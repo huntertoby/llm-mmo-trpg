@@ -88,7 +88,7 @@ def test_old_char_visit_uses_world_generation(personal_lib: ContentLibrary) -> N
     data["format"] = "trpg-char/5"
     del data["field_visit"]["generations"]
     old = loads_char(json.dumps(data))
-    assert old.format == "trpg-char/13"
+    assert old.format == "trpg-char/15"
     assert old.field_visit is not None and old.field_visit.generations == ()
     assert old.field_visit.generation(0) is None
     assert loads_char(dumps_char(bob)) == bob

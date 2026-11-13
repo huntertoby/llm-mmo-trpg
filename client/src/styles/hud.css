@@ -66,26 +66,6 @@
   margin-top: 3px;
 }
 
-/* HUD 的源力：三格菱形圖示（亮的是目前的源力）。 */
-
-.source-pips {
-  display: inline-flex;
-  gap: 4px;
-  vertical-align: middle;
-}
-
-.source-pip {
-  width: 10px;
-  height: 10px;
-  transform: rotate(45deg);
-  border: 1px solid #b98cff;
-  background: transparent;
-}
-
-.source-pip.filled {
-  background: #b98cff;
-}
-
 .hero-downed-notice {
   align-self: flex-start;
   padding: 4px 12px;

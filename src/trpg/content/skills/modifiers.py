@@ -122,6 +122,9 @@ class ModifierChange(ContentModel):
       無條件捨去）。
     - ``form_entry_permille``（3J-3，化形專精）：你的形態進入獎勵的數值 +n‰（1～1000；+500＝×1.5，
       無條件捨去；每次進入結算時套用）。
+    - ``silent_strike``（BS-1，#157，06 6.21.1 C；只能是 ``true``）：無聲——持有者的近戰攻擊
+      （普攻、武器技、反應攻擊）不讓目標轉向；只在手持匕首或雙匕首時生效。只能放在隱蔽關鍵字的
+      修正技能，或由主動技能以 ``grant_skill`` 暫時給（:mod:`trpg.content.silent_strike`）。
     """
 
     damage_permille: int | None = Field(default=None, ge=-500, le=1000)
@@ -145,6 +148,8 @@ class ModifierChange(ContentModel):
     summon_damage_permille: int | None = Field(default=None, ge=1, le=1000)
     form_upkeep_permille: int | None = Field(default=None, ge=-1000, le=-1)
     form_entry_permille: int | None = Field(default=None, ge=1, le=1000)
+    silent_strike: bool | None = Field(default=None, exclude_if=lambda v: v is None)
+    """沒填（``None``）時不輸出：既有修正技能的序列化與雜湊不變（BS-1）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:

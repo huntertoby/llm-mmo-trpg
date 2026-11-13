@@ -57,12 +57,22 @@ KEYWORD_ALIASES: dict[str, str] = {"shock": "charged"}
 
 
 class FormDef(ContentModel):
-    """一個形制；可以限定自己的材質與預設材質（例如頭冠預設金、頭巾預設布）。"""
+    """一個形制；可以限定自己的材質與預設材質（例如頭冠預設金、頭巾預設布）。
+
+    ``enemy_only``（RG-4，美術 PM 決定 2026-11-13「大盾先只給敵人」）：敵人範本的紙娃娃專用（例
+    ``kite_shield`` 的 ``sect_great`` 門派大盾）。玩家拿得到形制的地方——裝備生成、前端外觀清單
+    （:func:`appearance_export`）——都略過；``items.yaml`` 的物品寫了這種形制算錯誤。
+    RG-5 起沒有形制用它（兩種大盾開放給玩家），欄位保留給之後的敵人專用造型。
+
+    ``offhands``（RG-5，RG樣張 10.8 P-3）：限定只配這些副手（``offhands.yaml`` 的 ID）的物品；
+    ``kite_shield`` 是塔盾與鳶盾共用的造型，雲紋碑盾、熔殼塔盾只給塔盾。沒寫＝不限（不輸出）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     materials: tuple[str, ...] | None = None
     default_material: str | None = Field(default=None, pattern=ID_PATTERN)
+    enemy_only: bool = Field(default=False, exclude_if=lambda v: not v)
+    offhands: tuple[str, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class KindDef(ContentModel):
@@ -81,6 +91,10 @@ class KindDef(ContentModel):
 
     def form_default(self, form: FormDef) -> str:
         return form.default_material if form.default_material is not None else self.default_material
+
+    def player_forms(self) -> tuple[FormDef, ...]:
+        """玩家拿得到的形制（略過 ``enemy_only``；順序照資料檔）。"""
+        return tuple(f for f in self.forms if not f.enemy_only)
 
 
 class AppearanceTable(ContentModel):
@@ -126,6 +140,8 @@ class AppearanceTable(ContentModel):
             raise ValueError(f"造型 {kind.id}：形制重複")
         if not set(kind.materials) <= known or kind.default_material not in kind.materials:
             raise ValueError(f"造型 {kind.id}：材質必須在材質清單內，且預設材質在可用材質內")
+        if not kind.player_forms():
+            raise ValueError(f"造型 {kind.id}：至少要有一個不是 enemy_only 的形制")
         for form in kind.forms:
             allowed = kind.form_materials(form)
             if not set(allowed) <= known or kind.form_default(form) not in allowed:
@@ -196,6 +212,11 @@ def _form_material_problems(item: ItemDef, kind: KindDef) -> list[str]:
     form = next((f for f in kind.forms if f.id == item.form), None)
     if item.form is not None and form is None:
         return [f"物品 {item.id}：造型 {kind.id} 沒有形制 {item.form!r}"]
+    if form is not None and form.enemy_only:
+        return [f"物品 {item.id}：造型 {kind.id} 的形制 {form.id} 只給敵人（enemy_only）"]
+    if form is not None and form.offhands is not None and item.offhand not in form.offhands:
+        allowed_offhands = "、".join(form.offhands)
+        return [f"物品 {item.id}：造型 {kind.id} 的形制 {form.id} 只配副手 {allowed_offhands}"]
     allowed = kind.form_materials(form) if form is not None else kind.materials
     if item.material is not None and item.material not in allowed:
         return [f"物品 {item.id}：材質 {item.material!r} 不在允許內（{', '.join(allowed)}）"]
@@ -219,6 +240,8 @@ def keyword_names(table: AppearanceTable, keywords: KeywordTable) -> dict[str, s
 def appearance_export(table: AppearanceTable, keywords: KeywordTable) -> dict[str, object]:
     """前端用的清單（``client/src/render/gearAppearance.json``；鍵為 camelCase，順序固定）。
 
+    只列玩家拿得到的形制（略過 ``enemy_only``，RG-4）：外觀選單、圖示表都從這份清單取。
+
     ``keywords``：關鍵字表（``skill_keywords.yaml``），只用來取 ``keywordNames`` 的中文名（QI-4b）。
     """
     return {
@@ -239,19 +262,24 @@ def appearance_export(table: AppearanceTable, keywords: KeywordTable) -> dict[st
                 "paired": k.paired,
                 "materials": list(k.materials),
                 "defaultMaterial": k.default_material,
-                "forms": [
-                    {
-                        "id": f.id,
-                        "zh": f.name_zh,
-                        "materials": list(k.form_materials(f)),
-                        "defaultMaterial": k.form_default(f),
-                    }
-                    for f in k.forms
-                ],
+                "forms": [_form_export(k, f) for f in k.player_forms()],
             }
             for k in table.kinds
         ],
     }
+
+
+def _form_export(kind: KindDef, form: FormDef) -> dict[str, object]:
+    """一個形制的前端欄位；``offhands``（RG-5）只在有限定時輸出（其他形制的 JSON 不變）。"""
+    out: dict[str, object] = {
+        "id": form.id,
+        "zh": form.name_zh,
+        "materials": list(kind.form_materials(form)),
+        "defaultMaterial": kind.form_default(form),
+    }
+    if form.offhands is not None:
+        out["offhands"] = list(form.offhands)
+    return out
 
 
 def appearance_json(table: AppearanceTable, keywords: KeywordTable) -> str:

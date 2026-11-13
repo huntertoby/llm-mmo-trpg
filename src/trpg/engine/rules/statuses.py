@@ -156,6 +156,8 @@ def move_points_for_turn(
     delta += form_move_delta(rules, unit)  # 形態的移動加減（Phase 3J-1a）
     delta += weather_move_bonus(rules, unit, weather_id)  # 種族的環境被動（Phase 3R-2）
     delta += surface_move_bonus(rules, unit, surface)  # 鱗族（3R-4）
+    if unit.part_mods:  # 部位破壞的移動下降（PB-1a）
+        delta -= unit.part_mods.get("move", 0)
     return max(0, points + delta - move_reduction(rules, unit))
 
 
@@ -191,8 +193,11 @@ def damage_dealt_permille(
 ) -> int:
     """自己造成的攻擊傷害倍率（‰；虛弱 750）；``element`` 與狀態的 ``element_dealt`` 相同時再乘
     ``element_dealt_permille``（元素姿態，Phase 3W-2b）；目標站在水上（``on_water``）時再乘
-    ``element_dealt_wet_permille``（雷霆架勢，Phase 3W-2c）。"""
+    ``element_dealt_wet_permille``（雷霆架勢，Phase 3W-2c）。部位破壞的 ``stat_down damage_dealt``
+    （PB-1a，``part_mods``）同處相乘。"""
     combined = _combined(rules, unit, lambda d: d.damage_dealt_permille)
+    if unit.part_mods:
+        combined = combined * unit.part_mods.get("damage_dealt", PERMILLE) // PERMILLE
     if element is None:
         return combined
     elemental = _combined(

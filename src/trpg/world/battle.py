@@ -34,6 +34,7 @@ from typing import Any
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef, Objective
+from trpg.content.parts import BossPart, SealSkillBreak
 from trpg.content.regions import RegionDef
 from trpg.content.skills import SkillDef
 from trpg.engine.actions import Step
@@ -75,6 +76,7 @@ from trpg.world.battlefield import Battlefield, UnitCounts, contact_battlefield
 from trpg.world.calendar import day_of
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.companions import companion_spawns, companion_win_affinity
+from trpg.world.duel import duel_accepted, fielded_lineup
 from trpg.world.economy import battle_gold, pouch_skills, spend_pouch
 from trpg.world.encounters import (
     EncounterLineup,
@@ -145,6 +147,14 @@ class PreparedBattle:
     """就地開打切出的戰場（6C-2，:mod:`trpg.world.battlefield`）；``None``＝用模板地圖。"""
     cut_fallback: CutFallback | None = None
     """碰到地圖上的敵人卻退回模板的原因（6C-2）。"""
+    duel: bool = False
+    """精英單挑（RG-2，:mod:`trpg.world.duel`）：這場是主角對精英本人一對一。``lineup`` 仍是整個陣容
+    （獎勵照它算），實際上場的是 :attr:`fielded`。"""
+
+    @property
+    def fielded(self) -> EncounterLineup:
+        """實際上場的敵方陣容（一對一時只有精英本人）。"""
+        return fielded_lineup(self.lineup) if self.duel else self.lineup
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +236,17 @@ def enemy_level(library: ContentLibrary, encounter: EncounterResult) -> int:
     return location.level_min + encounter.level_bonus
 
 
+def _renamed_part(part: BossPart, rename: dict[str, str]) -> BossPart:
+    """部位 ``seal_skill`` 封的招照升階改名（PB-1a）；沒有要改的照原樣。"""
+    effects = tuple(
+        e.model_copy(update={"skill": rename[e.skill]})
+        if isinstance(e, SealSkillBreak) and e.skill in rename
+        else e
+        for e in part.on_break
+    )
+    return part if effects == part.on_break else part.model_copy(update={"on_break": effects})
+
+
 def grow_enemy(
     library: ContentLibrary, template: UnitTemplate, level: int
 ) -> tuple[UnitTemplate, tuple[SkillDef, ...]]:
@@ -237,7 +258,7 @@ def grow_enemy(
     - 技能：階級低於 ``skill_tier_by_level[等級]`` 的照 roguelite ``at_run_tier`` 重配成
       ``<原 ID>_t<階級>``（只升不降），反應規則引用的 ID 一併改名。
     - ``level`` 欄位＝等級（召喚物依施放者等級成長）。
-    - Boss 階段（5F-2）換上的技能組一併升階改名。
+    - Boss 階段（5F-2）換上的技能組一併升階改名；部位封的招（PB-1a）也一樣。
     """
     if level <= 1:
         return template, ()
@@ -271,6 +292,8 @@ def grow_enemy(
             else phase.model_copy(update={"skills": tuple(rename.get(s, s) for s in phase.skills)})
             for phase in template.phases
         )
+    if template.parts:  # 部位封的招跟著改名（PB-1a）
+        update["parts"] = tuple(_renamed_part(p, rename) for p in template.parts)
     if template.reactions is not None:
         update["reactions"] = tuple(
             r.model_copy(update={"reaction": rename[r.reaction]}) if r.reaction in rename else r
@@ -426,31 +449,26 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     rolled = roll_lineup(library, encounter, char.story_flags)  # 線頭到期結局的變化（5B-4b）
     reinforced = reinforce_lineup(library, encounter, rolled, reinforce)
     lineup = reinforced.lineup
+    duel = duel_accepted(encounter, lineup)  # 精英單挑（RG-2）：只有精英本人上場
+    fielded = fielded_lineup(lineup) if duel else lineup
     level = enemy_level(library, encounter)
     extra: dict[str, SkillDef] = {}
     # 第三方（5B-M3 三方混戰）照同一等級成長，排在敵方之後
     enemies = _enemy_spawns(
         library,
         (
-            (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, lineup))),
-            (Team.THIRD, lineup_templates(library, lineup, third=True)),
+            (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, fielded))),
+            (Team.THIRD, lineup_templates(library, fielded, third=True)),
         ),
         level,
         extra,
     )
     phase_spawns = _phase_spawns(library, enemies, level, extra)  # Boss 階段的召喚（5F-2）
-    # 我方＝主角＋傭兵（5C-1）＋影子（5C-2）；沒有隊友＝獨行（5C-2 玩法 PM 定 ③）
-    mercenaries = _mercenary_spawns(library, char, extra)
-    shadow_units, shadow_skills = shadow_spawns(library, char)
-    extra.update((s.id, s) for s in shadow_skills)
-    # 劇情夥伴（5C-3）：排在傭兵、影子之後，同樣照主角等級成長
-    companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
-    extra.update((s.id, s) for s in companion_skills)
     statuses = hero_statuses(char)
     hero, hp = _hero_with_items(library, char, extra, statuses)
     first = first_team(library, char, encounter, reinforced.enemy_first)
     oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
-    allies = (hero, *mercenaries, *shadow_units, *companions)
+    allies = (hero,) if duel else (hero, *_party_spawns(library, char, extra))
     field = _battlefield(library, encounter, allies, enemies, first)  # 就地開打（6C-2）
     setup = _battle_setup(
         library,
@@ -474,7 +492,21 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         oath=oath,
         field_cut=field.cut,
         cut_fallback=field.fallback,
+        duel=duel,
     )
+
+
+def _party_spawns(
+    library: ContentLibrary, char: CharacterState, extra: dict[str, SkillDef]
+) -> tuple[UnitSpawn, ...]:
+    """主角以外的我方：傭兵（5C-1）＋影子（5C-2）＋劇情夥伴（5C-3，排在最後，同樣照主角等級成長）；
+    沒有隊友＝獨行（5C-2 玩法 PM 定 ③）。重配的技能加進 ``extra``。"""
+    mercenaries = _mercenary_spawns(library, char, extra)
+    shadow_units, shadow_skills = shadow_spawns(library, char)
+    extra.update((s.id, s) for s in shadow_skills)
+    companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
+    extra.update((s.id, s) for s in companion_skills)
+    return (*mercenaries, *shadow_units, *companions)
 
 
 def _battlefield(
@@ -840,6 +872,7 @@ def _won_rewards(
         boss_bonus=bonus,
         fixed_class=_fixed_main_hand(library, encounter, prepared.lineup),  # 6T-1a（#135）
         mix=world.weapon_mix,
+        duel=prepared.duel,  # RG-2：一對一也照整個陣容掉
     )
     char, loot, loot_events = add_loot(library, char, roll)
     more += loot_events

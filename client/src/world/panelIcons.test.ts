@@ -76,6 +76,9 @@ describe("背包格子（#7、G2）", () => {
 
   it("滑過的說明寫全名與個數", () => {
     expect(cellHint(row("a", { name_zh: "小回復藥", kind_zh: "消耗品", count: 2 }))).toBe("小回復藥・消耗品・×2");
+    const shield = row("g", { name_zh: "稀有塔盾（5 級）", kind_zh: "裝備", gear: true });
+    expect(cellHint(shield)).toBe("稀有塔盾（5 級）・裝備");
+    expect(cellHint(shield, "雲紋碑盾")).toBe("稀有塔盾（5 級）・雲紋碑盾・裝備"); // RG-8 K-1
   });
 
   it("名字小牌（UI-E3c #11）：每行最多 3 字、最多 2 行，只在詞與詞之間換行（不拆詞）", () => {
@@ -94,12 +97,21 @@ describe("背包格子（#7、G2）", () => {
     expect(tileLines("一二三四五六七八")[1]).toMatch(/…$/);
   });
 
-  it("名字小牌：個數放在小牌外面（不壓框）", () => {
+  // QI-7：名字小牌只剩物品圖示表裡沒有的 id 在用（"p" 不在表裡），斷言照舊
+  it("名字小牌（圖示表裡沒有的物品）：個數放在小牌外面（不壓框）", () => {
     const html = renderToStaticMarkup(
       createElement(BagContents, { inventory: inv({ bag: [row("p", { name_zh: "小回復藥", count: 3 })], slots_used: 1 }), busy: false, onAct: () => undefined, canUse: true }),
     );
     expect(html).toContain('<span class="world-bag-tile-line">小</span><span class="world-bag-tile-line">回復藥</span>');
     expect(html).toMatch(/<\/span><b class="world-bag-count">3<\/b>/);
+  });
+
+  it("QI-7：圖示表裡有的物品畫 42 的 Q 版圖示（背包框、畫布 84），不畫名字小牌；個數照現行", () => {
+    const html = renderToStaticMarkup(
+      createElement(BagContents, { inventory: inv({ bag: [row("item_hp_potion_small", { name_zh: "小回復藥", count: 3 })], slots_used: 1, pouch: [] }), busy: false, onAct: () => undefined, canUse: true }),
+    );
+    expect(html).toMatch(/<canvas class="item-icon item-icon-bag" width="84" height="84" style="width:42px;height:42px" data-item-icon="item_hp_potion_small"[^>]*><\/canvas><b class="world-bag-count">3<\/b>/);
+    expect(html).not.toContain("world-bag-tile");
   });
 
   it("別大類的武器：格子有角標，選了之後詳情照舊有兩行字（6T-1b）", () => {

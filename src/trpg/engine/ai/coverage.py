@@ -63,6 +63,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "revive": "候選估計 _placement_estimate；_rewrite_gains（revive_points）",
         "delayed_damage": "_rewrite_gains（_bomb_points）",
         "summon": "候選估計 summon_estimate（ai/summon.py）",
+        "summon_beside": "被動、反應（由觸發或反應機制施放，不是主動施放的評分對象；TF-1）",
         "enter_form": "候選估計 _placement_estimate；_buff_gains（ai_profiles form）",
         "leave_form": "預覽事件評分（傷害）；只在形態中可選（skill_problem）",
         "zone": "候選估計 zone_estimate（ai/zone.py）",

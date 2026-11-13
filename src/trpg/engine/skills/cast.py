@@ -9,12 +9,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import Literal
 
 from trpg.content.battle import Dice
 from trpg.content.skills import (
+    ALL_STRIKES_HIT,
     CONSUME_STACK,
     DAMAGE_MULTIPLIER,
     DASH,
@@ -26,6 +27,7 @@ from trpg.content.skills import (
     REVEAL,
     SACRIFICE_SUMMON,
     SELF_DAMAGE_OF_HIT,
+    SELF_STACK_AT_LEAST,
     SHADOWSTEP,
     SWAP,
     SWAP_ANY,
@@ -37,7 +39,7 @@ from trpg.content.skills import (
     default_affects,
 )
 from trpg.content.stacks import auto_consumed
-from trpg.engine import modifiers
+from trpg.engine import modifiers, part_breaks
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
@@ -65,6 +67,8 @@ from trpg.engine.events import (
 from trpg.engine.ids import PRONE
 from trpg.engine.maneuvers import contest
 from trpg.engine.pierce import NO_PIERCE, PierceTrace, pierce_trace
+from trpg.engine.practice import is_practice_target
+from trpg.engine.quiet_strikes import no_turn_reason
 from trpg.engine.reactions import (
     ally_targeted_reactions,
     block_multiplier,
@@ -83,11 +87,12 @@ from trpg.engine.rewrites import (
 )
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.facing import face_toward
+from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import collect_move
-from trpg.engine.skills.conditions import Subject, condition_met
+from trpg.engine.skills.conditions import Subject, condition_met, stack_at_least
 from trpg.engine.skills.mobility import dash_route, shadowstep_behind
 from trpg.engine.skills.primitives import primitive_handler
 from trpg.engine.skills.primitives.base import TOUCHING_AFFECTS
@@ -107,6 +112,7 @@ from trpg.engine.skills.targeting import (
     resolve_effects,
     shape_reach,
     skill_profile,
+    skill_strikes,
 )
 from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.stacks import consume_stacks
@@ -118,6 +124,9 @@ _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
 """位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中；揭露（Phase 3D-8a）自動命中範圍內的
 敵人；引爆符文（Phase 3-23）也自動命中。"""
 
+
+_STRIKE_AFFECTS = ("enemies", "all")
+"""連擊武器的單體武器技（#153）重打的傷害效果、與「前面都沒中才在後面那下結算」的附加效果的對象。"""
 
 _NO_ALLY_ROLL = "shockwave"
 """震波（Phase 3-54d，06 6.33 #64）：對敵方先擲命中，對友方（``affects: all`` 也一樣）不擲命中。"""
@@ -157,6 +166,14 @@ class Cast:
     """
 
     modified = True
+    all_strikes_landed = False
+    """這次施放每一下都命中同一個目標（DD-3 ``all_strikes_hit``，#158）：連擊武器的每一下打完、
+    都中、都沒被守護者攔下時才在實例上設成真；``holds`` 對這個條件回傳它。"""
+    redirected = False
+    """這次施放有某一下被守護者攔下（:meth:`_redirect` 在實例上設成真）。"""
+    stacks_at_cast: Mapping[str, int] | None = None
+    """施放開始時施放者的層數快照（KW-1 ``self_stack_at_least``，#161）：:meth:`run` 在任何效果與
+    消耗之前在實例上設定；``holds`` 對這個條件看快照，所以同一招消耗或累積的層數不影響判斷。"""
 
     def __init__(
         self,
@@ -209,6 +226,16 @@ class Cast:
         """失手反噬（``cost.on_miss``）是否適用：複製的技能不付代價，所以不適用。"""
         self.melee_victims: list[tuple[UnitState, XY]] = []
         """被這次施放的近戰命中判定打到的單位與當時施放者的位置：結算完轉身（Phase 3C-6a）。"""
+        self.part_id: str | None = None
+        """打頭目的哪個部位（PB-1a；只有 ``use_skill`` 的第一段由動作的 ``target_part`` 設定）：
+        主要目標的命中用部位的護甲、傷害帶 ``part_id``（:mod:`trpg.engine.part_breaks`）。"""
+        self.strikes = skill_strikes(caster, skill) if self.modified else 1
+        """傷害效果打幾下（#153，08 8.11：雙匕首的單體武器技 2；被動與陷阱觸發一律 1）。"""
+        self.form_bonus = (0, 0)
+        """形態的進入獎勵（命中、暴擊）：第一下擲完就清掉，連擊武器後面幾下照樣吃到（同一次施放）。"""
+        # 連擊武器多打幾下時（DD-1b，08 8.11 細節 6）為串列：賭注的 self_damage_of_hit 先記在
+        # 這裡、等全部幾下打完才以總傷害結算；None 表示照原位置結算。
+        self.deferred_hit_backlash: list[EffectSpec] | None = None
 
     # ------------------------------------------------------------------
     # 命中
@@ -248,6 +275,7 @@ class Cast:
         for unit in sorted(rolled, key=lambda u: u.id):
             self.roll_one(unit)
         # 形態的進入獎勵（3J-1a、3J-1b）：這次施放所有目標的命中擲骰都吃到，擲完才用掉
+        self.form_bonus = (self.caster.next_attack_hit, self.caster.next_attack_crit)
         self.caster.next_attack_hit = self.caster.next_attack_crit = 0
         if self.modified:
             self.update_cooldown_delta()
@@ -261,14 +289,22 @@ class Cast:
         hit = [Subject(u, u.xy) for u in self.enemies if self.is_hit(u)]
         self.cooldown_delta = modifiers.cooldown_delta(self.ctx.state, self.caster, self.use, hit)
 
-    def roll_one(self, unit: UnitState, *, force_block: bool = False) -> AttackRoll:
+    def roll_one(
+        self, unit: UnitState, *, force_block: bool = False, extra: bool = False
+    ) -> AttackRoll:
         """對 ``unit`` 擲一次命中（發出 ``attack_rolled``、記錄結果；單體命中時給守護者攔截的機會，
-        命中且受傷害效果影響——或 ``force_block``（直線衝撞自己結算傷害）——時決定格擋倍率）。"""
+        命中且受傷害效果影響——或 ``force_block``（直線衝撞自己結算傷害）——時決定格擋倍率）。
+
+        ``extra``：連擊武器多打的那一下（#153）：預覽時同普攻的後續幾下（最少後果失手、最多後果
+        暴擊；測試模式的木樁照樣命中）；武器 ``backstab_first_only`` 時不算背刺；不再記轉身。"""
         ctx = self.ctx
         forced: ForcedOutcome | None = None
         if ctx.preview is not None:
             ctx.mark_branch()
-            forced = "hit" if ctx.preview == "min" else "crit"
+            if not extra or is_practice_target(ctx.state, unit):
+                forced = "hit" if ctx.preview == "min" else "crit"
+            else:
+                forced = "miss" if ctx.preview == "min" else "crit"
         single = ctx.preview is None and self.skill.shape.type == "single"
         if single and take_decoy(ctx, self.caster, unit, skill_id=self.skill.id) is not None:
             missed = _decoy_miss()  # 狐火誘餌（3R-2b）：擲命中之前轉向誘餌，這次攻擊落空
@@ -276,7 +312,25 @@ class Cast:
             return missed
         bonus = self.modifier(modifiers.hit_bonus, unit) + self.aim_bonus
         self.caster.aimed = self.caster.aimed and not self.aim_bonus  # 用掉瞄準
-        roll = roll_attack(ctx.state, ctx.rng, self.caster, unit, forced, self.profile, bonus=bonus)
+        defender = part_breaks.defense_view(unit, self.part_for(unit))  # 打部位：部位的護甲
+        backstab = not (extra and held_weapon(self.caster).backstab_first_only)
+        melee = self.profile.melee and unit is not self.caster
+        # BS-1（#157）：從隱蔽中出手或無聲時目標不轉向（命中判定之前判斷：之後才脫離隱蔽）
+        quiet = (
+            no_turn_reason(ctx.state, self.caster, self.skill, modified=self.modified)
+            if melee
+            else None
+        )
+        roll = roll_attack(
+            ctx.state,
+            ctx.rng,
+            self.caster,
+            defender,
+            forced,
+            self.profile,
+            bonus=bonus,
+            backstab_allowed=backstab,
+        )
         rolled_event = ctx.emit(
             AttackRolled,
             attacker_id=self.caster.id,
@@ -292,6 +346,8 @@ class Cast:
             total=roll.total,
             cover=roll.cover,
             cover_object_id=roll.cover_object_id,
+            cover_unit_id=roll.cover_unit_id,
+            cover_formation=roll.cover_formation,
             target_number=roll.target_number,
             hit=roll.hit,
             crit=roll.crit,
@@ -299,9 +355,11 @@ class Cast:
             modifier_bonus=roll.modifier_bonus,
             backstab=roll.backstab,
             ambush=roll.ambush,
+            no_turn=quiet,
         )
         self.hits[unit.id] = roll
-        if self.profile.melee and unit is not self.caster:
+        turns = melee and not extra and quiet is None
+        if turns:
             self.melee_victims.append((unit, self.caster.xy))
         if roll.hit and self.skill.shape.type == "single":
             guardian = try_intercept(
@@ -309,7 +367,7 @@ class Cast:
             )
             if guardian is not None:
                 self._redirect(unit, guardian)
-                if self.profile.melee and self.melee_victims:
+                if self.profile.melee and self.melee_victims and quiet is None:
                     # 3C-6b：守護者擋下近戰，轉身的是守護者（不是原本被瞄準的人）
                     self.melee_victims[-1] = (guardian, self.caster.xy)
                 unit = guardian
@@ -322,6 +380,13 @@ class Cast:
                 ctx, self.caster, unit, melee=self.profile.height_limited
             )
         return roll
+
+    def part_for(self, unit: UnitState) -> str | None:
+        """``unit`` 是動作的主要目標、而且選了還沒破的部位時，那個部位的 ID（PB-1a）。"""
+        action = self.action
+        if self.part_id is None or action is None or action.target_id != unit.id:
+            return None
+        return None if part_breaks.live_part(unit, self.part_id) is None else self.part_id
 
     def modifier(
         self,
@@ -343,6 +408,7 @@ class Cast:
         位移方向由施放者到守護者重新計算）。"""
         roll = self.hits.pop(original.id)
         self.hits[guardian.id] = roll
+        self.redirected = True
         self.enemies = [guardian if u.id == original.id else u for u in self.enemies]
         area = self.area
         self.area = SkillArea(
@@ -374,8 +440,29 @@ class Cast:
         return sorted(alive, key=lambda u: u.id)
 
     def holds(self, condition: ConditionSpec | None, subject: Subject) -> bool:
-        """效果層級的條件對 ``subject`` 是否成立（判斷「結算到這個效果當下」的狀態）。"""
+        """效果層級的條件對 ``subject`` 是否成立（判斷「結算到這個效果當下」的狀態）。
+        ``all_strikes_hit``（DD-3）看這次施放的 :attr:`all_strikes_landed`（驗證保證它不在
+        ``any_of`` 裡）。"""
+        if condition is not None and condition.type == ALL_STRIKES_HIT:
+            return self.all_strikes_landed
+        if condition is not None and self.stacks_at_cast is not None:
+            parts = condition.alternatives()
+            if any(part.type == SELF_STACK_AT_LEAST for part in parts):
+                return any(self._holds_part(part, subject) for part in parts)
         return condition_met(self.ctx.state, self.caster, condition, subject)
+
+    def _holds_part(self, part: ConditionSpec, subject: Subject) -> bool:
+        """``holds`` 的一個「或」分支：``self_stack_at_least`` 看施放開始時的層數快照（KW-1）。"""
+        if part.type == SELF_STACK_AT_LEAST and self.stacks_at_cast is not None:
+            return stack_at_least(self.stacks_at_cast, part)
+        return condition_met(self.ctx.state, self.caster, part, subject)
+
+    def after_all_strikes(self, effect: ResolvedEffect) -> bool:
+        """效果帶 ``all_strikes_hit`` 條件（DD-3）：不在第一下結算，等每一下都打完才判斷。"""
+        if effect.spec_index < 0:
+            return False
+        condition = self.skill.effects[effect.spec_index].condition
+        return condition is not None and condition.type == ALL_STRIKES_HIT
 
     def tile_holds(self, condition: ConditionSpec | None, xy: XY) -> bool:
         """條件對格子 ``xy``（連同站在上面的單位）是否成立。"""
@@ -394,6 +481,7 @@ class Cast:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
+        self.stacks_at_cast = dict(self.caster.stacks)  # KW-1：「層數達 N」看施放開始時的層數
         if not self.dash():  # 衝鋒一律最先結算；被擋下時其餘效果不結算
             return
         if not self.shadowstep():  # 瞬步一律最先結算（Phase 3D-8d）
@@ -404,23 +492,114 @@ class Cast:
         self.announce_pierce()
         self.consume_stacks()
         self.roll_gamble()
+        if self.repeated_damage():
+            self.deferred_hit_backlash = []
         for effect in self.effects:
-            spec = self.skill.effects[effect.spec_index]
-            start = len(self.ctx.events)
-            batch = self.build(effect, spec)
-            if batch:
-                execute(self.ctx, batch)
-            if effect.type == "damage":
-                if effect.affects in TOUCHING_AFFECTS:
-                    self.touch_untouched_tiles(spec, start)
-                    self.spread_wind(spec)
-                if spec.lifesteal_permille is not None:
-                    self.lifesteal(spec.lifesteal_permille, start)
-                if spec.on_kill:
-                    self.on_kill(spec.on_kill, start)
+            if not self.after_all_strikes(effect):
+                self.resolve_effect(effect)
+        self.extra_strikes()
+        self.settle_deferred_hit_backlash()
         self.backlash_on_miss()
         self.react_to_hits()
         self.shorten_cooldown()
+
+    def resolve_effect(self, effect: ResolvedEffect, *, extra: bool = False) -> None:
+        """結算一個效果（含傷害效果之後的元素觸及、風的擴散、吸血與擊殺時效果）。``extra``：連擊
+        武器多打的那一下（#153）重打的傷害效果——元素觸及格子與風的擴散是附加效果，不再做。"""
+        spec = self.skill.effects[effect.spec_index]
+        start = len(self.ctx.events)
+        batch = self.build(effect, spec)
+        if batch:
+            execute(self.ctx, batch)
+        if effect.type == "damage":
+            if effect.affects in TOUCHING_AFFECTS and not extra:
+                self.touch_untouched_tiles(spec, start)
+                self.spread_wind(spec)
+            if spec.lifesteal_permille is not None:
+                self.lifesteal(spec.lifesteal_permille, start)
+            if spec.on_kill:
+                self.on_kill(spec.on_kill, start)
+
+    # -- 連擊武器的單體武器技（#153，08 8.11）---------------------------------
+
+    def extra_strikes(self) -> None:
+        """拿雙匕首（``strikes: 2``）施放單體武器技：全部效果結算完（第一下）之後，對同一個目標
+        再打 ``strikes − 1`` 下。每一下各自擲命中與暴擊（背刺照吃；形態進入獎勵與瞄準照吃——同一次
+        施放的每一次命中判定），命中就把技能的每個傷害效果再結算一次（每下都套技能倍率、各用一次
+        武器的傷害骰與屬性加成；打部位時同一個部位，部位已破就打本體）；詞條、被動的「命中時」
+        觸發跟著每一下的 ``attack_rolled``／``damage_dealt`` 各觸發一次。
+
+        附加效果（非傷害：上狀態、推拉、位移、標記、消耗層數與狀態、賭注）只結算一次：前面的
+        某一下已命中就不再結算；前面都沒中、這一下才中，就在這一下結算（照技能效果的順序）；
+        對象是自己、友方、格子的效果第一下就照常結算過。施放者或目標倒下（第一下打倒目標）就
+        不再打；守護者攔下時之後幾下打守護者。結算完把命中結果合併成「任一下命中」，給失手反噬、
+        冷卻修正、被命中的反應與第二段判斷用。"""
+        repeated = self.repeated_damage()
+        if not repeated:
+            return
+        original = self.enemies[0]
+        every = self.is_hit(original) and not self.redirected  # DD-3：第一下中、沒被攔
+        struck = 0
+        for _ in range(self.strikes - 1):
+            target = self.enemies[0]
+            if not (self.caster.alive and target.alive):
+                break
+            prior = dict(self.hits)
+            landed = self.is_hit(target)
+            self.caster.next_attack_hit, self.caster.next_attack_crit = self.form_bonus
+            roll = self.roll_one(target, extra=True)
+            self.caster.next_attack_hit = self.caster.next_attack_crit = 0
+            struck += 1
+            every = every and roll.hit and not self.redirected and self.enemies[0] is original
+            if self.is_hit(self.enemies[0]):
+                self._strike_effects(repeated, landed=landed)
+            for uid, roll_before in prior.items():  # 合併：任一下命中就算命中
+                current = self.hits.get(uid)
+                if roll_before.hit and (current is None or not current.hit):
+                    self.hits[uid] = roll_before
+        if every and struck == self.strikes - 1:
+            self.settle_all_strikes()
+        if self.modified:
+            self.update_cooldown_delta()
+
+    def settle_all_strikes(self) -> None:
+        """每一下都命中同一個目標（DD-3，#158 雙牙）：結算帶 ``all_strikes_hit`` 條件的效果一次
+        （最後一下命中之後；目標已倒下時 ``targets`` 自然選不到）。"""
+        self.all_strikes_landed = True
+        for effect in self.effects:
+            if self.after_all_strikes(effect):
+                self.resolve_effect(effect)
+
+    def repeated_damage(self) -> list[ResolvedEffect]:
+        """連擊武器要多打的傷害效果；不多打（``strikes`` 1、不是單一敵人、沒有對敵人的傷害）
+        時為空。"""
+        if self.strikes <= 1 or len(self.enemies) != 1:
+            return []
+        return [e for e in self.effects if e.type == "damage" and e.affects in _STRIKE_AFFECTS]
+
+    def settle_deferred_hit_backlash(self) -> None:
+        """多打的幾下結算完之後，結算先記下的 ``self_damage_of_hit``：以賭注擲骰後到現在（全部
+        幾下）對敵人造成的傷害總和計算（08 8.11 細節 6）。"""
+        pending, self.deferred_hit_backlash = self.deferred_hit_backlash or [], None
+        for spec in pending:
+            self.self_damage_of_hit(spec)
+
+    def _strike_effects(self, repeated: list[ResolvedEffect], *, landed: bool) -> None:
+        """多打的那一下命中：重打傷害效果；前面都沒中（``landed`` 為假）時對敵人的附加效果也在
+        這一下結算。"""
+        if not landed:
+            self.consume_target_stacks()
+            self.roll_gamble()
+        for effect in self.effects:
+            if effect in repeated:
+                self.resolve_effect(effect, extra=True)
+            elif self.after_all_strikes(effect):
+                continue  # DD-3：等每一下都打完才判斷（settle_all_strikes）
+            elif not landed and (
+                effect.type == GAMBLE
+                or (effect.affects in _STRIKE_AFFECTS and effect.type != CONSUME_STACK)
+            ):
+                self.resolve_effect(effect)
 
     # -- 賭博型（Phase 3D-7a）-----------------------------------------------
 
@@ -468,7 +647,10 @@ class Cast:
             if sub.type == DAMAGE_MULTIPLIER:
                 continue
             if sub.type == SELF_DAMAGE_OF_HIT:
-                self.self_damage_of_hit(sub)
+                if self.deferred_hit_backlash is not None:
+                    self.deferred_hit_backlash.append(sub)
+                else:
+                    self.self_damage_of_hit(sub)
                 continue
             if sub.type in (REFUND_AP, REFUND_COOLDOWN):
                 self.refund(sub)
@@ -702,25 +884,42 @@ class Cast:
             spec = self.skill.effects[effect.spec_index]
             assert spec.stack is not None and spec.per_stack_permille is not None
             definition = rules.stack_def(spec.stack)
-            if definition.owner == "self":
-                spent = consume_stacks(self.ctx, self.caster, spec.stack, source_id=self.caster.id)
-                bonus = spent * spec.per_stack_permille
-                boosts = ("damage",) if definition.consumer is None else definition.consumer.boosts
-                if "damage" in boosts:
-                    self.caster_bonus += bonus
-                if "heal" in boosts:
-                    self.heal_bonus += bonus
-                    if definition.consumer is not None and definition.consumer.heal_self_only:
-                        self.heal_self_only = True
-                if "shield" in boosts:
-                    self.shield_bonus += bonus
+            if definition.owner != "self":
+                self._consume_from_targets(effect, spec)
                 continue
-            for unit in self.targets(effect.affects, spec.condition):
-                spent = consume_stacks(self.ctx, unit, spec.stack, source_id=self.caster.id)
-                self.target_bonus[unit.id] = (
-                    self.target_bonus.get(unit.id, 0) + spent * spec.per_stack_permille
-                )
+            spent = consume_stacks(self.ctx, self.caster, spec.stack, source_id=self.caster.id)
+            bonus = spent * spec.per_stack_permille
+            boosts = ("damage",) if definition.consumer is None else definition.consumer.boosts
+            if "damage" in boosts:
+                self.caster_bonus += bonus
+            if "heal" in boosts:
+                self.heal_bonus += bonus
+                if definition.consumer is not None and definition.consumer.heal_self_only:
+                    self.heal_self_only = True
+            if "shield" in boosts:
+                self.shield_bonus += bonus
         self.auto_consume_stacks()
+
+    def consume_target_stacks(self) -> None:
+        """只做 ``consume_stack`` 的 ``owner: target``（連擊武器前面幾下都沒中、這一下才命中時，
+        在這一下消耗，#153）。"""
+        rules = self.ctx.rules
+        for effect in self.effects:
+            if effect.type != CONSUME_STACK:
+                continue
+            spec = self.skill.effects[effect.spec_index]
+            assert spec.stack is not None
+            if rules.stack_def(spec.stack).owner != "self":
+                self._consume_from_targets(effect, spec)
+
+    def _consume_from_targets(self, effect: ResolvedEffect, spec: EffectSpec) -> None:
+        """從每個被命中的目標各自消耗 ``spec.stack``，換成對它的傷害加成。"""
+        assert spec.stack is not None and spec.per_stack_permille is not None
+        for unit in self.targets(effect.affects, spec.condition):
+            spent = consume_stacks(self.ctx, unit, spec.stack, source_id=self.caster.id)
+            self.target_bonus[unit.id] = (
+                self.target_bonus.get(unit.id, 0) + spent * spec.per_stack_permille
+            )
 
     def auto_consume_stacks(self) -> None:
         """自動消耗（3-52b，專注）：施放者的主動技能造成傷害時，吃掉全部該層數、每層加成傷害；
@@ -806,6 +1005,7 @@ class Cast:
             pierce_permille=behind,
             chain_permille=chain,
             block_permille=block,
+            part_id=self.part_for(unit),
         )
 
     def physical_element(self) -> Element:

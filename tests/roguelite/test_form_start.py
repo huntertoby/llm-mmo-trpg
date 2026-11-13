@@ -39,7 +39,9 @@ def test_starter_rule_opens_stances_only_for_enter_form() -> None:
 def test_the_form_start_pool_holds_only_the_tier_one_forms() -> None:
     lib = library()
     assert starter_pools(lib)["form"] == tuple(sorted(MAKERS))
-    for other, ids in starter_pools(lib).items():  # 其他池不受影響
+    pools = starter_pools(lib)
+    assert set(pools) == set(lib.keywords.start_ids()) == set(lib.keywords.ids())  # KW-2：16 個池
+    for other, ids in pools.items():  # 其他池不受影響
         assert len(ids) >= 3, other
 
 

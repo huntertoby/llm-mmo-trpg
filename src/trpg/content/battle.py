@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, field_validator, model_serializer, model_validator
 
+from trpg.content.parts import BossPart, SealSkillBreak, check_parts
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.bonus_text import bonus_text
@@ -29,6 +30,7 @@ __all__ = [
     "ArmorBreak",
     "Blessing",
     "BlockBonus",
+    "BossPart",
     "BossPhase",
     "CreatureLook",
     "DeathSurfaceSpec",
@@ -82,6 +84,8 @@ __all__ = [
     "WeaponLook",
     "WeaponTable",
     "check_phases",
+    "part_reference_problems",
+    "template_part_problems",
     "weapon_attr_examples_zh",
 ]
 
@@ -496,8 +500,8 @@ def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:
     lines: list[str] = []
     if w.strikes > 1:
         lines.append(
-            f"連擊：普攻一次打 {w.strikes} 下，每一下各自擲命中與傷害；"
-            "背刺時每一下都吃背刺加成（武器技只打一次）"
+            f"連擊：普攻與單體武器技都打 {w.strikes} 下，每一下各自擲命中與傷害；"
+            "背刺時每一下都吃背刺加成（武器技的附加效果只結算一次）"
         )
     if w.counter:
         lines.append("反擊：相鄰敵人的近戰攻擊命中你時，自動回擊一次（佔本輪反應，不花 AP 與耐力）")
@@ -598,7 +602,8 @@ class OffhandDef(ContentModel):
       （都是物理或都是心智）取較高 ``max``、一物理一心智取平均 ``mean``（schema 檢查）。
     - ``block_bonus``：格擋反應強化（圓盾），依縮放屬性值，見 :class:`BlockBonus`；
     - ``ranged_cover``：自身半掩護（塔盾）——遠程攻擊打持有者時命中修正同半掩護
-      （``core.half_cover_hit_penalty``）；攻擊者站得比持有者高 1 層以上時無視；與場上掩護物不疊加；
+      （``core.half_cover_hit_penalty``）；攻擊者站得比持有者高 2 層以上時無視（同半掩護，
+      RG-5b）；與場上掩護物不疊加；
     - ``move_penalty``：持有者的移動點數 −N（塔盾）；
     - ``spell_damage_permille``：持有者的法術技傷害 +N‰（法書；計入全身 +50% 上限）；
     - ``spell_range_bonus``：持有者的法術技施放距離 +N（法器珠；不加範圍大小，
@@ -670,7 +675,7 @@ class OffhandDef(ContentModel):
         if self.ranged_cover:
             lines.append(
                 f"遠程掩護：遠程攻擊打你時命中 −{core.half_cover_hit_penalty}（同半掩護；"
-                "攻擊者站得高 1 層以上時無視）"
+                "攻擊者站得比你高 2 層以上時無視）"
             )
         if self.move_penalty:
             lines.append(f"笨重：你的移動 −{self.move_penalty}")
@@ -1109,6 +1114,7 @@ class ReactionWhen(ContentModel):
         "ally_downed",
         "enemy_enters_adjacent",
         "ally_targeted",
+        "ally_hit_near",
         "enemy_moves_in_range",
         "ally_hit_in_range",
         "kin_hit_in_range",
@@ -1213,7 +1219,10 @@ class DollGear(ContentModel):
     """範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
 
     Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
-    ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。"""
+    ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。
+
+    RG-4：``emblem`` 盾心紋樣（持盾弟子的雲紋碑盾 ``peak`` 三峰山；前端不認得就不畫）；
+    沒寫時不輸出。"""
 
     kind: str = Field(pattern=ID_PATTERN)
     material: str = Field(pattern=ID_PATTERN)
@@ -1221,6 +1230,7 @@ class DollGear(ContentModel):
     form: str | None = Field(default=None, pattern=ID_PATTERN)
     trim: str | None = Field(default=None, pattern=_HEX)
     apron: str | None = Field(default=None, pattern=_HEX)
+    emblem: Literal["peak"] | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class CreatureLook(ContentModel):
@@ -1614,6 +1624,41 @@ def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
     return problems
 
 
+def template_part_problems(template: UnitTemplate) -> list[str]:
+    """``UnitTemplate.parts``（PB-1a）的結構問題（範本驗證時檢查）：只給頭目、不給召喚物；2～4 個、
+    ID 不重複、``hp_permille`` 加總 ≤ 600‰。"""
+    parts = template.parts
+    if not parts:
+        return []
+    problems: list[str] = []
+    if BOSS_TAG not in template.tags:
+        problems.append("只有帶 boss 標籤的單位能有 parts")
+    if template.summon:
+        problems.append("召喚物不能有 parts")
+    return problems + check_parts(parts)
+
+
+def part_reference_problems(template: UnitTemplate) -> list[str]:
+    """``parts`` 引用同一範本其他欄位的問題（載入內容庫時檢查，不放在範本驗證——測試與工具常把
+    ``phases``、``skills`` 換掉再組範本）：封的招要在 ``skills`` 或任一階段的技能組裡；
+    ``exposed_in`` 是這個範本的階段 ID。訊息指出部位 ID。"""
+    problems: list[str] = []
+    phase_ids = {p.id for p in template.phases}
+    skills = {*template.skills, *(s for p in template.phases for s in p.skills or ())}
+    for part in template.parts:
+        unknown = [p for p in part.exposed_in if p not in phase_ids]
+        if unknown:
+            problems.append(
+                f"部位 {part.id} 的 exposed_in 不是這個單位的階段：{'、'.join(unknown)}"
+            )
+        for effect in part.on_break:
+            if isinstance(effect, SealSkillBreak) and effect.skill not in skills:
+                problems.append(
+                    f"部位 {part.id} 封的招 {effect.skill} 不在這個單位的技能組（含各階段）裡"
+                )
+    return problems
+
+
 class UnitTemplate(ContentModel):
     """``content/units/<id>.yaml``：一個單位範本（Phase 1 直接給定屬性與武器）。
 
@@ -1708,6 +1753,18 @@ class UnitTemplate(ContentModel):
     phases: tuple[BossPhase, ...] = ()
     """Boss 的階段（Phase 5F-2）：HP 跌破門檻時換技能組／行為模式、加減狀態、改天氣與格子、召喚
     （:class:`BossPhase`、:mod:`trpg.engine.boss_phases`）；空＝沒有階段。"""
+    parts: tuple[BossPart, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """頭目部位（PB-1a，05 5.12.2；:mod:`trpg.content.parts`）：只有帶 ``boss`` 標籤、不是召喚物的
+    範本能有；空＝沒有部位（不輸出）。"""
+
+    @model_validator(mode="after")
+    def _check_parts(self) -> UnitTemplate:
+        if not self.parts:
+            return self
+        problems = [f"單位 {self.id}：{p}" for p in template_part_problems(self)]
+        if problems:
+            raise ValueError("；".join(problems))
+        return self
 
     @model_validator(mode="after")
     def _check_phases(self) -> UnitTemplate:

@@ -66,6 +66,7 @@ __all__ = [
     "pick_affix",
     "replace_affix",
     "roll_rarity",
+    "with_affix",
 ]
 
 type WeaponClass = Literal["melee", "ranged", "focus"]
@@ -181,7 +182,8 @@ def _look_base(library: ContentLibrary, rng: Rng, slot_type: SlotType) -> _Base:
     if not kinds:
         return _Base(slot_type=slot_type, name_zh=_SLOT_NAME[slot_type])
     kind = rng.choice(kinds)
-    form = rng.choice(kind.forms)
+    # RG-4：略過 enemy_only 的形制（改前沒有這種形制，抽法不變）
+    form = rng.choice(kind.player_forms())
     return _Base(
         slot_type=slot_type,
         name_zh=kind.name_zh,
@@ -309,6 +311,7 @@ def _fits(library: ContentLibrary, base: _Base, forced: str | None = None) -> li
         for _, a in sorted(library.affixes.items())
         if not a.legendary_only
         and (a.id not in rules.unique_affixes or a.id == forced)
+        and a.id not in rules.held_back_affixes  # LW-1：暫不進產生器
         and not affix_slot_problems(probe, a, base.weapon, library.weapons)
     ]
 
@@ -794,6 +797,47 @@ def downscale_item(library: ContentLibrary, item: ItemDef, item_level: int) -> I
         spent += affix_points(rules, affix, value)
     update["affixes"] = tuple(rolls)
     return item.model_copy(update=update)
+
+
+def with_affix(library: ContentLibrary, item: ItemDef, affix_id: str) -> ItemDef:
+    """必帶詞條（RG-4，#163：持盾弟子、熔殼甲兵掉的塔盾必帶「盾陣」）：``item`` 還沒有
+    ``affix_id``、而且這條詞條掛得上時，把它加在最後；其他詞條從最後一條往前拿掉，直到條數（稀有度與每件上限）與
+    點數（部位詞條預算，8.22.1）放得下，普通物品的基礎加成壓到剩下的預算。第 1 條（稀有起的 build
+    詞條）最後才拿。這條詞條本身照一般詞條計點；單獨一條就超過預算（低物品等級）時照樣帶上
+    （照穿，比照 5D-4），也不看稀有度的可用類別。掛不上（不是對應的副手）或已經有時原樣回傳；
+    不用亂數。"""
+    affix = library.affixes.get(affix_id)
+    if affix is None or any(r.affix == affix_id for r in item.affixes):
+        return item
+    weapon = None if item.weapon is None else library.weapons.get(item.weapon)
+    if affix_slot_problems(item, affix, weapon, library.weapons):
+        return item
+    limit = library.ruleset.equipment.max_affixes_per_item
+    rules = library.item_gen
+    if rules is None or item.item_level is None:
+        kept = list(item.affixes)[: limit - 1]
+        return item.model_copy(update={"affixes": (*kept, AffixRoll(affix=affix.id))})
+    if item.rarity in rules.rarities:
+        limit = min(limit, max(1, rules.rarity(item.rarity).max_affixes))
+    budget = Fraction(affix_budget(rules, item.item_level, item.slot_type))
+    lo = None if affix.value is None else affix.value.min
+    value, points = _best_value(rules, affix, budget) or (lo, affix_points(rules, affix, lo))
+
+    def spent(rolls: Sequence[AffixRoll]) -> Fraction:
+        return sum(
+            (affix_points(rules, library.affixes[r.affix], r.value) for r in rolls), Fraction(0)
+        )
+
+    kept = list(item.affixes)
+    while kept and (len(kept) + 1 > limit or spent(kept) + points > budget):
+        kept.pop()
+    bonus = item.base_bonus_permille
+    if bonus:
+        room = max(Fraction(0), budget - points - spent(kept))
+        cap = int(room) // rules.base_bonus.points * rules.base_bonus.permille
+        bonus = min(bonus, cap)
+    rolls = (*kept, AffixRoll(affix=affix.id, value=value))
+    return item.model_copy(update={"affixes": rolls, "base_bonus_permille": bonus})
 
 
 def replace_affix(item: ItemDef, index: int, affix: AffixDef, value: int | None) -> ItemDef:

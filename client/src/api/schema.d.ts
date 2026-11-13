@@ -1003,7 +1003,8 @@ export interface paths {
         /**
          * Post Pregen Wait
          * @description 6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端
-         *     顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。
+         *     顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。WP-2：送出文字許願前也先問
+         *     （``kind: "wish"``＋``text``；許願在佇列插隊排最前面）；選單許願、現在不能許的一律 ``none``。
          */
         post: operations["post_pregen_wait_api_world_characters__character_id__pregen_wait_post"];
         delete?: never;
@@ -1616,11 +1617,155 @@ export interface paths {
         };
         /**
          * Get Objects
-         * @description 可改的對象（NW-1：敵人與頭目）。
+         * @description 可改的對象（``unit``：敵人與頭目；``skill``：技能，附篩選欄位與 1 階預算比例）。
          */
         get: operations["get_objects_api_tuning_objects_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/group-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Group Preview
+         * @description 分組改的預覽（不寫檔）：逐招的改動、前後預算比例、跳過原因（一次最多 100 招）。
+         */
+        post: operations["post_group_preview_api_tuning_skills_group_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/presets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Presets
+         * @description 分組改的常用預設組。
+         */
+        get: operations["get_presets_api_tuning_skills_presets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/ladders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ladders
+         * @description 骰子與武器倍率的階梯（由弱到強；骰子欄位「±1 級」用，和分組改同一份）。
+         */
+        get: operations["get_ladders_api_tuning_skills_ladders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/ratio-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Ratio Plan
+         * @description 1 階比值工作的規模（組數＝招 × 可用武器 × 情境數）與預估秒數（NW-2c T11；不跑）。
+         */
+        post: operations["post_ratio_plan_api_tuning_skills_ratio_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/ratio-baseline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ratio Baseline
+         * @description 匯入的比值基準（沒有時 ``null``）。
+         */
+        get: operations["get_ratio_baseline_api_tuning_skills_ratio_baseline_get"];
+        put?: never;
+        /**
+         * Post Ratio Baseline
+         * @description 匯入 ``scripts/t1_skill_ratio.py run`` 的 JSON 當基準（NW-2c T12）；格式不對 422。
+         */
+        post: operations["post_ratio_baseline_api_tuning_skills_ratio_baseline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/{skill_id}/ratio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Skill Ratio
+         * @description 技能表單的比值區：目前值與參考線（只當參考，不擋寫回）、上次不同內容的量測（NW-2c）。
+         */
+        get: operations["get_skill_ratio_api_tuning_skills__skill_id__ratio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tuning/skills/{skill_id}/budget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Budget
+         * @description 一招套上改動後的預算比例、判定、變奏、違規（數字同 ``trpg skills budget``）。
+         */
+        post: operations["post_budget_api_tuning_skills__skill_id__budget_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1747,6 +1892,9 @@ export interface paths {
         /**
          * Post Apply
          * @description 寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。
+         *
+         *     草稿裡有招超出預算合格區間時，``confirm_budget`` 要恰好是那幾招（勾「我確定」），否則 409；
+         *     確認後一起登記進 ``skill_budget.yaml`` 的例外清單。
          */
         post: operations["post_apply_api_tuning_drafts__name__apply_post"];
         delete?: never;
@@ -2176,6 +2324,8 @@ export interface components {
             /** Target Object Id */
             target_object_id?: string | null;
             direction?: components["schemas"]["Direction"] | null;
+            /** Target Part */
+            target_part?: string | null;
         };
         /**
          * Attribute
@@ -2309,6 +2459,10 @@ export interface components {
             cross_class_lost_zh?: string | null;
             /** Opening Note Zh */
             opening_note_zh?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Rare */
+            rare?: boolean | null;
         };
         /**
          * BattleHintView
@@ -2433,6 +2587,10 @@ export interface components {
              * @default []
              */
             followup_options: components["schemas"]["FollowupOptionOut"][];
+            /** Part Options */
+            part_options?: components["schemas"]["PartActionOut"][] | null;
+            /** Skills Off */
+            skills_off?: components["schemas"]["SkillOffOut"][] | null;
             orders: components["schemas"]["OrderSet"];
             /** Orders Ignored */
             orders_ignored: components["schemas"]["IgnoredOrder"][];
@@ -2463,6 +2621,8 @@ export interface components {
             units: components["schemas"]["UnitView"][];
             /** Traps */
             traps: components["schemas"]["TrapView"][];
+            /** Trap Traces */
+            trap_traces?: components["schemas"]["Pos"][] | null;
             /** Turn Order */
             turn_order: string[];
             /** Active Unit */
@@ -2587,6 +2747,8 @@ export interface components {
             claimed_by?: string | null;
             /** Status Zh */
             status_zh: string;
+            /** Status Note Zh */
+            status_note_zh?: string | null;
         };
         /**
          * BoardClearedView
@@ -2622,6 +2784,41 @@ export interface components {
             day: number;
             /** Name Zh */
             name_zh: string;
+            /**
+             * Id
+             * @default
+             */
+            id: string;
+            /**
+             * Kind
+             * @default other
+             * @enum {string}
+             */
+            kind: "story_skill" | "boss_unlock" | "league" | "other";
+            /**
+             * Kinds
+             * @default []
+             */
+            kinds: ("story_skill" | "boss_unlock" | "league" | "other")[];
+        };
+        /**
+         * BoardPhaseView
+         * @description 一段日程（PNL-1b；``content/world/season.yaml`` 的 ``schedule``）。
+         */
+        BoardPhaseView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /**
+             * Text Zh
+             * @default
+             */
+            text_zh: string;
+            /** Start Day */
+            start_day: number;
+            /** End Day */
+            end_day: number;
         };
         /**
          * BoardSeasonBossView
@@ -2704,6 +2901,18 @@ export interface components {
             permille: number;
             /** Days Zh */
             days_zh: string;
+            /**
+             * Start Day
+             * @default 0
+             */
+            start_day: number;
+            /**
+             * End Day
+             * @default 0
+             */
+            end_day: number;
+            /** Region */
+            region?: string | null;
             /** Target Note Zh */
             target_note_zh?: string | null;
         };
@@ -2963,6 +3172,24 @@ export interface components {
             reason_zh: string;
         };
         /**
+         * ChangeIconOut
+         * @description 「前 → 後」一列的欄位小圖（FL-1b，移植需求第 7 節；圖示一律沿用前批）。
+         *
+         *     ``part``＝第④批部件圖樣（``cat``：``card`` 卡片小圖、``shape``、``surface``、``skeleton``）；
+         *     ``status``＝第⑤批狀態圖示；``keyword``＝第⑤b 批關鍵字圓章。
+         */
+        ChangeIconOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "part" | "status" | "keyword";
+            /** Cat */
+            cat?: string | null;
+            /** Id */
+            id: string;
+        };
+        /**
          * ChangeLookAction
          * @description 改外觀（Phase 6R-2，#137：在主城隨時免費改；:mod:`trpg.world.looks`）。``look`` 省略或全空＝
          *     回到種族預設。只在畫面，不影響數值。
@@ -3010,6 +3237,10 @@ export interface components {
             direction?: string | null;
             /** Anchored */
             anchored?: boolean | null;
+            /** Lock Target Id */
+            lock_target_id?: string | null;
+            /** Lock Blocker Id */
+            lock_blocker_id?: string | null;
             /** Text */
             text: string;
         };
@@ -3330,6 +3561,8 @@ export interface components {
             /** Name Zh */
             name_zh: string;
             pos: components["schemas"]["XY"];
+            /** Unit Id */
+            unit_id?: string | null;
         };
         /**
          * CraftAction
@@ -3778,6 +4011,9 @@ export interface components {
          *
          *     Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
          *     ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。
+         *
+         *     RG-4：``emblem`` 盾心紋樣（持盾弟子的雲紋碑盾 ``peak`` 三峰山；前端不認得就不畫）；
+         *     沒寫時不輸出。
          */
         DollGear: {
             /** Kind */
@@ -3792,6 +4028,8 @@ export interface components {
             trim?: string | null;
             /** Apron */
             apron?: string | null;
+            /** Emblem */
+            emblem?: "peak" | null;
         };
         /**
          * DollLook
@@ -3888,6 +4126,20 @@ export interface components {
              * @default []
              */
             effect_fixes: components["schemas"]["EffectFix"][];
+        };
+        /**
+         * DuelChoiceAction
+         * @description 回應精英提出的單挑（RG-2，#162，09 9.6.6）：只在遭遇的 ``duel`` 是 ``offered`` 時可送；
+         *     ``accept``＝一對一（只有主角對精英本人），否則照原本全隊打。兩邊獎勵完全一樣。
+         */
+        DuelChoiceAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "duel_choice";
+            /** Accept */
+            accept: boolean;
         };
         /**
          * EffectFix
@@ -4014,6 +4266,10 @@ export interface components {
             battlefield?: components["schemas"]["BattlefieldRectView"] | null;
             /** Battlefield Fallback Zh */
             battlefield_fallback_zh?: string | null;
+            /** Duel */
+            duel?: ("offered" | "accepted" | "declined") | null;
+            /** Duel Zh */
+            duel_zh?: string | null;
         };
         /**
          * EndStance
@@ -4124,6 +4380,11 @@ export interface components {
             kind_zh: string;
             /** Note Zh */
             note_zh: string;
+            /**
+             * Hint Zh
+             * @default
+             */
+            hint_zh: string;
             /** Attributes Zh */
             attributes_zh: string;
             /** Template */
@@ -4850,6 +5111,19 @@ export interface components {
             category?: string | null;
         };
         /**
+         * FlashBaseStatOut
+         * @description 原技能列的一個數字（FL-1b 2.1：AP、耐力、冷卻、射程、燃燒回合…，各帶卡片小圖與說明卡）。
+         */
+        FlashBaseStatOut: {
+            /** Name Zh */
+            name_zh: string;
+            /** Value Zh */
+            value_zh: string;
+            /** Term */
+            term?: string | null;
+            icon?: components["schemas"]["ChangeIconOut"] | null;
+        };
+        /**
          * FlashCategoryOut
          * @description 可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。
          */
@@ -4913,6 +5187,32 @@ export interface components {
              * @default []
              */
             unequip_candidates: string[];
+            /** Unequip Slot */
+            unequip_slot?: string | null;
+            /**
+             * Changes
+             * @default []
+             */
+            changes: components["schemas"]["StatChangeOut"][];
+            /** Headline Zh */
+            headline_zh?: string | null;
+            /**
+             * Say Zh
+             * @default
+             */
+            say_zh: string;
+            /** Tag Term */
+            tag_term?: string | null;
+            /** Note Zh */
+            note_zh?: string | null;
+            /**
+             * Name Source
+             * @default template
+             * @enum {string}
+             */
+            name_source: "llm" | "template";
+            /** Weaker Tag Zh */
+            weaker_tag_zh?: string | null;
         };
         /**
          * FlashPickAction
@@ -5025,6 +5325,16 @@ export interface components {
             insight_per_win: number;
             /** Max Carry */
             max_carry: number;
+        };
+        /**
+         * FlashTermOut
+         * @description 選變體畫面的一張說明卡（FL-1b，移植需求 9.2）：數字已照資料填好。
+         */
+        FlashTermOut: {
+            /** Title Zh */
+            title_zh: string;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * FocusTarget
@@ -5191,6 +5501,8 @@ export interface components {
             item_tags?: {
                 [key: string]: string[];
             };
+            /** Offhands */
+            offhands?: string[] | null;
             /**
              * Legendary Only
              * @default false
@@ -6765,6 +7077,10 @@ export interface components {
             name_zh: string;
             /** Count */
             count: number;
+            /** Color */
+            color?: string | null;
+            /** Rare */
+            rare?: boolean | null;
         };
         /**
          * LetterView
@@ -6947,6 +7263,27 @@ export interface components {
             /** Expires At */
             expires_at: number;
             account: components["schemas"]["AccountView"];
+        };
+        /**
+         * LoneWolfView
+         * @description 角色身上帶獨狼條件的技能與詞條，以及目前的隊伍出城會不會成立（LW-2，06 6.37「提示與標灰」）。
+         *
+         *     ``ok`` 照隊伍面板的成員算（只有主角＝成立）；護送、守點戰開場就在我方的 NPC 也算隊友，
+         *     出城前看不到，所以只寫在提示字裡。
+         */
+        LoneWolfView: {
+            /** Ok */
+            ok: boolean;
+            /**
+             * Skills Zh
+             * @default []
+             */
+            skills_zh: string[];
+            /**
+             * Affixes Zh
+             * @default []
+             */
+            affixes_zh: string[];
         };
         /** @enum {string} */
         LookBeard: "none" | "stubble" | "mustache" | "goatee" | "full";
@@ -7626,7 +7963,7 @@ export interface components {
             slot_zh: string;
         };
         /** @enum {string} */
-        ObjectPanel: "board" | "league" | "pavilion" | "skills" | "workshop";
+        ObjectPanel: "board" | "league" | "pavilion" | "skills" | "workshop" | "wish";
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -7839,6 +8176,99 @@ export interface components {
             detail: string | null;
         };
         /**
+         * PartActionOut
+         * @description 一個「目標有部位」的合法單體動作（普攻或單體技能，PB-1c）與它的部位選項（依部位 ID）。
+         *     用 ``type``＋``skill_id``＋``target_id`` 對到 ``legal_actions`` 裡的動作；選了部位就在那個動作
+         *     帶上 ``target_part`` 送出，沒選＝打本體。
+         */
+        PartActionOut: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "attack" | "use_skill";
+            /** Skill Id */
+            skill_id?: string | null;
+            /** Target Id */
+            target_id: string;
+            /** Options */
+            options: components["schemas"]["PartOptionOut"][];
+        };
+        /**
+         * PartOptionOut
+         * @description 選部位小選單的一列（PB-1c；引擎 :func:`trpg.engine.parts.part_targets`）：能不能選、
+         *     不能的原因。
+         */
+        PartOptionOut: {
+            /** Part Id */
+            part_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Ok */
+            ok: boolean;
+            /** Reason Zh */
+            reason_zh?: string | null;
+        };
+        /** @enum {string} */
+        PartReach: "any" | "behind" | "high_or_far" | "disabled";
+        /**
+         * PartView
+         * @description 頭目的一個部位（PB-1c，唯讀；05 5.12.2 第 12 點）。``hp``／``max_hp`` 在觀看者看不到資訊
+         *     （``UnitView.hidden_info``）時為 ``None``（:mod:`trpg.api.hidden_info`）。``exposed``：目前的
+         *     階段露出（``exposed_in`` 空＝全程）。``break_lines_zh``：「破掉會：……」每一項破壞效果一句
+         *     （API 層由 :func:`trpg.narrative.parts.break_lines_zh` 填入；引擎投影時為空）。
+         */
+        PartView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Hp */
+            hp: number | null;
+            /** Max Hp */
+            max_hp: number | null;
+            /** Broken */
+            broken: boolean;
+            /** Exposed */
+            exposed: boolean;
+            reach: components["schemas"]["PartReach"];
+            /**
+             * Break Lines Zh
+             * @default []
+             */
+            break_lines_zh: string[];
+        };
+        /**
+         * PartyIntroLine
+         * @description 隊友加入當下的一句台詞。
+         */
+        PartyIntroLine: {
+            /** Speaker Zh */
+            speaker_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Region */
+            region?: string | null;
+        };
+        /**
+         * PartyIntroView
+         * @description 還沒播的隊友加入台詞（OB-7，#154；對話框，不另做過場、不給選項）。
+         *
+         *     前端播完送既有的 ``hint_seen {ids: [seen_id]}``，之後就不再出現（「重新顯示提示」清掉
+         *     ``hints_seen`` 後會再出現一次）。已完成開局的角色（``opening`` 為 ``None``）不播。
+         */
+        PartyIntroView: {
+            /** Seen Id */
+            seen_id: string;
+            /** Member */
+            member: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Lines */
+            lines: components["schemas"]["PartyIntroLine"][];
+        };
+        /**
          * PartyMemberView
          * @description 隊伍的一名成員（主角、傭兵或標準隊友）。
          */
@@ -7859,6 +8289,11 @@ export interface components {
             companion?: string | null;
             /** Note Zh */
             note_zh?: string | null;
+            /** Backstory Zh */
+            backstory_zh?: string | null;
+            portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Region */
+            region?: string | null;
         };
         /**
          * PartyView
@@ -7909,6 +8344,7 @@ export interface components {
             free_slots: number;
             /** Companion Zh */
             companion_zh?: string | null;
+            lone_wolf?: components["schemas"]["LoneWolfView"] | null;
         };
         /** @enum {string} */
         PathEventKind: "stood_up" | "surface" | "slip_check" | "trap" | "damage" | "status" | "reaction" | "displaced" | "surface_changed" | "fell" | "deadly" | "downed" | "escaped" | "stopped";
@@ -8048,6 +8484,17 @@ export interface components {
             cost: number;
             /** Options */
             options: components["schemas"]["FlashOptionOut"][];
+            /**
+             * Base Stats
+             * @default []
+             */
+            base_stats: components["schemas"]["FlashBaseStatOut"][];
+            /** Terms */
+            terms?: {
+                [key: string]: components["schemas"]["FlashTermOut"];
+            };
+            /** Weaker Foot Zh */
+            weaker_foot_zh?: string | null;
         };
         /**
          * PendingLootView
@@ -8077,6 +8524,17 @@ export interface components {
             can_replace: boolean;
             /** Place Zh */
             place_zh: string;
+            /**
+             * Source
+             * @default quest
+             * @enum {string}
+             */
+            source: "quest" | "opportunity" | "wish";
+            /**
+             * Refund
+             * @default 0
+             */
+            refund: number;
         };
         /**
          * PendingView
@@ -8198,7 +8656,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "flash" | "opportunity";
+            kind: "flash" | "opportunity" | "wish";
             /** Skill */
             skill?: string | null;
             /** Slot */
@@ -8207,6 +8665,10 @@ export interface components {
             category?: string | null;
             /** Solution */
             solution?: number | null;
+            /** Text */
+            text?: string | null;
+            /** Keywords */
+            keywords?: string[] | null;
         };
         /**
          * PreviewOut
@@ -8310,6 +8772,10 @@ export interface components {
              * @default []
              */
             backstab: string[];
+            /** No Turn */
+            no_turn?: string[] | null;
+            /** No Turn Reason */
+            no_turn_reason?: ("concealed" | "silent") | null;
             landing?: components["schemas"]["XY"] | null;
             /**
              * Followup Tiles
@@ -8322,6 +8788,11 @@ export interface components {
             /** Oath Warning */
             oath_warning?: string | null;
             variant?: components["schemas"]["PreviewVariantOut"] | null;
+            /**
+             * Strikes
+             * @default 1
+             */
+            strikes: number;
         };
         /**
          * PreviewVariantOut
@@ -8399,6 +8870,9 @@ export interface components {
             route_zh?: string | null;
             /** Advice Zh */
             advice_zh?: string | null;
+            giver_portrait?: components["schemas"]["NpcPortrait"] | null;
+            /** Giver Region */
+            giver_region?: string | null;
         };
         /** QuestStepView */
         QuestStepView: {
@@ -8408,6 +8882,10 @@ export interface components {
             done: boolean;
             /** Current */
             current: boolean;
+            /** Place Zh */
+            place_zh?: string | null;
+            /** Task Zh */
+            task_zh?: string | null;
         };
         /**
          * RaceLook
@@ -8830,6 +9308,22 @@ export interface components {
              * @default false
              */
             transform_hint: boolean;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
+            /**
+             * Weaker
+             * @default false
+             */
+            weaker: boolean;
+            /** Weaker Zh */
+            weaker_zh?: string | null;
+            /** Weaker Pick Zh */
+            weaker_pick_zh?: string | null;
         };
         /**
          * RegionStoneView
@@ -9244,15 +9738,31 @@ export interface components {
             status_zh: string;
             /** Phase Zh */
             phase_zh?: string | null;
+            phase?: components["schemas"]["BoardPhaseView"] | null;
+            /**
+             * Phases
+             * @default []
+             */
+            phases: components["schemas"]["BoardPhaseView"][];
             /**
              * Upcoming
              * @default []
              */
             upcoming: components["schemas"]["BoardMilestoneView"][];
+            /**
+             * Milestones
+             * @default []
+             */
+            milestones: components["schemas"]["BoardMilestoneView"][];
             /** Next Refresh At */
             next_refresh_at: number;
             /** Next Refresh Zh */
             next_refresh_zh: string;
+            /**
+             * Refresh Time Zh
+             * @default
+             */
+            refresh_time_zh: string;
         };
         /**
          * SeasonResetReport
@@ -9510,6 +10020,10 @@ export interface components {
             problem_zh: string | null;
             /** Battle Zh */
             battle_zh?: string | null;
+            /** Color */
+            color?: string | null;
+            /** Rare */
+            rare?: boolean | null;
         };
         /**
          * ShopView
@@ -9854,6 +10368,11 @@ export interface components {
             /** Flash Problem Zh */
             flash_problem_zh?: string | null;
             /**
+             * Flash Available
+             * @default true
+             */
+            flash_available: boolean;
+            /**
              * Next Major
              * @default false
              */
@@ -9942,6 +10461,27 @@ export interface components {
             /** Icon Prop */
             icon_prop?: string | null;
             art?: components["schemas"]["IconArt"] | null;
+        };
+        /**
+         * SkillOffOut
+         * @description 主角一招帶「整場固定」條件、本場不成立的技能（LW-2，06 6.37「戰鬥中標灰」；
+         *     :mod:`trpg.api.condition_off`）。技能列與說明卡把它標灰並寫出原因；招照樣能不能用仍看
+         *     ``legal_actions``。
+         */
+        SkillOffOut: {
+            /** Skill Id */
+            skill_id: string;
+            /** Conditions */
+            conditions: string[];
+            /** Whole */
+            whole: boolean;
+            /** Reason Zh */
+            reason_zh: string;
+            /**
+             * Effects
+             * @default []
+             */
+            effects: number[];
         };
         /** @enum {string} */
         SkillRarity: "common" | "rare" | "epic" | "legendary";
@@ -10170,6 +10710,39 @@ export interface components {
             hp: number;
             /** Mana */
             mana: number;
+        };
+        /**
+         * StatChangeOut
+         * @description 閃現選項「前 → 後」的一列（FL-1a）：閃現前與選項套用後技能卡上一個數字的差異。
+         */
+        StatChangeOut: {
+            /** Field */
+            field: string;
+            /** Label Zh */
+            label_zh: string;
+            /** Effect Index */
+            effect_index?: number | null;
+            /** Before */
+            before: string | null;
+            /** After */
+            after: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "better" | "worse" | "cost" | "new";
+            /**
+             * Name Zh
+             * @default
+             */
+            name_zh: string;
+            /** Term */
+            term?: string | null;
+            /** Before Zh */
+            before_zh?: string | null;
+            /** After Zh */
+            after_zh?: string | null;
+            icon?: components["schemas"]["ChangeIconOut"] | null;
         };
         /** StationView */
         StationView: {
@@ -10594,6 +11167,8 @@ export interface components {
             scope_zh: string;
             /** Expires Zh */
             expires_zh: string;
+            /** Left Zh */
+            left_zh?: string | null;
             /** Npc Zh */
             npc_zh?: string | null;
             /** Location Zh */
@@ -10689,6 +11264,16 @@ export interface components {
             /** Target Id */
             target_id: string;
         };
+        /**
+         * TuningApplyIn
+         * @description 寫回時的確認（NW-2a）：要恰好等於驗證回的 ``needs_confirm_budget`` 的招。
+         */
+        TuningApplyIn: {
+            /** Confirm Budget */
+            confirm_budget?: string[];
+            /** Confirm Min Moves */
+            confirm_min_moves?: string[];
+        };
         /** TuningApplyResult */
         TuningApplyResult: {
             /** Commit */
@@ -10702,16 +11287,97 @@ export interface components {
             /** Restart Note Zh */
             restart_note_zh: string;
         };
+        /**
+         * TuningBudgetFlag
+         * @description 草稿裡預算超出合格區間的招（寫回要勾「我確定」；NW-2a D3）。
+         */
+        TuningBudgetFlag: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Ratio Permille */
+            ratio_permille: number;
+            /** Ratio Text */
+            ratio_text: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "over" | "weak";
+            /** Message Zh */
+            message_zh: string;
+        };
+        /** TuningBudgetIn */
+        TuningBudgetIn: {
+            /** Changes */
+            changes?: components["schemas"]["TuningChangeIn"][];
+        };
+        /** TuningBudgetResult */
+        TuningBudgetResult: {
+            /** Skill Id */
+            skill_id: string;
+            /** Ratio Permille */
+            ratio_permille: number | null;
+            /** Ratio Text */
+            ratio_text: string;
+            /** Min Ratio Permille */
+            min_ratio_permille: number;
+            /** Max Ratio Permille */
+            max_ratio_permille: number;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "over" | "weak" | "error";
+            /** Verdict Zh */
+            verdict_zh: string;
+            /** Variants */
+            variants?: components["schemas"]["TuningBudgetVariant"][];
+            /** Segments */
+            segments?: components["schemas"]["TuningBudgetSegment"][];
+            /** Violations */
+            violations?: components["schemas"]["TuningViolation"][];
+            /** Known Exception */
+            known_exception: boolean;
+            /** Field Errors */
+            field_errors?: components["schemas"]["TuningFieldError"][];
+            /** Error Zh */
+            error_zh?: string | null;
+        };
+        /** TuningBudgetSegment */
+        TuningBudgetSegment: {
+            /** Label */
+            label: string;
+            /** Points */
+            points: string;
+        };
+        /** TuningBudgetVariant */
+        TuningBudgetVariant: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Ratio Permille */
+            ratio_permille: number;
+            /** Ratio Text */
+            ratio_text: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "over" | "weak";
+        };
+        /** @enum {string} */
+        TuningCategory: "boss" | "enemy" | "skill" | "ai" | "rules";
         /** TuningChangeIn */
         TuningChangeIn: {
             /** File */
             file: string;
             /** Path */
             path: string;
-            /** Old */
-            old: number | null;
-            /** New */
-            new: number | string | null;
+            old: components["schemas"]["TuningValue"];
+            new: components["schemas"]["TuningValue"];
         };
         /** TuningChangeView */
         TuningChangeView: {
@@ -10719,10 +11385,8 @@ export interface components {
             file: string;
             /** Path */
             path: string;
-            /** Old */
-            old: number | null;
-            /** New */
-            new: number | null;
+            old: components["schemas"]["TuningValue"];
+            new: components["schemas"]["TuningValue"];
             /** Object Id */
             object_id: string;
             /** Label Zh */
@@ -10746,6 +11410,12 @@ export interface components {
              * @default 0
              */
             seconds: number;
+            /** Needs Confirm Budget */
+            needs_confirm_budget?: components["schemas"]["TuningBudgetFlag"][];
+            /** Side Changes */
+            side_changes?: components["schemas"]["TuningSideChange"][];
+            /** Needs Confirm Min Moves */
+            needs_confirm_min_moves?: components["schemas"]["TuningMinMovesFlag"][];
         };
         /** TuningDiff */
         TuningDiff: {
@@ -10755,6 +11425,8 @@ export interface components {
             text: string;
             /** Errors */
             errors?: components["schemas"]["TuningFieldError"][];
+            /** Side Changes */
+            side_changes?: components["schemas"]["TuningSideChange"][];
         };
         /** TuningDiffRow */
         TuningDiffRow: {
@@ -10768,10 +11440,8 @@ export interface components {
             path: string;
             /** Label Zh */
             label_zh: string;
-            /** Old */
-            old: number | null;
-            /** New */
-            new: number | null;
+            old: components["schemas"]["TuningValue"];
+            new: components["schemas"]["TuningValue"];
         };
         /** TuningDraftIn */
         TuningDraftIn: {
@@ -10806,18 +11476,113 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "int" | "permille";
-            /** Value */
-            value: number | null;
+            kind: "int" | "permille" | "dice" | "range" | "skill_ids";
+            value: components["schemas"]["TuningValue"];
             /** Default Zh */
             default_zh?: string | null;
             /** Hint Min */
             hint_min?: number | null;
             /** Hint Max */
             hint_max?: number | null;
+            /** Limit Min */
+            limit_min?: number | null;
+            /** Limit Max */
+            limit_max?: number | null;
+            /** Readonly Zh */
+            readonly_zh?: string | null;
             /** Note Zh */
             note_zh: string;
+            /** Group Zh */
+            group_zh?: string | null;
         };
+        /**
+         * TuningGroupFilter
+         * @description 分組改的篩選（全部條件都要符合；空的條件不篩）。
+         */
+        TuningGroupFilter: {
+            /** Tier */
+            tier?: number[];
+            /** Category */
+            category?: string[];
+            /** Weapon Req */
+            weapon_req?: string[];
+            /** Ap Cost */
+            ap_cost?: number[];
+            /** Kind */
+            kind?: string[];
+            /** Enemy Only */
+            enemy_only?: boolean | null;
+            /** Has Condition */
+            has_condition?: boolean | null;
+            /** Ranged */
+            ranged?: boolean | null;
+            /** Shape */
+            shape?: string[];
+            /** Tags */
+            tags?: string[];
+            /** Single Damage */
+            single_damage?: boolean | null;
+        };
+        /** TuningGroupIn */
+        TuningGroupIn: {
+            /** Skills */
+            skills?: string[];
+            filter?: components["schemas"]["TuningGroupFilter"] | null;
+            target: components["schemas"]["TuningGroupTarget"];
+            op: components["schemas"]["TuningGroupOp"];
+        };
+        /** TuningGroupOp */
+        TuningGroupOp: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "set" | "add" | "scale_permille" | "ladder";
+            /** Value */
+            value: number;
+        };
+        /** TuningGroupPreset */
+        TuningGroupPreset: {
+            /** Key */
+            key: string;
+            /** Label Zh */
+            label_zh: string;
+            filter: components["schemas"]["TuningGroupFilter"];
+        };
+        /** TuningGroupPreview */
+        TuningGroupPreview: {
+            /** Rows */
+            rows: components["schemas"]["TuningGroupRow"][];
+            /** Count */
+            count: number;
+            /** Max Skills */
+            max_skills: number;
+        };
+        /** TuningGroupRow */
+        TuningGroupRow: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Changes */
+            changes: components["schemas"]["TuningChangeIn"][];
+            /** Before Ratio Permille */
+            before_ratio_permille: number | null;
+            /** After Ratio Permille */
+            after_ratio_permille: number | null;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "over" | "weak" | "error" | "skipped";
+            /** Skipped Reason Zh */
+            skipped_reason_zh?: string | null;
+            /** Violations */
+            violations?: components["schemas"]["TuningViolation"][];
+            ratio?: components["schemas"]["TuningRatioSummary"] | null;
+        };
+        /** @enum {string} */
+        TuningGroupTarget: "ap_cost" | "cost.stamina" | "cost.mana" | "cost.cooldown" | "shape.range" | "damage_all" | "damage_base" | "damage_conditional";
         /** TuningHistoryEntry */
         TuningHistoryEntry: {
             /** Commit */
@@ -10827,6 +11592,61 @@ export interface components {
             /** Date */
             date: string;
         };
+        /**
+         * TuningLadders
+         * @description 分組改與骰子欄位「±1 級」用的階梯（``skill_composer.yaml``，由弱到強；NW-2b B2）。
+         */
+        TuningLadders: {
+            /** Dice */
+            dice: string[];
+            /** Multipliers */
+            multipliers: number[];
+        };
+        /** TuningMapSide */
+        TuningMapSide: {
+            /** N */
+            n: number;
+            /** Wins */
+            wins: number;
+            /** Rounds */
+            rounds: number;
+            /** Allies */
+            allies: number;
+            /** Downed */
+            downed: number;
+            /** Small */
+            small: boolean;
+            /** Skills */
+            skills: components["schemas"]["TuningSkillRate"][];
+            /** Maps */
+            maps: components["schemas"]["TuningSimBuildResult"][];
+        };
+        /** TuningMapSimResult */
+        TuningMapSimResult: {
+            /** Maps */
+            maps: string[];
+            /** Battles */
+            battles: number;
+            before: components["schemas"]["TuningMapSide"];
+            after: components["schemas"]["TuningMapSide"];
+            flips: components["schemas"]["TuningSimFlips"];
+            /** Before Cached */
+            before_cached: boolean;
+        };
+        /**
+         * TuningMinMovesFlag
+         * @description 招式組改完低於 #149 的招數下限的單位（寫回要勾「我確定」；NW-2a R1，使用者「照建議」）。
+         */
+        TuningMinMovesFlag: {
+            /** Unit Id */
+            unit_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Shortfalls */
+            shortfalls: string[];
+            /** Message Zh */
+            message_zh: string;
+        };
         /** TuningObjectDetail */
         TuningObjectDetail: {
             /** Kind */
@@ -10835,17 +11655,17 @@ export interface components {
             id: string;
             /** Name Zh */
             name_zh: string;
-            /**
-             * Category
-             * @enum {string}
-             */
-            category: "boss" | "enemy";
+            category: components["schemas"]["TuningCategory"];
             /** File */
             file: string;
             /** Fields */
             fields: components["schemas"]["TuningFieldView"][];
             /** Notes Zh */
             notes_zh?: string[];
+            skill?: components["schemas"]["TuningSkillFacets"] | null;
+            /** Used By */
+            used_by?: components["schemas"]["TuningSkillUser"][];
+            unit_skills?: components["schemas"]["TuningUnitSkills"] | null;
         };
         /** TuningObjectSummary */
         TuningObjectSummary: {
@@ -10855,13 +11675,174 @@ export interface components {
             id: string;
             /** Name Zh */
             name_zh: string;
-            /**
-             * Category
-             * @enum {string}
-             */
-            category: "boss" | "enemy";
+            category: components["schemas"]["TuningCategory"];
             /** File */
             file: string;
+            skill?: components["schemas"]["TuningSkillFacets"] | null;
+        };
+        /**
+         * TuningRatioBaseline
+         * @description 匯入的基準（``t1_skill_ratio.py run`` 的 JSON；T12）。
+         */
+        TuningRatioBaseline: {
+            /** Skills */
+            skills: number;
+            /** Rows */
+            rows: number;
+            /** Seeds */
+            seeds: number;
+            /** Same Content */
+            same_content: boolean;
+            /** Note Zh */
+            note_zh: string;
+        };
+        /**
+         * TuningRatioLine
+         * @description 一條參考線（D4：只當參考，不擋寫回）。
+         */
+        TuningRatioLine: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "plain" | "on" | "off" | "arrow";
+            /** Label Zh */
+            label_zh: string;
+            /** Threshold */
+            threshold: number;
+            /** Value */
+            value: number | null;
+            /** Ok */
+            ok: boolean | null;
+            /** Tentative */
+            tentative: boolean;
+        };
+        /**
+         * TuningRatioPlan
+         * @description 比值工作的規模（T11）：組數＝Σ（招 × 可用武器 × 情境數）。
+         */
+        TuningRatioPlan: {
+            /** Requested */
+            requested: string[];
+            /** Skills */
+            skills: string[];
+            /** Skipped */
+            skipped: components["schemas"]["TuningRatioSkip"][];
+            /** Jobs */
+            jobs: number;
+            /** Groups */
+            groups: number;
+            /** Seeds */
+            seeds: number;
+            /** Work */
+            work: number;
+            /** Max Work */
+            max_work: number;
+            /** Seconds */
+            seconds: number;
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /** TuningRatioPlanIn */
+        TuningRatioPlanIn: {
+            /** Skills */
+            skills?: string[];
+            /**
+             * Seeds
+             * @default 50
+             */
+            seeds: number;
+        };
+        /** TuningRatioRow */
+        TuningRatioRow: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            before: components["schemas"]["TuningRatioSummary"] | null;
+            after: components["schemas"]["TuningRatioSummary"] | null;
+        };
+        /** TuningRatioSimResult */
+        TuningRatioSimResult: {
+            /** Skills */
+            skills: components["schemas"]["TuningRatioRow"][];
+            /** Skipped */
+            skipped?: components["schemas"]["TuningRatioSkip"][];
+            /** Seeds */
+            seeds: number;
+            /** Groups */
+            groups: number;
+            /** Before Cached */
+            before_cached: boolean;
+            /**
+             * Same Content
+             * @default false
+             */
+            same_content: boolean;
+            /** Odd */
+            odd?: string[];
+        };
+        /** TuningRatioSkip */
+        TuningRatioSkip: {
+            /** Skill Id */
+            skill_id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Reason Zh */
+            reason_zh: string;
+        };
+        /**
+         * TuningRatioSummary
+         * @description 一招的比值摘要（同 ``t1_skill_ratio.py`` 摘要表的欄位）與參考線判定。
+         */
+        TuningRatioSummary: {
+            /** Plain */
+            plain: string;
+            /** Plain Tot */
+            plain_tot: string;
+            /** On */
+            on: string;
+            /** On Tot */
+            on_tot: string;
+            /** Dual */
+            dual: string;
+            /** Bound */
+            bound: string;
+            /** Category Zh */
+            category_zh: string;
+            /** Lines */
+            lines: components["schemas"]["TuningRatioLine"][];
+            /** Seeds */
+            seeds: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "workshop" | "baseline";
+            /** Source Zh */
+            source_zh: string;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
+        };
+        /**
+         * TuningSideChange
+         * @description 寫回時由後端產生的附帶改動（使用者不能直接改；NW-2a T5）。
+         */
+        TuningSideChange: {
+            /** File */
+            file: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "exception_add" | "exception_remove";
+            /** Skill Id */
+            skill_id: string;
+            /** Text Zh */
+            text_zh: string;
         };
         /** TuningSimBoss */
         TuningSimBoss: {
@@ -10895,6 +11876,16 @@ export interface components {
             /** Lost To Won */
             lost_to_won: number;
         };
+        /**
+         * TuningSimInject
+         * @description 「裝到 build」（NW-2a T9）：只在模擬的內容庫裡把這招裝到該 build 英雄身上，不寫檔。
+         */
+        TuningSimInject: {
+            /** Build */
+            build: string;
+            /** Skill */
+            skill: string;
+        };
         /** TuningSimJob */
         TuningSimJob: {
             /** Job Id */
@@ -10915,6 +11906,15 @@ export interface components {
             /** Error Zh */
             error_zh?: string | null;
             result?: components["schemas"]["TuningSimResult"] | null;
+            map_result?: components["schemas"]["TuningMapSimResult"] | null;
+            ratio_result?: components["schemas"]["TuningRatioSimResult"] | null;
+        };
+        /** TuningSimMap */
+        TuningSimMap: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
         };
         /** TuningSimOptions */
         TuningSimOptions: {
@@ -10930,6 +11930,33 @@ export interface components {
             workers: number;
             /** Seconds Per Battle */
             seconds_per_battle: number;
+            /** Maps */
+            maps?: components["schemas"]["TuningSimMap"][];
+            /**
+             * Map Default Seeds
+             * @default 24
+             */
+            map_default_seeds: number;
+            /**
+             * Map Seconds Per Battle
+             * @default 0.8
+             */
+            map_seconds_per_battle: number;
+            /**
+             * Ratio Default Seeds
+             * @default 50
+             */
+            ratio_default_seeds: number;
+            /**
+             * Ratio Max Work
+             * @default 40000
+             */
+            ratio_max_work: number;
+            /**
+             * Ratio Battles Per Second
+             * @default 450
+             */
+            ratio_battles_per_second: number;
         };
         /** TuningSimPhase */
         TuningSimPhase: {
@@ -10951,8 +11978,14 @@ export interface components {
              * @default current
              */
             draft: string;
+            /**
+             * Scenario
+             * @default boss
+             * @enum {string}
+             */
+            scenario: "boss" | "map" | "ratio";
             /** Boss */
-            boss: string;
+            boss?: string | null;
             /** Builds */
             builds?: string[] | null;
             /**
@@ -10960,6 +11993,16 @@ export interface components {
              * @default 3
              */
             seeds: number;
+            /** Maps */
+            maps?: string[] | null;
+            /** Allies */
+            allies?: string[] | null;
+            /** Probe */
+            probe?: string[];
+            /** Inject */
+            inject?: components["schemas"]["TuningSimInject"][];
+            /** Skills */
+            skills?: string[];
         };
         /** TuningSimResult */
         TuningSimResult: {
@@ -11003,6 +12046,93 @@ export interface components {
             /** Small */
             small: boolean;
         };
+        /**
+         * TuningSkillFacets
+         * @description 技能清單的篩選欄位（NW-2a A6）。
+         */
+        TuningSkillFacets: {
+            /** Tier */
+            tier: number;
+            /** Category */
+            category: string;
+            /** Weapon Req */
+            weapon_req: string;
+            /** Ap Cost */
+            ap_cost: number | null;
+            /** Kind */
+            kind: string;
+            /** Enemy Only */
+            enemy_only: boolean;
+            /** Has Condition */
+            has_condition: boolean;
+            /** Shape */
+            shape: string;
+            /** Ranged */
+            ranged: boolean;
+            /** Tags */
+            tags: string[];
+            /**
+             * Single Damage
+             * @default false
+             */
+            single_damage: boolean;
+            /** Budget Ratio Permille */
+            budget_ratio_permille?: number | null;
+        };
+        /**
+         * TuningSkillRate
+         * @description 單招施放率：分子＝施放次數，分母＝裝了這招的單位的行動回合數（T10）。
+         */
+        TuningSkillRate: {
+            /** Skill */
+            skill: string;
+            /**
+             * Team
+             * @enum {string}
+             */
+            team: "ally" | "enemy";
+            /** Casts */
+            casts: number;
+            /** Turns */
+            turns: number;
+            /** Battles */
+            battles: number;
+            /** Small */
+            small: boolean;
+        };
+        /**
+         * TuningSkillRatio
+         * @description 技能表單的比值區：目前值、上次量測（不同內容）的值。
+         */
+        TuningSkillRatio: {
+            /** Skill Id */
+            skill_id: string;
+            /** Applicable */
+            applicable: boolean;
+            /** Reason Zh */
+            reason_zh?: string | null;
+            current?: components["schemas"]["TuningRatioSummary"] | null;
+            previous?: components["schemas"]["TuningRatioSummary"] | null;
+        };
+        /**
+         * TuningSkillUser
+         * @description 裝了某招的單位或模擬用 build。
+         */
+        TuningSkillUser: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "unit" | "build";
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Where Zh */
+            where_zh: string[];
+            /** Tier */
+            tier?: number | null;
+        };
         /** TuningStatus */
         TuningStatus: {
             /** Can Write */
@@ -11022,6 +12152,28 @@ export interface components {
             drafts: string[];
             /** Sim Running */
             sim_running?: string | null;
+        };
+        /**
+         * TuningUnitSkills
+         * @description 招式組編輯器用（NW-2b B5）：單位的武器、技能欄位上限、和這個單位不相容的招。
+         */
+        TuningUnitSkills: {
+            /** Weapon Zh */
+            weapon_zh: string;
+            /** Slots Zh */
+            slots_zh: string;
+            /** Problems */
+            problems?: {
+                [key: string]: string;
+            };
+        };
+        TuningValue: number | string | string[] | null;
+        /** TuningViolation */
+        TuningViolation: {
+            /** Rule */
+            rule: string;
+            /** Message Zh */
+            message_zh: string;
         };
         /** UnitView */
         UnitView: {
@@ -11208,6 +12360,8 @@ export interface components {
             form_cooldowns: components["schemas"]["FormCooldownView"][];
             race?: components["schemas"]["RaceView"] | null;
             boss_phase?: components["schemas"]["BossPhaseView"] | null;
+            /** Parts */
+            parts?: components["schemas"]["PartView"][] | null;
         };
         /** UpcomingEventOut */
         UpcomingEventOut: {
@@ -11334,6 +12488,8 @@ export interface components {
             copy_cast?: components["schemas"]["UseSkill-Input"] | null;
             form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
+            /** Target Part */
+            target_part?: string | null;
         };
         /**
          * UseSkill
@@ -11381,6 +12537,8 @@ export interface components {
             copy_cast?: components["schemas"]["UseSkill-Output"] | null;
             form_element?: components["schemas"]["Element"] | null;
             followup_target?: components["schemas"]["FollowupTarget"] | null;
+            /** Target Part */
+            target_part?: string | null;
         };
         /**
          * UseTeleportStoneAction
@@ -11526,6 +12684,74 @@ export interface components {
             weapon_class: string;
             /** Range */
             range: number;
+        };
+        /**
+         * WishAction
+         * @description 在主城的許願池許願（Phase WP-1；07 7.6、#88）：``text``（一句話的願望，
+         *     LLM 對到關鍵字並提議完整
+         *     技能；只進 prompt 的 ``<player_input>``）與 ``keywords``（從選單挑 1～2 個關鍵字，不呼叫 LLM）
+         *     剛好給一個。字數與個數的上限在世界規則（``rules.yaml`` 的 ``wish``），由規則檢查。
+         */
+        WishAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "wish";
+            /** Text */
+            text?: string | null;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+        };
+        /**
+         * WishMenuItemView
+         * @description 選單的一個關鍵字（「改用選單」挑 1～2 個）。
+         */
+        WishMenuItemView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+        };
+        /**
+         * WishView
+         * @description ``WorldView.wish``（WP-2；07 7.6、#88）：主城許願池的面板資料。人在主城才有，其他 ``None``。
+         *     能不能許與原因和 ``wish`` 動作用同一個函式（:func:`trpg.world.wish.wish_problem`），所以畫面的
+         *     原因句和送出被拒的那一句相同。
+         */
+        WishView: {
+            /** Title Zh */
+            title_zh: string;
+            speaker?: components["schemas"]["RangeSpeakerView"] | null;
+            /** Line Zh */
+            line_zh?: string | null;
+            /** Cost */
+            cost: number;
+            /** Refund */
+            refund: number;
+            /** Coins */
+            coins: number;
+            /** Left */
+            left: number;
+            /** Per Week */
+            per_week: number;
+            /** Available */
+            available: boolean;
+            /** Blocked Zh */
+            blocked_zh?: string | null;
+            /** Llm */
+            llm: boolean;
+            /** Text Max Chars */
+            text_max_chars: number;
+            /** Max Keywords */
+            max_keywords: number;
+            /** Menu */
+            menu: components["schemas"]["WishMenuItemView"][];
         };
         /**
          * WorkshopArena
@@ -11706,7 +12932,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["DuelChoiceAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"] | components["schemas"]["WishAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -12006,6 +13232,8 @@ export interface components {
                 [key: string]: string;
             };
             workshop?: components["schemas"]["WorkshopView"] | null;
+            party_intro?: components["schemas"]["PartyIntroView"] | null;
+            wish?: components["schemas"]["WishView"] | null;
         };
         XY: [
             number,
@@ -14655,6 +15883,233 @@ export interface operations {
             };
         };
     };
+    post_group_preview_api_tuning_skills_group_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TuningGroupIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningGroupPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_presets_api_tuning_skills_presets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningGroupPreset"][];
+                };
+            };
+        };
+    };
+    get_ladders_api_tuning_skills_ladders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningLadders"];
+                };
+            };
+        };
+    };
+    post_ratio_plan_api_tuning_skills_ratio_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TuningRatioPlanIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRatioPlan"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ratio_baseline_api_tuning_skills_ratio_baseline_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRatioBaseline"] | null;
+                };
+            };
+        };
+    };
+    post_ratio_baseline_api_tuning_skills_ratio_baseline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningRatioBaseline"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_skill_ratio_api_tuning_skills__skill_id__ratio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningSkillRatio"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_budget_api_tuning_skills__skill_id__budget_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                skill_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TuningBudgetIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TuningBudgetResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_object_api_tuning_objects__kind___object_id__get: {
         parameters: {
             query?: never;
@@ -14889,7 +16344,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TuningApplyIn"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

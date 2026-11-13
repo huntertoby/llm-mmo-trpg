@@ -64,6 +64,7 @@ from trpg.skillgen.candidates import (
     _ranked_held,
     _weighted_order,
     behavior_weights,
+    new_direction_keywords,
     region_first,
     route_rank,
 )
@@ -338,7 +339,7 @@ def generate_whiteboard_candidates(
         raise ValueError(f"未知的關鍵字：{', '.join(unknown)}")
     behavior = behavior_weights(library, request.behavior)
     held = _ranked_held(request.keyword_counts, order, behavior)
-    unheld = [k for k in order if k not in held]
+    unheld = new_direction_keywords(library, held)
     maker = _Maker(library, request, tries)
     deepen_count, bridge_count, new_count = request.mix
     found: list[Candidate | None] = []

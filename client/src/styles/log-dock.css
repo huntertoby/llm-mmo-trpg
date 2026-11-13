@@ -69,6 +69,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* UI-1：紀錄被主角卡或選取面板壓矮時，縮的是清單，不是圖示 */
+  flex-shrink: 0;
   width: 30px;
   height: 28px;
   padding: 0;

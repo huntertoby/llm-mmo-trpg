@@ -375,17 +375,9 @@
   margin-left: 6px;
 }
 
+/* PNL-4：選項列 A（兩欄格子＋右下放棄小鈕）的版面在 world/story.css（.world-sol-*） */
 .world-event-solutions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   margin: 6px 0 4px;
-}
-
-.world-solution-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .world-situation {
@@ -574,6 +566,12 @@
 .world-party-members {
   margin: 4px 0;
   padding-left: 18px;
+}
+
+/* OB-8（#154）：名字那一列下面的一行來歷 */
+.world-party-backstory {
+  margin: 1px 0 3px;
+  line-height: 1.35;
 }
 
 .world-hire {
@@ -850,4 +848,46 @@
   100% {
     box-shadow: 0 0 0 0 transparent;
   }
+}
+
+/* RG-3（#162）：精英要求一對一的對話框（`WorldPanel.DuelDialog`）：接受、拒絕兩顆按鈕一樣大 */
+.duel-dialog {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(232, 187, 72, 0.7);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.duel-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.duel-title + .duel-art {
+  margin-top: 0; /* 標題已有下距 4：插圖上方共 4 */
+}
+.duel-dialog p {
+  margin: 0 0 8px;
+}
+/* RG-4（RG樣張.md 9.8 第 7 條）：兩顆都是一般按鈕、同一個 min-width 一樣大，靠右（同 modal-buttons），接受在左 */
+.duel-choices {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.duel-choices > .duel-choice {
+  min-width: 96px;
+}
+/* 打開時焦點給這一段本身（tabIndex −1），不畫焦點框 */
+.duel-dialog:focus {
+  outline: none;
+}
+/* RG-4：單挑插圖 320×120（標題下面、置中、上 4 下 8）；窄的卡片裡等比縮小，不溢出 */
+.duel-art {
+  display: block;
+  width: 320px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 320 / 120;
+  margin: 4px auto 8px;
 }

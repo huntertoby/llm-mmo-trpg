@@ -242,6 +242,7 @@ _FIELD_ZH: dict[str, str] = {
     "stacks": "層數",
     "stamina": "耐力",
     "status": "狀態",
+    "strike_other": "召出後反咬",
     "weapon_skills": "武器技",
     "surface": "表面",
     "tag": "標籤",

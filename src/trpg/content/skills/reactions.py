@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
@@ -26,9 +26,26 @@ class ReactionSpec(ContentModel):
       相鄰格之後（強制位移、傳送、跳躍、互換不算；本來就相鄰的移動不算「進入」）。
     - ``ally_targeted``（3D-3）：與持有者相鄰的友方被敵方單體技能或普攻選為目標、**命中判定之前**；
       另一方是攻擊者。
+    - ``ally_hit_near``（TF-1，#159 援手）：與持有者相鄰的友方被敵人的攻擊（普攻或技能）命中、
+      **傷害結算之後** 仍存活；另一方是那名友方。必須搭配 ``aid: true``。
+    - ``aid``（TF-1，#159 援手）：反應的對象改成被瞄準／受擊的那名友方（形狀 ``single`` 時作用在他
+      身上），只能搭配 :data:`AID_EVENTS`。``false`` 不輸出。
     """
 
     event: ReactionEvent
+    aid: bool = Field(default=False, exclude_if=lambda v: not v)
+
+    @model_validator(mode="after")
+    def _check_aid(self) -> ReactionSpec:
+        if self.aid and self.event not in AID_EVENTS:
+            raise ValueError(f"aid 只能搭配 {'、'.join(AID_EVENTS)}，收到 {self.event}")
+        if self.event == "ally_hit_near" and not self.aid:
+            raise ValueError("ally_hit_near 必須搭配 aid: true（反應作用在受擊的友方）")
+        return self
+
+
+AID_EVENTS: tuple[str, ...] = ("ally_targeted", "ally_hit_near")
+"""可以搭配 ``aid: true`` 的反應事件（TF-1）。"""
 
 
 class TrapSpec(ContentModel):

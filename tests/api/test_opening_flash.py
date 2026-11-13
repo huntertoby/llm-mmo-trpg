@@ -44,6 +44,7 @@ from trpg.world.step import new_character, world_step
 type MakeChar = Callable[..., CharacterState]
 
 BLOCKED = "到 4 級才能閃現"
+FLASHABLE = "skill_frost_shackle"  # FL-1a：hero.skills[0] 戰歌已沒有閃現選項（蓄力不再只多冷卻）
 
 
 @pytest.fixture
@@ -62,7 +63,8 @@ def _used(char: CharacterState, insight: int = 3) -> CharacterState:
 
 
 def _flash(library: ContentLibrary, char: CharacterState) -> CharacterState:
-    action = FlashAction(skill=char.hero.skills[0])
+    skills = char.hero.skills
+    action = FlashAction(skill=FLASHABLE if FLASHABLE in skills else skills[0])
     result = world_step(library, make_world(), char, action, NOON)
     assert any(isinstance(e, FlashOfferedEvent) for e in result.events)
     return result.char

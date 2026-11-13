@@ -165,7 +165,7 @@ def test_old_save_loads_and_is_placed_at_entry(calm_field: ContentLibrary) -> No
     data["format"] = "trpg-char/1"
     del data["field"], data["teleport_stones"]
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert old.format == "trpg-char/13"
+    assert old.format == "trpg-char/15"
     assert old.field is None
     char, events = _step(calm_field, old, _walk((12, 9)))
     assert char.field == FieldPos(map="mist_ferry", x=12, y=9, facing="e")
@@ -558,5 +558,5 @@ def test_old_world_log_is_stale() -> None:
     assert log.stale_zh == "規則已變、不能重播"
     again = read_log(dumps_log(log.entries, stale_through=log.stale_through))
     assert again == log
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/9"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/10"
     assert read_log('{"format": "trpg-wlog/1"}\n').stale_through is None

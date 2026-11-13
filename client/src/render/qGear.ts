@@ -1,8 +1,10 @@
 // Q 版身體、腿、衣服、披風、盾、背掛、腰掛、頸飾、紋章（QK-1 第 2、7、9 項；照 docs/art/sample/qDoll.js，四方向見 docs/art/部件四方向清單.md）。
 // 側面一律用「朝東」的座標畫（朝西由外層鏡像），近側、遠側照真人互換（S.WEST）。
 import type { Ctx } from "./artDraw";
-import { colors, fill, mix, pz, Q_OUT, rotAt, rr, S, TAU, type QItem, type QLook, type QView } from "./qCore";
+import { colors, fill, isTowerLike, mix, pz, Q_OUT, rotAt, rr, S, TAU, type QItem, type QLook, type QView } from "./qCore";
 import { bodyPattern, drawLegForm, isNeckForm } from "./qGearForms";
+import { shellBack, shellSide } from "./qMoltenShell";
+import { sectShieldBack, sectShieldSide } from "./qSectShield";
 import { pdHeld } from "./qWeapons";
 
 // ---------- 腿：4×8 的方塊，拆成大腿（髖轉）＋小腿（膝轉）＋腳 ----------
@@ -240,10 +242,12 @@ export function shieldFront(ctx: Ctx, it: QItem, x: number): void {
 }
 export function shieldSide(ctx: Ctx, it: QItem): void {
   const [c, d] = colors(it);
-  const tower = it.kind === "shield_kite" && it.form === "tower";
+  const tower = isTowerLike(it);
   ctx.save();
   ctx.translate(8.6, -13.5 - pz("shieldUp"));
-  if (it.kind === "shield_round") {
+  if (it.form === "sect_great" && tower) sectShieldSide(ctx, it);
+  else if (it.form === "molten_shell" && tower) shellSide(ctx, it);
+  else if (it.kind === "shield_round") {
     fill(ctx, d, () => ctx.ellipse(0, 0, 2.9, 7.5, 0, 0, TAU));
     fill(ctx, c, () => ctx.ellipse(0.6, 0, 2.1, 6.2, 0, 0, TAU));
     ctx.strokeStyle = RIM;
@@ -288,7 +292,11 @@ export function shieldBack(ctx: Ctx, it: QItem, x: number, dy = 0): void {
     ctx.beginPath();
     ctx.arc(0, 0, 7.1, 0, TAU);
     ctx.stroke();
-  } else if (it.form === "tower") {
+  } else if (it.form === "sect_great" && isTowerLike(it)) {
+    sectShieldBack(ctx, it);
+  } else if (it.form === "molten_shell" && isTowerLike(it)) {
+    shellBack(ctx, it);
+  } else if (isTowerLike(it)) {
     fill(ctx, d, () => rr(ctx, -7, -6, 14, 22, 1.5));
     fill(ctx, wood, () => rr(ctx, -5.6, -4.6, 11.2, 19.2, 1));
   } else {

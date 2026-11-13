@@ -29,7 +29,7 @@ from trpg.api.world_economy_schemas import (
 )
 from trpg.api.world_field_schemas import FieldHeroView, FieldView
 from trpg.api.world_mail_schemas import MailBadgeView
-from trpg.api.world_party_schemas import MyShadowView, PartyView
+from trpg.api.world_party_schemas import MyShadowView, PartyIntroView, PartyView
 from trpg.api.world_range_schemas import RangeView, WorkshopView
 from trpg.api.world_story_schemas import (
     DialogLineView,
@@ -41,6 +41,7 @@ from trpg.api.world_story_schemas import (
     SituationResultView,
     ThreadView,
 )
+from trpg.api.world_wish_schemas import WishView
 from trpg.content.battle import LookChoice
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute, Team
@@ -51,6 +52,7 @@ from trpg.world.actions import (
     ChangeLookAction,
     ChangeRaceAction,
     DissolveAction,
+    DuelChoiceAction,
     EventSolveAction,
     FlashAction,
     FlashPickAction,
@@ -75,6 +77,7 @@ from trpg.world.actions import (
     TavernAction,
     TeleportAction,
     TravelAction,
+    WishAction,
 )
 from trpg.world.crafting_actions import (
     CraftAction,
@@ -140,6 +143,7 @@ type WorldActionRequest = Annotated[
     TravelAction
     | CampAction
     | RetreatAction
+    | DuelChoiceAction  # RG-2
     | RestAction
     | LoadoutAction
     | TeleportAction
@@ -184,7 +188,8 @@ type WorldActionRequest = Annotated[
     | WalkAction  # 6B-2
     | UseTeleportStoneAction
     | SneakAction  # 6C-5
-    | UseFieldObjectAction,
+    | UseFieldObjectAction
+    | WishAction,  # WP-2（#88 許願池）
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -469,6 +474,12 @@ class EncounterView(_ApiModel):
     """就地開打切出的戰場（6C-2）；``None``＝用地點原本的戰鬥地圖模板。"""
     battlefield_fallback_zh: str | None = None
     """碰到地圖上的敵人卻改用模板的原因（6C-2，例「站位放不下」）。"""
+    duel: Literal["offered", "accepted", "declined"] | None = None
+    """精英單挑（RG-2，#162）：``offered``＝排最前的精英要求一對一（送 ``duel_choice``；還沒選就
+    開打＝拒絕），``accepted``＝一對一（``enemies`` 只有精英本人、我方只有主角），``declined``＝照
+    原本全隊打。兩邊獎勵一樣。``None``＝沒有提出單挑。"""
+    duel_zh: str | None = None
+    """單挑的說明句（例「狂暴的霧狼要求一對一：接受＝只有你和牠，拒絕＝照原本全隊打；兩邊獎勵一樣」）。"""
 
 
 class WorldClockView(_ApiModel):
@@ -739,6 +750,11 @@ class WorldView(_ApiModel):
     ``dissolve``。已完成開局＝空。"""
     workshop: WorkshopView | None = None
     """主城工坊師傅的選單（PR-2a，#147）：人在主城、內容有靶場與師傅選單時才有；其他 ``None``。"""
+    party_intro: PartyIntroView | None = None
+    """還沒播的隊友加入台詞（OB-7，#154；:func:`trpg.api.world_party_intro.party_intro`）：開局還沒
+    結束時，賽倫在確定出發後、阿岳在新手第 1 步打完後各一段；戰鬥中、沒有時 ``None``。"""
+    wish: WishView | None = None
+    """主城許願池的面板資料（WP-2，#88；:func:`trpg.api.world_wish_view.wish_view`）：人在主城才有。"""
 
 
 class WorldBattleResponse(_ApiModel):

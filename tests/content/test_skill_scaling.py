@@ -44,7 +44,14 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ 6F-4c 巨劍、弓的 4 招起始觸發招 ＋ 6F-4g 單手劍的 1 招（倒地追獵，6F-4h 改成追印絆擊）
     # ＋ CB-2a #149 的 4 招（黏液、俯衝灑火塵、毒牙頂撞、寒羽霜箭，只給敵人）
     # ＋ CB-2e #149 的收霧斬（只給敵人）
-    assert len(BUILTIN) == 403
+    # ＋ LW-1 的 3 招獨狼示範（孤狼撲擊、無人掩護、獨行者）
+    # ＋ RG-1 的 3 招瞄準預告（鶴唳穿雲、定身符、熔岩彈，只給敵人）
+    # ＋ RG-2 的狂怒劈砍（荒原狂戰士，只給敵人）
+    # ＋ KW-2 的 16 招層數示範與利用者（連擊、怒氣、專注、氣）
+    assert (
+        len(BUILTIN) == 429
+    )  # BAL-21c 加 skill_rift_flicker；LW-1 加 3 招；BS-1 加 2 招；RG-1 加 3 招；RG-2 加 1 招
+    # KW-2 加 16 招
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 

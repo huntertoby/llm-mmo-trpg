@@ -58,6 +58,7 @@ TEN_KEYWORDS = {
     "concealed",
     "summon",
 }
+STACK_KEYWORDS = {"combo_point", "fury", "focus", "ki"}  # KW-1／KW-2 的層數關鍵字（#161）
 
 
 def summoned(
@@ -87,10 +88,12 @@ def test_the_infusion_table_covers_all_ten_keywords() -> None:
     table = library().ruleset.core.summon_infusions
     assert set(table) == TEN_KEYWORDS
     # 3-53：中毒關鍵字沒有召喚灌注（06 6.27.1 沒有要求）；其餘十個都有。
-    assert {k.id for k in library().ruleset.keywords.keywords} - {
-        "poisoned",
-        "form",
-    } == TEN_KEYWORDS
+    # KW-2：四個層數關鍵字也沒有召喚灌注（06 6.29.2 灌注表只列 10 個、6.32.1 沒有要求；
+    # 保守照中毒，待 PM）。
+    keywords = library().ruleset.keywords
+    assert set(keywords.ids()) == set(keywords.start_ids())  # 16 個都檢查（KW-1 只看開局的 12 個）
+    assert set(keywords.ids()) - {"poisoned", "form"} - STACK_KEYWORDS == TEN_KEYWORDS
+    assert not STACK_KEYWORDS & set(table)
 
 
 def test_wet_creates_water_on_the_target_tile() -> None:

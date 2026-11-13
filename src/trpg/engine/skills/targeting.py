@@ -90,13 +90,14 @@ from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.stack_queries import required_stack
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Element, ObjectId, Pos, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "DamageParameters",
     "PaidCost",
     "ResolvedEffect",
     "SkillArea",
+    "aims_first",
     "center_tiles",
     "checked_area",
     "composite_area",
@@ -124,6 +125,7 @@ __all__ = [
     "skill_mana_cost",
     "skill_problem",
     "skill_profile",
+    "skill_strikes",
     "stack_problem",
     "summon_site_problem",
     "teleport_landing_problem",
@@ -409,7 +411,8 @@ def stack_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
         return None
     have = unit.stacks.get(definition.id, 0)
     if have < need:
-        return f"層數不足：需要「{definition.name_zh}」{need} 層，目前 {have} 層"
+        word = definition.unit_zh  # RG-5：連擊點用「點」
+        return f"層數不足：需要「{definition.name_zh}」{need} {word}，目前 {have} {word}"
     return None
 
 
@@ -439,7 +442,7 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     ap_cost = skill_ap_cost(state, skill, unit)
     if unit.ap < ap_cost:
         return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
-    problem = _already_problem(state, unit, skill)
+    problem = _sealed_problem(unit, skill) or _already_problem(state, unit, skill)
     if problem is not None:
         return problem
     if any(
@@ -452,6 +455,13 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     if problem is None and any(e.type == COPY_SKILL for e in skill.effects):
         return copy_problem(state, unit)  # Phase 3C-4b：沒有可複製的技能時不能施放
     return problem
+
+
+def _sealed_problem(unit: UnitState, skill: SkillDef) -> str | None:
+    """被部位破壞封住的招（PB-1a ``seal_skill``；換技能組也不解除）。"""
+    if skill.id in unit.sealed_skills:
+        return f"{skill.name_zh} 已被破壞部位封住"
+    return None
 
 
 def reaction_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
@@ -480,6 +490,12 @@ def reaction_target_problem(
 # ---------------------------------------------------------------------------
 
 
+def _strikes_back(skill: SkillDef, effect: ResolvedEffect) -> bool:
+    """護主（TF-1）：``summon_beside`` 的 ``strike_other`` 對象是敵人（反應的觸發者），效果本身
+    作用在施放者（不擲命中）。"""
+    return skill.effects[effect.spec_index].strike_other is True
+
+
 def _unit_target_problem(  # noqa: PLR0917
     state: BattleState,
     caster: UnitState,
@@ -496,7 +512,9 @@ def _unit_target_problem(  # noqa: PLR0917
     if any(e.type == SACRIFICE_SUMMON for e in effects) and target.owner_id != caster.id:
         return f"只能獻祭自己的召喚物：{target.name_zh} 不是你的召喚物"  # 獻祭召喚物（3-24c）
     enemy = target.team is not caster.team
-    if enemy and not any(e.affects in ("enemies", "all", "tiles") for e in effects):
+    if enemy and not any(
+        e.affects in ("enemies", "all", "tiles") or _strikes_back(skill, e) for e in effects
+    ):
         return f"此技能無法對敵方使用：{target.name_zh}"
     if not enemy:
         helps = any(  # 賭注（gamble）的對象是施放者，但不讓技能能選自己當目標（Phase 3D-7a）
@@ -1003,6 +1021,12 @@ def summon_site_problem(state: BattleState, xy: XY) -> str | None:
     return None
 
 
+def aims_first(caster: UnitState, skill: SkillDef) -> bool:
+    """這次施放要先瞄準（RG-1 ``lock_on`` 而且施放者不是玩家方；AF-1，05 5.7「瞄準預告只限敵方」）。
+    施放、選目標、預覽都看它（:mod:`trpg.engine.lock_on` 照樣匯出）。"""
+    return skill.lock_on and caster.team is not Team.ALLY
+
+
 def checked_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
@@ -1071,7 +1095,8 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
         for unit in revive_candidates(state, caster) if revive else state.living_units():
             if manhattan(caster.xy, unit.xy) <= reach:
                 yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
-        if skill.shape.type != "chain" and not revive:
+        # 瞄準預告（RG-1）只對單位
+        if skill.shape.type != "chain" and not revive and not aims_first(caster, skill):
             for obj in state.objects_sorted():
                 if manhattan(caster.xy, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))
@@ -1437,6 +1462,15 @@ def damage_parameters(
     if modified and skill.category == "spell":
         element = modifiers.damage_element(state, caster, modifiers.skill_use(skill), element)
     return DamageParameters(dice, flat, scaled, multiplier, element)
+
+
+def skill_strikes(caster: UnitState, skill: SkillDef) -> int:
+    """這次施放的傷害效果打幾下（#153，08 8.11）：拿連擊武器（雙匕首 ``strikes: 2``）施放 **單體**
+    武器技（``category: weapon``、形狀 ``single``）時是手上武器的 ``strikes``；法術、其他形狀、
+    單擊武器都是 1。形態中看手上的武器（:func:`held_weapon`，天生武器的連擊只給普攻）。"""
+    if skill.category != "weapon" or skill.shape.type != "single":
+        return 1
+    return held_weapon(caster).strikes
 
 
 def copy_problem(state: BattleState, caster: UnitState) -> str | None:

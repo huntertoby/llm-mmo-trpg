@@ -189,6 +189,9 @@ kinds:
     forms:
       - {id: kite, name_zh: 鳶盾}
       - {id: tower, name_zh: 塔盾}
+      # RG-5（#163，08 8.11；RG樣張 10.8）：兩種大盾開放給玩家，只配塔盾（offhands: [tower_shield]）
+      - {id: sect_great, name_zh: 雲紋碑盾, offhands: [tower_shield]}   # 持盾弟子的大盾
+      - {id: molten_shell, name_zh: 熔殼塔盾, offhands: [tower_shield]}   # 熔殼甲兵的立殼改成手持塔盾
     materials: [iron, steel, copper, silver, gold]
     default_material: iron
   - id: tome

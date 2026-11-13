@@ -42,32 +42,36 @@ stacks:
     # Phase 3-52（06 6.32）：開放給技能消耗；身上有消耗怒氣的技能時，受到傷害也會自動累積（裝備詞條照舊，不重複算）。
     gain:
       - {when: damaged}
-    consumer: {boosts: [damage]}
+    # KW-2（#161，06 6.27.1「花掉怒氣換傷害或護盾」，示範：咬牙撐住）：消耗怒氣也加成護盾。
+    consumer: {boosts: [damage, shield]}
 
   # --- Phase 3-52 層數擴充（玩法決定 #57，docs/design/06-技能.md 6.32；數值為初值，未經模擬）---
   # gain：自動累積規則（只有身上帶有消耗這種層數的技能的單位才會累積）；技能的 add_stack 另外再加。
   # consumer：consume_stack 的加成作用在哪些效果（boosts），以及哪些技能可以消耗（requires_any，至少滿足一項）。
-  # composer: false ＝ 隨機組合器不抽（玩家與 LLM 搭配使用）。
+  # composer: false ＝ 隨機組合器不抽（玩家與 LLM 搭配使用）。KW-2（#161，06 6.32.1）：連擊點、專注、氣拿掉 composer: false，
+  # 組合器會抽（白板才長得出來）；怒氣本來就會抽。
   - id: combo_point
     name_zh: 連擊點
-    description_zh: 累積在自己身上；武器技命中時自動累積，消耗連擊點的終結技每層提高傷害。
+    unit_zh: 點   # RG-5（玩法PM交接 4.1.6 KW-3）：連擊點用「點」，其他層數用「層」
+    description_zh: 累積在自己身上；武器技命中時自動累積，消耗連擊點的終結技每點提高傷害。
     owner: self
     max: 5
     ai_value: 3
-    composer: false
     gain:
       - {when: weapon_skill_hit}
     consumer:
       boosts: [damage]
       requires_any:
         - {tag: finisher}
+        # KW-2：隨機組合器的技能不帶「終結」標籤，但蓄力與終結骨架（組合器把骨架 ID 放進標籤）就是終結技；
+        # 加這一項組合器才做得出消耗連擊點的技能（手寫技能照舊用 finisher）
+        - {tag: builder_finisher}
   - id: focus
     name_zh: 專注
     description_zh: 累積在自己身上；回合結束時這回合沒有移動就自動累積，你下一個造成傷害的主動技能會自動消耗全部專注，每層提高 15% 傷害（施放時消耗，打空也會用掉）。
     owner: self
     max: 3
     ai_value: 2
-    composer: false
     gain:
       - {when: turn_end_still}
     consumer: {boosts: [damage]}
@@ -120,7 +124,6 @@ stacks:
     owner: self
     max: 3
     ai_value: 2
-    composer: false
     gain:
       - {when: basic_attack_hit}
     consumer: {boosts: [damage, heal], heal_self_only: true}

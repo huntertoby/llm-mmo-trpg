@@ -117,7 +117,7 @@ describe("重閃", () => {
     const slots = reflashSlots(flashed);
     expect(slots.map((s) => s.slot)).toEqual([1, 2, 3]);
     const complete = CAMPFIRE.hero.flash.find((f) => f.complete);
-    expect(reflashSlots(complete)).toEqual([{ slot: 0, label: "調整欄", transformHint: false }]);
+    expect(reflashSlots(complete)).toEqual([{ slot: 0, label: "調整欄", transformHint: false, none: false, problem: null }]);
     expect(reflashSlots(undefined)).toEqual([]);
   });
   it("升階後第 3 格還不是轉型：只有第 3 格帶轉型提示", () => {

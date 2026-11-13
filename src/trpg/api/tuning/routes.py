@@ -13,29 +13,42 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Final
+from typing import Annotated, Any, Final
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Request, Response
 from pydantic import ValidationError
 
 from trpg.api.tuning.drafts import DRAFT_NAME_PATTERN
 from trpg.api.tuning.objects import ObjectNotFoundError
+from trpg.api.tuning.ratios import BaselineError
 from trpg.api.tuning.schemas import (
+    TuningApplyIn,
     TuningApplyResult,
+    TuningBudgetIn,
+    TuningBudgetResult,
     TuningCheckResult,
     TuningDiff,
     TuningDraftIn,
     TuningDraftView,
+    TuningGroupIn,
+    TuningGroupPreset,
+    TuningGroupPreview,
     TuningHistoryEntry,
+    TuningLadders,
     TuningObjectDetail,
     TuningObjectSummary,
+    TuningRatioBaseline,
+    TuningRatioPlan,
+    TuningRatioPlanIn,
     TuningSimJob,
     TuningSimOptions,
     TuningSimRequest,
+    TuningSkillRatio,
     TuningStatus,
 )
 from trpg.api.tuning.service import DraftInputError, TuningService
 from trpg.api.tuning.sim_jobs import SimBusyError, SimRequestError
+from trpg.api.tuning.skills import GroupError
 from trpg.api.tuning.writeback import WritebackError
 
 __all__ = ["FORWARD_HEADERS", "TUNNEL_ZH", "local_only", "router"]
@@ -73,9 +86,81 @@ def get_status(service: Service) -> TuningStatus:
 
 @router.get("/objects")
 def get_objects(service: Service, kind: str | None = None) -> list[TuningObjectSummary]:
-    """可改的對象（NW-1：敵人與頭目）。"""
-    rows = service.objects()
-    return [r for r in rows if kind is None or r.kind == kind]
+    """可改的對象（``unit``：敵人與頭目；``skill``：技能，附篩選欄位與 1 階預算比例）。"""
+    return service.objects(kind)
+
+
+@router.post("/skills/group-preview")
+def post_group_preview(body: TuningGroupIn, service: Service) -> TuningGroupPreview:
+    """分組改的預覽（不寫檔）：逐招的改動、前後預算比例、跳過原因（一次最多 100 招）。"""
+    try:
+        return service.group_preview(body)
+    except GroupError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except ObjectNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/skills/presets")
+def get_presets(service: Service) -> list[TuningGroupPreset]:
+    """分組改的常用預設組。"""
+    return service.presets()
+
+
+@router.get("/skills/ladders")
+def get_ladders(service: Service) -> TuningLadders:
+    """骰子與武器倍率的階梯（由弱到強；骰子欄位「±1 級」用，和分組改同一份）。"""
+    return service.ladders()
+
+
+@router.post("/skills/ratio-plan")
+def post_ratio_plan(body: TuningRatioPlanIn, service: Service) -> TuningRatioPlan:
+    """1 階比值工作的規模（組數＝招 × 可用武器 × 情境數）與預估秒數（NW-2c T11；不跑）。"""
+    try:
+        return service.ratio_plan(body.skills, body.seeds)
+    except SimRequestError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/skills/ratio-baseline")
+def get_ratio_baseline(service: Service) -> TuningRatioBaseline | None:
+    """匯入的比值基準（沒有時 ``null``）。"""
+    return service.ratio_baseline()
+
+
+@router.post("/skills/ratio-baseline")
+def post_ratio_baseline(
+    body: Annotated[dict[str, Any], Body()], service: Service
+) -> TuningRatioBaseline:
+    """匯入 ``scripts/t1_skill_ratio.py run`` 的 JSON 當基準（NW-2c T12）；格式不對 422。"""
+    try:
+        return service.import_ratio_baseline(body)
+    except BaselineError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/skills/{skill_id}/ratio")
+def get_skill_ratio(
+    skill_id: Annotated[str, Path(pattern=r"^skill_[a-z0-9_]+$")], service: Service
+) -> TuningSkillRatio:
+    """技能表單的比值區：目前值與參考線（只當參考，不擋寫回）、上次不同內容的量測（NW-2c）。"""
+    try:
+        return service.skill_ratio(skill_id)
+    except ObjectNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.post("/skills/{skill_id}/budget")
+def post_budget(
+    skill_id: Annotated[str, Path(pattern=r"^skill_[a-z0-9_]+$")],
+    service: Service,
+    body: Annotated[TuningBudgetIn | None, Body()] = None,
+) -> TuningBudgetResult:
+    """一招套上改動後的預算比例、判定、變奏、違規（數字同 ``trpg skills budget``）。"""
+    try:
+        return service.budget(skill_id, [] if body is None else body.changes)
+    except ObjectNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.get("/objects/{kind}/{object_id}")
@@ -139,10 +224,19 @@ def post_revert(
 
 
 @router.post("/drafts/{name}/apply")
-def post_apply(name: DraftName, service: Service) -> TuningApplyResult:
-    """寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。"""
+def post_apply(
+    name: DraftName,
+    service: Service,
+    body: Annotated[TuningApplyIn | None, Body()] = None,
+) -> TuningApplyResult:
+    """寫回 ``content/`` 並自動 commit 一筆 ``tune:``（前置檢查不過時 409，檔案不變）。
+
+    草稿裡有招超出預算合格區間時，``confirm_budget`` 要恰好是那幾招（勾「我確定」），否則 409；
+    確認後一起登記進 ``skill_budget.yaml`` 的例外清單。"""
+    confirm = [] if body is None else body.confirm_budget
+    moves = [] if body is None else body.confirm_min_moves
     try:
-        return service.apply(name)
+        return service.apply(name, confirm, moves)
     except WritebackError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

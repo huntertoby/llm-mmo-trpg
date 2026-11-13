@@ -1,7 +1,8 @@
 // 靈感閃現的純函式（Phase 3W-6；規則在 06 6.34.3，數值由後端 `flash_rules` 提供，這裡不寫死）。
 // 3W-R2：可重閃的欄、可傳承的目標、可帶走的變化與上限、不能傳承的原因都由後端下發，這裡只讀。
 // 文字集中在這裡：價格說明、技能卡的「已閃 N／5 次」、稀有度提示、溶掉確認、傳承條件。
-import type { FlashOption, FlashPreview, PendingFlash, RunChoice, RunHero, SkillCard, SkillFlash } from "../api/types";
+import type { FlashOption, FlashPreview, RunChoice, RunHero, SkillCard, SkillFlash } from "../api/types";
+import { autoUnequip } from "./flashChoice";
 import { ownedCards } from "./loadout";
 import { percent } from "../battle/previewText";
 
@@ -51,6 +52,14 @@ export function flashCountText(f: SkillFlash | undefined, rules: Rules | undefin
 /** 「可以閃現了」只在真的能閃（先上場用過、沒閃滿）時顯示。 */
 export function showCanFlash(f: SkillFlash | undefined): boolean {
   return f !== undefined && !f.complete && f.can_flash;
+}
+
+/** 這招目前沒有任何合法閃現選項時的灰字（FL-1c，06 6.34「費用方向」第 7 點；伺服器 `flash_problem_zh` 同一句）。 */
+export const NO_FLASH_OPTIONS_TEXT = "這招目前沒有可以閃的變化";
+
+/** 伺服器實際算過、這一次閃現一個合法選項都沒有（`flash_available: false`）：面板整列標灰、不能按。 */
+export function noFlashOptions(f: SkillFlash | undefined): boolean {
+  return f !== undefined && f.flash_available === false;
 }
 
 /** 變化歷程的一行：「第 2 次・連段：多打一下（重閃 1 次）」。 */
@@ -115,7 +124,14 @@ export interface ReflashSlot {
   label: string;
   /** 這格是不是第 3 次大變化但還不是轉型（升階後建議重閃）。 */
   transformHint: boolean;
+  /** 伺服器實際算過、重閃這格一個合法選項都沒有（RR-1，比照 FL-1c `flash_available`）：按鈕標灰、不能按。 */
+  none: boolean;
+  /** 不能重閃這格的灰字（伺服器 `problem_zh`）。 */
+  problem: string | null;
 }
+
+/** 重閃某一格沒有任何合法選項時的灰字（RR-1；伺服器 `problem_zh` 同一句；玩法 PM 11-13 定稿，TXT-2）。 */
+export const NO_REFLASH_OPTIONS_TEXT = "這一格目前沒有可以重閃的變化";
 
 /** 這招可以重閃的格子（後端 `reflash_slots`）；完整技能的調整欄（0）標「調整欄」。 */
 export function reflashSlots(f: SkillFlash | undefined): ReflashSlot[] {
@@ -123,7 +139,8 @@ export function reflashSlots(f: SkillFlash | undefined): ReflashSlot[] {
   return (f.reflash_slots ?? []).map((s) => {
     const record = f.records.find((r) => r.nth === s.slot);
     const label = s.slot === 0 || record === undefined ? "調整欄" : recordLine(record);
-    return { slot: s.slot, label, transformHint: s.transform_hint };
+    const none = s.available === false;
+    return { slot: s.slot, label, transformHint: s.transform_hint, none, problem: none ? (s.problem_zh ?? NO_REFLASH_OPTIONS_TEXT) : null };
   });
 }
 
@@ -205,32 +222,14 @@ export function needsUnequip(o: FlashOption): boolean {
   return o.unequip_candidates.length > 0;
 }
 
+/** 選好了沒：要卸下時先選卸下哪一招；姿態欄自動換下原姿態（FL-1b 8.3），不用選。 */
 export function pickReady(o: FlashOption | undefined, unequip: string | null): boolean {
   if (o === undefined) return false;
-  return !needsUnequip(o) || unequip !== null;
+  return !needsUnequip(o) || unequip !== null || autoUnequip(o) !== null;
 }
 
 export function pickChoice(o: FlashOption, unequip: string | null): RunChoice {
-  return { kind: "flash_pick", pick: o.index, unequip: needsUnequip(o) ? unequip : null };
-}
-
-export function pendingTitle(p: PendingFlash, name: string): string {
-  const what = p.slot === null ? `第 ${p.nth} 次閃現${p.major ? "（大變化）" : ""}` : p.slot === 0 ? "重閃調整欄" : `重閃第 ${p.slot} 次`;
-  const focus = p.category === null ? "不指定" : "指定類別";
-  return `「${name}」${what}（${focus}，已扣 ${p.cost} 點）`;
-}
-
-/** 新舊卡片的差異行（預覽數字）：形狀、費用與每條效果／修正的變動。 */
-export function cardDiff(before: SkillCard | undefined, after: SkillCard): string[] {
-  if (before === undefined) return [];
-  const lines: string[] = [];
-  if (before.shape !== after.shape) lines.push(`形狀：${before.shape} → ${after.shape}`);
-  if (before.cost.join("，") !== after.cost.join("，")) lines.push(`費用：${before.cost.join("，")} → ${after.cost.join("，")}`);
-  const was = [...before.effects, ...before.modifiers.map((m) => `修正：${m}`)];
-  const now = [...after.effects, ...after.modifiers.map((m) => `修正：${m}`)];
-  for (const line of was) if (!now.includes(line)) lines.push(`原：${line}`);
-  for (const line of now) if (!was.includes(line)) lines.push(`新：${line}`);
-  return lines;
+  return { kind: "flash_pick", pick: o.index, unequip: needsUnequip(o) ? (unequip ?? autoUnequip(o)) : null };
 }
 
 export function previewProblem(p: FlashPreview | null): string | null {
@@ -246,9 +245,9 @@ export const COMPLETE_BONUS_PERMILLE = 120;
 export const COMPLETE_INTRO: readonly string[] = [
   `完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +${percent(COMPLETE_BONUS_PERMILLE)}）。`,
   "完整技能不能再閃現；之後可以在營火重閃它的「調整欄」，換一個小變化。",
-  "三張都不想要可以跳過，技能不變。",
+  "三張都不想要可以都不拿，技能不變。",
 ];
 
 export function completeSkipText(): string {
-  return "目前：跳過（技能不變）。";
+  return "目前：都不拿（技能不變）。";
 }

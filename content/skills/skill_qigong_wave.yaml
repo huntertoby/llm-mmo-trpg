@@ -1,0 +1,25 @@
+# KW-2 氣示範（#161，06 6.32.1「氣功波：花光每層傷害提高」；數值為初值，未經模擬）：朝前方直線推出一道氣勁，花光氣，
+# 每層傷害提高。
+id: skill_qigong_wave
+schema_version: 1
+name_zh: 氣功波
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: line, size: 3}
+effects:
+  - {type: damage, multiplier_permille: 950}
+  - {type: consume_stack, stack: ki, per_stack_permille: 150, affects: self}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, melee, martial, aoe, finisher]
+narrative:
+  concept: 把攢下的氣一掌推出，化成一道貫穿的氣浪
+  cast_flavor: 你雙掌一推，看不見的氣浪筆直地撞開前方的一切
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,6 +26,7 @@ from trpg.content.equipment import (
 )
 from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.library.ruleset import Ruleset
+from trpg.content.silent_strike import carries_silent
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.weapon_params import set_weapon_param
 from trpg.shared.errors import ContentError
@@ -122,9 +123,12 @@ def _affix_reference_problems(
 
 def _action_problems(affix: ActionAffix, ruleset: Ruleset) -> list[str]:
     """授予動作（G3b）：授予的必須是主動技（被動技與反應技不是「動作」）。"""
-    skill = ruleset.skills.by_id().get(affix.skill)
+    skills = ruleset.skills.by_id()
+    skill = skills.get(affix.skill)
     if skill is not None and skill.kind != "active":
         return [f"詞條 {affix.id} 授予的技能 {skill.id} 必須是主動技（目前 {skill.kind}）"]
+    if skill is not None and carries_silent(skill, skills):  # BS-1（#157）：無聲不做成詞條
+        return [f"詞條 {affix.id} 授予的技能 {skill.id} 會給「無聲」：無聲不能來自裝備詞條"]
     return []
 
 
@@ -183,14 +187,28 @@ def _affix_statuses(affix: AffixDef) -> list[str]:
 
 
 def _check_appearance(
-    root: Path, appearance: AppearanceTable, items: ItemTable, keywords: KeywordTable
+    root: Path,
+    appearance: AppearanceTable,
+    items: ItemTable,
+    keywords: KeywordTable,
+    offhands: Collection[str] | None = None,
 ) -> None:
-    """外觀清單的關鍵字都是 3-24b1 的關鍵字；items.yaml 寫了的外觀欄位都認得且相容。"""
+    """外觀清單的關鍵字都是 3-24b1 的關鍵字；items.yaml 寫了的外觀欄位都認得且相容；形制限定的
+    副手（``FormDef.offhands``，RG-5）都在 ``offhands.yaml``（``offhands`` 為 ``None`` 時不查）。"""
+    path = root / "equipment" / "appearance.yaml"
     unknown = sorted(set(appearance.keywords) - set(keywords.ids()))
     if unknown:
-        raise ContentError(
-            root / "equipment" / "appearance.yaml", f"未知的關鍵字：{', '.join(unknown)}"
+        raise ContentError(path, f"未知的關鍵字：{', '.join(unknown)}")
+    if offhands is not None:
+        bad = sorted(
+            f"{kind.id}.{form.id}：{o}"
+            for kind in appearance.kinds
+            for form in kind.forms
+            for o in form.offhands or ()
+            if o not in offhands
         )
+        if bad:
+            raise ContentError(path, f"形制限定了未知的副手：{'；'.join(bad)}")
     problems = [p for item in items.items for p in item_appearance_problems(item, appearance)]
     if problems:
         raise ContentError(root / "items.yaml", "；".join(problems))
@@ -208,12 +226,19 @@ def _check_affixes(
     affixes: Mapping[str, AffixDef],
     ruleset: Ruleset,
     weapons: Mapping[str, WeaponDef],
+    offhands: Collection[str] = (),
 ) -> None:
     keyword_ids = frozenset(ruleset.keywords.ids())
     problems = [
         p
         for affix in affixes.values()
         for p in _affix_reference_problems(affix, ruleset, weapons, keyword_ids)
+    ]
+    problems += [  # RG-4：限定副手的詞條引用的副手存在
+        f"詞條 {affix.id} 引用了未知的副手：{o}"
+        for affix in affixes.values()
+        for o in affix.offhands
+        if o not in offhands
     ]
     if problems:
         raise ContentError(root / "affixes.yaml", "；".join(problems))

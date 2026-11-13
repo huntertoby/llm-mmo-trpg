@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { LocationBoard, NoteView } from "../api/types";
+import { isSubmitEnter } from "../ui/imeEnter";
 import { NOTE_MAX, noteDeleteLabel, noteProblem, noteTime, remainingLabel } from "./notes";
 
 interface Props {
@@ -118,7 +119,7 @@ export function NotesPanel({ characterId, location, busy }: Props) {
           data-testid="world-note-input"
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") void send();
+            if (isSubmitEnter(e)) void send();
           }}
         />
         <button

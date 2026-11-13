@@ -35,6 +35,7 @@ __all__ = [
     "ObjectDef",
     "ObjectTable",
     "OrderBonuses",
+    "PartAiRules",
     "ReactionDef",
     "ReactionEventDef",
     "ReactionRule",
@@ -674,6 +675,9 @@ class AiWeights(ContentModel):
     """（Phase 3H-2）技能的耐力機會成本：每點耐力 × 這個值 ÷ 1000（扣在技能的分數上）。"""
     cooldown: int = 0
     flank: int = 0
+    screen: int = 0
+    """（RG-1，#162）盾兵（``shield_guard`` 標籤）站位：每替一名相鄰的遠程同伴擋住至少一名打得到他的
+    遠程敵人加分（位置價值）。沒有這個標籤的單位不算。"""
     backstab: int = 0
     """（Phase 3D-8d）近戰單位站在敵人背後格的每個敵人（位置價值加分）。"""
     back_exposed: int = 0
@@ -730,6 +734,20 @@ class AiWeights(ContentModel):
     hold_guard: int = 0
     """（Phase 3-22）守點戰中，**我方** 單位在守點 ``hold_radius`` 格內且有敵人逼近（6 格內）時，
     守護（防禦）動作多加的分數。"""
+    guard_back_bonus: int = 0
+    """（PB-1b）有部位的頭目：``reach: behind`` 的部位快破時，「背對攻擊者」（``back_exposed``）多扣
+    的分數。表格層級的 ``parts`` 填入每個行為模式；沒有部位的單位不受影響。"""
+    near_break_permille: int = Field(default=0, ge=0, le=1000)
+    """（PB-1b）「快破」的門檻：部位剩餘血量 ≤ 部位最大血量 × 這個值‰。表格層級的 ``parts``
+    填入。"""
+    circle_back_bonus: int = 0
+    """（PB-1b2）繞背：玩家方近戰站在頭目背後格，而且頭目有「從背後」才打得到、目前階段已露出、
+    還沒破的部位時，位置價值加這個數（每名這樣的頭目一次）。表格層級的 ``parts`` 填入；沒有部位的
+    戰鬥不受影響。"""
+    silent_behind: int = 0
+    """（BS-1，#157）無聲：持有無聲（手持匕首類）的近戰單位站在相鄰敵人的背後格時，每名這樣的敵人
+    位置價值再加這個數（目標不會轉身，留在背後連續背刺、不要走開；疊在 ``backstab`` 上）。表格層級
+    的 ``facing`` 填入；沒有無聲的單位不受影響。"""
 
 
 class TrapAiRules(ContentModel):
@@ -821,6 +839,9 @@ class RewriteAiRules(ContentModel):
     activation_battle_rounds: int = Field(default=4, ge=1)
     delayed_enemy_points: int = Field(default=5, ge=0)
     delayed_attacked_permille: int = Field(default=600, ge=0, le=1000)
+    lock_on_permille: int = Field(default=700, ge=0, le=1000)
+    """（RG-1，#162）瞄準預告的強力一擊：AI 估「現在就射出」的收益再乘這個千分比（對手可能躲開、
+    擋住或打斷；:attr:`trpg.engine.preview.Preview.lock_fire`）。"""
     delayed_heal_points: int = Field(default=5, ge=0)
     priority_kill_points: int = Field(default=10, ge=0)
     interrupt_points: int = Field(default=12, ge=0)
@@ -1064,6 +1085,42 @@ def _merged_tables(shared: dict[str, Any], profile: dict[str, Any]) -> dict[str,
     }
 
 
+class PartAiRules(ContentModel):
+    """頭目部位的 AI 價值表（PB-1b，R8、T13；``content/ai_profiles.yaml`` 的 ``parts:``；全部是
+    占位，NW-3 開放後由使用者調）。
+
+    - ``seal_skill``／``interrupt_charge``／``stat_down``／``control``／``stop_mechanic``：每種破壞
+      效果的價值（等值點數）。部位分 ＝ ``on_break`` 各項價值相加 ×（預覽最少後果的部位傷害 ÷
+      部位剩餘血量，上限 1）。
+    - ``priority_bonus``：這一下（預覽最多後果）能破、而且破了能封住頭目下一招或打斷蓄力時再加的
+      分數。
+    - ``guard_back_bonus``、``near_break_permille``：頭目背後部位快破時，「背對攻擊者」多扣的分數與
+      「快破」門檻（‰）；填入每個行為模式的 ``weights``（:class:`AiWeights`）。
+    - ``circle_back_bonus``（PB-1b2）：繞背——玩家方近戰站在「背後有能打的部位」的頭目背後格時，
+      位置價值多加的分數；填入每個行為模式的 ``weights``。
+    """
+
+    seal_skill: int = Field(default=0, ge=0)
+    interrupt_charge: int = Field(default=0, ge=0)
+    stat_down: int = Field(default=0, ge=0)
+    control: int = Field(default=0, ge=0)
+    stop_mechanic: int = Field(default=0, ge=0)
+    priority_bonus: int = Field(default=0, ge=0)
+    guard_back_bonus: int = Field(default=0, ge=0)
+    near_break_permille: int = Field(default=0, ge=0, le=1000)
+    circle_back_bonus: int = Field(default=0, ge=0)
+
+    def value_of(self, kind: str) -> int:
+        """破壞效果種類 ``kind`` 的價值（未知種類為 0）。"""
+        return {
+            "seal_skill": self.seal_skill,
+            "interrupt_charge": self.interrupt_charge,
+            "stat_down": self.stat_down,
+            "control": self.control,
+            "stop_mechanic": self.stop_mechanic,
+        }.get(kind, 0)
+
+
 class RunAiRules(ContentModel):
     """AI 使用跑步的數值（Phase 3-20，玩法 #22；``content/ai_profiles.yaml`` 的 ``run:``）。
 
@@ -1183,6 +1240,9 @@ class AiProfileTable(ContentModel):
     formation_ai: dict[str, int] = Field(default_factory=dict)
     """陣法站位的位置權重（Phase 5A-M2；``formation``）：敵我同一套，填入每個行為模式的
     ``weights``（行為模式自己列出的優先）。"""
+    parts: PartAiRules = Field(default_factory=PartAiRules)
+    """頭目部位的 AI 價值表（PB-1b）；``guard_back_bonus``、``near_break_permille`` 另外填入每個行為
+    模式的 ``weights``（行為模式自己列出的優先）。"""
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
@@ -1214,6 +1274,11 @@ class AiProfileTable(ContentModel):
             if key in data
         }
         facing = data.get("facing")
+        parts = data.get("parts")
+        if isinstance(parts, dict):  # PB-1b：頭目護背的兩個權重
+            keys = ("guard_back_bonus", "near_break_permille", "circle_back_bonus")  # PB-1b2：繞背
+            guard = {k: parts[k] for k in keys if k in parts}
+            facing = {**(facing if isinstance(facing, dict) else {}), **guard}
         for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai", "race_ai"):
             extra = data.get(extra_key)
             if isinstance(extra, dict):

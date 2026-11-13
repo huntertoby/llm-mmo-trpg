@@ -40,6 +40,7 @@ conditional_rates:
   affix_cond_still_defense: common          # 本回合沒有移動
   affix_cond_low_hp_damage: rare            # HP 低於 50%
   affix_trait_longgun_still_crit: common    # 火槍站定
+  affix_cond_lone_defense: common           # 獨狼（LW-1；獨行時整場成立，保守取 common＝最貴）
 
 # 其他類別每條固定點數（8.22.1 第 4 點）。
 category_points: {keyword: 8, attack: 10, weapon_trait: 8, trigger: 12, charge: 12, action: 20, reaction: 15, rule: 40}
@@ -116,3 +117,6 @@ offer_attempts: 8
 
 # 獨特詞條（Phase 5D-3，08 8.26.3 M4）：不進一般產生器（掉落、傭兵、重骰），只由隱藏配方指定。
 unique_affixes: [affix_unique_thunder_mist, affix_unique_steam_guard, affix_unique_frostfire]
+
+# 暫不進一般產生器的詞條（LW-1）：獨狼示範詞條「獨行的」先只定義、不掉落，由開發 PM 排入時從這裡拿掉。
+held_back_affixes: [affix_cond_lone_defense]

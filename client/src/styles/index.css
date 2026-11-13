@@ -19,9 +19,14 @@
 @import "./world.css";
 @import "./world-economy.css";
 @import "./world-hud.css";
+@import "./world-panel-board.css";
+@import "./flash-choice.css";
+@import "./world-panel-quest.css";
+@import "./world-panel-wish.css";
 @import "./region-map.css";
 @import "./atlas.css";
 @import "./entry.css";
 @import "./range.css";
 @import "./range-ob.css";
 @import "./look.css";
+@import "./reflash-weaker.css";

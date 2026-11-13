@@ -199,6 +199,22 @@
   height: 18px;
 }
 
+/* PNL-2：主角卡的靈感點可以點（直接開成長面板的「靈感閃現」）；樣子和其他籌碼一樣 */
+.world-hud-chip.world-hud-chip-btn {
+  margin: 0;
+  min-height: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.world-hud-chip.world-hud-chip-btn:hover {
+  border-color: var(--ui-gold-hi);
+}
+
 .world-hud-bar {
   position: relative;
   width: 100%;
@@ -894,6 +910,15 @@
   margin: 8px 0 0;
 }
 
+/* PNL-4（OB-8，需求 3.5）：隊友加入的台詞＝開場的對話排法（頭像 48＋粗體名字＋台詞），每句一個頭像 */
+.world-party-intro {
+  line-height: 1.6;
+}
+
+.world-party-intro > .world-awaken-line:first-child {
+  margin-top: 0;
+}
+
 .world-awaken-text {
   margin: 2px 0 0;
   line-height: 1.6;
@@ -921,3 +946,440 @@
   padding-left: 18px;
   margin-top: 10px;
 }
+
+/* =====================================================================
+   PNL-1a：資訊面板的共用版面（docs/art/資訊面板-移植需求.md 2.2、3.1、3.2；樣張 docs/art/sample/infoPanels.css 的 ip-* 改名 pnl-*）。
+   欄寬一律寫在 class（窄版的容器查詢才蓋得掉）；描框只表示狀態（隊友卡金框／綠框、空狀態虛線）。
+   ===================================================================== */
+:root {
+  /* 三級文字：主（L1）＝名字、數字、狀態；次（L2）＝一句說明、地點；註（L3）＝規則、例外。L3 是 #a39d8c（對比 ≥ 4.5，3.1 第 1 條） */
+  --pnl-l1: var(--ui-text);
+  --pnl-l2: #bdb5a2;
+  --pnl-l3: #a39d8c;
+  --pnl-num: var(--ui-gold-hi);
+  --pnl-row: rgb(255 255 255 / 4%);
+  --pnl-row-hi: rgb(255 255 255 / 7%);
+  --pnl-line: var(--ui-gold-soft);
+  /* 提示三級（3.1 第 2 條）：底色同色 10%～12%、左 3px 色條 */
+  --pnl-warn: #e8b45a;
+  --pnl-warn-bg: rgb(232 180 90 / 12%);
+  --pnl-lock: #b9b0e8;
+  --pnl-lock-bar: #8a80c0;
+  --pnl-lock-bg: rgb(138 128 192 / 12%);
+  --pnl-info: #8cd0e4;
+  --pnl-info-bar: #4ab0d0;
+  --pnl-info-bg: rgb(74 176 208 / 10%);
+  --pnl-good: #8fd19e;
+  --pnl-open: #e6c46a;
+}
+
+/* 窄版看面板寬、不看視窗寬（3.2 第 9 條）：800×600 碰不到 max-width: 600px，面板卻只有 514 */
+/* TXT-2：另叫 fc，選變體畫面（flash-choice.css 的 @container fc）在大世界彈窗裡量這一層 */
+.world-hud-panel {
+  container: world-panel fc / inline-size;
+}
+
+/* ---------- 文字三級 ---------- */
+.pnl-l1 { color: var(--pnl-l1); font-size: 14px; }
+.pnl-l2 { color: var(--pnl-l2); font-size: 12.5px; line-height: 1.6; }
+.pnl-l3 { color: var(--pnl-l3); font-size: 11.5px; line-height: 1.55; }
+.pnl-ico { flex: none; }
+/* 說明字裡「詞＋數字」不斷行（`KeepNum`；PNL-1b 美術驗收可修 1） */
+.pnl-nowrap { white-space: nowrap; }
+
+/* ---------- 固定區（標頭、籌碼、管整個面板的提示、分頁列）：捲動區頂端 sticky，不跟著捲 ---------- */
+.pnl-fixed {
+  position: sticky;
+  top: 0;
+  z-index: 6; /* 在捲動區上緣漸隱（z-index 5）之上 */
+  background: var(--ui-navy);
+}
+
+/* 捲下去後固定區下緣補一段漸隱（原本的上緣漸隱被固定區蓋住；PNL-1a 美術驗收可修 1：10 → 18px、上半實色，第一行字腳不再露出） */
+.ui-popup-body[data-scrolled="1"] .pnl-fixed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 18px;
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--ui-navy) 50%, rgb(30 34 54 / 0%));
+}
+
+/* 有固定區的面板：「×」不再浮在捲動區裡，擺到外框右上（和標頭同一列，3.1 第 6 條） */
+.world-hud-panel:has(.pnl-fixed) > .ui-popup-body > .world-hud-panel-close {
+  position: absolute;
+  top: 21px;
+  right: 14px;
+  float: none;
+  z-index: 7;
+}
+
+.pnl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+  padding-right: 36px; /* 讓出右上的「×」 */
+}
+
+.pnl-title {
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1.3;
+  color: var(--ui-text);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.pnl-head-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pnl-head-actions button {
+  font-size: 13px;
+  padding: 4px 10px;
+}
+
+.pnl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.pnl-fixed .pnl-callout {
+  margin: 6px 0 0;
+}
+
+/* ---------- 數值籌碼：圖示＋小標＋亮金數字（0 灰） ---------- */
+.pnl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 5px;
+  border-radius: 999px;
+  background: var(--pnl-row-hi);
+  border: 1px solid rgb(200 168 104 / 22%);
+  font-size: 12px;
+  color: var(--pnl-l2);
+  white-space: nowrap;
+  line-height: 20px;
+}
+
+.pnl-chip b {
+  color: var(--pnl-num);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pnl-chip.zero b {
+  color: var(--pnl-l2);
+}
+
+/* ---------- 標籤（小膠囊）：狀態、天數、類別 ---------- */
+.pnl-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  line-height: 18px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(200 168 104 / 30%);
+  color: var(--pnl-l2);
+  white-space: nowrap;
+}
+
+.pnl-tag.open { color: #1c1712; background: var(--pnl-open); border-color: var(--pnl-open); font-weight: 700; }
+.pnl-tag.live { color: #12261a; background: var(--pnl-good); border-color: var(--pnl-good); font-weight: 700; }
+.pnl-tag.mine { color: var(--pnl-good); border-color: var(--pnl-good); }
+.pnl-tag.dim { color: var(--pnl-l3); border-color: rgb(255 255 255 / 12%); }
+.pnl-tag.info { color: var(--pnl-info); border-color: rgb(74 176 208 / 45%); background: var(--pnl-info-bg); }
+.pnl-tag.lock { color: var(--pnl-lock); border-color: rgb(138 128 192 / 55%); background: var(--pnl-lock-bg); }
+.pnl-tag.warn { color: var(--pnl-warn); border-color: rgb(232 180 90 / 55%); background: var(--pnl-warn-bg); }
+.pnl-tag canvas { margin-left: -3px; }
+
+/* ---------- 提示三級：警告（琥珀）／鎖住（紫灰）／資訊（青）；粗體結論在前，右邊可掛 (i) ---------- */
+.pnl-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px 6px 8px;
+  border-radius: 6px;
+  border-left: 3px solid;
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 6px 0;
+}
+
+.pnl-callout > canvas { margin-top: 1px; }
+.pnl-callout .body { flex: 1 1 auto; min-width: 0; }
+.pnl-callout .sub { display: block; font-size: 12px; color: var(--pnl-l2); }
+.pnl-callout .end { flex: none; align-self: center; }
+.pnl-callout.warn { background: var(--pnl-warn-bg); border-color: var(--pnl-warn); color: var(--pnl-warn); }
+.pnl-callout.lock { background: var(--pnl-lock-bg); border-color: var(--pnl-lock-bar); color: var(--pnl-lock); }
+.pnl-callout.info { background: var(--pnl-info-bg); border-color: var(--pnl-info-bar); color: var(--pnl-info); }
+
+/* (i) 說明鈕（說明卡是共用 Hint） */
+.pnl-tip {
+  display: inline-flex;
+  vertical-align: middle;
+  cursor: help;
+}
+
+/* ---------- 摺疊（details，同一組一次只開一個） ---------- */
+.pnl-folds {
+  display: flex;
+  flex-direction: column;
+}
+
+.pnl-fold {
+  margin: 6px 0 0;
+  border-radius: 6px;
+  background: var(--pnl-row);
+}
+
+.pnl-fold > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--pnl-l2);
+}
+
+.pnl-fold > summary::-webkit-details-marker { display: none; }
+
+.pnl-fold > summary::before {
+  content: "";
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--ui-gold);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.12s;
+}
+
+.pnl-fold[open] > summary::before { transform: rotate(90deg); }
+.pnl-fold > summary b { color: var(--ui-text); font-weight: 700; }
+.pnl-fold > summary .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.pnl-fold-body { padding: 2px 12px 10px 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pnl-fold > summary::before { transition: none; }
+}
+
+/* ---------- 區塊標頭（18～20px 圖示＋15px 粗體；只有一塊內容的分頁不畫）、清單列、欄名列、空狀態 ---------- */
+.pnl-sec { border-top: 1px solid var(--pnl-line); margin-top: 14px; padding-top: 12px; }
+.pnl-sec.first { border-top: none; margin-top: 8px; padding-top: 0; }
+.pnl-sec-head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; min-height: 24px; flex-wrap: wrap; }
+.pnl-sec-title { font-size: 15px; font-weight: 700; color: var(--ui-text); }
+.pnl-sec-right { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--pnl-l2); }
+
+.pnl-rows { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.pnl-row { display: grid; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 6px; background: var(--pnl-row); min-width: 0; }
+.pnl-row .name { font-weight: 700; font-size: 14px; color: var(--ui-text); min-width: 0; }
+.pnl-row .num { font-variant-numeric: tabular-nums; }
+.pnl-cols-head { display: grid; gap: 10px; padding: 0 10px 2px; font-size: 11px; color: var(--pnl-l3); }
+
+.pnl-empty {
+  color: var(--pnl-l3);
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px dashed rgb(255 255 255 / 10%);
+  margin-top: 6px;
+}
+
+/* 分頁內容最上面一行（原來區塊標頭右邊那些：規則標籤、刷新時刻、(i)） */
+.pnl-tabline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 8px;
+  font-size: 12px;
+  color: var(--pnl-l2);
+  flex-wrap: wrap;
+  min-height: 22px;
+}
+
+.pnl-tabline .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.pnl-pane > .pnl-callout:first-child { margin-top: 0; }
+
+/* ---------- 分頁列（3.2 第 6、7 條） ---------- */
+.pnl-tabbar {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 10px 0 0;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--pnl-line);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.pnl-tab {
+  all: unset;
+  box-sizing: border-box;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  margin-bottom: -1px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  color: var(--pnl-l2);
+  font-size: 13.5px;
+  cursor: pointer;
+  position: relative;
+}
+
+.pnl-tab:hover { color: var(--ui-text); background: rgb(255 255 255 / 4%); }
+.pnl-tab:focus-visible { outline: 2px solid var(--ui-gold-hi); outline-offset: -2px; }
+
+/* 目前分頁：和內容同底色（蓋掉分頁列的底線，像資料夾的耳朵）＋上緣 2px 亮金＋亮金粗體字 */
+.pnl-tab.on { color: var(--ui-gold-hi); font-weight: 700; background: var(--ui-navy); border-color: var(--pnl-line); }
+.pnl-tab.on:hover { background: var(--ui-navy); }
+
+.pnl-tab.on::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ui-gold-hi);
+}
+
+/* 字寬照粗體預留：data-t 的同一段字用粗體畫一份 0 高、看不見的，撐出寬度；切分頁前後每個分頁的位置逐像素不動 */
+.pnl-tab .lbl,
+.pnl-tab .lbl-s { flex-direction: column; align-items: center; }
+.pnl-tab .lbl { display: inline-flex; }
+.pnl-tab .lbl-s { display: none; }
+
+.pnl-tab .lbl::after,
+.pnl-tab .lbl-s::after {
+  content: attr(data-t);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 放不下時（PanelTabs 量 scrollWidth）：1 全部兩字短名；2 全部只剩圖示（滑過出現名字）；3 折成兩列（不藏分頁） */
+.pnl-tabbar.fit1 .pnl-tab .lbl,
+.pnl-tabbar.fit2 .pnl-tab .lbl,
+.pnl-tabbar.fit3 .pnl-tab .lbl { display: none; }
+.pnl-tabbar.fit1 .pnl-tab .lbl-s { display: inline-flex; }
+.pnl-tabbar.fit1 .pnl-tab { padding: 0 8px; gap: 4px; }
+.pnl-tabbar.fit2 .pnl-tab,
+.pnl-tabbar.fit3 .pnl-tab { padding: 0 6px; gap: 3px; }
+.pnl-tabbar.fit3 { flex-wrap: wrap; row-gap: 2px; }
+
+/* 分頁上的狀態記號（不新增顏色） */
+.pnl-tbadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  line-height: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pnl-tbadge.n { background: var(--pnl-open); color: #1c1712; }
+.pnl-tbadge.p { border: 1px solid rgb(200 168 104 / 45%); color: var(--pnl-l2); font-weight: 400; }
+.pnl-tbadge.live { min-width: 8px; width: 8px; height: 8px; padding: 0; border-radius: 50%; background: var(--pnl-good); box-shadow: 0 0 0 2px rgb(143 209 158 / 25%); }
+.pnl-tbadge.ico { min-width: 0; padding: 0; height: auto; }
+.pnl-tab.on .pnl-tbadge.p { color: var(--ui-text); }
+
+/* 分頁內容：和固定區之間留 8px；量最高那一頁時每一種樣子疊在同一格（不畫出來） */
+.pnl-panes { margin-top: 8px; }
+.pnl-measure { display: grid; }
+.pnl-measure > .pnl-pane { grid-area: 1 / 1; visibility: hidden; }
+/* PNL-2：量測盒放在 0 高、裁掉的外層裡（不佔位、不撐出捲軸），目前分頁照常掛著 */
+.pnl-measure-wrap { height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+
+/* ---------- 隊伍與影子（3.3） ---------- */
+.pnl-members { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pnl-member { display: flex; gap: 8px; padding: 8px; border-radius: 8px; background: var(--pnl-row); min-width: 0; position: relative; }
+.pnl-member.hero { box-shadow: inset 0 0 0 1px rgb(232 187 72 / 45%); }
+.pnl-member.comp { box-shadow: inset 0 0 0 1px rgb(127 176 122 / 45%); }
+.pnl-member .face { flex: none; display: inline-flex; align-self: flex-start; }
+.pnl-member .info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pnl-member .nm { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 14px; flex-wrap: wrap; }
+.pnl-member .lvl { font-size: 11.5px; color: var(--pnl-num); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pnl-member .role { font-size: 12px; color: var(--pnl-l2); }
+.pnl-member .ai { font-size: 12px; color: var(--pnl-l2); }
+.pnl-member .ai b { color: var(--ui-text); font-weight: 400; white-space: nowrap; } /* 「預設（守衛）」那段不斷行 */
+.pnl-member .story { font-size: 11.5px; color: var(--pnl-l3); line-height: 1.45; }
+
+.pnl-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pnl-stat { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; border-radius: 6px; background: var(--pnl-row); min-width: 0; }
+.pnl-stat .k { font-size: 11.5px; color: var(--pnl-l3); }
+.pnl-stat .v { font-size: 14px; color: var(--ui-text); display: flex; align-items: center; gap: 5px; }
+.pnl-stat .v b { color: var(--pnl-num); font-variant-numeric: tabular-nums; }
+.pnl-stat select { font-size: 13px; max-width: 100%; }
+.pnl-reports { margin-top: 8px; font-size: 12.5px; }
+
+/* 面板寬 < 560（800×600 的 514）：隊友卡兩欄、第 3 張撐滿一列（2＋1） */
+@container world-panel (max-width: 559px) {
+  .pnl-members { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pnl-members > .pnl-member:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+/* ---------- 成長與技能（PNL-2；3.3；樣張 infoPanels.css 的 .ip-rule-chips、.ip-skill、.ip-set） ---------- */
+/* 閃現規則籌碼（#19）：一輪營火也用（FlashSection 共用），所以不靠面板容器 */
+.pnl-rule-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 6px; align-items: center; }
+.pnl-rule { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 6px; background: var(--pnl-row-hi); font-size: 12.5px; color: var(--pnl-l2); line-height: 1.5; }
+.pnl-rule b { color: var(--pnl-num); font-variant-numeric: tabular-nums; }
+
+/* 靈感閃現：每招一列（技能圖示 32｜名字＋L3 已閃次數｜鎖標籤｜閃現鈕）；點名字照現行展開技能卡 */
+.pnl-skill { grid-template-columns: 32px minmax(0, 1fr) auto auto; align-items: start; }
+.pnl-skill > canvas { border-radius: 6px; }
+.pnl-skill > .pnl-skill-tag,
+.pnl-skill > .pnl-skill-btn { align-self: center; display: inline-flex; }
+.pnl-skill > details { min-width: 0; }
+.pnl-skill > details > summary { cursor: pointer; list-style: none; display: flex; flex-direction: column; gap: 1px; min-height: 32px; justify-content: center; }
+.pnl-skill > details > summary::-webkit-details-marker { display: none; }
+.pnl-skill > details > summary .pnl-skill-name { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.pnl-skill > details[open] > summary { margin-bottom: 6px; }
+.pnl-skill-btn button { font-size: 13px; }
+
+/* 外觀與種族：設定列（列名＋次行｜鎖標籤＋鈕／選單） */
+.pnl-set { grid-template-columns: minmax(0, 1fr) auto; }
+.pnl-set .lbl { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pnl-set .ctl { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.pnl-set .ctl select,
+.pnl-set .ctl button { font-size: 13px; }
+.pnl-tag-hit { display: inline-flex; }
+
+/* 整備：摺疊展開後照現行內容（重閃、溶掉或傳承、誓約），段落用 L2 */
+.pnl-fold-body > .campfire-reflash,
+.pnl-fold-body > .campfire-old,
+.pnl-fold-body > .world-oath { margin: 0; }
+.pnl-fold-body p.small { color: var(--pnl-l2); font-size: 12.5px; line-height: 1.6; margin: 0 0 6px; }
+
+/* 「外觀與種族」分頁圖示：主角頭像不帶框（樣張 heroBare） */
+.hero-face-bare { display: inline-block; flex: none; }

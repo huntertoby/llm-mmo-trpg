@@ -4,6 +4,8 @@
 import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CARD_GAP } from "../battle/stageLayout";
+import { FLOAT_PIN_PX, floatPinCanvas } from "../render/hudIcon";
+import { IconCanvas } from "./HudGlyph";
 import { avoidRect, cardMaxHeight } from "./hoverCard";
 import { ParentFloat } from "./useFloatCard";
 import type { TileCardApi } from "./useTileCard";
@@ -18,13 +20,10 @@ interface Props {
   children: ReactNode;
 }
 
-/** 圖釘（3-40b，美術 PM：標題列右側＋底部提示共用同一個圖示）。 */
-function PinIcon({ className }: { className: string }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-      <path d="M10.5 1.5 14.5 5.5 12 6.5 9.5 9 9.8 12.2 8.6 13.4 6 10.8 2.5 14.3 1.7 13.5 5.2 10 2.6 7.4 3.8 6.2 7 6.5 9.5 4Z" fill="currentColor" />
-    </svg>
-  );
+/** 圖釘（3-40b，美術 PM：標題列右側＋底部提示共用同一個圖示）。QI-5（圖釘 A）：第④批 Q 版 canvas 13px，已釘紅頭、未釘灰鋼 55%（和 `PinGlyph` 同一張畫布）；
+ *  canvas 不吃 CSS 的 `currentColor`，狀態由 `pinned` 傳。 */
+function PinIcon({ className, pinned }: { className: string; pinned: boolean }) {
+  return <IconCanvas px={FLOAT_PIN_PX} className={className} cacheKey={pinned ? "on" : "off"} make={() => floatPinCanvas(pinned)} />;
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
@@ -111,14 +110,14 @@ export function HoverFloat({ placement, card, children }: Props) {
               ctl.pin();
             }}
           >
-            <PinIcon className="tile-pin-icon" />
+            <PinIcon className="tile-pin-icon" pinned={ctl.pinned} />
             {children}
             <div className="tile-pin-bar">
               {ctl.pinned ? (
                 "Esc 或再點一次：取消"
               ) : (
                 <>
-                  <PinIcon className="tile-pin-glyph" /> 點擊釘住・Shift＋點：任何格
+                  <PinIcon className="tile-pin-glyph" pinned={false} /> 點擊釘住・Shift＋點：任何格
                 </>
               )}
             </div>

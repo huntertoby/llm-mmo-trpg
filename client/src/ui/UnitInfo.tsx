@@ -27,7 +27,11 @@ import { Hint } from "./Hint";
 import { phaseText } from "../battle/bossPhase";
 import { PinGlyph } from "./SkillCardGlyphs";
 import { activeStacks, affixBadges, barData, surfaceAt, unitChips } from "./statusCard";
+import { breakLine, partBarState } from "../battle/partMenu";
+import { PartBar, PartIcon } from "./PartBar";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
+import { StackPips } from "./StackPips";
+import { hasGauge } from "../render/qIcon/stackGauge";
 
 interface Props {
   unit: UnitView | null;
@@ -188,7 +192,35 @@ export function UnitInfo(props: Props) {
         <StatBar bar={barData("hp", unit)} />
         <StatBar bar={barData("stamina", unit)} />
       </div>
+      {!compact && <UnitParts unit={unit} />}
       {!compact && <UnitCardMore {...props} unit={unit} />}
+    </div>
+  );
+}
+
+/**
+ * 頭目部位（PB-1c，05 5.12.2 第 12 點）：HP 下面每個部位一列——圖示、名稱、小血條（`.part-bar`；破掉打叉、未露出或
+ * 看不到資訊時幾乎黑、不寫數字），滑過看「破掉會：……」。沒有部位不畫。
+ */
+export function UnitParts({ unit }: { unit: UnitView }) {
+  const parts = unit.parts ?? [];
+  if (parts.length === 0) return null;
+  return (
+    <div className="unit-parts" data-testid="unit-parts">
+      {parts.map((p) => {
+        const state = partBarState(p);
+        const ok = state.kind === "ok";
+        return (
+          <Hint key={p.id} text={breakLine({ breakLines: p.break_lines_zh ?? [], broken: p.broken }) ?? p.name_zh}>
+            <span className="unit-part" data-part={p.id} data-state={state.kind}>
+              <PartIcon id={p.id} ok={ok} broken={p.broken} doll={null} />
+              <span className="part-menu-name">{p.name_zh}</span>
+              <PartBar state={state} />
+              {!ok && <span className="part-bar-num muted">{p.broken ? "已破壞" : p.exposed ? "" : "未露出"}</span>}
+            </span>
+          </Hint>
+        );
+      })}
     </div>
   );
 }
@@ -216,9 +248,14 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
           {unit.statuses.map((s, i) => (
             <StatusBadge key={`${i}:${s.status_id}`} status={s} text={statusText(s, skills)} />
           ))}
-          {activeStacks(unit).map(([k, n]) => (
-            <StackBadge key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
-          ))}
+          {/* KW-3 待決 3（美術 PM 2026-11-13）：連擊、怒氣、專注、氣用和 HUD 同尺寸的計量；其他層數照舊。只列 >0（0 層照現行不顯示） */}
+          {activeStacks(unit).map(([k, n]) =>
+            hasGauge(k) ? (
+              <StackPips key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
+            ) : (
+              <StackBadge key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
+            ),
+          )}
           {surface !== null && view !== undefined && <SurfaceBadge surface={surface} text={surfaceText(view, unit)} />}
         </div>
       )}

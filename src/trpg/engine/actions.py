@@ -88,6 +88,9 @@ class Attack(_ActionBase):
     target_id: UnitId | None = None
     target_object_id: ObjectId | None = None
     direction: Direction | None = None
+    target_part: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """打頭目的哪個部位（PB-1a，05 5.12.2；只能和 ``target_id`` 一起給）。省略＝打本體；
+    能不能選由 :func:`trpg.engine.parts.part_targets` 判斷。"""
 
     @model_validator(mode="after")
     def _one_target(self) -> Attack:
@@ -96,6 +99,8 @@ class Attack(_ActionBase):
             raise ValueError(
                 "Attack 必須恰好指定 target_id、target_object_id 或 direction 其中之一"
             )
+        if self.target_part is not None and self.target_id is None:
+            raise ValueError("Attack 的 target_part 只能和 target_id 一起給")
         return self
 
 
@@ -255,6 +260,15 @@ class UseSkill(_ActionBase):
     「擊殺 → 接下一段」（Phase 3F-4a）從施放者第一段結算後的位置選（玩家省略時結算到第二段暫停，由
     :class:`Decision` 補上）；「聚集 → 範圍打擊」「命中 → 加碼段」由引擎決定，不能帶。其他技能
     不能帶。"""
+    target_part: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """打頭目的哪個部位（PB-1a，05 5.12.2）：只有單體、對該目標有傷害效果的技能能帶，而且只能和
+    ``target_id`` 一起給；只作用在第一段（複合技第二段、延遲段打本體）。省略＝打本體。"""
+
+    @model_validator(mode="after")
+    def _part_needs_unit(self) -> UseSkill:
+        if self.target_part is not None and self.target_id is None:
+            raise ValueError("UseSkill 的 target_part 只能和 target_id 一起給")
+        return self
 
 
 class UseRaceSkill(_ActionBase):

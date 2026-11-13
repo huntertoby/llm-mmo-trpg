@@ -40,8 +40,9 @@ class Change(BaseModel):
 
     file: str = Field(pattern=r"^[a-z0-9_]+(/[a-z0-9_]+)*\.yaml$")
     path: str = Field(min_length=1, max_length=120)
-    old: int | None
-    new: int | None
+    old: int | str | tuple[str, ...] | None
+    new: int | str | tuple[str, ...] | None
+    """整數、骰子字串（``2d6``）、技能 ID 清單（NW-2a）；``None``＝沒寫。"""
 
     @property
     def key(self) -> tuple[str, str]:

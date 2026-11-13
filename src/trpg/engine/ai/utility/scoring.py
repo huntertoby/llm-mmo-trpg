@@ -157,7 +157,7 @@ def _preview_score(
     after = position_value(p.min_state, actor.id, w, orders, walk=walk)
     # 位置變化只在動作成功時發生（攻擊、技巧動作乘上命中率／成功率）
     hit = p.hit_chance if p.hit_chance is not None else Fraction(1)
-    score = _gains(state, actor, p, profile) + hit * (after - before)
+    score = _lock_gains(state, actor, p, profile) + hit * (after - before)
     if orders is not None:
         score += _order_bonus(state, actor, p, profile, orders)
     if isinstance(action, UseSkill):
@@ -169,6 +169,15 @@ def _preview_score(
     elif isinstance(action, Attack):  # 蓄力吐息（3J-2）：開始蓄力的收益是預計範圍內的敵人
         score += profile.weights.damage * _delayed_points(state, actor, p, profile.rewrite)
     return score
+
+
+def _lock_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiProfile) -> Fraction:
+    """預覽收益；瞄準預告（RG-1）改用「現在就射出」的預覽（``p.lock_fire``）× ``lock_on_permille``
+    （下回合才射、對手可以應對）。"""
+    if p.lock_fire is None:
+        return _gains(state, actor, p, profile)
+    gains = _gains(state, actor, p.lock_fire, profile)
+    return gains * profile.rewrite.lock_on_permille / 1000
 
 
 def extra_targets(state: BattleState, actor: UnitState, p: Preview) -> Fraction:

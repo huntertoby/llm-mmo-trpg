@@ -49,6 +49,13 @@ Phase 6R-2（#137）主角紙娃娃多了玩家自己選的外觀（``hero.doll.
 
 Phase TR-1（#134）加上「未完成開局（在主城工坊靶場）」（``opening``：起始技能的種子），角色格式升成
 ``trpg-char/12``；``/1``～``/11`` 照讀（沒有＝已完成開局：舊角色建角時就選了武器與關鍵字）。
+
+Phase WP-1（許願池，07 7.6、#88）加上本週許願的次數（``wish_week``）、待選三選一的來源多一種
+``wish`` 與都不拿時的退款（``PendingOffer.refund``），角色格式升成 ``trpg-char/14``；``/1``～``/13``
+照讀（沒有＝本週還沒許過願）。
+
+Phase RG-2（精英單挑，#162）加上遭遇的單挑狀態（``EncounterResult.duel``，沒有時不輸出），角色格式
+升成 ``trpg-char/15``；``/1``～``/14`` 照讀（沒有＝沒有提出單挑）。
 """
 
 from __future__ import annotations
@@ -120,6 +127,7 @@ __all__ = [
     "TimedFlag",
     "TradeRecord",
     "WeaponMix",
+    "WishWeek",
     "WorldEventState",
     "WorldState",
 ]
@@ -131,7 +139,7 @@ LEGACY_WORLD_FORMATS: Final = frozenset({"trpg-world/1", "trpg-world/2", "trpg-w
 ``weapon_mix``、``DailyActivity.characters``）。"""
 _ORIGIN_FORMATS: Final = frozenset({"trpg-char/9", "trpg-char/10"})
 """已經有裝備來歷（``gear_origin``）的舊角色格式（6T-1a 起），讀進來不重算來歷。"""
-CHAR_FORMAT: Final = "trpg-char/13"
+CHAR_FORMAT: Final = "trpg-char/15"
 LEGACY_CHAR_FORMATS: Final = frozenset(
     {
         "trpg-char/1",
@@ -146,6 +154,8 @@ LEGACY_CHAR_FORMATS: Final = frozenset(
         "trpg-char/10",
         "trpg-char/11",
         "trpg-char/12",
+        "trpg-char/13",
+        "trpg-char/14",
     }
 )
 """照讀、讀進來就升成 :data:`CHAR_FORMAT` 的舊角色格式（6B-2～6R-1：只多了選填欄位；6T-1a 另把
@@ -310,6 +320,12 @@ class EncounterResult(_Model):
     賽季 Boss 的規則回寫。"""
     contact: FieldContact | None = None
     """碰到實地地圖上看得見的敵人（Phase 6C-1）；``None``＝移動遇敵、戰鬥解法等。"""
+    duel: Literal["offered", "accepted", "declined"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    """精英單挑（RG-2，#162，09 9.6.6）：``offered``＝陣容排最前的精英提出一對一（遇敵時判定），
+    ``duel_choice`` 改成 ``accepted``／``declined``；還沒選就開打＝拒絕。``None``＝不提
+    （不輸出）。"""
 
 
 class EventTrigger(_Model):
@@ -536,7 +552,8 @@ class PendingOffer(_Model):
     """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。
 
     ``source``（Phase 5B-4c）：``quest``＝任務（``quest``、``step`` 是任務與步驟）；
-    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）。
+    ``opportunity``＝事件的機遇解法（``quest``＝骨架 ID、``step``＝``opportunity``）；
+    ``wish``＝主城的許願池（WP-1；``quest``＝``wish``、``step``＝``w<週>_<第幾次>``）。
 
     ``guaranteed``（Phase 5D-2b）：機遇是保底觸發的那次（標題用骨架的保底「誰」）；預設 ``False``，
     舊存檔照讀。"""
@@ -544,11 +561,20 @@ class PendingOffer(_Model):
     quest: str = Field(pattern=ID_PATTERN)
     step: str = Field(pattern=ID_PATTERN)
     offer: SkillOffer
-    source: Literal["quest", "opportunity"] = "quest"
+    source: Literal["quest", "opportunity", "wish"] = "quest"
     guaranteed: bool = False
     region: str | None = None
     """取得地點的區域（6L-2，#126：選到的技能記進 ``CharacterState.skill_regions``）；``None``＝
     舊存檔，選的時候用角色當下的區域。"""
+    refund: int = Field(default=0, ge=0, exclude_if=lambda v: v == 0)
+    """都不拿時退還的任務幣（WP-1 許願池，#88 2b；照許願當時的費用算）；0 不輸出。"""
+
+
+class WishWeek(_Model):
+    """本週許願的次數（Phase WP-1；``week`` 是 :func:`~trpg.world.season.week_of`，換週＝0 次）。"""
+
+    week: int = Field(ge=0)
+    used: int = Field(ge=0)
 
 
 def _check_threads(threads: tuple[ThreadState, ...]) -> tuple[ThreadState, ...]:
@@ -1232,18 +1258,20 @@ class WorldState(_Model):
 
 
 class CharacterState(_Model):
-    """一個角色在大世界的狀態（``trpg-char/13``；``trpg-char/1``～``/12`` 照讀）。"""
+    """一個角色在大世界的狀態（``trpg-char/15``；``trpg-char/1``～``/14`` 照讀）。"""
 
-    format: Literal["trpg-char/13"] = CHAR_FORMAT
+    format: Literal["trpg-char/15"] = CHAR_FORMAT
 
     @model_validator(mode="before")
     @classmethod
     def _upgrade_format(cls, data: object) -> object:
-        """``trpg-char/1``～``/12`` → ``trpg-char/13``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
+        """``trpg-char/1``～``/14`` → ``trpg-char/15``：只多了選填欄位（6B-2、6C-1、6C-2、6C-6、
         6C-5、6D-R2 的 ``field_visit.generations``、6F-4 的提示紀錄、6L-2 的 ``skill_regions``、
         6T-1a 的 ``gear_origin``、``mailbox``、6R-1 的 ``free_race_change_used``、6R-2 的
         ``hero.doll.custom``、TR-1 的 ``opening``：沒有＝已完成開局；OB-1 的 ``opening`` 新欄位：
-        ``/12`` 靶場中的角色取預設 ``stage="pick_class"``，走 #150 新流程），直接換版號；
+        ``/12`` 靶場中的角色取預設 ``stage="pick_class"``，走 #150 新流程；WP-1 的 ``wish_week``、
+        ``PendingOffer.refund``：沒有＝本週沒許過願；RG-2 的 ``EncounterResult.duel``：沒有＝沒有
+        提出單挑），直接換版號；
         ``/6`` 以前的存檔沒有 ``level_seen``，補成目前等級（舊角色不跳升級畫面）。6T-1a：``/8``
         以前的存檔已有的裝備（背包、穿戴中、等著決定的戰利品）不知道穿過沒有，保守起見一律記成
         綁定（``bound: legacy``），不能交易（``/9`` 起已經有來歷，不重算）。"""
@@ -1487,6 +1515,10 @@ class CharacterState(_Model):
     opening: OpeningState | None = None
     """未完成開局（在主城工坊靶場，還沒按「確定出發」）；``None``＝已完成（舊角色一律是）。這段期間
     主角拿的是佔位武器、沒有技能，只能做 ``opening_confirm`` 與只記畫面紀錄的動作。"""
+
+    # ---- 許願池（Phase WP-1，07 7.6、#88；邏輯在 trpg.world.wish） ----
+    wish_week: WishWeek | None = Field(default=None, exclude_if=lambda v: v is None)
+    """最近一次許願那週的次數（每週 2 次；``None``＝沒許過願）。"""
 
     @field_validator("gear_origin")
     @classmethod

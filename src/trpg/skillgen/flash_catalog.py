@@ -70,6 +70,15 @@ class FlashCatalog:
     def templates(self) -> tuple[str, ...]:
         return tuple(e.template for e in self.entries)
 
+    @property
+    def combinations(self) -> int:
+        """目錄裡不同的（模板, 參數）組合數（LF-2：題目要的數量不超過它，不逼模型重複）。"""
+        return len(self.pool)
+
+    def choices(self, template: str) -> int:
+        """模板的參數組合數（沒有參數的模板是 1；不在目錄裡是 0；LF-2 寫進 prompt）。"""
+        return sum(1 for v in self.pool.values() if v.template == template)
+
     def resolve(
         self,
         template: str,

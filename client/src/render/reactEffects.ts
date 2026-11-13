@@ -10,12 +10,13 @@ import { TILE_SIZE } from "../battle/geometry";
 import type { ReactKind, VfxReaction } from "../battle/vfx";
 import type { ArtTextures } from "./artTextures";
 import { knockOffset } from "./motionClips";
-import { creatureReact, guardOf, REACT_MS, reactFrame, sideOffset, type ReactClip, type ReactFrame, type ReactOpts } from "./reactClips";
+import { creatureReact, creatureReactFlashPeak, guardOf, REACT_MS, reactFlashPeak, reactFrame, sideOffset, type ReactClip, type ReactFrame, type ReactOpts } from "./reactClips";
+import { HUMAN_HIT_FLASH } from "./motionClips";
 import { clearFlash, overlayFlash } from "./silhouetteFlash";
 import { downedLook } from "./unitLook";
 import { BODY_LABEL, bodyNodes, bodyTexture, creatureOf, dollPx, FEET, flashTexture, gripOf, hasSkeleton, isProne, overlayFlashKind, placeCreatureBody, uprightTexture, type BodyFrame } from "./unitSprite";
 import type { Effect } from "./vfxEffects";
-import { dummyFlashAlpha, dummyFlashMs, isTrainingDummy } from "./trainingDummy";
+import { DUMMY_FLASH_ALPHA, dummyFlashAlpha, dummyFlashMs, isTrainingDummy } from "./trainingDummy";
 
 const T = TILE_SIZE;
 
@@ -31,6 +32,11 @@ export interface ReactHost {
   setTexture(unitId: string, node: Sprite, tex: Texture): void;
   /** 回到站好（倒地狀態＝躺著、倒下＝倒地圖示）的貼圖與位置。 */
   restBody(unitId: string, sprite: Container): void;
+  /**
+   * OCL-1b：被遮擋外框（`occlusionLayer.ts`）。`flash`＝當下白閃與這個效果自己的峰值（Q6：峰值由這裡傳，外框層不查表）；
+   * `hide`＝倒下片段中不畫外框。沒有外框的繪製器（測試）可以不給。
+   */
+  readonly outline?: { flash(unitId: string, flash: number, peak: number): void; hide(unitId: string): void };
 }
 
 /** 反應種類 → 片段。 */
@@ -53,7 +59,7 @@ export function reactEffects(host: ReactHost, r: VfxReaction, startMs: number, s
     const g = gripOf(draw);
     const opts: ReactOpts = { side: r.side ?? 1, guard: g === null ? "arm" : guardOf(g.main, g.off), variant: r.variant ?? 0 };
     if (clip === "down") return [downEffect(host, r.unitId, startMs, ms)];
-    const out = [bodyEffect(host, r.unitId, startMs, ms, (s, t) => poseDoll(host, r.unitId, s, reactFrame(clip, t, opts)))];
+    const out = [bodyEffect(host, r.unitId, startMs, ms, (s, t) => poseDoll(host, r.unitId, s, reactFrame(clip, t, opts), reactFlashPeak(clip)))];
     if (clip === "dodge") out.push(ghostEffect(host, r.unitId, startMs, ms, opts));
     if (clip === "block") out.push(sparkEffect(host, r.unitId, startMs, ms));
     return out;
@@ -81,6 +87,7 @@ export function bodyEffect(host: ReactHost, unitId: string, startMs: number, ms:
     end: () => {
       const s = host.sprite(unitId);
       if (s !== null) host.restBody(unitId, s);
+      host.outline?.flash(unitId, 0, 1); // OCL-1b：白閃結束，外框回到原色
       if (held) host.release(unitId);
       held = false;
     },
@@ -107,11 +114,12 @@ export function setCreatureBody(host: ReactHost, unitId: string, s: Container, p
   setBody(host, unitId, s, { creature: pose });
 }
 
-/** 紙娃娃：姿勢＋往後退、往側邊、離地、旋轉（南北向有透視，只走一半）。 */
-export function poseDoll(host: ReactHost, unitId: string, s: Container, f: ReactFrame): void {
+/** 紙娃娃：姿勢＋往後退、往側邊、離地、旋轉（南北向有透視，只走一半）。`peak`＝這個片段白閃的峰值（OCL-1b 外框閃白的分母）。 */
+export function poseDoll(host: ReactHost, unitId: string, s: Container, f: ReactFrame, peak = 0): void {
   const draw = host.draw(unitId);
   if (draw === undefined || s.destroyed) return;
   setBody(host, unitId, s, { pose: f.pose, flash: f.flash });
+  host.outline?.flash(unitId, f.flash, peak);
   const px = dollPx(draw);
   const back = knockOffset(draw.facing, f.back * px);
   const side = sideOffset(draw.facing, f.side * px);
@@ -122,7 +130,11 @@ export function poseDoll(host: ReactHost, unitId: string, s: Container, f: React
 }
 
 function poseCreature(host: ReactHost, unitId: string, s: Container, clip: ReactClip, t: number): void {
-  setCreatureBody(host, unitId, s, creatureReact(clip, t));
+  const pose = creatureReact(clip, t);
+  setCreatureBody(host, unitId, s, pose);
+  // OCL-1b（Q6）：倒下的人不畫外框（頭目倒下的 0.7 白閃也不傳）；其他照這個片段自己的峰值
+  if (clip === "down") host.outline?.hide(unitId);
+  else host.outline?.flash(unitId, pose.flash ?? 0, creatureReactFlashPeak(clip));
 }
 
 /**
@@ -138,6 +150,7 @@ function downEffect(host: ReactHost, unitId: string, startMs: number, ms: number
   const inner = bodyEffect(host, unitId, startMs, ms, (s, t) => {
     const draw = host.draw(unitId);
     if (draw === undefined || s.destroyed) return;
+    host.outline?.hide(unitId); // OCL-1b（Q6）：倒下的人不畫外框
     const f = reactFrame("down", t);
     const look = downedLook(draw.downed, draw.revivable);
     if (f.fall >= 1 && draw.downed) {
@@ -255,10 +268,12 @@ function overlayEffect(host: ReactHost, unitId: string, startMs: number, ms: num
       if (body === undefined || tex === null) return;
       host.art.holdFor(owner, tex);
       overlayFlash(body, tex, reactFrame("hit", t).flash * strength);
+      host.outline?.flash(unitId, reactFrame("hit", t).flash * strength, HUMAN_HIT_FLASH * strength); // OCL-1b（Q6）：疊層的峰值 0.85 × strength
     },
     end: () => {
       const s = host.sprite(unitId);
       if (s !== null) clearFlash(s);
+      host.outline?.flash(unitId, 0, 1);
       host.art.holdFor(owner, null);
     },
   };
@@ -284,10 +299,12 @@ export function dummyFlashEffect(host: ReactHost, unitId: string, startMs: numbe
       if (body === undefined || tex === null) return;
       host.art.holdFor(owner, tex);
       overlayFlash(body, tex, dummyFlashAlpha(t));
+      host.outline?.flash(unitId, dummyFlashAlpha(t), DUMMY_FLASH_ALPHA);
     },
     end: () => {
       const s = host.sprite(unitId);
       if (s !== null) clearFlash(s);
+      host.outline?.flash(unitId, 0, 1);
       host.art.holdFor(owner, null);
     },
   };

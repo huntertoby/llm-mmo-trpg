@@ -81,7 +81,7 @@ const TABLE: ReadonlyArray<readonly [string, string, number, string, string]> = 
   ["mist_wraith", "skill_blink", 3, "blink", "atk:blink"], // 2 位移：魅閃現
   ["molten_wraith", "skill_blink", 3, "blink", "atk:blink"],
   ["mountain_leopard", "skill_tiger_charge", 1, "charge", "atk:pounce"], // 3 衝鋒原語：山豹撲擊
-  ["lava_tortoise", "skill_fire_wall", 1, "breath", "atk:breath"], // 4 錐形：噴岩龜火牆
+  // 4 錐形：噴岩龜原本帶火牆，RG-1（#162）換成瞄準預告的熔岩彈，錐形改由下面的硫煙獸涵蓋
   ["sulfur_beast", "skill_sulfur_breath", 1, "breath", "atk:breath"], // 4 錐形：硫煙獸貼身不再退回獠牙撞
   ["sulfur_beast", "skill_sulfur_breath", 3, "breath", "atk:breath"],
   ["lava_beetle", "skill_battering_ram", 1, "charge", "atk:ram"], // 5 指定招：甲蟲破城衝撞

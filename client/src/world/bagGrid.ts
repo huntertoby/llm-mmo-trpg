@@ -85,7 +85,8 @@ export function tileLines(name: string): string[] {
   return [chars.slice(0, first).join(""), rest.length > TILE_LINE_CHARS ? `${rest.slice(0, TILE_LINE_CHARS - 1).join("")}…` : rest.join("")];
 }
 
-/** 滑過一格的說明：名字、種類、個數。 */
-export function cellHint(row: WorldBagItem): string {
-  return row.gear === true ? `${row.name_zh}・${row.kind_zh}` : `${row.name_zh}・${row.kind_zh}・×${row.count}`;
+/** 滑過一格的說明：名字、種類、個數。`formZh`：裝備的外觀形制名（RG-8：雲紋碑盾、熔殼塔盾），有的話接在名字後面。 */
+export function cellHint(row: WorldBagItem, formZh: string | null = null): string {
+  if (row.gear !== true) return `${row.name_zh}・${row.kind_zh}・×${row.count}`;
+  return formZh !== null ? `${row.name_zh}・${formZh}・${row.kind_zh}` : `${row.name_zh}・${row.kind_zh}`;
 }

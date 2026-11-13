@@ -625,16 +625,23 @@ def store_offer(
     step: str,
     offer: SkillOffer,
     *,
-    source: Literal["quest", "opportunity"] = "quest",
+    source: Literal["quest", "opportunity", "wish"] = "quest",
     guaranteed: bool = False,
     region: str | None = None,
     made_by: Literal["llm", "composer"] = "composer",
+    refund: int = 0,
 ) -> tuple[CharacterState, WorldEvent]:
-    """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務與機遇（5B-4c）共用。
+    """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務、機遇（5B-4c）、許願池（WP-1）共用。
     ``guaranteed``（5D-2b）：保底觸發的機遇。``region``（6L-2）：取得地點的區域；``made_by``：
-    候選的來源（機遇的 LLM 版）。"""
+    候選的來源（機遇、許願池的 LLM 版）。``refund``（WP-1）：都不拿時退還的任務幣。"""
     pending = PendingOffer(
-        quest=quest, step=step, offer=offer, source=source, guaranteed=guaranteed, region=region
+        quest=quest,
+        step=step,
+        offer=offer,
+        source=source,
+        guaranteed=guaranteed,
+        region=region,
+        refund=refund,
     )
     char = char.model_copy(
         update={
@@ -683,8 +690,10 @@ def _take_offer(
             skill=None,
             placed="skipped",
             source=pending.source,
+            refund=pending.refund,
         )
-        return char.model_copy(update={"pending_offers": rest}), (event,)
+        coins = char.quest_coins + pending.refund  # WP-1：許願池都不拿退一半（#88 2b）
+        return char.model_copy(update={"pending_offers": rest, "quest_coins": coins}), (event,)
     if not 0 <= action.pick < len(offer.candidates):
         raise WorldActionError(f"候選索引必須是 0～{len(offer.candidates) - 1}，收到 {action.pick}")
     service = char.pending_encounter is None and at_service(library, char)

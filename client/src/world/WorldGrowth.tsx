@@ -1,18 +1,48 @@
-// 大世界的「成長與技能」畫面（Phase 5A-7；docs/phases/Phase5計畫.md 13.3）：重用一輪的配點、閃現、
-// 重閃、溶掉、傳承元件（送出的選擇轉成世界動作），加上誓約區。地點限制（城鎮與營火）由後端
-// `growth` 下發，不在可花點的地方時按鈕停用並顯示原因。
-import { useState } from "react";
+// 大世界的「成長與技能」面板（Phase 5A-7；docs/phases/Phase5計畫.md 13.3）：重用一輪的配點、閃現、重閃、溶掉、傳承元件
+// （送出的選擇轉成世界動作），加上誓約區。地點限制（城鎮與營火）由後端 `growth` 下發，不在可花點的地方時按鈕停用並顯示原因。
+// PNL-2（docs/art/資訊面板-移植需求.md 3.3「成長與技能」）：固定區（標題＋回到地點圖、四個籌碼、不能花點時一行琥珀警告＋(i)）＋
+// 四個分頁（靈感閃現｜屬性點｜整備｜外觀與種族）；整備分頁是三列摺疊（重閃、溶掉或傳承、誓約；一次只開一個）。
+// 入門期的限制（`view.limits` 的 flash／dissolve／oath）拆到各頁：閃現頁的鎖住提示、整備摺疊右邊的鎖標籤（說明卡是伺服器原句）。
+import { useState, type ReactNode } from "react";
 import { api } from "../api/client";
 import type { RunChoice, WorldAction, WorldView } from "../api/types";
 import { AttributeRespecSection } from "../run/AttributeRespecSection";
-import { CampfireSkillCare } from "../run/CampfireSkillCare";
-import { FlashSection } from "../run/FlashSection";
+import { OldSkillSection, ReflashSection } from "../run/CampfireSkillCare";
+import { FlashChooser } from "../run/FlashChooser";
+import { FlashRuleChips, flashRowState } from "../run/FlashSection";
+import { CAN_FLASH_TEXT, flashCountText, noFlashOptions, NO_FLASH_OPTIONS_TEXT, ownedSkills, reflashable, showCanFlash } from "../run/flash";
 import { FlashPendingPanel } from "../screens/RunFlashPending";
+import { FLASH_LOCK_NOTE_ZH } from "../run/flashChoice";
+import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Hint } from "../ui/Hint";
-import { LimitNote, limitOf } from "./limits";
-import { LookChangeLine } from "./LookChange";
-import { RaceChangeLine } from "./RaceChange";
+import { Callout, Chip, EmptyNote, Fold, FoldGroup, HudBare, InfoTip, KeepNum, LockGlyph, PanelHead, PartBare, TabLine, Tag, EventBare } from "../ui/PanelKit";
+import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
+import { SkillCardView } from "../ui/SkillCardView";
+import { SkillIconView } from "../ui/SkillIconView";
+import { LookChangeRow, RaceChangeRow } from "./GrowthLookRows";
 import { choiceLabel, defaultParams, oathButton, paramLabel, spendLock, swearAction } from "./growth";
+import {
+  ATTR_EMPTY_ZH,
+  ATTR_LINE_ZH,
+  ATTR_PER_LEVEL_ZH,
+  CARE_FOLD_ZH,
+  CARE_FOLDS,
+  CARE_LINE_ZH,
+  CARE_PLACE_ZH,
+  CHOSEN_TAG_ZH,
+  FLASH_LOCK_ZH,
+  GROWTH_TAB_ZH,
+  GROWTH_TITLE_ZH,
+  growthTabBadge,
+  growthWarning,
+  LEVEL4_TAG_ZH,
+  NO_REFLASH_TIP_ZH,
+  NO_REFLASH_ZH,
+  NOT_NOW_ZH,
+  type CareFold,
+  type GrowthTabId,
+} from "./growthPanel";
+import { limitOf } from "./limits";
 
 interface Props {
   view: WorldView;
@@ -21,6 +51,8 @@ interface Props {
   onChoose(choice: RunChoice): Promise<number | null>;
   onAct(action: WorldAction): Promise<number | null>;
   onClose(): void;
+  /** 從別處的提醒點進來直接開的分頁（例：主角卡的靈感點 → 「靈感閃現」）；省略＝照預設（`pickTab`）。 */
+  initialTab?: GrowthTabId | null;
 }
 
 const PLACE = "只在城鎮與營火";
@@ -30,72 +62,278 @@ export function WorldFlashPending({ view, busy, onChoose }: Pick<Props, "view" |
   if (pending == null) return null;
   return (
     <div className="world-growth" data-testid="world-flash-pending">
-      <div className="world-growth-lock small" role="status">
-        先選完閃現的變化：選之前不能移動、開戰或使用其他服務。
-      </div>
-      <FlashPendingPanel key={`${pending.skill_id}:${pending.nth}:${pending.slot}`} pending={pending} hero={view.hero} busy={busy} onChoose={onChoose} />
+      {/* FL-1b 2.1：鎖住提示放進上固定區（寬版第 2 行下一行 L3；窄版收進 (i)） */}
+      <FlashPendingPanel key={`${pending.skill_id}:${pending.nth}:${pending.slot}`} pending={pending} hero={view.hero} busy={busy} onChoose={onChoose} lockNote={FLASH_LOCK_NOTE_ZH} />
     </div>
   );
 }
 
-export function WorldGrowth({ view, busy, onChoose, onAct, onClose }: Props) {
+/** 固定區（不捲）：標題＋回到地點圖、四個籌碼（0 灰）、不能花點時一行琥珀警告（原次行進 (i)；在城鎮不顯示）。 */
+function GrowthHead({ view, onClose }: Pick<Props, "view" | "onClose">) {
+  const c = view.character;
+  const insight = view.growth.insight;
+  const points = c.attribute_points;
+  const warn = growthWarning(view);
+  return (
+    <>
+      <PanelHead heading={GROWTH_TITLE_ZH} onBack={onClose} testId="world-growth-head" />
+      <div className="pnl-chips" data-testid="world-growth-chips">
+        <Chip icon={<HudBare id="bar_G" px={16} />} label="Lv" value={c.level} />
+        <Chip icon={<HudBare id="rank" px={16} />} label="角色階級" value={view.growth.skill_tier} />
+        <Chip icon={<HudBare id="bulb" px={15} />} label="靈感點" value={insight} zero={insight <= 0} />
+        <Chip icon={<PartBare cat="skeleton" id="aura" px={16} />} label="未分配屬性點" value={points} zero={points <= 0} />
+      </div>
+      {warn !== null && (
+        <Callout tone="warn" testId="world-service-note" end={<InfoTip text={`${view.growth.service_zh}。`} />}>
+          <b>{NOT_NOW_ZH}</b>：<KeepNum text={warn} />
+        </Callout>
+      )}
+    </>
+  );
+}
+
+/** 鎖標籤＋說明卡（伺服器原句）。 */
+function LockTag({ text, reason, testId }: { text: string; reason: string | null; testId?: string }) {
+  return (
+    <Hint text={reason}>
+      <span className="pnl-tag-hit" tabIndex={0}>
+        <Tag tone="lock" icon={<LockGlyph px={14} />} testId={testId}>
+          {text}
+        </Tag>
+      </span>
+    </Hint>
+  );
+}
+
+/** 靈感閃現分頁：（入門期）鎖住提示「閃現：4 級起」→ 規則籌碼＋(i) → 每招一列（圖示 32、名字、L3 已閃次數、鎖標籤、閃現鈕）。 */
+function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onChoose">) {
+  const [target, setTarget] = useState<string | null>(null);
+  const hero = view.hero;
+  const cid = view.character.character_id;
+  const limit = limitOf(view, "flash");
+  const lock = limit ?? spendLock(view);
+  const insight = hero.insight ?? view.growth.insight;
+  const skills = ownedSkills(hero);
+  const chosen = skills.find((s) => s.card.id === target);
+  return (
+    <div className="world-flash-pane" data-testid="run-flash">
+      {limit !== null && (
+        <Callout tone="lock" testId="world-limit-note">
+          <b>{FLASH_LOCK_ZH.head}</b>：<KeepNum text={FLASH_LOCK_ZH.tail} />
+        </Callout>
+      )}
+      <FlashRuleChips rules={hero.flash_rules} />
+      {chosen !== undefined && (
+        <FlashChooser
+          key={chosen.card.id}
+          runId={cid}
+          previewFlash={(skill, slot) => api.worldFlashPreview(cid, skill, slot)}
+          hero={hero}
+          skillId={chosen.card.id}
+          skillName={chosen.card.name_zh}
+          slot={null}
+          busy={busy}
+          onChoose={async (c) => {
+            const status = await onChoose(c);
+            if (status === null) setTarget(null);
+            return status;
+          }}
+          onCancel={() => setTarget(null)}
+        />
+      )}
+      <ul className="pnl-rows" data-testid="flash-skill-list">
+        {skills.map(({ card, flash, equipped }) => {
+          const { can, reason } = flashRowState(flash, insight, hero.flash_rules, lock);
+          const none = noFlashOptions(flash);
+          return (
+            <li key={card.id} className={none ? "pnl-row pnl-skill flash-none" : "pnl-row pnl-skill"} data-skill={card.id} data-flash-none={none ? 1 : undefined}>
+              <SkillIconView icon={card.icon} size={32} />
+              <details>
+                <summary>
+                  <span className="pnl-skill-name">
+                    <span className="name">{card.name_zh}</span>
+                    {!equipped && <span className="pnl-l3">（備用）</span>}
+                    {showCanFlash(flash) && limit === null && <span className="skill-flash-ready small">{CAN_FLASH_TEXT}</span>}
+                  </span>
+                  <span className="pnl-l3">
+                    <KeepNum text={flashCountText(flash, hero.flash_rules)} />
+                  </span>
+                  {none && (
+                    <span className="flash-none-note" data-testid={`flash-none-${card.id}`}>
+                      {NO_FLASH_OPTIONS_TEXT}
+                    </span>
+                  )}
+                </summary>
+                <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} />
+              </details>
+              <span className="pnl-skill-tag">{limit !== null && <LockTag text={LEVEL4_TAG_ZH} reason={limit} />}</span>
+              <Hint text={can ? undefined : reason}>
+                <span className="pnl-skill-btn">
+                  <button
+                    type="button"
+                    className={target === card.id ? "primary" : ""}
+                    disabled={busy || !can}
+                    data-testid={`flash-open-${card.id}`}
+                    onClick={() => setTarget(target === card.id ? null : card.id)}
+                  >
+                    閃現
+                  </button>
+                </span>
+              </Hint>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** 屬性點分頁：入門期資訊條（伺服器的字）→「未分配的屬性點」＋「升級時每級 +2」→ 沒有點時虛線空狀態；配點與重配照現行。 */
+function AttrPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onChoose">) {
+  const lock = spendLock(view);
+  const cid = view.character.character_id;
+  const starter = view.growth.starter_note_zh ?? null;
+  return (
+    <div className="world-attr-pane" data-testid="world-growth-attr">
+      {starter !== null && (
+        <Callout tone="info" testId="world-growth-starter">
+          <KeepNum text={starter} />
+        </Callout>
+      )}
+      <TabLine end={<Tag tone="dim">{ATTR_PER_LEVEL_ZH}</Tag>}>
+        <span>{ATTR_LINE_ZH}</span>
+      </TabLine>
+      {view.character.attribute_points <= 0 && (
+        <EmptyNote testId="world-growth-attr-empty">
+          <KeepNum text={ATTR_EMPTY_ZH} />
+        </EmptyNote>
+      )}
+      <AttributeRespecSection
+        hero={view.hero}
+        busy={busy || (!view.growth.can_allocate && !view.growth.can_spend)}
+        onChoose={onChoose}
+        campfire={view.growth.at_service}
+        runId={cid}
+        previewAllocation={(attrs) => api.worldAllocationPreview(cid, attrs)}
+        respecLocked={view.growth.can_spend ? null : lock}
+        allocateNote="沒有遭遇時隨時可以分配；重配只在城鎮與營火。"
+      />
+    </div>
+  );
+}
+
+/** 整備摺疊右邊的狀態標籤（#22、#23；說明卡是原句）。 */
+function careFoldEnd(view: WorldView, fold: CareFold): ReactNode {
+  if (fold === "reflash") {
+    if (reflashable(view.hero).length > 0) return null;
+    return (
+      <Hint text={NO_REFLASH_TIP_ZH}>
+        <span className="pnl-tag-hit" tabIndex={0}>
+          <Tag tone="dim" testId="world-care-reflash-tag">
+            {NO_REFLASH_ZH}
+          </Tag>
+        </span>
+      </Hint>
+    );
+  }
+  if (fold === "dissolve") {
+    const reason = limitOf(view, "dissolve");
+    return reason === null ? null : <LockTag text={LEVEL4_TAG_ZH} reason={reason} testId="world-care-dissolve-tag" />;
+  }
+  const reason = limitOf(view, "oath");
+  return reason === null ? null : <LockTag text={CHOSEN_TAG_ZH} reason={reason} testId="world-care-oath-tag" />;
+}
+
+/** 整備分頁：第一行「重閃、溶掉與傳承、誓約」＋「只在城鎮與營火」；三列摺疊（同一組、一次只開一個），展開後照現行內容。 */
+function CarePane({ view, busy, onChoose, onAct }: Pick<Props, "view" | "busy" | "onChoose" | "onAct">) {
   const cid = view.character.character_id;
   const lock = spendLock(view);
   const previewFlash = (skill: string, slot: number | null) => api.worldFlashPreview(cid, skill, slot);
-  const previewAllocation = (attrs: Record<string, number>) => api.worldAllocationPreview(cid, attrs);
-  // OB-5b：下面列了入門期的限制時，不寫「可以使用」（前後矛盾）
-  const limited = (["flash", "dissolve", "oath"] as const).some((k) => limitOf(view, k) !== null);
+  const body: Record<CareFold, ReactNode> = {
+    reflash: <ReflashSection runId={cid} hero={view.hero} busy={busy || lock !== null} onChoose={onChoose} previewFlash={previewFlash} place={PLACE} bare />,
+    dissolve: <OldSkillSection hero={view.hero} busy={busy || lock !== null || limitOf(view, "dissolve") !== null} onChoose={onChoose} place={PLACE} bare />,
+    oath: <OathSection view={view} busy={busy} onAct={onAct} bare />,
+  };
   return (
-    <div className="world-growth" data-testid="world-growth">
-      <div className="panel world-growth-head">
-        <div className="section-title">
-          成長與技能
-          <span className="muted small lead-gap">
-            Lv {view.character.level}・角色階級 {view.growth.skill_tier}・靈感點 {view.growth.insight}・未分配屬性點 {view.character.attribute_points}
-          </span>
-        </div>
-        <div className={`small ${view.growth.at_service ? "muted" : "world-growth-lock"}`} data-testid="world-service-note">
-          {view.growth.service_zh}。{view.growth.starter_note_zh ?? ""}{view.growth.at_service ? (limited ? "" : "你現在在這裡，可以使用。") : `現在不行：${view.growth.blocked_zh ?? ""}。`}
-        </div>
-        {lock !== null && view.growth.at_service && <div className="world-growth-lock small">現在不能花點：{lock}</div>}
-        {/* OB-5（#150 第 6、9 點）：開局還沒結束時不開放的成長功能（閃現、溶掉與傳承、誓約），先寫明原因 */}
-        <LimitNote reason={limitOf(view, "flash")} />
-        <LimitNote reason={limitOf(view, "dissolve")} />
-        <LimitNote reason={limitOf(view, "oath")} />
-        <div className="run-actions">
-          <button type="button" onClick={onClose} data-testid="world-growth-close">
-            回到地點圖
-          </button>
-        </div>
-      </div>
-      {/* 6R-2（#137）：外觀在主城隨時免費改；HUD 版面也找得到（6R-1 的本季免費換種族一起放這裡） */}
-      <div className="panel" data-testid="world-growth-look">
-        <div className="section-title">外觀與種族</div>
-        <LookChangeLine character={view.character} busy={busy} onAct={(a) => void onAct(a)} />
-        {view.character.free_race_change === true && <RaceChangeLine character={view.character} busy={busy} onAct={(a) => void onAct(a)} />}
-      </div>
-      <div className="panel">
-        <div className="section-title">屬性點</div>
-        {view.character.attribute_points <= 0 && <div className="muted small">沒有未分配的屬性點（升級時每級 2 點）。</div>}
-        <AttributeRespecSection
-          hero={view.hero}
-          busy={busy || (!view.growth.can_allocate && !view.growth.can_spend)}
-          onChoose={onChoose}
-          campfire={view.growth.at_service}
-          runId={cid}
-          previewAllocation={previewAllocation}
-          respecLocked={view.growth.can_spend ? null : lock}
-          allocateNote="沒有遭遇時隨時可以分配；重配只在城鎮與營火。"
-        />
-      </div>
-      <FlashSection runId={cid} hero={view.hero} busy={busy} onChoose={onChoose} previewFlash={previewFlash} lockedReason={lock} />
-      <CampfireSkillCare runId={cid} hero={view.hero} busy={busy || lock !== null} onChoose={onChoose} previewFlash={previewFlash} place={PLACE} />
-      <OathSection view={view} busy={busy} onAct={onAct} />
+    <div className="world-care-pane" data-testid="campfire-care">
+      <TabLine end={<Tag>{CARE_PLACE_ZH}</Tag>}>
+        <span>{CARE_LINE_ZH}</span>
+      </TabLine>
+      <FoldGroup name="world-growth-care">
+        {CARE_FOLDS.map((f) => (
+          <Fold
+            key={f}
+            id={f}
+            testId={`world-care-${f}`}
+            summary={
+              <span>
+                <b>{CARE_FOLD_ZH[f].name}</b>　{CARE_FOLD_ZH[f].note}
+              </span>
+            }
+            end={careFoldEnd(view, f)}
+          >
+            {body[f]}
+          </Fold>
+        ))}
+      </FoldGroup>
     </div>
   );
 }
 
-function OathSection({ view, busy, onAct }: Pick<Props, "view" | "busy" | "onAct">) {
+/** 外觀與種族分頁：兩列設定列（外觀；本季還能免費換種族時多一列種族）。 */
+function LookPane({ view, busy, onAct }: Pick<Props, "view" | "busy" | "onAct">) {
+  return (
+    <div className="pnl-rows" data-testid="world-growth-look">
+      <LookChangeRow view={view} busy={busy} onAct={(a) => void onAct(a)} />
+      {view.character.free_race_change === true && <RaceChangeRow view={view} busy={busy} onAct={(a) => void onAct(a)} />}
+    </div>
+  );
+}
+
+/** 「外觀與種族」分頁圖示：主角頭像不帶框（HUD 主角卡同一份外觀）；沒有外觀資料時用 HUD 的角色階級圖。 */
+function LookIcon({ view }: { view: WorldView }) {
+  const input = fieldHeroInput(view.character.hero_look ?? view.field?.hero);
+  if (input === null) return <HudBare id="rank" px={16} />;
+  return <HeroFace input={input} realm={view.character.origin_realm ?? null} size={16} bare />;
+}
+
+/** 四個分頁（順序照「玩家最常來做的事」；記號照 `growthTabBadge`）。 */
+export function growthTabs(props: Pick<Props, "view" | "busy" | "onChoose" | "onAct">): PanelTabDef[] {
+  const { view } = props;
+  const icon: Record<GrowthTabId, ReactNode> = {
+    flash: <HudBare id="bulb" px={16} />,
+    attr: <PartBare cat="skeleton" id="aura" px={16} />,
+    care: <EventBare id="b_rest" px={16} />,
+    look: <LookIcon view={view} />,
+  };
+  const render: Record<GrowthTabId, () => ReactNode> = {
+    flash: () => <FlashPane {...props} />,
+    attr: () => <AttrPane {...props} />,
+    care: () => <CarePane {...props} />,
+    look: () => <LookPane {...props} />,
+  };
+  return (["flash", "attr", "care", "look"] as const).map((id) => ({
+    id,
+    label: GROWTH_TAB_ZH[id].label,
+    short: GROWTH_TAB_ZH[id].short,
+    hint: GROWTH_TAB_ZH[id].hint,
+    icon: icon[id],
+    badge: growthTabBadge(view, id),
+    folds: id === "care" ? CARE_FOLDS : undefined,
+    render: render[id],
+  }));
+}
+
+export function WorldGrowth({ view, busy, onChoose, onAct, onClose, initialTab = null }: Props) {
+  const tabs = growthTabs({ view, busy, onChoose, onAct });
+  return (
+    <div className="world-growth" data-testid="world-growth">
+      <PanelTabs tabs={tabs} head={<GrowthHead view={view} onClose={onClose} />} initial={initialTab} testId="world-growth-tabs" />
+    </div>
+  );
+}
+
+function OathSection({ view, busy, onAct, bare = false }: Pick<Props, "view" | "busy" | "onAct"> & { bare?: boolean }) {
   const oath = view.oath;
   const [templateId, setTemplateId] = useState<string>(oath.templates?.[0]?.id ?? "");
   const template = (oath.templates ?? []).find((t) => t.id === templateId);
@@ -104,8 +342,8 @@ function OathSection({ view, busy, onAct }: Pick<Props, "view" | "busy" | "onAct
   const [confirmRelease, setConfirmRelease] = useState(false);
   const button = oathButton(view);
   return (
-    <div className="panel world-oath" data-testid="world-oath">
-      <div className="section-title">誓約</div>
+    <div className={bare ? "world-oath" : "panel world-oath"} data-testid="world-oath">
+      {!bare && <div className="section-title">誓約</div>}
       <p className="small muted">在城鎮或營火立誓，同時 1 個，一直有效到自己解除；解除後現實 1 天內不能再立。</p>
       {oath.available && (
         <p className="small muted" data-testid="world-oath-rules">

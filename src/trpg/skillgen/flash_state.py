@@ -22,7 +22,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.flash_templates import FlashPricing, FlashRules, PriceRule
-from trpg.content.skills import ShapeSpec, SkillKind
+from trpg.content.skills import ShapeSpec, SkillDef, SkillKind
 
 __all__ = [
     "COMPLETE_SLOT",
@@ -70,9 +70,14 @@ class Variation(_Frozen):
     keyword: str | None = None
     shape: ShapeSpec | None = None
     element: str | None = None
+    name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """LLM 取的名稱（LF-1；只給大變化與轉型，:mod:`trpg.skillgen.flash_text` 檢查過才掛上）。
+    只影響顯示，不進 :meth:`key`；沒有時不輸出（舊存檔逐字不變）。"""
+    note_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """LLM 寫的一句話描述（LF-1；同上，只影響顯示）。"""
 
     def key(self) -> str:
-        """穩定的識別字串（子亂數串流的標籤、比對用）。"""
+        """穩定的識別字串（子亂數串流的標籤、比對用；不含名稱與描述）。"""
         shape = "-" if self.shape is None else self.shape.model_dump_json(exclude_none=True)
         return "/".join(
             (self.source, self.template, self.keyword or "-", shape, self.element or "-")
@@ -88,6 +93,16 @@ class FlashRecord(_Frozen):
     floor_permille: int = Field(default=0, ge=0)
     """強度下限（Phase 3W-2）：重閃時，被換掉的那一筆套用後的預算分數（‰，無條件進位）；重調後這一
     筆的預算分數不可低於它（玩法 PM：重閃也不低於換掉之前）。閃現為 0（只比前一筆）。"""
+    kept: SkillDef | None = Field(default=None, exclude_if=lambda v: v is None)
+    """存檔裡這一筆套完之後的定義（RR-1，06 6.34.9「重推套不上的那一筆」）：升階時照新階級重推、
+    這一筆套不上，就把升階前存著的定義記在這裡；之後重推（閃現、重閃、再升階）到這一筆套不上時
+    照它保留（重配到當時的角色階級），不丟掉、也不改用當初的階級重推。只在升階時寫入；重閃換掉
+    更前面的一筆時清掉（定義裡含舊的那一筆）。不進技能 ID 的雜湊；沒有時不輸出（舊存檔逐字
+    不變）。"""
+
+    def identity(self) -> dict[str, object]:
+        """技能 ID 雜湊用的內容（不含 ``kept``：保留的定義不改變這招是誰）。"""
+        return self.model_dump(mode="json", exclude={"kept"})
 
 
 class SkillFlash(_Frozen):
@@ -219,7 +234,11 @@ def with_reflash(
         return state.model_copy(update={"adjustment": record, "spent": spent})
     if old is None:
         raise ValueError(f"沒有第 {nth} 次的變化可以重閃")
-    records = tuple(record if r.nth == nth else r for r in state.records)
+    # RR-1：後面幾筆保留的定義含舊的這一筆，換掉之後不能再用
+    records = tuple(
+        record if r.nth == nth else r if r.nth < nth else r.model_copy(update={"kept": None})
+        for r in state.records
+    )
     return state.model_copy(update={"records": records, "spent": spent})
 
 

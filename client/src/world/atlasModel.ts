@@ -98,7 +98,7 @@ export function nextMapLayer(layer: "region" | "atlas" | null, map: WorldMapView
 // ---------------------------------------------------------------------------
 
 /** 情境物件點了直接開的面板：橋頭石碑（`stele_region`）開該區的傳送選單、功能型物件（`panel`）開既有
- * 面板；兩個都沒有（許願池、工坊、一般物件）＝`null`，照舊開說明卡。 */
+ * 面板（WP-3 起許願池 `wish` 也是）；兩個都沒有（一般物件）＝`null`，照舊開說明卡。 */
 export function objectHud(
   obj: Pick<FieldSituationObject, "panel" | "stele_region"> | null,
 ): { panel: HudPanel; who: string | null } | null {

@@ -33,13 +33,14 @@ from trpg.engine.actions import UseSkill
 from trpg.engine.activations import activate
 from trpg.engine.context import Ctx
 from trpg.engine.copying import copy_free_problem, copy_source, has_copy_effect
-from trpg.engine.delayed import charge
+from trpg.engine.delayed import charge, charge_lock_on
 from trpg.engine.events import (
     EffectFizzled,
     SkillCooldownChanged,
     SkillFollowup,
     SkillUsed,
 )
+from trpg.engine.parts import check_target_part
 from trpg.engine.reactions import (
     PauseForDecision,
     after_attack,
@@ -60,6 +61,7 @@ from trpg.engine.skills.followups import (
 from trpg.engine.skills.targeting import (
     PaidCost,
     SkillArea,
+    aims_first,
     center_tiles,
     checked_area,
     composite_area,
@@ -107,10 +109,12 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     skill = modifiers.shaped_skill(ctx.state, caster, skill)
     if skill.id not in caster.all_skills:
         raise IllegalActionError(f"{caster.name_zh} 沒有裝備技能：{skill.name_zh}")
-    problem = skill_problem(ctx.state, caster, skill)
+    problem = skill_problem(ctx.state, caster, skill) or check_target_part(ctx.state, action)
     if problem is not None:
         raise IllegalActionError(problem)
     area = checked_area(ctx.state, caster, skill, action)
+    if aims_first(caster, skill) and action.target_id is None:
+        raise IllegalActionError(f"{skill.name_zh} 要瞄準一名單位")
     origin = _planned_followup(ctx.state, caster, skill, action)
     paid_area = area
     if origin is not None:
@@ -129,6 +133,9 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         elif skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
             assert action.target_pos is not None
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
+        elif aims_first(caster, skill) and not ctx.fire_lock:  # 瞄準預告（RG-1）：施放＝瞄準
+            assert action.target_id is not None
+            charge_lock_on(ctx, caster, skill, ctx.state.units[action.target_id])
         else:
             _resolve_cast(ctx, caster, skill, action, area, origin)
             if reveal:
@@ -150,6 +157,7 @@ def _resolve_cast(  # noqa: PLR0917
 ) -> None:
     """一般技能（含複合技能的第二段）的結算與施放後的轉向、潛行偷襲脫離。"""
     cast = Cast(ctx, caster, skill, action, area)
+    cast.part_id = action.target_part  # 只有第一段打部位（PB-1a）；第二段、延遲段打本體
     face = _primary_xy(ctx.state, caster, action)
     start = len(ctx.events)
     cast.run()

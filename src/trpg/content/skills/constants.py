@@ -84,8 +84,32 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
     "target_collided",
     "wielding_weapon",
     "in_form",
+    "lone_wolf",
+    "self_lacks_status",
+    "all_strikes_hit",
+    "self_stack_at_least",
+    "self_on_high_ground",
 )
-"""引擎實作的 17 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。"""
+"""引擎實作的 22 種條件（``trpg.engine.skills.conditions``），資料檔必須全部定義。
+
+``lone_wolf``（LW-1，06 6.37、#156）：開戰那一刻施放者的陣營只有自己（召喚物不算），整場固定。
+``self_lacks_status``（LW-1，BAL-21c 候選 B）：施放者身上沒有指定狀態（敵人專用招用）。
+``all_strikes_hit``（DD-3，#158）：這次施放每一下都命中同一個目標（只能用在效果上；由
+``trpg.engine.skills.cast.Cast`` 判斷）。
+``self_stack_at_least``（KW-1，#161，06 6.32.1）：施放者的某種自身層數達 N 層（施放中以施放開始
+時的層數判斷，由 ``Cast`` 記快照）。
+``self_on_high_ground``（KW-2，#161 鷹眼「站在高處時」）：施放者所在格的高度至少 1 層（占位定義，
+待 PM；飛行不算）。"""
+
+
+ALL_STRIKES_HIT = "all_strikes_hit"
+"""「這次施放每一下都命中」條件（DD-3，#158，08 8.11 雙牙）。"""
+
+SELF_STACK_AT_LEAST = "self_stack_at_least"
+"""「施放者的某種層數達 N 層」條件（KW-1，#161，06 6.32.1：利用＝消耗或「層數達 N 時」）。"""
+
+SELF_ON_HIGH_GROUND = "self_on_high_ground"
+"""「施放者站在高處」條件（KW-2，#161 鷹眼）。"""
 
 
 type Targeting = Literal[
@@ -108,6 +132,7 @@ type ReactionEvent = Literal[
     "ally_downed",
     "enemy_enters_adjacent",
     "ally_targeted",
+    "ally_hit_near",
 ]
 
 
@@ -220,6 +245,9 @@ _PLAIN_CONDITION_TEXT = {
     "first_round": "第一輪",
     "target_collided": "目標本回合受過撞擊",
     "in_form": "你在形態中",
+    "lone_wolf": "獨狼（開戰時我方只有你）",
+    "all_strikes_hit": "每一下都命中同一個目標（雙匕首兩下都中）",
+    "self_on_high_ground": "你站在高處",
 }
 """沒有參數的條件的一句話（Phase 3D-1）。"""
 
@@ -294,8 +322,10 @@ SKILL_REACTION_EVENTS: tuple[str, ...] = (
     "ally_downed",
     "enemy_enters_adjacent",
     "ally_targeted",
+    "ally_hit_near",
 )
-"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1；後四個是 Phase 3D-3 新增）。"""
+"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1；第 5～8 個是 Phase 3D-3 新增；
+``ally_hit_near`` 是 TF-1 援手用的，只能搭配 ``aid: true``）。"""
 
 
 LEGACY_REACTION_EVENTS: tuple[str, ...] = SKILL_REACTION_EVENTS[:4]
@@ -460,6 +490,10 @@ LEAVE_FORM = "leave_form"
 
 
 SUMMON = "summon"
+
+
+SUMMON_BESIDE = "summon_beside"
+"""TF-1（#159 伴生、護主）的召喚到身邊原語 ID：被動、反應用，在持有者旁邊召出縮小版召喚物。"""
 
 
 MAX_SUMMON_COUNT = 2
@@ -748,6 +782,10 @@ CASTER_CONDITIONS: frozenset[str] = frozenset(
         "self_concealed",
         "wielding_weapon",
         "in_form",
+        "lone_wolf",
+        "self_lacks_status",
+        "self_stack_at_least",
+        "self_on_high_ground",
     }
 )
 """只看施放者的條件（Phase 3D-1；``wielding_weapon`` 為 3I-5）：技能層級的判斷不需要影響範圍內

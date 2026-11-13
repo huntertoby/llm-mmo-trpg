@@ -1,7 +1,8 @@
 """大世界的生成內容（Phase 6L-2；06 6.34.7「預先生成」、07 7.6）。
 
 三個入口本來就會請 LLM 提議：**閃現與重閃**的變化、主線**劇情技能**的元素與文字、**機遇**的完整技能
-三選一。世界引擎（純函式）不呼叫 LLM，也不知道背景執行緒：
+三選一；WP-1 加上第四個：**許願池**（願望對到的關鍵字＋完整技能三選一，:class:`WishGenRequest`）。
+世界引擎（純函式）不呼叫 LLM，也不知道背景執行緒：
 
 - 引擎需要生成內容時組一個 **請求**（:class:`FlashGenRequest`、:class:`StoryGenRequest`、
   :class:`OfferGenRequest`），交給目前裝上的 **供應者**（:func:`using_generated`；API 層裝上背景
@@ -43,9 +44,12 @@ __all__ = [
     "Generated",
     "OfferGen",
     "OfferGenRequest",
+    "Record",
     "StoryGen",
     "StoryGenRequest",
     "Supplier",
+    "WishGen",
+    "WishGenRequest",
     "flash_key",
     "flash_pregen_key",
     "input_key",
@@ -91,7 +95,25 @@ class OfferGen(_Model):
     offer: SkillOffer | None = None
 
 
-type Generated = Annotated[FlashGen | StoryGen | OfferGen, Field(discriminator="kind")]
+class WishGen(_Model):
+    """許願池（WP-1）：LLM 從選單對到的關鍵字與完整技能三選一。``source``：``llm``＝關鍵字＋至少
+    一張 LLM 提議的技能；``partial``＝只有關鍵字（``offer`` 為 ``None``，引擎用同樣的關鍵字照常算
+    組合器版）；``none``＝沒對上（模型關閉、逾時、驗證不過），引擎拒絕這次許願。願望文字不在這裡
+    （在動作裡），紀錄只有 LLM 給出的結構。"""
+
+    kind: Literal["wish"] = "wish"
+    key: str
+    source: Literal["llm", "partial", "none"] = "none"
+    keywords: tuple[str, ...] = ()
+    offer: SkillOffer | None = None
+    attempts: int = Field(default=0, ge=0)
+    """對關鍵字那一步呼叫了幾次 LLM（提議技能的次數在 ``offer`` 的標示裡）。"""
+    codes: tuple[str, ...] = ()
+    """對關鍵字那一步的錯誤碼（每次嘗試依序）。"""
+    prompt_version: str = ""
+
+
+type Generated = Annotated[FlashGen | StoryGen | OfferGen | WishGen, Field(discriminator="kind")]
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,15 +156,33 @@ class OfferGenRequest:
     kind: Literal["complete_offer"] = "complete_offer"
 
 
-type GenRequest = FlashGenRequest | StoryGenRequest | OfferGenRequest
-type Supplier = Callable[[GenRequest], FlashGen | StoryGen | OfferGen | None]
+@dataclass(frozen=True, slots=True)
+class WishGenRequest:
+    """許願池的請求（WP-1）：``text`` 是玩家的願望（生成函式只放進 prompt 的 ``<player_input>``）；
+    ``menu`` 是可以對到的關鍵字；``run`` 是出題用的角色（``offers_made`` 已對上）；
+    ``max_keywords``、
+    ``llm_cards`` 照世界規則。"""
+
+    character_id: str
+    key: str
+    text: str
+    menu: tuple[str, ...]
+    run: RunState
+    max_keywords: int
+    llm_cards: int
+    kind: Literal["wish"] = "wish"
+
+
+type GenRequest = FlashGenRequest | StoryGenRequest | OfferGenRequest | WishGenRequest
+type Record = FlashGen | StoryGen | OfferGen | WishGen
+type Supplier = Callable[[GenRequest], Record | None]
 """請求 → 紀錄（或 ``None``）。API 層的實作可以等背景工作（最多 10 秒）；引擎只當它是資料來源。"""
 
 
 @dataclass(slots=True)
 class _Context:
     supplier: Supplier | None
-    used: list[FlashGen | StoryGen | OfferGen]
+    used: list[Record]
 
 
 _CONTEXT: ContextVar[_Context | None] = ContextVar("trpg_world_generated", default=None)
@@ -151,7 +191,7 @@ _CONTEXT: ContextVar[_Context | None] = ContextVar("trpg_world_generated", defau
 @contextmanager
 def using_generated(
     supplier: Supplier | None,
-) -> Iterator[list[FlashGen | StoryGen | OfferGen]]:
+) -> Iterator[list[Record]]:
     """在 ``with`` 區塊內裝上供應者；``as`` 拿到的清單收集這段期間引擎最後給出的紀錄（依發生順序）。
     ``supplier`` 為 ``None``＝一律降級（照樣收集降級的紀錄）。"""
     context = _Context(supplier, [])
@@ -162,7 +202,7 @@ def using_generated(
         _CONTEXT.reset(token)
 
 
-def supply[R: (FlashGen, StoryGen, OfferGen)](
+def supply[R: (FlashGen, StoryGen, OfferGen, WishGen)](
     request: GenRequest, expect: type[R], fallback: R, accept: Callable[[R], R | None]
 ) -> R:
     """引擎拿生成內容：問目前的供應者，種類或鍵不對、``accept``（引擎的驗證）不收時用 ``fallback``；
@@ -181,13 +221,11 @@ def supply[R: (FlashGen, StoryGen, OfferGen)](
     return chosen
 
 
-def recorded(records: Iterable[FlashGen | StoryGen | OfferGen]) -> Supplier:
+def recorded(records: Iterable[Record]) -> Supplier:
     """重播用的供應者：依（種類, 鍵）取日誌裡的紀錄，不呼叫 LLM。"""
-    by_key: dict[tuple[str, str], FlashGen | StoryGen | OfferGen] = {
-        (r.kind, r.key): r for r in records
-    }
+    by_key: dict[tuple[str, str], Record] = {(r.kind, r.key): r for r in records}
 
-    def lookup(request: GenRequest) -> FlashGen | StoryGen | OfferGen | None:
+    def lookup(request: GenRequest) -> Record | None:
         return by_key.get((request.kind, request.key))
 
     return lookup

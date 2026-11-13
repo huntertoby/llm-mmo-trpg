@@ -27,6 +27,8 @@ export interface RowLayer {
   traps: Container;
   /** HID-1b（美術 PM 11-07）：攻擊紅框（`Highlights.attacks`）：在單位之下、物件與高度徽章之上（HighlightLayer.drawAttackFrames）。 */
   frames: Container;
+  /** RG-3：瞄準線照所在的排切段放這裡（攻擊紅框那一級：紅框之上、單位之下；`RgMarkLayer`）。和紅框分開，`clearFrames` 不清。 */
+  aims: Container;
   units: Container;
   /** 擋視線表面（煙霧、黑暗）的上層霧：在單位之上（Phase 3-36b）。 */
   veil: Container;
@@ -65,11 +67,12 @@ function makeRow(): RowLayer {
     badges: new Container(),
     traps: new Container(),
     frames: new Container(),
+    aims: new Container(),
     units: new Container(),
     veil: new Container(),
     marks: new RenderLayer(),
   };
-  row.root.addChild(row.ground, row.deco, row.under, row.objects, row.traps, row.badges, row.frames, row.units, row.veil, row.marks);
+  row.root.addChild(row.ground, row.deco, row.under, row.objects, row.traps, row.badges, row.frames, row.aims, row.units, row.veil, row.marks);
   return row;
 }
 

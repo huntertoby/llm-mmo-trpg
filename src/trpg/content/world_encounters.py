@@ -37,7 +37,9 @@ __all__ = [
     "encounter_table_problems",
 ]
 
-MIN_GROUP_SIZE = 2
+MIN_GROUP_SIZE = 1
+"""一場敵人最少 1 名（OB-7b，#155 2026-11-12 修訂：新手第 1 步渡口 1 隻、主角＋賽倫 2 打 1）。
+第一季只有 ``bandit_raiders`` 是 1 名，其他陣容仍 ≥ 2（內容測試鎖住）。"""
 MAX_GROUP_SIZE = 4
 """一場敵人最多 4 名（地圖敵方起始區 4 格；3 人隊伍對 2～4 名，代決 5A3-9）。"""
 MAX_THIRD_SIZE = 3
@@ -47,7 +49,7 @@ NO_ENCOUNTER_KINDS = frozenset({"town", "gate"})
 
 
 class EncounterGroupDef(ContentModel):
-    """一種陣容：單位範本 ID 或變體 ID，2～4 名（可重複）。
+    """一種陣容：單位範本 ID 或變體 ID，1～4 名（可重複；1 名只給新手渡口，OB-7b）。
 
     ``third``（Phase 5B-M3 三方混戰，09 9.6.6「兩方敵人互相敵對」）：同場的第三方，0～3 名；和我方、
     敵方都敵對。"""
@@ -81,6 +83,9 @@ class FixedElite(ContentModel):
 
     unit: str = Field(pattern=ID_PATTERN)
     affix: str = Field(pattern=ID_PATTERN)
+    duel: bool = Field(default=False, exclude_if=lambda v: not v)
+    """精英單挑（RG-2，#162，09 9.6.6）：這名精英開戰前提出一對一。接受＝只有主角對這名精英，拒絕
+    （或沒選就開打）＝照原本全隊打；兩邊獎勵完全一樣。沒填＝不提（不輸出，既有內容不變）。"""
 
 
 class UnitMinLevel(ContentModel):

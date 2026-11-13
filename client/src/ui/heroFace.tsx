@@ -5,7 +5,7 @@
 // 確定性：沒有亂數；離屏畫好依（外觀、區域、大小）快取成圖片網址。沒有 DOM（vitest）時留同大小的空框。
 import type { FieldHeroView, UnitView } from "../api/types";
 import { resolveDoll, type DollInput } from "../render/appearance";
-import { drawPortraitFrame, PORTRAIT_REGION, specFigure } from "../render/portrait";
+import { drawPortraitBare, drawPortraitFrame, PORTRAIT_REGION, specFigure } from "../render/portrait";
 
 /** 主角頭像要畫的外觀（`resolveDoll` 的輸入，我方）。 */
 export type HeroFaceInput = DollInput;
@@ -44,17 +44,17 @@ export function heroRing(realm: string | null | undefined): string {
   return ((realm != null ? PORTRAIT_REGION[realm] : undefined) ?? PORTRAIT_REGION["merc"]!)[0];
 }
 
-/** 快取鍵（外觀內容＋區域＋大小＋解析度）。 */
-export function heroFaceKey(input: HeroFaceInput, realm: string | null | undefined, size: number, dpr: number): string {
-  return `${size}|${dpr}|${realm ?? ""}|${JSON.stringify(input)}`;
+/** 快取鍵（外觀內容＋區域＋大小＋解析度；不帶框的另加 `|bare`，帶框的鍵不變）。 */
+export function heroFaceKey(input: HeroFaceInput, realm: string | null | undefined, size: number, dpr: number, bare = false): string {
+  return `${size}|${dpr}|${realm ?? ""}|${JSON.stringify(input)}${bare ? "|bare" : ""}`;
 }
 
 const cache = new Map<string, string>();
 
-/** 主角頭像的圖片網址（沒有 DOM 時為 `null`）。 */
-export function heroFaceUrl(input: HeroFaceInput, realm: string | null | undefined, size: number, dpr = 2): string | null {
+/** 主角頭像的圖片網址（沒有 DOM 時為 `null`）。`bare`＝不畫區域色底與框、下緣漸隱（PNL-2「外觀與種族」分頁圖示；同一份外觀）。 */
+export function heroFaceUrl(input: HeroFaceInput, realm: string | null | undefined, size: number, dpr = 2, bare = false): string | null {
   if (typeof document === "undefined") return null;
-  const key = heroFaceKey(input, realm, size, dpr);
+  const key = heroFaceKey(input, realm, size, dpr, bare);
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
   const c = document.createElement("canvas");
@@ -63,16 +63,22 @@ export function heroFaceUrl(input: HeroFaceInput, realm: string | null | undefin
   const ctx = c.getContext("2d");
   if (ctx === null) return null;
   ctx.scale(dpr, dpr);
-  drawPortraitFrame(ctx, 0, 0, size, specFigure(resolveDoll(input)), realm);
+  if (bare) drawPortraitBare(ctx, size, specFigure(resolveDoll(input)));
+  else drawPortraitFrame(ctx, 0, 0, size, specFigure(resolveDoll(input)), realm);
   const url = c.toDataURL("image/png");
   cache.set(key, url);
   return url;
 }
 
-/** 主角頭像（圓角方框，同 NPC 頭像）；沒有 DOM 時留同大小的空框。 */
-export function HeroFace({ input, realm, size, label }: { input: HeroFaceInput; realm: string | null | undefined; size: number; label?: string }) {
-  const url = heroFaceUrl(input, realm, size);
+/** 主角頭像（圓角方框，同 NPC 頭像）；沒有 DOM 時留同大小的空框。`bare`＝不帶框（分頁圖示）。 */
+export function HeroFace({ input, realm, size, label, bare = false }: { input: HeroFaceInput; realm: string | null | undefined; size: number; label?: string; bare?: boolean }) {
+  const url = heroFaceUrl(input, realm, size, 2, bare);
   const ring = heroRing(realm);
+  if (bare) {
+    const cls = "pnl-ico hero-face-bare";
+    if (url === null) return <span className={cls} style={{ width: size, height: size }} data-hero-face="bare" aria-label={label} role={label !== undefined ? "img" : undefined} />;
+    return <img className={cls} src={url} width={size} height={size} alt={label ?? ""} data-hero-face="bare" draggable={false} />;
+  }
   if (url === null) {
     return <span className="hero-face" style={{ width: size, height: size }} data-hero-face="q" data-ring={ring} aria-label={label} role={label !== undefined ? "img" : undefined} />;
   }

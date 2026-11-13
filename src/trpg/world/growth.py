@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+from collections.abc import Mapping
 from typing import Final
 
 from trpg.content.library import ContentLibrary
@@ -59,6 +60,7 @@ from trpg.roguelite.state import (
 from trpg.shared.rng import fnv1a64
 from trpg.skillgen.flash_offer import FlashOptionSource, FlashRequest, UsageSource
 from trpg.skillgen.flash_state import Variation
+from trpg.skillgen.flash_text import VariationText, text_map
 from trpg.world.actions import (
     AllocateAction,
     AttributesAllocatedEvent,
@@ -515,15 +517,22 @@ def _flash(
 
 
 class _RecordedFlash(UsageSource):
-    """日誌（或預先生成）記下的變化提議；``make_offer`` 照樣一一驗證，套不上的用模板補。"""
+    """日誌（或預先生成）記下的變化提議；``make_offer`` 照樣一一驗證，套不上的用模板補。LF-1：
+    另給名稱與描述（``texts``），引擎檢查後掛到鍵對得上的選項。"""
 
-    def __init__(self, accepted: tuple[Variation, ...]) -> None:
+    def __init__(
+        self, accepted: tuple[Variation, ...], texts: tuple[VariationText, ...] = ()
+    ) -> None:
         self.accepted = accepted
+        self.by_key = text_map(texts)
 
     def proposed(
         self, library: ContentLibrary, request: FlashRequest, skill: object
     ) -> list[Variation]:
         return list(self.accepted)
+
+    def texts(self, library: ContentLibrary, request: FlashRequest) -> Mapping[str, VariationText]:
+        return self.by_key
 
 
 def world_flash_request(
@@ -563,9 +572,9 @@ def _flash_source(
         return UsageSource(), template
     fallback = FlashGen(key=gen.key, record=FlashLlmRecord(tag=gen.key, source="template"))
     found = supply(gen, FlashGen, fallback, lambda g: g)
-    if not found.record.accepted:
+    if not found.record.accepted and not found.record.texts:
         return UsageSource(), found.record
-    return _RecordedFlash(found.record.accepted), found.record
+    return _RecordedFlash(found.record.accepted, found.record.texts), found.record
 
 
 def _new_skill(before: RunState, after: RunState, old: str) -> str:

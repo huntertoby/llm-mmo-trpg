@@ -1,0 +1,33 @@
+# LW-1 獨狼示範（玩法決定 #156，06 6.37；名稱與內容是初稿，倍率交數值工坊）：遠程單體傷害；獨狼時傷害提高，打出後自己進入隱蔽。
+# 06 的初稿另有「獨狼時射程 +1」：現有技能結構沒有「條件成立時射程改變」，不做（06 6.37「LW-1 後的細節」第 4 點）。
+# LW-2（開發 PM 轉玩法 PM 定稿）：平常照一般倍率 1000，只有獨狼成立時多一段傷害（寫法同隱匿射擊「1000＋隱蔽時 1300」）。
+# 武器倍率與隱蔽回合在數值工坊（effects[*].multiplier_permille、effects[*].duration）；數值為保守占位，未經模擬。
+# BAL：獨狼那一段取 600（71.9%）；500 時 68.7% 過弱。
+id: skill_unguarded_shot
+schema_version: 1
+name_zh: 無人掩護
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 沒人分散對手的注意，這一箭可以慢慢瞄
+  - type: damage
+    multiplier_permille: 600
+    condition: {type: lone_wolf}
+  # 獨自出戰時，射完就隱進暗處
+  - {type: apply_status, status: concealed, duration: 2, affects: self, condition: {type: lone_wolf}}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, ranged]
+narrative:
+  concept: 沒有人替你擋，那就讓他們找不到你
+  cast_flavor: 箭離弦的同時你已經矮身換位，只留下一道空蕩的射擊位置
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

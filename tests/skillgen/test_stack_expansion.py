@@ -41,6 +41,9 @@ def _card_text(skill_id: str) -> str:
 
 def test_consume_text_names_what_the_stack_boosts() -> None:
     assert "傷害 +20%" in _card_text("skill_combo_finisher")
+    # RG-5b（玩法PM交接 4.1.7 第 3 條）：連擊點一律用「點」，其他照舊「層」
+    assert "每點使本技能傷害 +20%" in _card_text("skill_combo_finisher")
+    assert "每層" not in _card_text("skill_throat_cut")
     shield = _card_text("skill_sanctified_ward")
     assert "每層使本技能治療、護盾 +20%" in shield
     assert "傷害、治療" in _card_text("skill_qi_breath") or "治療 +15%" in _card_text(
@@ -54,7 +57,9 @@ def test_glossary_explains_how_each_new_stack_is_gained_and_spent() -> None:
     for stack_id in NEW_STACKS:
         lines = "\n".join(by_id[stack_id].rules_zh)
         assert "只有帶著消耗它的技能才會自動累積" in lines, stack_id
-        assert "消耗：技能每層提高" in lines, stack_id
+        unit = library().ruleset.stack_def(stack_id).unit_zh  # RG-5b：連擊點用「點」
+        assert f"消耗：技能每{unit}提高" in lines, stack_id
+        assert ("層" in lines) is (unit == "層"), f"{stack_id} 單位不一致：{lines}"
         assert not any(c in lines for c in _ENGLISH), f"{stack_id} 說明露出英文：{lines}"
     assert "疊在被命中的敵人身上" in "\n".join(by_id["hoarfrost"].rules_zh)
     assert "3 輪沒有再累積就清空" in "\n".join(by_id["hoarfrost"].rules_zh)

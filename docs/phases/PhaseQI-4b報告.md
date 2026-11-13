@@ -82,7 +82,7 @@ armor_broken、array_ward、charging、commanding、crystal_surge、crystal_surg
 | `docs/art/shots/qi4/4b-01-statustile-fit-before-after-18-24-26-x4.png` | 追加（美術 QI-4a 可修 1） | `status-gallery?set=tile&nofit=1`：護盾、心連結、戰意、帶電護盾（第④批對照）、水幕護盾、定時炸彈、蓄力、劍陣 × 18／24／26 × 真 1 倍與 DPR 2，最近鄰 ×4；每格上＝改前（4a）、下＝改後 |
 | `docs/art/shots/qi4/4b-02-battle-bomb-charge-statustile-dpr3.png` | 4a 待決 7、`statusTile` 實機 | 實機戰場（單場戰鬥）定時炸彈 2、蓄力 1 徽章，DPR 3 特寫（筆記第四節 18 的做法） |
 | `docs/art/shots/qi4/4b-03-bag-1600-tooltip-keywords.jpg` | 第 7 項實機 1600 | 背包：身上裝備格 fit 48、背包格 42、詳情卡 64＋「目前」32、頭的說明卡含「關鍵字：帶電、倒地」；詳情卡含「關鍵字：冰凍、召喚物」 |
-| `docs/art/shots/qi4/4b-04-bag-800-tooltip-keywords.jpg` | 第 7 項實機 800 | 同上 800×600（身上裝備格 38），身體的說明卡含「關鍵字：冰凍、隱蔽」 |
+| `docs/art/shots/qi4/4b-04-bag-800-tooltip-keywords.jpg` | 第 7 項實機 800 | 同上 800×600（身上裝備格 38），頭部的說明卡含「關鍵字：帶電、倒地」（美術驗收更正） |
 | `docs/art/shots/qi4/4b-05-qi2c-workshop-card56-1600-800.jpg` | QI-2c 補拍（驗收 1 節第 8 項） | 技能工坊「技能卡片預覽」56 mid，1600、800 |
 | `docs/art/shots/qi4/4b-06-qi2c-workshop-800-96-40-28.jpg` | QI-2c 補拍（第 9 項） | 技能工坊 96 full／40／28 main，800（右 1600 對照） |
 | `docs/art/shots/qi4/4b-07-qi2c-worn-slots-1600-true1x-x6.png` | QI-2c 補拍（第 12 項） | 1600×900 裝置像素比 1 的身上裝備格（主手、副手、頭、身體）最近鄰 ×6；畫布左上 (457,284)…(643,284) 都是整數 |

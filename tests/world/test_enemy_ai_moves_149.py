@@ -62,6 +62,8 @@ BOSS_PHASE = (
     ("sect_mist_lock_master", "return_to_one", "skill_mist_rend"),  # CB-2e：換掉 execute
     ("rift_shard_lord", "three_pillars", "skill_shard_erosion"),
     ("rift_shard_lord", "three_pillars", "skill_spark_chain"),
+    # BAL-21c：取代 AI 不放的 skill_blink
+    ("rift_shard_lord", "core_overload", "skill_rift_flicker"),
 )
 AFFIXED = (
     ("mist_wolf", "mist_veiled", "skill_mist_shift"),

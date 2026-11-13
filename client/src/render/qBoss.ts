@@ -530,7 +530,8 @@ export function drawShardLord(ctx: Ctx, st: LordState = {}, opt: DrawOpt = {}): 
 }
 
 // =========================== 頭目動作片段（攻擊依技能類型、受擊、倒下） ===========================
-// 灰燼之心：熔岩噴發 spout＝自身範圍、火焰箭 firebolt＝遠程、殼片撞擊 ram＝普攻（第 1 階段）；碎晶之主：聚雷 thunder＝遠程施放、手晶揮擊 swing＝普攻。
+// 灰燼之心：熔岩噴發 spout＝自身範圍、火焰箭 firebolt＝遠程、殼片撞擊 ram＝普攻（第 1 階段）；碎晶之主：聚雷 thunder＝遠程施放、手晶揮擊 swing＝普攻、
+// 瞬步殘影 blink＝位移（BAL-21c）。
 // t 的純函式；12 格／秒；倒下停在最後一格。
 const kfB = (u: number, pts: ReadonlyArray<readonly [number, number]>): number => {
   const first = pts[0]!;
@@ -549,7 +550,7 @@ const segB = (u: number, a: number, b: number): number => clamp((u - a) / (b - a
 const bumpB = (u: number, a: number, b: number): number => Math.sin(Math.PI * segB(u, a, b));
 
 /** 頭目的片段（含待機）。 */
-export const BOSS_CLIPS: Readonly<Record<BossId, readonly string[]>> = { ah: ["spout", "firebolt", "ram", "hit", "death"], sl: ["thunder", "swing", "hit", "death"] };
+export const BOSS_CLIPS: Readonly<Record<BossId, readonly string[]>> = { ah: ["spout", "firebolt", "ram", "hit", "death"], sl: ["thunder", "swing", "blink", "hit", "death"] };
 export const BOSS_CLIP_ZH: Readonly<Record<string, string>> = {
   idle: "待機",
   spout: "範圍爆發：熔岩噴發",
@@ -557,11 +558,12 @@ export const BOSS_CLIP_ZH: Readonly<Record<string, string>> = {
   ram: "普攻：殼片撞擊（第 1 階段）",
   thunder: "遠程施放：聚雷（手晶放電）",
   swing: "普攻：手晶揮擊",
+  blink: "位移：瞬步殘影（在目的格）",
   hit: "受擊",
   death: "倒下",
 };
 /** 片段長度（毫秒）。待機 16 格一圈（灰燼之心呼吸兩次）。 */
-export const BOSS_MS: Readonly<Record<string, number>> = { idle: 5278, spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, hit: 400, death: 1500 };
+export const BOSS_MS: Readonly<Record<string, number>> = { idle: 5278, spout: 1300, firebolt: 950, ram: 900, thunder: 1000, swing: 800, blink: 600, hit: 400, death: 1500 };
 export const BOSS_IDLE_N = 16;
 
 /** 片段在 t 毫秒的格數與 u（同樣張 act：12 格／秒，最後一格 u＝1）。 */
@@ -619,6 +621,8 @@ export function bossAttackClip(id: BossId, type0: string, phase: number): string
     if ((type === "melee" || type === "charge") && phase === 1) return "ram";
     return "firebolt";
   }
+  // BAL-21c（T7 美術 PM）：位移（界隙閃擊的第二段）播瞬步殘影 blink，不再退回揮擊 swing
+  if (type === "blink") return "blink";
   return type === "cast" || type === "area" || type === "breath" ? "thunder" : "swing";
 }
 
@@ -716,6 +720,9 @@ export function bossPlan(who: BossId, clip: string, u0: number, opt: BossActOpt 
       st.swingR = kfB(u, [[0, 15], [0.35, 20], [0.55, 26], [0.7, 25], [1, 15]]);
       dx = kfB(u, [[0, 0], [0.35, -2], [0.55, 6], [1, 0]]);
       if (u > 0.45 && u < 0.68) fx.push({ k: "slash", x: 44, y: -38, r: 14, c: "#e0d8ff", a: 1 - segB(u, 0.45, 0.68) * 0.7, len: 1.4 });
+    } else if (c === "blink") {
+      // BAL-21c（T7 美術 PM，樣張 bosses.html 第 81 行）：約 600 ms、殘影 blink 1 → 0 線性；在目的格播（motionLayer 一開始就站在終點）
+      st.blink = 1 - u;
     } else if (c === "hit") {
       dx = -kfB(u, [[0, 0], [0.18, 5], [1, 0]]);
       rot = -0.06 * kfB(u, [[0, 0], [0.18, 1], [1, 0]]);

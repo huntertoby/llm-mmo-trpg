@@ -37,10 +37,12 @@ export abstract class MotionLayer extends FeedbackLayer {
       const sprite = this.unitSprites.get(m.unitId);
       if (sprite === undefined) continue;
       this.idle.hold(m.unitId, sprite); // 移動中不播待機（6M-4）
+      this.beginMove(m.unitId); // OCL-1b（Q5）：自己的外框藏起來，別人的沿用到移動結束
       try {
         await this.moveOne(m, sprite, skip);
       } finally {
         this.idle.release(m.unitId);
+        this.endMove(m.unitId);
       }
     }
   }
@@ -92,9 +94,11 @@ export abstract class MotionLayer extends FeedbackLayer {
     const from = this.center(m.from);
     const to = this.center(m.to);
     this.launch(warpEffects(warpPlan(m), this.effectClock, (p) => this.center(p)));
+    // BAL-21c：頭目的瞬步殘影整段在目的格播（一開始就站到終點，殘影由濃到淡）
+    const at = m.creatureBlinkAt === "to" ? 0 : 0.5;
     const frame = (t: number) => {
       if (sprite.destroyed) return;
-      const there = t >= 0.5;
+      const there = t >= at;
       sprite.position.set(there ? to.x : from.x, there ? to.y : from.y);
       toRow(sprite)(there ? 1 : 0);
       this.poseBody(m.unitId, sprite, { creature: creatureStrikePose("blink", t) });
@@ -225,11 +229,13 @@ export abstract class MotionLayer extends FeedbackLayer {
     const s = sprite;
     const base = { x: s.position.x, y: s.position.y };
     this.idle.hold(unitId, s);
+    this.beginMove(unitId); // OCL-1b：進出門當作移動（外框藏起來）
     try {
       await this.during(ms, skip, (u) => this.transitPose(unitId, s, base, leaveFrame(kind, facing, u)));
       this.transitPose(unitId, s, base, leaveFrame(kind, facing, 1));
     } finally {
       this.idle.release(unitId);
+      this.endMove(unitId);
     }
   }
 
@@ -250,12 +256,14 @@ export abstract class MotionLayer extends FeedbackLayer {
     const s = sprite;
     const base = { x: s.position.x, y: s.position.y };
     this.idle.hold(unitId, s);
+    this.beginMove(unitId); // OCL-1b：進出門當作移動（外框藏起來）
     try {
       this.transitPose(unitId, s, base, arriveFrame(kind, facing, 0));
       await this.during(ms, skip, (u) => this.transitPose(unitId, s, base, arriveFrame(kind, facing, u)));
     } finally {
       this.transitPose(unitId, s, base, arriveFrame(kind, facing, 1));
       this.idle.release(unitId);
+      this.endMove(unitId);
     }
   }
 
@@ -325,6 +333,7 @@ export abstract class MotionLayer extends FeedbackLayer {
     this.idle.hold(walk.unitId, sprite); // 走路中不播待機（6M-4）
     const outline = this.silhouetteOf.get(walk.unitId);
     if (outline !== undefined) outline.visible = false;
+    this.beginMove(walk.unitId); // OCL-1b（Q5）：自己的外框藏起來，別人的沿用到走完
     let facing: Facing = this.unitDrawOf.get(walk.unitId)?.facing ?? "south";
     const gait: Gait = walk.gait ?? "walk";
     const units = (row: number) => this.rows.row(row).units;
@@ -389,12 +398,14 @@ export abstract class MotionLayer extends FeedbackLayer {
       battleTrace(() => ({ kind: "walk", clock: this.effectClock, unit: walk.unitId, end: true, stays }));
       if (stays) {
         this.follow(null);
+        this.endMove(walk.unitId);
         return;
       }
       if (!lying) this.restBody(walk.unitId, sprite);
       else this.markProne(walk.unitId);
       this.follow(null);
       this.idle.release(walk.unitId);
+      this.endMove(walk.unitId); // OCL-1b：走完重算（走路滑倒躺著的不當被擋者）
     }
   }
 

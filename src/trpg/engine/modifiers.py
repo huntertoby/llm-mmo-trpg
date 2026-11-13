@@ -55,6 +55,7 @@ __all__ = [
     "CHANGE_HANDLERS",
     "INTERACT",
     "SHOVE",
+    "SILENT_WEAPONS",
     "TRIP",
     "ActiveRule",
     "Use",
@@ -80,6 +81,7 @@ __all__ = [
     "rule_limit_key",
     "rule_limit_reached",
     "shaped_skill",
+    "silent_strike",
     "skill_has_fire",
     "skill_is_fiery",
     "skill_use",
@@ -95,6 +97,8 @@ __all__ = [
 
 _PERMILLE = 1000
 _HOSTILE = ("enemies", "all")
+SILENT_WEAPONS: frozenset[str] = frozenset({"dagger", "dual_dagger"})
+"""無聲生效的武器（BS-1，06 6.21.1 C2：匕首、雙匕首；換別的武器時不成立）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,10 +132,10 @@ def unit_rules(state: BattleState, unit: UnitState) -> tuple[ActiveRule, ...]:
     """``unit`` 的全部修正規則（依技能 ID、再依規則索引）。修正型傳說（Phase 3D-6，
     ``activation``）只在啟動後生效。"""
     rules = state.ruleset
-    if not rules.has_modifier(unit.skills):
+    if not rules.has_modifier(unit.all_skills):
         return ()
     found: list[ActiveRule] = []
-    for skill_id in sorted(unit.skills):
+    for skill_id in sorted(unit.all_skills):
         skill = rules.skill_def(skill_id)
         if skill.is_modifier and (not skill.is_activatable or is_active(unit, skill_id)):
             found.extend(ActiveRule(skill, i, rule) for i, rule in enumerate(skill.modifiers))
@@ -458,6 +462,17 @@ def grants_pierce(state: BattleState, unit: UnitState, use: Use) -> bool:
     )
 
 
+def silent_strike(state: BattleState, unit: UnitState, use: Use) -> bool:
+    """無聲（BS-1，#157，06 6.21.1 C）：``unit`` 有成立的 ``silent_strike`` 規則套用在這次攻擊上，
+    而且手上拿的是匕首類（:data:`SILENT_WEAPONS`）。只看規則本身；「這次是不是近戰」由呼叫端判斷
+    （:func:`trpg.engine.rules.silent.no_turn_reason`）。"""
+    if unit.weapon.id not in SILENT_WEAPONS:  # 實際出手的武器（形態中是天生武器：不成立）
+        return False
+    return any(
+        _self_holds(state, unit, rule) for rule in _applicable(state, unit, use, "silent_strike")
+    )
+
+
 def displace_split(
     state: BattleState, unit: UnitState, use: Use, subject: Subject, base: int
 ) -> tuple[int, int]:
@@ -648,6 +663,7 @@ CHANGE_HANDLERS: Mapping[str, Callable[..., object]] = MappingProxyType(
         "summon_damage_permille": summon_damage_permille,
         "form_upkeep_permille": form_upkeep_permille,
         "form_entry_permille": form_entry_permille,
+        "silent_strike": silent_strike,
     }
 )
 """每種修正規則改變（``content/modifier_changes.yaml``）由哪個查詢函式套用（Phase 3T-1 的宣告表；

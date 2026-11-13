@@ -14,14 +14,16 @@ import { LIFT_SHAKE_PX } from "../../battle/impact";
 import { liftEffects } from "../heightArt";
 import { BODY_LABEL, bodyNodes, bodyTexture, creatureOf, flashTexture, hasSkeleton, isProne, overlayFlashKind } from "../unitSprite";
 import { clearFlash, overlayFlash } from "../silhouetteFlash";
-import { CREATURE_CLIPS, quantizeCreaturePose } from "../creaturePose";
-import { humanHit, knockOffset, quantizeFlash } from "../motionClips";
+import { CREATURE_CLIPS, CREATURE_HIT_FLASH, quantizeCreaturePose } from "../creaturePose";
+import { HUMAN_HIT_FLASH, humanHit, knockOffset, quantizeFlash } from "../motionClips";
 import { FEET } from "../unitSprite";
 import { reduceVfx, REDUCED_FLASH_MS } from "../reducedMotion";
 import { SkillLayer } from "./skillLayer";
 import { DOLL_PX, type LiftState } from "./rendererBase";
 
 const T = TILE_SIZE;
+/** 減少動態時的白閃（6H-1）：開頭的強度（人形、異形、疊層都一樣），之後線性淡掉。 */
+export const REDUCED_FLASH_PEAK = 0.85;
 
 export abstract class VfxLayer extends SkillLayer {
   /** 受擊與結果（6N-4，`reactEffects.ts`）用的操作。 */
@@ -51,6 +53,8 @@ export abstract class VfxLayer extends SkillLayer {
         if (tex !== null) this.setBodyTexture(id, node, tex);
       }
     },
+    // OCL-1b：受擊閃白交給被遮擋外框（k ＝ 白閃 ÷ 呼叫點傳的峰值）、倒下片段藏外框
+    outline: { flash: (id, flash, peak) => this.flashOutline(id, flash, peak), hide: (id) => this.hideOutline(id) },
   };
 
   /** 特殊結果、復活、勝利（6N-5，`resultEffects.ts`）用的操作：受擊的操作再加地圖大小。 */
@@ -98,10 +102,12 @@ export abstract class VfxLayer extends SkillLayer {
         }
         const pose = quantizeCreaturePose(CREATURE_CLIPS.hit.pose(t));
         this.poseBody(unitId, s, { creature: pose });
+        this.flashOutline(unitId, pose.flash ?? 0, CREATURE_HIT_FLASH); // OCL-1b（Q6）：異形、頭目受擊的峰值 0.9
       },
       end: () => {
         const s = current();
         if (s !== null) this.restBody(unitId, s);
+        this.flashOutline(unitId, 0, 1);
         if (held) this.idle.release(unitId);
         held = false;
       },
@@ -138,12 +144,14 @@ export abstract class VfxLayer extends SkillLayer {
         }
         const h = humanHit(t);
         this.poseBody(unitId, s, { pose: h.pose, flash: h.flash });
+        this.flashOutline(unitId, h.flash, HUMAN_HIT_FLASH); // OCL-1b（Q6）：人形受擊的峰值 0.85
         const off = knockOffset(this.unitDrawOf.get(unitId)?.facing ?? "south", h.knock * DOLL_PX);
         for (const node of bodyNodes(s)) node.position.set(off.x, FEET + off.y);
       },
       end: () => {
         const s = current();
         if (s !== null) this.restBody(unitId, s);
+        this.flashOutline(unitId, 0, 1);
         if (held) this.idle.release(unitId);
         held = false;
       },
@@ -185,10 +193,12 @@ export abstract class VfxLayer extends SkillLayer {
         if (body === undefined || tex === null) return;
         this.art.holdFor(owner, tex);
         overlayFlash(body, tex, humanHit(t).flash);
+        this.flashOutline(unitId, humanHit(t).flash, HUMAN_HIT_FLASH); // OCL-1b（Q6）：疊層照人形受擊，峰值 0.85
       },
       end: () => {
         const s = current();
         if (s !== null) clearFlash(s);
+        this.flashOutline(unitId, 0, 1);
         this.art.holdFor(owner, null);
       },
     };
@@ -269,7 +279,8 @@ export abstract class VfxLayer extends SkillLayer {
         const s = current();
         const draw = this.unitDrawOf.get(unitId);
         if (s === null || draw === undefined) return;
-        const flash = 0.85 * (1 - t);
+        const flash = REDUCED_FLASH_PEAK * (1 - t);
+        this.flashOutline(unitId, flash, REDUCED_FLASH_PEAK); // OCL-1b（Q6）：減少動態的白閃一律 0.85（異形也是），峰值照它自己
         if (kind === "doll") this.poseBody(unitId, s, { flash: quantizeFlash(flash) });
         else if (kind === "creature") this.poseBody(unitId, s, { creature: quantizeCreaturePose({ flash }) });
         else {
@@ -281,6 +292,7 @@ export abstract class VfxLayer extends SkillLayer {
         }
       },
       end: () => {
+        this.flashOutline(unitId, 0, 1);
         const s = current();
         if (s === null) return;
         if (kind === "overlay") clearFlash(s);

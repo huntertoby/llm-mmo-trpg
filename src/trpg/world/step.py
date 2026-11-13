@@ -38,6 +38,7 @@ from trpg.world.actions import (
     CampedEvent,
     ChangeLookAction,
     ChangeRaceAction,
+    DuelChoiceAction,
     EncounterCheckEvent,
     EncounterEvent,
     EventSolveAction,
@@ -63,6 +64,7 @@ from trpg.world.actions import (
     TeleportAction,
     TravelAction,
     TraveledEvent,
+    WishAction,
     WorldAction,
     WorldEvent,
 )
@@ -73,6 +75,7 @@ from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
 from trpg.world.crafting import CRAFTING_HANDLERS
+from trpg.world.duel import choose_duel
 from trpg.world.economy import ECONOMY_HANDLERS, after_step
 from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
@@ -147,6 +150,7 @@ from trpg.world.town import (
     with_visited_town,
 )
 from trpg.world.trade import PAIR_HANDLERS, stamp_gear
+from trpg.world.wish import apply_wish
 
 __all__ = [
     "HANDLERS",
@@ -213,7 +217,7 @@ def new_character(
             "visited_towns": (region,),
             "visited_locations": ({"region": region, "location": world_map.town},),  # 6C-6
             "skill_tier": hero_tier(library, 1),  # 開局不重配（6.34.9），第一次升階才重配
-            "mercenaries": default_party(library),  # 預設賽倫＋回春（9.6.11，5C-3）
+            "mercenaries": default_party(library),  # 預設帶的傭兵（5C-3；#154 起只帶賽倫）
             "gold": 0 if (economy := library.world_economy.rules) is None else economy.start_gold,
         }
     )
@@ -254,7 +258,7 @@ def world_step(
         and not isinstance(action, OfferPickAction | NarrateAction)
         and not note
     ):  # 敘述不改數值（只有事件敘述換骨架），三選一待選時也能寫進日誌（5B-5）
-        raise WorldActionError("還有任務給的技能三選一沒有選：先選一招或跳過")
+        raise WorldActionError("還有任務給的技能三選一沒有選：先選一招，或都不拿")
     # 換日（5F-1）：世界事件的開始、門檻調整、失敗只寫進世界狀態（調整紀錄可查），不算這個角色的事件
     world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）
@@ -493,6 +497,7 @@ def _handlers() -> dict[type, _Handler]:
         ),
         # 撤退與城鎮服務（5A-4，:mod:`trpg.world.town`）；雇用與影子 AI（5C-1、5C-2）
         RetreatAction: _keeps_world(lambda lib, _w, char, _a, _n: retreat(lib, char)),
+        DuelChoiceAction: _keeps_world(lambda _l, _w, char, action, _n: choose_duel(char, action)),
         RestAction: _keeps_world(lambda lib, _w, char, _a, _n: rest(lib, char)),
         LoadoutAction: _keeps_world(lambda lib, _w, char, action, _n: loadout(lib, char, action)),
         TeleportAction: _keeps_world(_teleport),
@@ -519,6 +524,8 @@ def _handlers() -> dict[type, _Handler]:
         OpeningClassAction: _keeps_world(apply_opening_class),
         # OB-3（#150 第 5 點）：4 級前的免費重選
         OpeningReselectAction: _keeps_world(apply_reselect),
+        # WP-1（07 7.6、#88）：主城的許願池
+        WishAction: _keeps_world(apply_wish),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3

@@ -629,3 +629,56 @@
   -webkit-touch-callout: none;
   user-select: none;
 }
+
+/* LW-2：本場條件不成立（整場固定的條件，例獨狼；battle/conditionOff.ts）。招照樣能不能按看 blocked；
+   這裡只把圖示褪成灰、框改虛線，告訴玩家「帶條件的那部分（或整個被動）本場不會發動」。BS-2 的武器條件沿用。 */
+.skill-button.cond-off {
+  border-style: dashed;
+}
+
+.skill-button.cond-off .skill-button-icon,
+.skill-mini.cond-off > * {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.skill-mini.cond-off {
+  border-style: dashed;
+  opacity: 0.7;
+}
+
+/* 說明卡上方的狀態行（移植需求 3.7 第 2 條）：浮動卡外層是透明的，自己帶底色，不壓在戰場上；用框分種類。
+   「本場不成立：…」＝灰紫虛線（和技能鈕的虛線呼應）；「現在不能用：…」＝琥珀實線、那四個字琥珀粗體（LW-2b） */
+.cond-off-note,
+.now-off-note {
+  margin-bottom: 4px;
+  padding: 5px 9px;
+  border: 1px dashed #8a8398;
+  border-radius: 6px;
+  background: var(--ui-navy);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+  color: #d8d2c4;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* 琥珀＝提示三級的警告色（world-hud.css 的 --pnl-warn；那個變數只在面板裡，這裡直接寫） */
+.now-off-note {
+  border: 1px solid #e8b45a;
+}
+
+.now-off-note > b {
+  color: #e8b45a;
+  font-weight: 700;
+}
+
+/* BS-2（LW-2 驗收可修 2）：說明卡第 3 行裡本場不會發動的效果數字（例無人掩護的「×0.6」「2 回合・隱蔽」）：
+   同技能鈕的語言——圖示灰階、虛線框，字不淡（移植需求 3.7 第 1 條） */
+.skill-eff.cond-off {
+  padding: 0 3px;
+  border: 1px dashed #8a8398;
+  border-radius: 4px;
+}
+
+.skill-eff.cond-off > canvas {
+  filter: grayscale(1) brightness(0.8);
+}

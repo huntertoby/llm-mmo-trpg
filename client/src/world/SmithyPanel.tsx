@@ -5,6 +5,7 @@
 import { useState } from "react";
 import type { WorldAction, WorldCraftGear, WorldCrafting, WorldView } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { ItemListIcon } from "../ui/ItemIcon";
 import { codeProblem, normalizeCode } from "./bagView";
 import { craftAction, draftProblem, initialDraft, toggleMaterial, withSlot, type CraftDraft } from "./crafting";
 import { walletLine } from "./economy";
@@ -97,6 +98,7 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
                 onChange={() => setDraft(toggleMaterial(draft, m.item, crafting.flavor_max))}
                 data-testid={`world-craft-material-${m.item}`}
               />
+              <ItemListIcon id={m.item} />
               {m.name_zh} ×{m.count}
             </label>
           </Hint>

@@ -12,11 +12,12 @@
 | `src/trpg/world/opening.py` | 開局的主檔：`new_opening(seed)`、開局閘門 `opening_gate`（各階段能做的動作）、畫面用的 `opening_limits(char)`、選大類 `apply_opening_class`、舊的一次選定 `apply_opening_confirm`、推薦關鍵字 `recommended_keywords`、靶場內容 `range_content`、沙盒試打 `range_trial`／`trial_seed`、`mentor_town`；PR-2a 起：測試模式的設定 `_practice_setup`、工坊師傅的「靶場試玩」`own_practice`／`practice_seed`、能不能開 `practice_problem`（原因句 `PRACTICE_*_ZH`） |
 | `src/trpg/world/opening_choice.py` | 正式選定（OB-2）：`choice_problem`、`place_ok`／`place_problem`、`starter_steps_done`、`apply_formal_choice`，以及依階段分流的 `apply_opening_confirm` |
 | `src/trpg/world/opening_reselect.py` | 4 級前的免費重選（OB-3）：`reselect_problem`（OB-6 起先呼叫 `reselect_window_problem`＝只看資格：已選定、等級、沒用過）、`apply_reselect`、`reselect_losses`／`reselect_returns`、`starter_item_id`（OB-6 抽出 `weapon_item_id`）；開局結束 `close_opening` |
+| `src/trpg/world/wish.py` | **WP-1 許願池**：主城花任務幣許願（`wish_problem`：主城、入門期、遭遇、每週次數 `wish_week`、任務幣）；選單或願望文字 → 完整技能三選一（`PendingOffer.source="wish"`，都不拿退 `refund`）。LLM 那一半見 `docs/dev/上手-LLM.md` 第八節。WP-2 的面板資料 `WorldView.wish` 在 `src/trpg/api/world_wish_view.py`（`wish_block`：戰鬥中、待選閃現與三選一，再 `wish_problem`） |
 | `src/trpg/world/opening_limits.py` | 入門期的戰鬥閘與活動限制（OB-4）：`in_starter_period`、`STARTER_STEPS`、`spawn_hidden`、`fight_problem`、`solution_problem`、`spot_problem`、`holds_step`、`stuck_conditions`；被擋的原因文字 `FIGHT_ZH`、`FLASH_ZH`、`SOLUTION_ZH`、`OBJECT_ZH` |
 | `src/trpg/world/state.py` | `CharacterState`（含 `opening: OpeningState \| None`、`hints_seen`、`hints_off`、`level_seen`）、`OpeningState`、`CHAR_FORMAT`、`LEGACY_CHAR_FORMATS` |
 | `src/trpg/world/actions.py` | 世界動作與事件的型別：`OpeningClassAction`、`OpeningConfirmAction`、`OpeningReselectAction`、`HintSeenAction`、`HintsOffAction`、`HintsResetAction`、`UI_NOTE_ACTIONS`；事件 `OpeningClassChosenEvent`、`OpeningConfirmedEvent`、`OpeningReselectedEvent` |
 | `src/trpg/world/step.py` | `world_step(library, world, char, action, now)`：純函式入口；分派表 `HANDLERS`；`new_character`；提示旗標常數 `LESSON_ALLOCATE`、`LESSON_ALLOCATE_SKIP`、`LESSON_ALLOCATE_LEFT`、`LESSON_ALLOCATE_AGAIN` |
-| `src/trpg/world/growth.py` | 升級與成長；`OPENING_END_LEVEL`（4）；入門期升級自動配點（`gain_xp`）；4 級前不能閃現的判斷在這裡 |
+| `src/trpg/world/growth.py` | 升級與成長；`OPENING_END_LEVEL`（4）；入門期升級自動配點（`gain_xp`）；4 級前不能閃現的判斷在這裡；升階重配 `sync_tier`（→ roguelite `sync_skill_tier`；RR-1 起照新階級套不上的那一筆記下升階前的定義 `FlashRecord.kept`，見 `上手-內容資料與模擬.md` 第 45 點；`WORLD_RULES_VERSION` 29） |
 | `src/trpg/world/quests.py` | 任務推進；延後的三選一 `issue_deferred_offers`、`_note_granted`（把三選一拿到的招記進 `opening.granted_skills`） |
 | `src/trpg/world/save.py` | 存檔格式與版號：`WORLD_RULES_VERSION`（每一版改了什麼寫在常數下面的說明）、`WLOG_FORMAT`、`dumps_char`／`loads_char`、`content_digest`、`log_rules_key` |
 | `src/trpg/world/battle.py` | `prepare_battle(library, char)` 組出戰鬥設定；`fight` 把打完的步驟回寫世界；主角出場函式 `hero_spawn`（PR-2a 起公開，靶場試玩共用） |
@@ -32,10 +33,11 @@
 | `src/trpg/api/tuning/` | 數值工坊（NW-1a，前綴 `/api/tuning`）：`dev_mode` 且 `TRPG_TUNING=1` 才掛，帶轉發標頭 403；細節在 `上手-內容資料與模擬.md` 第七節 |
 | `src/trpg/server/season_policy.py` | 季末重置時每個存檔欄位怎麼處理的表（新加存檔欄位必須登記） |
 | `content/world/newcomer.yaml` | 新手內容：`mentor_npc`、各段台詞、`range:`（`racks`、`placeholder_weapon`、`map`、`dummies`、`demos`、`starters`、`keeper_object`、`choose*`、PR-2a 的工坊師傅選單 `workshop`；`max_rounds` 測試模式不用）；schema 在 `src/trpg/content/world_newcomer.py`（`WorkshopContent`） |
-| `content/world/fields/capital/capital.yaml` | 主城實地地圖；`workshop_master` 的 `panel: workshop`（PR-2a，`ObjectPanel` 多了 `workshop`）、`training_range` 的說明卡 |
+| `content/world/fields/capital/capital.yaml` | 主城實地地圖；`workshop_master` 的 `panel: workshop`（PR-2a，`ObjectPanel` 多了 `workshop`）、`training_range` 的說明卡；WP-2：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`；前端 WP-3 前照舊開說明卡，守池人的 `note_zh` 也是面板的那一句） |
 | `src/trpg/api/opening_gear_note.py` | 卡片多寫的一行（OB-6）：入門期的入門武器「借的、不能賣寄分解」、還能重選時的起始武器「重選會收回」；`HeroGearSlotOut.opening_note_zh`、`BagItemView.opening_note_zh` |
 | `client/src/world/range.ts`、`RangeScreen.tsx`、`RangeClassPick.tsx`、`RangeParts.tsx` | 前端的選大類、正式選定與重選畫面；`rangeMode()` 回 `class`／`choose`／`reselect`；重選的確認彈窗 `ReselectConfirmDialog`、小牌 `reselectBadge` |
 | `client/src/world/ReselectEntry.tsx` | 葛蘭面板、主城靶場面板上方的「重選」鈕（`opensReselect`）；配點收尾彈窗的兩段 `allocateClosingLines` |
+| `client/src/world/PartyIntroDialog.tsx`、`client/src/world/PartyPanel.tsx` | OB-8（#154）：隊友加入台詞的對話框 `PartyIntroDialog`（`DialogFrame`，標題「{名字}加入隊伍」、只有「好」）與要不要播 `partyIntroShown`；隊伍面板名字下面的來歷行（`.world-party-backstory`） |
 
 ## 二、資料怎麼流
 
@@ -105,7 +107,7 @@
    | `LOG_FORMAT` | `engine/runner.py` | 動到引擎的紀錄結構或結算；這一塊通常不碰。 |
    | `SAVE_FORMAT` | `roguelite/save.py` | `RunState`／一輪存檔的結構變了；舊版號進 `COMPATIBLE_FORMATS` 並寫轉換。 |
 
-   改版號時 `tests/world/test_opening_stages.py::test_versions` 的字面值要跟著改；兩段同一批上線只加一次，合併時由 PM 對齊。
+   改版號時 `tests/world/test_opening_stages.py::test_versions` 的字面值要跟著改；兩段同一批上線只加一次，合併時由 PM 對齊。WP-1 起：`WORLD_RULES_VERSION` 28、`CHAR_FORMAT` `trpg-char/14`（`tests/api/test_pr2a_range_practice.py` 也寫死了規則版號；`trpg-char/14` 字面散在約 14 個測試檔，升版時 `grep -rl` 一起改）。
 3. **加存檔欄位要登記季末重置**：`tests/test_architecture.py::test_every_saved_field_has_a_season_reset_kind` 會擋沒登記在 `server/season_policy.py` 的欄位。改到存檔欄位的段，相關測試一定包含 `tests/test_architecture.py`。
 4. **已寫入設計文件的規則不能自己放寬**（`CLAUDE.md` 角色分工）：閘門、條件、次數這類規則有疑問就照最保守的做並寫進「待 PM 決定」；被擋的原因文字是暫定可以改字，但不能改判斷。
 5. **畫面與規則用同一個函式**：敵人顯示與接觸判定共用 `field_enemies._shown`、被擋原因共用 `opening_limits`／`opening.opening_limits`、紮營條件共用 `step.camp_problem`。新增限制時先找有沒有現成的共用點，不要在 API 層另寫一份判斷。
@@ -134,6 +136,13 @@
 17. **窄版（< 1040）任務欄預設收合**，重選小牌在收合的捲軸圖示上看不到，要展開才看得到。（`PhaseOB-6a報告.md` 待決）
 18. **pytest 的檔案參數順序**：`tests/api/<檔>` 排在 `tests/test_architecture.py` **後面**時，`tests/api/conftest.py` 不會套到那個檔（`make_client` 找不到、`capital_spawn` 不生效）。一次跑多個檔時把 `tests/test_architecture.py` 放最後。（`PhasePR-2a報告.md` 第 3 節）
 19. **`BattleView` 加有預設值的欄位，前端測試的 `smallView`（`client/src/battle/testFixtures.ts`）也要補**：產生的型別在輸出模型裡是必填，typecheck 會擋。（`PhasePR-2a報告.md` 第 4 節）
+20. **開局只帶賽倫、阿岳第 1 步打完才入隊（OB-7，#154）**：`content/world/mercenaries.yaml` 的 `default_party` 只剩 `merc_tiebi`；任務 `starter_ferry` 的 `companion_after: ferry_bandits`（`trpg.world.companions._joined_yet`，那一步完成才算該在隊）。賽倫其實從建角就在隊上（選大類階段沒有戰鬥，玩家感受不到），台詞在確定出發後才由 `WorldView.party_intro` 給前端播。所以第 1 步渡口是主角＋賽倫打 1 隻 `bandit_rookie`（2 打 1，OB-7b）。量頭目的 `sim/boss_probe.py` 改用 `PROBE_PARTY`（賽倫＋回春）不跟 `default_party`；凍結重播 `tests/world/test_field_ctx_replay.py` 也寫死 `FROZEN_PARTY`。
+21. **隊友的台詞與來歷（OB-7）**：`WorldView.party_intro`（`api/world_party_intro.py`）一次給一段沒播過的（賽倫先，條件：`opening` 不是 `None`、`stage != pick_class`、他是開局那一位且在隊上；夥伴：在隊上、有 `join_lines`）；看過＝`hints_seen` 有 `intro:<成員 ID>`，前端送既有的 `hint_seen`。`PartyMemberView.backstory_zh`：賽倫看 `party.is_escort`（`hire` 換下他時規則記劇情旗標 `escort_parted`，`WORLD_RULES_VERSION` 27）、夥伴讀 `CompanionDef.backstory_zh`。
+
+22. **隊友台詞的前端接法（OB-8）**：`WorldScreen` 的 `partyIntro`＝`view.party_intro`，條件是靶場那段話（`rangeDone`）已關、沒有「你不在的時候」與開場；按「好」走既有的 `markSeen([seen_id])`（本機先記、送 `hint_seen`）。播著時升級畫面與教學先等（`partyIntro === null` 加在那三個條件上），所以渡口打完是「阿岳台詞 → 升到 2 級 → 配點教學」。播誰、何時播全由後端決定，前端沒有寫死成員；之後改入隊時機只要動後端。隊伍面板在主城與野外是「影子（Y）」面板最上面那塊（`HudShadowPanel`），城鎮的雇用面板也有。
+
+23. **遭遇表加新陣容只改內容（RG-1，#162）**：雲海吊橋、古松祭壇、焦油坑、熔岩洞窟各加一個盾兵陣容，原陣容不動；不升 `WORLD_RULES_VERSION`（世界規則程式沒變，內容雜湊會變）。那些地點抽到原陣容的機率跟著變低，用固定種子斷言某地點抽到某陣容的測試要重看。精英單挑（RG-2）才會動遇敵與組場，到時要升 `WORLD_RULES_VERSION`，規格在 `docs/phases/PhaseRG計畫.md` 第 2.2 節。
+24. **精英單挑（RG-2，#162）**：`world/duel.py`。提出在 `solutions.make_encounter` 的最後（`offer_duel`：陣容排最前的精英帶 `elite.duel: true` → `EncounterResult.duel="offered"`；固定精英、懸賞、遭遇變化三處的 `FixedElite` 都能帶），所以移動遇敵、實地接觸、情境物件、戰鬥解法都會提出。`duel_choice` 只在 `offered` 時可送；**沒選就開打＝拒絕**（`prepare_battle` 只認 `accepted`）。接受時 `PreparedBattle.lineup` 仍是整個陣容（經驗、金錢、掉落、精英首殺、懸賞都照它），實際上場的是 `PreparedBattle.fielded`（只有精英本人、沒有第三方），我方只有主角；`roll_loot(..., duel=True)` 讓掉材料的成員照整個敵方陣容。遇敵面板 `EncounterView.duel`／`duel_zh`、`enemies` 照實際上場的列。`WORLD_RULES_VERSION` 31、`CHAR_FORMAT` `trpg-char/15`（`trpg-char/14` 字面在 15 個測試檔，`git grep -l` 一起換）。測試 `tests/world/test_elite_duel_rg2.py`（北坡狼王種子 0、1 一對一與全隊都打得贏）。
 
 ## 五、相關測試檔
 
@@ -141,6 +150,8 @@
 |---|---|
 | 開局階段、閘門、版號 | `tests/world/test_opening.py`、`tests/world/test_opening_stages.py` |
 | 正式選定 | `tests/world/test_opening_choice.py`、`tests/api/test_opening_choice_api.py` |
+| 開局隊友、阿岳入隊時機、台詞與來歷（OB-7） | `tests/world/test_companions.py`、`tests/world/test_party.py`、`tests/api/test_ob7_party_intro.py`、`tests/content/test_world_mercenaries.py` |
+| 前端的隊友台詞對話框與來歷行（OB-8） | `client/src/world/partyIntro.test.ts`、`client/src/world/party.test.ts` |
 | 重選、開局結束 | `tests/world/test_opening_reselect.py`、`tests/world/test_opening_end.py`；重選畫面資料、雇用與影子句、卡片的「不能」（OB-6）：`tests/api/test_ob6_reselect.py` |
 | 入門期限制 | `tests/world/test_opening_limits.py`、`tests/api/test_opening_flash.py` |
 | 選大類 API、靶場 API、試打 | `tests/api/test_opening_class_api.py`、`tests/api/test_range_api.py`、`tests/api/test_capital_opening_api.py` |

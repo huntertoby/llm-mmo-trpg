@@ -1,7 +1,7 @@
 """副手（Phase 3I-2，``docs/phases/Phase3I計畫.md``；08 8.11 副手表，玩法決定 #46）。
 
 圓盾（力量／體質取較高；格擋反應強化依縮放屬性）、塔盾（體質；遠程攻擊打你時命中同半掩護、
-攻擊者高 1 層以上無視；移動 −1）、法書（智力；法術技傷害 +10%，計入全身 +50% 上限）、法器珠
+攻擊者高 2 層以上無視；移動 −1）、法書（智力；法術技傷害 +10%，計入全身 +50% 上限）、法器珠
 （智力／意志取較高；法術技施放距離 +1，不加範圍、射程為自身的不受影響）。
 
 行為一致測試（流程改善 B）：塔盾掩護、法書加成、法器珠射程、圓盾格擋各一組引擎表格測試；
@@ -151,6 +151,7 @@ def test_test_mode_can_pick_each_offhand() -> None:
 
 FLAT = "\n".join(["0000000"] * 5)
 ATTACKER_HIGH = "\n".join(["0000000", "0000000", "0010000", "0000000", "0000000"])
+ATTACKER_HIGH_2 = "\n".join(["0000000", "0000000", "0020000", "0000000", "0000000"])
 TARGET_HIGH = "\n".join(["0000000", "0000000", "0000100", "0000000", "0000000"])
 
 COVER_TABLE = [
@@ -160,7 +161,9 @@ COVER_TABLE = [
     ("遠程打圓盾（沒有掩護特性）", "bow", FLAT, "round_shield", False, 0),
     ("近戰打塔盾", "one_handed_sword", FLAT, "tower_shield", False, 0),
     ("長柄（矛）打塔盾", "spear", FLAT, "tower_shield", False, 0),
-    ("攻擊者高 1 層", "bow", ATTACKER_HIGH, "tower_shield", False, 0),
+    # RG-5b（玩法PM交接 4.1.7）：照半掩護，塔盾算 1 層高，攻擊者要高 2 層才無視
+    ("攻擊者高 1 層", "bow", ATTACKER_HIGH, "tower_shield", False, -2),
+    ("攻擊者高 2 層", "bow", ATTACKER_HIGH_2, "tower_shield", False, 0),
     ("攻擊者低 1 層", "bow", TARGET_HIGH, "tower_shield", False, -2),
     ("無視掩護的火槍", "longgun", FLAT, "tower_shield", False, 0),
     ("塔盾加場上掩護物不疊加", "bow", FLAT, "tower_shield", True, -2),

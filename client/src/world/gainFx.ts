@@ -4,24 +4,36 @@
 //   放進腰包、穿上、脫下只是換位置，總數不變，不算拿到；賣掉、用掉是變少，也不播。
 import type { WorldInventory, WorldView } from "../api/types";
 import type { GearLook } from "../render/gearIcon";
+import { hasItemIcon } from "../render/itemIcon";
 
 export interface Gain {
   item: string;
   name: string;
   gear: boolean;
   count: number;
+  /** 染料顏色、稀有材料（物品 view 的 `color`、`rare`；QI-7 物品圖示用）。 */
+  color?: string | null;
+  rare?: boolean | null;
 }
 
 /** 一次最多飛幾個（一口氣拿到很多時只飛前幾個，其餘的照樣進背包）。 */
 export const MAX_FLY = 3;
 
-function totals(inv: WorldInventory): Map<string, { n: number; name: string; gear: boolean }> {
-  const out = new Map<string, { n: number; name: string; gear: boolean }>();
-  const add = (item: string, n: number, name: string, gear: boolean) => {
+interface Total {
+  n: number;
+  name: string;
+  gear: boolean;
+  color: string | null;
+  rare: boolean | null;
+}
+
+function totals(inv: WorldInventory): Map<string, Total> {
+  const out = new Map<string, Total>();
+  const add = (item: string, n: number, name: string, gear: boolean, color: string | null = null, rare: boolean | null = null) => {
     const cur = out.get(item);
-    out.set(item, { n: (cur?.n ?? 0) + n, name: cur?.name ?? name, gear: cur?.gear ?? gear });
+    out.set(item, { n: (cur?.n ?? 0) + n, name: cur?.name ?? name, gear: cur?.gear ?? gear, color: cur?.color ?? color, rare: cur?.rare ?? rare });
   };
-  for (const b of [...inv.bag, ...inv.pouch]) add(b.item, b.count, b.name_zh, b.gear);
+  for (const b of [...inv.bag, ...inv.pouch]) add(b.item, b.count, b.name_zh, b.gear, b.color ?? null, b.rare ?? null);
   for (const s of inv.equipment ?? []) if (s.item != null) add(s.item.id, 1, s.item.name_zh, true);
   return out;
 }
@@ -33,20 +45,25 @@ export function gainedItems(prev: WorldInventory | null | undefined, next: World
   const out: Gain[] = [];
   for (const [item, t] of [...totals(next)].sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))) {
     const more = t.n - (a.get(item)?.n ?? 0);
-    if (more > 0) out.push({ item, name: t.name, gear: t.gear, count: more });
+    if (more > 0) out.push({ item, name: t.name, gear: t.gear, count: more, ...(t.color !== null ? { color: t.color } : {}), ...(t.rare !== null ? { rare: t.rare } : {}) });
   }
   return out.slice(0, MAX_FLY);
 }
 
-/** 飛行圖示要畫什麼（6Q-1）：裝備用 `gearIcon` 的實際圖示（外觀從同一份背包找）；其他物品維持通用圖示。 */
-export type GainIconChoice = { kind: "gear"; look: GearLook; slot: string | null } | { kind: "generic"; gear: boolean };
+/**
+ * 飛行圖示要畫什麼：裝備用 `gearIcon` 的實際圖示（6Q-1；外觀從同一份背包找）；物品畫自己的 Q 版圖示（QI-7，`qIcon/items.ts` 表裡有的，
+ * 或有染料顏色的）；其他用通用圖示（`gain_item` 布袋、`gain_gear` 劍）。
+ */
+export type GainIconChoice = { kind: "gear"; look: GearLook; slot: string | null } | { kind: "item"; item: string; color: string | null; rare: boolean | null } | { kind: "generic"; gear: boolean };
 
 /**
- * 找裝備的外觀：先看身上穿的（`equipment`），再看背包的裝備卡（`gear_cards`），依物品 ID 比對。
- * 不是裝備、或兩邊都找不到（舊畫面、資料不齊）時退回通用圖示。
+ * 物品：表裡有圖示（或有染料顏色）就畫自己的，否則通用布袋。
+ * 裝備找外觀：先看身上穿的（`equipment`），再看背包的裝備卡（`gear_cards`），依物品 ID 比對。
+ * 兩邊都找不到（舊畫面、資料不齊）時退回通用的劍。
  */
-export function gainIconOf(inv: WorldInventory | null | undefined, gain: Pick<Gain, "item" | "gear">): GainIconChoice {
-  if (!gain.gear || inv == null) return { kind: "generic", gear: gain.gear };
+export function gainIconOf(inv: WorldInventory | null | undefined, gain: Pick<Gain, "item" | "gear" | "color" | "rare">): GainIconChoice {
+  if (!gain.gear) return hasItemIcon(gain.item, gain.color) ? { kind: "item", item: gain.item, color: gain.color ?? null, rare: gain.rare ?? null } : { kind: "generic", gear: false };
+  if (inv == null) return { kind: "generic", gear: true };
   for (const s of inv.equipment ?? []) {
     if (s.item != null && s.item.id === gain.item && s.item.appearance != null) return { kind: "gear", look: s.item.appearance, slot: s.slot };
   }

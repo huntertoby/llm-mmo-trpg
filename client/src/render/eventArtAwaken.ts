@@ -7,7 +7,7 @@ import type { DollSpec } from "./appearance";
 import type { Ctx } from "./artDraw";
 import { drawBanner, drawPortalPillar, drawPortalRing, PORTAL_TILES, REGION_ORDER, type CapitalRegion } from "./capitalArt";
 import { capitalBackdrop, capitalTile } from "./eventArtCapital";
-import { BADGE_ICON_INK, glow, ICON, T } from "./eventArtParts";
+import { drawBadgeIcon, glow, T } from "./eventArtParts";
 import { dollSkin } from "./inkStyle";
 import type { InkPose } from "./inkPose";
 import { drawFigure } from "./paperdoll";
@@ -206,7 +206,7 @@ export function drawAwakenArt(ctx: Ctx, hero: DollSpec, pose: AwakenPose, open: 
   ctx.strokeStyle = "#c8a868";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  ICON.portal(ctx, 21, 20, 13, BADGE_ICON_INK);
+  drawBadgeIcon(ctx, "portal", 21, 20); /* QI-6：覺醒插圖的小牌也換 Q 版源晶（需求 4 第 3 點） */
   ctx.fillStyle = "#f2e6c8";
   ctx.textBaseline = "middle";
   ctx.fillText(place, 32, 21);

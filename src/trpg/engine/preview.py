@@ -31,6 +31,7 @@ from trpg.content.skills import (
     TIME_BOMB,
     EffectSpec,
     SkillDef,
+    silent_rounds_shown,
 )
 from trpg.engine import modifiers
 from trpg.engine.actions import (
@@ -91,7 +92,7 @@ from trpg.engine.events import (
     UnitSummoned,
 )
 from trpg.engine.gear.charge import find_charge
-from trpg.engine.ids import BOSS_TAG
+from trpg.engine.ids import BOSS_TAG, SHIELD_FORMATION
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
@@ -122,6 +123,7 @@ from trpg.engine.skill_infusion import infused_pick
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_attr, skill_scaling_value
 from trpg.engine.skills.targeting import (
+    aims_first,
     compute_area,
     damage_parameters,
     followup_origin,
@@ -131,6 +133,7 @@ from trpg.engine.skills.targeting import (
     shape_reach,
     skill_ap_cost,
     skill_profile,
+    skill_strikes,
 )
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import strip_hidden_traps
@@ -455,6 +458,12 @@ class Preview:
     backstab: tuple[UnitId, ...] = ()
     """行動者會從背後攻擊的單位（Phase 3D-8d；最多後果的模擬中命中判定帶背刺加成的目標，依 ID）。
     命中率與暴擊率已包含背刺與潛行偷襲的加成；說明在 ``notes``。"""
+    no_turn: tuple[UnitId, ...] = ()
+    """被行動者近戰攻擊、卻不會轉身的單位（BS-1，#157；最多後果的模擬中 ``attack_rolled.no_turn``
+    有值的目標，依 ID）；原因在 :attr:`no_turn_reason`，說明在 ``notes``（「背刺・無聲
+    （不會轉身）」）。"""
+    no_turn_reason: str | None = None
+    """``no_turn`` 的原因：``concealed`` 從隱蔽中出手、``silent`` 無聲；沒有時為 ``None``。"""
     landing: XY | None = None
     """複合技能（Phase 3F-3a）：第二段的原點（「位移 → 動作」為位移段的落點；3F-4a 的其他種類為
     最多後果的模擬裡第二段的原點，第二段沒有結算時為 ``None``）；其他動作為 ``None``。"""
@@ -468,6 +477,13 @@ class Preview:
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁依此寫說明）；其他動作為 ``None``。
     延遲段的 ``landing``／``followup_tiles`` 是施放後以施放者位置推算的預計範圍。"""
+    lock_fire: Preview | None = None
+    """瞄準預告（RG-1，#162，``lock_on``）：假設「現在就射出」的預覽（照一般施放結算，
+    :attr:`trpg.engine.context.Ctx.fire_lock`）。真正的施放只是瞄準（本預覽的事件只有
+    ``followup_charged``）；效用 AI 用它估這一擊的價值。其他動作為 ``None``。"""
+    strikes: int = 1
+    """技能的傷害效果打幾下（#153，:func:`skill_strikes`：拿雙匕首施放單體武器技為 2）；
+    ``targets`` 的傷害已是這幾下的合計（DD-2：網頁依此標「打 2 下」）。普攻與其他動作為 1。"""
 
 
 # ---------------------------------------------------------------------------
@@ -725,6 +741,10 @@ def _cover_notes(cover: Cover | None) -> tuple[str, ...]:
     if cover is None:
         return ()
     x, y = cover.pos
+    if cover.kind == SHIELD_FORMATION:  # 塔盾詞條「盾陣」（RG-4，#163）
+        return (f"盾陣 −{cover.penalty}：被 {cover.name_zh} 的盾陣擋住 ({x}, {y})",)
+    if cover.unit_id is not None:  # 盾兵掩護（RG-1）
+        return (f"盾兵掩護 −{cover.penalty}：被 {cover.name_zh} 的盾擋住 ({x}, {y})",)
     return (f"半掩護 −{cover.penalty}：{cover.name_zh} ({x}, {y})",)
 
 
@@ -906,7 +926,11 @@ def _damage_expectation(  # noqa: PLR0917
     max_events: list[EventBase],
 ) -> DamageRange | None:
     """技能對 ``target_id`` 的傷害範圍：最少／最多取自模擬事件，期望值依效果的骰子分布精確計算
-    （事件與效果數量對不上時退回最少與最多的平均）。"""
+    （事件與效果數量對不上時退回最少與最多的平均）。
+
+    連擊武器的單體武器技（#153，雙匕首打兩下）：最少後果只有第一下命中（後面幾下同普攻的後續
+    幾下，最少後果失手），期望值以第一下的事件算出每一下的期望、乘上下數（每一下的命中率與
+    暴擊率相同）。"""
     skill = _preview_skill(state, actor, action)
 
     def direct(events: list[EventBase]) -> list[DamageDealt]:
@@ -935,6 +959,9 @@ def _damage_expectation(  # noqa: PLR0917
     ]
     if hit == 0:
         return DamageRange(minimum, maximum, Fraction(0), Fraction(0))
+    strikes = skill_strikes(actor, skill)
+    if strikes > 1 and len(low) == len(specs) * strikes:
+        low = low[: len(specs)]  # 測試模式的木樁：每一下都命中，取第一下
     if len(specs) != len(low):
         mid = Fraction(minimum + maximum, 2)
         return DamageRange(minimum, maximum, mid * hit, mid)
@@ -964,6 +991,7 @@ def _damage_expectation(  # noqa: PLR0917
             table[value] = max(0, nominal - shield)
         shield = max(0, shield - event.amount)
         total += ((hit - crit) * _expected(normal, table) + crit * _expected(doubled, table)) / hit
+    total *= strikes
     return DamageRange(minimum, maximum, total * hit, total)
 
 
@@ -1237,19 +1265,27 @@ def _bomb_infos(state: BattleState, events: list[EventBase]) -> tuple[BombInfo, 
     return tuple(infos)
 
 
-def _grant_infos(state: BattleState, events: list[EventBase]) -> tuple[GrantInfo, ...]:
-    """模擬事件中暫時獲得的技能（``state`` 用來查技能名稱）。"""
-    return tuple(
-        GrantInfo(
-            unit_id=e.unit_id,
-            skill_id=e.skill_id,
-            name_zh=state.ruleset.skill_def(e.skill_id).name_zh,
-            duration=e.duration,
-            refreshed=e.refreshed,
+def _grant_infos(
+    state: BattleState, actor: UnitState, events: list[EventBase]
+) -> tuple[GrantInfo, ...]:
+    """模擬事件中暫時獲得的技能（``state`` 用來查技能名稱）。給自己無聲時顯示「接下來 N 回合」
+    的 N（資料持續值 − 1，BS-3）。"""
+    infos: list[GrantInfo] = []
+    for e in events:
+        if not isinstance(e, SkillGranted):
+            continue
+        granted = state.ruleset.skill_def(e.skill_id)
+        shown = silent_rounds_shown(granted, e.duration, to_self=e.unit_id == actor.id)
+        infos.append(
+            GrantInfo(
+                unit_id=e.unit_id,
+                skill_id=e.skill_id,
+                name_zh=granted.name_zh,
+                duration=e.duration if shown is None else shown,
+                refreshed=e.refreshed,
+            )
         )
-        for e in events
-        if isinstance(e, SkillGranted)
-    )
+    return tuple(infos)
 
 
 def _revive_infos(events: list[EventBase]) -> tuple[ReviveInfo, ...]:
@@ -1451,6 +1487,31 @@ def _backstab_targets(actor: UnitState, events: list[EventBase]) -> tuple[UnitId
     )
 
 
+_NO_TURN_ZH = {"concealed": "從隱蔽中出手", "silent": "無聲"}
+
+
+def _no_turn_info(
+    state: BattleState, actor: UnitState, events: list[EventBase], backstab: tuple[UnitId, ...]
+) -> tuple[tuple[UnitId, ...], str | None, tuple[str, ...]]:
+    """行動者的近戰命中判定中「目標不會轉身」的目標（依 ID）、原因（BS-1；同一次動作只有一種）與
+    說明（「背刺・無聲（不會轉身）：盜賊1」，06 6.21.1 C6；每個目標一句）。"""
+    rolls = [
+        e
+        for e in events
+        if isinstance(e, AttackRolled) and e.attacker_id == actor.id and e.no_turn is not None
+    ]
+    if not rolls:
+        return (), None, ()
+    targets = tuple(sorted({e.target_id for e in rolls}))
+    reason = rolls[0].no_turn
+    label = _NO_TURN_ZH[str(reason)]
+    notes = tuple(
+        f"{'背刺・' if uid in backstab else ''}{label}（不會轉身）：{state.units[uid].name_zh}"
+        for uid in targets
+    )
+    return targets, reason, notes
+
+
 def _positional_notes(
     state: BattleState, actor: UnitState, events: list[EventBase], backstab: tuple[UnitId, ...]
 ) -> tuple[str, ...]:
@@ -1479,6 +1540,9 @@ def preview(state: BattleState, action: Action) -> Preview:
     warning = oath_warning(state, action, (low.state, high.state))
     if warning is not None:
         base = replace(base, oath_warning=warning)
+    if isinstance(action, UseSkill) and aims_first(actor, _preview_skill(state, actor, action)):
+        fired_low, fired_high = simulate_preview(stripped, action, fire_lock=True)
+        base = replace(base, lock_fire=_build(state, action, actor, fired_low, fired_high))
     spec = _gamble_spec(state, actor, action)
     if spec is None or spec.chance_permille is None:
         return base
@@ -1589,6 +1653,7 @@ def _build(
         notes += actor.weapon.trait_lines_zh(on_hit_only=True)
     backstab = _backstab_targets(actor, max_events)
     notes += _positional_notes(state, actor, max_events, backstab)
+    no_turn, no_turn_reason, no_turn_notes = _no_turn_info(state, actor, max_events, backstab)
     if isinstance(action, UseSkill):
         checks = _displace_checks(state, actor, action)
         notes += _displace_notes(
@@ -1613,7 +1678,7 @@ def _build(
         min_state=low.state,
         max_state=high.state,
         cover=cover,
-        notes=notes,
+        notes=(*notes, *no_turn_notes),
         targets=targets,
         healed=healed,
         ap_cost=ap_cost,
@@ -1628,14 +1693,21 @@ def _build(
         summons=_summon_infos(state, max_events),
         bombs=_bomb_infos(high.state, max_events),
         revives=_revive_infos(max_events),
-        grants=_grant_infos(state, max_events),
+        grants=_grant_infos(state, actor, max_events),
         run_range=_run_range(high.state, actor) if isinstance(action, Run) else (),
         miss_notes=_miss_notes(state, actor, action),
         backstab=backstab,
+        no_turn=no_turn,
+        no_turn_reason=no_turn_reason,
         landing=landing,
         followup_tiles=follow_tiles,
         followup_when=_followup_when(state, actor, action),
         infusion=infusion,
+        strikes=(
+            skill_strikes(actor, _preview_skill(state, actor, action))
+            if isinstance(action, UseSkill)
+            else 1
+        ),
     )
 
 
@@ -1710,6 +1782,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "revive": "revives",
         "delayed_damage": "bombs",
         "summon": "summons",
+        "summon_beside": "無（被動、反應不預覽；TF-1）",
         "leave_form": f"{_OUTCOMES}（解除形態本身不列預覽結果；其餘效果照一般事件）",
         "enter_form": f"{_OUTCOMES}（form：進入形態；護盾、治療、範圍傷害等進入獎勵照一般事件）",
         "zone": f"affected_tiles、{_OUTCOMES}",

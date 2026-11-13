@@ -2,6 +2,7 @@
 // （`POST .../pregen/wait`，伺服器最多等 10 秒，超過改給組合器或模板版）。等超過 `PREGEN_HINT_DELAY_MS`
 // 才顯示等待提示（共用彈窗 `DialogFrame`），可以取消；取消＝不送那個動作（沒有扣點）。
 import type { PregenWaitRequest, WorldAction } from "../api/types";
+import { WISH_ZH } from "./wish";
 
 /** 等多久才顯示等待提示（毫秒）：已經好了的通常一下就回來，不閃一下彈窗。 */
 export const PREGEN_HINT_DELAY_MS = 400;
@@ -12,15 +13,26 @@ export function pregenWaitBody(action: WorldAction): PregenWaitRequest | null {
     return { kind: "flash", skill: action.skill, slot: action.slot ?? null, category: action.category ?? null };
   }
   if (action.kind === "event_solve") return { kind: "opportunity", solution: action.solution };
+  // WP-3：文字許願先等 LLM（選單許願不呼叫 LLM、不用等）
+  if (action.kind === "wish" && action.text != null && action.text !== "") return { kind: "wish", text: action.text };
   return null;
+}
+
+/** 等待提示下面那一行：閃現、機遇逾時改給一般的版本；許願逾時不送、改開選單（WP-3）。 */
+export const PREGEN_WAIT_NOTE = "最多等 10 秒；來不及就改用一般的版本。";
+
+export function pregenWaitNote(body: PregenWaitRequest): string {
+  return body.kind === "wish" ? WISH_ZH.waitNote : PREGEN_WAIT_NOTE;
 }
 
 /** 等待提示的文字。 */
 export function pregenWaitText(body: PregenWaitRequest): string {
+  if (body.kind === "wish") return WISH_ZH.waitText;
   return body.kind === "flash" ? "說書人正在構思這招的變化……" : "說書人正在構思這份機遇……";
 }
 
 /** 等待動畫（RT-3 技能生成）的請求編號：同一個請求每次挑到同一句、同一個圖樣。 */
 export function pregenRequestId(body: PregenWaitRequest): string {
+  if (body.kind === "wish") return `wish:${body.text ?? ""}`;
   return body.kind === "flash" ? `flash:${body.skill ?? ""}:${body.slot ?? ""}:${body.category ?? ""}` : `opportunity:${body.solution ?? ""}`;
 }

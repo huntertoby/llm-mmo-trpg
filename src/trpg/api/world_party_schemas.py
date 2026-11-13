@@ -11,8 +11,11 @@ from trpg.content.world_events import NpcPortrait
 
 __all__ = [
     "AiChoiceView",
+    "LoneWolfView",
     "MercenaryView",
     "MyShadowView",
+    "PartyIntroLine",
+    "PartyIntroView",
     "PartyMemberView",
     "PartyView",
     "ShadowView",
@@ -41,6 +44,14 @@ class PartyMemberView(_ApiModel):
     """劇情夥伴 ID（5C-3；不是夥伴為 ``None``）。"""
     note_zh: str | None = None
     """補充說明（夥伴：「劇情夥伴：任務結束後離隊」）。"""
+    backstory_zh: str | None = None
+    """名字那一列下面的來歷（OB-7，#154）：開局帶來、沒換下過的賽倫（``mercenaries.yaml`` 的
+    ``escort``）與有寫 ``backstory_zh`` 的劇情夥伴（阿岳）；其他成員 ``None``。"""
+    portrait: NpcPortrait | None = None
+    """劇情夥伴的頭像（PNL-4：人設卡 ``content/world/npcs/`` 的 ``portrait``）；其他成員 ``None``
+    （傭兵照 ``PartyView.mercenaries`` 的名單、主角照主角外觀，前端已有）。"""
+    region: str | None = None
+    """劇情夥伴頭像框的區域色（人設卡所在的區，阿岳＝``cloud_ridge``）；其他成員 ``None``。"""
 
 
 class MercenaryView(_ApiModel):
@@ -105,6 +116,46 @@ class AiChoiceView(_ApiModel):
     description_zh: str
 
 
+class PartyIntroLine(_ApiModel):
+    """隊友加入當下的一句台詞。"""
+
+    speaker_zh: str
+    text_zh: str
+    portrait: NpcPortrait | None = None
+    """說話者的頭像（PNL-4，OB-8）：伺服器照說話者的名字對到這段的成員（傭兵名單、劇情夥伴的人設卡）
+    或主城的守印人；對不到或沒寫頭像為 ``None``（前端畫通用剪影）。"""
+    region: str | None = None
+    """頭像框的區域色：守印人 ``capital``、傭兵＝出身區（``None``＝傭兵金框）、
+    劇情夥伴＝人設卡所在的區。"""
+
+
+class PartyIntroView(_ApiModel):
+    """還沒播的隊友加入台詞（OB-7，#154；對話框，不另做過場、不給選項）。
+
+    前端播完送既有的 ``hint_seen {ids: [seen_id]}``，之後就不再出現（「重新顯示提示」清掉
+    ``hints_seen`` 後會再出現一次）。已完成開局的角色（``opening`` 為 ``None``）不播。"""
+
+    seen_id: str
+    """``intro:<成員 ID>``（例 ``intro:merc_tiebi``、``intro:companion_ayue``）。"""
+    member: str
+    """傭兵 ID 或劇情夥伴 ID。"""
+    name_zh: str
+    lines: tuple[PartyIntroLine, ...]
+
+
+class LoneWolfView(_ApiModel):
+    """角色身上帶獨狼條件的技能與詞條，以及目前的隊伍出城會不會成立（LW-2，06 6.37「提示與標灰」）。
+
+    ``ok`` 照隊伍面板的成員算（只有主角＝成立）；護送、守點戰開場就在我方的 NPC 也算隊友，
+    出城前看不到，所以只寫在提示字裡。"""
+
+    ok: bool
+    skills_zh: tuple[str, ...] = ()
+    """帶獨狼條件的技能名（技能列順序）。"""
+    affixes_zh: tuple[str, ...] = ()
+    """帶獨狼條件的詞條（「皮甲的「獨行的」」：物品名＋詞條名，欄位順序）。"""
+
+
 class PartyView(_ApiModel):
     """目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"""
 
@@ -127,6 +178,8 @@ class PartyView(_ApiModel):
     """傭兵＋影子還能選幾名（劇情夥伴佔隊友位，5C-3）。"""
     companion_zh: str | None = None
     """劇情夥伴在隊時的說明（例「阿岳跟著你（霧渡新手路），佔 1 個隊友位；任務結束後離隊」）。"""
+    lone_wolf: LoneWolfView | None = None
+    """角色帶獨狼條件的技能或詞條時的出城前提示（LW-2）；沒帶時為 ``None``。"""
 
 
 class MyShadowView(_ApiModel):

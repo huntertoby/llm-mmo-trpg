@@ -228,13 +228,15 @@
   border-color: var(--accent);
 }
 
+/* WP-3b（docs/art/WP-3驗收.md 可修 3）：偏離路線是類別，不是「本場不成立」，不用虛線（3.7 第 1 條）：
+   改成 1px 紫色細框（畫在邊框裡、不佔位，選中時換成選中框），「偏離路線」標籤本身照舊 */
 .run-offer-card.off-route {
-  border-style: dashed;
-  border-color: #c58cff;
+  box-shadow: inset 0 0 0 1px rgb(197 140 255 / 55%);
 }
 
 .run-offer-card.off-route.selected {
   border-color: var(--accent);
+  box-shadow: none;
 }
 
 .off-route-tag {

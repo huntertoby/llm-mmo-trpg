@@ -290,6 +290,7 @@ def _reaction_field() -> FieldSpec:
         "ally_downed": "視野內的友方倒下之後（形狀必須是自身）",
         "enemy_enters_adjacent": "敵人主動走進相鄰格之後",
         "ally_targeted": "相鄰友方被敵人選為目標、命中判定之前",
+        "ally_hit_near": "相鄰友方被敵人攻擊命中、傷害結算之後",
     }
     return FieldSpec(
         field="reaction",
@@ -1022,7 +1023,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
                 for p in ON_HIT_PRIMITIVES
             ),
         )
-    elif name in ("grant_pierce", "allow_self_target"):
+    elif name in ("grant_pierce", "allow_self_target", "silent_strike"):
         value = FieldSpec(**base, type="bool")
     else:
         if name == "summon_limit_delta":  # BAL-14c：選單只留 +1

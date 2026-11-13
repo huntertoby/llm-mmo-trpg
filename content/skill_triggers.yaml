@@ -117,3 +117,12 @@ triggers:
     budget_coefficient_permille: 300
     min_rarity: epic
     random_composer: false
+  # --- TF-1（#159 伴生，06 6.34.5）：戰鬥開始時。只給轉型「伴生」用，隨機組合器不使用（係數為初值，未經模擬）。
+  - id: on_battle_start
+    name_zh: 戰鬥開始時
+    llm_hint: "戰鬥開始時自動發動一次。"
+    description_zh: 戰鬥開始、先攻順序排好之後，第一位行動之前（每場一次）。沒有另一方，效果作用在持有者。
+    has_other: false
+    budget_coefficient_permille: 300   # 每場只有一次（回合開始時是每回合，500）
+    min_rarity: epic
+    random_composer: false

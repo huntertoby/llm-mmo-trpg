@@ -102,7 +102,16 @@ export interface AtlasPaintOptions {
    * 第 i 座（`scene.islands` 的順序＝`regions.yaml`）在 i×0.3 秒開始、0.3 秒到位；主城不動。
    */
   rise?: number | null;
+  /**
+   * FIX-ATLAS2：滑鼠滑過的「不能去」浮島（鎖住／之後的賽季）的區域 ID。只有這座島的本體貼成稍亮的那一張
+   * （`LOCKED_HOVER_LIGHT`）；不加底色、框、光暈、放大。開放的島傳進來也不理（開放的島滑過照舊由 CSS 處理）。
+   */
+  hoverLocked?: string | null;
 }
+
+/** FIX-ATLAS2（美術 PM 第九任）：鎖住浮島滑過時本體疊的白色比例（只疊在島的不透明像素上，約等於亮度 ×1.16；美術驗收由 9% 改 16%）。 */
+export const LOCKED_HOVER_LIGHT = 0.16;
+export const LOCKED_HOVER_FILL = `rgba(255,255,255,${LOCKED_HOVER_LIGHT})`;
 
 /** 浮起時的位移與透明度（`world/opening.ts` 的 `riseProgress`／`riseOffset` 同一套；放這裡是為了 render 不依賴 world）。 */
 export const RISE_STEP_MS = 300;
@@ -121,6 +130,8 @@ export class AtlasPainter {
   private readonly skies = new Map<string, Surface>();
   private readonly sprites = new Map<string, Surface>();
   private layers: Layers | null = null;
+  /** 鎖住浮島滑過時的稍亮本體（每張本體離屏圖一張；本體被換掉時跟著失效）。 */
+  private readonly lit = new WeakMap<Surface, Surface>();
   /** 實際畫了幾次（測試用：快取命中不加）。`frame`＝組合（貼圖）次數。 */
   readonly stats = { sky: 0, base: 0, body: 0, marks: 0, front: 0, chrome: 0, frame: 0 };
 
@@ -216,6 +227,23 @@ export class AtlasPainter {
     return this.sprite("marks", is, box, JSON.stringify([is, k, epoch]), w, h, (c) => islandMarks(c, is, k));
   }
 
+  /** 本體的稍亮版本：原圖貼上，再用 source-atop 只在島的像素上疊 `LOCKED_HOVER_FILL`。 */
+  private litSurface(src: Surface): Surface {
+    const hit = this.lit.get(src);
+    if (hit !== undefined) return hit;
+    const s = this.make(src.width, src.height);
+    const c = s.getContext("2d");
+    if (c !== null) {
+      c.drawImage(asImage(src), 0, 0);
+      c.globalCompositeOperation = "source-atop";
+      c.fillStyle = LOCKED_HOVER_FILL;
+      c.fillRect(0, 0, src.width, src.height);
+      c.globalCompositeOperation = "source-over";
+    }
+    this.lit.set(src, s);
+    return s;
+  }
+
   /** 準備上層的各張離屏圖（場景、尺寸、字牌倍數、字型版本變了才重做；沒變的島直接沿用）。`bare`：未開放的島不畫鎖頭徽章。 */
   prepare(scene: AtlasScene, canTeleport: boolean, w: number, h: number, k = 1, epoch = 0, bare = false): Layers {
     const key = JSON.stringify([scene, canTeleport, w, h, k, epoch, bare]);
@@ -259,17 +287,19 @@ export class AtlasPainter {
     ctx.clearRect(0, 0, w, h);
     const rise = opts.rise ?? null;
     const order = new Map(scene.islands.map((is, i) => [is.region, i]));
-    const blit = (s: Sprite): void => {
+    const hover = opts.hoverLocked ?? null;
+    const lockedHover = hover !== null && [scene.capital, ...scene.islands].some((is) => is.region === hover && is.status !== "open") ? hover : null;
+    const blit = (s: Sprite, lit = false): void => {
       const r = riseAt(order.get(s.region) ?? -1, rise);
       if (r.alpha <= 0) return;
       if (r.alpha < 1) ctx.globalAlpha = r.alpha;
-      ctx.drawImage(asImage(s.surface), s.x * sx, (s.y + floatOffset(s.region, t) + r.dy) * sy);
+      ctx.drawImage(asImage(lit ? this.litSurface(s.surface) : s.surface), s.x * sx, (s.y + floatOffset(s.region, t) + r.dy) * sy);
       if (r.alpha < 1) ctx.globalAlpha = 1;
     };
-    layers.bodies.forEach(blit);
+    layers.bodies.forEach((s) => blit(s, s.region === lockedHover));
     ctx.drawImage(asImage(layers.front), 0, 0);
     if (opts.bare === true) return;
-    layers.marks.forEach(blit);
+    layers.marks.forEach((s) => blit(s));
     ctx.drawImage(asImage(layers.chrome), 0, 0);
   }
 }

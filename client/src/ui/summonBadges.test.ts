@@ -635,14 +635,17 @@ describe("6F-11 第 5 項：世界畫面 6 處黏字（JSX 行首的全形空白
 
   it("6 處都改成 lead-gap（margin-inline-start），CSS 有這條規則", () => {
     const spots: Array<[string, string]> = [
-      ["world/QuestLog.tsx", '<span className="muted small lead-gap">\n                {q.kind_zh}'],
-      ["world/QuestLog.tsx", '<span className="muted lead-gap">\n                {t.scope_zh}・{t.expires_zh}'],
-      ["world/WorldGrowth.tsx", '<span className="muted small lead-gap">\n            Lv {view.character.level}'],
+      // PNL-3：任務與線頭改成分頁，類別、範圍、到期改用標籤（flex gap），那兩段 JSX 不在了（下面另外檢查）
       ["world/LeaguePanel.tsx", '<span className="muted lead-gap">\n              賽季第 {league.season_day} 天'],
-      ["world/BoardPanel.tsx", '<span className={`lead-gap ${board.season_boss.status === "open" ? "world-board-open" : "muted"}`}>\n                  {board.season_boss.status_zh}'],
+      // PNL-1b：公告板改成分頁，賽季頭目的狀態改用標籤（`TabLine` 的 end），這一處不再是黏字的寫法
       ["run/FlashChooser.tsx", '<span className="muted small lead-gap">\n            {slot === null ?'],
     ];
     for (const [p, s] of spots) expect(raw[p], p).toContain(s);
+    // PNL-2：成長面板第一行改成四個籌碼（不再是一串字），沒有黏字的問題
+    expect(raw["world/WorldGrowth.tsx"]).toContain('label="Lv" value={c.level}');
+    // PNL-3：任務卡的類別、線頭的範圍是 `Tag`（標籤之間用 flex gap，沒有黏字的問題）
+    expect(raw["world/QuestLog.tsx"]).toContain("<Tag>{quest.kind_zh}</Tag>"); // PNL-4：類別改細框中性
+    expect(raw["world/QuestLog.tsx"]).toContain("<Tag>{t.scope_zh}</Tag>");
     const css = readFile(SRC_DIR, "styles/base.css");
     expect(/\.lead-gap\s*\{([^}]*)\}/.exec(css)?.[1] ?? "").toMatch(/margin-inline-start:\s*0\.75em/);
   });

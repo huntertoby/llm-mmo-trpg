@@ -13,13 +13,16 @@ from trpg.content.skills import SKILL_REACTION_EVENTS, SkillDef
 _UNCOVERED: dict[str, dict[str, str]] = {
     "skeleton": {},
     "trigger": {
-        "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能"
+        "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能",
+        "on_battle_start": "只由閃現轉型「伴生」產生（TF-1，#159），沒有手寫技能",
     },
-    "reaction_event": {},
+    "reaction_event": {
+        "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
+    },
     "condition": {
-        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）"
+        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）",
     },
-    "primitive": {},
+    "primitive": {"summon_beside": "只由閃現轉型「伴生」「護主」產生（TF-1，#159），沒有手寫技能"},
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
@@ -99,6 +102,24 @@ _STATUS_VIA_PRIMITIVE = {
 # 在那之前先以池為裝備來源（builds.yaml 是模擬回歸範本，不為補池而改動）。
 _POOL_ONLY = frozenset(
     {
+        # KW-2：連擊、怒氣、專注、氣的示範招與利用者（#161；builds.yaml 是模擬回歸範本，
+        # 不為示範而改動）
+        "skill_blood_fury",
+        "skill_breathing_qi",
+        "skill_centering",
+        "skill_crumbling_fist",
+        "skill_eagle_eye",
+        "skill_flowing_cut",
+        "skill_fury_slam",
+        "skill_grit_teeth",
+        "skill_heart_piercer",
+        "skill_inch_force",
+        "skill_mind_eye_shot",
+        "skill_qigong_wave",
+        "skill_shadow_glide",
+        "skill_swift_stab",
+        "skill_throat_cut",
+        "skill_war_cry",
         "skill_kindling_strike",
         "skill_flash_freeze",
         "skill_shatter_ice",
@@ -114,6 +135,13 @@ _POOL_ONLY = frozenset(
         "skill_kindle_pop",
         "skill_icebreaker",
         "skill_frost_snap",
+        # LW-1：獨狼示範技能（#156，06 6.37；builds.yaml 都帶隊友，不為示範而改動）
+        "skill_lone_wolf_pounce",
+        "skill_unguarded_shot",
+        "skill_lone_strider",
+        # BS-1：無聲示範技能（#157，06 6.21.1；builds.yaml 是模擬回歸範本，不為示範而改動）
+        "skill_silent_step",
+        "skill_shadow_bind",
         # 3-50：代價換強度第一批的示範技能（builds.yaml 是模擬回歸範本，不為示範而改動）
         "skill_frost_armor_seal",
         "skill_all_in_chant",

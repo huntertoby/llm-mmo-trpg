@@ -1,0 +1,27 @@
+# 荒原狂戰士「狂怒劈砍」（RG-2，#162，19.2.1「加深內容」：用 #161 的怒氣，受傷累積、滿了打出強力一擊）。
+# 怒氣滿 4 層（stacks.yaml 的上限）才能出手，花光每層傷害 +20%（同怒氣爆發）；怒氣怎麼累積照 #161 的機制
+# （受到傷害 +1；狂戰士另帶怒火中燒）。數值是初值，照工坊。只給敵人用。
+id: skill_berserker_fury_cleave
+schema_version: 1
+name_zh: 狂怒劈砍
+enemy_only: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1300}
+  - {type: consume_stack, stack: fury, per_stack_permille: 200, affects: self}
+condition: {type: self_stack_at_least, stack: fury, count: 4}
+cost: {stamina: 10, cooldown: 1}
+tags: [physical, melee, finisher, rage]
+narrative:
+  concept: 挨過的每一下都記在帳上，滿了就一斧連本帶利砍回去
+  cast_flavor: 狂戰士雙眼充血，怒吼著把積滿的怒火全灌進這一斧
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

@@ -22,8 +22,11 @@
 // CB-4：`case=ahRamS|ahRamEdgeWN|ahRamE`（灰燼之心第 1 階段普攻衝撞：正南、站最左欄朝西打正北、東西向對照）、`lordSwingS|lordSwingEdgeN`（碎晶之主普攻：正南、站最右欄打正北）、
 // `boarSE|boarWNW`（硫煙獸挑獠牙：東南、朝西打西北）、`matriarchEdgeSW`（熔爐母獸精英＋大型站最右欄、打右下角的西南）。
 // CB-4b：`case=ahRamW`（灰燼之心第 1 階段普攻衝撞，東西向、目標在西；和 `ahRamE` 成對）。
+// OCL-1b：`case=oclAhN|oclAhNEnemy|oclLordN|oclBoarHit|oclHumanHit`（被遮擋外框的播放：頭目在目標正南往北打、第三方頭目打敵方（Q7）、
+// 碎晶之主、異形／人形被頭目擋著受擊）；`&afterHit=0,30,90,300` 連拍改成「出招命中後這幾個毫秒」各一張（受擊閃白）。
 // BAL-21b：`#bal21b?step=cast|release`（灰燼之心第 1 階段熔岩濺落：施放回合播 `spout`、結束後畫預告格；落下回合頭目不播片段、
 // 落點 3×3 火屬性範圍特效＋火地）；`&freeze=<毫秒>` 停在那一刻（`started`），`&rows=1` 標題列出片段；事件與卡照 `skill_lava_splash.yaml`。
+// BAL-21c：`#bal21c`（碎晶之主第 3 階段界隙閃擊：原地 thunder → 目的格瞬步殘影 blink）；`&blinkFreeze=0|300` 停在殘影開頭／中段，`&face=east` 朝東，`&rows=1`。
 // `?anim=0.1` 慢動作（playback.ts 的 devAnimFactor）；`?cell=88` 放大格子。
 import type { BattleResponse, BattleView, Glossary, MoveMode, Pos, SkillCard, StepOut, TelegraphOut, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -1418,6 +1421,12 @@ interface Cb2bCase {
   targetStatuses?: Array<{ status_id: string; remaining: number }>;
   /** CB-4：頭目的階段（`UnitView.boss_phase.index`；灰燼之心第 1 階段普攻＝`ram`）。 */
   bossPhase?: number;
+  /** OCL-1b：施放者的陣營（沒給＝敵方）。 */
+  casterTeam?: "ally" | "enemy" | "third";
+  /** OCL-1b：目標換成這個範本與陣營（沒給＝主角，友方）。 */
+  targetAs?: { template: string; team: "ally" | "enemy" | "third"; name: string };
+  /** OCL-1b：不動的其他單位（步前、步後畫面都有；例：站在目標南邊擋住它的頭目）。 */
+  extras?: () => UnitView[];
 }
 const cb2bMove = (id: string, a: Pos, b: Pos, mode: MoveMode, seq: number): Record<string, unknown> => ({ seq, round: 1, type: "unit_moved", unit_id: id, from_pos: a, to_pos: b, mode, cost: 0 });
 const cb2bHit = (id: string, amount = 5): Record<string, unknown> => ({ seq: 5, round: 1, type: "damage_dealt", target_id: HERO, source_id: id, element: "physical", amount, hp_before: 30, hp_after: 25, crit: false, block_permille: 1000 });
@@ -1507,6 +1516,24 @@ CB3["lordSwingEdgeN"] = m2Case("碎晶之主・普攻揮擊（站最右欄、目
 CB3["boarSE"] = m2Case("硫煙獸・挑獠牙（目標在東南）", "sulfur_beast", "skill_venom_gore", ["damage", "apply_status"], P(3, 1), P(4, 2));
 CB3["boarWNW"] = m2Case("硫煙獸・挑獠牙（朝西、目標在西北）", "sulfur_beast", "skill_venom_gore", ["damage", "apply_status"], P(5, 3), P(4, 2), { facing: "west" });
 CB3["matriarchEdgeSW"] = m2Case("熔爐母獸（精英＋大型）・掄尾砸擊（站最右欄、目標在西南）", "furnace_matriarch", "skill_ember_bite", ["damage", "apply_status"], P(8, 3), P(7, 4), { tags: ["elite"] });
+// OCL-1b：被遮擋外框的播放（`docs/phases/PhaseOCL-1計畫.md` 交付 OCL-1b 第 5 點）。頭目站在目標正南往北打（外框沿用、片段結束重算）；
+// `oclAhNEnemy`＝Q7 的第二種做法「第三方頭目打敵方」（第一種「頭目身後同一排另一側再放敵方小兵」實測只擋 30.7%，不到 55%）；`oclBoarHit`／`oclHumanHit`＝被頭目擋著受擊
+// （頭目不動，旁邊的人出手；看外框閃白）。
+const AH_BEHIND = (team: "ally" | "enemy" | "third" = "enemy"): UnitView =>
+  unit("ocl_ah", team, 4, 3, { template_id: "ashen_heart", name_zh: "灰燼之心", facing: "north", hp: 80, max_hp: 80, tags: ["boss", "elite"], boss_phase: { index: 1, total: 3, name_zh: "第 1 階段" }, doll_look: UNIT_DOLLS.ashen_heart } as unknown as Partial<UnitView>);
+CB3["oclAhN"] = m2Case("OCL：灰燼之心（第 1 階段）・普攻衝撞（站在目標正南、往北打友方）", "ashen_heart", "", ["damage"], P(4, 3), P(4, 2), AH1);
+CB3["oclAhNEnemy"] = m2Case("OCL（Q7）：第三方的灰燼之心（第 1 階段）站在敵方盜匪正南、往北打", "ashen_heart", "", ["damage"], P(4, 3), P(4, 2), {
+  ...AH1,
+  casterTeam: "third",
+  targetAs: { template: "bandit", team: "enemy", name: "盜匪" },
+});
+CB3["oclLordN"] = m2Case("OCL：碎晶之主・普攻揮擊（站在目標正南、往北打友方）", "rift_shard_lord", "", ["damage"], P(4, 3), P(4, 2), BOSS_BASIC);
+CB3["oclBoarHit"] = m2Case("OCL：硫煙獸（第三方）被灰燼之心擋著、被西邊的盜匪打（異形受擊閃白）", "bandit", "", ["damage"], P(3, 2), P(4, 2), {
+  basic: true,
+  targetAs: { template: "sulfur_beast", team: "third", name: "硫煙獸" },
+  extras: () => [AH_BEHIND()],
+});
+CB3["oclHumanHit"] = m2Case("OCL：主角被灰燼之心擋著、被西邊的盜匪打（人形受擊閃白）", "bandit", "", ["damage"], P(3, 2), P(4, 2), { basic: true, extras: () => [AH_BEHIND()] });
 
 /** CB-3 連拍：播放中照畫布時鐘取樣，把戰場畫布貼到一張總表上（格子標遊戲內毫秒）。 */
 class Sheet {
@@ -1594,11 +1621,13 @@ async function cb2b(): Promise<void> {
   const heroAt = c.skill === "skill_blink" || c.skill === "skill_summon_ember_whelp" ? P(1, 4) : c.to;
   const hitsHero = c.basic === true ? [{ seq: 1, round: 1, type: "attack_rolled", attacker_id: id, target_id: HERO, hit: true }] : [];
   const tiles = c.tiles ?? [c.to];
-  const caster = (p: Pos) => unit(id, "enemy", p.x, p.y, { template_id: c.template, name_zh: c.name ?? c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }), ...(c.bossPhase === undefined ? {} : { boss_phase: { index: c.bossPhase, total: 3, name_zh: `第 ${c.bossPhase} 階段` } }) } as unknown as Partial<UnitView>);
-  const target = (p: Pos, after = false) => unit(HERO, "ally", p.x, p.y, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30, ...(after && c.targetStatuses !== undefined ? { hp: 25, statuses: c.targetStatuses.map((st) => ({ ...st, name_zh: "流血", source_id: id, amount: null, blast_radius: null, charge_tiles: [], cost_status: false })) } : {}) } as unknown as Partial<UnitView>);
-  const vWalk = c.walkFrom === undefined ? null : battle([caster(c.walkFrom), target(heroAt)], 9, 5);
-  const v0 = battle([caster(c.from), target(heroAt)], 9, 5);
-  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt, true), ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
+  const caster = (p: Pos) => unit(id, c.casterTeam ?? "enemy", p.x, p.y, { template_id: c.template, name_zh: c.name ?? c.zh, facing: c.facing, hp: 30, max_hp: 30, doll_look: UNIT_DOLLS[c.template], ...(c.tags === undefined ? {} : { tags: c.tags }), ...(c.bossPhase === undefined ? {} : { boss_phase: { index: c.bossPhase, total: 3, name_zh: `第 ${c.bossPhase} 階段` } }) } as unknown as Partial<UnitView>);
+  const ta = c.targetAs;
+  const target = (p: Pos, after = false) => unit(HERO, ta?.team ?? "ally", p.x, p.y, { template_id: ta?.template ?? "hero_fighter", weapon_id: "one_handed_sword", name_zh: ta?.name ?? "主角", ...(ta === undefined || UNIT_DOLLS[ta.template] === undefined ? {} : { doll_look: UNIT_DOLLS[ta.template] }), facing: c.facing === "east" ? "west" : "east", hp: 30, max_hp: 30, ...(after && c.targetStatuses !== undefined ? { hp: 25, statuses: c.targetStatuses.map((st) => ({ ...st, name_zh: "流血", source_id: id, amount: null, blast_radius: null, charge_tiles: [], cost_status: false })) } : {}) } as unknown as Partial<UnitView>);
+  const extras = c.extras?.() ?? [];
+  const vWalk = c.walkFrom === undefined ? null : battle([caster(c.walkFrom), target(heroAt), ...extras], 9, 5);
+  const v0 = battle([caster(c.from), target(heroAt), ...extras], 9, 5);
+  const v1 = battle([caster(c.end ?? c.from), target(c.pushed ?? heroAt, true), ...extras, ...(c.spawn === undefined ? [] : [c.spawn])], 9, 5);
   const cards: VfxCards = c.basic === true ? {} : { [c.skill]: { ...card(c.shape, c.range, c.effects), id: c.skill } as SkillCard };
   const opens = c.basic === true ? hitsHero : [{ seq: 1, round: 1, type: "skill_used", unit_id: id, skill_id: c.skill, name_zh: c.zh, ap: 1, mana: 0, mana_after: 0, tiles }];
   const events = [...opens, ...c.more(id)];
@@ -1619,6 +1648,8 @@ async function cb2b(): Promise<void> {
   const sheet = params.get("sheet") === "1" ? new Sheet(r, cropRaw.length === 4 && cropRaw.every(Number.isFinite) ? (cropRaw as [number, number, number, number]) : [0, 0, 9, 5], stagePixels(drawModelOf(v0)).width, params.get("clock") === "real") : null;
   const atRaw = (params.get("at") ?? "").split(",").filter((x) => x !== "").map(Number).filter(Number.isFinite);
   const every = Number(params.get("every") ?? "");
+  // OCL-1b：`&afterHit=0,30,90,300`＝出招命中後這幾個毫秒各拍一張（受擊閃白連拍）
+  const afterHit = (params.get("afterHit") ?? "").split(",").filter((x) => x !== "").map(Number).filter(Number.isFinite);
   const strikeRow = plan.frames.flatMap((f) => f.skill ?? []).find((row) => row.strike && row.unitId === id);
   // CB-3b M1：這一招排出來的時間軸列（片段名、起訖、命中點），給截圖腳本讀、也標在連拍標題上
   const rowList = plan.frames.flatMap((f) => f.skill ?? []).map((row) => ({ unit: row.unitId, clip: row.clip, recover: row.recover, still: row.still, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), hitMs: row.hitMs === null ? null : Math.round(row.hitMs), fb: row.fb ?? null, creature: row.creature?.action ?? null }));
@@ -1635,7 +1666,8 @@ async function cb2b(): Promise<void> {
         else if (op.op === "walk") await r.animateWalk(op.walk, () => false);
         else if (op.op === "vfx") {
           // CB-3 連拍：出招片段每格的正中間各一張（第 f 格＝出招列開始後 f × 83.33 ms），前後各多一張
-          if (sheet !== null && !(every > 0) && strikeRow !== undefined && op.skill?.includes(strikeRow) === true) {
+          if (sheet !== null && afterHit.length > 0 && strikeRow?.hitMs != null && op.skill?.includes(strikeRow) === true) sheet.start(afterHit.map((d) => strikeRow.hitMs! + d));
+          else if (sheet !== null && !(every > 0) && strikeRow !== undefined && op.skill?.includes(strikeRow) === true) {
             const n = Math.round(strikeRow.ms / F - 0.2);
             // CB-3b：`&at=` 只留片段時間（毫秒）落在的那幾格
             const frames = atRaw.length > 0 ? atRaw.map((ms) => Math.round(ms / (1000 / 12))) : Array.from({ length: n + 2 }, (_, f) => f);
@@ -1658,7 +1690,9 @@ async function cb2b(): Promise<void> {
     await (window as unknown as { __cb2bPlay: () => Promise<number> }).__cb2bPlay();
     const base = strikeRow?.startMs ?? 0;
     const perFrame = !(every > 0) && strikeRow !== undefined;
-    sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}${rowNote}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
+    const hitMs = strikeRow?.hitMs;
+    if (afterHit.length > 0 && hitMs != null) sheet.flush(`OCL-1b・${c.zh}（正式流程；命中後 0～${afterHit.at(-1)} ms 連拍）`, (t) => `命中 +${Math.round(t - hitMs)} ms`, Number(params.get("cols") ?? "5"));
+    else sheet.flush(`CB-3・${c.zh}${prefersReducedMotion() ? "・減少動態" : ""}（正式流程：playbackPlan → frameOps；${perFrame ? "t＝出招片段開始後的毫秒" : "t＝開始播放後的毫秒"}${rowNote}）`, (t) => `t=${Math.round(perFrame ? (t - base) / (F / (1000 / 12)) - 1000 / 24 : t)}`, Number(params.get("cols") ?? "5"));
   }
 }
 
@@ -1730,5 +1764,69 @@ async function bal21b(): Promise<void> {
   window.__skillDone = true;
 }
 
-const MODES: Readonly<Record<string, () => Promise<void>>> = { bal21b, cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
+// ---- BAL-21c：碎晶之主第 3 階段界隙閃擊（先打再閃走；第二段的傳送在目的格播瞬步殘影 blink） ----------------
+const B21C_LORD = "c_lord";
+const B21C_SKILL = "skill_rift_flicker";
+const B21C_FROM = P(4, 3);
+const B21C_TO = P(7, 2);
+const B21C_CARD = { id: B21C_SKILL, name_zh: "界隙閃擊", shape: "單體", skeleton: "strike", timing: "after_action", effect_ids: ["damage"], stats: { range: 6 }, icon: { segments: [{ skeleton: "strike", shape_id: "single", range: 6, effects: [{ type: "damage" }] }, { skeleton: "displace", shape_id: "ground_tile", range: 4, effects: [{ type: "teleport" }] }] } } as unknown as SkillCard;
+
+function b21cView(lord: Pos, hurt: boolean): BattleView {
+  const boss = unit(B21C_LORD, "enemy", lord.x, lord.y, { template_id: "rift_shard_lord", name_zh: "碎晶之主", facing: params.get("face") === "east" ? "east" : "west", hp: 170, max_hp: 380, tags: ["boss", "elite"], doll_look: UNIT_DOLLS.rift_shard_lord, boss_phase: { index: 3, total: 4, name_zh: "核心過載" } } as unknown as Partial<UnitView>);
+  const heroU = unit(HERO, "ally", 2, 2, { template_id: "hero_fighter", weapon_id: "one_handed_sword", name_zh: "主角", facing: "east", hp: hurt ? 24 : 30, max_hp: 30 } as unknown as Partial<UnitView>);
+  return battle([boss, heroU], 10, 5);
+}
+
+/** `#bal21c`：`&blinkFreeze=<毫秒>` 停在傳送（瞬步殘影）開始後那麼久（0＝開頭、殘影最濃；300＝中段）；`&rows=1` 標題列出片段。 */
+async function bal21c(): Promise<void> {
+  const events = [
+    { seq: 1, round: 3, type: "skill_used", unit_id: B21C_LORD, skill_id: B21C_SKILL, name_zh: "界隙閃擊", ap: 1, mana: 3, mana_after: 40, tiles: [P(2, 2)] },
+    { seq: 2, round: 3, type: "attack_rolled", attacker_id: B21C_LORD, target_id: HERO, hit: true, skill_id: B21C_SKILL },
+    { seq: 3, round: 3, type: "damage_dealt", target_id: HERO, source_id: B21C_LORD, element: "physical", amount: 6, hp_before: 30, hp_after: 24, crit: false, block_permille: 1000 },
+    { seq: 4, round: 3, type: "skill_followup", unit_id: B21C_LORD, skill_id: B21C_SKILL, name_zh: "界隙閃擊", when: "after_action", origin: B21C_FROM, tiles: [B21C_TO] },
+    { seq: 5, round: 3, type: "unit_moved", unit_id: B21C_LORD, from_pos: B21C_FROM, to_pos: B21C_TO, mode: "teleport", cost: 0 },
+  ];
+  const v0 = b21cView(B21C_FROM, false);
+  const v1 = b21cView(B21C_TO, true);
+  const step = { actor_id: B21C_LORD, events, view: v1, step: { type: "skill" } } as unknown as StepOut;
+  const res = { steps: [step], initial_view: v0, view: v1 } as unknown as BattleResponse;
+  const plan = playbackPlan(res, HERO, "normal", { [B21C_SKILL]: B21C_CARD }, new Set(), weaponClassInView, attackFamilyInView, creatureStrikeInView, prefersReducedMotion());
+  const rows = plan.frames.flatMap((f) => f.skill ?? []).filter((row) => row.unitId === B21C_LORD);
+  const moves = plan.frames.flatMap((f) => f.after ?? []).flatMap((m) => (m.kind === "move" ? [m.anim] : []));
+  document.body.dataset.rows = JSON.stringify({ rows: rows.map((row) => ({ clip: row.clip, strike: row.strike, startMs: Math.round(row.startMs), ms: Math.round(row.ms), creature: row.creature?.action ?? null })), after: moves });
+  const rowNote = params.get("rows") === "1" ? `；出招：${rows.filter((x) => x.strike).map((x) => x.creature?.action ?? "—").join("、")}；出招後位移：${moves.map((m) => `${m.mode}${m.creatureBlink === true ? `（瞬步殘影 ${m.durationMs} ms${m.creatureBlinkAt === "to" ? "，在目的格" : ""}）` : ""}`).join("、")}` : "";
+  const r = await show(v0);
+  caption(`BAL-21c・碎晶之主界隙閃擊：先在原地放雷（thunder），再閃到目的格播瞬步殘影 blink${rowNote}`);
+  const blinkFreeze = Number(params.get("blinkFreeze") ?? "");
+  const clock = () => (r as unknown as { effectClock: number }).effectClock;
+  await wait(300);
+  window.__skillStart = performance.now();
+  for (const frame of plan.frames)
+    for (const op of frameOps(frame)) {
+      if (op.op === "move") {
+        if (op.anim.creatureBlink === true && Number.isFinite(blinkFreeze) && blinkFreeze >= 0) {
+          const t0 = clock();
+          const check = () => {
+            if (clock() - t0 >= blinkFreeze) {
+              r.setBoost(1e-6);
+              frozen = true;
+              window.__skillDone = true;
+            } else requestAnimationFrame(check);
+          };
+          requestAnimationFrame(check);
+        }
+        await r.animate([op.anim], () => false);
+        if (frozen) return;
+      } else if (op.op === "vfx") {
+        const origins = op.skill === undefined ? undefined : r.playSkill(op.skill);
+        r.playVfx(op.vfx, op.impactMs, false, origins);
+        await wait(op.vfx.leadMs);
+      } else if (op.op === "view") r.draw(drawModelOf(op.view));
+      else if (op.op === "pause") await wait(op.ms);
+    }
+  await wait(800);
+  window.__skillDone = true;
+}
+
+const MODES: Readonly<Record<string, () => Promise<void>>> = { bal21b, bal21c, cb2b, fb: fbAttacks, openers, prims, lower: primsLower, order, moves, perf, react: reacts, result: results, variants, skillvar: skillVariants, impact: impactTimeline, creature: creatureBasics, elite: eliteHumanoids };
 void (MODES[MODE] ?? openers)();

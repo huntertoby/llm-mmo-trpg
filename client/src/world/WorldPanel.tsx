@@ -10,12 +10,14 @@
 // 5D-4：「商店」「鐵匠」改成切換左欄的完整畫面；右側背包改成摘要（`InventorySummary`）＋「打開背包」；
 // 背包滿等決定時狀態列一行提示＋按鈕（選擇在背包畫面）。
 // UI-E3b：遇敵卡每名敵人前面加小頭像（戰場紙娃娃縮圖，`enemyThumb.tsx`）；精英、Boss 加金環。
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { PopupFrame } from "../ui/PopupFrame";
 import { battlefieldLine } from "./battlefield";
+import { DuelArt } from "./DuelArt";
+import { duelPlan } from "./duelArtPlan";
 import { EnemyThumb } from "./enemyThumb";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
@@ -54,6 +56,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   const e = view.encounter;
   if (e === null) return null;
   const field = battlefieldLine(e); // 6C-2：就地開打或退回模板的原因
+  const duelOffered = e.duel === "offered" && !e.in_battle; // RG-3：精英要求一對一，還沒選
   return (
     <PopupFrame placement={{ kind: "inline" }} tone="danger" className="world-encounter" testId="world-encounter" role="region" label="遇敵">
       <div className="section-title">遇敵：{e.location_name_zh}</div>
@@ -85,8 +88,15 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           ))}
         </ul>
       )}
+      {e.duel != null && e.duel !== "offered" && e.duel_zh != null && (
+        <div className="muted small" data-testid="world-encounter-duel">
+          {e.duel_zh}
+        </div>
+      )}
+      {duelOffered && <DuelDialog view={view} encounter={e} busy={busy} onAct={onAct} />}
       <div className="run-actions">
-        <button type="button" className="primary" disabled={busy} onClick={onBattle} data-testid="world-fight">
+        {/* 有單挑提議時「開戰」＝拒絕單挑，改一般樣式（和單挑對話框「不引導」一致；開發 PM 決定，RG-4 驗收美術 PM 另記）；沒有單挑照舊主鈕 */}
+        <button type="button" className={duelOffered ? undefined : "primary"} disabled={busy} onClick={onBattle} data-testid="world-fight">
           {e.in_battle ? "繼續戰鬥" : "開戰"}
         </button>
         {!e.in_battle && (
@@ -99,6 +109,44 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
       </div>
     </PopupFrame>
   );
+}
+
+/**
+ * RG-3（#162，09 9.6.6）：精英要求一對一的對話框（`EncounterView.duel` ＝ `offered`）。
+ * 說明字是伺服器的 `duel_zh`（寫明「兩邊獎勵一樣」）。不選直接按「開戰」＝拒絕（RG-2 規則，照舊能打）。
+ * 不用 `DialogFrame`：遇敵卡本身是中上方的彈窗，`DialogFrame` 會疊在卡裡面、蓋住敵人清單又出現「移到下方」（RG-3 實機看過），
+ * 改成遇敵卡裡一段有框的小對話框（`role="group"`）。
+ * RG-4（docs/art/RG樣張.md 9.6 決定 3、9.8 第 7 條）：標題下面一張 320×120 插圖（A 暮色對峙，`DuelArt`）；
+ * 接受、拒絕兩顆都是一般按鈕（不加 `primary`，不暗示推薦）、同一個 min-width 一樣大、接受在左；不加 autoFocus，
+ * 打開時焦點給這一段本身（`tabIndex={-1}`），Enter 不會直接按到任何一顆。
+ */
+function DuelDialog({ view, encounter, busy, onAct }: { view: WorldView; encounter: NonNullable<WorldView["encounter"]>; busy: boolean; onAct(action: WorldAction): void }) {
+  const elite = duelEliteName(encounter);
+  const plan = duelPlan(view);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus({ preventScroll: true });
+  }, []);
+  return (
+    <div className="duel-dialog" data-testid="world-duel" role="group" aria-label="單挑" tabIndex={-1} ref={ref}>
+      <div className="duel-title">{`${elite}要求一對一`}</div>
+      {plan !== null && <DuelArt plan={plan} />}
+      {encounter.duel_zh != null && <p className="small">{encounter.duel_zh}</p>}
+      <div className="duel-choices">
+        <button type="button" className="duel-choice" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: true })} data-testid="world-duel-accept">
+          接受
+        </button>
+        <button type="button" className="duel-choice" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: false })} data-testid="world-duel-decline">
+          拒絕
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** 提出單挑的精英：陣容裡第一個精英（伺服器 `duel_line` 也用排最前的那一個）；沒有標精英時用第一名敵人。 */
+export function duelEliteName(e: NonNullable<WorldView["encounter"]>): string {
+  return (e.enemies.find((x) => x.elite) ?? e.enemies[0])?.name_zh ?? "";
 }
 
 export function HerePanel({

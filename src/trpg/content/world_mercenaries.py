@@ -24,9 +24,11 @@ __all__ = [
     "MERCENARY_ROLES",
     "MIN_PER_ROLE",
     "CompanionDef",
+    "EscortDef",
     "MercenaryDef",
     "MercenaryRole",
     "MercenaryTable",
+    "PartyLine",
 ]
 
 type MercenaryRole = Literal["damage", "guardian", "support", "control"]
@@ -63,6 +65,23 @@ class MercenaryDef(ContentModel):
     ``docs/art/sample/merc-portraits.html``）。沒寫＝通用剪影。"""
 
 
+class PartyLine(ContentModel):
+    """隊友加入當下的一句台詞（OB-7，#154：對話框，不另做過場、不給選項）。"""
+
+    speaker_zh: str = Field(min_length=1)
+    text_zh: str = Field(min_length=1)
+
+
+class EscortDef(ContentModel):
+    """開局帶的護衛（OB-7，#154；09 9.6「預設隊友的出場」）：``mercenary`` 必須在 ``default_party``
+    裡；``intro`` 是確定出發後、傳送前的台詞；``backstory_zh`` 是隊伍面板名字下面那行來歷（只給開局
+    帶來的那一位，在城鎮換掉後重新雇用的不顯示）。"""
+
+    mercenary: str = Field(pattern=ID_PATTERN)
+    backstory_zh: str = Field(min_length=1)
+    intro: tuple[PartyLine, ...] = Field(min_length=1)
+
+
 class CompanionDef(ContentModel):
     """劇情夥伴（5C-3；09 9.6.9 #97：主線或任務鏈給的 NPC，只在對應任務裡跟著，佔一個隊友位）。
 
@@ -82,6 +101,10 @@ class CompanionDef(ContentModel):
     """帶他打贏一場給的好感度（18.7.6：阿岳 +2）。"""
     affinity_daily_cap: int = Field(default=0, ge=0, le=100)
     """同一天（6 點刷新）這種好感度最多加多少（18.7.6：阿岳每天最多 +6）。"""
+    backstory_zh: str | None = Field(default=None, min_length=1)
+    """隊伍面板名字下面那行來歷（OB-7，#154）；``None``＝不顯示。"""
+    join_lines: tuple[PartyLine, ...] = ()
+    """加入當下的台詞（OB-7，#154；開局還沒結束的角色才播，見 ``trpg.api.world_party_intro``）。"""
 
 
 class MercenaryTable(ContentModel):
@@ -98,9 +121,11 @@ class MercenaryTable(ContentModel):
     shadow_reports_kept: int = Field(default=20, ge=1)
     """影子紀錄保留的戰報則數（5C-2）。"""
     default_party: tuple[str, ...] = ()
-    """新角色一開始帶的傭兵（依出場順序；5C-3，9.6.11 5C-2 代決、#131：賽倫＋回春）。空＝獨行。"""
+    """新角色一開始帶的傭兵（依出場順序；5C-3；#154 起只帶賽倫）。空＝獨行。"""
     companions: tuple[CompanionDef, ...] = ()
     """劇情夥伴（5C-3，#97：只在對應任務裡跟著，佔一個隊友位）。"""
+    escort: EscortDef | None = None
+    """開局帶的護衛的台詞與來歷（OB-7，#154）。"""
 
     @model_validator(mode="after")
     def _check(self) -> MercenaryTable:
@@ -124,6 +149,8 @@ class MercenaryTable(ContentModel):
         unknown = [m for m in party if m not in known]
         if unknown:
             raise ValueError(f"default_party 有不在名單的傭兵：{', '.join(unknown)}")
+        if self.escort is not None and self.escort.mercenary not in party:
+            raise ValueError(f"escort 的 {self.escort.mercenary} 要在 default_party 裡")
         ids = [c.id for c in self.companions]
         clash = sorted({i for i in ids if ids.count(i) > 1} | (set(ids) & known))
         if clash:

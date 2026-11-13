@@ -384,6 +384,8 @@ def _self_condition(unit: UnitState, condition: ConditionSpec) -> bool:
         return unit.hp * _PERMILLE < condition.permille * unit.max_hp
     if kind == "self_concealed":
         return unit.has_status(CONCEALED)
+    if kind == "lone_wolf":  # 「獨自」詞條＝獨狼（LW-1，08 8.21.6）
+        return unit.lone_wolf
     raise ValueError(f"裝備的防禦條件只能看持有者自己：{kind}")
 
 

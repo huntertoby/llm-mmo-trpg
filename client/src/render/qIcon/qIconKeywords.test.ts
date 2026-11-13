@@ -46,8 +46,10 @@ const SAMPLE_KC: Record<string, string> = { ignite: "#ff6a1a", wet: "#4aa8ff", c
 describe("T-A1 12 個關鍵字的圖樣與色", () => {
   it("12 個都有圖樣、和 gearAppearance.json 的 keywords 同序；色＝KEYWORD_COLOR（和樣張 KC 逐筆相同）", () => {
     expect(KWS).toHaveLength(12);
-    expect(K.KEYS).toEqual(KWS);
-    expect(Object.keys(KEYWORD_COLOR).sort()).toEqual([...KWS].sort());
+    /* KW-3：四個層數關鍵字接在後面（裝備不帶；qIconKW3.test.ts） */
+    const STACK = ["combo_point", "fury", "focus", "ki"];
+    expect(K.KEYS).toEqual([...KWS, ...STACK]);
+    expect(Object.keys(KEYWORD_COLOR)).toEqual(K.KEYS);
     for (const kw of KWS) expect(KEYWORD_COLOR[kw], kw).toBe(SAMPLE_KC[kw]);
   });
   it("k 照需求 3.3 表", () => {
@@ -112,7 +114,7 @@ describe("T-A3 角", () => {
     });
   });
   it("105 款：查 kind/form → kind → 右下；沒有任何一款放右上；例外表的每一列都對到實際的款", () => {
-    expect(LOOKS).toHaveLength(105);
+    expect(LOOKS).toHaveLength(107); // RG-5 起鳶盾多兩款（雲紋碑盾、熔殼塔盾）
     const used = new Set<string>();
     for (const look of LOOKS) {
       const c = K.cornersOf({ def: defOf(look) })[0], kf = `${look.kind}/${look.form}`, want = K.KEY_CORNER[kf]?.[0] ?? K.KEY_CORNER[look.kind!]?.[0] ?? "br";

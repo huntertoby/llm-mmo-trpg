@@ -541,8 +541,8 @@
   "shape": "單體（射程 武器射程）",
   "condition": null,
   "effects": [
-   "武器傷害 ×1.15（敵方）",
-   "武器傷害 ×1（敵方），若手持雙匕首時，這把武器吃敏捷"
+   "武器傷害 ×1.35（敵方）",
+   "狀態「中毒」 3 回合（敵方），若每一下都命中同一個目標（雙匕首兩下都中）"
   ],
   "modifiers": [],
   "activation": null,
@@ -568,7 +568,7 @@
   "timing": null,
   "effect_ids": [
    "damage",
-   "damage"
+   "apply_status"
   ],
   "followup": null,
   "followup_when": null,
@@ -594,17 +594,17 @@
        "condition": null
       },
       {
-       "type": "damage",
-       "status": null,
+       "type": "apply_status",
+       "status": "poison",
        "surface": null,
-       "condition": "wielding_weapon"
+       "condition": "all_strikes_hit"
       }
      ]
     }
    ],
    "link": null,
    "condition": {
-    "id": "wielding_weapon",
+    "id": "all_strikes_hit",
     "status": null
    },
    "costs": [],
@@ -615,25 +615,25 @@
    "trap_trigger": null,
    "zone_element": null,
    "art": {
-    "prop": "w:dual_dagger",
+    "prop": "w:sword",
     "motion": "swing",
-    "act": "combo",
-    "tint": null,
+    "act": "dot",
+    "tint": "poison",
     "spark": null
    }
   },
   "keywords": {
-   "makes": [],
-   "uses": [
+   "makes": [
     {
-     "id": "prone",
-     "name_zh": "倒地",
-     "description_zh": "絆倒、推倒、撞擊讓目標倒地；倒地的目標更容易被近戰命中與處決。",
+     "id": "poisoned",
+     "name_zh": "中毒",
+     "description_zh": "毒讓目標中毒，每回合受到毒素傷害且治療降低；有些技能能消耗中毒，或對中毒的目標造成更重的傷害。",
      "variant": false,
-     "general": true,
-     "reason_zh": "近戰攻擊倒地的目標有優勢"
+     "general": false,
+     "reason_zh": null
     }
    ],
+   "uses": [],
    "basic": false
   },
   "variants": [],
@@ -680,10 +680,10 @@
      "index": 0,
      "type": "damage",
      "category": "damage",
-     "label": "×1.15",
+     "label": "×1.35",
      "unit": null,
      "dice": null,
-     "multiplier_permille": 1150,
+     "multiplier_permille": 1350,
      "weapon": true,
      "amount": null,
      "element": null,
@@ -693,17 +693,17 @@
     },
     {
      "index": 1,
-     "type": "damage",
-     "category": "damage",
-     "label": "×1",
-     "unit": null,
+     "type": "apply_status",
+     "category": "status",
+     "label": "3",
+     "unit": "回合",
      "dice": null,
-     "multiplier_permille": 1000,
-     "weapon": true,
-     "amount": null,
+     "multiplier_permille": null,
+     "weapon": false,
+     "amount": 3,
      "element": null,
      "element_zh": null,
-     "name_zh": null,
+     "name_zh": "中毒",
      "affects": null
     }
    ],

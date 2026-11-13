@@ -697,7 +697,8 @@ def _op_kill_refund(
 def _op_charge(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
 ) -> list[Draft]:
-    """蓄力：冷卻 +2（最多 5 回合），威力由預算器依冷卻折抵提高。"""
+    """蓄力：冷卻 +2（最多 5 回合），威力由預算器依冷卻折抵提高；至少一項一定要嚴格變強
+    （FL-1a，:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     cooldown = skill.cost.cooldown or 0
@@ -710,16 +711,17 @@ def _op_charge(
 
 
 def _op_light(
-    skill: SkillDef, template: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。
 
     BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）−1，
-    威力照樣由預算器降低；每項最少留 1（只減不拿掉）。"""
+    每項最少留 1（只減不拿掉）。FL-1a：至少一項一定要嚴格變弱、沒有一項變強
+    （:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     if (skill.ap_cost or 1) <= 1:
-        return _light_cost_drafts(skill, template.cost_fields)
+        return _light_cost_drafts(skill, template.cost_fields, library)
     base, effects = base_draft(skill)
     base["ap_cost"] = (skill.ap_cost or 2) - 1
     cooldown = skill.cost.cooldown
@@ -728,17 +730,30 @@ def _op_light(
     return [(base, effects)]
 
 
+def _paid(library: ContentLibrary, field: str, value: int) -> int:
+    """卡片上的實付值（我方）：法力照 ``core.mana_cost``，其他照資料值。"""
+    return library.ruleset.core.mana_cost(value) if field == "mana" else value
+
+
 _LIGHT_COST_FIELDS = frozenset({"cooldown", "mana", "stamina"})
 """AP 已是 1 時輕巧能減的代價（BAL-12b 定；AP、源力不在這裡）。"""
 
 
-def _light_cost_drafts(skill: SkillDef, fields: Sequence[str]) -> list[Draft]:
-    """``fields`` 依序各減 1 的草稿（每項最少留 1；沒有可減的就不出）。"""
+def _light_cost_drafts(
+    skill: SkillDef, fields: Sequence[str], library: ContentLibrary
+) -> list[Draft]:
+    """``fields`` 依序各減 1 的草稿（每項最少留 1；沒有可減的就不出）。
+
+    FL-1c（06 6.34「費用方向」第 5 點）：「少付」以卡片上的實付值為準。減 1 之後實付沒變（法力照
+    ``core.mana_cost`` 四捨五入，例：3 → 2 實付都是 2）就當作沒少付：這一項不出草稿，**也不改試
+    後面的項目**（前面已經排進來的照舊）。"""
     drafts: list[Draft] = []
     for field in fields:
         current = getattr(skill.cost, field, None) if field in _LIGHT_COST_FIELDS else None
         if not isinstance(current, int) or current - 1 < 1:
             continue
+        if _paid(library, field, current - 1) == _paid(library, field, current):
+            break
         base, effects = base_draft(skill)
         base["cost"] = {**base["cost"], field: current - 1}
         drafts.append((base, effects))

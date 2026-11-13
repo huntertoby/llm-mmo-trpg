@@ -63,7 +63,7 @@
 }
 
 .world-mail {
-  container-type: inline-size;
+  container: mail / inline-size; /* TXT-2：命名容器，窄版查詢指名量郵寄面板 */
 }
 
 /* 寬的時候兩欄：左邊寄給誰、右邊東西／金幣＋留言／檢查與寄出；面板窄（800 寬視窗）時疊成一欄 */
@@ -92,7 +92,7 @@
   overflow-y: auto;
 }
 
-@container (width < 560px) {
+@container mail (width < 560px) {
   .mail-send {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -489,7 +489,7 @@
   max-width: 180px;
 }
 
-@container (width < 560px) {
+@container mail (width < 560px) {
   /* 6T-1c（美術 PM 小修 7）：800 寬時卡片縮矮，第二封的按鈕不被面板下緣切掉 */
   .mail-letters {
     gap: 6px;
@@ -554,4 +554,13 @@
 
 .gear-cross-class .lost {
   color: #e07a4a;
+}
+
+/* QI-7：信上的物品附件畫 32 的物品圖示，貼在小牌左端、蓋住小牌上下左的 1px 框線，小牌高度照現行 32（不撐高） */
+.mail-thing-chip.has-icon {
+  padding-left: 0;
+}
+
+.mail-thing-chip > .item-icon {
+  margin: -1px 0 -1px -1px;
 }

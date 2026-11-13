@@ -392,8 +392,10 @@ def test_table_has_the_164_rewritten_entries() -> None:
     # ＋ BAL-2c 的形態幅度（原語參數一筆，實作者初稿，待玩法 PM 改寫）
     # ＋ BAL-12c 的固定值加成（傷害、治療、護盾原語參數各一，實作者初稿，待玩法 PM 改寫）
     # ＋ BAL-12e 的表面強度（原語參數一筆，實作者初稿，待玩法 PM 改寫）
-    assert len(TABLE.texts) == 170
-    assert len({e.id for e in TABLE.texts}) == 170
+    # ＋ TF-1 的召喚到身邊（原語與反咬參數各一，實作者初稿，待玩法 PM 改寫）
+    # ＋ KW-1b 的自身層數達到的層數參數（條件參數一筆，實作者初稿，待玩法 PM 改寫）
+    assert len(TABLE.texts) == 173
+    assert len({e.id for e in TABLE.texts}) == 173
 
 
 def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:

@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import type { BattleResponse, BattleView, Pos, SkillCard, UnitView } from "../../api/types";
 import { actionLabel, classifyActions, type ClassifiedActions, type LabeledAction } from "../../battle/actions";
+import { conditionOffMap, withConditionOff } from "../../battle/conditionOff";
 import { BATTLE_DRAW, buildDrawModel, type DrawModel } from "../../battle/drawModel";
 import { fxSkillsOf } from "../../battle/fxSkills";
 import { followupMode, isFollowupPending } from "../../battle/followup";
@@ -11,6 +12,7 @@ import { withPushReasons } from "../../battle/pushReasons";
 import { raceModes } from "../../battle/race";
 import { withReasons } from "../../battle/skillReasons";
 import { telegraphMarks, type TelegraphMark } from "../../battle/telegraph";
+import { aimDraws, type AimDraw } from "../../battle/rgMarks";
 import {
   basicModes,
   copyMode,
@@ -54,6 +56,8 @@ export interface BattleData {
   fallback: LabeledAction[];
   model: DrawModel;
   marks: TelegraphMark[];
+  /** RG-3：瞄準預告的準星與瞄準線（播放中、結束後不畫，同 `marks`）。 */
+  aims: AimDraw[];
   /** 詢問視窗的觸發單位所在格（鏡頭焦點）。 */
   focusTile: Pos | null;
 }
@@ -93,8 +97,14 @@ export function useBattleData(
   );
   const skillReasons = useSkillReasons(battleId, response);
   const buttons = useMemo(
-    () => (hero === null ? [] : withReasons(skillButtons(hero, response.legal_actions, cards, response.variant_states ?? []), skillReasons)),
-    [hero, response.legal_actions, response.variant_states, cards, skillReasons],
+    () =>
+      hero === null
+        ? []
+        : withConditionOff(
+            withReasons(skillButtons(hero, response.legal_actions, cards, response.variant_states ?? []), skillReasons),
+            conditionOffMap(response.skills_off), // LW-2：本場條件不成立的標灰
+          ),
+    [hero, response.legal_actions, response.variant_states, response.skills_off, cards, skillReasons],
   );
   const basic = useMemo(
     () => withPushReasons(basicModes(response.legal_actions, hero?.charges ?? []), response.interact_options, view),
@@ -136,6 +146,7 @@ export function useBattleData(
     () => (busy || view.ended ? [] : telegraphMarks(response.telegraph, view)),
     [busy, view, response.telegraph],
   );
+  const aims = useMemo(() => (busy || view.ended ? [] : aimDraws(response.telegraph, view)), [busy, view, response.telegraph]);
   const focusTile = useMemo<Pos | null>(() => {
     const trigger = response.pending?.trigger_unit_id;
     if (response.awaiting !== "decision" || trigger == null) return null;
@@ -165,6 +176,7 @@ export function useBattleData(
     fallback,
     model,
     marks,
+    aims,
     focusTile,
   };
 }

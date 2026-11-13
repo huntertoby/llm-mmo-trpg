@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from trpg.api.condition_off import skills_off
 from trpg.api.hidden_info import (
     event_hidden_fields,
     event_visible,
@@ -30,6 +31,8 @@ from trpg.api.schemas import (
     FollowupOptionOut,
     HistoryStepOut,
     InteractOptionOut,
+    PartActionOut,
+    PartOptionOut,
     PreviewOut,
     RunOptionOut,
     StepOut,
@@ -39,7 +42,7 @@ from trpg.api.sessions import BattleSession, StepRecord
 from trpg.api.telegraph import telegraph_out
 from trpg.api.variants import preview_variant, variant_states
 from trpg.content.library import ContentLibrary
-from trpg.engine.actions import Step, UseSkill
+from trpg.engine.actions import Action, Attack, Step, UseSkill
 from trpg.engine.ai.commanded import ignored_orders
 from trpg.engine.battle import (
     interact_direction,
@@ -49,13 +52,16 @@ from trpg.engine.battle import (
 )
 from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
-from trpg.engine.events import BattleStarted, EventBase
+from trpg.engine.events import BattleStarted, EffectFizzled, EventBase, TurnStarted
+from trpg.engine.lock_on import LOCK_BLOCKED, LOCK_CONCEALED, LOCK_LOST, lock_blocker
+from trpg.engine.parts import PART_REASON_ZH, part_targets
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
 from trpg.engine.skills.followups import followup_options
 from trpg.engine.state import BattleState
-from trpg.engine.view import BattleView, project_for
+from trpg.engine.view import BattleView, UnitView, project_for
 from trpg.narrative.events import battle_started_text, describe_event
+from trpg.narrative.parts import break_lines_zh
 from trpg.narrative.unit_traits import unit_trait_lines
 from trpg.shared.types import Pos, Team, UnitId
 
@@ -127,7 +133,59 @@ def traits_view(
         )
         for u in view.units
     )
-    return view.model_copy(update={"units": units})
+    return view.model_copy(update={"units": tuple(_with_break_lines(state, u) for u in units)})
+
+
+def _with_break_lines(state: BattleState, unit: UnitView) -> UnitView:
+    """部位的「破掉會：……」（PB-1c；:func:`trpg.narrative.parts.break_lines_zh`）。"""
+    owner = state.units.get(unit.id)
+    if unit.parts is None or owner is None:
+        return unit
+    defs = {p.id: p for p in owner.parts}
+    parts = tuple(
+        p.model_copy(update={"break_lines_zh": break_lines_zh(state.ruleset, defs[p.id])})
+        if p.id in defs
+        else p
+        for p in unit.parts
+    )
+    return unit.model_copy(update={"parts": parts})
+
+
+def part_options_out(
+    state: BattleState, legal: tuple[Action, ...]
+) -> tuple[PartActionOut, ...] | None:
+    """``legal`` 裡目標有部位的普攻與單體技能各自的部位選項（PB-1c；同一個動作種類、技能、目標只列
+    一次）；沒有時為 ``None``。"""
+    out: list[PartActionOut] = []
+    seen: set[tuple[str, str | None, str]] = set()
+    for action in legal:
+        if not isinstance(action, (Attack, UseSkill)) or action.target_id is None:
+            continue
+        skill_id = action.skill_id if isinstance(action, UseSkill) else None
+        key = (action.type, skill_id, action.target_id)
+        if key in seen:
+            continue
+        targets = part_targets(state, action)
+        if not targets:
+            continue
+        seen.add(key)
+        out.append(
+            PartActionOut(
+                type="attack" if isinstance(action, Attack) else "use_skill",
+                skill_id=skill_id,
+                target_id=action.target_id,
+                options=tuple(
+                    PartOptionOut(
+                        part_id=t.part_id,
+                        name_zh=t.name_zh,
+                        ok=t.ok,
+                        reason_zh=None if t.reason is None else PART_REASON_ZH[t.reason],
+                    )
+                    for t in targets
+                ),
+            )
+        )
+    return tuple(out) if out else None
 
 
 def team_events_out(
@@ -136,11 +194,46 @@ def team_events_out(
     """``team`` 看到的事件 JSON：陷阱過濾（:func:`filter_events`）＋ 隱蔽中的敵人只藏資訊
     （以這一步之後的狀態判斷誰看不到）。"""
     hidden = hidden_unit_ids(state, team)
-    return tuple(
-        event_out(e, state, hidden)
-        for e in filter_events(events, state, team)
-        if event_visible(e, state, team, hidden)
-    )
+    out: list[dict[str, Any]] = []
+    turn_of: UnitId | None = None
+    for e in filter_events(events, state, team):
+        if isinstance(e, TurnStarted):
+            turn_of = e.unit_id
+        if not event_visible(e, state, team, hidden):
+            continue
+        data = event_out(e, state, hidden)
+        if isinstance(e, EffectFizzled) and e.reason in _LOCK_REASONS:
+            data.update(_lock_fizzle_ids(state, e, turn_of, hidden))
+        out.append(data)
+    return tuple(out)
+
+
+_LOCK_REASONS = frozenset({LOCK_LOST, LOCK_CONCEALED, LOCK_BLOCKED})
+"""瞄準預告落空的原因（RG-1 ``effect_fizzled.reason``）。"""
+
+
+def _lock_fizzle_ids(
+    state: BattleState, e: EffectFizzled, caster_id: UnitId | None, hidden: frozenset[UnitId]
+) -> dict[str, str]:
+    """瞄準預告落空（RG-3 浮字）：``lock_caster_id``＝射出的人（射出在他回合開始時，取這一步
+    裡最後一個 ``turn_started``）；``lock_on_blocked`` 另帶 ``lock_blocker_id``＝擋下的目標隊友
+    （以這一步之後的戰場、:func:`lock_blocker` 判斷）。觀看者看不到資訊的單位不送。
+
+    RG-3b：AF-1 起有人擋在中間時改打擋住的人，引擎發 ``lock_intercepted``（自帶 ``unit_id``＝
+    射出的人、``blocker_id``），前端「被擋下」直接讀它、這裡不推算；``lock_on_blocked`` 落空只剩
+    「擋住的人本身選不到」（例如 2 格外的隱蔽）這一種，引擎事件沒有擋住的人，才在這裡推算。"""
+    out: dict[str, str] = {}
+    caster = None if caster_id is None else state.units.get(caster_id)
+    if caster is None or caster.id in hidden:
+        return out
+    out["lock_caster_id"] = caster.id
+    if e.reason != LOCK_BLOCKED or e.pos is None:
+        return out
+    target = state.unit_at(e.pos.x, e.pos.y)
+    blocker = None if target is None else lock_blocker(state, caster, target)
+    if blocker is not None and blocker.id not in hidden:
+        out["lock_blocker_id"] = blocker.id
+    return out
 
 
 def step_out(
@@ -289,6 +382,8 @@ def battle_response(
         pending=pending,
         copy_options=copy_options_out(state, pending),
         followup_options=followup_options_out(state, pending),
+        part_options=part_options_out(state, legal),
+        skills_off=skills_off(state, session.hero_id),
         orders=session.orders,
         orders_ignored=ignored_orders(state, VIEW_TEAM, session.orders),
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),

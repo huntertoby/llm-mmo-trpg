@@ -19,8 +19,9 @@ from trpg.llm.client import ChatMessage
 from trpg.llm.naming import skill_summary
 from trpg.llm.prompts.escape import escape_text
 from trpg.llm.prompts.world import WorldStyle, load_world_style
-from trpg.skillgen.flash_catalog import FlashCatalog
+from trpg.skillgen.flash_catalog import CatalogEntry, FlashCatalog
 from trpg.skillgen.flash_offer import FlashRequest
+from trpg.skillgen.flash_state import Variation
 
 __all__ = [
     "FLASH_PROMPT_VERSION",
@@ -30,9 +31,14 @@ __all__ = [
 ]
 
 # 改動任何閃現提議 prompt 文字、區塊格式時必須同步改版本號（快照測試會檢查）。
-FLASH_PROMPT_VERSION = "flash-variation/5"
+# LF-2：/6 —— 題目寫明數量上限、可用類別、各模板的參數組合數；<catalog> 帶 note_words；大變化可順便
+# 取 name_zh；schema 每個模板一個分支
+FLASH_PROMPT_VERSION = "flash-variation/6"
 
 NOTE_MAX_CHARS = 40
+NAME_MAX_CHARS = 12
+MAX_SCHEMA_BRANCHES = 40
+"""模板超過這個數時 schema 退回扁平列舉（LF-2 第 4 點；分支太多時語法約束很慢）。"""
 
 FLASH_TASK = """你是「{world_name}」世界的技能設計助手。
 世界簡介：{summary}
@@ -40,14 +46,26 @@ FLASH_TASK = """你是「{world_name}」世界的技能設計助手。
 
 任務：玩家的一招技能「靈光一閃」，請依資料區最後的題目 <request>，從 <catalog> 中提議
 <request> 的 count 個不同的變化。只輸出符合給定 JSON schema 的 JSON，不要輸出任何其他文字。
-- 每個變化填 category（類別）與 template（模板），都必須是 <catalog> 列出的選項，不可自創。
-- 模板有 keyword、element、shape 選單時，必須從該模板的選單挑一個填入；沒有選單的欄位填 null。
+- count 不會超過 <catalog> 能給的不同變化數；<request> 的 categories 是這次可用的類別，
+  choices 是每個模板有幾種不同的參數組合（1 ＝ 只有一種，同一個模板不要提議兩次）。
+- 每個變化填 category（類別）與 template（模板），都必須是 <catalog> 列出的選項，不可自創；
+  category 填該模板在 <catalog> 的類別。
+- 模板有 keyword、element、shape 選單時，必須從該模板的選單挑一個填入；沒有選單的欄位不要填。
+  同一個模板用不同的參數算不同的變化。
 - 不要填任何數值（傷害、範圍、冷卻、點數都不用寫）：強度由遊戲的預算器補。
-- note_zh：一句話說明為什麼這個變化適合這招，最多 {note_max} 個字，全形中文，不可有英文或代號。
-  note_zh 只寫變化後這招真的有的效果，並寫出這個變化加上的效果（例如加了燃燒就要提到燃燒）；
+- note_zh（每個變化都要寫）：一句話說明為什麼這個變化適合這招，最多 {note_max} 個字，
+  全形中文與全形標點，不可有英文、數字或代號。
+  <catalog> 的 note_words 是這個變化會加上的效果詞（「／」分隔的同一組詞選一個；有參數時依參數
+  列出）：note_zh 要用到每一組的其中一個詞。只寫變化後這招真的有的效果，
   不要提到這招沒有的控制、元素或召喚物；世界觀詞（例如源晶、頻率、碎界）最多一個。
   note_zh 照 <request> 的 style（這招原本取得地點的區域與風格）寫；沒有要求時用中性奇幻，
   不用武俠、仙俠、文言詞。
+- <request> 的 major 為 true 時（大變化），每個變化另填 name_zh：變化後這招的新招式名，
+  兩到六個字為主、最多 {name_max} 個字，只能用全形中文字，不可有英文、數字或空白；
+  句式多樣（兩字、三字、四字、「X之Y」混用），「・」最多一個、不放在開頭或結尾；
+  名稱是招式名，不是說明，不要加地名或「版」「變奏」這類字。
+  不可和 <skill> 的名稱或其他已知技能同名，各變化的名稱也不可相同；不要用世界觀詞開頭；
+  照 style 取名，名稱或 note_zh 要提到這個變化加上的效果。major 為 false 時不填 name_zh。
 - 盡量讓變化涵蓋不同類別，並參考 <usage>（這招實戰的用法統計）與 <held_keywords>
   （玩家其他技能常用的關鍵字）挑選最貼合這個玩家的變化。
 - 一個變化只能是一個模板；不要提議 <already> 已經提議過的變化。
@@ -74,25 +92,79 @@ def _enum(values: Sequence[str]) -> dict[str, Any]:
     return {"enum": [*values, None]}
 
 
-def flash_schema(catalog: FlashCatalog, count: int) -> dict[str, Any]:
-    """提議輸出的 JSON schema：``{"variations": [{category, template, keyword, element, shape,
-    note_zh}]}``，列舉來自目錄、沒有任何數值欄位。"""
+def _text_fields(*, major: bool) -> dict[str, Any]:
+    """說明（必填）與大變化的名稱（必填）。名稱不設 ``maxLength``：語法約束會把太長的名稱從中間
+    截斷（實測截出「焰息・延燒一瞬・雲嶺版・」），太長的交給名稱檢查丟掉、照 LF-1 另外命名。"""
+    fields: dict[str, Any] = {
+        "note_zh": {"type": "string", "minLength": 1, "maxLength": NOTE_MAX_CHARS}
+    }
+    if major:
+        fields["name_zh"] = {"type": "string", "minLength": 1}
+    return fields
+
+
+def _text_required(*, major: bool) -> list[str]:
+    return ["note_zh", "name_zh"] if major else ["note_zh"]
+
+
+def _flat_item(catalog: FlashCatalog, *, major: bool) -> dict[str, Any]:
+    """扁平列舉（LF-2 以前的 schema；模板太多時的退路）：模板和參數選單沒有綁在一起。"""
     keywords = tuple(dict.fromkeys(k for e in catalog.entries for k in e.keywords))
     elements = tuple(dict.fromkeys(k for e in catalog.entries for k in e.elements))
     shapes = tuple(dict.fromkeys(k for e in catalog.entries for k in e.shapes))
-    item = {
+    return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["category", "template"],
+        "required": ["category", "template", *_text_required(major=major)],
         "properties": {
             "category": {"enum": list(catalog.categories)},
             "template": {"enum": list(catalog.templates())},
             "keyword": _enum(keywords),
             "element": _enum(elements),
             "shape": _enum(shapes),
-            "note_zh": {"type": ["string", "null"], "maxLength": NOTE_MAX_CHARS},
+            **_text_fields(major=major),
         },
     }
+
+
+def _branch(entry: CatalogEntry, *, major: bool) -> dict[str, Any]:
+    """一個模板的分支（LF-2 第 4 點）：``template``、``category`` 是常數，參數只列該模板的選單
+    （必填）；沒有選單的參數不出現。"""
+    properties: dict[str, Any] = {
+        "category": {"const": entry.category},
+        "template": {"const": entry.template},
+    }
+    required = ["category", "template"]
+    for name, values in (
+        ("keyword", entry.keywords),
+        ("element", entry.elements),
+        ("shape", entry.shapes),
+    ):
+        if values:
+            properties[name] = {"enum": list(values)}
+            required.append(name)
+    properties.update(_text_fields(major=major))
+    required += _text_required(major=major)
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": required,
+        "properties": properties,
+    }
+
+
+def flash_schema(catalog: FlashCatalog, count: int, *, major: bool = False) -> dict[str, Any]:
+    """提議輸出的 JSON schema：``{"variations": [{category, template, keyword?, element?, shape?,
+    note_zh, name_zh?}]}``，列舉來自目錄、沒有任何數值欄位。
+
+    LF-2：每個模板一個 ``oneOf`` 分支（參數選單綁在模板上；伺服器不支援 ``oneOf`` 時由
+    ``LLMClient`` 依 ``oneof_as_anyof`` 改成 ``anyOf``）；模板超過 :data:`MAX_SCHEMA_BRANCHES` 個時
+    退回扁平列舉。``note_zh`` 必填；``major``（大變化）時每項另有必填的 ``name_zh``（不合格只丟
+    文字，不重試）。"""
+    if len(catalog.entries) > MAX_SCHEMA_BRANCHES:
+        item = _flat_item(catalog, major=major)
+    else:
+        item = {"oneOf": [_branch(e, major=major) for e in catalog.entries]}
     return {
         "type": "object",
         "additionalProperties": False,
@@ -116,7 +188,30 @@ def _usage_payload(library: ContentLibrary, request: FlashRequest) -> dict[str, 
     }
 
 
-def _catalog_payload(catalog: FlashCatalog) -> list[dict[str, Any]]:
+def _param_label(variation: Variation) -> str:
+    shape = None if variation.shape is None else variation.shape.type
+    return "／".join(v for v in (variation.keyword, variation.element, shape) if v is not None)
+
+
+def _note_words(
+    catalog: FlashCatalog, entry: CatalogEntry, words: Mapping[str, Sequence[str]]
+) -> list[str] | dict[str, list[str]] | None:
+    """模板的 note_words（LF-2）：沒有參數時是詞組清單；有參數時依參數值分開列。"""
+    found = {
+        key: list(words[key])
+        for key, v in sorted(catalog.pool.items())
+        if v.template == entry.template and key in words
+    }
+    if not found:
+        return None
+    if not (entry.keywords or entry.elements or entry.shapes):
+        return next(iter(found.values()))
+    return {_param_label(catalog.pool[key]): value for key, value in found.items()}
+
+
+def _catalog_payload(
+    catalog: FlashCatalog, note_words: Mapping[str, Sequence[str]] | None = None
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for entry in catalog.entries:
         row: dict[str, Any] = {
@@ -131,6 +226,9 @@ def _catalog_payload(catalog: FlashCatalog) -> list[dict[str, Any]]:
         ):
             if values:
                 row[name] = list(values)
+        mention = None if note_words is None else _note_words(catalog, entry, note_words)
+        if mention:
+            row["note_words"] = mention
         rows.append(row)
     return rows
 
@@ -147,6 +245,7 @@ def build_flash_messages(
     previous_proposal: str | None = None,
     errors: str | None = None,
     world: WorldStyle | None = None,
+    note_words: Mapping[str, Sequence[str]] | None = None,
 ) -> list[ChatMessage]:
     """組出閃現變化提議的 messages：``[system, user]``。``count`` 是還要提議幾個；``already`` 是
     已經通過驗證的變化（以 ``category/template`` 描述）；重試時帶上一份提議與錯誤回饋。
@@ -160,6 +259,7 @@ def build_flash_messages(
         summary=style.summary_zh,
         tone=style.text_tone(),  # 6L-1 C1
         note_max=NOTE_MAX_CHARS,
+        name_max=NAME_MAX_CHARS,
     )
     header: dict[str, Any] = {
         "flash_nth": request.nth,
@@ -167,11 +267,13 @@ def build_flash_messages(
         "role_tier": request.role_tier,
         "reflash": request.slot is not None,
         "category": request.category,
+        "categories": list(catalog.categories),
+        "choices": {e.template: catalog.choices(e.template) for e in catalog.entries},
         "count": count,
         "style": style.style_payload(request.region),  # 6L-1（#126）
     }
     blocks = [
-        _block("catalog", _json(_catalog_payload(catalog))),
+        _block("catalog", _json(_catalog_payload(catalog, note_words))),
         _block("skill", _json(skill_summary(library, before))),
         _block("usage", _json(_usage_payload(library, request))),
         _block("held_keywords", _json(dict(sorted(request.held_keywords.items())))),

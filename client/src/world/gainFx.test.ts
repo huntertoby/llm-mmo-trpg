@@ -70,7 +70,7 @@ describe("6Q-1：飛行圖示的選擇", () => {
     expect(gainIconOf(inv([item("blade", 1, true)]), { item: "blade", gear: true })).toEqual({ kind: "generic", gear: true });
   });
 
-  it("畫法：裝備畫 GearIcon 的 canvas，其他畫通用 SVG", () => {
+  it("畫法：裝備畫 GearIcon 的 canvas，其他畫通用圖示（QI-7 起是 Q 版畫布，不是 SVG）", () => {
     const gear = renderToStaticMarkup(createElement(GainFlyIcon, { choice: gainIconOf(full, { item: "blade", gear: true }) }));
     expect(gear).toContain("gear-icon");
     expect(gear).not.toContain("<svg");

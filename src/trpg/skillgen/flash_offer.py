@@ -15,9 +15,12 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -64,22 +67,32 @@ from trpg.skillgen.flash_state import (
     with_flash,
     with_reflash,
 )
+from trpg.skillgen.flash_text import VariationText, clean_text
 from trpg.skillgen.flash_trade import MINOR_OPS, convergible
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
+    "NO_OPTIONS_ZH",
+    "NO_REFLASH_OPTIONS_ZH",
+    "REFLASH_WEAKER_PICK_ZH",
+    "REFLASH_WEAKER_ZH",
+    "WEAKER_FOOT_ZH",
+    "WEAKER_TAG_ZH",
     "DataOrderSource",
     "FlashOffer",
     "FlashOption",
     "FlashOptionSource",
     "FlashRequest",
     "ProposingSource",
+    "TextSource",
     "UsageSource",
     "category_counts",
     "category_ranking",
     "choose",
+    "has_options",
     "history_problem",
     "make_offer",
+    "reflash_weaker",
     "skill_before",
     "try_variation",
 ]
@@ -156,6 +169,16 @@ class ProposingSource(FlashOptionSource, Protocol):
         self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
     ) -> Sequence[Variation]:
         """提議的變化（可以含不合格的；數量不限）。``skill`` 是套用這一次之前的技能。"""
+        ...
+
+
+class TextSource(Protocol):
+    """會給變化 **文字** 的來源（LF-1：LLM 的名稱與描述、重播）：:func:`make_offer` 在
+    :meth:`ProposingSource.proposed` 之後呼叫，依變化的穩定鍵掛到選項上（提議的、補位的、轉型保底都
+    算；引擎用 :func:`~trpg.skillgen.flash_text.clean_text` 再檢查一次）。"""
+
+    def texts(self, library: ContentLibrary, request: FlashRequest) -> Mapping[str, VariationText]:
+        """這一次出題的文字（鍵 ＝ :meth:`~trpg.skillgen.flash_state.Variation.key`）。"""
         ...
 
 
@@ -388,6 +411,9 @@ class FlashOption(BaseModel):
     summary_zh: str
     floor_permille: int = Field(default=0, ge=0)
     """重閃時被換掉那一筆的預算分數下限（‰，進位；選擇時寫進 :class:`FlashRecord`）；閃現為 0。"""
+    weaker: bool = Field(default=False, exclude_if=lambda v: not v)
+    """被強度下限卡住的重閃格（RR-2，#160，06 6.34.3；RR-2c 定義）出的選項裡，**整招** 預算分數低於
+    重閃前（玩家現在的卡）的那些（卡上標「比原本弱」）。``False`` 時不輸出（存檔逐字不變）。"""
 
 
 class FlashOffer(BaseModel):
@@ -404,6 +430,9 @@ class FlashOffer(BaseModel):
     major: bool = False
     cost: int = Field(ge=0)
     options: tuple[FlashOption, ...] = ()
+    weaker: bool = Field(default=False, exclude_if=lambda v: not v)
+    """這次是被強度下限卡住的重閃格（RR-2，#160）：選項可能比現在弱（:func:`reflash_weaker`）。
+    ``False`` 時不輸出。"""
 
 
 @dataclass(slots=True)
@@ -416,9 +445,21 @@ class _Builder:
     """重閃時被換掉那一筆的預算分數（‰，進位）；閃現為 0。"""
     broken: FlashHistoryError | None = None
     """已存的歷程在目前的內容重推不了（3W-R1）：閃現改用 ``request.current`` 當起點。"""
+    texts: Mapping[str, VariationText] = field(default_factory=dict)
+    """來源給的文字（LF-1，:class:`TextSource`）；套用前由 :func:`clean_text` 檢查後掛上。"""
+    weaker: bool = False
+    """被強度下限卡住的重閃格（RR-2，#160）：不套被換掉那一筆的下限（``floor_permille`` 是 0），
+    也不套整招篩選（``whole_floor``）；整招低於現在的選項標「比原本弱」。"""
+    whole_floor: Fraction | None = None
+    """重閃的整招下限（RR-2c，06 6.34.3「重閃也一樣」）：玩家現在那張卡的預算分數；重閃後整招不能
+    低於它。閃現為 ``None``（閃現的下限在推導時已經看整招）。轉型不設下限、不篩（06 6.34.5「轉型不套
+    強度下限」，玩法 PM 選 (b)：換了種類預算類別不同，分數不能比，只要落在新種類的預算窗內）；畫面上
+    有轉型選項的面板寫「（轉型除外）」、轉型卡句末接「轉型後照新種類重算強度，不跟原本比。」
+    （前端 ``client/src/run/flashChoice.ts``，FL-1h）。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
+        variation = clean_text(variation, self.texts.get(variation.key()))
         state = (
             with_flash(request.state, variation)
             if request.slot is None
@@ -441,11 +482,19 @@ class _Builder:
                 skill = derive_skill(self.library, request.base, state, request.seed, request.tier)
         except FlashError:
             return None
+        below = (
+            self.whole_floor is not None
+            and variation.source != "transform"  # 06 6.34.5：轉型不套整招篩選（FL-1h 確認）
+            and budget_power(skill, self.library) < self.whole_floor
+        )
+        if below and not self.weaker:
+            return None  # RR-2c：重閃後整招低於現在的卡，照原規則不合格
         return FlashOption(
             variation=variation,
             skill=skill,
             summary_zh=_summary(self.library, variation),
             floor_permille=self.floor_permille,
+            weaker=below,
         )
 
     def take(self, variations: Sequence[Variation], count: int) -> list[FlashOption]:
@@ -460,14 +509,47 @@ class _Builder:
 
 
 def _builder(library: ContentLibrary, request: FlashRequest) -> _Builder:
-    """這次請求的選項產生器：先重推一次已存的歷程（重推不了時記下原因，走 3W-R1 的退路），再算重閃的
+    """這次請求的選項產生器（:func:`_strict_builder`）；被強度下限卡住的重閃格（RR-2，#160，
+    :func:`reflash_weaker`）改成不套被換掉那一筆的下限、也不套整招篩選，整招低於現在的選項標
+    「比原本弱」。"""
+    builder = _strict_builder(library, request)
+    if _weaker(library, request, builder):
+        builder.floor_permille = 0
+        builder.weaker = True
+    return builder
+
+
+def _strict_builder(library: ContentLibrary, request: FlashRequest) -> _Builder:
+    """照原規則的選項產生器：先重推一次已存的歷程（重推不了時記下原因，走 3W-R1 的退路），再算重閃的
     強度下限。"""
     try:
         chain = derive_chain(library, request.base, request.state, request.seed, request.tier)
     except FlashStepError as exc:
         broken = FlashHistoryError(exc)
-        return _Builder(library, request, _fallback_floor(library, request), broken)
-    return _Builder(library, request, _replaced_floor(library, request, chain))
+        builder = _Builder(library, request, _fallback_floor(library, request), broken)
+        if request.slot is not None and request.current is not None:
+            builder.whole_floor = budget_power(request.current, library)
+        return builder
+    builder = _Builder(library, request, _replaced_floor(library, request, chain))
+    if request.slot is not None:
+        builder.whole_floor = _whole_floor(library, request, chain)
+    return builder
+
+
+def _whole_floor(
+    library: ContentLibrary, request: FlashRequest, chain: Sequence[SkillDef]
+) -> Fraction:
+    """重閃的整招下限（RR-2c）：玩家現在那張卡（已存歷程重推的最後一筆；沒有任何一筆時是原本的
+    技能加預算上限加成）的預算分數。"""
+    if chain:
+        return budget_power(chain[-1], library)
+    return budget_power(
+        with_budget_bonus(
+            at_role_tier(library, request.base, request.tier),
+            bonus_permille(library.flash.rules, request.state),
+        ),
+        library,
+    )
 
 
 def try_variation(
@@ -624,6 +706,114 @@ def category_counts(
     }
 
 
+NO_OPTIONS_ZH = "這招目前沒有可以閃的變化"
+"""沒有任何合法閃現選項時面板的灰字（FL-1c，06 6.34「費用方向」第 7 點）。"""
+NO_REFLASH_OPTIONS_ZH = "這一格目前沒有可以重閃的變化"
+"""重閃某一格沒有任何合法選項時按鈕的灰字（RR-1，比照 :data:`NO_OPTIONS_ZH`；
+玩法 PM 11-13 定稿，TXT-2）。"""
+REFLASH_WEAKER_ZH = "這一格重閃後，這招可能比現在弱"
+"""被強度下限卡住的重閃格入口的提醒字；選類別面板最上面也再寫一次（RR-2c，#160 第 3 點）。"""
+REFLASH_WEAKER_PICK_ZH = "扣點後一定要選一個。"
+"""選類別面板最上面、接在 :data:`REFLASH_WEAKER_ZH` 後面的那句（RR-2c，#160 第 3 點；兩層確認
+合成一層，不另跳確認框）。"""
+WEAKER_FOOT_ZH = "這次的選項可能比現在弱；標 ▼ 的是變小的地方。"
+"""較弱的重閃出題後，面板固定區取代「選哪個這招整體都會強一點」的那句（RR-2c，#160 第 3 點）。"""
+WEAKER_TAG_ZH = "比原本弱"
+"""較弱的重閃裡整招低於現在的選項卡，類別標籤旁的小標（RR-2c，#160 第 4 點；變弱樣式）。"""
+_OPTIONS_CACHE_LIMIT = 512
+"""內容庫上「有沒有選項」快取（``ContentLibrary.flash_option_cache``）的上限：滿了就清空。"""
+
+
+def has_options(library: ContentLibrary, request: FlashRequest) -> bool:
+    """不指定類別出題（:func:`make_offer`，依用法統計的來源）會不會至少有 1 個選項（FL-1c 第 7 點：
+    沒有時面板不給按）。
+
+    用出題同一套衍生流程，只算到第一個合格的就停：這一次可出的類別（大變化時另含補位用的小變化
+    類別，同 :func:`_fill_up`）任一類有套得上的變化，或大變化有轉型保底。LLM 提議的變化不算（提議
+    只會多、不會少；這裡只看確定性的部分）。結果依請求內容（SHA-256，不用 ``hash()``／``id()``）
+    快取在內容庫上。"""
+    cache = library.flash_option_cache
+    key = _options_key(request)
+    found = cache.get(key)
+    if found is not None:
+        return found
+    found = _has_options(library, request)
+    if len(cache) >= _OPTIONS_CACHE_LIMIT:
+        cache.clear()
+    cache[key] = found
+    return found
+
+
+def _options_key(request: FlashRequest) -> str:
+    body = {
+        "base": request.base.model_dump(mode="json"),
+        "state": request.state.model_dump(mode="json"),
+        "usage": request.usage.model_dump(mode="json"),
+        "seed": request.seed,
+        "slot": request.slot,
+        "tier": request.tier,
+        "held": dict(sorted(request.held_keywords.items())),
+        "current": None if request.current is None else request.current.model_dump(mode="json"),
+    }
+    text = json.dumps(body, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def reflash_weaker(library: ContentLibrary, request: FlashRequest) -> bool:
+    """這一格重閃是不是被強度下限卡住（RR-2，#160，06 6.34.3「強度下限」例外；RR-2c 定義）。
+
+    照原規則（這一格不低於被換掉的那一筆，**而且整招不低於現在的卡**）**沒有任何候選** 達得到時是
+    ``True``（範圍同 :func:`has_options`：不指定類別、依用法統計的來源），這時改出預算窗內、但整招
+    可能比現在弱的候選（兩道下限都不套）。只要有一個候選達得到就是 ``False``（照原規則只出達得到
+    的）；新的閃現（``slot`` 為空）、完整技能第一次調整（還沒有被換掉的那一筆）、已存歷程重推
+    不了（3W-R1）一律 ``False``。改成較弱之後有沒有選項另看 :func:`has_options`。結果同
+    :func:`has_options` 快取在內容庫上。"""
+    return _weaker(library, request, None)
+
+
+def _weaker(library: ContentLibrary, request: FlashRequest, strict: _Builder | None) -> bool:
+    if request.slot is None or request.state.record(request.slot) is None:
+        return False  # 新的閃現、完整技能第一次調整：沒有被換掉的那一筆
+    cache = library.flash_option_cache
+    key = "weaker:" + _options_key(request)
+    found = cache.get(key)
+    if found is not None:
+        return found
+    builder = _strict_builder(library, request) if strict is None else strict
+    # 歷程重推不了（3W-R1）時照舊：下限照存檔裡的定義，不改出較弱的
+    found = (
+        builder.broken is None
+        and builder.floor_permille > 0
+        and not _has_options(library, request, builder)
+    )
+    if len(cache) >= _OPTIONS_CACHE_LIMIT:
+        cache.clear()
+    cache[key] = found
+    return found
+
+
+def _has_options(
+    library: ContentLibrary, request: FlashRequest, builder: _Builder | None = None
+) -> bool:
+    source = UsageSource()
+    table = library.flash
+    major = slot_is_major(table.rules, request.state, request.nth)
+    before = skill_before(library, request)
+    builder = _builder(library, request) if builder is None else builder
+    categories = dict.fromkeys(
+        (
+            *allowed_categories(table, before, major=major),
+            *allowed_categories(table, before, major=False),
+        )
+    )
+    for category in categories:
+        if builder.take(source.ranked(library, request, category, before), 1):
+            return True
+    if major and table.pricing.transform_guaranteed:
+        return bool(builder.take(source.transforms(library, request, before), 1))
+    return False
+
+
 def category_ranking(
     library: ContentLibrary,
     request: FlashRequest,
@@ -674,8 +864,11 @@ def make_offer(
     tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
     rng = Rng(request.seed).fork(tag)
     builder = _builder(library, request)
+    # LF-1：先拿提議（LLM 來源在這裡呼叫模型），再拿文字，之後建的選項才掛得上名稱與描述
+    variations = _proposed_variations(library, source, request, before)
+    builder.texts = _source_texts(library, source, request)
     transform = _transform_option(library, request, source, builder, before) if major else None
-    proposed = _proposed_options(library, source, builder, request, before=before, allowed=allowed)
+    proposed = _proposed_options(builder, variations, allowed=allowed)
     if focused:
         assert request.category is not None
         ranked = source.ranked(library, request, request.category, before)
@@ -708,25 +901,33 @@ def make_offer(
         major=major,
         cost=rule.cost,
         options=tuple(options),
+        weaker=builder.weaker,
     )
 
 
-def _proposed_options(
-    library: ContentLibrary,
-    source: FlashOptionSource,
-    builder: _Builder,
-    request: FlashRequest,
-    *,
-    before: SkillDef,
-    allowed: Sequence[str],
-) -> list[FlashOption]:
-    """來源提議的變化中，類別可用、不重複、真的套得上的選項（沒有提議的來源回傳空）。"""
+def _proposed_variations(
+    library: ContentLibrary, source: FlashOptionSource, request: FlashRequest, before: SkillDef
+) -> Sequence[Variation]:
+    """來源提議的變化（沒有提議的來源回傳空）。"""
     propose = getattr(source, "proposed", None)
-    if propose is None:
-        return []
+    return () if propose is None else propose(library, request, before)
+
+
+def _source_texts(
+    library: ContentLibrary, source: FlashOptionSource, request: FlashRequest
+) -> Mapping[str, VariationText]:
+    """來源給的文字（LF-1；沒有 ``texts`` 的來源回傳空）。"""
+    texts = getattr(source, "texts", None)
+    return {} if texts is None else texts(library, request)
+
+
+def _proposed_options(
+    builder: _Builder, variations: Sequence[Variation], *, allowed: Sequence[str]
+) -> list[FlashOption]:
+    """提議的變化中，類別可用、不重複、真的套得上的選項。"""
     found: list[FlashOption] = []
     seen: set[str] = set()
-    for variation in propose(library, request, before):
+    for variation in variations:
         if variation.category not in allowed or variation.key() in seen:
             continue
         seen.add(variation.key())

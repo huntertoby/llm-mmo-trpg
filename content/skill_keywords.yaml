@@ -168,6 +168,7 @@ keywords:
       - {effect: grant_skill, skill: skill_flight}
     uses:
       - {condition: height_advantage}
+      - {condition: self_on_high_ground}   # KW-2（#161 鷹眼）：自己站在高處時才成立
       - {effect: damage, weapon_req: ranged, category: weapon, grade: general, reason_zh: 站得比目標高時遠程攻擊命中提高}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
       - {change: grant_pierce, grade: general, reason_zh: 遠程攻擊的修正，搭配高處的射擊}   # 通用：遠程修正
   - id: concealed
@@ -184,6 +185,8 @@ keywords:
     uses:
       - {condition: self_concealed}
       - {condition: from_behind}
+      - {change: silent_strike}   # BS-1（#157）：無聲——留在背後連續背刺
+      - {effect: grant_skill, skill: skill_silent_step}   # BS-1（#157）：主動技能給幾回合無聲（影纏）
   - id: summon
     name_zh: 召喚物
     description_zh: 召喚與圖騰讓場上多出幫手；你可以獻祭自己的召喚物，在它所在的位置爆炸或治療。
@@ -235,3 +238,40 @@ keywords:
       - {effect: leave_form}   # 3J-4c：解形爆發（只能在形態中施放，先解除形態）
       - {change: form_upkeep_permille}
       - {change: form_entry_permille}
+  # KW-1（玩法決定 #161，06 6.27.1、6.32.1）：四種累積在自己身上的層數掛成關鍵字（12 → 16），關鍵字 ID ＝ 層數 ID。
+  # 製造＝技能本身額外加這種層數（add_stack）；stacks.yaml 的 gain（自動累積）與專注的「下一招自動消耗」是背景規則，
+  # 不算製造或利用。利用＝消耗這種層數（consume_stack），或條件「自身層數達 N」（self_stack_at_least）。
+  # KW-2：池子補齊（示範招、每池 3 招主動利用者、白板配方、閃現嫁接），拿掉 start_hidden 與 composable: false——開局、
+  # 許願池、三選一新方向、隨機組合器、LLM 出題都出現（stacks.yaml 的 composer: false 一起拿掉）。
+  - id: combo_point
+    name_zh: 連擊
+    description_zh: 武器技打中累積連擊點（一次出招最多 1 點）；終結技花光連擊點換傷害，有些技能要連擊點達到幾點才生效。
+    makes:
+      - {effect: add_stack, stack: combo_point}
+    uses:
+      - {effect: consume_stack, stack: combo_point}
+      - {condition: self_stack_at_least, stack: combo_point}
+  - id: fury
+    name_zh: 怒氣
+    description_zh: 受傷時累積怒氣（自己造成的傷也算）；花掉怒氣換傷害或護盾，有些技能要怒氣達到幾層才生效。
+    makes:
+      - {effect: add_stack, stack: fury}
+    uses:
+      - {effect: consume_stack, stack: fury}
+      - {condition: self_stack_at_least, stack: fury}
+  - id: focus
+    name_zh: 專注
+    description_zh: 站著不動累積專注，下一招傷害技會吃掉專注加傷；也有技能主動花光專注，或要專注達到幾層才生效。
+    makes:
+      - {effect: add_stack, stack: focus}
+    uses:
+      - {effect: consume_stack, stack: focus}
+      - {condition: self_stack_at_least, stack: focus}
+  - id: ki
+    name_zh: 氣
+    description_zh: 普攻打中累積氣；花掉氣換傷害或治療自己，有些技能要氣達到幾層才生效。
+    makes:
+      - {effect: add_stack, stack: ki}
+    uses:
+      - {effect: consume_stack, stack: ki}
+      - {condition: self_stack_at_least, stack: ki}

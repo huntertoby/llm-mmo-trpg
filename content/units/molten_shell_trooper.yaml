@@ -1,0 +1,19 @@
+# 灰燼荒原敵人「熔殼甲兵」（RG-1，#162，19.2.1「加深內容」、09 9.6.6「盾兵」）：背著熔殼大盾，站在噴岩龜前面替它擋遠程
+# （shield_guard 標籤：相鄰的遠程同伴被遠程攻擊時命中 −core.shield_guard_hit_penalty）。玩家的應對：繞到側面，或推開、撞開。
+# 當作熔岩獸（甲蟲體型；PhaseRG計畫 待 PM 決定 14）。數值照熔岩甲蟲縮一點（初值，未經模擬；照工坊）。
+# 外觀（RG-4）：熔岩甲蟲＋特徵 molten_shield（美術 A 立殼，docs/art/RG樣張.md 9.2、9.8 第 3 條；只給敵人）。
+id: molten_shell_trooper
+name_zh: 熔殼甲兵
+attributes: {str: 13, dex: 8, con: 16, int: 3, wis: 8, wil: 10}
+max_hp: 30
+speed: 4
+armor_bonus: 5
+weapon: stone_fist
+ai_profile: guard
+resist: {}
+element_mods: {fire: -500, ice: 500}
+tags: [beast, lava_beast, shield_guard]
+skills: [skill_shield_bash, skill_battering_ram]   # 盾擊＋熔岩甲蟲的衝撞（#149 一般敵人至少 2 招）
+opening_statuses:
+  - {status: molten_burst}
+doll: {creature: {body: crawler, variant: beetle, material: magma, traits: [molten_shield]}}

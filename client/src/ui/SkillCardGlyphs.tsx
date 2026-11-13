@@ -132,7 +132,7 @@ export function AttrGlyph({ label }: { label: string }) {
   );
 }
 
-/** 圖釘（QI-2c：Q 版 canvas；`pinned` 預設 true＝已釘紅頭，false＝未釘灰鋼 55%）。`HoverFloat` 的 `PinIcon` 不換（第 0.0 節）。 */
+/** 圖釘（QI-2c：Q 版 canvas；`pinned` 預設 true＝已釘紅頭，false＝未釘灰鋼 55%）。QI-5 起 `HoverFloat` 的 `PinIcon` 也是同一張畫布（`render/hudIcon.ts` 的 `floatPinCanvas`）。 */
 export function PinGlyph({ pinned = true }: { pinned?: boolean }) {
   return <CardGlyphCanvas id="pin" px={CARD_GLYPH_PX.pin} className="pin-glyph" opt={{ pinned }} />;
 }

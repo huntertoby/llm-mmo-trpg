@@ -499,3 +499,384 @@
   margin: 0;
   padding-left: 18px;
 }
+
+/* ---- NW-2b：分頁、技能清單、技能表單、預算比例條、招式組、分組改、附帶改動 ---- */
+
+.tn-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tn-tabs > button {
+  flex: 1 1 auto;
+}
+
+.tn-object-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tn-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.tn-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tn-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-items: center;
+}
+
+.tn-filter-row > .muted {
+  min-width: 30px;
+}
+
+.tn-checked-count {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.tn-checked-count.over {
+  color: var(--danger);
+}
+
+.tn-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.tn-skill-row > input {
+  margin-top: 6px;
+}
+
+.tn-skill-row .tn-object {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tn-ratio {
+  font-variant-numeric: tabular-nums;
+}
+
+.tn-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 0 5px;
+  white-space: nowrap;
+}
+
+.tn-tag.enemy {
+  border-color: #c06060;
+  color: #ff9a9a;
+}
+
+.tn-v-ok {
+  color: #7ad08a;
+}
+
+.tn-v-over,
+.tn-v-error {
+  color: var(--danger);
+}
+
+.tn-v-weak {
+  color: #f0c27a;
+}
+
+.tn-budget {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tn-budget.tn-v-over,
+.tn-budget.tn-v-error {
+  border-color: var(--danger);
+}
+
+.tn-budget,
+.tn-budget.tn-v-ok,
+.tn-budget.tn-v-weak,
+.tn-budget.tn-v-over {
+  color: inherit;
+}
+
+.tn-budget-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.tn-budget-ratio {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tn-budget-track {
+  position: relative;
+  height: 12px;
+  background: #2a2a38;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tn-budget-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(122 208 138 / 35%);
+}
+
+.tn-budget-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  margin-left: -2px;
+  background: currentcolor;
+}
+
+.tn-budget-scale {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tn-budget-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.tn-budget-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 4px;
+}
+
+.tn-confirm-check {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.tn-confirm-check input {
+  margin-top: 3px;
+}
+
+.tn-retier {
+  border-left-color: #f0c27a;
+}
+
+.tn-used-by summary {
+  cursor: pointer;
+}
+
+.tn-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.tn-section-title {
+  margin-top: 6px;
+  border-bottom: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.tn-field.tn-field-wide {
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr);
+}
+
+.tn-field.tn-field-wide .tn-field-now,
+.tn-field.tn-field-wide .tn-field-input,
+.tn-field.tn-field-wide .tn-field-mark {
+  grid-column: 2;
+}
+
+.tn-readonly-field {
+  overflow-wrap: anywhere;
+}
+
+.tn-dice-steps {
+  display: flex;
+  gap: 4px;
+}
+
+.tn-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.tn-move-list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tn-move,
+.tn-picker-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+}
+
+.tn-move-tools {
+  margin-left: auto;
+  display: flex;
+  gap: 3px;
+}
+
+.tn-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.tn-picker-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tn-picker-list li.disabled {
+  opacity: 0.55;
+}
+
+.tn-why {
+  color: #f0c27a;
+  overflow-wrap: anywhere;
+}
+
+.tn-moves-flag,
+.tn-violations {
+  border-color: var(--danger);
+}
+
+.tn-group-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: flex-end;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  margin: 0;
+}
+
+.tn-group-pick label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tn-group-pick label.tn-build {
+  flex-direction: row;
+  white-space: normal;
+}
+
+.tn-group-pick input:not([type="radio"]) {
+  width: 80px;
+}
+
+.tn-skipped td {
+  color: var(--muted);
+}
+
+.tn-side-changes ul {
+  margin: 0;
+  padding-left: 18px;
+  overflow-wrap: anywhere;
+}
+
+.tn-exceptions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 6px;
+}
+
+.tn-inject-add {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tn-probe .tn-tag,
+.tn-inject .tn-tag {
+  font-size: 12px;
+}
+
+/* NW-2c：1 階比值（技能表單的比值區、模擬結果）。 */
+.tn-ratio-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tn-ratio-cells td,
+.tn-ratio-cells th {
+  white-space: nowrap;
+}
+
+.tn-ratio-lines {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tn-ratio-lines .tn-tag,
+.tn-sim-result .tn-tag {
+  margin-left: 6px;
+  font-size: 11px;
+}
+
+.tn-changed-cell {
+  font-weight: bold;
+  color: #ffd04a;
+}
+
+.tn-violation-line {
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.tn-part-group {
+  border-left: 3px solid #5a6c8a;
+  padding-left: 8px;
+  margin-top: 6px;
+}

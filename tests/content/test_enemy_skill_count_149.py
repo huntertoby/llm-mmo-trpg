@@ -3,82 +3,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-
-from trpg.content.battle import UnitTemplate
+from trpg.content.enemy_moves import ELITE, EXEMPT, REGIONS
+from trpg.content.enemy_moves import first_season_units as _first_season
+from trpg.content.enemy_moves import move_shortfalls as _shortfalls
+from trpg.content.enemy_moves import phase_counts as _phase_counts
 from trpg.content.library import ContentLibrary
 from trpg.content.world_enemies import EnemyCatalog
 
-MOB, ELITE, BOSS = 2, 3, 3
-REGIONS = ("cloud_ridge", "ashen_waste")
-EXEMPT = {
-    "bandit_rookie",  # 18.2 例外：新手第 1 場專用（使用者「照推薦 寫入」）
-    "bandit_rookie_terrace",  # 同上的 bandit_rookie，只有梯田固定戰的 HP 不同（CB-2d）
-    "bandit_archer_rookie",
-    "training_dummy",
-    "training_dummy_moving",
-    "rift_pillar_fire",  # 源晶柱
-    "rift_pillar_mist",
-    "rift_pillar_thunder",
-    "sect_array_stone",  # 陣石
-    "sect_summit_array_stone",
-    "rift_crystal_golem",  # 碎晶之主階段召喚的晶傀儡
-}
-
-
-def _lineup_names(library: ContentLibrary) -> set[str]:
-    names: set[str] = set()
-    for region in REGIONS:
-        table = library.world_encounters[region]
-        for group in table.groups:
-            names |= set(group.all_units)
-        names |= {s.unit for s in table.surges}
-        names |= {loc.elite.unit for loc in table.locations if loc.elite is not None}
-    season = library.world_season
-    assert season is not None
-    names |= {b.elite.unit for b in season.bounties}
-    if season.season_boss is not None:
-        names |= set(season.season_boss.units)
-    return names
-
-
-def _spawned_by_phases(units: dict[str, UnitTemplate]) -> set[str]:
-    return {spawn.template for u in units.values() for p in u.phases for spawn in p.spawns}
-
-
-def _first_season(library: ContentLibrary) -> Iterator[UnitTemplate]:
-    catalog = library.enemy_catalog()
-    names = _lineup_names(library)
-    templates = {n: catalog.template(n) for n in names}
-    templates |= {
-        n: library.units[n]
-        for n in _spawned_by_phases(templates)
-        if n in library.units and not library.units[n].summon
-    }
-    for name in sorted(templates):
-        if name not in EXEMPT:
-            yield templates[name]
-
-
-def _phase_counts(unit: UnitTemplate) -> list[tuple[str, int]]:
-    current = unit.skills
-    counts: list[tuple[str, int]] = []
-    for phase in unit.phases:
-        current = phase.skills if phase.skills is not None else current
-        counts.append((phase.id, len(current)))
-    return counts
-
-
-def _shortfalls(library: ContentLibrary) -> list[str]:
-    problems: list[str] = []
-    for unit in _first_season(library):
-        if "boss" in unit.tags:
-            problems += [f"{unit.id}/{p}={n}" for p, n in _phase_counts(unit) if n < BOSS]
-        else:
-            need = ELITE if "elite" in unit.tags else MOB
-            if len(unit.skills) < need:
-                problems.append(f"{unit.id}={len(unit.skills)}")
-    return problems
+# NW-2a（R1）：判定函式搬到 trpg.content.enemy_moves（數值工坊共用），這裡只換來源、斷言不變。
 
 
 def test_the_scan_covers_the_first_season(library: ContentLibrary) -> None:
@@ -210,7 +142,8 @@ def test_the_three_pillars_phase_uses_thunder_clap(library: ContentLibrary) -> N
     assert "skill_cluster_bolt" in pulse.skills
     overload = next(p for p in lord.phases if p.id == "core_overload")
     assert overload.skills is not None
-    assert "skill_blink" in overload.skills  # 本段不動
+    assert "skill_rift_flicker" in overload.skills  # BAL-21c：skill_blink 換界隙閃擊
+    assert "skill_blink" not in overload.skills
 
 
 def test_the_ai_values_self_concealment(library: ContentLibrary) -> None:

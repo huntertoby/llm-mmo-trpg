@@ -1,0 +1,26 @@
+# KW-2 專注示範（#161，06 6.32.1「貫心箭：花光每層傷害提高；滿 3 層標記目標」；數值為初值，未經模擬）。
+# 「滿 3 層」照施放開始時的層數判斷（KW-1 self_stack_at_least）。和專注一擊（只花光加傷）效果不同，並存。
+id: skill_heart_piercer
+schema_version: 1
+name_zh: 貫心箭
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1200}
+  - {type: consume_stack, stack: focus, per_stack_permille: 150, affects: self}
+  - {type: apply_status, status: marked, duration: 2, condition: {type: self_stack_at_least, stack: focus, count: 3}}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, ranged, finisher]
+narrative:
+  concept: 凝到極致的一箭，直取要害還留下記號
+  cast_flavor: 你屏息許久才鬆開弓弦，箭矢穿心而過
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

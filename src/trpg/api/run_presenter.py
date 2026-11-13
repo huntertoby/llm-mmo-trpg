@@ -5,6 +5,17 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from trpg.api.attribute_text import attribute_affects
+from trpg.api.flash_changes import base_stats, flash_changes
+from trpg.api.flash_text import (
+    FlashTextContext,
+    base_terms,
+    flash_terms,
+    option_headline,
+    option_llm_text,
+    option_say,
+    option_tag_term,
+    term_ids,
+)
 from trpg.api.gear import item_info
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
@@ -40,6 +51,7 @@ from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.flashes import (
     carryable_records,
+    flash_available,
     flash_categories,
     flash_request,
     inherit_source_problem,
@@ -65,7 +77,17 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_major import transform_slot_plan
-from trpg.skillgen.flash_offer import history_problem
+from trpg.skillgen.flash_offer import (
+    NO_OPTIONS_ZH,
+    NO_REFLASH_OPTIONS_ZH,
+    REFLASH_WEAKER_PICK_ZH,
+    REFLASH_WEAKER_ZH,
+    WEAKER_FOOT_ZH,
+    WEAKER_TAG_ZH,
+    has_options,
+    history_problem,
+    reflash_weaker,
+)
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -157,9 +179,31 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
     rules = library.flash.rules
     state: SkillFlash = state_of(run, skill_id)
     problem = problem_of(library, run, skill_id)
+    # FL-1c（06 6.34「費用方向」第 7 點）：其他條件都符合時，先實際算一次有沒有合法選項；沒有就
+    # 不給按（灰字），不再按下去才說「沒有合法的變化」
+    available = problem is not None or flash_available(library, run, skill_id)
+    if not available:
+        problem = NO_OPTIONS_ZH
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     major = state.record(rules.major_flash)
-    hint = not state.complete and major is not None and major.variation.source != "transform"
+    # RR-1（比照 FL-1c）：每一格先實際算一次重閃有沒有合法選項；沒有就標灰、不給按
+    requests = {
+        s: flash_request(library, run, skill_id, slot=s) for s in reflash_slots(library, state)
+    }
+    slots = {s: has_options(library, request) for s, request in requests.items()}
+    # RR-2（#160）：被強度下限卡住的格子改出較弱的候選，入口掛提醒、不標灰
+    weaker = {s: ok and reflash_weaker(library, requests[s]) for s, ok in slots.items()}
+    # FL-1g（FL-1b 驗收可修 6）：「可以重閃第 3 格轉型」只在重閃第 3 格真的出得了題時才給
+    hint = (
+        not state.complete
+        and major is not None
+        and major.variation.source != "transform"
+        and (
+            slots[rules.major_flash]
+            if rules.major_flash in slots
+            else has_options(library, flash_request(library, run, skill_id, slot=rules.major_flash))
+        )
+    )
     return SkillFlashOut(
         skill_id=skill_id,
         base_id=state.base_id,
@@ -168,14 +212,23 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
         used=state.used,
         can_flash=problem is None,
         flash_problem_zh=problem,
+        flash_available=available,
         next_major=not state.complete and len(state.records) + 1 == rules.major_flash,
         records=tuple(_record_out(library, r) for r in records),
         spent=state.spent,
         dissolve_refund=dissolve_refund(rules, state),
         reflash_transform_hint=hint,
         reflash_slots=tuple(
-            ReflashSlotOut(slot=s, transform_hint=hint and s == rules.major_flash)
-            for s in reflash_slots(library, state)
+            ReflashSlotOut(
+                slot=s,
+                transform_hint=hint and s == rules.major_flash,
+                available=ok,
+                problem_zh=None if ok else NO_REFLASH_OPTIONS_ZH,
+                weaker=weaker[s],
+                weaker_zh=REFLASH_WEAKER_ZH if weaker[s] else None,
+                weaker_pick_zh=REFLASH_WEAKER_PICK_ZH if weaker[s] else None,
+            )
+            for s, ok in slots.items()
         ),
         carryable=carryable_records(library, state),
         inherit_problem_zh=inherit_source_problem(library, run, skill_id),
@@ -199,21 +252,45 @@ def _flash_rules(library: ContentLibrary) -> FlashRulesOut:
     )
 
 
+def _flash_before(library: ContentLibrary, run: RunState, skill_id: str) -> SkillDef:
+    """選項比對的「前」（FL-1a）：一律是玩家現在手上的整張卡（RR-2b，06 6.34.3 #160 第 4 點：
+    閃現與所有重閃都用現在的卡當基準，不用被換掉那一筆的前一筆；出題的起點
+    :func:`~trpg.skillgen.flash_offer.skill_before` 不變）。"""
+    return skill_defs(library, run, [skill_id])[0]
+
+
 def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
     pending = run.pending_flash
     if pending is None:
         return None
     offer = pending.offer
     equipped = skill_defs(library, run, run.hero.skills)
+    before = _flash_before(library, run, pending.skill)
+    effective = hero_effective_attributes(library, run)
+    ctx = FlashTextContext(weapon=library.weapons.get(run.hero.weapon), attr=effective.__getitem__)
+    terms = base_terms(before, _card(library, run, before))
+    stats = base_stats(library, before)
+    terms += [s.term for s in stats if s.term is not None]
     options = []
     for index, option in enumerate(offer.options):
         unequip: tuple[str, ...] = ()
+        unequip_slot: str | None = None
         if pending.skill in run.hero.skills:
             plan = transform_slot_plan(
                 equipped, pending.skill, option.skill, library.ruleset.core.skill_slots
             )
             unequip = plan.candidates if plan.needs_unequip else ()
+            unequip_slot = plan.new_slot if plan.needs_unequip else None
         variation = option.variation
+        changes = flash_changes(library, before, option.skill, keyword=variation.keyword)
+        headline = option_headline(library, variation, option.skill, changes)
+        say = option_say(library, variation, option.skill, changes)
+        tag = option_tag_term(library, variation)
+        note, name_source = option_llm_text(variation, option.skill)
+        terms += [*term_ids(headline), *term_ids(say), *([] if tag is None else [tag])]
+        for row in changes:
+            terms += [*term_ids(row.before_zh), *term_ids(row.after_zh)]
+            terms += [] if row.term is None else [row.term]
         options.append(
             FlashOptionOut(
                 index=index,
@@ -225,6 +302,14 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 transform=variation.source == "transform",
                 card=_card(library, run, option.skill),
                 unequip_candidates=unequip,
+                unequip_slot=unequip_slot,
+                changes=changes,
+                headline_zh=headline,
+                say_zh=say,
+                tag_term=tag,
+                note_zh=note,
+                name_source=name_source,
+                weaker_tag_zh=WEAKER_TAG_ZH if option.weaker else None,
             )
         )
     return PendingFlashOut(
@@ -235,6 +320,9 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
         major=offer.major,
         cost=offer.cost,
         options=tuple(options),
+        base_stats=stats,
+        terms=flash_terms(library, before, terms, ctx),
+        weaker_foot_zh=WEAKER_FOOT_ZH if offer.weaker else None,
     )
 
 

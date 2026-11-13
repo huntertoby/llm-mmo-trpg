@@ -46,8 +46,8 @@ type GainOn = Literal[
 ]
 """自動累積的時機（Phase 3-52，06 6.32）：
 
-- ``weapon_skill_hit``：持有者的武器技命中（每個被命中的單位 +1）；
-- ``basic_attack_hit``：持有者的普攻命中；
+- ``weapon_skill_hit``：持有者的武器技命中（一次出招最多 +1，AF-1）；
+- ``basic_attack_hit``：持有者的普攻命中（一次普攻最多 +1，AF-1）；
 - ``damaged``：持有者受到傷害（數值大於 0）；
 - ``kill``：持有者造成的傷害讓敵人倒下；
 - ``summon_downed``：持有者的召喚物被打倒；
@@ -203,6 +203,8 @@ class StackDef(ContentModel):
     - ``expires_after_rounds``：每次累積（含已在上限時再累積）會刷新；之後這麼多輪沒有再累積，
       整個層數在那一輪開始時清空（省略＝不會過期）。
     - ``ai_value``：效用 AI 對每一層的估值（等值傷害點數；初值未經模擬）。
+    - ``unit_zh``：玩家看到的單位（RG-5，玩法PM交接 4.1.6 KW-3：連擊點用「點」，其他用「層」）；
+      預設「層」不輸出（既有規則包不變）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -212,6 +214,7 @@ class StackDef(ContentModel):
     max: int = Field(ge=1, le=9)
     expires_after_rounds: int | None = Field(default=None, ge=1)
     ai_value: int = Field(default=0, ge=0)
+    unit_zh: str = Field(default="層", min_length=1, exclude_if=lambda v: v == "層")
     overload: OverloadSpec | None = None
     """超載（Phase 3D-7b）：只有 ``owner: self`` 的層數可以。"""
     gain: tuple[GainSpec, ...] = ()

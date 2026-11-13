@@ -19,7 +19,8 @@ import { Hint } from "./Hint";
 import { HeroCard } from "./HeroCard";
 import { unitHeroInput } from "./heroFace";
 import { passiveLine, raceHudText } from "../battle/race";
-import { activeStacks, barData, heroChips, surfaceAt } from "./statusCard";
+import { barData, heroChips, hudStacks, surfaceAt } from "./statusCard";
+import { StackPips } from "./StackPips";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
 
 interface Props {
@@ -72,7 +73,7 @@ export function compactHudText(view: BattleView, hero: UnitView): string {
   return parts.join("｜");
 }
 
-/** 狀態列：狀態圖示（右下角回合數）、層數（右下角層數）、腳下表面。 */
+/** 狀態列：狀態圖示（右下角回合數）、層數（右下角層數；KW-3 起連擊、怒氣、專注、氣是格子計量 `StackPips`）、腳下表面。 */
 function HudBadges({ view, hero, cards }: { view: BattleView; hero: UnitView; cards?: Props["cards"] }) {
   const surface = surfaceAt(view, hero);
   return (
@@ -80,9 +81,9 @@ function HudBadges({ view, hero, cards }: { view: BattleView; hero: UnitView; ca
       {hero.statuses.map((s, i) => (
         <StatusBadge key={`${i}:${s.status_id}`} status={s} text={statusLine(s)} />
       ))}
-      {activeStacks(hero).map(([k, n]) => (
-        <StackBadge key={k} id={k} count={n} cards={cards} owned={hero.skills} />
-      ))}
+      {hudStacks(hero, cards).map(({ id, count, gauge }) =>
+        gauge ? <StackPips key={id} id={id} count={count} cards={cards} owned={hero.skills} /> : <StackBadge key={id} id={id} count={count} cards={cards} owned={hero.skills} />,
+      )}
       {surface !== null && <SurfaceBadge surface={surface} text={surfaceUnder(view, hero)} />}
     </>
   );

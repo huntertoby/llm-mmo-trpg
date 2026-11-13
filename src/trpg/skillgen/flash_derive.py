@@ -41,6 +41,13 @@ from trpg.skillgen.evolution import (
     template_prefix,
 )
 from trpg.skillgen.flash_category import template_kinds
+from trpg.skillgen.flash_cost import (
+    COST_OPS,
+    Accept,
+    accept_for,
+    charge_adjusted,
+    light_adjusted,
+)
 from trpg.skillgen.flash_major import (
     apply_extra,
     extra_prefix,
@@ -58,6 +65,7 @@ from trpg.skillgen.flash_state import (
     bonus_permille,
     seed_tag,
 )
+from trpg.skillgen.flash_text import clean_name
 from trpg.skillgen.flash_trade import MINOR_OPS, TRADES, apply_trade
 from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.usage import SkillUsage
@@ -79,6 +87,7 @@ __all__ = [
     "flashed_identity",
     "history_error",
     "history_records",
+    "keep_failed",
     "power_floor",
     "unimplemented_ops",
     "variation_rng",
@@ -242,10 +251,12 @@ def _retuned(  # noqa: PLR0917 - 同 retune 的參數，只在本模組內部呼
     extra: Sequence[dict[str, Any]],
     knobs: Sequence[Knob],
     effect_knobs: Sequence[Knob] = (),
+    accept: Accept | None = None,
 ) -> SkillDef | None:
     """同一份草稿重調 ``TUNE_ATTEMPTS`` 次（子亂數 ``tag``、``tag.r1``…）。
 
-    回傳第一個合格且帶上變化的；都不合格時 ``None``。"""
+    回傳第一個合格且帶上變化的（給了 ``accept`` 還要通過它；FL-1a 蓄力、輕巧）；都不合格時
+    ``None``。"""
     for attempt in range(TUNE_ATTEMPTS):
         # 第一次的子亂數與 3W-1 相同；強度下限讓調整更容易失敗，所以同一份草稿多試幾次
         fork = tag if attempt == 0 else f"{tag}.r{attempt}"
@@ -259,6 +270,50 @@ def _retuned(  # noqa: PLR0917 - 同 retune 的參數，只在本模組內部呼
             extra_knobs=knobs,
             effect_knobs=effect_knobs,
         )
+        if (
+            done is not None
+            and _carries(done, variation, library)
+            and (accept is None or accept(done))
+        ):
+            return done
+    return None
+
+
+def _apply_cost(  # noqa: PLR0917 - 同 _retuned 的參數，只在本模組內部呼叫
+    library: ContentLibrary,
+    current: SkillDef,
+    drafts: Sequence[_Draft],
+    variation: Variation,
+    op: str,
+    rng: Rng,
+    floor: Fraction | None,
+    replaced: Fraction | None,
+    origin: SkillDef | None,
+) -> SkillDef | None:
+    """收回家族（BAL-10d，:func:`~trpg.skillgen.flash_trade.apply_trade`）與蓄力、輕巧（FL-1a，
+    06 6.34「費用方向」第 1～4 點；規則在 :mod:`trpg.skillgen.flash_cost`）。
+
+    每份草稿先走以前的預算重調（同樣的子亂數，所以本來就合格的結果不變），結果還要通過
+    「蓄力至少一項變強／輕巧沒有一項變強、至少一項變弱、少付的代價照預算扣回」；不通過時改用一次只動
+    一項的確定性調整。輕巧在 AP 已經是 1 時（只減冷卻或資源）不走預算重調——它的強度下限只換算 AP，
+    重調只會打平或變強（調查第 4 節）。"""
+    trade = TRADES.get(op)
+    if trade is not None:  # 收回家族（BAL-10d）：拿掉的預算 ＋ 這次的 +40‰ 換成核心數值
+        return apply_trade(library, current, drafts, trade, rng, floor=floor)
+    accept = accept_for(op, current)
+    light_on_one_ap = op == "light" and (current.ap_cost or 1) <= 1
+    for index, (base, effects) in enumerate(drafts):
+        if not light_on_one_ap:
+            extra, knobs = tuning_extras(op, base, library)
+            done = _retuned(
+                library, base, effects, variation, rng, str(index), floor, extra, knobs, (), accept
+            )
+            if done is not None:
+                return done
+        if op == "charge":
+            done = charge_adjusted(library, current, (base, effects), floor=floor, origin=origin)
+        else:
+            done = light_adjusted(library, current, (base, effects), replaced=replaced)
         if done is not None and _carries(done, variation, library):
             return done
     return None
@@ -272,13 +327,15 @@ def apply_variation(
     bonus: int,
     rng: Rng,
     replaced: Fraction | None = None,
+    origin: SkillDef | None = None,
 ) -> SkillDef | None:
     """把 ``variation`` 套在 ``skill`` 上，依預算上限加成 ``bonus``（‰）重調強度並驗證；做不出來時
     ``None``。回傳的技能 ID、名稱與原本相同（由 :func:`derive_skill` 統一換）。
 
     **強度下限**（:func:`power_floor`）：重調後的預算分數不低於套用前（重閃時再不低於
     ``replaced``），
-    個別數字可以變小（例：範圍 +1 後傷害骰變小）。"""
+    個別數字可以變小（例：範圍 +1 後傷害骰變小）。蓄力、輕巧另有規則（:func:`_apply_cost`）；
+    ``origin`` 是閃現之前的原招（蓄力的狀態回合累計上限照它算；省略＝``skill``）。"""
     current = with_budget_bonus(skill, bonus)
     floor = power_floor(library, current, variation, replaced)
     if variation.source == "major":
@@ -295,9 +352,10 @@ def apply_variation(
         drafts = _minor_drafts(current, variation, library)
         template = library.flash.minor_template(variation.template)
         tag = "" if template is None else template.op
-        trade = TRADES.get(tag)
-        if trade is not None:  # 收回家族（BAL-10d）：拿掉的預算 ＋ 這次的 +40‰ 換成核心數值
-            return apply_trade(library, current, drafts, trade, rng, floor=floor)
+        if tag in TRADES or tag in COST_OPS:  # 收回家族（BAL-10d）；蓄力、輕巧（FL-1a）
+            return _apply_cost(
+                library, current, drafts, variation, tag, rng, floor, replaced, origin
+            )
     if tag in FIXED_FIRST_OPS:  # BAL-10b：先取最小的合格增幅（草稿已按增幅由小到大）
         for base, effects in drafts:
             fixed = fixed_strength(base, effects, library, floor=floor)
@@ -326,17 +384,16 @@ def apply_variation(
 
 def flashed_identity(library: ContentLibrary, base: SkillDef, state: SkillFlash) -> tuple[str, str]:
     """閃現後技能的（ID，名稱）。ID ＝ ``<原 ID>_fl_<歷程雜湊前 10 碼>``；名稱在有大變化或轉型時是
-    組合式「{前綴}・{原名}」（取最後一個），只有小變化時沿用原名。"""
+    組合式「{前綴}・{原名}」（取最後一個），只有小變化時沿用原名。LF-1：那一筆帶 LLM 名稱
+    （``Variation.name_zh``，出題時已檢查）時用它。"""
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
-    body = json.dumps(
-        [r.model_dump(mode="json") for r in records], sort_keys=True, separators=(",", ":")
-    )
+    body = json.dumps([r.identity() for r in records], sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:10]
     name = base.name_zh
     for record in records:
         prefix = _big_prefix(library, record.variation)
         if prefix is not None:
-            name = f"{prefix}・{base.name_zh}"
+            name = clean_name(record.variation.name_zh) or f"{prefix}・{base.name_zh}"
     return f"{base.id}_fl_{digest}", name
 
 
@@ -381,14 +438,22 @@ def at_role_tier(library: ContentLibrary, skill: SkillDef, tier: int | None) -> 
 
 
 def _substitute(
-    library: ContentLibrary, skill: SkillDef, old: Variation, *, bonus: int, rng: Rng
+    library: ContentLibrary,
+    skill: SkillDef,
+    old: Variation,
+    *,
+    bonus: int,
+    rng: Rng,
+    origin: SkillDef | None = None,
 ) -> SkillDef | None:
     """``old``（轉型前的小變化）在新種類上不合法時，換成同類別、資料順序第一個合法的小變化。"""
     for template in library.flash.minor:
         if template.category != old.category or template.id == old.template:
             continue
         candidate = old.model_copy(update={"template": template.id})
-        done = apply_variation(library, skill, candidate, bonus=bonus, rng=rng.fork(template.id))
+        done = apply_variation(
+            library, skill, candidate, bonus=bonus, rng=rng.fork(template.id), origin=origin
+        )
         if done is not None:
             return done
     return None
@@ -410,11 +475,16 @@ def _apply_transform(
     skill = apply_variation(library, base, record.variation, bonus=bonus, rng=rng)
     if skill is None:
         return None
+    origin = skill
     for old in earlier:
         sub_rng = variation_rng(seed, base.id, old).fork("transform")
-        done = apply_variation(library, skill, old.variation, bonus=bonus, rng=sub_rng)
+        done = apply_variation(
+            library, skill, old.variation, bonus=bonus, rng=sub_rng, origin=origin
+        )
         if done is None and old.variation.source == "minor":
-            done = _substitute(library, skill, old.variation, bonus=bonus, rng=sub_rng)
+            done = _substitute(
+                library, skill, old.variation, bonus=bonus, rng=sub_rng, origin=origin
+            )
         if done is not None:
             skill = done
     return skill
@@ -430,9 +500,8 @@ def derive_chain(
     """變化歷程每套完一筆之後的技能（ID、名稱還是原本的；依序，沒有變化時為空）。每一筆都受強度
     下限約束：不低於前一筆，重閃過的那一筆不低於當時被換掉的（``floor_permille``）。``tier`` 是角色
     階級（預算與模板的最低階級都看它）。任何一筆套用不了時拋出 :class:`FlashError`。"""
-    skill = with_budget_bonus(
-        at_role_tier(library, base, tier), bonus_permille(library.flash.rules, state)
-    )
+    origin = at_role_tier(library, base, tier)
+    skill = with_budget_bonus(origin, bonus_permille(library.flash.rules, state))
     chain: list[SkillDef] = []
     records = history_records(state)
     for index, record in enumerate(records):
@@ -444,13 +513,72 @@ def derive_chain(
             applied = _apply_transform(library, origin, records[:index], record, seed, bonus=bonus)
         else:
             applied = apply_variation(
-                library, skill, record.variation, bonus=bonus, rng=rng, replaced=replaced
+                library,
+                skill,
+                record.variation,
+                bonus=bonus,
+                rng=rng,
+                replaced=replaced,
+                origin=origin,
             )
+        if applied is None and record.kept is not None:
+            # RR-1：照新階級套不上的這一筆照存檔裡的定義保留（重配到這個階級）
+            applied = at_role_tier(library, record.kept, tier)
         if applied is None:
             raise FlashStepError(base.id, record.nth, record.variation.template)
         skill = applied
         chain.append(skill)
     return chain
+
+
+def keep_failed(
+    library: ContentLibrary,
+    base: SkillDef,
+    state: SkillFlash,
+    seed: int,
+    *,
+    old_tier: int,
+    tier: int,
+) -> SkillFlash:
+    """升階（``old_tier`` → ``tier``）時把照新階級套不上的那幾筆記下存檔裡的定義（RR-1，06 6.34.9
+    「重推套不上的那一筆」）：存檔裡的定義是升階前的歷程（:func:`derive_chain`，``old_tier``）每一筆
+    套完的技能。照新階級逐筆重推，某一筆套不上、又還沒有保留的定義時，把它記在
+    :attr:`FlashRecord.kept`；之後的重推（閃現、重閃、再升階）到這一筆就照它保留。
+
+    全部套得上時原樣回傳；升階前的歷程也重推不了時（內容改版，3W-R1）原樣回傳（照舊由呼叫者重配
+    存著的定義）。"""
+    records = history_records(state)
+    if not records or old_tier == tier:
+        return state
+    try:
+        saved = derive_chain(library, base, state, seed, old_tier)
+    except FlashStepError:
+        return state
+    kept: dict[int, SkillDef] = {}
+    current = state
+    for _ in range(len(records) + 1):
+        try:
+            derive_chain(library, base, current, seed, tier)
+        except FlashStepError as exc:
+            index = next(i for i, r in enumerate(records) if r.nth == exc.nth)
+            if records[index].nth in kept:
+                return state
+            kept[records[index].nth] = saved[index]
+            current = _with_kept(state, kept)
+            continue
+        return current
+    return state
+
+
+def _with_kept(state: SkillFlash, kept: dict[int, SkillDef]) -> SkillFlash:
+    def keep(record: FlashRecord) -> FlashRecord:
+        found = kept.get(record.nth)
+        return record if found is None else record.model_copy(update={"kept": found})
+
+    adjustment = None if state.adjustment is None else keep(state.adjustment)
+    return state.model_copy(
+        update={"records": tuple(keep(r) for r in state.records), "adjustment": adjustment}
+    )
 
 
 def history_error(
@@ -522,7 +650,14 @@ def derive_on_current(
         applied = _apply_transform(library, origin, state.records[:-1], record, seed, bonus=bonus)
     else:
         rng = variation_rng(seed, state.base_id, record)
-        applied = apply_variation(library, current, variation, bonus=bonus, rng=rng)
+        applied = apply_variation(
+            library,
+            current,
+            variation,
+            bonus=bonus,
+            rng=rng,
+            origin=at_role_tier(library, base, tier),
+        )
     if applied is None:
         raise FlashStepError(base.id, record.nth, variation.template)
     return _identify(library, base, state, applied)

@@ -62,6 +62,7 @@ import { useHudStage } from "../world/useHudStage";
 import { FieldObjectCard } from "../world/FieldThings";
 import { exitViewRects, FIELD_SCALE, followCamera, sameCamera, visibleTiles, type Camera } from "../world/camera";
 import { WorldFlashPending, WorldGrowth } from "../world/WorldGrowth";
+import type { GrowthTabId } from "../world/growthPanel";
 import { leftPane, togglePane, worldActionOf, type WantPane } from "../world/growth";
 import { WorldBagScreen } from "../world/BagScreen";
 import { WorldShopScreen } from "../world/ShopScreen";
@@ -91,13 +92,16 @@ import { battleSummary } from "../world/battleSummary";
 import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
 import { useRegionTheme, worldRegion } from "../ui/regionTheme";
-import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText } from "../world/pregen";
+import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitNote, pregenWaitText } from "../world/pregen";
 import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
+import { PartyIntroDialog, partyIntroShown } from "../world/PartyIntroDialog";
 import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines, reselectDoneLines } from "../world/RangeScreen";
 import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeExitLabel, rangeFightNotes, rangeFightPlace, rangeMode, type ChoosePage, type RangeFight } from "../world/range";
 import { WorkshopPanel } from "../world/WorkshopPanel";
+import { WishPanel, type WishFallback } from "../world/WishPanel";
+import { WISH_ZH, wishAction, type WishMode } from "../world/wish";
 import { ReselectEntry, allocateClosingLines } from "../world/ReselectEntry";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -173,7 +177,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [result, setResult] = useState<WorldSituationResult | null>(null);
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
-  const [pregenWait, setPregenWait] = useState<{ text: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
+  const [wishFallback, setWishFallback] = useState<WishFallback | null>(null);
+  const [pregenWait, setPregenWait] = useState<{ text: string; note: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
   useRegionTheme(view !== null ? worldRegion(view) : null); // RT-1：實地地圖的區域（主城與室內是 capital；沒有＝hub）
   /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
@@ -234,6 +239,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   }
   const levelUp = view?.level_up ?? null;
   const showLevelUp = levelUp !== null && !closed.has(`level:${levelUp.level}`);
+  /** OB-8（#154）：隊友加入的台詞（伺服器一次給一段）。靶場那段話、你不在的時候、開場都關掉之後才播；
+   * 播著時升級畫面與教學先等（播完才接）。 */
+  const partyIntro =
+    view !== null && rangeDone === null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntroShown(view.party_intro, seenIds)
+      ? view.party_intro
+      : null;
   // OB-5（#150）：靶場整頁的模式——選大類（未完成開局）、正式選定（入門期打完新手前兩步，在葛蘭那裡或主城）
   const rangeKind = rangeMode(view?.opening);
   // OB-5b：自動打開只有一次（可選定後第一次到霧渡鎮或主城）；開過就記在角色的提示紀錄，之後靠頂列的鈕或點葛蘭／靶場
@@ -267,6 +278,12 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
+  // WP-3：關掉許願池面板（或換別的面板）就不再提「改從選單挑」，下次打開照常從第一個分頁開
+  useEffect(() => {
+    if (hudPanel !== "wish") setWishFallback(null);
+  }, [hudPanel]);
+  /** PNL-2：成長面板要直接開的分頁（主角卡的靈感點 → 「靈感閃現」）；`seq` 讓面板已開著時也重新掛載到那一頁。 */
+  const [growthTab, setGrowthTab] = useState<{ tab: GrowthTabId | null; seq: number }>({ tab: null, seq: 0 });
   /** `npc`／`friend` 面板的對象（NPC ID 或影子主人的角色 ID；6B-4）。 */
   const [hudWho, setHudWho] = useState<string | null>(null);
   /** 地圖（M）：區域圖（6C-6）或大世界圖（6D-5）的浮動全畫面面板，和 HUD 面板分開（關掉地圖不動面板）。
@@ -438,10 +455,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
-  /** 6L-2：送出前等 LLM 的預先生成（閃現、機遇）；回傳 `false`＝玩家取消（不送動作）。 */
-  async function waitPregen(id: string, action: WorldAction): Promise<boolean> {
+  /** 6L-2：送出前等 LLM 的預先生成（閃現、機遇、WP-3 文字許願）；`cancel`＝玩家取消（不送動作），
+   * `timeout`＝伺服器等了 10 秒還沒好（許願改開選單；其他入口照舊送出，伺服器會給組合器或模板版）。 */
+  async function waitPregen(id: string, action: WorldAction): Promise<"go" | "cancel" | "timeout"> {
     const body = pregenWaitBody(action);
-    if (body === null || llm?.enabled !== true) return true;
+    if (body === null || llm?.enabled !== true) return "go";
     let cancel = () => undefined as void;
     const cancelled = new Promise<"cancel">((resolve) => {
       cancel = () => resolve("cancel");
@@ -449,17 +467,17 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     let shown = false;
     const timer = window.setTimeout(() => {
       shown = true;
-      setPregenWait({ text: pregenWaitText(body), requestId: pregenRequestId(body), status: "wait", cancel });
+      setPregenWait({ text: pregenWaitText(body), note: pregenWaitNote(body), requestId: pregenRequestId(body), status: "wait", cancel });
     }, PREGEN_HINT_DELAY_MS);
     try {
       const done = await Promise.race([api.worldPregenWait(id, body).catch(() => null), cancelled]);
-      if (done === "cancel") return false;
+      if (done === "cancel") return "cancel";
       // RT-3：等待動畫有出現時，收成卡框、卡面淡入 0.3 秒再送出（減少動態時直接出卡）
       if (shown && !reducedMotion()) {
         setPregenWait((cur) => (cur === null ? cur : { ...cur, status: "done" }));
         await new Promise((resolve) => window.setTimeout(resolve, WAIT_DONE_MS));
       }
-      return true;
+      return done?.status === "timeout" ? "timeout" : "go";
     } finally {
       window.clearTimeout(timer);
       setPregenWait(null);
@@ -470,8 +488,28 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void run(async () => {
       if (charId === null) return;
       if (action.kind === "travel") setResult(null);
-      if (!(await waitPregen(charId, action))) return;
+      if ((await waitPregen(charId, action)) === "cancel") return;
       show(await api.worldAct(charId, action));
+    });
+
+  /** WP-3 許願：文字許願先等 LLM（等待提示同閃現）；逾時或伺服器退回（沒聽懂、不能許）＝不扣錢，面板切到選單並說明。 */
+  const wish = (mode: WishMode, text: string, keywords: string[]) =>
+    void run(async () => {
+      if (charId === null) return;
+      const action = wishAction(mode, text, keywords);
+      const waited = await waitPregen(charId, action);
+      if (waited === "cancel") return;
+      if (waited === "timeout" && mode === "text") {
+        setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: WISH_ZH.timeout }));
+        return;
+      }
+      try {
+        show(await api.worldAct(charId, action));
+        setWishFallback(null);
+      } catch (e) {
+        if (mode !== "text") throw e;
+        setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: errorText(e) }));
+      }
     });
 
   const openSituation = (template: string) =>
@@ -828,7 +866,14 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       return;
     }
     const panel = b.panel;
+    if (panel === "growth") setGrowthTab((g) => (g.tab === null ? g : { tab: null, seq: g.seq + 1 }));
     setHudPanel((cur) => togglePanel(cur, panel));
+  }
+  /** 從提醒點進來：打開成長面板並直接開那一頁（已開著也換過去，不關掉）。 */
+  function openGrowthTab(tab: GrowthTabId) {
+    if (view === null || !panelAvailable(view, "growth")) return;
+    setGrowthTab((g) => ({ tab, seq: g.seq + 1 }));
+    setHudPanel("growth");
   }
   const closeHud = () => setHudPanel(null);
   const hudKeys = useRef({
@@ -894,11 +939,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       case "skills":
         return <HudSkillsPanel view={v} busy={busy} onAct={act} />;
       case "growth":
-        return <WorldGrowth view={v} busy={busy} onChoose={choose} onAct={actStatus} onClose={closeHud} />;
+        return <WorldGrowth key={growthTab.seq} view={v} busy={busy} onChoose={choose} onAct={actStatus} onClose={closeHud} initialTab={growthTab.tab} />;
       case "quests":
         return <QuestLog view={v} onClose={closeHud} />;
       case "shadow":
-        return <HudShadowPanel view={v} busy={busy} onAct={act} />;
+        return <HudShadowPanel view={v} busy={busy} onAct={act} onClose={closeHud} />;
       case "notes":
         return (
           <HudNotesPanel notes={charId !== null && <NotesPanel characterId={charId} location={v.here.location} busy={busy} />} log={log} />
@@ -941,6 +986,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             )}
           </ReselectEntry>
         );
+      case "wish":
+        return v.wish == null ? null : <WishPanel wish={v.wish} busy={busy} fallback={wishFallback} onWish={wish} onBack={closeHud} />;
       case "stele":
         return hudWho === null ? null : <SteleMenu key={hudWho} view={v} region={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
       case "pavilion":
@@ -1003,6 +1050,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             }
           }}
           onButton={hudButton}
+          onGrowthTab={openGrowthTab}
           onMap={() => hudKeys.current.map()}
           onPlace={() => setHudPanel((cur) => togglePanel(cur, "place"))}
           openPanel={shown}
@@ -1183,10 +1231,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {view !== null && rangeDone !== null && (
         <RangeDoneDialog lines={rangeDone.lines} heading={rangeDone.heading} closeLabel={rangeDone.closeLabel} onClose={() => setRangeDone(null)} />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && showLevelUp && levelUp !== null && (
+      {partyIntro !== null && <PartyIntroDialog intro={partyIntro} onClose={() => markSeen([partyIntro.seen_id])} />}
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && showLevelUp && levelUp !== null && (
         <LevelUpDialog levelUp={levelUp} onClose={() => markSeen([], levelUp.level)} />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind === "allocate" && (
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && !showLevelUp && showLesson && lesson !== null && lesson.kind === "allocate" && (
         <AllocateLessonDialog
           lesson={lesson}
           affects={view.hero.attribute_affects ?? []}
@@ -1196,10 +1245,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
           onSkip={() => closeAllocate("skip")}
         />
       )}
-      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && lesson.kind !== "choose" && (
+      {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && lesson.kind !== "choose" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
-      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} />}
+      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} note={pregenWait.note} />}
       </DialogHudBox.Provider>
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (

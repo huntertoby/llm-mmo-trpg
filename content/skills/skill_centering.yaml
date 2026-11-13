@@ -1,0 +1,26 @@
+# KW-2 專注示範（#161，06 6.32.1；數值為初值，未經模擬）：專注 +1。骨架沒有只累積層數的核心，借一個小護盾當核心（光環骨架）。
+# AF-1（玩法 PM 交接 4.1.3 第 2 點）：拿掉「這回合不能移動」的定身代價（自身狀態代價最短 2 回合太重）；專注本來就是「回合結束時這回合
+# 沒移動 +1」，放完不移動自然多拿 1 層。省下的預算照工坊。
+id: skill_centering
+schema_version: 1
+name_zh: 凝神
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 2d4, affects: self}
+  - {type: add_stack, stack: focus, amount: 1, affects: self}
+condition: null
+cost: {mana: 2, cooldown: 1}
+tags: [spell, shield, builder]
+narrative:
+  concept: 站定、收心，讓呼吸與準星一起靜下來
+  cast_flavor: 你收住氣息，四周的雜音一點一點淡去
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

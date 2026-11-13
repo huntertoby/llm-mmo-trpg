@@ -87,10 +87,13 @@ from trpg.engine.events.objects import (
     SurfaceEntered,
     TerrainChanged,
     TrapExpired,
+    TrapGlance,
     TrapPlaced,
     TrapRevealed,
+    TrapTraced,
     TrapTriggered,
 )
+from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
 from trpg.engine.events.rules import (
     ApGranted,
     ApRefunded,
@@ -119,6 +122,7 @@ from trpg.engine.events.skills import (
     GambleRolled,
     GearHpLost,
     GearTriggered,
+    LockIntercepted,
     OverloadTriggered,
     SkillActivated,
     SkillCooldownChanged,
@@ -244,6 +248,8 @@ type Event = Annotated[
     | StacksChanged
     | TrapPlaced
     | TrapRevealed
+    | TrapTraced
+    | TrapGlance
     | TrapTriggered
     | TrapExpired
     | SourceChanged
@@ -262,6 +268,7 @@ type Event = Annotated[
     | SkillCopied
     | SkillFollowup
     | FollowupCharged
+    | LockIntercepted
     | FollowupCancelled
     | ZoneCreated
     | ZoneMoved
@@ -283,7 +290,11 @@ type Event = Annotated[
     | ChargeActivated
     | OathBroken
     | BossPhaseChanged
-    | WeatherChanged,
+    | WeatherChanged
+    | PartDamaged
+    | PartBroken
+    | SkillSealed
+    | PartStatDown,
     Field(discriminator="type"),
 ]
 

@@ -86,6 +86,13 @@ IMMOVABLE = "immovable"
 """不會被移動的單位標籤（石像，Phase 3-33e2a）：推擊、拉扯與強制位移、傳送對它無效。"""
 STEADFAST = "steadfast"
 """堅守單位的標籤：被推擊的距離打折（``core.steadfast_push_permille``）。"""
+SHIELD_GUARD = "shield_guard"
+"""盾兵的標籤（RG-1，#162，09 9.6.6）：替相鄰的遠程同伴擋遠程攻擊（命中
+−``shield_guard_hit_penalty``，:func:`trpg.engine.rules.combat.half_cover`）。"""
+SHIELD_FORMATION = "shield_formation"
+"""塔盾詞條「盾陣」的掩護種類（RG-4，#163，08 8.11）：``Cover.kind``（預覽、API 的
+``CoverOut.kind``）。帶盾陣的單位替相鄰的隊友（不分遠近、不含自己）擋遠程攻擊，命中
+−``shield_formation_hit_penalty``；判定同盾兵（:func:`trpg.engine.rules.combat.guard_between`）。"""
 TOPPLABLE = "topplable"
 """可被推倒的物件標籤。"""
 

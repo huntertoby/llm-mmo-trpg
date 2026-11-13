@@ -34,6 +34,7 @@ from trpg.world.generated import (
     GenRequest,
     OfferGen,
     OfferGenRequest,
+    Record,
     StoryGen,
     StoryGenRequest,
     recorded,
@@ -47,7 +48,7 @@ from trpg.world.state import CharacterState, QuestState
 from trpg.world.step import StepResult, world_step
 
 MakeChar = Callable[..., CharacterState]
-SKILL = "skill_war_hymn"
+SKILL = "skill_frost_shackle"  # FL-1a：戰歌只有「只多冷卻」的蓄力，改成沒有閃現選項
 STORY = "skill_mist_breaker"
 
 
@@ -99,8 +100,8 @@ def _step(
     library: ContentLibrary,
     char: CharacterState,
     action: WorldAction,
-    supplier: Callable[[GenRequest], FlashGen | StoryGen | OfferGen | None] | None,
-) -> tuple[StepResult, tuple[FlashGen | StoryGen | OfferGen, ...]]:
+    supplier: Callable[[GenRequest], Record | None] | None,
+) -> tuple[StepResult, tuple[Record, ...]]:
     with using_generated(supplier) as used:
         result = world_step(library, make_world(), char, action, NOON)
     return result, tuple(used)
@@ -204,8 +205,8 @@ def _story_char(make_char: MakeChar) -> CharacterState:
 def _granted(
     library: ContentLibrary,
     char: CharacterState,
-    supplier: Callable[[GenRequest], FlashGen | StoryGen | OfferGen | None] | None,
-) -> tuple[CharacterState, StorySkillGrantedEvent, tuple[FlashGen | StoryGen | OfferGen, ...]]:
+    supplier: Callable[[GenRequest], Record | None] | None,
+) -> tuple[CharacterState, StorySkillGrantedEvent, tuple[Record, ...]]:
     with using_generated(supplier) as used:
         after, events = advance_quests(library, make_world(), char, (), NOON)
     granted = next(e for e in events if isinstance(e, StorySkillGrantedEvent))
@@ -316,9 +317,9 @@ def test_old_char_without_regions_is_neutral(library: ContentLibrary, make_char:
     char = make_char()
     text = (
         dumps_char(char)
-        .replace('"trpg-char/13"', '"trpg-char/7"')
+        .replace('"trpg-char/15"', '"trpg-char/7"')
         .replace('"skill_regions": {},', "")
     )
     old = loads_char(text)
-    assert old.format == "trpg-char/13" and old.skill_regions == {}
+    assert old.format == "trpg-char/15" and old.skill_regions == {}
     assert skill_region(old, SKILL) is None

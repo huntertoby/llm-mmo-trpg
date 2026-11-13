@@ -4,7 +4,8 @@
   :meth:`probe` 回傳 ``None`` ＝ 可用；否則回傳要顯示給玩家的提示（連不到模型**不報錯**，那一輪
   自動當作關閉）。:meth:`proposer` 建立候選產生器的提議器、:meth:`flash_source` 建立閃現變化提議
   的來源工廠（Phase 3W-5 接 3W-7；都經 ``trpg.roguelite.llm_hook`` 掛接）。6L-2：
-  :meth:`story_proposer` 建立大世界劇情技能（換元素、名稱、描述）的提議器。
+  :meth:`story_proposer` 建立大世界劇情技能（換元素、名稱、描述）的提議器。WP-1：:meth:`wish_source`
+  建立許願池的來源（對關鍵字＋把願望放進 ``<player_input>`` 的技能提議器）。
 - :class:`LocalLlmProvider`：讀 ``config/llm.toml``，連線檢查有逾時（``probe_timeout_s``），
   不會卡住開局。
 - :class:`MockLlmProvider`：測試與離線預覽用（``MockLLMClient``，不連任何位址）。
@@ -28,6 +29,7 @@ from trpg.llm.candidate_source import make_proposer, mock_proposer
 from trpg.llm.client import LLMClient, MockLLMClient
 from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
 from trpg.llm.story_skill import StoryProposer, make_story_proposer, mock_story_proposer
+from trpg.llm.wish import WishSource, mock_wish_client
 from trpg.roguelite.llm_hook import FlashSourceFactory
 from trpg.skillgen.proposal_topic import LlmProposer
 
@@ -62,6 +64,10 @@ class LlmProvider(Protocol):
 
     def story_proposer(self, library: ContentLibrary) -> StoryProposer | None:
         """大世界劇情技能換元素與文字的提議器（6L-2）；做不到時回傳 ``None``（用內容版）。"""
+        ...
+
+    def wish_source(self, library: ContentLibrary) -> WishSource | None:
+        """許願池的來源（WP-1）；做不到時回傳 ``None``（文字許願被拒，請玩家改用選單）。"""
         ...
 
     def alert_permille(self) -> int:
@@ -122,7 +128,10 @@ class LocalLlmProvider:
         if config is None:
             return None
         client = OpenAICompatClient(config, transport=self._transport)
-        return lambda sink: LlmFlashSource(client, max_attempts=config.max_retries, sink=sink)
+        # LF-1：同一個 client 也為大變化與轉型命名（名稱與描述進遊戲、記進日誌）
+        return lambda sink: LlmFlashSource(
+            client, max_attempts=config.max_retries, sink=sink, naming=client
+        )
 
     def story_proposer(self, library: ContentLibrary) -> StoryProposer | None:
         config = self._config()
@@ -130,6 +139,20 @@ class LocalLlmProvider:
             return None
         client = OpenAICompatClient(config, transport=self._transport)
         return make_story_proposer(client, library, max_attempts=config.max_retries)
+
+    def wish_source(self, library: ContentLibrary) -> WishSource | None:
+        config = self._config()
+        if config is None:
+            return None
+        client = OpenAICompatClient(config, transport=self._transport)
+        # WP-1：同一個 client 對關鍵字、提議技能（願望在 <player_input>）、命名
+        return WishSource(
+            client=client,
+            proposer=lambda wish: make_proposer(
+                client, library, max_attempts=config.max_retries, naming=client, player_text=wish
+            ),
+            max_attempts=config.max_retries,
+        )
 
     def alert_permille(self) -> int:
         config = self._config()
@@ -154,11 +177,14 @@ class MockLlmProvider:
         alert_permille: int = DEFAULT_ALERT_PERMILLE,
         generate: bool = False,
         story_responses: Sequence[str | Exception] = (),
+        flash_naming: bool = False,
     ) -> None:
         self.reachable = reachable
         self._alert = alert_permille
         self.probes = 0
         self.generate = generate
+        self.flash_naming = flash_naming
+        """LF-1：閃現的大變化與轉型用 Mock 命名（預設關，不動既有測試）。"""
         self.story = MockLLMClient(story_responses)
         """大世界說書人與情境提議共用的 Mock（依序回應；用完拋 ``LLMUnavailable`` → 降級）。"""
 
@@ -170,10 +196,17 @@ class MockLlmProvider:
         return mock_proposer(library, naming=True)
 
     def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
-        return lambda sink: mock_flash_source(library, sink=sink)
+        naming = self.flash_naming
+        return lambda sink: mock_flash_source(library, sink=sink, naming=naming)
 
     def story_proposer(self, library: ContentLibrary) -> StoryProposer | None:
         return mock_story_proposer(library)
+
+    def wish_source(self, library: ContentLibrary) -> WishSource | None:
+        return WishSource(
+            client=lambda wish, menu: mock_wish_client(library, wish, menu),
+            proposer=lambda _wish: mock_proposer(library, naming=True),
+        )
 
     def alert_permille(self) -> int:
         return self._alert

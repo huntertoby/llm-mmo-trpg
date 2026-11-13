@@ -3,10 +3,11 @@
 // 沒釘住時再點一次圖示或按 Esc 收起。
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import type { LogLine } from "../battle/log";
-import { logLimit, type LogLimit } from "../battle/logRoom";
+import { logDockMaxHeight, logLimit, type LogLimit } from "../battle/logRoom";
 import { liveToasts, nextToastChange, stampArrivals, type LogToast } from "../battle/logToasts";
 import { BattleLog, TONE_MARK, type LogHover } from "./BattleLog";
 import { Hint } from "./Hint";
+import { NoTurnTag } from "./NoTurnTag";
 import { PinGlyph } from "./SkillCardGlyphs";
 
 export const LOG_PIN_KEY = "trpg.battleLog.pinned";
@@ -51,6 +52,7 @@ function ToastLine({ toast }: { toast: LogToast }) {
         </span>
       )}
       <span className="log-text">{line.summary ?? line.text}</span>
+      {line.noTurn !== undefined && line.summary !== undefined && <NoTurnTag kind={line.noTurn.kind} backstab={line.noTurn.backstab} hint={false} />}
     </div>
   );
 }
@@ -66,10 +68,13 @@ interface ViewProps {
   log: (actions: ReactNode) => ReactNode;
   /** 選取中：縮短讓開選取面板（6A-4c，`battle/logRoom.ts`）；`null` 或省略 ＝ 照原本的高度。 */
   limit?: LogLimit | null;
+  /** UI-1：沒選取時的高度上限，上緣停在主角卡下緣（`heroLogCap`）；`null` 或省略 ＝ 只用 CSS 的 58%。 */
+  heroCap?: number | null;
 }
 
 /** 畫面本體（不含計時與本機儲存，方便測試）。 */
-export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onTogglePin, log, limit = null }: ViewProps) {
+export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onTogglePin, log, limit = null, heroCap = null }: ViewProps) {
+  const maxHeight = logDockMaxHeight(limit, heroCap);
   const pin = (
     <Hint text={pinned ? "取消釘選（收起後回到浮動提示）" : "釘選：一直顯示完整紀錄"}>
       <button type="button" className={`log-pin${pinned ? " on" : ""}`} aria-pressed={pinned} aria-label={pinned ? "取消釘選" : "釘選"} onClick={onTogglePin}>
@@ -81,7 +86,7 @@ export function BattleLogDockView({ toasts, open, pinned, onToggleOpen, onToggle
     <div
       className={`log-dock${open ? " open" : ""}${pinned ? " pinned" : ""}${limit === null ? "" : " squeezed"}${limit?.tight === true ? " tight" : ""}`}
       aria-label="戰鬥紀錄"
-      style={limit === null ? undefined : { maxHeight: limit.tight ? `${limit.maxHeight}px` : `min(58%, ${limit.maxHeight}px)` }}
+      style={maxHeight === undefined ? undefined : { maxHeight }}
     >
       {open ? (
         <div className="log-dock-panel">{log(pin)}</div>
@@ -108,9 +113,11 @@ interface Props {
   onHover?: (hover: LogHover | null) => void;
   /** 選取時可用的高度（`useLogRoom`）；`null` 或省略 ＝ 沒有選取。 */
   room?: number | null;
+  /** UI-1：沒選取時主角卡底下的可用高度（`useHeroLogCap`）。 */
+  heroCap?: number | null;
 }
 
-export function BattleLogDock({ lines, onHover, room = null }: Props) {
+export function BattleLogDock({ lines, onHover, room = null, heroCap = null }: Props) {
   const limit = logLimit(room);
   const rootRef = useRef<HTMLDivElement>(null);
   // 縮短或恢復時捲到最新一行（只顯示最新的幾行）
@@ -147,6 +154,7 @@ export function BattleLogDock({ lines, onHover, room = null }: Props) {
     <div ref={rootRef} className="log-dock-root">
     <BattleLogDockView
       limit={limit}
+      heroCap={heroCap}
       toasts={toasts}
       open={open}
       pinned={pinned}

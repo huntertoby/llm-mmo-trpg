@@ -11,7 +11,7 @@ min_rarity: epic
 shapes: [self]
 required_category: spell    # 觸發的效果自動命中，不看武器
 required_weapon_req: any
-core: {primitives: [damage, heal, shield, apply_status]}
+core: {primitives: [damage, heal, shield, apply_status, summon_beside]}   # summon_beside：TF-1 伴生（轉型專用，組合器與 LLM 不用）
 secondary: {max_count: 1}
 composer:   # 隨機組合器的骨架專屬設定（3T-8）
   self_shape_harmful_ok: true

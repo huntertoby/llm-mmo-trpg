@@ -283,6 +283,7 @@ def _load_world_market(
         affixes=None if world_enemies is None else {a.id for a in world_enemies.affixes},
         items=world_economy.items,
         keywords=keyword_ids,
+        gear_affixes=affixes,
     )
     world_crafting = load_world_crafting(  # 5D-3
         root,

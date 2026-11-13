@@ -10,6 +10,7 @@ API 回應一律用這裡的 :class:`SkillCard`（敘事層的卡片加上 ``sta
 
 from __future__ import annotations
 
+import contextlib
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -273,6 +274,9 @@ _PLAIN: dict[str, tuple[EffectCategory, str, str | None]] = {
 
 def _plain(library: ContentLibrary, index: int, spec: EffectSpec) -> EffectStat:
     category, field, unit = _PLAIN.get(spec.type, ("other", "", None))
+    if category == "stack" and spec.stack is not None:
+        with contextlib.suppress(KeyError):  # RG-5：連擊點用「點」
+            unit = library.ruleset.stack_def(spec.stack).unit_zh
     value = getattr(spec, field) if field else None
     amount = value if isinstance(value, int) else None
     return EffectStat(

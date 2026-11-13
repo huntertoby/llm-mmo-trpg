@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from typing import Literal
 
 from trpg.content.battle import WeaponDef
+from trpg.content.equipment import ALLY_RANGED_COVER, WeaponTraitAffix
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.gear.core import gear_defense_permille
-from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
+from trpg.engine.ids import CONCEALED, DEFENDING, PRONE, SHIELD_FORMATION, SHIELD_GUARD
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.facing import is_behind
@@ -34,7 +35,7 @@ from trpg.engine.rules.statuses import (
 from trpg.engine.rules.weapons import crit_range_cut, weapon_hit_bonus
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute, Element, ObjectId, Surface
+from trpg.shared.types import Attribute, Element, ObjectId, Surface, UnitId
 
 __all__ = [
     "PPM",
@@ -173,7 +174,10 @@ def defense_value_permille(unit: UnitState, rules: Ruleset, cut: int = 0) -> int
     Phase 3G-G1：裝備的防禦加成也直接相加，
     見 :func:`~trpg.engine.gear.core.gear_defense_permille`）。
     """
-    base = max(1, effective_attribute(rules, unit, Attribute.DEX) + unit.armor_bonus)
+    armor = unit.armor_bonus
+    if unit.part_mods:  # 部位破壞的護甲下降（PB-1a）
+        armor -= unit.part_mods.get("armor", 0)
+    base = max(1, effective_attribute(rules, unit, Attribute.DEX) + armor)
     bonus = rules.core.defend_defense_bonus_permille if unit.has_status(DEFENDING) else 0
     bonus -= defense_break_permille(rules, unit) + cut
     bonus += gear_defense_permille(unit)
@@ -218,6 +222,9 @@ class Cover:
     kind: str
     name_zh: str
     pos: XY
+    unit_id: UnitId | None = None
+    """盾兵掩護（RG-1）、盾陣（RG-4，``kind`` 為 ``shield_formation``）：提供掩護的單位；物件與塔盾
+    為 ``None``。"""
 
 
 def cover_object_between(
@@ -271,6 +278,12 @@ def half_cover(
 
     近戰（含長柄）與穿透技能（``profile.pierce``）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
+
+    場上沒有掩護物時依序再看盾兵（RG-1，:func:`guard_between`，懲罰 ``shield_guard_hit_penalty``）
+    與目標自己的塔盾；三者不疊加。
+
+    塔盾詞條「盾陣」（RG-4，#163，:func:`_formation_cover`，懲罰 ``shield_formation_hit_penalty``）
+    也不疊加：盾陣的懲罰比上面那一個高時才改算盾陣（取最高；同分照舊算原本的來源）。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
     if limited or (
@@ -279,12 +292,24 @@ def half_cover(
         else attacker.weapon.ignore_cover
     ):
         return None
+    cover = _ranged_cover(state, attacker, target)
+    formation = _formation_cover(state, attacker, target)
+    if formation is not None and (cover is None or formation.penalty > cover.penalty):
+        return formation
+    return cover
+
+
+def _ranged_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """盾陣以外的遠程掩護（呼叫端已排除近戰與穿透）：場上的掩護物、盾兵、目標自己的塔盾，依序取
+    第一個成立的（:func:`half_cover`）。"""
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:
         return None
     found = cover_object_between(state, attacker.xy, target.xy)
     if found is None:
-        return _shield_cover(state, attacker, target, penalty)
+        return _guard_cover(state, attacker, target) or _shield_cover(
+            state, attacker, target, penalty
+        )
     oid, pos = found
     obj = state.objects[oid]
     return Cover(
@@ -296,16 +321,125 @@ def half_cover(
     )
 
 
+def protects_ranged(state: BattleState, unit: UnitState) -> bool:
+    """盾兵保護得到的同伴（RG-1）：武器不受高度限制（射程 > ``melee_height_limit_max_range``：
+    弓、法杖、槍），也就是「遠程」。"""
+    return not is_height_limited(state, unit)
+
+
+def holds_formation(unit: UnitState) -> bool:
+    """帶塔盾詞條「盾陣」（RG-4，#163）：身上有生效中的副手特性強化 ``ally_ranged_cover``。"""
+    return any(
+        isinstance(a.affix, WeaponTraitAffix) and a.affix.param == ALLY_RANGED_COVER
+        for a in unit.gear.active_affixes("weapon_trait")
+    )
+
+
+def guard_between(
+    state: BattleState,
+    attacker_xy: XY,
+    target: UnitState,
+    *,
+    at: XY | None = None,
+    formation: bool = False,
+) -> UnitState | None:
+    """盾兵掩護的幾何部分（RG-1，#162，09 9.6.6）：從 ``attacker_xy`` 打 ``target``（站在 ``at``，
+    省略＝目前位置）時替他擋的盾兵。條件同半掩護物件（:func:`cover_object_between`）：盾兵帶
+    ``shield_guard`` 標籤、存活、和目標同陣營、不是目標自己，在目標四方向相鄰、而且在目標朝向攻擊者
+    的那一側；高度同半掩護：盾兵視為 1 層高（攻擊者高出它 1 層以上、或目標站得比它高 1 層以上時擋
+    不到；RG-5b 撤回 RG-5 的「比目標高 1 層就無視」，玩法PM交接 4.1.7）。多名時取
+    上、右、下、左順序的第一個。不看武器與目標是不是遠程（呼叫端負責）。
+
+    ``formation``（RG-4，#163）：改找帶塔盾詞條「盾陣」的隊友（:func:`holds_formation`）；其餘條件
+    與幾何完全相同（同一套判定，差別只在誰算擋的人、以及呼叫端不限目標是遠程）。"""
+    tx, ty = target.xy if at is None else at
+    for dx, dy in _COVER_DIRECTIONS:
+        cx, cy = tx + dx, ty + dy
+        if not state.in_bounds(cx, cy):
+            continue
+        guard = state.unit_at(cx, cy)
+        if (
+            guard is None
+            or guard.id == target.id
+            or guard.team is not target.team
+            or not (holds_formation(guard) if formation else guard.has_tag(SHIELD_GUARD))
+        ):
+            continue
+        if guard_blocks(state, attacker_xy, (tx, ty), (cx, cy)):
+            return guard
+    return None
+
+
+def guard_blocks(state: BattleState, attacker_xy: XY, target_xy: XY, guard_xy: XY) -> bool:
+    """站在 ``guard_xy`` 的盾兵擋不擋得到從 ``attacker_xy`` 打 ``target_xy`` 的遠程攻擊（只看幾何，
+    :func:`guard_between`）：四方向相鄰、在目標朝向攻擊者的那一側、高度條件同半掩護物件（盾兵視為
+    1 層高，攻擊者要比盾兵高 2 層以上才無視；RG-5b 撤回 RG-5 的「比目標高 1 層就無視」，玩法PM交接
+    4.1.7）。"""
+    tx, ty = target_xy
+    dx, dy = guard_xy[0] - tx, guard_xy[1] - ty
+    if abs(dx) + abs(dy) != 1:
+        return False
+    if dx * (attacker_xy[0] - tx) + dy * (attacker_xy[1] - ty) <= 0:
+        return False
+    guard_height = state.tile(*guard_xy).height
+    if state.tile(*attacker_xy).height > guard_height + 1:
+        return False
+    return guard_height + 1 >= state.tile(*target_xy).height
+
+
+def _guard_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """盾兵掩護（RG-1）：``target`` 是遠程（:func:`protects_ranged`）而且有盾兵擋在攻擊者那一側時，
+    命中 −``shield_guard_hit_penalty``（為 0 時視為沒有）。呼叫端已排除近戰與穿透。"""
+    penalty = state.ruleset.core.shield_guard_hit_penalty
+    if penalty <= 0 or not protects_ranged(state, target):
+        return None
+    guard = guard_between(state, attacker.xy, target)
+    if guard is None:
+        return None
+    return Cover(
+        penalty=penalty,
+        object_id=None,
+        kind=SHIELD_GUARD,
+        name_zh=guard.name_zh,
+        pos=guard.xy,
+        unit_id=guard.id,
+    )
+
+
+def _formation_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """塔盾詞條「盾陣」（RG-4，#163，08 8.11）：和 ``target`` 相鄰、同陣營、帶盾陣的單位（不是目標
+    自己）擋在攻擊者那一側時，命中 −``shield_formation_hit_penalty``（為 0 時視為沒有）。判定同盾兵
+    （:func:`guard_between` 的 ``formation``），但目標不限遠程。呼叫端已排除近戰與穿透。"""
+    penalty = state.ruleset.core.shield_formation_hit_penalty
+    if penalty <= 0 or not any(
+        u.team is target.team and u.id != target.id and holds_formation(u)
+        for u in state.units.values()
+    ):
+        return None
+    guard = guard_between(state, attacker.xy, target, formation=True)
+    if guard is None:
+        return None
+    return Cover(
+        penalty=penalty,
+        object_id=None,
+        kind=SHIELD_FORMATION,
+        name_zh=guard.name_zh,
+        pos=guard.xy,
+        unit_id=guard.id,
+    )
+
+
 def _shield_cover(
     state: BattleState, attacker: UnitState, target: UnitState, penalty: int
 ) -> Cover | None:
     """塔盾的自身半掩護（Phase 3I-2，08 8.11）：目標副手有 ``ranged_cover`` 時，遠程攻擊（呼叫端已
-    排除近戰與穿透）命中同半掩護；攻擊者站得比目標高 1 層以上時無視。場上的掩護物已經成立時不會
-    走到這裡（兩者不疊加）。"""
+    排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高，攻擊者站得比目標高 2 層以上時
+    無視（RG-5b，玩法PM交接 4.1.7；以前是高 1 層就無視）。場上的掩護物已經成立時不會走到這裡（兩者
+    不疊加）。"""
     offhand = target.gear.offhand
     if offhand is None or not offhand.ranged_cover:
         return None
-    if state.tile(*attacker.xy).height > state.tile(*target.xy).height:
+    if state.tile(*attacker.xy).height > state.tile(*target.xy).height + 1:
         return None
     return Cover(
         penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target.xy
@@ -434,6 +568,10 @@ class AttackRoll:
     target_number: int
     hit: bool
     crit: bool
+    cover_unit_id: UnitId | None = None
+    """盾兵掩護的盾兵（RG-1；``cover`` 是它的命中修正）；盾陣時是帶盾陣的隊友（RG-4）。"""
+    cover_formation: bool = False
+    """``cover_unit_id`` 是塔盾詞條「盾陣」（RG-4，#163）而不是盾兵。"""
     modifier_bonus: int = 0
     """修正規則的命中加值（Phase 3C-2 ``hit_bonus``；已含在 ``total``）。"""
     backstab: int = 0
@@ -519,6 +657,8 @@ def roll_attack(  # noqa: PLR0917
     if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
         bonus += weapon_hit_bonus(attacker, manhattan(attacker.xy, target.xy))
     bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）
+    if attacker.part_mods:  # 部位破壞的命中下降（PB-1a）
+        bonus -= attacker.part_mods.get("hit", 0)
     crit_range = max(2, positional.crit_range - attacker.next_attack_crit)
     if forced is not None:
         natural = _forced_natural(
@@ -550,6 +690,8 @@ def roll_attack(  # noqa: PLR0917
         situational=situational,
         cover=cover_mod,
         cover_object_id=None if cover is None else cover.object_id,
+        cover_unit_id=None if cover is None else cover.unit_id,
+        cover_formation=cover is not None and cover.kind == SHIELD_FORMATION,
         total=total,
         target_number=rules.core.hit_target,
         hit=hit,
@@ -575,6 +717,8 @@ def _forced_natural(forced: ForcedOutcome, bonus: int, crit_range: int, rules: R
 def element_modifier_ppm(unit: UnitState, element: Element, rules: Ruleset) -> int:
     """元素修正（ppm）＝ (1000 − 分組抗性‰) × (1000 + 個別弱點／抗性‰)，下限 ``floor × 1000``。"""
     group = unit.resist.get(element.resist_group, 0)
+    if unit.part_mods:  # 部位破壞的抗性下降（PB-1a）
+        group -= unit.part_mods.get(f"resist.{element.resist_group.value}", 0)
     individual = unit.element_mods.get(element, 0)
     value = (PERMILLE - group) * (PERMILLE + individual)
     floor = rules.core.element_mod_floor_permille * PERMILLE

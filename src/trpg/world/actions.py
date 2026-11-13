@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Annotated, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, LookChoice
 from trpg.content.world_events import ThreadScope
@@ -124,6 +124,8 @@ __all__ = [
     "CutFallback",
     "DefeatedEvent",
     "DissolveAction",
+    "DuelChoiceAction",
+    "DuelChosenEvent",
     "EncounterCheckEvent",
     "EncounterEvent",
     "EventCheckEvent",
@@ -204,6 +206,8 @@ __all__ = [
     "ThreadSpentEvent",
     "TravelAction",
     "TraveledEvent",
+    "WishAction",
+    "WishMadeEvent",
     "WorldAction",
     "WorldEvent",
 ]
@@ -236,6 +240,14 @@ class RetreatAction(_Model):
     """看了陣容不打，退回出發地點（09 9.6.6：不開戰、不扣任何東西）。"""
 
     kind: Literal["retreat"] = "retreat"
+
+
+class DuelChoiceAction(_Model):
+    """回應精英提出的單挑（RG-2，#162，09 9.6.6）：只在遭遇的 ``duel`` 是 ``offered`` 時可送；
+    ``accept``＝一對一（只有主角對精英本人），否則照原本全隊打。兩邊獎勵完全一樣。"""
+
+    kind: Literal["duel_choice"] = "duel_choice"
+    accept: bool
 
 
 class FightAction(_Model):
@@ -389,6 +401,25 @@ class OfferPickAction(_Model):
     replace: str | None = None
 
 
+class WishAction(_Model):
+    """在主城的許願池許願（Phase WP-1；07 7.6、#88）：``text``（一句話的願望，
+    LLM 對到關鍵字並提議完整
+    技能；只進 prompt 的 ``<player_input>``）與 ``keywords``（從選單挑 1～2 個關鍵字，不呼叫 LLM）
+    剛好給一個。字數與個數的上限在世界規則（``rules.yaml`` 的 ``wish``），由規則檢查。"""
+
+    kind: Literal["wish"] = "wish"
+    text: str | None = Field(default=None, min_length=1, max_length=500)
+    keywords: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(
+        default=(), max_length=4
+    )
+
+    @model_validator(mode="after")
+    def _one_way(self) -> WishAction:
+        if (self.text is None) == (not self.keywords):
+            raise ValueError("許願要給願望文字或選單的關鍵字（剛好一種）")
+        return self
+
+
 class TalkAction(_Model):
     """和所在地點的 NPC 說話（9.6.7 #3）：引擎依好感度列出能給的內容（只換資訊）。"""
 
@@ -512,6 +543,7 @@ type WorldAction = Annotated[
     TravelAction
     | CampAction
     | RetreatAction
+    | DuelChoiceAction  # RG-2
     | FightAction
     | RestAction
     | LoadoutAction
@@ -562,7 +594,8 @@ type WorldAction = Annotated[
     | UseFieldObjectAction
     | MailSendAction  # 6T-1a
     | MailClaimAction
-    | MailRefuseAction,
+    | MailRefuseAction
+    | WishAction,  # WP-1
     Field(discriminator="kind"),
 ]
 
@@ -782,6 +815,14 @@ class CampedEvent(_Model):
     supplies_left: int
     hp: int
     mana: int
+
+
+class DuelChosenEvent(_Model):
+    """回應了精英的單挑（RG-2）：``accepted``＝接受一對一。"""
+
+    kind: Literal["duel_chosen"] = "duel_chosen"
+    location: str
+    accepted: bool
 
 
 class RetreatedEvent(_Model):
@@ -1070,7 +1111,7 @@ class SkillOfferedEvent(_Model):
     step: str
     reason: Literal["level_up", "complete"]
     candidates: tuple[str, ...]
-    source: Literal["quest", "opportunity"] = "quest"
+    source: Literal["quest", "opportunity", "wish"] = "quest"
     made_by: Literal["llm", "composer"] = "composer"
     """候選的來源（6L-2，機遇的完整技能）：``llm``＝至少一張是 LLM 提議的；``composer``＝組合器與
     技能池。"""
@@ -1084,7 +1125,22 @@ class SkillOfferTakenEvent(_Model):
     step: str
     skill: str | None
     placed: Literal["equipped", "bench", "skipped"]
-    source: Literal["quest", "opportunity"] = "quest"
+    source: Literal["quest", "opportunity", "wish"] = "quest"
+    refund: int = Field(default=0, ge=0, exclude_if=lambda v: v == 0)
+    """許願池的三選一都不拿時退還的任務幣（WP-1，#88 2b）；0 不輸出。"""
+
+
+class WishMadeEvent(_Model):
+    """許願（WP-1）：``via``＝文字或選單；``keywords``＝對到（或選）的關鍵字；``made_by``＝三選一的
+    來源；``coins_spent``＝扣的任務幣；``used``＝本週第幾次；``refund``＝都不拿時會退的任務幣。"""
+
+    kind: Literal["wish_made"] = "wish_made"
+    via: Literal["text", "menu"]
+    keywords: tuple[str, ...]
+    made_by: Literal["llm", "composer"] = "composer"
+    coins_spent: int = Field(ge=0)
+    used: int = Field(ge=1)
+    refund: int = Field(default=0, ge=0)
 
 
 class StorySkillGrantedEvent(_Model):
@@ -1215,6 +1271,7 @@ type WorldEvent = Annotated[
     | LocationRevealedEvent
     | CampedEvent
     | RetreatedEvent
+    | DuelChosenEvent  # RG-2
     | BattleStartedEvent
     | BattleEndedEvent
     | LeveledUpEvent
@@ -1307,6 +1364,7 @@ type WorldEvent = Annotated[
     | ExitBlockedEvent  # 6E-1
     | MailSentEvent  # 6T-1a
     | MailClaimedEvent
-    | MailRefusedEvent,
+    | MailRefusedEvent
+    | WishMadeEvent,  # WP-1
     Field(discriminator="kind"),
 ]

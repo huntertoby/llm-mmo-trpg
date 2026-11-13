@@ -43,5 +43,21 @@ phases:
     remove_statuses: [concealed]
     add_statuses: [{status: mist_return}]
     weather: clear
+# 部位（PB-1a；#152、05 5.12、18 18.2.3「部位」表）：只用預設比例（每個 200‰，加總 600‰），護甲與抗性同本體。
+# 長劍的降傷 750‰（−25%）是占位（R4），待使用者在數值工坊調。
+parts:
+  - {id: whisk, name_zh: 拂塵, hp_permille: 200, reach: any, on_break: [{type: seal_skill, skill: skill_mist_shift}]}
+  - id: dantian
+    name_zh: 氣海
+    hp_permille: 200
+    reach: behind
+    exposed_in: [mist_lock, return_to_one]
+    on_break: [{type: stop_mechanic, status: mist_return}]
+  - id: sword
+    name_zh: 長劍
+    hp_permille: 200
+    reach: any
+    exposed_in: [return_to_one]
+    on_break: [{type: stat_down, stat: damage_dealt, amount: 750}, {type: interrupt_charge}]
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
 doll: {skin: '#f1c9a5', hair: long, hair_color: '#f0f0f0', beard: true, rarity: legendary, traits: [mist], gear: {body: {kind: robe, material: cloth, color: '#dfe4e2', trim: '#e8bb48'}, cloak: {kind: cape, material: cloth, color: '#5f8f8a'}, off_hand: {kind: whisk, material: wood}}}   # QK-8（#145）：右手長劍（weapon）、左手拂塵；NPC、頭像、頭目同一個樣子

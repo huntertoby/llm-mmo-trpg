@@ -55,6 +55,7 @@ __all__ = [
     "StartResourcesOut",
     "StartResourcesRequest",
     "StartWeaponOption",
+    "StatChangeOut",
 ]
 
 
@@ -336,6 +337,21 @@ class ReflashSlotOut(_ApiModel):
     """第幾次（完整技能的調整欄為 0）。"""
     transform_hint: bool = False
     """這一欄是第 3 次大變化但還不是轉型（升階後建議重閃）。"""
+    available: bool = True
+    """重閃這一欄有沒有任何合法選項（RR-1，比照 FL-1c 的 ``flash_available``，06 6.34「費用方向」
+    第 7 點）：伺服器實際算過；``False`` 時按鈕標灰、不能按，灰字是 ``problem_zh``。"""
+    problem_zh: str | None = None
+    """不能重閃這一欄的原因（可以時為 ``None``）。"""
+    weaker: bool = False
+    """被強度下限卡住的重閃格（RR-2，#160，06 6.34.3「強度下限」例外；RR-2c）：照原規則（這一格
+    不低於被換掉的那一筆、整招不低於現在的卡）沒有任何候選，改出整招可能比現在弱的候選。
+    ``True`` 時入口不標灰、掛 ``weaker_zh``（變弱樣式）；按下去進原本的選類別面板，面板最上面
+    再寫一次 ``weaker_zh``＋``weaker_pick_zh``（RR-2b：不另跳確認框，選「不指定」或某個類別才
+    扣點，關掉面板不重閃）。"""
+    weaker_zh: str | None = None
+    """入口與選類別面板的提醒字「這一格重閃後，這招可能比現在弱」（``weaker`` 時才有）。"""
+    weaker_pick_zh: str | None = None
+    """選類別面板提醒字後面那句「扣點後一定要選一個。」（``weaker`` 時才有）。"""
 
 
 class SkillFlashOut(_ApiModel):
@@ -354,6 +370,10 @@ class SkillFlashOut(_ApiModel):
     """點數以外的條件都符合，可以閃現（「可以閃現了」）。"""
     flash_problem_zh: str | None = None
     """不能閃現的原因（可以時為 ``None``）。"""
+    flash_available: bool = True
+    """這一次閃現有沒有任何合法選項（FL-1c）：其他條件都符合時伺服器實際算過；``False`` 時
+    ``can_flash`` 也是 ``False``，``flash_problem_zh`` 是「這招目前沒有可以閃的變化」，面板
+    顯示灰色。其他條件不符合時（還沒用過、閃滿等）不算，照 ``True``。"""
     next_major: bool = False
     """下一次閃現是大變化（第 3 次）。"""
     records: tuple[FlashRecordOut, ...] = ()
@@ -374,6 +394,49 @@ class SkillFlashOut(_ApiModel):
     """這招可以接受傳承（還沒閃過、不是完整技能；3W-R2）。"""
 
 
+class ChangeIconOut(_ApiModel):
+    """「前 → 後」一列的欄位小圖（FL-1b，移植需求第 7 節；圖示一律沿用前批）。
+
+    ``part``＝第④批部件圖樣（``cat``：``card`` 卡片小圖、``shape``、``surface``、``skeleton``）；
+    ``status``＝第⑤批狀態圖示；``keyword``＝第⑤b 批關鍵字圓章。"""
+
+    kind: Literal["part", "status", "keyword"]
+    cat: str | None = None
+    id: str
+
+
+class StatChangeOut(_ApiModel):
+    """閃現選項「前 → 後」的一列（FL-1a）：閃現前與選項套用後技能卡上一個數字的差異。"""
+
+    field: str
+    """欄位路徑：``range``、``radius``、``size``；代價 ``cost.<種類>``（``cost.ap``、
+    ``cost.cooldown``、``cost.mana``…，種類同 ``CostStat.kind``）；效果 ``effects[i].dice``／
+    ``.multiplier_permille``／``.amount``（回合、格數、層數）／``.magnitude_permille``（狀態強度）；
+    接續段 ``followup[i]...``；整個效果新增或拿掉時是 ``effects[i]``。"""
+    label_zh: str
+    """欄位的中文名（例「燃燒回合」「傷害骰子」「冷卻」）。"""
+    effect_index: int | None = None
+    """效果列的 ``index``（同卡片 ``stats.effects`` 或接續段的位置）；技能層級與代價為 ``None``。"""
+    before: str | None
+    """閃現前的值（顯示用字串：骰子「1d8」、倍率「×1.15」、強度「1025‰」、回合「5」）；新加的為
+    ``None``。"""
+    after: str | None
+    """選項套用後的值；拿掉的為 ``None``。"""
+    direction: Literal["better", "worse", "cost", "new"]
+    """``better``／``worse``：強度變強／變弱；``cost``：代價變了（升降看前後值）；``new``：新加的。"""
+    name_zh: str = ""
+    """畫面上的欄位名（FL-1b，移植需求 9.1 #4：射程、冷卻、AP、燃燒、範圍、地面、額外傷害、
+    接續、第二元素、效果、種類…；對照表在 :mod:`trpg.api.flash_changes`）。"""
+    term: str | None = None
+    """欄位名的說明卡（:attr:`PendingFlashOut.terms` 的鍵）；沒有說明卡為 ``None``。"""
+    before_zh: str | None = None
+    """「前」的顯示字（帶單位：「4 格」「2 回合」「3 成武器傷害」）；``None``＝原本沒有。
+    可帶術語標記 ``[[術語|字]]`` 與圖示標記 ``{{kw:<id>}}``。"""
+    after_zh: str | None = None
+    """「後」的顯示字；``None``＝拿掉了（畫面寫「沒有」）。"""
+    icon: ChangeIconOut | None = None
+
+
 class FlashOptionOut(_ApiModel):
     """待選閃現的一個選項：變化與套用後的技能卡。"""
 
@@ -389,6 +452,44 @@ class FlashOptionOut(_ApiModel):
     card: SkillCard
     unequip_candidates: tuple[str, ...] = ()
     """選這個（轉型換到已滿的欄位）要卸下其中一招到備用（送 ``flash_pick`` 的 ``unequip``）。"""
+    unequip_slot: str | None = None
+    """要卸下時，轉型後佔的欄位（FL-1b 8.3：卸下選單寫「被動欄滿了…」；姿態欄只有 1 格，畫面自動換下
+    原姿態、不出選單）；不用卸下為 ``None``。"""
+    changes: tuple[StatChangeOut, ...] = ()
+    """和閃現前（重閃是被換掉那一筆之前）比，卡片上有變的數字（FL-1a；只列有變的，順序：射程等 →
+    代價 → 效果 → 接續段）。"""
+    headline_zh: str | None = None
+    """白話大標（FL-1b，``flash_templates.yaml`` 的 ``headline_zh`` 與「模板 × 關鍵字」表）；
+    還沒填的模板為 ``None``，畫面退回 ``summary_zh``。"""
+    say_zh: str = ""
+    """選中時下固定區的一句話（FL-1b 9.3）：模板有寫的照模板，沒有的照差異清單組。可帶術語標記。"""
+    tag_term: str | None = None
+    """類別標籤的說明卡（FL-1b 9.2：蓄力「威力提高」、輕巧「威力降低」只在說明卡）。"""
+    note_zh: str | None = None
+    """LLM 寫的一句話描述（LF-3；``Variation.note_zh``，引擎 ``clean_note`` 過了才有）；沒有＝畫面
+    照舊只畫大標與「前 → 後」，不佔位。純文字，不帶術語標記。"""
+    name_source: Literal["llm", "template"] = "template"
+    """這個選項的技能名稱（``card.name_zh``）從哪來（LF-3）：``llm``＝這次閃現的大變化或轉型帶了
+    LLM 名稱而且用上了；``template``＝其他（組合式「{前綴}・{原名}」，或小變化沿用原名）。"""
+    weaker_tag_zh: str | None = None
+    """被強度下限卡住的重閃格裡，整招預算分數低於重閃前（現在的卡）的選項（RR-2c，#160 第 4 點）：
+    類別標籤旁的小標「比原本弱」（變弱樣式：無底無框＋▼）；其他選項為 ``None``。"""
+
+
+class FlashTermOut(_ApiModel):
+    """選變體畫面的一張說明卡（FL-1b，移植需求 9.2）：數字已照資料填好。"""
+
+    title_zh: str
+    text_zh: str
+
+
+class FlashBaseStatOut(_ApiModel):
+    """原技能列的一個數字（FL-1b 2.1：AP、耐力、冷卻、射程、燃燒回合…，各帶卡片小圖與說明卡）。"""
+
+    name_zh: str
+    value_zh: str
+    term: str | None = None
+    icon: ChangeIconOut | None = None
 
 
 class PendingFlashOut(_ApiModel):
@@ -402,6 +503,15 @@ class PendingFlashOut(_ApiModel):
     major: bool
     cost: int
     options: tuple[FlashOptionOut, ...]
+    base_stats: tuple[FlashBaseStatOut, ...] = ()
+    """原技能列（現在的卡；重閃也是，RR-2b）的數字（FL-1b 2.1）；欄位名與小圖和「前 → 後」
+    同一份對照。"""
+    terms: dict[str, FlashTermOut] = Field(default_factory=dict)
+    """這次選項（大標、前 → 後、說明句、原技能列）用到的說明卡（FL-1b）：術語 ID → 說明卡。
+    畫面只查表；查不到的術語不畫底線。"""
+    weaker_foot_zh: str | None = None
+    """被強度下限卡住的重閃格出題後（RR-2b，#160）：面板固定區取代「選哪個這招整體都會強一點」的那句
+    「這次的選項可能比現在弱；標 ▼ 的是變小的地方。」；一般出題為 ``None``。"""
 
 
 class FlashPreviewRequest(_ApiModel):

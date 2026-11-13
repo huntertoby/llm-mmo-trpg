@@ -9,19 +9,24 @@ from __future__ import annotations
 from collections import Counter
 
 from trpg.api.account_schemas import TitlesOf, no_titles
+from trpg.api.condition_off import sticky_kinds
 from trpg.api.world_party_schemas import (
     AiChoiceView,
+    LoneWolfView,
     MercenaryView,
     MyShadowView,
     PartyMemberView,
     PartyView,
     ShadowView,
 )
+from trpg.content.equipment import ConditionalAffix, affix_text
 from trpg.content.library import ContentLibrary
-from trpg.content.world_mercenaries import MERCENARY_ROLES, MercenaryDef
+from trpg.content.world_events import NpcPortrait
+from trpg.content.world_mercenaries import MERCENARY_ROLES, CompanionDef, MercenaryDef
 from trpg.world.actions import (
     CompanionJoinedEvent,
     CompanionLeftEvent,
+    DuelChosenEvent,
     PartyChangedEvent,
     ShadowAiChangedEvent,
     ShadowSavedEvent,
@@ -31,16 +36,29 @@ from trpg.world.calendar import day_of
 from trpg.world.common import world_map_of
 from trpg.world.companions import companion_defs, free_slots, wanted_companions
 from trpg.world.errors import WorldError
+from trpg.world.gear import worn_gear
 from trpg.world.narration import location_name_for
 from trpg.world.opening import HIRE_PANEL_ZH, opening_limits
-from trpg.world.party import hire_problem, party_mercenaries, season_boss_problem, slot_capped
+from trpg.world.party import (
+    hire_problem,
+    is_escort,
+    party_mercenaries,
+    season_boss_problem,
+    slot_capped,
+)
 from trpg.world.shadows import shadow_level, shadow_role_zh, shadow_tier
 from trpg.world.state import CharacterState, ShadowReport, ShadowSnapshot, WorldState
+from trpg.world.weapon_mix import hero_skills
 
 __all__ = [
     "ai_choice_views",
     "ai_zh",
     "allies_line",
+    "companion_face",
+    "duel_allies_line",
+    "duel_event_line",
+    "duel_line",
+    "lone_wolf_view",
     "my_shadow_view",
     "party_event_line",
     "party_view",
@@ -159,6 +177,28 @@ def _shadow_view(
     )
 
 
+def _escort_backstory(library: ContentLibrary, char: CharacterState, mercenary: str) -> str | None:
+    """開局帶來的護衛的來歷（OB-7，#154）；不是那一位時 ``None``。"""
+    table = library.world_mercenaries
+    if table is None or table.escort is None or not is_escort(library, char, mercenary):
+        return None
+    return table.escort.backstory_zh
+
+
+def companion_face(
+    library: ContentLibrary, companion: CompanionDef
+) -> tuple[NpcPortrait | None, str | None]:
+    """劇情夥伴的頭像與頭像框區域（PNL-4）：人設卡（``companion.npc``）的 ``portrait`` 與
+    那張卡所在的區（依區域 ID 排序找第一張；阿岳＝雲嶺）。找不到人設卡時 ``(None, None)``
+    （前端畫通用剪影）。"""
+    tables = library.world_event_content.npcs
+    for region in sorted(tables):
+        card = tables[region].npc_by_id().get(companion.npc)
+        if card is not None:
+            return card.portrait, region
+    return None, None
+
+
 def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberView]:
     builds = library.builds.by_id()
     members = [PartyMemberView(name_zh=char.hero.name_zh, title_zh="主角", level=char.level)]
@@ -169,6 +209,7 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
             level=char.level,
             mercenary=m.id,
             ai_zh=_ai_zh(library, char.party_ai.get(m.id), builds[m.build].hero.ai_profile),
+            backstory_zh=_escort_backstory(library, char, m.id),
         )
         for m in party_mercenaries(library, char)
     ]
@@ -182,17 +223,21 @@ def _members(library: ContentLibrary, char: CharacterState) -> list[PartyMemberV
         )
         for s in char.shadows
     ]
-    members += [
-        PartyMemberView(
-            name_zh=c.name_zh,
-            title_zh=f"{c.title_zh}・劇情夥伴",
-            level=char.level,
-            companion=c.id,
-            ai_zh=_ai_zh(library, None, c.ai_profile or builds[c.build].hero.ai_profile),
-            note_zh=COMPANION_NOTE_ZH,
+    for c in companion_defs(library, char):
+        portrait, region = companion_face(library, c)
+        members.append(
+            PartyMemberView(
+                name_zh=c.name_zh,
+                title_zh=f"{c.title_zh}・劇情夥伴",
+                level=char.level,
+                companion=c.id,
+                ai_zh=_ai_zh(library, None, c.ai_profile or builds[c.build].hero.ai_profile),
+                note_zh=COMPANION_NOTE_ZH,
+                backstory_zh=c.backstory_zh,
+                portrait=portrait,
+                region=region,
+            )
         )
-        for c in companion_defs(library, char)
-    ]
     return members
 
 
@@ -218,6 +263,45 @@ def _quest_name(library: ContentLibrary, quest: str) -> str | None:
     return None
 
 
+LONE_WOLF = "lone_wolf"
+
+
+def _lone_wolf_skills(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    generated = {s.id: s for s in char.generated_skills}
+    names: list[str] = []
+    for skill_id in hero_skills(library, char):
+        skill = generated.get(skill_id) or library.skills.get(skill_id)
+        if skill is not None and LONE_WOLF in sticky_kinds(skill):
+            names.append(skill.name_zh)
+    return tuple(names)
+
+
+def _lone_wolf_affixes(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
+    found: list[str] = []
+    for item in worn_gear(library, char).values():
+        for roll in item.affixes:
+            affix = library.affixes.get(roll.affix)
+            if not isinstance(affix, ConditionalAffix):
+                continue
+            if any(part.type == LONE_WOLF for part in affix.condition.alternatives()):
+                # 「獨行的：獨狼時…」只取詞條名
+                short = affix_text(affix, roll.value).split("：", 1)[0]
+                found.append(f"{item.name_zh}的「{short}」")
+    return tuple(found)
+
+
+def lone_wolf_view(
+    library: ContentLibrary, char: CharacterState, members: int
+) -> LoneWolfView | None:
+    """出城前的獨狼提示（LW-2，06 6.37）：角色帶獨狼條件的技能或詞條時才有；``members`` 是隊伍
+    面板的人數（含主角），只有主角＝成立。"""
+    skills = _lone_wolf_skills(library, char)
+    affixes = _lone_wolf_affixes(library, char)
+    if not skills and not affixes:
+        return None
+    return LoneWolfView(ok=members == 1, skills_zh=skills, affixes_zh=affixes)
+
+
 def party_view(
     library: ContentLibrary,
     world: WorldState,
@@ -233,8 +317,9 @@ def party_view(
     table = library.world_mercenaries
     roster = () if table is None else table.mercenaries
     boss = season_boss_problem(char)
+    members = tuple(_members(library, char))
     return PartyView(
-        members=tuple(_members(library, char)),
+        members=members,
         max_hired=0 if table is None else table.max_hired,
         can_hire=problem is None,
         hire_problem_zh=problem,
@@ -250,6 +335,7 @@ def party_view(
         season_boss_zh=boss,
         free_slots=free_slots(library, char),
         companion_zh=companion_line(library, char),
+        lone_wolf=lone_wolf_view(library, char, len(members)),
     )
 
 
@@ -318,6 +404,29 @@ def allies_line(library: ContentLibrary, char: CharacterState, hero_hp: int) -> 
     if names:
         return f"{hero}＋{'、'.join(names)}"
     return f"{hero}・{SOLO_ZH}"
+
+
+def duel_allies_line(char: CharacterState, hero_hp: int) -> str:
+    """精英單挑（RG-2）接受後的我方說明：只有主角上場，隊友在外面等。"""
+    return f"主角（開場 HP {hero_hp}{'，疲憊' if char.fatigued else ''}）・一對一，隊友在外面等"
+
+
+def duel_line(duel: str | None, elite_zh: str) -> str | None:
+    """遇敵面板的單挑說明（RG-2，#162）；沒有提出單挑＝``None``。"""
+    if duel == "offered":
+        return f"{elite_zh}要求一對一：接受＝只有你和它，拒絕＝照原本全隊打；兩邊獎勵一樣。"
+    if duel == "accepted":
+        return f"接受了{elite_zh}的單挑：隊友與其他敵人都不上場，獎勵照整場算。"
+    if duel == "declined":
+        return f"拒絕了{elite_zh}的單挑：照原本全隊打。"
+    return None
+
+
+def duel_event_line(event: WorldEvent) -> str | None:
+    """``duel_chosen`` 的句子（RG-2）。"""
+    if not isinstance(event, DuelChosenEvent):
+        return None
+    return "接受單挑：一對一，隊友在外面等。" if event.accepted else "拒絕單挑：照原本全隊打。"
 
 
 def _companion_event_line(

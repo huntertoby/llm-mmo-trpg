@@ -91,6 +91,9 @@ class Recorder:
         return Generators(flash=self.flash, story=self.story, offer=self.offer)
 
 
+FLASHABLE = "skill_frost_shackle"  # FL-1a：hero.skills[0] 戰歌已沒有閃現選項（蓄力不再只多冷卻）
+
+
 def _town_char(library: ContentLibrary, character_id: str = "alice") -> CharacterState:
     char = new_character(library, character_id, hero(library), region="cloud_ridge")
     flash = {s: acquire(s).model_copy(update={"used": True}) for s in char.hero.skills}
@@ -246,7 +249,7 @@ def test_store_logs_sources_and_replays_without_llm(
         return offer_gen(lib, request)
 
     store.pregen = WorldPregen(Generators(flash=flash, offer=offer), enabled=lambda: True)
-    skill = town.hero.skills[0]
+    skill = FLASHABLE
     start = store.world()
     try:
         store.character("c1")
@@ -280,7 +283,7 @@ def test_store_without_pregen_still_records_fallback(
 ) -> None:
     """模型關閉（沒有預先生成）：照常可以玩，日誌記下降級的來源。"""
     store = _store(library, tmp_path, _town_char(library, "c1"))
-    skill = store.character("c1").hero.skills[0]
+    skill = FLASHABLE
     outcome = store.act("c1", FlashAction(skill=skill))
     assert outcome.char.pending_flash is not None
     (entry,) = store.entries()

@@ -28,6 +28,7 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
+from trpg.engine.ai.parts import circle_back_extra, guard_back_extra, silent_behind_extra
 from trpg.engine.ai.weapon_range import (
     best_distance,
     damage_permille_at,
@@ -37,13 +38,17 @@ from trpg.engine.ai.weapon_range import (
 from trpg.engine.ai.zone import hostile_zone_at
 from trpg.engine.effects.world import unit_push_block
 from trpg.engine.formation import formation_permille
-from trpg.engine.ids import BOSS_TAG
+from trpg.engine.ids import BOSS_TAG, SHIELD_GUARD
 from trpg.engine.preview import Preview
 from trpg.engine.rules.combat import (
     HALF_COVER,
     attack_problem,
     cover_object_between,
+    guard_between,
+    guard_blocks,
     is_concealed,
+    is_height_limited,
+    protects_ranged,
 )
 from trpg.engine.rules.facing import FACING_VECTORS, facing_between, is_behind
 from trpg.engine.rules.geometry import (
@@ -319,7 +324,9 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
         )
         value -= w.keep_distance * close
     if w.cover:
-        value += w.cover * _covered_from(state, xy, enemies)
+        value += w.cover * _covered_from(state, unit, xy, enemies)
+    if w.screen and unit.has_tag(SHIELD_GUARD):  # 盾兵（RG-1）：站到遠程同伴前面
+        value += w.screen * _screened_allies(state, unit, xy, enemies)
     if w.exposed:
         value -= w.exposed * _outgunned_by(state, unit, enemies)
     if w.flank:
@@ -406,8 +413,13 @@ def _facing_terms(
 ) -> int:
     """位置價值中與朝向有關的部分（Phase 3D-8d，敵我同一套）：近戰單位站在相鄰敵人的背後格
     （背刺位置）加分；背對相鄰的近戰敵人扣分——結束移動時的朝向以「面向最近的敵人」近似
-    （同距離取 ID 較小者），背後格站著近戰敵人時扣 ``back_exposed``。"""
-    value = 0
+    （同距離取 ID 較小者），背後格站著近戰敵人時扣 ``back_exposed``；有部位的頭目背後部位快破時
+    再多扣 ``guard_back_bonus``（PB-1b，:func:`~trpg.engine.ai.parts.guard_back_extra`）；玩家方近戰
+    站在「背後有能打的部位」的頭目背後格加 ``circle_back_bonus``（PB-1b2 繞背，
+    :func:`~trpg.engine.ai.parts.circle_back_extra`）。"""
+    value = circle_back_extra(unit, w, enemies) if w.circle_back_bonus else 0
+    if w.silent_behind:  # BS-1：無聲留背
+        value += silent_behind_extra(state, unit, w, enemies)
     if w.backstab and unit.weapon.is_melee:
         value += w.backstab * sum(
             1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)
@@ -419,7 +431,7 @@ def _facing_terms(
             dx, dy = FACING_VECTORS[facing]
             back = state.unit_at(unit.xy[0] - dx, unit.xy[1] - dy)
             if back is not None and back.team is not unit.team and back.weapon.is_melee:
-                value -= w.back_exposed
+                value -= w.back_exposed + guard_back_extra(unit, w)  # 背後部位快破（PB-1b）
     return value
 
 
@@ -494,19 +506,53 @@ def _outgunned_by(state: BattleState, unit: UnitState, enemies: list[UnitState])
     return len(_outgunners(state, unit, enemies))
 
 
-def _covered_from(state: BattleState, xy: XY, enemies: list[UnitState]) -> int:
+def _covered_from(state: BattleState, unit: UnitState, xy: XY, enemies: list[UnitState]) -> int:
     """在射程內看得到 ``xy``、且從其位置看過來 ``xy`` 受到半掩護的敵人數。
 
     射程外的敵人不算：掩護只在對方打得到自己時才有意義。否則雙方各躲在掩護後、彼此都在射程外時，
     離開掩護的扣分會壓過 ``approach`` 的收益，造成永遠不接近的僵局（``lava_crossing`` 種子 19）。
+
+    盾兵掩護（RG-1）也算：``unit`` 是遠程、同陣營的盾兵擋在那個敵人那一側（只對遠程敵人）。
     """
+    guarded = state.ruleset.core.shield_guard_hit_penalty > 0 and protects_ranged(state, unit)
     return sum(
         1
         for e in enemies
         if manhattan(e.xy, xy) <= e.weapon.range
-        and cover_object_between(state, e.xy, xy) is not None
+        and (
+            cover_object_between(state, e.xy, xy) is not None
+            or (
+                guarded
+                and not is_height_limited(state, e)
+                and guard_between(state, e.xy, unit, at=xy) is not None
+            )
+        )
         and has_line_of_sight(state, e.xy, xy, lob=e.weapon.lob, viewer=e)
     )
+
+
+def _screened_allies(state: BattleState, unit: UnitState, xy: XY, enemies: list[UnitState]) -> int:
+    """盾兵（RG-1，#162）站在 ``xy`` 時替幾名相鄰的遠程同伴擋住至少一名打得到他們的遠程敵人
+    （幾何同 :func:`~trpg.engine.rules.combat.guard_blocks`；同伴以 ``state`` 的位置為準）。"""
+    if state.ruleset.core.shield_guard_hit_penalty <= 0:
+        return 0
+    shooters = [e for e in enemies if not is_height_limited(state, e)]
+    count = 0
+    for ally in state.units_sorted():
+        if (
+            ally.id == unit.id
+            or not ally.alive
+            or ally.team is not unit.team
+            or manhattan(ally.xy, xy) != 1
+            or not protects_ranged(state, ally)
+        ):
+            continue
+        if any(
+            manhattan(e.xy, ally.xy) <= e.weapon.range and guard_blocks(state, e.xy, ally.xy, xy)
+            for e in shooters
+        ):
+            count += 1
+    return count
 
 
 def _in_cover(state: BattleState, unit: UnitState) -> bool:

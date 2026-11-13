@@ -21,9 +21,9 @@ const MODE = params.get("mode") ?? "cards";
 const ONLY = params.get("only")?.split(",") ?? null;
 
 const SOLUTIONS: WorldEventView["solutions"] = [
-  { index: 0, kind: "situation", kind_zh: "情境判定", note_zh: "查看四周", attributes_zh: "感知", template: "inspect", available: true, cost_supplies: 0, can_pay: true },
-  { index: 1, kind: "combat", kind_zh: "戰鬥", note_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
-  { index: 2, kind: "abandon", kind_zh: "放棄", note_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
+  { index: 0, kind: "situation", kind_zh: "情境判定", note_zh: "查看四周", hint_zh: "", attributes_zh: "感知", template: "inspect", available: true, cost_supplies: 0, can_pay: true },
+  { index: 1, kind: "combat", kind_zh: "戰鬥", note_zh: "", hint_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
+  { index: 2, kind: "abandon", kind_zh: "放棄", note_zh: "", hint_zh: "", attributes_zh: "", template: null, available: true, cost_supplies: 0, can_pay: true },
 ];
 
 const LOCATION_ZH: Readonly<Record<string, string>> = { ashen_waste: "灰燼荒原・焦土道", capital: "主城・樞島" };

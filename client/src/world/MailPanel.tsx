@@ -5,7 +5,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MailActionResponse, MailLetter, MailQuote, MailRecipient, MailSend, MailView, WorldBagItem, WorldInventory } from "../api/types";
 import { GearIcon } from "../ui/GearIcon";
+import { ItemIcon } from "../ui/ItemIcon";
+import { hasItemIcon } from "../render/itemIcon";
 import { Hint } from "../ui/Hint";
+import { isSubmitEnter } from "../ui/imeEnter";
 import "./mail.css";
 import { addToDraft, countValue, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, setDraftCount, slotsUsed, tabSay, type MailDraft, type MailTab } from "./mailModel";
 import { Portrait } from "./StoryIcons";
@@ -52,14 +55,20 @@ function gearCard(inventory: WorldInventory | null, id: string) {
 }
 
 /**
- * 背包或附件的一格：裝備用裝備圖示，其他是名稱與個數的小牌。小牌的高度和裝備圖示格對齊（6T-1c，美術 PM 決定 B；
- * 過渡做法：G10 物品圖示移植後換成物品圖示）。`noCount`：附件格裡個數另用數量框顯示。
+ * 背包或附件的一格：裝備用裝備圖示，物品用 Q 版物品圖示（QI-7；32、背包框），都沒有（表裡沒有的物品、沒有裝備卡的裝備）時退回金色小方塊；
+ * 名稱與個數照舊。小牌的高度和裝備圖示格對齊（6T-1c，美術 PM 決定 B）。`noCount`：附件格裡個數另用數量框顯示。
  */
 function Thing({ row, count, inventory, dim, tag, noCount }: { row: WorldBagItem; count?: number; inventory: WorldInventory | null; dim?: boolean; tag?: string | null; noCount?: boolean }) {
   const gear = row.gear === true ? gearCard(inventory, row.item) : null;
   return (
     <span className={`mail-thing${dim === true ? " dim" : ""}${row.gear === true ? " gear" : ""}`} data-thing={row.item}>
-      {gear !== null ? <GearIcon look={gear.item.appearance} slot={gear.slot} size={32} label={gear.item.name_zh} /> : <span className="mail-thing-mark" aria-hidden="true" />}
+      {gear !== null ? (
+        <GearIcon look={gear.item.appearance} slot={gear.slot} size={32} label={gear.item.name_zh} />
+      ) : row.gear !== true && hasItemIcon(row.item, row.color) ? (
+        <ItemIcon id={row.item} size={32} frame="bag" color={row.color} rare={row.rare} />
+      ) : (
+        <span className="mail-thing-mark" aria-hidden="true" />
+      )}
       <span className="mail-thing-name">{row.name_zh}</span>
       {row.gear !== true && noCount !== true && <b className="mail-thing-count">×{count ?? row.count}</b>}
       {tag != null && <em className="mail-thing-tag" data-testid="mail-bound-tag">{tag}</em>}
@@ -100,7 +109,7 @@ function CountBox({ row, count, busy, onCount }: { row: WorldBagItem; count: num
         }}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
+          if (isSubmitEnter(e)) commit();
         }}
         data-testid={`mail-count-input-${row.item}`}
       />
@@ -370,8 +379,8 @@ function LetterRow({ letter, returned, region, inventory, busy, onClaim, onRefus
       </div>
       <div className="mail-letter-things">
         {letter.items.map((i) => (
-          <span key={i.item} className="mail-thing mail-thing-chip">
-            <span className="mail-thing-mark" aria-hidden="true" />
+          <span key={i.item} className={`mail-thing mail-thing-chip${hasItemIcon(i.item, i.color) ? " has-icon" : ""}`}>
+            {hasItemIcon(i.item, i.color) ? <ItemIcon id={i.item} size={32} frame="bag" color={i.color} rare={i.rare} /> : <span className="mail-thing-mark" aria-hidden="true" />}
             <span className="mail-thing-name">{i.name_zh}</span>
             <b className="mail-thing-count">×{i.count}</b>
           </span>

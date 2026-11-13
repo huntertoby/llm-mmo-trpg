@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PreviewOut } from "../api/types";
-import { chainLines, costLine, damageText, outcomeText, percent, previewLines } from "./previewText";
+import { chainLines, costLine, damageText, outcomeText, partPreviewLines, percent, previewLines } from "./previewText";
 import { smallView } from "./testFixtures";
 import { unitNames } from "./units";
 
@@ -120,5 +120,44 @@ describe("chain preview", () => {
     const skipped = previewLines(p, names, view, true);
     expect(skipped.some((l) => l.includes("爆炸"))).toBe(false);
     expect(skipped).toContain("可能：a 單位3 倒下");
+  });
+});
+
+describe("PB-1c：選了部位的預覽行", () => {
+  const dmg = (seq: number, before: number | null, after: number | null) => ({
+    seq,
+    round: 1,
+    type: "part_damaged",
+    target_id: "unit_0003",
+    part_id: "whisk",
+    name_zh: "拂塵",
+    amount: before !== null && after !== null ? before - after : 3,
+    hp_before: before,
+    hp_after: after,
+  });
+  const broke = { seq: 9, round: 1, type: "part_broken", target_id: "unit_0003", part_id: "whisk", name_zh: "拂塵", effects: ["seal_skill"] };
+  const with_ = (low: unknown[], high: unknown[]) => ({ ...base, min_events: low, max_events: high }) as unknown as PreviewOut;
+
+  it("最少、最多相同：「拂塵還剩 12」", () => {
+    expect(partPreviewLines(with_([dmg(1, 20, 12)], [dmg(1, 20, 12)]))).toEqual(["拂塵還剩 12"]);
+  });
+
+  it("最少、最多不同：「拂塵還剩 6～12」，接在總覽行後面", () => {
+    const p = with_([dmg(1, 20, 12)], [dmg(1, 20, 6)]);
+    expect(partPreviewLines(p)).toEqual(["拂塵還剩 6～12"]);
+    const lines = previewLines(p, names, view);
+    expect(lines[0]).toContain("命中");
+    expect(lines[1]).toBe("拂塵還剩 6～12");
+  });
+
+  it("最少的後果就會破：「會打破拂塵」；只有最多的會破：「拂塵還剩 0～12（可能打破）」", () => {
+    expect(partPreviewLines(with_([dmg(1, 5, 0), broke], [dmg(1, 5, 0), broke]))).toEqual(["會打破拂塵"]);
+    expect(partPreviewLines(with_([dmg(1, 20, 12)], [dmg(1, 20, 0), broke]))).toEqual(["拂塵還剩 0～12（可能打破）"]);
+  });
+
+  it("頭目資訊被隱藏（剩餘血量 null）或沒打部位時不寫", () => {
+    expect(partPreviewLines(with_([dmg(1, null, null)], [dmg(1, null, null)]))).toEqual([]);
+    expect(partPreviewLines(base)).toEqual([]);
+    expect(previewLines(base, names, view).some((l) => l.includes("還剩"))).toBe(false);
   });
 });

@@ -39,6 +39,14 @@ ENEMY_ONLY = frozenset(
         "skill_mist_rend",
         # BAL-21b 灰燼之心第 1 階段的熔岩濺落（取代 lava_spout；molten_lord 仍用 lava_spout）
         "skill_lava_splash",
+        # BAL-21c 碎晶之主第 3 階段的界隙閃擊（取代 AI 不放的 skill_blink）
+        "skill_rift_flicker",
+        # RG-1（#162）瞄準預告的強力一擊：雲鶴使、符籙師、噴岩龜
+        "skill_crane_piercing_shot",
+        "skill_binding_talisman",
+        "skill_lava_bomb",
+        # RG-2（#162）荒原狂戰士怒氣滿 4 層的強力一擊
+        "skill_berserker_fury_cleave",
     }
 )
 

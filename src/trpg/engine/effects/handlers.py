@@ -7,6 +7,7 @@ from dataclasses import replace
 from typing import NamedTuple
 
 from trpg.content.rule_changes import ELEMENT_HEALS_ALLIES
+from trpg.engine import part_breaks
 from trpg.engine.activations import active_rule_change
 from trpg.engine.context import Ctx
 from trpg.engine.effects.models import (
@@ -80,7 +81,7 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
-from trpg.engine.traps import detect_traps, queue_trap_entry
+from trpg.engine.traps import detect_traps, queue_trap_entry, trace_traps
 from trpg.engine.zones import note_unit_moved
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
 
@@ -201,6 +202,8 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
             scale_attr=effect.scale_attr,
         )
     ]
+    if effect.part_id is not None:  # 打部位（PB-1a）：部位扣同樣的數字，緊接在 damage_dealt 之後
+        events += part_breaks.damage_part(ctx, unit, effect.part_id, hp_before, effect.source_id)
     events += _redirect(ctx, unit, link, redirected, effect) + _share(ctx, unit, shares, effect)
     if cheated is not None:
         events += _cheat_death(
@@ -236,7 +239,10 @@ def _rolled_damage(
     rolls, exploded = _damage_rolls(ctx, effect)
     raw_permille = raw_damage_permille(sum(rolls), effect.flat, effect.scaled_permille)
     if effect.apply_element_mod:
-        mod_ppm = element_modifier_ppm(unit, effect.element, ctx.rules)
+        defender = (
+            unit if effect.part_id is None else part_breaks.element_view(unit, effect.part_id)
+        )
+        mod_ppm = element_modifier_ppm(defender, effect.element, ctx.rules)
     if effect.apply_weather:
         weather = weather_permille(ctx.state, effect.element)
     dealt = _dealt_permille(ctx, effect, unit) * formation // PERMILLE  # 虛弱、陣法
@@ -777,6 +783,7 @@ def arrive(
         queue_trap_entry(ctx, unit, dest)  # 進入敵方陷阱格（主動或強制移動；傳送不算）
     note_unit_moved(ctx, unit, (from_pos.x, from_pos.y), dest)  # 持續區域（Phase 3D-5）
     detect_traps(ctx, unit)  # 感知的常駐數值：自動看見附近的敵方陷阱（Phase 3H-1）
+    trace_traps(ctx, unit)  # 玩家方看到附近敵方陷阱的可疑痕跡（RG-2）
     min_drop = ctx.core.fall_damage_min_drop
     if (
         mode not in ("teleport", "teleported", "shadowstep")
@@ -845,7 +852,8 @@ def _status_blocked(ctx: Ctx, unit: UnitState, status_id: str) -> str | None:
 def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
     """施加狀態（重複施加時刷新持續時間，不疊加）。"""
     unit = ctx.state.units.get(effect.target_id)
-    if unit is None or not unit.alive:
+    # 部位破壞停掉的機制（PB-1a ``stop_mechanic``）：跳過、不發事件
+    if unit is None or not unit.alive or effect.status_id in unit.suppressed_statuses:
         return []
     events: list[EventBase] = []
     status_id = effect.status_id

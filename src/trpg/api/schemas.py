@@ -70,6 +70,7 @@ __all__ = [
     "PreviewOut",
     "ReviveOut",
     "RunOptionOut",
+    "SkillOffOut",
     "SkillReasons",
     "StatusChanceOut",
     "StepOut",
@@ -126,6 +127,24 @@ class SkillReasons(_ApiModel):
     """主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"""
 
     reasons: dict[str, str]
+
+
+class SkillOffOut(_ApiModel):
+    """主角一招帶「整場固定」條件、本場不成立的技能（LW-2，06 6.37「戰鬥中標灰」；
+    :mod:`trpg.api.condition_off`）。技能列與說明卡把它標灰並寫出原因；招照樣能不能用仍看
+    ``legal_actions``。"""
+
+    skill_id: str
+    conditions: tuple[str, ...]
+    """不成立的條件種類（例 ``lone_wolf``；排序）。"""
+    whole: bool
+    """``True``＝技能層級的條件（整招或整個被動不會生效）；``False``＝只有帶條件的那部分效果不會發動。"""
+    reason_zh: str
+    """原因（例「開戰時身邊有隊友，獨狼本場不成立」）。"""
+    effects: tuple[int, ...] = ()
+    """不會發動的第一段效果的位置（``skill.effects`` 的索引＝技能卡
+    ``stats.effects[].index``；BS-2，LW-2 驗收可修 2）：卡片上那幾個效果數字也標灰。
+    整招不生效或條件在修正規則、第二段上時可能是空的。"""
 
 
 class HeroCards(_ApiModel):
@@ -351,6 +370,13 @@ class ChargeOut(_ApiModel):
     anchored: bool | None = None
     """落在施放時選的格子（BAL-21a）：``pos`` 是那格、範圍不隨施放者移動；``False``／``None``＝以
     施放者為中心（可為 ``None`` 是為了讓前端型別保持選填）。"""
+    lock_target_id: UnitId | None = None
+    """瞄準預告（RG-1，#162）：被瞄準的單位（頭上畫「被瞄準」、施放者到他畫瞄準線）；``pos``／
+    ``tiles`` 是他目前的格子。不是瞄準時為 ``None``。"""
+    lock_blocker_id: UnitId | None = None
+    """瞄準預告（RG-3）：現在射出會被誰擋下（目標的隊友站在直線上，
+    :func:`trpg.engine.lock_on.lock_blocker`；前端在他身前斷線、後段改灰）。沒有人擋、不是瞄準、
+    或擋的人觀看者看不到資訊時為 ``None``。"""
     text: str
 
 
@@ -409,6 +435,28 @@ class FollowupOptionOut(_ApiModel):
 
     followup_target: FollowupTarget
     tiles: tuple[XY, ...]
+
+
+class PartOptionOut(_ApiModel):
+    """選部位小選單的一列（PB-1c；引擎 :func:`trpg.engine.parts.part_targets`）：能不能選、
+    不能的原因。"""
+
+    part_id: str
+    name_zh: str
+    ok: bool
+    reason_zh: str | None = None
+    """不能選的原因（繁體中文，例「要從背後近戰才打得到」）；能選時 ``None``。"""
+
+
+class PartActionOut(_ApiModel):
+    """一個「目標有部位」的合法單體動作（普攻或單體技能，PB-1c）與它的部位選項（依部位 ID）。
+    用 ``type``＋``skill_id``＋``target_id`` 對到 ``legal_actions`` 裡的動作；選了部位就在那個動作
+    帶上 ``target_part`` 送出，沒選＝打本體。"""
+
+    type: Literal["attack", "use_skill"]
+    skill_id: str | None = None
+    target_id: UnitId
+    options: tuple[PartOptionOut, ...]
 
 
 class BattleOutcome(_ApiModel):
@@ -474,6 +522,12 @@ class BattleResponse(_ApiModel):
     followup_options: tuple[FollowupOptionOut, ...] = ()
     """``pending.kind == "followup"``（Phase 3F-4a）時，複合技能（``pending.skill_id``）第二段
     從施放者目前位置所有合法的選取；其他時候為空。"""
+    part_options: tuple[PartActionOut, ...] | None = None
+    """輪到主角時，``legal_actions`` 裡目標有部位的普攻與單體技能各自的部位選項（PB-1c，
+    05 5.12.3）；沒有這種動作時為 ``None``。"""
+    skills_off: tuple[SkillOffOut, ...] | None = None
+    """主角帶「整場固定」條件（例獨狼）而本場不成立的技能（LW-2）；沒有時為 ``None``。不論是不是
+    主角的回合都給。"""
     """主角的反應詢問（只有公開欄位）。"""
     orders: OrderSet
     """我方隊友目前的戰術指令。"""
@@ -545,6 +599,9 @@ class CoverOut(_ApiModel):
     kind: str
     name_zh: str
     pos: XY
+    unit_id: UnitId | None = None
+    """盾兵掩護（RG-1 ``kind: shield_guard``）的盾兵、或塔盾詞條「盾陣」（RG-4 ``kind:
+    shield_formation``）的持盾隊友；物件或塔盾為 ``None``（RG-3：前端畫小盾與連結）。"""
 
 
 class HealOut(_ApiModel):
@@ -784,6 +841,11 @@ class PreviewOut(_ApiModel):
     """失手反噬 ``cost.on_miss`` 的說明（Phase 3D-7a，例「失手時：你獲得「倒地」」）。"""
     backstab: tuple[UnitId, ...] = ()
     """行動者會從背後攻擊的單位（Phase 3D-8d；命中率已含背刺加成，說明在 ``notes``）。"""
+    no_turn: tuple[UnitId, ...] | None = None
+    """被行動者近戰攻擊卻不會轉身的單位（BS-1，#157）；沒有時為 ``None``。和 ``backstab`` 一起時
+    顯示「背刺・無聲（不會轉身）」（說明已在 ``notes``）。"""
+    no_turn_reason: Literal["concealed", "silent"] | None = None
+    """``no_turn`` 的原因：``concealed`` 從隱蔽中出手、``silent`` 無聲（手持匕首類）。"""
     landing: XY | None = None
     """複合技能（Phase 3F-3a）：位移段的落點＝動作段的原點；其他動作為 ``None``。"""
     followup_tiles: tuple[XY, ...] = ()
@@ -797,16 +859,27 @@ class PreviewOut(_ApiModel):
     variant: PreviewVariantOut | None = None
     """這個目標點會生效的戰場變奏型態（Phase 3-25b）；沒有變奏成立為 ``None``（傷害、範圍等已是
     該型態的結果）。"""
+    strikes: int = 1
+    """技能的傷害效果打幾下（#153：拿雙匕首施放單體武器技為 2；DD-2）：``targets`` 的傷害已是
+    這幾下的合計（最少＝只中第一下，最多＝每下都暴擊）。普攻與其他動作為 1。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
+    """預覽的傷害。期望值夾在「最多」以內（DD-2 待決 3：雙匕首每下期望 × 下數、或目標 HP 擋住
+    最多時，引擎的期望值可能大於最多）：命中時的期望超過最多就當成最多，已乘命中率的期望照同一個
+    比例縮（＝最多 × 命中率）。只改顯示；引擎與 AI 的估值照舊（AI 另以目標 HP 夾住）。"""
     if d is None:
         return None
+    expected, if_hit = d.expected, d.expected_if_hit
+    cap = Fraction(d.maximum)
+    if if_hit > cap:
+        expected = expected * cap / if_hit
+        if_hit = cap
     return DamageOut(
         minimum=d.minimum,
         maximum=d.maximum,
-        expected_milli=_milli(d.expected),
-        expected_if_hit_milli=_milli(d.expected_if_hit),
+        expected_milli=_milli(min(expected, cap)),
+        expected_if_hit_milli=_milli(if_hit),
     )
 
 
@@ -897,6 +970,15 @@ def _hurl(h: HurlInfo) -> HurlOut:
     )
 
 
+def _no_turn_reason(reason: str | None) -> Literal["concealed", "silent"] | None:
+    """預覽的不轉身原因（BS-1）→ 回應的型別。"""
+    if reason == "concealed":
+        return "concealed"
+    if reason == "silent":
+        return "silent"
+    return None
+
+
 def _gamble(p: Preview) -> GambleOut | None:
     info = p.gamble
     if info is None:
@@ -946,6 +1028,7 @@ def preview_out(
                 kind=cover.kind,
                 name_zh=cover.name_zh,
                 pos=cover.pos,
+                unit_id=cover.unit_id,
             )
         ),
         notes=p.notes,
@@ -986,10 +1069,13 @@ def preview_out(
         gamble=_gamble(p),
         miss_notes=p.miss_notes,
         backstab=p.backstab,
+        no_turn=p.no_turn or None,
+        no_turn_reason=_no_turn_reason(p.no_turn_reason),
         landing=p.landing,
         followup_tiles=p.followup_tiles,
         followup_when=p.followup_when,
         oath_warning=p.oath_warning,
+        strikes=p.strikes,
         infusion=None
         if p.infusion is None
         else InfusionPreviewOut(

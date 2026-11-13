@@ -11,6 +11,8 @@ import type { ActionMode, SkillButton } from "../battle/targeting";
 import { gearSkillBadge } from "../battle/gearSkills";
 import { grantedBadge } from "../battle/granted";
 import { activeVariantCard, variantBadge } from "../battle/variants";
+import { conditionOffClass, conditionOffLabel } from "../battle/conditionOff";
+import { ConditionOffNote, NowOffNote } from "./ConditionOffNote";
 import { SkillCardView, type CardPin } from "./SkillCardView";
 import { SkillIconView } from "./SkillIconView";
 import { FloatCard, useFloatCard, type FloatApi } from "./useFloatCard";
@@ -147,8 +149,9 @@ function SkillSlot({
     <div className="skill-slot" {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}${variant?.glow === true && !blocked ? " variant-ready" : ""}`}
+        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}${variant?.glow === true && !blocked ? " variant-ready" : ""}${conditionOffClass(b.conditionOff)}`}
         data-variant={form?.id}
+        aria-label={b.conditionOff != null ? conditionOffLabel(b.name, b.conditionOff) : undefined}
         disabled={blocked && !reasoned}
         aria-disabled={blocked}
         onClick={() => (blocked ? onBlocked?.(b) : onSelect(b.skillId))}
@@ -176,8 +179,9 @@ function SkillSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
-          {b.disabledReason !== null && <div className="skill-card-reason">現在不能用：{b.disabledReason}</div>}
-          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} />
+          <NowOffNote reason={b.disabledReason} />
+          <ConditionOffNote mark={b.conditionOff} />
+          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>
       )}
     </div>
@@ -221,7 +225,7 @@ function RaceSlot({
           <div className="section-title">
             {race.name_zh}・{race.skill_name_zh}
           </div>
-          {reason !== undefined && <div className="skill-card-reason">現在不能用：{reason}</div>}
+          <NowOffNote reason={reason} />
           {raceBattleCardLines(race).map((line) => (
             <div key={line} className="small">
               {line}
@@ -254,8 +258,8 @@ function MiniSlot({
     <span className="skill-mini-wrap" {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-mini${selected || f.pinned ? " selected" : ""}`}
-        aria-label={b.name}
+        className={`skill-mini${selected || f.pinned ? " selected" : ""}${conditionOffClass(b.conditionOff)}`}
+        aria-label={conditionOffLabel(b.name, b.conditionOff)}
         aria-pressed={f.pinned}
         onClick={() => usable && onSelect(b.skillId)}
       >
@@ -263,7 +267,8 @@ function MiniSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
-          <SkillCardView card={card} compact pin={cardPin(f)} />
+          <ConditionOffNote mark={b.conditionOff} />
+          <SkillCardView card={card} compact pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>
       )}
     </span>

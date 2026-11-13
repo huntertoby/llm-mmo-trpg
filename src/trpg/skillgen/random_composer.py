@@ -666,6 +666,15 @@ def _relabel(skill: SkillDef, variant: int, seed: int) -> SkillDef:
     )
 
 
+_STACK_SKELETON = "builder_finisher"
+"""累積、消耗層數的骨架（KW-2：層數關鍵字指定時用）。"""
+
+
+def _is_stack_keyword(keyword: str, lib: ContentLibrary) -> bool:
+    """關鍵字 ID 就是組合器會抽的層數 ID（KW-1／KW-2：連擊、怒氣、專注、氣）。"""
+    return any(s.id == keyword and s.composer for s in lib.ruleset.stacks.stacks)
+
+
 def _compose_with_keyword(
     seed: int,
     keyword: str,
@@ -685,6 +694,10 @@ def _compose_with_keyword(
         raise ComposeError(f"未知的關鍵字 {keyword!r}（可用：{'、'.join(lib.keywords.ids())}）")
     if not lib.keywords.by_id()[keyword].composable:
         raise ComposeError(f"組合器做不出關鍵字 {keyword} 的技能（該關鍵字需要手寫技能）")
+    if kwargs.get("skeleton") is None and _is_stack_keyword(keyword, lib):
+        # KW-2（#161）：層數關鍵字只有蓄力骨架做得出來（累積或消耗層數），不指定骨架時固定用它；
+        # 這四個關鍵字 KW-2 前組合器不做，所以既有關鍵字的結果不變
+        kwargs = {**kwargs, "skeleton": _STACK_SKELETON}
     limit = min(tries, KEYWORD_TRIES)
     for index in range(limit):
         variant = seed + index * _VARIANT_STEP

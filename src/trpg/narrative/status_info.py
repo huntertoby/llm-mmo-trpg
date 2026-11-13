@@ -230,7 +230,7 @@ def stack_gain_text(stack: StackDef) -> str:
             when = f"你的{rule.element.display_name}傷害命中時"
         else:
             when = _GAIN_WHEN[rule.when]
-        parts.append(f"{when} +{rule.amount} 層")
+        parts.append(f"{when} +{rule.amount} {stack.unit_zh}")
     if not parts:
         return ""
     where = "疊在被命中的敵人身上" if stack.owner == "target" else "累積在你身上"
@@ -241,18 +241,20 @@ def _consumer_line(stack: StackDef, library: ContentLibrary) -> str:
     consumer = stack.consumer
     if consumer is None:
         return ""
-    line = f"消耗：技能每層提高{consumer.boost_names()}"
+    unit = stack.unit_zh  # RG-5b：連擊點用「點」，其他「層」
+    line = f"消耗：技能每{unit}提高{consumer.boost_names()}"
     if consumer.requires_any:
         line += f"（限{'、'.join(consumer.requirement_names(library.ruleset))}的技能）"
     if stack.auto_consume is not None:
         per = stack.auto_consume.per_stack_permille / 10
-        line += f"；你下一個造成傷害的主動技能會自動消耗全部層數，每層傷害 +{per:g}%"
+        line += f"；你下一個造成傷害的主動技能會自動消耗全部{unit}數，每{unit}傷害 +{per:g}%"
     return line
 
 
 def stack_rules(stack: StackDef, library: ContentLibrary) -> tuple[str, ...]:
     """層數的規則句（清單 5.5～5.7）：上限依來源、清空時機、超載。"""
-    lines = [f"上限依來源（技能卡與裝備詞條各自寫明；最多 {stack.max} 層）"]
+    unit = stack.unit_zh  # RG-5b（玩法PM交接 4.1.7 第 3 條）：連擊點用「點」，其他「層」
+    lines = [f"上限依來源（技能卡與裝備詞條各自寫明；最多 {stack.max} {unit}）"]
     gain = stack_gain_text(stack)
     if gain:
         lines.append(gain)
@@ -275,7 +277,7 @@ def stack_rules(stack: StackDef, library: ContentLibrary) -> tuple[str, ...]:
                 backlash.append(f"獲得「{library.ruleset.status_def(sub.status).name_zh}」")
         per = overload.per_stack_damage_permille / 10
         lines.append(
-            f"超載：每層讓你帶「{tag}」標籤的技能傷害 +{per:g}%；"
-            f"累積到 {overload.threshold} 層時你{'、'.join(backlash)}並清空層數"
+            f"超載：每{unit}讓你帶「{tag}」標籤的技能傷害 +{per:g}%；"
+            f"累積到 {overload.threshold} {unit}時你{'、'.join(backlash)}並清空{unit}數"
         )
     return tuple(lines)

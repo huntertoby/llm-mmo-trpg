@@ -8,6 +8,7 @@ from trpg.content.battle import ReactionRule, ReactionWhen, UnitTemplate, Weapon
 from trpg.content.enemy_looks import ordinary_enemy_doll
 from trpg.content.equipment import Loadout
 from trpg.content.library import Ruleset
+from trpg.content.parts import opening_part_hp
 from trpg.content.skills import GRANT_SKILL
 from trpg.engine.context import Ctx
 from trpg.engine.events import (
@@ -398,4 +399,6 @@ def make_unit(
         ),  # QK-6a：一般敵人依 id 挑外觀（純顯示）
         race=template.race,
         phases=template.phases,
+        parts=template.parts,
+        part_hp=opening_part_hp(template.parts, max_hp),  # 開場當下的最大 HP（之後不重算）
     )

@@ -9,6 +9,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from trpg.api.tuning.objects import concrete_fields
 from trpg.api.tuning.yaml_patch import MISSING, PatchError, lookup, patch_text
 from trpg.content.loader import bundled_content_dir, parse_yaml
 from trpg.content.tuning_fields import (
@@ -22,7 +23,8 @@ CONTENT = bundled_content_dir()
 
 
 def _concrete_cases() -> list[tuple[str, tuple[PathPart, ...]]]:
-    """每個單位檔 × 每個白名單欄位（``phases[*]`` 展開成有 HP 門檻的階段）。"""
+    """每個單位檔 × 每個白名單欄位（``phases[*]`` 展開成有 HP 門檻的階段；PB-1n 起 ``parts[*]``
+    展開成頭目的每個部位，同數值工坊的 :func:`concrete_fields`）。"""
     table = load_tuning_fields(CONTENT)
     unit = table.target("unit")
     assert unit is not None
@@ -30,14 +32,10 @@ def _concrete_cases() -> list[tuple[str, tuple[PathPart, ...]]]:
     for path in target_files(CONTENT, unit):
         data = parse_yaml(path.read_text(encoding="utf-8"))
         rel = path.relative_to(CONTENT).as_posix()
-        for field in unit.fields:
-            parts = parse_path(field.path)
-            if "*" not in parts:
-                cases.append((rel, parts))
+        for field, concrete, _label in concrete_fields(data, unit):
+            if field.kind not in ("int", "permille"):  # 招式組（NW-2a）另測
                 continue
-            for i, phase in enumerate(data.get("phases") or ()):
-                if (phase.get("trigger") or {}).get("kind") == "hp_below":
-                    cases.append((rel, tuple(i if p == "*" else p for p in parts)))
+            cases.append((rel, parse_path(concrete)))
     return cases
 
 
@@ -62,6 +60,11 @@ def test_cases_cover_every_unit_and_the_phase_thresholds() -> None:
     assert len({rel for rel, _ in CASES}) > 50
     assert ("units/ashen_heart.yaml", ("phases", 1, "trigger", "permille")) in CASES
     assert ("units/ashen_heart.yaml", ("max_hp",)) in CASES
+    mist = "units/sect_mist_lock_master.yaml"
+    assert (mist, ("parts", 0, "hp_permille")) in CASES  # PB-1n：流式部位
+    assert (mist, ("parts", 1, "armor_bonus")) in CASES  # 區塊式部位、沒寫（插入）
+    assert (mist, ("parts", 2, "on_break", 0, "amount")) in CASES
+    assert (mist, ("parts", 0, "on_break", 0, "amount")) not in CASES  # 封招沒有數量
 
 
 @settings(max_examples=300, deadline=None)

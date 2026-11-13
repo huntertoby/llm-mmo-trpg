@@ -239,13 +239,17 @@ def propose_requests(
     """``count`` 個題目與各自的種子：沒指定的稀有度、骨架、關鍵字依 ``seed`` 確定性輪替
     （稀有度依序輪流；骨架半數不指定；關鍵字 0 或 1 個）。輪替出的題目先檢查可行
     （:func:`_feasible`），不可行就依種子換下一組（最多 :data:`ROTATION_TRIES` 組）；
-    稀有度、骨架、關鍵字都由參數指定的題目照跑。"""
-    keywords = library.keywords.ids()
-    unknown = [k for k in args.keywords if k not in keywords]
+    稀有度、骨架、關鍵字都由參數指定的題目照跑。
+
+    輪替只抽開局會出現的關鍵字（``start_ids``；KW-1 的 ``start_hidden`` ＝池子補齊前不主動提供，
+    遊戲裡的三選一新方向也不出它們）；``--keywords`` 明確指定時全部關鍵字都接受。"""
+    known = library.keywords.ids()
+    unknown = [k for k in args.keywords if k not in known]
     if unknown:
-        raise ValueError(f"未知的關鍵字：{'、'.join(unknown)}（可用：{'、'.join(keywords)}）")
+        raise ValueError(f"未知的關鍵字：{'、'.join(unknown)}（可用：{'、'.join(known)}）")
     explicit = args.rarity is not None and args.skeleton is not None and bool(args.keywords)
-    return [_pick(library, args, keywords, index, explicit=explicit) for index in range(args.count)]
+    rotation = library.keywords.start_ids()
+    return [_pick(library, args, rotation, index, explicit=explicit) for index in range(args.count)]
 
 
 def _mock_client(

@@ -1,11 +1,13 @@
 // 戰鬥的主角狀態卡與單位小卡（Phase 6A-2，去文字化③；docs/archive/art/去文字化移植需求.md 第 3 節）：
 // 條（HP、法力、耐力）與一排「圖示＋數字」的資料。純函式，不碰 React；元件在 `StatusCardParts.tsx`、`Hud.tsx`、`UnitInfo.tsx`。
 // 說明卡文字一律用現有的句子（`actionCardText`、HUD 原本的提示、武器特性、狀態句……），第一行是「名稱 現值」。
-import type { BattleView, StatusView, UnitView } from "../api/types";
+import type { BattleView, SkillCard, StatusView, UnitView } from "../api/types";
 import { actionCardText } from "../battle/actionInfo";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { HIDDEN_INFO_HINT, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import { sourcePips } from "../battle/source";
+import { stackSkillNames } from "../battle/stackInfo";
+import { GAUGE_MAX, hasGauge } from "../render/qIcon/stackGauge";
 
 export type BarKind = "hp" | "mana" | "stamina";
 
@@ -206,6 +208,28 @@ export function activeStacks(unit: UnitView): [string, number][] {
   return Object.entries(unit.stacks)
     .filter(([, n]) => n > 0)
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/** HUD 的一個層數：`gauge`＝畫成格子計量（KW-3 的四種層數），否則照舊畫 `StackBadge`。 */
+export interface HudStack {
+  id: string;
+  count: number;
+  gauge: boolean;
+}
+
+/**
+ * 主角 HUD 的層數列（KW-3）：大於 0 的層數依 ID 排序；有計量的四種（連擊點、怒氣、專注、氣）在 0 層時，
+ * 主角有會累積或消耗它的技能（技能卡的 `stacks`，同說明框「你的技能」）才顯示空格，否則整條不顯示（開發 PM 決定）。
+ */
+export function hudStacks(unit: UnitView, cards: Readonly<Record<string, SkillCard | undefined>> = {}): HudStack[] {
+  const owned = unit.skills ?? [];
+  const ids = new Set(Object.keys(unit.stacks).filter((k) => (unit.stacks[k] ?? 0) > 0));
+  for (const id of Object.keys(GAUGE_MAX).sort()) {
+    if (ids.has(id)) continue;
+    const { makes, uses } = stackSkillNames(id, cards, owned);
+    if (makes.length + uses.length > 0) ids.add(id);
+  }
+  return [...ids].sort().map((id) => ({ id, count: unit.stacks[id] ?? 0, gauge: hasGauge(id) }));
 }
 
 /** 單位腳下的表面 ID；沒有表面時 `null`。 */

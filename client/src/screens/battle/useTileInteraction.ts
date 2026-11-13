@@ -1,9 +1,11 @@
 // 戰鬥畫面的格子互動（由 BattleScreen 抽出，Phase 3T-7）：滑過（預覽與資訊卡）、點擊（規則在 `battle/tileClick.ts`，
 // 這裡執行它回傳的動作）、浮動資訊卡顯示的內容（單位與地形區段、是否收合）。
 // 資訊卡的釘住／滑過寬限由 `ui/hoverCard.ts` 的控制器負責（6.5.1：格子資訊卡不能滑進，只能點擊釘住）。
+// PB-1c：點有部位的頭目時打開選部位小選單（`partMenu`）；按下滑鼠那一刻（`onBoardPointerDown`，捕獲階段，比選單的「點外面關」早）
+// 記下開著的選單目標，交給點擊規則判斷「再點同一個頭目＝本體」。
 
-import { useCallback, useState } from "react";
-import type { Action, BattleView, OrderSet, Pos, UnitView } from "../../api/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Action, BattleView, OrderSet, PartActionOptions, Pos, UnitView } from "../../api/types";
 import type { ClassifiedActions } from "../../battle/actions";
 import { posKey, samePos } from "../../battle/geometry";
 import { withOrder, type OrderKind } from "../../battle/orders";
@@ -17,6 +19,7 @@ import { decideTileClick } from "../../battle/tileClick";
 import type { UnitNames } from "../../battle/units";
 import { zoneLinesAt } from "../../battle/zones";
 import { type TileCardApi, useTileCard } from "../../ui/useTileCard";
+import { withTargetPart, type PartMenuState } from "../../ui/PartMenu";
 
 export function unitAt(view: BattleView, tile: Pos | null): UnitView | undefined {
   if (tile === null) return undefined;
@@ -39,6 +42,13 @@ export interface TileInteraction {
   /** 單位資訊卡是否把地形區段收合（「版面」面板的選項）。 */
   collapseTile: boolean;
   setCollapseTile(on: boolean): void;
+  /** 開著的選部位小選單（PB-1c）；沒開為 `null`。 */
+  partMenu: PartMenuState | null;
+  closePartMenu(): void;
+  /** 選單選了（`null`＝本體）：照原本的送出方式送出。 */
+  pickPart(part: string | null): void;
+  /** 掛在 `.battle-board` 的 `onPointerDownCapture`。 */
+  onBoardPointerDown(): void;
 }
 
 export interface TileClickContext {
@@ -63,6 +73,8 @@ export interface TileClickContext {
   decideCopy(pick: Action | null): void;
   issueOrders(orders: OrderSet): void;
   setHint(text: string): void;
+  /** 伺服器的 `part_options`（PB-1c）。 */
+  partActions?: readonly PartActionOptions[] | null;
 }
 
 export function useTileInteraction(c: TileClickContext): TileInteraction {
@@ -71,14 +83,45 @@ export function useTileInteraction(c: TileClickContext): TileInteraction {
   const [collapseTile, setCollapseTileState] = useState<boolean>(loadTileCollapse);
   const { view, shown, hero, canAct, copying, canOrder, orderPick, command, mode, hurlPick, classified } = c;
   const { act, decideCopy, issueOrders, setCommand, setHurlPick, setHint, orders } = c;
+  const partActions = c.partActions ?? null;
+  const [partMenu, setPartMenu] = useState<PartMenuState | null>(null);
+  const partMenuRef = useRef<PartMenuState | null>(null);
+  partMenuRef.current = partMenu;
+  /** 按下滑鼠那一刻開著的選單目標（PB-1c）。 */
+  const menuAtDown = useRef<string | null>(null);
+  const closePartMenu = useCallback(() => setPartMenu(null), []);
+  // 回應、選取模式換了（換人、送出、取消瞄準）就關掉選單
+  useEffect(() => setPartMenu(null), [view, mode, canAct]);
+  const onBoardPointerDown = useCallback(() => {
+    menuAtDown.current = partMenuRef.current?.targetId ?? null;
+  }, []);
+  const send = useCallback(
+    (action: Action, submit: boolean) => {
+      if (submit && copying) decideCopy(action);
+      else act(action);
+    },
+    [act, copying, decideCopy],
+  );
+  const pickPart = useCallback(
+    (part: string | null) => {
+      const m = partMenuRef.current;
+      if (m === null) return;
+      setPartMenu(null);
+      if (m.dismissPin) tileCard.ctl.dismiss();
+      send(withTargetPart(m.action, part), m.submit);
+    },
+    [send, tileCard],
+  );
 
   const onTileClick = useCallback(
     (tile: Pos, shift: boolean) => {
       // 規則在 battle/tileClick.ts（純函式、有表格測試）；這裡只執行它回傳的動作。
       // 資訊卡釘住（3-40，使用者選 C）：沒有動作的格子左鍵點就釘；已釘住時點同一格取消；有動作的點擊照常行動並關掉釘住的卡。
       const pin = tileCard.ctl;
+      const partMenuTarget = menuAtDown.current;
+      menuAtDown.current = null;
       const result = decideTileClick(
-        { shift, pinned: pin.pinned, view, hero, canAct, copying, canOrder, orderPick, command, mode, hurlPick, classified },
+        { shift, pinned: pin.pinned, view, hero, canAct, copying, canOrder, orderPick, command, mode, hurlPick, classified, partActions, partMenuTarget },
         tile,
       );
       switch (result.kind) {
@@ -99,20 +142,23 @@ export function useTileInteraction(c: TileClickContext): TileInteraction {
         case "order":
           issueOrders(withOrder(orders, result.order));
           return;
+        case "part_menu":
+          setPartMenu({ targetId: result.targetId, tile: result.tile, action: result.action, options: result.options, submit: result.submit, dismissPin: result.dismissPin });
+          return;
         case "act":
         case "submit":
+          setPartMenu(null);
           if (result.dismissPin) pin.dismiss();
-          if (result.kind === "submit" && copying) decideCopy(result.action);
-          else act(result.action);
+          send(result.action, result.kind === "submit");
           return;
       }
     },
     [
-      act,
       canAct,
       command,
       copying,
-      decideCopy,
+      partActions,
+      send,
       canOrder,
       classified,
       hero,
@@ -165,5 +211,9 @@ export function useTileInteraction(c: TileClickContext): TileInteraction {
     hoverTexts,
     collapseTile,
     setCollapseTile,
+    partMenu,
+    closePartMenu,
+    pickPart,
+    onBoardPointerDown,
   };
 }

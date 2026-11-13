@@ -3,8 +3,8 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/12``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/9``（JSON Lines：第一行 ``{"format": "trpg-wlog/9"}``，之後一行一筆
+| 角色 | ``trpg-char/15``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/10``（JSON Lines：第一行 ``{"format": "trpg-wlog/10"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -87,6 +87,33 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 **Phase TR-1**（#134 開局在主城工坊靶場）：角色格式升成 ``trpg-char/12``（``opening``：未完成開局與
 起始技能的種子；``/11`` 以前照讀＝已完成開局）；新動作 ``opening_confirm``（日誌格式不變；靶場的
 沙盒試打不寫日誌）。:data:`WORLD_RULES_VERSION` 升成 22。
+
+**Phase LF-1**（LLM 閃現的名稱與描述）：閃現提議紀錄（``generated`` 裡的 ``FlashGen.record``）多
+選填欄位 ``texts``（LLM 的名稱與描述，依變化的鍵），格式升成 ``trpg-wlog/10``；空的時候不寫（沒有
+文字的那一行和 ``/9`` 逐字相同）。``trpg-wlog/7``～``/9`` **照讀**，寫回時標頭改成 ``/10``。角色存檔
+的變化歷程（``Variation``）多選填 ``name_zh``、``note_zh``，沒值時不輸出，``CHAR_FORMAT``
+不變（待 PM 決定）。:data:`WORLD_RULES_VERSION` 不變：舊日誌沒有文字，重播結果逐字相同。
+
+**Phase WP-1**（許願池）：新動作 ``wish``；``generated`` 多一種紀錄 ``WishGen``（LLM 對到的關鍵字與
+完整技能三選一；願望文字在動作裡），日誌格式不變（同動作 union 多一種的前例，待 PM 決定）。角色格式
+升 ``trpg-char/14``；:data:`WORLD_RULES_VERSION` 升成 28。
+
+**Phase RG-2**（精英單挑）：新動作 ``duel_choice``，日誌格式不變（同上，動作 union 多一種）。
+角色格式升 ``trpg-char/15``（``EncounterResult.duel``）；:data:`WORLD_RULES_VERSION` 升成 31。
+
+**Phase RG-4**（塔盾詞條「護陣」#163）：掉落算在持盾弟子、熔殼甲兵頭上時掉到的塔盾必帶護陣
+（:func:`trpg.world.loot.roll_loot` 的必帶詞條，資料在 ``world/loot.yaml``）。日誌、角色、世界格式都
+沒變；掉落的程式改了，:data:`WORLD_RULES_VERSION` 升成 32。
+
+**Phase RG-5**（#163 玩家大盾）：持盾弟子、熔殼甲兵掉的塔盾外觀一定是對應形制（雲紋碑盾、熔殼塔盾；
+``world/loot.yaml`` 的 ``signature_affixes.form``），詞條改名「盾陣」；盾兵與盾陣的高度條件統一成
+「攻擊者比被攻擊的人高 1 層以上無視」（戰鬥日誌 ``trpg-battle-log/124``）。日誌、角色、世界格式都
+沒變；掉落與戰鬥結算的程式改了，:data:`WORLD_RULES_VERSION` 升成 33。
+
+**Phase RG-5b**（玩法PM交接 4.1.7）：盾兵、盾陣、塔盾本體的高度條件照半掩護（掩護算 1 層高，攻擊者要
+高 2 層才無視；撤回 RG-5 的「高 1 層」），戰鬥日誌升 ``trpg-battle-log/125``。
+``trpg.world`` 的程式沒改，:data:`WORLD_RULES_VERSION` 維持 33：日誌規則鍵（:func:`log_rules_key`）
+本來就含戰鬥紀錄版號，``/124`` 的舊日誌照樣標成規則已變、不能重播。
 """
 
 from __future__ import annotations
@@ -139,17 +166,19 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/9"
-READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8"})
+WLOG_FORMAT: Final = "trpg-wlog/10"
+READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8", "trpg-wlog/9"})
 """照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``；6T-1a：``/8`` 只少了
-選填欄位 ``counterpart``、``counterpart_actor``）。"""
+選填欄位 ``counterpart``、``counterpart_actor``；LF-1：``/9`` 只少了閃現提議紀錄的選填欄位
+``texts``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 25
-# 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4）
+WORLD_RULES_VERSION: Final = 33
+# 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
+# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2；32＝RG-4；33＝RG-5）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -255,6 +284,32 @@ WORLD_RULES_VERSION: Final = 25
   結束的角色 4 級前不能閃現；④ 正式選定過的角色到 4 級時 ``opening`` 清成 ``None``（溶掉、傳承
   解鎖）；⑤ 略過配點教學之後換了地點會記一筆（``hints_seen``，再提示用）。``CHAR_FORMAT``、
   ``trpg-wlog`` 不變（沒有新的存檔欄位；新動作只是 union 增項，舊日誌沒有這種紀錄）。
+- 26（DD-1，#153）：引擎的雙匕首單體武器技改打兩下（戰鬥紀錄 ``trpg-battle-log/116``）。世界的程式
+  沒有改；世界日誌的規則鍵本來就含 ``LOG_FORMAT``，照開發 PM 的派工一併加一。同一份 25 的日誌只要
+  有拿雙匕首施放單體武器技的戰鬥，重播結果就不同。``CHAR_FORMAT``、``trpg-wlog`` 不變。
+- 27（OB-7，#154）：① 任務的 ``companion_after``：劇情夥伴等那一步完成才加入（阿岳在新手第 1 步打完
+  才入隊，原本接任務就加入）；② ``hire`` 之後開局的護衛不在隊上時記劇情旗標 ``escort_parted``
+  （隊伍面板的來歷只給開局帶來的那一位）。開局只帶賽倫是內容（``default_party``）。``CHAR_FORMAT``、
+  ``trpg-wlog`` 不變。
+- 28（WP-1，07 7.6、#88）：新動作 ``wish``（主城的許願池：扣任務幣、每週次數、完整技能三選一）；
+  許願池的三選一都不拿時退還任務幣（``offer_pick`` 不帶 ``pick``）。``CHAR_FORMAT`` 升
+  ``trpg-char/14``（``wish_week``、``PendingOffer.refund``）；
+  ``trpg-wlog`` 不變（``generated`` 多一種
+  紀錄 ``wish``，同動作 union 多一種的前例）。
+- 29（RR-1，06 6.34.9「重推套不上的那一筆」）：升階重配時，閃過的技能照新階級套不上的那一筆記下
+  升階前的定義（``FlashRecord.kept``），重推照它保留；以前整條重推失敗就重配存著的定義。套不上的
+  那一筆在歷程中間時，升階後的數值與之後的閃現、重閃選項都會不同。``CHAR_FORMAT`` 不升（只多了
+  選填、沒有時不輸出的欄位，舊存檔逐字不變）。
+- 30（RR-2c，06 6.34.3「重閃也一樣」＋#160）：重閃多一道整招篩選（重閃後整招的預算分數不低於
+  現在的卡），篩完一個都不剩的格子才改出較弱的候選（取代 RR-2 的判定）。日誌重播時重閃會重新出題
+  （``make_offer``），舊日誌裡的重閃可能出不同的選項、``flash_pick`` 的索引對到別的變化，所以舊日誌
+  標成規則已變。``CHAR_FORMAT`` 不升（``FlashOption.weaker`` 的意思改了，但 ``False`` 不輸出，
+  存檔欄位沒變）。
+- 31（RG-2，#162，09 9.6.6）：精英單挑——遇敵時陣容排最前的精英帶 ``duel: true`` 就提出一對一
+  （``EncounterResult.duel``），新動作 ``duel_choice``；接受時開戰只有主角對精英本人（組場改變），
+  獎勵照整個陣容（掉材料的成員改成整個敵方陣容）。另外戰鬥紀錄 ``trpg-battle-log/121``（敵方陷阱的
+  可疑痕跡；第一季沒有會放陷阱的敵人，世界戰鬥的結果不變）。``CHAR_FORMAT`` 升 ``trpg-char/15``
+  （``EncounterResult.duel``，``None`` 不輸出）；``trpg-wlog`` 不變（動作 union 多一種的前例）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

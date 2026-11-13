@@ -26,7 +26,11 @@ from tests.engine.helpers import (
 from tests.engine.skill_helpers import FLAT7, SID, U1, U2, battle, hit_with, of
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import loadout_held
-from trpg.content.keyword_derive import skill_condition_specs
+from trpg.content.keyword_derive import (
+    AFFINITY_BY_CONDITION,
+    affinity_weapons,
+    skill_condition_specs,
+)
 from trpg.content.library import gear_class_problem, gear_reference_problems, unit_skill_problems
 from trpg.content.skills import (
     CASTER_CONDITIONS,
@@ -209,11 +213,25 @@ def test_each_new_weapon_has_two_or_three_affinity_skills() -> None:
     wanted = ["fist", "scythe", "whip", "arcane_blade", "round_shield", "tower_shield"]
     wanted += ["tome", "orb", "dual_dagger", "shotgun", "pistol", "dual_pistol"]
     count = dict.fromkeys(wanted, 0)
-    for skill in _skills_with_affinity():
-        for cond in skill_condition_specs(skill):
-            if cond.type == "wielding_weapon" and cond.weapon in count:
-                count[cond.weapon] += 1
+    for skill in LIB.skills.values():
+        for weapon in affinity_weapons(skill):
+            if weapon in count:
+                count[weapon] += 1
     assert all(2 <= n <= 3 for n in count.values()), count
+
+
+def test_all_strikes_hit_counts_as_dual_dagger_affinity() -> None:
+    # 08 8.11（2026-11-13 玩法 PM）：「兩下都中」只有雙匕首打得出來，算作雙匕首親和
+    # （和「拿雙匕首時」同等）；之後別的武器也會打兩下時，改回明寫武器並拿掉這條對應。
+    assert AFFINITY_BY_CONDITION == {"all_strikes_hit": "dual_dagger"}
+    twin = LIB.skills["skill_twin_fang"]
+    kinds = {c.type for c in skill_condition_specs(twin)}
+    assert "all_strikes_hit" in kinds and "wielding_weapon" not in kinds
+    assert affinity_weapons(twin) == ("dual_dagger",)
+    blade = LIB.skills["skill_blade_dance"]  # 明寫「拿雙匕首時」的照舊
+    assert affinity_weapons(blade) == ("dual_dagger",)
+    dual = sorted(s.id for s in LIB.skills.values() if "dual_dagger" in affinity_weapons(s))
+    assert dual == ["skill_blade_dance", "skill_twin_fang"]
 
 
 # ---------------------------------------------------------------------------

@@ -93,6 +93,28 @@ def test_prompt_structure() -> None:
     assert prompt.schema_chars == proposal_subset.json_chars(prompt.json_schema)
 
 
+@pytest.mark.parametrize(
+    ("rarity", "skeleton"), [("rare", None), ("epic", None), ("legendary", None), ("rare", "combo")]
+)
+def test_prompt_never_offers_handwritten_or_enemy_only_conditions(
+    rarity: str, skeleton: str | None
+) -> None:
+    """BS-1 全量補修：``handwritten_only``（DD-3 ``all_strikes_hit``）與 ``enemy_only``（LW-1
+    ``self_lacks_status``）條件提議 schema 不收，題目子集與 ``<available>`` 也不能列。"""
+    rules = _lib().ruleset.conditions.conditions
+    banned = {c.id for c in rules if c.handwritten_only or c.enemy_only}
+    assert {"all_strikes_hit", "self_lacks_status"} <= banned
+    request = ProposalRequest(tier=1, rarity=rarity, skeleton=skeleton)  # type: ignore[arg-type]
+    prompt = build_proposal_prompt(_lib(), request)
+    assert prompt.subset.conditions, "這題應該有條件可選，否則測不到"
+    assert not banned & set(prompt.subset.conditions)
+    user = prompt.messages[1]["content"]
+    available = json.loads(html.unescape(user.split("<available>\n")[1].split("\n</available>")[0]))
+    assert not banned & {e["id"] for e in available.get("conditions", [])}
+    for cid in sorted(banned):
+        assert cid not in user
+
+
 def test_prompt_without_skeleton_omits_the_key() -> None:
     request = ProposalRequest(tier=1, rarity="rare")
     prompt = build_proposal_prompt(_lib(), request)

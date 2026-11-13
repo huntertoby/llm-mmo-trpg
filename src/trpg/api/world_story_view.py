@@ -282,6 +282,7 @@ def _solutions(
                 kind=solution.kind,
                 kind_zh=SOLUTION_KIND_ZH.get(solution.kind, solution.kind),
                 note_zh=solution.note_zh,
+                hint_zh=solution.hint_zh,
                 attributes_zh=_attrs_zh(attributes),
                 template=template.id if template is not None else None,
                 available=problem is None,
@@ -606,6 +607,17 @@ def _quest_text(defn: QuestDef, masks: Mapping[str, str]) -> tuple[str, str]:
     return mask_text(defn.name_zh, masks), mask_text(defn.summary_zh, masks)
 
 
+def split_step(text: str) -> tuple[str | None, str]:
+    """任務步驟拆成「地點｜要做的事」（PNL-3 #24）：照第一個「：」拆。
+
+    沒有「：」（或前後有一邊是空的）時地點 ``None``、整句當要做的事。
+    """
+    place, sep, task = text.partition("：")
+    if sep == "" or place.strip() == "" or task.strip() == "":
+        return None, text
+    return place.strip(), task.strip()
+
+
 def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogView, ...]:
     """任務日誌（依任務 ID；進行中與完成的都列）。"""
     table = quest_table(library, char.region)
@@ -613,6 +625,7 @@ def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogVi
         return ()
     defs = table.quest_by_id()
     masks = story_masks(library, char)
+    cards = region_npcs(library, char.region)
     out: list[QuestLogView] = []
     for state in char.quests:
         defn = defs.get(state.quest)
@@ -620,13 +633,14 @@ def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogVi
             continue
         name, summary = _quest_text(defn, masks)
         steps = tuple(
-            QuestStepView(
-                text_zh=mask_text(step.text_zh, masks),
+            _step_view(
+                mask_text(step.text_zh, masks),
                 done=i < state.steps_done,
                 current=not state.done and i == state.steps_done,
             )
             for i, step in enumerate(defn.steps)
         )
+        giver = cards.get(defn.giver) if defn.giver else None
         out.append(
             QuestLogView(
                 id=defn.id,
@@ -636,9 +650,16 @@ def quest_log(library: ContentLibrary, char: CharacterState) -> tuple[QuestLogVi
                 giver_zh=_npc_name(library, char.region, defn.giver) if defn.giver else None,
                 steps=steps,
                 done=state.done,
+                giver_portrait=giver.portrait if giver is not None else None,
+                giver_region=char.region if defn.giver else None,
             )
         )
     return tuple(out)
+
+
+def _step_view(text: str, *, done: bool, current: bool) -> QuestStepView:
+    place, task = split_step(text)
+    return QuestStepView(text_zh=text, done=done, current=current, place_zh=place, task_zh=task)
 
 
 def quests_here(
@@ -701,6 +722,11 @@ def pending_offer_view(
             else pending.quest
         )
         step_zh = "機遇"
+    elif pending.source == "wish":  # WP-1 許願池（07 7.6）
+        name_zh = "許願池"
+        step_zh = (
+            f"許願：都不拿可退 {pending.refund} 任務幣（次數照扣）。" if pending.refund else "許願"
+        )
     else:
         table = quest_table(library, char.region)
         defn = table.quest_by_id().get(pending.quest) if table is not None else None
@@ -721,6 +747,8 @@ def pending_offer_view(
             if service
             else "在野外：選了先放進備用，回城鎮或營火再換上。"
         ),
+        source=pending.source,
+        refund=pending.refund,
     )
 
 
@@ -737,6 +765,17 @@ def _remaining_zh(seconds: int) -> str:
     if days == 0:
         return f"{hours} 小時後到期"
     return f"{days} 天 {hours} 小時後到期" if hours else f"{days} 天後到期"
+
+
+def _left_zh(seconds: int) -> str:
+    """線頭剩多久（PNL-3 #26）：「剩 2 天 23 小時」「剩 5 小時」「剩 2 天」「剩不到 1 小時」。"""
+    if seconds < _HOUR:
+        return "剩不到 1 小時"
+    days, rest = divmod(seconds, _DAY)
+    hours = rest // _HOUR
+    if days == 0:
+        return f"剩 {hours} 小時"
+    return f"剩 {days} 天 {hours} 小時" if hours else f"剩 {days} 天"
 
 
 def thread_views(
@@ -764,6 +803,7 @@ def thread_views(
                 scope=defn.scope,
                 scope_zh="世界" if defn.scope == "world" else "個人",
                 expires_zh=_remaining_zh(state.expires_at - now),
+                left_zh=_left_zh(state.expires_at - now),
                 npc_zh=_npc_name(library, state.region, defn.npc) if defn.npc else None,
                 location_zh=location,
             )
@@ -851,15 +891,24 @@ def _quest_story_line(
     return None
 
 
+_OFFER_SOURCE_ZH: Final[dict[str, str]] = {
+    "quest": "任務",
+    "opportunity": "機遇",
+    "wish": "許願池",  # WP-1
+}
+
+
 def _skill_story_line(event: WorldEvent, names: Mapping[str, str]) -> str | None:
     if isinstance(event, SkillOfferedEvent):
-        source = "機遇" if event.source == "opportunity" else "任務"
-        return f"{source}給了技能三選一：先選一招（或跳過）。"
+        source = _OFFER_SOURCE_ZH.get(event.source, "任務")
+        return f"{source}給了技能三選一：先選一招（或都不拿）。"
     if isinstance(event, SkillOfferTakenEvent):
         if event.skill is None:
-            return (
-                "跳過了機遇給的技能。" if event.source == "opportunity" else "跳過了任務給的技能。"
-            )
+            if event.source == "wish" and event.refund:  # TXT-2：玩法 PM 定稿句
+                return f"許願池給的三招都沒拿，退回 {event.refund} 任務幣（次數照扣）。"
+            # WP-3b：玩法 PM 定案，一輪與世界日誌統一「都不拿」；日誌記已發生的事寫「三招都沒拿」
+            back = f"，退回 {event.refund} 任務幣" if event.refund else ""
+            return f"{_OFFER_SOURCE_ZH.get(event.source, '任務')}給的三招都沒拿{back}。"
         where = "裝上" if event.placed == "equipped" else "放進備用"
         return f"學會「{names.get(event.skill, event.skill)}」，{where}。"
     if isinstance(event, StorySkillGrantedEvent):

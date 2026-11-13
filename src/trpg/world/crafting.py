@@ -195,6 +195,7 @@ def build_choices(
         and slot_type in a.slots
         and not a.legendary_only
         and a.id not in gen.unique_affixes
+        and a.id not in gen.held_back_affixes  # LW-1：暫不進產生器
         and not a.weapons
         and (a.weapon_class is None or a.weapon_class == weapon_class or slot_type != "weapon")
     ]

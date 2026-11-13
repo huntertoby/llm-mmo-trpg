@@ -205,7 +205,8 @@ export const EFFECT: PartTable = {
   inscribe: { zh: "刻印", topic: "圓頂的石碑，上面一個金色菱形符文", d: tablet },
   detonate_runes: { zh: "引爆符文", topic: "符文石碑背後一圈橘色的爆炸", d: fit((c, o) => { poly(c, "#ff7a2a", starPts(0, 0, 11, 6.6, 10), 0.3); halo(c, o, (q) => at(q, 0, 0.4, 0.64, (p) => tablet(p, o))); }, 0.9) }, /* 第 2 版：縮到色環以內 */
 };
-export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap" };
+/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。 */
+export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon" };
 
 // =====================================================================
 // 表面 1 個形（8 種表面染色；第 3 批的地面效果記號，依表面換外形）
@@ -253,9 +254,76 @@ export const STATUS: PartTable = {
 };
 
 // =====================================================================
-// 條件 17 個
+// 條件 20 個
 // =====================================================================
 const halfHeart = (c: Ctx, _o: QOpts, s = 1.25) => { heart(c, "#7a2a3a", 0, 1.4, s); c.save(); c.beginPath(); c.rect(-12, 1, 24, 12); c.clip(); heart(c, "#ff5a4a", 0, 1.4, s); c.restore(); st(c, "#ff9a8a", 1.5, (x) => { x.moveTo(-8.4 * (s / 1.25), 1); x.lineTo(8.4 * (s / 1.25), 1); }, "butt"); };
+/** 獨狼（11-13）：「我」單獨＝玩家自己是那隻狼（技能名孤狼撲擊、獨行者）。和「目標落單」（光柱罩住米白人形）的剪影完全不同：
+ *  側面仰頭嚎叫的狼頭：口鼻朝左上、兩隻尖耳（後面那隻暗一階）、胸前一排鋸齒毛、頸後往右下拖到圖樣底。銀灰本色＋米白喉胸（亮面）＋頸後暗面；
+ *  >14px 多鼻頭、閉著的眼、耳內。試過右上加一彎金色新月（夜裡嚎叫）：剪影上新月貼在後腦，20px 讀成圓耳朵（熊、老鼠），拿掉。
+ *  BS-2：由 docs/art/sample/qIconsParts.js 逐行搬（第④批 14.5）；點表型別標成 Pt[]。 */
+const WOLF: Pt[] = [[-10.4, -9], [-5.4, -7], [-3.6, -7.2], [-1.6, -11.6], [1.4, -7.6], [3.8, -5.8], [6, -2.4], [8, 2.4], [8.8, 6.2], [7.6, 9.4], [4.6, 10.8], [-3.4, 10.4], [-2.6, 7.8], [-4.6, 6.6], [-3.2, 4.8], [-5, 3.4], [-3.6, 1.6], [-4.8, -1.6], [-8.6, -5], [-10, -7.4]];
+const loneWolf = (c: Ctx, o: QOpts) => {
+  /* 整隻縮 0.86、往右下移：口鼻尖與頸後下緣才收在圓片色環內（半徑約 12 單位；同第 2 版「圖樣收在色環內」） */
+  halo(c, o, (h0) => at(h0, 0.6, 0.4, 0.86, (q) => {
+    poly(q, "#7d8794", [[0.2, -7.4], [1.6, -10.6], [3.4, -6.4]], 0.4); /* 後面那隻耳朵 */
+    poly(q, "#aeb8c6", WOLF, 0.6);
+    poly(q, "#eef2f6", [[-10, -7.4], [-8.6, -5], [-4.8, -1.6], [-3.6, 1.6], [-5, 3.4], [-3.2, 4.8], [-4.6, 6.6], [-2.6, 7.8], [-3.4, 10.4], [0.4, 10.4], [0, 4], [-1.6, -1.6], [-5.8, -5], [-9.4, -8]], 0.4); /* 亮面：喉與胸前的白毛 */
+    poly(q, "#eef2f6", [[-10.4, -9], [-5.4, -7], [-3.6, -7.2], [-3.2, -8.4], [-6, -8.4]], 0.3); /* 亮面：口鼻上緣（審查可修 3：和喉胸同一個亮面色，規則 2 三階） */
+    poly(q, "#7d8794", [[3.8, -5.8], [6, -2.4], [8, 2.4], [8.8, 6.2], [7.6, 9.4], [4.6, 10.8], [4, 3], [2.8, -3]], 0.4); /* 暗面：頸後（右下） */
+    if (!o.tiny) { poly(q, "#5a6169", [[-2.6, -8], [-1.6, -10.2], [0.2, -7.8]], 0.2); ci(q, "#2a2a36", -9.8, -8.6, 0.9); ln(q, "#2a2a36", 0.9, [[-4.8, -5.8], [-3.2, -5.2]]); }
+  }));
+};
+/** 自身沒有狀態（11-13）：「目標帶有狀態」的淡紫旗，被紅斜槓劃掉（＝沒有；同驅散、致盲的劃掉），右下米白小人形（＝自己；同自身血量低於、在自己的符文上）。 */
+const selfLacks = (c: Ctx, o: QOpts) => {
+  at(c, -2, -0.6, 0.78, (q) => banner(q, o));
+  halo(c, o, (q) => { const P: Pt[] = [[-9.4, 6.2], [5.4, -9.6]]; if (o.tiny) ln(q, OUT, 5.2, P); ln(q, "#ff4a5a", 3.4, P); });
+  halo(c, o, (q) => bust(q, CREAM, 4.8, 4, 0.62)); /* 比自身血量低於的人形往內 0.8：肩膀不頂到色環 */
+};
+/** 每一下都命中（11-13，BS-1／DD-3 雙牙）：一面紅白靶，靶心插著兩把亮鋼匕首（柄朝右上、微微扇開）＝兩下都中同一個目標。
+ *  和「手持指定武器」（斜放單手劍）剪影不同：一個圓靶加兩根柄，對一條斜長條；和命中修正、被標記的紅準星（空心環＋十字刻度）分：靶是實心的同心圓。
+ *  三階：靶本色紅 #f0503e、暗面 #b8302a（右下）；匕首照背刺那把（亮鋼、金護手、皮柄）；亮面全圖只用 #ffffff（規則 2）。≤14px 拿掉刃上的亮面與入口的洞。
+ *  BS-2：由 docs/art/sample/qIconsParts.js 逐行搬（第④批 15.5）；迴圈陣列加 as const。 */
+const BULL_RED = "#f0503e", BULL_D = "#b8302a", BULL_W = "#f6f2e6";
+/** 插在靶上的匕首（原點＝入口、柄朝 −y）：露出一截細刃、窄金護手、皮柄、金柄頭。和背刺那把同色，護手收窄（背刺的 9.6 寬護手插在靶上兩把交疊成一團）。 */
+const stuckDagger = (c: Ctx, o: QOpts, x: number, y: number, k: number, rot: number) => at(c, x, y, k, (q) => {
+  poly(q, STEEL, [[-1.6, 0.6], [-1.6, -5.6], [1.6, -5.6], [1.6, 0.6]], 0.3); if (!o.tiny) f(q, "#ffffff", () => q.rect(-1.6, -5.6, 1.1, 6.2)); /* 刃（亮面＝左半） */
+  rr(q, GOLD, -3.8, -7.8, 7.6, 2.6, 1.1); rr(q, "#a8703e", -1.5, -12, 3, 4.6, 1); ci(q, GOLD, 0, -12.8, 2);
+}, rot);
+const allStrikesHit = (c: Ctx, o: QOpts) => {
+  /* 第 1 次試：靶小（半徑 8）、匕首 0.8 倍露出整片刃，剪影是圓身加兩根細長的柄＝甲蟲的觸角；第 2 次只露柄、寬護手，兩把交疊成一團金（像兩支毛刷）。
+     這版：靶撐滿圓片、匕首收窄（刃寬 3.2、護手 7.6），兩個入口沿垂直方向拉開、微微扇開往右上，柄頭稍微超出靶緣 */
+  const bx = -1.8, by = 1.8;
+  ci(c, BULL_D, bx, by, 8.8); ci(c, BULL_RED, bx - 0.6, by - 0.6, 8.1); ci(c, BULL_W, bx, by, 5.8); ci(c, BULL_RED, bx, by, 3.2);
+  if (!o.tiny) el(c, "#ffffff", bx - 4.4, by - 4.2, 1.9, 1.1, -0.75);
+  for (const [s, dx, dy] of [[-1, -2, -1.4], [1, 1.4, 2]] as const) {
+    if (!o.tiny) el(c, OUT, bx + dx, by + dy, 1.2, 1);
+    halo(c, o, (q) => stuckDagger(q, o, bx + dx, by + dy, 0.8, PI / 4 + s * 0.22));
+  }
+};
+/** 無聲（11-13，BS-1 修正內容 silent_strike）：一根淡紫羽毛（＝無聲，輕到沒有聲音；隱蔽家族的紫），前面平行壓一把亮鋼匕首（＝只在手持匕首類時生效）。
+ *  兩件都照武器圖示的方向斜放（尖朝右上）、平行錯開，剪影是一條寬的斜帶加羽毛的缺口，和「潛行偷襲」兜帽（圓頂）分得開，也不和「所有攻擊」的交叉雙劍成 X。
+ *  三階：羽毛本色 #b89af0（兜帽的亮紫）、暗面 #8a6ad8（兜帽本色）、羽軸米白；亮面全圖只用 #ffffff（規則 2）。≤14px 只留羽毛一個主體（規則 8；只剩匕首會和手持武器的劍撞）。
+ *  BS-2：由 docs/art/sample/qIconsParts.js 逐行搬（第④批 15.5）；點表型別標成 Pt[]。 */
+const FEATHER: Pt[] = [[0, -11.2], [2.6, -9.4], [4.2, -6], [4.6, -2.6], [4.4, -0.8], [1.8, -1.8], [4, 0.6], [3.6, 3.6], [1.2, 6.4], [-1.2, 6.4], [-3.2, 4.4], [-4.2, 1.6], [-2, 0.6], [-4.4, -0.6], [-4.4, -4.4], [-3, -8.6]];
+const feather = (c: Ctx, o: QOpts) => {
+  poly(c, "#b89af0", FEATHER, 0.5);
+  poly(c, "#8a6ad8", [[0.6, -10.6], [2.6, -9.4], [4.2, -6], [4.6, -2.6], [4.4, -0.8], [1.8, -1.8], [4, 0.6], [3.6, 3.6], [1.2, 6.4], [0.6, 6.4]], 0.3); /* 暗面：羽軸右邊那半 */
+  if (!o.tiny) poly(c, "#ffffff", [[-0.6, -9.6], [-2.6, -7.8], [-3.6, -4.4], [-3.4, -1.4], [-0.6, -3]], 0.3); /* 亮面：左上一片 */
+  ln(c, CREAM, 1.5, [[0, -8.6], [0, 10.4]]); /* 羽軸，下面露出一截 */
+};
+const silentStrike = (c: Ctx, o: QOpts) => {
+  if (o.tiny) { at(c, 0, 0, 0.98, (q) => feather(q, o), PI / 4); return; }
+  at(c, -2.4, -2.4, 0.9, (q) => feather(q, o), PI / 4);
+  halo(c, o, (q) => at(q, 3, 3, 0.8, (p) => { p.translate(0, 1.85); dagger(p, o); }, -3 * PI / 4));
+};
+/** KW-3 條件「自身層數達 N」A 案：三個全亮的金色計量格排在上半，右下米白小人形（同「自身血量低於」），整體縮 0.9 收進色環；≤14px 格子間距放大。 */
+function condPips(c: Ctx, o: QOpts): void {
+  const t = o.tiny, w = t ? 4.6 : 4.8, g = t ? 2.4 : 1.6, h = 9, x0 = -9.8, y0 = -9;
+  c.save(); c.scale(0.9, 0.9);
+  for (let i = 0; i < 3; i++) { const x = x0 + i * (w + g); rr(c, GOLD, x, y0, w, h, 1.2); f(c, "#fff6c8", () => c.roundRect(x, y0, w, t ? 2.8 : 2.6, [1.2, 1.2, 0, 0])); }
+  halo(c, o, (q) => bust(q, CREAM, 5.4, 5.8, 0.66));
+  c.restore();
+}
 export const COND: PartTable = {
   height_advantage: { zh: "居高臨下", topic: "一座山，山頂一個米白小人頭，右上一個朝上的黃箭頭", d: (c, o) => { poly(c, STONE, [[-10.6, 9.8], [-2.4, -3.6], [2.4, 2.6], [5, -0.6], [10.6, 9.8]], 0.6); f(c, STONE_L, () => { c.moveTo(-10.6, 9.8); c.lineTo(-2.4, -3.6); c.lineTo(-3.4, 9.8); c.closePath(); }); /* 第 2 版：山提亮一階（暗石→石、左坡亮面） */ poly(c, "#f6f2e6", [[-2.4, -3.8], [0.4, 0], [-2, 1.4], [-4.8, 0.4]], 0.3); ci(c, CREAM, -2.4, -7.6, 2.7); if (!o.tiny) poly(c, "#ffd23f", [[6.6, -10.6], [10.8, -5.4], [2.4, -5.4]], 0.3); } },
   target_hp_below: { zh: "目標血量低於", topic: "一顆心，上半暗紅、下半亮紅", d: (c, o) => halfHeart(c, o) },
@@ -274,6 +342,14 @@ export const COND: PartTable = {
   target_collided: { zh: "目標本回合受過撞擊", topic: "米白人形撞在右邊一道石牆上，中間一顆撞擊星", d: (c, o) => { wall(c, 5.6); bust(c, CREAM, -3, 1.2, 0.86); halo(c, o, (q) => burstStar(q, 3.6, -4.6, 4.8)); } },
   wielding_weapon: { zh: "手持指定武器", topic: "一把斜放的亮色單手劍（亮鋼寬刃、金護手、皮柄）", d: diagSword() }, /* 第 2 版：同打擊徽章 */
   in_form: { zh: "在形態中", topic: "三道淡紫色的爪痕", d: (c, _o) => at(c, 0, 0, 1, (q) => { for (const i of [-1, 0, 1]) poly(q, i === 0 ? "#e6d2ff" : "#c9a0ff", [[i * 6.4 - 2.2, -10], [i * 6.4 + 1.6, -10], [i * 6.4 + 2.8, 2], [i * 6.4 + 0.2, 10.2], [i * 6.4 - 1.8, 2]], 0.3); }, 0.28) },
+  /* 11-13 獨狼（LW-1 新條件）：加在條件表最後，前面 17 個的畫法不動。 */
+  lone_wolf: { zh: "獨狼", topic: "一隻仰頭嚎叫的銀灰狼頭（側面、口鼻朝左上、兩隻尖耳、米白喉胸一排鋸齒毛）", d: (c, o) => loneWolf(c, o) },
+  self_lacks_status: { zh: "自身沒有狀態", topic: "淡紫小旗被一道紅斜槓劃掉（同驅散、致盲劃掉的語言），右下一個米白小人形（同自身血量：自己）", d: (c, o) => selfLacks(c, o) },
+  all_strikes_hit: { zh: "每一下都命中", topic: "一面紅白靶，靶心插著兩把亮鋼匕首（柄朝右上、微微扇開）", d: (c, o) => allStrikesHit(c, o) },
+  /* 11-13 KW-1 自身層數達 N（#161）；KW-3 換成美術 A 案（docs/art/sample/qIconsKW.js 的 condPips 逐行搬，docs/art/KW樣張.md 第 5 節），取代暫代的「第一輪」。 */
+  self_stack_at_least: { zh: "自身層數達到", topic: "三個全亮的金色計量格（同 HUD 層數計量的格子）＋右下米白小人形（自身）", d: (c, o) => condPips(c, o) },
+  // KW-2：自身站在高處（鷹眼），美術出樣張前借「居高臨下」暫代
+  self_on_high_ground: { zh: "自身站在高處", topic: "（暫代）同「居高臨下」：一座山，山頂一個小人頭", d: (c, o) => COND["height_advantage"]!.d(c, o) },
 };
 
 // =====================================================================
@@ -318,7 +394,7 @@ export const TRIG: PartTable = {
   ally_hit_adjacent: { zh: "身旁隊友受擊時", topic: "綠色人形，右上一顆紅色撞擊星", d: (c, o) => { bust(c, ALLY, -3.4, 1.4, 0.92); halo(c, o, (q) => redStar(q, 5.2, -4.6, 5.4)); } },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent" };
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // TF-1 加後兩個（戰鬥開始時、身旁隊友受擊後），等美術出圖
 
 // =====================================================================
 // 接續 6 個
@@ -401,6 +477,7 @@ export const CHANGE: PartTable = {
   summon_attack_dice: { zh: "召喚物攻擊骰", topic: "小靈，右上一顆小骰子", d: withBadge(spirit(), dice) },
   form_upkeep_permille: { zh: "形態維持消耗", topic: "獸掌印、右下壓一個小沙漏，右上一個小箭頭（照正負；−500‰＝朝下青色）", d: up((c, o) => { paw(c, o); halo(c, o, (q) => at(q, 6.4, 6.6, 0.46, (p) => hourglass(p, o))); }) }, /* 11-12（追加 E）：原本右上是固定的沙漏、沒有正負；沙漏移到掌印右下（和「形態進入消耗」分得開），右上換成照正負的箭頭 */
   form_entry_permille: { zh: "形態進入消耗", topic: "獸掌印，右上一個小箭頭（照正負）", d: up((c, o) => paw(c, o)) },
+  silent_strike: { zh: "無聲（目標不轉身）", topic: "一根淡紫羽毛，前面平行壓一把亮鋼匕首（都斜放、尖朝右上）；≤14px 只留羽毛", d: (c, o) => silentStrike(c, o) },
 };
 
 // =====================================================================

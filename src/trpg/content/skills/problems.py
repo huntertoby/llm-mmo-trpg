@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
     ADD_STACK,
+    ALL_STRIKES_HIT,
     CONSUME_STACK,
     CONSUME_STATUS,
     DAMAGE_MULTIPLIER,
@@ -19,6 +20,7 @@ from trpg.content.skills.constants import (
     REFUND_COOLDOWN,
     RULE_CHANGE,
     SELF_DAMAGE_OF_HIT,
+    SELF_STACK_AT_LEAST,
     ZONE,
     rarity_rank,
 )
@@ -29,7 +31,7 @@ from trpg.content.skills.primitives import (
     PrimitiveParam,
     default_affects,
 )
-from trpg.content.skills.queries import on_hit_carrier
+from trpg.content.skills.queries import is_silent_grant, on_hit_carrier
 from trpg.content.skills.shapes import ShapeDef
 from trpg.content.skills.skill import SkillDef, _int_param_problems
 from trpg.shared.types import Surface
@@ -145,7 +147,27 @@ def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> li
     for name, spec in definition.params.items():
         if spec.required and name not in values:
             problems.append(f"{where}.{name}：條件 {definition.id} 缺少必要參數 {name}")
-    return problems
+    return problems + _stack_condition_problems(where, condition, refs)
+
+
+def _stack_condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
+    """``self_stack_at_least``（KW-1，#161）：層數存在、累積在施放者自己身上，``count`` 不超過上限。
+    ``refs.stacks`` 為 ``None``（沒有層數表）時不檢查。"""
+    if condition.type != SELF_STACK_AT_LEAST or condition.stack is None or refs.stacks is None:
+        return []
+    definition = refs.stacks.get(condition.stack)
+    if definition is None:
+        return [f"{where}.stack：未知的層數 {condition.stack!r}"]
+    if definition.owner != "self":
+        return [
+            f"{where}.stack：「{definition.name_zh}」疊在敵人身上，這個條件只能看施放者自己的層數"
+        ]
+    if condition.count is not None and condition.count > definition.max:
+        return [
+            f"{where}.count：「{definition.name_zh}」最多 {definition.max} 層，"
+            f"收到 {condition.count}"
+        ]
+    return []
 
 
 def _forbidden_affects_message(where: str, primitive_id: str, affects: str) -> str:
@@ -430,7 +452,8 @@ def granted_skill_problems(
         reasons: list[str] = []
         if granted.id == skill.id:
             reasons.append("不能給出自己")
-        if granted.kind != "active":
+        if granted.kind != "active" and not is_silent_grant(granted):
+            # BS-1（#157）：例外是只有「無聲」的修正技能（主動技能給幾回合無聲）
             reasons.append(f"必須是主動技能（kind: {granted.kind}）")
         if granted.rarity == "legendary":
             reasons.append("不能是傳說技能")
@@ -530,7 +553,86 @@ def skill_problems(
     problems += _branch_problems("cost.on_miss", skill, skill.cost.on_miss, refs, backlash=True)
     problems += _modifier_problems(skill, refs)
     problems += _legendary_problems(skill, primitives)
+    problems += _enemy_only_condition_problems(skill, conditions)
+    problems += _all_strikes_problems(skill)
+    problems += _lock_on_problems(skill)
     return problems
+
+
+def _all_strikes_problems(skill: SkillDef) -> list[str]:
+    """「這次施放每一下都命中」（DD-3 ``all_strikes_hit``，#158）只能單獨寫在效果的 ``condition``：
+    技能、複合第二段、修正規則的條件與 ``any_of`` 的分支都不行（引擎只在施放的效果結算時判斷）。"""
+    outer: list[tuple[str, ConditionSpec]] = []
+    if skill.condition is not None:
+        outer.append(("condition", skill.condition))
+    if skill.followup is not None and skill.followup.condition is not None:
+        outer.append(("followup.condition", skill.followup.condition))
+    outer += [
+        (f"modifiers[{i}].condition", r.condition)
+        for i, r in enumerate(skill.modifiers)
+        if r.condition is not None
+    ]
+    problems = [
+        f"{where}：{ALL_STRIKES_HIT}（每一下都命中）只能寫在效果的 condition"
+        for where, spec in outer
+        if any(part.type == ALL_STRIKES_HIT for part in spec.alternatives())
+    ]
+    for effect in skill.iter_effects(include_followup=True, include_modifiers=True):
+        spec = effect.condition
+        if spec is None:
+            continue
+        parts = spec.alternatives()
+        if len(parts) > 1 and any(part.type == ALL_STRIKES_HIT for part in parts):
+            problems.append(f"{ALL_STRIKES_HIT}（每一下都命中）不能放在 any_of 裡")
+    return problems
+
+
+def _lock_on_problems(skill: SkillDef) -> list[str]:
+    """瞄準預告（RG-1 ``lock_on``，#162）只能用在敵人專用、單體、沒有第二段的一般主動招，第一個效果
+    要對敵人（宣告時選的是敵方單位，射出時照一般施放結算）。"""
+    if not skill.lock_on:
+        return []
+    problems: list[str] = []
+    if not skill.enemy_only:
+        problems.append("lock_on（瞄準預告）只能用在敵人專用招（enemy_only）")
+    if skill.kind != "active" or skill.is_activatable:
+        problems.append("lock_on（瞄準預告）只能用在一般主動技能")
+    if skill.shape.type != "single":
+        problems.append("lock_on（瞄準預告）只能用在單體形狀（single）")
+    if skill.followup is not None or skill.trap is not None:
+        problems.append("lock_on（瞄準預告）不能有第二段（followup）或陷阱（trap）")
+    first = skill.effects[0] if skill.effects else None
+    if first is None or (first.affects or "enemies") not in {"enemies", "all"}:
+        problems.append("lock_on（瞄準預告）的第一個效果要對敵人")
+    return problems
+
+
+def _enemy_only_condition_problems(
+    skill: SkillDef, conditions: Mapping[str, ConditionDef]
+) -> list[str]:
+    """只給敵人專用招的條件（``enemy_only``，LW-1 ``self_lacks_status``）用在其他技能上。"""
+    if skill.enemy_only:
+        return []
+    found: list[ConditionSpec] = []
+    if skill.condition is not None:
+        found.append(skill.condition)
+    if skill.followup is not None and skill.followup.condition is not None:
+        found.append(skill.followup.condition)
+    found += [
+        e.condition
+        for e in skill.iter_effects(include_followup=True, include_modifiers=True)
+        if e.condition is not None
+    ]
+    found += [r.condition for r in skill.modifiers if r.condition is not None]
+    kinds = sorted(
+        {
+            part.type
+            for spec in found
+            for part in spec.alternatives()
+            if part.type in conditions and conditions[part.type].enemy_only
+        }
+    )
+    return [f"條件 {kind} 只有敵人專用招（enemy_only）能用" for kind in kinds]
 
 
 def legendary_cores(skill: SkillDef, primitives: dict[str, PrimitiveDef]) -> list[str]:

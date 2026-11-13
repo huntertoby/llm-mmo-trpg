@@ -145,11 +145,19 @@ def _masked(data: Any) -> Any:
     return data
 
 
+FROZEN_PARTY = ("merc_tiebi", "merc_huichun")
+"""凍結當時新角色預設帶的傭兵（OB-7 起內容只帶賽倫）。"""
+
+
 def run(library: ContentLibrary) -> list[Any]:
     """照 :func:`script` 走一遍（不合法的動作記下錯誤訊息、狀態不變）。"""
     world: WorldState = make_world()
     char: CharacterState = new_character(library, "alice", frozen_hero(), region=REGION)
-    char = char.model_copy(update={"field": FieldPos(map="mist_ferry", x=11, y=9)})
+    # OB-7（#154）：新角色的 default_party 改成只帶賽倫；傭兵名單不在凍結內容裡，凍結當時的預設
+    # （賽倫＋回春）在這裡寫死，比對只看世界規則的程式
+    char = char.model_copy(
+        update={"field": FieldPos(map="mist_ferry", x=11, y=9), "mercenaries": FROZEN_PARTY}
+    )
     out: list[Any] = []
     for k, action in enumerate(script()):
         try:

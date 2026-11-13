@@ -227,7 +227,7 @@ def _load_gear(
         for i in t.item_table.items
     }
     weapon_map = t.weapons.by_id()
-    _check_affixes(root, affixes, ruleset, weapon_map)
+    _check_affixes(root, affixes, ruleset, weapon_map, offhand_map)
     try:  # 詞條文字的欄位代入（Phase 3-41a）：數字與名稱從資料填，不寫死在 name_zh
         affixes = resolve_affix_names(affixes, ruleset)
     except (ValueError, KeyError) as exc:
@@ -236,7 +236,7 @@ def _load_gear(
         problems = item_problems(item, affixes, weapon_map, t.equipment_rules, offhand_map)
         if problems:
             raise ContentError(root / "items.yaml", "；".join(problems))
-    _check_appearance(root, t.appearance, t.item_table, t.keywords)
+    _check_appearance(root, t.appearance, t.item_table, t.keywords, offhand_map)
     _check_item_gen(root, t.item_gen, affixes)
     return affixes, items, _GearCatalog(items=items, affixes=affixes, rules=t.equipment_rules)
 

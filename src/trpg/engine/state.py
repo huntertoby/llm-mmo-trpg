@@ -13,11 +13,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from trpg.content.battle import (
+    BossPart,
     BossPhase,
     DollLook,
     ReactionRule,
@@ -58,6 +59,11 @@ __all__ = [
 ]
 
 
+def _empty(value: object) -> bool:
+    """序列化時省略的空值（部位欄位，PB-1a）：沒有部位的單位 JSON 不變。"""
+    return not value
+
+
 type Facing = Literal["north", "east", "south", "west"]
 """單位的朝向（Phase 3D-8d，四方向；北 ＝ y − 1）。背後格 ＝ 位置 ＋ 朝向的反方向。"""
 
@@ -84,6 +90,9 @@ class StatusInstance:
     anchor: Pos | None = None
     """延遲段的落點（BAL-21a，只有 ``charging`` 使用）：技能的 ``followup.anchor: cast_tile`` 時是
     施放時選的格子，第二段以它為中心結算、不隨施放者移動；``None``＝以施放者當下的位置為中心。"""
+    lock_target: Annotated[UnitId | None, Field(exclude_if=_empty)] = None
+    """瞄準預告的目標（RG-1，#162，只有 ``charging`` 使用）：``lock_on`` 的技能瞄準的單位，施放者
+    下一個自己的回合開始時對他射出；``None``＝不是瞄準（不輸出，既有狀態 JSON 不變）。"""
     cost_status: bool = False
     """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``），
     淨化與驅散都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""
@@ -141,6 +150,9 @@ class TrapState:
     attributes: tuple[tuple[Attribute, int], ...]
     revealed_to: tuple[Team, ...] = ()
     """被 ``reveal`` 揭露而看得到這個陷阱的其他陣營（Phase 3D-8a；放置者陣營本來就看得到）。"""
+    traced_by: Annotated[tuple[Team, ...], Field(exclude_if=_empty)] = ()
+    """看到這個陷阱「可疑痕跡」的陣營（RG-2，#162，05 5.7：只有玩家方會看到；只知道格子，不知道
+    種類）。揭露後從這裡移除（改成 ``revealed_to``）；沒有時不輸出，既有紀錄的 JSON 不變。"""
 
     @property
     def xy(self) -> tuple[int, int]:
@@ -520,6 +532,25 @@ class UnitState:
     """Boss 的階段（Phase 5F-2）：由範本帶入、戰鬥中不變；第 1 項是開場階段。"""
     phase_index: int = 0
     """目前的階段（``phases`` 的索引；0 ＝ 開場階段）：只增不減，每個階段整場只進入一次。"""
+    # 頭目部位（PB-1a，05 5.12.2；:mod:`trpg.engine.parts`、:mod:`trpg.engine.part_breaks`）。
+    # 沒有部位的單位全是預設值，序列化時不輸出（JSON 與改前逐字相同）。
+    parts: Annotated[tuple[BossPart, ...], Field(exclude_if=_empty)] = ()
+    """部位（由範本帶入、戰鬥中不變）。"""
+    part_hp: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(default_factory=dict)
+    """部位 ID → 剩餘血量（開場＝當下最大 HP × ``hp_permille``‰，無條件捨去、最低 1）。"""
+    broken_parts: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """已破的部位（依破掉的順序）：破了持續到戰鬥結束，回血、換階段都不長回來。"""
+    sealed_skills: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """被部位破壞封住的技能 ID（``seal_skill``；換技能組也不解除）。"""
+    part_mods: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(default_factory=dict)
+    """部位破壞的能力下降（``stat_down`` 累計）：``move``／``armor``／``hit``／``resist.<組>``
+    是降低量（加總），``damage_dealt`` 是造成傷害的倍率‰（相乘）。"""
+    suppressed_statuses: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """被停掉的機制（``stop_mechanic``）：之後任何來源都加不上這些狀態（跳過、不發事件）。"""
+    lone_wolf: Annotated[bool, Field(exclude_if=_empty)] = False
+    """獨狼（LW-1，06 6.37、#156；``lone_wolf`` 條件）：開戰那一刻自己的陣營除了自己沒有其他非召喚
+    單位。開場時算一次（:func:`trpg.engine.battle.begin_battle`），整場固定；之後加入的單位（援軍、
+    召喚、階段召喚）的值一律 ``False``。``False`` 時不輸出（JSON 與改前相同）。"""
 
     @property
     def alive(self) -> bool:
@@ -642,6 +673,13 @@ class UnitState:
             race=self.race,
             phases=self.phases,
             phase_index=self.phase_index,
+            parts=self.parts,
+            part_hp=dict(self.part_hp),
+            broken_parts=self.broken_parts,
+            sealed_skills=self.sealed_skills,
+            part_mods=dict(self.part_mods),
+            suppressed_statuses=self.suppressed_statuses,
+            lone_wolf=self.lone_wolf,
         )
 
 

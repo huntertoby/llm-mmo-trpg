@@ -315,7 +315,8 @@ describe("CB-4 命中對齊不變", () => {
     const now: Record<string, number> = {};
     for (const key of Object.keys(BODY_ANIM).sort()) for (const clip of Object.keys(BODY_ANIM[key]!.attacks).sort()) now[`${key}|${clip}`] = Number(creatureAttackHitU(key, `atk:${clip}`).toFixed(6));
     for (const who of ["ah", "sl"] as const) for (const clip of BOSS_CLIPS[who]) for (const ph of [1, 2, 3]) now[`boss:${who}|${clip}|${ph}`] = Number(bossAttackHitU(who, clip, ph).toFixed(6));
-    expect(now).toEqual(BEFORE);
+    // BAL-21c：碎晶之主加了位移片段 blink（沒有出手特效、也不前推 → 0.5）；其他鍵照修改前逐筆相同
+    expect(now).toEqual({ ...BEFORE, "boss:sl|blink|1": 0.5, "boss:sl|blink|2": 0.5, "boss:sl|blink|3": 0.5 });
   });
 });
 
@@ -392,9 +393,14 @@ describe("CB-4b 灰燼之心東西向衝撞：星爆內收到目標格", () => {
   };
 
   it("其他頭目片段的東西向畫面與修改前逐筆相同；灰燼之心 `ram` 只有出手 3 格（星爆、塵土）改變", () => {
+    const added: string[] = [];
     for (const who of ["ah", "sl"] as const)
       for (const clip of BOSS_CLIPS[who])
         for (const phase of who === "ah" ? [1, 2, 3] : [1, 2, 3, 4]) {
+          if (BEFORE[`${who}|${clip}|${phase}`] === undefined && clip !== "ram") {
+            added.push(`${who}|${clip}|${phase}`); // BAL-21c 新片段，修改前沒有基準
+            continue;
+          }
           const frames = Array.from({ length: 12 }, (_, f) => frameHash(who, clip, phase, f));
           if (who === "ah" && clip === "ram") {
             for (const [f, h] of frames.entries()) {
@@ -403,6 +409,7 @@ describe("CB-4b 灰燼之心東西向衝撞：星爆內收到目標格", () => {
             }
           } else expect(fnv(frames.join(",")), `${who} ${clip} ${phase}`).toBe(BEFORE[`${who}|${clip}|${phase}`]);
         }
+    expect(added).toEqual(["sl|blink|1", "sl|blink|2", "sl|blink|3", "sl|blink|4"]);
     // 碎晶之主、灰燼之心的其他片段不經過內收（原樣回傳同一個陣列）
     const fx: CreatureFx[] = [{ k: "burst", x: 50, y: -24 }];
     expect(bossSameRowFx("sl", "ram", fx)).toBe(fx);

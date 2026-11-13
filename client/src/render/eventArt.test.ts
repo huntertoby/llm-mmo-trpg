@@ -25,6 +25,8 @@ import {
   type EventArtId,
 } from "./eventArt";
 import { setDollSkin } from "./inkStyle";
+import { setQCanvasFactory } from "./qIcon/core";
+import { fakeCanvasFactory } from "../test/fakeCanvas";
 import { afterEach as afterEachQ } from "vitest";
 
 afterEachQ(() => setDollSkin("q"));
@@ -252,10 +254,12 @@ describe("快取（依場景、背景）", () => {
       },
     };
     vi.stubGlobal("document", fake);
+    setQCanvasFactory(fakeCanvasFactory({ calls: null })); // QI-6：小牌、泡泡的 Q 版圖樣另建畫布，不算進插圖的畫布數
     const before = eventArtCacheSize();
     const a = eventArtUrl("trap", "ashen");
     expect(eventArtUrl("trap", "ashen")).toBe(a);
     expect(eventArtUrl("trap", "cloud")).not.toBe(a);
+    setQCanvasFactory(null);
     expect(made).toBe(2);
     expect(eventArtCacheSize()).toBe(before + 2);
   });

@@ -10,11 +10,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
+from typing import Final
 
 from trpg.content.skill_keywords import KeywordRule, KeywordTable, RuleGrade
 from trpg.content.skills import (
+    ALL_STRIKES_HIT,
     ConditionSpec,
     EffectSpec,
     ModifierSpec,
@@ -24,9 +26,11 @@ from trpg.content.skills import (
 )
 
 __all__ = [
+    "AFFINITY_BY_CONDITION",
     "Facts",
     "KeywordGrade",
     "SkillKeywords",
+    "affinity_weapons",
     "derive_from_facts",
     "derive_keywords",
     "keyword_grades",
@@ -75,6 +79,25 @@ def skill_effect_specs(skill: SkillDef) -> tuple[EffectSpec, ...]:
 def skill_condition_specs(skill: SkillDef) -> tuple[ConditionSpec, ...]:
     """技能所有層級的條件（技能、效果、複合第二段與修正規則）。"""
     return facts_of(skill).conditions
+
+
+AFFINITY_BY_CONDITION: Final[Mapping[str, str]] = {ALL_STRIKES_HIT: "dual_dagger"}
+"""不寫武器、但只有某種武器做得到的條件 → 算作那種武器的親和（08 8.11，2026-11-13 玩法 PM 定）。
+
+「兩下都中」（``all_strikes_hit``）目前只有雙匕首打得出來，所以和「拿雙匕首時」同等；之後若有別的
+武器也會打兩下，改回在技能上明寫武器（``wielding_weapon``），並從這張表拿掉。"""
+
+
+def affinity_weapons(skill: SkillDef) -> tuple[str, ...]:
+    """技能是哪些武器或副手的親和技（依第一次出現的順序，不重複）：``wielding_weapon`` 寫的那把，
+    加上 :data:`AFFINITY_BY_CONDITION` 對到的武器（3I-5、08 8.11）。"""
+    found: list[str] = []
+    for cond in skill_condition_specs(skill):
+        if cond.type == "wielding_weapon" and cond.weapon is not None:
+            found.append(cond.weapon)
+        elif cond.type in AFFINITY_BY_CONDITION:
+            found.append(AFFINITY_BY_CONDITION[cond.type])
+    return tuple(dict.fromkeys(found))
 
 
 @dataclass(frozen=True, slots=True)

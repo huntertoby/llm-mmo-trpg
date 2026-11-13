@@ -10,6 +10,9 @@ import type { GearCandidate, HeroGearSlot, WorldAction, WorldBagItem, WorldInven
 import type { TipLine } from "../gear/affixStatus";
 import { itemSubtitle, itemTipLines, needsSwapConfirm } from "../run/gearOffer";
 import { GearIcon } from "../ui/GearIcon";
+import { ItemIcon } from "../ui/ItemIcon";
+import { hasItemIcon } from "../render/itemIcon";
+import { signatureFormZh } from "../render/gearResolve";
 import { Hint } from "../ui/Hint";
 import { PartTip } from "../ui/PartTip";
 import { GearCardView } from "../ui/gear/GearCardView";
@@ -151,18 +154,21 @@ function gearCardOf(inventory: WorldInventory, item: string): GearCandidate | nu
   return (inventory.gear_cards ?? []).find((c) => c.item.id === item) ?? null;
 }
 
-/** 物品格的一格：裝備畫圖示，其他是名字小牌（物品圖示 G10 移植前）＋右下角個數；點了選取。 */
+/** 物品格的一格：裝備畫裝備圖示，物品畫 Q 版物品圖示（QI-7；42、背包框），表裡沒有的物品退回名字小牌；右下角個數照現行；點了選取。 */
 export function BagCellView({ cell, inventory, picked, onPick }: { cell: BagCell; inventory: WorldInventory; picked: boolean; onPick(key: string): void }) {
   if (cell.kind === "empty") return <li className="world-bag-cell empty" aria-hidden="true" />;
   const row = cell.row;
   const card = row.gear === true ? gearCardOf(inventory, row.item) : null;
+  const hint = cellHint(row, signatureFormZh(card?.item.appearance));
   const cls = ["world-bag-cell", picked ? "picked" : "", row.gear === true ? "gear" : "", row.cross_class_zh != null ? "cross" : ""].filter((c) => c !== "").join(" ");
   return (
     <li className={cls}>
-      <Hint text={cellHint(row)}>
-        <button type="button" aria-pressed={picked} aria-label={cellHint(row)} onClick={() => onPick(cell.key)} data-testid={`world-bag-cell-${cell.key}`}>
+      <Hint text={hint}>
+        <button type="button" aria-pressed={picked} aria-label={hint} onClick={() => onPick(cell.key)} data-testid={`world-bag-cell-${cell.key}`}>
           {row.gear === true ? (
             <GearIcon look={card?.item.appearance ?? null} slot={card?.slot} size={42} label={row.name_zh} />
+          ) : hasItemIcon(row.item, row.color) ? (
+            <ItemIcon id={row.item} size={42} frame="bag" color={row.color} rare={row.rare} />
           ) : (
             <span className="world-bag-tile" aria-hidden="true">
               {tileLines(row.name_zh).map((l, i) => (

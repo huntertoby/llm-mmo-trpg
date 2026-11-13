@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterable, Sequence
 
 from trpg.api.run_presenter import origin_realm
 from trpg.api.world_economy_schemas import BagItemView
-from trpg.api.world_economy_view import inventory_view
+from trpg.api.world_economy_view import inventory_view, item_rare
 from trpg.api.world_field_people import look_of
 from trpg.api.world_mail_schemas import (
     LetterItemView,
@@ -138,7 +138,13 @@ def _items(library: ContentLibrary, counts: dict[str, int]) -> tuple[LetterItemV
     for item, count in sorted(counts.items()):
         found = library.world_economy.items.get(item)
         rows.append(
-            LetterItemView(item=item, name_zh=item if found is None else found.name_zh, count=count)
+            LetterItemView(
+                item=item,
+                name_zh=item if found is None else found.name_zh,
+                count=count,
+                color=None if found is None else found.color,  # QI-7
+                rare=None if found is None else item_rare(found),
+            )
         )
     return tuple(rows)
 

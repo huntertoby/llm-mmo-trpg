@@ -185,7 +185,7 @@ variant:
 llm_topic:
   secondary_count: 6
   condition_count: 4
-  core_exclude: [enter_form, leave_form]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）
+  core_exclude: [enter_form, leave_form, summon_beside]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）；summon_beside 只由閃現轉型產生（TF-1）
   base_weight: 100
   quota_percent_per_use: 100
   core_weights: {}                          # 個別原語的基礎權重（沒列出的用 base_weight）
@@ -254,6 +254,9 @@ whiteboard:
   # 6F-4e（#129「關鍵字叫點燃，第 1 招就該真的點燃」，06 6.27.3「火球製造點燃」）：這些關鍵字的製造者白板可以是「傷害＋對敵人施加該關鍵字的
   # 狀態或造它的表面」（例：引火彈）。只放寬結構，預算照舊，不允許條件（和潮濕、倒地、撞擊的例外不同）。
   status_rider_keywords: [ignite, frozen]
+  # KW-2（#161，06 6.32.1、6.34.1）：潮濕、倒地、撞擊之外，四個層數關鍵字也用「弱傷害＋製造」（傷害＋累積層數）與「條件傷害」
+  # （傷害＋「自身層數達 N」）的例外——單一個「累積層數」不是任何骨架的核心效果。
+  exception_keywords: [wet, prone, collision, combo_point, fury, focus, ki]
   # 6F-4b（#129，06 6.34.1、6.27.3）：利用者白板由組合器自動生成，不手寫——對關鍵字推導表裡每一條「對某狀態／表面的目標」
   # 利用規則（conditions），配上每一種傷害元素（carriers），做出「一段條件傷害」（例：趁燃雷擊＝對燃燒中的目標傷害較高的
   # 雷擊；製造帶電、利用點燃）。條件傷害本身算一個核心效果；元素製造的關鍵字＋條件利用的關鍵字最多各一個。
@@ -327,6 +330,9 @@ whiteboard:
     - {id: ember_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, shapes: [cross, square3], name_zh: 燃燒爆, weapon_name_zh: 燃燒爆擊, concept_zh: 在一小片區域炸開火焰，讓範圍內的人燒起來, flavor_zh: 火光一閃，四周的人身上都冒起了火苗}
     - {id: rime_lance, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [line], name_zh: 冰流, weapon_name_zh: 冰流斬, concept_zh: 一道寒氣沿著直線衝出去，走過的地面都結了冰, flavor_zh: 寒氣貼著地面竄出，身後留下一條滑溜溜的冰道}
     - {id: rime_burst, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [cross, square3], name_zh: 冰晶爆, weapon_name_zh: 冰晶爆擊, concept_zh: 在一小片區域炸開冰晶，讓地面結冰, flavor_zh: 冰晶向四面炸開，落地的地方全結成了冰}
+    # --- AF-1（玩法 PM 交接 4.1.3 第 11 點，06 6.27.2、6.34.9）：中毒 2 階補法術白板。點數固定的施加中毒（淬毒、毒沼、瘴氣）在 2 階湊不到
+    # 預算下限，法器 2 階組不出中毒的主動白板；補一招條件利用（對中毒目標加傷）。數值照預算，名稱照玩法 PM 的例子 ---
+    - {id: bone_rot, min_tier: 2, keyword: poisoned, skeleton: strike, effect: {type: damage, element: poison}, condition: {type: target_has_status, status: poison}, theme: poison, categories: [spell], name_zh: 蝕骨咒, concept_zh: 對中毒的目標唸出蝕骨的咒文，毒性越深傷得越重, flavor_zh: 咒文順著毒性鑽進骨縫，目標痛得彎下腰}
     # --- 6F-4f（6F-4e 待決 2）：潮濕、倒地、標記各補 1 招施加型白板，讓第 1 招不固定成水彈、絆擊、烙印。潮濕、倒地用既有的
     # 「弱傷害＋製造」例外（exception_keywords）；標記沒有結構例外，補的是單一效果（只施加標記）。數值照預算，名稱暫定 ---
     - {id: torrent_line, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [line], name_zh: 激流, weapon_name_zh: 激流斬, concept_zh: 一道水流沿著直線衝出去，走過的地面都積了水, flavor_zh: 水柱貼著地面衝出，身後留下一條濕漉漉的水痕}
@@ -385,6 +391,20 @@ whiteboard:
     - {id: second_wind, keyword: generic, skeleton: aura, effect: {type: heal, affects: self}, theme: holy, shapes: [self], categories: [spell], name_zh: 回氣, concept_zh: 調勻呼吸，恢復一些生命, flavor_zh: 一口長氣吐出來，傷口的疼痛淡了幾分}
     - {id: guard_up, keyword: generic, skeleton: aura, effect: {type: shield, affects: self}, theme: holy, shapes: [self], categories: [spell], name_zh: 護身, concept_zh: 在身上凝出一層護盾, flavor_zh: 一圈微光包住你的身體}
     - {id: rally, keyword: generic, skeleton: aura, skill: {ap_cost: 1}, effect: {type: apply_status, status: empowered, affects: self}, theme: physical, shapes: [self], categories: [spell], name_zh: 振奮, concept_zh: 讓自己精神一振，攻擊提高, flavor_zh: 你大喝一聲，把疲憊全都甩到腦後}
+    # --- KW-2（#161，06 6.32.1「每個新關鍵字至少 3 招 1 階白板」）：連擊、怒氣、專注、氣各 3 個配方——單體製造（傷害＋累積 1～2 層，蓄力骨架）、
+    # 直線製造、條件利用（傷害＋「自身層數達 N」，exception_keywords 的例外）。N 是占位（連擊 3、其他 2）；數值照預算，名稱暫定 ---
+    - {id: combo_jab, keyword: combo_point, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: combo_point, amount: 1, affects: self}, name_zh: 連刺, concept_zh: 輕快的一擊，攢下一點連擊點, flavor_zh: 你手腕一抖，攻勢一環扣一環}
+    - {id: combo_lunge, keyword: combo_point, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: combo_point, amount: 1, affects: self}, shapes: [line], name_zh: 穿影, weapon_name_zh: 穿影刺, concept_zh: 一路穿過前方的敵人，攢下連擊點, flavor_zh: 你貼地竄出，身後留下一串殘影}
+    - {id: combo_cash, keyword: combo_point, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: self_stack_at_least, stack: combo_point, count: 3}, name_zh: 乘隙擊, concept_zh: 連擊點攢到 3 點以上時，這一擊特別重, flavor_zh: 節奏到了，破綻自己送上門來}
+    - {id: fury_blow, keyword: fury, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: fury, amount: 1, affects: self}, name_zh: 怒擊, concept_zh: 打一下就把火氣往上推, flavor_zh: 你咬著牙出手，每一下都更火大}
+    - {id: fury_rush, keyword: fury, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: fury, amount: 1, affects: self}, shapes: [line], name_zh: 怒衝, weapon_name_zh: 怒衝斬, concept_zh: 朝前方一路衝撞，怒氣跟著上漲, flavor_zh: 你低吼著往前撞，擋路的全被掃開}
+    - {id: fury_vent, keyword: fury, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: self_stack_at_least, stack: fury, count: 2}, name_zh: 盛怒擊, concept_zh: 怒氣有 2 層以上時，這一擊特別重, flavor_zh: 積壓的怒火全灌進這一擊}
+    - {id: focus_shot, keyword: focus, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: focus, amount: 1, affects: self}, name_zh: 凝擊, weapon_name_zh: 凝息擊, concept_zh: 出手的同時把心神收攏, flavor_zh: 你屏住呼吸出手，心越來越靜}
+    - {id: focus_line, keyword: focus, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: focus, amount: 1, affects: self}, shapes: [line], name_zh: 一線, weapon_name_zh: 一線穿, concept_zh: 對準一條直線出手，邊打邊凝神, flavor_zh: 你的視線拉成一條直線，攻擊順著它穿過去}
+    - {id: focus_release, keyword: focus, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: self_stack_at_least, stack: focus, count: 2}, name_zh: 定心擊, concept_zh: 專注有 2 層以上時，這一擊特別重, flavor_zh: 心神凝到極點，一出手就正中要害}
+    - {id: ki_palm, keyword: ki, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: ki, amount: 1, affects: self}, name_zh: 運勁擊, concept_zh: 打中的力道回流成一口氣, flavor_zh: 你一擊打實，震力順著手臂回到丹田}
+    - {id: ki_surge, keyword: ki, skeleton: builder_finisher, effect: {type: damage, element: physical}, rider: {type: add_stack, stack: ki, amount: 1, affects: self}, shapes: [line], name_zh: 氣貫, weapon_name_zh: 氣貫擊, concept_zh: 一道氣勁直線推出，邊打邊聚氣, flavor_zh: 你吐氣發勁，氣浪貫穿前方}
+    - {id: ki_release, keyword: ki, skeleton: strike, effect: {type: damage, element: physical}, condition: {type: self_stack_at_least, stack: ki, count: 2}, name_zh: 發勁擊, concept_zh: 氣有 2 層以上時，這一擊特別重, flavor_zh: 丹田的氣一口吐盡，拳勁炸開}
   passive:
     - {id: ember_touch, keyword: ignite, skeleton: passive, effect: {type: apply_status, status: burning, affects: enemies}, theme: fire, trigger_event: on_hit, name_zh: 餘燼, concept_zh: 命中時讓目標燒起來, flavor_zh: 每一次命中都留下一點燒不盡的餘燼}
     - {id: flame_brand, keyword: ignite, skeleton: passive, effect: {type: damage, element: fire, affects: enemies}, trigger_event: on_hit, name_zh: 灼痕, concept_zh: 命中時額外灼傷目標, flavor_zh: 傷口邊緣冒出細小的火星}

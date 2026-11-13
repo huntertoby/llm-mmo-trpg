@@ -397,6 +397,7 @@ export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   shockwave: { role: "post", clip: "stomp" },
   // 6N-3 下半
   summon: { role: "post", clip: "summon_press" },
+  summon_beside: { role: "post", clip: "summon_press" }, // TF-1：伴生、護主（被動、反應）暫借召喚的動作
   sacrifice_summon: { role: "post", clip: "sacrifice_grip" },
   create_surface: { role: "post", clip: "scatter" },
   zone: { role: "post", clip: "zone_stamp" },

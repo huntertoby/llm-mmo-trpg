@@ -51,6 +51,7 @@ from trpg.engine.events import (
     InfusionFizzled,
     InitiativeRolled,
     InitiativeTieBroken,
+    LockIntercepted,
     ManeuverRolled,
     MapEventTriggered,
     MoveBlocked,
@@ -66,6 +67,9 @@ from trpg.engine.events import (
     ObjectMoved,
     ObjectToppled,
     OverloadTriggered,
+    PartBroken,
+    PartDamaged,
+    PartStatDown,
     PushResisted,
     RaceSkillUsed,
     ReactionDeclined,
@@ -89,6 +93,7 @@ from trpg.engine.events import (
     SkillGranted,
     SkillGrantExpired,
     SkillInfused,
+    SkillSealed,
     SkillTriggered,
     SkillUsed,
     SnareTriggered,
@@ -111,8 +116,10 @@ from trpg.engine.events import (
     TerrainChanged,
     TotemPulsed,
     TrapExpired,
+    TrapGlance,
     TrapPlaced,
     TrapRevealed,
+    TrapTraced,
     TrapTriggered,
     TriggerLimitReached,
     TurnEnded,
@@ -145,6 +152,7 @@ from trpg.engine.events import (
 from trpg.engine.race.skills import decoy_template_ids
 from trpg.engine.skill_triggers import MODIFIER_ON_HIT
 from trpg.engine.state import BattleState
+from trpg.narrative.parts import break_effect_zh, break_lines_zh
 from trpg.shared.fmt import signed
 from trpg.shared.types import Pos, Surface, rune_name
 
@@ -421,6 +429,10 @@ _FIZZLE_TEXT = {
     "shockwave_flying": "  震波打不到會飛的單位",
     "stonewall": "  穩若磐石：擊不倒",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
+    # 瞄準預告（RG-1，#162）射出時落空
+    "lock_on_lost": "  瞄準的目標倒下、走出射程或躲到看不見的地方：這一擊落空",
+    "lock_on_concealed": "  瞄準的目標躲進隱蔽、離得太遠看不見：這一擊落空",
+    "lock_on_blocked": "  擋在中間的人瞄不到：這一擊落空",
 }
 
 
@@ -598,7 +610,14 @@ def _attack(e: AttackRolled, v: _View) -> str:
     ]
     parts += _bonus_parts(e)
     cover_note = ""
-    if e.cover:
+    if e.cover and e.cover_unit_id is not None:  # 盾兵掩護（RG-1，#162）、盾陣（RG-4，#163）
+        label = "盾陣" if e.cover_formation else "盾兵掩護"
+        parts.append(f"{label} {signed(e.cover)}")
+        guard = state.units.get(e.cover_unit_id)
+        guard_name = e.cover_unit_id if guard is None else guard.name_zh
+        what = "盾陣" if e.cover_formation else "盾"
+        cover_note = f"［命中 −{-e.cover}：被{guard_name}的{what}擋住］"
+    elif e.cover:
         parts.append(f"半掩護 {signed(e.cover)}")
         obj = state.objects.get(e.cover_object_id) if e.cover_object_id is not None else None
         if obj is not None:
@@ -617,8 +636,19 @@ def _attack(e: AttackRolled, v: _View) -> str:
         verb = f"從背後{verb}"
     return (
         f"  {v.name[e.attacker_id]} {verb} {v.name[e.target_id]}：{' '.join(parts)} = {e.total}"
-        f"（需 ≥ {e.target_number}）→ {verdict}{cover_note}"
+        f"（需 ≥ {e.target_number}）→ {verdict}{cover_note}{_no_turn_note(e)}"
     )
+
+
+_NO_TURN_ZH = {"concealed": "隱蔽出手", "silent": "無聲"}
+
+
+def _no_turn_note(e: AttackRolled) -> str:
+    """近戰攻擊目標不轉身（BS-1，#157）：「［背刺・無聲（不會轉身）］」；照常轉身時為空字串。"""
+    if e.no_turn is None:
+        return ""
+    prefix = "背刺・" if e.backstab else ""
+    return f"［{prefix}{_NO_TURN_ZH[e.no_turn]}（不會轉身）］"
 
 
 @_handles(SkillUsed)
@@ -872,11 +902,13 @@ def _status_converted(e: StatusConverted, v: _View) -> str:
 
 @_handles(StacksChanged)
 def _stacks(e: StacksChanged, v: _View) -> str:
-    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    definition = v.state.ruleset.stack_def(e.stack_id)
     verb = {"gained": "累積", "consumed": "消耗", "expired": "過期清空", "overload": "超載清空"}[
         e.reason
     ]
-    return f"    {v.name[e.unit_id]} 的「{stack}」{verb}：{e.before} → {e.after} 層"
+    unit = definition.unit_zh  # RG-5：連擊點用「點」
+    who = v.name[e.unit_id]
+    return f"    {who} 的「{definition.name_zh}」{verb}：{e.before} → {e.after} {unit}"
 
 
 # ---------------------------------------------------------------------------
@@ -993,11 +1025,18 @@ _CANCEL_TEXT = {
     "expired": "到下回合開始都沒被攻擊",
     "replaced": "改為蓄力另一招",
     "form_left": "形態解除了",
+    "part_broken": "部位破壞",
+    "interrupted": "瞄準中被近戰打中，瞄準被打斷",
 }
 
 
 @_handles(FollowupCharged)
 def _followup_charged(e: FollowupCharged, v: _View) -> str:
+    if e.lock_target_id is not None:  # 瞄準預告（RG-1，#162）
+        return (
+            f"  ◎ {v.name[e.unit_id]} 瞄準了 {v.name[e.lock_target_id]}：「{e.name_zh}」"
+            "下回合開始時射出"
+        )
     release = _RELEASE_TEXT.get(e.release, e.release)
     if e.direction is not None:  # 定向蓄力（3J-2）
         way = DIRECTION_TEXT[e.direction]
@@ -1008,6 +1047,14 @@ def _followup_charged(e: FollowupCharged, v: _View) -> str:
     return (
         f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
         f"（{'落在指定位置' if e.anchored else '以自己為中心'}，目前預計影響 {len(e.tiles)} 格）"
+    )
+
+
+@_handles(LockIntercepted)
+def _lock_intercepted(e: LockIntercepted, v: _View) -> str:
+    return (
+        f"  ⛨ {v.name[e.blocker_id]} 擋在 {v.name[e.target_id]} 前面："
+        f"「{e.name_zh}」改打在 {v.name[e.blocker_id]} 身上"
     )
 
 
@@ -1085,19 +1132,21 @@ def _gear_triggered(e: GearTriggered, v: _View) -> str:
 
 @_handles(ChargeActivated)
 def _charge_activated(e: ChargeActivated, v: _View) -> str:
-    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    definition = v.state.ruleset.stack_def(e.stack_id)
     target = f"，對象 {v.name[e.target_id]}" if e.target_id is not None else ""
     return (
         f"  ⚡ {v.name[e.unit_id]} 啟動裝備「{e.name_zh}」"
-        f"（花 {e.stacks_spent} 層{stack}、{e.ap_spent} AP）{target}"
+        f"（花 {e.stacks_spent} {definition.unit_zh}{definition.name_zh}、{e.ap_spent} AP）{target}"
     )
 
 
 @_handles(OverloadTriggered)
 def _overload_triggered(e: OverloadTriggered, v: _View) -> str:
-    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    stack = v.state.ruleset.stack_def(e.stack_id)
+    unit = stack.unit_zh  # RG-5b：單位照層數定義（連擊點「點」）
     return (
-        f"  ✦ {v.name[e.unit_id]} 的「{stack}」累積到 {e.stacks} 層（門檻 {e.threshold}），超載了！"
+        f"  ✦ {v.name[e.unit_id]} 的「{stack.name_zh}」累積到 {e.stacks} {unit}"
+        f"（門檻 {e.threshold}），超載了！"
     )
 
 
@@ -1137,6 +1186,45 @@ def _boss_phase_changed(e: BossPhaseChanged, v: _View) -> str:
     return line if e.text_zh is None else f"{line}：{e.text_zh}"
 
 
+@_handles(PartDamaged)
+def _part_damaged(e: PartDamaged, v: _View) -> str:
+    left = v.hp_change(e.target_id, e.hp_before, e.hp_after, "（")
+    return f"    {v.name[e.target_id]} 的{e.name_zh}受損 {e.amount}{left + '）' if left else ''}"
+
+
+@_handles(PartBroken)
+def _part_broken(e: PartBroken, v: _View) -> str:
+    who = v.name[e.target_id]
+    line = f"  ◆ {who}的{e.name_zh}被打碎了！"
+    if e.text_zh is not None:
+        line += e.text_zh
+    if not e.applied:
+        return line
+    unit = v.state.units.get(e.target_id)
+    part = None if unit is None else next((p for p in unit.parts if p.id == e.part_id), None)
+    if part is None:
+        return line
+    return f"{line}破掉：{'；'.join(break_lines_zh(v.state.ruleset, part))}"
+
+
+@_handles(SkillSealed)
+def _skill_sealed(e: SkillSealed, v: _View) -> str:
+    return f"  ✕ {v.name[e.unit_id]} 的「{_skill_name(v, e.skill_id)}」被封住了"
+
+
+@_handles(PartStatDown)
+def _part_stat_down(e: PartStatDown, v: _View) -> str:
+    unit = v.state.units.get(e.unit_id)
+    part = None if unit is None else next((p for p in unit.parts if p.id == e.part_id), None)
+    spec = (
+        None
+        if part is None
+        else next((x for x in part.on_break if x.type == "stat_down" and x.stat == e.stat), None)
+    )
+    what = e.stat if spec is None else break_effect_zh(v.state.ruleset, spec)
+    return f"  ▽ {v.name[e.unit_id]}：{what}"
+
+
 @_handles(WeatherChanged)
 def _weather_changed(e: WeatherChanged, v: _View) -> str:
     return f"  ☁ 天氣變為{e.after_name_zh}"
@@ -1167,6 +1255,16 @@ def _trap_triggered(e: TrapTriggered, v: _View) -> str:
 def _trap_revealed(e: TrapRevealed, v: _View) -> str:
     skill = _skill_name(v, e.skill_id)
     return f"  {v.name[e.unit_id]} 揭露了 {xy_text(e.pos)} 的敵方陷阱「{skill}」"
+
+
+@_handles(TrapTraced)
+def _trap_traced(e: TrapTraced, v: _View) -> str:
+    return f"  ？{v.name[e.unit_id]} 注意到 {xy_text(e.pos)} 有可疑的痕跡"
+
+
+@_handles(TrapGlance)
+def _trap_glance(e: TrapGlance, v: _View) -> str:
+    return f"    {v.name[e.owner_id]} 朝 {xy_text(e.pos)} 瞄了一眼"
 
 
 @_handles(TrapExpired)

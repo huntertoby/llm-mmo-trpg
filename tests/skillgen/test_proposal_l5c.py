@@ -52,7 +52,10 @@ def _yaml_true_only() -> dict[str, set[str]]:
 
 def test_true_only_list_comes_from_yaml_and_covers_all_flags() -> None:
     assert {k: set(v) for k, v in true_only_params().items()} == _yaml_true_only()
-    assert _yaml_true_only() == {"damage": {"explode", "split_heal"}}
+    assert _yaml_true_only() == {
+        "damage": {"explode", "split_heal"},
+        "summon_beside": {"strike_other"},  # TF-1 護主（LLM 題目不出 summon_beside）
+    }
     for primitive in _lib().ruleset.primitives.primitives:
         for name, spec in primitive.params.items():
             if spec.true_only:

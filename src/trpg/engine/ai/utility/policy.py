@@ -35,6 +35,7 @@ from trpg.engine.ai.basics import aim_bonus, guard_bonus, swap_score
 from trpg.engine.ai.charge import charge_score
 from trpg.engine.ai.infuse import ap_ratio, infuse_setups, infuse_value, survival
 from trpg.engine.ai.objective import hold_guard_bonus
+from trpg.engine.ai.parts import part_score, part_variants, picks_parts
 from trpg.engine.ai.race import race_ai_action
 from trpg.engine.ai.stance import stance_cancel, stance_entry_blocked
 from trpg.engine.ai.summon import (
@@ -126,6 +127,7 @@ class UtilityAI:
         self._bonuses = profiles.orders
         self._run = profiles.run
         self._basic = profiles.basic
+        self._parts = profiles.parts
         self.orders: OrdersSource | None = orders
         """戰術指令的來源（Phase 2C-2）；``None`` 時完全不受指令影響。"""
         self._override = override
@@ -235,7 +237,36 @@ class UtilityAI:
                 scored[index] = ActionScore(move, full.score + extra, full.preview)
             else:
                 scored[index] = ActionScore(move, estimate, None)
-        return [scored[i] for i in sorted(scored)]
+        ranked = [scored[i] for i in sorted(scored)]
+        return self._with_parts(state, ranked, profile, before, ctx, walk)
+
+    def _with_parts(  # noqa: PLR0917
+        self,
+        state: BattleState,
+        ranked: list[ActionScore],
+        profile: AiProfile,
+        before: Fraction,
+        orders: OrderContext | None,
+        walk: _Walk | None,
+    ) -> list[ActionScore]:
+        """打部位的變體（PB-1b，R8）：已評分的普攻與單體技能候選之後，緊接著放每個能選的部位
+        （依部位 ID）；分數 ＝ 變體自己的預覽分數 ＋ :func:`part_score`。變體在技能的
+        ``skill_candidates`` 截斷之後才展開，不擠掉本體候選；排在本體後面，同分時本體優先。"""
+        unit = state.active
+        if unit is None or not picks_parts(state, unit):
+            return ranked  # 沒有部位的戰鬥、敵方與召喚物：候選清單原樣不動
+        out: list[ActionScore] = []
+        for scored in ranked:
+            out.append(scored)
+            for variant in part_variants(state, scored.action):
+                full = score_action(
+                    state, variant, profile, before=before, orders=orders, walk=walk
+                )
+                p = full.preview
+                assert p is not None
+                bonus = part_score(state, variant, p.min_events, p.max_events, self._parts)
+                out.append(ActionScore(variant, full.score + bonus, p))
+        return out
 
     def _score_other(  # noqa: PLR0917
         self,

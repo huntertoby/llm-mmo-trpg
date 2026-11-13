@@ -185,6 +185,8 @@ class ModifierPoints(ContentModel):
     form_upkeep_per_100: int = Field(default=0, ge=0)
     """形態維持費每減少 100‰ 的價值（Phase 3J-3，化形專精；每次使用的價值）。"""
     form_entry_per_100: int = Field(default=0, ge=0)
+    silent_strike: int = Field(default=0, ge=0)
+    """無聲（BS-1，#157：近戰攻擊不讓目標轉身；每次使用的價值）。"""
     """形態進入獎勵的數值每增加 100‰ 的價值（Phase 3J-3，化形專精）。"""
     allow_self_target: int = Field(default=0, ge=0)
     """治療、護盾、增益類技能也包含自己（Phase 3D-3；每次使用的價值）。``shape_to`` 沒有列在這裡：
@@ -282,6 +284,35 @@ class RetierGrowthRules(ContentModel):
     """升降地形的原語（3W-R2 從程式移到資料）：放大格數、補「落石」只看這些。"""
     area_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain", "create_surface")
     """點數固定、升階時放大格數的原語（升降地形與表面）。"""
+
+
+class FlashCostRules(ContentModel):
+    """閃現費用方向（蓄力、輕巧）的調整幅度（FL-1a，06 6.34「費用方向」第 4 點：每一級調多少由
+    使用者在數值工坊調；``skill_budget.yaml`` 的 ``flash_cost``）。規則本身（一定要變、調哪些項目、
+    回合每次最多 +1、累計最多 +2、最少留 1）寫在 :mod:`trpg.skillgen.flash_cost`，不在這裡。"""
+
+    damage_rungs: int = Field(default=1, ge=1, le=5)
+    """蓄力在預算重調後沒有任何一項變強時，傷害（之後是治療、護盾）的骰子或倍率一次往上調幾格
+    （組合器的骰子、倍率階梯；調完比例仍低於 70% 時同一項再往上，直到進窗或到頂）。"""
+    magnitude_step: int = Field(default=25, ge=1, le=500)
+    """蓄力、輕巧調狀態強度（``magnitude_permille``）時每一級多少‰（蓄力往上到
+    ``retier_growth.magnitude_max``；輕巧往下最多到 1000）。"""
+
+
+class FlashTransformRules(ContentModel):
+    """召喚與輔助的 1 階轉型（TF-1，#159，06 6.34.5「數值：縮小多少、持續幾回合，放進數值工坊由
+    使用者調」；``skill_budget.yaml`` 的 ``flash_transform``）。轉型的結構與規則在
+    :mod:`trpg.skillgen.flash_major`。庇佑、援手的治療量、護盾量、增益回合照新種類的預算重算，
+    不在這裡。"""
+
+    companion_power_permille: int = Field(default=500, ge=100, le=1000)
+    """伴生：開場召出的縮小版召喚物的最大 HP 與傷害是一般的幾‰。"""
+    companion_duration: int = Field(default=2, ge=1, le=4)
+    """伴生：開場召出的召喚物存在幾輪。"""
+    guardian_power_permille: int = Field(default=500, ge=100, le=1000)
+    """護主：被近戰攻擊時召出的縮小版召喚物的最大 HP 與傷害是一般的幾‰。"""
+    guardian_duration: int = Field(default=1, ge=1, le=4)
+    """護主：召出的召喚物存在幾輪（設計：1 回合）。"""
 
 
 class CharacterTierRules(ContentModel):
@@ -487,6 +518,9 @@ class BudgetRules(ContentModel):
     refund_ap_points: int = Field(default=6, ge=0)
     """``on_kill`` 的 ``refund_ap`` 每返還 1 點 AP 折合的預算點數（Phase 3D-8b；初值）。"""
     grant_skill_expected_uses_per_round_permille: int = Field(default=800, ge=0, le=3000)
+    silent_strike_round_milli: int = Field(default=600, ge=0, le=10000)
+    """主動技能給「無聲」（``grant_skill`` 給的技能只有 ``silent_strike`` 修正，BS-1，#157）時每給
+    1 回合的預算點數（千分之一點）；取代「被給技能總點數 × 預期使用次數」。"""
     """``grant_skill`` 的預算點數 ＝ 被給技能的總點數 × 這個值 ÷ 1000 × 持續輪數（預期每輪使用
     次數；Phase 3D-8c；初值，未經模擬）。"""
     lifesteal_value_permille: int = Field(default=800, ge=0, le=2000)
@@ -554,6 +588,9 @@ class BudgetRules(ContentModel):
     （稀有度改成只由結構自動算的標記）。"""
     retier_growth: RetierGrowthRules = Field(default_factory=RetierGrowthRules)
     """升階時放大效果本身（Phase 3W-9b）：點數固定的狀態、表面與升降地形。"""
+    flash_cost: FlashCostRules = Field(default_factory=FlashCostRules)
+    flash_transform: FlashTransformRules = Field(default_factory=FlashTransformRules)
+    """閃現蓄力、輕巧的調整幅度（FL-1a；數值工坊可改）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:

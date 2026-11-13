@@ -32,11 +32,16 @@ from collections.abc import Callable, Iterable
 from trpg.content.battle import ReactionRule
 from trpg.content.environment import ReactionDef
 from trpg.content.skills import SkillDef
-from trpg.engine import modifiers
+from trpg.engine import modifiers, part_breaks
 from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import DamageEffect, RemoveStatusEffect, ShieldEffect
+from trpg.engine.effects.models import (
+    CancelChargeEffect,
+    DamageEffect,
+    RemoveStatusEffect,
+    ShieldEffect,
+)
 from trpg.engine.events import (
     AttackIntercepted,
     AttackRolled,
@@ -55,7 +60,9 @@ from trpg.engine.gear.reactions import (
 )
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
 from trpg.engine.lifecycle import dismiss_summon
+from trpg.engine.lock_on import lock_target_of
 from trpg.engine.practice import is_practice_target
+from trpg.engine.quiet_strikes import NoTurn, no_turn_reason
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import AttackRoll, ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
@@ -99,11 +106,13 @@ __all__ = [
     "PauseForDecision",
     "after_attack",
     "ally_downed_reactions",
+    "ally_hit_near_reactions",
     "ally_targeted_reactions",
     "block_multiplier",
     "enemy_enters_adjacent_reactions",
     "enemy_moves_in_range_reactions",
     "hit_reactions",
+    "is_aid",
     "is_melee_attack",
     "kin_ward_reactions",
     "opportunity_attacks",
@@ -204,6 +213,7 @@ _TRIGGER_EVENT_MATCHERS: dict[str, Callable[[EventBase, UnitState, UnitState], b
         isinstance(e, AttackRolled) and e.target_id == u.id and e.attacker_id == t.id
     ),
     "ally_targeted": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
+    "ally_hit_near": lambda e, _u, t: isinstance(e, DamageDealt) and e.target_id == t.id,
     "ally_hit_in_range": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
     "ally_downed": lambda e, _u, t: isinstance(e, UnitDowned) and e.unit_id == t.id,
     "enemy_enters_adjacent": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
@@ -290,12 +300,18 @@ def _candidate(  # noqa: PLR0917
     trigger: UnitState,
     effect: str | None,
     skills: bool,
+    aided: UnitState | None = None,
 ) -> ReactionDef | SkillDef | None:
-    """``rule`` 目前能不能用：反應技（``skills``）或效果為 ``effect`` 的內建反應。"""
+    """``rule`` 目前能不能用：反應技（``skills``）或效果為 ``effect`` 的內建反應。``aided``：
+    援手（``reaction.aid``，TF-1）的對象——被瞄準／受擊的友方；援手反應技的射程與條件看他。"""
     if rule.reaction in unit.skills:
         if not skills:
             return None
         skill = ctx.rules.skill_def(rule.reaction)
+        if is_aid(skill):
+            if aided is None:
+                return None
+            trigger = aided
         return skill if _skill_usable(ctx, unit, skill, rule, trigger) else None
     definition = _usable(ctx, unit, rule)
     if definition is None or effect is None or definition.effect != effect:
@@ -313,13 +329,15 @@ def _react(
     *,
     effect: str | None = None,
     skills: bool = False,
+    aided: UnitState | None = None,
 ) -> ReactionDef | SkillDef | None:
     """找出 ``unit`` 第一條符合事件、目前可用的規則並詢問；使用時回傳反應定義或反應技
-    （已扣次數與耐力、發出 ``reaction_triggered``，由呼叫端執行效果）。"""
+    （已扣次數與耐力、發出 ``reaction_triggered``，由呼叫端執行效果）。``aided`` 見
+    :func:`_candidate`。"""
     for rule in unit.reactions:
         if rule.mode == "off" or rule.when.event not in events:
             continue
-        picked = _candidate(ctx, unit, rule, trigger, effect, skills)
+        picked = _candidate(ctx, unit, rule, trigger, effect, skills, aided)
         if picked is None:
             continue
         if _decide(ctx, unit, rule, picked, trigger):
@@ -419,7 +437,11 @@ def _kin_ward_def(ctx: Ctx, guardian: UnitState, target: UnitState) -> ReactionD
 def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bool) -> None:
     """``target`` 被 ``attacker`` 的攻擊命中、傷害結算之後（仍存活）：``hit_by_melee``／
     ``hit_by_attack`` 反應技（例如反擊技），或內建的反擊 ``counter_attack``（Phase 3I-1，拳套：
-    只對相鄰攻擊者的近戰攻擊，普攻一次）。``melee``：這次攻擊是否算近戰。"""
+    只對相鄰攻擊者的近戰攻擊，普攻一次）。``melee``：這次攻擊是否算近戰。
+
+    瞄準中（RG-1 ``lock_on``，#162）的 ``target`` 被敵人近戰命中時先取消瞄準（``interrupted``）。"""
+    if melee and target.alive and attacker.team is not target.team and lock_target_of(target):
+        execute(ctx, [CancelChargeEffect(unit_id=target.id, reason="interrupted")])
     if not target.alive or not attacker.alive:
         return
     events = ("hit_by_melee", "hit_by_attack") if melee else ("hit_by_attack",)
@@ -430,6 +452,7 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
         _run_skill(ctx, target, picked, attacker)
     elif picked is not None:
         perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
+    ally_hit_near_reactions(ctx, attacker, target)  # 援手（TF-1）：身邊友方替受擊者補血
 
 
 def take_decoy(
@@ -582,9 +605,32 @@ def ally_targeted_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) ->
             continue
         if manhattan(reactor.xy, target.xy) != 1:
             continue
-        picked = _react(ctx, reactor, ("ally_targeted",), attacker, skills=True)
+        picked = _react(ctx, reactor, ("ally_targeted",), attacker, skills=True, aided=target)
+        if isinstance(picked, SkillDef):  # 援手（TF-1）：作用在被瞄準的友方
+            _run_skill(ctx, reactor, picked, target if is_aid(picked) else attacker)
+
+
+def is_aid(skill: SkillDef) -> bool:
+    """援手反應技（``reaction.aid``，TF-1，#159）：反應作用在被瞄準／受擊的友方。"""
+    return skill.reaction is not None and skill.reaction.aid
+
+
+def ally_hit_near_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
+    """``target`` 被敵人 ``attacker`` 的攻擊命中、傷害結算之後仍存活（TF-1，#159 援手）：與
+    ``target`` 相鄰的友方（依單位 ID）各自可以用 ``ally_hit_near`` 反應技對 ``target`` 反應（例如
+    補血）；另一方是 ``target``。目標倒下就停止。"""
+    if attacker.team is target.team:
+        return
+    for reactor in ctx.state.units_sorted():
+        if not target.alive or ctx.state.ended:
+            return
+        if reactor.id == target.id or reactor.team is not target.team or not reactor.alive:
+            continue
+        if manhattan(reactor.xy, target.xy) != 1:
+            continue
+        picked = _react(ctx, reactor, ("ally_hit_near",), target, skills=True, aided=target)
         if isinstance(picked, SkillDef):
-            _run_skill(ctx, reactor, picked, attacker)
+            _run_skill(ctx, reactor, picked, target)
 
 
 @register_downed_handler
@@ -653,12 +699,15 @@ def perform_unit_attack(
     *,
     primary: bool,
     reaction: bool = False,
+    part_id: str | None = None,
 ) -> None:
     """一次普攻：命中判定 → （命中時）格擋反應 → 傷害。
 
     ``primary``：是否為動作本身的攻擊（預覽時主要攻擊視為命中，次要攻擊如藉機攻擊在
     ``min`` 模式視為失手、``max`` 模式視為暴擊）。被動技能的觸發等傷害結算完才處理。
     ``reaction``：這是反應攻擊（藉機攻擊、監視射擊）——命中加上感知的常駐數值（Phase 3H-1）。
+    ``part_id``：打 ``target`` 的哪個部位（PB-1a，動作的 ``target_part``）：連擊武器的每一下與
+    詞條連擊都打同一個部位（R5），穿透後方的目標打本體。
     """
     with holding(ctx):
         target_xy, attacker_xy = target.xy, attacker.xy
@@ -668,8 +717,17 @@ def perform_unit_attack(
         behind = pierce_line_targets(ctx.state, attacker, target)  # 開火前的直線（弩，3-24a2）
         pierce = attacker.weapon.pierce_permille
         spend_ammo(attacker)
+        melee = attacker.weapon.is_melee
+        # BS-1（#157）：從隱蔽中出手或無聲時，被打的單位不轉向（命中判定之前判斷：之後才脫離隱蔽）
+        quiet = no_turn_reason(ctx.state, attacker) if melee else None
         ambushed, rolled, victim = _attack_once(
-            ctx, attacker, target, primary=primary, reaction=reaction
+            ctx,
+            attacker,
+            target,
+            primary=primary,
+            reaction=reaction,
+            part_id=part_id,
+            no_turn=quiet,
         )
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
@@ -691,11 +749,13 @@ def perform_unit_attack(
                 primary=False,
                 reaction=reaction,
                 backstab_allowed=not attacker.weapon.backstab_first_only,
+                part_id=part_id,
+                no_turn=quiet,
             )
         attacker.next_attack_hit = attacker.next_attack_crit = (
             0  # 形態的進入獎勵：整次攻擊用完才失效
         )
-        turns = [(victim, attacker_xy)] if rolled and attacker.weapon.is_melee else []
+        turns = [(victim, attacker_xy)] if rolled and melee and quiet is None else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
         if reveal:
             reveal_after_gunshot(ctx, attacker)  # 槍聲（3-24a2）
@@ -739,9 +799,13 @@ def _attack_once(
     extra_permille: int | None = None,
     reaction: bool = False,
     backstab_allowed: bool = True,
+    part_id: str | None = None,
+    no_turn: NoTurn | None = None,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
     攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
+
+    ``no_turn``（BS-1）：這次近戰攻擊的目標不轉向的原因，記在 ``attack_rolled``（呼叫端判斷）。
 
     ``extra_permille``：這是普攻連擊多出來的一下（Phase 3-32a），傷害再乘上這個倍率；它不會再
     觸發連擊與分裂。"""
@@ -753,15 +817,23 @@ def _attack_once(
     forced = _forced_outcome(ctx, primary=primary or is_practice_target(ctx.state, target))
     state = ctx.state
     bonus = _attack_hit_bonus(ctx, attacker, target, reaction=reaction)
+    part_id = None if part_breaks.live_part(target, part_id) is None else part_id
     roll = roll_attack(
-        state, ctx.rng, attacker, target, forced, bonus=bonus, backstab_allowed=backstab_allowed
+        state,
+        ctx.rng,
+        attacker,
+        part_breaks.defense_view(target, part_id),  # 打部位：部位的護甲（PB-1a）
+        forced,
+        bonus=bonus,
+        backstab_allowed=backstab_allowed,
     )
-    rolled_event = _emit_attack_rolled(ctx, attacker, target, roll)
+    rolled_event = _emit_attack_rolled(ctx, attacker, target, roll, no_turn)
     if not roll.hit:
         return roll.ambush > 0, True, target
     guardian = try_intercept(ctx, attacker, target, rolled_event.seq)
     if guardian is not None:
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
+        part_id = None
     use = modifiers.ATTACK
     block, multiplier = _hit_multiplier(ctx, attacker, target, extra_permille)
     weapon = attacker.weapon
@@ -782,6 +854,7 @@ def _attack_once(
                 min_damage=ctx.core.min_damage_on_hit,
                 multiplier_permille=multiplier,
                 block_permille=block,
+                part_id=part_id,
             )
         ],
     )
@@ -790,7 +863,15 @@ def _attack_once(
     if extra_permille is None and attacker.alive:  # 普攻流：分裂與連擊（3-32a）
 
         def again(permille: int) -> None:
-            _attack_once(ctx, attacker, target, primary=False, extra_permille=permille)
+            _attack_once(
+                ctx,
+                attacker,
+                target,
+                primary=False,
+                extra_permille=permille,
+                part_id=part_id,
+                no_turn=no_turn,
+            )
 
         after_attack_hit(ctx, attacker, target, again)
     return roll.ambush > 0, True, target
@@ -821,7 +902,7 @@ def _attack_hit_bonus(ctx: Ctx, attacker: UnitState, target: UnitState, *, react
 
 
 def _emit_attack_rolled(
-    ctx: Ctx, attacker: UnitState, target: UnitState, roll: AttackRoll
+    ctx: Ctx, attacker: UnitState, target: UnitState, roll: AttackRoll, no_turn: NoTurn | None
 ) -> EventBase:
     return ctx.emit(
         AttackRolled,
@@ -838,12 +919,15 @@ def _emit_attack_rolled(
         total=roll.total,
         cover=roll.cover,
         cover_object_id=roll.cover_object_id,
+        cover_unit_id=roll.cover_unit_id,
+        cover_formation=roll.cover_formation,
         target_number=roll.target_number,
         hit=roll.hit,
         crit=roll.crit,
         modifier_bonus=roll.modifier_bonus,
         backstab=roll.backstab,
         ambush=roll.ambush,
+        no_turn=no_turn,
     )
 
 

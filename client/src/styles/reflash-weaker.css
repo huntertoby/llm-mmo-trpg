@@ -1,0 +1,57 @@
+/* RR-2（#160）：被強度下限卡住的重閃格。提醒一律用 FL-1b 的「變弱」樣式：無底無框＋向下三角（.fc-down，flash-choice.css）。
+   RR-2b：確認框合進選類別面板最上面那一行（.reflash-weaker-lead）。RR-2c：整招低於現在的選項卡加回「比原本弱」小標（.fc-weaker）。 */
+
+/* 重閃入口按鈕裡的提醒字（不標灰：按鈕照常可以按） */
+.reflash-weaker-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ui-text);
+  background: none;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* 選類別面板最上面那一行（提醒字＋「整招不會比現在弱；扣點後一定要選一個。」）：長句可折行，三角對齊第一行 */
+.reflash-weaker-lead {
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0 2px;
+  font-size: 13px;
+}
+
+.reflash-weaker-lead .fc-down {
+  flex: none;
+  margin-top: 0.55em;
+}
+
+/* 選項卡類別標籤旁的小標（只在整招低於現在的卡上） */
+.fc-weaker {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--ui-text);
+  background: none;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+/* 重閃入口按鈕裡的三角照舊縮小（按鈕字 12px）。FL-1h（美術 RR-2 可修 1）：選項卡的「▼ 比原本弱」小標不再縮，
+   和同一張卡「前 → 後」列的 ▼ 用同一個 CSS 三角（.fc-down：6.5／6.5／11），1 倍下不再像一個點 */
+.reflash-weaker-note .fc-down {
+  border-left-width: 5px;
+  border-right-width: 5px;
+  border-top-width: 8px;
+}
+
+.fc-weaker .fc-down {
+  margin: 0;
+}
+
+.fc-cat .fc-weaker {
+  margin-left: 6px;
+}

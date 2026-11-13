@@ -65,6 +65,10 @@ class BagItemView(_ApiModel):
     """別大類的主手卡片的下一行：「換上後不能用：〈招名〉」（目前裝的招裡要原本大類的）。"""
     opening_note_zh: str | None = None
     """開局還沒結束時裝備卡多寫的一行（OB-6：重選會收回的起始武器本體在背包時）；沒有＝``None``。"""
+    color: str | None = None
+    """染料的顏色（``items.yaml`` 的 ``color``；QI-7 物品圖示）；不是染料為 ``None``。"""
+    rare: bool | None = None
+    """稀有材料（``items.yaml`` 的 ``rare``；QI-7 物品圖示的框線色）；不是材料為 ``None``。"""
 
 
 class InventoryView(_ApiModel):
@@ -119,6 +123,10 @@ class ShopItemView(_ApiModel):
     problem_zh: str | None
     """不能買的原因；可以買時為 ``None``。"""
     battle_zh: str | None = None
+    color: str | None = None
+    """染料的顏色（``items.yaml`` 的 ``color``；QI-7 物品圖示）；不是染料為 ``None``。"""
+    rare: bool | None = None
+    """稀有材料（``items.yaml`` 的 ``rare``；QI-7 物品圖示的框線色）；不是材料為 ``None``。"""
 
 
 class ShopView(_ApiModel):

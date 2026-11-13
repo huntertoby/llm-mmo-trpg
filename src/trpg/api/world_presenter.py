@@ -57,8 +57,12 @@ from trpg.api.world_newcomer_view import (
     with_advice,
     with_routes,
 )
+from trpg.api.world_party_intro import party_intro
 from trpg.api.world_party_view import (
     allies_line,
+    duel_allies_line,
+    duel_event_line,
+    duel_line,
     my_shadow_view,
     party_event_line,
     party_view,
@@ -91,6 +95,7 @@ from trpg.api.world_story_view import (
     story_event_line,
     thread_views,
 )
+from trpg.api.world_wish_view import wish_view
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
@@ -483,7 +488,8 @@ def _encounter_view(
     catalog = library.enemy_catalog()
     # 敵方在前、第三方（5B-M3）在後；第三方沒有詞綴
     foes = [u for u in prepared.setup.units if u.team is not Team.ALLY]
-    affixes = [m.affix for m in prepared.lineup.members] + [None] * len(prepared.lineup.third)
+    fielded = prepared.fielded  # 精英單挑（RG-2）接受後只有精英本人
+    affixes = [m.affix for m in fielded.members] + [None] * len(fielded.third)
     views = tuple(
         _encounter_enemy(library, catalog, spawn, affix)
         for spawn, affix in zip(foes, affixes, strict=True)
@@ -512,11 +518,17 @@ def _encounter_view(
             oath=None if prepared.oath is None else prepared.oath.template,
             oath_bonus=None if prepared.oath is None else prepared.oath.bonus_status,
         ),
-        allies_zh=allies_line(library, char, prepared.hero_hp),
+        allies_zh=(
+            duel_allies_line(char, prepared.hero_hp)
+            if prepared.duel
+            else allies_line(library, char, prepared.hero_hp)
+        ),
         battlefield=_battlefield_view(prepared.field_cut),
         battlefield_fallback_zh=(
             None if prepared.cut_fallback is None else FALLBACK_ZH[prepared.cut_fallback]
         ),
+        duel=encounter.duel,
+        duel_zh=duel_line(encounter.duel, views[0].name_zh if views else ""),
     )
 
 
@@ -636,6 +648,7 @@ _LINES = (
     field_line,  # 6B-2
     things_line,  # 6C-5
     lambda library, _region, event: mail_event_line(library, event),  # 6T-1a
+    lambda _library, _region, event: duel_event_line(event),  # RG-2
 )
 
 
@@ -706,13 +719,14 @@ def world_view(
     social: FieldSocial | None = None,
     prepare: PrepareBattle | None = None,
     inline_tiles: bool = True,
+    wish_llm: bool = False,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
     的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）；``social`` 是
     其他角色的足跡與地點留言數（6C-5；省略＝不畫）。``prepare`` 是遭遇面板用的 ``prepare_battle``
     （6C-R3 伺服器傳快取版）；``inline_tiles`` 為假時實地地圖不帶地形（6C-R3，前端依雜湊另外
-    取）。"""
+    取）。``wish_llm``：許願池能不能用願望文字（世界的 LLM 開著、健康檢查沒說不可用；WP-2）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     limits = opening_limits(char)  # OB-5（#150 第 7、9 點）
@@ -777,6 +791,8 @@ def world_view(
         opening=range_view(library, char),  # TR-1（#134）：未完成開局＝停在工坊靶場
         limits=limits,
         workshop=workshop_view(library, char, in_battle=in_battle),  # PR-2a（#147）：工坊師傅選單
+        party_intro=None if in_battle else party_intro(library, char),  # OB-7（#154）
+        wish=wish_view(library, world, char, now, llm=wish_llm, in_battle=in_battle),  # WP-2
     )
 
 

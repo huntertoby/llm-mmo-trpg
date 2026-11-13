@@ -153,7 +153,54 @@
   color: var(--muted);
 }
 
+/* PB-1c：頭目部位破了（醒目：紅叉＋粗體亮字） */
+.tone-break .log-mark {
+  color: #ff5a4a;
+}
+
+.tone-break .log-text {
+  color: #ffd0c0;
+  font-weight: 700;
+}
+
 .log-text {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* BS-2：「背刺・無聲（不會轉身）」「隱蔽出手（不會轉身）」標籤（戰鬥紀錄的精簡行、浮動提示、攻擊預覽共用；
+   字與說明卡在 battle/noTurn.ts）。紫＝隱蔽系（同條件「潛行偷襲」的兜帽色），字不換行。
+   BS-2b（美術驗收可修 1）：隱蔽出手與無聲都是實線細框、靠字區分（3.7 已把虛線定成「本場不成立」）。 */
+.no-turn-tag {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 0 5px;
+  border: 1px solid #9a6ab8;
+  border-radius: 8px;
+  background: rgb(154 106 184 / 22%);
+  color: #e6d2ff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+/* BS-2b（美術驗收必修 1）：紀錄面板裡帶標籤的行可以換行；主字至少 6em、吃滿第一行，
+   標籤排在「詳」鈕之後（order），放不下時整個掉到第二行、對齊主字（記號 12px＋間距 4px）。 */
+.log-line.has-no-turn {
+  flex-wrap: wrap;
+}
+
+.log-line.has-no-turn .log-text {
+  flex: 1 1 0;
+  min-width: 6em;
+}
+
+.log-line.has-no-turn .no-turn-tag {
+  order: 1;
+  margin-left: 16px;
+}
+
+.preview-box li.preview-no-turn {
+  list-style: none;
 }

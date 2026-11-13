@@ -176,7 +176,8 @@ def test_run_auto_flashes_and_shows_flash_counts(
 # 種子換過：BAL-4b、4c、9c；BAL-19 合併後 4 → 6；BAL-19f 6 → 2；6F-4c 2 → 1；
 # MAP-1（dark_forest 改圖）1 → 2；BAL-20（AI 表 burning: 3）2 → 5（FIX-1 重掃 1～20：5、7、11、16、
 # 18、19、20 三項都練得到；拿掉 burning: 3 時 2 仍可，故歸因 BAL-20）。
-@pytest.mark.parametrize("seed", [5, 7])
+# KW-2（層數關鍵字進三選一新方向，候選全變）5 → 4（重掃 1～20：4、6、7、9 三項都練得到）。
+@pytest.mark.parametrize("seed", [4, 7])
 @pytest.mark.slow
 def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]

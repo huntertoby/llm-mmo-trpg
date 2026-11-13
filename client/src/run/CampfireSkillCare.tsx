@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { EmptyNote, KeepNum } from "../ui/PanelKit";
 import { SkillFlashInfo } from "../ui/SkillFlashInfo";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import {
@@ -22,6 +23,7 @@ import {
   toggleCarry,
   TRANSFORM_HINT,
 } from "./flash";
+import { weakerSlot } from "./reflashWeaker";
 
 interface Props {
   runId: string;
@@ -32,6 +34,8 @@ interface Props {
   previewFlash?: FlashPreviewLoader;
   /** 標題裡的地點說明（大世界：「只在城鎮與營火」）；省略 ＝「只在營火」。 */
   place?: string;
+  /** PNL-2：放進資訊面板的摺疊裡（摺疊列就是標題）：不畫 `.panel` 外框與區塊標題，原段落照舊。省略＝一輪營火的排法。 */
+  bare?: boolean;
 }
 
 export function CampfireSkillCare({ runId, hero, busy, onChoose, previewFlash, place = "只在營火" }: Props) {
@@ -45,17 +49,30 @@ export function CampfireSkillCare({ runId, hero, busy, onChoose, previewFlash, p
 
 // ---- 重閃 --------------------------------------------------------------------------------
 
-function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place }: Props) {
+/**
+ * 重閃清單空的時候（PNL-2 美術驗收可修 1）：虛線空狀態 `EmptyNote`。成長面板（`bare`，摺疊右邊已有「還沒有可以重閃的技能」標籤）
+ * 只寫原因；一輪營火（沒有標籤）照原句。
+ */
+export function reflashEmptyText(bare: boolean): string {
+  return bare ? "要先閃現過，或有完整技能。" : "還沒有可以重閃的技能（要先閃現過，或有完整技能）。";
+}
+
+/** 重閃說明（字照原句；PNL-4 起經 `KeepNum`，「點出 4 個」這類數字不和前面的詞分開）。 */
+export function reflashNoteText(flashRules: RunHero["flash_rules"]): string {
+  const r = rulesOf(flashRules);
+  return `把一招以前某一次的變化換掉，價格和閃現相同（${r.open_cost} 點出 ${r.open_options} 個；指定類別 ${r.focused_cost} 點出 ${r.focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項整招不會比現在弱；標 ▼ 的是換掉後變小的地方。`;
+}
+
+export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place = "只在營火", bare = false }: Props) {
   const [target, setTarget] = useState<{ id: string; slot: number } | null>(null);
   const list = reflashable(hero);
   const chosen = target === null ? undefined : list.find((s) => s.card.id === target.id);
   const slotLabel = chosen === undefined || target === null ? undefined : reflashSlots(chosen.flash).find((s) => s.slot === target.slot)?.label;
   return (
-    <div className="panel campfire-reflash" data-testid="campfire-reflash">
-      <div className="section-title">重閃（{place}）</div>
+    <div className={bare ? "campfire-reflash" : "panel campfire-reflash"} data-testid="campfire-reflash">
+      {!bare && <div className="section-title">重閃（{place}）</div>}
       <p className="small muted">
-        把一招以前某一次的變化換掉，價格和閃現相同（{rulesOf(hero.flash_rules).open_cost} 點出 {rulesOf(hero.flash_rules).open_options} 個；指定類別
-        {" "}{rulesOf(hero.flash_rules).focused_cost} 點出 {rulesOf(hero.flash_rules).focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項不會比被換掉的更弱。
+        <KeepNum text={reflashNoteText(hero.flash_rules)} />
       </p>
       {chosen !== undefined && target !== null && (
         <FlashChooser
@@ -67,6 +84,7 @@ function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place }: Pr
           skillName={chosen.card.name_zh}
           slot={target.slot}
           slotLabel={slotLabel}
+          weaker={weakerSlot(chosen.flash, target.slot)}
           busy={busy}
           onChoose={async (c) => {
             const status = await onChoose(c);
@@ -76,7 +94,7 @@ function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place }: Pr
           onCancel={() => setTarget(null)}
         />
       )}
-      {list.length === 0 && <div className="muted small">還沒有可以重閃的技能（要先閃現過，或有完整技能）。</div>}
+      {list.length === 0 && <EmptyNote testId="reflash-empty">{reflashEmptyText(bare)}</EmptyNote>}
       <ul className="flash-skill-list" data-testid="reflash-list">
         {list.map(({ card, flash }) => (
           <li key={card.id} className="reflash-row">
@@ -90,12 +108,20 @@ function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place }: Pr
                   key={s.slot}
                   type="button"
                   className={target?.id === card.id && target.slot === s.slot ? "primary" : ""}
-                  disabled={busy || (hero.insight ?? 0) < rulesOf(hero.flash_rules).open_cost}
+                  disabled={busy || s.none || (hero.insight ?? 0) < rulesOf(hero.flash_rules).open_cost}
                   data-testid={`reflash-${card.id}-${s.slot}`}
+                  data-reflash-none={s.none ? 1 : undefined}
+                  data-reflash-weaker={weakerSlot(flash, s.slot) !== null ? 1 : undefined}
                   onClick={() => setTarget({ id: card.id, slot: s.slot })}
                 >
                   重閃　{s.label}
                   {s.transformHint && <span className="skill-flash-transform small">　{TRANSFORM_HINT}</span>}
+                  <WeakerNote warn={weakerSlot(flash, s.slot)?.warn} testId={`reflash-weaker-${card.id}-${s.slot}`} />
+                  {s.problem !== null && (
+                    <span className="flash-none-note small" data-testid={`reflash-none-${card.id}-${s.slot}`}>
+                      {s.problem}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -106,11 +132,22 @@ function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place }: Pr
   );
 }
 
+/** RR-2（#160）：較弱重閃格入口的提醒字（變弱樣式：無底無框＋▼）；不是較弱的格子不佔位。 */
+function WeakerNote({ warn, testId }: { warn: string | undefined; testId: string }) {
+  if (warn === undefined) return null;
+  return (
+    <span className="reflash-weaker-note" data-testid={testId}>
+      <i className="fc-down" aria-label="變弱" />
+      {warn}
+    </span>
+  );
+}
+
 // ---- 溶掉／傳承 --------------------------------------------------------------------------
 
 type Mode = "dissolve" | "inherit";
 
-function OldSkillSection({ hero, busy, onChoose, place }: Omit<Props, "runId">) {
+export function OldSkillSection({ hero, busy, onChoose, place = "只在營火", bare = false }: Omit<Props, "runId">) {
   const [oldId, setOldId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
   const skills = ownedSkills(hero);
@@ -120,8 +157,8 @@ function OldSkillSection({ hero, busy, onChoose, place }: Omit<Props, "runId">) 
     setMode(null);
   }
   return (
-    <div className="panel campfire-old" data-testid="campfire-old">
-      <div className="section-title">溶掉或傳承（二選一，{place}）</div>
+    <div className={bare ? "campfire-old" : "panel campfire-old"} data-testid="campfire-old">
+      {!bare && <div className="section-title">溶掉或傳承（二選一，{place}）</div>}
       <p className="small muted">
         選一招舊技能，然後二選一：<b>溶掉</b>（退回花在它身上的靈感點的一半）或<b>傳承</b>（把它的小變化帶給另一招新技能）。兩種都會讓舊技能消失。
       </p>

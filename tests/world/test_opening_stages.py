@@ -90,8 +90,10 @@ def _starter(
 
 
 def test_versions() -> None:
-    assert CHAR_FORMAT == "trpg-char/13"
-    assert WORLD_RULES_VERSION == 25  # OB-3＋OB-4
+    assert CHAR_FORMAT == "trpg-char/15"
+    assert (
+        WORLD_RULES_VERSION == 33
+    )  # RG-5（32＝RG-4，31＝RG-2，30＝RR-2c，29＝RR-1，28＝WP-1，27＝OB-7）
 
 
 @pytest.mark.parametrize(("cls", "weapon"), sorted(CLASSES.items()))
@@ -215,7 +217,7 @@ def test_format_12_upgrades(
 ) -> None:
     del label
     loaded = loads_char(_as_old(make_char(), opening=opening))
-    assert loaded.format == "trpg-char/13"
+    assert loaded.format == "trpg-char/15"
     assert loaded.opening == expected
     if expected is not None:
         assert loaded.opening is not None and loaded.opening.stage == "pick_class"

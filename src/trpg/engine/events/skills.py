@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from trpg.engine.events.base import EventBase
 from trpg.shared.types import Pos, UnitId
 
@@ -69,19 +71,47 @@ class FollowupCharged(EventBase):
     """定向蓄力（Phase 3J-2，龍的蓄力吐息）的方向；複合技能的延遲段為 ``None``。"""
     anchored: bool = False
     """落在施放時選的格子（BAL-21a）；``False``＝以施放者為中心、跟著施放者移動。"""
+    lock_target_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
+    """瞄準預告（RG-1，#162，``lock_on``）瞄準的單位：``pos``／``tiles`` 是他瞄準當下的格子，
+    施放者下一個自己的回合開始時對他射出；不是瞄準時為 ``None``、不輸出。"""
+
+
+class LockIntercepted(EventBase):
+    """瞄準預告（RG-1 ``lock_on``）射出時，目標的隊友擋在中間：這一擊改打擋住的人（AF-1，05 5.7）。
+    緊接著是對 ``blocker_id`` 的一般結算（``skill_followup``、命中與傷害）。"""
+
+    type: Literal["lock_intercepted"] = "lock_intercepted"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    target_id: UnitId
+    """原本瞄準的人（不受這一擊影響）。"""
+    blocker_id: UnitId
+    """擋在中間、吃下這一擊的人。"""
 
 
 class FollowupCancelled(EventBase):
     """延遲段（Phase 3F-4b）取消：``downed`` 施放者倒下、``controlled`` 被暈眩或冰凍
     （``skip_turn`` 的狀態）、``silenced`` 法術型蓄力被沉默打斷（Phase 5A-M1b）、
     ``expired`` 被攻擊才釋放的延遲段到下回合開始都沒被攻擊、
-    ``replaced`` 施放了另一個延遲段、``form_left`` 蓄力吐息的形態解除了（Phase 3J-2）。"""
+    ``replaced`` 施放了另一個延遲段、``form_left`` 蓄力吐息的形態解除了（Phase 3J-2）、
+    ``part_broken`` 頭目的部位被打破（PB-1a，``seal_skill``／``interrupt_charge``）、
+    ``interrupted`` 瞄準中（RG-1 ``lock_on``）被近戰攻擊命中。"""
 
     type: Literal["followup_cancelled"] = "followup_cancelled"
     unit_id: UnitId
     skill_id: str
     name_zh: str
-    reason: Literal["downed", "controlled", "silenced", "expired", "replaced", "form_left"]
+    reason: Literal[
+        "downed",
+        "controlled",
+        "silenced",
+        "expired",
+        "replaced",
+        "form_left",
+        "part_broken",
+        "interrupted",
+    ]
 
 
 class SkillTriggered(EventBase):

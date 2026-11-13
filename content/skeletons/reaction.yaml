@@ -11,5 +11,5 @@ kinds: [reaction]
 enabled: true
 min_rarity: rare
 shapes: [self, single]
-core: {primitives: [damage, heal, shield, apply_status, push, pull, intercept]}
+core: {primitives: [damage, heal, shield, apply_status, push, pull, intercept, summon_beside]}   # summon_beside：TF-1 護主（轉型專用）
 secondary: {max_count: 1}

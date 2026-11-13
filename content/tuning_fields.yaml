@@ -3,7 +3,8 @@
 # 不進 library.files，所以改這份不會改內容 digest（content_digest／ruleset_hash／hash_ruleset）。
 # 加欄位不改程式：path 用點號分段，[*] 代表清單的每一項；載入時檢查每個 path 都對得到 schema 的整數欄位。
 # hint_min／hint_max 只是畫面上的「建議範圍」提示，不擋；擋的只有 schema 與跨檔檢查。
-# kind：int＝整數；permille＝整數千分比（‰，1000＝100%）。
+# kind：int＝整數；permille＝整數千分比（‰，1000＝100%）；dice＝骰子 NdM；range＝射程整數（weapon 唯讀）；
+#       skill_ids＝技能 ID 清單（NW-2a）。
 
 # 一律不開的檔（相對 content/ 的路徑，可用 * 萬用字元；程式裡另有一份固定的禁止表，兩份取聯集）。
 forbidden_files:
@@ -52,3 +53,144 @@ targets:
       - {path: element_mods.shadow, label_zh: 暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: "phases[*].trigger.permille", label_zh: 階段 HP 門檻, kind: permille, hint_min: 100, hint_max: 900, note_zh: 頭目 HP 跌到這個千分比以下時進入該階段；後面的階段要比前面低。}
       - {path: "phases[*].mana_restore", label_zh: 階段回復法力, kind: int, hint_min: 1, hint_max: 60, note_zh: 頭目進入這個階段時回復的法力點數（不超過最大法力）；沒寫＝不回復。開場階段不能設。}
+      # PB-1n：頭目部位（content/parts.py 的 BossPart；只有寫了 parts 的頭目才展開）。
+      # 加總 600‰、部位數、ID 等結構照 schema 擋；on_break[*].amount 只展開 stat_down（其他破壞效果沒有數量）。
+      - {path: "parts[*].hp_permille", label_zh: 部位血量（‰）, kind: permille, hint_min: 50, hint_max: 400, note_zh: 部位血量＝頭目開場最大 HP 的這麼多千分比（200＝20%）；同一隻頭目所有部位加總不能超過 600‰。部位越少血越快破。}
+      - {path: "parts[*].armor_bonus", label_zh: 部位護甲加值, kind: int, hint_min: 0, hint_max: 15, note_zh: 瞄準這個部位時，命中判定用這個護甲加值；沒寫＝和本體相同。比本體高＝更難打中。}
+      - {path: "parts[*].resist.physical", label_zh: 部位物理抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 打這個部位時的抗性（‰；負值是易傷）；沒寫＝和本體相同。瞄準部位的那一下改用這個抗性算傷害，頭目 HP 與部位血條扣同樣的數字。}
+      - {path: "parts[*].resist.elemental", label_zh: 部位元素抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含火焰、冰霜、雷電（‰；負值是易傷）；沒寫＝和本體相同。}
+      - {path: "parts[*].resist.nature", label_zh: 部位自然抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含毒素、風、大地（‰；負值是易傷）；沒寫＝和本體相同。}
+      - {path: "parts[*].resist.spirit", label_zh: 部位靈性抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含神聖、暗影（‰；負值是易傷）；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.physical", label_zh: 部位物理弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.fire", label_zh: 部位火焰弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.ice", label_zh: 部位冰霜弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.lightning", label_zh: 部位雷電弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.poison", label_zh: 部位毒素弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.wind", label_zh: 部位風弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.earth", label_zh: 部位大地弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.holy", label_zh: 部位神聖弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].element_mods.shadow", label_zh: 部位暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
+      - {path: "parts[*].on_break[*].amount", label_zh: 能力下降量, kind: int, hint_min: 1, hint_max: 999, existing_only: true, note_zh: 部位破掉後頭目下降多少，單位看「下降哪一項」：移動＝格、護甲／命中＝點、抗性＝‰（降低量）；「造成傷害」是倍率‰（750＝之後只打出 75%，也就是 −25%；要小於 1000，越小降越多）。}
+      # NW-2a：招式組（skill_ids＝技能 ID 清單；只能選 content/skills/ 既有的招，武器相容與敵人專用照載入檢查）
+      - {path: skills, label_zh: 技能（開場）, kind: skill_ids, note_zh: 單位開場會用的招；數量上限依 core.yaml 的 skill_slots，武器需求要和單位武器相容。}
+      - {path: "phases[*].skills", label_zh: 階段技能, kind: skill_ids, note_zh: 進入這個階段後換成這組招；刪掉＝沿用上一階段，空清單＝這個階段不放招。開場階段不能設。}
+
+  # NW-2a：技能（docs/phases/PhaseNW-2計畫.md 3.1）。效果層級的欄位＝effect_sites × effect_fields（effect_types 只展開到該原語的效果）。
+  # existing_only＝只有已寫的招展開（沒寫時插入會多一個機制，屬結構）；kinds＝只展開給這些技能種類（沒寫 kind＝active）。
+  # 範圍一律來自 schema 與 skill_primitives.yaml／skill_shapes.yaml（畫面只顯示）；hint 只是建議。
+  - kind: skill
+    label_zh: 技能
+    glob: skills/*.yaml
+    exclude:
+      - skill_gear_*           # 裝備附帶的技能（預算本來就不檢查）
+    fields:
+      - {path: ap_cost, label_zh: AP 消耗, kind: int, hint_min: 1, hint_max: 3, kinds: [active], existing_only: true, note_zh: 改 AP 會換預算係數（1 AP×0.5、2 AP×1.0、3 AP×1.6），預算比例會大跳。}
+      - {path: cost.stamina, label_zh: 耐力消耗, kind: int, hint_min: 0, hint_max: 30, note_zh: 沒寫＝0。武器技花耐力。}
+      - {path: cost.mana, label_zh: 法力消耗, kind: int, hint_min: 0, hint_max: 40, note_zh: 沒寫＝0。法術技花法力。}
+      - {path: cost.cooldown, label_zh: 冷卻（回合）, kind: int, hint_min: 1, hint_max: 6, note_zh: 1～6；清空＝沒有冷卻。冷卻會換預算的代價折抵。}
+      - {path: cost.uses_per_battle, label_zh: 每場次數上限, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 每場最多放幾次。}
+      - {path: cost.hp_percent, label_zh: 消耗生命（‰）, kind: permille, hint_min: 1, hint_max: 999, existing_only: true, note_zh: 施放時付出最大 HP 的這麼多千分比。}
+      - {path: cost.stacks, label_zh: 需要層數, kind: int, hint_min: 1, hint_max: 5, existing_only: true, note_zh: 施放前至少要有幾層。}
+      - {path: cost.source, label_zh: 源力消耗, kind: int, hint_min: 1, hint_max: 2, existing_only: true, note_zh: 傳說技能花的源力（1～2）。}
+      - {path: cost.self_status.duration, label_zh: 自身代價狀態持續, kind: int, hint_min: 2, hint_max: 3, existing_only: true, note_zh: 施放後自己獲得的代價狀態持續回合（2～3）。}
+      - {path: stance_upkeep, label_zh: 姿態維持費, kind: int, hint_min: 0, hint_max: 2, kinds: [stance], note_zh: 每個自己的回合開始付的點數（0～2）；沒寫＝0。}
+      - {path: crit_range, label_zh: 暴擊下限, kind: int, hint_min: 15, hint_max: 19, existing_only: true, note_zh: 自然骰不小於它就暴擊（15～19）；清空＝不擴大。}
+      - {path: damage_permille, label_zh: 基礎傷害折扣（‰）, kind: permille, hint_min: 100, hint_max: 999, existing_only: true, note_zh: 每個傷害效果再乘它（100～999）；清空＝不打折。}
+      - {path: shape.range, label_zh: 射程, kind: range, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）；寫「武器射程」的不能改。射程每格 ±5% 預算（基準 4）。}
+      - {path: shape.size, label_zh: 範圍大小, kind: int, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）。}
+      - {path: shape.radius, label_zh: 範圍半徑, kind: int, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）。}
+      - {path: shape.jumps, label_zh: 跳躍次數, kind: int, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）。}
+      - {path: shape.jump_range, label_zh: 跳躍距離, kind: int, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）。}
+      - {path: shape.arm, label_zh: 臂長, kind: int, existing_only: true, note_zh: 十字的臂長（skill_shapes.yaml）。}
+      - {path: condition.permille, label_zh: 條件門檻（‰）, kind: permille, existing_only: true, note_zh: 條件的千分比門檻（例 目標 HP 低於 400‰）；範圍見 skill_conditions.yaml。}
+      - {path: trigger.max_per_round, label_zh: 每輪觸發上限, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 被動技能每輪最多觸發幾次（1～3）。}
+      - {path: trigger.n, label_zh: 第 N 次觸發, kind: int, hint_min: 2, hint_max: 3, existing_only: true, note_zh: 每第 N 次命中觸發（2 或 3）。}
+      - {path: trigger.max_distance, label_zh: 觸發距離, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 另一方與持有者的距離上限。}
+      - {path: trap.rounds, label_zh: 陷阱持續, kind: int, existing_only: true, note_zh: 陷阱留在場上的輪數。}
+      - {path: followup.shape.range, label_zh: 第二段射程, kind: range, existing_only: true, note_zh: 複合技能第二段的射程（依形狀）。}
+      - {path: followup.shape.size, label_zh: 第二段範圍大小, kind: int, existing_only: true, note_zh: 複合技能第二段（依形狀）。}
+      - {path: followup.shape.radius, label_zh: 第二段範圍半徑, kind: int, existing_only: true, note_zh: 複合技能第二段（依形狀）。}
+      - {path: "variants[*].range_delta", label_zh: 變奏射程增減, kind: int, hint_min: -2, hint_max: 2, existing_only: true, note_zh: 變奏型態的射程增減（結果至少 1）。}
+    effect_sites:
+      - "effects[*]"
+      - "followup.effects[*]"
+      - "variants[*].add_effect"
+      - "variants[*].replace_effect.effect"
+      - "effects[*].then[*]"         # consume_status
+      - "effects[*].effects[*]"      # zone
+      - "effects[*].on_kill[*]"
+      - "effects[*].win[*]"          # gamble
+      - "effects[*].lose[*]"
+    effect_fields:
+      - {path: dice, label_zh: 骰子, kind: dice, existing_only: true, effect_types: [damage, heal, shield, charge_through, hurl_object, delayed_damage, detonate_runes, sacrifice_summon], note_zh: NdM（例 2d6）；可按 ±1 級（照組合器的骰子階梯）。}
+      - {path: multiplier_permille, label_zh: 武器倍率（‰）, kind: permille, existing_only: true, effect_types: [damage], note_zh: 武器技的傷害倍率（1000＝100%）。}
+      - {path: flat_bonus, label_zh: 固定值加成, kind: int, existing_only: true, effect_types: [damage, heal, shield], note_zh: 骰值之外多加的固定值（1～10）。}
+      - {path: lifesteal_permille, label_zh: 吸血（‰）, kind: permille, existing_only: true, effect_types: [damage], note_zh: 回復造成傷害的這麼多千分比（1～500）。}
+      - {path: form_bonus_permille, label_zh: 形態加成（‰）, kind: permille, existing_only: true, effect_types: [damage, heal], note_zh: 在形態中時多出的比例（1～1000）。}
+      - {path: spread, label_zh: 元素擴散格數, kind: int, existing_only: true, effect_types: [damage], note_zh: 風元素擴散（1～2）。}
+      - {path: scaling.per_step_permille, label_zh: 每步加成（‰）, kind: permille, existing_only: true, effect_types: [damage], note_zh: 依情況縮放的每一步加成。}
+      - {path: scaling.cap_permille, label_zh: 加成上限（‰）, kind: permille, existing_only: true, effect_types: [damage], note_zh: 依情況縮放的總加成上限。}
+      - {path: duration, label_zh: 持續（回合）, kind: int, existing_only: true, effect_types: [shield, apply_status, create_surface, create_obstacle, cheat_death, redirect_damage, reveal, summon, zone, grant_skill, inscribe], note_zh: 範圍依原語（skill_primitives.yaml）。}
+      - {path: distance, label_zh: 位移距離, kind: int, existing_only: true, effect_types: [push, pull, blow_surface], note_zh: 範圍依原語。}
+      - {path: collision_dice, label_zh: 撞擊骰, kind: dice, existing_only: true, effect_types: [push, pull], note_zh: 撞到東西時的傷害骰。}
+      - {path: range, label_zh: 舉起距離, kind: int, existing_only: true, effect_types: [hurl_object], note_zh: 可以舉起的物件的最遠距離（1～6）。}
+      - {path: magnitude_permille, label_zh: 幅度（‰）, kind: permille, existing_only: true, effect_types: [apply_status, create_surface, enter_form], note_zh: 姿態或形態的幅度，或數值型狀態的強度（1000～2000；例：獨狼被動「獨行者」給自己的激昂與護衛，1100＝狀態效果放大到 1.1 倍）。}
+      - {path: amount, label_zh: 數量, kind: int, existing_only: true, effect_types: [add_stack, grant_ap, restore_resource, refund_ap], note_zh: 疊加層數／給予或返還的 AP／回復量（依原語）。}
+      - {path: per_stack_permille, label_zh: 每層加成（‰）, kind: permille, existing_only: true, effect_types: [consume_stack], note_zh: 每消耗一層的加成（50～500）。}
+      - {path: permille, label_zh: 轉移比例（‰）, kind: permille, existing_only: true, effect_types: [redirect_damage], note_zh: 轉移給施放者的傷害比例（100～500）。}
+      - {path: hp_permille, label_zh: 復活 HP（‰）, kind: permille, existing_only: true, effect_types: [revive], note_zh: 站起來時的 HP（最大 HP 的千分比）。}
+      - {path: rounds, label_zh: 倒數輪數, kind: int, existing_only: true, effect_types: [delayed_damage], note_zh: 定時炸彈的倒數（1～3）。}
+      - {path: radius, label_zh: 爆炸半徑, kind: int, existing_only: true, effect_types: [delayed_damage, sacrifice_summon], note_zh: 範圍依原語（0～2）。}
+      - {path: power_permille, label_zh: 召喚物強度（‰）, kind: permille, existing_only: true, effect_types: [summon], note_zh: 召喚物最大 HP 與傷害的千分比。}
+      - {path: max_hp_permille, label_zh: 召喚物 HP 加成（‰）, kind: permille, existing_only: true, effect_types: [summon], note_zh: 召喚物最大 HP 多出的千分比。}
+      - {path: speed, label_zh: 移動速度, kind: int, existing_only: true, effect_types: [zone], note_zh: 移動區域每次環境回合前進的格數（1～2）。}
+      - {path: chance_permille, label_zh: 成功機率（‰）, kind: permille, existing_only: true, effect_types: [gamble], note_zh: 賭注成功的機率（50～950）。}
+      - {path: damage_multiplier_permille, label_zh: 傷害倍率（‰）, kind: permille, existing_only: true, effect_types: [damage_multiplier], note_zh: 賭注分支的傷害倍率（1500～3000）。}
+      - {path: self_damage_permille_of_hit, label_zh: 反噬比例（‰）, kind: permille, existing_only: true, effect_types: [self_damage_of_hit], note_zh: 施放者承受這次傷害的千分比。}
+
+  # PB-1n：AI 估值表（content/ai_profiles.yaml，敵我全體共用一份）。這段只開頭目部位的 parts:（PB-1b 的 8 個占位值）與 BS-2 的 facing.silent_behind；
+  # 行為模式權重、status_values 等其餘欄位照 NW 計畫留給 NW-3。
+  - kind: ai
+    label_zh: AI 估值
+    glob: ai_profiles.yaml
+    fields:
+      - {path: parts.seal_skill, label_zh: 打部位：封招的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 隊友 AI 評估「打這個部位」時，部位破掉能封住頭目一招值多少分（等值傷害點數；對照：暈眩 12、定身 6）。部位分＝破壞效果價值相加 ×（這一下的部位傷害 ÷ 部位剩餘血量，最多 1）。越大越愛打會封招的部位。}
+      - {path: parts.interrupt_charge, label_zh: 打部位：打斷蓄力的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉能打斷頭目正在蓄力的強招值多少分（等值傷害點數；例：霧鎖真人的長劍）。}
+      - {path: parts.stat_down, label_zh: 打部位：能力下降的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉讓頭目某項能力下降（移動、護甲、命中、抗性、造成傷害）值多少分。}
+      - {path: parts.control, label_zh: 打部位：控制的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉對頭目施加一次控制（例如暈眩）值多少分。}
+      - {path: parts.stop_mechanic, label_zh: 打部位：停掉機制的價值, kind: int, hint_min: 0, hint_max: 20, note_zh: 部位破掉停掉頭目一個機制（例：霧鎖真人氣海破掉後不再每回合回血）值多少分。}
+      - {path: parts.priority_bonus, label_zh: 打部位：一下能破的優先分, kind: int, hint_min: 0, hint_max: 20, note_zh: 這一下就能把部位打破、而且破了能封住頭目下一招或打斷蓄力時，再多加的分數。越大越會搶在頭目出招前破部位。}
+      - {path: parts.guard_back_bonus, label_zh: 頭目護背的扣分, kind: int, hint_min: 0, hint_max: 10, note_zh: 頭目背後的部位（例：氣海）快破時，頭目 AI 更不願意背對攻擊者——「背對」多扣這麼多分。0＝不特別護背。}
+      - {path: parts.near_break_permille, label_zh: 「快破」門檻（‰）, kind: permille, hint_min: 200, hint_max: 800, note_zh: 部位剩餘血量 ≤ 部位最大血量的這麼多千分比時算「快破」（500＝剩一半），頭目開始護背。只能 0～1000。}
+      - {path: parts.circle_back_bonus, label_zh: 隊友繞背的加分, kind: int, hint_min: 0, hint_max: 20, note_zh: 頭目有「要從背後才打得到」的部位（例：霧鎖真人的氣海）、這個階段已露出、還沒破時，隊友近戰站到頭目背後那一格多加的站位分。越大越願意繞到背後；藉機攻擊、危險地面、頭目強招的預告範圍照常扣分。0＝不特別繞背。}
+      # BS-2（BS-1 待決 2；06 6.21.1「AI：持有無聲時留在目標背後」）：只開無聲的留背分，背刺、背對扣分照 NW-3。
+      - {path: facing.silent_behind, label_zh: 無聲留背的加分, kind: int, hint_min: 0, hint_max: 10, note_zh: 持有「無聲」（手持匕首類）的近戰單位站在相鄰敵人的背後格時，每名敵人再加的站位分（疊在背刺的 4 分上）。敵我同一套。越大越黏在目標背後、不走開；太大可能不去打更值得打的目標。0＝和沒有無聲一樣只看背刺分。}
+  # BS-1（玩法決定 #157，06 6.21.1「數值工坊開放的欄位」）：背刺與潛行偷襲的加成（全體共用，敵我都吃）。
+  - kind: rules
+    label_zh: 核心戰鬥規則
+    glob: rules/core.yaml
+    fields:
+      - {path: backstab_hit_bonus, label_zh: 背刺命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 近戰攻擊者站在目標背後格時命中加這麼多（敵我、頭目都適用）。有「無聲」的刺客可以留在背後連續吃到。}
+      - {path: backstab_crit_range_bonus, label_zh: 背刺暴擊範圍, kind: int, hint_min: 0, hint_max: 3, note_zh: 背刺時暴擊範圍擴大這麼多（1＝武器 20 變 19～20）。}
+      - {path: ambush_hit_bonus, label_zh: 潛行偷襲命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 帶隱蔽狀態出手時命中加這麼多；出手後脫離隱蔽，從隱蔽中近戰出手時目標不會轉身。}
+      # RG-1（#162，09 9.6.6「數值照工坊」）：盾兵替相鄰的遠程同伴擋遠程攻擊。
+      # RG-2（#162，05 5.7）：玩家方看到敵方陷阱的可疑痕跡。
+      - {path: trap_trace_radius, label_zh: 陷阱痕跡距離, kind: int, hint_min: 0, hint_max: 5, note_zh: 我方單位走到敵方陷阱這麼多格內（直走橫走的步數）就看到那一格有「可疑痕跡」，只知道格子、不知道種類；0＝看不到痕跡。敵人看不到我方陷阱的痕跡。}
+      - {path: shield_guard_hit_penalty, label_zh: 盾兵掩護命中懲罰, kind: int, hint_min: 0, hint_max: 6, note_zh: 盾兵（持盾弟子、熔殼甲兵）站在遠程同伴朝向攻擊者的那一側時，遠程攻擊打那名同伴命中減這麼多；0＝盾兵不擋。和半掩護、塔盾不疊加。}
+      # RG-4（#163，08 8.11）：玩家塔盾的詞條「盾陣」，判定同盾兵、數值分開調。
+      - {path: shield_formation_hit_penalty, label_zh: 盾陣命中懲罰, kind: int, hint_min: 0, hint_max: 6, note_zh: 塔盾詞條「盾陣」：和持盾者相鄰（上下左右）的隊友被遠程攻擊時，攻擊者命中減這麼多；持盾者自己不算（由塔盾本體護）。0＝盾陣不擋。同一次攻擊被好幾個盾陣、或盾陣和半掩護、盾兵一起罩到時只算一次、取最高。}
+  # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
+  - kind: budget
+    label_zh: 技能預算表
+    glob: skill_budget.yaml
+    fields:
+      - {path: modifier.points_milli.silent_strike, label_zh: 無聲（被動常駐）的價值, kind: int, hint_min: 0, hint_max: 1000, note_zh: 千分之一點；每次近戰攻擊不讓目標轉身值多少，乘上預估使用次數（所有攻擊 10 次）就是無聲被動的預算點數（360＝3.6 點）。改了「無聲步」這類被動的預算比例跟著變。}
+      - {path: silent_strike_round_milli, label_zh: 主動給 1 回合無聲的價值, kind: int, hint_min: 0, hint_max: 2000, note_zh: 千分之一點；主動技能（例：影纏）用 grant_skill 給「無聲」時，每給 1 回合算這麼多點（600＝0.6 點）。}
+      # FL-1a（06 6.34「費用方向」第 4 點）：閃現蓄力、輕巧每一級調多少（規則「一定要變、順序、回合 +1／累計 +2／最少留 1」不開）。
+      - {path: flash_cost.damage_rungs, label_zh: 蓄力：傷害每次往上調幾格, kind: int, hint_min: 1, hint_max: 3, note_zh: 閃現「蓄力」在預算重調後沒有任何一項變強時，改把傷害（再來治療、護盾）的骰子或武器倍率往上調這麼多格（骰子依平均排序、倍率每格 100‰）；調完預算比例還低於 70% 時同一項再往上。1＝最小的一步。改了所有招的蓄力選項跟著變。}
+      - {path: flash_cost.magnitude_step, label_zh: 蓄力／輕巧：狀態強度每級（‰）, kind: int, hint_min: 10, hint_max: 100, note_zh: 閃現「蓄力」「輕巧」調數值型狀態（燃燒、中毒、減速、易傷等）的強度時每一級多少千分比（25＝每級 +2.5%）。蓄力只在狀態回合已經加不上去（到 6 回合或原招 +2）時才加強度，最多到 2000‰；輕巧往下最多降回 1000‰。}
+      # TF-1（#159，06 6.34.5「數值：縮小多少、持續幾回合，放進數值工坊由使用者調」）：召喚技的伴生、護主。
+      - {path: flash_transform.companion_power_permille, label_zh: 伴生：開場召喚物的強度（‰）, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「伴生」後，每場開打時身邊跟著的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比（500＝一半）。這是起點：做出來的被動不在預算範圍時，會每 100‰ 往上下找最接近、合格的強度。}
+      - {path: flash_transform.companion_duration, label_zh: 伴生：開場召喚物待幾輪, kind: int, hint_min: 1, hint_max: 4, note_zh: 伴生召出的召喚物存在幾輪（同一般召喚：在你第這麼多次回合結束時消失）。}
+      - {path: flash_transform.guardian_power_permille, label_zh: 護主：反咬召喚物的強度（‰）, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「護主」後，被近戰攻擊時冒出來反咬的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比。這是起點：不在預算範圍時會每 100‰ 往上下找最接近、合格的強度。}
+      - {path: flash_transform.guardian_duration, label_zh: 護主：反咬召喚物待幾輪, kind: int, hint_min: 1, hint_max: 4, note_zh: 護主召出的召喚物存在幾輪（設計是 1 回合）。}

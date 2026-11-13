@@ -82,12 +82,8 @@ def open_oath(ctx: Ctx, oath: OathSetup | None, unit_ids: list[UnitId]) -> None:
         )
     if oath.check.kind == "forbid_reaction":  # 立「不使用反應」：自動把反應設定關掉（5C-3b）
         _turn_reactions_off(ctx, holder)
-    if oath.check.kind == "solo":
-        me = state.units[holder]
-        if any(
-            u.id != holder and u.team is me.team and not u.is_summon for u in state.units_sorted()
-        ):
-            breach_oath(state)
+    if oath.check.kind == "solo" and not state.units[holder].lone_wolf:
+        breach_oath(state)  # 和獨狼同一個判定（LW-1，06 6.37：開場時已由 mark_lone_wolves 算好）
 
 
 def _turn_reactions_off(ctx: Ctx, holder: UnitId) -> None:

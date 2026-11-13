@@ -23,6 +23,10 @@ export type AttackAction = Schemas["Attack"];
 export type UseSkillAction = Schemas["UseSkill-Output"];
 export type UseRaceSkillAction = Schemas["UseRaceSkill"];
 export type RaceView = Schemas["RaceView"];
+/** 頭目部位（PB-1c）：單位卡上的部位、選部位選單的一列、一個「目標有部位」的動作的選項。 */
+export type PartView = Schemas["PartView"];
+export type PartOption = Schemas["PartOptionOut"];
+export type PartActionOptions = Schemas["PartActionOut"];
 export type StepOut = Schemas["StepOut"];
 export type Pos = Schemas["Pos"];
 export type Team = Schemas["Team"];
@@ -45,6 +49,8 @@ export type VariantState = Schemas["VariantStateOut"];
 export type PreviewVariant = Schemas["PreviewVariantOut"];
 export type VariantBudgetLine = Schemas["VariantLine"];
 export type SkillReasons = Schemas["SkillReasons"];
+/** 本場條件不成立（整場固定的條件，例獨狼）的技能（LW-2）。 */
+export type SkillOff = Schemas["SkillOffOut"];
 export type HeroCards = Schemas["HeroCards"];
 export type SkillStackRef = Schemas["SkillStackRef"];
 /** openapi-typescript 把有預設值的欄位標成必填；建立戰鬥時 `max_rounds` 可省略（伺服器預設 30），
@@ -144,6 +150,49 @@ export function asEvent(raw: Record<string, unknown>): EventBase {
 export function isUnitMoved(e: EventBase): e is UnitMovedEvent {
   return e.type === "unit_moved";
 }
+
+/** 打中頭目部位（PB-1a 事件；頭目資訊被隱藏時 `hp_before`／`hp_after` 為 null，PB-1c）。 */
+export interface PartDamagedEvent extends EventBase {
+  type: "part_damaged";
+  target_id: string;
+  part_id: string;
+  name_zh: string;
+  amount: number;
+  hp_before: number | null;
+  hp_after: number | null;
+}
+
+/** 頭目部位破了（整場一次；`applied` false＝破的那一下頭目也倒下、不施效果）。 */
+export interface PartBrokenEvent extends EventBase {
+  type: "part_broken";
+  target_id: string;
+  part_id: string;
+  name_zh: string;
+  effects: string[];
+  applied?: boolean;
+  text_zh?: string | null;
+  source_id?: string | null;
+}
+
+/** 部位破壞封住了一招。 */
+export interface SkillSealedEvent extends EventBase {
+  type: "skill_sealed";
+  unit_id: string;
+  skill_id: string;
+  part_id: string;
+}
+
+export function isPartDamaged(e: EventBase): e is PartDamagedEvent {
+  return e.type === "part_damaged" && typeof e["target_id"] === "string" && typeof e["part_id"] === "string";
+}
+
+export function isPartBroken(e: EventBase): e is PartBrokenEvent {
+  return e.type === "part_broken" && typeof e["target_id"] === "string" && typeof e["name_zh"] === "string";
+}
+
+export function isSkillSealed(e: EventBase): e is SkillSealedEvent {
+  return e.type === "skill_sealed" && typeof e["unit_id"] === "string" && typeof e["skill_id"] === "string";
+}
 // roguelite 一輪（Phase 3-5c-1）
 export type RunResponse = Schemas["RunResponse"];
 export type RunBattleResponse = Schemas["RunBattleResponse"];
@@ -179,6 +228,11 @@ export type PendingFlash = Schemas["PendingFlashOut"];
 export type FlashPreview = Schemas["FlashPreviewOut"];
 export type FlashOption = Schemas["FlashOptionOut"];
 export type FlashCategory = Schemas["FlashCategoryOut"];
+/** 選變體畫面（FL-1b）：「前 → 後」一列、欄位小圖、說明卡、原技能列的數字。 */
+export type StatChange = Schemas["StatChangeOut"];
+export type ChangeIcon = Schemas["ChangeIconOut"];
+export type FlashTerm = Schemas["FlashTermOut"];
+export type FlashBaseStat = Schemas["FlashBaseStatOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 // 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）
@@ -269,6 +323,7 @@ export type WorldAction =
   | (Omit<Schemas["TravelAction"], "hasten"> & { hasten?: boolean })
   | Schemas["CampAction"]
   | Schemas["RetreatAction"]
+  | Schemas["DuelChoiceAction"] // RG-3（#162）：回應精英提出的單挑
   | Schemas["RestAction"]
   | Schemas["LoadoutAction"]
   | Schemas["TeleportAction"]
@@ -326,7 +381,9 @@ export type WorldAction =
   | Schemas["UseTeleportStoneAction"]
   // 6C-5：潛行、點情境物件
   | Schemas["SneakAction"]
-  | Schemas["UseFieldObjectAction"];
+  | Schemas["UseFieldObjectAction"]
+  // WP-3：許願池（文字許願 `keywords` 帶 `[]`，選單許願不帶 `text`）
+  | Schemas["WishAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
@@ -358,6 +415,10 @@ export type SeasonBoardView = Schemas["SeasonBoardView"];
 export type BoardGoalView = Schemas["BoardGoalView"];
 export type BoardBountyView = Schemas["BoardBountyView"];
 export type BoardWorldEventView = Schemas["BoardWorldEventView"];
+/** 公告板分頁版（PNL-1b）：賽季資訊、日程一段、時間點（含種類）。 */
+export type SeasonInfoView = Schemas["SeasonInfoView"];
+export type BoardPhaseView = Schemas["BoardPhaseView"];
+export type BoardMilestoneView = Schemas["BoardMilestoneView"];
 /** 賽季 Boss（5F-3）：封印、鑰匙、帳號今天剩幾次、首殺、評分榜。 */
 export type BoardSeasonBossView = Schemas["BoardSeasonBossView"];
 export type BoardBossEntryView = Schemas["BoardBossEntryView"];
@@ -381,6 +442,10 @@ export type ResetLine = Schemas["ResetLine"];
 // 隊伍與系統傭兵（Phase 5C-1）
 export type WorldPartyView = Schemas["PartyView"];
 export type WorldPartyMember = Schemas["PartyMemberView"];
+/** 出城前的獨狼提示（LW-2，06 6.37）。 */
+export type WorldLoneWolf = Schemas["LoneWolfView"];
+/** 隊友加入當下的台詞（OB-7／OB-8，#154）。 */
+export type WorldPartyIntro = Schemas["PartyIntroView"];
 export type WorldMercenary = Schemas["MercenaryView"];
 // 朋友的影子（Phase 5C-2）
 export type WorldShadow = Schemas["ShadowView"];
@@ -428,3 +493,33 @@ export type TuningSimJob = Schemas["TuningSimJob"];
 export type TuningSimResult = Schemas["TuningSimResult"];
 export type TuningSimSide = Schemas["TuningSimSide"];
 export type TuningSimPhase = Schemas["TuningSimPhase"];
+export type TuningApplyIn = Schemas["TuningApplyIn"];
+export type TuningBudgetResult = Schemas["TuningBudgetResult"];
+export type TuningBudgetFlag = Schemas["TuningBudgetFlag"];
+export type TuningMinMovesFlag = Schemas["TuningMinMovesFlag"];
+export type TuningSideChange = Schemas["TuningSideChange"];
+export type TuningGroupIn = Schemas["TuningGroupIn"];
+export type TuningGroupFilter = Schemas["TuningGroupFilter"];
+export type TuningGroupTarget = Schemas["TuningGroupTarget"];
+export type TuningGroupOp = Schemas["TuningGroupOp"];
+export type TuningGroupPreset = Schemas["TuningGroupPreset"];
+export type TuningGroupPreview = Schemas["TuningGroupPreview"];
+export type TuningGroupRow = Schemas["TuningGroupRow"];
+export type TuningLadders = Schemas["TuningLadders"];
+export type TuningSkillFacets = Schemas["TuningSkillFacets"];
+export type TuningSkillUser = Schemas["TuningSkillUser"];
+export type TuningUnitSkills = Schemas["TuningUnitSkills"];
+export type TuningMapSimResult = Schemas["TuningMapSimResult"];
+export type TuningMapSide = Schemas["TuningMapSide"];
+export type TuningSkillRate = Schemas["TuningSkillRate"];
+export type TuningSimInject = Schemas["TuningSimInject"];
+export type TuningSkillRatio = Schemas["TuningSkillRatio"];
+export type TuningRatioSummary = Schemas["TuningRatioSummary"];
+export type TuningRatioLine = Schemas["TuningRatioLine"];
+export type TuningRatioPlan = Schemas["TuningRatioPlan"];
+export type TuningRatioPlanIn = Schemas["TuningRatioPlanIn"];
+export type TuningRatioSimResult = Schemas["TuningRatioSimResult"];
+export type TuningRatioRow = Schemas["TuningRatioRow"];
+export type TuningRatioSkip = Schemas["TuningRatioSkip"];
+export type TuningRatioBaseline = Schemas["TuningRatioBaseline"];
+export type TuningViolation = Schemas["TuningViolation"];

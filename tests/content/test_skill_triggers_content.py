@@ -20,6 +20,7 @@ COEFFICIENTS = {
     "on_cast_tag": 350,
     "on_status_applied": 400,
     "on_collision": 300,
+    "on_battle_start": 300,  # TF-1 伴生（每場一次；初值）
 }
 PASSIVES = ("skill_ember_brand", "skill_second_wind", "skill_thorn_skin", "skill_mark_detonation")
 
@@ -37,7 +38,7 @@ def test_the_twelve_triggers_are_defined_with_the_spec_coefficients() -> None:
 
 def test_only_triggers_with_another_party_allow_target_other() -> None:
     rules = library().ruleset
-    no_other = {"on_turn_start", "on_turn_end", "on_move", "on_cast_tag"}
+    no_other = {"on_turn_start", "on_turn_end", "on_move", "on_cast_tag", "on_battle_start"}
     for trigger in rules.skill_triggers.triggers:
         assert trigger.has_other is (trigger.id not in no_other)
 

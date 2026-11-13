@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldPendingLoot } from "../api/types";
 import { Hint } from "../ui/Hint";
+import { ItemListIcon } from "../ui/ItemIcon";
 import { type LootDraft, type LootSide, draftKey, lootChooseAction } from "./lootChoice";
 
 interface Props {
@@ -33,7 +34,10 @@ export function LootChoicePanel({ pending, inventory, busy, onAct }: Props) {
           return (
             <li key={key} data-testid={`world-loot-row-${key}`}>
               <Hint text={itemHint(item)}>
-                <span className="world-shop-name">{item.name_zh}</span>
+                <span className="world-shop-thing">
+                  <ItemListIcon id={item.item} gear={item.gear} color={item.color} rare={item.rare} />
+                  <span className="world-shop-name">{item.name_zh}</span>
+                </span>
               </Hint>
               <span className="muted">{side === "new" ? "新拿到" : "背包裡"}</span>
               {item.gear === true ? (

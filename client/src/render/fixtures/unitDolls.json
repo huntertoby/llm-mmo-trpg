@@ -13,6 +13,30 @@
   "affixes": [],
   "traits": []
  },
+ "ashen_berserker": {
+  "skin": "#a8724c",
+  "hair": "short",
+  "hair_color": "#5a3a22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "leather",
+    "material": "leather"
+   },
+   "feet": {
+    "kind": "boots",
+    "material": "leather"
+   },
+   "head": {
+    "kind": "bandana",
+    "material": "cloth",
+    "color": "#c2581f"
+   }
+  },
+  "beard": true,
+  "affixes": [],
+  "traits": []
+ },
  "ashen_heart": {
   "skin": "#f1c9a5",
   "skull": false,
@@ -659,6 +683,23 @@
   "affixes": [],
   "traits": []
  },
+ "molten_shell_trooper": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "crawler",
+   "variant": "beetle",
+   "material": "magma",
+   "traits": [
+    "molten_shield"
+   ],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
  "molten_wraith": {
   "skin": "#f1c9a5",
   "skull": false,
@@ -967,6 +1008,32 @@
    }
   },
   "main_kind": "puppet_cross",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_shield_disciple": {
+  "skin": "#d9a47a",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#5f8f8a",
+    "trim": "#dfe4e2"
+   },
+   "off_hand": {
+    "kind": "shield_kite",
+    "material": "wood",
+    "color": "#5f8f8a",
+    "form": "sect_great",
+    "trim": "#dfe4e2",
+    "emblem": "peak"
+   }
+  },
+  "main_material": "iron",
   "beard": false,
   "affixes": [],
   "traits": []

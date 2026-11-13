@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from trpg.engine.events.base import AdvantageState, DamageCause, EventBase
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, UnitId
 
@@ -39,12 +41,23 @@ class AttackRolled(EventBase):
     cover_object_id: ObjectId | None = None
     skill_id: str | None = None
     """技能的命中判定時為技能 ID（Phase 2A）；普攻為 ``None``。"""
+    cover_unit_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
+    """盾兵掩護（RG-1，#162）：替目標擋遠程攻擊的盾兵（``cover`` 是它的命中修正）；沒有時不輸出。
+    塔盾詞條「盾陣」（RG-4，#163）時是帶盾陣的隊友，並且 ``cover_formation`` 為真。"""
+    cover_formation: bool = Field(default=False, exclude_if=lambda v: not v)
+    """``cover_unit_id`` 是盾陣（RG-4）而不是盾兵；不是時不輸出。"""
     modifier_bonus: int = 0
     backstab: int = 0
     """背刺的命中加值（Phase 3D-8d；0 為不是背刺；暴擊範圍另外擴大
     ``backstab_crit_range_bonus``）。"""
     ambush: int = 0
     """潛行偷襲的命中加值（Phase 3D-8d；攻擊者帶 ``concealed`` 狀態；0 為沒有）。"""
+    no_turn: Literal["concealed", "silent"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    """這次近戰攻擊的目標不轉向（BS-1，#157，06 6.21.1）：``concealed`` 從隱蔽中出手、``silent``
+    無聲（手持匕首類的修正規則）；照常轉向（含遠程、打自己）時為 ``None``，不輸出。和 ``backstab``
+    一起成立時，紀錄與預覽顯示「背刺・無聲（不會轉身）」。"""
 
 
 class ConductBlocked(EventBase):

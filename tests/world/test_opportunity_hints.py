@@ -134,7 +134,7 @@ def test_hint_day_absent_in_old_save(library: ContentLibrary, make_char: MakeCha
     data = json.loads(dumps_char(char))
     data.pop("opportunity_hint_day")
     old = loads_char(json.dumps(data, ensure_ascii=False))
-    assert data["format"] == "trpg-char/13"
+    assert data["format"] == "trpg-char/15"
     assert old.opportunity_hint_day is None
     result = world_step(library, make_world(), old, TavernAction(), _day(6))
     assert _hints(result.events) == [HINT]

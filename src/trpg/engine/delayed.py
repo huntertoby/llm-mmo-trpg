@@ -17,6 +17,11 @@
   （``UseSkill.target_pos``）記在蓄力狀態的 ``StatusInstance.anchor``；預告、釋放都以那格為中心
   （:func:`~trpg.engine.skills.targeting.anchored_area`：不重驗射程與視線，只取地圖內的格子與技能
   條件），施放者移動也不跟著走。命中、抵抗仍以施放者本人計。
+- **瞄準預告**（RG-1，#162，``lock_on``）：施放＝瞄準（:func:`charge_lock_on`）——蓄力狀態的
+  ``lock_target`` 記住目標，預計範圍是目標當下的格子（跟著目標走）；下回合開始時先照
+  :func:`trpg.engine.lock_on.lock_problem` 檢查（倒下、出射程、斷視線、照一般規則選不到的隱蔽
+  時落空），再以技能本身結算；目標的隊友擋在中間時改打擋住的人（AF-1，:func:`~trpg.engine.lock_on.lock_victim`，
+  先發 ``lock_intercepted``）。瞄準中被近戰命中時取消（``interrupted``）。
 - 第二段的結算由 :func:`trpg.engine.skills.casting.run_delayed` 處理（命中、傷害照常；不付
   代價，代價在施放時已付）。
 - ``charging`` 是中性、有益的狀態：不會被淨化、驅散或奪取。
@@ -50,9 +55,12 @@ from trpg.engine.events import (
     EventBase,
     FollowupCancelled,
     FollowupCharged,
+    LockIntercepted,
     StatusApplied,
     UnitDowned,
 )
+from trpg.engine.lock_on import LOCK_BLOCKED, lock_pick, lock_problem, lock_victim
+from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.forms import breath_of, is_spell_for_silence
 from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skill_triggers import register_fired_resolver
@@ -62,7 +70,7 @@ from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.trigger_types import Fired
 from trpg.engine.triggers import register_trigger
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Pos
+from trpg.shared.types import Pos, UnitId
 
 __all__ = [
     "DELAYED_RELEASE",
@@ -71,6 +79,7 @@ __all__ = [
     "attacked_release",
     "charge",
     "charge_infos",
+    "charge_lock_on",
     "delayed_selection",
     "release_at_turn_start",
     "resolve_attacked_release",
@@ -156,6 +165,31 @@ def charge(ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill) -> No
     )
 
 
+def charge_lock_on(ctx: Ctx, caster: UnitState, skill: SkillDef, target: UnitState) -> None:
+    """瞄準預告（RG-1）：``caster`` 以 ``skill`` 瞄準 ``target``（合法性與代價由呼叫端先處理）。
+    已經在蓄力時取代舊的（``replaced``）；施放者面向目標。"""
+    old = charged_skill(ctx.state, caster)
+    if old is not None:
+        _drop(ctx, caster, old[0], "replaced", old[1])
+    caster.statuses = [s for s in caster.statuses if s.status_id != CHARGING]
+    caster.statuses.append(
+        StatusInstance(
+            CHARGING, remaining=1, source_id=caster.id, skill_id=skill.id, lock_target=target.id
+        )
+    )
+    face_toward(caster, target.xy)
+    ctx.emit(
+        FollowupCharged,
+        unit_id=caster.id,
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        release="next_turn",
+        pos=target.pos,
+        tiles=(target.pos,),
+        lock_target_id=target.id,
+    )
+
+
 def start_directed_charge(ctx: Ctx, unit: UnitState, direction: str) -> None:
     """定向蓄力：``unit`` 朝 ``direction`` 開始蓄力吐息（形態天生武器帶 ``charge``，合法性與 AP 由
     呼叫端先檢查）。已經在蓄力時取代舊的（``replaced``）。"""
@@ -191,7 +225,16 @@ def _drop(
     ctx: Ctx,
     unit: UnitState,
     status: StatusInstance,
-    reason: Literal["downed", "controlled", "silenced", "expired", "replaced", "form_left"],
+    reason: Literal[
+        "downed",
+        "controlled",
+        "silenced",
+        "expired",
+        "replaced",
+        "form_left",
+        "part_broken",
+        "interrupted",
+    ],
     skill: SkillDef | None = None,
 ) -> None:
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
@@ -208,11 +251,44 @@ def _drop(
 def _release(ctx: Ctx, unit: UnitState, skill: SkillDef, status: StatusInstance) -> None:
     """移除蓄力並結算第二段（以當下位置、或記住的落點推算不出選取時 ``followup_no_target``）。"""
     unit.statuses = [s for s in unit.statuses if s.status_id != CHARGING]
+    if status.lock_target is not None:
+        _release_lock(ctx, unit, skill, status.lock_target)
+        return
     found = delayed_selection(ctx.state, unit, skill, status.direction, status.anchor)
     if found is None:
         pos = Pos(x=unit.xy[0], y=unit.xy[1]) if status.anchor is None else status.anchor
         ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason="followup_no_target")
         return
+    run_delayed(ctx, unit, skill, *found)
+
+
+def _release_lock(ctx: Ctx, unit: UnitState, skill: SkillDef, target_id: str) -> None:
+    """瞄準預告射出（RG-1）：:func:`~trpg.engine.lock_on.lock_problem` 不成立時落空
+    （``effect_fizzled``，原因是落空的種類，``pos`` 是目標的格子；目標不在場上時是施放者的格子）；
+    否則以技能本身結算（同延遲段，不再付代價）。目標的隊友擋在中間時改打擋住的人（AF-1，先發
+    ``lock_intercepted``）；擋住的人本身選不到時落空（``lock_on_blocked``）。"""
+    target = ctx.state.units.get(UnitId(target_id))
+    problem = lock_problem(ctx.state, unit, skill, target)
+    if problem is not None:
+        pos = unit.pos if target is None else target.pos
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason=problem)
+        return
+    assert target is not None
+    victim = lock_victim(ctx.state, unit, skill, target)
+    if victim is None:
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=target.pos, reason=LOCK_BLOCKED)
+        return
+    if victim is not target:
+        ctx.emit(
+            LockIntercepted,
+            unit_id=unit.id,
+            skill_id=skill.id,
+            name_zh=skill.name_zh,
+            target_id=target.id,
+            blocker_id=victim.id,
+        )
+    found = lock_pick(ctx.state, unit, skill, victim)
+    assert found is not None  # lock_problem／lock_victim 已檢查過
     run_delayed(ctx, unit, skill, *found)
 
 
@@ -256,6 +332,27 @@ class ChargeInfo:
     tiles: tuple[Pos, ...]
     direction: str | None = None
     anchored: bool = False
+    lock_target_id: UnitId | None = None
+    """瞄準預告（RG-1）瞄準的單位：``pos``／``tiles`` 是他目前的格子。"""
+
+
+def _lock_info(
+    state: BattleState, unit: UnitState, status: StatusInstance, skill: SkillDef
+) -> ChargeInfo:
+    """瞄準中的單位的預告：預計範圍是目標目前的格子（目標已經不在場上時是空的）。"""
+    assert status.lock_target is not None
+    target = state.units.get(status.lock_target)
+    alive = target is not None and target.alive
+    return ChargeInfo(
+        unit_id=unit.id,
+        skill_id=skill.id,
+        name_zh=skill.name_zh,
+        release=release_of(skill),
+        remaining=status.remaining or 1,
+        pos=target.pos if target is not None and alive else unit.pos,
+        tiles=(target.pos,) if target is not None and alive else (),
+        lock_target_id=status.lock_target,
+    )
 
 
 def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
@@ -266,6 +363,9 @@ def charge_infos(state: BattleState) -> tuple[ChargeInfo, ...]:
         if charged is None:
             continue
         status, skill = charged
+        if status.lock_target is not None:
+            found.append(_lock_info(state, unit, status, skill))
+            continue
         selection = delayed_selection(state, unit, skill, status.direction, status.anchor)
         found.append(
             ChargeInfo(

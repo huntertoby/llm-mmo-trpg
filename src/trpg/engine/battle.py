@@ -88,8 +88,10 @@ from trpg.engine.gear.charge import charge_actions, do_activate_charge
 from trpg.engine.ice_slide import slide_check, slide_check_due, slide_unit
 from trpg.engine.ids import IMMOVABLE, PRONE, TOPPLABLE
 from trpg.engine.lifecycle import make_unit
+from trpg.engine.lone_wolf import mark_lone_wolves
 from trpg.engine.maneuvers import contest
 from trpg.engine.oaths import open_oath
+from trpg.engine.parts import check_target_part
 from trpg.engine.practice import is_practice_protected
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
@@ -127,7 +129,7 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, UnitSpawn, starting_source
 from trpg.engine.skill_infusion import do_infuse_skill
-from trpg.engine.skill_triggers import collect_move, settle
+from trpg.engine.skill_triggers import collect_battle_start, collect_move, settle
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.followups import second_problem
 from trpg.engine.skills.forms import has_skill_selection, skill_selections
@@ -375,6 +377,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             unit.mana = min(spawn.mana, unit.max_mana)
         if spawn.stamina is not None:  # 開場耐力（3H-2：一輪存檔帶入）
             unit.stamina = min(spawn.stamina, unit.max_stamina)
+    mark_lone_wolves(state)  # 獨狼（LW-1，#156）：開場那一刻定下、整場固定
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
     if state.practice is not None:  # 主角與木樁的開場位置（#147：被推進致命地形時回到這裡）
         state.practice_homes = {
@@ -400,6 +403,8 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         state.normal_turn_order = tuple(normal_order)
     ctx.emit(TurnOrderSet, order=tuple(state.turn_order))
     ctx.emit(RoundStarted)
+    collect_battle_start(ctx)  # 開場的被動（TF-1，#159 伴生）：第一位行動之前
+    settle(ctx)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
 
@@ -901,6 +906,7 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, Attack)
     cost = action_ap_cost(ctx.state, unit, modifiers.ATTACK)
     _require_ap(unit, cost)
+    _require_target_part(ctx.state, action)
     if natural_charge(ctx.rules, unit) is not None:  # 蓄力武器（龍的吐息；3J-2）：普攻＝開始蓄力
         _do_charge_attack(ctx, unit, action, cost)
         return
@@ -940,7 +946,14 @@ def _do_attack(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert action.target_id is not None
     target = _attack_target(ctx.state, unit, action.target_id)
     unit.ap -= cost
-    perform_unit_attack(ctx, unit, target, primary=True)
+    perform_unit_attack(ctx, unit, target, primary=True, part_id=action.target_part)
+
+
+def _require_target_part(state: BattleState, action: Action) -> None:
+    """``target_part``（PB-1a）不合法時拋出 :class:`IllegalActionError`（沒帶時不做事）。"""
+    problem = check_target_part(state, action)
+    if problem is not None:
+        raise IllegalActionError(problem)
 
 
 def _do_charge_attack(ctx: Ctx, unit: UnitState, action: Attack, cost: int) -> None:
@@ -1208,10 +1221,13 @@ def resolve_with(
     *,
     preview: PreviewMode | None = None,
     gamble: GambleBranch | None = None,
+    fire_lock: bool = False,
 ) -> ResolveResult:
     """內部 API：以 ``decisions`` 結算 ``action``（``preview`` 不為 ``None`` 時為預覽模擬；
-    ``gamble`` 指定預覽時賭注的分支，Phase 3D-7a）。"""
-    ctx = Ctx(base.clone(), decisions=decisions, preview=preview, gamble=gamble)
+    ``gamble`` 指定預覽時賭注的分支，Phase 3D-7a；``fire_lock`` 見 :attr:`Ctx.fire_lock`）。"""
+    ctx = Ctx(
+        base.clone(), decisions=decisions, preview=preview, gamble=gamble, fire_lock=fire_lock
+    )
     actor = ctx.state.units[action.unit_id]
     try:
         ACTION_HANDLERS[action.type](ctx, actor, action)
@@ -1242,19 +1258,23 @@ def resolve_with(
 
 
 def simulate_preview(
-    base: BattleState, action: Action, gamble: GambleBranch | None = None
+    base: BattleState,
+    action: Action,
+    gamble: GambleBranch | None = None,
+    *,
+    fire_lock: bool = False,
 ) -> tuple[ResolveResult, ResolveResult]:
     """內部 API：預覽用的「最少後果」與「最多後果」兩次模擬。
 
     ``min`` 模擬沒有經過任何分歧點（擲骰、檢定、反應決定、強制命中結果）時，``max`` 的結果必定
     相同，直接重用而不再模擬一次（例如沒有藉機攻擊、沒有踩上冰面的移動）。
     """
-    low_ctx = Ctx(base.clone(), preview="min", gamble=gamble)
+    low_ctx = Ctx(base.clone(), preview="min", gamble=gamble, fire_lock=fire_lock)
     ACTION_HANDLERS[action.type](low_ctx, low_ctx.state.units[action.unit_id], action)
     low = finish_resolution(low_ctx)
     if not low_ctx.preview_branched():
         return low, low
-    return low, resolve_with(base, action, preview="max", gamble=gamble)
+    return low, resolve_with(base, action, preview="max", gamble=gamble, fire_lock=fire_lock)
 
 
 def simulate_branch(

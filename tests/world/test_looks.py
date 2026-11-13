@@ -68,7 +68,7 @@ def test_race_change_keeps_shared_options(library: ContentLibrary, make_char: Ma
 
 def test_old_char_format_loads_with_race_default(make_char: MakeChar) -> None:
     data = json.loads(dumps_char(make_char()))
-    assert data["format"] == "trpg-char/13"
+    assert data["format"] == "trpg-char/15"
     data["format"] = "trpg-char/10"
     old = loads_char(json.dumps(data))
-    assert old.format == "trpg-char/13" and _custom(old) is None
+    assert old.format == "trpg-char/15" and _custom(old) is None

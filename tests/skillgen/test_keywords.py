@@ -44,7 +44,14 @@ KEYWORDS = (
     "summon",
     "poisoned",
     "form",
+    "combo_point",
+    "fury",
+    "focus",
+    "ki",
 )
+"""16 個關鍵字（KW-1，#161：連擊、怒氣、專注、氣接在形態之後）。"""
+STACK_KEYWORDS = ("combo_point", "fury", "focus", "ki")
+"""KW-1／KW-2（#161）的四個層數關鍵字；KW-2 補齊池子後和其他關鍵字一樣開局可選。"""
 NAMES = (
     "點燃",
     "潮濕",
@@ -58,9 +65,13 @@ NAMES = (
     "召喚物",
     "中毒",
     "形態",
+    "連擊",
+    "怒氣",
+    "專注",
+    "氣",
 )
 COMPOSABLE = tuple(k for k in KEYWORDS if k != "form")
-"""隨機組合器能產生的關鍵字（形態 ``composable: false``，6.30）。"""
+"""隨機組合器能產生的關鍵字（形態 ``composable: false``，6.30；KW-2 起四個層數關鍵字也能做）。"""
 
 
 def _skill(**fields: Any) -> SkillDef:
@@ -93,11 +104,11 @@ def _keywords(**fields: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
 # ---------------------------------------------------------------------------
 
 
-def test_table_has_the_twelve_keywords_in_order() -> None:
+def test_table_has_the_sixteen_keywords_in_order() -> None:
     table = library().keywords
     assert table.ids() == KEYWORDS
     assert tuple(k.name_zh for k in table.keywords) == NAMES
-    assert table.start_ids() == KEYWORDS
+    assert table.start_ids() == KEYWORDS  # KW-2：沒有開局隱藏的關鍵字了
 
 
 def test_no_keyword_is_a_school_or_theme() -> None:
@@ -293,6 +304,37 @@ POSITIVE: list[tuple[str, str, dict[str, Any]]] = [
                 }
             ]
         },
+    ),
+    # KW-1（#161）：製造＝技能本身加層數；利用＝消耗層數或「自身層數達 N」
+    *(
+        (
+            k,
+            "makes",
+            {"effects": [{"type": "add_stack", "stack": k, "amount": 1, "affects": "self"}]},
+        )
+        for k in STACK_KEYWORDS
+    ),
+    *(
+        (
+            k,
+            "uses",
+            {
+                "effects": [
+                    {"type": "damage", "dice": "1d6", "element": "physical"},
+                    {
+                        "type": "consume_stack",
+                        "stack": k,
+                        "per_stack_permille": 100,
+                        "affects": "self",
+                    },
+                ]
+            },
+        )
+        for k in STACK_KEYWORDS
+    ),
+    *(
+        (k, "uses", {"condition": {"type": "self_stack_at_least", "stack": k, "count": 1}})
+        for k in STACK_KEYWORDS
     ),
 ]
 
@@ -608,7 +650,8 @@ def test_exclusive_only_derivation_drops_general_and_provisional_rules() -> None
         fire, lib.keywords
     )
     pools = keyword_pools(lib, starter_only=True, exclusive_only=True)
-    assert all(len(ids) >= 3 for k, ids in pools.items())
+    assert set(pools) == set(KEYWORDS)  # KW-2：16 個池都檢查（KW-1 只檢查開局可選的 12 個）
+    assert all(len(ids) >= 3 for ids in pools.values()), {k: len(v) for k, v in pools.items()}
     assert set(pools["form"]) == {  # 形態池的 1 階起始技能：三招利用者（3J-4）與四招化身（3J-4b）
         "skill_form_bear",
         "skill_form_cat",

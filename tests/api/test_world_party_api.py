@@ -41,8 +41,8 @@ def test_party_view_in_town(client: TestClient) -> None:
     assert party["can_hire"] is True
     assert party["hire_problem_zh"] is None
     assert party["max_hired"] == 2
-    # 新角色預設帶賽倫＋回春（5C-3，9.6.11）
-    assert [m["title_zh"] for m in party["members"]] == ["主角", "盾衛・守護", "醫者・輔助"]
+    # 新角色預設只帶賽倫（5C-3；OB-7，#154）
+    assert [m["title_zh"] for m in party["members"]] == ["主角", "盾衛・守護"]
     roster = party["mercenaries"]
     assert len(roster) == 9
     tiebi = next(m for m in roster if m["id"] == "merc_tiebi")
@@ -109,14 +109,19 @@ def test_hire_rejected_in_the_field(client: TestClient) -> None:
 def test_companion_in_party_view(client: TestClient) -> None:
     cid, view = _create(client)
     assert view["party"]["free_slots"] == 2 and view["party"]["companion_zh"] is None
-    accepted = _ok(_act(client, cid, kind="accept_quest", quest="starter_ferry"))
+    # OB-7（#154）：預設只帶賽倫；替換與還原照舊，先自己雇滿 2 名（OB-7 前的預設）
+    _ok(_act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"]))
+    starter = _ok(_act(client, cid, kind="accept_quest", quest="starter_ferry"))
+    names = [m["name_zh"] for m in starter["party"]["members"][1:]]
+    assert names == ["賽倫", "回春"]  # 新手任務：阿岳等第 1 步打完才入隊
+    accepted = _ok(_act(client, cid, kind="accept_quest", quest="main_mist_rift"))
     party = accepted["party"]
     assert [m["name_zh"] for m in party["members"][1:]] == ["賽倫", "阿岳"]
     ayue = party["members"][2]
     assert ayue["companion"] == "companion_ayue" and ayue["title_zh"] == "獵戶・劇情夥伴"
     assert ayue["note_zh"] == "劇情夥伴：任務結束後離隊"
     assert party["free_slots"] == 1
-    assert party["companion_zh"] == "阿岳（霧渡新手路）跟著你，佔 1 個隊友位；任務結束後離隊"
+    assert party["companion_zh"] == "阿岳（霧中裂痕）跟著你，佔 1 個隊友位；任務結束後離隊"
     assert any(e.startswith("阿岳加入隊伍（替下回春）") for e in accepted["events"])
     assert {m["id"] for m in party["mercenaries"] if m["hired"]} == {"merc_tiebi"}
     too_many = _act(client, cid, kind="hire", mercenaries=["merc_tiebi", "merc_huichun"])

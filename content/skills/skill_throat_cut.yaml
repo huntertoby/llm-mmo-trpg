@@ -1,0 +1,26 @@
+# KW-2 連擊示範（#161，06 6.32.1；數值為初值，未經模擬）：終結技，花光連擊點每點傷害提高；滿 5 點讓目標流血。
+# 「滿 5 點」照施放開始時的點數判斷（KW-1 self_stack_at_least），所以先花光點數也照樣成立。
+id: skill_throat_cut
+schema_version: 1
+name_zh: 斷喉
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1100}
+  - {type: consume_stack, stack: combo_point, per_stack_permille: 200, affects: self}
+  - {type: apply_status, status: bleed, duration: 2, condition: {type: self_stack_at_least, stack: combo_point, count: 5}}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, melee, finisher]
+narrative:
+  concept: 攢滿的節奏化成一道割喉的弧光
+  cast_flavor: 你欺身而上，刀鋒貼著對手的頸側一抹而過
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

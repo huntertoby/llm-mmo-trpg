@@ -60,18 +60,20 @@ daily_goals:
 # 雲嶺懸賞第 1 天起（代決 5F1-8：9.7「第 4～7 天 懸賞」對應荒原懸賞 19.8 的等級 7～8）。
 bounties:
   - {id: north_wolf_king, name_zh: 北坡狼王, region: cloud_ridge, location: north_slope, level: 5,
-     group: north_wolf_king_pack, elite: {unit: mist_wolf, affix: berserk}, coins: 3, consolation_coins: 1, from_day: 1}
+     group: north_wolf_king_pack, elite: {unit: mist_wolf, affix: berserk, duel: true}, coins: 3, consolation_coins: 1, from_day: 1}
   # 會分身：本體 sect_mist_swordsman 開場用召喚原語召出 1 名低血量、同招式的霧影（18.7.4；5F-1b 玩法 PM 代決）
   - {id: mist_swordsman, name_zh: 霧中劍客, region: cloud_ridge, location: sword_tomb, level: 5,
      group: mist_swordsman_band, elite: {unit: sect_mist_swordsman, affix: mist_veiled}, coins: 3, consolation_coins: 1, from_day: 1}
   - {id: scarface, name_zh: 斷崖幫二當家「疤面」, region: cloud_ridge, location: cliff_gang_fort, level: 4,
-     group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}, coins: 3, consolation_coins: 1, from_day: 1}
+     group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked, duel: true}, coins: 3, consolation_coins: 1, from_day: 1}
+# RG-2（#162，09 9.6.6、18.2.1、19.2.1）：精英單挑 elite.duel: true——北坡狼王、疤面、熔爐督工「鍛疤」、熔核領主（每區 2 場；
+# 鍛疤是開發從現有精英挑的，不會補血）。接受＝一對一，拒絕或沒選就開打＝照原本全隊打；兩邊獎勵一樣。
 # 灰燼荒原懸賞（19.8；Phase 5F-5a）：第 4 天起（9.7「第 4～7 天 懸賞」、荒原第 4 天開放；代決 5F1-8）。
 # 精英的詞綴 19.8 只寫了寒燼蜥王（再生的）；熔爐督工、熔核領主用荒原詞綴「硬殼的」（開發 PM 定）。
   - {id: furnace_overseer, name_zh: 熔爐督工「鍛疤」, region: ashen_waste, location: overseer_camp, level: 7,
-     group: forge_scar_band, elite: {unit: forge_scar, affix: hard_shelled}, coins: 3, consolation_coins: 1, from_day: 4}
+     group: forge_scar_band, elite: {unit: forge_scar, affix: hard_shelled, duel: true}, coins: 3, consolation_coins: 1, from_day: 4}
   - {id: molten_lord, name_zh: 熔核領主, region: ashen_waste, location: lava_cave, level: 8,
-     group: molten_lord_band, elite: {unit: molten_lord, affix: hard_shelled}, coins: 3, consolation_coins: 1, from_day: 4}
+     group: molten_lord_band, elite: {unit: molten_lord, affix: hard_shelled, duel: true}, coins: 3, consolation_coins: 1, from_day: 4}
   - {id: frost_ember_king, name_zh: 寒燼蜥王, region: ashen_waste, location: obsidian_valley, level: 8,
      group: frost_king_band, elite: {unit: frost_ember_lizard, affix: regenerating}, coins: 3, consolation_coins: 1, from_day: 4}
 

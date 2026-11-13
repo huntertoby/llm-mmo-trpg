@@ -37,6 +37,7 @@ from trpg.content.skills import (
     default_affects,
     is_wind_skill,
     on_hit_carrier,
+    silent_rounds_shown,
     skill_elements,
 )
 from trpg.content.stacks import StackDef
@@ -466,6 +467,21 @@ def _summon(
     return f"{text}；{infusion_hint(lib, acts=summon_acts(template))}"
 
 
+def _summon_beside(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """召喚到身邊（TF-1，#159 伴生、護主）的一句話：縮小版的 HP 用和引擎同一個算法。"""
+    try:
+        summon = lib.ruleset.summon_def(spec.unit or "")
+    except KeyError:
+        return f"在你身邊召出召喚物，持續 {spec.duration} 輪"
+    hp = summon_card_hp(lib, summon, spec)
+    text = f"在你身邊召出縮小版的{summon.template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
+    if spec.power_permille is not None and spec.power_permille < NEUTRAL_PERMILLE:
+        text += f"（HP 與傷害只有一般的 {spec.power_permille / 10:g}%）"
+    if spec.strike_other:
+        text += "，召出後立刻反咬攻擊你的敵人一次"
+    return f"{text}；召喚物已滿或身邊沒有空格時不會出現"
+
+
 def _summon_variant_text(lib: ContentLibrary, spec: EffectSpec) -> str:
     """召喚技能分歧進化（Phase 3-33f2）多出的內容：數量型、加深（HP 與小特性）、橋接。"""
     parts: list[str] = []
@@ -749,26 +765,27 @@ def _overload_text(lib: ContentLibrary, stack: StackDef) -> str:
         else:
             assert sub.status is not None
             backlash.append(f"獲得「{lib.ruleset.status_def(sub.status).name_zh}」")
+    unit = stack.unit_zh  # RG-5b：連擊點用「點」，其他「層」
     return (
-        f"。超載：你帶{tag_text(lib, (overload.tag,))}標籤的技能每層傷害"
+        f"。超載：你帶{tag_text(lib, (overload.tag,))}標籤的技能每{unit}傷害"
         f" +{overload.per_stack_damage_permille / 10:g}%；"
-        f"累積到 {overload.threshold} 層時，你{'、'.join(backlash)}並清空層數"
+        f"累積到 {overload.threshold} {unit}時，你{'、'.join(backlash)}並清空{unit}數"
     )
 
 
 def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.stack is not None
     stack = lib.ruleset.stack_def(spec.stack)
+    unit = stack.unit_zh  # RG-5b（玩法PM交接 4.1.7 第 3 條）：連擊點用「點」，其他「層」
     if spec.type == "add_stack":
-        text = f"累積 {spec.amount or 1} 層「{stack.name_zh}」（上限 {stack.max}）"
+        text = f"累積 {spec.amount or 1} {unit}「{stack.name_zh}」（上限 {stack.max}）"
         return text + (_overload_text(lib, stack) if stack.overload is not None else "")
     assert spec.per_stack_permille is not None
-    need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
+    need = f"（至少 {skill.cost.stacks} {unit}才能施放）" if skill.cost.stacks else ""
     consumer = stack.consumer
     what = "傷害" if consumer is None else consumer.boost_names()
-    return (
-        f"消耗全部「{stack.name_zh}」，每層使本技能{what} +{spec.per_stack_permille / 10:g}%{need}"
-    )
+    per = spec.per_stack_permille / 10
+    return f"消耗全部「{stack.name_zh}」，每{unit}使本技能{what} +{per:g}%{need}"
 
 
 def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -780,7 +797,8 @@ def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
         text += "（骰數 × 剩餘回合）"
     elif spec.scale == "stacks":
         assert spec.stack is not None
-        text += f"（骰數 × 同時消耗的「{lib.ruleset.stack_def(spec.stack).name_zh}」層數）"
+        consumed = lib.ruleset.stack_def(spec.stack)
+        text += f"（骰數 × 同時消耗的「{consumed.name_zh}」{consumed.unit_zh}數）"
     if spec.splash is not None:
         text += f"，並波及周圍 {spec.splash} 格內的敵人"
     return text + "；目標沒有該狀態則不生效"
@@ -891,6 +909,14 @@ def _revive(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
 def _grant_skill(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.skill is not None
     granted = lib.ruleset.skill_def(spec.skill)
+    assert spec.duration is not None
+    shown = silent_rounds_shown(granted, spec.duration, to_self=spec.affects == "self")
+    if shown is not None:  # BS-3：給自己無聲的「接下來 N 回合」，資料持續值是 N＋1
+        return (
+            f"接下來 {shown} 回合獲得「{granted.name_zh}」"
+            f"（施放這回合剩下的部分，再加上之後 {shown} 個自己的回合；不佔技能欄位，"
+            "重新施放只刷新回合數）"
+        )
     return (
         f"讓目標暫時獲得技能「{granted.name_zh}」，持續 {spec.duration} 輪"
         "（在目標的回合結束時倒數；不佔技能欄位，重新施放只刷新輪數）"
@@ -981,6 +1007,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "shadowstep": _shadowstep,
     "charge_through": _charge_through,
     "summon": _summon,
+    "summon_beside": _summon_beside,
     "enter_form": _enter_form,
     "leave_form": _leave_form,
     "swap": _swap,
@@ -1070,6 +1097,7 @@ def variant_change_text(library: ContentLibrary, skill: SkillDef, variant: Varia
 _OWN_TARGET_TEXT: frozenset[str] = frozenset(
     {
         "summon",
+        "summon_beside",
         "zone",
         "rule_change",
         "gamble",
@@ -1142,6 +1170,8 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
         tag_name=rules.skill_tags.name,
         tag_runes=rules.skill_tags.rune_names(),
         weapon_name=lambda wid: rules.gear_names.get(wid, wid),
+        stack_name=lambda sid: rules.stack_def(sid).name_zh,
+        stack_unit=lambda sid: rules.stack_def(sid).unit_zh,
     )
 
 
@@ -1192,6 +1222,7 @@ _SIMPLE_CHANGE_TEXT = {
     "summon_attack_dice": "召喚物的攻擊傷害骰 +{value} 顆",
     "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 3 隻）",
     "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
+    "silent_strike": "無聲：手持匕首或雙匕首時，你的近戰攻擊不會讓目標轉身（可以留在背後連續背刺）",
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
 DESCRIBED_CHANGES: frozenset[str] = frozenset(
@@ -1370,6 +1401,7 @@ REACTION_TIMING_TEXT: dict[str, str] = {
     "ally_downed": "友方倒下時",
     "enemy_enters_adjacent": "敵人走進相鄰格時",
     "ally_targeted": "相鄰的友方被敵人瞄準時（命中判定之前）",
+    "ally_hit_near": "相鄰的友方被敵人攻擊命中後",
 }
 """反應技觸發事件的中文說明（Phase 3C-6a：技能卡片的「反應時機」一行）。"""
 
@@ -1390,6 +1422,8 @@ def trigger_timing_text(library: ContentLibrary, trigger: TriggerSpec) -> str:
     text = _trigger_timing(library, trigger)
     if trigger.target == "nearest_enemy":  # 3W-2b
         text += f"，對 {trigger.max_distance} 格內最近的一名敵人"
+    elif trigger.target == "weakest_ally":  # TF-1（#159 庇佑）
+        text += f"，對 {trigger.max_distance} 格內生命比例最低的一名友方（不含自己）"
     return text
 
 

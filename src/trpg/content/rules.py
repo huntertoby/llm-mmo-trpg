@@ -474,6 +474,12 @@ class CoreRules(ContentModel):
 
     # 掩護（1C）
     half_cover_hit_penalty: int = Field(ge=0)
+    shield_guard_hit_penalty: int = Field(default=2, ge=0)
+    """盾兵掩護（RG-1，#162，09 9.6.6）：帶 ``shield_guard`` 的單位替相鄰的遠程同伴擋遠程攻擊時的
+    命中懲罰（0＝不擋）。和半掩護、塔盾不疊加。"""
+    shield_formation_hit_penalty: int = Field(default=2, ge=0)
+    """塔盾詞條「盾陣」（RG-4，#163，08 8.11）：帶盾陣的單位替相鄰的隊友（不分遠近）擋遠程攻擊時的
+    命中懲罰（0＝不擋）。判定同盾兵；和半掩護、盾兵、塔盾不疊加，取最高。另開欄位，不和盾兵共用。"""
 
     # 環境回合（1B）
     burning_object_rounds: int = Field(ge=1)
@@ -506,6 +512,9 @@ class CoreRules(ContentModel):
     # 技能觸發（2E-1）
     max_trigger_depth: int = Field(default=3, ge=0)
     """技能觸發的連鎖深度上限：動作本身為 0，由觸發產生的觸發深度 +1，超過上限不結算。"""
+    trap_trace_radius: int = Field(default=2, ge=0)
+    """敵方陷阱的「可疑痕跡」（RG-2，#162，05 5.7）：玩家方單位移動抵達或回合開始時，曼哈頓這麼多
+    格內還沒揭露的敵方陷阱記成痕跡（只知道格子）。0＝看不到痕跡。"""
 
     # 姿態（2E-2）
     stance_ap_cost: int = Field(default=1, ge=0)

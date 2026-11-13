@@ -8,6 +8,7 @@ import { TILE_SIZE } from "../battle/geometry";
 import { stagePixels, topReserve } from "../battle/elevation";
 import { sortQuests } from "./story";
 import { growthBadge } from "./growth";
+import { threadLeftText } from "./questPanel";
 
 // ---------------- 功能列、面板、快捷鍵 ----------------
 
@@ -38,7 +39,9 @@ export type HudPanel =
   /** 郵寄（6T-1b）：走到郵差或郵筒旁邊開。 */
   | "mail"
   /** PR-2（#147）：主城工坊師傅的選單（靶場試玩、改造技能；`WorldView.workshop`，對象＝師傅的情境物件 ID）。 */
-  | "workshop";
+  | "workshop"
+  /** WP-3：主城的許願池面板（點池子或守池人；`WorldView.wish`）。 */
+  | "wish";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 
@@ -121,6 +124,8 @@ export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
       return view.mail != null;
     case "workshop":
       return view.workshop != null; // PR-2：伺服器只在主城（有靶場內容）時給
+    case "wish":
+      return view.wish != null; // WP-2：人在主城才有
     default:
       return true;
   }
@@ -301,7 +306,8 @@ export function trackedQuests(view: WorldView, max = 2): TrackedLine[] {
       advice: q.advice_zh ?? null,
     });
   }
-  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: t.expires_zh, route: null, advice: null });
+  // PNL-4（玩法 PM 11-13 確認、需求 3.3）：線頭到期改「剩 …」（伺服器的 `left_zh`，同面板線頭列）；說明卡 `trackHint` 用同一行
+  for (const t of view.threads ?? []) out.push({ id: t.id, kind: "thread", name: t.text_zh, line: threadLeftText(t), route: null, advice: null });
   return out.slice(0, max);
 }
 
@@ -338,7 +344,16 @@ export function mateCards(view: WorldView): MateCard[] {
     .slice(0, 2)
     .map((m) => {
       const merc = m.mercenary != null ? (view.party?.mercenaries ?? []).find((x) => x.id === m.mercenary) : undefined;
-      return { name: m.name_zh, short: shortName(m.name_zh), title: m.title_zh, level: m.level, hp: 1, portrait: merc?.portrait ?? null, origin: merc?.origin ?? "merc" };
+      /* PNL-4：劇情夥伴的頭像與框色由伺服器給（`PartyMemberView.portrait`／`region`，人設卡）；傭兵照名冊 */
+      return {
+        name: m.name_zh,
+        short: shortName(m.name_zh),
+        title: m.title_zh,
+        level: m.level,
+        hp: 1,
+        portrait: merc?.portrait ?? m.portrait ?? null,
+        origin: merc?.origin ?? m.region ?? "merc",
+      };
     });
 }
 
