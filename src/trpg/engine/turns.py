@@ -68,7 +68,7 @@ from trpg.engine.summons.core import (
     pulse_totem,
     summon_inert,
 )
-from trpg.engine.traps import detect_traps, tick_traps
+from trpg.engine.traps import detect_traps, tick_traps, trace_traps
 from trpg.engine.zones import expire_zones_at_turn_end, zones_turn_start
 from trpg.shared.types import Surface, UnitId
 
@@ -125,6 +125,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     pay_stance_upkeep(ctx, unit)  # 一般姿態的維持費（3W-2b）；付不起就解除姿態
     expire_activations(ctx, unit)  # 限時傳說到期（Phase 3D-6）
     detect_traps(ctx, unit)  # 感知的常駐數值（Phase 3H-1）
+    trace_traps(ctx, unit)  # 可疑痕跡（RG-2）
 
     expiring: list[EffectBase] = []
     ticking: list[EffectBase] = []

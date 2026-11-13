@@ -109,8 +109,13 @@ def _dropping_members(
     lineup: EncounterLineup,
     state: BattleState,
     events: Sequence[EventBase],
+    *,
+    duel: bool = False,
 ) -> list[LineupMember]:
-    """會掉材料的陣容成員（依陣容順序：敵方、第三方）。"""
+    """會掉材料的陣容成員（依陣容順序：敵方、第三方）。精英單挑（RG-2，``duel``）打贏時照整個敵方
+    陣容算（和拒絕單挑、全隊打贏時一樣；第三方沒上場、不掉）。"""
+    if duel:
+        return list(lineup.members)
     ids = _unit_ids(setup)
     enemy_ids = [uid for uid, s in zip(ids, setup.units, strict=True) if s.team is Team.ENEMY]
     third_ids = [uid for uid, s in zip(ids, setup.units, strict=True) if s.team is Team.THIRD]
@@ -224,6 +229,7 @@ def roll_loot(
     boss_bonus: frozenset[str] = frozenset(),
     fixed_class: bool = False,
     mix: WeaponMix | None = None,
+    duel: bool = False,
 ) -> LootRoll:
     """打贏一場掉的東西（見模組說明）；沒有掉落規則時為空。``level`` 是地點建議等級（敵人等級）。
 
@@ -237,7 +243,7 @@ def roll_loot(
         return LootRoll()
     rng = Rng(fnv1a64(f"{seed}:loot".encode()))
     materials: list[str] = []
-    for member in _dropping_members(setup, lineup, state, events):
+    for member in _dropping_members(setup, lineup, state, events, duel=duel):
         elite = _is_elite(library, member)
         if elite or rng.randint(0, 999) < rules.material_permille:
             materials.append(_material_of(rules, lineup.region, member, level, elite=elite))

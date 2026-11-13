@@ -124,6 +124,8 @@ __all__ = [
     "CutFallback",
     "DefeatedEvent",
     "DissolveAction",
+    "DuelChoiceAction",
+    "DuelChosenEvent",
     "EncounterCheckEvent",
     "EncounterEvent",
     "EventCheckEvent",
@@ -238,6 +240,14 @@ class RetreatAction(_Model):
     """看了陣容不打，退回出發地點（09 9.6.6：不開戰、不扣任何東西）。"""
 
     kind: Literal["retreat"] = "retreat"
+
+
+class DuelChoiceAction(_Model):
+    """回應精英提出的單挑（RG-2，#162，09 9.6.6）：只在遭遇的 ``duel`` 是 ``offered`` 時可送；
+    ``accept``＝一對一（只有主角對精英本人），否則照原本全隊打。兩邊獎勵完全一樣。"""
+
+    kind: Literal["duel_choice"] = "duel_choice"
+    accept: bool
 
 
 class FightAction(_Model):
@@ -533,6 +543,7 @@ type WorldAction = Annotated[
     TravelAction
     | CampAction
     | RetreatAction
+    | DuelChoiceAction  # RG-2
     | FightAction
     | RestAction
     | LoadoutAction
@@ -804,6 +815,14 @@ class CampedEvent(_Model):
     supplies_left: int
     hp: int
     mana: int
+
+
+class DuelChosenEvent(_Model):
+    """回應了精英的單挑（RG-2）：``accepted``＝接受一對一。"""
+
+    kind: Literal["duel_chosen"] = "duel_chosen"
+    location: str
+    accepted: bool
 
 
 class RetreatedEvent(_Model):
@@ -1252,6 +1271,7 @@ type WorldEvent = Annotated[
     | LocationRevealedEvent
     | CampedEvent
     | RetreatedEvent
+    | DuelChosenEvent  # RG-2
     | BattleStartedEvent
     | BattleEndedEvent
     | LeveledUpEvent

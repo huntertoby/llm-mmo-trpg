@@ -83,6 +83,9 @@ class FixedElite(ContentModel):
 
     unit: str = Field(pattern=ID_PATTERN)
     affix: str = Field(pattern=ID_PATTERN)
+    duel: bool = Field(default=False, exclude_if=lambda v: not v)
+    """精英單挑（RG-2，#162，09 9.6.6）：這名精英開戰前提出一對一。接受＝只有主角對這名精英，拒絕
+    （或沒選就開打）＝照原本全隊打；兩邊獎勵完全一樣。沒填＝不提（不輸出，既有內容不變）。"""
 
 
 class UnitMinLevel(ContentModel):

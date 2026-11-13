@@ -52,7 +52,7 @@ from trpg.engine.state import (
     reaction_limit,
 )
 from trpg.engine.summons.core import summon_inert, totem_of
-from trpg.engine.traps import visible_traps
+from trpg.engine.traps import trap_traces, visible_traps
 from trpg.engine.zones import next_zone_cells, zone_cells, zone_is_harmful, zone_spec
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId, rune_name
 
@@ -583,6 +583,9 @@ class BattleView(_ViewModel):
     units: tuple[UnitView, ...]
     traps: tuple[TrapView, ...]
     """只有 ``team`` 看得見的陷阱（自己陣營放置的）。"""
+    trap_traces: tuple[Pos, ...] | None = None
+    """``team`` 看到的敵方陷阱「可疑痕跡」格子（RG-2，#162；只有格子、不帶種類；依 ``(y, x)``）。
+    沒有時為 ``None``（不輸出成必填欄位，前端既有的測試夾具不用補）；揭露後改列在 ``traps``。"""
     turn_order: tuple[UnitId, ...]
     active_unit: UnitId | None
     round: int
@@ -1170,6 +1173,7 @@ def project_for(state: BattleState, team: Team) -> BattleView:
             )
             for t in sorted(visible_traps(state, team), key=lambda t: (t.pos.y, t.pos.x))
         ),
+        trap_traces=trap_traces(state, team) or None,
         turn_order=tuple(state.turn_order),
         active_unit=state.active_unit,
         round=state.round,

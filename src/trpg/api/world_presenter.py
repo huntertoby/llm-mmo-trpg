@@ -60,6 +60,9 @@ from trpg.api.world_newcomer_view import (
 from trpg.api.world_party_intro import party_intro
 from trpg.api.world_party_view import (
     allies_line,
+    duel_allies_line,
+    duel_event_line,
+    duel_line,
     my_shadow_view,
     party_event_line,
     party_view,
@@ -485,7 +488,8 @@ def _encounter_view(
     catalog = library.enemy_catalog()
     # 敵方在前、第三方（5B-M3）在後；第三方沒有詞綴
     foes = [u for u in prepared.setup.units if u.team is not Team.ALLY]
-    affixes = [m.affix for m in prepared.lineup.members] + [None] * len(prepared.lineup.third)
+    fielded = prepared.fielded  # 精英單挑（RG-2）接受後只有精英本人
+    affixes = [m.affix for m in fielded.members] + [None] * len(fielded.third)
     views = tuple(
         _encounter_enemy(library, catalog, spawn, affix)
         for spawn, affix in zip(foes, affixes, strict=True)
@@ -514,11 +518,17 @@ def _encounter_view(
             oath=None if prepared.oath is None else prepared.oath.template,
             oath_bonus=None if prepared.oath is None else prepared.oath.bonus_status,
         ),
-        allies_zh=allies_line(library, char, prepared.hero_hp),
+        allies_zh=(
+            duel_allies_line(char, prepared.hero_hp)
+            if prepared.duel
+            else allies_line(library, char, prepared.hero_hp)
+        ),
         battlefield=_battlefield_view(prepared.field_cut),
         battlefield_fallback_zh=(
             None if prepared.cut_fallback is None else FALLBACK_ZH[prepared.cut_fallback]
         ),
+        duel=encounter.duel,
+        duel_zh=duel_line(encounter.duel, views[0].name_zh if views else ""),
     )
 
 
@@ -638,6 +648,7 @@ _LINES = (
     field_line,  # 6B-2
     things_line,  # 6C-5
     lambda library, _region, event: mail_event_line(library, event),  # 6T-1a
+    lambda _library, _region, event: duel_event_line(event),  # RG-2
 )
 
 

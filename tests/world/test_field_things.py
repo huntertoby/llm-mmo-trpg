@@ -635,7 +635,7 @@ def test_char_save_round_trip_and_old_format(eventful: ContentLibrary) -> None:
     _start, moved, _ = _enter_ferry_steps(eventful)
     sneaky = moved.model_copy(update={"sneaking": True})
     assert loads_char(dumps_char(sneaky)) == sneaky
-    data = dumps_char(_char(eventful, "mist_ferry")).replace("trpg-char/14", "trpg-char/4")
+    data = dumps_char(_char(eventful, "mist_ferry")).replace("trpg-char/15", "trpg-char/4")
     old = loads_char(data)
-    assert old.format == "trpg-char/14" and old.field_event is None and not old.sneaking
+    assert old.format == "trpg-char/15" and old.field_event is None and not old.sneaking
     _ = FieldPos  # 匯入給型別用

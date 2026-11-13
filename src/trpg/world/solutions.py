@@ -41,6 +41,7 @@ from trpg.world.actions import (
 )
 from trpg.world.clock import day_phase
 from trpg.world.common import here, rules_of
+from trpg.world.duel import offer_duel
 from trpg.world.errors import WorldActionError, WorldError
 from trpg.world.generated import OfferGen, supply
 from trpg.world.growth import as_run, hero_tier, skill_seed, world_library
@@ -93,7 +94,7 @@ def make_encounter(
         level_bonus=world.level_bonus.get(char.region, 0),  # 世界事件失敗的建議等級加成（5F-1）
         bounty=open_bounty_at(library, world, char, target.id, now),  # 懸賞（5F-1b）
     )
-    return result, char
+    return offer_duel(library, result, char.story_flags), char  # 精英單挑（RG-2）
 
 
 def _location_objective(

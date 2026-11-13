@@ -38,6 +38,7 @@ from trpg.world.actions import (
     CampedEvent,
     ChangeLookAction,
     ChangeRaceAction,
+    DuelChoiceAction,
     EncounterCheckEvent,
     EncounterEvent,
     EventSolveAction,
@@ -74,6 +75,7 @@ from trpg.world.common import rules_of as _rules
 from trpg.world.common import world_map_of as _world_map
 from trpg.world.companions import sync_companions
 from trpg.world.crafting import CRAFTING_HANDLERS
+from trpg.world.duel import choose_duel
 from trpg.world.economy import ECONOMY_HANDLERS, after_step
 from trpg.world.economy_actions import EquipAction, LootChooseAction
 from trpg.world.endings import expire_threads
@@ -495,6 +497,7 @@ def _handlers() -> dict[type, _Handler]:
         ),
         # 撤退與城鎮服務（5A-4，:mod:`trpg.world.town`）；雇用與影子 AI（5C-1、5C-2）
         RetreatAction: _keeps_world(lambda lib, _w, char, _a, _n: retreat(lib, char)),
+        DuelChoiceAction: _keeps_world(lambda _l, _w, char, action, _n: choose_duel(char, action)),
         RestAction: _keeps_world(lambda lib, _w, char, _a, _n: rest(lib, char)),
         LoadoutAction: _keeps_world(lambda lib, _w, char, action, _n: loadout(lib, char, action)),
         TeleportAction: _keeps_world(_teleport),

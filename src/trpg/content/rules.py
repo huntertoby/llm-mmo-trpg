@@ -509,6 +509,9 @@ class CoreRules(ContentModel):
     # 技能觸發（2E-1）
     max_trigger_depth: int = Field(default=3, ge=0)
     """技能觸發的連鎖深度上限：動作本身為 0，由觸發產生的觸發深度 +1，超過上限不結算。"""
+    trap_trace_radius: int = Field(default=2, ge=0)
+    """敵方陷阱的「可疑痕跡」（RG-2，#162，05 5.7）：玩家方單位移動抵達或回合開始時，曼哈頓這麼多
+    格內還沒揭露的敵方陷阱記成痕跡（只知道格子）。0＝看不到痕跡。"""
 
     # 姿態（2E-2）
     stance_ap_cost: int = Field(default=1, ge=0)

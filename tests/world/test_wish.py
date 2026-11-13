@@ -308,5 +308,5 @@ def test_save_round_trip_and_old_format(library: ContentLibrary, make_char: Make
     plain = json.loads(dumps_char(char))
     assert "wish_week" not in plain
     assert all("refund" not in json.dumps(p) for p in plain.get("pending_offers", []))
-    old = dumps_char(char).replace('"trpg-char/14"', '"trpg-char/13"')
+    old = dumps_char(char).replace('"trpg-char/15"', '"trpg-char/13"')
     assert loads_char(old) == char

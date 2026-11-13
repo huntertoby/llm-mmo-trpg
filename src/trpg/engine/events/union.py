@@ -87,8 +87,10 @@ from trpg.engine.events.objects import (
     SurfaceEntered,
     TerrainChanged,
     TrapExpired,
+    TrapGlance,
     TrapPlaced,
     TrapRevealed,
+    TrapTraced,
     TrapTriggered,
 )
 from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
@@ -245,6 +247,8 @@ type Event = Annotated[
     | StacksChanged
     | TrapPlaced
     | TrapRevealed
+    | TrapTraced
+    | TrapGlance
     | TrapTriggered
     | TrapExpired
     | SourceChanged

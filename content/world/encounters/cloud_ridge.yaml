@@ -79,7 +79,7 @@ locations:
     groups: [{group: cliff_gang_core}, {group: cliff_gang_hounds}]
     ally_first_threads: [gang_fort_secret_door]  # 18.4 補充：持有暗門，在斷崖幫寨的戰鬥我方先手
     variants:  # 「二當家記恨你」到期 → 二當家坐大（打贏那一場結束）
-      - {flag: scarface_rises, group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}}  # 懸賞「疤面」＝盜賊隊長（連心的，18.7.4）
+      - {flag: scarface_rises, group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked, duel: true}}  # 懸賞「疤面」＝盜賊隊長（連心的，18.7.4）；RG-2 單挑
   - location: old_pine_altar
     groups: [{group: altar_wardens}, {group: altar_shield_wardens}]
   - location: cloud_sea_bridge
@@ -91,7 +91,7 @@ locations:
     groups: [{group: furnace_steward}, {group: furnace_tide}]
   - location: north_slope
     groups: [{group: north_slope_pack}]
-    elite: {unit: mist_wolf, affix: berserk}   # 懸賞「北坡狼王」（18.7.4，狂暴的）；懸賞板在 world/season.yaml（5F-1）
+    elite: {unit: mist_wolf, affix: berserk, duel: true}   # 懸賞「北坡狼王」（18.7.4，狂暴的）；懸賞板在 world/season.yaml（5F-1）；RG-2 單挑
   - location: winter_lake
     groups: [{group: lake_hunters}, {group: lake_bears}]
     unit_min_levels: [{unit: stoneback_bear, min_level: 4, otherwise: mist_wolf}]   # 5A-SIM2：石背熊 4 級以上才出現

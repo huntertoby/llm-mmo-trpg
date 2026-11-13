@@ -26,6 +26,7 @@ from trpg.content.world_mercenaries import MERCENARY_ROLES, CompanionDef, Mercen
 from trpg.world.actions import (
     CompanionJoinedEvent,
     CompanionLeftEvent,
+    DuelChosenEvent,
     PartyChangedEvent,
     ShadowAiChangedEvent,
     ShadowSavedEvent,
@@ -54,6 +55,9 @@ __all__ = [
     "ai_zh",
     "allies_line",
     "companion_face",
+    "duel_allies_line",
+    "duel_event_line",
+    "duel_line",
     "lone_wolf_view",
     "my_shadow_view",
     "party_event_line",
@@ -400,6 +404,29 @@ def allies_line(library: ContentLibrary, char: CharacterState, hero_hp: int) -> 
     if names:
         return f"{hero}＋{'、'.join(names)}"
     return f"{hero}・{SOLO_ZH}"
+
+
+def duel_allies_line(char: CharacterState, hero_hp: int) -> str:
+    """精英單挑（RG-2）接受後的我方說明：只有主角上場，隊友在外面等。"""
+    return f"主角（開場 HP {hero_hp}{'，疲憊' if char.fatigued else ''}）・一對一，隊友在外面等"
+
+
+def duel_line(duel: str | None, elite_zh: str) -> str | None:
+    """遇敵面板的單挑說明（RG-2，#162）；沒有提出單挑＝``None``。"""
+    if duel == "offered":
+        return f"{elite_zh}要求一對一：接受＝只有你和它，拒絕＝照原本全隊打；兩邊獎勵一樣。"
+    if duel == "accepted":
+        return f"接受了{elite_zh}的單挑：隊友與其他敵人都不上場，獎勵照整場算。"
+    if duel == "declined":
+        return f"拒絕了{elite_zh}的單挑：照原本全隊打。"
+    return None
+
+
+def duel_event_line(event: WorldEvent) -> str | None:
+    """``duel_chosen`` 的句子（RG-2）。"""
+    if not isinstance(event, DuelChosenEvent):
+        return None
+    return "接受單挑：一對一，隊友在外面等。" if event.accepted else "拒絕單挑：照原本全隊打。"
 
 
 def _companion_event_line(

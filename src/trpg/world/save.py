@@ -3,7 +3,7 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/14``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 角色 | ``trpg-char/15``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
 | 世界動作日誌 | ``trpg-wlog/10``（JSON Lines：第一行 ``{"format": "trpg-wlog/10"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
@@ -97,6 +97,9 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 **Phase WP-1**（許願池）：新動作 ``wish``；``generated`` 多一種紀錄 ``WishGen``（LLM 對到的關鍵字與
 完整技能三選一；願望文字在動作裡），日誌格式不變（同動作 union 多一種的前例，待 PM 決定）。角色格式
 升 ``trpg-char/14``；:data:`WORLD_RULES_VERSION` 升成 28。
+
+**Phase RG-2**（精英單挑）：新動作 ``duel_choice``，日誌格式不變（同上，動作 union 多一種）。
+角色格式升 ``trpg-char/15``（``EncounterResult.duel``）；:data:`WORLD_RULES_VERSION` 升成 31。
 """
 
 from __future__ import annotations
@@ -159,9 +162,9 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 30
+WORLD_RULES_VERSION: Final = 31
 # 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
-# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c）
+# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -288,6 +291,11 @@ WORLD_RULES_VERSION: Final = 30
   （``make_offer``），舊日誌裡的重閃可能出不同的選項、``flash_pick`` 的索引對到別的變化，所以舊日誌
   標成規則已變。``CHAR_FORMAT`` 不升（``FlashOption.weaker`` 的意思改了，但 ``False`` 不輸出，
   存檔欄位沒變）。
+- 31（RG-2，#162，09 9.6.6）：精英單挑——遇敵時陣容排最前的精英帶 ``duel: true`` 就提出一對一
+  （``EncounterResult.duel``），新動作 ``duel_choice``；接受時開戰只有主角對精英本人（組場改變），
+  獎勵照整個陣容（掉材料的成員改成整個敵方陣容）。另外戰鬥紀錄 ``trpg-battle-log/121``（敵方陷阱的
+  可疑痕跡；第一季沒有會放陷阱的敵人，世界戰鬥的結果不變）。``CHAR_FORMAT`` 升 ``trpg-char/15``
+  （``EncounterResult.duel``，``None`` 不輸出）；``trpg-wlog`` 不變（動作 union 多一種的前例）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
