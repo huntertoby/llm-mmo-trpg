@@ -76,6 +76,9 @@ describe("背包格子（#7、G2）", () => {
 
   it("滑過的說明寫全名與個數", () => {
     expect(cellHint(row("a", { name_zh: "小回復藥", kind_zh: "消耗品", count: 2 }))).toBe("小回復藥・消耗品・×2");
+    const shield = row("g", { name_zh: "稀有塔盾（5 級）", kind_zh: "裝備", gear: true });
+    expect(cellHint(shield)).toBe("稀有塔盾（5 級）・裝備");
+    expect(cellHint(shield, "雲紋碑盾")).toBe("稀有塔盾（5 級）・雲紋碑盾・裝備"); // RG-8 K-1
   });
 
   it("名字小牌（UI-E3c #11）：每行最多 3 字、最多 2 行，只在詞與詞之間換行（不拆詞）", () => {

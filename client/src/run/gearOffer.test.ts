@@ -64,6 +64,17 @@ describe("裝備卡的文字", () => {
     expect(itemSubtitle(item({ rarity_zh: null, rarity: null, legendary: true, item_level: null }))).toBe("傳說");
   });
 
+  it("副標題（RG-8 K-1）：塔盾是雲紋碑盾、熔殼塔盾形制時寫形制名，其他形制照副手種類；物品名不動", () => {
+    const tower = (form: string | null): GearItemInfo =>
+      item({ name_zh: "稀有塔盾（5 級）", slot_type: "offhand", offhand_name_zh: "塔盾", item_level: 5, appearance: { kind: "kite_shield", form, material: "iron" } } as Partial<GearItemInfo>);
+    expect(itemSubtitle(tower("sect_great"))).toBe("稀有・Lv5・雲紋碑盾");
+    expect(itemSubtitle(tower("molten_shell"))).toBe("稀有・Lv5・熔殼塔盾");
+    expect(itemSubtitle(tower("tower"))).toBe("稀有・Lv5・塔盾");
+    expect(itemSubtitle(tower(null))).toBe("稀有・Lv5・塔盾");
+    expect(itemSubtitle(tower("nope"))).toBe("稀有・Lv5・塔盾");
+    expect(tower("sect_great").name_zh).toBe("稀有塔盾（5 級）");
+  });
+
   it("稀有度 class：沒標稀有度的傳說物品當傳說", () => {
     expect(rarityClass(item())).toBe("gear-rarity-rare");
     expect(rarityClass({ rarity: null, legendary: true })).toBe("gear-rarity-legendary");

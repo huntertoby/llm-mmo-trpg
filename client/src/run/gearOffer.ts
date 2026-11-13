@@ -3,6 +3,7 @@
 import type { GearCandidate, GearItemInfo, RunChoice, RunHero } from "../api/types";
 import type { TipLine } from "../gear/affixStatus";
 import { withKeywordLine } from "../gear/gearKeywords";
+import { signatureFormZh } from "../render/gearResolve";
 
 /** 稀有度 → 卡片的色階 class（未標稀有度的測試物品當普通）。 */
 export function rarityClass(item: Pick<GearItemInfo, "rarity" | "legendary">): string {
@@ -27,7 +28,8 @@ export function itemTipLines(item: GearItemInfo, slot?: string): TipLine[] {
   return withKeywordLine(lines.length === 0 ? [{ text: "（沒有詞條）", note: null }] : lines, item.appearance, slot);
 }
 
-/** 副標題：稀有度・物品等級・武器資訊，例「稀有・Lv3・單手劍」「優良・Lv2・雙手」。 */
+/** 副標題：稀有度・物品等級・武器資訊，例「稀有・Lv3・單手劍」「優良・Lv2・雙手」。
+ *  副手有外觀形制名時（RG-8：雲紋碑盾、熔殼塔盾）寫形制名取代副手種類，例「稀有・Lv5・雲紋碑盾」；物品名不動。 */
 export function itemSubtitle(item: GearItemInfo): string {
   const parts: string[] = [];
   if (item.rarity_zh != null) parts.push(item.rarity_zh);
@@ -36,7 +38,7 @@ export function itemSubtitle(item: GearItemInfo): string {
   if (item.weapon_name_zh != null) {
     parts.push(`${item.weapon_name_zh}${item.two_handed ? "・雙手" : ""}${item.paired ? "・成對" : ""}`);
   } else if (item.offhand_name_zh != null) {
-    parts.push(item.offhand_name_zh);
+    parts.push(signatureFormZh(item.appearance) ?? item.offhand_name_zh);
   }
   return parts.join("・");
 }
