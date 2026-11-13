@@ -279,6 +279,7 @@
   line-height: 1.35;
   word-break: keep-all;
   overflow-wrap: anywhere;
+  text-wrap: balance; /* TXT-2（美術 PM）：兩行長度接近，第二行不只剩一兩個字 */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; /* 最多折兩行 */
@@ -416,6 +417,25 @@
 .fc-when {
   font-weight: 400;
   color: var(--pnl-l2);
+}
+
+/* TXT-2（FL-1g 複驗新可修 1）：「前」「後」的字只在空白與標點換行（keep-all），一輪窄欄 376 不再斷在「武器傷／害」
+   中間；括號條件換到下一行。只寫 nowrap 在「4 成武器傷害」上會把「前」欄擠成「1.15 倍武器傷／害」，所以兩欄一起改。
+   括號條件（.fc-when）照舊可以在字間換行：整段不斷的話「（手持雙手槍時才有）」比「後」欄寬，會超出卡外。
+   break-word 是保險（一整段放不下時才斷，不影響欄寬的計算）。 */
+.fc-was,
+.fc-now > span {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.fc-now .fc-when {
+  word-break: normal;
+}
+
+/* 帶條件時前段（「4 成武器傷害」）整段不斷：數字和單位不拆開 */
+.fc-main {
+  white-space: nowrap;
 }
 
 /* ---------- LF-3：改名列＋本機模型的一句話描述（不搶版面：沒有就不佔位） ---------- */
