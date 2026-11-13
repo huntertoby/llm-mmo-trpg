@@ -16,7 +16,10 @@
 - **落在選定格**（BAL-21a）：``followup.anchor: cast_tile`` 時，施放時第一段選的格子
   （``UseSkill.target_pos``）記在蓄力狀態的 ``StatusInstance.anchor``；預告、釋放都以那格為中心
   （:func:`~trpg.engine.skills.targeting.anchored_area`：不重驗射程與視線，只取地圖內的格子與技能
-  條件），施放者移動也不跟著走。命中、抵抗仍以施放者本人計。
+  條件），施放者移動也不跟著走。命中、抵抗仍以施放者本人計。``followup.anchor: farthest_enemy``
+  （GB-1c，#164 R5）時落點由引擎在施放當下選
+  （:func:`~trpg.engine.skills.targeting.farthest_enemy`：最遠的存活敵人當下的格子），之後同
+  ``cast_tile``；``followup_charged.anchor_target_id`` 是那名敵人。
 - **瞄準預告**（RG-1，#162，``lock_on``）：施放＝瞄準（:func:`charge_lock_on`）——蓄力狀態的
   ``lock_target`` 記住目標，預計範圍是目標當下的格子（跟著目標走）；下回合開始時先照
   :func:`trpg.engine.lock_on.lock_problem` 檢查（倒下、出射程、斷視線、照一般規則選不到的隱蔽
@@ -65,7 +68,7 @@ from trpg.engine.rules.forms import breath_of, is_spell_for_silence
 from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skill_triggers import register_fired_resolver
 from trpg.engine.skills.casting import run_delayed
-from trpg.engine.skills.targeting import SkillArea, anchored_area, checked_area
+from trpg.engine.skills.targeting import SkillArea, anchored_area, checked_area, farthest_enemy
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.trigger_types import Fired
 from trpg.engine.triggers import register_trigger
@@ -92,14 +95,27 @@ def _second(skill: SkillDef) -> SkillDef:
     return skill if skill.followup is None else (skill.followup_skill() or skill)
 
 
-def anchor_of(skill: SkillDef, action: UseSkill) -> Pos | None:
+def anchor_of(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> Pos | None:
     """施放 ``skill``（``action``）時要記住的落點：``followup.anchor: cast_tile`` 時是第一段選的格子
-    （BAL-21a），其他為 ``None``。"""
+    （BAL-21a）；``farthest_enemy`` 時是引擎選的最遠敵人當下的格子（GB-1c；找不到時為 ``None``，
+    ``skill_problem`` 已擋）；其他為 ``None``。"""
+    return _anchor(state, caster, skill, action)[0]
+
+
+def _anchor(
+    state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
+) -> tuple[Pos | None, UnitId | None]:
+    """（落點, 引擎選的敵人）；見 :func:`anchor_of`。"""
     follow = skill.followup
     if follow is None or follow.anchor is None:
-        return None
+        return None, None
+    if follow.anchor == "farthest_enemy":
+        enemy = farthest_enemy(state, caster)
+        return (None, None) if enemy is None else (enemy.pos, enemy.id)
     assert action.target_pos is not None  # ANCHOR_FIRST_SHAPES 都要選格，合法性已驗過
-    return action.target_pos
+    return action.target_pos, None
 
 
 def delayed_selection(
@@ -148,7 +164,7 @@ def charge(ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill) -> No
     old = caster.get_status(CHARGING)
     if old is not None:
         _drop(ctx, caster, old, "replaced")
-    anchor = anchor_of(skill, action)
+    anchor, anchor_target = _anchor(ctx.state, caster, skill, action)
     caster.statuses.append(
         StatusInstance(CHARGING, remaining=1, source_id=caster.id, skill_id=skill.id, anchor=anchor)
     )
@@ -162,6 +178,7 @@ def charge(ctx: Ctx, caster: UnitState, skill: SkillDef, action: UseSkill) -> No
         pos=pos if anchor is None else anchor,
         tiles=_tiles(None if found is None else found[1]),
         anchored=anchor is not None,
+        anchor_target_id=anchor_target,
     )
 
 

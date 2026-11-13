@@ -10,6 +10,8 @@
    （:func:`trpg.engine.zones.move_zones`）。
 4. **天氣**：下雨時隨機產生水窪。
 5. **地圖事件**：本輪結束時的 ``spawn_units``／``terrain_change``。
+6. **頭目階段的生長表面**（GB-1c，T16、#164 R6 A）：目前階段帶 ``grow_surface`` 的存活頭目（依
+   單位 ID），從南緣往南長一排（:func:`_grow_surfaces`；不取用亂數）。
 
 環境回合的亂數來自 :func:`environment_rng`（由種子與輪數衍生，與玩家動作消耗的亂數無關），
 因此 :func:`telegraph` 在狀態複本上執行同一段邏輯即可得到與實際完全一致的預告。
@@ -23,6 +25,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.content.battle import PhaseGrowSurface
 from trpg.content.maps import MapEvent, SpawnUnitsEvent
 from trpg.engine.bombs import blast_tiles, bomb_carriers, bomb_spec, tick_bombs
 from trpg.engine.context import Ctx
@@ -60,7 +63,7 @@ from trpg.engine.rule_changes import expire_orphan_summons
 from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.runes import tick_runes
-from trpg.engine.state import BattleState
+from trpg.engine.state import BattleState, UnitState
 from trpg.engine.zones import move_zones
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, ObjectId, Pos, Surface, UnitId
@@ -117,6 +120,7 @@ def run_environment(ctx: Ctx) -> None:
         expire_orphan_summons(ctx)  # 召喚者不在場的分身到期（Phase 3D-6）
         _weather(ctx, tiles)
         _map_events(ctx)
+        _grow_surfaces(ctx)
         ctx.emit(EnvironmentEnded)
     finally:
         ctx.rng = saved
@@ -212,6 +216,56 @@ def _map_events(ctx: Ctx) -> None:
             continue
         ctx.emit(MapEventTriggered, index=index, kind=event.kind)
         execute(ctx, _event_effects(event))
+
+
+def _grow_surfaces(ctx: Ctx) -> None:
+    """頭目階段的生長表面（GB-1c，:class:`~trpg.content.battle.PhaseGrowSurface`）：每一欄（頭目佔的
+    那幾欄）在南緣外第 2～``max_rows`` 排裡，找第一格還沒有這種表面、而北邊相鄰那格已經有的格子，
+    能長就長（可站、不致命、沒有單位、沒有物件、沒有其他表面）；長不了的那一欄就停在那裡。用地圖事件
+    的 ``ChangeTileEffect``（表面不會到期，同階段的 ``tiles``）。"""
+    effects: list[EffectBase] = []
+    for unit in ctx.state.living_units():
+        if not unit.phases:
+            continue
+        grow = unit.phases[unit.phase_index].grow_surface
+        if grow is not None:
+            effects += [
+                ChangeTileEffect(pos=xy, surface=grow.surface)
+                for xy in _grow_front(ctx.state, unit, grow)
+            ]
+    if effects:
+        execute(ctx, effects)
+
+
+def _grow_front(state: BattleState, unit: UnitState, grow: PhaseGrowSurface) -> list[XY]:
+    """``unit`` 這一輪要長表面的格子（由西到東）。"""
+    half = unit.footprint // 2
+    x0, south = unit.xy[0] - half, unit.xy[1] + half
+    found: list[XY] = []
+    for x in range(x0, x0 + unit.footprint):
+        for row in range(2, grow.max_rows + 1):
+            xy, north = (x, south + row), (x, south + row - 1)
+            if not (0 <= xy[1] < state.height and 0 <= x < state.width):
+                break
+            if state.tile(*north).surface is not grow.surface:
+                break  # 北邊那格沒有：這一欄停了
+            if state.tile(*xy).surface is grow.surface:
+                continue  # 已經長到這裡：再往南看
+            if _can_grow(state, xy):
+                found.append(xy)
+            break
+    return found
+
+
+def _can_grow(state: BattleState, xy: XY) -> bool:
+    tile = state.tile(*xy)
+    return (
+        tile.surface is Surface.NONE
+        and tile.object_id is None
+        and state.unit_at(*xy) is None
+        and is_standable(state, xy)
+        and not is_deadly(state, xy)
+    )
 
 
 def _event_effects(event: MapEvent) -> list[EffectBase]:

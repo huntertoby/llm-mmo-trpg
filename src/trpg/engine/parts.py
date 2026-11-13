@@ -11,16 +11,25 @@
 召喚物不能選。打得到的條件：
 
 - ``any``：一定可以。
-- ``behind``：攻擊者站在目標的背後格（``rules/facing.py::back_xy``），而且這次攻擊是近戰（同背刺的
+- ``behind``：攻擊者站在目標的背後格（``rules/facing.py::is_behind``），而且這次攻擊是近戰（同背刺的
   ``AttackProfile.melee``）。
 - ``high_or_far``：攻擊者所在格比頭目高 ≥ 1 層，或曼哈頓距離 > 3（R7，同濃霧「超過 N 格」）。
 - ``disabled``：頭目身上有倒地、暈眩或冰凍（:data:`DISABLED_STATUSES`，照設計文字列 ID）。
+- ``ranged``（GB-1c，#164 R3）：這次攻擊不是近戰（同背刺的近戰判斷；拿矛也不行）。
 - ``exposed_in``：非空時，頭目目前的階段 ID 要在清單內。
 - 已破的部位不能選。
+
+**巨型頭目的部位綁格**（GB-1c，05 5.12.2 第 8 點、5.12.4 第 3 點、T11、T12）：部位有 ``tiles`` 時，
+上面的條件之外還要「那一格打得到」——近戰要和部位的其中一格相鄰（``melee_from: any_face`` 時和任一
+佔格相鄰即可；拿矛也要相鄰）；遠程要有一格在射程內（量到那一格）而且看得到它（巨人自己的身體不擋，
+GB-1a ``ignore_unit``）。原因代碼 ``melee_cannot_reach``、``not_adjacent_to_tile``、
+``out_of_range_to_tile``、``no_sight_to_tile``。選哪個部位仍記在動作的 ``target_part``（T12）：點到
+前殼、已破、未露出的部位格＝本體（不送）。
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
@@ -28,11 +37,13 @@ from trpg.content.parts import BossPart
 from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, UseSkill
-from trpg.engine.rules.combat import weapon_profile
-from trpg.engine.rules.facing import back_xy
-from trpg.engine.rules.footprint import unit_dist
-from trpg.engine.rules.forms import natural_charge
-from trpg.engine.skills.targeting import resolve_effects, skill_profile
+from trpg.engine.part_breaks import part_tiles
+from trpg.engine.rules.combat import attack_reach, weapon_profile
+from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.footprint import adjacent, dist_to, is_giant, nearest_tile, unit_dist
+from trpg.engine.rules.forms import held_weapon, natural_charge
+from trpg.engine.rules.geometry import XY, has_line_of_sight
+from trpg.engine.skills.targeting import resolve_effects, shape_reach, skill_profile
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.variants import target_point, varied_skill
 
@@ -64,6 +75,10 @@ type PartReason = Literal[
     "need_behind",
     "need_high_or_far",
     "need_disabled",
+    "melee_cannot_reach",
+    "not_adjacent_to_tile",
+    "out_of_range_to_tile",
+    "no_sight_to_tile",
 ]
 
 PART_REASON_ZH: dict[str, str] = {
@@ -77,6 +92,10 @@ PART_REASON_ZH: dict[str, str] = {
     "need_behind": "要從背後近戰才打得到",
     "need_high_or_far": "要從高處（高 1 層以上）或 4 格外才打得到",
     "need_disabled": "要趁頭目倒地、暈眩或冰凍時才打得到",
+    "melee_cannot_reach": "只有遠程才打得到",
+    "not_adjacent_to_tile": "要貼著那一格才打得到",
+    "out_of_range_to_tile": "那一格超出射程",
+    "no_sight_to_tile": "看不到那一格",
 }
 """原因代碼的中文（``IllegalActionError`` 與介面共用）。"""
 
@@ -92,6 +111,19 @@ class PartTarget:
     @property
     def ok(self) -> bool:
         return self.reason is None
+
+
+@dataclass(frozen=True, slots=True)
+class _Swing:
+    """這次攻擊打部位時要看的參數：近戰與否；射程（量到某一格，普攻含高處射程）與拋射只在巨型頭目的
+    部位格（GB-1c）才用到。"""
+
+    melee: bool
+    reach: Callable[[XY], int]
+    lob: int
+
+
+_NO_SWING = _Swing(melee=False, reach=lambda _xy: 0, lob=0)
 
 
 def current_phase_id(unit: UnitState) -> str | None:
@@ -110,12 +142,12 @@ def part_targets(state: BattleState, action: Action) -> tuple[PartTarget, ...]:
     attacker = state.units.get(action.unit_id)
     if target is None or attacker is None or not target.parts:
         return ()
-    shared, melee = _action_reason(state, attacker, target, action)
+    shared, swing = _action_reason(state, attacker, target, action)
     return tuple(
         PartTarget(
             part_id=part.id,
             name_zh=part.name_zh,
-            reason=shared or _part_reason(state, attacker, target, part, melee=melee),
+            reason=shared or _part_reason(state, attacker, target, part, swing),
         )
         for part in sorted(target.parts, key=lambda p: p.id)
     )
@@ -142,28 +174,39 @@ def _requested_part(action: Action) -> str | None:
 
 def _action_reason(
     state: BattleState, attacker: UnitState, target: UnitState, action: Attack | UseSkill
-) -> tuple[PartReason | None, bool]:
-    """整個動作不能選部位的原因（``None``＝可以），以及這次攻擊算不算近戰（背後條件用）。"""
+) -> tuple[PartReason | None, _Swing]:
+    """整個動作不能選部位的原因（``None``＝可以），以及這次攻擊的參數（近戰與否、射程、拋射）。"""
     if attacker.is_summon:
-        return "summon", False
+        return "summon", _NO_SWING
     if isinstance(action, Attack):
         if natural_charge(state.ruleset, attacker) is not None:
-            return "charge_attack", False
-        return None, weapon_profile(state, attacker).melee
+            return "charge_attack", _NO_SWING
+        swing = _Swing(
+            melee=weapon_profile(state, attacker).melee,
+            reach=lambda xy: attack_reach(state, attacker, xy),
+            lob=attacker.weapon.lob,
+        )
+        return None, swing
     return _skill_reason(state, attacker, target, action)
 
 
 def _skill_reason(
     state: BattleState, attacker: UnitState, target: UnitState, action: UseSkill
-) -> tuple[PartReason | None, bool]:
+) -> tuple[PartReason | None, _Swing]:
     if action.copy_cast is not None and action.copy_cast.target_part is not None:
-        return "copy_cast", False
+        return "copy_cast", _NO_SWING
     skill = _effective_skill(state, attacker, action)
     if skill is None or skill.shape.type != "single":
-        return "area_skill", False
+        return "area_skill", _NO_SWING
     if not _damages(state, skill, enemy=target.team is not attacker.team):
-        return "no_damage", False
-    return None, skill_profile(state, attacker, skill).melee
+        return "no_damage", _NO_SWING
+    found = skill
+    swing = _Swing(
+        melee=skill_profile(state, attacker, skill).melee,
+        reach=lambda _xy: shape_reach(state, found, attacker),
+        lob=held_weapon(attacker).lob if skill.category == "weapon" else 0,
+    )
+    return None, swing
 
 
 def _effective_skill(state: BattleState, unit: UnitState, action: UseSkill) -> SkillDef | None:
@@ -184,22 +227,61 @@ def _damages(state: BattleState, skill: SkillDef, *, enemy: bool) -> bool:
 
 
 def _part_reason(
-    state: BattleState, attacker: UnitState, target: UnitState, part: BossPart, *, melee: bool
+    state: BattleState, attacker: UnitState, target: UnitState, part: BossPart, swing: _Swing
 ) -> PartReason | None:
     if part.id in target.broken_parts:
         return "broken"
     if part.exposed_in and current_phase_id(target) not in part.exposed_in:
         return "not_exposed"
+    reason = _reach_reason(state, attacker, target, part, melee=swing.melee)
+    if reason is None and part.tiles and is_giant(target):
+        return _tile_reason(state, attacker, target, part, swing)
+    return reason
+
+
+def _reach_reason(
+    state: BattleState, attacker: UnitState, target: UnitState, part: BossPart, *, melee: bool
+) -> PartReason | None:
     match part.reach:
         case "any":
             return None
         case "behind":
-            return None if melee and attacker.xy == back_xy(target) else "need_behind"
+            return None if melee and is_behind(attacker.xy, target) else "need_behind"
         case "high_or_far":
             return None if _high_or_far(state, attacker, target) else "need_high_or_far"
         case "disabled":
             disabled = any(target.has_status(s) for s in DISABLED_STATUSES)
             return None if disabled else "need_disabled"
+        case "ranged":
+            return "melee_cannot_reach" if melee else None
+
+
+def _tile_reason(
+    state: BattleState, attacker: UnitState, target: UnitState, part: BossPart, swing: _Swing
+) -> PartReason | None:
+    """巨型頭目的部位格打不打得到（GB-1c，見模組說明）。"""
+    tiles = part_tiles(target, part)
+    if swing.melee:
+        if part.melee_from == "any_face":
+            near = adjacent(attacker, target)
+        else:
+            near = any(dist_to(attacker, xy) == 1 for xy in tiles)
+        return None if near else "not_adjacent_to_tile"
+    in_range = [xy for xy in tiles if dist_to(attacker, xy) <= swing.reach(xy)]
+    if not in_range:
+        return "out_of_range_to_tile"
+    seen = any(
+        has_line_of_sight(
+            state,
+            nearest_tile(attacker, xy),
+            xy,
+            lob=swing.lob,
+            viewer=attacker,
+            ignore_unit=target,
+        )
+        for xy in in_range
+    )
+    return None if seen else "no_sight_to_tile"
 
 
 def _high_or_far(state: BattleState, attacker: UnitState, target: UnitState) -> bool:

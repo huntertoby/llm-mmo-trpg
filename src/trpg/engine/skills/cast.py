@@ -332,6 +332,7 @@ class Cast:
             bonus=bonus,
             backstab_allowed=backstab,
             at=self.hit_tile(unit),
+            from_behind=part_breaks.part_behind(unit, self.part_for(unit)),  # GB-1c，R4
         )
         rolled_event = ctx.emit(
             AttackRolled,
@@ -385,9 +386,14 @@ class Cast:
         return roll
 
     def hit_tile(self, unit: UnitState) -> XY | None:
-        """範圍技打中巨型單位的那一格（GB-1b，R1；``SkillArea.hit_tiles``）；其他為 ``None``。"""
+        """範圍技打中巨型單位的那一格（GB-1b，R1；``SkillArea.hit_tiles``）；單體打巨型頭目綁格的
+        部位時是部位的那一格（GB-1c，:func:`~trpg.engine.part_breaks.part_hit_tile`）；其他為
+        ``None``。"""
         if unit.footprint == 1:
             return None
+        tile = part_breaks.part_hit_tile(self.caster, unit, self.part_for(unit))
+        if tile is not None:
+            return tile
         return next((xy for uid, xy in self.area.hit_tiles if uid == unit.id), None)
 
     def part_for(self, unit: UnitState) -> str | None:
@@ -454,6 +460,12 @@ class Cast:
         ``any_of`` 裡）。"""
         if condition is not None and condition.type == ALL_STRIKES_HIT:
             return self.all_strikes_landed
+        if (  # 近戰打殼縫這類部位：條件「目標背後」成立（GB-1c，R4）
+            subject.unit is not None
+            and self.profile.melee
+            and part_breaks.part_behind(subject.unit, self.part_for(subject.unit))
+        ):
+            subject = subject._replace(behind=True)
         if condition is not None and self.stacks_at_cast is not None:
             parts = condition.alternatives()
             if any(part.type == SELF_STACK_AT_LEAST for part in parts):

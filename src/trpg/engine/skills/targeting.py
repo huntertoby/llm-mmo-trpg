@@ -111,6 +111,7 @@ __all__ = [
     "compute_area",
     "copy_problem",
     "damage_parameters",
+    "farthest_enemy",
     "fires_gun",
     "followup_origin",
     "followup_selection",
@@ -452,7 +453,11 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     ap_cost = skill_ap_cost(state, skill, unit)
     if unit.ap < ap_cost:
         return f"AP 不足：需要 {ap_cost}，剩餘 {unit.ap}"
-    problem = _sealed_problem(unit, skill) or _already_problem(state, unit, skill)
+    problem = (
+        _sealed_problem(state, unit, skill)
+        or _already_problem(state, unit, skill)
+        or _anchor_problem(state, unit, skill)
+    )
     if problem is not None:
         return problem
     if any(
@@ -467,10 +472,39 @@ def skill_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
     return problem
 
 
-def _sealed_problem(unit: UnitState, skill: SkillDef) -> str | None:
-    """被部位破壞封住的招（PB-1a ``seal_skill``；換技能組也不解除）。"""
+def _sealed_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
+    """被部位破壞封住的招（PB-1a ``seal_skill``；換技能組也不解除）。限時封招（GB-1c，T14）：
+    ``round`` 還沒到 ``sealed_until`` 記的解封輪時也擋。"""
     if skill.id in unit.sealed_skills:
         return f"{skill.name_zh} 已被破壞部位封住"
+    until = unit.sealed_until.get(skill.id)
+    if until is not None and state.round < until:
+        return f"{skill.name_zh} 已被破壞部位封住（第 {until} 輪起解封）"
+    return None
+
+
+def farthest_enemy(state: BattleState, caster: UnitState) -> UnitState | None:
+    """``followup.anchor: farthest_enemy``（GB-1c，#164 R5）的對象：離 ``caster`` 最近佔格曼哈頓
+    距離最遠的存活敵人（不同陣營）；看不見的隱蔽敵人不算（照一般隱蔽規則
+    :func:`~trpg.engine.rules.combat.concealment_problem`）；同距離取 (y, x) 小的。不限射程、
+    不需視線。沒有時為 ``None``。"""
+    found = [
+        u
+        for u in state.living_units()
+        if u.team is not caster.team and concealment_problem(state, caster, u) is None
+    ]
+    if not found:
+        return None
+    return min(found, key=lambda u: (-unit_dist(caster, u), u.xy[1], u.xy[0]))
+
+
+def _anchor_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str | None:
+    """落點由引擎選最遠敵人的延遲段（GB-1c，R5）：找不到敵人就不能施放。"""
+    follow = skill.followup
+    if follow is None or follow.anchor != "farthest_enemy":
+        return None
+    if farthest_enemy(state, unit) is None:
+        return f"{skill.name_zh} 找不到可以落下的敵人"
     return None
 
 

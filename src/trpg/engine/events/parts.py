@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from trpg.engine.events.base import EventBase
 from trpg.shared.types import UnitId
 
@@ -37,12 +39,14 @@ class PartBroken(EventBase):
 
 
 class SkillSealed(EventBase):
-    """部位破壞封住了一招（``seal_skill``）：換技能組也不解除。"""
+    """部位破壞封住了一招（``seal_skill``）：換技能組也不解除。``rounds``（GB-1c，T14）有值時是
+    限時封招：從這一輪起封這麼多輪；永久封住時為 ``None``、不輸出。"""
 
     type: Literal["skill_sealed"] = "skill_sealed"
     unit_id: UnitId
     skill_id: str
     part_id: str
+    rounds: int | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class PartStatDown(EventBase):

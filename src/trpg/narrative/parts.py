@@ -45,7 +45,8 @@ def break_effect_zh(rules: Ruleset, effect: PartBreakEffect) -> str:
     """一項破壞效果的中文（例「封住「霧遁」（正在蓄力就一起打斷）」）。"""
     match effect:
         case SealSkillBreak():
-            return f"封住「{_skill_name(rules, effect.skill)}」（正在蓄力就一起打斷）"
+            rounds = "" if effect.rounds is None else f" {effect.rounds} 回合"  # 限時（GB-1c）
+            return f"封住「{_skill_name(rules, effect.skill)}」{rounds}（正在蓄力就一起打斷）"
         case InterruptChargeBreak():
             return "打斷正在蓄力的強招"
         case StatDownBreak() if effect.stat == "damage_dealt":

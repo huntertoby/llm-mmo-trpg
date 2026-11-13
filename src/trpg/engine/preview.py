@@ -33,7 +33,7 @@ from trpg.content.skills import (
     SkillDef,
     silent_rounds_shown,
 )
-from trpg.engine import modifiers
+from trpg.engine import modifiers, part_breaks
 from trpg.engine.actions import (
     Action,
     ActivateCharge,
@@ -775,7 +775,13 @@ def _attack_numbers(
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, modifiers.ATTACK, Subject(target, target.xy))
         )
-        positional = positional_bonus(state, actor, target, weapon_profile(state, actor))
+        positional = positional_bonus(
+            state,
+            actor,
+            target,
+            weapon_profile(state, actor),
+            from_behind=part_breaks.part_behind(target, action.target_part),  # GB-1c，R4
+        )
         naturals = _naturals(advantage_state(state, actor, target))
         hit, crit = _chances(
             naturals,
@@ -1107,7 +1113,12 @@ def _skill_targets(
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, use, Subject(target, target.xy))
         )
-        positional = positional_bonus(state, shooter, target, profile)  # 背刺：以出手的位置判斷
+        behind_part = uid == action.target_id and part_breaks.part_behind(
+            target, action.target_part
+        )  # 殼縫算從背後（GB-1c，R4）
+        positional = positional_bonus(  # 背刺：以出手的位置判斷
+            state, shooter, target, profile, from_behind=behind_part
+        )
         naturals = _naturals(advantage_state(state, shooter, target, profile))
         hit, crit = _chances(
             naturals,
