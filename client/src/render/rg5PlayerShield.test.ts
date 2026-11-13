@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { isTowerLike, S, type QItem, type QUnit, type QView } from "./qCore";
 import { drawQ } from "./qDoll";
+import { gearKinds, signatureFormZh } from "./gearResolve";
 import { qPalette, qResolve, qWeaponDef, Q_WEAPON_KINDS } from "./qIcon/weapons";
 import { crack, SHELL_FIX, shellPal, shellPalOf } from "./qMoltenShell";
 import { sectPal, sectPalOf } from "./qSectShield";
@@ -130,6 +131,16 @@ describe("RG-5 熔殼塔盾（10.2、10.4、P-2）", () => {
 describe("RG-5 圖示表", () => {
   it("kite_shield.forms 有兩款，名稱定案", () => {
     expect(Q_WEAPON_KINDS["kite_shield"]?.forms).toMatchObject({ sect_great: "雲紋碑盾", molten_shell: "熔殼塔盾" });
+  });
+
+  it("RG-8 K-1：形制名（物品卡副標、背包說明）只有限定副手特性的兩款大盾有，名字和圖示表同一份", () => {
+    expect(signatureFormZh({ kind: "kite_shield", form: "sect_great" })).toBe("雲紋碑盾");
+    expect(signatureFormZh({ kind: "kite_shield", form: "molten_shell" })).toBe("熔殼塔盾");
+    for (const look of [{ kind: "kite_shield", form: "tower" }, { kind: "kite_shield", form: "kite" }, { kind: "kite_shield" }, { form: "sect_great" }, { kind: "round_shield", form: "sect_great" }, null]) {
+      expect(signatureFormZh(look), JSON.stringify(look)).toBeNull();
+    }
+    const named = gearKinds().flatMap((k) => k.forms.filter((f) => signatureFormZh({ kind: k.id, form: f.id }) !== null).map((f) => `${k.id}.${f.id}`));
+    expect(named).toEqual(["kite_shield.sect_great", "kite_shield.molten_shell"]);
   });
 
   it("兩款都有圖樣：直立塊狀（關鍵字小圖樣用 block 那組）、圓章縮放上限 0.87", () => {

@@ -12,6 +12,7 @@ import { itemSubtitle, itemTipLines, needsSwapConfirm } from "../run/gearOffer";
 import { GearIcon } from "../ui/GearIcon";
 import { ItemIcon } from "../ui/ItemIcon";
 import { hasItemIcon } from "../render/itemIcon";
+import { signatureFormZh } from "../render/gearResolve";
 import { Hint } from "../ui/Hint";
 import { PartTip } from "../ui/PartTip";
 import { GearCardView } from "../ui/gear/GearCardView";
@@ -158,11 +159,12 @@ export function BagCellView({ cell, inventory, picked, onPick }: { cell: BagCell
   if (cell.kind === "empty") return <li className="world-bag-cell empty" aria-hidden="true" />;
   const row = cell.row;
   const card = row.gear === true ? gearCardOf(inventory, row.item) : null;
+  const hint = cellHint(row, signatureFormZh(card?.item.appearance));
   const cls = ["world-bag-cell", picked ? "picked" : "", row.gear === true ? "gear" : "", row.cross_class_zh != null ? "cross" : ""].filter((c) => c !== "").join(" ");
   return (
     <li className={cls}>
-      <Hint text={cellHint(row)}>
-        <button type="button" aria-pressed={picked} aria-label={cellHint(row)} onClick={() => onPick(cell.key)} data-testid={`world-bag-cell-${cell.key}`}>
+      <Hint text={hint}>
+        <button type="button" aria-pressed={picked} aria-label={hint} onClick={() => onPick(cell.key)} data-testid={`world-bag-cell-${cell.key}`}>
           {row.gear === true ? (
             <GearIcon look={card?.item.appearance ?? null} slot={card?.slot} size={42} label={row.name_zh} />
           ) : hasItemIcon(row.item, row.color) ? (
