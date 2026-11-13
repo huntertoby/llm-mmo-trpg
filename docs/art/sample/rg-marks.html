@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>RG 戰場標記</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>RG 戰場標記（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-13（PhaseRG計畫.md 第 5 節）。分段：<a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=zoom&w=1600&mute=1">×3 細看 1600</a><a href="?part=zoom&w=800&mute=1">×3 細看 800</a><a href="?part=anim&mute=1">關鍵幀</a><a href="?part=collide&mute=1">撞圖並排</a><a href="?part=ground&mute=1">各區地面</a><a href="?part=parts&mute=1">單項特寫</a>。每段畫成一張圖（腳本從 #out 取出存檔）。</p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script><script src="mapMarks.js"></script>
+<script src="rgMarks.js"></script>
+<script>
+const OO = OccludeOutline, RG = RGMarks, T = OO.T, P = new URLSearchParams(location.search), PART = P.get("part") || "scene";
+try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, REG = (id) => R4.REGIONS.find((r) => r.id === id);
+const ASH = REG("ashen_waste"), CRY = REG("crystal_crown"), FRO = REG("frost_tide"), ARC = REG("arcane_hub");
+const tile = (region, id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, region, id, 0, 0, gx, gy); ctx.restore(); };
+/** 雲嶺地面：explore.js 的地面（cloudTiles.js 的實地地圖底，戰鬥格子的同一套畫法）。 */
+const CLOUD = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
+/** 遊戲的地圖縮放（同 occlude-outline.html：stageLayout.ts fitScale＋hudSideInsets，12×12 地圖）：1600×900 → 1.31、800×600 → 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+const TAU = Math.PI * 2;
+
+// ---------------- 現行戰場的東西（照抄遊戲端，出處寫在右邊） ----------------
+const CUR = {
+  /** 環境預告「蓄」（highlightLayer.ts setHighlights：marks 層，所有排之上）：格內 3 的方框填 16%、描 2 px 85%；右上黑圓半徑 9＋12 px 粗字。 */
+  telegraph(ctx, gx, gy, glyph = "蓄1", color = "#b06bff") {
+    const x = gx * T, y = gy * T;
+    ctx.save(); ctx.fillStyle = hexA(color, 0.16); ctx.fillRect(x + 3, y + 3, T - 6, T - 6); ctx.strokeStyle = hexA(color, 0.85); ctx.lineWidth = 2; ctx.strokeRect(x + 3, y + 3, T - 6, T - 6);
+    ctx.beginPath(); ctx.arc(x + T - 11, y + 11, 9, 0, TAU); ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fill();
+    ctx.fillStyle = color; ctx.font = `700 12px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, x + T - 11, y + 11.5); ctx.restore();
+  },
+  /** 蓄力徽章（unitSprite.ts statusBadge＋unitLook.ts：at (−0.37T, −0.2T)、半徑 10、黑 80%、followup 紫 0xc77dff 線 2、狀態圖示 16、數字 10 px 在右下 (8, 8)）。 */
+  chargeBadge(ctx, gx, gy, n = 1) {
+    const x = (gx + 0.5) * T - 0.37 * T, y = (gy + 0.5) * T - 0.2 * T;
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU); ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#c77dff"; ctx.stroke();
+    try { QStatusLive.paintStatusIcon(ctx, "charging", x, y, 14); } catch (e) { /* 沒有就只畫圓 */ }
+    ctx.font = `700 10px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText(String(n), x + 8, y + 8); ctx.fillStyle = "#fff"; ctx.fillText(String(n), x + 8, y + 8); ctx.restore();
+  },
+  /** 攻擊紅框（highlightLayer.ts drawAttackFrames：每排 frames 層，單位之下）：圓角 8、內縮 2、線 3、0xff4040。 */
+  attackFrame(ctx, gx, gy) { ctx.save(); rr(ctx, gx * T + 2, gy * T + 2, T - 4, T - 4, 8); ctx.lineWidth = 3; ctx.strokeStyle = "#ff4040"; ctx.stroke(); ctx.restore(); },
+  /** 滑過的白框（drawFrames：hover 層）。 */
+  hoverFrame(ctx, gx, gy) { ctx.save(); ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 2; ctx.strokeRect(gx * T + 1, gy * T + 1, T - 2, T - 2); ctx.restore(); },
+  /** 移動路徑線（pathArt.ts drawPathLine：先 7 px 黑 45% 底線，再 4 px 本色；冰、到不了是 7/5 虛線；每格中心一個點）。cells＝格子清單，kind＝normal｜danger｜ice｜unreachable。 */
+  pathLine(ctx, cells, kind = "normal") {
+    const COL = { normal: "#ffffff", ice: "#1e78d0", danger: "#ff6a50", unreachable: "#c8c8c8" }, dashed = kind === "ice" || kind === "unreachable";
+    const pts = cells.map(([x, y]) => [(x + 0.5) * T, (y + 0.5) * T]);
+    const poly = () => { ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); };
+    ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round"; poly(); ctx.strokeStyle = "rgba(0,0,0,0.45)"; ctx.lineWidth = 7; ctx.stroke();
+    if (dashed) ctx.setLineDash([7, 5]); poly(); ctx.strokeStyle = COL[kind]; ctx.lineWidth = 4; ctx.stroke(); ctx.setLineDash([]);
+    for (const [x, y] of pts.slice(1)) { ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fill(); ctx.beginPath(); ctx.arc(x, y, 3.8, 0, TAU); ctx.fillStyle = COL[kind]; ctx.fill(); }
+    ctx.restore();
+  },
+  /** 淡色圓角格（pathArt.ts drawSoftCells；RANGE_SOFT＝技能射程、MOVE_SOFT＝移動、HIT_SOFT＝預覽範圍）＋外緣亮線（這裡只畫每格的圓角，外緣線省略）。 */
+  softCells(ctx, cells, s) {
+    ctx.save();
+    for (const [x, y] of cells) { rr(ctx, x * T + 3, y * T + 3, T - 6, T - 6, 8); ctx.fillStyle = hexA(s.fill, s.fa); ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = hexA(s.line, s.la); ctx.stroke(); }
+    const set = new Set(cells.map(([x, y]) => `${x},${y}`)); ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = hexA(s.edge, s.ea);
+    for (const [x, y] of cells) { const o = [x * T, y * T]; ctx.beginPath(); if (!set.has(`${x},${y - 1}`)) { ctx.moveTo(o[0] + 2, o[1] + 2); ctx.lineTo(o[0] + T - 2, o[1] + 2); } if (!set.has(`${x},${y + 1}`)) { ctx.moveTo(o[0] + 2, o[1] + T - 2); ctx.lineTo(o[0] + T - 2, o[1] + T - 2); } if (!set.has(`${x - 1},${y}`)) { ctx.moveTo(o[0] + 2, o[1] + 2); ctx.lineTo(o[0] + 2, o[1] + T - 2); } if (!set.has(`${x + 1},${y}`)) { ctx.moveTo(o[0] + T - 2, o[1] + 2); ctx.lineTo(o[0] + T - 2, o[1] + T - 2); } ctx.stroke(); }
+    ctx.restore();
+  },
+  RANGE: { fill: "#ffe6a0", fa: 0.08, line: "#ffe6a0", la: 0.2, edge: "#ffe6a0", ea: 0.55 },
+  MOVE: { fill: "#5aa8ff", fa: 0.34, line: "#ffffff", la: 0.75, edge: "#c8e4ff", ea: 0.95 },
+  HIT: { fill: "#ff7a3c", fa: 0.32, line: "#ffc896", la: 0.6, edge: "#ff8c46", ea: 0.95 },
+  /** 複合技能動作段範圍（highlightLayer.ts drawOverlay followup_area：0xc77dff 22%）。 */
+  followupArea(ctx, gx, gy) { ctx.save(); ctx.fillStyle = hexA("#c77dff", 0.22); ctx.fillRect(gx * T + 2, gy * T + 2, T - 4, T - 4); ctx.restore(); },
+  /** 陷阱踏板（fieldFx.ts drawTrapPad 原樣，52 虛擬格縮到 48）：淡紅虛線橢圓、深色圓盤、陣營色圈（敵方虛線＋紅「!」）、元素色夾齒或沙漏。 */
+  trap(ctx, gx, gy, { mine = false, trigger = "enter", color = "#d8d8e0" } = {}) {
+    const U = 52, col = mine ? "#5aa0ff" : "#ff5a5a", cx = U / 2, cy = U / 2 + 2, R = U * 0.3;
+    ctx.save(); ctx.translate(gx * T, gy * T); ctx.scale(T / U, T / U);
+    ctx.beginPath(); ctx.ellipse(cx, cy, 22, 16, 0, 0, TAU); ctx.fillStyle = "rgba(224,72,58,0.16)"; ctx.fill(); ctx.strokeStyle = "rgba(224,72,58,0.75)"; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.ellipse(cx, cy, R, R * 0.78, 0, 0, TAU); ctx.fillStyle = "rgba(20,18,16,0.55)"; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = col; if (!mine) ctx.setLineDash([5, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 2;
+    if (trigger === "enter") { for (const sgn of [-1, 1]) { for (let i = 0; i < 4; i++) { const px = cx - R * 0.6 + (i * R * 1.2) / 3; ctx.beginPath(); ctx.moveTo(px - 3.5, cy + sgn * 8); ctx.lineTo(px + 3.5, cy + sgn * 8); ctx.lineTo(px, cy + sgn * 1.5); ctx.closePath(); ctx.fill(); } ctx.beginPath(); ctx.moveTo(cx - R * 0.75, cy + sgn * 8); ctx.lineTo(cx + R * 0.75, cy + sgn * 8); ctx.stroke(); } }
+    else { ctx.beginPath(); ctx.moveTo(cx - 6, cy - 8); ctx.lineTo(cx + 6, cy - 8); ctx.lineTo(cx - 6, cy + 8); ctx.lineTo(cx + 6, cy + 8); ctx.closePath(); ctx.fill(); }
+    if (!mine) { ctx.fillStyle = "#ff5a5a"; ctx.font = `bold 14px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText("!", U - 9, 10); ctx.fillText("!", U - 9, 10); }
+    ctx.restore();
+  },
+  /** 狀態圖示（頭頂 11；QStatusLive＝遊戲端 statusIcon.ts 原樣打包）。 */
+  status(ctx, id, x, y, px = 11) { try { const c = QStatusLive.statusIconCanvas(id, px); if (c) ctx.drawImage(c, x - px / 2, y - px / 2, px, px); } catch (e) { /* 略 */ } },
+  /** 一般浮字（feedbackLayer.ts：20 px 粗、黑描邊 4）。 */
+  float(ctx, text, x, headY, color, p = 0.5) { RG.floatText(ctx, text, x, headY, p, color); },
+};
+function hexA(h, a) { const n = parseInt(h.slice(1, 7), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+// ---------------- 單位 ----------------
+const U = {
+  hero: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_fighter, view: "front", hp: 0.8, ...o }),
+  mage: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_mage, view: "front", hp: 0.6, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_archer, view: "front", hp: 0.9, ...o }),
+  merc: (o) => ({ kind: "doll", team: "ally", doll: TP.bandit_shieldbearer, view: "front", hp: 0.7, ...o }),
+  bandit: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit, view: "front", hp: 0.7, ...o }),
+  eArcher: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit_archer, view: "side", hp: 0.9, ...o }),
+  shield: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit_shieldbearer, view: "front", hp: 0.9, ...o }),
+  lizard: (o) => ({ kind: "creature", team: "enemy", spec: { body: "lizard", material: "magma", size: "small" }, hp: 0.9, ...o }),
+};
+const center = (gx, gy) => ({ x: (gx + 0.5) * T, y: (gy + 0.5) * T });
+/** 弓手的胸口（瞄準線起點）：格子中心往上 0.3 格。 */
+const chest = (gx, gy) => ({ x: (gx + 0.5) * T, y: (gy + 0.5) * T - 0.3 * T });
+
+// ---------------- 場景繪製 ----------------
+/**
+ * 畫一個戰場。scene＝{ cols, rows, ground, units, objects:[[gx,gy,region,id]], decals(ctx,k), under(ctx,k), over(ctx,k), top(ctx,k) }
+ * 圖層順序照遊戲：地面 → 地面標記（陷阱層：可疑痕跡、陷阱踏板）→ 單位之下（每排 frames：攻擊紅框、瞄準線、盾兵連結）
+ *   → 一排一排（物件、腳下圈、身體、HP 條與狀態列、蓄力徽章）→ marks（所有排之上：環境預告「蓄」、路徑線）→ 頭頂標記（準星、小盾、看一眼、浮字）。
+ * k＝這張圖的「畫面下限」放大倍率表（地圖縮小時標記不跟著縮，同 minMark.ts 的作法）。
+ */
+function render(scene, view) {
+  const sc = view.S * (view.zoom ?? 1) * (view.res ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+  const xf = () => g.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  xf();
+  const K = kOf(view.S);
+  for (let y = 0; y < scene.rows; y++) for (let x = 0; x < scene.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); (scene.groundAt ? scene.groundAt(x, y) : scene.ground)(g, x * T, y * T, x, y); g.restore(); }
+  g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
+  if (scene.decals) { xf(); scene.decals(g, K); }
+  if (scene.under) { xf(); scene.under(g, K); }
+  const units = OO.order(scene.units), objs = scene.objects ?? [];
+  const rows = [...new Set([...units.map((u) => u.y), ...objs.map((o) => o[1])])].sort((a, b) => a - b);
+  for (const row of rows) {
+    for (const [gx, gy, region, id] of objs.filter((o) => o[1] === row)) { xf(); g.save(); g.translate(gx * T, gy * T); g.scale(T / 52, T / 52); R4.object(g, region, id, 0, 0); g.restore(); }
+    const inRow = units.filter((u) => u.y === row);
+    for (const u of inRow) { xf(); OO.drawRing(g, u); OO.drawBody(g, u, sc); }
+    for (const u of inRow) { xf(); hud(g, u, K); }
+  }
+  if (scene.over) { xf(); scene.over(g, K); }
+  if (scene.top) { xf(); scene.top(g, K); }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return cv;
+}
+/** HP 條＋腳邊狀態列＋蓄力徽章（occludeOutline.js drawHud 同一套：HP 條在 c.y＋0.36T、寬 0.8T、高 5；狀態圖示 11、下緣離 HP 條 4）。 */
+function hud(ctx, u, K) {
+  const c = OO.centerOf(u), w = T * 0.8, y = c.y + T * 0.36;
+  ctx.fillStyle = "#000"; ctx.fillRect(c.x - w / 2, y, w, 5);
+  const r = u.hp ?? 1; ctx.fillStyle = r > 0.5 ? "#4cd964" : r > 0.25 ? "#ffcc00" : "#ff3b30"; ctx.fillRect(c.x - w / 2, y, w * r, 5);
+  if (u.status?.length) { const n = Math.min(3, u.status.length), px = 11 * K.status, gap = 1, x0 = c.x - (n * px + (n - 1) * gap) / 2; u.status.slice(0, 3).forEach((id, i) => CUR.status(ctx, id, x0 + i * (px + gap) + px / 2, y - 4 - px / 2, px)); }
+  if (u.charge) CUR.chargeBadge(ctx, u.x, u.y, u.charge);
+}
+/** 每種標記的「畫面下限」（px）與世界大小 → 放大倍率（minMark.ts minMarkScale：max(1, 下限 ÷ (世界大小 × 地圖縮放))）。 */
+const MIN = { reticle: [20, 16], chip: [14, 11], glance: [14, 12], line: [2, 2], q: [12, 9], status: [11, 10] };
+function kOf(S) { const o = {}; for (const [k, [base, min]] of Object.entries(MIN)) o[k] = Math.max(1, min / (base * S)); return o; }
+/** 標記中心（頭頂上方）：反向放大時往上長，下緣不碰頭（中心＝頭頂 − 空隙 − 半徑 × k）。 */
+const headMark = (gx, gy, half, gap, k) => ({ x: (gx + 0.5) * T, y: (gy + 0.5) * T + RG.HEAD_TOP - gap - half * k });
+
+// ---------------- 主場景：焦油坑一角（10×8） ----------------
+/**
+ * 敵：弓手 E1 (7,1) 瞄準法師 M (2,2)（正常），盾兵 SB (7,2) 站在 E1 南邊（朝玩家弓手那一側）；弓手 E2 (8,5) 瞄準主角 H (2,5)、被傭兵 C (5,5) 擋在中間；
+ *     盜匪 B (8,7) 剛放下陷阱、看一眼西邊。我：主角 H、法師 M、傭兵 C、弓手 A (3,6)（輪到她、正在選目標，滑過 E1 → 預覽有盾兵掩護）。
+ * 地上：可疑痕跡 (4,7)（A 的 2 格內）、已揭露的敵方陷阱 (1,7)（對照）、殘牆 (6,3)。
+ * 敵人的瞄準預告在敵方回合宣告，玩家回合一直掛著到下回合射出：所以「玩家選目標」和「兩條瞄準線」會同時出現。
+ */
+const SC = { tgt1: [2, 2], tgt2: [2, 5], blk: [5, 5], e1: [7, 1], e2: [8, 5], sb: [7, 2], glance: [8, 7] };
+function mainScene(pal, ms = 300, opt = {}) {
+  const H = U.hero({ id: "H", x: SC.tgt2[0], y: SC.tgt2[1], status: ["burning"] }), M = U.mage({ id: "M", x: SC.tgt1[0], y: SC.tgt1[1] }), C = U.merc({ id: "C", x: SC.blk[0], y: SC.blk[1], view: "side", west: false });
+  const A = U.archer({ id: "A", x: 3, y: 6, active: true, view: "side" });
+  const E1 = U.eArcher({ id: "E1", x: SC.e1[0], y: SC.e1[1], west: true, charge: 1 }), SB = U.shield({ id: "SB", x: SC.sb[0], y: SC.sb[1], view: "side", west: true });
+  const E2 = U.eArcher({ id: "E2", x: SC.e2[0], y: SC.e2[1], west: true, charge: 1 }), B = U.bandit({ id: "B", x: SC.glance[0], y: SC.glance[1], view: "side", west: true });
+  const units = [H, M, C, A, E1, SB, E2, B];
+  const groundAt = (x, y) => (x === 0 && y <= 2 ? tile(ASH, "lava") : (x + y * 3) % 7 === 0 ? tile(ASH, "dirt") : tile(ASH, "stone"));
+  const geo = (K) => {
+    const r1 = headMark(...SC.tgt1, 10, 3, K.reticle), r2 = headMark(...SC.tgt2, 10, 3, K.reticle), a1 = chest(...SC.e1), a2 = chest(...SC.e2);
+    return { r1, r2, a1, a2, bl: blockOn(a2, r2, chest(...SC.blk)) };
+  };
+  return {
+    cols: 10, rows: 8, groundAt, units, objects: [[6, 3, ASH, "low_wall"]],
+    decals: (g, K) => { RG.trace(g, 4 * T, 7 * T, 4, 7, { k: K.q }); CUR.trap(g, 1, 7, { color: "#ff6a1a" }); },
+    under: (g, K) => {
+      if (opt.select !== false) for (const [x, y] of [SC.e1, SC.sb, SC.e2]) CUR.attackFrame(g, x, y);
+      if (opt.lines !== false) { const o = geo(K); RG.lockLine(g, o.a1, o.r1, { pal, ms, k: K.line, rk: K.reticle }); RG.lockLine(g, o.a2, o.r2, { pal, ms, k: K.line, rk: K.reticle, blockAt: o.bl.t }); }
+    },
+    over: (g) => { CUR.telegraph(g, ...SC.e1); CUR.telegraph(g, ...SC.e2); if (opt.select !== false) CUR.hoverFrame(g, ...SC.e1); },
+    top: (g, K) => {
+      const ph = RG.blinkPhase(ms);
+      if (opt.lines !== false) {
+        const o = geo(K);
+        RG.reticle(g, o.r1.x, o.r1.y, { pal, phase: ph, k: K.reticle });
+        RG.reticle(g, o.r2.x, o.r2.y, { pal, phase: ph, k: K.reticle, blocked: true });
+        RG.blockStop(g, o.bl.p, o.bl.dir, { pal, k: Math.min(K.line, 1.3) }); /* 斷點槓最多放大 1.3：800 寬時 ×1.88 會蓋住擋的人整顆頭 */
+      }
+      if (opt.select !== false) { RG.coverLink(g, center(...SC.sb), center(...SC.e1), { k: K.chip }); const c = headMark(...SC.e1, 7, 2, K.chip); RG.coverChip(g, c.x, c.y, "unit", { k: K.chip }); }
+      const gl = headMark(...SC.glance, 7, 2, K.glance); RG.glance(g, gl.x, gl.y, { x: -1, y: 0 }, opt.glanceMs ?? 300, { k: K.glance });
+      if (opt.floats) opt.floats(g, K);
+    },
+  };
+}
+/** 線 a→b 上離 p 最近的點（擋住的人）：回傳 { t（0～1）, p（斷點：擋住的人身前，往弓手那邊退 0.22 格）, dir }。 */
+function blockOn(a, b, p) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy, L = Math.sqrt(L2);
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)), back = (0.22 * T) / L;
+  const tt = Math.max(0, t - back);
+  return { t, p: { x: a.x + dx * tt, y: a.y + dy * tt }, dir: { x: dx / L, y: dy / L } };
+}
+
+// ---------------- 拼圖 ----------------
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; } /* 放不下就換列 */ const caps = c.cap ? wrap(c.cap, Math.max(w, 110), 12) : []; items.push({ c, x, w, h, caps }); x += Math.max(w, caps.length ? 110 : 0) + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width;
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+  document.documentElement.dataset.done = "1";
+}
+const VIEW = (S, x0, y0, w, h, res = 1, zoom = 1) => ({ S, zoom, res, x0, y0, w, h });
+/** 從真 1 倍的整張圖裁一塊（模型座標 mx, my, mw, mh），整數倍最近鄰放大。 */
+function crop(cv, view, mx, my, mw, mh, Z, cap) {
+  const s = view.S * (view.res ?? 1), x = Math.round((mx - view.x0) * s), y = Math.round((my - view.y0) * s), w = Math.round(mw * s), h = Math.round(mh * s);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(cv, -x, -y);
+  return { cv: c, w: w * Z, h: h * Z, nn: true, cap };
+}
+const wOf = () => (P.get("w") === "800" ? 800 : 1600);
+const SOf = (w) => (w === 800 ? S800 : S1600);
+
+const PARTS = {};
+// ================= 1. 戰場情境（真 1 倍，A／B 並排） =================
+PARTS.scene = () => {
+  const w = wOf(), S = SOf(w), V = VIEW(S, 0, -T * 0.4, T * 10, T * 8.4);
+  const a = render(mainScene("A"), V), b = render(mainScene("B"), V);
+  const K = kOf(S);
+  publish(sheet(w === 800 ? 560 : 1310, [
+    { title: `RG 戰場標記・${w}×${w === 800 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(2)}（一格 ${(T * S).toFixed(1)} px）・真 1 倍` },
+    { note: `左 A 強招紫（#b06bff，同「蓄」）｜右 B 警示紅（#ff4646）。焦油坑一角：右上弓手瞄準左上的法師（準星＋流動虛線）、右邊弓手瞄準主角但傭兵擋在中間（擋住的人前面一道短槓、之後改灰點線、準星變灰不閃）；玩家的弓手正在選目標、滑過盾兵後面的弓手（紅框＋白框＋頭上小盾＋盾兵胸口連到弓手胸口的點線）；左下翻土＋細線＋「？」是可疑痕跡、最左下是已揭露的敵方陷阱；右下盜匪頭上是「看一眼」（播到 300 ms）。` + (w === 800 ? `800 寬地圖縮到 ${S.toFixed(2)}，標記照 6F-9 的作法保持畫面下限：準星 ×${K.reticle.toFixed(2)}、小盾 ×${K.chip.toFixed(2)}、看一眼 ×${K.glance.toFixed(2)}、線寬 ×${K.line.toFixed(2)}、「？」×${K.q.toFixed(2)}。` : "1600 寬全部 ×1（不放大）。") },
+    { cells: [{ cv: a, cap: "A 強招紫" }, { cv: b, cap: "B 警示紅" }] },
+  ]), "image/png");
+};
+// ================= 2. 最近鄰 ×3 細看 =================
+PARTS.zoom = () => {
+  const w = wOf(), S = SOf(w), V = VIEW(S, 0, -T * 0.4, T * 10, T * 8.4), Z = 3;
+  const blocks = [{ title: `×${Z} 最近鄰（${w} 寬、一格 ${(T * S).toFixed(1)} px、真 1 倍裁切；一個像素＝${Z}×${Z} 方塊）` }];
+  for (const pal of ["A", "B"]) {
+    const cv = render(mainScene(pal), V);
+    blocks.push({ note: `${RG.PAL[pal].name}` });
+    blocks.push({ cells: [
+      crop(cv, V, T * 1.3, T * 0.9, T * 2.4, T * 2.3, Z, "被瞄準的法師（準星、線的終點）"),
+      crop(cv, V, T * 6.1, T * 0.2, T * 2.6, T * 2.9, Z, "瞄準中的弓手（蓄、蓄力徽章）＋盾兵＋小盾與連結"),
+      ]});
+    blocks.push({ cells: [crop(cv, V, T * 1.4, T * 3.9, T * 5.2, T * 2.1, Z, "被擋住的那條線（傭兵前的短槓、灰點線、主角頭上的灰準星）")] });
+    blocks.push({ cells: [
+      crop(cv, V, T * 0.6, T * 6.4, T * 4.6, T * 1.6, Z, "已揭露的敵方陷阱（左）vs 可疑痕跡（右）"),
+      crop(cv, V, T * 7.3, T * 5.9, T * 1.6, T * 2.1, Z, "看一眼（300 ms）"),
+    ] });
+  }
+  publish(sheet(w === 800 ? 1000 : 1700, blocks), "image/png");
+};
+// ================= 3. 動畫關鍵幀 =================
+PARTS.anim = () => {
+  const S = S1600, V = VIEW(S, 0, -T * 0.4, T * 10, T * 8.4), Z = 3;
+  const frames = (ms, opt, rect, cap, pal = "A") => crop(render(mainScene(pal, ms, opt), V), V, ...rect, Z, cap);
+  const R_TGT = [T * 1.45, T * 1.1, T * 2.1, T * 1.9];
+  const R_LINE = [T * 3.6, T * 2.2, T * 3.0, T * 2.0];
+  const R_GL = [T * 7.4, T * 6.1, T * 1.5, T * 1.85];
+  const per = (11 / RG.TIMING.flowPxPerS) * 1000;
+  const flowMs = [0, 1, 2, 3, 4].map((i) => Math.round((i * per) / 4));
+  const glMs = [0, 60, 120, 180, 240, 360, 480, 540, 600];
+  const fl = (text, gx, gy, p, color) => (g) => RG.floatText(g, text, (gx + 0.5) * T, (gy + 0.5) * T + RG.HEAD_TOP, p, color);
+  const R_E1 = [T * 6.2, T * 0.0, T * 2.6, T * 2.2], R_C = [T * 4.2, T * 3.9, T * 2.6, T * 2.2];
+  const fp = [0.05, 0.12, 0.22, 0.45, 0.8];
+  publish(sheet(1640, [
+    { title: "關鍵幀（1600 寬、真 1 倍裁切 ×3 最近鄰；A 強招紫，B 只拍閃爍）" },
+    { note: `準星閃 2 段：週期 ${RG.TIMING.blinkMs} ms，0～${RG.TIMING.blinkOnMs} ms「亮」（原大、外圈 2.6、左上白亮弧），${RG.TIMING.blinkOnMs}～${RG.TIMING.blinkMs} ms「收」（縮 0.86、外圈 2.2、沒有亮弧）。不閃到看不見（沒有透明 0 的一段）。` },
+    { cells: [frames(0, {}, R_TGT, "A 0 ms 亮"), frames(300, {}, R_TGT, "A 300 ms 亮"), frames(600, {}, R_TGT, "A 600 ms 收"), frames(800, {}, R_TGT, "A 800 ms 收"), frames(0, {}, R_TGT, "B 0 ms 亮", "B"), frames(600, {}, R_TGT, "B 600 ms 收", "B")] },
+    { note: `瞄準線流動：每秒往目標走 ${RG.TIMING.flowPxPerS} 模型 px，虛線週期 11（實 4＋空 7）→ ${Math.round(per)} ms 走完一個週期。下面 5 格是一個週期的 0、1/4、2/4、3/4、1（最後一格＝第一格）。` },
+    { cells: flowMs.map((ms) => frames(ms, { select: false }, [T * 3.4, T * 0.7, T * 2.8, T * 1.4], `${ms} ms`)) },
+    { note: "看一眼 0.6 秒：0～90 ms 從 0.6 倍彈到 1.1、150 ms 落回 1；120～240 ms 瞳孔往那一格移；240～360 ms 朝那一格冒兩道視線；480～600 ms 淡出。" },
+    { cells: glMs.map((ms) => frames(300, { select: false, glanceMs: ms }, R_GL, `${ms} ms`)) },
+    { note: "浮字（沿用傷害浮字：p＝0～1 是整組回饋的時間；0～22% 從 0.6 倍彈到 1、往上飄 16、最後 30% 淡出）。落空、被打斷在弓手頭上；被擋下在擋住的那個隊友頭上。色＝tone good（#ffe066，同「格擋」「攔截」）。" },
+    { cells: fp.map((p) => frames(300, { select: false, floats: fl("落空", 7, 1, p) }, R_E1, `落空 p=${p}`)) },
+    { cells: fp.map((p) => frames(300, { select: false, floats: fl("被擋下", 5, 5, p) }, R_C, `被擋下 p=${p}`)) },
+    { cells: fp.map((p) => frames(300, { select: false, floats: fl("被打斷", 7, 1, p) }, R_E1, `被打斷 p=${p}`)) },
+  ]), "image/png");
+};
+// ================= 4. 撞圖並排 =================
+PARTS.collide = () => {
+  const S = S1600, ZM = 2;
+  const mini = (cols, rows, draw, units = [], ground = tile(ASH, "stone")) => {
+    const V = VIEW(S, 0, -T * 0.4, T * cols, T * (rows + 0.4), 1, ZM);
+    const sc = { cols, rows, ground, units, top: draw.top, under: draw.under, over: draw.over, decals: draw.decals };
+    return render(sc, V);
+  };
+  const K1 = kOf(S);
+  const one = (u) => [u];
+  const cellsLines = [
+    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, { x: 0.5 * T, y: 1.5 * T - 14 }, { x: 3.5 * T, y: 0.6 * T }, { pal: "A", ms: 0, k: 1, endGap: 0 }) }), cap: "瞄準線 A" },
+    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, { x: 0.5 * T, y: 1.5 * T - 14 }, { x: 3.5 * T, y: 0.6 * T }, { pal: "B", ms: 0, k: 1, endGap: 0 }) }), cap: "瞄準線 B" },
+    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, { x: 0.5 * T, y: 1.5 * T - 14 }, { x: 3.5 * T, y: 0.6 * T }, { pal: "A", ms: 0, k: 1, endGap: 0, blockAt: 0.5 }), top: (g) => RG.blockStop(g, { x: 2 * T - 6, y: 1.05 * T }, { x: 0.96, y: -0.28 }, { pal: "A" }) }), cap: "瞄準線 A 被擋（後段灰點線）" },
+    { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "normal") }), cap: "現行：移動路徑（白）" },
+    { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "danger") }), cap: "現行：路徑經過危險（紅橘）" },
+  ];
+  const cellsLines2 = [
+    { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "ice") }), cap: "現行：路徑冰面（藍虛線）" },
+    { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "unreachable") }), cap: "現行：到不了（灰虛線）" },
+    { cv: mini(4, 2, { under: (g) => CUR.softCells(g, [[1, 0], [2, 0], [3, 0], [1, 1], [2, 1], [3, 1]], CUR.RANGE) }), cap: "現行：技能射程淡框" },
+    { cv: mini(4, 2, { over: (g) => { CUR.telegraph(g, 0, 1); for (const [x, y] of [[2, 0], [3, 0], [2, 1]]) CUR.telegraph(g, x, y, "蓄"); } }), cap: "現行：蓄（施放者＋預計範圍）" },
+    { cv: mini(4, 2, { under: (g) => { for (const [x, y] of [[1, 0], [2, 0], [2, 1]]) CUR.followupArea(g, x, y); } }), cap: "現行：複合技動作段範圍" },
+  ];
+  // 頭頂：準星 vs 現行頭頂／身上的圓形記號
+  const head = (draw, u) => { const V = VIEW(S, 0, -T * 0.9, T, T * 1.9, 1, ZM); return render({ cols: 1, rows: 1, ground: tile(ASH, "stone"), units: u ? [u] : [], top: draw }, V); };
+  const hm = (gx, gy) => headMark(gx, gy, 10, 3, 1);
+  const cellsHead = [
+    { cv: head((g) => { const c = hm(0, 0); RG.reticle(g, c.x, c.y, { pal: "A", phase: 0 }); }, U.hero({ x: 0, y: 0 })), cap: "準星 A（亮）" },
+    { cv: head((g) => { const c = hm(0, 0); RG.reticle(g, c.x, c.y, { pal: "B", phase: 0 }); }, U.hero({ x: 0, y: 0 })), cap: "準星 B（亮）" },
+    { cv: head((g) => { const c = hm(0, 0); RG.reticle(g, c.x, c.y, { pal: "A", blocked: true }); }, U.hero({ x: 0, y: 0 })), cap: "準星 被擋（灰）" },
+    { cv: head(() => {}, U.eArcher({ x: 0, y: 0, west: true, charge: 1 })), cap: "現行：蓄力徽章（圓＋實心點、紫環）" },
+    { cv: head(() => {}, U.hero({ x: 0, y: 0, status: ["marked", "overwatch", "charging"] })), cap: "現行：被標記、警戒、蓄力中（腳邊 11）" },
+    { cv: head((g) => MapMarks.watchEye(g, 0.5 * T, 0.5 * T + RG.HEAD_TOP - 6 - 5), U.bandit({ x: 0, y: 0 })), cap: "現行：敵群的眼睛（實地）" },
+    { cv: head((g) => CUR.attackFrame(g, 0, 0), U.bandit({ x: 0, y: 0 })), cap: "現行：攻擊紅框" },
+  ];
+  // 狀態圖示放大看（真 1 倍 11 → ×4）
+  const statusBig = (id) => { const c = document.createElement("canvas"); c.width = 11; c.height = 11; CUR.status(c.getContext("2d"), id, 5.5, 5.5, 11); return { cv: c, w: 44, h: 44, nn: true, cap: id }; };
+  const reticleBig = (pal, ph, blocked) => { const c = document.createElement("canvas"); c.width = 26; c.height = 26; const g = c.getContext("2d"); g.scale(S, S); RG.reticle(g, 13 / S, 12 / S, { pal, phase: ph, blocked }); return { cv: c, w: 78, h: 78, nn: true, cap: `準星 ${pal}${blocked ? " 被擋" : ph ? " 收" : " 亮"}（1600 真 1 倍 ×3）` }; };
+  // 盾：小盾 vs 物件版（提案）vs 現行有盾的狀態
+  const chip = (kind, u) => head((g) => { const c = headMark(0, 0, 7, 2, 1); RG.coverChip(g, c.x, c.y, kind); }, u);
+  const cellsShield = [
+    { cv: chip("unit", U.eArcher({ x: 0, y: 0, west: true })), cap: "盾兵擋住（盾＋盾後人頭）" },
+    { cv: chip("object", U.eArcher({ x: 0, y: 0, west: true })), cap: "提案：物件半掩護（矮牆，遊戲現在沒有）" },
+    { cv: head(() => {}, U.eArcher({ x: 0, y: 0, west: true, status: ["defending", "guarded", "shielded"] })), cap: "現行：防禦、受護衛、護盾（腳邊 11）" },
+    { cv: head((g) => CUR.float(g, "格擋", 0.5 * T, 0.5 * T + RG.HEAD_TOP, "#ffe066"), U.eArcher({ x: 0, y: 0, west: true })), cap: "現行：格擋浮字" },
+  ];
+  const chipBig = (kind) => { const c = document.createElement("canvas"); c.width = 20; c.height = 20; const g = c.getContext("2d"); g.scale(S, S); RG.coverChip(g, 10 / S, 10 / S, kind); return { cv: c, w: 80, h: 80, nn: true, cap: `${kind === "unit" ? "小盾" : "矮牆"}（1600 真 1 倍 ×4）` }; };
+  // 地面：可疑痕跡 vs 陷阱、腳印、情境物件提示
+  const gr = (draw) => mini(1, 1, { decals: draw });
+  const cellsGround = [
+    { cv: gr((g) => RG.trace(g, 0, 0, 4, 7)), cap: "可疑痕跡" },
+    { cv: gr((g) => RG.trace(g, 0, 0, 1, 2)), cap: "可疑痕跡（另一格的碎粒）" },
+    { cv: gr((g) => CUR.trap(g, 0, 0, { color: "#ff6a1a" })), cap: "現行：揭露的敵方陷阱（火、踩到）" },
+    { cv: gr((g) => CUR.trap(g, 0, 0, { color: "#8fe3ff", trigger: "delay" })), cap: "現行：揭露的敵方陷阱（冰、延時）" },
+    { cv: gr((g) => CUR.trap(g, 0, 0, { mine: true, color: "#7ddc3a" })), cap: "現行：自己的陷阱" },
+    { cv: gr((g) => MapMarks.footprints(g, [[-0.5, 0], [0.5, 0]])), cap: "現行：腳印（實地）" },
+    { cv: gr((g) => MapMarks.objectHint(g, 0, 0, 0)), cap: "現行：情境物件提示（實地）" },
+  ];
+  // 看一眼 vs 眼睛、事件「！」
+  const gl = (u, dir) => head((g) => { const c = headMark(0, 0, 7, 2, 1); RG.glance(g, c.x, c.y, dir, 300); }, u);
+  const cellsGlance = [
+    { cv: gl(U.bandit({ x: 0, y: 0, view: "side", west: true }), { x: -1, y: 0 }), cap: "看一眼（往西）" },
+    { cv: gl(U.bandit({ x: 0, y: 0 }), { x: 0.7, y: 0.7 }), cap: "看一眼（往東南）" },
+    { cv: gl(U.lizard({ x: 0, y: 0 }), { x: 0, y: -1 }), cap: "看一眼（異形、往北）" },
+    { cv: head((g) => MapMarks.watchEye(g, 0.5 * T, 0.5 * T + RG.HEAD_TOP - 6 - 5), U.bandit({ x: 0, y: 0 })), cap: "現行：敵群的眼睛" },
+    { cv: head((g) => MapMarks.watchEye(g, 0.5 * T, 0.5 * T + RG.HEAD_TOP - 6 - 5, true), U.bandit({ x: 0, y: 0 })), cap: "現行：眼睛（潛行半閉）" },
+    { cv: mini(1, 1, { top: (g) => MapMarks.eventMark(g, 0, 0, 0) }), cap: "現行：事件「！」泡泡" },
+  ];
+  const glanceBig = () => { const c = document.createElement("canvas"); c.width = 24; c.height = 24; const g = c.getContext("2d"); g.scale(S, S); RG.glance(g, 12 / S, 12 / S, { x: -1, y: 0 }, 300); return { cv: c, w: 96, h: 96, nn: true, cap: "看一眼（1600 真 1 倍 ×4）" }; };
+  const eyeBig = () => { const c = document.createElement("canvas"); c.width = 28; c.height = 20; const g = c.getContext("2d"); g.scale(S, S); MapMarks.watchEye(g, 14 / S, 10 / S); return { cv: c, w: 112, h: 80, nn: true, cap: "現行眼睛（×4）" }; };
+  void K1; void one;
+  publish(sheet(1500, [
+    { title: "撞圖並排（1600 的地圖縮放 1.31，向量放大 2 倍；小圖是真 1 倍最近鄰）" },
+    { note: "線：瞄準線（2 px 膠囊虛線、每段自己包外框色、斜直線、沒有格心點、畫在單位之下）vs 移動路徑（4 px、整條黑底、沿格子走、每格中心一個點、畫在所有單位之上）、技能射程（整格淡框）、蓄（格框＋右上字）。" },
+    { cells: cellsLines }, { cells: cellsLines2 },
+    { note: "頭頂：準星是「空心圓＋左右上三根刻度＋朝下三角」，中心空；現行的蓄力狀態是「圓＋實心點」、被標記是「圓＋叉」，而且在腳邊 11 px 的狀態框裡；敵群眼睛是米白眼＋紅瞳。" },
+    { cells: cellsHead },
+    { cells: [reticleBig("A", 0), reticleBig("A", 1), reticleBig("B", 0), reticleBig("B", 1), reticleBig("A", 0, true), statusBig("charging"), statusBig("marked"), statusBig("overwatch"), eyeBig()] },
+    { note: "盾：小盾在頭頂（只在選目標、預覽有盾兵掩護時），盾後露半顆米白人頭＝來源是人；物件版（矮牆）是給半掩護的同族提案。現行狀態的防禦、受護衛、護盾在腳邊 11 px 框裡。" },
+    { cells: cellsShield },
+    { cells: [chipBig("unit"), chipBig("object"), statusBig("defending"), statusBig("guarded"), statusBig("shielded")] },
+    { note: "地面：可疑痕跡（一塊翻起的新土＋一條拉直的細線與兩個小木樁＋右上米白「？」）沒有任何陷阱的形；揭露的陷阱是紅虛線橢圓＋深色圓盤＋陣營色圈＋元素色夾齒／沙漏＋右上紅「!」。" },
+    { cells: cellsGround },
+    { note: "看一眼：暖米色小泡泡＋兩隻眼（白眼白、深瞳孔往那一格偏）＋泡泡外兩道視線；現行的敵群眼睛是單顆大眼（米白眼白＋紅瞳、沒有泡泡）、事件「！」是金色泡泡。" },
+    { cells: cellsGlance },
+    { cells: [glanceBig(), eyeBig()] },
+  ]));
+};
+// ================= 5. 各區地面（線、準星、痕跡的對比） =================
+PARTS.ground = () => {
+  const S = S1600, ZM = 1.5;
+  const GROUNDS = [["荒原焦土", tile(ASH, "stone")], ["荒原岩漿", tile(ASH, "lava")], ["荒原灰燼", tile(ASH, "dirt")], ["雲嶺青石板", CLOUD], ["晶冠石地", tile(CRY, "stone")], ["霜潮石地", tile(FRO, "stone")], ["魔導石地", tile(ARC, "stone")]];
+  const cells = [];
+  for (const pal of ["A", "B"]) for (const [name, ground] of GROUNDS) {
+    const V = VIEW(S, 0, -T * 0.4, T * 3, T * 2.4, 1, ZM);
+    const sc = { cols: 3, rows: 2, ground, units: [U.hero({ x: 2, y: 1 })],
+      decals: (g) => RG.trace(g, 0, 0, 3, 1),
+      under: (g) => RG.lockLine(g, { x: 0.3 * T, y: 1.6 * T }, headMark(2, 1, 10, 3, 1), { pal, ms: 0 }),
+      top: (g) => { const c = headMark(2, 1, 10, 3, 1); RG.reticle(g, c.x, c.y, { pal, phase: 0 }); } };
+    cells.push({ cv: render(sc, V), cap: `${pal}・${name}` });
+  }
+  const rows = []; for (let i = 0; i < cells.length; i += 7) rows.push({ cells: cells.slice(i, i + 7) });
+  publish(sheet(1560, [
+    { title: "各區地面上的瞄準線、準星與可疑痕跡（1600 的地圖縮放，向量放大 1.5 倍）" },
+    { note: "上排 A 強招紫、下排 B 警示紅。B 在岩漿（第 2 格）上紅線和準星只剩外框色撐著、對比最差；A 在每一種地面都跳出來。可疑痕跡的翻土在深色地面（焦土、灰燼）靠碎粒與細線、在淺色地面（晶冠）靠深色土塊。" },
+    ...rows,
+  ]));
+};
+// ================= 6. 單項特寫（向量 ×4，給移植對照尺寸） =================
+PARTS.parts = () => {
+  const Z = 4, box = (w, h, draw) => { const c = document.createElement("canvas"); c.width = w * Z; c.height = h * Z; const g = c.getContext("2d"); g.fillStyle = "#3a3430"; g.fillRect(0, 0, c.width, c.height); g.scale(Z, Z); g.strokeStyle = "rgba(255,255,255,0.15)"; g.lineWidth = 1 / Z; for (let i = 0; i <= w; i += 2) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, h); g.stroke(); } for (let i = 0; i <= h; i += 2) { g.beginPath(); g.moveTo(0, i); g.lineTo(w, i); g.stroke(); } draw(g); return c; };
+  const cells = [
+    { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "A", phase: 0 })), cap: "準星 A 亮（20×21 模型 px）" },
+    { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "A", phase: 1 })), cap: "準星 A 收（×0.86）" },
+    { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "B", phase: 0 })), cap: "準星 B 亮" },
+    { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "A", blocked: true })), cap: "準星 被擋（灰、不閃）" },
+    { cv: box(18, 18, (g) => RG.coverChip(g, 9, 9, "unit")), cap: "小盾（14×14）" },
+    { cv: box(18, 18, (g) => RG.coverChip(g, 9, 9, "object")), cap: "物件版（提案）" },
+    { cv: box(24, 20, (g) => RG.glance(g, 10, 10, { x: 1, y: 0 }, 400)), cap: "看一眼（14×13＋視線）" },
+  ];
+  const cells2 = [
+    { cv: box(48, 48, (g) => { g.fillStyle = "#4a3a30"; g.fillRect(0, 0, 48, 48); RG.trace(g, 0, 0, 4, 7); }), cap: "可疑痕跡（一格 48，畫在焦土色上）" },
+    { cv: box(60, 14, (g) => RG.lockLine(g, { x: 0, y: 7 }, { x: 60, y: 7 }, { pal: "A", ms: 0, endGap: 0 })), cap: "瞄準線（實 4＋空 7、線 2＋外框各 1）" },
+    { cv: box(60, 14, (g) => { RG.lockLine(g, { x: 0, y: 7 }, { x: 60, y: 7 }, { pal: "A", ms: 0, endGap: 0, blockAt: 0.45 }); RG.blockStop(g, { x: 26, y: 7 }, { x: 1, y: 0 }, { pal: "A" }); }), cap: "被擋（斷點＋灰點線 1.5／5）" },
+  ];
+  publish(sheet(1500, [
+    { title: "單項特寫（模型像素 ×4 向量重畫；格線每 2 px）" },
+    { cells }, { cells: cells2 },
+  ]), "image/png");
+};
+try { (PARTS[PART] ?? PARTS.scene)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
