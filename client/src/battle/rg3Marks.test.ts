@@ -145,6 +145,13 @@ describe("shield guard", () => {
     expect(guardDraw(null, view)).toBeNull();
   });
 
+  it("a shield_formation cover (tower shield affix) draws the same chip and link from the shield holder", () => {
+    const g = guardDraw(preview({ penalty: 2, kind: "shield_formation", name_zh: "盾陣", pos: [2, 0], unit_id: "unit_0004" }), view);
+    expect(g).toEqual({ wardId: "unit_0003", ward: { x: 2, y: 1 }, guardId: "unit_0004", guard: { x: 2, y: 0 } });
+    expect(guardDraw(preview({ penalty: 2, kind: "shield_formation", name_zh: "盾陣", pos: [2, 0] }), view)).toBeNull(); // 沒有 unit_id
+    expect(guardDraw(preview({ penalty: 2, kind: "shield_formation", name_zh: "盾陣", pos: [2, 0], unit_id: "unit_9999" }), view)).toBeNull(); // 擋的人不在畫面資料
+  });
+
   it("moves the chip to the upper right when the guard is due north", () => {
     expect(chipCenter({ x: 2, y: 0 }, { x: 2, y: 1 }, 100, -30, 1)).toEqual({ x: 100 + NORTH_CHIP_DX, y: -26 });
     expect(chipCenter({ x: 2, y: 2 }, { x: 2, y: 1 }, 100, -30, 1)).toEqual({ x: 100, y: chipY(-30, 1) });
