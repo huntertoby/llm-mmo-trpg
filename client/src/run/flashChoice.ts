@@ -2,6 +2,7 @@
 // 欄位名、單位、大標、一句話、說明卡全部由伺服器給（`FlashOptionOut.changes`、`headline_zh`、`say_zh`、`PendingFlashOut.terms`；
 // 開發 PM 第 12 節決定 1：對照表在後端 `flash_changes.py`）；這裡只決定樣式與排法、解析術語標記。
 import type { FlashOption, PendingFlash, StatChange } from "../api/types";
+import { LLM_SOURCE_LABEL } from "./llmFlow";
 
 // ---- 定稿字（9.1） ------------------------------------------------------------------------
 
@@ -41,6 +42,32 @@ export function paidTag(p: PendingFlash): string {
 export function headlineOf(o: FlashOption): string {
   const h = o.headline_zh ?? null;
   return h === null || h === "" ? o.summary_zh : h;
+}
+
+// ---- LLM 的名稱與描述（LF-3） ------------------------------------------------------------
+
+/** 改名那一列的欄位名（「名稱 點燃斬 → 竹影焚心」）。 */
+export const FLASH_NAME_ZH = "名稱";
+/** 名稱來自本機模型時，新名稱後面的小標記（沿用候選卡的 LLM 標記字 `LLM_SOURCE_LABEL`，玩法 PM 2026-10-29 定案）。 */
+export const FLASH_LLM_NAME_ZH = LLM_SOURCE_LABEL;
+/** 小標記的說明卡（LF-3 暫定字，待 PM）。 */
+export const FLASH_LLM_NAME_HINT = "這個名稱由本機模型提議；效果與數值照規則。";
+
+/** 選了這個會改名時的新名稱（大變化、轉型）；名稱不變（小變化）為 `null`。`current` 是畫面上的原名。 */
+export function renamedTo(o: FlashOption, current: string): string | null {
+  const name = o.card.name_zh;
+  return name === "" || name === current ? null : name;
+}
+
+/** 新名稱是本機模型取的（伺服器 `name_source`）。 */
+export function llmNamed(o: FlashOption): boolean {
+  return o.name_source === "llm";
+}
+
+/** 本機模型寫的一句話描述；沒有為 `null`（不佔位）。 */
+export function noteOf(o: FlashOption): string | null {
+  const note = o.note_zh ?? null;
+  return note === null || note === "" ? null : note;
 }
 
 /** 「後」的四種樣式（第 3 節）；拿掉的效果（`after` 是 null）照「變弱」（第 12 節決定 5）。 */

@@ -405,6 +405,42 @@
   color: var(--pnl-l2);
 }
 
+/* ---------- LF-3：改名列＋本機模型的一句話描述（不搶版面：沒有就不佔位） ---------- */
+
+/* 新名稱：名稱沒有好壞——不用變好的金底、不用變弱的三角，主文字色粗字、無底無框 */
+.fc-now.name {
+  color: var(--ui-text);
+  background: none;
+  padding-left: 2px;
+}
+
+/* 名稱來源：本機模型取的名稱後面一顆紫色小膠囊（候選卡 .offer-llm-tag 同色、字級同「新」） */
+.fc-src {
+  flex: none;
+  font-size: 10.5px;
+  line-height: 15px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid #b08cff;
+  color: #d3c0ff;
+  background: rgb(176 140 255 / 12%);
+  cursor: help;
+}
+
+/* 一句話描述：接在名稱下面、整列寬，次要字、一般字重，最多兩行 */
+.fc-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--pnl-l3);
+  font-size: 12.5px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
 /* ---------- 術語：青色點線底線＋說明卡（Hint） ---------- */
 .fc-term {
   text-decoration: underline dotted rgb(140 208 228 / 75%);
@@ -646,6 +682,15 @@
   .fc-now {
     line-height: 19px;
     padding: 0 6px;
+  }
+
+  .fc-now.name {
+    padding-left: 2px;
+  }
+
+  .fc-note {
+    font-size: 12px;
+    line-height: 1.4;
   }
 
   .fc-foot {
