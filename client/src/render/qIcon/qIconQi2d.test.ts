@@ -31,20 +31,36 @@ const NINETEEN: Readonly<Record<string, string>> = {
 const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_berserker_fury_cleave", // RG-2：荒原狂戰士
   "skill_binding_talisman", // RG-1：瞄準預告的 3 招
+  "skill_blood_fury", // KW-2：連擊、怒氣、專注、氣的示範招與利用者
+  "skill_breathing_qi",
+  "skill_centering",
   "skill_crane_piercing_shot",
+  "skill_crumbling_fist",
+  "skill_eagle_eye",
+  "skill_flowing_cut",
+  "skill_fury_slam",
+  "skill_grit_teeth",
+  "skill_heart_piercer",
+  "skill_inch_force",
   "skill_lava_bomb",
   "skill_lava_splash",
   "skill_lone_strider",
   "skill_lone_wolf_pounce",
+  "skill_mind_eye_shot",
+  "skill_qigong_wave",
   "skill_rift_flicker",
   "skill_shadow_bind",
+  "skill_shadow_glide",
   "skill_silent_step",
+  "skill_swift_stab",
+  "skill_throat_cut",
   "skill_unguarded_shot",
+  "skill_war_cry",
 ];
 /** 基準錄好之後內容改過、主圖跟著變的招（DD-3：雙牙拿掉第二段傷害、改成兩下都中才上中毒）。 */
 const CONTENT_CHANGED: readonly string[] = ["skill_twin_fang"];
 /** 基準錄好之後才加的部件（LW-1 兩個條件、DD-3 與 BS-1 各一個、KW-1 一個條件；沒有開工前的雜湊）。 */
-const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike", "condition:self_stack_at_least"];
+const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike", "condition:self_stack_at_least", "condition:self_on_high_ground"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
 const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier && !ADDED_AFTER_BASELINE.includes(id)); // 基準之後才加的修正技（BS-1 無聲步）沒有開工前的紀錄

@@ -464,8 +464,10 @@ describe("1. 建角頁：種族格子卡＋右側展開欄、判定加值、出�
     expect(crestId("hub")).toBe("c_other");
     expect(src("ui/CreateIcons.tsx")).toContain("const accent = regionThemeFor(region).accent;");
     expect(src("ui/CreateIcons.tsx")).toContain("opt={{ accent }}");
-    // KW-1：開局不出現（start_hidden）的四個層數關鍵字（連擊、怒氣、專注、氣）的圖示在 KW-3 隨美術補；拿掉 start_hidden 時這裡自動要求。
-    const ids = KEYWORDS_YAML.keywords.filter((k) => k.start_hidden !== true).map((k) => k.id).sort();
+    // KW-2：四個層數關鍵字（連擊、怒氣、專注、氣）開局可選了，但創角圖示是美術（KW-3 隨美術補）；KW-3 補上時下一行會失敗，提醒拿掉 ART_PENDING。
+    const ART_PENDING = ["combo_point", "focus", "fury", "ki"];
+    expect(KEYWORDS_YAML.keywords.map((k) => k.id).filter((id) => !(KEYWORD_ICON_IDS as readonly string[]).includes(id)).sort()).toEqual(ART_PENDING);
+    const ids = KEYWORDS_YAML.keywords.filter((k) => k.start_hidden !== true && !ART_PENDING.includes(k.id)).map((k) => k.id).sort();
     expect([...KEYWORD_ICON_IDS].sort()).toEqual(ids);
     const icons = new Set(ids.map((id) => renderToStaticMarkup(createElement(KeywordIcon, { id })).replace(/data-keyword-icon="[^"]+"/, "")));
     expect(icons.size).toBe(ids.length);
