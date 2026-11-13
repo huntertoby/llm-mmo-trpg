@@ -23,7 +23,7 @@ from trpg.content.battle import WeaponDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.shared.bonus_text import bonus_text, plain_text
-from trpg.shared.types import Attribute, Surface
+from trpg.shared.types import Attribute, Element, Surface
 from trpg.skillgen.flash_ops import cell_count
 from trpg.skillgen.flash_state import Variation
 
@@ -39,6 +39,10 @@ __all__ = [
 
 _TERM_RE = re.compile(r"\[\[([^|\]]+)(?:\|[^\]]*)?\]\]")
 _PERMILLE = 1000
+_DEFAULT_STEP = 1
+"""模板沒寫 ``delta`` 時 ``{n}`` 填的數：這些模板的改法一次都是 ±1（``flash_ops``：觸發範圍
+``delta or 1``、維持費 ±1、延長、觸發次數、作用範圍、持續回合各 +1；FL-1f）。"""
+_ELEMENTS = frozenset(e.value for e in Element)
 _TAG_TERMS = {"charge": "power_up", "light": "power_down"}
 """選項卡類別標籤的說明卡（9.2：威力提高／降低只在說明卡）：模板的 ``op`` → 術語。"""
 
@@ -102,16 +106,25 @@ def _values(
     extra = next(
         (c.after_zh for c in changes if c.direction == "new" and c.after_zh is not None), None
     )
-    keyword = library.keywords.by_id().get(variation.keyword or "")
     values = {
-        "n": "" if delta is None else str(abs(delta)),
+        "n": str(abs(delta if delta is not None else _DEFAULT_STEP)),
         "shape": "" if shape is None else f"[[shape:{shape.id}|{shape.name_zh}範圍]]",
         "cells": "" if cells is None else str(cells),
         "range": "" if not isinstance(after.shape.range, int) else str(after.shape.range),
         "extra": (extra or "").split("（")[0],  # 條件「（……才有）」說明句另寫
-        "keyword": "" if keyword is None else keyword.name_zh,
+        "keyword": _keyword_zh(library, variation),
     }
     return values
+
+
+def _keyword_zh(library: ContentLibrary, variation: Variation) -> str:
+    """``{keyword}``：關鍵字的中文名；第二元素的模板（``element_second``…）是元素的中文名。"""
+    keyword = library.keywords.by_id().get(variation.keyword or "")
+    if keyword is not None:
+        return keyword.name_zh
+    if variation.element in _ELEMENTS:
+        return Element(variation.element).display_name
+    return ""
 
 
 def option_headline(

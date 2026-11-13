@@ -108,16 +108,14 @@ def test_removed_effect_reads_none_and_worse() -> None:
     assert [_view(r) for r in rows] == [("地面", "[[surface:water|積水]]", None, "worse")]
 
 
-def test_headlines_only_for_the_five_filled_ones() -> None:
-    """8.2：只填了 5 條；其他模板為 None（畫面退回 summary_zh）。"""
+def test_headlines_of_the_five_first_filled_ones() -> None:
+    """8.2：FL-1b 先填的 5 條（FL-1f 其他模板也填了，見 ``test_flash_text_fl1f.py``）。"""
     cases = {
         ("range_plus", "area", None): "射程變遠 1 格",
         ("cost_charge", "cost", None): "多等幾回合再用，換這招變強",
         ("cost_light", "cost", None): "省一點代價，這招弱一點",
         ("keyword_imbue", "element", "wet"): "打中的格子還會積水",
         ("keyword_exploit", "element", "collision"): "敵人剛被撞過，這招多傷一截",
-        ("keyword_imbue", "element", "ignite"): None,
-        ("multi_hit", "combo", None): None,
     }
     for (template, category, keyword), want in cases.items():
         variation = Variation(source="minor", template=template, category=category, keyword=keyword)
