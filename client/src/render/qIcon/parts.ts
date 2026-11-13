@@ -316,6 +316,14 @@ const silentStrike = (c: Ctx, o: QOpts) => {
   at(c, -2.4, -2.4, 0.9, (q) => feather(q, o), PI / 4);
   halo(c, o, (q) => at(q, 3, 3, 0.8, (p) => { p.translate(0, 1.85); dagger(p, o); }, -3 * PI / 4));
 };
+/** KW-3 條件「自身層數達 N」A 案：三個全亮的金色計量格排在上半，右下米白小人形（同「自身血量低於」），整體縮 0.9 收進色環；≤14px 格子間距放大。 */
+function condPips(c: Ctx, o: QOpts): void {
+  const t = o.tiny, w = t ? 4.6 : 4.8, g = t ? 2.4 : 1.6, h = 9, x0 = -9.8, y0 = -9;
+  c.save(); c.scale(0.9, 0.9);
+  for (let i = 0; i < 3; i++) { const x = x0 + i * (w + g); rr(c, GOLD, x, y0, w, h, 1.2); f(c, "#fff6c8", () => c.roundRect(x, y0, w, t ? 2.8 : 2.6, [1.2, 1.2, 0, 0])); }
+  halo(c, o, (q) => bust(q, CREAM, 5.4, 5.8, 0.66));
+  c.restore();
+}
 export const COND: PartTable = {
   height_advantage: { zh: "居高臨下", topic: "一座山，山頂一個米白小人頭，右上一個朝上的黃箭頭", d: (c, o) => { poly(c, STONE, [[-10.6, 9.8], [-2.4, -3.6], [2.4, 2.6], [5, -0.6], [10.6, 9.8]], 0.6); f(c, STONE_L, () => { c.moveTo(-10.6, 9.8); c.lineTo(-2.4, -3.6); c.lineTo(-3.4, 9.8); c.closePath(); }); /* 第 2 版：山提亮一階（暗石→石、左坡亮面） */ poly(c, "#f6f2e6", [[-2.4, -3.8], [0.4, 0], [-2, 1.4], [-4.8, 0.4]], 0.3); ci(c, CREAM, -2.4, -7.6, 2.7); if (!o.tiny) poly(c, "#ffd23f", [[6.6, -10.6], [10.8, -5.4], [2.4, -5.4]], 0.3); } },
   target_hp_below: { zh: "目標血量低於", topic: "一顆心，上半暗紅、下半亮紅", d: (c, o) => halfHeart(c, o) },
@@ -338,8 +346,8 @@ export const COND: PartTable = {
   lone_wolf: { zh: "獨狼", topic: "一隻仰頭嚎叫的銀灰狼頭（側面、口鼻朝左上、兩隻尖耳、米白喉胸一排鋸齒毛）", d: (c, o) => loneWolf(c, o) },
   self_lacks_status: { zh: "自身沒有狀態", topic: "淡紫小旗被一道紅斜槓劃掉（同驅散、致盲劃掉的語言），右下一個米白小人形（同自身血量：自己）", d: (c, o) => selfLacks(c, o) },
   all_strikes_hit: { zh: "每一下都命中", topic: "一面紅白靶，靶心插著兩把亮鋼匕首（柄朝右上、微微扇開）", d: (c, o) => allStrikesHit(c, o) },
-  /* 11-13 KW-1 自身層數達 N（#161）：暫代，借「第一輪」的金色數字（畫的時候才查表）；正式圖由美術 PM 出（PhaseKW計畫.md 第 3 節）。 */
-  self_stack_at_least: { zh: "自身層數達到", topic: "（暫代）同「第一輪」：一個金色的粗體數字 1", d: (c, o) => COND["first_round"]!.d(c, o) },
+  /* 11-13 KW-1 自身層數達 N（#161）；KW-3 換成美術 A 案（docs/art/sample/qIconsKW.js 的 condPips 逐行搬，docs/art/KW樣張.md 第 5 節），取代暫代的「第一輪」。 */
+  self_stack_at_least: { zh: "自身層數達到", topic: "三個全亮的金色計量格（同 HUD 層數計量的格子）＋右下米白小人形（自身）", d: (c, o) => condPips(c, o) },
   // KW-2：自身站在高處（鷹眼），美術出樣張前借「居高臨下」暫代
   self_on_high_ground: { zh: "自身站在高處", topic: "（暫代）同「居高臨下」：一座山，山頂一個小人頭", d: (c, o) => COND["height_advantage"]!.d(c, o) },
 };
