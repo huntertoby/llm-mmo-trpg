@@ -2745,7 +2745,7 @@
        }
       }
      ],
-     "headline_zh": null,
+     "headline_zh": "同一個敵人多挨一段",
      "say_zh": "傷害從 1.15 倍[[weapon_damage:1150|武器傷害]] 變成 7 成[[weapon_damage:700|武器傷害]]，傷害從 1 倍[[weapon_damage:1000|武器傷害]] 變成 1.1 倍[[weapon_damage:1100|武器傷害]]，多了額外傷害：4 成[[weapon_damage:400|武器傷害]]（手持雙手槍時才有）。",
      "tag_term": null,
      "note_zh": null,
@@ -3006,7 +3006,7 @@
        }
       }
      ],
-     "headline_zh": null,
+     "headline_zh": "換個形狀，一次打到更多敵人",
      "say_zh": "多了範圍：3 格，傷害從 1.15 倍[[weapon_damage:1150|武器傷害]] 變成 1.2 倍[[weapon_damage:1200|武器傷害]]，傷害從 1 倍[[weapon_damage:1000|武器傷害]] 變成 3 成[[weapon_damage:300|武器傷害]]。",
      "tag_term": null,
      "note_zh": null,
@@ -4315,8 +4315,8 @@
        }
       }
      ],
-     "headline_zh": null,
-     "say_zh": "種類從 主動 變成 反應，射程從 4 格 變成 2 格，不用花AP，不用花耐力，用過之後要等 1 回合才能再用（原本 2）。",
+     "headline_zh": "變成反應：被近戰攻擊時自動回敬這招",
+     "say_zh": "這招變成反應：敵人近戰攻擊你時，自動對它施放縮小版的這招。",
      "tag_term": null,
      "note_zh": null,
      "name_source": "template"
@@ -5380,8 +5380,8 @@
        }
       }
      ],
-     "headline_zh": null,
-     "say_zh": "種類從 主動 變成 姿態，拿掉射程，不用花AP，不用花耐力，不用花冷卻，拿掉效果，多了效果：[[status:stance_bulwark|堅壁姿態]]。",
+     "headline_zh": "變成姿態：進入後一直生效，直到你取消",
+     "say_zh": "這招變成姿態：進入後一直生效，每回合付維持費，直到你取消。",
      "tag_term": null,
      "note_zh": null,
      "name_source": "template"
@@ -5753,7 +5753,7 @@
        }
       }
      ],
-     "headline_zh": null,
+     "headline_zh": "敵人站在水上時，這招多傷一截",
      "say_zh": "多了額外傷害：3 成[[weapon_damage:300|武器傷害]]（目標站在「水」表面上時才有）。",
      "tag_term": null,
      "note_zh": "霧水沾身的敵人，火勢趁隙燒得更深。",
@@ -5953,7 +5953,7 @@
        }
       }
      ],
-     "headline_zh": null,
+     "headline_zh": "專精點燃：造成的點燃更持久",
      "say_zh": "燃燒多 1 回合。",
      "tag_term": null,
      "note_zh": "山霧鎖住熱氣，點燃的火更難熄滅。",
@@ -6190,7 +6190,7 @@
        }
       }
      ],
-     "headline_zh": null,
+     "headline_zh": "敵人身上有帶電時，這招多傷一截",
      "say_zh": "多了額外傷害：3 成[[weapon_damage:300|武器傷害]]（本回合已施放過帶「特定」標籤的技能時才有）。",
      "tag_term": null,
      "note_zh": "雲氣匯聚，帶電的敵人挨這一斬格外吃痛。",
@@ -6456,8 +6456,8 @@
        }
       }
      ],
-     "headline_zh": null,
-     "say_zh": "種類從 主動 變成 姿態，拿掉射程，不用花AP，不用花耐力，不用花冷卻，拿掉效果，多了效果：[[status:stance_ironwall|鐵壁姿態]]。",
+     "headline_zh": "變成姿態：進入後一直生效，直到你取消",
+     "say_zh": "這招變成姿態：進入後一直生效，每回合付維持費，直到你取消。",
      "tag_term": null,
      "note_zh": "以長劍為引，將火焰凝於自身，進入燃燒的架勢。",
      "name_source": "llm"
