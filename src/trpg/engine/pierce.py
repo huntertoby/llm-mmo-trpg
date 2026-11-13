@@ -16,7 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from trpg.engine.ids import PENETRABLE
-from trpg.engine.rules.geometry import XY, bresenham, manhattan
+from trpg.engine.rules.footprint import dist_to
+from trpg.engine.rules.geometry import XY, bresenham
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import ObjectId, UnitId
@@ -52,7 +53,7 @@ def pierce_trace(
         return PierceTrace(
             route, tuple(o for o, _ in objects), tuple(xy for _, xy in objects), behind
         )
-    route = tuple(sorted(area.tiles, key=lambda p: (manhattan(caster.xy, p), p[1], p[0])))
+    route = tuple(sorted(area.tiles, key=lambda p: (dist_to(caster, p), p[1], p[0])))
     objects = _penetrable(state, route)
     if not objects:
         return PierceTrace(route)

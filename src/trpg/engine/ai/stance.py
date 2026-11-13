@@ -16,7 +16,7 @@ from trpg.content.environment import StanceAiRules
 from trpg.content.skills import SkillDef
 from trpg.engine.actions import EndStance
 from trpg.engine.rules.combat import attack_reach
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = ["stance_cancel", "stance_entry_blocked"]
@@ -26,9 +26,7 @@ _PERMILLE = 1000
 
 def _nearest_enemy(state: BattleState, unit: UnitState) -> int | None:
     distances = [
-        manhattan(unit.xy, other.xy)
-        for other in state.living_units()
-        if other.team is not unit.team
+        unit_dist(unit, other) for other in state.living_units() if other.team is not unit.team
     ]
     return min(distances) if distances else None
 

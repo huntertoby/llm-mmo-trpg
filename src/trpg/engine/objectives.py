@@ -23,6 +23,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.events import BattleEnded, EndReason, GuardsRetreated
 from trpg.engine.forms import leave_all_forms
 from trpg.engine.ids import BOSS_TAG
+from trpg.engine.rules.footprint import touches
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Team
 
@@ -97,7 +98,7 @@ def check_round_end(ctx: Ctx) -> bool:
         assert objective.rounds is not None
         tiles = set(objective.tiles)
         if any(
-            u.team is not Team.ALLY and not u.is_summon and u.xy in tiles
+            u.team is not Team.ALLY and not u.is_summon and touches(u, tiles)
             for u in state.living_units()
         ):
             end_battle(ctx, Team.ENEMY, "point_lost")

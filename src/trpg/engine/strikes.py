@@ -24,7 +24,7 @@ from trpg.engine.events import GearTriggered
 from trpg.engine.gear.enhance import strike_affixes
 from trpg.engine.gear.state import GearAffix
 from trpg.engine.modifiers import ATTACK, damage_element
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import adjacent
 from trpg.engine.rules.statuses import weapon_attribute, weapon_scale_attr
 from trpg.engine.state import UnitState
 from trpg.engine.weapon_traits import attack_dice
@@ -43,7 +43,7 @@ def cleave_target(ctx: Ctx, attacker: UnitState, target: UnitState) -> UnitState
     found = [
         u
         for u in ctx.state.living_units()
-        if u.team is not attacker.team and u.id != target.id and manhattan(u.xy, target.xy) == 1
+        if u.team is not attacker.team and u.id != target.id and adjacent(u, target)
     ]
     return min(found, key=lambda u: (u.hp, u.xy)) if found else None
 

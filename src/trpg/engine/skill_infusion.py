@@ -45,7 +45,7 @@ from trpg.engine.events import (
     SkillCooldownChanged,
     SkillInfused,
 )
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.statuses import (
     blocks_spells,
     effective_attribute,
@@ -268,7 +268,7 @@ def _cast_problem(state: BattleState, summon: UnitState, skill: SkillDef) -> str
 
 
 def _threatens(enemy: UnitState, owner: UnitState) -> bool:
-    return manhattan(enemy.xy, owner.xy) <= enemy.weapon.range + enemy.speed
+    return unit_dist(enemy, owner) <= enemy.weapon.range + enemy.speed
 
 
 def _mode_filter(

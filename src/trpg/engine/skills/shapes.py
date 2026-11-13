@@ -13,12 +13,21 @@
 
 from __future__ import annotations
 
+from trpg.engine.rules.footprint import (
+    chebyshev_to,
+    dist_to,
+    nearest_tile,
+    strike_tiles,
+    unit_dist,
+)
 from trpg.engine.rules.geometry import XY, chebyshev, has_line_of_sight, manhattan
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
     "DIRECTIONS",
     "DIRECTION_ORDER",
+    "around_tiles",
+    "caster_center_candidates",
     "center_candidates",
     "center_problem",
     "chain_units",
@@ -154,7 +163,9 @@ def chain_units(
     """連鎖：第一個目標，之後每跳選「距上一個目標 ≤ ``jump_range``、看得到、尚未被擊中」的最近
     同陣營單位（與第一個目標同一邊；同距離依單位 ID），沒有可跳的就停止。
 
-    「同一邊」：第一個目標是施放者的敵人時跳敵人，否則跳友方（連鎖治療）。
+    「同一邊」：第一個目標是施放者的敵人時跳敵人，否則跳友方（連鎖治療）。巨型單位（GB-1b，T5）
+    是一個節點、只會被打一次；距離量到最近佔格，從它跳出時以離下一個目標最近的佔格為起點
+    （:func:`~trpg.engine.rules.footprint.strike_tiles`）。
     """
     enemy_side = first.team is not caster.team
     chain = [first]
@@ -166,12 +177,97 @@ def chain_units(
             for u in state.living_units()
             if u.id not in seen
             and (u.team is not caster.team) == enemy_side
-            and manhattan(last.xy, u.xy) <= jump_range
-            and has_line_of_sight(state, last.xy, u.xy)
+            and unit_dist(last, u) <= jump_range
+            and has_line_of_sight(state, *strike_tiles(last, u))
         ]
         if not candidates:
             break
-        nxt = min(candidates, key=lambda u: (manhattan(last.xy, u.xy), u.id))
+        nxt = min(candidates, key=lambda u: (unit_dist(last, u), u.id))
         chain.append(nxt)
         seen.add(nxt.id)
     return chain
+
+
+# ---------------------------------------------------------------------------
+# 以佔格為中心（GB-1b，R2，05 5.12.4 第 2 點）
+# ---------------------------------------------------------------------------
+
+
+def around_tiles(state: BattleState, unit: UnitState, shape_type: str, size: int) -> tuple[XY, ...]:
+    """以 ``unit`` 自己為中心的形狀（R2）：一格的單位時就是原本以 ``unit.xy`` 為中心的形狀
+    （``ring``、``square3``、``cross``，其餘當範圍光環 ``allies_in_radius``；``size`` 是半徑或臂長，
+    方陣不看）。巨型單位把整個
+    佔格當中心向外量：環形＝到佔格的切比雪夫距離恰為 ``size``；範圍光環＝到最近佔格的曼哈頓距離
+    ≤ ``size``；方陣＝切比雪夫距離 1；十字＝佔格的每一欄、每一列各往外延伸 ``size`` 格（遇牆或地圖
+    邊緣停在它之前）。佔格本身一律不在範圍內。"""
+    if unit.footprint == 1:
+        return _one_tile_around(state, unit.xy, shape_type, size)
+    if shape_type == "cross":
+        return _giant_cross(state, unit, size)
+    reach = 1 if shape_type == "square3" else size
+    half = unit.footprint // 2
+    x, y = unit.xy
+    span = half + reach
+    cells = [
+        (cx, cy)
+        for cy in range(y - span, y + span + 1)
+        for cx in range(x - span, x + span + 1)
+        if not unit.covers(cx, cy) and in_play(state, (cx, cy))
+    ]
+    if shape_type == "ring":
+        return _sorted([c for c in cells if chebyshev_to(unit, c) == reach])
+    if shape_type == "square3":
+        return _sorted([c for c in cells if chebyshev_to(unit, c) <= 1])
+    return _sorted([c for c in cells if dist_to(unit, c) <= reach])  # 範圍光環
+
+
+def _one_tile_around(state: BattleState, xy: XY, shape_type: str, size: int) -> tuple[XY, ...]:
+    if shape_type == "ring":
+        return ring_tiles(state, xy, size)
+    if shape_type == "cross":
+        return cross_tiles(state, xy, size)
+    if shape_type == "square3":
+        return square3_tiles(state, xy)
+    return radius_tiles(state, xy, size)
+
+
+def _giant_cross(state: BattleState, unit: UnitState, arm: int) -> tuple[XY, ...]:
+    """巨型單位的十字：佔格每一欄往北、往南，每一列往東、往西各延伸 ``arm`` 格。"""
+    half = unit.footprint // 2
+    x, y = unit.xy
+    cells: list[XY] = []
+    for off in range(-half, half + 1):
+        rays = (
+            ((x + off, y - half), (0, -1)),
+            ((x + off, y + half), (0, 1)),
+            ((x - half, y + off), (-1, 0)),
+            ((x + half, y + off), (1, 0)),
+        )
+        for (sx, sy), (dx, dy) in rays:
+            for k in range(1, arm + 1):
+                cell = (sx + dx * k, sy + dy * k)
+                if not in_play(state, cell):
+                    break
+                cells.append(cell)
+    return _sorted(cells)
+
+
+def caster_center_candidates(state: BattleState, caster: UnitState, reach: int) -> list[XY]:
+    """``caster`` 射程內所有合法的中心格（依 ``(y, x)``）。一格的單位＝:func:`center_candidates`；
+    巨型單位（T9）從離那一格最近的佔格量射程與視線，自己的佔格只列中心格一次（選自己＝以佔格為
+    中心的形狀，9 格結果相同）。"""
+    if caster.footprint == 1:
+        return center_candidates(state, caster.xy, reach)
+    span = caster.footprint // 2 + reach
+    x, y = caster.xy
+    cells: list[XY] = []
+    for cy in range(max(0, y - span), min(state.height, y + span + 1)):
+        for cx in range(max(0, x - span), min(state.width, x + span + 1)):
+            cell = (cx, cy)
+            if caster.covers(cx, cy):
+                if cell == caster.xy:
+                    cells.append(cell)
+                continue
+            if center_problem(state, nearest_tile(caster, cell), cell, reach) is None:
+                cells.append(cell)
+    return cells

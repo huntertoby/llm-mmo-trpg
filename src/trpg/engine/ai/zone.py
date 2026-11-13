@@ -15,7 +15,8 @@ from fractions import Fraction
 from trpg.content.environment import AiProfile
 from trpg.content.skills import ZONE, EffectSpec, SkillDef
 from trpg.engine.events import EventBase, ZoneCreated
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.footprint import dist_to
+from trpg.engine.rules.geometry import XY
 from trpg.engine.skills import shapes
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.zones import affects_team, zone_cells, zone_is_harmful, zone_spec
@@ -102,7 +103,7 @@ def zone_estimate(
     score = 3 * inside + 2 * along
     if score <= 0:
         return None
-    return Fraction(score) - Fraction(manhattan(unit.xy, origin), _PERMILLE)
+    return Fraction(score) - Fraction(dist_to(unit, origin), _PERMILLE)
 
 
 def _status_value(state: BattleState, status_id: str, profile: AiProfile) -> Fraction:

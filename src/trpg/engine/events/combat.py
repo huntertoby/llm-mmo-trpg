@@ -58,6 +58,9 @@ class AttackRolled(EventBase):
     """這次近戰攻擊的目標不轉向（BS-1，#157，06 6.21.1）：``concealed`` 從隱蔽中出手、``silent``
     無聲（手持匕首類的修正規則）；照常轉向（含遠程、打自己）時為 ``None``，不輸出。和 ``backstab``
     一起成立時，紀錄與預覽顯示「背刺・無聲（不會轉身）」。"""
+    hit_tile: Pos | None = Field(default=None, exclude_if=lambda v: v is None)
+    """打中巨型目標的那一格（GB-1b，05 5.12.4 第 2、4 點）：單體＝離攻擊者最近的佔格，範圍技＝範圍內
+    離範圍中心最近的佔格（同距離 (y, x) 小）；演出落點用它。一格的目標為 ``None``，不輸出。"""
 
 
 class ConductBlocked(EventBase):

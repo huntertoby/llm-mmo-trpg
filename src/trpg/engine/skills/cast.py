@@ -87,8 +87,9 @@ from trpg.engine.rewrites import (
 )
 from trpg.engine.rules.combat import PERMILLE, AttackProfile, AttackRoll, ForcedOutcome, roll_attack
 from trpg.engine.rules.facing import face_toward
+from trpg.engine.rules.footprint import adjacent, nearest_tile, unit_dist
 from trpg.engine.rules.forms import held_weapon
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import collect_move
@@ -330,6 +331,7 @@ class Cast:
             self.profile,
             bonus=bonus,
             backstab_allowed=backstab,
+            at=self.hit_tile(unit),
         )
         rolled_event = ctx.emit(
             AttackRolled,
@@ -356,11 +358,12 @@ class Cast:
             backstab=roll.backstab,
             ambush=roll.ambush,
             no_turn=quiet,
+            hit_tile=None if roll.hit_tile is None else Pos(x=roll.hit_tile[0], y=roll.hit_tile[1]),
         )
         self.hits[unit.id] = roll
         turns = melee and not extra and quiet is None
         if turns:
-            self.melee_victims.append((unit, self.caster.xy))
+            self.melee_victims.append((unit, nearest_tile(self.caster, unit.xy)))
         if roll.hit and self.skill.shape.type == "single":
             guardian = try_intercept(
                 ctx, self.caster, unit, rolled_event.seq, skill_id=self.skill.id
@@ -369,7 +372,7 @@ class Cast:
                 self._redirect(unit, guardian)
                 if self.profile.melee and self.melee_victims and quiet is None:
                     # 3C-6b：守護者擋下近戰，轉身的是守護者（不是原本被瞄準的人）
-                    self.melee_victims[-1] = (guardian, self.caster.xy)
+                    self.melee_victims[-1] = (guardian, nearest_tile(self.caster, guardian.xy))
                 unit = guardian
         if roll.hit and self.skill.category == "spell" and unit.team is not self.caster.team:
             spell_hit_reactions(ctx, self.caster, unit)  # 被法術命中、傷害之前（3D-3）
@@ -380,6 +383,12 @@ class Cast:
                 ctx, self.caster, unit, melee=self.profile.height_limited
             )
         return roll
+
+    def hit_tile(self, unit: UnitState) -> XY | None:
+        """範圍技打中巨型單位的那一格（GB-1b，R1；``SkillArea.hit_tiles``）；其他為 ``None``。"""
+        if unit.footprint == 1:
+            return None
+        return next((xy for uid, xy in self.area.hit_tiles if uid == unit.id), None)
 
     def part_for(self, unit: UnitState) -> str | None:
         """``unit`` 是動作的主要目標、而且選了還沒破的部位時，那個部位的 ID（PB-1a）。"""
@@ -757,7 +766,7 @@ class Cast:
         )
         if not self._dash_walk(path):
             return False
-        if not target.alive or manhattan(caster.xy, target.xy) != 1:
+        if not target.alive or not adjacent(caster, target):
             return self._dash_failed("blocked")
         self.area = replace(self.area, origin=caster.xy)
         return True
@@ -979,7 +988,7 @@ class Cast:
         bonus = bonus * self.modifier(modifiers.damage_permille, unit) // PERMILLE
         bonus = bonus * gamble // PERMILLE
         if self.gun:  # 火器：站在這個距離的傷害修正（火槍遠距 +25%、貼臉 −50%、霰彈槍衰減）
-            bonus = bonus * range_damage_permille(self.caster, manhattan(self.caster.xy, unit.xy))
+            bonus = bonus * range_damage_permille(self.caster, unit_dist(self.caster, unit))
             bonus //= PERMILLE
         behind = self.behind_permille(unit)
         chain = self.chain_permille(unit)

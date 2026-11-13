@@ -51,6 +51,13 @@ from trpg.engine.gear.summon import gear_summon_cooldown
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.infusion import check_infusion
 from trpg.engine.rules.combat import AttackProfile, attack_value, concealment_problem
+from trpg.engine.rules.footprint import (
+    dist_to,
+    face_tile,
+    nearest_tile,
+    strike_tiles,
+    unit_dist,
+)
 from trpg.engine.rules.forms import (
     active_form,
     form_element_problem,
@@ -171,6 +178,8 @@ class SkillArea:
     - ``origin``：推擊與拉扯的原點（中心格型為中心，其他為施放者所在格）。
     - ``direction``：方向型形狀的前進向量。
     - ``chained``：``units`` 是連鎖形狀依序跳到的單位（連鎖衰減依這個順序；BAL-13c，#77）。
+    - ``hit_tiles``：巨型單位「打中的那一格」（GB-1b，R1，05 5.12.4 第 4 點）：範圍內離範圍中心
+      最近的佔格（同距離 (y, x) 小）；只列巨型單位、依 ``units`` 的順序，一格的單位不列。
     """
 
     tiles: tuple[XY, ...]
@@ -178,6 +187,7 @@ class SkillArea:
     origin: XY
     direction: XY | None = None
     chained: bool = False
+    hit_tiles: tuple[tuple[UnitId, XY], ...] = ()
 
 
 # ---------------------------------------------------------------------------
@@ -534,29 +544,41 @@ def _visible_problem(
     state: BattleState, caster: UnitState, skill: SkillDef, target: UnitState, reach: int
 ) -> str | None:
     """單位目標看得到嗎：射程、高度、視線，致盲的距離上限，對敵人的隱蔽限制。"""
-    problem = _reach_problem(state, caster, skill, target.xy, target.name_zh, reach)
+    problem = _reach_problem(state, caster, skill, target.xy, target.name_zh, reach, target)
     if problem is not None:
         return problem
     cap = attack_range_cap(state.ruleset, caster)  # 致盲：以單位為目標的技能只能選近處的單位
-    if cap is not None and manhattan(caster.xy, target.xy) > cap:
-        return f"致盲中：只能選擇 {cap} 格內的單位（距離 {manhattan(caster.xy, target.xy)}）"
+    if cap is not None and unit_dist(caster, target) > cap:
+        return f"致盲中：只能選擇 {cap} 格內的單位（距離 {unit_dist(caster, target)}）"
     enemy = target.team is not caster.team
     return concealment_problem(state, caster, target) if enemy else None
 
 
 def _reach_problem(  # noqa: PLR0917
-    state: BattleState, caster: UnitState, skill: SkillDef, xy: XY, what: str, reach: int
+    state: BattleState,
+    caster: UnitState,
+    skill: SkillDef,
+    xy: XY,
+    what: str,
+    reach: int,
+    target: UnitState | None = None,
 ) -> str | None:
-    distance = manhattan(caster.xy, xy)
+    """射程、近戰高度差、視線。巨型單位（GB-1b，T9、05 5.12.4 第 2 點）兩邊都取最近佔格
+    （:func:`~trpg.engine.rules.footprint.strike_tiles`；目標是格子或物件時只換施放者那邊）。"""
+    if target is not None:
+        origin, xy = strike_tiles(caster, target)
+    else:
+        origin = nearest_tile(caster, xy)
+    distance = manhattan(origin, xy)
     if distance > reach:
         return f"目標超出射程：距離 {distance}，射程 {reach}"
     core = state.ruleset.core
     if reach <= core.melee_height_limit_max_range:
-        diff = abs(state.tile(*caster.xy).height - state.tile(*xy).height)
+        diff = abs(state.tile(*origin).height - state.tile(*xy).height)
         if diff > core.melee_height_limit:
             return f"高度差過大，無法近戰：相差 {diff} 層（上限 {core.melee_height_limit} 層）"
     lob = held_weapon(caster).lob if skill.category == "weapon" else 0  # 弓的拋射（3-24a1）
-    if not has_line_of_sight(state, caster.xy, xy, lob=lob, viewer=caster):
+    if not has_line_of_sight(state, origin, xy, lob=lob, viewer=caster):
         return f"視線被阻擋：{caster.name_zh} 看不到 {what}"
     return None
 
@@ -620,7 +642,7 @@ def _revive_pick_problem(
     problem = revive_target_problem(state, caster, target)
     if problem is not None:
         return problem
-    return _reach_problem(state, caster, skill, target.xy, target.name_zh, reach)
+    return _reach_problem(state, caster, skill, target.xy, target.name_zh, reach, target)
 
 
 def _object_target_problem(  # noqa: PLR0917
@@ -662,10 +684,35 @@ def _require_fields(action: UseSkill, allowed: tuple[str, ...], targeting: str) 
 def _tiles_to_units(
     state: BattleState, tiles: tuple[XY, ...], chain: list[UnitState] | None
 ) -> tuple[UnitId, ...]:
+    """站在 ``tiles`` 上的單位（依 ID）；巨型單位蓋到好幾格也只算一次（GB-1b，T5、D6）。"""
     if chain is not None:
         return tuple(u.id for u in chain)
-    units = [u for xy in tiles if (u := state.unit_at(*xy)) is not None]
-    return tuple(sorted(u.id for u in units))
+    return tuple(sorted({u.id for xy in tiles if (u := state.unit_at(*xy)) is not None}))
+
+
+def _chain_tiles(caster: UnitState, chain: list[UnitState]) -> tuple[XY, ...]:
+    """連鎖打到的格子：每一跳打中的那一格（巨型單位是離上一跳最近的佔格，GB-1b T5）。"""
+    cells: set[XY] = set()
+    last = caster
+    for unit in chain:
+        cells.add(strike_tiles(last, unit)[1])
+        last = unit
+    return tuple(sorted(cells, key=lambda p: (p[1], p[0])))
+
+
+def _hit_tiles(
+    state: BattleState, units: tuple[UnitId, ...], tiles: tuple[XY, ...], ref: XY
+) -> tuple[tuple[UnitId, XY], ...]:
+    """巨型單位打中的那一格（R1）：``tiles`` 裡它的佔格中離 ``ref``（範圍中心）最近的，同距離
+    (y, x) 小；範圍沒蓋到它的格子（``include_caster`` 加進來的自己）時取離 ``ref`` 最近的佔格。"""
+    found: list[tuple[UnitId, XY]] = []
+    for uid in units:
+        unit = state.units[uid]
+        if unit.footprint == 1:
+            continue
+        mine = [xy for xy in tiles if unit.covers(*xy)] or [nearest_tile(unit, ref)]
+        found.append((uid, min(mine, key=lambda p: (manhattan(p, ref), p[1], p[0]))))
+    return tuple(found)
 
 
 def _unit_area(
@@ -692,10 +739,10 @@ def _unit_area(
         if problem is not None:
             raise IllegalActionError(problem)
         if spec.type != "chain":
-            return (target.xy,), None
+            return (strike_tiles(caster, target)[1],), None  # 巨型單位：打中的那一格（T9）
         assert spec.jumps is not None and spec.jump_range is not None
         chain = shapes.chain_units(state, caster, target, spec.jumps, spec.jump_range)
-        return tuple(sorted({u.xy for u in chain}, key=lambda p: (p[1], p[0]))), chain
+        return _chain_tiles(caster, chain), chain
     assert action.target_object_id is not None
     if spec.type == "chain":
         raise IllegalActionError("連鎖技能的第一個目標必須是單位")
@@ -734,7 +781,7 @@ def _tile_area(
         if problem is not None:
             raise IllegalActionError(problem)
         return center_tiles(state, skill.shape.type, center, arm=_arm(state, skill)), center
-    problem = shapes.center_problem(state, caster.xy, center, reach)
+    problem = shapes.center_problem(state, nearest_tile(caster, center), center, reach)
     if problem is not None:
         raise IllegalActionError(problem)
     if any(e.type == "teleport" for e in effects):
@@ -748,6 +795,9 @@ def _tile_area(
     problem = _site_problem(state, skill, effects, center)
     if problem is not None:
         raise IllegalActionError(problem)
+    if caster.footprint > 1 and caster.covers(*center) and skill.shape.type != "ground_tile":
+        # 巨型單位選自己的佔格＝以整個佔格為中心（GB-1b，R2）
+        return shapes.around_tiles(state, caster, skill.shape.type, _arm(state, skill)), caster.xy
     return center_tiles(state, skill.shape.type, center, arm=_arm(state, skill)), center
 
 
@@ -776,10 +826,10 @@ def hurl_object_problem(
         return f"{definition.name_zh}無法投擲（不是可推動的物件）"
     spec = next(e for e in skill.effects if e.type == HURL_OBJECT)
     assert spec.range is not None
-    distance = manhattan(caster.xy, obj.xy)
+    distance = dist_to(caster, obj.xy)
     if distance > spec.range:
         return f"物件超出投擲距離：距離 {distance}，上限 {spec.range}"
-    if not has_line_of_sight(state, caster.xy, obj.xy):
+    if not has_line_of_sight(state, nearest_tile(caster, obj.xy), obj.xy):
         return f"視線被阻擋：{caster.name_zh} 看不到 {definition.name_zh}"
     return None
 
@@ -836,7 +886,7 @@ def _unit_tile_area(
     if target.id == caster.id:
         raise IllegalActionError("不能傳送自己（傳送他人要選另一個單位）")
     dest = (action.target_pos.x, action.target_pos.y)
-    problem = shapes.center_problem(state, caster.xy, dest, reach)
+    problem = shapes.center_problem(state, nearest_tile(caster, dest), dest, reach)
     if problem is None:
         problem = teleport_landing_problem(state, target, dest)
     if problem is not None:
@@ -895,7 +945,7 @@ def _object_tile_area(
     center = (action.target_pos.x, action.target_pos.y)
     if center == obj.xy:
         raise IllegalActionError("落點不能是物件原本的格子")
-    problem = shapes.center_problem(state, caster.xy, center, reach)
+    problem = shapes.center_problem(state, nearest_tile(caster, center), center, reach)
     if problem is not None:
         raise IllegalActionError(problem)
     return (center,), center
@@ -910,11 +960,13 @@ def _direction_area(
         raise IllegalActionError("此技能必須指定 direction（north／east／south／west）")
     spec = skill.shape
     assert spec.size is not None
+    step = shapes.DIRECTIONS[action.direction]
+    origin = face_tile(caster, step)  # 巨型單位從朝那個方向那一面的中間格起算（GB-1b，R2）
     if spec.type == "line":
-        tiles = shapes.line_tiles(state, caster.xy, action.direction, spec.size)
+        tiles = shapes.line_tiles(state, origin, action.direction, spec.size)
     else:
-        tiles = shapes.cone_tiles(state, caster.xy, action.direction, spec.size)
-    return tiles, shapes.DIRECTIONS[action.direction]
+        tiles = shapes.cone_tiles(state, origin, action.direction, spec.size)
+    return tiles, step
 
 
 def _self_area(
@@ -926,9 +978,8 @@ def _self_area(
     if spec.type == "self":
         return (caster.xy,)
     assert spec.radius is not None
-    if spec.type == "ring":
-        return shapes.ring_tiles(state, caster.xy, spec.radius)
-    return shapes.radius_tiles(state, caster.xy, spec.radius)
+    # 以自己為中心：巨型單位把整個佔格當中心（GB-1b，R2；一格時就是原本的環形與範圍光環）
+    return shapes.around_tiles(state, caster, spec.type, spec.radius)
 
 
 _AREA_TARGETING = frozenset({"direction", "tile", "none"})
@@ -986,8 +1037,14 @@ def compute_area(
     units = _tiles_to_units(state, tiles, chain)
     if any(e.type == CHARGE_THROUGH for e in effects):  # 隊友讓路：只有沿途的敵人會被撞
         units = tuple(u for u in units if state.units[u].team is not caster.team)
+    ref = origin if direction is None else face_tile(caster, direction)
     return SkillArea(
-        tiles=tiles, units=units, origin=origin, direction=direction, chained=chain is not None
+        tiles=tiles,
+        units=units,
+        origin=origin,
+        direction=direction,
+        chained=chain is not None,
+        hit_tiles=_hit_tiles(state, units, tiles, ref),
     )
 
 
@@ -1055,7 +1112,10 @@ def anchored_area(state: BattleState, caster: UnitState, skill: SkillDef, center
     problem = skill_condition_problem(state, caster, skill, tiles)
     if problem is not None:
         raise IllegalActionError(problem)
-    return SkillArea(tiles=tiles, units=_tiles_to_units(state, tiles, None), origin=center)
+    units = _tiles_to_units(state, tiles, None)
+    return SkillArea(
+        tiles=tiles, units=units, origin=center, hit_tiles=_hit_tiles(state, units, tiles, center)
+    )
 
 
 def _arm(state: BattleState, skill: SkillDef) -> int:
@@ -1093,12 +1153,12 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
         )  # 射程外的目標不可能合法，先篩掉（省下例外的成本）
         revive = any(e.type == REVIVE for e in skill.effects)
         for unit in revive_candidates(state, caster) if revive else state.living_units():
-            if manhattan(caster.xy, unit.xy) <= reach:
+            if unit_dist(caster, unit) <= reach:
                 yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
         # 瞄準預告（RG-1）只對單位
         if skill.shape.type != "chain" and not revive and not aims_first(caster, skill):
             for obj in state.objects_sorted():
-                if manhattan(caster.xy, obj.xy) <= reach:
+                if dist_to(caster, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))
     elif shape.targeting == "tile":
         for x, y in _tile_candidates(state, caster, skill):
@@ -1120,7 +1180,7 @@ def _tile_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> 
         return charge_candidates(state, caster, reach)
     if any(e.type == LEAP for e in skill.effects):
         return leap_candidates(state, caster, reach)
-    tiles = shapes.center_candidates(state, caster.xy, reach)
+    tiles = shapes.caster_center_candidates(state, caster, reach)
     if any(e.type == SUMMON for e in skill.effects):  # 召喚（3D-4a）：只列出可以召喚的空格
         return [xy for xy in tiles if summon_site_problem(state, xy) is None]
     return tiles
@@ -1129,7 +1189,7 @@ def _tile_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> 
 def _hurl_candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Iterator[UseSkill]:
     """投擲物件的候選：可舉起的物件（依 ID）× 射程內的落點（依 ``(y, x)``）。"""
     reach = shape_reach(state, skill, caster)
-    tiles = shapes.center_candidates(state, caster.xy, reach)
+    tiles = shapes.caster_center_candidates(state, caster, reach)
     for obj in state.objects_sorted():
         if hurl_object_problem(state, caster, skill, obj) is not None:
             continue
@@ -1149,7 +1209,7 @@ def _reachable_units(state: BattleState, caster: UnitState, skill: SkillDef) -> 
     return [
         unit
         for unit in sorted(state.living_units(), key=lambda u: u.id)
-        if manhattan(caster.xy, unit.xy) <= reach
+        if unit_dist(caster, unit) <= reach
         and _visible_problem(state, caster, skill, unit, reach) is None
     ]
 
@@ -1162,7 +1222,7 @@ def _teleport_candidates(
     if any(e.type == SHADOWSTEP for e in skill.effects):
         yield from _shadowstep_candidates(state, caster, skill)
         return
-    tiles = shapes.center_candidates(state, caster.xy, shape_reach(state, skill, caster))
+    tiles = shapes.caster_center_candidates(state, caster, shape_reach(state, skill, caster))
     for unit in _reachable_units(state, caster, skill):
         if unit.id == caster.id:
             continue

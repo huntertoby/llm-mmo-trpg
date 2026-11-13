@@ -17,7 +17,8 @@ from trpg.engine.actions import Action, Attack, Defend, EndTurn, Move, Reload
 from trpg.engine.basics import reload_problem
 from trpg.engine.ids import DEFENDING
 from trpg.engine.rules.combat import attack_problem, is_height_limited
-from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
+from trpg.engine.rules.footprint import dist_to, unit_dist
+from trpg.engine.rules.geometry import XY, has_line_of_sight
 from trpg.engine.rules.movement import PathMap, available_move_budget, path_map
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos
@@ -30,7 +31,7 @@ def _enemies(state: BattleState, unit: UnitState) -> list[UnitState]:
 
 
 def _can_hit_from(state: BattleState, unit: UnitState, xy: XY, enemy: UnitState) -> bool:
-    if manhattan(xy, enemy.xy) > unit.weapon.range:
+    if dist_to(enemy, xy) > unit.weapon.range:
         return False
     if is_height_limited(state, unit):
         diff = abs(state.tile(*xy).height - state.tile(*enemy.xy).height)
@@ -40,7 +41,7 @@ def _can_hit_from(state: BattleState, unit: UnitState, xy: XY, enemy: UnitState)
 
 
 def _pick_target(unit: UnitState, targets: list[UnitState]) -> UnitState:
-    return min(targets, key=lambda t: (manhattan(unit.xy, t.xy), t.hp, t.id))
+    return min(targets, key=lambda t: (unit_dist(unit, t), t.hp, t.id))
 
 
 def _goal(state: BattleState, unit: UnitState, pm: PathMap, enemies: list[UnitState]) -> XY | None:
@@ -54,7 +55,7 @@ def _goal(state: BattleState, unit: UnitState, pm: PathMap, enemies: list[UnitSt
         return None
 
     def closeness(xy: XY) -> tuple[int, int, int, int]:
-        return (min(manhattan(xy, e.xy) for e in enemies), pm.cost[xy], xy[1], xy[0])
+        return (min(dist_to(e, xy) for e in enemies), pm.cost[xy], xy[1], xy[0])
 
     return min(candidates, key=closeness)
 

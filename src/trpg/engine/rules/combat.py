@@ -18,6 +18,7 @@ from trpg.engine.ids import CONCEALED, DEFENDING, PRONE, SHIELD_FORMATION, SHIEL
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.footprint import nearest_tile, strike_tiles, unit_dist
 from trpg.engine.rules.forms import form_backstab_crit, form_defense_permille
 from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.rules.perks import attribute_perk
@@ -264,6 +265,8 @@ def half_cover(
     attacker: UnitState,
     target: UnitState,
     profile: AttackProfile | None = None,
+    *,
+    at: XY | None = None,
 ) -> Cover | None:
     """``attacker`` 攻擊 ``target`` 時，目標是否受到半掩護。
 
@@ -284,6 +287,8 @@ def half_cover(
 
     塔盾詞條「盾陣」（RG-4，#163，:func:`_formation_cover`，懲罰 ``shield_formation_hit_penalty``）
     也不疊加：盾陣的懲罰比上面那一個高時才改算盾陣（取最高；同分照舊算原本的來源）。
+
+    巨型單位（GB-1b）：幾何以 :func:`strike_xy` 的兩格算；``at`` 是範圍技「打中的那一格」（R1）。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
     if limited or (
@@ -292,23 +297,35 @@ def half_cover(
         else attacker.weapon.ignore_cover
     ):
         return None
-    cover = _ranged_cover(state, attacker, target)
-    formation = _formation_cover(state, attacker, target)
+    attacker_xy, target_xy = strike_xy(attacker, target, at)
+    cover = _ranged_cover(state, attacker_xy, target, target_xy)
+    formation = _formation_cover(state, attacker_xy, target, target_xy)
     if formation is not None and (cover is None or formation.penalty > cover.penalty):
         return formation
     return cover
 
 
-def _ranged_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+def strike_xy(attacker: UnitState, target: UnitState, at: XY | None = None) -> tuple[XY, XY]:
+    """一次命中判定兩邊用的格子（GB-1b）：``at``（範圍技打中巨型單位的那一格，R1）有值時是
+    「攻擊者離那格最近的佔格、那格」，否則照 :func:`~trpg.engine.rules.footprint.strike_tiles`；
+    都是一格時＝``(attacker.xy, target.xy)``。"""
+    if at is None:
+        return strike_tiles(attacker, target)
+    return nearest_tile(attacker, at), at
+
+
+def _ranged_cover(
+    state: BattleState, attacker_xy: XY, target: UnitState, target_xy: XY
+) -> Cover | None:
     """盾陣以外的遠程掩護（呼叫端已排除近戰與穿透）：場上的掩護物、盾兵、目標自己的塔盾，依序取
     第一個成立的（:func:`half_cover`）。"""
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:
         return None
-    found = cover_object_between(state, attacker.xy, target.xy)
+    found = cover_object_between(state, attacker_xy, target_xy)
     if found is None:
-        return _guard_cover(state, attacker, target) or _shield_cover(
-            state, attacker, target, penalty
+        return _guard_cover(state, attacker_xy, target, target_xy) or _shield_cover(
+            state, attacker_xy, target, target_xy, penalty
         )
     oid, pos = found
     obj = state.objects[oid]
@@ -387,13 +404,15 @@ def guard_blocks(state: BattleState, attacker_xy: XY, target_xy: XY, guard_xy: X
     return guard_height + 1 >= state.tile(*target_xy).height
 
 
-def _guard_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+def _guard_cover(
+    state: BattleState, attacker_xy: XY, target: UnitState, target_xy: XY
+) -> Cover | None:
     """盾兵掩護（RG-1）：``target`` 是遠程（:func:`protects_ranged`）而且有盾兵擋在攻擊者那一側時，
     命中 −``shield_guard_hit_penalty``（為 0 時視為沒有）。呼叫端已排除近戰與穿透。"""
     penalty = state.ruleset.core.shield_guard_hit_penalty
     if penalty <= 0 or not protects_ranged(state, target):
         return None
-    guard = guard_between(state, attacker.xy, target)
+    guard = guard_between(state, attacker_xy, target, at=target_xy)
     if guard is None:
         return None
     return Cover(
@@ -406,7 +425,9 @@ def _guard_cover(state: BattleState, attacker: UnitState, target: UnitState) -> 
     )
 
 
-def _formation_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+def _formation_cover(
+    state: BattleState, attacker_xy: XY, target: UnitState, target_xy: XY
+) -> Cover | None:
     """塔盾詞條「盾陣」（RG-4，#163，08 8.11）：和 ``target`` 相鄰、同陣營、帶盾陣的單位（不是目標
     自己）擋在攻擊者那一側時，命中 −``shield_formation_hit_penalty``（為 0 時視為沒有）。判定同盾兵
     （:func:`guard_between` 的 ``formation``），但目標不限遠程。呼叫端已排除近戰與穿透。"""
@@ -416,7 +437,7 @@ def _formation_cover(state: BattleState, attacker: UnitState, target: UnitState)
         for u in state.units.values()
     ):
         return None
-    guard = guard_between(state, attacker.xy, target, formation=True)
+    guard = guard_between(state, attacker_xy, target, at=target_xy, formation=True)
     if guard is None:
         return None
     return Cover(
@@ -430,7 +451,7 @@ def _formation_cover(state: BattleState, attacker: UnitState, target: UnitState)
 
 
 def _shield_cover(
-    state: BattleState, attacker: UnitState, target: UnitState, penalty: int
+    state: BattleState, attacker_xy: XY, target: UnitState, target_xy: XY, penalty: int
 ) -> Cover | None:
     """塔盾的自身半掩護（Phase 3I-2，08 8.11）：目標副手有 ``ranged_cover`` 時，遠程攻擊（呼叫端已
     排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高，攻擊者站得比目標高 2 層以上時
@@ -439,10 +460,10 @@ def _shield_cover(
     offhand = target.gear.offhand
     if offhand is None or not offhand.ranged_cover:
         return None
-    if state.tile(*attacker.xy).height > state.tile(*target.xy).height + 1:
+    if state.tile(*attacker_xy).height > state.tile(*target_xy).height + 1:
         return None
     return Cover(
-        penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target.xy
+        penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target_xy
     )
 
 
@@ -479,7 +500,7 @@ def concealed_max_distance(state: BattleState, viewer: UnitState | None = None) 
 def sees_hidden(state: BattleState, viewer: UnitState, target: UnitState) -> bool:
     """狐族「靈覺」（Phase 3R-2）：``target`` 在 ``viewer`` 的 ``radius`` 格內時，隱蔽對他無效。"""
     radius = reveal_radius(state.ruleset, viewer)
-    return radius > 0 and manhattan(viewer.xy, target.xy) <= radius
+    return radius > 0 and unit_dist(viewer, target) <= radius
 
 
 def advantage_sources(
@@ -518,7 +539,7 @@ def advantage_sources(
         weather is not None
         and weather.ranged_disadvantage_beyond is not None
         and not melee
-        and manhattan(attacker.xy, target.xy) > weather.ranged_disadvantage_beyond
+        and unit_dist(attacker, target) > weather.ranged_disadvantage_beyond
     ):
         disadvantage = True
     return advantage, disadvantage
@@ -578,6 +599,9 @@ class AttackRoll:
     """背刺的命中加值（Phase 3D-8d；0 為不是背刺；已含在 ``total``，暴擊範圍另外擴大）。"""
     ambush: int = 0
     """潛行偷襲的命中加值（Phase 3D-8d；0 為沒有隱蔽；已含在 ``total``）。"""
+    hit_tile: XY | None = None
+    """打中巨型目標的那一格（GB-1b，R1；事件 ``attack_rolled.hit_tile``）；一格的目標為
+    ``None``。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -610,7 +634,9 @@ def positional_bonus(
       移除隱蔽）。站在黑暗或草叢裡的隱蔽不算（只看狀態）。
     """
     core = state.ruleset.core
-    behind = backstab_allowed and profile.melee and is_behind(attacker.xy, target)
+    behind = (
+        backstab_allowed and profile.melee and is_behind(strike_tiles(attacker, target)[0], target)
+    )
     backstab = core.backstab_hit_bonus if behind else 0
     ambush = core.ambush_hit_bonus if attacker.has_status(CONCEALED) else 0
     crit_range = profile.crit_range - (
@@ -633,6 +659,7 @@ def roll_attack(  # noqa: PLR0917
     *,
     bonus: int = 0,
     backstab_allowed: bool = True,
+    at: XY | None = None,
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
@@ -641,6 +668,8 @@ def roll_attack(  # noqa: PLR0917
 
     ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。``profile`` 為技能的攻擊參數
     （省略時取自 ``attacker`` 的武器）。``bonus`` 為修正規則的命中加值（3C-2，呼叫端計算）。
+    ``at``：範圍技打中巨型單位的那一格（GB-1b，R1；掩護以它算）；``AttackRoll.hit_tile`` 是打中
+    巨型目標的那一格（一格的目標為 ``None``）。
     """
     rules = state.ruleset
     if profile is None:
@@ -648,14 +677,14 @@ def roll_attack(  # noqa: PLR0917
     adv = advantage_state(state, attacker, target, profile)
     modifier = hit_modifier(attacker, target, rules, profile)
     situational = situational_modifier(state, attacker, target)
-    cover = half_cover(state, attacker, target, profile)
+    cover = half_cover(state, attacker, target, profile, at=at)
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
     positional = positional_bonus(
         state, attacker, target, profile, backstab_allowed=backstab_allowed
     )
     if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
-        bonus += weapon_hit_bonus(attacker, manhattan(attacker.xy, target.xy))
+        bonus += weapon_hit_bonus(attacker, unit_dist(attacker, target))
     bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）
     if attacker.part_mods:  # 部位破壞的命中下降（PB-1a）
         bonus -= attacker.part_mods.get("hit", 0)
@@ -699,6 +728,7 @@ def roll_attack(  # noqa: PLR0917
         modifier_bonus=bonus - positional.hit - attacker.next_attack_hit,
         backstab=positional.backstab,
         ambush=positional.ambush,
+        hit_tile=None if target.footprint == 1 else strike_xy(attacker, target, at)[1],
     )
 
 
@@ -755,21 +785,29 @@ def attack_reach(state: BattleState, attacker: UnitState, target_xy: XY | None =
     return max(1, reach)
 
 
-def reach_problem(state: BattleState, attacker: UnitState, target_xy: XY, what: str) -> str | None:
+def reach_problem(
+    state: BattleState,
+    attacker: UnitState,
+    target_xy: XY,
+    what: str,
+    target: UnitState | None = None,
+) -> str | None:
     """射程、近戰高度差與視線的檢查（目標可以是單位或物件所在的格子）；有彈匣的武器空膛時
-    不能開火（Phase 3-24a2）。"""
+    不能開火（Phase 3-24a2）。巨型單位（GB-1b）兩邊都取最近佔格（:func:`strike_xy`）。"""
     if attacker.weapon.magazine > 0 and attacker.ammo <= 0:
         return f"空膛：{attacker.weapon.name_zh}需要先裝填"
-    distance = manhattan(attacker.xy, target_xy)
+    if target is not None:
+        origin, target_xy = strike_xy(attacker, target)
+    else:
+        origin = nearest_tile(attacker, target_xy)
+    distance = manhattan(origin, target_xy)
     reach = attack_reach(state, attacker, target_xy)
     if distance > reach:
         return f"目標超出射程：距離 {distance}，射程 {reach}"
     height_problem = melee_height_problem(state, attacker, target_xy)
     if height_problem is not None:
         return height_problem
-    if not has_line_of_sight(
-        state, attacker.xy, target_xy, lob=attacker.weapon.lob, viewer=attacker
-    ):
+    if not has_line_of_sight(state, origin, target_xy, lob=attacker.weapon.lob, viewer=attacker):
         return f"視線被阻擋：{attacker.name_zh} 看不到 {what}"
     return None
 
@@ -782,12 +820,12 @@ def attack_problem(state: BattleState, attacker: UnitState, target: UnitState) -
         return "不能攻擊自己"
     if target.team is attacker.team:
         return f"不能攻擊友方單位：{target.name_zh}"
-    problem = reach_problem(state, attacker, target.xy, target.name_zh)
+    problem = reach_problem(state, attacker, target.xy, target.name_zh, target)
     if problem is not None:
         return problem
     cap = attack_range_cap(state.ruleset, attacker)
-    if cap is not None and manhattan(attacker.xy, target.xy) > cap:
-        return f"致盲中：只能攻擊 {cap} 格內的目標（距離 {manhattan(attacker.xy, target.xy)}）"
+    if cap is not None and unit_dist(attacker, target) > cap:
+        return f"致盲中：只能攻擊 {cap} 格內的目標（距離 {unit_dist(attacker, target)}）"
     return concealment_problem(state, attacker, target)
 
 
@@ -800,7 +838,7 @@ def concealment_problem(state: BattleState, attacker: UnitState, target: UnitSta
     limit = concealed_max_distance(state, attacker) + attribute_perk(
         state.ruleset, attacker, "reveal_range"
     )  # 感知的常駐數值（Phase 3H-1）
-    distance = manhattan(attacker.xy, target.xy)
+    distance = unit_dist(attacker, target)
     if distance > limit:
         return f"目標隱蔽中：超過 {limit} 格無法選為目標（距離 {distance}）"
     return None

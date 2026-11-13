@@ -218,7 +218,14 @@ def _move_breaks(ctx: Ctx, tracker: OathTracker, event: UnitMoved) -> bool:
 
 
 def _nearest(enemies: list[UnitState], xy: tuple[int, int]) -> int:
-    return min(abs(u.xy[0] - xy[0]) + abs(u.xy[1] - xy[1]) for u in enemies)
+    # 量到最近佔格（GB-1b；state.py 匯入本模組，所以不能匯入 rules.footprint，照它的算法寫）
+    return min(
+        _gap(u.xy[0], xy[0], u.footprint) + _gap(u.xy[1], xy[1], u.footprint) for u in enemies
+    )
+
+
+def _gap(center: int, at: int, footprint: int) -> int:
+    return max(abs(center - at) - footprint // 2, 0)
 
 
 def _turn_end_breaks(ctx: Ctx, tracker: OathTracker) -> bool:

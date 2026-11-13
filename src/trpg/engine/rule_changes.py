@@ -20,7 +20,7 @@ from trpg.engine.activations import active_rule_change, has_rule_source
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, RuleChangeTriggered
 from trpg.engine.lifecycle import dismiss_summon
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import adjacent
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills.casting import use_rule_change_effects
 from trpg.engine.state import UnitState
@@ -47,7 +47,7 @@ def pass_through(ctx: Ctx, unit: UnitState, touched: set[UnitId]) -> None:
     for other in state.living_units():
         if not unit.alive:
             return
-        if other.team is unit.team or other.id in touched or manhattan(unit.xy, other.xy) != 1:
+        if other.team is unit.team or other.id in touched or not adjacent(unit, other):
             continue
         touched.add(other.id)
         depth = ctx.trigger_depth + 1

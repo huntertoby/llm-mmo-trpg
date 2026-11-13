@@ -30,7 +30,8 @@ from trpg.engine.actions import (
 from trpg.engine.ai.orders import FocusTarget, HoldPosition, Protect, TacticalOrder
 from trpg.engine.events import EventBase, SummonExpired, UnitSummoned
 from trpg.engine.ids import BOSS_TAG
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.footprint import dist_to, unit_dist
+from trpg.engine.rules.geometry import XY
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons.control import mode_problem
 from trpg.engine.summons.core import growth_of, totem_of
@@ -68,18 +69,18 @@ def sacrifice_estimate(
     受傷的友方數 × 2（治療）；範圍內沒有值得的對象時 ``None``（不納入候選）。"""
     spec = next(e for e in skill.effects if e.type == SACRIFICE_SUMMON)
     radius = spec.radius or 0
-    near = [u for u in state.living_units() if manhattan(u.xy, target_xy) <= radius]
+    near = [u for u in state.living_units() if dist_to(u, target_xy) <= radius]
     if spec.element is not None:
         score = 3 * sum(1 for u in near if u.team is not unit.team)
     else:
         score = 2 * sum(1 for u in near if u.team is unit.team and u.hp < u.max_hp)
     if score == 0:
         return None
-    return Fraction(score) - Fraction(manhattan(unit.xy, target_xy), _PERMILLE)
+    return Fraction(score) - Fraction(dist_to(unit, target_xy), _PERMILLE)
 
 
 def _nearest_enemy(state: BattleState, team: object, xy: XY) -> int | None:
-    distances = [manhattan(xy, u.xy) for u in state.living_units() if u.team is not team]
+    distances = [dist_to(u, xy) for u in state.living_units() if u.team is not team]
     return min(distances) if distances else None
 
 
@@ -94,7 +95,7 @@ def _totem_allies(state: BattleState, team: object, template_id: str, xy: XY) ->
     return sum(
         1
         for u in state.living_units()
-        if u.team is team and totem_of(state, u) is None and manhattan(u.xy, xy) <= spec.radius
+        if u.team is team and totem_of(state, u) is None and dist_to(u, xy) <= spec.radius
     )
 
 
@@ -103,7 +104,7 @@ def summon_estimate(
 ) -> Fraction | None:
     """召喚位置 ``xy`` 的便宜估計：越靠近最近的敵人越高（同距離時離施放者近者優先）；沒有敵人時
     ``None``。圖騰（``template_id``）看光環範圍內的友方數，沒有友方時 ``None``。"""
-    tie = Fraction(manhattan(unit.xy, xy), _PERMILLE)
+    tie = Fraction(dist_to(unit, xy), _PERMILLE)
     if template_id is not None and _is_totem(state, template_id):
         allies = _totem_allies(state, unit.team, template_id, xy)
         return Fraction(allies) - tie if allies else None
@@ -328,7 +329,7 @@ def _hold(state: BattleState, unit: UnitState, actions: list[Action]) -> list[Ac
             continue
         if isinstance(action, Attack):
             at = _attack_xy(state, action)
-            if at is None or manhattan(unit.xy, at) != 1:
+            if at is None or dist_to(unit, at) != 1:
                 continue
         kept.append(action)
     return kept
@@ -341,13 +342,13 @@ def _guard(
     if owner is None or not owner.alive:
         return actions
     radius = rules.guard_radius
-    here = manhattan(unit.xy, owner.xy)
+    here = unit_dist(unit, owner)
     kept: list[Action] = []
     for action in actions:
         if isinstance(action, Swap):
             continue
         if isinstance(action, Move | Vault):
-            there = manhattan(_dest(action), owner.xy)
+            there = dist_to(owner, _dest(action))
             if there > radius and there >= here:
                 continue
         kept.append(action)
@@ -364,7 +365,7 @@ def _threats_first(
         if enemy is None:
             return False
         reach = enemy.weapon.range + enemy.speed + rules.guard_threat_range
-        return manhattan(enemy.xy, owner.xy) <= reach
+        return unit_dist(enemy, owner) <= reach
 
     if not any(isinstance(a, Attack) and threatens(a.target_id) for a in actions):
         return actions
@@ -378,8 +379,8 @@ def _focus(state: BattleState, unit: UnitState, actions: list[Action]) -> list[A
         return actions
     if any(isinstance(a, Attack) and a.target_id == target.id for a in actions):
         return [a for a in actions if not isinstance(a, Attack) or a.target_id == target.id]
-    here = manhattan(unit.xy, target.xy)
-    closing = any(isinstance(a, Move) and manhattan(_dest(a), target.xy) < here for a in actions)
+    here = unit_dist(unit, target)
+    closing = any(isinstance(a, Move) and dist_to(target, _dest(a)) < here for a in actions)
     if not closing:
         return actions
     return [a for a in actions if not isinstance(a, Attack) or a.target_id == target.id]

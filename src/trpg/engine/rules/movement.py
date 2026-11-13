@@ -14,8 +14,9 @@ import heapq
 
 from trpg.content.maps import standable
 from trpg.engine.ids import FLYING, PRONE
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.forms import form_flat_height
-from trpg.engine.rules.geometry import XY, manhattan, neighbors4
+from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.statuses import fear_sources, is_rooted
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos, UnitId
@@ -156,15 +157,15 @@ class PathMap:
         return path
 
 
-def fear_origins(state: BattleState, unit: UnitState) -> tuple[XY, ...]:
-    """恐懼的來源所在格（依單位 ID 排序）；來源已不在場上的不算。"""
+def fear_origins(state: BattleState, unit: UnitState) -> tuple[UnitState, ...]:
+    """恐懼的來源（依單位 ID 排序）；來源已不在場上的不算。"""
     ids = sorted(fear_sources(state.ruleset, unit))
-    return tuple(state.units[i].xy for i in ids if i in state.units and state.units[i].alive)
+    return tuple(state.units[i] for i in ids if i in state.units and state.units[i].alive)
 
 
-def fear_blocks_step(origins: tuple[XY, ...], cur: XY, nxt: XY) -> bool:
-    """恐懼：這一步會讓自己與任一恐懼來源的曼哈頓距離變小。"""
-    return any(manhattan(nxt, o) < manhattan(cur, o) for o in origins)
+def fear_blocks_step(origins: tuple[UnitState, ...], cur: XY, nxt: XY) -> bool:
+    """恐懼：這一步會讓自己與任一恐懼來源的曼哈頓距離變小（巨型來源量到最近佔格，GB-1b）。"""
+    return any(dist_to(o, nxt) < dist_to(o, cur) for o in origins)
 
 
 def path_map(

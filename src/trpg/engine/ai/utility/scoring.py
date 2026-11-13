@@ -78,9 +78,9 @@ from trpg.engine.preview import Preview, preview
 from trpg.engine.rules.combat import (
     attack_reach,
 )
+from trpg.engine.rules.footprint import dist_to, unit_dist
 from trpg.engine.rules.geometry import (
     XY,
-    manhattan,
 )
 from trpg.engine.rules.movement import (
     available_move_budget,
@@ -276,9 +276,7 @@ def _overwatch_points(
     if not watch or any(actor.has_status(s) for s in watch):
         return Fraction(0)
     reach = actor.weapon.range
-    near = sum(
-        1 for e in _enemies(state, actor) if reach < manhattan(actor.xy, e.xy) <= reach + e.speed
-    )
+    near = sum(1 for e in _enemies(state, actor) if reach < unit_dist(actor, e) <= reach + e.speed)
     return Fraction(rules.overwatch_points * min(near, rules.overwatch_max_enemies))
 
 
@@ -470,7 +468,7 @@ def skill_cost(
 def defend_score(state: BattleState, unit: UnitState, w: AiWeights) -> Fraction:
     """防禦的分數：``defend`` × 6 格內的敵人數（防禦只替自己加上狀態，位置不變；與完整
     ``preview`` 的分數相同）。"""
-    near = sum(1 for e in _enemies(state, unit) if manhattan(unit.xy, e.xy) <= _DEFEND_RADIUS)
+    near = sum(1 for e in _enemies(state, unit) if unit_dist(unit, e) <= _DEFEND_RADIUS)
     return Fraction(w.defend * near)
 
 
@@ -494,17 +492,17 @@ def run_score(state: BattleState, unit: UnitState, rules: RunAiRules) -> Fractio
     now = [unit.xy]
     after = _run_tiles(state, unit, state.ruleset.core.run_move_bonus)
     if unit.hp * 1000 < rules.retreat_hp_permille * unit.max_hp:  # 低血量：只考慮撤離，不追擊
-        if min(manhattan(unit.xy, e.xy) for e in enemies) > rules.retreat_enemy_radius:
+        if min(unit_dist(unit, e) for e in enemies) > rules.retreat_enemy_radius:
             return Fraction(0)
 
         def gap(tiles: list[XY]) -> int:
-            return max(min(manhattan(t, e.xy) for e in enemies) for t in tiles)
+            return max(min(dist_to(e, t) for e in enemies) for t in tiles)
 
         return Fraction(rules.retreat_points if gap(after) > gap(now) else 0)
     reach = attack_reach(state, unit)
 
     def can_hit(tiles: list[XY]) -> bool:
-        return any(manhattan(t, e.xy) <= reach for t in tiles for e in enemies)
+        return any(dist_to(e, t) <= reach for t in tiles for e in enemies)
 
     return Fraction(rules.pursue_points if not can_hit(now) and can_hit(after) else 0)
 

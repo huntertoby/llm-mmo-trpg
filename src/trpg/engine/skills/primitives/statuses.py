@@ -30,7 +30,7 @@ from trpg.engine.resources import (
     pick_stolen_buff,
 )
 from trpg.engine.rules.combat import PERMILLE
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.primitives.base import Handler
 from trpg.engine.skills.targeting import (
@@ -106,7 +106,7 @@ def _consume_then(cast: Cast, unit: UnitState, spec: EffectSpec, scale: int) -> 
             if u.alive
             and u.id != unit.id
             and u.team is not cast.caster.team
-            and manhattan(u.xy, unit.xy) <= spec.splash
+            and unit_dist(u, unit) <= spec.splash
         ]
         recipients += near
     batch: list[EffectBase] = []
