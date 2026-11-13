@@ -100,7 +100,7 @@ describe("公告板與成長的說明段落套 KeepNum（需求 3.1 更正）", 
   });
   it("重閃說明字不變；「點出 4 個」黏在一起", () => {
     const text = reflashNoteText(undefined as never);
-    expect(text).toMatch(/^把一招以前某一次的變化換掉，價格和閃現相同（\d+ 點出 \d+ 個；指定類別 \d+ 點出 \d+ 個）。不需要先上場用過，也不增加閃現次數；新選項不會比被換掉的更弱。$/);
+    expect(text).toMatch(/^把一招以前某一次的變化換掉，價格和閃現相同（\d+ 點出 \d+ 個；指定類別 \d+ 點出 \d+ 個）。不需要先上場用過，也不增加閃現次數；新選項整招不會比現在弱；標 ▼ 的是換掉後變小的地方。$/);
     expect(glueNumbers(text).filter((p) => p.glue).length).toBeGreaterThanOrEqual(2);
   });
 });

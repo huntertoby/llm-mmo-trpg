@@ -1,4 +1,5 @@
-/* RR-2（#160）：被強度下限卡住的重閃格。「比原本弱」一律用 FL-1b 的「變弱」樣式：無底無框＋向下三角（.fc-down，flash-choice.css）。 */
+/* RR-2（#160）：被強度下限卡住的重閃格。提醒一律用 FL-1b 的「變弱」樣式：無底無框＋向下三角（.fc-down，flash-choice.css）。
+   RR-2b：「比原本弱」小標（.fc-weaker）撤掉；確認框合進選類別面板最上面那一行（.reflash-weaker-lead）。 */
 
 /* 重閃入口按鈕裡的提醒字（不標灰：按鈕照常可以按） */
 .reflash-weaker-note {
@@ -12,27 +13,21 @@
   line-height: 1.5;
 }
 
-/* 選項卡類別標籤旁的小標 */
-.fc-weaker {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 4px;
-  color: var(--ui-text);
-  background: none;
-  font-size: 11.5px;
-  font-weight: 400;
-  line-height: 1.4;
-  white-space: nowrap;
+/* 選類別面板最上面那一行（提醒字＋「整招不會比現在弱；扣點後一定要選一個。」）：長句可折行，三角對齊第一行 */
+.reflash-weaker-lead {
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0 2px;
+  font-size: 13px;
 }
 
-.reflash-weaker-note .fc-down,
-.fc-weaker .fc-down {
+.reflash-weaker-lead .fc-down {
+  flex: none;
+  margin-top: 0.55em;
+}
+
+.reflash-weaker-note .fc-down {
   border-left-width: 5px;
   border-right-width: 5px;
   border-top-width: 8px;
-}
-
-.fc-cat .fc-weaker {
-  margin-left: 6px;
 }

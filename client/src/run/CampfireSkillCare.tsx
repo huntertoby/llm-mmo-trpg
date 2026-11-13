@@ -23,7 +23,7 @@ import {
   toggleCarry,
   TRANSFORM_HINT,
 } from "./flash";
-import { REFLASH_WEAKER_BACK_ZH, REFLASH_WEAKER_GO_ZH, weakerSlot } from "./reflashWeaker";
+import { weakerSlot } from "./reflashWeaker";
 
 interface Props {
   runId: string;
@@ -60,13 +60,11 @@ export function reflashEmptyText(bare: boolean): string {
 /** 重閃說明（字照原句；PNL-4 起經 `KeepNum`，「點出 4 個」這類數字不和前面的詞分開）。 */
 export function reflashNoteText(flashRules: RunHero["flash_rules"]): string {
   const r = rulesOf(flashRules);
-  return `把一招以前某一次的變化換掉，價格和閃現相同（${r.open_cost} 點出 ${r.open_options} 個；指定類別 ${r.focused_cost} 點出 ${r.focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項不會比被換掉的更弱。`;
+  return `把一招以前某一次的變化換掉，價格和閃現相同（${r.open_cost} 點出 ${r.open_options} 個；指定類別 ${r.focused_cost} 點出 ${r.focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項整招不會比現在弱；標 ▼ 的是換掉後變小的地方。`;
 }
 
 export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, place = "只在營火", bare = false }: Props) {
   const [target, setTarget] = useState<{ id: string; slot: number } | null>(null);
-  // RR-2（#160）：被強度下限卡住的格子按下去先確認（扣點前），按「重閃」才進選類別
-  const [confirm, setConfirm] = useState<{ id: string; slot: number; text: string } | null>(null);
   const list = reflashable(hero);
   const chosen = target === null ? undefined : list.find((s) => s.card.id === target.id);
   const slotLabel = chosen === undefined || target === null ? undefined : reflashSlots(chosen.flash).find((s) => s.slot === target.slot)?.label;
@@ -86,6 +84,7 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
           skillName={chosen.card.name_zh}
           slot={target.slot}
           slotLabel={slotLabel}
+          weaker={weakerSlot(chosen.flash, target.slot)}
           busy={busy}
           onChoose={async (c) => {
             const status = await onChoose(c);
@@ -93,17 +92,6 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
             return status;
           }}
           onCancel={() => setTarget(null)}
-        />
-      )}
-      {confirm !== null && (
-        <ReflashWeakerConfirm
-          text={confirm.text}
-          busy={busy}
-          onGo={() => {
-            setTarget({ id: confirm.id, slot: confirm.slot });
-            setConfirm(null);
-          }}
-          onBack={() => setConfirm(null)}
         />
       )}
       {list.length === 0 && <EmptyNote testId="reflash-empty">{reflashEmptyText(bare)}</EmptyNote>}
@@ -124,16 +112,7 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                   data-testid={`reflash-${card.id}-${s.slot}`}
                   data-reflash-none={s.none ? 1 : undefined}
                   data-reflash-weaker={weakerSlot(flash, s.slot) !== null ? 1 : undefined}
-                  onClick={() => {
-                    const weak = weakerSlot(flash, s.slot);
-                    if (weak !== null) {
-                      setTarget(null);
-                      setConfirm({ id: card.id, slot: s.slot, text: weak.confirm });
-                      return;
-                    }
-                    setConfirm(null);
-                    setTarget({ id: card.id, slot: s.slot });
-                  }}
+                  onClick={() => setTarget({ id: card.id, slot: s.slot })}
                 >
                   重閃　{s.label}
                   {s.transformHint && <span className="skill-flash-transform small">　{TRANSFORM_HINT}</span>}
@@ -161,23 +140,6 @@ function WeakerNote({ warn, testId }: { warn: string | undefined; testId: string
       <i className="fc-down" aria-label="變弱" />
       {warn}
     </span>
-  );
-}
-
-/** RR-2（#160）：按下較弱的重閃格、扣點前的確認（字由伺服器給；按鈕「重閃」「先不要」）。 */
-export function ReflashWeakerConfirm({ text, busy, onGo, onBack }: { text: string; busy: boolean; onGo(): void; onBack(): void }) {
-  return (
-    <div className="panel dissolve-confirm" role="alertdialog" aria-label="重閃確認" data-testid="reflash-weaker-confirm">
-      <div className="small">{text}</div>
-      <div className="run-actions">
-        <button type="button" className="primary" disabled={busy} data-testid="reflash-weaker-go" onClick={onGo}>
-          {REFLASH_WEAKER_GO_ZH}
-        </button>
-        <button data-sfx="ui_cancel" type="button" disabled={busy} data-testid="reflash-weaker-back" onClick={onBack}>
-          {REFLASH_WEAKER_BACK_ZH}
-        </button>
-      </div>
-    </div>
   );
 }
 

@@ -121,12 +121,6 @@ function OptionCard({ o, current, selected, focusable, terms, onPick, onKey }: {
           <Tag tone={o.transform ? "warn" : undefined}>
             <Term id={o.tag_term} label={tag} terms={terms} />
           </Tag>
-          {o.weaker_tag_zh && (
-            <span className="fc-weaker" data-testid="flash-option-weaker">
-              <i className="fc-down" aria-label="變弱" />
-              {o.weaker_tag_zh}
-            </span>
-          )}
         </span>
       </div>
       <DiffRows changes={o.changes ?? []} terms={terms} rename={rename} note={noteOf(o)} />
