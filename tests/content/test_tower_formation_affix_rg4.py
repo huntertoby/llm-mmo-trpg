@@ -144,8 +144,31 @@ def test_shield_troops_drop_tower_shields_with_the_formation() -> None:
     tower = _tower("rare", 8)
     (dropped,) = _with_signature(lib, rules, [tower], ("sect_shield_disciple",))
     assert any(r.affix == FORMATION for r in dropped.affixes)
+    assert (dropped.form, dropped.material) == ("sect_great", tower.material)  # RG-5
+    (shell,) = _with_signature(lib, rules, [tower], ("molten_shell_trooper",))
+    assert (shell.form, shell.material) == ("molten_shell", tower.material)
+    # 陣容裡兩種都有時取上面那一列（持盾弟子）
+    (both,) = _with_signature(lib, rules, [tower], ("molten_shell_trooper", "sect_shield_disciple"))
+    assert both.form == "sect_great"
     (plain,) = _with_signature(lib, rules, [tower], ("bandit",))
     assert plain == tower
+
+
+def test_signature_forms_are_tower_shield_forms() -> None:
+    """RG-5：必帶的外觀形制是塔盾物品造型（``kite_shield``）的形制，而且限定配塔盾。"""
+    lib = library()
+    rules = lib.world_loot
+    assert rules is not None and lib.appearance is not None
+    body = lib.items["item_offhand_tower_shield"]
+    kind = lib.appearance.kind_by_id()[body.kind or ""]
+    forms = {f.id: f for f in kind.forms}
+    assert {row.units[0]: row.form for row in rules.signature_affixes} == {
+        "sect_shield_disciple": "sect_great",
+        "molten_shell_trooper": "molten_shell",
+    }
+    for row in rules.signature_affixes:
+        assert row.form is not None
+        assert row.offhand in (forms[row.form].offhands or ())
 
 
 def test_the_signature_rows_name_real_enemies_and_points() -> None:

@@ -123,11 +123,16 @@ class SignatureAffix(ContentModel):
     """打盾兵拿盾兵的盾（RG-4，#163，08 8.11）：掉落算在 ``units`` 其中之一頭上、而且掉到的是副手
     ``offhand`` 時，必帶詞條 ``affix``（:func:`trpg.content.item_gen.with_affix`）。
 
-    掉落算在誰頭上：精英的那一件算該精英；沒有精英時的一般掉落算整個敵方陣容（陣容裡有就算）。"""
+    掉落算在誰頭上：精英的那一件算該精英；沒有精英時的一般掉落算整個敵方陣容（陣容裡有就算）。
+
+    ``form``（RG-5，#163，08 8.11「外觀」；玩法PM交接 4.1.5）：掉的那件換成這個外觀形制（持盾弟子 →
+    雲紋碑盾 ``sect_great``、熔殼甲兵 → 熔殼塔盾 ``molten_shell``）；材質照一般規則（不動）。沒寫＝
+    形制照一般規則。"""
 
     units: tuple[str, ...] = Field(min_length=1)
     offhand: str = Field(pattern=ID_PATTERN)
     affix: str = Field(pattern=r"^affix_[a-z0-9_]+$")
+    form: str | None = Field(default=None, pattern=ID_PATTERN)
 
 
 class RegionLoot(ContentModel):
@@ -185,15 +190,20 @@ class LootRules(ContentModel):
         """敵人的家族材料：區域的 ``families`` 優先，其次各區共用的；都沒有時為 ``None``。"""
         return self.region(region).families.get(unit) or self.families.get(unit)
 
-    def signature_affix(self, sources: Collection[str], offhand: str | None) -> str | None:
-        """掉落算在 ``sources``（單位範本或變體 ID）頭上、掉到副手 ``offhand`` 時必帶的詞條（依
+    def signature(self, sources: Collection[str], offhand: str | None) -> SignatureAffix | None:
+        """掉落算在 ``sources``（單位範本或變體 ID）頭上、掉到副手 ``offhand`` 時套用的那一列（依
         ``signature_affixes`` 的順序取第一個符合的）；沒有時為 ``None``。"""
         if offhand is None:
             return None
         for row in self.signature_affixes:
             if row.offhand == offhand and any(u in sources for u in row.units):
-                return row.affix
+                return row
         return None
+
+    def signature_affix(self, sources: Collection[str], offhand: str | None) -> str | None:
+        """:meth:`signature` 那一列的必帶詞條；沒有時為 ``None``。"""
+        row = self.signature(sources, offhand)
+        return None if row is None else row.affix
 
     def sell_price(self, rarity: str | None, item_level: int | None) -> int | None:
         """裝備回收價；不收時為 ``None``（代決 5D2-8）。"""

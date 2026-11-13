@@ -104,6 +104,11 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 **Phase RG-4**（塔盾詞條「護陣」#163）：掉落算在持盾弟子、熔殼甲兵頭上時掉到的塔盾必帶護陣
 （:func:`trpg.world.loot.roll_loot` 的必帶詞條，資料在 ``world/loot.yaml``）。日誌、角色、世界格式都
 沒變；掉落的程式改了，:data:`WORLD_RULES_VERSION` 升成 32。
+
+**Phase RG-5**（#163 玩家大盾）：持盾弟子、熔殼甲兵掉的塔盾外觀一定是對應形制（雲紋碑盾、熔殼塔盾；
+``world/loot.yaml`` 的 ``signature_affixes.form``），詞條改名「盾陣」；盾兵與盾陣的高度條件統一成「攻擊者
+比被攻擊的人高 1 層以上無視」（戰鬥日誌 ``trpg-battle-log/124``）。日誌、角色、世界格式都沒變；掉落與戰鬥
+結算的程式改了，:data:`WORLD_RULES_VERSION` 升成 33。
 """
 
 from __future__ import annotations
@@ -166,9 +171,9 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 32
+WORLD_RULES_VERSION: Final = 33
 # 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
-# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2；32＝RG-4）
+# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2；32＝RG-4；33＝RG-5）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
