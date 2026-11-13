@@ -121,16 +121,19 @@ function RenameRow({ rename }: { rename: Rename }) {
         →
       </span>
       <span className="fc-nows">
-        <span className="fc-now name" data-style="name" data-testid="flash-new-name">
-          <span>{rename.after}</span>
+        {/* FL-1g（LF-3 驗收可修 1）：新名稱與小標記是不斷行的一組，放不下時整組換行 */}
+        <span className="fc-name-group" data-testid="flash-name-group">
+          <span className="fc-now name" data-style="name" data-testid="flash-new-name">
+            <span>{rename.after}</span>
+          </span>
+          {rename.llm && (
+            <Hint text={FLASH_LLM_NAME_HINT}>
+              <span className="fc-src" tabIndex={0} data-testid="flash-name-source">
+                {FLASH_LLM_NAME_ZH}
+              </span>
+            </Hint>
+          )}
         </span>
-        {rename.llm && (
-          <Hint text={FLASH_LLM_NAME_HINT}>
-            <span className="fc-src" tabIndex={0} data-testid="flash-name-source">
-              {FLASH_LLM_NAME_ZH}
-            </span>
-          </Hint>
-        )}
       </span>
     </>
   );

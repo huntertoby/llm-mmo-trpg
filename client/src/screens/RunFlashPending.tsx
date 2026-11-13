@@ -187,6 +187,16 @@ function FlashFoot({
   );
 }
 
+/** 選中的卡要捲到哪裡：整張放得進可視區（扣掉上下的 scroll-margin）用 `nearest`，放不下用 `start`（對齊上緣）。
+ * 大世界看外面的捲動區（`.ui-popup-body`）；一輪是整頁捲，看視窗高。 */
+export function scrollBlock(el: HTMLElement): ScrollLogicalPosition {
+  const scroller = el.closest<HTMLElement>(".ui-popup-body");
+  const room = scroller === null ? window.innerHeight : scroller.clientHeight;
+  const style = window.getComputedStyle(el);
+  const margins = (Number.parseFloat(style.scrollMarginTop) || 0) + (Number.parseFloat(style.scrollMarginBottom) || 0);
+  return el.getBoundingClientRect().height + margins > room ? "start" : "nearest";
+}
+
 /** 待選閃現的選項畫面本體（一輪與大世界共用；5A-7）。 */
 export function FlashPendingPanel({ pending, hero, busy, onChoose, lockNote }: PanelProps) {
   const [pick, setPick] = useState<number | null>(null);
@@ -200,11 +210,13 @@ export function FlashPendingPanel({ pending, hero, busy, onChoose, lockNote }: P
   const terms: Terms = pending.terms ?? {};
   const name = before?.name_zh ?? pending.skill_id;
 
-  // 選中的那張整張看得到（5 第 3 條）：nearest＋CSS scroll-margin（下緣多留約 20px）；內容沒超出時不捲
+  // 選中的那張整張看得到（5 第 3 條）：nearest＋CSS scroll-margin（上緣讓出漸隱、下緣多留約 20px）；內容沒超出時不捲。
+  // FL-1g（LF-3 驗收必修 1）：卡比可視區高時改對齊卡的上緣（start），標頭落在上緣漸隱下面，下半截讓玩家自己捲
   useEffect(() => {
     if (pick === null || list.current === null) return;
     const el = list.current.querySelector<HTMLElement>(`[data-index="${pick}"]`);
-    el?.scrollIntoView?.({ block: "nearest" });
+    if (el === null) return;
+    el.scrollIntoView?.({ block: scrollBlock(el) });
   }, [pick]);
 
   const choose = (index: number) => {

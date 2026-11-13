@@ -58,9 +58,9 @@ def test_light_lists_cheaper_cost_and_a_weaker_effect() -> None:
     base = _named("展翼")
     after = _flash(base, "cost_light")
     rows = _rows(base, after)
-    assert rows["cost.ap"] == ("2", "1", "cost")
+    assert rows["cost.ap"] == ("2", "1", "better")  # FL-1g：代價變少照變好
     assert rows["effects[0].amount"] == ("3", str(after.effects[0].duration), "worse")
-    assert all(d != "better" for *_, d in rows.values())
+    assert all(v[-1] != "better" for f, v in rows.items() if not f.startswith("cost."))
 
 
 def test_war_hymn_charge_lists_the_aura_rounds() -> None:
@@ -75,7 +75,8 @@ def test_war_hymn_charge_lists_the_aura_rounds() -> None:
 def test_cost_rows_follow_the_card() -> None:
     base = _named("霜寒之觸")
     cheaper = base.model_copy(update={"cost": base.cost.model_copy(update={"mana": 1})})
-    assert _rows(base, cheaper) == {"cost.mana": ("2", "1", "cost")}
+    assert _rows(base, cheaper) == {"cost.mana": ("2", "1", "better")}
+    assert _rows(cheaper, base) == {"cost.mana": ("1", "2", "cost")}
 
 
 def test_one_up_one_down_is_expressed() -> None:

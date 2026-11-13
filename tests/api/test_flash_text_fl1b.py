@@ -97,7 +97,7 @@ def test_icons_and_terms_of_rows() -> None:
 def test_light_has_one_up_one_down() -> None:
     """11 #4：輕巧 AP 2 → 1、燃燒 5 → 2（一升一降）。"""
     rows = {r.name_zh: _view(r) for r in _rows("cost_light", "cost")}
-    assert rows["AP"] == ("AP", "2", "1", "cost")
+    assert rows["AP"] == ("AP", "2", "1", "better")  # FL-1g：代價變少照變好
     assert rows["燃燒"][3] == "worse"
 
 

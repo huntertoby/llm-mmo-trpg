@@ -143,11 +143,21 @@ describe("FL-1b 畫面", () => {
     expect(out).not.toContain("威力 提高");
   });
 
-  it("一升一降（輕巧）：代價框與變弱三角在同一張卡", () => {
+  it("一升一降（輕巧）：代價變少照變好（FL-1g 必修 1），和變弱三角在同一張卡", () => {
     const rows = html(FIXTURE.sets.rows!);
     const light = rows.slice(rows.indexOf('data-testid="flash-option-0"'), rows.indexOf('data-testid="flash-option-1"'));
-    expect(light).toContain('class="fc-now cost"');
+    expect(light).not.toContain('class="fc-now cost"');
+    expect(light).toContain('<span class="fc-was">2</span><span class="fc-arrow" aria-label="變成">→</span><span class="fc-nows"><span class="fc-now up"');
     expect(light).toContain('class="fc-down"');
+    // 同一張卡兩段都叫「傷害」時加段名（FL-1g 可修 3）
+    expect(light).toContain("傷害（第 1 段）");
+    expect(light).toContain("傷害（第 2 段）");
+  });
+
+  it("代價變多照舊是琥珀框（蓄力：冷卻 2 → 4）", () => {
+    const rows = html(FIXTURE.sets.rows!);
+    const charge = rows.slice(rows.indexOf('data-testid="flash-option-3"'));
+    expect(charge).toContain('class="fc-now cost"');
   });
 
   it("術語：有說明卡的畫點線底線（fc-term），查不到的只畫字", () => {

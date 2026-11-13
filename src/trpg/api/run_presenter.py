@@ -77,7 +77,7 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_major import transform_slot_plan
-from trpg.skillgen.flash_offer import NO_OPTIONS_ZH, history_problem, skill_before
+from trpg.skillgen.flash_offer import NO_OPTIONS_ZH, has_options, history_problem, skill_before
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -176,7 +176,14 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
         problem = NO_OPTIONS_ZH
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     major = state.record(rules.major_flash)
-    hint = not state.complete and major is not None and major.variation.source != "transform"
+    # FL-1g（FL-1b 驗收可修 6）：「可以重閃第 3 格轉型」只在重閃第 3 格真的出得了題時才給；歷程在
+    # 目前的角色階級重推不了時（3W-R1，重閃沒有退路）按下去一定是「沒有合法的變化」
+    hint = (
+        not state.complete
+        and major is not None
+        and major.variation.source != "transform"
+        and has_options(library, flash_request(library, run, skill_id, slot=rules.major_flash))
+    )
     return SkillFlashOut(
         skill_id=skill_id,
         base_id=state.base_id,
