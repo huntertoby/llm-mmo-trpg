@@ -32,6 +32,8 @@ export const WISH_ZH = {
   waitText: "池水泛起漣漪，正在聽你的願望……",
   waitNote: "最多等 10 秒；來不及就改從選單挑關鍵字（不扣任務幣）。",
   pickNth: (n: number) => `第 ${n} 個`,
+  /** 下固定區「名字：說明」中間的冒號（WP-3b）。 */
+  pickedSep: "：",
   leftTimes: (n: number) => `剩 ${n} 次`,
   refundNote: (refund: number) => `三招都不拿也算一次，退回 ${refund} 任務幣。`,
   skip: "都不拿",
@@ -53,6 +55,15 @@ export function toggleKeyword(picked: readonly string[], id: string, max: number
   if (picked.includes(id)) return picked.filter((k) => k !== id);
   if (picked.length >= max) return [...picked];
   return [...picked, id];
+}
+
+/** 下固定區要寫說明的那一個（WP-3b 乙案）：最後挑中的那一個（拿掉後退回前一個）；沒挑＝null。 */
+export function pickedFocus<K extends { id: string }>(menu: readonly K[], picked: readonly string[]): K | null {
+  for (let i = picked.length - 1; i >= 0; i--) {
+    const k = menu.find((m) => m.id === picked[i]);
+    if (k !== undefined) return k;
+  }
+  return null;
 }
 
 /** 送出鈕現在為什麼按不下去（`null`＝可以按）。伺服器說不能許時回它的原因（畫面第一行另有「現在不能用」）。 */

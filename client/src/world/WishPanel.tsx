@@ -5,22 +5,30 @@
 // - 中間捲：分頁內容。面板高度＝兩個分頁裡最高的那一頁（`PanelTabs` 量），切分頁外框不跳。
 // - 下固定區（`PopupFrame slots` 的 foot）：「前 → 後」（任務幣、本週次數＝代價，三選一＝新；FL-1b 的 `DiffRows`）＋退款說明＋許願鈕。
 // 不能許時整個表單灰掉（伺服器的 `available`／`blocked_zh`）；送出、等待、逾時退回選單由 `WorldScreen` 處理。
+// WP-3b（docs/art/WP-3驗收.md 必修 1 乙案）：選單格只放圓章＋名字（＋第 N 個），說明收進 `Hint` 說明卡；最後挑中的那一個的說明
+// 放在下固定區最上面（兩個分頁都預留同樣的高度，切分頁、挑關鍵字時外框與下固定區都不跳）。欄數看面板寬：寬版 4 欄、窄版 3 欄。
+// 分頁圖示與「本週還能許」籌碼圖示是第⑦批的許願池三個圖（`qIcon/hud.ts` 的 `WISH`；移植說明 Q版小圖示-第7批HUD.md 13.7）。
 import { useEffect, useState, type ReactNode } from "react";
 import { NowOffNote } from "../ui/ConditionOffNote";
 import { Hint } from "../ui/Hint";
-import { Callout, Chip, TokenGlyph } from "../ui/PanelKit";
+import { Callout, Chip, HudBare, TokenGlyph } from "../ui/PanelKit";
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
 import { usePopupSlots } from "../ui/PopupFrame";
 import { PopupSlot } from "../ui/PopupSlot";
 import { DiffRows, KeywordGlyph } from "../run/FlashChoiceParts";
 import { known } from "../render/qIcon/keywords";
 import { Portrait } from "./StoryIcons";
-import { toggleKeyword, WISH_ZH, wishDiffs, wishModes, wishSubmitBlock, type WishData, type WishMode } from "./wish";
+import { pickedFocus, toggleKeyword, WISH_ZH, wishDiffs, wishModes, wishSubmitBlock, type WishData, type WishMode } from "./wish";
 
 /** 守池人頭像：寬版 36＋對話泡、窄版（面板 < 560）28＋標題旁一行（同公告板守印人 `KEEPER_FACE`）。 */
 const KEEPER_FACE = { wide: 36, narrow: 28 } as const;
 /** 選單列的關鍵字小圓章（第⑤b 批 Q 版）。 */
 const KEYWORD_PX = 20;
+/** 下固定區挑中的那一個的小圓章。 */
+const PICKED_PX = 16;
+/** 分頁圖示（照成長分頁：圖樣本身 16）、籌碼圖示（照任務幣籌碼 15）。 */
+const TAB_ICON_PX = 16;
+const CHIP_ICON_PX = 15;
 /** 空白但佔一行高。 */
 const NBSP = String.fromCharCode(0xa0);
 
@@ -77,7 +85,7 @@ function WishHead({ wish: w, onBack }: { wish: WishData; onBack?: () => void }) 
       )}
       <div className="pnl-chips">
         <Chip icon={<TokenGlyph px={15} />} label={WISH_ZH.coins} value={w.coins} zero={w.coins < w.cost} testId="wish-coins" />
-        <Chip label={WISH_ZH.left} value={`${w.left}／${w.per_week}`} zero={w.left === 0} testId="wish-left" />
+        <Chip icon={<HudBare id="wish_left" px={CHIP_ICON_PX} />} label={WISH_ZH.left} value={`${w.left}／${w.per_week}`} zero={w.left === 0} testId="wish-left" />
       </div>
     </>
   );
@@ -128,27 +136,32 @@ function MenuPane({ wish: w, picked, off, note, onPick }: { wish: WishData; pick
         {w.menu.map((k) => {
           const at = picked.indexOf(k.id);
           const full = at < 0 && picked.length >= w.max_keywords;
+          // 不能點時用 aria-disabled（不用 disabled）：停用的按鈕收不到滑過，說明卡就打不開
+          const locked = off || full;
           return (
             <li key={k.id}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={at >= 0}
-                className={at >= 0 ? "wish-kw on" : "wish-kw"}
-                disabled={off || full}
-                onClick={() => onPick(k.id)}
-                data-kw={k.id}
-                data-testid="wish-kw"
-              >
-                {known([k.id], 1).length > 0 ? <KeywordGlyph id={k.id} px={KEYWORD_PX} /> : <span className="wish-kw-noicon" aria-hidden="true" />}
-                <b className="name">{k.name_zh}</b>
-                {at >= 0 && (
-                  <span className="pnl-tag open" data-testid="wish-kw-order">
-                    {WISH_ZH.pickNth(at + 1)}
-                  </span>
-                )}
-                <span className="desc pnl-l3">{k.description_zh}</span>
-              </button>
+              <Hint text={k.description_zh}>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={at >= 0}
+                  aria-disabled={locked}
+                  className={at >= 0 ? "wish-kw on" : "wish-kw"}
+                  onClick={() => {
+                    if (!locked) onPick(k.id);
+                  }}
+                  data-kw={k.id}
+                  data-testid="wish-kw"
+                >
+                  {known([k.id], 1).length > 0 ? <KeywordGlyph id={k.id} px={KEYWORD_PX} /> : <span className="wish-kw-noicon" aria-hidden="true" />}
+                  <b className="name">{k.name_zh}</b>
+                  {at >= 0 && (
+                    <span className="pnl-tag open" data-testid="wish-kw-order">
+                      {WISH_ZH.pickNth(at + 1)}
+                    </span>
+                  )}
+                </button>
+              </Hint>
             </li>
           );
         })}
@@ -158,10 +171,29 @@ function MenuPane({ wish: w, picked, off, note, onPick }: { wish: WishData; pick
   );
 }
 
-function WishFoot({ wish: w, block, busy, onSubmit }: { wish: WishData; block: string | null; busy: boolean; onSubmit(): void }) {
+/** 下固定區最上面：最後挑中的那一個關鍵字的說明（`pickedFocus`）。兩個分頁都佔同樣的兩行高，沒有時空白。 */
+function PickedNote({ wish: w, picked, active }: { wish: WishData; picked: readonly string[]; active: WishMode }) {
+  const k = active === "menu" ? pickedFocus(w.menu, picked) : null;
+  return (
+    <div className="wish-picked" data-testid="wish-picked" data-kw={k?.id}>
+      {k !== null && (
+        <p className="pnl-l2 wish-picked-desc">
+          <span className="pnl-tag open">{WISH_ZH.pickNth(picked.indexOf(k.id) + 1)}</span>
+          {known([k.id], 1).length > 0 && <KeywordGlyph id={k.id} px={PICKED_PX} />}
+          <b className="name">{k.name_zh}</b>
+          {WISH_ZH.pickedSep}
+          {k.description_zh}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function WishFoot({ wish: w, block, busy, picked, active, onSubmit }: { wish: WishData; block: string | null; busy: boolean; picked: readonly string[]; active: WishMode; onSubmit(): void }) {
   const go = block === null && !busy;
   return (
     <div className={w.available ? "wish-foot" : "wish-foot off"} data-testid="wish-foot">
+      <PickedNote wish={w} picked={picked} active={active} />
       <DiffRows changes={wishDiffs(w)} terms={{}} />
       <div className="wish-foot-row">
         {/* 為什麼按不下去：一律佔一行（沒有時空白），切分頁、挑關鍵字時下固定區不跳；不能許時原因只寫在第一行 */}
@@ -194,16 +226,16 @@ export function WishPanel({ wish: w, busy, fallback, onWish, onBack }: Props) {
   const note = fallback?.text ?? null;
   const tabs: PanelTabDef[] = modes.map((m) =>
     m === "text"
-      ? { id: "text", label: WISH_ZH.tabText, short: WISH_ZH.tabTextShort, icon: null, render: () => <TextPane wish={w} text={text} off={off} onText={setText} /> }
+      ? { id: "text", label: WISH_ZH.tabText, short: WISH_ZH.tabTextShort, icon: <HudBare id="wish_text" px={TAB_ICON_PX} />, render: () => <TextPane wish={w} text={text} off={off} onText={setText} /> }
       : {
           id: "menu",
           label: WISH_ZH.tabMenu,
           short: WISH_ZH.tabMenuShort,
-          icon: null,
+          icon: <HudBare id="wish_menu" px={TAB_ICON_PX} />,
           render: () => <MenuPane wish={w} picked={picked} off={off} note={note} onPick={(id) => setPicked((cur) => toggleKeyword(cur, id, w.max_keywords))} />,
         },
   );
-  const foot: ReactNode = <WishFoot wish={w} block={block} busy={busy} onSubmit={() => onWish(active, text, picked)} />;
+  const foot: ReactNode = <WishFoot wish={w} block={block} busy={busy} picked={picked} active={active} onSubmit={() => onWish(active, text, picked)} />;
   return (
     <div className={off ? "wish-panel off" : "wish-panel"} data-testid="world-hud-wish" data-mode={active} data-available={w.available ? "1" : "0"}>
       <PanelTabs
