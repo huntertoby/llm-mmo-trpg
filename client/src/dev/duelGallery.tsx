@@ -593,7 +593,7 @@ function runSheet(part: string): HTMLCanvasElement {
     return sheet("遊戲端主角剪影 20 種：插圖左半 150×120 真 1 倍；下方人物 100×106 最近鄰 ×2（對照 duel-weapons-1-sil）", rows);
   }
   // contact：會單挑的四場 × 九種，中間 130×84，真 1 倍與 ×2，下面寫整組移動量（res 1）
-  const ES: Array<[string, ESpec]> = [["北坡狼王 1.2", wolf], ["疤面（人形）", scar], ["鍛疤暫代（荒原隊長，人形）", sceneE("forge")], ["熔核領主 1.8", sceneE("lord")]];
+  const ES: Array<[string, ESpec]> = [["狼王", wolf], ["疤面", scar], ["鍛疤暫代", sceneE("forge")], ["熔核", sceneE("lord")]];
   const rows: Cell[][] = [];
   for (const [zh, e] of ES) {
     const D = CONTACT_W.map((w) => {
