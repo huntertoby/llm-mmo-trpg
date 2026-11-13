@@ -93,3 +93,114 @@
 
 - Firefox、Safari 沒有實機看。新增的 CSS 只用了 flex、`margin-top: em`，沒有新語法。
 - 大世界成長面板沒有另外拍。它和一輪營火共用 `ReflashSection`、`FlashChooser`、`RunFlashPending`。
+
+---
+
+## RR-2c｜整招篩選與 #160 例外改字（玩法 PM `a6c36fe30`，回覆 RR-2b 待決 1）
+
+> 同一個分支接著做。開工前先 `git merge main`，拿到 `a6c36fe30`。commit：4efe5e683（引擎、API、測試、OpenAPI 與前端）、d3fa0e993（截圖）；本節與上手筆記另一個 commit。
+
+### c1. 做法
+
+- **整招篩選（一般重閃照 (a)）**：`flash_offer._Builder` 多一個 `whole_floor`，值是玩家現在那張卡的 `budget_power`，由 `_whole_floor` 計算：取已存歷程重推的最後一筆，沒有任何一筆時用原本的技能加預算上限加成；3W-R1 歷程重推不了時用 `request.current`。
+  - 重閃（`slot` 不為空）時，新整招低於 `whole_floor` 的選項不合格。
+  - 這是推導完成後的過濾，不改推導本身。所以 `floor_permille`、歷程重推、存檔欄位都不變。原本的格下限（「這一格不低於被換掉的那一筆」）照留，兩道一起套。
+  - **轉型不篩**：照 3W-3「轉型不設下限」處理，見待決 c1。
+- **#160 例外格（照 (b)）**：
+  - 判定改成「格下限＋整招篩選後一個都不剩」。`_weaker` 用嚴格的 builder 試，取代 RR-2 原本的判定。新的閃現、完整技能第一次調整、3W-R1 照舊不放寬。
+  - 例外格兩道下限都不套，改出預算窗內的候選。
+  - `FlashOffer.weaker` 表示這一格是例外格；`FlashOption.weaker` 表示這個選項的整招低於現在的卡，只有這些選項標「比原本弱」。
+- **字**（`flash_offer` 常數，全由伺服器送）：
+
+  | 欄位 | 字 |
+  |---|---|
+  | `ReflashSlotOut.weaker_zh`（入口＋選類別面板） | 「這一格重閃後，這招可能比現在弱」 |
+  | `ReflashSlotOut.weaker_pick_zh` | 「扣點後一定要選一個。」 |
+  | `PendingFlashOut.weaker_foot_zh` | 「這次的選項可能比現在弱；標 ▼ 的是變小的地方。」 |
+  | `FlashOptionOut.weaker_tag_zh`（加回） | 「比原本弱」，只給整招低於現在的選項 |
+
+  一般重閃的「選哪個這招整體都會強一點」和營火說明行不改，因為補上篩選後就成立了（轉型除外，見待決 c1）。
+- **前端**：`.fc-weaker` 小標加回 `RunFlashPending` 的 `.fc-cat`，樣式在 `reflash-weaker.css`。選類別面板那一行照舊是 `weakerLeadText`，現在顯示「這一格重閃後，這招可能比現在弱。扣點後一定要選一個。」
+- 前 → 後的基準照舊用現在的卡（RR-2b）。
+
+### c2. 版號
+
+- **`WORLD_RULES_VERSION` 29 → 30**：
+  - 原因：世界日誌重播時，重閃會重新出題（`growth._flash` → `open_flash` → `make_offer`）。整招篩選會讓舊日誌裡的重閃出不同的選項，`flash_pick` 的索引就會對到別的變化，同一份日誌重播出不同結果。
+  - 例外格的判定也改了：舊日誌裡被 RR-2 判成較弱、但現在整招篩選後仍有選項的格子，出題會變。
+  - 寫死版號的兩個測試已同步：`tests/api/test_pr2a_range_practice.py`、`tests/world/test_opening_stages.py`。`save.py` 的版號說明加了第 30 條。
+- **`CHAR_FORMAT`、`SAVE_FORMAT`、日誌格式都不升**：存檔欄位沒變。`FlashOption.weaker` 的意思改了，但值為 `False` 時不輸出；存檔裡還沒選的題目照舊讀得進來。
+- 一輪的存檔沒有日誌重播，不受影響。
+
+### c3. 預測與實際
+
+預測寫在 `scratchpad/rr2b/prediction_c.txt`，開工前寫下。
+
+| 項目 | 預測 | 實際 |
+|---|---|---|
+| 重播（bandit_lair 種子 7） | 不變（沒有閃現） | 不變（重播驗證通過） |
+| parity（`test_refactor_parity`） | 不變（只出新的閃現） | 不變（通過，沒重產） |
+| Mock（`tests/llm`、`llm_propose_mock.txt`） | 不變（沒有重閃請求） | 不變（`tests/llm/` 全部通過，沒重產） |
+| CLI 快照（`tests/cli/test_output_snapshots.py`） | 不變（AI 只重閃完整技能第一次調整，那一步的輸入就是現在的卡，下限已經保證整招不低於現在） | 不變（25 passed，沒重產） |
+| 模擬報表（`sim/test_flash_report`、`test_flash_balanced_policy`） | 不變，理由同上 | 不變（slow 測試通過，沒重產） |
+| `test_reflash_weaker_rr2.py` | 要改（字、選項 weaker 的意思、性質測試）；預測重現案例第 1 格仍是例外格，4 個選項不變 | 照預測：重現案例第 1 格仍是例外格，4 個選項逐字不變，其中 3 張整招低於現在；測試已先改成新規則，跑起來通過 |
+| `test_openapi_snapshot.py` | 要重產（`weaker_tag_zh` 加回、說明字變） | 已重產（OpenAPI 加 11 行、`schema.d.ts` 加 2 行） |
+| 版號測試 2 個 | 要改 | 已改 |
+| `test_flash_run`、`test_flash_world` | 不會失敗 | 不變（沒改測試，直接通過） |
+| 開發頁夾具、前端 run 夾具 | 不變（沒有重閃） | 不變（沒重產） |
+| 前端 `rr2ReflashWeaker.test.ts` | 要改字、加回小標 | 已改 |
+
+### c4. whole_check 再核對（種子 2、7）
+
+開發起始包 0，打到營火，每一格重閃都出一次題，比較每個選項的整招 `budget_power` 和現在的卡：
+
+| 種子／格 | 種類 | 現在 | 選項整招 | 低於現在的 | 小標 |
+|---|---|---|---|---|---|
+| 2／1 | 例外格 | 23.62 | 21.73／23.62／21.78／21.73 | 3 | 3 張（等於現在的那張不標） |
+| 2／2 | 一般 | 23.62 | 23.62／25.52／23.62／23.62 | 0 | — |
+| 2／3 | 一般 | 23.62 | 23.86／**20.0（轉型）**／23.62／23.86 | 1（轉型） | — |
+| 7／1 | 一般 | 22.5 | 22.5／24.38／22.5／22.5 | 0（RR-2b 時 22.1 那個被篩掉了） | — |
+| 7／2 | 一般 | 22.5 | 22.5／24.38／22.5／22.5 | 0（RR-2b 時 21.88 那個被篩掉了） | — |
+| 7／3 | 一般 | 22.5 | 22.5／22.75／**19.38（轉型）**／22.5 | 1（轉型） | — |
+
+種子 3、5 也全部不低於現在。剩下低於現在的只有大變化格的轉型保底，見待決 c1。
+
+### c5. 測試
+
+- `test_reflash_weaker_rr2.py`：
+  - 重現案例改成「下限 0，整招低於現在的才標較弱（3 張），小標對得上」。
+  - 性質測試 `test_same_seed_same_offer` 改成「`option.weaker == 例外格 and 整招低於現在（轉型除外）`」。
+  - `test_reachable_floor_keeps_the_original_offer` 不改，它比對的是嚴格出題（現在已含整招篩選）。
+  - **新增性質測試** `test_normal_reflash_never_weakens_the_whole_skill`：營火這一輪所有閃過的格子 × 種子 × 不指定或指定類別。一般重閃的每個選項，整招都不低於現在的卡，轉型除外。
+- 前端 `rr2ReflashWeaker.test.ts`：新字，小標只畫在有 `weaker_tag_zh` 的那張卡。
+
+### c6. 檢查
+
+| 指令 | 結束碼 |
+|---|---|
+| `uv run ruff check .`、`ruff format --check .` | 0／0 |
+| `uv run mypy` | 0（1580 個檔案） |
+| `uv run lint-imports` | 0 |
+| `uv run pytest -q -n 8 -m "not llm"`（含 slow：rr2、`test_flash_run`、rr1、retier、`world/test_flash_world`、`test_growth`、`test_opening_stages`、`tests/api/` 全部、`tests/skillgen/` 全部（含 parity、fl1a、fl1c）、`tests/llm/` 全部、`sim/test_flash_report`、`test_flash_balanced_policy`、`test_flash_llm_run`、`test_flash_texts_run_lf1`） | 0（6861 passed、15 skipped） |
+| `uv run pytest tests/cli/test_output_snapshots.py` | 0（25 passed） |
+| `trpg battle --map bandit_lair --seed 7`，再 `trpg battle replay` | 0（重播驗證通過：73 個動作、254 個事件） |
+| `vitest run src/run/ src/world/pnl4Followups.test.ts src/screens/ src/ui/ src/dev/` | 0（872 passed） |
+| `corepack pnpm -C client build` | 0 |
+
+### c7. 截圖（`docs/art/shots/RR-2b/c*`；800、1600，DPR 1，`?mute=1`，`--mute-audio`）
+
+| 檔案 | 內容 |
+|---|---|
+| `c01-entry-*.png` | 入口：「▼ 這一格重閃後，這招可能比現在弱」 |
+| `c02-chooser-*.png` | 選類別面板最上面：「▼ 這一格重閃後，這招可能比現在弱。扣點後一定要選一個。」 |
+| `c03-weak-options-*.png` | 出題後 (i)：「一定要選一個。這次的選項可能比現在弱；標 ▼ 的是變小的地方。」；4 張卡有 3 張標「▼ 比原本弱」，選中的那張「多等幾回合再用」整招等於現在，不標 |
+
+- 伺服器：自己開 `trpg serve --port 8823`，PID 50748，交件前已用這個 PID 關掉。
+- 瀏覽器：無頭 Chrome，除錯埠 9583，加 `--remote-debugging-address=127.0.0.1`，由腳本自己結束。
+- 開之前都先用 netstat 確認埠沒人用；8823、9583 現在都已經沒在聽。
+
+### c8. 待 PM 決定
+
+1. **轉型不套整招篩選**：照 3W-3「轉型不設下限」處理。大變化格重閃時，轉型保底的整招可能比現在弱（種子 2 第 3 格是 20.0 對 23.62，種子 7 第 3 格是 19.38 對 22.5）。所以這兩種格子上，「選哪個這招整體都會強一點」對轉型那張不成立，和新的閃現原本就有的轉型例外一樣。若要轉型也篩，只要在 `_Builder.option` 拿掉 `variation.source != "transform"` 這個條件，但大變化格會更常沒有轉型保底。
+2. **格下限照留**：這次是「加一道整招篩選」。原本「這一格不低於被換掉的那一筆」（`floor_permille`，會影響推導時的重調）沒有拿掉；拿掉的話會改到推導結果與存檔裡的歷程。
+3. **例外格裡整招不低於現在的選項不標小標**：照 #160 第 4 點「達到的不加」。所以重現案例 4 張只有 3 張標。
