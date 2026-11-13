@@ -452,7 +452,10 @@ class _Builder:
     也不套整招篩選（``whole_floor``）；整招低於現在的選項標「比原本弱」。"""
     whole_floor: Fraction | None = None
     """重閃的整招下限（RR-2c，06 6.34.3「重閃也一樣」）：玩家現在那張卡的預算分數；重閃後整招不能
-    低於它。閃現為 ``None``（閃現的下限在推導時已經看整招）。轉型照 3W-3 不設下限、不篩。"""
+    低於它。閃現為 ``None``（閃現的下限在推導時已經看整招）。轉型不設下限、不篩（06 6.34.5「轉型不套
+    強度下限」，玩法 PM 選 (b)：換了種類預算類別不同，分數不能比，只要落在新種類的預算窗內）；畫面上
+    有轉型選項的面板寫「（轉型除外）」、轉型卡句末接「轉型後照新種類重算強度，不跟原本比。」
+    （前端 ``client/src/run/flashChoice.ts``，FL-1h）。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
@@ -481,7 +484,7 @@ class _Builder:
             return None
         below = (
             self.whole_floor is not None
-            and variation.source != "transform"
+            and variation.source != "transform"  # 06 6.34.5：轉型不套整招篩選（FL-1h 確認）
             and budget_power(skill, self.library) < self.whole_floor
         )
         if below and not self.weaker:
