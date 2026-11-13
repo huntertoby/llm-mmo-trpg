@@ -316,6 +316,20 @@ PARTS["icons-marks"] = () => {
   }
   publish(sheet(1340, blocks), "image/png");
 };
+// ================= 指紋（A4 加）：A1～A3 過審圖的畫布逐一 FNV-1a，改共用畫法前後比對 =================
+const fnv = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let h = 2166136261; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619); return (h >>> 0).toString(16).padStart(8, "0"); };
+PARTS.hash = () => {
+  const out = {};
+  for (const [wz, S] of [["1600", S1600], ["800", S800]]) {
+    for (const v of VARS) out[`sprite-${v.k}-${wz}`] = fnv(render(solo(v.st), soloView(S, 1)));
+    CASES.forEach((c, i) => { out[`mark${i + 1}-${wz}`] = fnv(caseCv(c, S)); });
+  }
+  const vw = { S: S1600, res: 1, x0: 3.7 * T, y0: 0.2 * T, w: 3.6 * T, h: 5 * T };
+  for (const bt of [0, 0.25, 0.5, 0.7, 0.85, 1]) out[`shed-${bt}`] = fnv(render(solo({ phase: 1, shell: 0, breakT: bt, t: 300 }), vw));
+  Object.assign(out, icHash());
+  document.documentElement.dataset.hash = JSON.stringify(out);
+  publish(sheet(400, [{ title: "hash" }]));
+};
 // ================= 自查：單一外觀放大（?part=probe&k=p2n&z=4&hover=seam） =================
 PARTS.probe = () => {
   const v = VARS.find((x) => x.k === (P.get("k") || "p1s")) ?? VARS[0], Z = +(P.get("z") || 4);

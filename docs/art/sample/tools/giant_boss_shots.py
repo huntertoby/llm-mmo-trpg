@@ -12,7 +12,8 @@ Usage (from the repo root):
 - No remote-debugging port is opened. Always --mute-audio; the URL carries ?mute=1.
 - <chrome tmp> is your own scratch folder (the Chrome profile goes there).
 - --anchor prints the measured bounding boxes (model px, relative to the anchor).
-- --hash prints the A3 part-icon fingerprints (vent/seam/core x 20/16/12 px x res 1/2).
+- --hash prints fingerprints of the reviewed A1-A3 canvases (sprites, marks, shed
+  frames at 1600/800) and the A3 part icons (vent/seam/core x 20/16/12 px x res 1/2).
 """
 
 from __future__ import annotations
@@ -108,7 +109,7 @@ def anchor(tmp: Path) -> int:
 
 
 def icon_hash(tmp: Path) -> int:
-    html = dump(tmp, "part=icons")
+    html = dump(tmp, "part=hash")
     found = HASH_RE.search(html)
     if not found:
         print("hash: page did not finish")
