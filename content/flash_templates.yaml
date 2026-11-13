@@ -638,7 +638,7 @@ major:
   - {id: major_extend, category: deepen, evolution: extend, headline_zh: "這招的所有效果多持續 1 回合"}
   - {id: major_delayed_burst, category: deepen, evolution: delayed_burst, headline_zh: "貼上目標，下一輪在它周圍爆開", say_zh: "打中後在目標身上留下印記，下一輪在它周圍一圈爆開。"}
   - {id: major_kill_chain, category: deepen, evolution: kill_chain, headline_zh: "打倒敵人時拿回 1 AP", say_zh: "這招打倒敵人時，馬上拿回 1 AP，可以接著行動。"}
-  - {id: major_battle_variant, category: deepen, evolution: battle_variant, headline_zh: "站在特定地形時，這招換一種打法", say_zh: "站在特定地形上施放時，這招自動換成另一種打法。"}
+  - {id: major_battle_variant, category: deepen, evolution: battle_variant, headline_zh: "站在特定地形時，這招換一種打法", say_zh: "{terrain}施放時，這招自動換成另一種打法。"}
   - {id: major_bridge_exploit, category: bridge, evolution: bridge_exploit, headline_zh: "敵人身上有{keyword}時，這招多傷一截"}
   - {id: major_bridge_imbue, category: bridge, evolution: bridge_imbue, headline_zh: "打中時還會造成{keyword}"}
 
@@ -765,24 +765,27 @@ headlines:
     keyword: collision
     headline_zh: 敵人剛被撞過，這招多傷一截               # 9.1 #32
     say_zh: "目標這回合被推去[[kw:collision|撞過]]牆或別人時，這招對它多 {extra}。"
-  # FL-1f（玩法 PM 2026-11-13 填答第五節）。製造類：keyword_imbue、major_bridge_imbue 共用。照 skill_evolution.yaml
-  # grafts 的 makes 對過引擎：隱蔽（造煙霧在打中的格子，不是自己躲）、冰凍（造冰面，不會凍住敵人）對不上，用模板的
-  # 通用句；形態、高處沒有 makes，不會出這兩個組合，不列。
+  # FL-1f（玩法 PM 2026-11-13 填答第五、十節）。製造類：keyword_imbue、major_bridge_imbue 共用，照 skill_evolution.yaml
+  # grafts 的 makes 寫（隱蔽＝打中的格子造煙霧、冰凍＝造冰面）；形態、高處沒有 makes，不會出這兩個組合，不列。
   - {template: keyword_imbue, keyword: charged, headline_zh: 打中時還會放電}
+  - {template: keyword_imbue, keyword: concealed, headline_zh: 打中的格子還會冒出煙霧}
+  - {template: keyword_imbue, keyword: frozen, headline_zh: 打中的格子還會結冰}
   - {template: keyword_imbue, keyword: collision, headline_zh: 打中時還會把敵人撞出去}
   - {template: keyword_imbue, keyword: ignite, headline_zh: 打中時還會點燃敵人}
   - {template: keyword_imbue, keyword: marked, headline_zh: 打中時還會標記敵人}
   - {template: keyword_imbue, keyword: poisoned, headline_zh: 打中時還會讓敵人中毒}
   - {template: keyword_imbue, keyword: prone, headline_zh: 打中時還會把敵人絆倒}
   - {template: major_bridge_imbue, keyword: charged, headline_zh: 打中時還會放電}
+  - {template: major_bridge_imbue, keyword: concealed, headline_zh: 打中的格子還會冒出煙霧}
+  - {template: major_bridge_imbue, keyword: frozen, headline_zh: 打中的格子還會結冰}
   - {template: major_bridge_imbue, keyword: collision, headline_zh: 打中時還會把敵人撞出去}
   - {template: major_bridge_imbue, keyword: ignite, headline_zh: 打中時還會點燃敵人}
   - {template: major_bridge_imbue, keyword: marked, headline_zh: 打中時還會標記敵人}
   - {template: major_bridge_imbue, keyword: poisoned, headline_zh: 打中時還會讓敵人中毒}
   - {template: major_bridge_imbue, keyword: prone, headline_zh: 打中時還會把敵人絆倒}
   - {template: major_bridge_imbue, keyword: wet, headline_zh: 打中的格子還會積水}
-  # 加碼類：keyword_exploit、major_bridge_exploit 共用。照 grafts 的 uses 條件對過：帶電的條件是「這回合放過雷電技能」
-  # （cast_tag_this_turn），不是敵人帶電，用模板的通用句。
+  # 加碼類：keyword_exploit、major_bridge_exploit 共用，照 grafts 的 uses 條件寫（帶電＝cast_tag_this_turn 雷電）。
+  - {template: keyword_exploit, keyword: charged, headline_zh: 這回合放過雷電技能，這招多傷一截}
   - {template: keyword_exploit, keyword: concealed, headline_zh: 從隱蔽中出手，這招多傷一截}
   - {template: keyword_exploit, keyword: form, headline_zh: 在形態中出手，這招多傷一截}
   - {template: keyword_exploit, keyword: frozen, headline_zh: 敵人被凍住時，這招多傷一截}
@@ -792,6 +795,7 @@ headlines:
   - {template: keyword_exploit, keyword: poisoned, headline_zh: 敵人中毒時，這招多傷一截}
   - {template: keyword_exploit, keyword: prone, headline_zh: 敵人倒地時，這招多傷一截}
   - {template: keyword_exploit, keyword: wet, headline_zh: 敵人站在水上時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: charged, headline_zh: 這回合放過雷電技能，這招多傷一截}
   - {template: major_bridge_exploit, keyword: collision, headline_zh: 敵人剛被撞過，這招多傷一截}
   - {template: major_bridge_exploit, keyword: concealed, headline_zh: 從隱蔽中出手，這招多傷一截}
   - {template: major_bridge_exploit, keyword: form, headline_zh: 在形態中出手，這招多傷一截}
@@ -802,6 +806,8 @@ headlines:
   - {template: major_bridge_exploit, keyword: poisoned, headline_zh: 敵人中毒時，這招多傷一截}
   - {template: major_bridge_exploit, keyword: prone, headline_zh: 敵人倒地時，這招多傷一截}
   - {template: major_bridge_exploit, keyword: wet, headline_zh: 敵人站在水上時，這招多傷一截}
+  # support_imbue 的「潮濕例外」（第十節第 4 點）；其他關鍵字照模板通用句
+  - {template: support_imbue, keyword: wet, headline_zh: 目標腳下積一灘水}
   # 輔助類：support_keyword 只有潮濕、隱蔽（沒有模板通用句）
   - {template: support_keyword, keyword: wet, headline_zh: 施放時目標腳下積水}
   - {template: support_keyword, keyword: concealed, headline_zh: 施放時讓目標躲進隱蔽}

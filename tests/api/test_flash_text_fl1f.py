@@ -10,7 +10,9 @@ import pytest
 from tests.engine.helpers import library as _load_library
 from trpg.api.flash_changes import flash_changes, magnitude_zh, status_magnitude_suffix
 from trpg.api.flash_text import option_headline, option_say
+from trpg.api.run_schemas import StatChangeOut
 from trpg.skillgen.flash_state import Variation
+from trpg.skillgen.variant_gen import variant_specs, with_variant
 from trpg.skillgen.whiteboard import compose_whiteboard
 
 LIB = _load_library()
@@ -58,10 +60,28 @@ def test_every_template_has_a_headline() -> None:
         ("multi_hit", "combo", "minor", None, None, "同一個敵人多挨一段"),
         ("element_second", "element", "minor", None, "ice", "多帶一段冰霜傷害"),
         ("keyword_imbue", "element", "minor", "ignite", None, "打中時還會點燃敵人"),
-        # 隱蔽的製造是在打中的格子造煙霧，不是自己躲：用模板的通用句（填答第五節「對照引擎的規則」）
-        ("keyword_imbue", "element", "minor", "concealed", None, "打中時還會造成隱蔽"),
-        # 帶電的加碼條件是「這回合放過雷電技能」，不是敵人帶電：用模板的通用句
-        ("keyword_exploit", "element", "minor", "charged", None, "敵人身上有帶電時，這招多傷一截"),
+        # 第二輪（填答第十節）：照引擎寫——隱蔽造煙霧、冰凍造冰面、帶電看這回合放過雷電技能
+        ("keyword_imbue", "element", "minor", "concealed", None, "打中的格子還會冒出煙霧"),
+        ("keyword_imbue", "element", "minor", "frozen", None, "打中的格子還會結冰"),
+        ("major_bridge_imbue", "bridge", "major", "frozen", None, "打中的格子還會結冰"),
+        (
+            "keyword_exploit",
+            "element",
+            "minor",
+            "charged",
+            None,
+            "這回合放過雷電技能，這招多傷一截",
+        ),
+        (
+            "major_bridge_exploit",
+            "bridge",
+            "major",
+            "charged",
+            None,
+            "這回合放過雷電技能，這招多傷一截",
+        ),
+        ("support_imbue", "bridge", "major", "wet", None, "目標腳下積一灘水"),
+        ("support_imbue", "bridge", "major", "frozen", None, "目標腳下留下冰凍的場地"),
         ("keyword_exploit", "element", "minor", "wet", None, "敵人站在水上時，這招多傷一截"),
         ("support_keyword", "support", "minor", "wet", None, "施放時目標腳下積水"),
         ("major_intensify", "deepen", "major", "ignite", None, "專精點燃：造成的點燃更持久"),
@@ -81,9 +101,7 @@ def test_say_lines_from_the_answer_sheet() -> None:
     """填答第七節：前 → 後看不出怎麼運作的模板才寫 say_zh。"""
     cases = {
         ("minor", "kill_refund", "extend"): "這招打倒敵人時，馬上拿回 1 AP，可以接著行動。",
-        ("major", "major_battle_variant", "deepen"): (
-            "站在特定地形上施放時，這招自動換成另一種打法。"
-        ),
+        ("major", "major_battle_variant", "deepen"): "在特定地形施放時，這招自動換成另一種打法。",
         ("major", "shield_charged", "bridge"): "護盾被打破時，電一下打破它的敵人。",
         ("transform", "to_trap", "transform"): ("這招變成陷阱：先布在地上，敵人踩上去時才發動。"),
     }
@@ -129,3 +147,38 @@ def test_burning_magnitude_row_reads_plain() -> None:
     after = KINDLE.model_copy(update={"effects": (effect,)})
     rows = [r for r in flash_changes(LIB, KINDLE, after) if r.field.endswith("magnitude_permille")]
     assert [(r.name_zh, r.before_zh, r.after_zh) for r in rows] == [("燃燒傷害", "原本", "1.25 倍")]
+
+
+@pytest.mark.parametrize(
+    ("condition", "want"),
+    [
+        ("wet", "站在水中"),
+        ("icy", "站在冰上"),
+        ("high", "站在高處"),
+        ("wall", "背靠牆壁"),
+        ("oil", "站在油上"),
+        ("puddle", "站在水窪裡"),
+    ],
+)
+def test_battle_variant_say_names_the_terrain(condition: str, want: str) -> None:
+    """第十節第 3 點：{terrain} 填完整的動作片語（加上去的那個變奏的條件）。"""
+    spec = next(s for s in variant_specs(LIB) if s["id"].startswith(f"{condition}_"))
+    after = with_variant(KINDLE, spec)
+    assert after is not None
+    variation = Variation(source="major", template="major_battle_variant", category="deepen")
+    assert option_say(LIB, variation, after, ()) == f"{want}施放時，這招自動換成另一種打法。"
+
+
+def test_intensify_headline_has_two_forms() -> None:
+    """第十節第 5 點：原本就會造成 → 更持久；原本不會、引擎補上製造效果 → 開始會造成。"""
+    variation = Variation(
+        source="major", template="major_intensify", category="deepen", keyword="ignite"
+    )
+    longer = StatChangeOut(
+        field="effects[0].amount", label_zh="燃燒回合", before="5", after="6", direction="better"
+    )
+    added = StatChangeOut(
+        field="effects[1]", label_zh="效果", before=None, after="燃燒", direction="new"
+    )
+    assert option_headline(LIB, variation, KINDLE, (longer,)) == "專精點燃：造成的點燃更持久"
+    assert option_headline(LIB, variation, KINDLE, (added,)) == "專精點燃：這招開始會造成點燃"

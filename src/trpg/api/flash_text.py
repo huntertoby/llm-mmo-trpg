@@ -43,6 +43,20 @@ _DEFAULT_STEP = 1
 """模板沒寫 ``delta`` 時 ``{n}`` 填的數：這些模板的改法一次都是 ±1（``flash_ops``：觸發範圍
 ``delta or 1``、維持費 ±1、延長、觸發次數、作用範圍、持續回合各 +1；FL-1f）。"""
 _ELEMENTS = frozenset(e.value for e in Element)
+_VARIANT_WHERE = {
+    "wet": "站在水中",
+    "icy": "站在冰上",
+    "high": "站在高處",
+    "wall": "背靠牆壁",
+    "oil": "站在油上",
+    "puddle": "站在水窪裡",
+}
+"""戰場變奏 ``{terrain}``：變奏條件（``skill_composer.yaml`` 的 ``variant.conditions`` ID）→
+完整的動作片語（FL-1f 第二輪，填答第十節第 3 點）。查不到時寫 :data:`_VARIANT_SOMEWHERE`。"""
+_VARIANT_SOMEWHERE = "在特定地形"
+_INTENSIFY_NEW = "專精{keyword}：這招開始會造成{keyword}"
+"""``major_intensify`` 原本不會造成該關鍵字、引擎補上製造效果時的大標（第十節第 5 點）；
+原本就會造成時用模板的 ``headline_zh``（更持久）。"""
 _TAG_TERMS = {"charge": "power_up", "light": "power_down"}
 """選項卡類別標籤的說明卡（9.2：威力提高／降低只在說明卡）：模板的 ``op`` → 術語。"""
 
@@ -113,8 +127,20 @@ def _values(
         "range": "" if not isinstance(after.shape.range, int) else str(after.shape.range),
         "extra": (extra or "").split("（")[0],  # 條件「（……才有）」說明句另寫
         "keyword": _keyword_zh(library, variation),
+        "terrain": _variant_where(library, after),
     }
     return values
+
+
+def _variant_where(library: ContentLibrary, after: SkillDef) -> str:
+    """戰場變奏加上去的那個（``variants`` 最後一個，``evolution._variant`` 往後接）的條件片語。"""
+    if not after.variants:
+        return _VARIANT_SOMEWHERE
+    variant_id = after.variants[-1].id
+    for condition in library.composer.variant.conditions:
+        if variant_id.startswith(f"{condition.id}_") and condition.id in _VARIANT_WHERE:
+            return _VARIANT_WHERE[condition.id]
+    return _VARIANT_SOMEWHERE
 
 
 def _keyword_zh(library: ContentLibrary, variation: Variation) -> str:
@@ -137,6 +163,10 @@ def option_headline(
     text, delta = _pick(library, variation, "headline_zh")
     if text is None:
         return None
+    if variation.template == "major_intensify" and any(
+        c.direction == "new" and c.before is None for c in changes
+    ):
+        text = _INTENSIFY_NEW  # 原本不會造成，引擎補上製造效果（不是更持久）
     return _fill(text, _values(library, variation, after, changes, delta))
 
 
