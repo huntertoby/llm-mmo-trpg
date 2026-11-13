@@ -73,7 +73,41 @@ window.QBossGiantIcons = (() => {
   }
   const corePre = (c) => window.QIcons.H.glow(c, 24, 21, 19, CORE, 0.55);
 
+  /** 本體（A4 時加；美術 PM 3.5：灰燼之心整隻縮到 20px，前殼＋核心光；具名頭目本體用頭像的例外，同霧鎖真人）。
+   *  做法同 bossParts.js 第 3 版頭像：取 QBossGiant.fill() 的本體填色層（第 2 階段・熔殼不在：殼蓋掀開、核心露出；不描外框、不帶金外光），
+   *  高解析度畫一次快取，裁整隻（BODY.box，模型 px）貼進 ±BODY.span／2 圖樣單位，外框交給 QIcons.render（20px＝1px）。≤32px 在裝置像素上：
+   *   a. alpha 門檻 ≥0.5（同頭像可修 2：外緣半像素不留灰帶）；
+   *   b. 核心光加粗（20px 時晶體只剩 2 px、窩裡的光不到 1 px 寬）：核心位置一團 LAVA_HOT 柔光＋貼整數像素的晶體塊（CORE 本色＋左上 1 px 亮點）；
+   *   c. 前殼三隻甲蟲的火眼加粗：兩眼縮下來不到 1 px 間距，合成一顆 1 px 熔岩色點（貼整數像素）。b、c 只在 o.small。 */
+  const BODY = { lift: 1.25, st: { phase: 2, shell: 0, t: 300 }, box: [-78, -159, 156, 160], span: 22.6, z: 6, core: [0, -73], eyes: [[-47, -15], [0, -14], [47, -15]] };
+  let bodyCache = null;
+  const bodyFill = () => bodyCache ?? (bodyCache = window.QBossGiant.fill(BODY.st, BODY.z));
+  function bodyGlyph(c, o) {
+    const F = bodyFill(), [bx, by, bw, bh] = BODY.box, k = BODY.span / bw;
+    const put = (g) => { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(F.canvas, F.ox + bx * F.z, F.oy + by * F.z, bw * F.z, bh * F.z, -BODY.span / 2, -(bh * k) / 2, BODY.span, bh * k); };
+    if (48 / o.u > 32) { c.save(); put(c); c.restore(); return; }
+    const Mg = c.getTransform(), Md = Mg.translate(-BODY.span / 2 - bx * k, -(bh * k) / 2 - by * k).scale(k, k); // 模型 px → 裝置像素
+    const W = c.canvas.width, Hh = c.canvas.height, L = document.createElement("canvas"); L.width = W; L.height = Hh;
+    const lg = L.getContext("2d", { willReadFrequently: true }); lg.setTransform(Mg); put(lg);
+    const img = lg.getImageData(0, 0, W, Hh), d = img.data;
+    for (let i = 3; i < d.length; i += 4) d[i] = d[i] >= 128 ? 255 : 0; // a
+    if (!o.flat) for (let i = 0; i < d.length; i += 4) { if (!d[i + 3]) continue; const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; if (lum < 120) for (let j = 0; j < 3; j++) d[i + j] = Math.min(255, Math.round(d[i + j] * BODY.lift + 6)); } // a2：玄武岩換亮一階（規則 6；同部位圖示 ROCK 換亮的做法，只動暗色像素，熔岩、核心不變）
+    lg.putImageData(img, 0, 0);
+    if (o.small && !o.flat) {
+      const dp = Math.max(1, Math.round(W / (48 / o.u))); // 裝置像素／CSS px（20px res1＝1、res2＝2）
+      const at = (mx, my) => { const p = Md.transformPoint(new DOMPoint(mx, my)); return [p.x, p.y]; };
+      lg.setTransform(1, 0, 0, 1, 0, 0);
+      const [cx, cy] = at(...BODY.core);
+      lg.save(); lg.fillStyle = LAVA_HOT; for (const [r, al] of [[3.6, 0.3], [2.6, 0.4]]) { lg.globalAlpha = al; lg.beginPath(); lg.arc(cx, cy, r * dp, 0, TAU); lg.fill(); } lg.restore(); // b：核心柔光
+      const bw2 = 2 * dp, bh2 = 3 * dp, x0 = Math.round(cx - bw2 / 2), y0 = Math.round(cy - bh2 / 2);
+      lg.fillStyle = CORE; lg.fillRect(x0, y0, bw2, bh2); lg.fillStyle = "#fff4d0"; lg.fillRect(x0, y0, dp, dp); // b：晶體塊
+      lg.fillStyle = LAVA; for (const [ex, ey] of BODY.eyes) { const [x, y] = at(ex, ey); lg.fillRect(Math.round(x - dp / 2), Math.round(y - dp / 2), dp, dp); } // c：火眼
+    }
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(L, 0, 0); c.restore();
+  }
+
   const GLYPH = {
+    body: { zh: "本體", d: bodyGlyph },
     vent: { zh: "熔岩噴口", d: ventGlyph },
     seam: { zh: "殼縫", d: seamGlyph },
     core: { zh: "核心", d: coreGlyph, pre: corePre },

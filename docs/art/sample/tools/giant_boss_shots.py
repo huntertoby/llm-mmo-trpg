@@ -49,6 +49,12 @@ SHOTS = [
     ("icons", "part=icons", DEST + "4a-icons.png"),
     ("icons-t1", "part=icons-t1", DEST + "4b-icons-t1.png"),
     ("icons-marks", "part=icons-marks", DEST + "4c-icons-marks.png"),
+    ("brk", "part=brk", DEST + "5a-break.jpg"),
+    ("brk-1600", "part=brk-t1&w=1600", DEST + "5b-break-1600-t1.png"),
+    ("brk-800", "part=brk-t1&w=800", DEST + "5c-break-800-t1.png"),
+    ("after", "part=after", DEST + "5d-after.png"),
+    ("shed-glow", "part=shed-glow", DEST + "5e-shed-glow.png"),
+    ("body-icon", "part=body-icon", DEST + "5f-body-icon.png"),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')

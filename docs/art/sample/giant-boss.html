@@ -62,13 +62,14 @@ function render(scene, view) {
     const row = list[i].row, inRow = []; for (; i < list.length && list[i].row === row; i++) inRow.push(list[i]);
     for (const it of inRow) {
       if (it.giant) {
-        g.setTransform(m); GB.draw(g, Gi.st, Gi.opt ?? {});
+        g.setTransform(m); GB.draw(g, Gi.st, Gi.opt ?? {}); if (Gi.flashPart) GB.flashPart(g, W, H, m, Gi.st, Gi.flashPart); // A4：破壞演出第 1 格的部位白閃
         if (Gi.hover && Gi.hover !== "body") GB.glowPart(g, W, H, m, Gi.st, Gi.hover, { dpr: view.res ?? 1 });
       } else { xf(g); OO.drawRing(g, it.u); const F = GB.mk(W, H), fc = F.getContext("2d"); xf(fc); OO.drawBody(fc, it.u, sc); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(F, 0, 0); }
     }
     for (const it of inRow) if (!it.giant && it.u.hp !== undefined) { xf(g); smallHud(g, it.u); }
   }
   if (Gi && Gi.marks) { g.setTransform(m); GB.drawMarks(g, Gi.parts ?? {}, { S: view.S, res: view.res ?? 1, hover: Gi.hover, melee: Gi.melee !== false }); }
+  if (Gi && Gi.st && Gi.st.fx) { g.setTransform(m); GB.breakFx(g, Gi.st, { S: view.S }); } // A4：破壞演出特效與「破」字記號，在所有單位與標示之上
   g.setTransform(1, 0, 0, 1, 0, 0);
   return cv;
 }
@@ -80,7 +81,7 @@ const U = {
   lizard: (o) => ({ kind: "creature", team: "enemy", spec: { body: "lizard", material: "magma", size: "small" }, hp: 0.9, ...o }), // heart_ember_lizard 的 doll
 };
 /** 只放一隻巨型頭目：5×5 格（北一排岩漿、3×3、南一排石地）的小場景。 */
-const solo = (st, o = {}) => ({ cols: 12, rows: 12, giant: { x: 5, y: 3, st, opt: o.opt, hover: o.hover, parts: o.parts, melee: o.melee, marks: o.marks }, units: o.units ?? [] });
+const solo = (st, o = {}) => ({ cols: 12, rows: 12, giant: { x: 5, y: 3, st, opt: o.opt, hover: o.hover, parts: o.parts, melee: o.melee, marks: o.marks, flashPart: o.flashPart }, units: o.units ?? [] });
 const soloView = (S, res = 1, pad = 0.35) => ({ S, res, x0: (4 - pad) * T, y0: (1 - 0.15) * T, w: (3 + 2 * pad) * T, h: (4.15 + pad) * T });
 
 // ---- 拼圖（同 boss-parts.html 的 sheet／publish） ----
@@ -316,6 +317,97 @@ PARTS["icons-marks"] = () => {
   }
   publish(sheet(1340, blocks), "image/png");
 };
+// ================= 5 A4 破壞演出（三種 × 5 格）、破壞後外觀、飛行殼片、本體圖示 =================
+const FR = ["1 命中 80ms", "2 裂開 80ms", "3 斷開 160ms", "4 落地 160ms", "5 定格"];
+const BRK_ROWS = [
+  { id: "vent", short: "噴口封住", zh: "熔岩噴口封住（第 2 階段）", base: { phase: 2, shell: 0, t: 300 } },
+  { id: "seam", short: "殼縫破", zh: "殼縫破（第 1 階段：熔殼掉落）", base: { phase: 1, t: 300 }, shed: true },
+  { id: "core", short: "核心破", zh: "核心破（第 2 階段・熔心爆蓄力中）", base: { phase: 2, shell: 0, t: 300 } },
+  { id: "seam", zh: "殼縫破（第 2 階段：熔殼已不在）", base: { phase: 2, shell: 0, t: 300 } },
+];
+/** 第 k 格的狀態：0～3 帶 fx；第 5 格（k＝4）拿掉 fx、改成 broken 旗標（＝破壞後定稿，證明定格和之後的外觀是同一張）。 */
+function brkSt(r, k) {
+  const st = { ...r.base, fx: { part: r.id, k, side: 1 } };
+  if (k >= 4) { delete st.fx; st.broken = { [r.id]: true }; }
+  if (r.shed) { if (k >= 2) { st.shell = 0; st.breakT = [0, 0, 0.35, 0.72, 1][k]; } else st.shell = 1; }
+  return st;
+}
+const brkCv = (r, k, S, res = 1) => render(solo(brkSt(r, k), { flashPart: k === 0 ? r.id : undefined }), soloView(S, res, 0.3));
+const cropCv = (src, x, y, w, h) => { const o = GB.mk(w, h); o.getContext("2d").drawImage(src, x, y, w, h, 0, 0, w, h); return o; };
+const BRK_NOTE = "5 格約 0.6 秒（段 1 同：80／80／160／160 ms＋定格），不擋回合；微震照現行 impact.ts partBreakShakes（SHAKE_SPEC.heavy，整隻 3×3 一起震；靜態圖看不出）。不出「○○ 破！」浮字（PB-1e 美術 PM 裁定），只有「破」字記號：第 3 格出現、第 4 格淡到 55% 並上移 3、第 5 格消失。特效層畫在所有單位與部位格標示之上。";
+PARTS.brk = () => {
+  const S = 1.45, rows = BRK_ROWS.map((r) => ({ cells: FR.map((zh, k) => ({ cv: brkCv(r, k, S), cap: `${r.zh}・${zh}` })), gap: 10 }));
+  publish(sheet(1340, [
+    { title: "5a. A4 破壞演出：三種部位 × 5 格（向量直接畫到 1.45 倍；1600 是 1.31）" },
+    { note: BRK_NOTE + "\n噴口：1 三支噴口白閃＋白黃小星 → 2 錐身裂紋、口裡熔岩過熱、碎屑 → 3 冷殼塞進口（封住）、三股黑煙、大星＋光環、「破」→ 4 黑煙往上散開變淡、口緣落灰 → 5 封住定稿（黑殼塞、冷掉的溢流痕）。\n殼縫：1 兩側裂縫白閃、被打那側小星 → 2 裂縫過熱發白、碎屑（玄武岩＋熔岩）→ 3 裂縫冷到暗紅、熔殼殼片彈起、兩側冒白汽、大星＋光環、「破」→ 4 裂縫全黑、殼片飛過噴口（離開佔格＝不帶金外光）、縫下落灰 → 5 冷黑定稿、熔殼不在。\n核心：1 核心白閃（蓄力光、吸氣火星還在）→ 2 晶體裂紋、核心光縮小、蓄力光減弱 → 3 核心光一縮（0.7 倍、變暗）、12 顆火星四散、大星＋光環、蓄力光幾乎熄、「破」→ 4 火星飛遠下墜變淡、核心冒一縷灰煙、蓄力光熄 → 5 核心破定稿（暗晶體、三道深色裂痕、窩裡的光剩 25%）。\n第 4 列：第 2 階段殼縫破（熔殼本來就不在）：同第 2 列，只是沒有殼片。" },
+    ...rows,
+  ]));
+};
+PARTS["brk-t1"] = () => {
+  const W = P.get("w") === "800" ? 800 : 1600, S = W === 800 ? S800 : S1600, z = W === 800 ? 2 : 1;
+  const blocks = [{ title: `5${W === 800 ? "c" : "b"}. 破壞演出 ${W} 寬真 1 倍${z > 1 ? `、最近鄰 ×${z}` : ""}（地圖縮放 ${S.toFixed(2)}；「破」字記號 ×${GB.popScale(S).toFixed(2)}）` },
+    { note: W === 800 ? `800 寬：「破」整個記號反向放大 ×${GB.popScale(S).toFixed(2)}（半徑 ${(10 * GB.popScale(S)).toFixed(1)}、外圈 ${(1.5 * GB.popScale(S)).toFixed(1)}、字 ${(14 * GB.popScale(S)).toFixed(1)} 模型 px ＝ 畫面字 12 px），位置照模型 px 不放大。下排：第 3 格（斷開）上半部最近鄰 ×4。` : "1600 寬：「破」不放大（字 18.3 px）。每列 5 格。" }];
+  for (const r of BRK_ROWS.slice(0, 3)) blocks.push({ cells: FR.map((zh, k) => (z > 1 ? nn(brkCv(r, k, S), z, `${r.short}・${zh}`) : { cv: brkCv(r, k, S), cap: `${r.short}・${zh}` })), gap: 10 });
+  if (W === 800) blocks.push({ cells: BRK_ROWS.slice(0, 3).map((r) => { const cv = brkCv(r, 2, S); return nn(cropCv(cv, 0, 0, cv.width, Math.round(cv.height * 0.62)), 4, `${r.short}・第 3 格上半 ×4`); }), gap: 12 });
+  publish(sheet(1340, blocks), "image/png");
+};
+const AFTER = [
+  [{ phase: 2, shell: 0, t: 300 }, "完好（第 2 階段）"],
+  [{ phase: 2, shell: 0, t: 300, broken: { vent: true } }, "噴口封住"],
+  [{ phase: 2, shell: 0, t: 300, broken: { seam: true } }, "殼縫破"],
+  [{ phase: 2, shell: 0, t: 300, broken: { core: true } }, "核心破"],
+  [{ phase: 2, shell: 0, t: 300, broken: { vent: true, seam: true, core: true } }, "全破（第 2 階段）"],
+  [{ phase: 3, shell: 0, t: 300, broken: { vent: true, seam: true, core: true } }, "全破（第 3 階段・熔毀）"],
+];
+PARTS.after = () => {
+  const blocks = [{ title: "5d. 破壞後外觀定稿（持續到戰鬥結束）：1600 真 1 倍、部位特寫最近鄰 ×3；800 真 1 倍最近鄰 ×3" },
+    { note: "噴口封住：口裡的熔岩換成冷殼塞（鼓出口緣一點、左上亮灰、兩道灰裂），口緣的溢流冷成黑色硬流痕；熔岩噴發的熔岩柱不再出現。殼縫破：裂縫凝成黑殼（外緣 #1a1310、縫心 #2e2420），受光那側一條灰白冷殼邊＋兩粒冷渣，沒有熱光。核心破：晶體變暗（#7a5a46）、三道深色裂痕＋一點餘燼、比完好小一點（0.92）、窩裡的光剩 25%；第 3 階段的白熱裂紋不再閃（換成暗裂痕），殼窩下緣的熔岩流照舊（熔毀是頭目本身的狀態）。" }];
+  const vw = soloView(S1600, 1, 0.3), cells = AFTER.map(([st, zh]) => ({ cv: render(solo(st), vw), cap: `1600・${zh}` }));
+  blocks.push({ cells: cells.slice(0, 3), gap: 12 }, { cells: cells.slice(3), gap: 12 });
+  const S = S1600, tile = (cv, c0, r0, nc, nr) => cropCv(cv, Math.round((4 * T + c0 * T - vw.x0) * S) - 4, Math.round((2 * T + r0 * T - vw.y0) * S) - 6, Math.round(nc * T * S) + 8, Math.round(nr * T * S) + 8);
+  const ok = cells[0].cv, all = cells[4].cv;
+  blocks.push({ cells: [nn(tile(ok, 0, -0.35, 3, 1.4), 3, "噴口：完好 ×3"), nn(tile(all, 0, -0.35, 3, 1.4), 3, "噴口：封住 ×3")], gap: 12 });
+  blocks.push({ cells: [nn(tile(ok, 2, 1, 1, 1), 3, "東殼縫：完好"), nn(tile(all, 2, 1, 1, 1), 3, "東殼縫：破"), nn(tile(ok, 1, 1, 1, 1), 3, "核心：完好"), nn(tile(all, 1, 1, 1, 1), 3, "核心：破")], gap: 12 });
+  const v8 = soloView(S800, 1, 0.3);
+  blocks.push({ cells: AFTER.map(([st, zh]) => nn(render(solo(st), v8), 3, `800・${zh} ×3`)), gap: 10 });
+  publish(sheet(1340, blocks), "image/png");
+};
+PARTS["shed-glow"] = () => {
+  const S = S1600, vw = { S, res: 1, x0: 4 * T, y0: 0.2 * T, w: 3 * T, h: 5 * T }, fr = [0.5, 0.7, 0.85];
+  const row = (legacy) => fr.map((bt) => nn(render(solo({ phase: 1, shell: 0, breakT: bt, t: 300 }, { opt: legacy ? { legacyPlates: true } : undefined }), vw), 2, `${legacy ? "第 2 版" : "A4"}・breakT ${bt}`));
+  publish(sheet(1340, [{ title: "5e. 可修 B：殼片離開佔格（中心過北緣 y −144 或兩側 |x| > 72）後不帶頭目金外光，只留黑外框、和本體分開淡出（1600 真 1 倍，最近鄰 ×2）" },
+    { note: "上排第 2 版（殼片畫在本體圖層裡，跟著包金外光，淡出時半透明殼片＋實心外框）；下排 A4（離開佔格的殼片每片自己包黑外框、外框跟著殼片一起淡）。還在佔格裡的殼片照舊在本體圖層裡（剛彈起那一下仍是頭目的一部分）。" },
+    { cells: row(true), gap: 12 }, { cells: row(false), gap: 12 }]), "image/png");
+};
+PARTS["body-icon"] = () => {
+  const ids = ["body", ...IDS];
+  const big = (() => { const e = GI.GLYPH.body, def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); } }; const ic = QIcons.render(def, 96, 1, { ow: QIcons.outlinePx(20) * 4.8 }); const c = GB.mk(128, 128), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, 128, 128); g.drawImage(ic, 16, 16); return { cv: c, cap: "本體・96（向量、沒有加粗，對照用）" }; })();
+  const row = (px, res, z) => STATES.map(([st, zh]) => nn(icCell("body", px, res, st), z, `本體・${zh}`));
+  const sil = (() => { const ic = GI.icon("body", 20, 1), c = GB.mk(26, 26), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, 26, 26); g.drawImage(GB.tint(ic, "#f2e6c8"), 3, 3); return nn(c, 6, "本體・剪影 20 真 1 倍"); })();
+  const side = ids.map((id) => nn(icCell(id, 20, 1, "ok"), 6, `${GI.GLYPH[id].zh}・20 真 1 倍`));
+  // 選單（照霧鎖真人 drawMenu 的列：navy 底、金框、每列 26、圖示 20＋名稱 12px）：本體可打、噴口已破壞、殼縫打不到、核心未露出
+  const menu = (res) => {
+    const W = 196, H = 4 * 26 + 8, c = GB.mk(W * res, H * res), g = c.getContext("2d"); g.scale(res, res);
+    g.fillStyle = "#1e2236"; g.fillRect(0, 0, W, H); g.strokeStyle = "#c8a868"; g.lineWidth = 1; g.strokeRect(0.5, 0.5, W - 1, H - 1);
+    [["body", "ok", "本體"], ["vent", "broken", "熔岩噴口　已破壞"], ["seam", "off", "殼縫　射程不夠"], ["core", "hidden", "核心　呼吸階段才露出"]].forEach(([id, st, zh], i) => {
+      const y = 4 + i * 26; let ic = GI.icon(id, 20, res); if (st !== "ok") ic = grayIc(ic);
+      g.drawImage(ic, 6, y + 3, 20, 20); if (st === "broken") GI.xMark(g, 6, y + 3, 20);
+      g.font = `12px ${FONT}`; g.textBaseline = "middle"; g.fillStyle = st === "ok" ? "#f0e6cc" : st === "broken" ? "#ff6a5a" : "#9a98a6"; g.fillText(zh, 32, y + 13);
+    });
+    return c;
+  };
+  document.documentElement.dataset.audit = icAudit("body", 20);
+  publish(sheet(1340, [
+    { title: "5f. 選單「本體」列圖示：灰燼之心整隻縮到 20px（第 2 階段：前殼＋核心光；美術 PM 3.5）" },
+    { note: "取 QBossGiant.fill() 的本體填色層（不描外框、不帶金外光）整隻縮進 48 格（圖樣 22.6 單位寬），外框照 QIcons.outlinePx（20px＝1px）。≤32px 在裝置像素上：alpha 門檻 ≥0.5；暗色像素換亮一階（×1.25＋6，規則 6）；核心光加粗（柔光＋2×3 px 晶體塊、左上 1 px 亮點）；前殼三隻甲蟲的火眼合成一顆 1 px 熔岩色點。四態照頭目部位-移植需求.md 2.1（打不到、未露出＝去色＋亮度 0.8＋透明度 0.45；已破壞＝紅×）；本體實際上只會用到「一般」。自查（20 真 1 倍，不算外框色）：" + icAudit("body", 20) },
+    { cells: [big] },
+    { title: "20px・真 1 倍 ×6：一般｜打不到｜未露出｜已破壞" }, { cells: row(20, 1, 6), gap: 8 },
+    { title: "20px・2 倍內部解析度 ×3" }, { cells: row(20, 2, 3), gap: 8 },
+    { title: "和三個部位並排（20 真 1 倍 ×6）＋剪影" }, { cells: [...side, sil], gap: 8 },
+    { title: "選單情境：真 1 倍最近鄰 ×3｜2 倍內部解析度（原尺寸）" }, { cells: [nn(menu(1), 3, "選單 20 真 1 倍 ×3（字為字型渲染，只看圖示）"), { cv: menu(2), cap: "選單 2 倍內部解析度（遊戲 DPR 2）" }], gap: 16 },
+  ]), "image/png");
+};
+PARTS["brk-probe"] = () => { const r = BRK_ROWS[+(P.get("r") || 0)], k = +(P.get("k") || 0), Z = +(P.get("z") || 3); const cv = brkCv(r, k, Z); publish(sheet(Math.max(800, cv.width + 40), [{ cells: [{ cv, cap: `${r.zh}・${FR[k]}` }] }])); };
 // ================= 指紋（A4 加）：A1～A3 過審圖的畫布逐一 FNV-1a，改共用畫法前後比對 =================
 const fnv = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let h = 2166136261; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619); return (h >>> 0).toString(16).padStart(8, "0"); };
 PARTS.hash = () => {
@@ -327,6 +419,8 @@ PARTS.hash = () => {
   const vw = { S: S1600, res: 1, x0: 3.7 * T, y0: 0.2 * T, w: 3.6 * T, h: 5 * T };
   for (const bt of [0, 0.25, 0.5, 0.7, 0.85, 1]) out[`shed-${bt}`] = fnv(render(solo({ phase: 1, shell: 0, breakT: bt, t: 300 }), vw));
   Object.assign(out, icHash());
+  for (const res of [1, 2]) out[`body-20-${res}`] = fnv(GI.icon("body", 20, res)); // A4 本體圖示
+  BRK_ROWS.forEach((r, i) => FR.forEach((_, k) => { out[`brk${i + 1}-${k + 1}-1600`] = fnv(brkCv(r, k, S1600)); })); // A4 破壞演出
   document.documentElement.dataset.hash = JSON.stringify(out);
   publish(sheet(400, [{ title: "hash" }]));
 };
