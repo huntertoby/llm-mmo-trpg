@@ -7,10 +7,14 @@ import { heightAt, occluded } from "../../battle/elevation";
 import { RING } from "../artPalette";
 import { silhouette } from "../heightArt";
 import { southArrowPlace } from "../rowLayers";
-import { SOUTH_ARROW_LABEL } from "../minMark";
+import { CHARGE_BADGE_LABEL, HP_BAR_LABEL, PART_STRIP_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL } from "../minMark";
 import { neighborFaces } from "../badgeLayout";
 import { mapEdgeOf, NO_EDGE } from "../rowLayout";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, isLinked, isProne, placeCreatureBody, PRONE, ringScale, type BodyFrame } from "../unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, dollPx, isLinked, isProne, PART_DEBRIS_LABEL, placeCreatureBody, PRONE, ringScale, specOfUnit, type BodyFrame } from "../unitSprite";
+import { dollKey } from "../appearance";
+import { partGlowCanvas } from "../bossPartArt";
+import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "../paperdoll";
+import type { PartFx } from "../../battle/partStrip";
 import { roofCovers } from "../sceneryModel";
 import type { InkPose } from "../inkPose";
 import { creaturePerches, LINK_COLOR } from "../inkCreature";
@@ -24,6 +28,10 @@ import { DOLL_PX } from "./rendererBase";
 
 /** CB-3：鳥留在空中等攻擊的最長時間（效果時鐘毫秒；正常是走完到下一步出招之間的停頓，遠小於這個數）。 */
 const ALOFT_MAX_MS = 4000;
+/** PB-1e：選單打開時頭目的狀態列與蓄力徽章的透明度（美術移植需求 3.5）。 */
+export const PART_MENU_DIM = 0.4;
+/** PB-1e：選單滑過部位時的亮起節點。 */
+export const PART_GLOW_LABEL = "part-glow";
 
 const T = TILE_SIZE;
 
@@ -66,7 +74,15 @@ export abstract class UnitLayer extends HighlightLayer {
    * 6F-22b（美術 PM 6F-22 檢查第 2 節第 1 題）：屋頂蓋住屋後的人（`roofCovers`，同樣畫剪影）比照。
    */
   private hudLayerOf(model: DrawModel, u: UnitDraw): RenderLayer | null {
+    // PB-1e（美術移植需求 3.4）：有部位的頭目南邊那格站著人時，整組 HUD 一起改掛最上層（部位小格才不被那個人的頭蓋住）
+    if (u.partHudUp === true) return this.hudTop;
     return occluded(model, u) || roofCovers(model.scenery, u) ? this.hudTop : null;
+  }
+
+  /** PB-1e：頭目 HUD 改掛最上層時，朝南三角形（已縮小，`facingArrowPoly`）也一起；要在 `attachMarks`、`attachHud` 之後呼叫。 */
+  private attachPartHud(u: UnitDraw, sprite: Container): void {
+    if (u.partHudUp !== true) return;
+    for (const n of sprite.children) if (n.label === SOUTH_ARROW_LABEL && n.parentRenderLayer !== this.hudTop) this.hudTop.attach(n);
   }
 
   protected resetSouthArrow(sprite: Container): void {
@@ -75,7 +91,9 @@ export abstract class UnitLayer extends HighlightLayer {
   }
 
   /** 一個單位：畫在所在排（剪影、外框在全部單位畫完後由 `OcclusionLayer.drawOcclusion` 決定）。 */
-  protected drawUnit(model: DrawModel, u: UnitDraw): void {
+  protected drawUnit(model: DrawModel, u0: UnitDraw): void {
+    const fx = this.partFxOf.get(u0.id); // PB-1e：破壞演出中重畫場景，照演出那一格畫
+    const u = fx === undefined || u0.parts === undefined ? u0 : { ...u0, partFx: fx };
     const faces = neighborFaces({ x: u.x, y: u.y, height: heightAt(model, u) }, model.units.map((o) => ({ x: o.x, y: o.y, height: heightAt(model, o), downed: o.downed }))); // 6F-13
     this.facesOf.set(u.id, faces);
     const sprite = buildUnitSprite(this.art, this.pulses, u, faces, { edge: mapEdgeOf(model, u) }); // 6F-16：地圖邊緣
@@ -86,6 +104,7 @@ export abstract class UnitLayer extends HighlightLayer {
     else this.rows.row(u.y).units.addChild(sprite);
     this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
     this.rows.attachHud(sprite, this.hudLayerOf(model, u)); // 6F-22：被高台擋住時 HUD 畫在高台之上
+    this.attachPartHud(u, sprite);
     this.place(sprite, u, u.x * T + T / 2, u.y * T + T / 2);
     if (!u.downed) {
       this.unitSprites.set(u.id, sprite);
@@ -266,9 +285,102 @@ export abstract class UnitLayer extends HighlightLayer {
     if (parent !== null) parent.addChildAt(fresh, parent.getChildIndex(old));
     this.rows.attachMarks(fresh, this.model === null ? null : this.southArrowTop(this.model, next, fresh));
     this.rows.attachHud(fresh, this.model === null ? null : this.hudLayerOf(this.model, next));
+    this.attachPartHud(next, fresh);
     old.destroy({ children: true });
     this.unitSprites.set(unitId, fresh);
     this.unitDrawOf.set(unitId, next);
     return fresh;
+  }
+
+  // ---- PB-1e：頭目部位（破壞演出蓋過的樣子、選單滑過的亮起與淡化）---------------------------
+
+  /** 破壞演出中蓋過的樣子（單位 ID → 這一格）；重畫場景時 `drawUnit` 照它畫。 */
+  protected readonly partFxOf = new Map<string, PartFx>();
+
+  /**
+   * 破壞演出換格（`resultEffects` 的 `part_break`）：人物（部位白閃、裂紋、斷了）、頭頂小格、地上的掉落物照這一格。
+   * 有片段在播（受擊）時片段下一格自己換貼圖；沒有時直接換站好的貼圖。`null`＝回到伺服器給的樣子。
+   */
+  protected setPartFx(unitId: string, fx: PartFx | null): void {
+    if (fx === null) this.partFxOf.delete(unitId);
+    else this.partFxOf.set(unitId, fx);
+    const draw = this.unitDrawOf.get(unitId);
+    if (draw === undefined || draw.parts === undefined) return;
+    const { partFx: _old, ...rest } = draw;
+    const next: UnitDraw = fx === null ? rest : { ...rest, partFx: fx };
+    this.unitDrawOf.set(unitId, next);
+    const sprite = this.unitSprites.get(unitId);
+    if (sprite === undefined || sprite.destroyed) return;
+    this.rebuildPartNodes(sprite, next);
+    if (!this.idle.isHeld(unitId)) this.restBody(unitId, sprite);
+  }
+
+  /** 頭頂部位小格、地上的掉落物換成 `u` 的樣子（同一個單位節點、同一層）。 */
+  private rebuildPartNodes(sprite: Container, u: UnitDraw): void {
+    const fresh = buildUnitSprite(this.art, this.pulses, u, this.facesOf.get(u.id) ?? [], { edge: this.model === null ? NO_EDGE : mapEdgeOf(this.model, u) });
+    for (const label of [PART_STRIP_LABEL, PART_DEBRIS_LABEL]) {
+      const old = sprite.children.find((n) => n.label === label);
+      const now = fresh.children.find((n) => n.label === label);
+      const layer = old?.parentRenderLayer ?? sprite.children.find((n) => n.label === HP_BAR_LABEL)?.parentRenderLayer ?? null;
+      const body = sprite.children.findIndex((n) => n.label === BODY_LABEL);
+      const at = old !== undefined ? sprite.getChildIndex(old) : label === PART_DEBRIS_LABEL ? Math.max(0, body) : sprite.children.length;
+      if (old !== undefined) old.destroy({ children: true });
+      if (now === undefined) continue;
+      sprite.addChildAt(now, Math.min(at, sprite.children.length));
+      if (label === PART_STRIP_LABEL) {
+        if (layer !== null) layer.attach(now);
+        this.scaleMark(now);
+      }
+    }
+    fresh.destroy({ children: true });
+  }
+
+  /** 選部位小選單：哪個頭目、滑過哪個部位（`null`＝本體或沒滑過）。 */
+  private partFocus: { unitId: string; part: string | null } | null = null;
+  /** 目前畫上去的亮起與淡化（換焦點、重畫場景時先拿掉）。 */
+  private focusNodes: { glow: Sprite | null; dimmed: Container[] } = { glow: null, dimmed: [] };
+
+  /**
+   * PB-1e（美術移植需求 3.5）：選單打開時頭目的狀態列（含「+N」）與蓄力徽章淡到 40%；滑過某個部位時那個部位亮起。
+   * `unitId` ＝ `null` ＝選單關了。HP 條、護盾條、部位條不淡。
+   */
+  setPartFocus(unitId: string | null, part: string | null): void {
+    this.partFocus = unitId === null ? null : { unitId, part };
+    this.applyPartFocus();
+  }
+
+  /** 照目前的焦點畫亮起與淡化（重畫場景後 `BattleRenderer.draw` 再呼叫一次）。 */
+  protected applyPartFocus(): void {
+    const prev = this.focusNodes;
+    if (prev.glow !== null && !prev.glow.destroyed) prev.glow.destroy();
+    for (const n of prev.dimmed) if (!n.destroyed) n.alpha = 1;
+    this.focusNodes = { glow: null, dimmed: [] };
+    const f = this.partFocus;
+    if (f === null) return;
+    const sprite = this.unitSprites.get(f.unitId);
+    const draw = this.unitDrawOf.get(f.unitId);
+    if (sprite === undefined || sprite.destroyed || draw === undefined) return;
+    const dimmed = sprite.children.filter((n) => n.label === STATUS_ROW_LABEL || n.label === CHARGE_BADGE_LABEL);
+    for (const n of dimmed) n.alpha = PART_MENU_DIM;
+    this.focusNodes = { glow: this.partGlow(sprite, draw, f.part), dimmed };
+  }
+
+  /** 滑過的部位亮起（貼在身體之上、同一個位置與大小）；本體、破了、畫不出來時不畫。 */
+  private partGlow(sprite: Container, u: UnitDraw, part: string | null): Sprite | null {
+    if (part === null || u.downed || !(u.parts ?? []).some((p) => p.id === part && !p.broken)) return null;
+    const spec = specOfUnit(u);
+    const k = dollPx(u);
+    const res = this.art.figureRes(k);
+    const tex = this.art.canvas(`pglow|${res}|${part}|${dollKey(spec, u.facing, false)}|${k.toFixed(3)}`, () => partGlowCanvas(spec, u.facing, part, res, k));
+    if (tex === null) return null;
+    const glow = new Sprite(tex);
+    glow.label = PART_GLOW_LABEL;
+    glow.anchor.set(0.5, DOLL_FOOT_Y / DOLL_H);
+    glow.width = DOLL_W * k;
+    glow.height = DOLL_H * k;
+    glow.position.set(0, FEET);
+    const body = sprite.children.findIndex((n) => n.label === BODY_LABEL);
+    sprite.addChildAt(glow, body < 0 ? sprite.children.length : body + 1);
+    return glow;
   }
 }

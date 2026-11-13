@@ -42,7 +42,7 @@ describe("破壞演出（占位）", () => {
     const vfx = vfxFor(events, view, cards);
     const s = specialsFor(vfx, events, view, view).filter((x) => x.kind === "part_break");
     const r = vfx.reactions?.find((x) => x.unitId === BOSS);
-    expect(s).toEqual([{ kind: "part_break", pos: at(3, 2), unitId: BOSS, atMs: r!.atMs }]);
+    expect(s).toEqual([{ kind: "part_break", pos: at(3, 2), unitId: BOSS, atMs: r!.atMs, partId: "whisk" }]); // PB-1e：帶部位（演出畫在那個部位上）
     expect(PART_BREAK_STOP_MS).toBe(70);
   });
 
@@ -63,9 +63,8 @@ describe("破壞演出（占位）", () => {
     expect(plain.shakes ?? []).toEqual([]);
   });
 
-  it("不動 render/battle/unitLayer.ts（不新增貼圖）：演出全在 specials／impact／feedback", () => {
-    expect(readFile(SRC_DIR, "render/battle/unitLayer.ts")).not.toMatch(/part_broken|part_break/);
-    expect(readFile(SRC_DIR, "render/resultEffects.ts")).toMatch(/case "part_break":\s*\n\s*return \[\];/);
+  it("PB-1e 起正式演出接在 resultEffects 的 part_break（PB-1c「不動 unitLayer」的限制解除）", () => {
+    expect(readFile(SRC_DIR, "render/resultEffects.ts")).toMatch(/case "part_break": \{[\s\S]*?partBreakEffect\(host, s, at, o\.scale\)/);
   });
 });
 

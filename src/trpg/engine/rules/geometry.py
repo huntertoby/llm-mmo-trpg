@@ -118,8 +118,40 @@ def _line_clear(
     return not any(_blocks_line(state, cell, limit, lob, walls) for cell in bresenham(a, b)[1:-1])
 
 
+def _giant_cells(
+    state: BattleState, ends: tuple[XY, XY], ignore: UnitState | None
+) -> frozenset[XY]:
+    """擋視線的巨型單位佔格（GB-1a，05 5.12.4 第 5 點：身體擋住後面，同牆）。不算 ``ignore`` 與
+    佔著任一端點的巨型單位（打它自己的任一格、它自己往外看都不擋）。"""
+    cells: set[XY] = set()
+    for unit in state.units.values():
+        if unit.footprint == 1 or not unit.alive or unit is ignore:
+            continue
+        if unit.covers(*ends[0]) or unit.covers(*ends[1]):
+            continue
+        half = unit.footprint // 2
+        x, y = unit.xy
+        cells.update(
+            (cx, cy) for cy in range(y - half, y + half + 1) for cx in range(x - half, x + half + 1)
+        )
+    return frozenset(cells)
+
+
+def _giant_blocks(line: tuple[XY, XY], cells: frozenset[XY], lob: int) -> bool:
+    """直線（拋射時只看攻擊方向，否則兩個方向）穿過巨型單位的佔格（不含兩端）。"""
+    a, b = line
+    paths = [bresenham(a, b)] if lob > 0 else [bresenham(a, b), bresenham(b, a)]
+    return any(cell in cells for path in paths for cell in path[1:-1])
+
+
 def has_line_of_sight(
-    state: BattleState, a: XY, b: XY, *, lob: int = 0, viewer: UnitState | None = None
+    state: BattleState,
+    a: XY,
+    b: XY,
+    *,
+    lob: int = 0,
+    viewer: UnitState | None = None,
+    ignore_unit: UnitState | None = None,
 ) -> bool:
     """``a`` 與 ``b`` 之間的視線（對稱：``has_line_of_sight(a, b) == has_line_of_sight(b, a)``）。
 
@@ -131,8 +163,13 @@ def has_line_of_sight(
     - ``lob``（拋射，Phase 3-24a1，弓）：可越過這麼多層高的障礙（高度差與物件；牆壁與黑暗不行）。
       有 ``lob`` 時不再對稱——只看攻擊方向（``a`` 是射擊者）。
     - ``viewer``（Phase 3R-2）：看的人；種族被動讓他的視線距離改變（只影響距離，不影響遮擋）。
+    - 巨型單位（GB-1a）的佔格當成牆（拋射也越不過）；``ignore_unit`` 與佔著任一端點的巨型單位
+      不擋。沒有巨型單位時這一步不改任何結果。
     """
     if manhattan(a, b) > sight_range(state, viewer):
+        return False
+    giants = _giant_cells(state, (a, b), ignore_unit)
+    if giants and _giant_blocks((a, b), giants, lob):
         return False
     limit = max(state.tile(*a).height, state.tile(*b).height) + 1
     walls = _sight_walls(state)

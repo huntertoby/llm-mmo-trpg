@@ -32,6 +32,8 @@ def enter_surface(ctx: Ctx, unit: UnitState, *, own_move: bool = False) -> list[
     surface = ctx.state.tile(*unit.xy).surface
     if surface is Surface.NONE or is_flying(unit):  # 會飛的單位不受地面表面影響（3-33e2b）
         return []
+    if unit.footprint > 1:  # 巨型單位（GB-1a，T10）：不觸發表面的進入效果
+        return []
     definition = ctx.rules.surface_def(surface)
     if definition.on_enter is None:
         return []

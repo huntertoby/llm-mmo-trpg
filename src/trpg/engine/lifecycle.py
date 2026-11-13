@@ -401,4 +401,5 @@ def make_unit(
         phases=template.phases,
         parts=template.parts,
         part_hp=opening_part_hp(template.parts, max_hp),  # 開場當下的最大 HP（之後不重算）
+        footprint=template.footprint,  # 佔格（GB-1a）
     )

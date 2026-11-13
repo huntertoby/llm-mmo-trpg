@@ -81,6 +81,20 @@ export interface DollSpec {
   rarity?: "epic" | "legendary";
   /** 圖騰：不畫小人，畫一根圖騰柱。 */
   totem?: boolean;
+  /** PB-1e：頭目部位的外觀（`render/bossPartArt.ts` 的 `dollPartsOf`）；沒有部位的單位不帶這個欄位（鍵與畫法都不變）。 */
+  parts?: DollParts;
+}
+
+/** PB-1e：頭目部位（霧鎖真人）畫在人物上的樣子。 */
+export interface DollParts {
+  /** 拂塵破了：剪短。 */
+  whisk?: boolean;
+  /** 長劍破了：斷在鋸齒口。 */
+  sword?: boolean;
+  /** 氣海：露出時的氣旋（`qi`）、破了的裂痕（`crack`）。 */
+  dantian?: "qi" | "crack";
+  /** 破壞演出的前兩格（部位還在）：`flash`＝部位整塊白閃、`crack`＝部位上的亮金白裂紋。 */
+  fx?: { part: string; k: "flash" | "crack" };
 }
 
 /** 每個欄位認得的 `kind`；不在清單內的該欄位不畫。 */

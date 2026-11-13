@@ -5,7 +5,8 @@
 // 劍穗、傀儡線要武器在畫布上的位置：借 POSE.probe 記下每把武器的變換（樣張 setPose({probe})）。
 // 座標同 qDoll：腳底 (0,0)、頭心 (0,−29)；側面一律朝東畫（外層鏡像），左右手、左右腰照朝西換邊（ww）。確定性：沒有亂數。
 import type { Ctx } from "./artDraw";
-import { fill, getM, mix, rr, setM, TAU, tp, type M6, type QItem, type QPose, type QUnit, type QView } from "./qCore";
+import { fill, getM, mix, rr, setM, TAU, tp, type M6, type P2, type QItem, type QPose, type QUnit, type QView } from "./qCore";
+import { belowBreak, BRK_SIDE_DY } from "./qWeapons";
 import { HELD_KINDS, type QHeldItem } from "./qNpcHeld";
 
 /** 一個新部件：k＝種類；edge＝亮一階的邊（皮圍裙）；pocket＝圍裙口袋；cap＝戴帽時護目鏡架在帽沿上；who＝傀儡線在哪隻手。 */
@@ -95,9 +96,11 @@ export function npcPrep(unit0: QUnit, pose: QPose | null, ww: boolean): NpcFrame
       if (it.kind === "puppet_strings") P("strings", { who: slot });
     }
   }
+  // PB-1e：氣海（霧鎖真人）的氣旋或裂痕：外框之後畫（不描外框）、側面挖掉主手武器那一塊（＝排在武器之下）
+  if (unit0.dantian !== undefined) P(unit0.dantian === "qi" ? "dantian_qi" : "dantian_crack");
   const wms: Record<string, M6[]> = {};
   let p2 = pose;
-  if (parts.some((p) => p.k === "tassel" || p.k === "strings")) {
+  if (parts.some((p) => p.k === "tassel" || p.k === "strings" || p.k === "dantian_qi" || p.k === "dantian_crack")) {
     const inner = pose?.probe;
     p2 = {
       ...(pose ?? {}),
@@ -114,7 +117,7 @@ export function npcPrep(unit0: QUnit, pose: QPose | null, ww: boolean): NpcFrame
 export function npcNeedsLayers(unit: QUnit): boolean {
   const h = unit.gear.head?.kind;
   const held = (it: QItem | undefined): boolean => it?.kind === "puppet_strings" || it?.kind === "puppet_cross";
-  return h === "veil" || h === "gauze" || held(unit.gear.main_hand) || held(unit.gear.off_hand);
+  return h === "veil" || h === "gauze" || held(unit.gear.main_hand) || held(unit.gear.off_hand) || unit.dantian !== undefined;
 }
 
 /** qStamp 給的兩張離屏：over＝外框之上（不描外框）、under＝外框之下。和本體同一個畫布座標。 */
@@ -528,4 +531,133 @@ export function npcAfterQ(ctx: Ctx, npc: NpcFrame, view: QView): void {
     draw(target ?? ctx);
   }
   for (const p of npc.parts) if (p.k === "gauze") onLayer(ctx, LAYERS?.over, (c) => gauze(c, view, p));
+  const dt = npc.parts.find((p) => p.k === "dantian_qi" || p.k === "dantian_crack");
+  if (dt !== undefined) {
+    const main = npc.unit.gear.main_hand;
+    const wm = S && main ? npc.wms[main.kind]?.[0] : undefined;
+    onLayer(ctx, LAYERS?.over, (c) => dantianLayer(c, view, dt.k === "dantian_crack", wm ?? null, main?.broken === true));
+  }
+}
+
+// ---------- PB-1e：氣海（照 docs/art/sample/bossParts.js 的 BELLY、drawD、extraD） ----------
+
+/** 腹部（本體座標：腳底原點、頭心 −29）；側面往身體內側挪 `DANTIAN_SIDE_DX`（樣張第 2 版 SIDE_DX）。 */
+export const BELLY = { x: 0, y: -12.5, rx: 4.2, ry: 3.2 } as const;
+export const DANTIAN_SIDE_DX = 0.4;
+
+/** 氣海的中心（本體座標；側面一律朝東畫）。 */
+export function bellyAt(view: QView): P2 {
+  return [BELLY.x + (view === "side" ? DANTIAN_SIDE_DX : 0), BELLY.y];
+}
+
+/** 露出時腹前的淡青氣旋（樣張 drawD 的 qi）。 */
+function qiSwirl(c: Ctx, bx: number, by: number): void {
+  c.save();
+  const g = c.createRadialGradient(bx, by, 0, bx, by, 5.2);
+  g.addColorStop(0, "rgba(220,255,250,0.9)");
+  g.addColorStop(0.45, "rgba(110,224,208,0.65)");
+  g.addColorStop(1, "rgba(110,224,208,0)");
+  c.fillStyle = g;
+  c.beginPath();
+  c.arc(bx, by, 5.2, 0, TAU);
+  c.fill();
+  c.strokeStyle = "rgba(240,255,252,0.85)";
+  c.lineWidth = 0.55;
+  c.lineCap = "round";
+  c.beginPath();
+  c.arc(bx, by, 2.4, -0.4, 2.2);
+  c.stroke();
+  c.beginPath();
+  c.arc(bx, by, 1.2, 2.6, 5.2);
+  c.stroke();
+  c.restore();
+}
+
+/** 破了：三道深青裂痕＋兩側漏出四團淡霧（樣張 drawD 的 broken）。 */
+function qiCracks(c: Ctx, bx: number, by: number): void {
+  c.save();
+  c.globalAlpha = 0.95;
+  c.strokeStyle = "#1f3a38";
+  c.lineWidth = 0.95;
+  c.lineCap = "round";
+  c.beginPath();
+  for (const [a, l] of [
+    [-0.6, 3.6],
+    [1.9, 3.0],
+    [3.6, 3.3],
+  ] as const) {
+    c.moveTo(bx, by);
+    c.lineTo(bx + Math.cos(a) * l * 0.55, by + Math.sin(a) * l * 0.55 + 0.4);
+    c.lineTo(bx + Math.cos(a + 0.25) * l, by + Math.sin(a + 0.25) * l);
+  }
+  c.stroke();
+  c.restore();
+  c.save();
+  c.fillStyle = "#e6ecec";
+  for (const [dx, dy, r, al] of [
+    [-5.6, -1.4, 2.4, 0.7],
+    [-8.0, -3.6, 1.8, 0.5],
+    [5.8, -0.6, 2.2, 0.65],
+    [8.2, -2.8, 1.6, 0.45],
+  ] as const) {
+    c.globalAlpha = al;
+    c.beginPath();
+    c.ellipse(bx + dx, by + dy, r, r * 0.7, 0, 0, TAU);
+    c.fill();
+  }
+  c.restore();
+}
+
+/**
+ * 主手武器（刃、護手、柄、握劍的手）在武器座標的範圍，往外放約 0.5（樣張用「拿掉主手武器的那一份相減」做遮罩；
+ * 遊戲端照畫法直接給：記下的武器變換＋劍的形狀）。斷劍只算斷口以下。
+ */
+function weaponArea(c: Ctx, broken: boolean): void {
+  c.save();
+  if (broken) {
+    belowBreak(c, BRK_SIDE_DY);
+    c.clip();
+  }
+  c.beginPath();
+  c.moveTo(-1.8, -2);
+  c.lineTo(-1.8, -16.5);
+  c.lineTo(0, -20);
+  c.lineTo(1.8, -16.5);
+  c.lineTo(1.8, -2);
+  c.closePath();
+  c.rect(-3.4, -4.2, 6.8, 2.6);
+  c.rect(-1.3, -2, 2.6, 5.4);
+  c.moveTo(2.9, 0);
+  c.arc(0, 0, 2.9, 0, TAU);
+  c.fill();
+  c.restore();
+}
+
+/** 氣海那一層（在 qStamp 的「外框之上」離屏畫；側面挖掉主手武器＝畫在武器之下）。`wm`＝主手武器的變換（畫布座標）。 */
+function dantianLayer(c: Ctx, view: QView, crack: boolean, wm: M6 | null, broken: boolean): void {
+  const [bx, by] = bellyAt(view);
+  const draw = (g: Ctx): void => (crack ? qiCracks(g, bx, by) : qiSwirl(g, bx, by));
+  const cv = c.canvas as HTMLCanvasElement | undefined;
+  if (view !== "side" || wm === null || cv === undefined || typeof document === "undefined") {
+    draw(c);
+    return;
+  }
+  const tmp = document.createElement("canvas");
+  tmp.width = cv.width;
+  tmp.height = cv.height;
+  const t = tmp.getContext("2d");
+  if (t === null) {
+    draw(c);
+    return;
+  }
+  setM(t, getM(c));
+  draw(t);
+  t.globalCompositeOperation = "destination-out";
+  setM(t, wm);
+  t.fillStyle = "#000";
+  weaponArea(t, broken);
+  c.save();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.drawImage(tmp, 0, 0);
+  c.restore();
 }

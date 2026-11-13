@@ -6,7 +6,7 @@ import { clearLayer } from "./labels";
 import type { Pos } from "../api/types";
 import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
-import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, PART_STRIP_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
@@ -49,7 +49,7 @@ export const UNIT_MARK_LABELS: readonly string[] = [BOMB_BADGE_LABEL, CHARGE_BAD
  * 6F-22：被南邊高台擋住時改在高台之上畫的 HUD（`RowStack.attachHud`）：HP 條（含護盾條）、狀態列（含「+N」膠囊）、
  * 朝向三角形（朝南移到 HP 條下面的那個照 6F-21b，不在這裡）、召喚物回合數、倒下徽章，以及炸彈、蓄力、灌注徽章（`UNIT_MARK_LABELS`）。
  */
-export const HUD_LABELS: readonly string[] = [HP_BAR_LABEL, HIDDEN_HP_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL, SUMMON_BADGE_LABEL, DOWNED_BADGE_LABEL];
+export const HUD_LABELS: readonly string[] = [HP_BAR_LABEL, PART_STRIP_LABEL, HIDDEN_HP_LABEL, STATUS_ROW_LABEL, FACING_ARROW_LABEL, SUMMON_BADGE_LABEL, DOWNED_BADGE_LABEL];
 
 /**
  * HID-1b（美術 PM 11-07）：畫在上層霧之上的 HUD（`RowLayer.marks`）：HP 條、「？」、狀態列、召喚物回合數、倒下徽章。
@@ -130,6 +130,12 @@ export class RowStack {
         if (southUnder === null) n.parentRenderLayer?.detach(n);
         else if (n.parentRenderLayer !== southUnder) southUnder.attach(n);
       }
+    }
+    // PB-1e：有部位小格的頭目，伸進南邊一排的金菱形會蓋住中間那一條；HP 條＋部位小格改掛同一層、排在金菱形之後
+    const front = sprite.children.find((n) => n.label === BOSS_RING_FRONT_LABEL);
+    if (front?.parentRenderLayer != null && sprite.children.some((n) => n.label === PART_STRIP_LABEL)) {
+      const layer = front.parentRenderLayer;
+      for (const n of sprite.children) if (n.label === HP_BAR_LABEL || n.label === PART_STRIP_LABEL || n.label === HIDDEN_HP_LABEL) layer.attach(n);
     }
     // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
     // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）

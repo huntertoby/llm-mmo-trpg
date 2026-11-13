@@ -241,6 +241,8 @@ export interface VfxSpecial {
   atMs: number;
   /** 格擋成功：被彈開半步的攻擊者。 */
   attackerId?: string;
+  /** PB-1e：頭目部位破了（part_break）：哪個部位（演出畫在那個部位上）。 */
+  partId?: string;
 }
 
 export interface VfxStop {

@@ -23,7 +23,15 @@ export function qUnitOf(spec: DollSpec): QUnit {
     gear.main_hand = { ...main, kind: "paired" };
     delete gear.off_hand;
   }
-  return { look, gear };
+  const parts = spec.parts;
+  if (parts === undefined) return { look, gear };
+  // PB-1e：頭目部位破了的外觀（拂塵剪短、劍斷）掛在那件手持物上；氣海的氣旋、裂痕掛在單位上（qNpc 畫）
+  for (const slot of ["main_hand", "off_hand"] as const) {
+    const it = gear[slot];
+    if (it?.kind === "whisk" && parts.whisk === true) gear[slot] = { ...it, cut: true } as QItem;
+    if (it?.kind === "sword" && parts.sword === true) gear[slot] = { ...it, broken: true } as QItem;
+  }
+  return { look, gear, ...(parts.dantian === undefined ? {} : { dantian: parts.dantian }) };
 }
 
 /**

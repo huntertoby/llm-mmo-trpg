@@ -96,7 +96,7 @@ def slide_next_block(
     """從 ``cur`` 滑向 ``nxt`` 時擋住的原因；可以滑過去時為 ``None``。"""
     if not state.in_bounds(*nxt):
         return "edge"
-    if any(u.alive and u.id != unit.id and u.xy == nxt for u in state.units.values()):
+    if any(u.alive and u.id != unit.id and u.covers(*nxt) for u in state.units.values()):
         return "unit"
     if is_deadly(state, nxt):
         return "deadly"

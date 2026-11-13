@@ -231,6 +231,7 @@ export class BattleRenderer extends VfxLayer {
     this.drawRgTraces(model); // RG-3：可疑痕跡（陷阱層）
     this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
+    this.applyPartFocus(); // PB-1e：選部位小選單開著時的亮起與淡化（單位節點重建了，再畫一次）
     this.drawOcclusion(model); // OCL-1a：被大型前排擋住的外框＋6F-22 舊剪影（有新外框的不畫）
     this.reposeAloft(); // CB-3：留在空中的鳥重畫後換回飛行姿勢
     this.motion.drawUnits(model);

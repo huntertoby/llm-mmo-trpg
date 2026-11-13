@@ -29,6 +29,11 @@ export const INFUSED_BADGE_LABEL = "infused-badge";
 export const SOUTH_ARROW_LABEL = "south-arrow";
 /** 6F-22：HP 條（含護盾條）節點的標籤（被南邊高台擋住時改在高台之上畫，`RowStack.attachHud`）。 */
 export const HP_BAR_LABEL = "hp-bar";
+/**
+ * PB-1e：頭目的頭頂部位小格（HP 條正下方；`bossPartArt.partStripNode`）。跟著 HP 條掛同一層（`HUD_LABELS`）；
+ * 自己也是標記：地圖縮放改變時照新縮放重畫（800 寬只放大高度），大小倍率固定 1。
+ */
+export const PART_STRIP_LABEL = "part-strip";
 /** HID-1（決定 #144）：看不到資訊的隱蔽敵人，HP 條上的「？」（自己也是標記，地圖縮小時反向放大）。 */
 export const HIDDEN_HP_LABEL = "hidden-hp";
 /**
@@ -105,5 +110,5 @@ export function statusRowOf(unit: Container): Container | null {
 export function unitMarksOf(unit: Container): Container[] {
   const pick = (name: string) => unit.children.find((n) => n.label === name) as Container | undefined;
   const names = [SUMMON_BADGE_LABEL, STATUS_ROW_LABEL, BOMB_BADGE_LABEL, CHARGE_BADGE_LABEL, INFUSED_BADGE_LABEL, HIDDEN_HP_LABEL];
-  return names.map(pick).filter((n): n is Container => n !== undefined);
+  return [PART_STRIP_LABEL, ...names].map(pick).filter((n): n is Container => n !== undefined); // PB-1e：部位小格最先（重排時挪朝南三角形）
 }

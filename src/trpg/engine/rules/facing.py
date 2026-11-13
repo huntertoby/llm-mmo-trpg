@@ -45,7 +45,10 @@ def facing_between(src: XY, dest: XY) -> Facing | None:
 
 
 def face_toward(unit: UnitState, xy: XY) -> None:
-    """``unit`` 轉向 ``xy``（同一格時不變）。"""
+    """``unit`` 轉向 ``xy``（同一格時不變）。巨型單位（GB-1a，05 5.12.4 第 7 點、T8）朝向固定、
+    整場不轉：出招、被近戰打都不改。"""
+    if unit.footprint > 1:
+        return
     facing = facing_between(unit.xy, xy)
     if facing is not None:
         unit.facing = facing
@@ -58,8 +61,18 @@ def back_xy(unit: UnitState) -> XY:
 
 
 def is_behind(attacker_xy: XY, target: UnitState) -> bool:
-    """``attacker_xy`` 是 ``target`` 的背後格（只算相鄰的背後格）。"""
-    return attacker_xy == back_xy(target)
+    """``attacker_xy`` 是 ``target`` 的背後格（只算相鄰的背後格）。
+
+    巨型單位（GB-1a，T8）：站在背面那一排外側、和背面那一排相鄰（背面的 3 格之外各一格；斜角
+    不算）。部位的「算從背後」（``counts_as_behind``）在 GB-1c。"""
+    if target.footprint == 1:
+        return attacker_xy == back_xy(target)
+    half = target.footprint // 2
+    dx, dy = FACING_VECTORS[target.facing]
+    rx, ry = attacker_xy[0] - target.xy[0], attacker_xy[1] - target.xy[1]
+    if dx != 0:  # 朝東西：背面是一整欄
+        return rx == -dx * (half + 1) and abs(ry) <= half
+    return ry == -dy * (half + 1) and abs(rx) <= half
 
 
 def default_facing(team: Team) -> Facing:

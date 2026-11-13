@@ -118,6 +118,23 @@ def spawn(
     return UnitSpawn(template=t, weapon=w, team=team, position=pos)
 
 
+def giant_template(base: str = "bandit", **overrides: object) -> UnitTemplate:
+    """合成的不動巨型頭目（GB-1a，05 5.12.4）：佔 3×3、帶 ``boss`` 標籤、速度 0、預設 200 HP。
+    只放在測試裡，不進 ``content/``；**不帶** ``immovable`` 標籤（證明免疫來自佔格，不是標籤）。"""
+    overrides.setdefault("tags", ("boss",))
+    overrides.setdefault("speed", 0)
+    overrides.setdefault("max_hp", 200)
+    return template(base, footprint=3, **overrides)
+
+
+def spawn_giant(
+    team: Team, pos: tuple[int, int] | None, tmpl: UnitTemplate | None = None
+) -> UnitSpawn:
+    """巨型單位的 ``UnitSpawn``（``pos`` 是中心格；``None``＝照起始區放）。"""
+    t = giant_template() if tmpl is None else tmpl
+    return UnitSpawn(template=t, weapon=library().weapons[t.weapon], team=team, position=pos)
+
+
 def make_setup(
     map_def: MapDef,
     spawns: Sequence[UnitSpawn],

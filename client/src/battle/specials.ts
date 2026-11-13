@@ -103,7 +103,8 @@ function partBreaks(vfx: StepVfx, events: readonly EventBase[], before: BattleVi
     const hit = vfx.hits.find((h) => samePos(h.pos, u.pos));
     const atMs = r?.atMs ?? hit?.atMs ?? vfx.leadMs;
     if (out.some((s) => s.unitId === u.id && s.atMs === atMs)) continue;
-    out.push({ kind: "part_break", pos: u.pos, unitId: u.id, atMs });
+    const partId = typeof e.part_id === "string" ? e.part_id : undefined;
+    out.push({ kind: "part_break", pos: u.pos, unitId: u.id, atMs, ...(partId === undefined ? {} : { partId }) });
   }
   return out;
 }

@@ -61,6 +61,7 @@ export abstract class VfxLayer extends SkillLayer {
   private readonly resultHost: ResultHost = {
     ...this.reactHost,
     bounds: () => ({ w: (this.model?.width ?? 0) * T, h: (this.model?.height ?? 0) * T }),
+    partFx: (id, fx) => this.setPartFx(id, fx),
   };
 
   /**

@@ -23,6 +23,10 @@ export interface QItem {
   glow?: string;
   /** 盾心紋樣（RG-4，DollGear.emblem）：目前只認 `peak`（雲紋碑盾的三峰山），不認得就不畫。 */
   emblem?: string;
+  /** PB-1e 頭目部位破了（`render/bossPartArt.ts`）：拂塵剪短（只剩柄、金箍、三撮短毛）。 */
+  cut?: boolean;
+  /** PB-1e：劍斷（刃畫到鋸齒斷口為止）；`"side"`＝側面（斷口往刃尖移，鋸齒露在身體輪廓外）。 */
+  broken?: boolean | "side";
 }
 
 /** Q 版外觀（`Look` 的超集：#137 的可選外觀、獸耳四種）。不認得的值當作沒有。 */
@@ -65,6 +69,8 @@ export type QGear = Partial<Record<QSlot, QItem>>;
 export interface QUnit {
   look: QLook;
   gear: QGear;
+  /** PB-1e：氣海（霧鎖真人）。`qi`＝露出時腹前的淡青氣旋、`crack`＝破了（三道裂痕＋淡霧）；都不描外框、排在主手武器之下。 */
+  dantian?: "qi" | "crack";
 }
 export type QView = "front" | "back" | "side";
 
@@ -155,6 +161,8 @@ export const S = {
   BOWM: null as M6 | null,
   CTX: null as Ctx | null,
   hooks: null as QHooks | null,
+  /** PB-1e：正在畫的手持物 kind（`mainWeapon` 畫 `W.draw` 的期間；部位圖層、遮罩用，見 `render/bossPartArt.ts`）。 */
+  PAINT: null as string | null,
 };
 
 /** 讀姿勢欄位；沒給或不是有限數字 → 0。 */

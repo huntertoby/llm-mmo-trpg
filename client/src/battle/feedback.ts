@@ -17,6 +17,8 @@ export interface FloatItem {
   big: boolean;
   /** 同一格同一步的第幾個（0 起）；畫布依序往上錯開並延後出現，避免重疊。 */
   slot: number;
+  /** PB-1e：「{部位} 破！」——和破壞演出的白閃同時出現（`playback.frameOps` 提前到命中那一刻、重畫之前）。 */
+  early?: boolean;
 }
 
 export interface LineItem {
@@ -136,6 +138,7 @@ interface Spot {
   text: string;
   tone: FloatTone;
   big?: boolean;
+  early?: boolean;
 }
 
 type Locate = (id: unknown) => Pos | null;
@@ -208,8 +211,8 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
     case "reaction_triggered":
       return e.reaction === "block" ? [{ pos: at(e.unit_id), text: WORD_BLOCK, tone: "good" }] : [];
     case "part_broken":
-      // PB-1c（T16 占位）：部位破了跳「拂塵 破！」（放大、醒目）
-      return typeof e.name_zh === "string" ? [{ pos: at(e.target_id), text: partBrokenWord(e.name_zh), tone: "bad", big: true }] : [];
+      // PB-1c：部位破了跳「拂塵 破！」（放大、醒目）；PB-1e：提前到命中那一刻，和破壞演出的白閃同時（PB-1c 待決 6）
+      return typeof e.name_zh === "string" ? [{ pos: at(e.target_id), text: partBrokenWord(e.name_zh), tone: "bad", big: true, early: true }] : [];
     case "effect_fizzled":
       return lockFizzleSpots(e, at);
     case "lock_intercepted":
@@ -288,7 +291,7 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
       // 「格擋」同一格同一步只跳一次（反應的格擋和傷害的格擋比例可能同時出現）
       const p = s.pos;
       if (s.text === WORD_BLOCK && items.some((x) => x.kind === "float" && x.text === WORD_BLOCK && samePos(x.pos, p))) continue;
-      items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos) });
+      items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos), ...(s.early === true ? { early: true } : {}) });
     }
     if (e.type === "trap_glance") {
       // RG-3：敵人放陷阱時看那一格一眼（放置者看不到時不演）
