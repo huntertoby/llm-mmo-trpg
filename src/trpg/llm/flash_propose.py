@@ -688,7 +688,11 @@ def name_texts(
     names: list[FlashNameRecord] = []
     taken: set[str] = set()
     for option in big:
-        used = client if isinstance(client, LLMClient) else client(option.skill, request.seed)
+        # 依選項分流的種子（Mock 命名依種子挑詞；同一題各選項才不會撞名）
+        seed = (
+            Rng(request.seed).fork(f"llm.flash.naming/{option.variation.key()}").randint(0, 2**31)
+        )
+        used = client if isinstance(client, LLMClient) else client(option.skill, seed)
         result = name_skill(
             used,
             library,
