@@ -80,14 +80,12 @@ from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_offer import (
     NO_OPTIONS_ZH,
     NO_REFLASH_OPTIONS_ZH,
-    REFLASH_WEAKER_CONFIRM_ZH,
+    REFLASH_WEAKER_PICK_ZH,
     REFLASH_WEAKER_ZH,
     WEAKER_FOOT_ZH,
-    WEAKER_TAG_ZH,
     has_options,
     history_problem,
     reflash_weaker,
-    skill_before,
 )
 from trpg.skillgen.flash_state import (
     FlashRecord,
@@ -227,7 +225,7 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
                 problem_zh=None if ok else NO_REFLASH_OPTIONS_ZH,
                 weaker=weaker[s],
                 weaker_zh=REFLASH_WEAKER_ZH if weaker[s] else None,
-                weaker_confirm_zh=REFLASH_WEAKER_CONFIRM_ZH if weaker[s] else None,
+                weaker_pick_zh=REFLASH_WEAKER_PICK_ZH if weaker[s] else None,
             )
             for s, ok in slots.items()
         ),
@@ -253,14 +251,11 @@ def _flash_rules(library: ContentLibrary) -> FlashRulesOut:
     )
 
 
-def _flash_before(
-    library: ContentLibrary, run: RunState, skill_id: str, slot: int | None
-) -> SkillDef:
-    """閃現選項比對的「前」（FL-1a）：閃現用玩家現有的定義；重閃用被換掉那一筆之前的技能
-    （:func:`~trpg.skillgen.flash_offer.skill_before`，同出題時的起點）。"""
-    if slot is None:
-        return skill_defs(library, run, [skill_id])[0]
-    return skill_before(library, flash_request(library, run, skill_id, slot=slot))
+def _flash_before(library: ContentLibrary, run: RunState, skill_id: str) -> SkillDef:
+    """選項比對的「前」（FL-1a）：一律是玩家現在手上的整張卡（RR-2b，06 6.34.3 #160 第 4 點：
+    閃現與所有重閃都用現在的卡當基準，不用被換掉那一筆的前一筆；出題的起點
+    :func:`~trpg.skillgen.flash_offer.skill_before` 不變）。"""
+    return skill_defs(library, run, [skill_id])[0]
 
 
 def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
@@ -269,7 +264,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
         return None
     offer = pending.offer
     equipped = skill_defs(library, run, run.hero.skills)
-    before = _flash_before(library, run, pending.skill, offer.slot)
+    before = _flash_before(library, run, pending.skill)
     effective = hero_effective_attributes(library, run)
     ctx = FlashTextContext(weapon=library.weapons.get(run.hero.weapon), attr=effective.__getitem__)
     terms = base_terms(before, _card(library, run, before))
@@ -313,7 +308,6 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 tag_term=tag,
                 note_zh=note,
                 name_source=name_source,
-                weaker_tag_zh=WEAKER_TAG_ZH if option.weaker else None,
             )
         )
     return PendingFlashOut(

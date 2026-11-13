@@ -344,12 +344,14 @@ class ReflashSlotOut(_ApiModel):
     """不能重閃這一欄的原因（可以時為 ``None``）。"""
     weaker: bool = False
     """被強度下限卡住的重閃格（RR-2，#160，06 6.34.3「強度下限」例外）：照原規則沒有任何候選達得到
-    下限，改出較弱的候選。``True`` 時入口不標灰、掛 ``weaker_zh``（變弱樣式），按下去先跳
-    ``weaker_confirm_zh`` 確認（按鈕「重閃」「先不要」）再扣點。"""
+    下限，改出較弱的候選。``True`` 時入口不標灰、掛 ``weaker_zh``（變弱樣式）；按下去進原本的選類別
+    面板，面板最上面再寫一次 ``weaker_zh``＋``weaker_pick_zh``（RR-2b：不另跳確認框，選「不指定」或
+    某個類別才扣點，關掉面板不重閃）。"""
     weaker_zh: str | None = None
-    """入口的提醒字「這一格重閃可能比原本弱」（``weaker`` 時才有）。"""
-    weaker_confirm_zh: str | None = None
-    """按下去、扣點前的確認句（``weaker`` 時才有）。"""
+    """入口與選類別面板的提醒字「這一格原本的變化特別強，重閃後這部分會變弱」（``weaker`` 時
+    才有）。"""
+    weaker_pick_zh: str | None = None
+    """選類別面板提醒字後面那句「整招不會比現在弱；扣點後一定要選一個。」（``weaker`` 時才有）。"""
 
 
 class SkillFlashOut(_ApiModel):
@@ -469,9 +471,6 @@ class FlashOptionOut(_ApiModel):
     name_source: Literal["llm", "template"] = "template"
     """這個選項的技能名稱（``card.name_zh``）從哪來（LF-3）：``llm``＝這次閃現的大變化或轉型帶了
     LLM 名稱而且用上了；``template``＝其他（組合式「{前綴}・{原名}」，或小變化沿用原名）。"""
-    weaker_tag_zh: str | None = None
-    """被強度下限卡住的重閃格出的較弱選項（RR-2，#160）：類別標籤旁的小標「比原本弱」（變弱樣式：
-    無底無框＋▼）；一般選項為 ``None``。"""
 
 
 class FlashTermOut(_ApiModel):
@@ -502,13 +501,14 @@ class PendingFlashOut(_ApiModel):
     cost: int
     options: tuple[FlashOptionOut, ...]
     base_stats: tuple[FlashBaseStatOut, ...] = ()
-    """原技能列（閃現前）的數字（FL-1b 2.1）；欄位名與小圖和「前 → 後」同一份對照。"""
+    """原技能列（現在的卡；重閃也是，RR-2b）的數字（FL-1b 2.1）；欄位名與小圖和「前 → 後」
+    同一份對照。"""
     terms: dict[str, FlashTermOut] = Field(default_factory=dict)
     """這次選項（大標、前 → 後、說明句、原技能列）用到的說明卡（FL-1b）：術語 ID → 說明卡。
     畫面只查表；查不到的術語不畫底線。"""
     weaker_foot_zh: str | None = None
-    """被強度下限卡住的重閃格出題後（RR-2，#160）：面板固定區取代「選哪個這招整體都會強一點」的那句
-    「這次的選項都比原本弱，標 ▼ 的是變弱的地方。」；一般出題為 ``None``。"""
+    """被強度下限卡住的重閃格出題後（RR-2b，#160）：面板固定區取代「選哪個這招整體都會強一點」的那句
+    「被換掉的部分會變弱，整招不會比現在弱；標 ▼ 的是變小的地方。」；一般出題為 ``None``。"""
 
 
 class FlashPreviewRequest(_ApiModel):

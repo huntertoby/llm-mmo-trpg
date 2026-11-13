@@ -163,7 +163,7 @@ def test_the_backend_sends_reflash_slots_and_inherit_rules(client: TestClient) -
             "problem_zh": None,
             "weaker": False,
             "weaker_zh": None,
-            "weaker_confirm_zh": None,
+            "weaker_pick_zh": None,
         }
     ]
     assert flashed["carryable"] == [1] and not flashed["inherit_target"]

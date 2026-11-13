@@ -73,10 +73,9 @@ from trpg.skillgen.usage import SkillUsage
 __all__ = [
     "NO_OPTIONS_ZH",
     "NO_REFLASH_OPTIONS_ZH",
-    "REFLASH_WEAKER_CONFIRM_ZH",
+    "REFLASH_WEAKER_PICK_ZH",
     "REFLASH_WEAKER_ZH",
     "WEAKER_FOOT_ZH",
-    "WEAKER_TAG_ZH",
     "DataOrderSource",
     "FlashOffer",
     "FlashOption",
@@ -674,16 +673,13 @@ NO_OPTIONS_ZH = "這招目前沒有可以閃的變化"
 NO_REFLASH_OPTIONS_ZH = "這一格目前沒有可以重閃的變化"
 """重閃某一格沒有任何合法選項時按鈕的灰字（RR-1，比照 :data:`NO_OPTIONS_ZH`；
 玩法 PM 11-13 定稿，TXT-2）。"""
-REFLASH_WEAKER_ZH = "這一格重閃可能比原本弱"
-"""被強度下限卡住的重閃格入口的提醒字（RR-2，#160，06 6.34.3「強度下限」例外第 2 點）。"""
-REFLASH_WEAKER_CONFIRM_ZH = (
-    "這一格原本的變化特別強，這次重閃出的選項都會比原本弱。扣點後一定要選一個。還要重閃嗎？"
-)
-"""按下被強度下限卡住的重閃格時、扣點前的確認句（RR-2，#160；按鈕「重閃」「先不要」）。"""
-WEAKER_FOOT_ZH = "這次的選項都比原本弱，標 ▼ 的是變弱的地方。"
-"""較弱的重閃出題後，面板固定區取代「選哪個這招整體都會強一點」的那句（RR-2，#160）。"""
-WEAKER_TAG_ZH = "比原本弱"
-"""較弱的重閃每張選項卡類別標籤旁的小標（RR-2，#160；變弱樣式）。"""
+REFLASH_WEAKER_ZH = "這一格原本的變化特別強，重閃後這部分會變弱"
+"""被強度下限卡住的重閃格入口的提醒字；選類別面板最上面也再寫一次（RR-2b，#160 第 3 點）。"""
+REFLASH_WEAKER_PICK_ZH = "整招不會比現在弱；扣點後一定要選一個。"
+"""選類別面板最上面、接在 :data:`REFLASH_WEAKER_ZH` 後面的那句（RR-2b，#160 第 3 點；兩層確認
+合成一層，不另跳確認框）。"""
+WEAKER_FOOT_ZH = "被換掉的部分會變弱，整招不會比現在弱；標 ▼ 的是變小的地方。"
+"""較弱的重閃出題後，面板固定區取代「選哪個這招整體都會強一點」的那句（RR-2b，#160 第 3 點）。"""
 _OPTIONS_CACHE_LIMIT = 512
 """內容庫上「有沒有選項」快取（``ContentLibrary.flash_option_cache``）的上限：滿了就清空。"""
 

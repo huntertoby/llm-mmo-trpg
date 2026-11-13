@@ -2,8 +2,9 @@
 
 重現案例（RR-1 報告待決 2）：第一個開發起始包、種子 2 的一輪打到營火。「灼燃・燃燒爆」第 1 次是
 蓄力，預算分數很高；重閃第 1 格時照原規則（不低於被換掉的那一筆）沒有任何候選達得到，以前只能
-標灰。現在這一格改出不低於重閃前一筆、但低於被換掉那一筆的候選：入口掛提醒、出題後每張卡標
-「比原本弱」，選了寫進歷程的下限是 0（重推得出同一張卡）。其他格（達得到下限）照原規則不變。
+標灰。現在這一格改出不低於重閃前一筆、但低於被換掉那一筆的候選：入口與選類別面板掛提醒、出題後
+固定區換句（RR-2b 撤掉「比原本弱」小標），選了寫進歷程的下限是 0（重推得出同一張卡）。其他格（達得到
+下限）照原規則不變。RR-2b：所有重閃的「前 → 後」都用現在的卡當基準（06 6.34.3 #160 第 4 點）。
 """
 
 from __future__ import annotations
@@ -15,20 +16,21 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from trpg.api.flash_changes import base_stats, flash_changes
 from trpg.api.run_presenter import _flash_out, pending_flash_out
 from trpg.content.library import ContentLibrary
 from trpg.roguelite import auto_play
 from trpg.roguelite.flashes import flash_request, open_flash, pick_flash
+from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.start import new_dev_run
 from trpg.roguelite.state import FlashChoice, FlashPickChoice, RunState
 from trpg.skillgen import flash_offer
 from trpg.skillgen.evolution import budget_power
 from trpg.skillgen.flash_derive import derive_chain, derive_skill
 from trpg.skillgen.flash_offer import (
-    REFLASH_WEAKER_CONFIRM_ZH,
+    REFLASH_WEAKER_PICK_ZH,
     REFLASH_WEAKER_ZH,
     WEAKER_FOOT_ZH,
-    WEAKER_TAG_ZH,
     FlashRequest,
     has_options,
     make_offer,
@@ -74,12 +76,12 @@ def test_floor_blocked_slot_offers_weaker_options(
     # 照原規則出不了題（RR-1 時標灰的原因）；現在改成較弱的候選
     assert not _strict_has_options(library, request)
     assert reflash_weaker(library, request) and has_options(library, request)
-    # 入口不標灰，掛提醒字與確認句
+    # 入口不標灰，掛提醒字；選類別面板的那句也由伺服器給（RR-2b：不另跳確認框）
     slots = {s.slot: s for s in _flash_out(library, run, skill_id).reflash_slots}
     blocked = slots[BLOCKED_SLOT]
     assert blocked.available and blocked.problem_zh is None
     assert blocked.weaker and blocked.weaker_zh == REFLASH_WEAKER_ZH
-    assert blocked.weaker_confirm_zh == REFLASH_WEAKER_CONFIRM_ZH
+    assert blocked.weaker_pick_zh == REFLASH_WEAKER_PICK_ZH
     # 扣點出題：每個選項都標較弱、下限 0，第 1 格的分數低於被換掉的那一筆、不低於重閃前
     chain = derive_chain(library, request.base, request.state, request.seed, request.tier)
     replaced = budget_power(chain[BLOCKED_SLOT - 1], library)
@@ -103,10 +105,17 @@ def test_floor_blocked_slot_offers_weaker_options(
         state = with_reflash(request.state, BLOCKED_SLOT, option.variation)
         slot_skill = derive_chain(library, request.base, state, request.seed, request.tier)[0]
         assert before <= budget_power(slot_skill, library) < replaced
-    # 面板：固定區換句、每張卡加小標
+    # 面板：固定區換句；「比原本弱」小標撤掉（RR-2b），JSON 裡沒有這個欄位
     pending = pending_flash_out(library, opened)
     assert pending is not None and pending.weaker_foot_zh == WEAKER_FOOT_ZH
-    assert all(o.weaker_tag_zh == WEAKER_TAG_ZH for o in pending.options)
+    assert all("weaker_tag_zh" not in o for o in pending.model_dump(mode="json")["options"])
+    # 「前」是現在的卡（RR-2b）：原技能列與「前 → 後」都和現在的卡比
+    # （注意：引擎保證的是被換掉那一格不低於它的前一筆，不是整招不低於現在的卡；見 RR-2b 報告待決 1）
+    current = skill_defs(library, run, [skill_id])[0]
+    assert pending.base_stats == base_stats(library, current)
+    for option, out_option in zip(offer.options, pending.options, strict=True):
+        keyword = option.variation.keyword
+        assert out_option.changes == flash_changes(library, current, option.skill, keyword=keyword)
     # 選了寫進歷程：下限 0，重推得出同一張卡
     picked = pick_flash(library, opened, FlashPickChoice(pick=0))
     assert picked.pending_flash is None
@@ -134,7 +143,7 @@ def test_slots_that_reach_the_floor_are_unchanged(
         assert _strict_has_options(library, request)
         assert not reflash_weaker(library, request)
         assert out.available and not out.weaker
-        assert out.weaker_zh is None and out.weaker_confirm_zh is None
+        assert out.weaker_zh is None and out.weaker_pick_zh is None
         opened = open_flash(library, run, FlashChoice(skill=skill_id, slot=slot))
         assert opened.pending_flash is not None
         offer = opened.pending_flash.offer
@@ -142,7 +151,14 @@ def test_slots_that_reach_the_floor_are_unchanged(
         assert all(not o.weaker and o.floor_permille > 0 for o in offer.options)
         pending = pending_flash_out(library, opened)
         assert pending is not None and pending.weaker_foot_zh is None
-        assert all(o.weaker_tag_zh is None for o in pending.options)
+        # RR-2b：一般重閃的「前 → 後」也用現在的卡當基準（同新的閃現）
+        current = skill_defs(library, run, [skill_id])[0]
+        assert pending.base_stats == base_stats(library, current)
+        for option, out_option in zip(offer.options, pending.options, strict=True):
+            keyword = option.variation.keyword
+            assert out_option.changes == flash_changes(
+                library, current, option.skill, keyword=keyword
+            )
         # 存檔欄位：沒有較弱時不輸出
         assert "weaker" not in offer.model_dump(mode="json")
         assert all("weaker" not in o for o in offer.model_dump(mode="json")["options"])
