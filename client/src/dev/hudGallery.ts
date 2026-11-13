@@ -9,6 +9,8 @@
 //        pip      源力圓點：3 格裡亮暗混排（0～3 亮），旁邊放同一張狀態卡的源力小圖 16
 //        pin      圖釘三處：浮動卡標題列（已釘／未釘）、底部提示列（未釘）、釘住的說明卡角落（金圓底＋紅頭）；技能卡 `PinGlyph`（cardGlyphCanvas）並排
 //        hash     指紋（和樣張 `qicons_shots.py --hash hud` 同一個 FNV 算法、同一個行格式；圖釘只有 A），結果放 `body.dataset.hash`
+//        wishhash 許願池三個圖的指紋（WP-3b；和樣張 `qicons_shots.py --hash wish` 的推薦三行同格式），結果放 `body.dataset.wishhash`
+//        wish     許願池三個圖（WP-3b）：實際底色上真 1 倍 ×1 與最近鄰 ×4（分頁 16 在 #1e2236、籌碼 15 在 #2e3244）
 //   &res=<1|2,…>      內部解析度（預設 1,2；1＝真 1 倍：畫布寬高＝CSS px）
 //   &zoom=<k>         放大 k 倍顯示（預設 3）；截圖用裝置像素比 1 拍
 //   &grp=<類,…>        set=a 只列這幾類
@@ -121,9 +123,26 @@ function hashLines(): string[] {
   lines.push(`pin_a | ${fp(QH.pinCanvas(true, 13, 2))}/${fp(QH.pinCanvas(true, 13, 1))}`, `pin_off | ${fp(QH.pinCanvas(false, 13, 2))}/${fp(QH.pinCanvas(false, 13, 1))}`, `pinbadge_a | ${fp(QH.pinBadge(18, 2))}/${fp(QH.pinBadge(18, 1))}`);
   return lines;
 }
+/** 許願池三個圖（WP-3b）：樣張 `q-icons-hud.html ?part=wish&sec=hash` 的行格式「id | 尺寸:2 倍內部/真 1 倍」。 */
+function wishHashLines(): string[] {
+  return QH.wishList().map(({ id, entry: e }) => `${id} | ${sizesOf(e).map((px) => `${px}:${fp(QH.canvas(id, px, 2))}/${fp(QH.canvas(id, px, 1))}`).join(" ")}`);
+}
+function setWishHash(): void { const L = wishHashLines(); document.body.dataset.wishhash = L.join("\n"); document.body.append(h("pre", { className: "out", textContent: L.join("\n") })); }
+/** 許願池三個圖：遊戲端同一張畫布（`hudIconCanvas`，`HudBare` 的 frame none），放在實際底色上 ×1 與最近鄰 ×4。 */
+function setWish(): void {
+  const BGW: Record<string, string> = { wish_text: "#1e2236", wish_menu: "#1e2236", wish_left: "#2e3244" };
+  for (const res of RESS) {
+    const row = h("div", { className: "row" });
+    for (const { id, entry: e } of QH.wishList()) {
+      const px = e.sizes[0]!, g = hudIconCanvas(id, px, res, { frame: "none" });
+      row.append(cell(`${id} ${px}（res ${res}）`, BGW[id]!, show(g, px, 1), show(g, px, 4)));
+    }
+    document.body.append(h("h2", { textContent: `許願池三個圖 res ${res}：實際大小｜最近鄰 ×4` }), row);
+  }
+}
 function setHash(): void { const L = hashLines(); document.body.dataset.hash = L.join("\n"); document.body.append(h("pre", { className: "out", textContent: L.join("\n") })); }
 
-(window as unknown as Record<string, unknown>)["__qiHudDev"] = { canvas: QH.canvas, list: QH.list, pinBadge: QH.pinBadge, hash: hashLines };
+(window as unknown as Record<string, unknown>)["__qiHudDev"] = { canvas: QH.canvas, list: QH.list, pinBadge: QH.pinBadge, hash: hashLines, wishHash: wishHashLines };
 void waitForFonts().then(() => {
   for (const s of SETS) {
     if (s === "a") setA();
@@ -132,6 +151,8 @@ void waitForFonts().then(() => {
     else if (s === "pip") setPip();
     else if (s === "pin") setPin();
     else if (s === "hash") setHash();
+    else if (s === "wishhash") setWishHash();
+    else if (s === "wish") setWish();
   }
   document.body.dataset.ready = "1";
 });
