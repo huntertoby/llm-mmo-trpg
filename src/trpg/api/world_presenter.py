@@ -92,6 +92,7 @@ from trpg.api.world_story_view import (
     story_event_line,
     thread_views,
 )
+from trpg.api.world_wish_view import wish_view
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
@@ -707,13 +708,14 @@ def world_view(
     social: FieldSocial | None = None,
     prepare: PrepareBattle | None = None,
     inline_tiles: bool = True,
+    wish_llm: bool = False,
 ) -> WorldView:
     """``raw_events`` 是這次請求的世界事件（判定結果、對話、傳聞用）；``narrations`` 是目前事件
     觸發之後
     的說書人敘述（事件卡用，5B-5）；``titles`` 是影子主人的帳號稱號（名片，5F-3c）；``social`` 是
     其他角色的足跡與地點留言數（6C-5；省略＝不畫）。``prepare`` 是遭遇面板用的 ``prepare_battle``
     （6C-R3 伺服器傳快取版）；``inline_tiles`` 為假時實地地圖不帶地形（6C-R3，前端依雜湊另外
-    取）。"""
+    取）。``wish_llm``：許願池能不能用願望文字（世界的 LLM 開著、健康檢查沒說不可用；WP-2）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
     limits = opening_limits(char)  # OB-5（#150 第 7、9 點）
@@ -779,6 +781,7 @@ def world_view(
         limits=limits,
         workshop=workshop_view(library, char, in_battle=in_battle),  # PR-2a（#147）：工坊師傅選單
         party_intro=None if in_battle else party_intro(library, char),  # OB-7（#154）
+        wish=wish_view(library, world, char, now, llm=wish_llm, in_battle=in_battle),  # WP-2
     )
 
 

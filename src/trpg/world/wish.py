@@ -51,6 +51,7 @@ __all__ = [
     "wish_menu",
     "wish_offer_ok",
     "wish_problem",
+    "wish_refund",
     "wish_request",
     "wish_rules",
     "wishes_left",
@@ -66,6 +67,12 @@ WISH_NO_MATCH_ZH: Final = "許願池這次沒聽懂你的願望，改從選單�
 def wish_rules(library: ContentLibrary) -> WishRules:
     """世界規則的許願池數值。"""
     return rules_of(library).wish
+
+
+def wish_refund(library: ContentLibrary) -> int:
+    """三選一都不拿時退還的任務幣（費用 × ``refund_permille``，捨去）。"""
+    rules = wish_rules(library)
+    return rules.cost_quest_coins * rules.refund_permille // 1000
 
 
 def wish_menu(library: ContentLibrary) -> tuple[str, ...]:
@@ -236,7 +243,7 @@ def apply_wish(
     week = week_of(library, world, now)
     used = wishes_used(library, world, char, now) + 1
     cost = rules.cost_quest_coins
-    refund = cost * rules.refund_permille // 1000
+    refund = wish_refund(library)
     char = char.model_copy(
         update={
             "quest_coins": char.quest_coins - cost,

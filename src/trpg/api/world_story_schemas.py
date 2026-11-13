@@ -300,6 +300,12 @@ class PendingOfferView(_ApiModel):
     can_replace: bool
     """在城鎮或營火（可以直接裝上、指定替換）；野外學到的放進備用。"""
     place_zh: str
+    source: Literal["quest", "opportunity", "wish"] = "quest"
+    """三選一從哪來（``PendingOffer.source``：``quest``、``opportunity``、``wish``…；WP-2 起給前端
+    分辨許願池的標題與跳過鈕）。"""
+    refund: int = 0
+    """都不拿時退還的任務幣（許願池，#88 2b；其他來源 0）。前端的跳過鈕
+    寫「都不拿（退 N 任務幣）」。"""
 
 
 class ThreadView(_ApiModel):

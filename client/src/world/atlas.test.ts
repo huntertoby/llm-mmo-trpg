@@ -131,7 +131,8 @@ describe("主城的情境物件", () => {
     expect(objectHud({ panel: "league" })).toEqual({ panel: "league", who: null });
     expect(objectHud({ panel: "pavilion" })).toEqual({ panel: "pavilion", who: null });
     expect(objectHud({ panel: "skills" })).toEqual({ panel: "skills", who: null });
-    expect(objectHud({})).toBeNull(); // 許願池、工坊、浮橋：照舊開說明卡
+    expect(objectHud({})).toBeNull(); // 浮橋等一般物件：照舊開說明卡
+    expect(objectHud({ panel: "wish" })).toBeNull(); // WP-2：許願池面板在 WP-3 接上前照舊開說明卡
     expect(objectHud(null)).toBeNull();
     // 物件 ID 叫 stele_ 也不算，要有 stele_region
     expect(objectHud({ stele_region: null, panel: null })).toBeNull();

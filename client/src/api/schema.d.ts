@@ -1003,7 +1003,8 @@ export interface paths {
         /**
          * Post Pregen Wait
          * @description 6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端
-         *     顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。
+         *     顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。WP-2：送出文字許願前也先問
+         *     （``kind: "wish"``＋``text``；許願在佇列插隊排最前面）；選單許願、現在不能許的一律 ``none``。
          */
         post: operations["post_pregen_wait_api_world_characters__character_id__pregen_wait_post"];
         delete?: never;
@@ -7927,7 +7928,7 @@ export interface components {
             slot_zh: string;
         };
         /** @enum {string} */
-        ObjectPanel: "board" | "league" | "pavilion" | "skills" | "workshop";
+        ObjectPanel: "board" | "league" | "pavilion" | "skills" | "workshop" | "wish";
         /** ObjectView */
         ObjectView: {
             /** Id */
@@ -8486,6 +8487,17 @@ export interface components {
             can_replace: boolean;
             /** Place Zh */
             place_zh: string;
+            /**
+             * Source
+             * @default quest
+             * @enum {string}
+             */
+            source: "quest" | "opportunity" | "wish";
+            /**
+             * Refund
+             * @default 0
+             */
+            refund: number;
         };
         /**
          * PendingView
@@ -8607,7 +8619,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "flash" | "opportunity";
+            kind: "flash" | "opportunity" | "wish";
             /** Skill */
             skill?: string | null;
             /** Slot */
@@ -8616,6 +8628,10 @@ export interface components {
             category?: string | null;
             /** Solution */
             solution?: number | null;
+            /** Text */
+            text?: string | null;
+            /** Keywords */
+            keywords?: string[] | null;
         };
         /**
          * PreviewOut
@@ -12617,6 +12633,74 @@ export interface components {
             range: number;
         };
         /**
+         * WishAction
+         * @description 在主城的許願池許願（Phase WP-1；07 7.6、#88）：``text``（一句話的願望，
+         *     LLM 對到關鍵字並提議完整
+         *     技能；只進 prompt 的 ``<player_input>``）與 ``keywords``（從選單挑 1～2 個關鍵字，不呼叫 LLM）
+         *     剛好給一個。字數與個數的上限在世界規則（``rules.yaml`` 的 ``wish``），由規則檢查。
+         */
+        WishAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "wish";
+            /** Text */
+            text?: string | null;
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+        };
+        /**
+         * WishMenuItemView
+         * @description 選單的一個關鍵字（「改用選單」挑 1～2 個）。
+         */
+        WishMenuItemView: {
+            /** Id */
+            id: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Description Zh */
+            description_zh: string;
+        };
+        /**
+         * WishView
+         * @description ``WorldView.wish``（WP-2；07 7.6、#88）：主城許願池的面板資料。人在主城才有，其他 ``None``。
+         *     能不能許與原因和 ``wish`` 動作用同一個函式（:func:`trpg.world.wish.wish_problem`），所以畫面的
+         *     原因句和送出被拒的那一句相同。
+         */
+        WishView: {
+            /** Title Zh */
+            title_zh: string;
+            speaker?: components["schemas"]["RangeSpeakerView"] | null;
+            /** Line Zh */
+            line_zh?: string | null;
+            /** Cost */
+            cost: number;
+            /** Refund */
+            refund: number;
+            /** Coins */
+            coins: number;
+            /** Left */
+            left: number;
+            /** Per Week */
+            per_week: number;
+            /** Available */
+            available: boolean;
+            /** Blocked Zh */
+            blocked_zh?: string | null;
+            /** Llm */
+            llm: boolean;
+            /** Text Max Chars */
+            text_max_chars: number;
+            /** Max Keywords */
+            max_keywords: number;
+            /** Menu */
+            menu: components["schemas"]["WishMenuItemView"][];
+        };
+        /**
          * WorkshopArena
          * @description 裝上試玩的選單：預設地圖（靶場）與可選的地圖、對手。
          */
@@ -12795,7 +12879,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"] | components["schemas"]["WishAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -13096,6 +13180,7 @@ export interface components {
             };
             workshop?: components["schemas"]["WorkshopView"] | null;
             party_intro?: components["schemas"]["PartyIntroView"] | null;
+            wish?: components["schemas"]["WishView"] | null;
         };
         XY: [
             number,

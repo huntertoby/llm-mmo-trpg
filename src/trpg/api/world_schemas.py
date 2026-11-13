@@ -41,6 +41,7 @@ from trpg.api.world_story_schemas import (
     SituationResultView,
     ThreadView,
 )
+from trpg.api.world_wish_schemas import WishView
 from trpg.content.battle import LookChoice
 from trpg.shared.rng import MASK64
 from trpg.shared.types import Attribute, Team
@@ -75,6 +76,7 @@ from trpg.world.actions import (
     TavernAction,
     TeleportAction,
     TravelAction,
+    WishAction,
 )
 from trpg.world.crafting_actions import (
     CraftAction,
@@ -184,7 +186,8 @@ type WorldActionRequest = Annotated[
     | WalkAction  # 6B-2
     | UseTeleportStoneAction
     | SneakAction  # 6C-5
-    | UseFieldObjectAction,
+    | UseFieldObjectAction
+    | WishAction,  # WP-2（#88 許願池）
     Field(discriminator="kind"),
 ]
 """``POST /api/world/characters/{id}/actions`` 的請求（``fight`` 走開戰端點；``swear_oath`` 只收
@@ -742,6 +745,8 @@ class WorldView(_ApiModel):
     party_intro: PartyIntroView | None = None
     """還沒播的隊友加入台詞（OB-7，#154；:func:`trpg.api.world_party_intro.party_intro`）：開局還沒
     結束時，賽倫在確定出發後、阿岳在新手第 1 步打完後各一段；戰鬥中、沒有時 ``None``。"""
+    wish: WishView | None = None
+    """主城許願池的面板資料（WP-2，#88；:func:`trpg.api.world_wish_view.wish_view`）：人在主城才有。"""
 
 
 class WorldBattleResponse(_ApiModel):

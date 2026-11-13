@@ -12,7 +12,7 @@
 | `src/trpg/world/opening.py` | 開局的主檔：`new_opening(seed)`、開局閘門 `opening_gate`（各階段能做的動作）、畫面用的 `opening_limits(char)`、選大類 `apply_opening_class`、舊的一次選定 `apply_opening_confirm`、推薦關鍵字 `recommended_keywords`、靶場內容 `range_content`、沙盒試打 `range_trial`／`trial_seed`、`mentor_town`；PR-2a 起：測試模式的設定 `_practice_setup`、工坊師傅的「靶場試玩」`own_practice`／`practice_seed`、能不能開 `practice_problem`（原因句 `PRACTICE_*_ZH`） |
 | `src/trpg/world/opening_choice.py` | 正式選定（OB-2）：`choice_problem`、`place_ok`／`place_problem`、`starter_steps_done`、`apply_formal_choice`，以及依階段分流的 `apply_opening_confirm` |
 | `src/trpg/world/opening_reselect.py` | 4 級前的免費重選（OB-3）：`reselect_problem`（OB-6 起先呼叫 `reselect_window_problem`＝只看資格：已選定、等級、沒用過）、`apply_reselect`、`reselect_losses`／`reselect_returns`、`starter_item_id`（OB-6 抽出 `weapon_item_id`）；開局結束 `close_opening` |
-| `src/trpg/world/wish.py` | **WP-1 許願池**：主城花任務幣許願（`wish_problem`：主城、入門期、遭遇、每週次數 `wish_week`、任務幣）；選單或願望文字 → 完整技能三選一（`PendingOffer.source="wish"`，都不拿退 `refund`）。LLM 那一半見 `docs/dev/上手-LLM.md` 第八節 |
+| `src/trpg/world/wish.py` | **WP-1 許願池**：主城花任務幣許願（`wish_problem`：主城、入門期、遭遇、每週次數 `wish_week`、任務幣）；選單或願望文字 → 完整技能三選一（`PendingOffer.source="wish"`，都不拿退 `refund`）。LLM 那一半見 `docs/dev/上手-LLM.md` 第八節。WP-2 的面板資料 `WorldView.wish` 在 `src/trpg/api/world_wish_view.py`（`wish_block`：戰鬥中、待選閃現與三選一，再 `wish_problem`） |
 | `src/trpg/world/opening_limits.py` | 入門期的戰鬥閘與活動限制（OB-4）：`in_starter_period`、`STARTER_STEPS`、`spawn_hidden`、`fight_problem`、`solution_problem`、`spot_problem`、`holds_step`、`stuck_conditions`；被擋的原因文字 `FIGHT_ZH`、`FLASH_ZH`、`SOLUTION_ZH`、`OBJECT_ZH` |
 | `src/trpg/world/state.py` | `CharacterState`（含 `opening: OpeningState \| None`、`hints_seen`、`hints_off`、`level_seen`）、`OpeningState`、`CHAR_FORMAT`、`LEGACY_CHAR_FORMATS` |
 | `src/trpg/world/actions.py` | 世界動作與事件的型別：`OpeningClassAction`、`OpeningConfirmAction`、`OpeningReselectAction`、`HintSeenAction`、`HintsOffAction`、`HintsResetAction`、`UI_NOTE_ACTIONS`；事件 `OpeningClassChosenEvent`、`OpeningConfirmedEvent`、`OpeningReselectedEvent` |
@@ -33,7 +33,7 @@
 | `src/trpg/api/tuning/` | 數值工坊（NW-1a，前綴 `/api/tuning`）：`dev_mode` 且 `TRPG_TUNING=1` 才掛，帶轉發標頭 403；細節在 `上手-內容資料與模擬.md` 第七節 |
 | `src/trpg/server/season_policy.py` | 季末重置時每個存檔欄位怎麼處理的表（新加存檔欄位必須登記） |
 | `content/world/newcomer.yaml` | 新手內容：`mentor_npc`、各段台詞、`range:`（`racks`、`placeholder_weapon`、`map`、`dummies`、`demos`、`starters`、`keeper_object`、`choose*`、PR-2a 的工坊師傅選單 `workshop`；`max_rounds` 測試模式不用）；schema 在 `src/trpg/content/world_newcomer.py`（`WorkshopContent`） |
-| `content/world/fields/capital/capital.yaml` | 主城實地地圖；`workshop_master` 的 `panel: workshop`（PR-2a，`ObjectPanel` 多了 `workshop`）、`training_range` 的說明卡 |
+| `content/world/fields/capital/capital.yaml` | 主城實地地圖；`workshop_master` 的 `panel: workshop`（PR-2a，`ObjectPanel` 多了 `workshop`）、`training_range` 的說明卡；WP-2：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`；前端 WP-3 前照舊開說明卡，守池人的 `note_zh` 也是面板的那一句） |
 | `src/trpg/api/opening_gear_note.py` | 卡片多寫的一行（OB-6）：入門期的入門武器「借的、不能賣寄分解」、還能重選時的起始武器「重選會收回」；`HeroGearSlotOut.opening_note_zh`、`BagItemView.opening_note_zh` |
 | `client/src/world/range.ts`、`RangeScreen.tsx`、`RangeClassPick.tsx`、`RangeParts.tsx` | 前端的選大類、正式選定與重選畫面；`rangeMode()` 回 `class`／`choose`／`reselect`；重選的確認彈窗 `ReselectConfirmDialog`、小牌 `reselectBadge` |
 | `client/src/world/ReselectEntry.tsx` | 葛蘭面板、主城靶場面板上方的「重選」鈕（`opensReselect`）；配點收尾彈窗的兩段 `allocateClosingLines` |
