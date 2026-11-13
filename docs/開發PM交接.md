@@ -46,8 +46,7 @@
 **2. 最後一次全量**：2026-11-13 cc8345511 已 push（pytest 17127、vitest 4398、build 0），含：RR-2／2b／2c（#160，`WORLD_RULES_VERSION` 30）、WP-3b、KW-1＋KW-1b（#161）、RG-1（#162）；`LOG_FORMAT` 現為 /120（KW-1 與 RG-1 同一版）。d5e04c462 正在跑全量（上一次 ed1449cbe 有 4 條 KW 失敗，KW-1b 已修；再前一次跑到 99% 時 xdist worker「node down」卡死 3 小時，已停掉——全量期間盡量不要讓 agent 跑大批測試，`TRPG_PYTEST_WORKERS` 改用 10）。通過就 push，並照 3.0001 節發一則給專案 PM。
 
 **3. 執行中的 agent（分支）**：
-- **AF-1**（11-13 派）：(e3k) A 段規則小修＋KW-2 白板放寬收窄成明確清單（專案 PM 條件；**push 前要合**，c9f644443 起的 main 含通用放寬）。
-- **RG-3**（11-13 派）：#162 戰場標記第一批前端（docs/art/RG樣張.md）。
+- **RG-4＋RG-3b**（11-13 派，見 (e3l)）：main c5f236c7f 起全量只剩 1 條 `test_rg3_api.py::test_a_blocked_fizzle_carries_the_caster_and_the_blocker`（AF-1 改擋箭規則後 RG-3 推算過時），RG-3b 修好、合併、全量綠才 push。KW-2、RG-3、AF-1 都已合進 main、未 push。
 
 **4. 待排（依序，注意檔案衝突）**：
 - **KW-2**（#161 內容：示範招 14、池子門檻、拿掉 start_hidden、許願池、閃現嫁接、鷹眼「站在高處」條件；規格 `PhaseKW計畫.md`）。派工要寫：恢復範圍前後的關鍵字數（專案 PM 條件）、灌注表要決定層數關鍵字有沒有召喚灌注、重產 llm propose Mock 快照。等玩法 PM 回 KW-1 待決（3.0001）後派較穩。
