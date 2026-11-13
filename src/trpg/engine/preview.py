@@ -123,6 +123,7 @@ from trpg.engine.skill_infusion import infused_pick
 from trpg.engine.skills.conditions import Subject, condition_met
 from trpg.engine.skills.scaling import skill_scaling_attr, skill_scaling_value
 from trpg.engine.skills.targeting import (
+    aims_first,
     compute_area,
     damage_parameters,
     followup_origin,
@@ -1537,7 +1538,7 @@ def preview(state: BattleState, action: Action) -> Preview:
     warning = oath_warning(state, action, (low.state, high.state))
     if warning is not None:
         base = replace(base, oath_warning=warning)
-    if isinstance(action, UseSkill) and _preview_skill(state, actor, action).lock_on:
+    if isinstance(action, UseSkill) and aims_first(actor, _preview_skill(state, actor, action)):
         fired_low, fired_high = simulate_preview(stripped, action, fire_lock=True)
         base = replace(base, lock_fire=_build(state, action, actor, fired_low, fired_high))
     spec = _gamble_spec(state, actor, action)

@@ -245,7 +245,7 @@ keywords:
   # 許願池、三選一新方向、隨機組合器、LLM 出題都出現（stacks.yaml 的 composer: false 一起拿掉）。
   - id: combo_point
     name_zh: 連擊
-    description_zh: 武器技打中累積連擊點（雙匕首一次出招也只算 1 點）；終結技花光連擊點換傷害，有些技能要連擊點達到幾點才生效。
+    description_zh: 武器技打中累積連擊點（一次出招最多 1 點）；終結技花光連擊點換傷害，有些技能要連擊點達到幾點才生效。
     makes:
       - {effect: add_stack, stack: combo_point}
     uses:

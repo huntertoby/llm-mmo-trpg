@@ -51,6 +51,7 @@ from trpg.engine.events import (
     InfusionFizzled,
     InitiativeRolled,
     InitiativeTieBroken,
+    LockIntercepted,
     ManeuverRolled,
     MapEventTriggered,
     MoveBlocked,
@@ -430,8 +431,8 @@ _FIZZLE_TEXT = {
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
     # 瞄準預告（RG-1，#162）射出時落空
     "lock_on_lost": "  瞄準的目標倒下、走出射程或躲到看不見的地方：這一擊落空",
-    "lock_on_concealed": "  瞄準的目標進入隱蔽：這一擊落空",
-    "lock_on_blocked": "  目標的隊友擋在中間：這一擊落空",
+    "lock_on_concealed": "  瞄準的目標躲進隱蔽、離得太遠看不見：這一擊落空",
+    "lock_on_blocked": "  擋在中間的人瞄不到：這一擊落空",
 }
 
 
@@ -1042,6 +1043,14 @@ def _followup_charged(e: FollowupCharged, v: _View) -> str:
     return (
         f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
         f"（{'落在指定位置' if e.anchored else '以自己為中心'}，目前預計影響 {len(e.tiles)} 格）"
+    )
+
+
+@_handles(LockIntercepted)
+def _lock_intercepted(e: LockIntercepted, v: _View) -> str:
+    return (
+        f"  ⛨ {v.name[e.blocker_id]} 擋在 {v.name[e.target_id]} 前面："
+        f"「{e.name_zh}」改打在 {v.name[e.blocker_id]} 身上"
     )
 
 

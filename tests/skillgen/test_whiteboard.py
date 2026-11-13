@@ -280,19 +280,6 @@ def _request(
 HELD = {"ignite": 2, "marked": 1, "charged": 1}
 
 
-@cache
-def _composes(keyword: str) -> bool:
-    """法器 2 階組得出這個關鍵字的主動白板（KW-2：新方向多了四個關鍵字，種子 7 抽到中毒；中毒的
-    主動配方在 2 階湊不到預算下限，候選照設計退回手寫池——既有的缺口，不是這次的改動）。"""
-    for seed in range(5):
-        try:
-            compose_whiteboard(seed, keyword=keyword, tier=2, weapon_class="focus", library=LIB)
-        except ComposeError:
-            continue
-        return True
-    return False
-
-
 def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
     for seed in range(8):
         found = generate_whiteboard_candidates(LIB, _request(HELD, seed))
@@ -309,7 +296,7 @@ def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
                 assert set(c.keywords) <= set(derive_keywords(c.skill, LIB.keywords).all())
                 continue
             assert len(c.keywords) == 1
-            if c.keywords[0] in whiteboard_keywords(LIB, "active", 2) and _composes(c.keywords[0]):
+            if c.keywords[0] in whiteboard_keywords(LIB, "active", 2):
                 assert c.source == "composer" and is_whiteboard(c.skill, LIB), c.skill.id
                 assert c.keywords[0] in derive_keywords(c.skill, LIB.keywords).all()
             else:  # 沒有白板配方的關鍵字退回手寫池的 1 階技能
