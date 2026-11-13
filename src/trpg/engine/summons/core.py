@@ -61,7 +61,8 @@ from trpg.engine.gear.summon import gear_summon_duration, inherit_attack_gear
 from trpg.engine.ids import CONCEALED, PRONE, next_unit_id
 from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
-from trpg.engine.rules.geometry import XY, manhattan, neighbors4
+from trpg.engine.rules.footprint import adjacent, dist_to, unit_dist
+from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.landing import landing_problem
 from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.skills.scaling import skill_scaling_attr
@@ -469,7 +470,7 @@ def _detonate(ctx: Ctx, unit: UnitState, reason: DetonateReason) -> None:
     victims = [
         u
         for u in ctx.state.units_sorted()
-        if u.alive and u.team is not unit.team and manhattan(u.xy, unit.xy) <= spec.radius
+        if u.alive and u.team is not unit.team and unit_dist(u, unit) <= spec.radius
     ]
     ctx.emit(
         SummonDetonated,
@@ -507,8 +508,7 @@ def detonate_if_adjacent(ctx: Ctx, unit: UnitState, reason: DetonateReason) -> b
     if template is None or template.detonate is None or not unit.alive:
         return False
     if not any(
-        u.alive and u.team is not unit.team and manhattan(u.xy, unit.xy) == 1
-        for u in ctx.state.living_units()
+        u.alive and u.team is not unit.team and adjacent(u, unit) for u in ctx.state.living_units()
     ):
         return False
     _detonate(ctx, unit, reason)
@@ -533,7 +533,7 @@ def _platform_site(state: BattleState, owner: UnitState, unit: UnitState) -> XY 
     ]
     if not sites:
         return None
-    return min(sites, key=lambda xy: (manhattan(xy, owner.xy), xy[1], xy[0]))
+    return min(sites, key=lambda xy: (dist_to(owner, xy), xy[1], xy[0]))
 
 
 def _raise_platform(ctx: Ctx, owner: UnitState, unit: UnitState) -> None:
@@ -576,7 +576,7 @@ def _surface_and_heal(ctx: Ctx, unit: UnitState, pulse: SummonPulse) -> list[Eff
             ally.team is unit.team
             and ally.id != unit.id
             and ally.hp < ally.max_hp
-            and manhattan(ally.xy, unit.xy) <= pulse.heal_radius
+            and unit_dist(ally, unit) <= pulse.heal_radius
         ):
             batch.append(
                 HealEffect(
@@ -630,10 +630,10 @@ def _pull_nearest_enemy(ctx: Ctx, totem: UnitState, radius: int) -> None:
     state = ctx.state
     candidates = sorted(
         (u for u in state.living_units() if u.team is not totem.team and u.id != totem.id),
-        key=lambda u: (manhattan(u.xy, totem.xy), u.xy[1], u.xy[0], u.id),
+        key=lambda u: (unit_dist(u, totem), u.xy[1], u.xy[0], u.id),
     )
     for enemy in candidates:
-        if manhattan(enemy.xy, totem.xy) > radius:
+        if unit_dist(enemy, totem) > radius:
             break
         step = _pull_step(state, enemy, totem)
         if step is None:
@@ -667,7 +667,7 @@ def _snare_trigger(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
             snare is None
             or vine.team is mover.team
             or vine.snare_round == state.round
-            or manhattan(vine.xy, mover.xy) != 1
+            or not adjacent(vine, mover)
         ):
             continue
         vine.snare_round = state.round
@@ -705,7 +705,7 @@ def totem_targets(state: BattleState, totem: UnitState, spec: TotemSpec) -> list
         and u.team is totem.team
         and u.id != totem.id
         and totem_of(state, u) is None
-        and manhattan(u.xy, totem.xy) <= spec.radius
+        and unit_dist(u, totem) <= spec.radius
     ]
 
 

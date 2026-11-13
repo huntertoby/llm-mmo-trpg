@@ -52,6 +52,7 @@ from trpg.engine.events import (
 from trpg.engine.gear.state import GearState
 from trpg.engine.ids import CONCEALED
 from trpg.engine.modifiers import form_entry_permille, form_upkeep_permille
+from trpg.engine.rules.footprint import adjacent, unit_dist
 from trpg.engine.rules.forms import (
     form_collision_permille,
     form_defense_permille,
@@ -60,7 +61,6 @@ from trpg.engine.rules.forms import (
     form_move_delta,
     form_taken_permille,
 )
-from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.statuses import effective_attribute, stance_status_ids
 from trpg.engine.state import FormState, UnitState
 from trpg.shared.types import Element
@@ -201,9 +201,7 @@ def _burst_effects(
             multiplier_permille=scale,
         )
         for other in ctx.state.units_sorted()
-        if other.alive
-        and other.team is not unit.team
-        and manhattan(other.xy, unit.xy) <= burst.radius
+        if other.alive and other.team is not unit.team and unit_dist(other, unit) <= burst.radius
     ]
 
 
@@ -224,10 +222,7 @@ def _heal_adjacent_effects(
             multiplier_permille=multiplier,
         )
         for other in ctx.state.units_sorted()
-        if other.alive
-        and other.id != unit.id
-        and other.team is unit.team
-        and manhattan(other.xy, unit.xy) == 1
+        if other.alive and other.id != unit.id and other.team is unit.team and adjacent(other, unit)
     ]
 
 

@@ -16,7 +16,8 @@ from trpg.content.skills import HURL_OBJECT, TOPPLE, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
 from trpg.engine.effects.world import topple_line
-from trpg.engine.rules.geometry import XY, axis_direction, chebyshev, manhattan
+from trpg.engine.rules.footprint import dist_to
+from trpg.engine.rules.geometry import XY, axis_direction, chebyshev
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Surface
@@ -49,7 +50,7 @@ def scene_estimate(
         score = _hurl_value(state, unit, skill, action, area)
     if score is None:
         return None
-    return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+    return score - Fraction(dist_to(unit, area.origin), 1000)
 
 
 def _value(unit: UnitState, hit: list[UnitState]) -> int:
@@ -88,9 +89,7 @@ def _hurl_value(
                 if u is not landing and chebyshev(dest, u.xy) <= definition.explosion.radius
             ]
         elif definition.spill is not None and has_fire_follow_up(state, unit):
-            hit += [
-                u for u in state.living_units() if u is not landing and manhattan(dest, u.xy) <= 1
-            ]
+            hit += [u for u in state.living_units() if u is not landing and dist_to(u, dest) <= 1]
     if not any(u.team is not unit.team for u in hit):
         return None
     return Fraction(_value(unit, hit))

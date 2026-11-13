@@ -56,7 +56,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.gear.state import GearAffix
 from trpg.engine.rules.combat import NATURAL_HIT
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.statuses import skip_turn_status
 from trpg.engine.skills.casting import use_modifier_effects, use_triggered_skill
 from trpg.engine.skills.conditions import Subject, condition_met, skill_condition_met
@@ -346,7 +346,7 @@ def _is_melee_damage(ctx: Ctx, event: DamageDealt) -> bool:
     target = ctx.state.units.get(event.target_id)
     if event.cause != "attack" or source is None or target is None:
         return False
-    return manhattan(source.xy, target.xy) <= ctx.core.melee_height_limit_max_range
+    return unit_dist(source, target) <= ctx.core.melee_height_limit_max_range
 
 
 def _on_damage(ctx: Ctx, index: PassiveIndex, event: DamageDealt) -> None:
@@ -629,7 +629,7 @@ def nearest_enemy(state: BattleState, owner: UnitState, max_distance: int) -> Un
     for unit in state.units_sorted():
         if not unit.alive or unit.team is owner.team:
             continue
-        distance = manhattan(owner.xy, unit.xy)
+        distance = unit_dist(owner, unit)
         if distance <= max_distance and (best is None or (distance, unit.id) < best):
             best, found = (distance, unit.id), unit
     return found
@@ -643,7 +643,7 @@ def weakest_ally(state: BattleState, owner: UnitState, max_distance: int) -> Uni
     for unit in state.units_sorted():
         if unit.id == owner.id or not unit.alive or unit.team is not owner.team:
             continue
-        if manhattan(owner.xy, unit.xy) > max_distance or unit.max_hp <= 0:
+        if unit_dist(owner, unit) > max_distance or unit.max_hp <= 0:
             continue
         if found is None or unit.hp * found.max_hp < found.hp * unit.max_hp:
             found = unit
@@ -666,7 +666,7 @@ def _trigger_other(
     other = None if fired.other_id is None else state.units.get(fired.other_id)
     if other is None or (not other.alive and fired.event != "on_kill"):
         return False
-    if trigger.max_distance is not None and manhattan(owner.xy, other.xy) > trigger.max_distance:
+    if trigger.max_distance is not None and unit_dist(owner, other) > trigger.max_distance:
         return False
     return other
 

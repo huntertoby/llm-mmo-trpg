@@ -19,10 +19,9 @@ from trpg.engine.ai.utility.position import _enemies, _Scene, _scene, _unit_posi
 from trpg.engine.ice_slide import path_slide_risks
 from trpg.engine.ids import PRONE
 from trpg.engine.infusion import template_of
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.geometry import (
-    XY,
     chebyshev,
-    manhattan,
 )
 from trpg.engine.rules.race import fall_immune
 from trpg.engine.state import BattleState, UnitState, reaction_limit
@@ -100,12 +99,12 @@ def ice_slip_cost(
     return cost
 
 
-def reactive_enemies(state: BattleState, unit: UnitState) -> list[XY]:
-    """可能對 ``unit`` 藉機攻擊的敵人位置：存活、本輪反應次數未用完、有「敵人離開相鄰格」的
-    反應規則（不檢查耐力與武器，寧可多算）。"""
+def reactive_enemies(state: BattleState, unit: UnitState) -> list[UnitState]:
+    """可能對 ``unit`` 藉機攻擊的敵人：存活、本輪反應次數未用完、有「敵人離開相鄰格」的反應規則
+    （不檢查耐力與武器，寧可多算）。相鄰以佔格算（GB-1b，巨型單位）。"""
     core = state.ruleset.core
     return [
-        e.xy
+        e
         for e in _enemies(state, unit)
         if e.reactions_used < reaction_limit(core, e)
         and any(rule.when.event == "enemy_leaves_adjacent" for rule in e.reactions)
@@ -117,12 +116,12 @@ def _detonates_on_arrival(state: BattleState, unit: UnitState, move: Move) -> bo
     template = template_of(state, unit)
     if template is None or template.detonate is None:
         return False
-    foes = [u.xy for u in state.living_units() if u.team is not unit.team]
-    return any(manhattan((p.x, p.y), f) == 1 for p in move.path[1:] for f in foes)
+    foes = [u for u in state.living_units() if u.team is not unit.team]
+    return any(dist_to(f, (p.x, p.y)) == 1 for p in move.path[1:] for f in foes)
 
 
 def is_risky_move(
-    state: BattleState, unit: UnitState, move: Move, enemies: list[XY] | None = None
+    state: BattleState, unit: UnitState, move: Move, enemies: list[UnitState] | None = None
 ) -> bool:
     """移動是否可能有「位置改變」以外的後果（需要完整 ``preview`` 才能評分）。
 
@@ -149,7 +148,7 @@ def is_risky_move(
         xy = (pos.x, pos.y)
         if i < last:
             nxt = (path[i + 1].x, path[i + 1].y)
-            if any(manhattan(xy, e) == 1 and manhattan(nxt, e) != 1 for e in enemies):
+            if any(dist_to(e, xy) == 1 and dist_to(e, nxt) != 1 for e in enemies):
                 return True
         if i == 0:
             continue

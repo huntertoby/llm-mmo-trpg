@@ -25,7 +25,8 @@ from trpg.content.skills import COMPOSITE_MOVES, SkillDef
 from trpg.engine.actions import Decision, UseSkill
 from trpg.engine.delayed import anchor_of, delayed_selection
 from trpg.engine.results import Pending
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.footprint import dist_to
+from trpg.engine.rules.geometry import XY
 from trpg.engine.skills.followups import followup_options
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
@@ -75,12 +76,12 @@ def composite_estimate(
     enemies, allies = _sides(state, unit, area.units)
     if enemies == 0:
         return None
-    return Fraction(3 * enemies - 3 * allies) - Fraction(manhattan(unit.xy, area.origin), 1000)
+    return Fraction(3 * enemies - 3 * allies) - Fraction(dist_to(unit, area.origin), 1000)
 
 
 def _distance_to_foes(state: BattleState, unit: UnitState, xy: XY) -> int:
     foes = [u for u in state.living_units() if u.team is not unit.team]
-    return min((manhattan(xy, f.xy) for f in foes), default=0)
+    return min((dist_to(f, xy) for f in foes), default=0)
 
 
 def choose_followup(state: BattleState, pending: Pending) -> Decision:

@@ -29,7 +29,7 @@ from trpg.engine.actions import UseRaceSkill
 from trpg.engine.ids import DECOY_TAG
 from trpg.engine.race.skills import race_skill_actions, race_skill_of
 from trpg.engine.rules.combat import attack_problem, attack_reach
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import dist_to, unit_dist
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.skills import shapes
 from trpg.engine.state import BattleState, UnitState
@@ -50,7 +50,7 @@ def _enemies(state: BattleState, unit: UnitState) -> list[UnitState]:
 
 
 def _nearest(state: BattleState, unit: UnitState) -> int | None:
-    distances = [manhattan(unit.xy, e.xy) for e in _enemies(state, unit)]
+    distances = [unit_dist(unit, e) for e in _enemies(state, unit)]
     return min(distances) if distances else None
 
 
@@ -70,7 +70,7 @@ def _adapt_score(state: BattleState, unit: UnitState, _a: UseRaceSkill) -> int:
         return 0
     if any(attack_problem(state, unit, e) is None for e in enemies):
         return 0  # 現在就打得到，不必多走
-    gap = min(manhattan(unit.xy, e.xy) for e in enemies) - attack_reach(state, unit)
+    gap = min(unit_dist(unit, e) for e in enemies) - attack_reach(state, unit)
     return int(unit.move_points < gap <= unit.move_points + 2)
 
 
@@ -85,7 +85,7 @@ def _decoy_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> i
         return 0  # 已經有一個誘餌
     assert action.target_pos is not None
     xy = (action.target_pos.x, action.target_pos.y)
-    gaps = [manhattan(xy, e.xy) for e in _enemies(state, unit)]
+    gaps = [dist_to(e, xy) for e in _enemies(state, unit)]
     return min(gaps) + 1
 
 
@@ -138,7 +138,7 @@ def _leap_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
     skill = race_skill_of(state, unit)
     assert skill is not None
     reach = skill.shape.range if isinstance(skill.shape.range, int) else 0
-    return rise * _LEAP_RISE_POINTS + hits + (reach + 1 - manhattan(unit.xy, dest))
+    return rise * _LEAP_RISE_POINTS + hits + (reach + 1 - dist_to(unit, dest))
 
 
 def _restore_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
@@ -160,7 +160,7 @@ def _hurl_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
     if definition.explosion is None or state.tile(*dest).surface is not Surface.FIRE:
         return 0
     radius = definition.explosion.radius
-    near = [u for u in state.living_units() if manhattan(u.xy, dest) <= radius]
+    near = [u for u in state.living_units() if dist_to(u, dest) <= radius]
     if any(u.team is unit.team for u in near):
         return 0
     return len(near)

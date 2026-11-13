@@ -9,17 +9,23 @@
 
 from __future__ import annotations
 
+from collections.abc import Collection
+
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
     "adjacent",
+    "chebyshev_to",
     "dist_to",
+    "face_tile",
     "giant_at",
     "is_giant",
     "nearest_tile",
     "occupies",
+    "strike_tiles",
     "tiles_of",
+    "touches",
     "unit_dist",
 ]
 
@@ -78,6 +84,37 @@ def unit_dist(a: UnitState, b: UnitState) -> int:
 def adjacent(a: UnitState, b: UnitState) -> bool:
     """上下左右相鄰（和任何一格相鄰就算；斜角不算）。"""
     return unit_dist(a, b) == 1
+
+
+def strike_tiles(a: UnitState, b: UnitState) -> tuple[XY, XY]:
+    """``a`` 對 ``b`` 出手時兩邊用的格子（GB-1b，05 5.12.4 第 2 點）：``a`` 離 ``b`` 最近的佔格
+    （出招起點）與 ``b`` 離那一格最近的佔格（打中的那一格）；兩格的曼哈頓距離＝:func:`unit_dist`。
+    射程、視線、掩護都以這兩格算。都是一格時＝``(a.xy, b.xy)``。"""
+    if a.footprint == 1 and b.footprint == 1:
+        return a.xy, b.xy
+    aim = nearest_tile(b, nearest_tile(a, b.xy))
+    return nearest_tile(a, aim), aim
+
+
+def touches(unit: UnitState, cells: Collection[XY]) -> bool:
+    """``unit`` 有任一佔格在 ``cells`` 裡（區域、爆炸範圍「在不在裡面」；巨型單位整個只算一次，
+    GB-1b）。一格的單位＝``unit.xy in cells``。"""
+    if unit.footprint == 1:
+        return unit.xy in cells
+    return any(xy in cells for xy in tiles_of(unit))
+
+
+def chebyshev_to(unit: UnitState, xy: XY) -> int:
+    """``xy`` 到 ``unit`` 佔格的切比雪夫距離（環形、方陣以整個佔格為中心時用；佔格內為 0）。"""
+    near = nearest_tile(unit, xy)
+    return max(abs(near[0] - xy[0]), abs(near[1] - xy[1]))
+
+
+def face_tile(unit: UnitState, step: XY) -> XY:
+    """佔格朝 ``step``（單位方向向量）那一面的中間格（錐形、直線的起點，R2；一格時是自己）。"""
+    half = unit.footprint // 2
+    x, y = unit.xy
+    return (x + step[0] * half, y + step[1] * half)
 
 
 def giant_at(state: BattleState, xy: XY) -> UnitState | None:

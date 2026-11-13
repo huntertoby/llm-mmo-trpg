@@ -66,7 +66,8 @@ from trpg.engine.quiet_strikes import NoTurn, no_turn_reason
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import AttackRoll, ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
-from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
+from trpg.engine.rules.footprint import adjacent, dist_to, unit_dist
+from trpg.engine.rules.geometry import XY, has_line_of_sight
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.statuses import (
     blocks_spells,
@@ -101,6 +102,7 @@ from trpg.engine.weapon_traits import (
     spend_ammo,
 )
 from trpg.shared.errors import TrpgError
+from trpg.shared.types import Pos
 
 __all__ = [
     "PauseForDecision",
@@ -424,7 +426,7 @@ def _kin_ward_def(ctx: Ctx, guardian: UnitState, target: UnitState) -> ReactionD
         definition = ctx.rules.reaction_def(rule.reaction)
         if definition.effect != "shield_ally" or definition.kin_tag is None:
             continue
-        if manhattan(guardian.xy, target.xy) > (definition.range or 0):
+        if unit_dist(guardian, target) > (definition.range or 0):
             continue
         if not (guardian.has_tag(definition.kin_tag) and target.has_tag(definition.kin_tag)):
             continue
@@ -445,8 +447,8 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
     if not target.alive or not attacker.alive:
         return
     events = ("hit_by_melee", "hit_by_attack") if melee else ("hit_by_attack",)
-    adjacent = melee and manhattan(target.xy, attacker.xy) == 1
-    effect = "basic_attack" if adjacent else None
+    beside = melee and adjacent(target, attacker)
+    effect = "basic_attack" if beside else None
     picked = _react(ctx, target, events, attacker, effect=effect, skills=True)
     if isinstance(picked, SkillDef):
         _run_skill(ctx, target, picked, attacker)
@@ -533,7 +535,7 @@ def _gear_redirect(
         if guardian.id == target.id or guardian.team is not target.team or not guardian.alive:
             continue
         affix = redirect_affix(guardian)
-        if affix is None or manhattan(guardian.xy, target.xy) > (affix.range or 1):
+        if affix is None or unit_dist(guardian, target) > (affix.range or 1):
             continue
         if affix.limit == "per_round" and guardian.gear_round_counts.get(affix.id, 0) >= 1:
             continue
@@ -561,7 +563,7 @@ def _intercept_by_skill(
     for guardian in ctx.state.units_sorted():
         if guardian.id == target.id or guardian.team is not target.team:
             continue
-        if not guardian.alive or manhattan(guardian.xy, target.xy) != 1:
+        if not guardian.alive or not adjacent(guardian, target):
             continue
         picked = _react(ctx, guardian, ("ally_hit_adjacent",), attacker, skills=True)
         if not isinstance(picked, SkillDef):
@@ -603,7 +605,7 @@ def ally_targeted_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) ->
             return
         if reactor.id == target.id or reactor.team is not target.team or not reactor.alive:
             continue
-        if manhattan(reactor.xy, target.xy) != 1:
+        if not adjacent(reactor, target):
             continue
         picked = _react(ctx, reactor, ("ally_targeted",), attacker, skills=True, aided=target)
         if isinstance(picked, SkillDef):  # 援手（TF-1）：作用在被瞄準的友方
@@ -626,7 +628,7 @@ def ally_hit_near_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) ->
             return
         if reactor.id == target.id or reactor.team is not target.team or not reactor.alive:
             continue
-        if manhattan(reactor.xy, target.xy) != 1:
+        if not adjacent(reactor, target):
             continue
         picked = _react(ctx, reactor, ("ally_hit_near",), target, skills=True, aided=target)
         if isinstance(picked, SkillDef):
@@ -658,9 +660,9 @@ def enemy_enters_adjacent_reactions(ctx: Ctx, mover: UnitState, from_xy: XY) -> 
     for reactor in state.living_units():
         if not mover.alive:
             return
-        if reactor.team is mover.team or manhattan(reactor.xy, mover.xy) != 1:
+        if reactor.team is mover.team or not adjacent(reactor, mover):
             continue
-        if manhattan(reactor.xy, from_xy) == 1:
+        if dist_to(reactor, from_xy) == 1:
             continue
         picked = _react(ctx, reactor, ("enemy_enters_adjacent",), mover, skills=True)
         if isinstance(picked, SkillDef):
@@ -928,6 +930,7 @@ def _emit_attack_rolled(
         backstab=roll.backstab,
         ambush=roll.ambush,
         no_turn=no_turn,
+        hit_tile=None if roll.hit_tile is None else Pos(x=roll.hit_tile[0], y=roll.hit_tile[1]),
     )
 
 
@@ -945,7 +948,7 @@ def _hit_multiplier(
     block = block_multiplier(ctx, attacker, target)
     multiplier = block * bonus_permille // PERMILLE
     multiplier = (
-        multiplier * range_damage_permille(attacker, manhattan(attacker.xy, target.xy)) // PERMILLE
+        multiplier * range_damage_permille(attacker, unit_dist(attacker, target)) // PERMILLE
     )
     if extra_permille is not None:
         multiplier = multiplier * extra_permille // PERMILLE
@@ -968,7 +971,7 @@ def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> N
             return
         if reactor.team is mover.team:
             continue
-        before, after = manhattan(reactor.xy, from_xy), manhattan(reactor.xy, to_xy)
+        before, after = dist_to(reactor, from_xy), dist_to(reactor, to_xy)
         reach = reactor.weapon.reach
         leaves_reach = before <= reach < after
         leaves_adjacent = before == 1 and after != 1

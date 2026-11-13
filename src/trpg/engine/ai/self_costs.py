@@ -16,7 +16,7 @@ from fractions import Fraction
 from trpg.content.environment import AiProfile
 from trpg.content.skills import SkillDef
 from trpg.engine.preview import Preview
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = ["self_cost_gate"]
@@ -30,7 +30,7 @@ def _stun_allowed(state: BattleState, actor: UnitState, profile: AiProfile) -> b
     if actor.hp * _PERMILLE >= actor.max_hp * rules.stun_hp_below_permille:
         return False
     return any(
-        manhattan(actor.xy, u.xy) <= rules.stun_enemy_radius
+        unit_dist(actor, u) <= rules.stun_enemy_radius
         for u in state.living_units()
         if u.team is not actor.team
     )

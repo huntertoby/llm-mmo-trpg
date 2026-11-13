@@ -22,7 +22,7 @@ from fractions import Fraction
 
 from trpg.content.environment import SummonAiRules
 from trpg.engine.actions import InfuseSkill, UseSkill
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.skill_infusion import infuse_problem, infused_pick, snapshot
 from trpg.engine.state import BattleState, UnitState
 
@@ -46,7 +46,7 @@ def survival(state: BattleState, summon: UnitState, rules: SummonAiRules) -> Fra
     threats = sum(
         1
         for e in state.living_units()
-        if e.team is not summon.team and manhattan(e.xy, summon.xy) <= e.weapon.range + e.speed
+        if e.team is not summon.team and unit_dist(e, summon) <= e.weapon.range + e.speed
     )
     incoming = threats * rules.infuse_threat_damage
     return Fraction(summon.hp, max(summon.hp + incoming, 1))

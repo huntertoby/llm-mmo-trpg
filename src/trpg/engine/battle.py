@@ -105,7 +105,7 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.rule_changes import pass_through
 from trpg.engine.rules.combat import PERMILLE, attack_problem, reach_problem
 from trpg.engine.rules.facing import face_toward, opening_facing
-from trpg.engine.rules.footprint import tiles_of
+from trpg.engine.rules.footprint import adjacent, dist_to, tiles_of
 from trpg.engine.rules.forms import charge_direction, natural_charge
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
@@ -730,7 +730,7 @@ def maneuver_problem(state: BattleState, unit: UnitState, target: UnitState) -> 
         return f"目標已不在戰場上：{target.name_zh}"
     if target.team is unit.team:
         return f"只能對敵方單位使用：{target.name_zh}"
-    if manhattan(unit.xy, target.xy) != 1:
+    if not adjacent(unit, target):
         return f"目標必須相鄰：{target.name_zh}"
     limit = state.ruleset.core.melee_height_limit
     diff = abs(state.tile(*unit.xy).height - state.tile(*target.xy).height)
@@ -835,7 +835,7 @@ def object_move_problem(
 
 def _adjacent_problem(state: BattleState, unit: UnitState, obj: ObjectState) -> str | None:
     """互動的物件必須相鄰、高度差不超過 ``interact_height_limit``。"""
-    if manhattan(unit.xy, obj.xy) != 1:
+    if dist_to(unit, obj.xy) != 1:
         return f"物件必須相鄰：{state.object_def(obj).name_zh}"
     limit = state.ruleset.core.interact_height_limit
     diff = abs(state.tile(*unit.xy).height - state.tile(*obj.xy).height)
@@ -881,7 +881,7 @@ def interact_options(
         movable = "pushable" in tags or moves_object(state, unit.id, tags) is not None
         if obj.destroyed or (not movable and TOPPLABLE not in tags):
             continue
-        if manhattan(unit.xy, obj.xy) != 1:
+        if dist_to(unit, obj.xy) != 1:
             continue
         for mode, side in INTERACT_CHOICES:
             problem = interact_problem(state, unit, obj, mode, side)

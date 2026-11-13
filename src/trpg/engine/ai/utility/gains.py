@@ -56,9 +56,9 @@ from trpg.engine.events import (
 )
 from trpg.engine.ids import PRONE
 from trpg.engine.preview import DamageRange, Preview
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.geometry import (
     XY,
-    manhattan,
 )
 from trpg.engine.rules.movement import (
     is_deadly,
@@ -468,9 +468,7 @@ def _defend_gains(f: _GainFrame) -> Fraction:
     """防禦動作：每名 6 格內的敵人。"""
     if not isinstance(f.p.action, Defend) or f.only is not None:
         return Fraction(0)
-    near = sum(
-        1 for e in _enemies(f.state, f.actor) if manhattan(f.actor.xy, e.xy) <= _DEFEND_RADIUS
-    )
+    near = sum(1 for e in _enemies(f.state, f.actor) if unit_dist(f.actor, e) <= _DEFEND_RADIUS)
     return Fraction(f.w.defend * near)
 
 

@@ -20,7 +20,8 @@ from trpg.content.skills import DETONATE_RUNES, INSCRIBE, SkillDef
 from trpg.engine.events import EventBase, RuneInscribed, RuneRemoved
 from trpg.engine.gear.enhance import rune_affixes
 from trpg.engine.preview import Preview
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.footprint import dist_to
+from trpg.engine.rules.geometry import XY
 from trpg.engine.rune_queries import own_runes_at
 from trpg.engine.state import BattleState, UnitState
 
@@ -73,7 +74,7 @@ def has_rune_reader(state: BattleState, unit: UnitState) -> bool:
 
 def _enemy_distance(state: BattleState, unit: UnitState, xy: XY) -> int | None:
     """``xy`` 離最近的敵人的曼哈頓距離；沒有敵人時 ``None``。"""
-    distances = [manhattan(xy, o.xy) for o in state.living_units() if o.team is not unit.team]
+    distances = [dist_to(o, xy) for o in state.living_units() if o.team is not unit.team]
     return min(distances) if distances else None
 
 
@@ -95,7 +96,7 @@ def rune_estimate(
         score += _cell_score(_enemy_distance(state, unit, xy))
     if score <= 0:
         return None
-    return Fraction(score) - Fraction(manhattan(unit.xy, origin), _PERMILLE)
+    return Fraction(score) - Fraction(dist_to(unit, origin), _PERMILLE)
 
 
 def rune_gains(

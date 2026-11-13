@@ -29,6 +29,7 @@ from trpg.engine.effects.models import (
 from trpg.engine.effects.queue import execute, register_effect
 from trpg.engine.events import BombExploded, BombTicked, EventBase, UnitDowned
 from trpg.engine.interactions import TILE_CATEGORIES, touch_outcomes
+from trpg.engine.rules.footprint import touches
 from trpg.engine.rules.geometry import XY
 from trpg.engine.skills.scaling import skill_scaling_value
 from trpg.engine.skills.shapes import radius_tiles
@@ -147,7 +148,7 @@ def _bomb_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
             min_damage=ctx.core.min_damage_on_hit,
         )
         for unit in state.units_sorted()
-        if unit.alive and unit.xy in tiles
+        if unit.alive and touches(unit, tiles)
     ]
     if event.element is not Element.PHYSICAL:
         for xy in sorted(tiles, key=lambda p: (p[1], p[0])):

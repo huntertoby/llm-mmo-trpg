@@ -11,6 +11,7 @@ from __future__ import annotations
 from trpg.content.skills import ZONE, EffectSpec
 from trpg.engine.context import Ctx
 from trpg.engine.events import ZoneTriggered
+from trpg.engine.rules.footprint import touches
 from trpg.engine.rules.geometry import XY
 from trpg.engine.skill_triggers import check_trigger_depth
 from trpg.engine.skills import shapes
@@ -153,7 +154,7 @@ def flush_zone_entries(ctx: Ctx) -> None:
         unit = ctx.state.units.get(unit_id)
         if zone is None or unit is None or not unit.alive:
             continue
-        if unit.xy in zone_cells(ctx.state, zone):
+        if touches(unit, zone_cells(ctx.state, zone)):
             _trigger(ctx, zone, unit, "enter")
 
 
@@ -165,7 +166,7 @@ def zones_turn_start(ctx: Ctx, unit: UnitState) -> None:
             return
         if find_zone(ctx.state, zone.id) is None or zone_when(ctx.state, zone) == "enter":
             continue
-        if unit.xy in zone_cells(ctx.state, zone) and affects_team(ctx.state, zone, unit.team):
+        if touches(unit, zone_cells(ctx.state, zone)) and affects_team(ctx.state, zone, unit.team):
             _trigger(ctx, zone, unit, "turn_start")
 
 

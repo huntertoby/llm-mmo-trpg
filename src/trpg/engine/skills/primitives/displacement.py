@@ -30,6 +30,7 @@ from trpg.engine.reactions import (
     enemy_enters_adjacent_reactions,
     enemy_moves_in_range_reactions,
 )
+from trpg.engine.rules.footprint import dist_to, nearest_tile
 from trpg.engine.rules.geometry import XY, axis_direction
 from trpg.engine.rules.movement import is_deadly, is_flying
 from trpg.engine.skill_triggers import collect_move
@@ -54,7 +55,14 @@ def _displace_direction(cast: Cast, unit: UnitState, *, pull: bool) -> XY | None
     if area.direction is not None:
         dx, dy = area.direction
         return (-dx, -dy) if pull else (dx, dy)
-    direction = axis_direction(unit.pos.x - area.origin[0], unit.pos.y - area.origin[1])
+    caster = cast.caster
+    origin = area.origin
+    if caster.footprint > 1 and caster.covers(*origin):
+        # 巨型單位以自己為中心（GB-1b，T7）：朝／離最近的佔格（斜向同距離取 x 軸），已相鄰的不拉
+        if pull and dist_to(caster, unit.xy) <= 1:
+            return None
+        origin = nearest_tile(caster, unit.xy)
+    direction = axis_direction(unit.pos.x - origin[0], unit.pos.y - origin[1])
     if direction is None:
         return None
     return (-direction[0], -direction[1]) if pull else direction

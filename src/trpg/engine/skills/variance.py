@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from trpg.content.skills import ScaleSpec, SkillDef
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import adjacent, unit_dist
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = ["overload_bonus", "scale_bonus", "scale_steps"]
@@ -22,7 +22,7 @@ def _enemies_adjacent(state: BattleState, unit: UnitState, team_of: UnitState) -
     return sum(
         1
         for other in state.units_sorted()
-        if other.alive and other.team is not team_of.team and manhattan(other.xy, unit.xy) == 1
+        if other.alive and other.team is not team_of.team and adjacent(other, unit)
     )
 
 
@@ -37,7 +37,7 @@ def scale_steps(state: BattleState, caster: UnitState, target: UnitState, by: st
     if by == "missing_hp_10pct":
         return max(0, caster.max_hp - caster.hp) * 10 // max(1, caster.max_hp)
     if by == "distance":
-        return manhattan(caster.xy, target.xy)
+        return unit_dist(caster, target)
     if by == "enemies_adjacent_target":
         return _enemies_adjacent(state, target, caster)
     if by == "enemies_adjacent_self":

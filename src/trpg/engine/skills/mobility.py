@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from trpg.content.skills import CHARGE_THROUGH, DASH, LEAP, SHADOWSTEP, EffectSpec
 from trpg.engine.ids import PRONE
 from trpg.engine.rules.facing import back_xy
+from trpg.engine.rules.footprint import dist_to, giant_at
 from trpg.engine.rules.geometry import XY, bresenham, chebyshev, manhattan
 from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import is_standable, path_map, step_cost
@@ -52,18 +53,14 @@ def dash_route(state: BattleState, caster: UnitState, target: XY, reach: int) ->
     起點。步行規則（高度、地形、恐懼）、不經過任何單位，路徑成本不超過 ``reach``。
 
     有多個相鄰格可到達時取成本最小者，同成本依 ``(y, x)`` 由小到大；沒有可抵達的相鄰格時回傳
-    ``None``。
+    ``None``。``target`` 是巨型單位的佔格時，終點是它任一佔格的相鄰格（GB-1b，05 5.12.4 第 2 點）。
     """
-    if manhattan(caster.xy, target) == 1:
+    giant = giant_at(state, target)
+    if (manhattan(caster.xy, target) if giant is None else dist_to(giant, caster.xy)) == 1:
         return [caster.xy]
     pm = path_map(state, caster, reach, through_allies=False)
-    goals = [
-        xy
-        for xy in (
-            (target[0] + dx, target[1] + dy) for dx, dy in ((0, -1), (1, 0), (0, 1), (-1, 0))
-        )
-        if state.in_bounds(*xy) and pm.can_end_at(xy)
-    ]
+    around = _beside(target) if giant is None else _adjacent(giant)
+    goals = [xy for xy in around if state.in_bounds(*xy) and pm.can_end_at(xy)]
     if not goals:
         return None
     best = min(goals, key=lambda xy: (pm.cost[xy], xy[1], xy[0]))
@@ -242,7 +239,7 @@ def shadowstep_spot_problem(
 ) -> str | None:
     """瞬步落在 ``xy`` 不合法的原因：要與目標相鄰、在地圖內、可站立、不是致命地形、沒有其他單位
     （施放者自己所在的格子可以），與目標的高度差不超過近戰上限（落地後要打得到）。"""
-    if manhattan(xy, target.xy) != 1:
+    if dist_to(target, xy) != 1:
         return f"瞬步的落點必須在 {target.name_zh} 的相鄰格：{xy}"
     block = landing_problem(state, xy, mover=caster.id)
     if block is LandingBlock.OUT_OF_BOUNDS:
@@ -260,10 +257,26 @@ def shadowstep_spot_problem(
     return None
 
 
-def _adjacent(target: UnitState) -> list[XY]:
-    """目標的相鄰格，固定順序：上、右、下、左。"""
-    x, y = target.xy
+def _beside(xy: XY) -> list[XY]:
+    """``xy`` 的相鄰格，固定順序：上、右、下、左。"""
+    x, y = xy
     return [(x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+
+
+def _adjacent(target: UnitState) -> list[XY]:
+    """目標的相鄰格，固定順序：上、右、下、左。巨型單位（GB-1b）是佔格外圍的 12 格：北排（由西到
+    東）、東欄（由北到南）、南排（由東到西）、西欄（由南到北）。"""
+    if target.footprint == 1:
+        return _beside(target.xy)
+    half = target.footprint // 2
+    x, y = target.xy
+    side = range(-half, half + 1)
+    return [
+        *((x + i, y - half - 1) for i in side),
+        *((x + half + 1, y + i) for i in side),
+        *((x - i, y + half + 1) for i in side),
+        *((x - half - 1, y - i) for i in side),
+    ]
 
 
 def shadowstep_choices(state: BattleState, caster: UnitState, target: UnitState) -> list[XY]:

@@ -65,8 +65,8 @@ from trpg.engine.rules.combat import (
     rolled_damage_amount,
 )
 from trpg.engine.rules.facing import facing_between
-from trpg.engine.rules.footprint import is_giant
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.footprint import adjacent, is_giant
+from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.race import fall_immune
 from trpg.engine.rules.statuses import (
@@ -586,7 +586,7 @@ def _absorb(
     """護盾吸收 ``amount`` 點傷害，回傳吸收的點數；吸收量歸零的護盾狀態立即移除。帶附帶效果的護盾
     （3W-2b）另發出 ``shield_absorbed``（反傷用）與 ``shield_ended``（打破時）。"""
     source = None if effect.source_id is None else ctx.state.units.get(effect.source_id)
-    melee = effect.cause == "attack" and source is not None and manhattan(source.xy, unit.xy) == 1
+    melee = effect.cause == "attack" and source is not None and adjacent(source, unit)
     absorbed = 0
     kept: list[StatusInstance] = []
     removed: list[str] = []
