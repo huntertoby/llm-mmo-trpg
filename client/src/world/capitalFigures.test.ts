@@ -13,6 +13,7 @@ import { barlessIds, fieldDrawModel, figureObjects, hoverText, interactTarget, t
 import { FieldObjectCard } from "./FieldThings";
 import { figureFieldLook, figureUnitId, facilityFigureId, FIGURE_EMPTY_HAND, npcFieldLook } from "./npcLook";
 import { BoardPanel, boardKeeper } from "./BoardPanel";
+import { objectHud } from "./atlasModel";
 import capitalYaml from "../../../content/world/fields/capital/capital.yaml?raw";
 import hallYaml from "../../../content/world/fields/capital/interiors/capital_mentor_hall.yaml?raw";
 import tavernYaml from "../../../content/world/fields/capital/interiors/capital_tavern.yaml?raw";
@@ -131,6 +132,14 @@ describe("內容：四位都有外觀與頭像，格子不變", () => {
       expect(s.panel, s.id).toBe(ORIGINAL[s.id]!.panel);
       expect(s.figure!.portrait.look, s.id).toBeDefined();
       expect(s.figure!.portrait.gear?.["body"], s.id).toBeDefined();
+    }
+  });
+
+  it("WP-3：點守池人與許願池都開許願池面板（不是說明卡）", () => {
+    for (const id of ["pool_keeper", "wishing_pool"]) {
+      const spot = ALL.find((s) => s.id === id) as unknown as FieldSituationObject | undefined;
+      expect(spot, id).toBeDefined();
+      expect(objectHud(spot!), id).toEqual({ panel: "wish", who: null });
     }
   });
 

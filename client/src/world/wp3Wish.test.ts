@@ -1,4 +1,5 @@
 // WP-3：許願池面板（`WishPanel.tsx`、`wish.ts`）、主城物件開面板、文字許願先等 LLM、三選一的標題與「都不拿（退 N 任務幣）」。
+// @ts-expect-error 測試在 node 執行；專案沒裝 @types/node，只為了讀檔
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -117,7 +118,7 @@ describe("WP-3 許願池：接線", () => {
   });
 
   it("三選一畫面用 offerTitle／offerSubtitle／offerSkipLabel（不再寫死「任務給的技能三選一」「跳過」）", () => {
-    const src = readFileSync(new URL("./QuestLog.tsx", import.meta.url), "utf-8");
+    const src = (readFileSync as (url: URL, enc: string) => string)(new URL("./QuestLog.tsx", import.meta.url), "utf-8");
     expect(src).toContain("{offerTitle(pending)}");
     expect(src).toContain("{offerSkipLabel(pending)}");
     expect(src).not.toContain("<h2>任務給的技能三選一</h2>");
