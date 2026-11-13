@@ -34,7 +34,7 @@ const FIGURES = ALL.filter((s) => s.figure !== undefined);
 /** 原本（6D-4／6D-R2）的格子與面板。 */
 const ORIGINAL: Record<string, { at: [number, number]; panel: string | undefined }> = {
   seal_keeper: { at: [14, 12], panel: "board" }, // RT-5b：移到中央廣場傳送石旁（玩法 PM 決定）
-  pool_keeper: { at: [6, 4], panel: undefined },
+  pool_keeper: { at: [6, 4], panel: "wish" }, // WP-2：點了開許願池面板
   workshop_master: { at: [24, 18], panel: "workshop" }, // PR-2a：點了開工坊師傅選單
   scribe: { at: [2, 2], panel: "skills" },
 };
@@ -231,7 +231,7 @@ describe("互動照舊", () => {
     expect(pool).toContain('data-testid="world-object-who"');
     expect(pool).toContain('data-portrait="doll"');
     expect(pool).toContain("守池人");
-    expect(pool).toContain("池子還沒醒");
+    expect(pool).toContain("說出你想要的力量"); // WP-2 的暫定台詞（待玩法 PM 給字）
     const well = card("wishing_pool");
     expect(well).not.toContain("world-object-who");
     expect(well).not.toContain("data-portrait");

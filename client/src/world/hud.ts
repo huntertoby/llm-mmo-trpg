@@ -39,7 +39,9 @@ export type HudPanel =
   /** 郵寄（6T-1b）：走到郵差或郵筒旁邊開。 */
   | "mail"
   /** PR-2（#147）：主城工坊師傅的選單（靶場試玩、改造技能；`WorldView.workshop`，對象＝師傅的情境物件 ID）。 */
-  | "workshop";
+  | "workshop"
+  /** WP-3：主城的許願池面板（點池子或守池人；`WorldView.wish`）。 */
+  | "wish";
 
 export type HudButtonId = "bag" | "skills" | "growth" | "quests" | "shadow" | "notes" | "sneak";
 
@@ -122,6 +124,8 @@ export function panelAvailable(view: WorldView, panel: HudPanel): boolean {
       return view.mail != null;
     case "workshop":
       return view.workshop != null; // PR-2：伺服器只在主城（有靶場內容）時給
+    case "wish":
+      return view.wish != null; // WP-2：人在主城才有
     default:
       return true;
   }

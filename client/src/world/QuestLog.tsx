@@ -28,6 +28,7 @@ import {
 } from "./questPanel";
 import { Portrait } from "./StoryIcons";
 import { sortQuests } from "./story";
+import { offerSkipLabel, offerSubtitle, offerTitle } from "./wish";
 
 /** 委託人小頭像（樣張 22）。 */
 export const GIVER_FACE = 22;
@@ -208,9 +209,9 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
   }, [groupKey]);
   return (
     <div className="panel world-offer" data-testid="world-offer" ref={top}>
-      <h2>任務給的技能三選一</h2>
-      <div className="small">
-        {pending.quest_name_zh}：{pending.step_zh}
+      <h2 data-testid="world-offer-title">{offerTitle(pending)}</h2>
+      <div className="small" data-testid="world-offer-sub">
+        {offerSubtitle(pending)}
       </div>
       <div className="muted small">{pending.place_zh}選之前不能移動或使用其他服務。</div>
       <OfferPicker
@@ -240,7 +241,7 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
           學這招
         </button>
         <button type="button" disabled={busy} onClick={() => onAct({ kind: "offer_pick", pick: null })} data-testid="world-offer-skip">
-          跳過
+          {offerSkipLabel(pending)}
         </button>
       </div>
     </div>

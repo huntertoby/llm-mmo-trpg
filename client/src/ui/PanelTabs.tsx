@@ -179,7 +179,20 @@ export function resetScrollOnSwitch(root: ScrollHost, prev: string, next: string
 /**
  * 有分頁的面板本體：固定區（`head`＋分頁列）＋分頁內容。只有一個分頁時不畫分頁列（2～5 個才拆，3.2 第 3 條）。
  */
-export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly PanelTabDef[]; head?: ReactNode; initial?: string | null; testId?: string }) {
+export function PanelTabs({
+  tabs,
+  head,
+  initial,
+  testId,
+  onTab,
+}: {
+  tabs: readonly PanelTabDef[];
+  head?: ReactNode;
+  initial?: string | null;
+  testId?: string;
+  /** 切分頁時通知呼叫端（WP-3：許願池的送出列在框的下固定區，要知道現在是哪一種許法）。 */
+  onTab?: (id: string) => void;
+}) {
   const [picked, setPicked] = useState<string | null>(() => (initial != null && tabs.some((t) => t.id === initial) ? initial : null));
   const active = tabs.find((t) => t.id === picked) ?? tabs.find((t) => t.id === pickTab(tabs)) ?? tabs[0];
   const root = useRef<HTMLDivElement>(null);
@@ -228,7 +241,7 @@ export function PanelTabs({ tabs, head, initial, testId }: { tabs: readonly Pane
     <div ref={root} className="pnl-tabs" data-testid={testId} data-tab={active.id}>
       <div className="pnl-fixed">
         {head}
-        {many && <TabBar tabs={tabs} active={active.id} onPick={(id) => { resetScrollOnSwitch(root.current, active.id, id); setPicked(id); }} testId={testId !== undefined ? `${testId}-tabs` : undefined} />}
+        {many && <TabBar tabs={tabs} active={active.id} onPick={(id) => { resetScrollOnSwitch(root.current, active.id, id); setPicked(id); onTab?.(id); }} testId={testId !== undefined ? `${testId}-tabs` : undefined} />}
       </div>
       <div className="pnl-panes" style={locked !== null ? { minHeight: locked } : undefined} data-locked={locked ?? undefined}>
         {/* PNL-2：量的時候目前分頁照常掛著（量測盒放在 0 高、不佔位的外層裡）。原本量測時先卸下目前分頁，

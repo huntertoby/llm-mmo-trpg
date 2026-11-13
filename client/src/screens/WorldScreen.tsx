@@ -100,6 +100,8 @@ import { PartyIntroDialog, partyIntroShown } from "../world/PartyIntroDialog";
 import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDoneLines, reselectDoneLines } from "../world/RangeScreen";
 import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeExitLabel, rangeFightNotes, rangeFightPlace, rangeMode, type ChoosePage, type RangeFight } from "../world/range";
 import { WorkshopPanel } from "../world/WorkshopPanel";
+import { WishPanel, type WishFallback } from "../world/WishPanel";
+import { WISH_ZH, wishAction, type WishMode } from "../world/wish";
 import { ReselectEntry, allocateClosingLines } from "../world/ReselectEntry";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -175,6 +177,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [result, setResult] = useState<WorldSituationResult | null>(null);
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
+  const [wishFallback, setWishFallback] = useState<WishFallback | null>(null);
   const [pregenWait, setPregenWait] = useState<{ text: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
   useRegionTheme(view !== null ? worldRegion(view) : null); // RT-1：實地地圖的區域（主城與室內是 capital；沒有＝hub）
@@ -275,6 +278,10 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
 
   // ---- HUD（6B-5）：單一浮動面板、浮動提示、任務追蹤收合 ----
   const [hudPanel, setHudPanel] = useState<HudPanel | null>(null);
+  // WP-3：關掉許願池面板（或換別的面板）就不再提「改從選單挑」，下次打開照常從第一個分頁開
+  useEffect(() => {
+    if (hudPanel !== "wish") setWishFallback(null);
+  }, [hudPanel]);
   /** PNL-2：成長面板要直接開的分頁（主角卡的靈感點 → 「靈感閃現」）；`seq` 讓面板已開著時也重新掛載到那一頁。 */
   const [growthTab, setGrowthTab] = useState<{ tab: GrowthTabId | null; seq: number }>({ tab: null, seq: 0 });
   /** `npc`／`friend` 面板的對象（NPC ID 或影子主人的角色 ID；6B-4）。 */
@@ -448,10 +455,11 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }
   }
 
-  /** 6L-2：送出前等 LLM 的預先生成（閃現、機遇）；回傳 `false`＝玩家取消（不送動作）。 */
-  async function waitPregen(id: string, action: WorldAction): Promise<boolean> {
+  /** 6L-2：送出前等 LLM 的預先生成（閃現、機遇、WP-3 文字許願）；`cancel`＝玩家取消（不送動作），
+   * `timeout`＝伺服器等了 10 秒還沒好（許願改開選單；其他入口照舊送出，伺服器會給組合器或模板版）。 */
+  async function waitPregen(id: string, action: WorldAction): Promise<"go" | "cancel" | "timeout"> {
     const body = pregenWaitBody(action);
-    if (body === null || llm?.enabled !== true) return true;
+    if (body === null || llm?.enabled !== true) return "go";
     let cancel = () => undefined as void;
     const cancelled = new Promise<"cancel">((resolve) => {
       cancel = () => resolve("cancel");
@@ -463,13 +471,13 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     }, PREGEN_HINT_DELAY_MS);
     try {
       const done = await Promise.race([api.worldPregenWait(id, body).catch(() => null), cancelled]);
-      if (done === "cancel") return false;
+      if (done === "cancel") return "cancel";
       // RT-3：等待動畫有出現時，收成卡框、卡面淡入 0.3 秒再送出（減少動態時直接出卡）
       if (shown && !reducedMotion()) {
         setPregenWait((cur) => (cur === null ? cur : { ...cur, status: "done" }));
         await new Promise((resolve) => window.setTimeout(resolve, WAIT_DONE_MS));
       }
-      return true;
+      return done?.status === "timeout" ? "timeout" : "go";
     } finally {
       window.clearTimeout(timer);
       setPregenWait(null);
@@ -480,8 +488,28 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     void run(async () => {
       if (charId === null) return;
       if (action.kind === "travel") setResult(null);
-      if (!(await waitPregen(charId, action))) return;
+      if ((await waitPregen(charId, action)) === "cancel") return;
       show(await api.worldAct(charId, action));
+    });
+
+  /** WP-3 許願：文字許願先等 LLM（等待提示同閃現）；逾時或伺服器退回（沒聽懂、不能許）＝不扣錢，面板切到選單並說明。 */
+  const wish = (mode: WishMode, text: string, keywords: string[]) =>
+    void run(async () => {
+      if (charId === null) return;
+      const action = wishAction(mode, text, keywords);
+      const waited = await waitPregen(charId, action);
+      if (waited === "cancel") return;
+      if (waited === "timeout" && mode === "text") {
+        setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: WISH_ZH.timeout }));
+        return;
+      }
+      try {
+        show(await api.worldAct(charId, action));
+        setWishFallback(null);
+      } catch (e) {
+        if (mode !== "text") throw e;
+        setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: errorText(e) }));
+      }
     });
 
   const openSituation = (template: string) =>
@@ -958,6 +986,8 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
             )}
           </ReselectEntry>
         );
+      case "wish":
+        return v.wish == null ? null : <WishPanel wish={v.wish} busy={busy} fallback={wishFallback} onWish={wish} onBack={closeHud} />;
       case "stele":
         return hudWho === null ? null : <SteleMenu key={hudWho} view={v} region={hudWho} busy={busy} onAct={act} onClose={closeHud} />;
       case "pavilion":

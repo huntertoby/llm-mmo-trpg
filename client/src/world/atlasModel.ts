@@ -98,14 +98,13 @@ export function nextMapLayer(layer: "region" | "atlas" | null, map: WorldMapView
 // ---------------------------------------------------------------------------
 
 /** 情境物件點了直接開的面板：橋頭石碑（`stele_region`）開該區的傳送選單、功能型物件（`panel`）開既有
- * 面板；兩個都沒有（一般物件）與許願池（`wish`，WP-3 前）＝`null`，照舊開說明卡。 */
+ * 面板（WP-3 起許願池 `wish` 也是）；兩個都沒有（一般物件）＝`null`，照舊開說明卡。 */
 export function objectHud(
   obj: Pick<FieldSituationObject, "panel" | "stele_region"> | null,
 ): { panel: HudPanel; who: string | null } | null {
   if (obj === null) return null;
   if (obj.stele_region != null) return { panel: "stele", who: obj.stele_region };
   // PR-2b：`workshop`（工坊師傅選單）也是面板（`WorldScreen` 另記師傅的物件 ID，給「重選」入口用）
-  // WP-2：`wish`（許願池面板）在 WP-3 接上前先略過，照舊開說明卡
-  if (obj.panel != null && obj.panel !== "wish") return { panel: obj.panel, who: null };
+  if (obj.panel != null) return { panel: obj.panel, who: null };
   return null;
 }
