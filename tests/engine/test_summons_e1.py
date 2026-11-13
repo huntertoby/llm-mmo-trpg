@@ -58,6 +58,7 @@ TEN_KEYWORDS = {
     "concealed",
     "summon",
 }
+PENDING = {"combo_point", "fury", "focus", "ki"}  # KW-1 的 start_hidden 層數關鍵字
 
 
 def summoned(
@@ -87,10 +88,11 @@ def test_the_infusion_table_covers_all_ten_keywords() -> None:
     table = library().ruleset.core.summon_infusions
     assert set(table) == TEN_KEYWORDS
     # 3-53：中毒關鍵字沒有召喚灌注（06 6.27.1 沒有要求）；其餘十個都有。
-    assert {k.id for k in library().ruleset.keywords.keywords} - {
-        "poisoned",
-        "form",
-    } == TEN_KEYWORDS
+    keywords = library().ruleset.keywords
+    # KW-1：start_hidden 的四個層數關鍵字（PENDING）池子在 KW-2 補齊前不檢查灌注；
+    # KW-2 拿掉 start_hidden 時下一行會失敗，提醒決定這四個要不要灌注並恢復成看全部關鍵字。
+    assert set(keywords.ids()) - set(keywords.start_ids()) == PENDING
+    assert set(keywords.start_ids()) - {"poisoned", "form"} == TEN_KEYWORDS
 
 
 def test_wet_creates_water_on_the_target_tile() -> None:
