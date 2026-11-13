@@ -5,8 +5,7 @@
 // - `dialog`：戰鬥詢問視窗（3-8 的 `decision-card`）：水平置中、靠上或靠下，框內捲；
 // - `inline`：疊在別的容器裡（中上方的遇敵卡、事件卡），位置由容器決定。
 // 四角飾件畫在外框的 `::after`（`.rt-frame`），內容捲在 `.ui-popup-body` 裡，所以捲動時飾件不跟著跑。
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode, type Ref, type RefObject, type UIEvent } from "react";
-
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref, type RefObject, type UIEvent } from "react";
 /** 6F-3 `popupBox()` 的結果（CSS 像素，相對 HUD 舞台）。 */
 export interface PopupBoxLike {
   top: number;
@@ -104,13 +103,36 @@ interface Props {
   data?: Readonly<Record<string, string>>;
   /** 框頂端、不跟著捲的那一列（戰鬥詢問視窗的標題與「移到下方」）。 */
   head?: ReactNode;
+  /** 框底端、不跟著捲的那一段（FL-1b：選變體的下固定區；照 `head` 的做法放在 `ui-popup-body` 後面）。 */
+  foot?: ReactNode;
+  /**
+   * 開「上下固定區的插槽」（FL-1b，大世界 HUD 面板）：框頂端與底端各放一個 `ui-popup-head`／`ui-popup-foot`，
+   * 捲動區裡的元件可以用 `usePopupSlots()` 拿到這兩個元素、把自己的標頭與確定列 portal 進去（同一個元件的狀態，不用往上提）。
+   * 插槽空著時 CSS 不顯示（`:empty`），其他面板的排版不變。
+   */
+  slots?: boolean;
   /** 外框的 ref（點擊式面板判斷「點到外面」用，例如大世界的設定面板）。 */
   frameRef?: Ref<HTMLDivElement>;
   children: ReactNode;
 }
 
-export function PopupFrame({ placement, tone = "normal", className, role, label, testId, data, head, frameRef, children }: Props) {
+/** 上下固定區的插槽元素（`PopupFrame slots`）；不在有插槽的框裡為 `null`。 */
+export interface PopupSlots {
+  head: HTMLElement | null;
+  foot: HTMLElement | null;
+}
+
+const PopupSlotsContext = createContext<PopupSlots | null>(null);
+
+/** 捲動區裡的元件拿框的上下固定區插槽（FL-1b）；`null`＝不在有插槽的框裡，自己畫在原地。 */
+export function usePopupSlots(): PopupSlots | null {
+  return useContext(PopupSlotsContext);
+}
+export function PopupFrame({ placement, tone = "normal", className, role, label, testId, data, head, foot, slots = false, frameRef, children }: Props) {
   const body = useRef<HTMLDivElement | null>(null);
+  const [headEl, setHeadEl] = useState<HTMLElement | null>(null);
+  const [footEl, setFootEl] = useState<HTMLElement | null>(null);
+  const slotValue = useMemo<PopupSlots | null>(() => (slots ? { head: headEl, foot: footEl } : null), [slots, headEl, footEl]);
   useOverflowFlag(body);
   const attrs = Object.fromEntries(Object.entries(data ?? {}).map(([k, v]) => [`data-${k}`, v]));
   const cls = ["ui-popup", "rt-frame", `ui-popup-${placement.kind}`, tone === "danger" ? "danger" : "", placement.kind === "dialog" && placement.low ? "low" : "", className ?? ""]
@@ -123,10 +145,21 @@ export function PopupFrame({ placement, tone = "normal", className, role, label,
           <span>！</span>
         </div>
       )}
-      {head}
+      {slots ? (
+        <div ref={setHeadEl} className="ui-popup-head">
+          {head}
+        </div>
+      ) : (
+        head
+      )}
       <div ref={body} className="ui-popup-body" onScroll={markScrolled}>
-        {children}
+        {slots ? <PopupSlotsContext.Provider value={slotValue}>{children}</PopupSlotsContext.Provider> : children}
       </div>
+      {(slots || foot !== undefined) && (
+        <div ref={slots ? setFootEl : undefined} className="ui-popup-foot">
+          {foot}
+        </div>
+      )}
     </div>
   );
 }

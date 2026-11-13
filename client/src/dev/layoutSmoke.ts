@@ -811,7 +811,7 @@ async function flashStages(screen: DevScreen, label: string, doc: Document, win:
   if (screen === "flash") {
     if (!(await stepStage(rows, `${label}・出題前`, doc, win, 'button[data-testid^="flash-open-"]', ".flash-chooser .flash-categories"))) return rows;
     if (await stepStage(rows, `${label}・指定類別`, doc, win, '.flash-categories button[data-testid^="flash-cat-"]', ".flash-chooser .flash-mode.selected, .flash-chooser .flash-cat.selected")) {
-      if (await stepStage(rows, `${label}・選項`, doc, win, '[data-testid="flash-confirm"]', ".run-flash-pending .flash-option")) {
+      if (await stepStage(rows, `${label}・選項`, doc, win, '[data-testid="flash-confirm"]', ".run-flash-pending .fc-opt")) {
         const count = doc.querySelectorAll(".run-flash-pending .part-tip").length;
         if (count > 0) {
           await hoverFirst(doc, ".run-flash-pending .part-tip", 0);

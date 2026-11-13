@@ -3169,6 +3169,24 @@ export interface components {
             reason_zh: string;
         };
         /**
+         * ChangeIconOut
+         * @description 「前 → 後」一列的欄位小圖（FL-1b，移植需求第 7 節；圖示一律沿用前批）。
+         *
+         *     ``part``＝第④批部件圖樣（``cat``：``card`` 卡片小圖、``shape``、``surface``、``skeleton``）；
+         *     ``status``＝第⑤批狀態圖示；``keyword``＝第⑤b 批關鍵字圓章。
+         */
+        ChangeIconOut: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "part" | "status" | "keyword";
+            /** Cat */
+            cat?: string | null;
+            /** Id */
+            id: string;
+        };
+        /**
          * ChangeLookAction
          * @description 改外觀（Phase 6R-2，#137：在主城隨時免費改；:mod:`trpg.world.looks`）。``look`` 省略或全空＝
          *     回到種族預設。只在畫面，不影響數值。
@@ -5061,6 +5079,19 @@ export interface components {
             category?: string | null;
         };
         /**
+         * FlashBaseStatOut
+         * @description 原技能列的一個數字（FL-1b 2.1：AP、耐力、冷卻、射程、燃燒回合…，各帶卡片小圖與說明卡）。
+         */
+        FlashBaseStatOut: {
+            /** Name Zh */
+            name_zh: string;
+            /** Value Zh */
+            value_zh: string;
+            /** Term */
+            term?: string | null;
+            icon?: components["schemas"]["ChangeIconOut"] | null;
+        };
+        /**
          * FlashCategoryOut
          * @description 可指定的一個類別：目前有幾個合法變化（「連段（2）」；0 個不能選）。
          */
@@ -5124,11 +5155,22 @@ export interface components {
              * @default []
              */
             unequip_candidates: string[];
+            /** Unequip Slot */
+            unequip_slot?: string | null;
             /**
              * Changes
              * @default []
              */
             changes: components["schemas"]["StatChangeOut"][];
+            /** Headline Zh */
+            headline_zh?: string | null;
+            /**
+             * Say Zh
+             * @default
+             */
+            say_zh: string;
+            /** Tag Term */
+            tag_term?: string | null;
         };
         /**
          * FlashPickAction
@@ -5241,6 +5283,16 @@ export interface components {
             insight_per_win: number;
             /** Max Carry */
             max_carry: number;
+        };
+        /**
+         * FlashTermOut
+         * @description 選變體畫面的一張說明卡（FL-1b，移植需求 9.2）：數字已照資料填好。
+         */
+        FlashTermOut: {
+            /** Title Zh */
+            title_zh: string;
+            /** Text Zh */
+            text_zh: string;
         };
         /**
          * FocusTarget
@@ -8388,6 +8440,15 @@ export interface components {
             cost: number;
             /** Options */
             options: components["schemas"]["FlashOptionOut"][];
+            /**
+             * Base Stats
+             * @default []
+             */
+            base_stats: components["schemas"]["FlashBaseStatOut"][];
+            /** Terms */
+            terms?: {
+                [key: string]: components["schemas"]["FlashTermOut"];
+            };
         };
         /**
          * PendingLootView
@@ -10593,6 +10654,18 @@ export interface components {
              * @enum {string}
              */
             direction: "better" | "worse" | "cost" | "new";
+            /**
+             * Name Zh
+             * @default
+             */
+            name_zh: string;
+            /** Term */
+            term?: string | null;
+            /** Before Zh */
+            before_zh?: string | null;
+            /** After Zh */
+            after_zh?: string | null;
+            icon?: components["schemas"]["ChangeIconOut"] | null;
         };
         /** StationView */
         StationView: {

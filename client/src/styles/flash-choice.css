@@ -1,0 +1,688 @@
+/* FL-1b：靈感閃現「選變體」畫面改版（docs/art/靈感閃現選擇-移植需求.md；樣張 docs/art/sample/flashChoice.css 的 fc-* 直向版）。
+   三段：上固定區（.fc-fixed）＋選項清單（.fc-opts）＋下固定區（.fc-foot）。大世界放在 HUD 面板（PopupFrame slots）的
+   .ui-popup-head／.ui-popup-foot 插槽；一輪（.fc-run）三段照排、下固定區 sticky 在頁面底。
+   寬／窄版看面板寬（容器查詢 559px；大世界＝.world-hud-panel 的 world-panel 容器、一輪＝.fc-run 自己當容器），
+   兩種字都畫，.wide-only／.narrow-only 切換。顏色沿用資訊面板的 --pnl-*。 */
+
+/* ---------- 大世界 HUD 面板的上下插槽（PopupFrame slots；空的時候不佔位） ---------- */
+.ui-popup-head:empty,
+.ui-popup-foot:empty {
+  display: none;
+}
+
+.world-hud-panel > .ui-popup-head {
+  flex: none;
+  padding: 18px 12px 0;
+}
+
+.world-hud-panel:has(> .ui-popup-head:not(:empty)) > .ui-popup-body {
+  margin-top: 6px;
+}
+
+.world-hud-panel > .ui-popup-foot {
+  flex: none;
+}
+
+.world-hud-panel:has(> .ui-popup-foot:not(:empty)) > .ui-popup-body {
+  margin-bottom: 0;
+}
+
+/* ---------- 寬窄兩套字 ---------- */
+.fc-panel .narrow-only {
+  display: none;
+}
+
+/* 一輪：頁面本身會捲；自己當容器（看這個面板的寬） */
+.fc-run {
+  container-type: inline-size;
+}
+
+/* ---------- 上固定區：標頭 ---------- */
+.fc-fixed {
+  display: flex;
+  flex-direction: column;
+}
+
+.fc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fc-title {
+  font-family: "Noto Serif TC", "PMingLiU", serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--ui-text);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.fc-title small {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ui-gold-hi);
+  letter-spacing: 0;
+}
+
+.fc-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--pnl-l2);
+}
+
+.fc-sub b {
+  color: var(--ui-text);
+}
+
+.fc-sub .pnl-l3 {
+  line-height: 1.4;
+}
+
+.fc-sub.inline {
+  margin: 0;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* 窄版一行放不下（招名長、重閃）時只截招名，「已扣」標籤與 (i) 一定留在框內 */
+.fc-sub.inline b {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.fc-sub.inline .fc-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-sub.inline > :not(b) {
+  flex: none;
+}
+
+.fc-lock {
+  margin: 2px 0 0;
+}
+
+/* 原技能列（只出現一次）：白 4% 淡底、圓角 6、不描框 */
+.fc-base {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  margin: 8px 0 0;
+  padding: 6px 10px 6px 6px;
+  border-radius: 6px;
+  background: var(--pnl-row);
+}
+
+.fc-base-icon {
+  grid-row: 1 / 3;
+  display: flex;
+}
+
+.fc-base-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ui-text);
+  white-space: nowrap;
+}
+
+.fc-base-name .k {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--pnl-l3);
+}
+
+.fc-base-k {
+  font-size: 12px;
+  color: var(--pnl-l3);
+  white-space: nowrap;
+}
+
+.fc-base-more {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  align-self: center;
+}
+
+.fc-base-more button {
+  font-size: 12px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.fc-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 10px;
+  font-size: 12.5px;
+  color: var(--pnl-l2);
+  line-height: 20px;
+}
+
+.fc-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.fc-stat b {
+  color: var(--ui-text);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+}
+
+.fc-noicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+/* ---------- 選項卡 ---------- */
+.fc-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fc-opt {
+  position: relative;
+  border-radius: 7px;
+  background: var(--pnl-row);
+  padding: 7px 10px 8px;
+  border: 1px solid transparent; /* 選中時不跳 1px（4） */
+  cursor: pointer;
+  scroll-margin: 6px 0 20px; /* 選中的卡下框露出下緣漸隱（5 第 3 條） */
+  outline: none;
+}
+
+.fc-opt:hover {
+  background: var(--pnl-row-hi);
+}
+
+.fc-opt:focus-visible {
+  box-shadow: 0 0 0 2px rgb(140 208 228 / 55%);
+}
+
+/* 描框只表示狀態：選中＝亮金框＋淡金底 */
+.fc-opt.on {
+  border-color: var(--ui-gold-hi);
+  background: rgb(232 196 106 / 8%);
+  box-shadow: 0 0 0 1px rgb(232 196 106 / 25%) inset;
+}
+
+.fc-opt-top {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+}
+
+.fc-radio {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ui-gold);
+  box-sizing: border-box;
+  position: relative;
+}
+
+.fc-opt.on .fc-radio {
+  border-color: var(--ui-gold-hi);
+}
+
+.fc-opt.on .fc-radio::after {
+  content: "";
+  position: absolute;
+  inset: 2.5px;
+  border-radius: 50%;
+  background: var(--ui-gold-hi);
+}
+
+.fc-headline {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ui-text);
+  line-height: 1.35;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; /* 最多折兩行 */
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.fc-opt.on .fc-headline {
+  color: var(--ui-gold-hi);
+}
+
+.fc-cat {
+  align-self: start;
+  margin-top: 2px;
+}
+
+/* 轉型：琥珀細框（同現行 .flash-option-tag.transform 的提示色） */
+.fc-cat.transform .pnl-tag {
+  background: none;
+}
+
+/* ---------- 前 → 後：只列有變的欄位 ---------- */
+.fc-diffs {
+  display: grid;
+  grid-template-columns: 16px max-content max-content 14px minmax(0, 1fr);
+  gap: 3px 6px;
+  align-items: center;
+  margin: 5px 0 0 23px;
+  font-size: 13px;
+}
+
+.fc-diffs > canvas,
+.fc-diffs > .fc-noicon {
+  justify-self: center;
+}
+
+.fc-lab {
+  color: var(--pnl-l2);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.fc-was {
+  color: var(--pnl-l3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fc-was.none {
+  font-size: 12px;
+}
+
+.fc-arrow {
+  color: var(--ui-gold);
+  font-weight: 700;
+  text-align: center;
+}
+
+.fc-nows {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.fc-now {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border-radius: 4px;
+  line-height: 21px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+
+.fc-now > span {
+  white-space: normal;
+}
+
+.fc-now canvas {
+  flex: none;
+  vertical-align: -3px;
+}
+
+/* 「後」四種樣式：不靠顏色也分得開——實心底／細框＋警告三角／無底＋向下三角／綠「新」。框一律 outline（不加列高） */
+.fc-now.up,
+.fc-now.new {
+  color: var(--ui-gold-hi);
+  background: rgb(232 196 106 / 22%);
+}
+
+.fc-now.cost {
+  color: var(--pnl-warn);
+  background: none;
+  outline: 1px solid rgb(232 180 90 / 80%);
+  outline-offset: -1px;
+  padding-left: 4px;
+  gap: 4px;
+}
+
+.fc-now.down {
+  color: var(--ui-text);
+  background: none;
+  font-weight: 400;
+  padding-left: 2px;
+  gap: 4px;
+}
+
+.fc-down {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 6.5px solid transparent;
+  border-right: 6.5px solid transparent;
+  border-top: 11px solid currentColor; /* 和 13px 警告三角同高 */
+  margin: 1px 0 0;
+}
+
+.fc-newtag {
+  flex: none;
+  font-size: 10.5px;
+  line-height: 15px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: #12261a;
+  background: var(--pnl-good);
+  font-weight: 700;
+}
+
+.fc-when {
+  font-weight: 400;
+  color: var(--pnl-l2);
+}
+
+/* ---------- 術語：青色點線底線＋說明卡（Hint） ---------- */
+.fc-term {
+  text-decoration: underline dotted rgb(140 208 228 / 75%);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+.fc-tipcard {
+  max-width: 300px;
+}
+
+.fc-tip-title {
+  display: block;
+  color: var(--ui-gold-hi);
+  margin-bottom: 2px;
+}
+
+/* ---------- 下固定區（點哪個都不跳；最小高度照 5 第 1 條） ---------- */
+.fc-foot {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 74px;
+  margin: 0 12px;
+  padding: 8px 0 16px;
+  border-top: 1px solid var(--pnl-line);
+}
+
+.fc-foot.reserve {
+  min-height: 100px; /* 量到卸下選單＋兩行說明＋確定 99（移植需求約 91） */
+}
+
+.fc-foot-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 最多兩行（大標＋一句話接著排）：下固定區高度固定，點哪個都不跳（5 第 1 條）；完整的變化看卡上的前 → 後 */
+.fc-say {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--pnl-l1);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.fc-say .dim {
+  color: var(--pnl-l2);
+}
+
+.fc-picked {
+  color: var(--ui-gold-hi);
+  margin-right: 8px;
+}
+
+.fc-foot button.primary {
+  flex: none;
+  font-size: 14px;
+  padding: 6px 20px;
+}
+
+.fc-foot button[disabled] {
+  opacity: 0.45;
+}
+
+/* 轉型卸下選單：在「確定」上面一列 */
+.fc-unequip {
+  display: flex;
+  align-items: center;
+  gap: 6px 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--pnl-l2);
+}
+
+.fc-unequip .k {
+  white-space: nowrap;
+}
+
+.fc-unequip-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.fc-unequip button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  padding: 2px 9px 2px 4px;
+  white-space: nowrap;
+}
+
+.fc-unequip button.on {
+  border-color: var(--ui-gold-hi);
+  color: var(--ui-gold-hi);
+  box-shadow: 0 0 0 1px rgb(232 196 106 / 35%) inset;
+}
+
+/* 一輪：頁面捲動時「確定」仍看得到（第 12 節決定 3） */
+.fc-run > .fc-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 8px 0 0;
+  padding-left: 0;
+  padding-right: 0;
+  background: var(--ui-panel-solid, var(--ui-navy));
+}
+
+.fc-run .fc-opts {
+  margin-top: 10px;
+}
+
+.fc-run .fc-opt {
+  scroll-margin-bottom: 110px; /* 下固定區蓋在頁面底 */
+}
+
+/* ---------- 「完整說明」說明卡 ---------- */
+.fc-pop {
+  width: 330px;
+  max-width: 100%;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ui-text);
+}
+
+.fc-pop h4 {
+  margin: 0 0 4px;
+  font-size: 13.5px;
+  color: var(--ui-gold-hi);
+}
+
+.fc-pop dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 10px;
+  margin: 0;
+}
+
+.fc-pop dt {
+  color: var(--pnl-l2);
+}
+
+.fc-pop dd {
+  margin: 0;
+}
+
+.fc-pop .formula {
+  margin: 0;
+}
+
+.fc-asm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.fc-asm > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.fc-pop .concept {
+  margin: 6px 0 0;
+  color: var(--pnl-l3);
+  font-size: 11.5px;
+}
+
+/* ---------- 窄版（面板 < 560，800×600 的 493）：看面板寬，不看視窗寬 ---------- */
+@container (max-width: 559px) {
+  .fc-panel .wide-only {
+    display: none;
+  }
+
+  .fc-panel .narrow-only {
+    display: revert;
+  }
+
+  .fc-panel .fc-head.narrow-only,
+  .fc-panel .fc-base-icon.narrow-only {
+    display: flex;
+  }
+
+  .fc-title {
+    font-size: 19px;
+  }
+
+  .fc-base {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    padding: 3px 8px 3px 5px;
+    margin-top: 5px;
+    gap: 0 8px;
+  }
+
+  .fc-base-icon {
+    grid-row: 1;
+  }
+
+  .fc-base-more {
+    grid-row: 1;
+    grid-column: 4;
+  }
+
+  .fc-base .fc-stats {
+    gap: 2px 8px;
+  }
+
+  .fc-headline {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  .fc-opts {
+    gap: 4px;
+  }
+
+  .fc-opt {
+    padding: 4px 8px 5px;
+  }
+
+  .fc-diffs {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    gap: 2px 5px;
+  }
+
+  .fc-now {
+    line-height: 19px;
+    padding: 0 6px;
+  }
+
+  .fc-foot {
+    gap: 4px;
+    min-height: 57px;
+    padding: 6px 0 12px;
+  }
+
+  .fc-foot.reserve {
+    min-height: 86px; /* 量到 85（移植需求約 83） */
+  }
+
+  .fc-foot-main {
+    gap: 8px;
+  }
+
+  .fc-unequip {
+    font-size: 12px;
+    gap: 4px 6px;
+  }
+
+  .fc-unequip-list {
+    gap: 4px;
+  }
+
+  .fc-unequip button {
+    font-size: 12px;
+    padding: 1px 7px 1px 3px;
+    gap: 4px;
+  }
+
+  .fc-say {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .fc-picked {
+    margin-right: 6px;
+  }
+}

@@ -144,6 +144,14 @@ def test_pending_flash_options_carry_changes(client: TestClient) -> None:
     for option in options:
         assert option["changes"], option["template"]
         for row in option["changes"]:
-            assert set(row) == {"field", "label_zh", "effect_index", "before", "after", "direction"}
+            assert set(row) == {
+                "field",
+                "label_zh",
+                "effect_index",
+                "before",
+                "after",
+                "direction",
+                *("name_zh", "term", "before_zh", "after_zh", "icon"),  # FL-1b 畫面字
+            }
             assert row["direction"] in ("better", "worse", "cost", "new")
             assert row["before"] != row["after"]

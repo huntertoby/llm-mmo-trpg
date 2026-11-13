@@ -8,21 +8,28 @@
 - ``cost``：代價欄位（AP、冷卻、法力、耐力……）變了，升或降看前後值；
 - ``new``：新加的效果或欄位（前值為 ``None``）。拿掉的效果記 ``worse``（後值為 ``None``）。
 
-只列有變的欄位；順序固定（技能層級 → 代價 → 效果 → 接續段）。前端畫「前 → 後」用，不進規則。
+只列有變的欄位；順序固定（種類 → 技能層級 → 代價 → 效果 → 接續段）。前端畫「前 → 後」用，不進規則。
+
+**畫面用的欄位名與單位對照只在這裡**（FL-1b，``docs/art/靈感閃現選擇-移植需求.md`` 8.1、
+9.1 #3～#5；開發 PM 第 12 節決定 1）：每列另帶 ``name_zh``（射程、冷卻、AP、燃燒、範圍、地面、
+額外傷害、接續、第二元素、效果、種類）、帶單位的 ``before_zh``／``after_zh``（「4 格」「2 回合」
+「3 成武器傷害」）、欄位小圖 ``icon`` 與說明卡 ``term``。前端只畫樣式。顯示字可帶術語標記
+``[[術語|字]]``、圖示標記 ``{{kw:<id>}}``（見 :mod:`trpg.api.flash_text`）。
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator, Sequence
 from fractions import Fraction
 from typing import Literal
 
-from trpg.api.run_schemas import StatChangeOut
+from trpg.api.run_schemas import ChangeIconOut, FlashBaseStatOut, StatChangeOut
 from trpg.api.skill_cards import CostStat, EffectStat, card_stats, effect_stat
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import EffectSpec, SkillDef
+from trpg.content.skills import EffectSpec, SkillDef, condition_text
 
-__all__ = ["flash_changes"]
+__all__ = ["base_stats", "flash_changes", "ratio_zh"]
 
 Direction = Literal["better", "worse", "cost", "new"]
 
@@ -279,11 +286,39 @@ def _effects(
     return [(spec, effect_stat(library, skill, i, spec)) for i, spec in enumerate(specs)]
 
 
+_KIND_ZH = {
+    "active": "主動",
+    "passive": "被動",
+    "reaction": "反應",
+    "stance": "姿態",
+    "modifier": "修正型被動",
+}
+
+
+def _kind_of(skill: SkillDef) -> str:
+    return "modifier" if skill.is_modifier else skill.kind
+
+
+def _kind_rows(before: SkillDef, after: SkillDef) -> Iterator[StatChangeOut]:
+    """轉型換了種類（FL-1b 9.1 #4「種類」；前面有值的換掉照 ``better``，不掛「新」）。"""
+    a, b = _kind_of(before), _kind_of(after)
+    if a != b:
+        yield _row("kind", "種類", _KIND_ZH.get(a, a), _KIND_ZH.get(b, b), "better")
+
+
 def flash_changes(
-    library: ContentLibrary, before: SkillDef, after: SkillDef
+    library: ContentLibrary,
+    before: SkillDef,
+    after: SkillDef,
+    *,
+    keyword: str | None = None,
 ) -> tuple[StatChangeOut, ...]:
-    """``before``（閃現前）到 ``after``（選項套用後）卡片數字的差異清單（見模組說明）。"""
+    """``before``（閃現前）到 ``after``（選項套用後）卡片數字的差異清單（見模組說明）。
+
+    ``keyword``：選項帶的關鍵字（``Variation.keyword``）；新加的表面效果「後」寫
+    「會造成 {關鍵字}」用。"""
     rows = [
+        *_kind_rows(before, after),
         *_shape_rows(before, after, library),
         *_cost_rows(before, after, library),
         *_effect_rows(
@@ -299,4 +334,349 @@ def flash_changes(
             _effects(library, after, after.followup.effects if after.followup else ()),
         ),
     ]
-    return tuple(rows)
+    view = _View(library, before, after, keyword)
+    return tuple(view.dress(row) for row in _drop_shifted(rows))
+
+
+def _drop_shifted(rows: list[StatChangeOut]) -> list[StatChangeOut]:
+    """同一個效果只是換了位置（例：多打一下插進一段傷害，後面的造水往後挪一格）：「拿掉」與「新加」
+    兩列的欄位名與值都一樣時兩列都不列（FL-1b：畫面不出現「積水 → 沒有」又「沒有 → 積水」）。"""
+    removed = [r for r in rows if r.after is None and r.before is not None and "." not in r.field]
+    added = [r for r in rows if r.before is None and r.after is not None and "." not in r.field]
+    drop: set[int] = set()
+    for old in removed:
+        prefix = old.field.split("[", 1)[0]
+        match = next(
+            (
+                new
+                for new in added
+                if id(new) not in drop
+                and new.field.split("[", 1)[0] == prefix
+                and (new.label_zh, new.after) == (old.label_zh, old.before)
+            ),
+            None,
+        )
+        if match is not None:
+            drop |= {id(old), id(match)}
+    return [r for r in rows if id(r) not in drop]
+
+
+# ---------------------------------------------------------------------------
+# 畫面用的欄位名、單位、小圖與說明卡（FL-1b）
+# ---------------------------------------------------------------------------
+
+_FIELD_RE = re.compile(r"^(effects|followup)\[(\d+)\](?:\.effects\[(\d+)\])?(?:\.([a-z_]+))?$")
+_COST_ICON = {
+    "ap": "ap",
+    "mana": "mana",
+    "stamina": "stamina",
+    "hp_percent": "hp",
+    "cooldown": "cooldown",
+    "uses_per_battle": "uses",
+    "source": "source",
+}
+_COST_TERM = {"ap": "ap", "stamina": "stamina", "cooldown": "cooldown"}
+_COST_UNIT = {"cooldown": "回合", "uses_per_battle": "次"}
+_SHAPE_ROWS = {"range": ("射程", "格"), "radius": ("範圍", "格"), "size": ("範圍", "格")}
+_SURFACE_ZH = {"water": "積水"}
+"""表面在選變體畫面的叫法（9.2「積水（水表面）」）；沒列的用表面的 ``name_zh``。"""
+_AMOUNT_UNITS = (("回合", "回合"), ("距離", "格"), ("層數", "層"), ("持續", "輪"))
+"""``label_zh`` 的字尾 → 單位（「燃燒回合」→ 名「燃燒」、值「5 回合」）。"""
+_PERMILLE = 1000
+_TENTH = 100
+_CARD_ICON = {
+    "damage": "damage",
+    "delayed_damage": "damage",
+    "heal": "heal",
+    "shield": "shield",
+    "apply_status": "status",
+    "create_surface": "surface",
+    "summon": "summon",
+    "push": "move",
+    "pull": "move",
+    "teleport": "move",
+}
+
+
+def ratio_zh(permille: int) -> str:
+    """倍率的白話（9.1 #3）：整成寫「3 成」、不整寫「35%」、1 以上寫「1.35 倍」。"""
+    if permille >= _PERMILLE:
+        return f"{permille / _PERMILLE:g} 倍"
+    if permille % _TENTH == 0:
+        return f"{permille // _TENTH} 成"
+    return f"{permille / 10:g}%"
+
+
+def _unit(value: str | None, unit: str | None) -> str | None:
+    if value is None or not unit:
+        return value
+    return f"{value} {unit}"
+
+
+def _percent(value: str | None) -> str | None:
+    """強度 ‰ 的暫定寫法：「1025‰」→「102.5%」（白話寫法待玩法 PM，FL-1b 報告 10.2 第 3 條）。"""
+    if value is None:
+        return None
+    return f"{int(value.removesuffix('‰')) / 10:g}%"
+
+
+def _card_icon(spec: EffectSpec) -> str:
+    return _CARD_ICON.get(spec.type, "status")
+
+
+def _icon(spec: EffectSpec) -> ChangeIconOut:
+    if spec.type == "apply_status" and spec.status is not None:
+        return ChangeIconOut(kind="status", id=str(spec.status))
+    if spec.type == "create_surface" and spec.surface is not None:
+        return ChangeIconOut(kind="part", cat="surface", id=spec.surface.value)
+    return ChangeIconOut(kind="part", cat="card", id=_card_icon(spec))
+
+
+def _card(icon: str) -> ChangeIconOut:
+    return ChangeIconOut(kind="part", cat="card", id=icon)
+
+
+def _ratio(times: str | None, weapon: bool) -> str | None:
+    """「×0.3」→「3 成武器傷害」（武器技帶說明卡 ``weapon_damage:<‰>``）。"""
+    if times is None:
+        return None
+    permille = round(float(times.removeprefix("×")) * _PERMILLE)
+    text = ratio_zh(permille)
+    return f"{text}[[weapon_damage:{permille}|武器傷害]]" if weapon else text
+
+
+def _plain(row: StatChangeOut, name: str, unit: str | None, term: str | None) -> dict[str, object]:
+    return {
+        "name_zh": name,
+        "term": term,
+        "before_zh": _unit(row.before, unit),
+        "after_zh": _unit(row.after, unit),
+    }
+
+
+def _whole_name(prefix: str, skill: SkillDef, spec: EffectSpec) -> str:
+    """整個效果新加或拿掉的欄位名（9.1 #4）。"""
+    if prefix == "followup":
+        return "接續"
+    if spec.type == "create_surface":
+        return "地面"
+    if spec.type != "damage":
+        return "效果"
+    if spec.condition is None:
+        first = next((e for e in skill.effects if e.type == "damage"), None)
+        if first is not None and first is not spec and spec.element != first.element:
+            return "第二元素"
+    return "額外傷害"
+
+
+class _View:
+    """把一列差異換成畫面字（欄位名、帶單位的前後值、小圖、說明卡）。"""
+
+    def __init__(
+        self, library: ContentLibrary, before: SkillDef, after: SkillDef, keyword: str | None
+    ) -> None:
+        self.library = library
+        self.before = before
+        self.after = after
+        self.keyword = keyword
+        self.statuses = library.ruleset.statuses.by_id()
+
+    def dress(self, row: StatChangeOut) -> StatChangeOut:
+        field = row.field
+        if field == "kind":
+            kind = _kind_of(self.after)
+            update = _plain(row, row.label_zh, None, None)
+            update["icon"] = ChangeIconOut(kind="part", cat="skeleton", id=kind)
+            if kind == "passive":
+                update["after_zh"] = f"[[kind:passive|{row.after}]]"
+            return row.model_copy(update=update)
+        if field in _SHAPE_ROWS:
+            name, unit = _SHAPE_ROWS[field]
+            update = _plain(row, name, unit, "range" if field == "range" else None)
+            update["icon"] = _card("range")
+            return row.model_copy(update=update)
+        if field.startswith("cost."):
+            kind = field.removeprefix("cost.")
+            update = _plain(row, row.label_zh, _COST_UNIT.get(kind), _COST_TERM.get(kind))
+            icon = _COST_ICON.get(kind)
+            update["icon"] = None if icon is None else _card(icon)
+            return row.model_copy(update=update)
+        match = _FIELD_RE.match(field)
+        if match is None:
+            return row.model_copy(update=_plain(row, row.label_zh, None, None))
+        prefix, index, sub, attr = match.groups()
+        update = self._effect(row, prefix, int(index), None if sub is None else int(sub), attr)
+        return row.model_copy(update=update)
+
+    def _spec(self, skill: SkillDef, prefix: str, index: int, sub: int | None) -> EffectSpec | None:
+        if prefix == "effects":
+            specs: Sequence[EffectSpec] = skill.effects
+        else:
+            specs = skill.followup.effects if skill.followup else ()
+        if index >= len(specs):
+            return None
+        if sub is None:
+            return specs[index]
+        nested = specs[index].effects or ()
+        return nested[sub] if sub < len(nested) else None
+
+    def _effect(
+        self, row: StatChangeOut, prefix: str, index: int, sub: int | None, attr: str | None
+    ) -> dict[str, object]:
+        new_spec = self._spec(self.after, prefix, index, sub)
+        old_spec = self._spec(self.before, prefix, index, sub)
+        if attr is None:  # 整個效果新加或拿掉
+            return self._whole(row, prefix, index, old_spec, new_spec)
+        spec = new_spec or old_spec
+        assert spec is not None
+        if attr == "amount":
+            return self._amount(row, spec)
+        if attr == "multiplier_permille":
+            skill = self.after if new_spec is not None else self.before
+            weapon = effect_stat(self.library, skill, index, spec).weapon
+            return {
+                "name_zh": "傷害",
+                "term": None,
+                "before_zh": _ratio(row.before, weapon),
+                "after_zh": _ratio(row.after, weapon),
+                "icon": _card("damage"),
+            }
+        if attr == "magnitude_permille":
+            update = _plain(row, row.label_zh, None, None)
+            update.update(before_zh=_percent(row.before), after_zh=_percent(row.after))
+            update["icon"] = _icon(spec)
+            return update
+        update = _plain(row, row.label_zh.removesuffix("骰子") or row.label_zh, None, None)
+        update["icon"] = _card(_card_icon(spec))  # 骰子
+        return update
+
+    def _amount(self, row: StatChangeOut, spec: EffectSpec) -> dict[str, object]:
+        if spec.type == "apply_status" and spec.status is not None:
+            status = self.statuses.get(str(spec.status))
+            name = str(spec.status) if status is None else status.name_zh
+            update = _plain(row, name, "回合", f"status:{spec.status}")
+            update["icon"] = ChangeIconOut(kind="status", id=str(spec.status))
+            return update
+        if (
+            spec.type == "create_surface"
+            and spec.surface is not None
+            and row.label_zh.endswith("回合")
+        ):
+            surface = spec.surface.value
+            name = _SURFACE_ZH.get(surface) or row.label_zh.removesuffix("回合")
+            update = _plain(row, name, "回合", f"surface:{surface}")
+            update["icon"] = _icon(spec)
+            return update
+        label, unit = row.label_zh, None
+        for suffix, found in _AMOUNT_UNITS:
+            if label.endswith(suffix) and label != suffix:
+                label, unit = label.removesuffix(suffix), found
+                break
+        update = _plain(row, label, unit, None)
+        update["icon"] = _icon(spec)
+        return update
+
+    def _whole(
+        self,
+        row: StatChangeOut,
+        prefix: str,
+        index: int,
+        old_spec: EffectSpec | None,
+        new_spec: EffectSpec | None,
+    ) -> dict[str, object]:
+        adding = row.before is None
+        spec = new_spec if adding else old_spec
+        skill = self.after if adding else self.before
+        assert spec is not None
+        phrase = self._phrase(skill, index, spec, makes=self.keyword if adding else None)
+        return {
+            "name_zh": _whole_name(prefix, skill, spec),
+            "term": None,
+            "before_zh": None if adding else phrase,
+            "after_zh": phrase if adding else None,
+            "icon": _icon(spec),
+        }
+
+    def _phrase(self, skill: SkillDef, index: int, spec: EffectSpec, *, makes: str | None) -> str:
+        """整個效果的白話（9.3：「積水，會造成 潮濕」「3 成武器傷害（目標這回合被撞過才有）」）。"""
+        if spec.type == "create_surface" and spec.surface is not None:
+            surface = spec.surface.value
+            name = _SURFACE_ZH.get(surface)
+            if name is None:
+                name = self.library.ruleset.surface_def(spec.surface).name_zh
+            text = f"[[surface:{surface}|{name}]]"
+            keyword = self._keyword_name(makes)
+            if makes is not None and keyword is not None:
+                text += f"，[[makes|會造成]] {{{{kw:{makes}}}}}[[kw:{makes}|{keyword}]]"
+            return text
+        if spec.type == "apply_status" and spec.status is not None:
+            status = self.statuses.get(str(spec.status))
+            name = str(spec.status) if status is None else status.name_zh
+            rounds = spec.duration or (None if status is None else status.duration)
+            tail = "" if rounds is None else f" {rounds} 回合"
+            return f"[[status:{spec.status}|{name}]]{tail}"
+        stat = effect_stat(self.library, skill, index, spec)
+        if spec.type != "damage":
+            return stat.label or _name(stat)
+        if stat.weapon:
+            text = _ratio(_times(stat.multiplier_permille or _PERMILLE), weapon=True) or ""
+        else:
+            text = f"{stat.dice or ''} {stat.element_zh or ''}傷害".strip()
+        if spec.condition is not None:
+            text += f"（{self._condition(spec)}）"
+        return text
+
+    def _condition(self, spec: EffectSpec) -> str:
+        assert spec.condition is not None
+        custom = self.library.flash.condition_zh.get(spec.condition.type)
+        if custom is not None:
+            return custom
+        ruleset = self.library.ruleset
+        weapons = self.library.weapons
+        text = condition_text(
+            spec.condition,
+            status_name=lambda s: self.statuses[s].name_zh if s in self.statuses else s,
+            surface_name=lambda s: ruleset.surface_def(s).name_zh,
+            weapon_name=lambda w: weapons[w].name_zh if w in weapons else w,
+        )
+        return f"{text}才有" if text.endswith("時") else f"{text}時才有"
+
+    def _keyword_name(self, keyword: str | None) -> str | None:
+        found = None if keyword is None else self.library.keywords.by_id().get(keyword)
+        return None if found is None else found.name_zh
+
+
+def base_stats(library: ContentLibrary, skill: SkillDef) -> tuple[FlashBaseStatOut, ...]:
+    """原技能列的數字（FL-1b 2.1）：代價（照卡片順序：AP、耐力、冷卻…）、射程、狀態回合。"""
+    stats = card_stats(library, skill)
+    out: list[FlashBaseStatOut] = []
+    for cost in stats.costs:
+        icon = _COST_ICON.get(cost.kind)
+        out.append(
+            FlashBaseStatOut(
+                name_zh=_COST_ZH.get(cost.kind, cost.kind),
+                value_zh=_cost_label(cost) or "",
+                term=_COST_TERM.get(cost.kind),
+                icon=None if icon is None else _card(icon),
+            )
+        )
+    if stats.range is not None:
+        out.append(
+            FlashBaseStatOut(
+                name_zh="射程", value_zh=str(stats.range), term="range", icon=_card("range")
+            )
+        )
+    statuses = library.ruleset.statuses.by_id()
+    for spec, stat in zip(skill.effects, stats.effects, strict=False):
+        if spec.type != "apply_status" or spec.status is None or stat.amount is None:
+            continue
+        status = statuses.get(str(spec.status))
+        out.append(
+            FlashBaseStatOut(
+                name_zh=str(spec.status) if status is None else status.name_zh,
+                value_zh=f"{stat.amount} {stat.unit or '回合'}",
+                term=f"status:{spec.status}",
+                icon=ChangeIconOut(kind="status", id=str(spec.status)),
+            )
+        )
+    return tuple(out)

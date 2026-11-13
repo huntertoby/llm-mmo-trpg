@@ -37,11 +37,13 @@ __all__ = [
     "CompleteSkillRules",
     "ExtraMajorTemplate",
     "FlashCategory",
+    "FlashHeadline",
     "FlashKind",
     "FlashPricing",
     "FlashRules",
     "FlashTable",
     "FlashTemplate",
+    "FlashTerm",
     "MajorFlashTemplate",
     "PriceRule",
     "TransformTarget",
@@ -289,6 +291,12 @@ class FlashTemplate(ContentModel):
     summary_zh: str = Field(min_length=1)
     llm_hint: str = ""
     """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
+    headline_zh: str | None = None
+    """選變體畫面的白話大標（FL-1b，移植需求 8.2；玩法 PM 寫）；可帶 ``{n}``（模板的
+    ``delta``）。省略時畫面退回 ``summary_zh``。依關鍵字而不同的見 :attr:`FlashTable.headlines`。"""
+    say_zh: str | None = None
+    """選中時下固定區的一句話（FL-1b 9.3）；可帶 ``{shape}``、``{cells}``、``{range}``、
+    ``{n}`` 與術語標記 ``[[術語|字]]``。省略時由差異清單照句型組。"""
     delta: int | None = Field(default=None, ge=-3, le=3)
     """``area``／``range`` 的增量（格）。"""
     shapes: tuple[ShapeSpec, ...] = ()
@@ -342,6 +350,12 @@ class MajorFlashTemplate(ContentModel):
     evolution: str = Field(pattern=ID_PATTERN)
     llm_hint: str = ""
     """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用進化模板的說明。"""
+    headline_zh: str | None = None
+    """選變體畫面的白話大標（FL-1b，移植需求 8.2；玩法 PM 寫）；可帶 ``{n}``（模板的
+    ``delta``）。省略時畫面退回 ``summary_zh``。依關鍵字而不同的見 :attr:`FlashTable.headlines`。"""
+    say_zh: str | None = None
+    """選中時下固定區的一句話（FL-1b 9.3）；可帶 ``{shape}``、``{cells}``、``{range}``、
+    ``{n}`` 與術語標記 ``[[術語|字]]``。省略時由差異清單照句型組。"""
 
 
 type TransformTarget = Literal["passive", "reaction", "summon", "trap", "stance", "modifier"]
@@ -366,6 +380,12 @@ class TransformTemplate(ContentModel):
     summary_zh: str = Field(min_length=1)
     llm_hint: str = ""
     """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
+    headline_zh: str | None = None
+    """選變體畫面的白話大標（FL-1b，移植需求 8.2；玩法 PM 寫）；可帶 ``{n}``（模板的
+    ``delta``）。省略時畫面退回 ``summary_zh``。依關鍵字而不同的見 :attr:`FlashTable.headlines`。"""
+    say_zh: str | None = None
+    """選中時下固定區的一句話（FL-1b 9.3）；可帶 ``{shape}``、``{cells}``、``{range}``、
+    ``{n}`` 與術語標記 ``[[術語|字]]``。省略時由差異清單照句型組。"""
     trigger: TriggerSpec | None = None
     reaction: ReactionSpec | None = None
     scale_permille: int = Field(default=500, ge=100, le=1000)
@@ -419,6 +439,37 @@ class ExtraMajorTemplate(ContentModel):
     summary_zh: str = Field(min_length=1)
     llm_hint: str = ""
     """給 LLM 提議看的一句話說明（3W-7）；空 ＝ 用 ``summary_zh``。"""
+    headline_zh: str | None = None
+    """選變體畫面的白話大標（FL-1b，移植需求 8.2；玩法 PM 寫）；可帶 ``{n}``（模板的
+    ``delta``）。省略時畫面退回 ``summary_zh``。依關鍵字而不同的見 :attr:`FlashTable.headlines`。"""
+    say_zh: str | None = None
+    """選中時下固定區的一句話（FL-1b 9.3）；可帶 ``{shape}``、``{cells}``、``{range}``、
+    ``{n}`` 與術語標記 ``[[術語|字]]``。省略時由差異清單照句型組。"""
+
+
+class FlashHeadline(ContentModel):
+    """「模板 × 關鍵字」的大標與說明句（FL-1b，移植需求 8.2）：依關鍵字（或第二元素）而不同的模板
+    （``keyword_imbue``、``keyword_exploit``、``element_second``…）。表裡沒有的組合退回模板自己的
+    ``headline_zh``／``say_zh``，再沒有就退回 ``summary_zh``。不用 LLM。"""
+
+    template: str = Field(pattern=ID_PATTERN)
+    keyword: str = Field(pattern=ID_PATTERN)
+    """變化帶的關鍵字（``Variation.keyword``）或元素（``Variation.element``）。"""
+    headline_zh: str | None = None
+    say_zh: str | None = None
+
+
+class FlashTerm(ContentModel):
+    """選變體畫面的說明卡（FL-1b，移植需求 6、9.2；「介面用詞」）。
+
+    ``text_zh`` 可帶資料填的變數（``{ap_per_turn}``、``{ap_carry_max}``、``{water_rounds}``、
+    ``{wet_heal_percent}``；武器傷害另有 ``{dice}``、``{attrs}``、``{times}``、``{bonus}``），
+    數字不寫死。狀態、關鍵字、形狀照內容原句（``status:<id>``、``kw:<id>``、``shape:<id>``
+    讀各自的 ``description_zh``），這裡有同 ID 的優先。"""
+
+    id: str = Field(min_length=1)
+    title_zh: str = Field(min_length=1)
+    text_zh: str = Field(min_length=1)
 
 
 class SupportSkillRule(ContentModel):
@@ -443,6 +494,13 @@ class FlashTable(ContentModel):
     transforms: tuple[TransformTemplate, ...] = ()
     support: SupportSkillRule = SupportSkillRule()
     """輔助技的判定（``support_only`` 類別用）。"""
+    headlines: tuple[FlashHeadline, ...] = ()
+    """「模板 × 關鍵字」的大標（FL-1b）。"""
+    terms: tuple[FlashTerm, ...] = ()
+    """選變體畫面的說明卡（FL-1b）。"""
+    condition_zh: dict[str, str] = Field(default_factory=dict)
+    """新加的條件傷害「（……才有）」的白話（FL-1b；條件 ID → 句子，可帶術語標記）；沒有的退回條件的
+    一句話。"""
     stance_ladders: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """元素姿態的階梯（3W-2b）：元素 ID（``physical`` 也有）→ 由弱到強的姿態狀態 ID。轉型優先
     轉成同元素的姿態；姿態的「費用」「修正」類小變化在同一階梯上換級（維持費 ±1 搭配效果升降）。"""
@@ -472,6 +530,15 @@ class FlashTable(ContentModel):
                 raise ValueError(
                     f"大變化補充模板 {extra.id} 的類別 {extra.category} 不是大變化類別"
                 )
+        known = set(templates)
+        for line in self.headlines:
+            if line.template not in known:
+                raise ValueError(f"大標 {line.template}×{line.keyword}：未知的模板")
+        pairs = [(h.template, h.keyword) for h in self.headlines]
+        dup = sorted(f"{t}×{k}" for (t, k), n in Counter(pairs).items() if n > 1)
+        dup += sorted(k for k, n in Counter(t.id for t in self.terms).items() if n > 1)
+        if dup:
+            raise ValueError(f"大標或說明卡重複：{', '.join(dup)}")
         return self
 
     def category(self, category_id: str) -> FlashCategory:
@@ -501,3 +568,15 @@ class FlashTable(ContentModel):
 
     def transform_template(self, template_id: str) -> TransformTemplate | None:
         return next((t for t in self.transforms if t.id == template_id), None)
+
+    def headline(self, template_id: str, keyword: str | None) -> FlashHeadline | None:
+        """「模板 × 關鍵字」表的一列（FL-1b）；沒有時 ``None``。"""
+        if keyword is None:
+            return None
+        return next(
+            (h for h in self.headlines if h.template == template_id and h.keyword == keyword),
+            None,
+        )
+
+    def term(self, term_id: str) -> FlashTerm | None:
+        return next((t for t in self.terms if t.id == term_id), None)

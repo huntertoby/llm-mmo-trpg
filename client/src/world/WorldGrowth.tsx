@@ -12,6 +12,7 @@ import { FlashChooser } from "../run/FlashChooser";
 import { FlashRuleChips, flashRowState } from "../run/FlashSection";
 import { CAN_FLASH_TEXT, flashCountText, noFlashOptions, NO_FLASH_OPTIONS_TEXT, ownedSkills, reflashable, showCanFlash } from "../run/flash";
 import { FlashPendingPanel } from "../screens/RunFlashPending";
+import { FLASH_LOCK_NOTE_ZH } from "../run/flashChoice";
 import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Hint } from "../ui/Hint";
 import { Callout, Chip, EmptyNote, Fold, FoldGroup, HudBare, InfoTip, KeepNum, LockGlyph, PanelHead, PartBare, TabLine, Tag, EventBare } from "../ui/PanelKit";
@@ -61,10 +62,8 @@ export function WorldFlashPending({ view, busy, onChoose }: Pick<Props, "view" |
   if (pending == null) return null;
   return (
     <div className="world-growth" data-testid="world-flash-pending">
-      <div className="world-growth-lock small" role="status">
-        先選完閃現的變化：選之前不能移動、開戰或使用其他服務。
-      </div>
-      <FlashPendingPanel key={`${pending.skill_id}:${pending.nth}:${pending.slot}`} pending={pending} hero={view.hero} busy={busy} onChoose={onChoose} />
+      {/* FL-1b 2.1：鎖住提示放進上固定區（寬版第 2 行下一行 L3；窄版收進 (i)） */}
+      <FlashPendingPanel key={`${pending.skill_id}:${pending.nth}:${pending.slot}`} pending={pending} hero={view.hero} busy={busy} onChoose={onChoose} lockNote={FLASH_LOCK_NOTE_ZH} />
     </div>
   );
 }
