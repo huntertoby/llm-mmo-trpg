@@ -5,6 +5,8 @@
 //           另外逐項比（歸因用）：主角／精英剪影（cv、seam）、交叉的武器圖示、紙娃娃小人本身（樣張 QDoll.stamp／QNpc.stamp vs 遊戲端 qStamp）。
 //           輸出 `<pre id="out">`。
 //   dialog  正式的遇敵卡（EncounterPanel）＋單挑段＋插圖，假資料（&e=wolf｜lord｜scar｜forge，&w=1600｜800 只決定卡片外的舞台寬；&duel=none 沒有單挑提議，看「開戰」主鈕對照）。
+//   fp      劍版指紋（RG-6：改非劍主手前後要逐字相同）：四場 × DPR 1、2 的整張 duelCanvas FNV-1a（同樣張 rg-duel-weapons.html 的 fnv），
+//           兩條路：dev＝上面 diff 的 spec（樣張 hero_fighter、SAMPLE_HOOKS）、game＝dialog 的假 WorldView 經 duelPlan → duelSpecOf（GAME_HOOKS）。
 //   （沒有 mode）並排看圖：四場樣張（上）vs 遊戲端（下），DPR 2；獸爪 ×4。
 // 重跑（無頭 Chrome，一定要 --disable-gpu）：chrome --headless=new --disable-gpu --dump-dom --virtual-time-budget=60000 "http://127.0.0.1:<port>/dev/duel-gallery.html?mode=diff&mute=1"
 import { createRoot } from "react-dom/client";
@@ -36,6 +38,8 @@ import { SAMPLE_HOOKS } from "../render/qSample";
 import { qStamp } from "../render/qStamp";
 import { useRegionTheme } from "../ui/regionTheme";
 import { EncounterPanel } from "../world/WorldPanel";
+import { duelPlan } from "../world/duelArtPlan";
+import { duelSpecOf } from "../world/DuelArt";
 import "../styles/index.css";
 
 type C2 = CanvasRenderingContext2D;
@@ -292,6 +296,34 @@ function runDiff(): void {
   }
 }
 
+// ---------- fp：劍版指紋 ----------
+function fnv(c: HTMLCanvasElement): string {
+  const d = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < d.length; i++) {
+    h ^= d[i]!;
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+function runFp(): void {
+  loadSample();
+  const all: string[] = [];
+  for (const res of [1, 2])
+    for (const s of SCENES) {
+      const f = fnv(duelCanvas(gameSpec(s), res)!);
+      all.push(f);
+      log(`fp dev ${s.id} res${res} ${f}`);
+    }
+  for (const res of [1, 2])
+    for (const e of ["wolf", "scar", "lord", "forge"]) {
+      const f = fnv(duelCanvas(duelSpecOf(duelPlan(dialogView(e, true))!), res)!);
+      all.push(f);
+      log(`fp game ${e} res${res} ${f}`);
+    }
+  log(`FP TOTAL ${all.join(" ")}`);
+}
+
 // ---------- 看圖 ----------
 function show(): void {
   loadSample();
@@ -336,10 +368,9 @@ const ENEMY_LOOK: Record<string, { zh: string; region: string; look: Any }> = {
   scar: { zh: "疤面", region: "cloud_ridge", look: { template_id: "bandit_scarface", doll_look: dl({ hair: "long", hair_color: "#1c1c22", gear: { head: g("douli", "cloth", "#3c4248"), body: g("coat", "cloth", "#3c4248"), cloak: g("cape", "cloth", "#c0392b"), feet: g("boots", "leather") }, main_kind: "saber", main_material: "steel" }), weapon_id: "saber", weapon_class: "melee", race_look: null, equipment: [] } },
   forge: { zh: "熔爐督工「鍛疤」", region: "ashen_waste", look: { template_id: "bandit_captain", doll_look: dl({ gear: { head: g("bandana", "cloth", "#ff6a1a"), body: g("mail", "iron"), cloak: g("cape", "cloth", "#5a4a3e"), feet: g("boots", "leather") }, main_kind: "shotgun", main_material: "iron" }), weapon_id: "shotgun", weapon_class: "ranged", race_look: null, equipment: [] } },
 };
-function DialogScene({ e }: { e: string }) {
+function dialogView(e: string, duel: boolean): WorldView {
   const E = ENEMY_LOOK[e] ?? ENEMY_LOOK["wolf"]!;
-  useRegionTheme(E.region);
-  const view = {
+  return {
     character: { hero_look: HERO_LOOK },
     map: { region: E.region },
     encounter: {
@@ -362,10 +393,15 @@ function DialogScene({ e }: { e: string }) {
       opening_zh: [],
       allies_zh: "主角（開場 HP 60）",
       battlefield_fallback_zh: null,
-      duel: P.get("duel") === "none" ? null : "offered",
-      duel_zh: P.get("duel") === "none" ? null : `接受：只有你和${E.zh}上場，隊友、傭兵不上場。拒絕：照原本全隊開打。兩邊的獎勵一樣（經驗、掉落、懸賞照整個陣容算）。`,
+      duel: duel ? "offered" : null,
+      duel_zh: duel ? `接受：只有你和${E.zh}上場，隊友、傭兵不上場。拒絕：照原本全隊開打。兩邊的獎勵一樣（經驗、掉落、懸賞照整個陣容算）。` : null,
     },
   } as unknown as WorldView;
+}
+function DialogScene({ e }: { e: string }) {
+  const E = ENEMY_LOOK[e] ?? ENEMY_LOOK["wolf"]!;
+  useRegionTheme(E.region);
+  const view = dialogView(e, P.get("duel") !== "none");
   const w = Number(P.get("w") ?? 1600);
   return (
     <div style={{ position: "relative", width: w, height: w <= 800 ? 600 : 900, background: "#14161f" }}>
@@ -378,6 +414,7 @@ function DialogScene({ e }: { e: string }) {
 
 try {
   if (MODE === "diff") runDiff();
+  else if (MODE === "fp") runFp();
   else if (MODE === "dialog") createRoot(document.getElementById("root")!).render(<DialogScene e={P.get("e") ?? "wolf"} />);
   else show();
 } catch (err) {
