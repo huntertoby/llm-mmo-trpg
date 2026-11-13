@@ -150,4 +150,4 @@ def test_wlog_6_is_stale() -> None:
     entry = WorldLogEntry(seq=3, now=NOON, character_id="alice", action=CampAction())
     log = read_log('{"format": "trpg-wlog/6"}\n' + dumps_log_entry(entry) + "\n")
     assert log.stale_through == 3 and log.stale_zh == "規則已變、不能重播"
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/9"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/10"

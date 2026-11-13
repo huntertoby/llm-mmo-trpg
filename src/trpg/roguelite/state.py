@@ -37,6 +37,7 @@ from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_offer import FlashOffer
 from trpg.skillgen.flash_state import SkillFlash, Variation
+from trpg.skillgen.flash_text import VariationText
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
@@ -262,6 +263,9 @@ class FlashLlmRecord(_Model):
     reason: str | None = None
     seconds: float = 0.0
     names: tuple[FlashLlmName, ...] = ()
+    texts: tuple[VariationText, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """LLM 的名稱與描述（LF-1，依變化的鍵；出題時由引擎檢查後掛上）。沒有時不輸出（舊紀錄逐字
+    不變）。"""
 
 
 class LevelUpChoice(_Model):

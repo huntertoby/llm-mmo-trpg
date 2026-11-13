@@ -29,16 +29,17 @@ import json
 import re
 import time
 from collections import Counter
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from trpg.content.effect_words import EffectWords, load_effect_words
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world import load_world_style
+from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient, OpenAICompatClient
 from trpg.llm.config import LLMConfig
 from trpg.llm.consistency import (
@@ -66,10 +67,12 @@ from trpg.skillgen.flash_offer import (
     FlashOptionSource,
     FlashRequest,
     UsageSource,
+    make_offer,
     skill_before,
     try_variation,
 )
 from trpg.skillgen.flash_state import Variation, seed_tag, slot_is_major
+from trpg.skillgen.flash_text import VariationText, clean_note, text_map
 
 __all__ = [
     "DEFAULT_FLASH_ATTEMPTS",
@@ -82,6 +85,7 @@ __all__ = [
     "mock_flash_client",
     "mock_flash_source",
     "name_offer",
+    "name_texts",
     "note_checker",
     "propose_variations",
     "select_flash_source",
@@ -252,10 +256,12 @@ def judge_items(
     taken: set[str],
     *,
     note_check: NoteCheck | None = None,
+    notes: dict[str, str] | None = None,
 ) -> tuple[list[Variation], list[_Issue]]:
     """逐項檢查提議：回傳合格的變化（依回應順序、已去重、引擎真的套得上）與被拒絕的項目。
     ``taken`` 是已經合格的變化鍵（會更新）。``note_check``（4-L11）給了就檢查 ``note_zh`` 和變化後
-    的效果一致（錯誤碼 ``flash.note_zh.*``／``flash.note_zh.missing_added``）。"""
+    的效果一致（錯誤碼 ``flash.note_zh.*``／``flash.note_zh.missing_added``）。``notes``（LF-1）給了
+    就收下合格項目的 ``note_zh``（鍵 ＝ 變化的穩定鍵），之後當玩家看得到的描述。"""
     accepted: list[Variation] = []
     issues: list[_Issue] = []
     for index, raw in enumerate(items):
@@ -270,6 +276,8 @@ def judge_items(
             if issue is None and variation is not None:
                 taken.add(variation.key())
                 accepted.append(variation)
+                if notes is not None and item.note_zh is not None:
+                    notes[variation.key()] = item.note_zh
         if issue is not None:
             issues.append(issue)
     return accepted, issues
@@ -343,7 +351,9 @@ class FlashProposalRecord(BaseModel):
     seconds: float = 0.0
     """耗時（只供報表，不進任何確定性狀態）。"""
     names: tuple[FlashNameRecord, ...] = ()
-    """大變化／轉型選項的命名結果（:func:`name_offer`；命名關閉時為空）。"""
+    """大變化／轉型選項的命名結果（:func:`name_offer`、:func:`name_texts`；命名關閉時為空）。"""
+    texts: tuple[VariationText, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """LF-1：玩家看得到的名稱與描述（依變化的鍵排序；出題時引擎再檢查一次才掛上）。"""
 
 
 @dataclass(slots=True)
@@ -359,6 +369,7 @@ class _Loop:
     clock: Clock
     taken: set[str] = field(default_factory=set)
     accepted: list[Variation] = field(default_factory=list)
+    notes: dict[str, str] = field(default_factory=dict)
     records: list[AttemptRecord] = field(default_factory=list)
     rejected: list[str] = field(default_factory=list)
     previous: str | None = None
@@ -405,6 +416,7 @@ class _Loop:
             self._check,
             self.taken,
             note_check=self._note_check,
+            notes=self.notes,
         )
         issues += bad
         self.accepted += found
@@ -465,6 +477,10 @@ def propose_variations(
             break
     count = len(loop.accepted)
     source: ProposalSource = "llm" if count >= want else ("partial" if count else "template")
+    kept = {v.key() for v in loop.accepted[:want]}
+    texts = tuple(
+        VariationText(key=k, note_zh=note) for k, note in sorted(loop.notes.items()) if k in kept
+    )
     return FlashProposalRecord(
         tag=tag,
         source=source,
@@ -475,6 +491,7 @@ def propose_variations(
         rejected=tuple(loop.rejected),
         reason=loop.reason,
         seconds=sum(r.seconds for r in loop.records),
+        texts=texts,
     )
 
 
@@ -483,7 +500,13 @@ def propose_variations(
 # ---------------------------------------------------------------------------
 
 type FlashClient = LLMClient | Callable[[FlashRequest, int], LLMClient]
+type NamingClient = LLMClient | Callable[[SkillDef, int], LLMClient]
+"""命名用的 client，或依（選項的技能, 種子）建立 client 的函式（Mock 用）。"""
 type RecordSink = Callable[[FlashProposalRecord], None]
+
+
+def _request_tag(request: FlashRequest) -> str:
+    return seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
 
 
 class LlmFlashSource(UsageSource):
@@ -491,7 +514,10 @@ class LlmFlashSource(UsageSource):
     用法統計排序的模板（補位與轉型保底），``proposed`` 先請模型挑。
 
     ``client`` 可以是固定的 client，或依（題目，種子）建立 client 的函式（Mock 用）。每次提議的
-    提議紀錄累積在 :attr:`records`，也會交給 ``sink``（寫進 run 紀錄與統計）。"""
+    提議紀錄累積在 :attr:`records`，也會交給 ``sink``（寫進 run 紀錄與統計）。
+
+    LF-1：提議時模型寫的 ``note_zh`` 收進紀錄的 ``texts``；``naming`` 給了就再為大變化與轉型選項
+    命名（:func:`name_texts`）。:meth:`texts` 把這些文字交給 ``make_offer`` 掛到選項上。"""
 
     def __init__(
         self,
@@ -500,11 +526,13 @@ class LlmFlashSource(UsageSource):
         max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
         sink: RecordSink | None = None,
         clock: Clock = time.perf_counter,
+        naming: NamingClient | None = None,
     ) -> None:
         self.client = client
         self.max_attempts = max_attempts
         self.sink = sink
         self.clock = clock
+        self.naming = naming
         self.records: list[FlashProposalRecord] = []
 
     def proposed(
@@ -518,15 +546,30 @@ class LlmFlashSource(UsageSource):
         record = propose_variations(
             used, library, request, max_attempts=self.max_attempts, clock=self.clock
         )
+        if self.naming is not None:
+            record = name_texts(
+                record,
+                self.naming,
+                library,
+                request,
+                max_attempts=self.max_attempts,
+                clock=self.clock,
+            )
         self.records.append(record)
         if self.sink is not None:
             self.sink(record)
         return record.accepted
 
+    def texts(self, library: ContentLibrary, request: FlashRequest) -> Mapping[str, VariationText]:
+        """這一次（同標籤、最後一筆）提議紀錄的文字（LF-1）。"""
+        tag = _request_tag(request)
+        record = next((r for r in reversed(self.records) if r.tag == tag), None)
+        return {} if record is None else text_map(record.texts)
+
 
 class RecordedSource(UsageSource):
     """重播用：直接取用存下來的提議（:class:`FlashProposalRecord`），不呼叫 LLM。找不到同標籤的
-    紀錄時不提議（全部用模板）。"""
+    紀錄時不提議（全部用模板）。LF-1：文字（名稱與描述）也從紀錄拿。"""
 
     def __init__(self, records: Iterable[FlashProposalRecord]) -> None:
         self.by_tag = {r.tag: r for r in records}
@@ -534,9 +577,12 @@ class RecordedSource(UsageSource):
     def proposed(
         self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
     ) -> Sequence[Variation]:
-        tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
-        record = self.by_tag.get(tag)
+        record = self.by_tag.get(_request_tag(request))
         return () if record is None else record.accepted
+
+    def texts(self, library: ContentLibrary, request: FlashRequest) -> Mapping[str, VariationText]:
+        record = self.by_tag.get(_request_tag(request))
+        return {} if record is None else text_map(record.texts)
 
 
 def select_flash_source(
@@ -546,14 +592,13 @@ def select_flash_source(
     sink: RecordSink | None = None,
 ) -> FlashOptionSource:
     """依 ``config/llm.toml`` 的 ``generate`` 開關（網頁的 ``llm`` 開關同一個）選來源：關 ＝ 預設的
-    :class:`UsageSource`；開 ＝ :class:`LlmFlashSource`（沒給 client 時用本機模型）。"""
+    :class:`UsageSource`；開 ＝ :class:`LlmFlashSource`（沒給 client 時用本機模型；LF-1 起同一個
+    client 也為大變化與轉型命名）。"""
     if not config.generate:
         return UsageSource()
-    return LlmFlashSource(
-        client if client is not None else OpenAICompatClient(config),
-        max_attempts=config.max_retries,
-        sink=sink,
-    )
+    used = client if client is not None else OpenAICompatClient(config)
+    naming = used if isinstance(used, LLMClient) else None
+    return LlmFlashSource(used, max_attempts=config.max_retries, sink=sink, naming=naming)
 
 
 # ---------------------------------------------------------------------------
@@ -611,6 +656,80 @@ def name_offer(
     return offer.model_copy(update={"options": tuple(options)}), tuple(names)
 
 
+def _unavailable(record: FlashProposalRecord) -> bool:
+    return record.reason is not None and record.reason.startswith(LLM_ERROR_CODES[LLMUnavailable])
+
+
+def name_texts(
+    record: FlashProposalRecord,
+    client: NamingClient,
+    library: ContentLibrary,
+    request: FlashRequest,
+    *,
+    max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
+    clock: Clock = time.perf_counter,
+) -> FlashProposalRecord:
+    """LF-1：為這一次出題的大變化與轉型選項命名，名稱寫進紀錄的 ``texts``（6.34.3：小變化不改名）。
+
+    用紀錄裡的提議出一次題（純函式 :func:`~trpg.skillgen.flash_offer.make_offer`，和引擎之後出題
+    同一套），對每個大變化、轉型選項呼叫命名步驟 :func:`~trpg.llm.naming.name_skill`（照原技能的
+    區域與武器，#126；名稱或敘事要提到變化加上的效果，4-L11）。命名失敗的項目沒有名稱（引擎用
+    「{前綴}・{原名}」）。那一項沒有描述時，命名的 ``concept`` 合格（:func:`clean_note`）就當描述。
+    模型連不上（提議時已 ``llm.unavailable``）時不命名。"""
+    if _unavailable(record):
+        return record
+    start = clock()
+    offer = make_offer(library, request, RecordedSource([record]))
+    big = [o for o in offer.options if o.variation.source != "minor"]
+    if not big:
+        return record
+    before = skill_before(library, request)
+    texts = dict(text_map(record.texts))
+    names: list[FlashNameRecord] = []
+    taken: set[str] = set()
+    for option in big:
+        # 依選項分流的種子（Mock 命名依種子挑詞；同一題各選項才不會撞名）
+        seed = (
+            Rng(request.seed).fork(f"llm.flash.naming/{option.variation.key()}").randint(0, 2**31)
+        )
+        used = client if isinstance(client, LLMClient) else client(option.skill, seed)
+        result = name_skill(
+            used,
+            library,
+            option.skill,
+            taken=taken,
+            max_attempts=max_attempts,
+            before=before,
+            region=request.region,
+            weapon=request.weapon_zh,
+        )
+        names.append(
+            FlashNameRecord(
+                template=option.variation.template,
+                source=result.source,
+                attempts=result.attempts,
+                codes=result.codes,
+                consistency_retries=result.consistency_retries,
+            )
+        )
+        if result.source != "llm":
+            continue
+        taken.add(result.text.name_zh)
+        key = option.variation.key()
+        old = texts.get(key)
+        note = old.note_zh if old is not None else None
+        texts[key] = VariationText(
+            key=key, name_zh=result.text.name_zh, note_zh=note or clean_note(result.text.concept)
+        )
+    return record.model_copy(
+        update={
+            "names": (*record.names, *names),
+            "texts": tuple(texts[k] for k in sorted(texts)),
+            "seconds": record.seconds + (clock() - start),
+        }
+    )
+
+
 # ---------------------------------------------------------------------------
 # Mock（CI 與 --llm-mock）
 # ---------------------------------------------------------------------------
@@ -659,12 +778,15 @@ def mock_flash_source(
     *,
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
     sink: RecordSink | None = None,
+    naming: bool = False,
 ) -> LlmFlashSource:
-    """Mock 提議來源：不需網路與金鑰。"""
+    """Mock 提議來源：不需網路與金鑰。``naming``（LF-1）為真時大變化與轉型用 Mock 命名
+    （:func:`~trpg.llm.candidate_source.mock_naming_client`）；預設關（不動既有快照）。"""
     return LlmFlashSource(
         lambda request, seed: mock_flash_client(library, request, seed, max_attempts),
         max_attempts=max_attempts,
         sink=sink,
+        naming=(lambda skill, seed: mock_naming_client(library, skill, seed)) if naming else None,
     )
 
 

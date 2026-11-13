@@ -65,6 +65,7 @@ from trpg.skillgen.flash_state import (
     bonus_permille,
     seed_tag,
 )
+from trpg.skillgen.flash_text import clean_name
 from trpg.skillgen.flash_trade import MINOR_OPS, TRADES, apply_trade
 from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.usage import SkillUsage
@@ -382,7 +383,8 @@ def apply_variation(
 
 def flashed_identity(library: ContentLibrary, base: SkillDef, state: SkillFlash) -> tuple[str, str]:
     """閃現後技能的（ID，名稱）。ID ＝ ``<原 ID>_fl_<歷程雜湊前 10 碼>``；名稱在有大變化或轉型時是
-    組合式「{前綴}・{原名}」（取最後一個），只有小變化時沿用原名。"""
+    組合式「{前綴}・{原名}」（取最後一個），只有小變化時沿用原名。LF-1：那一筆帶 LLM 名稱
+    （``Variation.name_zh``，出題時已檢查）時用它。"""
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     body = json.dumps(
         [r.model_dump(mode="json") for r in records], sort_keys=True, separators=(",", ":")
@@ -392,7 +394,7 @@ def flashed_identity(library: ContentLibrary, base: SkillDef, state: SkillFlash)
     for record in records:
         prefix = _big_prefix(library, record.variation)
         if prefix is not None:
-            name = f"{prefix}・{base.name_zh}"
+            name = clean_name(record.variation.name_zh) or f"{prefix}・{base.name_zh}"
     return f"{base.id}_fl_{digest}", name
 
 
