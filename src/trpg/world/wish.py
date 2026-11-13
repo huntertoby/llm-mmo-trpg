@@ -237,7 +237,7 @@ def apply_wish(
         run,
         "complete",
         region_keywords=keywords,
-        pinned_keyword=keywords[0],  # 三張都帶第 1 個關鍵字（待決 5）
+        pinned_keyword=keywords[0],  # 三張都帶第 1 個；第 2 個靠 region_keywords 排前（TXT-2）
         region=None,  # 「任何池」、中性奇幻（#126）
     )
     week = week_of(library, world, now)

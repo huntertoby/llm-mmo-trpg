@@ -557,7 +557,8 @@ class FlashTable(ContentModel):
     """新加的條件傷害「（……才有）」的白話（FL-1b；條件 ID → 句子，可帶術語標記）；沒有的退回條件的
     一句話。"""
     battle_variant: BattleVariantText | None = None
-    """戰場變奏的說明句與條件片語（TXT-2）；``None`` 時 ``{terrain}`` 原樣留著（內容漏寫看得出來）。"""
+    """戰場變奏的說明句與條件片語（TXT-2）；``None`` 時 ``{terrain}`` 原樣留著
+    （內容漏寫看得出來）。"""
     intensify_new_headline_zh: str | None = None
     """``major_intensify`` 原本不會造成該關鍵字、引擎補上製造效果時的大標（TXT-2 從
     ``api/flash_text.py`` 搬來；可帶 ``{keyword}``）；``None`` 時照模板的 ``headline_zh``。"""
