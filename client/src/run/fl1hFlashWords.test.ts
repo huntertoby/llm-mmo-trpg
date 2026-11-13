@@ -162,7 +162,8 @@ describe("FL-1i 轉型卡下固定區「強度」不可拆（美術 RR-2 驗收 
   it("「強度」是不可拆詞；轉型句切出「強度」一段", () => {
     expect(FLASH_NO_BREAK_WORDS).toContain("強度");
     expect(noBreakRuns(FLASH_TRANSFORM_FOOT_ZH)).toEqual([
-      { text: "轉型後照新種類重算", keep: false },
+      { text: "轉型", keep: true }, // FL-1j 起「轉型」也是不可拆詞
+      { text: "後照新種類重算", keep: false },
       { text: "強度", keep: true },
       { text: "，不跟原本比。", keep: false },
     ]);
@@ -174,6 +175,6 @@ describe("FL-1i 轉型卡下固定區「強度」不可拆（美術 RR-2 驗收 
     const o = p.options.find((x) => x.transform);
     if (o === undefined) throw new Error("夾具 transform 組缺轉型選項");
     const html = renderToStaticMarkup(createElement(TermText, { text: sayText(o), terms: p.terms ?? {}, nobr: true }));
-    expect(html).toContain('重算<span class="fc-nobr">強度</span>，不跟原本比。');
+    expect(html).toContain('後照新種類重算<span class="fc-nobr">強度</span>，不跟原本比。');
   });
 });

@@ -107,7 +107,7 @@ describe("技能卡文字", () => {
     const html2 = renderToStaticMarkup(createElement(SkillCardView, { card: flashedCard, flash: flashed, flashRules: CAMPFIRE.hero.flash_rules }));
     expect(html2).toContain("skill-flash-history");
     expect(html2).toContain("第 3 次・大變化");
-    expect(html2).toContain("可以重閃第 3 格轉型");
+    expect(html2.replace(/<[^>]*>/gu, "")).toContain("可以重閃第 3 格轉型"); // FL-1j：「第 3 格」「轉型」包成不斷行的小段
   });
 });
 
@@ -262,7 +262,7 @@ describe("畫面渲染", () => {
     expect(html).toContain("重閃（只在營火）");
     expect(html).toContain("溶掉或傳承（二選一，只在營火）");
     expect(html).toContain("調整欄");
-    expect(html).toContain("可以重閃第 3 格轉型");
+    expect(html.replace(/<[^>]*>/gu, "")).toContain("可以重閃第 3 格轉型");
   });
   it("閃現選項畫面：點數已扣、每個選項有標籤與說明、最後有確定鍵", () => {
     const html = renderToStaticMarkup(createElement(RunFlashPending, { run: PENDING, busy: false, onChoose: noop }));

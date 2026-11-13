@@ -5,6 +5,7 @@ import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { EmptyNote, KeepNum } from "../ui/PanelKit";
 import { SkillFlashInfo } from "../ui/SkillFlashInfo";
+import { NoBreakText } from "./FlashChoiceParts";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import {
   carryable,
@@ -115,7 +116,12 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                   onClick={() => setTarget({ id: card.id, slot: s.slot })}
                 >
                   重閃　{s.label}
-                  {s.transformHint && <span className="skill-flash-transform small">　{TRANSFORM_HINT}</span>}
+                  {s.transformHint && (
+                    <span className="skill-flash-transform small">
+                      {"　"}
+                      <NoBreakText text={TRANSFORM_HINT} />
+                    </span>
+                  )}
                   <WeakerNote warn={weakerSlot(flash, s.slot)?.warn} testId={`reflash-weaker-${card.id}-${s.slot}`} />
                   {s.problem !== null && (
                     <span className="flash-none-note small" data-testid={`reflash-none-${card.id}-${s.slot}`}>

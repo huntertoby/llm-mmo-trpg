@@ -73,8 +73,8 @@ export function Term({ id, label, terms }: { id: string | null | undefined; labe
   );
 }
 
-/** 純文字裡的不可拆詞（`FLASH_NO_BREAK_WORDS`）包成不斷行的一段（FL-1h：條件括號不斷在「雙手／槍」）。 */
-function NoBreakText({ text }: { text: string }) {
+/** 純文字裡的不可拆詞（`FLASH_NO_BREAK_WORDS`）與數字＋單位包成不斷行的一段（FL-1h：條件括號不斷在「雙手／槍」；FL-1j：「少 1 ／回合」「轉／型」；成長面板的藍字也用）。 */
+export function NoBreakText({ text }: { text: string }) {
   return (
     <>
       {noBreakRuns(text).map((r, i) =>
