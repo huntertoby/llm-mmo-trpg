@@ -1,7 +1,7 @@
 """Shoot the KW-phase art samples (docs/art/KW樣張.md, page q-icons-kw.html).
 
 Usage (from the repo root):
-    uv run python docs/art/sample/tools/kw_shots.py            # every shot -> docs/art/shots/qicons-kw/
+    uv run python docs/art/sample/tools/kw_shots.py            # every shot -> shots/qicons-kw/
     uv run python docs/art/sample/tools/kw_shots.py cand hud   # only these
     uv run python docs/art/sample/tools/kw_shots.py --audit    # audit table (text)
     uv run python docs/art/sample/tools/kw_shots.py --hash     # fingerprints of the new art
@@ -19,10 +19,12 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import qicons_shots as q  # noqa: E402
+import qicons_shots as q
 
 PROFILE = Path(tempfile.gettempdir()) / "kw-shots-chrome-profile"
-q.BASE = [a if not a.startswith("--user-data-dir=") else f"--user-data-dir={PROFILE}" for a in q.BASE]
+q.BASE = [
+    a if not a.startswith("--user-data-dir=") else f"--user-data-dir={PROFILE}" for a in q.BASE
+]
 PAGE = "q-icons-kw.html"
 OUT = q.ART / "shots" / "qicons-kw"
 # (name, query, file): all PNG (true-1x nearest-neighbour blow-ups). Sheets changed in v2 carry -v2;
