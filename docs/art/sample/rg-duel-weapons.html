@@ -7,7 +7,7 @@
 </style></head>
 <body>
 <h1>單挑插圖：主手不是劍（RG-4 驗收 K2，樣張）</h1>
-<p class="note">畫圖 agent，2026-11-13（紀錄 RG樣張.md 9.9）。分段：<a href="?part=now&mute=1">現況（20 種主手）</a><a href="?part=sil&mute=1">主角剪影 20 種</a><a href="?part=cross&mute=1">交叉 20 種 × 人形／異形</a><a href="?part=duel&mute=1">五種主手 × 兩場</a><a href="?part=small&mute=1">800 縮 259×97</a><a href="?part=audit&mute=1">劍版指紋</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
+<p class="note">畫圖 agent，2026-11-13（紀錄 RG樣張.md 9.9）。分段：<a href="?part=now&mute=1">現況（20 種主手）</a><a href="?part=sil&mute=1">主角剪影 20 種</a><a href="?part=cross&mute=1">交叉 20 種 × 人形／異形</a><a href="?part=duel&mute=1">五種主手 × 兩場</a><a href="?part=small&mute=1">800 縮 259×97</a><a href="?part=contact&mute=1">爪痕碰大型異形（第 2 版）</a><a href="?part=audit&mute=1">劍版指紋</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
 <div id="sheet"></div>
 <textarea id="out"></textarea>
 <pre id="audit"></pre>
@@ -111,7 +111,7 @@ PARTS.sil = () => {
 // ================= 交叉 20 種 × 異形／人形（插圖中間裁 110×84） =================
 PARTS.cross = () => {
   const blocks = [{ title: "交叉 20 種 × 北坡狼王（獸爪）／疤面（單刀）：插圖中間裁 110×84，真 1 倍與最近鄰 ×2" },
-    { note: "blade（劍、魔導劍、巨劍、矛）＝照劍；head（斧、錘、鐮刀、三種杖）＝爪痕劃在柄上；gun（火槍、霰彈槍）＝爪痕劃在槍管前段；open（弓、弩、鞭）＝和獸爪錯開，人形照劍；block（匕首、雙匕首、拳套、手槍、雙手槍）＝兩邊都錯開（RG樣張.md 9.9.3）" }];
+    { note: "第 2 版：blade（劍、魔導劍、巨劍、矛）＝照劍；head（斧、錘、鐮刀、三種杖）＝爪痕劃在柄上；gun（火槍）＝爪痕劃在槍管前段、霰彈槍劃在槍身中段；open（弓、弩、鞭）＝和獸爪錯開，弓、弩對人形也錯開、鞭對人形照劍；block（匕首、雙匕首、拳套、手槍、雙手槍）＝兩邊都錯開；錯開組的爪痕右緣不越過精英剪影（RG樣張.md 9.9.3、9.9.9）" }];
   for (const id of ["wolf", "scar"]) {
     const D = W20.map((w) => crop(RU.duelCanvas(specOf(heroOf(w.look), id), 1), 105, 14, 110, 84));
     blocks.push({ note: `${ELITES[id].zh}：真 1 倍` }, { cells: D.map((c, i) => plain(c, W20[i].zh)), gap: 8, capW: 110 });
@@ -139,6 +139,23 @@ PARTS.small = () => {
   blocks.push({ cells: S.flatMap((d) => [plain(d.wolf, `${d.zh} × 北坡狼王`), plain(d.scar, `${d.zh} × 疤面`)]), gap: 12, capW: 259 });
   for (const d of S) blocks.push({ cells: [nn(d.wolf, 3, `${d.zh} × 北坡狼王 ×3`), nn(d.scar, 3, `${d.zh} × 疤面 ×3`)], gap: 16 });
   publish(sheet(1700, blocks), "image/png");
+};
+// ================= 第 2 版（審查 D-2）：爪痕碰不碰大型異形（熔核領主 1.8、熊 1.5、蛇 1.5、狼王 1.2） =================
+const BIG = {
+  lord: { zh: "熔核領主 1.8", spec: LORD, k: 1.8, region: "ashen_waste" },
+  bear: { zh: "熊 1.5", spec: { body: "bear", material: "fur", size: "large", elite: true }, k: 1.5, region: "cloud_ridge" },
+  snake: { zh: "蛇 1.5", spec: { body: "serpent", material: "scale", size: "large", elite: true }, k: 1.5, region: "cloud_ridge" },
+  wolf: { zh: "北坡狼王 1.2", spec: ELITES.wolf.elite.spec, k: 1.2, region: "cloud_ridge" },
+};
+PARTS.contact = () => {
+  const ws = ["劍", "弓", "弩", "鞭", "匕首", "手槍", "雙手槍", "斧", "霰彈槍"].map((zh) => W20.find((w) => w.zh === zh));
+  const blocks = [{ title: "第 2 版（審查 D-2）：爪痕右緣 ≤ 精英剪影同列左緣 −3 px（只往左移）；插圖中間裁 130×84，真 1 倍與最近鄰 ×2" },
+    { note: "劍那欄是第 3 版原樣（不套這條，熊的劍版本來就碰到臉，見 RG樣張.md 9.9.9）；其他欄是錯開組（open／block）與 head、gun 組" }];
+  for (const b of Object.values(BIG)) {
+    const D = ws.map((w) => crop(RU.duelCanvas({ hero: heroOf(w.look), elite: { spec: b.spec, weapon: CLAW, k: b.k }, region: b.region, variant: "A" }, 1), 110, 14, 130, 84));
+    blocks.push({ note: b.zh }, { cells: D.map((c, i) => plain(c, ws[i].zh)), gap: 8, capW: 130 }, { cells: D.map((c) => nn(c, 2)), gap: 8 });
+  }
+  publish(sheet(2500, blocks), "image/png");
 };
 // ================= 20 種 Q 版武器圖示（無框，48 真 1 倍與 ×3；對照用） =================
 PARTS.icons = () => {

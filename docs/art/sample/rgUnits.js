@@ -362,16 +362,16 @@ window.RGUnits = (() => {
     g.restore();
   }
   const isDiag = (look) => { if (look.kind === "beast_claw") return true; try { return !!QIconsWeapons.def(look).meta.diag; } catch (e) { return true; } };
-  function crossed(ctx, heroW, eliteW, cx, cy, px0, res, mode) {
+  function crossed(ctx, heroW, eliteW, cx, cy, px0, res, mode, es = null) {
     const put = (look, mirror, k = 1, dx = 0, dy = 0) => {
       const px = px0 * k, c0 = weaponCanvas(look, px, res), c = mode === "flat" ? tinted(c0, "#f2e6c8") : c0;
       ctx.save(); ctx.translate(cx + dx, cy + dy); if (mirror) ctx.scale(-1, 1); if (!isDiag(look)) ctx.rotate(0.62);
       if (mode === "flat") { const o = tinted(c0, OUT); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(o, -px / 2 + dx * 0.9, -px / 2 + dy * 0.9, px, px); }
       ctx.drawImage(c, -px / 2, -px / 2, px, px); ctx.restore();
     };
-    const claw = eliteW.kind === "beast_claw", F = mode !== "flat" && FACE[crossGroup(heroW)]?.[claw ? "claw" : "man"];
+    const claw = eliteW.kind === "beast_claw", F = mode !== "flat" && faceOf(heroW)?.[claw ? "claw" : "man"];
     if (F) { /* 9.9：不是長條斜放的主手（弓、拳套、手槍、成對…）：兩把錯開、只在邊上交疊，不疊在對方的主體上 */
-      if (claw) { put(heroW, false, F.k, ...F.hero); put(eliteW, true, F.ek, ...F.elite); } else { put(eliteW, true, F.ek, ...F.elite); put(heroW, false, F.k, ...F.hero); }
+      if (claw) { const sh = es ? clawShift(es, eliteW, F, cx, cy, px0, res) : 0; /* 9.9 D-2：爪痕右緣不越過精英剪影左緣 −3 px，只往左移 */ put(heroW, false, F.k, ...F.hero); put(eliteW, true, F.ek, F.elite[0] - sh, F.elite[1]); } else { put(eliteW, true, F.ek, ...F.elite); put(heroW, false, F.k, ...F.hero); }
       return;
     }
     /* 爪痕蓋在劍上（第 2 版）：劍蓋上去會把三道爪痕的中段切成六根尖刺，讀成羽毛扇；爪痕在上，劍從爪痕之間、兩端露出 */
@@ -389,11 +389,36 @@ window.RGUnits = (() => {
    */
   const CROSS_GROUP = { axe: "head", hammer: "head", scythe: "head", staff: "head", longgun: "gun", shotgun: "gun", bow: "open", crossbow: "open", whip: "open", fist: "block", dagger: "block", dual_dagger: "block", pistol: "block", dual_pistol: "block" };
   const crossGroup = (look) => CROSS_GROUP[look?.kind] ?? "blade";
+  /** 第 2 版（審查 D-1、D-3）：同組裡個別 kind 的例外。鞭對人形照劍（刀從鞭圈裡穿過、整把看得到），所以不帶 man；霰彈槍的爪痕劃在槍身中段，喇叭口和槍托都露出來。 */
+  const FACE_KIND = {
+    whip: { claw: { hero: [-14, 4], elite: [11, -3], k: 0.92, ek: 0.92 } },
+    shotgun: { claw: { hero: [1, -1], elite: [-2, 2], k: 1.08, ek: 1 } },
+  };
+  const faceOf = (look) => FACE_KIND[look?.kind] ?? FACE[crossGroup(look)];
+  /**
+   * 審查 D-2：錯開組（FACE 有值）的爪痕，右緣不越過精英剪影（含 1.6 px 輪廓光）在同一列的最左緣 −3 px；超過就整組往左移（不縮小）。
+   * 回傳要往左移的插圖 px。劍那組不走這裡（指紋不動）。
+   */
+  function clawShift(es, eliteW, F, cx, cy, px0, res) {
+    const W = DUEL_W * res, H = DUEL_H * res, mkc = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
+    const cc = mkc(), cg = cc.getContext("2d"), px = px0 * F.ek; cg.scale(res, res); cg.translate(cx + F.elite[0], cy + F.elite[1]); cg.scale(-1, 1); cg.drawImage(weaponCanvas(eliteW, px, res), -px / 2, -px / 2, px, px);
+    const ec = mkc(), eg = ec.getContext("2d"); eg.scale(res, res); eg.drawImage(es.cv, es.x0 - 1.6, es.y0 - 0.6, es.w, es.h); eg.drawImage(es.cv, es.x0, es.y0, es.w, es.h);
+    const a = cg.getImageData(0, 0, W, H).data, b = eg.getImageData(0, 0, W, H).data;
+    let need = 0;
+    for (let y = 0; y < H; y++) {
+      let cr = -1, el = -1;
+      for (let x = W - 1; x >= 0; x--) if (a[(y * W + x) * 4 + 3] > 64) { cr = x; break; }
+      if (cr < 0) continue;
+      for (let x = 0; x < W; x++) if (b[(y * W + x) * 4 + 3] > 64) { el = x; break; }
+      if (el >= 0) need = Math.max(need, cr - (el - 3 * res));
+    }
+    return Math.ceil(need) / res;
+  }
   /** 錯開：hero／elite＝[dx, dy]（插圖 px，交叉中心為原點）、k／ek＝主角／精英圖示倍率；claw＝異形（獸爪）、man＝人形（沒寫＝照劍交叉）。 */
   const FACE = {
     head: { claw: { hero: [6, -6], elite: [-3, 3], k: 1.05, ek: 1 } },
     gun: { claw: { hero: [-5, 5], elite: [4, -4], k: 1.08, ek: 1 } },
-    open: { claw: { hero: [-14, 4], elite: [11, -3], k: 0.92, ek: 0.92 } },
+    open: { claw: { hero: [-14, 4], elite: [11, -3], k: 0.92, ek: 0.92 }, man: { hero: [-14, 5], elite: [10, -4], k: 0.8, ek: 0.95 } }, /* 第 2 版 D-1：弓、弩對人形也錯開（鞭見 FACE_KIND） */
     block: { claw: { hero: [-14, 4], elite: [11, -3], k: 0.88, ek: 0.92 }, man: { hero: [-14, 5], elite: [10, -4], k: 0.8, ek: 0.95 } },
   };
   /** 四芒星火花（交叉點）。 */
@@ -455,7 +480,7 @@ window.RGUnits = (() => {
     const cx = W / 2, cy = 56;
     if (A) {
       const r = ctx.createRadialGradient(cx, cy, 2, cx, cy, 34); r.addColorStop(0, "rgba(255,240,200,0.55)"); r.addColorStop(1, "rgba(255,240,200,0)"); ctx.fillStyle = r; ctx.fillRect(cx - 40, cy - 40, 80, 80);
-      crossed(ctx, spec.hero.weapon, spec.elite.weapon, cx, cy, 58, res, "color");
+      crossed(ctx, spec.hero.weapon, spec.elite.weapon, cx, cy, 58, res, "color", es);
       if (spec.elite.weapon?.kind !== "beast_claw") spark(ctx, cx, cy - 9, 7); /* 第 3 版：爪痕那組不加火花（白色火花疊在白爪痕上，整組更像一團白毛） */
     } else {
       ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, 27, 0, TAU); ctx.fillStyle = "rgba(10,12,24,0.7)"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#e8bb48"; ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy, 23.5, 0, TAU); ctx.lineWidth = 0.8; ctx.strokeStyle = "rgba(232,187,72,0.6)"; ctx.stroke(); ctx.restore();

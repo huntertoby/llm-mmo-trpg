@@ -24,11 +24,13 @@ r.DIALOGS = []
 r.SHOTS = [
     # duel-weapons-0-before.jpg (part=now) was shot before 9.9 changed rgUnits.js; re-shooting
     # it now would draw the new version, so it is not in the list.
+    # v2 (review D-1..D-3) only changed the crossing: 1-sil is not re-shot; v1 files are kept.
     ("sil", "part=sil", "shots/rg-units/duel-weapons-1-sil.png"),
-    ("cross", "part=cross", "shots/rg-units/duel-weapons-2-cross.png"),
-    ("duel", "part=duel", "shots/rg-units/duel-weapons-3-duel.png"),
-    ("duel-x4", "part=x4", "shots/rg-units/duel-weapons-4-duel-x4.png"),
-    ("small", "part=small", "shots/rg-units/duel-weapons-5-small-259.png"),
+    ("cross", "part=cross", "shots/rg-units/duel-weapons-2-cross-v2.png"),
+    ("duel", "part=duel", "shots/rg-units/duel-weapons-3-duel-v2.png"),
+    ("duel-x4", "part=x4", "shots/rg-units/duel-weapons-4-duel-x4-v2.png"),
+    ("small", "part=small", "shots/rg-units/duel-weapons-5-small-259-v2.png"),
+    ("contact", "part=contact", "shots/rg-units/duel-weapons-6-contact-v2.png"),
 ]
 AUDIT_ARGC = 2
 AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')
