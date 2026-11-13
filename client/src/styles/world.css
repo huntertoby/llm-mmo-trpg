@@ -862,14 +862,32 @@
   font-weight: 700;
   margin-bottom: 4px;
 }
+.duel-title + .duel-art {
+  margin-top: 0; /* 標題已有下距 4：插圖上方共 4 */
+}
 .duel-dialog p {
   margin: 0 0 8px;
 }
+/* RG-4（RG樣張.md 9.8 第 7 條）：兩顆都是一般按鈕、同一個 min-width 一樣大，靠右（同 modal-buttons），接受在左 */
 .duel-choices {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
-.duel-choices > button {
-  min-width: 0;
+.duel-choices > .duel-choice {
+  min-width: 96px;
+}
+/* 打開時焦點給這一段本身（tabIndex −1），不畫焦點框 */
+.duel-dialog:focus {
+  outline: none;
+}
+/* RG-4：單挑插圖 320×120（標題下面、置中、上 4 下 8）；窄的卡片裡等比縮小，不溢出 */
+.duel-art {
+  display: block;
+  width: 320px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 320 / 120;
+  margin: 4px auto 8px;
 }
