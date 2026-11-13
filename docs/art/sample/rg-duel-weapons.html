@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>單挑插圖：主手不是劍</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>單挑插圖：主手不是劍（RG-4 驗收 K2，樣張）</h1>
+<p class="note">畫圖 agent，2026-11-13（紀錄 RG樣張.md 9.9）。分段：<a href="?part=now&mute=1">現況（20 種主手）</a><a href="?part=sil&mute=1">主角剪影 20 種</a><a href="?part=cross&mute=1">交叉 20 種 × 人形／異形</a><a href="?part=duel&mute=1">五種主手 × 兩場</a><a href="?part=small&mute=1">800 縮 259×97</a><a href="?part=audit&mute=1">劍版指紋</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<pre id="audit"></pre>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="idleWeapons.js"></script><script src="qNpc.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="rgUnits.js"></script>
+<script>
+const RU = RGUnits, P = new URLSearchParams(location.search), PART = P.get("part") || "duel";
+const TP = PaperDoll.TEMPLATES, FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+
+// ---------------- 主手 20 種（8.11；同 qIconsWeapons KINDS 的 kind／form） ----------------
+const W20 = [
+  ["劍", "sword", "straight", "steel"], ["巨劍", "greatsword", "twohand", "steel"], ["匕首", "dagger", "short", "iron"], ["斧", "axe", "hand", "iron"],
+  ["錘", "hammer", "mace", "iron"], ["矛", "spear", "spear", "iron"], ["拳套", "fist", "knuckle", "iron"], ["鐮刀", "scythe", "long", "iron"],
+  ["鞭", "whip", "leather", "leather"], ["魔導劍", "sword", "arcane", "steel"], ["雙匕首", "dual_dagger", "short", "iron"], ["弓", "bow", "short", "wood"],
+  ["弩", "crossbow", "light", "wood"], ["火槍", "longgun", "flintlock", "steel"], ["霰彈槍", "shotgun", "blunderbuss", "iron"], ["手槍", "pistol", "flintlock", "steel"],
+  ["雙手槍", "dual_pistol", "flintlock", "steel"], ["法杖", "staff", "long", "wood"], ["權杖", "staff", "scepter", "gold"], ["圖騰杖", "staff", "totem", "wood"],
+].map(([zh, kind, form, material]) => ({ zh, look: { kind, form, material } }));
+const W5 = ["劍", "弓", "斧", "法杖", "雙手槍"].map((zh) => W20.find((w) => w.zh === zh));
+/** 主角：主手換成 look；雙手武器、成對武器、弓弩槍不拿盾（弓手用 hero_archer、法杖類用 hero_mage 的身體，其他用 hero_fighter）。 */
+const TWO = new Set(["greatsword", "spear", "scythe", "dual_dagger", "bow", "crossbow", "longgun", "shotgun", "dual_pistol"]);
+function heroOf(look) {
+  const base = look.kind === "bow" || look.kind === "crossbow" ? TP.hero_archer : look.kind === "staff" ? TP.hero_mage : TP.hero_fighter;
+  const gear = { ...base.gear, main_hand: { slot: "main_hand", ...look } };
+  if (TWO.has(look.kind)) delete gear.off_hand;
+  return { doll: { look: base.look, gear }, weapon: look };
+}
+const SWORD_HERO = { doll: TP.hero_fighter, weapon: { kind: "sword", material: "steel" } }; // rg-units.html 的 HERO（劍版四場）
+
+// ---------------- 精英（同 rg-units.html 的 ELITES） ----------------
+const CLAW = { kind: "beast_claw" };
+const NPCB = Object.fromEntries(Object.values(QNpc.BANDITS).flatMap(([, list]) => list.map(([zh, , u]) => [zh, u])));
+const LORD = { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"], elite: true, affixes: ["hardshell"] };
+const ELITES = {
+  wolf: { zh: "北坡狼王（異形、雲嶺）", region: "cloud_ridge", elite: { spec: { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"], elite: true, affixes: ["berserk"] }, weapon: CLAW, k: 1.2 } },
+  scar: { zh: "斷崖幫「疤面」（人形、雲嶺）", region: "cloud_ridge", elite: { npc: NPCB["斷崖幫隊長"], weapon: { kind: "saber", material: "steel" } } },
+  lord: { zh: "熔核領主（異形、荒原）", region: "ashen_waste", elite: { spec: LORD, weapon: CLAW, k: 1.8 } },
+  forge: { zh: "荒原精英（人形；鍛疤暫代荒原隊長）", region: "ashen_waste", elite: { npc: NPCB["荒原隊長"], weapon: { kind: "shotgun", form: "double", material: "iron" } } },
+};
+const specOf = (hero, id) => ({ hero, elite: ELITES[id].elite, region: ELITES[id].region, variant: "A" });
+
+// ---------------- 拼圖、輸出（同 rg-units.html） ----------------
+const nn = (c, Z, cap) => ({ cv: c, w: c.width * Z, h: c.height * Z, nn: true, cap });
+const plain = (c, cap, s = 1) => ({ cv: c, w: c.width * s, h: c.height * s, cap });
+const crop = (src, x, y, w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(src, -x, -y); return c; };
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; } const caps = c.cap ? wrap(c.cap, Math.max(w, b.capW ?? 110), 12) : []; items.push({ c, x, w, h, caps }); x += Math.max(w, caps.length ? (b.capW ?? 110) : 0) + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.done = "1";
+}
+/** FNV-1a 32 位元（整張 RGBA）。 */
+function fnv(cv) { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let h = 0x811c9dc5; for (let i = 0; i < d.length; i++) { h ^= d[i]; h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16).padStart(8, "0"); }
+
+const PARTS = {};
+// ================= 現況：rgUnits.duel 照舊（只換主角主手） =================
+PARTS.now = () => {
+  const blocks = [{ title: "現況（第 3 版畫法，只換主角主手）：20 種 × 北坡狼王／疤面，真 1 倍" }];
+  for (const id of ["wolf", "scar"]) blocks.push({ cells: W20.map((w) => plain(RU.duelCanvas(specOf(heroOf(w.look), id), 1), w.zh)), gap: 10, capW: 320 });
+  publish(sheet(1700, blocks), "image/jpeg");
+};
+// ================= 主角剪影 20 種（插圖左半裁 150×120） =================
+PARTS.sil = () => {
+  const D = W20.map((w) => crop(RU.duelCanvas(specOf(heroOf(w.look), "scar"), 1), 0, 0, 150, 120));
+  const blocks = [{ title: "主角剪影 20 種（插圖左半裁 150×120，疤面那場）：真 1 倍" },
+    { note: "held（劍、巨劍、匕首、斧、錘、矛、拳套、鐮刀、鞭、魔導劍、雙匕首）＝紙娃娃照畫，同劍；bow（弓）、aim（弩、火槍、霰彈槍、手槍、雙手槍）、staff（法杖、權杖、圖騰杖）＝道具剪影（RG樣張.md 9.9.2）" },
+    { cells: D.map((c, i) => plain(c, W20[i].zh)), gap: 8, capW: 150 },
+    { note: "最近鄰 ×3（裁到人物 100×106）" },
+    { cells: D.map((c, i) => nn(crop(c, 34, 10, 100, 106), 3, W20[i].zh)), gap: 8 }];
+  publish(sheet(1700, blocks), "image/png");
+};
+// ================= 交叉 20 種 × 異形／人形（插圖中間裁 110×84） =================
+PARTS.cross = () => {
+  const blocks = [{ title: "交叉 20 種 × 北坡狼王（獸爪）／疤面（單刀）：插圖中間裁 110×84，真 1 倍與最近鄰 ×2" },
+    { note: "blade（劍、魔導劍、巨劍、矛）＝照劍；head（斧、錘、鐮刀、三種杖）＝爪痕劃在柄上；gun（火槍、霰彈槍）＝爪痕劃在槍管前段；open（弓、弩、鞭）＝和獸爪錯開，人形照劍；block（匕首、雙匕首、拳套、手槍、雙手槍）＝兩邊都錯開（RG樣張.md 9.9.3）" }];
+  for (const id of ["wolf", "scar"]) {
+    const D = W20.map((w) => crop(RU.duelCanvas(specOf(heroOf(w.look), id), 1), 105, 14, 110, 84));
+    blocks.push({ note: `${ELITES[id].zh}：真 1 倍` }, { cells: D.map((c, i) => plain(c, W20[i].zh)), gap: 8, capW: 110 });
+    blocks.push({ note: `${ELITES[id].zh}：最近鄰 ×2` }, { cells: D.map((c, i) => nn(c, 2, W20[i].zh)), gap: 8 });
+  }
+  publish(sheet(1700, blocks), "image/png");
+};
+// ================= 五種主手 × 兩場（真 1 倍、×4、800 縮 259×97） =================
+const D5 = () => W5.map((w) => ({ zh: w.zh, wolf: RU.duelCanvas(specOf(heroOf(w.look), "wolf"), 1), scar: RU.duelCanvas(specOf(heroOf(w.look), "scar"), 1) }));
+PARTS.duel = () => {
+  const blocks = [{ title: "主手 劍／弓／斧／法杖／雙手槍 × 狼王／疤面，真 1 倍" },
+    { note: "劍＝第 3 版原樣（指紋不變）；弓＝bow 剪影＋open 交叉；斧＝held 剪影＋head 交叉；法杖＝staff 剪影＋head 交叉；雙手槍＝aim 剪影＋block 交叉（RG樣張.md 9.9）" }];
+  for (const d of D5()) blocks.push({ cells: [plain(d.wolf, `${d.zh} × 北坡狼王`), plain(d.scar, `${d.zh} × 疤面`)], gap: 16, capW: 320 });
+  publish(sheet(720, blocks), "image/png");
+};
+PARTS.x4 = () => {
+  const blocks = [{ title: "同上，最近鄰 ×4（左：北坡狼王；右：疤面）" }];
+  for (const d of D5()) blocks.push({ note: d.zh }, { cells: [nn(d.wolf, 4), nn(d.scar, 4)], gap: 16 });
+  publish(sheet(2640, blocks), "image/png");
+};
+PARTS.small = () => {
+  const shrink = (src) => { const c = document.createElement("canvas"); c.width = 259; c.height = 97; const g = c.getContext("2d"); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high"; g.drawImage(src, 0, 0, 259, 97); return c; };
+  const blocks = [{ title: "800×600：插圖 320×120（DPR 1）等比縮成 259×97（RG-4 待決 10 接受），真 1 倍；下方最近鄰 ×3" }];
+  const S = D5().map((d) => ({ zh: d.zh, wolf: shrink(d.wolf), scar: shrink(d.scar) }));
+  blocks.push({ cells: S.flatMap((d) => [plain(d.wolf, `${d.zh} × 北坡狼王`), plain(d.scar, `${d.zh} × 疤面`)]), gap: 12, capW: 259 });
+  for (const d of S) blocks.push({ cells: [nn(d.wolf, 3, `${d.zh} × 北坡狼王 ×3`), nn(d.scar, 3, `${d.zh} × 疤面 ×3`)], gap: 16 });
+  publish(sheet(1700, blocks), "image/png");
+};
+// ================= 20 種 Q 版武器圖示（無框，48 真 1 倍與 ×3；對照用） =================
+PARTS.icons = () => {
+  const one = (look) => { const c = document.createElement("canvas"); c.width = c.height = 48; const g = c.getContext("2d"); g.fillStyle = "#3a3f4a"; g.fillRect(0, 0, 48, 48); g.strokeStyle = "rgba(255,255,255,0.15)"; g.beginPath(); g.moveTo(24, 0); g.lineTo(24, 48); g.moveTo(0, 24); g.lineTo(48, 24); g.stroke(); QIconsWeapons.paint(g, look, 48, 1, { frame: "none" }); return c; };
+  publish(sheet(1700, [{ title: "Q 版武器圖示 20 種（無框）" }, { cells: W20.map((w) => nn(one(w.look), 3, w.zh)), gap: 8 }]), "image/png");
+};
+// ================= 劍版指紋：四場 × res 1／2（改 rgUnits.js 前後比） =================
+PARTS.audit = () => {
+  const rows = [];
+  for (const res of [1, 2]) for (const id of Object.keys(ELITES)) rows.push(`${id} res${res} ${fnv(RU.duelCanvas(specOf(SWORD_HERO, id), res))}`);
+  const c = document.createElement("canvas"); c.width = 420; c.height = 20 + rows.length * 18; const g = c.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, c.width, c.height); g.fillStyle = "#eadfcc"; g.font = `13px monospace`; rows.forEach((r, i) => g.fillText(r, 10, 18 + i * 18));
+  console.log("AUDIT " + rows.join(" | "));
+  document.getElementById("audit").textContent = rows.join(String.fromCharCode(10));
+  publish(c, "image/png");
+};
+try { (PARTS[PART] ?? PARTS.duel)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>

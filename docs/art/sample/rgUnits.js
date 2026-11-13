@@ -225,6 +225,7 @@ window.RGUnits = (() => {
        2. 主手武器和手、身體之間留一道輪廓光縫：拿掉主手再畫一次，相減得到「伸出身體外的武器」，往外 0.7 單位的那圈（落在身體上的部分）就是縫。
        3. 斗笠帽緣下一道縫（見 withSilDouli）。 */
     const unit = who.npc ?? who.doll, er = 1.0 * k * R;
+    if (who.prop) return propSilhouette(who, unit, draw, mk, er, cx, foot, k, R, lx, ly, W, H); /* 9.9：主手不是劍（弓、弩、槍、杖）另走「道具」剪影 */
     const full = erode(draw(unit, !!who.npc), er);
     let seam = null;
     if (unit.gear?.main_hand) {
@@ -239,6 +240,63 @@ window.RGUnits = (() => {
       sg.beginPath(); sg.moveTo(lx + s * 1.5 * k, ly - 32.0 * k); sg.lineTo(lx + s * 10.5 * k, ly - 32.5 * k); sg.stroke(); sg.restore();
       sg.globalCompositeOperation = "destination-in"; sg.drawImage(full, 0, 0);
     }
+    return { cv: full, seam, x0: cx - lx, y0: foot - ly, w: W, h: H };
+  }
+  // ---- 3b. 主手不是劍（RG樣張.md 9.9，RG-4 驗收 K2）：剪影組 ----
+  /**
+   * 剪影組：held＝紙娃娃照畫（同劍：拿掉主手相減開縫，劍走的就是這條，一行沒動）；bow／aim／staff＝「道具」剪影：
+   * 紙娃娃改拿「載體」（拳套 knuckle：不是雙手武器，手臂照組別的架式往前舉，手上沒有東西伸出去），
+   * 主手武器改用中間交叉的那個 Q 版武器圖示（alpha > 128 二值化）貼在手心（PROP：大小、位移、角度），不侵蝕；
+   * 縫＝道具往外 0.7 單位、落在身體上的那圈（同劍）。弓、弩、槍在紙娃娃裡是抱在胸前或藏在身後，「相減」會把手臂、箭袋一起減出來，
+   * 縫繞身體一圈（RG-4 驗收看到的鬼影）；杖頭的光暈在剪影裡是一顆大黑球。這三組一律拿到身體外面。
+   */
+  const SIL_GROUP = { bow: "bow", crossbow: "aim", longgun: "aim", shotgun: "aim", pistol: "aim", dual_pistol: "aim", staff: "staff" };
+  const silGroup = (look) => SIL_GROUP[look?.kind] ?? "held";
+  const CARRIER = { slot: "main_hand", kind: "fist", form: "knuckle", material: "iron" };
+    /**
+   * 道具（以 Q 版武器圖示當剪影，和中間交叉的那把同一個形）：px＝圖示大小（模型單位）、at＝圖示中心相對手心（模型單位，+x 朝敵人、−y 往上）、
+   * rot＝圖示轉多少（斜放圖示的作用端在右上；+π/4＝轉成朝前水平）。icon＝剪影用的圖示（雙手槍畫兩把單手槍）。
+   */
+  const PROP = {
+    bow: { px: 21, at: [3.5, -0.5], rot: Math.PI / 4 },
+    crossbow: { px: 24, at: [5.5, 0.5], rot: Math.PI / 4 - 0.1 },
+    longgun: { px: 27, at: [6.5, 0.5], rot: Math.PI / 4 - 0.1 },
+    shotgun: { px: 25, at: [6, 0.5], rot: Math.PI / 4 - 0.1 },
+    pistol: { px: 17, at: [3.8, -1.4], rot: 0.55 },
+    dual_pistol: { px: 17, at: [3.8, -1.4], rot: 0.55, icon: { kind: "pistol" } },
+    staff: { px: 26, at: [5, -7], rot: -Math.PI / 4 },
+  };
+  /** 剪影組的架式：弓、槍、弩手臂抬到肩高往前平舉（瞄準）；杖照劍的架式。 */
+  const GROUP_POSE = { bow: { arm: -1.0, wpn: 1.2, lean: 0.05 }, aim: { arm: -1.0, wpn: 1.2, lean: 0.05 }, staff: { arm: -0.95, wpn: 1.2, lean: 0.05 } };
+  /** 載體拿在手上時，手心在 R 倍 canvas 的位置（qDoll 的 probe；只取拳套那一筆）。 */
+  function handOf(unit, pose, k, R, lx, ly) {
+    let m = null; const c = document.createElement("canvas"); c.width = c.height = 4; const g = c.getContext("2d");
+    g.scale(R, R); g.translate(lx, ly); g.scale(k, k);
+    QDoll.setPose({ ...(pose ?? {}), probe: (kind, h, t, v, o, mm) => { if (kind === "gauntlet" && !m) m = mm; } });
+    try { QDoll.draw(g, unit, "side"); } finally { QDoll.setPose(null); }
+    return m ? [m.e, m.f] : [lx * R, (ly - 20) * R];
+  }
+  function propCanvas(mk, look, hand, s, extra = [0, 0]) {
+    const P0 = PROP[look.kind], icon = { ...look, ...(P0.icon ?? {}) }, d = Math.round(P0.px * s);
+    const ic = document.createElement("canvas"); ic.width = ic.height = d; QIconsWeapons.paint(ic.getContext("2d"), icon, d, 1, { frame: "none" });
+    const cv = mk(), g = cv.getContext("2d");
+    g.translate(hand[0], hand[1]); g.scale(s, s); g.translate(P0.at[0] + extra[0], P0.at[1] + extra[1]); g.rotate(P0.rot);
+    g.drawImage(ic, -P0.px / 2, -P0.px / 2, P0.px, P0.px);
+    return hard(cv, 128); /* 圖示的半透明光暈、亮點不算進剪影 */
+  }
+  function propSilhouette(who, unit, draw, mk, er, cx, foot, k, R, lx, ly, W, H) {
+    const look = unit.gear.main_hand, gear = { ...unit.gear, main_hand: CARRIER };
+    if (look.kind === "bow" && !gear.back) gear.back = { slot: "back", kind: "quiver", material: "leather" }; /* 弓手照紙娃娃背箭袋（箭羽露在後腦旁） */
+    const carry = { ...unit, gear };
+    const body = erode(draw(carry, false), er);
+    const hand = handOf(carry, who.pose, k, R, lx, ly), s = k * R;
+    /* 雙手槍：遠側那把（往前 1.5、往下 4.5）先畫，近側那把蓋在上面、兩把之間也開縫 */
+    const props = look.kind === "dual_pistol" ? [propCanvas(mk, look, hand, s, [1.5, 4.5]), propCanvas(mk, look, hand, s)] : [propCanvas(mk, look, hand, s)];
+    const seam = mk(), sg = seam.getContext("2d");
+    const ring = (p, under) => { const r = mk(), rg = r.getContext("2d"); rg.drawImage(QNpc.dilate(p, 0.7 * s), 0, 0); rg.globalCompositeOperation = "destination-out"; rg.drawImage(p, 0, 0); rg.globalCompositeOperation = "destination-in"; rg.drawImage(under, 0, 0); return r; };
+    const full = mk(), fg = full.getContext("2d"); fg.drawImage(body, 0, 0);
+    for (const p of props) { sg.globalCompositeOperation = "destination-out"; sg.drawImage(p, 0, 0); sg.globalCompositeOperation = "source-over"; sg.drawImage(ring(p, full), 0, 0); fg.drawImage(p, 0, 0); }
+    hard(seam, 128);
     return { cv: full, seam, x0: cx - lx, y0: foot - ly, w: W, h: H };
   }
   /** 侵蝕 r 像素（反相 → 膨脹 → 反相；膨脹用 QNpc.dilate＝qDoll 外框同一套 12 方向圓盤）。 */
@@ -305,16 +363,39 @@ window.RGUnits = (() => {
   }
   const isDiag = (look) => { if (look.kind === "beast_claw") return true; try { return !!QIconsWeapons.def(look).meta.diag; } catch (e) { return true; } };
   function crossed(ctx, heroW, eliteW, cx, cy, px0, res, mode) {
-    const put = (look, mirror, k = 1) => {
+    const put = (look, mirror, k = 1, dx = 0, dy = 0) => {
       const px = px0 * k, c0 = weaponCanvas(look, px, res), c = mode === "flat" ? tinted(c0, "#f2e6c8") : c0;
-      ctx.save(); ctx.translate(cx, cy); if (mirror) ctx.scale(-1, 1); if (!isDiag(look)) ctx.rotate(0.62);
+      ctx.save(); ctx.translate(cx + dx, cy + dy); if (mirror) ctx.scale(-1, 1); if (!isDiag(look)) ctx.rotate(0.62);
       if (mode === "flat") { const o = tinted(c0, OUT); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(o, -px / 2 + dx * 0.9, -px / 2 + dy * 0.9, px, px); }
       ctx.drawImage(c, -px / 2, -px / 2, px, px); ctx.restore();
     };
+    const claw = eliteW.kind === "beast_claw", F = mode !== "flat" && FACE[crossGroup(heroW)]?.[claw ? "claw" : "man"];
+    if (F) { /* 9.9：不是長條斜放的主手（弓、拳套、手槍、成對…）：兩把錯開、只在邊上交疊，不疊在對方的主體上 */
+      if (claw) { put(heroW, false, F.k, ...F.hero); put(eliteW, true, F.ek, ...F.elite); } else { put(eliteW, true, F.ek, ...F.elite); put(heroW, false, F.k, ...F.hero); }
+      return;
+    }
     /* 爪痕蓋在劍上（第 2 版）：劍蓋上去會把三道爪痕的中段切成六根尖刺，讀成羽毛扇；爪痕在上，劍從爪痕之間、兩端露出 */
     /* 第 3 版：異形精英的爪痕蓋在劍上、從劍身中段劃過，劍放大 1.12 倍讓劍身夠長、三道爪痕之間露得出鋼色；人形照舊先畫精英再畫主角 */
-    if (eliteW.kind === "beast_claw") { put(heroW, false, 1.12); put(eliteW, true); } else { put(eliteW, true); put(heroW, false); }
+    if (claw) { put(heroW, false, 1.12); put(eliteW, true); } else { put(eliteW, true); put(heroW, false); }
   }
+  // ---- 3b. 主手不是劍（RG樣張.md 9.9）：交叉組 ----
+  /**
+   * 交叉組（主角主手 → 和精英怎麼交叉）：
+   *   blade＝長條、刃在前段（劍、巨劍、魔導劍、矛）：照劍（9.8 第 4 條），不在表裡；
+   *   head＝頭重的長柄（斧、錘、鐮刀、三種杖）：爪痕改劃在柄上、主角那把往右上推，斧頭、錘頭、杖頭整個露出來；
+   *   gun＝長槍（火槍、霰彈槍）：爪痕劃在槍管前段、主角那把往左下拉，槍托、扳機、護弓露出來；
+   *   open＝有開口的（弓、弩、鞭）：和獸爪錯開，只在邊上交疊（疊在中間會把弓弦、弩臂關成籠子）；人形照劍交叉；
+   *   block＝塊狀或自帶 X 的（拳套、匕首、雙匕首、手槍、雙手槍）：異形、人形都錯開，主角那把縮小。
+   */
+  const CROSS_GROUP = { axe: "head", hammer: "head", scythe: "head", staff: "head", longgun: "gun", shotgun: "gun", bow: "open", crossbow: "open", whip: "open", fist: "block", dagger: "block", dual_dagger: "block", pistol: "block", dual_pistol: "block" };
+  const crossGroup = (look) => CROSS_GROUP[look?.kind] ?? "blade";
+  /** 錯開：hero／elite＝[dx, dy]（插圖 px，交叉中心為原點）、k／ek＝主角／精英圖示倍率；claw＝異形（獸爪）、man＝人形（沒寫＝照劍交叉）。 */
+  const FACE = {
+    head: { claw: { hero: [6, -6], elite: [-3, 3], k: 1.05, ek: 1 } },
+    gun: { claw: { hero: [-5, 5], elite: [4, -4], k: 1.08, ek: 1 } },
+    open: { claw: { hero: [-14, 4], elite: [11, -3], k: 0.92, ek: 0.92 } },
+    block: { claw: { hero: [-14, 4], elite: [11, -3], k: 0.88, ek: 0.92 }, man: { hero: [-14, 5], elite: [10, -4], k: 0.8, ek: 0.95 } },
+  };
   /** 四芒星火花（交叉點）。 */
   function spark(ctx, x, y, r, c1 = "#fff7c0", c2 = "#ffffff") {
     const star = (rr, w) => { ctx.beginPath(); for (let i = 0; i < 8; i++) { const a = (i * Math.PI) / 4 - Math.PI / 2, q = i % 2 ? w : rr; ctx.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } ctx.closePath(); };
@@ -356,7 +437,7 @@ window.RGUnits = (() => {
       const v = ctx.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, 190); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,0.45)"); ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
       ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(heroX, foot, 30, 4, 0, 0, TAU); ctx.ellipse(eliteX, foot, 38, 4.5, 0, 0, TAU); ctx.fill();
     }
-    const hs = silhouetteOf({ doll: spec.hero.doll, view: "side", west: false, pose: spec.hero.pose ?? HERO_POSE }, heroX, foot, kH, res);
+    const hs = silhouetteOf({ doll: spec.hero.doll, view: "side", west: false, pose: spec.hero.pose ?? (GROUP_POSE[silGroup(spec.hero.doll.gear?.main_hand)] ?? HERO_POSE), prop: silGroup(spec.hero.doll.gear?.main_hand) !== "held" }, heroX, foot, kH, res);
     const es = silhouetteOf(spec.elite.spec ? { spec: spec.elite.spec, west: true } : { doll: spec.elite.doll, npc: spec.elite.npc, view: "side", west: true }, eliteX, foot, kE, res);
     const put = (s, c, dx = 0, dy = 0) => { ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(c, s.x0 + dx, s.y0 + dy, s.w, s.h); ctx.restore(); };
     if (A) {
