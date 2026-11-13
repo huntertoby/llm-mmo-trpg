@@ -330,6 +330,9 @@ whiteboard:
     - {id: ember_burst, keyword: ignite, skeleton: area, effect: {type: damage, element: fire}, rider: {type: apply_status, status: burning}, shapes: [cross, square3], name_zh: 燃燒爆, weapon_name_zh: 燃燒爆擊, concept_zh: 在一小片區域炸開火焰，讓範圍內的人燒起來, flavor_zh: 火光一閃，四周的人身上都冒起了火苗}
     - {id: rime_lance, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [line], name_zh: 冰流, weapon_name_zh: 冰流斬, concept_zh: 一道寒氣沿著直線衝出去，走過的地面都結了冰, flavor_zh: 寒氣貼著地面竄出，身後留下一條滑溜溜的冰道}
     - {id: rime_burst, keyword: frozen, skeleton: area, effect: {type: damage, element: ice}, rider: {type: create_surface, surface: ice}, shapes: [cross, square3], name_zh: 冰晶爆, weapon_name_zh: 冰晶爆擊, concept_zh: 在一小片區域炸開冰晶，讓地面結冰, flavor_zh: 冰晶向四面炸開，落地的地方全結成了冰}
+    # --- AF-1（玩法 PM 交接 4.1.3 第 11 點，06 6.27.2、6.34.9）：中毒 2 階補法術白板。點數固定的施加中毒（淬毒、毒沼、瘴氣）在 2 階湊不到
+    # 預算下限，法器 2 階組不出中毒的主動白板；補一招條件利用（對中毒目標加傷）。數值照預算，名稱照玩法 PM 的例子 ---
+    - {id: bone_rot, min_tier: 2, keyword: poisoned, skeleton: strike, effect: {type: damage, element: poison}, condition: {type: target_has_status, status: poison}, theme: poison, categories: [spell], name_zh: 蝕骨咒, concept_zh: 對中毒的目標唸出蝕骨的咒文，毒性越深傷得越重, flavor_zh: 咒文順著毒性鑽進骨縫，目標痛得彎下腰}
     # --- 6F-4f（6F-4e 待決 2）：潮濕、倒地、標記各補 1 招施加型白板，讓第 1 招不固定成水彈、絆擊、烙印。潮濕、倒地用既有的
     # 「弱傷害＋製造」例外（exception_keywords）；標記沒有結構例外，補的是單一效果（只施加標記）。數值照預算，名稱暫定 ---
     - {id: torrent_line, keyword: wet, skeleton: area, effect: {type: damage, element: physical}, rider: {type: create_surface, surface: water}, shapes: [line], name_zh: 激流, weapon_name_zh: 激流斬, concept_zh: 一道水流沿著直線衝出去，走過的地面都積了水, flavor_zh: 水柱貼著地面衝出，身後留下一條濕漉漉的水痕}

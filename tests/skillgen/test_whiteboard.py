@@ -280,33 +280,6 @@ def _request(
 HELD = {"ignite": 2, "marked": 1, "charged": 1}
 
 
-# 已知的白板內容缺口：(關鍵字, 階級, 種類) 組不出白板，三選一照設計退回手寫池。
-# 這是內容缺口，已交玩法 PM（KW-2 發現：中毒的主動配方在 2 階湊不到預算下限）。只有清單內的組合
-# 可以退回；其他關鍵字照舊必須組得出來。內容補好後
-# test_known_whiteboard_gaps_still_fail_to_compose 會失敗，提醒把那一筆從清單拿掉。
-KNOWN_GAPS: frozenset[tuple[str, int, str]] = frozenset({("poison", 2, "active")})
-
-
-@cache
-def _composes(keyword: str, tier: int) -> bool:
-    """法器在這一階組得出這個關鍵字的主動白板（試 5 個種子）。"""
-    for seed in range(5):
-        try:
-            compose_whiteboard(seed, keyword=keyword, tier=tier, weapon_class="focus", library=LIB)
-        except ComposeError:
-            continue
-        return True
-    return False
-
-
-@pytest.mark.parametrize(("keyword", "tier", "kind"), sorted(KNOWN_GAPS))
-def test_known_whiteboard_gaps_still_fail_to_compose(keyword: str, tier: int, kind: str) -> None:
-    assert kind == "active"  # _composes 只試主動白板
-    assert not _composes(keyword, tier), (
-        f"{keyword} {tier} 階 {kind} 白板組得出來了：把這一筆從 KNOWN_GAPS 拿掉"
-    )
-
-
 def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
     for seed in range(8):
         found = generate_whiteboard_candidates(LIB, _request(HELD, seed))
@@ -323,14 +296,10 @@ def test_candidates_are_whiteboards_in_deepen_bridge_new_order() -> None:
                 assert set(c.keywords) <= set(derive_keywords(c.skill, LIB.keywords).all())
                 continue
             assert len(c.keywords) == 1
-            keyword = c.keywords[0]
-            if (
-                keyword in whiteboard_keywords(LIB, "active", 2)
-                and (keyword, 2, "active") not in KNOWN_GAPS
-            ):
+            if c.keywords[0] in whiteboard_keywords(LIB, "active", 2):
                 assert c.source == "composer" and is_whiteboard(c.skill, LIB), c.skill.id
-                assert keyword in derive_keywords(c.skill, LIB.keywords).all()
-            else:  # 沒有白板配方（或列在 KNOWN_GAPS）的關鍵字退回手寫池的 1 階技能
+                assert c.keywords[0] in derive_keywords(c.skill, LIB.keywords).all()
+            else:  # 沒有白板配方的關鍵字退回手寫池的 1 階技能
                 assert c.source == "pool" and c.skill.tier == RULES.tier
         assert found[0].keywords == ("ignite",) and not found[0].fallback
         assert found[1].keywords[-1] in {"marked", "charged"}
