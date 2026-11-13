@@ -765,26 +765,27 @@ def _overload_text(lib: ContentLibrary, stack: StackDef) -> str:
         else:
             assert sub.status is not None
             backlash.append(f"獲得「{lib.ruleset.status_def(sub.status).name_zh}」")
+    unit = stack.unit_zh  # RG-5b：連擊點用「點」，其他「層」
     return (
-        f"。超載：你帶{tag_text(lib, (overload.tag,))}標籤的技能每層傷害"
+        f"。超載：你帶{tag_text(lib, (overload.tag,))}標籤的技能每{unit}傷害"
         f" +{overload.per_stack_damage_permille / 10:g}%；"
-        f"累積到 {overload.threshold} 層時，你{'、'.join(backlash)}並清空層數"
+        f"累積到 {overload.threshold} {unit}時，你{'、'.join(backlash)}並清空{unit}數"
     )
 
 
 def _stack(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.stack is not None
     stack = lib.ruleset.stack_def(spec.stack)
+    unit = stack.unit_zh  # RG-5b（玩法PM交接 4.1.7 第 3 條）：連擊點用「點」，其他「層」
     if spec.type == "add_stack":
-        text = f"累積 {spec.amount or 1} 層「{stack.name_zh}」（上限 {stack.max}）"
+        text = f"累積 {spec.amount or 1} {unit}「{stack.name_zh}」（上限 {stack.max}）"
         return text + (_overload_text(lib, stack) if stack.overload is not None else "")
     assert spec.per_stack_permille is not None
-    need = f"（至少 {skill.cost.stacks} 層才能施放）" if skill.cost.stacks else ""
+    need = f"（至少 {skill.cost.stacks} {unit}才能施放）" if skill.cost.stacks else ""
     consumer = stack.consumer
     what = "傷害" if consumer is None else consumer.boost_names()
-    return (
-        f"消耗全部「{stack.name_zh}」，每層使本技能{what} +{spec.per_stack_permille / 10:g}%{need}"
-    )
+    per = spec.per_stack_permille / 10
+    return f"消耗全部「{stack.name_zh}」，每{unit}使本技能{what} +{per:g}%{need}"
 
 
 def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
@@ -796,7 +797,8 @@ def _consume_status(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
         text += "（骰數 × 剩餘回合）"
     elif spec.scale == "stacks":
         assert spec.stack is not None
-        text += f"（骰數 × 同時消耗的「{lib.ruleset.stack_def(spec.stack).name_zh}」層數）"
+        consumed = lib.ruleset.stack_def(spec.stack)
+        text += f"（骰數 × 同時消耗的「{consumed.name_zh}」{consumed.unit_zh}數）"
     if spec.splash is not None:
         text += f"，並波及周圍 {spec.splash} 格內的敵人"
     return text + "；目標沒有該狀態則不生效"

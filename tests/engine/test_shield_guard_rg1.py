@@ -90,17 +90,26 @@ def test_shooting_from_high_ground_ignores_the_shield() -> None:
     assert cover_of(scene(heights=rows)) == (0, None)
 
 
-def test_shooting_from_one_layer_above_ignores_the_shield() -> None:
-    """RG-5（玩法PM交接 4.1.6 RG-4 第 3 條）：盾兵也統一成「攻擊者高 1 層以上無視」
-    （同塔盾、盾陣）。"""
+def test_shooting_from_one_layer_above_is_still_blocked() -> None:
+    """RG-5b（玩法PM交接 4.1.7 第 1 條）：照半掩護，盾兵算 1 層高，攻擊者只高 1 層仍擋得到
+    （要高 2 層才無視；撤回 RG-5 的「高 1 層無視」）。"""
     rows = ["0000000000"] * 4 + ["1100000000"] + ["0000000000"] * 4
-    assert cover_of(scene(heights=rows)) == (0, None)
+    assert cover_of(scene(heights=rows)) == (PENALTY, GUARD)
 
 
 def test_the_shield_still_blocks_when_everyone_stands_one_layer_up() -> None:
-    """同高（大家都站在 1 層高台上）照樣擋：只看攻擊者比目標高多少。"""
+    """同高（大家都站在 1 層高台上）照樣擋。"""
     rows = ["1111111111"] * 9
     assert cover_of(scene(heights=rows))[0] != 0
+
+
+def test_two_layers_above_a_raised_guard_is_still_blocked() -> None:
+    """高度比的是盾兵（掩護）不是目標：大家站在 1 層高台、攻擊者在 3 層，比盾兵高 2 層才無視；
+    攻擊者在 2 層（比盾兵高 1 層）仍擋得到。"""
+    high = ["0000000000"] * 4 + ["3311111111"] + ["0000000000"] * 4
+    assert cover_of(scene(heights=high)) == (0, None)
+    one = ["0000000000"] * 4 + ["2211111111"] + ["0000000000"] * 4
+    assert cover_of(scene(heights=one)) == (PENALTY, GUARD)
 
 
 def test_the_shield_does_not_stack_with_cover_objects() -> None:

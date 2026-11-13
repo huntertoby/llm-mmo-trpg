@@ -346,8 +346,8 @@ def guard_between(
     """盾兵掩護的幾何部分（RG-1，#162，09 9.6.6）：從 ``attacker_xy`` 打 ``target``（站在 ``at``，
     省略＝目前位置）時替他擋的盾兵。條件同半掩護物件（:func:`cover_object_between`）：盾兵帶
     ``shield_guard`` 標籤、存活、和目標同陣營、不是目標自己，在目標四方向相鄰、而且在目標朝向攻擊者
-    的那一側；高度：攻擊者站得比目標高 1 層以上時擋不到（RG-5 統一，同塔盾本體；玩法PM交接 4.1.6
-    RG-4 第 3 條），目標站得比盾兵高 2 層以上時也擋不到（盾兵視為 1 層高）。多名時取
+    的那一側；高度同半掩護：盾兵視為 1 層高（攻擊者高出它 1 層以上、或目標站得比它高 1 層以上時擋
+    不到；RG-5b 撤回 RG-5 的「比目標高 1 層就無視」，玩法PM交接 4.1.7）。多名時取
     上、右、下、左順序的第一個。不看武器與目標是不是遠程（呼叫端負責）。
 
     ``formation``（RG-4，#163）：改找帶塔盾詞條「盾陣」的隊友（:func:`holds_formation`）；其餘條件
@@ -372,19 +372,19 @@ def guard_between(
 
 def guard_blocks(state: BattleState, attacker_xy: XY, target_xy: XY, guard_xy: XY) -> bool:
     """站在 ``guard_xy`` 的盾兵擋不擋得到從 ``attacker_xy`` 打 ``target_xy`` 的遠程攻擊（只看幾何，
-    :func:`guard_between`）：四方向相鄰、在目標朝向攻擊者的那一側；攻擊者比目標高 1 層以上時無視
-    （RG-5：盾兵與盾陣統一成「高 1 層」，同塔盾本體；RG-4 以前是攻擊者比盾兵高 2 層才無視）；目標比
-    盾兵高 2 層以上時擋不到。"""
+    :func:`guard_between`）：四方向相鄰、在目標朝向攻擊者的那一側、高度條件同半掩護物件（盾兵視為
+    1 層高，攻擊者要比盾兵高 2 層以上才無視；RG-5b 撤回 RG-5 的「比目標高 1 層就無視」，玩法PM交接
+    4.1.7）。"""
     tx, ty = target_xy
     dx, dy = guard_xy[0] - tx, guard_xy[1] - ty
     if abs(dx) + abs(dy) != 1:
         return False
     if dx * (attacker_xy[0] - tx) + dy * (attacker_xy[1] - ty) <= 0:
         return False
-    target_height = state.tile(*target_xy).height
-    if state.tile(*attacker_xy).height > target_height:
+    guard_height = state.tile(*guard_xy).height
+    if state.tile(*attacker_xy).height > guard_height + 1:
         return False
-    return state.tile(*guard_xy).height + 1 >= target_height
+    return guard_height + 1 >= state.tile(*target_xy).height
 
 
 def _guard_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
@@ -433,12 +433,13 @@ def _shield_cover(
     state: BattleState, attacker: UnitState, target: UnitState, penalty: int
 ) -> Cover | None:
     """塔盾的自身半掩護（Phase 3I-2，08 8.11）：目標副手有 ``ranged_cover`` 時，遠程攻擊（呼叫端已
-    排除近戰與穿透）命中同半掩護；攻擊者站得比目標高 1 層以上時無視。場上的掩護物已經成立時不會
-    走到這裡（兩者不疊加）。"""
+    排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高，攻擊者站得比目標高 2 層以上時
+    無視（RG-5b，玩法PM交接 4.1.7；以前是高 1 層就無視）。場上的掩護物已經成立時不會走到這裡（兩者
+    不疊加）。"""
     offhand = target.gear.offhand
     if offhand is None or not offhand.ranged_cover:
         return None
-    if state.tile(*attacker.xy).height > state.tile(*target.xy).height:
+    if state.tile(*attacker.xy).height > state.tile(*target.xy).height + 1:
         return None
     return Cover(
         penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target.xy

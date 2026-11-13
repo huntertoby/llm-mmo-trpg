@@ -1142,9 +1142,11 @@ def _charge_activated(e: ChargeActivated, v: _View) -> str:
 
 @_handles(OverloadTriggered)
 def _overload_triggered(e: OverloadTriggered, v: _View) -> str:
-    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    stack = v.state.ruleset.stack_def(e.stack_id)
+    unit = stack.unit_zh  # RG-5b：單位照層數定義（連擊點「點」）
     return (
-        f"  ✦ {v.name[e.unit_id]} 的「{stack}」累積到 {e.stacks} 層（門檻 {e.threshold}），超載了！"
+        f"  ✦ {v.name[e.unit_id]} 的「{stack.name_zh}」累積到 {e.stacks} {unit}"
+        f"（門檻 {e.threshold}），超載了！"
     )
 
 

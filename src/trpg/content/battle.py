@@ -602,7 +602,8 @@ class OffhandDef(ContentModel):
       （都是物理或都是心智）取較高 ``max``、一物理一心智取平均 ``mean``（schema 檢查）。
     - ``block_bonus``：格擋反應強化（圓盾），依縮放屬性值，見 :class:`BlockBonus`；
     - ``ranged_cover``：自身半掩護（塔盾）——遠程攻擊打持有者時命中修正同半掩護
-      （``core.half_cover_hit_penalty``）；攻擊者站得比持有者高 1 層以上時無視；與場上掩護物不疊加；
+      （``core.half_cover_hit_penalty``）；攻擊者站得比持有者高 2 層以上時無視（同半掩護，
+      RG-5b）；與場上掩護物不疊加；
     - ``move_penalty``：持有者的移動點數 −N（塔盾）；
     - ``spell_damage_permille``：持有者的法術技傷害 +N‰（法書；計入全身 +50% 上限）；
     - ``spell_range_bonus``：持有者的法術技施放距離 +N（法器珠；不加範圍大小，
@@ -674,7 +675,7 @@ class OffhandDef(ContentModel):
         if self.ranged_cover:
             lines.append(
                 f"遠程掩護：遠程攻擊打你時命中 −{core.half_cover_hit_penalty}（同半掩護；"
-                "攻擊者站得高 1 層以上時無視）"
+                "攻擊者站得比你高 2 層以上時無視）"
             )
         if self.move_penalty:
             lines.append(f"笨重：你的移動 −{self.move_penalty}")
