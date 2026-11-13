@@ -75,7 +75,7 @@ export class BattleRenderer extends VfxLayer {
     stage.addChild(this.world);
     // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
     this.groundFx.mask = this.groundMask;
-    this.world.addChild(this.rows.root, this.marks, this.attackTop, this.arrowTop, this.ambient.root, this.silhouettes, this.hudTop, this.hover, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
+    this.world.addChild(this.rows.root, this.marks, this.attackTop, this.arrowTop, this.ambient.root, this.silhouettes, this.hudTop, this.hover, this.headMarks, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();
@@ -124,6 +124,7 @@ export class BattleRenderer extends VfxLayer {
       releaseIfLast();
     }
     this.art.destroy();
+    this.rgDestroy();
     this.ready = false;
   }
 
@@ -160,6 +161,7 @@ export class BattleRenderer extends VfxLayer {
     if (this.ready && this.model !== null) {
       this.applySize(this.model);
       this.rebuildOutlines(); // OCL-1a（Q2）：只重建外框貼圖，比例與遲滯不重算
+      this.rgRescale(); // RG-3：準星、小盾、「？」的反向放大倍率跟著縮放
     }
   }
 
@@ -226,6 +228,7 @@ export class BattleRenderer extends VfxLayer {
     }
     this.drawBadges(model);
     for (const trap of model.traps) this.drawTrap(trap);
+    this.drawRgTraces(model); // RG-3：可疑痕跡（陷阱層）
     this.drawLinks(model);
     for (const u of model.units) this.drawUnit(model, u);
     this.drawOcclusion(model); // OCL-1a：被大型前排擋住的外框＋6F-22 舊剪影（有新外框的不畫）
@@ -234,6 +237,7 @@ export class BattleRenderer extends VfxLayer {
     this.drawVeils(model);
     this.drawMist(model);
     this.drawAttackFrames(); // HID-1b：紅框在該排單位之下，rows.reset 會清掉，要重畫
+    this.drawRgOverlay(); // RG-3：瞄準線在每排 `aims`（rows.reset 會清掉）、準星與小盾跟著新的頭頂
     this.ambient.draw(this.ambientHost(), model);
     this.art.endFrame();
     this.resumeLifts(model);

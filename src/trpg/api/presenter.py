@@ -52,7 +52,8 @@ from trpg.engine.battle import (
 )
 from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
-from trpg.engine.events import BattleStarted, EventBase
+from trpg.engine.events import BattleStarted, EffectFizzled, EventBase, TurnStarted
+from trpg.engine.lock_on import LOCK_BLOCKED, LOCK_CONCEALED, LOCK_LOST, lock_blocker
 from trpg.engine.parts import PART_REASON_ZH, part_targets
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
@@ -193,11 +194,42 @@ def team_events_out(
     """``team`` 看到的事件 JSON：陷阱過濾（:func:`filter_events`）＋ 隱蔽中的敵人只藏資訊
     （以這一步之後的狀態判斷誰看不到）。"""
     hidden = hidden_unit_ids(state, team)
-    return tuple(
-        event_out(e, state, hidden)
-        for e in filter_events(events, state, team)
-        if event_visible(e, state, team, hidden)
-    )
+    out: list[dict[str, Any]] = []
+    turn_of: UnitId | None = None
+    for e in filter_events(events, state, team):
+        if isinstance(e, TurnStarted):
+            turn_of = e.unit_id
+        if not event_visible(e, state, team, hidden):
+            continue
+        data = event_out(e, state, hidden)
+        if isinstance(e, EffectFizzled) and e.reason in _LOCK_REASONS:
+            data.update(_lock_fizzle_ids(state, e, turn_of, hidden))
+        out.append(data)
+    return tuple(out)
+
+
+_LOCK_REASONS = frozenset({LOCK_LOST, LOCK_CONCEALED, LOCK_BLOCKED})
+"""瞄準預告落空的原因（RG-1 ``effect_fizzled.reason``）。"""
+
+
+def _lock_fizzle_ids(
+    state: BattleState, e: EffectFizzled, caster_id: UnitId | None, hidden: frozenset[UnitId]
+) -> dict[str, str]:
+    """瞄準預告落空（RG-3 浮字）：``lock_caster_id``＝射出的人（射出在他回合開始時，取這一步
+    裡最後一個 ``turn_started``）；``lock_on_blocked`` 另帶 ``lock_blocker_id``＝擋下的目標隊友
+    （以這一步之後的戰場、:func:`lock_blocker` 判斷）。觀看者看不到資訊的單位不送。"""
+    out: dict[str, str] = {}
+    caster = None if caster_id is None else state.units.get(caster_id)
+    if caster is None or caster.id in hidden:
+        return out
+    out["lock_caster_id"] = caster.id
+    if e.reason != LOCK_BLOCKED or e.pos is None:
+        return out
+    target = state.unit_at(e.pos.x, e.pos.y)
+    blocker = None if target is None else lock_blocker(state, caster, target)
+    if blocker is not None and blocker.id not in hidden:
+        out["lock_blocker_id"] = blocker.id
+    return out
 
 
 def step_out(

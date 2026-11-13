@@ -323,6 +323,7 @@ export type WorldAction =
   | (Omit<Schemas["TravelAction"], "hasten"> & { hasten?: boolean })
   | Schemas["CampAction"]
   | Schemas["RetreatAction"]
+  | Schemas["DuelChoiceAction"] // RG-3（#162）：回應精英提出的單挑
   | Schemas["RestAction"]
   | Schemas["LoadoutAction"]
   | Schemas["TeleportAction"]

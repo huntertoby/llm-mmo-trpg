@@ -7928,6 +7928,17 @@
             ],
             "title": "Lock Target Id"
           },
+          "lock_blocker_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Blocker Id"
+          },
           "text": {
             "type": "string",
             "title": "Text"
@@ -8699,6 +8710,17 @@
           },
           "pos": {
             "$ref": "#/components/schemas/XY"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
           }
         },
         "additionalProperties": false,

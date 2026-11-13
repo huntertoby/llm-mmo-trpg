@@ -19,6 +19,7 @@ import {
   type InfuseSession,
 } from "../../battle/summonControl";
 import type { TelegraphMark } from "../../battle/telegraph";
+import { guardDraw, type AimDraw } from "../../battle/rgMarks";
 import {
   actionAtTile,
   DIRECTION_ARROWS,
@@ -72,6 +73,8 @@ export interface HighlightInput {
   panelPreview: Action | null;
   hover: Pos | null;
   marks: readonly TelegraphMark[];
+  /** RG-3：瞄準預告（`battle/rgMarks.aimDraws`）。 */
+  aims: readonly AimDraw[];
   focusTile: Pos | null;
   model: DrawModel;
   cards: Cards;
@@ -89,7 +92,7 @@ export interface HighlightState {
 
 export function useHighlights(i: HighlightInput): HighlightState {
   const { battleId, response, view, shown, hero, canAct, copying, canOrder, classified, mode, hurlPick } = i;
-  const { command, infuse, orderPick, hover, marks, focusTile, heroId } = i;
+  const { command, infuse, orderPick, hover, marks, aims, focusTile, heroId } = i;
   const [logHover, setLogHover] = useState<LogHover | null>(null);
   const [telegraphHover, setTelegraphHover] = useState<readonly Pos[] | null>(null);
 
@@ -117,7 +120,8 @@ export function useHighlights(i: HighlightInput): HighlightState {
   const path = useMemo(() => pathDraw(pathPv), [pathPv]);
 
   const baseHighlights = useMemo<Highlights>(() => {
-    const common = { telegraph: marks, focus: focusTile, hover };
+    // RG-3：準星與瞄準線一直顯示（同環境預告）；小盾只在選目標、預覽有盾兵掩護時（`guardDraw`）
+    const common = { telegraph: marks, aims, guard: guardDraw(preview, view), focus: focusTile, hover };
     if (orderPick !== null && canOrder) {
       return { ...NO_HIGHLIGHTS, ...common, attacks: orderTargetTiles(orderPick, view, heroId) };
     }
@@ -186,6 +190,7 @@ export function useHighlights(i: HighlightInput): HighlightState {
     preview,
     hover,
     marks,
+    aims,
     focusTile,
     orderPick,
     hurlPick,
