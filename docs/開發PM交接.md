@@ -46,7 +46,7 @@
 **2. 最後一次全量**：2026-11-13 cc8345511 已 push（pytest 17127、vitest 4398、build 0），含：RR-2／2b／2c（#160，`WORLD_RULES_VERSION` 30）、WP-3b、KW-1＋KW-1b（#161）、RG-1（#162）；`LOG_FORMAT` 現為 /120（KW-1 與 RG-1 同一版）。d5e04c462 正在跑全量（上一次 ed1449cbe 有 4 條 KW 失敗，KW-1b 已修；再前一次跑到 99% 時 xdist worker「node down」卡死 3 小時，已停掉——全量期間盡量不要讓 agent 跑大批測試，`TRPG_PYTEST_WORKERS` 改用 10）。通過就 push，並照 3.0001 節發一則給專案 PM。
 
 **3. 執行中的 agent（分支）**：
-- **RG-4＋RG-3b**（11-13 派，見 (e3l)）：main c5f236c7f 起全量只剩 1 條 `test_rg3_api.py::test_a_blocked_fizzle_carries_the_caster_and_the_blocker`（AF-1 改擋箭規則後 RG-3 推算過時），RG-3b 修好、合併、全量綠才 push。KW-2、RG-3、AF-1 都已合進 main、未 push。
+- **美術工具檔 ruff 小修**（11-13 派）：rg_units_shots.py 拆行。合併後跑全量，綠就 push（main 累積未 push：KW-2、RG-3、AF-1、KW-3、KW-3b、RG-4＋RG-3b＋#163；LOG_FORMAT /123、WORLD_RULES_VERSION 32）。
 
 **4. 待排（依序，注意檔案衝突）**：
 - **KW-2**（#161 內容：示範招 14、池子門檻、拿掉 start_hidden、許願池、閃現嫁接、鷹眼「站在高處」條件；規格 `PhaseKW計畫.md`）。派工要寫：恢復範圍前後的關鍵字數（專案 PM 條件）、灌注表要決定層數關鍵字有沒有召喚灌注、重產 llm propose Mock 快照。等玩法 PM 回 KW-1 待決（3.0001）後派較穩。
@@ -89,6 +89,8 @@
 | AF-1 | 待決 1～3、5：擋住的人選不到就整發落空、多人擋時打最近的、第三方也會瞄準、被動另打的攻擊仍各 +1；待決 4：請改 06 6.27.1／6.32.1 凝神的寫法（已拿掉定身） | `docs/phases/PhaseAF-1報告.md` |
 | 給美術 PM：KW-3b | KW-3 已是第 2 版（指紋 9／9 相同），不用換圖；請把 docs/art/KW樣張.md 第 11 節開頭改成「KW-3 已是第 2 版，不用換」。另 KW-3 待決 3：單位資訊卡層數要不要換計量 | `docs/phases/PhaseKW-3b報告.md`、`PhaseKW-3報告.md` |
 | 給玩法 PM：KW-3 | 「連擊／連擊點」兩個名稱並存（美術第 9 節第 8 條） | `docs/phases/PhaseKW-3報告.md` 待決 6 |
+| RG-4（#163 護陣） | 待決 1～8：第一季上限 10 級副手預算放不下護陣、只有盾兵必帶拿得到；雲嶺盾兵 3～4 級必帶超預算時照帶；高度條件用盾兵的「高 2 層」而設計寫「高 1 層」；掉落歸屬與 roguelite 三選一不套必帶；同分算原來源；詞條分類；狀態 ward 也叫「護陣」撞名；AI 沒算護陣 | `docs/phases/PhaseRG-4報告.md` 第 8 節 |
+| 給美術 PM：RG-4 | 驗收 `docs/art/shots/RG-4/`；待決 9（護陣預覽無小盾圖示）、10（800 單挑插圖 259×97）、12、13（1600 瞄準線斷點短槓位置）；美術工具檔 rg_units_shots.py 開發已拆行修 ruff，美術分支再改這檔時請照 ruff 寫 | `docs/phases/PhaseRG-4報告.md` |
 | 平衡疑慮 | KW-1 三條、RG-1 平衡疑慮段、RR-2 一條，請記進平衡待查 | 各報告「平衡疑慮」段 |
 
 **給美術 PM（2026-11-13 這一批）**
