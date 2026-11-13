@@ -66,10 +66,10 @@ describe("T-B1 後端代碼前端都畫得出來", () => {
 });
 
 describe("T-B2 部件代碼齊全", () => {
-  it("數量照需求 1.1：骨架 16、效果 51 圖（53 碼）、表面 8、條件 20（LW-1 加 2 個、DD-3 加 1 個）、代價 6、觸發 22（＋5 暫代）、接續 6、形狀 13、修正 22（BS-1 加 1 個）、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
+  it("數量照需求 1.1：骨架 16、效果 51 圖（54 碼，TF-1 加召喚到身邊暫代）、表面 8、條件 20（LW-1 加 2 個、DD-3 加 1 個）、代價 6、觸發 22（＋7 暫代，TF-1 加 2 個）、接續 6、形狀 13、修正 22（BS-1 加 1 個）、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
     const n = (t: object): number => Object.keys(t).length;
     expect([n(QP.SKELETON), n(QP.EFFECT), n(QP.EFFECT) + n(QP.EFFECT_ALIAS), n(QP.SURFACE), n(QP.COND), n(QP.COST), n(QP.TRIG), n(QP.TRIG_ALIAS), n(QP.LINK), n(QP.SHAPE), n(QP.CHANGE), n(QP.ELEMENT), n(QP.STATUS), n(QP.CARD), n(QP.TARGET)])
-      .toEqual([16, 51, 53, 8, 20, 6, 22, 5, 6, 13, 22, 9, 32, 22, 13]); // 條件 17＋LW-1 的 2 個＋DD-3 的 1 個；修正 21＋BS-1 無聲（BS-2 都換正式圖）
+      .toEqual([16, 51, 54, 8, 20, 6, 22, 7, 6, 13, 22, 9, 32, 22, 13]); // 條件 17＋LW-1 的 2 個＋DD-3 的 1 個；修正 21＋BS-1 無聲（BS-2 都換正式圖）
   });
   it("名詞表的狀態、表面、觸發、條件、效果原語與 KNOWN_PARTS 都有 Q 版圖樣或明確退回", () => {
     const known = (cat: string, id: string): void => { const e = QP.entry(cat, id); expect(e.unknown, `${cat}:${id}`).toBeUndefined(); };
@@ -84,7 +84,7 @@ describe("T-B2 部件代碼齊全", () => {
     for (const id of KNOWN_PARTS.triggers) known("trigger", id);
     for (const id of KNOWN_PARTS.links) known("link", id);
     for (const id of KNOWN_PARTS.costs) known("cost", id);
-    // 觸發的 5 個暫代：名詞表有、目前沒有招用到（需求 4.4 第 21 點）
+    // 觸發的 7 個暫代（TF-1 加 2 個）：名詞表有、目前沒有招用到（需求 4.4 第 21 點）
     const used = new Set(ALL_ICONS.map((i) => i.trigger));
     for (const id of Object.keys(QP.TRIG_ALIAS)) expect(used.has(id), id).toBe(false);
   });

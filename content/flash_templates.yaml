@@ -732,6 +732,43 @@ transforms:
     headline_zh: "變成修正：你同元素的技能打中時都帶上這招的效果"
     say_zh: "這招變成修正型被動：你同元素的技能打中時，都會帶上這招的效果。"
     damage_permille_steps: [400, 300, 200, 150, 100, 50]
+  # TF-1（#159，06 6.34.5「召喚與輔助的 1 階轉型」）：召喚技 → 伴生、護主；輔助技（沒有傷害）→ 庇佑、援手。
+  # source：適用的原招（summon 召喚技／support 輔助技）；排在既有模板之後，既有能轉的招結果不變。
+  # 伴生、護主的縮小幅度與持續輪數在 skill_budget.yaml 的 flash_transform（數值工坊）。
+  # headline_zh 由玩法 PM 定（專案 PM 轉達）；say_zh 照 06 6.34.5 各轉型的說明。
+  - id: to_passive_companion
+    to: passive
+    source: summon
+    prefix_zh: 伴生
+    summary_zh: 轉成被動：每場戰鬥開始時，在你身邊自動召出一隻縮小版的這個召喚物（每場一次）
+    headline_zh: 變成被動：每場開打時身邊就跟著一隻
+    say_zh: 召喚師開場身邊就跟著一隻縮小版的召喚物，第一回合可以直接出手
+    trigger: {event: on_battle_start}
+  - id: to_reaction_guardian
+    to: reaction
+    source: summon
+    prefix_zh: 護主
+    summary_zh: 轉成反應：被近戰攻擊時，在你身邊召出縮小版的召喚物，存在 1 回合，替你反咬攻擊者一次
+    headline_zh: 變成反應：被近戰攻擊時召出一隻替你反咬
+    say_zh: 你被近戰攻擊時，身邊冒出一隻縮小版的召喚物，替你反咬攻擊者一口
+    reaction: {event: hit_by_melee}
+  - id: to_passive_blessing
+    to: passive
+    source: support
+    prefix_zh: 庇佑
+    summary_zh: 轉成被動：每回合開始時，身邊 1 格內生命比例最低的一名友方受到縮小版的這招（自己不算）
+    headline_zh: 變成被動：每回合開始照顧身邊最虛弱的隊友
+    say_zh: 每回合開始時，身邊 1 格內最虛弱的隊友回一點血、上一層小護盾或得到較短的增益
+    trigger: {event: on_turn_start, target: weakest_ally, max_distance: 1}
+  - id: to_reaction_aid
+    to: reaction
+    source: support
+    prefix_zh: 援手
+    summary_zh: 轉成反應：身邊 1 格內的友方被敵人瞄準時，對他施放縮小版的這招（治療招在他受擊後補血）
+    headline_zh: 變成反應：身邊隊友被盯上時自動幫他
+    say_zh: 身邊隊友被敵人盯上時，護盾招在攻擊打下來之前替他上盾；治療招在他受擊後補血
+    reaction: {event: ally_targeted, aid: true}
+    heal_reaction: {event: ally_hit_near, aid: true}
 
 # 元素姿態的階梯（3W-2b、06 6.34.5）：元素 → 由弱到強 5 級的姿態狀態（statuses.yaml `stance_<元素>_<級>`）。
 # 轉型（to_stance）優先轉成同元素的姿態（沒有元素＝物理，戰意架勢）；姿態的「費用」「修正」類小變化在同一階梯上換級。

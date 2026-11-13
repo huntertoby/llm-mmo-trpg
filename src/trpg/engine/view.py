@@ -145,6 +145,7 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "enemy_moves_in_range": "敵人在射程與視線內移動一步後",
     "ally_hit_in_range": "範圍內的友方被攻擊命中時（傷害之前）",
     "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
+    "ally_hit_near": "相鄰友方被敵人擊中後",
     "kin_hit_in_range": "範圍內的同門被攻擊命中時（傷害之前）",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""

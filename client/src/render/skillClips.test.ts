@@ -195,6 +195,7 @@ describe("primitive clips (6N-2 first half, 6N-3 second half)", () => {
         ["extra_reaction", "grant_ap", "grant_skill"],
         ["refund_ap", "refund_cooldown", "reset_cooldown"],
         ["add_stack", "consume_stack", "consume_status"],
+        ["summon", "summon_beside"], // TF-1：召喚到身邊暫借召喚的動作
       ]
         .map((g) => [...g].sort())
         .sort(),

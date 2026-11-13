@@ -488,6 +488,12 @@ def reaction_target_problem(
 # ---------------------------------------------------------------------------
 
 
+def _strikes_back(skill: SkillDef, effect: ResolvedEffect) -> bool:
+    """護主（TF-1）：``summon_beside`` 的 ``strike_other`` 對象是敵人（反應的觸發者），效果本身
+    作用在施放者（不擲命中）。"""
+    return skill.effects[effect.spec_index].strike_other is True
+
+
 def _unit_target_problem(  # noqa: PLR0917
     state: BattleState,
     caster: UnitState,
@@ -504,7 +510,9 @@ def _unit_target_problem(  # noqa: PLR0917
     if any(e.type == SACRIFICE_SUMMON for e in effects) and target.owner_id != caster.id:
         return f"只能獻祭自己的召喚物：{target.name_zh} 不是你的召喚物"  # 獻祭召喚物（3-24c）
     enemy = target.team is not caster.team
-    if enemy and not any(e.affects in ("enemies", "all", "tiles") for e in effects):
+    if enemy and not any(
+        e.affects in ("enemies", "all", "tiles") or _strikes_back(skill, e) for e in effects
+    ):
         return f"此技能無法對敵方使用：{target.name_zh}"
     if not enemy:
         helps = any(  # 賭注（gamble）的對象是施放者，但不讓技能能選自己當目標（Phase 3D-7a）

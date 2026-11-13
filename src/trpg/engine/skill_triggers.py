@@ -460,6 +460,25 @@ def collect_turn_end(ctx: Ctx, unit: UnitState) -> None:
     _collect_own(ctx, unit, "on_turn_end")
 
 
+def collect_battle_start(ctx: Ctx) -> None:
+    """``on_battle_start``（TF-1，#159 伴生）：戰鬥開始、先攻排好之後，每個持有者各一次（依單位
+    ID）。沒有持有者時不建立被動索引（既有戰鬥不受影響）。"""
+    if not any(_has_battle_start(ctx, u) for u in ctx.state.units_sorted()):
+        return
+    for unit in ctx.state.units_sorted():
+        _collect_own(ctx, unit, ON_BATTLE_START)
+
+
+def _has_battle_start(ctx: Ctx, unit: UnitState) -> bool:
+    return any(
+        (t := ctx.rules.skill_def(s).trigger) is not None and t.event == ON_BATTLE_START
+        for s in unit.skills
+    )
+
+
+ON_BATTLE_START = "on_battle_start"
+
+
 def collect_move(ctx: Ctx, unit: UnitState) -> None:
     """``on_move``：一次主動移動動作完成後。"""
     _collect_own(ctx, unit, "on_move")
@@ -616,6 +635,21 @@ def nearest_enemy(state: BattleState, owner: UnitState, max_distance: int) -> Un
     return found
 
 
+def weakest_ally(state: BattleState, owner: UnitState, max_distance: int) -> UnitState | None:
+    """``max_distance`` 格（曼哈頓）內生命比例（hp ÷ max_hp）最低的存活友方，不含 ``owner``
+    自己（召喚物、護送 NPC 都是同陣營單位，一併算；TF-1，#159 庇佑）；同比例取單位 ID 小的。
+    比例以交叉相乘比較（整數，不用浮點）。"""
+    found: UnitState | None = None
+    for unit in state.units_sorted():
+        if unit.id == owner.id or not unit.alive or unit.team is not owner.team:
+            continue
+        if manhattan(owner.xy, unit.xy) > max_distance or unit.max_hp <= 0:
+            continue
+        if found is None or unit.hp * found.max_hp < found.hp * unit.max_hp:
+            found = unit
+    return found
+
+
 def _trigger_other(
     state: BattleState, fired: Fired, owner: UnitState, trigger: TriggerSpec
 ) -> UnitState | Literal[False] | None:
@@ -626,6 +660,9 @@ def _trigger_other(
     if trigger.target == "nearest_enemy":
         assert trigger.max_distance is not None
         return nearest_enemy(state, owner, trigger.max_distance) or False
+    if trigger.target == "weakest_ally":
+        assert trigger.max_distance is not None
+        return weakest_ally(state, owner, trigger.max_distance) or False
     other = None if fired.other_id is None else state.units.get(fired.other_id)
     if other is None or (not other.alive and fired.event != "on_kill"):
         return False

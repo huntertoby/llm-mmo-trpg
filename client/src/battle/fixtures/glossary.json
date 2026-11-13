@@ -3522,6 +3522,16 @@
    "rules_zh": []
   },
   {
+   "id": "summon_beside",
+   "name_zh": "召喚到身邊",
+   "description_zh": "在你身邊召出一隻縮小版的召喚物；召喚物已滿時不會出現。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "zone",
    "name_zh": "持續區域",
    "description_zh": "在範圍內建立持續數輪的區域，區域內的單位會受到效果影響。",
@@ -3898,6 +3908,14 @@
    "rules_zh": []
   },
   {
+   "id": "on_battle_start",
+   "name_zh": "戰鬥開始時",
+   "description_zh": "戰鬥開始、先攻順序排好之後，第一位行動之前（每場一次）。沒有另一方，效果作用在持有者。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "targeted_by_melee",
    "name_zh": "被近戰攻擊時",
    "description_zh": "被近戰攻擊命中之後、傷害結算之前。",
@@ -3973,6 +3991,14 @@
    "id": "ally_targeted",
    "name_zh": "隊友被瞄準時",
    "description_zh": "相鄰友方被敵人的單體技能或普攻選為目標、命中判定之前。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "ally_hit_near",
+   "name_zh": "身旁隊友受擊後",
+   "description_zh": "相鄰友方被敵人的攻擊（普攻或技能）命中、傷害結算之後仍站著；反應作用在那名友方。",
    "tags": [],
    "status_look": null,
    "rules_zh": []

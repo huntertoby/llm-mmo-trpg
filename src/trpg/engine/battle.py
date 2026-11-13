@@ -129,7 +129,7 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, UnitSpawn, starting_source
 from trpg.engine.skill_infusion import do_infuse_skill
-from trpg.engine.skill_triggers import collect_move, settle
+from trpg.engine.skill_triggers import collect_battle_start, collect_move, settle
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.followups import second_problem
 from trpg.engine.skills.forms import has_skill_selection, skill_selections
@@ -403,6 +403,8 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
         state.normal_turn_order = tuple(normal_order)
     ctx.emit(TurnOrderSet, order=tuple(state.turn_order))
     ctx.emit(RoundStarted)
+    collect_battle_start(ctx)  # 開場的被動（TF-1，#159 伴生）：第一位行動之前
+    settle(ctx)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
 

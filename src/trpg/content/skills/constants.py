@@ -120,6 +120,7 @@ type ReactionEvent = Literal[
     "ally_downed",
     "enemy_enters_adjacent",
     "ally_targeted",
+    "ally_hit_near",
 ]
 
 
@@ -308,8 +309,10 @@ SKILL_REACTION_EVENTS: tuple[str, ...] = (
     "ally_downed",
     "enemy_enters_adjacent",
     "ally_targeted",
+    "ally_hit_near",
 )
-"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1；後四個是 Phase 3D-3 新增）。"""
+"""反應技（``kind: reaction``）的觸發事件（Phase 2E-2 4.1；第 5～8 個是 Phase 3D-3 新增；
+``ally_hit_near`` 是 TF-1 援手用的，只能搭配 ``aid: true``）。"""
 
 
 LEGACY_REACTION_EVENTS: tuple[str, ...] = SKILL_REACTION_EVENTS[:4]
@@ -474,6 +477,10 @@ LEAVE_FORM = "leave_form"
 
 
 SUMMON = "summon"
+
+
+SUMMON_BESIDE = "summon_beside"
+"""TF-1（#159 伴生、護主）的召喚到身邊原語 ID：被動、反應用，在持有者旁邊召出縮小版召喚物。"""
 
 
 MAX_SUMMON_COUNT = 2

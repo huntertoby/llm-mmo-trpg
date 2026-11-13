@@ -72,6 +72,7 @@ def test_all_demo_skills_load_and_cover_shapes_and_primitives() -> None:
         "destroy_object",
         "raise_terrain",
         "lower_terrain",
+        "summon_beside",  # TF-1：只由閃現轉型（伴生、護主）產生
     }
     assert all(s.skeleton in SKELETON_IDS for s in skills)
     assert lib.ruleset.skill_def("skill_ashen_oath").name_zh == "灰燼誓約"

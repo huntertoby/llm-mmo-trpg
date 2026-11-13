@@ -71,6 +71,7 @@ from trpg.content.skills.constants import (
     SKILL_ID_PATTERN,
     SPLIT_SKELETONS,
     SUMMON,
+    SUMMON_BESIDE,
     WIELDING_EFFECT_ONLY,
     WIELDING_WEAPON,
     ZONE,
@@ -117,6 +118,10 @@ _FOLLOWUP_CACHE_LIMIT = 4096
 _VARIANT_CACHE: dict[tuple[int, str], tuple[Any, Any]] = {}
 """變奏型態（:meth:`SkillDef.variant_form`）的快取：以技能物件的 ``id`` 與變奏 ID 為鍵
 （值保留原物件，避免 ``id`` 重用時取錯）。"""
+
+
+_MIN_BESIDE_POWER = 100
+"""召喚到身邊（TF-1）縮小版的最低強度（‰）。"""
 
 
 class SkillDef(ContentModel):
@@ -277,6 +282,7 @@ class SkillDef(ContentModel):
         self._check_self_moves()
         self._check_pair_moves()
         self._check_summon()
+        self._check_summon_beside()
         self._check_zone()
         self._check_runes()
         self._check_sacrifice()
@@ -656,6 +662,30 @@ class SkillDef(ContentModel):
                 "只召喚一隻時 power_permille 不能小於 1000（大於 1000 是完整技能的強化）；"
                 "小於 1000 是數量型分歧進化，必須搭配 count: 2"
             )
+
+    def _check_summon_beside(self) -> None:
+        """召喚到身邊（TF-1，#159 伴生、護主）：``unit``、``duration`` 必填；``power_permille``
+        （縮小版，100～1000）可省略；``strike_other`` 要對象是反應的觸發者，必須是反應技、形狀
+        ``single``。被動或反應、形狀、唯一效果的資料在 ``skill_primitives.yaml``。"""
+        beside = [e for e in self.effects if e.type == SUMMON_BESIDE]
+        if not beside:
+            return
+        spec = beside[0]
+        if self.kind not in ("passive", "reaction"):
+            raise SkillRuleError(
+                f"summon_beside 只能用在被動或反應技，收到 kind: {self.kind}",
+                path="kind",
+                code="combo.passive_or_reaction",
+            )
+        if spec.unit is None or spec.duration is None:
+            raise ValueError("summon_beside 必須填 unit 與 duration")
+        if (
+            spec.power_permille is not None
+            and not _MIN_BESIDE_POWER <= spec.power_permille <= _PERMILLE
+        ):
+            raise ValueError("summon_beside 的 power_permille 必須在 100～1000（縮小版召喚物）")
+        if spec.strike_other and (self.kind != "reaction" or self.shape.type != "single"):
+            raise ValueError("summon_beside 的 strike_other 只能用在形狀 single 的反應技")
 
     def _check_revive(self) -> None:
         """復活（Phase 3D-8b）：必須填 ``hp_permille``。只能用在主動技能、最多一個、形狀

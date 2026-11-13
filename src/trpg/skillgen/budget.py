@@ -739,6 +739,9 @@ def _summon_variant_points(
     if trait is not None:
         once += trait.budget_points
         notes.append(f"小特性 {trait.name_zh}")
+    if effect.strike_other:  # 護主的反咬（TF-1）：召出時多打一下，算一輪的價值（一次性）
+        once += total
+        notes.append("召出時反咬一次")
     count = effect.count if isinstance(effect.count, int) else 1
     if count > 1 or effect.power_permille:
         scale = count * Fraction(effect.power_permille or _PERMILLE, _PERMILLE)

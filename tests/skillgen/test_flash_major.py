@@ -110,6 +110,11 @@ def test_transform_data_matches_decision_73() -> None:
         TRAP: ("trap", 2),
         STANCE: ("stance", 2),
         MODIFIER: ("modifier", 3),
+        # TF-1（#159）：召喚技、輔助技的 1 階被動、反應轉型
+        "to_passive_companion": ("passive", 1),
+        "to_reaction_guardian": ("reaction", 1),
+        "to_passive_blessing": ("passive", 1),
+        "to_reaction_aid": ("reaction", 1),
     }
     units = {u for t in table.transforms for us in t.units.values() for u in us}
     for unit in units:

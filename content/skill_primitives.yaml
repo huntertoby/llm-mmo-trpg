@@ -675,6 +675,26 @@ primitives:
       trait: {llm_hint: "召喚物擁有的小特性。", type: summon_trait, description_zh: 加深分歧進化：召喚物的小特性（core.yaml 的 summon_traits）}
       infusion: {llm_hint: "召喚物固有的灌注元素。", type: infusion, description_zh: 橋接分歧進化：召喚物固有的第二個灌注關鍵字（core.yaml 的 summon_infusions）}
 
+  # --- TF-1：召喚到身邊（#159 伴生、護主，06 6.34.5）。只由閃現轉型產生：隨機組合器與 LLM 題目不使用 ---
+  - id: summon_beside
+    name_zh: 召喚到身邊
+    llm_hint: "在自己身邊召出一隻縮小版的召喚物。"
+    description_zh: 只用在被動與反應技（技能唯一的效果）。在持有者旁邊第一個可以召喚的格子（東、西、南、北）召出 unit 範本的召喚物，持續 duration 輪（輪數規則同 summon）；power_permille 讓牠的最大 HP 與傷害只有一般的這麼多‰（縮小版）。同一召喚者的召喚物已達上限、或旁邊沒有空格時不召喚（不像 summon 會讓最舊的消失）。strike_other：召出後立刻對反應的觸發者（形狀 single 的對象，必須是敵人）普攻一次，打得到才打。
+    player_description: "在你身邊召出一隻縮小版的召喚物；召喚物已滿時不會出現。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    sole_effect: true
+    max_per_skill: 1
+    budget_basis: summon
+    acts_on: caster
+    allowed_shapes: [self, single]
+    params:
+      unit: {llm_hint: "要召喚的單位種類。", type: summon, required: true, description_zh: 召喚物範本 ID（content/units/summons/）}
+      duration: {llm_hint: "召喚物停留的回合數。", type: int, required: true, min: 1, max: 4, description_zh: 召喚物存在的輪數, knob: none}
+      power_permille: {llm_hint: "召喚物相對於一般強度的比例。", type: int, min: 100, max: 1000, description_zh: 縮小版：召喚物的最大 HP 與傷害只有一般的這麼多‰（省略＝一般強度）, knob: none}
+      strike_other: {llm_hint: "召出後立刻攻擊觸發反應的敵人一次。", type: bool, true_only: true, description_zh: "反咬：召出後立刻對反應的觸發者普攻一次（打得到才打；只能用在形狀 single 的反應技）；只能填 true"}
+
   # --- Phase 3D-5：持續區域（docs/design/06-技能.md 6.16 G；點數為初值，未經模擬）---
   - id: zone
     nested_core: true

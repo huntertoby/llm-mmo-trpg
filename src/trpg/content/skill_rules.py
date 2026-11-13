@@ -299,6 +299,22 @@ class FlashCostRules(ContentModel):
     ``retier_growth.magnitude_max``；輕巧往下最多到 1000）。"""
 
 
+class FlashTransformRules(ContentModel):
+    """召喚與輔助的 1 階轉型（TF-1，#159，06 6.34.5「數值：縮小多少、持續幾回合，放進數值工坊由
+    使用者調」；``skill_budget.yaml`` 的 ``flash_transform``）。轉型的結構與規則在
+    :mod:`trpg.skillgen.flash_major`。庇佑、援手的治療量、護盾量、增益回合照新種類的預算重算，
+    不在這裡。"""
+
+    companion_power_permille: int = Field(default=500, ge=100, le=1000)
+    """伴生：開場召出的縮小版召喚物的最大 HP 與傷害是一般的幾‰。"""
+    companion_duration: int = Field(default=2, ge=1, le=4)
+    """伴生：開場召出的召喚物存在幾輪。"""
+    guardian_power_permille: int = Field(default=500, ge=100, le=1000)
+    """護主：被近戰攻擊時召出的縮小版召喚物的最大 HP 與傷害是一般的幾‰。"""
+    guardian_duration: int = Field(default=1, ge=1, le=4)
+    """護主：召出的召喚物存在幾輪（設計：1 回合）。"""
+
+
 class CharacterTierRules(ContentModel):
     """技能內容的「最低角色階級」（Phase 3W-9，06 6.34.9 的表；``skill_budget.yaml`` 的
     ``min_character_tier``）。沒列出的種類、原語、骨架、形狀都是 1 階。驗證器、技能工坊、組合器、
@@ -573,6 +589,7 @@ class BudgetRules(ContentModel):
     retier_growth: RetierGrowthRules = Field(default_factory=RetierGrowthRules)
     """升階時放大效果本身（Phase 3W-9b）：點數固定的狀態、表面與升降地形。"""
     flash_cost: FlashCostRules = Field(default_factory=FlashCostRules)
+    flash_transform: FlashTransformRules = Field(default_factory=FlashTransformRules)
     """閃現蓄力、輕巧的調整幅度（FL-1a；數值工坊可改）。"""
 
     @model_validator(mode="after")

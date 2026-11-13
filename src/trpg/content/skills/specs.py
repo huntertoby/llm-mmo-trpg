@@ -120,10 +120,11 @@ class TriggerSpec(ContentModel):
     - ``target``：效果作用的單位——``self``（持有者）、``other``（該時機的另一方）或
       ``nearest_enemy``（Phase 3W-2b：``max_distance`` 格內離持有者最近的一名存活敵人，同距離
       取單位 ID 小的；範圍內沒有敵人就不觸發、不付代價；任何時機都能用，例如回合開始標記最近的
-      敵人）。
+      敵人）；或 ``weakest_ally``（TF-1，#159 庇佑：``max_distance`` 格內生命比例最低的一名存活
+      友方，不含持有者自己，含召喚物與護送 NPC；同比例取單位 ID 小的；沒有就不觸發、不付代價）。
     - ``max_per_round``：每輪最多觸發幾次（每輪開始時重設）。
-    - ``max_distance``：``target: other`` 時，另一方與持有者的曼哈頓距離上限；``nearest_enemy``
-      必填。
+    - ``max_distance``：``target: other`` 時，另一方與持有者的曼哈頓距離上限；``nearest_enemy``、
+      ``weakest_ally`` 必填。
     - ``tag``：只有 ``on_cast_tag`` 使用且必填（施放帶這個標籤的技能；Phase 3C-3a）。
     - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
     - ``surface``：只有 ``on_enter_surface`` 使用，可省略（省略＝任何表面；Phase 3C-3b）。
@@ -134,7 +135,7 @@ class TriggerSpec(ContentModel):
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     surface: Surface | None = None
-    target: Literal["self", "other", "nearest_enemy"] = "self"
+    target: Literal["self", "other", "nearest_enemy", "weakest_ally"] = "self"
     max_per_round: int = Field(default=1, ge=1, le=3)
     max_distance: int | None = Field(default=None, ge=1)
 
@@ -146,9 +147,9 @@ class TriggerSpec(ContentModel):
         elif self.n is not None:
             raise ValueError(f"只有 every_n_hits 使用 n，{self.event} 不可填 n")
         if self.max_distance is not None and self.target == "self":
-            raise ValueError("max_distance 只能搭配 target: other 或 nearest_enemy")
-        if self.target == "nearest_enemy" and self.max_distance is None:
-            raise ValueError("target: nearest_enemy 必須填 max_distance（找幾格內最近的敵人）")
+            raise ValueError("max_distance 只能搭配 target: other、nearest_enemy 或 weakest_ally")
+        if self.target in ("nearest_enemy", "weakest_ally") and self.max_distance is None:
+            raise ValueError(f"target: {self.target} 必須填 max_distance（找幾格內的單位）")
         if self.event == ON_CAST_TAG:
             if self.tag is None:
                 raise ValueError("on_cast_tag 必須填 tag")

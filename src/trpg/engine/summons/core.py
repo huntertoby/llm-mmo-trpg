@@ -85,6 +85,7 @@ __all__ = [
     "pulse_totem",
     "summon_inert",
     "summon_limit",
+    "summon_room",
     "summon_stats",
     "summon_unit",
     "totem_of",
@@ -243,6 +244,16 @@ def summon_stats(
         level=owner.level,
         attr_mod=grown.attr_mod,
     )
+
+
+def summon_room(ctx: Ctx, owner: UnitState, skill_id: str) -> bool:
+    """``owner`` 以 ``skill_id`` 召喚時還有沒有空位（同一召喚者的召喚物少於上限）。召喚到身邊
+    （``summon_beside``，TF-1）滿了就不召喚，不擠掉最舊的。"""
+    use = _skill_use(ctx.state, skill_id)
+    limit = summon_limit(
+        ctx.core, 0 if use is None else modifiers.summon_limit_delta(ctx.state, owner, use)
+    )
+    return len(summons_of(ctx, owner.id)) < limit
 
 
 def summon_unit(  # noqa: PLR0917
