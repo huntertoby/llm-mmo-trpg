@@ -23,7 +23,7 @@ export function RunGearOffer({ seed, view, busy, onChoose }: Props) {
     <div className="panel run-gear-offer" data-testid="gear-offer">
       <h2>戰利品：裝備三選一（第 {view.afterBattle} 場後）</h2>
       <p className="muted small">
-        選 1 件直接換上，換下的裝備進背包（營火可以換回來）；不想換就跳過。選完之後才是升級。
+        選 1 件直接換上，換下的裝備進背包（營火可以換回來）；不想換就都不拿。選完之後才是升級。
       </p>
       <div className="run-offer-cards">
         {order.map((index) => {
@@ -65,7 +65,7 @@ export function RunGearOffer({ seed, view, busy, onChoose }: Props) {
               else void onChoose(gearPickChoice(pick));
             }}
           >
-            {chosen === undefined ? "跳過（不換裝備）" : `換上「${chosen.item.name_zh}」`}
+            {chosen === undefined ? "都不拿（不換裝備）" : `換上「${chosen.item.name_zh}」`}
           </button>
         </div>
       )}
