@@ -6,8 +6,8 @@
   a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
 </style></head>
 <body>
-<h1>RG 戰場標記（樣張）</h1>
-<p class="note">畫圖 agent，2026-11-13（PhaseRG計畫.md 第 5 節）。分段：<a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=zoom&w=1600&mute=1">×3 細看 1600</a><a href="?part=zoom&w=800&mute=1">×3 細看 800</a><a href="?part=anim&mute=1">關鍵幀</a><a href="?part=collide&mute=1">撞圖並排</a><a href="?part=ground&mute=1">各區地面</a><a href="?part=parts&mute=1">單項特寫</a>。每段畫成一張圖（腳本從 #out 取出存檔）。</p>
+<h1>RG 戰場標記（樣張，第 2 版）</h1>
+<p class="note">畫圖 agent，2026-11-13（PhaseRG計畫.md 第 5 節）；第 2 版同日（審查 M1、可修 1～7、美術 PM 決定：A 強招紫）。分段：<a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=zoom&w=1600&mute=1">×3 細看 1600</a><a href="?part=zoom&w=800&mute=1">×3 細看 800</a><a href="?part=anim&mute=1">關鍵幀</a><a href="?part=collide&mute=1">撞圖並排</a><a href="?part=ground&mute=1">各區地面</a><a href="?part=parts&mute=1">單項特寫</a>。每段畫成一張圖（腳本從 #out 取出存檔）。</p>
 <div id="sheet"></div>
 <textarea id="out"></textarea>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
@@ -95,16 +95,33 @@ function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arc
 
 // ---------------- 單位 ----------------
 const U = {
-  hero: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_fighter, view: "front", hp: 0.8, ...o }),
-  mage: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_mage, view: "front", hp: 0.6, ...o }),
-  archer: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_archer, view: "front", hp: 0.9, ...o }),
-  merc: (o) => ({ kind: "doll", team: "ally", doll: TP.bandit_shieldbearer, view: "front", hp: 0.7, ...o }),
-  bandit: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit, view: "front", hp: 0.7, ...o }),
-  eArcher: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit_archer, view: "side", hp: 0.9, ...o }),
-  shield: (o) => ({ kind: "doll", team: "enemy", doll: TP.bandit_shieldbearer, view: "front", hp: 0.9, ...o }),
+  hero: (o) => ({ kind: "doll", team: "ally", tpl: "hero_fighter", doll: TP.hero_fighter, view: "front", hp: 0.8, ...o }),
+  mage: (o) => ({ kind: "doll", team: "ally", tpl: "hero_mage", doll: TP.hero_mage, view: "front", hp: 0.6, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", tpl: "hero_archer", doll: TP.hero_archer, view: "front", hp: 0.9, ...o }),
+  merc: (o) => ({ kind: "doll", team: "ally", tpl: "bandit_shieldbearer", doll: TP.bandit_shieldbearer, view: "front", hp: 0.7, ...o }),
+  bandit: (o) => ({ kind: "doll", team: "enemy", tpl: "bandit", doll: TP.bandit, view: "front", hp: 0.7, ...o }),
+  eArcher: (o) => ({ kind: "doll", team: "enemy", tpl: "bandit_archer", doll: TP.bandit_archer, view: "side", hp: 0.9, ...o }),
+  shield: (o) => ({ kind: "doll", team: "enemy", tpl: "bandit_shieldbearer", doll: TP.bandit_shieldbearer, view: "front", hp: 0.9, ...o }),
   lizard: (o) => ({ kind: "creature", team: "enemy", spec: { body: "lizard", material: "magma", size: "small" }, hp: 0.9, ...o }),
 };
 const center = (gx, gy) => ({ x: (gx + 0.5) * T, y: (gy + 0.5) * T });
+/**
+ * 第 2 版（可修 1）：頭頂「含頭飾」的最高點（相對格子中心，往上為負）。遊戲的 unitTopY 只算 DOLL_HEAD_TOP，法師尖帽會頂進準星；
+ * 樣張直接量畫出來的身體：在 4 倍的暫存 canvas 畫一次，取格子中心左右 9 模型 px 內第一列不透明（alpha > 96）的像素。
+ * 移植時照 unitTopY(u) 再加頭飾高度（見 RG樣張.md 2.1 的表）；異形照 unitTopY(u)（含 creatureTop）。
+ */
+const TOPC = new Map();
+function topOf(u) {
+  const key = [u.tpl ?? JSON.stringify(u.spec), u.view, !!u.west, u.scale ?? 1].join("|");
+  if (TOPC.has(key)) return TOPC.get(key);
+  const Z = 4, W = 96, H = 140, c = document.createElement("canvas"); c.width = W * Z; c.height = H * Z;
+  const g = c.getContext("2d", { willReadFrequently: true }); g.setTransform(Z, 0, 0, Z, 24 * Z, 80 * Z);
+  OO.drawBody(g, { ...u, x: 0, y: 0, h: 0 }, Z, true);
+  const cx = 48, cy = 104, x0 = (cx - 9) * Z, w = 18 * Z, d = g.getImageData(x0, 0, w, H * Z).data;
+  let top = RG.HEAD_TOP;
+  outer: for (let y = 0; y < H * Z; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 96) { top = y / Z - cy; break outer; }
+  TOPC.set(key, top); return top;
+}
 /** 弓手的胸口（瞄準線起點）：格子中心往上 0.3 格。 */
 const chest = (gx, gy) => ({ x: (gx + 0.5) * T, y: (gy + 0.5) * T - 0.3 * T });
 
@@ -149,8 +166,11 @@ function hud(ctx, u, K) {
 /** 每種標記的「畫面下限」（px）與世界大小 → 放大倍率（minMark.ts minMarkScale：max(1, 下限 ÷ (世界大小 × 地圖縮放))）。 */
 const MIN = { reticle: [20, 16], chip: [14, 11], glance: [14, 12], line: [2, 2], q: [12, 9], status: [11, 10] };
 function kOf(S) { const o = {}; for (const [k, [base, min]] of Object.entries(MIN)) o[k] = Math.max(1, min / (base * S)); return o; }
-/** 標記中心（頭頂上方）：反向放大時往上長，下緣不碰頭（中心＝頭頂 − 空隙 − 半徑 × k）。 */
-const headMark = (gx, gy, half, gap, k) => ({ x: (gx + 0.5) * T, y: (gy + 0.5) * T + RG.HEAD_TOP - gap - half * k });
+/** 標記中心（頭頂上方）：反向放大時往上長，下緣不碰頭（中心＝含頭飾的頭頂 − 空隙 − 下緣距離 × k）。u＝單位。 */
+const headMark = (u, below, gap, k) => ({ x: (u.x + 0.5) * T, y: (u.y + 0.5) * T + topOf(u) - gap - below * k });
+const RET = (u, k) => headMark(u, RG.RETICLE_BELOW, 4, k), CHIP = (u, k) => headMark(u, RG.CHIP_BELOW, 2, k), GLM = (u, k) => headMark(u, RG.GLANCE_BELOW, 2, k);
+/** 蓄力徽章（瞄準線起點要避開）：格子中心＋(−0.37T, −0.2T)、半徑 10＋2。 */
+const badgeOf = (u) => ({ x: (u.x + 0.5) * T - 0.37 * T, y: (u.y + 0.5) * T - 0.2 * T, r: 12 });
 
 // ---------------- 主場景：焦油坑一角（10×8） ----------------
 /**
@@ -168,7 +188,7 @@ function mainScene(pal, ms = 300, opt = {}) {
   const units = [H, M, C, A, E1, SB, E2, B];
   const groundAt = (x, y) => (x === 0 && y <= 2 ? tile(ASH, "lava") : (x + y * 3) % 7 === 0 ? tile(ASH, "dirt") : tile(ASH, "stone"));
   const geo = (K) => {
-    const r1 = headMark(...SC.tgt1, 10, 3, K.reticle), r2 = headMark(...SC.tgt2, 10, 3, K.reticle), a1 = chest(...SC.e1), a2 = chest(...SC.e2);
+    const r1 = RET(M, K.reticle), r2 = RET(H, K.reticle), a1 = chest(...SC.e1), a2 = chest(...SC.e2);
     return { r1, r2, a1, a2, bl: blockOn(a2, r2, chest(...SC.blk)) };
   };
   return {
@@ -176,7 +196,7 @@ function mainScene(pal, ms = 300, opt = {}) {
     decals: (g, K) => { RG.trace(g, 4 * T, 7 * T, 4, 7, { k: K.q }); CUR.trap(g, 1, 7, { color: "#ff6a1a" }); },
     under: (g, K) => {
       if (opt.select !== false) for (const [x, y] of [SC.e1, SC.sb, SC.e2]) CUR.attackFrame(g, x, y);
-      if (opt.lines !== false) { const o = geo(K); RG.lockLine(g, o.a1, o.r1, { pal, ms, k: K.line, rk: K.reticle }); RG.lockLine(g, o.a2, o.r2, { pal, ms, k: K.line, rk: K.reticle, blockAt: o.bl.t }); }
+      if (opt.lines !== false) { const o = geo(K); RG.lockLine(g, o.a1, o.r1, { pal, ms, k: K.line, rk: K.reticle, avoid: [badgeOf(E1)] }); RG.lockLine(g, o.a2, o.r2, { pal, ms, k: K.line, rk: K.reticle, blockAt: o.bl.t, avoid: [badgeOf(E2)] }); }
     },
     over: (g) => { CUR.telegraph(g, ...SC.e1); CUR.telegraph(g, ...SC.e2); if (opt.select !== false) CUR.hoverFrame(g, ...SC.e1); },
     top: (g, K) => {
@@ -187,8 +207,8 @@ function mainScene(pal, ms = 300, opt = {}) {
         RG.reticle(g, o.r2.x, o.r2.y, { pal, phase: ph, k: K.reticle, blocked: true });
         RG.blockStop(g, o.bl.p, o.bl.dir, { pal, k: Math.min(K.line, 1.3) }); /* 斷點槓最多放大 1.3：800 寬時 ×1.88 會蓋住擋的人整顆頭 */
       }
-      if (opt.select !== false) { RG.coverLink(g, center(...SC.sb), center(...SC.e1), { k: K.chip }); const c = headMark(...SC.e1, 7, 2, K.chip); RG.coverChip(g, c.x, c.y, "unit", { k: K.chip }); }
-      const gl = headMark(...SC.glance, 7, 2, K.glance); RG.glance(g, gl.x, gl.y, { x: -1, y: 0 }, opt.glanceMs ?? 300, { k: K.glance });
+      if (opt.select !== false) { const c = CHIP(E1, K.chip); RG.coverLink(g, center(...SC.sb), center(...SC.e1), c, { k: K.chip }); RG.coverChip(g, c.x, c.y, "unit", { k: K.chip }); }
+      const gl = GLM(B, K.glance); RG.glance(g, gl.x, gl.y, { x: -1, y: 0 }, opt.glanceMs ?? 300, { k: K.glance });
       if (opt.floats) opt.floats(g, K);
     },
   };
@@ -245,77 +265,75 @@ const wOf = () => (P.get("w") === "800" ? 800 : 1600);
 const SOf = (w) => (w === 800 ? S800 : S1600);
 
 const PARTS = {};
-// ================= 1. 戰場情境（真 1 倍，A／B 並排） =================
+// ================= 1. 戰場情境（真 1 倍；第 2 版只放 A 強招紫） =================
 PARTS.scene = () => {
   const w = wOf(), S = SOf(w), V = VIEW(S, 0, -T * 0.4, T * 10, T * 8.4);
-  const a = render(mainScene("A"), V), b = render(mainScene("B"), V);
+  const a = render(mainScene("A"), V);
   const K = kOf(S);
-  publish(sheet(w === 800 ? 560 : 1310, [
-    { title: `RG 戰場標記・${w}×${w === 800 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(2)}（一格 ${(T * S).toFixed(1)} px）・真 1 倍` },
-    { note: `左 A 強招紫（#b06bff，同「蓄」）｜右 B 警示紅（#ff4646）。焦油坑一角：右上弓手瞄準左上的法師（準星＋流動虛線）、右邊弓手瞄準主角但傭兵擋在中間（擋住的人前面一道短槓、之後改灰點線、準星變灰不閃）；玩家的弓手正在選目標、滑過盾兵後面的弓手（紅框＋白框＋頭上小盾＋盾兵胸口連到弓手胸口的點線）；左下翻土＋細線＋「？」是可疑痕跡、最左下是已揭露的敵方陷阱；右下盜匪頭上是「看一眼」（播到 300 ms）。` + (w === 800 ? `800 寬地圖縮到 ${S.toFixed(2)}，標記照 6F-9 的作法保持畫面下限：準星 ×${K.reticle.toFixed(2)}、小盾 ×${K.chip.toFixed(2)}、看一眼 ×${K.glance.toFixed(2)}、線寬 ×${K.line.toFixed(2)}、「？」×${K.q.toFixed(2)}。` : "1600 寬全部 ×1（不放大）。") },
-    { cells: [{ cv: a, cap: "A 強招紫" }, { cv: b, cap: "B 警示紅" }] },
+  publish(sheet(w === 800 ? 560 : 680, [
+    { title: `RG 戰場標記 第 2 版・${w} 寬・真 1 倍` },
+    { note: `${w}×${w === 800 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(2)}（一格 ${(T * S).toFixed(1)} px）。A 強招紫 #b06bff（2026-11-13 美術 PM 決定）。右上弓手瞄準左上法師（準星在尖帽上方）；右邊弓手瞄準主角、被傭兵擋（短槓、灰點線、灰準星不閃）；玩家弓手滑過盾兵後面的弓手：頭上小盾，盾兵的點線從身體右外側繞上來接到小盾；左下可疑痕跡（土堆＋挖痕＋細線＋「？」）與已揭露的陷阱；右下看一眼（300 ms）。` + (w === 800 ? `標記保持畫面下限：準星 ×${K.reticle.toFixed(2)}、小盾 ×${K.chip.toFixed(2)}、看一眼 ×${K.glance.toFixed(2)}、線寬 ×${K.line.toFixed(2)}、「？」×${K.q.toFixed(2)}。` : "1600 寬全部 ×1。") },
+    { cells: [{ cv: a }] },
   ]), "image/png");
 };
 // ================= 2. 最近鄰 ×3 細看 =================
 PARTS.zoom = () => {
   const w = wOf(), S = SOf(w), V = VIEW(S, 0, -T * 0.4, T * 10, T * 8.4), Z = 3;
-  const blocks = [{ title: `×${Z} 最近鄰（${w} 寬、一格 ${(T * S).toFixed(1)} px、真 1 倍裁切；一個像素＝${Z}×${Z} 方塊）` }];
-  for (const pal of ["A", "B"]) {
-    const cv = render(mainScene(pal), V);
-    blocks.push({ note: `${RG.PAL[pal].name}` });
-    blocks.push({ cells: [
-      crop(cv, V, T * 1.3, T * 0.9, T * 2.4, T * 2.3, Z, "被瞄準的法師（準星、線的終點）"),
-      crop(cv, V, T * 6.1, T * 0.2, T * 2.6, T * 2.9, Z, "瞄準中的弓手（蓄、蓄力徽章）＋盾兵＋小盾與連結"),
-      ]});
-    blocks.push({ cells: [crop(cv, V, T * 1.4, T * 3.9, T * 5.2, T * 2.1, Z, "被擋住的那條線（傭兵前的短槓、灰點線、主角頭上的灰準星）")] });
-    blocks.push({ cells: [
+  const cv = render(mainScene("A"), V);
+  publish(sheet(w === 800 ? 1000 : 1700, [
+    { title: `第 2 版 ×${Z} 最近鄰（${w} 寬、一格 ${(T * S).toFixed(1)} px、真 1 倍裁切；A 強招紫）` },
+    { cells: [
+      crop(cv, V, T * 1.3, T * 0.7, T * 2.4, T * 2.5, Z, "被瞄準的法師（準星在尖帽上方）"),
+      crop(cv, V, T * 6.0, T * 0.15, T * 3.0, T * 3.0, Z, "瞄準中的弓手（蓄、蓄力徽章、線從徽章外起）＋盾兵＋小盾與繞外側的連結"),
+    ] },
+    { cells: [crop(cv, V, T * 1.4, T * 3.9, T * 5.2, T * 2.1, Z, "被擋住的那條線（傭兵前的短槓、灰點線、主角頭上的灰準星）")] },
+    { cells: [
       crop(cv, V, T * 0.6, T * 6.4, T * 4.6, T * 1.6, Z, "已揭露的敵方陷阱（左）vs 可疑痕跡（右）"),
       crop(cv, V, T * 7.3, T * 5.9, T * 1.6, T * 2.1, Z, "看一眼（300 ms）"),
-    ] });
-  }
-  publish(sheet(w === 800 ? 1000 : 1700, blocks), "image/png");
+    ] },
+  ]), "image/png");
 };
 // ================= 3. 動畫關鍵幀 =================
 PARTS.anim = () => {
   const S = S1600, V = VIEW(S, 0, -T * 0.4, T * 10, T * 8.4), Z = 3;
-  const frames = (ms, opt, rect, cap, pal = "A") => crop(render(mainScene(pal, ms, opt), V), V, ...rect, Z, cap);
-  const R_TGT = [T * 1.45, T * 1.1, T * 2.1, T * 1.9];
-  const R_LINE = [T * 3.6, T * 2.2, T * 3.0, T * 2.0];
+  const frames = (ms, opt, rect, cap) => crop(render(mainScene("A", ms, opt), V), V, ...rect, Z, cap);
+  const R_TGT = [T * 1.45, T * 0.95, T * 2.1, T * 2.05];
   const R_GL = [T * 7.4, T * 6.1, T * 1.5, T * 1.85];
   const per = (11 / RG.TIMING.flowPxPerS) * 1000;
   const flowMs = [0, 1, 2, 3, 4].map((i) => Math.round((i * per) / 4));
-  const glMs = [0, 60, 120, 180, 240, 360, 480, 540, 600];
+  const glMs = [0, 60, 105, 150, 195, 240, 360, 480, 540, 600];
   const fl = (text, gx, gy, p, color) => (g) => RG.floatText(g, text, (gx + 0.5) * T, (gy + 0.5) * T + RG.HEAD_TOP, p, color);
   const R_E1 = [T * 6.2, T * 0.0, T * 2.6, T * 2.2], R_C = [T * 4.2, T * 3.9, T * 2.6, T * 2.2];
   const fp = [0.05, 0.12, 0.22, 0.45, 0.8];
+  const done = { select: false, lines: false };
   publish(sheet(1640, [
-    { title: "關鍵幀（1600 寬、真 1 倍裁切 ×3 最近鄰；A 強招紫，B 只拍閃爍）" },
-    { note: `準星閃 2 段：週期 ${RG.TIMING.blinkMs} ms，0～${RG.TIMING.blinkOnMs} ms「亮」（原大、外圈 2.6、左上白亮弧），${RG.TIMING.blinkOnMs}～${RG.TIMING.blinkMs} ms「收」（縮 0.86、外圈 2.2、沒有亮弧）。不閃到看不見（沒有透明 0 的一段）。` },
-    { cells: [frames(0, {}, R_TGT, "A 0 ms 亮"), frames(300, {}, R_TGT, "A 300 ms 亮"), frames(600, {}, R_TGT, "A 600 ms 收"), frames(800, {}, R_TGT, "A 800 ms 收"), frames(0, {}, R_TGT, "B 0 ms 亮", "B"), frames(600, {}, R_TGT, "B 600 ms 收", "B")] },
+    { title: "關鍵幀 第 2 版（1600 寬、真 1 倍裁切 ×3 最近鄰；A 強招紫）" },
+    { note: `準星閃 2 段：週期 ${RG.TIMING.blinkMs} ms，0～${RG.TIMING.blinkOnMs} ms「亮」（原大、外圈 2.6、左上白亮弧），${RG.TIMING.blinkOnMs}～${RG.TIMING.blinkMs} ms「收」（縮 0.86、外圈 2.2、沒有亮弧）。不閃到看不見。` },
+    { cells: [frames(0, {}, R_TGT, "0 ms 亮"), frames(300, {}, R_TGT, "300 ms 亮"), frames(600, {}, R_TGT, "600 ms 收"), frames(800, {}, R_TGT, "800 ms 收")] },
     { note: `瞄準線流動：每秒往目標走 ${RG.TIMING.flowPxPerS} 模型 px，虛線週期 11（實 4＋空 7）→ ${Math.round(per)} ms 走完一個週期。下面 5 格是一個週期的 0、1/4、2/4、3/4、1（最後一格＝第一格）。` },
-    { cells: flowMs.map((ms) => frames(ms, { select: false }, [T * 3.4, T * 0.7, T * 2.8, T * 1.4], `${ms} ms`)) },
-    { note: "看一眼 0.6 秒：0～90 ms 從 0.6 倍彈到 1.1、150 ms 落回 1；120～240 ms 瞳孔往那一格移；240～360 ms 朝那一格冒兩道視線；480～600 ms 淡出。" },
+    { cells: flowMs.map((ms) => frames(ms, { select: false }, [T * 3.4, T * 0.6, T * 2.8, T * 1.5], `${ms} ms`)) },
+    { note: "看一眼 0.6 秒（第 2 版提早方向）：0～90 ms 從 0.6 倍彈到 1.1、150 ms 落回 1；60～150 ms 瞳孔往那一格移；150～240 ms 朝那一格冒兩道視線；480～600 ms 淡出。方向完整 240～480 ms，含淡出約 0.33 秒以上看得到方向。" },
     { cells: glMs.map((ms) => frames(300, { select: false, glanceMs: ms }, R_GL, `${ms} ms`)) },
-    { note: "浮字（沿用傷害浮字：p＝0～1 是整組回饋的時間；0～22% 從 0.6 倍彈到 1、往上飄 16、最後 30% 淡出）。落空、被打斷在弓手頭上；被擋下在擋住的那個隊友頭上。色＝tone good（#ffe066，同「格擋」「攔截」）。" },
-    { cells: fp.map((p) => frames(300, { select: false, floats: fl("落空", 7, 1, p) }, R_E1, `落空 p=${p}`)) },
-    { cells: fp.map((p) => frames(300, { select: false, floats: fl("被擋下", 5, 5, p) }, R_C, `被擋下 p=${p}`)) },
-    { cells: fp.map((p) => frames(300, { select: false, floats: fl("被打斷", 7, 1, p) }, R_E1, `被打斷 p=${p}`)) },
+    { note: "浮字（沿用傷害浮字：0～22% 從 0.6 倍彈到 1、往上飄 16、最後 30% 淡出）。落空、被打斷在弓手頭上；被擋下在擋住的那個隊友頭上。色＝tone good（#ffe066）。第 2 版：浮字出現的同一步，瞄準線、準星、斷點短槓一起拿掉（格子裡不再留線）。" },
+    { cells: fp.map((p) => frames(300, { ...done, floats: fl("落空", 7, 1, p) }, R_E1, `落空 p=${p}`)) },
+    { cells: fp.map((p) => frames(300, { ...done, floats: fl("被擋下", 5, 5, p) }, R_C, `被擋下 p=${p}`)) },
+    { cells: fp.map((p) => frames(300, { ...done, floats: fl("被打斷", 7, 1, p) }, R_E1, `被打斷 p=${p}`)) },
   ]), "image/png");
 };
 // ================= 4. 撞圖並排 =================
 PARTS.collide = () => {
   const S = S1600, ZM = 2;
-  const mini = (cols, rows, draw, units = [], ground = tile(ASH, "stone")) => {
-    const V = VIEW(S, 0, -T * 0.4, T * cols, T * (rows + 0.4), 1, ZM);
+  const mini = (cols, rows, draw, units = [], ground = tile(ASH, "stone"), zm = ZM) => {
+    const V = VIEW(S, 0, -T * 0.4, T * cols, T * (rows + 0.4), 1, zm);
     const sc = { cols, rows, ground, units, top: draw.top, under: draw.under, over: draw.over, decals: draw.decals };
     return render(sc, V);
   };
-  const K1 = kOf(S);
-  const one = (u) => [u];
+  const LA = { x: 0.5 * T, y: 1.5 * T - 14 }, LB = { x: 3.5 * T, y: 0.6 * T };
+  const tgt2 = U.hero({ x: 0, y: 1 });
   const cellsLines = [
-    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, { x: 0.5 * T, y: 1.5 * T - 14 }, { x: 3.5 * T, y: 0.6 * T }, { pal: "A", ms: 0, k: 1, endGap: 0 }) }), cap: "瞄準線 A" },
-    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, { x: 0.5 * T, y: 1.5 * T - 14 }, { x: 3.5 * T, y: 0.6 * T }, { pal: "B", ms: 0, k: 1, endGap: 0 }) }), cap: "瞄準線 B" },
-    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, { x: 0.5 * T, y: 1.5 * T - 14 }, { x: 3.5 * T, y: 0.6 * T }, { pal: "A", ms: 0, k: 1, endGap: 0, blockAt: 0.5 }), top: (g) => RG.blockStop(g, { x: 2 * T - 6, y: 1.05 * T }, { x: 0.96, y: -0.28 }, { pal: "A" }) }), cap: "瞄準線 A 被擋（後段灰點線）" },
+    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, LA, LB, { pal: "A", ms: 0, k: 1, endGap: 0, start: 0 }) }), cap: "瞄準線 A" },
+    { cv: mini(4, 2, { under: (g) => RG.lockLine(g, LA, LB, { pal: "A", ms: 0, k: 1, endGap: 0, start: 0, blockAt: 0.5 }), top: (g) => RG.blockStop(g, { x: 2 * T - 6, y: 1.05 * T }, { x: 0.96, y: -0.28 }, { pal: "A" }) }), cap: "瞄準線 A 被擋（後段灰點線）" },
+    { cv: mini(4, 2, { under: (g) => { const r = RET(tgt2, 1); RG.lockLine(g, chest(3, 0), r, { pal: "A", ms: 0 }); RG.lockLine(g, chest(3, 1), r, { pal: "A", ms: 0 }); }, top: (g) => { const r = RET(tgt2, 1); RG.reticle(g, r.x, r.y, { pal: "A", phase: 0 }); } }, [tgt2]), cap: "兩個敵人瞄準同一人：線各畫各的、準星只一個" },
     { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "normal") }), cap: "現行：移動路徑（白）" },
     { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "danger") }), cap: "現行：路徑經過危險（紅橘）" },
   ];
@@ -323,38 +341,49 @@ PARTS.collide = () => {
     { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "ice") }), cap: "現行：路徑冰面（藍虛線）" },
     { cv: mini(4, 2, { over: (g) => CUR.pathLine(g, [[0, 1], [1, 1], [2, 1], [2, 0], [3, 0]], "unreachable") }), cap: "現行：到不了（灰虛線）" },
     { cv: mini(4, 2, { under: (g) => CUR.softCells(g, [[1, 0], [2, 0], [3, 0], [1, 1], [2, 1], [3, 1]], CUR.RANGE) }), cap: "現行：技能射程淡框" },
-    { cv: mini(4, 2, { over: (g) => { CUR.telegraph(g, 0, 1); for (const [x, y] of [[2, 0], [3, 0], [2, 1]]) CUR.telegraph(g, x, y, "蓄"); } }), cap: "現行：蓄（施放者＋預計範圍）" },
+    { cv: mini(4, 2, { over: (g) => { CUR.telegraph(g, 0, 1); for (const [x, y] of [[2, 0], [3, 0], [2, 1]]) CUR.telegraph(g, x, y, "蓄"); } }), cap: "現行：蓄（施放者＋預計範圍；RG 目標格不再畫）" },
     { cv: mini(4, 2, { under: (g) => { for (const [x, y] of [[1, 0], [2, 0], [2, 1]]) CUR.followupArea(g, x, y); } }), cap: "現行：複合技動作段範圍" },
   ];
   // 頭頂：準星 vs 現行頭頂／身上的圓形記號
-  const head = (draw, u) => { const V = VIEW(S, 0, -T * 0.9, T, T * 1.9, 1, ZM); return render({ cols: 1, rows: 1, ground: tile(ASH, "stone"), units: u ? [u] : [], top: draw }, V); };
-  const hm = (gx, gy) => headMark(gx, gy, 10, 3, 1);
+  const head = (draw, u) => { const V = VIEW(S, 0, -T * 1.0, T, T * 2.0, 1, ZM); return render({ cols: 1, rows: 1, ground: tile(ASH, "stone"), units: u ? [u] : [], top: draw }, V); };
+  const ret = (u, o) => head((g) => { const c = RET(u, 1); RG.reticle(g, c.x, c.y, o); }, u);
   const cellsHead = [
-    { cv: head((g) => { const c = hm(0, 0); RG.reticle(g, c.x, c.y, { pal: "A", phase: 0 }); }, U.hero({ x: 0, y: 0 })), cap: "準星 A（亮）" },
-    { cv: head((g) => { const c = hm(0, 0); RG.reticle(g, c.x, c.y, { pal: "B", phase: 0 }); }, U.hero({ x: 0, y: 0 })), cap: "準星 B（亮）" },
-    { cv: head((g) => { const c = hm(0, 0); RG.reticle(g, c.x, c.y, { pal: "A", blocked: true }); }, U.hero({ x: 0, y: 0 })), cap: "準星 被擋（灰）" },
+    { cv: ret(U.hero({ x: 0, y: 0 }), { pal: "A", phase: 0 }), cap: "準星 A（亮）" },
+    { cv: ret(U.mage({ x: 0, y: 0 }), { pal: "A", phase: 0 }), cap: "準星 A・法師尖帽（含頭飾）" },
+    { cv: ret(U.lizard({ x: 0, y: 0 }), { pal: "A", phase: 0 }), cap: "準星 A・異形" },
+    { cv: ret(U.hero({ x: 0, y: 0 }), { pal: "A", blocked: true }), cap: "準星 被擋（灰）" },
     { cv: head(() => {}, U.eArcher({ x: 0, y: 0, west: true, charge: 1 })), cap: "現行：蓄力徽章（圓＋實心點、紫環）" },
     { cv: head(() => {}, U.hero({ x: 0, y: 0, status: ["marked", "overwatch", "charging"] })), cap: "現行：被標記、警戒、蓄力中（腳邊 11）" },
     { cv: head((g) => MapMarks.watchEye(g, 0.5 * T, 0.5 * T + RG.HEAD_TOP - 6 - 5), U.bandit({ x: 0, y: 0 })), cap: "現行：敵群的眼睛（實地）" },
     { cv: head((g) => CUR.attackFrame(g, 0, 0), U.bandit({ x: 0, y: 0 })), cap: "現行：攻擊紅框" },
   ];
-  // 狀態圖示放大看（真 1 倍 11 → ×4）
   const statusBig = (id) => { const c = document.createElement("canvas"); c.width = 11; c.height = 11; CUR.status(c.getContext("2d"), id, 5.5, 5.5, 11); return { cv: c, w: 44, h: 44, nn: true, cap: id }; };
   const reticleBig = (pal, ph, blocked) => { const c = document.createElement("canvas"); c.width = 26; c.height = 26; const g = c.getContext("2d"); g.scale(S, S); RG.reticle(g, 13 / S, 12 / S, { pal, phase: ph, blocked }); return { cv: c, w: 78, h: 78, nn: true, cap: `準星 ${pal}${blocked ? " 被擋" : ph ? " 收" : " 亮"}（1600 真 1 倍 ×3）` }; };
-  // 盾：小盾 vs 物件版（提案）vs 現行有盾的狀態
-  const chip = (kind, u) => head((g) => { const c = headMark(0, 0, 7, 2, 1); RG.coverChip(g, c.x, c.y, kind); }, u);
+  // 盾：小盾（第 2 版沒有人頭）＋連結的各種相對位置
+  const chip = (kind, u) => head((g) => { const c = CHIP(u, 1); RG.coverChip(g, c.x, c.y, kind); }, u);
   const cellsShield = [
-    { cv: chip("unit", U.eArcher({ x: 0, y: 0, west: true })), cap: "盾兵擋住（盾＋盾後人頭）" },
-    { cv: chip("object", U.eArcher({ x: 0, y: 0, west: true })), cap: "提案：物件半掩護（矮牆，遊戲現在沒有）" },
+    { cv: chip("unit", U.eArcher({ x: 0, y: 0, west: true })), cap: "小盾（第 2 版：拿掉人頭、放大）" },
+    { cv: chip("object", U.eArcher({ x: 0, y: 0, west: true })), cap: "備用、未採用：物件半掩護（矮牆）" },
     { cv: head(() => {}, U.eArcher({ x: 0, y: 0, west: true, status: ["defending", "guarded", "shielded"] })), cap: "現行：防禦、受護衛、護盾（腳邊 11）" },
     { cv: head((g) => CUR.float(g, "格擋", 0.5 * T, 0.5 * T + RG.HEAD_TOP, "#ffe066"), U.eArcher({ x: 0, y: 0, west: true })), cap: "現行：格擋浮字" },
   ];
-  const chipBig = (kind) => { const c = document.createElement("canvas"); c.width = 20; c.height = 20; const g = c.getContext("2d"); g.scale(S, S); RG.coverChip(g, 10 / S, 10 / S, kind); return { cv: c, w: 80, h: 80, nn: true, cap: `${kind === "unit" ? "小盾" : "矮牆"}（1600 真 1 倍 ×4）` }; };
+  const chipBig = (kind) => { const c = document.createElement("canvas"); c.width = 20; c.height = 20; const g = c.getContext("2d"); g.scale(S, S); RG.coverChip(g, 10 / S, 10 / S, kind); return { cv: c, w: 80, h: 80, nn: true, cap: `${kind === "unit" ? "小盾" : "矮牆（未採用）"}（1600 真 1 倍 ×4）` }; };
+  const linkCell = (pg, sg, cap) => {
+    const P = U.eArcher({ x: pg[0], y: pg[1], west: true, charge: 1 }), SBu = U.shield({ x: sg[0], y: sg[1], view: "side", west: sg[0] >= pg[0] });
+    return { cv: mini(3, 3, { under: (g) => CUR.attackFrame(g, ...pg), over: (g) => { CUR.telegraph(g, ...pg); CUR.hoverFrame(g, ...pg); }, top: (g) => { const c = CHIP(P, 1); RG.coverLink(g, center(...sg), center(...pg), c, {}); RG.coverChip(g, c.x, c.y, "unit"); } }, [P, SBu], tile(ASH, "stone"), 1.5), cap };
+  };
+  const cellsLink = [
+    linkCell([1, 1], [1, 2], "盾兵在南（上下相鄰）：從右外側繞上來"),
+    linkCell([1, 2], [1, 1], "盾兵在北（上下相鄰）"),
+    linkCell([1, 1], [2, 1], "盾兵在東（左右相鄰）"),
+    linkCell([1, 1], [0, 1], "盾兵在西（左右相鄰）"),
+    linkCell([1, 1], [2, 2], "盾兵在東南（斜）"),
+  ];
   // 地面：可疑痕跡 vs 陷阱、腳印、情境物件提示
-  const gr = (draw) => mini(1, 1, { decals: draw });
+  const gr = (draw, ground) => mini(1, 1, { decals: draw }, [], ground);
   const cellsGround = [
-    { cv: gr((g) => RG.trace(g, 0, 0, 4, 7)), cap: "可疑痕跡" },
-    { cv: gr((g) => RG.trace(g, 0, 0, 1, 2)), cap: "可疑痕跡（另一格的碎粒）" },
+    { cv: gr((g) => RG.trace(g, 0, 0, 4, 7)), cap: "可疑痕跡（第 2 版：土堆＋挖痕）" },
+    { cv: gr((g) => RG.trace(g, 0, 0, 4, 7), tile(CRY, "stone")), cap: "可疑痕跡（晶冠淺色地面）" },
     { cv: gr((g) => CUR.trap(g, 0, 0, { color: "#ff6a1a" })), cap: "現行：揭露的敵方陷阱（火、踩到）" },
     { cv: gr((g) => CUR.trap(g, 0, 0, { color: "#8fe3ff", trigger: "delay" })), cap: "現行：揭露的敵方陷阱（冰、延時）" },
     { cv: gr((g) => CUR.trap(g, 0, 0, { mine: true, color: "#7ddc3a" })), cap: "現行：自己的陷阱" },
@@ -362,7 +391,7 @@ PARTS.collide = () => {
     { cv: gr((g) => MapMarks.objectHint(g, 0, 0, 0)), cap: "現行：情境物件提示（實地）" },
   ];
   // 看一眼 vs 眼睛、事件「！」
-  const gl = (u, dir) => head((g) => { const c = headMark(0, 0, 7, 2, 1); RG.glance(g, c.x, c.y, dir, 300); }, u);
+  const gl = (u, dir) => head((g) => { const c = GLM(u, 1); RG.glance(g, c.x, c.y, dir, 300); }, u);
   const cellsGlance = [
     { cv: gl(U.bandit({ x: 0, y: 0, view: "side", west: true }), { x: -1, y: 0 }), cap: "看一眼（往西）" },
     { cv: gl(U.bandit({ x: 0, y: 0 }), { x: 0.7, y: 0.7 }), cap: "看一眼（往東南）" },
@@ -373,41 +402,42 @@ PARTS.collide = () => {
   ];
   const glanceBig = () => { const c = document.createElement("canvas"); c.width = 24; c.height = 24; const g = c.getContext("2d"); g.scale(S, S); RG.glance(g, 12 / S, 12 / S, { x: -1, y: 0 }, 300); return { cv: c, w: 96, h: 96, nn: true, cap: "看一眼（1600 真 1 倍 ×4）" }; };
   const eyeBig = () => { const c = document.createElement("canvas"); c.width = 28; c.height = 20; const g = c.getContext("2d"); g.scale(S, S); MapMarks.watchEye(g, 14 / S, 10 / S); return { cv: c, w: 112, h: 80, nn: true, cap: "現行眼睛（×4）" }; };
-  void K1; void one;
   publish(sheet(1500, [
-    { title: "撞圖並排（1600 的地圖縮放 1.31，向量放大 2 倍；小圖是真 1 倍最近鄰）" },
-    { note: "線：瞄準線（2 px 膠囊虛線、每段自己包外框色、斜直線、沒有格心點、畫在單位之下）vs 移動路徑（4 px、整條黑底、沿格子走、每格中心一個點、畫在所有單位之上）、技能射程（整格淡框）、蓄（格框＋右上字）。" },
+    { title: "撞圖並排 第 2 版（1600 的地圖縮放 1.31，向量放大 2 倍；小圖是真 1 倍最近鄰；A 強招紫）" },
+    { note: "線：瞄準線（2 px 膠囊虛線、每段自己包外框色、斜直線、沒有格心點、畫在單位之下）vs 移動路徑（4 px、整條黑底、沿格子走、每格中心一個點、畫在所有單位之上）、技能射程（整格淡框）、蓄（格框＋右上字）。兩個敵人瞄準同一人時：線各畫各的、準星只畫一個。" },
     { cells: cellsLines }, { cells: cellsLines2 },
-    { note: "頭頂：準星是「空心圓＋左右上三根刻度＋朝下三角」，中心空；現行的蓄力狀態是「圓＋實心點」、被標記是「圓＋叉」，而且在腳邊 11 px 的狀態框裡；敵群眼睛是米白眼＋紅瞳。" },
+    { note: "頭頂：準星是「空心圓＋左右上三根刻度＋朝下三角」，中心空；第 2 版的頭頂算進頭飾（法師尖帽頂在三角下方 4 模型 px）。現行的蓄力狀態是「圓＋實心點」、被標記是「圓＋叉」，在腳邊 11 px 的狀態框裡；敵群眼睛是米白眼＋紅瞳。" },
     { cells: cellsHead },
-    { cells: [reticleBig("A", 0), reticleBig("A", 1), reticleBig("B", 0), reticleBig("B", 1), reticleBig("A", 0, true), statusBig("charging"), statusBig("marked"), statusBig("overwatch"), eyeBig()] },
-    { note: "盾：小盾在頭頂（只在選目標、預覽有盾兵掩護時），盾後露半顆米白人頭＝來源是人；物件版（矮牆）是給半掩護的同族提案。現行狀態的防禦、受護衛、護盾在腳邊 11 px 框裡。" },
+    { cells: [reticleBig("A", 0), reticleBig("A", 1), reticleBig("A", 0, true), statusBig("charging"), statusBig("marked"), statusBig("overwatch"), eyeBig()] },
+    { note: "盾：小盾在頭頂（只在選目標、預覽有盾兵掩護時）；第 2 版拿掉盾後的人頭，「來源是人」交給連結：盾兵的點線終點的大圓點貼在小盾的側邊。矮牆物件版未採用（半掩護小圖示這段不做），留作備用。" },
     { cells: cellsShield },
     { cells: [chipBig("unit"), chipBig("object"), statusBig("defending"), statusBig("guarded"), statusBig("shielded")] },
-    { note: "地面：可疑痕跡（一塊翻起的新土＋一條拉直的細線與兩個小木樁＋右上米白「？」）沒有任何陷阱的形；揭露的陷阱是紅虛線橢圓＋深色圓盤＋陣營色圈＋元素色夾齒／沙漏＋右上紅「!」。" },
+    { note: "盾兵連結的相對位置（向量 1.5 倍）：上下相鄰時從被保護者身體的右外側（蓄力徽章在左）繞上去接到小盾，不穿過身體；左右、斜的從盾兵那一側接到小盾。" },
+    { cells: cellsLink },
+    { note: "地面：可疑痕跡（左邊高起的一堆新土、上緣亮下緣暗、右半一道挖痕、右腳兩顆濺出的土塊＋一條拉直的細線與兩個小木樁＋右上米白「？」）沒有任何陷阱的形；揭露的陷阱是紅虛線橢圓＋深色圓盤＋陣營色圈＋元素色夾齒／沙漏＋右上紅「!」。" },
     { cells: cellsGround },
     { note: "看一眼：暖米色小泡泡＋兩隻眼（白眼白、深瞳孔往那一格偏）＋泡泡外兩道視線；現行的敵群眼睛是單顆大眼（米白眼白＋紅瞳、沒有泡泡）、事件「！」是金色泡泡。" },
     { cells: cellsGlance },
     { cells: [glanceBig(), eyeBig()] },
   ]));
 };
-// ================= 5. 各區地面（線、準星、痕跡的對比） =================
+// ================= 5. 各區地面（線、準星、痕跡的對比；A） =================
 PARTS.ground = () => {
   const S = S1600, ZM = 1.5;
   const GROUNDS = [["荒原焦土", tile(ASH, "stone")], ["荒原岩漿", tile(ASH, "lava")], ["荒原灰燼", tile(ASH, "dirt")], ["雲嶺青石板", CLOUD], ["晶冠石地", tile(CRY, "stone")], ["霜潮石地", tile(FRO, "stone")], ["魔導石地", tile(ARC, "stone")]];
   const cells = [];
-  for (const pal of ["A", "B"]) for (const [name, ground] of GROUNDS) {
-    const V = VIEW(S, 0, -T * 0.4, T * 3, T * 2.4, 1, ZM);
-    const sc = { cols: 3, rows: 2, ground, units: [U.hero({ x: 2, y: 1 })],
+  for (const [name, ground] of GROUNDS) {
+    const V = VIEW(S, 0, -T * 0.4, T * 3, T * 2.4, 1, ZM), hero = U.hero({ x: 2, y: 1 });
+    const sc = { cols: 3, rows: 2, ground, units: [hero],
       decals: (g) => RG.trace(g, 0, 0, 3, 1),
-      under: (g) => RG.lockLine(g, { x: 0.3 * T, y: 1.6 * T }, headMark(2, 1, 10, 3, 1), { pal, ms: 0 }),
-      top: (g) => { const c = headMark(2, 1, 10, 3, 1); RG.reticle(g, c.x, c.y, { pal, phase: 0 }); } };
-    cells.push({ cv: render(sc, V), cap: `${pal}・${name}` });
+      under: (g) => RG.lockLine(g, { x: 0.3 * T, y: 1.6 * T }, RET(hero, 1), { pal: "A", ms: 0, start: 0 }),
+      top: (g) => { const c = RET(hero, 1); RG.reticle(g, c.x, c.y, { pal: "A", phase: 0 }); } };
+    cells.push({ cv: render(sc, V), cap: `A・${name}` });
   }
-  const rows = []; for (let i = 0; i < cells.length; i += 7) rows.push({ cells: cells.slice(i, i + 7) });
-  publish(sheet(1560, [
-    { title: "各區地面上的瞄準線、準星與可疑痕跡（1600 的地圖縮放，向量放大 1.5 倍）" },
-    { note: "上排 A 強招紫、下排 B 警示紅。B 在岩漿（第 2 格）上紅線和準星只剩外框色撐著、對比最差；A 在每一種地面都跳出來。可疑痕跡的翻土在深色地面（焦土、灰燼）靠碎粒與細線、在淺色地面（晶冠）靠深色土塊。" },
+  const rows = []; for (let i = 0; i < cells.length; i += 4) rows.push({ cells: cells.slice(i, i + 4) });
+  publish(sheet(1210, [
+    { title: "各區地面上的瞄準線、準星與可疑痕跡 第 2 版（A；向量放大 1.5 倍）" },
+    { note: "可疑痕跡第 2 版：土堆的亮上緣與暗挖痕在深色地面（焦土、灰燼）也分得出高低；淺色地面（晶冠、霜潮）靠土堆本身的褐色。" },
     ...rows,
   ]));
 };
@@ -417,20 +447,22 @@ PARTS.parts = () => {
   const cells = [
     { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "A", phase: 0 })), cap: "準星 A 亮（20×21 模型 px）" },
     { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "A", phase: 1 })), cap: "準星 A 收（×0.86）" },
-    { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "B", phase: 0 })), cap: "準星 B 亮" },
     { cv: box(26, 26, (g) => RG.reticle(g, 13, 12, { pal: "A", blocked: true })), cap: "準星 被擋（灰、不閃）" },
-    { cv: box(18, 18, (g) => RG.coverChip(g, 9, 9, "unit")), cap: "小盾（14×14）" },
-    { cv: box(18, 18, (g) => RG.coverChip(g, 9, 9, "object")), cap: "物件版（提案）" },
+    { cv: box(18, 18, (g) => RG.coverChip(g, 9, 9, "unit")), cap: "小盾 第 2 版（11.2×12.8，外框含 14×15）" },
+    { cv: box(18, 18, (g) => RG.coverChip(g, 9, 9, "object")), cap: "矮牆（未採用）" },
     { cv: box(24, 20, (g) => RG.glance(g, 10, 10, { x: 1, y: 0 }, 400)), cap: "看一眼（14×13＋視線）" },
   ];
   const cells2 = [
-    { cv: box(48, 48, (g) => { g.fillStyle = "#4a3a30"; g.fillRect(0, 0, 48, 48); RG.trace(g, 0, 0, 4, 7); }), cap: "可疑痕跡（一格 48，畫在焦土色上）" },
-    { cv: box(60, 14, (g) => RG.lockLine(g, { x: 0, y: 7 }, { x: 60, y: 7 }, { pal: "A", ms: 0, endGap: 0 })), cap: "瞄準線（實 4＋空 7、線 2＋外框各 1）" },
-    { cv: box(60, 14, (g) => { RG.lockLine(g, { x: 0, y: 7 }, { x: 60, y: 7 }, { pal: "A", ms: 0, endGap: 0, blockAt: 0.45 }); RG.blockStop(g, { x: 26, y: 7 }, { x: 1, y: 0 }, { pal: "A" }); }), cap: "被擋（斷點＋灰點線 1.5／5）" },
+    { cv: box(48, 48, (g) => { g.fillStyle = "#4a3a30"; g.fillRect(0, 0, 48, 48); RG.trace(g, 0, 0, 4, 7); }), cap: "可疑痕跡 第 2 版（一格 48，畫在焦土色上）" },
+    { cv: box(60, 14, (g) => RG.lockLine(g, { x: 0, y: 7 }, { x: 60, y: 7 }, { pal: "A", ms: 0, endGap: 0, start: 0 })), cap: "瞄準線（實 4＋空 7、線 2＋外框各 1）" },
+    { cv: box(60, 14, (g) => { RG.lockLine(g, { x: 0, y: 7 }, { x: 60, y: 7 }, { pal: "A", ms: 0, endGap: 0, start: 0, blockAt: 0.45 }); RG.blockStop(g, { x: 26, y: 7 }, { x: 1, y: 0 }, { pal: "A" }); }), cap: "被擋（斷點＋灰點線 1.5／5）" },
   ];
+  const tops = ["hero_fighter", "hero_mage", "hero_archer", "bandit", "bandit_archer", "bandit_shieldbearer"].map((tpl) => `${tpl} ${topOf({ kind: "doll", tpl, doll: TP[tpl], view: "front", x: 0, y: 0 }).toFixed(1)}`).join("、");
+  const ltop = topOf(U.lizard({ x: 0, y: 0 })).toFixed(1);
   publish(sheet(1500, [
-    { title: "單項特寫（模型像素 ×4 向量重畫；格線每 2 px）" },
+    { title: "單項特寫 第 2 版（模型像素 ×4 向量重畫；格線每 2 px）" },
     { cells }, { cells: cells2 },
+    { note: `量到的頭頂（含頭飾，相對格子中心，正面）：${tops}；異形（岩漿小蜥蜴）${ltop}。標準人形 unitTopY＝${RG.HEAD_TOP.toFixed(1)}。` },
   ]), "image/png");
 };
 try { (PARTS[PART] ?? PARTS.scene)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }

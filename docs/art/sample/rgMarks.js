@@ -1,5 +1,5 @@
 // rgMarks.js：RG 段戰場標記樣張（畫圖 agent，2026-11-13；PhaseRG計畫.md 第 5 節、05 5.7、09 9.6.6）。
-// 六項：被瞄準標記（準星）、瞄準線、落空／被擋下／被打斷浮字、盾兵擋住的小盾＋連結、可疑痕跡、看那一格一眼。
+// 第 2 版（2026-11-13，審查 M1、可修 1～7 與美術 PM 決定）。六項：被瞄準標記（準星）、瞄準線、落空／被擋下／被打斷浮字、盾兵擋住的小盾＋連結、可疑痕跡、看那一格一眼。
 // 座標一律是模型像素（一格 T＝48，client/src/battle/geometry.ts TILE_SIZE）；呼叫端先把 ctx 換到地圖縮放。
 // 確定性：不用 Math.random；時間一律由呼叫端傳入（毫秒）。只讀別的畫法檔，不改它們。
 window.RGMarks = (() => {
@@ -61,21 +61,28 @@ window.RGMarks = (() => {
     if (!dim && !o.blocked) { ctx.strokeStyle = "rgba(255,255,255,0.8)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, 0, R, Math.PI * 1.08, Math.PI * 1.42); ctx.stroke(); }
     ctx.restore();
   }
-  /** 準星圓心相對格子中心的 y：頭頂往上 3（空隙）再 10（半個準星）。 */
-  const RETICLE_DY = HEAD_TOP - 3 - 10;
+  /** 準星圓心到三角外框下緣的距離（三角尖 R＋6.4＝12.6，外框再 1）。 */
+  const RETICLE_BELOW = 13.6;
+  /** 準星圓心相對格子中心的 y（標準人形、沒有頭飾）：頭頂往上 4（空隙）再 13.6×k。第 2 版：頭頂改用「含頭飾」的最高點（樣張頁 topOf）。 */
+  const RETICLE_DY = HEAD_TOP - 4 - RETICLE_BELOW;
 
   // =====================================================================
   // 2. 瞄準線：弓手胸口 → 準星，2 px 實線段的虛線（膠囊形、每段自己包外框色），往目標流動。
   //    和移動路徑線分開：路徑是 4 px、整條連續的黑底線、沿格子中心走直角＋圓角、每格中心一個點、畫在單位之上；
   //    瞄準線是 2 px、斜的直線、沒有點、只有每一段自己有細外框、畫在單位之下（每排的 frames 層）。
   // =====================================================================
-  /** a＝起點（弓手胸口）、b＝終點（準星圓心）；o＝{ pal, ms（流動時間）, blockAt（0～1，被擋的位置，沒有＝不擋）, k（畫面下限放大）, endGap }。 */
+  /**
+   * a＝弓手胸口、b＝終點（準星圓心）；o＝{ pal, ms（流動時間）, blockAt（0～1，被擋的位置，沒有＝不擋）, k（畫面下限放大）, endGap, start, avoid }。
+   * 第 2 版：起點從胸口往目標 0.4 格（出了身體）；若那一點還在 avoid 的圓裡（弓手的蓄力徽章：半徑 10＋2），沿線往前推到出了圓再起。
+   */
   function lockLine(ctx, a, b, o = {}) {
     const p = PAL[o.pal ?? "A"], k = o.k ?? 1;
     const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
     if (len < 1) return;
     const ux = dx / len, uy = dy / len;
-    const start = 6, end = len - (o.endGap ?? 11 * (o.rk ?? 1)); // 起點離弓手胸口 6、終點停在準星外緣
+    const end = len - (o.endGap ?? 11 * (o.rk ?? 1)); // 終點停在準星外緣
+    let start = o.start ?? 0.4 * T;
+    for (const c of o.avoid ?? []) while (start < end && Math.hypot(a.x + ux * start - c.x, a.y + uy * start - c.y) < c.r) start += 0.5;
     const dash = 4 * k, gap = 7 * k, per = dash + gap;
     const off = -(((o.ms ?? 0) / 1000) * TIMING.flowPxPerS) * k; // 負 offset＝虛線往終點走
     const cut = o.blockAt == null ? end : Math.max(start, Math.min(end, o.blockAt * len));
@@ -136,17 +143,16 @@ window.RGMarks = (() => {
   function coverChip(ctx, x, y, kind = "unit", o = {}) {
     const k = o.k ?? 1;
     ctx.save(); ctx.translate(x, y); ctx.scale(k, k); ctx.lineJoin = "round";
-    const shield = () => { ctx.beginPath(); ctx.moveTo(-4.6, -3.2); ctx.quadraticCurveTo(0, -4.6, 4.6, -3.2); ctx.lineTo(4.6, 0.8); ctx.quadraticCurveTo(4.2, 4.6, 0, 6.6); ctx.quadraticCurveTo(-4.2, 4.6, -4.6, 0.8); ctx.closePath(); };
+    /* 第 2 版（必修 M1）：拿掉盾後的人頭（1 倍讀成燈泡、冰淇淋），鳶形盾放大撐滿 14×14（寬 11.2、高 12.8）；「來源是人」交給盾兵連結（終點接在盾的側邊）。 */
+    const shield = () => { ctx.beginPath(); ctx.moveTo(-5.6, -5.1); ctx.quadraticCurveTo(0, -6.8, 5.6, -5.1); ctx.lineTo(5.6, -0.2); ctx.quadraticCurveTo(5.1, 4.4, 0, 6.85); ctx.quadraticCurveTo(-5.1, 4.4, -5.6, -0.2); ctx.closePath(); };
     if (kind === "unit") {
-      // 人頭（盾的左上後方）
-      ctx.beginPath(); ctx.arc(-3.4, -5.2, 2.9, 0, TAU); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke(); ctx.fillStyle = CREAM; ctx.fill();
-      // 盾：外框 1、鋼色、右半暗面、中線亮
+      // 盾：外框 1、鋼色、右半暗面、左側亮條
       shield(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke(); ctx.fillStyle = STEEL; ctx.fill();
-      ctx.save(); shield(); ctx.clip(); ctx.fillStyle = STEEL_D; ctx.fillRect(0.6, -6, 6, 14); ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(-3.4, -2.6, 1.2, 4.2); ctx.restore();
+      ctx.save(); shield(); ctx.clip(); ctx.fillStyle = STEEL_D; ctx.fillRect(0.7, -8, 8, 16); ctx.fillStyle = "rgba(255,255,255,0.8)"; ctx.fillRect(-4.2, -3.6, 1.4, 5.4); ctx.restore();
       // 盾心金釘
-      ctx.beginPath(); ctx.arc(0.3, 0.6, 1.25, 0, TAU); ctx.fillStyle = "#e8bb48"; ctx.fill();
+      ctx.beginPath(); ctx.arc(0.35, -0.5, 1.5, 0, TAU); ctx.fillStyle = "#e8bb48"; ctx.fill();
     } else {
-      // 矮牆（兩層磚、上緣亮）
+      // 矮牆（兩層磚、上緣亮）：半掩護物件版，未採用（2026-11-13 美術 PM：半掩護小圖示這段不做），留作備用
       const wall = () => { ctx.beginPath(); ctx.rect(-6, -1.5, 12, 7.5); };
       wall(); ctx.lineWidth = 2; ctx.strokeStyle = INK; ctx.stroke(); ctx.fillStyle = "#8a7e72"; ctx.fill();
       ctx.fillStyle = "#b0a496"; ctx.fillRect(-6, -1.5, 12, 2);
@@ -154,19 +160,38 @@ window.RGMarks = (() => {
     }
     ctx.restore();
   }
-  /** 小盾圓心相對格子中心的 y：頭頂往上 2 再 7。 */
-  const CHIP_DY = HEAD_TOP - 2 - 7;
-  /** 盾兵 → 被保護者的淡連結：兩人胸口（格子中心往上 0.3 格）之間一排米白小點（點線，不是虛線），兩端各一個小圓；畫在單位之上（頭頂標記那一層）。 */
-  function coverLink(ctx, a, b, o = {}) {
-    const k = o.k ?? 1, y0 = o.y0 ?? -0.3 * T; /* 第 2 版：胸口高度、畫在頭頂標記層（第 1 版在腳邊、單位之下，上下相鄰時整條被盾兵身體蓋掉） */
-    const d0 = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / d0, uy = (b.y - a.y) / d0; /* 只畫兩人之間那一段：盾兵端往前 0.25 格、被保護者端往回 0.45 格（第 2 版第 1 次整條穿過弓手的臉） */
-    const A = { x: a.x + ux * 0.25 * T, y: a.y + y0 + uy * 0.25 * T }, B = { x: b.x - ux * 0.45 * T, y: b.y + y0 - uy * 0.45 * T };
-    const len = Math.hypot(B.x - A.x, B.y - A.y), n = Math.max(2, Math.round(len / (4 * k)));
+  /** 小盾中心到下緣外框的距離（盾尖 6.85＋外框 1）。 */
+  const CHIP_BELOW = 7.85;
+  /** 小盾中心相對格子中心的 y（標準人形、沒有頭飾）：頭頂往上 2 再 7.85×k。 */
+  const CHIP_DY = HEAD_TOP - 2 - CHIP_BELOW;
+  /**
+   * 盾兵 → 小盾的淡連結（第 2 版）：一排米白小點（點線，不是虛線、不流動），起點在盾兵胸口、終點的圓點貼在小盾的側邊，
+   * 讓盾「掛」在盾兵的點線上（「來源是人」由連結交代）。畫在頭頂標記層。
+   * a＝盾兵格子中心、b＝被保護者格子中心、chip＝小盾中心；o.k＝小盾的畫面下限放大。
+   * 走法：二次曲線，從盾兵那一側繞到小盾的側邊，不穿過被保護者的身體：
+   *   side＝盾兵在被保護者的東（＋1）或西（−1）；同一直行（上下相鄰）時取東（＋1，蓄力徽章在西邊）。
+   *   起點 A：同一直行＝盾兵胸口往外側 0.46 格（出了盾兵的身體與被保護者的 HP 條）；其他＝盾兵胸口往被保護者 0.25 格。
+   *   終點 E：小盾中心＋(side × 8.1k, −2.5k)（盾的直邊中段，圓點貼著盾的外框）。
+   *   控制點 C：(b.x＋side × max(1 格, |A.x − b.x|), E.y)：曲線先往上、在被保護者身體外側爬到頭頂高度，再橫著接到盾。
+   *     盾兵在正北（同一直行、在上）：C＝(b.x＋side × 0.75 格, (A.y＋E.y)÷2)，只輕輕往外彎（小盾就在盾兵腳邊）。
+   */
+  function coverLink(ctx, a, b, chip, o = {}) {
+    const k = o.k ?? 1, y0 = -0.3 * T, same = Math.abs(a.x - b.x) < 1, side = same ? 1 : Math.sign(a.x - b.x);
+    let A;
+    if (same) A = { x: a.x + side * 0.46 * T, y: a.y + y0 };
+    else { const d = Math.hypot(b.x - a.x, b.y - a.y) || 1; A = { x: a.x + ((b.x - a.x) / d) * 0.25 * T, y: a.y + y0 + ((b.y - a.y) / d) * 0.25 * T }; }
+    const E = { x: chip.x + side * 8.1 * k, y: chip.y - 2.5 * k };
+    const C = same && a.y < b.y ? { x: b.x + side * 0.75 * T, y: (A.y + E.y) / 2 } : { x: b.x + side * Math.max(T, Math.abs(A.x - b.x)), y: E.y }; // 盾兵在正北：小盾就在盾兵腳邊，只輕輕往外彎
+    const at = (t) => ({ x: (1 - t) * (1 - t) * A.x + 2 * t * (1 - t) * C.x + t * t * E.x, y: (1 - t) * (1 - t) * A.y + 2 * t * (1 - t) * C.y + t * t * E.y });
+    const N = 96, acc = [0]; let prev = at(0);
+    for (let i = 1; i <= N; i++) { const q = at(i / N); acc.push(acc[i - 1] + Math.hypot(q.x - prev.x, q.y - prev.y)); prev = q; }
+    const len = acc[N], n = Math.max(2, Math.round(len / (4.5 * k)));
+    const byLen = (L) => { let i = 1; while (i < N && acc[i] < L) i++; const f = (L - acc[i - 1]) / Math.max(1e-6, acc[i] - acc[i - 1]); return at((i - 1 + f) / N); };
     ctx.save();
     for (let i = 0; i <= n; i++) {
-      const t = i / n, x = A.x + (B.x - A.x) * t, y = A.y + (B.y - A.y) * t, r = (i === 0 || i === n ? 2.1 : 1.3) * k;
-      ctx.beginPath(); ctx.arc(x, y, r + 0.8, 0, TAU); ctx.fillStyle = "rgba(22,18,26,0.45)"; ctx.fill();
-      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = "rgba(232,240,248,0.85)"; ctx.fill();
+      const q = byLen((len * i) / n), r = (i === 0 || i === n ? 2.1 : 1.3) * k;
+      ctx.beginPath(); ctx.arc(q.x, q.y, r + 0.8, 0, TAU); ctx.fillStyle = "rgba(22,18,26,0.45)"; ctx.fill();
+      ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, TAU); ctx.fillStyle = "rgba(232,240,248,0.85)"; ctx.fill();
     }
     ctx.restore();
   }
@@ -175,23 +200,35 @@ window.RGMarks = (() => {
   // 5. 可疑痕跡：格子地面的一塊翻土（深土＋淺色碎粒）＋兩道細線（拉過的細繩、刮痕）＋右上的米白「？」小圓。
   //    不畫任何陷阱的形（沒有夾齒、沙漏、圈、陣營色）。已揭露的陷阱是：淡紅虛線橢圓＋深色圓盤＋陣營色圈＋元素色夾齒／沙漏＋右上紅「！」。
   // =====================================================================
-  /** (x0, y0)＝格子左上角；gx, gy 決定碎粒的位置（確定性）。o.k＝「？」的畫面下限放大。 */
+  /**
+   * (x0, y0)＝格子左上角。o.k＝「？」的畫面下限放大。第 2 版（可修 4）：拿掉淺色碎粒（像巧克力豆餅乾），
+   * 改成「左邊高起的一堆新土（凹凸的上緣亮、下緣暗）＋右下一個挖開的暗坑（近側坑緣亮）」，兩顆深色土塊濺在坑邊；細線與「？」保留。
+   * gx, gy 保留參數（不用亂數，形固定）。
+   */
   function trace(ctx, x0, y0, gx = 0, gy = 0, o = {}) {
-    const r = seedRand(gx * 7919 + gy * 104729 + 17), cx = x0 + T / 2, cy = y0 + T / 2 + 4;
-    ctx.save();
-    // 翻土：不規則的一塊（10 個頂點），深土色 55%＋外緣淡
-    const pts = [];
-    for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU, rr = 0.78 + r() * 0.3; pts.push([cx + Math.cos(a) * 14 * rr, cy + Math.sin(a) * 10.5 * rr]); } /* 第 2 版：圓一點（第 1 版長橢圓＋斜線像葉子、木片） */
-    ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
-    ctx.fillStyle = "rgba(118,90,60,0.78)"; ctx.fill(); ctx.strokeStyle = "rgba(20,14,8,0.55)"; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.save(); ctx.clip(); ctx.fillStyle = "rgba(60,42,26,0.55)"; ctx.beginPath(); ctx.ellipse(cx + 3, cy + 4, 15, 6, 0, 0, TAU); ctx.fill(); ctx.restore(); /* 翻土：淺色新土＋下半一層深土（翻起來的那一面） */
-    // 土塊與碎粒（深的鼓包＋淺的碎粒）
-    for (let i = 0; i < 4; i++) { const x = cx - 9 + r() * 18, y = cy - 4 + r() * 7; ctx.beginPath(); ctx.ellipse(x, y, 2.6, 1.7, 0, 0, TAU); ctx.fillStyle = "#3a2a1c"; ctx.fill(); ctx.beginPath(); ctx.ellipse(x - 0.6, y - 0.6, 1.3, 0.8, 0, 0, TAU); ctx.fillStyle = "rgba(200,176,140,0.55)"; ctx.fill(); }
-    for (let i = 0; i < 9; i++) { const x = cx - 14 + r() * 28, y = cy - 7 + r() * 14; ctx.fillStyle = "rgba(214,196,160,0.8)"; ctx.fillRect(x, y, 1.4, 1.2); }
-    // 細線：一條拉直的淺色細線從土裡斜伸出去、兩端各一個小木樁（1 px；不穿過土塊中間，第 1 版穿過中間像葉脈）
-    ctx.lineCap = "round"; const L0 = [x0 + 5, y0 + T - 9], L1 = [cx - 9, cy + 4], L2 = [cx + 10, cy - 3], L3 = [x0 + T - 6, y0 + 22];
+    void gx; void gy;
+    const cx = x0 + T / 2, cy = y0 + T / 2 + 4;
+    ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+    // 細線（先畫，根被土堆、坑蓋住＝從土裡伸出來）：左下、右上各一段，兩端小木樁
+    const L0 = [x0 + 5, y0 + T - 9], L1 = [cx - 9, cy + 3], L2 = [cx + 9, cy + 2], L3 = [x0 + T - 6, y0 + 22];
     ctx.strokeStyle = "rgba(20,14,8,0.6)"; ctx.lineWidth = 2.2; for (const [a, b] of [[L0, L1], [L2, L3]]) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); }
     ctx.strokeStyle = "rgba(240,232,210,0.9)"; ctx.lineWidth = 1; for (const [a, b] of [[L0, L1], [L2, L3]]) { ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); }
+    // 挖開的坑（右下）：暗橢圓，近側（下緣）坑唇亮、遠側（上緣）內壁更暗
+    const hx = cx + 7, hy = cy + 4.5;
+    ctx.beginPath(); ctx.ellipse(hx, hy, 8, 3.6, 0, 0, TAU); ctx.fillStyle = "rgba(74,54,34,0.9)"; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx, hy + 0.6, 6.6, 2.6, 0, 0, TAU); ctx.fillStyle = "rgba(18,11,6,0.95)"; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(hx, hy + 0.2, 7.6, 3.3, 0, 0.12 * Math.PI, 0.88 * Math.PI); ctx.strokeStyle = "rgba(222,196,150,0.85)"; ctx.lineWidth = 1.1; ctx.stroke();
+    // 土堆（左上、左邊高）：凹凸三個鼓包的上緣，下緣微彎；坑的左端被它壓住
+    const top = () => { ctx.moveTo(cx - 15, cy + 4); ctx.quadraticCurveTo(cx - 17, cy - 2, cx - 11.5, cy - 4); ctx.quadraticCurveTo(cx - 9, cy - 10.5, cx - 3.5, cy - 7.5); ctx.quadraticCurveTo(cx + 1.5, cy - 7, cx + 1.5, cy - 2); ctx.quadraticCurveTo(cx + 5, cy - 1, cx + 4.5, cy + 3.5); };
+    const heap = () => { ctx.beginPath(); top(); ctx.quadraticCurveTo(cx - 5, cy + 8, cx - 15, cy + 4); ctx.closePath(); };
+    heap(); ctx.fillStyle = "rgba(128,96,62,0.97)"; ctx.fill();
+    ctx.save(); heap(); ctx.clip();
+    ctx.fillStyle = "rgba(46,32,18,0.6)"; ctx.beginPath(); ctx.ellipse(cx - 4, cy + 7, 14, 4.8, 0, 0, TAU); ctx.fill(); // 下緣暗
+    ctx.strokeStyle = "rgba(232,208,164,0.85)"; ctx.lineWidth = 1.8; ctx.translate(0.4, 1.1); ctx.beginPath(); top(); ctx.stroke(); // 上緣亮
+    ctx.restore();
+    heap(); ctx.strokeStyle = "rgba(20,14,8,0.75)"; ctx.lineWidth = 1.2; ctx.stroke();
+    // 濺出的兩顆深色土塊（坑的右邊）
+    for (const [x, y, rr] of [[cx + 17, cy + 1.5, 1.6], [cx + 15.5, cy + 8.5, 1.3]]) { ctx.beginPath(); ctx.arc(x, y, rr + 0.6, 0, TAU); ctx.fillStyle = "rgba(20,14,8,0.5)"; ctx.fill(); ctx.beginPath(); ctx.arc(x, y, rr, 0, TAU); ctx.fillStyle = "#6a4c30"; ctx.fill(); }
     for (const [px, py] of [L0, L3]) { ctx.fillStyle = INK; ctx.fillRect(px - 1.6, py - 3.2, 3.2, 4.4); ctx.fillStyle = "#8a6440"; ctx.fillRect(px - 0.9, py - 2.5, 1.8, 3); }
     // 「？」小圓：右上（x0+T−11, y0+11），半徑 6；米白底、外框色 1、深褐「？」
     const k = o.k ?? 1, qx = x0 + T - 11, qy = y0 + 11;
@@ -211,8 +248,8 @@ window.RGMarks = (() => {
   function glanceFrame(ms) {
     const t = Math.max(0, Math.min(TIMING.glanceMs, ms));
     const scale = t < 90 ? 0.6 + 0.5 * (t / 90) : t < 150 ? 1.1 - 0.1 * ((t - 90) / 60) : 1;
-    const look = t < 120 ? 0 : t < 240 ? (t - 120) / 120 : 1;
-    const sight = t < 240 ? 0 : t < 360 ? (t - 240) / 120 : 1;
+    const look = t < 60 ? 0 : t < 150 ? (t - 60) / 90 : 1; // 第 2 版（可修 5）：瞳孔 60～150 ms 轉過去
+    const sight = t < 150 ? 0 : t < 240 ? (t - 150) / 90 : 1; // 視線 150～240 ms 冒出
     const alpha = t < 480 ? 1 : 1 - (t - 480) / 120;
     return { scale, alpha, look, sight };
   }
@@ -241,8 +278,10 @@ window.RGMarks = (() => {
     }
     ctx.restore();
   }
-  /** 泡泡中心相對格子中心的 y：頭頂往上 2 再 7（尾巴尖約在頭頂上 2）。 */
-  const GLANCE_DY = HEAD_TOP - 2 - 7;
+  /** 泡泡中心到尾巴尖外框的距離（尾巴尖 7＋外框 1）。 */
+  const GLANCE_BELOW = 8;
+  /** 泡泡中心相對格子中心的 y（標準人形、沒有頭飾）：頭頂往上 2 再 8×k。 */
+  const GLANCE_DY = HEAD_TOP - 2 - GLANCE_BELOW;
 
-  return { T, INK, FEET, HEAD_TOP, PAL, BLOCKED, TIMING, FLOAT, blinkPhase, reticle, RETICLE_DY, lockLine, blockStop, floatFrame, floatText, coverChip, CHIP_DY, coverLink, trace, glance, glanceFrame, GLANCE_DY, seedRand };
+  return { T, INK, FEET, HEAD_TOP, PAL, BLOCKED, TIMING, FLOAT, blinkPhase, reticle, RETICLE_DY, RETICLE_BELOW, lockLine, blockStop, floatFrame, floatText, coverChip, CHIP_DY, CHIP_BELOW, coverLink, trace, glance, glanceFrame, GLANCE_DY, GLANCE_BELOW, seedRand };
 })();

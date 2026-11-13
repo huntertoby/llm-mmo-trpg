@@ -1,4 +1,4 @@
-"""Re-shoot the RG battle-mark samples (docs/art/RG樣張.md).
+"""Re-shoot the RG battle-mark samples (docs/art/RG樣張.md), version 2 (*-v2 files).
 
 Usage (from the repo root):
     uv run python -I docs/art/sample/tools/rg_marks_shots.py <chrome tmp> [name ...] [--out <dir>]
@@ -26,14 +26,14 @@ PAGE = ART / "sample" / "rg-marks.html"
 
 # (name, query, output path relative to docs/art)
 SHOTS = [
-    ("scene-1600", "part=scene&w=1600", "shots/rg-marks/1-scene-1600.png"),
-    ("scene-800", "part=scene&w=800", "shots/rg-marks/2-scene-800.png"),
-    ("zoom-1600", "part=zoom&w=1600", "shots/rg-marks/3-zoom3-1600.png"),
-    ("zoom-800", "part=zoom&w=800", "shots/rg-marks/4-zoom3-800.png"),
-    ("anim", "part=anim", "shots/rg-marks/5-keyframes.png"),
-    ("collide", "part=collide", "shots/rg-marks/6-collide.jpg"),
-    ("ground", "part=ground", "shots/rg-marks/7-grounds.jpg"),
-    ("parts", "part=parts", "shots/rg-marks/8-parts.png"),
+    ("scene-1600", "part=scene&w=1600", "shots/rg-marks/1-scene-1600-v2.png"),
+    ("scene-800", "part=scene&w=800", "shots/rg-marks/2-scene-800-v2.png"),
+    ("zoom-1600", "part=zoom&w=1600", "shots/rg-marks/3-zoom3-1600-v2.png"),
+    ("zoom-800", "part=zoom&w=800", "shots/rg-marks/4-zoom3-800-v2.png"),
+    ("anim", "part=anim", "shots/rg-marks/5-keyframes-v2.png"),
+    ("collide", "part=collide", "shots/rg-marks/6-collide-v2.jpg"),
+    ("ground", "part=ground", "shots/rg-marks/7-grounds-v2.jpg"),
+    ("parts", "part=parts", "shots/rg-marks/8-parts-v2.png"),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')
