@@ -103,8 +103,9 @@ from trpg.engine.reactions import (
 )
 from trpg.engine.results import ResolveResult
 from trpg.engine.rule_changes import pass_through
-from trpg.engine.rules.combat import attack_problem, reach_problem
+from trpg.engine.rules.combat import PERMILLE, attack_problem, reach_problem
 from trpg.engine.rules.facing import face_toward, opening_facing
+from trpg.engine.rules.footprint import tiles_of
 from trpg.engine.rules.forms import charge_direction, natural_charge
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import (
@@ -162,7 +163,7 @@ from trpg.engine.weapon_traits import attack_dice, spend_ammo
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.ids import IdAllocator
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute, ObjectId, Pos, Team, UnitId
+from trpg.shared.types import Attribute, ObjectId, Pos, Surface, Team, UnitId
 
 __all__ = [
     "ACTION_HANDLERS",
@@ -225,10 +226,16 @@ def _place_units(setup: BattleSetup, state: BattleState) -> list[XY]:
         if (x, y) in used:
             raise BattleSetupError(f"起始位置重複：({x}, {y})")
         used.add((x, y))
+        if spawn.template.footprint > 1:
+            used |= _giant_cells(setup, state, spawn, (x, y), used)
+    giant_spots = _place_giants(setup, state, used)
     result: list[XY] = []
-    for spawn in setup.units:
+    for index, spawn in enumerate(setup.units):
         if spawn.position is not None:
             result.append(spawn.position)
+            continue
+        if index in giant_spots:
+            result.append(giant_spots[index])
             continue
         free = [c for c in _zone_of(setup, state, spawn.team) if c not in used]
         free = [c for c in free if is_standable(state, c)]
@@ -237,6 +244,57 @@ def _place_units(setup: BattleSetup, state: BattleState) -> list[XY]:
         used.add(free[0])
         result.append(free[0])
     return result
+
+
+def _giant_cells(
+    setup: BattleSetup, state: BattleState, spawn: UnitSpawn, center: XY, used: set[XY]
+) -> set[XY]:
+    """巨型單位（GB-1a，T3）站在 ``center`` 時佔的其餘格子；任一格出界、是牆、或和別人重疊時拋出
+    :class:`BattleSetupError`（站得上去、同高度、沒有物件與表面由內容檢查保證）。"""
+    half = spawn.template.footprint // 2
+    cells = {
+        (x, y)
+        for y in range(center[1] - half, center[1] + half + 1)
+        for x in range(center[0] - half, center[0] + half + 1)
+    } - {center}
+    for cell in sorted(cells, key=lambda c: (c[1], c[0])):
+        if not _giant_cell_ok(state, cell):
+            raise BattleSetupError(f"{spawn.template.name_zh}佔的格子 {cell} 超出地圖或是牆壁")
+        if cell in used:
+            raise BattleSetupError(f"{spawn.template.name_zh}佔的格子 {cell} 和其他單位重疊")
+    return cells
+
+
+def _giant_cell_ok(state: BattleState, cell: XY) -> bool:
+    """巨型單位的非中心佔格：在地圖內、不是牆（可站或致命地形；腳下的致命地形對它無效，D10）。"""
+    if not state.in_bounds(*cell):
+        return False
+    return is_standable(state, cell) or is_deadly(state, cell)
+
+
+def _place_giants(setup: BattleSetup, state: BattleState, used: set[XY]) -> dict[int, XY]:
+    """沒有指定位置的巨型單位先放（GB-1a）：陣營起始區裡第一個 9 格都放得下的格子當中心，佔的格子
+    全部記進 ``used``，其他單位再從剩下的起始格挑。沒有巨型單位時什麼都不做。"""
+    spots: dict[int, XY] = {}
+    for index, spawn in enumerate(setup.units):
+        if spawn.position is not None or spawn.template.footprint == 1:
+            continue
+        half = spawn.template.footprint // 2
+        for center in _zone_of(setup, state, spawn.team):
+            cells = [
+                (x, y)
+                for y in range(center[1] - half, center[1] + half + 1)
+                for x in range(center[0] - half, center[0] + half + 1)
+            ]
+            if is_standable(state, center) and all(
+                c not in used and _giant_cell_ok(state, c) for c in cells
+            ):
+                spots[index] = center
+                used.update(cells)
+                break
+        else:
+            raise BattleSetupError(f"{spawn.team.display_name}起始區放不下{spawn.template.name_zh}")
+    return spots
 
 
 def _zone_of(setup: BattleSetup, state: BattleState, team: Team) -> list[XY]:
@@ -377,7 +435,7 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
             unit.mana = min(spawn.mana, unit.max_mana)
         if spawn.stamina is not None:  # 開場耐力（3H-2：一輪存檔帶入）
             unit.stamina = min(spawn.stamina, unit.max_stamina)
-    mark_lone_wolves(state)  # 獨狼（LW-1，#156）：開場那一刻定下、整場固定
+    _settle_placement(setup, state)  # 巨型單位（GB-1a）＋獨狼（LW-1，#156）：開場那一刻定下
     state.source_wells = tuple(sorted(map_def.source_wells, key=lambda xy: (xy[1], xy[0])))
     if state.practice is not None:  # 主角與木樁的開場位置（#147：被推進致命地形時回到這裡）
         state.practice_homes = {
@@ -407,6 +465,31 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
     settle(ctx)
     start_turn(ctx, state.turn_order[0])
     return finish_resolution(ctx)
+
+
+def _settle_placement(setup: BattleSetup, state: BattleState) -> None:
+    """巨型單位（GB-1a，05 5.12.4、T3、T8）開場的兩件事：朝向改成地圖 ``giant_facing`` 指定的方向
+    （沒列的照陣營的開場朝向）；佔格上原有的表面直接清掉（不發事件；內容檢查本來就擋）。沒有巨型
+    單位時什麼都不做。最後標出獨狼（LW-1，#156：開場那一刻定下、整場固定）。"""
+    for unit in state.units_sorted():
+        if unit.footprint == 1:
+            continue
+        unit.facing = setup.map.giant_facing.get(unit.template_id, unit.facing)
+        for xy in tiles_of(unit):
+            tile = state.tile(*xy)
+            if tile.surface is not Surface.NONE:
+                state.set_tile(
+                    *xy,
+                    replace(
+                        tile,
+                        surface=Surface.NONE,
+                        surface_remaining=None,
+                        surface_team=None,
+                        surface_creator=None,
+                        surface_magnitude_permille=PERMILLE,
+                    ),
+                )
+    mark_lone_wolves(state)
 
 
 OPENING_STATUS_MAX_DURATION = 2

@@ -7,6 +7,7 @@ from dataclasses import replace
 from trpg.content.maps import MAX_HEIGHT
 from trpg.engine.context import Ctx
 from trpg.engine.events import EventBase, TerrainChanged, UnitFell
+from trpg.engine.rules.footprint import giant_at
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.race import fall_immune
 from trpg.shared.types import Pos, UnitId
@@ -17,11 +18,12 @@ __all__ = ["change_height"]
 def change_height(
     ctx: Ctx, xy: XY, new_height: int, source_id: UnitId | None = None
 ) -> list[EventBase]:
-    """改變高度；站在上面的單位跟著移動（往下落差達門檻時墜落）。"""
+    """改變高度；站在上面的單位跟著移動（往下落差達門檻時墜落）。巨型單位的佔格不改（GB-1a，
+    05 5.12.4 第 8 點「佔的格子高度一致」）。"""
     state = ctx.state
     tile = state.tile(*xy)
     new_height = max(0, min(MAX_HEIGHT, new_height))
-    if new_height == tile.height:
+    if new_height == tile.height or giant_at(state, xy) is not None:
         return []
     state.set_tile(*xy, replace(tile, height=new_height))
     events: list[EventBase] = [

@@ -101,8 +101,9 @@ def stand_up_cost(state: BattleState, unit: UnitState) -> int:
 
 
 def available_move_budget(state: BattleState, unit: UnitState) -> int | None:
-    """本回合還能用於走路的點數（倒地時扣掉站起的消耗）；站不起來或被定身時回傳 ``None``。"""
-    if is_rooted(state.ruleset, unit):
+    """本回合還能用於走路的點數（倒地時扣掉站起的消耗）；站不起來或被定身時回傳 ``None``。
+    巨型單位（GB-1a，第一版不做會移動的多格單位）一律 ``None``。"""
+    if is_rooted(state.ruleset, unit) or unit.footprint > 1:
         return None
     if not unit.has_status(PRONE):
         return unit.move_points
@@ -187,7 +188,9 @@ def path_map(
             continue
         for nxt in neighbors4(state, cur):
             other = occupied.get(nxt)
-            if other is not None and (other.team is not unit.team or not through_allies):
+            if other is not None and (
+                other.team is not unit.team or not through_allies or other.footprint > 1
+            ):  # 巨型單位（GB-1a）的佔格連友方也不能穿過
                 continue
             c = unit_step_cost(state, unit, cur, nxt)
             if c is None or (fear and fear_blocks_step(fear, cur, nxt)):

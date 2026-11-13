@@ -65,6 +65,7 @@ from trpg.engine.rules.combat import (
     rolled_damage_amount,
 )
 from trpg.engine.rules.facing import facing_between
+from trpg.engine.rules.footprint import is_giant
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.race import fall_immune
@@ -833,6 +834,8 @@ def _move_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="out_of_bounds")]
     if unit.has_tag(IMMOVABLE) and effect.mode in ("forced", "teleported"):  # 石像（3-33e2a）
         return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="immovable")]
+    if is_giant(unit):  # 巨型單位（GB-1a，05 5.12.4 第 6 點、T6）：任何位移都不動
+        return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="immovable")]
     occupant = state.unit_at(dx, dy)
     if occupant is not None and occupant.id != unit.id and effect.mode != "walk":
         return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="occupied")]
@@ -844,6 +847,8 @@ def _status_blocked(ctx: Ctx, unit: UnitState, status_id: str) -> str | None:
     Phase 3R-2）。"""
     if status_id == PRONE and unit.has_status(RACE_STONEWALL):
         return "stonewall"
+    if status_id == PRONE and is_giant(unit):  # 巨型單位（GB-1a，T6）：倒地免疫
+        return "immovable"
     if status_id == CONCEALED and prevents_concealment(ctx.rules, unit):
         return "revealed"
     return None
@@ -989,6 +994,10 @@ def _swap_units(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if first is None or second is None or not first.alive or not second.alive:
         return []
     a_xy, b_xy = first.xy, second.xy
+    giant = next((u for u in (first, second) if is_giant(u)), None)
+    if giant is not None:  # 巨型單位（GB-1a，T6）：換位免疫
+        to = second.pos if giant is first else first.pos
+        return [ctx.emit(MoveBlocked, unit_id=giant.id, to_pos=to, reason="immovable")]
     if not (is_standable(state, a_xy) and is_standable(state, b_xy)):
         return [ctx.emit(EffectFizzled, effect_kind="swap", pos=None, reason="swap_blocked")]
     events = arrive(ctx, first, b_xy, "swap", source_id=effect.source_id)
