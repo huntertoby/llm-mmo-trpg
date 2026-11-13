@@ -15,7 +15,6 @@ import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { PopupFrame } from "../ui/PopupFrame";
-import { DialogFrame } from "../ui/DialogFrame";
 import { battlefieldLine } from "./battlefield";
 import { EnemyThumb } from "./enemyThumb";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
@@ -112,23 +111,24 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
  * RG-3（#162，09 9.6.6）：精英要求一對一的對話框（`EncounterView.duel` ＝ `offered`）。接受、拒絕兩顆按鈕一樣大；
  * 說明字是伺服器的 `duel_zh`（寫明「兩邊獎勵一樣」）。插圖（精英剪影對主角剪影、交叉武器 320×120）美術還沒出：先做無插圖的版本。
  * 不選直接按「開戰」＝拒絕（RG-2 規則，照舊能打）。
+ * 不用 `DialogFrame`：遇敵卡本身是中上方的彈窗，`DialogFrame` 會疊在卡裡面、蓋住敵人清單又出現「移到下方」（RG-3 實機看過），
+ * 改成遇敵卡裡一段有框的小對話框（`role="group"`）。
  */
 function DuelDialog({ encounter, busy, onAct }: { encounter: NonNullable<WorldView["encounter"]>; busy: boolean; onAct(action: WorldAction): void }) {
   const elite = duelEliteName(encounter);
   return (
-    <DialogFrame label="單挑" title={`${elite}要求一對一`}>
-      <div className="duel-dialog" data-testid="world-duel">
-        {encounter.duel_zh != null && <p className="small">{encounter.duel_zh}</p>}
-        <div className="duel-choices">
-          <button type="button" className="primary" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: true })} data-testid="world-duel-accept">
-            接受
-          </button>
-          <button type="button" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: false })} data-testid="world-duel-decline">
-            拒絕
-          </button>
-        </div>
+    <div className="duel-dialog" data-testid="world-duel" role="group" aria-label="單挑">
+      <div className="duel-title">{`${elite}要求一對一`}</div>
+      {encounter.duel_zh != null && <p className="small">{encounter.duel_zh}</p>}
+      <div className="duel-choices">
+        <button type="button" className="primary" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: true })} data-testid="world-duel-accept">
+          接受
+        </button>
+        <button type="button" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: false })} data-testid="world-duel-decline">
+          拒絕
+        </button>
       </div>
-    </DialogFrame>
+    </div>
   );
 }
 
