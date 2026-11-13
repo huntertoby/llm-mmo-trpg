@@ -183,9 +183,9 @@ export function plainTerms(text: string): string {
     .join("");
 }
 
-/** 不可拆的詞（FL-1h，美術 11-13）：條件括號（`.fc-when`）可以在字間換行，但這些詞整個換到下一行，
- * 不會斷成「手持雙手／槍時才有」。 */
-export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍"];
+/** 不可拆的詞（FL-1h，美術 11-13）：條件括號（`.fc-when`）與下固定區的一句話（`.fc-say-line`，FL-1i）可以在字間換行，
+ * 但這些詞整個換到下一行，不會斷成「手持雙手／槍時才有」「重算強／度」（FL-1i，美術 RR-2 驗收 F-1）。 */
+export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍", "強度"];
 
 /** 純文字照不可拆詞切段：`keep` 為 true 的那段畫成不斷行。沒有不可拆詞時整段一個 `keep: false`。 */
 export function noBreakRuns(text: string, words: readonly string[] = FLASH_NO_BREAK_WORDS): { text: string; keep: boolean }[] {
