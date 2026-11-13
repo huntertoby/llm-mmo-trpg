@@ -1,4 +1,4 @@
-// Q 版小圖示第 1 批：武器 17 種 53 款＋副手 4 種 8 款（Phase QI-1a；照 docs/art/sample/qIconsWeapons.js 逐行搬，需求 3.2）。
+// Q 版小圖示第 1 批：武器 17 種 53 款＋副手 4 種 8 款（RG-5 加鳶盾的雲紋碑盾、熔殼塔盾兩款，畫法在 greatShields.ts）（Phase QI-1a；照 docs/art/sample/qIconsWeapons.js 逐行搬，需求 3.2）。
 // 一張圖放兩種框：米色圓章（武器小圖示 20、24、28px）與裝備格（32px 以上）。框照現行，這裡只畫框裡的圖。
 // 座標：48×48。斜放的武器畫在「握把 +y、作用端 −y」的直立座標再轉 45°；槍畫在「槍口 +x」再轉 −45°；手槍只斜 −0.42；拳套、盾、書、法器珠直立。
 // 和樣張不同的地方：
@@ -12,6 +12,9 @@ import {
   staffArt, starPts, swordArt, TAU, towerShield, diag as up,
   type Ctx, type DrawFn, type ArtPal, type Pt, type QOpts,
 } from "./core";
+import { sectIcon, shellIcon } from "./greatShields";
+import { shellPalOf } from "../qMoltenShell";
+import { sectPalOf } from "../qSectShield";
 
 const WOOD = "#7a5232", WOODL = "#a87648", CREAM = "#e8e0c8", GOLD = "#e8bb48", GOLDL = "#f6d878";
 
@@ -78,7 +81,7 @@ export const Q_WEAPON_KINDS: Readonly<Record<string, KindInfo>> = {
   dual_dagger: { zh: "雙匕首", forms: { short: "短刀", stiletto: "三稜刺", kris: "彎匕" } },
   staff: { zh: "杖", forms: { long: "長杖", scepter: "權杖", wand: "短杖", totem: "圖騰杖" }, diag: true },
   round_shield: { zh: "圓盾", forms: { wood: "木圓盾", banded: "包鐵圓盾" } },
-  kite_shield: { zh: "鳶盾", forms: { kite: "鳶盾", tower: "塔盾" } },
+  kite_shield: { zh: "鳶盾", forms: { kite: "鳶盾", tower: "塔盾", sect_great: "雲紋碑盾", molten_shell: "熔殼塔盾" } },
   tome: { zh: "法書", forms: { book: "典籍", scroll: "卷軸匣" } },
   orb: { zh: "法器珠", forms: { ball: "水晶球", floating: "浮空寶珠" } },
 };
@@ -655,7 +658,13 @@ function orbFloating(c: Ctx, o: QOpts, P: QPal): void {
 }
 const OFF: Readonly<Record<string, Builder>> = {
   round_shield: (r, P) => ({ block: true, badge: 0.8, d: (c, o) => roundShield(c, o, P, r.form === "banded") }),
-  kite_shield: (r, P) => (r.form === "tower" ? { block: true, badge: 0.87, d: (c, o) => towerShield(c, o, 24, 24, 1, 0, P.a, true) } : { block: true, badge: 0.86, d: (c, o) => kiteShield(c, o, P) }),
+  kite_shield: (r, P) => {
+    if (r.form === "tower") return { block: true, badge: 0.87, d: (c, o) => towerShield(c, o, 24, 24, 1, 0, P.a, true) };
+    /* RG-5 玩家大盾（rgPlayerShield.js 第 3 節）：碑盾盾邊照材質本色（混關鍵字之前）亮度（審查 P-1）；熔殼殼板混玄武岩、殼縫固定紅光 */
+    if (r.form === "sect_great") { const B = qPalette({ ...r, keywords: [], tintKw: undefined }), pal = sectPalOf(P.a, B.a, B.d); return { block: true, badge: 0.87, d: (c, o) => sectIcon(c, o, pal) }; }
+    if (r.form === "molten_shell") { const pal = shellPalOf(P.a); return { block: true, badge: 0.87, d: (c, o) => shellIcon(c, o, pal) }; }
+    return { block: true, badge: 0.86, d: (c, o) => kiteShield(c, o, P) };
+  },
   tome: (r, P) => ({ block: true, badge: 0.84, d: r.form === "scroll" ? (c, o) => tomeScroll(c, o, P) : (c, o) => tomeBook(c, o, P) }),
   orb: (r, P) => ({ block: true, badge: r.form === "floating" ? 0.9 : 0.88, d: r.form === "floating" ? (c, o) => orbFloating(c, o, P) : (c, o) => orbBall(c, o, P), pre: (c) => glow(c, 24, r.form === "floating" ? 23.6 : 20.6, 23, orbPair(P)[0], 0.5), post: r.form === "floating" ? (c, o) => { if (!o.small) { sparkle(c, "#ffffff", 40, 9, 2.6); sparkle(c, "#ffffff", 8, 38, 2); } } : undefined }),
 };

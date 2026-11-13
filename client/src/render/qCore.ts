@@ -299,5 +299,6 @@ export const rec = (who: string): ((hand: P2, ctx: Ctx) => void) | null => {
 export const mark = (n: string): void => void S.POSE?.layers?.push(n);
 export const clamp01 = (t: number): number => Math.max(0, Math.min(1, t));
 export const isShield = (it: QItem | null | undefined): boolean => !!it && String(it.kind).startsWith("shield");
-/** 塔盾一類（RG-4，docs/art/RG樣張.md 9.8 第 1 條）：塔盾與門派大盾 `sect_great` 共用握法、位移、圖層。 */
-export const isTowerLike = (it: QItem | null | undefined): boolean => !!it && it.kind === "shield_kite" && (it.form === "tower" || it.form === "sect_great");
+/** 塔盾一類（RG-4，docs/art/RG樣張.md 9.8 第 1 條；RG-5 加熔殼塔盾 10.5 第 2 條）：塔盾、雲紋碑盾 `sect_great`、熔殼塔盾 `molten_shell` 共用握法、位移、圖層。 */
+export const isTowerLike = (it: QItem | null | undefined): boolean =>
+  !!it && it.kind === "shield_kite" && (it.form === "tower" || it.form === "sect_great" || it.form === "molten_shell");

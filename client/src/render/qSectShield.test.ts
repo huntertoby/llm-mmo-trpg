@@ -77,14 +77,26 @@ describe("RG-4 雲紋碑盾", () => {
     expect(fills(tower, "front")).not.toContain(RED);
   });
 
-  it("不認得的 emblem 不畫紋樣；沒有顏色時用樣張預設的青面月白邊", () => {
+  it("不認得的 emblem 不畫紋樣；帶 trim 沒有 color 時盾面用樣張預設的青", () => {
     const u = disciple();
-    const odd = withOff(u, { kind: "shield_kite", form: "sect_great", material: "wood", emblem: "taiji" });
+    const odd = withOff(u, { kind: "shield_kite", form: "sect_great", material: "wood", trim: "#dfe4e2", emblem: "taiji" });
     for (const v of ["front", "side"] as const) {
       const f = fills(odd, v);
       expect(f, v).not.toContain(RED);
       expect(f, v).toContain("#5f8f8a");
       expect(f, v).toContain("#dfe4e2");
+    }
+  });
+
+  it("RG-5：沒有 trim（玩家）照材質補色，不認得的 emblem 一樣不畫；盾面是材質色、不是青", () => {
+    const hero = qUnitOf(resolveDollT({ template: "hero_fighter", team: "ally", summon: false, weaponId: "one_handed_sword" }));
+    const odd = withOff(hero, { kind: "shield_kite", form: "sect_great", material: "wood", emblem: "taiji" });
+    for (const v of ["front", "side"] as const) {
+      const f = fills(odd, v);
+      expect(f, v).not.toContain(RED);
+      expect(f, v).not.toContain("#5f8f8a");
+      expect(f, v).toContain("#a06a36"); // 木（material.ts）
+      expect(f, v).toContain("#dfe4e2"); // 木的亮度 < 150 → 月白邊
     }
   });
 });

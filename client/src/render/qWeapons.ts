@@ -2,6 +2,7 @@
 // 另含樣張 paperdoll.js 的 drawWeapon／drawWeapon2（盾、書、法球與 QW 沒有的手持物，畫在手的位置；pdHeld）。
 import type { Ctx } from "./artDraw";
 import { fill, getM, invM, isTowerLike, pz, rr, S, setM, TAU, tp, wc, colors, type P2, type QItem } from "./qCore";
+import { shellFront } from "./qMoltenShell";
 import { sectShieldFront } from "./qSectShield";
 import { QW_HELD } from "./qNpcHeld";
 
@@ -617,9 +618,14 @@ function pdHeld2(ctx: Ctx, it: QItem, x: number, front: boolean): void {
       break;
     }
     case "shield_kite":
-      // 門派大盾（RG-4 雲紋碑盾，敵人專用）：照樣張 rgUnits.js front()，錨點同塔盾
+      // 雲紋碑盾（RG-4 持盾弟子；RG-5 起玩家也能用）：照樣張 rgUnits.js front()，錨點同塔盾
       if (it.form === "sect_great") {
         sectShieldFront(ctx, it);
+        break;
+      }
+      // 熔殼塔盾（RG-5，玩家形制）：照樣張 rgPlayerShield.js shellFront()，錨點同塔盾
+      if (it.form === "molten_shell") {
+        shellFront(ctx, it);
         break;
       }
       // 塔盾：長方形大盾

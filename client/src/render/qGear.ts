@@ -3,6 +3,7 @@
 import type { Ctx } from "./artDraw";
 import { colors, fill, isTowerLike, mix, pz, Q_OUT, rotAt, rr, S, TAU, type QItem, type QLook, type QView } from "./qCore";
 import { bodyPattern, drawLegForm, isNeckForm } from "./qGearForms";
+import { shellBack, shellSide } from "./qMoltenShell";
 import { sectShieldBack, sectShieldSide } from "./qSectShield";
 import { pdHeld } from "./qWeapons";
 
@@ -245,6 +246,7 @@ export function shieldSide(ctx: Ctx, it: QItem): void {
   ctx.save();
   ctx.translate(8.6, -13.5 - pz("shieldUp"));
   if (it.form === "sect_great" && tower) sectShieldSide(ctx, it);
+  else if (it.form === "molten_shell" && tower) shellSide(ctx, it);
   else if (it.kind === "shield_round") {
     fill(ctx, d, () => ctx.ellipse(0, 0, 2.9, 7.5, 0, 0, TAU));
     fill(ctx, c, () => ctx.ellipse(0.6, 0, 2.1, 6.2, 0, 0, TAU));
@@ -292,6 +294,8 @@ export function shieldBack(ctx: Ctx, it: QItem, x: number, dy = 0): void {
     ctx.stroke();
   } else if (it.form === "sect_great" && isTowerLike(it)) {
     sectShieldBack(ctx, it);
+  } else if (it.form === "molten_shell" && isTowerLike(it)) {
+    shellBack(ctx, it);
   } else if (isTowerLike(it)) {
     fill(ctx, d, () => rr(ctx, -7, -6, 14, 22, 1.5));
     fill(ctx, wood, () => rr(ctx, -5.6, -4.6, 11.2, 19.2, 1));
