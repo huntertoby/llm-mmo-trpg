@@ -1,5 +1,6 @@
 """RG-3（#162 戰場標記前端）要的 API 欄位：瞄準預告會被誰擋（``ChargeOut.lock_blocker_id``）、
-落空事件的射出者與擋下的人（``lock_caster_id``／``lock_blocker_id``）、盾兵掩護的盾兵（``CoverOut.unit_id``）。"""
+落空事件的射出者與擋下的人（``lock_caster_id``／``lock_blocker_id``；RG-3b 起擋下改打讀
+``lock_intercepted``）、盾兵掩護的盾兵（``CoverOut.unit_id``）。"""
 
 from __future__ import annotations
 
@@ -11,7 +12,7 @@ from trpg.api.telegraph import telegraph_out
 from trpg.engine import Attack, preview, resolve
 from trpg.engine.actions import EndTurn
 from trpg.engine.events import EventBase
-from trpg.engine.state import BattleState
+from trpg.engine.state import BattleState, StatusInstance
 from trpg.shared.types import Pos, Team
 
 
@@ -55,10 +56,30 @@ def test_the_archers_own_side_is_not_a_blocker() -> None:
     assert _lock_charge(state)["lock_blocker_id"] is None
 
 
-def test_a_blocked_fizzle_carries_the_caster_and_the_blocker() -> None:
+def test_an_intercepted_shot_names_the_caster_and_the_blocker() -> None:
+    """RG-3b（AF-1）：隊友擋在中間時改打擋住的人、不再落空；「被擋下」讀 ``lock_intercepted``
+    自帶的 ``unit_id``／``blocker_id``，沒有 ``lock_on_*`` 落空事件。"""
     state = aim(arena(third=(Team.ALLY, (2, 0), "bandit"))).state
     state.units[THIRD].pos = Pos(x=4, y=4)
     events, after = _to_archer_turn(state)
+    out = team_events_out(events, after, Team.ALLY)
+    (caught,) = [e for e in out if e["type"] == "lock_intercepted"]
+    assert caught["unit_id"] == ARCHER and caught["target_id"] == HERO
+    assert caught["blocker_id"] == THIRD and "text" in caught
+    assert not [e for e in out if str(e.get("reason", "")).startswith("lock_on")]
+    shot = [e for e in out if e["type"] == "attack_rolled" and e.get("attacker_id") == ARCHER]
+    assert [e["target_id"] for e in shot] == [THIRD]
+
+
+def test_a_blocker_who_cannot_be_picked_still_fizzles_with_the_blocker() -> None:
+    """擋住的人本身選不到（2 格外的隱蔽）才照舊 ``lock_on_blocked`` 落空：引擎事件沒有擋住的人，
+    API 仍推算 ``lock_blocker_id``。"""
+    state = aim(arena(third=(Team.ALLY, (2, 0), "bandit"))).state
+    state.units[THIRD].pos = Pos(x=4, y=4)  # 離弓手 3 格
+    state.units[THIRD].statuses.append(StatusInstance("concealed", remaining=3))
+    events, after = _to_archer_turn(state)
+    out = team_events_out(events, after, Team.ALLY)
+    assert not [e for e in out if e["type"] == "lock_intercepted"]
     fizzle = _fizzle(events, after)
     assert fizzle["reason"] == "lock_on_blocked"
     assert fizzle["lock_caster_id"] == ARCHER and fizzle["lock_blocker_id"] == THIRD
