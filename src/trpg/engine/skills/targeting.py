@@ -90,13 +90,14 @@ from trpg.engine.skills.scaling import mastery_reach_bonus, skill_scaling_value
 from trpg.engine.stack_queries import required_stack
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Element, ObjectId, Pos, UnitId
+from trpg.shared.types import Element, ObjectId, Pos, Team, UnitId
 
 __all__ = [
     "DamageParameters",
     "PaidCost",
     "ResolvedEffect",
     "SkillArea",
+    "aims_first",
     "center_tiles",
     "checked_area",
     "composite_area",
@@ -1019,6 +1020,12 @@ def summon_site_problem(state: BattleState, xy: XY) -> str | None:
     return None
 
 
+def aims_first(caster: UnitState, skill: SkillDef) -> bool:
+    """這次施放要先瞄準（RG-1 ``lock_on`` 而且施放者不是玩家方；AF-1，05 5.7「瞄準預告只限敵方」）。
+    施放、選目標、預覽都看它（:mod:`trpg.engine.lock_on` 照樣匯出）。"""
+    return skill.lock_on and caster.team is not Team.ALLY
+
+
 def checked_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
@@ -1087,7 +1094,8 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
         for unit in revive_candidates(state, caster) if revive else state.living_units():
             if manhattan(caster.xy, unit.xy) <= reach:
                 yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
-        if skill.shape.type != "chain" and not revive and not skill.lock_on:  # 瞄準只對單位（RG-1）
+        # 瞄準預告（RG-1）只對單位
+        if skill.shape.type != "chain" and not revive and not aims_first(caster, skill):
             for obj in state.objects_sorted():
                 if manhattan(caster.xy, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))

@@ -41,9 +41,9 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/121"
-"""目前的戰鬥紀錄版本（``/121``，Phase RG-2：敵方陷阱的可疑痕跡 ``TrapState.traced_by``、事件
-``trap_traced``、``trap_glance``）。
+LOG_FORMAT = "trpg-battle-log/122"
+"""目前的戰鬥紀錄版本（``/122``，Phase AF-1：瞄準預告的擋箭改打擋住的人（事件 ``lock_intercepted``）、
+隱蔽照一般規則、只限非玩家方；連擊點與氣一次出招最多 +1）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

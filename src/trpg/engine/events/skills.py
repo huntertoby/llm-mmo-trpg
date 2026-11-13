@@ -76,6 +76,20 @@ class FollowupCharged(EventBase):
     施放者下一個自己的回合開始時對他射出；不是瞄準時為 ``None``、不輸出。"""
 
 
+class LockIntercepted(EventBase):
+    """瞄準預告（RG-1 ``lock_on``）射出時，目標的隊友擋在中間：這一擊改打擋住的人（AF-1，05 5.7）。
+    緊接著是對 ``blocker_id`` 的一般結算（``skill_followup``、命中與傷害）。"""
+
+    type: Literal["lock_intercepted"] = "lock_intercepted"
+    unit_id: UnitId
+    skill_id: str
+    name_zh: str
+    target_id: UnitId
+    """原本瞄準的人（不受這一擊影響）。"""
+    blocker_id: UnitId
+    """擋在中間、吃下這一擊的人。"""
+
+
 class FollowupCancelled(EventBase):
     """延遲段（Phase 3F-4b）取消：``downed`` 施放者倒下、``controlled`` 被暈眩或冰凍
     （``skip_turn`` 的狀態）、``silenced`` 法術型蓄力被沉默打斷（Phase 5A-M1b）、

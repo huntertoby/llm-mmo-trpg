@@ -5,7 +5,7 @@
 - 技能層級：層數不足時不在 ``legal_actions``、施放被擋、原因是中文；足夠時能放而且不消耗層數。
 - 效果層級：以施放開始時的層數判斷——終結技先花光層數，「滿 N 層」的效果照樣成立；N−1 層不成立。
 - 雙匕首施放單體武器技：兩下都中 +1、第一下沒中第二下中 +1、兩下都沒中 0；單手武器 +1；範圍武器技
-  打中兩個目標仍各 +1（每個目標一次）。
+  打中兩個目標也只 +1（AF-1，06 6.32.1「一次出招最多 +1」）。
 """
 
 from __future__ import annotations
@@ -160,7 +160,7 @@ def test_an_any_of_branch_reads_the_snapshot_too(monkeypatch: pytest.MonkeyPatch
 
 
 # ---------------------------------------------------------------------------
-# 3. 雙匕首每次出招只 +1 連擊點（同一次施放對同一個目標最多一次）
+# 3. 雙匕首每次出招只 +1 連擊點（一次出招最多一次，AF-1 起不分目標）
 # ---------------------------------------------------------------------------
 
 DUAL = [
@@ -190,12 +190,12 @@ def test_a_one_handed_weapon_skill_still_gains_one(monkeypatch: pytest.MonkeyPat
     assert combo_of(use(state).state) == 1
 
 
-def test_an_area_weapon_skill_gains_once_per_target_hit(monkeypatch: pytest.MonkeyPatch) -> None:
-    """範圍武器技打中兩個目標仍各 +1（每個目標一次，現況；待 PM）。"""
+def test_an_area_weapon_skill_gains_once_per_cast(monkeypatch: pytest.MonkeyPatch) -> None:
+    """範圍武器技打中兩個目標也只 +1（AF-1，使用者「都照建議」：一次出招最多 +1）。"""
     line = {"type": "line", "size": 2}
     state = scene(weapon_skill(STRIKE, shape=line), foes=((4, 3), (5, 3)), weapon="dual_dagger")
     d20s(monkeypatch, [HIT, HIT])
     result = resolve(state, UseSkill(unit_id=U1, skill_id=SID, direction="east"))
     hit = {e.target_id for e in of(result, DamageDealt)}
     assert hit == {U2, U3}
-    assert combo_of(result.state) == 2
+    assert combo_of(result.state) == 1

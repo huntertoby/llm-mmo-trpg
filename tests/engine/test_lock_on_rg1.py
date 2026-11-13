@@ -2,8 +2,9 @@
 規格 ``docs/phases/PhaseRG計畫.md`` 1.1）。
 
 每列一條規則句、實際跑引擎（內建的鶴唳穿雲，不另造測試技能）：施放＝瞄準（付代價、不擲命中），
-施放者下一個自己的回合開始才射出；四種應對（斷視線、隱蔽、隊友擋在中間、近戰打斷）與目標倒下、
-走出射程都讓它落空；自己陣營的單位不擋、遠程打中弓手不打斷、普通射擊照舊不預告。
+施放者下一個自己的回合開始才射出；斷視線、隱蔽（照一般隱蔽規則，AF-1）、近戰打斷與目標倒下、
+走出射程都讓它落空，隊友擋在中間改打擋住的人（AF-1，``test_af1_rules.py``）；自己陣營的單位不擋、
+遠程打中弓手不打斷、普通射擊照舊不預告。
 """
 
 from __future__ import annotations
@@ -153,18 +154,20 @@ def test_breaking_line_of_sight_behind_cover_makes_it_miss() -> None:
     assert fizzles(events) == ["lock_on_lost"] and not shots(events)
 
 
-def test_entering_concealment_makes_it_miss_at_any_distance() -> None:
-    state = aim(arena(hero=(3, 4))).state  # 距離 2：一般規則下隱蔽的目標仍可攻擊
+def test_entering_concealment_beyond_two_tiles_makes_it_miss() -> None:
+    """AF-1：隱蔽照一般隱蔽規則（2 格內照射，見 ``test_af1_rules.py``）；2 格外落空。"""
+    state = aim(arena(hero=(5, 4))).state  # 距離 4
     state.units[HERO].statuses.append(StatusInstance("concealed", remaining=3))
     events = to_archer_turn(state)
     assert fizzles(events) == ["lock_on_concealed"] and not shots(events)
 
 
-def test_an_ally_standing_in_between_blocks_the_shot() -> None:
+def test_an_ally_standing_in_between_takes_the_shot() -> None:
+    """AF-1（05 5.7）：改打擋住的人，不再整發落空。"""
     state = aim(arena(third=(Team.ALLY, (2, 0), "bandit"))).state
     state.units[THIRD].pos = Pos(x=4, y=4)  # 隊友走到弓手與目標之間
     events = to_archer_turn(state)
-    assert fizzles(events) == ["lock_on_blocked"] and not shots(events)
+    assert not fizzles(events) and [r.target_id for r in shots(events)] == [THIRD]
 
 
 def test_the_archers_own_side_does_not_block() -> None:

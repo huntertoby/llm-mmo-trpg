@@ -5,10 +5,17 @@
 :mod:`trpg.engine.delayed`）；射出前依序檢查，第一個不成立的就落空（:func:`lock_problem`）：
 
 1. 目標還站著（``lock_on_lost``）；
-2. 目標沒有隱蔽——**不論距離**（施放者看穿隱蔽時不算；``lock_on_concealed``）；
-3. 照一般施放的選取仍然合法：射程、視線（``lock_on_lost``）；
-4. 施放者到目標的直線上（兩個方向的 Bresenham，不含兩端）沒有**目標陣營**的存活單位
-   （隊友擋在中間；``lock_on_blocked``）。施放者自己陣營的單位（例如盾兵）不擋。
+2. 照一般施放的選取仍然合法：射程、視線、**一般的隱蔽規則**（AF-1，05 5.7「隱蔽照一般隱蔽規則」：
+   2 格內照射、2 格外選不到）。選不到時，目標是施放者看不見的隱蔽就記成 ``lock_on_concealed``，
+   其他記成 ``lock_on_lost``。
+
+接著看 **擋在中間的人**（:func:`lock_victim`，AF-1，05 5.7「隊友擋在中間＝改打擋住的人」）：
+施放者到目標的直線上（兩個方向的 Bresenham，不含兩端）有**目標陣營**的存活單位時，這一擊改打
+直線上離施放者最近的那一個（照一般施放對他選取）；擋住的人本身選不到時才落空（``lock_on_blocked``）。
+施放者自己陣營的單位（例如盾兵）不擋。
+
+**只限非玩家方**（AF-1，05 5.7「瞄準預告只限敵方」）：:func:`aims_first` 是唯一的判斷——玩家方
+（``Team.ALLY``）的單位放 ``lock_on`` 招（例如複製技能複製到敵人的瞄準招）就是一般施放。
 
 瞄準中的施放者被近戰攻擊命中時取消（``interrupted``，:func:`lock_interrupted`，由
 :func:`trpg.engine.reactions.hit_reactions` 呼叫）。
@@ -20,7 +27,7 @@ from trpg.content.skills import CHARGING, SkillDef
 from trpg.engine.actions import UseSkill
 from trpg.engine.rules.combat import is_concealed, sees_hidden
 from trpg.engine.rules.geometry import bresenham
-from trpg.engine.skills.targeting import SkillArea, checked_area
+from trpg.engine.skills.targeting import SkillArea, aims_first, checked_area
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import UnitId
@@ -29,18 +36,20 @@ __all__ = [
     "LOCK_BLOCKED",
     "LOCK_CONCEALED",
     "LOCK_LOST",
+    "aims_first",
     "lock_blocker",
     "lock_pick",
     "lock_problem",
     "lock_target_of",
+    "lock_victim",
 ]
 
 LOCK_LOST = "lock_on_lost"
 """落空：目標倒下、走出射程或被掩護物斷了視線（一般施放的選取不合法）。"""
 LOCK_CONCEALED = "lock_on_concealed"
-"""落空：目標進入隱蔽（不論距離）。"""
+"""落空：目標進入隱蔽，而且照一般隱蔽規則選不到（2 格外；AF-1 起不再是「不論距離」）。"""
 LOCK_BLOCKED = "lock_on_blocked"
-"""落空：目標的隊友擋在施放者與目標之間。"""
+"""落空：目標的隊友擋在施放者與目標之間，而且擋住的人本身選不到（AF-1 起能選到就改打他）。"""
 
 
 def lock_target_of(unit: UnitState) -> UnitId | None:
@@ -82,10 +91,18 @@ def lock_problem(
     """射出前的檢查：落空的原因（``effect_fizzled.reason``），可以射出時為 ``None``。"""
     if target is None or not target.alive:
         return LOCK_LOST
-    if is_concealed(state, target) and not sees_hidden(state, caster, target):
-        return LOCK_CONCEALED
     if lock_pick(state, caster, skill, target) is None:
-        return LOCK_LOST
-    if lock_blocker(state, caster, target) is not None:
-        return LOCK_BLOCKED
+        hidden = is_concealed(state, target) and not sees_hidden(state, caster, target)
+        return LOCK_CONCEALED if hidden else LOCK_LOST
     return None
+
+
+def lock_victim(
+    state: BattleState, caster: UnitState, skill: SkillDef, target: UnitState
+) -> UnitState | None:
+    """真正吃到這一擊的人（:func:`lock_problem` 已通過時呼叫）：沒有人擋時是目標；目標的隊友擋在
+    中間時是擋住的那個人（AF-1）；擋住的人本身選不到時為 ``None``（``lock_on_blocked`` 落空）。"""
+    blocker = lock_blocker(state, caster, target)
+    if blocker is None:
+        return target
+    return blocker if lock_pick(state, caster, skill, blocker) is not None else None

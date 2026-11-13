@@ -61,6 +61,7 @@ from trpg.engine.skills.followups import (
 from trpg.engine.skills.targeting import (
     PaidCost,
     SkillArea,
+    aims_first,
     center_tiles,
     checked_area,
     composite_area,
@@ -112,7 +113,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     if problem is not None:
         raise IllegalActionError(problem)
     area = checked_area(ctx.state, caster, skill, action)
-    if skill.lock_on and action.target_id is None:
+    if aims_first(caster, skill) and action.target_id is None:
         raise IllegalActionError(f"{skill.name_zh} 要瞄準一名單位")
     origin = _planned_followup(ctx.state, caster, skill, action)
     paid_area = area
@@ -132,7 +133,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
         elif skill.trap is not None:  # 陷阱技能：施放時只放置陷阱，其餘效果等觸發時結算
             assert action.target_pos is not None
             place_trap(ctx, caster, skill, (action.target_pos.x, action.target_pos.y))
-        elif skill.lock_on and not ctx.fire_lock:  # 瞄準預告（RG-1，#162）：施放＝瞄準
+        elif aims_first(caster, skill) and not ctx.fire_lock:  # 瞄準預告（RG-1）：施放＝瞄準
             assert action.target_id is not None
             charge_lock_on(ctx, caster, skill, ctx.state.units[action.target_id])
         else:

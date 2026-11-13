@@ -46,8 +46,8 @@ type GainOn = Literal[
 ]
 """自動累積的時機（Phase 3-52，06 6.32）：
 
-- ``weapon_skill_hit``：持有者的武器技命中（每個被命中的單位 +1）；
-- ``basic_attack_hit``：持有者的普攻命中；
+- ``weapon_skill_hit``：持有者的武器技命中（一次出招最多 +1，AF-1）；
+- ``basic_attack_hit``：持有者的普攻命中（一次普攻最多 +1，AF-1）；
 - ``damaged``：持有者受到傷害（數值大於 0）；
 - ``kill``：持有者造成的傷害讓敵人倒下；
 - ``summon_downed``：持有者的召喚物被打倒；

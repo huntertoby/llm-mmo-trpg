@@ -19,8 +19,9 @@
   條件），施放者移動也不跟著走。命中、抵抗仍以施放者本人計。
 - **瞄準預告**（RG-1，#162，``lock_on``）：施放＝瞄準（:func:`charge_lock_on`）——蓄力狀態的
   ``lock_target`` 記住目標，預計範圍是目標當下的格子（跟著目標走）；下回合開始時先照
-  :func:`trpg.engine.lock_on.lock_problem` 檢查（倒下或出射程、隱蔽、隊友擋在中間時落空），再以技能
-  本身對目標結算。瞄準中被近戰命中時取消（``interrupted``）。
+  :func:`trpg.engine.lock_on.lock_problem` 檢查（倒下、出射程、斷視線、照一般規則選不到的隱蔽
+  時落空），再以技能本身結算；目標的隊友擋在中間時改打擋住的人（AF-1，:func:`~trpg.engine.lock_on.lock_victim`，
+  先發 ``lock_intercepted``）。瞄準中被近戰命中時取消（``interrupted``）。
 - 第二段的結算由 :func:`trpg.engine.skills.casting.run_delayed` 處理（命中、傷害照常；不付
   代價，代價在施放時已付）。
 - ``charging`` 是中性、有益的狀態：不會被淨化、驅散或奪取。
@@ -54,10 +55,11 @@ from trpg.engine.events import (
     EventBase,
     FollowupCancelled,
     FollowupCharged,
+    LockIntercepted,
     StatusApplied,
     UnitDowned,
 )
-from trpg.engine.lock_on import lock_pick, lock_problem
+from trpg.engine.lock_on import LOCK_BLOCKED, lock_pick, lock_problem, lock_victim
 from trpg.engine.rules.facing import face_toward
 from trpg.engine.rules.forms import breath_of, is_spell_for_silence
 from trpg.engine.rules.statuses import skip_turn_status
@@ -263,7 +265,8 @@ def _release(ctx: Ctx, unit: UnitState, skill: SkillDef, status: StatusInstance)
 def _release_lock(ctx: Ctx, unit: UnitState, skill: SkillDef, target_id: str) -> None:
     """瞄準預告射出（RG-1）：:func:`~trpg.engine.lock_on.lock_problem` 不成立時落空
     （``effect_fizzled``，原因是落空的種類，``pos`` 是目標的格子；目標不在場上時是施放者的格子）；
-    否則以技能本身對目標結算（同延遲段，不再付代價）。"""
+    否則以技能本身結算（同延遲段，不再付代價）。目標的隊友擋在中間時改打擋住的人（AF-1，先發
+    ``lock_intercepted``）；擋住的人本身選不到時落空（``lock_on_blocked``）。"""
     target = ctx.state.units.get(UnitId(target_id))
     problem = lock_problem(ctx.state, unit, skill, target)
     if problem is not None:
@@ -271,8 +274,21 @@ def _release_lock(ctx: Ctx, unit: UnitState, skill: SkillDef, target_id: str) ->
         ctx.emit(EffectFizzled, effect_kind="followup", pos=pos, reason=problem)
         return
     assert target is not None
-    found = lock_pick(ctx.state, unit, skill, target)
-    assert found is not None  # lock_problem 已檢查過
+    victim = lock_victim(ctx.state, unit, skill, target)
+    if victim is None:
+        ctx.emit(EffectFizzled, effect_kind="followup", pos=target.pos, reason=LOCK_BLOCKED)
+        return
+    if victim is not target:
+        ctx.emit(
+            LockIntercepted,
+            unit_id=unit.id,
+            skill_id=skill.id,
+            name_zh=skill.name_zh,
+            target_id=target.id,
+            blocker_id=victim.id,
+        )
+    found = lock_pick(ctx.state, unit, skill, victim)
+    assert found is not None  # lock_problem／lock_victim 已檢查過
     run_delayed(ctx, unit, skill, *found)
 
 

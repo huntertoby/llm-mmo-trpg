@@ -122,6 +122,7 @@ from trpg.engine.events.skills import (
     GambleRolled,
     GearHpLost,
     GearTriggered,
+    LockIntercepted,
     OverloadTriggered,
     SkillActivated,
     SkillCooldownChanged,
@@ -267,6 +268,7 @@ type Event = Annotated[
     | SkillCopied
     | SkillFollowup
     | FollowupCharged
+    | LockIntercepted
     | FollowupCancelled
     | ZoneCreated
     | ZoneMoved
