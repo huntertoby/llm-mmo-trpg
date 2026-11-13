@@ -279,7 +279,9 @@
   line-height: 1.35;
   word-break: keep-all;
   overflow-wrap: anywhere;
-  text-wrap: balance; /* TXT-2（美術 PM）：兩行長度接近，第二行不只剩一兩個字 */
+  /* TXT-2：試過 text-wrap: balance（美術 PM），退回不加。超過兩行被截斷時，Chrome 會把藏起來的行改排成更多行、
+     並在詞中間斷開（「更／多敵人」「持／續」），違反「不斷回詞中間、行數不變」的條件；107 個大標在 1600／800／376
+     也都沒有任何一個斷行位置因此改變（`docs/phases/PhaseTXT-2報告.md`）。 */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; /* 最多折兩行 */

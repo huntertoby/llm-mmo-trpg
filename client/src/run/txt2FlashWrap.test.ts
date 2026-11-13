@@ -11,9 +11,9 @@ function rule(selector: string): string {
 }
 
 describe("選變體畫面的換行（TXT-2）", () => {
-  it("大標加 text-wrap: balance，仍是 keep-all＋兩行截斷", () => {
+  it("大標不加 text-wrap: balance（截斷時會在藏起來的行裡斷回詞中間，報告第 11 項），照舊 keep-all＋兩行截斷", () => {
     const head = rule(".fc-headline");
-    expect(head).toContain("text-wrap: balance");
+    expect(head).not.toMatch(/text-wrap:\s*balance/);
     expect(head).toContain("word-break: keep-all");
     expect(head).toContain("line-clamp: 2");
   });
