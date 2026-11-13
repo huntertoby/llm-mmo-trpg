@@ -63,6 +63,7 @@ from trpg.engine.ids import IMMOVABLE, RACE_STONEWALL, STEADFAST, TOPPLABLE, nex
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.facing import facing_toward_enemies
+from trpg.engine.rules.footprint import giant_at, is_giant
 from trpg.engine.rules.landing import landing_problem, nearest_free
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.race import hazard_push_reduction
@@ -122,6 +123,8 @@ def set_surface(
     由效果佇列在清空前觸發（``depth`` 為造成改變的效果深度）。
     """
     state = ctx.state
+    if surface is not Surface.NONE and giant_at(state, xy) is not None:
+        return []  # 巨型單位的佔格不能有表面（GB-1a，05 5.12.4 第 1 點、T3）：跳過、不發事件
     tile = state.tile(*xy)
     if surface is Surface.NONE:
         remaining = None
@@ -456,6 +459,8 @@ def _inscribe(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return [_fizzle(ctx, effect.kind, xy, "out_of_bounds")]
     if not is_standable(ctx.state, xy):
         return [_fizzle(ctx, effect.kind, xy, "not_standable")]
+    if giant_at(ctx.state, xy) is not None:  # 巨型單位的佔格不能放東西（GB-1a，T3）
+        return [_fizzle(ctx, effect.kind, xy, "occupied")]
     return inscribe_rune(
         ctx,
         effect.source_id,
@@ -602,7 +607,7 @@ type _ResistReason = Literal["steadfast", "immovable", "race_stonewall", "race_h
 def _resist_reason(unit: UnitState) -> _ResistReason:
     if unit.has_status(RACE_STONEWALL):
         return "race_stonewall"
-    if unit.has_tag(IMMOVABLE):
+    if unit.has_tag(IMMOVABLE) or is_giant(unit):
         return "immovable"
     return "steadfast" if unit.has_tag(STEADFAST) else "race_heavy"
 
@@ -620,7 +625,7 @@ def push_distance(
     """
     if unit.has_status(RACE_STONEWALL):
         return 0
-    if unit.has_tag(IMMOVABLE):  # 石像（Phase 3-33e2a）：完全推不動
+    if unit.has_tag(IMMOVABLE) or is_giant(unit):  # 石像（Phase 3-33e2a）、巨型單位（GB-1a）
         return 0
     distance = requested
     if unit.has_tag(STEADFAST):
@@ -940,6 +945,8 @@ def _change_tile(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     state = ctx.state
     xy = effect.pos
     events: list[EventBase] = []
+    if giant_at(state, xy) is not None:
+        return events  # 巨型單位的佔格（GB-1a，D10）：高度與地形保持一致、也不能有表面，整個跳過
     if effect.height is not None:
         events.extend(change_height(ctx, xy, effect.height))
     if effect.terrain is not None:

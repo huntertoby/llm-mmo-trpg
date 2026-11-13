@@ -199,7 +199,7 @@ class VaultPlan:
 
 
 def _unit_on(state: BattleState, xy: XY) -> UnitState | None:
-    return next((u for u in state.units_sorted() if u.alive and u.xy == xy), None)
+    return state.unit_at(*xy)  # 巨型單位（GB-1a）的每一格都算
 
 
 def _landing_problem(state: BattleState, unit: UnitState, dest: XY) -> str | None:

@@ -64,6 +64,11 @@ def _empty(value: object) -> bool:
     return not value
 
 
+def _single(value: object) -> bool:
+    """序列化時省略的佔格邊長（GB-1a）：一格的單位 JSON 不變。"""
+    return value == 1
+
+
 type Facing = Literal["north", "east", "south", "west"]
 """單位的朝向（Phase 3D-8d，四方向；北 ＝ y − 1）。背後格 ＝ 位置 ＋ 朝向的反方向。"""
 
@@ -551,6 +556,10 @@ class UnitState:
     """獨狼（LW-1，06 6.37、#156；``lone_wolf`` 條件）：開戰那一刻自己的陣營除了自己沒有其他非召喚
     單位。開場時算一次（:func:`trpg.engine.battle.begin_battle`），整場固定；之後加入的單位（援軍、
     召喚、階段召喚）的值一律 ``False``。``False`` 時不輸出（JSON 與改前相同）。"""
+    footprint: Annotated[int, Field(exclude_if=_single)] = 1
+    """佔格邊長（GB-1a，05 5.12.4、T1）：1＝一般單位；3＝不動巨型頭目（佔 3×3，``pos`` 是中心格）。
+    由範本帶入、整場不變；佔哪些格一律走 :func:`trpg.engine.rules.footprint.tiles_of`。等於 1 時不
+    輸出（JSON 與改前相同）。"""
 
     @property
     def alive(self) -> bool:
@@ -565,6 +574,13 @@ class UnitState:
     @property
     def xy(self) -> tuple[int, int]:
         return (self.pos.x, self.pos.y)
+
+    def covers(self, x: int, y: int) -> bool:
+        """``(x, y)`` 是這個單位佔的格子（GB-1a；一格的單位就是 ``pos``）。不看存活。"""
+        if self.footprint == 1:
+            return self.pos.x == x and self.pos.y == y
+        half = self.footprint // 2
+        return abs(self.pos.x - x) <= half and abs(self.pos.y - y) <= half
 
     @property
     def all_skills(self) -> tuple[str, ...]:
@@ -680,6 +696,7 @@ class UnitState:
             part_mods=dict(self.part_mods),
             suppressed_statuses=self.suppressed_statuses,
             lone_wolf=self.lone_wolf,
+            footprint=self.footprint,
         )
 
 
@@ -853,16 +870,25 @@ class BattleState:
         return [u for u in self.units_sorted() if u.alive]
 
     def unit_at(self, x: int, y: int) -> UnitState | None:
-        """站在 ``(x, y)`` 的存活單位（同一格最多一個）。"""
+        """站在 ``(x, y)`` 的存活單位（同一格最多一個）；巨型單位（GB-1a）佔的每一格都算它。"""
         for uid in sorted(self.units):
             u = self.units[uid]
-            if u.alive and u.pos.x == x and u.pos.y == y:
+            if u.alive and u.covers(x, y):
                 return u
         return None
 
     def occupancy(self) -> dict[tuple[int, int], UnitState]:
-        """存活單位的位置表。"""
-        return {u.xy: u for u in self.living_units()}
+        """存活單位的位置表；巨型單位（GB-1a）佔的每一格都對到它。"""
+        table: dict[tuple[int, int], UnitState] = {}
+        for u in self.living_units():
+            if u.footprint == 1:
+                table[u.xy] = u
+            else:
+                half = u.footprint // 2
+                for y in range(u.pos.y - half, u.pos.y + half + 1):
+                    for x in range(u.pos.x - half, u.pos.x + half + 1):
+                        table[(x, y)] = u
+        return table
 
     @property
     def active(self) -> UnitState | None:
