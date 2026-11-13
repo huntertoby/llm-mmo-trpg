@@ -19,6 +19,7 @@ import {
   FLASH_MORE_WIDE_ZH,
   FLASH_NAME_ZH,
   FLASH_NONE_ZH,
+  noBreakRuns,
   nowStyle,
   nowText,
   parseTerms,
@@ -72,12 +73,29 @@ export function Term({ id, label, terms }: { id: string | null | undefined; labe
   );
 }
 
-/** 伺服器字串（帶 `[[術語|字]]`、`{{kw:id}}` 標記）畫成字＋術語＋小圓章。 */
-export function TermText({ text, terms }: { text: string; terms: Terms }) {
+/** 純文字裡的不可拆詞（`FLASH_NO_BREAK_WORDS`）包成不斷行的一段（FL-1h：條件括號不斷在「雙手／槍」）。 */
+function NoBreakText({ text }: { text: string }) {
+  return (
+    <>
+      {noBreakRuns(text).map((r, i) =>
+        r.keep ? (
+          <span key={i} className="fc-nobr">
+            {r.text}
+          </span>
+        ) : (
+          <Fragment key={i}>{r.text}</Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
+/** 伺服器字串（帶 `[[術語|字]]`、`{{kw:id}}` 標記）畫成字＋術語＋小圓章。`nobr`：純文字裡的不可拆詞不斷行（條件括號用）。 */
+export function TermText({ text, terms, nobr = false }: { text: string; terms: Terms; nobr?: boolean }) {
   return (
     <>
       {parseTerms(text).map((p, i) => {
-        if (p.kind === "text") return <Fragment key={i}>{p.text}</Fragment>;
+        if (p.kind === "text") return nobr ? <NoBreakText key={i} text={p.text} /> : <Fragment key={i}>{p.text}</Fragment>;
         if (p.kind === "icon") return p.cat === "kw" ? <KeywordGlyph key={i} id={p.id} px={14} /> : null;
         return <Term key={i} id={p.id} label={p.label} terms={terms} />;
       })}
@@ -105,7 +123,7 @@ function NowChip({ change, terms }: { change: StatChange; terms: Terms }) {
               <TermText text={main} terms={terms} />
             </span>
             <span className="fc-when">
-              <TermText text={when} terms={terms} />
+              <TermText text={when} terms={terms} nobr />
             </span>
           </>
         )}

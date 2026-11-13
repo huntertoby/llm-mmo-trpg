@@ -3,7 +3,7 @@
 // 字全由伺服器送（`ReflashSlotOut.weaker_zh`／`weaker_pick_zh`、`PendingFlashOut.weaker_foot_zh`、`FlashOptionOut.weaker_tag_zh`）；
 // 這裡只取欄位，不自己推規則。
 import type { PendingFlash, SkillFlash } from "../api/types";
-import { FLASH_MUST_PICK_ZH } from "./flashChoice";
+import { FLASH_MUST_PICK_TRANSFORM_ZH, FLASH_MUST_PICK_ZH, hasTransform } from "./flashChoice";
 
 export interface WeakerSlot {
   /** 入口與選類別面板的提醒字「這一格重閃後，這招可能比現在弱」。 */
@@ -26,10 +26,10 @@ export function weakerLeadText(w: WeakerSlot): string {
 }
 
 /** 上固定區那句（不含句尾句號，同 `FLASH_MUST_PICK_ZH`）：較弱的重閃把「選哪個這招整體都會強一點…」換成伺服器的
- * `weaker_foot_zh`，「一定要選一個。」照留。 */
+ * `weaker_foot_zh`，「一定要選一個。」照留。FL-1h：有轉型選項時（不是較弱的重閃）用帶「轉型除外」的那句。 */
 export function mustPickText(p: PendingFlash): string {
   const foot = p.weaker_foot_zh;
-  if (foot === null || foot === undefined || foot === "") return FLASH_MUST_PICK_ZH;
+  if (foot === null || foot === undefined || foot === "") return hasTransform(p.options) ? FLASH_MUST_PICK_TRANSFORM_ZH : FLASH_MUST_PICK_ZH;
   const lead = FLASH_MUST_PICK_ZH.slice(0, FLASH_MUST_PICK_ZH.indexOf("。") + 1);
   return `${lead}${foot.replace(/。$/, "")}`;
 }
