@@ -80,8 +80,13 @@ from trpg.skillgen.flash_major import transform_slot_plan
 from trpg.skillgen.flash_offer import (
     NO_OPTIONS_ZH,
     NO_REFLASH_OPTIONS_ZH,
+    REFLASH_WEAKER_CONFIRM_ZH,
+    REFLASH_WEAKER_ZH,
+    WEAKER_FOOT_ZH,
+    WEAKER_TAG_ZH,
     has_options,
     history_problem,
+    reflash_weaker,
     skill_before,
 )
 from trpg.skillgen.flash_state import (
@@ -183,10 +188,12 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     major = state.record(rules.major_flash)
     # RR-1（比照 FL-1c）：每一格先實際算一次重閃有沒有合法選項；沒有就標灰、不給按
-    slots = {
-        s: has_options(library, flash_request(library, run, skill_id, slot=s))
-        for s in reflash_slots(library, state)
+    requests = {
+        s: flash_request(library, run, skill_id, slot=s) for s in reflash_slots(library, state)
     }
+    slots = {s: has_options(library, request) for s, request in requests.items()}
+    # RR-2（#160）：被強度下限卡住的格子改出較弱的候選，入口掛提醒、不標灰
+    weaker = {s: ok and reflash_weaker(library, requests[s]) for s, ok in slots.items()}
     # FL-1g（FL-1b 驗收可修 6）：「可以重閃第 3 格轉型」只在重閃第 3 格真的出得了題時才給
     hint = (
         not state.complete
@@ -218,6 +225,9 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
                 transform_hint=hint and s == rules.major_flash,
                 available=ok,
                 problem_zh=None if ok else NO_REFLASH_OPTIONS_ZH,
+                weaker=weaker[s],
+                weaker_zh=REFLASH_WEAKER_ZH if weaker[s] else None,
+                weaker_confirm_zh=REFLASH_WEAKER_CONFIRM_ZH if weaker[s] else None,
             )
             for s, ok in slots.items()
         ),
@@ -303,6 +313,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 tag_term=tag,
                 note_zh=note,
                 name_source=name_source,
+                weaker_tag_zh=WEAKER_TAG_ZH if option.weaker else None,
             )
         )
     return PendingFlashOut(
@@ -315,6 +326,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
         options=tuple(options),
         base_stats=stats,
         terms=flash_terms(library, before, terms, ctx),
+        weaker_foot_zh=WEAKER_FOOT_ZH if offer.weaker else None,
     )
 
 

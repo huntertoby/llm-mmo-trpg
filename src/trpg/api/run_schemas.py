@@ -342,6 +342,14 @@ class ReflashSlotOut(_ApiModel):
     第 7 點）：伺服器實際算過；``False`` 時按鈕標灰、不能按，灰字是 ``problem_zh``。"""
     problem_zh: str | None = None
     """不能重閃這一欄的原因（可以時為 ``None``）。"""
+    weaker: bool = False
+    """被強度下限卡住的重閃格（RR-2，#160，06 6.34.3「強度下限」例外）：照原規則沒有任何候選達得到
+    下限，改出較弱的候選。``True`` 時入口不標灰、掛 ``weaker_zh``（變弱樣式），按下去先跳
+    ``weaker_confirm_zh`` 確認（按鈕「重閃」「先不要」）再扣點。"""
+    weaker_zh: str | None = None
+    """入口的提醒字「這一格重閃可能比原本弱」（``weaker`` 時才有）。"""
+    weaker_confirm_zh: str | None = None
+    """按下去、扣點前的確認句（``weaker`` 時才有）。"""
 
 
 class SkillFlashOut(_ApiModel):
@@ -461,6 +469,9 @@ class FlashOptionOut(_ApiModel):
     name_source: Literal["llm", "template"] = "template"
     """這個選項的技能名稱（``card.name_zh``）從哪來（LF-3）：``llm``＝這次閃現的大變化或轉型帶了
     LLM 名稱而且用上了；``template``＝其他（組合式「{前綴}・{原名}」，或小變化沿用原名）。"""
+    weaker_tag_zh: str | None = None
+    """被強度下限卡住的重閃格出的較弱選項（RR-2，#160）：類別標籤旁的小標「比原本弱」（變弱樣式：
+    無底無框＋▼）；一般選項為 ``None``。"""
 
 
 class FlashTermOut(_ApiModel):
@@ -495,6 +506,9 @@ class PendingFlashOut(_ApiModel):
     terms: dict[str, FlashTermOut] = Field(default_factory=dict)
     """這次選項（大標、前 → 後、說明句、原技能列）用到的說明卡（FL-1b）：術語 ID → 說明卡。
     畫面只查表；查不到的術語不畫底線。"""
+    weaker_foot_zh: str | None = None
+    """被強度下限卡住的重閃格出題後（RR-2，#160）：面板固定區取代「選哪個這招整體都會強一點」的那句
+    「這次的選項都比原本弱，標 ▼ 的是變弱的地方。」；一般出題為 ``None``。"""
 
 
 class FlashPreviewRequest(_ApiModel):

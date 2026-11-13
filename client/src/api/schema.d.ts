@@ -5180,6 +5180,8 @@ export interface components {
              * @enum {string}
              */
             name_source: "llm" | "template";
+            /** Weaker Tag Zh */
+            weaker_tag_zh?: string | null;
         };
         /**
          * FlashPickAction
@@ -8458,6 +8460,8 @@ export interface components {
             terms?: {
                 [key: string]: components["schemas"]["FlashTermOut"];
             };
+            /** Weaker Foot Zh */
+            weaker_foot_zh?: string | null;
         };
         /**
          * PendingLootView
@@ -9278,6 +9282,15 @@ export interface components {
             available: boolean;
             /** Problem Zh */
             problem_zh?: string | null;
+            /**
+             * Weaker
+             * @default false
+             */
+            weaker: boolean;
+            /** Weaker Zh */
+            weaker_zh?: string | null;
+            /** Weaker Confirm Zh */
+            weaker_confirm_zh?: string | null;
         };
         /**
          * RegionStoneView
