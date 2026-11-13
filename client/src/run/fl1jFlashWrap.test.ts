@@ -91,7 +91,10 @@ describe("FL-1j (3) 成長面板／營火的藍字「可以重閃第 3 格轉型
     );
   });
   it("營火重閃鈕與技能卡的閃現資訊都經過 NoBreakText", () => {
-    expect(readFile(SRC_DIR, "run/CampfireSkillCare.tsx")).toContain("<NoBreakText text={TRANSFORM_HINT} />");
+    const care = readFile(SRC_DIR, "run/CampfireSkillCare.tsx");
+    expect(care).toContain("<NoBreakText text={TRANSFORM_HINT} />");
+    // 重閃鈕裡的藍字整段不換行（放不下就整段換到下一行），全形空白在 span 外面
+    expect(care).toMatch(/\{"　"\}\s*<span className="skill-flash-transform small fc-nobr"/u);
     expect(readFile(SRC_DIR, "ui/SkillFlashInfo.tsx")).toContain("<NoBreakText text={TRANSFORM_HINT} />");
     // .fc-nobr 在 flash-choice.css，index.css 全域載入，成長面板也吃得到
     expect(readFile(SRC_DIR, "styles/index.css")).toContain("flash-choice.css");
