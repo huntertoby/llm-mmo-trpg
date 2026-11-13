@@ -1,0 +1,198 @@
+/* WP-3：許願池面板（`world/WishPanel.tsx`）。版面照資訊面板的通用規則（docs/art/資訊面板-移植需求.md 3.1、3.2、3.7）：
+   上固定區＝`PanelTabs` 的 sticky `.pnl-fixed`（捲下去下緣 18px 漸隱，world-hud.css），中間捲，下固定區＝框的 `.ui-popup-foot`
+   插槽（flash-choice.css 的插槽規則）。共用的 pnl-*、fc-diffs 不改；這個檔只放許願池自己的。窄版看面板寬（容器查詢 559px）。 */
+
+/* ---------- 上固定區：不能許時「現在不能用：原因」放第一行（3.7 第 2、3 條；面板裡不加陰影） ---------- */
+.wish-off {
+  margin: 6px 0 0;
+}
+
+.wish-off .now-off-note {
+  margin: 0;
+  box-shadow: none;
+  font-size: 13px;
+}
+
+/* 窄版標題列擠的時候「回到地點圖」不折行（守池人那一行自己收成「…」） */
+.wish-panel .pnl-head-actions button {
+  white-space: nowrap;
+}
+
+.wish-panel .pnl-fixed .pnl-tabbar {
+  margin-top: 8px;
+}
+
+/* ---------- 分頁內容 ---------- */
+.wish-pane {
+  padding-top: 8px;
+}
+
+.wish-pane .pnl-callout {
+  margin: 0 0 8px;
+}
+
+.wish-lead {
+  margin: 0 0 8px;
+}
+
+.wish-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 10px;
+  border: 1px solid rgb(200 168 104 / 40%);
+  border-radius: 6px;
+  background: var(--ui-well, #161a2a);
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: none;
+}
+
+.wish-input:focus-visible {
+  outline: none;
+  border-color: var(--ui-gold-hi);
+}
+
+.wish-input::placeholder {
+  color: var(--pnl-l3);
+}
+
+.wish-refund {
+  margin: 8px 0 0;
+}
+
+.wish-count {
+  margin-top: 4px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 選單：清單一律白 4% 淡底不描框（3.1 第 3 條）；挑中的那格才描金框（狀態）＋實心「第 N 個」 */
+.wish-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wish-kw {
+  display: grid;
+  grid-template-columns: 20px max-content minmax(0, 1fr);
+  column-gap: 7px;
+  row-gap: 2px;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 6px 9px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--pnl-row);
+  color: var(--ui-text);
+  cursor: pointer;
+}
+
+.wish-kw > .name {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.wish-kw > .pnl-tag {
+  justify-self: start;
+}
+
+.wish-kw > .desc {
+  grid-column: 1 / -1;
+}
+
+.wish-kw-noicon {
+  width: 20px;
+  height: 20px;
+}
+
+.wish-kw:hover:not(:disabled),
+.wish-kw:focus-visible:not(:disabled) {
+  background: var(--pnl-row-hi);
+}
+
+.wish-kw.on {
+  border-color: var(--ui-gold-hi);
+  background: var(--pnl-row-hi);
+}
+
+/* 挑滿 2 個時其他格不能點（稍微變暗；不用虛線：虛線只代表「本場不成立」；比「不能許」的整張灰掉淡） */
+.wish-kw:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* 不能許：整張表單灰掉（圖示灰階、字變暗），原因在第一行 */
+.wish-panel.off .wish-input,
+.wish-panel.off .wish-kw {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+/* ---------- 下固定區：前 → 後（FL-1b 的 DiffRows）＋退款說明＋許願鈕 ---------- */
+.wish-foot {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 12px;
+  padding: 8px 0 16px;
+  border-top: 1px solid var(--pnl-line);
+}
+
+.wish-foot .fc-diffs {
+  flex: 1 1 auto;
+  margin: 0;
+  min-width: 0;
+}
+
+.wish-foot-row {
+  flex: 0 1 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 0;
+  text-align: right;
+}
+
+.wish-need {
+  color: var(--pnl-warn);
+  white-space: nowrap;
+}
+
+.wish-submit {
+  font-size: 14px;
+  padding: 6px 24px;
+}
+
+.wish-submit[disabled] {
+  opacity: 0.45;
+}
+
+/* ---------- 窄版（面板寬 < 560：800×600）：選單一欄、下固定區右欄收窄 ---------- */
+@container world-panel (max-width: 559px) {
+  .wish-menu {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .wish-kw {
+    padding: 5px 8px;
+  }
+
+  .wish-foot-row {
+    flex-basis: 130px;
+  }
+}

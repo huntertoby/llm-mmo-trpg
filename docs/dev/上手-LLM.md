@@ -120,5 +120,5 @@
    - `PendingOfferView` 多 `source`（`quest`／`opportunity`／`wish`）、`refund`（都不拿退幾任務幣）。
    - 等待：`PregenWaitRequest.kind` 多 `wish`＋`text`（`keywords` 收但選單許願一律 `none`）。`world_pregen.wish_wait_request` 和動作組同一把鍵（願望先 `strip`）；空白、超過字數、`wish_block` 不過＝`none`（不白打 LLM；等待端點不看戰鬥中，那時動作本來就 409）。
    - **插隊**：`WorldPregen` 不再直接把 `_run` 丟給執行緒池；`_submit` 把 `_Entry`（帶自己的 `Future` 與內容庫視圖）放進 `_urgent`（`URGENT_KINDS`＝`{"wish"}`）或 `_normal` 兩條 deque，再丟一個 `_next` 工作；`_next` 從 `_urgent` 先拿、`set_running_or_notify_cancel` 失敗（被取消）就略過。結果：許願排在所有還沒開始的預測前面、許願之間照先後、正在跑的那一筆不被打斷。測試 `tests/api/test_wish_api_wp2.py::test_wish_jumps_the_queue`、`test_cancelled_wish_is_skipped`。
-   - 主城：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`）；前端 `atlasModel.objectHud` 在 WP-3 接上面板前略過 `wish`（照舊開說明卡）。
+   - 主城：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`）；WP-3 起前端點這兩個開許願池面板（`world/WishPanel.tsx`；前端的事看 `docs/dev/上手-前端戰鬥畫面與動畫.md` 第一節「許願池面板」列）。
    - Mock 注意：Mock 提議器做不做得出完整技能跟技能種子（角色 ID、賽季種子）有關；要測 `llm` 版用 `alice`＋`make_world()`（同 `test_wish_pregen`）。

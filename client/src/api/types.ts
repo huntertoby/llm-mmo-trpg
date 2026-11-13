@@ -380,7 +380,9 @@ export type WorldAction =
   | Schemas["UseTeleportStoneAction"]
   // 6C-5：潛行、點情境物件
   | Schemas["SneakAction"]
-  | Schemas["UseFieldObjectAction"];
+  | Schemas["UseFieldObjectAction"]
+  // WP-3：許願池（文字許願 `keywords` 帶 `[]`，選單許願不帶 `text`）
+  | Schemas["WishAction"];
 export type WorldGrowthView = Schemas["GrowthView"];
 export type WorldOathView = Schemas["OathView"];
 export type WorldOathTemplate = Schemas["OathTemplateView"];
