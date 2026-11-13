@@ -97,6 +97,15 @@ opportunity:
   guarantee_from_day: 6
   # 5B-4e（18.7.6「5B-4d 代決」）：保底時不檢查「需要帶電技能」（三張照樣帶帶電）
   guarantee_waives_keyword: true
+# 許願池（Phase WP-1；07 7.6、#88）：主城花任務幣許願，每週 per_week 次；三選一都不拿時次數照扣、退還 refund_permille。
+# cost_quest_coins、text_max_chars、llm_cards 是 WP-1 的初值（docs/phases/PhaseWP計畫.md 第 6 節待決 2、3、6）。
+wish:
+  per_week: 2
+  cost_quest_coins: 4
+  refund_permille: 500
+  text_max_chars: 60
+  max_keywords: 2
+  llm_cards: 1
 # 實地地圖的規則數值（Phase 6C-R2；原本寫死在 trpg.world 的常數，數值不變；原型值，之後用模擬調）。
 # - sight_range：敵人的視野（前方 90° 扇形、曼哈頓距離；21.10 第 3、12 條）。
 # - sneak_sight_divisor：潛行中視野＝sight_range ÷ 這個數（捨去；21.10 第 6 條「減半」）。

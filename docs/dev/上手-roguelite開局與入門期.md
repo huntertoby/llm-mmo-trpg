@@ -12,6 +12,7 @@
 | `src/trpg/world/opening.py` | 開局的主檔：`new_opening(seed)`、開局閘門 `opening_gate`（各階段能做的動作）、畫面用的 `opening_limits(char)`、選大類 `apply_opening_class`、舊的一次選定 `apply_opening_confirm`、推薦關鍵字 `recommended_keywords`、靶場內容 `range_content`、沙盒試打 `range_trial`／`trial_seed`、`mentor_town`；PR-2a 起：測試模式的設定 `_practice_setup`、工坊師傅的「靶場試玩」`own_practice`／`practice_seed`、能不能開 `practice_problem`（原因句 `PRACTICE_*_ZH`） |
 | `src/trpg/world/opening_choice.py` | 正式選定（OB-2）：`choice_problem`、`place_ok`／`place_problem`、`starter_steps_done`、`apply_formal_choice`，以及依階段分流的 `apply_opening_confirm` |
 | `src/trpg/world/opening_reselect.py` | 4 級前的免費重選（OB-3）：`reselect_problem`（OB-6 起先呼叫 `reselect_window_problem`＝只看資格：已選定、等級、沒用過）、`apply_reselect`、`reselect_losses`／`reselect_returns`、`starter_item_id`（OB-6 抽出 `weapon_item_id`）；開局結束 `close_opening` |
+| `src/trpg/world/wish.py` | **WP-1 許願池**：主城花任務幣許願（`wish_problem`：主城、入門期、遭遇、每週次數 `wish_week`、任務幣）；選單或願望文字 → 完整技能三選一（`PendingOffer.source="wish"`，都不拿退 `refund`）。LLM 那一半見 `docs/dev/上手-LLM.md` 第八節 |
 | `src/trpg/world/opening_limits.py` | 入門期的戰鬥閘與活動限制（OB-4）：`in_starter_period`、`STARTER_STEPS`、`spawn_hidden`、`fight_problem`、`solution_problem`、`spot_problem`、`holds_step`、`stuck_conditions`；被擋的原因文字 `FIGHT_ZH`、`FLASH_ZH`、`SOLUTION_ZH`、`OBJECT_ZH` |
 | `src/trpg/world/state.py` | `CharacterState`（含 `opening: OpeningState \| None`、`hints_seen`、`hints_off`、`level_seen`）、`OpeningState`、`CHAR_FORMAT`、`LEGACY_CHAR_FORMATS` |
 | `src/trpg/world/actions.py` | 世界動作與事件的型別：`OpeningClassAction`、`OpeningConfirmAction`、`OpeningReselectAction`、`HintSeenAction`、`HintsOffAction`、`HintsResetAction`、`UI_NOTE_ACTIONS`；事件 `OpeningClassChosenEvent`、`OpeningConfirmedEvent`、`OpeningReselectedEvent` |
@@ -106,7 +107,7 @@
    | `LOG_FORMAT` | `engine/runner.py` | 動到引擎的紀錄結構或結算；這一塊通常不碰。 |
    | `SAVE_FORMAT` | `roguelite/save.py` | `RunState`／一輪存檔的結構變了；舊版號進 `COMPATIBLE_FORMATS` 並寫轉換。 |
 
-   改版號時 `tests/world/test_opening_stages.py::test_versions` 的字面值要跟著改；兩段同一批上線只加一次，合併時由 PM 對齊。
+   改版號時 `tests/world/test_opening_stages.py::test_versions` 的字面值要跟著改；兩段同一批上線只加一次，合併時由 PM 對齊。WP-1 起：`WORLD_RULES_VERSION` 28、`CHAR_FORMAT` `trpg-char/14`（`tests/api/test_pr2a_range_practice.py` 也寫死了規則版號；`trpg-char/14` 字面散在約 14 個測試檔，升版時 `grep -rl` 一起改）。
 3. **加存檔欄位要登記季末重置**：`tests/test_architecture.py::test_every_saved_field_has_a_season_reset_kind` 會擋沒登記在 `server/season_policy.py` 的欄位。改到存檔欄位的段，相關測試一定包含 `tests/test_architecture.py`。
 4. **已寫入設計文件的規則不能自己放寬**（`CLAUDE.md` 角色分工）：閘門、條件、次數這類規則有疑問就照最保守的做並寫進「待 PM 決定」；被擋的原因文字是暫定可以改字，但不能改判斷。
 5. **畫面與規則用同一個函式**：敵人顯示與接觸判定共用 `field_enemies._shown`、被擋原因共用 `opening_limits`／`opening.opening_limits`、紮營條件共用 `step.camp_problem`。新增限制時先找有沒有現成的共用點，不要在 API 層另寫一份判斷。

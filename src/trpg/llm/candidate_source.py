@@ -152,6 +152,7 @@ def make_proposer(
     max_attempts: int = DEFAULT_MAX_ATTEMPTS,
     stats: ProposerStats | None = None,
     naming: NamingClient | None = None,
+    player_text: str | None = None,
 ) -> LlmProposer:
     """真模型的提議器。``client`` 可以是固定的 client，或依（題目，種子）建立 client 的函式
     （Mock 用）。題目沒有可用結構、退回也失敗等都算失敗（``LlmAttempt.skill`` 為 ``None``）。
@@ -159,14 +160,24 @@ def make_proposer(
     ``naming``（4-L7）：給了就在結構合格後請它為技能命名與寫敘事（``name_skill``，最多
     ``max_attempts`` 次，失敗用組合式名稱）；``None`` ＝ 命名關閉：不多呼叫一次，名稱與敘事都用
     組合式名稱與模板敘事（4-L8b，不採用提議裡的敘事）。已用過的名稱記在提議器內，同一個提議器
-    產生的技能不會重名。"""
+    產生的技能不會重名。
+
+    ``player_text``（WP-1 許願池）：玩家的願望，
+    每次提議都放進 prompt 的 ``<player_input>``（守則 7，
+    :func:`~trpg.llm.prompts.builder.build_skill_proposal_messages`）；``None``＝沒有玩家文字。"""
     taken: set[str] = set()
 
     def propose(request: ProposalRequest, ctx: ProposalContext, seed: int) -> LlmAttempt:
         used = client if isinstance(client, LLMClient) else client(request, seed)
         try:
             outcome = propose_skill(
-                used, library, request, ctx, seed=seed, max_attempts=max_attempts
+                used,
+                library,
+                request,
+                ctx,
+                seed=seed,
+                max_attempts=max_attempts,
+                player_text=player_text,
             )
         except (FallbackError, ValueError) as exc:
             return LlmAttempt(None, 0, (), str(exc))

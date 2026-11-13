@@ -2,7 +2,8 @@
 沒趕上時「等，超過 10 秒改給組合器版（推薦）」）。
 
 三個入口（:mod:`trpg.world.generated`）：閃現與重閃的變化、主線劇情技能的元素與文字、機遇的完整技能
-三選一。這一層：
+三選一；WP-1 加上許願池（**不預測**：玩家當場打字，引擎要的時候才排進佇列，同樣最多等 10 秒）。
+這一層：
 
 - **預測**（:func:`predicted_requests`，每個世界動作之後、角色第一次讀進來時）：
   - 閃現：沒有待選的閃現與遭遇時，裝備中可以閃的技能（不指定類別、最多 :data:`FLASH_LIMIT` 招，
@@ -45,6 +46,7 @@ from trpg.api.llm_source import LlmProvider
 from trpg.content.library import ContentLibrary
 from trpg.llm.flash_propose import LlmFlashSource
 from trpg.llm.story_skill import StorySkillRequest
+from trpg.llm.wish import match_wish
 from trpg.roguelite.flashes import problem_of
 from trpg.roguelite.llm_hook import use_proposer
 from trpg.roguelite.offers import make_offer, offer_key
@@ -59,6 +61,8 @@ from trpg.world.generated import (
     StoryGen,
     StoryGenRequest,
     Supplier,
+    WishGen,
+    WishGenRequest,
     flash_pregen_key,
 )
 from trpg.world.growth import (
@@ -94,6 +98,7 @@ __all__ = [
     "opportunity_wait_request",
     "predicted_requests",
     "provider_generators",
+    "wish_generator",
 ]
 
 _LOG = logging.getLogger(__name__)
@@ -116,16 +121,18 @@ QUEUE_LIMIT: Final = 12
 """全服暫存區（含排隊中與做好的）最多幾筆；超過丟掉最舊、還沒開始的。"""
 _POLL_SECONDS: Final = 0.05
 
-type Kind = Literal["flash", "story_skill", "complete_offer"]
+type Kind = Literal["flash", "story_skill", "complete_offer", "wish"]
+type _Record = FlashGen | StoryGen | OfferGen | WishGen
 
 
 @dataclass(frozen=True, slots=True)
 class Generators:
-    """三個入口的生成函式（內容庫是世界引擎用的同一個視圖）；``None``＝這個入口不生成。"""
+    """各入口的生成函式（內容庫是世界引擎用的同一個視圖）；``None``＝這個入口不生成。"""
 
     flash: Callable[[ContentLibrary, FlashGenRequest], FlashGen] | None = None
     story: Callable[[ContentLibrary, StoryGenRequest], StoryGen] | None = None
     offer: Callable[[ContentLibrary, OfferGenRequest], OfferGen] | None = None
+    wish: Callable[[ContentLibrary, WishGenRequest], WishGen] | None = None
 
 
 def provider_generators(provider: LlmProvider) -> Generators:
@@ -189,7 +196,54 @@ def provider_generators(provider: LlmProvider) -> Generators:
             return OfferGen(key=request.key)
         return OfferGen(key=request.key, source="llm", offer=made)
 
-    return Generators(flash=flash, story=story, offer=offer)
+    def wish(library: ContentLibrary, request: WishGenRequest) -> WishGen:
+        return wish_generator(provider, library, request)
+
+    return Generators(flash=flash, story=story, offer=offer, wish=wish)
+
+
+def wish_generator(
+    provider: LlmProvider, library: ContentLibrary, request: WishGenRequest
+) -> WishGen:
+    """許願池的生成函式（WP-1）：願望 → 關鍵字（:func:`~trpg.llm.wish.match_wish`）→ 用把願望放進
+    ``<player_input>`` 的提議器出完整技能三選一（每份最多 ``llm_cards`` 張請 LLM）。
+    沒對上＝``none``；
+    對上但沒有 LLM 提議的技能＝``partial``（引擎照關鍵字算組合器版）。"""
+    source = provider.wish_source(library)
+    if source is None:
+        return WishGen(key=request.key)
+    match = match_wish(
+        source.client_for(request.text, request.menu),
+        library,
+        request.text,
+        request.menu,
+        max_keywords=request.max_keywords,
+        max_attempts=source.max_attempts,
+    )
+    base = WishGen(
+        key=request.key,
+        attempts=match.attempts,
+        codes=match.codes,
+        prompt_version=match.prompt_version,
+    )
+    if not match.keywords:
+        return base
+    found = base.model_copy(update={"source": "partial", "keywords": match.keywords})
+    if request.llm_cards <= 0:
+        return found
+    with use_proposer(source.proposer(request.text)):
+        made = make_offer(
+            library,
+            request.run.model_copy(update={"llm": True}),
+            "complete",
+            region_keywords=match.keywords,
+            pinned_keyword=match.keywords[0],
+            region=None,  # 「任何池」、中性奇幻（#126）
+            llm_max_calls=request.llm_cards,
+        )
+    if not any(t.source == "llm" for t in made.tags):
+        return found
+    return found.model_copy(update={"source": "llm", "offer": made})
 
 
 # ---------------------------------------------------------------------------
@@ -361,7 +415,7 @@ class _Entry:
     request: GenRequest
     target: str | None
     """閃現的技能 ID（等待提示用）；其他入口為 ``None``。"""
-    future: Future[FlashGen | StoryGen | OfferGen | None]
+    future: Future[_Record | None]
     deadline: float | None = None
     order: int = 0
 
@@ -421,7 +475,11 @@ class WorldPregen:
         view = world_library(library)
         wanted = {_slot(r) for r in requests}
         with self._lock:
-            for key in [k for k in self._entries if k[0] == cid and k[1] not in wanted]:
+            for key in [
+                k
+                for k, e in self._entries.items()
+                if k[0] == cid and k[1] not in wanted and e.request.kind != "wish"
+            ]:  # WP-1：許願不是預測出來的（等待提示排的），留著給接下來的許願動作
                 self._entries.pop(key).future.cancel()
             for request in requests:
                 if (cid, _slot(request)) not in self._entries:
@@ -457,9 +515,7 @@ class WorldPregen:
                 return
             self._entries.pop(idle[0][1]).future.cancel()
 
-    def _run(
-        self, view: ContentLibrary, request: GenRequest
-    ) -> FlashGen | StoryGen | OfferGen | None:
+    def _run(self, view: ContentLibrary, request: GenRequest) -> _Record | None:
         """背景執行緒：真正呼叫 LLM（單一佇列，一次一個）。出錯＝``None``（降級）。"""
         if not self.enabled():
             return None
@@ -471,13 +527,15 @@ class WorldPregen:
                 return self.generators.story(view, request)
             if isinstance(request, OfferGenRequest) and self.generators.offer is not None:
                 return self.generators.offer(view, request)
+            if isinstance(request, WishGenRequest) and self.generators.wish is not None:
+                return self.generators.wish(view, request)
         except Exception:
             _LOG.exception("預先生成失敗（%s），改用組合器、模板或內容版", request.key)
         return None
 
     # -- 等待 -----------------------------------------------------------------
 
-    def _await(self, entry: _Entry) -> tuple[FlashGen | StoryGen | OfferGen | None, bool]:
+    def _await(self, entry: _Entry) -> tuple[_Record | None, bool]:
         """等這一筆（不持鎖）：回傳（結果, 有沒有逾時）。``deadline`` 從第一次等待算起。"""
         with self._lock:
             if entry.deadline is None:
@@ -503,7 +561,7 @@ class WorldPregen:
         """給世界引擎的供應者（:func:`trpg.world.generated.using_generated`）：好了就給、沒好就等
         （最多 10 秒），給出去的那一筆從暫存區拿掉。沒預測到的請求當場排進佇列再等。"""
 
-        def supply(request: GenRequest) -> FlashGen | StoryGen | OfferGen | None:
+        def supply(request: GenRequest) -> _Record | None:
             if self._closed or not self.enabled():
                 return None
             key = (request.character_id, _slot(request))

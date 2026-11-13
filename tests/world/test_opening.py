@@ -104,11 +104,11 @@ def test_confirm_rejects_bad_choice(library: ContentLibrary, make_char: MakeChar
 
 def test_old_save_counts_as_done(library: ContentLibrary, make_char: MakeChar) -> None:
     old = json.loads(dumps_char(make_char()))
-    assert old["format"] == CHAR_FORMAT == "trpg-char/13"
+    assert old["format"] == CHAR_FORMAT == "trpg-char/14"
     old.pop("opening", None)
     old["format"] = "trpg-char/11"
     loaded = loads_char(json.dumps(old))
-    assert loaded.format == "trpg-char/13" and loaded.opening is None
+    assert loaded.format == "trpg-char/14" and loaded.opening is None
     pending = _pending(library, make_char)
     assert loads_char(dumps_char(pending)).opening == pending.opening
 
