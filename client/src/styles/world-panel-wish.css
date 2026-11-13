@@ -22,6 +22,13 @@
   margin-top: 8px;
 }
 
+/* WP-3b 分頁圖示（移植說明 13.7 第 2 條）：置中是分頁頂 +9.5，往下 0.5 取整成 +10（和樣張一致）。
+   圖和分頁的小數部分相同，畫出來圖的上緣永遠在分頁上緣下面整 10 個像素，不會一個 +9、一個 +10 */
+.wish-panel .pnl-tab > .pnl-ico {
+  position: relative;
+  top: 0.5px;
+}
+
 /* ---------- 分頁內容 ---------- */
 .wish-pane {
   padding-top: 8px;
@@ -31,8 +38,10 @@
   margin: 0 0 8px;
 }
 
+/* WP-3b 可修 4：最後一行不只剩一兩個字（Chrome 117+、Edge；Safari 26+；Firefox 不支援＝照一般折行） */
 .wish-lead {
   margin: 0 0 8px;
+  text-wrap: pretty;
 }
 
 .wish-input {
@@ -70,10 +79,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* 選單：清單一律白 4% 淡底不描框（3.1 第 3 條）；挑中的那格才描金框（狀態）＋實心「第 N 個」 */
+/* 選單（WP-3b 必修 1 乙案）：格子只放圓章＋名字（＋第 N 個），說明在說明卡（Hint）；寬版 4 欄、窄版 3 欄，12 個一屏放完。
+   清單一律白 4% 淡底不描框（3.1 第 3 條）；挑中的那格才描金框（狀態）＋實心「第 N 個」 */
 .wish-menu {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -82,10 +92,11 @@
 
 .wish-kw {
   display: grid;
-  grid-template-columns: 20px max-content minmax(0, 1fr);
+  grid-template-columns: 20px max-content max-content;
   column-gap: 7px;
-  row-gap: 2px;
   align-items: center;
+  /* WP-3b 可修 5：同一列有一格比較高時，內容靠上、不被拉開 */
+  align-content: start;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -106,10 +117,7 @@
 
 .wish-kw > .pnl-tag {
   justify-self: start;
-}
-
-.wish-kw > .desc {
-  grid-column: 1 / -1;
+  white-space: nowrap;
 }
 
 .wish-kw-noicon {
@@ -117,8 +125,8 @@
   height: 20px;
 }
 
-.wish-kw:hover:not(:disabled),
-.wish-kw:focus-visible:not(:disabled) {
+.wish-kw:hover:not([aria-disabled="true"]),
+.wish-kw:focus-visible:not([aria-disabled="true"]) {
   background: var(--pnl-row-hi);
 }
 
@@ -127,8 +135,9 @@
   background: var(--pnl-row-hi);
 }
 
-/* 挑滿 2 個時其他格不能點（稍微變暗；不用虛線：虛線只代表「本場不成立」；比「不能許」的整張灰掉淡） */
-.wish-kw:disabled {
+/* 挑滿 2 個時其他格不能點（稍微變暗；不用虛線：虛線只代表「本場不成立」；比「不能許」的整張灰掉淡）。
+   用 aria-disabled 不用 disabled：滑過照樣打得開說明卡 */
+.wish-kw[aria-disabled="true"] {
   opacity: 0.7;
   cursor: default;
 }
@@ -140,15 +149,54 @@
   opacity: 0.55;
 }
 
-/* ---------- 下固定區：前 → 後（FL-1b 的 DiffRows）＋退款說明＋許願鈕 ---------- */
+/* ---------- 下固定區：挑中的說明（WP-3b）＋前 → 後（FL-1b 的 DiffRows）＋許願鈕 ---------- */
 .wish-foot {
   box-sizing: border-box;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
   margin: 0 12px;
   padding: 8px 0 16px;
   border-top: 1px solid var(--pnl-line);
+}
+
+/* 挑中的那一個的說明：兩個分頁都預留兩行（沒有時空白），切分頁、挑關鍵字時外框與下固定區都不跳 */
+.wish-picked {
+  flex: 1 0 100%;
+  box-sizing: border-box;
+  min-height: calc(2 * 1.5 * 12.5px + 6px);
+  padding-bottom: 6px;
+}
+
+.wish-picked-desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.wish-picked-desc > .pnl-tag,
+.wish-picked-desc > .pnl-ico {
+  vertical-align: -3px;
+  margin-right: 5px;
+}
+
+/* 標籤比字行矮（14 行高＋框 2＝16），第一行不會被撐高，下固定區兩個分頁一樣高 */
+.wish-picked-desc > .pnl-tag {
+  line-height: 14px;
+  vertical-align: 1px;
+}
+
+.wish-picked-desc > .name {
+  color: var(--ui-text);
+}
+
+/* WP-3b 可修 6：不能許時「得到 → 新 技能三選一」也跟著灰掉（和表單一樣 0.55）；任務幣「不夠」那列保留琥珀。
+   DiffRows 一列是格線裡的 5 格（圖示、名稱、前、箭頭、後），「得到」固定是最後一列（`wishDiffs`）＝最後 5 格 */
+.wish-foot.off .fc-diffs > :nth-last-child(-n + 5) {
+  filter: grayscale(1);
+  opacity: 0.55;
 }
 
 .wish-foot .fc-diffs {
@@ -184,15 +232,38 @@
 /* ---------- 窄版（面板寬 < 560：800×600）：選單一欄、下固定區右欄收窄 ---------- */
 @container world-panel (max-width: 559px) {
   .wish-menu {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
   }
 
   .wish-kw {
-    padding: 5px 8px;
+    column-gap: 5px;
+    padding: 4px 7px;
+  }
+
+  .wish-picked {
+    min-height: calc(2 * 1.45 * 12px + 4px);
+    padding-bottom: 4px;
+  }
+
+  .wish-picked-desc {
+    font-size: 12px;
+    line-height: 1.45;
   }
 
   .wish-foot-row {
     flex-basis: 130px;
+  }
+}
+
+/* WP-3b 可修 2：寬版但矮的視窗（1040×624：面板 676 寬、只有約 413 高）守池人對話泡也收成標題旁一行（同 800），
+   讓「說出願望」的輸入框不被切。面板高跟著視窗高（popupBox 的 maxHeight），用視窗高判斷：820 以下捲動區可視高 < 約 450。 */
+@media (max-height: 820px) {
+  .wish-panel .pnl-speaker {
+    display: none;
+  }
+
+  .wish-panel .pnl-speaker-mini {
+    display: flex;
   }
 }

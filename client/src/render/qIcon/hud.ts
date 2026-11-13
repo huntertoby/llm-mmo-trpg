@@ -219,6 +219,32 @@ const ICON2: Record<string, HudIconEntry> = {
 };
 /** 清單順序照樣張（ICON 先 5 個，再 Object.assign ICON2）。 */
 export const ICON: Readonly<Record<string, HudIconEntry | undefined>> = { ...ICON1, ...ICON2 };
+
+// ---------------- 許願池（WP-3b；樣張 qIconsHud.js 的 WISH 表，紀錄 docs/art/Q版小圖示-第7批HUD.md 第 13 節、移植說明 13.7） ----------------
+// 只搬推薦 A 三個（`_b`、`_c` 不搬）。放在另一張表、不進 `ICON`／`list()`：第⑦批的指紋（`--hash hud` 55 行）一行都不動。
+// 樣張的 `grp: "wish"` 在遊戲端用 `"gen"`（畫法路徑相同：沒有框、圖樣撐滿、16／15 包 1px 外框）。
+/** 金色四芒星（白芯；三階：金、亮金左上半、白芯）。k＝內凹比例。 */
+const wishStar = (c: Ctx, x: number, y: number, R: number, k = 0.3): void => { poly(c, "#ffc83a", starPts(x, y, R, R * k, 4), 0.5); poly(c, "#ffe58a", [[x, y - R], [x - R * k, y - R * k], [x - R, y], [x, y]]); poly(c, "#fffbe6", starPts(x, y, R * 0.42, R * 0.13, 4)); };
+/** 對話框（圓角框＋左下尾巴）：本色、下緣暗一階、左上亮面。 */
+const speech = (c: Ctx, C: Tone3, x: number, y: number, w: number, h: number, r: number, tail: readonly (readonly [number, number])[]): void => { poly(c, C[2], tail, 1); rr(c, C[2], x, y, w, h, r); rr(c, C[0], x, y, w, h - 3.4, r); poly(c, C[0], tail.map(([a, b]) => [a, b - 2.2] as const), 0.6); el(c, C[1], x + w * 0.24, y + 5.2, w * 0.13, 2.1, -0.35); };
+const SKY: Tone3 = ["#4f9fe8", "#bfe2ff", "#3478c0"];
+export const WISH: Readonly<Record<string, HudIconEntry | undefined>> = {
+  /** 分頁「說出願望」：天藍對話框＋框裡金色四芒星。 */
+  wish_text: { zh: "分頁：說出願望", grp: "gen", sizes: [16],
+    d: (c, o) => { speech(c, SKY, 3.6, 4.6, 40.8, 30.4, 12, [[9.6, 30], [21.4, 30], [5.4, 44]]); halo(c, o, (x) => wishStar(x, 24, 19.6, 12.4)); } },
+  /** 分頁「從選單挑」：田字四格，三格灰藍各一顆關鍵字色圓點（冰、火、毒），右下挑中的金格大一圈、壓深色勾。 */
+  wish_menu: { zh: "分頁：從選單挑", grp: "gen", sizes: [16],
+    d: (c, o) => { const T = 18, G = 3.6, P: [number, number, string][] = [[4, 4, "#8fe3ff"], [4 + T + G, 4, "#ff7a2a"], [4, 4 + T + G, "#7ddc3a"]];
+      for (const [x, y, dot] of P) { rr(c, "#55617e", x, y, T, T, 4.6); rr(c, "#7a88a8", x, y, T, T - 2.6, 4.6); f(c, "#a8b4d0", () => c.roundRect(x + 3, y + 2, T - 8, 2, 1)); ci(c, OUT, x + T / 2, y + T / 2 - 0.6, 5.4); ci(c, dot, x + T / 2, y + T / 2 - 0.6, 4.2); }
+      halo(c, o, (x) => { const q = 4 + T + G - 1.4, S = T + 2.8; rr(x, "#b88a24", q, q, S, S, 5); rr(x, "#f2c44a", q, q, S, S - 3, 5); f(x, "#fff0b0", () => x.roundRect(q + 3.4, q + 2.2, S - 9, 2, 1)); ln(x, "#4a3008", 4.2, [[q + 5.4, q + 11], [q + 9.6, q + 15.4], [q + 16.2, q + 6.6]]); }); } },
+  /** 籌碼「本週還能許」：小許願池（米灰石緣圍一汪天藍水，池上一顆金色四芒星；>24px 右上多一顆小星）。 */
+  wish_left: { zh: "籌碼：本週還能許", grp: "gen", sizes: [15],
+    d: (c, o) => { el(c, "#857a66", 24, 33.4, 20.8, 11.2); el(c, "#c4b9a2", 24, 31.4, 20.8, 9.8); el(c, "#2f7fd0", 24, 30.6, 15.2, 6); el(c, "#4aa8ff", 24, 31.4, 15.2, 5.2); el(c, "#bfe6ff", 19.4, 30, 7.4, 1.7);
+      if (!o.small) for (const x of [10, 18, 30, 38]) f(c, "#9a8f7a", () => c.rect(x, 38.6, 1.4, 3.6));
+      halo(c, o, (x) => { wishStar(x, 23.4, 15.8, 12); if (!o.small) poly(x, "#ffe58a", starPts(38.4, 9.6, 5.4, 1.7, 4), 0.4); /* 右上小星 ≤24px 省掉（規則 8） */ }); } },
+};
+/** 許願池三個圖的清單（開發頁 `hud-gallery.html?set=wishhash` 用；樣張 `wishList()` 只留推薦 A）。 */
+export const wishList = (): { id: string; entry: HudIconEntry }[] => Object.entries(WISH).filter(([, e]) => e !== undefined).map(([id, e]) => ({ id, entry: e! }));
 export const REGION_ACCENT: Readonly<Record<string, string>> = { crystal_crown: "#8ab0ff", cloud_ridge: "#6aa84a", arcane_hub: "#4ad0c8", ashen_waste: "#ff6a1a", frost_tide: "#6ac0e8", hub: "#a898ff" }; /* 照 content/ui/region_themes.yaml 的 accent */
 /** 有專屬紋章圖樣的區域 → 圖示 id；其他區域一律菱形寶石 `c_other`（需求 3 第 6 點）。 */
 export const CREST_OF: Readonly<Record<string, string>> = { crystal_crown: "c_crystal_crown", cloud_ridge: "c_cloud_ridge", arcane_hub: "c_arcane_hub", ashen_waste: "c_ashen_waste", frost_tide: "c_frost_tide" };
@@ -229,7 +255,7 @@ const accentOf = (id: string, accent?: string): string => accent ?? REGION_ACCEN
 
 // ---------------- 出圖 ----------------
 export interface HudPaintOpt { frame?: "none"; accent?: string }
-const entryOf = (id: string): HudIconEntry => { const e = ICON[id]; if (e === undefined) throw new Error("qIcon/hud: unknown id " + id); return e; };
+const entryOf = (id: string): HudIconEntry => { const e = ICON[id] ?? WISH[id]; if (e === undefined) throw new Error("qIcon/hud: unknown id " + id); return e; };
 /** 圖樣定義（48 格）：card／d10（±10 單位）的包成 48 格；紋章帶區域色。 */
 export function def(id: string, accent?: string): QDef {
   const e = entryOf(id); if (e.card !== undefined) { const card = e.card; return { d: b10((c, o) => QP.entry("card", card).d(c, o)) }; } if (e.d10) return { d: b10(e.d10) };

@@ -126,6 +126,13 @@
   overscroll-behavior: contain;
 }
 
+/* WP-3b（docs/art/WP-3驗收.md 可修 1）：大世界的資訊面板（HUD 彈窗）一律預留捲軸的寬度，切分頁時有沒有捲軸，
+   固定區（標頭、「回到地點圖」、分頁列底線）都不左右移。Chrome、Edge、Firefox 支援；Safari 18.2 起支援；
+   macOS 的浮動捲軸本來就不佔寬，沒有影響。 */
+.ui-popup-hud > .ui-popup-body {
+  scrollbar-gutter: stable;
+}
+
 /* UI-E1b（docs/archive/art/UI-E1檢查.md E，飾件不能壓到內容）：紅帶不再貼齊左右邊，改成在上緣、讓出四角飾件
    （飾件佔外框 2＋2＋18＝22px），所以紅帶改成絕對定位、左右各從 22px 起；內容從紅帶與「！」下方開始（上內距 20px）。
    遇敵等 inline 危險框的左右內距 12 → 20px（美術 PM 要求加 6px；加 6 時第一個字離外緣 20px，仍壓到 22px 的飾件 2px，所以加 8） */

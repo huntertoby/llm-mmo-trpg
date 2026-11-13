@@ -44,7 +44,7 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
         preview={preview}
         affects={run.hero.attribute_affects}
       />
-      <div className="section-title">選一張新技能（可跳過）</div>
+      <div className="section-title">選一張新技能（可以都不拿）</div>
       <OfferPicker
         offer={view.offer}
         hero={run.hero}
@@ -59,7 +59,7 @@ export function RunLevelUp({ run, view, busy, onChoose }: Props) {
       />
       <div className="run-actions">
         <button type="button" className="primary" data-sfx={pick === null ? "ui_confirm" : "ui_learn"} disabled={busy || !ready} onClick={() => void confirm()}>
-          {pick === null ? "確定（跳過技能）" : "確定"}
+          {pick === null ? "確定（技能都不拿）" : "確定"}
         </button>
         {!allocationComplete(alloc, view.points) && (
           <span className="muted small">請先把 {view.points} 點屬性配完。</span>

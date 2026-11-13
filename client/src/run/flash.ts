@@ -245,9 +245,9 @@ export const COMPLETE_BONUS_PERMILLE = 120;
 export const COMPLETE_INTRO: readonly string[] = [
   `完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +${percent(COMPLETE_BONUS_PERMILLE)}）。`,
   "完整技能不能再閃現；之後可以在營火重閃它的「調整欄」，換一個小變化。",
-  "三張都不想要可以跳過，技能不變。",
+  "三張都不想要可以都不拿，技能不變。",
 ];
 
 export function completeSkipText(): string {
-  return "目前：跳過（技能不變）。";
+  return "目前：都不拿（技能不變）。";
 }

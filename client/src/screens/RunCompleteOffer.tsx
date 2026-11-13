@@ -52,7 +52,7 @@ export function RunCompleteOffer({ run, view, busy, onChoose }: Props) {
           disabled={busy || !pickReady(run.hero, view.offer, pick, replace, force)}
           onClick={() => void confirm()}
         >
-          {pick === null ? "跳過" : "確定"}
+          {pick === null ? "都不拿" : "確定"}
         </button>
         {pick === null && <span className="muted small">{completeSkipText()}</span>}
       </div>

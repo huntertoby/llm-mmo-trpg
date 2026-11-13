@@ -256,7 +256,7 @@ def world_step(
         and not isinstance(action, OfferPickAction | NarrateAction)
         and not note
     ):  # 敘述不改數值（只有事件敘述換骨架），三選一待選時也能寫進日誌（5B-5）
-        raise WorldActionError("還有任務給的技能三選一沒有選：先選一招或跳過")
+        raise WorldActionError("還有任務給的技能三選一沒有選：先選一招，或都不拿")
     # 換日（5F-1）：世界事件的開始、門檻調整、失敗只寫進世界狀態（調整紀錄可查），不算這個角色的事件
     world, _rolled = roll_season(library, world, now)
     world, char, ended = expire_threads(library, world, char, now)  # 線頭到期結局（5B-4b）

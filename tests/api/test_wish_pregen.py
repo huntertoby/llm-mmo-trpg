@@ -137,8 +137,13 @@ def test_pending_offer_title_and_story_lines(
     assert view is not None and view.quest_name_zh == "許願池"
     assert "退 2 任務幣" in view.step_zh
     offered = next(e for e in result.events if isinstance(e, SkillOfferedEvent))
-    assert _skill_story_line(offered, {}) == "許願池給了技能三選一：先選一招（或跳過）。"
+    assert _skill_story_line(offered, {}) == "許願池給了技能三選一：先選一招（或都不拿）。"
     skipped = world_step(content_library, world, result.char, OfferPickAction(), NOON)
     taken = next(e for e in skipped.events if isinstance(e, SkillOfferTakenEvent))
     # TXT-2：玩法 PM 定稿句
     assert _skill_story_line(taken, {}) == "許願池給的三招都沒拿，退回 2 任務幣（次數照扣）。"
+    # WP-3b：其他來源都不拿也寫「三招都沒拿」（玩法 PM 定案；有退款才接「，退回 N 任務幣」）
+    quest = taken.model_copy(update={"source": "quest", "refund": 0})
+    assert _skill_story_line(quest, {}) == "任務給的三招都沒拿。"
+    chance = taken.model_copy(update={"source": "opportunity", "refund": 3})
+    assert _skill_story_line(chance, {}) == "機遇給的三招都沒拿，退回 3 任務幣。"
