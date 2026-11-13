@@ -43,7 +43,7 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-13 d8edd4611 全過，push 到 67a9b8207（pytest 17481、vitest 4487、build 0），含 RG-5b（盾高度照半掩護、每點、LOG_FORMAT /125）、RG-7（只補測試）、RG-8（大盾形制名、開發頁狼王照實機）、FL-1h（轉型字、和現在一樣、▼ 三角、雙手槍不拆）、美術 RG-5／RG-6 驗收。版號 LOG_FORMAT /125、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
+**2. 最後一次全量**：2026-11-14 8b5afebcf 全過，push 到 851d97f72（pytest 17481、vitest 4489、build 0），含 FL-1i（營火「轉型除外」、「強度」不拆；資訊卡計量 RG-5 已做）。前一次 11-13 push 67a9b8207 含 RG-5b、RG-7、RG-8、FL-1h。版號 LOG_FORMAT /125、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
 
 **3. 執行中的 agent（分支）**：
 - 無（RG-7、RG-8、FL-1h 11-13 已合併）。
@@ -51,7 +51,7 @@
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
 - 開發頁之後：要不要所有裝備都顯示形制名（RG-8 待決 1），等美術或玩法提出。LW-2 待決 6「現在不能用」那行加底色仍等美術答覆。
-- (e3n) 11-14 派 FL-1i：營火「轉型除外」、轉型句「強度」不可拆（美術 4865d5d38）、單位資訊卡層數換 HUD 計量（KW-3 待決 3，docs/art/RG-4驗收.md 末節）。原條：下一段動到營火或重閃字時：營火說明行「新選項整招不會比現在弱」加「轉型除外」，改字與 1 個測試（玩法PM交接 4.1.8，FL-1h 待決 7）。
+- (e3n) 已完成（FL-1i 11-14 push）。原：11-14 派 FL-1i：營火「轉型除外」、轉型句「強度」不可拆（美術 4865d5d38）、單位資訊卡層數換 HUD 計量（KW-3 待決 3，docs/art/RG-4驗收.md 末節）。原條：下一段動到營火或重閃字時：營火說明行「新選項整招不會比現在弱」加「轉型除外」，改字與 1 個測試（玩法PM交接 4.1.8，FL-1h 待決 7）。
 - 美術 RG-5 裁定的「之後再做」：開墨線畫風時補 inkOffhand；動遮擋外框時高低差遮擋照實際外形。
 (派工提醒，11-13 使用者「都裝」) 使用者層級已裝 skill：pixijs（v8 指南；碰 PixiJS 時用，派工單寫明「只讀這次要碰的 1～3 個主題檔，不要整份讀」）、property-based-testing（hypothesis 性質測試；守確定性重播、存檔讀回、正規化；不加新相依）。
 (派工規定，11-13 使用者「ok那就照建議」) 目標瀏覽器：主力為電腦版 Chrome、Edge（Windows、Mac），畫面、功能與截圖驗收以這兩個為準；Firefox、Safari（含 iPhone、iPad 上所有瀏覽器）要能玩、外觀可降級，用新 CSS 寫法要確認舊瀏覽器只是變陽春不會壞；相容性一律查 caniuse 或 MDN，不照 modern-web-guidance 工具的資料。前端派工單都要寫這條。
