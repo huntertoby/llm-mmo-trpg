@@ -66,15 +66,18 @@ def _item(note: str) -> dict[str, Any]:
             "element": None, "shape": None, "note_zh": note}  # fmt: skip
 
 
-def test_archaic_note_is_retried_with_feedback(lib: ContentLibrary) -> None:
-    """不合格的 note 帶錯誤碼重試（照 4-L11 的流程）；重試後合格的才用。"""
+def test_archaic_note_is_dropped_without_a_retry(lib: ContentLibrary) -> None:
+    """LF-2：古風詞不合格的 note 只丟說明（``flash.note_dropped.archaic``），變化第一次就收下、
+    不為說明重試。"""
     request = _request(lib, None)
     bad = json.dumps({"variations": [_item("濕透的地面運起真氣。")]}, ensure_ascii=False)
-    good = json.dumps({"variations": [_item(GOOD)]}, ensure_ascii=False)
     records: list[Any] = []
-    source = LlmFlashSource(MockLLMClient([bad, good, good]), max_attempts=3, sink=records.append)
+    client = MockLLMClient([bad] * 3)
+    source = LlmFlashSource(client, max_attempts=3, sink=records.append)
     make_offer(lib, request, source)
     record = records[-1]
     assert isinstance(record, FlashProposalRecord)
-    assert "flash.note_zh.archaic" in record.codes[0]
-    assert record.attempts >= 2 and WET in record.accepted  # 第二次合格才收
+    assert "flash.note_dropped.archaic" in record.codes[0]
+    assert WET in record.accepted and record.texts == ()
+    # 重試只為還缺的數量（結構問題），錯誤回饋裡沒有說明的錯誤
+    assert all("note_dropped" not in call[1]["content"] for call in client.calls[1:])

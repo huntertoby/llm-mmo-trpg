@@ -86,7 +86,8 @@ groups:
       surfaces: [poison]
       primitives: [cleanse, clear_surface, blow_surface]
   - id: wind
-    words: [狂風, 旋風, 疾風, 颶風, 暴風, 強風, 烈風, 勁風, 風刃, 風壓]
+    # LF-2：補「風屬、風系、風勢、山風、陣風」（實測「風屬傷害」被誤擋，調查報告 B.2）
+    words: [狂風, 旋風, 疾風, 颶風, 暴風, 強風, 烈風, 勁風, 風刃, 風壓, 風屬, 風系, 風勢, 山風, 陣風]
     matches: {elements: [wind], primitives: [blow_surface]}
   - id: earth
     words: [大地, 岩, 地脈, 地裂, 裂地, 沙]

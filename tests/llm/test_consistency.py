@@ -301,7 +301,8 @@ def _item(note: str | None) -> dict[str, Any]:
             "element": None, "shape": None, "note_zh": note}  # fmt: skip
 
 
-def test_bad_note_is_rejected_and_retried() -> None:
+def test_bad_note_is_dropped_and_the_variation_kept() -> None:
+    """LF-2：說明不一致只丟說明（``flash.note_dropped.*``），變化照收、不為說明重試。"""
     request = _flash_request()
     bad = json.dumps({"variations": [_item("帶來烈焰。")]}, ensure_ascii=False)
     good = json.dumps({"variations": [_item("讓地面濕透。")]}, ensure_ascii=False)
@@ -309,9 +310,31 @@ def test_bad_note_is_rejected_and_retried() -> None:
     source = LlmFlashSource(client, max_attempts=3)
     make_offer(LIB, request, source)
     record = source.records[0]
-    assert "flash.note_zh.effect_mismatch" in record.codes[0]
-    assert any(v.template == "keyword_imbue" for v in record.accepted)
-    assert "flash.note_zh.effect_mismatch" in client.calls[1][1]["content"]
+    assert "flash.note_dropped.effect_mismatch" in record.codes[0]
+    assert record.accepted[0].template == "keyword_imbue"
+    assert all(t.note_zh is None for t in record.texts)
+    assert all("effect_mismatch" not in call[1]["content"] for call in client.calls[1:])
+
+
+@pytest.mark.parametrize(
+    "note",
+    [
+        "山風捲起，多一段風屬傷害。",
+        "風系的力量一擊而過。",
+        "借著風勢一擊。",
+    ],
+)
+def test_wind_synonyms_count_as_wind(note: str) -> None:
+    """LF-2：詞表的風元素補「風屬、風系、風勢、山風、陣風」（調查報告 B.2 的誤擋）。"""
+    wind = next(g for g in WORDS.groups if g.id == "wind")
+    assert {"風屬", "風系", "風勢", "山風", "陣風"} <= set(wind.words)
+    added = frozenset({"element:wind"})
+    assert check_added([note], added, WORDS, code="x") == []
+    # 這招有風元素（旋風爆），提到風不算不一致
+    facts = skill_facts(LIB, LIB.skills["skill_air_burst"])
+    assert "element:wind" in facts
+    assert check_mentions("note_zh", note, facts, WORDS) == []
+    assert check_mentions("note_zh", note, skill_facts(LIB, FIRE_ARROW), WORDS) != []
 
 
 def test_name_offer_passes_the_skill_before_the_flash() -> None:

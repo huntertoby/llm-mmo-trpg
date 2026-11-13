@@ -29,6 +29,7 @@ from trpg.skillgen.player_text import plain_name
 __all__ = [
     "NameCheck",
     "added_facts",
+    "added_word_choices",
     "check_added",
     "check_mentions",
     "check_world_terms",
@@ -197,6 +198,19 @@ def check_added(
             f"這次變化加上的效果沒有被提到（例如{listed}），請在名稱或敘事裡寫出來。",
         )
     ]
+
+
+def added_word_choices(
+    added: frozenset[str], words: EffectWords, *, per_group: int = 3
+) -> list[str]:
+    """LF-2：變化加上的效果要用的詞（給 prompt 直接引用）：:func:`check_added` 會要求的每一組各列前
+    ``per_group`` 個詞，以「／」分隔（寫出其中一個就算提到）。沒有要求的效果不列。"""
+    out: list[str] = []
+    for fact in sorted(added):
+        groups = [g for g in words.groups if fact in g.matches.facts()]
+        if len(groups) == 1:
+            out.append("／".join(groups[0].words[:per_group]))
+    return list(dict.fromkeys(out))
 
 
 # ---------------------------------------------------------------------------

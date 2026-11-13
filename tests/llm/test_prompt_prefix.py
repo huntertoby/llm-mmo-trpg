@@ -20,6 +20,7 @@ import json
 import re
 from dataclasses import replace
 from functools import cache
+from typing import Any
 
 from trpg.cli.llm import ProposeArgs, propose_requests
 from trpg.content.library import ContentLibrary
@@ -195,6 +196,12 @@ def test_flash_retry_shares_the_prefix() -> None:
     assert "suggested_order" not in request_block
 
 
+def _schema_templates(schema: dict[str, Any]) -> list[str]:
+    """schema 列出的模板（LF-2：每個模板一個 oneOf 分支，依目錄順序）。"""
+    items = schema["properties"]["variations"]["items"]
+    return [branch["properties"]["template"]["const"] for branch in items["oneOf"]]
+
+
 def test_flash_catalog_is_shuffled_unless_disabled() -> None:
     """LLM-1A：預設整份目錄依種子打亂；``shuffle_catalog=False`` 才依 build_catalog 固定排序。"""
     lib = _lib()
@@ -204,7 +211,7 @@ def test_flash_catalog_is_shuffled_unless_disabled() -> None:
     shuffled = MockLLMClient(['{"variations": []}'])
     propose_variations(shuffled, lib, request, max_attempts=1)
     assert fixed.schemas[0] is not None and shuffled.schemas[0] is not None
-    templates = fixed.schemas[0]["properties"]["variations"]["items"]["properties"]["template"]
+    templates = _schema_templates(fixed.schemas[0])
     # 固定順序＝build_catalog 的順序（eval_flash_diversity 量位置偏好用的同一個順序）
     before = skill_before(lib, request)
     full = build_catalog(
@@ -214,9 +221,9 @@ def test_flash_catalog_is_shuffled_unless_disabled() -> None:
         major=False,
         applicable=lambda v: try_variation(lib, request, v) is not None,
     )
-    assert tuple(templates["enum"]) == full.templates()
-    other = shuffled.schemas[0]["properties"]["variations"]["items"]["properties"]["template"]
-    assert set(other["enum"]) == set(templates["enum"])
+    assert tuple(templates) == full.templates()
+    other = _schema_templates(shuffled.schemas[0])
+    assert set(other) == set(templates)
     assert fixed.calls[0][1] != shuffled.calls[0][1]
 
 
