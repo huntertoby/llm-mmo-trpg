@@ -1,5 +1,5 @@
 // 浮動字與行動連線（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：同一格錯開往上堆（`FloatStack`）、夾在戰場內、狀態光環。
-import { Container, Graphics, type Text } from "pixi.js";
+import { Container, Graphics, Sprite, Texture, type Text } from "pixi.js";
 import type { Pos } from "../../api/types";
 import type { FeedbackItem, FloatTone } from "../../battle/feedback";
 import { TILE_SIZE } from "../../battle/geometry";
@@ -8,7 +8,11 @@ import { label } from "../labels";
 import { HUMAN_TOP_Y, unitMarkTopY } from "../unitSprite";
 import { BIG_REST, floatBaseY, floatFit, floatFontSize, floatFrame, FLOAT_HEAD_GAP, FLOAT_RISE_MAX } from "../uiAnim";
 import { capRise, clampFloatCenter, FLOAT_EDGE_PAD, floatTopShift, groupRise, visibleFieldBounds, type FloatBounds } from "../floatStack";
-import { OcclusionLayer } from "./occlusionLayer";
+import { RgMarkLayer } from "./rgMarkLayer";
+import { drawGlance } from "../rgArt";
+import { glanceDir, glanceY, RG_MIN, RG_TIMING } from "../../battle/rgMarks";
+import { minMarkScale } from "../minMark";
+import { devAnimFactor } from "../../battle/playback";
 
 const T = TILE_SIZE;
 const FLOAT_COLORS: Readonly<Record<FloatTone, number>> = {
@@ -48,13 +52,21 @@ interface FloatSpot {
   riseMax: number;
 }
 
-export abstract class FeedbackLayer extends OcclusionLayer {
+/** 看一眼跟著 `?anim=0.1` 放慢（逐格截圖用；正式畫面 1）。 */
+const GLANCE_SLOW = devAnimFactor(typeof window === "undefined" ? "" : window.location.search);
+
+type FloatLike = Exclude<FeedbackItem, { kind: "glance" }>;
+
+export abstract class FeedbackLayer extends RgMarkLayer {
   /**
    * 播放一步的地圖回饋（浮動數字、字樣、行動連線、狀態彈出）；不等待結束，效果畫在獨立的圖層，
    * 場景重畫不會清掉。`durationMs` 是整組回饋的時間（已依播放速度縮放）。
    */
-  playFeedback(items: readonly FeedbackItem[], durationMs: number): void {
+  playFeedback(all: readonly FeedbackItem[], durationMs: number): void {
     if (!this.ready || durationMs <= 0) return;
+    const items = all.filter((x): x is FloatLike => x.kind !== "glance");
+    const glances = all.filter((x): x is Extract<FeedbackItem, { kind: "glance" }> => x.kind === "glance");
+    if (glances.length > 0) this.launch(glances.flatMap((g) => this.glanceEffect(g, this.realClock)).map((e) => ({ ...e, clock: "real" as const })));
     // 6H-1：傷害數字照實際時間走（停頓、最後一擊放慢時照常速彈出）
     const now = this.realClock;
     // 6F-6：同一格的字先量好高度，照實際高度錯開往上堆；這一格前幾步的字還沒播完時接在上面（`floatStack.ts`）
@@ -89,7 +101,7 @@ export abstract class FeedbackLayer extends OcclusionLayer {
   }
 
   /** 浮動字的字（還沒放位置）：停住時的高度、寬度、飄的最大距離。 */
-  private floatLabel(item: Exclude<FeedbackItem, { kind: "line" }>): FloatLabel {
+  private floatLabel(item: Exclude<FloatLike, { kind: "line" }>): FloatLabel {
     const isStatus = item.kind === "status";
     const text = isStatus ? `＋${item.text}` : item.text;
     const color = isStatus ? STATUS_COLOR : FLOAT_COLORS[item.tone];
@@ -103,7 +115,7 @@ export abstract class FeedbackLayer extends OcclusionLayer {
     return { t, big, isStatus, fit, restH: t.height * rest, restW: t.width * rest, riseMax: floatFrame(1, big).rise };
   }
 
-  private makeEffect(item: Exclude<FeedbackItem, { kind: "line" }>, l: FloatLabel, at: FloatSpot, now: number, durationMs: number): Effect[] {
+  private makeEffect(item: Exclude<FloatLike, { kind: "line" }>, l: FloatLabel, at: FloatSpot, now: number, durationMs: number): Effect[] {
     const c = this.center(item.pos);
     // 同一組的字照順序延後出現（彈一下），但一起往上飄（6F-6 `groupRise`：後出現的字不會被先出現的追上）
     const delayFrac = Math.min(0.6, at.order * 0.15);
@@ -162,6 +174,50 @@ export abstract class FeedbackLayer extends OcclusionLayer {
           node.alpha = f.alpha;
           put(baseY - rise(p), f.scale * fit);
         },
+      },
+    ];
+  }
+
+  /**
+   * RG-3：敵人放陷阱時「看那一格一眼」（樣張 2.6）：放置者頭頂（含頭飾）上方的小泡泡、兩隻眼往那一格看，0.6 秒（和浮字同一層）。
+   * 每一幀重畫一張小畫布（彈出 → 瞳孔轉過去 → 視線 → 淡出）；減少動態時直接顯示、不彈。
+   */
+  private glanceEffect(g: Extract<FeedbackItem, { kind: "glance" }>, now: number): Effect[] {
+    const k = minMarkScale(RG_MIN.glance.base, RG_MIN.glance.min, this.scale);
+    const c = this.center(g.pos);
+    const top = this.rgHeadTop(g.unitId) ?? c.y + this.floatTopY(g.pos);
+    const res = Math.max(1, Math.ceil((typeof window === "undefined" ? 1 : window.devicePixelRatio || 1) * this.scale * k * 4) / 4);
+    const box = 32;
+    const canvas = typeof document === "undefined" ? null : document.createElement("canvas");
+    const ctx = canvas?.getContext("2d") ?? null;
+    if (canvas === null || ctx === null) return [];
+    canvas.width = Math.ceil(box * res);
+    canvas.height = Math.ceil(box * res);
+    const dir = glanceDir(g.pos, g.to);
+    const paint = (ms: number) => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(res, 0, 0, res, (box / 2) * res, (box / 2) * res);
+      drawGlance(ctx, 0, 0, dir, ms, 1, this.reduced);
+    };
+    paint(0);
+    const tex = Texture.from(canvas);
+    const node = new Sprite(tex);
+    node.anchor.set(0.5);
+    node.width = box * k;
+    node.height = box * k;
+    node.position.set(c.x, glanceY(top, k));
+    node.label = "rg-glance";
+    return [
+      {
+        node,
+        startMs: now,
+        endMs: now + RG_TIMING.glanceMs * GLANCE_SLOW,
+        update: (p) => {
+          paint(p * RG_TIMING.glanceMs);
+          tex.source.update();
+        },
+        end: () => tex.destroy(true),
       },
     ];
   }

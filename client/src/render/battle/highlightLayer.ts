@@ -7,6 +7,7 @@ import { TILE_SIZE } from "../../battle/geometry";
 import { HIGHLIGHT } from "../../battle/glossary";
 import type { Overlay, OverlayKind } from "../../battle/scenePreview";
 import type { TelegraphMark } from "../../battle/telegraph";
+import type { AimDraw, GuardDraw } from "../../battle/rgMarks";
 import { clearLayer, label } from "../labels";
 import { drawExitFrame, exitLabel, hoverFrameCell, type ExitSignDraw } from "../exitSign";
 import { unitMarkTopY } from "../unitSprite";
@@ -57,6 +58,10 @@ export interface Highlights {
   eyes?: readonly WatchEye[];
   /** 滑過（觸控：點一下）的出口（UI-E4）：每格綠框＋目的地名小牌。 */
   exitHover?: ExitSignDraw | null;
+  /** RG-3：瞄準預告（準星＋瞄準線；`battle/rgMarks.aimDraws`，畫在 `RgMarkLayer`）。 */
+  aims?: readonly AimDraw[];
+  /** RG-3：選目標預覽有盾兵掩護時的小盾與連結（`battle/rgMarks.guardDraw`）。 */
+  guard?: GuardDraw | null;
 }
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   route: HIGHLIGHT.route,

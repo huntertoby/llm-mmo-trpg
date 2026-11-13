@@ -79,6 +79,13 @@ export function telegraphMarks(t: TelegraphOut, view: BattleView): TelegraphMark
     addBombMark(byTile, "bomb", b.pos, text, bombGlyph(b));
   }
   for (const c of t.charges ?? []) {
+    if (c.lock_target_id != null) {
+      // RG-3（美術 PM 決定 3）：瞄準預告的目標格不再畫「蓄」的預計範圍（改畫準星＋瞄準線，`rgMarks.ts`），
+      // 只留施放者（弓手）身上的「蓄 N」；施放者看不到時不標
+      const caster = view.units.find((u) => u.id === c.unit_id)?.pos;
+      if (caster !== undefined) addBombMark(byTile, "charge", caster, c.text, `蓄${c.remaining}`);
+      continue;
+    }
     for (const pos of c.tiles) addBombMark(byTile, "charge_area", pos, c.text, "蓄");
     addBombMark(byTile, "charge", c.pos, c.text, `蓄${c.remaining}`);
   }

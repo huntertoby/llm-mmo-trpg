@@ -33,7 +33,17 @@ export interface StatusItem {
   slot: number;
 }
 
-export type FeedbackItem = FloatItem | LineItem | StatusItem;
+/** RG-3：敵人放陷阱時「看那一格一眼」（放置者頭上的小泡泡，0.6 秒）。 */
+export interface GlanceItem {
+  kind: "glance";
+  /** 放置者所在格。 */
+  pos: Pos;
+  unitId: string;
+  /** 陷阱那一格。 */
+  to: Pos;
+}
+
+export type FeedbackItem = FloatItem | LineItem | StatusItem | GlanceItem;
 
 /** 事件型別 → 固定字樣（對照表放這一處；有條件的字樣在 `textFor` 內判斷）。 */
 export const EVENT_WORDS: Readonly<Record<string, { text: string; tone: FloatTone }>> = {
@@ -55,6 +65,10 @@ export const WORD_BLOCK = "格擋";
 export const WORD_DODGE = "閃避";
 /** 目標不能動（冰凍、暈眩、倒地、定身）時沒打中的字樣（6N-6，美術 PM 6N-5 驗收）：不是閃開的，照舊寫「失手」。 */
 export const WORD_MISS = "失手";
+/** RG-3：瞄準預告落空（目標倒下、出射程、斷視線、隱蔽）、被隊友擋下、瞄準中被近戰打斷（美術 PM：三個都用 good 黃）。 */
+export const WORD_LOCK_MISS = "落空";
+export const WORD_LOCK_BLOCKED = "被擋下";
+export const WORD_LOCK_INTERRUPTED = "被打斷";
 /** 頭目部位破了（PB-1c 占位演出，T16）：「{部位} 破！」。 */
 export const partBrokenWord = (name: string): string => `${name} 破！`;
 
@@ -143,6 +157,17 @@ function attackSpots(e: EventBase, at: Locate, immobile: (id: unknown) => boolea
   return spots;
 }
 
+/**
+ * RG-3：瞄準預告落空（`effect_fizzled` 的 `lock_on_*`）。字一律不放在目標頭上（隱蔽造成的落空會洩漏位置）：
+ * 「被擋下」在擋住的那個隊友頭上（伺服器 `lock_blocker_id`；找不到時退回弓手），其他「落空」在弓手頭上（`lock_caster_id`）。
+ */
+function lockFizzleSpots(e: EventBase, at: Locate): Spot[] {
+  if (typeof e.reason !== "string" || !e.reason.startsWith("lock_on")) return [];
+  const caster = at(e.lock_caster_id);
+  if (e.reason === "lock_on_blocked") return [{ pos: at(e.lock_blocker_id) ?? caster, text: WORD_LOCK_BLOCKED, tone: "good" }];
+  return [{ pos: caster, text: WORD_LOCK_MISS, tone: "good" }];
+}
+
 /** 一個事件 → 要在地圖上顯示的浮動文字（沒有對應回饋回傳空陣列）。 */
 function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): Spot[] {
   const amount = num(e.amount);
@@ -174,6 +199,11 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
     case "part_broken":
       // PB-1c（T16 占位）：部位破了跳「拂塵 破！」（放大、醒目）
       return typeof e.name_zh === "string" ? [{ pos: at(e.target_id), text: partBrokenWord(e.name_zh), tone: "bad", big: true }] : [];
+    case "effect_fizzled":
+      return lockFizzleSpots(e, at);
+    case "followup_cancelled":
+      // RG-3：瞄準中被近戰打中，瞄準取消（字在弓手頭上）
+      return e.reason === "interrupted" ? [{ pos: at(e.unit_id), text: WORD_LOCK_INTERRUPTED, tone: "good" }] : [];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];
@@ -246,6 +276,12 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
       const p = s.pos;
       if (s.text === WORD_BLOCK && items.some((x) => x.kind === "float" && x.text === WORD_BLOCK && samePos(x.pos, p))) continue;
       items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos) });
+    }
+    if (e.type === "trap_glance") {
+      // RG-3：敵人放陷阱時看那一格一眼（放置者看不到時不演）
+      const from = at(e.owner_id);
+      const to = posOf(e.pos);
+      if (from !== null && to !== null && typeof e.owner_id === "string") items.push({ kind: "glance", pos: from, unitId: e.owner_id, to });
     }
     if (e.type === "status_applied") {
       const pos = at(e.target_id);

@@ -196,6 +196,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     panelPreview: sel.panelPreview,
     hover: tiles.hover,
     marks: data.marks,
+    aims: data.aims,
     focusTile: data.focusTile,
     model: data.model,
     cards,

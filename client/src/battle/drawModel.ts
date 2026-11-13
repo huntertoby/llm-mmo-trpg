@@ -194,6 +194,8 @@ export interface DrawModel {
   /** 倒下的單位在前（先畫，壓在下面）。 */
   units: UnitDraw[];
   traps: TrapDraw[];
+  /** RG-3：敵方陷阱的可疑痕跡（`BattleView.trap_traces`；看不出種類，只畫翻土＋「？」）；沒有時省略。 */
+  traces?: Pos[];
   /** 在場圖騰的光環涵蓋的格子（淡色底，Phase 3D-4b）。 */
   auras: AuraDraw[];
   /** 持續區域的格子（半透明底色，移動型附方向箭頭；Phase 3D-5）。 */
@@ -399,7 +401,7 @@ export function buildDrawModel(
   const zones = zoneDraws(view, skills);
   const runes = runeDraws(view);
   const goalMarkers = objectiveMarkers(view.objective);
-  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, auras, zones, runes, wells, markers: goalMarkers, ...(options.margin === undefined ? {} : { margin: options.margin }), ...(view.practice === true ? { practice: practiceSceneOf(view.map_id) } : {}) };
+  return { ...themeOf(view), weather: view.weather_id ?? "", width: view.width, height: view.height, tiles, objects, units, traps, ...((view.trap_traces ?? []).length > 0 ? { traces: [...(view.trap_traces ?? [])] } : {}), auras, zones, runes, wells, markers: goalMarkers, ...(options.margin === undefined ? {} : { margin: options.margin }), ...(view.practice === true ? { practice: practiceSceneOf(view.map_id) } : {}) };
 }
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
