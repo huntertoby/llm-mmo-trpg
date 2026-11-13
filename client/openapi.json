@@ -2543,7 +2543,7 @@
           "world"
         ],
         "summary": "Post Pregen Wait",
-        "description": "6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端\n顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。",
+        "description": "6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端\n顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。WP-2：送出文字許願前也先問\n（``kind: \"wish\"``＋``text``；許願在佇列插隊排最前面）；選單許願、現在不能許的一律 ``none``。",
         "operationId": "post_pregen_wait_api_world_characters__character_id__pregen_wait_post",
         "parameters": [
           {
@@ -19419,7 +19419,8 @@
           "league",
           "pavilion",
           "skills",
-          "workshop"
+          "workshop",
+          "wish"
         ]
       },
       "ObjectView": {
@@ -20879,6 +20880,21 @@
           "place_zh": {
             "type": "string",
             "title": "Place Zh"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "quest",
+              "opportunity",
+              "wish"
+            ],
+            "title": "Source",
+            "default": "quest"
+          },
+          "refund": {
+            "type": "integer",
+            "title": "Refund",
+            "default": 0
           }
         },
         "additionalProperties": false,
@@ -21168,7 +21184,8 @@
             "type": "string",
             "enum": [
               "flash",
-              "opportunity"
+              "opportunity",
+              "wish"
             ],
             "title": "Kind"
           },
@@ -21215,6 +21232,31 @@
               }
             ],
             "title": "Solution"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "keywords": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keywords"
           }
         },
         "additionalProperties": false,
@@ -31553,6 +31595,168 @@
         "title": "WeaponRangeEntry",
         "description": "武器的射程（CB-3c）：前端判斷異形的技能算不算近戰（技能射程等於近戰武器的射程）；列出全部武器。"
       },
+      "WishAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "wish",
+            "title": "Kind",
+            "default": "wish"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "keywords": {
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Keywords",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WishAction",
+        "description": "在主城的許願池許願（Phase WP-1；07 7.6、#88）：``text``（一句話的願望，\nLLM 對到關鍵字並提議完整\n技能；只進 prompt 的 ``<player_input>``）與 ``keywords``（從選單挑 1～2 個關鍵字，不呼叫 LLM）\n剛好給一個。字數與個數的上限在世界規則（``rules.yaml`` 的 ``wish``），由規則檢查。"
+      },
+      "WishMenuItemView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "description_zh": {
+            "type": "string",
+            "title": "Description Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name_zh",
+          "description_zh"
+        ],
+        "title": "WishMenuItemView",
+        "description": "選單的一個關鍵字（「改用選單」挑 1～2 個）。"
+      },
+      "WishView": {
+        "properties": {
+          "title_zh": {
+            "type": "string",
+            "title": "Title Zh"
+          },
+          "speaker": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RangeSpeakerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "line_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Zh"
+          },
+          "cost": {
+            "type": "integer",
+            "title": "Cost"
+          },
+          "refund": {
+            "type": "integer",
+            "title": "Refund"
+          },
+          "coins": {
+            "type": "integer",
+            "title": "Coins"
+          },
+          "left": {
+            "type": "integer",
+            "title": "Left"
+          },
+          "per_week": {
+            "type": "integer",
+            "title": "Per Week"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Zh"
+          },
+          "llm": {
+            "type": "boolean",
+            "title": "Llm"
+          },
+          "text_max_chars": {
+            "type": "integer",
+            "title": "Text Max Chars"
+          },
+          "max_keywords": {
+            "type": "integer",
+            "title": "Max Keywords"
+          },
+          "menu": {
+            "items": {
+              "$ref": "#/components/schemas/WishMenuItemView"
+            },
+            "type": "array",
+            "title": "Menu"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title_zh",
+          "cost",
+          "refund",
+          "coins",
+          "left",
+          "per_week",
+          "available",
+          "llm",
+          "text_max_chars",
+          "max_keywords",
+          "menu"
+        ],
+        "title": "WishView",
+        "description": "``WorldView.wish``（WP-2；07 7.6、#88）：主城許願池的面板資料。人在主城才有，其他 ``None``。\n能不能許與原因和 ``wish`` 動作用同一個函式（:func:`trpg.world.wish.wish_problem`），所以畫面的\n原因句和送出被拒的那一句相同。"
+      },
       "WorkshopArena": {
         "properties": {
           "default_map": {
@@ -32143,6 +32347,9 @@
           },
           {
             "$ref": "#/components/schemas/UseFieldObjectAction"
+          },
+          {
+            "$ref": "#/components/schemas/WishAction"
           }
         ],
         "discriminator": {
@@ -32195,7 +32402,8 @@
             "use_field_object": "#/components/schemas/UseFieldObjectAction",
             "use_item": "#/components/schemas/UseItemAction",
             "use_teleport_stone": "#/components/schemas/UseTeleportStoneAction",
-            "walk": "#/components/schemas/WalkAction"
+            "walk": "#/components/schemas/WalkAction",
+            "wish": "#/components/schemas/WishAction"
           }
         }
       },
@@ -33150,6 +33358,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/PartyIntroView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wish": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WishView"
               },
               {
                 "type": "null"

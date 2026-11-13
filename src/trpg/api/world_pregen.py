@@ -465,7 +465,7 @@ class PregenWaitRequest(BaseModel):
     """機遇：事件的第幾個解法（同 ``event_solve`` 的 ``solution``）；不是機遇解法＝不用等。"""
     text: str | None = None
     """許願（WP-2）：要送出的願望文字（同 ``wish`` 動作的 ``text``）；會在佇列插隊排最前面。"""
-    keywords: tuple[str, ...] = ()
+    keywords: tuple[str, ...] | None = None
     """許願：選單的關鍵字（同 ``wish`` 動作）；選單許願不呼叫 LLM，一律 ``none``。"""
 
 
