@@ -2,9 +2,14 @@
 // 用正式元件與正式資料流畫：戰場是 `BattleRenderer`＋`buildDrawModel`（單位的 `equipment` 走 dollGear → resolveGear → 紙娃娃，和實機同一條路）；
 // 背包與裝備欄是 `BagContents`（42 格）與 `WornSlot`（48 格），圖示走 `GearIcon` → gearIconCanvas → qWeaponDef。資料是假的。
 // 參數：?mode=scene&w=1600|800（格子 63／25 px，等於 1600、800 寬視窗的地圖縮放 1.31／0.53）｜?mode=bag
+//       ｜?mode=c&w=1600|800：盾陣（shield_formation）的預覽沿用盾兵小盾＋點線（RG-4 驗收待決 9）
+//       ｜?mode=d&w=1600|800：單位資訊卡層數（KW-3 待決 3：四種計量 StackPips，其他照舊）
 //       ｜?mode=k3&w=1600|800：RG-4 驗收 K3（持盾弟子身邊的粉紅小點）的對照——南鄰格比較高的單位畫 6F-22 舊剪影（敵方 #ffb3a8 虛線人形），平地的不畫。
 import { createRoot } from "react-dom/client";
-import type { BattleView, Glossary, HeroGearSlot, TileView, UnitView, WorldInventory, WorldBagItem } from "../api/types";
+import type { BattleView, Glossary, HeroGearSlot, PreviewOut, TileView, UnitView, WorldInventory, WorldBagItem } from "../api/types";
+import { guardDraw } from "../battle/rgMarks";
+import { unitNames } from "../battle/units";
+import { UnitInfo } from "../ui/UnitInfo";
 import glossary from "../battle/fixtures/glossary.json";
 import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
@@ -86,6 +91,53 @@ async function showK3(): Promise<void> {
   r.draw(buildDrawModel(k3Scene(), HERO));
   document.body.dataset["ready"] = "1";
 }
+/** C：主角（弓）瞄準敵方符籙師；旁邊持塔盾（帶盾陣）的熔殼兵擋著 → 預覽 cover.kind＝shield_formation。 */
+function cScene(): BattleView {
+  const units: UnitView[] = [
+    unit("unit_0090", "enemy", 2, 1, { template_id: "t", name_zh: "符籙師", facing: "south" } as Partial<UnitView>),
+    unit("unit_0091", "enemy", 3, 1, { template_id: "t", name_zh: "盾陣兵", facing: "south", equipment: [{ slot: "off_hand", appearance: shield("molten_shell", "iron") }] } as Partial<UnitView>),
+    unit(HERO, "ally", 2, 4, { template_id: "hero_fighter", name_zh: "主角", facing: "north", weapon_id: "short_bow", weapon_class: "ranged" } as Partial<UnitView>),
+  ];
+  return { ...scene(), units, tiles: grid(5), height: 5 } as BattleView;
+}
+async function showC(): Promise<void> {
+  const cell = W === 800 ? 25 : 63;
+  const v = cScene();
+  const preview = { action: { type: "attack", unit_id: HERO, target_id: "unit_0090" }, cover: { penalty: 2, kind: "shield_formation", name_zh: "盾陣兵的盾陣", pos: [3, 1], unit_id: "unit_0091" } } as unknown as PreviewOut;
+  const box = document.createElement("div");
+  const h = document.createElement("h2");
+  h.textContent = `盾陣預覽（格子 ${cell}px、真 1 倍）：主角瞄準符籙師，旁邊持塔盾（盾陣）的人擋著 → 小盾＋點線（同盾兵）；預覽字（伺服器給的 name_zh 為假資料）：`;
+  box.appendChild(h);
+  const t = document.createElement("div");
+  t.id = "preview-text";
+  // 預覽框那一行的格式照 previewText.previewLines（「目標有{cover.name_zh}掩護（命中 −n）」）；整段 previewLines 要完整的 PreviewOut，這裡只示意那一行
+  const c = preview.cover;
+  t.textContent = c !== null ? `預覽框：目標有${c.name_zh}掩護（命中 −${c.penalty}）` : "";
+  box.appendChild(t);
+  document.body.appendChild(box);
+  const r = new BattleRenderer();
+  await r.init(box);
+  r.setScale(cell / 48);
+  r.draw(buildDrawModel(v, HERO));
+  r.setHighlights({ moves: [], attacks: [{ x: 2, y: 1 }], directions: [], preview: [], telegraph: [], focus: null, hover: { x: 2, y: 1 }, overlays: [], picked: [], vaults: [], guard: guardDraw(preview, v) });
+  setTimeout(() => (document.body.dataset["ready"] = "1"), 800);
+}
+/** D：單位資訊卡（正式元件 UnitInfo）：連擊 3＋怒氣滿＋專注 1＋氣 2＋其他層數。 */
+function CardD() {
+  const u = unit("unit_0090", "enemy", 1, 1, { name_zh: "刀客", stacks: { combo_point: 3, fury: 4, focus: 1, ki: 2, static_charge: 2 } } as Partial<UnitView>);
+  const u2 = unit("unit_0091", "enemy", 2, 1, { name_zh: "拳師", stacks: { ki: 1, static_charge: 1 } } as Partial<UnitView>);
+  const v = { ...scene(), units: [u, u2] } as BattleView;
+  const names = unitNames(v);
+  return (
+    <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+      {[u, u2].map((x) => (
+        <div key={x.id} className="unit-float bridge-left pinned" style={{ position: "relative", left: 0, top: 0, pointerEvents: "auto" }}>
+          <UnitInfo unit={x} names={names} heroId={HERO} skills={{}} view={v} />
+        </div>
+      ))}
+    </div>
+  );
+}
 async function showScene(): Promise<void> {
   header();
   const cell = W === 800 ? 25 : 63;
@@ -152,5 +204,14 @@ if (MODE === "bag") {
   document.body.appendChild(root);
   createRoot(root).render(<Bag />);
   setTimeout(() => (document.body.dataset["ready"] = "1"), 500);
-} else if (MODE === "k3") await showK3();
+} else if (MODE === "d") {
+  const h = document.createElement("h2");
+  h.textContent = `單位資訊卡層數（視窗 ${W}、真 1 倍）：連擊、怒氣、專注、氣是 HUD 同尺寸計量，其他層數（靜電）照舊`;
+  document.body.appendChild(h);
+  const root = document.createElement("div");
+  document.body.appendChild(root);
+  createRoot(root).render(<CardD />);
+  setTimeout(() => (document.body.dataset["ready"] = "1"), 500);
+} else if (MODE === "c") await showC();
+else if (MODE === "k3") await showK3();
 else await showScene();
