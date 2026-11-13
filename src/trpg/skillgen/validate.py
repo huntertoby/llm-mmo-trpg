@@ -41,6 +41,7 @@ from trpg.content.skill_rules import (
     SkillMatch,
 )
 from trpg.content.skills import (
+    BUILTIN_GATHER_SHAPES,
     COMPOSITE_KIND_ZH,
     COMPOSITE_MOVES,
     GATHER_SHAPES,
@@ -370,7 +371,10 @@ def _move_segment_violations(skill: SkillDef, library: ContentLibrary) -> list[V
             )
         ]
     skeleton = library.skeletons[skill.skeleton]
-    gather = skill.effects[0].type == "pull" and skill.shape.type in GATHER_SHAPES
+    shapes = GATHER_SHAPES
+    if skill.content_only_ok:  # GB-2b：內建技能、敵人專用招另可用範圍光環聚集
+        shapes += BUILTIN_GATHER_SHAPES
+    gather = skill.effects[0].type == "pull" and skill.shape.type in shapes
     if skill.shape.type not in skeleton.shapes and not gather:
         return [
             Violation(

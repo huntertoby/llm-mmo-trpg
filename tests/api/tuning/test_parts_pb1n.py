@@ -134,7 +134,7 @@ def test_units_without_parts_get_no_part_fields() -> None:
     table = load_tuning_fields(CONTENT)
     unit = table.target("unit")
     assert unit is not None
-    data = read_data(CONTENT / "units/ashen_heart.yaml")
+    data = read_data(CONTENT / "units/rift_shard_lord.yaml")  # GB-2 起灰燼之心有部位，改用碎晶之主
     assert "parts" not in data
     assert not [p for _f, p, _l in concrete_fields(data, unit) if p.startswith("parts")]
 

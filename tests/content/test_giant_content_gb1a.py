@@ -84,7 +84,8 @@ def test_giant_facing_is_optional_and_round_trips() -> None:
 
 def test_current_content_has_no_giant_problems() -> None:
     lib = library()
-    assert not any(u.footprint > 1 for u in lib.units.values())
+    # GB-2 起灰燼之心是內容裡唯一的巨型單位（熔心坑）
+    assert sorted(u.id for u in lib.units.values() if u.footprint > 1) == ["ashen_heart"]
     assert check(lib) == []
 
 
@@ -164,7 +165,7 @@ def test_giant_facing_must_name_a_known_template() -> None:
     m = lib.maps["open_plain"].model_copy(update={"giant_facing": {"nobody": "south"}})
     problems = giant_problems(
         lib.units,
-        {"open_plain": m},
+        {**lib.maps, "open_plain": m},  # GB-2：其餘地圖照舊（熔心坑的巨人要找得到頭目地圖）
         terrain=lib.ruleset.terrain.by_id(),
         objects=lib.ruleset.objects.by_id(),
         roguelite=lib.roguelite,

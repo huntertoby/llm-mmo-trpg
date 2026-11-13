@@ -126,10 +126,11 @@ shapes:
     description_zh: 影響與施放者曼哈頓距離不超過 radius 的格子（含自己），不需要選取。
     targeting: none
     min_rarity: common
+    # GB-2b：content_max 4 只有內建技能能寫（灰燼之心的吸氣「4 格內」，19.2.3 R7）；生成器、LLM 只看 max 3。
     budget: {base_permille: 1000, param: radius, per_unit_permille: 400}
-    cell_count: {param: radius, by_value: {1: 5, 2: 13, 3: 25}}
+    cell_count: {param: radius, by_value: {1: 5, 2: 13, 3: 25, 4: 41}}
     params:
-      radius: {llm_hint: "影響的半徑。", min: 1, max: 3}
+      radius: {llm_hint: "影響的半徑。", min: 1, max: 3, content_max: 4}
   # Phase 3C-5a（docs/design/06-技能.md 6.15）：投擲物件專用。UseSkill 同時給 target_object_id（被舉起的
   # pushable 物件，距離上限是 hurl_object 效果的 range）與 target_pos（落點，距施放者 ≤ 這裡的 range）。
   - id: object_then_tile

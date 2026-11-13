@@ -113,8 +113,16 @@ def _phase_template(library: ContentLibrary, unit: str, phase: str) -> UnitTempl
         if entry.id == phase:
             break
     tags = tuple(t for t in base.tags if t != "immovable")  # 空地圖：不能動的打不到人
+    # GB-2：灰燼之心是 3×3 巨型頭目（只能在頭目地圖）；這裡只驗 AI 選招，照 1 格、無部位放
     return base.model_copy(
-        update={"skills": current, "phases": (), "speed": base.speed or 4, "tags": tags}
+        update={
+            "skills": current,
+            "phases": (),
+            "speed": base.speed or 4,
+            "tags": tags,
+            "footprint": 1,
+            "parts": (),
+        }
     )
 
 

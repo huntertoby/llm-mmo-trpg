@@ -1,6 +1,9 @@
 # 灰燼之心第 1 階段「殼」的新招（BAL-21b，取代 skill_lava_spout；玩法決定 #149「lava_spout 裁定」B 案＋「後續（同日）」要保留提前一輪預告）。
 # 19.2.3「每 2 回合噴出熔岩，在 3 格造火地，提前一輪預告」：施放時選 4 格內一格（殼頂噴出熔岩柱、給自己護盾 1d4），
 # 下一個自己的回合開始在那格的 3×3 落下：1d6 火＋火地 2 回合（延遲段落在選定格，BAL-21a 的 followup.anchor: cast_tile）。
+# GB-2（#164 R5；19.2.3「巨型頭目段 GB 補定的細節」第 3 點）：落點改由引擎選——離灰燼之心最近佔格最遠的存活敵人當下的格子
+# （followup.anchor: farthest_enemy；不限射程、不需視線；看不見的隱蔽敵人不算），所以第一段不選格（shape: self，自身護盾照舊）。
+# 名稱照舊「熔岩濺落」（19.2.3 的「熔岩噴發」是設計用語；改名會動技能列表）。
 # 數值照 docs/phases/PhaseBAL-21計畫.md 第 2 節 Q1 建議（法力 6、冷卻 2、2 AP；使用者 2026-11-12「數值的調整不要再給你做」：不另調）。只給敵人用。
 id: skill_lava_splash
 schema_version: 1
@@ -15,13 +18,13 @@ category: spell
 weapon_req: any
 ap_cost: 2
 scaling_attr: int
-shape: {type: square3, range: 4}
+shape: {type: self}   # GB-2：落點由 farthest_enemy 決定，不選格
 effects:
   - {type: shield, dice: 1d4, affects: self}
 followup:
   when: delayed
   release: next_turn
-  anchor: cast_tile
+  anchor: farthest_enemy
   skeleton: area
   shape: {type: square3, range: 0}
   effects:

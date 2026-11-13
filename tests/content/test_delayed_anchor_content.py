@@ -18,7 +18,7 @@ from trpg.content.battle import BossPhase, check_phases
 from trpg.content.skills import ANCHOR_FIRST_SHAPES, SkillDef
 
 #: 內建技能裡填了 ``anchor`` 的（BAL-21b 灰燼之心的熔岩濺落）；其他都不輸出 ``anchor``。
-ANCHORED_BUILTINS = frozenset({"skill_lava_splash"})
+ANCHORED_BUILTINS = {"skill_lava_splash": "farthest_enemy"}  # GB-2（#164 R5）：原 cast_tile
 
 
 def skill_data(*, shape: dict[str, Any] | None = None, **follow: Any) -> dict[str, Any]:
@@ -111,7 +111,8 @@ def test_unset_fields_are_not_serialized() -> None:
             assert "mana_restore" not in phase.model_dump(), unit.id
     for skill_id in sorted(ANCHORED_BUILTINS):
         followup = lib.skills[skill_id].followup
-        assert followup is not None and followup.model_dump()["anchor"] == "cast_tile"
+        assert followup is not None
+        assert followup.model_dump()["anchor"] == ANCHORED_BUILTINS[skill_id]
     anchored = SkillDef.model_validate(skill_data())
     assert anchored.model_dump()["followup"]["anchor"] == "cast_tile"
 

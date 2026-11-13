@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
@@ -71,6 +72,8 @@ _DEFAULTS_ZH: Final = {
     "cost.cooldown": "沒寫＝沒有冷卻",
     "stance_upkeep": "沒寫＝0",
     "phases[*].skills": "沒寫＝沿用上一階段",
+    "phases[*].grow_surface.max_rows": "沒寫＝4",
+    "parts[*].on_break[*].rounds": "沒寫＝永久封住",
 }
 
 _PART_DEFAULT_ZH: Final = "沒寫＝和本體相同"
@@ -87,6 +90,9 @@ _STAT_ZH: Final = {
     "damage_dealt": "之後造成傷害的倍率（‰；750＝−25%）",
 }
 """``stat_down`` 的數量欄位標籤（依 ``stat``；PB-1n）。"""
+
+_BREAK_FIELD_TYPES: Final = {"amount": "stat_down", "rounds": "seal_skill"}
+"""``parts[*].on_break[*].<欄位>`` 只展開到這種破壞效果（PB-1n 數量；GB-2 限時封招的回合數）。"""
 
 _SITE_WORDS: Final = {
     "effects": "效果",
@@ -191,21 +197,26 @@ def _part_label(data: Any, parts: Sequence[PathPart], field: TuningField) -> str
     label = f"部位「{part.get('name_zh') or part.get('id')}」"
     if len(parts) > 3 and parts[2] == "on_break" and isinstance(parts[3], int):  # noqa: PLR2004
         effects = part.get("on_break") or []
-        stat = str(effects[parts[3]].get("stat") or "")
+        effect = effects[parts[3]]
         which = f"第 {parts[3] + 1} 個效果" if len(effects) > 1 else ""
+        if parts[-1] == "rounds":  # GB-2：限時封招
+            return f"{label}破掉後{which}：封住「{effect.get('skill')}」的回合數"
+        stat = str(effect.get("stat") or "")
         return f"{label}破掉後{which}：{_STAT_ZH.get(stat, field.label_zh)}"
     return label + field.label_zh.removeprefix("部位")
 
 
 def _part_skipped(field: TuningField, data: Any, parts: Sequence[PathPart]) -> bool:
-    """``parts[*].on_break[*].*`` 只展開 ``stat_down``（其他破壞效果沒有數量；PB-1n）。"""
+    """``parts[*].on_break[*].*`` 只展開到對應的破壞效果（:data:`_BREAK_FIELD_TYPES`：數量只給
+    ``stat_down``，PB-1n；回合數只給 ``seal_skill``，GB-2）。"""
     if len(parts) < 4 or parts[0] != "parts" or parts[2] != "on_break":  # noqa: PLR2004
         return False
     try:
         effect = lookup(data, parts[:4])
     except PatchError:
         return True
-    return not (isinstance(effect, dict) and effect.get("type") == "stat_down")
+    wanted = _BREAK_FIELD_TYPES.get(str(parts[-1]))
+    return not (isinstance(effect, dict) and effect.get("type") == wanted)
 
 
 def _phase_skipped(field: TuningField, phase: Any) -> bool:
@@ -532,6 +543,8 @@ def _tables(content_dir: Path) -> tuple[PrimitiveTable | None, ShapeTable | None
 
 
 def _default_zh(field: TuningField) -> str | None:
+    if field.path in _DEFAULTS_ZH:
+        return _DEFAULTS_ZH[field.path]
     if field.path.startswith("parts[*].") and field.path != "parts[*].hp_permille":
         return _PART_DEFAULT_ZH
     return _DEFAULTS_ZH.get(field.path)
@@ -547,6 +560,8 @@ def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int 
     if leaf == "amount":
         effect = lookup(data, parts[:4])
         return (1, 999) if effect.get("stat") == "damage_dealt" else (1, None)
+    if leaf == "rounds":  # GB-2：SealSkillBreak.rounds（ge=1）
+        return 1, None
     return None, None
 
 
@@ -559,6 +574,8 @@ def field_limits(
         if isinstance(parts[1], int):
             return _part_limits(data, parts)
         return (0, 1000) if parts[-1] == "near_break_permille" else (0, None)  # AI 估值表
+    if parts[-2:] == ("grow_surface", "max_rows"):  # GB-2：PhaseGrowSurface.max_rows
+        return 1, 9
     prims, shapes = _tables(content_dir)
     leaf = parts[-1]
     if field.effect_types and prims is not None:
@@ -572,8 +589,8 @@ def field_limits(
         found = next((s for s in shapes.shapes if s.id == shape.get("type")), None)
         if found is not None:
             spec2 = {**found.params, **found.content_params}.get(str(leaf))
-            if spec2 is not None:
-                return spec2.min, spec2.max
+            if spec2 is not None:  # 工坊改的是內建內容：上限照 content_max（GB-2b）
+                return spec2.min, spec2.top(builtin=True)
     return None, None
 
 
@@ -635,6 +652,17 @@ def unit_skill_picker(
     )
 
 
+def _skill_names_in_label(label: str, library: ContentLibrary | None) -> str:
+    """標籤裡的「skill_xxx」換成技能中文名（GB-2b：限時封招的標籤；沒有內容庫或找不到就照舊）。"""
+    if library is None or "「skill_" not in label:
+        return label
+    for skill_id in sorted(re.findall(r"「(skill_[a-z0-9_]+)」", label)):
+        skill = library.skills.get(skill_id)
+        if skill is not None:
+            label = label.replace(f"「{skill_id}」", f"「{skill.name_zh}」")
+    return label
+
+
 def object_detail(
     content_dir: Path,
     table: TuningFields,
@@ -649,7 +677,8 @@ def object_detail(
     data = read_data(path)
     primitives = primitive_names(content_dir)
     fields: list[TuningFieldView] = []
-    for field, concrete, label in concrete_fields(data, target, primitives):
+    for field, concrete, raw_label in concrete_fields(data, target, primitives):
+        label = _skill_names_in_label(raw_label, library)
         value = field_value(data, concrete)
         low, high = field_limits(content_dir, data, field, concrete)
         fields.append(

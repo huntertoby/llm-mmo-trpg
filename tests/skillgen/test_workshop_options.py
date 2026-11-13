@@ -10,6 +10,7 @@ import pytest
 from tests.engine.helpers import library
 from tests.skillgen.workshop_walks import DISPLACE, MODIFIER, STRIKE, Walk
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import BUILTIN_GATHER_SHAPES
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_conform import field_problems
 from trpg.skillgen.option_models import Choice, DraftOptions, FieldSpec, StepOptions
@@ -172,6 +173,8 @@ def test_every_shipped_skill_fits_the_options() -> None:
         data = skill.model_dump(mode="json", exclude_none=True)
         if any((m.change.summon_limit_delta or 0) < 0 for m in skill.modifiers):
             continue  # BAL-14c：召喚上限 −1 只有內建召喚專精能帶，工坊選單不列
+        if skill.shape.type in BUILTIN_GATHER_SHAPES and skill.followup is not None:
+            continue  # GB-2b：範圍光環聚集（熔心吸氣）只給內建、敵人專用招，工坊選單不列
         assert _fits(lib, data) == (None, ()), skill_id
 
 

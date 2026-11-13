@@ -1,10 +1,17 @@
 # 灰燼荒原區域 Boss（Phase 5F-5a；docs/design/19-灰燼荒原與賽季主線.md 19.2.3、09 9.6.8 #86）：灰燼之心，熔心坑（Boss 地圖 molten_heart_pit）。
 # 一塊會呼吸的源晶核心殘片，嵌在熔岩甲蟲堆成的殼裡；不移動。主線第 2 章結尾、等級 9；隊伍主角＋2（可帶影子，#87）。
-# 數值是初值（模擬見 docs/phases/Phase5F-5a報告.md）；外觀（doll）見檔尾（5A-ART4）。
+# GB-2（#152、#164；19.2.3「不動巨型頭目與部位」與「巨型頭目段 GB 補定的細節」，和下面舊階段描述衝突時以它為準）：
+#   不動巨型頭目，佔 3×3（footprint: 3），中心格在熔心坑 (5, 3)、朝南（地圖 giant_facing）。
+#   部位綁格（tiles 是相對中心格的偏移，北＝dy −1）：北排 3 格＝熔岩噴口（只有不是近戰的攻擊打得到）；
+#   中排東西 2 格＝殼縫（共用一條血；近戰打它算從背後）；中心＝核心（第 2 階段起露出，近戰貼任一面都打得到）；
+#   南排 3 格不列＝前殼（本體）。部位血量、封招回合、火地生長排數都是占位值（未量測），由使用者在數值工坊調。
+# 數值是初值（模擬見 docs/phases/Phase5F-5a報告.md；GB-2 起 3×3 與部位讓舊勝率不再適用，見 PhaseGB-2報告.md「平衡疑慮」）；外觀（doll）見檔尾（5A-ART4）。
 # 階段（引擎資料化，trpg.engine.boss_phases）：
-#   1 殼（100～60%）：開場狀態「熔殼」（受到的傷害 −40%；被冰打到就碎，元素沒有水，代決 5F5a-6）；「熔岩濺落」延遲段（BAL-21b 起，原「熔岩噴發」），施放時選 4 格內一格、下回合在那格 3×3 落下並造火地。
-#   2 呼吸（≤ 60%）：殼裂開（移除熔殼）；「熔心吸氣」把 2 格內的人拉近並小火傷、「熔心吐息」身邊第 2 圈小火傷＋燃燒（需要治療或護盾的時刻）；召喚 2 隻餘燼蜥。
-#   3 熔毀（≤ 30%）：坑底多處冒出火地（引擎沒有「火地每回合擴散」，用進入階段時一次放 8 格近似）；蓄力強招「熔心爆」（十字臂長 2，提前一輪預告）。
+#   1 殼（100～60%）：開場狀態「熔殼」（受到的傷害 −40%；被冰打到就碎，元素沒有水，代決 5F5a-6；殼縫破了也提早消失）；
+#     「熔岩濺落」延遲段（BAL-21b 起，原「熔岩噴發」；GB-2 起落在離它最遠的敵人那一格，下回合 3×3 落下並造火地；噴口破了這招就沒了）。
+#   2 呼吸（≤ 60%）：殼裂開（移除熔殼）；「熔心吸氣」把 4 格內的人往它拉 1 格並小火傷、「熔心吐息」身邊第 2 圈小火傷＋燃燒；
+#     殼縫東西兩側各爬出 1 隻餘燼蜥。核心破：打斷熔心爆的蓄力、吸氣 2 回合內失效。
+#   3 熔毀（≤ 30%）：南緣外那一排冒出火地，之後每輪往南長 1 排（最多 4 排，占位）；蓄力強招「熔心爆」（十字臂長 2，提前一輪預告）。
 # 護甲調整（19.4 骨架 13、雲嶺骨架 14 的世界線頭到期）寫在遭遇表 encounters/ashen_waste.yaml 的 armor_mods（開戰時套用）。
 id: ashen_heart
 name_zh: 灰燼之心
@@ -17,10 +24,34 @@ ai_profile: archer
 resist: {}
 element_mods: {fire: -750, ice: 500}
 tags: [boss, elite, lava_beast, ashen_core, immovable]
-skills: [skill_lava_splash, skill_fire_bolt, skill_ashen_oath]  # BAL-21b：P1 熔岩噴發換熔岩濺落（4 格內選格、下回合 3×3 落下）
+footprint: 3   # GB-2：不動巨型頭目 3×3（05 5.12.4）
+skills: [skill_lava_splash, skill_fire_bolt, skill_ashen_oath]  # BAL-21b：P1 熔岩噴發換熔岩濺落（GB-2 起落在最遠的敵人、下回合 3×3 落下）
 reactions: []
 opening_statuses:
   - {status: molten_shell}
+# 部位（GB-2，19.2.3「部位綁格」；hp_permille 各 200 占位、加總 600‰）
+parts:
+  - id: shell_seam
+    name_zh: 殼縫
+    hp_permille: 200
+    reach: any
+    tiles: [[-1, 0], [1, 0]]
+    counts_as_behind: true
+    on_break: [{type: stop_mechanic, status: molten_shell}]
+  - id: vent
+    name_zh: 熔岩噴口
+    hp_permille: 200
+    reach: ranged
+    tiles: [[-1, -1], [0, -1], [1, -1]]
+    on_break: [{type: seal_skill, skill: skill_lava_splash}]
+  - id: core
+    name_zh: 核心
+    hp_permille: 200
+    reach: any
+    tiles: [[0, 0]]
+    melee_from: any_face
+    exposed_in: [breath, meltdown]
+    on_break: [{type: interrupt_charge}, {type: seal_skill, skill: skill_heart_inhale, rounds: 2}]
 phases:
   - {id: shell, name_zh: 殼}
   - id: breath
@@ -29,21 +60,20 @@ phases:
     text_zh: 外殼轟然裂開，裡面的核心一明一暗地呼吸著——殼縫裡爬出兩隻餘燼蜥。
     skills: [skill_heart_inhale, skill_heart_exhale, skill_fire_bolt]
     remove_statuses: [molten_shell]
-    spawns: [{template: heart_ember_lizard, count: 2}]  # 殼縫餘燼蜥（5F-5b）
+    spawns:   # 殼縫餘燼蜥（5F-5b）；GB-2 起從殼縫東西兩側出來（被佔就找最近的安全格）
+      # GB-2b：從殼縫攻擊位 (3, 3)、(7, 3) 各往外移一格，不佔近戰打殼縫的位置
+      - {template: heart_ember_lizard, count: 1, at: [2, 3]}
+      - {template: heart_ember_lizard, count: 1, at: [8, 3]}
   - id: meltdown
     name_zh: 熔毀
     trigger: {kind: hp_below, permille: 300}
     text_zh: 核心開始熔毀，坑底的裂縫一條接一條噴出火來。
     skills: [skill_heart_meltdown, skill_heart_exhale, skill_fire_bolt]
     ai_profile: cunning
-    tiles:
-      - {at: [4, 4], surface: fire}
-      - {at: [6, 4], surface: fire}
-      - {at: [4, 6], surface: fire}
-      - {at: [6, 6], surface: fire}
-      - {at: [2, 5], surface: fire}
-      - {at: [8, 5], surface: fire}
-      - {at: [5, 2], surface: fire}
-      - {at: [5, 8], surface: fire}
+    tiles:   # GB-2（#164 R6 A）：南緣外第 1 排，之後由 grow_surface 每輪往南長
+      - {at: [4, 5], surface: fire}
+      - {at: [5, 5], surface: fire}
+      - {at: [6, 5], surface: fire}
+    grow_surface: {surface: fire, max_rows: 4}   # 最多 4 排（含第 1 排；占位）
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
 doll: {rarity: legendary, creature: {body: wisp, material: crystal, element: fire, size: huge, traits: [core], status_traits: {molten_shell: [crust]}}}

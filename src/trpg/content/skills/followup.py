@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from trpg.content.skills.constants import (
     ANCHOR_FIRST_SHAPES,
+    BUILTIN_GATHER_SHAPES,
     COMPOSITE_KIND_ZH,
     COMPOSITE_MOVES,
     DELAYED_RELEASE_VALUES,
@@ -78,11 +79,11 @@ def _check_after_action(
 
 def _check_after_gather(effects: tuple[EffectSpec, ...], shape: ShapeSpec, f: FollowupSpec) -> None:
     """聚集 → 範圍打擊（3F-4a）：第一段只有一個 ``pull``（朝聚集點拉），形狀在
-    :data:`GATHER_SHAPES`；第二段以聚集點為中心（``cross``／``square3``，射程與第一段相同，環形為
-    0）。"""
+    :data:`GATHER_SHAPES`（內建技能另可用 :data:`BUILTIN_GATHER_SHAPES`，GB-2b）；第二段以聚集點
+    為中心（``cross``／``square3``，射程與第一段相同，環形與範圍光環為 0）。"""
     if len(effects) != 1 or effects[0].type != "pull":
         raise ValueError(f"聚集段只能有一個拉扯原語（pull），收到 {_types(effects)}")
-    if shape.type not in GATHER_SHAPES:
+    if shape.type not in GATHER_SHAPES + BUILTIN_GATHER_SHAPES:  # 後者只限內建（skill.py 再擋）
         raise ValueError(f"聚集段的形狀只能是 {'、'.join(GATHER_SHAPES)}，收到 {shape.type}")
     if f.shape.type not in FOLLOWUP_CENTERED:
         raise ValueError(
