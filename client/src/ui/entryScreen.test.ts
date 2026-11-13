@@ -361,7 +361,7 @@ function px(body: string, prop: string): number {
 const content = (path: string): string => readFile(SRC_DIR, `../../content/${path}`);
 const RACES_YAML = parse(content("races.yaml")) as { races: { id: string; blurb_zh: string; home_realm: string }[] };
 const ORIGINS_YAML = parse(content("origins.yaml")) as { origins: { id: string; tagline_zh: string; realm: string }[] };
-const KEYWORDS_YAML = parse(content("skill_keywords.yaml")) as { keywords: { id: string }[] };
+const KEYWORDS_YAML = parse(content("skill_keywords.yaml")) as { keywords: { id: string; start_hidden?: boolean }[] };
 
 const race = (id: string, realm: string, realmName: string): RaceOption => ({
   id,
@@ -464,7 +464,8 @@ describe("1. 建角頁：種族格子卡＋右側展開欄、判定加值、出�
     expect(crestId("hub")).toBe("c_other");
     expect(src("ui/CreateIcons.tsx")).toContain("const accent = regionThemeFor(region).accent;");
     expect(src("ui/CreateIcons.tsx")).toContain("opt={{ accent }}");
-    const ids = KEYWORDS_YAML.keywords.map((k) => k.id).sort();
+    // KW-1：開局不出現（start_hidden）的四個層數關鍵字（連擊、怒氣、專注、氣）的圖示在 KW-3 隨美術補；拿掉 start_hidden 時這裡自動要求。
+    const ids = KEYWORDS_YAML.keywords.filter((k) => k.start_hidden !== true).map((k) => k.id).sort();
     expect([...KEYWORD_ICON_IDS].sort()).toEqual(ids);
     const icons = new Set(ids.map((id) => renderToStaticMarkup(createElement(KeywordIcon, { id })).replace(/data-keyword-icon="[^"]+"/, "")));
     expect(icons.size).toBe(ids.length);
