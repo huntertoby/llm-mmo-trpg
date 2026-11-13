@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -11,6 +13,7 @@ import pytest
 from tests.engine.helpers import library
 from trpg.llm import LLMConfig, MockLLMClient
 from trpg.llm.candidate_source import mock_naming_client
+from trpg.llm.client import OpenAICompatClient
 from trpg.llm.errors import LLMUnavailable
 from trpg.llm.flash_eval import evaluate_flash, pick_skills
 from trpg.llm.flash_propose import (
@@ -28,6 +31,7 @@ from trpg.llm.flash_propose import (
 from trpg.llm.naming import DEFAULT_NAMING_ATTEMPTS
 from trpg.llm.prompts.flash import (
     FLASH_PROMPT_VERSION,
+    MAX_SCHEMA_BRANCHES,
     build_flash_messages,
     flash_prompt_record,
     flash_schema,
@@ -102,6 +106,12 @@ def _variations(offer: FlashOffer) -> list[str]:
     return [o.variation.key() for o in offer.options]
 
 
+def _schema_templates(schema: Mapping[str, Any]) -> list[str]:
+    """schema 列出的模板（LF-2：每個模板一個 oneOf 分支，依目錄順序）。"""
+    items = schema["properties"]["variations"]["items"]
+    return [branch["properties"]["template"]["const"] for branch in items["oneOf"]]
+
+
 # ---------------------------------------------------------------------------
 # schema 與 prompt
 # ---------------------------------------------------------------------------
@@ -111,8 +121,80 @@ def test_schema_has_no_numeric_fields_and_enums_come_from_the_catalog() -> None:
     request = _request()
     catalog = build_catalog(LIB, request, skill_before(LIB, request), major=False)
     schema = flash_schema(catalog, 4)
-    item = schema["properties"]["variations"]["items"]
     assert schema["properties"]["variations"]["maxItems"] == 4
+    branches = schema["properties"]["variations"]["items"]["oneOf"]
+    assert _schema_templates(schema) == list(catalog.templates())
+    for branch, entry in zip(branches, catalog.entries, strict=True):
+        assert branch["additionalProperties"] is False
+        props = branch["properties"]
+        assert props["template"] == {"const": entry.template}
+        assert props["category"] == {"const": entry.category}
+        assert "name_zh" not in props  # 小變化題目不取名
+        for name, node in props.items():
+            kind = str(node.get("type"))
+            assert "integer" not in kind and "number" not in kind, name
+    # 不含轉型、形態、種族這類不是模板的東西
+    assert not any(t.startswith("to_") for t in catalog.templates())
+
+
+def test_schema_binds_each_template_to_its_own_parameter_menu() -> None:
+    """LF-2 第 4 點：每個模板一個分支，參數只列該模板的選單（必填），沒有選單的分支沒有該欄位；
+    ``oneof_as_anyof`` 開時送出的是 ``anyOf``、關時保留 ``oneOf``。"""
+    request = _request()
+    before = skill_before(LIB, request)
+    catalog = build_catalog(LIB, request, before, major=False, applicable=_applicable(request))
+    schema = flash_schema(catalog, 4)
+    by_template = {
+        b["properties"]["template"]["const"]: b
+        for b in schema["properties"]["variations"]["items"]["oneOf"]
+    }
+    exploit = by_template["keyword_exploit"]
+    entry = catalog.entry("keyword_exploit")
+    assert entry is not None
+    assert exploit["properties"]["keyword"] == {"enum": list(entry.keywords)}
+    assert exploit["required"] == ["category", "template", "keyword", "note_zh"]
+    assert "element" not in exploit["properties"] and "shape" not in exploit["properties"]
+    assert exploit["properties"]["note_zh"] == {"type": "string", "minLength": 1, "maxLength": 40}
+    plain = by_template["range_plus"]
+    assert set(plain["properties"]) == {"category", "template", "note_zh"}
+    snapshot = {t: (b["required"], sorted(b["properties"])) for t, b in sorted(by_template.items())}
+    assert snapshot == {
+        "cost_charge": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "cost_light": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "keyword_exploit": (
+            ["category", "template", "keyword", "note_zh"],
+            ["category", "keyword", "note_zh", "template"],
+        ),
+        "keyword_imbue": (
+            ["category", "template", "keyword", "note_zh"],
+            ["category", "keyword", "note_zh", "template"],
+        ),
+        "multi_hit": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "range_plus": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "refine": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+    }
+    anyof = OpenAICompatClient(LLMConfig(oneof_as_anyof=True))._prepare_schema(schema)
+    strict = OpenAICompatClient(LLMConfig(oneof_as_anyof=False))._prepare_schema(schema)
+    assert "anyOf" in anyof["properties"]["variations"]["items"]
+    assert "oneOf" not in anyof["properties"]["variations"]["items"]
+    assert (
+        strict["properties"]["variations"]["items"] == schema["properties"]["variations"]["items"]
+    )
+    # 大變化題目每個分支多一個必填的 name_zh（不設 maxLength：語法約束會從中間截斷名稱）
+    major = flash_schema(catalog, 4, major=True)
+    for branch in major["properties"]["variations"]["items"]["oneOf"]:
+        assert branch["properties"]["name_zh"] == {"type": "string", "minLength": 1}
+        assert branch["required"][-2:] == ["note_zh", "name_zh"]
+
+
+def test_schema_falls_back_to_flat_enums_with_too_many_templates() -> None:
+    request = _request()
+    catalog = build_catalog(LIB, request, skill_before(LIB, request), major=False)
+    many = replace(
+        catalog, entries=catalog.entries * (MAX_SCHEMA_BRANCHES // len(catalog.entries) + 1)
+    )
+    item = flash_schema(many, 4)["properties"]["variations"]["items"]
+    assert "oneOf" not in item
     assert set(item["properties"]) == {
         "category",
         "template",
@@ -121,15 +203,6 @@ def test_schema_has_no_numeric_fields_and_enums_come_from_the_catalog() -> None:
         "shape",
         "note_zh",
     }
-    assert item["additionalProperties"] is False
-    for name, node in item["properties"].items():
-        assert "integer" not in str(node.get("type")) and "number" not in str(node.get("type")), (
-            name
-        )
-    assert item["properties"]["category"]["enum"] == list(catalog.categories)
-    assert set(item["properties"]["template"]["enum"]) == set(catalog.templates())
-    # 不含轉型、形態、種族這類不是模板的東西
-    assert not any(t.startswith("to_") for t in catalog.templates())
 
 
 def test_prompt_is_versioned_and_data_is_escaped() -> None:
@@ -145,7 +218,7 @@ def test_prompt_is_versioned_and_data_is_escaped() -> None:
     assert "<b>" not in user and "&lt;b&gt;" in user
     assert "不要填任何數值" in messages[0]["content"]
     record = flash_prompt_record(messages)
-    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/5"
+    assert record["prompt_version"] == FLASH_PROMPT_VERSION == "flash-variation/6"
     assert user.index("<catalog>") < user.index("<request>")  # LLM-1：固定目錄在前
     assert len(record["system_hash"]) == 12
 
@@ -233,14 +306,10 @@ def test_proposals_crowded_into_one_category_still_cover_two_categories() -> Non
 BAD_ITEMS = {
     "flash.unknown_template": _item("beast_form", "area"),  # 形態原語
     "flash.template_not_available": _item("to_passive_on_hit", "area"),  # 轉型不可提議
-    "flash.unknown_category": _item("range_plus", "race_orc"),  # 種族類別
-    "flash.category_mismatch": _item("range_plus", "combo"),
-    "flash.param_missing": _item("keyword_imbue", "element"),
+    "flash.unknown_category": _item("beast_form", "race_orc"),  # 種族類別（模板也不在目錄）
+    "flash.param_missing": _item("keyword_exploit", "element"),  # 選單有 6 個：不能代填
     "flash.param_not_offered": _item("keyword_imbue", "element", keyword="no_such_keyword"),
-    "flash.param_unused": _item("range_plus", "area", keyword="wet"),
     "flash.extra_field": {**_item("range_plus", "area"), "damage": 30},  # 數值欄位
-    "flash.english_text": _item("range_plus", "area", note_zh="use range_plus"),  # 英文代號
-    "flash.note_text": _item("range_plus", "area", note_zh="範圍 +1"),
     "flash.schema": {"category": 1, "template": 2},
 }
 
@@ -287,7 +356,8 @@ def test_duplicates_are_dropped() -> None:
         MockLLMClient([_text(GOOD4[0], GOOD4[0], GOOD4[1])]), LIB, _request(), max_attempts=1
     )
     assert [v.template for v in record.accepted] == ["range_plus", "multi_hit"]
-    assert "flash.duplicate" in record.codes[0]
+    # LF-2：重複的直接丟掉，不算錯（記修正碼）
+    assert record.codes[0] == ("flash.repaired.duplicate",) and record.rejected == ()
 
 
 def test_retry_accumulates_valid_items_and_gives_feedback() -> None:
@@ -555,10 +625,10 @@ def test_proposal_prompt_and_schema_use_the_filtered_catalog() -> None:
                 continue  # 目錄是空的：不呼叫模型
             schema = client.schemas[0]
             assert schema is not None
-            templates = schema["properties"]["variations"]["items"]["properties"]["template"]
+            templates = _schema_templates(schema)
             before = skill_before(LIB, request)
             full = build_catalog(LIB, request, before, major=False)
-            for template in templates["enum"]:
+            for template in templates:
                 assert any(
                     try_variation(LIB, request, v)
                     for v in full.pool.values()
@@ -604,10 +674,10 @@ def test_shuffling_changes_only_the_presentation() -> None:
             variation.shape.type if variation.shape is not None else None,
         )
         assert shown.resolve(*args) == catalog.resolve(*args)
-    # schema 列舉與 prompt 目錄用的是同一個順序
-    item = flash_schema(shown, 4)["properties"]["variations"]["items"]["properties"]
-    assert item["template"]["enum"] == list(shown.templates())
-    assert item["category"]["enum"] == list(shown.categories)
+    # schema 分支與 prompt 目錄用的是同一個順序
+    assert _schema_templates(flash_schema(shown, 4)) == list(shown.templates())
+    flat = flash_schema(shown, 4)
+    assert flat["properties"]["variations"]["maxItems"] == 4
 
 
 def _template_order(seed: int, *, shuffle: bool) -> tuple[tuple[str, ...], str]:
@@ -619,9 +689,8 @@ def _template_order(seed: int, *, shuffle: bool) -> tuple[tuple[str, ...], str]:
     assert client.schemas == again.schemas and client.calls == again.calls
     schema = client.schemas[0]
     assert schema is not None
-    item = schema["properties"]["variations"]["items"]["properties"]
     block = client.calls[0][1]["content"].split("<request>")[1].split("</request>")[0]
-    return tuple(item["template"]["enum"]), block
+    return tuple(_schema_templates(schema)), block
 
 
 def test_catalog_order_follows_the_question_seed_by_default() -> None:
