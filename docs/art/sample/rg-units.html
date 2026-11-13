@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>RG 第二批：持盾弟子、熔殼甲兵、單挑插圖</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>RG 第二批：持盾弟子、熔殼甲兵、精英單挑插圖（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-13（PhaseRG計畫.md 第 5 節最後三列；紀錄 RG樣張.md 第 9 節）。分段：<a href="?part=dolls&mute=1">持盾弟子四方向</a><a href="?part=shells&mute=1">熔殼甲兵</a><a href="?part=lineup&mute=1">並排對照（48 格）</a><a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=duel&mute=1">單挑插圖候選</a>；對話框情境在 <a href="rg-duel-dialog.html?w=1600&mute=1">rg-duel-dialog.html</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="idleWeapons.js"></script><script src="qNpc.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="rgUnits.js"></script>
+<script>
+const OO = OccludeOutline, RU = RGUnits, T = OO.T, P = new URLSearchParams(location.search), PART = P.get("part") || "dolls";
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, REG = (id) => R4.REGIONS.find((r) => r.id === id);
+const ASH = REG("ashen_waste");
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", TAU = Math.PI * 2;
+const tile = (region, id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, region, id, 0, 0, gx, gy); ctx.restore(); };
+const CLOUD = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
+const ASHG = (ctx, x, y, gx, gy) => tile(ASH, (gx + gy * 3) % 5 === 0 ? "dirt" : "stone")(ctx, x, y, gx, gy);
+/** 遊戲的地圖縮放（同 rg-marks.html／occlude-outline.html）：1600×900 → 1.31、800×600 → 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+
+// ---------------- 單位 ----------------
+const MONK = Object.fromEntries(QNpc.MONKS.map(([zh, , u, o]) => [zh, { u, o: o ?? {} }]));
+const npc = (zh) => QNpc.prep(MONK[zh].u).q; // 修士（QNpc 的 content → qDoll；沒有新部件的直接用 QDoll）
+const DOLLS = {
+  shieldA: { zh: "持盾弟子 A 雲紋碑盾", doll: RU.sectShieldDisciple("A") },
+  shieldB: { zh: "持盾弟子 B 太極方盾", doll: RU.sectShieldDisciple("B") },
+  sword: { zh: "持劍弟子（現行）", doll: npc("持劍弟子") },
+  crane: { zh: "雲鶴使（現行）", doll: null, npc: "雲鶴使" },
+  talisman: { zh: "符籙師（現行）", doll: null, npc: "符籙師" },
+  monk: { zh: "護法武僧（現行）", doll: null, npc: "護法武僧" },
+  kite: { zh: "盜賊盾衛（鳶盾，現行）", doll: TP.bandit_shieldbearer },
+  tower: { zh: "塔盾（現行，盜賊換塔盾）", doll: { look: TP.bandit.look, gear: { ...TP.bandit.gear, off_hand: { slot: "off_hand", kind: "shield_kite", form: "tower", material: "wood", color: "#6a4a2e" } } } },
+};
+const CREAT = {
+  shellA: { zh: "熔殼甲兵 A 立殼", spec: RU.moltenShellTrooper("a") },
+  shellB: { zh: "熔殼甲兵 B 半圓殼盾", spec: RU.moltenShellTrooper("b") },
+  beetle: { zh: "熔岩甲蟲（現行）", spec: { body: "crawler", variant: "beetle", material: "magma" } },
+  turtle: { zh: "噴岩龜（現行）", spec: { body: "shell", material: "magma", traits: ["volcano"] } },
+  lizard: { zh: "餘燼蜥（現行）", spec: { body: "lizard", material: "magma", size: "small" } },
+  lord: { zh: "熔核領主（精英，現行）", spec: { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"], elite: true, affixes: ["hardshell"] } },
+};
+/** 一隻人形（含 QNpc 新部件的修士走 QNpc.stamp；大盾走 RU.stampDoll）。pose＝qDoll 姿勢（待機）。 */
+function drawDoll(ctx, key, view, x, y, k, west, dpr, pose) {
+  const d = DOLLS[key];
+  if (d.npc) { QNpc.stamp(ctx, MONK[d.npc].u, view, x, y, k * (MONK[d.npc].o.k ?? 1), west, { dpr }); return; }
+  if (pose) QDoll.setPose(pose);
+  try { RU.stampDoll(ctx, d.doll, view, x, y, k, west, { dpr }); } finally { if (pose) QDoll.setPose(null); }
+}
+function drawCreature(ctx, key, x, y, k, west, t) {
+  const spec = CREAT[key].spec;
+  if (t == null) QCreature.stamp(ctx, spec, x, y, k, west); else QCreatureAnim.stamp(ctx, spec, "idle", t, x, y, k, west);
+}
+/** 劍盾待機（idleWeapons.js sword_shield；u 0～1）。 */
+const idle = (u) => IdleWeapons.IDLE.sword_shield.pose(u);
+
+// ---------------- 格子 ----------------
+/** 一格（48 寬、上方多留 22 給頭）：地面＋腳下環＋單位。res＝裝置像素／模型 px。 */
+function cellCanvas(ground, draw, res = 1, padX = 12, gx = 3, gy = 3, up = 22) {
+  const W = T + padX * 2, H = T + up, c = document.createElement("canvas"); c.width = Math.round(W * res); c.height = Math.round(H * res);
+  const g = c.getContext("2d"); g.scale(res, res);
+  g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H);
+  g.translate(padX, up);
+  for (const i of [-1, 0, 1]) { g.save(); g.beginPath(); g.rect(i * T, 0, T, T); g.clip(); ground(g, i * T, 0, gx + i, gy); g.restore(); }
+  g.strokeStyle = "rgba(0,0,0,0.25)"; g.lineWidth = 1 / res; for (const x of [0, T]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, T); g.stroke(); }
+  draw(g, res);
+  return c;
+}
+const ringAt = (g, team, cx = T / 2, elite = false) => OO.drawRing(g, { team, x: cx / T - 0.5, y: 0, kind: elite ? "creature" : "doll", spec: { elite } });
+const feet = (cx = T / 2) => ({ x: cx, y: T / 2 + T * 0.23 });
+function dollCell(key, view, west, opt = {}) {
+  return cellCanvas(opt.ground ?? CLOUD, (g, res) => { ringAt(g, opt.team ?? "enemy"); const f = feet(); drawDoll(g, key, view, f.x, f.y, OO.K, west, Math.max(2, res), opt.pose); }, opt.res ?? 1);
+}
+function creatureCell(key, west, opt = {}) {
+  const spec = CREAT[key].spec;
+  return cellCanvas(opt.ground ?? ASHG, (g) => { ringAt(g, "enemy", T / 2, !!spec.elite); const f = feet(); drawCreature(skipGround(g, spec), key, f.x, f.y, OO.K, west, opt.t); }, opt.res ?? 1);
+}
+/** QCreature.stamp 自己先畫紅色地面環（2 筆；精英 7 筆）：跳過，改畫遊戲端的陣營環（同 occludeOutline.js skipPaint）。 */
+function skipGround(ctx, spec) {
+  let left = spec.elite ? 7 : 2; const PAINT = new Set(["fill", "stroke", "fillRect", "strokeRect", "fillText", "strokeText"]);
+  return new Proxy(ctx, { get(t, p) { if (PAINT.has(p)) return (...a) => { if (left > 0) { left -= 1; return undefined; } return t[p](...a); }; const v = Reflect.get(t, p); return typeof v === "function" ? v.bind(t) : v; }, set(t, p, v) { t[p] = v; return true; } });
+}
+/** 最近鄰放大。 */
+const nn = (c, Z, cap) => ({ cv: c, w: c.width * Z, h: c.height * Z, nn: true, cap });
+const plain = (c, cap, s = 1) => ({ cv: c, w: c.width * s, h: c.height * s, cap });
+/** 剪影（只留外形，墨色）：同一格畫好後把單位那層換成單色。 */
+function silCell(drawUnit, res = 1) {
+  const W = T + 24, H = T + 22, c = document.createElement("canvas"); c.width = W * res; c.height = H * res; const g = c.getContext("2d"); g.scale(res, res); g.translate(12, 22); drawUnit(g, res); g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "source-in"; g.fillStyle = "#f2e6c8"; g.fillRect(0, 0, c.width, c.height);
+  const o = document.createElement("canvas"); o.width = c.width; o.height = c.height; const og = o.getContext("2d"); og.fillStyle = "#3a3f4a"; og.fillRect(0, 0, o.width, o.height); og.drawImage(c, 0, 0); return o;
+}
+
+// ---------------- 拼圖、輸出（同 rg-marks.html 的 sheet／publish） ----------------
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; } const caps = c.cap ? wrap(c.cap, Math.max(w, b.capW ?? 110), 12) : []; items.push({ c, x, w, h, caps }); x += Math.max(w, caps.length ? (b.capW ?? 110) : 0) + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width;
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+  document.documentElement.dataset.done = "1";
+}
+const PARTS = {};
+
+// ================= 1. 持盾弟子：四方向、待機 =================
+PARTS.dolls = () => {
+  const V = [["front", false, "正面"], ["side", false, "側面朝東"], ["side", true, "側面朝西"], ["back", false, "背面"]];
+  const blocks = [{ title: "持盾弟子：四方向＋待機（劍盾待機 shieldUp，u＝0／0.5）——一格 48，真 1 倍 ×1、最近鄰 ×4、向量 ×4" }];
+  for (const key of ["shieldA", "shieldB"]) {
+    const one = [], zoom = [], vec = [];
+    for (const [v, w, zh] of V) for (const u of [0, 0.5]) {
+      const c1 = dollCell(key, v, w, { pose: idle(u) });
+      one.push(plain(c1, `${zh} u${u}`)); zoom.push(nn(c1, 4)); vec.push(plain(dollCell(key, v, w, { pose: idle(u), res: 4 }), null));
+    }
+    blocks.push({ note: DOLLS[key].zh }, { cells: one, gap: 18, capW: 48 }, { cells: zoom.slice(0, 4), gap: 8 }, { cells: zoom.slice(4), gap: 8 }, { cells: vec.slice(0, 4), gap: 8 }, { cells: vec.slice(4), gap: 8 });
+  }
+  publish(sheet(1640, blocks), "image/png");
+};
+// ================= 2. 熔殼甲兵：朝東、朝西、待機 =================
+PARTS.shells = () => {
+  const blocks = [{ title: "熔殼甲兵：朝東、朝西、待機（qCreatureAnim idle 0／600／1200 ms）——一格 48，真 1 倍 ×1、最近鄰 ×4、向量 ×4" }];
+  for (const key of ["shellA", "shellB"]) {
+    const items = [[false, null, "朝東 靜態"], [true, null, "朝西 靜態"], [false, 0, "待機 0"], [false, 600, "待機 600"], [false, 1200, "待機 1200"]];
+    const one = items.map(([w, t, zh]) => plain(creatureCell(key, w, { t }), zh));
+    const zoom = items.slice(0, 4).map(([w, t]) => nn(creatureCell(key, w, { t }), 4));
+    const vec = items.slice(0, 4).map(([w, t]) => plain(creatureCell(key, w, { t, res: 4 }), null));
+    blocks.push({ note: CREAT[key].zh }, { cells: one, gap: 18, capW: 60 }, { cells: zoom, gap: 8 }, { cells: vec, gap: 8 });
+  }
+  publish(sheet(1640, blocks), "image/png");
+};
+// ================= 3. 並排對照（一格 48，真 1 倍＋最近鄰 ×3＋剪影） =================
+PARTS.lineup = () => {
+  const cloudKeys = ["shieldA", "shieldB", "sword", "crane", "talisman", "monk", "kite", "tower"], ashKeys = ["shellA", "shellB", "beetle", "turtle", "lizard", "lord"];
+  const dc = (k, v, w) => dollCell(k, v, w, { pose: DOLLS[k].npc ? null : idle(0) }), cc = (k) => creatureCell(k, true);
+  const dSil = (k, v, w) => silCell((g, r) => { const f = feet(); drawDoll(g, k, v, f.x, f.y, OO.K, w, Math.max(2, r)); });
+  const cSil = (k) => silCell((g) => { const f = feet(); drawCreature(noPaint(g), k, f.x, f.y, OO.K, true); });
+  const blocks = [{ title: "並排對照：一格 48 真 1 倍（上）、最近鄰 ×3（中）、只留剪影 ×2（下）。修士在雲嶺地面、熔岩獸在荒原焦土；全部朝西（敵方預設）" }];
+  for (const [v, w, zh] of [["front", false, "正面"], ["side", true, "側面朝西"]]) {
+    blocks.push({ note: `雲嶺修士與盾：${zh}` }, { cells: cloudKeys.map((k) => plain(dc(k, v, w), DOLLS[k].zh)), gap: 30, capW: 72 },
+      { cells: cloudKeys.map((k) => nn(dc(k, v, w), 3)), gap: 6 }, { cells: cloudKeys.map((k) => nn(dSil(k, v, w), 2)), gap: 6 });
+  }
+  blocks.push({ note: "荒原熔岩獸：朝西" }, { cells: ashKeys.map((k) => plain(cc(k), CREAT[k].zh)), gap: 30, capW: 72 },
+    { cells: ashKeys.map((k) => nn(cc(k), 3)), gap: 6 }, { cells: ashKeys.map((k) => nn(cSil(k), 2)), gap: 6 });
+  publish(sheet(1860, blocks), "image/png");
+};
+/** 異形只要身體（地面環、影子、軟特效都不畫）：同 occludeOutline.js skipPaint(ctx, Infinity)。 */
+function noPaint(ctx) { const PAINT = new Set(["fill", "stroke", "fillRect", "strokeRect"]); return new Proxy(ctx, { get(t, p) { if (PAINT.has(p)) return () => undefined; const v = Reflect.get(t, p); return typeof v === "function" ? v.bind(t) : v; }, set(t, p, v) { t[p] = v; return true; } }); }
+
+// ================= 4. 戰場情境（遊戲地圖縮放的真 1 倍） =================
+/** 單位：{ k: DOLLS 或 CREAT 的鍵 | tpl: PaperDoll 範本, x, y, view, west, team, hp } */
+function sceneCanvas(sc, S, res = 1) {
+  const up = 30, W = sc.cols * T, H = sc.rows * T + up, cv = document.createElement("canvas"); cv.width = Math.round(W * S * res); cv.height = Math.round(H * S * res);
+  const g = cv.getContext("2d"); const xf = () => g.setTransform(S * res, 0, 0, S * res, 0, up * S * res);
+  xf(); g.fillStyle = "#14161f"; g.fillRect(0, -up, W, H);
+  for (let y = 0; y < sc.rows; y++) for (let x = 0; x < sc.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); sc.ground(g, x * T, y * T, x, y); g.restore(); }
+  g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / (S * res); for (let y = 0; y <= sc.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(W, y * T); g.stroke(); } for (let x = 0; x <= sc.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, sc.rows * T); g.stroke(); }
+  const us = [...sc.units].sort((a, b) => a.y - b.y || a.x - b.x);
+  for (const u of us) {
+    xf(); const isC = !!CREAT[u.k], spec = isC ? CREAT[u.k].spec : null;
+    OO.drawRing(g, { team: u.team ?? "enemy", x: u.x, y: u.y, kind: isC ? "creature" : "doll", spec: { elite: !!spec?.elite }, hero: u.hero });
+    const f = OO.feetOf({ x: u.x, y: u.y });
+    if (isC) drawCreature(skipGround(g, spec), u.k, f.x, f.y, OO.K, !!u.west);
+    else if (u.tpl) QDoll.stamp(g, TP[u.tpl], u.view ?? "front", f.x, f.y, OO.K, !!u.west, { dpr: Math.max(2, S * res) });
+    else drawDoll(g, u.k, u.view ?? "front", f.x, f.y, OO.K, !!u.west, Math.max(2, S * res), DOLLS[u.k].npc ? null : idle(0));
+    const c = OO.centerOf({ x: u.x, y: u.y }), w = T * 0.8, hy = c.y + T * 0.36; // HP 條（同 rg-marks.html hud）
+    g.fillStyle = "#000"; g.fillRect(c.x - w / 2, hy, w, 5); g.fillStyle = (u.hp ?? 1) > 0.5 ? "#4cd964" : "#ffcc00"; g.fillRect(c.x - w / 2, hy, w * (u.hp ?? 1), 5);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0); return cv;
+}
+const ALLY = (tpl, x, y, o = {}) => ({ tpl, x, y, team: "ally", view: "side", west: false, ...o });
+const SCENES = {
+  cloud: { zh: "雲嶺・古松祭壇／雲海吊橋（持盾弟子 A 在上排、B 在下排，各護一名遠程；右邊盜賊盾衛對照）", cols: 8, rows: 4, ground: CLOUD, units: [
+    ALLY("hero_fighter", 1, 1, { hero: true }), ALLY("hero_mage", 1, 2), ALLY("hero_archer", 0, 3),
+    { k: "shieldA", x: 5, y: 1, view: "side", west: true }, { k: "crane", x: 6, y: 1, view: "side", west: true }, { k: "sword", x: 5, y: 0, view: "side", west: true },
+    { k: "monk", x: 4, y: 2, view: "front" }, { k: "shieldB", x: 5, y: 3, view: "front" }, { k: "talisman", x: 6, y: 3, view: "side", west: true }, { k: "kite", x: 7, y: 2, view: "side", west: true } ] },
+  ash: { zh: "荒原・焦油坑（熔殼甲兵 A 在上排、B 在下排，各擋在噴岩龜前面；中間熔岩甲蟲、右邊熔核領主對照）", cols: 8, rows: 4, ground: ASHG, units: [
+    ALLY("hero_fighter", 1, 1, { hero: true }), ALLY("hero_mage", 1, 2), ALLY("hero_archer", 0, 3),
+    { k: "shellA", x: 4, y: 1, west: true }, { k: "turtle", x: 5, y: 1, west: true }, { k: "lizard", x: 4, y: 0, west: true },
+    { k: "beetle", x: 5, y: 2, west: true }, { k: "shellB", x: 4, y: 3, west: true }, { k: "turtle", x: 5, y: 3, west: true }, { k: "lord", x: 7, y: 2, west: true } ] },
+};
+PARTS.scene = () => {
+  const w = +(P.get("w") ?? 1600), S = w === 800 ? S800 : S1600;
+  publish(sheet(Math.max(900, Math.round(8 * T * S) + 40), [
+    { title: `戰場情境 ${w} 寬（地圖縮放 ${S.toFixed(2)}，一格 ${(T * S).toFixed(1)} px，真 1 倍）` },
+    ...Object.values(SCENES).flatMap((sc) => [{ note: sc.zh }, { cells: [plain(sceneCanvas(sc, S), null)] }]),
+  ]), "image/png");
+};
+PARTS.zoom = () => {
+  const blocks = [{ title: "戰場情境細看：1600（1.31）與 800（0.53）真 1 倍，裁新單位那一塊、最近鄰 ×3" }];
+  for (const [w, S] of [[1600, S1600], [800, S800]]) for (const sc of Object.values(SCENES)) {
+    const cv = sceneCanvas(sc, S), x = Math.round(3.5 * T * S), cw = Math.round(4.5 * T * S), ch = cv.height;
+    const c = document.createElement("canvas"); c.width = cw; c.height = ch; c.getContext("2d").drawImage(cv, -x, 0);
+    blocks.push({ cells: [nn(c, 3, `${w}：${sc.zh.split("（")[0]}`)] });
+  }
+  publish(sheet(1700, blocks), "image/png");
+};
+
+// ================= 5. 精英單挑插圖 =================
+const HERO = { doll: TP.hero_fighter, weapon: { kind: "sword", material: "steel" } };
+const CLAW = { kind: "beast_claw" }; // 異形精英：獸爪（rgUnits.js beastClaw）
+const NPCB = Object.fromEntries(Object.values(QNpc.BANDITS).flatMap(([, list]) => list.map(([zh, , u]) => [zh, u])));
+const ELITES = {
+  wolf: { zh: "北坡狼王（異形、雲嶺）", region: "cloud_ridge", elite: { spec: { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"], elite: true, affixes: ["berserk"] }, weapon: CLAW, k: 1.2 } },
+  scar: { zh: "斷崖幫「疤面」（人形、雲嶺）", region: "cloud_ridge", elite: { npc: NPCB["斷崖幫隊長"], weapon: { kind: "saber", material: "steel" } } },
+  lord: { zh: "熔核領主（異形、荒原）", region: "ashen_waste", elite: { spec: CREAT.lord.spec, weapon: CLAW, k: 1.45 } },
+  forge: { zh: "荒原精英（人形；鍛疤外觀未定，借荒原隊長）", region: "ashen_waste", elite: { npc: NPCB["荒原隊長"], weapon: { kind: "shotgun", form: "double", material: "iron" } } },
+};
+const duelSpec = (id, variant) => ({ hero: HERO, elite: ELITES[id].elite, region: ELITES[id].region, variant });
+PARTS.duel = () => {
+  const blocks = [{ title: "精英單挑插圖 320×120：A 暮色對峙／B 對角徽記（真 1 倍；下方 ×2 最近鄰）" }];
+  for (const v of ["A", "B"]) {
+    blocks.push({ note: v === "A" ? "A 暮色對峙：區域天色＋遠山，剪影墨色＋朝中間的輪廓光（主角藍、精英金），交叉的武器本色＋火花" : "B 對角徽記：深藍底斜切我方藍／敵方紅、金斜線，剪影填陣營色＋墨色投影，交叉的武器米白剪影＋金環" });
+    blocks.push({ cells: Object.keys(ELITES).map((id) => plain(RU.duelCanvas(duelSpec(id, v), 1), ELITES[id].zh)), gap: 16, capW: 320 });
+  }
+  blocks.push({ note: "最近鄰 ×2（真 1 倍放大）" }, { cells: ["A", "B"].flatMap((v) => ["wolf", "forge"].map((id) => nn(RU.duelCanvas(duelSpec(id, v), 1), 2))), gap: 12 });
+  publish(sheet(1400, blocks), "image/png");
+};
+
+// ================= 6. 部件特寫（向量 ×6，格線每 2 模型 px，給移植對尺寸） =================
+PARTS.parts = () => {
+  const Z = 6, box = (w, h, ox, oy, draw) => { const c = document.createElement("canvas"); c.width = w * Z; c.height = h * Z; const g = c.getContext("2d"); g.fillStyle = "#3a3f4a"; g.fillRect(0, 0, c.width, c.height); g.scale(Z, Z); g.strokeStyle = "rgba(255,255,255,0.12)"; g.lineWidth = 1 / Z; for (let x = 0; x <= w; x += 2) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y <= h; y += 2) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } g.translate(ox, oy); g.strokeStyle = "rgba(255,120,120,0.7)"; g.beginPath(); g.moveTo(-1.5, 0); g.lineTo(1.5, 0); g.moveTo(0, -1.5); g.lineTo(0, 1.5); g.stroke(); draw(g); return c; };
+  const cells = [];
+  for (const v of ["A", "B"]) for (const vw of ["front", "side", "back"]) cells.push({ cv: box(22, 32, 11, vw === "back" ? 10 : 18, (g) => RU.VIEW_DRAW[vw](g, RU.SHIELDS[v])), cap: `${RU.SHIELDS[v].zh}・${{ front: "正面", side: "側面", back: "背面" }[vw]}（紅十字＝qDoll 盾錨點）` });
+  const shell = (key) => box(72, 44, 32, 40, (g) => { QCreature.stamp(noPaint(g), CREAT[key].spec, 0, 0, 1, false); });
+  publish(sheet(1700, [{ title: "部件特寫（模型座標，向量 ×6；格線 2 px）" }, { cells, gap: 16, capW: 132 }, { cells: [{ cv: shell("shellA"), cap: "熔殼甲兵 A（腳底＝紅十字）" }, { cv: shell("shellB"), cap: "熔殼甲兵 B" }, { cv: shell("beetle"), cap: "熔岩甲蟲（現行）" }, { cv: shell("turtle"), cap: "噴岩龜（現行）" }], gap: 16 }]), "image/jpeg");
+};
+try { (PARTS[PART] ?? PARTS.dolls)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
