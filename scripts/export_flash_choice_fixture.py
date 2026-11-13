@@ -14,7 +14,14 @@
 - ``stance``：轉成姿態、姿態欄已有一招（自動換下，不出選單）；
 - ``llm``（LF-3）：點燃斬閃過兩次（射程 +1、蓄力）後的第 3 次大變化，**真的出題**
   （``make_offer``，2 階），變化帶 LLM 的名稱與一句話描述（字照 LF-1 報告第 3 節本機模型的
-  輸出改寫成這招的效果）；第 3 個只有描述、名稱退回組合式（命名不合格時的樣子）。
+  輸出改寫成這招的效果）；第 3 個只有描述、名稱退回組合式（命名不合格時的樣子）；
+- ``reflash``（FL-1h）：RR-2 的重現案例（第一個開發起始包、種子 2 打到營火，「灼燃・燃燒爆」重閃
+  第 1 格＝#160 例外格），**真的出題**（``open_flash`` → ``pending_flash_out``）：
+  3 張標「比原本弱」，1 張整招等於現在、前 → 後一列都沒有（「和現在一樣」那一行）；
+- ``reflash_major``（FL-1h）：同一招重閃第 3 格（大變化格），有轉型保底（轉型不套整招篩選，
+  上固定區的句子帶「轉型除外」）。
+
+這兩組的主角卡換成那一招現在的卡（``bases``）。
 
 主角（``hero``）沿用 ``client/src/run/fixtures/run_campfire.json``，第一招換成點燃斬。
 """
@@ -38,11 +45,16 @@ from trpg.api.flash_text import (
     option_tag_term,
     term_ids,
 )
+from trpg.api.run_presenter import hero_out, pending_flash_out
 from trpg.api.run_schemas import FlashOptionOut, PendingFlashOut
 from trpg.api.skill_cards import skill_card
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import CardOwner
+from trpg.roguelite import auto_play
+from trpg.roguelite.flashes import open_flash
+from trpg.roguelite.start import new_dev_run
+from trpg.roguelite.state import FlashChoice
 from trpg.skillgen.flash_derive import derive_skill
 from trpg.skillgen.flash_offer import (
     DataOrderSource,
@@ -102,6 +114,12 @@ LLM_TEXTS: tuple[tuple[str | None, str | None], ...] = (
     ("赤焰立姿", "以長劍為引，將火焰凝於自身，進入燃燒的架勢。"),
 )
 """``llm`` 組依出題順序的（名稱，描述）；``None`` ＝ 沒有（名稱退回組合式）。"""
+
+
+REFLASH_SEED = 2
+"""``reflash`` 組：RR-2 重現案例的種子（``tests/roguelite/test_reflash_weaker_rr2.py``）。"""
+REFLASH_SETS = {"reflash": 1, "reflash_major": 3}
+"""組名 → 重閃第幾格。"""
 
 
 class _TextedSource(DataOrderSource):
@@ -215,6 +233,30 @@ def _llm_pending(library: ContentLibrary, base: SkillDef) -> dict[str, Any]:
     return _pending_out(library, base.id, skill_before(library, request), items, offer.nth)
 
 
+def _reflash_sets(library: ContentLibrary) -> tuple[dict[str, Any], dict[str, Any]]:
+    """RR-2 重現案例的一輪打到營火，「灼燃・燃燒爆」（歷程第 1 次是蓄力）重閃第 1、3 格，真的出題。
+
+    回（組名 → ``PendingFlashOut``，組名 → 那一招現在的卡）。"""
+    run = new_dev_run(library, library.dev_starters.packs[0].id, REFLASH_SEED)
+    run, _ = auto_play(library, run, stop=lambda r, _b: r.node.kind == "campfire")
+    run = run.model_copy(update={"insight": 8})
+    skill_id = next(
+        sid
+        for sid, state in sorted(run.flash.items())
+        if (r := state.record(1)) is not None and r.variation.template == "cost_charge"
+    )
+    card = next(c for c in hero_out(library, run).skills if c.id == skill_id)
+    sets: dict[str, Any] = {}
+    bases: dict[str, Any] = {}
+    for key, slot in REFLASH_SETS.items():
+        opened = open_flash(library, run, FlashChoice(skill=skill_id, slot=slot))
+        pending = pending_flash_out(library, opened)
+        assert pending is not None
+        sets[key] = pending.model_dump(mode="json")
+        bases[key] = card.model_dump(mode="json")
+    return sets, bases
+
+
 def main() -> int:
     library = load_library()
     base = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=library)
@@ -229,6 +271,9 @@ def main() -> int:
         )
     out["sets"]["llm"] = _llm_pending(library, base)
     out["bases"] = {key: _card(library, library.skills[sid]) for key, sid in BASES.items()}
+    reflash, reflash_bases = _reflash_sets(library)
+    out["sets"].update(reflash)
+    out["bases"].update(reflash_bases)
     passives = [s["id"] for s in hero["skills"] if s["kind_id"] == "passive"]
     others = [s["id"] for s in hero["skills"][1:] if s["kind_id"] == "active"][:2]
     for key, slot, ids in (
