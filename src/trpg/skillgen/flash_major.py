@@ -545,8 +545,13 @@ def _fits(template: TransformTemplate, skill: SkillDef, library: ContentLibrary)
     是「做得出來的種類」）。其他種類照舊，由結構自己判斷。"""
     if template.source == "summon":
         return is_summon_skill(skill)
-    if template.source == "support":
-        return is_support_skill(skill, library.flash) and bool(_support_core(skill, library))
+    if template.source == "support":  # 輔助技：整招（含接續段）都沒有傷害
+        harm = library.flash.support.harm_effects
+        return (
+            is_support_skill(skill, library.flash)
+            and not any(e.type in harm for e in _whole_effects(skill))
+            and bool(_support_core(skill, library))
+        )
     if template.to in ("passive", "reaction"):
         return bool(_hostile_core(skill))
     return True
