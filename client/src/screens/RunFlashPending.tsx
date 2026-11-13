@@ -194,7 +194,7 @@ function FlashFoot({
             <>
               <b className="fc-picked">{headlineOf(picked)}</b>
               <span className="fc-say-line">
-                <TermText text={sayText(picked)} terms={terms} />
+                <TermText text={sayText(picked)} terms={terms} nobr />
               </span>
             </>
           )}

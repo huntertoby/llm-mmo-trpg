@@ -2,7 +2,7 @@
 // (e3h) 轉型不套整招篩選（06 6.34.5，玩法 PM 選 (b)）：有轉型選項的面板，上固定區那句帶「轉型除外」；轉型卡的下固定區句末接一句。
 // (e3i) 「▼ 比原本弱」的 ▼ 用和前 → 後同一個 CSS 三角（美術 RR-2 可修 1）。
 // (e3j) 重閃選項整招和現在一樣、前 → 後一列都沒有：卡裡放「和現在一樣，選了這招不會變」（玩法 PM 4.1.2 第 4 條）。
-// (e3f) 條件括號裡「雙手槍」不斷行（美術 11-13）。
+// (e3f) 條件括號裡「雙手槍」不斷行（美術 11-13）；FL-1i：下固定區的一句話也開 nobr，「強度」不斷成「強／度」。
 // 夾具：`dev/fixtures/flashChoice.json`（`scripts/export_flash_choice_fixture.py`，`reflash`／`reflash_major` 是伺服器真的出題）。
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -14,6 +14,7 @@ import data from "../dev/fixtures/flashChoice.json";
 import {
   FLASH_MUST_PICK_TRANSFORM_ZH,
   FLASH_MUST_PICK_ZH,
+  FLASH_NO_BREAK_WORDS,
   FLASH_SAME_AS_NOW_ZH,
   FLASH_TRANSFORM_FOOT_ZH,
   hasTransform,
@@ -21,6 +22,7 @@ import {
   sameAsNow,
   sayText,
 } from "./flashChoice";
+import { TermText } from "./FlashChoiceParts";
 import { mustPickText } from "./reflashWeaker";
 
 type Fixture = { hero: RunHero; sets: Record<string, PendingFlash>; bases: Record<string, SkillCard> };
@@ -153,5 +155,25 @@ describe("FL-1h (e3f) 條件括號的不可拆詞", () => {
     const html = panel("rows");
     expect(html).toMatch(/<span class="fc-when">（手持<span class="fc-nobr">雙手槍<\/span>時才有）<\/span>/u);
     expect(readFile(SRC_DIR, "styles/flash-choice.css")).toMatch(/\.fc-nobr\s*\{\s*white-space: nowrap;\s*\}/u);
+  });
+});
+
+describe("FL-1i 轉型卡下固定區「強度」不可拆（美術 RR-2 驗收 F-1）", () => {
+  it("「強度」是不可拆詞；轉型句切出「強度」一段", () => {
+    expect(FLASH_NO_BREAK_WORDS).toContain("強度");
+    expect(noBreakRuns(FLASH_TRANSFORM_FOOT_ZH)).toEqual([
+      { text: "轉型後照新種類重算", keep: false },
+      { text: "強度", keep: true },
+      { text: "，不跟原本比。", keep: false },
+    ]);
+  });
+
+  it("下固定區的一句話開 nobr（轉型句的「強度」包成 .fc-nobr）", () => {
+    expect(readFile(SRC_DIR, "screens/RunFlashPending.tsx")).toContain("<TermText text={sayText(picked)} terms={terms} nobr />");
+    const p = set("transform");
+    const o = p.options.find((x) => x.transform);
+    if (o === undefined) throw new Error("夾具 transform 組缺轉型選項");
+    const html = renderToStaticMarkup(createElement(TermText, { text: sayText(o), terms: p.terms ?? {}, nobr: true }));
+    expect(html).toContain('重算<span class="fc-nobr">強度</span>，不跟原本比。');
   });
 });
