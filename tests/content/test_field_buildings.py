@@ -37,7 +37,7 @@ RULE_HASHES = {
     "capital_mentor_hall": "b88e2811a2734684",
     # RT-5b：守印人移到傳送石旁、南側兩座石碑對準浮橋；6T-1b：再加郵筒（low_wall）與郵寄設施（post）
     # PR-2a：靶場說明卡定稿句、工坊師傅 panel
-    "capital": "5bb6634881af56be",
+    "capital": "341d6dcf2a2f2587",  # WP-2：許願池、守池人加 panel: wish，說明句改寫
     "ash_ferry": "ba92570cc37240f9",
 }
 """加欄位之前的內容雜湊：排除 ``buildings``、物件 ``look`` 與情境物件 ``figure``（6V-1）後的排序鍵
