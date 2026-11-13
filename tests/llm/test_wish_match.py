@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import pytest
@@ -37,10 +37,10 @@ class Recording:
     def __init__(self, responses: Sequence[str | Exception]) -> None:
         self.inner = MockLLMClient(responses)
         self.sent: list[list[ChatMessage]] = []
-        self.schemas: list[dict[str, Any] | None] = []
+        self.schemas: list[Mapping[str, Any] | None] = []
 
     def complete(
-        self, messages: Sequence[ChatMessage], *, json_schema: dict[str, Any] | None = None
+        self, messages: Sequence[ChatMessage], *, json_schema: Mapping[str, Any] | None = None
     ) -> str:
         self.sent.append(list(messages))
         self.schemas.append(json_schema)
