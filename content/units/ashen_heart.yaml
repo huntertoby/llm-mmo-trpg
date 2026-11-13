@@ -61,8 +61,9 @@ phases:
     skills: [skill_heart_inhale, skill_heart_exhale, skill_fire_bolt]
     remove_statuses: [molten_shell]
     spawns:   # 殼縫餘燼蜥（5F-5b）；GB-2 起從殼縫東西兩側出來（被佔就找最近的安全格）
-      - {template: heart_ember_lizard, count: 1, at: [3, 3]}
-      - {template: heart_ember_lizard, count: 1, at: [7, 3]}
+      # GB-2b：從殼縫攻擊位 (3, 3)、(7, 3) 各往外移一格，不佔近戰打殼縫的位置
+      - {template: heart_ember_lizard, count: 1, at: [2, 3]}
+      - {template: heart_ember_lizard, count: 1, at: [8, 3]}
   - id: meltdown
     name_zh: 熔毀
     trigger: {kind: hp_below, permille: 300}
