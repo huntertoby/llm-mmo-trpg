@@ -11,7 +11,10 @@
 //   &set=<名稱,…>       逗號接多段：
 //        bag      背包模擬 16 件（照樣張 ?part=bag 的清單：一或兩個關鍵字、五種稀有度輪流），8 欄
 //        all      105 款總表，每款兩個關鍵字（點燃＋標記，同樣張 ?part=c）；可配 &from=&n= 分張（預設）
-//        chips    12 個圓章本身（直徑 13／18／20／27；撞擊 13、18 是簡化形；同樣張 ?part=true1x 的圓章）
+//        chips    16 個圓章本身（直徑 13／18／20／27；撞擊 13、18 是簡化形；同樣張 ?part=true1x 的圓章；KW-3 起含連擊、怒氣、專注、氣）
+//        hud      KW-3：HUD 層數計量（四種 × 0～滿層；`render/qIcon/stackGauge.ts`，和遊戲端 `StackPips` 同一張畫布）
+//        cond     KW-3：條件部件「層數達 N」（圓片 30／26／18／16；`parts.ts` 的 chipCanvas，同技能圖示開發頁）
+//        hash     KW-3：新圖指紋（照樣張 q-icons-kw.html?part=hash 的算法與格式，只列 A 案），結果放 `body.dataset.hash`；和 docs/art/KW樣張.md 第 7 節逐字比
 //        dots     點版：12 種點色 × 五種稀有度（每列：直劍 32、半身板甲 32、長靴 32、寶石戒 42、鳶盾 42；同樣張 ?part=dots，忽略 &px）
 //        corner   例外表的款（KEY_CORNER 或記號方向例外表 MORE_DIR_KIND 列到的：斧、連枷、彎月鐮、弓、弩、四種鞋、墜、骨符、頭巾、手套、雙匕首、
 //                 雙手槍、鞭、狙擊槍、卷軸匣、寬簷帽），每款兩個關鍵字；標籤寫角與記號方向
@@ -27,7 +30,8 @@
 //                       qIconsParts.js、qIconsStatus.js、qIconsKeywords.js（載入前把 qIcons.js 的 M 換成 core.ts 的 M、qIconsWeapons.js 的 MAT 鐵鋼銅換成
 //                       material.ts，同 status-gallery）；兩邊交錯著畫「只有關鍵字層」的畫布（105 款 × 兩個關鍵字（6 組輪流）× 32／42／48／64 × res）
 //                       與 12 個圓章 × 13／18／20／27 × res，getImageData 逐像素比。`&px=`、`&res=` 照樣可縮小範圍（預設 32,42,48,64 與 1,2）
-// 畫好後 `body.dataset.ready = "1"`。另外掛 `window.__qiKwDev`：paint、chip（＝chipCanvas）、list（105 款）、layer(look, kws, px, res)（只有關鍵字層的畫布）。
+// 畫好後 `body.dataset.ready = "1"`。另外掛 `window.__qiKwDev`：paint、chip（＝chipCanvas）、list（105 款）、layer(look, kws, px, res)（只有關鍵字層的畫布）、
+// gauge(id, n, res)（KW-3 層數計量畫布）、hash()（KW-3 指紋行）。
 import appearance from "../render/gearAppearance.json";
 import type { Glossary } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -36,6 +40,8 @@ import { MATERIAL } from "../render/material";
 import { KEYWORD_COLOR } from "../render/palette";
 import { M as CORE_M } from "../render/qIcon/core";
 import * as K from "../render/qIcon/keywords";
+import * as QP from "../render/qIcon/parts";
+import * as SG from "../render/qIcon/stackGauge";
 
 interface Form { id: string; zh: string }
 interface Kind { id: string; slotType: string; zh: string; forms: Form[] }
@@ -53,6 +59,10 @@ const N = Number(q.get("n") ?? 9999);
 const LABEL = q.get("label") !== "0";
 const LIVE = q.get("live") === "1";
 const RARS = ["common", "uncommon", "rare", "epic", "legendary"];
+/** 裝備外觀的 12 個關鍵字（KW-3 起 `K.KEYS` 多了四個層數關鍵字，裝備不帶；點版、和樣張比都只用這 12 個）。 */
+const GEAR_KWS = appearance.keywords as string[];
+/** KW-3 的四個層數關鍵字（樣張 qIconsKW.js 的 KEYS 順序）。 */
+const STACK_KWS = ["combo_point", "fury", "focus", "ki"] as const;
 
 const KINDS = appearance.kinds as unknown as Kind[];
 /** 105 款（kind × form）。 */
@@ -163,12 +173,12 @@ function allSection(): void {
 function chipsSection(): void {
   const ds = q.get("px") === null ? [13, 18, 20, 27] : PXS;
   for (const res of RESS)
-    section(`12 個圓章：直徑 ${ds.join("／")}・${resLabel(res)}${zoomLabel}（撞擊 13、18 是簡化形）`, row(...K.KEYS.map((kw) => cell(`${K.LIST[kw]!.zh} ${kw}`, ...ds.map((d) => shown(K.chipCanvas(kw, d, res)!, d))))));
+    section(`${K.KEYS.length} 個圓章：直徑 ${ds.join("／")}・${resLabel(res)}${zoomLabel}（撞擊 13、18 是簡化形；最後四個是 KW-3 的層數關鍵字）`, row(...K.KEYS.map((kw) => cell(`${K.LIST[kw]!.zh} ${kw}`, ...ds.map((d) => shown(K.chipCanvas(kw, d, res)!, d))))));
 }
 function dotsSection(): void {
   const items: readonly [string, string, string, number][] = [["sword", "straight", "steel", 32], ["plate", "half", "steel", 32], ["boots", "tall", "leather", 32], ["ring", "gem", "gold", 42], ["kite_shield", "kite", "iron", 42]];
   for (const res of RESS) {
-    const rows = K.KEYS.map((kw2, r) => { const kw1 = K.KEYS[(r + 6) % K.KEYS.length]!;
+    const rows = GEAR_KWS.map((kw2, r) => { const kw1 = GEAR_KWS[(r + 6) % GEAR_KWS.length]!;
       const sw = h("span", { className: "sw" }); sw.style.background = KEYWORD_COLOR[kw2]!;
       return row(h("div", { className: "label" }, sw, ` 點：${K.LIST[kw2]!.zh}（${KEYWORD_COLOR[kw2]}）　圓章：${K.LIST[kw1]!.zh}`), ...items.map(([kind, form, material, px], i) => { const rarity = RARS[(i + r) % RARS.length]!; return cell(rarity, shown(gear({ kind, form, material, rarity, keywords: [kw1, kw2] }, px, res), px)); })); });
     section(`點版：12 種點色 × 五種稀有度・${resLabel(res)}${zoomLabel}（每列：直劍 32、半身板甲 32、長靴 32、寶石戒 42、鳶盾 42；稀有度每列往後錯一格）`, ...rows);
@@ -234,7 +244,7 @@ async function compare(): Promise<void> {
   }
   for (const d of [13, 18, 20, 27]) for (const res of ress) {
     const r: Row = { what: "chip", px: d, res, total: 0, same: 0, diffs: [] };
-    for (const kw of K.KEYS) { const dd = diff(K.chipCanvas(kw, d, res)!, S.K.chipCanvas(kw, d, 1, { res })); r.total++; if (dd.px === 0) r.same++; else r.diffs.push({ id: kw, ...dd }); }
+    for (const kw of GEAR_KWS) { const dd = diff(K.chipCanvas(kw, d, res)!, S.K.chipCanvas(kw, d, 1, { res })); r.total++; if (dd.px === 0) r.same++; else r.diffs.push({ id: kw, ...dd }); }
     out.chips.push(r);
   }
   document.body.dataset.compare = JSON.stringify(out);
@@ -260,7 +270,37 @@ function liveCheck(): void {
   document.body.append(h("pre", { className: "out", textContent: JSON.stringify(out, null, 1) }));
 }
 
-(window as unknown as Record<string, unknown>)["__qiKwDev"] = { paint: K.paint, chip: K.chipCanvas, list: () => ALL.map((e) => ({ ...e.look, label: e.label })), layer, gear, legacyGear, live };
+// ---------------- KW-3：層數計量、條件部件、指紋 ----------------
+/** 計量畫布（顯示＝`gaugeBox`×ZOOM）。 */
+const gaugeShown = (id: string, n: number, res: number): HTMLCanvasElement => { const cv = SG.gaugeCanvas(id, n, res)!, { w, h: hh } = SG.gaugeBox(id); cv.style.width = `${w * ZOOM}px`; cv.style.height = `${hh * ZOOM}px`; return cv; };
+function hudSection(): void {
+  for (const res of RESS)
+    section(`HUD 層數計量：四種 × 0～滿層・${resLabel(res)}${zoomLabel}（含膠囊外寬 ${STACK_KWS.map((k) => `${K.LIST[k]!.zh} ${SG.gaugeOuter(k)}`).join("、")}；畫布四邊多 4px 給滿層外暈）`,
+      ...STACK_KWS.map((id) => row(h("div", { className: "label", textContent: K.LIST[id]!.zh }), ...Array.from({ length: (SG.GAUGE_MAX[id] ?? 0) + 1 }, (_, n) => cell(`${n}／${SG.GAUGE_MAX[id]}`, gaugeShown(id, n, res))))));
+}
+function condSection(): void {
+  const pxs = q.get("px") === null ? [30, 26, 18, 16] : PXS;
+  for (const res of RESS)
+    section(`條件部件「層數達 N」：圓片 ${pxs.join("／")}・${resLabel(res)}${zoomLabel}（左：KW-3 A 案；右：同列的「累積層數」「消耗層數」「第一輪」對照）`,
+      row(...pxs.map((px) => cell(`${px}`, shown(QP.chipCanvas("condition", "self_stack_at_least", px, 1, { res }), px)))),
+      row(...pxs.flatMap((px) => [["effect", "add_stack"], ["effect", "consume_stack"], ["condition", "first_round"]].map(([cat, id]) => cell(`${id} ${px}`, shown(QP.chipCanvas(cat!, id!, px, 1, { res }), px))))));
+}
+/** 指紋（FNV-1a 32 位元，同樣張 q-icons-kw.html?part=hash）：圓章 13／18／20／27 × res 1、2；條件 30／18／16 × res 1、2；計量 0～滿層 res 1。 */
+function fnv(cv: HTMLCanvasElement): string { const d = cv.getContext("2d")!.getImageData(0, 0, cv.width, cv.height).data; let x = 0x811c9dc5; for (let i = 0; i < d.length; i++) { x ^= d[i]!; x = Math.imul(x, 0x01000193) >>> 0; } return x.toString(16).padStart(8, "0"); }
+function hashLines(): string[] {
+  const lines: string[] = [];
+  for (const kw of STACK_KWS) lines.push(`chip ${kw} a ` + [32, 42, 48, 64].map((S) => K.sizeOf(S, 1)).flatMap((D) => [1, 2].map((r) => fnv(K.chipCanvas(kw, D, r)!))).join(" "));
+  lines.push("cond a " + [30, 18, 16].flatMap((px) => [1, 2].map((r) => fnv(QP.chipCanvas("condition", "self_stack_at_least", px, 1, { res: r })))).join(" "));
+  for (const kw of STACK_KWS) lines.push(`hud ${kw} a ` + Array.from({ length: (SG.GAUGE_MAX[kw] ?? 0) + 1 }, (_, n) => fnv(SG.gaugeCanvas(kw, n, 1)!)).join(" "));
+  return lines;
+}
+function hashSection(): void {
+  const lines = hashLines();
+  document.body.dataset.hash = lines.join("\n");
+  document.body.append(h("pre", { className: "out", id: "hash", textContent: lines.join("\n") }));
+}
+
+(window as unknown as Record<string, unknown>)["__qiKwDev"] = { paint: K.paint, chip: K.chipCanvas, list: () => ALL.map((e) => ({ ...e.look, label: e.label })), layer, gear, legacyGear, live, gauge: SG.gaugeCanvas, hash: hashLines };
 
 for (const s of SETS) {
   if (s === "bag") bagSection();
@@ -272,5 +312,8 @@ for (const s of SETS) {
   else if (s === "legacy") legacySection();
   else if (s === "compare") await compare();
   else if (s === "live") liveCheck();
+  else if (s === "hud") hudSection();
+  else if (s === "cond") condSection();
+  else if (s === "hash") hashSection();
 }
 document.body.dataset.ready = "1";

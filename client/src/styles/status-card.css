@@ -164,8 +164,20 @@
     0 0 2px #000;
 }
 
-.stack-tip:has(.stack-badge) {
+.stack-tip:has(.stack-badge),
+.stack-tip:has(.stack-pips) {
   border-bottom: none;
+}
+
+/* KW-3：層數計量（ui/StackPips.tsx）。膠囊、格子、滿層外暈都畫在畫布裡；畫布四邊多 4px 給外暈，負邊距收回，版面只佔膠囊（高 22）。 */
+.stack-pips {
+  display: inline-flex;
+  cursor: help;
+}
+
+.stack-pips canvas {
+  display: block;
+  margin: -4px;
 }
 
 .hud-details,
