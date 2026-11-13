@@ -35,11 +35,15 @@ SHOTS = [
     ("sprites-800", "part=sprites&w=800", DEST + "1b-sprites-800-t1.png"),
     ("big", "part=big", DEST + "1c-sprites-big.jpg"),
     ("anchor", "part=anchor", DEST + "1d-anchor.jpg"),
+    ("shed", "part=shed", DEST + "1e-shed-1600-nn.png"),
     ("field-1600", "part=field&w=1600", DEST + "2a-field-1600-t1.png"),
     ("field-800", "part=field&w=800", DEST + "2b-field-800-t1.png"),
+    ("field-1600-p3", "part=field&w=1600&p3=1", DEST + "2c-field-1600-p3-t1.png"),
+    ("field-800-p3", "part=field&w=800&p3=1", DEST + "2d-field-800-p3-t1.png"),
     ("marks-1600", "part=marks&w=1600", DEST + "3a-marks-1600-t1.png"),
     ("marks-800", "part=marks&w=800", DEST + "3b-marks-800-t1.png"),
     ("marks-nn", "part=marks-nn", DEST + "3c-marks-nn.png"),
+    ("seam-800", "part=seam-800", DEST + "3d-seam-800.png"),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')

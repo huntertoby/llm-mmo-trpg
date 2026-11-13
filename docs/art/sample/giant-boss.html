@@ -55,6 +55,7 @@ function render(scene, view) {
   g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
   const Gi = scene.giant, ax = Gi ? (Gi.x + 0.5) * T : 0, ay = Gi ? (Gi.y + 2) * T : 0; // 錨點＝南排南緣中點
   const m = new DOMMatrix([sc, 0, 0, sc, (ax - view.x0) * sc, (ay - view.y0) * sc]);
+  if (Gi && (Gi.opt ?? {}).pitGlow !== false) { g.setTransform(m); GB.groundGlow(g, Gi.st); } // 第 2 版：第 3 階段坑底紅光屬地面層，地格之後、所有單位之前（審查必修 3）
   const list = [...(scene.units ?? []).map((u) => ({ u, row: u.y, x: u.x })), ...(Gi ? [{ giant: true, row: Gi.y + 1, x: Gi.x }] : [])].sort((a, b) => a.row - b.row || a.x - b.x);
   let i = 0;
   while (i < list.length) {
@@ -178,6 +179,19 @@ PARTS.field = () => {
   const parts = { vent: { state: "off", why: "ranged" }, seam: { state: "off", why: "range" }, core: { state: "ok" } };
   const b = render({ cols: 12, rows: 12, giant: { x: 5, y: 3, st: { phase: 2, shell: 0, t: 300 }, marks: true, parts, hover: "core", melee: true }, units: units() }, V);
   // 南邊緊貼的那一格放大（看前殼有沒有擋到南邊的人）
+  if (P.get("p3") === "1") { // 2c：第 3 階段＋兩側多站人（審查 r7 同場景：(3,2) 弓手、(7,4) 戰士）；紅光改成地面層後兩側的人不被染
+    const more = [U.archer({ id: "a2", x: 3, y: 2 }), U.hero({ id: "w2", x: 7, y: 4, hero: false, view: "side", west: true })];
+    const c = render({ cols: 12, rows: 12, giant: { x: 5, y: 3, st: { phase: 3, shell: 0, t: 300 } }, units: units({ more }) }, V);
+    const crop2 = (cx, cy, w, h) => { const o = GB.mk(w * S, h * S); o.getContext("2d").drawImage(c, Math.round((cx - V.x0) * S), Math.round((cy - V.y0) * S), Math.round(w * S), Math.round(h * S), 0, 0, Math.round(w * S), Math.round(h * S)); return o; };
+    const zz = W_ === 800 ? 4 : 3;
+    publish(sheet(1280, [
+      { title: `2c. 第 3 階段（熔毀）比例：${W_} 寬、地圖縮放 ${S.toFixed(2)}，真 1 倍；坑底紅光是地面層` },
+      { note: "第 2 版（審查必修 3）：坑底紅光拆成 QBossGiant.groundGlow，和地格一起、在所有單位之前畫；頭目本體照舊畫在南排那一排。場景同審查 r7：西側 (3,2) 弓手、(3,3) 餘燼蜥，東側 (7,3) 法師、(7,4) 戰士，南邊 (5,5) 主角、(6,5) 餘燼蜥、(4,6) 弓手。下排：西、東兩側最近鄰（人身上、HP 條都沒有橘色圓弧）。" },
+      { cells: [{ cv: c, cap: "第 3 階段・熔殼不在（真 1 倍）" }] },
+      { cells: [nn(crop2(2.6 * T, 1.7 * T, 1.9 * T, 2.9 * T), zz, `西側 (3,2)、(3,3) 最近鄰 ×${zz}`), nn(crop2(6.5 * T, 2.7 * T, 1.9 * T, 2.9 * T), zz, `東側 (7,3)、(7,4) 最近鄰 ×${zz}`)] },
+    ]), "image/png");
+    return;
+  }
   const crop = (src, cx, cy, w, h) => { const c = GB.mk(w * S, h * S); c.getContext("2d").drawImage(src, Math.round((cx - V.x0) * S), Math.round((cy - V.y0) * S), Math.round(w * S), Math.round(h * S), 0, 0, Math.round(w * S), Math.round(h * S)); return c; };
   const ca = crop(a, 3.5 * T, 3.4 * T, 4 * T, 3.6 * T), cb = crop(b, 3.5 * T, 3.4 * T, 4 * T, 3.6 * T);
   publish(sheet(1280, [
@@ -189,12 +203,12 @@ PARTS.field = () => {
 };
 // ================= 3 部位格標示（A2）各狀態 =================
 const CASES = [
-  { zh: "① 完好（可打）：噴口、殼縫、核心米白四角；殼縫角上背刺小圖（近戰）", st: { phase: 2, shell: 0, t: 300 }, parts: {} },
+  { zh: "① 完好（可打）：噴口、殼縫、核心米白四角；殼縫內側下角背刺記號（近戰；1600 圖樣小圓片、800 粗彎箭頭）", st: { phase: 2, shell: 0, t: 300 }, parts: {} },
   { zh: "② 滑過噴口：三格一起亮（同一個部位）＋身上噴口亮起", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "vent" },
   { zh: "③ 滑過殼縫：東西兩格一起亮（共用一條血）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "seam" },
   { zh: "④ 滑過核心", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "core" },
   { zh: "⑤ 滑過前殼＝打本體：整個 3×3 外緣紅框（同現行目標紅框）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "body" },
-  { zh: "⑥ 打不到（暗＋原因）：噴口「要遠程」、殼縫「射程不夠」、核心「看不到」", st: { phase: 2, shell: 0, t: 300 }, parts: { vent: { state: "off", why: "ranged" }, seam: { state: "off", why: "range" }, core: { state: "off", why: "sight" } } },
+  { zh: "⑥ 打不到（暗＋灰括號；1600 另有灰原因小圓片，800 不畫）：噴口「要遠程」、殼縫「射程不夠」、核心「看不到」", st: { phase: 2, shell: 0, t: 300 }, parts: { vent: { state: "off", why: "ranged" }, seam: { state: "off", why: "range" }, core: { state: "off", why: "sight" } } },
   { zh: "⑦ 破掉（暗紅＋紅×）：噴口、殼縫破（身上噴口封住、殼縫冷掉：暫定，A4 再定）", st: { phase: 2, shell: 0, t: 300, broken: { vent: true, seam: true } }, parts: { vent: { state: "broken" }, seam: { state: "broken" } } },
   { zh: "⑧ 未露出（第 1 階段核心）：暗色虛線框；點它＝打本體", st: { phase: 1, shell: 1, t: 300 }, parts: { core: { state: "hidden" } } },
   { zh: "⑨ 遠程攻擊者：殼縫沒有背刺小圖（R4：只有近戰算從背後）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, melee: false },
@@ -203,13 +217,32 @@ const caseCv = (c, S, res = 1) => render(solo(c.st, { marks: true, parts: c.part
 PARTS.marks = () => {
   const S = SW, z = W_ === 800 ? 3 : 1;
   const blocks = [{ title: `3${W_ === 800 ? "b" : "a"}. 部位格標示（A2）各狀態：${W_} 寬真 1 倍${z > 1 ? `、最近鄰 ×${z}` : ""}（地圖縮放 ${S.toFixed(2)}）` },
-    { note: "標示畫在單位之上（同 highlightLayer 的 marks：選目標時才出現）。米白四角＝這格是部位、可以打；亮青白框＝滑過（同霧鎖真人的部位亮起 #a8f4ff）；暗＋灰原因小圖＝打不到；暗紅＋紅×＝破掉；暗色虛線＝還沒露出。前殼（南排）是本體，平常不畫框，滑過時整個 3×3 外緣紅框。800 寬：線至少 1.5 px、× 至少 6 px、小圓片直徑至少 14 px（反向放大）。" },
+    { note: "標示畫在單位之上（同 highlightLayer 的 marks：選目標時才出現）。米白四角＝這格是部位、可以打；亮青白框＝滑過（同霧鎖真人的部位亮起 #a8f4ff）；暗＋灰原因小圖＝打不到；暗紅＋紅×＝破掉；暗色虛線＝還沒露出。前殼（南排）是本體，平常不畫框，滑過時整個 3×3 外緣紅框。800 寬：線至少 1.5 px、× 至少 6 px、背刺記號直徑至少 14 px（反向放大）；第 2 版起 800 不畫原因小圓片（暗化 55%＋不透明灰括號），背刺改成粗彎箭頭。" },
     { cells: CASES.map((c) => (z > 1 ? nn(caseCv(c, S), z, c.zh) : { cv: caseCv(c, S), cap: c.zh })), gap: 14 }];
   publish(sheet(1280, blocks), "image/png");
 };
 PARTS["marks-nn"] = () => {
   const S = S1600, pick = [0, 2, 5, 6], blocks = [{ title: "3c. 部位格標示特寫：1600 真 1 倍、最近鄰 ×2" }];
   blocks.push({ cells: pick.map((i) => nn(caseCv(CASES[i], S), 2, CASES[i].zh)), gap: 14 });
+  publish(sheet(1280, blocks), "image/png");
+};
+// ================= 1e 熔殼脫落（第 2 版：殼片往北飛進岩漿消失） =================
+PARTS.shed = () => {
+  const S = S1600, fr = [0, 0.25, 0.5, 0.7, 0.85, 1];
+  const vw = { S, res: 1, x0: 3.7 * T, y0: 0.2 * T, w: 3.6 * T, h: 5 * T };
+  const cells = fr.map((bt) => nn(render(solo({ phase: 1, shell: 0, breakT: bt, t: 300 }), vw), 2, `breakT ${bt}`));
+  publish(sheet(1340, [{ title: "1e. 熔殼脫落：殼片依名稱雜湊往北彈起、飛過噴口落進北邊岩漿，後 40% 縮小淡出；脫落完南排不留殼片（1600 真 1 倍，最近鄰 ×2）" }, { cells, gap: 12 }]), "image/png");
+};
+// ================= 3d 殼縫背刺記號（第 2 版必修 2）：800 真 1 倍 ①③⑨ 並排＋殼縫格最近鄰 ×4 =================
+PARTS["seam-800"] = () => {
+  const S = S800, pick = [0, 2, 8], blocks = [{ title: "3d. 殼縫背刺記號：800 真 1 倍（①完好、③滑過殼縫、⑨遠程沒有記號）＋殼縫兩格最近鄰 ×4" },
+    { note: "第 2 版（審查必修 2）：記號改放殼縫格的內側下角（靠核心那側），不蓋住貼外側的熔岩裂縫；800 不用圖樣小圓片，改畫深底＋2 px 黃環＋米白粗彎箭頭（繞到背後）。1600 照舊是背刺圖樣小圓片（3a、3c）。" }];
+  const cvs = pick.map((i) => caseCv(CASES[i], S));
+  blocks.push({ cells: cvs.map((cv, k) => nn(cv, 2, CASES[pick[k]].zh + "（真 1 倍，最近鄰 ×2）")), gap: 14 });
+  const vw = soloView(S, 1, 0.3), crop = (cv, mx) => { const x = Math.round((mx - vw.x0) * S), y = Math.round((3 * T - vw.y0) * S), w = Math.round(T * S) + 2, h = Math.round(T * S) + 2, o = GB.mk(w, h); o.getContext("2d").drawImage(cv, x - 1, y - 1, w, h, 0, 0, w, h); return o; };
+  const cells = [];
+  for (const [k, cv] of cvs.entries()) for (const [mx, zh] of [[4 * T, "西殼縫格"], [6 * T, "東殼縫格"]]) cells.push(nn(crop(cv, mx), 4, `${["①", "③", "⑨"][k]} ${zh} ×4`));
+  blocks.push({ cells, gap: 12 });
   publish(sheet(1280, blocks), "image/png");
 };
 // ================= 自查：單一外觀放大（?part=probe&k=p2n&z=4&hover=seam） =================

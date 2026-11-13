@@ -54,10 +54,11 @@ window.QBossGiant = (() => {
   const tileXY = (row, col) => [(col - 1) * T - T / 2, -3 * T + row * T];
 
   // ---- 噴口（北排） ----
+  // 第 2 版（審查必修 1）：錐身落在北排內（y −144～−96），兩側口在北排上緣內、中間口緣只探出北緣一點；背殼頂壓到 y −110，北排三格看得到三支錐身。
   const VENTS = [
-    { x: -46, base: -96, top: -146, bw: 23, tw: 10, tilt: -0.2 },
-    { x: 46, base: -96, top: -146, bw: 23, tw: 10, tilt: 0.2 },
-    { x: 0, base: -110, top: -172, bw: 26, tw: 11, tilt: 0 },
+    { x: -46, base: -90, top: -136, bw: 23, tw: 10, tilt: -0.16 },
+    { x: 46, base: -90, top: -136, bw: 23, tw: 10, tilt: 0.16 },
+    { x: 0, base: -96, top: -148, bw: 25, tw: 11, tilt: 0 },
   ];
   function vent(g, v, S, idx) {
     const h = v.base - v.top, sealed = !!S.broken.vent, P = "vent";
@@ -104,19 +105,25 @@ window.QBossGiant = (() => {
   }
 
   // ---- 背殼（岩丘，本體） ----
-  const DOME = [[-70, -4], [-72, -34], [-67, -64], [-57, -90], [-43, -112], [-22, -129], [0, -133], [22, -129], [43, -112], [57, -90], [67, -64], [72, -34], [70, -4]];
+  // 第 2 版：頂壓到 y −110（北排留給噴口）；兩側不再是直線（可修 3）：輪廓微微起伏，另外兩側各貼兩隻探出輪廓的側甲蟲背（SIDE_SHELLS）。
+  const DOME = [[-70, -3], [-73, -18], [-69, -36], [-72, -56], [-69, -76], [-60, -94], [-42, -106], [-20, -111], [0, -112], [20, -111], [42, -106], [60, -94], [69, -76], [72, -56], [69, -36], [73, -18], [70, -3]];
   function domePath(g) { g.beginPath(); g.moveTo(...DOME[0]); for (let i = 1; i < DOME.length - 1; i++) { const [x, y] = DOME[i], [nx, ny] = DOME[i + 1]; g.quadraticCurveTo(x, y, (x + nx) / 2, (y + ny) / 2); } g.lineTo(...DOME[DOME.length - 1]); g.closePath(); }
   function dome(g, S) {
     domePath(g); g.fillStyle = BASALT; g.fill();
     g.save(); domePath(g); g.clip();
-    ell(g, -28, -118, 40, 15, light(BASALT, 0.12), { rot: -0.28, line: false }); // 左上亮面
-    ell(g, 46, -60, 30, 50, dark(BASALT, 0.16), { rot: 0.1, line: false }); // 右下暗面
-    // 岩丘上的甲蟲背（不會掉；qBoss 底座 4 隻甲蟲背的放大）
-    for (const [x, y, rx, ry, r] of [[-25, -119, 13, 7.5, -0.35], [25, -119, 13, 7.5, 0.35], [-45, -101, 11, 7, -0.75], [45, -101, 11, 7, 0.75], [-60, -62, 7, 11, 0.15], [60, -62, 7, 11, -0.15]]) {
-      ell(g, x, y, rx, ry, BASALT_L, { rot: r });
-      g.save(); g.translate(x, y); g.rotate(r); line(g, [[0, -ry + 1], [0, ry - 1]], 0.9 * G * 0.7, OUT); ell(g, -rx * 0.35, -ry * 0.35, rx * 0.3, ry * 0.25, light(BASALT_L, 0.22), { line: false }); g.restore();
-    }
+    ell(g, -30, -100, 36, 12, light(BASALT, 0.12), { rot: -0.22, line: false }); // 左上亮面
+    ell(g, 46, -52, 30, 44, dark(BASALT, 0.16), { rot: 0.1, line: false }); // 右下暗面
+    // 岩丘上的甲蟲背（不會掉；qBoss 底座 4 隻甲蟲背的放大）。第 2 版：頂上兩隻跟著背殼壓低；殼縫格內側上半補一隻（可修 3，不壓裂縫、不碰內側下角的背刺小圖）
+    for (const [x, y, rx, ry, r] of DOME_SHELLS) smallShell(g, x, y, rx, ry, r);
     g.restore();
+    // 兩側探出輪廓的側甲蟲背（可修 3：剪影兩側不是直線）；在殼縫外側下方，不碰裂縫
+    for (const s of [-1, 1]) smallShell(g, s * 67, -67, 6, 10, s * -0.12);
+  }
+  const DOME_SHELLS = [[-24, -101, 12, 6.5, -0.3], [24, -101, 12, 6.5, 0.3], [-44, -78, 6.5, 8.5, -0.2], [44, -78, 6.5, 8.5, 0.2]];
+  /** 小甲蟲背（qBoss 底座甲蟲背）：圓背甲＋中線＋左上亮面。 */
+  function smallShell(g, x, y, rx, ry, r) {
+    ell(g, x, y, rx, ry, BASALT_L, { rot: r });
+    g.save(); g.translate(x, y); g.rotate(r); line(g, [[0, -ry + 1], [0, ry - 1]], 0.9 * G * 0.7, OUT); ell(g, -rx * 0.35, -ry * 0.35, rx * 0.3, ry * 0.25, light(BASALT_L, 0.22), { line: false }); g.restore();
   }
 
   // ---- 殼縫（中排東西，兩格同一個部位） ----
@@ -132,15 +139,16 @@ window.QBossGiant = (() => {
   }
 
   // ---- 殼窩、殼蓋、核心（中心格） ----
-  const CX = 0, CY = -88, CAV_RX = 30, CAV_RY = 35;
+  // 第 2 版（審查必修 1）：殼窩整個退回中排（y −96～−48）：中心 −72、半高 24；核心縮到 1.05 倍（上緣 −96.7，呼吸放大後最多再超 1.5 px）。
+  const CX = 0, CY = -72, CAV_RX = 28, CAV_RY = 24;
   const CORE_PTS = [[0, -15], [10, -8], [11, 4], [4, 13], [-6, 12], [-11, 3], [-9, -9]]; // qBoss core() 的形
-  const CK = G * 1.45; // 核心比 1 格版大 1.45 倍
+  const CK = G * 1.05; // 核心比 1 格版大 1.05 倍（第 1 版 1.45，長進北排）
   function cavity(g, S) {
     ell(g, CX, CY, CAV_RX + 3.5, CAV_RY + 3.5, BASALT_L); // 窩緣
     ell(g, CX, CY, CAV_RX, CAV_RY, CAVE);
     g.save(); g.beginPath(); g.ellipse(CX, CY, CAV_RX, CAV_RY, 0, 0, TAU); g.clip();
-    ell(g, CX, CY + 26, 24, 10, mix(CAVE, LAVA, 0.55), { line: false }); // 窩底的熔岩光
-    if (S.phase >= 2) flatGlow(g, CX, CY, 34, CORE, (0.55 + 0.45 * S.breath) * (1 - S.die));
+    ell(g, CX, CY + 18, 20, 8, mix(CAVE, LAVA, 0.55), { line: false }); // 窩底的熔岩光
+    if (S.phase >= 2) flatGlow(g, CX, CY, 28, CORE, (0.55 + 0.45 * S.breath) * (1 - S.die));
     g.restore();
   }
   function core(g, S) {
@@ -162,17 +170,17 @@ window.QBossGiant = (() => {
   function lid(g, S, open) {
     const glow = mix(LAVA, LAVA_HOT, clamp(0.3 + 0.7 * S.breath));
     if (open < 1) { // 中縫的光（合著時）
-      g.save(); g.globalAlpha = 1 - open; line(g, [[CX, CY - CAV_RY + 4], [CX - 1.5, CY - 8], [CX + 1.2, CY + 10], [CX, CY + CAV_RY - 5]], 5, glow); g.restore();
+      g.save(); g.globalAlpha = 1 - open; line(g, [[CX, CY - CAV_RY + 4], [CX - 1.5, CY - 6], [CX + 1.2, CY + 7], [CX, CY + CAV_RY - 5]], 5, glow); g.restore();
     }
     for (const s of [-1, 1]) {
       g.save(); g.translate(CX + s * (CAV_RX + 1), CY); g.scale(1 - 0.62 * open, 1); g.translate(-s * (CAV_RX + 1), 0);
       const half = [];
       for (let i = 0; i <= 12; i++) { const a = -Math.PI / 2 + (i / 12) * Math.PI; half.push([s * Math.cos(a) * (CAV_RX + 1.5), Math.sin(a) * (CAV_RY + 1.5)]); }
-      half.push([s * 2.2, CY - CY + CAV_RY - 4], [s * 1.2, 10], [s * 3.2, -8], [s * 2, -CAV_RY + 5]);
+      half.push([s * 2.2, CY - CY + CAV_RY - 4], [s * 1.2, 7], [s * 3.2, -6], [s * 2, -CAV_RY + 5]);
       poly(g, half, BASALT_L);
       g.save(); path(g, half); g.clip();
-      ell(g, s * 16, -14, 9, 13, s < 0 ? light(BASALT_L, 0.2) : dark(BASALT_L, 0.1), { line: false, rot: s * 0.3 });
-      for (const yy of [-12, 10]) line(g, [[s * 4, yy], [s * 27, yy + 3]], 0.9 * G * 0.7, OUT); // 殼片分節
+      ell(g, s * 14, -9, 8, 9, s < 0 ? light(BASALT_L, 0.2) : dark(BASALT_L, 0.1), { line: false, rot: s * 0.3 });
+      for (const yy of [-8, 7]) line(g, [[s * 4, yy], [s * 25, yy + 3]], 0.9 * G * 0.7, OUT); // 殼片分節
       g.restore();
       g.restore();
     }
@@ -202,12 +210,12 @@ window.QBossGiant = (() => {
   }
 
   // ---- 熔殼殼片（狀態 molten_shell）：名稱和 qBoss.js PLATES 同一組（雜湊一樣）；位置放大圍住殼窩 ----
-  /** [名稱, x, y, 旋轉, 寬, 高]（模型像素） */
+  /** [名稱, x, y, 旋轉, 寬, 高]（模型像素）。第 2 版：跟著殼窩退回中排（中心 −72），整組縮 0.85。 */
   const PLATES = [
-    ["p-back-l", -30, -118, -0.5, 30, 20], ["p-back-r", 30, -118, 0.5, 30, 20], ["p-top", 0, -127, 0, 32, 19],
-    ["p-left", -38, -86, -0.9, 26, 22], ["p-right", 38, -86, 0.9, 26, 22],
-    ["p-low-l", -24, -63, -0.3, 30, 18], ["p-low-r", 24, -63, 0.3, 30, 18], ["p-front", 0, -72, 0, 34, 19],
-    ["p-mid-l", -16, -100, -0.2, 24, 18], ["p-mid-r", 16, -100, 0.2, 24, 18],
+    ["p-back-l", -24, -89, -0.5, 26, 17], ["p-back-r", 24, -89, 0.5, 26, 17], ["p-top", 0, -92, 0, 28, 16],
+    ["p-left", -31, -72, -0.9, 22, 19], ["p-right", 31, -72, 0.9, 22, 19],
+    ["p-low-l", -20, -54, -0.3, 26, 16], ["p-low-r", 20, -54, 0.3, 26, 16], ["p-front", 0, -59, 0, 29, 16],
+    ["p-mid-l", -13, -79, -0.2, 21, 16], ["p-mid-r", 13, -79, 0.2, 21, 16],
   ];
   /** 一片殼片（qBoss plate() 換成模型像素）：圓背甲＋中線＋鋸齒熔岩縫（熱度越高越黃）＋左上亮面。 */
   function plate(g, w, h, heat) {
@@ -219,18 +227,19 @@ window.QBossGiant = (() => {
     const z = [[-w * 0.34, 0.9], [-w * 0.17, -1.8], [0, 1.5], [w * 0.17, -1.5], [w * 0.34, 1.2]];
     line(g, z, 2 * G, EMBER); line(g, z, 1 * G, mix(LAVA, LAVA_HOT, clamp(heat)));
   }
-  /** 殼片的掛點：熔殼在＝貼著（第 2、3 階段＝往外撐開、露出核心），隨呼吸張開；不在＝依名稱雜湊飛出、落在兩側前角（南排外側兩格的外半邊），不出佔格。 */
+  /** 殼片的掛點：熔殼在＝貼著（第 2、3 階段＝往外撐開、露出核心），隨呼吸張開；
+   *  不在＝第 2 版（美術 PM 3.2 第 5 項）：依名稱雜湊往北彈起、飛過噴口落進北邊岩漿（y −160～−180），後 40% 邊縮小邊淡出；脫落完（breakT ≥ 1）就不畫，南排不留殼片。回傳 null＝不畫。 */
   function plateAnchor(p, shell, bt, breath, open) {
     const [key, x, y, r] = p;
     if (shell > 0) {
       const o = 0.6 * breath, k = open ? 1.42 : 1, px = CX + (x - CX) * k, py = CY + (y - CY) * (open ? 1.2 : 1);
       return { x: px * (1 + 0.02 * o), y: py - o * 0.9, r: r * (open ? 1.25 : 1), a: 1, s: 1 };
     }
+    if (bt >= 1) return null;
     const dir = Math.sign(x || rnd(key) - 0.5) || 1, spin = (rnd(key, 3) - 0.5) * 6;
-    const fx = dir * (36 + 24 * rnd(key, 1)), fy = -15 - 32 * rnd(key, 4), hop = 30 + 24 * rnd(key, 2);
-    if (bt >= 1) return { x: fx, y: fy, r: r + spin * 0.8, a: 0.85, s: 0.74 };
-    const u = clamp(bt);
-    return { x: x + (fx - x) * u, y: y + (fy - y) * u * u - hop * Math.sin(Math.PI * u), r: r + spin * 0.8 * u, a: 1, s: 1 - 0.26 * u };
+    const fx = x * 1.15 + dir * (4 + 14 * rnd(key, 1)), fy = -162 - 18 * rnd(key, 4), hop = 22 + 18 * rnd(key, 2);
+    const u = clamp(bt), fade = clamp((u - 0.6) / 0.4);
+    return { x: x + (fx - x) * u, y: y + (fy - y) * u - hop * Math.sin(Math.PI * u), r: r + spin * u, a: 1 - fade, s: 1 - 0.4 * fade };
   }
 
   /** 狀態：st＝{ phase: 1|2|3, shell: 0～1（熔殼在不在；預設第 1 階段在、其他不在）, breakT: 0～1（脫落進度）, t: 毫秒, spout, inhale, dieT, broken: { vent, seam } } */
@@ -254,8 +263,8 @@ window.QBossGiant = (() => {
       g.strokeStyle = EMBER; g.lineWidth = LW; g.stroke(); g.fillStyle = LAVA_HOT; g.fillRect(x - 0.8, y0 + 1, 1.6, L * 0.6);
     }
     const open = S.phase >= 2;
-    const order = S.shell > 0 ? PLATES : [...PLATES].sort((a, b) => plateAnchor(a, 0, S.bt, 0).y - plateAnchor(b, 0, S.bt, 0).y);
-    for (const p of order) { const A = plateAnchor(p, S.shell, S.bt, S.breath, open); g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); g.scale(A.s, A.s); plate(g, p[4], p[5], S.shell > 0 ? S.breath : 0.12); g.restore(); }
+    const order = S.shell > 0 ? PLATES : S.bt >= 1 ? [] : [...PLATES].sort((a, b) => plateAnchor(a, 0, S.bt, 0).y - plateAnchor(b, 0, S.bt, 0).y); // 飛走時北邊（遠）的先畫
+    for (const p of order) { const A = plateAnchor(p, S.shell, S.bt, S.breath, open); if (!A || A.a <= 0) continue; g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); g.scale(A.s, A.s); plate(g, p[4], p[5], S.shell > 0 ? S.breath : 0.12); g.restore(); }
   }
 
   /** 地面：3×3 陣營環（提案 A：圓角方框貼佔格內 3）＋精英金框＋南緣中點金菱形＋影子。opt.ring＝"rect"（預設）｜"ellipse"（提案 B）｜false。 */
@@ -265,7 +274,10 @@ window.QBossGiant = (() => {
     ctx.fillStyle = "rgba(10,8,14,0.35)"; ctx.beginPath(); ctx.ellipse(0, -30, 74, 26, 0, 0, TAU); ctx.fill();
     if (mode === "rect") {
       const r = { x: -69, y: -141, w: 138, h: 138 };
-      ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 14); ctx.globalAlpha = 0.8; ctx.fillStyle = "#c63b3b"; ctx.fill(); ctx.globalAlpha = 1; ctx.lineWidth = 1.5 * 1.6; ctx.strokeStyle = "#ffb3a8"; ctx.stroke();
+      // 第 2 版（可修 4）：紅底只在中、南兩排填 80%；北排（噴口之間露出來的那條）減到 35%，不讀成一塊紅布
+      ctx.save(); ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 14); ctx.clip(); ctx.fillStyle = "#c63b3b";
+      ctx.globalAlpha = 0.35; ctx.fillRect(r.x, r.y, r.w, -96 - r.y); ctx.globalAlpha = 0.8; ctx.fillRect(r.x, -96, r.w, r.y + r.h + 96); ctx.restore();
+      ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 14); ctx.lineWidth = 1.5 * 1.6; ctx.strokeStyle = "#ffb3a8"; ctx.stroke();
       ctx.beginPath(); ctx.roundRect(r.x - 2.5, r.y - 2.5, r.w + 5, r.h + 5, 16); ctx.lineWidth = 3.6; ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = 1.8; ctx.strokeStyle = GOLD; ctx.stroke();
       gem(ctx, 0, -5.5, 1.6);
     } else if (mode === "ellipse") {
@@ -281,6 +293,12 @@ window.QBossGiant = (() => {
     ctx.lineJoin = "round"; ctx.strokeStyle = OUT; ctx.lineWidth = 1.6 * s; ctx.stroke(); ctx.fillStyle = GOLD; ctx.fill(); ctx.fillStyle = "#fff2c0"; ctx.fillRect(x - 0.5 * s, y0 + 1.2 * s, s, s); ctx.restore();
   }
 
+  /** 第 3 階段坑底發紅（第 2 版，審查必修 3）：屬地面層，和地格一起、在所有單位之前畫；draw() 不再畫它。ctx 座標同 draw（原點＝錨點）。 */
+  function groundGlow(ctx, st = {}) {
+    const S = stateOf(st);
+    if (S.phase === 3) flatGlow(ctx, 0, -50, 112, "#ff6e1e", 1 - S.die, 92);
+  }
+
   /**
    * 畫灰燼之心（3×3）。ctx 目前座標＝模型像素、原點＝錨點（南排南緣中點）。st 見 stateOf；opt：
    *   glow（頭目外光色，預設傳說金；false＝不畫）、ring（"rect"｜"ellipse"｜false）、flash（受擊白閃 0～1）、key（部位 id：那個部位換記號色，遮罩用）。
@@ -288,7 +306,6 @@ window.QBossGiant = (() => {
   function draw(ctx, st = {}, opt = {}) {
     const S = stateOf(st);
     if (opt.ring !== false) groundRing(ctx, opt);
-    if (S.phase === 3 && opt.pitGlow !== false) flatGlow(ctx, 0, -50, 112, "#ff6e1e", 1 - S.die, 92); // 熔毀：坑底發紅（地面的光，不算外接框）
     KEY = opt.key ?? null;
     try {
       layer(ctx, BOX, (g) => bodyLayer(g, S), { ow: OW, glow: opt.glow === false || S.die > 0 ? null : (opt.glow ?? GOLD), glowW: GLOW_W, glowA: GLOW_A, flash: num(opt.flash, 0) });
@@ -347,6 +364,7 @@ window.QBossGiant = (() => {
   function drawMarks(ctx, parts, o = {}) {
     const S = o.S ?? 1, res = o.res ?? 1, hover = o.hover ?? null, melee = o.melee !== false;
     const W = (w, min) => Math.max(w, min / S);
+    const compact = T * S < 40; // 800 寬（一格 25.5 px）：第 2 版拿掉原因小圓片（美術 PM 3.2 第 3 項），打不到改靠更暗＋不透明灰括號
     for (const [part, row, c0, n, side] of REGIONS) {
       const st = parts[part] ?? { state: "ok" }, [x0, y0] = tileXY(row, c0), w = n * T;
       let state = st.state;
@@ -359,28 +377,42 @@ window.QBossGiant = (() => {
         ctx.fillStyle = MARK.hover; ctx.globalAlpha = 0.14; ctx.fillRect(...inner); ctx.globalAlpha = 1;
         ctx.beginPath(); ctx.roundRect(...inner, 5); ctx.lineWidth = lw + 2 * W(MARK.inkW, 1); ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = lw; ctx.strokeStyle = MARK.hover; ctx.stroke();
       } else if (state === "off") {
-        ctx.fillStyle = "rgba(10,8,14,0.34)"; ctx.fillRect(...inner);
-        ctx.globalAlpha = 0.75; brackets(ctx, x0, y0, w, MARK.dimLine, W(1.8, 1), W(1.4, 1)); ctx.globalAlpha = 1;
-        const R = REASON[st.why] ?? REASON.range; chip(ctx, R, x0 + w / 2, y0 + T / 2, W(MARK.chipR, MARK.chipMin), S, res, { ring: "rgba(255,255,255,0.35)", gray: true });
+        ctx.fillStyle = compact ? "rgba(10,8,14,0.55)" : "rgba(10,8,14,0.34)"; ctx.fillRect(...inner); // 800：暗化 34% → 55%（可修 1）
+        ctx.globalAlpha = compact ? 1 : 0.75; brackets(ctx, x0, y0, w, MARK.dimLine, W(1.8, 1.5), W(1.4, 1)); ctx.globalAlpha = 1;
+        if (!compact) { const R = REASON[st.why] ?? REASON.range; chip(ctx, R, x0 + w / 2, y0 + T / 2, W(MARK.chipR, MARK.chipMin), S, res, { ring: "rgba(255,255,255,0.35)", gray: true }); }
       } else if (state === "broken") {
         ctx.fillStyle = MARK.broken; ctx.globalAlpha = 0.55; ctx.fillRect(...inner); ctx.globalAlpha = 1;
         const r = W(MARK.xSize, MARK.xMin) / 2, lw = W(3, 1.5);
         ctx.lineCap = "round";
         for (let k = 0; k < n; k++) { const cx = x0 + k * T + T / 2, cy = y0 + T / 2; for (const [c, lww] of [[OUT, lw + W(2.4, 1.2)], [MARK.x, lw]]) { ctx.strokeStyle = c; ctx.lineWidth = lww; ctx.beginPath(); ctx.moveTo(cx - r, cy - r); ctx.lineTo(cx + r, cy + r); ctx.moveTo(cx + r, cy - r); ctx.lineTo(cx - r, cy + r); ctx.stroke(); } }
       } else if (state === "hidden") {
-        ctx.setLineDash([W(4, 2.5), W(3, 2)]); ctx.beginPath(); ctx.roundRect(...inner, 5);
-        ctx.lineWidth = W(1.6, 1) + 2 * W(1, 0.8); ctx.strokeStyle = OUT; ctx.globalAlpha = 0.8; ctx.stroke(); ctx.lineWidth = W(1.6, 1); ctx.strokeStyle = MARK.dimLine; ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        // 第 2 版（可修 2）：線至少 1.5 px、段長至少 3 px、不透明（800 第 1 版只剩斷續暗點）
+        ctx.setLineDash([W(4, 3.5), W(3, 2.5)]); ctx.beginPath(); ctx.roundRect(...inner, 5);
+        ctx.lineWidth = W(1.6, 1.5) + 2 * W(1, 0.8); ctx.strokeStyle = OUT; ctx.stroke(); ctx.lineWidth = W(1.6, 1.5); ctx.strokeStyle = MARK.dimLine; ctx.stroke(); ctx.setLineDash([]);
       }
-      // 殼縫：近戰時外側下角一顆背刺小圖（「算從背後」；R4 遠程不算，不畫）。放外側下角，避開預告格右上角的字
+      // 殼縫：近戰時一顆背刺小圖（「算從背後」；R4 遠程不算，不畫）。第 2 版（審查必修 2）：改放「內側」下角（靠核心那側，背殼平塗處），不蓋住貼外側的熔岩裂縫；
+      // 800（compact）不用 14 px 的圖樣小圓片（只剩一團白），改畫加粗的「往回彎的箭頭」記號（黃環 2 px）。
       if (part === "seam" && melee && (state === "ok" || state === "hover")) {
-        const r = W(MARK.chipR, MARK.chipMin), cx = side < 0 ? x0 + r + W(1, 0.5) : x0 + T - r - W(1, 0.5), cy = y0 + T - r - W(1, 0.5);
-        chip(ctx, BACK_CHIP, cx, cy, r, S, res, { ring: "#ffe9a8" });
+        const r = W(MARK.chipR, MARK.chipMin), cx = side < 0 ? x0 + T - r - W(1, 0.5) : x0 + r + W(1, 0.5), cy = y0 + T - r - W(1, 0.5);
+        if (compact) backMark(ctx, cx, cy, r, S, side); else chip(ctx, BACK_CHIP, cx, cy, r, S, res, { ring: "#ffe9a8" });
       }
       ctx.restore();
     }
     if (hover === "body") { // 前殼（本體）：整個 3×3 外緣的攻擊紅框（同現行目標紅框 #ff4040）
       ctx.save(); const lw = W(2, 1.5); ctx.lineWidth = lw + W(1.6, 1); ctx.strokeStyle = OUT; ctx.strokeRect(-72 + 2, -144 + 2, 140, 140); ctx.lineWidth = lw; ctx.strokeStyle = MARK.body; ctx.strokeRect(-72 + 2, -144 + 2, 140, 140); ctx.restore();
     }
+  }
+  /** 800 寬的背刺記號：深底圓＋2 px 黃環（條件色 #ffe9a8）＋米白粗彎箭頭（從外側繞過頂、往下指向內側＝「繞到背後」）。side＝殼縫在哪一側（箭頭從那一側繞過來）。 */
+  function backMark(ctx, x, y, r, S, side) {
+    const px = 1 / S, ring = 2 * px, ar = r * 0.44, lw = Math.max(2 * px, r * 0.26), hd = r * 0.5, sx = -side; // sx：箭頭尖朝哪一側（內側）
+    ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = "rgba(10,12,18,0.92)"; ctx.fill();
+    ctx.lineWidth = ring; ctx.strokeStyle = "#ffe9a8"; ctx.beginPath(); ctx.arc(x, y, r - ring / 2, 0, TAU); ctx.stroke();
+    const cy = y + r * 0.12, a0 = sx > 0 ? Math.PI : 0, a1 = sx > 0 ? 0.15 : Math.PI - 0.15; // 從外側（a0）往上繞到內側
+    const ex = x + Math.cos(a1) * ar, ey = cy + Math.sin(a1) * ar;
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = MARK.cream; ctx.lineWidth = lw;
+    ctx.beginPath(); ctx.arc(x, cy, ar, a0, a1, sx < 0); ctx.stroke();
+    ctx.fillStyle = MARK.cream; ctx.beginPath(); ctx.moveTo(ex - hd * 0.95, ey - hd * 0.1); ctx.lineTo(ex + hd * 0.95, ey - hd * 0.1); ctx.lineTo(ex + sx * hd * 0.15, ey + hd * 1.05); ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
   /** 區塊四角的 L 形括號（米白＋外框色襯邊）；x0、y0 是區塊左上，寬 w、高 1 格。 */
   function brackets(ctx, x0, y0, w, col, lw, ink) {
@@ -398,5 +430,5 @@ window.QBossGiant = (() => {
     const a = r * 1.56 * (48 / 36); window.QIconsWeapons.blit(ctx, gg, x - a / 2, y - a / 2, a, S * res); ctx.restore();
   }
 
-  return { draw, stateOf, partMask, glowPart, drawMarks, groundRing, TILE_PART, PART_ZH, REASON, BACK_CHIP, MARK, HOVER, PLATES, VENTS, BEETLES, SEAM, tileXY, plateAnchor, seedOf, T, K, G, BOX, mk, tint, dilate };
+  return { draw, groundGlow, stateOf, partMask, glowPart, drawMarks, groundRing, TILE_PART, PART_ZH, REASON, BACK_CHIP, MARK, HOVER, PLATES, VENTS, BEETLES, SEAM, tileXY, plateAnchor, seedOf, T, K, G, BOX, mk, tint, dilate };
 })();
