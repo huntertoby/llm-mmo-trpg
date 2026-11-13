@@ -167,7 +167,7 @@ def _clause(row: StatChangeOut) -> str:
         lead = "只要" if (_int(row.after) or 0) < (_int(row.before) or 0) else "要花"
         return f"{lead} {row.after} AP（原本 {row.before}）"
     if after is None:
-        return f"拿掉{name}"
+        return f"不用花{name}" if row.field.startswith("cost.") else f"拿掉{name}"
     if before is None:
         return f"多了{name}：{after}"
     a, b = _int(row.before), _int(row.after)

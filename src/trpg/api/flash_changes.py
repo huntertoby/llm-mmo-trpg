@@ -632,12 +632,14 @@ class _View:
         if custom is not None:
             return custom
         ruleset = self.library.ruleset
+        weapons = self.library.weapons
         text = condition_text(
             spec.condition,
             status_name=lambda s: self.statuses[s].name_zh if s in self.statuses else s,
             surface_name=lambda s: ruleset.surface_def(s).name_zh,
+            weapon_name=lambda w: weapons[w].name_zh if w in weapons else w,
         )
-        return f"{text}時才有"
+        return f"{text}才有" if text.endswith("時") else f"{text}時才有"
 
     def _keyword_name(self, keyword: str | None) -> str | None:
         found = None if keyword is None else self.library.keywords.by_id().get(keyword)

@@ -10,7 +10,7 @@ import { Hint } from "../ui/Hint";
 import { IconCanvas } from "../ui/HudGlyph";
 import { PartBare, WarnGlyph } from "../ui/PanelKit";
 import { AssemblyFormula, SkillIconView } from "../ui/SkillIconView";
-import { FLASH_BASE_NARROW_ZH, FLASH_BASE_WIDE_ZH, FLASH_MORE_NARROW_ZH, FLASH_MORE_WIDE_ZH, FLASH_NONE_ZH, nowStyle, parseTerms, splitWhen } from "./flashChoice";
+import { FLASH_BASE_NARROW_ZH, FLASH_BASE_WIDE_ZH, FLASH_MORE_NARROW_ZH, FLASH_MORE_WIDE_ZH, FLASH_NONE_ZH, nowStyle, nowText, parseTerms, splitWhen } from "./flashChoice";
 
 export type Terms = Readonly<Record<string, FlashTerm>>;
 
@@ -75,7 +75,7 @@ export function TermText({ text, terms }: { text: string; terms: Terms }) {
 /** 「後」那一塊：四種樣式（第 3 節）。代價前面掛第⑦批警告三角；變弱前面掛 CSS 向下三角；新加的掛實心綠「新」。 */
 function NowChip({ change, terms }: { change: StatChange; terms: Terms }) {
   const style = nowStyle(change);
-  const text = change.after_zh ?? change.after ?? FLASH_NONE_ZH;
+  const text = nowText(change);
   const { main, when } = splitWhen(text);
   return (
     <span className={`fc-now ${style}`} data-style={style}>

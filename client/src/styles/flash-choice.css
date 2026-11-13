@@ -428,12 +428,18 @@
   gap: 12px;
 }
 
+/* 最多兩行（大標＋一句話接著排）：下固定區高度固定，點哪個都不跳（5 第 1 條）；完整的變化看卡上的前 → 後 */
 .fc-say {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 13px;
   line-height: 1.6;
   color: var(--pnl-l1);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
 }
 
 .fc-say .dim {
@@ -660,7 +666,6 @@
   }
 
   .fc-picked {
-    display: block;
-    margin-right: 0;
+    margin-right: 6px;
   }
 }

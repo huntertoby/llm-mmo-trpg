@@ -47,7 +47,7 @@ export function headlineOf(o: FlashOption): string {
 export type NowStyle = "up" | "cost" | "down" | "new";
 
 export function nowStyle(c: StatChange): NowStyle {
-  if (c.after === null) return "down";
+  if (c.after === null) return c.direction === "cost" ? "up" : "down";
   switch (c.direction) {
     case "cost":
       return "cost";
@@ -58,6 +58,15 @@ export function nowStyle(c: StatChange): NowStyle {
     default:
       return "up";
   }
+}
+
+/** 代價整項不用付了（轉型後不花 AP、耐力…）：「後」寫「不用花」、照變好（樣張轉型那張「AP 2 → 不用花」）。 */
+export const FLASH_NO_COST_ZH = "不用花";
+
+/** 「後」的字：伺服器的 `after_zh`；拿掉的效果「沒有」、拿掉的代價「不用花」。 */
+export function nowText(c: StatChange): string {
+  if (c.after !== null) return c.after_zh ?? c.after;
+  return c.direction === "cost" ? FLASH_NO_COST_ZH : FLASH_NONE_ZH;
 }
 
 // ---- 卸下選單（8.3、9.1 #28） ------------------------------------------------------------
