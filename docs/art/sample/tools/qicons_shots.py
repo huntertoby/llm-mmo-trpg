@@ -38,6 +38,9 @@ Usage (from the repo root):
     uv run python docs/art/sample/tools/qicons_shots.py hud-v2           # batch 7 v2 close-ups
     uv run python docs/art/sample/tools/qicons_shots.py style-hud        # style sample HUD close-up
     uv run python docs/art/sample/tools/qicons_shots.py true1x hud       # batch 7 true 1x
+    uv run python docs/art/sample/tools/qicons_shots.py wish             # WP-3 wish pool icons
+    uv run python docs/art/sample/tools/qicons_shots.py --audit wish     # their audit table
+    uv run python docs/art/sample/tools/qicons_shots.py --hash wish      # their fingerprints
     uv run python docs/art/sample/tools/qicons_shots.py event       # batch 8: every event-* shot
     uv run python docs/art/sample/tools/qicons_shots.py --audit event    # batch 8 audit table
     uv run python docs/art/sample/tools/qicons_shots.py --hash event     # batch 8 fingerprints
@@ -655,6 +658,22 @@ HUD_SHOTS: list[Shot] = [
     # true 1x 15 and 18 side by side.
     ("hud-v2", HUD_PAGE, "part=v2", "closeup/qicons/hud/v2.png", 1),
     ("hud-v2", HUD_PAGE, "part=weather", "closeup/qicons/hud/v2-weather.png", 1),
+    # WP-3 wish pool (11-13): two tab icons and the weekly-wishes chip, candidates A/B/C; every
+    # sheet is a true-1x / nearest-neighbour blow-up on the real background (PNG).
+    *[
+        ("wish", HUD_PAGE, f"part=wish&sec={sec}&mute=1", f"shots/qicons-wish/{name}.png", 1)
+        for sec, name in [
+            ("cand", "cand"),
+            ("tabs&set=a", "tabs"),
+            ("tabs&set=b", "tabs-b"),
+            ("tabs&set=c", "tabs-c"),
+            ("chip&set=a", "chip"),
+            ("chip&set=b", "chip-b"),
+            ("chip&set=c", "chip-c"),
+            ("near&set=tab", "near-tab"),
+            ("near&set=chip", "near-chip"),
+        ]
+    ],
 ]
 
 # Batch 8 (event card icons): A tables, d20 colours and the illustration badges are close-ups
@@ -934,10 +953,13 @@ def main() -> int:
         return 0 if shoot_true1x(set(args.parts) - {"true1x"}, out_dir) else 1
     # Batch 5b C version: "dot" draws the "more" marker as the second keyword's colour dot.
     mark = "&mark=dot" if "dot" in args.parts and batch_page == KEYWORD_PAGE else ""
+    # WP-3 wish pool icons (batch 7 page, own table): --hash wish / --audit wish
+    wish = "wish" in args.parts
     if args.hash:
         # "var": batch 2 every material/dye/keyword variant; batch 1 ("--hash var") every material.
         variants = "var" in args.parts and batch_page in (ARMOR_PAGE, WEAPON_PAGE)
-        return 0 if audit(batch_page, ("hash&sub=var" if variants else "hash") + mark) else 1
+        query = "wish&sec=hash&mute=1" if wish else ("hash&sub=var" if variants else "hash") + mark
+        return 0 if audit(HUD_PAGE if wish else batch_page, query) else 1
     if args.audit:
         batched = bool(
             {"armor", "weapons", "skills", "parts", "status", "keywords", "hud", "event", "items"}
@@ -945,7 +967,10 @@ def main() -> int:
         )
         # "r6" (QI-1a): rule-6 brightness of the eight weapon looks, sample vs material.ts colours.
         page = WEAPON_PAGE if "r6" in args.parts else batch_page if batched else STYLE_PAGE
-        return 0 if audit(page, "r6" if "r6" in args.parts else "audit" + mark) else 1
+        query = "r6" if "r6" in args.parts else "audit" + mark
+        if wish:
+            page, query = HUD_PAGE, "wish&sec=audit&mute=1"
+        return 0 if audit(page, query) else 1
     ok = True
     if args.query:
         out_dir = args.out or Path(tempfile.gettempdir())
