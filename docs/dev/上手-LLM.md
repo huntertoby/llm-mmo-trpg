@@ -27,6 +27,8 @@
 | `world/generated.py` | 世界引擎拿生成內容的介面：請求（`FlashGenRequest`…）、`supply`、`recorded`（重播） |
 | `roguelite/llm_hook.py` | 一輪的掛接點（`use_proposer`、`use_flash_source`；`trpg.roguelite` 不能匯入 `trpg.llm`） |
 | `skillgen/flash_text.py` | **LF-1**：`VariationText`、`clean_text`／`clean_name`／`clean_note`（引擎端的最後一道文字檢查） |
+| `llm/wish.py`、`prompts/wish.py` | **WP-1 許願池**：`match_wish`（願望 → 1～2 個關鍵字，`WISH_PROMPT_VERSION` `wish-match/1`）、`WishSource`（對關鍵字的 client＋把願望放進 `<player_input>` 的技能提議器）、`mock_wish_client` |
+| `world/wish.py` | **WP-1**：許願的規則（`wish_problem`、`wish_menu`、`wishes_left`、`wish_request`、`apply_wish`）；只經 `supply` 拿 `WishGen` |
 
 ## 二、資料怎麼流（LLM 出招流程，各入口共用）
 
@@ -77,6 +79,7 @@
 | 一輪的閃現紀錄 | `tests/roguelite/test_flash_llm_run.py`、`test_flash_texts_run_lf1.py`、`test_save.py` |
 | 大世界生成、日誌、重播 | `tests/world/test_generated_content.py`、`test_flash_texts_world_lf1.py`、`test_save.py`、`test_replay.py`；`tests/api/test_world_pregen.py`、`test_world_pregen_schedule.py` |
 | prompt 文字 | `tests/llm/test_prompts.py`、`test_prompt_prefix.py` |
+| 許願池（WP-1） | `tests/world/test_wish.py`、`tests/llm/test_wish_match.py`、`tests/api/test_wish_pregen.py` |
 | 依賴方向 | `uv run lint-imports`、`tests/test_architecture.py` |
 
 本機 LLM 冒煙（手動、少量）：寫一支暫存腳本，`load_llm_config(Path("config/llm.local.toml"))` → `OpenAICompatClient` → `LlmFlashSource(client, naming=client)` → `make_offer`，印 `record.names` 與每個選項的 `skill.name_zh`、`variation.note_zh`（LF-1 報告第 3 節有輸出範例）。
@@ -102,3 +105,12 @@
 3. **開發頁夾具**：`scripts/export_flash_choice_fixture.py` 多一組 `llm`（點燃斬閃過兩次後第 3 次大變化，**真的出題** `make_offer`，用一個帶 `texts()` 的 `DataOrderSource` 子類掛文字）。`client/dev/flash-choice.html?set=llm`。
 4. **實機（大世界）要點**：`pregen/wait` 的 10 秒**從第一次等待算起**，重問不會重新計時；LF-1 的程式（每個大變化另呼叫命名）實測整題超過 10 秒 → 退回組合式名稱。要拍 LLM 版：讀一次角色（開始預先生成）後先等 60～90 秒再送閃現（LF-3 報告第 3 節）。
 5. **測試**：`tests/api/test_flash_llm_text_lf3.py`、`client/src/run/lf3FlashLlmText.test.ts`。
+
+## 八、WP-1：許願池（`docs/phases/PhaseWP計畫.md`）
+
+1. **資料流**（同第二節的共用流程，第四個入口）：世界動作 `wish{text}` → `world/wish.py::apply_wish` 組 `WishGenRequest`（鍵＝`input_key("wish/{角色}/{offers_made}", 願望＋選單＋出題用的角色狀態)`）→ `supply(…, WishGen, 退路 WishGen(source="none"), accept)` → API 層 `world_pregen.wish_generator`：`match_wish`（願望只在 `<player_input>`）→ 對到了就 `use_proposer(source.proposer(願望))` 裡 `make_offer(..., pinned_keyword=第 1 個, region_keywords=全部, region=None, llm_max_calls=llm_cards)` → `WishGen{source: llm|partial|none, keywords, offer}` → 日誌 `generated` → 重播 `recorded`。
+2. **不預測**：玩家當場打字；`supplier` 收到才排進單一佇列、等最多 10 秒（同閃現）。`prefetch` 不會丟掉 `kind == "wish"` 的暫存（WP-2 的等待提示先排、動作再來拿）。
+3. **引擎驗證**（`_acceptor`）：關鍵字在選單、不重複、1～`max_keywords` 個，否則整筆不收 → 動作被拒（`WISH_NO_MATCH_ZH`，不扣錢不算次數）；三選一要過 `checked_offer` 而且每張帶第 1 個關鍵字，否則改成 `partial`（引擎照關鍵字算組合器版），日誌記的是引擎收下的版本。
+4. **願望文字**只在動作裡（日誌有）與 prompt 的 `<player_input>`（對關鍵字、提議技能兩步；`make_proposer(player_text=)` → `propose_skill`）；`WishGen` 不存願望，命名步驟不看願望。
+5. **Mock**：`mock_wish_client` 用「名稱有任一字出現在願望裡」對關鍵字（「凍」→ 冰凍、「燃」→ 點燃）。Mock 提議器做不出冰凍的完整技能（`literal_error`），所以冰凍願望在 Mock 下是 `partial`；要測 `llm` 版用點燃（`tests/api/test_wish_pregen.py`）。
+6. **測試**：`tests/world/test_wish.py`（規則、退路、存檔）、`tests/llm/test_wish_match.py`（`<player_input>`、重試、prompt 快照）、`tests/api/test_wish_pregen.py`（生成函式、佇列、日誌與重播、最小顯示）。
