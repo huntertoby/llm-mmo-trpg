@@ -21,6 +21,8 @@ export interface QItem {
   crest?: string;
   strap?: string;
   glow?: string;
+  /** 盾心紋樣（RG-4，DollGear.emblem）：目前只認 `peak`（雲紋碑盾的三峰山），不認得就不畫。 */
+  emblem?: string;
 }
 
 /** Q 版外觀（`Look` 的超集：#137 的可選外觀、獸耳四種）。不認得的值當作沒有。 */
@@ -297,3 +299,5 @@ export const rec = (who: string): ((hand: P2, ctx: Ctx) => void) | null => {
 export const mark = (n: string): void => void S.POSE?.layers?.push(n);
 export const clamp01 = (t: number): number => Math.max(0, Math.min(1, t));
 export const isShield = (it: QItem | null | undefined): boolean => !!it && String(it.kind).startsWith("shield");
+/** 塔盾一類（RG-4，docs/art/RG樣張.md 9.8 第 1 條）：塔盾與門派大盾 `sect_great` 共用握法、位移、圖層。 */
+export const isTowerLike = (it: QItem | null | undefined): boolean => !!it && it.kind === "shield_kite" && (it.form === "tower" || it.form === "sect_great");

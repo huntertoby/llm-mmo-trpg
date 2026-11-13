@@ -1,7 +1,7 @@
 # 雲嶺敵人「持盾弟子」（RG-1，#162，18.2.1「加深內容」、09 9.6.6「盾兵」）：觀內弟子持大盾，站在雲鶴使、符籙師前面
 # 替他們擋遠程（shield_guard 標籤：相鄰的遠程同伴被遠程攻擊時命中 −core.shield_guard_hit_penalty）。
 # 玩家的應對：繞到側面，或先把盾兵推開、撞開。數值照盜賊盾衛（初值，未經模擬；照工坊）。
-# 外觀：大盾是新部件，美術 PM 出圖前先用鳶盾暫代（PhaseRG計畫 第 5 節）。
+# 外觀：副手是門派大盾（RG-4，`kite_shield` 的敵人專用形制 sect_great）：青面月白邊的雲紋碑盾、盾心三峰山紋（docs/art/RG樣張.md 9.1、9.8）。
 id: sect_shield_disciple
 name_zh: 持盾弟子
 attributes: {str: 13, dex: 10, con: 14, int: 8, wis: 10, wil: 10}
@@ -14,4 +14,4 @@ resist: {physical: 100}
 element_mods: {}
 tags: [humanoid, sect, shield_guard]
 skills: [skill_shield_bash, skill_taunting_roar]   # 同盜賊盾衛（#149 一般敵人至少 2 招）
-doll: {skin: '#d9a47a', hair: bun, hair_color: '#1c1c22', main_material: iron, gear: {body: {kind: robe, material: cloth, color: '#5f8f8a', trim: '#dfe4e2'}, off_hand: {kind: shield_kite, material: wood, color: '#5f8f8a'}}}
+doll: {skin: '#d9a47a', hair: bun, hair_color: '#1c1c22', main_material: iron, gear: {body: {kind: robe, material: cloth, color: '#5f8f8a', trim: '#dfe4e2'}, off_hand: {kind: shield_kite, form: sect_great, material: wood, color: '#5f8f8a', trim: '#dfe4e2', emblem: peak}}}

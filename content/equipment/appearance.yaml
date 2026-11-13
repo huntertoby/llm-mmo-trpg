@@ -189,6 +189,7 @@ kinds:
     forms:
       - {id: kite, name_zh: 鳶盾}
       - {id: tower, name_zh: 塔盾}
+      - {id: sect_great, name_zh: 門派大盾, enemy_only: true}   # RG-4：持盾弟子的雲紋碑盾（只給敵人，美術 PM 9.6 決定 2）
     materials: [iron, steel, copper, silver, gold]
     default_material: iron
   - id: tome

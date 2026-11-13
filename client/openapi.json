@@ -10037,6 +10037,18 @@
               }
             ],
             "title": "Apron"
+          },
+          "emblem": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "peak"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emblem"
           }
         },
         "additionalProperties": false,
@@ -10046,7 +10058,7 @@
           "material"
         ],
         "title": "DollGear",
-        "description": "範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。\n\nPhase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、\n``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。"
+        "description": "範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。\n\nPhase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、\n``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。\n\nRG-4：``emblem`` 盾心紋樣（持盾弟子的雲紋碑盾 ``peak`` 三峰山；前端不認得就不畫）；\n沒寫時不輸出。"
       },
       "DollLook": {
         "properties": {
@@ -13683,6 +13695,20 @@
             },
             "type": "object",
             "title": "Item Tags"
+          },
+          "offhands": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offhands"
           },
           "legendary_only": {
             "type": "boolean",

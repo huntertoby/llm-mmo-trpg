@@ -92,7 +92,7 @@ from trpg.engine.events import (
     UnitSummoned,
 )
 from trpg.engine.gear.charge import find_charge
-from trpg.engine.ids import BOSS_TAG
+from trpg.engine.ids import BOSS_TAG, SHIELD_FORMATION
 from trpg.engine.maneuvers import contest_chance
 from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
@@ -741,6 +741,8 @@ def _cover_notes(cover: Cover | None) -> tuple[str, ...]:
     if cover is None:
         return ()
     x, y = cover.pos
+    if cover.kind == SHIELD_FORMATION:  # 塔盾詞條「護陣」（RG-4，#163）
+        return (f"護陣 −{cover.penalty}：被 {cover.name_zh} 的護陣擋住 ({x}, {y})",)
     if cover.unit_id is not None:  # 盾兵掩護（RG-1）
         return (f"盾兵掩護 −{cover.penalty}：被 {cover.name_zh} 的盾擋住 ({x}, {y})",)
     return (f"半掩護 −{cover.penalty}：{cover.name_zh} ({x}, {y})",)

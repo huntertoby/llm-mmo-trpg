@@ -610,11 +610,13 @@ def _attack(e: AttackRolled, v: _View) -> str:
     ]
     parts += _bonus_parts(e)
     cover_note = ""
-    if e.cover and e.cover_unit_id is not None:  # 盾兵掩護（RG-1，#162）
-        parts.append(f"盾兵掩護 {signed(e.cover)}")
+    if e.cover and e.cover_unit_id is not None:  # 盾兵掩護（RG-1，#162）、護陣（RG-4，#163）
+        label = "護陣" if e.cover_formation else "盾兵掩護"
+        parts.append(f"{label} {signed(e.cover)}")
         guard = state.units.get(e.cover_unit_id)
         guard_name = e.cover_unit_id if guard is None else guard.name_zh
-        cover_note = f"［命中 −{-e.cover}：被{guard_name}的盾擋住］"
+        what = "護陣" if e.cover_formation else "盾"
+        cover_note = f"［命中 −{-e.cover}：被{guard_name}的{what}擋住］"
     elif e.cover:
         parts.append(f"半掩護 {signed(e.cover)}")
         obj = state.objects.get(e.cover_object_id) if e.cover_object_id is not None else None

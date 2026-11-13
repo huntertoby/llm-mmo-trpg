@@ -25,6 +25,8 @@ export interface GearItem {
   tassel?: string;
   /** 杖頭光色（Phase 5A-ART5，`DollLook.main_glow`；道童綠光）：附魔元素仍優先。 */
   glow?: string;
+  /** 盾心紋樣（RG-4，`DollGear.emblem`；持盾弟子的雲紋碑盾 `peak`）：不認得就不畫。 */
+  emblem?: string;
 }
 
 export interface Look {
@@ -154,6 +156,7 @@ interface DollGearLook {
   form?: string | null;
   trim?: string | null;
   apron?: string | null;
+  emblem?: string | null;
 }
 
 /** 後端的單位外觀 → 內部外觀；欄位值是可選的（`null` 與缺漏同義）。 */
@@ -179,6 +182,7 @@ function fromDollLook(d: DollLook): Appearance {
       ...(g.form != null ? { form: g.form } : {}),
       ...(g.trim != null ? { trim: g.trim } : {}),
       ...(g.apron != null ? { apron: g.apron } : {}),
+      ...(g.emblem != null ? { emblem: g.emblem } : {}),
     };
   }
   const mainStyle: Partial<GearItem> = {};

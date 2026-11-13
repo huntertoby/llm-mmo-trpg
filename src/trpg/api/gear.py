@@ -170,6 +170,7 @@ def _affix_info(affix: AffixDef) -> GearAffixInfo:
         weapons=affix.weapons,
         weapon_class=affix.weapon_class,
         item_tags={k: tuple(v) for k, v in affix.item_tags.items()},
+        offhands=affix.offhands or None,
         legendary_only=affix.legendary_only,
         value_min=None if affix.value is None else affix.value.min,
         value_max=None if affix.value is None else affix.value.max,

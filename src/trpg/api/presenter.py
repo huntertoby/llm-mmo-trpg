@@ -217,7 +217,11 @@ def _lock_fizzle_ids(
 ) -> dict[str, str]:
     """瞄準預告落空（RG-3 浮字）：``lock_caster_id``＝射出的人（射出在他回合開始時，取這一步
     裡最後一個 ``turn_started``）；``lock_on_blocked`` 另帶 ``lock_blocker_id``＝擋下的目標隊友
-    （以這一步之後的戰場、:func:`lock_blocker` 判斷）。觀看者看不到資訊的單位不送。"""
+    （以這一步之後的戰場、:func:`lock_blocker` 判斷）。觀看者看不到資訊的單位不送。
+
+    RG-3b：AF-1 起有人擋在中間時改打擋住的人，引擎發 ``lock_intercepted``（自帶 ``unit_id``＝
+    射出的人、``blocker_id``），前端「被擋下」直接讀它、這裡不推算；``lock_on_blocked`` 落空只剩
+    「擋住的人本身選不到」（例如 2 格外的隱蔽）這一種，引擎事件沒有擋住的人，才在這裡推算。"""
     out: dict[str, str] = {}
     caster = None if caster_id is None else state.units.get(caster_id)
     if caster is None or caster.id in hidden:

@@ -160,12 +160,23 @@ function attackSpots(e: EventBase, at: Locate, immobile: (id: unknown) => boolea
 /**
  * RG-3：瞄準預告落空（`effect_fizzled` 的 `lock_on_*`）。字一律不放在目標頭上（隱蔽造成的落空會洩漏位置）：
  * 「被擋下」在擋住的那個隊友頭上（伺服器 `lock_blocker_id`；找不到時退回弓手），其他「落空」在弓手頭上（`lock_caster_id`）。
+ * RG-3b：AF-1 起擋在中間的人能選到時改打他（`lock_intercepted`，見 `interceptSpots`），這裡的 `lock_on_blocked`
+ * 只剩「擋住的人本身選不到」（例如 2 格外的隱蔽）。
  */
 function lockFizzleSpots(e: EventBase, at: Locate): Spot[] {
   if (typeof e.reason !== "string" || !e.reason.startsWith("lock_on")) return [];
   const caster = at(e.lock_caster_id);
   if (e.reason === "lock_on_blocked") return [{ pos: at(e.lock_blocker_id) ?? caster, text: WORD_LOCK_BLOCKED, tone: "good" }];
   return [{ pos: caster, text: WORD_LOCK_MISS, tone: "good" }];
+}
+
+/**
+ * RG-3b：瞄準預告被隊友擋下、改打擋住的人（AF-1 的 `lock_intercepted`，事件自帶 `blocker_id`）→「被擋下」放在
+ * 擋下的人頭上（緊接著是對他的命中與傷害浮字）。找不到擋下的人時不顯示（不退回目標頭上）。
+ */
+function interceptSpots(e: EventBase, at: Locate): Spot[] {
+  const blocker = at(e.blocker_id);
+  return blocker === null ? [] : [{ pos: blocker, text: WORD_LOCK_BLOCKED, tone: "good" }];
 }
 
 /** 一個事件 → 要在地圖上顯示的浮動文字（沒有對應回饋回傳空陣列）。 */
@@ -201,6 +212,8 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
       return typeof e.name_zh === "string" ? [{ pos: at(e.target_id), text: partBrokenWord(e.name_zh), tone: "bad", big: true }] : [];
     case "effect_fizzled":
       return lockFizzleSpots(e, at);
+    case "lock_intercepted":
+      return interceptSpots(e, at);
     case "followup_cancelled":
       // RG-3：瞄準中被近戰打中，瞄準取消（字在弓手頭上）
       return e.reason === "interrupted" ? [{ pos: at(e.unit_id), text: WORD_LOCK_INTERRUPTED, tone: "good" }] : [];

@@ -19,6 +19,8 @@
 - ``{skill}``、``{skill_ap}``、``{skill_cooldown}``、``{skill_range}``、``{skill_effect.<欄位>}``：
   動作類詞條解鎖的技能。
 - ``{rule}``：改變規則類詞條的規則（「規則改變「血痕」：你步行經過……」，和傳說技能卡同一句）。
+- ``{core.<欄位>}``：核心規則（``rules/core.yaml``）的整數，工坊改了就跟著變（RG-4 護陣的
+  ``{core.shield_formation_hit_penalty}``）。
 
 模板裡有不認得的欄位時載入失敗（:class:`ValueError`）。
 """
@@ -125,6 +127,8 @@ def _field_text(affix: AffixDef, name: str, sub: str | None, ruleset: Ruleset) -
         return None if sub is None else _effect_field(effects[0] if effects else None, sub, ruleset)
     if name in ("up", "down"):
         return None if sub is None else _cost_field(affix, name, sub)
+    if name == "core":  # RG-4：核心規則的數值（工坊可調）
+        return None if sub is None else _format(sub, getattr(ruleset.core, sub, None), ruleset)
     if name.startswith("skill"):
         return _skill_field(affix, name, sub, ruleset)
     named = _named_field(affix, name, ruleset)

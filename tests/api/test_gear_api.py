@@ -31,7 +31,7 @@ def test_catalog_lists_slots_items_and_the_whitelist(client: TestClient) -> None
     assert [s["slot"] for s in body["slots"]][:2] == ["main_hand", "off_hand"]
     assert len(body["slots"]) == 9
     assert (
-        len(body["affixes"]) == 79  # LW-1 加「獨行的」
+        len(body["affixes"]) == 80  # LW-1 加「獨行的」；RG-4 加塔盾的「護陣」
     )  # 3K-1：+7 普攻附加元素、+8 武器元素；5D-3：+3 獨特；5D-2b：+8 技能強化；5D-4：+1
     assert {a["category_number"] for a in body["affixes"]} == set(range(1, 12))
     strength = next(a for a in body["affixes"] if a["id"] == "affix_attr_str")

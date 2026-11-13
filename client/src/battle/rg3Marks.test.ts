@@ -198,6 +198,12 @@ describe("feedback words and the glance item", () => {
     ]);
   });
 
+  it("RG-3b: lock_intercepted puts 被擋下 on the blocker (who takes the shot), never on the original target", () => {
+    const items = feedbackFor([ev("lock_intercepted", { unit_id: "unit_0003", skill_id: "s", name_zh: "鶴唳穿雲", target_id: "unit_0001", blocker_id: "unit_0004" })], view);
+    expect(items.map((i) => (i.kind === "float" ? [i.text, i.pos.x, i.pos.y, i.tone] : i.kind))).toEqual([[WORD_LOCK_BLOCKED, 2, 0, "good"]]);
+    expect(feedbackFor([ev("lock_intercepted", { unit_id: "unit_0003", skill_id: "s", name_zh: "x", target_id: "unit_0001", blocker_id: "unit_9999" })], view)).toEqual([]);
+  });
+
   it("a blocked miss without a known blocker falls back to the archer; an unknown archer shows nothing", () => {
     const items = feedbackFor([ev("effect_fizzled", { pos: { x: 0, y: 0 }, reason: "lock_on_blocked", lock_caster_id: "unit_0003" }), ev("effect_fizzled", { pos: { x: 0, y: 0 }, reason: "lock_on_lost" })], view);
     expect(items.map((i) => (i.kind === "float" ? [i.text, i.pos.x, i.pos.y] : i.kind))).toEqual([[WORD_LOCK_BLOCKED, 2, 1]]);
