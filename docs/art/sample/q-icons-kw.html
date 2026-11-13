@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<title>KW 段：連擊、怒氣、專注、氣的美術樣張</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-13）。紀錄：docs/art/KW樣張.md；畫法：qIconsKW.js；拍圖：tools/kw_shots.py。
+     網址參數 ?part=
+       cand     ①圓章圖樣：每個關鍵字 A／B 兩案 × 圓章 13／17／20／27（裝備格 32／42／48／64），真 1 倍與 2 倍內部解析度，最近鄰放大；剪影
+       color    ②關鍵字色：16 色色票與 16 個圓章 × 正常／紅色弱／綠色弱／藍色弱／灰階；OKLab 距離表；推薦組 vs 對照組
+       near     ①撞圖：既有 12 個＋新 4 個圓章排一排（真 1 倍 13、17，放大 5 倍），兩案各一排；和同題材的第③④⑤批記號並排
+       gear     ①放在裝備格上：代表裝備 × 新關鍵字（32、42 真 1 倍與 2 倍）
+       cond     ⑤條件部件「層數達 N」：A／B × 30／26／18／16，和既有條件與層數部件並排（真 1 倍放大）；情境（技能卡 56、96、組裝列、說明行）
+       hud      ④HUD 層數計量：A／B × 每種 0～滿層（真 1 倍放大）；HUD 主角卡實際位置（現行 vs Q 版）
+       create   ③創角關鍵字圖示：既有 12＋新 4（A／B），15 與 30 px，按鈕情境
+       audit    自查表（文字）；hash 新圖指紋（文字）
+       all      cand＋color＋near＋gear＋cond＋hud＋create（預設）
+     加 &mute=1（沒有聲音，照規定帶著）。截圖：docs/art/shots/qicons-kw/。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<link rel="stylesheet" href="obSamples.css">
+<style>
+  html, body { margin: 0; }
+  body.qi { background: #17151b; color: #eadfcc; font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif; width: 1280px; padding: 0 0 24px; overflow-x: hidden; }
+  .qi-wrap { padding: 14px 20px 0; }
+  .qi h1 { font-size: 21px; margin: 0 0 4px; color: #f2e6c8; }
+  .qi h2 { font-size: 16px; margin: 18px 0 2px; color: #f2e6c8; }
+  .qi h3 { font-size: 13.5px; margin: 10px 0 4px; color: #e8cf90; }
+  .qi h2 small, .qi .note { color: #b8ab96; font-weight: normal; font-size: 12.5px; line-height: 1.6; }
+  .qi .note { margin: 0 0 8px; }
+  .qi-tb { display: grid; gap: 4px 6px; align-items: center; }
+  .qi-tb .hd { font-size: 11.5px; color: #b8ab96; text-align: center; line-height: 1.3; }
+  .qi-tb .rh { font-size: 12.5px; color: #f2e6c8; display: flex; align-items: center; gap: 6px; line-height: 1.3; }
+  .qi-tb .rh small { display: block; color: #8a7e6c; font-size: 10.5px; font-family: Consolas, "Microsoft JhengHei", monospace; }
+  .qi-tb .c { background: #26222b; border-radius: 6px; padding: 4px; display: flex; justify-content: center; align-items: center; gap: 5px; }
+  .qi-tb .c.n { background: #23262d; }
+  .qi canvas { display: block; }
+  .qi-one { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .qi-one i { font-style: normal; font-size: 10px; color: #8a7e6c; font-family: Consolas, "Microsoft JhengHei", monospace; white-space: nowrap; }
+  .qi-audit { font: 12px/1.5 Consolas, monospace; white-space: pre; color: #d8ccb8; }
+  .qi-pick { outline: 2px solid #e8bb48; outline-offset: 1px; }
+  .kw-hud { width: 280px; padding: 8px 10px; background: #1f1a14; border: 1px solid #5a4a38; border-radius: 8px; }
+  .kw-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border: 1px solid #6a5a40; border-radius: 6px; background: #2a2418; color: #f2e6c8; font-size: 14px; }
+</style>
+</head>
+<body class="qi">
+<div class="qi-wrap" id="root"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="anim.js"></script><script src="idleWeapons.js"></script>
+<script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
+<script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
+<script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsArmor.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script>
+<script src="qPartsData.js"></script>
+<script src="qIconsKeywords.js"></script><script src="qIconsHud.js"></script>
+<script src="qIconsKW.js"></script>
+<script>
+const { h } = OB, Q = QIcons, QW = QIconsWeapons, QA = QIconsArmor, QS = QIconsSkills, QP = QIconsParts, QST = QIconsStatus, K = QIconsKeywords, QH = QIconsHud, KW = QIconsKW, TAU = Math.PI * 2;
+OB.applyTheme("capital");
+const PART = OB.param("part", "all"), root = document.getElementById("root"), show = (p) => PART === "all" ? ["cand", "color", "near", "gear", "cond", "hud", "create"].includes(p) : PART === p;
+const T1 = { res: 1 };
+const nn = (c, k) => { c.style.width = c.width * k / (c.dataset.res ? Number(c.dataset.res) : 1) + "px"; c.style.height = c.height * k / (c.dataset.res ? Number(c.dataset.res) : 1) + "px"; c.style.imageRendering = "pixelated"; return c; };
+const r2 = (c) => { c.dataset.res = "2"; return c; };
+const one = (label, els) => h("div.qi-one", {}, h("span", { style: "display:flex;gap:4px;align-items:center" }, els), label ? h("i", {}, label) : null);
+const ALL16 = [...K.KEYS, ...KW.KEYS];
+const zhOf = (kw) => (KW.isNew(kw) ? KW.ZH[kw] : K.LIST[kw].zh);
+const CHIP = KW.SIZES.map((S) => [S, K.sizeOf(S, 1)]); /* 真 1 倍圓章邊長：32→13、42→18、48→20、64→27 */
+const chip1 = (kw, D, cand, o = {}) => KW.chipCanvas(kw, D, 1, { res: 1, cand, ...o });
+const chip2 = (kw, D, cand, o = {}) => r2(KW.chipCanvas(kw, D, 1, { res: 2, cand, ...o }));
+const CANDS = ["a", "b"];
+
+// ---------------------------------------------------------------- 色盲模擬（Machado 2009，嚴重度 0.6＝色弱；線性 RGB 上乘矩陣）
+const CVD = {
+  none: null,
+  prot: [[0.385450, 0.769005, -0.154455], [0.100526, 0.829802, 0.069673], [-0.007442, -0.022190, 1.029632]],
+  deut: [[0.498864, 0.674741, -0.173604], [0.205199, 0.754872, 0.039929], [-0.011131, 0.030969, 0.980162]],
+  trit: [[1.104996, -0.046633, -0.058363], [-0.032137, 0.971635, 0.060503], [0.001336, 0.317922, 0.680742]],
+  gray: "gray",
+};
+const CVD_ZH = { none: "正常", prot: "紅色弱", deut: "綠色弱", trit: "藍色弱", gray: "灰階" };
+const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+const gam = (v) => { v = Math.min(1, Math.max(0, v)); return Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)); };
+const simRGB = (r, g, b, mode) => { const L = [lin(r), lin(g), lin(b)]; if (mode === "none") return [r, g, b]; if (mode === "gray") { const y = gam(0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2]); return [y, y, y]; } const M = CVD[mode]; return M.map((row) => gam(row[0] * L[0] + row[1] * L[1] + row[2] * L[2])); };
+const simCanvas = (src, mode) => { const c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.cssText = src.style.cssText; if (src.dataset.res) c.dataset.res = src.dataset.res; const x = c.getContext("2d"); x.drawImage(src, 0, 0); if (mode === "none") return c; const im = x.getImageData(0, 0, c.width, c.height), d = im.data; for (let i = 0; i < d.length; i += 4) { const [r, g, b] = simRGB(d[i], d[i + 1], d[i + 2], mode); d[i] = r; d[i + 1] = g; d[i + 2] = b; } x.putImageData(im, 0, 0); return c; };
+const hex3 = (s) => [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
+const oklab = (rgb) => { const [r, g, b] = rgb.map(lin); let l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b, s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b; [l, m, s] = [l, m, s].map((v) => Math.cbrt(Math.max(0, v))); return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s]; };
+const dist = (a, b, mode) => { const A = oklab(simRGB(...hex3(a), mode)), B = oklab(simRGB(...hex3(b), mode)); return 100 * Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); };
+
+if (PART === "all") root.append(h("h1", {}, "KW 段：連擊、怒氣、專注、氣的美術樣張（五項）"),
+  h("p.note", {}, "畫圖 agent，2026-11-13。依據 main 的 docs/phases/PhaseKW計畫.md 第 3 節。①圓章圖樣與③創角圖示每個關鍵字 A／B 兩案（金框＝推薦）；②關鍵字色一組推薦＋色盲模擬；④HUD 層數計量 A（通用斜切段）／B（各關鍵字自己的格形）；⑤條件部件「層數達 N」A／B。既有的畫法檔一個都沒改。"));
+
+// ---------------------------------------------------------------- ① 圓章兩案
+if (show("cand")) {
+  root.append(h("h2", {}, "①圓章圖樣：A／B 兩案 × 四個尺寸", h("small", {}, "　每格：真 1 倍（圓章 13／18／20／27）最近鄰放大 4 倍｜2 倍內部解析度放大 2 倍｜實際大小（2 倍）。最右：圖樣剪影（不含圓底）。金框＝推薦")),
+    h("div.qi-tb", { style: "grid-template-columns:200px repeat(4,max-content) max-content" }, h("div"), CHIP.map(([S, D]) => h("div.hd", {}, `裝備格 ${S}：圓章 ${D}`)), h("div.hd", {}, "剪影 13／27"),
+      KW.KEYS.flatMap((kw) => CANDS.map((cd) => { const e = KW.CAND[kw][cd], pick = KW.PICK[kw] === cd;
+        return [h("div.rh", {}, h("span", {}, `${KW.ZH[kw]} ${cd.toUpperCase()}${pick ? "（推薦）" : ""}`, h("small", {}, e.topic), h("small", {}, "src " + e.src + "　k " + e.k))),
+          CHIP.map(([, D]) => h("div.c" + (pick ? ".qi-pick" : ""), {}, nn(chip1(kw, D, cd), 4), nn(chip2(kw, D, cd), 2), chip2(kw, D, cd))),
+          h("div.c", {}, [13, 27].map((D) => { const cpx = (D - 2) * e.k, g = KW.glyph(kw, cpx, 1, { cand: cd, ow: 0 }), x = g.getContext("2d"); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, g.width, g.height); return nn(g, 3); }))]; })).flat()));
+}
+
+// ---------------------------------------------------------------- ② 顏色
+if (show("color")) {
+  const modes = Object.keys(CVD);
+  const sw = (col) => h("span", { style: `display:inline-block;width:22px;height:22px;border-radius:4px;background:${col};box-shadow:inset 0 0 0 1px #0006` });
+  const swSim = (col, mode) => { const [r, g, b] = simRGB(...hex3(col), mode); return sw(`rgb(${r},${g},${b})`); };
+  root.append(h("h2", {}, "②關鍵字色：推薦組（新 4 色在最右，粗字）× 色盲模擬", h("small", {}, "　色票＋圓章（真 1 倍 18，放大 3 倍）。模擬：Machado 2009 嚴重度 0.6（色弱）；灰階＝亮度")),
+    h("div.qi-tb", { style: "grid-template-columns:70px repeat(16,max-content)" }, h("div"), ALL16.map((kw) => h("div.hd", { style: KW.isNew(kw) ? "color:#ffe08a;font-weight:bold" : "" }, zhOf(kw))),
+      modes.flatMap((m) => [h("div.rh", {}, CVD_ZH[m]), ALL16.map((kw) => h("div.c" + (KW.isNew(kw) ? ".qi-pick" : ""), { style: "flex-direction:column" }, swSim(KW.colorOf(kw), m), nn(simCanvas(chip1(kw, 18), m), 3)))]).flat()));
+  /* 距離表：每個新色和最近的兩色 */
+  const rows = (C) => KW.KEYS.map((kw) => { const me = C[kw], others = ALL16.filter((k) => k !== kw).map((k) => [k, KW.isNew(k) ? C[k] : K.KC[k]]);
+    return KW.ZH[kw].padEnd(3, "　") + me + "  " + modes.map((m) => { const ds = others.map(([k, c]) => [dist(me, c, m), k]).sort((a, b) => a[0] - b[0]); return CVD_ZH[m] + " " + ds[0][0].toFixed(1) + "(" + zhOf(ds[0][1]) + ")"; }).join("  "); }).join("\n");
+  const oldMin = modes.map((m) => { let best = [999]; for (let i = 0; i < 12; i++) for (let j = i + 1; j < 12; j++) { const d = dist(K.KC[K.KEYS[i]], K.KC[K.KEYS[j]], m); if (d < best[0]) best = [d, K.KEYS[i], K.KEYS[j]]; } return CVD_ZH[m] + " " + best[0].toFixed(1) + "(" + zhOf(best[1]) + "–" + zhOf(best[2]) + ")"; }).join("  ");
+  const spec = (a, b) => modes.map((m) => CVD_ZH[m] + " " + dist(KW.COLOR[a], K.KC[b], m).toFixed(1)).join("  ");
+  root.append(h("h3", {}, "OKLab 距離（×100；大約 2 就看得出差，越大越好）：新色和最近的那一色"),
+    h("div.qi-audit", {}, "推薦組\n" + rows(KW.COLOR) + "\n\n對照組（第一直覺：連擊鋼白、怒氣亮紅、專注藍紫、氣青綠）\n" + rows(KW.COLOR_ALT) + "\n\n既有 12 色彼此最近：" + oldMin + "\n派工單點名的兩對（推薦組）：怒氣–點燃 " + spec("fury", "ignite") + "\n                          氣–召喚物 " + spec("ki", "summon")));
+  root.append(h("h3", {}, "推薦組 vs 對照組（圓章 18 真 1 倍放大 3 倍，正常與綠色弱）"),
+    h("div.qi-tb", { style: "grid-template-columns:120px repeat(8,max-content)" }, h("div"), ["正常", "綠色弱"].flatMap((z) => KW.KEYS.map((kw) => h("div.hd", {}, z + " " + KW.ZH[kw]))),
+      [["推薦", {}], ["對照", { alt: true }]].flatMap(([z, o]) => [h("div.rh", {}, z), ["none", "deut"].flatMap((m) => KW.KEYS.map((kw) => h("div.c", {}, nn(simCanvas(chip1(kw, 18, undefined, o), m), 3))))]).flat()));
+}
+
+// ---------------------------------------------------------------- ① 撞圖：16 個圓章一排
+if (show("near")) {
+  const row = (cand, D, k) => h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end" }, ALL16.map((kw) => one(zhOf(kw), [nn(chip1(kw, D, cand), k)])));
+  root.append(h("h2", {}, "①撞圖：既有 12 個＋新 4 個圓章排一排（真 1 倍，最小 13 放大 5 倍、18 放大 3 倍）", h("small", {}, "　上排新 4 個用 A、下排用 B")));
+  for (const cd of CANDS) root.append(h("h3", {}, `新 4 個用 ${cd.toUpperCase()}：圓章 13（裝備格 32）`), row(cd, 13, 5), h("h3", {}, `新 4 個用 ${cd.toUpperCase()}：圓章 18（背包格 42）`), row(cd, 18, 3));
+  /* 同題材、同畫面會出現的既有圖（第③④⑤批）：真 1 倍放大 4 倍 */
+  const S = (id) => QST.cardCanvas(id, 20, 1, { res: 1 }), C = (cat, id) => QP.chipCanvas(cat, id, 18, 1, { res: 1 });
+  const groups = [
+    ["連擊", "combo_point", [["骨架：連段（同 B 的兩顆閃光）", C("skeleton", "combo")], ["效果：累積層數", C("effect", "add_stack")],["撞擊（圓章）", chip1("collision", 18)], ["倒地（圓章）", chip1("prone", 18)]]],
+    ["怒氣", "fury", [["點燃（圓章）", chip1("ignite", 18)], ["狀態：嘲諷", S("taunted")], ["狀態：狂怒姿態", S("stance_fury")], ["狀態：流血", S("bleed")], ["隱蔽（圓章）", chip1("concealed", 18)]]],
+    ["專注", "focus", [["標記（圓章）", chip1("marked", 18)], ["效果：揭露（眼）", C("effect", "reveal")], ["狀態：致盲", S("blinded")], ["條件：每一下都命中", C("condition", "all_strikes_hit")]]],
+    ["氣", "ki", [["召喚物（圓章）", chip1("summon", 18)], ["狀態：蓄力", S("charging")], ["狀態：風架勢", S("stance_wind_1")], ["冰凍（圓章）", chip1("frozen", 18)], ["潮濕（圓章）", chip1("wet", 18)]]],
+  ];
+  root.append(h("h3", {}, "和最像的既有圖並排（真 1 倍放大 4 倍；狀態卡 20、部件圓片 18、圓章 18）"),
+    h("div.qi-tb", { style: "grid-template-columns:60px max-content max-content 1fr" }, groups.map(([zh, kw, others]) => [h("div.rh", {}, zh), h("div.c.qi-pick", {}, one("A", [nn(chip1(kw, 18, "a"), 4)])), h("div.c", {}, one("B", [nn(chip1(kw, 18, "b"), 4)])), h("div.c", { style: "justify-content:flex-start" }, others.map(([z, cv]) => one(z, [nn(cv, 4)])))]).flat()));
+}
+
+// ---------------------------------------------------------------- ① 放在裝備格上
+if (show("gear")) {
+  const REPS = [["雙匕首・短", { kind: "dual_dagger", form: "short", material: "steel" }], ["戰斧・鐵", { kind: "axe", form: "battle", material: "iron" }], ["短弓・木", { kind: "bow", form: "short", material: "wood" }], ["長杖・木", { kind: "staff", form: "long", material: "wood" }], ["拳套・鐵", { kind: "fist", form: "knuckle", material: "iron" }], ["半身板甲・鋼", { kind: "plate", form: "half", material: "steel" }], ["長靴・皮", { kind: "boots", form: "tall", material: "leather" }]];
+  /* 角的左上座標：qIconsKeywords.js 的 at()（沒有匯出，照抄一筆不改） */
+  const cornerAt = (corner, size, D, res) => { const m = size * K.MARGIN, snap = (v) => Math.round(v * res) / res, far = snap(size - m - D), near = snap(m); return [corner[1] === "r" ? far : near, corner[0] === "b" ? far : near]; };
+  const isArmor = (look) => !!QA.KINDS[look.kind], defOf = (look) => (isArmor(look) ? QA.def(look) : QW.def(look, true));
+  const gearCv = (look, kw, px, res, cand) => { const cv = isArmor(look) ? QA.canvas(look, px, 1, { res }) : QW.canvas(look, px, 1, { frame: "gear", res }); cv.dataset.res = String(res); const x = cv.getContext("2d"); x.setTransform(res, 0, 0, res, 0, 0);
+    const D = K.sizeOf(px, res), corner = K.cornersOf(defOf(look))[0], [x0, y0] = cornerAt(corner, px, D, res); KW.chip(x, kw, x0, y0, D, res, { cand }); return cv; };
+  root.append(h("h2", {}, "①放在裝備格上（推薦 A；角照第⑤b 批 KEY_CORNER）", h("small", {}, "　每格：32 真 1 倍放大 3 倍｜42 真 1 倍放大 2 倍｜42 實際大小（2 倍）")),
+    h("div.qi-tb", { style: "grid-template-columns:70px repeat(7,max-content)" }, h("div"), REPS.map(([z]) => h("div.hd", {}, z)),
+      KW.KEYS.flatMap((kw) => [h("div.rh", {}, nn(chip1(kw, 18), 2), KW.ZH[kw]), REPS.map(([, look]) => h("div.c.n", { style: "flex-direction:column" }, nn(gearCv(look, kw, 32, 1), 3), h("span", { style: "display:flex;gap:4px;align-items:center" }, nn(gearCv(look, kw, 42, 1), 2), nn(gearCv(look, kw, 42, 2), 1))))]).flat()));
+}
+
+// ---------------------------------------------------------------- ⑤ 條件部件
+KW.installCond();
+if (show("cond")) {
+  const SZ = [30, 26, 18, 16];
+  const tile = (cat, id, px, res) => { const cv = QP.chipCanvas(cat, id, px, 1, { res }); cv.dataset.res = String(res); return cv; };
+  const items = [["condition", "self_stack_at_least__a", "新 A：滿格計量（推薦）"], ["condition", "self_stack_at_least__b", "新 B：金條頂到門檻"], ["condition", "first_round", "現行暫代：借「第一輪」的 1"],
+    ["effect", "add_stack", "效果：累積層數"], ["effect", "consume_stack", "效果：消耗層數"], ["cost", "stacks", "代價：消耗層數"], ["condition", "self_hp_below", "條件：自身血量低於"], ["condition", "height_advantage", "條件：居高臨下"], ["condition", "lone_wolf", "條件：獨狼"], ["condition", "self_lacks_status", "條件：自身沒有狀態"]];
+  root.append(h("h2", {}, "⑤條件部件「層數達 N」（self_stack_at_least）", h("small", {}, "　18px 圓片、條件色環。每格：真 1 倍放大（30、26 ×3；18、16 ×5）＋2 倍內部解析度實際大小。前三欄是新兩案與現行暫代，後面是同族的既有部件")),
+    h("div.qi-tb", { style: `grid-template-columns:40px repeat(${items.length},max-content)` }, h("div"), items.map(([, , z]) => h("div.hd", { style: "max-width:92px" }, z)),
+      SZ.flatMap((px) => [h("div.rh", {}, String(px)), items.map(([cat, id], i) => h("div.c" + (i === 0 ? ".qi-pick" : ""), { style: "flex-direction:column" }, nn(tile(cat, id, px, 1), px <= 18 ? 5 : 3), tile(cat, id, px, 2)))]).flat()));
+  /* 情境：終結技「斷喉」的技能卡（KW-2 示範招：消耗連擊點每層加傷＋層數達 5 時流血），56 精簡、96 完整、組裝列（30）、條件 18、說明行 16 */
+  const look = { prop: "w:dagger", motion: "thrust", act: "dot", tint: null, el: "physical", el2: null, spark: null, kind: "active", rarity: "rare" };
+  const icon = (cid) => ({ kind: "active", rarity: "rare", elements: ["physical"], segments: [{ skeleton: "builder_finisher", shape_id: "single", range: null, arm: null, elements: [], effects: [{ type: "damage", status: null, surface: null, condition: null }, { type: "consume_stack", status: null, surface: null, condition: null }, { type: "apply_status", status: "bleed", surface: null, condition: "self_stack_at_least" }] }], link: null, condition: { id: cid, status: null }, costs: ["stacks"], trigger: null, modifier: null });
+  const card = (cid, label) => h("div", { style: "background:#1d1a22;border:1px solid #3a3440;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px" }, h("div", { style: "font-size:12.5px;color:#e8cf90" }, label),
+    h("div", { style: "display:flex;gap:10px;align-items:center" }, QP.canvas(icon(cid), look, 56, 1, { level: "mid" }), QP.canvas(icon(cid), look, 96, 1, { level: "full" }),
+      h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, QP.chipCanvas("skeleton", "builder_finisher", 30), QP.chipCanvas("shape", "single", 30), QP.chipCanvas("effect", "consume_stack", 30), QP.chipCanvas("effect", "status:bleed", 30, 1, { ring: "rgba(255,255,255,0.35)" })),
+        h("div", { style: "display:flex;gap:5px;align-items:center;font-size:12px" }, QP.chipCanvas("condition", cid, 18), "條件：自身「連擊點」達 5 層"),
+        h("div", { style: "display:flex;gap:5px;align-items:center;font-size:12px;background:#14161c;border-radius:6px;padding:3px 8px" }, QP.chipCanvas("condition", cid, 16), "條件：自身「連擊點」達 5 層（說明行 16px）"))));
+  root.append(h("h3", {}, "情境：KW-2 示範招「斷喉」（消耗連擊點每層加傷；連擊點達 5 層時流血）的技能卡——左現行暫代、中 A、右 B（2 倍內部解析度、實際大小）"),
+    h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:10px" }, card("first_round", "現行暫代（借第一輪）"), card("self_stack_at_least__a", "A 滿格計量（推薦）"), card("self_stack_at_least__b", "B 金條頂到門檻")));
+}
+
+// ---------------------------------------------------------------- ④ HUD 層數計量
+if (show("hud")) {
+  const g1 = (kw, n, cand) => { const c = KW.gaugeCanvas(kw, n, 1, { res: 1, cand }); return c; };
+  root.append(h("h2", {}, "④HUD 層數計量：A（通用斜切段）／B（各自的格形）× 0～滿層", h("small", {}, "　真 1 倍放大 3 倍。膠囊照 .stat-chip（高 22、底 #1a1410、框 #5a4a38）；圓章 14＋間距 3＋格子＝整條寬寫在列名。滿層：格子亮一階＋白亮條、膠囊框換關鍵字色並外暈、圓章外一圈關鍵字色")));
+  for (const cd of CANDS) root.append(h("h3", {}, cd === "a" ? "A：通用斜切段（每格 7×10、間距 1；推薦）" : "B：連擊斜刀片 7×10、怒氣尖角 8×10、專注菱形 9×10、氣圓珠 9×9"),
+    h("div.qi-tb", { style: "grid-template-columns:110px 1fr" }, KW.KEYS.flatMap((kw) => [h("div.rh", {}, h("span", {}, KW.ZH[kw] + " 上限 " + KW.MAX[kw], h("small", {}, "整條 " + KW.gaugeW(kw, cd) + "px"))),
+      h("div.c" + (cd === "a" ? ".qi-pick" : ""), { style: "justify-content:flex-start;flex-wrap:wrap" }, Array.from({ length: KW.MAX[kw] + 1 }, (_, n) => nn(g1(kw, n, cd), 3)))])));
+  /* 實際位置：主角狀態卡的圖示列（.hud-icons：AP 圓點膠囊、移動、源力、狀態、層數、腳下表面）。現行＝StackBadge（24 方塊＋層數金條圖＋右下角數字）。 */
+  const chipEl = (iconCv, inner) => h("span.stat-chip", {}, iconCv, inner);
+  const pips = (n, on, cls) => h("span.stat-pips", {}, Array.from({ length: n }, (_, i) => h("span.stat-pip." + cls + (i < on ? ".on" : ""))));
+  const bar = (k, txt, w) => h("div.stat-bar." + k, {}, h("i.stat-bar-fill", { style: `width:${w}%` }), h("span.stat-bar-text", {}, txt));
+  const badgeOld = (n) => h("span.stat-badge.stack-badge", {}, QP.cardCanvas("stack", 18), h("b.stat-corner", {}, String(n)));
+  const statusBadge = (id) => h("span.stat-badge", {}, QST.cardCanvas(id, 20));
+  const gaugeEl = (kw, n, cand, res = 2) => { const c = KW.gaugeCanvas(kw, n, 1, { res, cand }); c.style.margin = "-4px"; return c; };
+  const hud = (stackEls, label) => h("div", {}, h("div", { style: "font-size:12px;color:#b8ab96;margin:6px 0 3px" }, label), h("div.kw-hud", {},
+    h("div.hud-bars", {}, bar("hp", "HP 34/40", 85), bar("mana", "法力 6/10", 60), bar("stamina", "耐力 8/8", 100)),
+    h("div.hud-icons", {}, chipEl(QH.canvas("r_ap", 16), pips(3, 2, "ap")), chipEl(QH.canvas("r_move", 16), h("b", {}, "3")), statusBadge("bleed"), ...stackEls)));
+  const cases = [[["combo_point", 3]], [["combo_point", 5]], [["fury", 2], ["focus", 3]], [["ki", 1]]];
+  root.append(h("h3", {}, "實際位置：主角狀態卡的圖示列（client CSS 原樣；2 倍內部解析度、實際大小）——上現行、中 A、下 B"),
+    h("div", { style: "display:grid;grid-template-columns:repeat(4,max-content);gap:8px 14px" },
+      cases.map((cs) => hud(cs.map(([kw, n]) => badgeOld(n)), "現行：" + cs.map(([kw, n]) => KW.ZH[kw] + "×" + n).join("、"))),
+      cases.map((cs) => hud(cs.map(([kw, n]) => gaugeEl(kw, n, "a")), "A：" + cs.map(([kw, n]) => KW.ZH[kw] + " " + n + "/" + KW.MAX[kw]).join("、"))),
+      cases.map((cs) => hud(cs.map(([kw, n]) => gaugeEl(kw, n, "b")), "B：" + cs.map(([kw, n]) => KW.ZH[kw] + " " + n + "/" + KW.MAX[kw]).join("、")))));
+  root.append(h("h3", {}, "同一列的真 1 倍（左 A、右 B；放大 3 倍）"), h("div", { style: "display:flex;gap:20px" }, ["a", "b"].map((cd) => {
+    const W = 360, H = 30, res = 1, cv = document.createElement("canvas"); cv.width = W; cv.height = H; const x = cv.getContext("2d"); x.fillStyle = "#1f1a14"; x.fillRect(0, 0, W, H);
+    let px = 4; for (const [kw, n] of [["combo_point", 5], ["fury", 2], ["ki", 3]]) px += KW.gauge(x, kw, n, px, 4, res, { cand: cd }) + 4; return nn(cv, 2); })));
+}
+
+// ---------------------------------------------------------------- ③ 創角圖示
+const pending = [];
+if (show("create")) {
+  /* 既有 12 個：client/src/ui/CreateIcons.tsx 的 keywordGlyph（main，原樣抄成 SVG 字串）與 KEYWORD_ICON_COLOR */
+  const OLD_C = { ignite: "#ff8a3a", wet: "#5ab0f0", charged: "#ffe14a", frozen: "#a8e0ff", prone: "#d8b878", collision: "#ff6a5a", marked: "#ff6a9a", high_ground: "#8ad070", concealed: "#b8a8ff", summon: "#c08aff", poisoned: "#7ad050", form: "#e8bb48" };
+  const OLD = {
+    ignite: (c) => `<path d="M8 1.5C11 5 12.5 7 12 10A4 4 0 0 1 4 10C3.8 7.6 5.5 6.5 6 4.5C7 6.5 7.6 6.6 8 1.5Z" fill="${c}"/>`,
+    wet: (c) => `<path d="M8 1.5C10.5 5.5 12.5 7.8 12.5 10A4.5 4.5 0 0 1 3.5 10C3.5 7.8 5.5 5.5 8 1.5Z" fill="${c}"/>`,
+    charged: (c) => `<path d="M9.5 1L3.5 9H7.5L6 15L12.5 6.5H8.5Z" fill="${c}"/>`,
+    frozen: (c) => `<g stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5V14.5M2.4 4.75L13.6 11.25M2.4 11.25L13.6 4.75"/></g>`,
+    prone: (c) => `<circle cx="3.5" cy="10" r="2" fill="${c}"/><path d="M6 10.5H14" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/><path d="M1.5 14H14.5" stroke="${c}" stroke-width="1" stroke-opacity="0.7"/>`,
+    collision: (c) => `<path d="M8 1L9.6 5.6L14.5 4.5L11.2 8L14.5 11.5L9.6 10.4L8 15L6.4 10.4L1.5 11.5L4.8 8L1.5 4.5L6.4 5.6Z" fill="${c}"/>`,
+    marked: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.6" fill="${c}"/><path d="M8 0.5V3.5M8 12.5V15.5M0.5 8H3.5M12.5 8H15.5"/></g>`,
+    high_ground: (c) => `<path d="M1 14.5L6.5 6L9.5 10L11 8L15 14.5Z" fill="${c}"/><path d="M12 6.5V1.5M10 3.5L12 1.5L14 3.5" fill="none" stroke="${c}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`,
+    concealed: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 8Q8 1.5 14.5 8Q8 14.5 1.5 8Z"/><circle cx="8" cy="8" r="1.8" fill="${c}"/><path d="M2.5 14L13.5 2"/></g>`,
+    summon: (c) => `<ellipse cx="8" cy="12" rx="6" ry="2.4" fill="none" stroke="${c}" stroke-width="1.4"/><path d="M8 1.5L9.2 5.3L13 6.5L9.2 7.7L8 11.5L6.8 7.7L3 6.5L6.8 5.3Z" fill="${c}"/>`,
+    poisoned: (c) => `<circle cx="6" cy="10" r="4" fill="${c}"/><circle cx="11.5" cy="5" r="2.6" fill="${c}" fill-opacity="0.8"/><circle cx="12.5" cy="12" r="1.6" fill="${c}" fill-opacity="0.65"/>`,
+    form: (c) => `<g fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A5.5 5.5 0 0 1 13 5"/><path d="M13 1.8V5H9.8"/><path d="M13 9.5A5.5 5.5 0 0 1 3 11"/><path d="M3 14.2V11H6.2"/></g>`,
+  };
+  const svgOf = (kw, cand, size) => KW.isNew(kw) ? KW.createSvg(kw, cand, KW.CREATE_COLOR[kw], size) : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${size}" height="${size}">${OLD[kw](OLD_C[kw])}</svg>`;
+  /** SVG 畫進真 1 倍 canvas（非同步），再最近鄰放大。 */
+  const raster = (svg, px, k, bg = "#2a2418") => { const cv = document.createElement("canvas"); cv.width = cv.height = px; const x = cv.getContext("2d"); x.fillStyle = bg; x.fillRect(0, 0, px, px); nn(cv, k); const img = new Image(); pending.push(new Promise((ok) => { img.onload = () => { x.drawImage(img, 0, 0, px, px); ok(); }; img.onerror = ok; })); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); return cv; };
+  const inline = (svg) => { const s = h("span", { style: "display:inline-flex" }); s.innerHTML = svg; return s; };
+  root.append(h("h2", {}, "③創角關鍵字圖示（SVG 16 格、單色，同 CreateIcons.tsx；遊戲端現在是 15px，派工單寫按鈕內 28～32）", h("small", {}, "　每格：15 真 1 倍放大 4 倍｜30 真 1 倍放大 2 倍｜15、30 實際（向量）。新 4 個：連擊、氣和 KEYWORD_COLOR 同色，怒氣 #ff4a62、專注 #7d96ff 亮一階（原色在褐底上偏暗）")),
+    h("div.qi-tb", { style: "grid-template-columns:repeat(8,max-content)" },
+      [...K.KEYS.map((kw) => [kw, null]), ...KW.KEYS.flatMap((kw) => CANDS.map((cd) => [kw, cd]))].map(([kw, cd]) => h("div.c" + (cd && KW.PICK[kw] === cd ? ".qi-pick" : ""), { style: "flex-direction:column" },
+        h("span", { style: "display:flex;gap:4px;align-items:center" }, raster(svgOf(kw, cd, 15), 15, 4), raster(svgOf(kw, cd, 30), 30, 2)), h("span", { style: "display:flex;gap:4px;align-items:center" }, inline(svgOf(kw, cd, 15)), inline(svgOf(kw, cd, 30))), h("i", { style: "font-size:11px;font-style:normal;color:#b8ab96" }, zhOf(kw) + (cd ? " " + cd.toUpperCase() : ""))))));
+  root.append(h("h3", {}, "按鈕情境（創角「選兩個關鍵字」的按鈕：圖示 15＋名字；最後一列試 28）"),
+    h("div", { style: "display:flex;flex-wrap:wrap;gap:8px;max-width:1200px" }, [...K.KEYS.slice(0, 4), ...KW.KEYS].map((kw) => h("span.kw-btn", {}, inline(svgOf(kw, KW.PICK[kw], 15)), zhOf(kw)))),
+    h("div", { style: "display:flex;flex-wrap:wrap;gap:8px;margin-top:8px" }, [...K.KEYS.slice(0, 4), ...KW.KEYS].map((kw) => h("span.kw-btn", { style: "font-size:16px" }, inline(svgOf(kw, KW.PICK[kw], 28)), zhOf(kw)))),
+    h("p.note", {}, "※既有 12 個的創角色（KEYWORD_ICON_COLOR）和裝備圓章色（KEYWORD_COLOR）不是同一組；派工單要新 4 個「同色」，這裡連擊、氣同色，怒氣、專注亮一階（待美術 PM 定）。舊 12 個要不要統一不在這批。"));
+}
+
+// ---------------------------------------------------------------- 自查與指紋
+const lum = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+if (PART === "audit") {
+  const lines = ["①圓章圖樣（不含外框量；res 4）：kw 案 圓章D 圖樣px | 平均亮度(≥100) 亮面%(≥150 的 ≥5) 出圓%(圖樣畫到圓底內緣以外，≤0.5) 佔圓%(外接框長邊／內緣直徑)"];
+  for (const kw of KW.KEYS) for (const cd of CANDS) for (const [, D] of CHIP) {
+    const e = KW.CAND[kw][cd], inner = D - 2, cpx = inner * e.k, R = 4, g = KW.glyph(kw, cpx, R, { cand: cd, ow: 0 }), W = g.width, d = g.getContext("2d").getImageData(0, 0, W, W).data;
+    let n = 0, L = 0, br = 0, out = 0, x0 = W, x1 = 0, y0 = W, y1 = 0; const c0 = W / 2, rIn = (inner / 2) * R;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (d[i + 3] < 128) continue; n++; const l = lum(d[i], d[i + 1], d[i + 2]); L += l; if (l >= 150) br++; if (Math.hypot(x + 0.5 - c0, y + 0.5 - c0) > rIn) out++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const occ = (Math.max(x1 - x0, y1 - y0) + 1) / (inner * R);
+    lines.push(`${KW.ZH[kw]} ${cd.toUpperCase()} D${String(D).padStart(2)} ${cpx.toFixed(1).padStart(4)}px | ${(L / n).toFixed(0).padStart(4)} ${(100 * br / n).toFixed(0).padStart(3)}% ${(100 * out / n).toFixed(2).padStart(5)}% ${(100 * occ).toFixed(0).padStart(3)}%` + ((L / n) < 100 || br / n < 0.05 || out / n > 0.005 ? "  ←" : ""));
+  }
+  lines.push("", "⑤條件部件（圓片 18 的圖樣 14px、30 的 23.4px；同第④批量法：圖樣本身 ±10 單位）：案 px | 平均亮度 亮面% 佔格%");
+  for (const cd of CANDS) for (const cpx of [14, 23.4]) { const g = QP.glyph("condition", "self_stack_at_least__" + cd, cpx, 4, { ow: 0 }), W = g.width, d = g.getContext("2d").getImageData(0, 0, W, W).data; let n = 0, L = 0, br = 0, x0 = W, x1 = 0, y0 = W, y1 = 0;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (d[i + 3] < 128) continue; n++; const l = lum(d[i], d[i + 1], d[i + 2]); L += l; if (l >= 150) br++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    lines.push(`${cd.toUpperCase()} ${String(cpx).padStart(4)} | ${(L / n).toFixed(0).padStart(4)} ${(100 * br / n).toFixed(0).padStart(3)}% ${(100 * (Math.max(x1 - x0, y1 - y0) + 1) / (cpx * 4)).toFixed(0).padStart(3)}%`); }
+  lines.push("", "④HUD 計量寬（圓章 14＋3＋格子；≤60）：" + KW.KEYS.map((kw) => KW.ZH[kw] + " A " + KW.gaugeW(kw, "a") + "／B " + KW.gaugeW(kw, "b")).join("　"));
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join("\n")));
+}
+if (PART === "hash") {
+  const fnv = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let x = 0x811c9dc5; for (let i = 0; i < d.length; i++) { x ^= d[i]; x = Math.imul(x, 0x01000193) >>> 0; } return x.toString(16).padStart(8, "0"); };
+  const lines = [];
+  for (const kw of KW.KEYS) for (const cd of CANDS) lines.push(`chip ${kw} ${cd} ` + CHIP.flatMap(([, D]) => [1, 2].map((r) => fnv(KW.chipCanvas(kw, D, 1, { res: r, cand: cd })))).join(" "));
+  for (const cd of CANDS) lines.push(`cond ${cd} ` + [30, 18, 16].flatMap((px) => [1, 2].map((r) => fnv(QP.chipCanvas("condition", "self_stack_at_least__" + cd, px, 1, { res: r })))).join(" "));
+  for (const kw of KW.KEYS) for (const cd of CANDS) lines.push(`hud ${kw} ${cd} ` + Array.from({ length: KW.MAX[kw] + 1 }, (_, n) => fnv(KW.gaugeCanvas(kw, n, 1, { res: 1, cand: cd }))).join(" "));
+  root.append(h("div.qi-audit", { id: "audit" }, lines.join("\n")));
+}
+
+Promise.all(pending).then(() => requestAnimationFrame(() => { document.documentElement.dataset.h = String(Math.ceil(document.body.scrollHeight) + 8); }));
+</script>
+</body></html>
