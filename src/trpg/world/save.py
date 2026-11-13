@@ -159,9 +159,9 @@ LEGACY_WLOG_FORMATS: Final = frozenset(
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 28
+WORLD_RULES_VERSION: Final = 29
 # 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
-# 26＝DD-1；27＝OB-7；28＝WP-1）
+# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -279,6 +279,10 @@ WORLD_RULES_VERSION: Final = 28
   ``trpg-char/14``（``wish_week``、``PendingOffer.refund``）；
   ``trpg-wlog`` 不變（``generated`` 多一種
   紀錄 ``wish``，同動作 union 多一種的前例）。
+- 29（RR-1，06 6.34.9「重推套不上的那一筆」）：升階重配時，閃過的技能照新階級套不上的那一筆記下
+  升階前的定義（``FlashRecord.kept``），重推照它保留；以前整條重推失敗就重配存著的定義。套不上的
+  那一筆在歷程中間時，升階後的數值與之後的閃現、重閃選項都會不同。``CHAR_FORMAT`` 不升（只多了
+  選填、沒有時不輸出的欄位，舊存檔逐字不變）。
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 
