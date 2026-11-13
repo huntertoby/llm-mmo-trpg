@@ -7,7 +7,7 @@
 </style></head>
 <body>
 <h1>RG 第二批：持盾弟子、熔殼甲兵、精英單挑插圖（樣張）</h1>
-<p class="note">畫圖 agent，2026-11-13（PhaseRG計畫.md 第 5 節最後三列；紀錄 RG樣張.md 第 9 節）。分段：<a href="?part=dolls&mute=1">持盾弟子四方向</a><a href="?part=shells&mute=1">熔殼甲兵</a><a href="?part=lineup&mute=1">並排對照（48 格）</a><a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=duel&mute=1">單挑插圖候選</a>；對話框情境在 <a href="rg-duel-dialog.html?w=1600&mute=1">rg-duel-dialog.html</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
+<p class="note">畫圖 agent，2026-11-13（PhaseRG計畫.md 第 5 節最後三列；紀錄 RG樣張.md 第 9 節）。分段：<a href="?part=dolls&mute=1">持盾弟子四方向</a><a href="?part=shells&mute=1">熔殼甲兵</a><a href="?part=lineup&mute=1">並排對照（48 格）</a><a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=duel&mute=1">單挑插圖候選</a><a href="?part=duel2&mute=1">單挑插圖第 2 版（A）</a>；對話框情境在 <a href="rg-duel-dialog.html?w=1600&mute=1">rg-duel-dialog.html</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
 <div id="sheet"></div>
 <textarea id="out"></textarea>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
@@ -235,7 +235,7 @@ const NPCB = Object.fromEntries(Object.values(QNpc.BANDITS).flatMap(([, list]) =
 const ELITES = {
   wolf: { zh: "北坡狼王（異形、雲嶺）", region: "cloud_ridge", elite: { spec: { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"], elite: true, affixes: ["berserk"] }, weapon: CLAW, k: 1.2 } },
   scar: { zh: "斷崖幫「疤面」（人形、雲嶺）", region: "cloud_ridge", elite: { npc: NPCB["斷崖幫隊長"], weapon: { kind: "saber", material: "steel" } } },
-  lord: { zh: "熔核領主（異形、荒原）", region: "ashen_waste", elite: { spec: CREAT.lord.spec, weapon: CLAW, k: 1.45 } },
+  lord: { zh: "熔核領主（異形、荒原）", region: "ashen_waste", elite: { spec: CREAT.lord.spec, weapon: CLAW, k: 1.8 } },
   forge: { zh: "荒原精英（人形；鍛疤外觀未定，借荒原隊長）", region: "ashen_waste", elite: { npc: NPCB["荒原隊長"], weapon: { kind: "shotgun", form: "double", material: "iron" } } },
 };
 const duelSpec = (id, variant) => ({ hero: HERO, elite: ELITES[id].elite, region: ELITES[id].region, variant });
@@ -246,6 +246,22 @@ PARTS.duel = () => {
     blocks.push({ cells: Object.keys(ELITES).map((id) => plain(RU.duelCanvas(duelSpec(id, v), 1), ELITES[id].zh)), gap: 16, capW: 320 });
   }
   blocks.push({ note: "最近鄰 ×2（真 1 倍放大）" }, { cells: ["A", "B"].flatMap((v) => ["wolf", "forge"].map((id) => nn(RU.duelCanvas(duelSpec(id, v), 1), 2))), gap: 12 });
+  publish(sheet(1400, blocks), "image/png");
+};
+
+// ================= 5b. 第 2 版：獸爪改爪痕、疤面斗笠、熔核領主放大、主角劍縫（RG樣張.md 9.6） =================
+PARTS.duel2 = () => {
+  const crop = (src, x, y, w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(src, -x, -y); return c; };
+  const one = (id) => RU.duelCanvas(duelSpec(id, "A"), 1);
+  const D = Object.fromEntries(Object.keys(ELITES).map((id) => [id, one(id)]));
+  const claw = (bg) => { const c = document.createElement("canvas"); c.width = c.height = 48; const g = c.getContext("2d"); g.fillStyle = bg; g.fillRect(0, 0, 48, 48); RU.beastClaw(g, 48); return c; };
+  const blocks = [{ title: "第 2 版：單挑插圖 A（採用）＋獸爪改「三道爪痕」（必修 M2-1）" },
+    { note: "上排：獸爪圖示單獨（48 格真 1 倍、×8；畫的方向＝劍圖示的斜線，插圖裡鏡像）；插圖中間交叉那一塊裁 72×72：北坡狼王、熔核領主（劍＋爪痕）、疤面（劍＋單刀，對照），各真 1 倍與最近鄰 ×8" },
+    { cells: [plain(claw("#3a3f4a"), "爪痕 1 倍"), nn(claw("#3a3f4a"), 8, "爪痕 ×8")], gap: 16 },
+    { cells: ["wolf", "lord", "scar"].flatMap((id) => { const c = crop(D[id], 124, 20, 72, 72); return [plain(c, `${ELITES[id].zh.split("（")[0]} 1 倍`), nn(c, 8, "×8")]; }), gap: 14 },
+    { note: "四場真 1 倍（320×120）" },
+    { cells: Object.keys(ELITES).map((id) => plain(D[id], ELITES[id].zh)), gap: 16, capW: 320 } ];
+  for (const id of ["wolf", "lord", "scar"]) blocks.push({ note: `${ELITES[id].zh}：最近鄰 ×4` }, { cells: [nn(D[id], 4)] });
   publish(sheet(1400, blocks), "image/png");
 };
 

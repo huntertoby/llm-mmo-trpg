@@ -213,14 +213,58 @@ window.RGUnits = (() => {
    * who＝{ doll, view, west } 或 { spec, west }。畫在 (cx, foot)，大小 k（插圖 px／模型單位）。
    */
   function silhouetteOf(who, cx, foot, k, res) {
-    const W = 160, H = 130, cv = document.createElement("canvas"); cv.width = W * res; cv.height = H * res;
-    const g = cv.getContext("2d"); g.scale(res, res);
-    const lx = W / 2, ly = H - 10;
-    if (who.npc) QNpc.stamp(g, who.npc, who.view ?? "side", lx, ly, k, !!who.west, { dpr: Math.max(2, res * 1.5) }); // 有 QNpc 新部件的人形（斗笠…）
-    else if (who.doll) { if (who.pose) QDoll.setPose(who.pose); try { stampDoll(g, who.doll, who.view ?? "side", lx, ly, k, !!who.west, { dpr: Math.max(2, res * 1.5) }); } finally { if (who.pose) QDoll.setPose(null); } }
-    else QCreature.stamp(noGround(g), who.spec, lx, ly, k, !!who.west);
-    return { cv, x0: cx - lx, y0: foot - ly };
+    const W = 160, H = 130, lx = W / 2, ly = H - 10, R = Math.max(3, res * 2); /* 內部 R 倍畫（侵蝕、縫在高解析度做），貼上時縮回 */
+    const mk = () => { const c = document.createElement("canvas"); c.width = W * R; c.height = H * R; return c; };
+    const draw = (unit, npc) => { const cv = mk(), g = cv.getContext("2d"); g.scale(R, R);
+      if (npc) withSilDouli(() => QNpc.stamp(g, unit, who.view ?? "side", lx, ly, k, !!who.west, { dpr: R * 1.5 })); // 有 QNpc 新部件的人形（斗笠…）
+      else { if (who.pose) QDoll.setPose(who.pose); try { stampDoll(g, unit, who.view ?? "side", lx, ly, k, !!who.west, { dpr: R * 1.5 }); } finally { if (who.pose) QDoll.setPose(null); } }
+      return cv; };
+    if (!who.npc && !who.doll) { const cv = mk(), g = cv.getContext("2d"); g.scale(R, R); QCreature.stamp(noGround(g), who.spec, lx, ly, k, !!who.west); hard(cv, 40); /* 部件之間的半透明接縫填滿 */ return { cv, x0: cx - lx, y0: foot - ly, w: W, h: H }; }
+    /* 人形（第 2 版）：
+       1. 剪影去掉 qDoll／QNpc 的外框（半徑 1.3 單位）：侵蝕 1.0 單位。外框把劍身撐成一根「手指」，剪影讀成揮手（審查可修 3）。
+       2. 主手武器和手、身體之間留一道輪廓光縫：拿掉主手再畫一次，相減得到「伸出身體外的武器」，往外 0.7 單位的那圈（落在身體上的部分）就是縫。
+       3. 斗笠帽緣下一道縫（見 withSilDouli）。 */
+    const unit = who.npc ?? who.doll, er = 1.0 * k * R;
+    const full = erode(draw(unit, !!who.npc), er);
+    let seam = null;
+    if (unit.gear?.main_hand) {
+      const g0 = { ...unit.gear }; delete g0.main_hand; const bare = erode(draw({ ...unit, gear: g0 }, !!who.npc), er);
+      const wpn = mk(), wg = wpn.getContext("2d"); wg.drawImage(full, 0, 0); wg.globalCompositeOperation = "destination-out"; wg.drawImage(bare, 0, 0);
+      seam = mk(); const sg = seam.getContext("2d"); sg.drawImage(QNpc.dilate(wpn, 0.7 * k * R), 0, 0); sg.globalCompositeOperation = "destination-out"; sg.drawImage(wpn, 0, 0);
+      sg.globalCompositeOperation = "destination-in"; sg.drawImage(full, 0, 0); hard(seam, 128);
+    }
+    if (who.npc && JSON.stringify(who.npc.gear?.head ?? {}).includes("douli") && (who.view ?? "side") === "side") {
+      /* 斗笠帽緣下、臉那一側一道縫（模型座標 x 1.5～帽緣、y −32.2，寬 0.7）：寬帽緣和額頭分開，讀成「帽子下面一張臉」 */
+      seam ??= mk(); const sg = seam.getContext("2d"), s = who.west ? -1 : 1; sg.save(); sg.scale(R, R); sg.strokeStyle = "#fff"; sg.lineWidth = 0.75 * k; sg.lineCap = "round";
+      sg.beginPath(); sg.moveTo(lx + s * 1.5 * k, ly - 32.0 * k); sg.lineTo(lx + s * 10.5 * k, ly - 32.5 * k); sg.stroke(); sg.restore();
+      sg.globalCompositeOperation = "destination-in"; sg.drawImage(full, 0, 0);
+    }
+    return { cv: full, seam, x0: cx - lx, y0: foot - ly, w: W, h: H };
   }
+  /** 侵蝕 r 像素（反相 → 膨脹 → 反相；膨脹用 QNpc.dilate＝qDoll 外框同一套 12 方向圓盤）。 */
+  function erode(src, r) {
+    const inv = (c0) => { const c = document.createElement("canvas"); c.width = c0.width; c.height = c0.height; const g = c.getContext("2d"); g.fillStyle = "#000"; g.fillRect(0, 0, c.width, c.height); g.globalCompositeOperation = "destination-out"; g.drawImage(c0, 0, 0); return c; };
+    return hard(inv(QNpc.dilate(inv(src), r)), 128);
+  }
+  /** alpha 二值化（內部 R 倍解析度；縮回插圖大小時才有平滑邊）。膨脹、侵蝕的半透明邊會一路變寬，不切會在墨色剪影外透出一圈輪廓光色。 */
+  function hard(c, th) {
+    const g = c.getContext("2d"), d = g.getImageData(0, 0, c.width, c.height), q = d.data;
+    for (let i = 3; i < q.length; i += 4) q[i] = q[i] > th ? 255 : 0;
+    g.putImageData(d, 0, 0); return c;
+  }
+  /**
+   * 插圖剪影專用的斗笠側面（第 2 版，審查可修 1）：現行 qNpc.js 的側面斗笠帽緣只比頭寬 1.5～4 單位、尖頂高，剪影讀成「方塊上一個屋頂」。
+   * 剪影時換成寬帽緣（後 −15.2、前 +16.8，往前低 2 單位＝帽子微微前傾）、矮錐頂（−41.6）、帽緣下有厚度 1.2；
+   * 前緣比臉（鼻尖 x ≈ 9.8）多伸 7 單位，帽緣下、臉前面留出一個缺口。戰場上的 sprite 不換（qNpc.js 只讀）。
+   */
+  const SIL_DOULI = { C(ctx, v, p) {
+    if (v !== "side") return DOULI0.C(ctx, v, p);
+    const c = p.color ?? "#c8b07a", d = dk(c, 0.22);
+    fill(ctx, c, () => { ctx.moveTo(-15.2, -35.4); ctx.quadraticCurveTo(-6, -40.6, 0.6, -41.6); ctx.quadraticCurveTo(8, -39.6, 16.8, -33.4); ctx.lineTo(16.4, -32.4); ctx.quadraticCurveTo(0, -34.0, -14.8, -34.4); ctx.closePath(); });
+    fill(ctx, d, () => { ctx.moveTo(16.4, -32.4); ctx.quadraticCurveTo(0, -34.0, -14.8, -34.4); ctx.lineTo(-14.6, -35.0); ctx.quadraticCurveTo(0, -34.8, 16.6, -33.2); ctx.closePath(); });
+  } };
+  let DOULI0 = null;
+  function withSilDouli(fn) { DOULI0 = QNpc.PART.douli; QNpc.PART.douli = SIL_DOULI; try { return fn(); } finally { QNpc.PART.douli = DOULI0; } }
   /** QCreature.stamp 會先畫地面環與影子（直接上色的前幾筆）：全部跳過，只留 layer 貼上的身體（同 occludeOutline.js skipPaint(ctx, Infinity)）。 */
   function noGround(ctx) {
     const P = new Set(["fill", "stroke", "fillRect", "strokeRect"]);
@@ -229,17 +273,34 @@ window.RGUnits = (() => {
   function tinted(src, color) { const c = document.createElement("canvas"); c.width = src.width; c.height = src.height; const g = c.getContext("2d"); g.drawImage(src, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = color; g.fillRect(0, 0, c.width, c.height); return c; }
   /** 交叉的武器：主角的主手＋精英的主手（異形用爪 fist／claw／bone）。每把是 Q 版武器圖示（無框），精英那把左右鏡像。 */
   function weaponCanvas(look, px, res) { const cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); const g = cv.getContext("2d"); g.scale(res, res); if (look.kind === "beast_claw") beastClaw(g, px); else QIconsWeapons.paint(g, look, px, res, { frame: "none" }); return cv; }
-  /** 異形精英的「武器」：三根往前彎的骨色獸爪（48 格畫法：外框 #16121a、骨 #e9e3cf／暗 #a8a08a、左上亮面），斜放同劍（握處左下、尖端右上）。 */
+  /**
+   * 異形精英的「武器」（第 2 版，審查必修 M2-1）：三道骨白彎弧爪痕。第 1 版「三根爪＋褐色掌」1 倍讀成書本、羽毛，已拿掉掌。
+   * 48 格畫法：外框 #16121a（寬 3）、骨 #e9e3cf、凹側暗面 #a8a08a、凸側亮線白 75%。三道平行、由粗到尖（入爪端粗、收尾細），
+   * 中間那道最長。畫的方向和 Q 版劍圖示同一條斜線（左下－右上）；crossed() 把精英那把左右鏡像，所以實際是「右上往左下」的
+   * 另一條斜線，和主角的劍交叉成 X（爪痕蓋在劍上，劍柄、劍尖在兩端露出）。
+   */
   function beastClaw(g, px) {
-    g.save(); g.scale(px / 48, px / 48); g.translate(24, 24); g.rotate(Math.PI / 4); /* 爪尖朝右上（同 Q 版劍圖示的斜放） */
-    const talon = (dx, len, w) => () => { g.moveTo(dx - w, 14); g.quadraticCurveTo(dx - w * 1.1, -len * 0.4, dx + w * 0.4, -len); g.quadraticCurveTo(dx + w * 2.6, -len * 0.55, dx + w, 14); g.closePath(); };
-    const T3 = [talon(-6.5, 15, 2.6), talon(0, 19, 3), talon(6.5, 15, 2.6)];
-    g.lineJoin = "round"; g.strokeStyle = OUT; g.lineWidth = 4;
-    for (const t of T3) { g.beginPath(); t(); g.stroke(); }
-    g.beginPath(); g.roundRect(-11, 10, 22, 9, 4); g.stroke(); fill(g, "#5e3b1f", () => g.roundRect(-11, 10, 22, 9, 4)); fill(g, "#8a5a32", () => g.roundRect(-10, 10.6, 20, 4, 2)); /* 爪根的皮肉 */
-    for (const t of T3) { fill(g, "#e9e3cf", t); }
-    for (const dx of [-6.5, 0, 6.5]) fill(g, "#a8a08a", () => { g.moveTo(dx + 1, 12); g.quadraticCurveTo(dx + 2.2, 0, dx + 1.2, -8); g.quadraticCurveTo(dx + 3, 0, dx + 2.6, 12); g.closePath(); });
-    for (const dx of [-6.5, 0, 6.5]) fill(g, "rgba(255,255,255,0.7)", () => g.ellipse(dx - 1.4, 2, 0.6, 3, 0.1, 0, TAU));
+    g.save(); g.scale(px / 48, px / 48); g.translate(24, 24); g.rotate(Math.PI / 4); /* 軸線＝劍圖示的斜線；-y＝右上 */
+    /* 一道爪痕：軸 x＝ox，從 (ox, top) 到 (ox, bot)，往 +x 彎 b；入爪端（top）粗、尾端（bot）尖。edge(-1) 凹側、edge(+1) 凸側 */
+    const slash = (ox, top, bot, w, b) => {
+      const L = bot - top, y1 = top + L * 0.3, y2 = top + L * 0.68;
+      return (sc = 1) => { const ww = w * sc;
+        g.moveTo(ox + 0.2, top);
+        g.bezierCurveTo(ox + b + ww * 0.9, y1, ox + b + ww * 0.55, y2, ox, bot);
+        g.bezierCurveTo(ox + b - ww * 0.35, y2, ox + b - ww * 0.55, y1, ox - 0.2, top);
+        g.closePath(); };
+    };
+    const OX = [-13.2, -6.6, 0], LN = [[-12.5, 15], [-17.5, 17.5], [-15, 11.5]], WD = [3.9, 4.7, 3.9], BD = [3, 3.6, 3]; /* 整組往 -x 偏 6（鏡像後＝往劍尖那頭）：劍柄、護手、下半段劍身露在爪痕外；爪痕劃過上半段劍身 */
+    const S3 = OX.map((ox, i) => slash(ox, LN[i][0], LN[i][1], WD[i], BD[i]));
+    g.lineJoin = "round"; g.strokeStyle = OUT; g.lineWidth = 3;
+    for (const t of S3) { g.beginPath(); t(); g.stroke(); }
+    for (const t of S3) fill(g, "#e9e3cf", () => t());
+    /* 凹側暗面：同一道往 -x 縮一半寬 */
+    for (const [i, t] of S3.entries()) { g.save(); g.beginPath(); t(); g.clip(); g.translate(-[2, 2.4, 2][i], 0); fill(g, "#a8a08a", () => t(0.75)); g.restore(); }
+    /* 凸側亮線 */
+    for (const [i, ox] of OX.entries()) { const [top, bot] = LN[i], b = BD[i];
+      const L = bot - top; g.save(); g.strokeStyle = "rgba(255,255,255,0.75)"; g.lineWidth = 0.9; g.lineCap = "round"; g.beginPath(); g.moveTo(ox + 1.3, top + L * 0.14); g.quadraticCurveTo(ox + b + 1.4, top + L * 0.42, ox + 1.2, top + L * 0.66); g.stroke(); g.restore();
+    }
     g.restore();
   }
   const isDiag = (look) => { if (look.kind === "beast_claw") return true; try { return !!QIconsWeapons.def(look).meta.diag; } catch (e) { return true; } };
@@ -250,7 +311,8 @@ window.RGUnits = (() => {
       if (mode === "flat") { const o = tinted(c0, OUT); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(o, -px / 2 + dx * 0.9, -px / 2 + dy * 0.9, px, px); }
       ctx.drawImage(c, -px / 2, -px / 2, px, px); ctx.restore();
     };
-    put(eliteW, true); put(heroW, false);
+    /* 爪痕蓋在劍上（第 2 版）：劍蓋上去會把三道爪痕的中段切成六根尖刺，讀成羽毛扇；爪痕在上，劍從爪痕之間、兩端露出 */
+    if (eliteW.kind === "beast_claw") { put(heroW, false); put(eliteW, true); } else { put(eliteW, true); put(heroW, false); }
   }
   /** 四芒星火花（交叉點）。 */
   function spark(ctx, x, y, r, c1 = "#fff7c0", c2 = "#ffffff") {
@@ -295,11 +357,14 @@ window.RGUnits = (() => {
     }
     const hs = silhouetteOf({ doll: spec.hero.doll, view: "side", west: false, pose: spec.hero.pose ?? HERO_POSE }, heroX, foot, kH, res);
     const es = silhouetteOf(spec.elite.spec ? { spec: spec.elite.spec, west: true } : { doll: spec.elite.doll, npc: spec.elite.npc, view: "side", west: true }, eliteX, foot, kE, res);
-    const put = (s, c, dx = 0, dy = 0) => ctx.drawImage(c, s.x0 + dx, s.y0 + dy, s.cv.width / res, s.cv.height / res);
+    const put = (s, c, dx = 0, dy = 0) => { ctx.save(); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(c, s.x0 + dx, s.y0 + dy, s.w, s.h); ctx.restore(); };
     if (A) {
       // 輪廓光：朝中間那側位移 1.6 px 的亮色剪影墊在下面，再蓋墨色剪影
       put(hs, tinted(hs.cv, "#a9ccff"), 1.6, -0.6); put(hs, tinted(hs.cv, OUT));
       put(es, tinted(es.cv, "#ffbf3a"), -1.6, -0.6); put(es, tinted(es.cv, OUT));
+      /* 第 2 版：武器和手之間、斗笠帽緣下的輪廓光縫（同一側的輪廓光色） */
+      if (hs.seam) put(hs, tinted(hs.seam, "#a9ccff"));
+      if (es.seam) put(es, tinted(es.seam, "#ffbf3a"));
     } else {
       put(hs, tinted(hs.cv, OUT), 2, 2); put(hs, tinted(hs.cv, "#a9ccff"));
       put(es, tinted(es.cv, OUT), -2, 2); put(es, tinted(es.cv, "#ffbf3a"));
@@ -321,5 +386,5 @@ window.RGUnits = (() => {
   function hexA(h, a) { const n = parseInt(h.slice(1, 7), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
   function duelCanvas(spec, res = 2) { const cv = document.createElement("canvas"); cv.width = DUEL_W * res; cv.height = DUEL_H * res; const g = cv.getContext("2d"); g.scale(res, res); duel(g, spec, res); return cv; }
 
-  return { SHIELDS, SHELL, C, LAVA, KEY, stampDoll, withShield, shieldOf, sectShieldDisciple, moltenShellTrooper, registerTraits, duel, duelCanvas, silhouetteOf, setHeroPose, DUEL_W, DUEL_H, VIEW_DRAW };
+  return { beastClaw, SHIELDS, SHELL, C, LAVA, KEY, stampDoll, withShield, shieldOf, sectShieldDisciple, moltenShellTrooper, registerTraits, duel, duelCanvas, silhouetteOf, setHeroPose, DUEL_W, DUEL_H, VIEW_DRAW };
 })();

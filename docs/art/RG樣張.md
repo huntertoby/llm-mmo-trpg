@@ -201,6 +201,8 @@
 
 依據 main 的 `docs/phases/PhaseRG計畫.md` 第 5 節表格最後三列。三項各兩個候選，**推薦：持盾弟子 A、熔殼甲兵 A、單挑插圖 A**（理由在各節）。
 
+> **第 2 版**（同日，接手的畫圖 agent）：美術 PM 已決定三項都選 A（9.6）；照審查 `RG樣張-審查.md`「第二批審查」的必修 M2-1、可修 1～5 改單挑插圖與對話框，逐條對照見 9.7。**移植以 9.8 為準**（9.1～9.3 的移植說明是第 1 版，和 9.8 不同處照 9.8）。主截圖是 `7-duel-v2.png`、`9-dialog-1600-A-v2.png`、`10-dialog-800-A-v2.png`、`13-dialog-1600-scar-v2.png`。
+
 - 樣張頁 `sample/rg-units.html`（`?part=dolls｜shells｜lineup｜scene&w=1600｜800｜zoom｜duel｜parts`）＋畫法 `sample/rgUnits.js`；對話框情境 `sample/rg-duel-dialog.html?w=1600｜800&v=A｜B&e=wolf｜scar｜lord｜forge`（載入遊戲端 `client/src/styles/index.css`，框與按鈕是現行 class）。
 - 重拍：`uv run python -I docs/art/sample/tools/rg_units_shots.py <暫存資料夾> [名稱…]`（名稱見腳本 `SHOTS`、`DIALOGS`；畫布從 `#out` 取出，對話框用 `--screenshot --force-device-scale-factor=1`；不開伺服器、不開除錯埠、`--mute-audio`）。
 - 不改 `qDoll.js`、`qCreature.js`：大盾用「鑰匙色塔盾＋畫到盾那一筆時換畫」（見 9.1 移植說明）；熔殼大盾掛進 `QCreature.TRAITS`（匯出的物件）。
@@ -307,3 +309,66 @@
 3. 單挑插圖的武器：異形精英用新畫的「獸爪」圖示（樣張），還是改成其他符號（例如精英頭像）？
 4. 對話框的「接受」要不要用 `primary`（藍色主鈕）——計畫寫「兩個按鈕一樣大」，現在大小相同但接受較醒目，等於暗示推薦接受。
 5. 鍛疤的外觀還沒定（樣張借荒原隊長的剪影）。
+
+### 9.6 美術 PM 的決定（已決定，2026-11-13 美術 PM）
+
+1. **三項都選 A**：持盾弟子 **A 雲紋碑盾**、熔殼甲兵 **A 立殼**、單挑插圖 **A 暮色對峙**。B（太極方盾、半圓殼盾、對角徽記）**未採用**，留在第 1 版截圖（`1`～`3`、`7-duel.png`、`11`、`12-dialog-*-B.png`）當紀錄。
+2. **大盾先只給敵人**：做成敵人專用 form（`sect_great`，不進玩家可抽、可裝備的外觀池）。要不要開放給玩家是規則，**轉玩法 PM**；回覆前照只給敵人。
+3. **單挑對話框的「接受」「拒絕」**：兩顆都用一般按鈕樣式（不加 `primary`）、一樣大，預設焦點不放在接受上（計畫的用意是不引導）。
+4. **鍛疤先借荒原隊長剪影當暫代**：移植說明（9.8 第 6 條）與 `敵人外觀.md` 各記一句「暫代，外觀定案後插圖剪影自動跟著換」。
+
+### 9.7 第 2 版逐條對照（2026-11-13，接手的畫圖 agent）
+
+改的只有單挑插圖（`rgUnits.js` 第 3 節）與對話框；持盾弟子、熔殼甲兵的畫法沒動，`1`～`6`、`8` 不重拍。主截圖只畫採用的 A，檔名加 `-v2`；`7-duel.png`、`9`～`12-dialog-*.png` 留當紀錄。
+
+| 審查條目 | 改法 | 截圖 |
+|---|---|---|
+| 必修 M2-1 獸爪讀成書本、羽毛 | 拿掉褐色掌，改成**三道骨白彎弧爪痕**（`beastClaw`）：三道平行、入爪端粗、尾端尖、中間那道最長，墨色外框 3（48 格）、凹側暗面 `#a8a08a`、凸側亮線。畫的方向是劍圖示的斜線，插圖裡鏡像，所以和主角的劍是**不同方向的兩條斜線，交叉成 X**。爪痕**蓋在劍上**、整組往劍尖那頭偏 6（劍蓋在爪痕上時，三道爪痕的中段被切掉，剩六根尖刺，讀成羽毛扇）：劍柄、護手、下段劍身在左下露出，劍尖在右上露出 | `7-duel-v2.png` 上兩列（爪痕單獨 1 倍／×8；北坡狼王、熔核領主交叉處裁 72×72 的 1 倍／×8，疤面的雙刀對照）、下面兩場 ×4；`9-dialog-1600-A-v2.png`（北坡狼王）、`10-dialog-800-A-v2.png`（熔核領主） |
+| 可修 1 疤面斗笠像屋頂 | 插圖剪影時換用寬帽緣的側面斗笠（`SIL_DOULI`）：帽緣後 −15.2、前 +16.8（現行約 ±12.6），往前低 2（微微前傾），錐頂從 −43.4 降到 −41.6；前緣比鼻尖多伸 7 單位，帽緣下、臉前面留出缺口。另在帽緣下、臉那一側切一道精英金的輪廓光縫（x 1.5～10.5、寬 0.75），帽子和額頭分開。戰場 sprite 不換（`qNpc.js` 只讀） | `7-duel-v2.png` 疤面 ×4、`13-dialog-1600-scar-v2.png` |
+| 可修 2 熔核領主太小、融進地面 | 倍率 1.45 → **1.8**（`rg-units.html`、`rg-duel-dialog.html` 的 `ELITES.lord.k`）；殼頂和主角頭頂約同高，殼身整個在地平線光之上，只剩腳在地面暗帶裡（有金色輪廓光） | `7-duel-v2.png` 熔核領主 ×4、`10-dialog-800-A-v2.png` |
+| 可修 3 主角的劍黏在手上 | 人形剪影（主角與人形精英）改兩步：① 侵蝕 1.0 單位，去掉紙娃娃外框（外框半徑 1.3）把劍身撐成一根「手指」的部分；② 拿掉主手再畫一次、相減得到「伸出去的武器」，往外 0.7 單位、落在手和身體上的那圈畫成輪廓光色（主角藍、精英金），劍和手之間有一道亮縫。剪影在 R 倍（≥3）內部解析度做、alpha 二值化後縮回（不切的話膨脹、侵蝕的半透明邊會一路變寬，墨色外面透出一整圈藍） | `7-duel-v2.png` 四場 1 倍、三場 ×4 |
+| 可修 4 塔盾判斷點 | 9.8 第 1 條列齊 8 處（已用 `git show main` 核對行號）、建議 `isTowerLike()`；`emblem` 欄位加進 schema 與 TS 型別 | — |
+| 可修 5 「半圓殼片」字面 | 9.8 第 3 條 | — |
+| 決定 3 按鈕 | 對話框兩顆都是一般 `<button>`（不加 `primary`）、`min-width: 96px` 一樣大、順序照現行（接受在左，`modal-buttons` 靠右）；不加 autoFocus | `9`、`10`、`13-dialog-*-v2.png` |
+
+**第 2 版我看到（照最終圖）**：
+- 爪痕單獨（`7-duel-v2.png` 第 1 列）：1 倍是三道白色的彎刀形斜痕，由左下往右上、上端粗下端尖；×8 看得到墨色外框、每道凹側一條灰暗面、凸側一條白亮線。不像書、不像羽毛，是「抓痕」。
+- 交叉處 72×72（北坡狼王、熔核領主）：1 倍是左下一支金柄劍、右上一點劍尖，中間被三道白爪痕從左上往右下斜劃過去，兩組方向不同；×8 劍柄、護手、劍尖完整，劍身中段被爪痕蓋住，火花落在爪痕上。和右邊疤面的雙刀交叉（兩把對稱的 X）比，爪痕那組是「爪劃過劍」，不對稱但認得出兩樣東西。
+- 四場 1 倍：主角剪影變瘦，手往前、一支細劍從手裡往右上伸出，手和劍之間有一道淡藍亮縫；人形精英（疤面、荒原隊長）手上的刀、槍也伸得出剪影外。疤面的斗笠變成一頂寬沿尖笠，帽沿下面看得到一個側臉（鼻子、下巴），不再像屋頂。熔核領主和主角一樣高，殼的上緣有金邊，前面一根角朝主角。
+- 對話框 1600（`9`、`13`）、800（`10`）：插圖在 480 寬框內置中，兩顆按鈕同寬同色（暗底淺字），接受在左；800 的熔核領主角尖離爪痕只有幾 px，沒有碰到。
+
+**仍不好認**：
+1. 爪痕 ×8 和雙刀並排時，爪痕那組的劍身中段被蓋住，劍靠劍柄、護手、劍尖認；1 倍的第一眼是「白色爪痕」，第二眼才是劍。
+2. 主角剪影仍是 Q 版大頭；劍細（1 倍約 3 px 寬），手和劍之間的亮縫 1 倍只有 1 px，靠藍色輪廓光的顏色差才分得出。
+3. 疤面帽緣下的金色縫 1 倍很淡（約 1 px），帽子讀成斗笠主要靠寬帽緣與臉前面的缺口。
+4. 熔核領主的腳仍在地面暗帶裡（只剩金邊），身體在地平線光上。
+
+### 9.8 移植說明（第 2 版；和 9.1～9.3 不同的以這裡為準）
+
+1. **持盾弟子的塔盾判斷點（可修 4）**：`sect_great` 要在下面 **8 處**都視同 `tower`（2026-11-13 用 `git show main` 核對行號）。建議在 `qCore.ts`（或 `qGear.ts`）加一個 `isTowerLike(it) = it.kind === "shield_kite" && (it.form === "tower" || it.form === "sect_great")`，8 處都換成它：
+
+   | 檔 | 行 | 現在的判斷 | 換成 |
+   |---|---|---|---|
+   | `client/src/render/qWeapons.ts` | 462 | `it.kind === "shield_kite" && it.form === "tower"`（進 `pdHeld2`） | `isTowerLike(it)` |
+   | `client/src/render/qGear.ts` | 243 | `const tower = it.kind === "shield_kite" && it.form === "tower"`（側面） | `isTowerLike(it)` |
+   | `client/src/render/qGear.ts` | 291 | `it.form === "tower"`（背面） | `isTowerLike(it)` |
+   | `client/src/render/qDoll.ts` | 1087 | `oh.form === "tower" ? 11.5`（`shieldBack` 位移） | `isTowerLike(oh) ? 11.5` |
+   | `client/src/render/qDoll.ts` | 1235 | `off.form === "tower" ? 1.5 : -0.5`（`ARM().shf`） | `isTowerLike(off) ? 1.5 : -0.5` |
+   | `client/src/render/qDoll.ts` | 1236 | `off.kind === "shield_kite" && off.form !== "tower"`（**`!==`**，漏改整面盾下移 3.5） | `off.kind === "shield_kite" && !isTowerLike(off)` |
+   | `client/src/render/qDoll.ts` | 1311 | `off.form === "tower" ? 1.5 : -0.5` | `isTowerLike(off) ? 1.5 : -0.5` |
+   | `client/src/render/qDoll.ts` | 1314 | `off.form === "tower" ? 11.5 : 11`（`shieldBack`） | `isTowerLike(off) ? 11.5 : 11` |
+
+   畫法本身（盾面的三個樣子）還是在 `shieldFront`／`shieldSide`／`shieldBack` 與 `pdHeld2` 裡加 `form === "sect_great"` 分支，照 `rgUnits.js` 的 `front()`／`side()`／`back()`（只移植 A；`emblem: peak`）。引擎沒有任何 `tower` 判斷，不碰規則。
+2. **`sect_great` 只給敵人（決定 2）與 `emblem` 欄位**：
+   - `content/equipment/appearance.yaml` 的 `kite_shield.forms` 加 `{id: sect_great, name_zh: 門派大盾, enemy_only: true}`；`FormDef`（`src/trpg/content/appearance.py`）加 `enemy_only: bool = False`（沿用技能的 `enemy_only` 寫法），玩家的外觀池、裝備生成、外觀選單都略過 `enemy_only` 的形制。玩法 PM 回覆開放前照只給敵人。
+   - `emblem`：加進單位外觀的裝備欄 `DollGear`（`src/trpg/content/battle.py`，和 `form`、`trim` 同一層；`emblem: Literal["peak"] | None = None`，之後要太極再加）與 TS 的 `QItem`（`client/src/render/qCore.ts` 第 12 行，`emblem?: string`）；前端不認得就不畫紋樣。持盾弟子：`off_hand: {kind: shield_kite, form: sect_great, material: wood, color: '#5f8f8a', trim: '#dfe4e2', emblem: peak}`。
+3. **熔殼甲兵採 A 立殼，和計畫字面不同（可修 5）**：`PhaseRG計畫.md` 第 5 節寫「半圓殼片立在身前」，字面上是 B（半圓殼盾）。**依美術 PM 決定改用 A 立殼**：殼縫和甲蟲背同一套鋸齒火紋，一眼是「自己的殼拿來擋」；盾面朝敵人、側看到的是殼的厚度（新月形），透視才對；B 的拱形在 1 倍時拱裡的火線讀成燈籠、壁爐。驗收請照樣張 A 的長相，不照「半圓」字面退件。特徵名移植成 `molten_shield`（畫法 `SHELL.a.draw`）。
+4. **獸爪（必修 M2-1）**：`client/src/render/qIcon/` 加一個 `beast_claw` 的插圖用圖示（只給單挑插圖用，不進武器圖示表），畫法照 `rgUnits.js` 的 `beastClaw`（48 格座標，三道 `slash(ox, top, bot, w, b)`，`OX`／`LN`／`WD`／`BD` 四個表）。交叉時精英那把左右鏡像；**異形精英的爪痕畫在主角武器之後（上面）**，人形精英照舊先畫精英、再畫主角。
+5. **插圖剪影（可修 1、3）**：照 `rgUnits.js` 的 `silhouetteOf`：
+   - 人形在離屏 R 倍（DPR 2 時 R ≥ 4）畫紙娃娃 sprite → 侵蝕 1.0 單位（反相、膨脹、反相；膨脹用外框同一套 12 方向）→ alpha 二值化（> 128）→ 縮回時 `imageSmoothingQuality = "high"`。
+   - 武器縫：同一個單位拿掉主手再畫一次，相減＝伸出的武器；武器往外膨脹 0.7 單位、扣掉武器本身、只留落在身體上的部分＝縫，畫輪廓光色。
+   - 斗笠：剪影時把側面斗笠換成 `SIL_DOULI` 的寬帽緣（只在插圖用；戰場 sprite 照現行），再在帽緣下、臉那一側畫一道 0.75 寬的輪廓光縫。
+   - 異形照舊（不侵蝕），但一樣 alpha 二值化（> 40）把部件之間的半透明接縫填滿。
+   - 熔核領主倍率 1.8（異形精英各給倍率：北坡狼王 1.2、熔核領主 1.8；人形 1.9×1.15）。
+6. **鍛疤（決定 4）**：外觀還沒定，插圖**暫代**借荒原隊長剪影。插圖剪影是從單位的紙娃娃自動產生的，**外觀定案後插圖剪影自動跟著換**，不用另畫；定案時順手拍一張新插圖確認。
+7. **對話框按鈕（決定 3）**：`modal-buttons` 裡兩顆都是一般 `<button type="button">`，**不加 `primary`**，同一個 `min-width`（樣張 96 px）讓兩顆一樣大；順序照現行（接受在左）。**不加 `autoFocus`**，打開時焦點給對話框本身（`tabIndex={-1}`），Enter 不會直接按到任何一顆。

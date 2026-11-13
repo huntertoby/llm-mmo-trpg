@@ -27,7 +27,7 @@ const CLAW = { kind: "beast_claw" };
 const ELITES = {
   wolf: { zh: "北坡狼王", region: "cloud_ridge", them: "牠", elite: { spec: { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"], elite: true, affixes: ["berserk"] }, weapon: CLAW, k: 1.2 } },
   scar: { zh: "疤面", region: "cloud_ridge", them: "他", elite: { npc: NPCB["斷崖幫隊長"], weapon: { kind: "saber", material: "steel" } } },
-  lord: { zh: "熔核領主", region: "ashen_waste", them: "牠", elite: { spec: { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"], elite: true, affixes: ["hardshell"] }, weapon: CLAW, k: 1.45 } },
+  lord: { zh: "熔核領主", region: "ashen_waste", them: "牠", elite: { spec: { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"], elite: true, affixes: ["hardshell"] }, weapon: CLAW, k: 1.8 } },
   forge: { zh: "鍛疤", region: "ashen_waste", them: "他", elite: { npc: NPCB["荒原隊長"], weapon: { kind: "shotgun", form: "double", material: "iron" } } },
 };
 const E = ELITES[P.get("e") ?? (W <= 800 ? "lord" : "wolf")];
@@ -58,7 +58,9 @@ const frame = h("div.ui-popup.rt-frame.ui-popup-hud.decision-card.world-hud-dial
     art,
     h("p", {}, `接受：只有你和${E.zh}上場，隊友、傭兵不上場。拒絕：照原本全隊開打。`),
     h("p.small.muted", {}, "兩邊的獎勵一樣（經驗、掉落、懸賞照整個陣容算）。"),
-    h("div.modal-buttons", {}, h("button.primary", { type: "button" }, "接受"), h("button", { type: "button" }, "拒絕"))));
+    /* 第 2 版（美術 PM 決定 3）：兩顆都用一般按鈕樣式（不加 primary）、一樣大（同一個 min-width），順序照現行（接受在左）；
+       預設焦點不放在任何一顆按鈕上（不加 autoFocus；移植時焦點給框本身 tabIndex −1），不引導 */
+    h("div.modal-buttons", {}, h("button", { type: "button", style: "min-width:96px" }, "接受"), h("button", { type: "button", style: "min-width:96px" }, "拒絕"))));
 document.getElementById("dlg").appendChild(frame);
 document.documentElement.dataset.done = "1";
 </script>
