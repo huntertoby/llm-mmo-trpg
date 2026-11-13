@@ -63,6 +63,7 @@ from trpg.world.actions import (
     TeleportAction,
     TravelAction,
     TraveledEvent,
+    WishAction,
     WorldAction,
     WorldEvent,
 )
@@ -147,6 +148,7 @@ from trpg.world.town import (
     with_visited_town,
 )
 from trpg.world.trade import PAIR_HANDLERS, stamp_gear
+from trpg.world.wish import apply_wish
 
 __all__ = [
     "HANDLERS",
@@ -519,6 +521,8 @@ def _handlers() -> dict[type, _Handler]:
         OpeningClassAction: _keeps_world(apply_opening_class),
         # OB-3（#150 第 5 點）：4 級前的免費重選
         OpeningReselectAction: _keeps_world(apply_reselect),
+        # WP-1（07 7.6、#88）：主城的許願池
+        WishAction: _keeps_world(apply_wish),
     }
     table |= {kind: _keeps_world(fn) for kind, fn in ECONOMY_HANDLERS.items()}  # 5D-1
     table |= {kind: _changes_world(fn) for kind, fn in CRAFTING_HANDLERS.items()}  # 5D-3

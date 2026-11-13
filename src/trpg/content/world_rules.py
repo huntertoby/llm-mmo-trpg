@@ -39,6 +39,7 @@ __all__ = [
     "RegionWeather",
     "SupplyRules",
     "WeatherWeights",
+    "WishRules",
     "WorldRules",
     "world_rules_problems",
 ]
@@ -257,6 +258,25 @@ class OpportunityRules(ContentModel):
     """保底觸發的機遇不檢查 ``requires_keyword``（Phase 5B-4e；三選一照樣指定該關鍵字）。"""
 
 
+class WishRules(ContentModel):
+    """許願池（Phase WP-1；07 7.6、#88：主城花任務幣許願，每週 2 次；都不拿次數照扣、任務幣退一半）
+    。
+    數字是 WP-1 的初值（``docs/phases/PhaseWP計畫.md`` 第 6 節待決 2、3、6），之後只改這裡。"""
+
+    per_week: int = Field(default=2, ge=0)
+    """每個角色每週能許幾次（09 9.6 上限表）。"""
+    cost_quest_coins: int = Field(default=4, ge=0)
+    """每次許願的任務幣（設計沒寫數字，初值）。"""
+    refund_permille: int = Field(default=500, ge=0, le=1000)
+    """三選一都不拿時退還的比例（‰，捨去；#88 2b「任務幣退一半」）。"""
+    text_max_chars: int = Field(default=60, ge=1, le=500)
+    """願望文字最多幾個字（設計「一句話」；prompt 的玩家文字上限是 500）。"""
+    max_keywords: int = Field(default=2, ge=1)
+    """一次許願最多對到幾個關鍵字（07 7.6「1～2 個關鍵字」）。"""
+    llm_cards: int = Field(default=1, ge=0, le=3)
+    """一份三選一最多請 LLM 幾張（其餘組合器與技能池補滿；同機遇 6L-2b 的保守值）。"""
+
+
 DEFAULT_WEEK_DAYS: Final = 7
 """一週的預設天數（沒有世界規則時也用這個）。"""
 
@@ -338,6 +358,8 @@ class WorldRules(ContentModel):
     hero_growth: HeroGrowthRules = HeroGrowthRules()
     xp: XpRules = XpRules()
     opportunity: OpportunityRules = OpportunityRules()
+    wish: WishRules = WishRules()
+    """許願池（Phase WP-1）。"""
     field: FieldRules = FieldRules()
     """實地地圖的規則數值（Phase 6C-R2）。"""
 

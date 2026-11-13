@@ -722,6 +722,11 @@ def pending_offer_view(
             else pending.quest
         )
         step_zh = "機遇"
+    elif pending.source == "wish":  # WP-1 許願池（07 7.6）
+        name_zh = "許願池"
+        step_zh = (
+            f"許願：都不拿可退 {pending.refund} 任務幣（次數照扣）。" if pending.refund else "許願"
+        )
     else:
         table = quest_table(library, char.region)
         defn = table.quest_by_id().get(pending.quest) if table is not None else None
@@ -884,15 +889,21 @@ def _quest_story_line(
     return None
 
 
+_OFFER_SOURCE_ZH: Final[dict[str, str]] = {
+    "quest": "任務",
+    "opportunity": "機遇",
+    "wish": "許願池",  # WP-1
+}
+
+
 def _skill_story_line(event: WorldEvent, names: Mapping[str, str]) -> str | None:
     if isinstance(event, SkillOfferedEvent):
-        source = "機遇" if event.source == "opportunity" else "任務"
+        source = _OFFER_SOURCE_ZH.get(event.source, "任務")
         return f"{source}給了技能三選一：先選一招（或跳過）。"
     if isinstance(event, SkillOfferTakenEvent):
         if event.skill is None:
-            return (
-                "跳過了機遇給的技能。" if event.source == "opportunity" else "跳過了任務給的技能。"
-            )
+            back = f"，退還 {event.refund} 任務幣" if event.refund else ""
+            return f"跳過了{_OFFER_SOURCE_ZH.get(event.source, '任務')}給的技能{back}。"
         where = "裝上" if event.placed == "equipped" else "放進備用"
         return f"學會「{names.get(event.skill, event.skill)}」，{where}。"
     if isinstance(event, StorySkillGrantedEvent):
