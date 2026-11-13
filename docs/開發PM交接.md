@@ -43,10 +43,10 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-14 8b5afebcf 全過，push 到 851d97f72（pytest 17481、vitest 4489、build 0），含 FL-1i（營火「轉型除外」、「強度」不拆；資訊卡計量 RG-5 已做）。前一次 11-13 push 67a9b8207 含 RG-5b、RG-7、RG-8、FL-1h。版號 LOG_FORMAT /125、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
+**2. 最後一次全量**：2026-11-14 47043706a 全過並 push（pytest 17522、vitest 4519、build 0），含 FL-1j（斷行）、GB-1a（巨型頭目佔格，LOG_FORMAT /126）、PB-1e（頭目部位美術）、GB 規格與 #164。版號 LOG_FORMAT /126、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
 
 **3. 執行中的 agent（分支）**：
-- GB-1b（11-14 GB-1a 合併後派）。本機 main 已合 FL-1j、GB-1a（LOG_FORMAT /126）、PB-1e，全量中。
+- GB-1b（11-14 GB-1a 合併後派）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
