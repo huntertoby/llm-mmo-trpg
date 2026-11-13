@@ -27,18 +27,20 @@ window.RGPlayerShield = (() => {
   /** 固定色（不跟材質）：雲紋章、銅釘、盾背木板與皮帶（rgUnits.js 的 C）；殼縫紅光（rgUnits.js 的 LAVA）。 */
   const FIX = { qing: "#5f8f8a", moon: "#dfe4e2", red: "#c0392b", brass: "#e8bb48", wood: "#7a5232", strap: "#3a2414", basalt: "#4a3631", glow: "#ff6a1a", core: "#ffd04a" };
   /** 盾邊換色的門檻：盾面亮度 < 150 配月白邊（同敵人：青面月白邊），≥ 150 配材質暗色再暗 10%。照顏色判斷，不照材質名。 */
-  const RIM_LUM = 150;
+  const RIM_LUM = 150; /* RG-5 P-1：比的是材質本色（混關鍵字之前），見 sectPal() */
   /** 熔殼立殼：殼板＝材質主色往玄武岩混 SHELL_K（推薦 0.35；頁面 ?part=materials 有 0／0.35／0.6 三列對照）。 */
   let SHELL_K = 0.35;
   /** 玩家的材質 → 主色 a、暗色 d（照 qIconsWeapons.palette：材質表＋元素關鍵字混色；樣張用樣張材質表，遊戲端用 material.ts）。 */
   function matPal(look) {
     const QW = window.QIconsWeapons, r = QW.resolve({ kind: "kite_shield", form: "tower", material: look.material, keywords: look.keywords, rarity: look.rarity, color: look.color });
-    const P = QW.palette(r); return { a: P.a, d: P.d, r };
+    const P = QW.palette(r), B = QW.palette(QW.resolve({ kind: "kite_shield", form: "tower", material: look.material, keywords: [], rarity: look.rarity, color: look.color }));
+    return { a: P.a, d: P.d, r, base: B.a, baseD: B.d };
   }
-  /** 雲紋碑盾的配色：look＝{ material, keywords } 或 { enemy: true }（持盾弟子：青面月白邊，和 rgUnits.js A 相同）。 */
+  /** 雲紋碑盾的配色：look＝{ material, keywords } 或 { enemy: true }（持盾弟子：青面月白邊，和 rgUnits.js A 相同）。
+   *  RG-5（審查 P-1）：盾邊明暗照**材質本色（混關鍵字之前）**的亮度判斷，暗邊也用本色的暗色；關鍵字只染盾面（同材質一律同一種邊）。 */
   function sectPal(look = {}) {
     if (look.enemy) return { face: FIX.qing, rim: FIX.moon, rivet: FIX.brass, ring: null, enemy: true };
-    const { a, d } = matPal(look), face = a, rim = lum(face) < RIM_LUM ? FIX.moon : dk(d, 0.1);
+    const { a, base, baseD } = matPal(look), face = a, rim = lum(base) < RIM_LUM ? FIX.moon : dk(baseD, 0.1);
     return { face, rim, rivet: dist(face, FIX.brass) < 70 ? dk(rim, 0.1) : FIX.brass, ring: rim === FIX.moon ? null : rim, enemy: false };
   }
   /** 熔殼立殼的配色：plate＝殼板本色、lit＝迎光那片、low＝下片、inner＝殼的內面（厚度、背面）、edge＝殼緣。look.k 覆寫混玄武岩的比例。 */
@@ -109,10 +111,20 @@ window.RGPlayerShield = (() => {
   function seam(ctx, pts, w = 1, a = 1) { ctx.save(); ctx.globalAlpha = a; line(ctx, FIX.glow, w, pts); line(ctx, FIX.core, w * 0.38, pts); ctx.restore(); }
   /** 鋸齒殼縫：從 x0 到 x1、中心高 y、齒高 h、n 段（同甲蟲背上的火紋：一上一下）。 */
   const zig = (x0, x1, y, h, n = 4) => Array.from({ length: n + 1 }, (_, i) => [x0 + ((x1 - x0) * i) / n, y + (i % 2 ? -h : h * 0.3)]);
-  /** 不規則的裂縫（第 2 版：等高的鋸齒讀成彩蛋的花紋；照敵人殼縫的寫法，齒高、間距錯開）。v＝第幾道（三道各錯一點）。 */
-  const CRACK = [[0, 0.25], [0.17, -0.9], [0.33, 0.35], [0.47, -0.55], [0.63, 0.5], [0.8, -1], [1, 0.1]];
-  const crack = (x0, x1, y, h, v = 0) => CRACK.map(([t, d], i) => [x0 + (x1 - x0) * Math.min(1, Math.max(0, t + (i % 3 === v % 3 ? 0.04 : 0))), y + d * h * (i % 2 === v % 2 ? 0.8 : 1.1)]);
-  /** 一道殼縫：裂縫下緣一條下一片殼板的亮邊（板緣），紅光壓在上面。 */
+  /** 三道殼縫（第 3 版，RG-5 審查 P-2：第 2 版三道共用一張偏移表，32 讀成條紋蛋）。每道一張自己的偏移表，長短、位置、間距都錯開：
+   *  上＝只裂左半邊、短；中＝最長、橫貫、右端往下斜；下＝中長、左高右低地斜、中段往下分岔一小叉。間距 6.6／8.6 不等分。
+   *  y、x0、x1 是殼的正面模型座標（盾錨點）；p＝[沿線比例 t, 上下偏移（×齒高 h）]；br＝[從第幾點分岔, 分岔的後續點]。 */
+  const CRACKS = [
+    { y: -11.2, x0: -6.6, x1: 0.8, p: [[0, 0.2], [0.24, -0.85], [0.47, 0.45], [0.72, -0.6], [1, 0.3]] },
+    { y: -4.6, x0: -7.4, x1: 6.6, p: [[0, -0.45], [0.12, 0.45], [0.27, -0.8], [0.41, 0.3], [0.56, -0.5], [0.71, 0.55], [0.85, -0.2], [1, 1.1]] },
+    { y: 4.0, x0: -5.6, x1: 5.2, p: [[0, -1.1], [0.2, -0.2], [0.39, -0.95], [0.6, 0.25], [0.8, -0.15], [1, 1]], br: [2, [[0.46, 0.9], [0.5, 2.1]]] },
+  ];
+  /** 第 v 道殼縫的折線（第一條是主縫、有分岔時第二條是分岔）。X、Y＝模型座標 → 畫布座標；h＝齒高；xs＝橫向縮（背面 0.8）。 */
+  const crack = (v, h, X = (x) => x, Y = (y) => y, xs = 1) => {
+    const C = CRACKS[v], pt = ([t, d]) => [X((C.x0 + (C.x1 - C.x0) * t) * xs), Y(C.y) + d * h], main = C.p.map(pt);
+    return C.br ? [main, [main[C.br[0]], ...C.br[1].map(pt)]] : [main];
+  };
+  /** 一道殼縫（一條折線）：裂縫下緣一條下一片殼板的亮邊（板緣），紅光壓在上面。 */
   function plateSeam(ctx, pts, w, lit, dy) { line(ctx, lit, w * 0.55, pts.map(([x, y]) => [x, y + dy])); line(ctx, FIX.glow, w, pts); line(ctx, FIX.core, w * 0.38, pts); }
   /** 正面外形：蛋形頂（比雲紋碑盾的淺拱高、尖）、兩側往外鼓、下緣微收、圓角。和碑盾同高同寬：x ±8.5、y −18～9。 */
   function shellPath(ctx, s = 1, ox = 0, oy = 0, i = 0) {
@@ -133,9 +145,7 @@ window.RGPlayerShield = (() => {
     fill(ctx, pal.inner, () => { ctx.moveTo(5.6, -16); ctx.quadraticCurveTo(9.6, -4, 6.4, 10); ctx.lineTo(12, 10); ctx.lineTo(12, -16); ctx.closePath(); }); // 右緣看到一點殼的厚度（內面）
     fill(ctx, "rgba(255,255,255,0.4)", () => ctx.ellipse(-4.2, -12.4, 0.9, 2.6, 0.5, 0, TAU));
     ctx.restore();
-    plateSeam(ctx, crack(-6.4, 5.6, -10.6, 1.5, 0), 1.1, mix(pal.plate, "#ffffff", 0.3), 1.0);
-    plateSeam(ctx, crack(-7.2, 6.2, -3.4, 1.5, 1), 1.1, mix(pal.plate, "#ffffff", 0.3), 1.0);
-    plateSeam(ctx, crack(-6.6, 5.6, 3.4, 1.5, 2), 1.1, mix(pal.plate, "#ffffff", 0.3), 1.0);
+    for (let v = 0; v < 3; v++) crack(v, 1.5).forEach((pts) => plateSeam(ctx, pts, 1.1, mix(pal.plate, "#ffffff", 0.3), 1.0));
   }
   /** 側面：敵人那片立殼（rgUnits.js SHELL.a，x 18～29、y 0～−30）等比縮進塔盾側面錨點（y −10～13.3，縮 0.777），新月形、三道殼縫。不畫扣盾的前腳（手握）。 */
   function shellSide(ctx, pal) {
@@ -161,7 +171,7 @@ window.RGPlayerShield = (() => {
     fill(ctx, pal.plate, () => shellPath(ctx, 1, 0, oy));
     fill(ctx, pal.inner, () => shellPath(ctx, 1, 0, oy, 1.2));
     ctx.save(); ctx.beginPath(); shellPath(ctx, 1, 0, oy, 1.2); ctx.clip(); fill(ctx, dk(pal.inner, 0.25), () => ctx.rect(4.4, -12, 6, 32)); ctx.restore();
-    [-10.6, -3.4, 3.4].forEach((y, v) => seam(ctx, crack(-5.6, 5, y + oy, 1.1, v), 0.7, 0.75));
+    for (let v = 0; v < 3; v++) crack(v, 1.1, undefined, (y) => y + oy, 0.8).forEach((pts) => seam(ctx, pts, 0.7, 0.75));
     for (const y of [-1.4, 9.6]) fill(ctx, FIX.strap, () => ctx.rect(-7.6, y, 15.2, 1.5));
   }
 
@@ -210,7 +220,7 @@ window.RGPlayerShield = (() => {
   // 3. Q 版圖示（48 格；照 qIconsWeapons.js 的副手：直立、外框由 QIcons.render 包、≤24px 省小零件）
   // =====================================================================================
   const HI = "rgba(255,255,255,0.45)", HI2 = "rgba(255,255,255,0.8)", SH = "rgba(0,0,0,0.22)";
-  /** 雲紋碑盾圖示：碑形（淺拱頂、直邊、下緣小圓角），盾邊寬 13%（同塔盾圖示），盾心大雲紋章（直徑佔盾寬 55%），兩道盾骨、四顆銅釘（>24px）。
+  /** 雲紋碑盾圖示：碑形（淺拱頂、直邊、下緣小圓角），盾邊寬 2.4（盾寬 29 的 8%；第 1 版 3.6），盾心大雲紋章（直徑佔盾寬 55%），兩道盾骨、四顆銅釘（>24px）。
    *  和人物手上同一面：拱高／寬＝4／17、盾邊色、盾骨、銅釘、紋章都照 sectFront，只加粗。 */
   function sectIcon(c, o, pal) {
     const L = 9.5, R = 38.5, T = 15, B = 44, a = 9; /* 第 2 版：拱加高（誇大碑形）、盾邊 3.6 → 2.4（月白邊太寬整面讀成白色相框、材質看不出來） */
@@ -243,7 +253,7 @@ window.RGPlayerShield = (() => {
     fill(c, HI, () => c.ellipse(OX - 4.4 * SX, OY - 13 * SY, 1.9, 4.4, 0.5, 0, TAU));
     c.restore();
     const w = o.small ? 3 : 2.6, h = o.small ? 2.4 : 2.6;
-    [[-10.6, -6.2, 5.2], [-3.4, -7, 5.8], [3.4, -6.4, 5.2]].forEach(([y, x0, x1], v) => { const pts = crack(OX + x0 * SX, OX + x1 * SX, OY + y * SY, h, v); line(c, mix(pal.plate, "#ffffff", 0.32), w * 0.6, pts.map(([x, yy]) => [x, yy + w * 0.75])); line(c, FIX.glow, w, pts); line(c, FIX.core, w * 0.4, pts); });
+    for (let v = 0; v < 3; v++) crack(v, h, (x) => OX + x * SX, (y) => OY + y * SY).forEach((pts) => { line(c, mix(pal.plate, "#ffffff", 0.32), w * 0.6, pts.map(([x, yy]) => [x, yy + w * 0.75])); line(c, FIX.glow, w, pts); line(c, FIX.core, w * 0.4, pts); });
   }
   /** 圖樣定義（給 QIcons.render）：{ zh, d, meta: { badge, r } }；look 同紙娃娃（material、keywords、rarity 或 enemy）。 */
   function iconDef(form, look = {}) {
