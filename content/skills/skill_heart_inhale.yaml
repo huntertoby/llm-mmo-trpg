@@ -1,5 +1,8 @@
 # 灰燼之心第 2 階段「呼吸」的吸氣（Phase 5F-5a；19.2.3：核心「吸氣」把 2 格內的單位拉近 1 格）。
 # 拉近之後在身邊一圈小火傷（同引力爆的聚集段）；只給敵人用；數值為初值，未經模擬。
+# GB-2（#164 R7、R2）：灰燼之心改成 3×3 後，環形從最近佔格量（切比雪夫距離恰為 2，24 格）、往最近佔格拉 1 格（引擎 T7）；
+# 後段方陣 1d10 照舊、不強制接吐息。19.2.3 要的「4 格內」目前寫不出來：聚集段的形狀只收 cross／square3／ring
+# （content/skills/constants.py GATHER_SHAPES），範圍光環的 radius 上限 3（skill_shapes.yaml）；形狀暫不改，待 PM 決定（PhaseGB-2報告.md）。
 id: skill_heart_inhale
 schema_version: 1
 name_zh: 熔心吸氣

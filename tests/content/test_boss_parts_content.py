@@ -152,7 +152,7 @@ def test_defaults_and_optional_fields_are_not_serialized() -> None:
 def test_units_without_parts_do_not_output_the_key() -> None:
     lib = library()
     with_parts_ids = sorted(t.id for t in lib.units.values() if t.parts)
-    assert with_parts_ids == [MIST]
+    assert with_parts_ids == ["ashen_heart", MIST]  # GB-2：灰燼之心的部位綁格
     for template in lib.units.values():
         dumped = template.model_dump()
         assert ("parts" in dumped) == bool(template.parts), template.id

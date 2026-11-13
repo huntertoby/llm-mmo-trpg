@@ -126,7 +126,7 @@ def test_5f5b_balance_values(library: ContentLibrary) -> None:
     heart = library.unit("ashen_heart")
     assert heart.max_hp == 160 and heart.element_mods[Element.FIRE] == -750
     spawns = [s.template for p in heart.phases for s in p.spawns]
-    assert spawns == ["heart_ember_lizard"]
+    assert spawns == ["heart_ember_lizard", "heart_ember_lizard"]  # GB-2：殼縫東西兩側各 1 隻
     lizard, court = library.unit("ember_lizard"), library.unit("heart_ember_lizard")
     same = {"attributes", "max_hp", "speed", "armor_bonus", "weapon", "skills", "element_mods"}
     assert court.model_dump(include=same) == lizard.model_dump(include=same)

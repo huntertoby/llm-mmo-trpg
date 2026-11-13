@@ -4,6 +4,9 @@
 第 5 節）：施放時選 4 格內一格（給自己護盾 1d4），下一個自己的回合開始在那格的 3×3 落下
 1d6 火＋火地 2 回合；法力 6、冷卻 2、2 AP；``molten_lord`` 不換。
 行為一致測試：實際跑引擎（內建技能，不另造測試技能）。
+GB-2（#164 R5）起不選格：落點由引擎選（``followup.anchor: farthest_enemy``，最遠的敵人當下的格子），
+第一段形狀 ``self``；本檔的落點跟著改成最遠的那名敵人（引擎規則的細節在
+``tests/engine/test_giant_parts_gb1c.py``）。
 """
 
 from __future__ import annotations
@@ -40,7 +43,7 @@ FLAT9 = "\n".join(["000000000"] * 9)
 SPLASH = "skill_lava_splash"
 SPOUT = "skill_lava_spout"
 CASTER = (1, 4)
-SPOT = Pos(x=4, y=4)
+SPOT = Pos(x=4, y=5)  # GB-2：最遠的敵人（(4, 4) 距 3、(4, 5) 距 4）
 
 
 def arena(foes: Sequence[tuple[int, int]] = ((4, 4), (4, 5))) -> BattleState:
@@ -59,8 +62,8 @@ def square(center: Pos) -> tuple[Pos, ...]:
     return tuple(Pos(x=center.x + dx, y=center.y + dy) for dy in (-1, 0, 1) for dx in (-1, 0, 1))
 
 
-def cast(state: BattleState, at: Pos = SPOT) -> ResolveResult:
-    return resolve(state, UseSkill(unit_id=U1, skill_id=SPLASH, target_pos=at))
+def cast(state: BattleState) -> ResolveResult:
+    return resolve(state, UseSkill(unit_id=U1, skill_id=SPLASH))
 
 
 def until_turn_of(state: BattleState, uid: UnitId) -> tuple[BattleState, list[EventBase]]:
@@ -89,11 +92,15 @@ def test_the_numbers_follow_the_q1_defaults() -> None:
     skill = library().skills[SPLASH]
     assert skill.enemy_only and skill.ap_cost == 2
     assert (skill.cost.mana, skill.cost.cooldown) == (6, 2)
-    assert (skill.shape.type, skill.shape.range) == ("square3", 4)
+    assert skill.shape.type == "self"  # GB-2：不選格
     assert [(e.type, str(e.dice), e.affects) for e in skill.effects] == [("shield", "1d4", "self")]
     follow = skill.followup
     assert follow is not None
-    assert (follow.when, follow.release, follow.anchor) == ("delayed", "next_turn", "cast_tile")
+    assert (follow.when, follow.release, follow.anchor) == (
+        "delayed",
+        "next_turn",
+        "farthest_enemy",
+    )
     assert (follow.shape.type, follow.shape.range) == ("square3", 0)
     assert follow.effects is not None
     kinds = [
