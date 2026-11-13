@@ -337,6 +337,11 @@ class ReflashSlotOut(_ApiModel):
     """第幾次（完整技能的調整欄為 0）。"""
     transform_hint: bool = False
     """這一欄是第 3 次大變化但還不是轉型（升階後建議重閃）。"""
+    available: bool = True
+    """重閃這一欄有沒有任何合法選項（RR-1，比照 FL-1c 的 ``flash_available``，06 6.34「費用方向」
+    第 7 點）：伺服器實際算過；``False`` 時按鈕標灰、不能按，灰字是 ``problem_zh``。"""
+    problem_zh: str | None = None
+    """不能重閃這一欄的原因（可以時為 ``None``）。"""
 
 
 class SkillFlashOut(_ApiModel):

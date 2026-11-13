@@ -9271,6 +9271,13 @@ export interface components {
              * @default false
              */
             transform_hint: boolean;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Problem Zh */
+            problem_zh?: string | null;
         };
         /**
          * RegionStoneView

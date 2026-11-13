@@ -77,7 +77,13 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.types import Attribute
 from trpg.skillgen.flash_major import transform_slot_plan
-from trpg.skillgen.flash_offer import NO_OPTIONS_ZH, has_options, history_problem, skill_before
+from trpg.skillgen.flash_offer import (
+    NO_OPTIONS_ZH,
+    NO_REFLASH_OPTIONS_ZH,
+    has_options,
+    history_problem,
+    skill_before,
+)
 from trpg.skillgen.flash_state import (
     FlashRecord,
     SkillFlash,
@@ -176,13 +182,21 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
         problem = NO_OPTIONS_ZH
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
     major = state.record(rules.major_flash)
-    # FL-1g（FL-1b 驗收可修 6）：「可以重閃第 3 格轉型」只在重閃第 3 格真的出得了題時才給；歷程在
-    # 目前的角色階級重推不了時（3W-R1，重閃沒有退路）按下去一定是「沒有合法的變化」
+    # RR-1（比照 FL-1c）：每一格先實際算一次重閃有沒有合法選項；沒有就標灰、不給按
+    slots = {
+        s: has_options(library, flash_request(library, run, skill_id, slot=s))
+        for s in reflash_slots(library, state)
+    }
+    # FL-1g（FL-1b 驗收可修 6）：「可以重閃第 3 格轉型」只在重閃第 3 格真的出得了題時才給
     hint = (
         not state.complete
         and major is not None
         and major.variation.source != "transform"
-        and has_options(library, flash_request(library, run, skill_id, slot=rules.major_flash))
+        and (
+            slots[rules.major_flash]
+            if rules.major_flash in slots
+            else has_options(library, flash_request(library, run, skill_id, slot=rules.major_flash))
+        )
     )
     return SkillFlashOut(
         skill_id=skill_id,
@@ -199,8 +213,13 @@ def _flash_out(library: ContentLibrary, run: RunState, skill_id: str) -> SkillFl
         dissolve_refund=dissolve_refund(rules, state),
         reflash_transform_hint=hint,
         reflash_slots=tuple(
-            ReflashSlotOut(slot=s, transform_hint=hint and s == rules.major_flash)
-            for s in reflash_slots(library, state)
+            ReflashSlotOut(
+                slot=s,
+                transform_hint=hint and s == rules.major_flash,
+                available=ok,
+                problem_zh=None if ok else NO_REFLASH_OPTIONS_ZH,
+            )
+            for s, ok in slots.items()
         ),
         carryable=carryable_records(library, state),
         inherit_problem_zh=inherit_source_problem(library, run, skill_id),
