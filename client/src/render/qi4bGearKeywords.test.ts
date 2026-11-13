@@ -60,7 +60,7 @@ describe("T-B1 接線：關鍵字層＝直接呼叫 keywords.paint", () => {
         n += 1;
       }
     });
-    expect(n).toBe(105 * 5 * 2);
+    expect(n).toBe(107 * 5 * 2); // RG-5 起鳶盾多兩款（雲紋碑盾、熔殼塔盾）
   });
   it("沒有關鍵字時 chips 不多畫任何東西", () => {
     for (const look of LOOKS.slice(0, 20)) expect(sig(gear(look, true, 48, 2))).toEqual(sig(gear(look, false, 48, 2)));

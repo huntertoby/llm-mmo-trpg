@@ -61,13 +61,18 @@ class FormDef(ContentModel):
 
     ``enemy_only``（RG-4，美術 PM 決定 2026-11-13「大盾先只給敵人」）：敵人範本的紙娃娃專用（例
     ``kite_shield`` 的 ``sect_great`` 門派大盾）。玩家拿得到形制的地方——裝備生成、前端外觀清單
-    （:func:`appearance_export`）——都略過；``items.yaml`` 的物品寫了這種形制算錯誤。"""
+    （:func:`appearance_export`）——都略過；``items.yaml`` 的物品寫了這種形制算錯誤。
+    RG-5 起沒有形制用它（兩種大盾開放給玩家），欄位保留給之後的敵人專用造型。
+
+    ``offhands``（RG-5，RG樣張 10.8 P-3）：限定只配這些副手（``offhands.yaml`` 的 ID）的物品；
+    ``kite_shield`` 是塔盾與鳶盾共用的造型，雲紋碑盾、熔殼塔盾只給塔盾。沒寫＝不限（不輸出）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
     materials: tuple[str, ...] | None = None
     default_material: str | None = Field(default=None, pattern=ID_PATTERN)
     enemy_only: bool = Field(default=False, exclude_if=lambda v: not v)
+    offhands: tuple[str, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class KindDef(ContentModel):
@@ -209,6 +214,9 @@ def _form_material_problems(item: ItemDef, kind: KindDef) -> list[str]:
         return [f"物品 {item.id}：造型 {kind.id} 沒有形制 {item.form!r}"]
     if form is not None and form.enemy_only:
         return [f"物品 {item.id}：造型 {kind.id} 的形制 {form.id} 只給敵人（enemy_only）"]
+    if form is not None and form.offhands is not None and item.offhand not in form.offhands:
+        allowed_offhands = "、".join(form.offhands)
+        return [f"物品 {item.id}：造型 {kind.id} 的形制 {form.id} 只配副手 {allowed_offhands}"]
     allowed = kind.form_materials(form) if form is not None else kind.materials
     if item.material is not None and item.material not in allowed:
         return [f"物品 {item.id}：材質 {item.material!r} 不在允許內（{', '.join(allowed)}）"]
@@ -254,19 +262,24 @@ def appearance_export(table: AppearanceTable, keywords: KeywordTable) -> dict[st
                 "paired": k.paired,
                 "materials": list(k.materials),
                 "defaultMaterial": k.default_material,
-                "forms": [
-                    {
-                        "id": f.id,
-                        "zh": f.name_zh,
-                        "materials": list(k.form_materials(f)),
-                        "defaultMaterial": k.form_default(f),
-                    }
-                    for f in k.player_forms()
-                ],
+                "forms": [_form_export(k, f) for f in k.player_forms()],
             }
             for k in table.kinds
         ],
     }
+
+
+def _form_export(kind: KindDef, form: FormDef) -> dict[str, object]:
+    """一個形制的前端欄位；``offhands``（RG-5）只在有限定時輸出（其他形制的 JSON 不變）。"""
+    out: dict[str, object] = {
+        "id": form.id,
+        "zh": form.name_zh,
+        "materials": list(kind.form_materials(form)),
+        "defaultMaterial": kind.form_default(form),
+    }
+    if form.offhands is not None:
+        out["offhands"] = list(form.offhands)
+    return out
 
 
 def appearance_json(table: AppearanceTable, keywords: KeywordTable) -> str:

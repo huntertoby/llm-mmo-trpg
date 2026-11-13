@@ -86,8 +86,11 @@ bosses:
   sect_mist_lock_master: {material: item_summit_mist_crystal, gear_rarity: epic}
   ashen_heart: {material: item_molten_heart, gear_rarity: epic}   # 5F-5a：灰燼之心 → 熔心晶（19.2.3、19.2.4）
 
-# RG-4（#163，08 8.11「打盾兵拿盾兵的盾」）：掉落算在這些敵人頭上、掉到塔盾時必帶「護陣」。
+# RG-4（#163，08 8.11「打盾兵拿盾兵的盾」）：掉落算在這些敵人頭上、掉到塔盾時必帶「盾陣」。
+# RG-5（玩法PM交接 4.1.5）：外觀也一定是對應形制（form；持盾弟子 → 雲紋碑盾、熔殼甲兵 → 熔殼塔盾），材質照一般規則。
+# 陣容裡兩種都有時取上面那一列（持盾弟子）。
 # 精英的那一件算該精英；沒有精英時的一般掉落算整個敵方陣容（陣容裡有就算）。詞條照一般計點，
-# 其他詞條從最後一條往前拿掉到放得下預算；低物品等級時護陣單獨一條超過預算也照樣帶（待 PM 決定）。
+# 其他詞條從最後一條往前拿掉到放得下預算；低物品等級時盾陣單獨一條超過預算也照樣帶（玩法PM交接 4.1.6 RG-4 第 2 條：照帶）。
 signature_affixes:
-  - {units: [sect_shield_disciple, molten_shell_trooper], offhand: tower_shield, affix: affix_trait_tower_formation}
+  - {units: [sect_shield_disciple], offhand: tower_shield, affix: affix_trait_tower_formation, form: sect_great}
+  - {units: [molten_shell_trooper], offhand: tower_shield, affix: affix_trait_tower_formation, form: molten_shell}

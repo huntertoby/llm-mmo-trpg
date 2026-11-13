@@ -610,12 +610,12 @@ def _attack(e: AttackRolled, v: _View) -> str:
     ]
     parts += _bonus_parts(e)
     cover_note = ""
-    if e.cover and e.cover_unit_id is not None:  # 盾兵掩護（RG-1，#162）、護陣（RG-4，#163）
-        label = "護陣" if e.cover_formation else "盾兵掩護"
+    if e.cover and e.cover_unit_id is not None:  # 盾兵掩護（RG-1，#162）、盾陣（RG-4，#163）
+        label = "盾陣" if e.cover_formation else "盾兵掩護"
         parts.append(f"{label} {signed(e.cover)}")
         guard = state.units.get(e.cover_unit_id)
         guard_name = e.cover_unit_id if guard is None else guard.name_zh
-        what = "護陣" if e.cover_formation else "盾"
+        what = "盾陣" if e.cover_formation else "盾"
         cover_note = f"［命中 −{-e.cover}：被{guard_name}的{what}擋住］"
     elif e.cover:
         parts.append(f"半掩護 {signed(e.cover)}")
@@ -902,11 +902,13 @@ def _status_converted(e: StatusConverted, v: _View) -> str:
 
 @_handles(StacksChanged)
 def _stacks(e: StacksChanged, v: _View) -> str:
-    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    definition = v.state.ruleset.stack_def(e.stack_id)
     verb = {"gained": "累積", "consumed": "消耗", "expired": "過期清空", "overload": "超載清空"}[
         e.reason
     ]
-    return f"    {v.name[e.unit_id]} 的「{stack}」{verb}：{e.before} → {e.after} 層"
+    unit = definition.unit_zh  # RG-5：連擊點用「點」
+    who = v.name[e.unit_id]
+    return f"    {who} 的「{definition.name_zh}」{verb}：{e.before} → {e.after} {unit}"
 
 
 # ---------------------------------------------------------------------------
@@ -1130,11 +1132,11 @@ def _gear_triggered(e: GearTriggered, v: _View) -> str:
 
 @_handles(ChargeActivated)
 def _charge_activated(e: ChargeActivated, v: _View) -> str:
-    stack = v.state.ruleset.stack_def(e.stack_id).name_zh
+    definition = v.state.ruleset.stack_def(e.stack_id)
     target = f"，對象 {v.name[e.target_id]}" if e.target_id is not None else ""
     return (
         f"  ⚡ {v.name[e.unit_id]} 啟動裝備「{e.name_zh}」"
-        f"（花 {e.stacks_spent} 層{stack}、{e.ap_spent} AP）{target}"
+        f"（花 {e.stacks_spent} {definition.unit_zh}{definition.name_zh}、{e.ap_spent} AP）{target}"
     )
 
 

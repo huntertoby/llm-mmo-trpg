@@ -62,7 +62,7 @@ describe("T2 gearAppearance.json 的武器、副手每一款都有 Q 版圖樣",
     }
     expect(WEAPON_KINDS.filter((k) => k.slotType === "weapon").length).toBe(17);
     expect(WEAPON_KINDS.filter((k) => k.slotType === "offhand").length).toBe(4);
-    expect(count).toBe(61);
+    expect(count).toBe(63); // RG-5：副手加雲紋碑盾、熔殼塔盾（61 → 63）
     // Q 版的清單沒有多出 JSON 以外的種類
     expect(Object.keys(Q_WEAPON_KINDS).sort()).toEqual(WEAPON_KINDS.map((k) => k.id).sort());
   });

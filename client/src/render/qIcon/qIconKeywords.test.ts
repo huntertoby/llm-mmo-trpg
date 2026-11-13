@@ -114,7 +114,7 @@ describe("T-A3 角", () => {
     });
   });
   it("105 款：查 kind/form → kind → 右下；沒有任何一款放右上；例外表的每一列都對到實際的款", () => {
-    expect(LOOKS).toHaveLength(105);
+    expect(LOOKS).toHaveLength(107); // RG-5 起鳶盾多兩款（雲紋碑盾、熔殼塔盾）
     const used = new Set<string>();
     for (const look of LOOKS) {
       const c = K.cornersOf({ def: defOf(look) })[0], kf = `${look.kind}/${look.form}`, want = K.KEY_CORNER[kf]?.[0] ?? K.KEY_CORNER[look.kind!]?.[0] ?? "br";

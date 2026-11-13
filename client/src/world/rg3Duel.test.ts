@@ -60,6 +60,15 @@ describe("duel dialog", () => {
     expect(html(view("offered", OFFERED, true))).not.toContain("world-duel-accept");
   });
 
+  it("the fight button is plain while a duel is offered (no nudge), primary otherwise", () => {
+    const fight = (v: WorldView): string => /<button[^>]*data-testid="world-fight"[^>]*>/.exec(html(v))?.[0] ?? "";
+    expect(fight(view("offered", OFFERED))).not.toContain("primary");
+    expect(fight(view(null, null))).toContain('class="primary"');
+    expect(fight(view("accepted", "接受了狼王的單挑"))).toContain('class="primary"');
+    expect(fight(view("declined", "拒絕了"))).toContain('class="primary"');
+    expect(fight(view("offered", OFFERED, true))).toContain('class="primary"'); // 已在戰鬥中：「繼續戰鬥」照舊
+  });
+
   it("names the first elite", () => {
     const e = view("offered", OFFERED).encounter;
     expect(e === null ? "" : duelEliteName(e)).toBe("狼王");

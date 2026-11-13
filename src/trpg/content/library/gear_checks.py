@@ -187,14 +187,28 @@ def _affix_statuses(affix: AffixDef) -> list[str]:
 
 
 def _check_appearance(
-    root: Path, appearance: AppearanceTable, items: ItemTable, keywords: KeywordTable
+    root: Path,
+    appearance: AppearanceTable,
+    items: ItemTable,
+    keywords: KeywordTable,
+    offhands: Collection[str] | None = None,
 ) -> None:
-    """外觀清單的關鍵字都是 3-24b1 的關鍵字；items.yaml 寫了的外觀欄位都認得且相容。"""
+    """外觀清單的關鍵字都是 3-24b1 的關鍵字；items.yaml 寫了的外觀欄位都認得且相容；形制限定的
+    副手（``FormDef.offhands``，RG-5）都在 ``offhands.yaml``（``offhands`` 為 ``None`` 時不查）。"""
+    path = root / "equipment" / "appearance.yaml"
     unknown = sorted(set(appearance.keywords) - set(keywords.ids()))
     if unknown:
-        raise ContentError(
-            root / "equipment" / "appearance.yaml", f"未知的關鍵字：{', '.join(unknown)}"
+        raise ContentError(path, f"未知的關鍵字：{', '.join(unknown)}")
+    if offhands is not None:
+        bad = sorted(
+            f"{kind.id}.{form.id}：{o}"
+            for kind in appearance.kinds
+            for form in kind.forms
+            for o in form.offhands or ()
+            if o not in offhands
         )
+        if bad:
+            raise ContentError(path, f"形制限定了未知的副手：{'；'.join(bad)}")
     problems = [p for item in items.items for p in item_appearance_problems(item, appearance)]
     if problems:
         raise ContentError(root / "items.yaml", "；".join(problems))

@@ -4,7 +4,7 @@
 //           主角 hero_fighter＋steel sword）× DPR 1、2 的整張 duelCanvas；獸爪單獨（48 格，px 48、58 × res 1、2）；
 //           另外逐項比（歸因用）：主角／精英剪影（cv、seam）、交叉的武器圖示、紙娃娃小人本身（樣張 QDoll.stamp／QNpc.stamp vs 遊戲端 qStamp）。
 //           輸出 `<pre id="out">`。
-//   dialog  正式的遇敵卡（EncounterPanel）＋單挑段＋插圖，假資料（&e=wolf｜lord｜scar｜forge，&w=1600｜800 只決定卡片外的舞台寬）。
+//   dialog  正式的遇敵卡（EncounterPanel）＋單挑段＋插圖，假資料（&e=wolf｜lord｜scar｜forge，&w=1600｜800 只決定卡片外的舞台寬；&duel=none 沒有單挑提議，看「開戰」主鈕對照）。
 //   （沒有 mode）並排看圖：四場樣張（上）vs 遊戲端（下），DPR 2；獸爪 ×4。
 // 重跑（無頭 Chrome，一定要 --disable-gpu）：chrome --headless=new --disable-gpu --dump-dom --virtual-time-budget=60000 "http://127.0.0.1:<port>/dev/duel-gallery.html?mode=diff&mute=1"
 import { createRoot } from "react-dom/client";
@@ -362,8 +362,8 @@ function DialogScene({ e }: { e: string }) {
       opening_zh: [],
       allies_zh: "主角（開場 HP 60）",
       battlefield_fallback_zh: null,
-      duel: "offered",
-      duel_zh: `接受：只有你和${E.zh}上場，隊友、傭兵不上場。拒絕：照原本全隊開打。兩邊的獎勵一樣（經驗、掉落、懸賞照整個陣容算）。`,
+      duel: P.get("duel") === "none" ? null : "offered",
+      duel_zh: P.get("duel") === "none" ? null : `接受：只有你和${E.zh}上場，隊友、傭兵不上場。拒絕：照原本全隊開打。兩邊的獎勵一樣（經驗、掉落、懸賞照整個陣容算）。`,
     },
   } as unknown as WorldView;
   const w = Number(P.get("w") ?? 1600);

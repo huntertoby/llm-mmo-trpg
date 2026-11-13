@@ -52,7 +52,8 @@ stacks:
   # 組合器會抽（白板才長得出來）；怒氣本來就會抽。
   - id: combo_point
     name_zh: 連擊點
-    description_zh: 累積在自己身上；武器技命中時自動累積，消耗連擊點的終結技每層提高傷害。
+    unit_zh: 點   # RG-5（玩法PM交接 4.1.6 KW-3）：連擊點用「點」，其他層數用「層」
+    description_zh: 累積在自己身上；武器技命中時自動累積，消耗連擊點的終結技每點提高傷害。
     owner: self
     max: 5
     ai_value: 3

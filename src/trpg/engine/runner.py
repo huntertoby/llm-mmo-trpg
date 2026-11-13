@@ -41,10 +41,9 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/123"
-"""目前的戰鬥紀錄版本（``/123``，Phase RG-4：塔盾詞條「護陣」——相鄰隊友被遠程攻擊時命中
-−``shield_formation_hit_penalty``，和半掩護、盾兵、塔盾取最高；``attack_rolled`` 新增
-``cover_formation``）。
+LOG_FORMAT = "trpg-battle-log/124"
+"""目前的戰鬥紀錄版本（``/124``，Phase RG-5：盾兵與塔盾詞條「盾陣」的高度條件統一成「攻擊者比
+被攻擊的人高 1 層以上無視」，同塔盾本體；以前是攻擊者比持盾者高 2 層才無視）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

@@ -227,11 +227,14 @@ export interface GuardDraw {
 
 /**
  * 滑過目標的預覽有盾兵掩護（`cover.kind` ＝ `shield_guard`、`cover.unit_id`）時畫小盾與連結（樣張 2.4「何時出現」）；
- * 其他（沒有掩護、物件掩護、塔盾、目標或盾兵不在畫面資料裡）null。
+ * 盾陣（#163 塔盾詞條，`cover.kind` ＝ `shield_formation`、`cover.unit_id`＝持塔盾的人）沿用同一個小盾＋點線，不另畫圖示，
+ * 差別交給伺服器的預覽文字（RG-4 驗收待決 9，美術 PM 2026-11-13 裁定）。
+ * 其他（沒有掩護、物件掩護、目標或擋的人不在畫面資料裡）null。
  */
+const GUARD_COVERS: ReadonlySet<string> = new Set(["shield_guard", "shield_formation"]);
 export function guardDraw(p: PreviewOut | null | undefined, view: BattleView): GuardDraw | null {
   const cover = p?.cover;
-  if (p == null || cover == null || cover.kind !== "shield_guard" || cover.unit_id == null) return null;
+  if (p == null || cover == null || !GUARD_COVERS.has(cover.kind) || cover.unit_id == null) return null;
   const targetId = "target_id" in p.action && typeof p.action.target_id === "string" ? p.action.target_id : null;
   if (targetId === null) return null;
   const live = new Map(view.units.filter(isAlive).map((u) => [u.id, u.pos]));

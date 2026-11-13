@@ -236,7 +236,7 @@ def _load_gear(
         problems = item_problems(item, affixes, weapon_map, t.equipment_rules, offhand_map)
         if problems:
             raise ContentError(root / "items.yaml", "；".join(problems))
-    _check_appearance(root, t.appearance, t.item_table, t.keywords)
+    _check_appearance(root, t.appearance, t.item_table, t.keywords, offhand_map)
     _check_item_gen(root, t.item_gen, affixes)
     return affixes, items, _GearCatalog(items=items, affixes=affixes, rules=t.equipment_rules)
 

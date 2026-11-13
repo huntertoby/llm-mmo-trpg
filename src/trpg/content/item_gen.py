@@ -800,7 +800,7 @@ def downscale_item(library: ContentLibrary, item: ItemDef, item_level: int) -> I
 
 
 def with_affix(library: ContentLibrary, item: ItemDef, affix_id: str) -> ItemDef:
-    """必帶詞條（RG-4，#163：持盾弟子、熔殼甲兵掉的塔盾必帶「護陣」）：``item`` 還沒有
+    """必帶詞條（RG-4，#163：持盾弟子、熔殼甲兵掉的塔盾必帶「盾陣」）：``item`` 還沒有
     ``affix_id``、而且這條詞條掛得上時，把它加在最後；其他詞條從最後一條往前拿掉，直到條數（稀有度與每件上限）與
     點數（部位詞條預算，8.22.1）放得下，普通物品的基礎加成壓到剩下的預算。第 1 條（稀有起的 build
     詞條）最後才拿。這條詞條本身照一般詞條計點；單獨一條就超過預算（低物品等級）時照樣帶上

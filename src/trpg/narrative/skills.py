@@ -1169,6 +1169,7 @@ def condition_summary(library: ContentLibrary, condition: ConditionSpec) -> str:
         tag_runes=rules.skill_tags.rune_names(),
         weapon_name=lambda wid: rules.gear_names.get(wid, wid),
         stack_name=lambda sid: rules.stack_def(sid).name_zh,
+        stack_unit=lambda sid: rules.stack_def(sid).unit_zh,
     )
 
 

@@ -99,7 +99,7 @@ __all__ = [
 
 AFFIX_ID_PATTERN = r"^affix_[a-z0-9_]+$"
 ALLY_RANGED_COVER = "ally_ranged_cover"
-"""副手特性強化（RG-4，#163）：塔盾詞條「護陣」——相鄰的隊友被遠程攻擊時，攻擊者命中
+"""副手特性強化（RG-4，#163）：塔盾詞條「盾陣」——相鄰的隊友被遠程攻擊時，攻擊者命中
 −``core.shield_formation_hit_penalty``（判定同盾兵，:func:`trpg.engine.rules.combat.half_cover`）。"""
 OFFHAND_TRAIT_PARAMS: frozenset[str] = frozenset({ALLY_RANGED_COVER})
 """限定副手（``offhands``）的武器特性強化可用的參數（不改武器資料，由引擎直接讀）。"""
@@ -209,7 +209,7 @@ class _AffixBase(ContentModel):
     - ``item_tags``：依物品種類限定標籤（例如「副（限盾）、身」寫成 ``{offhand: [shield]}``：副手
       必須帶 ``shield`` 標籤，身體不限）。
     - ``offhands``：副手類物品限定這些副手（``offhands.yaml`` 的 id；空 ＝ 不限；其他種類的物品不受
-      影響；RG-4：塔盾專屬的「護陣」）。沒填時不輸出（既有詞條的序列化不變）。
+      影響；RG-4：塔盾專屬的「盾陣」）。沒填時不輸出（既有詞條的序列化不變）。
     - ``legendary_only``：只能出現在傳說物品上（改變規則類）。
     - ``value``：數值 ``N`` 的範圍；``None`` 表示這條詞條沒有可擲的數值（固定效果）。
     """
@@ -485,7 +485,7 @@ class WeaponTraitAffix(_AffixBase):
     （例如貼臉懲罰減半 ＝ 500）。``weapons`` 必填（只出現在對應武器上）。
 
     副手特性強化（RG-4，#163）：改填 ``offhands``（只出現在對應副手上、``slots: [offhand]``），
-    ``param`` 必須是 :data:`OFFHAND_TRAIT_PARAMS` 之一（目前只有塔盾的「護陣」
+    ``param`` 必須是 :data:`OFFHAND_TRAIT_PARAMS` 之一（目前只有塔盾的「盾陣」
     ``ally_ranged_cover``），``delta: 1``；不改武器資料，由引擎直接讀。"""
 
     category: Literal["weapon_trait"]

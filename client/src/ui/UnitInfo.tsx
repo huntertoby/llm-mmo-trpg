@@ -30,6 +30,8 @@ import { activeStacks, affixBadges, barData, surfaceAt, unitChips } from "./stat
 import { breakLine, partBarState } from "../battle/partMenu";
 import { PartBar, PartIcon } from "./PartBar";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
+import { StackPips } from "./StackPips";
+import { hasGauge } from "../render/qIcon/stackGauge";
 
 interface Props {
   unit: UnitView | null;
@@ -246,9 +248,14 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
           {unit.statuses.map((s, i) => (
             <StatusBadge key={`${i}:${s.status_id}`} status={s} text={statusText(s, skills)} />
           ))}
-          {activeStacks(unit).map(([k, n]) => (
-            <StackBadge key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
-          ))}
+          {/* KW-3 待決 3（美術 PM 2026-11-13）：連擊、怒氣、專注、氣用和 HUD 同尺寸的計量；其他層數照舊。只列 >0（0 層照現行不顯示） */}
+          {activeStacks(unit).map(([k, n]) =>
+            hasGauge(k) ? (
+              <StackPips key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
+            ) : (
+              <StackBadge key={k} id={k} count={n} cards={cards} owned={unit.id === heroId ? unit.skills : null} />
+            ),
+          )}
           {surface !== null && view !== undefined && <SurfaceBadge surface={surface} text={surfaceText(view, unit)} />}
         </div>
       )}

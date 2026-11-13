@@ -854,6 +854,7 @@ class _View:
             tag_runes=ruleset.skill_tags.rune_names(),
             weapon_name=lambda w: weapons[w].name_zh if w in weapons else w,
             stack_name=lambda sid: ruleset.stack_def(sid).name_zh,
+            stack_unit=lambda sid: ruleset.stack_def(sid).unit_zh,
         )
         return f"{text}才有" if text.endswith("時") else f"{text}時才有"
 

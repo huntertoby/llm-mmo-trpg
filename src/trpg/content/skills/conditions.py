@@ -121,6 +121,11 @@ def _unknown_tag(_tag: str) -> str:
     return UNKNOWN_TAG_TEXT
 
 
+def _stack_layer(_stack: str) -> str:
+    """沒有層數表可查時的單位（RG-5）。"""
+    return "層"
+
+
 def _unknown_stack(_stack: str) -> str:
     """沒有層數表可查時（KW-1）：不露出英文代號。"""
     return "層數"
@@ -135,8 +140,11 @@ def condition_text(
     tag_runes: Mapping[str, str] | None = None,
     weapon_name: Callable[[str], str] = str,
     stack_name: Callable[[str], str] = _unknown_stack,
+    stack_unit: Callable[[str], str] = _stack_layer,
 ) -> str:
-    """條件的一句話（繁體中文），例如「目標血量低於 40%」。有 ``any_of`` 時用「，或」連接。"""
+    """條件的一句話（繁體中文），例如「目標血量低於 40%」。有 ``any_of`` 時用「，或」連接。
+
+    ``stack_unit``：層數的單位（RG-5：連擊點「點」、其他「層」；``StackDef.unit_zh``）。"""
     return "，或".join(
         _single_condition_text(
             part,
@@ -146,6 +154,7 @@ def condition_text(
             tag_runes=tag_runes,
             weapon_name=weapon_name,
             stack_name=stack_name,
+            stack_unit=stack_unit,
         )
         for part in condition.alternatives()
     )
@@ -160,6 +169,7 @@ def _single_condition_text(
     tag_runes: Mapping[str, str] | None,
     weapon_name: Callable[[str], str],
     stack_name: Callable[[str], str],
+    stack_unit: Callable[[str], str],
 ) -> str:
     kind = condition.type
     if kind in ("target_hp_below", "self_hp_below") and condition.permille is not None:
@@ -175,7 +185,7 @@ def _single_condition_text(
         return f"本回合已施放過帶「{tag_name(condition.tag)}」標籤的技能"
     plain = _PLAIN_CONDITION_TEXT.get(kind)
     if kind == SELF_STACK_AT_LEAST:
-        plain = _stack_condition_text(condition, stack_name)
+        plain = _stack_condition_text(condition, stack_name, stack_unit)
     if kind == "in_form" and condition.form_category is not None:
         plain = f"你在{FORM_CATEGORY_TEXT[condition.form_category]}形態中"
     if plain is None and kind == "on_own_rune":
@@ -187,9 +197,12 @@ def _single_condition_text(
     return plain or kind
 
 
-def _stack_condition_text(condition: ConditionSpec, stack_name: Callable[[str], str]) -> str:
-    """``self_stack_at_least`` 的一句話（KW-1）：「自身『連擊點』達 3 層」；參數不齊時也不露出
-    英文代號。"""
+def _stack_condition_text(
+    condition: ConditionSpec, stack_name: Callable[[str], str], stack_unit: Callable[[str], str]
+) -> str:
+    """``self_stack_at_least`` 的一句話（KW-1）：「自身『連擊點』達 3 點」「自身『怒氣』達 2 層」
+    （單位 RG-5 起照 ``StackDef.unit_zh``）；參數不齊時也不露出英文代號。"""
     if condition.stack is None or condition.count is None:
         return "自身層數達到指定層數"
-    return f"自身「{stack_name(condition.stack)}」達 {condition.count} 層"
+    unit = stack_unit(condition.stack)
+    return f"自身「{stack_name(condition.stack)}」達 {condition.count} {unit}"
