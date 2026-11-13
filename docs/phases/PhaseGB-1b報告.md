@@ -119,3 +119,11 @@
 3. `api/skill_reasons.py`、`sim/skill_ratio.py` 的行內距離沒有換（不在本段範圍）；GB-4a 處理 API 時一起換。
 4. `attack_rolled.hit_tile` 是新事件欄位（`/127`），前端事件窄化要在 GB-4a 加（`client/src/api/types.ts`）。
 5. 恐懼、藉機攻擊、陣法、光環等「N 格內」全部量到最近佔格，巨人因此影響的範圍變大（平衡第 10 節第 1 條的延伸），若有某一項要量到中心請指出。
+
+## 開發 PM 裁定（2026-11-14）
+
+- 接受。46／0、三個雜湊不變、CLI 快照 0 鍵。
+- 待決 1、2：同意（錐形、直線從所選方向那一面的中間格起算；`include_caster` 照舊）。
+- 待決 3、4：`api/skill_reasons.py`、`sim/skill_ratio.py` 換單位距離、前端窄化 `attack_rolled.hit_tile`，併進 GB-4a。
+- 待決 5：照 05 5.12.4 第 2 點「距離量到最近的那一格」，全部量到最近佔格，不另開例外。
+- 待決 6 平衡觀察轉玩法 PM 記平衡待查。
