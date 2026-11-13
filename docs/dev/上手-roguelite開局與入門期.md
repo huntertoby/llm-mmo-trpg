@@ -17,7 +17,7 @@
 | `src/trpg/world/state.py` | `CharacterState`（含 `opening: OpeningState \| None`、`hints_seen`、`hints_off`、`level_seen`）、`OpeningState`、`CHAR_FORMAT`、`LEGACY_CHAR_FORMATS` |
 | `src/trpg/world/actions.py` | 世界動作與事件的型別：`OpeningClassAction`、`OpeningConfirmAction`、`OpeningReselectAction`、`HintSeenAction`、`HintsOffAction`、`HintsResetAction`、`UI_NOTE_ACTIONS`；事件 `OpeningClassChosenEvent`、`OpeningConfirmedEvent`、`OpeningReselectedEvent` |
 | `src/trpg/world/step.py` | `world_step(library, world, char, action, now)`：純函式入口；分派表 `HANDLERS`；`new_character`；提示旗標常數 `LESSON_ALLOCATE`、`LESSON_ALLOCATE_SKIP`、`LESSON_ALLOCATE_LEFT`、`LESSON_ALLOCATE_AGAIN` |
-| `src/trpg/world/growth.py` | 升級與成長；`OPENING_END_LEVEL`（4）；入門期升級自動配點（`gain_xp`）；4 級前不能閃現的判斷在這裡 |
+| `src/trpg/world/growth.py` | 升級與成長；`OPENING_END_LEVEL`（4）；入門期升級自動配點（`gain_xp`）；4 級前不能閃現的判斷在這裡；升階重配 `sync_tier`（→ roguelite `sync_skill_tier`；RR-1 起照新階級套不上的那一筆記下升階前的定義 `FlashRecord.kept`，見 `上手-內容資料與模擬.md` 第 45 點；`WORLD_RULES_VERSION` 29） |
 | `src/trpg/world/quests.py` | 任務推進；延後的三選一 `issue_deferred_offers`、`_note_granted`（把三選一拿到的招記進 `opening.granted_skills`） |
 | `src/trpg/world/save.py` | 存檔格式與版號：`WORLD_RULES_VERSION`（每一版改了什麼寫在常數下面的說明）、`WLOG_FORMAT`、`dumps_char`／`loads_char`、`content_digest`、`log_rules_key` |
 | `src/trpg/world/battle.py` | `prepare_battle(library, char)` 組出戰鬥設定；`fight` 把打完的步驟回寫世界；主角出場函式 `hero_spawn`（PR-2a 起公開，靶場試玩共用） |
