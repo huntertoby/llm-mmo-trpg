@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,7 @@ from trpg.content.library.gear_checks import (
     _check_item_gen,
     _GearCatalog,
 )
+from trpg.content.library.giant_checks import giant_problems
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.library.skill_checks import (
     _check_keywords,
@@ -346,6 +348,28 @@ def _load_run_extras(
     }
 
 
+def _check_giants(
+    root: Path,
+    t: _BaseTables,
+    *,
+    units: dict[str, UnitTemplate],
+    maps: dict[str, MapDef],
+    world: Mapping[str, Any],
+) -> None:
+    """不動巨型頭目（GB-1a，T13）：只在頭目地圖的遭遇裡、放得下、``giant_facing`` 的範本存在。"""
+    problems = giant_problems(
+        units,
+        maps,
+        terrain=t.terrain.by_id(),
+        objects=t.objects.by_id(),
+        roguelite=t.roguelite,
+        world_maps=world["world_maps"],
+        world_encounters=world["world_encounters"],
+    )
+    if problems:
+        raise ContentError(root / "units", "；".join(problems))
+
+
 def load_library(
     content_dir: Path | None = None,
 ) -> ContentLibrary:
@@ -381,6 +405,7 @@ def load_library(
         root, t, files, ruleset=ruleset, units=units, maps=maps, races=races, affixes=affixes
     )
     extras = _load_run_extras(root, t, load, maps=maps, units=units)
+    _check_giants(root, t, units=units, maps=maps, world=world)  # GB-1a：不動巨型頭目
     name_problems = skill_name_problems(t.skills, t.composer.whiteboard)  # 6L-1：其他檢查之後
     name_problems += exploit_problems(t.composer.whiteboard, t.keywords)  # 6F-4b：利用者白板
     name_problems += pool_region_problems(t.skills, t.regions)  # 6F-4c：區域技能池

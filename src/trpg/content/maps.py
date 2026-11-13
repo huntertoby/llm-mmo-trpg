@@ -29,6 +29,7 @@ __all__ = [
     "AltObjectives",
     "Archetype",
     "Encounter",
+    "GiantFacing",
     "MapDef",
     "MapEvent",
     "MapObjectPlacement",
@@ -57,6 +58,9 @@ _MAX_SIZE = 64
 
 type XY = tuple[int, int]
 
+
+type GiantFacing = Literal["north", "east", "south", "west"]
+"""巨型頭目的朝向（同引擎的 ``Facing``；北＝y − 1）。"""
 
 type Archetype = Literal[
     "bridge_chasm",
@@ -303,6 +307,9 @@ class MapDef(ContentModel):
     source_wells: tuple[tuple[int, int], ...] = ()
     """源泉格（Phase 3C-4a）：我方單位進入時 +1 源力（不超過上限），源泉消失。不可與物件、
     起始區重疊，不可重複。"""
+    giant_facing: dict[str, GiantFacing] = Field(default_factory=dict, exclude_if=lambda v: not v)
+    """不動巨型頭目的朝向（GB-1a，05 5.12.4 第 7 點、T8）：範本 ID → 正面朝哪個方向（整場不轉）。
+    沒列的巨型單位照陣營的開場朝向。範本 ID 必須存在（載入內容庫時檢查）；空＝不輸出。"""
 
     @property
     def width(self) -> int:

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from trpg.content.rules import CoreRules
 
 __all__ = [
+    "GIANT_FOOTPRINTS",
     "ID_PATTERN",
     "SUMMON_MODES",
     "ArmorBreak",
@@ -1270,6 +1271,9 @@ type LookBeastEars = Literal["fox", "cat", "wolf", "rabbit"]
 BOSS_TAG = "boss"
 """頭目的標籤（QK-6a：頭目外觀固定，不依 id 變化）。"""
 
+GIANT_FOOTPRINTS: tuple[int, ...] = (1, 3)
+"""``UnitTemplate.footprint`` 可以填的值（GB-1a：只做 3×3 的不動巨型頭目）。"""
+
 
 class LookChoice(ContentModel):
     """玩家自己選的外觀（Phase 6R-2，#137；07 7.7）：**只在畫面**，不影響數值、技能與技能生成，
@@ -1756,6 +1760,21 @@ class UnitTemplate(ContentModel):
     parts: tuple[BossPart, ...] = Field(default=(), exclude_if=lambda v: not v)
     """頭目部位（PB-1a，05 5.12.2；:mod:`trpg.content.parts`）：只有帶 ``boss`` 標籤、不是召喚物的
     範本能有；空＝沒有部位（不輸出）。"""
+    footprint: int = Field(default=1, exclude_if=lambda v: v == 1)
+    """佔格邊長（GB-1a，05 5.12.4「不動巨型頭目」）：1＝一般單位（不輸出）；3＝佔 3×3（位置是中心
+    格）。第一版只收 1 或 3，而且只有帶 ``boss`` 標籤、不是召喚物的範本能大於 1；只能出現在
+    ``archetype: boss`` 地圖的遭遇裡（載入內容庫時檢查，
+    :func:`trpg.content.library.unit_checks.giant_problems`）。"""
+
+    @model_validator(mode="after")
+    def _check_footprint(self) -> UnitTemplate:
+        if self.footprint not in GIANT_FOOTPRINTS:
+            raise ValueError(f"單位 {self.id}：footprint 只能是 1 或 3，收到 {self.footprint}")
+        if self.footprint > 1 and (BOSS_TAG not in self.tags or self.summon):
+            raise ValueError(
+                f"單位 {self.id}：只有帶 boss 標籤、不是召喚物的範本能佔多格（footprint）"
+            )
+        return self
 
     @model_validator(mode="after")
     def _check_parts(self) -> UnitTemplate:
