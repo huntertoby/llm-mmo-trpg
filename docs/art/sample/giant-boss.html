@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>灰燼之心 3×3（GB A1＋A2）</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>灰燼之心 3×3：立繪（A1）＋部位格標示（A2）樣張</h1>
+<p class="note">畫圖 agent，2026-11-14（PhaseGB 計畫 D14～D18、D23、T20；第 9 節 A1、A2）。分段：
+<a href="?part=sprites&w=1600&mute=1">1a 立繪 1600 真 1 倍</a><a href="?part=sprites&w=800&mute=1">1b 立繪 800 真 1 倍</a><a href="?part=big&mute=1">1c 立繪放大＋佔格</a><a href="?part=anchor&mute=1">1d 錨點與外接框</a>
+<a href="?part=field&w=1600&mute=1">2a 比例 1600</a><a href="?part=field&w=800&mute=1">2b 比例 800</a>
+<a href="?part=marks&w=1600&mute=1">3a 部位格 1600</a><a href="?part=marks&w=800&mute=1">3b 部位格 800</a><a href="?part=marks-nn&mute=1">3c 部位格特寫</a><a href="?part=probe&mute=1">自查</a></p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
+<script src="qBossGiant.js"></script><script src="qBossGiantIcons.js"></script>
+<script>
+const GB = QBossGiant, OO = OccludeOutline, T = GB.T, P = new URLSearchParams(location.search), PART = P.get("part") || "sprites";
+try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, ASH = R4.REGIONS.find((r) => r.id === "ashen_waste");
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+/** 遊戲的地圖縮放（同 occlude-outline.html：stageLayout.ts fitScale＋hudSideInsets；熔心坑 12×12）：1600×900 → 1.31、800×600 → 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+const W_ = P.get("w") === "800" ? 800 : 1600, SW = W_ === 800 ? S800 : S1600;
+// 地面：灰燼荒原（Regions4 ashen_waste 的 stone／lava／wall，52 單位畫到 48 格；同 occlude-outline.html）
+const tile = (id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, ASH, id, 0, 0, gx, gy); ctx.restore(); };
+const STONE = tile("stone"), LAVA = tile("lava"), WALL = tile("wall");
+/** 熔心坑改圖後的地面（GB-2 6.2 的方向：外圈牆、y 1 與兩側是岩漿、坑底石地；座標未定，只取灰燼之心周圍）。 */
+const pitGround = (gx, gy) => (gx === 0 || gy === 0 || gx === 11 || gy === 11 ? WALL : gx === 1 || gy === 1 || gx === 10 ? LAVA : STONE);
+
+// ---- 六種外觀（三階段 × 熔殼在／不在） ----
+const VARS = [
+  { k: "p1s", zh: "第 1 階段・殼｜熔殼在（開場）", st: { phase: 1, shell: 1, t: 300 } },
+  { k: "p1n", zh: "第 1 階段・殼｜熔殼不在（被冰打碎、或殼縫先破）", st: { phase: 1, shell: 0, t: 300 } },
+  { k: "p2n", zh: "第 2 階段・呼吸｜熔殼不在（一般：換階段時移除）", st: { phase: 2, shell: 0, t: 300 } },
+  { k: "p2s", zh: "第 2 階段・呼吸｜熔殼在（現行內容不會出現）", st: { phase: 2, shell: 1, t: 300 } },
+  { k: "p3n", zh: "第 3 階段・熔毀｜熔殼不在（一般）", st: { phase: 3, shell: 0, t: 300 } },
+  { k: "p3s", zh: "第 3 階段・熔毀｜熔殼在（現行內容不會出現）", st: { phase: 3, shell: 1, t: 300 } },
+];
+
+// ================= 場景：地面＋單位（一排一排）＋巨型頭目＋部位格標示 =================
+// scene：{ cols, rows, ground(gx,gy), giant: { x, y（中心格）, st, opt, hover, parts, melee, marks }, units: [OO 單位] }；view：{ S, res, x0, y0, w, h }（模型像素）
+function render(scene, view) {
+  const sc = view.S * (view.res ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = GB.mk(W, H), g = cv.getContext("2d"), xf = (c) => c.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); xf(g);
+  for (let y = 0; y < scene.rows; y++) for (let x = 0; x < scene.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); (scene.ground ?? pitGround)(x, y)(g, x * T, y * T, x, y); g.restore(); }
+  g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
+  const Gi = scene.giant, ax = Gi ? (Gi.x + 0.5) * T : 0, ay = Gi ? (Gi.y + 2) * T : 0; // 錨點＝南排南緣中點
+  const m = new DOMMatrix([sc, 0, 0, sc, (ax - view.x0) * sc, (ay - view.y0) * sc]);
+  if (Gi && (Gi.opt ?? {}).pitGlow !== false) { g.setTransform(m); GB.groundGlow(g, Gi.st); } // 第 2 版：第 3 階段坑底紅光屬地面層，地格之後、所有單位之前（審查必修 3）
+  const list = [...(scene.units ?? []).map((u) => ({ u, row: u.y, x: u.x })), ...(Gi ? [{ giant: true, row: Gi.y + 1, x: Gi.x }] : [])].sort((a, b) => a.row - b.row || a.x - b.x);
+  let i = 0;
+  while (i < list.length) {
+    const row = list[i].row, inRow = []; for (; i < list.length && list[i].row === row; i++) inRow.push(list[i]);
+    for (const it of inRow) {
+      if (it.giant) {
+        g.setTransform(m); GB.draw(g, Gi.st, Gi.opt ?? {});
+        if (Gi.hover && Gi.hover !== "body") GB.glowPart(g, W, H, m, Gi.st, Gi.hover, { dpr: view.res ?? 1 });
+      } else { xf(g); OO.drawRing(g, it.u); const F = GB.mk(W, H), fc = F.getContext("2d"); xf(fc); OO.drawBody(fc, it.u, sc); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(F, 0, 0); }
+    }
+    for (const it of inRow) if (!it.giant && it.u.hp !== undefined) { xf(g); smallHud(g, it.u); }
+  }
+  if (Gi && Gi.marks) { g.setTransform(m); GB.drawMarks(g, Gi.parts ?? {}, { S: view.S, res: view.res ?? 1, hover: Gi.hover, melee: Gi.melee !== false }); }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return cv;
+}
+function smallHud(ctx, u) { const c = { x: (u.x + 0.5) * T, y: (u.y + 0.5) * T }, w = T * 0.8; ctx.fillStyle = "#000"; ctx.fillRect(c.x - w / 2, c.y + T * 0.36, w, 5); ctx.fillStyle = u.hp > 0.5 ? "#4cd964" : u.hp > 0.25 ? "#ffcc00" : "#ff3b30"; ctx.fillRect(c.x - w / 2, c.y + T * 0.36, w * u.hp, 5); }
+const U = {
+  hero: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_fighter, view: "back", hp: 0.8, hero: true, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_archer, view: "back", hp: 0.9, ...o }),
+  mage: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_mage, view: "side", hp: 0.6, ...o }),
+  lizard: (o) => ({ kind: "creature", team: "enemy", spec: { body: "lizard", material: "magma", size: "small" }, hp: 0.9, ...o }), // heart_ember_lizard 的 doll
+};
+/** 只放一隻巨型頭目：5×5 格（北一排岩漿、3×3、南一排石地）的小場景。 */
+const solo = (st, o = {}) => ({ cols: 12, rows: 12, giant: { x: 5, y: 3, st, opt: o.opt, hover: o.hover, parts: o.parts, melee: o.melee, marks: o.marks }, units: o.units ?? [] });
+const soloView = (S, res = 1, pad = 0.35) => ({ S, res, x0: (4 - pad) * T, y0: (1 - 0.15) * T, w: (3 + 2 * pad) * T, h: (4.15 + pad) * T });
+
+// ---- 拼圖（同 boss-parts.html 的 sheet／publish） ----
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0, items = [];
+      const flush = () => { if (!items.length) return; lay.push({ t: "cells", items, y }); y += rowH + 10; x = pad; rowH = 0; items = []; };
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) flush(); const caps = c.cap ? wrap(c.cap, Math.max(w, 110), 12) : []; items.push({ c, x, w, h, caps }); x += w + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      flush();
+    }
+  }
+  const H = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, Math.round(it.x), Math.round(l.y), it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width; document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+}
+const nn = (cv, z, cap) => ({ cv, w: cv.width * z, h: cv.height * z, nn: true, cap });
+const PARTS = {};
+
+// ================= 量外接框（模型像素，相對錨點） =================
+function bbox(st, opt = {}, thr = 8) {
+  const Z = 4, B = GB.BOX, cv = GB.mk((B[2] - B[0]) * Z, (B[3] - B[1]) * Z), g = cv.getContext("2d", { willReadFrequently: true });
+  g.setTransform(Z, 0, 0, Z, -B[0] * Z, -B[1] * Z); GB.draw(g, st, opt);
+  const d = g.getImageData(0, 0, cv.width, cv.height).data; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) if (d[(y * cv.width + x) * 4 + 3] > thr) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const r = (v) => Math.round(v * 10) / 10;
+  return { x0: r(x0 / Z + B[0]), x1: r((x1 + 1) / Z + B[0]), y0: r(y0 / Z + B[1]), y1: r((y1 + 1) / Z + B[1]) };
+}
+
+// ================= 1a／1b 立繪真 1 倍 =================
+PARTS.sprites = () => {
+  const S = SW, nnz = P.get("g") === "nn", z = W_ === 800 ? 4 : 2;
+  const blocks = [{ title: `1${W_ === 800 ? "b" : "a"}${nnz ? "2" : ""}. 立繪${nnz ? "最近鄰 ×" + z : "真 1 倍"}（${W_}×${W_ === 800 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(2)}、一格 ${(T * S).toFixed(1)} px）` },
+    { note: nnz ? `真 1 倍的圖（1 裝置像素＝1 畫面 px）裁本體一帶（佔格往外 0.3 格、往上 4.1 格）最近鄰放大 ×${z}。` : "灰燼地格：北一排岩漿、中間 3×3（中心格＝熔心坑 (5, 3)）、南一排石地。每張都是真 1 倍（1 裝置像素＝1 畫面 px）。地面陣營環用提案 A（3×3 圓角方框）。" }];
+  const cells = VARS.map((v) => {
+    if (!nnz) return { cv: render(solo(v.st), soloView(S, 1)), cap: v.zh };
+    const cv = render(solo(v.st), { S, res: 1, x0: 3.7 * T, y0: 0.9 * T, w: 3.6 * T, h: 4.3 * T });
+    return nn(cv, z, v.zh);
+  });
+  if (W_ === 800 && !nnz) { blocks.push({ cells, gap: 16 }); blocks.push({ title: `最近鄰 ×${z}` }); const cz = VARS.map((v) => nn(render(solo(v.st), { S, res: 1, x0: 3.7 * T, y0: 0.9 * T, w: 3.6 * T, h: 4.3 * T }), z, v.zh)); blocks.push({ cells: cz, gap: 14 }); }
+  else blocks.push({ cells, gap: 16 });
+  publish(sheet(nnz ? 1340 : 1280, blocks), "image/png");
+};
+// ================= 1c 立繪放大＋佔格與高度上限 =================
+PARTS.big = () => {
+  const S = 2.2, blocks = [{ title: "1c. 立繪放大（向量直接畫到 2.2 倍）＋佔格 3×3 與高度上限 4 格" }, { note: "青虛線＝佔格與每一格（北排噴口、中排殼縫｜核心｜殼縫、南排前殼）；紅線＝高度上限（南緣往上 4 格＝北排往上再 1 格，北邊是岩漿）；黃點＝錨點（南排南緣中點）。" }];
+  const cells = VARS.map((v) => {
+    const vw = soloView(S, 1, 0.3), cv = render(solo(v.st, { opt: { ring: "rect" } }), vw), g = cv.getContext("2d");
+    const ax = (5.5 * T - vw.x0) * S, ay = (5 * T - vw.y0) * S;
+    g.save(); g.translate(ax, ay); g.scale(S, S);
+    g.setLineDash([4 / S, 3 / S]); g.lineWidth = 1.2 / S; g.strokeStyle = "rgba(120,240,255,0.85)";
+    for (let k = 0; k <= 3; k++) { g.beginPath(); g.moveTo(-72 + k * 48, -144); g.lineTo(-72 + k * 48, 0); g.stroke(); g.beginPath(); g.moveTo(-72, -144 + k * 48); g.lineTo(72, -144 + k * 48); g.stroke(); }
+    g.setLineDash([]); g.strokeStyle = "#16121a"; g.lineWidth = 4 / S; g.beginPath(); g.moveTo(-84, -192); g.lineTo(84, -192); g.stroke(); g.strokeStyle = "#ff5a4a"; g.lineWidth = 2 / S; g.stroke();
+    g.fillStyle = "#ffe14d"; g.beginPath(); g.arc(0, 0, 3 / S * 1.4, 0, Math.PI * 2); g.fill(); g.restore();
+    return { cv, cap: v.zh };
+  });
+  blocks.push({ cells: cells.slice(0, 3), gap: 10 }, { cells: cells.slice(3), gap: 10 });
+  publish(sheet(1280, blocks));
+};
+// ================= 1d 錨點與外接框 =================
+PARTS.anchor = () => {
+  const rows = VARS.map((v) => ({ v, body: bbox(v.st, { glow: false, ring: false, pitGlow: false }), all: bbox(v.st, { ring: false, pitGlow: false }) }));
+  const W = (b) => (b.x1 - b.x0).toFixed(1), Hh = (b) => (b.y1 - b.y0).toFixed(1);
+  const lines = rows.map((r) => `${r.v.zh}：本體 x ${r.body.x0}～${r.body.x1}、y ${r.body.y0}～${r.body.y1}（${W(r.body)}×${Hh(r.body)}）；含外光 x ${r.all.x0}～${r.all.x1}、y ${r.all.y0}～${r.all.y1}（${W(r.all)}×${Hh(r.all)}）`);
+  const top = Math.min(...rows.map((r) => r.all.y0)), side = Math.max(...rows.map((r) => Math.max(-r.all.x0, r.all.x1))), bot = Math.max(...rows.map((r) => r.all.y1));
+  const px = (S) => `一格 ${(T * S).toFixed(1)} px；佔格 ${(144 * S).toFixed(1)}×${(144 * S).toFixed(1)} px；外接框（含外光）最寬 ${(2 * side * S).toFixed(1)}、最高 ${((bot - top) * S).toFixed(1)} px（往上 ${(-top * S).toFixed(1)}、往下 ${(bot * S).toFixed(1)}）`;
+  document.documentElement.dataset.anchor = JSON.stringify({ rows: rows.map((r) => ({ k: r.v.k, body: r.body, all: r.all })), top, side, bot, S1600, S800 });
+  const blocks = [{ title: "1d. 錨點與外接框（模型像素：1 格＝48，原點＝錨點＝南排南緣中點，y 往上是負）" },
+    { note: `錨點：佔格中心格（T20 (5, 3)）中心往南 72 模型 px＝南排南緣中點。佔格 x −72～72、y −144～0；高度上限 4 格＝y ≥ −192。\n以下量自畫出來的像素（alpha > 8；陣營環另計），熔岩噴發的熔岩柱（spout）、熔毀階段坑底的紅光（地面的光）不算在外接框內。\n${lines.join("\n")}\n全部外觀合起來：x ±${side}、y ${top}～${bot}（${(bot - top).toFixed(1)} 高 ＝ ${((bot - top) / 48).toFixed(2)} 格；往上 ${(-top / 48).toFixed(2)} 格 ≤ 4）。\n1600 寬（地圖縮放 ${S1600.toFixed(3)}）：${px(S1600)}。\n800 寬（地圖縮放 ${S800.toFixed(3)}）：${px(S800)}。` }];
+  publish(sheet(1280, blocks));
+};
+// ================= 2 比例圖：3×3 立在灰燼地格上，南邊、兩側站 1 格的主角與餘燼蜥 =================
+PARTS.field = () => {
+  const S = SW, z = W_ === 800 ? 3 : 2;
+  const units = (o = {}) => [U.hero({ id: "h", x: 5, y: 5 }), U.archer({ id: "a", x: 4, y: 6 }), U.lizard({ id: "l1", x: 6, y: 5, west: true }), U.lizard({ id: "l2", x: 3, y: 3 }), U.mage({ id: "m", x: 7, y: 3, west: true }), ...(o.more ?? [])];
+  const V = { S, res: 1, x0: 1.5 * T, y0: 0.4 * T, w: 8 * T, h: 6.9 * T };
+  const a = render({ cols: 12, rows: 12, giant: { x: 5, y: 3, st: { phase: 1, shell: 1, t: 300 } }, units: units() }, V);
+  const parts = { vent: { state: "off", why: "ranged" }, seam: { state: "off", why: "range" }, core: { state: "ok" } };
+  const b = render({ cols: 12, rows: 12, giant: { x: 5, y: 3, st: { phase: 2, shell: 0, t: 300 }, marks: true, parts, hover: "core", melee: true }, units: units() }, V);
+  // 南邊緊貼的那一格放大（看前殼有沒有擋到南邊的人）
+  if (P.get("p3") === "1") { // 2c：第 3 階段＋兩側多站人（審查 r7 同場景：(3,2) 弓手、(7,4) 戰士）；紅光改成地面層後兩側的人不被染
+    const more = [U.archer({ id: "a2", x: 3, y: 2 }), U.hero({ id: "w2", x: 7, y: 4, hero: false, view: "side", west: true })];
+    const c = render({ cols: 12, rows: 12, giant: { x: 5, y: 3, st: { phase: 3, shell: 0, t: 300 } }, units: units({ more }) }, V);
+    const crop2 = (cx, cy, w, h) => { const o = GB.mk(w * S, h * S); o.getContext("2d").drawImage(c, Math.round((cx - V.x0) * S), Math.round((cy - V.y0) * S), Math.round(w * S), Math.round(h * S), 0, 0, Math.round(w * S), Math.round(h * S)); return o; };
+    const zz = W_ === 800 ? 4 : 3;
+    publish(sheet(1280, [
+      { title: `2c. 第 3 階段（熔毀）比例：${W_} 寬、地圖縮放 ${S.toFixed(2)}，真 1 倍；坑底紅光是地面層` },
+      { note: "第 2 版（審查必修 3）：坑底紅光拆成 QBossGiant.groundGlow，和地格一起、在所有單位之前畫；頭目本體照舊畫在南排那一排。場景同審查 r7：西側 (3,2) 弓手、(3,3) 餘燼蜥，東側 (7,3) 法師、(7,4) 戰士，南邊 (5,5) 主角、(6,5) 餘燼蜥、(4,6) 弓手。下排：西、東兩側最近鄰（人身上、HP 條都沒有橘色圓弧）。" },
+      { cells: [{ cv: c, cap: "第 3 階段・熔殼不在（真 1 倍）" }] },
+      { cells: [nn(crop2(2.6 * T, 1.7 * T, 1.9 * T, 2.9 * T), zz, `西側 (3,2)、(3,3) 最近鄰 ×${zz}`), nn(crop2(6.5 * T, 2.7 * T, 1.9 * T, 2.9 * T), zz, `東側 (7,3)、(7,4) 最近鄰 ×${zz}`)] },
+    ]), "image/png");
+    return;
+  }
+  const crop = (src, cx, cy, w, h) => { const c = GB.mk(w * S, h * S); c.getContext("2d").drawImage(src, Math.round((cx - V.x0) * S), Math.round((cy - V.y0) * S), Math.round(w * S), Math.round(h * S), 0, 0, Math.round(w * S), Math.round(h * S)); return c; };
+  const ca = crop(a, 3.5 * T, 3.4 * T, 4 * T, 3.6 * T), cb = crop(b, 3.5 * T, 3.4 * T, 4 * T, 3.6 * T);
+  publish(sheet(1280, [
+    { title: `2. 比例：${W_}×${W_ === 800 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(2)}（一格 ${(T * S).toFixed(1)} px），真 1 倍` },
+    { note: "灰燼之心中心 (5, 3)、佔 x 4～6、y 2～4（T20）；北邊 y 1 是岩漿。南邊 (5, 5) 主角（背面）、(4, 6) 弓手、(6, 5) 餘燼蜥；西側殼縫旁 (3, 3) 餘燼蜥、東側 (7, 3) 法師。頭目畫在南排那一排（y 4），南邊一排的人後畫、蓋在前殼上，不會被擋。左：第 1 階段熔殼在；右：第 2 階段＋選目標（近戰主角在南邊：噴口要遠程、殼縫不相鄰、核心可打，滑過核心）。" },
+    { cells: [{ cv: a, cap: "第 1 階段・熔殼在（真 1 倍）" }, { cv: b, cap: "第 2 階段・選目標、滑過核心（真 1 倍）" }] },
+    { cells: [nn(ca, z, `南邊一帶最近鄰 ×${z}（左圖）`), nn(cb, z, `南邊一帶最近鄰 ×${z}（右圖）`)] },
+  ]), "image/png");
+};
+// ================= 3 部位格標示（A2）各狀態 =================
+const CASES = [
+  { zh: "① 完好（可打）：噴口、殼縫、核心米白四角；殼縫內側下角背刺記號（近戰；1600 圖樣小圓片、800 U 形迴轉箭頭）", st: { phase: 2, shell: 0, t: 300 }, parts: {} },
+  { zh: "② 滑過噴口：三格一起亮（同一個部位）＋身上噴口亮起", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "vent" },
+  { zh: "③ 滑過殼縫：東西兩格一起亮（共用一條血）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "seam" },
+  { zh: "④ 滑過核心", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "core" },
+  { zh: "⑤ 滑過前殼＝打本體：整個 3×3 外緣紅框（同現行目標紅框）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "body" },
+  { zh: "⑥ 打不到（暗＋灰括號；1600 另有灰原因小圓片，800 不畫）：噴口「要遠程」、殼縫「射程不夠」、核心「看不到」", st: { phase: 2, shell: 0, t: 300 }, parts: { vent: { state: "off", why: "ranged" }, seam: { state: "off", why: "range" }, core: { state: "off", why: "sight" } } },
+  { zh: "⑦ 破掉（暗紅＋紅×）：噴口、殼縫破（身上噴口封住、殼縫冷掉：暫定，A4 再定）", st: { phase: 2, shell: 0, t: 300, broken: { vent: true, seam: true } }, parts: { vent: { state: "broken" }, seam: { state: "broken" } } },
+  { zh: "⑧ 未露出（第 1 階段核心）：暗色虛線框；點它＝打本體", st: { phase: 1, shell: 1, t: 300 }, parts: { core: { state: "hidden" } } },
+  { zh: "⑨ 遠程攻擊者：殼縫沒有背刺小圖（R4：只有近戰算從背後）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, melee: false },
+];
+const caseCv = (c, S, res = 1) => render(solo(c.st, { marks: true, parts: c.parts, hover: c.hover, melee: c.melee }), soloView(S, res, 0.3));
+PARTS.marks = () => {
+  const S = SW, z = W_ === 800 ? 3 : 1;
+  const blocks = [{ title: `3${W_ === 800 ? "b" : "a"}. 部位格標示（A2）各狀態：${W_} 寬真 1 倍${z > 1 ? `、最近鄰 ×${z}` : ""}（地圖縮放 ${S.toFixed(2)}）` },
+    { note: "標示畫在單位之上（同 highlightLayer 的 marks：選目標時才出現）。米白四角＝這格是部位、可以打；亮青白框＝滑過（同霧鎖真人的部位亮起 #a8f4ff）；暗＋灰原因小圖＝打不到；暗紅＋紅×＝破掉；暗色虛線＝還沒露出。前殼（南排）是本體，平常不畫框，滑過時整個 3×3 外緣紅框。800 寬：線至少 1.5 px、× 至少 6 px、背刺記號直徑至少 14 px（反向放大）；第 2 版起 800 不畫原因小圓片（暗化 55%＋不透明灰括號），背刺改成 U 形迴轉箭頭（條件黃環）。" },
+    { cells: CASES.map((c) => (z > 1 ? nn(caseCv(c, S), z, c.zh) : { cv: caseCv(c, S), cap: c.zh })), gap: 14 }];
+  publish(sheet(1280, blocks), "image/png");
+};
+PARTS["marks-nn"] = () => {
+  const S = S1600, pick = [0, 2, 5, 6], blocks = [{ title: "3c. 部位格標示特寫：1600 真 1 倍、最近鄰 ×2" }];
+  blocks.push({ cells: pick.map((i) => nn(caseCv(CASES[i], S), 2, CASES[i].zh)), gap: 14 });
+  publish(sheet(1280, blocks), "image/png");
+};
+// ================= 1e 熔殼脫落（第 2 版：殼片往北飛進岩漿消失） =================
+PARTS.shed = () => {
+  const S = S1600, fr = [0, 0.25, 0.5, 0.7, 0.85, 1];
+  const vw = { S, res: 1, x0: 3.7 * T, y0: 0.2 * T, w: 3.6 * T, h: 5 * T };
+  const cells = fr.map((bt) => nn(render(solo({ phase: 1, shell: 0, breakT: bt, t: 300 }), vw), 2, `breakT ${bt}`));
+  publish(sheet(1340, [{ title: "1e. 熔殼脫落：殼片依名稱雜湊往北彈起、飛過噴口落進北邊岩漿，後 40% 縮小淡出；脫落完南排不留殼片（1600 真 1 倍，最近鄰 ×2）" }, { cells, gap: 12 }]), "image/png");
+};
+// ================= 3d 殼縫背刺記號（第 2 版必修 2）：800 真 1 倍 ①③⑨ 並排＋殼縫格最近鄰 ×4 =================
+PARTS["seam-800"] = () => {
+  const S = S800, pick = [0, 2, 8], blocks = [{ title: "3d. 殼縫背刺記號：800 真 1 倍（①完好、③滑過殼縫、⑨遠程沒有記號）＋殼縫兩格最近鄰 ×4" },
+    { note: "第 2 版（審查必修 2）：記號改放殼縫格的內側下角（靠核心那側），不蓋住貼外側的熔岩裂縫；800 不用圖樣小圓片，改畫深底＋2 px 條件黃環＋米白 U 形迴轉箭頭（繞到背後；A3 時改，複審可修 A），記號佔掉內側下角那個括號、不貼米白括號。1600 照舊是背刺圖樣小圓片（3a、3c）。" }];
+  const cvs = pick.map((i) => caseCv(CASES[i], S));
+  blocks.push({ cells: cvs.map((cv, k) => nn(cv, 2, CASES[pick[k]].zh + "（真 1 倍，最近鄰 ×2）")), gap: 14 });
+  const vw = soloView(S, 1, 0.3), crop = (cv, mx) => { const x = Math.round((mx - vw.x0) * S), y = Math.round((3 * T - vw.y0) * S), w = Math.round(T * S) + 2, h = Math.round(T * S) + 2, o = GB.mk(w, h); o.getContext("2d").drawImage(cv, x - 1, y - 1, w, h, 0, 0, w, h); return o; };
+  const cells = [];
+  for (const [k, cv] of cvs.entries()) for (const [mx, zh] of [[4 * T, "西殼縫格"], [6 * T, "東殼縫格"]]) cells.push(nn(crop(cv, mx), 4, `${["①", "③", "⑨"][k]} ${zh} ×4`));
+  blocks.push({ cells, gap: 12 });
+  publish(sheet(1280, blocks), "image/png");
+};
+// ================= 4 A3 部位小圖（qBossGiantIcons.js） =================
+const GI = QBossGiantIcons, NAV = "#1e2236", IDS = ["vent", "seam", "core"];
+/** 灰掉（打不到、未露出）：照抄 bossParts.js gray()（去色＋亮度 0.8＋透明度 0.45）。 */
+function grayIc(cv, a = 0.45) { const c = GB.mk(cv.width, cv.height), x = c.getContext("2d"); x.filter = "grayscale(1) brightness(0.8)"; x.globalAlpha = a; x.drawImage(cv, 0, 0); return c; }
+const STATES = [["ok", "一般"], ["off", "打不到"], ["hidden", "未露出"], ["broken", "已破壞"]];
+/** 一格：navy 底、圖示 px 置中、狀態；res＝內部解析度。 */
+function icCell(id, px, res, state, padPx = 3) {
+  const S = (px + 2 * padPx) * res, c = GB.mk(S, S), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, S, S);
+  let ic = GI.icon(id, px, res); if (state !== "ok") ic = grayIc(ic);
+  g.drawImage(ic, padPx * res, padPx * res);
+  if (state === "broken") { g.save(); g.scale(res, res); GI.xMark(g, padPx, padPx, px); g.restore(); }
+  return c;
+}
+function icAudit(id, px) {
+  const ic = GI.icon(id, px, 1), d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let n = 0, sum = 0, hi = 0, x0 = 99, x1 = -1, y0 = 99, y1 = -1;
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const p = i / 4, x = p % ic.width, y = Math.floor(p / ic.width); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (Math.abs(d[i] - 22) + Math.abs(d[i + 1] - 18) + Math.abs(d[i + 2] - 26) < 30) continue; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; sum += L; if (L >= 150) hi++; }
+  return `${GI.GLYPH[id].zh} ${px}：亮度 ${Math.round(sum / n)}、亮面 ${Math.round((100 * hi) / n)}%、外接 ${x1 - x0 + 1}×${y1 - y0 + 1}／${px}`;
+}
+/** 圖示指紋（FNV-1a over 像素；20／16／12 × res 1、2）：給下次改版比對。 */
+function icHash() { const out = {}; for (const id of IDS) for (const px of [20, 16, 12]) for (const res of [1, 2]) { const ic = GI.icon(id, px, res), d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let h = 2166136261; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619); out[`${id}-${px}-${res}`] = (h >>> 0).toString(16).padStart(8, "0"); } return out; }
+PARTS.icons = () => {
+  const big = IDS.map((id) => { const e = GI.GLYPH[id], def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); }, pre: e.pre }; const ic = QIcons.render(def, 96, 1, { ow: QIcons.outlinePx(20) * 4.8 }); const c = GB.mk(128, 128), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, 128, 128); g.drawImage(ic, 16, 16); return { cv: c, cap: `${e.zh}・20 的 4.8 倍（向量，同一份簡化）` }; });
+  const row = (px, res, z) => IDS.flatMap((id) => STATES.map(([st, zh]) => nn(icCell(id, px, res, st), z, `${GI.GLYPH[id].zh}・${zh}`)));
+  const sil = IDS.map((id) => { const ic = GI.icon(id, 20, 1), c = GB.mk(26, 26), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, 26, 26); g.drawImage(GB.tint(ic, "#f2e6c8"), 3, 3); return nn(c, 6, `${GI.GLYPH[id].zh}・剪影 20 真 1 倍`); });
+  // 同一個選單／說明卡上會一起出現的：背刺（從背後）、元素火、狀態燃燒（現行）
+  const at = (cv0, px = 20) => { const c = GB.mk(px + 6, px + 6), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, px + 6, px + 6); g.drawImage(cv0, 3, 3, px, px); return c; };
+  const burn = GB.mk(20, 20); try { const s = QStatusLive.statusIconCanvas("burning", 20); burn.getContext("2d").drawImage(s, 0, 0, 20, 20); } catch (e) { console.log("burning: " + e); }
+  const behind = QIcons.render({ d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); QIconsParts.entry("condition", "from_behind").d(c, o); c.restore(); } }, 20, 1, { ow: 1 });
+  const cmp = [[GI.icon("vent", 20, 1), "熔岩噴口"], [GI.icon("seam", 20, 1), "殼縫"], [GI.icon("core", 20, 1), "核心"], [QIcons.render(QIconsSkills.ELEMENT.fire, 20, 1, { ow: 1 }), "元素・火"], [burn, "燃燒（現行狀態）"], [behind, "背刺（從背後）"]];
+  const cmpCells = cmp.map(([cv0, zh]) => nn(at(cv0), 6, `${zh}・20 真 1 倍`)), cmpSil = cmp.map(([cv0, zh]) => nn(at(GB.tint(cv0, "#f2e6c8")), 6, `${zh}・剪影`));
+  const audit = IDS.map((id) => icAudit(id, 20)).join("；");
+  document.documentElement.dataset.hash = JSON.stringify(icHash());
+  publish(sheet(1280, [
+    { title: "4a. A3 部位小圖：熔岩噴口、殼縫、核心（選單 20px；48 格、外框 #16121a 1px、平塗三階；深底 --ui-navy）" },
+    { note: "造型照第 2 版身上：噴口＝火山錐＋口裡熔岩＋往上噴的熔岩舌；殼縫＝玄武岩殼板＋上下貫穿的鋸齒熔岩縫；核心＝殼窩（下半圈）上的晶體（qBoss CORE_PTS），後面一圈光暈。四種狀態照頭目部位-移植需求.md 2.1：打不到、未露出＝去色＋亮度 0.8＋透明度 0.45（兩者圖示相同，靠列上的原因字分）；已破壞＝灰掉＋紅×。自查（20 真 1 倍，不算外框色）：" + audit },
+    { cells: big },
+    { title: "20px・2 倍內部解析度（遊戲固定 DPR 2）×3：一般｜打不到｜未露出｜已破壞" }, { cells: row(20, 2, 3), gap: 8 },
+    { title: "20px・真 1 倍（100% 螢幕最壞情況）×6" }, { cells: row(20, 1, 6), gap: 8 },
+    { title: "剪影與並排（同一張選單／說明卡上會一起出現的圖示）" }, { cells: sil }, { cells: cmpCells }, { cells: cmpSil },
+  ]), "image/png");
+};
+PARTS["icons-t1"] = () => {
+  // 部位格上的尺寸（選用，3.2 第 6 項）：1600 一格 62.8 → 圖示 16；800 一格 25.5 → 圖示 12（≤14：只留主體、不包外框）
+  const blocks = [{ title: "4b. 真 1 倍各尺寸：20（選單；800 與 1600 同）｜16（1600 部位格角）｜12（800 部位格角）；每個尺寸上排原尺寸、下排最近鄰 ×6" }];
+  for (const px of [20, 16, 12]) {
+    blocks.push({ note: `${px}px：${IDS.map((id) => GI.GLYPH[id].zh).join("、")} × 一般｜打不到｜未露出｜已破壞` });
+    blocks.push({ cells: IDS.flatMap((id) => STATES.map(([st]) => ({ cv: icCell(id, px, 1, st, 2) }))), gap: 6 });
+    blocks.push({ cells: IDS.flatMap((id) => STATES.map(([st, zh]) => nn(icCell(id, px, 1, st, 2), 6, `${GI.GLYPH[id].zh}・${zh}`))), gap: 8 });
+  }
+  publish(sheet(1340, blocks), "image/png");
+};
+/** 部位格加小圖（3.2 第 6 項）：每個區塊左上括號內放部位小圖（1600：16px、800：12px）；打不到、未露出、破掉灰掉。 */
+function marksWithIcons(cv, view, parts) {
+  const g = cv.getContext("2d"), S = view.S, px = T * S >= 40 ? 16 : 12, ins = GB.MARK.inset + 2;
+  for (const [part, row, c0] of [["vent", 0, 1], ["seam", 1, 0], ["core", 1, 1], ["seam", 1, 2]]) {
+    const st = (parts[part] ?? { state: "ok" }).state, [tx, ty] = GB.tileXY(row, c0), ax = 5.5 * T + tx, ay = 5 * T + ty;
+    let ic = GI.icon(part, px, view.res ?? 1); if (st !== "ok") ic = grayIc(ic, 0.6);
+    g.drawImage(ic, Math.round((ax + ins - view.x0) * S), Math.round((ay + ins - view.y0) * S));
+  }
+  return cv;
+}
+PARTS["icons-marks"] = () => {
+  const pick = [0, 3, 5, 7], blocks = [{ title: "4c. 對照（3.2 第 6 項）：部位格要不要加部位小圖。每組左＝現在（括號＋身上的部位）、右＝每個區塊左上加小圖（1600：16px；800：12px）" },
+    { note: "小圖放在區塊左上括號內側（噴口放中間那格，殼縫東西各一、核心一）；打不到、未露出灰掉。真 1 倍，最近鄰 ×2（1600）／×3（800）。挑 ① 完好、④ 滑過核心、⑥ 打不到、⑧ 未露出。" }];
+  for (const [S, wz, z] of [[S1600, "1600", 2], [S800, "800", 3]]) {
+    const cells = [];
+    for (const i of pick) { const c = CASES[i], vw = soloView(S, 1, 0.3); cells.push(nn(caseCv(c, S), z, `${wz}・${c.zh.slice(0, 1)} 現在`), nn(marksWithIcons(caseCv(c, S), vw, c.parts), z, `${wz}・${c.zh.slice(0, 1)} 加小圖`)); }
+    blocks.push({ cells, gap: 10 });
+  }
+  publish(sheet(1340, blocks), "image/png");
+};
+// ================= 自查：單一外觀放大（?part=probe&k=p2n&z=4&hover=seam） =================
+PARTS.probe = () => {
+  const v = VARS.find((x) => x.k === (P.get("k") || "p1s")) ?? VARS[0], Z = +(P.get("z") || 4);
+  const cv = render(solo(v.st, { hover: P.get("hover") || undefined }), soloView(Z, 1, 0.2));
+  publish(sheet(Math.max(800, cv.width + 40), [{ cells: [{ cv, cap: v.zh }] }]));
+};
+
+try { (PARTS[PART] ?? PARTS.sprites)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
