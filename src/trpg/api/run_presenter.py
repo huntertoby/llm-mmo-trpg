@@ -83,6 +83,7 @@ from trpg.skillgen.flash_offer import (
     REFLASH_WEAKER_PICK_ZH,
     REFLASH_WEAKER_ZH,
     WEAKER_FOOT_ZH,
+    WEAKER_TAG_ZH,
     has_options,
     history_problem,
     reflash_weaker,
@@ -308,6 +309,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 tag_term=tag,
                 note_zh=note,
                 name_source=name_source,
+                weaker_tag_zh=WEAKER_TAG_ZH if option.weaker else None,
             )
         )
     return PendingFlashOut(

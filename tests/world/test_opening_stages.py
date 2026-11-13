@@ -91,7 +91,7 @@ def _starter(
 
 def test_versions() -> None:
     assert CHAR_FORMAT == "trpg-char/14"
-    assert WORLD_RULES_VERSION == 29  # RR-1（28＝WP-1，27＝OB-7）
+    assert WORLD_RULES_VERSION == 30  # RR-2c（29＝RR-1，28＝WP-1，27＝OB-7）
 
 
 @pytest.mark.parametrize(("cls", "weapon"), sorted(CLASSES.items()))

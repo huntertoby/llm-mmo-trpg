@@ -1,10 +1,12 @@
-"""RR-2：被強度下限卡住的重閃格改出較弱的候選並提醒（#160，06 6.34.3「強度下限」例外）。
+"""RR-2／RR-2c：被強度下限卡住的重閃格改出較弱的候選並提醒（#160，06 6.34.3「強度下限」例外）。
 
 重現案例（RR-1 報告待決 2）：第一個開發起始包、種子 2 的一輪打到營火。「灼燃・燃燒爆」第 1 次是
-蓄力，預算分數很高；重閃第 1 格時照原規則（不低於被換掉的那一筆）沒有任何候選達得到，以前只能
-標灰。現在這一格改出不低於重閃前一筆、但低於被換掉那一筆的候選：入口與選類別面板掛提醒、出題後
-固定區換句（RR-2b 撤掉「比原本弱」小標），選了寫進歷程的下限是 0（重推得出同一張卡）。其他格（達得到
-下限）照原規則不變。RR-2b：所有重閃的「前 → 後」都用現在的卡當基準（06 6.34.3 #160 第 4 點）。
+蓄力，預算分數很高；重閃第 1 格時照原規則沒有任何候選達得到，以前只能標灰。
+
+RR-2c（玩法 PM a6c36fe30）：原規則＝這一格不低於被換掉的那一筆，**而且重閃後整招不低於現在的卡**
+（整招篩選；轉型照 3W-3 不設下限）。篩完一個都不剩的格子才是例外：兩道下限都不套，改出預算窗內、
+整招可能比現在弱的候選；整招低於現在的那幾張卡標「比原本弱」。入口與選類別面板掛提醒、出題後
+固定區換句，選了寫進歷程的下限是 0（重推得出同一張卡）。所有重閃的「前 → 後」都用現在的卡當基準。
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from trpg.skillgen.flash_offer import (
     REFLASH_WEAKER_PICK_ZH,
     REFLASH_WEAKER_ZH,
     WEAKER_FOOT_ZH,
+    WEAKER_TAG_ZH,
     FlashRequest,
     has_options,
     make_offer,
@@ -82,7 +85,7 @@ def test_floor_blocked_slot_offers_weaker_options(
     assert blocked.available and blocked.problem_zh is None
     assert blocked.weaker and blocked.weaker_zh == REFLASH_WEAKER_ZH
     assert blocked.weaker_pick_zh == REFLASH_WEAKER_PICK_ZH
-    # 扣點出題：每個選項都標較弱、下限 0，第 1 格的分數低於被換掉的那一筆、不低於重閃前
+    # 扣點出題：下限 0，第 1 格的分數低於被換掉的那一筆、不低於它的前一筆；整招低於現在的才標較弱
     chain = derive_chain(library, request.base, request.state, request.seed, request.tier)
     replaced = budget_power(chain[BLOCKED_SLOT - 1], library)
     before = budget_power(
@@ -100,19 +103,23 @@ def test_floor_blocked_slot_offers_weaker_options(
     assert opened.pending_flash is not None
     offer = opened.pending_flash.offer
     assert offer.weaker and offer.options
+    current = skill_defs(library, run, [skill_id])[0]
+    now = budget_power(current, library)
     for option in offer.options:
-        assert option.weaker and option.floor_permille == 0
+        assert option.floor_permille == 0
+        assert option.weaker == (budget_power(option.skill, library) < now)
         state = with_reflash(request.state, BLOCKED_SLOT, option.variation)
         slot_skill = derive_chain(library, request.base, state, request.seed, request.tier)[0]
         assert before <= budget_power(slot_skill, library) < replaced
-    # 面板：固定區換句；「比原本弱」小標撤掉（RR-2b），JSON 裡沒有這個欄位
+    # 重現案例：4 個選項有 3 個整招比現在弱（RR-2b 報告 whole_check），1 個剛好等於現在
+    assert [o.weaker for o in offer.options].count(True) == 3
+    # 面板：固定區換句；整招低於現在的卡才標「比原本弱」（RR-2c）
     pending = pending_flash_out(library, opened)
     assert pending is not None and pending.weaker_foot_zh == WEAKER_FOOT_ZH
-    assert all("weaker_tag_zh" not in o for o in pending.model_dump(mode="json")["options"])
+    assert [o.weaker_tag_zh for o in pending.options] == [
+        WEAKER_TAG_ZH if o.weaker else None for o in offer.options
+    ]
     # 「前」是現在的卡（RR-2b）：原技能列與「前 → 後」都和現在的卡比
-    # （注意：引擎保證的是被換掉那一格不低於它的前一筆，不是整招不低於現在的卡；
-    # 見 RR-2b 報告待決 1）
-    current = skill_defs(library, run, [skill_id])[0]
     assert pending.base_stats == base_stats(library, current)
     for option, out_option in zip(offer.options, pending.options, strict=True):
         keyword = option.variation.keyword
@@ -201,7 +208,13 @@ def test_same_seed_same_offer(
     assert first == second
     weaker, offer = first
     assert offer.weaker == weaker
-    assert all(o.weaker == weaker for o in offer.options)
+    now = budget_power(
+        derive_skill(library, request.base, request.state, seed, request.tier), library
+    )
+    for option in offer.options:
+        below = option.variation.source != "transform" and budget_power(option.skill, library) < now
+        # 「比原本弱」只在例外格、而且整招低於現在的卡
+        assert option.weaker == (weaker and below)
     if weaker:
         assert all(o.floor_permille == 0 for o in offer.options)
 
@@ -221,3 +234,41 @@ def test_reachable_floor_keeps_the_original_offer(
         strict = make_offer(library, request)
     assert make_offer(library, request) == strict
     assert not strict.weaker
+
+
+@_PROPERTY
+@given(
+    seed=st.integers(min_value=0, max_value=2**31 - 1),
+    pick=st.integers(min_value=0, max_value=63),
+    category=st.sampled_from([None, "focus"]),
+)
+def test_normal_reflash_never_weakens_the_whole_skill(
+    library: ContentLibrary, campfire: RunState, seed: int, pick: int, category: str | None
+) -> None:
+    """RR-2c（06 6.34.3「重閃也一樣」）：一般重閃（不是例外格）的每個選項，整招預算分數都不低於
+    現在的卡（轉型照 3W-3 不設下限，不在此列）。格子在營火這一輪所有閃過的技能裡挑。"""
+    run = campfire
+    slots = [
+        (skill_id, record.nth)
+        for skill_id, state in sorted(run.flash.items())
+        for record in state.records
+    ]
+    skill_id, slot = slots[pick % len(slots)]
+    request = dataclasses.replace(flash_request(library, run, skill_id, slot=slot), seed=seed)
+    if reflash_weaker(library, request) or not has_options(library, request):
+        return
+    if category is not None:
+        counts = flash_offer.category_counts(library, request)
+        usable = sorted(c for c, n in counts.items() if n > 0)
+        if not usable:
+            return
+        request = dataclasses.replace(request, category=usable[pick % len(usable)])
+    offer = make_offer(library, request)
+    now = budget_power(
+        derive_skill(library, request.base, request.state, seed, request.tier), library
+    )
+    assert not offer.weaker
+    for option in offer.options:
+        assert not option.weaker
+        if option.variation.source != "transform":
+            assert budget_power(option.skill, library) >= now

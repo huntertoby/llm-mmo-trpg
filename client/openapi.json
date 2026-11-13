@@ -12902,6 +12902,17 @@
             ],
             "title": "Name Source",
             "default": "template"
+          },
+          "weaker_tag_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weaker Tag Zh"
           }
         },
         "additionalProperties": false,

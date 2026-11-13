@@ -31,7 +31,7 @@ interface Props {
   slot: number | null;
   /** 重閃時顯示被換掉的是哪一格。 */
   slotLabel?: string;
-  /** RR-2b（#160）：被強度下限卡住的重閃格（伺服器 `weaker`）：面板最上面多一行提醒（扣點前；關掉面板不重閃、不扣點）。 */
+  /** RR-2b／RR-2c（#160）：被強度下限卡住的重閃格（伺服器 `weaker`）：面板最上面多一行提醒（扣點前；關掉面板不重閃、不扣點）。 */
   weaker?: WeakerSlot | null;
   busy: boolean;
   onChoose(choice: RunChoice): Promise<number | null>;

@@ -5180,6 +5180,8 @@ export interface components {
              * @enum {string}
              */
             name_source: "llm" | "template";
+            /** Weaker Tag Zh */
+            weaker_tag_zh?: string | null;
         };
         /**
          * FlashPickAction
