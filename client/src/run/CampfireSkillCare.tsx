@@ -106,12 +106,19 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                   key={s.slot}
                   type="button"
                   className={target?.id === card.id && target.slot === s.slot ? "primary" : ""}
-                  disabled={busy || (hero.insight ?? 0) < rulesOf(hero.flash_rules).open_cost}
+                  disabled={busy || s.none || (hero.insight ?? 0) < rulesOf(hero.flash_rules).open_cost}
+                  title={s.problem ?? undefined}
                   data-testid={`reflash-${card.id}-${s.slot}`}
+                  data-reflash-none={s.none ? 1 : undefined}
                   onClick={() => setTarget({ id: card.id, slot: s.slot })}
                 >
                   重閃　{s.label}
                   {s.transformHint && <span className="skill-flash-transform small">　{TRANSFORM_HINT}</span>}
+                  {s.problem !== null && (
+                    <span className="flash-none-note small" data-testid={`reflash-none-${card.id}-${s.slot}`}>
+                      　{s.problem}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

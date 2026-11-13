@@ -22971,6 +22971,22 @@
             "type": "boolean",
             "title": "Transform Hint",
             "default": false
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": true
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
           }
         },
         "additionalProperties": false,

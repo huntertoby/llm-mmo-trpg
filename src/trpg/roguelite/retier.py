@@ -12,6 +12,10 @@
 上的數字就是下一次閃現的「套用前」與重閃的強度下限；ID 由歷程決定，不變。:func:`retier` 只處理沒
 閃過的技能。歷程在目前的內容重推不了時（:class:`~trpg.skillgen.flash_derive.FlashHistoryError`），退回
 重配存著的定義（之後的閃現也以它為起點，見 ``FlashRequest.current``）。
+
+**套不上的那一筆照存檔裡的定義保留**（RR-1，06 6.34.9）：照新階級重推時某一筆套不上，先把升階前
+那一筆套完的定義記進 ``FlashRecord.kept``（:func:`~trpg.skillgen.flash_derive.keep_failed`），
+再重推；之後的閃現、重閃、再升階到這一筆都照它保留，所以重閃不會因為升階而出不了題。
 """
 
 from __future__ import annotations
@@ -21,7 +25,8 @@ from trpg.content.skills import SkillDef
 from trpg.roguelite.flashes import base_def, state_of
 from trpg.roguelite.offers import at_run_tier, skill_defs
 from trpg.roguelite.state import RunState
-from trpg.skillgen.flash_derive import FlashError, derive_skill
+from trpg.skillgen.flash_derive import FlashError, derive_skill, keep_failed
+from trpg.skillgen.flash_state import SkillFlash
 from trpg.skillgen.skill_tier import character_tier, retier
 
 __all__ = ["run_tier", "sync_skill_tier"]
@@ -40,8 +45,12 @@ def sync_skill_tier(library: ContentLibrary, run: RunState) -> RunState:
     owned = (*run.hero.skills, *run.bench)
     rename: dict[str, str] = {}
     generated = {s.id: s for s in run.generated_skills}
+    states: dict[str, SkillFlash] = {}
     for skill in skill_defs(library, run, owned):
-        new = _at_tier(library, run, skill, tier)
+        state = _keep_failed(library, run, skill.id, tier)
+        if state is not None:
+            states[skill.id] = state
+        new = _at_tier(library, run, skill, tier, state)
         if new.id != skill.id:
             rename[skill.id] = new.id
             generated.pop(skill.id, None)
@@ -52,7 +61,7 @@ def sync_skill_tier(library: ContentLibrary, run: RunState) -> RunState:
     keep = {*skills, *bench}
     kept = {k: v for k, v in generated.items() if k in keep}
     usage = {rename.get(k, k): v for k, v in run.skill_usage.items()}
-    flash = {rename.get(k, k): v for k, v in run.flash.items()}
+    flash = {rename.get(k, k): states.get(k, v) for k, v in run.flash.items()}
     return run.model_copy(
         update={
             "hero": run.hero.model_copy(update={"skills": skills}),
@@ -65,10 +74,29 @@ def sync_skill_tier(library: ContentLibrary, run: RunState) -> RunState:
     )
 
 
-def _at_tier(library: ContentLibrary, run: RunState, skill: SkillDef, tier: int) -> SkillDef:
-    """一招學會的技能換到角色階級 ``tier``：閃過的從原本的技能照新階級重推歷程（重推不了時重配存著
-    的定義），沒閃過的照 :func:`~trpg.roguelite.offers.at_run_tier` 重配。"""
-    state = state_of(run, skill.id)
+def _keep_failed(
+    library: ContentLibrary, run: RunState, skill_id: str, tier: int
+) -> SkillFlash | None:
+    """升階時照新階級套不上的那幾筆記下存檔裡的定義（RR-1）；沒有要記的時 ``None``。"""
+    state = run.flash.get(skill_id)
+    if state is None or run.skill_tier is None:
+        return None
+    base = base_def(library, run, skill_id)
+    found = keep_failed(library, base, state, run.seed, old_tier=run.skill_tier, tier=tier)
+    return None if found == state else found
+
+
+def _at_tier(
+    library: ContentLibrary,
+    run: RunState,
+    skill: SkillDef,
+    tier: int,
+    state: SkillFlash | None = None,
+) -> SkillDef:
+    """一招學會的技能換到角色階級 ``tier``：閃過的從原本的技能照新階級重推歷程（套不上的那一筆照
+    ``state`` 裡保留的定義；整條重推不了時重配存著的定義），沒閃過的照
+    :func:`~trpg.roguelite.offers.at_run_tier` 重配。"""
+    state = state_of(run, skill.id) if state is None else state
     if not state.records and state.adjustment is None:
         return at_run_tier(library, skill, tier)
     try:

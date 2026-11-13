@@ -87,6 +87,7 @@ __all__ = [
     "flashed_identity",
     "history_error",
     "history_records",
+    "keep_failed",
     "power_floor",
     "unimplemented_ops",
     "variation_rng",
@@ -386,9 +387,7 @@ def flashed_identity(library: ContentLibrary, base: SkillDef, state: SkillFlash)
     組合式「{前綴}・{原名}」（取最後一個），只有小變化時沿用原名。LF-1：那一筆帶 LLM 名稱
     （``Variation.name_zh``，出題時已檢查）時用它。"""
     records = [*state.records, *([state.adjustment] if state.adjustment else [])]
-    body = json.dumps(
-        [r.model_dump(mode="json") for r in records], sort_keys=True, separators=(",", ":")
-    )
+    body = json.dumps([r.identity() for r in records], sort_keys=True, separators=(",", ":"))
     digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:10]
     name = base.name_zh
     for record in records:
@@ -522,11 +521,64 @@ def derive_chain(
                 replaced=replaced,
                 origin=origin,
             )
+        if applied is None and record.kept is not None:
+            # RR-1：照新階級套不上的這一筆照存檔裡的定義保留（重配到這個階級）
+            applied = at_role_tier(library, record.kept, tier)
         if applied is None:
             raise FlashStepError(base.id, record.nth, record.variation.template)
         skill = applied
         chain.append(skill)
     return chain
+
+
+def keep_failed(
+    library: ContentLibrary,
+    base: SkillDef,
+    state: SkillFlash,
+    seed: int,
+    *,
+    old_tier: int,
+    tier: int,
+) -> SkillFlash:
+    """升階（``old_tier`` → ``tier``）時把照新階級套不上的那幾筆記下存檔裡的定義（RR-1，06 6.34.9
+    「重推套不上的那一筆」）：存檔裡的定義是升階前的歷程（:func:`derive_chain`，``old_tier``）每一筆
+    套完的技能。照新階級逐筆重推，某一筆套不上、又還沒有保留的定義時，把它記在
+    :attr:`FlashRecord.kept`；之後的重推（閃現、重閃、再升階）到這一筆就照它保留。
+
+    全部套得上時原樣回傳；升階前的歷程也重推不了時（內容改版，3W-R1）原樣回傳（照舊由呼叫者重配
+    存著的定義）。"""
+    records = history_records(state)
+    if not records or old_tier == tier:
+        return state
+    try:
+        saved = derive_chain(library, base, state, seed, old_tier)
+    except FlashStepError:
+        return state
+    kept: dict[int, SkillDef] = {}
+    current = state
+    for _ in range(len(records) + 1):
+        try:
+            derive_chain(library, base, current, seed, tier)
+        except FlashStepError as exc:
+            index = next(i for i, r in enumerate(records) if r.nth == exc.nth)
+            if records[index].nth in kept:
+                return state
+            kept[records[index].nth] = saved[index]
+            current = _with_kept(state, kept)
+            continue
+        return current
+    return state
+
+
+def _with_kept(state: SkillFlash, kept: dict[int, SkillDef]) -> SkillFlash:
+    def keep(record: FlashRecord) -> FlashRecord:
+        found = kept.get(record.nth)
+        return record if found is None else record.model_copy(update={"kept": found})
+
+    adjustment = None if state.adjustment is None else keep(state.adjustment)
+    return state.model_copy(
+        update={"records": tuple(keep(r) for r in state.records), "adjustment": adjustment}
+    )
 
 
 def history_error(
