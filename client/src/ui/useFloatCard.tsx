@@ -172,6 +172,8 @@ export function useFloatCard({ pinOn = "always", shiftPin = false }: FloatOption
     },
     onClick: (e: MouseEvent<HTMLElement>) => {
       if (inCard(e.target)) return; // 卡片在觸發元素的 React 子樹裡（portal），卡片上的點擊由卡片自己處理
+      // PB-1f（e3q）：卡片裡面再開的說明卡（也是 portal）冒泡上來的點擊不算點了觸發元素（否則外層卡片被切回關掉）
+      if (!(e.target instanceof Node) || triggerRef.current?.contains(e.target) !== true) return;
       if (pinOn === "always" || (pinOn === "touch" && pointer.current === "touch")) ctl.click(true);
     },
     onFocus: (e: FocusEvent<HTMLElement>) => {
