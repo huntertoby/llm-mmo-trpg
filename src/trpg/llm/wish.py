@@ -158,9 +158,10 @@ def mock_wish_client(
     max_keywords: int = 2,
     attempts: int = DEFAULT_WISH_ATTEMPTS,
 ) -> MockLLMClient:
-    """Mock（不需網路與金鑰）：選單裡名稱出現在願望中的關鍵字，依選單順序取前 ``max_keywords`` 個；
+    """Mock（不需網路與金鑰）：選單裡名稱有任一個字出現在願望中的關鍵字（例「凍」→ 冰凍），依選單
+    順序取前 ``max_keywords`` 個；
     都沒有＝回空清單（驗證不過，測重試與退路）。確定性。"""
     by_id = {k.id: k.name_zh for k in library.keywords.keywords}
-    found = [k for k in menu if by_id.get(k) and by_id[k] in wish][:max_keywords]
+    found = [k for k in menu if set(by_id.get(k, "")) & set(wish)][:max_keywords]
     text = json.dumps({"keywords": found}, ensure_ascii=False)
     return MockLLMClient([text] * attempts)

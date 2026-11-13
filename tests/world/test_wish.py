@@ -277,15 +277,11 @@ def test_text_wish_takes_a_valid_llm_offer(library: ContentLibrary, make_char: M
     assert isinstance(record, WishGen) and record.source == "llm"
 
 
-def test_text_wish_drops_a_bad_llm_offer_only(
-    library: ContentLibrary, make_char: MakeChar
-) -> None:
+def test_text_wish_drops_a_bad_llm_offer_only(library: ContentLibrary, make_char: MakeChar) -> None:
     char = _capital(make_char)
     offer = _llm_offer(library, char)
     wrong_tier = offer.model_copy(update={"tier": offer.tier + 1})
-    gen = _fixed(
-        lambda r: WishGen(key=r.key, source="llm", keywords=("frozen",), offer=wrong_tier)
-    )
+    gen = _fixed(lambda r: WishGen(key=r.key, source="llm", keywords=("frozen",), offer=wrong_tier))
     after, events, used = _with(gen, library, char)
     made = next(e for e in events if isinstance(e, WishMadeEvent))
     assert made.made_by == "composer"
