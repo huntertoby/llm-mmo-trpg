@@ -94,3 +94,11 @@
 9. **統計**：`FlashProposalStats` 多 `naming_calls`、`names_merged`、`notes_dropped`、`repairs`、`mean_round_trips`，`summary_lines` 多四行（`scripts/eval_flash_llm.py` 照印）。
 10. **Mock 不受影響**：Mock 回應的項目本來就合格、不帶說明與名稱，也不看 prompt 與 schema；這段沒有任何快照、parity 夾具改變。
 11. **本機小樣本**：`docs/phases/PhaseLF-2報告.md` 第 3 節（7 招 × 3 種題目，和調查報告 B.2 同一組）；腳本做法是包一層會記錄的 client 跑 `make_offer(LlmFlashSource(client, naming=client))`，數提議與命名各幾次呼叫。
+
+## 七、LF-3：閃現的名稱與描述進 API 與畫面
+
+1. **API**：`FlashOptionOut.note_zh`（LLM 的一句話描述，純文字、不帶術語標記；沒有＝`None`）、`name_source`（`llm`／`template`）。兩個都由 `api/flash_text.py::option_llm_text(variation, after)` 算：描述再過一次 `clean_note`；名稱只有大變化、轉型帶了 `clean_name` 合格的名稱、**而且** `after.name_zh` 真的等於它才算 `llm`（小變化沿用原名一律 `template`，即使原名是之前閃現的 LLM 名稱）。`run_presenter._pending` 一處填，一輪與大世界共用。
+2. **前端**：選項卡在大標下面多一列「名稱 原名 → 新名」（新名稱跟畫面上的原名不同才列，組合式名稱也列），本機模型取的名稱後面一顆紫色「源晶推演」小標記（`LLM_SOURCE_LABEL`，滑過出 `FLASH_LLM_NAME_HINT`）；描述接在名稱列下面一行（`.fc-note`，次要字、最多兩行）。下固定區不動。程式在 `run/flashChoice.ts`（`renamedTo`、`llmNamed`、`noteOf`）、`run/FlashChoiceParts.tsx`（`DiffRows` 的 `rename`、`note`）。
+3. **開發頁夾具**：`scripts/export_flash_choice_fixture.py` 多一組 `llm`（點燃斬閃過兩次後第 3 次大變化，**真的出題** `make_offer`，用一個帶 `texts()` 的 `DataOrderSource` 子類掛文字）。`client/dev/flash-choice.html?set=llm`。
+4. **實機（大世界）要點**：`pregen/wait` 的 10 秒**從第一次等待算起**，重問不會重新計時；LF-1 的程式（每個大變化另呼叫命名）實測整題超過 10 秒 → 退回組合式名稱。要拍 LLM 版：讀一次角色（開始預先生成）後先等 60～90 秒再送閃現（LF-3 報告第 3 節）。
+5. **測試**：`tests/api/test_flash_llm_text_lf3.py`、`client/src/run/lf3FlashLlmText.test.ts`。
