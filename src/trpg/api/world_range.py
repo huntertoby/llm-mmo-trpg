@@ -65,6 +65,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "PRACTICE_TITLE_ZH",
+    "capital_figure",
     "close_range_trial",
     "keeper_speaker",
     "open_range_practice",
@@ -121,7 +122,7 @@ def _lines(lines: tuple[OpeningLine, ...]) -> tuple[RangeLineView, ...]:
 
 def _keeper(library: ContentLibrary, arena: RangeContent) -> RangeSpeakerView | None:
     """守印人的頭像：主城實地地圖上 ``range.keeper_object`` 那個情境物件的外觀。"""
-    return _capital_figure(library, arena.keeper_object)
+    return capital_figure(library, arena.keeper_object)
 
 
 def keeper_speaker(library: ContentLibrary) -> RangeSpeakerView | None:
@@ -132,7 +133,7 @@ def keeper_speaker(library: ContentLibrary) -> RangeSpeakerView | None:
     return None if arena is None else _keeper(library, arena)
 
 
-def _capital_figure(library: ContentLibrary, object_id: str | None) -> RangeSpeakerView | None:
+def capital_figure(library: ContentLibrary, object_id: str | None) -> RangeSpeakerView | None:
     """主城實地地圖上 ``object_id`` 那個情境物件的名字與頭像（守印人、工坊師傅）。"""
     found = library.outdoor_map(CAPITAL_REGION, CAPITAL_REGION)
     if object_id is None or found is None:
@@ -161,7 +162,7 @@ def workshop_view(
     return WorkshopView(
         title_zh=f"{capital}{menu.title_zh}",
         capital_zh=capital,
-        speaker=_capital_figure(library, menu.master_object),
+        speaker=capital_figure(library, menu.master_object),
         line=RangeLineView(speaker_zh=menu.line.speaker_zh, text_zh=menu.line.text_zh),
         practice_zh=menu.practice_zh,
         practice_note_zh=menu.practice_note_zh,

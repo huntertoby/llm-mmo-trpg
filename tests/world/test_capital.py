@@ -539,8 +539,10 @@ def test_capital_objects_carry_panel_and_stele(calm: ContentLibrary) -> None:
         "shadow_league_desk": "league",
         "loadout_pavilion": "pavilion",
         "workshop_master": "workshop",  # PR-2a：工坊師傅選單
+        "wishing_pool": "wish",  # WP-2：許願池面板
+        "pool_keeper": "wish",
     }
-    assert by["wishing_pool"].panel is None and by["bridge_cloud_ridge"].stele_region is None
+    assert by["bridge_cloud_ridge"].stele_region is None
     hall = calm.field_maps["capital_mentor_hall"]
     assert {s.id: s.panel for s in hall.situation_objects} == {
         "scribe": "skills",

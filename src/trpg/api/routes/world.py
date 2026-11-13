@@ -109,10 +109,12 @@ from trpg.api.world_field_schemas import FieldTilesView
 from trpg.api.world_field_view import field_tiles, visible_field_map
 from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
 from trpg.api.world_pregen import (
+    Kind,
     PregenWaitOut,
     PregenWaitRequest,
     flash_wait_request,
     opportunity_wait_request,
+    wish_wait_request,
 )
 from trpg.api.world_presenter import character_summary, event_lines, world_view
 from trpg.api.world_range import (
@@ -189,6 +191,8 @@ def _view(
         # 6C-R3：靜態地形改由 GET …/characters/{id}/fields/{map_id} 取；前端取不到時用
         # ?with_tiles=1 請伺服器直接帶（6D-R1）
         inline_tiles=inline_tiles,
+        # WP-2：許願池能不能用願望文字＝預先生成裝上、而且世界的 LLM 開著（文字許願只經這條路）
+        wish_llm=store.pregen is not None and store.pregen.enabled(),
     )
 
 
@@ -394,7 +398,8 @@ def post_dev_teleport(character_id: str, request: Request, *, region: str) -> Wo
 @router.post("/characters/{character_id}/pregen/wait")
 def post_pregen_wait(character_id: str, body: PregenWaitRequest, request: Request) -> PregenWaitOut:
     """6L-2：按閃現（或重閃）、選機遇解法之前先問 LLM 的版本好了沒——會等到好了或 10 秒（期間前端
-    顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。"""
+    顯示等待提示、可以取消）。不扣點、不寫日誌；等待時不佔世界的寫入鎖。WP-2：送出文字許願前也先問
+    （``kind: "wish"``＋``text``；許願在佇列插隊排最前面）；選單許願、現在不能許的一律 ``none``。"""
     store = world_of(request)
     pregen = store.pregen
     if pregen is None:
@@ -408,12 +413,14 @@ def post_pregen_wait(character_id: str, body: PregenWaitRequest, request: Reques
                 raise WorldActionError("閃現的等待要指定技能")
             choice = FlashChoice(skill=body.skill, slot=body.slot, category=body.category)
             gen = flash_wait_request(library, store.world(), char, choice)
+        elif body.kind == "wish":
+            gen = wish_wait_request(library, store.world(), char, body.text, store.clock())
         elif body.solution is not None:
             gen = opportunity_wait_request(library, store.world(), char, body.solution)
         if gen is None:
             return PregenWaitOut(status="none")
-    kind: Literal["flash", "complete_offer"] = "flash" if body.kind == "flash" else "complete_offer"
-    return pregen.wait(character_id, kind, gen, library=library)
+    kinds: dict[str, Kind] = {"flash": "flash", "opportunity": "complete_offer", "wish": "wish"}
+    return pregen.wait(character_id, kinds[body.kind], gen, library=library)
 
 
 @router.post("/characters/{character_id}/flash-preview")

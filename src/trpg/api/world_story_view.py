@@ -747,6 +747,8 @@ def pending_offer_view(
             if service
             else "在野外：選了先放進備用，回城鎮或營火再換上。"
         ),
+        source=pending.source,
+        refund=pending.refund,
     )
 
 

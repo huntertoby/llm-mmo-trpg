@@ -13,7 +13,9 @@
   - 機遇：每份三選一最多 :data:`OPPORTUNITY_LLM_CARDS` 張請 LLM（6L-2b），其餘用組合器；
     ``pending_event`` 有可用的機遇解法時（最多 :data:`OPPORTUNITY_LIMIT`）。
 - **單一佇列**：一條背景執行緒依序做，同一時間只有一個 LLM 請求。暫存區全服最多
-  :data:`QUEUE_LIMIT` 筆，超過時丟掉最舊、還沒開始的。
+  :data:`QUEUE_LIMIT` 筆，超過時丟掉最舊、還沒開始的。**許願插隊**（WP-2，開發 PM 裁定）：許願是玩家
+  當場打字、實測一次 7～9.6 秒，排在預測的閃現、機遇後面就會超過 10 秒；所以許願排在所有還沒開始的
+  預測前面（許願之間照先後），不打斷正在跑的那一筆。
 - **只放記憶體**：結果不寫日誌也不寫存檔；預測換了（角色狀態變了）就丟掉這個角色沒用到的。
 - **閃現的暫存鍵不含用法統計**（6L-2c，玩法 PM 決定）：每打完一場統計都會變，放進鍵就會一直重做。
   統計只在開始生成時讀一次（那次請求的輸入）；同一招同一次出題只有一筆，已經在生成或做好的不重開。
@@ -35,6 +37,7 @@ import concurrent.futures
 import logging
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -43,6 +46,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict
 
 from trpg.api.llm_source import LlmProvider
+from trpg.api.world_wish_view import wish_block
 from trpg.content.library import ContentLibrary
 from trpg.llm.flash_propose import LlmFlashSource
 from trpg.llm.story_skill import StorySkillRequest
@@ -81,6 +85,7 @@ from trpg.world.situations import opportunity_available
 from trpg.world.solutions import opportunity_tier_bonus
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.story_gen import opportunity_request, story_base, story_request
+from trpg.world.wish import wish_request, wish_rules
 
 __all__ = [
     "FLASH_LIMIT",
@@ -89,8 +94,10 @@ __all__ = [
     "QUEUE_LIMIT",
     "STORY_LIMIT",
     "STORY_WAIT_SECONDS",
+    "URGENT_KINDS",
     "WAIT_SECONDS",
     "Generators",
+    "Kind",
     "PregenWaitOut",
     "PregenWaitRequest",
     "WorldPregen",
@@ -99,6 +106,7 @@ __all__ = [
     "predicted_requests",
     "provider_generators",
     "wish_generator",
+    "wish_wait_request",
 ]
 
 _LOG = logging.getLogger(__name__)
@@ -368,6 +376,25 @@ def opportunity_wait_request(
     )
 
 
+def wish_wait_request(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    text: str | None,
+    now: int,
+) -> WishGenRequest | None:
+    """送出文字許願前的等待（WP-2）會用的生成請求，和 ``wish`` 動作組的那一筆同一把鍵
+    （:func:`~trpg.world.wish.wish_request`，願望先去頭尾空白）。選單許願（沒有文字）、願望空白或
+    超過字數、現在不能許（:func:`~trpg.api.world_wish_view.wish_block`）＝``None``
+    （不白打 LLM）。"""
+    cleaned = None if text is None else text.strip()
+    if not cleaned or len(cleaned) > wish_rules(library).text_max_chars:
+        return None
+    if wish_block(library, world, char, now) is not None:
+        return None
+    return wish_request(library, world, char, cleaned)
+
+
 def _opportunity_requests(
     library: ContentLibrary, world: WorldState, char: CharacterState
 ) -> list[GenRequest]:
@@ -416,8 +443,13 @@ class _Entry:
     target: str | None
     """閃現的技能 ID（等待提示用）；其他入口為 ``None``。"""
     future: Future[_Record | None]
+    view: ContentLibrary
     deadline: float | None = None
     order: int = 0
+
+
+URGENT_KINDS: Final = frozenset({"wish"})
+"""插隊排在所有還沒開始的預測前面的入口（WP-2：許願是玩家當場打字，沒有預先生成）。"""
 
 
 class PregenWaitRequest(BaseModel):
@@ -425,12 +457,16 @@ class PregenWaitRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    kind: Literal["flash", "opportunity"]
+    kind: Literal["flash", "opportunity", "wish"]
     skill: str | None = None
     slot: int | None = None
     category: str | None = None
     solution: int | None = None
     """機遇：事件的第幾個解法（同 ``event_solve`` 的 ``solution``）；不是機遇解法＝不用等。"""
+    text: str | None = None
+    """許願（WP-2）：要送出的願望文字（同 ``wish`` 動作的 ``text``）；會在佇列插隊排最前面。"""
+    keywords: tuple[str, ...] = ()
+    """許願：選單的關鍵字（同 ``wish`` 動作）；選單許願不呼叫 LLM，一律 ``none``。"""
 
 
 class PregenWaitOut(BaseModel):
@@ -453,6 +489,8 @@ class WorldPregen:
     poll_seconds: float = _POLL_SECONDS
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _entries: dict[tuple[str, str], _Entry] = field(default_factory=dict)
+    _urgent: deque[_Entry] = field(default_factory=deque)
+    _normal: deque[_Entry] = field(default_factory=deque)
     _pool: ThreadPoolExecutor | None = None
     _order: int = 0
     _closed: bool = False
@@ -498,14 +536,36 @@ class WorldPregen:
         return None
 
     def _submit(self, view: ContentLibrary, request: GenRequest) -> _Entry:
-        """（持鎖）排進單一佇列。"""
+        """（持鎖）排進單一佇列：許願（:data:`URGENT_KINDS`）排在所有還沒開始的預測前面，其他照先後。
+        背景執行緒每次從佇列頭拿一筆（:meth:`_next`），所以正在跑的那一筆不會被打斷。"""
         if self._pool is None:
             self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="trpg-pregen")
-        future = self._pool.submit(self._run, view, request)
         self._order += 1
-        entry = _Entry(request, self._target(request), future, order=self._order)
+        future: Future[_Record | None] = Future()
+        entry = _Entry(request, self._target(request), future, view, order=self._order)
+        (self._urgent if request.kind in URGENT_KINDS else self._normal).append(entry)
         self._entries[(request.character_id, _slot(request))] = entry
+        self._pool.submit(self._next)  # 一筆一個工作；取消掉的那筆由下一個工作略過
         return entry
+
+    def _take(self) -> _Entry | None:
+        """從佇列頭拿下一筆還沒取消的（許願先），標成執行中；沒有＝``None``。"""
+        with self._lock:
+            while self._urgent or self._normal:
+                entry = (self._urgent or self._normal).popleft()
+                if entry.future.set_running_or_notify_cancel():
+                    return entry
+        return None
+
+    def _next(self) -> None:
+        """背景執行緒的一個工作：做佇列頭的那一筆，結果交給它的 ``Future``。"""
+        entry = self._take()
+        if entry is None:
+            return
+        try:
+            entry.future.set_result(self._run(entry.view, entry.request))
+        except BaseException as exc:  # _run 自己會吞掉生成錯誤；這裡只防萬一
+            entry.future.set_exception(exc)
 
     def _trim(self) -> None:
         """（持鎖）超過上限時丟掉最舊、還沒開始的。"""
@@ -636,5 +696,7 @@ class WorldPregen:
             for entry in self._entries.values():
                 entry.future.cancel()
             self._entries.clear()
+            self._urgent.clear()
+            self._normal.clear()
         if pool is not None:
             pool.shutdown(wait=False, cancel_futures=True)

@@ -433,10 +433,10 @@ type SpotUse = Literal["note", "event", "encounter"]
 """情境物件點了做什麼（6C-5）：``note``＝只開說明卡；``event``＝開這個地點的事件骨架（情境判定照
 骨架的模板）；``encounter``＝這個地點的遭遇（Boss 門）。"""
 
-type ObjectPanel = Literal["board", "league", "pavilion", "skills", "workshop"]
+type ObjectPanel = Literal["board", "league", "pavilion", "skills", "workshop", "wish"]
 """主城情境物件點了開的既有面板（6D-R2）：``board``＝公告板（封印、賽季 Boss）、``league``＝影子
 循環賽、``pavilion``＝整備亭、``skills``＝技能（魔導書）、``workshop``＝工坊師傅選單（PR-2a，
-``WorldView.workshop``）。"""
+``WorldView.workshop``）、``wish``＝許願池（WP-2，``WorldView.wish``）。"""
 
 
 type FigureWork = Literal["smith", "keeper", "town"]
