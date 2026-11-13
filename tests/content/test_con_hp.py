@@ -122,6 +122,7 @@ OLD_HP = {
     "fire_dust_bat": 16,
     "lava_tortoise": 50,
     "molten_shell_trooper": 48,  # RG-1 新增（荒原盾兵）
+    "ashen_berserker": 46,  # RG-2 新增（荒原狂戰士）
     "magma_slug": 48,
     "sulfur_beast": 40,
     "scorched_colossus": 70,

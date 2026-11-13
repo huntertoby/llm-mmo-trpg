@@ -6501,6 +6501,20 @@
             "type": "array",
             "title": "Traps"
           },
+          "trap_traces": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Pos"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trap Traces"
+          },
           "turn_order": {
             "items": {
               "type": "string"
@@ -10321,6 +10335,27 @@
         "title": "DraftOptions",
         "description": ":func:`~trpg.skillgen.options.draft_options` 的結果：前置步驟都完成的步驟（依序），以及\n第一個還沒完成的步驟 ``next_step``（全部完成時為 ``None``）。"
       },
+      "DuelChoiceAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "duel_choice",
+            "title": "Kind",
+            "default": "duel_choice"
+          },
+          "accept": {
+            "type": "boolean",
+            "title": "Accept"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accept"
+        ],
+        "title": "DuelChoiceAction",
+        "description": "回應精英提出的單挑（RG-2，#162，09 9.6.6）：只在遭遇的 ``duel`` 是 ``offered`` 時可送；\n``accept``＝一對一（只有主角對精英本人），否則照原本全隊打。兩邊獎勵完全一樣。"
+      },
       "EffectFix": {
         "properties": {
           "index": {
@@ -10666,6 +10701,33 @@
               }
             ],
             "title": "Battlefield Fallback Zh"
+          },
+          "duel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "offered",
+                  "accepted",
+                  "declined"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duel"
+          },
+          "duel_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duel Zh"
           }
         },
         "additionalProperties": false,
@@ -32290,6 +32352,9 @@
             "$ref": "#/components/schemas/RetreatAction"
           },
           {
+            "$ref": "#/components/schemas/DuelChoiceAction"
+          },
+          {
             "$ref": "#/components/schemas/RestAction"
           },
           {
@@ -32439,6 +32504,7 @@
             "change_race": "#/components/schemas/ChangeRaceAction",
             "craft": "#/components/schemas/CraftAction",
             "dissolve": "#/components/schemas/DissolveAction",
+            "duel_choice": "#/components/schemas/DuelChoiceAction",
             "enhance": "#/components/schemas/EnhanceAction",
             "equip": "#/components/schemas/EquipAction",
             "event_solve": "#/components/schemas/EventSolveAction",

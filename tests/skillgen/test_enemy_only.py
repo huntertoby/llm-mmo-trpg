@@ -45,6 +45,8 @@ ENEMY_ONLY = frozenset(
         "skill_crane_piercing_shot",
         "skill_binding_talisman",
         "skill_lava_bomb",
+        # RG-2（#162）荒原狂戰士怒氣滿 4 層的強力一擊
+        "skill_berserker_fury_cleave",
     }
 )
 

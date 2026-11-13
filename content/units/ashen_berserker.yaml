@@ -1,0 +1,17 @@
+# 灰燼荒原敵人「荒原狂戰士」（RG-2，#162，19.2.1「加深內容」）：斷崖幫荒原分隊的狂戰士，越挨打越兇——
+# 受到傷害累積怒氣（#161 的怒氣：stacks.yaml 的 fury，受傷 +1；怒火中燒每輪再 +1 並給一點護盾），
+# 怒氣滿 4 層就打出強力一擊「狂怒劈砍」（花光怒氣）。資源機制照 KW-1，不另做。
+# 數值照盜賊加厚一點（初值，未經模擬；照工坊）。外觀先用盜賊的紙娃娃換配色（美術 PM 之後出圖）。
+id: ashen_berserker
+name_zh: 荒原狂戰士
+attributes: {str: 15, dex: 10, con: 14, int: 6, wis: 8, wil: 10}
+max_hp: 34
+speed: 5
+armor_bonus: 2
+weapon: axe
+resist: {}
+element_mods: {}
+tags: [humanoid]
+skills: [skill_seething_rage, skill_berserker_fury_cleave]   # 受傷累積怒氣＋滿了的強力一擊（#149 一般敵人至少 2 招）
+doll: {skin: '#a8724c', hair: short, hair_color: '#5a3a22', beard: true, gear: {body: {kind: leather, material: leather}, feet: {kind: boots, material: leather}, head: {kind: bandana, material: cloth, color: '#c2581f'}}}
+look_range: {race: human, skin: ['#d9a47a', '#a8724c', '#7a4e32'], hair: [short, spiky], hair_color: ['#2a1c14', '#5a3a22', '#6a3d1e'], beard: [stubble, full]}

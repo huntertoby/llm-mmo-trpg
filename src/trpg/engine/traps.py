@@ -9,6 +9,12 @@
 - 隱藏：陷阱只有放置者陣營看得到（``reveal`` 揭露後，揭露者的陣營也看得到：
   ``revealed_to``）。敵方的路徑規劃、AI 評分與預覽一律經過 :func:`visible_traps`
   （預覽用 :func:`strip_hidden_traps`），不得讀取對方陣營的陷阱；事件紀錄是全知的。
+- 可疑痕跡（RG-2，#162，05 5.7、06 6.3.1）：**只有玩家方**（``Team.ALLY``，含召喚物）移動抵達
+  或回合開始時，``trap_trace_radius`` 格內還沒揭露的敵方陷阱記成痕跡（``TrapState.traced_by``，
+  :func:`trace_traps`），只知道格子、不知道種類；看到就留著直到觸發、過期、被揭露（揭露後從痕跡
+  移除）。痕跡不改可見性：路徑、AI、預覽照舊只看 :func:`visible_traps`（我方 AI 不因痕跡繞路）。
+  敵方（非玩家方）放陷阱時另發所有人可見的 ``trap_glance``（看那一格一眼的演出；那一格不因此變成
+  痕跡）。
 """
 
 from __future__ import annotations
@@ -21,8 +27,10 @@ from trpg.engine.context import Ctx
 from trpg.engine.events import (
     EventBase,
     TrapExpired,
+    TrapGlance,
     TrapPlaced,
     TrapRevealed,
+    TrapTraced,
     TrapTriggered,
 )
 from trpg.engine.rules.perks import attribute_perk
@@ -44,6 +52,8 @@ __all__ = [
     "reveal_traps",
     "strip_hidden_traps",
     "tick_traps",
+    "trace_traps",
+    "trap_traces",
     "visible_traps",
 ]
 
@@ -67,7 +77,10 @@ def reveal_traps(ctx: Ctx, caster: UnitState, tiles: Iterable[tuple[int, int]]) 
         trap = state.trap_at(*xy)
         if trap is None or trap.team is caster.team or caster.team in trap.revealed_to:
             continue
-        revealed = replace(trap, revealed_to=(*trap.revealed_to, caster.team))
+        traced = tuple(
+            t for t in trap.traced_by if t is not caster.team
+        )  # 揭露後不再是痕跡（RG-2）
+        revealed = replace(trap, revealed_to=(*trap.revealed_to, caster.team), traced_by=traced)
         state.traps = [revealed if t is trap else t for t in state.traps]
         ctx.emit(
             TrapRevealed,
@@ -95,6 +108,37 @@ def detect_traps(ctx: Ctx, unit: UnitState) -> None:
         and abs(t.pos.x - unit.pos.x) + abs(t.pos.y - unit.pos.y) <= radius
     ]
     reveal_traps(ctx, unit, near)
+
+
+def trace_traps(ctx: Ctx, unit: UnitState) -> None:
+    """可疑痕跡（RG-2，見模組說明）：玩家方的 ``unit`` 在 ``trap_trace_radius`` 格內的敵方陷阱，還沒
+    揭露、還沒記成痕跡的，記進 ``traced_by`` 並發 ``trap_traced``（依 ``(y, x)``；陷阱清單本來就照
+    這個順序）。敵方與第三方什麼也不做。不耗亂數。"""
+    radius = ctx.core.trap_trace_radius
+    team = unit.team
+    if team is not Team.ALLY or radius <= 0 or not ctx.state.traps:
+        return
+    found = [
+        t
+        for t in ctx.state.traps
+        if t.team is not team
+        and team not in t.revealed_to
+        and team not in t.traced_by
+        and abs(t.pos.x - unit.pos.x) + abs(t.pos.y - unit.pos.y) <= radius
+    ]
+    for trap in found:
+        traced = replace(trap, traced_by=(*trap.traced_by, team))
+        ctx.state.traps = [traced if t is trap else t for t in ctx.state.traps]
+        ctx.emit(TrapTraced, unit_id=unit.id, team=team, pos=trap.pos)
+
+
+def trap_traces(state: BattleState, team: Team) -> tuple[Pos, ...]:
+    """``team`` 看到的可疑痕跡格子（RG-2；依 ``(y, x)``）：記了痕跡、還沒揭露的對方陷阱。"""
+    return tuple(
+        t.pos
+        for t in sorted(state.traps, key=lambda t: (t.pos.y, t.pos.x))
+        if t.team is not team and team in t.traced_by and team not in t.revealed_to
+    )
 
 
 def strip_hidden_traps(state: BattleState, team: Team) -> BattleState:
@@ -133,6 +177,8 @@ def place_trap(ctx: Ctx, caster: UnitState, skill: SkillDef, xy: tuple[int, int]
         trigger=spec.trigger,
         rounds=spec.rounds,
     )
+    if caster.team is not Team.ALLY:  # 敵人放陷阱時看那一格一眼（RG-2；所有人可見的演出）
+        ctx.emit(TrapGlance, owner_id=caster.id, pos=trap.pos)
     for seer in state.living_units():  # 狐族的靈覺：陷阱放在他身邊就看得見（Phase 3R-2）
         if seer.team is not caster.team and reveal_radius(ctx.rules, seer) > 0:
             detect_traps(ctx, seer)

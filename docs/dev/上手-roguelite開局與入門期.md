@@ -142,6 +142,7 @@
 22. **隊友台詞的前端接法（OB-8）**：`WorldScreen` 的 `partyIntro`＝`view.party_intro`，條件是靶場那段話（`rangeDone`）已關、沒有「你不在的時候」與開場；按「好」走既有的 `markSeen([seen_id])`（本機先記、送 `hint_seen`）。播著時升級畫面與教學先等（`partyIntro === null` 加在那三個條件上），所以渡口打完是「阿岳台詞 → 升到 2 級 → 配點教學」。播誰、何時播全由後端決定，前端沒有寫死成員；之後改入隊時機只要動後端。隊伍面板在主城與野外是「影子（Y）」面板最上面那塊（`HudShadowPanel`），城鎮的雇用面板也有。
 
 23. **遭遇表加新陣容只改內容（RG-1，#162）**：雲海吊橋、古松祭壇、焦油坑、熔岩洞窟各加一個盾兵陣容，原陣容不動；不升 `WORLD_RULES_VERSION`（世界規則程式沒變，內容雜湊會變）。那些地點抽到原陣容的機率跟著變低，用固定種子斷言某地點抽到某陣容的測試要重看。精英單挑（RG-2）才會動遇敵與組場，到時要升 `WORLD_RULES_VERSION`，規格在 `docs/phases/PhaseRG計畫.md` 第 2.2 節。
+24. **精英單挑（RG-2，#162）**：`world/duel.py`。提出在 `solutions.make_encounter` 的最後（`offer_duel`：陣容排最前的精英帶 `elite.duel: true` → `EncounterResult.duel="offered"`；固定精英、懸賞、遭遇變化三處的 `FixedElite` 都能帶），所以移動遇敵、實地接觸、情境物件、戰鬥解法都會提出。`duel_choice` 只在 `offered` 時可送；**沒選就開打＝拒絕**（`prepare_battle` 只認 `accepted`）。接受時 `PreparedBattle.lineup` 仍是整個陣容（經驗、金錢、掉落、精英首殺、懸賞都照它），實際上場的是 `PreparedBattle.fielded`（只有精英本人、沒有第三方），我方只有主角；`roll_loot(..., duel=True)` 讓掉材料的成員照整個敵方陣容。遇敵面板 `EncounterView.duel`／`duel_zh`、`enemies` 照實際上場的列。`WORLD_RULES_VERSION` 31、`CHAR_FORMAT` `trpg-char/15`（`trpg-char/14` 字面在 15 個測試檔，`git grep -l` 一起換）。測試 `tests/world/test_elite_duel_rg2.py`（北坡狼王種子 0、1 一對一與全隊都打得贏）。
 
 ## 五、相關測試檔
 

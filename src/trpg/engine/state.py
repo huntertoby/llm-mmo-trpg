@@ -150,6 +150,9 @@ class TrapState:
     attributes: tuple[tuple[Attribute, int], ...]
     revealed_to: tuple[Team, ...] = ()
     """被 ``reveal`` 揭露而看得到這個陷阱的其他陣營（Phase 3D-8a；放置者陣營本來就看得到）。"""
+    traced_by: Annotated[tuple[Team, ...], Field(exclude_if=_empty)] = ()
+    """看到這個陷阱「可疑痕跡」的陣營（RG-2，#162，05 5.7：只有玩家方會看到；只知道格子，不知道
+    種類）。揭露後從這裡移除（改成 ``revealed_to``）；沒有時不輸出，既有紀錄的 JSON 不變。"""
 
     @property
     def xy(self) -> tuple[int, int]:

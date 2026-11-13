@@ -42,6 +42,8 @@ groups:
   - {id: convoy_raid, name_zh: 獸群襲擊運輸隊, units: [ember_lizard, ash_hound, ash_hound], third: [bandit, ashen_gunner]}  # 三方：玩家可以選邊
   - {id: overseer_crew, name_zh: 督工營的鐵鍊隊, units: [bandit, lava_beetle, ashen_gunner]}   # 混族例：盜賊用鐵鍊牽著熔岩甲蟲
   - {id: overseer_guard, name_zh: 督工營的守衛, units: [bandit_shieldbearer, bandit, lava_beetle]}
+  # RG-2（#162，19.2.1「加深內容」）：荒原狂戰士（#161 怒氣）跟著運輸隊；加在現有地點，原陣容不動
+  - {id: convoy_berserkers, name_zh: 運輸隊的狂戰士, units: [ashen_berserker, bandit, ashen_gunner]}
   - {id: fortress_bandits, name_zh: 要塞裡的斷崖幫, units: [scorched_colossus, bandit, ashen_gunner]}
   - {id: altar_wraiths, name_zh: 祭壇的熔晶魅, units: [molten_wraith, molten_wraith, horned_zealot]}
   # 主線第 2 章第 4 步「赫琳的背叛」（19.6.1：熔岩獸群、盜賊、祭司的護衛三方混戰）
@@ -74,7 +76,7 @@ locations:
   - location: cooling_well
     groups: [{group: well_guardians}]
   - location: gang_convoy_road
-    groups: [{group: convoy_guard, weight: 2}, {group: convoy_raid}]
+    groups: [{group: convoy_guard, weight: 2}, {group: convoy_raid}, {group: convoy_berserkers}]
   - location: ash_well_village
     groups: [{group: village_raid_mid}]
     objective: defend
@@ -84,7 +86,7 @@ locations:
       - {flag: brood_spread, group: brood_spread}
   - location: overseer_camp
     groups: [{group: overseer_crew}, {group: overseer_guard}]
-    elite: {unit: forge_scar, affix: hard_shelled}   # 懸賞「熔爐督工」＝盜賊隊長精英（19.8；詞綴開發 PM 定）
+    elite: {unit: forge_scar, affix: hard_shelled, duel: true}   # 懸賞「熔爐督工」＝盜賊隊長精英（19.8；詞綴開發 PM 定）；RG-2 單挑（19.2.1：開發挑不會補血的）
   - location: iron_forge_village
     groups: [{group: village_raid_heavy}]
     objective: defend

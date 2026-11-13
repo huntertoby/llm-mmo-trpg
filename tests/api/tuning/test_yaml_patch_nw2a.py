@@ -59,7 +59,8 @@ def _set(data: dict[str, object], parts: tuple[PathPart, ...], value: object) ->
 
 
 def test_cases_cover_every_skill_file_and_dice() -> None:
-    assert len({rel for rel, _p, _k in CASES}) == 409  # LW-1 加 3 招；BS-1 加 2 招；RG-1 加 3 招
+    # LW-1 加 3 招；BS-1 加 2 招；RG-1 加 3 招；RG-2 加 1 招
+    assert len({rel for rel, _p, _k in CASES}) == 410
     kinds = {k for _r, _p, k in CASES}
     assert {"int", "permille", "dice", "range"} <= kinds
     assert (

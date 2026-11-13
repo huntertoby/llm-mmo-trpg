@@ -52,6 +52,7 @@ from trpg.world.actions import (
     ChangeLookAction,
     ChangeRaceAction,
     DissolveAction,
+    DuelChoiceAction,
     EventSolveAction,
     FlashAction,
     FlashPickAction,
@@ -142,6 +143,7 @@ type WorldActionRequest = Annotated[
     TravelAction
     | CampAction
     | RetreatAction
+    | DuelChoiceAction  # RG-2
     | RestAction
     | LoadoutAction
     | TeleportAction
@@ -472,6 +474,12 @@ class EncounterView(_ApiModel):
     """就地開打切出的戰場（6C-2）；``None``＝用地點原本的戰鬥地圖模板。"""
     battlefield_fallback_zh: str | None = None
     """碰到地圖上的敵人卻改用模板的原因（6C-2，例「站位放不下」）。"""
+    duel: Literal["offered", "accepted", "declined"] | None = None
+    """精英單挑（RG-2，#162）：``offered``＝排最前的精英要求一對一（送 ``duel_choice``；還沒選就
+    開打＝拒絕），``accepted``＝一對一（``enemies`` 只有精英本人、我方只有主角），``declined``＝照
+    原本全隊打。兩邊獎勵一樣。``None``＝沒有提出單挑。"""
+    duel_zh: str | None = None
+    """單挑的說明句（例「狂暴的霧狼要求一對一：接受＝只有你和牠，拒絕＝照原本全隊打；兩邊獎勵一樣」）。"""
 
 
 class WorldClockView(_ApiModel):
