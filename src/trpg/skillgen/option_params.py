@@ -498,7 +498,7 @@ def condition_param_fields(
 
 
 ENEMY_ONLY_CONDITION = "這個條件只給敵人專用招用，玩家技能不能選"
-HANDWRITTEN_ONLY_CONDITION = "這個條件目前只給內建技能用（雙牙），還不開放選"
+HANDWRITTEN_ONLY_CONDITION = "這個條件目前只給內建技能用，還不開放選"
 """``enemy_only`` 條件（LW-1 ``self_lacks_status``）在選單上的停用說明。"""
 
 

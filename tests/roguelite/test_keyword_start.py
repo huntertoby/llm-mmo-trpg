@@ -46,6 +46,8 @@ def test_starter_pools_use_exclusive_rules_and_have_three_each() -> None:
     pools = starter_pools(lib)
     assert set(pools) == set(lib.keywords.ids())
     for keyword, ids in pools.items():
+        if keyword not in lib.keywords.start_ids():  # KW-1：開局不出現的四個層數關鍵字，KW-2 補齊
+            continue
         assert len(ids) >= 3, keyword
         assert all(is_starter_skill(lib.skills[i]) for i in ids)
     assert "skill_cleave" not in pools["prone"]  # 近戰武器技只靠通用規則利用倒地

@@ -20,6 +20,7 @@ from trpg.content.skills.constants import (
     REFUND_COOLDOWN,
     RULE_CHANGE,
     SELF_DAMAGE_OF_HIT,
+    SELF_STACK_AT_LEAST,
     ZONE,
     rarity_rank,
 )
@@ -146,7 +147,27 @@ def _condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> li
     for name, spec in definition.params.items():
         if spec.required and name not in values:
             problems.append(f"{where}.{name}：條件 {definition.id} 缺少必要參數 {name}")
-    return problems
+    return problems + _stack_condition_problems(where, condition, refs)
+
+
+def _stack_condition_problems(where: str, condition: ConditionSpec, refs: _Refs) -> list[str]:
+    """``self_stack_at_least``（KW-1，#161）：層數存在、累積在施放者自己身上，``count`` 不超過上限。
+    ``refs.stacks`` 為 ``None``（沒有層數表）時不檢查。"""
+    if condition.type != SELF_STACK_AT_LEAST or condition.stack is None or refs.stacks is None:
+        return []
+    definition = refs.stacks.get(condition.stack)
+    if definition is None:
+        return [f"{where}.stack：未知的層數 {condition.stack!r}"]
+    if definition.owner != "self":
+        return [
+            f"{where}.stack：「{definition.name_zh}」疊在敵人身上，這個條件只能看施放者自己的層數"
+        ]
+    if condition.count is not None and condition.count > definition.max:
+        return [
+            f"{where}.count：「{definition.name_zh}」最多 {definition.max} 層，"
+            f"收到 {condition.count}"
+        ]
+    return []
 
 
 def _forbidden_affects_message(where: str, primitive_id: str, affects: str) -> str:

@@ -39,8 +39,8 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
 ];
 /** 基準錄好之後內容改過、主圖跟著變的招（DD-3：雙牙拿掉第二段傷害、改成兩下都中才上中毒）。 */
 const CONTENT_CHANGED: readonly string[] = ["skill_twin_fang"];
-/** 基準錄好之後才加的部件（LW-1 兩個條件、DD-3 與 BS-1 各一個；沒有開工前的雜湊）。 */
-const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike"];
+/** 基準錄好之後才加的部件（LW-1 兩個條件、DD-3 與 BS-1 各一個、KW-1 一個條件；沒有開工前的雜湊）。 */
+const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike", "condition:self_stack_at_least"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
 const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier && !ADDED_AFTER_BASELINE.includes(id)); // 基準之後才加的修正技（BS-1 無聲步）沒有開工前的紀錄

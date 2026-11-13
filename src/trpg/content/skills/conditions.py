@@ -15,6 +15,7 @@ from trpg.content.skills.constants import (
     _PLAIN_CONDITION_TEXT,
     FORM_CATEGORY_TEXT,
     REQUIRED_CONDITIONS,
+    SELF_STACK_AT_LEAST,
     _unique,
 )
 from trpg.content.skills.primitives import ConditionDef
@@ -62,6 +63,11 @@ class ConditionSpec(ContentModel):
     （``weapons.yaml``、``offhands.yaml``）。"""
     form_category: FormCategory | None = None
     """``in_form`` 專用（Phase 3J-3，6.30）：限定形態類別（物理／心智）；省略＝任何形態。"""
+    stack: str | None = Field(default=None, pattern=ID_PATTERN, exclude_if=lambda v: v is None)
+    """``self_stack_at_least`` 專用（KW-1，#161）：施放者身上的層數 ID（``stacks.yaml``，只能是
+    ``owner: self``）。沒填不輸出，既有技能的序列化不變。"""
+    count: int | None = Field(default=None, exclude_if=lambda v: v is None)
+    """``self_stack_at_least`` 專用（KW-1）：至少幾層（1～該層數的上限）。沒填不輸出。"""
     any_of: tuple[ConditionSpec, ...] | None = Field(default=None, min_length=1, max_length=2)
     """真正的「或」（Phase 3W-2b）：``type`` 的條件成立，**或** ``any_of`` 裡任何一個成立（最多再
     2 個，不可再巢狀）。預算用其中最寬鬆的倍率，最低稀有度取最高的那個；只有技能與修正規則的條件
@@ -81,7 +87,17 @@ class ConditionSpec(ContentModel):
 
     def param_values(self) -> dict[str, Any]:
         """已填寫的參數（依名稱排序）。"""
-        names = ("element", "form_category", "permille", "status", "surface", "tag", "weapon")
+        names = (
+            "count",
+            "element",
+            "form_category",
+            "permille",
+            "stack",
+            "status",
+            "surface",
+            "tag",
+            "weapon",
+        )
         return {n: getattr(self, n) for n in names if getattr(self, n) is not None}
 
 
@@ -105,6 +121,11 @@ def _unknown_tag(_tag: str) -> str:
     return UNKNOWN_TAG_TEXT
 
 
+def _unknown_stack(_stack: str) -> str:
+    """沒有層數表可查時（KW-1）：不露出英文代號。"""
+    return "層數"
+
+
 def condition_text(
     condition: ConditionSpec,
     *,
@@ -113,6 +134,7 @@ def condition_text(
     tag_name: Callable[[str], str] = _unknown_tag,
     tag_runes: Mapping[str, str] | None = None,
     weapon_name: Callable[[str], str] = str,
+    stack_name: Callable[[str], str] = _unknown_stack,
 ) -> str:
     """條件的一句話（繁體中文），例如「目標血量低於 40%」。有 ``any_of`` 時用「，或」連接。"""
     return "，或".join(
@@ -123,6 +145,7 @@ def condition_text(
             tag_name=tag_name,
             tag_runes=tag_runes,
             weapon_name=weapon_name,
+            stack_name=stack_name,
         )
         for part in condition.alternatives()
     )
@@ -136,6 +159,7 @@ def _single_condition_text(
     tag_name: Callable[[str], str],
     tag_runes: Mapping[str, str] | None,
     weapon_name: Callable[[str], str],
+    stack_name: Callable[[str], str],
 ) -> str:
     kind = condition.type
     if kind in ("target_hp_below", "self_hp_below") and condition.permille is not None:
@@ -150,6 +174,8 @@ def _single_condition_text(
     if kind == "cast_tag_this_turn" and condition.tag is not None:
         return f"本回合已施放過帶「{tag_name(condition.tag)}」標籤的技能"
     plain = _PLAIN_CONDITION_TEXT.get(kind)
+    if kind == SELF_STACK_AT_LEAST:
+        plain = _stack_condition_text(condition, stack_name)
     if kind == "in_form" and condition.form_category is not None:
         plain = f"你在{FORM_CATEGORY_TEXT[condition.form_category]}形態中"
     if plain is None and kind == "on_own_rune":
@@ -159,3 +185,11 @@ def _single_condition_text(
     if plain is None and kind == "wielding_weapon":
         plain = "手持指定的武器時"  # 3-55：沒帶武器 ID 時也不露出英文代號
     return plain or kind
+
+
+def _stack_condition_text(condition: ConditionSpec, stack_name: Callable[[str], str]) -> str:
+    """``self_stack_at_least`` 的一句話（KW-1）：「自身『連擊點』達 3 層」；參數不齊時也不露出
+    英文代號。"""
+    if condition.stack is None or condition.count is None:
+        return "自身層數達到指定層數"
+    return f"自身「{stack_name(condition.stack)}」達 {condition.count} 層"

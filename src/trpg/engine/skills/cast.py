@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from typing import Literal
 
@@ -27,6 +27,7 @@ from trpg.content.skills import (
     REVEAL,
     SACRIFICE_SUMMON,
     SELF_DAMAGE_OF_HIT,
+    SELF_STACK_AT_LEAST,
     SHADOWSTEP,
     SWAP,
     SWAP_ANY,
@@ -91,7 +92,7 @@ from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import collect_move
-from trpg.engine.skills.conditions import Subject, condition_met
+from trpg.engine.skills.conditions import Subject, condition_met, stack_at_least
 from trpg.engine.skills.mobility import dash_route, shadowstep_behind
 from trpg.engine.skills.primitives import primitive_handler
 from trpg.engine.skills.primitives.base import TOUCHING_AFFECTS
@@ -170,6 +171,9 @@ class Cast:
     都中、都沒被守護者攔下時才在實例上設成真；``holds`` 對這個條件回傳它。"""
     redirected = False
     """這次施放有某一下被守護者攔下（:meth:`_redirect` 在實例上設成真）。"""
+    stacks_at_cast: Mapping[str, int] | None = None
+    """施放開始時施放者的層數快照（KW-1 ``self_stack_at_least``，#161）：:meth:`run` 在任何效果與
+    消耗之前在實例上設定；``holds`` 對這個條件看快照，所以同一招消耗或累積的層數不影響判斷。"""
 
     def __init__(
         self,
@@ -439,7 +443,17 @@ class Cast:
         ``any_of`` 裡）。"""
         if condition is not None and condition.type == ALL_STRIKES_HIT:
             return self.all_strikes_landed
+        if condition is not None and self.stacks_at_cast is not None:
+            parts = condition.alternatives()
+            if any(part.type == SELF_STACK_AT_LEAST for part in parts):
+                return any(self._holds_part(part, subject) for part in parts)
         return condition_met(self.ctx.state, self.caster, condition, subject)
+
+    def _holds_part(self, part: ConditionSpec, subject: Subject) -> bool:
+        """``holds`` 的一個「或」分支：``self_stack_at_least`` 看施放開始時的層數快照（KW-1）。"""
+        if part.type == SELF_STACK_AT_LEAST and self.stacks_at_cast is not None:
+            return stack_at_least(self.stacks_at_cast, part)
+        return condition_met(self.ctx.state, self.caster, part, subject)
 
     def after_all_strikes(self, effect: ResolvedEffect) -> bool:
         """效果帶 ``all_strikes_hit`` 條件（DD-3）：不在第一下結算，等每一下都打完才判斷。"""
@@ -465,6 +479,7 @@ class Cast:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
+        self.stacks_at_cast = dict(self.caster.stacks)  # KW-1：「層數達 N」看施放開始時的層數
         if not self.dash():  # 衝鋒一律最先結算；被擋下時其餘效果不結算
             return
         if not self.shadowstep():  # 瞬步一律最先結算（Phase 3D-8d）

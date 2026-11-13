@@ -20,7 +20,8 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
     },
     "condition": {
-        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）"
+        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）",
+        "self_stack_at_least": "KW-1 只先做條件；斷喉、貫心箭等示範招在 KW-2 加（#161）",
     },
     "primitive": {"summon_beside": "只由閃現轉型「伴生」「護主」產生（TF-1，#159），沒有手寫技能"},
     "status": {

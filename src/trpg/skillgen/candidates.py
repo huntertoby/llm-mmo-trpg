@@ -106,6 +106,7 @@ __all__ = [
     "follows_attr",
     "generate_candidates",
     "keyword_distribution",
+    "new_direction_keywords",
     "region_first",
     "route_rank",
     "skill_has_keywords",
@@ -232,6 +233,13 @@ def keyword_distribution(skills: Iterable[SkillDef], library: ContentLibrary) ->
     for skill in skills:
         counts.update(derive_keywords(skill, library.keywords, exclusive_only=True).all())
     return {k: counts[k] for k in library.keywords.ids() if counts[k] > 0}
+
+
+def new_direction_keywords(library: ContentLibrary, held: Sequence[str]) -> list[str]:
+    """還沒有、可以當「新方向」出題的關鍵字（推導表順序）：排除 ``start_hidden``（KW-1：池子補齊
+    前不主動出題；持有這種關鍵字的技能時，加深、橋接照常）。"""
+    offered = set(library.keywords.start_ids())
+    return [k for k in library.keywords.ids() if k not in held and k in offered]
 
 
 def behavior_weights(library: ContentLibrary, behavior: Mapping[str, int]) -> dict[str, int]:
@@ -711,7 +719,7 @@ def generate_candidates(
     found: list[Candidate | None] = []
     # 依「加深 → 橋接 → 新方向」的順序產生；退回到「還沒有的關鍵字」的候選用掉的關鍵字，不再給
     # 下一個候選（盡量讓三個候選不同），已被前一個候選用掉的技能也不會重複。
-    unheld = [k for k in order if k not in held]
+    unheld = new_direction_keywords(library, held)
     if request.pinned_keyword is not None:  # 指定關鍵字（5B-4d）
         found = _pinned(search, held, unheld, behavior)
     else:
