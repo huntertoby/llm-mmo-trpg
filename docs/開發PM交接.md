@@ -43,7 +43,7 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-13 a1f8037b2 已 push（pytest 17467、vitest 4452、build 0），含 KW-2、AF-1、RG-3、RG-4＋RG-3b＋#163、KW-3、KW-3b；版號 LOG_FORMAT /123、WORLD_RULES_VERSION 32、CHAR_FORMAT /15。
+**2. 最後一次全量**：2026-11-13 187402527 已 push（pytest 17474、vitest 4475、build 0），含 RG-5（玩家大盾、盾陣改名、高 1 層、連擊點單位）、RG-6（單挑非劍主手）、CLI 快照 3 鍵補正；版號 LOG_FORMAT /124、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
 
 **3. 執行中的 agent（分支）**：
 - 無（11-13 a1f8037b2 push 後全部收齊）。
@@ -94,6 +94,8 @@
 | 給美術 PM：RG-4 | 驗收 `docs/art/shots/RG-4/`；待決 9（護陣預覽無小盾圖示）、10（800 單挑插圖 259×97）、12、13（1600 瞄準線斷點短槓位置）；美術工具檔 rg_units_shots.py 開發已拆行修 ruff，美術分支再改這檔時請照 ruff 寫 | `docs/phases/PhaseRG-4報告.md` |
 | RG-5（給玩法 PM） | 待決 7：半掩護物件高度條件仍是高 2 層，4.1.6「同半掩護」的範圍；8：掉落物品名仍叫「塔盾」；9：手寫技能說明裡的「每層」要不要逐條改；平衡疑慮：高 1 層就無視盾兵、盾陣 | `docs/phases/PhaseRG-5報告.md` 第 8 節 |
 | RG-5（給美術 PM） | 驗收 `docs/art/shots/RG-5/`（全是開發頁）；待決 1（元素混色 45% 對 40%）、2（10.4 鋼＋冰凍盾邊色）、4（墨線畫風畫成鳶盾）、5（圓章 20 殼縫）、6（K3 舊剪影改不改）；開發改了樣張 rgPlayerShield.js（P-1／2／4），美術分支改同檔請先合 main | 同上 |
+| CLI 快照補正（給玩法 PM） | 斷喉說明「每層使本技能傷害 +20%」仍寫「層」（narrative/skills.py 不照 unit_zh），和 RG-5 待決 9 同類；要改成「每點」嗎 | `docs/phases/PhaseRG-5報告.md` 末節 |
+| RG-6（給美術 PM） | 驗收 `docs/art/shots/RG-6/`（開發頁）；待決 2：雙匕首剪影差 30／54 px（RG-4 就有） | `docs/phases/PhaseRG-6報告.md` |
 | 平衡疑慮 | KW-1 三條、RG-1 平衡疑慮段、RR-2 一條，請記進平衡待查 | 各報告「平衡疑慮」段 |
 
 **給美術 PM（2026-11-13 這一批）**
