@@ -37,7 +37,10 @@
 1. **四個關鍵字**加進 `content/skill_keywords.yaml`（放在「形態」之後，順序＝顯示順序）：
    - `makes: [{effect: add_stack, stack: <id>}]`；
    - `uses: [{effect: consume_stack, stack: <id>}, {condition: self_stack_at_least, stack: <id>}]`；
-   - `start_hidden: true`（池子在 KW-2 補齊前，開局選單與許願池不出現；三選一、閃現、工坊、推導照常）；
+   - `start_hidden: true`（池子在 KW-2 補齊前，開局選單、許願池與三選一的「新方向」不出現；已持有時加深、橋接照常，
+     閃現、工坊、推導照常）。`start_hidden` 的意思因此擴大到「新方向」（`skillgen.candidates.new_direction_keywords`，
+     兩個候選產生器共用）；目前內容只有這四個用它。池子門檻類的規則測試（每池 3 招、3 招利用者、白板、嫁接、裝備外觀）
+     暫時只對開局可選的關鍵字檢查，KW-2 拿掉 `start_hidden` 時自動恢復；
    - `composable: false`（`stacks.yaml` 這幾種層數還是 `composer: false`，組合器做不出來，KW-2 一起打開）。
 2. **新條件 `self_stack_at_least`（施放者的某種層數達 N 層）**：
    - 參數 `stack`（層數 ID，必填，只能是 `owner: self` 的層數）、`count`（1～該層數的上限，必填）。

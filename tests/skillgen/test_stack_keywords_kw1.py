@@ -19,9 +19,11 @@ from tests.skillgen.test_proposal import _models
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import ConditionSpec, SkillDef
 from trpg.narrative.skills import condition_summary
+from trpg.skillgen.candidates import new_direction_keywords
 from trpg.skillgen.keywords import derive_keywords, keyword_pools
 from trpg.skillgen.option_params import HANDWRITTEN_ONLY_CONDITION, condition_choice
 from trpg.skillgen.validate import validate_skill
+from trpg.world.wish import wish_menu
 
 NEW = ("combo_point", "fury", "focus", "ki")
 COND = "self_stack_at_least"
@@ -50,9 +52,15 @@ def test_the_keyword_list_grows_from_12_to_16() -> None:
 
 
 def test_the_new_keywords_wait_for_their_pools_before_opening_and_composer() -> None:
-    """KW-2 補齊池子前：開局選單（＝許願池選單）不出現、組合器不做；推導與三選一照常。"""
+    """KW-2 補齊池子前：開局選單、許願池選單、三選一的「新方向」都不出現，組合器不做；持有的時候
+    加深、橋接照常（``held`` 裡有它們不會出錯）。"""
     table = lib().keywords
     assert not set(NEW) & set(table.start_ids())
+    assert not set(NEW) & set(wish_menu(lib()))
+    assert new_direction_keywords(lib(), ()) == list(table.start_ids())
+    assert new_direction_keywords(lib(), ("ignite", "combo_point")) == [
+        k for k in table.start_ids() if k != "ignite"
+    ]
     assert all(not table.by_id()[k].composable for k in NEW)
     assert all(lib().ruleset.stack_def(k).owner == "self" for k in NEW)
 

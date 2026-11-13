@@ -448,7 +448,9 @@ def test_recipes_follow_the_tier_table_of_decision_72() -> None:
 def test_every_keyword_has_a_whiteboard_from_tier_one() -> None:
     """潮濕、倒地、撞擊、召喚物也有白板（不必退回手寫池）；形態仍沒有。"""
     covered = whiteboard_keywords(LIB_3W4B, "active", 1, creation=True)  # 創角例外：召喚物（3W-9）
-    assert set(LIB_3W4B.keywords.ids()) - {"form"} <= covered | {"high_ground"} | {"marked"}
+    # KW-1：start_hidden 的四個層數關鍵字（連擊、怒氣、專注、氣）的白板在 KW-2 補
+    opening = set(LIB_3W4B.keywords.start_ids())
+    assert opening - {"form"} <= covered | {"high_ground"} | {"marked"}
     assert {"wet", "prone", "collision", "summon"} <= covered
 
 

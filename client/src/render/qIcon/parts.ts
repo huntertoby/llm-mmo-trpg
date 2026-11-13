@@ -338,6 +338,8 @@ export const COND: PartTable = {
   lone_wolf: { zh: "獨狼", topic: "一隻仰頭嚎叫的銀灰狼頭（側面、口鼻朝左上、兩隻尖耳、米白喉胸一排鋸齒毛）", d: (c, o) => loneWolf(c, o) },
   self_lacks_status: { zh: "自身沒有狀態", topic: "淡紫小旗被一道紅斜槓劃掉（同驅散、致盲劃掉的語言），右下一個米白小人形（同自身血量：自己）", d: (c, o) => selfLacks(c, o) },
   all_strikes_hit: { zh: "每一下都命中", topic: "一面紅白靶，靶心插著兩把亮鋼匕首（柄朝右上、微微扇開）", d: (c, o) => allStrikesHit(c, o) },
+  /* 11-13 KW-1 自身層數達 N（#161）：暫代，借「第一輪」的金色數字（畫的時候才查表）；正式圖由美術 PM 出（PhaseKW計畫.md 第 3 節）。 */
+  self_stack_at_least: { zh: "自身層數達到", topic: "（暫代）同「第一輪」：一個金色的粗體數字 1", d: (c, o) => COND["first_round"]!.d(c, o) },
 };
 
 // =====================================================================

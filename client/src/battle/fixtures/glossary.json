@@ -3792,6 +3792,14 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "self_stack_at_least",
+   "name_zh": "自身層數達到",
+   "description_zh": "施放者身上的指定層數（連擊點、怒氣、專注、氣這類累積在自己身上的）達到指定層數。施放中以施放開始時的層數判斷，同一招消耗或累積的層數不影響。只看施放者。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "triggers": [

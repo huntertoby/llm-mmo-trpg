@@ -173,7 +173,8 @@ def test_evolution_content_schema_rejects_bad_templates() -> None:
     assert {t.branch for t in lib.evolution.templates} == {"deepen", "bridge"}
     # 3-53b：每個關鍵字都有嫁接（中毒也有橋接）
     # （召喚走自己的進化路徑，沒有嫁接）
-    assert set(lib.evolution.grafts) == set(lib.keywords.ids()) - {"summon"}
+    # KW-1：start_hidden 的四個層數關鍵字的嫁接（閃現「加第二個關鍵字」）在 KW-2 補
+    assert set(lib.evolution.grafts) == set(lib.keywords.start_ids()) - {"summon"}
 
 
 def test_bridge_can_graft_poison() -> None:

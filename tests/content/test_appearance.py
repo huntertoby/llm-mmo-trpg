@@ -93,7 +93,8 @@ def test_table_values_match_the_art_spec() -> None:
 def test_table_keywords_are_the_24b1_keywords() -> None:
     lib = library()
     assert lib.appearance is not None
-    assert set(lib.appearance.keywords) == set(lib.keywords.ids())
+    # KW-1：start_hidden 的四個層數關鍵字的裝備外觀（關鍵字色與圓章）在 KW-3 隨美術補
+    assert set(lib.appearance.keywords) == set(lib.keywords.start_ids())
 
 
 def test_table_rejects_bad_data() -> None:
