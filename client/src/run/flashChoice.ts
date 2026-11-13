@@ -185,8 +185,9 @@ export function plainTerms(text: string): string {
 
 /** 不可拆的詞（FL-1h，美術 11-13）：條件括號（`.fc-when`）與下固定區的一句話（`.fc-say-line`，FL-1i）可以在字間換行，
  * 但這些詞整個換到下一行，不會斷成「手持雙手／槍時才有」「重算強／度」（FL-1i，美術 RR-2 驗收 F-1）、
- * 「火焰傷／害」「轉／型」（FL-1j，美術 FL-1i 複驗可修 1、2）。數字和單位另由 `numberUnitRuns` 通用處理，不列在這裡。 */
-export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍", "強度", "傷害", "轉型"];
+ * 「火焰傷／害」「轉／型」（FL-1j，美術 FL-1i 複驗可修 1、2）、「回／合」「點／燃」（FL-1j 待決 2 裁定；「本／回合」可以）。
+ * 數字和單位另由 `numberUnitRuns`、「」括起來的名字另由 `quotedSpans` 通用處理，不列在這裡。 */
+export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍", "強度", "傷害", "轉型", "回合", "點燃"];
 
 /** 數字（含小數、骰子「1d4」、正負號、百分比）。 */
 const NUM_UNIT_RE = /[+\-−]?\d+(?:\.\d+)?(?:d\d+)?[%‰]?/gu;
@@ -207,12 +208,37 @@ export function unitAfterNumber(after: string): string {
 }
 
 /**
- * 數字和單位黏成一段（FL-1j，美術 FL-1i 複驗可修 1：「燃燒少 1 回合」不斷成「少 1 ／回合」）：通用規則，不逐字列舉——
- * 數字前面緊貼的一個中文字（「少」「第」「等」，可隔一個空白）＋數字＋（空白）＋後面的單位（`unitAfterNumber`）包成 `keep`。
- * 數字後面沒有單位、前面也沒有中文字時不包。
+ * 「」括起來的名字最多幾個字（不含括號）時整段連同括號不斷行（FL-1j 待決 2 裁定，美術 `docs/art/FL-1b驗收.md` 末節：
+ * 「雷電」「被標記」這類讀起來會誤會的通用規則，不逐字列舉）。超過照常可斷。
  */
-export function numberUnitRuns(text: string): { text: string; keep: boolean }[] {
-  const out: { text: string; keep: boolean }[] = [];
+export const QUOTED_NAME_MAX = 6;
+const QUOTED_RE = /「([^「」\n]*)」/gu;
+
+/** 一段不斷行的範圍 `[from, to)`（字串索引）。 */
+type Span = readonly [number, number];
+type Run = { text: string; keep: boolean };
+
+/** 「」括起來、內容 1～`QUOTED_NAME_MAX` 字的名字（含括號）。 */
+function quotedSpans(text: string): Span[] {
+  const out: Span[] = [];
+  for (const m of text.matchAll(QUOTED_RE)) {
+    const n = [...(m[1] ?? "")].length;
+    if (n === 0 || n > QUOTED_NAME_MAX) continue;
+    const from = m.index ?? 0;
+    out.push([from, from + m[0].length]);
+  }
+  return out;
+}
+
+/** `i` 落在某個不可拆詞的中間（不含頭尾）。 */
+const insideWord = (words: readonly Span[], i: number): Span | undefined => words.find(([a, b]) => a < i && i < b);
+
+/**
+ * 數字＋單位（`numberUnitRuns` 的範圍）。`words`（不可拆詞的範圍）：前面黏的那個字、後面的單位不切進詞的中間——
+ * 「第 3 格轉型」的單位只到「格」（不黏成「格轉」）、「強度 +1」不從「度」黏起，和 FL-1j 先切詞的結果一樣。
+ */
+function numberUnitSpans(text: string, words: readonly Span[] = []): Span[] {
+  const out: Span[] = [];
   let at = 0;
   for (const m of text.matchAll(NUM_UNIT_RE)) {
     const start = m.index ?? 0;
@@ -223,50 +249,76 @@ export function numberUnitRuns(text: string): { text: string; keep: boolean }[] 
     const gap = /^ ?/u.exec(text.slice(end))?.[0] ?? "";
     const unit = unitAfterNumber(text.slice(end + gap.length));
     const lead = /[\p{Script=Han}] ?$/u.exec(text.slice(at, start))?.[0] ?? "";
-    if (unit === "" && lead === "") continue;
-    const from = start - lead.length;
-    const to = unit === "" ? end : end + gap.length + unit.length;
-    if (from > at) out.push({ text: text.slice(at, from), keep: false });
-    out.push({ text: text.slice(from, to), keep: true });
+    let from = start - lead.length;
+    let to = unit === "" ? end : end + gap.length + unit.length;
+    if (insideWord(words, from) !== undefined) from = start;
+    const cut = insideWord(words, to);
+    if (cut !== undefined) to = cut[0] > end + gap.length ? cut[0] : end;
+    if (from === start && to === end) continue;
+    out.push([from, to]);
     at = to;
   }
-  if (at < text.length) out.push({ text: text.slice(at), keep: false });
   return out;
 }
 
-/** 純文字照不可拆詞（再加上數字＋單位，`numberUnitRuns`）切段：`keep` 為 true 的那段畫成不斷行。沒有時整段一個 `keep: false`。 */
-export function noBreakRuns(text: string, words: readonly string[] = FLASH_NO_BREAK_WORDS): { text: string; keep: boolean }[] {
-  const out: { text: string; keep: boolean }[] = [];
-  for (const r of wordRuns(text, words)) {
-    if (r.keep) out.push(r);
-    else out.push(...numberUnitRuns(r.text));
-  }
-  return out;
-}
-
-/** 只照不可拆詞切段（`noBreakRuns` 的第一步）。 */
-function wordRuns(text: string, words: readonly string[]): { text: string; keep: boolean }[] {
-  const out: { text: string; keep: boolean }[] = [];
-  let rest = text;
-  while (rest !== "") {
+/** 不可拆詞（由左往右、同一處取最長的，不重疊）。 */
+function wordSpans(text: string, words: readonly string[]): Span[] {
+  const out: Span[] = [];
+  let from = 0;
+  for (;;) {
     let at = -1;
     let word = "";
     for (const w of words) {
-      const i = w === "" ? -1 : rest.indexOf(w);
+      const i = w === "" ? -1 : text.indexOf(w, from);
       if (i >= 0 && (at < 0 || i < at || (i === at && w.length > word.length))) {
         at = i;
         word = w;
       }
     }
-    if (at < 0) {
-      out.push({ text: rest, keep: false });
-      break;
-    }
-    if (at > 0) out.push({ text: rest.slice(0, at), keep: false });
-    out.push({ text: word, keep: true });
-    rest = rest.slice(at + word.length);
+    if (at < 0) return out;
+    out.push([at, at + word.length]);
+    from = at + word.length;
   }
+}
+
+/** 範圍照起點排序，**重疊**的併成一段（只是相鄰的照樣分開，兩段之間仍可斷行）；切成段。 */
+function runsOf(text: string, spans: readonly Span[]): Run[] {
+  const sorted = [...spans].sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  const merged: [number, number][] = [];
+  for (const [a, b] of sorted) {
+    const last = merged[merged.length - 1];
+    if (last !== undefined && a < last[1]) last[1] = Math.max(last[1], b);
+    else merged.push([a, b]);
+  }
+  const out: Run[] = [];
+  let at = 0;
+  for (const [a, b] of merged) {
+    if (a > at) out.push({ text: text.slice(at, a), keep: false });
+    out.push({ text: text.slice(a, b), keep: true });
+    at = b;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), keep: false });
   return out;
+}
+
+/**
+ * 數字和單位黏成一段（FL-1j，美術 FL-1i 複驗可修 1：「燃燒少 1 回合」不斷成「少 1 ／回合」）：通用規則，不逐字列舉——
+ * 數字前面緊貼的一個中文字（「少」「第」「等」，可隔一個空白）＋數字＋（空白）＋後面的單位（`unitAfterNumber`）包成 `keep`。
+ * 數字後面沒有單位、前面也沒有中文字時不包。
+ */
+export function numberUnitRuns(text: string): Run[] {
+  return runsOf(text, numberUnitSpans(text));
+}
+
+/**
+ * 純文字切段：`keep` 為 true 的那段畫成不斷行。三種規則的範圍取聯集（重疊的併成一段）：
+ * 「」括起來 ≤ 6 字的名字（FL-1j 待決 2）、不可拆詞（`FLASH_NO_BREAK_WORDS`）、數字＋單位（`numberUnitSpans`）。
+ * 聯集而不是先切詞再找數字：「少 1 回合」的「回合」也是不可拆詞，先切詞會把「少 1」和「回合」切成相鄰兩段、中間又能斷。
+ * 沒有時整段一個 `keep: false`。
+ */
+export function noBreakRuns(text: string, words: readonly string[] = FLASH_NO_BREAK_WORDS): Run[] {
+  const ws = wordSpans(text, words);
+  return runsOf(text, [...quotedSpans(text), ...ws, ...numberUnitSpans(text, ws)]);
 }
 
 /** 「後」結尾的條件括號（「（目標這回合被撞過才有）」）拆出來，畫成次要字（樣張 `.fc-when`）。 */
