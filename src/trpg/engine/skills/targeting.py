@@ -1087,7 +1087,7 @@ def _candidates(state: BattleState, caster: UnitState, skill: SkillDef) -> Itera
         for unit in revive_candidates(state, caster) if revive else state.living_units():
             if manhattan(caster.xy, unit.xy) <= reach:
                 yield UseSkill(unit_id=uid, skill_id=sid, target_id=unit.id)
-        if skill.shape.type != "chain" and not revive:
+        if skill.shape.type != "chain" and not revive and not skill.lock_on:  # 瞄準只對單位（RG-1）
             for obj in state.objects_sorted():
                 if manhattan(caster.xy, obj.xy) <= reach:
                     yield UseSkill(unit_id=uid, skill_id=sid, target_object_id=ObjectId(obj.id))

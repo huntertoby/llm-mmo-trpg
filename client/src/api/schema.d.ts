@@ -3235,6 +3235,8 @@ export interface components {
             direction?: string | null;
             /** Anchored */
             anchored?: boolean | null;
+            /** Lock Target Id */
+            lock_target_id?: string | null;
             /** Text */
             text: string;
         };

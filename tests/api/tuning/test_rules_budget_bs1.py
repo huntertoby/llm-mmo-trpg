@@ -19,7 +19,12 @@ from trpg.content.tuning_fields import TABLE_KINDS, parse_path
 CONTENT = bundled_content_dir()
 CORE = "rules/core.yaml"
 BUDGET = "skill_budget.yaml"
-CORE_PATHS = ("backstab_hit_bonus", "backstab_crit_range_bonus", "ambush_hit_bonus")
+CORE_PATHS = (
+    "backstab_hit_bonus",
+    "backstab_crit_range_bonus",
+    "ambush_hit_bonus",
+    "shield_guard_hit_penalty",  # RG-1（#162）盾兵掩護
+)
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
     "silent_strike_round_milli",

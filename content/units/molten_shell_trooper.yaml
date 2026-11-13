@@ -13,7 +13,7 @@ ai_profile: guard
 resist: {}
 element_mods: {fire: -500, ice: 500}
 tags: [beast, lava_beast, shield_guard]
-skills: [skill_shield_bash]
+skills: [skill_shield_bash, skill_battering_ram]   # 盾擊＋熔岩甲蟲的衝撞（#149 一般敵人至少 2 招）
 opening_statuses:
   - {status: molten_burst}
 doll: {creature: {body: crawler, variant: beetle, material: magma}}
