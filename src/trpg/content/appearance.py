@@ -61,8 +61,8 @@ class FormDef(ContentModel):
 
     ``enemy_only``（RG-4，美術 PM 決定 2026-11-13「大盾先只給敵人」）：敵人範本的紙娃娃專用（例
     ``kite_shield`` 的 ``sect_great`` 門派大盾）。玩家拿得到形制的地方——裝備生成、前端外觀清單
-    （:func:`appearance_export`）——都略過；``items.yaml`` 的物品寫了這種形制算錯誤。RG-5 起沒有形制用它
-    （兩種大盾開放給玩家），欄位保留給之後的敵人專用造型。
+    （:func:`appearance_export`）——都略過；``items.yaml`` 的物品寫了這種形制算錯誤。
+    RG-5 起沒有形制用它（兩種大盾開放給玩家），欄位保留給之後的敵人專用造型。
 
     ``offhands``（RG-5，RG樣張 10.8 P-3）：限定只配這些副手（``offhands.yaml`` 的 ID）的物品；
     ``kite_shield`` 是塔盾與鳶盾共用的造型，雲紋碑盾、熔殼塔盾只給塔盾。沒寫＝不限（不輸出）。"""

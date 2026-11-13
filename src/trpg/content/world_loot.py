@@ -162,7 +162,7 @@ class LootRules(ContentModel):
     bosses: dict[str, BossLoot] = Field(default_factory=dict)
     """區域 Boss（單位範本 ID）→ 保底掉落（Phase 5F-3）。"""
     signature_affixes: tuple[SignatureAffix, ...] = ()
-    """敵人掉的特定副手必帶的詞條（RG-4：持盾弟子、熔殼甲兵掉的塔盾必帶「護陣」）。"""
+    """敵人掉的特定副手必帶的詞條（RG-4：持盾弟子、熔殼甲兵掉的塔盾必帶「盾陣」）。"""
 
     @model_validator(mode="after")
     def _check(self) -> LootRules:

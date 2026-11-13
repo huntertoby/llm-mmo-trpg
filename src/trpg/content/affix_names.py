@@ -19,7 +19,7 @@
 - ``{skill}``、``{skill_ap}``、``{skill_cooldown}``、``{skill_range}``、``{skill_effect.<欄位>}``：
   動作類詞條解鎖的技能。
 - ``{rule}``：改變規則類詞條的規則（「規則改變「血痕」：你步行經過……」，和傳說技能卡同一句）。
-- ``{core.<欄位>}``：核心規則（``rules/core.yaml``）的整數，工坊改了就跟著變（RG-4 護陣的
+- ``{core.<欄位>}``：核心規則（``rules/core.yaml``）的整數，工坊改了就跟著變（RG-4 盾陣的
   ``{core.shield_formation_hit_penalty}``）。
 
 模板裡有不認得的欄位時載入失敗（:class:`ValueError`）。

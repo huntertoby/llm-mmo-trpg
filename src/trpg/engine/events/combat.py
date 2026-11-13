@@ -43,9 +43,9 @@ class AttackRolled(EventBase):
     """技能的命中判定時為技能 ID（Phase 2A）；普攻為 ``None``。"""
     cover_unit_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
     """盾兵掩護（RG-1，#162）：替目標擋遠程攻擊的盾兵（``cover`` 是它的命中修正）；沒有時不輸出。
-    塔盾詞條「護陣」（RG-4，#163）時是帶護陣的隊友，並且 ``cover_formation`` 為真。"""
+    塔盾詞條「盾陣」（RG-4，#163）時是帶盾陣的隊友，並且 ``cover_formation`` 為真。"""
     cover_formation: bool = Field(default=False, exclude_if=lambda v: not v)
-    """``cover_unit_id`` 是護陣（RG-4）而不是盾兵；不是時不輸出。"""
+    """``cover_unit_id`` 是盾陣（RG-4）而不是盾兵；不是時不輸出。"""
     modifier_bonus: int = 0
     backstab: int = 0
     """背刺的命中加值（Phase 3D-8d；0 為不是背刺；暴擊範圍另外擴大

@@ -106,9 +106,9 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 沒變；掉落的程式改了，:data:`WORLD_RULES_VERSION` 升成 32。
 
 **Phase RG-5**（#163 玩家大盾）：持盾弟子、熔殼甲兵掉的塔盾外觀一定是對應形制（雲紋碑盾、熔殼塔盾；
-``world/loot.yaml`` 的 ``signature_affixes.form``），詞條改名「盾陣」；盾兵與盾陣的高度條件統一成「攻擊者
-比被攻擊的人高 1 層以上無視」（戰鬥日誌 ``trpg-battle-log/124``）。日誌、角色、世界格式都沒變；掉落與戰鬥
-結算的程式改了，:data:`WORLD_RULES_VERSION` 升成 33。
+``world/loot.yaml`` 的 ``signature_affixes.form``），詞條改名「盾陣」；盾兵與盾陣的高度條件統一成
+「攻擊者比被攻擊的人高 1 層以上無視」（戰鬥日誌 ``trpg-battle-log/124``）。日誌、角色、世界格式都
+沒變；掉落與戰鬥結算的程式改了，:data:`WORLD_RULES_VERSION` 升成 33。
 """
 
 from __future__ import annotations

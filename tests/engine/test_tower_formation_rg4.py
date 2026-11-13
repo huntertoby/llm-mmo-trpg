@@ -111,14 +111,14 @@ def test_an_adjacent_ally_is_covered_against_a_ranged_attack() -> None:
     assert roll.cover == -PENALTY and roll.cover_unit_id == HOLDER and roll.cover_formation
     assert roll.cover_object_id is None
     text = describe_event(roll, result.state) or ""
-    assert "護陣" in text and "的護陣擋住" in text and "盾兵掩護" not in text
+    assert "盾陣" in text and "的盾陣擋住" in text and "盾兵掩護" not in text
     assert "cover_formation" in roll.model_dump_json()
 
 
 def test_the_preview_names_the_formation_holder() -> None:
     p = preview(scene(), Attack(unit_id=SHOOTER, target_id=WARD))
     assert any(
-        note.startswith(f"護陣 −{PENALTY}：被 ") and "的護陣擋住" in note for note in p.notes
+        note.startswith(f"盾陣 −{PENALTY}：被 ") and "的盾陣擋住" in note for note in p.notes
     )
 
 
@@ -167,10 +167,11 @@ def test_shooting_from_two_layers_above_ignores_the_formation() -> None:
     assert cover_of(scene(heights=rows))[0] == 0
 
 
-def test_one_layer_above_uses_the_shield_guard_height_rule() -> None:
-    """高度條件和盾兵同一套（持盾者視為 1 層高）：攻擊者只高 1 層仍擋得到（待 PM 確認）。"""
+def test_one_layer_above_ignores_the_formation() -> None:
+    """RG-5（玩法PM交接 4.1.6 RG-4 第 3 條）：攻擊者比被攻擊的人高 1 層以上就無視（08 原文；和盾兵、
+    塔盾同一條）。RG-4 時持盾者視為 1 層高、要高 2 層才無視。"""
     rows = ["0000000000"] * 4 + ["1100000000"] + ["0000000000"] * 4
-    assert cover_of(scene(heights=rows))[0] == PENALTY
+    assert cover_of(scene(heights=rows))[0] == 0
 
 
 def test_two_formations_count_once() -> None:

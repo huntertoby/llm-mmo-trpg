@@ -101,7 +101,7 @@ def test_a_skill_level_stack_condition_gates_the_skill(
     assert listed is ok
     assert problem is None  # 層數條件不是代價（cost.stacks），由技能條件擋
     if not ok:
-        with pytest.raises(IllegalActionError, match="自身「連擊點」達 3 層"):
+        with pytest.raises(IllegalActionError, match="自身「連擊點」達 3 點"):  # RG-5：連擊點用「點」
             use(state)
         return
     d20s(monkeypatch, [MISS])  # 沒打中：不消耗、也不自動累積

@@ -9,8 +9,9 @@
   詞條偏向該區關鍵字（20.2）。
 - **必帶詞條**（RG-4，#163「打盾兵拿盾兵的盾」）：掉落算在 ``signature_affixes`` 列的敵人頭上
   （精英的那一件算該精英；沒有精英時算整個敵方陣容）、掉到列的副手時補上詞條
-  （:func:`~trpg.content.item_gen.with_affix`，不用亂數，其他掉落逐位元不變）；RG-5 起那一列有 ``form``
-  時外觀形制也換成對應的大盾（持盾弟子 → 雲紋碑盾、熔殼甲兵 → 熔殼塔盾；材質照一般規則）。
+  （:func:`~trpg.content.item_gen.with_affix`，不用亂數，其他掉落逐位元不變）；RG-5 起那一列
+  有 ``form`` 時外觀形制也換成對應的大盾（持盾弟子 → 雲紋碑盾、熔殼甲兵 → 熔殼塔盾；材質照一般
+  規則）。
 - **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的留給戰後結算（``pending_loot``），玩家選要
   丟哪件（新拿到的、原本的都可以；5D-2b 玩法 PM 代決，取代 5D2-6 的不撿，不做暫存區）。
 
@@ -278,16 +279,18 @@ def roll_loot(
 def _with_signature(
     library: ContentLibrary, rules: LootRules, items: Sequence[ItemDef], sources: Sequence[str]
 ) -> tuple[ItemDef, ...]:
-    """掉落算在 ``sources`` 頭上時補上必帶的詞條（RG-4，``LootRules.signature_affixes``），有 ``form``
-    時換成對應的外觀形制（RG-5）。不用亂數。"""
+    """掉落算在 ``sources`` 頭上時補上必帶的詞條（RG-4，``LootRules.signature_affixes``），
+    有 ``form`` 時換成對應的外觀形制（RG-5）。不用亂數。"""
     out: list[ItemDef] = []
     for item in items:
         row = rules.signature(sources, item.offhand)
-        if row is not None:
-            item = with_affix(library, item, row.affix)
-            if row.form is not None and item.form != row.form:
-                item = item.model_copy(update={"form": row.form})
-        out.append(item)
+        if row is None:
+            out.append(item)
+            continue
+        signed = with_affix(library, item, row.affix)
+        if row.form is not None and signed.form != row.form:
+            signed = signed.model_copy(update={"form": row.form})
+        out.append(signed)
     return tuple(out)
 
 

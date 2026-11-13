@@ -133,7 +133,7 @@ class GearAffixInfo(_ApiModel):
     weapon_class: str | None = None
     item_tags: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     offhands: tuple[str, ...] | None = None
-    """副手類物品限定的副手 id（RG-4：塔盾專屬的「護陣」是 ``["tower_shield"]``）；不限時為
+    """副手類物品限定的副手 id（RG-4：塔盾專屬的「盾陣」是 ``["tower_shield"]``）；不限時為
     ``None``。"""
     legendary_only: bool = False
     value_min: int | None = None

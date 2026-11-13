@@ -38,7 +38,7 @@ def test_the_affix_is_a_tower_shield_only_offhand_trait() -> None:
     affix = lib.affixes[FORMATION]
     assert isinstance(affix, WeaponTraitAffix)
     assert affix.offhands == ("tower_shield",) and affix.slots == ("offhand",)
-    assert "護陣" in affix.name_zh and "{" not in affix.name_zh
+    assert affix.name_zh.startswith("盾陣：") and "{" not in affix.name_zh
     tower = lib.items["item_offhand_tower_shield"]
     assert not affix_slot_problems(tower, affix, None, lib.weapons)
     for other in ("item_offhand_round_shield", "item_offhand_tome", "item_offhand_orb"):

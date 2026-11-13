@@ -1,10 +1,11 @@
-"""RG-4 持盾弟子的雲紋碑盾（``kite_shield`` 的 ``sect_great``）與 ``DollGear.emblem``；RG-5 起兩種大盾
-開放給玩家。
+"""RG-4 持盾弟子的雲紋碑盾（``kite_shield`` 的 ``sect_great``）與 ``DollGear.emblem``；
+RG-5 起兩種大盾開放給玩家。
 
 - RG-4（美術 PM 9.6 決定 2）：大盾先只給敵人（``FormDef.enemy_only``）。
-- RG-5（#163，08 8.11；RG樣張 10.8 決定 1、P-3）：``sect_great``（雲紋碑盾）與新形制 ``molten_shell``
-  （熔殼塔盾）開放給玩家，只配 ``offhand: tower_shield`` 的物品（``FormDef.offhands``）。``enemy_only``
-  欄位保留（目前沒有形制用它），玩家拿得到形制的地方照舊略過它。
+- RG-5（#163，08 8.11；RG樣張 10.8 決定 1、P-3）：``sect_great``（雲紋碑盾）與新形制
+  ``molten_shell``（熔殼塔盾）開放給玩家，只配 ``offhand: tower_shield`` 的物品
+  （``FormDef.offhands``）。``enemy_only`` 欄位保留（目前沒有形制用它），玩家拿得到形制的
+  地方照舊略過它。
 - ``emblem`` 只認 ``peak``，沒寫時不輸出（既有 JSON 不變）。
 """
 

@@ -408,12 +408,12 @@ affixes:
     weapons: [axe]
     param: armor_break.rounds
     delta: 1
-  # RG-4（#163，08 8.11）：塔盾專屬「護陣」——副手特性強化（offhands 限定、不改武器資料）。和你相鄰的
+  # RG-4（#163，08 8.11）：塔盾專屬「盾陣」——副手特性強化（offhands 限定、不改武器資料）。和你相鄰的
   # 隊友（不含自己）被遠程攻擊時攻擊者命中 −core.shield_formation_hit_penalty（工坊欄位；判定同盾兵）。
   # 預算照一般詞條（weapon_trait 類固定點數）；持盾弟子、熔殼甲兵掉的塔盾必帶（world/loot.yaml）。
   - id: affix_trait_tower_formation
     category: weapon_trait
-    name_zh: 護陣：和你相鄰的隊友被遠程攻擊時，攻擊者命中 −{core.shield_formation_hit_penalty}（不護自己；和半掩護、盾兵不疊加）
+    name_zh: 盾陣：和你相鄰的隊友被遠程攻擊時，攻擊者命中 −{core.shield_formation_hit_penalty}（不護自己；和半掩護、盾兵不疊加）
     slots: [offhand]
     offhands: [tower_shield]
     param: ally_ranged_cover

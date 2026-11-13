@@ -411,7 +411,8 @@ def stack_problem(state: BattleState, unit: UnitState, skill: SkillDef) -> str |
         return None
     have = unit.stacks.get(definition.id, 0)
     if have < need:
-        return f"層數不足：需要「{definition.name_zh}」{need} 層，目前 {have} 層"
+        word = definition.unit_zh  # RG-5：連擊點用「點」
+        return f"層數不足：需要「{definition.name_zh}」{need} {word}，目前 {have} {word}"
     return None
 
 
