@@ -66,6 +66,7 @@ from trpg.skillgen.flash_state import (
     with_flash,
     with_reflash,
 )
+from trpg.skillgen.flash_text import VariationText, clean_text
 from trpg.skillgen.flash_trade import MINOR_OPS, convergible
 from trpg.skillgen.usage import SkillUsage
 
@@ -77,6 +78,7 @@ __all__ = [
     "FlashOptionSource",
     "FlashRequest",
     "ProposingSource",
+    "TextSource",
     "UsageSource",
     "category_counts",
     "category_ranking",
@@ -160,6 +162,16 @@ class ProposingSource(FlashOptionSource, Protocol):
         self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
     ) -> Sequence[Variation]:
         """提議的變化（可以含不合格的；數量不限）。``skill`` 是套用這一次之前的技能。"""
+        ...
+
+
+class TextSource(Protocol):
+    """會給變化 **文字** 的來源（LF-1：LLM 的名稱與描述、重播）：:func:`make_offer` 在
+    :meth:`ProposingSource.proposed` 之後呼叫，依變化的穩定鍵掛到選項上（提議的、補位的、轉型保底都
+    算；引擎用 :func:`~trpg.skillgen.flash_text.clean_text` 再檢查一次）。"""
+
+    def texts(self, library: ContentLibrary, request: FlashRequest) -> Mapping[str, VariationText]:
+        """這一次出題的文字（鍵 ＝ :meth:`~trpg.skillgen.flash_state.Variation.key`）。"""
         ...
 
 
@@ -420,9 +432,12 @@ class _Builder:
     """重閃時被換掉那一筆的預算分數（‰，進位）；閃現為 0。"""
     broken: FlashHistoryError | None = None
     """已存的歷程在目前的內容重推不了（3W-R1）：閃現改用 ``request.current`` 當起點。"""
+    texts: Mapping[str, VariationText] = field(default_factory=dict)
+    """來源給的文字（LF-1，:class:`TextSource`）；套用前由 :func:`clean_text` 檢查後掛上。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
+        variation = clean_text(variation, self.texts.get(variation.key()))
         state = (
             with_flash(request.state, variation)
             if request.slot is None
@@ -739,8 +754,11 @@ def make_offer(
     tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
     rng = Rng(request.seed).fork(tag)
     builder = _builder(library, request)
+    # LF-1：先拿提議（LLM 來源在這裡呼叫模型），再拿文字，之後建的選項才掛得上名稱與描述
+    variations = _proposed_variations(library, source, request, before)
+    builder.texts = _source_texts(library, source, request)
     transform = _transform_option(library, request, source, builder, before) if major else None
-    proposed = _proposed_options(library, source, builder, request, before=before, allowed=allowed)
+    proposed = _proposed_options(builder, variations, allowed=allowed)
     if focused:
         assert request.category is not None
         ranked = source.ranked(library, request, request.category, before)
@@ -776,22 +794,29 @@ def make_offer(
     )
 
 
-def _proposed_options(
-    library: ContentLibrary,
-    source: FlashOptionSource,
-    builder: _Builder,
-    request: FlashRequest,
-    *,
-    before: SkillDef,
-    allowed: Sequence[str],
-) -> list[FlashOption]:
-    """來源提議的變化中，類別可用、不重複、真的套得上的選項（沒有提議的來源回傳空）。"""
+def _proposed_variations(
+    library: ContentLibrary, source: FlashOptionSource, request: FlashRequest, before: SkillDef
+) -> Sequence[Variation]:
+    """來源提議的變化（沒有提議的來源回傳空）。"""
     propose = getattr(source, "proposed", None)
-    if propose is None:
-        return []
+    return () if propose is None else propose(library, request, before)
+
+
+def _source_texts(
+    library: ContentLibrary, source: FlashOptionSource, request: FlashRequest
+) -> Mapping[str, VariationText]:
+    """來源給的文字（LF-1；沒有 ``texts`` 的來源回傳空）。"""
+    texts = getattr(source, "texts", None)
+    return {} if texts is None else texts(library, request)
+
+
+def _proposed_options(
+    builder: _Builder, variations: Sequence[Variation], *, allowed: Sequence[str]
+) -> list[FlashOption]:
+    """提議的變化中，類別可用、不重複、真的套得上的選項。"""
     found: list[FlashOption] = []
     seen: set[str] = set()
-    for variation in propose(library, request, before):
+    for variation in variations:
         if variation.category not in allowed or variation.key() in seen:
             continue
         seen.add(variation.key())

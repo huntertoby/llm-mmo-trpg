@@ -70,9 +70,14 @@ class Variation(_Frozen):
     keyword: str | None = None
     shape: ShapeSpec | None = None
     element: str | None = None
+    name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """LLM 取的名稱（LF-1；只給大變化與轉型，:mod:`trpg.skillgen.flash_text` 檢查過才掛上）。
+    只影響顯示，不進 :meth:`key`；沒有時不輸出（舊存檔逐字不變）。"""
+    note_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """LLM 寫的一句話描述（LF-1；同上，只影響顯示）。"""
 
     def key(self) -> str:
-        """穩定的識別字串（子亂數串流的標籤、比對用）。"""
+        """穩定的識別字串（子亂數串流的標籤、比對用；不含名稱與描述）。"""
         shape = "-" if self.shape is None else self.shape.model_dump_json(exclude_none=True)
         return "/".join(
             (self.source, self.template, self.keyword or "-", shape, self.element or "-")

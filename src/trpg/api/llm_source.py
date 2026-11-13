@@ -122,7 +122,10 @@ class LocalLlmProvider:
         if config is None:
             return None
         client = OpenAICompatClient(config, transport=self._transport)
-        return lambda sink: LlmFlashSource(client, max_attempts=config.max_retries, sink=sink)
+        # LF-1：同一個 client 也為大變化與轉型命名（名稱與描述進遊戲、記進日誌）
+        return lambda sink: LlmFlashSource(
+            client, max_attempts=config.max_retries, sink=sink, naming=client
+        )
 
     def story_proposer(self, library: ContentLibrary) -> StoryProposer | None:
         config = self._config()
@@ -154,11 +157,14 @@ class MockLlmProvider:
         alert_permille: int = DEFAULT_ALERT_PERMILLE,
         generate: bool = False,
         story_responses: Sequence[str | Exception] = (),
+        flash_naming: bool = False,
     ) -> None:
         self.reachable = reachable
         self._alert = alert_permille
         self.probes = 0
         self.generate = generate
+        self.flash_naming = flash_naming
+        """LF-1：閃現的大變化與轉型用 Mock 命名（預設關，不動既有測試）。"""
         self.story = MockLLMClient(story_responses)
         """大世界說書人與情境提議共用的 Mock（依序回應；用完拋 ``LLMUnavailable`` → 降級）。"""
 
@@ -170,7 +176,8 @@ class MockLlmProvider:
         return mock_proposer(library, naming=True)
 
     def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
-        return lambda sink: mock_flash_source(library, sink=sink)
+        naming = self.flash_naming
+        return lambda sink: mock_flash_source(library, sink=sink, naming=naming)
 
     def story_proposer(self, library: ContentLibrary) -> StoryProposer | None:
         return mock_story_proposer(library)

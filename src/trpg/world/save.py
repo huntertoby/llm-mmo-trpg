@@ -3,8 +3,8 @@
 | 資料 | 格式 |
 |---|---|
 | 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
-| 角色 | ``trpg-char/12``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/9``（JSON Lines：第一行 ``{"format": "trpg-wlog/9"}``，之後一行一筆
+| 角色 | ``trpg-char/13``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
+| 世界動作日誌 | ``trpg-wlog/10``（JSON Lines：第一行 ``{"format": "trpg-wlog/10"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -87,6 +87,12 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 **Phase TR-1**（#134 開局在主城工坊靶場）：角色格式升成 ``trpg-char/12``（``opening``：未完成開局與
 起始技能的種子；``/11`` 以前照讀＝已完成開局）；新動作 ``opening_confirm``（日誌格式不變；靶場的
 沙盒試打不寫日誌）。:data:`WORLD_RULES_VERSION` 升成 22。
+
+**Phase LF-1**（LLM 閃現的名稱與描述）：閃現提議紀錄（``generated`` 裡的 ``FlashGen.record``）多
+選填欄位 ``texts``（LLM 的名稱與描述，依變化的鍵），格式升成 ``trpg-wlog/10``；空的時候不寫（沒有
+文字的那一行和 ``/9`` 逐字相同）。``trpg-wlog/7``～``/9`` **照讀**，寫回時標頭改成 ``/10``。角色存檔
+的變化歷程（``Variation``）多選填 ``name_zh``、``note_zh``，沒值時不輸出，``CHAR_FORMAT``
+不變（待 PM 決定）。:data:`WORLD_RULES_VERSION` 不變：舊日誌沒有文字，重播結果逐字相同。
 """
 
 from __future__ import annotations
@@ -139,10 +145,11 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/9"
-READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8"})
+WLOG_FORMAT: Final = "trpg-wlog/10"
+READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8", "trpg-wlog/9"})
 """照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``；6T-1a：``/8`` 只少了
-選填欄位 ``counterpart``、``counterpart_actor``）。"""
+選填欄位 ``counterpart``、``counterpart_actor``；LF-1：``/9`` 只少了閃現提議紀錄的選填欄位
+``texts``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )

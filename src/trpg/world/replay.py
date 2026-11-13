@@ -9,7 +9,7 @@
 技能的元素與文字、機遇的三選一，連同來源）。重播只讀這些紀錄，**完全不呼叫 LLM**。
 
 6T-1a：交易那一筆同時改兩個角色（寄信、拒收、取回過期的信）：另記 ``counterpart``（另一個角色）與
-``counterpart_actor``（他的帳號）；重播時兩個角色一起從那一筆的結果更新（``trpg-wlog/9``）。
+``counterpart_actor``（他的帳號）；重播時兩個角色一起從那一筆的結果更新（``trpg-wlog/9`` 起）。
 """
 
 from __future__ import annotations

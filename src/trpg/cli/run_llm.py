@@ -83,7 +83,9 @@ def llm_session(
         with (
             use_proposer(proposer),
             use_flash_source(
-                lambda sink: LlmFlashSource(client, max_attempts=config.max_retries, sink=sink)
+                lambda sink: LlmFlashSource(
+                    client, max_attempts=config.max_retries, sink=sink, naming=client
+                )
             ),
         ):
             yield True

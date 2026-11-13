@@ -558,5 +558,5 @@ def test_old_world_log_is_stale() -> None:
     assert log.stale_zh == "規則已變、不能重播"
     again = read_log(dumps_log(log.entries, stale_through=log.stale_through))
     assert again == log
-    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/9"
+    assert json.loads(dumps_log((), stale_through=3).splitlines()[0])["format"] == "trpg-wlog/10"
     assert read_log('{"format": "trpg-wlog/1"}\n').stale_through is None
