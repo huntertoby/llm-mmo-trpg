@@ -269,6 +269,25 @@ class TrapRevealed(EventBase):
     skill_id: str
 
 
+class TrapTraced(EventBase):
+    """玩家方看到敵方陷阱的「可疑痕跡」（RG-2，#162，05 5.7）：``unit_id`` 走到（或回合開始時站在）
+    ``trap_trace_radius`` 格內。只帶格子，不帶技能與種類；只給 ``team`` 看（``event_filter``）。"""
+
+    type: Literal["trap_traced"] = "trap_traced"
+    unit_id: UnitId
+    team: Team
+    pos: Pos
+
+
+class TrapGlance(EventBase):
+    """敵人放陷阱時「看那一格一眼」（RG-2，#162，05 5.7）：所有人可見的演出事件，只帶放置者與格子；
+    不改面向、不讓那一格變成痕跡。"""
+
+    type: Literal["trap_glance"] = "trap_glance"
+    owner_id: UnitId
+    pos: Pos
+
+
 class TrapExpired(EventBase):
     """陷阱消失而沒有觸發：``timeout`` 為 ``enter`` 陷阱輪數到了，``source_lost`` 為放置者離場。"""
 

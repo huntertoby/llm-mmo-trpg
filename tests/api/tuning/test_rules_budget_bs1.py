@@ -23,6 +23,7 @@ CORE_PATHS = (
     "backstab_hit_bonus",
     "backstab_crit_range_bonus",
     "ambush_hit_bonus",
+    "trap_trace_radius",  # RG-2（#162）陷阱痕跡
     "shield_guard_hit_penalty",  # RG-1（#162）盾兵掩護
 )
 BUDGET_PATHS = (

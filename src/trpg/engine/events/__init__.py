@@ -98,8 +98,10 @@ from trpg.engine.events.objects import (
     SurfaceEntered,
     TerrainChanged,
     TrapExpired,
+    TrapGlance,
     TrapPlaced,
     TrapRevealed,
+    TrapTraced,
     TrapTriggered,
 )
 from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
@@ -298,8 +300,10 @@ __all__ = [
     "TerrainChanged",
     "TotemPulsed",
     "TrapExpired",
+    "TrapGlance",
     "TrapPlaced",
     "TrapRevealed",
+    "TrapTraced",
     "TrapTriggered",
     "TriggerLimitReached",
     "TurnEnded",

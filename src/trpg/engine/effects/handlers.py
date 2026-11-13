@@ -81,7 +81,7 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
-from trpg.engine.traps import detect_traps, queue_trap_entry
+from trpg.engine.traps import detect_traps, queue_trap_entry, trace_traps
 from trpg.engine.zones import note_unit_moved
 from trpg.shared.types import Element, Pos, Surface, Team, UnitId
 
@@ -783,6 +783,7 @@ def arrive(
         queue_trap_entry(ctx, unit, dest)  # 進入敵方陷阱格（主動或強制移動；傳送不算）
     note_unit_moved(ctx, unit, (from_pos.x, from_pos.y), dest)  # 持續區域（Phase 3D-5）
     detect_traps(ctx, unit)  # 感知的常駐數值：自動看見附近的敵方陷阱（Phase 3H-1）
+    trace_traps(ctx, unit)  # 玩家方看到附近敵方陷阱的可疑痕跡（RG-2）
     min_drop = ctx.core.fall_damage_min_drop
     if (
         mode not in ("teleport", "teleported", "shadowstep")

@@ -115,8 +115,10 @@ from trpg.engine.events import (
     TerrainChanged,
     TotemPulsed,
     TrapExpired,
+    TrapGlance,
     TrapPlaced,
     TrapRevealed,
+    TrapTraced,
     TrapTriggered,
     TriggerLimitReached,
     TurnEnded,
@@ -1238,6 +1240,16 @@ def _trap_triggered(e: TrapTriggered, v: _View) -> str:
 def _trap_revealed(e: TrapRevealed, v: _View) -> str:
     skill = _skill_name(v, e.skill_id)
     return f"  {v.name[e.unit_id]} 揭露了 {xy_text(e.pos)} 的敵方陷阱「{skill}」"
+
+
+@_handles(TrapTraced)
+def _trap_traced(e: TrapTraced, v: _View) -> str:
+    return f"  ？{v.name[e.unit_id]} 注意到 {xy_text(e.pos)} 有可疑的痕跡"
+
+
+@_handles(TrapGlance)
+def _trap_glance(e: TrapGlance, v: _View) -> str:
+    return f"    {v.name[e.owner_id]} 朝 {xy_text(e.pos)} 瞄了一眼"
 
 
 @_handles(TrapExpired)
