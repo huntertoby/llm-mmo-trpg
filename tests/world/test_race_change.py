@@ -76,7 +76,7 @@ def test_change_race_only_in_capital_and_this_season(
 def test_old_character_files_load_as_not_used(make_char: MakeChar) -> None:
     char = make_char()
     data = json.loads(dumps_char(char))
-    assert data["format"] == CHAR_FORMAT == "trpg-char/14"
+    assert data["format"] == CHAR_FORMAT == "trpg-char/15"
     data["format"] = "trpg-char/9"
     data.pop("free_race_change_used", None)
     old = loads_char(json.dumps(data))

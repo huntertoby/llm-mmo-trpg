@@ -84,7 +84,7 @@ locations:
       - {flag: brood_spread, group: brood_spread}
   - location: overseer_camp
     groups: [{group: overseer_crew}, {group: overseer_guard}]
-    elite: {unit: forge_scar, affix: hard_shelled}   # 懸賞「熔爐督工」＝盜賊隊長精英（19.8；詞綴開發 PM 定）
+    elite: {unit: forge_scar, affix: hard_shelled, duel: true}   # 懸賞「熔爐督工」＝盜賊隊長精英（19.8；詞綴開發 PM 定）；RG-2 單挑（19.2.1：開發挑不會補血的）
   - location: iron_forge_village
     groups: [{group: village_raid_heavy}]
     objective: defend

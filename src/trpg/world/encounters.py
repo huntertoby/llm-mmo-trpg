@@ -25,6 +25,9 @@
 （``EncounterResult.world_flags``）符合遭遇表 ``surges`` 的旗標、地點種類、時段時，一般抽到的陣容在
 敵方最後多 1 名（混精英之後；滿 4 名不加；遭遇變化不加）。不消耗亂數。
 
+**精英單挑**（RG-2，#162）：固定精英、懸賞、遭遇變化的 ``elite.duel`` 為真時，陣容標 ``duel``（那名
+精英排最前）；提出、回應與一對一組場在 :mod:`trpg.world.duel`。不消耗亂數。
+
 **第三方**（Phase 5B-M3 三方混戰）：陣容的 ``third`` 照順序放進 :attr:`EncounterLineup.third`（套用
 等級門檻）；營地混精英、固定精英、增援只作用在敵方 ``members``（代決 5BM3-9）。不消耗亂數。
 """
@@ -86,6 +89,9 @@ class EncounterLineup(BaseModel):
     """用了哪個遭遇變化（劇情旗標；Phase 5B-4b 線頭到期結局）；``None``＝一般抽陣容。"""
     bounty: str | None = None
     """懸賞陣容（Phase 5F-1）；``None``＝不是懸賞。"""
+    duel: bool = Field(default=False, exclude_if=lambda v: not v)
+    """排最前的精英會提出單挑（RG-2，#162：固定精英、懸賞、遭遇變化的 ``elite.duel``）；不輸出
+    ``False``，既有紀錄不變。"""
 
     @property
     def has_elite_affix(self) -> bool:
@@ -124,6 +130,7 @@ def roll_lineup(
             members=tuple(members),
             third=tuple(LineupMember(unit=_gated(u, entry, gate_level)) for u in group.third),
             variant=variant.flag,
+            duel=variant.elite is not None and variant.elite.duel,
         )
     bounty = _bounty_lineup(library, table, encounter)
     if bounty is not None:
@@ -150,6 +157,7 @@ def roll_lineup(
         group=group.id,
         members=tuple(members),
         third=third,
+        duel=entry.elite is not None and entry.elite.duel,
     )
 
 
@@ -269,6 +277,7 @@ def _bounty_lineup(
         group=group.id,
         members=(elite, *(LineupMember(unit=u) for u in group.units)),
         bounty=bounty.id,
+        duel=bounty.elite.duel,
     )
 
 

@@ -76,6 +76,7 @@ from trpg.world.battlefield import Battlefield, UnitCounts, contact_battlefield
 from trpg.world.calendar import day_of
 from trpg.world.common import max_hp, max_mana, rules_of, world_map_of
 from trpg.world.companions import companion_spawns, companion_win_affinity
+from trpg.world.duel import duel_accepted, fielded_lineup
 from trpg.world.economy import battle_gold, pouch_skills, spend_pouch
 from trpg.world.encounters import (
     EncounterLineup,
@@ -146,6 +147,14 @@ class PreparedBattle:
     """就地開打切出的戰場（6C-2，:mod:`trpg.world.battlefield`）；``None``＝用模板地圖。"""
     cut_fallback: CutFallback | None = None
     """碰到地圖上的敵人卻退回模板的原因（6C-2）。"""
+    duel: bool = False
+    """精英單挑（RG-2，:mod:`trpg.world.duel`）：這場是主角對精英本人一對一。``lineup`` 仍是整個陣容
+    （獎勵照它算），實際上場的是 :attr:`fielded`。"""
+
+    @property
+    def fielded(self) -> EncounterLineup:
+        """實際上場的敵方陣容（一對一時只有精英本人）。"""
+        return fielded_lineup(self.lineup) if self.duel else self.lineup
 
 
 # ---------------------------------------------------------------------------
@@ -440,31 +449,26 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
     rolled = roll_lineup(library, encounter, char.story_flags)  # 線頭到期結局的變化（5B-4b）
     reinforced = reinforce_lineup(library, encounter, rolled, reinforce)
     lineup = reinforced.lineup
+    duel = duel_accepted(encounter, lineup)  # 精英單挑（RG-2）：只有精英本人上場
+    fielded = fielded_lineup(lineup) if duel else lineup
     level = enemy_level(library, encounter)
     extra: dict[str, SkillDef] = {}
     # 第三方（5B-M3 三方混戰）照同一等級成長，排在敵方之後
     enemies = _enemy_spawns(
         library,
         (
-            (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, lineup))),
-            (Team.THIRD, lineup_templates(library, lineup, third=True)),
+            (Team.ENEMY, armored(library, char, encounter, lineup_templates(library, fielded))),
+            (Team.THIRD, lineup_templates(library, fielded, third=True)),
         ),
         level,
         extra,
     )
     phase_spawns = _phase_spawns(library, enemies, level, extra)  # Boss 階段的召喚（5F-2）
-    # 我方＝主角＋傭兵（5C-1）＋影子（5C-2）；沒有隊友＝獨行（5C-2 玩法 PM 定 ③）
-    mercenaries = _mercenary_spawns(library, char, extra)
-    shadow_units, shadow_skills = shadow_spawns(library, char)
-    extra.update((s.id, s) for s in shadow_skills)
-    # 劇情夥伴（5C-3）：排在傭兵、影子之後，同樣照主角等級成長
-    companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
-    extra.update((s.id, s) for s in companion_skills)
     statuses = hero_statuses(char)
     hero, hp = _hero_with_items(library, char, extra, statuses)
     first = first_team(library, char, encounter, reinforced.enemy_first)
     oath = oath_setup(library, char)  # 誓約的加成與判定（5C-3；主角＝units[0]）
-    allies = (hero, *mercenaries, *shadow_units, *companions)
+    allies = (hero,) if duel else (hero, *_party_spawns(library, char, extra))
     field = _battlefield(library, encounter, allies, enemies, first)  # 就地開打（6C-2）
     setup = _battle_setup(
         library,
@@ -488,7 +492,21 @@ def prepare_battle(library: ContentLibrary, char: CharacterState) -> PreparedBat
         oath=oath,
         field_cut=field.cut,
         cut_fallback=field.fallback,
+        duel=duel,
     )
+
+
+def _party_spawns(
+    library: ContentLibrary, char: CharacterState, extra: dict[str, SkillDef]
+) -> tuple[UnitSpawn, ...]:
+    """主角以外的我方：傭兵（5C-1）＋影子（5C-2）＋劇情夥伴（5C-3，排在最後，同樣照主角等級成長）；
+    沒有隊友＝獨行（5C-2 玩法 PM 定 ③）。重配的技能加進 ``extra``。"""
+    mercenaries = _mercenary_spawns(library, char, extra)
+    shadow_units, shadow_skills = shadow_spawns(library, char)
+    extra.update((s.id, s) for s in shadow_skills)
+    companions, companion_skills = grow_allies(library, companion_spawns(library, char), char.level)
+    extra.update((s.id, s) for s in companion_skills)
+    return (*mercenaries, *shadow_units, *companions)
 
 
 def _battlefield(
@@ -854,6 +872,7 @@ def _won_rewards(
         boss_bonus=bonus,
         fixed_class=_fixed_main_hand(library, encounter, prepared.lineup),  # 6T-1a（#135）
         mix=world.weapon_mix,
+        duel=prepared.duel,  # RG-2：一對一也照整個陣容掉
     )
     char, loot, loot_events = add_loot(library, char, roll)
     more += loot_events

@@ -92,7 +92,7 @@ def test_old_char_format_loads_without_visited(calm_maps: ContentLibrary) -> Non
     data["format"] = "trpg-char/3"
     data.pop("visited_locations", None)
     old = loads_char(json.dumps(data))
-    assert old.format == "trpg-char/14"
+    assert old.format == "trpg-char/15"
     assert old.visited_locations == ()
     assert _fog(_map(calm_maps, old))["mist_ferry"] == "visited"  # 目前位置一定算去過
 
