@@ -43,7 +43,7 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-13 aea340f2c 已 push（pytest 17017、vitest 4382、build 0）。之後合進 main、**還沒 push** 的：RR-2／2b／2c（#160，`WORLD_RULES_VERSION` 30）、WP-3b、KW-1＋KW-1b（#161）、RG-1（#162）；`LOG_FORMAT` 現為 /120（KW-1 與 RG-1 同一版）。d5e04c462 正在跑全量（上一次 ed1449cbe 有 4 條 KW 失敗，KW-1b 已修；再前一次跑到 99% 時 xdist worker「node down」卡死 3 小時，已停掉——全量期間盡量不要讓 agent 跑大批測試，`TRPG_PYTEST_WORKERS` 改用 10）。通過就 push，並照 3.0001 節發一則給專案 PM。
+**2. 最後一次全量**：2026-11-13 cc8345511 已 push（pytest 17127、vitest 4398、build 0），含：RR-2／2b／2c（#160，`WORLD_RULES_VERSION` 30）、WP-3b、KW-1＋KW-1b（#161）、RG-1（#162）；`LOG_FORMAT` 現為 /120（KW-1 與 RG-1 同一版）。d5e04c462 正在跑全量（上一次 ed1449cbe 有 4 條 KW 失敗，KW-1b 已修；再前一次跑到 99% 時 xdist worker「node down」卡死 3 小時，已停掉——全量期間盡量不要讓 agent 跑大批測試，`TRPG_PYTEST_WORKERS` 改用 10）。通過就 push，並照 3.0001 節發一則給專案 PM。
 
 **3. 執行中的 agent（分支）**：
 - **RG-2**（`worktree-agent-afef1fb4f18bc7936`）：#162 陷阱痕跡、精英單挑、荒原狂戰士；規格 `docs/phases/PhaseRG計畫.md`，會升 `WORLD_RULES_VERSION`。
