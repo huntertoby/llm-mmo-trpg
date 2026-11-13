@@ -849,3 +849,16 @@
     box-shadow: 0 0 0 0 transparent;
   }
 }
+
+/* RG-3（#162）：精英要求一對一的對話框（`WorldPanel.DuelDialog`）：接受、拒絕兩顆按鈕一樣大 */
+.duel-dialog p {
+  margin: 0 0 8px;
+}
+.duel-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.duel-choices > button {
+  min-width: 0;
+}

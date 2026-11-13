@@ -15,6 +15,7 @@ import type { WorldAction, WorldView } from "../api/types";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { Hint } from "../ui/Hint";
 import { PopupFrame } from "../ui/PopupFrame";
+import { DialogFrame } from "../ui/DialogFrame";
 import { battlefieldLine } from "./battlefield";
 import { EnemyThumb } from "./enemyThumb";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
@@ -85,6 +86,12 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           ))}
         </ul>
       )}
+      {e.duel != null && e.duel !== "offered" && e.duel_zh != null && (
+        <div className="muted small" data-testid="world-encounter-duel">
+          {e.duel_zh}
+        </div>
+      )}
+      {e.duel === "offered" && !e.in_battle && <DuelDialog encounter={e} busy={busy} onAct={onAct} />}
       <div className="run-actions">
         <button type="button" className="primary" disabled={busy} onClick={onBattle} data-testid="world-fight">
           {e.in_battle ? "繼續戰鬥" : "開戰"}
@@ -99,6 +106,35 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
       </div>
     </PopupFrame>
   );
+}
+
+/**
+ * RG-3（#162，09 9.6.6）：精英要求一對一的對話框（`EncounterView.duel` ＝ `offered`）。接受、拒絕兩顆按鈕一樣大；
+ * 說明字是伺服器的 `duel_zh`（寫明「兩邊獎勵一樣」）。插圖（精英剪影對主角剪影、交叉武器 320×120）美術還沒出：先做無插圖的版本。
+ * 不選直接按「開戰」＝拒絕（RG-2 規則，照舊能打）。
+ */
+function DuelDialog({ encounter, busy, onAct }: { encounter: NonNullable<WorldView["encounter"]>; busy: boolean; onAct(action: WorldAction): void }) {
+  const elite = duelEliteName(encounter);
+  return (
+    <DialogFrame label="單挑" title={`${elite}要求一對一`}>
+      <div className="duel-dialog" data-testid="world-duel">
+        {encounter.duel_zh != null && <p className="small">{encounter.duel_zh}</p>}
+        <div className="duel-choices">
+          <button type="button" className="primary" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: true })} data-testid="world-duel-accept">
+            接受
+          </button>
+          <button type="button" disabled={busy} onClick={() => onAct({ kind: "duel_choice", accept: false })} data-testid="world-duel-decline">
+            拒絕
+          </button>
+        </div>
+      </div>
+    </DialogFrame>
+  );
+}
+
+/** 提出單挑的精英：陣容裡第一個精英（伺服器 `duel_line` 也用排最前的那一個）；沒有標精英時用第一名敵人。 */
+export function duelEliteName(e: NonNullable<WorldView["encounter"]>): string {
+  return (e.enemies.find((x) => x.elite) ?? e.enemies[0])?.name_zh ?? "";
 }
 
 export function HerePanel({
