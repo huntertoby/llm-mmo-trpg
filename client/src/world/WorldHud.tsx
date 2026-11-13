@@ -601,6 +601,7 @@ export function WorldHud(props: WorldHudProps) {
           label="面板"
           testId="world-hud-panel"
           data={{ panel: props.openPanel ?? "" }}
+          slots
         >
           {props.panelLocked !== true && (
             <button type="button" className="world-hud-panel-close" onClick={props.onClosePanel} aria-label="關閉面板（Esc）" data-testid="world-hud-panel-close">

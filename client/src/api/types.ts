@@ -228,6 +228,11 @@ export type PendingFlash = Schemas["PendingFlashOut"];
 export type FlashPreview = Schemas["FlashPreviewOut"];
 export type FlashOption = Schemas["FlashOptionOut"];
 export type FlashCategory = Schemas["FlashCategoryOut"];
+/** 選變體畫面（FL-1b）：「前 → 後」一列、欄位小圖、說明卡、原技能列的數字。 */
+export type StatChange = Schemas["StatChangeOut"];
+export type ChangeIcon = Schemas["ChangeIconOut"];
+export type FlashTerm = Schemas["FlashTermOut"];
+export type FlashBaseStat = Schemas["FlashBaseStatOut"];
 export type BattleHistory = Schemas["BattleHistory"];
 export type AttributeId = Schemas["Attribute"];
 // 建議屬性與「這個屬性影響你的哪些招」（Phase 3H-3）

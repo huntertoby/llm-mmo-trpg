@@ -253,3 +253,24 @@ def test_base_strip_of_kindle() -> None:
         ("射程", "4", "range"),
         ("燃燒", "5 回合", "status:burning"),
     ]
+
+
+def test_shifted_effect_is_not_listed_twice() -> None:
+    """效果只是換了位置（多打一下插進一段，造水往後挪）：不列「積水 → 沒有」又「沒有 → 積水」。"""
+    _, wet = _option("keyword_imbue", "element", "wet")
+    burn, water = wet.effects
+    _, bump = _option("keyword_exploit", "element", "collision")
+    extra = bump.effects[1]
+    after = wet.model_copy(update={"effects": (burn, extra, water)})
+    rows = flash_changes(LIB, wet, after)
+    assert [(r.name_zh, r.direction) for r in rows] == [("額外傷害", "new")]
+
+
+def test_surface_rounds_read_as_puddle() -> None:
+    _, wet = _option("keyword_imbue", "element", "wet")
+    burn, water = wet.effects
+    longer = wet.model_copy(update={"effects": (burn, water.model_copy(update={"duration": 4}))})
+    shorter = wet.model_copy(update={"effects": (burn, water.model_copy(update={"duration": 2}))})
+    rows = flash_changes(LIB, shorter, longer)
+    assert [_view(r) for r in rows] == [("積水", "2 回合", "4 回合", "better")]
+    assert rows[0].term == "surface:water"

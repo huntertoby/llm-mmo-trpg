@@ -70,7 +70,11 @@ describe("浮動卡規則（6.5.1）", () => {
   });
 
   it("沒有自製的 portal 彈出層", () => {
-    const bad = files.filter(([path, text]) => !SHARED.has(path) && /createPortal\(/.test(text)).map(([path]) => path);
+    /** portal 但不是彈出層：檔名 → 原因。 */
+    const PORTAL_OK: Record<string, string> = {
+      "ui/PopupSlot.tsx": "FL-1b 上下固定區插槽（`PopupFrame slots`）：把同一個面板的標頭與確定列放進框的不捲區，不是浮在畫面上的彈出層",
+    };
+    const bad = files.filter(([path, text]) => !SHARED.has(path) && !(path in PORTAL_OK) && /createPortal\(/.test(text)).map(([path]) => path);
     expect(bad).toEqual([]);
   });
 

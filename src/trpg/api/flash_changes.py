@@ -335,7 +335,30 @@ def flash_changes(
         ),
     ]
     view = _View(library, before, after, keyword)
-    return tuple(view.dress(row) for row in rows)
+    return tuple(view.dress(row) for row in _drop_shifted(rows))
+
+
+def _drop_shifted(rows: list[StatChangeOut]) -> list[StatChangeOut]:
+    """同一個效果只是換了位置（例：多打一下插進一段傷害，後面的造水往後挪一格）：「拿掉」與「新加」
+    兩列的欄位名與值都一樣時兩列都不列（FL-1b：畫面不出現「積水 → 沒有」又「沒有 → 積水」）。"""
+    removed = [r for r in rows if r.after is None and r.before is not None and "." not in r.field]
+    added = [r for r in rows if r.before is None and r.after is not None and "." not in r.field]
+    drop: set[int] = set()
+    for old in removed:
+        prefix = old.field.split("[", 1)[0]
+        match = next(
+            (
+                new
+                for new in added
+                if id(new) not in drop
+                and new.field.split("[", 1)[0] == prefix
+                and (new.label_zh, new.after) == (old.label_zh, old.before)
+            ),
+            None,
+        )
+        if match is not None:
+            drop |= {id(old), id(match)}
+    return [r for r in rows if id(r) not in drop]
 
 
 # ---------------------------------------------------------------------------
@@ -533,6 +556,16 @@ class _View:
             name = str(spec.status) if status is None else status.name_zh
             update = _plain(row, name, "回合", f"status:{spec.status}")
             update["icon"] = ChangeIconOut(kind="status", id=str(spec.status))
+            return update
+        if (
+            spec.type == "create_surface"
+            and spec.surface is not None
+            and row.label_zh.endswith("回合")
+        ):
+            surface = spec.surface.value
+            name = _SURFACE_ZH.get(surface) or row.label_zh.removesuffix("回合")
+            update = _plain(row, name, "回合", f"surface:{surface}")
+            update["icon"] = _icon(spec)
             return update
         label, unit = row.label_zh, None
         for suffix, found in _AMOUNT_UNITS:

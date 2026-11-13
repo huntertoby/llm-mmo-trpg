@@ -1,7 +1,8 @@
 // 靈感閃現的純函式（Phase 3W-6；規則在 06 6.34.3，數值由後端 `flash_rules` 提供，這裡不寫死）。
 // 3W-R2：可重閃的欄、可傳承的目標、可帶走的變化與上限、不能傳承的原因都由後端下發，這裡只讀。
 // 文字集中在這裡：價格說明、技能卡的「已閃 N／5 次」、稀有度提示、溶掉確認、傳承條件。
-import type { FlashOption, FlashPreview, PendingFlash, RunChoice, RunHero, SkillCard, SkillFlash } from "../api/types";
+import type { FlashOption, FlashPreview, RunChoice, RunHero, SkillCard, SkillFlash } from "../api/types";
+import { autoUnequip } from "./flashChoice";
 import { ownedCards } from "./loadout";
 import { percent } from "../battle/previewText";
 
@@ -213,32 +214,14 @@ export function needsUnequip(o: FlashOption): boolean {
   return o.unequip_candidates.length > 0;
 }
 
+/** 選好了沒：要卸下時先選卸下哪一招；姿態欄自動換下原姿態（FL-1b 8.3），不用選。 */
 export function pickReady(o: FlashOption | undefined, unequip: string | null): boolean {
   if (o === undefined) return false;
-  return !needsUnequip(o) || unequip !== null;
+  return !needsUnequip(o) || unequip !== null || autoUnequip(o) !== null;
 }
 
 export function pickChoice(o: FlashOption, unequip: string | null): RunChoice {
-  return { kind: "flash_pick", pick: o.index, unequip: needsUnequip(o) ? unequip : null };
-}
-
-export function pendingTitle(p: PendingFlash, name: string): string {
-  const what = p.slot === null ? `第 ${p.nth} 次閃現${p.major ? "（大變化）" : ""}` : p.slot === 0 ? "重閃調整欄" : `重閃第 ${p.slot} 次`;
-  const focus = p.category === null ? "不指定" : "指定類別";
-  return `「${name}」${what}（${focus}，已扣 ${p.cost} 點）`;
-}
-
-/** 新舊卡片的差異行（預覽數字）：形狀、費用與每條效果／修正的變動。 */
-export function cardDiff(before: SkillCard | undefined, after: SkillCard): string[] {
-  if (before === undefined) return [];
-  const lines: string[] = [];
-  if (before.shape !== after.shape) lines.push(`形狀：${before.shape} → ${after.shape}`);
-  if (before.cost.join("，") !== after.cost.join("，")) lines.push(`費用：${before.cost.join("，")} → ${after.cost.join("，")}`);
-  const was = [...before.effects, ...before.modifiers.map((m) => `修正：${m}`)];
-  const now = [...after.effects, ...after.modifiers.map((m) => `修正：${m}`)];
-  for (const line of was) if (!now.includes(line)) lines.push(`原：${line}`);
-  for (const line of now) if (!was.includes(line)) lines.push(`新：${line}`);
-  return lines;
+  return { kind: "flash_pick", pick: o.index, unequip: needsUnequip(o) ? (unequip ?? autoUnequip(o)) : null };
 }
 
 export function previewProblem(p: FlashPreview | null): string | null {

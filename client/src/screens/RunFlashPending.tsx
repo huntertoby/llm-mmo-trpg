@@ -1,10 +1,31 @@
-// 閃現選項畫面（Phase 3W-6）：點數已經扣了，一定要選一個。每個選項顯示類別標籤、變化說明、與原本比較的數字，
-// 以及套用後的技能卡；轉型保底列在最後並標「轉型」。轉型換到已滿的欄位時，要先選卸下哪一招。
-import { useState } from "react";
-import type { PendingFlash, RunChoice, RunHero, RunResponse } from "../api/types";
-import { SkillCardView } from "../ui/SkillCardView";
+// 靈感閃現「選變體」畫面（Phase 3W-6；FL-1b 改版，docs/art/靈感閃現選擇-移植需求.md）。點數已經扣了，一定要選一個。
+// 三段：上固定區（標頭、說明行、原技能列，原技能只出現一次）＋選項清單（白話大標＋只列有變的「前 → 後」，點整張卡選中）＋
+// 下固定區（選中的大標、一句話、轉型的卸下選單、「確定」）。一輪與大世界共用：
+// - 大世界 HUD 面板（`PopupFrame slots`）：上下固定區 portal 進框的 `ui-popup-head`／`ui-popup-foot`，只有選項區在框內捲；
+// - 一輪（`RunScreen` 直接放在 `run-main`，頁面本身會捲）：三段照排，下固定區 `position: sticky; bottom: 0`（第 12 節決定 3）。
+// 寬版／窄版看面板寬（容器查詢 559px），兩種字都畫、CSS 切換。
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import type { FlashOption, PendingFlash, RunChoice, RunHero, RunResponse } from "../api/types";
 import { ownedCards } from "../run/loadout";
-import { cardDiff, flashOf, optionTag, pendingTitle, pickChoice, pickReady, sortedOptions } from "../run/flash";
+import { optionTag, pickChoice, pickReady, sortedOptions } from "../run/flash";
+import {
+  FLASH_MUST_PICK_ZH,
+  FLASH_PICK_NONE_ZH,
+  FLASH_PICK_SUBTITLE_ZH,
+  FLASH_PICK_TITLE_ZH,
+  anyUnequipMenu,
+  headlineOf,
+  paidTag,
+  pendingWhat,
+  showsUnequipMenu,
+  stepPick,
+  unequipPrompt,
+} from "../run/flashChoice";
+import { BaseStrip, DiffRows, Term, TermText, type Terms } from "../run/FlashChoiceParts";
+import { HudBare, InfoTip, Tag } from "../ui/PanelKit";
+import { usePopupSlots } from "../ui/PopupFrame";
+import { PopupSlot } from "../ui/PopupSlot";
+import { SkillIconView } from "../ui/SkillIconView";
 
 type Props = {
   run: RunResponse;
@@ -23,95 +44,222 @@ type PanelProps = {
   hero: RunHero;
   busy: boolean;
   onChoose(choice: RunChoice): Promise<number | null>;
+  /** 大世界鎖住時的提示（寬版第 2 行下一行，窄版收進 (i)；一輪沒有）。 */
+  lockNote?: string;
 };
 
-/** 待選閃現的選項畫面本體（一輪與大世界共用；5A-7）。 */
-export function FlashPendingPanel({ pending, hero, busy, onChoose }: PanelProps) {
-  const [pick, setPick] = useState<number | null>(null);
-  const [unequip, setUnequip] = useState<string | null>(null);
-  const before = ownedCards(hero).get(pending.skill_id);
-  const options = sortedOptions(pending.options);
-  const picked = options.find((o) => o.index === pick);
+/** 上固定區：標頭（寬版兩行、窄版一行＋(i)）＋原技能列。 */
+function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; name: string; lockNote: string | undefined; base: ReactNode }) {
+  const tip = lockNote === undefined ? `${FLASH_MUST_PICK_ZH}。` : `${FLASH_MUST_PICK_ZH}。${lockNote}`;
   return (
-    <div className="panel run-flash-pending" data-testid="run-flash-pending">
-      <h2>閃現！　選一個變化</h2>
-      <div className="small">{pendingTitle(pending, before?.name_zh ?? pending.skill_id)}</div>
-      <p className="muted small">點數已經扣了，一定要選一個。每個選項都不會讓這招變弱。</p>
-      {before !== undefined && (
-        <details className="flash-before">
-          <summary className="small">看原本的技能</summary>
-          <SkillCardView card={before} flash={flashOf(hero, before.id)} flashRules={hero.flash_rules} />
-        </details>
-      )}
-      <div className="run-offer-cards flash-options">
-        {options.map((o) => {
-          const diff = cardDiff(before, o.card);
-          const selected = pick === o.index;
-          return (
-            <div
-              key={o.index}
-              className={`run-offer-card flash-option${selected ? " selected" : ""}${o.transform ? " transform" : ""}`}
-              data-testid={`flash-option-${o.index}`}
-            >
-              <div className={`flash-option-tag${o.transform ? " transform" : ""}`} data-testid="flash-option-tag">
-                <b>{optionTag(o)}</b>
-              </div>
-              <div className="flash-option-summary">{o.summary_zh}</div>
-              {diff.length > 0 && (
-                <ul className="flash-diff small" data-testid="flash-diff">
-                  {diff.map((line) => (
-                    <li key={line} className={line.startsWith("原") ? "was" : line.startsWith("新") ? "now" : ""}>
-                      {line}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <SkillCardView card={o.card} />
-              <button
-                type="button"
-                className={selected ? "primary" : ""}
-                disabled={busy}
-                onClick={() => {
-                  setPick(selected ? null : o.index);
-                  setUnequip(null);
-                }}
-              >
-                {selected ? "已選這個（再按一次取消）" : "選這個"}
-              </button>
-            </div>
-          );
-        })}
+    <div className="fc-fixed" data-testid="flash-head">
+      <div className="fc-head wide-only">
+        <h2 className="fc-title">
+          <HudBare id="bulb" px={22} />
+          {FLASH_PICK_TITLE_ZH}
+          <small>{FLASH_PICK_SUBTITLE_ZH}</small>
+        </h2>
       </div>
-      {picked !== undefined && picked.unequip_candidates.length > 0 && (
-        <div className="panel run-replace">
-          <div className="section-title">轉型後的欄位已滿，請選一個要卸下（放回備用）的技能</div>
-          <div className="run-replace-list">
-            {picked.unequip_candidates.map((id) => (
-              <button
-                key={id}
-                type="button"
-                className={unequip === id ? "primary selected" : ""}
-                disabled={busy}
-                onClick={() => setUnequip(id)}
-              >
-                卸下「{ownedCards(hero).get(id)?.name_zh ?? id}」
-              </button>
-            ))}
-          </div>
+      <div className="fc-sub wide-only">
+        <b>
+          「{name}」{pendingWhat(pending)}
+        </b>
+        <Tag tone="open">{paidTag(pending)}</Tag>
+        <span className="pnl-l3">{FLASH_MUST_PICK_ZH}</span>
+      </div>
+      {lockNote !== undefined && (
+        <div className="fc-lock pnl-l3 wide-only" role="status" data-testid="flash-lock-note">
+          {lockNote}
         </div>
       )}
-      <div className="run-actions">
-        <button data-sfx="ui_learn"
-          type="button"
-          className="primary"
-          data-testid="flash-pick-confirm"
-          disabled={busy || !pickReady(picked, unequip)}
-          onClick={() => picked !== undefined && void onChoose(pickChoice(picked, unequip))}
-        >
+      <div className="fc-head narrow-only">
+        <h2 className="fc-title">
+          <HudBare id="bulb" px={20} />
+          {FLASH_PICK_TITLE_ZH}
+        </h2>
+        <span className="fc-sub inline">
+          <b>
+            「{name}」{pendingWhat(pending, true)}
+          </b>
+          <Tag tone="open">{paidTag(pending)}</Tag>
+          <InfoTip text={tip} label="說明" />
+        </span>
+      </div>
+      {base}
+    </div>
+  );
+}
+
+/** 一張選項卡：單選圈＋白話大標＋類別標籤，下面「前 → 後」各列。點整張卡選中（再點不取消）。 */
+function OptionCard({ o, selected, focusable, terms, onPick, onKey }: { o: FlashOption; selected: boolean; focusable: boolean; terms: Terms; onPick(): void; onKey(e: KeyboardEvent<HTMLDivElement>): void }) {
+  const tag = optionTag(o);
+  return (
+    <div
+      role="radio"
+      aria-checked={selected}
+      tabIndex={focusable ? 0 : -1}
+      className={`fc-opt${selected ? " on" : ""}${o.transform ? " transform" : ""}`}
+      data-testid={`flash-option-${o.index}`}
+      data-index={o.index}
+      onClick={onPick}
+      onKeyDown={onKey}
+    >
+      <div className="fc-opt-top">
+        <span className="fc-radio" aria-hidden="true" />
+        <span className="fc-headline" data-testid="flash-headline">
+          {headlineOf(o)}
+        </span>
+        <span className={`fc-cat${o.transform ? " transform" : ""}`} data-testid="flash-option-tag">
+          <Tag tone={o.transform ? "warn" : undefined}>
+            <Term id={o.tag_term} label={tag} terms={terms} />
+          </Tag>
+        </span>
+      </div>
+      <DiffRows changes={o.changes ?? []} terms={terms} />
+    </div>
+  );
+}
+
+/** 下固定區：選中的大標＋一句話＋（轉型要卸下時）卸下選單＋「確定」；都沒選時提示＋按不下去的「確定」。 */
+function FlashFoot({
+  picked,
+  reserve,
+  hero,
+  terms,
+  unequip,
+  busy,
+  onUnequip,
+  onConfirm,
+}: {
+  picked: FlashOption | undefined;
+  reserve: boolean;
+  hero: RunHero;
+  terms: Terms;
+  unequip: string | null;
+  busy: boolean;
+  onUnequip(id: string): void;
+  onConfirm(): void;
+}) {
+  const owned = ownedCards(hero);
+  return (
+    <div className={`fc-foot${reserve ? " reserve" : ""}`} data-testid="flash-foot">
+      {picked !== undefined && showsUnequipMenu(picked) && (
+        <div className="fc-unequip" data-testid="flash-unequip">
+          <span className="k">{unequipPrompt(picked)}</span>
+          <span className="fc-unequip-list">
+            {picked.unequip_candidates.map((id) => {
+              const card = owned.get(id);
+              return (
+                <button key={id} type="button" className={unequip === id ? "on" : ""} aria-pressed={unequip === id} disabled={busy} onClick={() => onUnequip(id)} data-testid={`flash-unequip-${id}`}>
+                  {card !== undefined && <SkillIconView icon={card.icon} size={20} level="main" label={card.name_zh} />}
+                  {card?.name_zh ?? id}
+                </button>
+              );
+            })}
+          </span>
+        </div>
+      )}
+      <div className="fc-foot-main">
+        <div className="fc-say" data-testid="flash-say">
+          {picked === undefined ? (
+            <span className="dim">{FLASH_PICK_NONE_ZH}</span>
+          ) : (
+            <>
+              <b className="fc-picked">{headlineOf(picked)}</b>
+              <span className="fc-say-line">
+                <TermText text={picked.say_zh || picked.summary_zh} terms={terms} />
+              </span>
+            </>
+          )}
+        </div>
+        <button data-sfx="ui_learn" type="button" className="primary" data-testid="flash-pick-confirm" disabled={busy || !pickReady(picked, unequip)} onClick={onConfirm}>
           確定
         </button>
-        <span className="muted small">{picked === undefined ? "請先選一個變化。" : ""}</span>
       </div>
+    </div>
+  );
+}
+
+/** 待選閃現的選項畫面本體（一輪與大世界共用；5A-7）。 */
+export function FlashPendingPanel({ pending, hero, busy, onChoose, lockNote }: PanelProps) {
+  const [pick, setPick] = useState<number | null>(null);
+  const [unequip, setUnequip] = useState<string | null>(null);
+  const list = useRef<HTMLDivElement | null>(null);
+  const slots = usePopupSlots();
+  const before = ownedCards(hero).get(pending.skill_id);
+  const options = sortedOptions(pending.options);
+  const order = options.map((o) => o.index);
+  const picked = options.find((o) => o.index === pick);
+  const terms: Terms = pending.terms ?? {};
+  const name = before?.name_zh ?? pending.skill_id;
+
+  // 選中的那張整張看得到（5 第 3 條）：nearest＋CSS scroll-margin（下緣多留約 20px）；內容沒超出時不捲
+  useEffect(() => {
+    if (pick === null || list.current === null) return;
+    const el = list.current.querySelector<HTMLElement>(`[data-index="${pick}"]`);
+    el?.scrollIntoView?.({ block: "nearest" });
+  }, [pick]);
+
+  const choose = (index: number) => {
+    if (index === pick) return; // 再點一次已選的卡不取消（1.3 第 2 條）
+    setPick(index);
+    setUnequip(null);
+  };
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      const index = Number((e.currentTarget as HTMLElement).dataset.index);
+      choose(index);
+      return;
+    }
+    const next = stepPick(order, pick, e.key);
+    if (next === pick || next === null) return;
+    e.preventDefault();
+    choose(next);
+    list.current?.querySelector<HTMLElement>(`[data-index="${next}"]`)?.focus();
+  };
+
+  const base = before === undefined ? null : <BaseStrip card={before} stats={pending.base_stats ?? []} terms={terms} />;
+  const head = <FlashHead pending={pending} name={name} lockNote={lockNote} base={base} />;
+  const foot = (
+    <FlashFoot
+      picked={picked}
+      reserve={anyUnequipMenu(options)}
+      hero={hero}
+      terms={terms}
+      unequip={unequip}
+      busy={busy}
+      onUnequip={setUnequip}
+      onConfirm={() => picked !== undefined && void onChoose(pickChoice(picked, unequip))}
+    />
+  );
+  const body = (
+    <div ref={list} className="fc-opts" role="radiogroup" aria-label="閃現的變化" data-testid="flash-options">
+      {options.map((o, i) => (
+        <OptionCard key={o.index} o={o} selected={pick === o.index} focusable={pick === null ? i === 0 : pick === o.index} terms={terms} onPick={() => choose(o.index)} onKey={onKey} />
+      ))}
+    </div>
+  );
+
+  if (slots !== null) {
+    // 大世界 HUD 面板：上下固定區放進框的插槽（不捲），這裡只留選項區
+    return (
+      <div className="run-flash-pending fc-panel fc-in-popup" data-testid="run-flash-pending">
+        <PopupSlot slots={slots} where="head">
+          <div className="fc-panel">{head}</div>
+        </PopupSlot>
+        {body}
+        <PopupSlot slots={slots} where="foot">
+          <div className="fc-panel">{foot}</div>
+        </PopupSlot>
+      </div>
+    );
+  }
+  return (
+    <div className="panel run-flash-pending fc-panel fc-run" data-testid="run-flash-pending">
+      {head}
+      {body}
+      {foot}
     </div>
   );
 }
