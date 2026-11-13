@@ -30,7 +30,7 @@ window.QBossGiant = (() => {
 
   // ---- 色（照 qBoss.js 灰燼之心；沒有新色票） ----
   const BASALT = "#4a3b36", BASALT_L = "#6a5a52", LAVA = "#ff6a1a", LAVA_HOT = "#ffd23a", CORE = "#ffb23a", EMBER = "#7a2a08";
-  const CAVE = mix(BASALT, OUT, 0.55), COOL = "#2a221e";
+  const CAVE = mix(BASALT, OUT, 0.55), COOL = "#2a221e", PLUG = "#3e332e"; // PLUG：A4 噴口封住的冷殼塞（比口裡的黑亮一階，讀成「塞了東西」不是空洞）
 
   // ---- 部位遮罩用的記號色：KEY＝部位 id 時，那個部位的所有色塊換成洋紅（兩張相減＝部位實際露出的像素，同 bossParts.js 的做法） ----
   let KEY = null;
@@ -43,6 +43,8 @@ window.QBossGiant = (() => {
   function poly(g, pts, c, opt = {}) { path(g, pts); g.fillStyle = c; g.fill(); if (opt.line !== false) { g.strokeStyle = seamOf(c); g.lineWidth = opt.lw ?? LW; g.lineJoin = "round"; g.stroke(); } }
   function ell(g, x, y, rx, ry, c, opt = {}) { g.beginPath(); g.ellipse(x, y, rx, ry, opt.rot ?? 0, 0, TAU); g.fillStyle = c; g.fill(); if (opt.line !== false) { g.strokeStyle = seamOf(c); g.lineWidth = opt.lw ?? LW; g.stroke(); } }
   function line(g, pts, w, c) { g.save(); g.strokeStyle = c; g.lineWidth = w; g.lineCap = "round"; g.lineJoin = "round"; g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke(); g.restore(); }
+  /** 破壞演出第 2 格「裂開」：部位上的亮金白裂紋（畫在本體圖層上、包在外框裡；同段 1 的裂紋色）。 */
+  function crackLines(g, list, k = 1) { for (const pts of list) { line(g, pts, 2.2 * k, "#ffe08a"); line(g, pts, 0.9 * k, "#ffffff"); } }
   /** 平塗光暈：3 圈半透明同心圓（qBoss flatGlow）。 */
   function flatGlow(ctx, x, y, r, c, a, ry = r) { ctx.save(); ctx.fillStyle = c; for (const [k, al] of [[1, 0.16], [0.72, 0.2], [0.46, 0.26]]) { ctx.globalAlpha = al * a; ctx.beginPath(); ctx.ellipse(x, y, r * k, ry * k, 0, 0, TAU); ctx.fill(); } ctx.restore(); }
 
@@ -61,7 +63,7 @@ window.QBossGiant = (() => {
     { x: 0, base: -96, top: -148, bw: 25, tw: 11, tilt: 0 },
   ];
   function vent(g, v, S, idx) {
-    const h = v.base - v.top, sealed = !!S.broken.vent, P = "vent";
+    const h = v.base - v.top, sealed = S.ventSealed, P = "vent";
     g.save(); g.translate(v.x, v.base); g.rotate(v.tilt);
     const bw = v.bw, tw = v.tw;
     // 煙囪本體：圓錐形的噴氣丘（下寬上窄、兩側微鼓），外面一片片甲蟲殼像屋瓦往上疊
@@ -82,11 +84,18 @@ window.QBossGiant = (() => {
     // 口緣與熔岩
     ell(g, 0, -h, tw + 2.6, 5.8, kc(P, BASALT_L));
     for (const [dx, r] of [[-tw - 1, 2.6], [tw + 0.6, 2.2], [-tw * 0.3, 2]]) ell(g, dx, -h - 3.6 + Math.abs(dx) * 0.08, r + 0.6, r, kc(P, BASALT_L)); // 口緣的疙瘩
-    if (sealed) { // 破＝封住（暫定，A4 再定）：冷掉的黑殼塞住口，兩道灰裂
+    if (sealed) { // 破＝封住（A4 定稿）：冷殼塞住口、頂出口緣一點（鼓成一個黑殼塞），兩道灰裂；口緣溢出的熔岩也冷成黑色的硬流痕
       ell(g, 0, -h + 0.4, tw - 0.6, 3.6, kc(P, COOL));
-      line(g, [[-tw * 0.5, -h - 0.6], [-tw * 0.1, -h + 0.6], [tw * 0.3, -h - 0.4]], 0.9, kc(P, "#6a605a"));
+      g.fillStyle = kc(P, PLUG); g.beginPath(); g.moveTo(-tw + 1.2, -h + 0.8); g.quadraticCurveTo(-tw * 0.55, -h - 4.6, 0, -h - 4.4); g.quadraticCurveTo(tw * 0.6, -h - 4.4, tw - 1.2, -h + 0.8); g.closePath(); g.fill();
+      g.strokeStyle = seamOf(kc(P, PLUG)); g.lineWidth = LW; g.stroke();
+      ell(g, -tw * 0.32, -h - 2.4, tw * 0.3, 1.1, kc(P, "#6e6259"), { line: false }); // 殼塞左上亮面
+      line(g, [[-tw * 0.55, -h - 0.4], [-tw * 0.15, -h - 2.6], [tw * 0.05, -h - 0.6], [tw * 0.4, -h - 2.8]], 0.9, kc(P, "#7a706a"));
+      for (const [dx, len] of [[-tw * 0.55, 7], [tw * 0.35, 10]]) { // 冷掉的溢流痕（同溢流的形，短一點）
+        g.fillStyle = kc(P, COOL); g.beginPath(); g.moveTo(dx - 2, -h + 2.5); g.quadraticCurveTo(dx - 2.4, -h + 2.5 + len * 0.6, dx, -h + 2.5 + len * 0.85); g.quadraticCurveTo(dx + 2.4, -h + 2.5 + len * 0.6, dx + 2, -h + 2.5); g.closePath(); g.fill();
+        g.fillStyle = kc(P, "#5a504a"); g.fillRect(dx - 0.5, -h + 3, 1, len * 0.45);
+      }
     } else {
-      const hot = clamp(0.55 + 0.45 * S.breath * (S.phase === 1 ? 0.6 : 1));
+      const hot = S.ventFlare ? 1 : clamp(0.55 + 0.45 * S.breath * (S.phase === 1 ? 0.6 : 1));
       ell(g, 0, -h + 0.4, tw - 0.6, 3.6, kc(P, LAVA));
       ell(g, 0, -h + 0.1, tw - 5, 1.8, kc(P, mix(LAVA, LAVA_HOT, hot)), { line: false });
       // 口緣溢出的熔岩（熔毀階段流得長）
@@ -101,6 +110,7 @@ window.QBossGiant = (() => {
       g.fillStyle = kc(P, LAVA); g.beginPath(); g.moveTo(-tw + 3, -h); g.quadraticCurveTo(-tw - 2, -h - H * 0.6, 0, -h - H); g.quadraticCurveTo(tw + 2, -h - H * 0.6, tw - 3, -h); g.closePath(); g.fill();
       ell(g, 0, -h - H * 0.45, 3.4, H * 0.3, kc(P, LAVA_HOT), { line: false });
     }
+    if (S.crackPart === "vent") crackLines(g, [[[-tw * 0.3, -h + 3], [-tw * 0.75, -h * 0.74], [-tw * 0.2, -h * 0.52], [-bw * 0.4, -h * 0.24]], [[tw * 0.45, -h + 3], [tw * 0.8, -h * 0.66], [tw * 0.3, -h * 0.42]]]);
     g.restore();
   }
 
@@ -129,14 +139,22 @@ window.QBossGiant = (() => {
   // ---- 殼縫（中排東西，兩格同一個部位） ----
   const SEAM = [[54, -93], [58, -83], [55, -72], [60, -62], [57, -52], [61, -44]];
   function seam(g, s, S) {
-    const P = "seam", pts = SEAM.map(([x, y]) => [s * x, y]), br = !!S.broken.seam;
-    const heat = br ? 0 : clamp(0.45 + 0.55 * S.breath);
-    if (!br) { g.save(); g.globalAlpha = 0.22; line(g, pts, 10, kc(P, LAVA)); g.restore(); } // 縫邊的熱光（平塗一圈）
-    for (const [a, b] of [[1, [s * 64, -88]], [3, [s * 52, -60]]]) { line(g, [pts[a], b], 3.4, kc(P, br ? "#1e1612" : EMBER)); line(g, [pts[a], b], 1.5, kc(P, br ? "#4a2a1c" : LAVA)); }
-    line(g, pts, 6.4, kc(P, br ? "#1e1612" : EMBER));
-    line(g, pts, 3.8, kc(P, br ? "#4a2a1c" : LAVA));
-    if (!br) line(g, pts, 1.5, kc(P, mix(LAVA, LAVA_HOT, heat)));
+    // A4：cool＝冷掉的程度（0 熱、1＝破掉定稿），hot＝破壞演出第 2 格的過熱（縫發白）
+    const P = "seam", pts = SEAM.map(([x, y]) => [s * x, y]), cool = S.seamCool, hot = S.crackPart === "seam";
+    const heat = clamp(0.45 + 0.55 * S.breath);
+    const oc = cool > 0 ? mix(EMBER, SEAM_COLD[0], cool) : EMBER, ic = hot ? LAVA_HOT : cool > 0 ? mix(LAVA, SEAM_COLD[1], cool) : LAVA;
+    if (cool < 1) { g.save(); g.globalAlpha = 0.22 * (1 - cool) * (hot ? 1.8 : 1); line(g, pts, hot ? 13 : 10, kc(P, hot ? LAVA_HOT : LAVA)); g.restore(); } // 縫邊的熱光（平塗一圈）
+    for (const [a, b] of [[1, [s * 64, -88]], [3, [s * 52, -60]]]) { line(g, [pts[a], b], 3.4, kc(P, oc)); line(g, [pts[a], b], 1.5, kc(P, ic)); }
+    line(g, pts, 6.4, kc(P, oc));
+    line(g, pts, 3.8, kc(P, ic));
+    if (cool <= 0) line(g, pts, 1.5, kc(P, hot ? "#ffffff" : mix(LAVA, LAVA_HOT, heat)));
+    else if (cool < 1) { g.save(); g.globalAlpha = 1 - cool; line(g, pts, 1.5, kc(P, mix(LAVA, LAVA_HOT, heat))); g.restore(); }
+    else { // 破掉定稿：縫裡凝成黑殼，受光那側（左上）一條灰白的冷殼邊，讀成「硬掉了」而不只是一條黑線
+      line(g, pts.map(([x, y]) => [x - 1.1, y - 0.4]), 0.9, kc(P, SEAM_COLD[2]));
+      for (const [x, y] of [[58, -78], [57, -56]]) ell(g, s * x, y, 1.3, 1, kc(P, SEAM_COLD[2]), { line: false }); // 兩粒冷渣
+    }
   }
+  const SEAM_COLD = ["#1a1310", "#2e2420", "#7a6e66"]; // 冷掉的縫：外緣、縫心、冷殼邊
 
   // ---- 殼窩、殼蓋、核心（中心格） ----
   // 第 2 版（審查必修 1）：殼窩整個退回中排（y −96～−48）：中心 −72、半高 24；核心縮到 1.05 倍（上緣 −96.7，呼吸放大後最多再超 1.5 px）。
@@ -148,22 +166,29 @@ window.QBossGiant = (() => {
     ell(g, CX, CY, CAV_RX, CAV_RY, CAVE);
     g.save(); g.beginPath(); g.ellipse(CX, CY, CAV_RX, CAV_RY, 0, 0, TAU); g.clip();
     ell(g, CX, CY + 18, 20, 8, mix(CAVE, LAVA, 0.55), { line: false }); // 窩底的熔岩光
-    if (S.phase >= 2) flatGlow(g, CX, CY, 28, CORE, (0.55 + 0.45 * S.breath) * (1 - S.die));
+    if (S.phase >= 2) flatGlow(g, CX, CY, 28, CORE, (0.55 + 0.45 * S.breath) * (1 - S.die) * S.coreLight);
+    if (S.charge > 0) flatGlow(g, CX, CY - 2, 30, LAVA_HOT, 0.7 * S.charge); // A4：蓄力光（熔心爆蓄力、吸氣中；核心破＝熄掉）
     g.restore();
   }
   function core(g, S) {
-    const P = "core", s = (1 + 0.06 * S.breath) * (1 - 0.55 * S.die);
+    const P = "core", s = (1 + 0.06 * S.breath) * (1 - 0.55 * S.die) * S.coreScale;
     g.save(); g.translate(CX, CY - S.inhale * 2); g.scale(CK * s, CK * s);
     let c = mix(CORE, "#fff4d0", 0.35 * S.breath + 0.4 * S.crack);
     if (S.die > 0) c = mix(c, "#5a4a44", S.die);
+    if (S.coreDull > 0) c = mix(c, CORE_DEAD, S.coreDull); // A4：核心破＝光熄、晶體變暗
     const lw = LW / CK;
     poly(g, CORE_PTS, kc(P, c), { lw });
     g.save(); path(g, CORE_PTS); g.clip();
     poly(g, [[0, -15], [-9, -9], [-11, 3], [1, 0]], kc(P, light(c, 0.35)), { line: false });
     poly(g, [[11, 4], [4, 13], [1, 0]], kc(P, dark(c, 0.12)), { line: false });
     g.restore();
-    g.fillStyle = kc(P, "#ffffff"); g.fillRect(-5, -9, 2.2, 4.4); g.fillRect(-2, -10.4, 1.4, 1.4);
-    if (S.crack > 0) { g.save(); g.globalAlpha = clamp(S.crack); line(g, [[-2, -12], [2, -4], [-1, 3], [3, 10]], 1.6 * 0.8, kc(P, "#ffffff")); line(g, [[8, -6], [3, -2], [7, 6]], 1.3 * 0.8, kc(P, "#fff4c0")); g.restore(); }
+    g.fillStyle = kc(P, S.coreDull > 0 ? mix("#ffffff", light(CORE_DEAD, 0.3), 0.6 * S.coreDull) : "#ffffff"); g.fillRect(-5, -9, 2.2, 4.4); g.fillRect(-2, -10.4, 1.4, 1.4);
+    if (S.crackPart === "core") crackLines(g, [[[-2, -13], [2, -5], [-1, 2], [3, 10]], [[9, -6], [4, -1], [8, 5]], [[-9, -2], [-4, 1], [-7, 8]]], 0.8 / CK * G);
+    if (S.coreBroken) { // 破掉定稿：三道深色裂痕（同熔毀的裂紋位置，換成冷掉的暗色）＋裂縫裡一點餘燼
+      for (const pts of [[[-2, -12], [2, -4], [-1, 3], [3, 10]], [[8, -6], [3, -2], [7, 6]], [[-9, -3], [-4, 0], [-6, 7]]]) line(g, pts, 1.6, kc(P, "#2a1a14"));
+      g.fillStyle = kc(P, LAVA); g.fillRect(1.2, -3.6, 1.6, 1.6);
+    }
+    if (S.crack > 0 && !S.coreBroken) { g.save(); g.globalAlpha = clamp(S.crack); line(g, [[-2, -12], [2, -4], [-1, 3], [3, 10]], 1.6 * 0.8, kc(P, "#ffffff")); line(g, [[8, -6], [3, -2], [7, 6]], 1.3 * 0.8, kc(P, "#fff4c0")); g.restore(); }
     g.restore();
   }
   /** 殼蓋：兩片甲蟲殼在殼窩前合起來（第 1 階段），中縫透出核心的光；第 2 階段起往兩側掀開（窄成側邊的兩片）。open 0～1。 */
@@ -242,11 +267,46 @@ window.QBossGiant = (() => {
     return { x: x + (fx - x) * u, y: y + (fy - y) * u - hop * Math.sin(Math.PI * u), r: r + spin * u, a: 1 - fade, s: 1 - 0.4 * fade };
   }
 
+  /** A4（GB巨型頭目-審查.md 第 5 節可修 B）：殼片中心離開佔格（北緣 y −144 以北、或兩側 |x| > 72）＝已經不是頭目身上的東西：
+   *  不畫在本體圖層裡（不吃頭目金外光），改在 draw() 裡一片一片自己包黑外框、照自己的透明度淡出（外框跟著淡）。 */
+  const plateFree = (A) => A.y < -144 || Math.abs(A.x) > 72;
+  function freePlates(ctx, S) {
+    if (S.shell > 0 || S.bt >= 1) return;
+    const list = [...PLATES].sort((a, b) => plateAnchor(a, 0, S.bt, 0).y - plateAnchor(b, 0, S.bt, 0).y);
+    for (const p of list) {
+      const A = plateAnchor(p, 0, S.bt, 0, false);
+      if (!A || A.a <= 0 || !plateFree(A)) continue;
+      layer(ctx, BOX, (g) => { g.translate(A.x, A.y); g.rotate(A.r); g.scale(A.s, A.s); plate(g, p[4], p[5], 0.12); }, { ow: OW, alpha: A.a });
+    }
+  }
   /** 狀態：st＝{ phase: 1|2|3, shell: 0～1（熔殼在不在；預設第 1 階段在、其他不在）, breakT: 0～1（脫落進度）, t: 毫秒, spout, inhale, dieT, broken: { vent, seam } } */
   function stateOf(st = {}) {
     const t = num(st.t, 0), phase = [1, 2, 3].includes(st.phase) ? st.phase : 1;
     const shell = clamp(num(st.shell, phase === 1 ? 1 : 0)), bt = clamp(num(st.breakT, shell > 0 ? 0 : 1));
-    return { t, phase, shell, bt, breath: 0.5 + 0.5 * Math.sin(t / 420), crack: phase === 3 ? 0.6 + 0.4 * Math.sin(t / 160) : 0, inhale: clamp(num(st.inhale, 0)), spout: clamp(num(st.spout, 0)), die: clamp(num(st.dieT, 0)), broken: st.broken ?? {} };
+    const broken = st.broken ?? {}, fx = fxOf(st), K = fx ? fx.k : 0, is = (p) => !!fx && fx.part === p;
+    const coreTab = (row, done, base) => (is("core") ? row[K] : broken.core ? done : base);
+    return {
+      t, phase, shell, bt, breath: 0.5 + 0.5 * Math.sin(t / 420), crack: phase === 3 ? 0.6 + 0.4 * Math.sin(t / 160) : 0,
+      inhale: is("core") ? BRK.inhale[K] : clamp(num(st.inhale, 0)), spout: clamp(num(st.spout, 0)), die: clamp(num(st.dieT, 0)), broken,
+      // A4 破壞演出（fx＝{ part, k 0～4, side }）與破壞後外觀（broken.vent｜seam｜core）；都沒有時全部是中性值，A1～A3 的圖不變
+      fx, crackPart: fx && K === 1 ? fx.part : null, ventSealed: !!broken.vent || (is("vent") && K >= 2), ventFlare: is("vent") && K === 1,
+      seamCool: broken.seam ? 1 : is("seam") ? BRK.seamCool[K] : 0,
+      coreBroken: !!broken.core || (is("core") && K >= 3), coreScale: coreTab(BRK.coreScale, BRK.coreScale[4], 1), coreDull: coreTab(BRK.coreDull, BRK.coreDull[4], 0),
+      coreLight: coreTab(BRK.coreLight, BRK.coreLight[4], 1), charge: is("core") ? BRK.charge[K] : clamp(num(st.charge, 0)),
+    };
+  }
+  /** A4 破壞演出的五格（k：0 命中 80 ms、1 裂開 80 ms、2 斷開 160 ms、3 落地 160 ms、4 定格）；每列是那個量在五格的值，第 5 格＝破壞後定稿。 */
+  const BRK = {
+    ms: [80, 80, 160, 160, 0],
+    seamCool: [0, 0, 0.6, 1, 1], // 殼縫：0 熱 → 1 冷黑（第 2 格過熱發白另用 crackPart）
+    coreScale: [1, 0.88, 0.7, 0.86, 0.92], coreDull: [0, 0.15, 0.55, 0.7, 0.7], coreLight: [1, 0.7, 0.3, 0.25, 0.25], // 核心光一縮：縮到 0.7 再回 0.92，變暗、窩裡的光剩 25%
+    charge: [1, 0.6, 0.15, 0, 0], inhale: [1, 0.6, 0, 0, 0], // 蓄力光、吸氣火星：第 3 格起熄
+  };
+  const CORE_DEAD = "#7a5a46";
+  function fxOf(st) {
+    const f = st.fx;
+    if (!f || !["vent", "seam", "core"].includes(f.part)) return null;
+    return { part: f.part, k: Math.max(0, Math.min(4, Math.round(num(f.k, 0)))), side: f.side === -1 ? -1 : 1 };
   }
   /** 本體（全部平塗部件；給 layer 包外框）。 */
   function bodyLayer(g, S) {
@@ -264,7 +324,7 @@ window.QBossGiant = (() => {
     }
     const open = S.phase >= 2;
     const order = S.shell > 0 ? PLATES : S.bt >= 1 ? [] : [...PLATES].sort((a, b) => plateAnchor(a, 0, S.bt, 0).y - plateAnchor(b, 0, S.bt, 0).y); // 飛走時北邊（遠）的先畫
-    for (const p of order) { const A = plateAnchor(p, S.shell, S.bt, S.breath, open); if (!A || A.a <= 0) continue; g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); g.scale(A.s, A.s); plate(g, p[4], p[5], S.shell > 0 ? S.breath : 0.12); g.restore(); }
+    for (const p of order) { const A = plateAnchor(p, S.shell, S.bt, S.breath, open); if (!A || A.a <= 0 || (S.shell <= 0 && !S.legacyPlates && plateFree(A))) continue; g.save(); g.globalAlpha = A.a; g.translate(A.x, A.y); g.rotate(A.r); g.scale(A.s, A.s); plate(g, p[4], p[5], S.shell > 0 ? S.breath : 0.12); g.restore(); }
   }
 
   /** 地面：3×3 陣營環（提案 A：圓角方框貼佔格內 3）＋精英金框＋南緣中點金菱形＋影子。opt.ring＝"rect"（預設）｜"ellipse"（提案 B）｜false。 */
@@ -305,16 +365,18 @@ window.QBossGiant = (() => {
    */
   function draw(ctx, st = {}, opt = {}) {
     const S = stateOf(st);
+    S.legacyPlates = !!opt.legacyPlates; // 對照用：第 2 版的飛行殼片（帶金外光）
     if (opt.ring !== false) groundRing(ctx, opt);
     KEY = opt.key ?? null;
     try {
       layer(ctx, BOX, (g) => bodyLayer(g, S), { ow: OW, glow: opt.glow === false || S.die > 0 ? null : (opt.glow ?? GOLD), glowW: GLOW_W, glowA: GLOW_A, flash: num(opt.flash, 0) });
     } finally { KEY = null; }
+    if (!opt.key && !opt.mask && !S.legacyPlates) freePlates(ctx, S);
     // 小粒子（吸氣的火星、熔毀滴落）：細外框（qBoss 同）
     const parts = [];
     if (S.inhale > 0) for (let k = 0; k < 16; k++) { const a = rnd("in", k) * TAU, d = 96 * (1 - ((S.t / 600 + rnd("in2", k)) % 1)); parts.push([CX + Math.cos(a) * d, CY + Math.sin(a) * d * 0.6, 2.8, LAVA_HOT]); }
     // 熔毀的滴落改成殼窩下緣的熔岩流（畫在本體裡），不另外畫粒子（粒子落在甲蟲臉上會讀成鼻子）
-    if (parts.length && !opt.key) layer(ctx, BOX, (g) => { for (const [x, y, r, c] of parts) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); } }, { ow: 0.8 * G, alpha: S.inhale > 0 && S.phase !== 3 ? Math.max(0.3, S.inhale) : 1 });
+    if (parts.length && !opt.key && !opt.mask) layer(ctx, BOX, (g) => { for (const [x, y, r, c] of parts) { g.fillStyle = c; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); } }, { ow: 0.8 * G, alpha: S.inhale > 0 && S.phase !== 3 ? Math.max(0.3, S.inhale) : 1 });
   }
 
   // ---------------- 部位遮罩與滑過亮起（bossParts.js 的 HOVER 同一套） ----------------
@@ -329,7 +391,7 @@ window.QBossGiant = (() => {
   function dilate(src, r, N = 16) { const c = mk(src.width, src.height), g = c.getContext("2d"); for (const f of [1, 0.66, 0.33]) for (let i = 0; i < N; i++) { const a = (i / N) * TAU; g.drawImage(src, Math.cos(a) * r * f, Math.sin(a) * r * f); } g.drawImage(src, 0, 0); return c; }
   /** 部位遮罩：w×h 的 canvas、變換 m（模型像素 → canvas 像素，原點＝錨點）。回傳實際露出的部位像素（白）。 */
   function partMask(w, h, m, st, part) {
-    const one = (key) => { const c = mk(w, h), g = c.getContext("2d", { willReadFrequently: true }); g.setTransform(m); draw(g, st, { glow: false, ring: false, key }); return c; };
+    const one = (key) => { const c = mk(w, h), g = c.getContext("2d", { willReadFrequently: true }); g.setTransform(m); draw(g, st, { glow: false, ring: false, key, mask: true }); return c; }; // mask：兩張都不畫本體以外的東西（吸氣火星、離開佔格的殼片），差只剩部位
     return diffMask(one(null), one(part));
   }
   /** 亮起：亮青白 #a8f4ff 描邊＋外框色襯邊＋部位上 35% 同色（bossParts HOVER；線寬照模型像素，跟著地圖縮放，畫面上至少 minPx）。 */
@@ -342,6 +404,86 @@ window.QBossGiant = (() => {
     l.globalCompositeOperation = "destination-out"; l.drawImage(mask, 0, 0); l.globalCompositeOperation = "source-over";
     l.globalAlpha = o.fill; l.drawImage(tint(mask, o.color), 0, 0);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(lay, 0, 0); ctx.restore();
+  }
+
+  // ---------------- A4 破壞演出（5 格約 0.6 秒；沿用段 1：白閃＋微震＋「破」字記號，不出「○○ 破！」浮字） ----------------
+  /** 第 1 格「命中」：部位整塊白閃（遮罩＝partMask，和滑過亮起同一份），a＝0.9（段 1 同值）。 */
+  function flashPart(ctx, w, h, m, st, part, a = 0.9) {
+    const mask = partMask(w, h, m, st, part);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = a; ctx.drawImage(tint(mask, "#ffffff"), 0, 0); ctx.restore();
+  }
+  const mouthOf = (v) => { const h = v.base - v.top; return [v.x + Math.sin(v.tilt) * h, v.base - Math.cos(v.tilt) * h]; };
+  /** 「破」字記號的位置（模型 px，相對錨點；掛在被破的部位上方）。殼縫掛在被打中的那一側（side −1 西、1 東）。 */
+  const POP = { vent: [0, -168], seam: [57, -106], core: [0, -114] };
+  const popAt = (part, side = 1) => { const [x, y] = POP[part]; return [part === "seam" ? side * x : x, y]; };
+  /** 「破」：預告格一字記號放大（段 1：黑圓 72%、半徑 10、外圈紅 1.5、字 14 粗亮黃）；畫面上字 ≥ 12 px：整個記號 × max(1, 12／(14 × 地圖縮放))（PB-1e 裁定）。 */
+  const POP_STYLE = { r: 10, ring: 1.5, font: 14, minPx: 12, bg: "rgba(0,0,0,0.72)", ringC: "#ff5a4a", text: "#ffd23f", ch: "破" };
+  const popScale = (S) => Math.max(1, POP_STYLE.minPx / (POP_STYLE.font * S));
+  function pop(ctx, x, y, a, S) {
+    const P = POP_STYLE, f = popScale(S);
+    ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.arc(x, y, P.r * f, 0, TAU); ctx.fillStyle = P.bg; ctx.fill(); ctx.lineWidth = P.ring * f; ctx.strokeStyle = P.ringC; ctx.stroke();
+    ctx.font = `bold ${P.font * f}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = P.text; ctx.fillText(P.ch, x, y + 0.5 * f); ctx.restore();
+  }
+  /** 黑煙（噴口封住的專屬特效）：四團平塗煙（暗灰＋左上一點亮灰），整團包細外框、一起淡（不疊出深淺）。 */
+  const SMOKE = ["#2c272b", "#5a5357"];
+  function smoke(ctx, x, y, r, a) {
+    const lobes = [[0, 0, 1], [-0.75, 0.3, 0.72], [0.75, 0.25, 0.78], [0.1, -0.68, 0.8]];
+    layer(ctx, [x - 2.5 * r, y - 2.5 * r, x + 2.5 * r, y + 2.5 * r], (g) => {
+      g.fillStyle = SMOKE[0]; for (const [dx, dy, s] of lobes) { g.beginPath(); g.arc(x + dx * r, y + dy * r, s * r, 0, TAU); g.fill(); }
+      g.fillStyle = SMOKE[1]; for (const [dx, dy, s] of [lobes[3], lobes[1]]) { g.beginPath(); g.ellipse(x + (dx - 0.28 * s) * r, y + (dy - 0.3 * s) * r, 0.42 * s * r, 0.28 * s * r, -0.4, 0, TAU); g.fill(); }
+    }, { ow: 0.6 * G, alpha: a });
+  }
+  /** 火星四散（核心破的專屬特效）：12 顆火星從核心往外噴（短拖尾指回核心），第 4 格飛遠、往下掉、變小變淡。細外框（同吸氣火星）。 */
+  function sparks(ctx, k) {
+    const far = k >= 3, list = [];
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU + (rnd("spk", i) - 0.5) * 0.4, d = far ? 46 + 16 * rnd("spk-d", i) : 22 + 10 * rnd("spk-d", i), fall = far ? 10 + 6 * rnd("spk-f", i) : 0;
+      list.push([Math.cos(a), Math.sin(a) * 0.75, d, fall, i % 3 === 2 ? LAVA : LAVA_HOT]);
+    }
+    layer(ctx, BOX, (g) => {
+      for (const [cx, cy, d, fall, c] of list) {
+        const x = CX + cx * d, y = CY + cy * d + fall, tail = far ? 4 : 7, w = far ? 2 : 2.8;
+        line(g, [[x - cx * tail, y - cy * tail - (far ? 3 : 0)], [x, y]], w, c);
+        g.fillStyle = "#fff4c0"; g.beginPath(); g.arc(x, y, w * 0.32, 0, TAU); g.fill();
+      }
+    }, { ow: 0.8 * G, alpha: far ? 0.75 : 1 });
+  }
+  /**
+   * 破壞演出的特效層（白閃之外的東西）：畫在所有單位之上（同段 1；「破」不能被南邊的人或浮字蓋住）。ctx 座標＝模型像素、原點＝錨點；
+   * st.fx＝{ part: "vent"|"seam"|"core", k: 0～4, side }；o.S＝地圖縮放（「破」800 反向放大用）。burst／shard／ring／dust／puff 照 QCreatureAnim.drawFx。
+   */
+  function breakFx(ctx, st, o = {}) {
+    const S = stateOf(st), f = S.fx; if (!f || f.k >= 4) return;
+    const QA = window.QCreatureAnim, k = f.k, D = (x, y, list) => { ctx.save(); ctx.translate(x, y); QA.drawFx(ctx, list, {}, [-40, -40, 40, 40]); ctx.restore(); };
+    const burst = (r, c = "#ffffff", c2 = "#ffe08a", a = 1) => ({ k: "burst", x: 0, y: 0, r, c, c2, a });
+    const shards = (c, s = 2.2, list = [[-9, -6, 0.6], [9, -8, -0.8], [6, 6, 2.2]]) => list.map(([x, y, rot], i) => ({ k: "shard", x, y, rot, s, c: Array.isArray(c) ? c[i % c.length] : c }));
+    const [px, py] = popAt(f.part, f.side);
+    if (f.part === "vent") {
+      const M = VENTS.map(mouthOf), mid = M[2];
+      if (k === 0) M.forEach(([x, y], i) => D(x, y, [burst(i === 2 ? 10 : 8)]));
+      if (k === 1) { D(...mid, [burst(7, "#ffe08a", "#ffffff", 0.8), ...shards("#9a8a7e", 2.4, [[-10, -7, 0.6], [10, -10, -0.8], [4, -16, 2.2]])]); D(...M[0], [burst(5, "#ffe08a", "#ffffff", 0.8)]); D(...M[1], [burst(5, "#ffe08a", "#ffffff", 0.8)]); }
+      if (k === 2) { M.forEach(([x, y], i) => smoke(ctx, x, y - 7, i === 2 ? 9 : 8, 0.95)); D(...mid, [burst(15, "#ffd23f", "#ffffff"), { k: "ring", x: 0, y: 2, rx: 20, c: "#ffe08a", w: 1.6 }]); }
+      if (k === 3) { M.forEach(([x, y], i) => { smoke(ctx, x - 2, y - 17, i === 2 ? 10 : 9, 0.9); smoke(ctx, x + 3, y - 32, i === 2 ? 12 : 10.5, 0.65); D(x, y + 1, [{ k: "dust", x: 0, y: 0, r: 5, c: "#8a807a", a: 0.9 }]); }); }
+    } else if (f.part === "seam") {
+      const sx = f.side * 57, sy = -68;
+      if (k === 0) D(sx, sy, [burst(9)]);
+      if (k === 1) D(sx, sy, [burst(6, "#ffe08a", "#ffffff", 0.8), ...shards(["#9a8a7e", LAVA, "#9a8a7e"], 2.4)]);
+      if (k === 2) { D(sx, sy, [burst(14, "#ffd23f", "#ffffff"), { k: "ring", x: 0, y: 4, rx: 16, c: "#ffe08a", w: 1.6 }]); for (const s of [-1, 1]) D(s * 58, -70, [{ k: "puff", x: 0, y: -10, r: 5, c: "#d8d0c8" }, { k: "puff", x: s * 2, y: 10, r: 4.2, c: "#d8d0c8" }]); }
+      if (k === 3) for (const s of [-1, 1]) D(s * 59, -46, [{ k: "dust", x: 0, y: 0, r: 5, c: "#8a807a", a: 0.9 }, { k: "puff", x: -s * 2, y: -34, r: 5.5, c: "#d8d0c8", a: 0.5 }]);
+    } else if (f.part === "core") {
+      if (k === 0) D(CX, CY, [burst(10)]);
+      if (k === 1) D(CX, CY, [burst(7, "#ffe08a", "#ffffff", 0.8), ...shards("#ffd98a", 2.2)]);
+      if (k === 2) { sparks(ctx, 2); D(CX, CY, [burst(15, "#ffd23f", "#ffffff"), { k: "ring", x: 0, y: 6, rx: 22, c: "#ffe08a", w: 1.6 }]); }
+      if (k === 3) { sparks(ctx, 3); D(CX, CY, [{ k: "puff", x: 0, y: -16, r: 5, c: "#6a6064", a: 1 }, { k: "dust", x: 0, y: 20, r: 5, c: "#8a807a", a: 0.9 }]); }
+    }
+    if (k === 2) pop(ctx, px, py, 1, o.S ?? 1);
+    if (k === 3) pop(ctx, px, py - 3, 0.55, o.S ?? 1);
+  }
+  /** 本體填色層（不描外框、不帶外光）：給選單「本體」列的頭像（qBossGiantIcons.js GLYPH.body）。z＝每模型 px 幾個 canvas px；原點＝錨點在 (ox, oy)。 */
+  function fill(st, z) {
+    const S = stateOf(st), c = mk((BOX[2] - BOX[0]) * z, (BOX[3] - BOX[1]) * z), g = c.getContext("2d");
+    g.setTransform(z, 0, 0, z, -BOX[0] * z, -BOX[1] * z); bodyLayer(g, S);
+    return { canvas: c, ox: -BOX[0] * z, oy: -BOX[1] * z, z };
   }
 
   // ---------------- A2 部位格標示（3×3 地面格；畫在單位之上：同 highlightLayer 的 marks） ----------------
@@ -433,5 +575,5 @@ window.QBossGiant = (() => {
     const a = r * 1.56 * (48 / 36); window.QIconsWeapons.blit(ctx, gg, x - a / 2, y - a / 2, a, S * res); ctx.restore();
   }
 
-  return { draw, groundGlow, stateOf, partMask, glowPart, drawMarks, groundRing, TILE_PART, PART_ZH, REASON, BACK_CHIP, MARK, HOVER, PLATES, VENTS, BEETLES, SEAM, tileXY, plateAnchor, seedOf, T, K, G, BOX, mk, tint, dilate };
+  return { draw, groundGlow, stateOf, partMask, glowPart, flashPart, breakFx, popAt, popScale, POP, POP_STYLE, BRK, fill, drawMarks, groundRing, TILE_PART, PART_ZH, REASON, BACK_CHIP, MARK, HOVER, PLATES, VENTS, BEETLES, SEAM, tileXY, plateAnchor, seedOf, T, K, G, BOX, mk, tint, dilate };
 })();
