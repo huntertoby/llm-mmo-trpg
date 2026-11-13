@@ -164,7 +164,8 @@ def test_library_checks_major_templates_against_the_evolution_table() -> None:
     from trpg.shared.errors import ContentError  # noqa: PLC0415
 
     lib = library()
-    good = lib.flash.model_dump(mode="json")
+    # 「模板 × 關鍵字」表會引用大變化模板（FL-1f），換掉 major 時一併清掉
+    good = {**lib.flash.model_dump(mode="json"), "headlines": []}
     bad = {**good, "major": [{"id": "m", "category": "bridge", "evolution": "intensify"}]}
     unknown = {**good, "major": [{"id": "m", "category": "deepen", "evolution": "nope"}]}
     for data, message in ((bad, "是 deepen"), (unknown, "未知的進化模板")):

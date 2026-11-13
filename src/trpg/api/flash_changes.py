@@ -26,10 +26,18 @@ from typing import Literal
 
 from trpg.api.run_schemas import ChangeIconOut, FlashBaseStatOut, StatChangeOut
 from trpg.api.skill_cards import CostStat, EffectStat, card_stats, effect_stat
+from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef, condition_text
+from trpg.shared.types import Surface
 
-__all__ = ["base_stats", "flash_changes", "ratio_zh"]
+__all__ = [
+    "base_stats",
+    "flash_changes",
+    "magnitude_zh",
+    "ratio_zh",
+    "status_magnitude_suffix",
+]
 
 Direction = Literal["better", "worse", "cost", "new"]
 
@@ -413,11 +421,63 @@ def _unit(value: str | None, unit: str | None) -> str | None:
     return f"{value} {unit}"
 
 
-def _percent(value: str | None) -> str | None:
-    """強度 ‰ 的暫定寫法：「1025‰」→「102.5%」（白話寫法待玩法 PM，FL-1b 報告 10.2 第 3 條）。"""
+def magnitude_zh(value: str | None, *, before: bool) -> str | None:
+    """強度 ‰ 的白話（FL-1f，玩法 PM 填答第六節）：寫「倍」不寫百分比；前值是 1000‰ 寫「原本」，
+    其他寫「N 倍」（小數最多兩位，四捨五入；小於 1 也寫「0.8 倍」）。「1250‰」→「1.25 倍」。"""
     if value is None:
         return None
-    return f"{int(value.removesuffix('‰')) / 10:g}%"
+    permille = int(value.removesuffix("‰"))
+    if before and permille == _PERMILLE:
+        return "原本"
+    whole, hundredths = divmod((permille + 5) // 10, 100)
+    text = str(whole) if hundredths == 0 else f"{whole}.{hundredths:02d}".rstrip("0")
+    return f"{text} 倍"
+
+
+_FAVORABLE_PERMILLES = (
+    ("damage_dealt_permille", "加成", "幅度"),
+    ("damage_taken_permille", "幅度", "減傷"),
+    ("physical_taken_permille", "幅度", "減傷"),
+    ("element_dealt_permille", "加成", "強度"),
+    ("element_dealt_wet_permille", "加成", "強度"),
+    ("move_permille", "加成", "強度"),
+    ("healing_received_permille", "加成", "強度"),
+)
+"""狀態倍率欄位 → （大於 1000 時、小於 1000 時）這個欄位改的是什麼（第六節的欄位名字尾）。
+第一個字尾給 ``> 1000``、第二個給 ``< 1000``；「強度」＝看不出是哪一種。"""
+_DRAWBACKS = {
+    ("damage_dealt_permille", "幅度"),
+    ("damage_taken_permille", "幅度"),
+    ("physical_taken_permille", "幅度"),
+    ("move_permille", "強度"),
+    ("healing_received_permille", "強度"),
+}
+"""對持有者不利的一邊；姿態的幅度只放大有利的那一邊（``engine/state.py`` 的
+``magnitude_permille``），所以姿態不看這些。"""
+
+
+def status_magnitude_suffix(status: StatusDef) -> str:
+    """狀態強度那一列的欄位名字尾（FL-1f，第六節表）：照狀態實際會被強度放大的欄位分類，
+    每回合傷害「傷害」、每回合回復「回復量」、降低輸出或讓對方多受傷「幅度」、少受傷「減傷」、
+    自己的加值「加成」；同時改好幾種、或看不出來的寫「強度」。"""
+    if status.on_turn_start_damage is not None:
+        return "傷害"
+    if status.on_turn_start_heal is not None:
+        return "回復量"
+    kinds: set[str] = set()
+    for field, up, down in _FAVORABLE_PERMILLES:
+        value: int = getattr(status, field)
+        if value == _PERMILLE:
+            continue
+        kind = up if value > _PERMILLE else down
+        if status.stance and (field, kind) in _DRAWBACKS:
+            continue
+        kinds.add(kind)
+    if any(v > 0 for v in status.attr_bonus.values()) or status.attack_bonus > 0:
+        kinds.add("加成")
+    if any(v < 0 for v in status.attr_bonus.values()) or status.attack_bonus < 0:
+        kinds.add("強度")
+    return kinds.pop() if len(kinds) == 1 else "強度"
 
 
 def _card_icon(spec: EffectSpec) -> str:
@@ -542,13 +602,48 @@ class _View:
                 "icon": _card("damage"),
             }
         if attr == "magnitude_permille":
-            update = _plain(row, row.label_zh, None, None)
-            update.update(before_zh=_percent(row.before), after_zh=_percent(row.after))
+            update = _plain(row, self._magnitude_name(row, spec), None, None)
+            update.update(
+                before_zh=magnitude_zh(row.before, before=True),
+                after_zh=magnitude_zh(row.after, before=False),
+            )
             update["icon"] = _icon(spec)
             return update
         update = _plain(row, row.label_zh.removesuffix("骰子") or row.label_zh, None, None)
         update["icon"] = _card(_card_icon(spec))  # 骰子
         return update
+
+    def _magnitude_name(self, row: StatChangeOut, spec: EffectSpec) -> str:
+        """強度那一列的欄位名（FL-1f，玩法 PM 填答第六節）：寫「這個東西變的是什麼」。"""
+        if spec.type == "enter_form":
+            return "形態加成"
+        if spec.type == "create_surface" and spec.surface is not None:
+            ruleset = self.library.ruleset
+            definition = ruleset.surface_def(spec.surface)
+            name = _SURFACE_ZH.get(spec.surface.value) or definition.name_zh
+            return name + ("傷害" if self._surface_hurts(spec.surface) else "效果")
+        if spec.type == "apply_status" and spec.status is not None:
+            status = self.statuses.get(str(spec.status))
+            if status is not None:
+                return status.name_zh + status_magnitude_suffix(status)
+        return row.label_zh
+
+    def _surface_hurts(self, surface: Surface) -> bool:
+        """表面會不會造成傷害：回合開始的傷害，或進入、回合開始時施加每回合傷害的狀態（火焰的燃燒）。"""
+        ruleset = self.library.ruleset
+        definition = ruleset.surface_def(surface)
+        start, enter = definition.on_turn_start, definition.on_enter
+        if start is not None and start.damage is not None:
+            return True
+        applied = [
+            s
+            for s in (
+                None if start is None else start.apply_status,
+                None if enter is None else enter.apply_status,
+            )
+            if s is not None
+        ]
+        return any(ruleset.status_def(s).on_turn_start_damage is not None for s in applied)
 
     def _amount(self, row: StatChangeOut, spec: EffectSpec) -> dict[str, object]:
         if spec.type == "apply_status" and spec.status is not None:
