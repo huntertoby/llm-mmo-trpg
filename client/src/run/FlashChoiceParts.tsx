@@ -96,11 +96,18 @@ function NowChip({ change, terms }: { change: StatChange; terms: Terms }) {
       {style === "down" && <i className="fc-down" aria-label="變弱" />}
       {style === "new" && <span className="fc-newtag">新</span>}
       <span>
-        <TermText text={main} terms={terms} />
-        {when !== null && (
-          <span className="fc-when">
-            <TermText text={when} terms={terms} />
-          </span>
+        {when === null ? (
+          <TermText text={main} terms={terms} />
+        ) : (
+          <>
+            {/* TXT-2（FL-1g 複驗新可修 1）：帶條件時「N 成…傷害」那段不斷行，窄欄只讓括號條件折行 */}
+            <span className="fc-main">
+              <TermText text={main} terms={terms} />
+            </span>
+            <span className="fc-when">
+              <TermText text={when} terms={terms} />
+            </span>
+          </>
         )}
       </span>
     </span>

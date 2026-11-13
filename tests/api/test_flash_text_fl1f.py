@@ -152,12 +152,13 @@ def test_burning_magnitude_row_reads_plain() -> None:
 @pytest.mark.parametrize(
     ("condition", "want"),
     [
-        ("wet", "站在水中"),
-        ("icy", "站在冰上"),
-        ("high", "站在高處"),
-        ("wall", "背靠牆壁"),
-        ("oil", "目標站在油上"),  # FL-1g：引擎看目標點的表面（玩法 PM 11-13）
-        ("puddle", "目標站在水窪裡"),
+        # TXT-2（玩法 PM 11-13 定稿）：看施放者的地形「你{地形}施放時」，看目標的「目標{地形}時」
+        ("wet", "你站在水中施放時"),
+        ("icy", "你站在冰上施放時"),
+        ("high", "你站在高處施放時"),
+        ("wall", "你背靠牆壁施放時"),
+        ("oil", "目標站在油上時"),
+        ("puddle", "目標站在水窪裡時"),
     ],
 )
 def test_battle_variant_say_names_the_terrain(condition: str, want: str) -> None:
@@ -166,7 +167,23 @@ def test_battle_variant_say_names_the_terrain(condition: str, want: str) -> None
     after = with_variant(KINDLE, spec)
     assert after is not None
     variation = Variation(source="major", template="major_battle_variant", category="deepen")
-    assert option_say(LIB, variation, after, ()) == f"{want}施放時，這招自動換成另一種打法。"
+    assert option_say(LIB, variation, after, ()) == f"{want}，這招自動換成另一種打法。"
+    assert option_headline(LIB, variation, after, ()) == "在特定地形施放時，這招換一種打法"
+
+
+def test_battle_variant_places_cover_every_condition() -> None:
+    """TXT-2：``battle_variant.places`` 對得上組合器的每一個變奏條件，主詞和條件看的地形一致
+    （``target_surface`` 看目標點，其他看施放者）。"""
+    table = LIB.flash.battle_variant
+    assert table is not None
+    conditions = LIB.composer.variant.conditions
+    assert sorted(p.condition for p in table.places) == sorted(c.id for c in conditions)
+    for condition in conditions:
+        place = table.place(condition.id)
+        assert place is not None
+        on_target = condition.when.target_surface is not None
+        assert place.subject == ("target" if on_target else "caster"), condition.id
+        assert not place.where_zh.startswith("目標")  # 主詞由句型給
 
 
 def test_intensify_headline_has_two_forms() -> None:

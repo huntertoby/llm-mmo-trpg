@@ -27,7 +27,7 @@ function wishData(over: Partial<WishData> = {}): WishData {
   return {
     title_zh: "許願池",
     speaker: { name_zh: "守池人", portrait: null, region: "capital" },
-    line_zh: "「說出你想要的力量，池子會回應你。」",
+    line_zh: "池水記得每個走過這裡的人。說說你想要什麼樣的力量——說得越具體，它越聽得懂。",
     cost: 4,
     refund: 2,
     coins: 9,
@@ -94,11 +94,11 @@ describe("WP-3 許願池：純函式", () => {
     const wish = { source: "wish" as const, quest_name_zh: "許願池", step_zh: "許願：都不拿可退 2 任務幣（次數照扣）。", refund: 2 };
     expect(offerTitle(wish)).toBe("許願池");
     expect(offerSubtitle(wish)).toBe("許願：都不拿可退 2 任務幣（次數照扣）。");
-    expect(offerSkipLabel(wish)).toBe("都不拿（退 2 任務幣）");
+    expect(offerSkipLabel(wish)).toBe("都不拿（退回 2 任務幣）"); // TXT-2
     const quest = { source: "quest" as const, quest_name_zh: "迷路的信", step_zh: "交給守印人", refund: 0 };
     expect(offerTitle(quest)).toBe("任務給的技能三選一");
     expect(offerSubtitle(quest)).toBe("迷路的信：交給守印人");
-    expect(offerSkipLabel(quest)).toBe("跳過");
+    expect(offerSkipLabel(quest)).toBe("都不拿"); // TXT-2：用詞統一成「都不拿」
   });
 });
 

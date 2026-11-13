@@ -140,4 +140,5 @@ def test_pending_offer_title_and_story_lines(
     assert _skill_story_line(offered, {}) == "許願池給了技能三選一：先選一招（或跳過）。"
     skipped = world_step(content_library, world, result.char, OfferPickAction(), NOON)
     taken = next(e for e in skipped.events if isinstance(e, SkillOfferTakenEvent))
-    assert _skill_story_line(taken, {}) == "跳過了許願池給的技能，退還 2 任務幣。"
+    # TXT-2：玩法 PM 定稿句
+    assert _skill_story_line(taken, {}) == "許願池給的三招都沒拿，退回 2 任務幣（次數照扣）。"

@@ -16,9 +16,9 @@ export const WISH_ZH = {
   tabMenuShort: "選單",
   coins: "任務幣",
   left: "本週還能許",
-  textLead: "用一句話說出想要的力量；說書人會對到 1～2 個關鍵字，再給你一份技能三選一。",
+  textLead: "用一句話說出想要的力量；池子會從裡面聽出 1～2 個關鍵字，給你三招挑一招。",
   textPlaceholder: "例：想把敵人凍住，再一錘敲碎",
-  menuLead: "挑 1～2 個關鍵字：三招都會帶第 1 個，第 2 個優先出現在其中一招。",
+  menuLead: "挑 1～2 個關鍵字：三招都會帶第 1 個，第 2 個會盡量出現在其中一招。",
   submit: "許願",
   needText: "先寫下你的願望",
   needKeyword: "先挑 1 個關鍵字",
@@ -27,14 +27,15 @@ export const WISH_ZH = {
   rowGain: "得到",
   gain: "技能三選一",
   notEnough: "不夠",
-  noneLeft: "沒有了",
-  timeout: "說書人這次來不及想好（等了 10 秒），改從選單挑關鍵字吧（沒有扣任務幣）。",
-  waitText: "許願池正在聽你的願望……",
+  noneLeft: "用完了",
+  timeout: "池子這次沒來得及回應（等了 10 秒），改從選單挑關鍵字吧（沒有扣任務幣）。",
+  waitText: "池水泛起漣漪，正在聽你的願望……",
   waitNote: "最多等 10 秒；來不及就改從選單挑關鍵字（不扣任務幣）。",
   pickNth: (n: number) => `第 ${n} 個`,
   leftTimes: (n: number) => `剩 ${n} 次`,
-  refundNote: (refund: number) => `三選一都不拿也算一次，退 ${refund} 任務幣。`,
-  skipRefund: (refund: number) => `都不拿（退 ${refund} 任務幣）`,
+  refundNote: (refund: number) => `三招都不拿也算一次，退回 ${refund} 任務幣。`,
+  skip: "都不拿",
+  skipRefund: (refund: number) => `都不拿（退回 ${refund} 任務幣）`,
 } as const;
 
 /** 有哪些分頁：LLM 關著（`llm` false）只有選單（規格第 5 節第 1 點）。 */
@@ -97,7 +98,7 @@ export function offerSubtitle(p: Pick<WorldPendingOffer, "source" | "quest_name_
   return p.source === "wish" ? p.step_zh : `${p.quest_name_zh}：${p.step_zh}`;
 }
 
-/** 跳過鈕：許願池而且有退款＝「都不拿（退 N 任務幣）」；其他照舊「跳過」。 */
+/** 不拿鈕（TXT-2 用詞統一成「都不拿」，07 7.6「可以都不拿」）：有退款＝「都不拿（退回 N 任務幣）」，其他「都不拿」。 */
 export function offerSkipLabel(p: Pick<WorldPendingOffer, "source" | "refund">): string {
-  return p.source === "wish" && p.refund > 0 ? WISH_ZH.skipRefund(p.refund) : "跳過";
+  return p.source === "wish" && p.refund > 0 ? WISH_ZH.skipRefund(p.refund) : WISH_ZH.skip;
 }

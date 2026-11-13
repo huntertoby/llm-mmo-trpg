@@ -8,6 +8,7 @@ import { GearIcon } from "../ui/GearIcon";
 import { ItemIcon } from "../ui/ItemIcon";
 import { hasItemIcon } from "../render/itemIcon";
 import { Hint } from "../ui/Hint";
+import { isSubmitEnter } from "../ui/imeEnter";
 import "./mail.css";
 import { addToDraft, countValue, EMPTY_DRAFT, firstTab, goldValue, letterSub, mailTabs, removeFromDraft, sendableState, sendBody, sendState, setDraftCount, slotsUsed, tabSay, type MailDraft, type MailTab } from "./mailModel";
 import { Portrait } from "./StoryIcons";
@@ -108,7 +109,7 @@ function CountBox({ row, count, busy, onCount }: { row: WorldBagItem; count: num
         }}
         onBlur={commit}
         onKeyDown={(e) => {
-          if (e.key === "Enter") commit();
+          if (isSubmitEnter(e)) commit();
         }}
         data-testid={`mail-count-input-${row.item}`}
       />

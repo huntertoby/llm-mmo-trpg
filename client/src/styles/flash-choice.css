@@ -43,9 +43,10 @@
   display: none;
 }
 
-/* 一輪：頁面本身會捲；自己當容器（看這個面板的寬） */
+/* 一輪：頁面本身會捲；自己當容器（看這個面板的寬）。TXT-2：命名容器 fc；大世界彈窗裡的 fc 是
+   `.world-hud-panel`（world-hud.css 同時叫 world-panel 與 fc），和改名前「最近的容器」是同一個 */
 .fc-run {
-  container-type: inline-size;
+  container: fc / inline-size;
 }
 
 /* ---------- 上固定區：標頭 ---------- */
@@ -278,6 +279,9 @@
   line-height: 1.35;
   word-break: keep-all;
   overflow-wrap: anywhere;
+  /* TXT-2：試過 text-wrap: balance（美術 PM），退回不加。超過兩行被截斷時，Chrome 會把藏起來的行改排成更多行、
+     並在詞中間斷開（「更／多敵人」「持／續」），違反「不斷回詞中間、行數不變」的條件；107 個大標在 1600／800／376
+     也都沒有任何一個斷行位置因此改變（`docs/phases/PhaseTXT-2報告.md`）。 */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; /* 最多折兩行 */
@@ -415,6 +419,25 @@
 .fc-when {
   font-weight: 400;
   color: var(--pnl-l2);
+}
+
+/* TXT-2（FL-1g 複驗新可修 1）：「前」「後」的字只在空白與標點換行（keep-all），一輪窄欄 376 不再斷在「武器傷／害」
+   中間；括號條件換到下一行。只寫 nowrap 在「4 成武器傷害」上會把「前」欄擠成「1.15 倍武器傷／害」，所以兩欄一起改。
+   括號條件（.fc-when）照舊可以在字間換行：整段不斷的話「（手持雙手槍時才有）」比「後」欄寬，會超出卡外。
+   break-word 是保險（一整段放不下時才斷，不影響欄寬的計算）。 */
+.fc-was,
+.fc-now > span {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.fc-now .fc-when {
+  word-break: normal;
+}
+
+/* 帶條件時前段（「4 成武器傷害」）整段不斷：數字和單位不拆開 */
+.fc-main {
+  white-space: nowrap;
 }
 
 /* ---------- LF-3：改名列＋本機模型的一句話描述（不搶版面：沒有就不佔位） ---------- */
@@ -660,7 +683,7 @@
 }
 
 /* ---------- 窄版（面板 < 560，800×600 的 493）：看面板寬，不看視窗寬 ---------- */
-@container (max-width: 559px) {
+@container fc (max-width: 559px) {
   .fc-panel .wide-only {
     display: none;
   }

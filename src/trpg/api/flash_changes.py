@@ -390,7 +390,8 @@ def _drop_shifted(rows: list[StatChangeOut]) -> list[StatChangeOut]:
 
 _SEGMENT_ZH = "{name}（第 {n} 段）"
 _FOLLOWUP_SEGMENT_ZH = "{name}（接續）"
-"""同一張卡兩列以上同名（例：雙槍連射兩段都叫「傷害」）時加的段名（FL-1g，FL-1b 驗收可修 3）。"""
+"""同一張卡兩列以上同名（例：雙槍連射兩段都叫「傷害」）時加的段名（FL-1g，FL-1b 驗收可修 3）；
+「傷害（第 1 段）」「傷害（接續）」玩法 PM 11-13 定稿（TXT-2）。"""
 
 
 def _name_segments(rows: list[StatChangeOut]) -> tuple[StatChangeOut, ...]:
@@ -602,8 +603,8 @@ def _card(icon: str) -> ChangeIconOut:
 
 _WEAPON_DAMAGE_ZH = "武器傷害"
 _ELEMENT_WEAPON_DAMAGE_ZH = "{element}武器傷害"
-"""帶元素的武器傷害（FL-1g，FL-1b 驗收必修 2）：元素名插在「武器傷害」前（「3 成雷電武器傷害」）。
-**字待玩法 PM 定**，定了只換這一行。物理不寫（武器傷害本來就是物理）。"""
+"""帶元素的武器傷害（FL-1g，FL-1b 驗收必修 2）：元素名插在「武器傷害」前（「3 成雷電武器傷害」），
+每種元素同一個句型；物理不寫元素（「3 成武器傷害」）。玩法 PM 11-13 定稿（TXT-2）。"""
 
 
 def _ratio(times: str | None, weapon: bool, element: Element | None = None) -> str | None:

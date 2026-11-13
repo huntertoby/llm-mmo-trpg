@@ -53,6 +53,9 @@
 有值時三張都帶它——加深＝只帶它；橋接＝它＋另一個持有的關鍵字；新方向＝它＋一個還沒有的關鍵字
 （區域偏向排前）；多關鍵字找不到時退回只帶它（``fallback``）。橋接、新方向的多關鍵字選項各自受
 ``bridge_variant_cap`` 管；不從通用池抽。``None`` ＝ 原行為（逐字不變）。
+橋接的「另一個持有的關鍵字」也是區域偏向排前（TXT-2，許願池兩個關鍵字：``region_keywords`` 的
+第 2 個已持有時，橋接先試「第 1＋第 2」，還沒有時新方向先試，所以組合器做得到時有一張同時帶兩個；
+其他呼叫端的 ``region_keywords`` 只有指定關鍵字本身，順序不變）。
 
 **LLM 來源**（Phase 4-L6，``docs/phases/Phase4計畫.md`` 3F 節）：呼叫端傳入 ``llm``
 （:data:`~trpg.skillgen.proposal_topic.LlmProposer`）時，每個候選種類先以
@@ -624,7 +627,8 @@ def _pinned(
     種類一條 ``fork``。"""
     pin = search.request.pinned_keyword
     assert pin is not None
-    others = [k for k in held if k != pin]
+    # TXT-2：區域偏向（許願的第 2 個關鍵字）排前，組合器做得到時橋接那張同時帶兩個
+    others = region_first([k for k in held if k != pin], search.request.region_keywords)
     fresh = [k for k in unheld if k != pin]
     seed = search.request.seed
 

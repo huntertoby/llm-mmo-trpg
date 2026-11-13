@@ -198,7 +198,7 @@ def test_menu_wish_skip_refund_and_counts(client: TestClient) -> None:
     assert len(pending["offer"]["candidates"]) == 3
     assert after["wish"]["left"] == 1 and after["wish"]["coins"] == 6
     assert after["wish"]["available"] is False  # 三選一還沒選
-    assert after["wish"]["blocked_zh"] == "還有任務給的技能三選一沒有選：先選一招或跳過"
+    assert after["wish"]["blocked_zh"] == "還有任務給的技能三選一沒有選：先選一招，或都不拿"
     skipped = _ok(_act(client, kind="offer_pick"))
     assert skipped["pending_offer"] is None
     assert (skipped["wish"]["coins"], skipped["wish"]["left"]) == (8, 1)  # 退 2、次數照扣

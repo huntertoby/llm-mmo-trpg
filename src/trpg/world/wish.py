@@ -60,7 +60,9 @@ __all__ = [
 
 WISH_QUEST: Final = "wish"
 """許願池三選一的 ``PendingOffer.quest``（步驟是 ``w<週>_<第幾次>``）。"""
-WISH_NO_MATCH_ZH: Final = "許願池這次沒聽懂你的願望，改從選單挑關鍵字吧（沒有扣任務幣）。"
+WISH_NO_MATCH_ZH: Final = (
+    "池子這次沒聽懂你的願望。換個說法再許一次，或改從選單挑關鍵字（沒有扣任務幣）。"
+)
 """願望文字沒對上關鍵字（模型關閉、逾時、驗證不過）時的原因句（暫定字）。"""
 
 
@@ -237,7 +239,7 @@ def apply_wish(
         run,
         "complete",
         region_keywords=keywords,
-        pinned_keyword=keywords[0],  # 三張都帶第 1 個關鍵字（待決 5）
+        pinned_keyword=keywords[0],  # 三張都帶第 1 個；第 2 個靠 region_keywords 排前（TXT-2）
         region=None,  # 「任何池」、中性奇幻（#126）
     )
     week = week_of(library, world, now)

@@ -105,7 +105,7 @@ export function OfferPicker({
         })}
       </div>
       <div className="muted small">
-        不選任何一張就是跳過（技能不變）。{pick === null && "目前：跳過。"}
+        一張都不選就是都不拿（技能不變）。{pick === null && "目前：都不拿。"}
       </div>
       {picked !== undefined && must && (
         <div className="panel run-replace">
