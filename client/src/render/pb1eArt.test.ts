@@ -6,11 +6,11 @@ import { buildDrawModel, type UnitDraw } from "../battle/drawModel";
 import { stripLayout } from "../battle/partStrip";
 import { tile, unit } from "../battle/testFixtures";
 import type { ArtTextures } from "./artTextures";
-import { BREAK_MS, breakFrameAt, breakFxOf, glowRgba, STRIP_BASE_SCALE } from "./bossPartArt";
-import { applyMarkScale, HP_BAR_LABEL, PART_STRIP_LABEL, SOUTH_ARROW_LABEL } from "./minMark";
+import { BREAK_MS, breakFrameAt, breakFxOf, glowRgba, popScale, STRIP_BASE_SCALE } from "./bossPartArt";
+import { applyMarkScale, HP_BAR_LABEL, MIN_BREAK_POP_FONT_PX, PART_STRIP_LABEL, SOUTH_ARROW_LABEL } from "./minMark";
 import { qUnitOf } from "./qSpec";
 import { HUD_LABELS, RowStack } from "./rowLayers";
-import { buildUnitSprite, facingArrowPoly, hpBoxOf, PART_DEBRIS_LABEL, PART_HUD_UP_ARROW, Pulses, specOfUnit } from "./unitSprite";
+import { buildUnitSprite, facingArrowPoly, hpBoxOf, PART_DEBRIS_LABEL, PART_HUD_UP_ARROW, PART_HUD_UP_ARROW_MIN_PX, Pulses, specOfUnit } from "./unitSprite";
 import { readFile, SRC_DIR } from "../test/sourceScan";
 
 const art = { figure: () => Texture.WHITE, creature: () => Texture.WHITE, summon: () => Texture.WHITE, dollFx: () => null, canvas: () => null, figureRes: () => 2 } as unknown as ArtTextures;
@@ -129,5 +129,47 @@ describe("接線", () => {
   });
   it("選單列的點擊只認列裡面的元素（portal 的說明卡冒泡上來不算選了這一列）", () => {
     expect(readFile(SRC_DIR, "ui/PartMenu.tsx")).toMatch(/e\.currentTarget\.contains\(e\.target\)/);
+  });
+});
+
+describe("PB-1f：「破」字記號最小尺寸、800 寬朝南三角形不縮（美術 PM PB-1e 驗收裁定）", () => {
+  it("「破」字畫面上 ≥ 12 px：倍率 max(1, 12 ／ (14 × 地圖縮放))", () => {
+    expect(MIN_BREAK_POP_FONT_PX).toBe(12);
+    expect(popScale(1.31)).toBe(1);
+    expect(popScale(12 / 14)).toBeCloseTo(1);
+    expect(popScale(0.53)).toBeCloseTo(1.617, 2); // 約 ×1.62
+    expect(14 * popScale(0.53) * 0.53).toBeCloseTo(12);
+  });
+  it("演出接上地圖縮放：倍率進貼圖快取鍵，圓、外圈、字一起放大，位置不放大", () => {
+    const fx = readFile(SRC_DIR, "render/partBreakFx.ts");
+    expect(fx).toMatch(/popScale\(host\.boardScale\?\.\(\) \?\? 1\)/);
+    expect(fx).toMatch(/popK\.toFixed\(3\)/);
+    const src = readFile(SRC_DIR, "render/bossPartArt.ts");
+    expect(src).toMatch(/POP_STYLE\.r \* k/);
+    expect(src).toMatch(/POP_STYLE\.ringW \* k/);
+    expect(src).toMatch(/POP_STYLE\.font \* k/);
+    expect(src).toMatch(/center\.x \+ px \* sd, center\.y \+ py, 1, f\.popK \?\? 1/);
+    expect(readFile(SRC_DIR, "render/battle/vfxLayer.ts")).toMatch(/boardScale: \(\) => this\.scale/);
+  });
+  it("南邊有人：1600 寬（1.31、1.03）朝南三角形縮 0.6；800 寬（0.53）不縮", () => {
+    const up = bossDraw({}, true);
+    const w = (p: number[]) => Math.max(p[0]!, p[2]!, p[4]!) - Math.min(p[0]!, p[2]!, p[4]!);
+    const full = w(facingArrowPoly(bossDraw()));
+    expect(w(facingArrowPoly(up, 1.31)) / full).toBeCloseTo(PART_HUD_UP_ARROW);
+    expect(w(facingArrowPoly(up, 1.03)) / full).toBeCloseTo(PART_HUD_UP_ARROW);
+    expect(w(facingArrowPoly(up, 0.53)) / full).toBeCloseTo(1);
+    expect((full * PART_HUD_UP_ARROW + 1) * 0.53).toBeLessThan(PART_HUD_UP_ARROW_MIN_PX);
+  });
+  it("地圖縮放改變時三角形節點跟著重畫（部位小格的重排）", () => {
+    const c = buildUnitSprite(art, new Pulses(), bossDraw({}, true));
+    const strip = c.children.find((n) => n.label === PART_STRIP_LABEL) as Container;
+    const arrow = c.children.find((n) => n.label === SOUTH_ARROW_LABEL) as Container;
+    applyMarkScale(strip, 1.31, 1.31);
+    const big = arrow.getLocalBounds().width;
+    applyMarkScale(strip, 0.53, 0.53);
+    const small = arrow.getLocalBounds().width;
+    expect(small).toBeGreaterThan(big * 1.4);
+    applyMarkScale(strip, 1.31, 1.31);
+    expect(arrow.getLocalBounds().width).toBeCloseTo(big);
   });
 });

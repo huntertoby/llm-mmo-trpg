@@ -2,7 +2,7 @@
 // （重擊參數）＋浮動字「{部位} 破！」。不新增貼圖、不動 `render/battle/unitLayer.ts`。紀錄：`part_broken` 是醒目的一類（第 7 點）。
 import { describe, expect, it } from "vitest";
 import type { BattleView, Pos, SkillCard } from "../api/types";
-import { feedbackFor, partBrokenWord } from "./feedback";
+import { feedbackFor } from "./feedback";
 import { SHAKE_SPEC, shakesFor, withImpact } from "./impact";
 import { logLines } from "./log";
 import { groupLog } from "./logGroups";
@@ -32,10 +32,11 @@ const broke = { seq: 4, round: 1, type: "part_broken", target_id: BOSS, part_id:
 const events = [used, dmg, partDmg, broke];
 
 describe("破壞演出（占位）", () => {
-  it("浮動字「拂塵 破！」：放大、醒目，在頭目頭上", () => {
+  it("PB-1f（美術 PM 裁定待決 1）：部位破壞不跳「拂塵 破！」浮字；本體受傷的傷害數字照舊", () => {
     const items = feedbackFor(events, view);
-    const word = items.find((i) => i.kind === "float" && i.text === partBrokenWord("拂塵"));
-    expect(word).toMatchObject({ kind: "float", text: "拂塵 破！", pos: at(3, 2), big: true, tone: "bad" });
+    const floats = items.filter((i) => i.kind === "float").map((i) => (i.kind === "float" ? i.text : ""));
+    expect(floats.some((t) => t.includes("破"))).toBe(false);
+    expect(floats).toContain("−5");
   });
 
   it("特殊結果 part_break 在頭目受擊那一刻；停頓照重擊 70", () => {

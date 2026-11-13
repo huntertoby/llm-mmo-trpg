@@ -99,6 +99,9 @@ function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; n
   );
 }
 
+/** 事件真的發生在這個元素（DOM）裡面，不是從 portal 的說明卡經 React 元件樹冒泡上來的（PB-1f e3q，同 `PartMenu`）。 */
+const ownEvent = (e: { target: EventTarget; currentTarget: EventTarget }): boolean => e.target instanceof Node && e.currentTarget instanceof Node && e.currentTarget.contains(e.target);
+
 /** 一張選項卡：單選圈＋白話大標＋類別標籤，下面「前 → 後」各列（LF-3：改名排第一列＋名稱來源標記，本機模型的一句話描述接在
  * 名稱下面）。點整張卡選中（再點不取消）。FL-1h：重閃選項整招和現在一樣（`same`）時，列的位置放一行「和現在一樣」。 */
 function OptionCard({ o, current, same, selected, focusable, terms, onPick, onKey }: { o: FlashOption; current: string; same: boolean; selected: boolean; focusable: boolean; terms: Terms; onPick(): void; onKey(e: KeyboardEvent<HTMLDivElement>): void }) {
@@ -113,8 +116,13 @@ function OptionCard({ o, current, same, selected, focusable, terms, onPick, onKe
       className={`fc-opt${selected ? " on" : ""}${o.transform ? " transform" : ""}`}
       data-testid={`flash-option-${o.index}`}
       data-index={o.index}
-      onClick={onPick}
-      onKeyDown={onKey}
+      // PB-1f（e3q）：卡裡的術語說明卡 portal 到 body，React 事件照元件樹冒泡上來；點說明卡（釘住）或焦點在說明卡上按鍵不能當成選了這張
+      onClick={(e) => {
+        if (ownEvent(e)) onPick();
+      }}
+      onKeyDown={(e) => {
+        if (ownEvent(e)) onKey(e);
+      }}
     >
       <div className="fc-opt-top">
         <span className="fc-radio" aria-hidden="true" />

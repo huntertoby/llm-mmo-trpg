@@ -18,7 +18,8 @@ export function PinnedUnitDock(props: Props) {
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       onPointerUp={(e) => {
-        if (e.pointerType === "touch") setExpanded((v) => !v);
+        // PB-1f（e3q）：裡面的說明卡 portal 到 body，點說明卡經 React 元件樹冒泡上來的不算點了停靠區
+        if (e.pointerType === "touch" && e.target instanceof Node && e.currentTarget.contains(e.target)) setExpanded((v) => !v);
       }}
     >
       <UnitInfo {...props} pinned compact={compact} />

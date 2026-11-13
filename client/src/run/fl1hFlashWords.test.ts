@@ -143,7 +143,12 @@ describe("FL-1h (e3f) 條件括號的不可拆詞", () => {
       { text: "雙手槍", keep: true },
       { text: "時才有）", keep: false },
     ]);
-    expect(noBreakRuns("（目標站在「水」表面上時才有）")).toEqual([{ text: "（目標站在「水」表面上時才有）", keep: false }]);
+    // PB-1f（FL-1j 待決 2 裁定）起「」括起來 ≤ 6 字的名字連同括號不斷行
+    expect(noBreakRuns("（目標站在「水」表面上時才有）")).toEqual([
+      { text: "（目標站在", keep: false },
+      { text: "「水」", keep: true },
+      { text: "表面上時才有）", keep: false },
+    ]);
     expect(noBreakRuns("雙手槍雙手槍")).toEqual([
       { text: "雙手槍", keep: true },
       { text: "雙手槍", keep: true },

@@ -62,6 +62,7 @@ export abstract class VfxLayer extends SkillLayer {
     ...this.reactHost,
     bounds: () => ({ w: (this.model?.width ?? 0) * T, h: (this.model?.height ?? 0) * T }),
     partFx: (id, fx) => this.setPartFx(id, fx),
+    boardScale: () => this.scale, // PB-1f：「破」字記號的最小尺寸
   };
 
   /**

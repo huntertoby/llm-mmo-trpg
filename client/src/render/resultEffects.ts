@@ -30,6 +30,8 @@ export interface ResultHost extends ReactHost {
   bounds(): { w: number; h: number };
   /** PB-1e：頭目部位破壞演出換格時，人物、頭頂小格、掉落物照這一格畫（`null`＝回到伺服器給的樣子）。沒有的繪製器（測試）可以不給。 */
   partFx?(unitId: string, fx: PartFx | null): void;
+  /** PB-1f：地圖在畫面上的縮放（「破」字記號的最小尺寸用）；沒給當 1。 */
+  boardScale?(): number;
 }
 
 /** 片段長度（毫秒，已乘播放速度；最短 160，同 6N-4）。 */

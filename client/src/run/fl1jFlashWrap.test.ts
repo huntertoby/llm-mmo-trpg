@@ -17,11 +17,11 @@ const FIXTURE = data as unknown as Fixture;
 const kept = (text: string) => noBreakRuns(text).filter((r) => r.keep).map((r) => r.text);
 
 describe("FL-1j (1) 「傷害」「轉型」不可拆", () => {
-  it("清單有四個詞", () => {
-    expect([...FLASH_NO_BREAK_WORDS]).toEqual(["雙手槍", "強度", "傷害", "轉型"]);
+  it("清單有四個詞（PB-1f 依 FL-1j 待決 2 裁定再加「回合」「點燃」）", () => {
+    expect([...FLASH_NO_BREAK_WORDS]).toEqual(["雙手槍", "強度", "傷害", "轉型", "回合", "點燃"]);
   });
   it("「1d4 火焰傷害」切出「傷害」；轉型句切出「轉型」", () => {
-    expect(kept("多了額外傷害：1d4 火焰傷害（目標帶有狀態「被標記」時才有）。")).toEqual(["傷害", "1d4 火焰", "傷害"]);
+    expect(kept("多了額外傷害：1d4 火焰傷害（目標帶有狀態「被標記」時才有）。")).toEqual(["傷害", "1d4 火焰", "傷害", "「被標記」"]); // PB-1f：「」名字不斷行
     expect(kept("這招變成陷阱：先布在地上。轉型後照新種類重算強度")).toEqual(["轉型", "強度"]);
   });
 });
