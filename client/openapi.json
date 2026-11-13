@@ -12882,6 +12882,26 @@
               }
             ],
             "title": "Tag Term"
+          },
+          "note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Zh"
+          },
+          "name_source": {
+            "type": "string",
+            "enum": [
+              "llm",
+              "template"
+            ],
+            "title": "Name Source",
+            "default": "template"
           }
         },
         "additionalProperties": false,

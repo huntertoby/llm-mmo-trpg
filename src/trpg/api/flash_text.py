@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
+from typing import Literal
 
 from trpg.api.flash_changes import ratio_zh
 from trpg.api.run_schemas import FlashTermOut, StatChangeOut
@@ -26,12 +27,15 @@ from trpg.shared.bonus_text import bonus_text, plain_text
 from trpg.shared.types import Attribute, Surface
 from trpg.skillgen.flash_ops import cell_count
 from trpg.skillgen.flash_state import Variation
+from trpg.skillgen.flash_text import clean_name, clean_note
 
 __all__ = [
     "FlashTextContext",
+    "NameSource",
     "base_terms",
     "flash_terms",
     "option_headline",
+    "option_llm_text",
     "option_say",
     "option_tag_term",
     "term_ids",
@@ -146,6 +150,19 @@ def option_tag_term(library: ContentLibrary, variation: Variation) -> str | None
         return None
     minor = library.flash.minor_template(variation.template)
     return None if minor is None else _TAG_TERMS.get(minor.op)
+
+
+NameSource = Literal["llm", "template"]
+
+
+def option_llm_text(variation: Variation, after: SkillDef) -> tuple[str | None, NameSource]:
+    """LLM 的一句話描述與名稱來源（LF-3）。變化上的文字出題時已經 ``clean_text`` 過，這裡照樣再
+    檢查一次（守則 3）：描述不合格當作沒有；名稱只有大變化、轉型帶了合格的名稱、而且技能真的用了它
+    才算 ``llm``。"""
+    note = clean_note(variation.note_zh)
+    name = None if variation.source == "minor" else clean_name(variation.name_zh)
+    source: NameSource = "llm" if name is not None and after.name_zh == name else "template"
+    return note, source
 
 
 # ---------------------------------------------------------------------------
