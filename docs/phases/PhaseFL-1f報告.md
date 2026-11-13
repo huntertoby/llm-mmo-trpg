@@ -91,3 +91,9 @@
 | `pytest -n 8`：fl1f、fl1b、fl1a、`test_flash_api`、`test_world_growth_api`、`tests/content`、`tests/skillgen/test_flash.py`、`test_flash_templates`、`test_openapi_snapshot`、`test_client_fixtures`、`tests/world/test_flash_world.py`、`tests/roguelite/test_flash_run.py`、`test_architecture` | 0（3314 passed） |
 
 沒跑全量 `check.py`、沒做平衡量測、沒啟動伺服器；`client/` 未動（夾具照裁定由 LF-3 重產）。
+
+## 開發 PM 裁定（第二輪）
+
+- 接受，已合併。第十節的五條照引擎行為改寫。
+- 待 PM 決定 1：地形片語和 intensify 的第二句先寫成程式常數。內容即資料，之後要搬進 YAML，等下一段動到 `src/trpg/content/flash_templates.py` 時順手做，不另開段。
+- 待 PM 決定 2：「油面、水窪」要不要改成「目標站在…」，轉交玩法 PM；回覆後只換字。
