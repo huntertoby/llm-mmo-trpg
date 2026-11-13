@@ -44,7 +44,21 @@
 
 ## 4. 檢查結束碼
 
-（交件前填）
+| 檢查 | 結束碼／結果 |
+|---|---|
+| `ruff check .` | 0 |
+| `ruff format --check .` | 0 |
+| `mypy src/trpg` | 0 |
+| `lint-imports` | 0（14 kept） |
+| `trpg content check` | 0 |
+| 重播 `open_plain` 種子 7 | 通過（91 動作、383 事件） |
+| `tests/content`、`tests/skillgen`、`tests/llm`、`tests/narrative`、`tests/test_primitive_coverage.py`、反應／被動／召喚的引擎測試 | 修完後相關檔全過 |
+| slow：`test_refactor_parity.py`、`test_proposal_l8.py`、`test_proposal.py`、`tests/cli -m slow` | 全過（parity 照第 3 節只改 10 鍵） |
+| `tests/api`、`tests/roguelite` | 1430 passed、1 skipped |
+| 引擎核心（決定性、複製、反應、回合、暫停序列化、獨狼、原語、架構、規則雜湊） | 104 passed |
+| 前端 `vitest run`（全部）、`tsc --noEmit` | 全部跑一次只有 `skillClips.test.ts` 1 項失敗（新原語沒有動作）；補上後該檔 29 項全過，`tsc` 0 |
+
+沒跑全量 `scripts/check.py`、沒跑模擬（守則 11）。
 
 ## 5. 待 PM 決定
 
@@ -66,3 +80,9 @@
 ## 7. 需要使用者決定的事
 
 - 上面第 1、2 點：`on_battle_start` 係數與護主的強度要不要放寬（例如護主改成存在 2 回合，或反應的預算窗對召喚另算）。請使用者在數值工坊試 `flash_transform` 的四個值後再定。
+
+## 8. 請使用者重開伺服器檢查的重點
+
+- 內容改了（新原語、觸發、反應事件、四個轉型），伺服器要重開；進行中的戰鬥會從頭開始。
+- 召喚技、輔助技第 3 次閃現時看得到「伴生／護主／庇佑／援手」其中一個轉型選項與大標。
+- 選伴生後下一場開打，身邊就有一隻縮小版召喚物；數值工坊「技能預算表」多四個 `flash_transform` 欄位。
