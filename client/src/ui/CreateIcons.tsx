@@ -19,7 +19,7 @@ export function RegionCrest({ region, size = 34 }: { region: string; size?: numb
 }
 
 /** 有專屬圖示的關鍵字（`content/skill_keywords.yaml` 的 ID；新增關鍵字沒圖示時用圓點）。 */
-export const KEYWORD_ICON_IDS = ["ignite", "wet", "charged", "frozen", "prone", "collision", "marked", "high_ground", "concealed", "summon", "poisoned", "form"] as const;
+export const KEYWORD_ICON_IDS = ["ignite", "wet", "charged", "frozen", "prone", "collision", "marked", "high_ground", "concealed", "summon", "poisoned", "form", "combo_point", "fury", "focus", "ki"] as const;
 
 /** 關鍵字的圖示顏色。 */
 export const KEYWORD_ICON_COLOR: Readonly<Record<string, string>> = {
@@ -35,6 +35,11 @@ export const KEYWORD_ICON_COLOR: Readonly<Record<string, string>> = {
   summon: "#c08aff",
   poisoned: "#7ad050",
   form: "#e8bb48",
+  /* KW-3（docs/art/KW樣張.md 第 3 節 CREATE_COLOR）：和圓章色（KEYWORD_COLOR）同色，只有怒氣亮一階（#df2046 在按鈕深褐底上太暗）。 */
+  combo_point: "#ff3d8b",
+  fury: "#ff4a62",
+  focus: "#476deb",
+  ki: "#29e0bc",
 };
 
 function keywordGlyph(id: string, c: string) {
@@ -107,6 +112,35 @@ function keywordGlyph(id: string, c: string) {
           <path d="M13 9.5A5.5 5.5 0 0 1 3 11" />
           <path d="M3 14.2V11H6.2" />
         </g>
+      );
+    // KW-3：四個層數關鍵字（A 案；照 docs/art/sample/qIconsKW.js 的 CREATE[kw].a 逐字抄，連擊的三條 path 由 comboCreate 算出）
+    case "combo_point":
+      return (
+        <>
+          <path d="M7.09 15.69L11.31 13.40L12.75 10.04L9.39 11.48Z" fill={c} fillOpacity="0.7" />
+          <path d="M3.93 13.20L9.69 9.60L12.07 5.06L7.54 7.45Z" fill={c} fillOpacity="0.85" />
+          <path d="M0.65 10.15L7.75 5.54L10.83 -0.03L5.26 3.05Z" fill={c} />
+        </>
+      );
+    case "fury":
+      return <path fillRule="evenodd" d="M0.6 3.6L8 8L15.4 3.6L15.2 10.6Q8 14.6 0.8 10.6ZM2.6 8L6.6 9.8L6 11.6L2.8 10.2ZM13.4 8L9.4 9.8L10 11.6L13.2 10.2Z" fill={c} />;
+    case "focus":
+      return (
+        <>
+          <g fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1.6 5V1.6H5M11 1.6H14.4V5M14.4 11V14.4H11M5 14.4H1.6V11" />
+          </g>
+          <path d="M8 4.4L10.6 8L8 11.6L5.4 8Z" fill={c} />
+        </>
+      );
+    case "ki":
+      return (
+        <>
+          <circle cx="8" cy="8" r="6.6" fill="none" stroke={c} strokeWidth="1.3" />
+          <path d="M8 1.4A6.6 6.6 0 0 1 8 14.6A3.3 3.3 0 0 1 8 8A3.3 3.3 0 0 0 8 1.4Z" fill={c} />
+          <circle cx="8" cy="4.7" r="1.1" fill={c} />
+          <circle cx="8" cy="11.3" r="1.1" fill="#1a1410" />
+        </>
       );
     default:
       return <circle cx="8" cy="8" r="3.5" fill={c} />;

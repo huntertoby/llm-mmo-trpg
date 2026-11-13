@@ -4,7 +4,7 @@
 // 純函式：不認得的值一律退回預設、不丟例外；清單來自 content/equipment/appearance.yaml（匯出成 gearAppearance.json）。
 import appearance from "./gearAppearance.json";
 import { GEAR_DYE, GEAR_RARITY } from "./artPalette";
-import { KEYWORD_COLOR } from "./palette";
+import { KEYWORD_COLOR, STACK_KEYWORDS } from "./palette";
 
 /** 已驗證的外觀（`resolveGear` 的結果）。 */
 export interface Resolved {
@@ -77,7 +77,7 @@ export function resolveGear(it: GearLook | null | undefined, slot?: string): Res
   const material = src.material != null && mats.includes(src.material) ? src.material : (form.defaultMaterial ?? K.defaultMaterial);
   const dye = (appearance.dyeMaterials as string[]).includes(material) && src.dye != null && GEAR_DYE[src.dye] !== undefined ? src.dye : null;
   const fromElement = src.element != null ? KEYWORD_OF_ELEMENT[src.element] : undefined;
-  const given = (src.keywords ?? []).filter((k) => KEYWORD_COLOR[k] !== undefined);
+  const given = (src.keywords ?? []).filter((k) => KEYWORD_COLOR[k] !== undefined && !STACK_KEYWORDS.has(k)); /* KW-3：層數關鍵字裝備不帶 */
   const keywords = (fromElement !== undefined && !given.includes(fromElement) ? [fromElement, ...given] : given).slice(0, MAX_KEYWORDS);
   const rarity = src.rarity != null && GEAR_RARITY[src.rarity] !== undefined ? src.rarity : "common";
   return { kind, form: form.id, material, dye, keywords, rarity, style: "common" };

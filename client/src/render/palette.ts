@@ -70,7 +70,16 @@ export const KEYWORD_COLOR: Readonly<Record<string, string>> = {
   summon: "#7dffb0",
   poisoned: "#7ad04a",
   form: "#e0a35a",
+  /* KW-3（#161，docs/art/KW樣張.md 第 1 節推薦組）：四個層數關鍵字（id＝層數 id）。只用在圓章、HUD 層數計量；
+   * 裝備外觀照設計不帶它們（`STACK_KEYWORDS`；`gearResolve`、`gemAccent` 跳過）。加在末尾：寶石色照宣告順序挑，前 12 個的順序不變。 */
+  combo_point: "#ff3d8b",
+  fury: "#df2046",
+  focus: "#476deb",
+  ki: "#29e0bc",
 };
+
+/** 層數關鍵字（KW-3）：掛在層數上的四個關鍵字。裝備外觀不帶（`gearAppearance.json` 的 `keywords` 沒有它們），寶石色與裝備圓章都跳過。 */
+export const STACK_KEYWORDS: ReadonlySet<string> = new Set(["combo_point", "fury", "focus", "ki"]);
 
 /** 這些關鍵字是元素：裝備圖示上的主色會混入它的顏色。 */
 export const TINT_KEYWORDS: ReadonlySet<string> = new Set(["ignite", "wet", "charged", "frozen"]);

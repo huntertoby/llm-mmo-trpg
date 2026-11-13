@@ -22,8 +22,8 @@
 // - `chipCanvas(kw, px, res)`：單獨一個圓章的畫布（樣張是 `(kw, px, zoom, o)`；放大交給開發頁的 CSS）；沒有畫布時回 null。
 // - 樣張 `LIST.zh` 寫「高地」「召喚」，內容 `skill_keywords.yaml` 是「高處」「召喚物」——這裡的 `zh` 只給開發頁當標籤，說明框以內容為準（QI-4b）。
 // ---------------------------------------------------------------------------------------------
-import { KEYWORD_COLOR } from "../palette";
-import { blank, blit, ctxOf, f, ICON_RES, mix, OUT, outlinePx, poly, qCanvasAvailable, render, rr, starPts, TAU, type Ctx, type DrawFn } from "./core";
+import { KEYWORD_COLOR, STACK_KEYWORDS } from "../palette";
+import { blank, blit, ci, ctxOf, el as ellipse, f, ICON_RES, mix, OUT, outlinePx, poly, qCanvasAvailable, render, rr, starPts, TAU, type Ctx, type DrawFn } from "./core";
 import { BOX, entry } from "./parts";
 import * as QS from "./skills";
 
@@ -44,8 +44,58 @@ export const collision: DrawFn = (c, o) => {
   rr(c, COLLIDE_STONE_D, 0.8, -10.4, 9.6, 20.8, 1.6); f(c, COLLIDE_STONE_L, () => c.rect(0.8, -9.4, 2, 18.8));
   poly(c, "#ffd23f", starPts(-2.4, -2.8, 7.8, 3.7, 7, -1.2), 0.3); poly(c, "#ffffff", starPts(-2.4, -2.8, 3.7, 1.9, 7, -1.2));
 };
+/* ---------------------------------------------------------------- KW-3：四個層數關鍵字（#161）的圓章圖樣（A 案）
+ * 照 docs/art/sample/qIconsKW.js 第 2 版（`comboSlashes`、`furyEyes`、`focusFrame`、`kiTaiji`，三階色 `TONE`）逐行搬；紀錄 docs/art/KW樣張.md 第 2、6、7 節。
+ * 只搬採用的 A 案（不搬 B 案、第 1 版 `d1`、對照色組）。 */
+const PI = Math.PI;
+const st = (c: Ctx, col: string, w: number, fn: (x: Ctx) => void, cap: CanvasLineCap = "round"): void => { c.beginPath(); fn(c); c.strokeStyle = col; c.lineWidth = w; c.lineCap = cap; c.lineJoin = "round"; c.stroke(); };
+/** 每個層數關鍵字圖樣自己的三階色（本色、亮一階、白芯／最亮）。 */
+export const KW_TONE: Readonly<Record<string, readonly [string, string, string]>> = {
+  combo_point: ["#ff3d8b", "#ff9cc4", "#ffffff"],
+  fury: ["#df2046", "#ff7a8c", "#fff0c8"],
+  focus: ["#6f8cff", "#b8c6ff", "#ffffff"],
+  ki: ["#1fb89a", "#c8fff0", "#ffffff"],
+};
+const tone = (kw: string): readonly [string, string, string] => KW_TONE[kw]!;
+/** 一道直的斬線（兩頭尖的細長菱形，不彎）：中心 (cx,cy)、方向 (ux,uy)、半長 L、中間半寬 w；p＝最寬處離中心的位置（>0 往前端移）。 */
+const spike = (c: Ctx, col: string, cx: number, cy: number, ux: number, uy: number, L: number, w: number, p = 0): void => { const nx = -uy, ny = ux, mx = cx + ux * L * p, my = cy + uy * L * p; poly(c, col, [[cx - ux * L, cy - uy * L], [mx + nx * w, my + ny * w], [cx + ux * L, cy + uy * L], [mx - nx * w, my - ny * w]], 0.2); };
+/** 連擊：三道直的斬線（前白、後兩道亮粉殘影往右下錯開、一道比一道短）；≤14px 兩道（白＋粉）。 */
+const comboSlashes: DrawFn = (c, o) => {
+  const T = tone("combo_point"), u = [0.7071, -0.7071] as const, n = [0.7071, 0.7071] as const;
+  const rows: readonly (readonly [number, number, number, number, string])[] = o.tiny ? [[3.4, -1.4, 6.4, 2.2, T[1]], [-3, 0.6, 9.4, 2.6, "#ffffff"]] : [[6, -2.6, 5, 1.5, "#ff6aa8"], [1, -1, 7.2, 1.75, T[1]], [-4.6, 0.6, 9, 2.1, "#ffffff"]];
+  for (const [off, s, L, w, col] of rows) spike(c, col, n[0] * off + u[0] * s, n[1] * off + u[1] * s, u[0], u[1], L, w, 0.15);
+};
+/** 怒氣：怒目——兩道往中間壓低的緋紅粗眉＋兩隻發亮的米黃斜眼。≤14px 眉更粗、眼放大，不畫眉上的亮邊。 */
+const furyEyes: DrawFn = (c, o) => {
+  const T = tone("fury"), t = o.tiny;
+  for (const s of [-1, 1]) {
+    const mir = (P: readonly (readonly [number, number])[]): [number, number][] => P.map(([x, y]) => [s < 0 ? x : -x, y]);
+    const B: readonly (readonly [number, number])[] = t ? [[-9.6, -6.8], [-0.8, -2.4], [-1.4, 1.8], [-9.8, -2.2]] : [[-9.4, -6.4], [-1.2, -2.6], [-1.6, 0.8], [-9.6, -3]];
+    poly(c, T[0], mir(B), 0.5);
+    if (!t) poly(c, T[1], mir([[-9.4, -6.4], [-1.2, -2.6], [-1.6, -1.4], [-9.5, -5]]));
+    const E: readonly (readonly [number, number])[] = t ? [[-9.4, 2.6], [-1.6, 4.4], [-2.6, 8.8], [-8.2, 7.6]] : [[-8.8, 2.4], [-2.2, 4.2], [-3, 7.6], [-7.6, 6.6]];
+    poly(c, T[2], mir(E), 0.6);
+    if (!t) ci(c, T[0], s < 0 ? -4.6 : 4.6, 5.4, 1.3);
+  }
+};
+/** 專注：對焦框——四個粗角括號圍住一顆菱形光點（靛藍外、白芯）。≤14px 括號更粗更短、光點放大。 */
+const focusFrame: DrawFn = (c, o) => {
+  const T = tone("focus"), t = o.tiny, R = t ? 7.6 : 7.8, A = t ? 3.6 : 4.4, W = t ? 3.4 : 2.8;
+  for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) st(c, T[1], W, (x) => { x.moveTo(sx * R, sy * (R - A)); x.lineTo(sx * R, sy * R); x.lineTo(sx * (R - A), sy * R); });
+  const D = t ? 4.8 : 4.6; poly(c, T[0], [[0, -D * 1.2], [D, 0], [0, D * 1.2], [-D, 0]], 0.4); poly(c, T[2], [[0, -D * 0.62], [D * 0.5, 0], [0, D * 0.62], [-D * 0.5, 0]]);
+};
+/** 氣：雙勾玉氣團（太極形）。≥18（圖樣 >14px）帶兩顆勾玉眼與左上亮面；≤14px 沒有眼、深半邊 #0e7f6a（第 2 版 K2）。 */
+const kiTaiji: DrawFn = (c, o) => {
+  const T = tone("ki"), R = 9.6, half = (col: string) => f(c, col, () => { c.moveTo(0, -R); c.arc(0, 0, R, -PI / 2, PI / 2, false); c.arc(0, R / 2, R / 2, PI / 2, -PI / 2, false); c.arc(0, -R / 2, R / 2, PI / 2, -PI / 2, true); c.closePath(); });
+  ci(c, T[1], 0, 0, R);
+  if (o.tiny) { half("#0e7f6a"); return; }
+  half(T[0]);
+  const e = 1.7; ci(c, T[0], 0, -R / 2, e); ci(c, T[1], 0, R / 2, e);
+  ellipse(c, T[2], -5.2, -2.6, 1.3, 2.6, 0.5);
+};
 export interface KeywordArt { zh: string; topic: string; src: string; k: number; d: DrawFn }
-/** 12 個關鍵字（順序同 gearAppearance.json 的 keywords）。k＝圖樣在圓章裡再縮放（方的、四角有東西的收進環內）；src＝沿用哪一批的哪個形。 */
+/** 16 個關鍵字：前 12 個順序同 gearAppearance.json 的 keywords（裝備外觀）；KW-3 的四個層數關鍵字接在後面（裝備不帶，只用在圓章、HUD 計量）。
+ *  k＝圖樣在圓章裡再縮放（方的、四角有東西的收進環內）；src＝沿用哪一批的哪個形。 */
 export const LIST: Readonly<Record<string, KeywordArt | undefined>> = {
   ignite: { zh: "點燃", topic: "火焰（橘外焰、黃內焰、白芯）", src: "b3:el:fire＝b4:element.fire", k: 1.04, d: el("fire") },
   wet: { zh: "潮濕", topic: "水滴落在兩道波浪上（藍、淺藍、白芯）", src: "b3:el:water", k: 0.85, d: el("water") },
@@ -59,6 +109,10 @@ export const LIST: Readonly<Record<string, KeywordArt | undefined>> = {
   summon: { zh: "召喚", topic: "青色小靈", src: "b3:summon＝b4:effect.summon", k: 1, d: act("summon") },
   poisoned: { zh: "中毒", topic: "綠毒滴，右上一顆泡", src: "b3:el:poison＝b4:status.poison＝b5:poison", k: 0.96, d: part("status", "poison") },
   form: { zh: "形態", topic: "淡紫色的獸掌印", src: "b4:effect.enter_form", k: 0.94, d: part("effect", "enter_form") },
+  combo_point: { zh: "連擊", topic: "三道直的斬線（兩頭尖、前白後粉的殘影、一道比一道短）；≤14px 兩道", src: "KW 新", k: 0.96, d: comboSlashes },
+  fury: { zh: "怒氣", topic: "怒目：兩道往中間壓低的緋紅粗眉＋兩隻發亮的米黃斜眼", src: "KW 新", k: 0.84, d: furyEyes },
+  focus: { zh: "專注", topic: "對焦框：四個粗角括號圍住一顆菱形光點", src: "KW 新", k: 0.8, d: focusFrame },
+  ki: { zh: "氣", topic: "雙勾玉氣團（太極形）；≤14px 沒有勾玉眼、深半邊加深", src: "KW 新", k: 0.92, d: kiTaiji },
 };
 export const KEYS: readonly string[] = Object.keys(LIST);
 /** 只有圖樣的 canvas：cpx＝圖樣本身（±10 單位）顯示的 CSS px；≤14px 不包外框（規則 8）。 */
@@ -82,8 +136,8 @@ export function chip(ctx: Ctx, kw: string, x0: number, y0: number, D: number, re
   const cpx = inner * e.k, g = glyph(kw, cpx, res), a = cpx * BOX;
   if (g) blit(ctx, g, cx - a / 2, cy - a / 2, a, res);
 }
-/** 只留認得的關鍵字（同遊戲端 resolveGear：KEYWORD_COLOR 認得的、前 2 個）。 */
-export const known = (kws: readonly string[] | null | undefined, max = 2): string[] => (kws ?? []).filter((k) => LIST[k] !== undefined).slice(0, max);
+/** 只留認得的關鍵字（同遊戲端 resolveGear：KEYWORD_COLOR 認得的、層數關鍵字除外（KW-3：裝備不帶）、前 2 個）。 */
+export const known = (kws: readonly string[] | null | undefined, max = 2): string[] => (kws ?? []).filter((k) => LIST[k] !== undefined && !STACK_KEYWORDS.has(k)).slice(0, max);
 export type Corner = "br" | "tl" | "bl";
 /** 角的左上座標（CSS px，對齊整數裝置像素）：右下 (far, far)、左上 (near, near)、左下 (near, far)。 */
 export const at = (corner: Corner, size: number, D: number, res: number): [number, number] => { const m = size * MARGIN, snap = (v: number) => Math.round(v * res) / res, far = snap(size - m - D), near = snap(m); return [corner[1] === "r" ? far : near, corner[0] === "b" ? far : near]; };

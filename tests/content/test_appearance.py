@@ -90,14 +90,37 @@ def test_table_values_match_the_art_spec() -> None:
     assert "cloth" not in kinds["helmet"].materials
 
 
+def _stack_keywords() -> set[str]:
+    """層數關鍵字（#161）：關鍵字 id ＝ 它 ``add_stack`` 的層數 id（連擊、怒氣、專注、氣）。"""
+    lib = library()
+    return {
+        k.id
+        for k in lib.keywords.keywords
+        if any(r.effect == "add_stack" and r.stack == k.id for r in k.makes)
+    }
+
+
 def test_table_keywords_are_the_24b1_keywords() -> None:
     lib = library()
     assert lib.appearance is not None
-    # KW-2：四個層數關鍵字的裝備外觀（關鍵字色與圓章，前端 artPalette）是美術，KW-3 隨美術補；
-    # KW-3 補上時下一行會失敗，提醒拿掉 ART_PENDING、恢復成「外觀關鍵字 ＝ 全部關鍵字」。
-    art_pending = {"combo_point", "fury", "focus", "ki"}
-    assert set(lib.keywords.ids()) - set(lib.appearance.keywords) == art_pending
-    assert set(lib.appearance.keywords) == set(lib.keywords.ids()) - art_pending
+    # 外觀關鍵字 ＝ 全部關鍵字扣掉層數關鍵字（KW-3：層數關鍵字照設計不上裝備，不是美術待補）。
+    stack = _stack_keywords()
+    assert set(lib.appearance.keywords) == set(lib.keywords.ids()) - stack
+
+
+def test_gear_never_carries_stack_keywords() -> None:
+    """KW-3：層數關鍵字（連擊、怒氣、專注、氣）裝備不帶——外觀表沒有它們，內容裡的物品也沒有。
+
+    前端 ``KEYWORD_COLOR`` 加了這四個（圓章、HUD 計量用），``gearResolve``／``gemAccent``
+    另外跳過它們（``client/src/render/qIcon/qIconKW3.test.ts`` 鎖前端那一半）。
+    """
+    lib = library()
+    assert lib.appearance is not None
+    stack = _stack_keywords()
+    assert stack == {"combo_point", "fury", "focus", "ki"}
+    assert not stack & set(lib.appearance.keywords)
+    for affix in lib.affixes.values():  # 裝備的關鍵字全部由詞條推導
+        assert not stack & set(derive_keywords([affix])), affix.id
 
 
 def test_table_rejects_bad_data() -> None:
