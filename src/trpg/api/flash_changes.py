@@ -5,7 +5,8 @@
 （``magnitude_permille``）與接續段的效果。每一列是一個欄位的「前值、後值、方向」：
 
 - ``better``／``worse``：強度欄位變強／變弱（數字大＝強；骰子比平均）；
-- ``cost``：代價欄位（AP、冷卻、法力、耐力……）變了，升或降看前後值；
+- ``cost``：代價欄位（AP、冷卻、法力、耐力……）變貴（新加、整項拿掉也算這一類，前端看後值）；
+  變便宜的代價照 ``better``（FL-1g）；
 - ``new``：新加的效果或欄位（前值為 ``None``）。拿掉的效果記 ``worse``（後值為 ``None``）。
 
 只列有變的欄位；順序固定（種類 → 技能層級 → 代價 → 效果 → 接續段）。前端畫「前 → 後」用，不進規則。
@@ -29,7 +30,7 @@ from trpg.api.skill_cards import CostStat, EffectStat, card_stats, effect_stat
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef, condition_text
-from trpg.shared.types import Surface
+from trpg.shared.types import Element, Surface
 
 __all__ = [
     "base_stats",
@@ -136,7 +137,24 @@ def _cost_rows(
         a, b = old.get(kind), new.get(kind)
         if a is not None and b is not None and (a.value, a.label) == (b.value, b.label):
             continue
-        yield _row(f"cost.{kind}", _COST_ZH.get(kind, kind), _cost_label(a), _cost_label(b), "cost")
+        name = _COST_ZH.get(kind, kind)
+        yield _row(f"cost.{kind}", name, _cost_label(a), _cost_label(b), _cost_way(a, b))
+
+
+_MORE_IS_BETTER_COSTS = frozenset({"uses_per_battle"})
+"""代價欄位裡數字越大越好的（每場次數）；其他（AP、冷卻、法力、耐力……）數字越大越貴。"""
+
+
+def _cost_way(a: CostStat | None, b: CostStat | None) -> Direction:
+    """代價欄位的方向（FL-1g，FL-1b 驗收必修 1）：只有變貴才是 ``cost``；變便宜照 ``better``。
+
+    整項拿掉（``b`` 是 ``None``）照舊給 ``cost``，前端寫「不用花」並畫成變好；新加的代價、
+    沒有數值可比的（失手反噬、只換字）也照舊是 ``cost``。
+    """
+    if a is None or b is None or a.value is None or b.value is None or a.value == b.value:
+        return "cost"
+    cheaper = b.value > a.value if a.kind in _MORE_IS_BETTER_COSTS else b.value < a.value
+    return "better" if cheaper else "cost"
 
 
 def _times(permille: int | None) -> str | None:
@@ -343,7 +361,8 @@ def flash_changes(
         ),
     ]
     view = _View(library, before, after, keyword)
-    return tuple(view.dress(row) for row in _drop_shifted(rows))
+    merged = _merge_moved(library, before, after, _drop_shifted(rows))
+    return _name_segments([view.dress(row) for row in merged])
 
 
 def _drop_shifted(rows: list[StatChangeOut]) -> list[StatChangeOut]:
@@ -367,6 +386,91 @@ def _drop_shifted(rows: list[StatChangeOut]) -> list[StatChangeOut]:
         if match is not None:
             drop |= {id(old), id(match)}
     return [r for r in rows if id(r) not in drop]
+
+
+_SEGMENT_ZH = "{name}（第 {n} 段）"
+_FOLLOWUP_SEGMENT_ZH = "{name}（接續）"
+"""同一張卡兩列以上同名（例：雙槍連射兩段都叫「傷害」）時加的段名（FL-1g，FL-1b 驗收可修 3）。"""
+
+
+def _name_segments(rows: list[StatChangeOut]) -> tuple[StatChangeOut, ...]:
+    """不同效果的列同名時加段名：本體有兩段以上同名時照出現順序「（第 N 段）」，
+    接續段「（接續）」。"""
+    owners: dict[str, list[tuple[str, int]]] = {}
+    for row in rows:
+        match = _FIELD_RE.match(row.field)
+        if match is None or not row.name_zh:
+            continue
+        key = (match.group(1), int(match.group(2)))
+        seen = owners.setdefault(row.name_zh, [])
+        if key not in seen:
+            seen.append(key)
+    out: list[StatChangeOut] = []
+    for row in rows:
+        match = _FIELD_RE.match(row.field)
+        keys = owners.get(row.name_zh, [])
+        if match is None or len(keys) < 2:  # noqa: PLR2004
+            out.append(row)
+            continue
+        prefix, index = match.group(1), int(match.group(2))
+        mine = sorted(i for p, i in keys if p == "effects")
+        if prefix == "followup":
+            label = _FOLLOWUP_SEGMENT_ZH.format(name=row.name_zh)
+        elif len(mine) < 2:  # noqa: PLR2004
+            label = row.name_zh
+        else:
+            label = _SEGMENT_ZH.format(name=row.name_zh, n=mine.index(index) + 1)
+        out.append(row.model_copy(update={"name_zh": label}))
+    return tuple(out)
+
+
+_MOVABLE = frozenset({"apply_status", "create_surface"})
+
+
+def _specs(skill: SkillDef, prefix: str) -> Sequence[EffectSpec]:
+    if prefix == "effects":
+        return skill.effects
+    return skill.followup.effects if skill.followup else ()
+
+
+def _merge_moved(
+    library: ContentLibrary, before: SkillDef, after: SkillDef, rows: list[StatChangeOut]
+) -> list[StatChangeOut]:
+    """同一個狀態或表面挪了位置、數字也變了（FL-1g，FL-1b 驗收可修 4：「燃燒 2 回合 → 沒有」＋
+    「沒有 → 燃燒 3 回合」）：拿掉與新加兩列併成新位置上的一般差異列（「燃燒 2 回合 → 3 回合」）。
+    只換位置、數字沒變的已由 :func:`_drop_shifted` 拿掉。"""
+    removed = [r for r in rows if r.after is None and r.before is not None and "." not in r.field]
+    added = [r for r in rows if r.before is None and r.after is not None and "." not in r.field]
+    replace: dict[int, list[StatChangeOut]] = {}
+    used: set[int] = set()
+    for old in removed:
+        match = _FIELD_RE.match(old.field)
+        if match is None:
+            continue
+        prefix, index = match.group(1), int(match.group(2))
+        old_spec = _specs(before, prefix)[index]
+        if old_spec.type not in _MOVABLE:
+            continue
+        for new in added:
+            found = _FIELD_RE.match(new.field)
+            if id(new) in used or found is None or found.group(1) != prefix:
+                continue
+            at = int(found.group(2))
+            new_spec = _specs(after, prefix)[at]
+            if not _same_effect(old_spec, new_spec):
+                continue
+            pair = (
+                (old_spec, effect_stat(library, before, index, old_spec)),
+                (new_spec, effect_stat(library, after, at, new_spec)),
+            )
+            replace[id(new)] = list(_pair_rows(prefix, at, pair))
+            replace[id(old)] = []
+            used.add(id(new))
+            break
+    out: list[StatChangeOut] = []
+    for row in rows:
+        out.extend(replace.get(id(row), [row]))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -496,13 +600,25 @@ def _card(icon: str) -> ChangeIconOut:
     return ChangeIconOut(kind="part", cat="card", id=icon)
 
 
-def _ratio(times: str | None, weapon: bool) -> str | None:
-    """「×0.3」→「3 成武器傷害」（武器技帶說明卡 ``weapon_damage:<‰>``）。"""
+_WEAPON_DAMAGE_ZH = "武器傷害"
+_ELEMENT_WEAPON_DAMAGE_ZH = "{element}武器傷害"
+"""帶元素的武器傷害（FL-1g，FL-1b 驗收必修 2）：元素名插在「武器傷害」前（「3 成雷電武器傷害」）。
+**字待玩法 PM 定**，定了只換這一行。物理不寫（武器傷害本來就是物理）。"""
+
+
+def _ratio(times: str | None, weapon: bool, element: Element | None = None) -> str | None:
+    """「×0.3」→「3 成武器傷害」（武器技帶說明卡 ``weapon_damage:<‰>``）；
+    帶元素時「3 成雷電武器傷害」。"""
     if times is None:
         return None
     permille = round(float(times.removeprefix("×")) * _PERMILLE)
     text = ratio_zh(permille)
-    return f"{text}[[weapon_damage:{permille}|武器傷害]]" if weapon else text
+    if not weapon:
+        return text
+    label = _WEAPON_DAMAGE_ZH
+    if element is not None and element is not Element.PHYSICAL:
+        label = _ELEMENT_WEAPON_DAMAGE_ZH.format(element=element.display_name)
+    return f"{text}[[weapon_damage:{permille}|{label}]]"
 
 
 def _plain(row: StatChangeOut, name: str, unit: str | None, term: str | None) -> dict[str, object]:
@@ -714,7 +830,8 @@ class _View:
         if spec.type != "damage":
             return stat.label or _name(stat)
         if stat.weapon:
-            text = _ratio(_times(stat.multiplier_permille or _PERMILLE), weapon=True) or ""
+            times = _times(stat.multiplier_permille or _PERMILLE)
+            text = _ratio(times, weapon=True, element=spec.element) or ""
         else:
             text = f"{stat.dice or ''} {stat.element_zh or ''}傷害".strip()
         if spec.condition is not None:
@@ -732,6 +849,8 @@ class _View:
             spec.condition,
             status_name=lambda s: self.statuses[s].name_zh if s in self.statuses else s,
             surface_name=lambda s: ruleset.surface_def(s).name_zh,
+            tag_name=ruleset.skill_tags.name,  # FL-1g：沒帶時退回「特定」（FL-1b 驗收可修 2）
+            tag_runes=ruleset.skill_tags.rune_names(),
             weapon_name=lambda w: weapons[w].name_zh if w in weapons else w,
         )
         return f"{text}才有" if text.endswith("時") else f"{text}時才有"

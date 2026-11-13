@@ -52,8 +52,8 @@ _VARIANT_WHERE = {
     "icy": "站在冰上",
     "high": "站在高處",
     "wall": "背靠牆壁",
-    "oil": "站在油上",
-    "puddle": "站在水窪裡",
+    "oil": "目標站在油上",
+    "puddle": "目標站在水窪裡",
 }
 """戰場變奏 ``{terrain}``：變奏條件（``skill_composer.yaml`` 的 ``variant.conditions`` ID）→
 完整的動作片語（FL-1f 第二輪，填答第十節第 3 點）。查不到時寫 :data:`_VARIANT_SOMEWHERE`。"""

@@ -156,8 +156,8 @@ def test_burning_magnitude_row_reads_plain() -> None:
         ("icy", "站在冰上"),
         ("high", "站在高處"),
         ("wall", "背靠牆壁"),
-        ("oil", "站在油上"),
-        ("puddle", "站在水窪裡"),
+        ("oil", "目標站在油上"),  # FL-1g：引擎看目標點的表面（玩法 PM 11-13）
+        ("puddle", "目標站在水窪裡"),
     ],
 )
 def test_battle_variant_say_names_the_terrain(condition: str, want: str) -> None:

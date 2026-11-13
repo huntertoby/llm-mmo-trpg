@@ -638,7 +638,7 @@ major:
   - {id: major_extend, category: deepen, evolution: extend, headline_zh: "這招的所有效果多持續 1 回合"}
   - {id: major_delayed_burst, category: deepen, evolution: delayed_burst, headline_zh: "貼上目標，下一輪在它周圍爆開", say_zh: "打中後在目標身上留下印記，下一輪在它周圍一圈爆開。"}
   - {id: major_kill_chain, category: deepen, evolution: kill_chain, headline_zh: "打倒敵人時拿回 1 AP", say_zh: "這招打倒敵人時，馬上拿回 1 AP，可以接著行動。"}
-  - {id: major_battle_variant, category: deepen, evolution: battle_variant, headline_zh: "站在特定地形時，這招換一種打法", say_zh: "{terrain}施放時，這招自動換成另一種打法。"}
+  - {id: major_battle_variant, category: deepen, evolution: battle_variant, headline_zh: "在特定地形施放時，這招換一種打法", say_zh: "{terrain}施放時，這招自動換成另一種打法。"}
   - {id: major_bridge_exploit, category: bridge, evolution: bridge_exploit, headline_zh: "敵人身上有{keyword}時，這招多傷一截"}
   - {id: major_bridge_imbue, category: bridge, evolution: bridge_imbue, headline_zh: "打中時還會造成{keyword}"}
 
