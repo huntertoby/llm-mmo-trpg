@@ -86,6 +86,9 @@ IMMOVABLE = "immovable"
 """不會被移動的單位標籤（石像，Phase 3-33e2a）：推擊、拉扯與強制位移、傳送對它無效。"""
 STEADFAST = "steadfast"
 """堅守單位的標籤：被推擊的距離打折（``core.steadfast_push_permille``）。"""
+SHIELD_GUARD = "shield_guard"
+"""盾兵的標籤（RG-1，#162，09 9.6.6）：替相鄰的遠程同伴擋遠程攻擊（命中
+−``shield_guard_hit_penalty``，:func:`trpg.engine.rules.combat.half_cover`）。"""
 TOPPLABLE = "topplable"
 """可被推倒的物件標籤。"""
 

@@ -474,6 +474,9 @@ class CoreRules(ContentModel):
 
     # 掩護（1C）
     half_cover_hit_penalty: int = Field(ge=0)
+    shield_guard_hit_penalty: int = Field(default=2, ge=0)
+    """盾兵掩護（RG-1，#162，09 9.6.6）：帶 ``shield_guard`` 的單位替相鄰的遠程同伴擋遠程攻擊時的
+    命中懲罰（0＝不擋）。和半掩護、塔盾不疊加。"""
 
     # 環境回合（1B）
     burning_object_rounds: int = Field(ge=1)

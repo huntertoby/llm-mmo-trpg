@@ -41,6 +41,8 @@ class AttackRolled(EventBase):
     cover_object_id: ObjectId | None = None
     skill_id: str | None = None
     """技能的命中判定時為技能 ID（Phase 2A）；普攻為 ``None``。"""
+    cover_unit_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
+    """盾兵掩護（RG-1，#162）：替目標擋遠程攻擊的盾兵（``cover`` 是它的命中修正）；沒有時不輸出。"""
     modifier_bonus: int = 0
     backstab: int = 0
     """背刺的命中加值（Phase 3D-8d；0 為不是背刺；暴擊範圍另外擴大

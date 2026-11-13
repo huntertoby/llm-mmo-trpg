@@ -35,6 +35,8 @@ def charged_skill(state: BattleState, unit: UnitState) -> tuple[StatusInstance, 
         breath = breath_of(state.ruleset, unit)
         return None if breath is None else (status, breath)
     skill = state.ruleset.skill_def(status.skill_id)
+    if status.lock_target is not None:  # 瞄準預告（RG-1）：射出的就是技能本身
+        return status, skill
     if skill.followup is None or skill.followup.release is None:
         return None
     return status, skill

@@ -12,6 +12,7 @@ ai_profile: archer
 resist: {}
 element_mods: {}
 tags: [humanoid, sect]
-skills: [skill_high_ground_shot, skill_rng_hawkeye_mark]
+# RG-1（#162）：強力一擊改成瞄準預告——高處狙擊換成鶴唳穿雲（主角弓手的高處狙擊不動）
+skills: [skill_crane_piercing_shot, skill_rng_hawkeye_mark]
 # 外觀（5A-ART4，docs/art/敵人外觀.md；美術代決待使用者確認，改名改配色只動這裡）
 doll: {skin: '#d9a47a', hair: bun, hair_color: '#1c1c22', gear: {body: {kind: robe, material: cloth, color: '#dfe4e2', trim: '#3c4248'}, cloak: {kind: cape, material: cloth, form: feather, color: '#f2f0ea'}}}

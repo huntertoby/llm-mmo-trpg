@@ -1,0 +1,31 @@
+# 雲鶴使「鶴唳穿雲」（RG-1，#162，18.2.1「雲鶴使、符籙師的強力一擊改成瞄準預告」，05 5.7）：瞄準預告的強力一擊。
+# 施放＝瞄準（付代價），下一個自己的回合開始才射出；目標躲到掩護後、進入隱蔽、隊友擋在中間、近戰打中雲鶴使都能讓它落空。
+# 數值照高處狙擊（主角弓手也用高處狙擊，所以另做一招，不改它）；數值照工坊。只給敵人用。
+id: skill_crane_piercing_shot
+schema_version: 1
+name_zh: 鶴唳穿雲
+enemy_only: true
+lock_on: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: ranged
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1000}
+  # 站得比目標高時，居高臨下多補一箭（同高處狙擊）
+  - type: damage
+    multiplier_permille: 800
+    condition: {type: height_advantage}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, ranged, height]
+narrative:
+  concept: 鶴唳一聲，箭已搭弦；先盯死獵物，下一刻才放
+  cast_flavor: 雲鶴使拉滿長弓，箭尖穩穩停在你身上
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

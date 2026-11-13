@@ -183,6 +183,7 @@ class Ctx:
         "decisions",
         "downed",
         "events",
+        "fire_lock",
         "fired",
         "gamble",
         "passives",
@@ -206,9 +207,12 @@ class Ctx:
         preview: PreviewMode | None = None,
         gamble: GambleBranch | None = None,
         check_override: CheckOverride | None = None,
+        fire_lock: bool = False,
     ) -> None:
         if check_override is not None and preview is None:
             raise ValueError("check_override 只能用在預覽模擬")
+        if fire_lock and preview is None:
+            raise ValueError("fire_lock 只能用在預覽模擬")
         self.state = state
         self.rng: Rng = Rng.from_state(state.rng_state) if preview is None else FixedRng(preview)
         self.events: list[EventBase] = []
@@ -242,6 +246,9 @@ class Ctx:
         self.check_log: list[CheckPoint] = []
         """預覽模擬擲過的檢定（依序；正式結算不記）。分支推演用它找分歧點
         （:mod:`trpg.engine.branching`）。"""
+        self.fire_lock = fire_lock
+        """AI 估值用的預覽（RG-1）：瞄準預告的技能假設「現在就射出」（照一般施放結算），
+        :attr:`trpg.engine.preview.Preview.lock_fire`。正式結算固定為 ``False``。"""
         self.zone_entries: list[tuple[int, UnitId]] = []
         """單位進入持續區域：``(區域, 單位)``，效果佇列清空時（陷阱之後）依記錄順序結算
         （Phase 3D-5，:mod:`trpg.engine.zones`）。"""

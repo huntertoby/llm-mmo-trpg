@@ -1221,10 +1221,13 @@ def resolve_with(
     *,
     preview: PreviewMode | None = None,
     gamble: GambleBranch | None = None,
+    fire_lock: bool = False,
 ) -> ResolveResult:
     """內部 API：以 ``decisions`` 結算 ``action``（``preview`` 不為 ``None`` 時為預覽模擬；
-    ``gamble`` 指定預覽時賭注的分支，Phase 3D-7a）。"""
-    ctx = Ctx(base.clone(), decisions=decisions, preview=preview, gamble=gamble)
+    ``gamble`` 指定預覽時賭注的分支，Phase 3D-7a；``fire_lock`` 見 :attr:`Ctx.fire_lock`）。"""
+    ctx = Ctx(
+        base.clone(), decisions=decisions, preview=preview, gamble=gamble, fire_lock=fire_lock
+    )
     actor = ctx.state.units[action.unit_id]
     try:
         ACTION_HANDLERS[action.type](ctx, actor, action)
@@ -1255,19 +1258,23 @@ def resolve_with(
 
 
 def simulate_preview(
-    base: BattleState, action: Action, gamble: GambleBranch | None = None
+    base: BattleState,
+    action: Action,
+    gamble: GambleBranch | None = None,
+    *,
+    fire_lock: bool = False,
 ) -> tuple[ResolveResult, ResolveResult]:
     """內部 API：預覽用的「最少後果」與「最多後果」兩次模擬。
 
     ``min`` 模擬沒有經過任何分歧點（擲骰、檢定、反應決定、強制命中結果）時，``max`` 的結果必定
     相同，直接重用而不再模擬一次（例如沒有藉機攻擊、沒有踩上冰面的移動）。
     """
-    low_ctx = Ctx(base.clone(), preview="min", gamble=gamble)
+    low_ctx = Ctx(base.clone(), preview="min", gamble=gamble, fire_lock=fire_lock)
     ACTION_HANDLERS[action.type](low_ctx, low_ctx.state.units[action.unit_id], action)
     low = finish_resolution(low_ctx)
     if not low_ctx.preview_branched():
         return low, low
-    return low, resolve_with(base, action, preview="max", gamble=gamble)
+    return low, resolve_with(base, action, preview="max", gamble=gamble, fire_lock=fire_lock)
 
 
 def simulate_branch(
