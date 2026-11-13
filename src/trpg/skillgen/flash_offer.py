@@ -728,8 +728,9 @@ def reflash_weaker(library: ContentLibrary, request: FlashRequest) -> bool:
     照原規則（不低於被換掉的那一筆）**沒有任何候選** 達得到時是 ``True``（範圍同
     :func:`has_options`：不指定類別、依用法統計的來源），這時改出不低於重閃前一筆、但不套被換掉
     那一筆下限的較弱候選。只要有一個候選達得到就是 ``False``（照原規則只出達得到的）；新的閃現
-    （``slot`` 為空）與完整技能第一次調整（還沒有被換掉的那一筆）一律 ``False``。改成較弱之後有沒有
-    選項另看 :func:`has_options`。結果同 :func:`has_options` 快取在內容庫上。"""
+    （``slot`` 為空）、完整技能第一次調整（還沒有被換掉的那一筆）、已存歷程重推不了（3W-R1）一律
+    ``False``。改成較弱之後有沒有選項另看 :func:`has_options`。結果同 :func:`has_options` 快取在
+    內容庫上。"""
     return _weaker(library, request, None)
 
 
@@ -742,7 +743,12 @@ def _weaker(library: ContentLibrary, request: FlashRequest, strict: _Builder | N
     if found is not None:
         return found
     builder = _strict_builder(library, request) if strict is None else strict
-    found = builder.floor_permille > 0 and not _has_options(library, request, builder)
+    # 歷程重推不了（3W-R1）時照舊：下限照存檔裡的定義，不改出較弱的
+    found = (
+        builder.broken is None
+        and builder.floor_permille > 0
+        and not _has_options(library, request, builder)
+    )
     if len(cache) >= _OPTIONS_CACHE_LIMIT:
         cache.clear()
     cache[key] = found
