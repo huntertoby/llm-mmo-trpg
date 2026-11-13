@@ -4,7 +4,7 @@
 // 姿勢：沒給 `wpn` ＝ 站好（用關鍵姿勢）；給了 `wpn` ＝ 6M／6N 片段（武器角度＝手臂角度＋wpn）。片段本身不改。
 import type { Ctx } from "./artDraw";
 import {
-  ARM, ARM_SPREAD_SET, clamp01, colors, elbowTo, FA, fill, fk, getM, ik, isShield, mark, mix, OUTA, pz, Q_OUT, rec, rot, rotAt, rr, S, SEAMF, SHX, TAU, UA,
+  ARM, ARM_SPREAD_SET, clamp01, colors, elbowTo, FA, fill, fk, getM, ik, isShield, isTowerLike, mark, mix, OUTA, pz, Q_OUT, rec, rot, rotAt, rr, S, SEAMF, SHX, TAU, UA,
   type P2, type QHooks, type QItem, type QPose, type QUnit, type QView,
 } from "./qCore";
 import { body, backItem, cloakBack, cloakClasp, cloakFront, cloakSide, crest, leg, neckItem, shieldBack, shieldFront, shieldSide, waistItem } from "./qGear";
@@ -1084,7 +1084,7 @@ function drawBackPre(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
   if (isShield(gear.off_hand)) {
     const sh = fk(-SHX(), OUTA(), 0);
     const oh = gear.off_hand!;
-    shieldBack(ctx, oh, sh[0] + 1, sh[1] + (oh.kind === "shield_round" ? 11.8 : oh.form === "tower" ? 11.5 : 11));
+    shieldBack(ctx, oh, sh[0] + 1, sh[1] + (oh.kind === "shield_round" ? 11.8 : isTowerLike(oh) ? 11.5 : 11));
     mark("shield");
   }
 }
@@ -1232,8 +1232,8 @@ function drawFrontOff(ctx: Ctx, unit: QUnit, key: KeyRef | null): void {
   const bh = fk(sx, -freeF, 0);
   ctx.translate(0, bh[1] + 9.6 + (ARM().shf && isShield(off) ? 3.9 : 0));
   if (off && isShield(off)) {
-    if (ARM().shf) ctx.translate(0, off.kind !== "shield_kite" ? 0 : off.form === "tower" ? 1.5 : -0.5);
-    else if (off.kind === "shield_kite" && off.form !== "tower") ctx.translate(0, 3.5);
+    if (ARM().shf) ctx.translate(0, off.kind !== "shield_kite" ? 0 : isTowerLike(off) ? 1.5 : -0.5);
+    else if (off.kind === "shield_kite" && !isTowerLike(off)) ctx.translate(0, 3.5);
     shieldFront(ctx, off, bh[0] + (ARM().shf ? 0 : 2.7));
   } else if (off && !OHF) pdHeld(ctx, off, bh[0] + (ARM().bk ?? 2), true);
   ctx.restore();
@@ -1308,10 +1308,10 @@ function fbApiOf(ctx: Ctx, unit: QUnit, view: FbView): FbApi {
       else if (view === "front") {
         ctx.translate(0, hand[1] + 9.6 + (ARM().shf && isShield(off) ? 3.9 : 0));
         if (isShield(off)) {
-          if (ARM().shf) ctx.translate(0, off.kind !== "shield_kite" ? 0 : off.form === "tower" ? 1.5 : -0.5);
+          if (ARM().shf) ctx.translate(0, off.kind !== "shield_kite" ? 0 : isTowerLike(off) ? 1.5 : -0.5);
           shieldFront(ctx, off, hand[0]);
         } else pdHeld(ctx, off, hand[0] + (ARM().bk ?? 2), true);
-      } else if (isShield(off)) shieldBack(ctx, off, hand[0] + 1, hand[1] + (off.kind === "shield_round" ? 11.8 : off.form === "tower" ? 11.5 : 11));
+      } else if (isShield(off)) shieldBack(ctx, off, hand[0] + 1, hand[1] + (off.kind === "shield_round" ? 11.8 : isTowerLike(off) ? 11.5 : 11));
       else if (off.kind !== "tome") {
         // QK-5b：副手拿武器（成對劍、斧…）背面照正面的拿法畫（原本一律畫成書）
         ctx.translate(0, hand[1] + 9.6);

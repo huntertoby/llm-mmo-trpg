@@ -181,7 +181,8 @@ def _look_base(library: ContentLibrary, rng: Rng, slot_type: SlotType) -> _Base:
     if not kinds:
         return _Base(slot_type=slot_type, name_zh=_SLOT_NAME[slot_type])
     kind = rng.choice(kinds)
-    form = rng.choice(kind.forms)
+    # RG-4：略過 enemy_only 的形制（改前沒有這種形制，抽法不變）
+    form = rng.choice(kind.player_forms())
     return _Base(
         slot_type=slot_type,
         name_zh=kind.name_zh,

@@ -1218,7 +1218,10 @@ class DollGear(ContentModel):
     """範本身上的一件外觀裝備（Phase 3E-2e）：造型、材質與染色。
 
     Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
-    ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。"""
+    ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。
+
+    RG-4：``emblem`` 盾心紋樣（持盾弟子的雲紋碑盾 ``peak`` 三峰山；前端不認得就不畫）；
+    沒寫時不輸出。"""
 
     kind: str = Field(pattern=ID_PATTERN)
     material: str = Field(pattern=ID_PATTERN)
@@ -1226,6 +1229,7 @@ class DollGear(ContentModel):
     form: str | None = Field(default=None, pattern=ID_PATTERN)
     trim: str | None = Field(default=None, pattern=_HEX)
     apron: str | None = Field(default=None, pattern=_HEX)
+    emblem: Literal["peak"] | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class CreatureLook(ContentModel):

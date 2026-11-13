@@ -4011,6 +4011,9 @@ export interface components {
          *
          *     Phase 5A-ART3：``form`` 形制（例如披風的 ``feather`` 白羽披肩）、``trim`` 鑲邊色（袍子）、
          *     ``apron`` 圍裙色（袍子前面一片）。前端不認得的 kind／form 不畫。
+         *
+         *     RG-4：``emblem`` 盾心紋樣（持盾弟子的雲紋碑盾 ``peak`` 三峰山；前端不認得就不畫）；
+         *     沒寫時不輸出。
          */
         DollGear: {
             /** Kind */
@@ -4025,6 +4028,8 @@ export interface components {
             trim?: string | null;
             /** Apron */
             apron?: string | null;
+            /** Emblem */
+            emblem?: "peak" | null;
         };
         /**
          * DollLook

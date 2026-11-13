@@ -1025,7 +1025,10 @@
    "off_hand": {
     "kind": "shield_kite",
     "material": "wood",
-    "color": "#5f8f8a"
+    "color": "#5f8f8a",
+    "form": "sect_great",
+    "trim": "#dfe4e2",
+    "emblem": "peak"
    }
   },
   "main_material": "iron",
