@@ -15,7 +15,10 @@ import {
   FLASH_PICK_TITLE_ZH,
   anyUnequipMenu,
   headlineOf,
+  llmNamed,
+  noteOf,
   paidTag,
+  renamedTo,
   pendingWhat,
   showsUnequipMenu,
   stepPick,
@@ -91,9 +94,12 @@ function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; n
   );
 }
 
-/** 一張選項卡：單選圈＋白話大標＋類別標籤，下面「前 → 後」各列。點整張卡選中（再點不取消）。 */
-function OptionCard({ o, selected, focusable, terms, onPick, onKey }: { o: FlashOption; selected: boolean; focusable: boolean; terms: Terms; onPick(): void; onKey(e: KeyboardEvent<HTMLDivElement>): void }) {
+/** 一張選項卡：單選圈＋白話大標＋類別標籤，下面「前 → 後」各列（LF-3：改名排第一列＋名稱來源標記，本機模型的一句話描述接在
+ * 名稱下面）。點整張卡選中（再點不取消）。 */
+function OptionCard({ o, current, selected, focusable, terms, onPick, onKey }: { o: FlashOption; current: string; selected: boolean; focusable: boolean; terms: Terms; onPick(): void; onKey(e: KeyboardEvent<HTMLDivElement>): void }) {
   const tag = optionTag(o);
+  const after = renamedTo(o, current);
+  const rename = after === null ? null : { before: current, after, llm: llmNamed(o) };
   return (
     <div
       role="radio"
@@ -116,7 +122,7 @@ function OptionCard({ o, selected, focusable, terms, onPick, onKey }: { o: Flash
           </Tag>
         </span>
       </div>
-      <DiffRows changes={o.changes ?? []} terms={terms} />
+      <DiffRows changes={o.changes ?? []} terms={terms} rename={rename} note={noteOf(o)} />
     </div>
   );
 }
@@ -237,7 +243,7 @@ export function FlashPendingPanel({ pending, hero, busy, onChoose, lockNote }: P
   const body = (
     <div ref={list} className="fc-opts" role="radiogroup" aria-label="閃現的變化" data-testid="flash-options">
       {options.map((o, i) => (
-        <OptionCard key={o.index} o={o} selected={pick === o.index} focusable={pick === null ? i === 0 : pick === o.index} terms={terms} onPick={() => choose(o.index)} onKey={onKey} />
+        <OptionCard key={o.index} o={o} current={name} selected={pick === o.index} focusable={pick === null ? i === 0 : pick === o.index} terms={terms} onPick={() => choose(o.index)} onKey={onKey} />
       ))}
     </div>
   );

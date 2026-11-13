@@ -450,6 +450,12 @@ class FlashOptionOut(_ApiModel):
     """選中時下固定區的一句話（FL-1b 9.3）：模板有寫的照模板，沒有的照差異清單組。可帶術語標記。"""
     tag_term: str | None = None
     """類別標籤的說明卡（FL-1b 9.2：蓄力「威力提高」、輕巧「威力降低」只在說明卡）。"""
+    note_zh: str | None = None
+    """LLM 寫的一句話描述（LF-3；``Variation.note_zh``，引擎 ``clean_note`` 過了才有）；沒有＝畫面
+    照舊只畫大標與「前 → 後」，不佔位。純文字，不帶術語標記。"""
+    name_source: Literal["llm", "template"] = "template"
+    """這個選項的技能名稱（``card.name_zh``）從哪來（LF-3）：``llm``＝這次閃現的大變化或轉型帶了
+    LLM 名稱而且用上了；``template``＝其他（組合式「{前綴}・{原名}」，或小變化沿用原名）。"""
 
 
 class FlashTermOut(_ApiModel):

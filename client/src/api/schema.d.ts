@@ -5171,6 +5171,14 @@ export interface components {
             say_zh: string;
             /** Tag Term */
             tag_term?: string | null;
+            /** Note Zh */
+            note_zh?: string | null;
+            /**
+             * Name Source
+             * @default template
+             * @enum {string}
+             */
+            name_source: "llm" | "template";
         };
         /**
          * FlashPickAction

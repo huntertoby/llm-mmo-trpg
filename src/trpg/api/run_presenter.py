@@ -11,6 +11,7 @@ from trpg.api.flash_text import (
     base_terms,
     flash_terms,
     option_headline,
+    option_llm_text,
     option_say,
     option_tag_term,
     term_ids,
@@ -253,6 +254,7 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
         headline = option_headline(library, variation, option.skill, changes)
         say = option_say(library, variation, option.skill, changes)
         tag = option_tag_term(library, variation)
+        note, name_source = option_llm_text(variation, option.skill)
         terms += [*term_ids(headline), *term_ids(say), *([] if tag is None else [tag])]
         for row in changes:
             terms += [*term_ids(row.before_zh), *term_ids(row.after_zh)]
@@ -273,6 +275,8 @@ def _pending(library: ContentLibrary, run: RunState) -> PendingFlashOut | None:
                 headline_zh=headline,
                 say_zh=say,
                 tag_term=tag,
+                note_zh=note,
+                name_source=name_source,
             )
         )
     return PendingFlashOut(

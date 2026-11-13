@@ -10,7 +10,20 @@ import { Hint } from "../ui/Hint";
 import { IconCanvas } from "../ui/HudGlyph";
 import { PartBare, WarnGlyph } from "../ui/PanelKit";
 import { AssemblyFormula, SkillIconView } from "../ui/SkillIconView";
-import { FLASH_BASE_NARROW_ZH, FLASH_BASE_WIDE_ZH, FLASH_MORE_NARROW_ZH, FLASH_MORE_WIDE_ZH, FLASH_NONE_ZH, nowStyle, nowText, parseTerms, splitWhen } from "./flashChoice";
+import {
+  FLASH_BASE_NARROW_ZH,
+  FLASH_BASE_WIDE_ZH,
+  FLASH_LLM_NAME_HINT,
+  FLASH_LLM_NAME_ZH,
+  FLASH_MORE_NARROW_ZH,
+  FLASH_MORE_WIDE_ZH,
+  FLASH_NAME_ZH,
+  FLASH_NONE_ZH,
+  nowStyle,
+  nowText,
+  parseTerms,
+  splitWhen,
+} from "./flashChoice";
 
 export type Terms = Readonly<Record<string, FlashTerm>>;
 
@@ -94,11 +107,47 @@ function NowChip({ change, terms }: { change: StatChange; terms: Terms }) {
   );
 }
 
-/** 一個選項的「前 → 後」各列（只列有變的欄位，一列一項）。 */
-export function DiffRows({ changes, terms }: { changes: readonly StatChange[]; terms: Terms }) {
-  if (changes.length === 0) return null;
+/** 改名（LF-3）：大變化、轉型的新名稱。照「前 → 後」同一格線，排在最前面；「後」是新名稱（粗字、無底無框，名稱沒有好壞），
+ * 本機模型取的名稱後面多一顆紫色小標記（候選卡同一個字，滑過出說明卡）。 */
+export type Rename = { before: string; after: string; llm: boolean };
+
+function RenameRow({ rename }: { rename: Rename }) {
+  return (
+    <>
+      <span className="fc-noicon" aria-hidden="true" />
+      <span className="fc-lab">{FLASH_NAME_ZH}</span>
+      <span className="fc-was">{rename.before}</span>
+      <span className="fc-arrow" aria-label="變成">
+        →
+      </span>
+      <span className="fc-nows">
+        <span className="fc-now name" data-style="name" data-testid="flash-new-name">
+          <span>{rename.after}</span>
+        </span>
+        {rename.llm && (
+          <Hint text={FLASH_LLM_NAME_HINT}>
+            <span className="fc-src" tabIndex={0} data-testid="flash-name-source">
+              {FLASH_LLM_NAME_ZH}
+            </span>
+          </Hint>
+        )}
+      </span>
+    </>
+  );
+}
+
+/** 一個選項的「前 → 後」各列（只列有變的欄位，一列一項）。LF-3：改名排第一列，本機模型的一句話描述接在名稱下面（整列寬、
+ * 次要字、最多兩行；沒有就不佔位）。 */
+export function DiffRows({ changes, terms, rename = null, note = null }: { changes: readonly StatChange[]; terms: Terms; rename?: Rename | null; note?: string | null }) {
+  if (changes.length === 0 && rename === null && note === null) return null;
   return (
     <div className="fc-diffs" data-testid="flash-diffs">
+      {rename !== null && <RenameRow rename={rename} />}
+      {note !== null && (
+        <p className="fc-note" data-testid="flash-note">
+          {note}
+        </p>
+      )}
       {changes.map((c, i) => (
         <Fragment key={`${c.field}:${i}`}>
           <ChangeIconView icon={c.icon} />

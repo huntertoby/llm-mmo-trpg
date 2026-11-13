@@ -1,7 +1,8 @@
 // 靈感閃現「選變體」畫面（FL-1b）的開發頁：`client/dev/flash-choice.html`。
 // 資料是伺服器同一套函式算的夾具（`scripts/export_flash_choice_fixture.py` → `dev/fixtures/flashChoice.json`），不是手寫：
 // - `?set=base`（預設；點燃斬第 1 次，使用者截圖那四個）、`rows`（雙槍連射，列數多＋一升一降）、`transform`（第 3 次，轉成反應、
-//   被動欄滿了＝卸下選單；卸下的三招是示意）、`stance`（轉成姿態，姿態欄自動換下、不出選單）；
+//   被動欄滿了＝卸下選單；卸下的三招是示意）、`stance`（轉成姿態，姿態欄自動換下、不出選單）、`llm`（LF-3：第 3 次大變化，
+//   本機模型取的名稱＋一句話描述；第 3 個只有描述、名稱是組合式）；
 // - `?mode=world`（預設：大世界 HUD 面板，外框照正式 `popupBox`、`PopupFrame slots`，帶鎖住提示）、`?mode=run`（一輪：頁面捲、
 //   下固定區 sticky；上面墊一段營火的字，讓頁面要捲）；
 // - `&pick=0～3`：開好後點第幾張（照畫面順序）；`&scroll=end`：捲到選項區底。
