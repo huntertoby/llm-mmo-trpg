@@ -93,8 +93,11 @@ def test_table_values_match_the_art_spec() -> None:
 def test_table_keywords_are_the_24b1_keywords() -> None:
     lib = library()
     assert lib.appearance is not None
-    # KW-1：start_hidden 的四個層數關鍵字的裝備外觀（關鍵字色與圓章）在 KW-3 隨美術補
-    assert set(lib.appearance.keywords) == set(lib.keywords.start_ids())
+    # KW-2：四個層數關鍵字的裝備外觀（關鍵字色與圓章，前端 artPalette）是美術，KW-3 隨美術補；
+    # KW-3 補上時下一行會失敗，提醒拿掉 ART_PENDING、恢復成「外觀關鍵字 ＝ 全部關鍵字」。
+    art_pending = {"combo_point", "fury", "focus", "ki"}
+    assert set(lib.keywords.ids()) - set(lib.appearance.keywords) == art_pending
+    assert set(lib.appearance.keywords) == set(lib.keywords.ids()) - art_pending
 
 
 def test_table_rejects_bad_data() -> None:

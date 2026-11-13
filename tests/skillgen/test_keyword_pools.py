@@ -128,7 +128,7 @@ def test_every_keyword_pool_has_at_least_three_active_exploiters() -> None:
     lib = library()
     short = {
         k: len(_exclusive_users(k, starter=False))
-        for k in lib.keywords.start_ids()  # KW-1：start_hidden 的四個層數關鍵字在 KW-2 補齊
+        for k in lib.keywords.ids()  # KW-2：16 個關鍵字都檢查（KW-1 只檢查開局可選的 12 個）
         if len(_exclusive_users(k, starter=False)) < 3
     }
     assert short == {}

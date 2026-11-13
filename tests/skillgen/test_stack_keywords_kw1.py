@@ -1,10 +1,12 @@
 """KW-1（#161，06 6.27.1、6.32.1）：連擊、怒氣、專注、氣掛成關鍵字；條件「自身層數達 N」的驗證
 與文字。
 
-- 關鍵字表 12 → 16；四個新關鍵字的 ID ＝層數 ID，開局與許願池先隱藏（KW-2 補池子），組合器先不做。
+- 關鍵字表 12 → 16；四個新關鍵字的 ID ＝層數 ID。KW-1 時開局與許願池先隱藏、組合器先不做；
+  KW-2 補齊池子後全部打開（這裡的斷言已改成 KW-2 的狀態）。
 - 推導：技能本身 ``add_stack``＝製造；``consume_stack`` 或條件「層數達 N」＝利用；自動累積、
   專注的下一招自動消耗都是背景規則，不算。
-- 條件只能看自己身上的層數、``count`` 不超過上限；第一版只給手寫技能，不進 LLM schema。
+- 條件只能看自己身上的層數、``count`` 不超過上限；KW-1 只給手寫技能，KW-2 起開放給 LLM、
+  工坊、白板、閃現。
 """
 
 from __future__ import annotations
@@ -21,7 +23,7 @@ from trpg.content.skills import ConditionSpec, SkillDef
 from trpg.narrative.skills import condition_summary
 from trpg.skillgen.candidates import new_direction_keywords
 from trpg.skillgen.keywords import derive_keywords, keyword_pools
-from trpg.skillgen.option_params import HANDWRITTEN_ONLY_CONDITION, condition_choice
+from trpg.skillgen.option_params import condition_choice
 from trpg.skillgen.validate import validate_skill
 from trpg.world.wish import wish_menu
 
@@ -51,18 +53,19 @@ def test_the_keyword_list_grows_from_12_to_16() -> None:
     assert names == {"combo_point": "連擊", "fury": "怒氣", "focus": "專注", "ki": "氣"}
 
 
-def test_the_new_keywords_wait_for_their_pools_before_opening_and_composer() -> None:
-    """KW-2 補齊池子前：開局選單、許願池選單、三選一的「新方向」都不出現，組合器不做；持有的時候
-    加深、橋接照常（``held`` 裡有它們不會出錯）。"""
+def test_the_new_keywords_are_open_after_their_pools_are_filled() -> None:
+    """KW-2 補齊池子後：開局選單、許願池選單、三選一的「新方向」都出現，組合器也做得出來。"""
     table = lib().keywords
-    assert not set(NEW) & set(table.start_ids())
-    assert not set(NEW) & set(wish_menu(lib()))
-    assert new_direction_keywords(lib(), ()) == list(table.start_ids())
+    assert set(NEW) <= set(table.start_ids())
+    assert table.start_ids() == table.ids()
+    assert set(NEW) <= set(wish_menu(lib()))
+    assert new_direction_keywords(lib(), ()) == list(table.ids())
     assert new_direction_keywords(lib(), ("ignite", "combo_point")) == [
-        k for k in table.start_ids() if k != "ignite"
+        k for k in table.ids() if k not in ("ignite", "combo_point")
     ]
-    assert all(not table.by_id()[k].composable for k in NEW)
+    assert all(table.by_id()[k].composable for k in NEW)
     assert all(lib().ruleset.stack_def(k).owner == "self" for k in NEW)
+    assert all(lib().ruleset.stack_def(k).composer for k in NEW)
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +155,8 @@ def test_a_good_stack_condition_passes_on_a_builtin_skill() -> None:
     assert not any("stack" in v.message for v in validate_skill(made, lib()))
 
 
-def test_the_stack_condition_is_for_handwritten_skills_only() -> None:
+def test_the_stack_condition_is_open_to_generated_skills() -> None:
+    """KW-2（玩法 PM 4.1.1 B3「開放」）：工坊來源不再擋、進 LLM schema、工坊選項可選。"""
     base = with_condition(
         skill("skill_combo_finisher"), {"type": COND, "stack": "combo_point", "count": 3}
     )
@@ -160,13 +164,11 @@ def test_the_stack_condition_is_for_handwritten_skills_only() -> None:
         update={"provenance": base.provenance.model_copy(update={"origin": "workshop"})}
     )
     found = [v for v in validate_skill(made, lib()) if v.rule == "condition.handwritten_only"]
-    assert [v.message for v in found] == ["條件「自身層數達到」目前只給內建技能用"]
+    assert found == []
     schema = str(_models().json_schema())
-    assert COND not in schema
+    assert COND in schema
     cond = lib().ruleset.conditions.by_id()[COND]
-    assert condition_choice(cond, lib(), effect_level=True).info["unavailable_zh"] == (
-        HANDWRITTEN_ONLY_CONDITION
-    )
+    assert "unavailable_zh" not in condition_choice(cond, lib(), effect_level=True).info
 
 
 def test_the_condition_reads_in_chinese() -> None:

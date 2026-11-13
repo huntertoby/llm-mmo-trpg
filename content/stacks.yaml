@@ -48,14 +48,14 @@ stacks:
   # --- Phase 3-52 層數擴充（玩法決定 #57，docs/design/06-技能.md 6.32；數值為初值，未經模擬）---
   # gain：自動累積規則（只有身上帶有消耗這種層數的技能的單位才會累積）；技能的 add_stack 另外再加。
   # consumer：consume_stack 的加成作用在哪些效果（boosts），以及哪些技能可以消耗（requires_any，至少滿足一項）。
-  # composer: false ＝ 隨機組合器不抽（玩家與 LLM 搭配使用）。
+  # composer: false ＝ 隨機組合器不抽（玩家與 LLM 搭配使用）。KW-2（#161，06 6.32.1）：連擊點、專注、氣拿掉 composer: false，
+  # 組合器會抽（白板才長得出來）；怒氣本來就會抽。
   - id: combo_point
     name_zh: 連擊點
     description_zh: 累積在自己身上；武器技命中時自動累積，消耗連擊點的終結技每層提高傷害。
     owner: self
     max: 5
     ai_value: 3
-    composer: false
     gain:
       - {when: weapon_skill_hit}
     consumer:
@@ -68,7 +68,6 @@ stacks:
     owner: self
     max: 3
     ai_value: 2
-    composer: false
     gain:
       - {when: turn_end_still}
     consumer: {boosts: [damage]}
@@ -121,7 +120,6 @@ stacks:
     owner: self
     max: 3
     ai_value: 2
-    composer: false
     gain:
       - {when: basic_attack_hit}
     consumer: {boosts: [damage, heal], heal_self_only: true}

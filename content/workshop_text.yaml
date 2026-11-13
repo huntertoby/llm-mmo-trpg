@@ -498,7 +498,7 @@ texts:
   player: 你目前的 HP 低於最大 HP 的某個比例時才成立。
 - id: 條件.self_stack_at_least.stack
   source: 層數 ID（stacks.yaml，只能是累積在自己身上的）
-  player: 要看哪一種層數；只能選累積在你自己身上的（例如連擊點、怒氣、專注、氣），疊在敵人身上的不行。
+  player: 要看哪一種層數：只能選累積在你自己身上的（例如連擊點、怒氣、專注、氣），疊在敵人身上的不行。
 - id: 條件.target_hp_below
   source: 目標的目前 HP ÷ 最大 HP 低於 permille ‰。
   player: 目標目前的 HP 低於最大 HP 的某個比例時才成立。

@@ -176,14 +176,14 @@ conditions:
   # KW-1（玩法決定 #161，06 6.32.1：利用層數＝消耗，或條件「層數達 N 時」）施放者自己的某種層數達 N 層。
   # 技能層級：層數不足不能施放（不消耗）；效果層級：以這次施放開始時的層數判斷（同一招消耗或累積的不算，
   # 所以終結技「花光每層加傷；滿 5 層讓目標流血」照寫就成立）。只能看 owner: self 的層數，count 不超過上限。
-  # 第一版只給手寫技能（handwritten_only）；harshness 為占位（common），之後由使用者在工坊看。
+  # KW-1 第一版只給手寫技能；KW-2 照玩法 PM（4.1.1 B3「開放」）拿掉 handwritten_only：LLM 提議、工坊、白板、閃現都能用
+  # （隨機組合器的條件清單 skill_composer.yaml 沒有加，既有種子不變）。harshness 為占位（common），之後由使用者在工坊看。
   - id: self_stack_at_least
     name_zh: 自身層數達到
     llm_hint: "施放者自己的指定層數達到指定層數時才成立。"
     description_zh: 施放者身上的指定層數（連擊點、怒氣、專注、氣這類累積在自己身上的）達到指定層數。施放中以施放開始時的層數判斷，同一招消耗或累積的層數不影響。只看施放者。
     harshness: common
     min_rarity: rare
-    handwritten_only: true
     params:
       stack: {llm_hint: "要看的層數種類。", type: stack, required: true, description_zh: 層數 ID（stacks.yaml，只能是累積在自己身上的）}
       count: {llm_hint: "至少幾層。", type: int, required: true, min: 1, max: 9, description_zh: 至少幾層}
