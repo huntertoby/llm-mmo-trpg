@@ -221,3 +221,13 @@ FL-1c 已做，本段驗收：成長「靈感閃現」分頁與一輪營火那�
 | `summon_bridge` | 關鍵字（橋接） | 帶電（charged）、撞擊（collision）、隱蔽（concealed）、形態（form）、冰凍（frozen）、高處（high_ground）、點燃（ignite）、標記（marked）、中毒（poisoned）、倒地（prone）、潮濕（wet） | — |
 
 「會出現的值」是上限（嫁接表 `skill_evolution.yaml` grafts 的 11 個）：實際還受模板的 `keywords` 限制與出題條件影響（例：`support_imbue` 只出「製造場地」的關鍵字、`summon_bridge` 只出灌注表有的）。`element_second`、`followup_element` 依元素不同，`headlines` 的 `keyword` 欄填元素 ID 即可（例：`ice`）。
+
+## 開發 PM 裁定
+
+- 接受，已合併。第 12 節 7 項照派工決定做（第 6 項的示意圖不做）。玩法 PM 2026-11-13 確認的三句字已併入。
+- 待 PM 決定 1～11 全部照 agent 的做法維持，其中：
+  - 第 2 點「‰ 強度暫寫百分比」、第 11 點「其他模板的 say_zh」：併入附錄 A，和 headline_zh 一起交玩法 PM 一次填完。
+  - 第 6 點：完整說明卡沿用技能卡的字，不另改白話。美術驗收若要改，另開小修。
+- **檢查放寬（push 前已回報專案 PM）**：floatCardRule 測試新增 portal 例外，只放 `ui/PopupSlot.tsx`；PopupFrame 本身照舊不用 portal。
+- changes 去掉「只換位置」的成對兩列：視為正確性修正，接受。
+- 截圖 10 張存在 `docs/art/shots/FL-1b/`，待美術 PM 照第 11 節驗收。實機未看的有 #3／#4 的一部分、#6、#11（開發頁）；主動欄卸下選單實機到不了。
