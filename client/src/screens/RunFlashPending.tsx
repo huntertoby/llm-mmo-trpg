@@ -9,7 +9,6 @@ import type { FlashOption, PendingFlash, RunChoice, RunHero, RunResponse } from 
 import { ownedCards } from "../run/loadout";
 import { optionTag, pickChoice, pickReady, sortedOptions } from "../run/flash";
 import {
-  FLASH_MUST_PICK_ZH,
   FLASH_PICK_NONE_ZH,
   FLASH_PICK_SUBTITLE_ZH,
   FLASH_PICK_TITLE_ZH,
@@ -25,6 +24,7 @@ import {
   unequipPrompt,
 } from "../run/flashChoice";
 import { BaseStrip, DiffRows, Term, TermText, type Terms } from "../run/FlashChoiceParts";
+import { mustPickText } from "../run/reflashWeaker";
 import { HudBare, InfoTip, Tag } from "../ui/PanelKit";
 import { usePopupSlots } from "../ui/PopupFrame";
 import { PopupSlot } from "../ui/PopupSlot";
@@ -53,7 +53,8 @@ type PanelProps = {
 
 /** 上固定區：標頭（寬版兩行、窄版一行＋(i)）＋原技能列。 */
 function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; name: string; lockNote: string | undefined; base: ReactNode }) {
-  const tip = lockNote === undefined ? `${FLASH_MUST_PICK_ZH}。` : `${FLASH_MUST_PICK_ZH}。${lockNote}`;
+  const must = mustPickText(pending); // RR-2：較弱的重閃換成伺服器的 weaker_foot_zh
+  const tip = lockNote === undefined ? `${must}。` : `${must}。${lockNote}`;
   return (
     <div className="fc-fixed" data-testid="flash-head">
       <div className="fc-head wide-only">
@@ -68,7 +69,7 @@ function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; n
           「{name}」{pendingWhat(pending)}
         </b>
         <Tag tone="open">{paidTag(pending)}</Tag>
-        <span className="pnl-l3">{FLASH_MUST_PICK_ZH}</span>
+        <span className="pnl-l3">{must}</span>
       </div>
       {lockNote !== undefined && (
         <div className="fc-lock pnl-l3 wide-only" role="status" data-testid="flash-lock-note">
@@ -120,6 +121,12 @@ function OptionCard({ o, current, selected, focusable, terms, onPick, onKey }: {
           <Tag tone={o.transform ? "warn" : undefined}>
             <Term id={o.tag_term} label={tag} terms={terms} />
           </Tag>
+          {o.weaker_tag_zh && (
+            <span className="fc-weaker" data-testid="flash-option-weaker">
+              <i className="fc-down" aria-label="變弱" />
+              {o.weaker_tag_zh}
+            </span>
+          )}
         </span>
       </div>
       <DiffRows changes={o.changes ?? []} terms={terms} rename={rename} note={noteOf(o)} />

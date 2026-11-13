@@ -156,7 +156,15 @@ def test_the_backend_sends_reflash_slots_and_inherit_rules(client: TestClient) -
     assert hero["flash_rules"]["max_carry"] == hero["flash_rules"]["major_flash"] - 1 == 2
     flashed = next(f for f in hero["flash"] if f["flashes"] == 1)
     assert flashed["reflash_slots"] == [
-        {"slot": 1, "transform_hint": False, "available": True, "problem_zh": None}
+        {
+            "slot": 1,
+            "transform_hint": False,
+            "available": True,
+            "problem_zh": None,
+            "weaker": False,
+            "weaker_zh": None,
+            "weaker_confirm_zh": None,
+        }
     ]
     assert flashed["carryable"] == [1] and not flashed["inherit_target"]
     assert flashed["inherit_problem_zh"] is None
