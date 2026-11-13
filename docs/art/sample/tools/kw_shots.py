@@ -25,15 +25,23 @@ PROFILE = Path(tempfile.gettempdir()) / "kw-shots-chrome-profile"
 q.BASE = [a if not a.startswith("--user-data-dir=") else f"--user-data-dir={PROFILE}" for a in q.BASE]
 PAGE = "q-icons-kw.html"
 OUT = q.ART / "shots" / "qicons-kw"
-# (name, query, file): true-1x / nearest-neighbour sheets are PNG, the rest JPEG 80.
+# (name, query, file): all PNG (true-1x nearest-neighbour blow-ups). Sheets changed in v2 carry -v2;
+# the v1 files stay in the folder for comparison.
 SHOTS = [
-    ("cand", "part=cand", "1-cand.png"),
-    ("color", "part=color", "2-color.png"),
-    ("near", "part=near", "3-near.png"),
-    ("gear", "part=gear", "4-gear.png"),
-    ("cond", "part=cond", "5-cond.png"),
-    ("hud", "part=hud", "6-hud.png"),
-    ("create", "part=create", "7-create.png"),
+    ("cand", "part=cand", "1-cand-v2.png"),
+    ("color", "part=color", "2-color-v2.png"),
+    ("near", "part=near", "3-near-v2.png"),
+    ("gear", "part=gear", "4-gear-v2.png"),
+    ("cond", "part=cond", "5-cond-v2.png"),
+    ("hud", "part=hud", "6-hud-v2.png"),
+    ("create", "part=create", "7-create-v2.png"),
+    # v2: v1 vs v2 next to the collision partners (normal, full protan/deutan, gray).
+    ("v2-combo", "part=v2&sec=combo", "8-v2-combo.png"),
+    ("v2-ki", "part=v2&sec=ki", "8-v2-ki.png"),
+    ("v2-fury", "part=v2&sec=fury", "8-v2-fury.png"),
+    ("v2-create", "part=v2&sec=create", "8-v2-create.png"),
+    ("v2-hud", "part=v2&sec=hud", "8-v2-hud.png"),
+    ("v2-hud-full", "part=v2&sec=hud-full", "8-v2-hud-full.png"),
 ]
 
 

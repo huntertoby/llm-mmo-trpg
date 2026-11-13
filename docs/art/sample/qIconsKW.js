@@ -35,8 +35,18 @@ window.QIconsKW = (() => {
   // =====================================================================
   /** 一道刀光（新月形）：從 (x1,y1) 到 (x2,y2)，往 (nx,ny) 那一側鼓 b 單位；內緣鼓 b×0.3（兩頭尖、中間厚）。 */
   const slash = (c, col, x1, y1, x2, y2, nx, ny, b) => f(c, col, () => { const mx = (x1 + x2) / 2, my = (y1 + y2) / 2; c.moveTo(x1, y1); c.quadraticCurveTo(mx + nx * b, my + ny * b, x2, y2); c.quadraticCurveTo(mx + nx * b * 0.3, my + ny * b * 0.3, x1, y1); c.closePath(); });
-  /** 連擊 A：三道平行的斜刀光（「/」方向、往左上鼓）。前面（左上）那道最亮最長（白芯＋粉邊），後面兩道是殘影，一道比一道暗、短。≤14px 只留兩道、加粗。 */
+  /** 一道直的斬線（兩頭尖的細長菱形，不彎）：中心 (cx,cy)、方向 (ux,uy)、半長 L、中間半寬 w；p＝最寬處離中心的位置（0＝正中，>0 往前端移，殘影感）。 */
+  const spike = (c, col, cx, cy, ux, uy, L, w, p = 0) => { const nx = -uy, ny = ux, mx = cx + ux * L * p, my = cy + uy * L * p; poly(c, col, [[cx - ux * L, cy - uy * L], [mx + nx * w, my + ny * w], [cx + ux * L, cy + uy * L], [mx - nx * w, my - ny * w]], 0.2); };
+  /** 連擊 A（第 2 版，K1）：三道**直的**斬線（「/」方向、兩頭尖、不彎）。前面那道最長最亮（純白），後面兩道是往右下錯開、一道比一道短的亮粉殘影——
+   *  和「在形態中」的三道爪痕（近直立、彎、等長、淡紫、有條件色環）分開：直對彎、45° 對直立、長短不一對等長。≤14px 兩道（白＋粉）。 */
   function comboSlashes(c, o) {
+    const T = TONE.combo_point, u = [0.7071, -0.7071], n = [0.7071, 0.7071]; /* u＝斬線方向（往右上）、n＝殘影錯開的方向（往右下） */
+    /* [沿 n 離中心、沿 u 位移（往左下＝落後）、半長、半寬、色] */
+    const rows = o.tiny ? [[3.4, -1.4, 6.4, 2.2, T[1]], [-3, 0.6, 9.4, 2.6, "#ffffff"]] : [[6, -2.6, 5, 1.5, "#ff6aa8"], [1, -1, 7.2, 1.75, T[1]], [-4.6, 0.6, 9, 2.1, "#ffffff"]];
+    for (const [off, s, L, w, col] of rows) spike(c, col, n[0] * off + u[0] * s, n[1] * off + u[1] * s, u[0], u[1], L, w, 0.15);
+  }
+  /** 連擊 A 第 1 版（彎的新月刀光，審查 K1 退：和 in_form 的三道爪痕同語彙）。只留給 ?part=v2 對照。 */
+  function comboSlashesV1(c, o) {
     const T = TONE.combo_point, u = [0.7071, -0.7071], n = [-0.7071, -0.7071]; /* u＝刀光方向（往右上）、n＝鼓起的方向（往左上） */
     /* 第 2 輪：第 1 輪的粉色殘影在圓章 13 真 1 倍和染粉的圓底黏成一片，前面那道改純白、殘影用亮粉、整體加粗 */
     const rows = o.tiny ? [[3.8, 7, T[1], 5.6], [-3.4, 9.2, "#ffffff", 6]] : [[6.2, 6, "#ff6aa8", 4], [0.6, 8.4, T[1], 4.4], [-5, 9.4, "#ffffff", 4.6]]; /* [離中心（沿 −n）、半長、色、鼓] */
@@ -82,7 +92,16 @@ window.QIconsKW = (() => {
     const D = t ? 4 : 3.4, y = t ? -6.2 : -6.6; poly(c, T[0], [[0, y - D * 1.25], [D, y], [0, y + D * 1.25], [-D, y]], 0.4); poly(c, T[2], [[0, y - D * 0.6], [D * 0.45, y], [0, y + D * 0.6], [-D * 0.45, y]]);
   }
   /** 氣 A：雙勾玉氣團（太極形）——一圓分成淺青白與青綠兩個勾玉，各帶一顆對方顏色的「眼」；左上一點白亮面。≤14px 眼放大、不畫亮面。 */
+  /** 氣 A 第 2 版（K2）：≥18 不變；≤14px（圓章 13）拿掉兩顆勾玉眼、深半邊加深一階（#0e7f6a），S 形分界是唯一的讀點——
+   *  召喚物 13 是「淺色圓團＋兩顆深眼」，拿掉眼才不會在色盲、灰階下變成同一個東西。 */
   function kiTaiji(c, o) {
+    if (!o.tiny) { kiTaijiV1(c, o); return; }
+    const T = TONE.ki, R = 9.6;
+    ci(c, T[1], 0, 0, R);
+    f(c, "#0e7f6a", () => { c.moveTo(0, -R); c.arc(0, 0, R, -PI / 2, PI / 2, false); c.arc(0, R / 2, R / 2, PI / 2, -PI / 2, false); c.arc(0, -R / 2, R / 2, PI / 2, -PI / 2, true); c.closePath(); });
+  }
+  /** 氣 A 第 1 版（≤14px 帶兩顆勾玉眼；≥18 仍是第 2 版在用的畫法）。 */
+  function kiTaijiV1(c, o) {
     const T = TONE.ki, R = 9.6, e = o.tiny ? 2.3 : 1.7;
     ci(c, T[1], 0, 0, R);
     f(c, T[0], () => { c.moveTo(0, -R); c.arc(0, 0, R, -PI / 2, PI / 2, false); c.arc(0, R / 2, R / 2, PI / 2, -PI / 2, false); c.arc(0, -R / 2, R / 2, PI / 2, -PI / 2, true); c.closePath(); });
@@ -99,7 +118,7 @@ window.QIconsKW = (() => {
   /** 每個關鍵字兩案：k＝圖樣在圓章裡再縮放（同第⑤b 批的 k；方的、四角有東西的收進圓底內）；src＝沿用哪一批的哪個形（新畫的寫「新」）。 */
   const CAND = {
     combo_point: {
-      a: { topic: "三道平行的斜刀光（前亮後暗的殘影）；≤14px 兩道", src: "新", k: 0.96, d: comboSlashes },
+      a: { topic: "三道直的斬線（兩頭尖、前白後粉的殘影、一道比一道短）；≤14px 兩道（第 2 版，K1）", src: "新", k: 0.96, d: comboSlashes, d1: comboSlashesV1 },
       b: { topic: "一大一小兩顆四芒閃光（大的白、小的連擊色）", src: "b3:combo（追擊／連擊）＝b4:skeleton.combo", k: 0.82, d: comboSparks },
     },
     fury: {
@@ -111,7 +130,7 @@ window.QIconsKW = (() => {
       b: { topic: "閉目凝神：往下彎的閉眼弧＋睫毛，眉心一顆菱形光點", src: "新", k: 0.86, d: focusEye },
     },
     ki: {
-      a: { topic: "雙勾玉氣團（太極形）：淺青白與青綠兩個勾玉", src: "新", k: 0.92, d: kiTaiji },
+      a: { topic: "雙勾玉氣團（太極形）：淺青白與青綠兩個勾玉；≤14px 沒有勾玉眼、深半邊加深（第 2 版，K2）", src: "新", k: 0.92, d: kiTaiji, d1: kiTaijiV1 },
       b: { topic: "氣旋：白芯氣團，外面兩道繞著轉的氣流", src: "新（派工單建議題材）", k: 0.96, d: kiSwirl },
     },
   };
@@ -122,7 +141,7 @@ window.QIconsKW = (() => {
   const colorOf = (kw, opt = {}) => (isNew(kw) ? (opt.alt ? COLOR_ALT : COLOR)[kw] : K.KC[kw]);
   /** 只有圖樣的 canvas：cpx＝圖樣本身（±10 單位）顯示的 CSS px；≤14px 不包外框（規則 8）。同 qIconsKeywords.js 的 glyph()。opt.flat＝量剪影用（只畫 d 的剪影、不包外框）。 */
   function glyph(kw, cpx, res = 2, opt = {}) {
-    const e = entryOf(kw, opt.cand); return Q.render({ d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: cpx <= 24, tiny: cpx <= 14 }); c.restore(); } }, cpx * K.BOX, res, { ow: opt.ow ?? (cpx <= 14 ? 0 : Q.outlinePx(cpx)) });
+    const e = entryOf(kw, opt.cand); return Q.render({ d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); (opt.v1 && e.d1 ? e.d1 : e.d)(c, { ...o, small: cpx <= 24, tiny: cpx <= 14 }); c.restore(); } }, cpx * K.BOX, res, { ow: opt.ow ?? (cpx <= 14 ? 0 : Q.outlinePx(cpx)) });
   }
   /** 在 (x0,y0) 左上角畫一個直徑 D 的關鍵字圓章（同 qIconsKeywords.js 的 chip()：外框色一圈 1 裝置像素＋深色混 28% 關鍵字色的圓底＋圖樣，沒有環）。既有 12 個直接呼叫 K.chip。 */
   function chip(ctx, kw, x0, y0, D, res, opt = {}) {
@@ -170,9 +189,15 @@ window.QIconsKW = (() => {
   // =====================================================================
   // ③ 創角關鍵字圖示（SVG 16×16 座標，單色，同 client/src/ui/CreateIcons.tsx 的 keywordGlyph；顯示 15px，派工單說按鈕內 28～32）
   // =====================================================================
+  /** 創角連擊 A 第 2 版（K1、K3）：和圓章同一組三道直的斬線（座標由圓章的 ±10 單位換到 16 格：×0.8＋8），透明度 1／0.85／0.7。 */
+  const spikeSvg = (c, ox, oy, L, w, op) => { const u = [0.7071, -0.7071], nv = [0.7071, 0.7071], cx = 8 + 0.8 * ox, cy = 8 + 0.8 * oy, l = 0.8 * L, ww = 0.8 * w, mx = cx + u[0] * l * 0.15, my = cy + u[1] * l * 0.15, P = [[cx - u[0] * l, cy - u[1] * l], [mx + nv[0] * ww, my + nv[1] * ww], [cx + u[0] * l, cy + u[1] * l], [mx - nv[0] * ww, my - nv[1] * ww]];
+    return `<path d="M${P.map(([x, y]) => x.toFixed(2) + " " + y.toFixed(2)).join("L")}Z" fill="${c}"${op < 1 ? ` fill-opacity="${op}"` : ""}/>`; };
+  const comboCreate = (c) => [[6, -2.6, 5, 1.7, 0.7], [1, -1, 7.2, 1.9, 0.85], [-4.6, 0.6, 9, 2.2, 1]].map(([off, sh, L, w, op]) => spikeSvg(c, 0.7071 * off + 0.7071 * sh, 0.7071 * off - 0.7071 * sh, L, w, op)).join("");
+  /** 第 1 版的創角圖示（只給 ?part=v2 對照）：連擊 A 彎刀光、透明度 1／0.75／0.5。 */
+  const CREATE_V1 = { combo_point: { a: (c) => `<path d="M4 15C5 10 8.5 6.5 13.5 4.6C9.5 7.6 7 10.6 6.2 15Z" fill="${c}"/><path d="M1.4 11.6C2.4 7.6 5.6 4.4 9.6 2.6C6.6 5.4 4.6 8 3.6 11.6Z" fill="${c}" fill-opacity="0.75"/><path d="M8.4 15.4C9.4 12.6 11.6 10.2 15 8.8C12.6 11 11.4 13 10.8 15.4Z" fill="${c}" fill-opacity="0.5"/>` } };
   const CREATE = {
     combo_point: {
-      a: (c) => `<path d="M4 15C5 10 8.5 6.5 13.5 4.6C9.5 7.6 7 10.6 6.2 15Z" fill="${c}"/><path d="M1.4 11.6C2.4 7.6 5.6 4.4 9.6 2.6C6.6 5.4 4.6 8 3.6 11.6Z" fill="${c}" fill-opacity="0.75"/><path d="M8.4 15.4C9.4 12.6 11.6 10.2 15 8.8C12.6 11 11.4 13 10.8 15.4Z" fill="${c}" fill-opacity="0.5"/>`,
+      a: comboCreate,
       b: (c) => `<path d="M6 0.8L7.4 4.6L11.2 6L7.4 7.4L6 11.2L4.6 7.4L0.8 6L4.6 4.6Z" fill="${c}"/><path d="M11.6 8L12.6 10.4L15 11.4L12.6 12.4L11.6 14.8L10.6 12.4L8.2 11.4L10.6 10.4Z" fill="${c}" fill-opacity="0.75"/>`,
     },
     fury: {
@@ -191,18 +216,23 @@ window.QIconsKW = (() => {
   };
   /** 創角圖示的 SVG 字串（viewBox 16、單色 c；同 KeywordIcon）。 */
   /** 創角圖示色：派工單要和 KEYWORD_COLOR 同色；怒氣、專注的原色在創角按鈕的深褐底上偏暗（第 1 輪截圖），這兩個建議亮一階（美術 PM 決定：同色或亮一階）。 */
-  const CREATE_COLOR = { combo_point: COLOR.combo_point, fury: "#ff4a62", focus: "#7d96ff", ki: COLOR.ki };
-  const createSvg = (kw, cand, c, size = 15) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${size}" height="${size}">${CREATE[kw][cand ?? PICK[kw]](c ?? CREATE_COLOR[kw])}</svg>`;
+  /* 第 2 版（美術 PM 2026-11-13 決定第 3 條）：怒氣亮一階 #ff4a62；專注維持同色 #476deb（亮一階 #7d96ff 在完全紅色盲下和召喚物的創角色 #c08aff 只差 0.2）；連擊、氣同色。 */
+  const CREATE_COLOR = { combo_point: COLOR.combo_point, fury: "#ff4a62", focus: COLOR.focus, ki: COLOR.ki };
+  const CREATE_COLOR_V1 = { ...CREATE_COLOR, focus: "#7d96ff" };
+  /** opt.v1＝第 1 版（連擊 A 彎刀光；顏色用 CREATE_COLOR_V1）。 */
+  const createSvg = (kw, cand, c, size = 15, opt = {}) => { const cd = cand ?? PICK[kw], fn = (opt.v1 && CREATE_V1[kw]?.[cd]) || CREATE[kw][cd]; return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${size}" height="${size}">${fn(c ?? (opt.v1 ? CREATE_COLOR_V1 : CREATE_COLOR)[kw])}</svg>`; };
 
   // =====================================================================
-  // ④ HUD 層數計量（格子式）：一個膠囊（照 status-card.css 的 .stat-chip：高 22、底 #1a1410、框 #5a4a38、圓角 11、左內距 4、右 7、間距 3）
+  // ④ HUD 層數計量（格子式）：一個膠囊（照 status-card.css 的 .stat-chip：高 22、底 #1a1410、框 #5a4a38、圓角 11、左內距 4、右 7、間距 3；第 2 版 A 右內距 5）
   //    裡面：關鍵字圓章 14px（同①，最小那一級）＋N 格。滿層：格子換亮一階＋白亮條、膠囊框換關鍵字色並往外暈 3px、圓章外加一圈關鍵字色。
   // =====================================================================
   const MAX = { combo_point: 5, fury: 4, focus: 3, ki: 3 };
   const SLOT = "#2a2418", SLOT_EDGE = "#5a4a38";
   /** 格子的形（CSS px，左上原點、寬 w 高 h 的格）：A＝通用斜切段；B＝各關鍵字自己的形（連擊斜刀片、怒氣尖角、專注菱形、氣圓珠）。 */
   const PIP = {
-    a: { w: 7, h: 10, step: 8, path: (c, x, y, w, h) => { c.moveTo(x + 2, y); c.lineTo(x + w, y); c.lineTo(x + w - 2, y + h); c.lineTo(x, y + h); c.closePath(); }, extra: 0 },
+    /* 第 2 版（K5）：格寬 6、步距 7、右內距 5——連擊 5 格「含膠囊」4＋14＋3＋4×7＋6＋5＝60。四種都用同一組（怒氣 53、專注與氣 46）。 */
+    a: { w: 6, h: 10, step: 7, padR: 5, path: (c, x, y, w, h) => { c.moveTo(x + 2, y); c.lineTo(x + w, y); c.lineTo(x + w - 2, y + h); c.lineTo(x, y + h); c.closePath(); } },
+    a1: { w: 7, h: 10, step: 8, padR: 7, path: (c, x, y, w, h) => { c.moveTo(x + 2, y); c.lineTo(x + w, y); c.lineTo(x + w - 2, y + h); c.lineTo(x, y + h); c.closePath(); } },
     b: {
       combo_point: { w: 7, h: 10, step: 7, path: (c, x, y, w, h) => { c.moveTo(x + 3.5, y); c.lineTo(x + w, y); c.lineTo(x + w - 3.5, y + h); c.lineTo(x, y + h); c.closePath(); } },
       fury: { w: 8, h: 10, step: 9, path: (c, x, y, w, h) => { c.moveTo(x + w / 2, y); c.lineTo(x + w, y + h * 0.42); c.lineTo(x + w, y + h); c.lineTo(x, y + h); c.lineTo(x, y + h * 0.42); c.closePath(); } },
@@ -210,7 +240,9 @@ window.QIconsKW = (() => {
       ki: { w: 9, h: 9, step: 10, path: (c, x, y, w, h) => { c.arc(x + w / 2, y + h / 2, w / 2, 0, TAU); } },
     },
   };
-  const pipOf = (kw, cand) => (cand === "b" ? PIP.b[kw] : PIP.a);
+  const pipOf = (kw, cand, v1) => (cand === "b" ? PIP.b[kw] : v1 ? PIP.a1 : PIP.a);
+  /** 亮格的本色（第 2 版 K6）：怒氣亮一階 #ff4a62（原色 #df2046 在完全紅色盲下亮格偏暗）；其他同 COLOR。膠囊框、外暈仍用 COLOR。 */
+  const HUD_FILL = { ...COLOR, fury: "#ff4a62" };
   /** 一格：外形先填外框色（亮格）或槽框色（暗格），再往內縮 1 裝置像素填本色；亮格加上緣亮條。 */
   function pip(c, P, x, y, on, full, col, res) {
     const u = 1 / res, path = (k) => { c.beginPath(); const cx = x + P.w / 2, cy = y + P.h / 2, sx = (P.w - 2 * k) / P.w, sy = (P.h - 2 * k) / P.h; c.save(); c.translate(cx, cy); c.scale(sx, sy); c.translate(-cx, -cy); P.path(c, x, y, P.w, P.h); c.restore(); };
@@ -218,11 +250,13 @@ window.QIconsKW = (() => {
     path(u); c.fillStyle = on ? (full ? mix(col, "#ffffff", 0.28) : col) : SLOT; c.fill();
     if (on) { c.save(); path(u); c.clip(); c.fillStyle = full ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.45)"; c.fillRect(x, y, P.w, Math.max(2 * u, Math.round(P.h * 0.28 * res) / res)); c.fillStyle = "rgba(0,0,0,0.22)"; c.fillRect(x, y + P.h - 2 * u, P.w, 2 * u); c.restore(); }
   }
-  /** 整條的寬（CSS px）：圓章 14＋間距 3＋格子。 */
-  const gaugeW = (kw, cand) => { const P = pipOf(kw, cand), n = MAX[kw]; return 14 + 3 + (n - 1) * P.step + P.w; };
+  /** 整條的寬（CSS px）：圓章 14＋間距 3＋格子（不含膠囊）。 */
+  const gaugeW = (kw, cand, v1) => { const P = pipOf(kw, cand, v1), n = MAX[kw]; return 14 + 3 + (n - 1) * P.step + P.w; };
+  /** 含膠囊的外寬：左內距 4＋gaugeW＋右內距（A 第 2 版 5，其他 7）。 */
+  const gaugeOuter = (kw, cand, v1) => 4 + gaugeW(kw, cand, v1) + (pipOf(kw, cand, v1).padR ?? 7);
   /** 在 (x,y) 畫一個層數膠囊（左上角；膠囊高 22）：n＝目前層數。回傳膠囊寬。opt.bare＝不畫膠囊（只畫圓章＋格子）。 */
   function gauge(c, kw, n, x, y, res, opt = {}) {
-    const cand = opt.cand ?? "a", P = pipOf(kw, cand), max = MAX[kw], full = n >= max, col = COLOR[kw], W = 4 + gaugeW(kw, cand) + 7, H = 22;
+    const cand = opt.cand ?? "a", v1 = !!opt.v1, P = pipOf(kw, cand, v1), max = MAX[kw], full = n >= max, col = COLOR[kw], fill = v1 || cand === "b" ? col : HUD_FILL[kw], W = gaugeOuter(kw, cand, v1), H = 22;
     c.save();
     if (!opt.bare) {
       if (full) { c.save(); c.shadowColor = col; c.shadowBlur = 5 * res; c.fillStyle = col; c.beginPath(); c.roundRect(x, y, W, H, 11); c.fill(); c.restore(); }
@@ -231,13 +265,13 @@ window.QIconsKW = (() => {
     }
     const cx = x + 4, cy = y + 4;
     if (full) { c.fillStyle = col; c.beginPath(); c.arc(cx + 7, cy + 7, 8, 0, TAU); c.fill(); }
-    chip(c, kw, cx, cy, 14, res, { cand: opt.chipCand });
+    chip(c, kw, cx, cy, 14, res, { cand: opt.chipCand, v1 });
     const px0 = cx + 14 + 3, py = y + Math.round((H - P.h) / 2);
-    for (let i = 0; i < max; i++) pip(c, P, px0 + i * P.step, py, i < n, full, col, res);
+    for (let i = 0; i < max; i++) pip(c, P, px0 + i * P.step, py, i < n, full, fill, res);
     c.restore(); return W;
   }
   /** 一個膠囊的 canvas（真 1 倍或 2 倍；zoom＝CSS 放大）。留 4px 給滿層的外暈。 */
-  function gaugeCanvas(kw, n, zoom = 1, o = {}) { const res = o.res ?? (zoom === 1 ? 2 : zoom), cand = o.cand ?? "a", W = 4 + gaugeW(kw, cand) + 7 + 8, H = 30, cv = blank(Math.round(W * res), Math.round(H * res)); cv.style.width = W * zoom + "px"; cv.style.height = H * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); gauge(x, kw, n, 4, 4, res, o); return cv; }
+  function gaugeCanvas(kw, n, zoom = 1, o = {}) { const res = o.res ?? (zoom === 1 ? 2 : zoom), cand = o.cand ?? "a", W = gaugeOuter(kw, cand, !!o.v1) + 8, H = 30, cv = blank(Math.round(W * res), Math.round(H * res)); cv.style.width = W * zoom + "px"; cv.style.height = H * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); gauge(x, kw, n, 4, 4, res, o); return cv; }
 
-  return { CREATE_COLOR, COLOR, COLOR_ALT, TONE, ZH, KEYS, CAND, PICK, COND, COND_PICK, CREATE, MAX, PIP, SIZES, isNew, colorOf, entryOf, glyph, chip, chipCanvas, installCond, createSvg, gauge, gaugeW, gaugeCanvas, pipOf };
+  return { CREATE_COLOR, COLOR, COLOR_ALT, TONE, ZH, KEYS, CAND, PICK, COND, COND_PICK, CREATE, MAX, PIP, SIZES, isNew, colorOf, entryOf, glyph, chip, chipCanvas, installCond, createSvg, gauge, gaugeW, gaugeOuter, gaugeCanvas, pipOf, HUD_FILL, CREATE_COLOR_V1 };
 })();

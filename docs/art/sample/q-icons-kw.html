@@ -10,6 +10,7 @@
        cond     ⑤條件部件「層數達 N」：A／B × 30／26／18／16，和既有條件與層數部件並排（真 1 倍放大）；情境（技能卡 56、96、組裝列、說明行）
        hud      ④HUD 層數計量：A／B × 每種 0～滿層（真 1 倍放大）；HUD 主角卡實際位置（現行 vs Q 版）
        create   ③創角關鍵字圖示：既有 12＋新 4（A／B），15 與 30 px，按鈕情境
+       v2       第 2 版逐條對照（&sec=combo｜ki｜fury｜create｜hud）：第 1 版 vs 第 2 版，和撞圖對象並排 × 正常／完全紅色盲／完全綠色盲／灰階（Machado 2009 嚴重度 1.0）
        audit    自查表（文字）；hash 新圖指紋（文字）
        all      cand＋color＋near＋gear＋cond＋hud＋create（預設）
      加 &mute=1（沒有聲音，照規定帶著）。截圖：docs/art/shots/qicons-kw/。 -->
@@ -73,10 +74,16 @@ const CVD = {
   trit: [[1.104996, -0.046633, -0.058363], [-0.032137, 0.971635, 0.060503], [0.001336, 0.317922, 0.680742]],
   gray: "gray",
 };
-const CVD_ZH = { none: "正常", prot: "紅色弱", deut: "綠色弱", trit: "藍色弱", gray: "灰階" };
+const CVD_ZH = { none: "正常", prot: "紅色弱", deut: "綠色弱", trit: "藍色弱", gray: "灰階", prot1: "紅色盲(1.0)", deut1: "綠色盲(1.0)", trit1: "藍色盲(1.0)" };
+/* 第 2 版：Machado 2009 嚴重度 1.0（完全色盲）。不放進 CVD，所以 ?part=color 的列不變。 */
+const CVD1 = {
+  prot1: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
+  deut1: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
+  trit1: [[1.255528, -0.076749, -0.178779], [-0.078411, 0.930809, 0.147602], [0.004733, 0.691367, 0.303900]],
+};
 const lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
 const gam = (v) => { v = Math.min(1, Math.max(0, v)); return Math.round(255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055)); };
-const simRGB = (r, g, b, mode) => { const L = [lin(r), lin(g), lin(b)]; if (mode === "none") return [r, g, b]; if (mode === "gray") { const y = gam(0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2]); return [y, y, y]; } const M = CVD[mode]; return M.map((row) => gam(row[0] * L[0] + row[1] * L[1] + row[2] * L[2])); };
+const simRGB = (r, g, b, mode) => { const L = [lin(r), lin(g), lin(b)]; if (mode === "none") return [r, g, b]; if (mode === "gray") { const y = gam(0.2126 * L[0] + 0.7152 * L[1] + 0.0722 * L[2]); return [y, y, y]; } const M = CVD[mode] ?? CVD1[mode]; return M.map((row) => gam(row[0] * L[0] + row[1] * L[1] + row[2] * L[2])); };
 const simCanvas = (src, mode) => { const c = document.createElement("canvas"); c.width = src.width; c.height = src.height; c.style.cssText = src.style.cssText; if (src.dataset.res) c.dataset.res = src.dataset.res; const x = c.getContext("2d"); x.drawImage(src, 0, 0); if (mode === "none") return c; const im = x.getImageData(0, 0, c.width, c.height), d = im.data; for (let i = 0; i < d.length; i += 4) { const [r, g, b] = simRGB(d[i], d[i + 1], d[i + 2], mode); d[i] = r; d[i + 1] = g; d[i + 2] = b; } x.putImageData(im, 0, 0); return c; };
 const hex3 = (s) => [1, 3, 5].map((i) => parseInt(s.slice(i, i + 2), 16));
 const oklab = (rgb) => { const [r, g, b] = rgb.map(lin); let l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b, m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b, s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b; [l, m, s] = [l, m, s].map((v) => Math.cbrt(Math.max(0, v))); return [0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s, 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s]; };
@@ -123,8 +130,8 @@ if (show("near")) {
   /* 同題材、同畫面會出現的既有圖（第③④⑤批）：真 1 倍放大 4 倍 */
   const S = (id) => QST.cardCanvas(id, 20, 1, { res: 1 }), C = (cat, id) => QP.chipCanvas(cat, id, 18, 1, { res: 1 });
   const groups = [
-    ["連擊", "combo_point", [["骨架：連段（同 B 的兩顆閃光）", C("skeleton", "combo")], ["效果：累積層數", C("effect", "add_stack")],["撞擊（圓章）", chip1("collision", 18)], ["倒地（圓章）", chip1("prone", 18)]]],
-    ["怒氣", "fury", [["點燃（圓章）", chip1("ignite", 18)], ["狀態：嘲諷", S("taunted")], ["狀態：狂怒姿態", S("stance_fury")], ["狀態：流血", S("bleed")], ["隱蔽（圓章）", chip1("concealed", 18)]]],
+    ["連擊", "combo_point", [["條件：在形態中（三道爪痕）", C("condition", "in_form")], ["形態（圓章）", chip1("form", 18)], ["骨架：連段（同 B 的兩顆閃光）", C("skeleton", "combo")], ["效果：累積層數", C("effect", "add_stack")],["撞擊（圓章）", chip1("collision", 18)], ["倒地（圓章）", chip1("prone", 18)]]],
+    ["怒氣", "fury", [["點燃（圓章）", chip1("ignite", 18)], ["狀態：嘲諷", S("taunted")], ["狀態：狂怒姿態", S("stance_fury")], ["狀態：流血", S("bleed")], ["隱蔽（圓章）", chip1("concealed", 18)], ["條件：潛行偷襲", C("condition", "self_concealed")]]],
     ["專注", "focus", [["標記（圓章）", chip1("marked", 18)], ["效果：揭露（眼）", C("effect", "reveal")], ["狀態：致盲", S("blinded")], ["條件：每一下都命中", C("condition", "all_strikes_hit")]]],
     ["氣", "ki", [["召喚物（圓章）", chip1("summon", 18)], ["狀態：蓄力", S("charging")], ["狀態：風架勢", S("stance_wind_1")], ["冰凍（圓章）", chip1("frozen", 18)], ["潮濕（圓章）", chip1("wet", 18)]]],
   ];
@@ -161,8 +168,8 @@ if (show("cond")) {
   const card = (cid, label) => h("div", { style: "background:#1d1a22;border:1px solid #3a3440;border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px" }, h("div", { style: "font-size:12.5px;color:#e8cf90" }, label),
     h("div", { style: "display:flex;gap:10px;align-items:center" }, QP.canvas(icon(cid), look, 56, 1, { level: "mid" }), QP.canvas(icon(cid), look, 96, 1, { level: "full" }),
       h("div", { style: "display:flex;flex-direction:column;gap:4px" }, h("div", { style: "display:flex;gap:4px;align-items:center" }, QP.chipCanvas("skeleton", "builder_finisher", 30), QP.chipCanvas("shape", "single", 30), QP.chipCanvas("effect", "consume_stack", 30), QP.chipCanvas("effect", "status:bleed", 30, 1, { ring: "rgba(255,255,255,0.35)" })),
-        h("div", { style: "display:flex;gap:5px;align-items:center;font-size:12px" }, QP.chipCanvas("condition", cid, 18), "條件：自身「連擊點」達 5 層"),
-        h("div", { style: "display:flex;gap:5px;align-items:center;font-size:12px;background:#14161c;border-radius:6px;padding:3px 8px" }, QP.chipCanvas("condition", cid, 16), "條件：自身「連擊點」達 5 層（說明行 16px）"))));
+        h("div", { style: "display:flex;gap:5px;align-items:center;font-size:12px" }, QP.chipCanvas("condition", cid, 18), "條件：自身「連擊點」達 5 層（待玩法 PM 確認）"),
+        h("div", { style: "display:flex;gap:5px;align-items:center;font-size:12px;background:#14161c;border-radius:6px;padding:3px 8px" }, QP.chipCanvas("condition", cid, 16), "條件：自身「連擊點」達 5 層（說明行 16px；字待玩法 PM 確認）"))));
   root.append(h("h3", {}, "情境：KW-2 示範招「斷喉」（消耗連擊點每層加傷；連擊點達 5 層時流血）的技能卡——左現行暫代、中 A、右 B（2 倍內部解析度、實際大小）"),
     h("div", { style: "display:grid;grid-template-columns:repeat(3,1fr);gap:10px" }, card("first_round", "現行暫代（借第一輪）"), card("self_stack_at_least__a", "A 滿格計量（推薦）"), card("self_stack_at_least__b", "B 金條頂到門檻")));
 }
@@ -171,8 +178,8 @@ if (show("cond")) {
 if (show("hud")) {
   const g1 = (kw, n, cand) => { const c = KW.gaugeCanvas(kw, n, 1, { res: 1, cand }); return c; };
   root.append(h("h2", {}, "④HUD 層數計量：A（通用斜切段）／B（各自的格形）× 0～滿層", h("small", {}, "　真 1 倍放大 3 倍。膠囊照 .stat-chip（高 22、底 #1a1410、框 #5a4a38）；圓章 14＋間距 3＋格子＝整條寬寫在列名。滿層：格子亮一階＋白亮條、膠囊框換關鍵字色並外暈、圓章外一圈關鍵字色")));
-  for (const cd of CANDS) root.append(h("h3", {}, cd === "a" ? "A：通用斜切段（每格 7×10、間距 1；推薦）" : "B：連擊斜刀片 7×10、怒氣尖角 8×10、專注菱形 9×10、氣圓珠 9×9"),
-    h("div.qi-tb", { style: "grid-template-columns:110px 1fr" }, KW.KEYS.flatMap((kw) => [h("div.rh", {}, h("span", {}, KW.ZH[kw] + " 上限 " + KW.MAX[kw], h("small", {}, "整條 " + KW.gaugeW(kw, cd) + "px"))),
+  for (const cd of CANDS) root.append(h("h3", {}, cd === "a" ? "A：通用斜切段（第 2 版：每格 6×10、步距 7、右內距 5；怒氣亮格 #ff4a62；推薦）" : "B：連擊斜刀片 7×10、怒氣尖角 8×10、專注菱形 9×10、氣圓珠 9×9"),
+    h("div.qi-tb", { style: "grid-template-columns:110px 1fr" }, KW.KEYS.flatMap((kw) => [h("div.rh", {}, h("span", {}, KW.ZH[kw] + " 上限 " + KW.MAX[kw], h("small", {}, "整條 " + KW.gaugeW(kw, cd) + "／含膠囊 " + KW.gaugeOuter(kw, cd) + "px"))),
       h("div.c" + (cd === "a" ? ".qi-pick" : ""), { style: "justify-content:flex-start;flex-wrap:wrap" }, Array.from({ length: KW.MAX[kw] + 1 }, (_, n) => nn(g1(kw, n, cd), 3)))])));
   /* 實際位置：主角狀態卡的圖示列（.hud-icons：AP 圓點膠囊、移動、源力、狀態、層數、腳下表面）。現行＝StackBadge（24 方塊＋層數金條圖＋右下角數字）。 */
   const chipEl = (iconCv, inner) => h("span.stat-chip", {}, iconCv, inner);
@@ -197,35 +204,81 @@ if (show("hud")) {
 
 // ---------------------------------------------------------------- ③ 創角圖示
 const pending = [];
+const OLD = {
+  ignite: (c) => `<path d="M8 1.5C11 5 12.5 7 12 10A4 4 0 0 1 4 10C3.8 7.6 5.5 6.5 6 4.5C7 6.5 7.6 6.6 8 1.5Z" fill="${c}"/>`,
+  wet: (c) => `<path d="M8 1.5C10.5 5.5 12.5 7.8 12.5 10A4.5 4.5 0 0 1 3.5 10C3.5 7.8 5.5 5.5 8 1.5Z" fill="${c}"/>`,
+  charged: (c) => `<path d="M9.5 1L3.5 9H7.5L6 15L12.5 6.5H8.5Z" fill="${c}"/>`,
+  frozen: (c) => `<g stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5V14.5M2.4 4.75L13.6 11.25M2.4 11.25L13.6 4.75"/></g>`,
+  prone: (c) => `<circle cx="3.5" cy="10" r="2" fill="${c}"/><path d="M6 10.5H14" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/><path d="M1.5 14H14.5" stroke="${c}" stroke-width="1" stroke-opacity="0.7"/>`,
+  collision: (c) => `<path d="M8 1L9.6 5.6L14.5 4.5L11.2 8L14.5 11.5L9.6 10.4L8 15L6.4 10.4L1.5 11.5L4.8 8L1.5 4.5L6.4 5.6Z" fill="${c}"/>`,
+  marked: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.6" fill="${c}"/><path d="M8 0.5V3.5M8 12.5V15.5M0.5 8H3.5M12.5 8H15.5"/></g>`,
+  high_ground: (c) => `<path d="M1 14.5L6.5 6L9.5 10L11 8L15 14.5Z" fill="${c}"/><path d="M12 6.5V1.5M10 3.5L12 1.5L14 3.5" fill="none" stroke="${c}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`,
+  concealed: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 8Q8 1.5 14.5 8Q8 14.5 1.5 8Z"/><circle cx="8" cy="8" r="1.8" fill="${c}"/><path d="M2.5 14L13.5 2"/></g>`,
+  summon: (c) => `<ellipse cx="8" cy="12" rx="6" ry="2.4" fill="none" stroke="${c}" stroke-width="1.4"/><path d="M8 1.5L9.2 5.3L13 6.5L9.2 7.7L8 11.5L6.8 7.7L3 6.5L6.8 5.3Z" fill="${c}"/>`,
+  poisoned: (c) => `<circle cx="6" cy="10" r="4" fill="${c}"/><circle cx="11.5" cy="5" r="2.6" fill="${c}" fill-opacity="0.8"/><circle cx="12.5" cy="12" r="1.6" fill="${c}" fill-opacity="0.65"/>`,
+  form: (c) => `<g fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A5.5 5.5 0 0 1 13 5"/><path d="M13 1.8V5H9.8"/><path d="M13 9.5A5.5 5.5 0 0 1 3 11"/><path d="M3 14.2V11H6.2"/></g>`,
+};
+const OLD_C = { ignite: "#ff8a3a", wet: "#5ab0f0", charged: "#ffe14a", frozen: "#a8e0ff", prone: "#d8b878", collision: "#ff6a5a", marked: "#ff6a9a", high_ground: "#8ad070", concealed: "#b8a8ff", summon: "#c08aff", poisoned: "#7ad050", form: "#e8bb48" };
 if (show("create")) {
   /* 既有 12 個：client/src/ui/CreateIcons.tsx 的 keywordGlyph（main，原樣抄成 SVG 字串）與 KEYWORD_ICON_COLOR */
-  const OLD_C = { ignite: "#ff8a3a", wet: "#5ab0f0", charged: "#ffe14a", frozen: "#a8e0ff", prone: "#d8b878", collision: "#ff6a5a", marked: "#ff6a9a", high_ground: "#8ad070", concealed: "#b8a8ff", summon: "#c08aff", poisoned: "#7ad050", form: "#e8bb48" };
-  const OLD = {
-    ignite: (c) => `<path d="M8 1.5C11 5 12.5 7 12 10A4 4 0 0 1 4 10C3.8 7.6 5.5 6.5 6 4.5C7 6.5 7.6 6.6 8 1.5Z" fill="${c}"/>`,
-    wet: (c) => `<path d="M8 1.5C10.5 5.5 12.5 7.8 12.5 10A4.5 4.5 0 0 1 3.5 10C3.5 7.8 5.5 5.5 8 1.5Z" fill="${c}"/>`,
-    charged: (c) => `<path d="M9.5 1L3.5 9H7.5L6 15L12.5 6.5H8.5Z" fill="${c}"/>`,
-    frozen: (c) => `<g stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M8 1.5V14.5M2.4 4.75L13.6 11.25M2.4 11.25L13.6 4.75"/></g>`,
-    prone: (c) => `<circle cx="3.5" cy="10" r="2" fill="${c}"/><path d="M6 10.5H14" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/><path d="M1.5 14H14.5" stroke="${c}" stroke-width="1" stroke-opacity="0.7"/>`,
-    collision: (c) => `<path d="M8 1L9.6 5.6L14.5 4.5L11.2 8L14.5 11.5L9.6 10.4L8 15L6.4 10.4L1.5 11.5L4.8 8L1.5 4.5L6.4 5.6Z" fill="${c}"/>`,
-    marked: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.6" fill="${c}"/><path d="M8 0.5V3.5M8 12.5V15.5M0.5 8H3.5M12.5 8H15.5"/></g>`,
-    high_ground: (c) => `<path d="M1 14.5L6.5 6L9.5 10L11 8L15 14.5Z" fill="${c}"/><path d="M12 6.5V1.5M10 3.5L12 1.5L14 3.5" fill="none" stroke="${c}" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>`,
-    concealed: (c) => `<g fill="none" stroke="${c}" stroke-width="1.5" stroke-linecap="round"><path d="M1.5 8Q8 1.5 14.5 8Q8 14.5 1.5 8Z"/><circle cx="8" cy="8" r="1.8" fill="${c}"/><path d="M2.5 14L13.5 2"/></g>`,
-    summon: (c) => `<ellipse cx="8" cy="12" rx="6" ry="2.4" fill="none" stroke="${c}" stroke-width="1.4"/><path d="M8 1.5L9.2 5.3L13 6.5L9.2 7.7L8 11.5L6.8 7.7L3 6.5L6.8 5.3Z" fill="${c}"/>`,
-    poisoned: (c) => `<circle cx="6" cy="10" r="4" fill="${c}"/><circle cx="11.5" cy="5" r="2.6" fill="${c}" fill-opacity="0.8"/><circle cx="12.5" cy="12" r="1.6" fill="${c}" fill-opacity="0.65"/>`,
-    form: (c) => `<g fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.5A5.5 5.5 0 0 1 13 5"/><path d="M13 1.8V5H9.8"/><path d="M13 9.5A5.5 5.5 0 0 1 3 11"/><path d="M3 14.2V11H6.2"/></g>`,
-  };
   const svgOf = (kw, cand, size) => KW.isNew(kw) ? KW.createSvg(kw, cand, KW.CREATE_COLOR[kw], size) : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${size}" height="${size}">${OLD[kw](OLD_C[kw])}</svg>`;
   /** SVG 畫進真 1 倍 canvas（非同步），再最近鄰放大。 */
   const raster = (svg, px, k, bg = "#2a2418") => { const cv = document.createElement("canvas"); cv.width = cv.height = px; const x = cv.getContext("2d"); x.fillStyle = bg; x.fillRect(0, 0, px, px); nn(cv, k); const img = new Image(); pending.push(new Promise((ok) => { img.onload = () => { x.drawImage(img, 0, 0, px, px); ok(); }; img.onerror = ok; })); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); return cv; };
   const inline = (svg) => { const s = h("span", { style: "display:inline-flex" }); s.innerHTML = svg; return s; };
-  root.append(h("h2", {}, "③創角關鍵字圖示（SVG 16 格、單色，同 CreateIcons.tsx；遊戲端現在是 15px，派工單寫按鈕內 28～32）", h("small", {}, "　每格：15 真 1 倍放大 4 倍｜30 真 1 倍放大 2 倍｜15、30 實際（向量）。新 4 個：連擊、氣和 KEYWORD_COLOR 同色，怒氣 #ff4a62、專注 #7d96ff 亮一階（原色在褐底上偏暗）")),
+  root.append(h("h2", {}, "③創角關鍵字圖示（SVG 16 格、單色，同 CreateIcons.tsx；遊戲端現在是 15px，派工單寫按鈕內 28～32）", h("small", {}, "　每格：15 真 1 倍放大 4 倍｜30 真 1 倍放大 2 倍｜15、30 實際（向量）。新 4 個（第 2 版，美術 PM 決定）：連擊、專注、氣和 KEYWORD_COLOR 同色，怒氣亮一階 #ff4a62")),
     h("div.qi-tb", { style: "grid-template-columns:repeat(8,max-content)" },
       [...K.KEYS.map((kw) => [kw, null]), ...KW.KEYS.flatMap((kw) => CANDS.map((cd) => [kw, cd]))].map(([kw, cd]) => h("div.c" + (cd && KW.PICK[kw] === cd ? ".qi-pick" : ""), { style: "flex-direction:column" },
         h("span", { style: "display:flex;gap:4px;align-items:center" }, raster(svgOf(kw, cd, 15), 15, 4), raster(svgOf(kw, cd, 30), 30, 2)), h("span", { style: "display:flex;gap:4px;align-items:center" }, inline(svgOf(kw, cd, 15)), inline(svgOf(kw, cd, 30))), h("i", { style: "font-size:11px;font-style:normal;color:#b8ab96" }, zhOf(kw) + (cd ? " " + cd.toUpperCase() : ""))))));
   root.append(h("h3", {}, "按鈕情境（創角「選兩個關鍵字」的按鈕：圖示 15＋名字；最後一列試 28）"),
     h("div", { style: "display:flex;flex-wrap:wrap;gap:8px;max-width:1200px" }, [...K.KEYS.slice(0, 4), ...KW.KEYS].map((kw) => h("span.kw-btn", {}, inline(svgOf(kw, KW.PICK[kw], 15)), zhOf(kw)))),
     h("div", { style: "display:flex;flex-wrap:wrap;gap:8px;margin-top:8px" }, [...K.KEYS.slice(0, 4), ...KW.KEYS].map((kw) => h("span.kw-btn", { style: "font-size:16px" }, inline(svgOf(kw, KW.PICK[kw], 28)), zhOf(kw)))),
-    h("p.note", {}, "※既有 12 個的創角色（KEYWORD_ICON_COLOR）和裝備圓章色（KEYWORD_COLOR）不是同一組；派工單要新 4 個「同色」，這裡連擊、氣同色，怒氣、專注亮一階（待美術 PM 定）。舊 12 個要不要統一不在這批。"));
+    h("p.note", {}, "※既有 12 個的創角色（KEYWORD_ICON_COLOR）和裝備圓章色（KEYWORD_COLOR）不是同一組；新 4 個：連擊、專注、氣同色，怒氣亮一階（美術 PM 2026-11-13 決定）。舊 12 個要不要統一不在這批。"));
+}
+
+// ---------------------------------------------------------------- 第 2 版逐條對照（?part=v2&sec=…）
+if (PART === "v2") {
+  const SEC = OB.param("sec", "combo"), MODES = ["none", "prot1", "deut1", "gray"];
+  const S20 = (id) => QST.cardCanvas(id, 20, 1, { res: 1 }), C18 = (cat, id, px = 18) => QP.chipCanvas(cat, id, px, 1, { res: 1 });
+  const c1 = (kw, D, o = {}) => KW.chipCanvas(kw, D, 1, { res: 1, ...o });
+  /** items：[標籤, () => canvas, 放大]；每個模式一列，同一張圖逐像素模擬。 */
+  const tbl = (items) => h("div.qi-tb", { style: `grid-template-columns:90px repeat(${items.length},max-content)` }, h("div"), items.map(([z]) => h("div.hd", { style: "max-width:120px" }, z)),
+    MODES.flatMap((m) => [h("div.rh", {}, CVD_ZH[m]), items.map(([, mk, k]) => h("div.c", {}, nn(simCanvas(mk(), m), k)))]).flat());
+  const grid = (title, note, items) => root.append(h("h2", {}, title, h("small", {}, "　" + note)), tbl(items));
+  if (SEC === "combo") grid("K1 連擊 A：第 1 版彎刀光 → 第 2 版直斬線，和「在形態中」的三道爪痕並排", "真 1 倍最近鄰放大（13 ×5、18 ×4、16 ×5、27 ×3）；條件圓片有金色條件環",
+    [["v1 圓章 13", () => c1("combo_point", 13, { v1: true }), 5], ["v2 圓章 13", () => c1("combo_point", 13), 5], ["v1 圓章 18", () => c1("combo_point", 18, { v1: true }), 4], ["v2 圓章 18", () => c1("combo_point", 18), 4], ["v2 圓章 27", () => c1("combo_point", 27), 3],
+      ["條件：在形態中 18", () => C18("condition", "in_form"), 4], ["條件：在形態中 16", () => C18("condition", "in_form", 16), 5], ["形態 圓章 18", () => c1("form", 18), 4], ["連擊 B 圓章 18", () => c1("combo_point", 18, { cand: "b" }), 4]]);
+  if (SEC === "ki") grid("K2 氣 A：13 那一級拿掉勾玉眼、深半邊加深（#0e7f6a），和召喚物並排", "真 1 倍最近鄰放大（13 ×6、18 ×4、20 ×4）；18 以上第 1、2 版相同",
+    [["v1 圓章 13", () => c1("ki", 13, { v1: true }), 6], ["v2 圓章 13", () => c1("ki", 13), 6], ["召喚物 圓章 13", () => c1("summon", 13), 6], ["氣 A 圓章 18（不變）", () => c1("ki", 18), 4], ["召喚物 圓章 18", () => c1("summon", 18), 4], ["狀態：蓄力 20", () => S20("charging"), 4], ["冰凍 圓章 13", () => c1("frozen", 13), 6]]);
+  if (SEC === "fury") grid("K7 怒氣 A（沒改圖）和隱蔽、潛行偷襲、嘲諷並排", "真 1 倍最近鄰放大（13 ×6、18 ×4、20 ×4）",
+    [["怒氣 A 圓章 13", () => c1("fury", 13), 6], ["隱蔽 圓章 13", () => c1("concealed", 13), 6], ["怒氣 A 圓章 18", () => c1("fury", 18), 4], ["隱蔽 圓章 18", () => c1("concealed", 18), 4], ["條件：潛行偷襲 18", () => C18("condition", "self_concealed"), 4], ["狀態：嘲諷 20", () => S20("taunted"), 4], ["點燃 圓章 18", () => c1("ignite", 18), 4]]);
+  if (SEC === "create") {
+    const BG = "#2a2418", svgOld = (kw, px) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="${px}" height="${px}">${OLD[kw](OLD_C[kw])}</svg>`;
+    /* SVG 非同步畫進 canvas，畫完才做色盲模擬（放進 pending，頁面等它們才寫 data-h） */
+    const ras = (svg, px) => { const cv = document.createElement("canvas"); cv.width = cv.height = px; const x = cv.getContext("2d"); x.fillStyle = BG; x.fillRect(0, 0, px, px); const img = new Image(); const done = new Promise((ok) => { img.onload = () => { x.drawImage(img, 0, 0, px, px); ok(); }; img.onerror = ok; }); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); return [cv, done]; };
+    const items = [["連擊 A v1", (px) => KW.createSvg("combo_point", "a", null, px, { v1: true })], ["連擊 A v2", (px) => KW.createSvg("combo_point", "a", null, px)], ["怒氣 A #ff4a62", (px) => KW.createSvg("fury", "a", null, px)],
+      ["專注 A v1 #7d96ff", (px) => KW.createSvg("focus", "a", null, px, { v1: true })], ["專注 A v2 #476deb", (px) => KW.createSvg("focus", "a", null, px)], ["氣 A", (px) => KW.createSvg("ki", "a", null, px)],
+      ["召喚物（既有）", (px) => svgOld("summon", px)], ["標記（既有）", (px) => svgOld("marked", px)], ["撞擊（既有）", (px) => svgOld("collision", px)], ["形態（既有）", (px) => svgOld("form", px)]];
+    const host = h("div.qi-tb", { style: `grid-template-columns:90px repeat(${items.length},max-content)` }, h("div"), items.map(([z]) => h("div.hd", { style: "max-width:100px" }, z)));
+    root.append(h("h2", {}, "K3、K4 創角圖示：連擊 A 直斬線＋透明度 1／0.85／0.7；專注改回同色", h("small", {}, "　按鈕底 #2a2418；每格 15 真 1 倍放大 4 倍＋30 真 1 倍原大")), host);
+    for (const m of MODES) { host.append(h("div.rh", {}, CVD_ZH[m])); for (const [, mk] of items) { const a = ras(mk(15), 15), b = ras(mk(30), 30), cell = h("div.c", {}); host.append(cell); pending.push(Promise.all([a[1], b[1]]).then(() => cell.append(nn(simCanvas(a[0], m), 4), nn(simCanvas(b[0], m), 1)))); } }
+    /* K4：創角那組色（KEYWORD_ICON_COLOR 既有 12＋新 4）的 OKLab 距離與對按鈕底的對比 */
+    const MS = ["none", "prot", "deut", "trit", "prot1", "deut1", "trit1"];
+    const relL = (rgb) => { const [r, g, b] = rgb.map(lin); return 0.2126 * r + 0.7152 * g + 0.0722 * b; }, contrast = (a, b, m) => { const A = relL(simRGB(...hex3(a), m)), B = relL(simRGB(...hex3(b), m)); return (Math.max(A, B) + 0.05) / (Math.min(A, B) + 0.05); };
+    const zh = (k) => (k[0] === "@" ? KW.ZH[k.slice(1)] : K.LIST[k].zh);
+    const tab = (C) => KW.KEYS.map((kw) => { const me = C[kw], others = [...Object.entries(OLD_C), ...KW.KEYS.filter((k) => k !== kw).map((k) => ["@" + k, C[k]])];
+      const near = (ms) => ms.map((m) => { const ds = others.map(([k, c]) => [dist(me, c, m), k]).sort((x, y) => x[0] - y[0]); return CVD_ZH[m] + " " + ds[0][0].toFixed(1) + "(" + zh(ds[0][1]) + ")"; }).join("  ");
+      return (KW.ZH[kw] + "　　").slice(0, 3) + me + "  " + near(MS.slice(0, 4)) + "\n      " + near(MS.slice(4)) + "\n      對按鈕底對比 " + MS.map((m) => CVD_ZH[m] + " " + contrast(me, BG, m).toFixed(2)).join("  "); }).join("\n");
+    const oldMin = MS.map((m) => { let best = [999]; const ks = Object.keys(OLD_C); for (let i = 0; i < 12; i++) for (let j = i + 1; j < 12; j++) { const d = dist(OLD_C[ks[i]], OLD_C[ks[j]], m); if (d < best[0]) best = [d, ks[i], ks[j]]; } return CVD_ZH[m] + " " + best[0].toFixed(1) + "(" + zh(best[1]) + "–" + zh(best[2]) + ")"; }).join("  ");
+    root.append(h("h3", {}, "K4：創角色（KEYWORD_ICON_COLOR 既有 12＋新 4）的 OKLab 距離（×100）與對按鈕底 #2a2418 的對比"),
+      h("div.qi-audit", { id: "audit" }, "第 2 版（連擊 #ff3d8b、怒氣 #ff4a62、專注 #476deb、氣 #29e0bc）：新色和最近的那一色\n" + tab(KW.CREATE_COLOR) + "\n\n第 1 版（專注 #7d96ff）\n" + tab(KW.CREATE_COLOR_V1) + "\n\n既有 12 個創角色彼此最近：" + oldMin));
+  }
+  if (SEC === "hud" || SEC === "hud-full") {
+    const g = (kw, n, o) => KW.gaugeCanvas(kw, n, 1, { res: 1, ...o });
+    const pair = (n) => KW.KEYS.flatMap((kw) => { const k = n(kw); return [[`${KW.ZH[kw]} v1 ${k}/${KW.MAX[kw]}（${KW.gaugeOuter(kw, "a", true)}px）`, () => g(kw, k, { v1: true }), 3], [`${KW.ZH[kw]} v2 ${k}/${KW.MAX[kw]}（${KW.gaugeOuter(kw, "a")}px）`, () => g(kw, k), 3]]; });
+    const half = pair((kw) => Math.ceil(KW.MAX[kw] / 2)), full = pair((kw) => KW.MAX[kw]);
+    root.append(h("h2", {}, "K5、K6 HUD 計量 A：格寬 6／步距 7／右內距 5（含膠囊 ≤60）；怒氣亮格 #ff4a62", h("small", {}, "　真 1 倍放大 3 倍；括號內是含膠囊的外寬")),
+      ...(SEC === "hud" ? [h("h3", {}, "半滿"), tbl(half.slice(0, 4)), tbl(half.slice(4))] : [h("h3", {}, "滿層"), tbl(full.slice(0, 4)), tbl(full.slice(4))]));
+  }
 }
 
 // ---------------------------------------------------------------- 自查與指紋
@@ -243,7 +296,7 @@ if (PART === "audit") {
   for (const cd of CANDS) for (const cpx of [14, 23.4]) { const g = QP.glyph("condition", "self_stack_at_least__" + cd, cpx, 4, { ow: 0 }), W = g.width, d = g.getContext("2d").getImageData(0, 0, W, W).data; let n = 0, L = 0, br = 0, x0 = W, x1 = 0, y0 = W, y1 = 0;
     for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (d[i + 3] < 128) continue; n++; const l = lum(d[i], d[i + 1], d[i + 2]); L += l; if (l >= 150) br++; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
     lines.push(`${cd.toUpperCase()} ${String(cpx).padStart(4)} | ${(L / n).toFixed(0).padStart(4)} ${(100 * br / n).toFixed(0).padStart(3)}% ${(100 * (Math.max(x1 - x0, y1 - y0) + 1) / (cpx * 4)).toFixed(0).padStart(3)}%`); }
-  lines.push("", "④HUD 計量寬（圓章 14＋3＋格子；≤60）：" + KW.KEYS.map((kw) => KW.ZH[kw] + " A " + KW.gaugeW(kw, "a") + "／B " + KW.gaugeW(kw, "b")).join("　"));
+  lines.push("", "④HUD 計量寬（圓章 14＋3＋格子／含膠囊；含膠囊 ≤60）：" + KW.KEYS.map((kw) => KW.ZH[kw] + " A " + KW.gaugeW(kw, "a") + "/" + KW.gaugeOuter(kw, "a") + "（第 1 版 " + KW.gaugeOuter(kw, "a", true) + "）／B " + KW.gaugeW(kw, "b") + "/" + KW.gaugeOuter(kw, "b")).join("　"));
   root.append(h("div.qi-audit", { id: "audit" }, lines.join("\n")));
 }
 if (PART === "hash") {
