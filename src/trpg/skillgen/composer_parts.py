@@ -993,6 +993,7 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "blow_surface",  # 3-54a：只由 _blow_secondary 的獨立串流加入（既有種子不變）
         "shockwave",  # 3-54b：只由 _shockwave_secondary 的獨立串流加入
         "leave_form",  # 3J-4c：解形爆發專用，隨機組合器不抽
+        "summon_beside",  # TF-1：召喚到身邊，只由閃現轉型產生
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的

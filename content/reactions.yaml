@@ -9,7 +9,8 @@
 #   hit_by_spell（3D-3）             被 category: spell 的技能命中、傷害之前；另一方是施放者
 #   ally_downed（3D-3）              視野內的友方倒下之後；另一方是倒下的友方（反應技形狀必須是 self）
 #   enemy_enters_adjacent（3D-3）    敵人主動移動（步行、衝鋒、直線衝撞）進入相鄰格之後；強制位移不算
-#   ally_targeted（3D-3）            相鄰友方被敵人單體技能或普攻選為目標、命中判定之前；另一方是攻擊者
+#   ally_targeted（3D-3）            相鄰友方被敵人單體技能或普攻選為目標、命中判定之前；另一方是攻擊者（aid: true 時是那名友方）
+#   ally_hit_near（TF-1）            相鄰友方被敵人的攻擊（普攻或技能）命中、傷害之後仍站著；另一方是那名友方（必須 aid: true）
 # 內建反應的事件（reactions[].events）：
 #   enemy_moves_in_range（3D-8c）    敵人主動移動（步行、衝鋒、直線衝撞）的一步結束後，位置在持有者武器射程與視線內
 #                                    （強制位移、傳送、跳躍、互換不算）。監視射擊 overwatch_shot 用它
@@ -82,6 +83,7 @@ events:
   - {id: ally_downed, name_zh: 隊友倒下時, description_zh: 視野內的友方倒下之後。}
   - {id: enemy_enters_adjacent, name_zh: 敵人靠近時, description_zh: 敵人主動移動進入你的相鄰格之後；被強制位移不算。}
   - {id: ally_targeted, name_zh: 隊友被瞄準時, description_zh: 相鄰友方被敵人的單體技能或普攻選為目標、命中判定之前。}
+  - {id: ally_hit_near, name_zh: 身旁隊友受擊後, description_zh: 相鄰友方被敵人的攻擊（普攻或技能）命中、傷害結算之後仍站著；反應作用在那名友方。}
   - {id: enemy_moves_in_range, name_zh: 敵人在射程內移動時, description_zh: 敵人主動移動一步後，位置在你的武器射程與視線內。}
   - {id: ally_hit_in_range, name_zh: 範圍內隊友受擊時, description_zh: 範圍內的友方被敵人單體攻擊命中、傷害結算之前。}
   - {id: kin_hit_in_range, name_zh: 同門受擊時, description_zh: 範圍內帶同門標籤的友方被敵人的攻擊命中、傷害結算之前。}

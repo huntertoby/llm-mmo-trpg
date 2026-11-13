@@ -103,6 +103,7 @@ PARAM_TEXT: dict[str, str] = {
     "spread": "元素擴散格數",
     "stack": "層數",
     "status": "狀態",
+    "strike_other": "召出後反咬",
     "surface": "表面",
     "tag": "標籤",
     "then": "消耗後的效果",

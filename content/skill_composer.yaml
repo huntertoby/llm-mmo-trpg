@@ -185,7 +185,7 @@ variant:
 llm_topic:
   secondary_count: 6
   condition_count: 4
-  core_exclude: [enter_form, leave_form]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）
+  core_exclude: [enter_form, leave_form, summon_beside]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）；summon_beside 只由閃現轉型產生（TF-1）
   base_weight: 100
   quota_percent_per_use: 100
   core_weights: {}                          # 個別原語的基礎權重（沒列出的用 base_weight）

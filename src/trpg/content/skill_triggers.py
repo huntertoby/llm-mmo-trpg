@@ -44,8 +44,10 @@ REQUIRED_TRIGGERS: tuple[str, ...] = (
     "on_collision",
     "on_enter_surface",
     "on_summon_downed",
+    "on_battle_start",
 )
-"""引擎實作的觸發時機，資料檔必須全部定義、不可多出引擎沒有的。"""
+"""引擎實作的觸發時機，資料檔必須全部定義、不可多出引擎沒有的。``on_battle_start``（TF-1，#159
+伴生）：戰鬥開始、先攻排好之後，每場一次。"""
 
 
 class SkillTriggerDef(ContentModel):

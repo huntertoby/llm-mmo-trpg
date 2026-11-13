@@ -96,4 +96,4 @@ def test_reaction_events_have_a_single_source() -> None:
     """組合器只從 2E-2 的四個事件抽（3D-3 的新事件只給手寫技能，既有種子的結果不變）。"""
     assert set(NON_INTERCEPT_EVENTS) | {"ally_hit_adjacent"} == set(LEGACY_REACTION_EVENTS)
     assert set(LEGACY_REACTION_EVENTS) < set(SKILL_REACTION_EVENTS)
-    assert len(SKILL_REACTION_EVENTS) == 8
+    assert len(SKILL_REACTION_EVENTS) == 9  # TF-1 加 ally_hit_near（援手）

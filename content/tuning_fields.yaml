@@ -183,3 +183,8 @@ targets:
       # FL-1a（06 6.34「費用方向」第 4 點）：閃現蓄力、輕巧每一級調多少（規則「一定要變、順序、回合 +1／累計 +2／最少留 1」不開）。
       - {path: flash_cost.damage_rungs, label_zh: 蓄力：傷害每次往上調幾格, kind: int, hint_min: 1, hint_max: 3, note_zh: 閃現「蓄力」在預算重調後沒有任何一項變強時，改把傷害（再來治療、護盾）的骰子或武器倍率往上調這麼多格（骰子依平均排序、倍率每格 100‰）；調完預算比例還低於 70% 時同一項再往上。1＝最小的一步。改了所有招的蓄力選項跟著變。}
       - {path: flash_cost.magnitude_step, label_zh: 蓄力／輕巧：狀態強度每級（‰）, kind: int, hint_min: 10, hint_max: 100, note_zh: 閃現「蓄力」「輕巧」調數值型狀態（燃燒、中毒、減速、易傷等）的強度時每一級多少千分比（25＝每級 +2.5%）。蓄力只在狀態回合已經加不上去（到 6 回合或原招 +2）時才加強度，最多到 2000‰；輕巧往下最多降回 1000‰。}
+      # TF-1（#159，06 6.34.5「數值：縮小多少、持續幾回合，放進數值工坊由使用者調」）：召喚技的伴生、護主。
+      - {path: flash_transform.companion_power_permille, label_zh: 伴生：開場召喚物的強度（‰）, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「伴生」後，每場開打時身邊跟著的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比（500＝一半）。這是起點：做出來的被動不在預算範圍時，會每 100‰ 往上下找最接近、合格的強度。}
+      - {path: flash_transform.companion_duration, label_zh: 伴生：開場召喚物待幾輪, kind: int, hint_min: 1, hint_max: 4, note_zh: 伴生召出的召喚物存在幾輪（同一般召喚：在你第這麼多次回合結束時消失）。}
+      - {path: flash_transform.guardian_power_permille, label_zh: 護主：反咬召喚物的強度（‰）, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「護主」後，被近戰攻擊時冒出來反咬的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比。這是起點：不在預算範圍時會每 100‰ 往上下找最接近、合格的強度。}
+      - {path: flash_transform.guardian_duration, label_zh: 護主：反咬召喚物待幾輪, kind: int, hint_min: 1, hint_max: 4, note_zh: 護主召出的召喚物存在幾輪（設計是 1 回合）。}

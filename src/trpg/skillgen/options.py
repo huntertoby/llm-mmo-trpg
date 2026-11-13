@@ -290,6 +290,7 @@ def _reaction_field() -> FieldSpec:
         "ally_downed": "視野內的友方倒下之後（形狀必須是自身）",
         "enemy_enters_adjacent": "敵人主動走進相鄰格之後",
         "ally_targeted": "相鄰友方被敵人選為目標、命中判定之前",
+        "ally_hit_near": "相鄰友方被敵人攻擊命中、傷害結算之後",
     }
     return FieldSpec(
         field="reaction",

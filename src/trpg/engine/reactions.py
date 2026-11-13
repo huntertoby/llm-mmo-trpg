@@ -100,11 +100,13 @@ __all__ = [
     "PauseForDecision",
     "after_attack",
     "ally_downed_reactions",
+    "ally_hit_near_reactions",
     "ally_targeted_reactions",
     "block_multiplier",
     "enemy_enters_adjacent_reactions",
     "enemy_moves_in_range_reactions",
     "hit_reactions",
+    "is_aid",
     "is_melee_attack",
     "kin_ward_reactions",
     "opportunity_attacks",
@@ -205,6 +207,7 @@ _TRIGGER_EVENT_MATCHERS: dict[str, Callable[[EventBase, UnitState, UnitState], b
         isinstance(e, AttackRolled) and e.target_id == u.id and e.attacker_id == t.id
     ),
     "ally_targeted": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
+    "ally_hit_near": lambda e, _u, t: isinstance(e, DamageDealt) and e.target_id == t.id,
     "ally_hit_in_range": lambda e, _u, t: isinstance(e, AttackRolled) and e.attacker_id == t.id,
     "ally_downed": lambda e, _u, t: isinstance(e, UnitDowned) and e.unit_id == t.id,
     "enemy_enters_adjacent": lambda e, _u, t: isinstance(e, UnitMoved) and e.unit_id == t.id,
@@ -291,12 +294,18 @@ def _candidate(  # noqa: PLR0917
     trigger: UnitState,
     effect: str | None,
     skills: bool,
+    aided: UnitState | None = None,
 ) -> ReactionDef | SkillDef | None:
-    """``rule`` 目前能不能用：反應技（``skills``）或效果為 ``effect`` 的內建反應。"""
+    """``rule`` 目前能不能用：反應技（``skills``）或效果為 ``effect`` 的內建反應。``aided``：
+    援手（``reaction.aid``，TF-1）的對象——被瞄準／受擊的友方；援手反應技的射程與條件看他。"""
     if rule.reaction in unit.skills:
         if not skills:
             return None
         skill = ctx.rules.skill_def(rule.reaction)
+        if is_aid(skill):
+            if aided is None:
+                return None
+            trigger = aided
         return skill if _skill_usable(ctx, unit, skill, rule, trigger) else None
     definition = _usable(ctx, unit, rule)
     if definition is None or effect is None or definition.effect != effect:
@@ -314,13 +323,15 @@ def _react(
     *,
     effect: str | None = None,
     skills: bool = False,
+    aided: UnitState | None = None,
 ) -> ReactionDef | SkillDef | None:
     """找出 ``unit`` 第一條符合事件、目前可用的規則並詢問；使用時回傳反應定義或反應技
-    （已扣次數與耐力、發出 ``reaction_triggered``，由呼叫端執行效果）。"""
+    （已扣次數與耐力、發出 ``reaction_triggered``，由呼叫端執行效果）。``aided`` 見
+    :func:`_candidate`。"""
     for rule in unit.reactions:
         if rule.mode == "off" or rule.when.event not in events:
             continue
-        picked = _candidate(ctx, unit, rule, trigger, effect, skills)
+        picked = _candidate(ctx, unit, rule, trigger, effect, skills, aided)
         if picked is None:
             continue
         if _decide(ctx, unit, rule, picked, trigger):
@@ -431,6 +442,7 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
         _run_skill(ctx, target, picked, attacker)
     elif picked is not None:
         perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
+    ally_hit_near_reactions(ctx, attacker, target)  # 援手（TF-1）：身邊友方替受擊者補血
 
 
 def take_decoy(
@@ -583,9 +595,32 @@ def ally_targeted_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) ->
             continue
         if manhattan(reactor.xy, target.xy) != 1:
             continue
-        picked = _react(ctx, reactor, ("ally_targeted",), attacker, skills=True)
+        picked = _react(ctx, reactor, ("ally_targeted",), attacker, skills=True, aided=target)
+        if isinstance(picked, SkillDef):  # 援手（TF-1）：作用在被瞄準的友方
+            _run_skill(ctx, reactor, picked, target if is_aid(picked) else attacker)
+
+
+def is_aid(skill: SkillDef) -> bool:
+    """援手反應技（``reaction.aid``，TF-1，#159）：反應作用在被瞄準／受擊的友方。"""
+    return skill.reaction is not None and skill.reaction.aid
+
+
+def ally_hit_near_reactions(ctx: Ctx, attacker: UnitState, target: UnitState) -> None:
+    """``target`` 被敵人 ``attacker`` 的攻擊命中、傷害結算之後仍存活（TF-1，#159 援手）：與
+    ``target`` 相鄰的友方（依單位 ID）各自可以用 ``ally_hit_near`` 反應技對 ``target`` 反應（例如
+    補血）；另一方是 ``target``。目標倒下就停止。"""
+    if attacker.team is target.team:
+        return
+    for reactor in ctx.state.units_sorted():
+        if not target.alive or ctx.state.ended:
+            return
+        if reactor.id == target.id or reactor.team is not target.team or not reactor.alive:
+            continue
+        if manhattan(reactor.xy, target.xy) != 1:
+            continue
+        picked = _react(ctx, reactor, ("ally_hit_near",), target, skills=True, aided=target)
         if isinstance(picked, SkillDef):
-            _run_skill(ctx, reactor, picked, attacker)
+            _run_skill(ctx, reactor, picked, target)
 
 
 @register_downed_handler

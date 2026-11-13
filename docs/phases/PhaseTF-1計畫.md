@@ -27,9 +27,10 @@
 4. **反應事件 `ally_hit_near`**：相鄰友方被敵人的攻擊（普攻或技能）命中、傷害結算之後仍存活；另一方是那名友方
    （必須 `aid: true`）。
 5. **原語 `summon_beside`（召喚到身邊）**：只用在被動、反應（不在主動），形狀 `self` 或 `single`，唯一效果。
-   在持有者相鄰的第一個合法空格（上、右、下、左的固定順序）召出 `unit`，持續 `duration` 輪，
+   在持有者相鄰的第一個合法空格（東、西、南、北，同數量型第二隻的順序）召出 `unit`，持續 `duration` 輪，
    `power_permille`（100～1000）縮小 HP 與傷害。同一召喚者的召喚物已達上限時不召喚（`effect_fizzled`，
-   原因 `summon_limit`），不像主動召喚那樣擠掉最舊的。`strike_other: true`：召出後立刻對形狀 `single`
+   原因 `summon_limit`），不像主動召喚那樣擠掉最舊的。`strike_other: true`：召喚物改出現在攻擊者旁邊
+   離持有者最近的空格（方格只有上下左右相鄰，站在持有者旁邊咬不到攻擊者），召出後立刻對形狀 `single`
    的對象（反應的觸發者）普攻一次（打得到才打）。預算沿用 `summon` 的算法，反咬另加一次每輪傷害。
    隨機組合器與 LLM 提議不使用（手寫／轉型專用）。
 6. 轉型的縮小幅度、持續回合放在 `content/skill_budget.yaml` 的 `flash_transform`，開進數值工坊（`kind: budget`）。

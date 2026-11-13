@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from trpg.content.skills import (
+    SUMMON_BESIDE,
     EffectSpec,
 )
 from trpg.engine.effects.models import (
@@ -13,9 +14,11 @@ from trpg.engine.effects.models import (
     EffectBase,
     HealEffect,
 )
+from trpg.engine.events import EffectFizzled, UnitSummoned
 from trpg.engine.gear.summon import gear_sacrifice_permille
 from trpg.engine.lifecycle import dismiss_summon
-from trpg.engine.rules.combat import PERMILLE
+from trpg.engine.reactions import perform_unit_attack
+from trpg.engine.rules.combat import PERMILLE, attack_problem
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.runes import own_runes
 from trpg.engine.skills.conditions import Subject
@@ -23,14 +26,16 @@ from trpg.engine.skills.primitives.base import Handler
 from trpg.engine.skills.revive import revive_unit
 from trpg.engine.skills.targeting import (
     ResolvedEffect,
+    summon_site_problem,
 )
-from trpg.engine.summons.core import summon_unit
+from trpg.engine.summons.core import summon_room, summon_unit
 from trpg.engine.summons.variants import second_summon_site
 from trpg.engine.zones import create_zone
-from trpg.shared.types import Element
+from trpg.shared.types import Element, Pos
 
 if TYPE_CHECKING:
     from trpg.engine.skills.cast import Cast
+    from trpg.engine.state import BattleState, UnitState
 
 
 def summon(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -60,6 +65,53 @@ def summon(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[Effect
             spec=spec,
         )
     return []
+
+
+def summon_beside(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """``summon_beside``（TF-1，#159 伴生、護主）：在施放者旁邊第一個可以召喚的格子（東、西、
+    南、北）召出縮小版召喚物（``power_permille``）。同一召喚者的召喚物已達上限、或旁邊沒有空格時
+    不召喚（``effect_fizzled``，原因 ``summon_limit``／``summon_blocked``）。``strike_other``：
+    召喚物改出現在攻擊者旁邊離施放者最近的空格（同距離照東、西、南、北），召出後立刻對攻擊者
+    普攻一次，打得到才打；攻擊者旁邊沒有空格時退回施放者旁邊（多半咬不到）。"""
+    ctx, caster = cast.ctx, cast.caster
+    if not cast.holds(spec.condition, Subject(caster, caster.xy)):
+        return []
+    assert spec.unit is not None and spec.duration is not None
+    pos = Pos(x=caster.xy[0], y=caster.xy[1])
+    if not summon_room(ctx, caster, cast.skill.id):
+        ctx.emit(EffectFizzled, effect_kind=SUMMON_BESIDE, pos=pos, reason="summon_limit")
+        return []
+    foe = _strike_target(cast) if spec.strike_other else None
+    site = None if foe is None else _site_near(ctx.state, foe.xy, caster.xy)
+    if site is None:
+        site = second_summon_site(ctx.state, caster.xy)
+    if site is None:
+        ctx.emit(EffectFizzled, effect_kind=SUMMON_BESIDE, pos=pos, reason="summon_blocked")
+        return []
+    events = summon_unit(ctx, caster, spec.unit, site, spec.duration, cast.skill.id, spec=spec)
+    summoned = next((e for e in events if isinstance(e, UnitSummoned)), None)
+    if foe is not None and summoned is not None:
+        pet = ctx.state.units[summoned.unit_id]
+        if pet.alive and foe.alive and attack_problem(ctx.state, pet, foe) is None:
+            perform_unit_attack(ctx, pet, foe, primary=False, reaction=True)
+    return []
+
+
+def _strike_target(cast: Cast) -> UnitState | None:
+    """護主反咬的對象：影響範圍裡第一個存活的敵人（反應技形狀 ``single`` 的對象＝觸發者）。"""
+    state = cast.ctx.state
+    for uid in cast.area.units:
+        unit = state.units.get(uid)
+        if unit is not None and unit.alive and unit.team is not cast.caster.team:
+            return unit
+    return None
+
+
+def _site_near(state: BattleState, foe_xy: XY, owner_xy: XY) -> XY | None:
+    """攻擊者旁邊可以召喚、離施放者最近的格子（同距離照東、西、南、北）。"""
+    sites = [(foe_xy[0] + dx, foe_xy[1] + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    free = [xy for xy in sites if summon_site_problem(state, xy) is None]
+    return min(free, key=lambda xy: manhattan(xy, owner_xy), default=None)
 
 
 def sacrifice_summon(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
@@ -166,6 +218,7 @@ def detonate_runes(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
 
 HANDLERS: dict[str, Handler] = {
     "summon": summon,
+    SUMMON_BESIDE: summon_beside,
     "sacrifice_summon": sacrifice_summon,
     "zone": zone,
     "revive": revive,

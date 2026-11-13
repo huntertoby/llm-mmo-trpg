@@ -30,7 +30,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Any
@@ -48,6 +48,7 @@ from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.evolution import EvolutionRequest, budget_power, retune
 from trpg.skillgen.evolution import rarity_of as _rarity_of
+from trpg.skillgen.flash_category import is_support_skill
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.scaling import fit_scaling
 from trpg.skillgen.summon_evolution import is_summon_skill, summon_evolution_options
@@ -355,7 +356,173 @@ def _to_modifier(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) ->
     return drafts
 
 
-_BUILDERS = {
+# ---------------------------------------------------------------------------
+# 轉型：召喚與輔助的 1 階轉型（TF-1，#159，06 6.34.5）
+# ---------------------------------------------------------------------------
+
+_SUMMON_BESIDE = "summon_beside"
+_SUPPORT_TYPES = ("heal", "shield", "apply_status")
+_FRIENDLY = (None, "allies", "self")
+_NORMAL_POWER = 1000
+
+
+def _summon_unit(skill: SkillDef) -> str | None:
+    """召喚技召喚的範本（第一個 ``summon`` 效果）；不是召喚技時 ``None``。"""
+    found = next((e for e in _whole_effects(skill) if e.type == "summon"), None)
+    return None if found is None else found.unit
+
+
+def _beside(unit: str, duration: int, power: int, *, strike: bool = False) -> dict[str, Any]:
+    effect: dict[str, Any] = {"type": _SUMMON_BESIDE, "unit": unit, "duration": duration}
+    if power < _NORMAL_POWER:  # 1000 ＝ 一般強度（不寫）
+        effect["power_permille"] = power
+    if strike:
+        effect["strike_other"] = True
+    return effect
+
+
+_POWER_STEP = 100
+_MIN_POWER = 100
+
+
+def _power_tries(start: int, costs: Sequence[dict[str, Any]]) -> list[tuple[int, dict[str, Any]]]:
+    """縮小版召喚物依序試的（強度‰, 代價）：先試數值工坊的設定值（每種代價），不在預算窗內時再
+    依離設定值的遠近、每 100‰ 一格往上下試（100～1000，同距離先往上）。召喚到身邊沒有可調的
+    骰子，強度由這裡找進預算窗。"""
+    powers = {start, *range(_MIN_POWER, _NORMAL_POWER + 1, _POWER_STEP)}
+    ordered = sorted(powers, key=lambda p: (abs(p - start), -p))
+    return [(p, dict(c)) for p in ordered for c in costs]
+
+
+def _to_companion(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    """伴生：戰鬥開始時在身邊召出縮小版召喚物（每場一次）。"""
+    unit = _summon_unit(skill)
+    if unit is None or t.trigger is None:
+        return []
+    rules = lib.budget.flash_transform
+    drafts: list[_Draft] = []
+    for power, cost in _power_tries(rules.companion_power_permille, ({}, {"mana": 2}, {"mana": 4})):
+        effect = _beside(unit, rules.companion_duration, power)
+        base = _new_base(
+            skill,
+            kind="passive",
+            skeleton="passive",
+            ap_cost=None,
+            shape={"type": "self"},
+            trigger=t.trigger.model_dump(mode="json", exclude_none=True),
+            cost=cost,
+            tags=_retag(skill, "passive", "summon"),
+            narrative=_concept(skill, t),
+        )
+        drafts.append((base, [dict(effect)]))
+    return drafts
+
+
+_GUARDIAN_COSTS: tuple[dict[str, Any], ...] = (
+    {"cooldown": 1},
+    {"mana": 2, "cooldown": 1},
+    {"cooldown": 2},
+    {"mana": 4, "cooldown": 2},
+)
+
+
+def _to_guardian(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    """護主：被近戰攻擊時在身邊召出縮小版召喚物，立刻反咬攻擊者一次。"""
+    unit = _summon_unit(skill)
+    if unit is None or t.reaction is None:
+        return []
+    rules = lib.budget.flash_transform
+    drafts: list[_Draft] = []
+    for power, cost in _power_tries(rules.guardian_power_permille, _GUARDIAN_COSTS):
+        effect = _beside(unit, rules.guardian_duration, power, strike=True)
+        base = _new_base(
+            skill,
+            kind="reaction",
+            skeleton="reaction",
+            ap_cost=None,
+            shape={"type": "single", "range": 2},
+            reaction=t.reaction.model_dump(mode="json", exclude_none=True),
+            cost=cost,
+            tags=_retag(skill, "reaction", "summon"),
+            narrative=_concept(skill, t),
+        )
+        drafts.append((base, [dict(effect)]))
+    return drafts
+
+
+def _support_core(skill: SkillDef, lib: ContentLibrary) -> list[dict[str, Any]]:
+    """輔助技帶得走的友方效果（治療、護盾、有益狀態；主段在前），最多 :data:`_MAX_CARRIED` 個；
+    一律改成作用在友方（庇佑、援手的對象是另一名友方），去掉骰子（新種類由預算器重調）。"""
+    known = lib.ruleset.statuses.by_id()
+    out: list[dict[str, Any]] = []
+    for effect in _whole_effects(skill):
+        if effect.type not in _SUPPORT_TYPES or effect.affects not in _FRIENDLY:
+            continue
+        item: dict[str, Any] = {"type": effect.type, "affects": "allies"}
+        if effect.dice is not None:  # 治療、護盾的骨子留著，由預算器往下調（縮小版）
+            item["dice"] = str(effect.dice)
+        if effect.type == "apply_status":
+            status = None if effect.status is None else known.get(effect.status)
+            if status is None or not status.beneficial or status.stance:
+                continue
+            item["status"] = status.id
+            if effect.duration is not None:
+                item["duration"] = effect.duration
+        if item not in out:
+            out.append(item)
+    return out[:_MAX_CARRIED]
+
+
+def _to_blessing(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    """庇佑：回合開始時，身邊 1 格內生命比例最低的友方受到縮小版的這招。"""
+    effects = _support_core(skill, lib)
+    if not effects or t.trigger is None:
+        return []
+    drafts: list[_Draft] = []
+    for cost in ({"mana": 2}, {"mana": 2, "cooldown": 2}, {}):
+        base = _new_base(
+            skill,
+            kind="passive",
+            skeleton="passive",
+            ap_cost=None,
+            shape={"type": "self"},
+            trigger=t.trigger.model_dump(mode="json", exclude_none=True),
+            cost=cost,
+            tags=_retag(skill, "passive"),
+            narrative=_concept(skill, t),
+        )
+        drafts.append((base, [dict(e) for e in effects]))
+    return drafts
+
+
+def _to_aid(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
+    """援手：身邊友方被瞄準時（命中判定之前）對他施放縮小版的這招；只有治療的招改在他受擊後
+    （``heal_reaction``）。"""
+    effects = _support_core(skill, lib)
+    heal_only = bool(effects) and all(e["type"] == "heal" for e in effects)
+    reaction = t.heal_reaction if heal_only and t.heal_reaction is not None else t.reaction
+    if not effects or reaction is None:
+        return []
+    drafts: list[_Draft] = []
+    for cost in ({"cooldown": 1}, {"mana": 2, "cooldown": 1}, {"cooldown": 2}):
+        base = _new_base(
+            skill,
+            kind="reaction",
+            skeleton="reaction",
+            ap_cost=None,
+            shape={"type": "single", "range": 1},
+            reaction=reaction.model_dump(mode="json", exclude_none=True),
+            cost=cost,
+            tags=_retag(skill, "reaction"),
+            narrative=_concept(skill, t),
+        )
+        drafts.append((base, [dict(e) for e in effects]))
+    return drafts
+
+
+type _Builder = Callable[[SkillDef, TransformTemplate, ContentLibrary], list[_Draft]]
+
+_BUILDERS: dict[str, _Builder] = {
     "passive": _to_passive,
     "reaction": _to_reaction,
     "summon": _to_summon,
@@ -363,6 +530,26 @@ _BUILDERS = {
     "stance": _to_stance,
     "modifier": _to_modifier,
 }
+_SOURCE_BUILDERS: dict[tuple[str, str], _Builder] = {
+    ("summon", "passive"): _to_companion,
+    ("summon", "reaction"): _to_guardian,
+    ("support", "passive"): _to_blessing,
+    ("support", "reaction"): _to_aid,
+}
+"""TF-1 的轉型（``source`` 不是 ``hostile``）：（原招種類, 新種類）→ 結構。"""
+
+
+def _fits(template: TransformTemplate, skill: SkillDef, library: ContentLibrary) -> bool:
+    """這個轉型模板適不適用這招（TF-1）：召喚技、輔助技各有自己的模板；帶敵對效果的被動、反應
+    模板只給帶得走敵對效果的招（做不出來的模板先拿掉，同種類裡適用的模板才排得到前面，種子挑的
+    是「做得出來的種類」）。其他種類照舊，由結構自己判斷。"""
+    if template.source == "summon":
+        return is_summon_skill(skill)
+    if template.source == "support":
+        return is_support_skill(skill, library.flash) and bool(_support_core(skill, library))
+    if template.to in ("passive", "reaction"):
+        return bool(_hostile_core(skill))
+    return True
 
 
 def transform_drafts(
@@ -373,6 +560,8 @@ def transform_drafts(
     template = library.flash.transform_template(variation.template)
     if template is None or skill.kind != "active":
         return []
+    if template.source != "hostile":
+        return _SOURCE_BUILDERS[(template.source, template.to)](skill, template, library)
     return _BUILDERS[template.to](skill, template, library)
 
 
@@ -445,7 +634,7 @@ def transform_variations(
         return []
     groups: dict[str, list[TransformTemplate]] = {}
     for template in library.flash.transforms:
-        if template.min_tier <= tier:
+        if template.min_tier <= tier and _fits(template, skill, library):
             groups.setdefault(template.to, []).append(template)
     order = rng.shuffled(sorted(groups))
     out: list[Variation] = []

@@ -13,13 +13,16 @@ from trpg.content.skills import SKILL_REACTION_EVENTS, SkillDef
 _UNCOVERED: dict[str, dict[str, str]] = {
     "skeleton": {},
     "trigger": {
-        "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能"
+        "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能",
+        "on_battle_start": "只由閃現轉型「伴生」產生（TF-1，#159），沒有手寫技能",
     },
-    "reaction_event": {},
+    "reaction_event": {
+        "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
+    },
     "condition": {
         "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）"
     },
-    "primitive": {},
+    "primitive": {"summon_beside": "只由閃現轉型「伴生」「護主」產生（TF-1，#159），沒有手寫技能"},
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",

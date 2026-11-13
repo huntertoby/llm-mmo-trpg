@@ -467,6 +467,21 @@ def _summon(
     return f"{text}；{infusion_hint(lib, acts=summon_acts(template))}"
 
 
+def _summon_beside(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """召喚到身邊（TF-1，#159 伴生、護主）的一句話：縮小版的 HP 用和引擎同一個算法。"""
+    try:
+        summon = lib.ruleset.summon_def(spec.unit or "")
+    except KeyError:
+        return f"在你身邊召出召喚物，持續 {spec.duration} 輪"
+    hp = summon_card_hp(lib, summon, spec)
+    text = f"在你身邊召出縮小版的{summon.template.name_zh}（HP {hp}），持續 {spec.duration} 輪"
+    if spec.power_permille is not None and spec.power_permille < NEUTRAL_PERMILLE:
+        text += f"（HP 與傷害只有一般的 {spec.power_permille / 10:g}%）"
+    if spec.strike_other:
+        text += "，召出後立刻反咬攻擊你的敵人一次"
+    return f"{text}；召喚物已滿或身邊沒有空格時不會出現"
+
+
 def _summon_variant_text(lib: ContentLibrary, spec: EffectSpec) -> str:
     """召喚技能分歧進化（Phase 3-33f2）多出的內容：數量型、加深（HP 與小特性）、橋接。"""
     parts: list[str] = []
@@ -990,6 +1005,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "shadowstep": _shadowstep,
     "charge_through": _charge_through,
     "summon": _summon,
+    "summon_beside": _summon_beside,
     "enter_form": _enter_form,
     "leave_form": _leave_form,
     "swap": _swap,
@@ -1079,6 +1095,7 @@ def variant_change_text(library: ContentLibrary, skill: SkillDef, variant: Varia
 _OWN_TARGET_TEXT: frozenset[str] = frozenset(
     {
         "summon",
+        "summon_beside",
         "zone",
         "rule_change",
         "gamble",
@@ -1380,6 +1397,7 @@ REACTION_TIMING_TEXT: dict[str, str] = {
     "ally_downed": "友方倒下時",
     "enemy_enters_adjacent": "敵人走進相鄰格時",
     "ally_targeted": "相鄰的友方被敵人瞄準時（命中判定之前）",
+    "ally_hit_near": "相鄰的友方被敵人攻擊命中後",
 }
 """反應技觸發事件的中文說明（Phase 3C-6a：技能卡片的「反應時機」一行）。"""
 
@@ -1400,6 +1418,8 @@ def trigger_timing_text(library: ContentLibrary, trigger: TriggerSpec) -> str:
     text = _trigger_timing(library, trigger)
     if trigger.target == "nearest_enemy":  # 3W-2b
         text += f"，對 {trigger.max_distance} 格內最近的一名敵人"
+    elif trigger.target == "weakest_ally":  # TF-1（#159 庇佑）
+        text += f"，對 {trigger.max_distance} 格內生命比例最低的一名友方（不含自己）"
     return text
 
 

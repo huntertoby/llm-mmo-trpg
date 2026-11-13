@@ -371,10 +371,18 @@ class TransformTemplate(ContentModel):
     - ``min_tier``：最低角色階級（#73：1 階被動、反應；2 階起召喚、陷阱、姿態；3 階起修正型被動）。
     - 強度不寫在這裡：轉型後照新種類的預算由預算器重調（``scale_permille`` 只是起點的提示，
       被動／反應的數值最後仍以預算為準）。
+    - ``source``（TF-1，#159）：適用的原招。``hostile``（預設）＝帶得走敵對效果的招；``summon``
+      ＝召喚技（伴生、護主：效果是召喚到身邊，縮小幅度在 ``skill_budget.yaml`` 的
+      ``flash_transform``）；``support`` ＝輔助技（沒有傷害的治療、護盾、增益：庇佑、援手）。
+    - ``heal_reaction``（TF-1 援手）：原招只有治療（沒有護盾、增益）時改用的反應（受擊後補血）；
+      其他輔助技用 ``reaction``（被瞄準時、命中判定之前）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
     to: TransformTarget
+    source: Literal["hostile", "summon", "support"] = Field(
+        default="hostile", exclude_if=lambda v: v == "hostile"
+    )
     min_tier: int = Field(default=1, ge=1, le=3)
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
@@ -388,6 +396,7 @@ class TransformTemplate(ContentModel):
     ``{n}`` 與術語標記 ``[[術語|字]]``。省略時由差異清單照句型組。"""
     trigger: TriggerSpec | None = None
     reaction: ReactionSpec | None = None
+    heal_reaction: ReactionSpec | None = Field(default=None, exclude_if=lambda v: v is None)
     scale_permille: int = Field(default=500, ge=100, le=1000)
     units: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """``summon``：技能元素（``any`` ＝ 沒有元素或沒列到時）→ 候選召喚物（依序試）。"""
@@ -415,6 +424,10 @@ class TransformTemplate(ContentModel):
         for kind, (field, present) in needs.items():
             if (self.to == kind) != present:
                 raise ValueError(f"轉型 {self.id}：轉成 {kind} 時必須（且只有 {kind}）填 {field}")
+        if self.source != "hostile" and self.to not in ("passive", "reaction"):
+            raise ValueError(f"轉型 {self.id}：source: {self.source} 只能轉成被動或反應")
+        if self.heal_reaction is not None and (self.source != "support" or self.to != "reaction"):
+            raise ValueError(f"轉型 {self.id}：heal_reaction 只給輔助技轉反應（援手）用")
         return self
 
 
