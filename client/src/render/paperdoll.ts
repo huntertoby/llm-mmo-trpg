@@ -11,6 +11,7 @@ import { dollSkin, type View } from "./inkStyle";
 import { qStampLocal } from "./qStamp";
 import { GAME_HOOKS, qPoseOf, qUnitOf } from "./qSpec";
 import { whiteSilhouette } from "./creaturePose";
+import { paintPartFx } from "./partLayer";
 
 /** 離屏畫布的虛擬大小與腳底位置（虛擬像素）。 */
 export const DOLL_W = 64;
@@ -139,6 +140,8 @@ export function renderFigureCanvas(spec: DollSpec, facing: Facing, downed: boole
       o.restore();
     }
   }
+  // PB-1e：頭目部位破壞演出的前兩格（部位白閃、裂紋），疊在身體上、外光之前
+  if (spec.parts?.fx !== undefined && !downed) paintPartFx(o, spec, facing, dpr, { w: DOLL_W, h: DOLL_H, footY: DOLL_FOOT_Y }, pose);
   const glowColor = spec.rarity !== undefined ? RARITY_GLOW[spec.rarity] : undefined;
   if (glowColor === undefined) return off;
   const glow = make();

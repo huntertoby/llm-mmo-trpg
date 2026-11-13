@@ -1,4 +1,5 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
+import { partDraws, partHudUp, type PartDraw, type PartFx } from "./partStrip";
 import type { BattleView, DollLook, Facing, Pos, Surface, UnitView } from "../api/types";
 import type { DollInput } from "../render/appearance";
 import type { AmbientScene } from "../render/ambientModel";
@@ -151,6 +152,12 @@ export interface UnitDraw {
   equipment?: ReadonlyArray<{ slot: string; appearance?: GearLook | null }>;
   /** 不畫頭上的小血條（Phase 6B-4：實地地圖的 NPC 與朋友的影子；戰鬥單位除了靶場木樁（PR-2c）一律畫）。 */
   noBar?: boolean;
+  /** PB-1e：頭目的部位（照 18.2.3 的順序；頭頂部位小格、破壞後外觀）；沒有部位的單位沒有這個欄位。 */
+  parts?: readonly PartDraw[];
+  /** PB-1e（美術移植需求 3.4）：有部位、南邊那一格有站著的單位 → 整組 HUD 改掛 `hudTop`、朝南三角形縮小。 */
+  partHudUp?: boolean;
+  /** PB-1e：破壞演出中暫時蓋過的樣子（繪製器設，`render/battle/unitLayer.ts`）；不是從伺服器來的。 */
+  partFx?: PartFx;
 }
 
 export interface TrapDraw {
@@ -317,7 +324,16 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     copyOf: copyTarget(view, u),
     equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
     ...(isTrainingDummy({ template: u.template_id }) ? { noBar: true } : {}), // PR-2c：靶場木樁沒有血條
+    ...partFields(view, u),
   };
+}
+
+/** PB-1e：部位（頭頂小格、破壞後外觀）與「南邊有人時 HUD 改掛最上層」。沒有部位時不加欄位。 */
+function partFields(view: BattleView, u: UnitView): Pick<UnitDraw, "parts" | "partHudUp"> {
+  if ((u.parts ?? []).length === 0) return {};
+  const parts = partDraws(u.parts);
+  const up = partHudUp({ x: u.pos.x, y: u.pos.y, parts }, view.units.filter((o) => o.id !== u.id).map((o) => ({ x: o.pos.x, y: o.pos.y, downed: o.downed })));
+  return { parts, ...(up ? { partHudUp: true } : {}) };
 }
 
 /** `activeId` 省略時以 `view.active_unit` 為行動中的單位；逐步播放時由播放器指定。 */

@@ -6,7 +6,40 @@ import { shellFront } from "./qMoltenShell";
 import { sectShieldFront } from "./qSectShield";
 import { QW_HELD } from "./qNpcHeld";
 
+/**
+ * PB-1e：劍刃的斷口（武器座標；照 `docs/art/sample/bossParts.js` 的 BRK；sword(L=16, W=2.6) 的刃從 −3 到 −16、尖 −19）。
+ * 斷口以上不畫；側面往刃尖移 `BRK_SIDE_DY`（約留原刃 60%，鋸齒露在身體輪廓外；樣張 brkDy）。
+ */
+export const SWORD_BRK: ReadonlyArray<readonly [number, number]> = [
+  [-1.3, -9.9],
+  [-0.7, -9.1],
+  [-0.1, -10.4],
+  [0.5, -9.3],
+  [1.3, -10.2],
+];
+export const BRK_SIDE_DY = -2.8;
+
+/** 斷口以下（保留的那一塊）的路徑：ctx 已在武器座標。 */
+export function belowBreak(ctx: Ctx, dy = 0): void {
+  const B = SWORD_BRK;
+  ctx.beginPath();
+  ctx.moveTo(-4, 8);
+  ctx.lineTo(4, 8);
+  ctx.lineTo(4, B[4]![1] + dy);
+  for (let i = B.length - 1; i >= 0; i--) ctx.lineTo(B[i]![0] + (i === 0 ? -2.7 : i === 4 ? 2.7 : 0), B[i]![1] + dy);
+  ctx.closePath();
+}
+
 function sword(ctx: Ctx, it: QItem | undefined, L: number, W: number): void {
+  if (it?.broken !== undefined && it.broken !== false) {
+    // PB-1e：劍斷（長劍部位破了）：刃畫到鋸齒斷口為止（裁掉斷口以上；之後 qStamp 照舊描一圈外框）
+    ctx.save();
+    belowBreak(ctx, it.broken === "side" ? BRK_SIDE_DY : 0);
+    ctx.clip();
+    sword(ctx, { ...it, broken: false }, L, W);
+    ctx.restore();
+    return;
+  }
   const [c] = wc(it, "steel");
   fill(ctx, c, () => {
     ctx.moveTo(-W / 2, -3);
@@ -418,7 +451,15 @@ export function mainWeapon(ctx: Ctx, it: QItem | null | undefined, hand: readonl
   if (M) ctx.transform(M[0] ?? 1, M[1] ?? 0, M[2] ?? 0, M[3] ?? 1, 0, 0);
   else ctx.rotate(a);
   if (mg) ctx.translate(0, -mg);
-  q.W.draw(ctx, q.item);
+  // PB-1e：斷劍的側面斷口往刃尖移；S.PAINT＝正在畫哪一件（部位圖層、遮罩用，`render/bossPartArt.ts`）
+  const item = q.item.broken === true && view === "side" ? { ...q.item, broken: "side" as const } : q.item;
+  const painting = S.PAINT;
+  S.PAINT = q.kind;
+  try {
+    q.W.draw(ctx, item);
+  } finally {
+    S.PAINT = painting;
+  }
   const probe = S.POSE?.probe;
   if (probe) {
     const m = getM(ctx);

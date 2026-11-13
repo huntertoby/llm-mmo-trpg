@@ -7,6 +7,8 @@ import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
 import { dollKey, resolveDoll, type DollSpec, type GearItem } from "./appearance";
+import { debrisOf, dollPartsOf, stripLayout } from "../battle/partStrip";
+import { DEBRIS_BOX, debrisCanvas, partStripNode, STRIP_BASE_SCALE } from "./bossPartArt";
 import { RING } from "./artPalette";
 import type { ArtTextures } from "./artTextures";
 import { label } from "./labels";
@@ -544,7 +546,10 @@ function formAuraSprite(art: ArtTextures, u: UnitDraw, feet: number): Sprite | n
 }
 
 export function specOfUnit(u: UnitDraw): DollSpec {
-  return resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, raceLook: u.raceLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
+  const spec = resolveDoll({ template: u.template, team: u.team, summon: u.summon, totem: u.totem, dollLook: u.dollLook, raceLook: u.raceLook, weaponId: u.weaponId, weaponClass: u.weaponClass, equipment: u.equipment, attackElement: u.attackElement });
+  // PB-1e：頭目部位破了的外觀（拂塵剪短、劍斷、氣海的氣旋／裂痕）；沒有部位的單位不帶（鍵與畫法不變）
+  const parts = dollPartsOf(u.parts, u.partFx);
+  return parts === null ? spec : { ...spec, parts };
 }
 
 /** 倒地狀態（`prone`，例如冰面滑倒）：還站得起來、只是躺著；和 HP 歸零的倒下（`downed`）不同。 */
@@ -926,6 +931,27 @@ function summonBadge(u: UnitDraw): Container {
   return c;
 }
 
+/** PB-1e：地上掉落物節點的標籤。 */
+export const PART_DEBRIS_LABEL = "part-debris";
+
+/** PB-1e：頭目腳下的掉落物（破了的拂塵、長劍；演出前三格不畫，`partFx`）；沒有時 `null`。 */
+function partDebrisSprite(art: ArtTextures, u: UnitDraw, feet: number): Sprite | null {
+  if (u.downed || u.parts === undefined) return null;
+  const d = debrisOf(u.parts, u.partFx);
+  if (!d.whisk && !d.sword) return null;
+  const k = dollPx(u);
+  const west = u.facing === "west";
+  const res = art.figureRes(1);
+  const tex = art.canvas(`pdeb|${res}|${d.whisk ? 1 : 0}${d.sword ? 1 : 0}|${west ? "w" : "e"}|${k.toFixed(3)}`, () => debrisCanvas(d.whisk, d.sword, west, k, res));
+  if (tex === null) return null;
+  const s = new Sprite(tex);
+  s.label = PART_DEBRIS_LABEL;
+  s.position.set(DEBRIS_BOX.x, feet + DEBRIS_BOX.y);
+  s.width = DEBRIS_BOX.w;
+  s.height = DEBRIS_BOX.h;
+  return s;
+}
+
 /** 6F-22b：護盾條外框的粗細（世界座標 px）。 */
 export const SHIELD_OUTLINE = 1;
 
@@ -1165,7 +1191,7 @@ function plusCapsule(count: number): { node: Container; text: Text; draw: (geom:
  * 底圈外緣朝向三角形的外接方框（世界座標、含描邊；6F-13 狀態列要避開）；倒下或沒有底圈（土牆）時不畫，回傳 `null`。
  * 和 `buildUnitSprite` 畫的同一個三角形（`ringArrow(facing, 0, FEET − 1, T × 0.36, T × 0.15, 5)`）。
  */
-export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): Box | null {
+export function arrowOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "parts" | "partHudUp">>): Box | null {
   if (u.downed) return null;
   const sl = summonLookOf(u as UnitDraw);
   if (sl !== null && hasNoRing(sl)) return null;
@@ -1466,6 +1492,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   }
   const fxUnder = humanoidFxSprite(art, u, feet, true);
   if (fxUnder !== null) c.addChild(bodyPart(fxUnder, u, feet));
+  const debris = partDebrisSprite(art, u, feet); // PB-1e：地上的掉落物（剪下的拂塵毛、斷下的劍尖），本體之前
+  if (debris !== null) c.addChild(debris);
   c.addChild(doll(art, u, look, feet, r));
   const fxOver = humanoidFxSprite(art, u, feet, false);
   if (fxOver !== null) c.addChild(bodyPart(fxOver, u, feet));
@@ -1496,6 +1524,8 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     const bar = hpBar(u);
     bar.position.y = hudDy;
     c.addChild(bar);
+    // PB-1e：頭目的頭頂部位小格（HP 條正下方、共用黑底）
+    if (u.parts !== undefined && u.parts.length > 0 && !u.downed) c.addChild(partStripNode(u.parts, u.hiddenInfo === true, u.partFx, hudDy, southArrowMoved(u)));
     if (u.hiddenInfo === true) c.addChild(hiddenHpMark(hudDy));
   }
   // 6F-15：6F-14 另外畫在狀態列上面的那一份三角形拿掉了（避不開時「+N」超出格子一點讓開，`rowLayout.slideClearOver`）
@@ -1560,15 +1590,17 @@ export function badgeOptsOf(u: UnitDraw): BadgeLayoutOpts {
 }
 
 /** HP 條（含護盾條）畫出來的方框（相對格子中心；6F-15 徽章不蓋到）。沒有 HP 條時 `null`。 */
-export function hpBoxOf(u: Pick<UnitDraw, "noBar" | "shieldRatio">): Box | null {
+export function hpBoxOf(u: Pick<UnitDraw, "noBar" | "shieldRatio"> & Partial<Pick<UnitDraw, "parts">>): Box | null {
   if (u.noBar === true) return null;
   const w = T * 0.8;
   const o = u.shieldRatio > 0 ? SHIELD_OUTLINE : 0; // 6F-22b：護盾條的外框
-  return { l: -w / 2 - o, r: w / 2 + o, t: T * 0.36 - (u.shieldRatio > 0 ? 3 + o : 0), b: T * 0.36 + 5 };
+  // PB-1e：頭目的部位小格包進來（徽章避讓、朝南三角形用；照 1600 寬的基準高度，地圖縮小時三角形另由部位小格節點挪）
+  const b = u.parts !== undefined && u.parts.length > 0 ? stripLayout(u.parts.length, STRIP_BASE_SCALE).bottom : T * 0.36 + 5;
+  return { l: -w / 2 - o, r: w / 2 + o, t: T * 0.36 - (u.shieldRatio > 0 ? 3 + o : 0), b };
 }
 
 /** 朝向三角形的三個頂點（世界座標；和 `arrowOf` 同一個三角形）。倒下或沒有底圈時 `null`。 */
-export function arrowPolyOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio">>): number[] | null {
+export function arrowPolyOf(u: Pick<UnitDraw, "downed" | "facing" | "summon" | "summonLook"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "parts" | "partHudUp">>): number[] | null {
   if (arrowOf(u) === null) return null;
   return facingArrowPoly(u);
 }
@@ -1589,14 +1621,26 @@ export function southArrowMoved(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitD
  * 6F-21（美術 PM 6F-14 檢查第 3 節）：朝南、有 HP 條時，原位幾乎整個被 HP 條蓋住，整個往下移到 HP 條下緣外面
  * （三角形上緣含描邊離 HP 條下緣 `SOUTH_ARROW_GAP`），形狀不變。其他朝向、沒有 HP 條時照原位。
  */
-export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "summon" | "summonLook" | "dollLook">>): number[] {
+export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "summon" | "summonLook" | "dollLook" | "parts" | "partHudUp">>): number[] {
   const ring = arrowRing(u);
   const p = ringArrow(u.facing, ring.cx, FEET - 1, ring.rx, ring.ry, 5);
-  const hp = southArrowMoved(u) ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0 }) : null;
+  const hp = southArrowMoved(u) ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0, ...(u.parts === undefined ? {} : { parts: u.parts }) }) : null;
   if (hp === null) return p;
   const top = Math.min(p[1]!, p[3]!, p[5]!) - ARROW_STROKE / 2;
   const dy = hp.b + SOUTH_ARROW_GAP - top;
-  return dy <= 0 ? p : p.map((v, i) => (i % 2 === 1 ? v + dy : v));
+  const moved = dy <= 0 ? p : p.map((v, i) => (i % 2 === 1 ? v + dy : v));
+  // PB-1e（移植需求第 4 節第 4 點，開發代決）：頭目 HUD 改掛最上層時三角形壓在南邊那個人的臉上 → 以上緣中點縮小
+  return u.partHudUp === true ? shrinkArrow(moved, PART_HUD_UP_ARROW) : moved;
+}
+
+/** PB-1e：頭目 HUD 改掛最上層時朝南三角形的縮放（以上緣中點為準，上緣仍離部位條 `SOUTH_ARROW_GAP`）。 */
+export const PART_HUD_UP_ARROW = 0.6;
+
+function shrinkArrow(p: number[], k: number): number[] {
+  const ys = [p[1]!, p[3]!, p[5]!];
+  const top = Math.min(...ys) - ARROW_STROKE / 2;
+  const cx = (p[0]! + p[2]! + p[4]!) / 3;
+  return p.map((v, i) => (i % 2 === 0 ? cx + (v - cx) * k : top + ARROW_STROKE / 2 + (v - top - ARROW_STROKE / 2) * k));
 }
 
 /**
