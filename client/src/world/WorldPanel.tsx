@@ -56,6 +56,7 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
   const e = view.encounter;
   if (e === null) return null;
   const field = battlefieldLine(e); // 6C-2：就地開打或退回模板的原因
+  const duelOffered = e.duel === "offered" && !e.in_battle; // RG-3：精英要求一對一，還沒選
   return (
     <PopupFrame placement={{ kind: "inline" }} tone="danger" className="world-encounter" testId="world-encounter" role="region" label="遇敵">
       <div className="section-title">遇敵：{e.location_name_zh}</div>
@@ -92,9 +93,10 @@ export function EncounterPanel({ view, busy, onAct, onBattle }: Pick<Props, "vie
           {e.duel_zh}
         </div>
       )}
-      {e.duel === "offered" && !e.in_battle && <DuelDialog view={view} encounter={e} busy={busy} onAct={onAct} />}
+      {duelOffered && <DuelDialog view={view} encounter={e} busy={busy} onAct={onAct} />}
       <div className="run-actions">
-        <button type="button" className="primary" disabled={busy} onClick={onBattle} data-testid="world-fight">
+        {/* 有單挑提議時「開戰」＝拒絕單挑，改一般樣式（和單挑對話框「不引導」一致；開發 PM 決定，RG-4 驗收美術 PM 另記）；沒有單挑照舊主鈕 */}
+        <button type="button" className={duelOffered ? undefined : "primary"} disabled={busy} onClick={onBattle} data-testid="world-fight">
           {e.in_battle ? "繼續戰鬥" : "開戰"}
         </button>
         {!e.in_battle && (
