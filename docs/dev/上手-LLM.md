@@ -23,7 +23,7 @@
 | `llm/consistency.py` | 敘事與效果一致（`skill_facts`、`check_mentions`、`check_added`）、世界觀詞用量 |
 | `llm/flash_eval.py`、`skill_eval.py`、`style_eval.py` | 真模型評估工具（`trpg llm …`） |
 | `api/llm_source.py` | `LlmProvider`：`LocalLlmProvider`（讀設定、ping）、`MockLlmProvider`（測試；`flash_naming=True` 開 Mock 命名） |
-| `api/world_pregen.py` | 大世界預先生成：單一背景佇列、只放記憶體、等最多 10 秒（`WAIT_SECONDS`） |
+| `api/world_pregen.py` | 大世界預先生成：單一背景佇列（WP-2 起許願插隊排最前面）、只放記憶體、等最多 10 秒（`WAIT_SECONDS`） |
 | `world/generated.py` | 世界引擎拿生成內容的介面：請求（`FlashGenRequest`…）、`supply`、`recorded`（重播） |
 | `roguelite/llm_hook.py` | 一輪的掛接點（`use_proposer`、`use_flash_source`；`trpg.roguelite` 不能匯入 `trpg.llm`） |
 | `skillgen/flash_text.py` | **LF-1**：`VariationText`、`clean_text`／`clean_name`／`clean_note`（引擎端的最後一道文字檢查） |
@@ -79,7 +79,7 @@
 | 一輪的閃現紀錄 | `tests/roguelite/test_flash_llm_run.py`、`test_flash_texts_run_lf1.py`、`test_save.py` |
 | 大世界生成、日誌、重播 | `tests/world/test_generated_content.py`、`test_flash_texts_world_lf1.py`、`test_save.py`、`test_replay.py`；`tests/api/test_world_pregen.py`、`test_world_pregen_schedule.py` |
 | prompt 文字 | `tests/llm/test_prompts.py`、`test_prompt_prefix.py` |
-| 許願池（WP-1） | `tests/world/test_wish.py`、`tests/llm/test_wish_match.py`、`tests/api/test_wish_pregen.py` |
+| 許願池（WP-1、WP-2） | `tests/world/test_wish.py`、`tests/llm/test_wish_match.py`、`tests/api/test_wish_pregen.py`、`tests/api/test_wish_api_wp2.py`（API、面板、等待、插隊）；主城 `panel`：`tests/world/test_capital.py`、`test_capital_figures.py`、`client/src/world/atlas.test.ts` |
 | 依賴方向 | `uv run lint-imports`、`tests/test_architecture.py` |
 
 本機 LLM 冒煙（手動、少量）：寫一支暫存腳本，`load_llm_config(Path("config/llm.local.toml"))` → `OpenAICompatClient` → `LlmFlashSource(client, naming=client)` → `make_offer`，印 `record.names` 與每個選項的 `skill.name_zh`、`variation.note_zh`（LF-1 報告第 3 節有輸出範例）。
@@ -114,3 +114,11 @@
 4. **願望文字**只在動作裡（日誌有）與 prompt 的 `<player_input>`（對關鍵字、提議技能兩步；`make_proposer(player_text=)` → `propose_skill`）；`WishGen` 不存願望，命名步驟不看願望。
 5. **Mock**：`mock_wish_client` 用「名稱有任一字出現在願望裡」對關鍵字（「凍」→ 冰凍、「燃」→ 點燃）。Mock 提議器做不出冰凍的完整技能（`literal_error`），所以冰凍願望在 Mock 下是 `partial`；要測 `llm` 版用點燃（`tests/api/test_wish_pregen.py`）。
 6. **測試**：`tests/world/test_wish.py`（規則、退路、存檔）、`tests/llm/test_wish_match.py`（`<player_input>`、重試、prompt 快照）、`tests/api/test_wish_pregen.py`（生成函式、佇列、日誌與重播、最小顯示）。
+7. **WP-2（API、面板、等待、插隊）**：
+   - 請求：`WorldActionRequest` 多 `WishAction`（`{kind:"wish", text?}` 或 `{kind:"wish", keywords:[…]}`；TS 型別的 `keywords` 是必填，文字許願送 `[]`）。
+   - 面板：`WorldView.wish`（`api/world_wish_view.py::wish_view`、schema 在 `api/world_wish_schemas.py`）：人在主城才有；`cost`、`refund`、`coins`、`left`、`per_week`、`available`／`blocked_zh`、`llm`、`text_max_chars`、`max_keywords`、`menu`（ID、名稱、`description_zh`）、`title_zh`（許願池物件名）、`speaker`／`line_zh`（守池人物件的頭像與 `note_zh`）。`blocked_zh` 走 `wish_block`：戰鬥中 → 待選閃現 → 待選三選一（和 `world_step` 先擋的字相同）→ `wish_problem`。`llm`＝`store.pregen` 裝上而且 `pregen.enabled()`（文字許願只經預先生成的供應者）；`routes/world.py::_view` 傳 `wish_llm`。
+   - `PendingOfferView` 多 `source`（`quest`／`opportunity`／`wish`）、`refund`（都不拿退幾任務幣）。
+   - 等待：`PregenWaitRequest.kind` 多 `wish`＋`text`（`keywords` 收但選單許願一律 `none`）。`world_pregen.wish_wait_request` 和動作組同一把鍵（願望先 `strip`）；空白、超過字數、`wish_block` 不過＝`none`（不白打 LLM；等待端點不看戰鬥中，那時動作本來就 409）。
+   - **插隊**：`WorldPregen` 不再直接把 `_run` 丟給執行緒池；`_submit` 把 `_Entry`（帶自己的 `Future` 與內容庫視圖）放進 `_urgent`（`URGENT_KINDS`＝`{"wish"}`）或 `_normal` 兩條 deque，再丟一個 `_next` 工作；`_next` 從 `_urgent` 先拿、`set_running_or_notify_cancel` 失敗（被取消）就略過。結果：許願排在所有還沒開始的預測前面、許願之間照先後、正在跑的那一筆不被打斷。測試 `tests/api/test_wish_api_wp2.py::test_wish_jumps_the_queue`、`test_cancelled_wish_is_skipped`。
+   - 主城：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`）；前端 `atlasModel.objectHud` 在 WP-3 接上面板前略過 `wish`（照舊開說明卡）。
+   - Mock 注意：Mock 提議器做不做得出完整技能跟技能種子（角色 ID、賽季種子）有關；要測 `llm` 版用 `alice`＋`make_world()`（同 `test_wish_pregen`）。
