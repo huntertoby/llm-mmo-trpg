@@ -53,6 +53,8 @@ targets:
       - {path: element_mods.shadow, label_zh: 暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: "phases[*].trigger.permille", label_zh: 階段 HP 門檻, kind: permille, hint_min: 100, hint_max: 900, note_zh: 頭目 HP 跌到這個千分比以下時進入該階段；後面的階段要比前面低。}
       - {path: "phases[*].mana_restore", label_zh: 階段回復法力, kind: int, hint_min: 1, hint_max: 60, note_zh: 頭目進入這個階段時回復的法力點數（不超過最大法力）；沒寫＝不回復。開場階段不能設。}
+      # GB-2：階段的生長表面（content/battle.py 的 PhaseGrowSurface；只展開已寫 grow_surface 的階段，例：灰燼之心第 3 階段的火地）。
+      - {path: "phases[*].grow_surface.max_rows", label_zh: 表面生長排數, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 這個階段的表面（例：火地）從頭目南緣往南最多長到幾排（含進階段時放的第 1 排；每輪結束長 1 排，遇到人、物件、水、岩漿、牆就停在那一欄）。越大越會把坑底封住。只能 1～9。}
       # PB-1n：頭目部位（content/parts.py 的 BossPart；只有寫了 parts 的頭目才展開）。
       # 加總 600‰、部位數、ID 等結構照 schema 擋；on_break[*].amount 只展開 stat_down（其他破壞效果沒有數量）。
       - {path: "parts[*].hp_permille", label_zh: 部位血量（‰）, kind: permille, hint_min: 50, hint_max: 400, note_zh: 部位血量＝頭目開場最大 HP 的這麼多千分比（200＝20%）；同一隻頭目所有部位加總不能超過 600‰。部位越少血越快破。}
@@ -71,6 +73,8 @@ targets:
       - {path: "parts[*].element_mods.holy", label_zh: 部位神聖弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
       - {path: "parts[*].element_mods.shadow", label_zh: 部位暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性；沒寫＝和本體相同。}
       - {path: "parts[*].on_break[*].amount", label_zh: 能力下降量, kind: int, hint_min: 1, hint_max: 999, existing_only: true, note_zh: 部位破掉後頭目下降多少，單位看「下降哪一項」：移動＝格、護甲／命中＝點、抗性＝‰（降低量）；「造成傷害」是倍率‰（750＝之後只打出 75%，也就是 −25%；要小於 1000，越小降越多）。}
+      # GB-2：限時封招（SealSkillBreak.rounds；只展開已寫 rounds 的封招，沒寫＝永久封住，改成限時屬結構）。
+      - {path: "parts[*].on_break[*].rounds", label_zh: 封招回合數, kind: int, hint_min: 1, hint_max: 5, existing_only: true, note_zh: 部位破掉後封住那一招幾輪：從破掉那一輪起算（2＝破掉那一輪和下一輪不能放，再下一輪起可以）。換階段不會解封。}
       # NW-2a：招式組（skill_ids＝技能 ID 清單；只能選 content/skills/ 既有的招，武器相容與敵人專用照載入檢查）
       - {path: skills, label_zh: 技能（開場）, kind: skill_ids, note_zh: 單位開場會用的招；數量上限依 core.yaml 的 skill_slots，武器需求要和單位武器相容。}
       - {path: "phases[*].skills", label_zh: 階段技能, kind: skill_ids, note_zh: 進入這個階段後換成這組招；刪掉＝沿用上一階段，空清單＝這個階段不放招。開場階段不能設。}
