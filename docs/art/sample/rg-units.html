@@ -255,7 +255,7 @@ PARTS.duel2 = () => {
   const one = (id) => RU.duelCanvas(duelSpec(id, "A"), 1);
   const D = Object.fromEntries(Object.keys(ELITES).map((id) => [id, one(id)]));
   const claw = (bg) => { const c = document.createElement("canvas"); c.width = c.height = 48; const g = c.getContext("2d"); g.fillStyle = bg; g.fillRect(0, 0, 48, 48); RU.beastClaw(g, 48); return c; };
-  const blocks = [{ title: "第 2 版：單挑插圖 A（採用）＋獸爪改「三道爪痕」（必修 M2-1）" },
+  const blocks = [{ title: "第 3 版：單挑插圖 A（採用）＋獸爪「三道爪痕」劃過劍身中段（必修 M2-1）" },
     { note: "上排：獸爪圖示單獨（48 格真 1 倍、×8；畫的方向＝劍圖示的斜線，插圖裡鏡像）；插圖中間交叉那一塊裁 72×72：北坡狼王、熔核領主（劍＋爪痕）、疤面（劍＋單刀，對照），各真 1 倍與最近鄰 ×8" },
     { cells: [plain(claw("#3a3f4a"), "爪痕 1 倍"), nn(claw("#3a3f4a"), 8, "爪痕 ×8")], gap: 16 },
     { cells: ["wolf", "lord", "scar"].flatMap((id) => { const c = crop(D[id], 124, 20, 72, 72); return [plain(c, `${ELITES[id].zh.split("（")[0]} 1 倍`), nn(c, 8, "×8")]; }), gap: 14 },

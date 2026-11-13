@@ -33,7 +33,7 @@ SHOTS = [
     ("scene-800", "part=scene&w=800", "shots/rg-units/5-scene-800.png"),
     ("zoom", "part=zoom", "shots/rg-units/6-scene-zoom3.png"),
     # v2 (art PM picked A/A/A): duel sheet shows only A; 7-duel.png (A vs B) is kept as a record
-    ("duel", "part=duel2", "shots/rg-units/7-duel-v2.png"),
+    ("duel", "part=duel2", "shots/rg-units/7-duel-v3.png"),
     ("parts", "part=parts", "shots/rg-units/8-parts.jpg"),
 ]
 
@@ -41,8 +41,11 @@ SHOTS = [
 DIALOG = ART / "sample" / "rg-duel-dialog.html"
 DIALOGS = [
     # v2: only A; the B dialogs (11-, 12-) are kept as records and not re-shot
-    ("dialog-1600", (1600, 900), "w=1600&v=A&e=wolf", "shots/rg-units/9-dialog-1600-A-v2.png"),
-    ("dialog-800", (800, 600), "w=800&v=A&e=lord", "shots/rg-units/10-dialog-800-A-v2.png"),
+    # v3 (claw re-crossed): wolf and lord at both sizes; v2 files are kept as records
+    ("dialog-1600", (1600, 900), "w=1600&v=A&e=wolf", "shots/rg-units/9-dialog-1600-wolf-v3.png"),
+    ("dialog-800", (800, 600), "w=800&v=A&e=lord", "shots/rg-units/10-dialog-800-lord-v3.png"),
+    ("dialog-800-wolf", (800, 600), "w=800&v=A&e=wolf", "shots/rg-units/14-dialog-800-wolf-v3.png"),
+    ("dialog-1600-lord", (1600, 900), "w=1600&v=A&e=lord", "shots/rg-units/15-dialog-1600-lord-v3.png"),
     ("dialog-1600-scar", (1600, 900), "w=1600&v=A&e=scar", "shots/rg-units/13-dialog-1600-scar-v2.png"),
 ]
 

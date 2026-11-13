@@ -275,7 +275,7 @@ window.RGUnits = (() => {
   function weaponCanvas(look, px, res) { const cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); const g = cv.getContext("2d"); g.scale(res, res); if (look.kind === "beast_claw") beastClaw(g, px); else QIconsWeapons.paint(g, look, px, res, { frame: "none" }); return cv; }
   /**
    * 異形精英的「武器」（第 2 版，審查必修 M2-1）：三道骨白彎弧爪痕。第 1 版「三根爪＋褐色掌」1 倍讀成書本、羽毛，已拿掉掌。
-   * 48 格畫法：外框 #16121a（寬 3）、骨 #e9e3cf、凹側暗面 #a8a08a、凸側亮線白 75%。三道平行、由粗到尖（入爪端粗、收尾細），
+   * 48 格畫法：外框 #16121a（寬 2.4，第 3 版）、骨 #e9e3cf、凹側暗面 #a8a08a、凸側亮線白 75%。三道平行、由粗到尖（入爪端粗、收尾細），
    * 中間那道最長。畫的方向和 Q 版劍圖示同一條斜線（左下－右上）；crossed() 把精英那把左右鏡像，所以實際是「右上往左下」的
    * 另一條斜線，和主角的劍交叉成 X（爪痕蓋在劍上，劍柄、劍尖在兩端露出）。
    */
@@ -290,9 +290,9 @@ window.RGUnits = (() => {
         g.bezierCurveTo(ox + b - ww * 0.35, y2, ox + b - ww * 0.55, y1, ox - 0.2, top);
         g.closePath(); };
     };
-    const OX = [-13.2, -6.6, 0], LN = [[-12.5, 15], [-17.5, 17.5], [-15, 11.5]], WD = [3.9, 4.7, 3.9], BD = [3, 3.6, 3]; /* 整組往 -x 偏 6（鏡像後＝往劍尖那頭）：劍柄、護手、下半段劍身露在爪痕外；爪痕劃過上半段劍身 */
+    const OX = [-17, -8, 1], LN = [[-14.5, 15], [-21, 21], [-17, 17]] /* 最靠劍尖那道兩端收短，不出 48 格 */, WD = [2.7, 3.1, 2.7], BD = [3.4, 4, 3.4]; /* 第 3 版：間距 9（1 倍縫 ≥ 2 px，劍身從縫裡露出）；長到接近劍長、兩端伸出劍的兩側；中心 -8＝劍身中段（鏡像後往劍尖那頭） */
     const S3 = OX.map((ox, i) => slash(ox, LN[i][0], LN[i][1], WD[i], BD[i]));
-    g.lineJoin = "round"; g.strokeStyle = OUT; g.lineWidth = 3;
+    g.lineJoin = "round"; g.strokeStyle = OUT; g.lineWidth = 2.4;
     for (const t of S3) { g.beginPath(); t(); g.stroke(); }
     for (const t of S3) fill(g, "#e9e3cf", () => t());
     /* 凹側暗面：同一道往 -x 縮一半寬 */
@@ -304,15 +304,16 @@ window.RGUnits = (() => {
     g.restore();
   }
   const isDiag = (look) => { if (look.kind === "beast_claw") return true; try { return !!QIconsWeapons.def(look).meta.diag; } catch (e) { return true; } };
-  function crossed(ctx, heroW, eliteW, cx, cy, px, res, mode) {
-    const put = (look, mirror) => {
-      const c0 = weaponCanvas(look, px, res), c = mode === "flat" ? tinted(c0, "#f2e6c8") : c0;
+  function crossed(ctx, heroW, eliteW, cx, cy, px0, res, mode) {
+    const put = (look, mirror, k = 1) => {
+      const px = px0 * k, c0 = weaponCanvas(look, px, res), c = mode === "flat" ? tinted(c0, "#f2e6c8") : c0;
       ctx.save(); ctx.translate(cx, cy); if (mirror) ctx.scale(-1, 1); if (!isDiag(look)) ctx.rotate(0.62);
       if (mode === "flat") { const o = tinted(c0, OUT); for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) ctx.drawImage(o, -px / 2 + dx * 0.9, -px / 2 + dy * 0.9, px, px); }
       ctx.drawImage(c, -px / 2, -px / 2, px, px); ctx.restore();
     };
     /* 爪痕蓋在劍上（第 2 版）：劍蓋上去會把三道爪痕的中段切成六根尖刺，讀成羽毛扇；爪痕在上，劍從爪痕之間、兩端露出 */
-    if (eliteW.kind === "beast_claw") { put(heroW, false); put(eliteW, true); } else { put(eliteW, true); put(heroW, false); }
+    /* 第 3 版：異形精英的爪痕蓋在劍上、從劍身中段劃過，劍放大 1.12 倍讓劍身夠長、三道爪痕之間露得出鋼色；人形照舊先畫精英再畫主角 */
+    if (eliteW.kind === "beast_claw") { put(heroW, false, 1.12); put(eliteW, true); } else { put(eliteW, true); put(heroW, false); }
   }
   /** 四芒星火花（交叉點）。 */
   function spark(ctx, x, y, r, c1 = "#fff7c0", c2 = "#ffffff") {
@@ -374,7 +375,7 @@ window.RGUnits = (() => {
     if (A) {
       const r = ctx.createRadialGradient(cx, cy, 2, cx, cy, 34); r.addColorStop(0, "rgba(255,240,200,0.55)"); r.addColorStop(1, "rgba(255,240,200,0)"); ctx.fillStyle = r; ctx.fillRect(cx - 40, cy - 40, 80, 80);
       crossed(ctx, spec.hero.weapon, spec.elite.weapon, cx, cy, 58, res, "color");
-      spark(ctx, cx, cy - 9, 7);
+      if (spec.elite.weapon?.kind !== "beast_claw") spark(ctx, cx, cy - 9, 7); /* 第 3 版：爪痕那組不加火花（白色火花疊在白爪痕上，整組更像一團白毛） */
     } else {
       ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, 27, 0, TAU); ctx.fillStyle = "rgba(10,12,24,0.7)"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#e8bb48"; ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy, 23.5, 0, TAU); ctx.lineWidth = 0.8; ctx.strokeStyle = "rgba(232,187,72,0.6)"; ctx.stroke(); ctx.restore();
       crossed(ctx, spec.hero.weapon, spec.elite.weapon, cx, cy, 50, res, "flat");
