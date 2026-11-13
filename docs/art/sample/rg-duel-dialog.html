@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>RG 精英單挑對話框（樣張）</title>
+<!-- 樣張：不接進遊戲。框、按鈕、字級直接載入現行樣式（只讀）：PopupFrame 的 ui-popup／rt-frame、DialogFrame 的 decision-card＋world-hud-dialog（大世界詢問視窗）。
+     網址：?w=1600｜800 &v=A｜B &e=wolf｜lord｜scar｜forge。視窗大小由拍圖腳本給（--window-size）。 -->
+<link rel="stylesheet" href="../../../client/src/styles/index.css">
+<style>
+  html,body{margin:0;overflow:hidden;background:#14161f}
+  #bg{position:fixed;left:0;top:0}
+  .duel-art{display:block;margin:4px auto 8px;width:320px;height:120px}
+</style></head>
+<body>
+<canvas id="bg"></canvas>
+<div id="dlg"></div>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="qNpc.js"></script><script src="qIcons.js"></script><script src="qIconsWeapons.js"></script>
+<script src="occludeOutline.js"></script><script src="obSamples.js"></script>
+<script src="rgUnits.js"></script>
+<script>
+const P = new URLSearchParams(location.search), W = +(P.get("w") ?? 1600), H = W <= 800 ? 600 : 900, /* 無頭 Chrome 載入時 innerWidth 還少 16（捲軸），照網址給的視窗大小 */ V = P.get("v") ?? "A";
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, ASH = R4.REGIONS.find((r) => r.id === "ashen_waste");
+const NPCB = Object.fromEntries(Object.values(QNpc.BANDITS).flatMap(([, list]) => list.map(([zh, , u]) => [zh, u])));
+const CLAW = { kind: "beast_claw" };
+/** 同 rg-units.html 的 ELITES（四場單挑的精英）。 */
+const ELITES = {
+  wolf: { zh: "北坡狼王", region: "cloud_ridge", them: "牠", elite: { spec: { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"], elite: true, affixes: ["berserk"] }, weapon: CLAW, k: 1.2 } },
+  scar: { zh: "疤面", region: "cloud_ridge", them: "他", elite: { npc: NPCB["斷崖幫隊長"], weapon: { kind: "saber", material: "steel" } } },
+  lord: { zh: "熔核領主", region: "ashen_waste", them: "牠", elite: { spec: { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"], elite: true, affixes: ["hardshell"] }, weapon: CLAW, k: 1.8 } },
+  forge: { zh: "鍛疤", region: "ashen_waste", them: "他", elite: { npc: NPCB["荒原隊長"], weapon: { kind: "shotgun", form: "double", material: "iron" } } },
+};
+const E = ELITES[P.get("e") ?? (W <= 800 ? "lord" : "wolf")];
+// 區域主題（四角飾件）：雲嶺照 obSamples.js applyTheme；荒原照 client/src/ui/regionCorners.ts 的 rivet 與 content/ui/region_themes.yaml（樣張端沒有，照抄）
+if (E.region === "cloud_ridge") OB.applyTheme("cloud_ridge");
+else {
+  const accent = "#ff6a1a", svg = (fx, fy) => `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><g transform="translate(${fx < 0 ? 18 : 0} ${fy < 0 ? 18 : 0}) scale(${fx} ${fy})"><path d="M0 0H18V6H6V18H0Z" fill="#5a5a60"/><path d="M0 0H18V1H1V18H0Z" fill="#7a7a80"/><circle cx="3" cy="3" r="1.6" fill="#9a9aa0"/><circle cx="12" cy="3" r="1.6" fill="#9a9aa0"/><circle cx="3" cy="12" r="1.6" fill="#9a9aa0"/><rect x="15" y="2" width="3" height="2" fill="${accent}" opacity="0.75"/></g></svg>`;
+  const POS = { tl: [1, 1, "left 2px top 2px"], tr: [-1, 1, "right 2px top 2px"], bl: [1, -1, "left 2px bottom 2px"], br: [-1, -1, "right 2px bottom 2px"] };
+  const layers = (sz) => Object.values(POS).map(([fx, fy, at]) => `url("data:image/svg+xml,${encodeURIComponent(svg(fx, fy))}") ${at} / ${sz}px ${sz}px no-repeat`).join(", ");
+  const r = document.documentElement.style; r.setProperty("--rt-accent", accent); r.setProperty("--rt-ring", accent); r.setProperty("--rt-ink", "#3a1a10"); r.setProperty("--rt-seal", accent); r.setProperty("--rt-corners", layers(18)); r.setProperty("--rt-corners-small", layers(12.6));
+  document.documentElement.dataset.region = "ashen_waste";
+}
+// 背景：大世界實地的地面（雲嶺 explore.js、荒原 regions4.js），地圖縮放照戰場（1600 → 1.31、800 → 0.53），壓暗一點表示有視窗
+{
+  const S = W <= 800 ? 0.53 : 1.31, T = 48, bg = document.getElementById("bg"); bg.width = W; bg.height = H; const g = bg.getContext("2d"); g.scale(S, S);
+  for (let y = 0; y < 40; y++) for (let x = 0; x < 64; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); g.translate(x * T, y * T); g.scale(T / 52, T / 52);
+    if (E.region === "cloud_ridge") { const mx = x % 12, my = y % 10; g.translate(-mx * 52, -my * 52); Explore.ground(g, "s", mx, my); } else R4.tile(g, ASH, (x + y * 3) % 5 === 0 ? "dirt" : "stone", 0, 0, x % 12, y % 10); g.restore(); } /* 實地地圖只有約 25×13 格：超出的格子重複前面的 */
+  g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = "rgba(10,12,20,0.35)"; g.fillRect(0, 0, W, H);
+}
+// 對話框：大世界詢問視窗＝DialogFrame（hud 位置：上緣在主角卡下方、寬 dialogBox() 的 480）
+const TOP = W <= 800 ? 76 : 112, maxH = H - TOP - (W <= 800 ? 70 : 96);
+const h = OB.h;
+const art = RU_canvas();
+function RU_canvas() { const dpr = window.devicePixelRatio || 1, c = RGUnits.duelCanvas({ hero: { doll: TP.hero_fighter, weapon: { kind: "sword", material: "steel" } }, elite: E.elite, region: E.region, variant: V }, dpr); c.className = "duel-art"; return c; }
+const frame = h("div.ui-popup.rt-frame.ui-popup-hud.decision-card.world-hud-dialog", { role: "dialog", "aria-label": "精英單挑", "data-popup": "hud", "data-tone": "normal", style: `top:${TOP}px;max-height:${maxH}px;width:480px;max-width:480px` },
+  h("div.decision-head", {}, h("div.modal-title", {}, `${E.zh}要求一對一`)),
+  h("div.ui-popup-body", {},
+    art,
+    h("p", {}, `接受：只有你和${E.zh}上場，隊友、傭兵不上場。拒絕：照原本全隊開打。`),
+    h("p.small.muted", {}, "兩邊的獎勵一樣（經驗、掉落、懸賞照整個陣容算）。"),
+    /* 第 2 版（美術 PM 決定 3）：兩顆都用一般按鈕樣式（不加 primary）、一樣大（同一個 min-width），順序照現行（接受在左）；
+       預設焦點不放在任何一顆按鈕上（不加 autoFocus；移植時焦點給框本身 tabIndex −1），不引導 */
+    h("div.modal-buttons", {}, h("button", { type: "button", style: "min-width:96px" }, "接受"), h("button", { type: "button", style: "min-width:96px" }, "拒絕"))));
+document.getElementById("dlg").appendChild(frame);
+document.documentElement.dataset.done = "1";
+</script>
+</body></html>
