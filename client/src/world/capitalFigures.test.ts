@@ -240,7 +240,7 @@ describe("互動照舊", () => {
     expect(pool).toContain('data-testid="world-object-who"');
     expect(pool).toContain('data-portrait="doll"');
     expect(pool).toContain("守池人");
-    expect(pool).toContain("說出你想要的力量"); // WP-2 的暫定台詞（待玩法 PM 給字）
+    expect(pool).toContain("池水記得每個走過這裡的人"); // TXT-2：玩法 PM 定稿台詞
     const well = card("wishing_pool");
     expect(well).not.toContain("world-object-who");
     expect(well).not.toContain("data-portrait");

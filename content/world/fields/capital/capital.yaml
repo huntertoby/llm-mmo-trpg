@@ -210,11 +210,11 @@ situation_objects:
       facing: e   # RT-5b：面向東邊剛醒來的主角
       line_zh: 封印和懸賞的消息，都貼在板上了。   # 6V-3：公告板上緣頭像旁的一句話（待玩法 PM 確認）
   # 許願池
-  - {at: [4, 3], id: wishing_pool, name_zh: 許願池, note_zh: 花任務幣向池子說一句願望，換一份技能三選一；每週次數有限。, panel: wish}   # 許願池（WP-2：點了開許願池面板；說明句暫定，待玩法 PM 給字）
+  - {at: [4, 3], id: wishing_pool, name_zh: 許願池, note_zh: 花任務幣向池子說一句願望，它會照你的願望給三招讓你挑一招；都不想要可以不拿，退回一半任務幣。每週能許的次數有限。, panel: wish}   # 許願池（WP-2：點了開許願池面板；TXT-2：玩法 PM 定稿句）
   - at: [6, 4]   # 守池人（站位；6V-1：水色長袍、髮髻，手上一顆池晶，面向池子）
     id: pool_keeper
     name_zh: 守池人
-    note_zh: 「說出你想要的力量，池子會回應你。」   # WP-2：也是許願池面板標頭下守池人的那一句（暫定，待玩法 PM 給字）
+    note_zh: 池水記得每個走過這裡的人。說說你想要什麼樣的力量——說得越具體，它越聽得懂。   # WP-2：也是許願池面板標頭下守池人的那一句（TXT-2：玩法 PM 定稿句）
     panel: wish   # WP-2：點了開許願池面板（WorldView.wish）
     figure:
       portrait:

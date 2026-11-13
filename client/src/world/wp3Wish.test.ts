@@ -27,7 +27,7 @@ function wishData(over: Partial<WishData> = {}): WishData {
   return {
     title_zh: "許願池",
     speaker: { name_zh: "守池人", portrait: null, region: "capital" },
-    line_zh: "「說出你想要的力量，池子會回應你。」",
+    line_zh: "池水記得每個走過這裡的人。說說你想要什麼樣的力量——說得越具體，它越聽得懂。",
     cost: 4,
     refund: 2,
     coins: 9,
