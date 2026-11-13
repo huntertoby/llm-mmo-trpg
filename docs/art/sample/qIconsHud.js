@@ -233,9 +233,62 @@ window.QIconsHud = (() => {
   const tone3 = (a) => [a, mix(a, "#ffffff", 0.4), mix(a, "#000000", 0.28)];
   const accentOf = (id) => tone3(REGION_ACCENT[ICON[id].region] ?? "#a898ff");
 
+  // =====================================================================
+  // 許願池（WP-3，11-13 補畫；規格 docs/art/WP-3驗收.md 第 5 節；紀錄 Q版小圖示-第7批HUD.md 第 13 節）。
+  // 放在另一張表 WISH，不進 ICON／list()：第⑦批的總表、真 1 倍分段、自查、指紋（--hash hud 55 行）一行都不動。
+  // 分頁圖 16（圖樣本身、放在 #1e2236 上，HudBare 的路徑）、籌碼圖 15（放在約 #2e3244 上）。每個位置三個候選：
+  // 不帶尾碼的是推薦（wish_text、wish_menu、wish_left），_b／_c 是其他候選，只給樣張頁 ?part=wish 對照。
+  // 「願望」記號＝金色四芒星（白芯）：五角星留給任務幣（第⑦批第 2 版金幣拿掉星的理由），四芒星和機遇、夜晚的白黃小星同一類但這裡是主體、金色。
+  // =====================================================================
+  /** 金色四芒星（白芯；三階：金、亮金左上半、白芯）。k＝內凹比例。 */
+  const wishStar = (c, x, y, R, k = 0.3) => { poly(c, "#ffc83a", starPts(x, y, R, R * k, 4), 0.5); poly(c, "#ffe58a", [[x, y - R], [x - R * k, y - R * k], [x - R, y], [x, y]]); poly(c, "#fffbe6", starPts(x, y, R * 0.42, R * 0.13, 4)); };
+  /** 對話框（圓角框＋左下尾巴）：本色、下緣暗一階、左上亮面。 */
+  const speech = (c, C, x, y, w, h, r, tail) => { poly(c, C[2], tail, 1); rr(c, C[2], x, y, w, h, r); rr(c, C[0], x, y, w, h - 3.4, r); poly(c, C[0], tail.map(([a, b]) => [a, b - 2.2]), 0.6); el(c, C[1], x + w * 0.24, y + 5.2, w * 0.13, 2.1, -0.35); };
+  const SKY = ["#4f9fe8", "#bfe2ff", "#3478c0"], LAV = ["#9c88e6", "#ddd4ff", "#7560c4"];
+  const WISH = {
+    // ---- 分頁「說出願望」（窄版「願望」）：LLM 開著才有，用自己的話說 ----
+    wish_text: { zh: "分頁：說出願望（推薦 A）", grp: "wish", slot: "text", sizes: [16], topic: "A：天藍色對話框（左下尾巴、下緣暗一階、左上亮面），框裡一顆金色四芒星（白芯，自己包一圈外框）——「說出口的願望」。對話框不用米白（說服、留言、線索都是米白紙）",
+      d: (c, o) => { speech(c, SKY, 3.6, 4.6, 40.8, 30.4, 12, [[9.6, 30], [21.4, 30], [5.4, 44]]); halo(c, o, (x) => wishStar(x, 24, 19.6, 12.4)); } },
+    wish_text_b: { zh: "分頁：說出願望（候選 B）", grp: "wish", slot: "text", sizes: [16], topic: "B：淡紫色的想像雲（五顆圓鼓起來、左下兩顆漸小的小泡泡），雲裡一顆金色四芒星——「心裡的願望」",
+      d: (c, o) => { const lumps = [[13.6, 21, 9.4], [23.6, 13.4, 10.6], [34.6, 18.6, 9.4], [31, 27.4, 8.4], [18.4, 28, 8.6]];
+        for (const [x, y, r] of lumps) ci(c, LAV[2], x, y + 1.6, r); for (const [x, y, r] of lumps) ci(c, LAV[0], x, y, r); ci(c, LAV[2], 11, 39.4, 4.6); ci(c, LAV[0], 10.6, 38.8, 3.8); ci(c, LAV[0], 6.2, 42.6, 2.6);
+        el(c, LAV[1], 17.4, 9.6, 4.4, 2, -0.5); halo(c, o, (x) => wishStar(x, 24.4, 20.4, 11)); } },
+    wish_text_c: { zh: "分頁：說出願望（候選 C）", grp: "wish", slot: "text", sizes: [16], topic: "C：右上一顆大的金色四芒星，左下一個小的天藍對話框（星壓在框上、自己包外框）——「對著星說」",
+      d: (c, o) => { speech(c, SKY, 3.6, 23.4, 23.4, 16.6, 6.4, [[7.4, 37], [15, 37], [4.6, 44]]); halo(c, o, (x) => wishStar(x, 29.6, 18.8, 15.2, 0.28)); } },
+
+    // ---- 分頁「從選單挑」（窄版「選單」）：從關鍵字選單挑 ----
+    wish_menu: { zh: "分頁：從選單挑（推薦 A）", grp: "wish", slot: "menu", sizes: [16], topic: "A：田字四格的選單：三格灰藍（各一顆關鍵字色小圓點：冰、火、毒），右下那格是挑中的金格、大一圈、壓一個深色勾——「從格子裡挑一個」",
+      d: (c, o) => { const T = 18, G = 3.6, P = [[4, 4, "#8fe3ff"], [4 + T + G, 4, "#ff7a2a"], [4, 4 + T + G, "#7ddc3a"]];
+        for (const [x, y, dot] of P) { rr(c, "#55617e", x, y, T, T, 4.6); rr(c, "#7a88a8", x, y, T, T - 2.6, 4.6); f(c, "#a8b4d0", () => c.roundRect(x + 3, y + 2, T - 8, 2, 1)); ci(c, OUT, x + T / 2, y + T / 2 - 0.6, 5.4); ci(c, dot, x + T / 2, y + T / 2 - 0.6, 4.2); }
+        halo(c, o, (x) => { const q = 4 + T + G - 1.4, S = T + 2.8; rr(x, "#b88a24", q, q, S, S, 5); rr(x, "#f2c44a", q, q, S, S - 3, 5); f(x, "#fff0b0", () => x.roundRect(q + 3.4, q + 2.2, S - 9, 2, 1)); ln(x, "#4a3008", 4.2, [[q + 5.4, q + 11], [q + 9.6, q + 15.4], [q + 16.2, q + 6.6]]); }); } },
+    wish_menu_b: { zh: "分頁：從選單挑（候選 B）", grp: "wish", slot: "menu", sizes: [16], topic: "B：直排三列的清單（每列一顆關鍵字色圓點＋灰藍長條），中間那列是挑中的金條、左邊一個深色勾",
+      d: (c, o) => { const ROWS = [[5.4, "#8fe3ff"], [19.6, null], [33.8, "#ff7a2a"]];
+        for (const [y, dot] of ROWS) { if (!dot) continue; rr(c, "#55617e", 15, y, 29, 9.6, 4.8); rr(c, "#7a88a8", 15, y, 29, 7.4, 3.7); ci(c, OUT, 8.6, y + 4.8, 5.6); ci(c, dot, 8.6, y + 4.8, 4.4); }
+        halo(c, o, (x) => { const y = 19.6 - 1.4; rr(x, "#b88a24", 3.4, y, 41.2, 12.4, 6.2); rr(x, "#f2c44a", 3.4, y, 41.2, 9.6, 4.8); f(x, "#fff0b0", () => x.roundRect(17, y + 2, 20, 1.8, 0.9)); ln(x, "#4a3008", 3.8, [[7.6, y + 6.4], [10.6, y + 9.2], [15, y + 3.4]]); }); } },
+    wish_menu_c: { zh: "分頁：從選單挑（候選 C）", grp: "wish", slot: "menu", sizes: [16], topic: "C：一隻米白的手（食指伸直、單色剪影，規則 9）從右下點左上一顆金框的關鍵字圓章（冰色心），旁邊露出另一顆灰藍圓章",
+      d: (c, o) => { ci(c, "#55617e", 35.6, 11.6, 8.4); ci(c, "#7a88a8", 35.6, 10.6, 7.2); ci(c, OUT, 35.6, 11, 3.6); ci(c, "#ff7a2a", 35.6, 11, 2.8);
+        ci(c, "#b88a24", 15.4, 15.4, 11.6); ci(c, "#f2c44a", 15.4, 14.6, 10.8); ci(c, OUT, 15.4, 15, 7); ci(c, "#8fe3ff", 15.4, 15, 5.8); el(c, "#e6fbff", 13.4, 12.8, 2.2, 1.4, -0.6);
+        halo(c, o, (x) => at(x, 32.4, 32.6, 0.92, (q) => { rr(q, "#f2e6c8", -3.6, -22, 7.2, 20, 3.6); rr(q, "#f2e6c8", -8.6, -5, 17.2, 15.4, 5.6); rr(q, "#cbbd9a", -8.6, 6.6, 17.2, 3.8, 1.9); el(q, "#f2e6c8", -9.2, -1.4, 3, 5.4, 0.5); f(q, "#fffaf0", () => q.roundRect(-2.4, -20.4, 2, 12, 1)); }, -0.78)); } },
+
+    // ---- 籌碼「本週還能許 N／2」：本週剩幾次（不用時鐘、沙漏；和任務幣六角、靈感點燈泡分開） ----
+    wish_left: { zh: "籌碼：本週還能許（推薦 A）", grp: "wish", slot: "left", sizes: [15], topic: "A：一口小小的許願池——橫的石砌池緣（米灰、上亮下暗）圍著一汪天藍的水（左上一道亮的水光），池上冒出一顆金色四芒星（白芯、自己包外框；>24px 右上多一顆小星）。剪影是「扁橢圓＋上面一顆星」，和任務幣的六角、靈感點的燈泡都不同",
+      d: (c, o) => { el(c, "#857a66", 24, 33.4, 20.8, 11.2); el(c, "#c4b9a2", 24, 31.4, 20.8, 9.8); el(c, "#2f7fd0", 24, 30.6, 15.2, 6); el(c, "#4aa8ff", 24, 31.4, 15.2, 5.2); el(c, "#bfe6ff", 19.4, 30, 7.4, 1.7);
+        if (!o.small) for (const x of [10, 18, 30, 38]) f(c, "#9a8f7a", () => c.rect(x, 38.6, 1.4, 3.6));
+        halo(c, o, (x) => { wishStar(x, 23.4, 15.8, 12); if (!o.small) poly(x, "#ffe58a", starPts(38.4, 9.6, 5.4, 1.7, 4), 0.4); /* 右上小星 ≤24px 省掉（規則 8；15 真 1 倍只剩一團灰） */ }); } },
+    wish_left_b: { zh: "籌碼：本週還能許（候選 B）", grp: "wish", slot: "left", sizes: [15], topic: "B：流星——右上一顆金色四芒星，左下拖一道天藍漸細的光尾（中間一道白芯）",
+      d: (c, o) => { f(c, "#4aa8ff", () => { c.moveTo(19.4, 9.4); c.quadraticCurveTo(12, 24, 4.6, 43.4); c.quadraticCurveTo(24, 32, 39, 27); c.closePath(); }); f(c, "#bfe6ff", () => { c.moveTo(24, 14.6); c.quadraticCurveTo(15, 28, 7.6, 40.4); c.quadraticCurveTo(22, 30, 33.4, 24.4); c.closePath(); });
+        halo(c, o, (x) => wishStar(x, 30.4, 17.4, 13)); } },
+    wish_left_c: { zh: "籌碼：本週還能許（候選 C）", grp: "wish", slot: "left", sizes: [15], topic: "C：天燈（許願燈）——圓頂、上寬下窄的紅橘紙燈（左半亮、兩道竹骨），下口透出黃色燈火，底下一圈竹環",
+      pre: (c, o) => glow(c, 24, 32, 18, "#ffb040", 0.45),
+      d: (c, o) => { const body = (x0, x1) => () => { c.moveTo(15, 37.4); c.lineTo(x0, 17); c.quadraticCurveTo(x0, 5, 24, 4.6); c.quadraticCurveTo(48 - x0, 5, 48 - x0, 17); c.lineTo(x1, 37.4); c.closePath(); };
+        f(c, "#c84a26", body(8.6, 33)); c.save(); c.beginPath(); body(8.6, 33)(); c.clip(); f(c, "#ec6a3a", () => c.rect(0, 0, 24, 48)); c.restore(); f(c, "#ff9a6a", () => c.roundRect(11.6, 12, 3, 18, 1.5));
+        for (const x of [19.4, 28.6]) f(c, "#a8401e", () => c.rect(x - 0.7, 8, 1.4, 29)); el(c, "#ffc850", 24, 33.4, 8, 5); el(c, "#fff2b0", 24, 35, 4, 2.8); rr(c, "#a06a36", 13.6, 37, 20.8, 4.6, 2.3); f(c, "#d8a868", () => c.rect(15.4, 37.8, 16, 1.2)); } },
+  };
+  const wishList = (slot) => Object.entries(WISH).filter(([, e]) => !slot || e.slot === slot).map(([id, e]) => ({ id, ...e, min: Math.min(...e.sizes) }));
+
   // ---------------- 出圖 ----------------
   /** 圖樣定義（48 格）：card／d10（±10 單位）的包成 48 格；紋章帶區域色。 */
-  function def(id) { const e = ICON[id]; if (e.card) return { d: b10((c, o) => QP.entry("card", e.card).d(c, o)) }; if (e.d10) return { d: b10(e.d10) };
+  function def(id) { const e = ICON[id] ?? WISH[id]; if (e.card) return { d: b10((c, o) => QP.entry("card", e.card).d(c, o)) }; if (e.d10) return { d: b10(e.d10) };
     if (e.grp === "crest") { const A = accentOf(id); return { d: (c, o) => e.d(c, o, A), pre: e.pre }; } return { d: e.d, pre: e.pre, post: e.post }; }
   /** 只畫圖樣（不含框）：邊長 px 的 canvas（裝置像素 round(px×res)）；≤14px 不包外框（規則 8）。 */
   const glyph = (id, px, res = 2, opt = {}) => Q.render(def(id), px, res, { ow: opt.ow ?? (px <= 14 ? 0 : Q.outlinePx(px)) });
@@ -245,7 +298,7 @@ window.QIconsHud = (() => {
   function cardLike(fn10, px, res, cpx = cardPx(px)) { return Q.render({ d: b10(fn10) }, cpx * CARD_BOX, res, { ow: cpx <= 14 ? 0 : Q.outlinePx(cpx) }); }
   /** 畫一個含框的圖示在 (0,0)～(size,size)。框：功能列＝淺色圓底（HUD_BACKING）；紋章＝六角金框＋深藍底＋區域色細環（RegionCrest）；其他沒有框。 */
   function paint(ctx, id, size, res, opt = {}) {
-    const e = ICON[id];
+    const e = ICON[id] ?? WISH[id];
     ctx.save();
     if (e.grp === "bar" && opt.frame !== "none") {
       ctx.beginPath(); ctx.arc(size / 2, size / 2, (15.5 / 48) * size, 0, TAU); ctx.fillStyle = "#d4dbef"; ctx.fill(); ctx.lineWidth = size / 48; ctx.strokeStyle = "#8a94b8"; ctx.stroke();
@@ -280,5 +333,5 @@ window.QIconsHud = (() => {
   const list = (grp) => Object.entries(ICON).filter(([, e]) => !grp || e.grp === grp).map(([id, e]) => ({ id, ...e, min: Math.min(...e.sizes) }));
   /** 第 1 版的圖（?part=v2 對照用）：暫時把畫法換成 V1 再出圖。 */
   function canvasV1(id, px, zoom = 1, opt = {}) { const e = ICON[id], keep = e.d; e.d = V1[id].d; try { return canvas(id, px, zoom, opt); } finally { e.d = keep; } }
-  return { ICON, V1, canvasV1, PIN, REGION_ACCENT, GRP_ZH, CARD_BOX, cardPx, def, glyph, paint, canvas, pinCanvas, pinBadge, list, gearArt, crescent };
+  return { ICON, WISH, wishList, V1, canvasV1, PIN, REGION_ACCENT, GRP_ZH, CARD_BOX, cardPx, def, glyph, paint, canvas, pinCanvas, pinBadge, list, gearArt, crescent };
 })();

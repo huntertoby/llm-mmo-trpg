@@ -16,6 +16,8 @@
        audit   自查表；review 最近鄰放大（上排 2 倍內部、下排真 1 倍；&only=id,…）；hash 指紋
        true1x  真 1 倍：每格 現行｜Q 真 1 倍｜Q 2 倍（&group=all｜pin，&from=&n= 分段）
        all     a＋pin＋moon＋scene（預設）
+       wish    許願池三個圖示（WP-3 補畫，11-13）：&sec=cand｜tabs（&set=a｜b｜c）｜chip（&set=a｜b｜c）｜near（&set=tab｜chip）｜audit｜hash；
+               畫法在 qIconsHud.js 的 WISH 表（不進 ICON，第⑦批的清單與指紋不動）；qIconsEvent.js 只為了畫既有分頁圖的對照而載入
      重拍：uv run python docs/art/sample/tools/qicons_shots.py hud；--audit hud；--hash hud；true1x hud -->
 <link rel="stylesheet" href="../../../client/src/styles/index.css">
 <link rel="stylesheet" href="obSamples.css">
@@ -75,7 +77,7 @@
 <script src="gearArt.js"></script><script src="skillsData.js"></script><script src="skillIcons.js"></script><script src="parts.js"></script><script src="assembled.js"></script>
 <script src="itemIcons.js"></script><script src="hudIcons.js"></script><script src="tools/obLiveIcons.js"></script>
 <script src="obSamples.js"></script>
-<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script><script src="qIconsHud.js"></script><script src="qIconsEvent.js"></script>
 <script src="qPartsData.js"></script>
 <script>
 const { h } = OB, Q = QIcons, QP = QIconsParts, QH = QIconsHud, QL = window.QHudLive, NL = String.fromCharCode(10), TAU = Math.PI * 2;
@@ -147,6 +149,16 @@ function onFrame(e, px, cv) {
   return h("span.fr." + cls, {}, cv);
 }
 const uniq = (a) => [...new Set(a)];
+/** 自查量測（?part=audit 與 ?part=wish&sec=audit 共用）：外接框長邊比、平均亮度、亮面比、離格邊（48 單位），外框色的像素不算亮度。 */
+const auditMeasure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
+  return { long: (Math.max(x1 - x0, y1 - y0) + 1) / S, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n), edge: (Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48) / S }; };
+/** 最粗處內切圓直徑 ÷ 邊長（規則 10）。 */
+const auditThick = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
+  for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= 100 ? INF : 0;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (D[y * S + x]) D[y * S + x] = Math.min(D[y * S + x], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.414, at(x + 1, y - 1) + 1.414);
+  let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
+  return (best * 2) / S; };
 
 // ---------------------------------------------------------------- 總表 A
 function rowA(e) {
@@ -305,14 +317,7 @@ function main() {
     const R = 8, DIAG = new Set(["r_weapon"]), DIM = new Set(["pip_off"]);
     const glyphOf = (e, px) => (e.card || e.d10 ? null : QH.glyph(e.id, px, R, { ow: 0 }));
     const cardGlyph = (e, px) => { const cpx = e.grp === "pip" ? px * 0.96 : QH.cardPx(px); return Q.render(QH.def(e.id), cpx * QH.CARD_BOX, R, { ow: 0 }); };
-    const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
-      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
-      return { long: (Math.max(x1 - x0, y1 - y0) + 1) / S, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n), edge: (Math.min(x0, y0, S - 1 - x1, S - 1 - y1) * 48) / S }; };
-    const thick = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
-      for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= 100 ? INF : 0;
-      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (D[y * S + x]) D[y * S + x] = Math.min(D[y * S + x], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.414, at(x + 1, y - 1) + 1.414);
-      let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
-      return (best * 2) / S; };
+    const measure = auditMeasure, thick = auditThick;
     const lines = ["id | 名稱 | 來源 | 量的大小 | 佔格（≥70%／斜放 ≥60%） | 離格邊（≥2.4） | 平均亮度（深底 ≥100） | 亮面（≥5%） | 最粗處（≥12%） | 結果"]; let bad = 0;
     for (const e of L) { const px = e.grp === "bar" ? Math.round(Math.min(...e.sizes.filter((s) => !e.bare?.includes(s))) * 0.74) : e.min, cv = glyphOf(e, px) ?? cardGlyph(e, px), a = measure(cv), t = thick(cv), dark = e.grp !== "bar";
       const card = !!(e.card || e.d10), fill = card ? a.long * QH.CARD_BOX : a.long; /* 卡片小圖：圖樣本身（±10 單位）是圖樣格的 3/4，佔格的分母用圖樣本身 */
@@ -326,7 +331,112 @@ function main() {
     const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
     root.append(h("div.qi-audit", { id: "audit" }, L.map((e) => `${e.id} | ${sizesOf(e).map((px) => px + ":" + fp(qCv(e.id, px)) + "/" + fp(qCv(e.id, px, 1, T1X))).join(" ")}`).concat(["a", "b", "off"].map((s) => `pin_${s} | ${fp(QH.pinCanvas(s, 13))}/${fp(QH.pinCanvas(s, 13, 1, T1X))}`), ["a", "b"].map((s) => `pinbadge_${s} | ${fp(QH.pinBadge(s))}/${fp(QH.pinBadge(s, 18, 1, T1X))}`)).join(NL)));
   }
+  if (PART === "wish") wishPart();
   document.documentElement.dataset.ready = "1"; document.documentElement.dataset.h = String(Math.ceil(document.body.getBoundingClientRect().height));
+}
+
+// ---------------------------------------------------------------- 許願池（WP-3 補畫，11-13；規格 docs/art/WP-3驗收.md 第 5 節，紀錄 Q版小圖示-第7批HUD.md 第 13 節）
+//   ?part=wish&sec=cand（每個位置三個候選：實際大小、真 1 倍 ×4、2 倍內部 ×4、向量 ×4、剪影）｜tabs（分頁列：真 1 倍 ×4、DPR 2 ×2）｜chip（籌碼列：同左）
+//   ｜near（和既有分頁圖、籌碼圖並排的真 1 倍 ×4＋剪影）｜audit（自查表）｜hash（指紋）
+function wishPart() {
+  const QE = window.QIconsEvent, SEC = OB.param("sec", "cand"), W = QH.wishList(), BYW = Object.fromEntries(W.map((e) => [e.id, e]));
+  const NAVY = "#1e2236", CHIPBG = "#2e3244", LINE = "rgba(200,168,104,0.35)", FONT = '"Noto Sans TC","Microsoft JhengHei",sans-serif';
+  const sized = (c, px) => { c.style.width = c.style.height = px + "px"; return c; };
+  /** 各種圖樣本身（res 1＝真 1 倍、2＝DPR 2）：HudBare、EventBare（infoPanels.js evBare 同一個算法）、PartBare（infoPanels.js part）。 */
+  const hudBare = (id, px, res) => QH.canvas(id, px, 1, { res, frame: "none" });
+  const evBare = (id, px, res) => { const c = blankCv(Math.round(px * res)), x = c.getContext("2d"); x.scale(res, res); const e = QE.ICON[id], size = e.grp === "badge" ? px : px / (e.fill ?? 0.84); QIconsWeapons.blit(x, QE.glyph(id, size, res), 0, 0, px, res); return sized(c, px); };
+  const partBare = (cat, id, px, res) => { const c = blankCv(Math.round(px * res)), x = c.getContext("2d"); x.scale(res, res); QP.paint(x, cat, id, px / 2, px / 2, px / QP.BOX, 1, res); return sized(c, px); };
+  const ICO = (key, px, res) => (BYW[key] ? QH.canvas(key, px, 1, { res }) : key === "aura" ? partBare("skeleton", "aura", px, res) : QE?.ICON[key] ? evBare(key, px, res) : hudBare(key, px, res));
+  /** 既有的分頁圖（16）與籌碼圖（15）：WP-3驗收.md 5.1、5.2 表裡「旁邊既有的」。 */
+  const NEAR_TAB = [["bulb", "成長 靈感閃現"], ["aura", "成長 屬性點"], ["b_rest", "成長 整備"], ["clue", "公告板 目標"], ["combat", "公告板 懸賞"], ["t_telegraph", "公告板 時程"], ["bar_M", "公告板 事件"], ["b_portal", "公告板 頭目"], ["bar_J", "任務 任務"], ["thread", "任務 事件線"], ["t_orders", "隊伍 隊伍"], ["bar_Y", "隊伍 影子"], ["narrator", "時間軸 說書人"], ["persuade", "事件卡 說服"], ["b_notes", "小牌 留言"]];
+  const NEAR_CHIP = [["token", "任務幣"], ["bulb", "靈感點"], ["coin", "金幣"], ["ration", "補給"], ["r_source", "源力"], ["warn", "警告"]];
+  /** 把小 canvas 貼到整數裝置像素（不重新取樣）。 */
+  const put = (ctx, cv, x, y, res) => { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(cv, Math.round(x * res), Math.round(y * res)); ctx.restore(); };
+  /** 畫一個 res 倍的場景 canvas（w×h CSS px）；draw(ctx, res) 在 CSS px 座標畫。 */
+  const scene = (w, hh, res, draw) => { const c = blankCv(Math.round(w * res), Math.round(hh * res)), x = c.getContext("2d"); x.scale(res, res); draw(x, res); c.style.width = w + "px"; c.style.height = hh + "px"; return c; };
+  const zoomCv = (c, k) => { c.style.width = parseFloat(c.style.width) * k + "px"; c.style.height = parseFloat(c.style.height) * k + "px"; c.style.imageRendering = "pixelated"; return c; };
+  /** 分頁列（照 WP-3驗收.md 5.1：分頁 34 高、padding 10＋1px 框、圖 16 在左緣 +11、垂直置中（9.5 → 取整 10）、圖字間距 6、字 13.5 粗體；目前分頁上緣 2px 亮金）。icon＝null 是只有字；label＝"" 是窄版只剩圖示。 */
+  function tabBar(tabs, res) {
+    const pad = 8, H = 46, m = blankCv(4).getContext("2d"); m.font = "bold 13.5px " + FONT;
+    const ws = tabs.map((t) => 11 + (t.icon ? 16 + (t.label ? 6 : 0) : 0) + (t.label ? Math.ceil(m.measureText(t.label).width) : 0) + 11), W2 = pad * 2 + ws.reduce((a, b) => a + b, 0);
+    return scene(W2, H, res, (x, r) => { x.fillStyle = NAVY; x.fillRect(0, 0, W2, H); const y0 = 6; let cx = pad;
+      x.fillStyle = LINE; x.fillRect(0, y0 + 34, W2, 1);
+      tabs.forEach((t, i) => { const w = ws[i];
+        if (t.on) { x.fillStyle = NAVY; x.fillRect(cx, y0, w, 35); x.strokeStyle = LINE; x.lineWidth = 1; x.beginPath(); x.moveTo(cx + 0.5, y0 + 35); x.lineTo(cx + 0.5, y0 + 6); x.arcTo(cx + 0.5, y0 + 0.5, cx + 6, y0 + 0.5, 6); x.lineTo(cx + w - 6, y0 + 0.5); x.arcTo(cx + w - 0.5, y0 + 0.5, cx + w - 0.5, y0 + 6, 6); x.lineTo(cx + w - 0.5, y0 + 35); x.stroke(); x.fillStyle = "#e8bb48"; x.fillRect(cx + 5, y0, w - 10, 2); }
+        let tx = cx + 11; if (t.icon) { put(x, ICO(t.icon, 16, r), tx, y0 + 10, r); tx += 16 + 6; }
+        if (t.label) { x.font = "bold 13.5px " + FONT; x.textBaseline = "middle"; x.fillStyle = t.on ? "#e8bb48" : "#bdb5a2"; x.fillText(t.label, tx, y0 + 17.5); }
+        cx += w; }); });
+  }
+  /** 籌碼（照 5.2：26 高全圓角、底 #2e3244、1px 框約 #433f41、圖 15 在左緣 +6、垂直置中（5.5 → 取整 6）、圖字間距 5、字 12px #bdb5a2、數字 13px 粗體亮金；0 次時數字 #bdb5a2）。 */
+  function chipRow(chips, res) {
+    const m = blankCv(4).getContext("2d"), parts = chips.map((ch) => { m.font = "12px " + FONT; const lw = Math.ceil(m.measureText(ch.label).width); m.font = "bold 13px " + FONT; const vw = Math.ceil(m.measureText(ch.value).width); return { ...ch, lw, vw, w: 6 + (ch.icon ? 15 + 5 : 0) + lw + 5 + vw + 9 }; });
+    const W2 = 8 + parts.reduce((a, p) => a + p.w + 8, 0), H = 38;
+    return scene(W2, H, res, (x, r) => { x.fillStyle = NAVY; x.fillRect(0, 0, W2, H); let cx = 8; const y0 = 6;
+      for (const p of parts) { x.beginPath(); x.roundRect(cx + 0.5, y0 + 0.5, p.w - 1, 25, 12.5); x.fillStyle = CHIPBG; x.fill(); x.strokeStyle = "#433f41"; x.lineWidth = 1; x.stroke();
+        let tx = cx + 6; if (p.icon) { put(x, ICO(p.icon, 15, r), tx, y0 + 6, r); tx += 15 + 5; }
+        x.textBaseline = "middle"; x.font = "12px " + FONT; x.fillStyle = "#bdb5a2"; x.fillText(p.label, tx, y0 + 13.5); x.font = "bold 13px " + FONT; x.fillStyle = p.zero ? "#bdb5a2" : "#e8bb48"; x.fillText(p.value, tx + p.lw + 5, y0 + 13.5); cx += p.w + 8; } });
+  }
+  const sil = (cv, bg) => { const c = blankCv(cv.width, cv.height), x = c.getContext("2d"); x.drawImage(cv, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#f2e6c8"; x.fillRect(0, 0, c.width, c.height); x.globalCompositeOperation = "destination-over"; x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height); c.style.width = cv.style.width; c.style.height = cv.style.height; return c; };
+  const onBg = (cv, bg, k) => h("span", { style: `display:inline-flex;padding:${Math.round(k * 2)}px;background:${bg};border-radius:4px` }, k === 1 ? cv : zoomCv(cv, k));
+  const cap = (t) => h("i", { style: "font:11px Consolas,'Microsoft JhengHei';color:#b8ab96;font-style:normal;white-space:nowrap" }, t);
+  const cell = (el, t) => h("div", { style: "display:flex;flex-direction:column;align-items:center;gap:3px" }, el, cap(t));
+  const block = (title, ...kids) => h("div", { style: "background:#201d24;border:1px solid #3a3440;border-radius:6px;padding:6px 8px;margin-bottom:8px" }, h("div", { style: "font-size:13px;color:#e8cf90;margin-bottom:5px" }, title), ...kids);
+  const rowEl = (...kids) => h("div", { style: "display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px" }, ...kids);
+  const SLOT = [["text", "分頁「說出願望」（窄版「願望」）16px，底 #1e2236", 16, NAVY], ["menu", "分頁「從選單挑」（窄版「選單」）16px，底 #1e2236", 16, NAVY], ["left", "籌碼「本週還能許 N／2」15px，底 #2e3244", 15, CHIPBG]];
+  const tag = (id) => (/_b$/.test(id) ? "B" : /_c$/.test(id) ? "C" : "A 推薦");
+
+  if (SEC === "cand") {
+    root.append(h("h2", {}, "許願池三個圖示：候選（每列 實際大小｜真 1 倍 ×4｜2 倍內部 ×4｜向量 ×4｜真 1 倍剪影 ×4）"));
+    for (const [slot, title, px, bg] of SLOT) root.append(block(title, ...W.filter((e) => e.slot === slot).map((e) => h("div", { style: "display:grid;grid-template-columns:150px 1fr;gap:8px;align-items:center;margin-bottom:6px" },
+      h("div", { style: "font-size:12px;color:#f2e6c8;line-height:1.35" }, h("b", {}, tag(e.id)), h("code", { style: "display:block;color:#8a7e6c;font:10.5px Consolas" }, e.id), h("small", { style: "display:block;color:#b8ab96;font-size:10.5px" }, e.topic.replace(/^[ABC]：/, "").slice(0, 46))),
+      rowEl(cell(onBg(QH.canvas(e.id, px, 1), bg, 1), px + "px"), cell(onBg(QH.canvas(e.id, px, 1, T1X), bg, 4), "真 1 倍 ×4"), cell(onBg(QH.canvas(e.id, px, 1), bg, 4), "2 倍內部 ×4"), cell(onBg(QH.canvas(e.id, px, 4), bg, 1), "向量 ×4"), cell(onBg(sil(QH.canvas(e.id, px, 1, T1X), "#23262d"), "#23262d", 4), "剪影 ×4"))))));
+  }
+  if (SEC === "tabs") {
+    const T = (a, b, on = 0, short = false) => [{ icon: a, label: short ? "願望" : "說出願望", on: on === 0 }, { icon: b, label: short ? "選單" : "從選單挑", on: on === 1 }];
+    const both = (tabs, lab) => rowEl(cell(zoomCv(tabBar(tabs, 1), 4), lab + "：真 1 倍 ×4"));
+    const both2 = (tabs, lab) => rowEl(cell(zoomCv(tabBar(tabs, 2), 2), lab + "：DPR 2 ×2"));
+    const set = OB.param("set", "a"), sfx = set === "a" ? "" : "_" + set, a = "wish_text" + sfx, b = "wish_menu" + sfx;
+    if (set === "a") root.append(block("分頁列（推薦 A）：現在只有字 → 加圖後；說出願望選中｜從選單挑選中｜窄版短名｜窄版只剩圖示（第 ② 級）",
+      rowEl(cell(zoomCv(tabBar(T(null, null), 1), 4), "現在（只有字）真 1 倍 ×4")), both(T(a, b, 0), "說出願望選中"), both(T(a, b, 1), "從選單挑選中"),
+      rowEl(cell(zoomCv(tabBar(T(a, b, 0, true), 1), 4), "窄版短名 ×4"), cell(zoomCv(tabBar([{ icon: a, label: "", on: true }, { icon: b, label: "", on: false }], 1), 4), "只剩圖示 ×4")),
+      both2(T(a, b, 0), "說出願望選中")));
+    else root.append(block("分頁列（候選 " + set.toUpperCase() + "）", both(T(a, b, 0), "說出願望選中"), both(T(a, b, 1), "從選單挑選中")));
+    if (set === "a") root.append(block("對照：成長面板的分頁（bulb、aura、b_rest）、公告板（×3）",
+      both([{ icon: "bulb", label: "靈感閃現", on: true }, { icon: "aura", label: "屬性點" }, { icon: "b_rest", label: "整備" }], "成長"),
+      rowEl(cell(zoomCv(tabBar([{ icon: "clue", label: "目標", on: true }, { icon: "combat", label: "懸賞" }, { icon: "t_telegraph", label: "時程" }, { icon: "bar_M", label: "事件" }, { icon: "b_portal", label: "頭目" }], 1), 3), "公告板：真 1 倍 ×3"))));
+  }
+  if (SEC === "chip") {
+    const set = OB.param("set", "a"), id = "wish_left" + (set === "a" ? "" : "_" + set);
+    const pair = (n, zero) => [{ icon: "token", label: "任務幣", value: "9" }, { icon: id, label: "本週還能許", value: n + "／2", zero }];
+    root.append(block("籌碼列（" + (set === "a" ? "推薦 A" : "候選 " + set.toUpperCase()) + "）：任務幣｜本週還能許",
+      ...(set === "a" ? [rowEl(cell(zoomCv(chipRow([{ icon: "token", label: "任務幣", value: "9" }, { icon: null, label: "本週還能許", value: "2／2" }], 1), 4), "現在（沒有圖）真 1 倍 ×4"))] : []),
+      rowEl(cell(zoomCv(chipRow(pair(2), 1), 4), "2／2 真 1 倍 ×4")), rowEl(cell(zoomCv(chipRow(pair(0, true), 1), 4), "0／2（數字變灰）真 1 倍 ×4")),
+      ...(set === "a" ? [rowEl(cell(zoomCv(chipRow(pair(2), 2), 2), "DPR 2 ×2")), rowEl(cell(zoomCv(chipRow([{ icon: id, label: "本週還能許", value: "1／2" }, { icon: "bulb", label: "靈感點", value: "0", zero: true }], 1), 4), "和靈感點（成長面板的籌碼）並排 ×4"))] : [])));
+  }
+  if (SEC === "near") {
+    const strip = (keys, px, bg, k) => rowEl(...keys.map(([key, lab]) => cell(onBg(ICO(key, px, 1), bg, k), lab)));
+    const silStrip = (keys, px, k) => rowEl(...keys.map(([key, lab]) => cell(onBg(sil(ICO(key, px, 1), "#23262d"), "#23262d", k), lab)));
+    const cand = (slot) => W.filter((e) => e.slot === slot).map((e) => [e.id, tag(e.id) + " " + e.id.replace("wish_", "")]);
+    const set = OB.param("set", "tab");
+    if (set === "tab") root.append(block("分頁圖 16：候選｜既有的分頁圖（真 1 倍 ×4，底 #1e2236；下排剪影）",
+      strip([...cand("text"), ...cand("menu")], 16, NAVY, 4), silStrip([...cand("text"), ...cand("menu")], 16, 4),
+      strip(NEAR_TAB.slice(0, 8), 16, NAVY, 4), silStrip(NEAR_TAB.slice(0, 8), 16, 4), strip(NEAR_TAB.slice(8), 16, NAVY, 4), silStrip(NEAR_TAB.slice(8), 16, 4)));
+    else root.append(block("籌碼圖 15：候選｜既有的籌碼圖與通用小圖（真 1 倍 ×4，底 #2e3244；下排剪影）",
+      strip([...cand("left"), ...NEAR_CHIP], 15, CHIPBG, 4), silStrip([...cand("left"), ...NEAR_CHIP], 15, 4),
+      block("推薦三個放在一起（真 1 倍 ×4）", rowEl(cell(onBg(ICO("wish_text", 16, 1), NAVY, 4), "說出願望"), cell(onBg(ICO("wish_menu", 16, 1), NAVY, 4), "從選單挑"), cell(onBg(ICO("wish_left", 15, 1), CHIPBG, 4), "本週還能許"), cell(onBg(ICO("token", 15, 1), CHIPBG, 4), "任務幣"), cell(onBg(ICO("bulb", 15, 1), CHIPBG, 4), "靈感點")))));
+  }
+  if (SEC === "audit") {
+    const bgL = { [NAVY]: 35, [CHIPBG]: 51 }, lines = ["id | 量的大小 | 佔格（≥70%） | 離格邊（≥2.4） | 平均亮度（深底 ≥100） | 亮面（≥5%） | 最粗處（≥12%） | 對底色亮度差 | 結果"]; let bad = 0;
+    for (const e of W) { const px = e.min, bg = e.slot === "left" ? CHIPBG : NAVY, cv = QH.glyph(e.id, px, 8, { ow: 0 }), a = auditMeasure(cv), t = auditThick(cv);
+      const fail = [a.long < 0.7 ? "佔格" : "", a.edge < 2.4 ? "貼邊" : "", a.lum < 100 ? "亮度" : "", a.bright < 0.05 ? "亮面" : "", t < 0.12 ? "太細" : ""].filter(Boolean); if (fail.length) bad++;
+      lines.push(`${e.id} | ${px}px | ${(a.long * 100).toFixed(0)}% | ${a.edge.toFixed(1)} | ${a.lum.toFixed(0)} | ${(a.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${(a.lum - bgL[bg]).toFixed(0)} | ${fail.length ? "不過 " + fail.join(" ") : "過"}`); }
+    lines.push(`共 ${W.length} 個，不過 ${bad} 個（量圖樣本身、不含外框，8 倍解析度；底色亮度 #1e2236＝35、#2e3244＝51）`);
+    root.append(h("div.qi-audit", { id: "audit" }, lines.join(NL)));
+  }
+  if (SEC === "hash") {
+    const fp = (cv) => { const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let a = 2166136261; for (let i = 0; i < d.length; i++) { a ^= d[i]; a = Math.imul(a, 16777619) >>> 0; } return a.toString(16).padStart(8, "0"); };
+    root.append(h("div.qi-audit", { id: "audit" }, W.map((e) => `${e.id} | ${e.sizes.map((px) => px + ":" + fp(QH.canvas(e.id, px, 1)) + "/" + fp(QH.canvas(e.id, px, 1, T1X))).join(" ")}`).join(NL)));
+  }
 }
 
 // 先把現行的 SVG 載成圖（非同步），再排版
