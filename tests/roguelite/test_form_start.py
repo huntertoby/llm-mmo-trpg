@@ -21,6 +21,7 @@ from trpg.skillgen.keywords import derive_keywords, is_starter_skill
 
 MAKERS = ("skill_form_bear", "skill_form_cat", "skill_form_roc", "skill_form_werewolf")
 EXPLOITERS = ("skill_form_pounce", "skill_form_renewal", "skill_wild_roar")
+PENDING = {"combo_point", "fury", "focus", "ki"}  # KW-1 的 start_hidden 層數關鍵字
 
 
 def test_starter_rule_opens_stances_only_for_enter_form() -> None:
@@ -39,8 +40,14 @@ def test_starter_rule_opens_stances_only_for_enter_form() -> None:
 def test_the_form_start_pool_holds_only_the_tier_one_forms() -> None:
     lib = library()
     assert starter_pools(lib)["form"] == tuple(sorted(MAKERS))
-    for other, ids in starter_pools(lib).items():  # 其他池不受影響
-        assert len(ids) >= 3, other
+    pools = starter_pools(lib)
+    opening = set(lib.keywords.start_ids())
+    # KW-1：start_hidden 的四個層數關鍵字（PENDING）池子在 KW-2 補齊前不檢查 ≥ 3 招；
+    # KW-2 拿掉 start_hidden 時下一行會失敗，提醒恢復成檢查全部的池。
+    assert set(pools) - opening == PENDING
+    for other, ids in pools.items():  # 其他池不受影響
+        if other in opening:
+            assert len(ids) >= 3, other
 
 
 @pytest.mark.parametrize("weapon", ["one_handed_sword", "fire_staff", "bow", "scepter"])
