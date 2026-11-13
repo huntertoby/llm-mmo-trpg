@@ -46,7 +46,7 @@
 **2. 最後一次全量**：2026-11-14 8b5afebcf 全過，push 到 851d97f72（pytest 17481、vitest 4489、build 0），含 FL-1i（營火「轉型除外」、「強度」不拆；資訊卡計量 RG-5 已做）。前一次 11-13 push 67a9b8207 含 RG-5b、RG-7、RG-8、FL-1h。版號 LOG_FORMAT /125、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
 
 **3. 執行中的 agent（分支）**：
-- 無（RG-7、RG-8、FL-1h 11-13 已合併）。
+- PB-1e（頭目部位美術移植＝(e)，移植需求 11-12 已交、OCL-1b 已合，不用再等）、FL-1j（斷行＝(e3o)），11-14 從 c149b1793 派出，各自 worktree，不碰同一批檔案。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
