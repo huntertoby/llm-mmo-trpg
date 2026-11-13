@@ -364,3 +364,7 @@
 - `c-try32/42-1、2` 重拍：多第 e 列（點版）。
 - 背包模擬的檔名改成 `closeup/qicons/keywords/bag32-plus、bag42-plus、bag32-dot、bag42-dot`（`qicons_shots.py keywords-bag`）；舊的 `bag32.png`、`bag42.png` 和 `-plus` 內容相同，沒有刪（審查紀錄引用）。
 
+
+## 14. 11-13 KW 段：連擊、怒氣、專注、氣（指路）
+
+四個新關鍵字的圓章圖樣、關鍵字色與創角圖示記在 `KW樣張.md`（第 1～3 節；畫法 `sample/qIconsKW.js`，這批的 `qIconsKeywords.js` 沒有改）。
