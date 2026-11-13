@@ -83,27 +83,35 @@ def _collect(  # noqa: PLR0917
     on: GainOn,
     other_id: UnitId | None = None,
     element: Element | None = None,
+    *,
+    once: bool = False,
 ) -> None:
+    """記一筆自動累積。``once``：同一個持有者、同一種層數、同一個另一方在這次結算（觸發收集到結算
+    之間，一次施放或一次攻擊）已經記過就不再記（KW-1，#161：雙匕首每次出招只 +1 連擊點）。"""
     owner = None if owner_id is None else ctx.state.units.get(owner_id)
     if owner is None or not owner.alive:
         return
     rules = ctx.rules
+    event = f"{STACK_GAIN_PREFIX}{on}"
     for stack in _gaining(rules, on, element):
-        if _eligible(rules, owner, stack):
-            ctx.fired.append(
-                Fired(
-                    seq,
-                    owner.id,
-                    stack.id,
-                    f"{STACK_GAIN_PREFIX}{on}",
-                    other_id,
-                    ctx.trigger_depth + 1,
-                )
-            )
+        if not _eligible(rules, owner, stack):
+            continue
+        if once and any(
+            f.event == event
+            and f.owner_id == owner.id
+            and f.skill_id == stack.id
+            and f.other_id == other_id
+            for f in ctx.fired
+        ):
+            continue
+        ctx.fired.append(Fired(seq, owner.id, stack.id, event, other_id, ctx.trigger_depth + 1))
 
 
 def collect_attack(ctx: Ctx, event: AttackRolled) -> None:
-    """命中判定：武器技命中（``weapon_skill_hit``）、普攻命中（``basic_attack_hit``）。"""
+    """命中判定：武器技命中（``weapon_skill_hit``）、普攻命中（``basic_attack_hit``）。
+
+    武器技每次出招對同一個目標最多累積一次（KW-1，06 6.32.1「雙匕首每次出招 +1，不管打中幾下」）：
+    連擊武器多打的那幾下不再累積，第一下沒中、後面中了照樣累積；範圍武器技打中幾個目標仍每個各一次。"""
     if not event.hit:
         return
     if event.skill_id is None:
@@ -111,7 +119,7 @@ def collect_attack(ctx: Ctx, event: AttackRolled) -> None:
         return
     skill = _event_skill(ctx.rules, event.skill_id)
     if skill is not None and skill.category == "weapon":
-        _collect(ctx, event.seq, event.attacker_id, "weapon_skill_hit", event.target_id)
+        _collect(ctx, event.seq, event.attacker_id, "weapon_skill_hit", event.target_id, once=True)
 
 
 def collect_damage(ctx: Ctx, event: DamageDealt) -> None:

@@ -853,6 +853,7 @@ class _View:
             tag_name=ruleset.skill_tags.name,  # FL-1g：沒帶時退回「特定」（FL-1b 驗收可修 2）
             tag_runes=ruleset.skill_tags.rune_names(),
             weapon_name=lambda w: weapons[w].name_zh if w in weapons else w,
+            stack_name=lambda sid: ruleset.stack_def(sid).name_zh,
         )
         return f"{text}才有" if text.endswith("時") else f"{text}時才有"
 

@@ -237,3 +237,48 @@ keywords:
       - {effect: leave_form}   # 3J-4c：解形爆發（只能在形態中施放，先解除形態）
       - {change: form_upkeep_permille}
       - {change: form_entry_permille}
+  # KW-1（玩法決定 #161，06 6.27.1、6.32.1）：四種累積在自己身上的層數掛成關鍵字（12 → 16），關鍵字 ID ＝ 層數 ID。
+  # 製造＝技能本身額外加這種層數（add_stack）；stacks.yaml 的 gain（自動累積）與專注的「下一招自動消耗」是背景規則，
+  # 不算製造或利用。利用＝消耗這種層數（consume_stack），或條件「自身層數達 N」（self_stack_at_least）。
+  # start_hidden：池子在 KW-2 補齊（每池 3 招 1 階白板、3 招主動利用者）前，開局選單與許願池先不出現；三選一、閃現、
+  # 工坊、推導照常。composable: false：這四種層數在 stacks.yaml 仍是 composer: false，組合器做不出來，KW-2 一起打開。
+  - id: combo_point
+    name_zh: 連擊
+    description_zh: 出招累積連擊點（雙匕首一次出招也只算 1 點）；終結技花光連擊點換傷害，有些技能要連擊點達到幾點才生效。
+    composable: false
+    start_hidden: true
+    makes:
+      - {effect: add_stack, stack: combo_point}
+    uses:
+      - {effect: consume_stack, stack: combo_point}
+      - {condition: self_stack_at_least, stack: combo_point}
+  - id: fury
+    name_zh: 怒氣
+    description_zh: 受傷時累積怒氣（自己造成的傷也算）；花掉怒氣換傷害，有些技能要怒氣達到幾層才生效。
+    composable: false
+    start_hidden: true
+    makes:
+      - {effect: add_stack, stack: fury}
+    uses:
+      - {effect: consume_stack, stack: fury}
+      - {condition: self_stack_at_least, stack: fury}
+  - id: focus
+    name_zh: 專注
+    description_zh: 站著不動累積專注，下一招傷害技會吃掉專注加傷；也有技能主動花光專注，或要專注達到幾層才生效。
+    composable: false
+    start_hidden: true
+    makes:
+      - {effect: add_stack, stack: focus}
+    uses:
+      - {effect: consume_stack, stack: focus}
+      - {condition: self_stack_at_least, stack: focus}
+  - id: ki
+    name_zh: 氣
+    description_zh: 普攻打中累積氣；花掉氣換傷害或治療自己，有些技能要氣達到幾層才生效。
+    composable: false
+    start_hidden: true
+    makes:
+      - {effect: add_stack, stack: ki}
+    uses:
+      - {effect: consume_stack, stack: ki}
+      - {condition: self_stack_at_least, stack: ki}

@@ -139,7 +139,11 @@ def _handwritten_condition_violations(skill: SkillDef, library: ContentLibrary) 
         }
     )
     return [
-        Violation(skill.id, "condition.handwritten_only", f"條件 {kind} 目前只給內建技能用（雙牙）")
+        Violation(
+            skill.id,
+            "condition.handwritten_only",
+            f"條件「{conditions[kind].name_zh}」目前只給內建技能用",
+        )
         for kind in kinds
     ]
 

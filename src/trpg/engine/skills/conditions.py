@@ -10,7 +10,8 @@
   ``flanked``（Phase 3D-8c）看對象單位與施放者的相對位置：對象的對面有施放者的友方；
   ``from_behind``（Phase 3D-8d）：施放者站在對象的背後格；``self_concealed``（3D-8d）只看施放者
   有沒有 ``concealed`` 狀態；``in_form``（3J-3）只看施放者有沒有在形態中（可限定類別）；
-  ``lone_wolf``（LW-1）看開戰時定下的獨狼旗標；``self_lacks_status``（LW-1）施放者沒有指定狀態。
+  ``lone_wolf``（LW-1）看開戰時定下的獨狼旗標；``self_lacks_status``（LW-1）施放者沒有指定狀態；
+``self_stack_at_least``（KW-1）施放者的某種層數達 N 層。
 
 技能層級的條件（:func:`skill_condition_met`）決定技能能否使用；效果層級的條件
 （:func:`condition_met`）由解譯器對每個對象分別判斷。
@@ -18,12 +19,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from typing import NamedTuple
 
 from trpg.content.skills import (
     ALL_STRIKES_HIT,
     CASTER_CONDITIONS,
+    SELF_STACK_AT_LEAST,
     ConditionSpec,
     SkillDef,
     condition_text,
@@ -43,6 +45,7 @@ __all__ = [
     "is_flanked",
     "skill_condition_met",
     "skill_condition_problem",
+    "stack_at_least",
     "subjects_of",
     "unit_held",
 ]
@@ -101,11 +104,20 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
         "lone_wolf": lambda: caster.lone_wolf,
         # 施放者沒有某狀態（LW-1，敵人專用招：碎晶之主被定身時不能閃擊）
         "self_lacks_status": lambda: not caster.has_status(str(condition.status)),
+        # 施放者的某種層數達 N 層（KW-1，#161）；施放中由 Cast.holds 改看施放開始時的快照
+        SELF_STACK_AT_LEAST: lambda: stack_at_least(caster.stacks, condition),
     }
     if kind in simple:
         return simple[kind]()
     assert kind == "cast_tag_this_turn" and condition.tag is not None
     return condition.tag in caster.turn_cast_tags
+
+
+def stack_at_least(stacks: Mapping[str, int], condition: ConditionSpec) -> bool:
+    """``self_stack_at_least``（KW-1）：``stacks``（層數 ID → 層數）裡 ``condition.stack`` 至少
+    ``condition.count`` 層。"""
+    assert condition.stack is not None and condition.count is not None
+    return stacks.get(condition.stack, 0) >= condition.count
 
 
 def flank_xy(caster_xy: XY, target_xy: XY) -> XY | None:
@@ -237,5 +249,6 @@ def skill_condition_problem(
         tag_name=rules.skill_tags.name,
         tag_runes=rules.skill_tags.rune_names(),
         weapon_name=lambda wid: rules.gear_names.get(wid, wid),
+        stack_name=lambda sid: rules.stack_def(sid).name_zh,
     )
     return f"技能條件不成立：{skill.name_zh} 需要「{text}」"
