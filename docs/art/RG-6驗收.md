@@ -54,3 +54,19 @@
 
 - **RG-6 結案**（必修 0）。待決 2（雙匕首剪影差 30／54 px）接受、不追。
 - 可修：實機北坡狼王比樣張與開發頁小一號（`mist_wolf.yaml` 沒有 `size: large`、`scar`，樣張與開發頁有）。**精英大小照遊戲資料不改**；開發頁改用實際外觀，9.9.10 量表「左 1 上 4」只對大狼成立，實機照小狼由 `groupFit` 自算，畫面已驗過沒問題。
+
+## RG-8 複驗（2026-11-14，美術複驗者）
+
+對象：可修「開發頁北坡狼王照實機外觀（小一號）」。依據 `docs/phases/PhaseRG-8報告.md`、截圖 `docs/art/shots/RG-8/06～09`。另從 main（`2e261af94`）開臨時 worktree、vite 127.0.0.1:5397、無頭 Chrome `--disable-gpu --mute-audio`、DPR 1 自己重跑；收尾已關掉自己的程序、移除 worktree。
+
+| # | 項目 | 判 | 截圖 | 看到的 |
+|---|---|---|---|---|
+| 1 | 開發頁狼王照實機大小 | **過** | `review-1-wolf-old-dev-live-x3.png`、`review-2-devpage-wolf-bow-true1x.png`、`RG-8/08`、`09` | `?mode=dialog&e=wolf&hw=bow` 的插圖（320×120）和 RG-6 實機 `live-5`（jpg）同位置逐像素比：平均差 4.3、差 >40 的 660 px（jpg 邊緣雜訊）；舊開發頁大狼對實機 6.6／2928 px。並排看：預設狼王和實機一樣小、沒有疤耳；`&wolf=sample` 仍是樣張大狼 |
+| 2 | 劍版指紋（`?mode=fp&wolf=sample`） | **過** | — | 16 個和本檔第 6 條**逐字相同**：`d457db52 82490307 5b3b977a c1bcc021 / 58791a6a 37135beb 325d5858 465c85c6 / 2467ef9e af5ee84f f655ace2 b73ab191 / 101518ec e7f17e15 c567ceb0 81ad3816` |
+| 3 | 預設（實機狼）指紋 | **過** | — | 只有狼王 4 個變：dev `5ba210c5`／`74b40347`、game `b8a30341`／`c8c34ddd`，和報告 1.1 相同；其他 12 個不變 |
+| 4 | 遇敵卡實機外觀 | **過** | `RG-8/06`、`07` | 1600／800 插圖讀法同 RG-6 實機（剪影、劍與爪痕交叉、縫） |
+
+- 必修：無。新可修：無。之後比劍版指紋照上手筆記 162 點加 `&wolf=sample`。
+- **RG-6 可修結案。**
+
+截圖（`docs/art/shots/RG-8-review/`）：`review-1-wolf-old-dev-live-x3.png`（左 RG-6 舊開發頁大狼、中 RG-8 開發頁預設、右 RG-6 實機，×3 最近鄰）、`review-2-devpage-wolf-bow-true1x.png`（開發頁插圖真 1 倍）、`review-3-devpage-wolf-bow-1600.jpg`（開發頁整張）。
