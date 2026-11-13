@@ -7,6 +7,9 @@
 - **裝備**：陣容的每名精英必掉 1 件、``elite_epic_permille`` 史詩（20.2；5D-2b 玩法 PM 代決，取代
   5D2-4 的一場 1 件）；沒有精英時 ``battle_permille`` 掉 1 件；物品等級＝地點建議等級（敵人等級），
   詞條偏向該區關鍵字（20.2）。
+- **必帶詞條**（RG-4，#163「打盾兵拿盾兵的盾」）：掉落算在 ``signature_affixes`` 列的敵人頭上
+  （精英的那一件算該精英；沒有精英時算整個敵方陣容）、掉到列的副手時補上詞條
+  （:func:`~trpg.content.item_gen.with_affix`，不用亂數，其他掉落逐位元不變）。
 - **進背包**：材料先、裝備後，依掉落順序逐份放；放不下的留給戰後結算（``pending_loot``），玩家選要
   丟哪件（新拿到的、原本的都可以；5D-2b 玩法 PM 代決，取代 5D2-6 的不撿，不做暫存區）。
 
@@ -26,7 +29,7 @@ from dataclasses import dataclass, field
 
 from trpg.content.equipment import ItemDef
 from trpg.content.item_budget import Rarity
-from trpg.content.item_gen import generate_item_retrying
+from trpg.content.item_gen import generate_item_retrying, with_affix
 from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPES, SlotType
 from trpg.content.world_loot import LootRules
@@ -254,7 +257,7 @@ def roll_loot(
     gear: list[ItemDef] = []
     for n in range(max(1, elites)):  # 每名精英 1 件（20.2、5D-2b）；沒有精英時照一般掉落抽 1 次
         boss = elite_members[n].unit if elites and elite_members[n].unit in boss_bonus else None
-        gear += _roll_gear(
+        dropped = _roll_gear(
             library,
             rules,
             char,
@@ -266,7 +269,20 @@ def roll_loot(
             fixed=fixed_class,
             mix=mix,
         )
+        sources = (elite_members[n].unit,) if elites else tuple(m.unit for m in lineup.members)
+        gear += _with_signature(library, rules, dropped, sources)
     return LootRoll(materials=tuple(materials), gear=tuple(gear))
+
+
+def _with_signature(
+    library: ContentLibrary, rules: LootRules, items: Sequence[ItemDef], sources: Sequence[str]
+) -> tuple[ItemDef, ...]:
+    """掉落算在 ``sources`` 頭上時補上必帶的詞條（RG-4，``LootRules.signature_affixes``）。"""
+    out: list[ItemDef] = []
+    for item in items:
+        affix = rules.signature_affix(sources, item.offhand)
+        out.append(item if affix is None else with_affix(library, item, affix))
+    return tuple(out)
 
 
 def boss_bonus_units(

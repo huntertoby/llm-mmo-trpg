@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from typing import Literal
 
 from trpg.content.battle import WeaponDef
+from trpg.content.equipment import ALLY_RANGED_COVER, WeaponTraitAffix
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.gear.core import gear_defense_permille
-from trpg.engine.ids import CONCEALED, DEFENDING, PRONE, SHIELD_GUARD
+from trpg.engine.ids import CONCEALED, DEFENDING, PRONE, SHIELD_FORMATION, SHIELD_GUARD
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.facing import is_behind
@@ -222,7 +223,8 @@ class Cover:
     name_zh: str
     pos: XY
     unit_id: UnitId | None = None
-    """盾兵掩護（RG-1）：提供掩護的盾兵；物件與塔盾為 ``None``。"""
+    """盾兵掩護（RG-1）、護陣（RG-4，``kind`` 為 ``shield_formation``）：提供掩護的單位；物件與塔盾
+    為 ``None``。"""
 
 
 def cover_object_between(
@@ -279,6 +281,9 @@ def half_cover(
 
     場上沒有掩護物時依序再看盾兵（RG-1，:func:`guard_between`，懲罰 ``shield_guard_hit_penalty``）
     與目標自己的塔盾；三者不疊加。
+
+    塔盾詞條「護陣」（RG-4，#163，:func:`_formation_cover`，懲罰 ``shield_formation_hit_penalty``）
+    也不疊加：護陣的懲罰比上面那一個高時才改算護陣（取最高；同分照舊算原本的來源）。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
     if limited or (
@@ -287,6 +292,16 @@ def half_cover(
         else attacker.weapon.ignore_cover
     ):
         return None
+    cover = _ranged_cover(state, attacker, target)
+    formation = _formation_cover(state, attacker, target)
+    if formation is not None and (cover is None or formation.penalty > cover.penalty):
+        return formation
+    return cover
+
+
+def _ranged_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """護陣以外的遠程掩護（呼叫端已排除近戰與穿透）：場上的掩護物、盾兵、目標自己的塔盾，依序取
+    第一個成立的（:func:`half_cover`）。"""
     penalty = state.ruleset.core.half_cover_hit_penalty
     if penalty <= 0:
         return None
@@ -312,14 +327,30 @@ def protects_ranged(state: BattleState, unit: UnitState) -> bool:
     return not is_height_limited(state, unit)
 
 
+def holds_formation(unit: UnitState) -> bool:
+    """帶塔盾詞條「護陣」（RG-4，#163）：身上有生效中的副手特性強化 ``ally_ranged_cover``。"""
+    return any(
+        isinstance(a.affix, WeaponTraitAffix) and a.affix.param == ALLY_RANGED_COVER
+        for a in unit.gear.active_affixes("weapon_trait")
+    )
+
+
 def guard_between(
-    state: BattleState, attacker_xy: XY, target: UnitState, *, at: XY | None = None
+    state: BattleState,
+    attacker_xy: XY,
+    target: UnitState,
+    *,
+    at: XY | None = None,
+    formation: bool = False,
 ) -> UnitState | None:
     """盾兵掩護的幾何部分（RG-1，#162，09 9.6.6）：從 ``attacker_xy`` 打 ``target``（站在 ``at``，
     省略＝目前位置）時替他擋的盾兵。條件同半掩護物件（:func:`cover_object_between`）：盾兵帶
     ``shield_guard`` 標籤、存活、和目標同陣營、不是目標自己，在目標四方向相鄰、而且在目標朝向攻擊者
     的那一側；盾兵視為 1 層高（攻擊者高出它 1 層以上、或目標站得比它高 1 層以上時擋不到）。多名時取
-    上、右、下、左順序的第一個。不看武器與目標是不是遠程（呼叫端負責）。"""
+    上、右、下、左順序的第一個。不看武器與目標是不是遠程（呼叫端負責）。
+
+    ``formation``（RG-4，#163）：改找帶塔盾詞條「護陣」的隊友（:func:`holds_formation`）；其餘條件
+    與幾何完全相同（同一套判定，差別只在誰算擋的人、以及呼叫端不限目標是遠程）。"""
     tx, ty = target.xy if at is None else at
     for dx, dy in _COVER_DIRECTIONS:
         cx, cy = tx + dx, ty + dy
@@ -330,7 +361,7 @@ def guard_between(
             guard is None
             or guard.id == target.id
             or guard.team is not target.team
-            or not guard.has_tag(SHIELD_GUARD)
+            or not (holds_formation(guard) if formation else guard.has_tag(SHIELD_GUARD))
         ):
             continue
         if guard_blocks(state, attacker_xy, (tx, ty), (cx, cy)):
@@ -366,6 +397,29 @@ def _guard_cover(state: BattleState, attacker: UnitState, target: UnitState) -> 
         penalty=penalty,
         object_id=None,
         kind=SHIELD_GUARD,
+        name_zh=guard.name_zh,
+        pos=guard.xy,
+        unit_id=guard.id,
+    )
+
+
+def _formation_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """塔盾詞條「護陣」（RG-4，#163，08 8.11）：和 ``target`` 相鄰、同陣營、帶護陣的單位（不是目標
+    自己）擋在攻擊者那一側時，命中 −``shield_formation_hit_penalty``（為 0 時視為沒有）。判定同盾兵
+    （:func:`guard_between` 的 ``formation``），但目標不限遠程。呼叫端已排除近戰與穿透。"""
+    penalty = state.ruleset.core.shield_formation_hit_penalty
+    if penalty <= 0 or not any(
+        u.team is target.team and u.id != target.id and holds_formation(u)
+        for u in state.units.values()
+    ):
+        return None
+    guard = guard_between(state, attacker.xy, target, formation=True)
+    if guard is None:
+        return None
+    return Cover(
+        penalty=penalty,
+        object_id=None,
+        kind=SHIELD_FORMATION,
         name_zh=guard.name_zh,
         pos=guard.xy,
         unit_id=guard.id,
@@ -511,7 +565,9 @@ class AttackRoll:
     hit: bool
     crit: bool
     cover_unit_id: UnitId | None = None
-    """盾兵掩護的盾兵（RG-1；``cover`` 是它的命中修正）。"""
+    """盾兵掩護的盾兵（RG-1；``cover`` 是它的命中修正）；護陣時是帶護陣的隊友（RG-4）。"""
+    cover_formation: bool = False
+    """``cover_unit_id`` 是塔盾詞條「護陣」（RG-4，#163）而不是盾兵。"""
     modifier_bonus: int = 0
     """修正規則的命中加值（Phase 3C-2 ``hit_bonus``；已含在 ``total``）。"""
     backstab: int = 0
@@ -631,6 +687,7 @@ def roll_attack(  # noqa: PLR0917
         cover=cover_mod,
         cover_object_id=None if cover is None else cover.object_id,
         cover_unit_id=None if cover is None else cover.unit_id,
+        cover_formation=cover is not None and cover.kind == SHIELD_FORMATION,
         total=total,
         target_number=rules.core.hit_target,
         hit=hit,

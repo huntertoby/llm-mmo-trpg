@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -212,12 +212,19 @@ def _check_affixes(
     affixes: Mapping[str, AffixDef],
     ruleset: Ruleset,
     weapons: Mapping[str, WeaponDef],
+    offhands: Collection[str] = (),
 ) -> None:
     keyword_ids = frozenset(ruleset.keywords.ids())
     problems = [
         p
         for affix in affixes.values()
         for p in _affix_reference_problems(affix, ruleset, weapons, keyword_ids)
+    ]
+    problems += [  # RG-4：限定副手的詞條引用的副手存在
+        f"詞條 {affix.id} 引用了未知的副手：{o}"
+        for affix in affixes.values()
+        for o in affix.offhands
+        if o not in offhands
     ]
     if problems:
         raise ContentError(root / "affixes.yaml", "；".join(problems))

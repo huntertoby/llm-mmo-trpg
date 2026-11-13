@@ -5501,6 +5501,8 @@ export interface components {
             item_tags?: {
                 [key: string]: string[];
             };
+            /** Offhands */
+            offhands?: string[] | null;
             /**
              * Legendary Only
              * @default false

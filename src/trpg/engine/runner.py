@@ -41,9 +41,10 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/122"
-"""目前的戰鬥紀錄版本（``/122``，Phase AF-1：瞄準預告的擋箭改打擋住的人（事件
-``lock_intercepted``）、隱蔽照一般規則、只限非玩家方；連擊點與氣一次出招最多 +1）。
+LOG_FORMAT = "trpg-battle-log/123"
+"""目前的戰鬥紀錄版本（``/123``，Phase RG-4：塔盾詞條「護陣」——相鄰隊友被遠程攻擊時命中
+−``shield_formation_hit_penalty``，和半掩護、盾兵、塔盾取最高；``attack_rolled`` 新增
+``cover_formation``）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

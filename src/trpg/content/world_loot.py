@@ -17,6 +17,7 @@ from typing import Final
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.equipment import AffixDef
 from trpg.content.item_budget import Rarity
 from trpg.content.loader import load_content_file
 from trpg.content.schemas import ContentModel
@@ -32,6 +33,7 @@ __all__ = [
     "MainHandMix",
     "MercenaryGearRules",
     "RegionLoot",
+    "SignatureAffix",
     "load_world_loot",
     "loot_problems",
 ]
@@ -117,6 +119,17 @@ class BossLoot(ContentModel):
     gear_rarity: Rarity = "epic"
 
 
+class SignatureAffix(ContentModel):
+    """打盾兵拿盾兵的盾（RG-4，#163，08 8.11）：掉落算在 ``units`` 其中之一頭上、而且掉到的是副手
+    ``offhand`` 時，必帶詞條 ``affix``（:func:`trpg.content.item_gen.with_affix`）。
+
+    掉落算在誰頭上：精英的那一件算該精英；沒有精英時的一般掉落算整個敵方陣容（陣容裡有就算）。"""
+
+    units: tuple[str, ...] = Field(min_length=1)
+    offhand: str = Field(pattern=ID_PATTERN)
+    affix: str = Field(pattern=r"^affix_[a-z0-9_]+$")
+
+
 class RegionLoot(ContentModel):
     """一個區域的掉落內容。"""
 
@@ -143,6 +156,8 @@ class LootRules(ContentModel):
     regions: dict[str, RegionLoot] = Field(default_factory=dict)
     bosses: dict[str, BossLoot] = Field(default_factory=dict)
     """區域 Boss（單位範本 ID）→ 保底掉落（Phase 5F-3）。"""
+    signature_affixes: tuple[SignatureAffix, ...] = ()
+    """敵人掉的特定副手必帶的詞條（RG-4：持盾弟子、熔殼甲兵掉的塔盾必帶「護陣」）。"""
 
     @model_validator(mode="after")
     def _check(self) -> LootRules:
@@ -170,6 +185,16 @@ class LootRules(ContentModel):
         """敵人的家族材料：區域的 ``families`` 優先，其次各區共用的；都沒有時為 ``None``。"""
         return self.region(region).families.get(unit) or self.families.get(unit)
 
+    def signature_affix(self, sources: Collection[str], offhand: str | None) -> str | None:
+        """掉落算在 ``sources``（單位範本或變體 ID）頭上、掉到副手 ``offhand`` 時必帶的詞條（依
+        ``signature_affixes`` 的順序取第一個符合的）；沒有時為 ``None``。"""
+        if offhand is None:
+            return None
+        for row in self.signature_affixes:
+            if row.offhand == offhand and any(u in sources for u in row.units):
+                return row.affix
+        return None
+
     def sell_price(self, rarity: str | None, item_level: int | None) -> int | None:
         """裝備回收價；不收時為 ``None``（代決 5D2-8）。"""
         if rarity is None or item_level is None:
@@ -190,8 +215,10 @@ def loot_problems(
     affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
     keywords: Collection[str] | None = None,
+    gear_affixes: Mapping[str, AffixDef] | None = None,
 ) -> list[str]:
-    """跨檔案問題（27.2；依區域、鍵排序）。``units``／``affixes`` 為 ``None``＝沒有
+    """跨檔案問題（27.2；依區域、鍵排序）。``gear_affixes``（裝備詞條白名單，RG-4）為 ``None``＝
+    不檢查 ``signature_affixes`` 的詞條。``units``／``affixes`` 為 ``None``＝沒有
     ``world/enemies.yaml``（變體與詞綴不明），不檢查敵人與詞綴；``keywords``（關鍵字推導表的 ID，
     5D-2b）為 ``None``＝不檢查區域的偏向關鍵字。"""
     problems: list[str] = []
@@ -228,6 +255,26 @@ def loot_problems(
             if affixes is not None and affix not in affixes:
                 problems.append(f"{where} 的 elite_affixes：未知的精英詞綴 {affix}")
             material(item, f"{where} 的 elite_affixes.{affix}")
+    problems += _signature_problems(rules, units, gear_affixes)
+    return problems
+
+
+def _signature_problems(
+    rules: LootRules, units: Collection[str] | None, gear_affixes: Mapping[str, AffixDef] | None
+) -> list[str]:
+    """``signature_affixes``（RG-4）：敵人存在、詞條存在而且限定在那種副手上。"""
+    problems: list[str] = []
+    for i, row in enumerate(rules.signature_affixes):
+        where = f"signature_affixes[{i}]"
+        if units is not None:
+            problems += [f"{where}：未知的敵人 {u}" for u in row.units if u not in units]
+        if gear_affixes is None:
+            continue
+        affix = gear_affixes.get(row.affix)
+        if affix is None:
+            problems.append(f"{where}：未知的詞條 {row.affix}")
+        elif "offhand" not in affix.slots or (affix.offhands and row.offhand not in affix.offhands):
+            problems.append(f"{where}：詞條 {row.affix} 掛不上副手 {row.offhand}")
     return problems
 
 
@@ -240,6 +287,7 @@ def load_world_loot(
     affixes: Collection[str] | None,
     items: Mapping[str, WorldItemDef],
     keywords: Collection[str] | None = None,
+    gear_affixes: Mapping[str, AffixDef] | None = None,
 ) -> LootRules | None:
     """載入 ``world/loot.yaml``；不存在＝``None``（掉落關閉）。``units`` 是單位範本與變體 ID。"""
     path = root / LOOT_FILE
@@ -247,7 +295,13 @@ def load_world_loot(
         return None
     rules = load_content_file(path, LootRules)
     problems = loot_problems(
-        rules, regions=regions, units=units, affixes=affixes, items=items, keywords=keywords
+        rules,
+        regions=regions,
+        units=units,
+        affixes=affixes,
+        items=items,
+        keywords=keywords,
+        gear_affixes=gear_affixes,
     )
     if problems:
         raise ContentError(path, "；".join(problems))

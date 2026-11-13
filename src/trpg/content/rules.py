@@ -477,6 +477,9 @@ class CoreRules(ContentModel):
     shield_guard_hit_penalty: int = Field(default=2, ge=0)
     """盾兵掩護（RG-1，#162，09 9.6.6）：帶 ``shield_guard`` 的單位替相鄰的遠程同伴擋遠程攻擊時的
     命中懲罰（0＝不擋）。和半掩護、塔盾不疊加。"""
+    shield_formation_hit_penalty: int = Field(default=2, ge=0)
+    """塔盾詞條「護陣」（RG-4，#163，08 8.11）：帶護陣的單位替相鄰的隊友（不分遠近）擋遠程攻擊時的
+    命中懲罰（0＝不擋）。判定同盾兵；和半掩護、盾兵、塔盾不疊加，取最高。另開欄位，不和盾兵共用。"""
 
     # 環境回合（1B）
     burning_object_rounds: int = Field(ge=1)

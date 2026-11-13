@@ -13696,6 +13696,20 @@
             "type": "object",
             "title": "Item Tags"
           },
+          "offhands": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offhands"
+          },
           "legendary_only": {
             "type": "boolean",
             "title": "Legendary Only",

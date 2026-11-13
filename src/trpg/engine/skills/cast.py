@@ -347,6 +347,7 @@ class Cast:
             cover=roll.cover,
             cover_object_id=roll.cover_object_id,
             cover_unit_id=roll.cover_unit_id,
+            cover_formation=roll.cover_formation,
             target_number=roll.target_number,
             hit=roll.hit,
             crit=roll.crit,

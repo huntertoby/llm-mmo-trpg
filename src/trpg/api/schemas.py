@@ -600,8 +600,8 @@ class CoverOut(_ApiModel):
     name_zh: str
     pos: XY
     unit_id: UnitId | None = None
-    """盾兵掩護（RG-1 ``kind: shield_guard``）的盾兵；物件或塔盾為 ``None``（RG-3：前端畫
-    小盾與連結）。"""
+    """盾兵掩護（RG-1 ``kind: shield_guard``）的盾兵、或塔盾詞條「護陣」（RG-4 ``kind:
+    shield_formation``）的持盾隊友；物件或塔盾為 ``None``（RG-3：前端畫小盾與連結）。"""
 
 
 class HealOut(_ApiModel):

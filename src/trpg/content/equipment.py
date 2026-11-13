@@ -57,8 +57,10 @@ __all__ = [
     "AFFIX_CATEGORIES",
     "AFFIX_CATEGORY_NUMBER",
     "AFFIX_CATEGORY_ZH",
+    "ALLY_RANGED_COVER",
     "CHARGE_GAIN_UNSUPPORTED",
     "NUMERIC_CATEGORIES",
+    "OFFHAND_TRAIT_PARAMS",
     "SELF_EVALUABLE_CONDITIONS",
     "ActionAffix",
     "AffixCategory",
@@ -96,6 +98,11 @@ __all__ = [
 ]
 
 AFFIX_ID_PATTERN = r"^affix_[a-z0-9_]+$"
+ALLY_RANGED_COVER = "ally_ranged_cover"
+"""副手特性強化（RG-4，#163）：塔盾詞條「護陣」——相鄰的隊友被遠程攻擊時，攻擊者命中
+−``core.shield_formation_hit_penalty``（判定同盾兵，:func:`trpg.engine.rules.combat.half_cover`）。"""
+OFFHAND_TRAIT_PARAMS: frozenset[str] = frozenset({ALLY_RANGED_COVER})
+"""限定副手（``offhands``）的武器特性強化可用的參數（不改武器資料，由引擎直接讀）。"""
 SUMMON_CHANGES: frozenset[str] = frozenset(
     {"cooldown_delta", "duration_delta", "sacrifice_permille"}
 )
@@ -201,6 +208,8 @@ class _AffixBase(ContentModel):
     - ``weapon_class``：武器類物品限定武器大類（例如「武（遠程）、頭」的遠程；其他種類不受影響）。
     - ``item_tags``：依物品種類限定標籤（例如「副（限盾）、身」寫成 ``{offhand: [shield]}``：副手
       必須帶 ``shield`` 標籤，身體不限）。
+    - ``offhands``：副手類物品限定這些副手（``offhands.yaml`` 的 id；空 ＝ 不限；其他種類的物品不受
+      影響；RG-4：塔盾專屬的「護陣」）。沒填時不輸出（既有詞條的序列化不變）。
     - ``legendary_only``：只能出現在傳說物品上（改變規則類）。
     - ``value``：數值 ``N`` 的範圍；``None`` 表示這條詞條沒有可擲的數值（固定效果）。
     """
@@ -211,6 +220,7 @@ class _AffixBase(ContentModel):
     weapons: tuple[str, ...] = ()
     weapon_class: Literal["melee", "ranged", "focus"] | None = None
     item_tags: dict[SlotType, tuple[str, ...]] = Field(default_factory=dict)
+    offhands: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
     legendary_only: bool = False
     value: ValueRange | None = None
     value_unit: Literal["flat", "permille"] = "flat"
@@ -225,9 +235,14 @@ class _AffixBase(ContentModel):
         if self.value is not None and not has_n:
             raise ValueError(f"詞條 {self.id}：有 value 範圍時 name_zh 必須含 {{n}}")
         tags = [t for group in self.item_tags.values() for t in group]
-        bad = [w for w in (*self.weapons, *tags) if re.match(ID_PATTERN, w) is None]
+        refs = (*self.weapons, *tags, *self.offhands)
+        bad = [w for w in refs if re.match(ID_PATTERN, w) is None]
         if bad:
-            raise ValueError(f"詞條 {self.id}：weapons／item_tags 格式錯誤：{', '.join(bad)}")
+            raise ValueError(
+                f"詞條 {self.id}：weapons／item_tags／offhands 格式錯誤：{', '.join(bad)}"
+            )
+        if self.offhands and "offhand" not in self.slots:
+            raise ValueError(f"詞條 {self.id}：限定 offhands 時 slots 必須含 offhand")
         return self
 
     @property
@@ -467,7 +482,11 @@ class AttackAffix(_AffixBase):
 class WeaponTraitAffix(_AffixBase):
     """第 5 類 武器特性強化（8.21.2.5；結算在 G2）：改武器資料的參數 ``param``（例如
     ``knockback``、``armor_break.rounds``）——``delta`` 加減，或 ``scale_permille`` 倍率
-    （例如貼臉懲罰減半 ＝ 500）。``weapons`` 必填（只出現在對應武器上）。"""
+    （例如貼臉懲罰減半 ＝ 500）。``weapons`` 必填（只出現在對應武器上）。
+
+    副手特性強化（RG-4，#163）：改填 ``offhands``（只出現在對應副手上、``slots: [offhand]``），
+    ``param`` 必須是 :data:`OFFHAND_TRAIT_PARAMS` 之一（目前只有塔盾的「護陣」
+    ``ally_ranged_cover``），``delta: 1``；不改武器資料，由引擎直接讀。"""
 
     category: Literal["weapon_trait"]
     param: str = Field(pattern=r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$")
@@ -476,8 +495,15 @@ class WeaponTraitAffix(_AffixBase):
 
     @model_validator(mode="after")
     def _check(self) -> WeaponTraitAffix:
-        if not self.weapons:
-            raise ValueError(f"詞條 {self.id}：武器特性強化必須限定 weapons")
+        if bool(self.weapons) == bool(self.offhands):
+            raise ValueError(
+                f"詞條 {self.id}：武器特性強化必須限定 weapons 或 offhands（恰好一種）"
+            )
+        if self.offhands and (self.param not in OFFHAND_TRAIT_PARAMS or self.slots != ("offhand",)):
+            raise ValueError(
+                f"詞條 {self.id}：限定副手的特性強化只能用 {sorted(OFFHAND_TRAIT_PARAMS)}，"
+                "而且 slots 只能是 [offhand]"
+            )
         if (self.delta is None) == (self.scale_permille is None):
             raise ValueError(f"詞條 {self.id}：delta 與 scale_permille 恰好填一個")
         return self
@@ -953,6 +979,7 @@ def loadout_held(weapon: WeaponDef, loadout: Loadout | None) -> dict[str, str]:
 
 _WEAPON_CLASS_ZH = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器"}
 _ITEM_TAG_ZH = {"shield": "盾"}
+_OFFHAND_ZH = {"tower_shield": "塔盾", "round_shield": "圓盾", "tome": "法書", "orb": "法器珠"}
 
 
 def _affix_slot_problems(
@@ -981,6 +1008,9 @@ def _affix_slot_problems(
     ):
         class_zh = _WEAPON_CLASS_ZH.get(affix.weapon_class, affix.weapon_class)
         problems.append(f"{where} 只能出現在{class_zh}上")
+    if item.slot_type == "offhand" and affix.offhands and item.offhand not in affix.offhands:
+        names = "、".join(_OFFHAND_ZH.get(o, o) for o in affix.offhands)
+        problems.append(f"{where} 只能出現在{names}上")
     needed = affix.item_tags.get(item.slot_type, ())
     if needed and not set(needed) & set(item.tags):
         tags = "、".join(_ITEM_TAG_ZH.get(t, t) for t in needed)

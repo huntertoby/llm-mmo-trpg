@@ -177,6 +177,8 @@ targets:
       # RG-2（#162，05 5.7）：玩家方看到敵方陷阱的可疑痕跡。
       - {path: trap_trace_radius, label_zh: 陷阱痕跡距離, kind: int, hint_min: 0, hint_max: 5, note_zh: 我方單位走到敵方陷阱這麼多格內（直走橫走的步數）就看到那一格有「可疑痕跡」，只知道格子、不知道種類；0＝看不到痕跡。敵人看不到我方陷阱的痕跡。}
       - {path: shield_guard_hit_penalty, label_zh: 盾兵掩護命中懲罰, kind: int, hint_min: 0, hint_max: 6, note_zh: 盾兵（持盾弟子、熔殼甲兵）站在遠程同伴朝向攻擊者的那一側時，遠程攻擊打那名同伴命中減這麼多；0＝盾兵不擋。和半掩護、塔盾不疊加。}
+      # RG-4（#163，08 8.11）：玩家塔盾的詞條「護陣」，判定同盾兵、數值分開調。
+      - {path: shield_formation_hit_penalty, label_zh: 護陣命中懲罰, kind: int, hint_min: 0, hint_max: 6, note_zh: 塔盾詞條「護陣」：和持盾者相鄰（上下左右）的隊友被遠程攻擊時，攻擊者命中減這麼多；持盾者自己不算（由塔盾本體護）。0＝護陣不擋。同一次攻擊被好幾個護陣、或護陣和半掩護、盾兵一起罩到時只算一次、取最高。}
   # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
   - kind: budget
     label_zh: 技能預算表

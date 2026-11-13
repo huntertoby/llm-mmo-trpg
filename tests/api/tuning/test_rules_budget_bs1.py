@@ -25,6 +25,7 @@ CORE_PATHS = (
     "ambush_hit_bonus",
     "trap_trace_radius",  # RG-2（#162）陷阱痕跡
     "shield_guard_hit_penalty",  # RG-1（#162）盾兵掩護
+    "shield_formation_hit_penalty",  # RG-4（#163）塔盾詞條「護陣」
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
