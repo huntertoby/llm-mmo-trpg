@@ -34,6 +34,10 @@ class ParamDef(ContentModel):
     """給 LLM 看的一句話說明（Phase 4-L3）：中性描述，不含世界觀名詞、階段編號與欄位名。"""
     default: int | None = None
     """省略時的值（Phase 5F-2b；只用在 ``content_params``：格數、預算、引擎幾何都照這個值）。"""
+    content_max: int | None = None
+    """只有內建技能（``provenance.origin: builtin``）能寫到的上限（GB-2b，例：灰燼之心吸氣的範圍光環
+    半徑 4）。技能生成器、LLM 提議、玩家選項只看 ``max``；格數、預算表要涵蓋到這個值。``None``＝同
+    ``max``。"""
 
     @model_validator(mode="after")
     def _range(self) -> ParamDef:
@@ -41,7 +45,15 @@ class ParamDef(ContentModel):
             raise ValueError(f"參數範圍不合理：min {self.min} > max {self.max}")
         if self.default is not None and not self.min <= self.default <= self.max:
             raise ValueError(f"預設值 {self.default} 不在 {self.min}–{self.max}")
+        if self.content_max is not None and self.content_max <= self.max:
+            raise ValueError(f"content_max {self.content_max} 必須大於 max {self.max}")
         return self
+
+    def top(self, *, builtin: bool = False) -> int:
+        """上限：內建技能用 ``content_max``（有寫時），其他用 ``max``。"""
+        if builtin and self.content_max is not None:
+            return self.content_max
+        return self.max
 
 
 class ShapeBudget(ContentModel):
@@ -187,7 +199,9 @@ class ShapeDef(ContentModel):
         if spec is None:
             raise ValueError(f"形狀 {self.id}：cell_count.param {cells.param!r} 不是這個形狀的參數")
         assert cells.by_value is not None
-        missing = [v for v in range(spec.min, spec.max + 1) if v not in cells.by_value]
+        missing = [
+            v for v in range(spec.min, spec.top(builtin=True) + 1) if v not in cells.by_value
+        ]
         if missing:
             raise ValueError(f"形狀 {self.id}：cell_count.by_value 缺少參數值 {missing}")
         return self
@@ -202,7 +216,7 @@ class ShapeDef(ContentModel):
             raise ValueError(f"形狀 {self.id}：budget.param {param!r} 不是這個形狀的參數")
         for table in (self.budget.by_value_permille, self.budget.non_power_by_value_permille):
             if table is not None:
-                missing = [v for v in range(spec.min, spec.max + 1) if v not in table]
+                missing = [v for v in range(spec.min, spec.top(builtin=True) + 1) if v not in table]
                 if missing:
                     raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
         return self

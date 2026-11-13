@@ -521,7 +521,8 @@ def skill_problems(
         known = ", ".join(sorted(shapes))
         problems.append(f"shape.type：未知的形狀 {skill.shape.type!r}（可用：{known}）")
     else:
-        problems += _int_param_problems("shape", skill.shape.param_values(), shape)
+        values = skill.shape.param_values()
+        problems += _int_param_problems("shape", values, shape, builtin=skill.content_only_ok)
     if skill.trap is not None and skill.trap.shape not in shapes:
         known = ", ".join(sorted(shapes))
         problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")

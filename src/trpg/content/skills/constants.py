@@ -697,6 +697,11 @@ GATHER_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
 為聚集點。"""
 
 
+BUILTIN_GATHER_SHAPES: tuple[str, ...] = ("allies_in_radius",)
+"""只有內建技能（``provenance.origin: builtin``）能用的聚集段形狀（GB-2b，灰燼之心的吸氣「4 格內」，
+19.2.3 R7）：範圍光環以施放者為聚集點（同環形）。技能生成器、LLM 提議只看 :data:`GATHER_SHAPES`。"""
+
+
 ON_KILL_SECOND_SHAPES: tuple[str, ...] = shape_role("on_kill_second")
 """``on_kill`` 第二段的形狀：動作段的形狀，加上跳躍、傳送用的指定格。"""
 

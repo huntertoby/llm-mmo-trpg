@@ -26,6 +26,7 @@ from trpg.content.skills.constants import (
     _ZONE_ONLY_FIELDS,
     ADD_STACK,
     BACKLASH_TYPES,
+    BUILTIN_GATHER_SHAPES,
     CHARGE_THROUGH,
     CONSUME_STACK,
     CONSUME_STATUS,
@@ -39,6 +40,7 @@ from trpg.content.skills.constants import (
     GAMBLE,
     GAMBLE_BRANCH_TYPES,
     GAMBLE_TAG,
+    GATHER_SHAPES,
     GRANT_SKILL,
     HURL_OBJECT,
     INSCRIBE,
@@ -505,6 +507,14 @@ class SkillDef(ContentModel):
             raise ValueError(
                 f"只有延遲段（when: delayed）可以指定 anchor，收到 when: {follow.when}"
             )
+        if (
+            follow.when == "after_gather"
+            and self.shape.type in BUILTIN_GATHER_SHAPES
+            and not self.content_only_ok
+        ):
+            raise ValueError(
+                f"聚集段的形狀只能是 {'、'.join(GATHER_SHAPES)}，收到 {self.shape.type}"
+            )
         _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
         total = len(self.effects) + len(follow.effects)
         if total > MAX_EFFECTS:
@@ -513,6 +523,14 @@ class SkillDef(ContentModel):
             self.followup_skill()
         except ValueError as exc:
             raise ValueError(f"followup：{exc}") from None
+
+    @property
+    def content_only_ok(self) -> bool:
+        """可以用「只給內建內容」的範圍（GB-2b：範圍光環聚集 :data:`BUILTIN_GATHER_SHAPES`、
+        形狀參數的 ``content_max``）：內建技能（``provenance.origin: builtin``）或敵人專用招
+        （``enemy_only``，閃現、升階等衍生版本沿用）。LLM 提議的來源不是 ``builtin``，也不能寫
+        ``enemy_only``。"""
+        return self.provenance.origin == "builtin" or self.enemy_only
 
     def followup_skill(self) -> SkillDef | None:
         """複合技能的動作段，展開成一個獨立的技能（Phase 3F-3a）：沿用本技能的 ID、名稱、類別、
@@ -1461,7 +1479,10 @@ def drop_icon_prop(data: Mapping[str, Any]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDef) -> list[str]:
+def _int_param_problems(
+    where: str, values: dict[str, int | str], shape: ShapeDef, *, builtin: bool = False
+) -> list[str]:
+    """形狀參數齊全且在範圍內；``builtin``（內建技能）時上限用 ``content_max``（GB-2b）。"""
     problems: list[str] = []
     params = shape.all_params()
     for name, spec in params.items():
@@ -1475,9 +1496,10 @@ def _int_param_problems(where: str, values: dict[str, int | str], shape: ShapeDe
                 problems.append(f'{where}.{name}：{shape.id} 的 {name} 不接受 "weapon"')
             continue
         assert isinstance(value, int)
-        if not spec.min <= value <= spec.max:
+        top = spec.top(builtin=builtin)
+        if not spec.min <= value <= top:
             problems.append(
-                f"{where}.{name}：{shape.id} 的 {name} 必須在 {spec.min}–{spec.max}，收到 {value}"
+                f"{where}.{name}：{shape.id} 的 {name} 必須在 {spec.min}–{top}，收到 {value}"
             )
     for name in values:
         if name not in params:
