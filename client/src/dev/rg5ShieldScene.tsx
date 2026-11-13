@@ -1,12 +1,11 @@
 // 開發用：RG-5 玩家大盾的「實機一時到不了」畫面（`dev/rg5-shield-scene.html`；不屬於正式 build）。
 // 用正式元件與正式資料流畫：戰場是 `BattleRenderer`＋`buildDrawModel`（單位的 `equipment` 走 dollGear → resolveGear → 紙娃娃，和實機同一條路）；
 // 背包與裝備欄是 `BagContents`（42 格）與 `WornSlot`（48 格），圖示走 `GearIcon` → gearIconCanvas → qWeaponDef。資料是假的。
-// 注意：形制要先在 gearAppearance.json 的 kite_shield.forms 裡（resolveGear 才不會退回鳶盾）；畫面上方會寫出目前是不是。
 // 參數：?mode=scene&w=1600|800（格子 63／25 px，等於 1600、800 寬視窗的地圖縮放 1.31／0.53）｜?mode=bag
+//       ｜?mode=k3&w=1600|800：RG-4 驗收 K3（持盾弟子身邊的粉紅小點）的對照——南鄰格比較高的單位畫 6F-22 舊剪影（敵方 #ffb3a8 虛線人形），平地的不畫。
 import { createRoot } from "react-dom/client";
 import type { BattleView, Glossary, HeroGearSlot, TileView, UnitView, WorldInventory, WorldBagItem } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
-import appearance from "../render/gearAppearance.json";
 import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
 import { tile, unit } from "../battle/testFixtures";
@@ -24,19 +23,11 @@ const HERO = "unit_0001";
 const COLS = 6;
 const shield = (form: string, material: string, keywords: string[] = []): GearLook => ({ kind: "kite_shield", form, material, keywords, rarity: "rare" });
 const ready = (form: string): boolean => resolveGear(shield(form, "iron"), "off_hand").form === form;
-/** gearAppearance.json 還沒有這兩個形制時，開發頁在記憶體裡暫補（只改這一頁載入的 JSON 物件，不動檔案）；畫面上方註明。 */
-const PATCHED: string[] = [];
-for (const [id, zh] of [["sect_great", "雲紋碑盾"], ["molten_shell", "熔殼塔盾"]] as const) {
-  if (ready(id)) continue;
-  const k = (appearance.kinds as unknown as Array<{ id: string; forms: unknown[] }>).find((x) => x.id === "kite_shield");
-  k?.forms.push({ id, zh, materials: ["iron", "steel", "copper", "silver", "gold"], defaultMaterial: "iron" });
-  PATCHED.push(id);
-}
 
 function header(): HTMLElement {
   const p = document.createElement("div");
   p.id = "status";
-  p.textContent = `gearAppearance.json：${PATCHED.length === 0 ? "兩個形制都在（正式資料）" : `${PATCHED.join("、")} 不在，開發頁暫補（實機未看）`}；resolveGear：sect_great ${ready("sect_great") ? "認得" : "不認得"}、molten_shell ${ready("molten_shell") ? "認得" : "不認得"}`;
+  p.textContent = `gearAppearance.json（正式資料）resolveGear：sect_great ${ready("sect_great") ? "認得" : "不認得（會退回鳶盾）"}、molten_shell ${ready("molten_shell") ? "認得" : "不認得（會退回鳶盾）"}`;
   document.body.appendChild(p);
   return p;
 }
@@ -70,6 +61,30 @@ function scene(): BattleView {
     objective: { kind: "eliminate", tiles: [], rounds: null }, ended: false, winner: null, end_reason: null, pending: null,
     source_wells: [], zones: [], runes: [],
   } as unknown as BattleView;
+}
+/** K3 對照：第 1 列 (1,0) 持盾弟子南鄰 (1,1) 高 2 → 畫虛線剪影；(3,0) 持盾弟子南鄰平地 → 不畫；(5,0) 拿劍的一般敵人南鄰高 2 → 一樣畫（不是碑盾特有）。 */
+function k3Scene(): BattleView {
+  const tiles = grid(3).map((t) => (t.y === 1 && (t.x === 1 || t.x === 5) ? { ...t, height: 2 } : t));
+  const units: UnitView[] = [
+    unit("unit_0090", "enemy", 1, 0, { template_id: "sect_shield_disciple", name_zh: "持盾弟子（南鄰高）", facing: "west", doll_look: UNIT_DOLLS["sect_shield_disciple"] } as Partial<UnitView>),
+    unit("unit_0091", "enemy", 3, 0, { template_id: "sect_shield_disciple", name_zh: "持盾弟子（平地）", facing: "west", doll_look: UNIT_DOLLS["sect_shield_disciple"] } as Partial<UnitView>),
+    unit("unit_0092", "enemy", 5, 0, { template_id: "t", name_zh: "劍兵（南鄰高）", facing: "west" } as Partial<UnitView>),
+    unit(HERO, "ally", 2, 2, { template_id: "hero_fighter", name_zh: "主角", facing: "north", weapon_id: "one_handed_sword" } as Partial<UnitView>),
+  ];
+  return { ...scene(), units, tiles, height: 3 } as BattleView;
+}
+async function showK3(): Promise<void> {
+  const cell = W === 800 ? 25 : 63;
+  const box = document.createElement("div");
+  const h = document.createElement("h2");
+  h.textContent = `K3 對照（格子 ${cell}px、真 1 倍）：左 持盾弟子南鄰高 2｜中 持盾弟子平地｜右 一般敵人南鄰高 2`;
+  box.appendChild(h);
+  document.body.appendChild(box);
+  const r = new BattleRenderer();
+  await r.init(box);
+  r.setScale(cell / 48);
+  r.draw(buildDrawModel(k3Scene(), HERO));
+  document.body.dataset["ready"] = "1";
 }
 async function showScene(): Promise<void> {
   header();
@@ -137,4 +152,5 @@ if (MODE === "bag") {
   document.body.appendChild(root);
   createRoot(root).render(<Bag />);
   setTimeout(() => (document.body.dataset["ready"] = "1"), 500);
-} else await showScene();
+} else if (MODE === "k3") await showK3();
+else await showScene();
