@@ -1,0 +1,25 @@
+# KW-2 氣利用者（#161，06 6.27.2「每池 3 招主動利用者」由開發補齊；數值為初值，未經模擬）：重拳；氣達 2 層時把目標擊倒
+# （以施放開始時的層數判斷，不消耗）。氣最搭倒地（06 6.32.1）。
+id: skill_crumbling_fist
+schema_version: 1
+name_zh: 崩拳
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 1300}
+  - {type: knock_prone, condition: {type: self_stack_at_least, stack: ki, count: 2}}
+condition: null
+cost: {stamina: 10, cooldown: 2}
+tags: [physical, melee, martial]
+narrative:
+  concept: 氣聚在拳頭上，一拳就把人打得站不住
+  cast_flavor: 你沉肩送拳，拳勁炸開，對手腳下一軟
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

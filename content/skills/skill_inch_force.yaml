@@ -1,0 +1,31 @@
+# KW-2 氣示範（#161，06 6.32.1「寸勁：打中 +1，推開 1 格」；數值為初值，未經模擬）：打中累積 1 層氣，再把同一個目標推開
+# 1 格（蓄力骨架的附帶不收推擊，推開寫成命中後的第二段；待 PM）。和震擊（只打中 +1）效果不同，並存。
+id: skill_inch_force
+schema_version: 1
+name_zh: 寸勁
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: str
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 450}
+  - {type: add_stack, stack: ki, amount: 1, affects: self}
+followup:
+  when: on_hit
+  skeleton: displace
+  shape: {type: single, range: weapon}
+  effects:
+    - {type: push, distance: 1}
+condition: null
+cost: {stamina: 6, cooldown: 1}
+tags: [physical, melee, martial, push, builder]
+narrative:
+  concept: 拳頭貼著對手才發力，一寸的距離就把人震開
+  cast_flavor: 你的拳頭貼上對手胸口，腰一擰，對方整個人向後滑開
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

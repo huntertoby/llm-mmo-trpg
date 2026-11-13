@@ -42,7 +42,8 @@ stacks:
     # Phase 3-52（06 6.32）：開放給技能消耗；身上有消耗怒氣的技能時，受到傷害也會自動累積（裝備詞條照舊，不重複算）。
     gain:
       - {when: damaged}
-    consumer: {boosts: [damage]}
+    # KW-2（#161，06 6.27.1「花掉怒氣換傷害或護盾」，示範：咬牙撐住）：消耗怒氣也加成護盾。
+    consumer: {boosts: [damage, shield]}
 
   # --- Phase 3-52 層數擴充（玩法決定 #57，docs/design/06-技能.md 6.32；數值為初值，未經模擬）---
   # gain：自動累積規則（只有身上帶有消耗這種層數的技能的單位才會累積）；技能的 add_stack 另外再加。

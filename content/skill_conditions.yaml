@@ -187,3 +187,13 @@ conditions:
     params:
       stack: {llm_hint: "要看的層數種類。", type: stack, required: true, description_zh: 層數 ID（stacks.yaml，只能是累積在自己身上的）}
       count: {llm_hint: "至少幾層。", type: int, required: true, min: 1, max: 9, description_zh: 至少幾層}
+  # KW-2（玩法決定 #161，06 6.27.1、6.32.1 鷹眼「站在高處時回合結束多 +1」）：施放者所在格的高度至少 1 層。
+  # 定義是占位（待 PM：要不要改成「比相鄰格高」、飛行算不算——目前不算）；只看施放者。第一版只給手寫技能
+  # （handwritten_only，同 KW-1 的做法）；harshness 為占位（common），之後由使用者在工坊看。
+  - id: self_on_high_ground
+    name_zh: 自身站在高處
+    llm_hint: "施放者所在的格子高度至少 1 層時才成立。"
+    description_zh: 施放者所在格的高度至少 1 層（站在高台、屋頂、土丘上）。飛行不算。只看施放者。
+    harshness: common
+    min_rarity: rare
+    handwritten_only: true

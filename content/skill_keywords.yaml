@@ -168,6 +168,7 @@ keywords:
       - {effect: grant_skill, skill: skill_flight}
     uses:
       - {condition: height_advantage}
+      - {condition: self_on_high_ground}   # KW-2（#161 鷹眼）：自己站在高處時才成立
       - {effect: damage, weapon_req: ranged, category: weapon, grade: general, reason_zh: 站得比目標高時遠程攻擊命中提高}   # 通用：遠程攻擊吃高低差命中加成（core.yaml height_hit_bonus）
       - {change: grant_pierce, grade: general, reason_zh: 遠程攻擊的修正，搭配高處的射擊}   # 通用：遠程修正
   - id: concealed

@@ -1,0 +1,25 @@
+# KW-2 怒氣示範（#161，06 6.32.1「咬牙撐住：花光每層一層護盾」；數值為初值，未經模擬）：得到護盾，花光怒氣，
+# 每層護盾提高（stacks.yaml 的 fury.consumer.boosts 加 shield）。
+id: skill_grit_teeth
+schema_version: 1
+name_zh: 咬牙撐住
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 1
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 2d4, affects: self}
+  - {type: consume_stack, stack: fury, per_stack_permille: 250, affects: self}
+condition: null
+cost: {mana: 3, cooldown: 2}
+tags: [physical, rage, shield, finisher]
+narrative:
+  concept: 把滿腔怒火壓成一口硬氣，硬扛下一波攻勢
+  cast_flavor: 你咬緊牙關，怒意在皮膚底下凝成一層硬殼
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

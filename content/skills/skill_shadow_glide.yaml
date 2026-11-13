@@ -1,0 +1,31 @@
+# KW-2 連擊示範（#161，06 6.32.1「掠影步：移動 2 格並 +1」；數值為初值，未經模擬）：刺一下累積 1 點連擊點，
+# 再掠開 2 格。骨架沒有「位移＋累積層數」的組合（位移骨架的附帶不收 add_stack），所以寫成蓄力段＋自身躍步的第二段（待 PM）。
+id: skill_shadow_glide
+schema_version: 1
+name_zh: 掠影步
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: builder_finisher
+category: weapon
+weapon_req: melee
+ap_cost: 1
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 250}
+  - {type: add_stack, stack: combo_point, amount: 1, affects: self}
+followup:
+  when: after_action
+  skeleton: displace
+  shape: {type: ground_tile, range: 2}
+  effects:
+    - {type: leap}
+condition: null
+cost: {stamina: 6, cooldown: 3}
+tags: [physical, melee, leap, mobility, builder]
+narrative:
+  concept: 刀尖一點就掠開，節奏一點都沒斷
+  cast_flavor: 你點出一刺，借勢掠過兩步，影子還留在原地
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

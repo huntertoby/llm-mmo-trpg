@@ -1,0 +1,24 @@
+# KW-2 連擊利用者（#161，06 6.27.2「每池 3 招主動利用者」由開發補齊；數值為初值，未經模擬）：
+# 連擊點達 3 點才能施放，不消耗連擊點。
+id: skill_flowing_cut
+schema_version: 1
+name_zh: 連影斬
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: weapon
+weapon_req: melee
+ap_cost: 2
+scaling_attr: dex
+shape: {type: single, range: weapon}
+effects:
+  - {type: damage, multiplier_permille: 2000}
+condition: {type: self_stack_at_least, stack: combo_point, count: 3}
+cost: {stamina: 8, cooldown: 1}
+tags: [physical, melee]
+narrative:
+  concept: 節奏起來之後，每一刀都順著上一刀的勢落下
+  cast_flavor: 你的刀影連成一線，順勢斬過對手
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
