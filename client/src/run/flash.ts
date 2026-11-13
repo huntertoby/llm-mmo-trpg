@@ -124,7 +124,14 @@ export interface ReflashSlot {
   label: string;
   /** 這格是不是第 3 次大變化但還不是轉型（升階後建議重閃）。 */
   transformHint: boolean;
+  /** 伺服器實際算過、重閃這格一個合法選項都沒有（RR-1，比照 FL-1c `flash_available`）：按鈕標灰、不能按。 */
+  none: boolean;
+  /** 不能重閃這格的灰字（伺服器 `problem_zh`）。 */
+  problem: string | null;
 }
+
+/** 重閃某一格沒有任何合法選項時的灰字（RR-1；伺服器 `problem_zh` 同一句）。 */
+export const NO_REFLASH_OPTIONS_TEXT = "這一格目前沒有可以重閃的變化";
 
 /** 這招可以重閃的格子（後端 `reflash_slots`）；完整技能的調整欄（0）標「調整欄」。 */
 export function reflashSlots(f: SkillFlash | undefined): ReflashSlot[] {
@@ -132,7 +139,8 @@ export function reflashSlots(f: SkillFlash | undefined): ReflashSlot[] {
   return (f.reflash_slots ?? []).map((s) => {
     const record = f.records.find((r) => r.nth === s.slot);
     const label = s.slot === 0 || record === undefined ? "調整欄" : recordLine(record);
-    return { slot: s.slot, label, transformHint: s.transform_hint };
+    const none = s.available === false;
+    return { slot: s.slot, label, transformHint: s.transform_hint, none, problem: none ? (s.problem_zh ?? NO_REFLASH_OPTIONS_TEXT) : null };
   });
 }
 
