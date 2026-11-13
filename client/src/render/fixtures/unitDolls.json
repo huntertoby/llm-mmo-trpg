@@ -659,6 +659,21 @@
   "affixes": [],
   "traits": []
  },
+ "molten_shell_trooper": {
+  "skin": "#f1c9a5",
+  "skull": false,
+  "gear": {},
+  "beard": false,
+  "creature": {
+   "body": "crawler",
+   "variant": "beetle",
+   "material": "magma",
+   "traits": [],
+   "status_traits": {}
+  },
+  "affixes": [],
+  "traits": []
+ },
  "molten_wraith": {
   "skin": "#f1c9a5",
   "skull": false,
@@ -967,6 +982,29 @@
    }
   },
   "main_kind": "puppet_cross",
+  "beard": false,
+  "affixes": [],
+  "traits": []
+ },
+ "sect_shield_disciple": {
+  "skin": "#d9a47a",
+  "hair": "bun",
+  "hair_color": "#1c1c22",
+  "skull": false,
+  "gear": {
+   "body": {
+    "kind": "robe",
+    "material": "cloth",
+    "color": "#5f8f8a",
+    "trim": "#dfe4e2"
+   },
+   "off_hand": {
+    "kind": "shield_kite",
+    "material": "wood",
+    "color": "#5f8f8a"
+   }
+  },
+  "main_material": "iron",
   "beard": false,
   "affixes": [],
   "traits": []

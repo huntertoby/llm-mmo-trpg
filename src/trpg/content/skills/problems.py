@@ -555,6 +555,7 @@ def skill_problems(
     problems += _legendary_problems(skill, primitives)
     problems += _enemy_only_condition_problems(skill, conditions)
     problems += _all_strikes_problems(skill)
+    problems += _lock_on_problems(skill)
     return problems
 
 
@@ -583,6 +584,26 @@ def _all_strikes_problems(skill: SkillDef) -> list[str]:
         parts = spec.alternatives()
         if len(parts) > 1 and any(part.type == ALL_STRIKES_HIT for part in parts):
             problems.append(f"{ALL_STRIKES_HIT}（每一下都命中）不能放在 any_of 裡")
+    return problems
+
+
+def _lock_on_problems(skill: SkillDef) -> list[str]:
+    """瞄準預告（RG-1 ``lock_on``，#162）只能用在敵人專用、單體、沒有第二段的一般主動招，第一個效果
+    要對敵人（宣告時選的是敵方單位，射出時照一般施放結算）。"""
+    if not skill.lock_on:
+        return []
+    problems: list[str] = []
+    if not skill.enemy_only:
+        problems.append("lock_on（瞄準預告）只能用在敵人專用招（enemy_only）")
+    if skill.kind != "active" or skill.is_activatable:
+        problems.append("lock_on（瞄準預告）只能用在一般主動技能")
+    if skill.shape.type != "single":
+        problems.append("lock_on（瞄準預告）只能用在單體形狀（single）")
+    if skill.followup is not None or skill.trap is not None:
+        problems.append("lock_on（瞄準預告）不能有第二段（followup）或陷阱（trap）")
+    first = skill.effects[0] if skill.effects else None
+    if first is None or (first.affects or "enemies") not in {"enemies", "all"}:
+        problems.append("lock_on（瞄準預告）的第一個效果要對敵人")
     return problems
 
 

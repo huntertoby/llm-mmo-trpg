@@ -675,6 +675,9 @@ class AiWeights(ContentModel):
     """（Phase 3H-2）技能的耐力機會成本：每點耐力 × 這個值 ÷ 1000（扣在技能的分數上）。"""
     cooldown: int = 0
     flank: int = 0
+    screen: int = 0
+    """（RG-1，#162）盾兵（``shield_guard`` 標籤）站位：每替一名相鄰的遠程同伴擋住至少一名打得到他的
+    遠程敵人加分（位置價值）。沒有這個標籤的單位不算。"""
     backstab: int = 0
     """（Phase 3D-8d）近戰單位站在敵人背後格的每個敵人（位置價值加分）。"""
     back_exposed: int = 0
@@ -836,6 +839,9 @@ class RewriteAiRules(ContentModel):
     activation_battle_rounds: int = Field(default=4, ge=1)
     delayed_enemy_points: int = Field(default=5, ge=0)
     delayed_attacked_permille: int = Field(default=600, ge=0, le=1000)
+    lock_on_permille: int = Field(default=700, ge=0, le=1000)
+    """（RG-1，#162）瞄準預告的強力一擊：AI 估「現在就射出」的收益再乘這個千分比（對手可能躲開、
+    擋住或打斷；:attr:`trpg.engine.preview.Preview.lock_fire`）。"""
     delayed_heal_points: int = Field(default=5, ge=0)
     priority_kill_points: int = Field(default=10, ge=0)
     interrupt_points: int = Field(default=12, ge=0)

@@ -299,6 +299,8 @@ class TelegraphCharge(BaseModel):
     anchored: bool = False
     """落在施放時選的格子（BAL-21a）：``pos`` 是那格、範圍不隨施放者移動；``False``＝以施放者
     為中心。"""
+    lock_target_id: UnitId | None = None
+    """瞄準預告（RG-1，#162）瞄準的單位：``pos``／``tiles`` 是他目前的格子。"""
 
 
 class Telegraph(BaseModel):

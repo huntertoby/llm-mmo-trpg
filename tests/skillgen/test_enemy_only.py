@@ -41,6 +41,10 @@ ENEMY_ONLY = frozenset(
         "skill_lava_splash",
         # BAL-21c 碎晶之主第 3 階段的界隙閃擊（取代 AI 不放的 skill_blink）
         "skill_rift_flicker",
+        # RG-1（#162）瞄準預告的強力一擊：雲鶴使、符籙師、噴岩龜
+        "skill_crane_piercing_shot",
+        "skill_binding_talisman",
+        "skill_lava_bomb",
     }
 )
 

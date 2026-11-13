@@ -90,6 +90,9 @@ class StatusInstance:
     anchor: Pos | None = None
     """延遲段的落點（BAL-21a，只有 ``charging`` 使用）：技能的 ``followup.anchor: cast_tile`` 時是
     施放時選的格子，第二段以它為中心結算、不隨施放者移動；``None``＝以施放者當下的位置為中心。"""
+    lock_target: Annotated[UnitId | None, Field(exclude_if=_empty)] = None
+    """瞄準預告的目標（RG-1，#162，只有 ``charging`` 使用）：``lock_on`` 的技能瞄準的單位，施放者
+    下一個自己的回合開始時對他射出；``None``＝不是瞄準（不輸出，既有狀態 JSON 不變）。"""
     cost_status: bool = False
     """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``），
     淨化與驅散都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""

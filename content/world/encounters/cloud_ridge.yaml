@@ -34,6 +34,9 @@ groups:
   - {id: altar_wardens, name_zh: 祭壇護法, units: [sect_warrior_monk, sect_talisman_caster, sect_mist_walker]}
   - {id: sword_array, name_zh: 劍陣, units: [sect_array_disciple, sect_array_disciple, sect_array_stone]}
   - {id: bridge_patrol, name_zh: 吊橋巡邏, units: [sect_swordsman, sect_crane_archer]}
+  # RG-1（#162，18.2.1「加深內容」）：持盾弟子站在雲鶴使、符籙師前面擋遠程；加在現有地點，原陣容不動
+  - {id: bridge_shield_line, name_zh: 吊橋盾陣, units: [sect_shield_disciple, sect_crane_archer]}
+  - {id: altar_shield_wardens, name_zh: 祭壇盾陣, units: [sect_shield_disciple, sect_talisman_caster, sect_warrior_monk]}
   - {id: valley_keepers, name_zh: 藥谷守人, units: [sect_alchemist, sect_warrior_monk, sect_puppeteer]}
   - {id: valley_beasts, name_zh: 藥谷野獸, units: [mountain_leopard, stoneback_bear]}
   - {id: furnace_steward, name_zh: 丹爐執事, units: [sect_steward, sect_swordsman, sect_warrior_monk]}
@@ -78,9 +81,9 @@ locations:
     variants:  # 「二當家記恨你」到期 → 二當家坐大（打贏那一場結束）
       - {flag: scarface_rises, group: scarface_risen, elite: {unit: bandit_captain, affix: heart_linked}}  # 懸賞「疤面」＝盜賊隊長（連心的，18.7.4）
   - location: old_pine_altar
-    groups: [{group: altar_wardens}]
+    groups: [{group: altar_wardens}, {group: altar_shield_wardens}]
   - location: cloud_sea_bridge
-    groups: [{group: sword_array}, {group: bridge_patrol}]
+    groups: [{group: sword_array}, {group: bridge_patrol}, {group: bridge_shield_line}]
     ranged_cap: 1   # 5A-SIM2：雲海吊橋每個陣容最多 1 名遠程（高處只留雲鶴使，沒有符籙師）
   - location: herb_valley
     groups: [{group: valley_keepers}, {group: valley_beasts}]

@@ -49,6 +49,7 @@
 #   line_up        （3-24a2）帶穿透的武器（弩）：站位能讓一條直線穿過多名敵人時，每多穿透一名敵人加分（低權重）
 #   charge_per_enemy  （3E-1）直線衝撞每個會被穿過的敵人的固定加分（預設 3，不是 0）
 #   shadowstep     （3E-1）瞬步的固定加分（預設 3，不是 0）；shadowstep_behind：落在目標背後再加（預設 2）
+#   screen         （RG-1，#162）盾兵（shield_guard 標籤）每替一名相鄰的遠程同伴擋住至少一名打得到他的遠程敵人加分；其他單位 0
 #   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
 #                  不算，所以不會讓弓手不敢進入射擊位置；煙幕、隱蔽讓敵人打不到自己時降低
 #
@@ -138,6 +139,7 @@ rewrite:
   activation_battle_rounds: 4
   delayed_enemy_points: 5          # 3F-4b：延遲段預計範圍內每個敵人的價值（友方扣同樣的分數）
   delayed_attacked_permille: 600   # 3F-4b：被攻擊才釋放的延遲段再乘這個千分比（可能沒人來打）
+  lock_on_permille: 700            # RG-1（#162）：瞄準預告的強力一擊，AI 估「現在就射出」的收益再乘這個千分比（對手可能躲開；初值，未經模擬）
 # summon 的模式欄位（Phase 3-33c，初值）：follow_radius 跟隨時待在召喚者幾格內（軟性）、guard_radius 守護我時只走到召喚者幾格內、
 #   guard_threat_range 守護我時敵人「威脅施放者」的距離寬限（敵人射程＋速度＋此值 ≥ 與施放者的距離）、auto_guard_hp_permille 我方 AI 施放者
 #   HP 低於此千分比時召喚物改守護我（0＝不切換）、auto_focus_boss 場上有 Boss 時改集火 Boss、infusion_points 估值時帶灌注的召喚物每輪加幾點。
@@ -275,7 +277,8 @@ profiles:
     name_zh: 守衛
     description_zh: 重視保護同伴與守點。
     player_description_zh: 留在被保護的隊友（或守點）附近，必要時舉盾防禦，不會衝太前面。
-    weights: {damage: 3, env_damage: 1, kill: 15, env_kill: 15, push: 4, surface: 4, expose: 5, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, shield: 8, support: 6, mana: 1, stamina_permille: 500, cooldown: 1}
+    # RG-1（#162）：screen＝盾兵（shield_guard 標籤）替相鄰遠程同伴擋遠程的站位；沒有這個標籤的單位不算（初值，未經模擬）
+    weights: {damage: 3, env_damage: 1, kill: 15, env_kill: 15, push: 4, surface: 4, expose: 5, friendly_fire: 10, approach: 1, threat: 2, protect: 12, objective: 25, hazard: 8, defend: 6, heal: 10, shield: 8, support: 6, mana: 1, stamina_permille: 500, cooldown: 1, screen: 12}
   - id: support
     name_zh: 支援
     description_zh: 重視治療、護盾、增益，並保持距離（2D-1；權重初值未經模擬）。

@@ -13,7 +13,7 @@ from trpg.content.battle import WeaponDef
 from trpg.content.library import Ruleset
 from trpg.engine.events import AdvantageState
 from trpg.engine.gear.core import gear_defense_permille
-from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
+from trpg.engine.ids import CONCEALED, DEFENDING, PRONE, SHIELD_GUARD
 from trpg.engine.modifiers import ATTACK, range_delta
 from trpg.engine.practice import is_practice_target
 from trpg.engine.rules.facing import is_behind
@@ -34,7 +34,7 @@ from trpg.engine.rules.statuses import (
 from trpg.engine.rules.weapons import crit_range_cut, weapon_hit_bonus
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.rng import Rng
-from trpg.shared.types import Attribute, Element, ObjectId, Surface
+from trpg.shared.types import Attribute, Element, ObjectId, Surface, UnitId
 
 __all__ = [
     "PPM",
@@ -221,6 +221,8 @@ class Cover:
     kind: str
     name_zh: str
     pos: XY
+    unit_id: UnitId | None = None
+    """盾兵掩護（RG-1）：提供掩護的盾兵；物件與塔盾為 ``None``。"""
 
 
 def cover_object_between(
@@ -274,6 +276,9 @@ def half_cover(
 
     近戰（含長柄）與穿透技能（``profile.pierce``）無視半掩護；單位不提供掩護。多個掩護物同時符合時只計一次，來源取上、右、下、
     左順序中的第一個（確定性）。懲罰為 ``half_cover_hit_penalty``（為 0 時視為沒有掩護）。
+
+    場上沒有掩護物時依序再看盾兵（RG-1，:func:`guard_between`，懲罰 ``shield_guard_hit_penalty``）
+    與目標自己的塔盾；三者不疊加。
     """
     limited = is_height_limited(state, attacker) if profile is None else profile.height_limited
     if limited or (
@@ -287,7 +292,9 @@ def half_cover(
         return None
     found = cover_object_between(state, attacker.xy, target.xy)
     if found is None:
-        return _shield_cover(state, attacker, target, penalty)
+        return _guard_cover(state, attacker, target) or _shield_cover(
+            state, attacker, target, penalty
+        )
     oid, pos = found
     obj = state.objects[oid]
     return Cover(
@@ -296,6 +303,72 @@ def half_cover(
         kind=obj.kind,
         name_zh=state.ruleset.object_def(obj.kind).name_zh,
         pos=pos,
+    )
+
+
+def protects_ranged(state: BattleState, unit: UnitState) -> bool:
+    """盾兵保護得到的同伴（RG-1）：武器不受高度限制（射程 > ``melee_height_limit_max_range``：
+    弓、法杖、槍），也就是「遠程」。"""
+    return not is_height_limited(state, unit)
+
+
+def guard_between(
+    state: BattleState, attacker_xy: XY, target: UnitState, *, at: XY | None = None
+) -> UnitState | None:
+    """盾兵掩護的幾何部分（RG-1，#162，09 9.6.6）：從 ``attacker_xy`` 打 ``target``（站在 ``at``，
+    省略＝目前位置）時替他擋的盾兵。條件同半掩護物件（:func:`cover_object_between`）：盾兵帶
+    ``shield_guard`` 標籤、存活、和目標同陣營、不是目標自己，在目標四方向相鄰、而且在目標朝向攻擊者
+    的那一側；盾兵視為 1 層高（攻擊者高出它 1 層以上、或目標站得比它高 1 層以上時擋不到）。多名時取
+    上、右、下、左順序的第一個。不看武器與目標是不是遠程（呼叫端負責）。"""
+    tx, ty = target.xy if at is None else at
+    for dx, dy in _COVER_DIRECTIONS:
+        cx, cy = tx + dx, ty + dy
+        if not state.in_bounds(cx, cy):
+            continue
+        guard = state.unit_at(cx, cy)
+        if (
+            guard is None
+            or guard.id == target.id
+            or guard.team is not target.team
+            or not guard.has_tag(SHIELD_GUARD)
+        ):
+            continue
+        if guard_blocks(state, attacker_xy, (tx, ty), (cx, cy)):
+            return guard
+    return None
+
+
+def guard_blocks(state: BattleState, attacker_xy: XY, target_xy: XY, guard_xy: XY) -> bool:
+    """站在 ``guard_xy`` 的盾兵擋不擋得到從 ``attacker_xy`` 打 ``target_xy`` 的遠程攻擊（只看幾何，
+    :func:`guard_between`）：四方向相鄰、在目標朝向攻擊者的那一側、高度條件同半掩護物件。"""
+    tx, ty = target_xy
+    dx, dy = guard_xy[0] - tx, guard_xy[1] - ty
+    if abs(dx) + abs(dy) != 1:
+        return False
+    if dx * (attacker_xy[0] - tx) + dy * (attacker_xy[1] - ty) <= 0:
+        return False
+    guard_height = state.tile(*guard_xy).height
+    if state.tile(*attacker_xy).height > guard_height + 1:
+        return False
+    return guard_height + 1 >= state.tile(*target_xy).height
+
+
+def _guard_cover(state: BattleState, attacker: UnitState, target: UnitState) -> Cover | None:
+    """盾兵掩護（RG-1）：``target`` 是遠程（:func:`protects_ranged`）而且有盾兵擋在攻擊者那一側時，
+    命中 −``shield_guard_hit_penalty``（為 0 時視為沒有）。呼叫端已排除近戰與穿透。"""
+    penalty = state.ruleset.core.shield_guard_hit_penalty
+    if penalty <= 0 or not protects_ranged(state, target):
+        return None
+    guard = guard_between(state, attacker.xy, target)
+    if guard is None:
+        return None
+    return Cover(
+        penalty=penalty,
+        object_id=None,
+        kind=SHIELD_GUARD,
+        name_zh=guard.name_zh,
+        pos=guard.xy,
+        unit_id=guard.id,
     )
 
 
@@ -437,6 +510,8 @@ class AttackRoll:
     target_number: int
     hit: bool
     crit: bool
+    cover_unit_id: UnitId | None = None
+    """盾兵掩護的盾兵（RG-1；``cover`` 是它的命中修正）。"""
     modifier_bonus: int = 0
     """修正規則的命中加值（Phase 3C-2 ``hit_bonus``；已含在 ``total``）。"""
     backstab: int = 0
@@ -555,6 +630,7 @@ def roll_attack(  # noqa: PLR0917
         situational=situational,
         cover=cover_mod,
         cover_object_id=None if cover is None else cover.object_id,
+        cover_unit_id=None if cover is None else cover.unit_id,
         total=total,
         target_number=rules.core.hit_target,
         hit=hit,

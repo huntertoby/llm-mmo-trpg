@@ -179,6 +179,13 @@ def charge_text(state: BattleState, charge: TelegraphCharge) -> str:
         if charge.release == "next_turn"
         else "下回合開始前被敵人攻擊就釋放（沒被攻擊就失效）"
     )
+    if charge.lock_target_id is not None:  # 瞄準預告（RG-1，#162）
+        target = state.units.get(charge.lock_target_id)
+        aimed = charge.lock_target_id if target is None else target.name_zh
+        return (
+            f"{name} 正在瞄準 {aimed}：「{charge.name_zh}」下回合開始時射出"
+            "（躲到掩護後、進入隱蔽、隊友擋在中間或近戰打中它都能讓它落空）"
+        )
     if charge.direction is not None:  # 定向蓄力（3J-2）
         way = DIRECTION_TEXT[charge.direction]
         count = len(charge.tiles)

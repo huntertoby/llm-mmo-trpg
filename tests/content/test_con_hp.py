@@ -91,6 +91,7 @@ OLD_HP = {
     "sect_acolyte": 22,  # 5A-3 新增（雲嶺）
     "sect_swordsman": 36,  # 5A-3 新增（雲嶺）
     "sect_talisman_caster": 24,  # 5A-3 新增（雲嶺）
+    "sect_shield_disciple": 36,  # RG-1 新增（雲嶺盾兵，照盜賊盾衛）
     "sect_alchemist": 32,  # 5A-3 新增（雲嶺）
     "sect_warrior_monk": 58,  # 5A-3 新增（雲嶺）
     "sect_array_disciple": 26,  # 5A-3 新增（雲嶺）
@@ -120,6 +121,7 @@ OLD_HP = {
     "lava_beetle": 56,
     "fire_dust_bat": 16,
     "lava_tortoise": 50,
+    "molten_shell_trooper": 48,  # RG-1 新增（荒原盾兵）
     "magma_slug": 48,
     "sulfur_beast": 40,
     "scorched_colossus": 70,

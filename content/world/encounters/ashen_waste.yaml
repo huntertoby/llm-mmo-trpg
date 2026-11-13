@@ -27,6 +27,9 @@ groups:
   - {id: mire_mix, name_zh: 沼上的熔岩獸, units: [magma_slug, fire_dust_bat]}
   - {id: well_guardians, name_zh: 冷卻井邊的熔岩獸, units: [magma_slug, lava_beetle, ember_lizard]}
   - {id: tar_tortoises, name_zh: 焦油坑的噴岩龜, units: [lava_tortoise, ember_lizard, ember_lizard]}
+  # RG-1（#162，19.2.1「加深內容」）：熔殼甲兵站在噴岩龜前面擋遠程；加在現有地點，原陣容不動
+  - {id: tar_shell_line, name_zh: 熔殼與噴岩龜, units: [molten_shell_trooper, lava_tortoise, ember_lizard]}
+  - {id: cave_shell_line, name_zh: 洞窟熔殼陣, units: [molten_shell_trooper, lava_tortoise]}
   - {id: tar_brood, name_zh: 焦油坑的母獸, units: [furnace_matriarch, ember_lizard, ash_hound]}
   - {id: cave_beetles, name_zh: 熔岩洞窟的甲蟲, units: [lava_beetle, thunder_shell_beetle, lava_tortoise]}
   - {id: cave_lord, name_zh: 熔核領主的熔岩池, units: [molten_lord, ember_lizard, ember_lizard]}                  # 精英（19.3）
@@ -76,7 +79,7 @@ locations:
     groups: [{group: village_raid_mid}]
     objective: defend
   - location: tar_pits
-    groups: [{group: tar_tortoises}, {group: tar_brood}, {group: lizard_brood}]
+    groups: [{group: tar_tortoises}, {group: tar_brood}, {group: lizard_brood}, {group: tar_shell_line}]
     variants:
       - {flag: brood_spread, group: brood_spread}
   - location: overseer_camp
@@ -88,7 +91,7 @@ locations:
   - location: obsidian_valley
     groups: [{group: obsidian_frost}, {group: obsidian_mix}]
   - location: lava_cave
-    groups: [{group: cave_beetles}, {group: beetle_line}, {group: cave_lord}]
+    groups: [{group: cave_beetles}, {group: beetle_line}, {group: cave_lord}, {group: cave_shell_line}]
   - location: horned_altar
     groups: [{group: altar_wraiths}, {group: altar_betrayal}]
   - location: ruined_fortress

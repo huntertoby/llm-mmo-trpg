@@ -85,8 +85,9 @@ def test_apply_variant(library: ContentLibrary) -> None:
     assert thunder.id == "thunder_talisman_caster"
     assert thunder.name_zh == "雷符師"
     assert thunder.weapon == "lightning_staff"
-    assert thunder.skills == ("skill_frost_shackle", "skill_static_palm")
-    assert base.skills == ("skill_frost_shackle", "skill_hush")  # 5A-4 追加 B：純控制
+    # RG-1（#162）：寒鎖換成瞄準預告的定身符
+    assert thunder.skills == ("skill_binding_talisman", "skill_static_palm")
+    assert base.skills == ("skill_binding_talisman", "skill_hush")  # 5A-4 追加 B：純控制
     assert thunder.max_hp == base.max_hp
     assert thunder.tags == base.tags
     frost = catalog.template("frost_crane_archer")
@@ -222,7 +223,7 @@ def _enemies(**changes: Any) -> dict[str, Any]:
                 "base": "sect_talisman_caster",
                 "name_zh": "變",
                 "theme": "lightning",
-                "skill_swaps": {"skill_frost_shackle": "skill_spark_chain"},
+                "skill_swaps": {"skill_binding_talisman": "skill_spark_chain"},  # RG-1 換招
             }
         ],
         "affixes": [{"id": "a1", "name_zh": "強的", "add_skills": ["skill_steady_breath"]}],
@@ -269,7 +270,7 @@ def test_schema_duplicates_and_stray_reaction() -> None:
         ({"base": "nobody"}, "未知的 base"),
         ({"base": "summon_golem"}, "未知的 base"),
         ({"skill_swaps": {"skill_cleave": "skill_spark_chain"}}, "base 沒有裝備"),
-        ({"skill_swaps": {"skill_frost_shackle": "skill_nothing"}}, "未知的技能"),
+        ({"skill_swaps": {"skill_binding_talisman": "skill_nothing"}}, "未知的技能"),
         ({"weapon": "laser"}, "未知的武器"),
         ({"id": "mist_wolf"}, "ID 和單位範本重複"),
     ],

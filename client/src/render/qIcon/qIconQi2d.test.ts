@@ -29,6 +29,9 @@ const NINETEEN: Readonly<Record<string, string>> = {
 };
 /** 基準錄好之後才加的招（沒有開工前的主圖雜湊）：BAL-21b 的熔岩濺落、LW-1 的獨狼示範 3 招。再加新招要列在這裡（依 ID 排序）。 */
 const ADDED_AFTER_BASELINE: readonly string[] = [
+  "skill_binding_talisman", // RG-1：瞄準預告的 3 招
+  "skill_crane_piercing_shot",
+  "skill_lava_bomb",
   "skill_lava_splash",
   "skill_lone_strider",
   "skill_lone_wolf_pounce",

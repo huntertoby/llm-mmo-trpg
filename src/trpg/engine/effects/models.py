@@ -263,7 +263,7 @@ class CancelChargeEffect(EffectBase):
 
     kind: Literal["cancel_charge"] = "cancel_charge"
     unit_id: UnitId
-    reason: Literal["downed", "controlled", "silenced", "part_broken"]
+    reason: Literal["downed", "controlled", "silenced", "part_broken", "interrupted"]
 
     def sort_target(self) -> str:
         return self.unit_id

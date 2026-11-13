@@ -203,6 +203,12 @@ class SkillDef(ContentModel):
     閃現、工坊與 LLM 提議的可選清單都經 :func:`trpg.content.player_pool.player_skills` 排除；敵人
     範本照常可以裝備、施放。不影響結算；``False`` 時不輸出，既有技能的序列化與雜湊不變。"""
 
+    lock_on: bool = Field(default=False, exclude_if=lambda v: not v)
+    """瞄準預告（RG-1，#162，05 5.7「遠程瞄準預告」）：遠程敵人的「強力一擊」。施放＝瞄準（付代價、
+    不擲命中、施放者帶 ``charging`` 記住目標），施放者下一個自己的回合開始才射出（目標斷視線、隱蔽、
+    有它的隊友擋在中間、走出射程時落空；施放者被近戰命中時取消）。只能用在 ``enemy_only`` 的單體
+    主動招（內容檢查 ``_lock_on_problems``）。``False`` 時不輸出，既有技能的序列化與雜湊不變。"""
+
     pool_regions: tuple[str, ...] | None = Field(default=None, exclude_if=lambda v: v is None)
     """區域技能池（Phase 6F-4c，玩法 PM 定；例：九轉回天 ``[cloud_ridge]``）：給了就只有在這些區域
     取得技能時（大世界的三選一，``CandidateRequest.region``）才出現在候選池；不在這些區域時不出。

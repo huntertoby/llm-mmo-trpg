@@ -426,6 +426,10 @@ _FIZZLE_TEXT = {
     "shockwave_flying": "  震波打不到會飛的單位",
     "stonewall": "  穩若磐石：擊不倒",
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
+    # 瞄準預告（RG-1，#162）射出時落空
+    "lock_on_lost": "  瞄準的目標倒下、走出射程或躲到看不見的地方：這一擊落空",
+    "lock_on_concealed": "  瞄準的目標進入隱蔽：這一擊落空",
+    "lock_on_blocked": "  目標的隊友擋在中間：這一擊落空",
 }
 
 
@@ -603,7 +607,12 @@ def _attack(e: AttackRolled, v: _View) -> str:
     ]
     parts += _bonus_parts(e)
     cover_note = ""
-    if e.cover:
+    if e.cover and e.cover_unit_id is not None:  # 盾兵掩護（RG-1，#162）
+        parts.append(f"盾兵掩護 {signed(e.cover)}")
+        guard = state.units.get(e.cover_unit_id)
+        guard_name = e.cover_unit_id if guard is None else guard.name_zh
+        cover_note = f"［命中 −{-e.cover}：被{guard_name}的盾擋住］"
+    elif e.cover:
         parts.append(f"半掩護 {signed(e.cover)}")
         obj = state.objects.get(e.cover_object_id) if e.cover_object_id is not None else None
         if obj is not None:
@@ -1010,11 +1019,17 @@ _CANCEL_TEXT = {
     "replaced": "改為蓄力另一招",
     "form_left": "形態解除了",
     "part_broken": "部位破壞",
+    "interrupted": "瞄準中被近戰打中，瞄準被打斷",
 }
 
 
 @_handles(FollowupCharged)
 def _followup_charged(e: FollowupCharged, v: _View) -> str:
+    if e.lock_target_id is not None:  # 瞄準預告（RG-1，#162）
+        return (
+            f"  ◎ {v.name[e.unit_id]} 瞄準了 {v.name[e.lock_target_id]}：「{e.name_zh}」"
+            "下回合開始時射出"
+        )
     release = _RELEASE_TEXT.get(e.release, e.release)
     if e.direction is not None:  # 定向蓄力（3J-2）
         way = DIRECTION_TEXT[e.direction]

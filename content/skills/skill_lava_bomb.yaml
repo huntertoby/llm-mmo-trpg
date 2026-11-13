@@ -1,0 +1,29 @@
+# 噴岩龜「熔岩彈」（RG-1，#162，19.2.1「噴岩龜的熔岩彈改成瞄準預告」，05 5.7）：19.2.1 表「拋射熔岩彈（造火地）」
+# 原本用火牆近似，這次改成單體瞄準（PhaseRG計畫 待 PM 決定 7）。施放＝瞄準，下一個自己的回合開始才噴出。
+# 「造火地」：strike 骨架的附帶原語不能造表面（area 骨架不能單體），先用燃燒代替（報告待決）。
+# 數值初值：費用照火牆、傷害照寒羽霜箭（同為 2 AP、冷卻 4 的敵人單體招）；數值照工坊。只給敵人用。
+id: skill_lava_bomb
+schema_version: 1
+name_zh: 熔岩彈
+enemy_only: true
+lock_on: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: strike
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 3d8, element: fire}
+  - {type: apply_status, status: burning, duration: 2}
+condition: null
+cost: {mana: 10, cooldown: 4}
+tags: [fire, spell, burn]
+narrative:
+  concept: 背殼像小火山，先把殼口轉向獵物，下一刻噴出一團熔岩
+  cast_flavor: 噴岩龜的殼口轉了過來，裡頭的熔岩越燒越亮
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

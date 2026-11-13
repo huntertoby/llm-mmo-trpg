@@ -36,7 +36,12 @@ from trpg.engine import modifiers, part_breaks
 from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import DamageEffect, RemoveStatusEffect, ShieldEffect
+from trpg.engine.effects.models import (
+    CancelChargeEffect,
+    DamageEffect,
+    RemoveStatusEffect,
+    ShieldEffect,
+)
 from trpg.engine.events import (
     AttackIntercepted,
     AttackRolled,
@@ -55,6 +60,7 @@ from trpg.engine.gear.reactions import (
 )
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
 from trpg.engine.lifecycle import dismiss_summon
+from trpg.engine.lock_on import lock_target_of
 from trpg.engine.practice import is_practice_target
 from trpg.engine.quiet_strikes import NoTurn, no_turn_reason
 from trpg.engine.results import Pending
@@ -431,7 +437,11 @@ def _kin_ward_def(ctx: Ctx, guardian: UnitState, target: UnitState) -> ReactionD
 def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bool) -> None:
     """``target`` 被 ``attacker`` 的攻擊命中、傷害結算之後（仍存活）：``hit_by_melee``／
     ``hit_by_attack`` 反應技（例如反擊技），或內建的反擊 ``counter_attack``（Phase 3I-1，拳套：
-    只對相鄰攻擊者的近戰攻擊，普攻一次）。``melee``：這次攻擊是否算近戰。"""
+    只對相鄰攻擊者的近戰攻擊，普攻一次）。``melee``：這次攻擊是否算近戰。
+
+    瞄準中（RG-1 ``lock_on``，#162）的 ``target`` 被敵人近戰命中時先取消瞄準（``interrupted``）。"""
+    if melee and target.alive and attacker.team is not target.team and lock_target_of(target):
+        execute(ctx, [CancelChargeEffect(unit_id=target.id, reason="interrupted")])
     if not target.alive or not attacker.alive:
         return
     events = ("hit_by_melee", "hit_by_attack") if melee else ("hit_by_attack",)
@@ -909,6 +919,7 @@ def _emit_attack_rolled(
         total=roll.total,
         cover=roll.cover,
         cover_object_id=roll.cover_object_id,
+        cover_unit_id=roll.cover_unit_id,
         target_number=roll.target_number,
         hit=roll.hit,
         crit=roll.crit,

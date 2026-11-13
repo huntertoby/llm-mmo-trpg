@@ -1,0 +1,28 @@
+# 符籙師「定身符」（RG-1，#162，18.2.1「雲鶴使、符籙師的強力一擊改成瞄準預告」，05 5.7）：符籙師兩招都是控制，
+# 單體的定身符當「強力一擊」改成瞄準預告（PhaseRG計畫 待 PM 決定 6）。施放＝瞄準，下一個自己的回合開始才擲出。
+# 數值照寒鎖（主角法師也用寒鎖，所以另做一招，不改它）；數值照工坊。只給敵人用。
+id: skill_binding_talisman
+schema_version: 1
+name_zh: 定身符
+enemy_only: true
+lock_on: true
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: control
+category: spell
+weapon_req: focus
+ap_cost: 1
+scaling_attr: int
+shape: {type: single, range: 5}
+effects:
+  - {type: damage, dice: 1d4, element: ice}
+  - {type: apply_status, status: root, duration: 1}
+condition: null
+cost: {mana: 5, cooldown: 2}
+tags: [ice, spell, control]
+narrative:
+  concept: 符紙在指間燃起青光，先對準了人，下一刻才擲出去
+  cast_flavor: 符籙師捏起一張黃符，符尖對準了你
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

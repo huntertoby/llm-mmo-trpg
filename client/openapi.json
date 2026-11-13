@@ -7903,6 +7903,17 @@
             ],
             "title": "Anchored"
           },
+          "lock_target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lock Target Id"
+          },
           "text": {
             "type": "string",
             "title": "Text"

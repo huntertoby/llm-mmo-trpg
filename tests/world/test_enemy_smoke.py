@@ -121,7 +121,8 @@ def test_groups_cover_every_new_enemy(library: ContentLibrary) -> None:
     new = {u for u, t in library.units.items() if {"sect", "beast", "construct"} & set(t.tags)}
     # 5F-2：霧鎖真人、雲頂觀陣眼石靈；5F-1b：霧中劍客
     # 5F-5a：灰燼荒原 12 種（熔岩獸群 9、熔核領主、寒燼蜥、熔晶魅）；5F-5b：殼縫餘燼蜥
-    assert len(new) == 33
+    # RG-1（#162）：盾兵 2 種（持盾弟子、熔殼甲兵）
+    assert len(new) == 35
     assert library.world_enemies is not None
     variants = {v.id for v in library.world_enemies.variants}
     assert new | variants <= fielded

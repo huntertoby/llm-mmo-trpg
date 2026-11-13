@@ -476,6 +476,10 @@ class Preview:
     followup_when: str | None = None
     """複合技能第二段的種類（``followup.when``，Phase 3F-4b；網頁依此寫說明）；其他動作為 ``None``。
     延遲段的 ``landing``／``followup_tiles`` 是施放後以施放者位置推算的預計範圍。"""
+    lock_fire: Preview | None = None
+    """瞄準預告（RG-1，#162，``lock_on``）：假設「現在就射出」的預覽（照一般施放結算，
+    :attr:`trpg.engine.context.Ctx.fire_lock`）。真正的施放只是瞄準（本預覽的事件只有
+    ``followup_charged``）；效用 AI 用它估這一擊的價值。其他動作為 ``None``。"""
     strikes: int = 1
     """技能的傷害效果打幾下（#153，:func:`skill_strikes`：拿雙匕首施放單體武器技為 2）；
     ``targets`` 的傷害已是這幾下的合計（DD-2：網頁依此標「打 2 下」）。普攻與其他動作為 1。"""
@@ -736,6 +740,8 @@ def _cover_notes(cover: Cover | None) -> tuple[str, ...]:
     if cover is None:
         return ()
     x, y = cover.pos
+    if cover.unit_id is not None:  # 盾兵掩護（RG-1）
+        return (f"盾兵掩護 −{cover.penalty}：被 {cover.name_zh} 的盾擋住 ({x}, {y})",)
     return (f"半掩護 −{cover.penalty}：{cover.name_zh} ({x}, {y})",)
 
 
@@ -1531,6 +1537,9 @@ def preview(state: BattleState, action: Action) -> Preview:
     warning = oath_warning(state, action, (low.state, high.state))
     if warning is not None:
         base = replace(base, oath_warning=warning)
+    if isinstance(action, UseSkill) and _preview_skill(state, actor, action).lock_on:
+        fired_low, fired_high = simulate_preview(stripped, action, fire_lock=True)
+        base = replace(base, lock_fire=_build(state, action, actor, fired_low, fired_high))
     spec = _gamble_spec(state, actor, action)
     if spec is None or spec.chance_permille is None:
         return base
