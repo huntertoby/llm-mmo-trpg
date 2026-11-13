@@ -547,6 +547,9 @@ class UnitState:
     """已破的部位（依破掉的順序）：破了持續到戰鬥結束，回血、換階段都不長回來。"""
     sealed_skills: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
     """被部位破壞封住的技能 ID（``seal_skill``；換技能組也不解除）。"""
+    sealed_until: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(default_factory=dict)
+    """限時封招（GB-1c，T14 ``seal_skill.rounds``）：技能 ID → 解封的輪數（第 N 輪破、封 r 輪時是
+    N＋r；``round`` 達到這個值起可以再放）。換技能組、換階段都不清。"""
     part_mods: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(default_factory=dict)
     """部位破壞的能力下降（``stat_down`` 累計）：``move``／``armor``／``hit``／``resist.<組>``
     是降低量（加總），``damage_dealt`` 是造成傷害的倍率‰（相乘）。"""
@@ -693,6 +696,7 @@ class UnitState:
             part_hp=dict(self.part_hp),
             broken_parts=self.broken_parts,
             sealed_skills=self.sealed_skills,
+            sealed_until=dict(self.sealed_until),
             part_mods=dict(self.part_mods),
             suppressed_statuses=self.suppressed_statuses,
             lone_wolf=self.lone_wolf,

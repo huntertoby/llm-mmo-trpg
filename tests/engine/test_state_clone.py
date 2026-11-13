@@ -21,6 +21,7 @@ _COPIED = {
         "stacks",
         "stack_expiry",
         "form_cooldowns",
+        "sealed_until",
         "part_hp",
         "part_mods",
     },

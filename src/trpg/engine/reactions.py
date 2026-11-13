@@ -828,6 +828,8 @@ def _attack_once(
         forced,
         bonus=bonus,
         backstab_allowed=backstab_allowed,
+        at=part_breaks.part_hit_tile(attacker, target, part_id),  # 巨型頭目的部位格（GB-1c）
+        from_behind=part_breaks.part_behind(target, part_id),  # 殼縫算從背後（GB-1c，R4）
     )
     rolled_event = _emit_attack_rolled(ctx, attacker, target, roll, no_turn)
     if not roll.hit:

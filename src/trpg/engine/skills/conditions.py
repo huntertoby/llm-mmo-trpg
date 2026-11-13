@@ -56,10 +56,12 @@ _PERMILLE = 1000
 
 
 class Subject(NamedTuple):
-    """條件的判斷對象：站在 ``xy`` 的 ``unit``（沒有單位時為 ``None``）。"""
+    """條件的判斷對象：站在 ``xy`` 的 ``unit``（沒有單位時為 ``None``）。``behind``（GB-1c，R4）：
+    這次是近戰打 ``unit`` 算從背後的部位（殼縫），條件 ``from_behind`` 直接成立。"""
 
     unit: UnitState | None
     xy: XY
+    behind: bool = False
 
 
 def _hp_below(unit: UnitState, permille: int) -> bool:
@@ -147,7 +149,12 @@ def is_flanked(state: BattleState, caster: UnitState, target: UnitState) -> bool
 
 
 def _unit_condition_met(
-    state: BattleState, caster: UnitState, condition: ConditionSpec, unit: UnitState
+    state: BattleState,
+    caster: UnitState,
+    condition: ConditionSpec,
+    unit: UnitState,
+    *,
+    behind: bool = False,
 ) -> bool:
     """看對象單位的條件（``target_hp_below``、``target_has_status``、``target_isolated``、
     ``flanked``、``from_behind``、``target_collided``）。"""
@@ -161,7 +168,7 @@ def _unit_condition_met(
     if kind == "flanked":
         return is_flanked(state, caster, unit)
     if kind == "from_behind":
-        return is_behind(caster.xy, unit)
+        return behind or is_behind(caster.xy, unit)
     if kind == "target_collided":  # 本回合（這一輪）受過撞擊（Phase 3-24c）
         return unit.collided_round == state.round
     assert kind == "target_isolated"
@@ -200,7 +207,7 @@ def _single_condition_met(
         return _caster_condition_met(state, caster, condition)
     if kind in _UNIT_CONDITIONS:
         return subject.unit is not None and _unit_condition_met(
-            state, caster, condition, subject.unit
+            state, caster, condition, subject.unit, behind=subject.behind
         )
     if kind == "height_advantage":
         return state.tile(*caster.xy).height > state.tile(*subject.xy).height

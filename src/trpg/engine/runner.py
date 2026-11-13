@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/127"
-"""目前的戰鬥紀錄版本（``/127``，Phase GB-1b：巨型頭目的距離、範圍去重與出招起點）。
+LOG_FORMAT = "trpg-battle-log/128"
+"""目前的戰鬥紀錄版本（``/128``，Phase GB-1c：巨型頭目的部位綁格、限時封招與新落點、生長表面）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

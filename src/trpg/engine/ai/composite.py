@@ -62,7 +62,7 @@ def composite_estimate(
     ``None``。治療型延遲段（Phase 5A-M1，九轉回天）改看預計範圍內受傷的友方（含自己），沒有就是
     ``None``。落在選定格的延遲段（BAL-21a）的預計範圍以 ``action.target_pos`` 為中心。"""
     if skill.followup is not None and skill.followup.when == "delayed":
-        found = delayed_selection(state, unit, skill, anchor=anchor_of(skill, action))
+        found = delayed_selection(state, unit, skill, anchor=anchor_of(state, unit, skill, action))
         if found is None:
             return None
         area = found[1]

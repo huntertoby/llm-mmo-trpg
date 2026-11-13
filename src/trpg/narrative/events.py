@@ -428,6 +428,7 @@ _FIZZLE_TEXT = {
     "followup_declined": "  放棄了第二段",
     "shockwave_flying": "  震波打不到會飛的單位",
     "stonewall": "  穩若磐石：擊不倒",
+    "immovable": "  巨大的身軀紋風不動：擊不倒",  # 巨型頭目的倒地免疫（GB-1a 待決 2，併 GB-1c）
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
     # 瞄準預告（RG-1，#162）射出時落空
     "lock_on_lost": "  瞄準的目標倒下、走出射程或躲到看不見的地方：這一擊落空",
@@ -1044,6 +1045,12 @@ def _followup_charged(e: FollowupCharged, v: _View) -> str:
             f"  ◷ {v.name[e.unit_id]} 朝{way}開始蓄力「{e.name_zh}」：{release}"
             f"（錐形，目前預計影響 {len(e.tiles)} 格）"
         )
+    if e.anchor_target_id is not None:  # 落在最遠的敵人（GB-1c，#164 R5）
+        return (
+            f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
+            f"（落在最遠的 {v.name[e.anchor_target_id]} 現在站的地方，"
+            f"預計影響 {len(e.tiles)} 格）"
+        )
     return (
         f"  ◷ {v.name[e.unit_id]} 開始蓄力「{e.name_zh}」：{release}"
         f"（{'落在指定位置' if e.anchored else '以自己為中心'}，目前預計影響 {len(e.tiles)} 格）"
@@ -1209,6 +1216,8 @@ def _part_broken(e: PartBroken, v: _View) -> str:
 
 @_handles(SkillSealed)
 def _skill_sealed(e: SkillSealed, v: _View) -> str:
+    if e.rounds is not None:  # 限時封招（GB-1c，T14）
+        return f"  ✕ {v.name[e.unit_id]} 的「{_skill_name(v, e.skill_id)}」被封住 {e.rounds} 回合"
     return f"  ✕ {v.name[e.unit_id]} 的「{_skill_name(v, e.skill_id)}」被封住了"
 
 

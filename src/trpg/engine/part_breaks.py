@@ -13,6 +13,11 @@
   ``part_mods``、發 ``part_stat_down``）、``control``（走一般的施加狀態：免疫、Boss 硬控轉換、
   控制遞減照常，不擲抵抗）、``stop_mechanic``（加進 ``suppressed_statuses``，身上有就移除）。
   破的那一下頭目倒下時 ``part_broken.applied`` 為假，不結算效果（T8）。
+  ``seal_skill`` 帶 ``rounds``（GB-1c，T14）時是限時封招：記在 ``sealed_until``（第 N 輪破、封 r
+  輪＝第 N＋r 輪起解封），``skill_sealed.rounds`` 帶輪數；已被永久封住的不改。
+- **巨型頭目的部位格**（GB-1c，05 5.12.4 第 3 點）：打綁格的部位時，「打中的那一格」是部位的格子裡
+  離攻擊者最近的那格（同距離 (y, x) 小；:func:`part_hit_tile`，掩護與事件 ``hit_tile`` 以它算）；
+  部位 ``counts_as_behind`` 時近戰算從背後（R4，:func:`part_behind`）。
 
 沒有 ``part_id`` 的傷害不經過這裡；不取用亂數。
 """
@@ -39,6 +44,8 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.effects.queue import handler_for, register_effect
 from trpg.engine.events import EventBase, PartBroken, PartDamaged, PartStatDown, SkillSealed
+from trpg.engine.rules.footprint import nearest_tile
+from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.state import UnitState
 from trpg.engine.triggers import register_trigger
 from trpg.shared.types import UnitId
@@ -49,7 +56,10 @@ __all__ = [
     "defense_view",
     "element_view",
     "live_part",
+    "part_behind",
+    "part_hit_tile",
     "part_of",
+    "part_tiles",
 ]
 
 PERMILLE = 1000
@@ -68,6 +78,30 @@ def live_part(unit: UnitState, part_id: str | None) -> BossPart | None:
     """還沒破的部位 ``part_id``；已破或不存在時為 ``None``（傷害照本體結算）。"""
     part = part_of(unit, part_id)
     return None if part is None or part.id in unit.broken_parts else part
+
+
+def part_tiles(unit: UnitState, part: BossPart) -> tuple[XY, ...]:
+    """部位綁的格子（地圖座標，依 (y, x)；GB-1c）；沒綁格（一格的頭目）時為空。"""
+    x, y = unit.xy
+    return tuple(sorted(((x + dx, y + dy) for dx, dy in part.tiles), key=lambda p: (p[1], p[0])))
+
+
+def part_hit_tile(attacker: UnitState, unit: UnitState, part_id: str | None) -> XY | None:
+    """打 ``unit`` 還沒破、綁了格子的部位時打中的那一格：部位的格子裡離攻擊者（最近佔格）最近的
+    那格，同距離 (y, x) 小（GB-1c）。不是這種部位時為 ``None``（照原本的打中格）。"""
+    part = live_part(unit, part_id)
+    if part is None or not part.tiles:
+        return None
+    return min(
+        part_tiles(unit, part),
+        key=lambda xy: (manhattan(nearest_tile(attacker, xy), xy), xy[1], xy[0]),
+    )
+
+
+def part_behind(unit: UnitState, part_id: str | None) -> bool:
+    """打 ``unit`` 的這個部位算從背後（GB-1c，R4 ``counts_as_behind``；呼叫端另外要求近戰）。"""
+    part = live_part(unit, part_id)
+    return part is not None and part.counts_as_behind
 
 
 def defense_view(unit: UnitState, part_id: str | None) -> UnitState:
@@ -185,10 +219,20 @@ def _apply_break(
 
 
 def _seal(ctx: Ctx, unit: UnitState, part: BossPart, spec: SealSkillBreak) -> list[EventBase]:
-    if spec.skill not in unit.sealed_skills:
-        unit.sealed_skills = (*unit.sealed_skills, spec.skill)
+    if spec.rounds is None:
+        if spec.skill not in unit.sealed_skills:
+            unit.sealed_skills = (*unit.sealed_skills, spec.skill)
+    elif spec.skill not in unit.sealed_skills:  # 限時（GB-1c，T14）：取較晚的解封輪
+        until = ctx.state.round + spec.rounds
+        unit.sealed_until[spec.skill] = max(until, unit.sealed_until.get(spec.skill, 0))
     events: list[EventBase] = [
-        ctx.emit(SkillSealed, unit_id=unit.id, skill_id=spec.skill, part_id=part.id)
+        ctx.emit(
+            SkillSealed,
+            unit_id=unit.id,
+            skill_id=spec.skill,
+            part_id=part.id,
+            rounds=spec.rounds,
+        )
     ]
     charging = unit.get_status(CHARGING)
     if charging is not None and charging.skill_id == spec.skill:

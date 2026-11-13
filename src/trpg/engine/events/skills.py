@@ -74,6 +74,9 @@ class FollowupCharged(EventBase):
     lock_target_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
     """瞄準預告（RG-1，#162，``lock_on``）瞄準的單位：``pos``／``tiles`` 是他瞄準當下的格子，
     施放者下一個自己的回合開始時對他射出；不是瞄準時為 ``None``、不輸出。"""
+    anchor_target_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
+    """``followup.anchor: farthest_enemy``（GB-1c，#164 R5）時引擎選的最遠敵人：``pos`` 是他施放
+    當下的格子（之後他走開，落點不動）；其他為 ``None``、不輸出。"""
 
 
 class LockIntercepted(EventBase):

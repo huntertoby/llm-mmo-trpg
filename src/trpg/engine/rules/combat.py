@@ -624,18 +624,23 @@ def positional_bonus(
     profile: AttackProfile,
     *,
     backstab_allowed: bool = True,
+    from_behind: bool = False,
 ) -> PositionalBonus:
     """一次命中判定的背刺與潛行偷襲加成。
 
     - 背刺：近戰攻擊（``profile.melee``）且攻擊者站在目標的背後格（目標朝向的反方向相鄰格）——
       命中 ``+backstab_hit_bonus``、暴擊範圍擴大 ``backstab_crit_range_bonus``。Boss 照常適用。
       ``backstab_allowed=False``（連擊武器的後續幾下，BAL-8 ``backstab_first_only``）時不算背刺。
+      ``from_behind``（GB-1c，#164 R4）：打的是 ``counts_as_behind`` 的部位（殼縫），近戰時不看站位
+      也算背刺。
     - 潛行偷襲：攻擊者帶 ``concealed`` 狀態——命中 ``+ambush_hit_bonus``（攻擊結算完後由呼叫端
       移除隱蔽）。站在黑暗或草叢裡的隱蔽不算（只看狀態）。
     """
     core = state.ruleset.core
     behind = (
-        backstab_allowed and profile.melee and is_behind(strike_tiles(attacker, target)[0], target)
+        backstab_allowed
+        and profile.melee
+        and (from_behind or is_behind(strike_tiles(attacker, target)[0], target))
     )
     backstab = core.backstab_hit_bonus if behind else 0
     ambush = core.ambush_hit_bonus if attacker.has_status(CONCEALED) else 0
@@ -660,6 +665,7 @@ def roll_attack(  # noqa: PLR0917
     bonus: int = 0,
     backstab_allowed: bool = True,
     at: XY | None = None,
+    from_behind: bool = False,
 ) -> AttackRoll:
     """擲命中骰（有優勢或劣勢時擲 2 顆 d20 取高／低）。暴擊需命中且自然骰 ≥ 武器暴擊範圍。
 
@@ -668,8 +674,9 @@ def roll_attack(  # noqa: PLR0917
 
     ``forced`` 只供預覽使用：不擲骰，直接採用指定結果。``profile`` 為技能的攻擊參數
     （省略時取自 ``attacker`` 的武器）。``bonus`` 為修正規則的命中加值（3C-2，呼叫端計算）。
-    ``at``：範圍技打中巨型單位的那一格（GB-1b，R1；掩護以它算）；``AttackRoll.hit_tile`` 是打中
-    巨型目標的那一格（一格的目標為 ``None``）。
+    ``at``：範圍技打中巨型單位的那一格（GB-1b，R1；掩護以它算；GB-1c 起也是打巨型頭目部位的那一
+    格）；``AttackRoll.hit_tile`` 是打中巨型目標的那一格（一格的目標為 ``None``）。``from_behind``：
+    打 ``counts_as_behind`` 的部位（GB-1c，R4；:func:`positional_bonus`）。
     """
     rules = state.ruleset
     if profile is None:
@@ -681,7 +688,12 @@ def roll_attack(  # noqa: PLR0917
     cover_mod = 0 if cover is None else -cover.penalty
     proficiency = rules.core.proficiency
     positional = positional_bonus(
-        state, attacker, target, profile, backstab_allowed=backstab_allowed
+        state,
+        attacker,
+        target,
+        profile,
+        backstab_allowed=backstab_allowed,
+        from_behind=from_behind,
     )
     if profile.weapon_attack:  # 站定與距離修正（Phase 3-24a2）
         bonus += weapon_hit_bonus(attacker, unit_dist(attacker, target))
