@@ -9,6 +9,7 @@
 //   dialog  正式的遇敵卡（EncounterPanel）＋單挑段＋插圖，假資料（&e=wolf｜lord｜scar｜forge，&hw=<主手 kind>（RG-6；預設單手劍），&w=1600｜800 只決定卡片外的舞台寬；&duel=none 沒有單挑提議，看「開戰」主鈕對照）。
 //   fp      劍版指紋（RG-6：改非劍主手前後要逐字相同）：四場 × DPR 1、2 的整張 duelCanvas FNV-1a（同樣張 rg-duel-weapons.html 的 fnv），
 //           兩條路：dev＝上面 diff 的 spec（樣張 hero_fighter、SAMPLE_HOOKS）、game＝dialog 的假 WorldView 經 duelPlan → duelSpecOf（GAME_HOOKS）。
+//   &wolf=sample  北坡狼王用樣張的大狼（size: large、scar；RG-4／RG-6 的舊指紋與量表）；預設照實機霧狼（RG-8）。
 //   （沒有 mode）並排看圖：四場樣張（上）vs 遊戲端（下），DPR 2；獸爪 ×4。
 // 重跑（無頭 Chrome，一定要 --disable-gpu）：chrome --headless=new --disable-gpu --dump-dom --virtual-time-budget=60000 "http://127.0.0.1:<port>/dev/duel-gallery.html?mode=diff&mute=1"
 import { createRoot } from "react-dom/client";
@@ -29,10 +30,11 @@ import occludeSrc from "../../../docs/art/sample/occludeOutline.js?raw";
 import rgUnitsSrc from "../../../docs/art/sample/rgUnits.js?raw";
 import type { WorldView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
+import unitDolls from "../render/fixtures/unitDolls.json";
 import { setGlossary } from "../battle/glossary";
 import { beastClawCanvas, duelCanvas, duelSilhouette, GROUP_POSE, HERO_K, HERO_POSE, HUMANOID_ELITE_K, propOf, silGroup, type DuelFigure, type DuelFit, type DuelMain, type DuelSpec, type DuelWeapon } from "../render/duelArt";
 import { resolveGear } from "../render/gearResolve";
-import { resolveCreature } from "../render/inkCreature";
+import { resolveCreature, type CreatureLookDraw } from "../render/inkCreature";
 import type { QUnit } from "../render/qCore";
 import { render } from "../render/qIcon/core";
 import { qResolve, qWeaponDef } from "../render/qIcon/weapons";
@@ -135,7 +137,12 @@ const iconOf = (look: Any): DuelWeapon | null => {
   return def === null ? null : { kind: "icon", def };
 };
 const CLAW: DuelWeapon = { kind: "beast_claw" };
-const WOLF = { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"] };
+/** 北坡狼王的外觀（RG-8，美術 RG-6 驗收可修：開發頁照實機）：預設照 `unitDolls.json` 的霧狼（`content/units/mist_wolf.yaml`，沒有 size: large、scar；
+ *  精英大小照遊戲資料不改）。`&wolf=sample` 退回樣張與 RG-4／RG-6 開發頁的大狼（舊指紋、9.9.10 量表「左 1 上 4」只對大狼成立）。
+ *  樣張與遊戲端兩邊都換成同一個外觀，diff／weapons 的逐像素比對仍是同一隻狼對同一隻狼。 */
+const WOLF_SAMPLE = { body: "hound", material: "fur", tint: "#c8ccd0", size: "large", traits: ["mist", "scar"] };
+const WOLF_LIVE: CreatureLookDraw = (({ status_traits: _st, ...c }) => c)((unitDolls as unknown as Record<string, { creature: CreatureLookDraw & { status_traits?: unknown } }>)["mist_wolf"]!.creature);
+const WOLF: CreatureLookDraw = P.get("wolf") === "sample" ? WOLF_SAMPLE : WOLF_LIVE;
 const LORD = { body: "crawler", variant: "beetle", material: "magma", size: "large", traits: ["lava_pool"] };
 const SCENES: readonly Scene[] = [
   {
