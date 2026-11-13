@@ -692,7 +692,9 @@
    "body": "crawler",
    "variant": "beetle",
    "material": "magma",
-   "traits": [],
+   "traits": [
+    "molten_shield"
+   ],
    "status_traits": {}
   },
   "affixes": [],

@@ -852,6 +852,86 @@ function crust(ctx: Ctx, a: FxInfo): void {
   ([[-2, -1, 2, -2], [-4, 6, -1, 9], [3, 5, 5, 8]] as const).forEach(([x0, y0, x1, y1], i) => stroke(ctx, `tr-crg${i}`, [[cx + x0, cy + y0], [cx + x1, cy + y1]], 0.9, FIRE[1]));
 }
 
+// ---------------------------------------------------------------------------
+// RG-4：熔殼甲兵的熔殼大盾（A 立殼；docs/art/RG樣張.md 9.2、9.8 第 3 條，畫法照 docs/art/sample/rgUnits.js 的 SHELL.a.draw 原樣）
+// ---------------------------------------------------------------------------
+/** 殼板＝熔岩甲蟲同一個玄武岩色 BASALT；殼縫照甲蟲背上的鋸齒火紋（樣張固定火色；之後有冰、雷變體時換 P.accent）。 */
+const MOLTEN_SHELL = { plate: BASALT, rim: "#6a5048", dark: "#2e211d", glow: "#ff6a1a", core: "#ffd04a" } as const;
+function msFill(ctx: Ctx, c: string, path: () => void): void {
+  ctx.fillStyle = c;
+  ctx.beginPath();
+  path();
+  ctx.fill();
+}
+function msLine(ctx: Ctx, c: string, w: number, pts: readonly Pt[]): void {
+  ctx.strokeStyle = c;
+  ctx.lineWidth = w;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.stroke();
+}
+function msSeam(ctx: Ctx, pts: readonly Pt[]): void {
+  msLine(ctx, MOLTEN_SHELL.glow, 1.1, pts);
+  msLine(ctx, MOLTEN_SHELL.core, 1.1 * 0.38, pts);
+}
+/**
+ * A 立殼（側看）：盾面朝前（朝敵人），側面看到的是盾的厚度＝一片往前鼓的新月形殼，高過甲蟲背（頂 −29），下緣抵地。
+ * 四片殼板、三道橫向殼縫透紅光；靠身體那一側是暗的內面，前腳從下面扣住內緣（避開眼睛）。座標：腳底 (0,0)、朝東。
+ */
+function moltenShield(ctx: Ctx, _a: FxInfo, P: Palette | null): void {
+  mark("tr-mshield");
+  const M = MOLTEN_SHELL;
+  const base = P?.base ?? BASALT;
+  const shape = (): void => {
+    ctx.moveTo(18.2, 0);
+    ctx.lineTo(18.6, -14);
+    ctx.quadraticCurveTo(18.2, -25, 20.4, -28.8);
+    ctx.quadraticCurveTo(23.6, -30, 25.6, -24.4);
+    ctx.quadraticCurveTo(29, -15, 27.8, -5);
+    ctx.quadraticCurveTo(27.4, -1.4, 26.4, 0);
+    ctx.closePath();
+  };
+  ctx.save();
+  const grip: Pt[] = [[12, -6.4], [16.4, -4.4], [20.6, -6]];
+  msLine(ctx, mix(base, OUT, 0.55), 2.0, grip);
+  msLine(ctx, base, 0.9, grip);
+  msFill(ctx, M.plate, shape);
+  ctx.save();
+  ctx.beginPath();
+  shape();
+  ctx.clip();
+  msFill(ctx, M.dark, () => {
+    ctx.moveTo(17, 0);
+    ctx.lineTo(17.4, -30);
+    ctx.lineTo(21.4, -30);
+    ctx.quadraticCurveTo(20.6, -14, 21.4, 0);
+    ctx.closePath();
+  });
+  msFill(ctx, M.rim, () => {
+    ctx.moveTo(21.4, -30);
+    ctx.lineTo(30, -30);
+    ctx.lineTo(30, -20.6);
+    ctx.quadraticCurveTo(25.4, -22.6, 21, -23);
+    ctx.closePath();
+  });
+  msFill(ctx, darken(M.plate, 0.18), () => {
+    ctx.moveTo(21.4, -7.2);
+    ctx.quadraticCurveTo(25, -8.4, 30, -7.6);
+    ctx.lineTo(30, 1);
+    ctx.lineTo(21.4, 1);
+    ctx.closePath();
+  });
+  msFill(ctx, "rgba(255,255,255,0.4)", () => ctx.ellipse(23, -26.2, 0.8, 2.2, 0.5, 0, TAU));
+  ctx.restore();
+  msSeam(ctx, [[21, -22.6], [22.6, -24.2], [24.2, -22.2], [25.8, -23.4], [27.6, -20.8]]);
+  msSeam(ctx, [[21.2, -15], [22.8, -16.8], [24.4, -14.6], [26, -16.4], [28.4, -14]]);
+  msSeam(ctx, [[21.4, -7.2], [23, -9], [24.6, -6.8], [26.2, -8.6], [28, -6.6]]);
+  msLine(ctx, mix(M.plate, OUT, 0.5), 0.5, [[21.4, 0], [20.8, -14], [21.6, -29]]);
+  ctx.restore();
+}
+
 /** 特徵：`soft` ＝ 無外框、半透明，畫在剪影外（霧團、黃煙）；`behind` ＝ 畫在身體後面（霧氣繞身）。 */
 export const TRAITS: Readonly<Record<string, { zh: string; soft?: boolean; draw: FxDraw }>> = {
   stone_back: { zh: "背上石板", draw: (ctx, a) => a.sp.forEach(([x, y], i) => ink(ctx, `tr-sb${i}`, [[x - 3, y + 1.4], [x - 1.6, y - 4.4 - (i % 2) * 1.6], [x + 2.6, y - 3.4], [x + 3, y + 1.4]], "#8a8f94", { sharp: true })) },
@@ -922,6 +1002,7 @@ export const TRAITS: Readonly<Record<string, { zh: string; soft?: boolean; draw:
       ([[-8, -12], [-3, -14], [2, -11.4], [-5, -9.4], [8, -12.4]] as const).forEach(([x, y]) => dot(ctx, x, y, 1.1, 0.8, P?.d ?? "#5a4a3a"));
     },
   },
+  molten_shield: { zh: "熔殼大盾（立殼）", draw: moltenShield },
   sparks: { zh: "電光", draw: (ctx, a) => ([[-a.len * 0.5, a.top * 0.75], [a.len * 0.6, a.top * 0.85]] as const).forEach(([x, y], i) => stroke(ctx, `tr-spk${i}`, [[x, y], [x + 2, y + 2], [x, y + 3], [x + 2.4, y + 5.4]], 0.9, "#fff36b")) },
 };
 
