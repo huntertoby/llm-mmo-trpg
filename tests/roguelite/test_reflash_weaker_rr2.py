@@ -110,7 +110,8 @@ def test_floor_blocked_slot_offers_weaker_options(
     assert pending is not None and pending.weaker_foot_zh == WEAKER_FOOT_ZH
     assert all("weaker_tag_zh" not in o for o in pending.model_dump(mode="json")["options"])
     # 「前」是現在的卡（RR-2b）：原技能列與「前 → 後」都和現在的卡比
-    # （注意：引擎保證的是被換掉那一格不低於它的前一筆，不是整招不低於現在的卡；見 RR-2b 報告待決 1）
+    # （注意：引擎保證的是被換掉那一格不低於它的前一筆，不是整招不低於現在的卡；
+    # 見 RR-2b 報告待決 1）
     current = skill_defs(library, run, [skill_id])[0]
     assert pending.base_stats == base_stats(library, current)
     for option, out_option in zip(offer.options, pending.options, strict=True):
