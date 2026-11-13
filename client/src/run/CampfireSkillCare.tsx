@@ -5,6 +5,7 @@ import type { RunChoice, RunHero } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { EmptyNote, KeepNum } from "../ui/PanelKit";
 import { SkillFlashInfo } from "../ui/SkillFlashInfo";
+import { NoBreakText } from "./FlashChoiceParts";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
 import {
   carryable,
@@ -115,7 +116,16 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                   onClick={() => setTarget({ id: card.id, slot: s.slot })}
                 >
                   重閃　{s.label}
-                  {s.transformHint && <span className="skill-flash-transform small">　{TRANSFORM_HINT}</span>}
+                  {/* FL-1j（美術 FL-1i 複驗可修 2）：藍字整段不換行（固定字、約 108px，一輪 376 的鈕也放得下），
+                      放不下就整段換到下一行；全形空白放在外面，換行時不會變成行首縮排 */}
+                  {s.transformHint && (
+                    <>
+                      {"　"}
+                      <span className="skill-flash-transform small fc-nobr" data-testid={`reflash-transform-${card.id}-${s.slot}`}>
+                        <NoBreakText text={TRANSFORM_HINT} />
+                      </span>
+                    </>
+                  )}
                   <WeakerNote warn={weakerSlot(flash, s.slot)?.warn} testId={`reflash-weaker-${card.id}-${s.slot}`} />
                   {s.problem !== null && (
                     <span className="flash-none-note small" data-testid={`reflash-none-${card.id}-${s.slot}`}>

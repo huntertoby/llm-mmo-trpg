@@ -184,11 +184,68 @@ export function plainTerms(text: string): string {
 }
 
 /** 不可拆的詞（FL-1h，美術 11-13）：條件括號（`.fc-when`）與下固定區的一句話（`.fc-say-line`，FL-1i）可以在字間換行，
- * 但這些詞整個換到下一行，不會斷成「手持雙手／槍時才有」「重算強／度」（FL-1i，美術 RR-2 驗收 F-1）。 */
-export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍", "強度"];
+ * 但這些詞整個換到下一行，不會斷成「手持雙手／槍時才有」「重算強／度」（FL-1i，美術 RR-2 驗收 F-1）、
+ * 「火焰傷／害」「轉／型」（FL-1j，美術 FL-1i 複驗可修 1、2）。數字和單位另由 `numberUnitRuns` 通用處理，不列在這裡。 */
+export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍", "強度", "傷害", "轉型"];
 
-/** 純文字照不可拆詞切段：`keep` 為 true 的那段畫成不斷行。沒有不可拆詞時整段一個 `keep: false`。 */
+/** 數字（含小數、骰子「1d4」、正負號、百分比）。 */
+const NUM_UNIT_RE = /[+\-−]?\d+(?:\.\d+)?(?:d\d+)?[%‰]?/gu;
+/** 數字後面的單位：中文字或英文字母（「回合」「格」「成」「AP」）。 */
+const UNIT_HEAD_RE = /^[\p{Script=Han}A-Za-z]+/u;
+/** 單位最多黏幾個字（太長的不黏，免得整段不能斷行）。 */
+const UNIT_MAX = 2;
+
+/**
+ * 數字後面的單位：英文字母整串（「AP」）；中文取前 `UNIT_MAX` 個字（「回合」「格」「倍」）。
+ * 不用 `Intl.Segmenter`：實測 ICU 把「回合，」切成「回／合」，各瀏覽器的詞典也不同；多黏一個字（「5 格外」）只少一個斷點，無害。
+ */
+export function unitAfterNumber(after: string): string {
+  const run = UNIT_HEAD_RE.exec(after)?.[0] ?? "";
+  if (run === "") return "";
+  if (/^[A-Za-z]/u.test(run)) return /^[A-Za-z]+/u.exec(run)?.[0] ?? "";
+  return [...(/^\p{Script=Han}+/u.exec(run)?.[0] ?? "")].slice(0, UNIT_MAX).join("");
+}
+
+/**
+ * 數字和單位黏成一段（FL-1j，美術 FL-1i 複驗可修 1：「燃燒少 1 回合」不斷成「少 1 ／回合」）：通用規則，不逐字列舉——
+ * 數字前面緊貼的一個中文字（「少」「第」「等」，可隔一個空白）＋數字＋（空白）＋後面的單位（`unitAfterNumber`）包成 `keep`。
+ * 數字後面沒有單位、前面也沒有中文字時不包。
+ */
+export function numberUnitRuns(text: string): { text: string; keep: boolean }[] {
+  const out: { text: string; keep: boolean }[] = [];
+  let at = 0;
+  for (const m of text.matchAll(NUM_UNIT_RE)) {
+    const start = m.index ?? 0;
+    if (start < at) continue;
+    // 英文字或數字中間的數字（「2d6」的「6」已含在前一個比對裡；「AP2」這類）不拆
+    if (start > 0 && /[A-Za-z0-9.]/u.test(text[start - 1] ?? "")) continue;
+    const end = start + m[0].length;
+    const gap = /^ ?/u.exec(text.slice(end))?.[0] ?? "";
+    const unit = unitAfterNumber(text.slice(end + gap.length));
+    const lead = /[\p{Script=Han}] ?$/u.exec(text.slice(at, start))?.[0] ?? "";
+    if (unit === "" && lead === "") continue;
+    const from = start - lead.length;
+    const to = unit === "" ? end : end + gap.length + unit.length;
+    if (from > at) out.push({ text: text.slice(at, from), keep: false });
+    out.push({ text: text.slice(from, to), keep: true });
+    at = to;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), keep: false });
+  return out;
+}
+
+/** 純文字照不可拆詞（再加上數字＋單位，`numberUnitRuns`）切段：`keep` 為 true 的那段畫成不斷行。沒有時整段一個 `keep: false`。 */
 export function noBreakRuns(text: string, words: readonly string[] = FLASH_NO_BREAK_WORDS): { text: string; keep: boolean }[] {
+  const out: { text: string; keep: boolean }[] = [];
+  for (const r of wordRuns(text, words)) {
+    if (r.keep) out.push(r);
+    else out.push(...numberUnitRuns(r.text));
+  }
+  return out;
+}
+
+/** 只照不可拆詞切段（`noBreakRuns` 的第一步）。 */
+function wordRuns(text: string, words: readonly string[]): { text: string; keep: boolean }[] {
   const out: { text: string; keep: boolean }[] = [];
   let rest = text;
   while (rest !== "") {
