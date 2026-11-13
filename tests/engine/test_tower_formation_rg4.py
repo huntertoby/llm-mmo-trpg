@@ -167,11 +167,11 @@ def test_shooting_from_two_layers_above_ignores_the_formation() -> None:
     assert cover_of(scene(heights=rows))[0] == 0
 
 
-def test_one_layer_above_ignores_the_formation() -> None:
-    """RG-5（玩法PM交接 4.1.6 RG-4 第 3 條）：攻擊者比被攻擊的人高 1 層以上就無視（08 原文；和盾兵、
-    塔盾同一條）。RG-4 時持盾者視為 1 層高、要高 2 層才無視。"""
+def test_one_layer_above_uses_the_half_cover_height_rule() -> None:
+    """RG-5b（玩法PM交接 4.1.7 第 1 條）：高度照半掩護，持盾者算 1 層高，攻擊者只高 1 層仍擋得到
+    （撤回 RG-5 的「高 1 層無視」，回到 RG-4 的共用判定）。"""
     rows = ["0000000000"] * 4 + ["1100000000"] + ["0000000000"] * 4
-    assert cover_of(scene(heights=rows))[0] == 0
+    assert cover_of(scene(heights=rows))[0] == PENALTY
 
 
 def test_two_formations_count_once() -> None:

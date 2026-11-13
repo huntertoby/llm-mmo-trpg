@@ -109,6 +109,11 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 ``world/loot.yaml`` 的 ``signature_affixes.form``），詞條改名「盾陣」；盾兵與盾陣的高度條件統一成
 「攻擊者比被攻擊的人高 1 層以上無視」（戰鬥日誌 ``trpg-battle-log/124``）。日誌、角色、世界格式都
 沒變；掉落與戰鬥結算的程式改了，:data:`WORLD_RULES_VERSION` 升成 33。
+
+**Phase RG-5b**（玩法PM交接 4.1.7）：盾兵、盾陣、塔盾本體的高度條件照半掩護（掩護算 1 層高，攻擊者要
+高 2 層才無視；撤回 RG-5 的「高 1 層」），戰鬥日誌升 ``trpg-battle-log/125``。
+``trpg.world`` 的程式沒改，:data:`WORLD_RULES_VERSION` 維持 33：日誌規則鍵（:func:`log_rules_key`）
+本來就含戰鬥紀錄版號，``/124`` 的舊日誌照樣標成規則已變、不能重播。
 """
 
 from __future__ import annotations
