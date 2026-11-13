@@ -3239,6 +3239,8 @@ export interface components {
             anchored?: boolean | null;
             /** Lock Target Id */
             lock_target_id?: string | null;
+            /** Lock Blocker Id */
+            lock_blocker_id?: string | null;
             /** Text */
             text: string;
         };
@@ -3559,6 +3561,8 @@ export interface components {
             /** Name Zh */
             name_zh: string;
             pos: components["schemas"]["XY"];
+            /** Unit Id */
+            unit_id?: string | null;
         };
         /**
          * CraftAction

@@ -373,6 +373,10 @@ class ChargeOut(_ApiModel):
     lock_target_id: UnitId | None = None
     """瞄準預告（RG-1，#162）：被瞄準的單位（頭上畫「被瞄準」、施放者到他畫瞄準線）；``pos``／
     ``tiles`` 是他目前的格子。不是瞄準時為 ``None``。"""
+    lock_blocker_id: UnitId | None = None
+    """瞄準預告（RG-3）：現在射出會被誰擋下（目標的隊友站在直線上，
+    :func:`trpg.engine.lock_on.lock_blocker`；前端在他身前斷線、後段改灰）。沒有人擋、不是瞄準、
+    或擋的人觀看者看不到資訊時為 ``None``。"""
     text: str
 
 
@@ -595,6 +599,9 @@ class CoverOut(_ApiModel):
     kind: str
     name_zh: str
     pos: XY
+    unit_id: UnitId | None = None
+    """盾兵掩護（RG-1 ``kind: shield_guard``）的盾兵；物件或塔盾為 ``None``（RG-3：前端畫
+    小盾與連結）。"""
 
 
 class HealOut(_ApiModel):
@@ -1021,6 +1028,7 @@ def preview_out(
                 kind=cover.kind,
                 name_zh=cover.name_zh,
                 pos=cover.pos,
+                unit_id=cover.unit_id,
             )
         ),
         notes=p.notes,

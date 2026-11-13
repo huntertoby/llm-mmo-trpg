@@ -18,7 +18,8 @@ from trpg.api.schemas import (
     UpcomingEventOut,
 )
 from trpg.content.library import ContentLibrary
-from trpg.engine.environment import TelegraphBomb, telegraph
+from trpg.engine.environment import TelegraphBomb, TelegraphCharge, telegraph
+from trpg.engine.lock_on import lock_blocker
 from trpg.engine.state import BattleState
 from trpg.engine.traps import strip_hidden_traps
 from trpg.narrative.events import xy_text
@@ -34,6 +35,23 @@ def _bomb_out(state: BattleState, bomb: TelegraphBomb, hidden: frozenset[UnitId]
     if bomb.unit_id in hidden:
         fields.update(remaining=None, radius=None)
     return BombOut(**fields, text=bomb_text(state, bomb, hidden))
+
+
+def _lock_blocker(
+    state: BattleState, charge: TelegraphCharge, hidden: frozenset[UnitId]
+) -> UnitId | None:
+    """瞄準預告（RG-3）：現在射出會擋下這一擊的目標隊友（:func:`lock_blocker`）；觀看者看不到資訊的
+    單位不送。"""
+    if charge.lock_target_id is None:
+        return None
+    caster = state.units.get(UnitId(charge.unit_id))
+    target = state.units.get(charge.lock_target_id)
+    if caster is None or target is None or not target.alive:
+        return None
+    blocker = lock_blocker(state, caster, target)
+    if blocker is None or blocker.id in hidden:
+        return None
+    return blocker.id
 
 
 def telegraph_out(state: BattleState, library: ContentLibrary, team: Team) -> TelegraphOut:
@@ -66,7 +84,12 @@ def telegraph_out(state: BattleState, library: ContentLibrary, team: Team) -> Te
         burning=tuple(burning),
         bombs=tuple(_bomb_out(state, b, hidden) for b in forecast.bombs),
         charges=tuple(
-            ChargeOut(**c.model_dump(), text=charge_text(state, c)) for c in forecast.charges
+            ChargeOut(
+                **c.model_dump(),
+                lock_blocker_id=_lock_blocker(state, c, hidden),
+                text=charge_text(state, c),
+            )
+            for c in forecast.charges
         ),
         upcoming=tuple(
             UpcomingEventOut(
