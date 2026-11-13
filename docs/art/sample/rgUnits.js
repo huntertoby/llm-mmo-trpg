@@ -362,7 +362,7 @@ window.RGUnits = (() => {
     g.restore();
   }
   const isDiag = (look) => { if (look.kind === "beast_claw") return true; try { return !!QIconsWeapons.def(look).meta.diag; } catch (e) { return true; } };
-  function crossed(ctx, heroW, eliteW, cx, cy, px0, res, mode, es = null) {
+  function crossed(ctx, heroW, eliteW, cx, cy, px0, res, mode, es = null, hs = null) {
     const put = (look, mirror, k = 1, dx = 0, dy = 0) => {
       const px = px0 * k, c0 = weaponCanvas(look, px, res), c = mode === "flat" ? tinted(c0, "#f2e6c8") : c0;
       ctx.save(); ctx.translate(cx + dx, cy + dy); if (mirror) ctx.scale(-1, 1); if (!isDiag(look)) ctx.rotate(0.62);
@@ -371,7 +371,10 @@ window.RGUnits = (() => {
     };
     const claw = eliteW.kind === "beast_claw", F = mode !== "flat" && faceOf(heroW)?.[claw ? "claw" : "man"];
     if (F) { /* 9.9：不是長條斜放的主手（弓、拳套、手槍、成對…）：兩把錯開、只在邊上交疊，不疊在對方的主體上 */
-      if (claw) { const sh = es ? clawShift(es, eliteW, F, cx, cy, px0, res) : 0; /* 9.9 D-2：爪痕右緣不越過精英剪影左緣 −3 px，只往左移 */ put(heroW, false, F.k, ...F.hero); put(eliteW, true, F.ek, F.elite[0] - sh, F.elite[1]); } else { put(eliteW, true, F.ek, ...F.elite); put(heroW, false, F.k, ...F.hero); }
+      if (claw) { /* 9.9 第 3 版（複審 R-1）：主角那把和爪痕整組一起移（必要時一起縮小），保持第 1 版的間距；見 groupFit */
+        const t = es ? groupFit(es, hs, heroW, eliteW, F, cx, cy, px0, res) : { dx: 0, dy: 0, s: 1 }; lastFit = t;
+        put(heroW, false, F.k * t.s, F.hero[0] * t.s + t.dx, F.hero[1] * t.s + t.dy); put(eliteW, true, F.ek * t.s, F.elite[0] * t.s + t.dx, F.elite[1] * t.s + t.dy);
+      } else { put(eliteW, true, F.ek, ...F.elite); put(heroW, false, F.k, ...F.hero); }
       return;
     }
     /* 爪痕蓋在劍上（第 2 版）：劍蓋上去會把三道爪痕的中段切成六根尖刺，讀成羽毛扇；爪痕在上，劍從爪痕之間、兩端露出 */
@@ -396,23 +399,58 @@ window.RGUnits = (() => {
   };
   const faceOf = (look) => FACE_KIND[look?.kind] ?? FACE[crossGroup(look)];
   /**
-   * 審查 D-2：錯開組（FACE 有值）的爪痕，右緣不越過精英剪影（含 1.6 px 輪廓光）在同一列的最左緣 −3 px；超過就整組往左移（不縮小）。
-   * 回傳要往左移的插圖 px。劍那組不走這裡（指紋不動）。
+   * 9.9 第 3 版（複審 R-1；取代第 2 版只推爪痕的 clawShift）：錯開組（FACE／FACE_KIND 有值）對異形時，**主角那把和爪痕整組一起移**，
+   * 兩把之間的距離保持第 1 版（FACE 表）的樣子。判斷都在插圖 px（× res 的裝置像素逐列掃，alpha > 64）：
+   *   精英側：整組（爪痕＋主角那把）每列最右 ≤ 精英剪影（含往左 1.6 px 的輪廓光）同列最左 −3 px；
+   *   主角側：整組每列最左 ≥ 主角剪影（含道具、往右 1.6 px 的輪廓光）同列最右 +3 px。
+   *   （主角側在第 1 版本來就不到 3 px 的——鞭柄、弩托貼著手——門檻改成第 1 版的距離：只擋「因為移動才碰到」。）
+   * 順序：第 1 版位置精英側就夠 → 不動；
+   *       ① 整組往上 0～4 px，挑「剩下要往左最少」的那個（爪痕尖只碰角尖、鼻尖的，往上幾 px 就差不多；往上不會碰到主角那把）；
+   *       ② 剩下的往左移到精英側剛好 3 px；主角側不夠時兩把一起縮小（位置、大小對交叉中心同乘 s，每次 0.02，下限 0.8），每個 s 重算往左移多少。
+   *       縮到 0.8 還不夠就用 0.8（回傳 ok: false，樣張頁標出來）。
+   * 回傳 { dx, dy, s, ok }（插圖 px；dx < 0 往左、dy < 0 往上）。劍那組不走這裡（指紋不動）。
    */
-  function clawShift(es, eliteW, F, cx, cy, px0, res) {
+  let lastFit = null;
+  function groupFit(es, hs, heroW, eliteW, F, cx, cy, px0, res) {
     const W = DUEL_W * res, H = DUEL_H * res, mkc = () => { const c = document.createElement("canvas"); c.width = W; c.height = H; return c; };
-    const cc = mkc(), cg = cc.getContext("2d"), px = px0 * F.ek; cg.scale(res, res); cg.translate(cx + F.elite[0], cy + F.elite[1]); cg.scale(-1, 1); cg.drawImage(weaponCanvas(eliteW, px, res), -px / 2, -px / 2, px, px);
-    const ec = mkc(), eg = ec.getContext("2d"); eg.scale(res, res); eg.drawImage(es.cv, es.x0 - 1.6, es.y0 - 0.6, es.w, es.h); eg.drawImage(es.cv, es.x0, es.y0, es.w, es.h);
-    const a = cg.getImageData(0, 0, W, H).data, b = eg.getImageData(0, 0, W, H).data;
-    let need = 0;
+    const alphaOf = (c) => { const d = c.getContext("2d").getImageData(0, 0, W, H).data, a = new Uint8Array(W * H); for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] > 64 ? 1 : 0; return a; };
+    const silMask = (s, rim) => { const c = mkc(), g = c.getContext("2d"); g.scale(res, res); g.drawImage(s.cv, s.x0 + rim, s.y0 - 0.6, s.w, s.h); g.drawImage(s.cv, s.x0, s.y0, s.w, s.h); return alphaOf(c); };
+    const eA = silMask(es, -1.6), hA = hs ? silMask(hs, 1.6) : null;
+    const eL = new Int32Array(H).fill(-1), hR = new Int32Array(H).fill(-1);
     for (let y = 0; y < H; y++) {
-      let cr = -1, el = -1;
-      for (let x = W - 1; x >= 0; x--) if (a[(y * W + x) * 4 + 3] > 64) { cr = x; break; }
-      if (cr < 0) continue;
-      for (let x = 0; x < W; x++) if (b[(y * W + x) * 4 + 3] > 64) { el = x; break; }
-      if (el >= 0) need = Math.max(need, cr - (el - 3 * res));
+      for (let x = 0; x < W; x++) if (eA[y * W + x]) { eL[y] = x; break; }
+      if (hA) for (let x = W - 1; x >= 0; x--) if (hA[y * W + x]) { hR[y] = x; break; }
     }
-    return Math.ceil(need) / res;
+    const icon = (g, look, mirror, k, x, y) => { const px = px0 * k; g.save(); g.translate(cx + x, cy + y); if (mirror) g.scale(-1, 1); if (!isDiag(look)) g.rotate(0.62); g.drawImage(weaponCanvas(look, px, res), -px / 2, -px / 2, px, px); g.restore(); };
+    /** 整組在 (s, dx, dy) 時：精英側要往左多少（> 0 ＝超過）、主角側還剩多少（< 0 ＝不夠 3 px），單位插圖 px */
+    const measure = (s, dx, dy) => {
+      const c = mkc(), g = c.getContext("2d"); g.scale(res, res);
+      icon(g, heroW, false, F.k * s, F.hero[0] * s + dx, F.hero[1] * s + dy); icon(g, eliteW, true, F.ek * s, F.elite[0] * s + dx, F.elite[1] * s + dy);
+      const a = alphaOf(c); let need = 0, room = Infinity;
+      for (let y = 0; y < H; y++) {
+        let l = -1, r = -1;
+        for (let x = 0; x < W; x++) if (a[y * W + x]) { l = x; break; }
+        if (l < 0) continue;
+        for (let x = W - 1; x >= 0; x--) if (a[y * W + x]) { r = x; break; }
+        if (eL[y] >= 0) need = Math.max(need, r - (eL[y] - 3 * res));
+        if (hR[y] >= 0) room = Math.min(room, l - (hR[y] + 3 * res));
+      }
+      return { need: Math.ceil(need) / res, room: room / res };
+    };
+    /* 主角側的門檻：3 px，但第 1 版本來就比 3 px 近的（鞭柄、弩托貼著手）以第 1 版為準——只擋「因為移動才碰到」 */
+    const m0 = measure(1, 0, 0), floor = Math.min(0, m0.room);
+    if (m0.need <= 0) return { dx: 0, dy: 0, s: 1, ok: true, n0: 0 };
+    /* ① 往上 0～4 px 裡挑剩下要往左最少的（同樣少取較小的往上） */
+    let up = 0, need = m0.need;
+    for (let u = 1; u <= 4; u++) { const m = measure(1, 0, -u); if (m.need < need) { up = u; need = m.need; } }
+    /* ② 剩下的往左移；主角側不夠就兩把一起縮小 */
+    let best = null;
+    for (let i = 0; i <= 10; i++) {
+      const s = Math.round((1 - i * 0.02) * 100) / 100, dx = -measure(s, 0, -up).need, m = measure(s, dx, -up);
+      best = { dx, dy: -up, s, ok: m.room >= floor && m.need <= 0, n0: m0.need };
+      if (best.ok) return best;
+    }
+    return best;
   }
   /** 錯開：hero／elite＝[dx, dy]（插圖 px，交叉中心為原點）、k／ek＝主角／精英圖示倍率；claw＝異形（獸爪）、man＝人形（沒寫＝照劍交叉）。 */
   const FACE = {
@@ -480,7 +518,7 @@ window.RGUnits = (() => {
     const cx = W / 2, cy = 56;
     if (A) {
       const r = ctx.createRadialGradient(cx, cy, 2, cx, cy, 34); r.addColorStop(0, "rgba(255,240,200,0.55)"); r.addColorStop(1, "rgba(255,240,200,0)"); ctx.fillStyle = r; ctx.fillRect(cx - 40, cy - 40, 80, 80);
-      crossed(ctx, spec.hero.weapon, spec.elite.weapon, cx, cy, 58, res, "color", es);
+      crossed(ctx, spec.hero.weapon, spec.elite.weapon, cx, cy, 58, res, "color", es, hs);
       if (spec.elite.weapon?.kind !== "beast_claw") spark(ctx, cx, cy - 9, 7); /* 第 3 版：爪痕那組不加火花（白色火花疊在白爪痕上，整組更像一團白毛） */
     } else {
       ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, 27, 0, TAU); ctx.fillStyle = "rgba(10,12,24,0.7)"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#e8bb48"; ctx.stroke(); ctx.beginPath(); ctx.arc(cx, cy, 23.5, 0, TAU); ctx.lineWidth = 0.8; ctx.strokeStyle = "rgba(232,187,72,0.6)"; ctx.stroke(); ctx.restore();
@@ -493,5 +531,5 @@ window.RGUnits = (() => {
   function hexA(h, a) { const n = parseInt(h.slice(1, 7), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
   function duelCanvas(spec, res = 2) { const cv = document.createElement("canvas"); cv.width = DUEL_W * res; cv.height = DUEL_H * res; const g = cv.getContext("2d"); g.scale(res, res); duel(g, spec, res); return cv; }
 
-  return { beastClaw, SHIELDS, SHELL, C, LAVA, KEY, stampDoll, withShield, shieldOf, sectShieldDisciple, moltenShellTrooper, registerTraits, duel, duelCanvas, silhouetteOf, setHeroPose, DUEL_W, DUEL_H, VIEW_DRAW };
+  return { beastClaw, SHIELDS, SHELL, C, LAVA, KEY, stampDoll, withShield, shieldOf, sectShieldDisciple, moltenShellTrooper, registerTraits, duel, duelCanvas, silhouetteOf, setHeroPose, DUEL_W, DUEL_H, VIEW_DRAW, fitOf: () => lastFit, resetFit: () => { lastFit = null; } };
 })();

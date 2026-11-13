@@ -6,7 +6,8 @@ Usage (from the repo root):
 
 Borrows rg_units_shots.py (headless Chrome --dump-dom, data URL in #out, no
 remote-debugging port, --mute-audio, ?mute=1); only the page and the list differ.
---audit prints the sword-version fingerprints (four duels x res 1/2) from <pre id="audit">.
+--audit prints the sword-version fingerprints (four duels x res 1/2) from <pre id="audit">;
+--fit prints how far groupFit moved / shrank each crossing on the contact sheet (v3, R-1).
 """
 
 from __future__ import annotations
@@ -24,13 +25,14 @@ r.DIALOGS = []
 r.SHOTS = [
     # duel-weapons-0-before.jpg (part=now) was shot before 9.9 changed rgUnits.js; re-shooting
     # it now would draw the new version, so it is not in the list.
-    # v2 (review D-1..D-3) only changed the crossing: 1-sil is not re-shot; v1 files are kept.
+    # v2 (review D-1..D-3) and v3 (re-review R-1) only changed the crossing: 1-sil is not
+    # re-shot; v1 and v2 files are kept as records.
     ("sil", "part=sil", "shots/rg-units/duel-weapons-1-sil.png"),
-    ("cross", "part=cross", "shots/rg-units/duel-weapons-2-cross-v2.png"),
-    ("duel", "part=duel", "shots/rg-units/duel-weapons-3-duel-v2.png"),
-    ("duel-x4", "part=x4", "shots/rg-units/duel-weapons-4-duel-x4-v2.png"),
-    ("small", "part=small", "shots/rg-units/duel-weapons-5-small-259-v2.png"),
-    ("contact", "part=contact", "shots/rg-units/duel-weapons-6-contact-v2.png"),
+    ("cross", "part=cross", "shots/rg-units/duel-weapons-2-cross-v3.png"),
+    ("duel", "part=duel", "shots/rg-units/duel-weapons-3-duel-v3.png"),
+    ("duel-x4", "part=x4", "shots/rg-units/duel-weapons-4-duel-x4-v3.png"),
+    ("small", "part=small", "shots/rg-units/duel-weapons-5-small-259-v3.png"),
+    ("contact", "part=contact", "shots/rg-units/duel-weapons-6-contact-v3.png"),
 ]
 AUDIT_ARGC = 2
 AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')
@@ -38,8 +40,9 @@ AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')
 
 def main(argv: list[str]) -> int:
     sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
-    if len(argv) >= AUDIT_ARGC and argv[1] == "--audit":
-        found = AUDIT_RE.search(r.dump(Path(argv[0]), "part=audit"))
+    if len(argv) >= AUDIT_ARGC and argv[1] in ("--audit", "--fit"):
+        part = "part=audit" if argv[1] == "--audit" else "part=contact"
+        found = AUDIT_RE.search(r.dump(Path(argv[0]), part))
         print(html.unescape(found.group(1)) if found else "no audit")
         return 0 if found else 1
     return r.main(argv)

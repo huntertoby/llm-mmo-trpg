@@ -111,7 +111,7 @@ PARTS.sil = () => {
 // ================= 交叉 20 種 × 異形／人形（插圖中間裁 110×84） =================
 PARTS.cross = () => {
   const blocks = [{ title: "交叉 20 種 × 北坡狼王（獸爪）／疤面（單刀）：插圖中間裁 110×84，真 1 倍與最近鄰 ×2" },
-    { note: "第 2 版：blade（劍、魔導劍、巨劍、矛）＝照劍；head（斧、錘、鐮刀、三種杖）＝爪痕劃在柄上；gun（火槍）＝爪痕劃在槍管前段、霰彈槍劃在槍身中段；open（弓、弩、鞭）＝和獸爪錯開，弓、弩對人形也錯開、鞭對人形照劍；block（匕首、雙匕首、拳套、手槍、雙手槍）＝兩邊都錯開；錯開組的爪痕右緣不越過精英剪影（RG樣張.md 9.9.3、9.9.9）" }];
+    { note: "第 3 版：blade（劍、魔導劍、巨劍、矛）＝照劍；head（斧、錘、鐮刀、三種杖）＝爪痕劃在柄上；gun（火槍）＝爪痕劃在槍管前段、霰彈槍劃在槍身中段；open（弓、弩、鞭）＝和獸爪錯開，弓、弩對人形也錯開、鞭對人形照劍；block（匕首、雙匕首、拳套、手槍、雙手槍）＝兩邊都錯開；對異形時主角那把和爪痕整組一起移（往上、往左，必要時一起縮小），保持第 1 版間距、不碰精英剪影（RG樣張.md 9.9.3、9.9.10）" }];
   for (const id of ["wolf", "scar"]) {
     const D = W20.map((w) => crop(RU.duelCanvas(specOf(heroOf(w.look), id), 1), 105, 14, 110, 84));
     blocks.push({ note: `${ELITES[id].zh}：真 1 倍` }, { cells: D.map((c, i) => plain(c, W20[i].zh)), gap: 8, capW: 110 });
@@ -147,14 +147,28 @@ const BIG = {
   snake: { zh: "蛇 1.5", spec: { body: "serpent", material: "scale", size: "large", elite: true }, k: 1.5, region: "cloud_ridge" },
   wolf: { zh: "北坡狼王 1.2", spec: ELITES.wolf.elite.spec, k: 1.2, region: "cloud_ridge" },
 };
+/* 第 3 版（複審 R-1）：會單挑的四場（北坡狼王、疤面、鍛疤、熔核領主）＋熊、蛇（目前不單挑，參考）× 九種主手。
+   每格的說明是 groupFit 的結果：左＝整組往左移、上＝整組往上、×＝兩把一起縮小（插圖 px，res 1）；人形不走 groupFit。 */
+const CONTACT_W = ["劍", "弓", "弩", "鞭", "匕首", "手槍", "雙手槍", "斧", "霰彈槍"];
+const CONTACT = [
+  { zh: "北坡狼王 1.2（單挑）", elite: ELITES.wolf.elite, region: "cloud_ridge" },
+  { zh: "斷崖幫「疤面」（單挑，人形）", elite: ELITES.scar.elite, region: "cloud_ridge" },
+  { zh: "鍛疤（單挑，人形；樣張用荒原隊長暫代）", elite: ELITES.forge.elite, region: "ashen_waste" },
+  { zh: "熔核領主 1.8（單挑）", elite: ELITES.lord.elite, region: "ashen_waste" },
+  { zh: "熊 1.5（目前不單挑，參考）", elite: { spec: BIG.bear.spec, weapon: CLAW, k: 1.5 }, region: "cloud_ridge" },
+  { zh: "蛇 1.5（目前不單挑，參考）", elite: { spec: BIG.snake.spec, weapon: CLAW, k: 1.5 }, region: "cloud_ridge" },
+];
+const fitText = (t) => !t ? "照劍／人形" : [t.dx ? `左 ${-t.dx}` : "", t.dy ? `上 ${-t.dy}` : "", t.s !== 1 ? `×${t.s.toFixed(2)}` : "", t.ok ? "" : "（不夠 3 px）"].filter(Boolean).join(" ") || "不動";
 PARTS.contact = () => {
-  const ws = ["劍", "弓", "弩", "鞭", "匕首", "手槍", "雙手槍", "斧", "霰彈槍"].map((zh) => W20.find((w) => w.zh === zh));
-  const blocks = [{ title: "第 2 版（審查 D-2）：爪痕右緣 ≤ 精英剪影同列左緣 −3 px（只往左移）；插圖中間裁 130×84，真 1 倍與最近鄰 ×2" },
-    { note: "劍那欄是第 3 版原樣（不套這條，熊的劍版本來就碰到臉，見 RG樣張.md 9.9.9）；其他欄是錯開組（open／block）與 head、gun 組" }];
-  for (const b of Object.values(BIG)) {
-    const D = ws.map((w) => crop(RU.duelCanvas({ hero: heroOf(w.look), elite: { spec: b.spec, weapon: CLAW, k: b.k }, region: b.region, variant: "A" }, 1), 110, 14, 130, 84));
-    blocks.push({ note: b.zh }, { cells: D.map((c, i) => plain(c, ws[i].zh)), gap: 8, capW: 130 }, { cells: D.map((c) => nn(c, 2)), gap: 8 });
+  const ws = CONTACT_W.map((zh) => W20.find((w) => w.zh === zh)), rows = [];
+  const blocks = [{ title: "第 3 版（複審 R-1）：主角那把和爪痕整組一起移、保持第 1 版間距；插圖中間裁 130×84，真 1 倍與最近鄰 ×2" },
+    { note: "規則（RG樣張.md 9.9.10）：整組右緣 ≤ 精英剪影同列左緣 −3 px、整組左緣 ≥ 主角剪影同列右緣 +3 px；先試往上 1～4 px，不行就往左移，主角側不夠就兩把一起縮小（下限 0.8）。劍那欄是第 3 版原樣（不套這條，指紋不動）。每格下面是整組的移動量（插圖 px）" }];
+  for (const b of CONTACT) {
+    const D = ws.map((w) => { RU.resetFit(); const c = crop(RU.duelCanvas({ hero: heroOf(w.look), elite: b.elite, region: b.region, variant: "A" }, 1), 110, 14, 130, 84); return { c, t: RU.fitOf() }; });
+    rows.push(`${b.zh}: ` + D.map((d, i) => `${ws[i].zh} ${fitText(d.t)}`).join(" | "));
+    blocks.push({ note: b.zh }, { cells: D.map((d, i) => plain(d.c, `${ws[i].zh}：${fitText(d.t)}`)), gap: 8, capW: 130 }, { cells: D.map((d) => nn(d.c, 2)), gap: 8 });
   }
+  document.getElementById("audit").textContent = rows.join(String.fromCharCode(10));
   publish(sheet(2500, blocks), "image/png");
 };
 // ================= 20 種 Q 版武器圖示（無框，48 真 1 倍與 ×3；對照用） =================
