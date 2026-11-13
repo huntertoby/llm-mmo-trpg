@@ -8,7 +8,7 @@ import type { WorldView } from "../api/types";
 import { nowStyle } from "../run/flashChoice";
 import { objectHud } from "./atlasModel";
 import { panelAvailable } from "./hud";
-import { pregenRequestId, pregenWaitBody, pregenWaitText } from "./pregen";
+import { PREGEN_WAIT_NOTE, pregenRequestId, pregenWaitBody, pregenWaitNote, pregenWaitText } from "./pregen";
 import { WishPanel } from "./WishPanel";
 import {
   offerSkipLabel,
@@ -114,6 +114,8 @@ describe("WP-3 許願池：接線", () => {
     expect(body).toEqual({ kind: "wish", text: "想把敵人凍住" });
     expect(pregenWaitText(body!)).toBe(WISH_ZH.waitText);
     expect(pregenRequestId(body!)).toBe("wish:想把敵人凍住");
+    expect(pregenWaitNote(body!)).toBe(WISH_ZH.waitNote);
+    expect(pregenWaitNote({ kind: "flash", skill: "s" })).toBe(PREGEN_WAIT_NOTE);
     expect(pregenWaitBody({ kind: "wish", keywords: ["frozen"] })).toBeNull();
   });
 

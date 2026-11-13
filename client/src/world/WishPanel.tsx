@@ -21,6 +21,8 @@ import { toggleKeyword, WISH_ZH, wishDiffs, wishModes, wishSubmitBlock, type Wis
 const KEEPER_FACE = { wide: 36, narrow: 28 } as const;
 /** 選單列的關鍵字小圓章（第⑤b 批 Q 版）。 */
 const KEYWORD_PX = 20;
+/** 空白但佔一行高。 */
+const NBSP = String.fromCharCode(0xa0);
 
 /** 送出前等不到 LLM（逾時）或伺服器退回時，自動切到選單並說明（`seq` 變了就重開到選單分頁）。 */
 export interface WishFallback {
@@ -81,6 +83,15 @@ function WishHead({ wish: w, onBack }: { wish: WishData; onBack?: () => void }) 
   );
 }
 
+/** 都不拿的退款（L3，放在分頁內容最後：資訊放內容後面，3.7 第 3 條）。 */
+function RefundNote({ refund }: { refund: number }) {
+  return (
+    <p className="pnl-l3 wish-refund" data-testid="wish-refund">
+      {WISH_ZH.refundNote(refund)}
+    </p>
+  );
+}
+
 function TextPane({ wish: w, text, off, onText }: { wish: WishData; text: string; off: boolean; onText(t: string): void }) {
   return (
     <div className="wish-pane" data-testid="wish-text-pane">
@@ -99,6 +110,7 @@ function TextPane({ wish: w, text, off, onText }: { wish: WishData; text: string
       <div className="pnl-l3 wish-count" data-testid="wish-count">
         {text.length}／{w.text_max_chars}
       </div>
+      <RefundNote refund={w.refund} />
     </div>
   );
 }
@@ -141,6 +153,7 @@ function MenuPane({ wish: w, picked, off, note, onPick }: { wish: WishData; pick
           );
         })}
       </ul>
+      <RefundNote refund={w.refund} />
     </div>
   );
 }
@@ -151,14 +164,10 @@ function WishFoot({ wish: w, block, busy, onSubmit }: { wish: WishData; block: s
     <div className={w.available ? "wish-foot" : "wish-foot off"} data-testid="wish-foot">
       <DiffRows changes={wishDiffs(w)} terms={{}} />
       <div className="wish-foot-row">
-        <span className="pnl-l3 wish-refund" data-testid="wish-refund">
-          {WISH_ZH.refundNote(w.refund)}
+        {/* 為什麼按不下去：一律佔一行（沒有時空白），切分頁、挑關鍵字時下固定區不跳；不能許時原因只寫在第一行 */}
+        <span className="pnl-l3 wish-need" data-testid={block !== null && w.available ? "wish-need" : undefined}>
+          {block !== null && w.available ? block : NBSP}
         </span>
-        {block !== null && w.available && (
-          <span className="pnl-l3 wish-need" data-testid="wish-need">
-            {block}
-          </span>
-        )}
         <button type="button" className="primary wish-submit" disabled={!go} onClick={() => go && onSubmit()} data-testid="wish-submit">
           {WISH_ZH.submit}
         </button>

@@ -30,6 +30,7 @@ export const WISH_ZH = {
   noneLeft: "沒有了",
   timeout: "說書人這次來不及想好（等了 10 秒），改從選單挑關鍵字吧（沒有扣任務幣）。",
   waitText: "許願池正在聽你的願望……",
+  waitNote: "最多等 10 秒；來不及就改從選單挑關鍵字（不扣任務幣）。",
   pickNth: (n: number) => `第 ${n} 個`,
   leftTimes: (n: number) => `剩 ${n} 次`,
   refundNote: (refund: number) => `三選一都不拿也算一次，退 ${refund} 任務幣。`,

@@ -13,6 +13,11 @@
   font-size: 13px;
 }
 
+/* 窄版標題列擠的時候「回到地點圖」不折行（守池人那一行自己收成「…」） */
+.wish-panel .pnl-head-actions button {
+  white-space: nowrap;
+}
+
 .wish-panel .pnl-fixed .pnl-tabbar {
   margin-top: 8px;
 }
@@ -53,6 +58,10 @@
 
 .wish-input::placeholder {
   color: var(--pnl-l3);
+}
+
+.wish-refund {
+  margin: 8px 0 0;
 }
 
 .wish-count {
@@ -118,9 +127,9 @@
   background: var(--pnl-row-hi);
 }
 
-/* 挑滿 2 個時其他格不能點（變暗，不用虛線：虛線只代表「本場不成立」） */
+/* 挑滿 2 個時其他格不能點（稍微變暗；不用虛線：虛線只代表「本場不成立」；比「不能許」的整張灰掉淡） */
 .wish-kw:disabled {
-  opacity: 0.55;
+  opacity: 0.7;
   cursor: default;
 }
 
@@ -160,6 +169,7 @@
 
 .wish-need {
   color: var(--pnl-warn);
+  white-space: nowrap;
 }
 
 .wish-submit {
@@ -183,6 +193,6 @@
   }
 
   .wish-foot-row {
-    flex-basis: 170px;
+    flex-basis: 130px;
   }
 }

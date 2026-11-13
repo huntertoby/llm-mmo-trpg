@@ -92,7 +92,7 @@ import { battleSummary } from "../world/battleSummary";
 import { isDevMode } from "../run/startFlow";
 import { worldPlaceName } from "../battle/placeName";
 import { useRegionTheme, worldRegion } from "../ui/regionTheme";
-import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitText } from "../world/pregen";
+import { PREGEN_HINT_DELAY_MS, pregenRequestId, pregenWaitBody, pregenWaitNote, pregenWaitText } from "../world/pregen";
 import { WAIT_DONE_MS, type WaitStatus } from "../render/waitArt";
 import { reducedMotion } from "../ui/motionPrefs";
 import { PregenWaitDialog } from "../world/PregenWaitDialog";
@@ -178,7 +178,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
   const [rumors, setRumors] = useState<{ at: string; lines: string[] } | null>(null);
   const [llm, setLlm] = useState<WorldLlmView | null>(null);
   const [wishFallback, setWishFallback] = useState<WishFallback | null>(null);
-  const [pregenWait, setPregenWait] = useState<{ text: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
+  const [pregenWait, setPregenWait] = useState<{ text: string; note: string; requestId: string; status: WaitStatus; cancel: () => void } | null>(null);
   const [absence, setAbsence] = useState<AbsenceView | null>(null);
   useRegionTheme(view !== null ? worldRegion(view) : null); // RT-1：實地地圖的區域（主城與室內是 capital；沒有＝hub）
   /** 開場、教學、升級畫面、戰鬥短提示看過了沒（6F-4，6F-2b：記在角色身上，`view.hints`）。這次畫面裡剛關掉的
@@ -467,7 +467,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     let shown = false;
     const timer = window.setTimeout(() => {
       shown = true;
-      setPregenWait({ text: pregenWaitText(body), requestId: pregenRequestId(body), status: "wait", cancel });
+      setPregenWait({ text: pregenWaitText(body), note: pregenWaitNote(body), requestId: pregenRequestId(body), status: "wait", cancel });
     }, PREGEN_HINT_DELAY_MS);
     try {
       const done = await Promise.race([api.worldPregenWait(id, body).catch(() => null), cancelled]);
@@ -1248,7 +1248,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       {view !== null && !shouldShowAbsence(absence) && !shouldShowOpening(view.guide, seenIds) && partyIntro === null && !showLevelUp && showLesson && lesson !== null && lesson.kind !== "allocate" && lesson.kind !== "choose" && (
         <LessonDialog lesson={lesson} lead={lessonLead} onOpen={() => closeLesson(true)} onSkip={() => closeLesson(false)} />
       )}
-      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} />}
+      {pregenWait !== null && <PregenWaitDialog text={pregenWait.text} requestId={pregenWait.requestId} status={pregenWait.status} waitedMs={PREGEN_HINT_DELAY_MS} onCancel={pregenWait.cancel} note={pregenWait.note} />}
       </DialogHudBox.Provider>
       {llm?.notice_zh != null && <div className="muted small world-llm-notice">{llm.notice_zh}</div>}
       {banner !== null && (

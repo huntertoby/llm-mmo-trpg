@@ -18,6 +18,13 @@ export function pregenWaitBody(action: WorldAction): PregenWaitRequest | null {
   return null;
 }
 
+/** 等待提示下面那一行：閃現、機遇逾時改給一般的版本；許願逾時不送、改開選單（WP-3）。 */
+export const PREGEN_WAIT_NOTE = "最多等 10 秒；來不及就改用一般的版本。";
+
+export function pregenWaitNote(body: PregenWaitRequest): string {
+  return body.kind === "wish" ? WISH_ZH.waitNote : PREGEN_WAIT_NOTE;
+}
+
 /** 等待提示的文字。 */
 export function pregenWaitText(body: PregenWaitRequest): string {
   if (body.kind === "wish") return WISH_ZH.waitText;
