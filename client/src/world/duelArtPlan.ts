@@ -7,7 +7,7 @@
 // 外觀定案後插圖剪影自動跟著換（9.6 決定 4、9.8 第 6 條）。
 import type { WorldView } from "../api/types";
 import { resolveDoll, type DollInput, type DollSpec, type GearItem } from "../render/appearance";
-import { CREATURE_ELITE_K, CREATURE_ELITE_K_DEFAULT, duelRegion, type DuelRegion } from "../render/duelArt";
+import { CREATURE_ELITE_K, CREATURE_ELITE_K_DEFAULT, duelRegion, type DuelMain, type DuelRegion } from "../render/duelArt";
 import type { GearLook } from "../render/gearResolve";
 import { resolveCreature, rigKey, type ResolvedCreature } from "../render/inkCreature";
 import { BEAST_CLAW } from "../render/qIcon/beastClaw";
@@ -57,6 +57,14 @@ export function mainWeaponOf(look: FieldLook): DuelWeaponPlan {
   const app = (look.equipment ?? []).find((x) => x.slot === "main_hand")?.appearance;
   if (app?.kind != null) return { kind: "gear", look: app as GearLook };
   return { kind: "item", item: weaponIconItem(look.weapon_id, look.weapon_class) };
+}
+
+/** 主手的 kind（＋形制、材質、元素；RG-6：插圖依 kind 分剪影組、交叉組，9.9.5 第 1 條）。獸爪、沒有 kind 時 null。 */
+export function mainKindOf(w: DuelWeaponPlan): DuelMain | null {
+  if (w.kind === BEAST_CLAW) return null;
+  const it = w.kind === "gear" ? w.look : w.item;
+  if (it.kind == null) return null;
+  return { kind: it.kind, form: it.form ?? null, material: it.material ?? null, element: it.element ?? null };
 }
 
 /** 異形精英的插圖倍率（依身形；沒有給的身形用預設）。 */

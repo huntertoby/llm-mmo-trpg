@@ -7,7 +7,7 @@ import { BEAST_CLAW } from "../render/qIcon/beastClaw";
 import { DUEL_H, DUEL_W, duelCanvas, type DuelSpec, type DuelWeapon } from "../render/duelArt";
 import { qUnitOf } from "../render/qSpec";
 import { weaponIconDef } from "../render/weaponIcon";
-import type { DuelPlan, DuelWeaponPlan } from "./duelArtPlan";
+import { mainKindOf, type DuelPlan, type DuelWeaponPlan } from "./duelArtPlan";
 
 function weaponOf(w: DuelWeaponPlan): DuelWeapon | null {
   if (w.kind === BEAST_CLAW) return { kind: BEAST_CLAW };
@@ -18,7 +18,7 @@ function weaponOf(w: DuelWeaponPlan): DuelWeapon | null {
 /** 計畫 → 畫法要的輸入（遊戲色 GAME_HOOKS）。 */
 export function duelSpecOf(plan: DuelPlan): DuelSpec {
   return {
-    hero: { unit: qUnitOf(plan.hero), weapon: weaponOf(plan.heroWeapon) },
+    hero: { unit: qUnitOf(plan.hero), weapon: weaponOf(plan.heroWeapon), main: mainKindOf(plan.heroWeapon) },
     elite: {
       figure: plan.elite.kind === "creature" ? { kind: "creature", creature: plan.elite.creature, k: plan.elite.k } : { kind: "doll", unit: qUnitOf(plan.elite.spec) },
       weapon: weaponOf(plan.eliteWeapon),
