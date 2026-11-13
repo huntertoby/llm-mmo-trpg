@@ -38,16 +38,19 @@ def _headline(
 def test_every_template_has_a_headline() -> None:
     """86 個模板都有大標；support_keyword 只有兩個關鍵字，寫在「模板 × 關鍵字」表。"""
     flash = LIB.flash
-    templates = [*flash.minor, *flash.major, *flash.extra_major, *flash.transforms]
-    assert len(templates) == 86
-    missing = [t.id for t in templates if t.headline_zh is None]
+    heads = [(t.id, t.headline_zh) for t in flash.minor]
+    heads += [(t.id, t.headline_zh) for t in flash.major]
+    heads += [(t.id, t.headline_zh) for t in flash.extra_major]
+    heads += [(t.id, t.headline_zh) for t in flash.transforms]
+    assert len(heads) == 86
+    missing = [template for template, headline in heads if headline is None]
     assert missing == ["support_keyword"]
     for keyword in ("wet", "concealed"):
         assert flash.headline("support_keyword", keyword) is not None
 
 
 @pytest.mark.parametrize(
-    ("template", "category", "source", "keyword", "element", "want"),
+    "case",
     [
         ("area_plus", "area", "minor", None, None, "範圍變大 1 格"),
         ("support_area_wide", "support", "minor", None, None, "光環範圍變大 2 格"),
@@ -68,14 +71,8 @@ def test_every_template_has_a_headline() -> None:
         ("to_stance", "transform", "transform", None, None, "變成姿態：進入後一直生效，直到你取消"),
     ],
 )
-def test_headlines(
-    template: str,
-    category: str,
-    source: str,
-    keyword: str | None,
-    element: str | None,
-    want: str,
-) -> None:
+def test_headlines(case: tuple[str, str, str, str | None, str | None, str]) -> None:
+    template, category, source, keyword, element, want = case
     got = _headline(template, category, source=source, keyword=keyword, element=element)
     assert got == want
 
