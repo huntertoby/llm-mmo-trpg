@@ -853,6 +853,24 @@ headlines:
 condition_zh:
   target_collided: 目標這回合被[[kw:collision|撞過]]才有
 
+# 戰場變奏（major_battle_variant）的說明句（TXT-2，玩法 PM 11-13 定稿）。模板 say_zh 帶 {terrain} 時，條件查得到就依
+# subject 換句型（caster：看施放者的地形；target：看目標點的地形），{terrain} 填 where_zh（動作片語，不帶主詞）；
+# 查不到照模板的句子、{terrain} 填 somewhere_zh。condition 是 skill_composer.yaml 的 variant.conditions ID。
+battle_variant:
+  caster_say_zh: "你{terrain}施放時，這招自動換成另一種打法。"
+  target_say_zh: "目標{terrain}時，這招自動換成另一種打法。"
+  somewhere_zh: 在特定地形
+  places:
+    - {condition: wet, where_zh: 站在水中, subject: caster}
+    - {condition: icy, where_zh: 站在冰上, subject: caster}
+    - {condition: high, where_zh: 站在高處, subject: caster}
+    - {condition: wall, where_zh: 背靠牆壁, subject: caster}
+    - {condition: oil, where_zh: 站在油上, subject: target}
+    - {condition: puddle, where_zh: 站在水窪裡, subject: target}
+
+# major_intensify 原本不會造成該關鍵字、引擎補上製造效果時的大標（原本就會造成時用模板的 headline_zh：更持久）。
+intensify_new_headline_zh: "專精{keyword}：這招開始會造成{keyword}"
+
 # 說明卡（9.2）。數字一律用變數，由伺服器照資料填：{ap_per_turn}、{ap_carry_max}（rules/core.yaml）、{water_rounds}（surfaces.yaml
 # water 的 duration）、{wet_heal_percent}（core.yaml wet_heal_permille）；武器傷害 {dice}（手上武器的骰）、{attrs}（縮放屬性）、
 # {times}（這一列的倍率）、{bonus}（「目前 +3」：屬性 × 普攻倍率，主角目前的值，捨去照卡片算法句）。狀態、關鍵字、形狀照內容原句（status:/kw:/shape: 讀各自的

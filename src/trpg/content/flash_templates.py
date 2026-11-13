@@ -34,6 +34,7 @@ from trpg.content.skills.modifiers import ModifierChange
 
 __all__ = [
     "FLASH_KINDS",
+    "BattleVariantText",
     "CompleteSkillRules",
     "ExtraMajorTemplate",
     "FlashCategory",
@@ -48,6 +49,7 @@ __all__ = [
     "PriceRule",
     "TransformTarget",
     "TransformTemplate",
+    "VariantPlace",
 ]
 
 type FlashKind = Literal["active", "passive", "reaction", "stance", "modifier"]
@@ -485,6 +487,46 @@ class FlashTerm(ContentModel):
     text_zh: str = Field(min_length=1)
 
 
+class VariantPlace(ContentModel):
+    """戰場變奏的一個條件寫成白話（TXT-2）：``condition`` 是 ``skill_composer.yaml`` 的
+    ``variant.conditions`` ID；``where_zh`` 是動作片語（「站在水中」，不帶主詞）；``subject`` 是
+    條件看誰的地形（``caster``：施放者，``target``：目標點），決定用哪一個句型。"""
+
+    condition: str = Field(pattern=ID_PATTERN)
+    where_zh: str = Field(min_length=1)
+    subject: Literal["caster", "target"]
+
+
+class BattleVariantText(ContentModel):
+    """戰場變奏（``major_battle_variant``）選項的說明句（TXT-2，玩法 PM 11-13 定稿；原寫死在
+    ``api/flash_text.py``）。
+
+    模板的 ``say_zh`` 帶 ``{terrain}`` 時：條件查得到 → 依 ``subject`` 換成 ``caster_say_zh``／
+    ``target_say_zh``，``{terrain}`` 填 ``where_zh``；查不到 → 照模板的句子、``{terrain}`` 填
+    ``somewhere_zh``。"""
+
+    caster_say_zh: str = Field(min_length=1)
+    target_say_zh: str = Field(min_length=1)
+    somewhere_zh: str = Field(min_length=1)
+    places: tuple[VariantPlace, ...] = ()
+
+    @model_validator(mode="after")
+    def _check(self) -> BattleVariantText:
+        for name in ("caster_say_zh", "target_say_zh"):
+            if "{terrain}" not in getattr(self, name):
+                raise ValueError(f"戰場變奏說明句 {name} 必須帶 {{terrain}}")
+        dup = sorted(k for k, n in Counter(p.condition for p in self.places).items() if n > 1)
+        if dup:
+            raise ValueError(f"戰場變奏條件重複：{', '.join(dup)}")
+        return self
+
+    def place(self, condition_id: str) -> VariantPlace | None:
+        return next((p for p in self.places if p.condition == condition_id), None)
+
+    def say(self, place: VariantPlace) -> str:
+        return self.caster_say_zh if place.subject == "caster" else self.target_say_zh
+
+
 class SupportSkillRule(ContentModel):
     """「輔助技」的判定（「輔助」類 ``support_only`` 用；3W-R2 從程式移到資料）：沒有
     ``harm_effects``，而且有 ``help_effects``，或有作用於友方（``affects: allies``）的
@@ -514,6 +556,11 @@ class FlashTable(ContentModel):
     condition_zh: dict[str, str] = Field(default_factory=dict)
     """新加的條件傷害「（……才有）」的白話（FL-1b；條件 ID → 句子，可帶術語標記）；沒有的退回條件的
     一句話。"""
+    battle_variant: BattleVariantText | None = None
+    """戰場變奏的說明句與條件片語（TXT-2）；``None`` 時 ``{terrain}`` 原樣留著（內容漏寫看得出來）。"""
+    intensify_new_headline_zh: str | None = None
+    """``major_intensify`` 原本不會造成該關鍵字、引擎補上製造效果時的大標（TXT-2 從
+    ``api/flash_text.py`` 搬來；可帶 ``{keyword}``）；``None`` 時照模板的 ``headline_zh``。"""
     stance_ladders: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """元素姿態的階梯（3W-2b）：元素 ID（``physical`` 也有）→ 由弱到強的姿態狀態 ID。轉型優先
     轉成同元素的姿態；姿態的「費用」「修正」類小變化在同一階梯上換級（維持費 ±1 搭配效果升降）。"""
