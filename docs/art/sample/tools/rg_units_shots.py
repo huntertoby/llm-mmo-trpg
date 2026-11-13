@@ -45,8 +45,18 @@ DIALOGS = [
     ("dialog-1600", (1600, 900), "w=1600&v=A&e=wolf", "shots/rg-units/9-dialog-1600-wolf-v3.png"),
     ("dialog-800", (800, 600), "w=800&v=A&e=lord", "shots/rg-units/10-dialog-800-lord-v3.png"),
     ("dialog-800-wolf", (800, 600), "w=800&v=A&e=wolf", "shots/rg-units/14-dialog-800-wolf-v3.png"),
-    ("dialog-1600-lord", (1600, 900), "w=1600&v=A&e=lord", "shots/rg-units/15-dialog-1600-lord-v3.png"),
-    ("dialog-1600-scar", (1600, 900), "w=1600&v=A&e=scar", "shots/rg-units/13-dialog-1600-scar-v2.png"),
+    (
+        "dialog-1600-lord",
+        (1600, 900),
+        "w=1600&v=A&e=lord",
+        "shots/rg-units/15-dialog-1600-lord-v3.png",
+    ),
+    (
+        "dialog-1600-scar",
+        (1600, 900),
+        "w=1600&v=A&e=scar",
+        "shots/rg-units/13-dialog-1600-scar-v2.png",
+    ),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')
