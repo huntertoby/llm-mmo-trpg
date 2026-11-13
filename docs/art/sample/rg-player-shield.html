@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>#163 護陣：兩種大盾給玩家用</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}pre#audit{font-size:12px;color:#d8ccb8}
+</style></head>
+<body>
+<h1>#163 護陣：雲紋碑盾、熔殼立殼給玩家用（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-13（docs/design/08-裝備.md 8.11 護陣；紀錄 RG樣張.md 第 10 節）。分段：
+<a href="?part=dolls&mute=1">主角四方向</a><a href="?part=lineup&mute=1">和敵人版並排（48 格）</a><a href="?part=materials&f=sect_great&mute=1">雲紋碑盾材質</a><a href="?part=materials&f=molten_shell&mute=1">熔殼立殼材質</a><a href="?part=icons&mute=1">圖示並排</a><a href="?part=t1&mute=1">圖示真 1 倍</a><a href="?part=bag&mute=1">背包模擬</a><a href="?part=scene&w=1600&mute=1">戰場 1600</a><a href="?part=scene&w=800&mute=1">戰場 800</a><a href="?part=parts&mute=1">部件特寫</a><a href="?part=audit&mute=1">自查</a>。每段畫成一張圖（腳本從 #out 取出）。</p>
+<div id="sheet"></div>
+<pre id="audit"></pre>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script><script src="cloudTiles.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="idleWeapons.js"></script><script src="qNpc.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="rgUnits.js"></script><script src="rgPlayerShield.js"></script>
+<script>
+const OO = OccludeOutline, RU = RGUnits, PS = RGPlayerShield, QW = QIconsWeapons, T = OO.T, P = new URLSearchParams(location.search), PART = P.get("part") || "dolls";
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, REG = (id) => R4.REGIONS.find((r) => r.id === id);
+const ASH = REG("ashen_waste");
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", TAU = Math.PI * 2;
+const tile = (region, id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, region, id, 0, 0, gx, gy); ctx.restore(); };
+const CLOUD = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
+const ASHG = (ctx, x, y, gx, gy) => tile(ASH, (gx + gy * 3) % 5 === 0 ? "dirt" : "stone")(ctx, x, y, gx, gy);
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+const MATS = ["iron", "steel", "copper", "silver", "gold"], MZ = QW.MAT_ZH;
+const FZ = { sect_great: "雲紋碑盾", molten_shell: "熔殼立殼" };
+
+// ---------------- 單位 ----------------
+/** 玩家主角（hero_fighter：板甲、劍、藍披風），副手換成新形制（look＝{ material, keywords } 或 { enemy: true }）或現行副手。 */
+const hero = (off) => ({ look: TP.hero_fighter.look, gear: { ...TP.hero_fighter.gear, off_hand: off } });
+const heroPS = (form, look = { material: "iron" }) => hero(PS.offHand(form, look));
+const heroOld = (kind, form, material) => hero({ slot: "off_hand", kind, form, material });
+const SHELL_SPEC = RU.moltenShellTrooper("a"), BEETLE = { body: "crawler", variant: "beetle", material: "magma" };
+/** 一隻人形：新形制走 PS.stampDoll、敵人大盾走 RU.stampDoll（兩個代理不會同時掛）。 */
+function drawUnit(ctx, u, view, x, y, k, west, dpr, pose) {
+  if (u.creature) { QCreature.stamp(skipGround(ctx, u.creature), u.creature, x, y, k, west); return; }
+  if (pose) QDoll.setPose(pose);
+  try { (u.gear?.off_hand?.rg ? RU.stampDoll : PS.stampDoll)(ctx, u, view, x, y, k, west, { dpr }); } finally { if (pose) QDoll.setPose(null); }
+}
+const idle = (u) => IdleWeapons.IDLE.sword_shield.pose(u);
+
+// ---------------- 格子 ----------------
+function cellCanvas(ground, draw, res = 1, padX = 12, gx = 3, gy = 3, up = 22) {
+  const W = T + padX * 2, H = T + up, c = document.createElement("canvas"); c.width = Math.round(W * res); c.height = Math.round(H * res);
+  const g = c.getContext("2d"); g.scale(res, res); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); g.translate(padX, up);
+  for (const i of [-1, 0, 1]) { g.save(); g.beginPath(); g.rect(i * T, 0, T, T); g.clip(); ground(g, i * T, 0, gx + i, gy); g.restore(); }
+  g.strokeStyle = "rgba(0,0,0,0.25)"; g.lineWidth = 1 / res; for (const x of [0, T]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, T); g.stroke(); }
+  draw(g, res); return c;
+}
+const ringAt = (g, team, kind = "doll") => OO.drawRing(g, { team, x: 0, y: 0, kind, spec: { elite: false }, hero: team === "ally" });
+const feet = () => ({ x: T / 2, y: T / 2 + T * 0.23 });
+/** 一格：u＝單位、team＝ally（玩家，藍環）｜enemy。 */
+function unitCell(u, view, west, opt = {}) {
+  return cellCanvas(opt.ground ?? CLOUD, (g, res) => { ringAt(g, opt.team ?? "ally", u.creature ? "creature" : "doll"); const f = feet(); drawUnit(g, u, view, f.x, f.y, OO.K, west, Math.max(2, res), u.creature ? null : opt.pose ?? idle(0)); }, opt.res ?? 1);
+}
+function skipGround(ctx, spec) {
+  let left = spec.elite ? 7 : 2; const PAINT = new Set(["fill", "stroke", "fillRect", "strokeRect", "fillText", "strokeText"]);
+  return new Proxy(ctx, { get(t, p) { if (PAINT.has(p)) return (...a) => { if (left > 0) { left -= 1; return undefined; } return t[p](...a); }; const v = Reflect.get(t, p); return typeof v === "function" ? v.bind(t) : v; }, set(t, p, v) { t[p] = v; return true; } });
+}
+function noPaint(ctx) { const PAINT = new Set(["fill", "stroke", "fillRect", "strokeRect"]); return new Proxy(ctx, { get(t, p) { if (PAINT.has(p)) return () => undefined; const v = Reflect.get(t, p); return typeof v === "function" ? v.bind(t) : v; }, set(t, p, v) { t[p] = v; return true; } }); }
+const nn = (c, Z, cap) => ({ cv: c, w: c.width * Z, h: c.height * Z, nn: true, cap });
+const plain = (c, cap, s = 1) => ({ cv: c, w: c.width * s, h: c.height * s, cap });
+/** 剪影格（透明底畫單位 → 單色米白 → 墊灰底）。 */
+function silCell(u, view, west, res = 2) {
+  const W = T + 24, H = T + 22, c = document.createElement("canvas"); c.width = W * res; c.height = H * res; const g = c.getContext("2d"); g.scale(res, res); g.translate(12, 22);
+  const f = feet(); if (u.creature) QCreature.stamp(noPaint(g), u.creature, f.x, f.y, OO.K, west); else drawUnit(g, u, view, f.x, f.y, OO.K, west, Math.max(2, res), idle(0));
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = "#f2e6c8"; g.fillRect(0, 0, c.width, c.height);
+  const o = document.createElement("canvas"); o.width = c.width; o.height = c.height; const og = o.getContext("2d"); og.fillStyle = "#3a3f4a"; og.fillRect(0, 0, o.width, o.height); og.drawImage(c, 0, 0); return o;
+}
+
+// ---------------- 拼圖、輸出（同 rg-units.html） ----------------
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; const cw = Math.max(w, c.cap ? (b.capW ?? 110) : 0); if (x + cw > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; } const caps = c.cap ? wrap(c.cap, cw, 12) : []; items.push({ c, x, w, h, caps }); x += cw + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      if (it.x + it.w > W) console.log("ERR cell overflow " + it.x + "+" + it.w);
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/png") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width; document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+}
+const PARTS = {};
+
+// ================= 1. 主角四方向＋待機 =================
+PARTS.dolls = () => {
+  const V = [["front", false, "正面"], ["side", false, "側面朝東"], ["side", true, "側面朝西"], ["back", false, "背面"]];
+  const blocks = [{ title: "玩家主角拿兩種新塔盾（鐵，預設材質）：四方向＋劍盾待機 u＝0／0.5——一格 48，真 1 倍 ×1（上）、最近鄰 ×4、向量 ×4" }];
+  for (const form of ["sect_great", "molten_shell"]) {
+    const one = [], zoom = [], vec = [];
+    for (const [v, w, zh] of V) for (const u of [0, 0.5]) {
+      const c1 = unitCell(heroPS(form), v, w, { pose: idle(u) });
+      one.push(plain(c1, `${zh} u${u}`)); zoom.push(nn(c1, 4)); vec.push(plain(unitCell(heroPS(form), v, w, { pose: idle(u), res: 4 }), null));
+    }
+    blocks.push({ note: `${FZ[form]}（${form}）` }, { cells: one, gap: 18, capW: 60 }, { cells: zoom.slice(0, 4), gap: 8 }, { cells: zoom.slice(4), gap: 8 }, { cells: vec.slice(0, 4), gap: 8 }, { cells: vec.slice(4), gap: 8 });
+  }
+  publish(sheet(1640, blocks));
+};
+
+// ================= 2. 和敵人版並排（48 格） =================
+PARTS.lineup = () => {
+  const L = [
+    ["玩家 雲紋碑盾（鐵）", heroPS("sect_great"), "ally", CLOUD],
+    ["敵人 持盾弟子", RU.sectShieldDisciple("A"), "enemy", CLOUD],
+    ["玩家 雲紋碑盾（敵人配色＝對照）", heroPS("sect_great", { enemy: true }), "ally", CLOUD],
+    ["玩家 熔殼立殼（鐵）", heroPS("molten_shell"), "ally", ASHG],
+    ["敵人 熔殼甲兵", { creature: SHELL_SPEC }, "enemy", ASHG],
+    ["玩家 熔殼立殼（敵人配色＝對照）", heroPS("molten_shell", { enemy: true }), "ally", ASHG],
+    ["玩家 塔盾（現行，鐵）", heroOld("shield_kite", "tower", "iron"), "ally", CLOUD],
+    ["玩家 鳶盾（現行，鐵）", heroOld("shield_kite", "kite", "iron"), "ally", CLOUD],
+    ["玩家 木圓盾（現行）", heroOld("shield_round", "wood", "wood"), "ally", CLOUD],
+  ];
+  const blocks = [{ title: "並排：玩家版（藍環）與敵人版（紅環）、現行三種盾；一格 48 真 1 倍（上）、最近鄰 ×3（中）、剪影 ×2（下）" }];
+  for (const [view, wP, wE, zh] of [["front", false, false, "正面"], ["side", false, true, "側面（玩家朝東、敵人朝西＝面對面）"]]) {
+    const cell = ([, u, team, gr]) => unitCell(u, view, team === "enemy" ? wE : wP, { team, ground: gr });
+    blocks.push({ note: zh }, { cells: L.map((x) => plain(cell(x), x[0])), gap: 30, capW: 92 },
+      { cells: L.map((x) => nn(cell(x), 3)), gap: 6 }, { cells: L.map(([, u, team]) => nn(silCell(u, view, team === "enemy" ? wE : wP), 1)), gap: 6 });
+  }
+  publish(sheet(2100, blocks));
+};
+
+// ================= 3. 材質換色 =================
+PARTS.materials = () => {
+  const form = P.get("f") || "sect_great", isShell = form === "molten_shell";
+  const rows = [...MATS.map((m) => [MZ[m], { material: m }]), ["鐵＋點燃", { material: "iron", keywords: ["ignite"] }], ["鋼＋冰凍", { material: "steel", keywords: ["frozen"] }], ["敵人配色（對照）", { enemy: true }]];
+  if (isShell) for (const k of [0, 0.6]) for (const m of ["iron", "gold"]) rows.push([`${MZ[m]}・殼板混玄武岩 ${k}（對照；推薦 ${PS.SHELL_K}）`, { material: m, k }]);
+  const ground = isShell ? ASHG : CLOUD;
+  const blocks = [{ title: `${FZ[form]}：各材質（紙娃娃正面、側面朝東 1 倍＋×3；裝備格 48 圖示 ×2 向量；32 真 1 倍 ×3）` },
+    { note: isShell ? "跟材質走：殼板（材質主色往玄武岩 #4a3631 混 0.35）、迎光片、下片、內面、殼緣（由殼板算）。固定：殼縫紅光 #ff6a1a＋黃芯 #ffd04a、皮帶。" : "跟材質走：盾面（材質主色，元素關鍵字照 palette 混色）；盾邊（盾面亮度 <150 配月白 #dfe4e2，≥150 配材質暗色再暗 10%）、盾骨（盾邊暗 10%）。固定：雲紋章（月白圓章、青色三峰、月白雲、朱紅點）、銅釘 #e8bb48（盾面接近金色時改盾邊色）、盾背木板與皮帶。" }];
+  for (const [zh, look] of rows) {
+    const u = heroPS(form, look), pal = PS.FORMS[form].pal(look);
+    const fr = unitCell(u, "front", false, { ground }), sd = unitCell(u, "side", false, { ground });
+    const ic48 = PS.iconCanvas(form, look, 48, 2), ic32 = PS.iconCanvas(form, look, 32, 1, { res: 1 });
+    const colors = isShell ? `殼板 ${pal.plate}・迎光 ${pal.lit}・內面 ${pal.inner}` : `盾面 ${pal.face}・盾邊 ${pal.rim}・銅釘 ${pal.rivet}${pal.ring ? "・圓章圈 " + pal.ring : ""}`;
+    blocks.push({ cells: [plain(fr, zh), plain(sd, null), nn(fr, 3), nn(sd, 3), plain(ic48, colors), nn(ic32, 3, "32 真 1 倍 ×3")], gap: 14, capW: 72 });
+  }
+  publish(sheet(1500, blocks));
+};
+
+// ================= 4. 圖示並排（和現行塔盾、鳶盾、圓盾） =================
+const OLD = [["塔盾", { kind: "kite_shield", form: "tower", material: "iron" }], ["鳶盾", { kind: "kite_shield", form: "kite", material: "iron" }], ["木圓盾", { kind: "round_shield", form: "wood", material: "wood" }], ["包鐵圓盾", { kind: "round_shield", form: "banded", material: "iron" }]];
+const ICONS = () => [...OLD.map(([zh, look]) => ({ zh: zh + "（現行 Q 版）", cv: (px, z, o) => QW.canvas(look, px, z, o), d: () => QW.def(look, true) })),
+  ...["sect_great", "molten_shell"].map((f) => ({ zh: FZ[f] + "（新）", cv: (px, z, o) => PS.iconCanvas(f, { material: "iron" }, px, z, { frame: o.frame ?? "gear", res: o.res }), d: () => PS.iconDef(f, { material: "iron" }) }))];
+/** 剪影（只留外形）：圖樣畫成米白、墊深灰。 */
+function silIcon(def, px) { const cv = QIcons.render(def, px, 2, {}); const g = cv.getContext("2d"); g.globalCompositeOperation = "source-in"; g.fillStyle = "#f2e6c8"; g.fillRect(0, 0, cv.width, cv.height); const o = document.createElement("canvas"); o.width = cv.width; o.height = cv.height; const og = o.getContext("2d"); og.fillStyle = "#3a3f4a"; og.fillRect(0, 0, o.width, o.height); og.drawImage(cv, 0, 0); return o; }
+PARTS.icons = () => {
+  const L = ICONS(), blocks = [{ title: "圖示並排（全部鐵；木圓盾是木）：裝備格 64／48／42／32、米色圓章 28／24／20（2 倍內部解析度，向量 ×2）" }];
+  blocks.push({ note: "裝備格 64、48、42、32（每格向量 ×2）" });
+  for (const px of [64, 48, 42, 32]) blocks.push({ cells: L.map((it) => plain(it.cv(px, 2, { frame: "gear" }), px === 64 ? it.zh : null)), gap: 16, capW: 130 });
+  blocks.push({ note: "米色圓章 28、24、20（向量 ×3）" });
+  for (const px of [28, 24, 20]) blocks.push({ cells: L.map((it) => plain(it.cv(px, 3, { frame: "badge" }), null)), gap: Math.max(16, 130 + 16 - px * 3) });
+  blocks.push({ note: "只留剪影（圖樣 48，×2）：新的兩面和現行四面的外形要分得開" }, { cells: L.map((it) => plain(silIcon(it.d(), 48), it.zh)), gap: 34, capW: 96 });
+  publish(sheet(1100, blocks));
+};
+PARTS.t1 = () => {
+  const L = ICONS(), blocks = [{ title: "真 1 倍（canvas＝CSS px）最近鄰 ×4：裝備格 32、背包 42、圓章 20；上排現行四面＋新兩面（鐵），下面新兩面各材質" }];
+  for (const [px, fr] of [[32, "gear"], [42, "gear"], [20, "badge"]]) blocks.push({ note: `${fr === "gear" ? "裝備格" : "圓章"} ${px}` }, { cells: L.map((it) => nn(it.cv(px, 1, { frame: fr, res: 1 }), 4, it.zh)), gap: 12, capW: 140 });
+  for (const f of ["sect_great", "molten_shell"]) {
+    blocks.push({ note: `${FZ[f]}：鐵、鋼、銅、銀、金、鐵＋點燃、鋼＋冰凍（32 裝備格、20 圓章，真 1 倍 ×4）` });
+    const looks = [...MATS.map((m) => ({ material: m })), { material: "iron", keywords: ["ignite"] }, { material: "steel", keywords: ["frozen"] }];
+    blocks.push({ cells: looks.map((lk) => nn(PS.iconCanvas(f, lk, 32, 1, { res: 1 }), 4)), gap: 12 }, { cells: looks.map((lk) => nn(PS.iconCanvas(f, lk, 20, 1, { res: 1, frame: "badge" }), 4)), gap: 60 });
+  }
+  publish(sheet(1280, blocks));
+};
+// ================= 5. 背包模擬（42 格，真 1 倍＋×3） =================
+PARTS.bag = () => {
+  const items = [["sect_great", { material: "iron" }], ["kite_shield", { form: "tower", material: "iron" }], ["molten_shell", { material: "iron" }], ["kite_shield", { form: "kite", material: "steel" }], ["round_shield", { form: "banded", material: "iron" }],
+    ["sect_great", { material: "gold" }], ["molten_shell", { material: "copper" }], ["sword", { form: "straight", material: "steel" }], ["kite_shield", { form: "tower", material: "silver" }], ["sect_great", { material: "silver" }],
+    ["round_shield", { form: "wood", material: "wood" }], ["molten_shell", { material: "silver" }], ["tome", { form: "book", material: "leather" }], ["sect_great", { material: "steel" }], ["kite_shield", { form: "tower", material: "gold" }]];
+  const cell = 46, C = 5, R = Math.ceil(items.length / C), cv = document.createElement("canvas"); cv.width = C * cell + 8; cv.height = R * cell + 8;
+  const g = cv.getContext("2d"); g.fillStyle = "#1b1d24"; g.fillRect(0, 0, cv.width, cv.height);
+  items.forEach(([k, lk], i) => { const x = 4 + (i % C) * cell + 2, y = 4 + Math.floor(i / C) * cell + 2; g.save(); g.translate(x, y);
+    if (PS.FORMS[k]) PS.paintIcon(g, k, lk, 42, 1, { frame: "gear" }); else QW.paint(g, { kind: k, ...lk }, 42, 1, { frame: "gear" }); g.restore(); });
+  publish(sheet(1200, [{ title: "背包模擬（背包格 42，真 1 倍；右邊最近鄰 ×3）：新兩面混在塔盾、鳶盾、圓盾、劍、書之間" },
+    { note: "排法（左上起一列 5 格）：碑盾鐵｜塔盾鐵｜熔殼鐵｜鳶盾鋼｜包鐵圓盾／碑盾金｜熔殼銅｜直劍鋼｜塔盾銀｜碑盾銀／木圓盾｜熔殼銀｜典籍｜碑盾鋼｜塔盾金" },
+    { cells: [plain(cv, "真 1 倍"), nn(cv, 3, "×3")], gap: 30 }]));
+};
+
+// ================= 6. 戰場情境 =================
+function sceneCanvas(sc, S, res = 1) {
+  const up = 30, W = sc.cols * T, H = sc.rows * T + up, cv = document.createElement("canvas"); cv.width = Math.round(W * S * res); cv.height = Math.round(H * S * res);
+  const g = cv.getContext("2d"); const xf = () => g.setTransform(S * res, 0, 0, S * res, 0, up * S * res);
+  xf(); g.fillStyle = "#14161f"; g.fillRect(0, -up, W, H);
+  for (let y = 0; y < sc.rows; y++) for (let x = 0; x < sc.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); sc.ground(g, x * T, y * T, x, y); g.restore(); }
+  g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / (S * res); for (let y = 0; y <= sc.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(W, y * T); g.stroke(); } for (let x = 0; x <= sc.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, sc.rows * T); g.stroke(); }
+  for (const u of [...sc.units].sort((a, b) => a.y - b.y || a.x - b.x)) {
+    xf(); const isC = !!u.u.creature;
+    OO.drawRing(g, { team: u.team ?? "enemy", x: u.x, y: u.y, kind: isC ? "creature" : "doll", spec: { elite: false }, hero: u.hero });
+    const f = OO.feetOf({ x: u.x, y: u.y });
+    drawUnit(g, u.u, u.view ?? "side", f.x, f.y, OO.K, !!u.west, Math.max(2, S * res), isC || u.u.look === undefined ? null : idle(0));
+    const c = OO.centerOf({ x: u.x, y: u.y }), w = T * 0.8, hy = c.y + T * 0.36;
+    g.fillStyle = "#000"; g.fillRect(c.x - w / 2, hy, w, 5); g.fillStyle = (u.hp ?? 1) > 0.5 ? "#4cd964" : "#ffcc00"; g.fillRect(c.x - w / 2, hy, w * (u.hp ?? 1), 5);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0); return cv;
+}
+const TPU = (t) => TP[t];
+const SCENES = {
+  cloud: { zh: "雲嶺：主角拿雲紋碑盾（鐵，上排）、另一名隊友拿金色碑盾（下排），各護在弓手、法師旁；右邊敵方持盾弟子護雲鶴使", cols: 8, rows: 4, ground: CLOUD, units: [
+    { u: heroPS("sect_great"), x: 2, y: 1, team: "ally", hero: true }, { u: TPU("hero_archer"), x: 1, y: 1, team: "ally" },
+    { u: heroPS("sect_great", { material: "gold" }), x: 2, y: 3, team: "ally" }, { u: TPU("hero_mage"), x: 1, y: 3, team: "ally" },
+    { u: RU.sectShieldDisciple("A"), x: 5, y: 1, west: true }, { u: QNpc.prep(QNpc.MONKS.find((m) => m[0] === "雲鶴使")[2]).q, x: 6, y: 1, west: true },
+    { u: QNpc.prep(QNpc.MONKS.find((m) => m[0] === "持劍弟子")[2]).q, x: 5, y: 3, west: true } ] },
+  ash: { zh: "荒原：主角拿熔殼立殼（鐵，上排）、隊友拿銀色熔殼（下排）；右邊敵方熔殼甲兵擋在噴岩龜前", cols: 8, rows: 4, ground: ASHG, units: [
+    { u: heroPS("molten_shell"), x: 2, y: 1, team: "ally", hero: true }, { u: TPU("hero_archer"), x: 1, y: 1, team: "ally" },
+    { u: heroPS("molten_shell", { material: "silver" }), x: 2, y: 3, team: "ally" }, { u: TPU("hero_mage"), x: 1, y: 3, team: "ally" },
+    { u: { creature: SHELL_SPEC }, x: 5, y: 1, west: true }, { u: { creature: { body: "shell", material: "magma", traits: ["volcano"] } }, x: 6, y: 1, west: true },
+    { u: { creature: BEETLE }, x: 5, y: 3, west: true } ] },
+};
+PARTS.scene = () => {
+  const w = +(P.get("w") ?? 1600), S = w === 800 ? S800 : S1600, blocks = [{ title: `戰場情境 ${w} 寬（地圖縮放 ${S.toFixed(2)}，一格 ${(T * S).toFixed(1)} px，真 1 倍）；下面裁新盾那一塊最近鄰 ×3` }];
+  for (const sc of Object.values(SCENES)) {
+    const cv = sceneCanvas(sc, S), x = Math.round(0.5 * T * S), cw = Math.round(6.5 * T * S), c = document.createElement("canvas"); c.width = cw; c.height = cv.height; c.getContext("2d").drawImage(cv, -x, 0);
+    blocks.push({ note: sc.zh }, { cells: [plain(cv, null)] }, { cells: [nn(c, w === 800 ? 3 : 2)] });
+  }
+  publish(sheet(w === 800 ? 1100 : 1400, blocks));
+};
+
+// ================= 7. 部件特寫（模型座標，向量 ×6，格線 2） =================
+PARTS.parts = () => {
+  const Z = 6, box = (w, h, ox, oy, draw) => { const c = document.createElement("canvas"); c.width = w * Z; c.height = h * Z; const g = c.getContext("2d"); g.fillStyle = "#3a3f4a"; g.fillRect(0, 0, c.width, c.height); g.scale(Z, Z); g.strokeStyle = "rgba(255,255,255,0.12)"; g.lineWidth = 1 / Z; for (let x = 0; x <= w; x += 2) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y <= h; y += 2) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } g.translate(ox, oy); g.strokeStyle = "rgba(255,120,120,0.7)"; g.beginPath(); g.moveTo(-1.5, 0); g.lineTo(1.5, 0); g.moveTo(0, -1.5); g.lineTo(0, 1.5); g.stroke(); draw(g); return c; };
+  const cells = [];
+  for (const [f, lk, zh] of [["sect_great", { material: "iron" }, "碑盾・鐵"], ["sect_great", { material: "silver" }, "碑盾・銀"], ["molten_shell", { material: "iron" }, "熔殼・鐵"], ["molten_shell", { material: "gold" }, "熔殼・金"]]) {
+    const F = PS.FORMS[f], pal = F.pal(lk);
+    for (const vw of ["front", "side", "back"]) cells.push({ cv: box(22, 32, 11, vw === "back" ? 13 : 20, (g) => F[vw](g, pal)), cap: `${zh}・${{ front: "正面", side: "側面", back: "背面" }[vw]}` });
+  }
+  publish(sheet(1700, [{ title: "部件特寫（qDoll 盾錨點座標＝紅十字，向量 ×6；格線 2 單位）" }, { cells, gap: 14, capW: 132 }]), "image/jpeg");
+};
+
+// ================= 8. 自查 =================
+function measure(def, px) {
+  const cv = QIcons.render(def, px, 96 / px, { ow: 0 }), g = cv.getContext("2d"), d = g.getImageData(0, 0, 96, 96).data;
+  let x0 = 96, y0 = 96, x1 = -1, y1 = -1, n = 0, L = 0, hi = 0;
+  for (let y = 0; y < 96; y++) for (let x = 0; x < 96; x++) { const i = (y * 96 + x) * 4; if (d[i + 3] < 128) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); const l = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; L += l; if (l >= 150) hi++; }
+  const u = 48 / 96; return { occ: (Math.max(x1 - x0 + 1, y1 - y0 + 1) * u) / 48, edge: Math.min(x0, y0, 95 - x1, 95 - y1) * u, lum: L / n, hi: hi / n };
+}
+function sameDraw(fa, fb, w, h, ox, oy) {
+  const mk = (fn) => { const c = document.createElement("canvas"); c.width = w * 6; c.height = h * 6; const g = c.getContext("2d"); g.scale(6, 6); g.translate(ox, oy); fn(g); return g.getImageData(0, 0, c.width, c.height).data; };
+  const A = mk(fa), B = mk(fb); let diff = 0; for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) diff++; return diff;
+}
+function sameDoll(ua, fa, ub, fb, view, west) {
+  const mk = (u, fn) => { const c = document.createElement("canvas"); c.width = 160; c.height = 200; const g = c.getContext("2d"); g.scale(2, 2); fn(g, u, view, 40, 90, OO.K, west, { dpr: 4 }); return g.getImageData(0, 0, 160, 200).data; };
+  const A = mk(ua, fa), B = mk(ub, fb); let diff = 0; for (let i = 0; i < A.length; i++) if (A[i] !== B[i]) diff++; return diff;
+}
+PARTS.audit = () => {
+  const out = [];
+  out.push("== 敵人配色是否和 rgUnits.js A 逐像素相同（不同的位元組數；0＝相同） ==");
+  const E = PS.FORMS.sect_great, ep = E.pal({ enemy: true });
+  for (const vw of ["front", "side", "back"]) out.push(`部件 ${vw}: ${sameDraw((g) => RU.VIEW_DRAW[vw](g, RU.SHIELDS.A), (g) => E[vw](g, ep), 22, 32, 11, vw === "back" ? 13 : 20)}`);
+  const ue = RU.sectShieldDisciple("A"), up = { look: ue.look, gear: { ...ue.gear, off_hand: PS.offHand("sect_great", { enemy: true }) } };
+  for (const [vw, w] of [["front", false], ["side", false], ["side", true], ["back", false]]) out.push(`持盾弟子整隻 ${vw}${w ? " 朝西" : ""}: ${sameDoll(ue, RU.stampDoll, up, PS.stampDoll, vw, w)}`);
+  out.push("", "== 圖示自查（圖樣 48 格、不含外框；佔框＝外接框長邊/48 ≥0.70；離格邊 ≥2.4 單位；深底亮度 ≥100、亮面(≥150) ≥5%） ==");
+  out.push("圖示 | 尺寸 | 佔框 | 離格邊 | 平均亮度 | 亮面% | 圓章縮放");
+  const looks = [...MATS.map((m) => [MZ[m], { material: m }]), ["鐵＋點燃", { material: "iron", keywords: ["ignite"] }], ["鋼＋冰凍", { material: "steel", keywords: ["frozen"] }]];
+  for (const f of ["sect_great", "molten_shell"]) for (const [zh, lk] of looks) for (const px of [48, 24]) {
+    const d = PS.iconDef(f, lk), m = measure(d, px);
+    out.push(`${FZ[f]}・${zh} | ${px} | ${m.occ.toFixed(2)} | ${m.edge.toFixed(1)} | ${m.lum.toFixed(0)}${m.lum < 100 ? " ✗" : ""} | ${(m.hi * 100).toFixed(1)}${m.hi < 0.05 ? " ✗" : ""} | ${d.meta.badge.toFixed(3)}`);
+  }
+  out.push("", "現行對照：");
+  for (const [zh, look] of OLD) { const d = QW.def(look, true), m = measure(d, 48); out.push(`${zh} | 48 | ${m.occ.toFixed(2)} | ${m.edge.toFixed(1)} | ${m.lum.toFixed(0)} | ${(m.hi * 100).toFixed(1)} | ${d.meta.badge.toFixed(3)}`); }
+  out.push("", "== 盾邊換色（盾面亮度 → 盾邊） ==");
+  for (const m of MATS) { const p = PS.sectPal({ material: m }); out.push(`${MZ[m]} 盾面 ${p.face}（亮度 ${PS.lum(p.face).toFixed(0)}）→ 盾邊 ${p.rim}、銅釘 ${p.rivet}`); }
+  const txt = out.join("\n"); document.getElementById("audit").textContent = txt; console.log("AUDIT\n" + txt);
+  const c = document.createElement("canvas"); c.width = 10; c.height = 10; publish(c);
+};
+try { (PARTS[PART] ?? PARTS.dolls)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
