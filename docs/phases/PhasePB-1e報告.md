@@ -9,7 +9,7 @@
 |---|---|
 | `be1d83232` | 主體：頭頂部位小格、南邊有人時 HUD 改掛 `hudTop`、選單滑過亮起＋狀態列／蓄力徽章 40%、5 格破壞演出＋「破」字、拂塵剪短／劍斷／氣海裂痕與氣旋、地上掉落物、「{部位} 破！」提前到命中 |
 | `40c253a27` | 金菱形不再蓋住部位小格；選單內說明卡點一下會選了那一列並送出攻擊（PB-1c 起的 bug）修好；測試 `battle/pb1eParts.test.ts`、`render/pb1eArt.test.ts`；開發頁 `client/dev/pb1e-gallery.html` |
-| （本報告） | 報告、上手筆記第 165～168 點、截圖 10 張 |
+| （本報告） | 報告、上手筆記第 166～169 點（合併時重編）、截圖 10 張 |
 
 主要檔案：`client/src/battle/partStrip.ts`（純函式）、`render/bossPartArt.ts`、`render/partLayer.ts`、`render/partBreakFx.ts`；改：`battle/drawModel.ts`（`UnitDraw.parts`／`partHudUp`／`partFx`）、`render/unitSprite.ts`、`render/battle/unitLayer.ts`、`render/rowLayers.ts`、`render/minMark.ts`、`render/qCore.ts`／`qSpec.ts`／`qWeapons.ts`／`qNpcHeld.ts`／`qNpc.ts`／`paperdoll.ts`、`render/resultEffects.ts`、`battle/specials.ts`（`partId`）、`battle/feedback.ts`／`playback.ts`、`ui/PartMenu.tsx`、`screens/BattleScreen.tsx`。
 
@@ -38,7 +38,7 @@
 
 ## 3. 瀏覽器實測（6.5.1；1600×900、800×600；無頭 Chrome `--mute-audio`、`?mute=1`）
 
-進場：自己的 `trpg serve --port 8796`（`TRPG_DEV_ROUTES=1`、存檔在 scratchpad）、無頭 Chrome CDP 127.0.0.1:9351；雲頂觀種子 1、`build_ranged`、工坊試玩（`skill_piercing_shot` 換 id），主角每回合往 (9,2) 走到第 3 輪（真人在 (2,1)、劍陣、只有拂塵可打）；開發選單「一鍵開局」那一次 `POST /api/battles` 用 CDP `Fetch` 換成這場（上手第 168 點）。
+進場：自己的 `trpg serve --port 8796`（`TRPG_DEV_ROUTES=1`、存檔在 scratchpad）、無頭 Chrome CDP 127.0.0.1:9351；雲頂觀種子 1、`build_ranged`、工坊試玩（`skill_piercing_shot` 換 id），主角每回合往 (9,2) 走到第 3 輪（真人在 (2,1)、劍陣、只有拂塵可打）；開發選單「一鍵開局」那一次 `POST /api/battles` 用 CDP `Fetch` 換成這場（上手第 169 點）。
 
 | 檢查 | 1600 | 800 |
 |---|---|---|
@@ -97,3 +97,10 @@ Python 沒改，沒跑 ruff／mypy／pytest。沒跑 `scripts/check.py`、沒跑
 4. 選單內說明卡點一下會選了那一列並送出攻擊——PB-1c 起就有、這段順手修了（`PartMenu` 列只認列裡面的點擊）；其他把 `<Hint>` 放在可點元素裡的地方可能有同樣問題，要不要排一次全面檢查。
 5. 「破」字記號在 800 寬沒有反向放大（約 5 px 半徑），要不要比照預告格記號加最小尺寸。
 6. 實機只拍得到劍陣階段（拂塵），氣海、長劍與南邊有人的 hudTop 只有開發頁；要不要另排佈局拍歸一階段。
+
+## 開發 PM 裁定（2026-11-14）
+
+- 接受。合併時上手筆記與 FL-1j 撞號，PB-1e 的四點重編為 166～169。
+- 待決 2（朝南三角形縮 0.6 倍）、3（800 狀態圖示維持、「1」「+1」不改）：照代決，請美術複驗時確認。
+- 待決 1（「拂塵 破！」浮字蓋住「破」字記號）、5（「破」字記號 800 寬要不要最小尺寸）、6（要不要另排實機拍歸一階段）轉美術 PM。
+- 待決 4：排一次小檢查——其他把說明卡放在可點元素裡的地方是否也會冒泡送出（記入交接待排 (e3q)）。
