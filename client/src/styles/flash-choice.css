@@ -91,10 +91,27 @@
 
 .fc-sub.inline {
   margin: 0;
+  flex: 1 1 auto;
   flex-wrap: nowrap;
   white-space: nowrap;
   gap: 5px;
   min-width: 0;
+}
+
+/* 窄版一行放不下（招名長、重閃）時只截招名，「已扣」標籤與 (i) 一定留在框內 */
+.fc-sub.inline b {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.fc-sub.inline .fc-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fc-sub.inline > :not(b) {
+  flex: none;
 }
 
 .fc-lock {
@@ -419,7 +436,7 @@
 }
 
 .fc-foot.reserve {
-  min-height: 91px;
+  min-height: 100px; /* 量到卸下選單＋兩行說明＋確定 99（移植需求約 91） */
 }
 
 .fc-foot-main {
@@ -638,7 +655,7 @@
   }
 
   .fc-foot.reserve {
-    min-height: 83px;
+    min-height: 86px; /* 量到 85（移植需求約 83） */
   }
 
   .fc-foot-main {

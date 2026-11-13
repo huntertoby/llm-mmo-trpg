@@ -79,7 +79,8 @@ function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; n
         </h2>
         <span className="fc-sub inline">
           <b>
-            「{name}」{pendingWhat(pending, true)}
+            <span className="fc-name">「{name}」</span>
+            {pendingWhat(pending, true)}
           </b>
           <Tag tone="open">{paidTag(pending)}</Tag>
           <InfoTip text={tip} label="說明" />

@@ -701,7 +701,7 @@ condition_zh:
 
 # 說明卡（9.2）。數字一律用變數，由伺服器照資料填：{ap_per_turn}、{ap_carry_max}（rules/core.yaml）、{water_rounds}（surfaces.yaml
 # water 的 duration）、{wet_heal_percent}（core.yaml wet_heal_permille）；武器傷害 {dice}（手上武器的骰）、{attrs}（縮放屬性）、
-# {times}（這一列的倍率）、{bonus}（屬性 × 普攻倍率，主角目前的值）。狀態、關鍵字、形狀照內容原句（status:/kw:/shape: 讀各自的
+# {times}（這一列的倍率）、{bonus}（「目前 +3」：屬性 × 普攻倍率，主角目前的值，捨去照卡片算法句）。狀態、關鍵字、形狀照內容原句（status:/kw:/shape: 讀各自的
 # description_zh），這裡有同 ID 的優先。
 terms:
   - id: range
@@ -724,7 +724,7 @@ terms:
     text_zh: 被推、拉、擊退時撞上牆、物件或別人而提前停下，每少走 1 格受一次撞擊傷害；撞到人兩邊都受傷。
   - id: weapon_damage
     title_zh: 武器傷害怎麼算
-    text_zh: "（武器骰 {dice} ＋ {attrs}加成）× {times}。屬性加成目前 {bonus}。"
+    text_zh: "（武器骰 {dice} ＋ {attrs}加成）× {times}。屬性加成{bonus}。"
   - id: scaling
     title_zh: 威力看哪個屬性
     text_zh: 力量、智力越高，這招越強（兩個取平均）。

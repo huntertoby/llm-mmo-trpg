@@ -176,7 +176,7 @@ def test_terms_fill_numbers_from_data() -> None:
     assert f"武器骰 {weapon.dice}" in damage
     assert "× 0.3" in damage
     bonus = KINDLE.scaling_value(lambda _a: 14, weapon) * core.basic_attack_attr_multiplier_permille
-    assert f"屬性加成目前 +{bonus / 1000:g}" in damage
+    assert f"屬性加成目前 +{bonus // 1000}" in damage
     statuses = LIB.ruleset.statuses.by_id()
     assert terms["status:burning"].text_zh == statuses["burning"].description_zh
     assert terms["kw:wet"].text_zh == LIB.keywords.by_id()["wet"].description_zh

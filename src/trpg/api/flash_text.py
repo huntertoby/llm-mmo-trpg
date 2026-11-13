@@ -22,6 +22,7 @@ from trpg.api.skill_cards import SkillCard
 from trpg.content.battle import WeaponDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.shared.bonus_text import bonus_text, plain_text
 from trpg.shared.types import Attribute, Surface
 from trpg.skillgen.flash_ops import cell_count
 from trpg.skillgen.flash_state import Variation
@@ -222,12 +223,12 @@ def _weapon_numbers(
     else:
         dice = str(weapon.dice) + (f"＋{weapon.flat}" if weapon.flat else "")
         attrs = weapon.skill_scaling_names_zh(skill.secondary_scaling_attr)
-    bonus = skill.scaling_value(ctx.attr, weapon) * core.basic_attack_attr_multiplier_permille
+    value = skill.scaling_value(ctx.attr, weapon)
     return {
         "dice": dice,
         "attrs": attrs,
         "times": f"{permille / _PERMILLE:g}",
-        "bonus": f"+{bonus / _PERMILLE:g}",
+        "bonus": plain_text(bonus_text(value, core.basic_attack_attr_multiplier_permille)),
         "ratio": ratio_zh(permille),
     }
 
