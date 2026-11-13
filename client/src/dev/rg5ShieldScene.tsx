@@ -6,6 +6,7 @@
 import { createRoot } from "react-dom/client";
 import type { BattleView, Glossary, HeroGearSlot, TileView, UnitView, WorldInventory, WorldBagItem } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
+import appearance from "../render/gearAppearance.json";
 import { buildDrawModel } from "../battle/drawModel";
 import { setGlossary } from "../battle/glossary";
 import { tile, unit } from "../battle/testFixtures";
@@ -23,11 +24,19 @@ const HERO = "unit_0001";
 const COLS = 6;
 const shield = (form: string, material: string, keywords: string[] = []): GearLook => ({ kind: "kite_shield", form, material, keywords, rarity: "rare" });
 const ready = (form: string): boolean => resolveGear(shield(form, "iron"), "off_hand").form === form;
+/** gearAppearance.json 還沒有這兩個形制時，開發頁在記憶體裡暫補（只改這一頁載入的 JSON 物件，不動檔案）；畫面上方註明。 */
+const PATCHED: string[] = [];
+for (const [id, zh] of [["sect_great", "雲紋碑盾"], ["molten_shell", "熔殼塔盾"]] as const) {
+  if (ready(id)) continue;
+  const k = (appearance.kinds as unknown as Array<{ id: string; forms: unknown[] }>).find((x) => x.id === "kite_shield");
+  k?.forms.push({ id, zh, materials: ["iron", "steel", "copper", "silver", "gold"], defaultMaterial: "iron" });
+  PATCHED.push(id);
+}
 
 function header(): HTMLElement {
   const p = document.createElement("div");
   p.id = "status";
-  p.textContent = `gearAppearance.json：sect_great ${ready("sect_great") ? "有" : "沒有（會退回鳶盾）"}、molten_shell ${ready("molten_shell") ? "有" : "沒有（會退回鳶盾）"}`;
+  p.textContent = `gearAppearance.json：${PATCHED.length === 0 ? "兩個形制都在（正式資料）" : `${PATCHED.join("、")} 不在，開發頁暫補（實機未看）`}；resolveGear：sect_great ${ready("sect_great") ? "認得" : "不認得"}、molten_shell ${ready("molten_shell") ? "認得" : "不認得"}`;
   document.body.appendChild(p);
   return p;
 }
