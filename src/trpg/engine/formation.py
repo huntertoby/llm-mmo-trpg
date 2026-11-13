@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from trpg.content.battle import FormationSpec, ShareDamageSpec, WardSpec
 from trpg.engine.rules.combat import PERMILLE
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 
 __all__ = [
@@ -45,7 +45,7 @@ def kin_in_range(
         if u.id != unit.id
         and u.team is unit.team
         and (kin_tag is None or u.has_tag(kin_tag))
-        and manhattan(u.xy, unit.xy) <= reach
+        and unit_dist(u, unit) <= reach
     ]
 
 
@@ -113,7 +113,7 @@ def ward_holders(state: BattleState, unit: UnitState) -> list[tuple[UnitState, W
             if (
                 spec is not None
                 and (spec.kin_tag is None or unit.has_tag(spec.kin_tag))
-                and manhattan(holder.xy, unit.xy) <= spec.range
+                and unit_dist(holder, unit) <= spec.range
             ):
                 found.append((holder, spec))
     return found

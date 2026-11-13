@@ -30,8 +30,8 @@ from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, UseSkill
 from trpg.engine.rules.combat import weapon_profile
 from trpg.engine.rules.facing import back_xy
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.forms import natural_charge
-from trpg.engine.rules.geometry import manhattan
 from trpg.engine.skills.targeting import resolve_effects, skill_profile
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.variants import target_point, varied_skill
@@ -204,4 +204,4 @@ def _part_reason(
 
 def _high_or_far(state: BattleState, attacker: UnitState, target: UnitState) -> bool:
     higher = state.tile(*attacker.xy).height - state.tile(*target.xy).height >= 1
-    return higher or manhattan(attacker.xy, target.xy) > FAR_BEYOND
+    return higher or unit_dist(attacker, target) > FAR_BEYOND

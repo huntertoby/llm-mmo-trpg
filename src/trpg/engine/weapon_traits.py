@@ -42,8 +42,9 @@ from trpg.engine.ids import ARMOR_BROKEN, BLEED, ENTANGLED, PRONE, REVEALED
 from trpg.engine.infusion import active_infusions, template_of
 from trpg.engine.maneuvers import contest
 from trpg.engine.rules.combat import attack_reach, is_concealed
+from trpg.engine.rules.footprint import dist_to, strike_tiles, unit_dist
 from trpg.engine.rules.forms import natural_bleed
-from trpg.engine.rules.geometry import XY, axis_direction, bresenham, has_line_of_sight, manhattan
+from trpg.engine.rules.geometry import XY, axis_direction, bresenham, has_line_of_sight
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute, Surface
 
@@ -86,7 +87,7 @@ def blessing_target(state: BattleState, attacker: UnitState) -> UnitState | None
     ]
     if not allies:
         return None
-    return min(allies, key=lambda u: (manhattan(u.xy, attacker.xy), u.id))
+    return min(allies, key=lambda u: (unit_dist(u, attacker), u.id))
 
 
 def _infusion_effects(
@@ -175,9 +176,9 @@ def chain_targets(
         for u in state.living_units()
         if u.team is not attacker.team
         and u.id != target.id
-        and manhattan(u.xy, target.xy) <= rule.chain_radius
+        and unit_dist(u, target) <= rule.chain_radius
     ]
-    near.sort(key=lambda u: (manhattan(u.xy, target.xy), u.id))
+    near.sort(key=lambda u: (unit_dist(u, target), u.id))
     return near[: rule.chain_targets]
 
 
@@ -321,10 +322,12 @@ def pierce_line_targets(
 ) -> list[UnitState]:
     """弩的穿透：從 ``attacker`` 經過 ``target`` 延伸的直線上，``target`` 後方、射程內、視線沒被擋住
     的敵人（由近到遠，最多 ``pierce_line`` 名）。直線是 Bresenham 直線的延伸，所以和普攻的視線
-    判斷一致；遇到擋住視線的地形就停止。"""
+    判斷一致；遇到擋住視線的地形就停止。巨型單位（GB-1b）從出招起點經過打中的那一格延伸，同一個
+    單位只算一次。"""
     limit = attacker.weapon.pierce_line
-    ax, ay = attacker.xy
-    dx, dy = target.xy[0] - ax, target.xy[1] - ay
+    origin, aim = strike_tiles(attacker, target)
+    ax, ay = origin
+    dx, dy = aim[0] - ax, aim[1] - ay
     distance = abs(dx) + abs(dy)
     if limit <= 0 or distance == 0:
         return []
@@ -333,18 +336,24 @@ def pierce_line_targets(
     end: XY = (ax + dx * k, ay + dy * k)
     found: list[UnitState] = []
     passed = False
-    for cell in bresenham(attacker.xy, end)[1:]:
-        if cell == target.xy:
+    for cell in bresenham(origin, end)[1:]:
+        if cell == aim:
             passed = True
             continue
         if not passed:
             continue
-        if not state.in_bounds(*cell) or manhattan(attacker.xy, cell) > reach:
+        if not state.in_bounds(*cell) or dist_to(attacker, cell) > reach:
             break
-        if not has_line_of_sight(state, attacker.xy, cell):
+        if not has_line_of_sight(state, origin, cell):
             break
         unit = state.unit_at(*cell)
-        if unit is not None and unit.alive and unit.team is not attacker.team:
+        if (
+            unit is not None
+            and unit.alive
+            and unit.team is not attacker.team
+            and unit.id != target.id
+            and unit not in found
+        ):
             found.append(unit)
             if len(found) >= limit:
                 break

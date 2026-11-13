@@ -33,6 +33,7 @@ from trpg.engine.events import (
     TrapTraced,
     TrapTriggered,
 )
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.rules.race import reveal_radius
 from trpg.engine.rules.statuses import effective_attribute
@@ -105,7 +106,7 @@ def detect_traps(ctx: Ctx, unit: UnitState) -> None:
         for t in ctx.state.traps
         if t.team is not unit.team
         and unit.team not in t.revealed_to
-        and abs(t.pos.x - unit.pos.x) + abs(t.pos.y - unit.pos.y) <= radius
+        and dist_to(unit, (t.pos.x, t.pos.y)) <= radius
     ]
     reveal_traps(ctx, unit, near)
 
@@ -124,7 +125,7 @@ def trace_traps(ctx: Ctx, unit: UnitState) -> None:
         if t.team is not team
         and team not in t.revealed_to
         and team not in t.traced_by
-        and abs(t.pos.x - unit.pos.x) + abs(t.pos.y - unit.pos.y) <= radius
+        and dist_to(unit, (t.pos.x, t.pos.y)) <= radius
     ]
     for trap in found:
         traced = replace(trap, traced_by=(*trap.traced_by, team))

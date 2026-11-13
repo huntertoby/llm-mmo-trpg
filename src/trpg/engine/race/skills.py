@@ -54,6 +54,7 @@ from trpg.engine.events import RaceSkillUsed, UnitSummoned
 from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT, RACE_STONEWALL
 from trpg.engine.lifecycle import dismiss_summon, make_unit
 from trpg.engine.rules.combat import concealment_problem
+from trpg.engine.rules.footprint import dist_to, touches, unit_dist
 from trpg.engine.rules.geometry import XY, axis_direction, has_line_of_sight, manhattan
 from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import is_deadly, is_standable
@@ -238,7 +239,7 @@ def _pull_problem(
     if target.team is unit.team:
         return "只能拉敵人"
     reach = _reach(skill)
-    distance = manhattan(unit.xy, target.xy)
+    distance = unit_dist(unit, target)
     if distance > reach:
         return f"目標超出射程：距離 {distance}，射程 {reach}"
     if distance <= 1:
@@ -263,7 +264,7 @@ def _hurl_problem(
     reach = effect.range or 0
     if "pushable" not in definition.tags:
         return f"{definition.name_zh}無法投擲（不是可推動的物件）"
-    distance = manhattan(unit.xy, obj.xy)
+    distance = dist_to(unit, obj.xy)
     if distance > reach:
         return f"物件超出投擲距離：距離 {distance}，上限 {reach}"
     if not has_line_of_sight(state, unit.xy, obj.xy):
@@ -330,7 +331,7 @@ def _leap_reach_problem(
         return f"{unit.name_zh} 不能移動"
     if not state.in_bounds(*dest):
         return f"超出地圖範圍：{dest}"
-    distance = manhattan(unit.xy, dest)
+    distance = dist_to(unit, dest)
     if distance == 0:
         return "不能跳到原地"
     reach = effect.range or 0
@@ -479,8 +480,8 @@ def _cone_targets(
     """錐形內的單位（不含施放者），由遠到近、同距離依 ID（遠的先推，近的才有位置可退）。"""
     size = skill.shape.size or 0
     cells = set(shapes.cone_tiles(state, unit.xy, direction, size))
-    found = [u for u in state.living_units() if u.id != unit.id and u.xy in cells]
-    return sorted(found, key=lambda u: (-manhattan(unit.xy, u.xy), u.id))
+    found = [u for u in state.living_units() if u.id != unit.id and touches(u, cells)]
+    return sorted(found, key=lambda u: (-unit_dist(unit, u), u.id))
 
 
 def spawn_decoy(ctx: Ctx, owner: UnitState, xy: XY, skill_id: str) -> UnitState:

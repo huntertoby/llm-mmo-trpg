@@ -19,6 +19,7 @@ from trpg.engine.gear.summon import gear_sacrifice_permille
 from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.reactions import perform_unit_attack
 from trpg.engine.rules.combat import PERMILLE, attack_problem
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.geometry import XY, manhattan
 from trpg.engine.runes import own_runes
 from trpg.engine.skills.conditions import Subject
@@ -134,7 +135,7 @@ def sacrifice_blast(cast: Cast, xy: XY, spec: EffectSpec) -> list[EffectBase]:
     caster = cast.caster
     scaled = cast.spell_scaled()
     near = sorted(
-        (u for u in cast.ctx.state.living_units() if manhattan(u.xy, xy) <= spec.radius),
+        (u for u in cast.ctx.state.living_units() if dist_to(u, xy) <= spec.radius),
         key=lambda u: u.id,
     )
     bonus = PERMILLE + gear_sacrifice_permille(cast.ctx.state, caster)  # 獻祭詞條（3-33f2）

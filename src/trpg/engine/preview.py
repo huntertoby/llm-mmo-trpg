@@ -114,8 +114,8 @@ from trpg.engine.rules.combat import (
     situational_modifier,
     weapon_profile,
 )
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.forms import natural_charge
-from trpg.engine.rules.geometry import manhattan
 from trpg.engine.rules.movement import available_move_budget, is_deadly, path_map
 from trpg.engine.rules.statuses import effective_attribute, shield_amount, weapon_attribute
 from trpg.engine.rules.weapons import weapon_hit_bonus
@@ -771,7 +771,7 @@ def _attack_numbers(
             hit_modifier(actor, target, state.ruleset)
             + core.proficiency
             + situational_modifier(state, actor, target)
-            + weapon_hit_bonus(actor, manhattan(actor.xy, target.xy))
+            + weapon_hit_bonus(actor, unit_dist(actor, target))
             - (0 if cover is None else cover.penalty)
             + modifiers.hit_bonus(state, actor, modifiers.ATTACK, Subject(target, target.xy))
         )
@@ -1100,7 +1100,7 @@ def _skill_targets(
             + core.proficiency
             + situational_modifier(state, shooter, target)
             + (
-                weapon_hit_bonus(shooter, manhattan(shooter.xy, target.xy))
+                weapon_hit_bonus(shooter, unit_dist(shooter, target))
                 if profile.weapon_attack
                 else 0
             )

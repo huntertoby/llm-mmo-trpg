@@ -19,7 +19,8 @@ from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, SwapUnitsEffect
 from trpg.engine.events import GuardSet, UnitAimed, WeaponReloaded
 from trpg.engine.ids import DEFENDING, PRONE
-from trpg.engine.rules.geometry import XY, manhattan
+from trpg.engine.rules.footprint import adjacent
+from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.landing import LandingBlock, landing_problem
 from trpg.engine.rules.movement import fear_blocks_step, fear_origins, is_standable
 from trpg.engine.rules.race import fall_immune
@@ -51,10 +52,7 @@ def adjacent_allies(state: BattleState, unit: UnitState) -> list[UnitState]:
     return [
         other
         for other in state.units_sorted()
-        if other.id != unit.id
-        and other.alive
-        and other.team is unit.team
-        and manhattan(other.xy, unit.xy) == 1
+        if other.id != unit.id and other.alive and other.team is unit.team and adjacent(other, unit)
     ]
 
 
@@ -66,7 +64,7 @@ def _ally_problem(state: BattleState, unit: UnitState, ally_id: UnitId | None) -
         return "不能指定自己（守護自己請不指定目標）"
     if ally.team is not unit.team:
         return f"{ally.name_zh} 不是隊友"
-    if manhattan(ally.xy, unit.xy) != 1:
+    if not adjacent(ally, unit):
         return f"{ally.name_zh} 不在相鄰格"
     return None
 
@@ -104,7 +102,7 @@ def guard_covers(ctx: Ctx, guardian: UnitState, target: UnitState) -> bool:
         and guardian.id != target.id
         and guardian.alive
         and guardian.guard_transfers < ctx.core.guard_transfers_per_round
-        and manhattan(guardian.xy, target.xy) == 1
+        and adjacent(guardian, target)
         and skip_turn_status(ctx.rules, guardian) is None
     )
 
