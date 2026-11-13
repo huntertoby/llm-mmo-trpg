@@ -20125,7 +20125,8 @@
           "any",
           "behind",
           "high_or_far",
-          "disabled"
+          "disabled",
+          "ranged"
         ]
       },
       "PartView": {

@@ -8210,7 +8210,7 @@ export interface components {
             reason_zh?: string | null;
         };
         /** @enum {string} */
-        PartReach: "any" | "behind" | "high_or_far" | "disabled";
+        PartReach: "any" | "behind" | "high_or_far" | "disabled" | "ranged";
         /**
          * PartView
          * @description 頭目的一個部位（PB-1c，唯讀；05 5.12.2 第 12 點）。``hp``／``max_hp`` 在觀看者看不到資訊
