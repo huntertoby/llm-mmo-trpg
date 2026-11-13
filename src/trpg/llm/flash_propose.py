@@ -426,6 +426,12 @@ def name_checker(
     ) -> list[NameCheck]:
         used = library_names | frozenset(taken)
         problems = check_name(name, style.naming, used, archaic_ok=archaic_ok)
+        if name.count("・") > 1 or name.startswith("・") or name.endswith("・"):
+            # 提議時順便取的名稱較常被截斷或寫成說明（實測「焰息・延燒一瞬・雲嶺版・」）：
+            # 「・」最多一個、不在頭尾；不合格就照 LF-1 另外命名
+            problems.append(
+                NameCheck("name_zh.dots", "name_zh 的「・」最多一個，不放在開頭或結尾。")
+            )
         if problems:
             return problems
         option = try_variation(library, request, variation)

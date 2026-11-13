@@ -18,6 +18,7 @@ from __future__ import annotations
 import html
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import replace
 from functools import cache
 from typing import Any
@@ -196,7 +197,7 @@ def test_flash_retry_shares_the_prefix() -> None:
     assert "suggested_order" not in request_block
 
 
-def _schema_templates(schema: dict[str, Any]) -> list[str]:
+def _schema_templates(schema: Mapping[str, Any]) -> list[str]:
     """schema 列出的模板（LF-2：每個模板一個 oneOf 分支，依目錄順序）。"""
     items = schema["properties"]["variations"]["items"]
     return [branch["properties"]["template"]["const"] for branch in items["oneOf"]]

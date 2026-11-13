@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import replace
 from typing import Any
 
@@ -105,7 +106,7 @@ def _variations(offer: FlashOffer) -> list[str]:
     return [o.variation.key() for o in offer.options]
 
 
-def _schema_templates(schema: dict[str, Any]) -> list[str]:
+def _schema_templates(schema: Mapping[str, Any]) -> list[str]:
     """schema 列出的模板（LF-2：每個模板一個 oneOf 分支，依目錄順序）。"""
     items = schema["properties"]["variations"]["items"]
     return [branch["properties"]["template"]["const"] for branch in items["oneOf"]]
@@ -151,26 +152,26 @@ def test_schema_binds_each_template_to_its_own_parameter_menu() -> None:
     entry = catalog.entry("keyword_exploit")
     assert entry is not None
     assert exploit["properties"]["keyword"] == {"enum": list(entry.keywords)}
-    assert exploit["required"] == ["category", "template", "keyword"]
+    assert exploit["required"] == ["category", "template", "keyword", "note_zh"]
     assert "element" not in exploit["properties"] and "shape" not in exploit["properties"]
+    assert exploit["properties"]["note_zh"] == {"type": "string", "minLength": 1, "maxLength": 40}
     plain = by_template["range_plus"]
     assert set(plain["properties"]) == {"category", "template", "note_zh"}
-    assert plain["required"] == ["category", "template"]
     snapshot = {t: (b["required"], sorted(b["properties"])) for t, b in sorted(by_template.items())}
     assert snapshot == {
-        "cost_charge": (["category", "template"], ["category", "note_zh", "template"]),
-        "cost_light": (["category", "template"], ["category", "note_zh", "template"]),
+        "cost_charge": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "cost_light": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
         "keyword_exploit": (
-            ["category", "template", "keyword"],
+            ["category", "template", "keyword", "note_zh"],
             ["category", "keyword", "note_zh", "template"],
         ),
         "keyword_imbue": (
-            ["category", "template", "keyword"],
+            ["category", "template", "keyword", "note_zh"],
             ["category", "keyword", "note_zh", "template"],
         ),
-        "multi_hit": (["category", "template"], ["category", "note_zh", "template"]),
-        "range_plus": (["category", "template"], ["category", "note_zh", "template"]),
-        "refine": (["category", "template"], ["category", "note_zh", "template"]),
+        "multi_hit": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "range_plus": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "refine": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
     }
     anyof = OpenAICompatClient(LLMConfig(oneof_as_anyof=True))._prepare_schema(schema)
     strict = OpenAICompatClient(LLMConfig(oneof_as_anyof=False))._prepare_schema(schema)
@@ -179,11 +180,11 @@ def test_schema_binds_each_template_to_its_own_parameter_menu() -> None:
     assert (
         strict["properties"]["variations"]["items"] == schema["properties"]["variations"]["items"]
     )
-    # 大變化題目每個分支多一個選填的 name_zh
+    # 大變化題目每個分支多一個必填的 name_zh（不設 maxLength：語法約束會從中間截斷名稱）
     major = flash_schema(catalog, 4, major=True)
     for branch in major["properties"]["variations"]["items"]["oneOf"]:
-        assert branch["properties"]["name_zh"]["maxLength"] == 12
-        assert "name_zh" not in branch["required"]
+        assert branch["properties"]["name_zh"] == {"type": "string", "minLength": 1}
+        assert branch["required"][-2:] == ["note_zh", "name_zh"]
 
 
 def test_schema_falls_back_to_flat_enums_with_too_many_templates() -> None:

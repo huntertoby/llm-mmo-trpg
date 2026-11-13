@@ -13,6 +13,7 @@ from trpg.llm.client import ChatMessage
 from trpg.llm.flash_propose import (
     FlashProposalStats,
     LlmFlashSource,
+    name_checker,
     note_words,
     propose_variations,
 )
@@ -306,3 +307,12 @@ def test_stats_report_round_trips_dropped_notes_and_repairs() -> None:
     assert stats.mean_round_trips == 1.0
     lines = "\n".join(stats.summary_lines())
     assert "每題往返次數" in lines and "丟掉的說明" in lines and "本地修正" in lines
+
+
+def test_merged_names_allow_at_most_one_dot_and_none_at_the_ends() -> None:
+    """實測語法約束截斷的名稱（「焰息・延燒一瞬・雲嶺版・」）不採用，照 LF-1 另外命名。"""
+    request = _request()
+    check = name_checker(LIB, request, skill_before(LIB, request))
+    variation = Variation(source="major", template="major_reshape", category="deepen")
+    for bad in ("焰息・延燒一瞬・雲嶺版・", "・赤羽", "赤羽・"):
+        assert "name_zh.dots" in [p.code for p in check(variation, bad, None, ())], bad

@@ -53,15 +53,17 @@ FLASH_TASK = """你是「{world_name}」世界的技能設計助手。
 - 模板有 keyword、element、shape 選單時，必須從該模板的選單挑一個填入；沒有選單的欄位不要填。
   同一個模板用不同的參數算不同的變化。
 - 不要填任何數值（傷害、範圍、冷卻、點數都不用寫）：強度由遊戲的預算器補。
-- note_zh：一句話說明為什麼這個變化適合這招，最多 {note_max} 個字，全形中文與全形標點，
-  不可有英文、數字或代號。
+- note_zh（每個變化都要寫）：一句話說明為什麼這個變化適合這招，最多 {note_max} 個字，
+  全形中文與全形標點，不可有英文、數字或代號。
   <catalog> 的 note_words 是這個變化會加上的效果詞（「／」分隔的同一組詞選一個；有參數時依參數
   列出）：note_zh 要用到每一組的其中一個詞。只寫變化後這招真的有的效果，
   不要提到這招沒有的控制、元素或召喚物；世界觀詞（例如源晶、頻率、碎界）最多一個。
   note_zh 照 <request> 的 style（這招原本取得地點的區域與風格）寫；沒有要求時用中性奇幻，
   不用武俠、仙俠、文言詞。
-- <request> 的 major 為 true 時（大變化），每個變化另填 name_zh：變化後這招的新名稱，最多
-  {name_max} 個字，只能用全形中文字（可用「・」與全形括號），不可有英文、數字或空白；
+- <request> 的 major 為 true 時（大變化），每個變化另填 name_zh：變化後這招的新招式名，
+  兩到六個字為主、最多 {name_max} 個字，只能用全形中文字，不可有英文、數字或空白；
+  句式多樣（兩字、三字、四字、「X之Y」混用），「・」最多一個、不放在開頭或結尾；
+  名稱是招式名，不是說明，不要加地名或「版」「變奏」這類字。
   不可和 <skill> 的名稱或其他已知技能同名，各變化的名稱也不可相同；不要用世界觀詞開頭；
   照 style 取名，名稱或 note_zh 要提到這個變化加上的效果。major 為 false 時不填 name_zh。
 - 盡量讓變化涵蓋不同類別，並參考 <usage>（這招實戰的用法統計）與 <held_keywords>
@@ -91,10 +93,18 @@ def _enum(values: Sequence[str]) -> dict[str, Any]:
 
 
 def _text_fields(*, major: bool) -> dict[str, Any]:
-    fields: dict[str, Any] = {"note_zh": {"type": ["string", "null"], "maxLength": NOTE_MAX_CHARS}}
+    """說明（必填）與大變化的名稱（必填）。名稱不設 ``maxLength``：語法約束會把太長的名稱從中間
+    截斷（實測截出「焰息・延燒一瞬・雲嶺版・」），太長的交給名稱檢查丟掉、照 LF-1 另外命名。"""
+    fields: dict[str, Any] = {
+        "note_zh": {"type": "string", "minLength": 1, "maxLength": NOTE_MAX_CHARS}
+    }
     if major:
-        fields["name_zh"] = {"type": ["string", "null"], "maxLength": NAME_MAX_CHARS}
+        fields["name_zh"] = {"type": "string", "minLength": 1}
     return fields
+
+
+def _text_required(*, major: bool) -> list[str]:
+    return ["note_zh", "name_zh"] if major else ["note_zh"]
 
 
 def _flat_item(catalog: FlashCatalog, *, major: bool) -> dict[str, Any]:
@@ -105,7 +115,7 @@ def _flat_item(catalog: FlashCatalog, *, major: bool) -> dict[str, Any]:
     return {
         "type": "object",
         "additionalProperties": False,
-        "required": ["category", "template"],
+        "required": ["category", "template", *_text_required(major=major)],
         "properties": {
             "category": {"enum": list(catalog.categories)},
             "template": {"enum": list(catalog.templates())},
@@ -134,6 +144,7 @@ def _branch(entry: CatalogEntry, *, major: bool) -> dict[str, Any]:
             properties[name] = {"enum": list(values)}
             required.append(name)
     properties.update(_text_fields(major=major))
+    required += _text_required(major=major)
     return {
         "type": "object",
         "additionalProperties": False,
@@ -148,7 +159,8 @@ def flash_schema(catalog: FlashCatalog, count: int, *, major: bool = False) -> d
 
     LF-2：每個模板一個 ``oneOf`` 分支（參數選單綁在模板上；伺服器不支援 ``oneOf`` 時由
     ``LLMClient`` 依 ``oneof_as_anyof`` 改成 ``anyOf``）；模板超過 :data:`MAX_SCHEMA_BRANCHES` 個時
-    退回扁平列舉。``major``（大變化）時每項多一個選填的 ``name_zh``。"""
+    退回扁平列舉。``note_zh`` 必填；``major``（大變化）時每項另有必填的 ``name_zh``（不合格只丟
+    文字，不重試）。"""
     if len(catalog.entries) > MAX_SCHEMA_BRANCHES:
         item = _flat_item(catalog, major=major)
     else:
