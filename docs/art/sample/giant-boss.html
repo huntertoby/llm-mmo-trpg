@@ -20,7 +20,7 @@
 <script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
 <script src="occludeOutline.js"></script>
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
-<script src="qBossGiant.js"></script>
+<script src="qBossGiant.js"></script><script src="qBossGiantIcons.js"></script>
 <script>
 const GB = QBossGiant, OO = OccludeOutline, T = GB.T, P = new URLSearchParams(location.search), PART = P.get("part") || "sprites";
 try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
@@ -203,7 +203,7 @@ PARTS.field = () => {
 };
 // ================= 3 部位格標示（A2）各狀態 =================
 const CASES = [
-  { zh: "① 完好（可打）：噴口、殼縫、核心米白四角；殼縫內側下角背刺記號（近戰；1600 圖樣小圓片、800 粗彎箭頭）", st: { phase: 2, shell: 0, t: 300 }, parts: {} },
+  { zh: "① 完好（可打）：噴口、殼縫、核心米白四角；殼縫內側下角背刺記號（近戰；1600 圖樣小圓片、800 U 形迴轉箭頭）", st: { phase: 2, shell: 0, t: 300 }, parts: {} },
   { zh: "② 滑過噴口：三格一起亮（同一個部位）＋身上噴口亮起", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "vent" },
   { zh: "③ 滑過殼縫：東西兩格一起亮（共用一條血）", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "seam" },
   { zh: "④ 滑過核心", st: { phase: 2, shell: 0, t: 300 }, parts: {}, hover: "core" },
@@ -217,7 +217,7 @@ const caseCv = (c, S, res = 1) => render(solo(c.st, { marks: true, parts: c.part
 PARTS.marks = () => {
   const S = SW, z = W_ === 800 ? 3 : 1;
   const blocks = [{ title: `3${W_ === 800 ? "b" : "a"}. 部位格標示（A2）各狀態：${W_} 寬真 1 倍${z > 1 ? `、最近鄰 ×${z}` : ""}（地圖縮放 ${S.toFixed(2)}）` },
-    { note: "標示畫在單位之上（同 highlightLayer 的 marks：選目標時才出現）。米白四角＝這格是部位、可以打；亮青白框＝滑過（同霧鎖真人的部位亮起 #a8f4ff）；暗＋灰原因小圖＝打不到；暗紅＋紅×＝破掉；暗色虛線＝還沒露出。前殼（南排）是本體，平常不畫框，滑過時整個 3×3 外緣紅框。800 寬：線至少 1.5 px、× 至少 6 px、背刺記號直徑至少 14 px（反向放大）；第 2 版起 800 不畫原因小圓片（暗化 55%＋不透明灰括號），背刺改成粗彎箭頭。" },
+    { note: "標示畫在單位之上（同 highlightLayer 的 marks：選目標時才出現）。米白四角＝這格是部位、可以打；亮青白框＝滑過（同霧鎖真人的部位亮起 #a8f4ff）；暗＋灰原因小圖＝打不到；暗紅＋紅×＝破掉；暗色虛線＝還沒露出。前殼（南排）是本體，平常不畫框，滑過時整個 3×3 外緣紅框。800 寬：線至少 1.5 px、× 至少 6 px、背刺記號直徑至少 14 px（反向放大）；第 2 版起 800 不畫原因小圓片（暗化 55%＋不透明灰括號），背刺改成 U 形迴轉箭頭（條件黃環）。" },
     { cells: CASES.map((c) => (z > 1 ? nn(caseCv(c, S), z, c.zh) : { cv: caseCv(c, S), cap: c.zh })), gap: 14 }];
   publish(sheet(1280, blocks), "image/png");
 };
@@ -236,7 +236,7 @@ PARTS.shed = () => {
 // ================= 3d 殼縫背刺記號（第 2 版必修 2）：800 真 1 倍 ①③⑨ 並排＋殼縫格最近鄰 ×4 =================
 PARTS["seam-800"] = () => {
   const S = S800, pick = [0, 2, 8], blocks = [{ title: "3d. 殼縫背刺記號：800 真 1 倍（①完好、③滑過殼縫、⑨遠程沒有記號）＋殼縫兩格最近鄰 ×4" },
-    { note: "第 2 版（審查必修 2）：記號改放殼縫格的內側下角（靠核心那側），不蓋住貼外側的熔岩裂縫；800 不用圖樣小圓片，改畫深底＋2 px 黃環＋米白粗彎箭頭（繞到背後）。1600 照舊是背刺圖樣小圓片（3a、3c）。" }];
+    { note: "第 2 版（審查必修 2）：記號改放殼縫格的內側下角（靠核心那側），不蓋住貼外側的熔岩裂縫；800 不用圖樣小圓片，改畫深底＋2 px 條件黃環＋米白 U 形迴轉箭頭（繞到背後；A3 時改，複審可修 A），記號佔掉內側下角那個括號、不貼米白括號。1600 照舊是背刺圖樣小圓片（3a、3c）。" }];
   const cvs = pick.map((i) => caseCv(CASES[i], S));
   blocks.push({ cells: cvs.map((cv, k) => nn(cv, 2, CASES[pick[k]].zh + "（真 1 倍，最近鄰 ×2）")), gap: 14 });
   const vw = soloView(S, 1, 0.3), crop = (cv, mx) => { const x = Math.round((mx - vw.x0) * S), y = Math.round((3 * T - vw.y0) * S), w = Math.round(T * S) + 2, h = Math.round(T * S) + 2, o = GB.mk(w, h); o.getContext("2d").drawImage(cv, x - 1, y - 1, w, h, 0, 0, w, h); return o; };
@@ -244,6 +244,77 @@ PARTS["seam-800"] = () => {
   for (const [k, cv] of cvs.entries()) for (const [mx, zh] of [[4 * T, "西殼縫格"], [6 * T, "東殼縫格"]]) cells.push(nn(crop(cv, mx), 4, `${["①", "③", "⑨"][k]} ${zh} ×4`));
   blocks.push({ cells, gap: 12 });
   publish(sheet(1280, blocks), "image/png");
+};
+// ================= 4 A3 部位小圖（qBossGiantIcons.js） =================
+const GI = QBossGiantIcons, NAV = "#1e2236", IDS = ["vent", "seam", "core"];
+/** 灰掉（打不到、未露出）：照抄 bossParts.js gray()（去色＋亮度 0.8＋透明度 0.45）。 */
+function grayIc(cv, a = 0.45) { const c = GB.mk(cv.width, cv.height), x = c.getContext("2d"); x.filter = "grayscale(1) brightness(0.8)"; x.globalAlpha = a; x.drawImage(cv, 0, 0); return c; }
+const STATES = [["ok", "一般"], ["off", "打不到"], ["hidden", "未露出"], ["broken", "已破壞"]];
+/** 一格：navy 底、圖示 px 置中、狀態；res＝內部解析度。 */
+function icCell(id, px, res, state, padPx = 3) {
+  const S = (px + 2 * padPx) * res, c = GB.mk(S, S), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, S, S);
+  let ic = GI.icon(id, px, res); if (state !== "ok") ic = grayIc(ic);
+  g.drawImage(ic, padPx * res, padPx * res);
+  if (state === "broken") { g.save(); g.scale(res, res); GI.xMark(g, padPx, padPx, px); g.restore(); }
+  return c;
+}
+function icAudit(id, px) {
+  const ic = GI.icon(id, px, 1), d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let n = 0, sum = 0, hi = 0, x0 = 99, x1 = -1, y0 = 99, y1 = -1;
+  for (let i = 0; i < d.length; i += 4) { if (d[i + 3] < 128) continue; const p = i / 4, x = p % ic.width, y = Math.floor(p / ic.width); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (Math.abs(d[i] - 22) + Math.abs(d[i + 1] - 18) + Math.abs(d[i + 2] - 26) < 30) continue; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; n++; sum += L; if (L >= 150) hi++; }
+  return `${GI.GLYPH[id].zh} ${px}：亮度 ${Math.round(sum / n)}、亮面 ${Math.round((100 * hi) / n)}%、外接 ${x1 - x0 + 1}×${y1 - y0 + 1}／${px}`;
+}
+/** 圖示指紋（FNV-1a over 像素；20／16／12 × res 1、2）：給下次改版比對。 */
+function icHash() { const out = {}; for (const id of IDS) for (const px of [20, 16, 12]) for (const res of [1, 2]) { const ic = GI.icon(id, px, res), d = ic.getContext("2d").getImageData(0, 0, ic.width, ic.height).data; let h = 2166136261; for (let i = 0; i < d.length; i++) h = Math.imul(h ^ d[i], 16777619); out[`${id}-${px}-${res}`] = (h >>> 0).toString(16).padStart(8, "0"); } return out; }
+PARTS.icons = () => {
+  const big = IDS.map((id) => { const e = GI.GLYPH[id], def = { d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); e.d(c, { ...o, small: true, tiny: false }); c.restore(); }, pre: e.pre }; const ic = QIcons.render(def, 96, 1, { ow: QIcons.outlinePx(20) * 4.8 }); const c = GB.mk(128, 128), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, 128, 128); g.drawImage(ic, 16, 16); return { cv: c, cap: `${e.zh}・20 的 4.8 倍（向量，同一份簡化）` }; });
+  const row = (px, res, z) => IDS.flatMap((id) => STATES.map(([st, zh]) => nn(icCell(id, px, res, st), z, `${GI.GLYPH[id].zh}・${zh}`)));
+  const sil = IDS.map((id) => { const ic = GI.icon(id, 20, 1), c = GB.mk(26, 26), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, 26, 26); g.drawImage(GB.tint(ic, "#f2e6c8"), 3, 3); return nn(c, 6, `${GI.GLYPH[id].zh}・剪影 20 真 1 倍`); });
+  // 同一個選單／說明卡上會一起出現的：背刺（從背後）、元素火、狀態燃燒（現行）
+  const at = (cv0, px = 20) => { const c = GB.mk(px + 6, px + 6), g = c.getContext("2d"); g.fillStyle = NAV; g.fillRect(0, 0, px + 6, px + 6); g.drawImage(cv0, 3, 3, px, px); return c; };
+  const burn = GB.mk(20, 20); try { const s = QStatusLive.statusIconCanvas("burning", 20); burn.getContext("2d").drawImage(s, 0, 0, 20, 20); } catch (e) { console.log("burning: " + e); }
+  const behind = QIcons.render({ d: (c, o) => { c.save(); c.translate(24, 24); c.scale(1.8, 1.8); QIconsParts.entry("condition", "from_behind").d(c, o); c.restore(); } }, 20, 1, { ow: 1 });
+  const cmp = [[GI.icon("vent", 20, 1), "熔岩噴口"], [GI.icon("seam", 20, 1), "殼縫"], [GI.icon("core", 20, 1), "核心"], [QIcons.render(QIconsSkills.ELEMENT.fire, 20, 1, { ow: 1 }), "元素・火"], [burn, "燃燒（現行狀態）"], [behind, "背刺（從背後）"]];
+  const cmpCells = cmp.map(([cv0, zh]) => nn(at(cv0), 6, `${zh}・20 真 1 倍`)), cmpSil = cmp.map(([cv0, zh]) => nn(at(GB.tint(cv0, "#f2e6c8")), 6, `${zh}・剪影`));
+  const audit = IDS.map((id) => icAudit(id, 20)).join("；");
+  document.documentElement.dataset.hash = JSON.stringify(icHash());
+  publish(sheet(1280, [
+    { title: "4a. A3 部位小圖：熔岩噴口、殼縫、核心（選單 20px；48 格、外框 #16121a 1px、平塗三階；深底 --ui-navy）" },
+    { note: "造型照第 2 版身上：噴口＝火山錐＋口裡熔岩＋往上噴的熔岩舌；殼縫＝玄武岩殼板＋上下貫穿的鋸齒熔岩縫；核心＝殼窩（下半圈）上的晶體（qBoss CORE_PTS），後面一圈光暈。四種狀態照頭目部位-移植需求.md 2.1：打不到、未露出＝去色＋亮度 0.8＋透明度 0.45（兩者圖示相同，靠列上的原因字分）；已破壞＝灰掉＋紅×。自查（20 真 1 倍，不算外框色）：" + audit },
+    { cells: big },
+    { title: "20px・2 倍內部解析度（遊戲固定 DPR 2）×3：一般｜打不到｜未露出｜已破壞" }, { cells: row(20, 2, 3), gap: 8 },
+    { title: "20px・真 1 倍（100% 螢幕最壞情況）×6" }, { cells: row(20, 1, 6), gap: 8 },
+    { title: "剪影與並排（同一張選單／說明卡上會一起出現的圖示）" }, { cells: sil }, { cells: cmpCells }, { cells: cmpSil },
+  ]), "image/png");
+};
+PARTS["icons-t1"] = () => {
+  // 部位格上的尺寸（選用，3.2 第 6 項）：1600 一格 62.8 → 圖示 16；800 一格 25.5 → 圖示 12（≤14：只留主體、不包外框）
+  const blocks = [{ title: "4b. 真 1 倍各尺寸：20（選單；800 與 1600 同）｜16（1600 部位格角）｜12（800 部位格角）；每個尺寸上排原尺寸、下排最近鄰 ×6" }];
+  for (const px of [20, 16, 12]) {
+    blocks.push({ note: `${px}px：${IDS.map((id) => GI.GLYPH[id].zh).join("、")} × 一般｜打不到｜未露出｜已破壞` });
+    blocks.push({ cells: IDS.flatMap((id) => STATES.map(([st]) => ({ cv: icCell(id, px, 1, st, 2) }))), gap: 6 });
+    blocks.push({ cells: IDS.flatMap((id) => STATES.map(([st, zh]) => nn(icCell(id, px, 1, st, 2), 6, `${GI.GLYPH[id].zh}・${zh}`))), gap: 8 });
+  }
+  publish(sheet(1340, blocks), "image/png");
+};
+/** 部位格加小圖（3.2 第 6 項）：每個區塊左上括號內放部位小圖（1600：16px、800：12px）；打不到、未露出、破掉灰掉。 */
+function marksWithIcons(cv, view, parts) {
+  const g = cv.getContext("2d"), S = view.S, px = T * S >= 40 ? 16 : 12, ins = GB.MARK.inset + 2;
+  for (const [part, row, c0] of [["vent", 0, 1], ["seam", 1, 0], ["core", 1, 1], ["seam", 1, 2]]) {
+    const st = (parts[part] ?? { state: "ok" }).state, [tx, ty] = GB.tileXY(row, c0), ax = 5.5 * T + tx, ay = 5 * T + ty;
+    let ic = GI.icon(part, px, view.res ?? 1); if (st !== "ok") ic = grayIc(ic, 0.6);
+    g.drawImage(ic, Math.round((ax + ins - view.x0) * S), Math.round((ay + ins - view.y0) * S));
+  }
+  return cv;
+}
+PARTS["icons-marks"] = () => {
+  const pick = [0, 3, 5, 7], blocks = [{ title: "4c. 對照（3.2 第 6 項）：部位格要不要加部位小圖。每組左＝現在（括號＋身上的部位）、右＝每個區塊左上加小圖（1600：16px；800：12px）" },
+    { note: "小圖放在區塊左上括號內側（噴口放中間那格，殼縫東西各一、核心一）；打不到、未露出灰掉。真 1 倍，最近鄰 ×2（1600）／×3（800）。挑 ① 完好、④ 滑過核心、⑥ 打不到、⑧ 未露出。" }];
+  for (const [S, wz, z] of [[S1600, "1600", 2], [S800, "800", 3]]) {
+    const cells = [];
+    for (const i of pick) { const c = CASES[i], vw = soloView(S, 1, 0.3); cells.push(nn(caseCv(c, S), z, `${wz}・${c.zh.slice(0, 1)} 現在`), nn(marksWithIcons(caseCv(c, S), vw, c.parts), z, `${wz}・${c.zh.slice(0, 1)} 加小圖`)); }
+    blocks.push({ cells, gap: 10 });
+  }
+  publish(sheet(1340, blocks), "image/png");
 };
 // ================= 自查：單一外觀放大（?part=probe&k=p2n&z=4&hover=seam） =================
 PARTS.probe = () => {

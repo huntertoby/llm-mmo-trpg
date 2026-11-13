@@ -12,6 +12,7 @@ Usage (from the repo root):
 - No remote-debugging port is opened. Always --mute-audio; the URL carries ?mute=1.
 - <chrome tmp> is your own scratch folder (the Chrome profile goes there).
 - --anchor prints the measured bounding boxes (model px, relative to the anchor).
+- --hash prints the A3 part-icon fingerprints (vent/seam/core x 20/16/12 px x res 1/2).
 """
 
 from __future__ import annotations
@@ -44,10 +45,14 @@ SHOTS = [
     ("marks-800", "part=marks&w=800", DEST + "3b-marks-800-t1.png"),
     ("marks-nn", "part=marks-nn", DEST + "3c-marks-nn.png"),
     ("seam-800", "part=seam-800", DEST + "3d-seam-800.png"),
+    ("icons", "part=icons", DEST + "4a-icons.png"),
+    ("icons-t1", "part=icons-t1", DEST + "4b-icons-t1.png"),
+    ("icons-marks", "part=icons-marks", DEST + "4c-icons-marks.png"),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')
 ANCHOR_RE = re.compile(r'data-anchor="([^"]*)"')
+HASH_RE = re.compile(r'data-hash="([^"]*)"')
 
 
 def dump(tmp: Path, query: str) -> str:
@@ -102,6 +107,17 @@ def anchor(tmp: Path) -> int:
     return 0
 
 
+def icon_hash(tmp: Path) -> int:
+    html = dump(tmp, "part=icons")
+    found = HASH_RE.search(html)
+    if not found:
+        print("hash: page did not finish")
+        return 1
+    for key, val in json.loads(found.group(1).replace("&quot;", '"')).items():
+        print(key, val)
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if not argv:
         print(__doc__)
@@ -111,6 +127,8 @@ def main(argv: list[str]) -> int:
     rest = argv[1:]
     if "--anchor" in rest:
         return anchor(tmp)
+    if "--hash" in rest:
+        return icon_hash(tmp)
     out_dir = ART
     if "--out" in rest:
         i = rest.index("--out")

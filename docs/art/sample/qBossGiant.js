@@ -371,7 +371,9 @@ window.QBossGiant = (() => {
       if (state === "ok" && hover === part) state = "hover";
       const ins = MARK.inset, inner = [x0 + ins - 1, y0 + ins - 1, w - 2 * ins + 2, T - 2 * ins + 2];
       ctx.save();
-      if (state === "ok") brackets(ctx, x0, y0, w, MARK.cream, W(MARK.w, MARK.minW), W(MARK.inkW, 1));
+      // 800 殼縫有背刺記號時，記號佔掉內側下角那個括號（不畫那一角，記號不貼米白括號；複審可修 A）
+      const skip = compact && part === "seam" && melee ? (side < 0 ? 2 : 3) : -1;
+      if (state === "ok") brackets(ctx, x0, y0, w, MARK.cream, W(MARK.w, MARK.minW), W(MARK.inkW, 1), skip);
       else if (state === "hover") {
         const lw = W(2.6, 2);
         ctx.fillStyle = MARK.hover; ctx.globalAlpha = 0.14; ctx.fillRect(...inner); ctx.globalAlpha = 1;
@@ -393,7 +395,7 @@ window.QBossGiant = (() => {
       // 殼縫：近戰時一顆背刺小圖（「算從背後」；R4 遠程不算，不畫）。第 2 版（審查必修 2）：改放「內側」下角（靠核心那側，背殼平塗處），不蓋住貼外側的熔岩裂縫；
       // 800（compact）不用 14 px 的圖樣小圓片（只剩一團白），改畫加粗的「往回彎的箭頭」記號（黃環 2 px）。
       if (part === "seam" && melee && (state === "ok" || state === "hover")) {
-        const r = W(MARK.chipR, MARK.chipMin), cx = side < 0 ? x0 + T - r - W(1, 0.5) : x0 + r + W(1, 0.5), cy = y0 + T - r - W(1, 0.5);
+        const r = W(MARK.chipR, MARK.chipMin), e = compact ? W(1, 1.5) : W(1, 0.5), cx = side < 0 ? x0 + T - r - e : x0 + r + e, cy = y0 + T - r - e; // 800 往格內多縮 1 px
         if (compact) backMark(ctx, cx, cy, r, S, side); else chip(ctx, BACK_CHIP, cx, cy, r, S, res, { ring: "#ffe9a8" });
       }
       ctx.restore();
@@ -402,22 +404,23 @@ window.QBossGiant = (() => {
       ctx.save(); const lw = W(2, 1.5); ctx.lineWidth = lw + W(1.6, 1); ctx.strokeStyle = OUT; ctx.strokeRect(-72 + 2, -144 + 2, 140, 140); ctx.lineWidth = lw; ctx.strokeStyle = MARK.body; ctx.strokeRect(-72 + 2, -144 + 2, 140, 140); ctx.restore();
     }
   }
-  /** 800 寬的背刺記號：深底圓＋2 px 黃環（條件色 #ffe9a8）＋米白粗彎箭頭（從外側繞過頂、往下指向內側＝「繞到背後」）。side＝殼縫在哪一側（箭頭從那一側繞過來）。 */
+  /** 800 寬的背刺記號（A3 時改，複審可修 A）：深底圓＋2 px 條件黃環 #ffd75e＋米白 U 形迴轉箭頭「∩」：外側那隻腳往上、繞過頂、從內側那隻腳往下，箭頭朝下＝「繞到背後」；
+   *  第 2 版的箭頭幾乎繞成一整圈（讀成 @、重新整理），環色又接近米白括號。side＝殼縫在哪一側。 */
+  const BACK_RING = "#ffd75e";
   function backMark(ctx, x, y, r, S, side) {
-    const px = 1 / S, ring = 2 * px, ar = r * 0.44, lw = Math.max(2 * px, r * 0.26), hd = r * 0.5, sx = -side; // sx：箭頭尖朝哪一側（內側）
+    const px = 1 / S, ring = 2 * px, a = r * 0.34, lw = Math.max(2 * px, r * 0.24), hw = r * 0.3, sx = -side; // sx：箭頭那隻腳在哪一側（內側）
     ctx.save(); ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = "rgba(10,12,18,0.92)"; ctx.fill();
-    ctx.lineWidth = ring; ctx.strokeStyle = "#ffe9a8"; ctx.beginPath(); ctx.arc(x, y, r - ring / 2, 0, TAU); ctx.stroke();
-    const cy = y + r * 0.12, a0 = sx > 0 ? Math.PI : 0, a1 = sx > 0 ? 0.15 : Math.PI - 0.15; // 從外側（a0）往上繞到內側
-    const ex = x + Math.cos(a1) * ar, ey = cy + Math.sin(a1) * ar;
+    ctx.lineWidth = ring; ctx.strokeStyle = BACK_RING; ctx.beginPath(); ctx.arc(x, y, r - ring / 2, 0, TAU); ctx.stroke();
+    const top = y - r * 0.06, xo = x - sx * a, xi = x + sx * a; // 頂上半圓的圓心高度、外側腳、內側腳
     ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = MARK.cream; ctx.lineWidth = lw;
-    ctx.beginPath(); ctx.arc(x, cy, ar, a0, a1, sx < 0); ctx.stroke();
-    ctx.fillStyle = MARK.cream; ctx.beginPath(); ctx.moveTo(ex - hd * 0.95, ey - hd * 0.1); ctx.lineTo(ex + hd * 0.95, ey - hd * 0.1); ctx.lineTo(ex + sx * hd * 0.15, ey + hd * 1.05); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(xo, y + r * 0.46); ctx.lineTo(xo, top); ctx.arc(x, top, a, sx > 0 ? Math.PI : 0, sx > 0 ? 0 : Math.PI, sx < 0); ctx.lineTo(xi, y + r * 0.12); ctx.stroke();
+    ctx.fillStyle = MARK.cream; ctx.beginPath(); ctx.moveTo(xi - hw, y + r * 0.1); ctx.lineTo(xi + hw, y + r * 0.1); ctx.lineTo(xi, y + r * 0.58); ctx.closePath(); ctx.fill();
     ctx.restore();
   }
   /** 區塊四角的 L 形括號（米白＋外框色襯邊）；x0、y0 是區塊左上，寬 w、高 1 格。 */
-  function brackets(ctx, x0, y0, w, col, lw, ink) {
+  function brackets(ctx, x0, y0, w, col, lw, ink, skip = -1) {
     const i = MARK.inset, a = MARK.arm, x1 = x0 + w - i, y1 = y0 + T - i, xa = x0 + i, ya = y0 + i;
-    const segs = [[[xa, ya + a], [xa, ya], [xa + a, ya]], [[x1 - a, ya], [x1, ya], [x1, ya + a]], [[x1, y1 - a], [x1, y1], [x1 - a, y1]], [[xa + a, y1], [xa, y1], [xa, y1 - a]]];
+    const segs = [[[xa, ya + a], [xa, ya], [xa + a, ya]], [[x1 - a, ya], [x1, ya], [x1, ya + a]], [[x1, y1 - a], [x1, y1], [x1 - a, y1]], [[xa + a, y1], [xa, y1], [xa, y1 - a]]].filter((_, k) => k !== skip); // skip：不畫的角（0 左上、1 右上、2 右下、3 左下）
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     for (const [c, ww] of [[OUT, lw + 2 * ink], [col, lw]]) { ctx.strokeStyle = c; ctx.lineWidth = ww; for (const sg of segs) { ctx.beginPath(); sg.forEach(([x, y], k) => (k ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke(); } }
   }
