@@ -29,7 +29,7 @@ b7eedf2ee 有寫「真的出不了題的格子才照 6.34『費用方向』第 7
 
 - `ReflashSlotOut` 多 `available`（預設 `True`）、`problem_zh`。`run_presenter._flash_out` 對每一格用 `has_options(flash_request(..., slot=s))` 實際算（同 FL-1c，有快取）；轉型提示改用同一個結果。
 - 灰字 `flash_offer.NO_REFLASH_OPTIONS_ZH`＝「這一格目前沒有可以重閃的變化」（前端同一句 `NO_REFLASH_OPTIONS_TEXT`）。**字待定**，見第 5 節。
-- 前端只改重閃入口：`run/flash.ts` 的 `reflashSlots()` 多 `none`／`problem`；`run/CampfireSkillCare.tsx` 的重閃鈕 `disabled`、`title`、`data-reflash-none`，鈕裡多一段 `flash-none-note` 灰字（沿用 FL-1c 的樣式）。一輪營火與大世界成長面板共用 `ReflashSection`，兩邊一起生效。
+- 前端只改重閃入口：`run/flash.ts` 的 `reflashSlots()` 多 `none`／`problem`；`run/CampfireSkillCare.tsx` 的重閃鈕 `disabled`、`data-reflash-none`，鈕裡多一段 `flash-none-note` 灰字（沿用 FL-1c 的樣式；修正：不用原生 `title`，照 `floatCardRule`；灰字行首不放全形空白，照 `summonBadges`）。一輪營火與大世界成長面板共用 `ReflashSection`，兩邊一起生效。
 - 按下去的伺服器端照舊：沒有選項時 `open_flash` 拋「這招這一次沒有合法的變化（沒有扣點）」，不扣點。
 - OpenAPI 重產、`gen:api` 重跑（`schema.d.ts` 多兩個欄位）。
 
