@@ -551,3 +551,5 @@
 - P-2：熔殼三道殼縫各用一張偏移表，長短與間距錯開，不要三道同形等距（32 會像條紋蛋）。截圖 `review-2-shell-cracks.png`。驗收看 32 與圓章 20 真 1 倍。
 - P-3：改完 `appearance.yaml` 要重跑 `scripts/export_appearance.py` 產 `gearAppearance.json`；`sect_great`、`molten_shell` 兩個形制限定只配 `offhand: tower_shield` 的物品（`kite_shield` 是共用造型，要加檢查與測試）。
 - P-4：`rgPlayerShield.js` 的 `sectIcon` 註解「盾邊 13%」實為 2.4（8%），以程式為準。
+
+**玩法 PM 回覆（2026-11-13，玩法PM交接 4.1.5、08 8.11）**：名稱定為「雲紋碑盾」「熔殼塔盾」；持盾弟子、熔殼甲兵掉的塔盾一定是對應形制，顏色照材質規則。已由專案 PM 轉開發。
