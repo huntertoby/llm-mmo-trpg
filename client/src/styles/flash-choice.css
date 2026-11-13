@@ -27,6 +27,17 @@
   margin-bottom: 0;
 }
 
+/* FL-1g（FL-1b 驗收可修 1）：選項卡有底色，RT-3b 的 56px 上緣漸隱在只捲一點時會把第 1 張的殘卡整塊蓋成空白；
+   選變體的捲動區改 32px（比例照舊：上 70% 實色）。選中的卡 scroll-margin-top 跟著讓出這 32px（LF-3 驗收必修 1） */
+.ui-popup-hud > .ui-popup-body:has(.fc-in-popup)::before {
+  height: 32px;
+  margin-bottom: -32px;
+}
+
+.fc-in-popup .fc-opt {
+  scroll-margin-top: 36px;
+}
+
 /* ---------- 寬窄兩套字 ---------- */
 .fc-panel .narrow-only {
   display: none;
@@ -291,7 +302,8 @@
 /* ---------- 前 → 後：只列有變的欄位 ---------- */
 .fc-diffs {
   display: grid;
-  grid-template-columns: 16px max-content max-content 14px minmax(0, 1fr);
+  /* FL-1g（LF-3 驗收可修 1）：「前」欄放得下時照字寬（max-content），擠的時候才折行；「後」欄最少留到新名稱＋小標記那一組的寬 */
+  grid-template-columns: 16px max-content minmax(min-content, max-content) 14px minmax(min-content, 1fr);
   gap: 3px 6px;
   align-items: center;
   margin: 5px 0 0 23px;
@@ -312,7 +324,7 @@
 .fc-was {
   color: var(--pnl-l3);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  white-space: normal; /* FL-1g：見上面 .fc-diffs（以前 nowrap，長的條件字會把「後」欄擠到放不下新名稱） */
 }
 
 .fc-was.none {
@@ -415,9 +427,22 @@
 }
 
 /* 名稱來源：本機模型取的名稱後面一顆紫色小膠囊（候選卡 .offer-llm-tag 同色、字級同「新」） */
+/* FL-1g（LF-3 驗收可修 1）：新名稱＋小標記不斷行，放不下時整組換到下一行 */
+.fc-name-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.fc-name-group > .fc-now.name > span {
+  white-space: nowrap;
+}
+
+/* FL-1g（LF-3 驗收可修 2）：字級 10.5 → 11.5，和同一張卡右上的類別標籤一致 */
 .fc-src {
   flex: none;
-  font-size: 10.5px;
+  font-size: 11.5px;
   line-height: 15px;
   padding: 0 6px;
   border-radius: 999px;
@@ -493,6 +518,7 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
+  text-wrap: pretty; /* FL-1g（FL-1b 驗收可修 5）：不留「個。」一字在第二行 */
 }
 
 .fc-say .dim {
@@ -554,10 +580,22 @@
   position: sticky;
   bottom: 0;
   z-index: 3;
-  margin: 8px 0 0;
+  margin: 32px 0 0; /* FL-1g：漸隱的高度；頁面捲到底（不黏）時漸隱只蓋這段空白 */
   padding-left: 0;
   padding-right: 0;
   background: var(--ui-panel-solid, var(--ui-navy));
+}
+
+/* FL-1g（FL-1b 驗收可修 5）：sticky 下固定區上方加和大世界一樣的下緣漸隱（32px、後 55% 實色），被蓋住的卡不切在一半 */
+.fc-run > .fc-foot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 32px;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(30 34 54 / 0%), var(--ui-panel-solid, var(--ui-navy)) 45%, var(--ui-panel-solid, var(--ui-navy)));
 }
 
 .fc-run .fc-opts {

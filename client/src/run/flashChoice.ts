@@ -50,8 +50,8 @@ export function headlineOf(o: FlashOption): string {
 export const FLASH_NAME_ZH = "名稱";
 /** 名稱來自本機模型時，新名稱後面的小標記（沿用候選卡的 LLM 標記字 `LLM_SOURCE_LABEL`，玩法 PM 2026-10-29 定案）。 */
 export const FLASH_LLM_NAME_ZH = LLM_SOURCE_LABEL;
-/** 小標記的說明卡（LF-3 暫定字，待 PM）。 */
-export const FLASH_LLM_NAME_HINT = "這個名稱由本機模型提議；效果與數值照規則。";
+/** 小標記的說明卡（玩法 PM 2026-11-13 定案，FL-1g 換字）。 */
+export const FLASH_LLM_NAME_HINT = "源晶推演：這個名字是源晶照你這一路的戰鬥推演出來的，只是名字；效果和數值都照規則定，不會因為名字改變。";
 
 /** 選了這個會改名時的新名稱（大變化、轉型）；名稱不變（小變化）為 `null`。`current` 是畫面上的原名。 */
 export function renamedTo(o: FlashOption, current: string): string | null {
@@ -70,7 +70,8 @@ export function noteOf(o: FlashOption): string | null {
   return note === null || note === "" ? null : note;
 }
 
-/** 「後」的四種樣式（第 3 節）；拿掉的效果（`after` 是 null）照「變弱」（第 12 節決定 5）。 */
+/** 「後」的四種樣式（第 3 節）；拿掉的效果（`after` 是 null）照「變弱」（第 12 節決定 5）。
+ * 代價欄位：伺服器只在變貴時給 `cost`，變便宜給 `better`（FL-1g，FL-1b 驗收必修 1），這裡照方向畫。 */
 export type NowStyle = "up" | "cost" | "down" | "new";
 
 export function nowStyle(c: StatChange): NowStyle {
