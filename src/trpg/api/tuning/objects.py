@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
@@ -588,8 +589,8 @@ def field_limits(
         found = next((s for s in shapes.shapes if s.id == shape.get("type")), None)
         if found is not None:
             spec2 = {**found.params, **found.content_params}.get(str(leaf))
-            if spec2 is not None:
-                return spec2.min, spec2.max
+            if spec2 is not None:  # 工坊改的是內建內容：上限照 content_max（GB-2b）
+                return spec2.min, spec2.top(builtin=True)
     return None, None
 
 
@@ -651,6 +652,17 @@ def unit_skill_picker(
     )
 
 
+def _skill_names_in_label(label: str, library: ContentLibrary | None) -> str:
+    """標籤裡的「skill_xxx」換成技能中文名（GB-2b：限時封招的標籤；沒有內容庫或找不到就照舊）。"""
+    if library is None or "「skill_" not in label:
+        return label
+    for skill_id in sorted(re.findall(r"「(skill_[a-z0-9_]+)」", label)):
+        skill = library.skills.get(skill_id)
+        if skill is not None:
+            label = label.replace(f"「{skill_id}」", f"「{skill.name_zh}」")
+    return label
+
+
 def object_detail(
     content_dir: Path,
     table: TuningFields,
@@ -665,7 +677,8 @@ def object_detail(
     data = read_data(path)
     primitives = primitive_names(content_dir)
     fields: list[TuningFieldView] = []
-    for field, concrete, label in concrete_fields(data, target, primitives):
+    for field, concrete, raw_label in concrete_fields(data, target, primitives):
+        label = _skill_names_in_label(raw_label, library)
         value = field_value(data, concrete)
         low, high = field_limits(content_dir, data, field, concrete)
         fields.append(

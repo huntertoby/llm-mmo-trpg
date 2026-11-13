@@ -80,6 +80,8 @@ def test_detail_shows_values_and_limits(read_service: TuningService) -> None:
     core = rows[CORE_ROUNDS]
     assert (core.value, core.limit_min, core.limit_max) == (_now(CORE_ROUNDS), 1, None)
     assert core.group_zh == "部位 3「核心」"
+    # GB-2b：畫面上的標籤換成技能中文名（concrete_fields 沒有內容庫，仍是 ID）
+    assert core.label_zh == "部位「核心」破掉後第 2 個效果：封住「熔心吸氣」的回合數"
     grow = rows[GROW_ROWS]
     assert (grow.value, grow.limit_min, grow.limit_max) == (_now(GROW_ROWS), 1, 9)
 
