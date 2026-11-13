@@ -279,15 +279,11 @@ export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
   const motion = (m: Motion<MoveAnim>): PlayOp => (m.kind === "walk" ? { op: "walk", walk: m.walk } : { op: "move", anim: m.anim });
   for (const m of frame.motions) ops.push(motion(m));
-  // PB-1e（PB-1c 待決 6）：「{部位} 破！」在命中那一刻（命中的停頓結束、重畫之前）就跳，和破壞演出的白閃同時；其他照舊
-  const early = frame.vfx === null ? [] : frame.feedback.filter((x) => x.kind === "float" && x.early === true);
-  const rest = early.length === 0 ? frame.feedback : frame.feedback.filter((x) => !early.includes(x));
   if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs, ...(frame.skill === undefined ? {} : { skill: frame.skill }), ...(frame.sfx === undefined ? {} : { sfx: frame.sfx }) });
-  if (early.length > 0) ops.push({ op: "feedback", items: early, durationMs: frame.feedbackMs });
   for (const m of frame.after ?? []) ops.push(motion(m));
   ops.push({ op: "view", view: frame.view, ...(frame.viewSfx === undefined ? {} : { sfx: frame.viewSfx }) });
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
-  if (rest.length > 0) ops.push({ op: "feedback", items: rest, durationMs: frame.feedbackMs });
+  if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
   if (frame.victory !== undefined) ops.push({ op: "victory", victory: frame.victory });
   if (frame.pauseMs > 0) ops.push({ op: "pause", ms: frame.pauseMs });

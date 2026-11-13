@@ -1,4 +1,4 @@
-// PB-1e：頭目部位的頭頂小格、外觀旗標、南邊有人時 HUD 改掛最上層、「{部位} 破！」提前到命中那一刻（純函式）。
+// PB-1e：頭目部位的頭頂小格、外觀旗標、南邊有人時 HUD 改掛最上層（純函式）；PB-1f：「{部位} 破！」浮字拿掉，回饋照舊在重畫之後。
 import { describe, expect, it } from "vitest";
 import type { BattleView, PartView, UnitView } from "../api/types";
 import { buildDrawModel } from "./drawModel";
@@ -6,6 +6,7 @@ import { frameOps, type Frame } from "./playback";
 import type { FeedbackItem } from "./feedback";
 import { debrisOf, dollPartsOf, HP_H, HP_W, HP_Y, partDraws, partHudUp, partOrder, STRIP, stripBars, stripLayout } from "./partStrip";
 import { tile, unit } from "./testFixtures";
+import { readFile, SRC_DIR } from "../test/sourceScan";
 
 const part = (id: string, o: Partial<PartView> = {}): PartView => ({ id, name_zh: id, hp: 24, max_hp: 24, broken: false, exposed: true, reach: "any", break_lines_zh: [], ...o });
 
@@ -78,16 +79,15 @@ describe("南邊那格有人：頭目 HUD 改掛最上層（移植需求 3.4）"
   });
 });
 
-describe("「{部位} 破！」提前到命中那一刻（PB-1c 待決 6）", () => {
-  const word: FeedbackItem = { kind: "float", pos: { x: 1, y: 1 }, text: "拂塵 破！", tone: "bad", big: true, slot: 1, early: true };
+describe("PB-1f：「{部位} 破！」浮字拿掉，回饋不再提前（PB-1e 驗收裁定待決 1）", () => {
   const dmg: FeedbackItem = { kind: "float", pos: { x: 1, y: 1 }, text: "−9", tone: "damage", big: false, slot: 0 };
-  const frame = (vfx: boolean): Frame => ({ actorId: "a", motions: [], vfx: vfx ? ({ leadMs: 100 } as unknown as Frame["vfx"]) : null, vfxImpactMs: 0, view: {} as BattleView, lifts: [], liftMs: 0, feedback: [dmg, word], feedbackMs: 900, lines: [], pauseMs: 0 }) as unknown as Frame;
-  it("有特效：破字緊接在特效之後、重畫之前；其他回饋照舊在重畫之後", () => {
+  const frame = (vfx: boolean): Frame => ({ actorId: "a", motions: [], vfx: vfx ? ({ leadMs: 100 } as unknown as Frame["vfx"]) : null, vfxImpactMs: 0, view: {} as BattleView, lifts: [], liftMs: 0, feedback: [dmg], feedbackMs: 900, lines: [], pauseMs: 0 }) as unknown as Frame;
+  it("有特效：回饋只有一段、在重畫之後", () => {
     const ops = frameOps(frame(true)).map((o) => (o.op === "feedback" ? `feedback:${o.items.map((i) => (i.kind === "float" ? i.text : i.kind)).join(",")}` : o.op));
-    expect(ops).toEqual(["mark", "vfx", "feedback:拂塵 破！", "view", "feedback:−9"]);
+    expect(ops).toEqual(["mark", "vfx", "view", "feedback:−9"]);
   });
-  it("沒有特效（略過）：照舊一起在重畫之後", () => {
-    const ops = frameOps(frame(false)).filter((o) => o.op === "feedback");
-    expect(ops).toHaveLength(1);
+  it("回饋項目不再有 early 欄位（原始碼）", () => {
+    expect(readFile(SRC_DIR, "battle/feedback.ts")).not.toMatch(/\bearly\b/u);
+    expect(readFile(SRC_DIR, "battle/playback.ts")).not.toMatch(/\bearly\b/u);
   });
 });

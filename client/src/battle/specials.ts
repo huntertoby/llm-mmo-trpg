@@ -6,7 +6,7 @@
 // - 閃避成功（`attack_rolled.hit == false`）：殘影多一層、「閃避」字樣；
 // - Boss 大招（帶 `boss` 標籤、蓄力中的單位放出蓄力的那一招）：畫面四周變暗 0.3 秒。
 // - 頭目部位破了（PB-1c 占位演出，T16；`part_broken`）：該頭目一次重擊白閃（那一下的受擊升級成重擊片段）＋微震（`impact.ts`
-//   重擊的參數）＋浮動字「{部位} 破！」（`feedback.ts`）。不新增貼圖、不動 `render/battle/unitLayer.ts`；正式演出在 PB-1e。
+//   重擊的參數）（PB-1c 的浮動字「{部位} 破！」在 PB-1f 拿掉了）。不新增貼圖、不動 `render/battle/unitLayer.ts`；正式演出在 PB-1e。
 // 不做慢動作和鏡頭拉近。「略過」時播放計畫沒有特效，也就沒有停頓。
 import { asEvent, isPartBroken, type BattleView, type EventBase, type Pos } from "../api/types";
 import { CHARGING } from "./followup";

@@ -17,8 +17,6 @@ export interface FloatItem {
   big: boolean;
   /** 同一格同一步的第幾個（0 起）；畫布依序往上錯開並延後出現，避免重疊。 */
   slot: number;
-  /** PB-1e：「{部位} 破！」——和破壞演出的白閃同時出現（`playback.frameOps` 提前到命中那一刻、重畫之前）。 */
-  early?: boolean;
 }
 
 export interface LineItem {
@@ -71,8 +69,6 @@ export const WORD_MISS = "失手";
 export const WORD_LOCK_MISS = "落空";
 export const WORD_LOCK_BLOCKED = "被擋下";
 export const WORD_LOCK_INTERRUPTED = "被打斷";
-/** 頭目部位破了（PB-1c 占位演出，T16）：「{部位} 破！」。 */
-export const partBrokenWord = (name: string): string => `${name} 破！`;
 
 /**
  * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
@@ -138,7 +134,6 @@ interface Spot {
   text: string;
   tone: FloatTone;
   big?: boolean;
-  early?: boolean;
 }
 
 type Locate = (id: unknown) => Pos | null;
@@ -211,8 +206,9 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
     case "reaction_triggered":
       return e.reaction === "block" ? [{ pos: at(e.unit_id), text: WORD_BLOCK, tone: "good" }] : [];
     case "part_broken":
-      // PB-1c：部位破了跳「拂塵 破！」（放大、醒目）；PB-1e：提前到命中那一刻，和破壞演出的白閃同時（PB-1c 待決 6）
-      return typeof e.name_zh === "string" ? [{ pos: at(e.target_id), text: partBrokenWord(e.name_zh), tone: "bad", big: true, early: true }] : [];
+      // PB-1f（美術 PM PB-1e 驗收裁定待決 1）：部位破壞不跳「{部位} 破！」浮字，只留破壞演出的「破」字記號（`partBreakFx`）；
+      // 本體受傷的傷害數字照舊（`damage_dealt`）。PB-1c 的占位浮字與 PB-1e 的「提前到命中」一起拿掉。
+      return [];
     case "effect_fizzled":
       return lockFizzleSpots(e, at);
     case "lock_intercepted":
@@ -291,7 +287,7 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
       // 「格擋」同一格同一步只跳一次（反應的格擋和傷害的格擋比例可能同時出現）
       const p = s.pos;
       if (s.text === WORD_BLOCK && items.some((x) => x.kind === "float" && x.text === WORD_BLOCK && samePos(x.pos, p))) continue;
-      items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos), ...(s.early === true ? { early: true } : {}) });
+      items.push({ kind: "float", pos: s.pos, text: s.text, tone: s.tone, big: s.big === true, slot: nextSlot(s.pos) });
     }
     if (e.type === "trap_glance") {
       // RG-3：敵人放陷阱時看那一格一眼（放置者看不到時不演）

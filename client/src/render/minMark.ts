@@ -9,6 +9,8 @@ import type { Container, Text } from "pixi.js";
 export const MIN_STATUS_GLYPH_PX = 10;
 /** 高度標記的數字字級在畫面上至少幾 px（同樣的原則：和狀態圖示一樣 10px）。 */
 export const MIN_HEIGHT_BADGE_FONT_PX = 10;
+/** PB-1f：頭目部位破壞的「破」字記號，字在畫面上至少幾 px（美術 PM PB-1e 驗收裁定待決 5：筆畫多的漢字 10 px 不夠）。 */
+export const MIN_BREAK_POP_FONT_PX = 12;
 /** 召喚物回合數徽章的數字在畫面上至少幾 px（6F-11，美術 PM 6F-10b 檢查）。 */
 export const MIN_BADGE_FONT_PX = 10;
 

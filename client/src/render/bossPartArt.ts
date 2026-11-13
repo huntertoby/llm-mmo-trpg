@@ -10,7 +10,7 @@ import type { PartBarState } from "../battle/partMenu";
 import { HP_H, HP_W, HP_Y, STRIP, STRIP_COLOR, STRIP_X_INK, STRIP_X_LINE, stripBars, stripLayout, type PartDraw, type PartFx, type StripLayout } from "../battle/partStrip";
 import type { DollSpec } from "./appearance";
 import { FONT } from "./labels";
-import { FACING_ARROW_LABEL, PART_STRIP_LABEL, registerMark, SOUTH_ARROW_LABEL } from "./minMark";
+import { FACING_ARROW_LABEL, MIN_BREAK_POP_FONT_PX, minMarkScale, PART_STRIP_LABEL, registerMark, SOUTH_ARROW_LABEL } from "./minMark";
 import { sqDistTo } from "./occludeOutline";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "./paperdoll";
 import { bellyPx, PART_KIND, renderPartLayer, tpM, type FigureFrame } from "./partLayer";
@@ -77,7 +77,7 @@ export function drawStrip(g: Graphics, bars: readonly PartBarState[], L: StripLa
  * 頭頂部位小格的節點（`PART_STRIP_LABEL`，跟著 HP 條掛同一層）。地圖縮放改變時（`applyMarkScale` 的重排）照新縮放重畫，
  * 朝南三角形（`southMoved`）跟著部位條的下緣往下挪。
  */
-export function partStripNode(parts: readonly PartDraw[], hiddenInfo: boolean, fx: PartFx | undefined, hudDy: number, southMoved: boolean): Graphics {
+export function partStripNode(parts: readonly PartDraw[], hiddenInfo: boolean, fx: PartFx | undefined, hudDy: number, southMoved: boolean, arrowAt?: (boardScale: number) => number[]): Graphics {
   const g = new Graphics();
   g.label = PART_STRIP_LABEL;
   g.position.y = hudDy;
@@ -88,7 +88,10 @@ export function partStripNode(parts: readonly PartDraw[], hiddenInfo: boolean, f
     drawStrip(g, bars, L);
     if (!southMoved) return;
     const arrow = g.parent?.children.find((n) => n.label === SOUTH_ARROW_LABEL || n.label === FACING_ARROW_LABEL);
-    if (arrow !== undefined) arrow.pivot.y = -(L.bottom - base);
+    if (arrow === undefined) return;
+    arrow.pivot.y = -(L.bottom - base);
+    // PB-1f：南邊有人時朝南三角形的大小也看縮放（`facingArrowPoly` 的第二個參數；800 寬不縮 0.6）
+    if (arrowAt !== undefined && arrow instanceof Graphics) arrow.clear().poly(arrowAt(boardScale)).fill(0xffffff).stroke({ width: 1, color: 0x000000 });
   };
   draw(STRIP_BASE_SCALE);
   registerMark(g, { base: 1, min: 0 }, [], (_k, boardScale) => draw(boardScale));
@@ -375,22 +378,31 @@ export const BREAK_POP: Readonly<Record<string, readonly [number, number]>> = { 
 /** 「破」記號（預告格一字記號的樣式放大：黑圓 72%、外圈紅、字亮黃）。 */
 export const POP_STYLE = { r: 10, font: 14, ring: "#ff5a4a", ringW: 1.5, fill: "rgba(0,0,0,0.72)", text: "#ffd23f" } as const;
 
-function pop(c: C2, x: number, y: number, a: number): void {
+/** PB-1f：`k`＝整個記號的等比倍率（`popScale`；圓心位置照模型 px，不跟著放大）。 */
+function pop(c: C2, x: number, y: number, a: number, k: number): void {
   c.save();
   c.globalAlpha = a;
   c.beginPath();
-  c.arc(x, y, POP_STYLE.r, 0, TAU);
+  c.arc(x, y, POP_STYLE.r * k, 0, TAU);
   c.fillStyle = POP_STYLE.fill;
   c.fill();
-  c.lineWidth = POP_STYLE.ringW;
+  c.lineWidth = POP_STYLE.ringW * k;
   c.strokeStyle = POP_STYLE.ring;
   c.stroke();
-  c.font = `bold ${POP_STYLE.font}px ${FONT}`;
+  c.font = `bold ${POP_STYLE.font * k}px ${FONT}`;
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillStyle = POP_STYLE.text;
-  c.fillText("破", x, y + 0.5);
+  c.fillText("破", x, y + 0.5 * k);
   c.restore();
+}
+
+/**
+ * PB-1f（美術 PM PB-1e 驗收裁定待決 5）：「破」字在畫面上至少 `MIN_BREAK_POP_FONT_PX`（12 px），整個記號等比放大：
+ * 倍率 max(1, 12 ／ (14 × 地圖縮放))；800 寬（0.53）約 ×1.62，1600 寬（1.31）是 1。
+ */
+export function popScale(boardScale: number): number {
+  return minMarkScale(POP_STYLE.font, MIN_BREAK_POP_FONT_PX, boardScale);
 }
 
 /** 破壞演出畫布的範圍（模型 px、相對腳底）。 */
@@ -405,6 +417,8 @@ export interface BreakFxIn {
   /** 手持物座標 → 模型 px（相對腳底）；氣海、畫不出來時 `null`。 */
   weapon: M6 | null;
   west: boolean;
+  /** PB-1f：「破」記號的等比倍率（`popScale`）；沒給是 1。 */
+  popK?: number;
 }
 
 /** 一格演出的特效（模型 px；`res`＝畫布 px／模型 px）。用現有的 burst、shard、dust、ring、puff（`drawCreatureFx`）。 */
@@ -483,7 +497,7 @@ export function breakFxCanvas(f: BreakFxIn, res: number): HTMLCanvasElement | nu
         { k: "puff", x: 9, y: -1, r: 3, c: "#e6f6f4" },
         { k: "puff", x: 0, y: -9, r: 2.6, c: "#e6f6f4" },
       ]);
-    pop(c, center.x + px * sd, center.y + py, 1);
+    pop(c, center.x + px * sd, center.y + py, 1, f.popK ?? 1);
   }
   if (frame === 3) {
     const dust = (x: number, y: number): void => {
@@ -499,7 +513,7 @@ export function breakFxCanvas(f: BreakFxIn, res: number): HTMLCanvasElement | nu
         { k: "puff", x: -12, y: -4, r: 2.6, c: "#e6f6f4", a: 0.6 },
         { k: "puff", x: 12, y: -3, r: 2.2, c: "#e6f6f4", a: 0.6 },
       ]);
-    pop(c, center.x + px * sd, center.y + py - 3, 0.55);
+    pop(c, center.x + px * sd, center.y + py - 3, 0.55, f.popK ?? 1);
   }
   return cv;
 }

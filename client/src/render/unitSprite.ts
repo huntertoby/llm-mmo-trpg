@@ -1525,7 +1525,9 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     bar.position.y = hudDy;
     c.addChild(bar);
     // PB-1e：頭目的頭頂部位小格（HP 條正下方、共用黑底）
-    if (u.parts !== undefined && u.parts.length > 0 && !u.downed) c.addChild(partStripNode(u.parts, u.hiddenInfo === true, u.partFx, hudDy, southArrowMoved(u)));
+    // PB-1f：南邊有人時朝南三角形照地圖縮放重畫（800 寬不縮）
+    const arrowAt = u.partHudUp === true && southArrowMoved(u) ? (s: number) => facingArrowPoly(u, s) : undefined;
+    if (u.parts !== undefined && u.parts.length > 0 && !u.downed) c.addChild(partStripNode(u.parts, u.hiddenInfo === true, u.partFx, hudDy, southArrowMoved(u), arrowAt));
     if (u.hiddenInfo === true) c.addChild(hiddenHpMark(hudDy));
   }
   // 6F-15：6F-14 另外畫在狀態列上面的那一份三角形拿掉了（避不開時「+N」超出格子一點讓開，`rowLayout.slideClearOver`）
@@ -1621,7 +1623,7 @@ export function southArrowMoved(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitD
  * 6F-21（美術 PM 6F-14 檢查第 3 節）：朝南、有 HP 條時，原位幾乎整個被 HP 條蓋住，整個往下移到 HP 條下緣外面
  * （三角形上緣含描邊離 HP 條下緣 `SOUTH_ARROW_GAP`），形狀不變。其他朝向、沒有 HP 條時照原位。
  */
-export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "summon" | "summonLook" | "dollLook" | "parts" | "partHudUp">>): number[] {
+export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitDraw, "noBar" | "shieldRatio" | "summon" | "summonLook" | "dollLook" | "parts" | "partHudUp">>, boardScale?: number): number[] {
   const ring = arrowRing(u);
   const p = ringArrow(u.facing, ring.cx, FEET - 1, ring.rx, ring.ry, 5);
   const hp = southArrowMoved(u) ? hpBoxOf({ noBar: u.noBar, shieldRatio: u.shieldRatio ?? 0, ...(u.parts === undefined ? {} : { parts: u.parts }) }) : null;
@@ -1630,11 +1632,24 @@ export function facingArrowPoly(u: Pick<UnitDraw, "facing"> & Partial<Pick<UnitD
   const dy = hp.b + SOUTH_ARROW_GAP - top;
   const moved = dy <= 0 ? p : p.map((v, i) => (i % 2 === 1 ? v + dy : v));
   // PB-1e（移植需求第 4 節第 4 點，開發代決）：頭目 HUD 改掛最上層時三角形壓在南邊那個人的臉上 → 以上緣中點縮小
-  return u.partHudUp === true ? shrinkArrow(moved, PART_HUD_UP_ARROW) : moved;
+  // PB-1f（美術 PM 裁定待決 2）：縮完畫面上太小（800 寬）就不縮
+  return u.partHudUp === true && partHudUpShrinks(moved, boardScale) ? shrinkArrow(moved, PART_HUD_UP_ARROW) : moved;
 }
 
 /** PB-1e：頭目 HUD 改掛最上層時朝南三角形的縮放（以上緣中點為準，上緣仍離部位條 `SOUTH_ARROW_GAP`）。 */
 export const PART_HUD_UP_ARROW = 0.6;
+/**
+ * PB-1f（美術 PM PB-1e 驗收裁定待決 2、可修 1）：縮 0.6 只在縮完的三角形（含描邊）畫面寬 ≥ 這個值時套用；
+ * 1600 寬（地圖約 1.0～1.3）照縮，800 寬（約 0.5～0.65）縮完只剩 2～3 px，不縮。
+ */
+export const PART_HUD_UP_ARROW_MIN_PX = 6;
+
+/** PB-1f：這個縮放下朝南三角形要不要縮（`boardScale` 沒給＝照 1600 寬的基準，縮）。 */
+function partHudUpShrinks(p: number[], boardScale: number | undefined): boolean {
+  if (boardScale === undefined) return true;
+  const w = Math.max(p[0]!, p[2]!, p[4]!) - Math.min(p[0]!, p[2]!, p[4]!);
+  return (w * PART_HUD_UP_ARROW + ARROW_STROKE) * boardScale >= PART_HUD_UP_ARROW_MIN_PX;
+}
 
 function shrinkArrow(p: number[], k: number): number[] {
   const ys = [p[1]!, p[3]!, p[5]!];

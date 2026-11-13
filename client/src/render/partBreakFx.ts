@@ -7,7 +7,7 @@
 // 身上以外的特效畫在一張跟著頭目位置的貼圖上（`bossPartArt.breakFxCanvas`，每格一張）。
 import { Sprite } from "pixi.js";
 import type { VfxSpecial } from "../battle/vfx";
-import { BREAK_BOX, BREAK_MS, breakFrameAt, breakFxCanvas, breakFxOf, partCenter, weaponToFeet } from "./bossPartArt";
+import { BREAK_BOX, BREAK_MS, breakFrameAt, breakFxCanvas, breakFxOf, partCenter, popScale, weaponToFeet } from "./bossPartArt";
 import type { ResultHost } from "./resultEffects";
 import { dollKey } from "./appearance";
 import { dollPx, FEET, specOfUnit } from "./unitSprite";
@@ -27,6 +27,7 @@ export function partBreakEffect(host: ResultHost, s: VfxSpecial, startMs: number
   const center = partCenter(spec, facing, part, k) ?? { x: 0, y: -20 };
   const weapon = weaponToFeet(spec, facing, part, k);
   const res = host.art.figureRes(1);
+  const popK = popScale(host.boardScale?.() ?? 1); // PB-1f：「破」字在畫面上 ≥ 12 px
   const owner = host.art.uniqueOwner(`pbreak:${unitId}`);
   const node = new Sprite();
   node.visible = false;
@@ -39,8 +40,8 @@ export function partBreakEffect(host: ResultHost, s: VfxSpecial, startMs: number
       host.art.holdFor(owner, null);
       return;
     }
-    const key = `pbfx|${res}|${part}|${f}|${dollKey(spec, facing, false)}|${k.toFixed(3)}`;
-    const tex = host.art.canvas(key, () => breakFxCanvas({ part, frame: f, center, weapon, west: facing === "west" }, res));
+    const key = `pbfx|${res}|${part}|${f}|${dollKey(spec, facing, false)}|${k.toFixed(3)}|${popK.toFixed(3)}`;
+    const tex = host.art.canvas(key, () => breakFxCanvas({ part, frame: f, center, weapon, west: facing === "west", popK }, res));
     if (tex === null) {
       node.visible = false;
       return;
