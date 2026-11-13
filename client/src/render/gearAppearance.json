@@ -1122,6 +1122,36 @@
             "gold"
           ],
           "defaultMaterial": "iron"
+        },
+        {
+          "id": "sect_great",
+          "zh": "雲紋碑盾",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron",
+          "offhands": [
+            "tower_shield"
+          ]
+        },
+        {
+          "id": "molten_shell",
+          "zh": "熔殼塔盾",
+          "materials": [
+            "iron",
+            "steel",
+            "copper",
+            "silver",
+            "gold"
+          ],
+          "defaultMaterial": "iron",
+          "offhands": [
+            "tower_shield"
+          ]
         }
       ]
     },
