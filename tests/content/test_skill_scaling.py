@@ -46,9 +46,10 @@ def test_the_builtin_table_covers_every_skill() -> None:
     # ＋ CB-2e #149 的收霧斬（只給敵人）
     # ＋ LW-1 的 3 招獨狼示範（孤狼撲擊、無人掩護、獨行者）
     # ＋ RG-1 的 3 招瞄準預告（鶴唳穿雲、定身符、熔岩彈，只給敵人）
+    # ＋ RG-2 的狂怒劈砍（荒原狂戰士，只給敵人）
     assert (
-        len(BUILTIN) == 412
-    )  # BAL-21c 加 skill_rift_flicker；LW-1 加 3 招；BS-1 加 2 招；RG-1 加 3 招
+        len(BUILTIN) == 413
+    )  # BAL-21c 加 skill_rift_flicker；LW-1 加 3 招；BS-1 加 2 招；RG-1 加 3 招；RG-2 加 1 招
     sources = {LIB.scaling_basis(s).source for s in BUILTIN if s.category == "spell"}
     assert sources == {"effect", "tags", "override", "body"}
 
