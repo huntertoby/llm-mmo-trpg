@@ -43,9 +43,10 @@
   display: none;
 }
 
-/* 一輪：頁面本身會捲；自己當容器（看這個面板的寬） */
+/* 一輪：頁面本身會捲；自己當容器（看這個面板的寬）。TXT-2：命名容器 fc；大世界彈窗裡的 fc 是
+   `.world-hud-panel`（world-hud.css 同時叫 world-panel 與 fc），和改名前「最近的容器」是同一個 */
 .fc-run {
-  container-type: inline-size;
+  container: fc / inline-size;
 }
 
 /* ---------- 上固定區：標頭 ---------- */
@@ -660,7 +661,7 @@
 }
 
 /* ---------- 窄版（面板 < 560，800×600 的 493）：看面板寬，不看視窗寬 ---------- */
-@container (max-width: 559px) {
+@container fc (max-width: 559px) {
   .fc-panel .wide-only {
     display: none;
   }

@@ -974,8 +974,9 @@
 }
 
 /* 窄版看面板寬、不看視窗寬（3.2 第 9 條）：800×600 碰不到 max-width: 600px，面板卻只有 514 */
+/* TXT-2：另叫 fc，選變體畫面（flash-choice.css 的 @container fc）在大世界彈窗裡量這一層 */
 .world-hud-panel {
-  container: world-panel / inline-size;
+  container: world-panel fc / inline-size;
 }
 
 /* ---------- 文字三級 ---------- */

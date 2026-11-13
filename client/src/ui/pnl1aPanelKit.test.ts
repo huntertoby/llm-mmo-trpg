@@ -247,7 +247,8 @@ describe("CSS（3.1、3.2）", () => {
     expect(css).toContain("--pnl-info-bar: #4ab0d0;");
   });
   it("窄版看面板寬（容器查詢 < 560）：隊友卡兩欄、第 3 張撐滿；「預設（守衛）」不斷行", () => {
-    expect(css).toMatch(/\.world-hud-panel \{\s*container: world-panel \/ inline-size;\s*\}/);
+    // TXT-2：另叫 fc（選變體畫面的 @container fc 在大世界彈窗裡量這一層）
+    expect(css).toMatch(/\.world-hud-panel \{\s*container: world-panel fc \/ inline-size;\s*\}/);
     const at = css.indexOf("@container world-panel (max-width: 559px)");
     expect(at).toBeGreaterThan(-1);
     const block = css.slice(at, css.indexOf("}\n}", at) + 3);
