@@ -129,6 +129,7 @@ minor:
     generic: true
     prefix_zh: 擴展
     summary_zh: 範圍 +1（傷害依預算調整）
+    headline_zh: "範圍變大 {n} 格"
   - id: range_plus
     category: area
     op: range
@@ -143,6 +144,7 @@ minor:
     op: reshape
     prefix_zh: 擴散
     summary_zh: 換形狀（直線 3、錐形 2、十字）：一次打到更多目標（傷害依預算調整）
+    headline_zh: "換個形狀，一次打到更多敵人"
     shapes:
       - {type: line, size: 3}
       - {type: cone, size: 2}
@@ -153,6 +155,7 @@ minor:
     min_tier: 2
     prefix_zh: 方陣
     summary_zh: 換成 3×3（傷害依預算調整）
+    headline_zh: "範圍換成 3×3，一次打到更多敵人"
     shapes:
       - {type: square3, range: 4}
   - id: reshape_line6
@@ -161,6 +164,7 @@ minor:
     min_tier: 3
     prefix_zh: 貫穿
     summary_zh: 換成整排直線（長度 6，傷害依預算調整）
+    headline_zh: "換成一整排直線，貫穿 6 格"
     shapes:
       - {type: line, size: 6}
   - id: reshape_chain
@@ -169,6 +173,7 @@ minor:
     min_tier: 3
     prefix_zh: 連鎖
     summary_zh: 換成連鎖跳躍（再跳 2 次，傷害依預算調整）
+    headline_zh: "換成連鎖，打中後再跳到 2 個敵人"
     shapes:
       - {type: chain, range: 4, jumps: 2, jump_range: 2}
   # BAL-10b：複合技的接續段範圍、距離（第一段形狀不動）
@@ -179,6 +184,7 @@ minor:
     kinds: [active]
     prefix_zh: 延展
     summary_zh: 接續段範圍 +1（傷害依預算調整）
+    headline_zh: "後面那一段範圍變大 {n} 格"
   - id: followup_range
     category: area
     op: followup_range
@@ -186,6 +192,7 @@ minor:
     kinds: [active]
     prefix_zh: 長驅
     summary_zh: 接續段距離 +1（傷害依預算調整）
+    headline_zh: "後面那一段射程變遠 {n} 格"
   # 地形變化（#58 的稀有度門檻 → 3W 改成最低角色階級；只有升降地形的技能套得上）：影響格數 4～6 格 2 階、7 格以上 3 階
   - id: terrain_mid
     category: area
@@ -195,6 +202,7 @@ minor:
     max_cells: 6
     prefix_zh: 隆起
     summary_zh: 地形變化：升降地形的影響範圍擴大到 4～6 格（十字），必要時附帶少量落石傷害（強度由預算補）
+    headline_zh: "地形變化的範圍變大"
     shapes:
       - {type: cross, range: 4}
   - id: terrain_wide
@@ -204,6 +212,7 @@ minor:
     min_cells: 7
     prefix_zh: 崩山
     summary_zh: 地形變化：升降地形的影響範圍擴大到 7 格以上（3×3 或更大），必要時附帶少量落石傷害（強度由預算補）
+    headline_zh: "地形變化的範圍大幅變大"
     shapes:
       - {type: square3, range: 4}
       - {type: allies_in_radius, radius: 2}
@@ -215,6 +224,7 @@ minor:
     kinds: [active]
     prefix_zh: 合體
     summary_zh: 合體：召喚隻數 −1，省下的預算全部換成召喚物的生命（一隻時恢復完整強度）
+    headline_zh: "召喚物合成一隻，更耐打"
   # 收束（BAL-10d，#74；06 6.34.4「收束」「收回家族」）：把範圍收小，省下的預算＋這次的 +40‰ 全部換成威力
   # （trpg.skillgen.flash_trade）。只對有傷害／治療／護盾量的主動技；BAL-10e 補陷阱（觸發範圍）與地面格（持續區域
   # 裡的傷害／治療／護盾）；複合技只動第一段形狀；
@@ -224,24 +234,28 @@ minor:
     op: converge_single
     prefix_zh: 收束
     summary_zh: 收成單體：範圍收成一個目標，省下的預算全部換成威力（以自己為中心的改成射程 1）
+    headline_zh: "範圍收成單一目標，換更高的傷害"
     skeletons: [strike, combo]   # 範圍骨架不允許單體：依序改試打擊、連擊（原骨架允許單體時照舊）
   - id: converge_step
     category: area
     op: converge_step
     prefix_zh: 收束
     summary_zh: 縮小一級：直線、錐形長度 −1，或 3×3 改十字，省下的預算全部換成威力
+    headline_zh: "範圍縮小一級，換更高的傷害"
   # ---- 連段 ----
   - id: multi_hit
     category: combo
     op: multi_hit
     prefix_zh: 連打
     summary_zh: 多打一下：同一個目標多一段命中（每段傷害依預算調整）
+    headline_zh: "同一個敵人多挨一段"
   - id: followup_hit
     min_tier: 2
     category: combo
     op: followup
     prefix_zh: 追擊
     summary_zh: 接續段：命中後再接一小段傷害（6.23 複合技，傷害依預算調整）
+    headline_zh: "打中後再補一小段傷害"
   # BAL-10b：複合技的接續段強化（複合技不改第一段形狀、也不再加接續段，改強化已有的接續段）
   - id: followup_potency
     category: combo
@@ -249,6 +263,7 @@ minor:
     kinds: [active]
     prefix_zh: 續勁
     summary_zh: 接續段強化：接續段的傷害提高（依預算）
+    headline_zh: "後面那一段更痛"
   # 精煉・多段併一段（BAL-10e，#75；06 6.34.4「收回家族」）：同一目標的多段同元素傷害併成一段，總量不變、只換成單發
   - id: refine_merge
     category: combo
@@ -256,6 +271,7 @@ minor:
     kinds: [active]
     prefix_zh: 精煉
     summary_zh: 多段併一段：同一目標的幾段傷害併成一段單發（總量不變，依預算換成威力）
+    headline_zh: "幾段傷害併成一次重擊"
   # ---- 元素與關鍵字 ----
   - id: element_second
     min_tier: 2
@@ -263,6 +279,7 @@ minor:
     op: element
     prefix_zh: 雙元
     summary_zh: 加第二元素：多一段別種元素的傷害（傷害依預算調整）
+    headline_zh: "多帶一段{keyword}傷害"
     elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
   - id: followup_element
     min_tier: 2
@@ -271,6 +288,7 @@ minor:
     kinds: [active]
     prefix_zh: 雙元
     summary_zh: 接續段加第二元素：接續段多一段別種元素的傷害（傷害依預算調整）
+    headline_zh: "後面那一段多帶{keyword}傷害"
     elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
   - id: dual_scaling
     min_tier: 3
@@ -278,16 +296,19 @@ minor:
     op: dual_scaling
     prefix_zh: 雙修
     summary_zh: 雙屬性縮放：加第二縮放屬性（命中與傷害取兩個屬性的平均）
+    headline_zh: "威力多看一個屬性"
   - id: keyword_imbue
     category: element
     op: keyword_imbue
     prefix_zh: 附魔
     summary_zh: 加第二個關鍵字：命中時額外製造該關鍵字
+    headline_zh: "打中時還會造成{keyword}"
   - id: keyword_exploit
     category: element
     op: keyword_exploit
     prefix_zh: 借勢
     summary_zh: 加第二個關鍵字：目標帶有該關鍵字時加碼
+    headline_zh: "敵人身上有{keyword}時，這招多傷一截"
   # 精煉（BAL-10e，#75；06 6.34.4「收回家族」）：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字、接續段），
   # 拿掉的預算＋這次的 +40‰ 全部換成主要效果的威力（trpg.skillgen.flash_reclaim；共用 trpg.skillgen.flash_trade）。
   - id: refine
@@ -296,6 +317,7 @@ minor:
     kinds: [active]
     prefix_zh: 精煉
     summary_zh: 精煉：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字或接續段），省下的預算全部換成主要效果的威力
+    headline_zh: "拿掉附帶效果，主要效果更強"
     skeletons: [strike, combo]   # 拿掉附帶效果後原骨架不合適時（例：控制技拿掉狀態）依序改試打擊、連擊
   # ---- 延長與收割 ----
   - id: extend_duration
@@ -304,6 +326,7 @@ minor:
     generic: true
     prefix_zh: 恆久
     summary_zh: 延長：這招的狀態、表面與區域多持續 1 回合（效果依預算調整）
+    headline_zh: "效果多持續 {n} 回合"
   - id: summon_toughen
     category: extend
     op: summon_toughen
@@ -311,11 +334,14 @@ minor:
     generic: true
     prefix_zh: 強壯
     summary_zh: 強壯：召喚物的最大生命再多一截（召喚技能的小變化，強度固定所以靠這個補）
+    headline_zh: "召喚物更耐打"
   - id: kill_refund
     category: extend
     op: kill_refund
     prefix_zh: 收割
     summary_zh: 擊殺返還 1 AP
+    headline_zh: "打倒敵人時拿回 1 AP"
+    say_zh: "這招打倒敵人時，馬上拿回 1 AP，可以接著行動。"
     kinds: [active]
   # ---- 費用方向（只限主動技；姿態改維持費，待引擎欄位） ----
   - id: cost_charge
@@ -341,12 +367,14 @@ minor:
     kinds: [stance]
     prefix_zh: 輕巧
     summary_zh: 輕巧：姿態維持費 −1，效果降低一級
+    headline_zh: "維持費少 {n}，姿態效果弱一點"
   - id: stance_cost_heavy
     category: cost
     op: stance_heavy
     kinds: [stance]
     prefix_zh: 蓄力
     summary_zh: 蓄力：姿態維持費 +1，效果提高
+    headline_zh: "維持費多 {n}，姿態效果強一點"
   # BAL-10b／10c：進入代價 −1——只減進入時的施放費用（冷卻、法力、耐力，每項最少留 1；姿態的進入 AP 由規則固定），維持費不動
   - id: stance_enter_light
     category: cost
@@ -355,6 +383,7 @@ minor:
     cost_fields: [ap_cost, cooldown, mana, stamina]
     prefix_zh: 俐落
     summary_zh: 進入代價 −1：進入姿態的冷卻、法力或耐力 −1（最少留 1；維持費不變，效果不變）
+    headline_zh: "進入姿態更便宜"
   # BAL-19e（#110「閃現的姿態變化模板補到約 10 種」）：進入代價 +1 的反向——進入時的法力或耐力 +1，姿態本體提高一級；
   # 維持費不動（#67）；變身姿態不出（BAL-10c）；進入冷卻不算代價（BAL-10c），不列
   - id: stance_enter_heavy
@@ -364,6 +393,7 @@ minor:
     cost_fields: [mana, stamina]
     prefix_zh: 沉勢
     summary_zh: 進入代價 +1：進入姿態的法力或耐力 +1，姿態效果提高一級（維持費不變）
+    headline_zh: "進入姿態多付一點，效果強一級"
   # ---- 輔助（治療、護盾、增益） ----
   - id: support_potency
     category: support
@@ -371,12 +401,14 @@ minor:
     generic: true
     prefix_zh: 強效
     summary_zh: 效果 +（治療、護盾、增益依預算提高）
+    headline_zh: "這招給的效果更強"
   - id: support_area
     category: support
     op: area
     delta: 1
     prefix_zh: 廣布
     summary_zh: 範圍 +1（效果依預算調整）
+    headline_zh: "範圍變大 {n} 格，照顧更多人"
   - id: support_area_wide
     category: support
     op: area
@@ -384,6 +416,7 @@ minor:
     min_tier: 2
     prefix_zh: 遍布
     summary_zh: 範圍 +2（光環類，效果依預算調整）
+    headline_zh: "光環範圍變大 {n} 格"
   - id: support_keyword
     category: support
     op: keyword_imbue
@@ -397,6 +430,7 @@ minor:
     op: trigger_range
     prefix_zh: 廣域
     summary_zh: 觸發範圍 +1（效果依預算調整）
+    headline_zh: "觸發的範圍變大 {n} 格"
   - id: trigger_range_wide
     category: trigger
     usage_base: 1
@@ -405,6 +439,7 @@ minor:
     min_tier: 2
     prefix_zh: 遠域
     summary_zh: 觸發範圍 +2（效果依預算調整）
+    headline_zh: "觸發的範圍變大 {n} 格"
   - id: trigger_potency
     category: trigger
     usage_base: 2
@@ -412,6 +447,7 @@ minor:
     generic: true
     prefix_zh: 強效
     summary_zh: 效果 +（依預算提高）
+    headline_zh: "觸發時的效果更強"
   - id: trigger_cap
     category: trigger
     usage_base: 1
@@ -419,6 +455,7 @@ minor:
     kinds: [passive]
     prefix_zh: 連發
     summary_zh: 每回合觸發次數上限 +1（效果依預算調整，不超過 6.6）
+    headline_zh: "每回合多觸發 {n} 次"
   # 附帶護身（BAL-19e，#110「閃現的反應變化模板補到約 10 種」；觸發類的「效果 +」）：反應觸發時順便給自己護盾或回氣（冷卻 −1；治療會碰到「傷害與友方治療不並存」）
   # （trpg.skillgen.flash_ops 的 self_rider）。只給只有一個效果、沒有同種效果的反應（擋攻擊的不出）；主要效果由預算器
   # 一起重調。BAL-19e 同時讓「觸發範圍 +1／+2」用在反應的單體射程（原本只看觸發距離與形狀大小，反應套不上）
@@ -430,6 +467,8 @@ minor:
     rider: {type: shield, dice: 1d4, affects: self}
     prefix_zh: 護身
     summary_zh: 附帶護盾：反應觸發時，自己也得到一層護盾（強度依預算重新分配）
+    headline_zh: "觸發時自己也得到一層護盾"
+    say_zh: "這個反應觸發時，你自己也會得到一層護盾。"
   - id: reaction_refocus
     category: trigger
     usage_base: 1
@@ -438,17 +477,21 @@ minor:
     rider: {type: restore_resource, resource: cooldown, amount: 1, affects: self}
     prefix_zh: 回氣
     summary_zh: 附帶回氣：反應觸發時，自己所有技能的冷卻 −1（強度依預算重新分配）
+    headline_zh: "觸發時你所有技能的冷卻 −1"
+    say_zh: "這個反應觸發時，你所有技能的冷卻都少 1 回合。"
   # 專注（BAL-10e，#75；06 6.34.4「收回家族」）：觸發範圍收回一級，或觸發條件收緊一級，換成觸發效果的威力
   - id: focus_range
     category: trigger
     op: focus_range
     prefix_zh: 專注
     summary_zh: 專注：觸發範圍收回一級，省下的預算全部換成觸發效果（依預算）
+    headline_zh: "觸發範圍收小，換更強的效果"
   - id: focus_condition
     category: trigger
     op: focus_condition
     prefix_zh: 專注
     summary_zh: 專注：觸發條件收緊一級（例：被攻擊時 → 被近戰攻擊時；沒有條件 → 目標血量低於 50%），換成觸發效果（依預算）
+    headline_zh: "觸發條件變嚴，換更強的效果"
   # ---- 修正（修正型被動、姿態） ----
   - id: mod_potency
     category: modifier
@@ -458,6 +501,7 @@ minor:
     generic: true
     prefix_zh: 強效
     summary_zh: 修正幅度 +（依預算提高）
+    headline_zh: "加成幅度更大"
   - id: mod_range
     category: modifier
     usage_base: 1
@@ -465,12 +509,14 @@ minor:
     kinds: [modifier]
     prefix_zh: 廣域
     summary_zh: 作用範圍 +1（多一條光環半徑 +1 的規則，或射程 +1，幅度依預算調整）
+    headline_zh: "作用範圍變大 {n} 格"
   - id: mod_keyword
     category: modifier
     op: mod_keyword
     kinds: [modifier]
     prefix_zh: 雙引
     summary_zh: 加第二個關鍵字：條件變成「原條件，或另一個關鍵字的條件」（幅度依預算調整）
+    headline_zh: "條件多一種：{keyword}也算"
   - id: stance_potency
     category: modifier
     usage_base: 2
@@ -479,6 +525,7 @@ minor:
     generic: true
     prefix_zh: 強效
     summary_zh: 姿態效果 +（元素傷害加成與小特色提高一級，維持費不變）
+    headline_zh: "姿態效果強一級"
   # 姿態附帶（BAL-19e，#110「閃現的姿態變化模板補到約 10 種」；06 6.34.4 姿態的「修正」類）：進入姿態時多一個作用於
   # 自己的效果（trpg.skillgen.flash_ops 的 self_rider）。只給只有姿態本體一個效果的姿態（骨架附帶最多 1 個；變身姿態
   # 的進入形態必須是唯一效果，不出）。姿態技能只能施加姿態狀態，所以附帶不用狀態（加速、隱蔽不行）。rider 的數值只是起點：先試本體不變、由預算器重調附帶的骰子，放不進預算時本體降一級
@@ -490,6 +537,7 @@ minor:
     rider: {type: shield, dice: 1d4, affects: self}
     prefix_zh: 護體
     summary_zh: 姿態附帶護盾：進入姿態時得到一層護盾（護盾量依預算）
+    headline_zh: "進入姿態時得到一層護盾"
   - id: stance_mend
     category: modifier
     usage_base: 1
@@ -498,6 +546,7 @@ minor:
     rider: {type: heal, dice: 1d4, affects: self}
     prefix_zh: 調息
     summary_zh: 姿態附帶治療：進入姿態時回復生命（治療量依預算）
+    headline_zh: "進入姿態時回一點血"
   - id: stance_refocus
     category: modifier
     usage_base: 1
@@ -506,6 +555,7 @@ minor:
     rider: {type: restore_resource, resource: cooldown, amount: 1, affects: self}
     prefix_zh: 凝神
     summary_zh: 姿態附帶回氣：進入姿態時自己所有技能的冷卻 −1（必要時姿態效果降一級）
+    headline_zh: "進入姿態時所有技能的冷卻 −1"
   - id: stance_channel
     category: modifier
     usage_base: 1
@@ -514,6 +564,7 @@ minor:
     rider: {type: restore_resource, resource: mana, amount: 2, affects: self}
     prefix_zh: 蓄能
     summary_zh: 姿態附帶回魔：進入姿態時回復法力（回復量依預算）
+    headline_zh: "進入姿態時回一點法力"
   - id: stance_cleanse
     category: modifier
     usage_base: 1
@@ -522,6 +573,7 @@ minor:
     rider: {type: cleanse, affects: self}
     prefix_zh: 澄心
     summary_zh: 姿態附帶淨化：進入姿態時移除自己身上的減益（必要時姿態效果降一級）
+    headline_zh: "進入姿態時清掉身上的減益"
   - id: mod_relax
     category: modifier
     usage_base: 1
@@ -529,6 +581,7 @@ minor:
     kinds: [modifier]
     prefix_zh: 寬限
     summary_zh: 條件放寬一級：血量門檻放寬，或多一個「或」分支（幅度依預算調整）
+    headline_zh: "條件放寬，更容易成立"
   # BAL-10b：修正型被動的持續、計數上限、冷卻、代價（其他幅度依預算調整；沒有傷害／治療幅度時用 rules.modifier_knobs）
   - id: mod_duration
     category: modifier
@@ -537,6 +590,7 @@ minor:
     kinds: [modifier]
     prefix_zh: 綿延
     summary_zh: 持續回合 +1：命中後附帶的狀態、符文，或召喚物多持續 1 回合（幅度依預算調整）
+    headline_zh: "附帶的效果多持續 {n} 回合"
   - id: mod_stack
     category: modifier
     usage_base: 1
@@ -544,6 +598,7 @@ minor:
     kinds: [modifier]
     prefix_zh: 疊勢
     summary_zh: 計數上限 +1：依空欄位計算的加成多算 1 格（幅度依預算調整）
+    headline_zh: "計算加成時多算 1 格"
   - id: mod_cooldown
     category: modifier
     usage_base: 1
@@ -551,6 +606,7 @@ minor:
     kinds: [modifier]
     prefix_zh: 迴轉
     summary_zh: 冷卻：命中後冷卻 −1 加深成 −2（幅度依預算調整）
+    headline_zh: "命中後冷卻減得更多"
   - id: mod_cost
     category: modifier
     usage_base: 1
@@ -558,6 +614,7 @@ minor:
     kinds: [modifier]
     prefix_zh: 減負
     summary_zh: 代價減輕：附帶的代價（傷害降低、命中降低……）減輕一級，不會變成沒有代價（其他幅度依預算調整）
+    headline_zh: "附帶的代價變輕"
   # 專注（修正型被動，BAL-10e，#75）：作用範圍收回一級，或規則的條件收緊一級，換成修正幅度
   - id: focus_mod_range
     category: modifier
@@ -565,23 +622,25 @@ minor:
     kinds: [modifier]
     prefix_zh: 專注
     summary_zh: 專注：作用範圍收回一級（範圍、射程 −1），省下的預算全部換成修正幅度
+    headline_zh: "作用範圍收小，換更大的加成"
   - id: focus_mod_condition
     category: modifier
     op: focus_mod_condition
     kinds: [modifier]
     prefix_zh: 專注
     summary_zh: 專注：條件收緊一級（沒有條件 → 目標血量低於 50%；血量門檻收緊；「或」拿掉一支），換成修正幅度
+    headline_zh: "條件變嚴，換更大的加成"
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
-  - {id: major_intensify, category: deepen, evolution: intensify}
-  - {id: major_reshape, category: deepen, evolution: reshape}
-  - {id: major_extend, category: deepen, evolution: extend}
-  - {id: major_delayed_burst, category: deepen, evolution: delayed_burst}
-  - {id: major_kill_chain, category: deepen, evolution: kill_chain}
-  - {id: major_battle_variant, category: deepen, evolution: battle_variant}
-  - {id: major_bridge_exploit, category: bridge, evolution: bridge_exploit}
-  - {id: major_bridge_imbue, category: bridge, evolution: bridge_imbue}
+  - {id: major_intensify, category: deepen, evolution: intensify, headline_zh: "專精{keyword}：造成的{keyword}更持久"}
+  - {id: major_reshape, category: deepen, evolution: reshape, headline_zh: "換個形狀，一次打到更多敵人"}
+  - {id: major_extend, category: deepen, evolution: extend, headline_zh: "這招的所有效果多持續 1 回合"}
+  - {id: major_delayed_burst, category: deepen, evolution: delayed_burst, headline_zh: "貼上目標，下一輪在它周圍爆開", say_zh: "打中後在目標身上留下印記，下一輪在它周圍一圈爆開。"}
+  - {id: major_kill_chain, category: deepen, evolution: kill_chain, headline_zh: "打倒敵人時拿回 1 AP", say_zh: "這招打倒敵人時，馬上拿回 1 AP，可以接著行動。"}
+  - {id: major_battle_variant, category: deepen, evolution: battle_variant, headline_zh: "站在特定地形時，這招換一種打法", say_zh: "站在特定地形上施放時，這招自動換成另一種打法。"}
+  - {id: major_bridge_exploit, category: bridge, evolution: bridge_exploit, headline_zh: "敵人身上有{keyword}時，這招多傷一截"}
+  - {id: major_bridge_imbue, category: bridge, evolution: bridge_imbue, headline_zh: "打中時還會造成{keyword}"}
 
 
 # ---------------------------------------------------------------------------
@@ -591,18 +650,18 @@ major:
 # 大變化補充（6.34.5、原 3-26b 待辦「輔助類模板」）：進化模板做不出來的輔助技（治療、護盾、增益），
 # 與召喚技能（沿用 3-33f2 的三支）。op 的實作在 trpg.skillgen.flash_major。
 extra_major:
-  - {id: support_wide, category: deepen, op: support_wide, only: support, prefix_zh: 廣佈, summary_zh: 加深：影響範圍擴大 1 格，多照顧一個人（效果依預算調整）}
-  - {id: support_ease, category: deepen, op: support_ease, only: support, prefix_zh: 輕盈, summary_zh: 加深：冷卻縮短 1 回合，能更常使用（效果依預算調整）}
-  - {id: support_imbue, category: bridge, op: support_imbue, only: support, prefix_zh: 附帶, summary_zh: "橋接{keyword}：施放時在目標腳下留下{keyword}的場地"}
-  - {id: shield_potency, category: deepen, op: shield_potency, only: shield, prefix_zh: 厚實, summary_zh: 加深：護盾量提高（依預算）}
-  - {id: shield_thorns, category: deepen, op: shield_status, only: shield, status: shielded_thorns, prefix_zh: 荊棘, summary_zh: 加深：護盾附反傷（吸收近戰攻擊時，對攻擊者反彈物理傷害）}
-  - {id: shield_mending, category: deepen, op: shield_status, only: shield, status: shielded_mending, prefix_zh: 回春, summary_zh: 加深：護盾結束時（打破或到期）回復少量生命}
-  - {id: shield_wet, category: bridge, op: shield_status, only: shield, status: shielded_wet, keyword: wet, prefix_zh: 水幕, summary_zh: 橋接潮濕：護盾被打破時，在自己腳下造出一灘水}
-  - {id: shield_marking, category: bridge, op: shield_status, only: shield, status: shielded_marking, keyword: marked, prefix_zh: 烙印, summary_zh: 橋接標記：護盾被打破時，對打破它的攻擊者施加標記}
-  - {id: shield_charged, category: bridge, op: shield_status, only: shield, status: shielded_charged, keyword: charged, prefix_zh: 帶電, summary_zh: 橋接帶電：護盾被打破時，對打破它的攻擊者造成小量雷電傷害}
-  - {id: summon_deepen, category: deepen, op: summon_deepen, only: summon, prefix_zh: 強化, summary_zh: 加深：召喚物更強壯，並多一個小特性}
-  - {id: summon_count, category: deepen, op: summon_count, only: summon, prefix_zh: 雙生, summary_zh: 加深：一次召喚 2 隻較弱的召喚物}
-  - {id: summon_bridge, category: bridge, op: summon_bridge, only: summon, prefix_zh: 灌注, summary_zh: "橋接{keyword}：召喚物多帶一個{keyword}灌注"}
+  - {id: support_wide, category: deepen, op: support_wide, only: support, prefix_zh: 廣佈, summary_zh: 加深：影響範圍擴大 1 格，多照顧一個人（效果依預算調整）, headline_zh: "範圍變大，多照顧一個人"}
+  - {id: support_ease, category: deepen, op: support_ease, only: support, prefix_zh: 輕盈, summary_zh: 加深：冷卻縮短 1 回合，能更常使用（效果依預算調整）, headline_zh: "冷卻少 1 回合，更常能用"}
+  - {id: support_imbue, category: bridge, op: support_imbue, only: support, prefix_zh: 附帶, summary_zh: "橋接{keyword}：施放時在目標腳下留下{keyword}的場地", headline_zh: "目標腳下留下{keyword}的場地"}
+  - {id: shield_potency, category: deepen, op: shield_potency, only: shield, prefix_zh: 厚實, summary_zh: 加深：護盾量提高（依預算）, headline_zh: "護盾更厚"}
+  - {id: shield_thorns, category: deepen, op: shield_status, only: shield, status: shielded_thorns, prefix_zh: 荊棘, summary_zh: 加深：護盾附反傷（吸收近戰攻擊時，對攻擊者反彈物理傷害）, headline_zh: "護盾被近戰打到時反彈傷害", say_zh: "護盾擋下近戰攻擊時，對攻擊者反彈一點物理傷害。"}
+  - {id: shield_mending, category: deepen, op: shield_status, only: shield, status: shielded_mending, prefix_zh: 回春, summary_zh: 加深：護盾結束時（打破或到期）回復少量生命, headline_zh: "護盾結束時回一點血", say_zh: "護盾被打破或時間到時，你會回一點血。"}
+  - {id: shield_wet, category: bridge, op: shield_status, only: shield, status: shielded_wet, keyword: wet, prefix_zh: 水幕, summary_zh: 橋接潮濕：護盾被打破時，在自己腳下造出一灘水, headline_zh: "護盾破掉時，腳下積一灘水", say_zh: "護盾被打破時，腳下積一灘水。"}
+  - {id: shield_marking, category: bridge, op: shield_status, only: shield, status: shielded_marking, keyword: marked, prefix_zh: 烙印, summary_zh: 橋接標記：護盾被打破時，對打破它的攻擊者施加標記, headline_zh: "護盾破掉時，標記打破它的敵人", say_zh: "護盾被打破時，標記打破它的敵人。"}
+  - {id: shield_charged, category: bridge, op: shield_status, only: shield, status: shielded_charged, keyword: charged, prefix_zh: 帶電, summary_zh: 橋接帶電：護盾被打破時，對打破它的攻擊者造成小量雷電傷害, headline_zh: "護盾破掉時，電一下打破它的敵人", say_zh: "護盾被打破時，電一下打破它的敵人。"}
+  - {id: summon_deepen, category: deepen, op: summon_deepen, only: summon, prefix_zh: 強化, summary_zh: 加深：召喚物更強壯，並多一個小特性, headline_zh: "召喚物更強，還多一個小本事"}
+  - {id: summon_count, category: deepen, op: summon_count, only: summon, prefix_zh: 雙生, summary_zh: 加深：一次召喚 2 隻較弱的召喚物, headline_zh: "一次召出 2 隻，各自弱一點", say_zh: "一次召出 2 隻，每隻比原本弱，但能分頭行動、多擋一個位置。"}
+  - {id: summon_bridge, category: bridge, op: summon_bridge, only: summon, prefix_zh: 灌注, summary_zh: "橋接{keyword}：召喚物多帶一個{keyword}灌注", headline_zh: "召喚物的攻擊帶上{keyword}"}
 
 # 轉型（6.34.5、#73）：第 3 次閃現（或重閃第 3 次）有合法轉型時一定是選項之一（#70）；可轉的種類有好幾種時
 # 由種子挑一種。min_tier：最低角色階級（1 階被動、反應；2 階起召喚、陷阱、姿態；3 階起修正型被動）。
@@ -612,12 +671,16 @@ transforms:
     to: passive
     prefix_zh: 餘波
     summary_zh: 轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招
+    headline_zh: "變成被動：你打中敵人時自動補上這招"
+    say_zh: "這招變成被動、不用再按：你的攻擊打中敵人時，自動對它補上縮小版的這招。"
     trigger: {event: on_hit, target: other}
     scale_permille: 500
   - id: to_reaction_melee
     to: reaction
     prefix_zh: 反擊
     summary_zh: 轉成反應：被近戰攻擊時，對攻擊者施放縮小版的這招
+    headline_zh: "變成反應：被近戰攻擊時自動回敬這招"
+    say_zh: "這招變成反應：敵人近戰攻擊你時，自動對它施放縮小版的這招。"
     reaction: {event: hit_by_melee}
     scale_permille: 600
   - id: to_summon
@@ -625,6 +688,8 @@ transforms:
     min_tier: 2
     prefix_zh: 靈召
     summary_zh: 轉成召喚：召喚一隻幫你出手的召喚物（依這招的元素）
+    headline_zh: "變成召喚：召出一隻替你用這招的幫手"
+    say_zh: "這招變成召喚：召出一隻幫手，每回合替你用這招的元素出手。"
     summon_duration: 2
     summon_boosts:        # 角色階級高、預算變大時依序加試（先試不強化的）
       - {duration: 3}
@@ -646,12 +711,16 @@ transforms:
     min_tier: 2
     prefix_zh: 伏設
     summary_zh: 轉成陷阱：在地上布下陷阱，敵人踩上去時才發動這招的效果
+    headline_zh: "變成陷阱：敵人踩上去才發動"
+    say_zh: "這招變成陷阱：先布在地上，敵人踩上去時才發動。"
     trap: {trigger: enter, rounds: 3, shape: single}
   - id: to_stance
     to: stance
     min_tier: 2
     prefix_zh: 架式
     summary_zh: 轉成姿態：進入一個持續到取消的姿態（原招有傷害給同元素的元素姿態、沒有傷害給防守向）
+    headline_zh: "變成姿態：進入後一直生效，直到你取消"
+    say_zh: "這招變成姿態：進入後一直生效，每回合付維持費，直到你取消。"
     stances:
       offense: [stance_fury]
       defense: [stance_bulwark, stance_guard, stance_ironwall, stance_bastion]
@@ -660,6 +729,8 @@ transforms:
     min_tier: 3
     prefix_zh: 化氣
     summary_zh: 轉成修正型被動：你的同元素技能命中時，帶上這招的效果（沒有可帶的效果時改為傷害提高）
+    headline_zh: "變成修正：你同元素的技能打中時都帶上這招的效果"
+    say_zh: "這招變成修正型被動：你同元素的技能打中時，都會帶上這招的效果。"
     damage_permille_steps: [400, 300, 200, 150, 100, 50]
 
 # 元素姿態的階梯（3W-2b、06 6.34.5）：元素 → 由弱到強 5 級的姿態狀態（statuses.yaml `stance_<元素>_<級>`）。
@@ -694,6 +765,46 @@ headlines:
     keyword: collision
     headline_zh: 敵人剛被撞過，這招多傷一截               # 9.1 #32
     say_zh: "目標這回合被推去[[kw:collision|撞過]]牆或別人時，這招對它多 {extra}。"
+  # FL-1f（玩法 PM 2026-11-13 填答第五節）。製造類：keyword_imbue、major_bridge_imbue 共用。照 skill_evolution.yaml
+  # grafts 的 makes 對過引擎：隱蔽（造煙霧在打中的格子，不是自己躲）、冰凍（造冰面，不會凍住敵人）對不上，用模板的
+  # 通用句；形態、高處沒有 makes，不會出這兩個組合，不列。
+  - {template: keyword_imbue, keyword: charged, headline_zh: 打中時還會放電}
+  - {template: keyword_imbue, keyword: collision, headline_zh: 打中時還會把敵人撞出去}
+  - {template: keyword_imbue, keyword: ignite, headline_zh: 打中時還會點燃敵人}
+  - {template: keyword_imbue, keyword: marked, headline_zh: 打中時還會標記敵人}
+  - {template: keyword_imbue, keyword: poisoned, headline_zh: 打中時還會讓敵人中毒}
+  - {template: keyword_imbue, keyword: prone, headline_zh: 打中時還會把敵人絆倒}
+  - {template: major_bridge_imbue, keyword: charged, headline_zh: 打中時還會放電}
+  - {template: major_bridge_imbue, keyword: collision, headline_zh: 打中時還會把敵人撞出去}
+  - {template: major_bridge_imbue, keyword: ignite, headline_zh: 打中時還會點燃敵人}
+  - {template: major_bridge_imbue, keyword: marked, headline_zh: 打中時還會標記敵人}
+  - {template: major_bridge_imbue, keyword: poisoned, headline_zh: 打中時還會讓敵人中毒}
+  - {template: major_bridge_imbue, keyword: prone, headline_zh: 打中時還會把敵人絆倒}
+  - {template: major_bridge_imbue, keyword: wet, headline_zh: 打中的格子還會積水}
+  # 加碼類：keyword_exploit、major_bridge_exploit 共用。照 grafts 的 uses 條件對過：帶電的條件是「這回合放過雷電技能」
+  # （cast_tag_this_turn），不是敵人帶電，用模板的通用句。
+  - {template: keyword_exploit, keyword: concealed, headline_zh: 從隱蔽中出手，這招多傷一截}
+  - {template: keyword_exploit, keyword: form, headline_zh: 在形態中出手，這招多傷一截}
+  - {template: keyword_exploit, keyword: frozen, headline_zh: 敵人被凍住時，這招多傷一截}
+  - {template: keyword_exploit, keyword: high_ground, headline_zh: 站在高處出手，這招多傷一截}
+  - {template: keyword_exploit, keyword: ignite, headline_zh: 敵人燃燒中時，這招多傷一截}
+  - {template: keyword_exploit, keyword: marked, headline_zh: 敵人被標記時，這招多傷一截}
+  - {template: keyword_exploit, keyword: poisoned, headline_zh: 敵人中毒時，這招多傷一截}
+  - {template: keyword_exploit, keyword: prone, headline_zh: 敵人倒地時，這招多傷一截}
+  - {template: keyword_exploit, keyword: wet, headline_zh: 敵人站在水上時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: collision, headline_zh: 敵人剛被撞過，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: concealed, headline_zh: 從隱蔽中出手，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: form, headline_zh: 在形態中出手，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: frozen, headline_zh: 敵人被凍住時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: high_ground, headline_zh: 站在高處出手，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: ignite, headline_zh: 敵人燃燒中時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: marked, headline_zh: 敵人被標記時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: poisoned, headline_zh: 敵人中毒時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: prone, headline_zh: 敵人倒地時，這招多傷一截}
+  - {template: major_bridge_exploit, keyword: wet, headline_zh: 敵人站在水上時，這招多傷一截}
+  # 輔助類：support_keyword 只有潮濕、隱蔽（沒有模板通用句）
+  - {template: support_keyword, keyword: wet, headline_zh: 施放時目標腳下積水}
+  - {template: support_keyword, keyword: concealed, headline_zh: 施放時讓目標躲進隱蔽}
 
 # 新加的條件傷害「（……才有）」的白話；沒有的退回條件的一句話（「目標本回合受過撞擊時才有」）。
 condition_zh:

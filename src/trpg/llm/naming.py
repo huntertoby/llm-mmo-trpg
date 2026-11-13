@@ -52,6 +52,7 @@ __all__ = [
     "check_archaic",
     "check_archaic_text",
     "check_consistency",
+    "check_name",
     "check_naming",
     "fallback_naming",
     "name_skill",
@@ -143,6 +144,28 @@ def check_naming(
         rules.world_terms,
     )
     errors += check_archaic(text, rules, archaic_ok=archaic_ok)
+    return errors
+
+
+def check_name(
+    name: str,
+    rules: NamingRules,
+    taken: Collection[str] = (),
+    *,
+    archaic_ok: bool = False,
+) -> list[NameCheck]:
+    """只檢查名稱（LF-2：閃現提議時順便取的 ``name_zh``，沒有兩段敘事）：和 :func:`check_naming`
+    對名稱的那幾項相同——長度、空字串、字元集、禁字、重名、世界觀詞、古風詞。"""
+    errors = _check_text("name_zh", name, rules.name_max_chars, rules)
+    if name in taken:
+        errors.append(NameCheck("name_zh.duplicate", "name_zh 和既有技能名稱重複，請換一個。"))
+    errors += check_world_terms(name, {}, rules.world_terms)
+    bare = NamingText(name_zh=name, concept="", cast_flavor="")
+    errors += [
+        e
+        for e in check_archaic(bare, rules, archaic_ok=archaic_ok)
+        if e.code.startswith("name_zh.")
+    ]
     return errors
 
 
