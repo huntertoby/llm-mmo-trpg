@@ -5,7 +5,11 @@
 
 - ``reach``：打得到的條件（每個部位一種）——``any`` 任何方向、``behind`` 從背後近戰（沿用背刺的
   背後格）、``high_or_far`` 從比頭目高 ≥ 1 層的格子或曼哈頓距離 > 3、``disabled`` 頭目倒地、暈眩或
-  冰凍時。
+  冰凍時、``ranged`` 這次攻擊不是近戰（GB-1c，#164 R3：同背刺的近戰判斷；巨型頭目的噴口）。
+- **巨型頭目的部位綁格**（GB-1c，05 5.12.4 第 3 點、19 19.2.3）：``tiles`` 是部位佔的格子（相對
+  中心格的偏移 ``(dx, dy)``，北＝dy −1）；巨型頭目的部位必須有、不重疊、在佔格內，一格的頭目不能有。
+  ``melee_from``：近戰要貼著部位的格子（``tile``）或貼著任何一面（``any_face``，核心）。
+  ``counts_as_behind``：近戰打這個部位算從背後（R4：背刺加成、條件「目標背後」；遠程照一般部位）。
 - ``exposed_in``：只有這些階段（``phases[*].id``）才露出；空＝全程露出。和 ``reach`` 並存。
 - ``armor_bonus``／``resist``／``element_mods``：部位自己的防禦；沒寫＝和本體相同（``resist``、
   ``element_mods`` 只覆寫有寫的鍵）。
@@ -37,6 +41,7 @@ __all__ = [
     "SealSkillBreak",
     "StatDownBreak",
     "StopMechanicBreak",
+    "check_part_tiles",
     "check_parts",
     "max_part_hp",
     "opening_part_hp",
@@ -51,7 +56,10 @@ PARTS_MAX = 4
 PART_HP_TOTAL_MAX = 600
 """同一隻頭目的部位 ``hp_permille`` 加總上限（05 5.12.2 第 3 點）。"""
 
-type PartReach = Literal["any", "behind", "high_or_far", "disabled"]
+type PartReach = Literal["any", "behind", "high_or_far", "disabled", "ranged"]
+
+type MeleeFrom = Literal["tile", "any_face"]
+"""巨型頭目部位的近戰條件（GB-1c，T11）：``tile`` 貼著部位的格子；``any_face`` 貼著任何一面。"""
 
 STAT_DOWN_STATS: tuple[str, ...] = (
     "move",
@@ -65,10 +73,14 @@ STAT_DOWN_STATS: tuple[str, ...] = (
 
 
 class SealSkillBreak(ContentModel):
-    """封住一招（換階段不解除）；頭目正在蓄力這一招就一起打斷。"""
+    """封住一招（換階段不解除）；頭目正在蓄力這一招就一起打斷。
+
+    ``rounds``（GB-1c，T14）：有值時只封這麼多輪——從破壞那一輪（第 N 輪）起算，第 N＋rounds 輪
+    開始解封；``None``＝永久（同段 1，不輸出）。"""
 
     type: Literal["seal_skill"] = "seal_skill"
     skill: str = Field(pattern=r"^skill_[a-z0-9_]+$")
+    rounds: int | None = Field(default=None, ge=1, exclude_if=lambda v: v is None)
 
 
 class StatDownBreak(ContentModel):
@@ -131,6 +143,12 @@ class BossPart(ContentModel):
     on_break: tuple[PartBreakEffect, ...] = Field(min_length=1, max_length=2)
     break_text_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
     """破掉時的一句敘事（戰鬥紀錄；沒寫時由效果自動組一句）。"""
+    tiles: tuple[tuple[int, int], ...] = Field(default=(), exclude_if=lambda v: not v)
+    """巨型頭目的部位格（GB-1c，T11）：相對中心格的偏移；空＝不綁格（一格的頭目，不輸出）。"""
+    melee_from: MeleeFrom = Field(default="tile", exclude_if=lambda v: v == "tile")
+    """巨型頭目部位的近戰條件（GB-1c；預設 ``tile`` 不輸出）。"""
+    counts_as_behind: bool = Field(default=False, exclude_if=lambda v: not v)
+    """近戰打這個部位算從背後（GB-1c，R4；``False`` 不輸出）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BossPart:
@@ -139,6 +157,8 @@ class BossPart(ContentModel):
             raise ValueError(f"部位 {self.id} 的 resist 必須在 -1000–1000‰：{', '.join(bad)}")
         if len(set(self.exposed_in)) != len(self.exposed_in):
             raise ValueError(f"部位 {self.id} 的 exposed_in 不能重複")
+        if len(set(self.tiles)) != len(self.tiles):
+            raise ValueError(f"部位 {self.id} 的 tiles 不能重複")
         return self
 
 
@@ -155,6 +175,34 @@ def check_parts(parts: tuple[BossPart, ...]) -> list[str]:
     total = sum(p.hp_permille for p in parts)
     if total > PART_HP_TOTAL_MAX:
         problems.append(f"所有部位的血量加總不能超過 {PART_HP_TOTAL_MAX}‰（收到 {total}‰）")
+    return problems
+
+
+def check_part_tiles(parts: tuple[BossPart, ...], footprint: int) -> list[str]:
+    """部位綁格（GB-1c，T11）的問題：巨型頭目（``footprint`` > 1）的每個部位都要有 ``tiles``、
+    在佔格內、彼此不重疊；一格的頭目的部位不能有 ``tiles``、``melee_from``、
+    ``counts_as_behind``。"""
+    problems: list[str] = []
+    if footprint == 1:
+        for part in parts:
+            if part.tiles or part.melee_from != "tile" or part.counts_as_behind:
+                problems.append(
+                    f"部位 {part.id}：只有佔多格的頭目的部位能有 "
+                    "tiles、melee_from、counts_as_behind"
+                )
+        return problems
+    half = footprint // 2
+    seen: dict[tuple[int, int], str] = {}
+    for part in parts:
+        if not part.tiles:
+            problems.append(f"部位 {part.id}：佔多格的頭目的部位要有 tiles（部位佔的格子）")
+        for dx, dy in part.tiles:
+            if abs(dx) > half or abs(dy) > half:
+                problems.append(f"部位 {part.id} 的格子 ({dx}, {dy}) 不在佔格內")
+            elif (dx, dy) in seen:
+                problems.append(f"部位 {part.id} 的格子 ({dx}, {dy}) 和部位 {seen[(dx, dy)]} 重疊")
+            else:
+                seen[(dx, dy)] = part.id
     return problems
 
 

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 
 from pydantic import Field, field_validator, model_serializer, model_validator
 
-from trpg.content.parts import BossPart, SealSkillBreak, check_parts
+from trpg.content.parts import BossPart, SealSkillBreak, check_part_tiles, check_parts
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.bonus_text import bonus_text
@@ -52,6 +52,7 @@ __all__ = [
     "OffhandDef",
     "OffhandTable",
     "OpeningStatus",
+    "PhaseGrowSurface",
     "PhaseSpawn",
     "PhaseTile",
     "PhaseTrigger",
@@ -1547,6 +1548,21 @@ class PhaseTile(ContentModel):
         return self
 
 
+class PhaseGrowSurface(ContentModel):
+    """階段的生長表面（GB-1c，T16；#164 R6 A、19 19.2.3「第 3 階段火地每輪往南長」）。
+
+    頭目在這個階段時，每輪結束的環境回合（:func:`trpg.engine.environment.run_environment`）從頭目
+    南緣往南長 1 排：第 k 排是南緣外第 k 排（頭目佔的那幾欄）。第 1 排由階段的 ``tiles`` 放；之後
+    每一欄只從北邊相鄰那格已經有這種表面的地方往南長一格，而且只長到可站、不致命、沒有單位、沒有物件、
+    沒有其他表面的格子（遇岩漿、牆、矮牆、水就停在那一欄）；最多長到 ``max_rows`` 排。"""
+
+    surface: Surface
+    rows_from: Literal["south_edge"] = "south_edge"
+    max_rows: int = Field(default=4, ge=1, le=9)
+    """最多長到幾排（含第 1 排；占位 4，工坊可調）。"""
+    every: Literal["round_end"] = "round_end"
+
+
 class PhaseSpawn(ContentModel):
     """階段轉換時召喚的單位（和 Boss 同陣營）。``at`` 省略＝Boss 當下的位置（改到最近的安全格）。"""
 
@@ -1578,6 +1594,8 @@ class BossPhase(ContentModel):
     mana_restore: int | None = Field(default=None, ge=1, exclude_if=lambda v: v is None)
     """進入這個階段時回復的法力點數（BAL-21a；不超過最大法力）。``None``＝不回復（預設），不輸出，
     沒填的頭目規則包雜湊不變。"""
+    grow_surface: PhaseGrowSurface | None = Field(default=None, exclude_if=lambda v: v is None)
+    """在這個階段時每輪結束長一排表面（GB-1c，:class:`PhaseGrowSurface`）；``None`` 不輸出。"""
 
     @property
     def is_opening(self) -> bool:
@@ -1594,6 +1612,7 @@ class BossPhase(ContentModel):
             or self.spawns
             or self.text_zh is not None
             or self.mana_restore is not None
+            or self.grow_surface is not None
         )
 
 
@@ -1639,7 +1658,7 @@ def template_part_problems(template: UnitTemplate) -> list[str]:
         problems.append("只有帶 boss 標籤的單位能有 parts")
     if template.summon:
         problems.append("召喚物不能有 parts")
-    return problems + check_parts(parts)
+    return problems + check_parts(parts) + check_part_tiles(parts, template.footprint)
 
 
 def part_reference_problems(template: UnitTemplate) -> list[str]:

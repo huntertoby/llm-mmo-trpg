@@ -85,6 +85,8 @@ class FollowupSpec(ContentModel):
     anchor: DelayedAnchor | None = Field(default=None, exclude_if=lambda v: v is None)
     """延遲段的落點（BAL-21a）：``cast_tile``＝施放時第一段選的格子（第一段的形狀要在
     :data:`~trpg.content.skills.constants.ANCHOR_FIRST_SHAPES`），施放者之後移動也不跟著走；
+    ``farthest_enemy``（GB-1c）＝施放時引擎選的最遠敵人的格子（第一段不選格，
+    :data:`~trpg.content.skills.constants.FARTHEST_FIRST_SHAPES`）；
     ``None``＝以施放者釋放當下的位置為中心。只有 ``when: delayed`` 可以填。``None`` 時不輸出，沒填的
     技能序列化與規則包雜湊不變。"""
 

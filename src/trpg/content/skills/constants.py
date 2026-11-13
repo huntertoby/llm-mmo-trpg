@@ -647,17 +647,24 @@ DELAYED_SHAPES: tuple[str, ...] = ("cross", "square3", "ring")
 ``anchor: cast_tile``（BAL-21a）時改以施放時選的格子為中心。"""
 
 
-type DelayedAnchor = Literal["cast_tile"]
+type DelayedAnchor = Literal["cast_tile", "farthest_enemy"]
 """延遲段的落點（Phase BAL-21a）：``cast_tile`` 落在施放時第一段選的格子
-（``UseSkill.target_pos``），施放者之後移動也不跟著走；省略（``None``）＝照舊以施放者釋放當下的位置為中心。"""
+（``UseSkill.target_pos``），施放者之後移動也不跟著走；``farthest_enemy``（GB-1c，#164 R5）
+施放時由引擎選格——離施放者最近佔格曼哈頓距離最遠的存活敵人當下的格子（看不見的隱蔽敵人不算，同距離
+(y, x) 小的；不限射程、不需視線）；省略（``None``）＝照舊以施放者釋放當下的位置為中心。"""
 
 
-DELAYED_ANCHOR_VALUES: tuple[str, ...] = ("cast_tile",)
+DELAYED_ANCHOR_VALUES: tuple[str, ...] = ("cast_tile", "farthest_enemy")
 
 
 ANCHOR_FIRST_SHAPES: tuple[str, ...] = ("cross", "square3", "ground_tile")
 """``anchor: cast_tile`` 的第一段可用的形狀（BAL-21a）：選一個格子的形狀（``skill_shapes.yaml``
 的 ``targeting: tile``，測試對照），選的格子就是第二段的落點。"""
+
+
+FARTHEST_FIRST_SHAPES: tuple[str, ...] = ("self",)
+"""``anchor: farthest_enemy`` 的第一段可用的形狀（GB-1c，T15）：不需選格（落點由引擎選），所以
+``UseSkill`` 帶 ``target_pos`` 會被拒絕、``legal_actions`` 只列一個不帶格子的動作。"""
 
 
 CHARGING = mechanic_status("charging")

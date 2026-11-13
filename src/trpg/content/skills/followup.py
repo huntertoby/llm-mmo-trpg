@@ -10,6 +10,7 @@ from trpg.content.skills.constants import (
     COMPOSITE_MOVES,
     DELAYED_RELEASE_VALUES,
     DELAYED_SHAPES,
+    FARTHEST_FIRST_SHAPES,
     FOLLOWUP_CENTERED,
     FOLLOWUP_FORBIDDEN,
     FOLLOWUP_SHAPES,
@@ -116,7 +117,8 @@ def _check_on_hit(effects: tuple[EffectSpec, ...], _shape: ShapeSpec, f: Followu
 def _check_delayed(effects: tuple[EffectSpec, ...], shape: ShapeSpec, f: FollowupSpec) -> None:
     """延遲段（3F-4b）：第一段任何動作（可以有一個自身位移）；第二段是以施放者為中心的動作
     （:data:`DELAYED_SHAPES`），必須指定 ``release``。``anchor: cast_tile``（BAL-21a）時第一段的
-    形狀要選一個格子（:data:`ANCHOR_FIRST_SHAPES`），第二段以那格為中心。"""
+    形狀要選一個格子（:data:`ANCHOR_FIRST_SHAPES`），第二段以那格為中心；``anchor: farthest_enemy``
+    （GB-1c）時第一段不選格（:data:`FARTHEST_FIRST_SHAPES`），第二段以引擎選的敵人格子為中心。"""
     if f.release is None:
         raise ValueError(
             f"延遲段必須指定 release（{'、'.join(DELAYED_RELEASE_VALUES)}）：何時釋放第二段"
@@ -124,10 +126,15 @@ def _check_delayed(effects: tuple[EffectSpec, ...], shape: ShapeSpec, f: Followu
     _no_forbidden(effects, "第一段", allowed=COMPOSITE_MOVES)
     _second_shape(f, DELAYED_SHAPES)
     _no_forbidden(f.effects, "延遲段")
-    if f.anchor is not None and shape.type not in ANCHOR_FIRST_SHAPES:
+    if f.anchor == "cast_tile" and shape.type not in ANCHOR_FIRST_SHAPES:
         raise ValueError(
             f"延遲段落在選定格（anchor: {f.anchor}）時，第一段的形狀要選一個格子"
             f"（{'、'.join(ANCHOR_FIRST_SHAPES)}），收到 {shape.type}"
+        )
+    if f.anchor == "farthest_enemy" and shape.type not in FARTHEST_FIRST_SHAPES:
+        raise ValueError(
+            f"延遲段落在最遠的敵人（anchor: {f.anchor}）時落點由引擎選，第一段的形狀不能選格"
+            f"（{'、'.join(FARTHEST_FIRST_SHAPES)}），收到 {shape.type}"
         )
 
 
