@@ -183,12 +183,18 @@ def followup_text(library: ContentLibrary, skill: SkillDef) -> str | None:
     when = f"［條件：{condition_summary(library, follow.condition)}］" if follow.condition else ""
     if skill.followup.release is not None:  # 延遲段（Phase 3F-4b）
         lead = _DELAYED_LEADS[skill.followup.release]
-        if skill.followup.anchor is not None:  # 落在施放時選的格子（BAL-21a）
-            lead = lead.replace("以自己為中心", "在施放時選的格子")
+        if skill.followup.anchor is not None:  # 錨點（BAL-21a 選定格；GB-2b 最遠的敵人）
+            lead = lead.replace("以自己為中心", _ANCHOR_PLACES[skill.followup.anchor])
     else:
         lead = _FOLLOWUP_LEADS[skill.followup.when]
     return f"{lead}：{shape_summary(library, follow.shape)}{when}：{effects}"
 
+
+_ANCHOR_PLACES = {
+    "cast_tile": "在施放時選的格子",
+    "farthest_enemy": "在離自己最遠的敵人那一帶",
+}
+"""延遲段錨點的落點說法（取代「以自己為中心」）。"""
 
 _FOLLOWUP_LEADS = {
     "after_move": "到達落點後，以落點為原點",
