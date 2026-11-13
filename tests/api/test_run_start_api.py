@@ -86,7 +86,8 @@ def test_dev_advance_is_off_by_default_and_reaches_post_battle_screens(
     assert client.post(f"/api/runs/{run['run_id']}/dev-advance?to=level_up").status_code == 404
     monkeypatch.setenv("TRPG_DEV_ROUTES", "1")
     assert client.post(f"/api/runs/{run['run_id']}/dev-advance?to=nope").status_code == 422
-    run = _ok(client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 5}))
+    # KW-2：新方向多 4 個關鍵字後種子 5 在完整技能三選一之前就輸了，改 4
+    run = _ok(client.post("/api/runs", json={"dev_pack": packs[0]["id"], "seed": 4}))
     for target in ("gear_offer", "level_up", "complete_offer", "campfire"):
         got = _ok(client.post(f"/api/runs/{run['run_id']}/dev-advance?to={target}"))
         assert got["node"]["kind"] == target

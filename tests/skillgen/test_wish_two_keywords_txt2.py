@@ -57,7 +57,8 @@ def test_unheld_second_keyword_is_tried_first_by_new(monkeypatch: pytest.MonkeyP
     ("seed", "first", "second", "kind"),
     [
         (7, "ignite", "marked", "bridge"),  # 已持有：橋接那張帶兩個
-        (5, "ignite", "prone", "new"),  # 還沒有：新方向那張帶兩個
+        # KW-2 新方向多 4 個關鍵字，候選亂數全變，種子 5 → 37
+        (37, "ignite", "prone", "new"),  # 還沒有：新方向那張帶兩個
         (2, "charged", "wet", "new"),
     ],
 )
