@@ -65,7 +65,7 @@
 | `vitest run src/world/atlas.test.ts src/world/pregen.test.ts` | 0（16 passed） |
 | 直接相關 pytest（見下） | 0 |
 
-pytest（`-n 8`，分兩批；`tests/api` 和 `tests/world` 混在同一次跑時 `tests/api/test_pr2a_range_practice.py` 會找不到 `make_client` fixture——main 上本來就這樣，分開跑全過，跟這段無關）：`tests/api/test_wish_api_wp2.py`、`test_wish_pregen.py`、`test_world_pregen.py`、`test_world_pregen_schedule.py`、`test_offer_prefetch.py`、`test_world_story.py`、`test_opportunity_offer_view.py`、`test_pr2a_range_practice.py`、`test_ob5_screen_data.py`、`test_world_api.py`、`test_world_field_api.py`、`test_flash_api.py`、`test_openapi_snapshot.py`；`tests/world/test_capital.py`、`test_capital_figures.py`、`test_wish.py`、`tests/content/test_capital_field.py`、`tests/test_architecture.py`。沒跑全量 `check.py`、沒做數值量測、沒用本機 LLM。
+pytest（`-n 8`，分兩批；`tests/api` 和 `tests/world` 混在同一次跑時 `tests/api/test_pr2a_range_practice.py` 會找不到 `make_client` fixture（只定義在 `tests/api/conftest.py`，這段沒動 conftest；沒在 main 上另外驗證），分開跑全過）：`tests/api/test_wish_api_wp2.py`、`test_wish_pregen.py`、`test_world_pregen.py`、`test_world_pregen_schedule.py`、`test_offer_prefetch.py`、`test_world_story.py`、`test_opportunity_offer_view.py`、`test_pr2a_range_practice.py`、`test_ob5_screen_data.py`、`test_world_api.py`、`test_world_field_api.py`、`test_flash_api.py`、`test_openapi_snapshot.py`；`tests/world/test_capital.py`、`test_capital_figures.py`、`test_wish.py`、`tests/content/test_capital_field.py`、`tests/test_architecture.py`。沒跑全量 `check.py`、沒做數值量測、沒用本機 LLM。
 
 ## 4. 待 PM 決定（照最保守的做法做了）
 
