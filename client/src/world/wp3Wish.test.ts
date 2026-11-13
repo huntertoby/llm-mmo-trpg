@@ -94,11 +94,11 @@ describe("WP-3 許願池：純函式", () => {
     const wish = { source: "wish" as const, quest_name_zh: "許願池", step_zh: "許願：都不拿可退 2 任務幣（次數照扣）。", refund: 2 };
     expect(offerTitle(wish)).toBe("許願池");
     expect(offerSubtitle(wish)).toBe("許願：都不拿可退 2 任務幣（次數照扣）。");
-    expect(offerSkipLabel(wish)).toBe("都不拿（退 2 任務幣）");
+    expect(offerSkipLabel(wish)).toBe("都不拿（退回 2 任務幣）"); // TXT-2
     const quest = { source: "quest" as const, quest_name_zh: "迷路的信", step_zh: "交給守印人", refund: 0 };
     expect(offerTitle(quest)).toBe("任務給的技能三選一");
     expect(offerSubtitle(quest)).toBe("迷路的信：交給守印人");
-    expect(offerSkipLabel(quest)).toBe("跳過");
+    expect(offerSkipLabel(quest)).toBe("都不拿"); // TXT-2：用詞統一成「都不拿」
   });
 });
 

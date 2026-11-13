@@ -34,7 +34,7 @@ WISH_KEEPER_OBJECT: Final = "pool_keeper"
 WISH_IN_BATTLE_ZH: Final = "戰鬥進行中，先打完這場"
 """戰鬥中（同 ``WorldStore`` 擋世界動作的那一句）。"""
 _PENDING_FLASH_ZH: Final = "還有閃現的選項沒有選：先選一個"
-_PENDING_OFFER_ZH: Final = "還有任務給的技能三選一沒有選：先選一招或跳過"
+_PENDING_OFFER_ZH: Final = "還有任務給的技能三選一沒有選：先選一招，或都不拿"
 """同 ``world_step`` 先擋的兩句（送出時被拒的字相同）。"""
 
 

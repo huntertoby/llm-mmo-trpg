@@ -130,7 +130,7 @@ export interface ReflashSlot {
   problem: string | null;
 }
 
-/** 重閃某一格沒有任何合法選項時的灰字（RR-1；伺服器 `problem_zh` 同一句）。 */
+/** 重閃某一格沒有任何合法選項時的灰字（RR-1；伺服器 `problem_zh` 同一句；玩法 PM 11-13 定稿，TXT-2）。 */
 export const NO_REFLASH_OPTIONS_TEXT = "這一格目前沒有可以重閃的變化";
 
 /** 這招可以重閃的格子（後端 `reflash_slots`）；完整技能的調整欄（0）標「調整欄」。 */

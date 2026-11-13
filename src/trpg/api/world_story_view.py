@@ -904,6 +904,8 @@ def _skill_story_line(event: WorldEvent, names: Mapping[str, str]) -> str | None
         return f"{source}給了技能三選一：先選一招（或跳過）。"
     if isinstance(event, SkillOfferTakenEvent):
         if event.skill is None:
+            if event.source == "wish" and event.refund:  # TXT-2：玩法 PM 定稿句
+                return f"許願池給的三招都沒拿，退回 {event.refund} 任務幣（次數照扣）。"
             back = f"，退還 {event.refund} 任務幣" if event.refund else ""
             return f"跳過了{_OFFER_SOURCE_ZH.get(event.source, '任務')}給的技能{back}。"
         where = "裝上" if event.placed == "equipped" else "放進備用"

@@ -647,7 +647,8 @@ def category_counts(
 NO_OPTIONS_ZH = "這招目前沒有可以閃的變化"
 """沒有任何合法閃現選項時面板的灰字（FL-1c，06 6.34「費用方向」第 7 點）。"""
 NO_REFLASH_OPTIONS_ZH = "這一格目前沒有可以重閃的變化"
-"""重閃某一格沒有任何合法選項時按鈕的灰字（RR-1，比照 :data:`NO_OPTIONS_ZH`）。"""
+"""重閃某一格沒有任何合法選項時按鈕的灰字（RR-1，比照 :data:`NO_OPTIONS_ZH`；
+玩法 PM 11-13 定稿，TXT-2）。"""
 _OPTIONS_CACHE_LIMIT = 512
 """內容庫上「有沒有選項」快取（``ContentLibrary.flash_option_cache``）的上限：滿了就清空。"""
 
