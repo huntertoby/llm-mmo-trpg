@@ -57,8 +57,11 @@
 
 ### 1.3 AI
 
-- **敵人會瞄準**：預覽瞄準招時會有 `followup_charged`，效用 AI 用既有的延遲段收益（`_delayed_points`：目標格 1 名敵人 ×
-  `delayed_enemy_points`）；`_rewrite_gains` 的延遲段條件加上 `lock_on`。不另加權重。
+- **敵人會瞄準**：預覽瞄準招時另算一份「現在就射出」的預覽（`Preview.lock_fire`，`Ctx.fire_lock` 只在預覽模擬用），
+  效用 AI 的預覽收益改用它 × `rewrite.lock_on_permille`（`ai_profiles.yaml`，初值 700：對手可能躲開）。
+  （實作時發現：只用延遲段的「範圍內敵人數」估值，瞄準招的分數固定約 21，永遠輸給普攻，等於 AI 不會瞄準；改成這樣後
+  和改之前的高處狙擊一樣，平地普攻、居高臨下時瞄準。）
+- legal_actions 不列瞄準招的物件目標（瞄準只對單位）。
 - **盾兵站到遠程同伴前面**：位置價值新權重 `screen`（`AiWeights`）：盾兵每替一名相鄰遠程同伴擋住至少一名打得到它的敵人
   （幾何同 1.2）加 `screen` 分。只對帶 `shield_guard` 的單位算，其他單位 0。`guard` 行為模式填 `screen: 12`（初值）。
 - **遠程偏好站在盾兵後面**：既有位置價值 `cover`（`_covered_from`）也算盾兵提供的掩護。沒有盾兵的戰鬥不變。
@@ -69,12 +72,12 @@
 |---|---|---|---|
 | `skill_crane_piercing_shot` 鶴唳穿雲 | 雲鶴使（冰鶴使變體跟著） | `skill_high_ground_shot`（主角弓手也在用，不改它） | 照高處狙擊：2 AP、耐力 10、冷卻 2、傷害 ×1000，居高再 ×800 |
 | `skill_binding_talisman` 定身符 | 符籙師（雷符師變體跟著） | `skill_frost_shackle`（主角法師也在用） | 照寒鎖：1 AP、法力 5、冷卻 2、1d4 冰＋定身 1 回合 |
-| `skill_lava_bomb` 熔岩彈 | 噴岩龜 | `skill_fire_wall`（19 的「熔岩彈」原本用火牆近似） | 2 AP、法力 10、冷卻 4；射程 5、1d8 火＋目標格火地 2 回合 |
+| `skill_lava_bomb` 熔岩彈 | 噴岩龜 | `skill_fire_wall`（19 的「熔岩彈」原本用火牆近似） | 2 AP、法力 10、冷卻 4；射程 5、3d8 火＋燃燒 2 回合（打擊骨架不能造火地，見待決 7） |
 
 | 新敵人（`content/units/`） | 區域 | 初值 |
 |---|---|---|
-| `sect_shield_disciple` 持盾弟子 | 雲嶺 | 照盜賊盾衛：HP 24、速度 4、護甲 6、單手劍、`guard`、`[humanoid, sect, shield_guard]`、`skill_shield_bash` |
-| `molten_shell_trooper` 熔殼甲兵 | 荒原 | 照熔岩甲蟲體型：HP 30、速度 4、護甲 5、石拳、`guard`、`[beast, lava_beast, shield_guard]`、`skill_shield_bash`、火 −50%、冰 +50%、開場「熔殼迸裂」 |
+| `sect_shield_disciple` 持盾弟子 | 雲嶺 | 照盜賊盾衛：HP 24、速度 4、護甲 6、單手劍、`guard`、`[humanoid, sect, shield_guard]`、`skill_shield_bash`＋`skill_taunting_roar`（#149 一般敵人至少 2 招） |
+| `molten_shell_trooper` 熔殼甲兵 | 荒原 | 照熔岩甲蟲體型：HP 30、速度 4、護甲 5、石拳、`guard`、`[beast, lava_beast, shield_guard]`、`skill_shield_bash`＋`skill_battering_ram`、火 −50%、冰 +50%、開場「熔殼迸裂」 |
 
 遭遇表（不加新地點，**加新陣容**到現有地點，原有陣容不動）：
 
@@ -98,7 +101,9 @@
   `engine/skills/interpreter.py`（宣告分支）、`engine/reactions.py`（`hit_reactions` 只新增一行呼叫打斷）、
   `engine/events/skills.py`（`lock_target_id`、`interrupted`）、`engine/events/combat.py`（`cover_unit_id`）、
   `engine/rules/combat.py`（盾兵掩護）、`engine/environment.py`、`engine/ids.py`、`engine/ai/utility/position.py`、
-  `engine/ai/utility/scoring.py`、`engine/preview.py`（掩護說明）、`engine/runner.py`（`LOG_FORMAT`）。
+  `engine/ai/utility/scoring.py`、`engine/preview.py`（掩護說明、`lock_fire`）、`engine/context.py`、`engine/battle.py`
+  （`fire_lock` 只在預覽模擬）、`engine/skills/targeting.py`（不列物件目標）、`engine/lock_on.py`（新檔，純查詢）、
+  `engine/runner.py`（`LOG_FORMAT`）。
 - 文字：`narrative/events.py`（落空與取消的句子、盾兵掩護）、`api/telegraph.py`、`api/schemas.py`。
 - 內容：上表的 3 招、2 名敵人、2 個遭遇檔、`ai_profiles.yaml`（`screen`）、`rules/core.yaml`、`tuning_fields.yaml`、
   `skill_icon_art.yaml`（新招的圖示資料，借既有部件）。
@@ -197,7 +202,9 @@
 4. **打斷只算近戰命中**（遠程、法術打中弓手不打斷；設計原話「近戰攻擊命中」）。推開、撞開不打斷。
 5. **瞄準時付全部代價**、射出時不再付；落空不退。
 6. **符籙師的「強力一擊」選定身符**：符籙師兩招都是控制（定身符、封符），沒有傷害招；選單體的定身符改成瞄準。也可以改成新的傷害招。
-7. **噴岩龜的熔岩彈取代火牆**：19 的「拋射熔岩彈（造火地）」原本用火牆近似，這次改成單體瞄準＋火地；火牆從噴岩龜身上拿掉。
+7. **噴岩龜的熔岩彈取代火牆**：19 的「拋射熔岩彈（造火地）」原本用火牆近似，這次改成單體瞄準；火牆從噴岩龜身上拿掉。
+   「造火地」做不到：打擊骨架（`strike`）的附帶原語不能造表面、範圍骨架（`area`）不能單體，先用燃燒 2 回合代替。
+   要真的造火地，得放寬骨架（技能規則，不是數值），請玩法 PM 決定。
 8. **盾兵只保護遠程同伴**（武器不受高度限制）；近戰同伴不受保護。噴岩龜（法杖）算遠程。
 9. **盾兵掩護的數值另開 `shield_guard_hit_penalty`**（初值 2，同半掩護），不和半掩護共用，讓使用者分開調。
 10. **既有的盜賊盾衛（`shield` 標籤）不變成盾兵**：只有新加的兩種帶 `shield_guard`。
