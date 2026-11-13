@@ -22,6 +22,13 @@
   margin-top: 8px;
 }
 
+/* WP-3b 分頁圖示（移植說明 13.7 第 2 條）：置中是分頁頂 +9.5，往下 0.5 取整成 +10（和樣張一致）。
+   圖和分頁的小數部分相同，畫出來圖的上緣永遠在分頁上緣下面整 10 個像素，不會一個 +9、一個 +10 */
+.wish-panel .pnl-tab > .pnl-ico {
+  position: relative;
+  top: 0.5px;
+}
+
 /* ---------- 分頁內容 ---------- */
 .wish-pane {
   padding-top: 8px;
@@ -175,8 +182,10 @@
   margin-right: 5px;
 }
 
+/* 標籤比字行矮（14 行高＋框 2＝16），第一行不會被撐高，下固定區兩個分頁一樣高 */
 .wish-picked-desc > .pnl-tag {
-  vertical-align: 0;
+  line-height: 14px;
+  vertical-align: 1px;
 }
 
 .wish-picked-desc > .name {
@@ -229,11 +238,17 @@
 
   .wish-kw {
     column-gap: 5px;
-    padding: 5px 7px;
+    padding: 4px 7px;
+  }
+
+  .wish-picked {
+    min-height: calc(2 * 1.45 * 12px + 4px);
+    padding-bottom: 4px;
   }
 
   .wish-picked-desc {
     font-size: 12px;
+    line-height: 1.45;
   }
 
   .wish-foot-row {

@@ -75,6 +75,8 @@ describe("WP-3b 三個許願池圖示", () => {
     expect(html).toMatch(/<canvas[^>]*style="width:16px;height:16px"[^>]*data-icon="wish_text"/);
     expect(html).toMatch(/data-testid="wish-left"><canvas[^>]*style="width:15px;height:15px"[^>]*data-icon="wish_left"/);
     expect(html).toMatch(/data-testid="wish-coins"><canvas[^>]*data-icon="token"/);
+    // 分頁圖上緣：置中 +9.5 往下 0.5 取整成 +10（13.7 第 2 條）
+    expect(css()).toMatch(/\.wish-panel \.pnl-tab > \.pnl-ico \{\s*position: relative;\s*top: 0\.5px;/);
     const head = html.slice(html.indexOf('data-testid="wish-head"'), html.indexOf("</h2>"));
     expect(head).not.toContain("<canvas");
   });
