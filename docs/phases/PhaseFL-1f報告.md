@@ -59,3 +59,35 @@
 - 待 PM 決定 1～5 是字句問題（加碼 × 帶電、製造 × 隱蔽／冰凍、戰場變奏的地形叫法、潮濕例外、major_intensify），轉交玩法 PM 一次回覆。回覆後只換字，併進下一段順手做，不另開段。
 - 第 6、7 點照現狀：剛好 1000‰ 寫「1 倍」；兩個橋接模板的一句話照差異清單自動組。
 - 第 8 點：開發頁夾具 `flashChoice.json` 交由 LF-3 合併 main 後跑 `scripts/export_flash_choice_fixture.py` 重產。
+
+## 第二輪：照玩法 PM 補答（填答第十節）換字
+
+玩法 PM 回覆第 3 節第 1～5 點：五條都是字錯、引擎沒錯，照引擎改寫。開工前已合併 main（含 LF-2，fast-forward）。
+
+| # | 項目 | 改成 | 位置 |
+|---|---|---|---|
+| 1 | 加碼 × 帶電（`keyword_exploit`、`major_bridge_exploit`） | 大標「這回合放過雷電技能，這招多傷一截」 | `content/flash_templates.yaml` `headlines` +2 列 |
+| 2 | 製造 × 隱蔽、× 冰凍（`keyword_imbue`、`major_bridge_imbue`） | 「打中的格子還會冒出煙霧」「打中的格子還會結冰」 | 同上 +4 列 |
+| 3 | 戰場變奏 | `say_zh`「{terrain}施放時，這招自動換成另一種打法。」；`{terrain}` 填加上去的那個變奏（`variants` 最後一個）條件的片語：水中「站在水中」、冰上「站在冰上」、居高「站在高處」、靠牆「背靠牆壁」、油面「站在油上」、水窪「站在水窪裡」；沒有資料時填「在特定地形」。大標照第一輪不變 | `flash_templates.yaml`；`src/trpg/api/flash_text.py` `_VARIANT_WHERE`、`_variant_where` |
+| 4 | `support_imbue` × 潮濕 | 「目標腳下積一灘水」；其他關鍵字照通用句 | `headlines` +1 列 |
+| 5 | `major_intensify` 分兩句 | 原本就會造成：模板的「專精{keyword}：造成的{keyword}更持久」；原本不會、引擎補上製造效果（差異清單有整個新加的效果）：「專精{keyword}：這招開始會造成{keyword}」 | `flash_text.py` `_INTENSIFY_NEW`、`option_headline` |
+
+`headlines` 由 36 列變 43 列。測試 `tests/api/test_flash_text_fl1f.py` 鎖住新句（20 → 32 條：換掉第一輪鎖通用句的 2 條；新增隱蔽、冰凍、橋接帶電、潮濕例外與一般關鍵字、6 個地形片語、intensify 兩種）。快照：預測只有 fl1f 測試裡第一輪鎖的帶電、隱蔽、戰場變奏 3 條會變，實際也只有這些（同一次改測試時換掉）。
+
+### 第二輪待 PM 決定
+
+1. **地形片語和 intensify 的第二句寫在程式**（`flash_text.py` 的常數），沒放進 `flash_templates.yaml`：放進 YAML 要在 `src/trpg/content/flash_templates.py` 加欄位，而這段允許改的檔案不含它。要搬成資料就另排一段。
+2. **油面、水窪**：引擎的條件是**目標**站在油上、水上（`target_surface`）。照第十節寫成「站在油上」「站在水窪裡」，沒寫是誰站；大標「站在特定地形時，這招換一種打法」也維持。玩法 PM 說五條都照引擎寫，這兩個片語是否要改成「目標站在油上」，請確認。
+
+### 第二輪檢查
+
+| 檢查 | 結束碼 |
+|---|---|
+| `uv run ruff check .` | 0 |
+| `uv run ruff format --check .` | 0 |
+| `uv run mypy` | 0 |
+| `uv run lint-imports` | 0（14 kept） |
+| `uv run trpg content check` | 0 |
+| `pytest -n 8`：fl1f、fl1b、fl1a、`test_flash_api`、`test_world_growth_api`、`tests/content`、`tests/skillgen/test_flash.py`、`test_flash_templates`、`test_openapi_snapshot`、`test_client_fixtures`、`tests/world/test_flash_world.py`、`tests/roguelite/test_flash_run.py`、`test_architecture` | 0（3314 passed） |
+
+沒跑全量 `check.py`、沒做平衡量測、沒啟動伺服器；`client/` 未動（夾具照裁定由 LF-3 重產）。
