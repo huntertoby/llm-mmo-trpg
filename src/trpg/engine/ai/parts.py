@@ -36,7 +36,7 @@ from trpg.engine.events import EventBase, PartBroken, PartDamaged
 from trpg.engine.part_breaks import live_part
 from trpg.engine.parts import current_phase_id, part_targets
 from trpg.engine.rules.facing import is_behind
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import adjacent
 from trpg.engine.skills.targeting import resource_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Team
@@ -159,10 +159,7 @@ def circle_back_extra(unit: UnitState, w: AiWeights, enemies: list[UnitState]) -
     return w.circle_back_bonus * sum(
         1
         for e in enemies
-        if e.parts
-        and manhattan(unit.xy, e.xy) == 1
-        and is_behind(unit.xy, e)
-        and _open_behind_part(e)
+        if e.parts and adjacent(unit, e) and is_behind(unit.xy, e) and _open_behind_part(e)
     )
 
 
@@ -177,9 +174,7 @@ def silent_behind_extra(
         return 0
     if not modifiers.silent_strike(state, unit, modifiers.ATTACK):
         return 0
-    return w.silent_behind * sum(
-        1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)
-    )
+    return w.silent_behind * sum(1 for e in enemies if adjacent(unit, e) and is_behind(unit.xy, e))
 
 
 def _open_behind_part(boss: UnitState) -> bool:

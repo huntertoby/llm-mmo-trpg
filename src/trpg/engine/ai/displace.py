@@ -17,7 +17,8 @@ from fractions import Fraction
 
 from trpg.content.skills import SWAP_ANY, TELEPORT_TARGET, SkillDef
 from trpg.engine.actions import UseSkill
-from trpg.engine.rules.geometry import XY, chebyshev, manhattan
+from trpg.engine.rules.footprint import unit_dist
+from trpg.engine.rules.geometry import XY, chebyshev
 from trpg.engine.rules.movement import is_deadly
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.traps import own_traps
@@ -109,4 +110,4 @@ def displace_estimate(
         )
     if value <= 0:
         return None
-    return Fraction(value) - Fraction(manhattan(caster.xy, first.xy), 1000)
+    return Fraction(value) - Fraction(unit_dist(caster, first), 1000)

@@ -51,6 +51,7 @@ from trpg.engine.rules.combat import (
     protects_ranged,
 )
 from trpg.engine.rules.facing import FACING_VECTORS, facing_between, is_behind
+from trpg.engine.rules.footprint import adjacent, dist_to, nearest_tile, tiles_of, unit_dist
 from trpg.engine.rules.geometry import (
     XY,
     axis_direction,
@@ -215,23 +216,26 @@ class _Walk:
 
     def __init__(self, state: BattleState, enemies: list[UnitState]) -> None:
         self.origin: dict[UnitId, XY] = {e.id: e.xy for e in enemies}
-        self.dist: dict[UnitId, dict[XY, int]] = {e.id: _steps_to(state, e.xy) for e in enemies}
+        self.dist: dict[UnitId, dict[XY, int]] = {
+            e.id: _steps_to(state, tiles_of(e)) for e in enemies
+        }
 
     def to(self, enemy: UnitState, xy: XY) -> int | None:
         """``xy`` 走到 ``enemy`` 的步數；不連通時為 ``None``，沒有紀錄的單位用曼哈頓距離。"""
         steps = self.dist.get(enemy.id)
         if steps is None:
-            return manhattan(xy, enemy.xy)
+            return dist_to(enemy, xy)
         base = steps.get(xy)
         if base is None:
             return None
-        return base + manhattan(self.origin[enemy.id], enemy.xy)
+        return base + dist_to(enemy, self.origin[enemy.id])
 
 
-def _steps_to(state: BattleState, target: XY) -> dict[XY, int]:
-    """從 ``target`` 反向的廣度優先搜尋：每個能走到 ``target`` 的格子的步數。"""
-    dist = {target: 0}
-    queue = deque([target])
+def _steps_to(state: BattleState, targets: tuple[XY, ...]) -> dict[XY, int]:
+    """從 ``targets``（單位的佔格；巨型單位是 9 格，走到任一佔格旁就算到，GB-1b）反向的廣度優先
+    搜尋：每個能走到那裡的格子的步數。"""
+    dist = dict.fromkeys(targets, 0)
+    queue = deque(targets)
     while queue:
         cur = queue.popleft()
         for nxt in neighbors4(state, cur):
@@ -254,7 +258,7 @@ def _approach_distance(scene: _Scene, xy: XY) -> int:
         steps = [d for e in targets if (d := walk.to(e, xy)) is not None]
         if steps:
             return min(steps)
-    return min(manhattan(xy, e.xy) for e in targets)
+    return min(dist_to(e, xy) for e in targets)
 
 
 def _boss_distance(unit: UnitState, scene: _Scene, xy: XY) -> int:
@@ -269,7 +273,7 @@ def _boss_distance(unit: UnitState, scene: _Scene, xy: XY) -> int:
     best: int | None = None
     for boss in bosses:
         d = walk.to(boss, xy) if walk is not None else None
-        d = manhattan(xy, boss.xy) if d is None else d
+        d = dist_to(boss, xy) if d is None else d
         best = d if best is None else min(best, d)
     return best or 0
 
@@ -319,9 +323,7 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
         # 隱蔽的敵人必須走到 2 格內才打得到（concealed_ranged_max_distance），所以遠程單位為了
         # 攻擊而進入 2 格內不扣分；否則兩名隱蔽的弓手會互相等待到平手（dark_forest 種子 7）
         keep = _keep_radius(unit)
-        close = sum(
-            1 for e in enemies if manhattan(xy, e.xy) <= keep and not is_concealed(state, e)
-        )
+        close = sum(1 for e in enemies if dist_to(e, xy) <= keep and not is_concealed(state, e))
         value -= w.keep_distance * close
     if w.cover:
         value += w.cover * _covered_from(state, unit, xy, enemies)
@@ -358,7 +360,7 @@ def _close_range_term(
         return 0
     best = max(
         (
-            damage_permille_at(weapon, manhattan(unit.xy, e.xy))
+            damage_permille_at(weapon, unit_dist(unit, e))
             for e in enemies
             if attack_problem(state, unit, e) is None
         ),
@@ -387,7 +389,7 @@ def _weapon_terms(
     value = 0
     if w.reach_spacing and weapon.is_melee and weapon.range > 1:
         for e in enemies:
-            distance = manhattan(unit.xy, e.xy)
+            distance = unit_dist(unit, e)
             if distance == 1:
                 value -= w.reach_spacing
             elif distance <= weapon.range and attack_problem(state, unit, e) is None:
@@ -403,7 +405,7 @@ def _weapon_terms(
         )
     if w.knock_angle and weapon.knockback > 0:
         value += w.knock_angle * sum(
-            1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and _knock_collides(state, unit, e)
+            1 for e in enemies if adjacent(unit, e) and _knock_collides(state, unit, e)
         )
     return value + _close_range_term(state, unit, w, enemies)
 
@@ -421,11 +423,9 @@ def _facing_terms(
     if w.silent_behind:  # BS-1：無聲留背
         value += silent_behind_extra(state, unit, w, enemies)
     if w.backstab and unit.weapon.is_melee:
-        value += w.backstab * sum(
-            1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_behind(unit.xy, e)
-        )
+        value += w.backstab * sum(1 for e in enemies if adjacent(unit, e) and is_behind(unit.xy, e))
     if w.back_exposed:
-        nearest = min(enemies, key=lambda e: (manhattan(unit.xy, e.xy), e.id))
+        nearest = min(enemies, key=lambda e: (unit_dist(unit, e), e.id))
         facing = facing_between(unit.xy, nearest.xy)
         if facing is not None:
             dx, dy = FACING_VECTORS[facing]
@@ -476,7 +476,7 @@ def _loaded(unit: UnitState) -> UnitState:
 
 def _flanked_count(state: BattleState, unit: UnitState, enemies: list[UnitState]) -> int:
     """``unit`` 目前位置緊貼著、而且對面站著友方（夾擊，Phase 3D-8c）的敵人數。"""
-    return sum(1 for e in enemies if manhattan(unit.xy, e.xy) == 1 and is_flanked(state, unit, e))
+    return sum(1 for e in enemies if adjacent(unit, e) and is_flanked(state, unit, e))
 
 
 def _order_penalty(orders: OrderContext, xy: XY) -> int:
@@ -496,7 +496,7 @@ def _outgunners(state: BattleState, unit: UnitState, enemies: list[UnitState]) -
     return [
         e
         for e in enemies
-        if manhattan(e.xy, unit.xy) <= e.weapon.range
+        if unit_dist(e, unit) <= e.weapon.range
         and attack_problem(state, e, unit) is None
         and attack_problem(state, unit, e) is not None
     ]
@@ -518,16 +518,16 @@ def _covered_from(state: BattleState, unit: UnitState, xy: XY, enemies: list[Uni
     return sum(
         1
         for e in enemies
-        if manhattan(e.xy, xy) <= e.weapon.range
+        if dist_to(e, xy) <= e.weapon.range
         and (
-            cover_object_between(state, e.xy, xy) is not None
+            cover_object_between(state, nearest_tile(e, xy), xy) is not None
             or (
                 guarded
                 and not is_height_limited(state, e)
-                and guard_between(state, e.xy, unit, at=xy) is not None
+                and guard_between(state, nearest_tile(e, xy), unit, at=xy) is not None
             )
         )
-        and has_line_of_sight(state, e.xy, xy, lob=e.weapon.lob, viewer=e)
+        and has_line_of_sight(state, nearest_tile(e, xy), xy, lob=e.weapon.lob, viewer=e)
     )
 
 
@@ -543,12 +543,13 @@ def _screened_allies(state: BattleState, unit: UnitState, xy: XY, enemies: list[
             ally.id == unit.id
             or not ally.alive
             or ally.team is not unit.team
-            or manhattan(ally.xy, xy) != 1
+            or dist_to(ally, xy) != 1
             or not protects_ranged(state, ally)
         ):
             continue
         if any(
-            manhattan(e.xy, ally.xy) <= e.weapon.range and guard_blocks(state, e.xy, ally.xy, xy)
+            unit_dist(e, ally) <= e.weapon.range
+            and guard_blocks(state, nearest_tile(e, ally.xy), ally.xy, xy)
             for e in shooters
         ):
             count += 1

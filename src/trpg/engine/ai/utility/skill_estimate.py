@@ -53,10 +53,10 @@ from trpg.engine.grants import granted_remaining
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
 from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.geometry import (
     XY,
     bresenham,
-    manhattan,
 )
 from trpg.engine.rules.statuses import stance_status_ids
 from trpg.engine.skills.conditions import unit_held
@@ -151,7 +151,7 @@ def skill_estimate(  # noqa: PLR0917
         if field == 0:
             return None
         score = Fraction(field)
-    return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+    return score - Fraction(dist_to(unit, area.origin), 1000)
 
 
 class _Unhandled:
@@ -295,11 +295,11 @@ def _trap_estimate(
     blast = center_tiles(state, skill.trap.shape, center)
     if any(u.team is unit.team and u.xy in blast for u in state.living_units()):
         return None
-    distances = [manhattan(center, e.xy) for e in scene.enemies]
+    distances = [dist_to(e, center) for e in scene.enemies]
     near = [d for d in distances if d <= rules.near]
     if not near:
         return None
-    return Fraction(len(near) * 4 - min(near)) - Fraction(manhattan(unit.xy, center), 1000)
+    return Fraction(len(near) * 4 - min(near)) - Fraction(dist_to(unit, center), 1000)
 
 
 def _supports(

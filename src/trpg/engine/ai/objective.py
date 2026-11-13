@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from trpg.content.environment import AiWeights
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import dist_to, unit_dist
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Team
 
@@ -22,7 +22,7 @@ _THREAT_RADIUS = 6
 
 
 def _nearest(unit: UnitState, tiles: tuple[tuple[int, int], ...]) -> int:
-    return min(manhattan(unit.xy, t) for t in tiles)
+    return min(dist_to(unit, t) for t in tiles)
 
 
 def objective_cost(state: BattleState, unit: UnitState, w: AiWeights) -> int:
@@ -50,7 +50,7 @@ def hold_guard_bonus(state: BattleState, unit: UnitState, w: AiWeights) -> int:
     if _nearest(unit, objective.tiles) > w.hold_radius:
         return 0
     threatened = any(
-        manhattan(unit.xy, e.xy) <= _THREAT_RADIUS
+        unit_dist(unit, e) <= _THREAT_RADIUS
         for e in state.living_units()
         if e.team is not Team.ALLY and not e.is_summon  # 敵方＋第三方（5B-M3）
     )

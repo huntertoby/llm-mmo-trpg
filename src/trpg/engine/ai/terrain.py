@@ -22,7 +22,8 @@ from trpg.content.environment import AiProfile
 from trpg.content.maps import MAX_HEIGHT
 from trpg.content.skills import SkillDef
 from trpg.engine.events import EventBase, TerrainChanged
-from trpg.engine.rules.geometry import XY, manhattan, neighbors4
+from trpg.engine.rules.footprint import dist_to
+from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.race import fall_immune
 from trpg.engine.skills.targeting import SkillArea
 from trpg.engine.state import BattleState, UnitState
@@ -102,7 +103,7 @@ def terrain_estimate(
             score += _ALLY_VALUE if can_raise else 0
     if score <= 0:
         return None
-    return score - Fraction(manhattan(unit.xy, area.origin), 1000)
+    return score - Fraction(dist_to(unit, area.origin), 1000)
 
 
 def terrain_gains(

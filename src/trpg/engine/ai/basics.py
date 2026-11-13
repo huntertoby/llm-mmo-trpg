@@ -9,7 +9,7 @@ from fractions import Fraction
 
 from trpg.content.environment import BasicActionAiRules
 from trpg.engine.preview import Preview
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = ["aim_bonus", "guard_bonus", "swap_score"]
@@ -18,7 +18,7 @@ _PERMILLE = 1000
 
 
 def _nearest_enemy(state: BattleState, unit: UnitState, xy: tuple[int, int]) -> int | None:
-    dists = [manhattan(xy, e.xy) for e in state.living_units() if e.team is not unit.team]
+    dists = [dist_to(e, xy) for e in state.living_units() if e.team is not unit.team]
     return min(dists) if dists else None
 
 
