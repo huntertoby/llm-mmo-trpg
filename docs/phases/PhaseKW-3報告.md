@@ -113,3 +113,13 @@ Chrome、vite、靜態伺服器、`trpg serve` 都用自己記下的 PID 關掉�
 | `25012c74f` | HUD 計量（`stackGauge.ts`、`StackPips.tsx`、`hudStacks`）、開發頁 hud／cond／hash、`qIconKW3.test.ts` |
 | `9a5c47915` | 截圖 `docs/art/shots/KW-3/` |
 | （本報告與上手筆記） | `docs/phases/PhaseKW-3報告.md`、`docs/dev/上手-前端戰鬥畫面與動畫.md` 第 154～156 點、檔案表與測試表 |
+
+## 開發 PM 裁定
+
+- 接受，已合併。指紋 9／9 逐字相同，既有圖逐像素不變。兩處 ART_PENDING 恢復範圍並換成「裝備不帶」的測試，檢查數列在報告裡。
+- 待 PM 決定：
+  - 1：條件部件實機未看，下次有技能用到時再補拍。
+  - 2：gearResolve 的那一行，合併 RG-4 時留意。
+  - 3：單位資訊卡的層數改計量，交美術 PM 定。
+  - 4、5：保守不動。
+  - 6：名稱並存轉交玩法 PM。
