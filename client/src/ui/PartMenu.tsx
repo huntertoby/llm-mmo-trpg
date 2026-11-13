@@ -85,6 +85,8 @@ function Row({ row, selected, doll, onHover, onPick }: { row: PartMenuRow; selec
       onPointerEnter={onHover}
       onClick={(e) => {
         e.stopPropagation();
+        // PB-1e：「破掉會」說明卡是 portal 到 body 的，React 的事件會照元件樹冒泡上來；點說明卡（釘住）不能當成選了這一列
+        if (!(e.target instanceof Node) || !e.currentTarget.contains(e.target)) return;
         onPick();
       }}
     >

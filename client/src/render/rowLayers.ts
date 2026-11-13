@@ -131,6 +131,12 @@ export class RowStack {
         else if (n.parentRenderLayer !== southUnder) southUnder.attach(n);
       }
     }
+    // PB-1e：有部位小格的頭目，伸進南邊一排的金菱形會蓋住中間那一條；HP 條＋部位小格改掛同一層、排在金菱形之後
+    const front = sprite.children.find((n) => n.label === BOSS_RING_FRONT_LABEL);
+    if (front?.parentRenderLayer != null && sprite.children.some((n) => n.label === PART_STRIP_LABEL)) {
+      const layer = front.parentRenderLayer;
+      for (const n of sprite.children) if (n.label === HP_BAR_LABEL || n.label === PART_STRIP_LABEL || n.label === HIDDEN_HP_LABEL) layer.attach(n);
+    }
     // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
     // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）
     const south = southUnder === null ? null : (top ?? southUnder);
