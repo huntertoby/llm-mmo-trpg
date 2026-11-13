@@ -440,6 +440,20 @@
   white-space: nowrap;
 }
 
+/* FL-1h（美術 11-13）：條件括號裡的不可拆詞（FLASH_NO_BREAK_WORDS，例「雙手槍」）整個換行，不斷成「雙手／槍」 */
+.fc-nobr {
+  white-space: nowrap;
+}
+
+/* FL-1h（美術 RR-2 可修 2，玩法 PM 4.1.2 第 4 條）：重閃選項整招和現在一樣、前 → 後一列都沒有時的那一行。
+   L3、11.5px，位置照第一列前 → 後的左緣（同 .fc-diffs 的左距） */
+.fc-same {
+  margin: 5px 0 0 23px;
+  color: var(--pnl-l3, #a39d8c);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
 /* ---------- LF-3：改名列＋本機模型的一句話描述（不搶版面：沒有就不佔位） ---------- */
 
 /* 新名稱：名稱沒有好壞——不用變好的金底、不用變弱的三角，主文字色粗字、無底無框 */
@@ -521,6 +535,21 @@
 
 .fc-foot.reserve {
   min-height: 100px; /* 量到卸下選單＋兩行說明＋確定 99（移植需求約 91） */
+}
+
+/* FL-1h（06 6.34.5）：轉型卡的一句話句末多接「轉型後照新種類重算強度，不跟原本比。」——這張卡最多三行，
+   有轉型選項的面板下固定區多留一行（點哪個都不跳） */
+.fc-say.transform {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.fc-foot.transform-room {
+  min-height: 95px;
+}
+
+.fc-foot.reserve.transform-room {
+  min-height: 121px;
 }
 
 .fc-foot-main {
@@ -740,6 +769,10 @@
     gap: 2px 5px;
   }
 
+  .fc-same {
+    margin: 2px 0 0;
+  }
+
   .fc-now {
     line-height: 19px;
     padding: 0 6px;
@@ -762,6 +795,14 @@
 
   .fc-foot.reserve {
     min-height: 86px; /* 量到 85（移植需求約 83） */
+  }
+
+  .fc-foot.transform-room {
+    min-height: 76px;
+  }
+
+  .fc-foot.reserve.transform-room {
+    min-height: 105px;
   }
 
   .fc-foot-main {
@@ -790,5 +831,22 @@
 
   .fc-picked {
     margin-right: 6px;
+  }
+}
+
+/* FL-1h：一輪窄欄（約 376）轉型卡的一句話接上「轉型後照新種類重算強度，不跟原本比。」要四行；只在這麼窄時放寬到四行並多留高度
+   （大世界 800 的面板比這寬，三行就放得下，不多佔空白） */
+@container fc (max-width: 420px) {
+  .fc-say.transform {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+  }
+
+  .fc-foot.transform-room {
+    min-height: 95px;
+  }
+
+  .fc-foot.reserve.transform-room {
+    min-height: 124px;
   }
 }

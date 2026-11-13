@@ -40,11 +40,16 @@
   white-space: nowrap;
 }
 
-.reflash-weaker-note .fc-down,
-.fc-weaker .fc-down {
+/* 重閃入口按鈕裡的三角照舊縮小（按鈕字 12px）。FL-1h（美術 RR-2 可修 1）：選項卡的「▼ 比原本弱」小標不再縮，
+   和同一張卡「前 → 後」列的 ▼ 用同一個 CSS 三角（.fc-down：6.5／6.5／11），1 倍下不再像一個點 */
+.reflash-weaker-note .fc-down {
   border-left-width: 5px;
   border-right-width: 5px;
   border-top-width: 8px;
+}
+
+.fc-weaker .fc-down {
+  margin: 0;
 }
 
 .fc-cat .fc-weaker {

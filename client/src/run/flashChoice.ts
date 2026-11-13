@@ -1,7 +1,7 @@
 // 靈感閃現「選變體」畫面改版（FL-1b，docs/art/靈感閃現選擇-移植需求.md）的純函式與定稿字。
 // 欄位名、單位、大標、一句話、說明卡全部由伺服器給（`FlashOptionOut.changes`、`headline_zh`、`say_zh`、`PendingFlashOut.terms`；
 // 開發 PM 第 12 節決定 1：對照表在後端 `flash_changes.py`）；這裡只決定樣式與排法、解析術語標記。
-import type { FlashOption, PendingFlash, StatChange } from "../api/types";
+import type { FlashOption, PendingFlash, SkillCard, StatChange } from "../api/types";
 import { LLM_SOURCE_LABEL } from "./llmFlow";
 
 // ---- 定稿字（9.1） ------------------------------------------------------------------------
@@ -11,6 +11,12 @@ export const FLASH_PICK_TITLE_ZH = "靈感閃現";
 export const FLASH_PICK_SUBTITLE_ZH = "選一個變化";
 /** 9.1 #34（寬版上固定區；窄版收進 (i)）。 */
 export const FLASH_MUST_PICK_ZH = "一定要選一個。選哪個這招整體都會強一點，標 ▼ 的是拿來換的";
+/** 有轉型選項的面板用這句（FL-1h，06 6.34.5「轉型不套強度下限」，玩法 PM 選 (b)）：轉型照新種類重算強度，不跟原本比。 */
+export const FLASH_MUST_PICK_TRANSFORM_ZH = "一定要選一個。選哪個這招整體都會強一點（轉型除外），標 ▼ 的是拿來換的";
+/** 選中轉型卡時，下固定區一句話的句末接這句（FL-1h，06 6.34.5）。 */
+export const FLASH_TRANSFORM_FOOT_ZH = "轉型後照新種類重算強度，不跟原本比。";
+/** 重閃選項整招和現在一樣、前 → 後一列都沒有時，卡裡放的那一行（FL-1h，玩法 PM 交接 4.1.2 第 4 條；美術 RR-2 可修 2）。 */
+export const FLASH_SAME_AS_NOW_ZH = "和現在一樣，選了這招不會變";
 /** 9.1 #21（都沒選時的下固定區）。 */
 export const FLASH_PICK_NONE_ZH = "先點一個變化。點數已經扣了，一定要選一個。";
 /** 9.1 #22。 */
@@ -37,6 +43,37 @@ export function paidTag(p: PendingFlash): string {
 }
 
 // ---- 選項卡 ------------------------------------------------------------------------------
+
+/** 這一題有沒有轉型選項（上固定區那句帶「轉型除外」）。 */
+export function hasTransform(options: readonly FlashOption[]): boolean {
+  return options.some((o) => o.transform);
+}
+
+/** 下固定區的一句話：伺服器的 `say_zh`（沒有退回 `summary_zh`）；轉型卡句末接 `FLASH_TRANSFORM_FOOT_ZH`（前句沒有句號時補一個）。 */
+export function sayText(o: FlashOption): string {
+  const say = o.say_zh || o.summary_zh;
+  if (!o.transform) return say;
+  const lead = say === "" || /[。！？]$/u.test(say) ? say : `${say}。`;
+  return `${lead}${FLASH_TRANSFORM_FOOT_ZH}`;
+}
+
+/** 卡的內容（不看 `id`：每個選項的技能 id 都不同）一樣嗎。欄位照鍵名排序比，不依賴鍵的順序。 */
+function sameCard(a: SkillCard, b: SkillCard): boolean {
+  const norm = (c: SkillCard) => {
+    const { id: _id, ...rest } = c;
+    return JSON.stringify(rest, (_k, v: unknown) => (v !== null && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0))) : v));
+  };
+  return norm(a) === norm(b);
+}
+
+/** 重閃的這個選項整招和現在一樣（前 → 後一列都沒有、名稱不變、卡的內容也和現在的卡相同）：卡裡放「和現在一樣」那一行。
+ * 只在重閃（`slot` 不為空；基準是現在的卡）；新的閃現照舊（玩法 PM 4.1.2 第 4 條只寫重閃）。`now` 是畫面上現在的卡。
+ * 本機模型寫了一句話描述（`note_zh`）的卡不算：卡裡已經有字，不再加這行。 */
+export function sameAsNow(p: PendingFlash, o: FlashOption, now: SkillCard | undefined): boolean {
+  if (p.slot === null || (o.changes ?? []).length > 0 || noteOf(o) !== null) return false;
+  // 找不到現在的卡就不下「一樣」的結論（寧可不寫，也不寫錯）
+  return now !== undefined && renamedTo(o, now.name_zh) === null && sameCard(o.card, now);
+}
 
 /** 白話大標；還沒填的模板退回 `summary_zh`（8.2）。 */
 export function headlineOf(o: FlashOption): string {
@@ -144,6 +181,35 @@ export function plainTerms(text: string): string {
   return parseTerms(text)
     .map((p) => (p.kind === "text" ? p.text : p.kind === "term" ? p.label : ""))
     .join("");
+}
+
+/** 不可拆的詞（FL-1h，美術 11-13）：條件括號（`.fc-when`）可以在字間換行，但這些詞整個換到下一行，
+ * 不會斷成「手持雙手／槍時才有」。 */
+export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍"];
+
+/** 純文字照不可拆詞切段：`keep` 為 true 的那段畫成不斷行。沒有不可拆詞時整段一個 `keep: false`。 */
+export function noBreakRuns(text: string, words: readonly string[] = FLASH_NO_BREAK_WORDS): { text: string; keep: boolean }[] {
+  const out: { text: string; keep: boolean }[] = [];
+  let rest = text;
+  while (rest !== "") {
+    let at = -1;
+    let word = "";
+    for (const w of words) {
+      const i = w === "" ? -1 : rest.indexOf(w);
+      if (i >= 0 && (at < 0 || i < at || (i === at && w.length > word.length))) {
+        at = i;
+        word = w;
+      }
+    }
+    if (at < 0) {
+      out.push({ text: rest, keep: false });
+      break;
+    }
+    if (at > 0) out.push({ text: rest.slice(0, at), keep: false });
+    out.push({ text: word, keep: true });
+    rest = rest.slice(at + word.length);
+  }
+  return out;
 }
 
 /** 「後」結尾的條件括號（「（目標這回合被撞過才有）」）拆出來，畫成次要字（樣張 `.fc-when`）。 */

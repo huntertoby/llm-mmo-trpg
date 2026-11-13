@@ -12,13 +12,17 @@ import {
   FLASH_PICK_NONE_ZH,
   FLASH_PICK_SUBTITLE_ZH,
   FLASH_PICK_TITLE_ZH,
+  FLASH_SAME_AS_NOW_ZH,
   anyUnequipMenu,
+  hasTransform,
   headlineOf,
   llmNamed,
   noteOf,
   paidTag,
   renamedTo,
   pendingWhat,
+  sameAsNow,
+  sayText,
   showsUnequipMenu,
   stepPick,
   unequipPrompt,
@@ -96,8 +100,8 @@ function FlashHead({ pending, name, lockNote, base }: { pending: PendingFlash; n
 }
 
 /** 一張選項卡：單選圈＋白話大標＋類別標籤，下面「前 → 後」各列（LF-3：改名排第一列＋名稱來源標記，本機模型的一句話描述接在
- * 名稱下面）。點整張卡選中（再點不取消）。 */
-function OptionCard({ o, current, selected, focusable, terms, onPick, onKey }: { o: FlashOption; current: string; selected: boolean; focusable: boolean; terms: Terms; onPick(): void; onKey(e: KeyboardEvent<HTMLDivElement>): void }) {
+ * 名稱下面）。點整張卡選中（再點不取消）。FL-1h：重閃選項整招和現在一樣（`same`）時，列的位置放一行「和現在一樣」。 */
+function OptionCard({ o, current, same, selected, focusable, terms, onPick, onKey }: { o: FlashOption; current: string; same: boolean; selected: boolean; focusable: boolean; terms: Terms; onPick(): void; onKey(e: KeyboardEvent<HTMLDivElement>): void }) {
   const tag = optionTag(o);
   const after = renamedTo(o, current);
   const rename = after === null ? null : { before: current, after, llm: llmNamed(o) };
@@ -129,7 +133,13 @@ function OptionCard({ o, current, selected, focusable, terms, onPick, onKey }: {
           )}
         </span>
       </div>
-      <DiffRows changes={o.changes ?? []} terms={terms} rename={rename} note={noteOf(o)} />
+      {same ? (
+        <p className="fc-same" data-testid="flash-same">
+          {FLASH_SAME_AS_NOW_ZH}
+        </p>
+      ) : (
+        <DiffRows changes={o.changes ?? []} terms={terms} rename={rename} note={noteOf(o)} />
+      )}
     </div>
   );
 }
@@ -138,6 +148,7 @@ function OptionCard({ o, current, selected, focusable, terms, onPick, onKey }: {
 function FlashFoot({
   picked,
   reserve,
+  transformRoom,
   hero,
   terms,
   unequip,
@@ -147,6 +158,8 @@ function FlashFoot({
 }: {
   picked: FlashOption | undefined;
   reserve: boolean;
+  /** 有轉型選項：轉型卡的一句話多接一句，下固定區多留一行（點哪個都不跳）。 */
+  transformRoom: boolean;
   hero: RunHero;
   terms: Terms;
   unequip: string | null;
@@ -156,7 +169,7 @@ function FlashFoot({
 }) {
   const owned = ownedCards(hero);
   return (
-    <div className={`fc-foot${reserve ? " reserve" : ""}`} data-testid="flash-foot">
+    <div className={`fc-foot${reserve ? " reserve" : ""}${transformRoom ? " transform-room" : ""}`} data-testid="flash-foot">
       {picked !== undefined && showsUnequipMenu(picked) && (
         <div className="fc-unequip" data-testid="flash-unequip">
           <span className="k">{unequipPrompt(picked)}</span>
@@ -174,14 +187,14 @@ function FlashFoot({
         </div>
       )}
       <div className="fc-foot-main">
-        <div className="fc-say" data-testid="flash-say">
+        <div className={`fc-say${picked?.transform === true ? " transform" : ""}`} data-testid="flash-say">
           {picked === undefined ? (
             <span className="dim">{FLASH_PICK_NONE_ZH}</span>
           ) : (
             <>
               <b className="fc-picked">{headlineOf(picked)}</b>
               <span className="fc-say-line">
-                <TermText text={picked.say_zh || picked.summary_zh} terms={terms} />
+                <TermText text={sayText(picked)} terms={terms} />
               </span>
             </>
           )}
@@ -251,6 +264,7 @@ export function FlashPendingPanel({ pending, hero, busy, onChoose, lockNote }: P
     <FlashFoot
       picked={picked}
       reserve={anyUnequipMenu(options)}
+      transformRoom={hasTransform(options)}
       hero={hero}
       terms={terms}
       unequip={unequip}
@@ -262,7 +276,7 @@ export function FlashPendingPanel({ pending, hero, busy, onChoose, lockNote }: P
   const body = (
     <div ref={list} className="fc-opts" role="radiogroup" aria-label="閃現的變化" data-testid="flash-options">
       {options.map((o, i) => (
-        <OptionCard key={o.index} o={o} current={name} selected={pick === o.index} focusable={pick === null ? i === 0 : pick === o.index} terms={terms} onPick={() => choose(o.index)} onKey={onKey} />
+        <OptionCard key={o.index} o={o} current={name} same={sameAsNow(pending, o, before)} selected={pick === o.index} focusable={pick === null ? i === 0 : pick === o.index} terms={terms} onPick={() => choose(o.index)} onKey={onKey} />
       ))}
     </div>
   );
