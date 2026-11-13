@@ -20,12 +20,16 @@ import { bodyEffect, poseDoll, setBody, setCreatureBody, type ReactHost } from "
 import { downedLook } from "./unitLook";
 import { BODY_LABEL, bodyNodes, creatureOf, dollPx, FEET, hasSkeleton } from "./unitSprite";
 import type { Effect } from "./vfxEffects";
+import type { PartFx } from "../battle/partStrip";
+import { partBreakEffect } from "./partBreakFx";
 
 const T = TILE_SIZE;
 
 /** 繪製器提供的操作：6N-4 的 `ReactHost` 再加地圖大小（畫面閃白、四周變暗用）。 */
 export interface ResultHost extends ReactHost {
   bounds(): { w: number; h: number };
+  /** PB-1e：頭目部位破壞演出換格時，人物、頭頂小格、掉落物照這一格畫（`null`＝回到伺服器給的樣子）。沒有的繪製器（測試）可以不給。 */
+  partFx?(unitId: string, fx: PartFx | null): void;
 }
 
 /** 片段長度（毫秒，已乘播放速度；最短 160，同 6N-4）。 */
@@ -279,8 +283,11 @@ function oneSpecial(host: ResultHost, s: VfxSpecial, o: SpecialOpts, vfx: StepVf
     }
     case "boss":
       return [vignetteEffect(host, at, Math.max(60, Math.round(BOSS_DIM_MS * o.scale)))];
-    case "part_break":
-      return []; // PB-1c：白閃是那一下升級後的重擊片段（`specials.ts`），微震在 `impact.ts`，浮動字在 `feedback.ts`
+    case "part_break": {
+      // PB-1e：正式演出 5 格（部位白閃、裂紋、碎塊飛出＋「破」、落地）；重擊白閃與微震照 PB-1c（`specials.ts`、`impact.ts`）
+      const e = partBreakEffect(host, s, at, o.scale);
+      return e === null ? [] : [e];
+    }
   }
 }
 

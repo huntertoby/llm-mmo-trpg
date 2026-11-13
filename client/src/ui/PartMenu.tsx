@@ -8,7 +8,7 @@
 // - 選取改變時把對應動作（帶 `target_part`）交給預覽（`onPreview`），預覽多一行「拂塵還剩 12」（`battle/previewText.ts`）。
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { Action, PartOption, Pos, UnitView } from "../api/types";
-import { breakLine, moveSelection, partMenuRows, partMenuSubtitle, pickedPart, type PartMenuRow } from "../battle/partMenu";
+import { BODY_ROW, breakLine, moveSelection, partMenuRows, partMenuSubtitle, pickedPart, type PartMenuRow } from "../battle/partMenu";
 import type { HeightGrid } from "../battle/elevation";
 import { tileBox } from "../battle/stageLayout";
 import { BACK_ICON, type BossDoll } from "../render/qIcon/bossParts";
@@ -50,6 +50,11 @@ interface Props {
   onClose(): void;
   /** 選取改變時預覽的動作；關掉時 `null`。 */
   onPreview(action: Action | null): void;
+  /**
+   * PB-1e：選單開著（頭目的狀態列、蓄力徽章淡到 40%）與滑過的部位（頭目身上那個部位亮起；`part` ＝ `null`＝本體）；
+   * 關掉時 `null`。
+   */
+  onFocus?(focus: { targetId: string; part: string | null } | null): void;
 }
 
 /** 動作帶上部位（`null`＝本體，原樣）。 */
@@ -119,7 +124,7 @@ function Row({ row, selected, doll, onHover, onPick }: { row: PartMenuRow; selec
   );
 }
 
-export function PartMenu({ menu, boss, model, scale, boardRef, onPick, onClose, onPreview }: Props) {
+export function PartMenu({ menu, boss, model, scale, boardRef, onPick, onClose, onPreview, onFocus }: Props) {
   const popup = usePopupMenu({ open: true, setOpen: (open) => (open ? undefined : onClose()) });
   const rows = partMenuRows(boss, menu.options);
   const [sel, setSel] = useState(0);
@@ -142,6 +147,12 @@ export function PartMenu({ menu, boss, model, scale, boardRef, onPick, onClose, 
     // 只在選取改變時重送
   }, [previewKey]);
   useEffect(() => () => onPreview(null), []);
+  // PB-1e：頭目身上跟著選取亮起（本體不亮）；關掉時拿掉亮起與淡化
+  const focusPart = selected === undefined || selected.id === BODY_ROW ? null : selected.id;
+  useEffect(() => {
+    onFocus?.({ targetId: menu.targetId, part: focusPart });
+  }, [menu.targetId, focusPart]);
+  useEffect(() => () => onFocus?.(null), []);
 
   // 方向鍵、Enter（Esc 由 usePopupMenu 處理）；攔下事件，BattleScreen 的鍵盤處理不會再收到
   useEffect(() => {

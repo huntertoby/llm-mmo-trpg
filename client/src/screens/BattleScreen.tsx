@@ -321,6 +321,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             onPick={tiles.pickPart}
             onClose={tiles.closePartMenu}
             onPreview={sel.setPanelPreview}
+            onFocus={(f) => pb.rendererRef.current?.setPartFocus(f?.targetId ?? null, f?.part ?? null)}
           />
         )}
         <ZoomControls
