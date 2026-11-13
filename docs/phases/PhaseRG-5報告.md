@@ -161,3 +161,20 @@
   - 7（半掩護物件的高度條件要不要一起統一）、8（掉落的物品名）、9（手寫技能說明裡的「每層」）：轉交玩法 PM。
   - 1、2、4、5、6：轉交美術 PM。
   - 3、10：照保守做法維持。
+
+## CLI 快照補充（開發 PM 交辦）
+
+**預測漏了什麼**：交件時寫「CLI 快照 0 鍵變（沒有盾兵、盾陣、連擊點條件）」，根據是 `tests/cli` 全過。但快照測試 `test_cli_output_matches_the_recorded_snapshot` 標了 `slow`，`pyproject.toml` 的預設 `addopts` 是 `-m 'not slow and not llm'`，所以「`tests/cli` 全過」其實沒跑到快照。另外「沒有連擊點條件」的判斷不對：`skills list`／`skills show` 會印出技能的使用條件，而內建技能裡有兩招用了 `self_stack_at_least` 連擊點條件。8dd76b544 讓 `_stack_condition_text` 改照 `StackDef.unit_zh` 取單位（`content/stacks.yaml` 的 `combo_point` 設成「點」），這兩招的條件文字就從「層」變成「點」。
+
+**來源確認**：在 RG-5 開工前的 95388af81 用同樣方式重算，3 鍵的雜湊和舊快照逐字相同；所以差異全部來自 RG-5（8dd76b544），和 RG-6 無關（只改前端）。逐行 diff 只有下面 4 行，沒有其他內容變動，也沒有排序變動。
+
+| 鍵 | 技能 | 改前 → 改後 |
+|---|---|---|
+| `skills_list` | 連影斬 `skill_flowing_cut` | 「［條件：自身「連擊點」達 3 層］」→「達 3 點」 |
+| `skills_list` | 斷喉 `skill_throat_cut` | 「若自身「連擊點」達 5 層」→「達 5 點」 |
+| `skills_show_all/03` | 連影斬 `skill_flowing_cut` | 「使用條件 自身「連擊點」達 3 層」→「達 3 點」 |
+| `skills_show_all/13` | 斷喉 `skill_throat_cut` | 「3. 狀態「流血」 2 回合（敵方），若自身「連擊點」達 5 層」→「達 5 點」 |
+
+都是預期中的換字，只重產這 3 鍵（`UPDATE_CLI_SNAPSHOTS=1` 只點名這 3 個參數），其他 21 鍵不動。重產後 `tests/cli -m slow` 44 passed、`tests/cli`（非 slow）148 passed，結束碼都是 0。
+
+附註：斷喉同一行的「消耗全部「連擊點」，每層使本技能傷害 +20%」仍是「每層」（`src/trpg/narrative/skills.py` 的消耗全部層數文字沒有改單位），這是上面待決第 9 項同類的問題，這次沒動，留給玩法 PM 一起決定。
