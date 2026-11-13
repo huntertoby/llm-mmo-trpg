@@ -43,7 +43,7 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-13 187402527 已 push（pytest 17474、vitest 4475、build 0），含 RG-5（玩家大盾、盾陣改名、高 1 層、連擊點單位）、RG-6（單挑非劍主手）、CLI 快照 3 鍵補正；版號 LOG_FORMAT /124、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
+**2. 最後一次全量**：2026-11-13 d8edd4611 全過，push 到 67a9b8207（pytest 17481、vitest 4487、build 0），含 RG-5b（盾高度照半掩護、每點、LOG_FORMAT /125）、RG-7（只補測試）、RG-8（大盾形制名、開發頁狼王照實機）、FL-1h（轉型字、和現在一樣、▼ 三角、雙手槍不拆）、美術 RG-5／RG-6 驗收。版號 LOG_FORMAT /125、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。
 
 **3. 執行中的 agent（分支）**：
 - 無（RG-7、RG-8、FL-1h 11-13 已合併）。
