@@ -15,6 +15,7 @@ import {
   openMode,
   type FlashMode,
 } from "./flash";
+import { weakerLeadText, type WeakerSlot } from "./reflashWeaker";
 
 /** 閃現預覽的來源（大世界 5A-7 用自己的端點；省略時用一輪的 `flash-preview`）。 */
 export type FlashPreviewLoader = (skill: string, slot: number | null) => Promise<FlashPreview>;
@@ -30,6 +31,8 @@ interface Props {
   slot: number | null;
   /** 重閃時顯示被換掉的是哪一格。 */
   slotLabel?: string;
+  /** RR-2b／RR-2c（#160）：被強度下限卡住的重閃格（伺服器 `weaker`）：面板最上面多一行提醒（扣點前；關掉面板不重閃、不扣點）。 */
+  weaker?: WeakerSlot | null;
   busy: boolean;
   onChoose(choice: RunChoice): Promise<number | null>;
   onCancel(): void;
@@ -64,7 +67,7 @@ export function FlashChooser(props: Props) {
 type ViewProps = Omit<Props, "runId" | "previewFlash"> & { preview: FlashPreview | null; loadError: string | null; initialCategory?: string | null };
 
 /** 出題前畫面本體（預覽由外面載入；方便單元測試直接給預覽）。 */
-export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, busy, onChoose, onCancel, preview, loadError, initialCategory = null }: ViewProps) {
+export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, weaker = null, busy, onChoose, onCancel, preview, loadError, initialCategory = null }: ViewProps) {
   const [category, setCategory] = useState<string | null>(initialCategory);
   const rules = hero.flash_rules;
 
@@ -87,6 +90,12 @@ export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, bu
           </span>
         )}
       </div>
+      {weaker !== null && (
+        <p className="reflash-weaker-note reflash-weaker-lead" data-testid="flash-weaker-lead">
+          <i className="fc-down" aria-label="變弱" />
+          <span>{weakerLeadText(weaker)}</span>
+        </p>
+      )}
       <p className="flash-warning small" data-testid="flash-warning">
         {flashWarning(mode)}
         {slot !== null && "重閃不增加閃現次數，也不需要先上場。"}

@@ -1,4 +1,5 @@
-/* RR-2（#160）：被強度下限卡住的重閃格。「比原本弱」一律用 FL-1b 的「變弱」樣式：無底無框＋向下三角（.fc-down，flash-choice.css）。 */
+/* RR-2（#160）：被強度下限卡住的重閃格。提醒一律用 FL-1b 的「變弱」樣式：無底無框＋向下三角（.fc-down，flash-choice.css）。
+   RR-2b：確認框合進選類別面板最上面那一行（.reflash-weaker-lead）。RR-2c：整招低於現在的選項卡加回「比原本弱」小標（.fc-weaker）。 */
 
 /* 重閃入口按鈕裡的提醒字（不標灰：按鈕照常可以按） */
 .reflash-weaker-note {
@@ -12,7 +13,20 @@
   line-height: 1.5;
 }
 
-/* 選項卡類別標籤旁的小標 */
+/* 選類別面板最上面那一行（提醒字＋「整招不會比現在弱；扣點後一定要選一個。」）：長句可折行，三角對齊第一行 */
+.reflash-weaker-lead {
+  align-items: flex-start;
+  gap: 6px;
+  margin: 4px 0 2px;
+  font-size: 13px;
+}
+
+.reflash-weaker-lead .fc-down {
+  flex: none;
+  margin-top: 0.55em;
+}
+
+/* 選項卡類別標籤旁的小標（只在整招低於現在的卡上） */
 .fc-weaker {
   display: inline-flex;
   flex: none;

@@ -2179,7 +2179,8 @@
      "title_zh": "武器傷害怎麼算",
      "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +3。"
     }
-   }
+   },
+   "weaker_foot_zh": null
   },
   "rows": {
    "skill_id": "skill_akimbo_burst",
@@ -3391,7 +3392,8 @@
      "title_zh": "武器傷害怎麼算",
      "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.7。屬性加成目前 +3。"
     }
-   }
+   },
+   "weaker_foot_zh": null
   },
   "transform": {
    "skill_id": "skill_rand_75",
@@ -4443,7 +4445,8 @@
      "title_zh": "對它加碼（關鍵字）",
      "text_zh": "目標身上有這個關鍵字時，這招會變強。"
     }
-   }
+   },
+   "weaker_foot_zh": null
   },
   "stance": {
    "skill_id": "skill_rand_75",
@@ -5512,7 +5515,8 @@
      "title_zh": "對它加碼（關鍵字）",
      "text_zh": "目標身上有這個關鍵字時，這招會變強。"
     }
-   }
+   },
+   "weaker_foot_zh": null
   },
   "llm": {
    "skill_id": "skill_rand_75",
@@ -6580,7 +6584,8 @@
      "title_zh": "武器傷害怎麼算",
      "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +3。"
     }
-   }
+   },
+   "weaker_foot_zh": null
   }
  },
  "bases": {

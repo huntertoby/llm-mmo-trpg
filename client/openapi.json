@@ -23026,7 +23026,7 @@
             ],
             "title": "Weaker Zh"
           },
-          "weaker_confirm_zh": {
+          "weaker_pick_zh": {
             "anyOf": [
               {
                 "type": "string"
@@ -23035,7 +23035,7 @@
                 "type": "null"
               }
             ],
-            "title": "Weaker Confirm Zh"
+            "title": "Weaker Pick Zh"
           }
         },
         "additionalProperties": false,

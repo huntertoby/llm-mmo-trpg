@@ -20,6 +20,7 @@ import json
 import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -73,7 +74,7 @@ from trpg.skillgen.usage import SkillUsage
 __all__ = [
     "NO_OPTIONS_ZH",
     "NO_REFLASH_OPTIONS_ZH",
-    "REFLASH_WEAKER_CONFIRM_ZH",
+    "REFLASH_WEAKER_PICK_ZH",
     "REFLASH_WEAKER_ZH",
     "WEAKER_FOOT_ZH",
     "WEAKER_TAG_ZH",
@@ -411,8 +412,8 @@ class FlashOption(BaseModel):
     floor_permille: int = Field(default=0, ge=0)
     """重閃時被換掉那一筆的預算分數下限（‰，進位；選擇時寫進 :class:`FlashRecord`）；閃現為 0。"""
     weaker: bool = Field(default=False, exclude_if=lambda v: not v)
-    """被強度下限卡住的重閃格（RR-2，#160，06 6.34.3）出的較弱選項：這一筆不低於重閃前一筆、但不套
-    被換掉那一筆的下限（``floor_permille`` 是 0）。``False`` 時不輸出（存檔逐字不變）。"""
+    """被強度下限卡住的重閃格（RR-2，#160，06 6.34.3；RR-2c 定義）出的選項裡，**整招** 預算分數低於
+    重閃前（玩家現在的卡）的那些（卡上標「比原本弱」）。``False`` 時不輸出（存檔逐字不變）。"""
 
 
 class FlashOffer(BaseModel):
@@ -430,7 +431,7 @@ class FlashOffer(BaseModel):
     cost: int = Field(ge=0)
     options: tuple[FlashOption, ...] = ()
     weaker: bool = Field(default=False, exclude_if=lambda v: not v)
-    """這次是被強度下限卡住的重閃格（RR-2，#160）：選項都比原本弱（:func:`reflash_weaker`）。
+    """這次是被強度下限卡住的重閃格（RR-2，#160）：選項可能比現在弱（:func:`reflash_weaker`）。
     ``False`` 時不輸出。"""
 
 
@@ -448,7 +449,10 @@ class _Builder:
     """來源給的文字（LF-1，:class:`TextSource`）；套用前由 :func:`clean_text` 檢查後掛上。"""
     weaker: bool = False
     """被強度下限卡住的重閃格（RR-2，#160）：不套被換掉那一筆的下限（``floor_permille`` 是 0），
-    出的選項都標「比原本弱」。"""
+    也不套整招篩選（``whole_floor``）；整招低於現在的選項標「比原本弱」。"""
+    whole_floor: Fraction | None = None
+    """重閃的整招下限（RR-2c，06 6.34.3「重閃也一樣」）：玩家現在那張卡的預算分數；重閃後整招不能
+    低於它。閃現為 ``None``（閃現的下限在推導時已經看整招）。轉型照 3W-3 不設下限、不篩。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
@@ -475,12 +479,19 @@ class _Builder:
                 skill = derive_skill(self.library, request.base, state, request.seed, request.tier)
         except FlashError:
             return None
+        below = (
+            self.whole_floor is not None
+            and variation.source != "transform"
+            and budget_power(skill, self.library) < self.whole_floor
+        )
+        if below and not self.weaker:
+            return None  # RR-2c：重閃後整招低於現在的卡，照原規則不合格
         return FlashOption(
             variation=variation,
             skill=skill,
             summary_zh=_summary(self.library, variation),
             floor_permille=self.floor_permille,
-            weaker=self.weaker,
+            weaker=below,
         )
 
     def take(self, variations: Sequence[Variation], count: int) -> list[FlashOption]:
@@ -496,7 +507,8 @@ class _Builder:
 
 def _builder(library: ContentLibrary, request: FlashRequest) -> _Builder:
     """這次請求的選項產生器（:func:`_strict_builder`）；被強度下限卡住的重閃格（RR-2，#160，
-    :func:`reflash_weaker`）改成不套被換掉那一筆的下限、選項標「比原本弱」。"""
+    :func:`reflash_weaker`）改成不套被換掉那一筆的下限、也不套整招篩選，整招低於現在的選項標
+    「比原本弱」。"""
     builder = _strict_builder(library, request)
     if _weaker(library, request, builder):
         builder.floor_permille = 0
@@ -511,8 +523,30 @@ def _strict_builder(library: ContentLibrary, request: FlashRequest) -> _Builder:
         chain = derive_chain(library, request.base, request.state, request.seed, request.tier)
     except FlashStepError as exc:
         broken = FlashHistoryError(exc)
-        return _Builder(library, request, _fallback_floor(library, request), broken)
-    return _Builder(library, request, _replaced_floor(library, request, chain))
+        builder = _Builder(library, request, _fallback_floor(library, request), broken)
+        if request.slot is not None and request.current is not None:
+            builder.whole_floor = budget_power(request.current, library)
+        return builder
+    builder = _Builder(library, request, _replaced_floor(library, request, chain))
+    if request.slot is not None:
+        builder.whole_floor = _whole_floor(library, request, chain)
+    return builder
+
+
+def _whole_floor(
+    library: ContentLibrary, request: FlashRequest, chain: Sequence[SkillDef]
+) -> Fraction:
+    """重閃的整招下限（RR-2c）：玩家現在那張卡（已存歷程重推的最後一筆；沒有任何一筆時是原本的
+    技能加預算上限加成）的預算分數。"""
+    if chain:
+        return budget_power(chain[-1], library)
+    return budget_power(
+        with_budget_bonus(
+            at_role_tier(library, request.base, request.tier),
+            bonus_permille(library.flash.rules, request.state),
+        ),
+        library,
+    )
 
 
 def try_variation(
@@ -674,16 +708,15 @@ NO_OPTIONS_ZH = "這招目前沒有可以閃的變化"
 NO_REFLASH_OPTIONS_ZH = "這一格目前沒有可以重閃的變化"
 """重閃某一格沒有任何合法選項時按鈕的灰字（RR-1，比照 :data:`NO_OPTIONS_ZH`；
 玩法 PM 11-13 定稿，TXT-2）。"""
-REFLASH_WEAKER_ZH = "這一格重閃可能比原本弱"
-"""被強度下限卡住的重閃格入口的提醒字（RR-2，#160，06 6.34.3「強度下限」例外第 2 點）。"""
-REFLASH_WEAKER_CONFIRM_ZH = (
-    "這一格原本的變化特別強，這次重閃出的選項都會比原本弱。扣點後一定要選一個。還要重閃嗎？"
-)
-"""按下被強度下限卡住的重閃格時、扣點前的確認句（RR-2，#160；按鈕「重閃」「先不要」）。"""
-WEAKER_FOOT_ZH = "這次的選項都比原本弱，標 ▼ 的是變弱的地方。"
-"""較弱的重閃出題後，面板固定區取代「選哪個這招整體都會強一點」的那句（RR-2，#160）。"""
+REFLASH_WEAKER_ZH = "這一格重閃後，這招可能比現在弱"
+"""被強度下限卡住的重閃格入口的提醒字；選類別面板最上面也再寫一次（RR-2c，#160 第 3 點）。"""
+REFLASH_WEAKER_PICK_ZH = "扣點後一定要選一個。"
+"""選類別面板最上面、接在 :data:`REFLASH_WEAKER_ZH` 後面的那句（RR-2c，#160 第 3 點；兩層確認
+合成一層，不另跳確認框）。"""
+WEAKER_FOOT_ZH = "這次的選項可能比現在弱；標 ▼ 的是變小的地方。"
+"""較弱的重閃出題後，面板固定區取代「選哪個這招整體都會強一點」的那句（RR-2c，#160 第 3 點）。"""
 WEAKER_TAG_ZH = "比原本弱"
-"""較弱的重閃每張選項卡類別標籤旁的小標（RR-2，#160；變弱樣式）。"""
+"""較弱的重閃裡整招低於現在的選項卡，類別標籤旁的小標（RR-2c，#160 第 4 點；變弱樣式）。"""
 _OPTIONS_CACHE_LIMIT = 512
 """內容庫上「有沒有選項」快取（``ContentLibrary.flash_option_cache``）的上限：滿了就清空。"""
 
@@ -724,14 +757,14 @@ def _options_key(request: FlashRequest) -> str:
 
 
 def reflash_weaker(library: ContentLibrary, request: FlashRequest) -> bool:
-    """這一格重閃是不是被強度下限卡住（RR-2，#160，06 6.34.3「強度下限」例外）。
+    """這一格重閃是不是被強度下限卡住（RR-2，#160，06 6.34.3「強度下限」例外；RR-2c 定義）。
 
-    照原規則（不低於被換掉的那一筆）**沒有任何候選** 達得到時是 ``True``（範圍同
-    :func:`has_options`：不指定類別、依用法統計的來源），這時改出不低於重閃前一筆、但不套被換掉
-    那一筆下限的較弱候選。只要有一個候選達得到就是 ``False``（照原規則只出達得到的）；新的閃現
-    （``slot`` 為空）、完整技能第一次調整（還沒有被換掉的那一筆）、已存歷程重推不了（3W-R1）一律
-    ``False``。改成較弱之後有沒有選項另看 :func:`has_options`。結果同 :func:`has_options` 快取在
-    內容庫上。"""
+    照原規則（這一格不低於被換掉的那一筆，**而且整招不低於現在的卡**）**沒有任何候選** 達得到時是
+    ``True``（範圍同 :func:`has_options`：不指定類別、依用法統計的來源），這時改出預算窗內、但整招
+    可能比現在弱的候選（兩道下限都不套）。只要有一個候選達得到就是 ``False``（照原規則只出達得到
+    的）；新的閃現（``slot`` 為空）、完整技能第一次調整（還沒有被換掉的那一筆）、已存歷程重推
+    不了（3W-R1）一律 ``False``。改成較弱之後有沒有選項另看 :func:`has_options`。結果同
+    :func:`has_options` 快取在內容庫上。"""
     return _weaker(library, request, None)
 
 

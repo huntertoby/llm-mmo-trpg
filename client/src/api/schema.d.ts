@@ -9289,8 +9289,8 @@ export interface components {
             weaker: boolean;
             /** Weaker Zh */
             weaker_zh?: string | null;
-            /** Weaker Confirm Zh */
-            weaker_confirm_zh?: string | null;
+            /** Weaker Pick Zh */
+            weaker_pick_zh?: string | null;
         };
         /**
          * RegionStoneView
