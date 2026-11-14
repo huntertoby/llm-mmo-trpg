@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import statistics
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -265,6 +266,13 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
             else None
         ),
         "reasoning_tokens": sum(c.get("reasoning_tokens") or 0 for c in calls),
+        "reasoning_tokens_median": (
+            statistics.median(c.get("reasoning_tokens") or 0 for c in tokens) if tokens else None
+        ),
+        "completion_tokens_median": (
+            statistics.median(c["completion_tokens"] for c in tokens) if tokens else None
+        ),
+        "finish_length": sum(1 for c in calls if c.get("finish_reason") == "length"),
         "naming_llm": naming_llm,
         "naming_total": naming_total,
         "failures": _failure_counts(rows),
@@ -285,7 +293,75 @@ def _server_info(base_url: str, model: str) -> dict[str, Any]:
     return {}
 
 
-def main(argv: list[str] | None = None) -> int:
+MIN_TPS = 60.0
+"""生成速度低於這個值就停（代表模型多半不在 GPU 上，要使用者處理）。"""
+
+SPEED_PROMPT = "用繁體中文寫一段約 600 字的奇幻冒險故事。"
+
+
+def measure_speed(config: Any, max_tokens: int = 500) -> dict[str, Any]:
+    """短請求（串流）量生成速度：從第一個 token 算到最後，排除 prompt 處理時間。"""
+    body: dict[str, Any] = {
+        "model": config.model,
+        "messages": [{"role": "user", "content": SPEED_PROMPT}],
+        "max_tokens": max_tokens,
+        "temperature": config.temperature,
+        "stream": True,
+        "stream_options": {"include_usage": True},
+        "chat_template_kwargs": {"enable_thinking": config.enable_thinking},
+    }
+    if config.reasoning_effort is not None:
+        body["reasoning_effort"] = config.reasoning_effort
+    start = time.perf_counter()
+    first: float | None = None
+    usage: dict[str, Any] = {}
+    chunks = 0
+    url = config.base_url.rstrip("/") + "/chat/completions"
+    with httpx.stream("POST", url, json=body, timeout=config.timeout_s) as response:
+        for line in response.iter_lines():
+            if not line.startswith("data: ") or line == "data: [DONE]":
+                continue
+            payload = json.loads(line[6:])
+            usage = payload.get("usage") or usage
+            for choice in payload.get("choices") or []:
+                delta = choice.get("delta") or {}
+                if any(delta.get(k) for k in ("content", "reasoning_content", "reasoning")):
+                    chunks += 1
+                    first = first if first is not None else time.perf_counter()
+    end = time.perf_counter()
+    tokens = usage.get("completion_tokens") or chunks
+    details = usage.get("completion_tokens_details") or {}
+    generation = end - (first if first is not None else start)
+    return {
+        "completion_tokens": tokens,
+        "reasoning_tokens": details.get("reasoning_tokens"),
+        "ttft_s": round((first if first is not None else start) - start, 2),
+        "generation_s": round(generation, 2),
+        "generation_tps": round(tokens / generation, 1) if generation > 0 else None,
+    }
+
+
+def gpu_memory() -> str:
+    """``nvidia-smi`` 的顯示卡記憶體用量（拿不到就空字串）。"""
+    try:
+        done = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.used,memory.total",
+                "--format=csv,noheader",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except OSError:
+        return ""
+    return done.stdout.strip()
+
+
+def _parse_args(argv: list[str] | None) -> argparse.Namespace:
+    """讀命令列，並把模型與思考設定寫進這次執行的環境變數（不改設定檔）。"""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0] if __doc__ else "")
     parser.add_argument("--model", required=True, help="LM Studio 的 model id")
     parser.add_argument("--reasoning-effort", default=None, help="例如 none（Gemma）")
@@ -293,11 +369,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=0, help="題目輪替種子（預設 0＝4-L5）")
     parser.add_argument("--out", type=Path, default=None, help="JSON 輸出路徑")
     parser.add_argument("--no-warmup", action="store_true")
+    parser.add_argument("--enable-thinking", default=None, help="true／false，覆寫設定")
     args = parser.parse_args(argv)
-
     os.environ["TRPG_LLM_MODEL"] = args.model
     if args.reasoning_effort is not None:
         os.environ["TRPG_LLM_REASONING_EFFORT"] = args.reasoning_effort
+    if args.enable_thinking is not None:
+        os.environ["TRPG_LLM_ENABLE_THINKING"] = args.enable_thinking
+    return args
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv)
     config = load_llm_config()
     library = load_library()
     requests = propose_requests(library, ProposeArgs(count=args.count, seed=args.seed))
@@ -326,6 +409,13 @@ def main(argv: list[str] | None = None) -> int:
             )
             result["warmup"] = {k: warm.get(k) for k in ("request", "source", "seconds", "calls")}
             print(f"暖機：{warm.get('seconds', 0):.1f} 秒（{warm['source']}）", flush=True)
+        result["speed"] = measure_speed(config)
+        result["gpu_memory"] = gpu_memory()
+        print(f"速度：{result['speed']}｜VRAM：{result['gpu_memory']}", flush=True)
+        tps = result["speed"]["generation_tps"]
+        if tps is not None and tps < MIN_TPS:
+            print(f"生成速度 {tps} t/s 低於 {MIN_TPS}，停止（模型可能不在 GPU 上）", flush=True)
+            return 2
         rows: list[dict[str, Any]] = []
         taken: set[str] = set()
         for index, (request, seed) in enumerate(requests, start=1):
