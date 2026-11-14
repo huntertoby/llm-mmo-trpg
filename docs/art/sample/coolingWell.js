@@ -17,12 +17,16 @@
     drop: "#4aa8ff", ink: "#1a1208", // 水滴記號：元素水色 palette.ts／危險記號的黑框色
     steam: "rgba(232,242,250,0.42)",
   };
-  /** 井圈幾何：頂面橢圓中心 (26, 21)、半徑 20×11.5、正面高 11 → 最低點 43.5（物件耐久條在 0.84 T＝43.7，不蓋到井身與水滴記號）；井口 13.5×7。 */
-  const G = { cx: 26, ty: 21, rx: 20, ry: 11.5, face: 11, irx: 13.5, iry: 7 };
+  /**
+   * 井圈幾何（第 2 版壓扁）：頂面橢圓中心 (26, 24.5)、半徑 20×9 → 上緣 15.5（不高於殘牆壓頂石上緣 15.6）；正面高 10 → 最低點 43.5
+   * （物件耐久條在 0.84 T＝43.7，不蓋到井身與水滴記號）；井口 13×5.5。第 1 版是 (26, 21)、20×11.5、面高 11（上緣 9.5，比殘牆高）。
+   */
+  const G = { cx: 26, ty: 24.5, rx: 20, ry: 9, face: 10, irx: 13, iry: 5.5 };
+  const KY = G.ry / 11.5; // 第 1 版手排座標（缺角、後側裂、K0 中央裂）照頂面壓扁的比例換算
   /** 破壞演出時間表（ms，事件到達起算）：K 0 裂、1 爆開、2 漫出、3 鋪滿、4 留下（＝靜態的打破後）。 */
   const FRAMES = [
     { k: 0, ms: 0, zh: "裂：井圈白閃＋裂縫亮、水從裂縫噴" },
-    { k: 1, ms: 90, zh: "爆開：井圈碎成 7 塊往外飛、中央水柱、水面從井心長到半格" },
+    { k: 1, ms: 90, zh: "爆開：井圈碎成 10 塊往外飛、中央水柱、水面從井心長到半格" },
     { k: 2, ms: 200, zh: "漫出：碎塊落地、水花往外、水面長到十字 4 格" },
     { k: 3, ms: 340, zh: "鋪滿：水面長到 3×3 的角、漣漪一圈" },
     { k: 4, ms: 520, zh: "留下：3×3 水表面（現行畫法）＋碎石圈" },
@@ -59,11 +63,11 @@
     const { cx, ty, irx, iry } = G;
     ctx.save(); ctx.beginPath(); ctx.ellipse(cx, ty + 0.5, irx, iry, 0, 0, TAU); ctx.clip();
     ctx.fillStyle = C.inner; ctx.fillRect(cx - irx, ty - iry, irx * 2, iry * 2 + 1);
-    const wy = ty + 2.6 + (stage === 2 ? 1 : 0); // 破很重時水位低一點（在漏）
+    const wy = ty + 2 + (stage === 2 ? 0.8 : 0); // 破很重時水位低一點（在漏）
     ctx.beginPath(); ctx.ellipse(cx, wy, irx - 0.8, iry - 1.4, 0, 0, TAU); ctx.fillStyle = C.water; ctx.fill();
     ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.beginPath(); ctx.ellipse(cx + 4, wy + 2, irx - 4, iry - 3, 0, 0, TAU); ctx.fill(); // 暗面（右下）
-    ctx.fillStyle = C.waterHi; ctx.beginPath(); ctx.ellipse(cx - 4, wy - 1.6, 5.5, 1.8, -0.08, 0, TAU); ctx.fill(); // 亮面（左上）
-    line(ctx, [[cx + 2, wy + 1.2], [cx + 8, wy + 0.8]], "rgba(255,255,255,0.75)", 1.1);
+    ctx.fillStyle = C.waterHi; ctx.beginPath(); ctx.ellipse(cx - 4, wy - 1.2, 5.5, 1.5, -0.08, 0, TAU); ctx.fill(); // 亮面（左上）
+    line(ctx, [[cx + 2, wy + 1], [cx + 8, wy + 0.7]], "rgba(255,255,255,0.75)", 1.1);
     ctx.restore();
     ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.beginPath(); ctx.ellipse(cx, ty + 0.5, irx, iry, 0, 0, TAU); ctx.stroke();
   }
@@ -71,8 +75,8 @@
   /** 熱氣：兩縷白煙從井水往上（坑是火場、井水是冷的）。半透明細線，不加高剪影。 */
   function steam(ctx) {
     const { cx, ty } = G; ctx.save(); ctx.lineCap = "round"; ctx.strokeStyle = C.steam; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.moveTo(cx - 4, ty); ctx.bezierCurveTo(cx - 9, ty - 4, cx - 1, ty - 8, cx - 6, ty - 14); ctx.stroke();
-    ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(cx + 5, ty - 1); ctx.bezierCurveTo(cx + 9, ty - 5, cx + 3, ty - 8, cx + 7, ty - 12); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - 4, ty); ctx.bezierCurveTo(cx - 9, ty - 3, cx - 1, ty - 6, cx - 6, ty - 10); ctx.stroke();
+    ctx.lineWidth = 1.8; ctx.beginPath(); ctx.moveTo(cx + 5, ty - 1); ctx.bezierCurveTo(cx + 9, ty - 4, cx + 3, ty - 6, cx + 7, ty - 9); ctx.stroke();
     ctx.restore();
   }
 
@@ -80,9 +84,10 @@
   function draw(ctx, s) {
     const st = s.hpStage ?? 0, { cx, ty, rx, ry, face } = G, r = rng(s.x ?? 0, s.y ?? 0, 241);
     shadowEllipse(ctx, cx + 3, ty + face + 5, rx + 3, ry - 2);
-    if (st === 2) { // 前面一灘漏出來的水（被正面蓋住上緣）
-      ctx.fillStyle = "rgba(58,142,224,0.6)"; ctx.beginPath(); ctx.ellipse(cx + 4, ty + face + ry - 0.5, 13, 3.6, 0, 0, TAU); ctx.fill();
-    }
+    // 受損漏出的水：灘放在井身左右兩側（y 39～43，耐久條 43.7 以上；第 1 版放腳下被耐久條蓋掉）。受損 1 左、受損 2 左右各一
+    const puddle = (x) => { ctx.fillStyle = "rgba(58,142,224,0.7)"; ctx.beginPath(); ctx.ellipse(x, 41, 4.6, 1.8, 0, 0, TAU); ctx.fill(); ctx.fillStyle = "rgba(143,212,255,0.8)"; ctx.beginPath(); ctx.ellipse(x - 1.2, 40.4, 1.8, 0.6, 0, 0, TAU); ctx.fill(); };
+    if (st >= 1) puddle(5);
+    if (st === 2) puddle(47);
     // 正面（石塊兩層＋鐵箍）
     facePath(ctx); ctx.fillStyle = C.face; ctx.fill();
     ctx.save(); facePath(ctx); ctx.clip();
@@ -105,58 +110,74 @@
     ctx.lineWidth = 2; ctx.strokeStyle = OUT; ctx.beginPath(); ctx.ellipse(cx, ty, rx, ry, 0, 0, TAU); ctx.stroke();
     water(ctx, st);
     if (st === 2) { // 井圈前右缺一塊（看得到裡面的水）
-      ctx.beginPath(); ctx.moveTo(cx + 9, ty + 5.6); ctx.lineTo(cx + 12.5, ty + 10.8); ctx.lineTo(cx + 16.5, ty + 7.6); ctx.lineTo(cx + 13.2, ty + 3.6); ctx.closePath();
+      ctx.beginPath(); ctx.moveTo(cx + 9, ty + 5.6 * KY); ctx.lineTo(cx + 12.5, ty + 10.8 * KY); ctx.lineTo(cx + 16.5, ty + 7.6 * KY); ctx.lineTo(cx + 13.2, ty + 3.6 * KY); ctx.closePath();
       ctx.fillStyle = C.water; ctx.fill(); ctx.lineWidth = 1.4; ctx.strokeStyle = OUT; ctx.stroke();
     }
-    if (st >= 1) { // 裂縫＋從裂縫流下的水
-      const k = (r() - 0.5) * 2;
-      line(ctx, [[15, yTop(15) - 0.5], [16.5 + k, yTop(15) + 3.5], [14.5, yTop(15) + 7], [16 + k, yTop(15) + face]], C.crack, 1.5);
-      line(ctx, [[16 + k, yTop(15) + face - 1], [15.5 + k, yTop(15) + face + 3.5]], C.water, 1.8);
-      ctx.fillStyle = "rgba(58,142,224,0.55)"; ctx.beginPath(); ctx.ellipse(15.5 + k, yTop(15) + face + 3.8, 4.2, 1.6, 0, 0, TAU); ctx.fill();
+    // 裂縫：深色 1.9 寬＋左側 1 px 淺色邊（第 2 版：第 1 版深色 1.5 畫在深色正面上，1600 真 1 倍看不到）
+    const crack = (pts, w = 1.9) => { line(ctx, pts.map(([x, y]) => [x - 1.1, y]), "rgba(255,255,255,0.3)", 1); line(ctx, pts, C.crack, w); };
+    if (st >= 1) { // 裂縫＋從裂縫流到左側小灘的水
+      const k = (r() - 0.5) * 2, y0 = yTop(15);
+      crack([[15, y0 - 0.5], [16.5 + k, y0 + 3.5], [14.5, y0 + 6.5], [16 + k, y0 + face]]);
+      line(ctx, [[16 + k, y0 + 5], [15.6 + k, y0 + face - 0.5], [11, 41.6], [7, 41.2]], C.water, 1.7);
     }
     if (st === 2) {
-      line(ctx, [[37, yTop(37)], [35.5, yTop(37) + 4], [38, yTop(37) + 7.5], [36.5, yTop(37) + face]], C.crack, 1.5);
-      line(ctx, [[cx - 6, ty - 9.5], [cx - 4, ty - 7], [cx - 6.5, ty - 5.6]], C.crack, 1.3); // 頂面後側的裂
-      line(ctx, [[36.5, yTop(37) + face - 1], [37.5, yTop(37) + face + 3]], C.water, 1.8);
+      const y0 = yTop(37);
+      crack([[37, y0], [35.5, y0 + 4], [38, y0 + 7], [36.5, y0 + face]]);
+      crack([[cx - 6, ty - 9.5 * KY], [cx - 4, ty - 7 * KY], [cx - 6.5, ty - 5.6 * KY]], 1.5); // 頂面後側的裂
+      line(ctx, [[36.5, y0 + 5], [37, y0 + face - 0.5], [41.5, 41.6], [45, 41.2]], C.water, 1.7);
     }
     if (s.flash) { // 破壞演出 K0：井圈白閃（同受擊白閃的做法：蓋一層白）＋裂縫亮
       ctx.save(); ctx.fillStyle = "rgba(255,255,255,0.5)"; facePath(ctx); ctx.fill();
       ctx.beginPath(); ctx.ellipse(cx, ty, rx, ry, 0, 0, TAU); ctx.ellipse(cx, ty + 0.5, G.irx, G.iry, 0, 0, TAU); ctx.fill("evenodd"); ctx.restore();
-      for (const pts of [[[15, yTop(15)], [16.5, yTop(15) + 4], [14.5, yTop(15) + 7.5], [16, yTop(15) + face]], [[37, yTop(37)], [35.5, yTop(37) + 4], [38, yTop(37) + 8], [36.5, yTop(37) + face]], [[cx + 1, ty + 7.6], [cx + 2.5, ty + 10], [cx, ty + 14]]]) { line(ctx, pts, C.crack, 2.6); line(ctx, pts, C.waterHi, 1.2); }
-      for (const [x0, y0, dx, dy] of [[16, yTop(15) + 6, -6, -2], [36.5, yTop(37) + 6, 6, -2.5], [cx + 1.5, ty + 12, 0.5, 4]]) line(ctx, [[x0, y0], [x0 + dx, y0 + dy]], C.waterHi, 2); // 裂縫噴水
+      for (const pts of [[[15, yTop(15)], [16.5, yTop(15) + 4], [14.5, yTop(15) + 7.5], [16, yTop(15) + face]], [[37, yTop(37)], [35.5, yTop(37) + 4], [38, yTop(37) + 8], [36.5, yTop(37) + face]], [[cx + 1, ty + 7.6 * KY], [cx + 2.5, ty + ry + 0.5], [cx, ty + ry + 4.5]]]) { line(ctx, pts, C.crack, 2.6); line(ctx, pts, C.waterHi, 1.2); }
+      for (const [x0, y0, dx, dy] of [[16, yTop(15) + 6, -6, -2], [36.5, yTop(37) + 6, 6, -2.5], [cx + 1.5, ty + ry + 3, 0.5, 4]]) line(ctx, [[x0, y0], [x0 + dx, y0 + dy]], C.waterHi, 2); // 裂縫噴水
     } else if (st < 2) steam(ctx);
-    spillMark(ctx, cx, ty + ry + face * 0.5 - 0.5, 6.2);
+    spillMark(ctx, cx, ty + ry + face * 0.5 - 0.5, 5.6); // 中心 (26, 38)、下緣約 43.8
   }
 
   // ---- 碎石圈（打破後殘留；裝飾、不擋路）與破壞演出 ----
-  /** 7 塊碎石：k 1 往外飛（抬高）、k 2 快落地、k ≥ 3 落定（＝碎石圈）。回傳 [{ x, y, lift, pts, rot }]。 */
+  // ---- 碎石圈（打破後殘留；裝飾、不擋路）與破壞演出 ----
+  // 第 2 版（審查必修 1）：碎塊變小變多（10 塊、半徑 2.5～4、大小不一）、不規則散落（角度抖 1.0、距離抖 ±5）、
+  // 外框只描一圈 1.3（第 1 版逐層描 3）、亮頂減半、落定後下緣蓋一道水線＋下半疊 40% 荒原水色＝泡在淺水裡的碎屑。
+  const RUB_N = 10, RUB_Y = 28; // 碎石圈中心（井圈落地處）
+  /** 10 塊碎石：k 1 往外飛（抬高）、k 2 快落地、k ≥ 3 落定（＝碎石圈）。回傳 [{ x, y, lift, pts, wet }]。 */
   function chunks(s, k) {
     const r = rng(s.x ?? 0, s.y ?? 0, 242), out = [];
     const spread = [0, 6, 10, 4, 4][Math.min(4, k)], lift = [0, 9, 4, 0, 0][Math.min(4, k)];
-    for (let i = 0; i < 7; i++) {
-      const a = (i / 7) * TAU + 0.35 + (r() - 0.5) * 0.3, rad = 4.2 + r() * 1.6, n = 6, pts = [];
-      for (let j = 0; j < n; j++) { const b = (j / n) * TAU + r() * 0.5; const q = rad * (0.78 + r() * 0.3); pts.push([Math.cos(b) * q, Math.sin(b) * q * 0.66]); }
-      out.push({ a, x: G.cx + Math.cos(a) * (15 + spread), y: RUB_Y + Math.sin(a) * (8.5 + spread * 0.6), lift: lift * (0.7 + r() * 0.6), pts });
+    for (let i = 0; i < RUB_N; i++) {
+      const a = (i / RUB_N) * TAU + 0.35 + (r() - 0.5) * 1.0, rad = 2.5 + r() * 1.5, d = 14 + (r() - 0.5) * 10, n = 5 + (i % 2), pts = [];
+      for (let j = 0; j < n; j++) { const b = (j / n) * TAU + r() * 0.6; const q = rad * (0.7 + r() * 0.45); pts.push([Math.cos(b) * q, Math.sin(b) * q * 0.66]); }
+      out.push({ x: G.cx + Math.cos(a) * (d + spread), y: RUB_Y + Math.sin(a) * (d * 0.58 + spread * 0.6), lift: lift * (0.7 + r() * 0.6), pts, wet: k >= 3 });
     }
     return out.sort((p, q) => p.y - q.y);
   }
-  const RUB_Y = 28; // 碎石圈中心（井圈落地處）
   function chunk(ctx, c) {
-    const th = 3; // 厚度（碎石很矮：比井圈正面 11 低很多）
-    if (c.lift < 1) { ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(c.x + 1.2, c.y + th + 0.8, 5, 1.8, 0, 0, TAU); ctx.fill(); }
-    else { ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.ellipse(c.x, c.y + th, 3.6, 1.3, 0, 0, TAU); ctx.fill(); } // 在空中：地上的影子小一點
-    const path = (dy) => { ctx.beginPath(); c.pts.forEach(([px, py], i) => (i ? ctx.lineTo(c.x + px, c.y - c.lift + py + dy) : ctx.moveTo(c.x + px, c.y - c.lift + py + dy))); ctx.closePath(); };
-    // 外框：每一層都描粗線（剪影＝頂面＋往下擠出 th）；再填側面、頂面
-    ctx.lineJoin = "round"; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
-    for (let dy = 0; dy <= th; dy += 1) { path(dy); ctx.stroke(); }
-    ctx.fillStyle = C.face; for (let dy = 1; dy <= th; dy += 1) { path(dy); ctx.fill(); }
-    path(0); ctx.fillStyle = C.top; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = "rgba(28,23,18,0.6)"; ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(c.x - 1.2, c.y - c.lift - 0.8, 2, 0.8, -0.2, 0, TAU); ctx.fill();
+    const th = 2.2, top = c.y - c.lift; // 厚度（碎屑很矮）
+    if (c.lift >= 1) { ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.beginPath(); ctx.ellipse(c.x, c.y + th, 2.6, 1, 0, 0, TAU); ctx.fill(); } // 在空中：地上的小影子
+    const path = (dy) => { ctx.beginPath(); c.pts.forEach(([px, py], i) => (i ? ctx.lineTo(c.x + px, top + py + dy) : ctx.moveTo(c.x + px, top + py + dy))); ctx.closePath(); };
+    ctx.lineJoin = "round";
+    path(th); ctx.fillStyle = C.face; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = OUT; ctx.stroke(); // 側面（暗）＋下緣外框
+    for (let dy = 1; dy < th; dy += 1) { path(dy); ctx.fill(); }
+    path(0); ctx.fillStyle = C.top; ctx.fill(); ctx.lineWidth = 1.3; ctx.strokeStyle = OUT; ctx.stroke(); // 頂面一圈
+    ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.beginPath(); ctx.ellipse(c.x - 0.8, top - 0.5, 1.2, 0.5, -0.2, 0, TAU); ctx.fill(); // 亮頂（減半）
+    if (c.wet) { // 泡在水裡：下半疊 40% 荒原水色＋一道淺色水線
+      let w = 0, yb = -Infinity; for (const [px, py] of c.pts) { w = Math.max(w, Math.abs(px)); yb = Math.max(yb, py); }
+      const wl = top + yb * 0.15 + th * 0.5;
+      ctx.save(); ctx.beginPath(); ctx.rect(c.x - w - 2, wl, 2 * w + 4, 12); ctx.clip();
+      path(0); ctx.fillStyle = "rgba(69,98,122,0.4)"; ctx.fill(); path(th); ctx.fill(); ctx.restore();
+      line(ctx, [[c.x - w - 1.2, wl + 0.3], [c.x + w + 1.2, wl]], "rgba(215,236,250,0.5)", 0.9);
+    }
   }
-  /** 打破後殘留：舊井口的深水影（水表面之上）＋一圈 7 塊碎石。k 預設 4（靜態）。 */
+  /** 打破後殘留：舊井口的深水影（水表面之上）＋不規則散落的 10 塊碎屑。k 預設 4（靜態）。 */
   function rubble(ctx, s, k = 4) {
-    if (k >= 3) { ctx.fillStyle = "rgba(16,40,72,0.5)"; ctx.beginPath(); ctx.ellipse(G.cx, RUB_Y, 10, 5.6, 0, 0, TAU); ctx.fill(); }
+    if (k >= 3) { ctx.fillStyle = "rgba(16,40,72,0.45)"; ctx.beginPath(); ctx.ellipse(G.cx, RUB_Y, 9, 5, 0, 0, TAU); ctx.fill(); }
     for (const c of chunks(s, k)) chunk(ctx, c);
+  }
+  /** 審查第 4 節／可修 3：K1～K3 新水面遮罩邊的亮色水沫（#8fd4ff、寬 1.5、60%），把「井裡的亮藍」接到「攤平的普通水」；K4 收掉。地面層、單位之下。 */
+  function spillFoam(ctx, k) {
+    if (k < 1 || k > 3) return;
+    ctx.save(); ctx.beginPath(); ctx.rect(-T, -T, 3 * T, 3 * T); ctx.clip(); // 只畫在 3×3 內（遮罩圓出了 3×3 的那段不是水邊）
+    spillMask(ctx, k); ctx.strokeStyle = "rgba(143,212,255,0.6)"; ctx.lineWidth = 1.5; ctx.lineJoin = "round"; ctx.stroke(); ctx.restore();
   }
   function drops(ctx, list) {
     for (const [x, y, rad] of list) { ctx.beginPath(); ctx.arc(x, y, rad, 0, TAU); ctx.fillStyle = C.waterHi; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = OUT; ctx.stroke(); }
@@ -192,5 +213,5 @@
     ctx.closePath();
   }
 
-  window.CoolingWell = { T, C, G, FRAMES, MASK_R, draw, rubble, breakFx, spillMask, spillMark, chunks };
+  window.CoolingWell = { T, C, G, FRAMES, MASK_R, draw, rubble, breakFx, spillMask, spillFoam, spillMark, chunks };
 })();

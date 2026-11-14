@@ -150,6 +150,7 @@ function renderPit(scene, view) {
     for (const [x, y] of spill3(w.x, w.y)) pitTile(g, x, y, after);
     xf(g); g.translate(w.x * T, w.y * T); g.scale(T / 52, T / 52); CW.breakFx(g, w, w.k, "ground"); // 漣漪：地面層、單位之下
     g.restore();
+    g.save(); xf(g); g.translate(w.x * T, w.y * T); g.scale(T / 52, T / 52); CW.spillFoam(g, w.k); g.restore(); // 第 2 版：遮罩邊的亮色水沫（不裁切，跨在新舊地面交界上）
   }
   const Gi = scene.giant, ax = 5.5 * T, ay = 5 * T, m = new DOMMatrix([sc, 0, 0, sc, (ax - view.x0) * sc, (ay - view.y0) * sc]);
   const units = (scene.units ?? []).map((u) => ({ ...u, h: hAt(u.x, u.y) }));
@@ -183,8 +184,8 @@ function cell(px, res, draw, gx = 5, gy = 6, surface = "none") {
 }
 const ITEMS = [
   { cap: "冷卻井・完好", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 0 }) },
-  { cap: "受損 1（≤66%）：一道裂、滲水", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 1 }), bar: 0.6 },
-  { cap: "受損 2（≤33%）：缺角、兩道裂、前面一灘水、沒熱氣", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 2 }), bar: 0.27 },
+  { cap: "受損 1（≤66%）：一道裂（淺色邊）、流到左側一灘", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 1 }), bar: 0.6 },
+  { cap: "受損 2（≤33%）：缺角、兩道裂、兩側各一灘、沒熱氣", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 2 }), bar: 0.27 },
   { cap: "打破後：碎石圈（裝飾）＋水表面", draw: (g) => CW.rubble(g, { x: 3, y: 8 }), surface: "water" },
   { cap: "現行 A5：水表面暫代", draw: () => {}, surface: "water", cur: true },
   { cap: "現行：鐵油桶（危險記號）", draw: (g) => FL.drawObject(g, objSpec("oil_barrel", 5, 6)), cur: true },
@@ -196,7 +197,7 @@ const itemCv = (it, px, res) => { const cv = cell(px, res, it.draw, 5, 6, it.sur
 PARTS.well = () => {
   publish(sheet(1560, [
     { title: "1. 冷卻井 cooling_well：四個狀態＋現行荒原物件（向量 ×4，一格 192 px；底是荒原石地 terrainArt.ts）" },
-    { note: "畫法照 ashenObjects.ts：灰褐石井圈（ruinTop／ruinFace、灰縫）、鐵箍與鏽點照鐵油桶、外框 #1c1712；正面高 11/52 ≈ 0.21 T，比殘牆（0.3 T）矮＝不是掩護、不擋視線，所以沒有舊樣張的鐵轆轤架。井水 #3a8ee0（比荒原水表面 #45627a 亮）＋兩縷熱氣；正面的藍色水滴＝「打破會漏水」的記號（照油桶危險記號：黑框實心小圖形畫在身上）。受損自己畫（同薄冰，不套通用裂痕），受損時下面有現行的物件耐久條。" },
+    { note: "畫法照 ashenObjects.ts：灰褐石井圈（ruinTop／ruinFace、灰縫）、鐵箍與鏽點照鐵油桶、外框 #1c1712；第 2 版：頂面上緣 15.5（不高於殘牆壓頂石 15.6）、正面高 10/52；若玩法定不是掩護就維持這個高度，沒有舊樣張的鐵轆轤架。井水 #3a8ee0（比荒原水表面 #45627a 亮）＋兩縷熱氣；正面的藍色水滴＝「打破會漏水」的記號（照油桶危險記號：黑框實心小圖形畫在身上）。受損自己畫（同薄冰，不套通用裂痕），受損時下面有現行的物件耐久條。" },
     { cells: ITEMS.slice(0, 5).map((it) => ({ cv: itemCv(it, 192, 1), cap: it.cap })), gap: 14 },
     { cells: ITEMS.slice(5).map((it) => ({ cv: itemCv(it, 192, 1), cap: it.cap })), gap: 14 },
   ]));
@@ -222,7 +223,7 @@ PARTS.break = () => {
   const cells = frames.map((f) => { const sc = brkScene(f.k); if (f.k === undefined) sc.wells = sc.wells.map((w) => (w.x === BRK.x && w.y === BRK.y ? { x: w.x, y: w.y, hpStage: 2, hp: 0.27 } : w)); const c = crop(renderPit(sc, V)); return z > 1 ? nn(c, z, f.cap) : { cv: c, cap: f.cap }; });
   publish(sheet(1560, [
     { title: `${is8 ? 4 : 3}. 冷卻井被打破的演出（${W_} 寬真 1 倍${z > 1 ? `，最近鄰 ×${z}` : ""}）：(3,8) 那口，3×3＝x 2～4、y 7～9` },
-    { note: "井圈白閃、裂縫亮 → 碎成 7 塊往外飛＋中央水柱 → 碎塊落地、水花往外 → 漣漪 → 留下碎石圈。水用現行水表面（terrainArt.ts，荒原水色 #45627a，相連併塊）：新的 3×3 水表面先畫好，用從井心往外長的圓形遮罩露出來（K1 半徑約半格、K2 十字、K3 到角、K4 全部）。戰士 (3,7) 在井北、法師 (4,8) 在井東：水表面在單位腳下；水花蓋在戰士身上是因為井在南邊一排（後畫）。3×3 含 (2,9) 高台、(4,9) 矮牆：水照放（規則怎麼放要開發確認，見移植需求）。" },
+    { note: "井圈白閃、裂縫亮 → 碎成 10 塊往外飛＋中央水柱 → 碎塊落地、水花往外 → 漣漪 → 留下泡在水裡的碎屑。K1～K3 新水面的邊有一圈亮色水沫（銜接井裡的亮藍），K4 收掉。水用現行水表面（terrainArt.ts，荒原水色 #45627a，相連併塊）：新的 3×3 水表面先畫好，用從井心往外長的圓形遮罩露出來（K1 半徑約半格、K2 十字、K3 到角、K4 全部）。戰士 (3,7) 在井北、法師 (4,8) 在井東：水表面在單位腳下；水花蓋在戰士身上是因為井在南邊一排（後畫）。3×3 含 (2,9) 高台、(4,9) 矮牆：水照放（規則怎麼放要開發確認，見移植需求）。" },
     { cells, gap: 12 },
   ]), "image/png");
 };
