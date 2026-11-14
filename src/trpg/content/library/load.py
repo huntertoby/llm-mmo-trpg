@@ -216,6 +216,17 @@ def _build_ruleset(root: Path, t: _BaseTables, races: RaceTable | None) -> Rules
         raise ContentError(root / "rules", str(exc)) from exc
 
 
+def _check_composer_objects(root: Path, t: _BaseTables) -> None:
+    """組合器的造牆排除清單（NW-3c）只能寫 ``objects.yaml`` 的物件。"""
+    known = {o.id for o in t.objects.objects}
+    unknown = sorted(set(t.composer.structure.obstacle_exclude) - known)
+    if unknown:
+        raise ContentError(
+            root / "skill_composer.yaml",
+            f"structure.obstacle_exclude 有不存在的物件：{', '.join(unknown)}",
+        )
+
+
 def _load_gear(
     root: Path, t: _BaseTables, ruleset: Ruleset
 ) -> tuple[dict[str, AffixDef], dict[str, ItemDef], _GearCatalog]:
@@ -397,6 +408,7 @@ def load_library(
         summons=frozenset(s.id for s in t.summons.summons),
     )
     ruleset = _build_ruleset(root, t, races)
+    _check_composer_objects(root, t)  # NW-3c：造牆排除清單
     affixes, items, gear = _load_gear(root, t, ruleset)
     units = _load_units(root, t, ruleset, gear, files)
     maps = _load_maps(root, t, files, units=units, ruleset=ruleset, gear=gear)

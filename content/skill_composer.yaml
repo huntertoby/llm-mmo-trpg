@@ -46,6 +46,9 @@ structure:
   cross_min_range: 2
   other_min_range: 3
   fallback_secondary: [apply_status, push, pull, knock_prone]   # 骨架沒指定附帶原語時
+  # 造牆（create_obstacle）的物件從 blocks_move 且非 explosive 的物件抽，再拿掉這裡列的（NW-3c，玩法PM交接 4.1.15）：
+  # 冷卻井打破就造 3×3 水，不當隨處可造的牆。數值工坊的造牆 HP 提示照同一份候選。
+  obstacle_exclude: [cooling_well]
 
 # 條件
 condition:
