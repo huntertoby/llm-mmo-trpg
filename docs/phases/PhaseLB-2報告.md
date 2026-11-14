@@ -155,3 +155,14 @@
 2. `6b91ebaf1` fix(lb-2): never silently drop the JSON schema constraint（client、探測與統計腳本、基準資料）
 3. `faa807a3e` feat(lb-2): explain hidden field rules in the prompt and tighten the schema
 4. docs(lb-2): report（本報告、錯誤統計表、中止的重測紀錄）
+
+## 開發 PM 裁定（2026-11-14）
+
+- **驗收通過，合併。** 改了 5 個測試，都是跟著 client 行為改（退到 guided_json 不再記住、每次記 error）或 schema 分支後的定義名改的，**沒有放寬任何驗證**。快照只新增 `skill-proposal/15` 一鍵，雜湊與 /14 相同，跟預測一致。戰鬥不變比對 different=0。
+- **第 6 步改後重測沒跑完，不算這段的缺失**：LM Studio 重載後模型沒整個放進 GPU（Gemma 30 t/s、9.4 GB），agent 照規矩停下。等使用者把 GPU offload 調回後，由開發 PM 派 **LB-2b**，照第五節的指令補跑，填回「改後」欄位，並和 LB-1 並排。
+- 待決 1：同上，LB-2b。
+- 待決 2、3（`reasoning_effort` 預設、溫度）：使用者決定。這段沒改 `config/llm.toml`。
+- 待決 4（`SCHEMA_CHAR_LIMIT` 125k）：先維持。LB-2b 如果看到寬題目（2～3 階）退回特別多，再一起提。
+- 待決 5（Q12 epic 被動、high_ground 所有模型都退回）：轉給玩法 PM 看題目設計。
+- 待決 6（變奏的 `range_delta` 要不要開放給 LLM）：屬於規則決定，轉給玩法 PM 和使用者。
+- 待決 7：現在 client 會記錄伺服器的回應本文，下次再出現 400 時再查。
