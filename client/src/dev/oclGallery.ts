@@ -1,7 +1,7 @@
 // 開發用：OCL-1 被遮擋剪影外框（開 `client/dev/ocl-gallery.html`；pnpm dev 後 /dev/ocl-gallery.html）。不屬於正式 build。
 // 用真的 `buildDrawModel` 與 `BattleRenderer.draw` 畫手寫的場面（比照 `practiceGallery.ts`），情境照樣張
 // `docs/art/sample/occlude-outline.html`（第 3 版）：
-// - `?scene=boss`：灰燼之心擋友方、擋敵方；碎晶之主擋友方、擋敵方（CB-4：頭目站在目標南邊）。
+// - `?scene=boss`：灰燼之心擋友方、擋敵方；碎晶之主擋友方、擋敵方（CB-4：頭目站在目標南邊）；GB-4b：3×3 巨型灰燼之心一格。
 // - `scene=pairs`：一般單位互擋 8 對（全部不畫，前排不是大型）。
 // - `scene=collide`：第 2 列＝矮異形在高台的人後面（只有 6F-22 舊剪影）；第 4 列＝頭目＋小兵一起擋（外框只在頭目身上）；
 //   另一列＝被頭目擋住、南邊又是高台（6F-22 也成立）：只有新外框。
@@ -63,6 +63,8 @@ interface Spec {
   facing?: "east" | "west" | "north" | "south";
   statuses?: string[];
   summon?: boolean;
+  /** GB-4b：3×3 巨型灰燼之心（`footprint` 3、`tiles`、三個綁格部位；`x`、`y`＝中心格）。 */
+  giant?: boolean;
 }
 
 function unitOf(s: Spec): UnitView {
@@ -85,6 +87,16 @@ function unitOf(s: Spec): UnitView {
     over.boss_phase = s.who === "ah" ? { index: 1, total: 3, name_zh: "第 1 階段" } : { index: 2, total: 4, name_zh: "第 2 階段" };
   }
   if (s.who === "golem") over.tags = ["elite"];
+  if (s.giant === true) {
+    const at = (dx: number, dy: number) => ({ x: s.x + dx, y: s.y + dy });
+    const part = (id: string, name_zh: string, tiles: Array<{ x: number; y: number }>, more: Record<string, unknown> = {}) => ({ id, name_zh, hp: 32, max_hp: 32, broken: false, exposed: true, reach: "any", break_lines_zh: [], tiles, ...more });
+    Object.assign(over, {
+      footprint: 3,
+      tiles: [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => at(dx, dy))),
+      parts: [part("core", "核心", [at(0, 0)], { hp: null, max_hp: null, exposed: false }), part("shell_seam", "殼縫", [at(-1, 0), at(1, 0)], { counts_as_behind: true }), part("vent", "熔岩噴口", [at(-1, -1), at(0, -1), at(1, -1)], { reach: "ranged" })],
+      facing: "south",
+    });
+  }
   if (s.summon === true) Object.assign(over, { owner_id: HERO, summon_expires_round: 5, summon_look: { body: "beast", variant: "wolf", element: null, size: "medium", trait: null } });
   return unit(s.id, team, s.x, s.y, over as Partial<UnitView>);
 }
@@ -125,6 +137,23 @@ const SCENES: Record<string, () => Scene[]> = {
     duo("灰燼之心擋敵方（餘燼蜥）", { who: "lizard" }, { who: "ah", team: "ally" }),
     duo("碎晶之主擋友方（法師）", { who: "mage" }, { who: "sl" }),
     duo("碎晶之主擋敵方（持盾盜匪）", { who: "shield" }, { who: "sl", team: "ally" }),
+    // GB-4b（PhaseGB 計畫 8.2 第 3 點）：3×3 巨型灰燼之心（中心 (2, 3)、佔 y 2～4）：北邊一排的人被噴口與外光擋到下半身；
+    // 兩側同排（中排）的人畫在它之前、南排兩側與南邊一排的人畫在它之後（蓋在前殼上）
+    {
+      cap: "3×3 灰燼之心（GB-4b）：北邊的人只被噴口擋到腳（比例遠低於 55%，不畫外框）；兩側、南邊的人不被擋（南邊的人蓋在前殼上）",
+      cols: 7,
+      rows: 7,
+      units: [
+        { id: "b", who: "ah", x: 3, y: 3, giant: true },
+        { id: HERO, who: "hero", x: 3, y: 1 },
+        { id: "n2", who: "bandit", x: 2, y: 1 },
+        { id: "m", who: "mage", x: 1, y: 3, facing: "east" },
+        { id: "l", who: "lizard", x: 5, y: 3, facing: "west" },
+        { id: "a", who: "archer", x: 2, y: 5 },
+        { id: "s", who: "shield", x: 3, y: 5, team: "ally" },
+        { id: "g", who: "golem", x: 5, y: 4, team: "ally" },
+      ],
+    },
   ],
   pairs: () => [
     duo("人擋人・平地", { who: "archer" }, { who: "shield" }, 0, 3),
