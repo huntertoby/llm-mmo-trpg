@@ -9,7 +9,9 @@ import json
 from dataclasses import replace
 
 from trpg.content.library import ContentLibrary
-from trpg.llm.prompts.proposal import build_proposal_prompt
+from trpg.llm.prompts.proposal import PASSIVE_NOTE_ZH, build_proposal_prompt, field_notes
+from trpg.skillgen.proposal import ProposalError
+from trpg.skillgen.proposal.evaluate import PASSIVE_AFFECTS_ADVICE, advise
 from trpg.skillgen.proposal_passive import rule_key, unfit_effect_rules
 from trpg.skillgen.proposal_subset import ProposalRequest, available_payload
 
@@ -70,3 +72,19 @@ def test_subset_without_tier_is_not_filtered(library: ContentLibrary) -> None:
     bare = available_payload(library, replace(subset, tier=None))["keywords"][0]["ways"]
     assert "raise_terrain" in bare and bare[0].startswith("條件 ")
     assert subset.tokens >= 0
+
+
+def test_passive_note_and_feedback_ask_for_explicit_self(library: ContentLibrary) -> None:
+    """初版重測 Q12：Gemma 用沒有 target 的觸發、效果不寫 affects，三次都被 passive.affects 擋下。
+    說明與回饋都要求明寫 affects: self（判定不變）。"""
+    notes = field_notes(library, Q12, build_proposal_prompt(library, Q12).subset)
+    assert notes["trigger"] == PASSIVE_NOTE_ZH and '"affects": "self"' in PASSIVE_NOTE_ZH
+    error = ProposalError(
+        "rules",
+        "effects[0]",
+        "passive.affects",
+        "effects[0]（shield）：trigger.target 為 self 時，效果的 affects 只能是 self，收到 allies",
+    )
+    advised = advise(error, library)
+    assert advised.message == error.message + PASSIVE_AFFECTS_ADVICE
+    assert (advised.code, advised.path) == (error.code, error.path)

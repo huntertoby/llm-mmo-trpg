@@ -14,10 +14,12 @@ from trpg.content.library import ContentLibrary
 from trpg.llm.prompts.proposal import VARIANTS_NOTE_ZH, build_proposal_prompt, field_notes
 from trpg.skillgen.proposal import (
     ProposalContext,
+    ProposalError,
     evaluate_proposal,
     proposal_from_skill,
     to_skill_def,
 )
+from trpg.skillgen.proposal.evaluate import RANGE_DELTA_ADVICE, advise
 from trpg.skillgen.proposal.schema_shape import VARIANT_SWAP_FIELDS
 from trpg.skillgen.proposal_numbers import fixed_filler, split_numbers
 from trpg.skillgen.proposal_subset import ProposalRequest
@@ -76,3 +78,30 @@ def test_range_delta_only_plus_one_or_two(library: ContentLibrary) -> None:
         result = evaluate_proposal(json.dumps(data), prompt.models, library, ctx, fill=fill)
         codes = {(e.path, e.code) for e in result.errors if e.stage == "proposal"}
         assert ("variants[1].range_delta", "literal_error") in codes, (delta, result.errors)
+
+
+def test_variants_note_lists_shapes_with_numeric_range(library: ContentLibrary) -> None:
+    """初版重測 Gemma 在 line、cone 上填 range_delta：說明要列出這題哪些形狀有射程。"""
+    request = ProposalRequest(1, "epic")
+    subset = build_proposal_prompt(library, request).subset
+    note = field_notes(library, request, subset)["variants"]
+    shapes = library.ruleset.shapes.by_id()
+    ranged = [s for s in subset.shapes if "range" in shapes[s].params]
+    plain = [s for s in subset.shapes if s not in ranged]
+    assert ranged and plain
+    head, tail = note.split("這題有射程的形狀：")[1].split("沒有射程")[0].split("；")
+    assert all(s in head for s in ranged)
+    assert all(s in tail for s in plain)
+
+
+def test_range_delta_error_gets_fix_advice(library: ContentLibrary) -> None:
+    """range_delta 配上沒有射程的形狀：判定不變，回饋附修法。"""
+    error = ProposalError(
+        "skill",
+        "variants[0].range_delta",
+        "value_error",
+        "變奏「甲」：range_delta 只能用在射程是數字的形狀，收到 line 的射程 None",
+    )
+    advised = advise(error, library)
+    assert advised.message == error.message + RANGE_DELTA_ADVICE
+    assert advised.code == error.code and advised.path == error.path
