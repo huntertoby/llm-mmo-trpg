@@ -46,7 +46,7 @@
 **2. 最後一次全量**：2026-11-14 e2bab3fe1 全過並 push（pytest 17682、vitest 4676、build 0），含 NW-3d（LLM 提議與技能工坊造牆物件改用組合器候選、1600 黑煙壓到 HUD 下）。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量；有 agent 在跑測試時全量常在 99% 卡死，盡量等 agent 都回來再跑。**
 
 **3. 執行中的 agent（分支）**：
-- BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。NW-3c、GB-4d、NW-3d 也已 push。LB-1／LB-1b（本機模型比較、Gemma 重測）已 push（報告 PhaseLB-1報告.md；重要發現：llm.toml 的 enable_thinking 在 LM Studio 無效，要 reasoning_effort=none）。LB-2（LLM 失敗診斷：記錄、schema 相容、溫度、prompt）已 push（d96b5a974，全量 pytest 17698、vitest 4676；改後重測因 GPU 沒載滿未跑）。LB-2b（玩法 4.1.17 待決 5 Q12 被動引導、待決 6 變奏開放 range_delta ＋改後重測＋上手筆記寫換模型規則：先 lms unload --all、確認只載一個、60 t/s 門檻、跑完載回 Gemma）11-14 派出，**跑的期間不跑全量、LM Studio 一次一個**；模型與 config 等使用者選；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
+- BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。NW-3c、GB-4d、NW-3d 也已 push。LB-1／LB-1b（本機模型比較、Gemma 重測）已 push（報告 PhaseLB-1報告.md；重要發現：llm.toml 的 enable_thinking 在 LM Studio 無效，要 reasoning_effort=none）。LB-2（LLM 失敗診斷：記錄、schema 相容、溫度、prompt）已 push（d96b5a974，全量 pytest 17698、vitest 4676；改後重測因 GPU 沒載滿未跑）。LB-2b（Q12 被動引導、變奏開放 range_delta、改後重測、上手筆記的換模型規則）已 push（全量 pytest 17709、vitest 4676）；待決 2～3 轉玩法（3.0001），4～6 等玩法答覆後排 LB-2c。使用者定「Gemma 溫度 0.7」：LB-CF（config/llm.toml 改 Gemma＋reasoning_effort=none＋實機開一輪確認 LLM 生成）11-14 派出；模型與 config 等使用者選；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
@@ -80,6 +80,9 @@
 
 | 給誰 | 來源 | 要做的事 | 細節在 |
 |---|---|---|---|
+| 玩法 PM | LB-2b 待決 2 | 開放 range_delta 後，Gemma 的錯誤有 61/96 來自變奏（帶變奏的嘗試 38%→70%）。三選一：維持現狀；prompt 再勸「沒必要不要加變奏」；題目沒要求時 schema 不給變奏欄位 | `docs/phases/PhaseLB-2b報告.md` 待 PM 決定 2 |
+| 玩法 PM | LB-2b 待決 3 | `self_on_high_ground` 是 handwritten_only，LLM 用不到（4.1.17 寫它是被動的主要寫法）。要不要開放給 LLM（規則／內容決定） | 同上 待決 3 |
+| 玩法 PM | LB-2b 待決 4～6（知會） | Q12 仍沒過：Gemma 改成「統御＋護盾 affects self」，超預算 131%；swift 寫了 height_advantage 但漏 trigger。開發打算在 LB-2c 做：被動 schema 固定 spell／any、budget.over 回饋附修法、修 range_delta 例子引出的 range 0。都只是引導、不改規則；等上面 2、3 的答覆一起排 | 同上 待決 4～6 |
 | 玩法 PM | CW-1 | 平衡疑慮（沒量）：原本開場就有的永久水現在要先打破井；AI 不會專門打井；(3, 4)、(7, 4) 兩口井的 3×3 會鋪到餘燼蜥腳下與殼縫攻擊位；熔心坑 12 場裡 8 場打破至少一口井 | `docs/phases/PhaseCW-1報告.md` 平衡疑慮 |
 | 玩法 PM | GB-3 | 熔心坑改後 12 場都是敵方勝（改前 11 敵 1 我）；平衡疑慮：蜥蜴追遠＋熔岩濺落打最遠的人、殼縫更早破、近戰集中在兩側（都沒量），請記平衡待查 | `docs/phases/PhaseGB-3報告.md` 第 4、10 節 |
 
