@@ -1,0 +1,391 @@
+{
+ "ashen_heart": {
+  "id": "unit_0004",
+  "template_id": "ashen_heart",
+  "name_zh": "灰燼之心",
+  "team": "enemy",
+  "pos": {
+   "x": 5,
+   "y": 3
+  },
+  "footprint": 3,
+  "tiles": [
+   {
+    "x": 4,
+    "y": 2
+   },
+   {
+    "x": 5,
+    "y": 2
+   },
+   {
+    "x": 6,
+    "y": 2
+   },
+   {
+    "x": 4,
+    "y": 3
+   },
+   {
+    "x": 5,
+    "y": 3
+   },
+   {
+    "x": 6,
+    "y": 3
+   },
+   {
+    "x": 4,
+    "y": 4
+   },
+   {
+    "x": 5,
+    "y": 4
+   },
+   {
+    "x": 6,
+    "y": 4
+   }
+  ],
+  "hp": 290,
+  "max_hp": 290,
+  "shield": 0,
+  "hidden_info": null,
+  "mana": 62,
+  "max_mana": 67,
+  "stamina": 64,
+  "max_stamina": 64,
+  "ap": 0,
+  "move_points": 0,
+  "speed": 0,
+  "initiative": 1,
+  "weapon_name_zh": "火焰法杖",
+  "weapon_id": "fire_staff",
+  "weapon_class": "focus",
+  "weapon_traits_zh": [
+   "普攻：1d6＋智力 × 0.3（⟦目前 +4｜實際 4.2，和其他加成合計後才捨去⟧）",
+   "雙手：占用副手欄位，不能再裝備盾或副手物品"
+  ],
+  "offhand_name_zh": "",
+  "offhand_traits_zh": [],
+  "traits_zh": [
+   "開場狀態「熔殼」：熔岩甲蟲堆成的外殼：受到的傷害大幅降低。被冰打到時外殼冷卻碎裂。不能被淨化、驅散或奪取。",
+   "階段：殼 → HP 60%「呼吸」 → 30%「熔毀」"
+  ],
+  "ammo": 0,
+  "magazine": 0,
+  "tags": [
+   "ashen_core",
+   "boss",
+   "elite",
+   "immovable",
+   "lava_beast"
+  ],
+  "skills": [],
+  "statuses": [
+   {
+    "status_id": "molten_shell",
+    "remaining": null,
+    "source_id": "unit_0003",
+    "amount": null,
+    "blast_radius": null,
+    "skill_id": null,
+    "release": null,
+    "charge_tiles": [],
+    "charge_anchored": null,
+    "cost_status": false
+   }
+  ],
+  "stacks": {},
+  "cooldowns": {
+   "skill_lava_splash_t3": 1
+  },
+  "reaction_available": false,
+  "reaction_rules": [],
+  "ap_carry": 1,
+  "source": 0,
+  "source_max": 3,
+  "downed": false,
+  "revivable": false,
+  "escaped": false,
+  "owner_id": null,
+  "summon_expires_round": null,
+  "dismissed": false,
+  "totem_radius": null,
+  "infusion": null,
+  "summon_mode": null,
+  "summon_target_id": null,
+  "commanded": false,
+  "infused_skill_id": null,
+  "infused_skill_name_zh": null,
+  "infused": false,
+  "attack_element": "fire",
+  "doll_look": {
+   "skin": "#f1c9a5",
+   "hair": null,
+   "hair_color": null,
+   "pants": null,
+   "trim": null,
+   "eyes": null,
+   "skull": false,
+   "gear": {},
+   "main_material": null,
+   "main_color": null,
+   "rarity": "legendary",
+   "main_kind": null,
+   "main_tassel": null,
+   "bun_band": null,
+   "beard": false,
+   "build": null,
+   "main_glow": null,
+   "scale": null,
+   "creature": {
+    "body": "wisp",
+    "variant": null,
+    "material": "crystal",
+    "element": "fire",
+    "size": "huge",
+    "tint": null,
+    "traits": [
+     "core"
+    ],
+    "status_traits": {
+     "molten_shell": [
+      "crust"
+     ]
+    }
+   },
+   "affixes": [],
+   "traits": [],
+   "custom": null
+  },
+  "summon_look": null,
+  "infusion_options": [],
+  "activations": [],
+  "granted_skills": [],
+  "facing": "south",
+  "equipment": [],
+  "gear_totals": [],
+  "gear_skills": [],
+  "charges": [],
+  "form": null,
+  "form_cooldowns": [],
+  "race": null,
+  "boss_phase": {
+   "index": 1,
+   "total": 3,
+   "name_zh": "殼",
+   "next_name_zh": "呼吸",
+   "next_permille": 600,
+   "next_condition_zh": "HP 60% 以下"
+  },
+  "parts": [
+   {
+    "id": "core",
+    "name_zh": "核心",
+    "hp": 58,
+    "max_hp": 58,
+    "broken": false,
+    "exposed": false,
+    "reach": "any",
+    "break_lines_zh": [
+     "打斷正在蓄力的強招",
+     "封住「熔心吸氣」 2 回合（正在蓄力就一起打斷）"
+    ],
+    "tiles": [
+     {
+      "x": 5,
+      "y": 3
+     }
+    ]
+   },
+   {
+    "id": "shell_seam",
+    "name_zh": "殼縫",
+    "hp": 58,
+    "max_hp": 58,
+    "broken": false,
+    "exposed": true,
+    "reach": "any",
+    "break_lines_zh": [
+     "停止「熔殼」，之後也加不上"
+    ],
+    "tiles": [
+     {
+      "x": 4,
+      "y": 3
+     },
+     {
+      "x": 6,
+      "y": 3
+     }
+    ]
+   },
+   {
+    "id": "vent",
+    "name_zh": "熔岩噴口",
+    "hp": 58,
+    "max_hp": 58,
+    "broken": false,
+    "exposed": true,
+    "reach": "ranged",
+    "break_lines_zh": [
+     "封住「熔岩濺落」（正在蓄力就一起打斷）"
+    ],
+    "tiles": [
+     {
+      "x": 4,
+      "y": 2
+     },
+     {
+      "x": 5,
+      "y": 2
+     },
+     {
+      "x": 6,
+      "y": 2
+     }
+    ]
+   }
+  ]
+ },
+ "heart_ember_lizard": {
+  "id": "unit_0004",
+  "template_id": "heart_ember_lizard",
+  "name_zh": "殼縫餘燼蜥1",
+  "team": "enemy",
+  "pos": {
+   "x": 3,
+   "y": 11
+  },
+  "footprint": null,
+  "tiles": null,
+  "hp": 17,
+  "max_hp": 25,
+  "shield": 0,
+  "hidden_info": null,
+  "mana": 28,
+  "max_mana": 28,
+  "stamina": 60,
+  "max_stamina": 80,
+  "ap": 2,
+  "move_points": 6,
+  "speed": 6,
+  "initiative": 29,
+  "weapon_name_zh": "利齒",
+  "weapon_id": "fangs",
+  "weapon_class": "melee",
+  "weapon_traits_zh": [
+   "普攻：1d6＋敏捷 × 0.3（目前 +9）",
+   "單手：副手欄位可以放盾或副手物品",
+   "背刺（近戰共用規則）：從目標背後攻擊，命中 +2、暴擊範圍 +1"
+  ],
+  "offhand_name_zh": "",
+  "offhand_traits_zh": [],
+  "traits_zh": [
+   "開場狀態「殼縫熔核」：從灰燼之心的殼縫裡帶出來的熔核，造成的攻擊傷害提高；倒下時熔核爆開，在原地留下一灘燒 2 回合的火。不能被淨化、驅散或奪取。"
+  ],
+  "ammo": 0,
+  "magazine": 0,
+  "tags": [
+   "beast",
+   "lava_beast"
+  ],
+  "skills": [],
+  "statuses": [
+   {
+    "status_id": "burning",
+    "remaining": 2,
+    "source_id": null,
+    "amount": null,
+    "blast_radius": null,
+    "skill_id": null,
+    "release": null,
+    "charge_tiles": [],
+    "charge_anchored": null,
+    "cost_status": false
+   },
+   {
+    "status_id": "heart_ember_burst",
+    "remaining": null,
+    "source_id": "unit_0004",
+    "amount": null,
+    "blast_radius": null,
+    "skill_id": null,
+    "release": null,
+    "charge_tiles": [],
+    "charge_anchored": null,
+    "cost_status": false
+   }
+  ],
+  "stacks": {},
+  "cooldowns": {},
+  "reaction_available": true,
+  "reaction_rules": [],
+  "ap_carry": 0,
+  "source": 0,
+  "source_max": 3,
+  "downed": false,
+  "revivable": false,
+  "escaped": false,
+  "owner_id": null,
+  "summon_expires_round": null,
+  "dismissed": false,
+  "totem_radius": null,
+  "infusion": null,
+  "summon_mode": null,
+  "summon_target_id": null,
+  "commanded": false,
+  "infused_skill_id": null,
+  "infused_skill_name_zh": null,
+  "infused": false,
+  "attack_element": null,
+  "doll_look": {
+   "skin": "#f1c9a5",
+   "hair": null,
+   "hair_color": null,
+   "pants": null,
+   "trim": null,
+   "eyes": null,
+   "skull": false,
+   "gear": {},
+   "main_material": null,
+   "main_color": null,
+   "rarity": null,
+   "main_kind": null,
+   "main_tassel": null,
+   "bun_band": null,
+   "beard": false,
+   "build": null,
+   "main_glow": null,
+   "scale": null,
+   "creature": {
+    "body": "lizard",
+    "variant": null,
+    "material": "magma",
+    "element": null,
+    "size": "small",
+    "tint": null,
+    "traits": [],
+    "status_traits": {}
+   },
+   "affixes": [],
+   "traits": [],
+   "custom": null
+  },
+  "summon_look": null,
+  "infusion_options": [],
+  "activations": [],
+  "granted_skills": [],
+  "facing": "east",
+  "equipment": [],
+  "gear_totals": [],
+  "gear_skills": [],
+  "charges": [],
+  "form": null,
+  "form_cooldowns": [],
+  "race": null,
+  "boss_phase": null,
+  "parts": null
+ }
+}
