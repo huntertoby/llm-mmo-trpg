@@ -219,6 +219,43 @@ def _layout_hints(
     return out
 
 
+ELEMENT_ADVICE = "。請在技能 JSON 的頂層填 element: {elements}（效果裡各自的 element 不算）"
+"""要求技能元素的互斥規則（``require.elements_any``，例 ``terrain_needs_earth``）附給 LLM 的建議
+（LB-2：原訊息只說「技能元素要是 earth」，Gemma 只改效果的 element、頂層不填，連三次一樣）。"""
+MAIN_DAMAGE_ADVICE = (
+    "。replace_effect.index 請改成主傷害以外的效果位置（從 0 起算），或改用 add_effect 加一個效果"
+)
+"""變奏換掉主傷害時的建議（LB-2）。"""
+SECONDARY_ADVICE = "。請刪掉多出的附帶效果（核心效果以外的都算），或改用附帶效果上限較高的骨架"
+"""``skeleton.secondary_count`` 的建議（LB-2）。"""
+
+
+def _element_requirements(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
+    return {
+        f"exclusion.{rule.id}": tuple(str(e) for e in rule.require.elements_any)
+        for rule in library.exclusions.rules
+        if rule.require is not None and rule.require.elements_any
+    }
+
+
+def advise(error: ProposalError, library: ContentLibrary) -> ProposalError:
+    """在錯誤訊息後面附上可照做的修法（LB-2；只改給 LLM 的說明，不改判定）：
+
+    - 要求技能元素的互斥規則：頂層的 ``element`` 要填哪個值（:data:`ELEMENT_ADVICE`）。
+    - 變奏換掉主傷害：``replace_effect.index`` 換位置或改用 ``add_effect``。
+    - ``skeleton.secondary_count``：刪掉多的附帶效果或換骨架。
+    """
+    extra = ""
+    elements = _element_requirements(library).get(error.code)
+    if elements:
+        extra = ELEMENT_ADVICE.format(elements=" 或 ".join(f'"{e}"' for e in elements))
+    elif error.path.endswith("replace_effect.index") and "主傷害" in error.message:
+        extra = MAIN_DAMAGE_ADVICE
+    elif error.code == "skeleton.secondary_count":
+        extra = SECONDARY_ADVICE
+    return replace(error, message=error.message + extra) if extra else error
+
+
 def evaluate_proposal(
     raw: str | Mapping[str, Any],
     models: ProposalModels,
@@ -246,10 +283,13 @@ def evaluate_proposal(
     try:
         skill = to_skill_def(proposal, ctx, fill or minimal_filler(library), library)
     except ValidationError as exc:
-        return ProposalResult(None, tuple(_pydantic_errors(exc, "skill", data)))
+        errors = _pydantic_errors(exc, "skill", data)
+        return ProposalResult(None, tuple(advise(e, library) for e in errors))
     violations = validate_skill(skill, library)
     if violations:
-        rule_errors = tuple(_rule_error(v.rule, v.message, skill) for v in violations)
+        rule_errors = tuple(
+            advise(_rule_error(v.rule, v.message, skill), library) for v in violations
+        )
         return ProposalResult(None, rule_errors)
     extra = [*_unheld_errors(skill, ctx), *_topic_errors(skill, ctx, library)]
     return ProposalResult(None, tuple(extra)) if extra else ProposalResult(skill, ())

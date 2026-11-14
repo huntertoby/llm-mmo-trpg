@@ -176,6 +176,10 @@ SNAPSHOTS = {
     # LLM-1C：區塊順序與 system 改回 LLM-1 之前（<request> 在最前、固定說明回到題目區；
     # 快照雜湊同 /10）
     "skill-proposal/14": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # LB-2：題目區多 fields_note_zh（頂層欄位說明）、schema 依類別分支與變奏分支、重試回饋附修法
+    # （都在 build_proposal_prompt／evaluate 這層；快照只看 build_skill_proposal_messages，
+    # 雜湊同 /14）
+    "skill-proposal/15": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 
