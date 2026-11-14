@@ -138,7 +138,8 @@ export class RowStack {
     const front = sprite.children.find((n) => n.label === BOSS_RING_FRONT_LABEL);
     if (front?.parentRenderLayer != null && sprite.children.some((n) => n.label === PART_STRIP_LABEL)) {
       const layer = front.parentRenderLayer;
-      for (const n of sprite.children) if (n.label === HP_BAR_LABEL || n.label === PART_STRIP_LABEL || n.label === HIDDEN_HP_LABEL) layer.attach(n);
+      // BM-1：800 寬時狀態列與徽章搬到 HP 條兩側（`bossSideHud.ts`），一樣伸進南邊一排：跟 HP 條同一層，南邊的地面才蓋不到
+      for (const n of sprite.children) if (n.label === HP_BAR_LABEL || n.label === PART_STRIP_LABEL || n.label === HIDDEN_HP_LABEL || n.label === STATUS_ROW_LABEL || UNIT_MARK_LABELS.includes(n.label)) layer.attach(n);
     }
     // 6F-21：朝南的三角形在南邊一排的地面之上（最南一排沒有人蓋它，照舊跟著單位畫）；
     // 6F-21b：南邊那格沒人站時改在 `top`（移動格、崖面之上；`southArrowPlace`）

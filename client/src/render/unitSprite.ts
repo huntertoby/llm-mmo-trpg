@@ -16,6 +16,7 @@ import { label } from "./labels";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_SCALE, DOLL_W, renderFigureCanvas, SUMMON_SCALE } from "./paperdoll";
 import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
+import { bossSideHudOn, shiftShapes, sideBadgeLayouts, sideBlock, sideRowShift, type SideBlock } from "./bossSideHud";
 import { statusTile, tileCanvas } from "./skillIcon";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
@@ -258,7 +259,7 @@ export function badgeLayoutOf(node: Container): BadgeLayout | undefined {
  * 數字畫面上至少 10px、整顆在格子裡、不蓋到臉，後面的避開前面的與召喚物回合數徽章（`turns`，狀態列重排完才讀它的位置）。
  * 6F-13：也避開相鄰格單位的臉（`faces`）；精簡列擁擠時狀態列只留「+N」（`chooseRowMode`）。
  */
-function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null, faces: readonly Circle[], marks: BadgeMarks, hudDy = 0): void {
+function registerBadges(badges: BadgeNode[], turns: Container | null, row: Container | null, faces: readonly Circle[], marks: BadgeMarks, hudDy = 0, side: ((s: number) => SideBlock | null) | null = null): void {
   const extra = (): Circle[] => (turns === null ? [] : [{ x: turns.position.x, y: turns.position.y, r: turns.scale.x * (SUMMON_BADGE_RADIUS + 0.5) }]);
   const rowBoxes = (): Box[] => {
     const sh = row === null ? undefined : rowShapesNow.get(row);
@@ -271,7 +272,11 @@ function registerBadges(badges: BadgeNode[], turns: Container | null, row: Conta
   let memo: { s: number; mode: RowMode; lays: BadgeLayout[]; over: RowOverflow | undefined } | null = null;
   const compute = (s: number): BadgeLayout[] => {
     const ctl = row === null ? undefined : rowControls.get(row);
-    if (memo === null || memo.s !== s) {
+    const block = side?.(s) ?? null;
+    if (block !== null && (memo === null || memo.s !== s)) {
+      // BM-1：800 寬有部位的頭目，徽章放 HP 條另一側（不和狀態列搶位置，狀態列照原本的排法）
+      memo = { s, mode: "normal", lays: sideBadgeLayouts(reqs, s, block), over: undefined };
+    } else if (memo === null || memo.s !== s) {
       const variants = ctl?.variants() ?? {};
       // 6F-14：避開朝向三角形（`firmBoxes`）；6F-15：也避開 HP 條（`hpBoxes`）
       // （6F-18：有人站的格子不畫「▲N」，6F-14～6F-17 避開「▲N」的排法拿掉）
@@ -1278,9 +1283,13 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
   const shapesOf = (lay: RowPlan) => rowShapes(lay, shown.length, rowK, bottom, extra > 0, widthOf(lay));
   const arrow = arrowOf(u);
   const apply = (lay: RowPlan) => {
-    const sh = shapesOf(lay);
+    let sh = shapesOf(lay);
+    // BM-1：800 寬有部位的頭目，整排搬到 HP 條旁邊（排法照原本，只平移；`bossSideHud.ts`）
+    const side = bossSideHudOn(u, rowS) ? sideRowShift(sh, sideBlock(u, rowS, SHIELD_OUTLINE, edge), rowS, arrow) : { dx: 0, dy: 0 };
+    if (side.dx !== 0 || side.dy !== 0) sh = shiftShapes(sh, side.dx, side.dy);
     rowShapesNow.set(row, sh);
-    row.position.x = lay.shift;
+    row.position.x = lay.shift + side.dx;
+    row.position.y = bottom + bossHudDy(u) + side.dy;
     const only = lay.plusOnly === true;
     const n = lay.compact ? 1 : shown.length;
     const x0 = -((n - 1) * lay.pitch) / 2;
@@ -1436,6 +1445,10 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       base = lay;
       apply(lay);
       badge.position.set(lay.badge.x, lay.badge.y);
+    } else if (bossSideHudOn(u, s)) {
+      // BM-1：搬到 HP 條旁邊時不用在格子裡讓朝向三角形（整排平移時再讓，`sideRowShift`）
+      base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW);
+      apply(base);
     } else {
       base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW, arrow, { bottom, allW, edge, total: ids.length }); // 6F-14：避開朝向三角形；6F-16：不超出地圖；6F-18：狀態數
       apply(base);
@@ -1549,7 +1562,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   if (row !== null) c.addChild(row);
   // 6F-12：徽章畫在 HP 條與狀態列上面：800 寬格子太擠、避不開時，數字照樣讀得出來（狀態列的圖示被蓋一角）
   for (const b of badges) c.addChild(b.node);
-  if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy);
+  if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy, (s) => (bossSideHudOn(u, s) ? sideBlock(u, s, SHIELD_OUTLINE, opts.edge ?? NO_EDGE) : null));
   return c;
 }
 

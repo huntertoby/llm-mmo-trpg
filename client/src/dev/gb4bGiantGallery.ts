@@ -3,7 +3,7 @@
 // 破壞演出同一組函式（`setPartFx` ＋ `partBreakFx.giantBreakCanvas`）畫手寫的場面（比照 `pb1eGallery.ts`）；外觀取
 // `render/fixtures/unitDolls.json`。每格＝真 1 倍的畫布（`extract`，裝置像素比 1 時＝畫面像素）＋可選的最近鄰放大。
 // 參數：
-//   ?set=sprites|marks|break|after|shed|field|hud   （逗號接多段；預設 sprites）
+//   ?set=sprites|marks|break|after|shed|field|side   （逗號接多段；預設 sprites；side＝BM-1 狀態 3 個＋蓄力的 HUD）
 //   &w=1600|800   地圖縮放照美術移植需求 2.3（1600＝1.308、800＝0.531）；`&scale=` 另給
 //   &zoom=<k>     最近鄰放大倍數（預設 0＝不放大；800 的立繪、殼縫格、「破」字特寫用 4）
 //   &only=<i,…>   每一段只畫第幾格（0 起；特寫用）
@@ -54,6 +54,8 @@ interface HeartSpec {
   seam?: PartSt;
   core?: PartSt;
   team?: "enemy" | "ally";
+  /** BM-1：狀態（預設照熔殼）。 */
+  statuses?: string[];
 }
 
 function part(id: string, name: string, s: PartSt, tiles: Pos[], over: Partial<PartView> = {}): PartView {
@@ -77,7 +79,7 @@ function heartOf(b: HeartSpec): UnitView {
     tags: ["boss", "elite"],
     doll_look: (dolls as Record<string, unknown>)["ashen_heart"],
     boss_phase: { index: phase, total: 3, name_zh: PHASE_ZH[phase] },
-    statuses: (b.shell ?? phase === 1 ? ["molten_shell"] : []).map(st),
+    statuses: (b.statuses ?? (b.shell ?? phase === 1 ? ["molten_shell"] : [])).map(st),
     footprint: 3,
     tiles,
     parts: [
@@ -315,6 +317,18 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
       {
         title: `場面：北邊岩漿、南邊與兩側有人（${W} 寬）`,
         cells: ([1, 3] as const).map((ph) => ({ cap: `第 ${ph} 階段${ph === 3 ? "（坑底紅光在地面層）" : ""}`, view: viewOf(units(ph), 11, 7, lava), zoomBox: { x0: 2.4, y0: -0.4, x1: 8.6, y1: 6.2 } })),
+      },
+    ];
+  },
+  // BM-1：狀態 3 個＋蓄力（800 寬狀態列在 HP 條右邊、徽章在左邊；1600 照原本）；頭目在最北（中心第 1 排）、HUD 不被畫面上緣切掉
+  side: () => {
+    const lava = (_x: number, y: number): string => (y === 0 ? "lava" : "stone");
+    const statuses = ["molten_shell", "burning", "shielded", "charging"];
+    const units = (y: number): UnitView[] => [heartOf({ x: 3, y, phase: 1, statuses }), personAt(HERO, 3, y + 2, "ally"), personAt("e1", 1, y, "enemy", "ember_lizard", "east")];
+    return [
+      {
+        title: `狀態 3 個＋蓄力（${W} 寬）：一般位置／最北（中心在第 1 排）`,
+        cells: [2, 1].map((y) => ({ cap: y === 1 ? "最北" : "一般", view: viewOf(units(y), 7, 6, lava), zoomBox: { x0: 0.4, y0: y === 1 ? -1.6 : -0.6, x1: 6.6, y1: y + 2.6 } })),
       },
     ];
   },

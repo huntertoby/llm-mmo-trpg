@@ -206,9 +206,9 @@ describe("6F-12 第 1 項：炸彈、蓄力、灌注徽章", () => {
 
   it("接線：unitSprite 用 badgeLayout 的常數與 layoutBadges，三種都 registerMark；繪製器照舊用 unitMarksOf", () => {
     const s = sources["render/unitSprite.ts"]!;
-    expect(s).toContain("if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy);"); // 6F-13：加上相鄰格的臉；6F-14：朝向三角形（6F-18：「▲N」拿掉）；QK-4b：頭目整組 HUD 平移
+    expect(s).toContain("if (badges.length > 0) registerBadges(badges, turns, row, faces, badgeMarks(u), hudDy, (s) =>"); // 6F-13：加上相鄰格的臉；6F-14：朝向三角形（6F-18：「▲N」拿掉）；QK-4b：頭目整組 HUD 平移；BM-1：800 寬頭目徽章放 HP 條旁
     expect(s).toContain("const lay = compute(s)[i]!;"); // 6F-13：同一個縮放只算一次（含只留「+N」）
-    expect(s).toContain("const sh = shapesOf(lay);"); // 6F-13：只留「+N」時的字寬另外算
+    expect(s).toContain("let sh = shapesOf(lay);"); // 6F-13：只留「+N」時的字寬另外算
     expect(s).toContain("rowShapesNow.set(row, sh);");
     expect(s).toContain("registerMark(b.node, spec, inner, relayout);");
     expect(s).toContain("new Graphics().circle(0, 0, STATUS_BADGE_R)");
