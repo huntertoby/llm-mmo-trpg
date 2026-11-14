@@ -36,10 +36,13 @@ from trpg.shared.types import Element
 from trpg.skillgen.candidates import skill_has_keywords
 from trpg.skillgen.keywords import has_keyword
 from trpg.skillgen.proposal_fallback import wanted_kind
-from trpg.skillgen.proposal_subset import ProposalRequest
+from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError, select_subset
+from trpg.skillgen.proposal_topup import keywords_reachable
 from trpg.skillgen.random_composer import (
+    _STACK_SKELETON,
     ComposeError,
     KeywordExhaustedError,
+    _is_stack_keyword,
     compose_with_stats,
 )
 from trpg.skillgen.validate import validate_skill
@@ -92,6 +95,8 @@ class CellResult:
     """出現最多的前 5 個設計（設計鍵, 次數）。"""
     blocked_by_design: bool
     """這個種類的骨架稀有度下限高於這格（被動至少 epic、反應至少 rare）：遊戲裡本來就不會出這格。"""
+    reachable: bool
+    """遊戲出題的檢查（:func:`topic_reachable`）通過：規則上這格做得出帶關鍵字的技能。"""
     diag: dict[str, int] = field(default_factory=dict)
     timing: dict[str, float] = field(default_factory=dict)
     """計時（毫秒）；每次跑都不同，比對時排除。"""
@@ -160,12 +165,34 @@ def blocked_by_design(cell: Cell, lib: ContentLibrary) -> bool:
     return skeleton is not None and rarity_rank(cell.rarity) < rarity_rank(skeleton.min_rarity)
 
 
-def _diagnose(cell: Cell, lib: ContentLibrary, seeds: int) -> dict[str, int]:
-    """不帶關鍵字組同種類、同階級、同稀有度：組不組得出來、組出來的有幾個碰巧帶這個關鍵字。
-
-    ``plain_ok`` 多而 ``keyword_hit`` 是 0 → 組合器這個種類不會長出這個關鍵字（缺配方）；
-    ``plain_ok`` 是 0 → 這個種類在這格本身就組不出來（規則或預算擋下）。"""
+def _diag_skeleton(cell: Cell, lib: ContentLibrary) -> str | None:
+    """診斷用的骨架：和組合器指定關鍵字時一樣（層數關鍵字不指定骨架時固定蓄力骨架）。"""
     skeleton = _skeleton_for(cell.kind, lib)
+    if skeleton is None and cell.keyword != NO_KEYWORD and _is_stack_keyword(cell.keyword, lib):
+        return _STACK_SKELETON
+    return skeleton
+
+
+def topic_reachable(cell: Cell, lib: ContentLibrary) -> bool:
+    """遊戲出 LLM 題目時的同一個檢查（``proposal_topic``：``select_subset`` 不出錯、選單帶得到
+    題目關鍵字）。不通過＝規則上這個種類、稀有度、階級做不出帶這個關鍵字的技能，遊戲不會出這題。"""
+    keywords = () if cell.keyword == NO_KEYWORD else (cell.keyword,)
+    request = ProposalRequest(cell.tier, cell.rarity, kind=cell.kind, keywords=keywords)
+    try:
+        subset = select_subset(lib, request)
+    except SubsetError:
+        return False
+    return keywords_reachable(lib, subset)
+
+
+def _diagnose(cell: Cell, lib: ContentLibrary, seeds: int) -> dict[str, int]:
+    """不帶關鍵字組同種類、同階級、同稀有度（層數關鍵字用蓄力骨架），數組得出來的有幾個帶這個關鍵字。
+
+    ``keyword_hit``＝組合器認的（``has_keyword``，含通用規則）；``keyword_exclusive``＝退回路徑認的
+    （只看專屬規則）。``plain_ok`` 是 0 → 本身就組不出來；兩個 hit 都是 0 → 缺配方；
+    只有 ``keyword_hit`` → 組合器只帶到通用規則，退回路徑不收。"""
+    skeleton = _diag_skeleton(cell, lib)
+    keywords = () if cell.keyword == NO_KEYWORD else (cell.keyword,)
     out: Counter[str] = Counter()
     for seed in range(seeds):
         try:
@@ -180,10 +207,12 @@ def _diagnose(cell: Cell, lib: ContentLibrary, seeds: int) -> dict[str, int]:
             out["plain_other_kind"] += 1
             continue
         out["plain_ok"] += 1
-        if cell.keyword != NO_KEYWORD and has_keyword(skill, cell.keyword, lib.keywords):
+        if keywords and has_keyword(skill, cell.keyword, lib.keywords):
             out["keyword_hit"] += 1
-    out.setdefault("plain_ok", 0)
-    out.setdefault("keyword_hit", 0)
+        if keywords and skill_has_keywords(skill, keywords, lib):
+            out["keyword_exclusive"] += 1
+    for key in ("plain_ok", "keyword_hit", "keyword_exclusive"):
+        out.setdefault(key, 0)
     return dict(sorted(out.items()))
 
 
@@ -249,6 +278,7 @@ def run_cell(cell: Cell, seeds: int, thin: int, diag_seeds: int) -> CellResult:
         samples=dict(sorted(samples.items())),
         top_designs=[[list(_jsonable(k)), n] for k, n in top],
         blocked_by_design=blocked_by_design(cell, lib),
+        reachable=not blocked_by_design(cell, lib) and topic_reachable(cell, lib),
         timing={
             "ms_mean": round(statistics.fmean(times) * 1000, 1) if times else 0.0,
             "ms_median": round(statistics.median(times) * 1000, 1) if times else 0.0,
@@ -336,6 +366,7 @@ def run_census(
 
 
 def classify(result: CellResult, thin: int) -> str:
+    """``n/a``＝骨架稀有度下限擋掉的格子；``empty``／``thin``／``ok`` 照合法數與設計數。"""
     if result.blocked_by_design:
         return "n/a"
     if result.legal == 0:
@@ -346,20 +377,31 @@ def classify(result: CellResult, thin: int) -> str:
 
 
 def cause(result: CellResult) -> str:
-    """空格、薄格的判斷：缺配方或規則擋下（依診斷與不合法原因）。"""
-    reasons = result.reasons
-    if reasons.get("keyword_not_composable"):
-        return "內容標記組合器不做（composable: false）"
+    """空格、薄格的判斷：規則擋下、缺配方、只帶到通用規則或配方稀少（依出題檢查與診斷）。"""
     diag = result.diag
-    if not diag:
-        return ""
-    if diag.get("plain_ok", 0) == 0:
-        return "規則擋下：這個種類在這格不帶關鍵字也組不出來"
-    if result.keyword != NO_KEYWORD and diag.get("keyword_hit", 0) == 0:
-        return "缺配方：這個種類組得出來，但從不帶這個關鍵字"
-    if result.keyword != NO_KEYWORD:
-        return "配方稀少：偶爾帶到關鍵字"
-    return "設計種類少"
+    keyword = result.keyword != NO_KEYWORD
+    checks = (
+        (
+            bool(result.reasons.get("keyword_not_composable")),
+            "內容標記組合器不做（composable: false）",
+        ),
+        (
+            not result.reachable,
+            "規則擋下：這個稀有度／種類沒有這個關鍵字的專屬來源（遊戲不出這題）",
+        ),
+        (not diag, ""),
+        (diag.get("plain_ok", 0) == 0, "規則或預算擋下：同骨架不帶關鍵字也組不出來"),
+        (not keyword, "設計種類少"),
+        (diag.get("keyword_exclusive", 0) > 0, "配方稀少：偶爾帶到專屬關鍵字"),
+        (
+            diag.get("keyword_hit", 0) > 0 or result.reasons.get("not_fit.keyword", 0) > 0,
+            "只帶到通用規則：組合器認、退回路徑不收",
+        ),
+    )
+    for hit, text in checks:
+        if hit:
+            return text
+    return "缺配方：規則允許，但組合器這個種類從不帶這個關鍵字"
 
 
 def stable_view(results: Sequence[CellResult]) -> list[dict[str, Any]]:
@@ -424,6 +466,7 @@ def _markdown(
 ) -> str:
     thin = int(params["thin"])
     status = Counter(classify(r, thin) for r in results)
+    gaps = Counter(classify(r, thin) for r in results if r.reachable)
     lines = [
         "# 組合器配方盤點摘要",
         "",
@@ -432,19 +475,30 @@ def _markdown(
         "",
         f"- 格子 {len(results)}：正常 {status['ok']}、薄 {status['thin']}、空 {status['empty']}、"
         f"設計上不存在 {status['n/a']}（骨架稀有度下限：被動至少 epic、反應至少 rare）",
+        f"- 其中遊戲會出題（出題檢查通過）的：空 {gaps['empty']}、薄 {gaps['thin']}；"
+        "其餘空格是規則上就沒有專屬來源（遊戲不出這題）",
         "",
-        "## 依關鍵字（空／薄／正常，不含設計上不存在）",
+        "## 依關鍵字（不含設計上不存在；「會出題」＝出題檢查通過的空格與薄格）",
         "",
-        "| 關鍵字 | 空 | 薄 | 正常 |",
-        "|---|---|---|---|",
+        "| 關鍵字 | 空 | 薄 | 正常 | 會出題的空 | 會出題的薄 |",
+        "|---|---|---|---|---|---|",
     ]
-    for keyword in dict.fromkeys(r.keyword for r in results):
-        mine = Counter(classify(r, thin) for r in results if r.keyword == keyword)
-        lines.append(f"| {keyword} | {mine['empty']} | {mine['thin']} | {mine['ok']} |")
-    lines += ["", "## 依種類", "", "| 種類 | 空 | 薄 | 正常 |", "|---|---|---|---|"]
-    for kind in dict.fromkeys(r.kind for r in results):
-        mine = Counter(classify(r, thin) for r in results if r.kind == kind)
-        lines.append(f"| {kind} | {mine['empty']} | {mine['thin']} | {mine['ok']} |")
+    for key, label in (("keyword", "關鍵字"), ("kind", "種類")):
+        if key == "kind":
+            lines += [
+                "",
+                "## 依種類",
+                "",
+                f"| {label} | 空 | 薄 | 正常 | 會出題的空 | 會出題的薄 |",
+                "|---|---|---|---|---|---|",
+            ]
+        for value in dict.fromkeys(getattr(r, key) for r in results):
+            mine = [r for r in results if getattr(r, key) == value]
+            c = Counter(classify(r, thin) for r in mine)
+            g = Counter(classify(r, thin) for r in mine if r.reachable)
+            lines.append(
+                f"| {value} | {c['empty']} | {c['thin']} | {c['ok']} | {g['empty']} | {g['thin']} |"
+            )
     flagged = [r for r in results if classify(r, thin) in ("empty", "thin")]
     flagged.sort(
         key=lambda r: (
@@ -459,13 +513,14 @@ def _markdown(
         "",
         "## 空格與薄格（依玩家遇到的頻率排序）",
         "",
-        "| 關鍵字 | 種類 | 階 | 稀有度 | 狀態 | 合法 | 設計 | 主要原因 | 判斷 | 中位 ms |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| 關鍵字 | 種類 | 階 | 稀有度 | 狀態 | 會出題 | 合法 | 設計 | 主要原因 | 判斷 | 中位 ms |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in flagged:
         lines.append(
             f"| {r.keyword} | {r.kind} | {r.tier} | {r.rarity} | {classify(r, thin)} | "
-            f"{r.legal} | {r.designs} | {_top_reason(r)} | {cause(r)} | "
+            f"{'是' if r.reachable else '否'} | {r.legal} | {r.designs} | {_top_reason(r)} | "
+            f"{cause(r)} | "
             f"{r.timing.get('ms_median', '')} |"
         )
     lines += [
