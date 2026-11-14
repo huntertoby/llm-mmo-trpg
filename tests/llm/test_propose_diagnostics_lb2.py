@@ -42,7 +42,7 @@ def test_failed_attempt_keeps_raw_errors_and_feedback(library: ContentLibrary) -
     assert first.raw == raw  # 清理前的原始輸出
     assert first.errors and {e["code"] for e in first.errors} == set(outcome.codes[0])
     assert all(e["message"] for e in first.errors)
-    assert any("bogus_field" in e.get("loc", "") for e in first.errors)  # pydantic 原始位置
+    assert any("bogus_field" in str(e.get("loc", "")) for e in first.errors)  # pydantic 原始位置
     assert any(e.get("input") == "1" for e in first.errors)
     # 回饋文字就是下一次 prompt 的 <errors> 內容
     assert first.feedback is not None

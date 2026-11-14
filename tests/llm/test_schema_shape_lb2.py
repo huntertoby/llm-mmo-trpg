@@ -47,7 +47,7 @@ VARIANT = {
     },
     "required": ["id", "name_zh", "when"],
 }
-SKILL = {
+SKILL: dict[str, Any] = {
     "$defs": {
         "Variant": VARIANT,
         "Layout": {

@@ -65,7 +65,7 @@
 
 ## 三、schema 相容性調查
 
-工具：`scripts/llm_schema_probe.py`（20 題＋暖機題的 schema 各送一次 `max_tokens` 8 的請求）、`LB-2資料/enforce_probe.py`（小 schema 看有沒有真的約束輸出）。
+工具：`scripts/llm_schema_probe.py`（20 題＋暖機題的 schema 各送一次 `max_tokens` 8 的請求）、`LB-2資料/enforce_probe.py.txt`（小 schema 看有沒有真的約束輸出）。
 
 1. **400 重現不了**：Gemma 對 21 份 schema（`anyOf` 改寫後、原樣 `oneOf` 抽 4 份）全部 HTTP 200；swift 不思考 21 份、思考開 3 份全部 200（`probe_*.json`）。LB-1 那次 400 的回應本文沒有記，原因無法確定；最可能是換模型（qwen → swift）時第一個請求遇到載入中的暫時錯誤。
 2. **真正的缺陷在 client**：`auto` 模式把任何一次 400／422 都當成「伺服器不支援 response_format」，**永久**改用 `guided_json`。實測 LM Studio 對 `guided_json` 完全不約束（給只能是 `zzz_only` 的 enum，模型照樣輸出 `red`；swift 還包了 ```` ```json ````）。所以 swift 那輪 60 次呼叫全部沒有約束，而且只有一則 warning。
