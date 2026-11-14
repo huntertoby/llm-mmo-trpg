@@ -3,7 +3,7 @@
 // `render/fixtures/unitDolls.json`（和伺服器 `UnitView.doll_look` 同一份匯出）。每格＝真 1 倍的畫布＋右邊頭目一帶最近鄰放大
 // （`extract` 取畫布像素、`imageSmoothingEnabled = false`）。
 // 參數：
-//   ?set=strip|hud|hover|after|break|qi    （逗號接多段；預設 strip）
+//   ?set=strip|hud|hover|after|break|qi|bm1    （逗號接多段；預設 strip；bm1＝BM-1 800 寬狀態列在 HP 條旁）
 //   &w=1600|800      照這個視窗寬算雲頂觀 12×12 的地圖縮放（預設 1600）；`&scale=` 另給
 //   &zoom=<k>        最近鄰放大倍數（預設 4）
 //   &part=whisk|sword|dantian（break 只畫這個部位；預設三個都畫）
@@ -114,11 +114,13 @@ const h = <T extends keyof HTMLElementTagNameMap>(tag: T, props: Partial<HTMLEle
 type Pixi = { app: { renderer: { extract: { canvas(o: unknown): HTMLCanvasElement }; render(o: unknown): void }; stage: unknown }; world: { y: number } };
 
 /** 頭目一帶（格 (x−0.6～x+1.6, y−0.9～y+1.4)，模型 px）最近鄰放大。 */
-function zoomOf(r: BattleRenderer, bx: number, by: number, rows = 1.4): HTMLCanvasElement {
+function zoomOf(r: BattleRenderer, bx: number, by: number, rows = 1.4, wide = false): HTMLCanvasElement {
   const p = r as unknown as Pixi;
   const T = 48;
   const res = devicePixelRatio * SCALE;
-  const frame = new Rectangle(Math.round((bx - 0.6) * T), Math.round((by - 0.9) * T + p.world.y), Math.round(2.2 * T), Math.round((0.9 + rows) * T));
+  // BM-1：`wide` 左右各多一格（800 寬狀態列、徽章在 HP 條兩側）
+  const x0 = wide ? bx - 1.5 : bx - 0.6;
+  const frame = new Rectangle(Math.round(x0 * T), Math.round((by - 0.9) * T + p.world.y), Math.round((wide ? 4 : 2.2) * T), Math.round((0.9 + rows) * T));
   const src = p.app.renderer.extract.canvas({ target: p.app.stage, frame, resolution: res });
   const out = h("canvas", { width: src.width * ZOOM, height: src.height * ZOOM });
   const g = out.getContext("2d")!;
@@ -134,6 +136,10 @@ interface Cell {
   /** 畫完之後做的事（滑過的部位、演出的格）。 */
   after?: (r: BattleRenderer) => void;
   zoomRows?: number;
+  /** BM-1：放大範圍左右各多一格。 */
+  wide?: boolean;
+  /** BM-1：地圖大小（預設 5×4）。 */
+  cols?: number;
 }
 
 const renderers: BattleRenderer[] = [];
@@ -145,7 +151,7 @@ async function cellOf(c: Cell, row: HTMLElement): Promise<void> {
   await r.init(host);
   r.setIdle(false);
   r.setScale(SCALE);
-  const model = buildDrawModel(viewOf(c.units), HERO, null, undefined, BATTLE_DRAW);
+  const model = buildDrawModel(viewOf(c.units, c.cols), HERO, null, undefined, BATTLE_DRAW);
   r.draw(model);
   c.after?.(r);
   const b = c.units.find((u) => u.id === BOSS)!;
@@ -155,7 +161,7 @@ async function cellOf(c: Cell, row: HTMLElement): Promise<void> {
   full.style.width = `${full.width / devicePixelRatio}px`;
   if (q.get("full") === "0") host.remove();
   else host.replaceWith(full);
-  box.appendChild(zoomOf(r, b.pos.x, b.pos.y, c.zoomRows));
+  box.appendChild(zoomOf(r, b.pos.x, b.pos.y, c.zoomRows, c.wide === true));
   if (q.get("keep") === "1") renderers.push(r);
   else r.destroy();
   box.appendChild(h("p", { className: "cap", textContent: c.cap }));
@@ -242,6 +248,30 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
           return { cap: ["1 命中白閃", "2 裂開", "3 斷開・飛出", "4 落地", "5 定格"][f]!, units: [b], after: (r: BattleRenderer) => breakFrame(r, b, p, f) };
         }),
       })),
+  // BM-1：800 寬狀態列移到 HP 條旁（右）、徽章在左；狀態 3 個＋蓄力時滑過三個部位（PB-1f 待決 3）；最右欄左右對調；東西兩側有人
+  bm1: () => {
+    const three = ["mist_return", "shielded", "burning", "charging"];
+    const wide = { zoomRows: 2, wide: true } as const;
+    return [
+      {
+        title: "BM-1：狀態 3 個＋蓄力，選單打開、滑過三個部位／選單沒開",
+        cells: [
+          ...(["whisk", "dantian", "sword"] as const).map((p) => ({ cap: `滑過${PART_ZH[p]}`, units: [bossOf({ parts: ["dmg", "ok", "ok"], statuses: three }), heroAt(2, 2)], after: (r: BattleRenderer) => r.setPartFocus(BOSS, p), ...wide })),
+          { cap: "選單沒開", units: [bossOf({ parts: ["dmg", "ok", "ok"], statuses: three }), heroAt(2, 2)], ...wide },
+        ],
+      },
+      {
+        title: "BM-1：南邊沒人／東西兩側有人／站最右欄（左右對調）／朝東／護盾條",
+        cells: [
+          { cap: "南邊沒人", units: [bossOf({ parts: ["dmg", "ok", "broken"], statuses: three }), heroAt(3, 2)], ...wide },
+          { cap: "東西兩側有人", units: [bossOf({ parts: ["dmg", "ok", "broken"], statuses: three }), heroAt(1, 1, "east"), unit("unit_0002", "ally", 3, 1, { template_id: "hero_archer", name_zh: "弓手", facing: "west", hp: 20, max_hp: 30 } as Partial<UnitView>)], ...wide },
+          { cap: "站最右欄", units: [bossOf({ x: 4, parts: ["dmg", "ok", "broken"], statuses: three }), heroAt(4, 2)], ...wide },
+          { cap: "朝東（三角形在東邊）", units: [bossOf({ facing: "east", parts: ["dmg", "ok", "broken"], statuses: three }), heroAt(2, 2)], ...wide },
+          { cap: "護盾條＋炸彈＋蓄力", units: [bossOf({ shield: 40, parts: ["dmg", "ok", "broken"], statuses: ["mist_return", "time_bomb", "charging"] }), heroAt(2, 2)], ...wide },
+        ],
+      },
+    ];
+  },
   qi: () => [
     {
       title: "腹前氣旋：鎖霧／歸一有、劍陣沒有、氣海破後沒有；側面在劍柄之下",

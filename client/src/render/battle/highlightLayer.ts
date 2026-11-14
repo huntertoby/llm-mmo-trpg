@@ -1,6 +1,7 @@
 // 高亮圖層（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：移動格、範圍、預覽、目標框、方向、攀跳、環境預告、場景物件預覽、
 // 路徑提示、致命淡紅、滑過與焦點框、出口滑過、實地地圖的標記（腳印、「！」、眼睛）。
 import { Container, Graphics, Sprite, type Text, type Texture } from "pixi.js";
+import { TELEGRAPH_BADGE_LABEL, TELEGRAPH_BADGE_R, TELEGRAPH_FONT, telegraphBadgeCenter, telegraphBadgeScale } from "../telegraphBadge";
 import type { Pos } from "../../api/types";
 import { occluded } from "../../battle/elevation";
 import { TILE_SIZE } from "../../battle/geometry";
@@ -94,6 +95,22 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
 };
 
 export abstract class HighlightLayer extends TerrainLayer {
+  /** BM-1：目前畫著的延遲預告字（節點、字、格子左上角）；縮放改變時重排（`telegraphRescale`）。 */
+  private telegraphBadges: Array<{ node: Container; glyph: Text; o: { x: number; y: number } }> = [];
+
+  /** BM-1：延遲預告字照目前的地圖縮放放大（畫面字 ≥ `MIN_TELEGRAPH_FONT_PX`）、錨在格子右上角；字的解析度跟著倍率提高。 */
+  protected telegraphRescale(): void {
+    const k = telegraphBadgeScale(this.scale);
+    const c = telegraphBadgeCenter(k);
+    const res = (window.devicePixelRatio || 1) * this.scale * k;
+    for (const b of this.telegraphBadges) {
+      if (b.node.destroyed) continue;
+      b.node.scale.set(k);
+      b.node.position.set(b.o.x + c.x, b.o.y + c.y);
+      if (!b.glyph.destroyed) b.glyph.resolution = Math.max(1, res);
+    }
+  }
+
   /** 滑過的出口：每格綠框（原本的「出」框），出口上方一個「往目的地」小牌。 */
   private drawExitHover(exit: ExitSignDraw): void {
     const g = new Graphics();
@@ -181,6 +198,7 @@ export abstract class HighlightLayer extends TerrainLayer {
       this.marks.addChild(rg);
     }
     this.drawThings(h.things ?? [], h.eyes ?? []);
+    this.telegraphBadges = [];
     for (const m of h.telegraph) {
       const o = this.origin(m.pos);
       pen
@@ -188,12 +206,17 @@ export abstract class HighlightLayer extends TerrainLayer {
         .rect(o.x + 3, o.y + 3, T - 6, T - 6)
         .fill({ color: m.color, alpha: 0.16 })
         .stroke({ width: 2, color: m.color, alpha: 0.85 });
-      const badge = new Graphics().circle(o.x + T - 11, o.y + 11, 9).fill({ color: 0x000000, alpha: 0.65 });
-      const glyph = label(m.glyph, 12, m.color, true);
+      // BM-1：右上角的預告字有最小畫面尺寸（`telegraphBadge.ts`；800 寬放大、往格子角長）
+      const node = new Container();
+      node.label = TELEGRAPH_BADGE_LABEL;
+      const badge = new Graphics().circle(0, 0, TELEGRAPH_BADGE_R).fill({ color: 0x000000, alpha: 0.65 });
+      const glyph = label(m.glyph, TELEGRAPH_FONT, m.color, true);
       glyph.anchor.set(0.5);
-      glyph.position.set(o.x + T - 11, o.y + 11);
-      pen.add(m.pos, badge, glyph);
+      node.addChild(badge, glyph);
+      this.telegraphBadges.push({ node, glyph, o });
+      pen.add(m.pos, node);
     }
+    this.telegraphRescale();
     const tags: Array<{ pos: Pos; text: Text }> = [];
     for (const o of h.overlays) {
       const tag = this.drawOverlay(pen.at(o.pos), o);

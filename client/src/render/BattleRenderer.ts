@@ -162,6 +162,7 @@ export class BattleRenderer extends VfxLayer {
       this.applySize(this.model);
       this.rebuildOutlines(); // OCL-1a（Q2）：只重建外框貼圖，比例與遲滯不重算
       this.rgRescale(); // RG-3：準星、小盾、「？」的反向放大倍率跟著縮放
+      this.telegraphRescale(); // BM-1：延遲預告字的最小畫面尺寸
     }
   }
 
