@@ -131,3 +131,13 @@ swift 改後一輪 33 次、18 條：`keyword.required` 5、`skeleton.secondary`
 3. `4d468e09a` fix(lb-2b): name the shapes that take range_delta and ask passives for explicit affects self
 4. `d8cb6e353` docs(lb-2b): LM Studio model-swap rules and LB-2b proposal notes in the LLM onboarding guide（上手-LLM 第四節第 8 點）
 5. docs(lb-2b): report and retest data（本報告、`LB-2b資料/`）
+
+## 開發 PM 裁定（2026-11-14）
+
+- **驗收通過，合併。** 改了 3 條既有測試，都是照玩法 PM 4.1.17 已定的內容改的（range_delta 開放、變奏分支 10 → 15），驗證沒有放寬。快照只新增 `skill-proposal/16` 一鍵，跟預測一致。戰鬥不變比對 different=0。換模型都照規則做，跑完已經把 Gemma 載回來。
+- 待決 1：**60 t/s 門檻不放寬**。swift 第 2 輪和 qwen 的改後重測不補，這段的結論靠 Gemma 兩輪加 swift 一輪就夠了。使用者要選 qwen 或 swift 時，再派一輪單獨量。
+- 待決 2（變奏成了 Gemma 的主要錯誤）、待決 3（`self_on_high_ground` 要不要開放給 LLM）：屬於玩法或規則的取捨，轉給玩法 PM。
+- 待決 4、6（被動 schema 固定成 spell／any、budget.over 的回饋附修法、RANGE_DELTA_ADVICE 的例子會引出 range 0）：都只是引導，跟玩法 PM 對 2、3 的答覆一起排成 **LB-2c** 一段做，不再分好幾次小段。
+- 待決 5：同意照「不加條件」判定。
+- 待決 7：同意。
+- 待決 8：跟 LB-2 的待決 4 一起，先維持 125k。
