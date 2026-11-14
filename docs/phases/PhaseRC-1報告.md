@@ -132,4 +132,12 @@
 
 ## 8. commit
 
-`git log 2de4893bf..HEAD`（分支 `worktree-agent-a7afeb0e2162bd7e7`，未 push）：見最後一個 commit 的訊息之前各筆；報告與資料是最後一筆。
+分支 `worktree-agent-a7afeb0e2162bd7e7`，未 push（`git log 2de4893bf..HEAD`）：
+
+- `20295ba2a` feat(rc-1): composer recipes for summons, passive and reaction holes
+- `9dfc743ff` fix(rc-1): eval topics require keywords_reachable (Q4)
+- `0059dfe50` test(rc-1): move wish two-keyword seeds after candidate RNG change
+- `49677b6fc` chore(rc-1): census diff script, onboarding note, test lint
+- `a86a62f66` test(rc-1): type-narrow summon effect in recipe test
+- `ce5651e02` docs(rc-1): report, census after recipes, before/after diff and samples
+- 之後一筆：報告 commit 清單
