@@ -180,19 +180,24 @@ def _models_key(subset: ProposalSubset) -> tuple[object, ...]:
     )
 
 
-def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> ProposalModels:
+def build_subset_models(
+    library: ContentLibrary, subset: ProposalSubset, *, split_category: bool = False
+) -> ProposalModels:
     """只含子集的提議模型，同一內容庫物件與同一子集重用（PERF-4）。
+
+    ``split_category``：頂層再依技能類別分支（``weapon_req`` 只列與 ``category`` 配對的值；LB-2，
+    見 :func:`~trpg.skillgen.proposal.build_proposal_models`）。
 
     :class:`ProposalModels` 是 frozen，呼叫端只讀，所以可以共用。快取項目持有內容庫的強參照：
     內容庫物件還活著時 ``id`` 不會被重用；被擠出後就能回收，最多留
     :data:`_MODELS_CACHE_SIZE` 項。"""
-    key = (id(library), _models_key(subset))
+    key = (id(library), (*_models_key(subset), split_category))
     with _models_lock:
         hit = _models_cache.get(key)
         if hit is not None:
             _models_cache.move_to_end(key)
             return hit[1]
-    models = _build_subset_models(library, subset)
+    models = _build_subset_models(library, subset, split_category=split_category)
     with _models_lock:
         _models_cache[key] = (library, models)
         _models_cache.move_to_end(key)
@@ -201,7 +206,9 @@ def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> Prop
     return models
 
 
-def _build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> ProposalModels:
+def _build_subset_models(
+    library: ContentLibrary, subset: ProposalSubset, *, split_category: bool = False
+) -> ProposalModels:
     """未記憶化的本體（:func:`~trpg.skillgen.proposal.build_proposal_models` 的便利包裝）。"""
     return build_proposal_models(
         library,
@@ -215,6 +222,7 @@ def _build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> Pro
         followup_skeletons=subset.followup_skeletons or None,
         followup_shapes=subset.followup_shapes,
         followup_moves=subset.followup_moves,
+        split_category=split_category,
     )
 
 

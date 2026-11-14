@@ -1,0 +1,26 @@
+[
+ {
+  "index": 0,
+  "status": 200,
+  "seconds": 7.17,
+  "finish_reason": "length",
+  "schema_chars": 16129,
+  "body": "{\n  \"id\": \"chatcmpl-6u8rd39m8hm4wj83c0dgh\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794659192,\n  \"model\": \"swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp\",\n  \"choices\": [\n    {\n      \"index\": 0,\n  "
+ },
+ {
+  "index": 1,
+  "status": 200,
+  "seconds": 10.18,
+  "finish_reason": "length",
+  "schema_chars": 90254,
+  "body": "{\n  \"id\": \"chatcmpl-gcu0smh1smdsf1f4m3fkog\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794659200,\n  \"model\": \"swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp\",\n  \"choices\": [\n    {\n      \"index\": 0,\n "
+ },
+ {
+  "index": 4,
+  "status": 200,
+  "seconds": 6.01,
+  "finish_reason": "length",
+  "schema_chars": 16129,
+  "body": "{\n  \"id\": \"chatcmpl-mc0425bkc0f9agg3perzc6\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794659210,\n  \"model\": \"swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp\",\n  \"choices\": [\n    {\n      \"index\": 0,\n "
+ }
+]

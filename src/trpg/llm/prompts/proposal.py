@@ -16,7 +16,8 @@ from trpg.llm.client import ChatMessage
 from trpg.llm.prompts.builder import build_skill_proposal_messages
 from trpg.llm.prompts.world import WorldStyle, load_world_style
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET, estimate_tokens
-from trpg.skillgen.proposal import ProposalModels
+from trpg.skillgen.proposal import WEAPON_REQ_DOC, ProposalModels
+from trpg.skillgen.proposal.schema_shape import shape_schema
 from trpg.skillgen.proposal_subset import (
     SCHEMA_CHAR_LIMIT,
     ProposalRequest,
@@ -59,6 +60,29 @@ KEYWORD_NOTE_ZH = (
     "（例：ways 有 apply_status（status＝commanding）就加一個施加 commanding 給友方的效果）。"
 )
 """題目有關鍵字時的說明（Phase 6S-2：``keyword.required``）。"""
+CATEGORY_NOTE_ZH = "技能類別：weapon＝武器技（用武器出招），spell＝法術技。weapon_req " + (
+    WEAPON_REQ_DOC
+)
+"""頂層欄位 ``category``／``weapon_req`` 的說明（LB-2：約束解碼看不到 schema 的說明文字，配對規則
+原本只寫在 schema 的 ``description``，模型讀不到，Gemma 常填錯）。"""
+ELEMENT_NOTE_ZH = "技能本身的元素，填在 JSON 頂層的 element（效果裡各自的 element 不算）。"
+"""頂層欄位 ``element`` 的說明（LB-2：``exclusion.terrain_needs_earth`` 時 Gemma 只在效果裡寫
+earth、頂層沒填，連續三次一樣）。"""
+EFFECTS_NOTE_ZH = (
+    "effects 第一個放核心效果；核心以外的每個效果都算附帶效果，數量不能超過所選骨架"
+    " secondary.note 寫的上限（例：上限 1 個時，核心以外只能再放 1 個效果）。"
+)
+"""``effects`` 的說明（LB-2：``skeleton.secondary_count``）。"""
+VARIANTS_NONE_ZH = "這個稀有度不能帶變奏：不要填 variants。"
+VARIANTS_NOTE_ZH = (
+    "選填，最多 {limit} 個；不填最容易通過。每個變奏＝id、name_zh、when（觸發條件）"
+    "＋ shape、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
+    "replace_effect 的 index 是要換掉的 effects 位置（從 0 起算），"
+    "不能指向主傷害（第一個 damage 效果）；要加強傷害請用 add_effect。"
+)
+"""``variants`` 的說明（LB-2：變奏數量、替換內容 1～2 項、主傷害不能被換掉）。"""
+PASSIVE_NOTE_ZH = "被動技能的 trigger.target 是 self 時，每個效果的 affects 都只能是 self。"
+"""被動技能的說明（LB-2：``passive.affects``）。"""
 LOCAL_CONTEXT_TOKENS = 16_384
 """本機模型（LM Studio）實際載入的上下文長度；system＋子集目錄＋題目＋ ``max_tokens`` 必須放得下
 （``tests/llm/test_prompt_prefix.py`` 檢查）。"""
@@ -89,11 +113,52 @@ def estimate_messages_tokens(messages: list[ChatMessage]) -> int:
     return sum(estimate_tokens(m["content"]) for m in messages)
 
 
+def _element_rules(library: ContentLibrary, subset: ProposalSubset) -> list[str]:
+    """要求技能元素的互斥規則（``require.elements_any``）中，這題用得到的那些 → 一句說明。"""
+    statuses = "apply_status" in subset.primitives
+    lines: list[str] = []
+    for rule in library.exclusions.rules:
+        need = rule.require.elements_any if rule.require is not None else None
+        if not need or rule.when is None:
+            continue
+        matches = (rule.when, *(rule.when.any_of or ()))
+        prims = sorted(
+            {p for m in matches for p in (m.primitives_any or ()) if p in subset.primitives}
+        )
+        stats = sorted({s for m in matches for s in (m.statuses or ())}) if statuses else []
+        used = [*prims, *(f"狀態 {s}" for s in stats)]
+        if used:
+            wanted = " 或 ".join(str(e) for e in need)
+            lines.append(
+                f"用到 {'、'.join(used)} 時，頂層 element 一定要填 {wanted}（{rule.name_zh}）。"
+            )
+    return lines
+
+
+def field_notes(
+    library: ContentLibrary, request: ProposalRequest, subset: ProposalSubset
+) -> dict[str, str]:
+    """頂層欄位的說明（LB-2）：約束解碼看不到 schema 的 ``description``，欄位的意思與跨欄位規則
+    要寫進 prompt 的資料區，模型才讀得到。只列這題用得到的規則。"""
+    notes = {
+        "category": CATEGORY_NOTE_ZH,
+        "element": "".join([ELEMENT_NOTE_ZH, *_element_rules(library, subset)]),
+        "effects": EFFECTS_NOTE_ZH,
+    }
+    if subset.kind == "passive":
+        notes["trigger"] = PASSIVE_NOTE_ZH
+    else:
+        limit = library.ruleset.core.variant_max_by_rarity.get(request.rarity, 0)
+        notes["variants"] = VARIANTS_NOTE_ZH.format(limit=limit) if limit else VARIANTS_NONE_ZH
+    return notes
+
+
 def _request_payload(
     request: ProposalRequest,
     subset: ProposalSubset,
     names: dict[str, str],
     world: WorldStyle | None = None,
+    fields: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "tier": request.tier,
@@ -102,6 +167,8 @@ def _request_payload(
         "keywords": [{"id": k, "name_zh": names[k]} for k in request.keywords],
         "budget_note_zh": BUDGET_NOTE_ZH,
     }
+    if fields:
+        payload["fields_note_zh"] = fields
     if world is not None and request.region is not None:
         # 6L-1（#126）：取得地點的區域與風格。中性（創角、許願池、測試原型）不帶：提議只出結構，
         # 名稱與描述由命名步驟照風格寫
@@ -127,6 +194,24 @@ def _request_payload(
     return payload
 
 
+def _models_and_schema(
+    library: ContentLibrary, subset: ProposalSubset, request: ProposalRequest
+) -> tuple[ProposalModels, dict[str, Any]]:
+    """提議模型與送給約束解碼的 schema（LB-2）。
+
+    頂層先依技能類別分支（``weapon_req`` 只能選與 ``category`` 配對的值；約束解碼看不到 schema 的
+    說明文字，4-L10a 寫在 ``WEAPON_REQ_DOC`` 的配對規則模型其實讀不到）；分支後超過
+    :data:`SCHEMA_CHAR_LIMIT` 時改用不分支的模型（配對規則仍寫在 prompt 的欄位說明）。變奏數量的
+    稀有度上限與「1～2 項替換內容」也寫進 schema（:func:`shape_schema`；驗證不變）。"""
+    limit = library.ruleset.core.variant_max_by_rarity.get(request.rarity, 0)
+    models = build_subset_models(library, subset, split_category=True)
+    schema = shape_schema(models.json_schema(), variant_limit=limit)
+    if json_chars(schema) > SCHEMA_CHAR_LIMIT:
+        models = build_subset_models(library, subset)
+        schema = shape_schema(models.json_schema(), variant_limit=limit)
+    return models, schema
+
+
 def build_proposal_prompt(
     library: ContentLibrary,
     request: ProposalRequest,
@@ -150,17 +235,17 @@ def build_proposal_prompt(
     system_tokens = estimate_messages_tokens(build_skill_proposal_messages({}, world=style)[:1])
     budget = PROMPT_TOKEN_BUDGET - system_tokens - USER_RESERVE_TOKENS
     subset = select_subset(library, request, token_budget=budget)
-    models = build_subset_models(library, subset)
     names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
     messages = build_skill_proposal_messages(
-        _request_payload(request, subset, names, style),
+        _request_payload(request, subset, names, style, field_notes(library, request, subset)),
         available=available_payload(library, subset),
         previous_proposal=previous_proposal,
         errors=errors,
         player_text=player_text,
         world=style,
     )
-    prompt = ProposalPrompt(messages, models.json_schema(), models, subset)
+    models, schema = _models_and_schema(library, subset, request)
+    prompt = ProposalPrompt(messages, schema, models, subset)
     if prompt.tokens > PROMPT_TOKEN_BUDGET:
         raise SubsetError(f"提議 prompt 估算 {prompt.tokens} token，超過上限 {PROMPT_TOKEN_BUDGET}")
     if prompt.schema_chars > SCHEMA_CHAR_LIMIT:

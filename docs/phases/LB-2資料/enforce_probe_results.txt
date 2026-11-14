@@ -1,0 +1,18 @@
+# enforce_probe.py 結果（2026-11-14，LM Studio 8001 埠，temperature 0、max_tokens 60、reasoning_effort none）
+# prompt 要模型輸出 {"color": "red", "kind": "c", "x": "zz", "a": 1, "b": 2}；看 schema 有沒有真的約束輸出。
+
+## google/gemma-4-26b-a4b-qat
+rf_enum 200 '{"color": "zzz_only"}'
+rf_oneOf 200 '{"kind": "a", "x": "aa"}'
+rf_anyOf 200 '{"kind": "a", "x": "aa"}'
+rf_maxProps 200 '{"a": 1, "b": 2, "c": 3}'
+guided_enum 200 '{"color": "red", "kind": "c", "x": "zz", "a": 1, "b": 2}'
+
+## swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp
+rf_enum 200 '{"color":"zzz_only"}'
+rf_oneOf 200 '{"kind":"a","x":"aa"}'
+rf_anyOf 200 '{"kind":"a","x":"aa"}'
+rf_maxProps 200 '{"a":1,"b":2,"c":3}'
+guided_enum 200 '```json\n{\n  "color": "red",\n  "kind": "c",\n  "x": "zz",\n  "a": 1,\n  "b": 2\n}\n```'
+
+# 結論：response_format 的 enum、oneOf、anyOf 都有約束；maxProperties 被忽略；guided_json 完全被忽略。

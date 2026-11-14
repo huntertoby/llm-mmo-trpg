@@ -12,12 +12,16 @@
 - 每題 ＝ 技能提議（重試迴圈，最多 ``max_retries`` 次）＋ 通過時的命名（``name_skill``，
   與遊戲相同）。
 - 一次只送一個請求；不平行。
+- LB-2：每次嘗試的診斷（原始輸出、完整錯誤、回饋文字）寫進每題的 ``attempt_details``；
+  ``trpg.llm`` 的 warning／error 日誌（例如 schema 退回）寫進 ``llm_log``，schema 實際用的寫法寫進
+  ``schema_mode``。``--temperature`` 只覆寫這一次執行。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import statistics
 import subprocess
@@ -40,7 +44,7 @@ from trpg.skillgen.proposal import ProposalContext
 from trpg.skillgen.proposal_fallback import FallbackError
 from trpg.skillgen.proposal_subset import ProposalRequest
 
-DEFAULT_OUT_DIR = Path("docs/phases/LB-1資料")
+DEFAULT_OUT_DIR = Path("docs/phases/LB-2資料")
 WARMUP_SEED = 999
 HTTP_OK = 200
 """暖機題目的輪替種子（和正式的 seed 0 題目不同）。"""
@@ -172,6 +176,7 @@ def _run_one(
         source=outcome.source,
         attempts=outcome.attempts,
         codes=[list(c) for c in outcome.codes],
+        attempt_details=[r.detail.to_json() if r.detail else {} for r in outcome.records],
         repaired=[list(r.repaired) for r in outcome.records],
         reason=outcome.reason,
         first_pass=outcome.source == "llm" and outcome.attempts == 1,
@@ -370,6 +375,8 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--out", type=Path, default=None, help="JSON 輸出路徑")
     parser.add_argument("--no-warmup", action="store_true")
     parser.add_argument("--enable-thinking", default=None, help="true／false，覆寫設定")
+    parser.add_argument("--temperature", type=float, default=None, help="覆寫溫度（只這一次）")
+    parser.add_argument("--label", default=None, help="輸出檔名（不含 .json）；預設用模型 id")
     args = parser.parse_args(argv)
     os.environ["TRPG_LLM_MODEL"] = args.model
     if args.reasoning_effort is not None:
@@ -379,9 +386,26 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     return args
 
 
+class _LogCapture(logging.Handler):
+    """收下 ``trpg.llm`` 的 warning 以上日誌（schema 退回等），寫進結果 JSON，同時印出。"""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.WARNING)
+        self.lines: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        line = f"{record.levelname}：{record.getMessage()}"
+        self.lines.append(line)
+        print(line, flush=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     config = load_llm_config()
+    if args.temperature is not None:
+        config = config.model_copy(update={"temperature": args.temperature})
+    captured = _LogCapture()
+    logging.getLogger("trpg.llm").addHandler(captured)
     library = load_library()
     requests = propose_requests(library, ProposeArgs(count=args.count, seed=args.seed))
     transport = RecordingTransport()
@@ -437,14 +461,21 @@ def main(argv: list[str] | None = None) -> int:
             )
     finally:
         client.close()
+        logging.getLogger("trpg.llm").removeHandler(captured)
+    result["schema_mode"] = client.schema_mode_used
+    result["unconstrained_calls"] = client.unconstrained_calls
+    result["llm_log"] = captured.lines
     result["finished_utc"] = datetime.now(UTC).isoformat(timespec="seconds")
     result["server"] = _server_info(config.base_url, config.model)
     result["summary"] = summarize(rows)
     result["rows"] = rows
-    out = args.out or DEFAULT_OUT_DIR / f"{args.model.replace('/', '_')}.json"
+    name = args.label or args.model.replace("/", "_")
+    out = args.out or DEFAULT_OUT_DIR / f"{name}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     summary = result["summary"]
+    if client.unconstrained_calls:
+        print(f"錯誤：{client.unconstrained_calls} 次呼叫沒有 schema 約束（退到 guided_json）")
     print(
         f"中位數 {summary['seconds_median']} 秒、最慢 {summary['seconds_max']} 秒、"
         f"一次通過 {summary['first_pass']}/{summary['completed']}、"
