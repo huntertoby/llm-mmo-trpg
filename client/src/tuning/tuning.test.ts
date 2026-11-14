@@ -203,6 +203,58 @@ describe("T-B1 表單由欄位清單產生；改過標記與差異一致", () =>
     expect(html).toContain("AI 估值（全體共用）・ai_profiles.yaml");
     expect(html).toContain("打部位：封招的價值");
   });
+
+  it("NW-3：格子物件表另成一組、用 object 讀欄位；畫面另讀 object 類；欄位照後端清單（含行為模式權重）", () => {
+    const list = [
+      { kind: "unit", id: "ashen_heart", name_zh: "灰燼之心", category: "boss" as const, file: FILE },
+      { kind: "ai", id: "ai_profiles", name_zh: "AI 估值表（全體共用）", category: "ai" as const, file: "ai_profiles.yaml" },
+      { kind: "object", id: "objects", name_zh: "格子物件（全體共用）", category: "object" as const, file: "objects.yaml" },
+    ];
+    expect(objectKind("unit", list, "objects")).toBe("object");
+    const listHtml = renderToStaticMarkup(
+      createElement(ObjectList, { objects: list, selected: "objects", query: "", edits: {}, onQuery: () => undefined, onSelect: () => undefined }),
+    );
+    expect(listHtml).toContain("格子物件（全體共用）（1）");
+    expect(listHtml).toContain('data-object="objects"');
+    const screen = stripTsComments(readFile(SRC_DIR, "screens/TuningScreen.tsx"));
+    expect(screen).toContain('tapi.tuningObjects("object")');
+    const row = (path: string, pattern: string, label: string, value: number, limitMin: number | null) => ({
+      path, pattern, label_zh: label, kind: "int" as const, value, default_zh: null, hint_min: 0, hint_max: 99, limit_min: limitMin, limit_max: null, readonly_zh: null, note_zh: "說明",
+    });
+    const objects: TuningObjectDetail = {
+      kind: "object",
+      id: "objects",
+      name_zh: "格子物件（全體共用）",
+      category: "object",
+      file: "objects.yaml",
+      fields: [row("objects[13].max_hp", "objects[*].max_hp", "物件「冷卻井」最大 HP", 15, 1)],
+      notes_zh: ["這份是全體共用的格子物件表"],
+    };
+    const props = { edits: {}, check: null, ladder: [], skills: [], onList: () => undefined, onEdit: () => undefined, onDrop: () => undefined };
+    const objHtml = renderToStaticMarkup(createElement(FieldForm, { detail: objects, ...props }));
+    expect(objHtml).toContain("格子物件（全體共用）・objects.yaml");
+    expect(objHtml).toContain("物件「冷卻井」最大 HP");
+    expect(objHtml).toContain('data-path="objects[13].max_hp"');
+    const ai: TuningObjectDetail = {
+      ...objects,
+      kind: "ai",
+      id: "ai_profiles",
+      category: "ai",
+      file: "ai_profiles.yaml",
+      fields: [
+        row("parts.guard_face_bonus", "parts.guard_face_bonus", "巨型頭目護面的加分", 3, 0),
+        row("profiles[2].weights.prefer_far_from_leader", "profiles[*].weights.prefer_far_from_leader", "行為模式「殼縫蟲群」：追離頭目遠的人", 3, null),
+      ],
+    };
+    const aiHtml = renderToStaticMarkup(createElement(FieldForm, { detail: ai, ...props }));
+    expect(aiHtml).toContain("巨型頭目護面的加分");
+    expect(aiHtml).toContain("行為模式「殼縫蟲群」：追離頭目遠的人");
+    // 改值：改動單照一般整數欄位記下（後端比對 old）
+    const well = objects.fields[0];
+    if (well === undefined) throw new Error("沒有冷卻井欄位");
+    const edits = setEdit({}, objects, well, "20");
+    expect(edits[editKey("objects.yaml", "objects[13].max_hp")]).toMatchObject({ old: 15, text: "20", object_id: "objects" });
+  });
 });
 
 describe("T-B2 後端的驗證錯誤：對得到欄位的在欄位下，對不到的在頁首", () => {
