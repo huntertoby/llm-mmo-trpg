@@ -265,8 +265,15 @@
 }
 
 .tn-field .tn-error,
-.tn-field .tn-warn {
+.tn-field .tn-warn,
+.tn-field .tn-notice {
   grid-column: 1 / -1;
+}
+
+/* NW-3b：欄位下方一直顯示的提示行（例：造牆技能放出的物件的最大 HP） */
+.tn-notice {
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .tn-error {

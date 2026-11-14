@@ -220,6 +220,11 @@ export function FieldRow({ detail, field, label, edits, errors, inherit = null, 
           </>
         )}
       </div>
+      {field.notice_zh != null && (
+        <div className="tn-notice muted small" data-testid="field-notice">
+          {field.notice_zh}
+        </div>
+      )}
       {shownErrors.map((m) => (
         <div key={m} className="tn-error" role="alert">
           {m}
