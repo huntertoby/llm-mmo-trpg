@@ -14,7 +14,7 @@ export const LABEL_TRAP = "陷阱";
 export const LABEL_ZONE = "持續區域";
 export const LABEL_RUNE = "符文";
 
-export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "rune" | "zone" | "objective";
+export type TileSectionKind = "terrain" | "surface" | "object" | "trap" | "rune" | "zone" | "objective" | "part";
 
 export interface TileSection {
   kind: TileSectionKind;

@@ -15,6 +15,7 @@ import { fbKindFor, type FbPart } from "../render/qAnimFB";
 import { PERCH_MS, type CreatureAttackType, type OwnFrames, type PerchRow } from "../render/creaturePose";
 import type { MoveAnim } from "./animation";
 import { casterMoveOf, creatureActionOf } from "./creatureAction";
+import { hitLocator } from "./footprint";
 import { samePos } from "./geometry";
 import { meleeWeaponRange } from "./glossary";
 import { noteStrike, repeatsStrike, type StrikeLedger } from "./repeatStrike";
@@ -277,11 +278,13 @@ const ledger = (s: RawSeg | null): StrikeLedger | null => (s === null ? null : {
 
 /** 和 vfx.ts 的 `opensSegment`／`openSegment` 同一套切法（段落與特效的 `casts` 一一對應）。 */
 function splitSegments(events: readonly Record<string, unknown>[], view: BattleView): RawSeg[] {
-  const at = (id: unknown): Pos | null => (typeof id === "string" ? (view.units.find((u) => u.id === id)?.pos ?? null) : null);
+  const loc = hitLocator(view.units); // GB-4a：和 vfx.ts 同一套演出位置
+  const at = loc.at;
   const out: RawSeg[] = [];
   let cur: RawSeg | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
+    loc.note(e);
     if (e.type === "rune_removed" && e.reason === "detonated") {
       // 符文引爆不開新段（和 vfx.ts 相同），但留在這一段的事件裡（推出 `detonate_runes`）
       cur?.events.push(e);

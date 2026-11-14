@@ -13,10 +13,11 @@
 // 7. 頭目部位（PB-1c，05 5.12.3、R1、R6）：要送出的普攻或單體技能的目標有部位（伺服器給了 `part_options`）時，
 //    不直接送出，改成打開選部位小選單（`part_menu`）。選單開著時（以按下滑鼠那一刻為準）再點同一個頭目＝打本體；
 //    點別的地方只關選單（選單在按下時已經關了），不做別的事。沒有部位的單位所有分支和改前相同。
+// 8. 巨型頭目（GB-4a，T12）：不跳選單，由點的那一格推出部位（`footprint.giantAim`）；打不到的部位格只提示原因。
 
 import type { Action, BattleView, PartActionOptions, PartOption, Pos, TacticalOrder, UnitView } from "../api/types";
 import { actionForClick, type ClassifiedActions } from "./actions";
-import { samePos } from "./geometry";
+import { giantAim, isGiant, occupies, standingAtTile, type GiantAim } from "./footprint";
 import type { OrderKind } from "./orders";
 import { orderFromTile } from "./orders";
 import { blockedPushAt } from "./pushReasons";
@@ -91,17 +92,54 @@ export function partOptionsFor(list: readonly PartActionOptions[] | null | undef
 function withPartMenu(s: TileClickState, tile: Pos, sent: Extract<TileClickResult, { kind: "act" | "submit" }>): TileClickResult {
   const found = partOptionsFor(s.partActions, sent.action);
   if (found === null) return sent;
+  const boss = s.view.units.find((u) => u.id === found.target_id);
+  if (boss !== undefined && isGiant(boss)) return giantClick(boss, found.options, tile, sent);
   if (s.partMenuTarget === found.target_id) return sent;
   return { kind: "part_menu", targetId: found.target_id, tile, action: sent.action, options: found.options, submit: sent.kind === "submit", dismissPin: sent.dismissPin };
+}
+
+/**
+ * 點巨型頭目的某一格（GB-4a，T12）：不跳選單，由那一格推出部位——打得到就帶 `target_part` 照原本送出；
+ * 前殼、已破、還沒露出的部位格＝本體；打不到的部位格不送出，提示原因。
+ */
+function giantClick(boss: UnitView, options: readonly PartOption[], tile: Pos, sent: Extract<TileClickResult, { kind: "act" | "submit" }>): TileClickResult {
+  const aim = giantAim(boss, options, sent.action, tile);
+  if (aim.kind === "blocked") return { kind: "hint", text: `打不到${aim.part.name_zh}：${aim.reason}` };
+  return { ...sent, action: aim.action };
+}
+
+/**
+ * `action`（不帶部位）打的是巨型頭目、而且 `tile` 是它的佔格時，這一格會打到什麼（GB-4a）；其他情況 `null`。
+ * 滑過預覽與資訊卡用，和點擊同一套判斷（`giantAim`）。
+ */
+export function giantAimAt(view: BattleView, list: readonly PartActionOptions[] | null | undefined, action: Action | null, tile: Pos | null): GiantAim | null {
+  if (action === null || tile === null) return null;
+  const found = partOptionsFor(list, action);
+  if (found === null) return null;
+  const boss = view.units.find((u) => u.id === found.target_id);
+  if (boss === undefined || !isGiant(boss) || !occupies(boss, tile)) return null;
+  return giantAim(boss, found.options, action, tile);
+}
+
+/** 滑過格子時，點下去會送出的動作（不帶部位）：有選取模式照模式，否則點敵人＝普攻。不能行動時 `null`。 */
+export function hoverActionAt(
+  s: Pick<TileClickState, "view" | "hero" | "canAct" | "copying" | "command" | "mode" | "hurlPick" | "classified">,
+  tile: Pos | null,
+): Action | null {
+  if (!(s.canAct || s.copying) || tile === null || s.hero === null || s.command !== null) return null;
+  if (s.mode !== null) return actionAtTile(s.mode, s.view, s.hero, tile, s.hurlPick);
+  const target = standingAtTile(s.view.units, tile);
+  return target === undefined ? null : (s.classified.attacks.get(target.id) ?? null);
 }
 
 /** 指揮召喚物時的點擊：選好終點後點可打到的敵人 ＝ 移動並攻擊；否則點藍格選終點。 */
 function commandClick(s: TileClickState, hero: UnitView, command: CommandSession, tile: Pos): TileClickResult {
   if (command.dest !== null) {
     const chosen = optionAt(command.options, command.dest);
-    const foe = chosen?.targets.find((id) =>
-      samePos(s.view.units.find((u) => u.id === id)?.pos ?? { x: -1, y: -1 }, tile),
-    );
+    const foe = chosen?.targets.find((id) => {
+      const u = s.view.units.find((x) => x.id === id);
+      return u !== undefined && occupies(u, tile);
+    });
     if (chosen !== undefined && foe !== undefined) {
       const action = commandAction(hero.id, command.summonId, chosen, foe);
       return action === null ? IGNORE : { kind: "act", action, dismissPin: false };

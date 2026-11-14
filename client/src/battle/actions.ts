@@ -2,6 +2,7 @@
 import type { Action, AttackAction, BattleView, MoveAction, Pos } from "../api/types";
 import { DIRECTIONS, objectStyle, reactionName } from "./glossary";
 import { REACTION_MODE_LABELS } from "./reactions";
+import { standingAtTile } from "./footprint";
 import { posKey, samePos } from "./geometry";
 import { MODE_LABELS } from "./summonControl";
 import { chargeLabel } from "./targeting";
@@ -169,7 +170,7 @@ export function classifyActions(
 
 /** 點選格子 → 要送出的動作：格上有可攻擊的敵人就攻擊，否則可移動就移動，否則 `null`。 */
 export function actionForClick(classified: ClassifiedActions, view: BattleView, tile: Pos): Action | null {
-  const target = view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, tile));
+  const target = standingAtTile(view.units, tile);
   if (target !== undefined) {
     const attack = classified.attacks.get(target.id);
     if (attack !== undefined) return attack;

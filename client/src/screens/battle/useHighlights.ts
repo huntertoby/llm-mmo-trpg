@@ -21,7 +21,6 @@ import {
 import type { TelegraphMark } from "../../battle/telegraph";
 import { guardDraw, type AimDraw } from "../../battle/rgMarks";
 import {
-  actionAtTile,
   DIRECTION_ARROWS,
   hurlPickPos,
   isSelfOnly,
@@ -30,7 +29,8 @@ import {
   type ActionMode,
 } from "../../battle/targeting";
 import { onField } from "../../battle/units";
-import { samePos } from "../../battle/geometry";
+import { unitTiles } from "../../battle/footprint";
+import { giantAimAt, hoverActionAt } from "../../battle/tileClick";
 import type { DrawModel } from "../../battle/drawModel";
 import type { SkillCard } from "../../api/types";
 import type { Highlights } from "../../render/BattleRenderer";
@@ -96,12 +96,14 @@ export function useHighlights(i: HighlightInput): HighlightState {
   const [logHover, setLogHover] = useState<LogHover | null>(null);
   const [telegraphHover, setTelegraphHover] = useState<readonly Pos[] | null>(null);
 
+  const partActions = response.part_options;
   const hoverAction = useMemo<Action | null>(() => {
-    if (!(canAct || copying) || hover === null || hero === null || command !== null) return null;
-    if (mode !== null) return actionAtTile(mode, view, hero, hover, hurlPick);
-    const target = view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, hover));
-    return target === undefined ? null : (classified.attacks.get(target.id) ?? null);
-  }, [canAct, copying, hover, hero, mode, view, classified, hurlPick]);
+    const action = hoverActionAt({ view, hero, canAct, copying, command, mode, hurlPick, classified }, hover);
+    // GB-4a：滑過巨型頭目的部位格直接預覽打那個部位（不跳選單）；打不到的部位格不預覽（原因在資訊卡）
+    const aim = giantAimAt(view, partActions, action, hover);
+    if (aim === null) return action;
+    return aim.kind === "blocked" ? null : aim.action;
+  }, [canAct, copying, hover, hero, mode, view, classified, hurlPick, command, partActions]);
   const selfAction = mode !== null && isSelfOnly(mode.targets) ? mode.targets.self : null;
   // 複製技能暫停時也能預覽：伺服器把滑過的選取當成「被複製技能的目標」，預覽整個施放（3C-6a）。
   const preview = usePreview(
@@ -174,7 +176,7 @@ export function useHighlights(i: HighlightInput): HighlightState {
         : [...classified.moves.values()].map((m) => m.path[m.path.length - 1] as Pos);
     const attacks = [...classified.attacks.keys()].flatMap((id) => {
       const u = view.units.find((x) => x.id === id);
-      return u === undefined ? [] : [u.pos];
+      return u === undefined ? [] : unitTiles(u);
     });
     return { moves, attacks, directions: [], preview: previewTiles, overlays, picked: [], path, ...common };
   }, [
@@ -204,8 +206,8 @@ export function useHighlights(i: HighlightInput): HighlightState {
     let out = baseHighlights;
     if (telegraphHover !== null) out = { ...out, preview: [...out.preview, ...telegraphHover] };
     if (logHover === null) return out;
-    const unitTiles = shown.units.filter((u) => logHover.unitIds.includes(u.id) && onField(u)).map((u) => u.pos);
-    return { ...out, preview: [...out.preview, ...unitTiles, ...logHover.tiles] };
+    const logUnitTiles = shown.units.filter((u) => logHover.unitIds.includes(u.id) && onField(u)).flatMap(unitTiles);
+    return { ...out, preview: [...out.preview, ...logUnitTiles, ...logHover.tiles] };
   }, [baseHighlights, logHover, telegraphHover, shown]);
 
   const legend = useMemo(() => legendEntries(highlights.overlays, mode), [highlights.overlays, mode]);

@@ -3,6 +3,7 @@ import type { ConditionOffMark } from "./conditionOff";
 import type { Action, BattleView, ChargeView, Direction, InteractOption, Pending, Pos, SkillCard, UnitView, VariantState } from "../api/types";
 import { skillVariantView, type SkillVariantView } from "./variants";
 import { buildComposite, compositePrompt, firstKeyAt, firstPos, secondAt, secondTiles, soleCenter, type CompositeSet } from "./composite";
+import { unitTiles, unitsOnTile } from "./footprint";
 import { posKey, samePos } from "./geometry";
 import { pickCountText, splitCompositeKeys, tileCount, unitCount } from "./pickCount";
 import { activeReason } from "./activations";
@@ -524,7 +525,7 @@ export function fallbackActions(legal: readonly Action[], hero: UnitView): Actio
 // ---- 點選 / 滑過 ----------------------------------------------------------
 
 function unitIdsAt(view: BattleView, tile: Pos): string[] {
-  const here = view.units.filter((u) => !u.escaped && !u.dismissed && samePos(u.pos, tile));
+  const here = unitsOnTile(view.units, tile).filter((u) => !u.escaped && !u.dismissed);
   return [...here.filter((u) => !u.downed), ...here.filter((u) => u.downed)].map((u) => u.id);
 }
 
@@ -710,7 +711,7 @@ export function targetTiles(
   if (mode.kind === "defend" && t.self !== null) targets.push(hero.pos);
   for (const id of t.units.keys()) {
     const u = view.units.find((x) => x.id === id);
-    if (u !== undefined) targets.push(u.pos);
+    if (u !== undefined) targets.push(...unitTiles(u));
   }
   for (const id of t.objects.keys()) {
     const o = view.objects.find((x) => x.id === id);
