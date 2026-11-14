@@ -46,7 +46,7 @@
 **2. 最後一次全量**：2026-11-14 6c4c05475 全量只紅 OpenAPI 快照（GB-1c 新事件），開發 PM 重產 openapi.json／schema.d.ts 後該測試、vitest 4537、build、typecheck 全 0，push（pytest 17579＋2）。含 GB-1c（部位綁格、限時封招、最遠敵人落點、火地生長，LOG_FORMAT /128）、PB-1f（破字記號、e3p、e3q）、美術 GB 移植需求。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量。**
 
 **3. 執行中的 agent（分支）**：
-- GB-2＋GB-2b 已合併（11-14），全量中；GB-3、GB-4a 可派；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
+- GB-2＋GB-2b 已合併（11-14），未 push：使用者回 GB-2b 待決 1「B」，GB-2c（測試改成 enemy_only 整批不檢查）做完才全量。GB-3、GB-4a 11-14 派出，使用者電腦關機中斷，已用 SendMessage 續做（worktree 無改動）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
@@ -80,10 +80,7 @@
 
 | 給誰 | 來源 | 要做的事 | 細節在 |
 |---|---|---|---|
-| 使用者（經專案 PM） | GB-2b 待決 1 | 熔心吸氣照 R7 改成 4 格內後，閃現強化在 T2 沒空間再加一級，agent 把它加進測試的例外名單 `NO_ROOM_AT_BASE_TIER`（11-12 使用者選 C 時只列熔岩濺落，原話「更多卡住再考慮 B」）。問：維持 C、名單加熔心吸氣，還是改 B？（這是測試放寬，push 前報） | `docs/phases/PhaseGB-2b報告.md` 待決 1 |
-| 玩法 PM | GB-2、GB-2b | 平衡觀察：改後熔心坑 12 場部位破 7 次、平均輪數約 5.7 → 4.9；吸氣 4 格內範圍很大（坑底 y 2～5 整排、頭目南方三欄到 y 8） | 兩份報告待決 7／3 |
 | 美術 PM | GB-2b | 圖示動作變了：熔心吸氣 spin → area、熔岩濺落 area → aura，要不要看一眼；A5 熔心坑樣張現在可以做（GB-2 已合併，蜥蜴出生格 (2, 3)、(8, 3)） | `docs/phases/PhaseGB-2b報告.md` 待決 4、5 |
-| 玩法 PM | GB 第 10 節 | 平衡疑慮（例：R2 讓熔心爆十字從 9 格變 24 格），請記平衡待查 | `docs/phases/PhaseGB計畫.md` 第 10 節 |
 
 ### 3.4 已接受的技術細節（不用再問）
 
