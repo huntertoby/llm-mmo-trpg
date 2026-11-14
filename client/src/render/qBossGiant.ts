@@ -970,8 +970,16 @@ function pop(ctx: Ctx, x: number, y: number, a: number, f: number): void {
   ctx.restore();
 }
 const SMOKE = ["#2c272b", "#5a5357"] as const;
-/** 黑煙（噴口封住的專屬特效）：四團平塗煙，整團包細外框、一起淡。 */
-function smoke(ctx: Ctx, x: number, y: number, r: number, a: number): void {
+/** 一團黑煙的上緣離中心多遠（最上面那瓣 0.68r 往上＋半徑 0.8r＋外框；模型 px）。 */
+export const smokeRise = (r: number): number => (0.68 + 0.8) * r + 0.6 * GG;
+/**
+ * GB-4d（美術 GB-4c 待決 6）：黑煙中心的 y，上緣不高過 `ceil`（模型 px、相對錨點；`undefined`＝不壓）。
+ * 只往下推，不縮小、不改透明度。
+ */
+export const smokeY = (y: number, r: number, ceil: number | undefined): number => (ceil === undefined ? y : Math.max(y, ceil + smokeRise(r)));
+/** 黑煙（噴口封住的專屬特效）：四團平塗煙，整團包細外框、一起淡。`ceil`：煙頂上限（`smokeY`）。 */
+function smoke(ctx: Ctx, x: number, y0: number, r: number, a: number, ceil?: number): void {
+  const y = smokeY(y0, r, ceil);
   const lobes = [[0, 0, 1], [-0.75, 0.3, 0.72], [0.75, 0.25, 0.78], [0.1, -0.68, 0.8]] as const;
   layer(
     ctx,
@@ -1025,8 +1033,9 @@ function sparks(ctx: Ctx, k: number): void {
 /**
  * 破壞演出的特效層（白閃之外的東西）：畫在所有單位與部位格標示之上。ctx 座標＝模型 px、原點＝錨點；
  * `st.fx`＝{ part, k 0～4, side }；`boardScale`＝地圖縮放（「破」字 800 反向放大，`bossPartArt.popScale`）。
+ * `smokeCeil`（GB-4d）：噴口黑煙的煙頂上限（模型 px、相對錨點；`undefined`＝照舊，`partBreakFx.giantSmokeCeil` 算）。
  */
-export function giantBreakFx(ctx: Ctx, st: GiantState, boardScale = 1): void {
+export function giantBreakFx(ctx: Ctx, st: GiantState, boardScale = 1, smokeCeil?: number): void {
   const S = giantStateOf(st);
   const f = S.fx;
   if (f === null || f.k >= 4) return;
@@ -1058,13 +1067,13 @@ export function giantBreakFx(ctx: Ctx, st: GiantState, boardScale = 1): void {
       D(M[1]![0], M[1]![1], [burst(5, "#ffe08a", "#ffffff", 0.8)]);
     }
     if (k === 2) {
-      M.forEach(([x, y], i) => smoke(ctx, x, y - 7, i === 2 ? 9 : 8, 0.95));
+      M.forEach(([x, y], i) => smoke(ctx, x, y - 7, i === 2 ? 9 : 8, 0.95, smokeCeil));
       D(mid[0], mid[1], [burst(15, "#ffd23f", "#ffffff"), { k: "ring", x: 0, y: 2, rx: 20, c: "#ffe08a", w: 1.6 }]);
     }
     if (k === 3)
       M.forEach(([x, y], i) => {
-        smoke(ctx, x - 2, y - 17, i === 2 ? 10 : 9, 0.9);
-        smoke(ctx, x + 3, y - 32, i === 2 ? 12 : 10.5, 0.65);
+        smoke(ctx, x - 2, y - 17, i === 2 ? 10 : 9, 0.9, smokeCeil);
+        smoke(ctx, x + 3, y - 32, i === 2 ? 12 : 10.5, 0.65, smokeCeil);
         D(x, y + 1, [{ k: "dust", x: 0, y: 0, r: 5, c: "#8a807a", a: 0.9 }]);
       });
   } else if (f.part === "seam") {
@@ -1448,6 +1457,37 @@ export interface GiantPose {
   reduce?: boolean | undefined;
 }
 
+/** 關鍵格之間 smoothstep（同 `qBoss` 的 `kfB`）。 */
+function kfG(u: number, pts: ReadonlyArray<readonly [number, number]>): number {
+  const first = pts[0]!;
+  if (u <= first[0]) return first[1];
+  for (let i = 1; i < pts.length; i++) {
+    const [b, vb] = pts[i]!;
+    if (u <= b) {
+      const [a, va] = pts[i - 1]!;
+      const x = (u - a) / (b - a || 1);
+      return va + (vb - va) * x * x * (3 - 2 * x);
+    }
+  }
+  return pts[pts.length - 1]![1];
+}
+/**
+ * GB-4d（美術 GB-4c 待決 5）：熔心吸氣的變體 `inhale`——吸氣火星往核心收（整段）＋核心蓄力光（越吸越亮），不畫熔岩柱。
+ * 長度、格數同 `spout`（1300 ms），所以命中對齊不變。原型值。
+ */
+export const INHALE_KF = {
+  inhale: [[0, 0], [0.12, 1], [0.8, 1], [1, 0]],
+  charge: [[0, 0], [0.5, 0.55], [0.8, 1], [1, 0.3]],
+} as const satisfies Record<string, ReadonlyArray<readonly [number, number]>>;
+/**
+ * 巨型頭目的片段對應（`qBoss.bossClipOf` 之後再換）：第 2 階段的範圍片段（`spout`；熔心吸氣施放）改播吸氣變體 `inhale`。
+ * 第 1 階段（熔岩濺落施放）、第 3 階段照舊 `spout`；1 格灰燼之心不經過這裡。
+ */
+export function giantClipOf(look: Pick<GiantLook, "phase">, clip: string | undefined): string {
+  const c = bossClipOf({ id: "ah", phase: look.phase }, clip);
+  return c === "spout" && look.phase === 2 ? "inhale" : c;
+}
+
 /**
  * 片段 → `GiantState`（移植需求第 7 節第 1 條）：時間軸沿用 `qBoss.ts` 灰燼之心的 `BOSS_MS`／`bossFrameU`／`bossPlan`，
  * 只取參數：待機的呼吸（`loop` 首尾接上）、熔岩噴發的吸氣與熔岩柱（`spout`，從中間噴口往上）、火焰箭的核心光（`flare`→`charge`）、
@@ -1456,14 +1496,20 @@ export interface GiantPose {
 export function giantStateFor(look: GiantLook, pose: GiantPose | null): { st: GiantState; flash: number } {
   const base: GiantState = { phase: look.phase, shell: look.shell, ...(look.breakT === undefined ? {} : { breakT: look.breakT }), broken: look.broken, fx: look.fx };
   if (pose === null || pose.clip === undefined) return { st: { ...base, t: 1200 }, flash: clamp(num(pose?.flash, 0)) };
-  const clip = bossClipOf({ id: "ah", phase: look.phase }, pose.clip);
-  const P = bossPlan("ah", clip, num(pose.u, 0), { phase: look.phase, ...(pose.reduce === true ? { reduce: true } : {}) });
+  const clip = giantClipOf(look, pose.clip);
+  const u = num(pose.u, 0);
+  // 吸氣變體的時間軸照 spout（片段長度、命中對齊不變），只換參數
+  const P = bossPlan("ah", clip === "inhale" ? "spout" : clip, u, { phase: look.phase, ...(pose.reduce === true ? { reduce: true } : {}) });
   const s = P.st as { t?: number; loop?: number; inhale?: number; spout?: number; dieT?: number };
   const st: GiantState = { ...base, t: num(s.t, 1200) };
   if (s.loop !== undefined) st.loop = s.loop;
   if (clip === "spout" && pose.reduce !== true) {
     st.inhale = num(s.inhale, 0);
     st.spout = num(s.spout, 0);
+  }
+  if (clip === "inhale" && pose.reduce !== true) {
+    st.inhale = kfG(u, INHALE_KF.inhale);
+    st.charge = kfG(u, INHALE_KF.charge);
   }
   const flare = P.o.flare ?? 0;
   if (flare > 0) st.charge = flare;

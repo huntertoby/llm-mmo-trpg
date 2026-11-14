@@ -169,9 +169,12 @@ describe("戰場接點", () => {
     expect(giantStateFor(look, null).st.t).toBe(1200);
     const idle = giantStateFor(look, { clip: "idle", u: 0.5 });
     expect(idle.st.loop).toBe(0.5);
-    const spout = giantStateFor(look, { clip: "atk:@area", u: 0.6 });
+    // GB-4d：第 2 階段的範圍片段播吸氣變體（不冒熔岩柱，`gb4dGiantFixes.test.ts`）；第 1 階段照舊 spout
+    const inhale = giantStateFor(look, { clip: "atk:@area", u: 0.6 });
+    expect(inhale.st.spout ?? 0).toBe(0);
+    expect(inhale.st.phase).toBe(2); // 不像 1 格版強制回第 1 階段
+    const spout = giantStateFor(giantLookOf({ phase: 1, statusIds: ["molten_shell"] }), { clip: "atk:@area", u: 0.6 });
     expect(spout.st.spout).toBeGreaterThan(0.5);
-    expect(spout.st.phase).toBe(2); // 不像 1 格版強制回第 1 階段
     const bolt = giantStateFor(look, { clip: "atk:@cast", u: 0.3 });
     expect(bolt.st.charge).toBeGreaterThan(0);
     expect(giantStateFor(look, { clip: "hit", u: 0 }).flash).toBeCloseTo(0.9, 6);

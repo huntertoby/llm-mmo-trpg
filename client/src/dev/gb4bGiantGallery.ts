@@ -4,7 +4,8 @@
 // `render/fixtures/unitDolls.json`。每格＝真 1 倍的畫布（`extract`，裝置像素比 1 時＝畫面像素）＋可選的最近鄰放大。
 // 參數：
 //   ?set=sprites|marks|break|after|shed|field|side   （逗號接多段；預設 sprites；side＝BM-1 狀態 3 個＋蓄力的 HUD；tele＝BM-1 延遲預告字）
-//   set=clips：GB-4c（美術 GB-4b 待決 6）攻擊片段停格——熔岩噴發（第 1 階段 spout）、熔心吸氣（第 2 階段，同 spout 片段）、受擊、倒下各 4 格；
+//   set=clips：GB-4c（美術 GB-4b 待決 6）攻擊片段停格——熔岩噴發（第 1 階段 spout）、熔心吸氣（第 2 階段；GB-4d 起播吸氣變體 inhale，
+//              pose 給遊戲同樣的 `atk:@area`）、受擊、倒下各 4 格（&u=a,b,… 換停格的 u）；
 //              本體貼圖直接用遊戲的 `drawGiantFrame`（`inkCreature` 巨型分支畫的同一個函式，pose＝片段＋u），底色是石地＋3×3 格線
 //   &w=1600|800   地圖縮放照美術移植需求 2.3（1600＝1.308、800＝0.531）；`&scale=` 另給
 //   &zoom=<k>     最近鄰放大倍數（預設 0＝不放大；800 的立繪、殼縫格、「破」字特寫用 4）
@@ -27,7 +28,7 @@ import { giantMarksOf } from "../render/battle/partTileMarks";
 import { BattleRenderer } from "../render/BattleRenderer";
 import dolls from "../render/fixtures/unitDolls.json";
 import { waitForFonts } from "../render/fontLoad";
-import { giantBreakCanvas } from "../render/partBreakFx";
+import { giantBreakCanvas, giantSmokeCeil } from "../render/partBreakFx";
 import { drawGiantFrame, GIANT_ANCHOR_DY, GIANT_BOX, GIANT_FEET_TO_ANCHOR, GIANT_FX_BOX, GIANT_PART_OF, GT, type GiantLook } from "../render/qBossGiant";
 
 setGlossary(glossary as unknown as Glossary);
@@ -237,7 +238,10 @@ function breakCell(cap: string, before: HeartSpec, after: HeartSpec, partId: str
       p.setPartFx(BOSS, giantBreakFxOf(partId, frame, side, shed));
       if (frame >= 4) return;
       const res = p.art.figureRes(1);
-      const cv = giantBreakCanvas({ phase: before.phase ?? 1, fx: { part: GIANT_PART_OF[partId]!, k: frame, side } }, res, SCALE);
+      // GB-4d：煙頂上限照遊戲（`giantBreakEffect` 同一個 `giantSmokeCeil`，看這一格的 HUD 下緣；只 800 寬）
+      const d = buildDrawModel(view, HERO, null, undefined, BATTLE_DRAW).units.find((u) => u.id === BOSS);
+      const ceil = d === undefined ? undefined : giantSmokeCeil(d, SCALE);
+      const cv = giantBreakCanvas({ phase: before.phase ?? 1, fx: { part: GIANT_PART_OF[partId]!, k: frame, side } }, res, SCALE, ceil);
       if (cv === null) return;
       const s = Sprite.from(cv);
       const at = p.unitSprites.get(BOSS)!;
@@ -352,10 +356,10 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
 };
 
 // ---- GB-4c：攻擊片段停格（本體貼圖；位置、白閃、縮小照 `giantStateFor`） ----
-const CLIP_U = [0.1, 0.35, 0.6, 0.85];
+const CLIP_U = q.get("u")?.split(",").map(Number) ?? [0.1, 0.35, 0.6, 0.85];
 const CLIPS: ReadonlyArray<{ zh: string; clip: string; phase: 1 | 2 | 3; u: readonly number[] }> = [
   { zh: "熔岩噴發（第 1 階段・熔岩濺落施放，spout）", clip: "spout", phase: 1, u: CLIP_U },
-  { zh: "熔心吸氣（第 2 階段，spout 片段：吸氣火星＋蓄力光）", clip: "spout", phase: 2, u: CLIP_U },
+  { zh: "熔心吸氣（第 2 階段，GB-4d 吸氣變體 inhale：吸氣火星往核心收＋核心蓄力光，不畫熔岩柱）", clip: "atk:@area", phase: 2, u: CLIP_U },
   { zh: "受擊（hit，整隻白閃；3×3 不位移）", clip: "hit", phase: 2, u: [0, 0.25, 0.5, 0.9] },
   { zh: "倒下（death，縮小變暗）", clip: "death", phase: 3, u: [0.15, 0.45, 0.75, 1] },
 ];
@@ -382,7 +386,8 @@ function clipCanvas(look: GiantLook, clip: string, u: number): HTMLCanvasElement
 }
 function clipsSection(): void {
   document.body.appendChild(h("h3", { textContent: `攻擊片段停格（${W} 寬、地圖縮放 ${SCALE}、真 1 倍；青線＝3×3 格線；開發頁・本體貼圖函式同遊戲）` }));
-  for (const c of CLIPS) {
+  for (const [ci, c] of CLIPS.entries()) {
+    if (GROUPS !== null && !GROUPS.includes(ci)) continue; // GB-4d：&group= 也能挑片段（0 起）
     document.body.appendChild(h("p", { className: "cap", textContent: c.zh }));
     const row = h("div", { className: "row" });
     row.style.flexWrap = "nowrap";
