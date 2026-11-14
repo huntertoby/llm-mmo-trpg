@@ -7,6 +7,7 @@
 //   &w=1600|800   地圖縮放照美術移植需求 2.3（1600＝1.308、800＝0.531）；`&scale=` 另給
 //   &zoom=<k>     最近鄰放大倍數（預設 0＝不放大；800 的立繪、殼縫格、「破」字特寫用 4）
 //   &only=<i,…>   每一段只畫第幾格（0 起；特寫用）
+//   &group=<i,…>  只畫第幾段（0 起；破壞連拍分張用）
 //   &grid=0       不畫 3×3 格線（預設畫：佔格外框＋格線，看核心、殼窩只在中排）
 // 畫好後 `document.body.dataset.ready = "1"`。
 import { Rectangle, Sprite } from "pixi.js";
@@ -135,31 +136,32 @@ interface Cell {
 }
 
 /** 3×3 格線（佔格外框實線、格線虛線），畫在真 1 倍的畫布上。 */
-function gridOn(c: HTMLCanvasElement, cx: number, cy: number, worldY: number): void {
+function gridOn(c: HTMLCanvasElement, cx: number, cy: number, ox: number, oy: number): void {
+  // 世界座標（格）→ 這張畫布的像素：(X × T − ox) × s；`ox`、`oy`＝畫布左上角的世界座標（模型 px，含頭頂預留）
   const g = c.getContext("2d")!;
   const s = SCALE * devicePixelRatio;
+  const px = (X: number): number => (X * T - ox) * s;
+  const py = (Y: number): number => (Y * T - oy) * s;
   g.save();
   g.strokeStyle = "rgba(120,220,255,0.9)";
   g.lineWidth = 1;
   for (let i = 0; i <= 3; i++) {
-    const x = Math.round((cx - 1.5 + i) * T * s) + 0.5;
-    const y = Math.round(((cy - 1.5 + i) * T + worldY) * s) + 0.5;
+    const x = Math.round(px(cx - 1.5 + i)) + 0.5;
+    const y = Math.round(py(cy - 1.5 + i)) + 0.5;
     g.setLineDash(i === 0 || i === 3 ? [] : [3, 3]);
     g.beginPath();
-    g.moveTo(x, ((cy - 1.5) * T + worldY) * s);
-    g.lineTo(x, ((cy + 1.5) * T + worldY) * s);
+    g.moveTo(x, py(cy - 1.5));
+    g.lineTo(x, py(cy + 1.5));
     g.stroke();
     g.beginPath();
-    g.moveTo((cx - 1.5) * T * s, y);
-    g.lineTo((cx + 1.5) * T * s, y);
+    g.moveTo(px(cx - 1.5), y);
+    g.lineTo(px(cx + 1.5), y);
     g.stroke();
   }
   // 錨點（南排南緣中點）
   g.setLineDash([]);
   g.fillStyle = "#7cf";
-  const ax = cx * T * s;
-  const ay = ((cy + 1.5) * T + worldY) * s;
-  g.fillRect(Math.round(ax) - 2, Math.round(ay) - 2, 4, 4);
+  g.fillRect(Math.round(px(cx)) - 2, Math.round(py(cy + 1.5)) - 2, 4, 4);
   g.restore();
 }
 
@@ -190,8 +192,9 @@ async function cellOf(c: Cell, row: HTMLElement): Promise<void> {
   const full = p.app.renderer.extract.canvas({ target: p.app.stage, frame: new Rectangle(0, 0, scr.width, scr.height), resolution: devicePixelRatio * SCALE });
   full.style.width = `${full.width / devicePixelRatio}px`;
   const b = c.view.units.find((u) => u.id === BOSS);
-  if (GRID && b !== undefined) gridOn(full, b.pos.x + 0.5, b.pos.y + 0.5, p.world.y);
-  host.replaceWith(c.crop === undefined ? full : zoomOf(r, c.crop, 1));
+  const shown = c.crop === undefined ? full : zoomOf(r, c.crop, 1);
+  if (GRID && b !== undefined) gridOn(shown, b.pos.x + 0.5, b.pos.y + 0.5, c.crop === undefined ? 0 : c.crop.x0 * T, c.crop === undefined ? -p.world.y : c.crop.y0 * T);
+  host.replaceWith(shown);
   const k = c.zoom ?? ZOOM;
   if (k > 0 && b !== undefined) box.appendChild(zoomOf(r, c.zoomBox ?? { x0: b.pos.x - 1.2, y0: b.pos.y - 1.9, x1: b.pos.x + 2.2, y1: b.pos.y + 2.2 }, k));
   r.destroy();
@@ -213,7 +216,7 @@ function marksCell(cap: string, heart: HeartSpec, options: PartOption[], hover: 
   };
   const marks = giantMarksOf(state, hover ?? P(2, 3)); // 沒有選取模式時要滑到身上才畫：沒指定滑過時用前殼（打本體，標示不另畫⑤）
   const hl: Highlights = { moves: [], attacks: boss.tiles ?? [], directions: [], preview: [], telegraph: [], focus: null, hover, overlays: [], picked: [], giantMarks: marks };
-  return { cap, view, after: (r) => r.setHighlights(hl), zoomBox: { x0: 0.9, y0: 0.9, x1: 4.1, y1: 4.1 } };
+  return { cap, view, after: (r) => r.setHighlights(hl), zoomBox: { x0: 0.9, y0: 0.9, x1: 4.1, y1: 4.1 }, crop: { x0: 0.8, y0: 0.8, x1: 4.2, y1: 4.2 } };
 }
 
 // ---- 破壞演出（和 `partBreakFx.giantBreakEffect` 同一組函式） ----
@@ -223,7 +226,7 @@ function breakCell(cap: string, before: HeartSpec, after: HeartSpec, partId: str
   return {
     cap,
     view,
-    crop: { x0: 0.3, y0: -1.7, x1: 4.7, y1: 4.1 },
+    crop: { x0: 0.8, y0: 0, x1: 4.2, y1: 4.05 },
     after: (r) => {
       const p = r as unknown as Pixi;
       p.setPartFx(BOSS, giantBreakFxOf(partId, frame, side, shed));
@@ -247,7 +250,7 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
   sprites: () => [
     {
       title: `A1 六種外觀（三階段 × 熔殼在／不在），${W} 寬、地圖縮放 ${SCALE}、真 1 倍；青線＝3×3 佔格與格線、青點＝錨點`,
-      cells: ([1, 2, 3] as const).flatMap((ph) => [true, false].map((shell) => ({ cap: `第 ${ph} 階段（${PHASE_ZH[ph]}）・熔殼${shell ? "在" : "不在"}`, view: viewOf([personAt(HERO, 0, 5, "ally"), heartOf({ phase: ph, shell })]) }))),
+      cells: ([1, 2, 3] as const).flatMap((ph) => [true, false].map((shell) => ({ cap: `第 ${ph} 階段（${PHASE_ZH[ph]}）・熔殼${shell ? "在" : "不在"}`, view: viewOf([personAt(HERO, 0, 5, "ally"), heartOf({ phase: ph, shell })]), crop: { x0: 0.7, y0: -1.75, x1: 4.3, y1: 4.15 } }))),
     },
   ],
   marks: () => [
@@ -292,8 +295,8 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
   ],
   shed: () => [
     {
-      title: "熔殼脫落：殼片往北飛過噴口進岩漿（第 3、4 格），離開佔格不帶金外光；最近鄰 ×3",
-      cells: [2, 3].map((f) => ({ ...breakCell(`第 ${f + 1} 格（breakT ${f === 2 ? 0.35 : 0.72}）`, { phase: 1 }, { phase: 1, shell: false, seam: "broken" }, "shell_seam", f, -1, true), zoom: 3, zoomBox: { x0: 0.6, y0: -0.6, x1: 4.4, y1: 4.1 } })),
+      title: "熔殼脫落：殼片往北飛過噴口進岩漿（第 3、4 格），離開佔格不帶金外光；最近鄰 ×2",
+      cells: [2, 3].map((f) => ({ ...breakCell(`第 ${f + 1} 格（breakT ${f === 2 ? 0.35 : 0.72}）`, { phase: 1 }, { phase: 1, shell: false, seam: "broken" }, "shell_seam", f, -1, true), zoom: 2, zoomBox: { x0: 0.6, y0: -0.2, x1: 4.4, y1: 4.1 } })),
     },
   ],
   field: () => {
@@ -319,8 +322,10 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
 
 const renderers: BattleRenderer[] = [];
 document.body.appendChild(h("h2", { textContent: `GB-4b 巨型灰燼之心：set=${SETS.join(",")}、${W} 寬、地圖縮放 ${SCALE}` }));
+const GROUPS = q.get("group")?.split(",").map(Number) ?? null; // 只畫第幾段（0 起；連拍分張用）
 for (const set of SETS) {
-  for (const group of (SETS_OF[set] ?? SETS_OF.sprites!)()) {
+  for (const [gi, group] of (SETS_OF[set] ?? SETS_OF.sprites!)().entries()) {
+    if (GROUPS !== null && !GROUPS.includes(gi)) continue;
     document.body.appendChild(h("h3", { textContent: group.title }));
     const row = h("div", { className: "row" });
     document.body.appendChild(row);
