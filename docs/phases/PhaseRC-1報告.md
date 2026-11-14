@@ -42,7 +42,7 @@
 
 ## 3. 快照與固定種子（先預測，再對照）
 
-改動不碰引擎、內建技能與規則包（`Ruleset` 不含骨架與 `skill_composer.yaml`），所以戰鬥、技能列表、parity 夾具預測都不變；會變的只有「經過組合器」的固定種子：指定關鍵字的組合（三選一、許願、退回路徑）與 LLM 評估題的輪替。**沒有重產任何快照或夾具**。
+改動不碰引擎、內建技能與規則包（`Ruleset` 不含骨架與 `skill_composer.yaml`），所以戰鬥、技能列表、parity 夾具預測都不變；會變的只有「經過組合器」的固定種子：指定關鍵字的組合（三選一、許願、退回路徑）與 LLM 評估題的輪替。除了圖示夾具的 1 筆（下表），**沒有重產任何快照或夾具**。
 
 | 鍵／測試 | 預測 | 實際 | 處理 |
 |---|---|---|---|
@@ -55,6 +55,7 @@
 | `test_upgrade_topup.py` 反應技＋潮濕／高處 | 會變（組合器現在做得出來） | 退路由「工坊」變「組合器」 | 測試改成：RC-1 前的組合器（三個機率 0）照舊由工坊做；現在的組合器潮濕、高處由組合器做，召喚物照舊工坊 |
 | `test_composer_new_options.py` 兩項 | 會變（召喚骨架改成可組） | `summon` 不再是 `hand_written_only` | 改斷言：召喚只出現在召喚骨架；特性表 `summon` 移到 `explicit_only_active` |
 | `test_llm_propose_cli.py::test_naming_flag_adds_generated_names`（`-n 6`） | 會變（第 4 題換了） | 第 6 題 Mock 命名撞名退回組合式名稱（Mock 命名的已知限制） | 改跑 5 題（前 5 題全部命名成功的性質不變） |
+| 圖示夾具 `client/src/render/fixtures/skill_icons.json` 的 `random`（組合器種子 0～49 不指定參數） | **漏預測**（一開始只想到戰鬥、技能、parity；這份夾具也收組合器的隨機技能）；事後逐種子比對：只有抽中整招召喚的種子會變 | 只有 `random[47]`：種子 47 從連段（combo）變成整招召喚；`skills`、`workshop` 不變 | 只重產這份（`uv run python -m tests.narrative.icon_fixture`），`git diff` 確認只改這一筆。前端讀這份夾具的 vitest（`skillIcon.test.ts`、`qIconSkills.test.ts`、`qi2cWiring.test.ts`、`qIconQi2d.test.ts`）是性質檢查，**這個 worktree 沒有 `client/node_modules`，沒跑**，請 PM 合併後跑一次 |
 | LB 20 題（`trpg llm propose -n 20 --seed 0`，`scripts/llm_model_compare.py` 用） | 只有第 4 題會換 | 第 4 題：1 階 common 不限骨架「召喚物」（種子 4278761754）→ **1 階 rare 不限骨架「冰凍」（種子 2051557974）**；其餘 19 題逐字相同 | 無快照；**之後的 LB 量測第 4 題和舊數據不可比**（其餘 19 題可比） |
 
 其他跑過、全過的：`tests/skillgen`、`tests/content`、`tests/roguelite`、`tests/llm`、`tests/world`、`tests/api` 中與三選一／一輪／許願／工坊相關的 214 項、`tests/sim/test_skill_fuzz.py`、`tests/engine` 被動／反應／層數相關 296 項。
