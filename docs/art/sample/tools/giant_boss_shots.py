@@ -55,6 +55,14 @@ SHOTS = [
     ("after", "part=after", DEST + "5d-after.png"),
     ("shed-glow", "part=shed-glow", DEST + "5e-shed-glow.png"),
     ("body-icon", "part=body-icon", DEST + "5f-body-icon.png"),
+    # A5: GB-2 molten heart pit field (terrain = live game drawing, tools/qFieldLive.js)
+    ("pit-1600", "part=pit&w=1600", DEST + "6a-pit-1600-t1.png"),
+    ("pit-800", "part=pit&w=800", DEST + "6b-pit-800-t1.png"),
+    ("pit-south", "part=pit-south", DEST + "6c-pit-south-t1.png"),
+    ("pit-p3-glow", "part=pit-p3&rows=1", DEST + "6d-pit-p3-glow-1600-t1.png"),
+    ("pit-p3-fire2", "part=pit-p3&rows=2", DEST + "6e-pit-p3-fire2-1600-t1.png"),
+    ("pit-a6-1600", "part=pit-a6&w=1600", DEST + "6f-pit-a6-1600-t1.png"),
+    ("pit-a6-800", "part=pit-a6&w=800", DEST + "6g-pit-a6-800-t1.png"),
 ]
 
 OUT_RE = re.compile(r'<textarea id="out">([^<]*)</textarea>')

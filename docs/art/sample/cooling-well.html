@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>冷卻井 cooling_well</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>冷卻井 cooling_well：物件外觀、破壞演出、熔心坑戰場</h1>
+<p class="note">畫圖 agent，2026-11-14（docs/design/20 灰燼之心那列「4 個冷卻井物件（打破造水 3×3）」；紀錄與移植需求 docs/art/冷卻井-移植需求.md）。分段：
+<a href="?part=well&mute=1">1 物件 ×4</a><a href="?part=well-t1&mute=1">2 物件真 1 倍</a><a href="?part=break&w=1600&mute=1">3 破壞 1600</a><a href="?part=break&w=800&mute=1">4 破壞 800</a>
+<a href="?part=pit&w=1600&mute=1">5 熔心坑 1600</a><a href="?part=pit&w=800&mute=1">6 熔心坑 800</a><a href="?part=pit-broken&mute=1">7 打破後 3×3</a></p>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
+<script src="qBossGiant.js"></script><script src="qBossGiantIcons.js"></script>
+<script src="tools/qFieldLive.js"></script>
+<script src="coolingWell.js"></script>
+<script>
+// 戰場的部分（地格、單位、頭目、HP 條、拼圖）照抄 giant-boss.html 第 6 節（A5），只把 4 格水表面換成冷卻井物件；giant-boss.html 本身沒動。
+const GB = QBossGiant, OO = OccludeOutline, T = GB.T, P = new URLSearchParams(location.search), PART = P.get("part") || "well";
+try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
+const TP = PaperDoll.TEMPLATES, FL = window.QFieldLive, CW = window.CoolingWell;
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif";
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+const W_ = P.get("w") === "800" ? 800 : 1600, SW = W_ === 800 ? S800 : S1600;
+const U = {
+  hero: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_fighter, view: "back", hp: 0.8, hero: true, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_archer, view: "back", hp: 0.9, ...o }),
+  mage: (o) => ({ kind: "doll", team: "ally", doll: TP.hero_mage, view: "side", hp: 0.6, ...o }),
+  lizard: (o) => ({ kind: "creature", team: "enemy", spec: { body: "lizard", material: "magma", size: "small" }, hp: 0.9, ...o }),
+};
+function sheet(W, blocks) { // giant-boss.html sheet 照抄
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0, items = [];
+      const flush = () => { if (!items.length) return; lay.push({ t: "cells", items, y }); y += rowH + 10; x = pad; rowH = 0; items = []; };
+      for (const c of b.cells) { const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height; if (x + w > W - pad + 0.5 && items.length) flush(); const caps = c.cap ? wrap(c.cap, Math.max(w, 110), 12) : []; items.push({ c, x, w, h, caps }); x += w + gap; rowH = Math.max(rowH, h + caps.length * 16 + 4); }
+      flush();
+    }
+  }
+  const H = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, Math.round(it.x), Math.round(l.y), it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width; document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+}
+const nn = (cv, z, cap) => ({ cv, w: cv.width * z, h: cv.height * z, nn: true, cap });
+const PARTS = {};
+
+// ================= 熔心坑（content/maps/molten_heart_pit.yaml 照抄；water 4 格 → 冷卻井 4 口） =================
+const PIT = {
+  terrain: ["############", "#vvvvvvvvvv#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#vv.vvvv.vv#", "#..........#"],
+  heights: ["000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "001000000100", "000000000000", "000000000000"],
+  lowWalls: [[4, 9], [7, 9]], wells: [[3, 4], [7, 4], [3, 8], [8, 8]],
+};
+const PIT_TER = { ".": "stone", v: "lava", "#": "wall" };
+const inPit = (x, y) => x >= 0 && y >= 0 && x < 12 && y < 12;
+const terAt = (x, y) => PIT_TER[PIT.terrain[y][x]], hAt = (x, y) => (inPit(x, y) ? +PIT.heights[y][x] : 0);
+const hexN = (n) => "#" + n.toString(16).padStart(6, "0"), rgbaN = (n, a) => `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+/** 一口井打破後漏出的 3×3（只放可站的地格：岩漿、牆不放；這張圖 4 口井的 3×3 都沒碰到岩漿）。 */
+const spill3 = (x, y) => { const out = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (inPit(x + dx, y + dy) && terAt(x + dx, y + dy) === "stone") out.push([x + dx, y + dy]); return out; };
+/** 表面：打破且演出結束（k 4）的井 → 3×3 水；fill＝第 3 階段火地。 */
+const pitSurf = (wells, extra = []) => { const m = new Map(); for (const w of wells) if (w.k === 4) for (const [x, y] of spill3(w.x, w.y)) m.set(`${x},${y}`, "water"); for (const [x, y] of extra) m.set(`${x},${y}`, "water"); return m; };
+function pitTileSpec(x, y, surf) { // giant-boss.html 照抄（artSpecs.ts tileArtSpec）
+  const t = terAt(x, y), s = surf.get(`${x},${y}`) ?? "none";
+  const nb = (dx, dy) => (inPit(x + dx, y + dy) ? { terrain: terAt(x + dx, y + dy), surface: surf.get(`${x + dx},${y + dy}`) ?? "none" } : undefined);
+  const differs = (n) => n !== undefined && n.terrain !== t, same = (n) => n !== undefined && n.surface === s && s !== "none";
+  const N = nb(0, -1), S = nb(0, 1), W = nb(-1, 0), E = nb(1, 0);
+  return { region: "ashen_waste", look: "", terrain: t, x, y, height: hAt(x, y), surface: s,
+    surfSame: { n: same(N), s: same(S), w: same(W), e: same(E) }, surfDiag: { nw: same(nb(-1, -1)), ne: same(nb(1, -1)), se: same(nb(1, 1)), sw: same(nb(-1, 1)) },
+    lip: { n: differs(N), s: differs(S), w: differs(W), e: differs(E) }, wallFace: t === "wall" && !(S !== undefined && S.terrain === "wall"), blocked: t !== "stone", tint: null };
+}
+function pitTile(g, x, y, surf) { // giant-boss.html 照抄
+  const h = hAt(x, y), lift = FL.tileLift(h);
+  g.save(); g.translate(x * T, y * T - lift);
+  if (lift > 0) {
+    const bands = Math.max(1, Math.ceil(lift / 2));
+    for (let i = 0; i < bands; i++) { const y0 = (i * lift) / bands, y1 = ((i + 1) * lift) / bands; g.fillStyle = hexN(FL.mixColor(FL.CLIFF_TOP, FL.CLIFF_BOTTOM, bands === 1 ? 0 : i / (bands - 1))); g.fillRect(0, T + y0, T, y1 - y0 + 0.5); }
+    g.fillStyle = "rgba(0,0,0,0.3)"; for (const sy of FL.strataLines(lift)) g.fillRect(0, T + sy, T, 1);
+  }
+  g.save(); g.beginPath(); g.rect(0, 0, T, T); g.clip(); g.scale(T / 52, T / 52); FL.drawTile(g, pitTileSpec(x, y, surf)); g.restore();
+  if (lift > 0) {
+    const low = (dx, dy) => inPit(x + dx, y + dy) && hAt(x + dx, y + dy) < h;
+    g.fillStyle = rgbaN(FL.RIM.color, FL.RIM.alpha); g.fillRect(0, T - 2, T, 2); if (low(0, -1)) g.fillRect(0, 0, T, 2);
+    g.fillStyle = rgbaN(FL.EDGE.color, FL.EDGE.alpha); if (low(1, 0)) g.fillRect(T - 1.5, 0, 1.5, T + lift); if (low(-1, 0)) g.fillRect(0, 0, 1.5, T + lift);
+  }
+  if (terAt(x, y) === "lava") {
+    const mask = FL.lethalCornerMask((a, b) => inPit(a, b) && terAt(a, b) !== "lava", x, y);
+    g.beginPath(); FL.lethalCornerPaths(T).forEach(([x0, y0, x1, y1, x2, y2], i) => { if (mask[i]) { g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineTo(x2, y2); } });
+    g.lineWidth = FL.LETHAL_CORNER_WIDTH; g.strokeStyle = rgbaN(FL.HIGHLIGHT.deadly, FL.LETHAL_CORNER_ALPHA); g.lineCap = "round"; g.lineJoin = "round"; g.stroke();
+  }
+  g.restore();
+}
+function pitBadge(g, x, y, S) { // giant-boss.html 照抄
+  const lift = FL.tileLift(hAt(x, y)), k = Math.max(1, FL.MIN_HEIGHT_BADGE_FONT_PX / (10 * S)), bg = FL.HEIGHT_MARK_BG, tri = FL.HEIGHT_MARK_TRI;
+  g.save(); g.translate(x * T, y * T - lift); g.scale(k, k);
+  rr(g, bg.x, bg.y, bg.w, bg.h, bg.r); g.fillStyle = "rgba(30,24,18,0.7)"; g.fill();
+  g.beginPath(); g.moveTo(tri[0], tri[1]); g.lineTo(tri[2], tri[3]); g.lineTo(tri[4], tri[5]); g.closePath(); g.fillStyle = "#fff3c4"; g.fill();
+  g.font = `700 10px ${FONT}`; g.textBaseline = "top"; g.fillText(String(hAt(x, y)), FL.HEIGHT_MARK_NUM.x, FL.HEIGHT_MARK_NUM.y); g.restore();
+}
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function pitHud(ctx, u) { const c = OO.centerOf(u), w = T * 0.8, y = c.y + T * 0.36; ctx.fillStyle = "#000"; ctx.fillRect(c.x - w / 2, y, w, 5); ctx.fillStyle = u.hp > 0.5 ? "#4cd964" : u.hp > 0.25 ? "#ffcc00" : "#ff3b30"; ctx.fillRect(c.x - w / 2, y, w * u.hp, 5); }
+/** 物件耐久條（terrainLayer.ts objectSprite：hpRatio < 1 時 0.18T～0.82T、y 0.84T、高 3，黑底灰條）。 */
+function objBar(ctx, ratio) { ctx.fillStyle = "#000"; ctx.fillRect(T * 0.18, T * 0.84, T * 0.64, 3); ctx.fillStyle = "#d0d0d0"; ctx.fillRect(T * 0.18, T * 0.84, T * 0.64 * ratio, 3); }
+/** 一口井（物件層，在那一排、單位之前）：k 未給＝完好／受損（hpStage、hp）；k 0～4＝破壞演出第 k 格（k 0 還是井、白閃；k ≥ 1 只剩碎石＋水花）。 */
+function wellAt(g, w) {
+  g.save(); g.translate(w.x * T, w.y * T - FL.tileLift(hAt(w.x, w.y)));
+  if (w.k === undefined || w.k === 0) {
+    g.save(); g.scale(T / 52, T / 52); CW.draw(g, { x: w.x, y: w.y, hpStage: w.k === 0 ? 2 : w.hpStage ?? 0, flash: w.k === 0 }); g.restore();
+    const ratio = w.k === 0 ? 0 : w.hp ?? 1; if (ratio < 1 && w.k === undefined) objBar(g, ratio);
+  } else { g.scale(T / 52, T / 52); CW.rubble(g, w, w.k); CW.breakFx(g, w, w.k, "air"); }
+  g.restore();
+}
+/**
+ * 熔心坑一張圖（giant-boss.html renderPit＋冷卻井）。scene＝{ giant, units, wells:[{ x, y, hpStage, hp, k }] }。
+ * 圖層：全部地格（k 4 的井 3×3 已是水表面）→ 破壞中（k 1～3）的井：新的 3×3 水表面用 spillMask 遮罩從井心長出來 → 一排一排（矮牆、井／碎石＋水花 → ▲N → 單位／頭目 → HP 條）。
+ */
+function renderPit(scene, view) {
+  const sc = view.S * (view.res ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = GB.mk(W, H), g = cv.getContext("2d"), xf = (c) => c.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); xf(g);
+  const wells = scene.wells ?? PIT.wells.map(([x, y]) => ({ x, y })), surf = pitSurf(wells);
+  for (let y = 0; y < 12; y++) for (let x = 0; x < 12; x++) pitTile(g, x, y, surf);
+  for (const w of wells) if (w.k >= 1 && w.k <= 3) {
+    const after = pitSurf([...wells.filter((o) => o !== w), { ...w, k: 4 }]);
+    g.save(); xf(g); g.translate(w.x * T, w.y * T); g.scale(T / 52, T / 52); CW.spillMask(g, w.k); xf(g); g.clip();
+    for (const [x, y] of spill3(w.x, w.y)) pitTile(g, x, y, after);
+    xf(g); g.translate(w.x * T, w.y * T); g.scale(T / 52, T / 52); CW.breakFx(g, w, w.k, "ground"); // 漣漪：地面層、單位之下
+    g.restore();
+    g.save(); xf(g); g.translate(w.x * T, w.y * T); g.scale(T / 52, T / 52); CW.spillFoam(g, w.k); g.restore(); // 第 2 版：遮罩邊的亮色水沫（不裁切，跨在新舊地面交界上）
+  }
+  const Gi = scene.giant, ax = 5.5 * T, ay = 5 * T, m = new DOMMatrix([sc, 0, 0, sc, (ax - view.x0) * sc, (ay - view.y0) * sc]);
+  const units = (scene.units ?? []).map((u) => ({ ...u, h: hAt(u.x, u.y) }));
+  for (let row = 0; row < 12; row++) {
+    xf(g);
+    for (const [x, y] of PIT.lowWalls) if (y === row) { g.save(); g.translate(x * T, y * T - FL.tileLift(hAt(x, y))); g.scale(T / 52, T / 52); FL.drawObject(g, { region: "ashen_waste", look: "", kind: "low_wall", x, y, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage: 0 }); g.restore(); }
+    for (const w of wells) if (w.y === row) wellAt(g, w);
+    for (let x = 0; x < 12; x++) if (hAt(x, row) > 0 && !units.some((u) => u.x === x && u.y === row)) pitBadge(g, x, row, view.S);
+    const inRow = [...units.filter((u) => u.y === row).map((u) => ({ u, x: u.x })), ...(Gi && row === 4 ? [{ giant: true, x: 5 }] : [])].sort((a, b) => a.x - b.x);
+    for (const it of inRow) {
+      if (it.giant) { g.setTransform(m); GB.draw(g, Gi.st, Gi.opt ?? {}); continue; }
+      xf(g); OO.drawRing(g, it.u); const F = GB.mk(W, H), fc = F.getContext("2d"); xf(fc); OO.drawBody(fc, it.u, sc); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(F, 0, 0);
+    }
+    xf(g); for (const it of inRow) if (!it.giant) pitHud(g, it.u);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return cv;
+}
+const FULL = (S) => ({ S, res: 1, x0: 0, y0: 0, w: 12 * T, h: 12 * T });
+const cropPit = (src, view, x0, y0, w, h) => { const sc = view.S * (view.res ?? 1), o = GB.mk(Math.round(w * sc), Math.round(h * sc)); o.getContext("2d").drawImage(src, Math.round((x0 - view.x0) * sc), Math.round((y0 - view.y0) * sc), o.width, o.height, 0, 0, o.width, o.height); return o; };
+const P1S = { phase: 1, shell: 1, t: 300 };
+const openUnits = () => [U.hero({ id: "h", x: 3, y: 11, active: true }), U.archer({ id: "a", x: 8, y: 11 }), U.mage({ id: "m", x: 2, y: 11, view: "back" }), U.lizard({ id: "l1", x: 2, y: 4 }), U.lizard({ id: "l2", x: 8, y: 4, west: true })];
+
+// ================= 1、2 物件單格：冷卻井四個狀態＋現行荒原物件對照 =================
+const stoneSpec = (x, y, surface = "none") => ({ region: "ashen_waste", look: "", terrain: "stone", x, y, height: 0, surface, surfSame: { n: false, s: false, w: false, e: false }, surfDiag: { nw: false, ne: false, se: false, sw: false }, lip: { n: false, s: false, w: false, e: false }, wallFace: false, blocked: false, tint: null });
+const objSpec = (kind, x, y, hpStage = 0) => ({ region: "ashen_waste", look: "", kind, x, y, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage });
+/** 一格（cell 模型 px＝px，res 裝置倍率）：荒原石地底＋物件。 */
+function cell(px, res, draw, gx = 5, gy = 6, surface = "none") {
+  const cv = GB.mk(Math.round(px * res), Math.round(px * res)), g = cv.getContext("2d");
+  g.scale((px * res) / 52, (px * res) / 52); FL.drawTile(g, stoneSpec(gx, gy, surface)); draw(g); return cv;
+}
+const ITEMS = [
+  { cap: "冷卻井・完好", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 0 }) },
+  { cap: "受損 1（≤66%）：一道裂（淺色邊）、流到左側一灘", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 1 }), bar: 0.6 },
+  { cap: "受損 2（≤33%）：缺角、兩道裂、兩側各一灘、沒熱氣", draw: (g) => CW.draw(g, { x: 3, y: 8, hpStage: 2 }), bar: 0.27 },
+  { cap: "打破後：碎石圈（裝飾）＋水表面", draw: (g) => CW.rubble(g, { x: 3, y: 8 }), surface: "water" },
+  { cap: "現行 A5：水表面暫代", draw: () => {}, surface: "water", cur: true },
+  { cap: "現行：鐵油桶（危險記號）", draw: (g) => FL.drawObject(g, objSpec("oil_barrel", 5, 6)), cur: true },
+  { cap: "現行：殘牆（矮牆 0.3 T）", draw: (g) => FL.drawObject(g, objSpec("low_wall", 5, 6)), cur: true },
+  { cap: "現行：破木箱", draw: (g) => FL.drawObject(g, objSpec("crate", 5, 6)), cur: true },
+  { cap: "現行：斷柱（擋視線）", draw: (g) => FL.drawObject(g, objSpec("stone_pillar", 5, 6)), cur: true },
+];
+const itemCv = (it, px, res) => { const cv = cell(px, res, it.draw, 5, 6, it.surface ?? "none"); if (it.bar !== undefined) { const g = cv.getContext("2d"); g.setTransform((px * res) / T, 0, 0, (px * res) / T, 0, 0); objBar(g, it.bar); } return cv; };
+PARTS.well = () => {
+  publish(sheet(1560, [
+    { title: "1. 冷卻井 cooling_well：四個狀態＋現行荒原物件（向量 ×4，一格 192 px；底是荒原石地 terrainArt.ts）" },
+    { note: "畫法照 ashenObjects.ts：灰褐石井圈（ruinTop／ruinFace、灰縫）、鐵箍與鏽點照鐵油桶、外框 #1c1712；第 2 版：頂面上緣 15.5（不高於殘牆壓頂石 15.6）、正面高 10/52；若玩法定不是掩護就維持這個高度，沒有舊樣張的鐵轆轤架。井水 #3a8ee0（比荒原水表面 #45627a 亮）＋兩縷熱氣；正面的藍色水滴＝「打破會漏水」的記號（照油桶危險記號：黑框實心小圖形畫在身上）。受損自己畫（同薄冰，不套通用裂痕），受損時下面有現行的物件耐久條。" },
+    { cells: ITEMS.slice(0, 5).map((it) => ({ cv: itemCv(it, 192, 1), cap: it.cap })), gap: 14 },
+    { cells: ITEMS.slice(5).map((it) => ({ cv: itemCv(it, 192, 1), cap: it.cap })), gap: 14 },
+  ]));
+};
+PARTS["well-t1"] = () => {
+  const blocks = [{ title: "2. 冷卻井真 1 倍：1600（一格 62.8 px）與 800（一格 25.5 px），右邊最近鄰 ×4" }];
+  for (const [S, wz] of [[S1600, "1600"], [S800, "800"]]) {
+    const px = T * S;
+    blocks.push({ note: `${wz}：一格 ${px.toFixed(1)} px（真 1 倍）。` + "編號：1 冷卻井完好、2 受損 1、3 受損 2、4 打破後、5 現行 A5 水表面、6 鐵油桶、7 殘牆、8 破木箱、9 斷柱。" }, { cells: ITEMS.map((it) => ({ cv: itemCv(it, px, 1), cap: String(ITEMS.indexOf(it) + 1) })), gap: wz === "800" ? 14 : 10 });
+    blocks.push({ cells: ITEMS.slice(0, 6).map((it) => nn(itemCv(it, px, 1), wz === "800" ? 5 : 3, it.cap.split("：")[0].split("（")[0] + ` ×${wz === "800" ? 5 : 3}`)), gap: 10 });
+  }
+  publish(sheet(1560, blocks), "image/png");
+};
+
+// ================= 3、4 破壞演出（(3,8) 那口；3×3＝x 2～4、y 7～9） =================
+const BRK = { x: 3, y: 8 };
+const brkUnits = () => [U.hero({ id: "h", x: 3, y: 7, active: true }), U.mage({ id: "m", x: 4, y: 8, view: "side", west: true })];
+const brkScene = (k) => ({ wells: PIT.wells.map(([x, y]) => (x === BRK.x && y === BRK.y ? { x, y, k, hpStage: 2, hp: 0.27 } : { x, y })), units: brkUnits() });
+PARTS.break = () => {
+  const S = SW, V = FULL(S), is8 = W_ === 800, z = is8 ? 3 : 1;
+  const crop = (cv) => cropPit(cv, V, 1.2 * T, 5.9 * T, 4.6 * T, 4.4 * T);
+  const frames = [{ k: undefined, cap: "前：受損 2（被打到 ≤33%）" }, ...CW.FRAMES.map((f) => ({ k: f.k, cap: `K${f.k}　${f.ms} ms　${f.zh}` }))];
+  const cells = frames.map((f) => { const sc = brkScene(f.k); if (f.k === undefined) sc.wells = sc.wells.map((w) => (w.x === BRK.x && w.y === BRK.y ? { x: w.x, y: w.y, hpStage: 2, hp: 0.27 } : w)); const c = crop(renderPit(sc, V)); return z > 1 ? nn(c, z, f.cap) : { cv: c, cap: f.cap }; });
+  publish(sheet(1560, [
+    { title: `${is8 ? 4 : 3}. 冷卻井被打破的演出（${W_} 寬真 1 倍${z > 1 ? `，最近鄰 ×${z}` : ""}）：(3,8) 那口，3×3＝x 2～4、y 7～9` },
+    { note: "井圈白閃、裂縫亮 → 碎成 10 塊往外飛＋中央水柱 → 碎塊落地、水花往外 → 漣漪 → 留下泡在水裡的碎屑。K1～K3 新水面的邊有一圈亮色水沫（銜接井裡的亮藍），K4 收掉。水用現行水表面（terrainArt.ts，荒原水色 #45627a，相連併塊）：新的 3×3 水表面先畫好，用從井心往外長的圓形遮罩露出來（K1 半徑約半格、K2 十字、K3 到角、K4 全部）。戰士 (3,7) 在井北、法師 (4,8) 在井東：水表面在單位腳下；水花蓋在戰士身上是因為井在南邊一排（後畫）。3×3 含 (2,9) 高台、(4,9) 矮牆：水照放（規則怎麼放要開發確認，見移植需求）。" },
+    { cells, gap: 12 },
+  ]), "image/png");
+};
+
+// ================= 5、6、7 熔心坑 =================
+PARTS.pit = () => {
+  const S = SW, V = FULL(S), is8 = W_ === 800, cv = renderPit({ giant: { st: P1S }, units: openUnits() }, V);
+  const blocks = [{ title: `${is8 ? 6 : 5}. 熔心坑第 1 階段開場：4 口冷卻井取代水表面（${W_}×${is8 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(3)}，一格 ${(T * S).toFixed(1)} px），真 1 倍` },
+    { note: "和 giant-boss.html 6a／6b 同一場景，只把 (3,4)、(7,4)、(3,8)、(8,8) 的水表面換成冷卻井物件（完好）。地形、矮牆、單位、頭目全部同 A5。" },
+    { cells: [{ cv, cap: "整張（真 1 倍）" }].concat(is8 ? [nn(cv, 2, "整張 ×2")] : []), gap: 16 }];
+  if (!is8) {
+    const cs = PIT.wells.map(([x, y]) => nn(cropPit(cv, V, (x - 1) * T, (y - 1) * T, 3 * T, 3 * T), 2, `(${x},${y}) ×2`));
+    blocks.push({ title: "四口井局部最近鄰 ×2" }, { cells: cs, gap: 12 });
+  } else {
+    const cs = PIT.wells.map(([x, y]) => nn(cropPit(cv, V, (x - 1) * T, (y - 1) * T, 3 * T, 3 * T), 4, `(${x},${y}) ×4`));
+    blocks.push({ cells: cs, gap: 12 });
+  }
+  publish(sheet(1560, blocks), "image/png");
+};
+PARTS["pit-broken"] = () => {
+  const S = S1600, V = FULL(S);
+  const wells = [{ x: 3, y: 4 }, { x: 7, y: 4, hpStage: 1, hp: 0.6 }, { x: 3, y: 8, k: 4 }, { x: 8, y: 8, hpStage: 2, hp: 0.27 }];
+  const units = [U.hero({ id: "h", x: 3, y: 7, active: true }), U.mage({ id: "m", x: 2, y: 8, view: "back" }), U.archer({ id: "a", x: 9, y: 9, view: "side", west: true }), U.lizard({ id: "l1", x: 2, y: 4 }), U.lizard({ id: "l2", x: 8, y: 4, west: true })];
+  const cv = renderPit({ giant: { st: P1S }, units, wells }, V);
+  publish(sheet(1560, [
+    { title: "7. 打破後：(3,8) 的井變成 3×3 水表面＋碎石圈；1600 真 1 倍" },
+    { note: "(3,8) 打破（3×3＝x 2～4、y 7～9，含高台 (2,9) 與矮牆 (4,9) 底下）；(7,4) 受損 1、(8,8) 受損 2（下面是現行物件耐久條）、(3,4) 完好。戰士 (3,7)、法師 (2,8) 站在水裡，弓手站高台 (9,9)。右：西南一帶最近鄰 ×2。" },
+    { cells: [{ cv, cap: "整張（真 1 倍）" }, nn(cropPit(cv, V, 1.2 * T, 5.9 * T, 4.6 * T, 4.6 * T), 2, "(3,8) 3×3 ×2"), nn(cropPit(cv, V, 6 * T, 2.6 * T, 4 * T, 7 * T), 2, "受損 1 (7,4)、受損 2 (8,8) ×2")], gap: 16 },
+  ]), "image/png");
+};
+
+try { (PARTS[PART] ?? PARTS.well)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
