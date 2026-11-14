@@ -144,3 +144,10 @@ GB-2 卡在兩處：聚集段第一段形狀只收 `cross`／`square3`／`ring`�
 
   多跳過原階的 8 招全是敵人專用招（熔心爆、熔岩噴口、岩漿破口、霧鎖千山、裂隙脈衝三招、裂隙粉碎）；**沒有任何非 `enemy_only` 的招被跳過**，3 階檢查 17 招都還在。
 - 驗證：`tests/skillgen` 裡跟閃現有關的 25 檔（`*flash*.py`）703 passed；`ruff check`、`ruff format --check`、`mypy` 都通過。
+
+## 11. GB-2d（client 主圖基準）
+
+- `client/src/render/qIcon/qIconQi2d.test.ts` 的「有基準的 402 招主圖」在 main 上紅：實際和開工前不同的招比預期多了 `skill_heart_inhale`。原因是 GB-2b 把熔心吸氣的第一段由環形 2 改成範圍光環 4（圖示夾具 `shape_id` `ring` → `allies_in_radius`、`art.motion` `spin` → `area`），主圖跟著變。
+- 照 `CONTENT_CHANGED`（基準錄好之後內容改過、主圖跟著變的招；前例 DD-3 雙牙）的慣例加進 `skill_heart_inhale`，註解寫明 GB-2b；判斷邏輯不動。
+- 熔岩濺落**沒有加**：它不在實際的差異清單裡（那個測試只比主圖，濺落的主圖沒變），照「不整批放寬」只加有差的那一招。
+- `corepack pnpm -C client test`：359 個測試檔、4537 tests 全過，結束碼 0。
