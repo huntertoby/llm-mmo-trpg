@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from functools import cache
 from typing import Any
@@ -89,6 +89,11 @@ _weapon_and_attr = weapon_and_attr
 _trigger_params = trigger_params
 _SUMMON = "summon"
 """整招召喚的骨架（RC-1：組法在 :mod:`trpg.skillgen.composer_recipes`，不走一般主動流程）。"""
+
+type Kinds = Collection[str] | None
+"""呼叫端要的技能種類（RC-1b，玩法 PM 交接 4.1.20 第 4 點；``SkillKind`` 的值）：``None`` ＝
+不指定、組合器自由抽（原行為）；有值時結果的 ``kind`` 一定在其中
+（見 :func:`compose_with_stats`）。"""
 
 
 class ComposeError(TrpgError):
@@ -228,10 +233,13 @@ def _wants_passive(seed: int, rarity: SkillRarity, library: ContentLibrary) -> b
     )
 
 
-def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> str | None:
+def _wants_special(
+    seed: int, rarity: SkillRarity, library: ContentLibrary, kinds: Kinds = None
+) -> str | None:
     """未指定骨架時，這個種子是否改組反應技、姿態、蓄力與終結（``builder_finisher``）或陷阱（``trap``）。
 
     與 :func:`_wants_passive` 一樣用獨立的亂數串流；抽中但組不出合格技能時由呼叫端退回一般主動技能。
+    ``kinds``（RC-1b）：呼叫端指定種類時，種類不在其中的骨架不擲（其餘骨架各自的串流不變）。
     """
     for name, permille in (
         ("reaction", library.composer.reaction.skeleton_permille),
@@ -246,6 +254,7 @@ def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> s
         skeleton = library.skeletons.get(name)
         if (
             skeleton is not None
+            and (kinds is None or skeleton.kinds[0] in kinds)
             and _skeleton_feasible(skeleton, rarity, library, explicit=True)
             and Rng(seed).fork(f"composer.{name}").chance_permille(permille)
         ):
@@ -737,6 +746,22 @@ def _relabel(skill: SkillDef, variant: int, seed: int) -> SkillDef:
     )
 
 
+def _allows_active(kinds: Kinds) -> bool:
+    return kinds is None or "active" in kinds
+
+
+def _kind_skeleton(kinds: Kinds, lib: ContentLibrary) -> str | None:
+    """指定種類（RC-1b）只有一種、而且不是主動時，用同名骨架（被動、反應、姿態、修正各有同名骨架）。"""
+    if kinds is None or _allows_active(kinds) or len(kinds) != 1:
+        return None
+    (kind,) = kinds
+    return kind if kind in lib.skeletons else None
+
+
+def _kind_ok(skill: SkillDef, kinds: Kinds) -> bool:
+    return kinds is None or skill.kind in kinds
+
+
 _STACK_SKELETON = "builder_finisher"
 """累積、消耗層數的骨架（KW-2：層數關鍵字指定時用）。"""
 
@@ -765,7 +790,8 @@ def _compose_with_keyword(
         raise ComposeError(f"未知的關鍵字 {keyword!r}（可用：{'、'.join(lib.keywords.ids())}）")
     if not lib.keywords.by_id()[keyword].composable:
         raise ComposeError(f"組合器做不出關鍵字 {keyword} 的技能（該關鍵字需要手寫技能）")
-    if kwargs.get("skeleton") is None and _is_stack_keyword(keyword, lib):
+    kinds: Kinds = kwargs.get("kinds")
+    if kwargs.get("skeleton") is None and _is_stack_keyword(keyword, lib) and _allows_active(kinds):
         # KW-2（#161）：層數關鍵字只有蓄力骨架做得出來（累積或消耗層數），不指定骨架時固定用它；
         # 這四個關鍵字 KW-2 前組合器不做，所以既有關鍵字的結果不變
         kwargs = {**kwargs, "skeleton": _STACK_SKELETON}
@@ -788,8 +814,10 @@ def _compose_with_keyword(
         except ComposeError:
             continue
         # PERF-2：只看這個關鍵字的規則；RC-1：只認專屬規則（和退回路徑、三選一的候選一致，
-        # 只帶到通用規則的技能交出去也會被拒）
-        if has_keyword(found.skill, keyword, lib.keywords, exclusive_only=True):
+        # 只帶到通用規則的技能交出去也會被拒）；RC-1b：呼叫端指定種類時種類也要對（傳說）
+        if _kind_ok(found.skill, kinds) and has_keyword(
+            found.skill, keyword, lib.keywords, exclusive_only=True
+        ):
             skill = found.skill if index == 0 else _relabel(found.skill, variant, seed)
             return ComposeResult(skill, found.attempts, index + 1)
     raise KeywordExhaustedError(
@@ -812,26 +840,35 @@ def compose_with_stats(
     held: Mapping[str, str] | None = None,
     keyword_tries: int = KEYWORD_TRIES,
     skip_legendary: bool = False,
+    kinds: Kinds = None,
 ) -> ComposeResult:
     """:func:`compose_random_skill`，另外回傳重抽次數。PERF-3（三選一的候選產生器用）：
     ``keyword_tries`` ＝ 指定關鍵字時最多試幾個種子變體（橋接搜尋上限，最多
     :data:`KEYWORD_TRIES`），
-    ``skip_legendary`` ＝ 指定關鍵字時抽到傳說的變體跳過。預設值＝原行為。"""
+    ``skip_legendary`` ＝ 指定關鍵字時抽到傳說的變體跳過。預設值＝原行為。
+
+    ``kinds``（RC-1b，玩法 PM 交接 4.1.20 第 4 點）：呼叫端知道要哪一種技能時傳入（``SkillKind``
+    的值）。沒指定骨架時：只有一種、而且不是主動（被動、反應、姿態、修正）＝ 用同名骨架；含主動
+    時，被動與特殊組法裡種類不在其中的不擲（各自的獨立串流不變）。結果的 ``kind`` 不在其中時
+    （例：傳說）指定關鍵字的變體跳過、不指定關鍵字的丟 :class:`ComposeError`。
+    ``None`` ＝ 原行為。"""
     lib = library if library is not None else default_library()
     fixed: dict[str, Any] = {
         "tier": tier,
         "rarity": rarity,
-        "skeleton": skeleton,
+        "skeleton": skeleton if skeleton is not None else _kind_skeleton(kinds, lib),
         "category": category,
         "ap_cost": ap_cost,
+        "kinds": kinds,
     }
-    found = (
-        _compose_with_keyword(
+    if keyword is not None:
+        found = _compose_with_keyword(
             seed, keyword, lib, tries=keyword_tries, skip_legendary=skip_legendary, **fixed
         )
-        if keyword is not None
-        else _compose_plain(seed, lib, **fixed)
-    )
+    else:
+        found = _compose_plain(seed, lib, **fixed)
+        if not _kind_ok(found.skill, kinds):
+            raise ComposeError(f"種子 {seed}：組出的技能種類 {found.skill.kind} 不在指定的種類內")
     if hero_attributes is None:
         return _with_affinity(found, held, lib)
     # 新技能跟主屬性（Phase 3H-3）：亂數串流不變，組完之後才改縮放屬性（武器技一律看武器大類）
@@ -890,6 +927,8 @@ def _special_kind(
     skeleton: str | None,
     skeleton_def: SkeletonDef,
     lib: ContentLibrary,
+    *,
+    kinds: Kinds = None,
 ) -> str | None:
     """主動以外的組法：明確指定的種類（反應、姿態……；RC-1 起含整招召喚），沒指定骨架時由
     :func:`_wants_special` 的獨立串流決定。"""
@@ -897,7 +936,7 @@ def _special_kind(
         return _SUMMON
     if skeleton_def.kinds[0] != "active":
         return skeleton_def.kinds[0]
-    return _wants_special(seed, rarity, lib) if skeleton is None else None
+    return _wants_special(seed, rarity, lib, kinds) if skeleton is None else None
 
 
 def _special_result(
@@ -944,6 +983,7 @@ def _compose_plain(
     ap_cost: int | None,
     no_legendary: bool = False,
     keyword: str | None = None,
+    kinds: Kinds = None,
 ) -> ComposeResult:
     rng = Rng(seed)
     tier_value = tier if tier is not None else rng.randint(1, 5)
@@ -953,9 +993,15 @@ def _compose_plain(
     if rarity_value == "legendary":
         return _legendary_unless(no_legendary, seed, lib, tier, skeleton, ap_cost)
     passive = skeleton_def.kinds == ("passive",) or (
-        skeleton is None and _wants_passive(seed, rarity_value, lib)
+        skeleton is None
+        and (kinds is None or "passive" in kinds)
+        and _wants_passive(seed, rarity_value, lib)
     )
-    special = None if passive else _special_kind(seed, rarity_value, skeleton, skeleton_def, lib)
+    special = (
+        None
+        if passive
+        else _special_kind(seed, rarity_value, skeleton, skeleton_def, lib, kinds=kinds)
+    )
     if special is not None:
         found = _special_result(
             seed,
@@ -1012,6 +1058,7 @@ def compose_random_skill(
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
     held: Mapping[str, str] | None = None,
+    kinds: Kinds = None,
 ) -> SkillDef:
     """依種子組出一個合格的隨機技能（``id`` 為 ``skill_rand_<seed>``）。
 
@@ -1024,7 +1071,9 @@ def compose_random_skill(
     「新方向」）。其餘內容與沒給時完全相同。
 
     ``held``（Phase 3I-5，06 6.10 #50）：主角手上的主手武器與副手（ID → 中文名）；給了就可能把
-    附帶效果上的常見條件換成「手持某種武器時」（:func:`trpg.skillgen.affinity.grant_affinity`）。"""
+    附帶效果上的常見條件換成「手持某種武器時」（:func:`trpg.skillgen.affinity.grant_affinity`）。
+
+    ``kinds``（RC-1b）：呼叫端知道種類時傳入，見 :func:`compose_with_stats`。"""
     return compose_with_stats(
         seed,
         tier=tier,
@@ -1037,4 +1086,5 @@ def compose_random_skill(
         hero_attributes=hero_attributes,
         avoid_attr=avoid_attr,
         held=held,
+        kinds=kinds,
     ).skill

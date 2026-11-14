@@ -8,7 +8,6 @@ from functools import cache
 import pytest
 
 from trpg.content.library import ContentLibrary
-from trpg.content.skill_keywords import KeywordRule
 from trpg.content.skills import CASTER_CONDITIONS, SkillDef
 from trpg.skillgen.candidates import skill_has_keywords
 from trpg.skillgen.composer_recipes import (
@@ -39,19 +38,6 @@ def _without_recipes() -> ContentLibrary:
     )
     composer = lib.composer.model_copy(update={"recipes": recipes})
     return dataclasses.replace(lib, composer=composer)
-
-
-@cache
-def _with_beside_rule() -> ContentLibrary:
-    """推導表多一條「召喚到身邊＝製造召喚物」（RC-1 時還沒有；伴生、護主在有這條時才生效）。"""
-    lib = default_library()
-    keywords = tuple(
-        k.model_copy(update={"makes": (*k.makes, KeywordRule(effect="summon_beside"))})
-        if k.id == "summon"
-        else k
-        for k in lib.keywords.keywords
-    )
-    return dataclasses.replace(lib, keywords=lib.keywords.model_copy(update={"keywords": keywords}))
 
 
 def _same(a: SkillDef, b: SkillDef) -> bool:
@@ -134,6 +120,8 @@ def test_epic_passive_high_ground_q12(tier: int) -> None:
             seed, tier=tier, rarity="epic", skeleton="passive", keyword="high_ground", library=lib
         ).skill
         assert skill_has_keywords(skill, ["high_ground"], lib)
+        if [e.type for e in skill.effects] == ["summon_beside"]:
+            continue  # RC-1b：伴生召出帶高處的召喚物（鷹、高台圖騰），不靠條件
         assert skill.trigger is not None and skill.condition is not None
         if skill.condition.type == "height_advantage":
             assert triggers[skill.trigger.event].has_other
@@ -198,19 +186,18 @@ def test_keyword_composer_only_counts_exclusive_rules() -> None:
         assert skill_has_keywords(skill, ["summon"], lib)
 
 
-def test_companion_and_guardian_wait_for_a_keyword_rule() -> None:
-    """``summon_beside`` 沒有推導規則時伴生、護主不列入；補上規則後組得出來。"""
+def test_companion_and_guardian_carry_summon() -> None:
+    """RC-1b（4.1.20 第 1 點）補上 ``summon_beside`` 的推導規則後，伴生、護主帶得到召喚物（RC-1 時
+    程式先寫好、等這條規則）。"""
     lib = default_library()
-    assert beside_keywords(lib, 2) == ()
-    patched = _with_beside_rule()
-    assert "summon" in beside_keywords(patched, 2)
+    assert "summon" in beside_keywords(lib, 2)
     passive = compose_with_stats(
-        0, tier=2, rarity="epic", skeleton="passive", keyword="summon", library=patched
+        0, tier=2, rarity="epic", skeleton="passive", keyword="summon", library=lib
     ).skill
     assert passive.trigger is not None and passive.trigger.event == "on_battle_start"
     assert [e.type for e in passive.effects] == ["summon_beside"]
     reaction = compose_with_stats(
-        0, tier=2, rarity="rare", skeleton="reaction", keyword="summon", library=patched
+        0, tier=2, rarity="rare", skeleton="reaction", keyword="summon", library=lib
     ).skill
     assert reaction.reaction is not None and reaction.reaction.event == "hit_by_melee"
     assert reaction.effects[0].strike_other

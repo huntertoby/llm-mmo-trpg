@@ -2,7 +2,8 @@
 
 合法＝和退回路徑 ``proposal_fallback._from_composer`` 收下的條件相同：組合器不丟 ``ComposeError``、
 ``validate_skill`` 無違規、``_fits``（種類、骨架、題目的全部關鍵字，只看專屬規則）。參數也照它：
-種類非主動時骨架＝種類（被動、反應各有同名骨架），關鍵字照題目。
+種類非主動時骨架＝種類（被動、反應各有同名骨架），關鍵字照題目；RC-1b 起種類也傳給組合器
+（``kinds``）。
 設計鍵＝骨架＋種類＋形狀類型＋效果類型（含狀態 ID）＋元素標籤（數值不同算同一個設計）。
 
 只讀：不改 ``content/``，不跑戰鬥。輸出 JSON 與 Markdown 摘要；計時以外的欄位只由內容與參數決定，
@@ -245,6 +246,7 @@ def run_cell(cell: Cell, seeds: int, thin: int, diag_seeds: int) -> CellResult:
                 skeleton=skeleton,
                 library=lib,
                 keyword=keywords[0] if keywords else None,
+                kinds=(kind,),  # RC-1b：同退回路徑，把題目的種類傳給組合器
             )
         except ComposeError as exc:
             reason, sample = _compose_reason(exc), str(exc)

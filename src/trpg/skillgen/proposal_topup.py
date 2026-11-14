@@ -91,6 +91,9 @@ _AFFECTS_ORDER: tuple[str, ...] = ("enemies", "allies", "self")
 _SKIP_PARAMS = frozenset({"infusion", "unit", "on_hit", "rule", "skill"})
 """推導規則裡這些參數對應的是手寫內容（附魔召喚、指定召喚物、規則改寫、授予指定技能），
 補強不產生、prompt 也不列。"""
+_SKIP_PRIMITIVES = frozenset({"summon_beside"})
+"""只由閃現轉型（與組合器的伴生、護主）產生的原語，LLM 題目不出（``llm_topic.core_exclude``）：
+補強與可行解不用。RC-1b 起「召喚物」有 ``summon_beside`` 的推導規則，沒排除會占掉補強名額。"""
 
 
 def keyword_effect_rules(library: ContentLibrary, keyword: str) -> tuple[KeywordRule, ...]:
@@ -104,6 +107,7 @@ def keyword_effect_rules(library: ContentLibrary, keyword: str) -> tuple[Keyword
         for rule in (*found.makes, *found.uses)
         if rule.grade == "exclusive"
         and rule.source == "effect"
+        and rule.source_id not in _SKIP_PRIMITIVES
         and not (_SKIP_PARAMS & set(rule.params()))
     )
 

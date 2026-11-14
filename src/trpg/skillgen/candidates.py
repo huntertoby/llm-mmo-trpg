@@ -103,6 +103,7 @@ __all__ = [
     "CandidateRules",
     "LlmTrace",
     "behavior_weights",
+    "composer_kinds",
     "follows_attr",
     "generate_candidates",
     "keyword_distribution",
@@ -292,6 +293,31 @@ def skill_has_keywords(skill: SkillDef, keywords: Sequence[str], library: Conten
     return all(k in found for k in keywords)
 
 
+_ACTIVE_FAMILY: tuple[str, ...] = ("active", "stance")
+"""三選一「主動」那一類交給組合器的種類（姿態也是自己施放的招，不是被動或反應）。"""
+_KIND_FAMILIES: dict[str, tuple[str, ...]] = {
+    "active": _ACTIVE_FAMILY,
+    "passive": ("passive",),
+    "reaction": ("reaction",),
+}
+type _BoardKind = Literal["active", "passive", "reaction"]
+_KIND_ORDER: tuple[_BoardKind, ...] = ("active", "passive", "reaction")
+
+
+def composer_kinds(library: ContentLibrary, seed: int, slot: str) -> tuple[str, ...]:
+    """三選一的組合器候選要的種類（RC-1b，玩法 PM 交接 4.1.20 第 4 點；06 6.34.1、07 7.6）：每個
+    候選（``slot``：加深、橋接、新方向）照 ``whiteboard.kind_permille``（主動 70／被動 20／反應 10）
+    先擲種類，再交給組合器（獨立串流 ``composer.kind/<slot>``，不消耗其他亂數）。組合器做不出擲到的
+    種類時呼叫端改出主動。"""
+    permille = library.composer.whiteboard.kind_permille
+    roll = Rng(seed).fork(f"composer.kind/{slot}").randint(1, sum(permille.values()))
+    for kind in _KIND_ORDER:
+        roll -= permille[kind]
+        if roll <= 0:
+            return _KIND_FAMILIES[kind]
+    return _ACTIVE_FAMILY  # pragma: no cover - roll 一定在 [1, 總和]
+
+
 # ---------------------------------------------------------------------------
 # 來源
 # ---------------------------------------------------------------------------
@@ -437,6 +463,7 @@ class _Search:
         attrs = self.request.hero_attributes or None
         avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
         capped = self.capped(keywords)
+        kinds = composer_kinds(self.library, self.request.seed, self.kind)
         for _ in range(self.rules.composer_tries):
             if self.exhausted(keywords):  # PERF-3：橋接上限用完
                 break
@@ -454,9 +481,11 @@ class _Search:
                     held=self.request.held or None,
                     keyword_tries=left,
                     skip_legendary=True,  # PERF-3：指定關鍵字的組合不抽傳說（傳說不當候選）
+                    kinds=kinds,
                 )
             except KeywordExhaustedError as exc:
                 self.spend(exc.variants if capped else 0)
+                kinds = _ACTIVE_FAMILY  # RC-1b：這個關鍵字做不出擲到的種類，改出主動（同白板）
                 continue
             except ComposeError:
                 continue

@@ -12,7 +12,8 @@
 - **反應**（第 5 點）：層數、高處、護主、潮濕。
 
 伴生、護主用 ``summon_beside``；``skill_keywords.yaml`` 沒有推導它的規則時（RC-1 當時沒有），這兩種
-配方帶不到任何關鍵字，所以不列入（:func:`beside_keywords` 為空），規則補上後自動生效。
+配方帶不到任何關鍵字，所以不列入（:func:`beside_keywords` 為空）。RC-1b（玩法 PM 交接 4.1.20
+第 1 點）補上「召喚物」與各召喚物固有關鍵字的 ``summon_beside`` 規則（鏡像 ``summon``）後生效。
 
 這裡只決定「用哪個配方」與組出草稿（``Draft``）；強度調整、命名與驗證在
 :mod:`trpg.skillgen.random_composer`。要不要用新配方一律用獨立的亂數串流（:func:`pick_recipe`），組法
