@@ -64,7 +64,7 @@
 ## 四、常踩的坑
 
 1. **新 worktree 沒有 `.venv`**：先 `uv sync --frozen`，之後 `UV_NO_SYNC=1`。
-2. **本機模型**：`config/llm.toml` 預設 `localhost:8001`（使用者的 vLLM，可能沒開）；LM Studio 用 `config/llm.local.toml`（gitignored）。Qwen、Gemma 都要 `reasoning_effort = "none"`，否則思考吃光 `max_tokens`、回應是空的（調查報告 B.1）。模型名照 `GET /v1/models`。
+2. **本機模型**：`config/llm.toml` 預設 `localhost:8001` 上 LM Studio 的 `google/gemma-4-26b-a4b-qat`、溫度 0.7、`reasoning_effort = "none"`（LB-CF，2026-11-14 使用者「Gemma 溫度 0.7」）；另一份設定檔只有設了 `TRPG_LLM_CONFIG` 才會讀。Qwen、Gemma 都要 `reasoning_effort = "none"`，否則思考吃光 `max_tokens`、回應是空的（調查報告 B.1）；換回 vLLM 時要拿掉這行（vLLM 可能不接受 none）。模型名照 `GET /v1/models`。
 3. **Mock 命名撞名**：同一題多個選項用同一個種子時 Mock 給同一個名字，命名會 `name_zh.duplicate` 退回（LF-1 前 `name_offer` 就有這個問題，`name_texts` 已依選項分流種子）。
 4. **Mock 命名寫不到橋接加上的效果**（`narrative.missing_added`）：Mock 的 `concept` 只列效果摘要，橋接那一項常退回組合式名稱；測試不要假設每個大變化都命名成功。
 5. **描述的一致性檢查很嚴**（實測 `note_zh.missing_added` 常擋）：LF-2 起不合格只丟說明（`flash.note_dropped.*`）、變化照收；測資料流要說明留下來時，仍可用 `monkeypatch` 把 `flash_propose.note_checker` 換成一律通過（`tests/llm/test_flash_texts_lf1.py::lenient_notes`）。

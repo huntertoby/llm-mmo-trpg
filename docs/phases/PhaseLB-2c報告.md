@@ -107,3 +107,14 @@
 3. `4bb157255` feat(lb-2c): variants only when the topic asks; passive schema fixes spell/any（第 1、3 項＋測試；兩項都改 `prompts/proposal.py` 同一段，合成一個 commit）
 4. `5ec029fc8` docs(lb-2c): LLM onboarding note for skill-proposal/17（上手-LLM 第五節）
 5. docs(lb-2c): report and retest data（本報告、`LB-2c資料/`）
+
+## 開發 PM 裁定（2026-11-14）
+
+- **驗收通過，合併。** 五項都是收窄送給模型的 schema，加上改 prompt 和回饋文字，驗證器和提議模型都沒動。改了 4 處既有測試，都是跟著新做法改，沒有放寬。快照照預測全部不變，只新增 `skill-proposal/17` 一鍵。
+- 戰鬥不變比對：整份 log 比 46 場都不同，原因只有內嵌規則包裡 `self_on_high_ground` 少了 `handwritten_only`，`ruleset_hash` 跟著變。拿掉規則包後比事件、動作、最終狀態，different=0。接受：這是 4.1.18 決定開放這個條件造成的，戰鬥行為沒變。
+- 重測（Gemma 0.7 一輪）：一次通過 15/20、最終通過 18/20、退回 2/20，變奏錯誤 0。比 LB-2b 好，但只跑了一輪。
+- 待決 1（`_topup_advice` 列「可用寫法」時沒套被動過濾，Q12 被回饋帶回升降地形）：記入佇列。範圍很小，但專案 PM 交代自由設計不再往外擴；挑選模式提案有結論前先不排，若提案不通過再併進下一段 LB。
+- 待決 2（最大 schema 124,601 字元，離 125k 上限只剩 399）：跟 LB-2 待決 4 一起看，同樣等提案結論。
+- 待決 3、4：維持現狀。
+- 待決 5（`wants_variants` 目前沒有呼叫端）：之後接許願池時再排。
+- LB-CF 待決 1（上手筆記第四節第 2 點還寫「預設 vLLM」）：開發 PM 已順手改好。
