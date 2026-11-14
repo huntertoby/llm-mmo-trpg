@@ -303,6 +303,9 @@ export function usePlayback(
     startedRef.current = true;
     void (async () => {
       try {
+        // BM-1（GB-4b 待決 9）：`play` 開頭同步呼叫 `flushSync`；直接在 effect 裡跑，React 開發模式會警告
+        // 「flushSync was called from inside a lifecycle method」（而且那一次 flush 不生效）。先讓出一個微任務再播
+        await Promise.resolve();
         await play(initial, true);
       } catch (e) {
         setError(errorText(e));
