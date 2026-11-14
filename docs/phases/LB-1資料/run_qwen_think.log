@@ -1,0 +1,23 @@
+暖機：8.5 秒（composer）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 480, 'ttft_s': 2.29, 'generation_s': 2.96, 'generation_tps': 169.0}｜VRAM：NVIDIA GeForce RTX 5090, 27183 MiB, 32607 MiB
+  1. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜21.2 秒｜暗影・蓄力與終結
+  2. 1 階／rare／不限骨架／fury｜composer｜嘗試 3｜18.0 秒｜神聖・蓄力與終結
+  3. 1 階／epic／不限骨架／marked｜composer｜嘗試 3｜18.4 秒｜毒素・刻印
+  4. 1 階／common／不限骨架／summon｜workshop｜嘗試 3｜17.8 秒｜範圍（保底）
+  5. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜17.7 秒｜物理・刻印
+  6. 1 階／epic／不限骨架／無關鍵字｜composer｜嘗試 3｜18.5 秒｜冰霜・控場
+  7. 1 階／common／area／無關鍵字｜composer｜嘗試 3｜17.8 秒｜物理・範圍
+  8. 1 階／rare／不限骨架／high_ground｜composer｜嘗試 3｜18.4 秒｜雷電・連段
+  9. 1 階／epic／builder_finisher／無關鍵字｜composer｜嘗試 3｜17.9 秒｜物理・蓄力與終結
+ 10. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜15.2 秒｜神聖・刻印
+ 11. 1 階／rare／strike／無關鍵字｜composer｜嘗試 3｜17.6 秒｜雷電・打擊
+ 12. 1 階／epic／passive／high_ground｜pool｜嘗試 3｜19.6 秒｜鷹眼
+ 13. 1 階／common／不限骨架／charged｜composer｜嘗試 3｜17.5 秒｜雷電・範圍
+ 14. 1 階／rare／combo／無關鍵字｜composer｜嘗試 3｜18.7 秒｜火焰・連段
+ 15. 1 階／epic／不限骨架／marked｜composer｜嘗試 3｜18.9 秒｜雷電・刻印
+ 16. 1 階／common／control／無關鍵字｜composer｜嘗試 3｜18.6 秒｜風・控場
+ 17. 1 階／epic／不限骨架／focus｜composer｜嘗試 3｜18.0 秒｜物理・蓄力與終結
+ 18. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜19.6 秒｜神聖・蓄力與終結
+ 19. 1 階／rare／不限骨架／ki｜composer｜嘗試 3｜19.3 秒｜暗影・蓄力與終結
+ 20. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜19.0 秒｜暗影・刻印
+中位數 18.41 秒、最慢 21.23 秒、一次通過 0/20、退回 20/20 → docs\phases\LB-1資料\qwen3.6-35b-a3b_think.json

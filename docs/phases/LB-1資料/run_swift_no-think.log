@@ -1,0 +1,23 @@
+暖機：5.8 秒（llm）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 0, 'ttft_s': 2.29, 'generation_s': 7.86, 'generation_tps': 63.6}｜VRAM：NVIDIA GeForce RTX 5090, 24702 MiB, 32607 MiB
+  1. 1 階／epic／不限骨架／combo_point｜llm｜嘗試 3｜10.4 秒｜裂土重擊
+  2. 1 階／rare／不限骨架／fury｜llm｜嘗試 3｜8.4 秒｜灼骨餘燼
+  3. 1 階／epic／不限骨架／marked｜llm｜嘗試 1｜4.8 秒｜驚雷印
+  4. 1 階／common／不限骨架／summon｜workshop｜嘗試 3｜5.7 秒｜範圍（保底）
+  5. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.6 秒｜赤痕標記
+  6. 1 階／epic／不限骨架／無關鍵字｜llm｜嘗試 1｜4.5 秒｜凝霜封界
+  7. 1 階／common／area／無關鍵字｜llm｜嘗試 1｜3.5 秒｜流火錐
+  8. 1 階／rare／不限骨架／high_ground｜composer｜嘗試 3｜6.6 秒｜雷電・連段
+  9. 1 階／epic／builder_finisher／無關鍵字｜llm｜嘗試 2｜5.2 秒｜纏電蓄力
+ 10. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.8 秒｜沉岩刻誌
+ 11. 1 階／rare／strike／無關鍵字｜llm｜嘗試 1｜3.5 秒｜焚心點
+ 12. 1 階／epic／passive／high_ground｜pool｜嘗試 3｜7.4 秒｜鷹眼
+ 13. 1 階／common／不限骨架／charged｜llm｜嘗試 1｜3.8 秒｜瞬閃雷鳴
+ 14. 1 階／rare／combo／無關鍵字｜llm｜嘗試 1｜4.8 秒｜陷足石牢
+ 15. 1 階／epic／不限骨架／marked｜llm｜嘗試 2｜5.0 秒｜斷界標
+ 16. 1 階／common／control／無關鍵字｜llm｜嘗試 1｜4.2 秒｜沉土拖曳
+ 17. 1 階／epic／不限骨架／focus｜llm｜嘗試 3｜8.2 秒｜引雷盡散
+ 18. 1 階／epic／不限骨架／combo_point｜llm｜嘗試 2｜6.2 秒｜鎖鏈伏雷
+ 19. 1 階／rare／不限骨架／ki｜llm｜嘗試 2｜6.7 秒｜疾風層疊
+ 20. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.6 秒｜烙心火印
+中位數 4.91 秒、最慢 10.36 秒、一次通過 10/20、退回 3/20 → docs\phases\LB-1資料\swift_no-think.json

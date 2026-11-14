@@ -1,0 +1,1323 @@
+{
+  "model": "google/gemma-4-26b-a4b-qat",
+  "base_url": "http://localhost:8001/v1",
+  "reasoning_effort": "none",
+  "enable_thinking": false,
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "timeout_s": 240.0,
+  "max_retries": 3,
+  "seed": 0,
+  "started_utc": "2026-11-14T11:06:46+00:00",
+  "warmup": {
+    "request": "1 階／common／不限骨架／無關鍵字",
+    "source": "composer",
+    "seconds": 3.591,
+    "calls": [
+      {
+        "step": "propose",
+        "seconds": 3.575,
+        "status": 200,
+        "finish_reason": "stop",
+        "prompt_tokens": 1850,
+        "completion_tokens": 149,
+        "reasoning_tokens": 0
+      }
+    ]
+  },
+  "finished_utc": "2026-11-14T11:08:14+00:00",
+  "server": {
+    "arch": "gemma4",
+    "quantization": "Q4_0",
+    "compatibility_type": "gguf",
+    "loaded_context_length": 13824,
+    "state": "loaded"
+  },
+  "summary": {
+    "questions": 20,
+    "completed": 20,
+    "first_pass": 8,
+    "first_pass_permille": 400,
+    "fallback": 7,
+    "fallback_permille": 350,
+    "sources": {
+      "composer": 5,
+      "llm": 13,
+      "workshop": 1,
+      "pool": 1
+    },
+    "mean_attempts": 2.0,
+    "seconds_median": 3.81,
+    "seconds_max": 7.3,
+    "seconds_mean": 4.19,
+    "propose_seconds_median": 3.16,
+    "call_seconds_median": 1.42,
+    "calls": 56,
+    "completion_tokens_per_second": 127.1,
+    "reasoning_tokens": 0,
+    "naming_llm": 13,
+    "naming_total": 13,
+    "failures": {
+      "llm": {},
+      "format": {
+        "value_error": 11
+      },
+      "engine": {
+        "passive.affects": 6,
+        "reference": 6,
+        "skeleton.secondary_count": 6,
+        "budget.over": 3,
+        "exclusion.terrain_needs_earth": 3,
+        "budget.weak": 2,
+        "skeleton.core_share": 2,
+        "variant.mark_and_shatter.budget.over": 2,
+        "shield.status": 1,
+        "skeleton.core": 1,
+        "variant.finisher.budget.over": 1,
+        "variant.finisher.skeleton.required_primitive": 1,
+        "variant.mark_and_shatter.skeleton.core_share": 1,
+        "variant.mark_and_shatter.skeleton.secondary_count": 1
+      }
+    }
+  },
+  "rows": [
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2171825236,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "value_error"
+        ],
+        [
+          "reference",
+          "reference"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：reference）",
+      "first_pass": false,
+      "propose_seconds": 6.824,
+      "name_zh": "暗影・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 1682515056，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 6.824,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.02,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5152,
+          "completion_tokens": 346,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.82,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5565,
+          "completion_tokens": 336,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.726,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5576,
+          "completion_tokens": 336,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 1
+    },
+    {
+      "request": "1 階／rare／不限骨架／fury",
+      "seed": 893870975,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "value_error"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        [
+          "skeleton.core_share"
+        ]
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 3.201,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "意志的重壓",
+      "concept": "透過不斷積累意志的厚度，最終爆發出足以改寫戰局的威壓。",
+      "cast_flavor": "當氣息凝聚至極致，無形的意志將化作號令，令周遭的一切臣服。",
+      "skill_kind": "active",
+      "effects": [
+        "add_stack",
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.703,
+      "seconds": 3.903,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.04,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4889,
+          "completion_tokens": 185,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.075,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5146,
+          "completion_tokens": 179,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.697,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1249,
+          "completion_tokens": 82,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 2
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 532914297,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "skeleton.secondary_count",
+          "skeleton.core_share",
+          "variant.mark_and_shatter.skeleton.secondary_count",
+          "variant.mark_and_shatter.skeleton.core_share",
+          "variant.mark_and_shatter.budget.over"
+        ],
+        [
+          "variant.mark_and_shatter.budget.over"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：variant.mark_and_shatter.budget.over）",
+      "first_pass": false,
+      "propose_seconds": 5.601,
+      "name_zh": "毒素・刻印",
+      "concept": "隨機組合器產生的刻印技能（種子 1430544302，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 5.601,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.623,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5139,
+          "completion_tokens": 263,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.396,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5475,
+          "completion_tokens": 258,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.316,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5735,
+          "completion_tokens": 233,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 3
+    },
+    {
+      "request": "1 階／common／不限骨架／summon",
+      "seed": 4278761754,
+      "source": "workshop",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "value_error"
+        ],
+        [
+          "value_error"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：value_error）",
+      "first_pass": false,
+      "propose_seconds": 7.166,
+      "name_zh": "範圍（保底）",
+      "concept": "",
+      "cast_flavor": "",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 7.166,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.349,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1968,
+          "completion_tokens": 341,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.506,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2402,
+          "completion_tokens": 252,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.957,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2298,
+          "completion_tokens": 306,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 4
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3214451173,
+      "source": "llm",
+      "attempts": 3,
+      "codes": [
+        [
+          "budget.weak"
+        ],
+        [
+          "skeleton.secondary_count"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 3.719,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "灼熱刻印",
+      "concept": "在目標體表烙下無法熄滅的餘頻印記。",
+      "cast_flavor": "熾熱的能量在接觸瞬間迸發，留下灼燒的痕跡。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "damage"
+      ],
+      "naming_seconds": 0.652,
+      "seconds": 4.371,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.711,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2189,
+          "completion_tokens": 164,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.046,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2510,
+          "completion_tokens": 185,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 0.885,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2449,
+          "completion_tokens": 139,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.649,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1234,
+          "completion_tokens": 68,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 5
+    },
+    {
+      "request": "1 階／epic／不限骨架／無關鍵字",
+      "seed": 3656944096,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.194,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "重力崩裂",
+      "concept": "透過改變空間的引力頻率，將目標強行拉向中心並造成衝擊。",
+      "cast_flavor": "空間發出乾澀的碎裂聲，無形的拉扯力將目標狠狠撞向虛無。",
+      "skill_kind": "active",
+      "effects": [
+        "pull",
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.703,
+      "seconds": 2.898,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.138,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4992,
+          "completion_tokens": 182,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.701,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1251,
+          "completion_tokens": 80,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 6
+    },
+    {
+      "request": "1 階／common／area／無關鍵字",
+      "seed": 3066109316,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 1.712,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "遲滯波紋",
+      "concept": "法術波動在擴散時會拖慢目標的動作頻率。",
+      "cast_flavor": "無形的震盪向錐形區域擴散，令空氣變得沉重而遲緩。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.637,
+      "seconds": 2.349,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.698,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1386,
+          "completion_tokens": 153,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.634,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1245,
+          "completion_tokens": 72,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 7
+    },
+    {
+      "request": "1 階／rare／不限骨架／high_ground",
+      "seed": 1817687911,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.169,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "大地號令",
+      "concept": "藉由震盪頻率引發地表共鳴，強行將目標拉向震央並施加統御意志。",
+      "cast_flavor": "碎裂的地面隆起，將迷途者強行拽入這場秩序的洗禮。",
+      "skill_kind": "active",
+      "effects": [
+        "pull",
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.658,
+      "seconds": 2.826,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.114,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4855,
+          "completion_tokens": 180,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.655,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1271,
+          "completion_tokens": 85,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 8
+    },
+    {
+      "request": "1 階／epic／builder_finisher／無關鍵字",
+      "seed": 690982258,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "skeleton.secondary_count"
+        ],
+        [
+          "skeleton.secondary_count"
+        ],
+        [
+          "skeleton.secondary_count"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：skeleton.secondary_count）",
+      "first_pass": false,
+      "propose_seconds": 3.899,
+      "name_zh": "物理・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 1880156148，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 3.899,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.703,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2002,
+          "completion_tokens": 200,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.103,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2275,
+          "completion_tokens": 195,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.043,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2275,
+          "completion_tokens": 195,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 9
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3084845306,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 1.763,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "name_zh.duplicate"
+      ],
+      "name_zh": "灼痕刻印",
+      "concept": "以高頻熱能於目標表面烙下無法褪去的灼熱印記。",
+      "cast_flavor": "熾熱的能量在目標身上留下燙傷的痕跡。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "damage"
+      ],
+      "naming_seconds": 0.988,
+      "seconds": 2.751,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.743,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2189,
+          "completion_tokens": 174,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.559,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1257,
+          "completion_tokens": 69,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.425,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1369,
+          "completion_tokens": 68,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 10
+    },
+    {
+      "request": "1 階／rare／strike／無關鍵字",
+      "seed": 838456073,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "value_error"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 2.856,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "沉重重擊",
+      "concept": "透過武器的強大撞擊力將目標擊落於地。",
+      "cast_flavor": "武器重重砸下，將對手徹底壓入塵土之中。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "knock_prone"
+      ],
+      "naming_seconds": 0.598,
+      "seconds": 3.454,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.96,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2116,
+          "completion_tokens": 157,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 0.859,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2342,
+          "completion_tokens": 133,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.595,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1259,
+          "completion_tokens": 67,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 11
+    },
+    {
+      "request": "1 階／epic／passive／high_ground",
+      "seed": 3203845091,
+      "source": "pool",
+      "attempts": 3,
+      "codes": [
+        [
+          "passive.affects",
+          "passive.affects",
+          "exclusion.terrain_needs_earth",
+          "budget.over"
+        ],
+        [
+          "passive.affects",
+          "passive.affects",
+          "shield.status",
+          "exclusion.terrain_needs_earth",
+          "budget.over"
+        ],
+        [
+          "passive.affects",
+          "passive.affects",
+          "exclusion.terrain_needs_earth",
+          "budget.over"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：passive.affects、exclusion.terrain_needs_earth、budget.over）",
+      "first_pass": false,
+      "propose_seconds": 6.172,
+      "name_zh": "鷹眼",
+      "concept": "站得越高，看得越遠，心也越靜",
+      "cast_flavor": "你在高處俯瞰整片戰場，每個破綻都看得一清二楚",
+      "skill_kind": "passive",
+      "effects": [
+        "shield",
+        "add_stack"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 6.172,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.112,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2861,
+          "completion_tokens": 170,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.088,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3338,
+          "completion_tokens": 164,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.083,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3373,
+          "completion_tokens": 166,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 12
+    },
+    {
+      "request": "1 階／common／不限骨架／charged",
+      "seed": 1858532144,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "reference"
+        ],
+        [
+          "reference"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：reference）",
+      "first_pass": false,
+      "propose_seconds": 6.218,
+      "name_zh": "雷電・範圍",
+      "concept": "隨機組合器產生的範圍技能（種子 3869085947，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 6.218,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.671,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1964,
+          "completion_tokens": 279,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.731,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2304,
+          "completion_tokens": 326,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.717,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2364,
+          "completion_tokens": 326,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 13
+    },
+    {
+      "request": "1 階／rare／combo／無關鍵字",
+      "seed": 1407370244,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "skeleton.core",
+          "skeleton.secondary_count",
+          "skeleton.core_share",
+          "budget.weak"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 3.414,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "concept.effect_mismatch",
+        "cast_flavor.effect_mismatch"
+      ],
+      "name_zh": "霜凍殘響",
+      "concept": "釋放低頻率的寒意，使目標的行動變得緩慢遲滯。",
+      "cast_flavor": "寒霜在空氣中交織，讓周遭的律動趨於凝滯。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.122,
+      "seconds": 4.536,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.281,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3229,
+          "completion_tokens": 206,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 0.982,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3654,
+          "completion_tokens": 169,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.67,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1273,
+          "completion_tokens": 84,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.448,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1476,
+          "completion_tokens": 74,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 14
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 3354077213,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "skeleton.secondary_share"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 1.682,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "cast_flavor.world_terms"
+      ],
+      "name_zh": "跳動的電光印記",
+      "concept": "在目標身上烙下閃爍的電光標記，隨後引發劇烈的電擊。",
+      "cast_flavor": "當殘餘的電光在空氣中震盪，雷鳴便會追隨印記而至。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status",
+        "damage"
+      ],
+      "naming_seconds": 1.076,
+      "seconds": 2.757,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.633,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5139,
+          "completion_tokens": 149,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.592,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1284,
+          "completion_tokens": 77,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.48,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1443,
+          "completion_tokens": 84,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 15
+    },
+    {
+      "request": "1 階／common／control／無關鍵字",
+      "seed": 3840270065,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "skeleton.secondary_share"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 1.468,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "凝滯的衝擊",
+      "concept": "透過法術波動在目標身前劃開一道沉重的阻礙，使其行動變得遲緩。",
+      "cast_flavor": "空氣中的震盪變得黏稠，阻斷了前進的步伐。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status",
+        "damage"
+      ],
+      "naming_seconds": 0.587,
+      "seconds": 2.055,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.453,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1454,
+          "completion_tokens": 147,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.584,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1283,
+          "completion_tokens": 75,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 16
+    },
+    {
+      "request": "1 階／epic／不限骨架／focus",
+      "seed": 2099149301,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.119,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "雷鳴號令",
+      "concept": "透過法器引導高頻震盪，將狂亂的電流轉化為絕對的統御意志。",
+      "cast_flavor": "隨著頻率不斷攀升，最終化作一道雷鳴，強制改寫周遭的秩序。",
+      "skill_kind": "active",
+      "effects": [
+        "add_stack",
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.62,
+      "seconds": 2.739,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.068,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5139,
+          "completion_tokens": 197,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.617,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1316,
+          "completion_tokens": 82,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 17
+    },
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2962346860,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "reference",
+          "reference"
+        ],
+        [
+          "variant.finisher.skeleton.required_primitive",
+          "variant.finisher.budget.over"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：variant.finisher.skeleton.required_primitive、variant.finisher.budget.over）",
+      "first_pass": false,
+      "propose_seconds": 7.303,
+      "name_zh": "神聖・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 3528847285，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 7.303,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.588,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5152,
+          "completion_tokens": 351,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.723,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5566,
+          "completion_tokens": 337,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.756,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5631,
+          "completion_tokens": 333,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 18
+    },
+    {
+      "request": "1 階／rare／不限骨架／ki",
+      "seed": 4286476637,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "value_error"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 3.122,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "終焉之號令",
+      "concept": "透過不斷疊加的揮擊蓄積力量，最後爆發出帶有威壓的重擊。",
+      "cast_flavor": "每一次揮動都讓空氣變得沉重，直至最後一次落下的重壓。",
+      "skill_kind": "active",
+      "effects": [
+        "add_stack",
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.607,
+      "seconds": 3.728,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.011,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4874,
+          "completion_tokens": 183,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.018,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5131,
+          "completion_tokens": 168,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.604,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1318,
+          "completion_tokens": 79,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 19
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 1691836196,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "skeleton.secondary_share"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 1.706,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "灼熱烙印",
+      "concept": "以殘存的熱能於目標表面刻下無法磨滅的灼燒印記。",
+      "cast_flavor": "殘留的餘頻在接觸瞬間爆裂，燃起熊熊烈焰。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "damage"
+      ],
+      "naming_seconds": 0.575,
+      "seconds": 2.281,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 1.689,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2189,
+          "completion_tokens": 173,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.573,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1304,
+          "completion_tokens": 74,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 20
+    }
+  ]
+}
