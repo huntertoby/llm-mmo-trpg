@@ -1,0 +1,3 @@
+暖機：6.1 秒（llm）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 0, 'ttft_s': 2.47, 'generation_s': 8.53, 'generation_tps': 58.6}｜VRAM：NVIDIA GeForce RTX 5090, 26015 MiB, 32607 MiB
+生成速度 58.6 t/s 低於 60.0，停止（模型可能不在 GPU 上）
