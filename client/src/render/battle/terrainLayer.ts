@@ -422,6 +422,8 @@ export abstract class TerrainLayer extends RendererBase {
     deco: (y) => this.rows.row(y).deco,
     place: (node, t) => this.rows.place(node, t, t.x * T, t.y * T, tileLift(t.height)),
     oldTile: (from, t) => this.art.tile(tileArtSpec(from, t)),
+    objects: (y) => this.rows.row(y).objects, // CW-1：冷卻井的破壞演出
+    canvas: (key, make) => this.art.canvas(key, make), // CW-1：冷卻井的演出、碎屑貼圖
   };
 
   protected ambientHost(): AmbientHost {

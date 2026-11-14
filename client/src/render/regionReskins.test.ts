@@ -99,7 +99,8 @@ describe("預設畫法不受新表影響（region 空字串）", () => {
         for (const [x, y] of [[0, 0], [3, 5], [7, 1]] as const) lines.push(...tileCalls({ terrain, lip, x, y, wallFace: true, surface: "fire" }));
       }
     }
-    for (const kind of Object.keys(OBJECT_DRAW)) {
+    // CW-1 新增的冷卻井（預設也用同一個畫法）不算在鎖住的舊物件裡：舊物件的輸出逐字不變
+    for (const kind of Object.keys(OBJECT_DRAW).filter((k) => k !== "cooling_well")) {
       for (const hpStage of [0, 1, 2] as const) lines.push(...objCalls({ kind, hpStage, vertical: hpStage === 1 }));
     }
     // 預設畫法（region 空字串）的整段呼叫序列；5A-ART6 沒有改預設畫法，這個值變了表示預設畫面變了。

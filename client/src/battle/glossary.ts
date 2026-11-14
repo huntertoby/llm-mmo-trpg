@@ -185,6 +185,7 @@ export const OBJECTS: Readonly<Record<string, ObjectLook>> = {
   rubble: { glyph: "礫", color: 0x7a7468, floor: false },
   ice_wall: { glyph: "冰", color: 0x8fd3f0, floor: false },
   thorn_wall: { glyph: "棘", color: 0x4f7a2a, floor: false },
+  cooling_well: { glyph: "井", color: 0x3a8ee0, floor: false }, // CW-1
 };
 
 export function objectStyle(kind: string): ObjectStyle {
