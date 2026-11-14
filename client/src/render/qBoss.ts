@@ -106,7 +106,7 @@ export const BOSS_FIELD_SCALE = 1.6;
 /** 待機一圈的長度（毫秒）。 */
 const IDLE_LOOP_MS = 5278;
 /** 線性循環（圈數）：一般＝t／週期；待機一圈時取整成整數圈。 */
-function cyc(t: number, period: number, loop: number | undefined): number {
+export function cyc(t: number, period: number, loop: number | undefined): number {
   if (loop === undefined) return t / period;
   return 1200 / period + Math.max(1, Math.round(IDLE_LOOP_MS / period)) * loop;
 }
@@ -114,7 +114,7 @@ function cyc(t: number, period: number, loop: number | undefined): number {
  * 振盪的相位（弧度）：一般＝t／週期；待機一圈（loop＝0～1）時把週期取整成一圈的整數次（QK-4b：碎晶之主待機接回第一格不跳），
  * 起點同 t＝1200。
  */
-function osc(t: number, period: number, loop: number | undefined): number {
+export function osc(t: number, period: number, loop: number | undefined): number {
   if (loop === undefined) return t / period;
   const n = Math.max(1, Math.round(IDLE_LOOP_MS / (TAU * period)));
   return 1200 / period + TAU * n * loop;
@@ -126,6 +126,8 @@ const BASALT_L = "#6a5a52";
 const LAVA = "#ff6a1a";
 const LAVA_HOT = "#ffd23a";
 const CORE = "#ffb23a";
+/** GB-4b：灰燼之心色票（3×3 巨型版 `qBossGiant.ts` 共用，不另抄一份）。 */
+export const ASH = { BASALT, BASALT_L, LAVA, LAVA_HOT, CORE, EMBER: "#7a2a08" } as const;
 /** 殼片：[名稱, 掛點 x, 掛點 y, 旋轉, 寬, 高]（和 bossArt.js 的 PLATES 同一份）。 */
 export const PLATES: ReadonlyArray<readonly [string, number, number, number, number, number]> = [
   ["p-back-l", -20, -34, -0.5, 18, 13],
