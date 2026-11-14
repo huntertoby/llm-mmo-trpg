@@ -452,9 +452,10 @@ def write_outputs(
         ],
     }
     json_path = out_dir / f"{name}.json"
-    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    text = json.dumps(payload, ensure_ascii=False, indent=1) + "\n"
+    json_path.write_text(text, encoding="utf-8", newline="\n")
     md_path = out_dir / f"{name}.md"
-    md_path.write_text(_markdown(results, lib, params, tiers), encoding="utf-8")
+    md_path.write_text(_markdown(results, lib, params, tiers), encoding="utf-8", newline="\n")
     return json_path, md_path
 
 
