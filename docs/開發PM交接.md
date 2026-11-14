@@ -51,6 +51,7 @@
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
 - 開發頁之後：要不要所有裝備都顯示形制名（RG-8 待決 1），等美術或玩法提出。LW-2 待決 6「現在不能用」那行加底色仍等美術答覆。
+- (e3u) 熔心坑 4 口冷卻井：地圖現在用水面暫代；設計（20 第一季內容表、19 19.2.3）是可打破、造出 3×3 水的物件，水桶／油桶類換皮。**等美術交井的外觀移植需求**（交了再排，或併進之後動熔心坑的段；排前先 grep docs/art/ 確認是否已交）。
 - (e3t) 下一個戰場標記段：800 寬延遲預告字太小（所有延遲招，美術 GB A5 審查，docs/art/GB巨型頭目-移植需求.md 第 8 節），不在 GB 做。
 - (e3s) 下一個動 `tuning_fields.yaml` 的段：工坊白名單加 GB-3 三個 AI 權重（`guard_face_bonus`、`giant_spot_bonus`、`prefer_far_from_leader`）。
 - GB-4b 開工要併：GB-4a 裁定 5（`PartView.counts_as_behind`）、7（補拍近戰殼縫、第 2 階段核心）、9（查 flushSync 警告與 404）、10（`giantPartStates` 接 `Highlights`）；美術移植需求第 7 節裁定；(e3r)。
