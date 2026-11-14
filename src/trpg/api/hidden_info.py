@@ -47,7 +47,7 @@ from trpg.engine.events import (
     UnitRevived,
 )
 from trpg.engine.rules.combat import is_concealed
-from trpg.engine.rules.geometry import manhattan
+from trpg.engine.rules.footprint import adjacent
 from trpg.engine.state import BattleState
 from trpg.engine.view import BattleView, PartView, UnitView
 from trpg.shared.types import Team, UnitId
@@ -80,14 +80,14 @@ _NUMBER_FIELDS: dict[type[EventBase], tuple[str, tuple[str, ...]]] = {
 
 def hidden_unit_ids(state: BattleState, team: Team) -> frozenset[UnitId]:
     """對 ``team`` 而言看不到資訊的單位（見模組說明）。"""
-    watchers = [u.xy for u in state.units_sorted() if u.team is team and u.alive]
+    watchers = [u for u in state.units_sorted() if u.team is team and u.alive]
     return frozenset(
         u.id
         for u in state.units_sorted()
         if u.team is not team
         and u.alive
         and is_concealed(state, u)
-        and not any(manhattan(u.xy, w) == 1 for w in watchers)
+        and not any(adjacent(u, w) for w in watchers)
     )
 
 

@@ -12,6 +12,7 @@ from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
 from trpg.engine.actions import UseSkill
 from trpg.engine.battle import legal_actions
+from trpg.engine.rules.footprint import nearest_tile, unit_dist
 from trpg.engine.skills.targeting import checked_area, skill_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.errors import IllegalActionError
@@ -26,16 +27,16 @@ PASSIVE_REASON = "被動技能：條件成立時自動生效，不能主動施�
 def _target_reason(state: BattleState, unit: UnitState, skill: SkillDef) -> str:
     foes = sorted(
         (u for u in state.living_units() if u.team is not unit.team),
-        key=lambda u: (abs(u.xy[0] - unit.xy[0]) + abs(u.xy[1] - unit.xy[1]), u.id),
+        key=lambda u: (unit_dist(u, unit), u.id),
     )
     targeting = state.ruleset.shape_def(skill.shape.type).targeting
     for foe in foes:
         if targeting == "unit":
             action = UseSkill(unit_id=unit.id, skill_id=skill.id, target_id=foe.id)
         elif targeting == "tile":
-            action = UseSkill(
-                unit_id=unit.id, skill_id=skill.id, target_pos=Pos(x=foe.xy[0], y=foe.xy[1])
-            )
+            # 巨型單位（GB-4a）：試它離施放者最近的那一格（一格的單位＝它自己的格）
+            x, y = nearest_tile(foe, unit.xy)
+            action = UseSkill(unit_id=unit.id, skill_id=skill.id, target_pos=Pos(x=x, y=y))
         else:
             break
         try:
