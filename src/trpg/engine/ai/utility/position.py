@@ -18,6 +18,7 @@ from trpg.content.environment import (
 from trpg.engine.actions import (
     Action,
 )
+from trpg.engine.ai.leader import far_from_leader_extra
 from trpg.engine.ai.objective import objective_cost
 from trpg.engine.ai.orders import (
     FocusTarget,
@@ -28,7 +29,13 @@ from trpg.engine.ai.orders import (
     UseEnvironment,
     validate_order,
 )
-from trpg.engine.ai.parts import circle_back_extra, guard_back_extra, silent_behind_extra
+from trpg.engine.ai.parts import (
+    behind_spot,
+    circle_back_extra,
+    giant_part_spot_extra,
+    guard_back_extra,
+    silent_behind_extra,
+)
 from trpg.engine.ai.weapon_range import (
     best_distance,
     damage_permille_at,
@@ -50,7 +57,7 @@ from trpg.engine.rules.combat import (
     is_height_limited,
     protects_ranged,
 )
-from trpg.engine.rules.facing import FACING_VECTORS, facing_between, is_behind
+from trpg.engine.rules.facing import FACING_VECTORS, facing_between
 from trpg.engine.rules.footprint import adjacent, dist_to, nearest_tile, tiles_of, unit_dist
 from trpg.engine.rules.geometry import (
     XY,
@@ -333,6 +340,10 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
         value -= w.exposed * _outgunned_by(state, unit, enemies)
     if w.flank:
         value += w.flank * _flanked_count(state, unit, enemies)
+    if w.giant_spot_bonus:  # GB-3：巨型頭目的部位站位
+        value += giant_part_spot_extra(state, unit, w, enemies)
+    if w.prefer_far_from_leader:  # GB-3（T17）：殼縫餘燼蜥追離頭目遠的人
+        value += far_from_leader_extra(state, unit, w, enemies)
     return value + _facing_terms(state, unit, w, enemies) + _weapon_terms(state, unit, w, enemies)
 
 
@@ -423,7 +434,10 @@ def _facing_terms(
     if w.silent_behind:  # BS-1：無聲留背
         value += silent_behind_extra(state, unit, w, enemies)
     if w.backstab and unit.weapon.is_melee:
-        value += w.backstab * sum(1 for e in enemies if adjacent(unit, e) and is_behind(unit.xy, e))
+        # GB-3：貼著巨型頭目「算從背後」的部位格（殼縫）也算背刺位置（behind_spot）
+        value += w.backstab * sum(
+            1 for e in enemies if adjacent(unit, e) and behind_spot(unit.xy, e)
+        )
     if w.back_exposed:
         nearest = min(enemies, key=lambda e: (unit_dist(unit, e), e.id))
         facing = facing_between(unit.xy, nearest.xy)

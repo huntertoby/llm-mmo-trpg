@@ -14,6 +14,18 @@
   :func:`circle_back_extra`，由 ``position._facing_terms`` 讀）。移動候選照位置價值排序，所以走得到
   背後格時那一格自然加分；藉機攻擊、危險表面、強招預告範圍照一般站位扣分。
 
+- **殼縫算背後**（GB-3，GB-1c 待決 6）：AI 的背後估值（``backstab``、無聲留背、繞背、瞬步落點）
+  把「貼著巨型頭目 ``counts_as_behind``、還沒破、已露出的部位格」也當成背後格
+  （:func:`behind_spot`；引擎的 ``part_behind`` 同一條規則）。一格的頭目不能有綁格部位，所以結果
+  和原本的 ``is_behind`` 相同。
+- **巨型頭目的部位站位**（GB-3，第 7 節第 2 點）：玩家方、不是召喚物的單位，近戰貼著某個巨型頭目
+  未破、已露出、近戰打得到的部位格（``melee_from: any_face`` 時貼任一面），或遠程站在射程夠、看得到
+  ``reach: ranged`` 部位（噴口）某一格的位置時，位置價值加 ``giant_spot_bonus``（每名巨型頭目一次；
+  :func:`giant_part_spot_extra`）。高台不另加分（高度與弓的高處射程本來就算進去）。
+- **巨型頭目護面**（GB-3，D13、T18）：巨型頭目有部位剩血 ≤ ``near_break_permille`` 時，這次動作
+  打到的敵人每名「貼著那個部位的格子」（``any_face`` 時貼任一面）的，多加 ``guard_face_bonus``
+  （:func:`guard_face_extra`，由 ``scoring._preview_score`` 讀）。
+
 全部是確定性的純查詢；數值在 ``content/ai_profiles.yaml`` 的 ``parts:``（占位，NW-3 開放後由
 使用者調）。
 """
@@ -33,17 +45,22 @@ from trpg.content.skills import CHARGING
 from trpg.engine import modifiers
 from trpg.engine.actions import Action, Attack, UseSkill
 from trpg.engine.events import EventBase, PartBroken, PartDamaged
-from trpg.engine.part_breaks import live_part
+from trpg.engine.part_breaks import live_part, part_tiles
 from trpg.engine.parts import current_phase_id, part_targets
+from trpg.engine.rules.combat import attack_reach
 from trpg.engine.rules.facing import is_behind
-from trpg.engine.rules.footprint import adjacent
+from trpg.engine.rules.footprint import adjacent, is_giant, nearest_tile
+from trpg.engine.rules.geometry import XY, has_line_of_sight, manhattan
 from trpg.engine.skills.targeting import resource_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Team
 
 __all__ = [
+    "behind_spot",
     "circle_back_extra",
+    "giant_part_spot_extra",
     "guard_back_extra",
+    "guard_face_extra",
     "part_score",
     "part_variants",
     "picks_parts",
@@ -157,9 +174,7 @@ def circle_back_extra(unit: UnitState, w: AiWeights, enemies: list[UnitState]) -
     if not unit.weapon.is_melee:
         return 0
     return w.circle_back_bonus * sum(
-        1
-        for e in enemies
-        if e.parts and adjacent(unit, e) and is_behind(unit.xy, e) and _open_behind_part(e)
+        1 for e in enemies if e.parts and adjacent(unit, e) and _open_behind_at(unit.xy, e)
     )
 
 
@@ -174,7 +189,9 @@ def silent_behind_extra(
         return 0
     if not modifiers.silent_strike(state, unit, modifiers.ATTACK):
         return 0
-    return w.silent_behind * sum(1 for e in enemies if adjacent(unit, e) and is_behind(unit.xy, e))
+    return w.silent_behind * sum(
+        1 for e in enemies if adjacent(unit, e) and behind_spot(unit.xy, e)
+    )
 
 
 def _open_behind_part(boss: UnitState) -> bool:
@@ -186,3 +203,101 @@ def _open_behind_part(boss: UnitState) -> bool:
         and (not part.exposed_in or phase in part.exposed_in)
         for part in boss.parts
     )
+
+
+def _open(boss: UnitState, part: BossPart) -> bool:
+    """部位還沒破、目前階段已露出。"""
+    if part.id in boss.broken_parts:
+        return False
+    return not part.exposed_in or current_phase_id(boss) in part.exposed_in
+
+
+def _touches_part(xy: XY, boss: UnitState, part: BossPart) -> bool:
+    """站在 ``xy``（一格）貼著部位的格子（``melee_from: any_face`` 時貼頭目任一面）。"""
+    if part.melee_from == "any_face":
+        return manhattan(nearest_tile(boss, xy), xy) == 1
+    return any(manhattan(xy, t) == 1 for t in part_tiles(boss, part))
+
+
+def _seam_at(xy: XY, boss: UnitState) -> bool:
+    """``xy`` 貼著巨型頭目 ``counts_as_behind``、還沒破、已露出的部位格（GB-1c R4 的殼縫）。"""
+    if not is_giant(boss) or not boss.parts:
+        return False
+    return any(
+        part.counts_as_behind and part.tiles and _open(boss, part) and _touches_part(xy, boss, part)
+        for part in boss.parts
+    )
+
+
+def behind_spot(xy: XY, enemy: UnitState) -> bool:
+    """AI 估值用：近戰站在 ``xy`` 打 ``enemy`` 算不算從背後——背後格（``is_behind``），或貼著巨型頭目
+    算從背後的部位格（GB-3，GB-1c 待決 6）。一格的單位＝``is_behind``。"""
+    return is_behind(xy, enemy) or _seam_at(xy, enemy)
+
+
+def _open_behind_at(xy: XY, boss: UnitState) -> bool:
+    """繞背的條件：站在背後格而且有 ``reach: behind`` 的開著的部位，或貼著開著的殼縫（GB-3）。"""
+    return (is_behind(xy, boss) and _open_behind_part(boss)) or _seam_at(xy, boss)
+
+
+def giant_part_spot_extra(
+    state: BattleState, unit: UnitState, w: AiWeights, enemies: list[UnitState]
+) -> int:
+    """巨型頭目的部位站位（GB-3，見模組說明）：每名「從這格打得到某個開著的部位」的巨型頭目
+    × ``giant_spot_bonus``。近戰看近戰打得到的部位（``reach`` 不是 ``ranged``）有沒有貼著；遠程看
+    ``reach: ranged`` 的部位有沒有一格在普攻射程內（含高處射程）而且看得到（巨人自己的身體不擋）。
+    只算玩家方、不是召喚物的單位；沒有巨型頭目的戰鬥一律 0。"""
+    if not w.giant_spot_bonus or unit.is_summon or unit.team is not Team.ALLY:
+        return 0
+    melee = unit.weapon.is_melee
+    count = 0
+    for boss in enemies:
+        if not is_giant(boss) or not boss.parts:
+            continue
+        if any(
+            _open(boss, part)
+            and part.tiles
+            and (
+                (melee and part.reach != "ranged" and _touches_part(unit.xy, boss, part))
+                or (not melee and part.reach == "ranged" and _shot_at(state, unit, boss, part))
+            )
+            for part in boss.parts
+        ):
+            count += 1
+    return w.giant_spot_bonus * count
+
+
+def _shot_at(state: BattleState, unit: UnitState, boss: UnitState, part: BossPart) -> bool:
+    """遠程從 ``unit.xy`` 有沒有一格部位格在普攻射程內、而且看得到（同 ``parts._tile_reason``）。"""
+    return any(
+        manhattan(unit.xy, t) <= attack_reach(state, unit, t)
+        and has_line_of_sight(state, unit.xy, t, lob=unit.weapon.lob, viewer=unit, ignore_unit=boss)
+        for t in part_tiles(boss, part)
+    )
+
+
+def guard_face_extra(
+    state: BattleState, boss: UnitState, w: AiWeights, victims: tuple[UnitState, ...]
+) -> int:
+    """巨型頭目護面（GB-3，D13、T18）：有部位快破（剩血 ≤ 最大 × ``near_break_permille``‰）時，
+    ``victims`` 裡每名貼著那個部位格子的敵人 × ``guard_face_bonus``（一名敵人只算一次）。不是巨型
+    頭目、沒有部位時一律 0。"""
+    if not w.guard_face_bonus or not is_giant(boss) or not boss.parts:
+        return 0
+    near = [
+        part
+        for part in boss.parts
+        if part.tiles and _open(boss, part) and _near_break(boss, part, w)
+    ]
+    if not near:
+        return 0
+    return w.guard_face_bonus * sum(
+        1
+        for v in victims
+        if v.team is not boss.team and any(_touches_part(v.xy, boss, p) for p in near)
+    )
+
+
+def _near_break(unit: UnitState, part: BossPart, w: AiWeights) -> bool:
+    full = max_part_hp(unit.max_hp, part)
+    return unit.part_hp.get(part.id, full) * _PERMILLE <= full * w.near_break_permille

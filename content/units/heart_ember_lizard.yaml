@@ -9,7 +9,7 @@ max_hp: 18
 speed: 6
 armor_bonus: 1
 weapon: fangs
-ai_profile: brute
+ai_profile: ember_brood   # GB-3（T17）：莽夫＋追離頭目遠的人
 resist: {}
 element_mods: {fire: -500, ice: 500}
 tags: [beast, lava_beast]
