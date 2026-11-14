@@ -1,0 +1,28 @@
+# LB-2b：把 llm_model_compare 的結果 JSON 整理成並排表的一欄（存成 .py.txt，不進 lint）。
+# 用法：uv run python <複製成 .py 的這支> <json>...
+import json
+import sys
+
+for path in sys.argv[1:]:
+    d = json.load(open(path, encoding="utf-8"))
+    s = d["summary"]
+    rows = d["rows"]
+    llm = s["sources"].get("llm", 0)
+    q12 = next(r for r in rows if r["index"] == 12)
+    vram = d.get("gpu_memory", "").split(",")[1].strip() if d.get("gpu_memory") else "?"
+    print(
+        path,
+        f"first={s['first_pass']}/{s['completed']}",
+        f"llm={llm}/{s['completed']}",
+        f"fallback={s['fallback']}/{s['completed']}",
+        f"attempts={s['mean_attempts']}",
+        f"median={s['seconds_median']}",
+        f"naming={s['naming_llm']}/{s['naming_total']}",
+        f"tps={d['speed']['generation_tps']}",
+        f"vram={vram}",
+        f"schema={d.get('schema_mode')}",
+        f"unconstrained={d.get('unconstrained_calls')}",
+        f"Q12={q12['source']}/{q12['attempts']}/{q12['codes']}",
+        sep="｜",
+    )
+    print("  passed:", [r["index"] for r in rows if r["source"] == "llm"])

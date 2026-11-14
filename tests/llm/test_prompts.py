@@ -180,6 +180,9 @@ SNAPSHOTS = {
     # （都在 build_proposal_prompt／evaluate 這層；快照只看 build_skill_proposal_messages，
     # 雜湊同 /14）
     "skill-proposal/15": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # LB-2b：被動題目的關鍵字 ways 先列 uses、拿掉放不進被動預算的 makes；變奏開放 range_delta
+    # （+1～+2；schema 分支與 VARIANTS_NOTE_ZH）。都在 build_proposal_prompt 這層，雜湊同 /15
+    "skill-proposal/16": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

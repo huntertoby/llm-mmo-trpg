@@ -228,6 +228,14 @@ MAIN_DAMAGE_ADVICE = (
 """變奏換掉主傷害時的建議（LB-2）。"""
 SECONDARY_ADVICE = "。請刪掉多出的附帶效果（核心效果以外的都算），或改用附帶效果上限較高的骨架"
 """``skeleton.secondary_count`` 的建議（LB-2）。"""
+RANGE_DELTA_ADVICE = (
+    "。請拿掉這個變奏的 range_delta（改用 shape、element 或 add_effect），"
+    "或把技能形狀改成有數字射程的形狀（例：single 並填數字 range）"
+)
+"""變奏的 ``range_delta`` 配上沒有數字射程的形狀時的建議（LB-2b：初版重測 Gemma 在 line、cone 上
+連三次填 range_delta）。"""
+PASSIVE_AFFECTS_ADVICE = '。請在這個效果明寫 "affects": "self"（沒寫時預設是 enemies 或 allies）'
+"""``passive.affects`` 的建議（LB-2b：初版重測 Q12 的 Gemma 效果不寫 ``affects``，三次一樣）。"""
 
 
 def _element_requirements(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
@@ -244,6 +252,8 @@ def advise(error: ProposalError, library: ContentLibrary) -> ProposalError:
     - 要求技能元素的互斥規則：頂層的 ``element`` 要填哪個值（:data:`ELEMENT_ADVICE`）。
     - 變奏換掉主傷害：``replace_effect.index`` 換位置或改用 ``add_effect``。
     - ``skeleton.secondary_count``：刪掉多的附帶效果或換骨架。
+    - 變奏的 ``range_delta`` 配上沒有數字射程的形狀（LB-2b）：拿掉 ``range_delta`` 或換形狀。
+    - ``passive.affects``（LB-2b）：明寫 ``affects: self``。
     """
     extra = ""
     elements = _element_requirements(library).get(error.code)
@@ -253,6 +263,10 @@ def advise(error: ProposalError, library: ContentLibrary) -> ProposalError:
         extra = MAIN_DAMAGE_ADVICE
     elif error.code == "skeleton.secondary_count":
         extra = SECONDARY_ADVICE
+    elif error.path.endswith(".range_delta") and "range_delta" in error.message:
+        extra = RANGE_DELTA_ADVICE
+    elif error.code == "passive.affects":
+        extra = PASSIVE_AFFECTS_ADVICE
     return replace(error, message=error.message + extra) if extra else error
 
 

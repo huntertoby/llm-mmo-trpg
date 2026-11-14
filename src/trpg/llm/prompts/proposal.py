@@ -76,13 +76,27 @@ EFFECTS_NOTE_ZH = (
 VARIANTS_NONE_ZH = "這個稀有度不能帶變奏：不要填 variants。"
 VARIANTS_NOTE_ZH = (
     "選填，最多 {limit} 個；不填最容易通過。每個變奏＝id、name_zh、when（觸發條件）"
-    "＋ shape、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
+    "＋ shape、range_delta、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
+    "range_delta 是射程加值，只能填 1 或 2（射程變遠），而且技能的形狀（或變奏換上的 shape）"
+    "要有數字射程。{ranged}"
     "replace_effect 的 index 是要換掉的 effects 位置（從 0 起算），"
     "不能指向主傷害（第一個 damage 效果）；要加強傷害請用 add_effect。"
 )
-"""``variants`` 的說明（LB-2：變奏數量、替換內容 1～2 項、主傷害不能被換掉）。"""
-PASSIVE_NOTE_ZH = "被動技能的 trigger.target 是 self 時，每個效果的 affects 都只能是 self。"
-"""被動技能的說明（LB-2：``passive.affects``）。"""
+"""``variants`` 的說明（LB-2：變奏數量、替換內容 1～2 項、主傷害不能被換掉；LB-2b：射程加值
+``range_delta``，``{ranged}`` 是 :func:`_ranged_shapes_note` 列的這題形狀）。"""
+RANGED_SHAPES_ZH = (
+    "這題有射程的形狀：{ranged}（shape.range 填 weapon 時不算）；"
+    "{plain} 沒有射程，用這些形狀時不能填 range_delta。"
+)
+"""這題哪些形狀能配 ``range_delta``（LB-2b：初版重測 Gemma 在 line、cone、ring 上填 range_delta，
+50 次嘗試 26 次被驗證器擋下）。"""
+RANGED_SHAPES_NONE_ZH = "這題的形狀都沒有射程，不能填 range_delta。"
+PASSIVE_NOTE_ZH = (
+    "被動技能的 trigger.target 是 self 時（沒有 target 欄位的觸發一律是 self），"
+    '每個效果都要明寫 "affects": "self"（不寫時預設是 enemies 或 allies，會被擋下）。'
+)
+"""被動技能的說明（LB-2：``passive.affects``；LB-2b：初版重測 Gemma 在 Q12 用沒有 target 欄位的
+``on_turn_start``、效果不寫 ``affects``，三次都被 ``passive.affects`` 擋下，改成要明寫）。"""
 LOCAL_CONTEXT_TOKENS = 16_384
 """本機模型（LM Studio）實際載入的上下文長度；system＋子集目錄＋題目＋ ``max_tokens`` 必須放得下
 （``tests/llm/test_prompt_prefix.py`` 檢查）。"""
@@ -149,8 +163,24 @@ def field_notes(
         notes["trigger"] = PASSIVE_NOTE_ZH
     else:
         limit = library.ruleset.core.variant_max_by_rarity.get(request.rarity, 0)
-        notes["variants"] = VARIANTS_NOTE_ZH.format(limit=limit) if limit else VARIANTS_NONE_ZH
+        notes["variants"] = (
+            VARIANTS_NOTE_ZH.format(limit=limit, ranged=_ranged_shapes_note(library, subset))
+            if limit
+            else VARIANTS_NONE_ZH
+        )
     return notes
+
+
+def _ranged_shapes_note(library: ContentLibrary, subset: ProposalSubset) -> str:
+    """這題的形狀哪些有數字射程（形狀定義有 ``range`` 參數；LB-2b，``range_delta`` 只能配它們）。"""
+    shapes = library.ruleset.shapes.by_id()
+    ranged = [s for s in subset.shapes if s in shapes and "range" in shapes[s].params]
+    plain = [s for s in subset.shapes if s not in ranged]
+    if not ranged:
+        return RANGED_SHAPES_NONE_ZH
+    if not plain:
+        return f"這題有射程的形狀：{'、'.join(ranged)}（shape.range 填 weapon 時不算）。"
+    return RANGED_SHAPES_ZH.format(ranged="、".join(ranged), plain="、".join(plain))
 
 
 def _request_payload(

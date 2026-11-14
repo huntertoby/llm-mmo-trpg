@@ -36,6 +36,7 @@ from trpg.content.skills import SkillRarity, rarity_rank
 from trpg.shared.rng import fnv1a64
 from trpg.skillgen.keywords import draft_facts
 from trpg.skillgen.proposal import budget_statuses, rarity_statuses
+from trpg.skillgen.proposal_passive import rule_key
 
 if TYPE_CHECKING:
     from trpg.skillgen.proposal_subset import ProposalSubset
@@ -122,10 +123,15 @@ def keyword_way_texts(
     triggers: Iterable[str] = (),
     shapes: Iterable[str] = (),
     limit: int = 6,
+    skip: frozenset[str] = frozenset(),
+    uses_first: bool = False,
 ) -> list[str]:
     """題目選單裡能帶到 ``keyword`` 的寫法（給 prompt 的短字串，最多 ``limit`` 個）：專屬規則中
     原語／條件／觸發／形狀在選單內的。例：``apply_status（status＝commanding）``、
-    ``條件 target_has_status（status＝poison）``。"""
+    ``條件 target_has_status（status＝poison）``。
+
+    LB-2b（被動題目）：``skip`` 是不列的規則（:func:`~trpg.skillgen.proposal_passive.rule_key`），
+    ``uses_first`` 時「利用」的規則排在「製造」前面。"""
     found = library.keywords.by_id().get(keyword)
     if found is None:
         return []
@@ -137,10 +143,13 @@ def keyword_way_texts(
     }
     label = {"effect": "", "condition": "條件 ", "trigger": "觸發 ", "shape": "形狀 "}
     out: list[str] = []
-    for rule in (*found.makes, *found.uses):
+    ordered = (*found.uses, *found.makes) if uses_first else (*found.makes, *found.uses)
+    for rule in ordered:
         if rule.grade != "exclusive" or rule.source not in allowed:
             continue
         if _SKIP_PARAMS & set(rule.params()) or rule.source_id not in allowed[rule.source]:
+            continue
+        if skip and rule_key(rule) in skip:
             continue
         text = label[rule.source] + _rule_text(rule)
         if text not in out:

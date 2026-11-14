@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# LB-2b 改後重測（Gemma 第 1 輪另外跑完之後）：依序、一次一個；換模型照上手-LLM 第四節第 8 點。
+# 任何一步失敗（只載入目標模型以外、t/s 低於 60）就停，但最後一定把 Gemma 載回來。
+cd /f/PythonProject/LLM-MMO-TRPG/.claude/worktrees/agent-ad1cb7f8f4b80ce52 || exit 9
+export UV_NO_SYNC=1
+LMS="C:/Users/tobby/.lmstudio/bin/lms.exe"
+CHECK="C:/Users/tobby/AppData/Local/Temp/claude/9f1b79de9b6f77a5/9d8cd6cd-f0cd-4696-a663-73ef271d469e/scratchpad/lb2b_check_loaded.py"
+OUT=docs/phases/LB-2b資料
+GEMMA=google/gemma-4-26b-a4b-qat
+SWIFT=swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp
+QWEN=qwen3.6-35b-a3b
+
+run() {  # model label
+  echo "=== $2 ===" ; date
+  uv run python "$CHECK" "$1" || { echo "STOP: loaded models not exactly $1"; return 1; }
+  uv run python scripts/llm_model_compare.py --model "$1" --reasoning-effort none --temperature 0.7 \
+    --label "$2" --out "$OUT/$2.json" > "$OUT/run_$2.log" 2>&1
+  code=$?
+  tail -2 "$OUT/run_$2.log"
+  [ $code -eq 0 ] || { echo "STOP: $2 exit $code"; return 1; }
+}
+
+swap() {  # model
+  echo "=== swap to $1 ===" ; date
+  "$LMS" unload --all
+  "$LMS" load "$1" -y
+}
+
+main() {
+  run "$GEMMA" gemma_after_t07_r1 || return 1
+  run "$GEMMA" gemma_after_t07_r2 || return 1
+  swap "$SWIFT"
+  run "$SWIFT" swift_after_t07_r1 || return 1
+  run "$SWIFT" swift_after_t07_r2 || return 1
+  swap "$QWEN"
+  run "$QWEN" qwen_after_t07_r1 || return 1
+}
+
+main
+status=$?
+swap "$GEMMA"
+uv run python "$CHECK" "$GEMMA"
+echo "CHAIN DONE status=$status"
+date

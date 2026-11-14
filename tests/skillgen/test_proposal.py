@@ -132,7 +132,10 @@ def test_proposal_has_no_numeric_fields() -> None:
     assert {"dice", "duration", "distance", "permille", "multiplier_permille"} <= all_numeric
     assert set(schema["$defs"]["Scaling"]["properties"]) == {"by"}
     assert set(standard_form(schema)["properties"]).isdisjoint({"ap_cost", "cost"})
-    assert "range_delta" not in schema["$defs"]["Variant"]["properties"]
+    # LB-2b（玩法 PM 4.1.17 第 2 點）：變奏的射程加值開放給 LLM，但只能選 +1、+2（照組合器）
+    delta = schema["$defs"]["Variant"]["properties"]["range_delta"]["anyOf"]
+    assert {"type": "null"} in delta
+    assert [o["enum"] for o in delta if "enum" in o] == [[1, 2]]
     for key, definition in schema["$defs"].items():
         if key.startswith("Trigger_"):
             assert set(definition["properties"]).isdisjoint({"max_per_round", "max_distance"})

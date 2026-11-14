@@ -3,9 +3,10 @@
 pydantic 模型與驗證器都不變（驗證一律用模型本身）；這裡只改「送給 LLM 伺服器的 schema」，讓約束
 解碼直接排除一定會被驗證器擋下的組合：
 
-- :func:`split_variants`：變奏（``Variant``）的替換內容必須是 ``shape``、``element``、
-  ``add_effect``、``replace_effect`` 其中 1～2 項（``SkillDef`` 的變奏驗證器）。LM Studio 的約束解碼
-  不支援 ``maxProperties``（LB-2 實測會被忽略），所以拆成「恰好這幾項」的分支（``anyOf``）。
+- :func:`split_variants`：變奏（``Variant``）的替換內容必須是 ``shape``、``range_delta``
+  （LB-2b 起開放）、``element``、``add_effect``、``replace_effect`` 其中 1～2 項（``SkillDef``
+  的變奏驗證器）。LM Studio 的約束解碼不支援 ``maxProperties``（LB-2 實測會被忽略），所以拆成
+  「恰好這幾項」的分支（``anyOf``）。
 - :func:`limit_variants`：變奏數量的稀有度上限（``core.variant_max_by_rarity``）寫進 ``maxItems``；
   上限 0 時拿掉 ``variants`` 欄位。
 
@@ -35,8 +36,15 @@ __all__ = [
     "split_variants",
 ]
 
-VARIANT_SWAP_FIELDS: tuple[str, ...] = ("shape", "element", "add_effect", "replace_effect")
-"""變奏的替換內容欄位（提議模型有的；``range_delta`` 不開放給 LLM）。"""
+VARIANT_SWAP_FIELDS: tuple[str, ...] = (
+    "shape",
+    "range_delta",
+    "element",
+    "add_effect",
+    "replace_effect",
+)
+"""變奏的替換內容欄位（提議模型有的；LB-2b 起含 ``range_delta``，只開 +1～+2）。5 項取 1 或 2
+＝ 15 個分支。"""
 VARIANT_SWAP_MAX = 2
 """每個變奏最多幾項替換內容（``SkillDef`` 的變奏驗證器：1～2 項）。"""
 _VARIANT_KEYS = frozenset({"id", "name_zh", "when"})
