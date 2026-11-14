@@ -10,7 +10,8 @@
 <p class="note">畫圖 agent，2026-11-14（PhaseGB 計畫 D14～D18、D23、T20；第 9 節 A1、A2）。分段：
 <a href="?part=sprites&w=1600&mute=1">1a 立繪 1600 真 1 倍</a><a href="?part=sprites&w=800&mute=1">1b 立繪 800 真 1 倍</a><a href="?part=big&mute=1">1c 立繪放大＋佔格</a><a href="?part=anchor&mute=1">1d 錨點與外接框</a>
 <a href="?part=field&w=1600&mute=1">2a 比例 1600</a><a href="?part=field&w=800&mute=1">2b 比例 800</a>
-<a href="?part=marks&w=1600&mute=1">3a 部位格 1600</a><a href="?part=marks&w=800&mute=1">3b 部位格 800</a><a href="?part=marks-nn&mute=1">3c 部位格特寫</a><a href="?part=probe&mute=1">自查</a></p>
+<a href="?part=marks&w=1600&mute=1">3a 部位格 1600</a><a href="?part=marks&w=800&mute=1">3b 部位格 800</a><a href="?part=marks-nn&mute=1">3c 部位格特寫</a><a href="?part=probe&mute=1">自查</a>
+<a href="?part=pit&w=1600&mute=1">6a 熔心坑 1600</a><a href="?part=pit&w=800&mute=1">6b 熔心坑 800</a><a href="?part=pit-south&mute=1">6c 南邊相鄰</a><a href="?part=pit-p3&rows=1&mute=1">6d 第 3 階段</a><a href="?part=pit-p3&rows=2&mute=1">6e 火地 2 排</a><a href="?part=pit-a6&w=1600&mute=1">6f A6 1600</a><a href="?part=pit-a6&w=800&mute=1">6g A6 800</a></p>
 <div id="sheet"></div>
 <textarea id="out"></textarea>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
@@ -21,6 +22,7 @@
 <script src="occludeOutline.js"></script>
 <script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script>
 <script src="qBossGiant.js"></script><script src="qBossGiantIcons.js"></script>
+<script src="tools/qFieldLive.js"></script>
 <script>
 const GB = QBossGiant, OO = OccludeOutline, T = GB.T, P = new URLSearchParams(location.search), PART = P.get("part") || "sprites";
 try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
@@ -430,6 +432,208 @@ PARTS.probe = () => {
   const cv = render(solo(v.st, { hover: P.get("hover") || undefined }), soloView(Z, 1, 0.2));
   publish(sheet(Math.max(800, cv.width + 40), [{ cells: [{ cv, cap: v.zh }] }]));
 };
+
+// ================= 6 A5 改圖後熔心坑戰場（GB-2 正式地圖；地形用遊戲端現行畫法 tools/qFieldLive.js） =================
+// 地格＝terrainArt.ts drawTile（region ashen_waste：stone／lava／wall＋高度明暗＋水、火表面）、矮牆＝objectArt.ts drawObject（荒原 low_wall）；
+// 崖面、高格描邊（heightArt.ts drawCliff／drawEdges）、致命角標（lethalMarks.ts drawLethalCorners）、高度徽章「▲N」（terrainLayer.ts drawBadges）
+// 是 Pixi Graphics，幾行照抄在下面（常數從 qFieldLive 取）。A1～A4 的 render()、solo() 不動（指紋不變）。
+const FL = window.QFieldLive;
+/** content/maps/molten_heart_pit.yaml（GB-2 改圖，照抄）。 */
+const PIT = {
+  terrain: ["############", "#vvvvvvvvvv#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#v........v#", "#vv.vvvv.vv#", "#..........#"],
+  heights: ["000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "000000000000", "001000000100", "000000000000", "000000000000"],
+  lowWalls: [[4, 9], [7, 9]], water: [[3, 4], [7, 4], [3, 8], [8, 8]],
+};
+const PIT_TER = { ".": "stone", v: "lava", "#": "wall" };
+const inPit = (x, y) => x >= 0 && y >= 0 && x < 12 && y < 12;
+const terAt = (x, y) => PIT_TER[PIT.terrain[y][x]], hAt = (x, y) => (inPit(x, y) ? +PIT.heights[y][x] : 0);
+const hexN = (n) => "#" + n.toString(16).padStart(6, "0"), rgbaN = (n, a) => `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+/** 表面：預放的 4 口冷卻井（水）＋第 3 階段火地。 */
+const pitSurf = (fire = []) => { const m = new Map(); for (const [x, y] of PIT.water) m.set(`${x},${y}`, "water"); for (const [x, y] of fire) m.set(`${x},${y}`, "fire"); return m; };
+/** artSpecs.ts tileArtSpec 照抄（drawModel 換成上面的地圖）。 */
+function pitTileSpec(x, y, surf) {
+  const t = terAt(x, y), s = surf.get(`${x},${y}`) ?? "none";
+  const nb = (dx, dy) => (inPit(x + dx, y + dy) ? { terrain: terAt(x + dx, y + dy), surface: surf.get(`${x + dx},${y + dy}`) ?? "none" } : undefined);
+  const differs = (n) => n !== undefined && n.terrain !== t, same = (n) => n !== undefined && n.surface === s && s !== "none";
+  const N = nb(0, -1), S = nb(0, 1), W = nb(-1, 0), E = nb(1, 0);
+  return { region: "ashen_waste", look: "", terrain: t, x, y, height: hAt(x, y), surface: s,
+    surfSame: { n: same(N), s: same(S), w: same(W), e: same(E) }, surfDiag: { nw: same(nb(-1, -1)), ne: same(nb(1, -1)), se: same(nb(1, 1)), sw: same(nb(-1, 1)) },
+    lip: { n: differs(N), s: differs(S), w: differs(W), e: differs(E) }, wallFace: t === "wall" && !(S !== undefined && S.terrain === "wall"), blocked: t !== "stone", tint: null };
+}
+/** 一格地面（terrainLayer.ts tileSprite：崖面 → 頂面貼圖（52 畫到 48）→ 高格描邊 → 致命角標），整格往上抬 lift。 */
+function pitTile(g, x, y, surf) {
+  const h = hAt(x, y), lift = FL.tileLift(h);
+  g.save(); g.translate(x * T, y * T - lift);
+  if (lift > 0) { // heightArt.ts drawCliff
+    const bands = Math.max(1, Math.ceil(lift / 2));
+    for (let i = 0; i < bands; i++) { const y0 = (i * lift) / bands, y1 = ((i + 1) * lift) / bands; g.fillStyle = hexN(FL.mixColor(FL.CLIFF_TOP, FL.CLIFF_BOTTOM, bands === 1 ? 0 : i / (bands - 1))); g.fillRect(0, T + y0, T, y1 - y0 + 0.5); }
+    g.fillStyle = "rgba(0,0,0,0.3)"; for (const sy of FL.strataLines(lift)) g.fillRect(0, T + sy, T, 1);
+  }
+  g.save(); g.beginPath(); g.rect(0, 0, T, T); g.clip(); g.scale(T / 52, T / 52); FL.drawTile(g, pitTileSpec(x, y, surf)); g.restore();
+  if (lift > 0) { // heightArt.ts drawEdges（edgeMarks：鄰格較低）
+    const low = (dx, dy) => inPit(x + dx, y + dy) && hAt(x + dx, y + dy) < h;
+    g.fillStyle = rgbaN(FL.RIM.color, FL.RIM.alpha); g.fillRect(0, T - 2, T, 2); if (low(0, -1)) g.fillRect(0, 0, T, 2);
+    g.fillStyle = rgbaN(FL.EDGE.color, FL.EDGE.alpha); if (low(1, 0)) g.fillRect(T - 1.5, 0, 1.5, T + lift); if (low(-1, 0)) g.fillRect(0, 0, 1.5, T + lift);
+  }
+  if (terAt(x, y) === "lava") { // lethalMarks.ts drawLethalCorners＋lethalCornersOf（只描致命區外輪廓）
+    const mask = FL.lethalCornerMask((a, b) => inPit(a, b) && terAt(a, b) !== "lava", x, y);
+    g.beginPath(); FL.lethalCornerPaths(T).forEach(([x0, y0, x1, y1, x2, y2], i) => { if (mask[i]) { g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineTo(x2, y2); } });
+    g.lineWidth = FL.LETHAL_CORNER_WIDTH; g.strokeStyle = rgbaN(FL.HIGHLIGHT.deadly, FL.LETHAL_CORNER_ALPHA); g.lineCap = "round"; g.lineJoin = "round"; g.stroke();
+  }
+  g.restore();
+}
+/** 高度徽章「▲N」（terrainLayer.ts drawBadges；heightMark.ts 的底、三角、數字位置；800 時以格子左上角反向放大到字 ≥ 10 px）。有人站著不畫（6F-18）。 */
+function pitBadge(g, x, y, S) {
+  const lift = FL.tileLift(hAt(x, y)), k = Math.max(1, FL.MIN_HEIGHT_BADGE_FONT_PX / (10 * S)), bg = FL.HEIGHT_MARK_BG, tri = FL.HEIGHT_MARK_TRI;
+  g.save(); g.translate(x * T, y * T - lift); g.scale(k, k);
+  rr(g, bg.x, bg.y, bg.w, bg.h, bg.r); g.fillStyle = "rgba(30,24,18,0.7)"; g.fill();
+  g.beginPath(); g.moveTo(tri[0], tri[1]); g.lineTo(tri[2], tri[3]); g.lineTo(tri[4], tri[5]); g.closePath(); g.fillStyle = "#fff3c4"; g.fill();
+  g.font = `700 10px ${FONT}`; g.textBaseline = "top"; g.fillText(String(hAt(x, y)), FL.HEIGHT_MARK_NUM.x, FL.HEIGHT_MARK_NUM.y); g.restore();
+}
+function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+const TAU_ = Math.PI * 2;
+/** 環境預告「蓄」（highlightLayer.ts setHighlights 的 telegraph：marks 層、所有排之上；位置跟著格子抬高；rg-marks.html CUR.telegraph 同一份）。 */
+function telegraph(ctx, gx, gy, glyph = "蓄", color = "#b06bff") {
+  const x = gx * T, y = gy * T - FL.tileLift(hAt(gx, gy));
+  ctx.save(); ctx.fillStyle = hexA(color, 0.16); ctx.fillRect(x + 3, y + 3, T - 6, T - 6); ctx.strokeStyle = hexA(color, 0.85); ctx.lineWidth = 2; ctx.strokeRect(x + 3, y + 3, T - 6, T - 6);
+  ctx.beginPath(); ctx.arc(x + T - 11, y + 11, 9, 0, TAU_); ctx.fillStyle = "rgba(0,0,0,0.65)"; ctx.fill();
+  ctx.fillStyle = color; ctx.font = `700 12px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(glyph, x + T - 11, y + 11.5); ctx.restore();
+}
+function hexA(h, a) { const n = parseInt(h.slice(1, 7), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
+/** 蓄力徽章（unitSprite.ts statusBadge：半徑 10、黑 80%、紫 0xc77dff 線 2、蓄力圖示、右下數字 10 px；rg-marks.html CUR.chargeBadge 同一份）。 */
+function chargeBadge(ctx, x, y, n = 1) {
+  ctx.save(); ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU_); ctx.fillStyle = "rgba(0,0,0,0.8)"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#c77dff"; ctx.stroke();
+  try { QStatusLive.paintStatusIcon(ctx, "charging", x, y, 14); } catch (e) { /* 沒有就只畫圓 */ }
+  ctx.font = `700 10px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineWidth = 3; ctx.strokeStyle = "#000"; ctx.strokeText(String(n), x + 8, y + 8); ctx.fillStyle = "#fff"; ctx.fillText(String(n), x + 8, y + 8); ctx.restore();
+}
+/** HP 條（occludeOutline.js drawHud 同一套：中心＋0.36T、寬 0.8T、高 5），跟著格子抬高。 */
+function pitHud(ctx, u) { const c = OO.centerOf(u), w = T * 0.8, y = c.y + T * 0.36; ctx.fillStyle = "#000"; ctx.fillRect(c.x - w / 2, y, w, 5); ctx.fillStyle = u.hp > 0.5 ? "#4cd964" : u.hp > 0.25 ? "#ffcc00" : "#ff3b30"; ctx.fillRect(c.x - w / 2, y, w * u.hp, 5); }
+/**
+ * 熔心坑一張圖。scene＝{ giant: { st, opt, charge }, units（OO 單位；h 自動照地圖）, fire:[[x,y]], marks(ctx) }；view＝{ S, res, x0, y0, w, h }（模型像素）。
+ * 圖層：全部地格（崖面、頂面、描邊、致命角標）→ 第 3 階段坑底紅光（地面層，A1 第 2 版）→ 一排一排（矮牆 → ▲N → 單位／頭目（南排那一排）→ HP 條）
+ *   → marks（預告「蓄」，所有排之上）→ 頭目 HUD（GB-4b「3×3 上方中間」，示意）。
+ * 和遊戲的差：遊戲每排的地格在那一排（南邊高格的頂面會蓋到北邊一排人的腳下 6 px）；這幾張高台北邊一格都沒站人，結果相同。
+ */
+function renderPit(scene, view) {
+  const sc = view.S * (view.res ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = GB.mk(W, H), g = cv.getContext("2d"), xf = (c) => c.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  g.fillStyle = "#14161f"; g.fillRect(0, 0, W, H); xf(g);
+  const surf = pitSurf(scene.fire ?? []);
+  for (let y = 0; y < 12; y++) for (let x = 0; x < 12; x++) pitTile(g, x, y, surf);
+  const Gi = scene.giant, ax = 5.5 * T, ay = 5 * T, m = new DOMMatrix([sc, 0, 0, sc, (ax - view.x0) * sc, (ay - view.y0) * sc]);
+  if (Gi && (Gi.opt ?? {}).pitGlow !== false) { g.setTransform(m); GB.groundGlow(g, Gi.st); }
+  const units = (scene.units ?? []).map((u) => ({ ...u, h: hAt(u.x, u.y) }));
+  for (let row = 0; row < 12; row++) {
+    xf(g);
+    for (const [x, y] of PIT.lowWalls) if (y === row) { g.save(); g.translate(x * T, y * T - FL.tileLift(hAt(x, y))); g.scale(T / 52, T / 52); FL.drawObject(g, { region: "ashen_waste", look: "", kind: "low_wall", x, y, joinL: false, joinR: false, vertical: false, flammable: false, turnsLeft: null, hpStage: 0 }); g.restore(); }
+    for (let x = 0; x < 12; x++) if (hAt(x, row) > 0 && !units.some((u) => u.x === x && u.y === row)) pitBadge(g, x, row, view.S);
+    const inRow = [...units.filter((u) => u.y === row).map((u) => ({ u, x: u.x })), ...(Gi && row === 4 ? [{ giant: true, x: 5 }] : [])].sort((a, b) => a.x - b.x);
+    for (const it of inRow) {
+      if (it.giant) { g.setTransform(m); GB.draw(g, Gi.st, Gi.opt ?? {}); continue; }
+      xf(g); OO.drawRing(g, it.u); const F = GB.mk(W, H), fc = F.getContext("2d"); xf(fc); OO.drawBody(fc, it.u, sc); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(F, 0, 0);
+    }
+    xf(g); for (const it of inRow) if (!it.giant) pitHud(g, it.u);
+  }
+  xf(g); if (scene.marks) scene.marks(g);
+  if (Gi && Gi.hud) { // 頭目 HUD：GB-4b「3×3 上方中間」（外接框頂上：錨點往上 159.7＋8）；HP 條同一般單位寬 0.8T（示意，GB-4c 定）；蓄力徽章照一般單位相對 HP 條的位置（−0.37T、−0.56T）
+    const hy = ay - 159.7 - 8, w = T * 0.8; g.fillStyle = "#000"; g.fillRect(ax - w / 2, hy, w, 5); g.fillStyle = "#4cd964"; g.fillRect(ax - w / 2, hy, w * (Gi.hp ?? 0.85), 5);
+    if (Gi.charge) chargeBadge(g, ax - 0.37 * T, hy - 0.56 * T, Gi.charge);
+  }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return cv;
+}
+/**
+ * 在截圖上標出（另畫一份，不動原圖）：每項＝{ n（編號）, boxes:[[x0,y0,x1,y1] 格座標], tag:[x,y] 格座標 }。
+ * 青色虛線框框住那幾格（襯黑），白底圓編號、細線連到最近的框；格座標照地圖（高格往上抬 lift）。
+ */
+function annotate(src, view, items) {
+  const sc = view.S * (view.res ?? 1), cv = GB.mk(src.width, src.height), g = cv.getContext("2d"); g.drawImage(src, 0, 0);
+  const P2 = (x, y) => [(x * T - view.x0) * sc, (y * T - view.y0) * sc];
+  const r = sc > 1 ? 9 : 7, fs = sc > 1 ? 12 : 10;
+  for (const it of items) {
+    for (const [x0, y0, x1, y1] of it.boxes) {
+      const lift = FL.tileLift(hAt(x0, y0)) / T, [a, b] = P2(x0, y0 - lift), [c, d] = P2(x1, y1 - lift);
+      g.setLineDash([4, 3]); g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,0.75)"; g.strokeRect(a + 1, b + 1, c - a - 2, d - b - 2); g.lineWidth = 1.5; g.strokeStyle = "#78f0ff"; g.strokeRect(a + 1, b + 1, c - a - 2, d - b - 2); g.setLineDash([]);
+    }
+    const [tx, ty] = P2(...it.tag);
+    for (const [x0, y0, x1, y1] of it.boxes) {
+      const lift = FL.tileLift(hAt(x0, y0)) / T, [a, b] = P2(x0, y0 - lift), [c, d] = P2(x1, y1 - lift), px = Math.max(a, Math.min(c, tx)), py = Math.max(b, Math.min(d, ty));
+      if (Math.hypot(px - tx, py - ty) < r + 2) continue;
+      g.beginPath(); g.moveTo(tx, ty); g.lineTo(px, py); g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,0.7)"; g.stroke(); g.lineWidth = 1.2; g.strokeStyle = "#78f0ff"; g.stroke();
+    }
+    g.beginPath(); g.arc(tx, ty, r, 0, TAU_); g.fillStyle = "#f2f6ff"; g.fill(); g.lineWidth = 1.5; g.strokeStyle = "#16121a"; g.stroke();
+    g.fillStyle = "#16121a"; g.font = `700 ${fs}px ${FONT}`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(it.n), tx, ty + 0.5);
+  }
+  return cv;
+}
+const FULL = (S) => ({ S, res: 1, x0: 0, y0: 0, w: 12 * T, h: 12 * T });
+/** 從整張圖裁一塊（模型像素）。 */
+const cropPit = (src, view, x0, y0, w, h) => { const sc = view.S * (view.res ?? 1), o = GB.mk(Math.round(w * sc), Math.round(h * sc)); o.getContext("2d").drawImage(src, Math.round((x0 - view.x0) * sc), Math.round((y0 - view.y0) * sc), o.width, o.height, 0, 0, o.width, o.height); return o; };
+const P1S = { phase: 1, shell: 1, t: 300 };
+/** 第 1 階段開場：我方在起始區（encounter 前三位照 start_zones.ally 前三格：戰士 (3,11)、弓手 (8,11)、法師 (2,11)），兩隻餘燼蜥照 start_zones.enemy (2,4)、(8,4)。 */
+const sceneOpen = () => ({ giant: { st: P1S }, units: [U.hero({ id: "h", x: 3, y: 11, active: true }), U.archer({ id: "a", x: 8, y: 11 }), U.mage({ id: "m", x: 2, y: 11, view: "back" }), U.lizard({ id: "l1", x: 2, y: 4 }), U.lizard({ id: "l2", x: 8, y: 4, west: true })] });
+/** 標出的六項（編號＝紀錄 3.8 的表）。 */
+const OPEN_NOTES = [
+  { n: 1, boxes: [[2, 9, 3, 10], [9, 9, 10, 10]], tag: [1.5, 8.5] }, // 高台
+  { n: 2, boxes: [[1, 1, 11, 2]], tag: [10.5, 0.5] }, // 北邊岩漿（頭目背後）
+  { n: 3, boxes: [[4, 9, 5, 10], [7, 9, 8, 10]], tag: [5.5, 10.5] }, // 矮牆
+  { n: 4, boxes: [[3, 4, 4, 5], [7, 4, 8, 5], [3, 8, 4, 9], [8, 8, 9, 9]], tag: [5.5, 7.5] }, // 冷卻井
+  { n: 5, boxes: [[3, 10, 4, 11], [8, 10, 9, 11]], tag: [10.5, 10.5] }, // 南側通路
+  { n: 6, boxes: [[4, 2, 7, 5]], tag: [7.5, 1.5] }, // 灰燼之心佔格
+];
+const OPEN_LEGEND = "標號：① 高台 (2,9)、(9,9) 高 1　② 北邊岩漿 y 1（頭目背後）　③ 矮牆 (4,9)、(7,9)　④ 冷卻井（水表面）(3,4)、(7,4)、(3,8)、(8,8)　⑤ 南側通路 (3,10)、(8,10)　⑥ 灰燼之心佔格 x 4～6、y 2～4。";
+PARTS.pit = () => {
+  const S = SW, V = FULL(S), cv = renderPit(sceneOpen(), V), an = annotate(cv, V, OPEN_NOTES), is8 = W_ === 800;
+  const blocks = [{ title: `6${is8 ? "b" : "a"}. A5 熔心坑（GB-2 改圖）第 1 階段開場：${W_}×${is8 ? 600 : 900} 視窗、地圖縮放 ${S.toFixed(3)}（一格 ${(T * S).toFixed(1)} px），真 1 倍` },
+    { note: "地形全部是遊戲端現行畫法（tools/qFieldLive.js＝terrainArt.ts drawTile、objectArt.ts 荒原矮牆；崖面、高格描邊、致命角標、▲N 照抄 heightArt.ts／lethalMarks.ts／terrainLayer.ts），region＝ashen_waste。我方：戰士 (3,11)（輪到行動，黃虛線圈）、弓手 (8,11)、法師 (2,11)；餘燼蜥 (2,4)、(8,4)（start_zones.enemy；第 2 階段召喚的才在 (2,3)、(8,3)）。左：原圖；右：同一張加標號。\n" + OPEN_LEGEND },
+    { cells: [{ cv, cap: "原圖（真 1 倍）" }, { cv: an, cap: "標號（青虛線框＝那幾格）" }], gap: 16 }];
+  if (is8) {
+    blocks.push({ title: "最近鄰 ×3（原圖）" }, { cells: [nn(cv, 3, "整張 ×3")] });
+  } else {
+    const c1 = cropPit(cv, V, 1 * T, 7.5 * T, 4.2 * T, 4.4 * T), c2 = cropPit(cv, V, 6.8 * T, 7.5 * T, 4.2 * T, 4.4 * T), c3 = cropPit(cv, V, 1 * T, 0.3 * T, 10 * T, 2.4 * T);
+    blocks.push({ title: "局部最近鄰 ×2（原圖）" }, { cells: [nn(c1, 2, "西南：高台 (2,9)、通路 (3,10)、矮牆 (4,9)、冷卻井 (3,8)"), nn(c2, 2, "東南：冷卻井 (8,8)、矮牆 (7,9)、通路 (8,10)、高台 (9,9)")], gap: 16 }, { cells: [nn(c3, 2, "北邊：岩漿 y 1 和頭目背後（噴口錐）")] });
+  }
+  publish(sheet(is8 ? 1340 : 1560, blocks), "image/png");
+};
+/** 南邊相鄰：戰士 (5,5) 輪到行動（黃虛線圈、白圈主角）、法師 (4,5)、弓手 (6,5) 緊貼前殼；兩側殼縫攻擊位 (3,3) 餘燼蜥、(7,3) 餘燼蜥。 */
+const sceneSouth = (st = P1S) => ({ giant: { st }, units: [U.hero({ id: "h", x: 5, y: 5, active: true }), U.mage({ id: "m", x: 4, y: 5, view: "back" }), U.archer({ id: "a", x: 6, y: 5 }), U.lizard({ id: "l1", x: 3, y: 3 }), U.lizard({ id: "l2", x: 7, y: 3, west: true })] });
+PARTS["pit-south"] = () => {
+  const blocks = [{ title: "6c. 3×3 立繪不擋南邊相鄰的人：1600 與 800 真 1 倍（第 1 階段熔殼在＝最寬的外觀）" },
+    { note: "南排 (4,5) 法師、(5,5) 戰士（主角白圈＋輪到行動黃虛線圈）、(6,5) 弓手緊貼前殼；兩側殼縫攻擊位 (3,3)、(7,3) 各一隻餘燼蜥。頭目畫在南排那一排（y 4），南邊一排的人後畫、蓋在前殼上；看 HP 條、腳下陣營環、黃圈有沒有被前殼、金框陣營環、外光蓋到。" }];
+  for (const [S, wz, z, zc] of [[S1600, "1600", 1, 3], [S800, "800", 3, 5]]) {
+    const V = FULL(S), cv = renderPit(sceneSouth(), V), part = cropPit(cv, V, 1.5 * T, 0.6 * T, 9 * T, 6.6 * T), south = cropPit(cv, V, 3.4 * T, 3.6 * T, 4.2 * T, 2.7 * T);
+    blocks.push({ cells: [z > 1 ? nn(part, z, `${wz}：坑北半（真 1 倍，最近鄰 ×${z}）`) : { cv: part, cap: `${wz}：坑北半（真 1 倍）` }, nn(south, zc, `${wz}：南排三人＋前殼 最近鄰 ×${zc}`)], gap: 16 });
+  }
+  publish(sheet(1560, blocks), "image/png");
+};
+/** 第 3 階段：坑底紅光（地面層）＋火地。rows＝1：進階段時南緣外第 1 排 (4..6,5)；2：長到第 2 排（＋(4..6,6)）。 */
+const fireRows = (n) => [5, 6, 7, 8].slice(0, n).flatMap((y) => [[4, y], [5, y], [6, y]]);
+const sceneP3 = (rows) => ({ giant: { st: { phase: 3, shell: 0, t: 300 } }, fire: fireRows(rows),
+  units: rows === 1 ? [U.hero({ id: "h", x: 3, y: 5, active: true, view: "side" }), U.mage({ id: "m", x: 5, y: 7, view: "back" }), U.archer({ id: "a", x: 7, y: 6 }), U.lizard({ id: "l1", x: 2, y: 3 }), U.lizard({ id: "l2", x: 8, y: 3, west: true })]
+    : [U.hero({ id: "h", x: 3, y: 6, active: true, view: "side" }), U.mage({ id: "m", x: 5, y: 8, view: "back" }), U.archer({ id: "a", x: 9, y: 9 }), U.lizard({ id: "l1", x: 2, y: 3 }), U.lizard({ id: "l2", x: 8, y: 4, west: true })] });
+PARTS["pit-p3"] = () => {
+  const rows = +(P.get("rows") || 1), S = S1600, V = FULL(S), cv = renderPit(sceneP3(rows), V);
+  const crop = cropPit(cv, V, 2.6 * T, 1.4 * T, 5.8 * T, 6.2 * T);
+  publish(sheet(1560, [
+    { title: rows === 1 ? "6d. 第 3 階段（熔毀）進階段：坑底紅光（地面層）＋南緣外第 1 排火地 (4～6, 5)；1600 真 1 倍" : "6e. 第 3 階段：火地從南緣長到第 2 排 (4～6, 5～6)；1600 真 1 倍" },
+    { note: (rows === 1 ? "紅光照 A1 第 2 版 QBossGiant.groundGlow（地格之後、所有單位之前）。火地是現行火表面（terrainArt.ts SURFACE_STYLE.fire：暗紅底＋火紋＋橘邊、相連的格子併塊）。戰士 (3,5)（輪到行動）、法師 (5,7)、弓手 (7,6)；第 2 階段召喚的餘燼蜥 (2,3)、(8,3)。" : "GB 計畫 R6 A：每輪結束往南長 1 排，只長到可站、沒有單位、物件、其他表面的格子，最多 4 排（占位）。這張是第 2 排長出來後：(4～6, 5～6) 6 格；戰士 (3,6)、法師 (5,8)、弓手站高台 (9,9)；餘燼蜥 (2,3)、(8,4)。") + "右：頭目南邊一帶最近鄰 ×2（紅光和火地的邊界、南排的人有沒有被染）。" },
+    { cells: [{ cv, cap: "整張（真 1 倍）" }, nn(crop, 2, "頭目南邊一帶 ×2")], gap: 16 },
+  ]), "image/png");
+};
+/** A6：熔岩濺落預告落在最遠的人。弓手站高台 (9,9)（離最近佔格 (6,4) 曼哈頓 8＝最遠）；戰士 (5,5)、法師 (3,6)；餘燼蜥 (2,4)、(8,4)。預告＝以 (9,9) 為中心的 3×3「蓄」、中心「蓄1」（BAL-21b）；頭目蓄力徽章「1」。 */
+const A6_TILES = []; for (let y = 8; y <= 10; y++) for (let x = 8; x <= 10; x++) A6_TILES.push([x, y]);
+const sceneA6 = () => ({ giant: { st: P1S, hud: true, charge: 1 }, units: [U.hero({ id: "h", x: 5, y: 5 }), U.mage({ id: "m", x: 3, y: 6, view: "side" }), U.archer({ id: "a", x: 9, y: 9, view: "side", west: true, active: true }), U.lizard({ id: "l1", x: 2, y: 4 }), U.lizard({ id: "l2", x: 8, y: 4, west: true })],
+  marks: (g) => { for (const [x, y] of A6_TILES) if (!(x === 9 && y === 9)) telegraph(g, x, y); telegraph(g, 9, 9, "蓄1"); } });
+PARTS["pit-a6"] = () => {
+  const S = SW, V = FULL(S), is8 = W_ === 800, cv = renderPit(sceneA6(), V), se = cropPit(cv, V, 6.6 * T, 6.9 * T, 5.2 * T, 5.1 * T);
+  const cells = is8 ? [nn(cv, 2, "整張 ×2（真 1 倍最近鄰）"), nn(se, 4, "東南：預告 3×3 ×4")] : [{ cv, cap: "整張（真 1 倍）" }, nn(se, 2, "東南：預告 3×3 ×2")];
+  publish(sheet(1560, [
+    { title: `6${is8 ? "g" : "f"}. A6 熔岩濺落預告落在最遠的人（站高台 (9,9)）：${W_} 寬真 1 倍、不畫連線` },
+    { note: "施放後到落下前：以最遠的人（弓手，高台 (9,9)，離最近佔格曼哈頓 8）為中心的 3×3 每格紫框「蓄」、中心「蓄1」（現行 highlightLayer 的 telegraph，畫在所有排之上；高台那格跟著抬高 6）；頭目頭上紫環蓄力徽章「1」（位置照 GB-4b「3×3 上方中間」示意：外接框頂上，HP 條同一般寬，GB-4c 定）。3×3 落在岩漿 (10,8～10)、(9,10) 上也照畫（伺服器給的格子）。" + (is8 ? "800：預告的字不反向放大（現行 telegraph 沒有 minMarkScale），「蓄」12 → 6.4 px。" : "") },
+    { cells, gap: 16 },
+  ]), "image/png");
+};
+PARTS["pit-probe"] = () => { const Z = +(P.get("z") || 2), V = FULL(Z); publish(sheet(Math.round(12 * T * Z) + 40, [{ cells: [{ cv: renderPit(sceneOpen(), V), cap: "probe" }] }])); };
 
 try { (PARTS[PART] ?? PARTS.sprites)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
 </script>
