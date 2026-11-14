@@ -183,6 +183,10 @@ SNAPSHOTS = {
     # LB-2b：被動題目的關鍵字 ways 先列 uses、拿掉放不進被動預算的 makes；變奏開放 range_delta
     # （+1～+2；schema 分支與 VARIANTS_NOTE_ZH）。都在 build_proposal_prompt 這層，雜湊同 /15
     "skill-proposal/16": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # LB-2c：題目沒要求變奏時 schema 不給變奏欄位、被動題目 schema 固定 spell／any、
+    # self_on_high_ground 開放、budget.over 與 range_delta 回饋改寫。都在 build_proposal_prompt／
+    # evaluate 這層，雜湊同 /16
+    "skill-proposal/17": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

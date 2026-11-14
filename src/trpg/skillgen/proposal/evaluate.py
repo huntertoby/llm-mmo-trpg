@@ -230,10 +230,11 @@ SECONDARY_ADVICE = "。請刪掉多出的附帶效果（核心效果以外的都
 """``skeleton.secondary_count`` 的建議（LB-2）。"""
 RANGE_DELTA_ADVICE = (
     "。請拿掉這個變奏的 range_delta（改用 shape、element 或 add_effect），"
-    "或把技能形狀改成有數字射程的形狀（例：single 並填數字 range）"
+    "或把技能形狀改成有數字射程的形狀"
 )
 """變奏的 ``range_delta`` 配上沒有數字射程的形狀時的建議（LB-2b：初版重測 Gemma 在 line、cone 上
-連三次填 range_delta）。"""
+連三次填 range_delta）。LB-2c（玩法 PM 4.1.18 第 5 點）：拿掉「例：single 並填數字 range」——
+LB-2b 重測新出現 4 次 ``single 的 range 收到 0``，疑似這個例子引出來的。"""
 PASSIVE_AFFECTS_ADVICE = '。請在這個效果明寫 "affects": "self"（沒寫時預設是 enemies 或 allies）'
 """``passive.affects`` 的建議（LB-2b：初版重測 Q12 的 Gemma 效果不寫 ``affects``，三次一樣）。"""
 
