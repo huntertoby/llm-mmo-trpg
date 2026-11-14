@@ -11496,6 +11496,8 @@ export interface components {
             readonly_zh?: string | null;
             /** Note Zh */
             note_zh: string;
+            /** Notice Zh */
+            notice_zh?: string | null;
             /** Group Zh */
             group_zh?: string | null;
         };

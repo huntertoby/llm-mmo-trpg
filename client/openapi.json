@@ -28601,6 +28601,17 @@
             "type": "string",
             "title": "Note Zh"
           },
+          "notice_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Zh"
+          },
           "group_zh": {
             "anyOf": [
               {

@@ -42,6 +42,7 @@ from trpg.skillgen.budget import BudgetError, skill_budget
 __all__ = [
     "AI_NAME_ZH",
     "AI_NOTES_ZH",
+    "OBSTACLE_NOTICE_ZH",
     "RETIER_NOTE_ZH",
     "TABLE_NAMES_ZH",
     "TABLE_NOTES_ZH",
@@ -52,6 +53,7 @@ __all__ = [
     "list_objects",
     "object_detail",
     "object_file",
+    "obstacle_objects",
     "primitive_names",
     "read_data",
     "retier_notes",
@@ -163,6 +165,48 @@ AI_NOTES_ZH: Final = (
     "護背扣分與快破門檻給頭目用。",
 )
 """AI 估值表表單頂端的唯讀提示（PB-1n）。"""
+
+
+OBSTACLE_NOTICE_ZH: Final = (
+    "造牆技能會放出這個物件。改 HP 會讓那些技能變強或變弱，技能預算不會跟著算。"
+)
+"""物件表單上、會被技能放出來的物件的「最大 HP」欄位提示（NW-3b；玩法 PM 交接 4.1.14 逐字）。"""
+
+
+def obstacle_objects(
+    content_dir: Path, table: TuningFields, library: ContentLibrary | None
+) -> frozenset[str]:
+    """技能檔裡 ``create_obstacle`` 會放出的物件 ID（NW-3b；玩法 PM 交接 4.1.14「由資料推」）。
+
+    走訪的是工坊技能對象的檔案清單（``skills/*.yaml``，同 :func:`unit_skill_picker`），每招的所有
+    效果層級（第二段、變奏、反噬、修正規則的命中後效果）都算。閃現與組合器隨機產生的招不算（它們
+    可能放的物件由規則決定、不在資料裡）。沒有內容庫時是空集合（不顯示提示）。"""
+    skills_target = table.target("skill")
+    if library is None or skills_target is None:
+        return frozenset()
+    found: set[str] = set()
+    for path in target_files(content_dir, skills_target):
+        skill = library.skills.get(path.stem)
+        if skill is None:
+            continue
+        for spec in skill.iter_effects(
+            include_followup=True,
+            include_variants=True,
+            include_backlash=True,
+            include_modifiers=True,
+        ):
+            if spec.type == "create_obstacle" and spec.object is not None:
+                found.add(spec.object)
+    return frozenset(found)
+
+
+def _field_notice(data: Any, path: str, walls: frozenset[str]) -> str | None:
+    """欄位的提示行（NW-3b）：物件表裡會被造牆技能放出來的物件的 ``max_hp``。"""
+    parts = parse_path(path)
+    if parts[:1] != ("objects",) or parts[-1] != "max_hp" or not isinstance(parts[1], int):
+        return None
+    entry = (data.get("objects") or [])[parts[1]]
+    return OBSTACLE_NOTICE_ZH if entry.get("id") in walls else None
 
 
 def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai", "rules", "object"]:
@@ -552,7 +596,8 @@ def _armor_notes(library: ContentLibrary | None, unit_id: str) -> list[str]:
             if mods is not None and mods.unit == unit_id:
                 notes.append(
                     f"實戰時另有遭遇護甲調整（{region}／{loc.location}，"
-                    f"{mods.min_total:+d}～{mods.max_total:+d}，依劇情旗標；數值工坊 NW-3 才開）"
+                    f"{mods.min_total:+d}～{mods.max_total:+d}，依劇情旗標；"
+                    "數值工坊還沒開放遭遇的護甲調整）"
                 )
     return notes
 
@@ -596,6 +641,8 @@ def _schema_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] |
         return 1, 9
     if parts[:1] == ("objects",) and parts[-1] == "max_hp":  # NW-3：ObjectDef.max_hp（ge=1）
         return 1, None
+    if parts[:1] == ("profiles",) and parts[-1] == "prefer_far_from_leader":  # NW-3b：ge=0
+        return 0, None
     return None
 
 
@@ -711,6 +758,7 @@ def object_detail(
     path = object_file(content_dir, target, object_id)
     data = read_data(path)
     primitives = primitive_names(content_dir)
+    walls = obstacle_objects(content_dir, table, library) if kind == "object" else frozenset()
     fields: list[TuningFieldView] = []
     for field, concrete, raw_label in concrete_fields(data, target, primitives):
         label = _skill_names_in_label(raw_label, library)
@@ -730,6 +778,7 @@ def object_detail(
                 limit_max=high,
                 readonly_zh=_readonly(field, value),
                 note_zh=field.note_zh,
+                notice_zh=_field_notice(data, concrete, walls),
                 group_zh=_part_group(data, concrete),
             )
         )
