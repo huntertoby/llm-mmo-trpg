@@ -107,7 +107,10 @@ def _schema_text(library: ContentLibrary, request: ProposalRequest) -> dict[str,
 
 
 def test_prompt_schema_splits_category_and_variants(library: ContentLibrary) -> None:
-    schema = _schema_text(library, ProposalRequest(1, "rare", skeleton="strike"))
+    # LB-2c：變奏欄位只在題目要求變奏時給（wants_variants）
+    schema = _schema_text(
+        library, ProposalRequest(1, "rare", skeleton="strike", wants_variants=True)
+    )
     defs = _defs(schema)
     for category, reqs in WEAPON_REQ_BY_CATEGORY.items():
         branch = defs[f"SkillProposal_{category}"]["properties"]
@@ -119,7 +122,9 @@ def test_prompt_schema_splits_category_and_variants(library: ContentLibrary) -> 
         assert sorted(values) == sorted(reqs)
         assert branch["variants"]["maxItems"] == 1  # rare 最多 1 個
     assert "anyOf" in defs["Variant"]
-    common = _defs(_schema_text(library, ProposalRequest(1, "common", skeleton="strike")))
+    common = _defs(
+        _schema_text(library, ProposalRequest(1, "common", skeleton="strike", wants_variants=True))
+    )
     assert "variants" not in common["SkillProposal_weapon"]["properties"]
     assert "Variant" not in common
 
@@ -151,10 +156,10 @@ def test_handwritten_variants_fit_the_variant_branches(library: ContentLibrary) 
 
 
 def test_field_notes_cover_hidden_rules(library: ContentLibrary) -> None:
-    prompt = build_proposal_prompt(library, ProposalRequest(1, "rare", keywords=("high_ground",)))
-    notes = field_notes(
-        library, ProposalRequest(1, "rare", keywords=("high_ground",)), prompt.subset
-    )
+    # LB-2c：變奏說明只在題目要求變奏（schema 有 variants）時出現
+    request = ProposalRequest(1, "rare", keywords=("high_ground",), wants_variants=True)
+    prompt = build_proposal_prompt(library, request)
+    notes = field_notes(library, request, prompt.subset)
     assert notes["category"] == CATEGORY_NOTE_ZH and "melee" in notes["category"]
     assert "頂層" in notes["element"]
     assert "最多 1 個" in notes["variants"] and "主傷害" in notes["variants"]
@@ -163,11 +168,9 @@ def test_field_notes_cover_hidden_rules(library: ContentLibrary) -> None:
     assert request_block["fields_note_zh"] == notes
     if "raise_terrain" in prompt.subset.primitives:
         assert "earth" in notes["element"] and "raise_terrain" in notes["element"]
-    common = build_proposal_prompt(library, ProposalRequest(1, "common", skeleton="strike"))
-    common_notes = field_notes(
-        library, ProposalRequest(1, "common", skeleton="strike"), common.subset
-    )
-    assert "不要填 variants" in common_notes["variants"]
+    common_request = ProposalRequest(1, "common", skeleton="strike", wants_variants=True)
+    common = build_proposal_prompt(library, common_request)
+    assert "variants" not in field_notes(library, common_request, common.subset)
 
 
 def test_terrain_feedback_names_the_top_level_field(library: ContentLibrary) -> None:

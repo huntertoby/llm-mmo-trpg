@@ -98,8 +98,8 @@ REQUIRED_CONDITIONS: tuple[str, ...] = (
 ``trpg.engine.skills.cast.Cast`` 判斷）。
 ``self_stack_at_least``（KW-1，#161，06 6.32.1）：施放者的某種自身層數達 N 層（施放中以施放開始
 時的層數判斷，由 ``Cast`` 記快照）。
-``self_on_high_ground``（KW-2，#161 鷹眼「站在高處時」）：施放者所在格的高度至少 1 層（占位定義，
-待 PM；飛行不算）。"""
+``self_on_high_ground``（KW-2，#161 鷹眼「站在高處時」）：施放者所在格的高度至少 1 層、飛行不算
+（定義定案：玩法 PM 交接 4.1.18 第 2 點；LB-2c 起開放給 LLM、工坊、白板、閃現）。"""
 
 
 ALL_STRIKES_HIT = "all_strikes_hit"

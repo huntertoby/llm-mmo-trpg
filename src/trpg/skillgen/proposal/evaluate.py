@@ -24,6 +24,7 @@ from trpg.content.skills import (
     SkillRuleError,
     drop_icon_prop,
     error_path_of,
+    rarity_rank,
     weapon_problem,
 )
 from trpg.skillgen.proposal.build import CATEGORIES
@@ -41,6 +42,7 @@ from trpg.skillgen.proposal_numbers import (
     NumberFiller,
     minimal_filler,
 )
+from trpg.skillgen.proposal_passive import best_trigger
 from trpg.skillgen.validate import validate_skill
 
 _QUOTED = re.compile(r"'([^']*)'")
@@ -230,12 +232,19 @@ SECONDARY_ADVICE = "。請刪掉多出的附帶效果（核心效果以外的都
 """``skeleton.secondary_count`` 的建議（LB-2）。"""
 RANGE_DELTA_ADVICE = (
     "。請拿掉這個變奏的 range_delta（改用 shape、element 或 add_effect），"
-    "或把技能形狀改成有數字射程的形狀（例：single 並填數字 range）"
+    "或把技能形狀改成有數字射程的形狀"
 )
 """變奏的 ``range_delta`` 配上沒有數字射程的形狀時的建議（LB-2b：初版重測 Gemma 在 line、cone 上
-連三次填 range_delta）。"""
+連三次填 range_delta）。LB-2c（玩法 PM 4.1.18 第 5 點）：拿掉「例：single 並填數字 range」——
+LB-2b 重測新出現 4 次 ``single 的 range 收到 0``，疑似這個例子引出來的。"""
 PASSIVE_AFFECTS_ADVICE = '。請在這個效果明寫 "affects": "self"（沒寫時預設是 enemies 或 allies）'
 """``passive.affects`` 的建議（LB-2b：初版重測 Q12 的 Gemma 效果不寫 ``affects``，三次一樣）。"""
+PASSIVE_BUDGET_ADVICE = (
+    "。被動的可用預算看觸發的係數：請換係數高的觸發（這個稀有度最高的是 {trigger}），或換便宜的狀態"
+)
+"""被動技能 ``budget.over`` 的建議（LB-2c，玩法 PM 4.1.18 第 3 點：「換係數高的觸發或便宜的狀態」；
+LB-2b 重測 Q12 的 Gemma 用「移動後」觸發＋統御狀態超預算 131%，同一份答案交三次）。``{trigger}``
+是技能稀有度能用的觸發裡係數最高的（:func:`~trpg.skillgen.proposal_passive.best_trigger`）。"""
 
 
 def _element_requirements(library: ContentLibrary) -> dict[str, tuple[str, ...]]:
@@ -246,7 +255,22 @@ def _element_requirements(library: ContentLibrary) -> dict[str, tuple[str, ...]]
     }
 
 
-def advise(error: ProposalError, library: ContentLibrary) -> ProposalError:
+def _passive_budget_advice(library: ContentLibrary, skill: SkillDef) -> str:
+    usable = [
+        t.id
+        for t in library.ruleset.skill_triggers.triggers
+        if rarity_rank(t.min_rarity) <= rarity_rank(skill.rarity)
+    ]
+    best = best_trigger(library, usable)
+    if best is None:
+        return "。被動的可用預算看觸發的係數：請換係數高的觸發，或換便宜的狀態"
+    name = str(best["event"]) + (f"（n: {best['n']}）" if "n" in best else "")
+    return PASSIVE_BUDGET_ADVICE.format(trigger=name)
+
+
+def advise(
+    error: ProposalError, library: ContentLibrary, skill: SkillDef | None = None
+) -> ProposalError:
     """在錯誤訊息後面附上可照做的修法（LB-2；只改給 LLM 的說明，不改判定）：
 
     - 要求技能元素的互斥規則：頂層的 ``element`` 要填哪個值（:data:`ELEMENT_ADVICE`）。
@@ -254,6 +278,8 @@ def advise(error: ProposalError, library: ContentLibrary) -> ProposalError:
     - ``skeleton.secondary_count``：刪掉多的附帶效果或換骨架。
     - 變奏的 ``range_delta`` 配上沒有數字射程的形狀（LB-2b）：拿掉 ``range_delta`` 或換形狀。
     - ``passive.affects``（LB-2b）：明寫 ``affects: self``。
+    - 被動技能（``skill`` 有給、``kind: passive``）的 ``budget.over``（LB-2c）：換係數高的觸發或
+      便宜的狀態（:data:`PASSIVE_BUDGET_ADVICE`）。
     """
     extra = ""
     elements = _element_requirements(library).get(error.code)
@@ -267,6 +293,8 @@ def advise(error: ProposalError, library: ContentLibrary) -> ProposalError:
         extra = RANGE_DELTA_ADVICE
     elif error.code == "passive.affects":
         extra = PASSIVE_AFFECTS_ADVICE
+    elif error.code == "budget.over" and skill is not None and skill.kind == "passive":
+        extra = _passive_budget_advice(library, skill)
     return replace(error, message=error.message + extra) if extra else error
 
 
@@ -302,7 +330,7 @@ def evaluate_proposal(
     violations = validate_skill(skill, library)
     if violations:
         rule_errors = tuple(
-            advise(_rule_error(v.rule, v.message, skill), library) for v in violations
+            advise(_rule_error(v.rule, v.message, skill), library, skill) for v in violations
         )
         return ProposalResult(None, rule_errors)
     extra = [*_unheld_errors(skill, ctx), *_topic_errors(skill, ctx, library)]

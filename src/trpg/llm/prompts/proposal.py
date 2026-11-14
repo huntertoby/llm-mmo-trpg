@@ -65,6 +65,8 @@ CATEGORY_NOTE_ZH = "技能類別：weapon＝武器技（用武器出招），spe
 )
 """頂層欄位 ``category``／``weapon_req`` 的說明（LB-2：約束解碼看不到 schema 的說明文字，配對規則
 原本只寫在 schema 的 ``description``，模型讀不到，Gemma 常填錯）。"""
+FIXED_CATEGORY_NOTE_ZH = "這題的骨架固定 category: {category}、weapon_req: {weapon_req}，照填。"
+"""骨架規定了類別時（被動一律 spell／any）的 ``category`` 說明（LB-2c：schema 也只收這一組）。"""
 ELEMENT_NOTE_ZH = "技能本身的元素，填在 JSON 頂層的 element（效果裡各自的 element 不算）。"
 """頂層欄位 ``element`` 的說明（LB-2：``exclusion.terrain_needs_earth`` 時 Gemma 只在效果裡寫
 earth、頂層沒填，連續三次一樣）。"""
@@ -73,7 +75,6 @@ EFFECTS_NOTE_ZH = (
     " secondary.note 寫的上限（例：上限 1 個時，核心以外只能再放 1 個效果）。"
 )
 """``effects`` 的說明（LB-2：``skeleton.secondary_count``）。"""
-VARIANTS_NONE_ZH = "這個稀有度不能帶變奏：不要填 variants。"
 VARIANTS_NOTE_ZH = (
     "選填，最多 {limit} 個；不填最容易通過。每個變奏＝id、name_zh、when（觸發條件）"
     "＋ shape、range_delta、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
@@ -83,7 +84,9 @@ VARIANTS_NOTE_ZH = (
     "不能指向主傷害（第一個 damage 效果）；要加強傷害請用 add_effect。"
 )
 """``variants`` 的說明（LB-2：變奏數量、替換內容 1～2 項、主傷害不能被換掉；LB-2b：射程加值
-``range_delta``，``{ranged}`` 是 :func:`_ranged_shapes_note` 列的這題形狀）。"""
+``range_delta``，``{ranged}`` 是 :func:`_ranged_shapes_note` 列的這題形狀）。
+LB-2c：只在 schema 有 ``variants`` 欄位時出現（:func:`variant_limit`；原本稀有度不能帶變奏時的
+「不要填」說明一併拿掉）。"""
 RANGED_SHAPES_ZH = (
     "這題有射程的形狀：{ranged}（shape.range 填 weapon 時不算）；"
     "{plain} 沒有射程，用這些形狀時不能填 range_delta。"
@@ -154,21 +157,56 @@ def field_notes(
 ) -> dict[str, str]:
     """頂層欄位的說明（LB-2）：約束解碼看不到 schema 的 ``description``，欄位的意思與跨欄位規則
     要寫進 prompt 的資料區，模型才讀得到。只列這題用得到的規則。"""
+    fixed = fixed_category(library, subset)
     notes = {
-        "category": CATEGORY_NOTE_ZH,
+        "category": (
+            CATEGORY_NOTE_ZH
+            if fixed is None
+            else FIXED_CATEGORY_NOTE_ZH.format(category=fixed[0], weapon_req=fixed[1])
+        ),
         "element": "".join([ELEMENT_NOTE_ZH, *_element_rules(library, subset)]),
         "effects": EFFECTS_NOTE_ZH,
     }
     if subset.kind == "passive":
         notes["trigger"] = PASSIVE_NOTE_ZH
-    else:
-        limit = library.ruleset.core.variant_max_by_rarity.get(request.rarity, 0)
-        notes["variants"] = (
-            VARIANTS_NOTE_ZH.format(limit=limit, ranged=_ranged_shapes_note(library, subset))
-            if limit
-            else VARIANTS_NONE_ZH
+    limit = variant_limit(library, request, subset)
+    if limit:  # LB-2c：變奏說明只在 schema 有 variants 欄位時出現
+        notes["variants"] = VARIANTS_NOTE_ZH.format(
+            limit=limit, ranged=_ranged_shapes_note(library, subset)
         )
     return notes
+
+
+def fixed_category(library: ContentLibrary, subset: ProposalSubset) -> tuple[str, str] | None:
+    """被動題目的（``category``, ``weapon_req``）：子集的骨架都規定同一組時回傳它（被動骨架是
+    ``spell``／``any``，``skeletons/passive.yaml``；06 6.3.1），否則 ``None``（不固定）。
+
+    LB-2c（玩法 PM 4.1.18 第 3 點）：寫進送給約束解碼的 schema（:func:`fix_category`）；驗證器的
+    ``passive.category`` 照舊。"""
+    if subset.kind != "passive":
+        return None
+    pairs = {
+        (s.required_category, s.required_weapon_req)
+        for s in (library.skeletons.get(i) for i in subset.skeletons)
+        if s is not None
+    }
+    if len(pairs) != 1:
+        return None
+    category, weapon_req = pairs.pop()
+    if category is None or weapon_req is None:
+        return None
+    return str(category), str(weapon_req)
+
+
+def variant_limit(library: ContentLibrary, request: ProposalRequest, subset: ProposalSubset) -> int:
+    """送給約束解碼的 schema 裡 ``variants`` 最多幾個（0 ＝ 沒有這個欄位）。
+
+    LB-2c（玩法 PM 4.1.18 第 1 點）：題目明確要求變奏（``request.wants_variants``）才給，數量照
+    稀有度上限（``core.variant_max_by_rarity``）；被動題目一律 0（驗證器：只有主動技能可以帶變奏）。
+    現有出題都沒有要求變奏，所以目前一律 0。只改 schema 與 prompt，提議模型與驗證不變。"""
+    if not request.wants_variants or subset.kind == "passive":
+        return 0
+    return library.ruleset.core.variant_max_by_rarity.get(request.rarity, 0)
 
 
 def _ranged_shapes_note(library: ContentLibrary, subset: ProposalSubset) -> str:
@@ -232,13 +270,16 @@ def _models_and_schema(
     頂層先依技能類別分支（``weapon_req`` 只能選與 ``category`` 配對的值；約束解碼看不到 schema 的
     說明文字，4-L10a 寫在 ``WEAPON_REQ_DOC`` 的配對規則模型其實讀不到）；分支後超過
     :data:`SCHEMA_CHAR_LIMIT` 時改用不分支的模型（配對規則仍寫在 prompt 的欄位說明）。變奏數量的
-    稀有度上限與「1～2 項替換內容」也寫進 schema（:func:`shape_schema`；驗證不變）。"""
-    limit = library.ruleset.core.variant_max_by_rarity.get(request.rarity, 0)
+    稀有度上限與「1～2 項替換內容」也寫進 schema（:func:`shape_schema`；驗證不變）；LB-2c 起題目
+    沒要求變奏時沒有 ``variants`` 欄位（:func:`variant_limit`），被動題目的 ``category``／
+    ``weapon_req`` 固定（:func:`fixed_category`）。"""
+    limit = variant_limit(library, request, subset)
+    category = fixed_category(library, subset)
     models = build_subset_models(library, subset, split_category=True)
-    schema = shape_schema(models.json_schema(), variant_limit=limit)
+    schema = shape_schema(models.json_schema(), variant_limit=limit, category=category)
     if json_chars(schema) > SCHEMA_CHAR_LIMIT:
         models = build_subset_models(library, subset)
-        schema = shape_schema(models.json_schema(), variant_limit=limit)
+        schema = shape_schema(models.json_schema(), variant_limit=limit, category=category)
     return models, schema
 
 
