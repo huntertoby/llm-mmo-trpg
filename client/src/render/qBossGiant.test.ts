@@ -91,7 +91,7 @@ describe("giantStateOf（狀態 → 畫法參數）", () => {
 
 describe("「破」字位置與 800 判斷", () => {
   it("噴口在中間噴口上、殼縫在被打中的那一側、核心在核心上方（模型 px）", () => {
-    expect(popAt("vent")).toEqual([0, -168]);
+    expect(popAt("vent")).toEqual([0, -140]); // GB-4c：移植需求 5.4（原 −168 蓋頭頂 HUD）
     expect(popAt("seam", -1)).toEqual([-57, -106]);
     expect(popAt("seam", 1)).toEqual([57, -106]);
     expect(popAt("core")).toEqual([0, -114]);

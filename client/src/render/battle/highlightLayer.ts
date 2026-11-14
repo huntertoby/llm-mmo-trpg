@@ -21,7 +21,7 @@ import type { PathDraw, PathTag } from "../../battle/pathPreview";
 import { bangCenter, drawFaintGrid, drawPathLine, drawPathMarks, drawSoftCells, HIT_SOFT, missTagNode, MOVE_SOFT, pathTagNode, RANGE_SOFT, placeTags, type TileGeo } from "../pathArt";
 import { poolInsets } from "../practiceRange";
 import { TerrainLayer } from "./terrainLayer";
-import { isGiantDraw } from "../../battle/drawModel";
+import { hoverCellFrame, isGiantDraw } from "../../battle/drawModel";
 import { giantTargetFrame } from "../giantSprite";
 import { giantMarkNodes, type GiantMarksDraw } from "./partTileMarks";
 
@@ -142,7 +142,8 @@ export abstract class HighlightLayer extends TerrainLayer {
     if (model === null) return;
     const insetOf = this.poolInset();
     // GB-4b（美術移植需求第 7 節第 3 條）：3×3 巨型頭目的 9 格都是目標時改畫一個框住整個 3×3 的紅框。照建議先放在南排的 `frames`
-    // （單位之下）實拍：本體幾乎蓋滿 3×3，紅框只剩外緣零星幾 px 看不出來，所以照第 3 條後半改到標示層（`attackTop`：單位、部位格標示之上）
+    // （單位之下）實拍：本體幾乎蓋滿 3×3，紅框只剩外緣零星幾 px 看不出來，所以照第 3 條後半改到標示層（`attackTop`：單位之上）。
+    // GB-4c（美術 GB-4b 待決 1 裁定）：紅框在標示層內排最底——部位格標示另放 `giantMarkTop`（`attackTop` 之上），不壓滑過框
     const giantCells = new Set<string>();
     for (const u of model.units) {
       const tiles = u.tiles ?? [];
@@ -181,6 +182,7 @@ export abstract class HighlightLayer extends TerrainLayer {
     if (!this.ready) return;
     const h = this.model === null ? all : clipHighlights(this.model, all); // 6F-6：範圍預覽不畫到地圖外
     clearLayer(this.marks);
+    clearLayer(this.giantMarkTop);
     clearLayer(this.hover);
     const pen = this.markPen();
     const geo = this.geo();
@@ -253,16 +255,18 @@ export abstract class HighlightLayer extends TerrainLayer {
     if (h.path !== undefined) this.drawPath(h.path, geo);
     this.drawLethalTints(h);
     if (h.exitHover != null) this.drawExitHover(h.exitHover);
-    this.drawFrames(h.focus, hoverFrameCell(h.hover, h.exitHover));
+    // GB-4c（美術 GB-4b 可修 1）：滑到巨型頭目的佔格上不畫單格白框（交給部位框、3×3 目標紅框）
+    const hoverCell = hoverFrameCell(h.hover, h.exitHover);
+    this.drawFrames(h.focus, this.model === null ? hoverCell : hoverCellFrame(this.model.units, hoverCell));
     this.drawGiantMarks(h.giantMarks ?? []);
   }
 
-  /** GB-4b：部位格標示（單位之上，同 marks 這一級；`partTileMarks.ts`）。 */
+  /** GB-4b：部位格標示（單位之上；GB-4c 起放 `giantMarkTop`，在 3×3 目標紅框之上；`partTileMarks.ts`）。 */
   private drawGiantMarks(list: readonly GiantMarksDraw[]): void {
     for (const d of list) {
       const draw = this.model?.units.find((u) => u.id === d.unitId);
       const look = draw === undefined ? null : (creatureOf(draw)?.boss?.giant ?? null);
-      for (const n of giantMarkNodes(this.art, d, look, this.center(d.pos), this.scale, window.devicePixelRatio || 1)) this.marks.addChild(n);
+      for (const n of giantMarkNodes(this.art, d, look, this.center(d.pos), this.scale, window.devicePixelRatio || 1)) this.giantMarkTop.addChild(n);
     }
   }
 

@@ -56,10 +56,13 @@ const LW = 0.6 * GG;
 
 /** 部位遮罩模式（`maskPart`）：只有這個部位的零件上色，其他零件擦掉。`null`＝照常畫。 */
 let MASK: GiantPart | null = null;
-/** 畫一個零件前：遮罩模式時，這個部位的零件照常畫，其他零件改成擦掉。 */
-function zone(g: Ctx, part: GiantPart | null): void {
+/** 遮罩只要核心的晶體、不含殼窩（GB-4c，美術 GB-4b 可修 2：破壞第 1 格白閃只用 `core()`；滑過亮起照舊含殼窩光）。 */
+let MASK_CRYSTAL = false;
+/** 畫一個零件前：遮罩模式時，這個部位的零件照常畫，其他零件改成擦掉。`cavity`＝核心的殼窩（`MASK_CRYSTAL` 時也擦掉）。 */
+function zone(g: Ctx, part: GiantPart | null, cavity = false): void {
   if (MASK === null) return;
-  g.globalCompositeOperation = part === MASK ? "source-over" : "destination-out";
+  const on = part === MASK && !(cavity && MASK_CRYSTAL);
+  g.globalCompositeOperation = on ? "source-over" : "destination-out";
 }
 
 function path(g: Ctx, pts: readonly P2[]): void {
@@ -686,8 +689,9 @@ function bodyLayer(g: Ctx, S: GiantS): void {
   zone(g, "seam");
   seam(g, -1, S);
   seam(g, 1, S);
-  zone(g, "core");
+  zone(g, "core", true);
   cavity(g, S);
+  zone(g, "core");
   core(g, S);
   zone(g, null);
   lid(g, S, S.phase >= 2 ? 1 : 0);
@@ -839,8 +843,9 @@ export function giantFill(st: GiantState, z: number): { canvas: HTMLCanvasElemen
 /**
  * 部位遮罩：只有那個部位實際露出的像素（不透明），畫在 `GIANT_BOX` 範圍、每模型 px `res` 個 canvas px。
  * 由畫法直接給：照常畫本體，只有那個部位的零件上色，其他零件 `destination-out`（被後畫的零件蓋住的地方自然擦掉）。沒有 DOM 時 `null`。
+ * `crystal`：核心只取晶體（`core()`），不含殼窩（`cavity()`）——破壞白閃用（GB-4c）；其他部位不受影響。
  */
-export function giantPartMask(st: GiantState, part: GiantPart, res: number): HTMLCanvasElement | null {
+export function giantPartMask(st: GiantState, part: GiantPart, res: number, crystal = false): HTMLCanvasElement | null {
   if (typeof document === "undefined") return null;
   const S = giantStateOf(st);
   const c = document.createElement("canvas");
@@ -850,10 +855,12 @@ export function giantPartMask(st: GiantState, part: GiantPart, res: number): HTM
   if (g === null) return null;
   g.setTransform(res, 0, 0, res, -GIANT_BOX[0] * res, -GIANT_BOX[1] * res);
   MASK = part;
+  MASK_CRYSTAL = crystal;
   try {
     bodyLayer(g, S);
   } finally {
     MASK = null;
+    MASK_CRYSTAL = false;
   }
   // 半透明的零件（熱光、光暈）照不透明算：遮罩只看有沒有
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -914,10 +921,10 @@ export function giantGlowCanvas(st: GiantState, part: GiantPart, res: number, sc
   l.drawImage(tintCanvas(mask, GIANT_HOVER.color), 0, 0);
   return lay;
 }
-/** 破壞第 1 格「命中」：部位整塊白閃（遮罩和滑過亮起同一份），a＝0.9（段 1 同值）。 */
+/** 破壞第 1 格「命中」：部位整塊白閃（遮罩和滑過亮起同一份，但核心只白晶體、不含殼窩：GB-4c 美術可修 2），a＝0.9（段 1 同值）。 */
 export const GIANT_FLASH_A = 0.9;
 export function giantFlashCanvas(st: GiantState, part: GiantPart, res: number): HTMLCanvasElement | null {
-  const mask = giantPartMask(st, part, res);
+  const mask = giantPartMask(st, part, res, true);
   if (mask === null) return null;
   const out = tintCanvas(mask, "#ffffff");
   const c = document.createElement("canvas");
@@ -934,8 +941,8 @@ const mouthOf = (v: Vent): P2 => {
   const h = v.base - v.top;
   return [v.x + Math.sin(v.tilt) * h, v.base - Math.cos(v.tilt) * h];
 };
-/** 「破」字記號的位置（模型 px，相對錨點）。殼縫掛在被打中的那一側（side −1 西、1 東）。 */
-export const POP: Readonly<Record<GiantPart, P2>> = { vent: [0, -168], seam: [57, -106], core: [0, -114] };
+/** 「破」字記號的位置（模型 px，相對錨點）。殼縫掛在被打中的那一側（side −1 西、1 東）。噴口 GB-4c 改 (0, −140)（原 −168 蓋頭頂 HUD；移植需求 5.4）。 */
+export const POP: Readonly<Record<GiantPart, P2>> = { vent: [0, -140], seam: [57, -106], core: [0, -114] };
 export const popAt = (part: GiantPart, side = 1): P2 => {
   const [x, y] = POP[part];
   return [part === "seam" ? side * x : x, y];
