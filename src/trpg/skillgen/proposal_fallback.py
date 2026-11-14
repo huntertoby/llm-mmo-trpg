@@ -95,6 +95,7 @@ def _from_composer(
                 library=library,
                 keyword=keyword,
                 hero_attributes=ctx.hero_attributes,
+                kinds=(kind,),  # RC-1b（4.1.20 第 4 點）：主動題不讓組合器交出被動、反應
             )
         except ComposeError:
             continue

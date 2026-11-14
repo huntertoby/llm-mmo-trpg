@@ -390,7 +390,12 @@ def _composed_starter(
     for _ in range(library.roguelite.start.composer_tries):
         try:
             skill = compose_random_skill(
-                rng.next_u32(), tier=1, category=hint, library=library, keyword=keyword
+                rng.next_u32(),
+                tier=1,
+                category=hint,
+                library=library,
+                keyword=keyword,
+                kinds=("active",),  # RC-1b（4.1.20 第 4 點）：起始技能只收主動（is_starter_skill）
             )
         except ComposeError:
             continue
