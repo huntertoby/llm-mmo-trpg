@@ -157,6 +157,20 @@ export function plusTextWidth(count: number, g: CapGeom = CAP_WIDE): number {
   return plusCapsuleWidth(count, g);
 }
 
+/** GB-4c：疊在圖示右下角的「+N」膠囊，往右、往下伸出圖示外的比例（膠囊寬、高的幾成）。 */
+export const PLUS_CORNER_OUT_X = 0.1;
+export const PLUS_CORNER_OUT_Y = 0.3;
+/**
+ * GB-4c（美術 BM-1 待決 1 裁定）：「+N」膠囊疊在圖示（中心 x＝`iconX`）右下角的外框（本地座標）：
+ * 右緣伸出圖示 `PLUS_CORNER_OUT_X` 個膠囊寬、下緣伸出 `PLUS_CORNER_OUT_Y` 個膠囊高（像徽章的數字）。
+ */
+export function plusCornerBox(iconX: number, plusW: number): Box {
+  const half = ROW_ICON_FEET / 2;
+  const r = iconX + half + PLUS_CORNER_OUT_X * plusW;
+  const b = half + PLUS_CORNER_OUT_Y * PLUS_CAP_H;
+  return { l: r - plusW, r, t: b - PLUS_CAP_H, b };
+}
+
 /** 精簡列與只留「+N」時膠囊的上下緣（本地座標）：下緣和 6F-18 的「+N」字（含描邊）一樣，貼著 HP 條上面。 */
 export function plusCapsuleY(): { t: number; b: number } {
   const b = ROW_ICON_FEET / 2 + ROW_PLUS_DROP + ROW_PLUS_STROKE / 2;
@@ -221,6 +235,8 @@ export interface RowPlan {
   compact: boolean;
   /** 6F-13：只顯示「+N」字（沒有圖示；N ＝ 全部的狀態數），字的左緣在本地座標 −圖示半寬。 */
   plusOnly?: boolean;
+  /** GB-4c（美術 BM-1 待決 1 裁定）：精簡列的「+N」膠囊疊在圖示右下角（800 寬頭目兩側排法），不另佔圖示右邊的位置。 */
+  plusCorner?: boolean;
   // 6F-21：6F-14 的 `plusLift`（「+N」往上提、讓朝南的三角形）拿掉了：朝南的三角形移到 HP 條下面（`unitSprite.arrowPolyOf`）
 }
 
@@ -261,7 +277,8 @@ export function rowShapes(plan: RowPlan, n: number, k: number, bottom: number, e
   }
   if (plan.compact) {
     boxes.push({ l: X(-half), r: X(half), t: Y(-half), b: Y(half) });
-    const cap = plusW > 0 ? capAt(half + ROW_PLUS_GAP, plusW, plusCapsuleY()) : null;
+    const corner = plusCornerBox(0, plusW);
+    const cap = plusW <= 0 ? null : plan.plusCorner === true ? capAt(corner.l, plusW, corner) : capAt(half + ROW_PLUS_GAP, plusW, plusCapsuleY());
     if (cap !== null) boxes.push(cap);
     return { boxes, circles, cap };
   }

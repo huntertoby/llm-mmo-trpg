@@ -47,6 +47,8 @@ import {
   type CapGeom,
   plusCapsuleWidth,
   plusCapsuleY,
+  plusCornerBox,
+  compactRow,
   PLUS_ONLY_MIN_STATUSES,
   ROW_PLUS_OVERFLOW_MAX,
   rowShapes,
@@ -1306,7 +1308,11 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     const capY = plusCapsuleY();
     if (plus !== null) {
       plus.node.visible = lay.compact && !only;
-      plus.node.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, capY.t);
+      // GB-4c（美術 BM-1 待決 1）：800 寬頭目兩側排法時「+N」疊在圖示右下角
+      if (lay.plusCorner === true) {
+        const c = plusCornerBox(x0, plusW);
+        plus.node.position.set(c.l, c.t);
+      } else plus.node.position.set(ROW_ICON_FEET / 2 + ROW_PLUS_GAP, capY.t);
     }
     plusAll.node.visible = only;
     plusAll.node.position.set(-ROW_ICON_FEET / 2, capY.t);
@@ -1447,7 +1453,8 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       badge.position.set(lay.badge.x, lay.badge.y);
     } else if (bossSideHudOn(u, s)) {
       // BM-1：搬到 HP 條旁邊時不用在格子裡讓朝向三角形（整排平移時再讓，`sideRowShift`）
-      base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW);
+      // GB-4c（美術 BM-1 待決 1）：一律 1 個圖示＋「+N」疊在右下角（2 個狀態也是「+1」），東側只伸出約 0.5 格
+      base = { ...compactRow(k, -ROW_EDGE, ROW_EDGE, plusW, false), plusCorner: true };
       apply(base);
     } else {
       base = unitRowLayout(shown.length, k, extra > 0, u.marker !== "", s, plusW, arrow, { bottom, allW, edge, total: ids.length }); // 6F-14：避開朝向三角形；6F-16：不超出地圖；6F-18：狀態數

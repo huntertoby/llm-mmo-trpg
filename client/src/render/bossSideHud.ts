@@ -2,6 +2,8 @@
 // 800 寬（地圖縮放 ≤ `COMPACT_ROW_MAX_SCALE`）時，有部位的頭目（1 格的霧鎖真人、3×3 的灰燼之心）的腳邊狀態列
 // 不再疊在 HP 條正上方（反向放大後蓋住下腹，滑過三個部位時亮起看不出差別），改放 HP 條（含部位小格）的右邊；
 // 炸彈、蓄力、灌注徽章放左邊。站在地圖最右欄時左右對調。1600 寬（縮放 > 0.85）照原本的排法。
+// GB-4c（美術 BM-1 驗收待決 1 裁定，兩招一起做）：兩側整排往上抬，下緣對齊 HP 條上緣（空隙 `BOSS_SIDE_GAP_PX`），
+// 讓出東西鄰居的 HP 條；狀態列的「+N」疊在圖示右下角（`rowLayout.plusCornerBox`），東側只伸出約 0.5 格。
 //
 // 純函式（座標都是未加 `bossHudDy` 的單位本地座標，和 `rowShapes`、`hpBoxOf` 同一套）；`unitSprite.statusRow`／`registerBadges` 呼叫。
 
@@ -17,7 +19,7 @@ const ARROW_STEP = 0.5;
 /** 往外讓的上限（世界座標）。 */
 const ARROW_MAX = 24;
 
-/** HP 條（含護盾條與部位小格）在這個縮放下的方框；兩側的東西以它的垂直中心對齊。 */
+/** HP 條（含護盾條與部位小格）在這個縮放下的方框；GB-4c 起兩側的東西下緣對齊它的上緣 `t`。 */
 export interface SideBlock {
   l: number;
   r: number;
@@ -40,10 +42,6 @@ export function sideBlock(u: Pick<UnitDraw, "shieldRatio"> & Partial<Pick<UnitDr
   return { l: -HP_W / 2 - o, r: HP_W / 2 + o, t: HP_Y - (u.shieldRatio > 0 ? 3 + o : 0), b, rowLeft: edge.right };
 }
 
-function mid(block: SideBlock): number {
-  return (block.t + block.b) / 2;
-}
-
 function gapOf(boardScale: number): number {
   return boardScale > 0 ? BOSS_SIDE_GAP_PX / boardScale : BOSS_SIDE_GAP_PX;
 }
@@ -59,17 +57,16 @@ export function shiftShapes<T extends { boxes: Box[]; circles: Circle[]; cap: Bo
 }
 
 /**
- * 狀態列（照原本排法算好的形狀 `sh`）搬到 HP 條旁邊的位移：垂直置中對齊 HP 條＋部位小格，
+ * 狀態列（照原本排法算好的形狀 `sh`）搬到 HP 條旁邊的位移：下緣對齊 HP 條上緣（GB-4c；空隙畫面 `BOSS_SIDE_GAP_PX`），
  * 水平貼著 HP 條外側（空隙畫面 `BOSS_SIDE_GAP_PX`）；碰到朝向三角形再往外讓。
  */
 export function sideRowShift(sh: { boxes: readonly Box[] }, block: SideBlock, boardScale: number, arrow: Box | null): { dx: number; dy: number } {
   if (sh.boxes.length === 0) return { dx: 0, dy: 0 };
   const l = Math.min(...sh.boxes.map((b) => b.l));
   const r = Math.max(...sh.boxes.map((b) => b.r));
-  const t = Math.min(...sh.boxes.map((b) => b.t));
   const b = Math.max(...sh.boxes.map((x) => x.b));
   const gap = gapOf(boardScale);
-  const dy = mid(block) - (t + b) / 2;
+  const dy = block.t - gap - b;
   const at = (extra: number) => (block.rowLeft ? block.l - gap - extra - r : block.r + gap + extra - l);
   let extra = 0;
   const moved = (d: number) => ({ boxes: sh.boxes.map((x) => ({ l: x.l + d, r: x.r + d, t: x.t + dy, b: x.b + dy })), circles: [] });
@@ -78,14 +75,13 @@ export function sideRowShift(sh: { boxes: readonly Box[] }, block: SideBlock, bo
 }
 
 /**
- * 炸彈、蓄力、灌注徽章在 HP 條另一側（預設左邊）的位置：照順序由內往外排，圓心垂直對齊 HP 條＋部位小格的中心，
+ * 炸彈、蓄力、灌注徽章在 HP 條另一側（預設左邊）的位置：照順序由內往外排，每顆（含數字）下緣對齊 HP 條上緣（GB-4c），
  * 數字放外側下角（左邊用「左下」、右邊用「右下」），不壓到 HP 條。
  */
 export function sideBadgeLayouts(reqs: readonly BadgeReq[], boardScale: number, block: SideBlock): BadgeLayout[] {
   const gap = gapOf(boardScale);
   const left = !block.rowLeft;
   const corner = left ? "bl" : "br";
-  const y = mid(block);
   let edge = left ? block.l - gap : block.r + gap;
   return reqs.map((req) => {
     const sc = badgeScales(req.kind, boardScale);
@@ -96,6 +92,8 @@ export function sideBadgeLayouts(reqs: readonly BadgeReq[], boardScale: number, 
     const hi = Math.max(...rs);
     const x = left ? edge - hi : edge - lo;
     edge = left ? x + lo - gap : x + hi + gap;
+    const bottom = Math.max(sh.circle.y + sh.circle.r, ...(sh.box === null ? [] : [sh.box.b]));
+    const y = block.t - gap - bottom;
     return { at: { x, y }, sc, tier: 0, faceOk: true, corner, firm: 0 };
   });
 }
