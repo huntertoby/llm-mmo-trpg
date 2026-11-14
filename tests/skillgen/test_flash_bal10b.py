@@ -146,14 +146,12 @@ def _strength(effect: EffectSpec) -> float:
     return float(effect.multiplier_permille or 0)
 
 
-#: 原階預算已頂到上緣、接續段傷害加一級就超出窗的內建敵人招：只驗 3 階。
-#: BAL-21b：熔岩濺落 T1 比例 93.8%，3×3 接續段的傷害點數 ×2，1d6 → 1d8 就超過 100%；
-#: 數值照使用者決定不調，敵人專用招也不會進玩家的閃現。
-#: 使用者 2026-11-12 選 C（只列熔岩濺落為例外），原話「C」；
-#: 之後若更多敵人招卡住再考慮 B（整體排除敵人專用招）。
-#: GB-2b：熔心吸氣改成範圍光環 4（R7）後 T2 比例 95.4%，同樣沒有加一級的空間；暫列，待 PM 決定
-#: 擴充這份例外（C）還是整體排除敵人專用招（B）（docs/phases/PhaseGB-2b報告.md 待決）。
-NO_ROOM_AT_BASE_TIER = frozenset({"skill_lava_splash", "skill_heart_inhale"})
+def _checks_base_tier(skill: SkillDef) -> bool:
+    """原階也驗閃現強化的空間：只有玩家招。敵人專用招（``enemy_only``）不會進玩家的閃現，只驗 3 階。
+
+    BAL-21b 起熔岩濺落（T1 93.8%）、GB-2b 起熔心吸氣（T2 95.4%）原階沒有加一級的空間；使用者
+    2026-11-12 先選 C（寫死例外名單），GB-2b 後改選 B（整體照 ``enemy_only``），原話「B」。"""
+    return not skill.enemy_only
 
 
 def test_there_are_compound_skills_to_test() -> None:
@@ -164,7 +162,7 @@ def test_there_are_compound_skills_to_test() -> None:
 def test_followup_potency_only_raises_the_followup(skill_id: str) -> None:
     lib = library()
     base = lib.skills[skill_id]
-    tiers = {3} if skill_id in NO_ROOM_AT_BASE_TIER else {base.tier, 3}
+    tiers = {base.tier, 3} if _checks_base_tier(base) else {3}
     for tier in sorted(tiers):
         before = at_role_tier(lib, base, tier)
         got = _apply(before, "followup_potency")
