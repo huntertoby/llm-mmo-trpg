@@ -102,7 +102,7 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             for s in rules.surfaces.surfaces
         ),
         objects=tuple(
-            _entry(o.id, o.name_zh, None, o.tags, object_rules(o, library))
+            _entry(o.id, o.name_zh, o.description_zh, o.tags, object_rules(o, library))
             for o in rules.objects.objects
         ),
         statuses=tuple(

@@ -13,7 +13,7 @@
 - 三村落（6D-2）：守點目標是情境物件，駐守在村口外、離目標 6 格內，接觸點切出的 12×12 包含目標
   （切不到的村落改用守點模板，草稿待確認 3）；
 - 熔心坑前廳：坑口 ``pit_gate``、廢墟要塞那一側的熔岩封口 ``pit_lava_seal``；
-  Boss 地圖的冷卻井照舊預放水；
+  Boss 地圖的冷卻井是物件（CW-1，打破造水 3×3）；
 - 餘燼集（小鎮）：傳送石 1 個、設施與 NPC 站位；
 - 餘燼集室內（6D-3）：酒館、爐叔鐵鋪兩扇門與室內圖互指，設施、爐叔、酒館老兵的事件點在室內，
   站位從入口走得到、相鄰格站得上。
@@ -526,7 +526,7 @@ def test_iron_forge_lava_pool_is_fenced(library: ContentLibrary) -> None:
 
 def test_molten_heart_pit_antechamber(library: ContentLibrary) -> None:
     """熔心坑前廳（Boss 前廳 12×8）：沒有敵人、營火、事件、傳送石；坑口 ``pit_gate`` 走得到；
-    熔岩封口 ``pit_lava_seal`` 在廢墟要塞往熔心坑的出口旁；Boss 地圖的冷卻井照舊是預放水表面。"""
+    熔岩封口 ``pit_lava_seal`` 在廢墟要塞往熔心坑的出口旁；Boss 地圖的 4 口冷卻井是物件（CW-1）。"""
     hall = _field(library, "molten_heart_pit")
     location = library.world_maps[REGION].location_by_id()["molten_heart_pit"]
     assert hall.layout_for(location) == "boss"
@@ -546,7 +546,8 @@ def test_molten_heart_pit_antechamber(library: ContentLibrary) -> None:
     assert min(_manhattan(seal, c) for c in exit_.at) <= 2
     assert all(x == fortress.width - 1 for x, _ in exit_.at)  # 東
     boss = library.maps["molten_heart_pit"]
-    assert sum(1 for s in boss.surfaces if s.surface is Surface.WATER) >= 4
+    wells = sorted(o.at for o in boss.objects if o.kind == "cooling_well")
+    assert wells == [(3, 4), (3, 8), (7, 4), (8, 8)]
 
 
 def test_ember_market_town(library: ContentLibrary) -> None:

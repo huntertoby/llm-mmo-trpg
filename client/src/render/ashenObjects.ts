@@ -8,6 +8,7 @@ import { ASH, ashGlowAt } from "./ashenTerrain";
 import { drawLowWall, type LowWallPalette } from "./lowWallArt";
 import { rng } from "./artRandom";
 import type { ObjectArtSpec } from "./objectArt";
+import { drawCoolingWell } from "./coolingWellArt";
 
 const T = 52;
 const OUT = ASH.outline;
@@ -289,7 +290,7 @@ function floatPlanks(ctx: Ctx, s: ObjectArtSpec): void {
   }
 }
 
-/** 灰燼荒原的物件畫法（物件 ID → 畫法）；需求第 2 節「物件」九種。 */
+/** 灰燼荒原的物件畫法（物件 ID → 畫法）；需求第 2 節「物件」九種＋CW-1 的冷卻井。 */
 export const ASHEN_OBJECTS: Readonly<Record<string, ObjectDrawer>> = {
   crate: brokenCrate,
   low_wall: ruinedWall,
@@ -300,4 +301,5 @@ export const ASHEN_OBJECTS: Readonly<Record<string, ObjectDrawer>> = {
   wooden_bridge: charredBridge,
   dead_tree: charredTree,
   thin_ice: floatPlanks,
+  cooling_well: drawCoolingWell, // CW-1：冷卻井（docs/art/冷卻井-移植需求.md）
 };

@@ -110,10 +110,15 @@ class ExplosionDef(ContentModel):
 
 
 class SpillDef(ContentModel):
-    """物件被 **傷害** 打破（``destroy cause = damage``，例如物理攻擊打破油桶）時，在該格與四方向
-    相鄰格產生 ``surface``（漏油）。被火焰引爆、燒毀、掉落等其他原因摧毀時不會漏出。"""
+    """物件被 **傷害** 打破（``destroy cause = damage``，例如物理攻擊打破油桶）時漏出 ``surface``
+    （漏油）。被火焰引爆、燒毀、掉落等其他原因摧毀時不會漏出。
+
+    範圍：``radius`` 沒寫＝該格與四方向相鄰格（十字 5 格，舊物件的行為）；寫了＝切比雪夫距離
+    ``radius`` 內的方陣（``1`` 即 3×3，意義同 ``explosion.radius``；冷卻井，CW-1），巨型單位的
+    佔格跳過（05 5.12.4 第 1 點）。沒寫時不序列化，舊規則包的雜湊不變。"""
 
     surface: Surface
+    radius: int | None = Field(default=None, ge=1, le=5, exclude_if=lambda v: v is None)
 
     @field_validator("surface")
     @classmethod
@@ -133,6 +138,8 @@ class ObjectDef(ContentModel):
     tags: tuple[str, ...] = ()
     explosion: ExplosionDef | None = None
     spill: SpillDef | None = None
+    description_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
+    """玩家看得到的一句說明（名詞表、物件卡；CW-1 冷卻井）。沒寫時不序列化。"""
 
     @field_validator("glyph")
     @classmethod

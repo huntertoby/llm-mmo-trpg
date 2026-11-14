@@ -2,7 +2,9 @@
 # 欄位：id、name_zh、glyph（戰場網格顯示用的單一 ASCII 字元）、max_hp（breakable 必填）、
 #       tags（引擎認得的標籤，見 src/trpg/content/environment.py 的 OBJECT_TAGS）、
 #       explosion（explosive 必填：radius 切比雪夫半徑、dice、flat、element）、
-#       spill（選填，Phase 1C：被傷害打破時——不是被火焰引爆——在該格與四方向相鄰格產生 surface）。
+#       spill（選填，Phase 1C：被傷害打破時——不是被火焰引爆——在該格與四方向相鄰格產生 surface；
+#         CW-1 起可寫 radius：切比雪夫半徑的方陣，1 即 3×3，巨型單位佔格不放；沒寫＝十字 5 格）、
+#       description_zh（選填，CW-1：玩家看得到的一句說明，名詞表與物件卡用）。
 # half_cover（Phase 1C）：遠程攻擊時，目標四方向相鄰、位於攻擊者那一側的 half_cover 物件提供
 #       半掩護（命中 −2，見 rules/core.yaml 的 half_cover_hit_penalty）；物件本身視為 1 層高。
 # 新物件只要組合既有標籤，就自動支援所有互動規則（interactions.yaml），不需要寫新程式。
@@ -82,3 +84,12 @@ objects:
     glyph: "x"
     max_hp: 10
     tags: [blocks_move, breakable, flammable]   # 3-11：暫時障礙（荊棘牆術 2 輪後枯萎）；不擋視線、可燃
+  - id: cooling_well
+    name_zh: 冷卻井
+    glyph: "u"
+    max_hp: 15           # 占位（灰燼實地圖庫.md 的 15）；由使用者在數值工坊調（玩法PM交接 4.1.12 第 4 點）
+    tags: [blocks_move, breakable]   # 油桶的換皮，但不可燃、不爆炸、不能推、不是掩護（4.1.12，CW-1）
+    spill:               # 任何傷害打破（含火）都造水；3×3，不放在巨型頭目的佔格上（05 5.12.4 第 1 點）
+      surface: water
+      radius: 1
+    description_zh: 打破後井水漫出，周圍 3×3 變成水面。

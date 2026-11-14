@@ -9,6 +9,7 @@ import { cracks, type HpStage } from "./fieldFx";
 import { drawLowWall } from "./lowWallArt";
 import { ARCANE_OBJECTS } from "./arcaneObjects";
 import { ASHEN_OBJECTS } from "./ashenObjects";
+import { drawCoolingWell } from "./coolingWellArt";
 import { CLOUD_OBJECTS } from "./cloudRidgeObjects";
 import { CRYSTAL_OBJECTS } from "./crystalObjects";
 import { FROST_OBJECTS } from "./frostObjects";
@@ -495,6 +496,8 @@ export const OBJECT_DRAW: Readonly<Record<string, ObjectDrawer>> = {
   rubble,
   thin_ice: thinIce,
   grass: grassFloor,
+  // CW-1：冷卻井只在灰燼荒原（熔心坑）；其他區、沒標區域時用同一個畫法（不出灰色六角形）
+  cooling_well: drawCoolingWell,
 };
 
 /** 各區的物件畫法（區域 ID → 物件 ID → 畫法）；預設區不在表內。雲嶺（3-37b）、灰燼荒原與晶冠點綴（5A-ART6）、魔導樞市與霜潮海境（5A-ART7）已加入。 */
@@ -654,7 +657,9 @@ export function drawFlammableMark(ctx: Ctx): void {
   ctx.restore();
 }
 
-/** 受損裂痕的顏色與範圍（比例）；沒列的物件用預設。薄冰自己畫裂痕（依級距），不套通用裂痕。 */
+/** 受損裂痕的顏色與範圍（比例）；沒列的物件用預設。薄冰、冷卻井自己畫裂痕（依級距），不套通用裂痕。 */
+const OWN_CRACKS: readonly string[] = ["thin_ice", "cooling_well"];
+
 const CRACKS: Readonly<Record<string, { color: string; box?: readonly [number, number, number, number] }>> = {
   ice_wall: { color: "#123048", box: [0.2, 0.15, 0.8, 0.8] },
   thorn_wall: { color: "#140c06" },
@@ -663,7 +668,7 @@ const CRACKS: Readonly<Record<string, { color: string; box?: readonly [number, n
 
 export function drawObject(ctx: Ctx, s: ObjectArtSpec): void {
   (pickThemed(s, s.kind, REGION_OBJECT_DRAW, LOOK_OBJECT_DRAW) ?? OBJECT_DRAW[s.kind] ?? drawGenericObject)(ctx, s);
-  if (s.hpStage > 0 && s.kind !== "thin_ice") {
+  if (s.hpStage > 0 && !OWN_CRACKS.includes(s.kind)) {
     const style = CRACKS[s.kind];
     cracks(ctx, s.hpStage, s.x, s.y, style?.color, style?.box);
   }

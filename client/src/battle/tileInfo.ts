@@ -58,7 +58,11 @@ function objectSection(view: BattleView, tile: TileView): TileSection | null {
   if (obj.hp !== null) head.push(`HP ${obj.hp}/${obj.max_hp ?? obj.hp}`);
   if (obj.burning !== null && obj.burning > 0) head.push(LABEL_BURNING);
   if (obj.expires_in != null) head.push(`剩 ${obj.expires_in} 回合消失`);
-  return section("object", head.join("・"), condenseObjectRules(rulesOf("objects", obj.kind), glossaryEntry("objects", obj.kind)?.tags.length ?? 0));
+  const entry = glossaryEntry("objects", obj.kind);
+  const rules = condenseObjectRules(rulesOf("objects", obj.kind), entry?.tags.length ?? 0);
+  // CW-1：物件有說明（冷卻井「打破後井水漫出…」）時放在規則前面
+  const note = entry?.description_zh;
+  return section("object", head.join("・"), typeof note === "string" && note !== "" ? [note, ...rules] : rules);
 }
 
 /**

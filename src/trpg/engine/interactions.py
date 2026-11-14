@@ -5,7 +5,8 @@
 - ``damage_dealt``（攻擊或效果造成的元素傷害）→ 元素觸及目標所在的格子。
 - ``object_damaged`` → 元素觸及物件所在的格子；HP ≤ 0 的 ``breakable`` 物件摧毀。
 - ``object_exploded`` → 範圍內的單位受到爆炸傷害，每一格被爆炸的元素觸及。
-- ``object_destroyed``（被傷害打破、投擲摔破）→ 物件的 ``spill``：該格與四方向相鄰格漏出表面。
+- ``object_destroyed``（被傷害打破、投擲摔破）→ 物件的 ``spill``：該格與四方向相鄰格（或 ``radius``
+  方陣）漏出表面。
 - ``element_touched``（``element_touch`` 效果、產生帶元素的表面）→ 元素觸及該格。
 - ``surface_entered``／``check_rolled`` → 表面的進入效果（燃燒、冰面滑倒）。
 
@@ -44,6 +45,7 @@ from trpg.engine.events import (
     SurfaceEntered,
 )
 from trpg.engine.ids import BURNING
+from trpg.engine.rules.footprint import giant_at
 from trpg.engine.rules.geometry import XY, chebyshev
 from trpg.engine.rules.movement import is_flying
 from trpg.engine.rules.race import burn_immune, conduction_immune
@@ -427,10 +429,22 @@ def _on_object_damaged(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBas
     return effects
 
 
+def _spill_square(state: BattleState, center: XY, radius: int) -> list[XY]:
+    """``center`` 切比雪夫距離 ``radius`` 內的格子（``1`` 即 3×3），依 ``(y, x)`` 排序；不含界外格與
+    存活巨型單位的佔格（05 5.12.4 第 1 點「佔格不能放表面」；CW-1 冷卻井的水不放在頭目格上）。"""
+    cx, cy = center
+    return [
+        (x, y)
+        for y in range(cy - radius, cy + radius + 1)
+        for x in range(cx - radius, cx + radius + 1)
+        if state.in_bounds(x, y) and giant_at(state, (x, y)) is None
+    ]
+
+
 @register_trigger("object_destroyed")
 def _on_object_destroyed(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
-    """被傷害打破或被丟出去摔破（不是被引爆）的物件若定義了 ``spill``，在該格與四方向相鄰格產生
-    表面（漏油）。"""
+    """被傷害打破或被丟出去摔破（不是被引爆）的物件若定義了 ``spill``，漏出表面（漏油、冷卻井的
+    水）。``spill.radius`` 沒寫＝該格與四方向相鄰格；寫了＝:func:`_spill_square`。"""
     assert isinstance(event, ObjectDestroyed)
     if event.cause not in ("damage", "hurled"):
         return []
@@ -438,7 +452,10 @@ def _on_object_destroyed(ctx: Ctx, event: EventBase, depth: int) -> list[EffectB
     if spill is None:
         return []
     x, y = event.pos.x, event.pos.y
-    tiles = [(x, y), (x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+    if spill.radius is None:
+        tiles = [(x, y), (x, y - 1), (x + 1, y), (x, y + 1), (x - 1, y)]
+    else:
+        tiles = _spill_square(ctx.state, (x, y), spill.radius)
     return [
         CreateSurfaceEffect(
             depth=depth, pos=xy, surface=spill.surface, cause=f"spill:{event.object_id}"
