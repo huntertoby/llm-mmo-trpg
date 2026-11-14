@@ -11373,7 +11373,7 @@ export interface components {
             verdict: "ok" | "over" | "weak";
         };
         /** @enum {string} */
-        TuningCategory: "boss" | "enemy" | "skill" | "ai" | "rules";
+        TuningCategory: "boss" | "enemy" | "skill" | "ai" | "rules" | "object";
         /** TuningChangeIn */
         TuningChangeIn: {
             /** File */

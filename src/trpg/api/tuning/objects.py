@@ -131,8 +131,10 @@ TABLE_NAMES_ZH: Final = {
     "ai": AI_NAME_ZH,
     "rules": "核心戰鬥規則（全體共用）",
     "budget": "技能預算表（全體共用）",
+    "object": "格子物件（全體共用）",
 }
-"""全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``）。"""
+"""全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
+``object``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -144,24 +146,32 @@ TABLE_NOTES_ZH: Final = {
         "超出合格區間的技能會在驗證時列出。",
         "目前只開放「無聲」的預算成本（BS-1）：被動常駐一份、主動技能給 1 回合一份。",
     ),
+    "object": (
+        "這份是全體共用的格子物件表（objects.yaml）：改一種物件的值，所有地圖上的這種物件一起變。",
+        "目前只開放已寫的最大 HP（NW-3）；沒寫最大 HP 的物件打不破，不在這裡開。"
+        "爆炸、漏出等其他欄位之後再開。",
+    ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""
 
 AI_NOTES_ZH: Final = (
     "這份是敵我全體共用的 AI 估值表：改一個值會影響所有戰鬥裡的 AI，不只一隻頭目。",
-    "目前只開放頭目部位（parts）的 9 個值與「無聲留背」（facing.silent_behind，BS-2），全部是占位；"
-    "行為模式權重等其他欄位等 NW-3。",
+    "目前開放頭目部位（parts）的 11 個值（含巨型頭目的護面與站位，GB-3）、「無聲留背」"
+    "（facing.silent_behind，BS-2）與殼縫蟲群的「追離頭目遠的人」（GB-3），全部是占位；"
+    "其他行為模式權重還沒開。",
     "「打部位」與「繞背」的值給玩家方隊友 AI 用（決定要不要瞄準部位、要不要站到頭目背後）；"
     "護背扣分與快破門檻給頭目用。",
 )
 """AI 估值表表單頂端的唯讀提示（PB-1n）。"""
 
 
-def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai", "rules"]:
+def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai", "rules", "object"]:
     if kind == "skill":
         return "skill"
     if kind == "ai":
         return "ai"
+    if kind == "object":
+        return "object"
     if kind in TABLE_KINDS:
         return "rules"
     tags = data.get("tags") or ()
@@ -176,6 +186,19 @@ def _category(data: Any, kind: str) -> Literal["boss", "enemy", "skill", "ai", "
 def _phase_label(data: Any, index: int) -> str:
     phase = (data.get("phases") or [])[index]
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
+
+
+_ENTRY_WORDS: Final = {"profiles": "行為模式", "objects": "物件"}
+"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件）在標籤前的稱呼。"""
+
+
+def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
+    """清單項目欄位的標籤前綴（NW-3），例「行為模式「殼縫蟲群」：」「物件「冷卻井」」。"""
+    index = parts[1]
+    assert isinstance(index, int)
+    entry = (data.get(str(parts[0])) or [])[index]
+    name = f"{_ENTRY_WORDS[str(parts[0])]}「{entry.get('name_zh') or entry.get('id')}」"
+    return f"{name}：" if parts[0] == "profiles" else name
 
 
 def _part_group(data: Any, path: str) -> str | None:
@@ -326,6 +349,8 @@ def concrete_fields(
                 label = f"{_phase_label(data, parts[1])}{field.label_zh}"
             elif parts[:1] == ("parts",) and len(parts) > 1 and isinstance(parts[1], int):
                 label = _part_label(data, parts, field)
+            elif parts[:1] in (("profiles",), ("objects",)) and len(parts) > 1:
+                label = f"{_entry_label(data, parts)}{field.label_zh}"
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
             out.append((field, format_path(parts), label))
@@ -565,6 +590,15 @@ def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int 
     return None, None
 
 
+def _schema_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] | None:
+    """schema 寫死的範圍（不靠原語、形狀表）；不是這幾種欄位 ``None``。"""
+    if parts[-2:] == ("grow_surface", "max_rows"):  # GB-2：PhaseGrowSurface.max_rows
+        return 1, 9
+    if parts[:1] == ("objects",) and parts[-1] == "max_hp":  # NW-3：ObjectDef.max_hp（ge=1）
+        return 1, None
+    return None
+
+
 def field_limits(
     content_dir: Path, data: Any, field: TuningField, path: str
 ) -> tuple[int | None, int | None]:
@@ -574,8 +608,9 @@ def field_limits(
         if isinstance(parts[1], int):
             return _part_limits(data, parts)
         return (0, 1000) if parts[-1] == "near_break_permille" else (0, None)  # AI 估值表
-    if parts[-2:] == ("grow_surface", "max_rows"):  # GB-2：PhaseGrowSurface.max_rows
-        return 1, 9
+    fixed = _schema_limits(parts)
+    if fixed is not None:
+        return fixed
     prims, shapes = _tables(content_dir)
     leaf = parts[-1]
     if field.effect_types and prims is not None:

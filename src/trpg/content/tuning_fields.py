@@ -22,7 +22,7 @@ from typing import Annotated, Any, Final, Literal, TypeAliasType, Union, get_arg
 from pydantic import BaseModel, Field
 
 from trpg.content.battle import Dice, UnitTemplate
-from trpg.content.environment import AiProfileTable
+from trpg.content.environment import AiProfileTable, ObjectTable
 from trpg.content.loader import load_content_file
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
@@ -118,12 +118,14 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "ai": AiProfileTable,
     "rules": CoreRules,
     "budget": BudgetRules,
+    "object": ObjectTable,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
-（無聲的預算成本）。``ai``、``rules``、``budget`` 都是「一個檔一個全體共用的表」）。"""
+（無聲的預算成本）；NW-3 起 ``object``＝``objects.yaml``（格子物件的 ``max_hp``）。``ai``、
+``rules``、``budget``、``object`` 都是「一個檔一個全體共用的表」）。"""
 
-TABLE_KINDS: Final = ("ai", "rules", "budget")
+TABLE_KINDS: Final = ("ai", "rules", "budget", "object")
 """一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
 SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
@@ -160,7 +162,7 @@ class TuningField(ContentModel):
 class TuningTarget(ContentModel):
     """一類對象：``glob`` 選到的每個檔是一個對象（檔名＝對象 ID）。"""
 
-    kind: Literal["unit", "skill", "ai", "rules", "budget"]
+    kind: Literal["unit", "skill", "ai", "rules", "budget", "object"]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
     exclude: tuple[str, ...] = ()

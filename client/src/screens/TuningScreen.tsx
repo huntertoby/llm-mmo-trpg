@@ -163,14 +163,16 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
       try {
         // PB-1n：AI 估值表（ai_profiles.yaml）和單位放在同一個分頁；讀不到就只列單位。
         // BS-2：全體共用的核心戰鬥規則（rules/core.yaml）與技能預算表（skill_budget.yaml）也放這裡（BS-1 後端已開）。
-        const [st, units, ai, rules, budget] = await Promise.all([
+        // NW-3：格子物件表（objects.yaml，物件的最大 HP）也放這裡。
+        const [st, units, ai, rules, budget, gridObjects] = await Promise.all([
           tapi.tuningStatus(),
           tapi.tuningObjects("unit"),
           tapi.tuningObjects("ai").catch(() => []),
           tapi.tuningObjects("rules").catch(() => []),
           tapi.tuningObjects("budget").catch(() => []),
+          tapi.tuningObjects("object").catch(() => []),
         ]);
-        const objs = [...units, ...ai, ...rules, ...budget];
+        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);

@@ -15,8 +15,8 @@ import type {
 } from "../api/types";
 
 /**
- * 選到的對象要用哪一類讀欄位（PB-1n）：技能分頁一律 `skill`；「敵人與頭目」分頁另列 AI 估值表（`ai`），
- * 依清單上的 `kind` 決定，找不到就當單位。
+ * 選到的對象要用哪一類讀欄位（PB-1n）：技能分頁一律 `skill`；「敵人與頭目」分頁另列 AI 估值表（`ai`）、
+ * 規則與預算表（`rules`、`budget`，BS-2）、格子物件表（`object`，NW-3），依清單上的 `kind` 決定，找不到就當單位。
  */
 export function objectKind(tab: "unit" | "skill", objects: readonly TuningObjectSummary[], id: string): string {
   if (tab === "skill") return "skill";

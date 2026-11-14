@@ -28236,7 +28236,8 @@
           "enemy",
           "skill",
           "ai",
-          "rules"
+          "rules",
+          "object"
         ]
       },
       "TuningChangeIn": {
