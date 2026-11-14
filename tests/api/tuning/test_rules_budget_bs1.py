@@ -45,7 +45,7 @@ def _now(file: str, path: str) -> Any:
 
 
 def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> None:
-    assert TABLE_KINDS == ("ai", "rules", "budget")
+    assert TABLE_KINDS == ("ai", "rules", "budget", "object")  # NW-3 加物件表
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (
         "core",

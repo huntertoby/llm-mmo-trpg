@@ -69,8 +69,13 @@ AI_PATHS = (
     "parts.guard_back_bonus",
     "parts.near_break_permille",
     "parts.circle_back_bonus",
+    "parts.guard_face_bonus",  # NW-3（GB-3 待決 3）巨型頭目
+    "parts.giant_spot_bonus",
     "facing.silent_behind",  # BS-2（BS-1 待決 2）
 )
+FAR = "profiles[*].weights.prefer_far_from_leader"
+"""NW-3：行為模式的權重（只展開已寫的模式；測試在 ``test_nw3_whitelist.py``）。"""
+AI_PATTERNS = (*AI_PATHS[:-1], FAR, AI_PATHS[-1])
 
 
 def _now(file: str, path: str) -> Any:
@@ -106,7 +111,7 @@ def test_part_and_ai_fields_are_whitelisted_with_hints_and_notes() -> None:
     assert "600‰" in hp.note_zh
     amount = unit.field_for(SWORD_AMOUNT)
     assert amount is not None and "750" in amount.note_zh and amount.existing_only
-    assert [f.path for f in ai.fields] == list(AI_PATHS)
+    assert [f.path for f in ai.fields] == list(AI_PATTERNS)
     assert all(f.note_zh and f.hint_max is not None for f in ai.fields)
     assert TARGET_MODELS["ai"].__name__ == "AiProfileTable"
     assert [p.name for p in target_files(CONTENT, ai)] == [AI]
@@ -154,8 +159,9 @@ def test_detail_shows_defaults_limits_and_ai_object(read_service: TuningService)
         ("ai_profiles", "ai", AI_NAME_ZH, AI)
     ]
     ai = object_detail(CONTENT, read_service.table, "ai", "ai_profiles")
-    assert [f.path for f in ai.fields] == list(AI_PATHS)
-    assert [f.value for f in ai.fields] == [_now(AI, p) for p in AI_PATHS]
+    shared = [f for f in ai.fields if f.pattern != FAR]
+    assert [f.path for f in shared] == list(AI_PATHS)
+    assert [f.value for f in shared] == [_now(AI, p) for p in AI_PATHS]
     near = next(f for f in ai.fields if f.path == "parts.near_break_permille")
     assert (near.kind, near.limit_min, near.limit_max) == ("permille", 0, 1000)
     assert ai.category == "ai" and any("全體共用" in n for n in ai.notes_zh)

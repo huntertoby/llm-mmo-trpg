@@ -152,8 +152,8 @@ targets:
       - {path: damage_multiplier_permille, label_zh: 傷害倍率（‰）, kind: permille, existing_only: true, effect_types: [damage_multiplier], note_zh: 賭注分支的傷害倍率（1500～3000）。}
       - {path: self_damage_permille_of_hit, label_zh: 反噬比例（‰）, kind: permille, existing_only: true, effect_types: [self_damage_of_hit], note_zh: 施放者承受這次傷害的千分比。}
 
-  # PB-1n：AI 估值表（content/ai_profiles.yaml，敵我全體共用一份）。這段只開頭目部位的 parts:（PB-1b 的 8 個占位值）與 BS-2 的 facing.silent_behind；
-  # 行為模式權重、status_values 等其餘欄位照 NW 計畫留給 NW-3。
+  # PB-1n：AI 估值表（content/ai_profiles.yaml，敵我全體共用一份）。這段開頭目部位的 parts:（PB-1b 的 8 個占位值、GB-3 的巨型頭目 2 個）、
+  # BS-2 的 facing.silent_behind 與 GB-3 的行為模式權重 prefer_far_from_leader（NW-3，只展開已寫的模式）；其餘行為模式權重、status_values 尚未開。
   - kind: ai
     label_zh: AI 估值
     glob: ai_profiles.yaml
@@ -167,6 +167,10 @@ targets:
       - {path: parts.guard_back_bonus, label_zh: 頭目護背的扣分, kind: int, hint_min: 0, hint_max: 10, note_zh: 頭目背後的部位（例：氣海）快破時，頭目 AI 更不願意背對攻擊者——「背對」多扣這麼多分。0＝不特別護背。}
       - {path: parts.near_break_permille, label_zh: 「快破」門檻（‰）, kind: permille, hint_min: 200, hint_max: 800, note_zh: 部位剩餘血量 ≤ 部位最大血量的這麼多千分比時算「快破」（500＝剩一半），頭目開始護背。只能 0～1000。}
       - {path: parts.circle_back_bonus, label_zh: 隊友繞背的加分, kind: int, hint_min: 0, hint_max: 20, note_zh: 頭目有「要從背後才打得到」的部位（例：霧鎖真人的氣海）、這個階段已露出、還沒破時，隊友近戰站到頭目背後那一格多加的站位分。越大越願意繞到背後；藉機攻擊、危險地面、頭目強招的預告範圍照常扣分。0＝不特別繞背。}
+      # NW-3（GB-3 報告待決 3）：巨型頭目（灰燼之心）的兩個占位權重；表格層級的 parts: 填入每個行為模式。
+      - {path: parts.guard_face_bonus, label_zh: 巨型頭目護面的加分, kind: int, hint_min: 0, hint_max: 10, note_zh: 巨型頭目有部位「快破」（看上面的門檻）時，這次動作打到的敵人每名「貼著那個部位的格子」再加這麼多分（技能與普攻都算）。越大頭目越會先打貼著快破部位的人。0＝不特別護。不是巨型頭目時不影響。}
+      - {path: parts.giant_spot_bonus, label_zh: 隊友找巨型部位的站位分, kind: int, hint_min: 0, hint_max: 20, note_zh: 玩家方近戰貼著巨型頭目開著的部位格、遠程站在打得到也看得到噴口類部位的格子時，站位分加這麼多（每名巨型頭目只加一次）。越大隊友越會走到打得到部位的位置。0＝不特別找。沒有巨型頭目的戰鬥不影響。}
+      - {path: "profiles[*].weights.prefer_far_from_leader", label_zh: 追離頭目遠的人, kind: int, hint_min: 0, hint_max: 10, existing_only: true, note_zh: 只展開已寫這個權重的行為模式（目前只有殼縫餘燼蜥用的「殼縫蟲群」）。打到的敵人離頭目最近佔格的距離（取最遠的一名）× 這個值加在動作分數上；移動時另加「從這格打得到的敵人裡離頭目最遠的距離」× 這個值。軟偏好、不強制。0＝不特別追。}
       # BS-2（BS-1 待決 2；06 6.21.1「AI：持有無聲時留在目標背後」）：只開無聲的留背分，背刺、背對扣分照 NW-3。
       - {path: facing.silent_behind, label_zh: 無聲留背的加分, kind: int, hint_min: 0, hint_max: 10, note_zh: 持有「無聲」（手持匕首類）的近戰單位站在相鄰敵人的背後格時，每名敵人再加的站位分（疊在背刺的 4 分上）。敵我同一套。越大越黏在目標背後、不走開；太大可能不去打更值得打的目標。0＝和沒有無聲一樣只看背刺分。}
   # BS-1（玩法決定 #157，06 6.21.1「數值工坊開放的欄位」）：背刺與潛行偷襲的加成（全體共用，敵我都吃）。
@@ -198,3 +202,10 @@ targets:
       - {path: flash_transform.companion_duration, label_zh: 伴生：開場召喚物待幾輪, kind: int, hint_min: 1, hint_max: 4, note_zh: 伴生召出的召喚物存在幾輪（同一般召喚：在你第這麼多次回合結束時消失）。}
       - {path: flash_transform.guardian_power_permille, label_zh: 護主：反咬召喚物的強度（‰）, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「護主」後，被近戰攻擊時冒出來反咬的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比。這是起點：不在預算範圍時會每 100‰ 往上下找最接近、合格的強度。}
       - {path: flash_transform.guardian_duration, label_zh: 護主：反咬召喚物待幾輪, kind: int, hint_min: 1, hint_max: 4, note_zh: 護主召出的召喚物存在幾輪（設計是 1 回合）。}
+  # NW-3（CW-1 報告待決 5）：格子物件（content/objects.yaml，所有物件在同一個檔、全體共用）。只開 max_hp，只展開已寫的物件
+  # （沒寫＝打不破，插入會變成結構改動）；爆炸、漏出、標籤等不開。
+  - kind: object
+    label_zh: 格子物件
+    glob: objects.yaml
+    fields:
+      - {path: "objects[*].max_hp", label_zh: 最大 HP, kind: int, hint_min: 1, hint_max: 99, existing_only: true, note_zh: 打破這種物件要的傷害；所有地圖上的這種物件一起變。只能 1 以上。HP 越低越容易被打破（敵我的攻擊、爆炸、範圍技都算），例：冷卻井打破後周圍 3×3 變成水面。}
