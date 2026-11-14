@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cache
 from typing import Any
@@ -43,6 +43,19 @@ from trpg.skillgen.composer_parts import (
     build_stance_effects,
     choose_core,
 )
+from trpg.skillgen.composer_recipes import (
+    SPELL_ELEMENTS,
+    Draft,
+    passive_drafts,
+    passive_recipes,
+    pick_recipe,
+    reaction_drafts,
+    reaction_recipes,
+    summon_drafts,
+    trigger_params,
+    weapon_and_attr,
+    weighted,
+)
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.keywords import has_keyword
@@ -70,9 +83,12 @@ MAX_ATTEMPTS = 100
 VARIANT_ATTEMPTS = 25
 
 _RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
-_SPELL_ELEMENTS: tuple[Element, ...] = tuple(
-    e for e in sorted(Element, key=lambda e: e.value) if e is not Element.PHYSICAL
-)
+_SPELL_ELEMENTS = SPELL_ELEMENTS
+_weighted = weighted
+_weapon_and_attr = weapon_and_attr
+_trigger_params = trigger_params
+_SUMMON = "summon"
+"""整招召喚的骨架（RC-1：組法在 :mod:`trpg.skillgen.composer_recipes`，不走一般主動流程）。"""
 
 
 class ComposeError(TrpgError):
@@ -102,15 +118,6 @@ class ComposeResult:
 def default_library() -> ContentLibrary:
     """預設的內容庫（``content/``），行程內只載入一次。"""
     return load_library()
-
-
-def _weighted[T](rng: Rng, items: tuple[T, ...], weights: tuple[int, ...]) -> T:
-    roll = rng.randint(1, sum(weights))
-    for item, weight in zip(items, weights, strict=True):
-        roll -= weight
-        if roll <= 0:
-            return item
-    return items[-1]  # pragma: no cover
 
 
 def _skeleton_feasible(
@@ -234,6 +241,7 @@ def _wants_special(seed: int, rarity: SkillRarity, library: ContentLibrary) -> s
         ("rune", library.composer.rune.skeleton_permille),
         ("sacrifice", library.composer.sacrifice.skeleton_permille),
         ("modifier", library.composer.special.modifier_permille),
+        (_SUMMON, library.composer.recipes.summon_permille),  # RC-1：排最後，前面沒抽中的種子才擲
     ):
         skeleton = library.skeletons.get(name)
         if (
@@ -261,17 +269,6 @@ def _choose_category(
     shares = rules.spell_share_permille
     share = shares.get(skeleton.id, shares["default"])
     return "spell" if rng.chance_permille(share) else "weapon"
-
-
-def _weapon_and_attr(rng: Rng, category: str, rules: ComposerRules) -> tuple[str, str]:
-    if category == "spell":
-        req = "any" if rng.chance_permille(rules.spell_any_weapon_permille) else "focus"
-        w = rules.spell_attr_weights
-        return req, _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
-    if rng.chance_permille(rules.melee_permille):
-        rng.chance_permille(rules.melee_dex_permille)  # 亂數串流不變；武器技一律 str（3H-6）
-        return "melee", "str"
-    return "ranged", "dex"
 
 
 def _ap_order(rng: Rng, ap_cost: int | None, rules: ComposerRules) -> list[int]:
@@ -462,29 +459,6 @@ def _attempt_passive(
     raise Retry
 
 
-_PARAM_PERMILLE = 500
-"""``on_status_applied`` 指定狀態、``on_enter_surface`` 指定表面的機率（其餘為任何狀態或表面）。"""
-_SURFACES = ("darkness", "fire", "holy", "ice", "oil", "poison", "water")
-
-
-def _trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, Any]:
-    """新觸發時機（Phase 3C-6b）的參數：``on_cast_tag`` 必填 ``tag``（元素標籤）；
-    ``on_status_applied`` 與 ``on_enter_surface`` 以一半的機率指定狀態或表面。其他時機沒有參數
-    （不消耗亂數）。"""
-    if event == "on_cast_tag":
-        return {"tag": rng.choice([e.value for e in _SPELL_ELEMENTS])}
-    if event == "on_status_applied" and rng.chance_permille(_PARAM_PERMILLE):
-        statuses = sorted(
-            s.id
-            for s in library.ruleset.statuses.statuses
-            if not s.beneficial and not s.stance and not s.enemy_only  # 5F-5c
-        )
-        return {"status": rng.choice(statuses)}
-    if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):
-        return {"surface": rng.choice(_SURFACES)}
-    return {}
-
-
 def _attempt_reaction(
     rng: Rng, library: ContentLibrary, seed: int, *, tier: int, rarity: SkillRarity, category: str
 ) -> SkillDef:
@@ -578,6 +552,93 @@ def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) 
     return SkillDef.model_validate(data)
 
 
+def _tune_drafts(
+    rng: Rng, lib: ContentLibrary, seed: int, ctx: Ctx, drafts: list[Draft]
+) -> SkillDef:
+    """RC-1 配方的草稿依序調整強度，第一個進得了預算窗的完成（旋鈕在 ``ctx.knobs``）。"""
+    for base, effects in drafts:
+        if tune(rng, lib, base, effects, ctx.knobs):
+            ctx.effects = effects
+            return _finish(lib, seed, base, ctx)
+    raise Retry
+
+
+def _first_valid(lib: ContentLibrary, build: Callable[[], SkillDef]) -> ComposeResult | None:
+    """RC-1 配方：最多 :data:`MAX_ATTEMPTS` 次，第一個通過驗證的；都做不出來回傳 ``None``。"""
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            skill = build()
+        except (Retry, ValidationError, BudgetError):
+            continue
+        if not validate_skill(skill, lib):
+            return ComposeResult(skill, attempt)
+    return None
+
+
+def _compose_summon(
+    seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
+) -> ComposeResult | None:
+    """整招召喚（RC-1，4.1.19 第 1 點）：獨立串流 ``composer.summon.build``。"""
+    rng = Rng(seed).fork("composer.summon.build")
+
+    def build() -> SkillDef:
+        ctx, drafts = summon_drafts(rng, lib, seed, tier=tier, rarity=rarity, keyword=keyword)
+        return _tune_drafts(rng, lib, seed, ctx, drafts)
+
+    return _first_valid(lib, build)
+
+
+def _compose_passive_recipe(
+    seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
+) -> ComposeResult | None:
+    """被動新配方（RC-1）：獨立串流決定要不要用（:func:`pick_recipe`）與組法；沒抽中或組不出來
+    回傳 ``None``，呼叫端照原本的組法（亂數串流沒動過，結果與 RC-1 前相同）。"""
+    rules = lib.composer.recipes
+    recipe = pick_recipe(
+        seed, "passive", passive_recipes(lib, tier), rules.passive_permille, keyword
+    )
+    if recipe is None:
+        return None
+    rng = Rng(seed).fork("composer.passive.recipe.build")
+
+    def build() -> SkillDef:
+        ctx, drafts = passive_drafts(
+            rng, lib, seed, tier=tier, rarity=rarity, recipe=recipe, keyword=keyword
+        )
+        return _tune_drafts(rng, lib, seed, ctx, drafts)
+
+    return _first_valid(lib, build)
+
+
+def _compose_reaction_recipe(
+    seed: int,
+    lib: ContentLibrary,
+    *,
+    tier: int,
+    rarity: SkillRarity,
+    category: str | None,
+    keyword: str | None,
+) -> ComposeResult | None:
+    """反應技新配方（RC-1）：同 :func:`_compose_passive_recipe`。"""
+    rules = lib.composer.recipes
+    recipe = pick_recipe(
+        seed, "reaction", reaction_recipes(lib, tier), rules.reaction_permille, keyword
+    )
+    if recipe is None:
+        return None
+    rng = Rng(seed).fork("composer.reaction.recipe.build")
+    chosen = category or _choose_category(rng, lib.skeletons["reaction"], None, lib.composer)
+
+    def build() -> SkillDef:
+        ctx, drafts = reaction_drafts(
+            rng, lib, seed, tier=tier, rarity=rarity, category=chosen, recipe=recipe,
+            keyword=keyword,
+        )  # fmt: skip
+        return _tune_drafts(rng, lib, seed, ctx, drafts)
+
+    return _first_valid(lib, build)
+
+
 def _compose_special(
     seed: int,
     lib: ContentLibrary,
@@ -587,12 +648,22 @@ def _compose_special(
     rarity: SkillRarity,
     category: str | None,
     ap_cost: int | None = None,
+    keyword: str | None = None,
 ) -> ComposeResult | None:
-    """反應技、姿態、蓄力與終結、陷阱：用獨立的亂數串流重抽；做不出合格技能回傳 ``None``。"""
+    """反應技、姿態、蓄力與終結、陷阱、整招召喚：用獨立的亂數串流重抽；做不出合格技能回傳 ``None``。
+    ``keyword``（RC-1）：整招召喚優先抽固有關鍵字相符的召喚物；反應技的新配方只考慮帶得到它的。"""
+    if kind == _SUMMON:
+        return _compose_summon(seed, lib, tier=tier, rarity=rarity, keyword=keyword)
+    if kind == "reaction":
+        found = _compose_reaction_recipe(
+            seed, lib, tier=tier, rarity=rarity, category=category, keyword=keyword
+        )
+        if found is not None:
+            return found
     rng = Rng(seed).fork(f"composer.{kind}.build")
     if kind == "modifier":
-        found = compose_modifier(seed, lib)
-        return None if found is None else ComposeResult(found, 1)
+        modifier = compose_modifier(seed, lib)
+        return None if modifier is None else ComposeResult(modifier, 1)
     chosen = category
     if kind in ("reaction", "builder_finisher", "trap", "rune") and chosen is None:
         chosen = _choose_category(rng, lib.skeletons[kind], None, lib.composer)
@@ -708,6 +779,7 @@ def _compose_with_keyword(
                     lib,
                     rarity=rarity,
                     no_legendary=skip_legendary and rarity is None,
+                    keyword=keyword,
                     **kwargs,
                 ),
                 None,
@@ -715,7 +787,9 @@ def _compose_with_keyword(
             )
         except ComposeError:
             continue
-        if has_keyword(found.skill, keyword, lib.keywords):  # PERF-2：只看這個關鍵字的規則
+        # PERF-2：只看這個關鍵字的規則；RC-1：只認專屬規則（和退回路徑、三選一的候選一致，
+        # 只帶到通用規則的技能交出去也會被拒）
+        if has_keyword(found.skill, keyword, lib.keywords, exclusive_only=True):
             skill = found.skill if index == 0 else _relabel(found.skill, variant, seed)
             return ComposeResult(skill, found.attempts, index + 1)
     raise KeywordExhaustedError(
@@ -810,6 +884,55 @@ def _legendary_unless(  # noqa: PLR0917 — 傳說的參數照原樣轉交
     return _compose_legendary_result(seed, lib, tier, skeleton, ap_cost)
 
 
+def _special_kind(
+    seed: int,
+    rarity: SkillRarity,
+    skeleton: str | None,
+    skeleton_def: SkeletonDef,
+    lib: ContentLibrary,
+) -> str | None:
+    """主動以外的組法：明確指定的種類（反應、姿態……；RC-1 起含整招召喚），沒指定骨架時由
+    :func:`_wants_special` 的獨立串流決定。"""
+    if skeleton == _SUMMON:  # RC-1：整招召喚不走一般主動流程
+        return _SUMMON
+    if skeleton_def.kinds[0] != "active":
+        return skeleton_def.kinds[0]
+    return _wants_special(seed, rarity, lib) if skeleton is None else None
+
+
+def _special_result(
+    seed: int,
+    lib: ContentLibrary,
+    special: str,
+    *,
+    explicit: bool,
+    fixed: tuple[int, SkillRarity, str | None, int | None],
+    keyword: str | None,
+) -> ComposeResult | None:
+    """反應技、姿態等特殊組法；``explicit``（明確指定骨架）時組不出來就拋出 :class:`ComposeError`，
+    否則回傳 ``None`` 讓呼叫端退回一般主動技能。"""
+    tier, rarity, category, ap_cost = fixed
+    if not _explicit_only_active(lib, special) and (
+        ap_cost is not None or (special == "stance" and category not in (None, "spell"))
+    ):
+        raise ComposeError("反應技與姿態不花 AP：不能指定 ap_cost（姿態也不能是武器技）")
+    found = _compose_special(
+        seed,
+        lib,
+        special,
+        tier=tier,
+        rarity=rarity,
+        category=category,
+        ap_cost=ap_cost,
+        keyword=keyword,
+    )
+    if found is None and explicit:
+        raise ComposeError(
+            f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的{special}（階級 {tier}、{rarity}）"
+        )
+    return found
+
+
 def _compose_plain(
     seed: int,
     lib: ContentLibrary,
@@ -820,6 +943,7 @@ def _compose_plain(
     category: str | None,
     ap_cost: int | None,
     no_legendary: bool = False,
+    keyword: str | None = None,
 ) -> ComposeResult:
     rng = Rng(seed)
     tier_value = tier if tier is not None else rng.randint(1, 5)
@@ -831,34 +955,26 @@ def _compose_plain(
     passive = skeleton_def.kinds == ("passive",) or (
         skeleton is None and _wants_passive(seed, rarity_value, lib)
     )
-    special: str | None = None
-    if not passive:
-        explicit_kind = skeleton_def.kinds[0] if skeleton_def.kinds[0] != "active" else None
-        special = explicit_kind or (
-            _wants_special(seed, rarity_value, lib) if skeleton is None else None
-        )
+    special = None if passive else _special_kind(seed, rarity_value, skeleton, skeleton_def, lib)
     if special is not None:
-        if not _explicit_only_active(lib, special) and (
-            ap_cost is not None or (special == "stance" and category not in (None, "spell"))
-        ):
-            raise ComposeError("反應技與姿態不花 AP：不能指定 ap_cost（姿態也不能是武器技）")
-        found = _compose_special(
+        found = _special_result(
             seed,
             lib,
             special,
-            tier=tier_value,
-            rarity=rarity_value,
-            category=category,
-            ap_cost=ap_cost,
+            explicit=skeleton is not None,
+            fixed=(tier_value, rarity_value, category, ap_cost),
+            keyword=keyword,
         )
         if found is not None:
             return found
-        if skeleton is not None:
-            raise ComposeError(
-                f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的{special}"
-                f"（階級 {tier_value}、{rarity_value}）"
-            )
     _check_passive_args(passive, ap_cost, category)
+    recipe = (
+        _compose_passive_recipe(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
+        if passive
+        else None
+    )
+    if recipe is not None:
+        return recipe
     category_value = (
         "spell" if passive else _choose_category(rng, skeleton_def, category, lib.composer)
     )

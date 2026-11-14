@@ -1091,10 +1091,11 @@ def _passive_effect(ctx: Ctx, name: str, target: str, *, core: bool) -> None:
         _status_effect(ctx, beneficial=target == "self")
 
 
-def build_passive_effects(ctx: Ctx, target: str) -> None:
+def build_passive_effects(ctx: Ctx, target: str, *, second: bool = True) -> None:
     """被動的效果：一個核心效果，再依機率多一個不同原語的附帶效果（骨架 ``max_count: 1``）。
 
-    ``target``：``trigger.target``（``other`` 或 ``self``）；形狀固定為 ``self``。
+    ``target``：``trigger.target``（``other`` 或 ``self``）；形狀固定為 ``self``。``second`` 為假時
+    不抽附帶效果（RC-1 配方自己加附帶，例如累積層數）。
     """
     names = _passive_candidates(target)
     beneficial = target == "self"
@@ -1109,7 +1110,7 @@ def build_passive_effects(ctx: Ctx, target: str) -> None:
         for name in _usable_primitives(ctx, names, core=False, beneficial=beneficial)
         if name != first
     ]
-    if rest and ctx.chance(ctx.rules.passive.second_effect_permille):
+    if second and rest and ctx.chance(ctx.rules.passive.second_effect_permille):
         _passive_effect(ctx, ctx.rng.choice(rest), target, core=False)
 
 
@@ -1153,17 +1154,22 @@ def _intercept_effects(ctx: Ctx) -> None:
     _shield_if_allowed(ctx, core=False)
 
 
-def build_reaction_effects(ctx: Ctx, event: str) -> None:
+def build_reaction_effects(
+    ctx: Ctx, event: str, *, second: bool = True, branch: str | None = None
+) -> None:
     """反應技的形狀與效果。
 
     擋攻擊：見 :func:`_intercept_effects`；其他事件：自身增益（形狀 self，只用骨架核心允許的原語）
     或對觸發者的傷害、有害狀態、推拉（形狀 single）。候選原語都由骨架資料篩選。
+
+    RC-1 配方用：``second`` 為假時不抽附帶效果；``branch="other"`` 一定走對觸發者的分支（不擲
+    自身增益的機率）。預設值＝原本的行為與亂數呼叫。
     """
     rules = ctx.rules.reaction
     if event == "ally_hit_adjacent":
         _intercept_effects(ctx)
         return
-    if ctx.chance(rules.self_permille):
+    if branch is None and ctx.chance(rules.self_permille):
         # 沒有骨架允許的自身增益原語時，改走對觸發者的分支。
         own = _usable_primitives(
             ctx, ("heal", "shield", "apply_status"), core=True, beneficial=True
@@ -1186,7 +1192,7 @@ def build_reaction_effects(ctx: Ctx, event: str) -> None:
     build_shape(ctx, [name], only=("single",))
     ctx.core_count = 1
     _make_effect(ctx, name, core=True, beneficial_only=False)
-    if ctx.chance(rules.second_effect_permille):
+    if second and ctx.chance(rules.second_effect_permille):
         pool = _secondary_pool(ctx)
         if pool:
             _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)

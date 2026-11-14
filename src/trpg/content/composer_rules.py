@@ -15,7 +15,7 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import RARITY_ORDER, EffectSpec, ShapeSpec, VariantWhen
+from trpg.content.skills import RARITY_ORDER, ConditionSpec, EffectSpec, ShapeSpec, VariantWhen
 from trpg.shared.types import Element
 
 __all__ = [
@@ -36,6 +36,10 @@ __all__ = [
     "LlmTopicRules",
     "PassiveRules",
     "ReactionRules",
+    "RecipeExploit",
+    "RecipeRules",
+    "RecipeStackEvent",
+    "RecipeSummonUnit",
     "ScalingRules",
     "SpecialRules",
     "StanceRules",
@@ -325,6 +329,52 @@ class SpecialRules(ContentModel):
 
     modifier_permille: int = _PERMILLE
     """稀有度史詩以上、未指定骨架時改組修正技能（``kind: modifier``）的機率（獨立的亂數串流）。"""
+
+
+class RecipeSummonUnit(ContentModel):
+    """組合器整招召喚、伴生、護主可以抽的召喚物（RC-1，玩法 PM 交接 4.1.19 第 1 點）。"""
+
+    unit: str
+    """召喚物範本 ID（``content/units/summons/``）。"""
+    theme: Element = Element.PHYSICAL
+    """組出來的技能的主題元素（名稱與標籤；照白板召喚配方）。"""
+    range: int = Field(default=4, ge=1)
+    """整招召喚的射程（形狀 ``ground_tile``）。"""
+
+
+class RecipeStackEvent(ContentModel):
+    """被動累積層數的一種觸發時機（RC-1，4.1.19 第 2 點）；``condition`` 是同時要帶的技能條件。"""
+
+    event: str
+    condition: ConditionSpec | None = None
+
+
+class RecipeExploit(ContentModel):
+    """被動、反應的利用型條件（RC-1，4.1.19 第 3 點）：只配有「另一方」的觸發。"""
+
+    keyword: str
+    condition: ConditionSpec
+
+
+class RecipeRules(ContentModel):
+    """組合器補配方（RC-1，``docs/玩法PM交接.md`` 4.1.19）。全部用獨立的亂數串流決定要不要用，
+    預設 0 ＝ 不用（結果與 RC-1 前相同）。"""
+
+    passive_permille: int = Field(default=0, ge=0, le=_PERMILLE_MAX)
+    """被動改用新配方的機率（指定關鍵字時只在有配方帶得到它時才擲）。"""
+    reaction_permille: int = Field(default=0, ge=0, le=_PERMILLE_MAX)
+    """反應技改用新配方的機率（同上）。"""
+    summon_permille: int = Field(default=0, ge=0, le=_PERMILLE_MAX)
+    """沒指定骨架時改組整招召喚的機率（``_wants_special`` 的最後一項）。"""
+    summon_units: tuple[RecipeSummonUnit, ...] = ()
+    """2 階起可抽的召喚物（1 階只抽 ``skill_budget.yaml`` 的 ``basic_summon_units``）。"""
+    summon_costs: tuple[dict[str, Any], ...] = ()
+    """整招召喚的代價變化（照白板召喚的 ``vary``，每項併進技能字典）。"""
+    stack_events: dict[str, tuple[RecipeStackEvent, ...]] = Field(default_factory=dict)
+    """層數 ID → 被動累積這種層數的觸發時機（＋條件）。"""
+    stack_counts: dict[str, int] = Field(default_factory=dict)
+    """層數 ID → 利用時條件 ``self_stack_at_least`` 的 N。"""
+    exploit_conditions: tuple[RecipeExploit, ...] = ()
 
 
 class VariantCondition(ContentModel):
@@ -719,6 +769,8 @@ class ComposerRules(ContentModel):
     """LLM 提議的費用旋鈕（Phase 4-L8b）。"""
     whiteboard: WhiteboardRules
     """白板技能的產生規則（Phase 3W-4）。"""
+    recipes: RecipeRules = Field(default_factory=RecipeRules)
+    """組合器補配方（RC-1）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:

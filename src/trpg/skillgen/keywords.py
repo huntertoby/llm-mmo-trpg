@@ -70,14 +70,19 @@ def _parsed_list[T: BaseModel](model: type[T], raw: object) -> list[T]:
     return [found for item in items if (found := _parsed(model, item)) is not None]
 
 
-def has_keyword(skill: SkillDef, keyword: str, table: KeywordTable) -> bool:
-    """``keyword in derive_keywords(skill, table).all()`` 的快速版（PERF-2）：只看這個關鍵字自己的
-    推導規則（基礎型態與每個戰場變奏型態，與 :func:`derive_keywords` 相同的範圍）；其他關鍵字的
-    規則不影響這個關鍵字成不成立，所以結果相同。"""
+def has_keyword(
+    skill: SkillDef, keyword: str, table: KeywordTable, *, exclusive_only: bool = False
+) -> bool:
+    """``keyword in derive_keywords(skill, table, exclusive_only=...).all()`` 的快速版（PERF-2）：
+    只看這個關鍵字自己的推導規則（基礎型態與每個戰場變奏型態，與 :func:`derive_keywords` 相同的
+    範圍）；其他關鍵字的規則不影響這個關鍵字成不成立，所以結果相同。``exclusive_only``（RC-1）只看專屬規則。"""
     single = derived(table, f"keyword:{keyword}", lambda: _single_keyword(table, keyword))
     if single is None:
         return False
-    return any(derive_from_facts(facts, single).all() for facts in skill_facts(skill))
+    return any(
+        derive_from_facts(facts, single, exclusive_only=exclusive_only).all()
+        for facts in skill_facts(skill)
+    )
 
 
 def _single_keyword(table: KeywordTable, keyword: str) -> KeywordTable | None:
