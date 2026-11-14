@@ -153,3 +153,4 @@
 - 待決 7：已知，之後的 LB 報告要註明。
 - 待決 8（指定關鍵字、不指定骨架時，交出被動或反應的比例變高）：這是分布的變化，不是洞，轉給玩法 PM 看要不要限制。
 - 補記：全量檢查時 `tests/sim/test_skill_fuzz.py` 的 slow 測試失敗，它把 summon 當成手寫專用骨架，但 RC-1 起組合器也做 summon。開發 PM 把 summon 從排除清單拿掉，這樣 summon 也必須抽得到，比原本更嚴，不是放寬。單獨重跑通過。
+- 補記（2026-11-15，RC-1b 合併後的全量）：pytest 17771 passed、vitest 4676 passed、build 0。ruff 擋下開發 PM 自己加的一行過長註解；拆成兩行後，ruff、format 和整個 tests/skillgen（4393 passed）都重跑過，結束碼都是 0，main 全綠。
