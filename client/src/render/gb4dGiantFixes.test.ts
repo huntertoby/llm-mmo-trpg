@@ -1,6 +1,6 @@
 // GB-4d：巨型頭目演出小修（美術 GB-4c 待決 5、6；docs/art/GB-4b驗收.md 末節）。
 // 5：第 2 階段熔心吸氣播吸氣變體 `inhale`（吸氣火星往核心收＋核心蓄力光），不畫熔岩柱；第 1、3 階段與 1 格灰燼之心照舊。
-// 6：800 寬噴口破的黑煙，煙頂壓在頭頂 HUD 下緣以下 ≥ 2 畫面 px；1600 照舊。
+// 6：噴口破的黑煙，煙頂壓在頭頂 HUD 下緣以下 ≥ 2 畫面 px（GB-4d 只 800；NW-3d 照美術 GB-4d 待決 1 更正，1600 也壓）。
 import { describe, expect, it } from "vitest";
 import type { PartView, Pos, UnitView } from "../api/types";
 import { unitDrawOf, type UnitDraw } from "../battle/drawModel";
@@ -100,7 +100,7 @@ function smokeTops(st: GiantState, board: number, ceil?: number): number[] {
   return tops;
 }
 
-describe("待決 6：800 噴口破的黑煙壓在頭頂 HUD 下緣以下", () => {
+describe("待決 6：800、1600 噴口破的黑煙都壓在頭頂 HUD 下緣以下", () => {
   const d = heartDraw();
   const vent = (k: number): GiantState => ({ phase: 2, fx: { part: "vent", k, side: 1 } });
 
@@ -111,25 +111,27 @@ describe("待決 6：800 噴口破的黑煙壓在頭頂 HUD 下緣以下", () =>
     expect(giantHudLowY({ ...d, noBar: true }, 0.531)).toBeNull();
   });
 
-  it("只 800 壓（1600 照舊 undefined）；上限＝HUD 下緣往下 2 畫面 px（換回錨點座標）", () => {
-    expect(giantSmokeCeil(d, 1.308)).toBeUndefined();
-    expect(giantSmokeCeil(d, 1)).toBeUndefined();
-    const c = giantSmokeCeil(d, 0.531)!;
-    expect(c).toBeCloseTo(giantHudLowY(d, 0.531)! - GIANT_ANCHOR_DY + SMOKE_HUD_GAP_PX / 0.531, 9);
-  });
-
-  it("800 第 3、4 格：原本煙頂高過上限（會碰 HUD）；壓了以後每團煙（含外框）都在上限以下", () => {
-    const c = giantSmokeCeil(d, 0.531)!;
-    expect(Math.min(...smokeTops(vent(3), 0.531))).toBeLessThan(c); // 修之前會碰到
-    for (const k of [2, 3]) {
-      const tops = smokeTops(vent(k), 0.531, c);
-      expect(tops.length).toBeGreaterThan(0);
-      expect(Math.min(...tops) - 0.6 * GG).toBeGreaterThanOrEqual(c - 1e-9);
+  it("NW-3d：800、1600 都有上限＝HUD 下緣往下 2 畫面 px（換回錨點座標）；沒有 HP 條才不壓", () => {
+    for (const s of [0.531, 1, 1.308]) {
+      const c = giantSmokeCeil(d, s)!;
+      expect(c).toBeCloseTo(giantHudLowY(d, s)! - GIANT_ANCHOR_DY + SMOKE_HUD_GAP_PX / s, 9);
     }
+    expect(giantSmokeCeil({ ...d, noBar: true }, 1.308)).toBeUndefined();
   });
 
-  it("1600 不給上限＝和以前一模一樣；smokeY 只往下推", () => {
-    expect(smokeTops(vent(3), 1.308, giantSmokeCeil(d, 1.308))).toEqual(smokeTops(vent(3), 1.308));
+  for (const [w, s] of [["800", 0.531], ["1600", 1.308]] as const) {
+    it(`${w} 第 3、4 格：原本煙頂高過上限（會碰 HUD）；壓了以後每團煙（含外框）都在上限以下`, () => {
+      const c = giantSmokeCeil(d, s)!;
+      expect(Math.min(...smokeTops(vent(3), s))).toBeLessThan(c); // 修之前會碰到
+      for (const k of [2, 3]) {
+        const tops = smokeTops(vent(k), s, c);
+        expect(tops.length).toBeGreaterThan(0);
+        expect(Math.min(...tops) - 0.6 * GG).toBeGreaterThanOrEqual(c - 1e-9);
+      }
+    });
+  }
+
+  it("smokeY 只往下推；沒給上限＝原本畫法", () => {
     expect(smokeY(-150, 10, undefined)).toBe(-150);
     expect(smokeY(-150, 10, -200)).toBe(-150);
     expect(smokeY(-190, 10, -170)).toBeCloseTo(-170 + smokeRise(10), 9);
