@@ -57,8 +57,8 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_unguarded_shot",
   "skill_war_cry",
 ];
-/** 基準錄好之後內容改過、主圖跟著變的招（DD-3：雙牙拿掉第二段傷害、改成兩下都中才上中毒）。 */
-const CONTENT_CHANGED: readonly string[] = ["skill_twin_fang"];
+/** 基準錄好之後內容改過、主圖跟著變的招（DD-3：雙牙拿掉第二段傷害、改成兩下都中才上中毒；GB-2b：熔心吸氣由環形 2 改成範圍光環 4）。 */
+const CONTENT_CHANGED: readonly string[] = ["skill_twin_fang", "skill_heart_inhale"];
 /** 基準錄好之後才加的部件（LW-1 兩個條件、DD-3 與 BS-1 各一個、KW-1 一個條件；沒有開工前的雜湊）。 */
 const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike", "condition:self_stack_at_least", "condition:self_on_high_ground"];
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
