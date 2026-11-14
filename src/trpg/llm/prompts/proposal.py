@@ -76,11 +76,14 @@ EFFECTS_NOTE_ZH = (
 VARIANTS_NONE_ZH = "這個稀有度不能帶變奏：不要填 variants。"
 VARIANTS_NOTE_ZH = (
     "選填，最多 {limit} 個；不填最容易通過。每個變奏＝id、name_zh、when（觸發條件）"
-    "＋ shape、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
+    "＋ shape、range_delta、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
+    "range_delta 是射程加值，只能填 1 或 2（射程變遠），而且技能的形狀（或變奏換上的 shape）"
+    "要有數字射程。"
     "replace_effect 的 index 是要換掉的 effects 位置（從 0 起算），"
     "不能指向主傷害（第一個 damage 效果）；要加強傷害請用 add_effect。"
 )
-"""``variants`` 的說明（LB-2：變奏數量、替換內容 1～2 項、主傷害不能被換掉）。"""
+"""``variants`` 的說明（LB-2：變奏數量、替換內容 1～2 項、主傷害不能被換掉；LB-2b：射程加值
+``range_delta``）。"""
 PASSIVE_NOTE_ZH = "被動技能的 trigger.target 是 self 時，每個效果的 affects 都只能是 self。"
 """被動技能的說明（LB-2：``passive.affects``）。"""
 LOCAL_CONTEXT_TOKENS = 16_384

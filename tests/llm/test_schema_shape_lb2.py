@@ -41,6 +41,7 @@ VARIANT = {
         "name_zh": {"type": "string"},
         "when": {"type": "object"},
         "shape": {"anyOf": [{"$ref": "#/$defs/Shape"}, {"type": "null"}]},
+        "range_delta": {"anyOf": [{"enum": [1, 2], "type": "integer"}, {"type": "null"}]},
         "element": {"anyOf": [{"$ref": "#/$defs/Element"}, {"type": "null"}]},
         "add_effect": {"anyOf": [{"$ref": "#/$defs/Effect"}, {"type": "null"}]},
         "replace_effect": {"anyOf": [{"$ref": "#/$defs/Swap"}, {"type": "null"}]},
@@ -71,7 +72,7 @@ def _defs(schema: dict[str, Any]) -> dict[str, Any]:
 def test_split_variants_one_or_two_swaps_exactly() -> None:
     branches = _defs(split_variants(SKILL))["Variant"]["anyOf"]
     chosen = [sorted(set(b["required"]) - {"id", "name_zh", "when"}) for b in branches]
-    assert len(branches) == 4 + 6  # 1 項 4 種 ＋ 2 項 6 種
+    assert len(branches) == 5 + 10  # 1 項 5 種 ＋ 2 項 10 種（LB-2b 起含 range_delta）
     assert all(1 <= len(c) <= 2 for c in chosen)
     assert len({tuple(c) for c in chosen}) == len(chosen)
     for branch, fields in zip(branches, chosen, strict=True):
@@ -142,7 +143,7 @@ def test_handwritten_variants_fit_the_variant_branches(library: ContentLibrary) 
             continue
         for spec, variant in zip(skill.variants, proposal.get("variants", []), strict=True):
             if spec.range_delta is not None:
-                continue  # range_delta 不開放給 LLM（提議模型沒有這個欄位）
+                continue  # proposal_from_skill 仍把 range_delta 當數值拿掉（Mock 不變，LB-2b）
             swaps = [f for f in VARIANT_SWAP_FIELDS if variant.get(f) is not None]
             assert 1 <= len(swaps) <= 2, (skill.id, swaps)
             seen += 1

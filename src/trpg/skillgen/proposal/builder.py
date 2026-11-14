@@ -399,12 +399,17 @@ def _when_model(surfaces: Sequence[str]) -> Any:
 
 def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ()) -> Any:
     """戰場變奏；``effect`` 是變奏能加入或替換的效果（不含 ``lookup_by_skill_id`` 原語），
-    ``None`` 時不開放 ``add_effect``／``replace_effect``。"""
+    ``None`` 時不開放 ``add_effect``／``replace_effect``。
+
+    ``range_delta``（LB-2b，玩法 PM 4.1.17 第 2 點；06 6.24「射程 ±」）：只開加值 +1～+2，範圍照
+    組合器（``composer_special`` 的 ``range_delta`` 階梯 1、2）；射程變短的變奏不開放。預算與驗證器
+    （形狀要有數字射程、變奏型態照算預算）不變。"""
     fields: dict[str, Any] = {
         "id": (str, Field(pattern=ID_PATTERN)),
         "name_zh": (str, Field(min_length=1, max_length=12)),
         "when": (_when_model(surfaces), ...),
         "shape": (shape | None, None),
+        "range_delta": (Literal[1, 2] | None, None),
         "element": (Element | None, None),
     }
     if effect is not None:
@@ -419,8 +424,8 @@ def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ())
     return create_model(
         "Variant",
         __base__=_Proposal,
-        __doc__="戰場變奏：when 條件成立時套用 1～2 項替換（shape、element、add_effect、"
-        "replace_effect）。",
+        __doc__="戰場變奏：when 條件成立時套用 1～2 項替換（shape、range_delta、element、"
+        "add_effect、replace_effect）。",
         **fields,
     )
 
