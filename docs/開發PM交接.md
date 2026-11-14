@@ -43,10 +43,10 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-14 6c4c05475 全量只紅 OpenAPI 快照（GB-1c 新事件），開發 PM 重產 openapi.json／schema.d.ts 後該測試、vitest 4537、build、typecheck 全 0，push（pytest 17579＋2）。含 GB-1c（部位綁格、限時封招、最遠敵人落點、火地生長，LOG_FORMAT /128）、PB-1f（破字記號、e3p、e3q）、美術 GB 移植需求。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量。**
+**2. 最後一次全量**：2026-11-14 a7dc58ca0 全過並 push（pytest 17631、vitest 4578、build 0），含 GB-2／2b／2c／2d（灰燼之心 3×3、熔心坑改圖、吸氣 4 格內、使用者選 B：enemy_only 不驗原階）、GB-3（巨型頭目 AI）、GB-4a（API＋前端邏輯）。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量。**
 
 **3. 執行中的 agent（分支）**：
-- GB-2＋GB-2b 已合併（11-14），未 push：使用者回 GB-2b 待決 1「B」，GB-2c（測試改成 enemy_only 整批不檢查）做完才全量。GB-3、GB-4a 11-14 派出，使用者電腦關機中斷，已用 SendMessage 續做（worktree 無改動）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
+- GB-4b（繪製＋正式美術，4b／4c 併一段，11-14 派）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
