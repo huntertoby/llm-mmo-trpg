@@ -43,15 +43,15 @@
 
 **1. 本任上了 origin/main 的段**（報告都在 `docs/phases/Phase<段>報告.md`）：NW-1b、QI-4b、BAL-21b（放寬驗證使用者選 C）、OCL-1a／1b／1c（剪影外框結案）、VFX-1、BAL-21c、BAL-21e、PB-1a／1b／1c（頭目部位段 1）、QI-5（⑦ HUD）、NW-2a／2b（數值工坊技能）、DD-1／1b／2（#153 雙匕首）、OB-7／7b／8（#154 開局只帶賽倫、#155 遭遇大小、渡口 2 打 1）、FIX-ATLAS1（荒原空框）、FIX-ATLAS2（鎖住浮島滑過微亮 16%）。版號：`LOG_FORMAT` /117、`WORLD_RULES_VERSION` 27。worktree 清理全部做完（殘留 152＋保留 63＋孤兒 1 都已刪，主資料夾 install／build 0，F 槽可用約 356 GB）；保留清單 `docs/archive/worktree清理保留清單.md` 留作紀錄。
 
-**2. 最後一次全量**：2026-11-14 6c3c05751 全過並 push（pytest 17663、vitest 4667、build 0），含 NW-3b（造牆 HP 提示、追遠權重下限、護甲提示改字）。前一次 607bac1fe 含 GB-4c。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量；有 agent 在跑測試時全量常在 99% 卡死，盡量等 agent 都回來再跑。**
+**2. 最後一次全量**：2026-11-14 84463d4e2 全過並 push（pytest 17670、vitest 4675、build 0），含 GB-4d（吸氣自己的演出、800 黑煙壓到 HUD 下）、NW-3c（造牆提示擴大到組合器的牆、組合器排除冷卻井）。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量；有 agent 在跑測試時全量常在 99% 卡死，盡量等 agent 都回來再跑。**
 
 **3. 執行中的 agent（分支）**：
-- BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。11-14 派 NW-3c（造牆提示擴大到組合器的牆、組合器排除冷卻井，玩法 4.1.15）與 GB-4d（(e3y) 吸氣不畫熔岩柱、800 黑煙壓到 HUD 下）；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
+- BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。NW-3c、GB-4d 也已 push。目前沒有 agent 在跑；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
 - 開發頁之後：要不要所有裝備都顯示形制名（RG-8 待決 1），等美術或玩法提出。LW-2 待決 6「現在不能用」那行加底色仍等美術答覆。
-- (e3y) 11-14 派 GB-4d。原：下一個前端段（美術 GB-4c 待決裁定，`docs/art/GB-4b驗收.md` 末節 1767c4d8）：第 2 階段熔心吸氣不畫熔岩柱（現在借用噴發片段）；800 寬噴口破第 4 格黑煙壓到頭頂 HUD 下緣以下。待決 2 照現狀。BM-1 待決 1 已在 GB-4c 做完。
+- (e3y) 已完成（GB-4d）。原：下一個前端段（美術 GB-4c 待決裁定，`docs/art/GB-4b驗收.md` 末節 1767c4d8）：第 2 階段熔心吸氣不畫熔岩柱（現在借用噴發片段）；800 寬噴口破第 4 格黑煙壓到頭頂 HUD 下緣以下。待決 2 照現狀。BM-1 待決 1 已在 GB-4c 做完。
 - (e3s)(e3x) 已完成（NW-3、NW-3b 11-14 合併）。原 (e3x)：`prefer_far_from_leader` schema 加下限（下一個動內容 schema 的段）；單位表單「數值工坊 NW-3 才開」字面過時要改（下一個動工坊的段）。另 NW-3 待決 4：玩法 PM 定只在工坊加提示、物件 HP 不進技能預算，提示字見 `docs/玩法PM交接.md` 4.1.14（commit 0d05fe1a6），併下一個動工坊的段。
 - (e3r)(e3t)(e3v) 已完成（BM-1 11-14 合併）。
 - 美術 RG-5 裁定的「之後再做」：開墨線畫風時補 inkOffhand；動遮擋外框時高低差遮擋照實際外形。
