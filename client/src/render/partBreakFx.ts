@@ -13,7 +13,6 @@ import { dollKey } from "./appearance";
 import { arrowPolyOf, bossHudDy, dollPx, FEET, hpBoxOf, isGiantUnit, southArrowMoved, specOfUnit } from "./unitSprite";
 import { giantBreakFxOf, STRIP_X_INK, STRIP_X_LINE, stripLayout } from "../battle/partStrip";
 import type { UnitDraw } from "../battle/drawModel";
-import { isCompactRow } from "./rowLayout";
 import { GIANT_ANCHOR_DY, GIANT_FX_BOX, GIANT_PART_OF, giantBreakFx, giantPopScale, type GiantState } from "./qBossGiant";
 import type { Effect } from "./vfxEffects";
 
@@ -108,10 +107,9 @@ export function giantHudLowY(d: UnitDraw, boardScale: number): number | null {
 
 /**
  * GB-4d（美術 GB-4c 待決 6）：噴口黑煙的煙頂上限（模型 px、相對錨點）＝HUD 下緣往下 `SMOKE_HUD_GAP_PX` 畫面 px。
- * 只在 800 寬（地圖縮放 ≤ `COMPACT_ROW_MAX_SCALE`）壓；1600 照舊（美術裁定）→ `undefined`。
+ * NW-3d（美術 GB-4d 待決 1 更正）：800、1600 都壓（原本只壓 800）；沒有 HP 條（`noBar`）時 `undefined`＝不壓。
  */
 export function giantSmokeCeil(d: UnitDraw, boardScale: number): number | undefined {
-  if (!isCompactRow(boardScale)) return undefined;
   const low = giantHudLowY(d, boardScale);
   return low === null ? undefined : low - GIANT_ANCHOR_DY + SMOKE_HUD_GAP_PX / boardScale;
 }
