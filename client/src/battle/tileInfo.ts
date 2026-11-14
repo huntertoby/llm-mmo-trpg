@@ -60,7 +60,7 @@ function objectSection(view: BattleView, tile: TileView): TileSection | null {
   if (obj.expires_in != null) head.push(`剩 ${obj.expires_in} 回合消失`);
   const entry = glossaryEntry("objects", obj.kind);
   const rules = condenseObjectRules(rulesOf("objects", obj.kind), entry?.tags.length ?? 0);
-  // CW-1：物件有說明（冷卻井「打破後井水漫出…」）時放在規則前面
+  // CW-1：物件有說明時放在規則前面（GB-4c 起冷卻井不寫說明，只留 spill 產生的規則行；玩法PM交接 4.1.13）
   const note = entry?.description_zh;
   return section("object", head.join("・"), typeof note === "string" && note !== "" ? [note, ...rules] : rules);
 }

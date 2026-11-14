@@ -55,7 +55,8 @@ def test_the_object_definition_follows_the_gameplay_ruling() -> None:
     assert well.tags == ("blocks_move", "breakable")
     assert well.explosion is None
     assert well.spill == SpillDef(surface=Surface.WATER, radius=1)
-    assert well.description_zh == "打破後井水漫出，周圍 3×3 變成水面。"
+    # GB-4c（玩法PM交接 4.1.13）：說明句拿掉，資訊卡只留由 spill 產生的規則行
+    assert well.description_zh is None
 
 
 def test_breaking_the_well_makes_a_3x3_pool_in_row_order() -> None:

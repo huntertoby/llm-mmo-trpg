@@ -92,4 +92,4 @@ objects:
     spill:               # 任何傷害打破（含火）都造水；3×3，不放在巨型頭目的佔格上（05 5.12.4 第 1 點）
       surface: water
       radius: 1
-    description_zh: 打破後井水漫出，周圍 3×3 變成水面。
+    # 不寫 description_zh（GB-4c，玩法PM交接 4.1.13）：格子資訊卡只留由 spill 產生的規則行（含「不放頭目格」）
