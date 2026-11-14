@@ -99,3 +99,16 @@
 7. 實機沒走到近戰點殼縫、第 2 階段點核心（只靠 vitest）；要不要 GB-4b 用開發頁或固定場面補拍？
 8. 截圖是內建瀏覽器縮圖（1600 畫面存成 800×450），不是 DPR 1 原尺寸；GB-4a 是邏輯段，是否可接受？
 9. 實測時主控台有 React `flushSync was called from inside a lifecycle method`（`BattleScreen`）與幾個 404，未查是否本段之前就有。
+
+## 開發 PM 裁定（2026-11-14）
+
+- 接受。全量 vitest 唯一失敗 `qIconQi2d` 是 GB-2b 造成，交 GB-2d 修。
+- 待決 1：接受動 `engine/view.py`（只加欄位與投影）。
+- 待決 2：「呼吸階段才露出」只套巨型頭目，霧鎖真人不改。
+- 待決 3：照目前（露出、沒破、打不到的部位格點了只提示不送出）。
+- 待決 4：引擎 `PART_REASON_ZH` 不改；美術第 9 節的短字只用在 GB-4b 的格子標示。
+- 待決 5：GB-4b 開頭在 `PartView` 加選填 `counts_as_behind`。
+- 待決 7：近戰點殼縫、第 2 階段點核心的畫面在 GB-4b 用開發頁或固定場面補拍。
+- 待決 8：GB-4a 是邏輯段，縮圖截圖可接受；GB-4b 起照 DPR 1。
+- 待決 9：`flushSync` 警告與 404 在 GB-4b 開工前查是否既有。
+- 待決 10：`giantPartStates` 由 GB-4b 接到 `render/` 的 `Highlights`。
