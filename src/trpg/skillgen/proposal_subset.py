@@ -45,6 +45,7 @@ from trpg.skillgen.proposal_followup import (
 )
 from trpg.skillgen.proposal_layouts import layout_hint, plan_layouts
 from trpg.skillgen.proposal_numbers import numeric_param_names
+from trpg.skillgen.proposal_passive import PASSIVE_KIND, unfit_effect_rules
 from trpg.skillgen.proposal_topup import keyword_way_texts
 
 __all__ = [
@@ -149,6 +150,9 @@ class ProposalSubset:
     followup_moves: tuple[str, ...] = ()
     """複合技能第二段另外可用的施放者自身位移（Phase 4-L8；YAML 順序，稀有度夠的
     ``COMPOSITE_MOVES``，即使不在 ``primitives``）。"""
+    tier: int | None = None
+    """題目的階級（LB-2b）：被動題目的關鍵字 ``ways`` 依這一階的被動預算拿掉放不進的產生效果
+    （:func:`_keyword_ways`）；``None`` ＝ 不篩（篩選大小時、手組的子集）。不影響模型與 schema。"""
 
 
 # ---------------------------------------------------------------------------
@@ -266,20 +270,43 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
                 "name_zh": keywords[i].name_zh,
                 "hint": keywords[i].description_zh,
                 # 6S-2：這份選單裡帶得到這個關鍵字的寫法（keyword.required 的主因）
-                "ways": keyword_way_texts(
-                    library,
-                    i,
-                    primitives=subset.primitives,
-                    conditions=subset.conditions,
-                    triggers=subset.triggers,
-                    shapes=subset.shapes,
-                ),
+                "ways": _keyword_ways(library, subset, keywords[i]),
             }
             for i in sorted(subset.keywords)
         ],
     }
     payload.update(_extra_entries(library, subset))
     return payload
+
+
+def _keyword_ways(
+    library: ContentLibrary, subset: ProposalSubset, keyword: KeywordDef
+) -> list[str]:
+    """關鍵字在這份選單裡的寫法（:func:`keyword_way_texts`）。被動題目（LB-2b，玩法 PM 4.1.17）：
+    ``uses``（條件、觸發）排前面當主要寫法，``makes`` 裡做成被動一定超預算的效果不列
+    （:func:`~trpg.skillgen.proposal_passive.unfit_effect_rules`；``tier`` 是 ``None`` 時不篩）。"""
+    passive = subset.kind == PASSIVE_KIND
+    skip: frozenset[str] = frozenset()
+    if passive and subset.tier is not None and subset.rarity is not None:
+        skip = unfit_effect_rules(
+            library,
+            keyword.makes,
+            tier=subset.tier,
+            rarity=subset.rarity,
+            primitives=subset.primitives,
+            triggers=subset.triggers,
+            skeletons=subset.skeletons,
+        )
+    return keyword_way_texts(
+        library,
+        keyword.id,
+        primitives=subset.primitives,
+        conditions=subset.conditions,
+        triggers=subset.triggers,
+        shapes=subset.shapes,
+        skip=skip,
+        uses_first=passive,
+    )
 
 
 def _extra_entries(library: ContentLibrary, subset: ProposalSubset) -> dict[str, Any]:
@@ -672,7 +699,8 @@ def select_subset(
         if item in models.primitive_ids:
             continue  # 只是不能用在變奏
         sel.drop(item, why)
-    final = replace(final, primitives=tuple(sorted(models.primitive_ids)))
+    # LB-2b：階級只在最後放進去（被動題目的 ways 依預算篩）；挑大小時用不篩的估算（只會偏大）
+    final = replace(final, primitives=tuple(sorted(models.primitive_ids)), tier=request.tier)
     return replace(
         final, dropped=tuple(sorted(sel.dropped.items())), tokens=subset_tokens(library, final)
     )
