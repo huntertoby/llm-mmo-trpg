@@ -70,6 +70,12 @@
 5. **描述的一致性檢查很嚴**（實測 `note_zh.missing_added` 常擋）：LF-2 起不合格只丟說明（`flash.note_dropped.*`）、變化照收；測資料流要說明留下來時，仍可用 `monkeypatch` 把 `flash_propose.note_checker` 換成一律通過（`tests/llm/test_flash_texts_lf1.py::lenient_notes`）。
 6. **`make_offer` 的呼叫順序**（LF-1 起）：先 `proposed`、再 `texts`、再轉型與補位。改這裡要跑 slow 的 `tests/skillgen/test_refactor_parity.py`（閃現出題的 JSON 雜湊）。
 7. **大變化題目的命名延遲**：每個大變化／轉型一次命名呼叫（本機 Qwen 3.8 27B 實測一題 4 個選項約 9 秒），大世界預先生成來不及時整題退回模板（PhaseLF計畫 第 7 節待決 5）。
+8. **LM Studio 換模型規則（必守；2026-11-14 使用者，LB-2b 起）**：之前換模型沒先卸載已載入的模型就載新的，顯存不夠、溢出到 RAM 用 CPU 跑（LB-2 重測 Gemma 只剩 30 t/s）。碰 LM Studio 的工作一律照做：
+   1. 換模型前先卸載全部：`C:\Users\tobby\.lmstudio\bin\lms.exe unload --all`（再用 `lms.exe load <model id>` 載入目標模型；只用環境變數 `TRPG_LLM_MODEL` 或腳本參數指定模型，不改 `config/llm*.toml`）。
+   2. 量測前查 `GET http://localhost:8001/api/v0/models`，確認 `state=loaded` 的**只有目標模型一個**；不只一個就停下回報。
+   3. 保留 60 t/s 門檻（`scripts/llm_model_compare.py` 的 `MIN_TPS`），沒達到就停下回報，不硬跑。
+   4. 全部跑完後把 `google/gemma-4-26b-a4b-qat` 載回來（`lms.exe load`），維持使用者原狀。
+   - LM Studio 一次只跑一個量測；不要啟動、關閉 LM Studio 本身，也不要改它的設定。
 
 ## 五、相關測試
 
@@ -81,6 +87,10 @@
 | prompt 文字 | `tests/llm/test_prompts.py`、`test_prompt_prefix.py` |
 | 許願池（WP-1、WP-2） | `tests/world/test_wish.py`、`tests/llm/test_wish_match.py`、`tests/api/test_wish_pregen.py`、`tests/api/test_wish_api_wp2.py`（API、面板、等待、插隊）；主城 `panel`：`tests/world/test_capital.py`、`test_capital_figures.py`、`client/src/world/atlas.test.ts` |
 | 依賴方向 | `uv run lint-imports`、`tests/test_architecture.py` |
+
+技能提議 prompt／schema（LB-2、LB-2b）：`tests/llm/test_schema_shape_lb2.py`、`test_passive_ways_lb2b.py`、`test_variant_range_lb2b.py`、`test_proposal_prompt.py`、`test_prompts.py`（版本快照）；`tests/skillgen/test_proposal*.py`、`test_upgrade_topup.py`。真模型量測：`scripts/llm_model_compare.py`＋`scripts/llm_failure_stats.py`（先照第四節第 8 點換模型）。
+
+- **LB-2b（`skill-proposal/16`）**：被動題目的關鍵字 `ways` 先列 `uses`（條件、觸發）、`makes` 裡做成被動一定超預算的效果不列（`skillgen/proposal_passive.py::unfit_effect_rules`：最省的被動＝係數最高的觸發＋最省的核心效果＋最小數值、不加條件，用 `skill_budget` 實算；組不出合法技能就照列）；`ProposalSubset.tier` 只在 `select_subset` 最後放進去，挑大小時不篩。變奏開放 `range_delta`（`Literal[1, 2]`，照組合器只開加值），`VARIANT_SWAP_FIELDS` 5 項 → 變奏分支 15 支；`proposal_from_skill` 仍把 `range_delta` 當數值拿掉（Mock 提議器不變）。初版重測 Gemma 在 line／cone／ring 上填 `range_delta`（50 次嘗試 26 次被擋），所以變奏說明列出這題「有射程的形狀」（形狀定義有 `range` 參數），回饋附 `RANGE_DELTA_ADVICE`；被動說明要求明寫 `"affects": "self"`、`passive.affects` 回饋附 `PASSIVE_AFFECTS_ADVICE`。判定都不變。
 
 本機 LLM 冒煙（手動、少量）：寫一支暫存腳本，`load_llm_config(Path("config/llm.local.toml"))` → `OpenAICompatClient` → `LlmFlashSource(client, naming=client)` → `make_offer`，印 `record.names` 與每個選項的 `skill.name_zh`、`variation.note_zh`（LF-1 報告第 3 節有輸出範例）。
 
