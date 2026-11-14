@@ -108,6 +108,12 @@ class ProposalRequest:
     region: str | None = None
     """技能取得地點的區域 ID（#126，06 6.34.7）：名稱與描述照該區風格。``None``＝中性（創角、
     許願池、測試原型）。由呼叫端依世界狀態傳入；只進 prompt，不影響子集與數值。"""
+    wants_variants: bool = False
+    """題目明確要求戰場變奏（LB-2c，玩法 PM 4.1.18 第 1 點）：只有為真時送給約束解碼的 schema
+    才有 ``variants`` 欄位、prompt 才有變奏說明（數量仍照稀有度上限）。現有的出題（升級候選、
+    許願池、``trpg llm`` 的評估題目）都沒有「要變奏」的資料，一律是 ``False``；之後出題指定
+    戰場變奏、或許願池的願望講到地形時，由呼叫端設為 ``True``。只影響 schema 與 prompt，
+    提議模型與驗證不變。"""
 
     def __post_init__(self) -> None:
         if self.tier < 1:

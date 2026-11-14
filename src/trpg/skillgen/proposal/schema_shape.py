@@ -8,9 +8,12 @@ pydantic 模型與驗證器都不變（驗證一律用模型本身）；這裡�
   的變奏驗證器）。LM Studio 的約束解碼不支援 ``maxProperties``（LB-2 實測會被忽略），所以拆成
   「恰好這幾項」的分支（``anyOf``）。
 - :func:`limit_variants`：變奏數量的稀有度上限（``core.variant_max_by_rarity``）寫進 ``maxItems``；
-  上限 0 時拿掉 ``variants`` 欄位。
+  上限 0 時拿掉 ``variants`` 欄位（LB-2c 起題目沒要求變奏時也是 0）。
+- :func:`fix_category`（LB-2c，玩法 PM 4.1.18 第 3 點）：骨架規定了 ``category``／``weapon_req``
+  時（被動一律 ``spell``／``any``，06 6.3.1；驗證器 ``passive.category``），頂層只留那一類的分支，
+  兩個欄位都寫成 ``const``。
 
-兩者都只讓 schema 變窄（任何符合新 schema 的 JSON 都符合原本的 schema），不會讓驗證器放行原本
+三者都只讓 schema 變窄（任何符合新 schema 的 JSON 都符合原本的 schema），不會讓驗證器放行原本
 擋下的提議。
 
 另外 :func:`drop_descriptions` 去掉 ``description``、:func:`prune_defs` 去掉沒被引用的定義：伺服器
@@ -30,6 +33,7 @@ __all__ = [
     "VARIANT_SWAP_FIELDS",
     "VARIANT_SWAP_MAX",
     "drop_descriptions",
+    "fix_category",
     "limit_variants",
     "prune_defs",
     "shape_schema",
@@ -189,8 +193,72 @@ def prune_defs(schema: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
-def shape_schema(schema: Mapping[str, Any], *, variant_limit: int) -> dict[str, Any]:
+def _resolve(node: Any, defs: Mapping[str, Any]) -> Any:
+    if isinstance(node, Mapping):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith(_REF_PREFIX):
+            return defs.get(ref.removeprefix(_REF_PREFIX))
+    return node
+
+
+def _allowed(prop: Any, defs: Mapping[str, Any]) -> frozenset[Any] | None:
+    """欄位可填的值（``const`` 或 ``enum``，``$ref`` 先解開）；看不出來時 ``None``。"""
+    node = _resolve(prop, defs)
+    if not isinstance(node, Mapping):
+        return None
+    if "const" in node:
+        return frozenset({node["const"]})
+    values = node.get("enum")
+    return frozenset(values) if isinstance(values, list) else None
+
+
+def _fits(values: frozenset[Any] | None, value: str) -> bool:
+    return values is None or value in values
+
+
+def fix_category(schema: Mapping[str, Any], category: str, weapon_req: str) -> dict[str, Any]:
+    """頂層（技能提議的各分支）的 ``category``／``weapon_req`` 固定成 ``category``／``weapon_req``
+    （``const``）；明確不收這兩個值的分支拿掉（回傳新 schema）。
+
+    分支在根的 ``oneOf``／``anyOf``（``$ref`` 指到 ``$defs``）；沒有分支時根本身就是技能。沒有
+    ``category`` 欄位的分支不動；全部分支都不收時照原樣回傳（保守：不讓 schema 變成沒有解）。"""
+    out = copy.deepcopy(dict(schema))
+    defs: Mapping[str, Any] = out.get("$defs") or {}
+    key = next((k for k in ("oneOf", "anyOf") if isinstance(out.get(k), list)), None)
+    items: list[Any] = list(out[key]) if key is not None else [out]
+    kept: list[Any] = []
+    for item in items:
+        node = _resolve(item, defs)
+        props = node.get("properties") if isinstance(node, dict) else None
+        if not isinstance(props, dict) or "category" not in props:
+            kept.append(item)
+            continue
+        if not (
+            _fits(_allowed(props["category"], defs), category)
+            and _fits(_allowed(props.get("weapon_req"), defs), weapon_req)
+        ):
+            continue
+        props["category"] = {"const": category, "type": "string"}
+        if "weapon_req" in props:
+            props["weapon_req"] = {"const": weapon_req, "type": "string"}
+        kept.append(item)
+    if not kept:
+        return copy.deepcopy(dict(schema))
+    if key is not None:
+        out[key] = kept
+    return out
+
+
+def shape_schema(
+    schema: Mapping[str, Any],
+    *,
+    variant_limit: int,
+    category: tuple[str, str] | None = None,
+) -> dict[str, Any]:
     """送給約束解碼的 schema：:func:`limit_variants` → :func:`split_variants` →
-    :func:`drop_descriptions` → :func:`prune_defs`。"""
+    （``category`` 有給時）:func:`fix_category` → :func:`drop_descriptions` → :func:`prune_defs`。
+    ``category`` 是（``category``, ``weapon_req``）。"""
     shaped = split_variants(limit_variants(schema, variant_limit))
+    if category is not None:
+        shaped = fix_category(shaped, *category)
     return prune_defs(drop_descriptions(shaped))

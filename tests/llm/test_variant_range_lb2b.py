@@ -24,7 +24,8 @@ from trpg.skillgen.proposal.schema_shape import VARIANT_SWAP_FIELDS
 from trpg.skillgen.proposal_numbers import fixed_filler, split_numbers
 from trpg.skillgen.proposal_subset import ProposalRequest
 
-EPIC_COMBO = ProposalRequest(1, "epic", skeleton="combo")
+EPIC_COMBO = ProposalRequest(1, "epic", skeleton="combo", wants_variants=True)
+"""LB-2c 起變奏欄位只在題目要求變奏時給；這裡測的是要求時的 schema 與說明。"""
 _BASE = frozenset({"id", "name_zh", "when"})
 
 
@@ -39,7 +40,7 @@ def test_variant_branches_include_range_delta(library: ContentLibrary) -> None:
 
 
 def test_variants_note_mentions_range_bonus(library: ContentLibrary) -> None:
-    request = ProposalRequest(1, "epic", skeleton="combo")
+    request = EPIC_COMBO
     notes = field_notes(library, request, build_proposal_prompt(library, request).subset)
     assert "range_delta" in VARIANTS_NOTE_ZH and "range_delta" in notes["variants"]
 
@@ -82,7 +83,7 @@ def test_range_delta_only_plus_one_or_two(library: ContentLibrary) -> None:
 
 def test_variants_note_lists_shapes_with_numeric_range(library: ContentLibrary) -> None:
     """初版重測 Gemma 在 line、cone 上填 range_delta：說明要列出這題哪些形狀有射程。"""
-    request = ProposalRequest(1, "epic")
+    request = ProposalRequest(1, "epic", wants_variants=True)
     subset = build_proposal_prompt(library, request).subset
     note = field_notes(library, request, subset)["variants"]
     shapes = library.ruleset.shapes.by_id()
