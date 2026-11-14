@@ -38,6 +38,7 @@ from trpg.content.tuning_fields import (
     target_files,
 )
 from trpg.skillgen.budget import BudgetError, skill_budget
+from trpg.skillgen.composer_parts import obstacle_candidates
 
 __all__ = [
     "AI_NAME_ZH",
@@ -176,15 +177,21 @@ OBSTACLE_NOTICE_ZH: Final = (
 def obstacle_objects(
     content_dir: Path, table: TuningFields, library: ContentLibrary | None
 ) -> frozenset[str]:
-    """技能檔裡 ``create_obstacle`` 會放出的物件 ID（NW-3b；玩法 PM 交接 4.1.14「由資料推」）。
+    """造牆技能會放出的物件 ID（NW-3b；NW-3c 擴大，玩法 PM 交接 4.1.14、4.1.15「由資料推」）。
 
-    走訪的是工坊技能對象的檔案清單（``skills/*.yaml``，同 :func:`unit_skill_picker`），每招的所有
-    效果層級（第二段、變奏、反噬、修正規則的命中後效果）都算。閃現與組合器隨機產生的招不算（它們
-    可能放的物件由規則決定、不在資料裡）。沒有內容庫時是空集合（不顯示提示）。"""
+    兩個來源的聯集：
+
+    - 手寫技能：工坊技能對象的檔案清單（``skills/*.yaml``，同 :func:`unit_skill_picker`），每招的
+      所有效果層級（第二段、變奏、反噬、修正規則的命中後效果）裡 ``create_obstacle`` 的物件；
+    - 組合器的造牆候選：:func:`~trpg.skillgen.composer_parts.obstacle_candidates`（組合器抽物件用
+      的同一個函式，所以排除清單裡的冷卻井不在內）。
+
+    閃現的延伸效果只把原技能既有的 ``create_obstacle`` 延長，物件來自原技能，不另算（4.1.15
+    第 2 點）。沒有內容庫時是空集合（不顯示提示）。"""
     skills_target = table.target("skill")
     if library is None or skills_target is None:
         return frozenset()
-    found: set[str] = set()
+    found: set[str] = set(obstacle_candidates(library))
     for path in target_files(content_dir, skills_target):
         skill = library.skills.get(path.stem)
         if skill is None:

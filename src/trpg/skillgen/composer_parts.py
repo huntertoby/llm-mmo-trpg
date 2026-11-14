@@ -52,6 +52,7 @@ __all__ = [
     "choose_core",
     "dice_ladder",
     "effect_knobs",
+    "obstacle_candidates",
     "set_knob_value",
 ]
 
@@ -504,17 +505,28 @@ def _sacrifice_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
     ctx.add_knobbed(spec)
 
 
+def obstacle_candidates(library: ContentLibrary) -> tuple[str, ...]:
+    """組合器 ``create_obstacle`` 可以放的物件 ID（排序）：``blocks_move``、不是 ``explosive``、
+    不在 ``skill_composer.yaml`` 的 ``structure.obstacle_exclude``（NW-3c，玩法 PM 交接 4.1.15：
+    冷卻井不當造牆候選）。數值工坊的造牆 HP 提示（``trpg.api.tuning.objects.obstacle_objects``）
+    用同一個函式。"""
+    excluded = frozenset(library.composer.structure.obstacle_exclude)
+    return tuple(
+        sorted(
+            o.id
+            for o in library.ruleset.objects.objects
+            if "blocks_move" in o.tags and "explosive" not in o.tags and o.id not in excluded
+        )
+    )
+
+
 def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
     spec: dict[str, Any] = {"type": primitive_id}
     if primitive_id == "sacrifice_summon":
         _sacrifice_effect(ctx, spec)
         return
     if primitive_id == "create_obstacle":
-        objects = sorted(
-            o.id
-            for o in ctx.library.ruleset.objects.objects
-            if "blocks_move" in o.tags and "explosive" not in o.tags
-        )
+        objects = obstacle_candidates(ctx.library)
         if not objects:
             raise Retry
         spec["object"] = ctx.rng.choice(objects)

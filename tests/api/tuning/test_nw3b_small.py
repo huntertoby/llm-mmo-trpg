@@ -30,6 +30,7 @@ from trpg.content.environment import AiWeights
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import bundled_content_dir
 from trpg.content.tuning_fields import parse_path
+from trpg.skillgen.composer_parts import obstacle_candidates
 
 CONTENT = bundled_content_dir()
 AI = "ai_profiles.yaml"
@@ -85,7 +86,9 @@ def test_the_notice_text_is_verbatim() -> None:
 
 def test_obstacle_objects_come_from_the_skill_files(read_service: TuningService) -> None:
     walls = obstacle_objects(CONTENT, read_service.table, read_service.library)
-    assert walls == _raw_obstacle_objects()
+    assert read_service.library is not None
+    # NW-3c（4.1.15 第 1 點）：手寫技能檔 ∪ 組合器的造牆候選
+    assert walls == _raw_obstacle_objects() | set(obstacle_candidates(read_service.library))
     assert {"earth_wall", "ice_wall", "thorn_wall"} <= walls  # 土牆、冰牆、荊棘叢（4.1.14）
     assert "cooling_well" not in walls
     assert obstacle_objects(CONTENT, read_service.table, None) == frozenset()

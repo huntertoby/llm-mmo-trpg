@@ -135,6 +135,10 @@ class StructureRules(ContentModel):
     other_min_range: int = Field(ge=0)
     fallback_secondary: tuple[str, ...]
     """骨架沒有指定附帶原語清單時的後備清單。"""
+    obstacle_exclude: tuple[str, ...] = ()
+    """不當造牆候選的物件 ID（NW-3c，玩法 PM 交接 4.1.15）：``create_obstacle`` 只從
+    ``blocks_move`` 且非 ``explosive`` 的物件抽，再拿掉這裡列的（例：冷卻井，打破就造水）。
+    ID 必須是 ``objects.yaml`` 的物件（載入時檢查）。"""
 
 
 class ConditionRules(ContentModel):
