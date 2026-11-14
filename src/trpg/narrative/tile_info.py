@@ -269,7 +269,12 @@ def object_rules(obj: ObjectDef, library: ContentLibrary) -> tuple[str, ...]:
         lines.append(f"爆炸範圍 {side}×{side}，{e.dice}{flat} {elem}傷害")
     if obj.spill is not None:
         spill = names.of(names.surface, obj.spill.surface.value)
-        lines.append(f"被傷害打破或摔破時（非被火引爆）漏出{spill}")
+        if obj.spill.radius is None:
+            lines.append(f"被傷害打破或摔破時（非被火引爆）漏出{spill}")
+        else:  # 方陣（CW-1 冷卻井）；巨型頭目的佔格不放
+            side = 2 * obj.spill.radius + 1
+            where = "（不放在巨型頭目佔的格子上）"
+            lines.append(f"被傷害打破或摔破時漏出{spill}，範圍 {side}×{side}{where}")
     seen: set[tuple[str, str]] = set()
     for r in ruleset.interactions.rules:
         if r.target != "object" or r.object_tag not in obj.tags:
