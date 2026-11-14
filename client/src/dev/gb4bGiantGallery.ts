@@ -3,7 +3,7 @@
 // 破壞演出同一組函式（`setPartFx` ＋ `partBreakFx.giantBreakCanvas`）畫手寫的場面（比照 `pb1eGallery.ts`）；外觀取
 // `render/fixtures/unitDolls.json`。每格＝真 1 倍的畫布（`extract`，裝置像素比 1 時＝畫面像素）＋可選的最近鄰放大。
 // 參數：
-//   ?set=sprites|marks|break|after|shed|field|side   （逗號接多段；預設 sprites；side＝BM-1 狀態 3 個＋蓄力的 HUD）
+//   ?set=sprites|marks|break|after|shed|field|side   （逗號接多段；預設 sprites；side＝BM-1 狀態 3 個＋蓄力的 HUD；tele＝BM-1 延遲預告字）
 //   &w=1600|800   地圖縮放照美術移植需求 2.3（1600＝1.308、800＝0.531）；`&scale=` 另給
 //   &zoom=<k>     最近鄰放大倍數（預設 0＝不放大；800 的立繪、殼縫格、「破」字特寫用 4）
 //   &only=<i,…>   每一段只畫第幾格（0 起；特寫用）
@@ -11,7 +11,8 @@
 //   &grid=0       不畫 3×3 格線（預設畫：佔格外框＋格線，看核心、殼窩只在中排）
 // 畫好後 `document.body.dataset.ready = "1"`。
 import { Rectangle, Sprite } from "pixi.js";
-import type { Action, BattleView, Facing, Glossary, PartOption, PartView, Pos, TileView, UnitView } from "../api/types";
+import type { Action, BattleView, Facing, Glossary, PartOption, PartView, Pos, TelegraphOut, TileView, UnitView } from "../api/types";
+import { telegraphMarks } from "../battle/telegraph";
 import glossary from "../battle/fixtures/glossary.json";
 import { classifyActions } from "../battle/actions";
 import { BATTLE_DRAW, buildDrawModel } from "../battle/drawModel";
@@ -331,6 +332,20 @@ const SETS_OF: Record<string, () => Array<{ title: string; cells: Cell[] }>> = {
         cells: [2, 1].map((y) => ({ cap: y === 1 ? "最北" : "一般", view: viewOf(units(y), 7, 6, lava), zoomBox: { x0: 0.4, y0: y === 1 ? -1.6 : -0.6, x1: 6.6, y1: y + 2.6 } })),
       },
     ];
+  },
+  // BM-1：延遲落格預告字（熔岩濺落「蓄」、施放者「蓄1」、炸彈倒數）：800 寬放大到畫面字 ≥10 px、錨在格子右上角
+  tele: () => {
+    const spot = P(3, 5);
+    const sq = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => P(spot.x + dx, spot.y + dy)));
+    const units = [heartOf({ x: 3, y: 2, phase: 1 }), personAt(HERO, 3, 5, "ally"), personAt("a1", 2, 6, "ally", "hero_archer", "north", "ranged"), personAt("a2", 5, 5, "ally", "hero_mage")];
+    const view = viewOf(units, 7, 7);
+    const tele = {
+      round: 1, changes: [], burning: [], upcoming: [],
+      bombs: [{ unit_id: "a2", pos: P(5, 5), tiles: [P(5, 4), P(6, 5)], remaining: 2, text: "炸彈：2 回合後爆炸" }],
+      charges: [{ unit_id: BOSS, skill_id: "skill_lava_splash", name_zh: "熔岩濺落", release: "next_turn", remaining: 1, pos: spot, tiles: sq, anchored: true, text: "灰燼之心的熔岩濺落：下回合開始時落在指定位置，影響 9 格" }],
+    } as unknown as TelegraphOut;
+    const hl: Highlights = { moves: [], attacks: [], directions: [], preview: [], telegraph: telegraphMarks(tele, view), focus: null, hover: null, overlays: [], picked: [] };
+    return [{ title: `延遲落格預告字（${W} 寬）`, cells: [{ cap: "熔岩濺落落點 3×3＋炸彈倒數", view, after: (r: BattleRenderer) => r.setHighlights(hl), zoomBox: { x0: 0.6, y0: 3.4, x1: 6.6, y1: 7 } }] }];
   },
 };
 
