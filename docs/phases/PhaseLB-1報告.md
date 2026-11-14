@@ -122,3 +122,8 @@
 - **思考開著（現行設定）**：qwen 與 swift 都 100% 退回組合器，每題 18～39 秒，時間全花在被截斷的思考上。
 - 第 8 題（high_ground）四個 Qwen 系的欄位都退回，只有 Gemma 通過；第 1 題 Gemma 退回、兩個 Qwen 系不思考都通過。
 - VRAM：qwen 約 27 GB、swift 約 24.5 GB（32 GB 卡）。
+
+## 開發 PM 裁定（2026-11-14）
+
+- 接受。前一位 agent 被停掉（qwen 當時被 LM Studio 放在 CPU，約 20 t/s；使用者修好後重新載入，開發 PM 實測 27 GB、148 t/s），本位接續、沿用 Gemma 資料。
+- **重要發現轉使用者**：`config/llm.toml` 現行只送 `chat_template_kwargs.enable_thinking=false`，LM Studio 不認，qwen 與 swift 都關不掉思考，思考用光 max_tokens 1024，20 題全部退回組合器。要關掉思考得設 `reasoning_effort=none`（`TRPG_LLM_REASONING_EFFORT=none`）。改設定檔與改用哪個模型都由使用者決定，這段沒改。
