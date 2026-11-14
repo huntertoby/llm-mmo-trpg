@@ -16,6 +16,7 @@ import { CREATURE_ELEM, FIRE } from "./qCreatureElem";
 import { Q_HEADS, RIG, type QHeadDef, type RigDef } from "./creatureRig";
 import { attackClipFor, BODY_ANIM, creatureFrameU, drawCreatureFx, idHash, PERCHERS, qCreaturePartPose, type AttackType } from "./qCreatureAnim";
 import { BOSS_BOX, BOSS_FIELD_SCALE, BOSS_IDLE_N, BOSS_MS, bossOf, bossPoseFx, drawBossFrame, type BossId } from "./qBoss";
+import { drawGiantFrame, GG, GIANT_CANVAS, GIANT_MOUTH, giantLookKey, giantLookOf, type GiantLook, type GiantLookInput } from "./qBossGiant";
 import { ellPts, lcg, seedOf, type Pt } from "./inkStyle";
 import { hasDom, qLayer, QC_OUT } from "./qCreatureLayer";
 
@@ -50,6 +51,11 @@ export interface CreatureInput {
   template?: string | undefined;
   /** 頭目目前的階段（1 起；`UnitView.boss_phase.index`）。 */
   bossPhase?: number | null | undefined;
+  /**
+   * GB-4b：3×3 巨型灰燼之心的外觀來源（部位破了沒、破壞演出這一格；`qBossGiant.giantLookOf`）；1 格的單位不給（鍵與畫法不變）。
+   * 只有範本是灰燼之心時有用（其他頭目、異形忽略）。
+   */
+  giant?: Omit<GiantLookInput, "phase" | "statusIds"> | undefined;
 }
 
 const CRYSTAL = "#9a86ff"; // 源晶藍紫（形態光環、魔導劍同色）
@@ -1113,8 +1119,8 @@ export interface ResolvedCreature {
   affixes: string[];
   /** 頭目外光色；不是頭目為 `undefined`。 */
   glow: string | undefined;
-  /** QK-4：有專屬畫法的頭目（qBoss）與目前階段；一般異形為 `undefined`。 */
-  boss?: { id: BossId; phase: number } | undefined;
+  /** QK-4：有專屬畫法的頭目（qBoss）與目前階段；一般異形為 `undefined`。GB-4b：`giant`＝3×3 巨型灰燼之心（`qBossGiant`）的外觀。 */
+  boss?: { id: BossId; phase: number; giant?: GiantLook } | undefined;
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -1143,13 +1149,13 @@ export function resolveCreature(input: CreatureInput): ResolvedCreature {
   for (const sid of Object.keys(byStatus).sort()) if (statuses.includes(sid)) for (const t of byStatus[sid] ?? []) add(t);
   const out: ResolvedCreature = { body, variant, material, element, tint, size, lite, traits, affixes: knownAffixes(input.affixes), glow };
   const boss = bossOf(input.template, input.bossPhase, statuses);
-  if (boss !== null) out.boss = boss;
+  if (boss !== null) out.boss = boss.id === "ah" && input.giant !== undefined ? { ...boss, giant: giantLookOf({ ...input.giant, phase: boss.phase, statusIds: statuses }) } : boss;
   return out;
 }
 
 /** 貼圖快取鍵（外觀＋朝向）：status_traits 已解進 `traits`，狀態一變鍵就跟著變。 */
 export function creatureKey(r: ResolvedCreature, facing: Facing): string {
-  const boss = r.boss === undefined ? "" : `${r.boss.id}${r.boss.phase}`;
+  const boss = r.boss === undefined ? "" : `${r.boss.id}${r.boss.phase}${r.boss.giant === undefined ? "" : giantLookKey(r.boss.giant)}`;
   return ["c", r.body, r.variant, r.material, r.element ?? "", r.tint ?? "", r.size.toFixed(3), r.lite ? "l" : "", r.traits.join("+"), r.affixes.join("+"), r.glow ?? "", boss, facing === "west" ? "w" : "e"].join("|");
 }
 
@@ -1278,6 +1284,14 @@ function partPoseOf(r: ResolvedCreature, P: Palette, pose: CreaturePose | null):
  * `ground`：false ＝ 不畫地上的影子；`"only"` ＝ 只畫影子。
  */
 export function drawCreature(ctx: Ctx, r: ResolvedCreature, pose: CreaturePose | null = null, ground: boolean | "only" = true): void {
+  if (r.boss?.giant !== undefined) {
+    // GB-4b：3×3 巨型灰燼之心：畫布是虛擬單位（1 單位＝GG 模型 px），回到模型 px 畫（`qBossGiant` 的座標）
+    ctx.save();
+    ctx.scale(1 / GG, 1 / GG);
+    drawGiantFrame(ctx, r.boss.giant, pose, ground);
+    ctx.restore();
+    return;
+  }
   if (r.boss !== undefined) {
     drawBossFrame(ctx, r.boss, pose, ground);
     return;
@@ -1374,6 +1388,7 @@ export function fxSizeOf(r: ResolvedCreature): number {
 /** CB-3c／CB-4：這一格轉向後的片段特效（腳底座標、未乘大小；原點＝「相鄰目標」那一點）。沒有轉向、沒有特效 → 空。頭目照 `bossPoseFx`。 */
 export function turnedCreatureFx(r: ResolvedCreature, pose: CreaturePose, c: number): CreatureFx[] {
   if (pose.fxTurn === undefined) return [];
+  if (r.boss?.giant !== undefined) return []; // GB-4b：3×3 不畫片段自帶的特效（位置照 1 格算的）
   if (r.boss !== undefined) return turnCreatureFx(bossPoseFx(r.boss, pose), pose.fxTurn, c);
   const pp = partPoseOf(r, creaturePalette(r), pose);
   return pp === null ? [] : turnCreatureFx(creatureFxShown(pp.fx, pose), pose.fxTurn, c);
@@ -1437,12 +1452,14 @@ export const HUGE_FIELD_SCALE = BOSS_FIELD_SCALE;
 
 /** 這隻的貼圖畫布（頭目另有較大的畫布）。 */
 export function creatureCanvasSize(r: Pick<ResolvedCreature, "boss">): { w: number; h: number; foot: number } {
+  if (r.boss?.giant !== undefined) return { w: GIANT_CANVAS.w, h: GIANT_CANVAS.h, foot: GIANT_CANVAS.foot };
   if (r.boss !== undefined) return { w: BOSS_BOX.w, h: BOSS_BOX.h, foot: BOSS_BOX.foot };
   return { w: CREATURE_W, h: CREATURE_H, foot: CREATURE_FOOT_Y };
 }
 
 /** 頭頂的高度（虛擬單位、已乘大小；狀態列避開用）。 */
 export function creatureTop(r: ResolvedCreature): number {
+  if (r.boss?.giant !== undefined) return GIANT_CANVAS.top;
   if (r.boss !== undefined) return BOSS_BOX.top[r.boss.id];
   return bodyTop(r.body).top * r.size;
 }
@@ -1462,13 +1479,14 @@ export function renderCreatureCanvas(r: ResolvedCreature, facing: Facing, dpr: n
   if (o === null) return null;
   o.scale(dpr, dpr);
   o.translate(w / 2, foot);
-  if (facing === "west") o.scale(-1, 1);
+  if (facing === "west" && r.boss?.giant === undefined) o.scale(-1, 1); // GB-4b：3×3 朝南固定，不鏡像（T8）
   drawCreature(o, r, layer === "shadow" ? null : pose, layer === "all" ? true : layer === "shadow" ? "only" : false);
   return off;
 }
 
 /** QK-4b：出手點（虛擬單位、未乘大小，朝東；嘴，頭目＝灰燼之心核心、碎晶之主前手晶）：飛行物、射線從這裡發出。 */
 export function creatureMouth(r: ResolvedCreature): readonly [number, number] {
+  if (r.boss?.giant !== undefined) return GIANT_MOUTH;
   if (r.boss !== undefined) return r.boss.id === "ah" ? [0, -28] : [52, -46];
   return BODY_ANIM[rigKey(r)]?.mouth ?? [10, -16]; // 大小由 creatureOffsetPx 乘
 }

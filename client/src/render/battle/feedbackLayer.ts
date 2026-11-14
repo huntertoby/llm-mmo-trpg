@@ -1,6 +1,7 @@
 // 浮動字與行動連線（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：同一格錯開往上堆（`FloatStack`）、夾在戰場內、狀態光環。
 import { Container, Graphics, Sprite, Texture, type Text } from "pixi.js";
 import type { Pos } from "../../api/types";
+import { drawOccupies, isGiantDraw } from "../../battle/drawModel";
 import type { FeedbackItem, FloatTone } from "../../battle/feedback";
 import { TILE_SIZE } from "../../battle/geometry";
 import type { Effect } from "../vfxEffects";
@@ -235,7 +236,9 @@ export abstract class FeedbackLayer extends RgMarkLayer {
 
   /** 浮動字所在格的單位頂端（`unitTopY`）；那一格沒有人（已經移走）時用標準人形的頭頂。 */
   private floatTopY(p: Pos): number {
-    const u = this.model?.units.find((x) => x.x === p.x && x.y === p.y);
+    const u = this.model?.units.find((x) => drawOccupies(x, p));
+    // GB-4b：3×3 巨型頭目的佔格（打中的那一格，`hit_tile`）：字從那一格冒、照一般人形的頭頂（不跑到 3×3 頂上的 HUD）
+    if (u !== undefined && isGiantDraw(u)) return HUMAN_TOP_Y;
     return u === undefined ? HUMAN_TOP_Y : unitMarkTopY(u); // QK-9：頭目從搬上去的 HUD 上方冒，不穿過 HUD
   }
 

@@ -767,7 +767,7 @@ export function bossAttackHitU(who: BossId, clip: string, phase: number): number
 
 
 /** 片段名（`CreaturePose.clip`）→ 頭目片段：idle、move（不動）→ 待機；atk:xxx → xxx；hit、death 照舊。 */
-function bossClipOf(boss: { id: BossId; phase: number }, clip: string | undefined): string {
+export function bossClipOf(boss: { id: BossId; phase: number }, clip: string | undefined): string {
   if (clip === undefined) return "static";
   if (clip === "move") return "idle";
   if (clip.startsWith("atk:@")) return bossAttackClip(boss.id, clip.slice(5), boss.phase);

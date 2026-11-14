@@ -16,7 +16,7 @@ import { DOLL_SCALE } from "./paperdoll";
 import { drawCreatureFx } from "./qCreatureAnim";
 import type { CreatureFx } from "./creaturePose";
 import { hasDom, qLayer, QC_OUT, type QLayerOpt } from "./qCreatureLayer";
-import { ASH, BOSS_FIELD_SCALE, BOSS_GLOW_A, BOSS_GLOW_W, cyc, osc } from "./qBoss";
+import { ASH, BOSS_FIELD_SCALE, BOSS_GLOW_A, BOSS_GLOW_W, bossClipOf, bossPlan, cyc, osc } from "./qBoss";
 import { MIN_BREAK_POP_FONT_PX, minMarkScale } from "./minMark";
 import { blit } from "./qIcon/core";
 import { glyph as partGlyph, BOX as PART_BOX } from "./qIcon/parts";
@@ -1361,3 +1361,133 @@ function backChip(ctx: Ctx, x: number, y: number, r: number, S: number, res: num
 }
 /** 部位格標示畫布的範圍（模型 px、相對錨點）：佔格四邊各多 4。 */
 export const GIANT_MARK_BOX = { x: -76, y: -148, w: 152, h: 152 } as const;
+
+// ---------------- 戰場接點（GB-4b）：外觀旗標、片段 → 狀態、畫一格 ----------------
+/** 一格的單位畫布原點（`unitSprite.FEET`＝格子中心往南 T×0.23）到錨點（中心格中心往南 72）的距離（模型 px）。 */
+export const GIANT_FEET_TO_ANCHOR = GIANT_ANCHOR_DY - GT * 0.23;
+/**
+ * 戰場貼圖的畫布（虛擬單位，1 單位＝`GG` 模型 px；`inkCreature.creatureCanvasSize`）：原點（腳底）＝一般單位的腳底（`FEET`），
+ * 畫的時候再往南 `GIANT_FEET_TO_ANCHOR` 到錨點，所以頭目的節點、`FEET`、受擊與待機的位移全部沿用一格的規矩。
+ * 範圍包住 `GIANT_BOX`（含熔岩柱、飛走的殼片）。`top`＝頭頂（含金外光；HUD 放在它上方，`unitSprite.bossHudDy`）。
+ */
+export const GIANT_CANVAS: { readonly w: number; readonly h: number; readonly foot: number; readonly top: number } = (() => {
+  const foot = Math.ceil((GIANT_FEET_TO_ANCHOR - GIANT_BOX[1]) / GG);
+  const below = Math.ceil((GIANT_BOX[3] + GIANT_FEET_TO_ANCHOR) / GG) + 1;
+  return { w: Math.ceil((GIANT_BOX[2] - GIANT_BOX[0]) / GG) + 2, h: foot + below, foot, top: (GIANT_BOUNDS.y0 + GIANT_FEET_TO_ANCHOR) / GG };
+})();
+/** 出手點（虛擬單位、相對腳底）：核心（殼窩中心）。 */
+export const GIANT_MOUTH: P2 = [0, (CY + GIANT_FEET_TO_ANCHOR) / GG];
+
+/** 戰場上的外觀（不含片段）：階段、熔殼、破了哪些部位、破壞演出的這一格。 */
+export interface GiantLook {
+  phase: 1 | 2 | 3;
+  /** 熔殼在不在（`molten_shell` 狀態）；演出中殼縫破的前兩格蓋回 1。 */
+  shell: 0 | 1;
+  /** 熔殼脫落進度（只有殼縫破第 3、4 格有值）。 */
+  breakT?: number;
+  broken: Partial<Record<GiantPart, boolean>>;
+  fx: Required<GiantFx> | null;
+}
+
+/** `UnitDraw` 裡用得到的欄位（`battle/partStrip` 的 `PartDraw`／`PartFx` 的結構）。 */
+export interface GiantLookInput {
+  phase: number | null | undefined;
+  statusIds?: readonly string[] | undefined;
+  parts?: ReadonlyArray<{ id: string; broken: boolean }> | undefined;
+  partFx?: { part: string; frame?: number | undefined; side?: number | undefined; shed?: boolean | undefined } | null | undefined;
+}
+
+/** 單位資料 → 外觀。演出中（`partFx.frame` 0～3）那個部位當成還沒破；殼縫第 1 階段破時熔殼前兩格蓋回、第 3、4 格照 `BRK.breakT` 飛走。 */
+export function giantLookOf(i: GiantLookInput): GiantLook {
+  const phase: 1 | 2 | 3 = i.phase === 2 || i.phase === 3 ? i.phase : 1;
+  const broken: Partial<Record<GiantPart, boolean>> = {};
+  for (const p of i.parts ?? []) {
+    const g = GIANT_PART_OF[p.id];
+    if (g !== undefined && p.broken) broken[g] = true;
+  }
+  let shell: 0 | 1 = (i.statusIds ?? []).includes("molten_shell") ? 1 : 0;
+  let breakT: number | undefined;
+  const f = i.partFx;
+  const part = f == null ? undefined : GIANT_PART_OF[f.part];
+  let fx: Required<GiantFx> | null = null;
+  if (f != null && part !== undefined && typeof f.frame === "number" && f.frame >= 0 && f.frame <= 3) {
+    const k = Math.round(f.frame);
+    fx = { part, k, side: f.side === -1 ? -1 : 1 };
+    delete broken[part];
+    if (part === "seam" && f.shed === true) {
+      if (k < 2) shell = 1;
+      else {
+        shell = 0;
+        breakT = BRK.breakT[k];
+      }
+    }
+  }
+  return { phase, shell, ...(breakT === undefined ? {} : { breakT }), broken, fx };
+}
+
+/** 外觀的快取鍵片段（同外觀同鍵）。 */
+export function giantLookKey(l: GiantLook): string {
+  const b = GIANT_PARTS.filter((p) => l.broken[p] === true).join("+");
+  const f = l.fx === null ? "" : `${l.fx.part}${l.fx.k}${l.fx.side < 0 ? "w" : "e"}`;
+  return `G${l.phase}${l.shell}${l.breakT === undefined ? "" : `@${l.breakT}`}|${b}|${f}`;
+}
+
+/** 片段的一格（`CreaturePose` 的 clip、u、flash、alpha、reduce）。 */
+export interface GiantPose {
+  clip?: string | undefined;
+  u?: number | undefined;
+  flash?: number | undefined;
+  alpha?: number | undefined;
+  reduce?: boolean | undefined;
+}
+
+/**
+ * 片段 → `GiantState`（移植需求第 7 節第 1 條）：時間軸沿用 `qBoss.ts` 灰燼之心的 `BOSS_MS`／`bossFrameU`／`bossPlan`，
+ * 只取參數：待機的呼吸（`loop` 首尾接上）、熔岩噴發的吸氣與熔岩柱（`spout`，從中間噴口往上）、火焰箭的核心光（`flare`→`charge`）、
+ * 受擊整隻白閃、倒下的縮小（`dieT`）。3×3 不位移：衝撞 `ram`、受擊的左右晃（dx、rot）都不用；片段自帶的地上特效也不畫（位置是照 1 格算的）。
+ */
+export function giantStateFor(look: GiantLook, pose: GiantPose | null): { st: GiantState; flash: number } {
+  const base: GiantState = { phase: look.phase, shell: look.shell, ...(look.breakT === undefined ? {} : { breakT: look.breakT }), broken: look.broken, fx: look.fx };
+  if (pose === null || pose.clip === undefined) return { st: { ...base, t: 1200 }, flash: clamp(num(pose?.flash, 0)) };
+  const clip = bossClipOf({ id: "ah", phase: look.phase }, pose.clip);
+  const P = bossPlan("ah", clip, num(pose.u, 0), { phase: look.phase, ...(pose.reduce === true ? { reduce: true } : {}) });
+  const s = P.st as { t?: number; loop?: number; inhale?: number; spout?: number; dieT?: number };
+  const st: GiantState = { ...base, t: num(s.t, 1200) };
+  if (s.loop !== undefined) st.loop = s.loop;
+  if (clip === "spout" && pose.reduce !== true) {
+    st.inhale = num(s.inhale, 0);
+    st.spout = num(s.spout, 0);
+  }
+  const flare = P.o.flare ?? 0;
+  if (flare > 0) st.charge = flare;
+  if (clip === "death") st.dieT = num(s.dieT, 0);
+  return { st, flash: clamp(Math.max(num(pose.flash, 0), P.o.flash)) };
+}
+
+/** ctx 目前每模型 px 幾個 canvas px（有 DOM 時從變換矩陣量；沒有時 1）。 */
+function ctxRes(ctx: Ctx): number {
+  if (typeof ctx.getTransform !== "function") return 1;
+  const m = ctx.getTransform();
+  return Math.max(0.25, Math.hypot(m.a, m.b));
+}
+
+/**
+ * 戰場貼圖的一格（`inkCreature.drawCreature` 的巨型分支）：ctx 原點＝腳底（`FEET`）、單位＝模型 px（呼叫端已 `scale(1/GG)`）。
+ * 不鏡像（朝南固定，T8）。`ground === "only"`（影子層）不畫：影子在地面的陣營環裡（`giantGroundRing`）。
+ * 破壞演出第 1 格（命中）在部位上疊白閃（`giantFlashCanvas`，遮罩由畫法直接給）。
+ */
+export function drawGiantFrame(ctx: Ctx, look: GiantLook, pose: GiantPose | null, ground: boolean | "only" = true): void {
+  if (ground === "only") return;
+  const { st, flash } = giantStateFor(look, pose);
+  ctx.save();
+  ctx.translate(0, GIANT_FEET_TO_ANCHOR);
+  const a = clamp(num(pose?.alpha, 1));
+  if (a !== 1) ctx.globalAlpha = (typeof ctx.globalAlpha === "number" ? ctx.globalAlpha : 1) * a;
+  drawGiantHeart(ctx, st, { flash });
+  if (look.fx !== null && look.fx.k === 0 && hasDom()) {
+    const res = ctxRes(ctx);
+    const c = giantFlashCanvas(st, look.fx.part, res);
+    if (c !== null) ctx.drawImage(c, GIANT_BOX[0], GIANT_BOX[1], c.width / res, c.height / res);
+  }
+  ctx.restore();
+}

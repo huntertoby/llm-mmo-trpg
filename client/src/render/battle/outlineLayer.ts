@@ -3,7 +3,7 @@
 // 外接矩形相交、身體面積 ≥ 4000 模型 px²、沒有倒下）→ 模型像素算比例 → 遲滯 → 要畫的才在畫面解析度做色帶與裁切。
 // 這裡不碰 Pixi 節點：繪製器（`unitLayer.ts` 的 `drawOcclusion`）把結果做成 Sprite 放進 `silhouettes`。
 // 遮罩、色帶都照鍵快取；身體 alpha 只經 `OclSource` 取（繪製器接到 `ArtTextures.alphaMask`，同一個鍵只讀一次）。
-import type { UnitDraw } from "../../battle/drawModel";
+import { unitRowOf, type UnitDraw } from "../../battle/drawModel";
 import { RING } from "../artPalette";
 import { CONCEALED } from "../statusIcon";
 import type { BareBody } from "../unitSprite";
@@ -152,8 +152,8 @@ export function tightBox(m: ModelMask): Pick<ModelMask, "x0" | "y0" | "w" | "h">
   }
   return x1 < 0 ? { x0: m.x0, y0: m.y0, w: 0, h: 0 } : { x0: m.x0 + x0, y0: m.y0 + y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
 }
-/** 所在的排（`row`，移動後的重算用畫面上的排；沒給時 `u.y`）。 */
-const rowOf = (e: OclUnit): number => e.row ?? e.u.y;
+/** 所在的排（`row`，移動後的重算用畫面上的排；沒給時 `u.y`，GB-4b：3×3 巨型頭目回南排 `unitRowOf`）。 */
+const rowOf = (e: OclUnit): number => e.row ?? unitRowOf(e.u);
 
 /**
  * 算這一輪誰畫外框（交付 1～3）。`was`＝上一輪有沒有畫（遲滯）；回傳每個單位的結果（不在 `units` 的不回傳）。

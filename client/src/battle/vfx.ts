@@ -244,6 +244,13 @@ export interface VfxSpecial {
   attackerId?: string;
   /** PB-1e：頭目部位破了（part_break）：哪個部位（演出畫在那個部位上）。 */
   partId?: string;
+  /**
+   * GB-4b：巨型頭目（3×3）的部位破了：打中的那一格在中心格的哪一側（`attack_rolled.hit_tile`；西 −1、東 1、同欄 1），
+   * 殼縫的「破」字與白汽照它（移植需求 5.4）。1 格頭目沒有這個欄位。
+   */
+  side?: -1 | 1;
+  /** GB-4b：巨型頭目殼縫破的那一刻熔殼還在（這一步開始前有 `molten_shell`）：熔殼殼片跟著第 3、4 格飛走。 */
+  shed?: boolean;
 }
 
 export interface VfxStop {

@@ -6,7 +6,7 @@ import { clearLayer } from "./labels";
 import type { Pos } from "../api/types";
 import { tileLift } from "../battle/elevation";
 import { posKey } from "../battle/geometry";
-import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, PART_STRIP_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
+import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, GIANT_RING_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, PART_STRIP_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
 
 export interface RowLayer {
   root: Container;
@@ -125,7 +125,10 @@ export class RowStack {
       } else if (ROW_HUD_LABELS.includes(n.label) || UNIT_MARK_LABELS.includes(n.label)) {
         if (n.parentRenderLayer !== row.marks) row.marks.attach(n);
       } else if (n.label === FACING_ARROW_LABEL) n.parentRenderLayer?.detach(n);
-      else if (n.label === BOSS_RING_FRONT_LABEL) {
+      else if (n.label === GIANT_RING_LABEL) {
+        // GB-4b：3×3 巨型頭目的陣營環（節點在南排）：南排的 `under`（地面之上、攻擊紅框與南排的人之下）
+        if (n.parentRenderLayer !== row.under) row.under.attach(n);
+      } else if (n.label === BOSS_RING_FRONT_LABEL) {
         // QK-9、HID-1c：伸進南邊一排的環、金菱形（最南一排沒有南邊，跟著單位畫）；走路換排、轉身重建時一起更新
         if (southUnder === null) n.parentRenderLayer?.detach(n);
         else if (n.parentRenderLayer !== southUnder) southUnder.attach(n);

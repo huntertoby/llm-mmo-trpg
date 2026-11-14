@@ -1,7 +1,7 @@
 // 單位圖層（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：畫單位與剪影、HUD 掛載（`hudTop`、朝南三角形）、連心虛線、
 // 換姿勢（`poseBody`／`restBody`）、待機、轉身。
 import { Container, Graphics, RenderLayer, Sprite, type Texture } from "pixi.js";
-import type { DrawModel, UnitDraw } from "../../battle/drawModel";
+import { unitRowOf, type DrawModel, type UnitDraw } from "../../battle/drawModel";
 import { TILE_SIZE } from "../../battle/geometry";
 import { heightAt, occluded } from "../../battle/elevation";
 import { RING } from "../artPalette";
@@ -10,7 +10,8 @@ import { southArrowPlace } from "../rowLayers";
 import { CHARGE_BADGE_LABEL, HP_BAR_LABEL, PART_STRIP_LABEL, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL } from "../minMark";
 import { neighborFaces } from "../badgeLayout";
 import { mapEdgeOf, NO_EDGE } from "../rowLayout";
-import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, dollPx, isLinked, isProne, PART_DEBRIS_LABEL, placeCreatureBody, PRONE, ringScale, specOfUnit, type BodyFrame } from "../unitSprite";
+import { BODY_LABEL, bodyNodes, bodyTexture, buildUnitSprite, creatureOf, dollPx, isGiantUnit, isLinked, isProne, PART_DEBRIS_LABEL, placeCreatureBody, PRONE, ringScale, specOfUnit, type BodyFrame } from "../unitSprite";
+import { giantGlowStrips } from "../giantSprite";
 import { dollKey } from "../appearance";
 import { partGlowCanvas } from "../bossPartArt";
 import { DOLL_FOOT_Y, DOLL_H, DOLL_W } from "../paperdoll";
@@ -100,8 +101,11 @@ export abstract class UnitLayer extends HighlightLayer {
     this.scaleUnitMarks(sprite); // 6F-9、6F-11
     this.holdBody(u.id, sprite); // 6R-F：這一輪畫到的人；沒畫到的（死掉、離場、換地圖）在 endFrame 放開
     // QK-9：頭目的環放大後伸進左右格，頭目排在同一排最前面（先畫），左右鄰居的腳不被環蓋住
-    if (ringScale(u) > 1) this.rows.row(u.y).units.addChildAt(sprite, 0);
-    else this.rows.row(u.y).units.addChild(sprite);
+    // GB-4b：3×3 巨型頭目放在南排那一列（`unitRowOf`）、同列最前；南邊一排的人後畫、蓋在前殼上
+    const row = unitRowOf(u);
+    if (ringScale(u) > 1) this.rows.row(row).units.addChildAt(sprite, 0);
+    else this.rows.row(row).units.addChild(sprite);
+    if (isGiantUnit(u)) this.drawGiantGround(u);
     this.rows.attachMarks(sprite, this.southArrowTop(model, u, sprite)); // 6F-13：徽章畫在「▲N」之上；6F-21b：朝南三角形
     this.rows.attachHud(sprite, this.hudLayerOf(model, u)); // 6F-22：被高台擋住時 HUD 畫在高台之上
     this.attachPartHud(u, sprite);
@@ -113,6 +117,19 @@ export abstract class UnitLayer extends HighlightLayer {
       // 6N-4：倒下的人只給倒下片段找（命中那一刻重畫後，片段要接在倒地圖示的新節點上播完）；待機、狀態、走路照舊不碰
       this.downedSprites.set(u.id, sprite);
       this.downedDrawOf.set(u.id, u);
+    }
+  }
+
+  /**
+   * GB-4b：第 3 階段坑底紅光（地面層、所有單位之前；美術移植需求 2.4 第 1 條）：切成一排一條掛各排的 `deco`，
+   * 不和本體一起畫在南排（會染到北排、同排先畫的人）。
+   */
+  private drawGiantGround(u: UnitDraw): void {
+    const look = creatureOf(u)?.boss?.giant;
+    if (look === undefined || u.downed) return;
+    for (const s of giantGlowStrips(this.art, look)) {
+      this.rows.row(u.y + s.dy).deco.addChild(s.node);
+      this.place(s.node, u, u.x * T + T / 2 + s.node.x, u.y * T + T / 2 + s.node.y);
     }
   }
 

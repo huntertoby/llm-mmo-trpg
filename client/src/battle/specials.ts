@@ -11,6 +11,7 @@
 import { asEvent, isPartBroken, type BattleView, type EventBase, type Pos } from "../api/types";
 import { CHARGING } from "./followup";
 import { samePos } from "./geometry";
+import { hitTileOf, isGiant } from "./footprint";
 import { standing } from "./hiddenInfo";
 import { upgradeReact, type SpecialKind, type StepVfx, type VfxReaction, type VfxSpecial, type VfxStop } from "./vfx";
 
@@ -104,9 +105,23 @@ function partBreaks(vfx: StepVfx, events: readonly EventBase[], before: BattleVi
     const atMs = r?.atMs ?? hit?.atMs ?? vfx.leadMs;
     if (out.some((s) => s.unitId === u.id && s.atMs === atMs)) continue;
     const partId = typeof e.part_id === "string" ? e.part_id : undefined;
-    out.push({ kind: "part_break", pos: u.pos, unitId: u.id, atMs, ...(partId === undefined ? {} : { partId }) });
+    out.push({ kind: "part_break", pos: u.pos, unitId: u.id, atMs, ...(partId === undefined ? {} : { partId }), ...giantBreak(events, before, u, partId) });
   }
   return out;
+}
+
+/**
+ * GB-4b：巨型頭目的部位破了：打中的那一格在哪一側（這一步打它的 `attack_rolled.hit_tile`，最後一個）、
+ * 殼縫破時熔殼還在不在（這一步開始前）。1 格頭目回空物件（欄位不變）。
+ */
+function giantBreak(events: readonly EventBase[], before: BattleView, u: BattleView["units"][number], partId: string | undefined): Pick<VfxSpecial, "side" | "shed"> {
+  if (!isGiant(u)) return {};
+  let hit: Pos | null = null;
+  for (const e of events) if (e.type === "attack_rolled" && e.target_id === u.id) hit = hitTileOf(e) ?? hit;
+  const side: -1 | 1 = hit !== null && hit.x < u.pos.x ? -1 : 1;
+  const was = before.units.find((x) => x.id === u.id);
+  const shed = partId === "shell_seam" && (was?.statuses ?? []).some((s) => s.status_id === "molten_shell");
+  return { side, shed };
 }
 
 /** 部位破壞的那一下：頭目的受擊升級成重擊片段（重擊白閃；倒下、格擋照舊不降級）。 */
