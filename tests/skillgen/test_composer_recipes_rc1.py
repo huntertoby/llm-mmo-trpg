@@ -46,9 +46,7 @@ def _with_beside_rule() -> ContentLibrary:
     """推導表多一條「召喚到身邊＝製造召喚物」（RC-1 時還沒有；伴生、護主在有這條時才生效）。"""
     lib = default_library()
     keywords = tuple(
-        k.model_copy(
-            update={"makes": (*k.makes, KeywordRule(effect="summon_beside"))}
-        )
+        k.model_copy(update={"makes": (*k.makes, KeywordRule(effect="summon_beside"))})
         if k.id == "summon"
         else k
         for k in lib.keywords.keywords
@@ -100,7 +98,7 @@ def test_tier_one_summons_only_basic_units() -> None:
     for seed in SEEDS:
         skill = compose_random_skill(seed, tier=1, rarity="rare", skeleton="summon", library=lib)
         assert skill.kind == "active"
-        assert [e.unit for e in skill.effects if e.type == "summon"][0] in basic
+        assert next(e.unit for e in skill.effects if e.type == "summon") in basic
         assert not validate_skill(skill, lib)
 
 
