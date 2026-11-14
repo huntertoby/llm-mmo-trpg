@@ -31,6 +31,7 @@ import {
 import { onField } from "../../battle/units";
 import { unitTiles } from "../../battle/footprint";
 import { giantAimAt, hoverActionAt } from "../../battle/tileClick";
+import { giantMarksOf } from "../../render/battle/partTileMarks";
 import type { DrawModel } from "../../battle/drawModel";
 import type { SkillCard } from "../../api/types";
 import type { Highlights } from "../../render/BattleRenderer";
@@ -202,13 +203,18 @@ export function useHighlights(i: HighlightInput): HighlightState {
 
   // 滑過戰鬥紀錄的一組：高亮相關單位目前所在的格子與事件指出的格子（疊在預覽範圍的橘色上）。
   // 滑過環境預告的項目（9.1）：把它涉及的格子標在地圖上（同樣疊在預覽範圍的橘色上）。
+  // GB-4b：3×3 巨型頭目的部位格標示（選打它的動作時；和點擊判定同一份 `PartView.tiles`）
+  const giantMarks = useMemo(
+    () => giantMarksOf({ view, hero, canAct, copying, command, mode, hurlPick, classified, partActions }, hover),
+    [view, hero, canAct, copying, command, mode, hurlPick, classified, partActions, hover],
+  );
   const highlights = useMemo<Highlights>(() => {
-    let out = baseHighlights;
+    let out: Highlights = giantMarks.length === 0 ? baseHighlights : { ...baseHighlights, giantMarks };
     if (telegraphHover !== null) out = { ...out, preview: [...out.preview, ...telegraphHover] };
     if (logHover === null) return out;
     const logUnitTiles = shown.units.filter((u) => logHover.unitIds.includes(u.id) && onField(u)).flatMap(unitTiles);
     return { ...out, preview: [...out.preview, ...logUnitTiles, ...logHover.tiles] };
-  }, [baseHighlights, logHover, telegraphHover, shown]);
+  }, [baseHighlights, giantMarks, logHover, telegraphHover, shown]);
 
   const legend = useMemo(() => legendEntries(highlights.overlays, mode), [highlights.overlays, mode]);
   const flameOn = useMemo(

@@ -10,7 +10,7 @@ import type { TelegraphMark } from "../../battle/telegraph";
 import type { AimDraw, GuardDraw } from "../../battle/rgMarks";
 import { clearLayer, label } from "../labels";
 import { drawExitFrame, exitLabel, hoverFrameCell, type ExitSignDraw } from "../exitSign";
-import { unitMarkTopY } from "../unitSprite";
+import { creatureOf, unitMarkTopY } from "../unitSprite";
 import { roofCovers } from "../sceneryModel";
 import { eventBob, eyeOffset, eyeTexture, footprintShapes, MARK_PAD, MARK_SIZE, objectHintAlpha, thingTexture, type MapThing, type WatchEye } from "../mapMarks";
 import { clipHighlights } from "../mapClip";
@@ -20,6 +20,9 @@ import type { PathDraw, PathTag } from "../../battle/pathPreview";
 import { bangCenter, drawFaintGrid, drawPathLine, drawPathMarks, drawSoftCells, HIT_SOFT, missTagNode, MOVE_SOFT, pathTagNode, RANGE_SOFT, placeTags, type TileGeo } from "../pathArt";
 import { poolInsets } from "../practiceRange";
 import { TerrainLayer } from "./terrainLayer";
+import { isGiantDraw } from "../../battle/drawModel";
+import { giantTargetFrame } from "../giantSprite";
+import { giantMarkNodes, type GiantMarksDraw } from "./partTileMarks";
 
 const T = TILE_SIZE;
 export interface DirectionMark {
@@ -62,6 +65,8 @@ export interface Highlights {
   aims?: readonly AimDraw[];
   /** RG-3：選目標預覽有盾兵掩護時的小盾與連結（`battle/rgMarks.guardDraw`）。 */
   guard?: GuardDraw | null;
+  /** GB-4b：3×3 巨型頭目的部位格標示（選打它的動作時；`partTileMarks.giantMarksOf`）。沒有時省略。 */
+  giantMarks?: readonly GiantMarksDraw[];
 }
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   route: HIGHLIGHT.route,
@@ -119,7 +124,18 @@ export abstract class HighlightLayer extends TerrainLayer {
     const model = this.model;
     if (model === null) return;
     const insetOf = this.poolInset();
+    // GB-4b（美術移植需求第 7 節第 3 條）：3×3 巨型頭目的 9 格都是目標時改畫一個框住整個 3×3 的紅框。照建議先放在南排的 `frames`
+    // （單位之下）實拍：本體幾乎蓋滿 3×3，紅框只剩外緣零星幾 px 看不出來，所以照第 3 條後半改到標示層（`attackTop`：單位、部位格標示之上）
+    const giantCells = new Set<string>();
+    for (const u of model.units) {
+      const tiles = u.tiles ?? [];
+      if (!isGiantDraw(u) || u.downed || !tiles.every((t) => this.attackCells.some((c) => c.x === t.x && c.y === t.y))) continue;
+      for (const t of tiles) giantCells.add(`${t.x},${t.y}`);
+      const nw = { x: Math.min(...tiles.map((t) => t.x)), y: Math.min(...tiles.map((t) => t.y)) };
+      this.attackTop.addChild(giantTargetFrame(this.origin(nw), HIGHLIGHT.attack));
+    }
     for (const p of this.attackCells) {
+      if (giantCells.has(`${p.x},${p.y}`)) continue;
       const o = this.origin(p);
       // PR-2d：測試模式貼水池的紅框讓出石條；實戰 `insetOf` 是 undefined，走改前那一行
       const i = insetOf?.(p) ?? null;
@@ -215,6 +231,16 @@ export abstract class HighlightLayer extends TerrainLayer {
     this.drawLethalTints(h);
     if (h.exitHover != null) this.drawExitHover(h.exitHover);
     this.drawFrames(h.focus, hoverFrameCell(h.hover, h.exitHover));
+    this.drawGiantMarks(h.giantMarks ?? []);
+  }
+
+  /** GB-4b：部位格標示（單位之上，同 marks 這一級；`partTileMarks.ts`）。 */
+  private drawGiantMarks(list: readonly GiantMarksDraw[]): void {
+    for (const d of list) {
+      const draw = this.model?.units.find((u) => u.id === d.unitId);
+      const look = draw === undefined ? null : (creatureOf(draw)?.boss?.giant ?? null);
+      for (const n of giantMarkNodes(this.art, d, look, this.center(d.pos), this.scale, window.devicePixelRatio || 1)) this.marks.addChild(n);
+    }
   }
 
   /** 6V-2：滑過、路徑預覽、選目標碰到致命格時整格疊淡紅（只是畫法；致命判定與路徑規則不動）。 */

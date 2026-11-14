@@ -8239,6 +8239,8 @@ export interface components {
             break_lines_zh: string[];
             /** Tiles */
             tiles?: components["schemas"]["Pos"][] | null;
+            /** Counts As Behind */
+            counts_as_behind?: boolean | null;
         };
         /**
          * PartyIntroLine

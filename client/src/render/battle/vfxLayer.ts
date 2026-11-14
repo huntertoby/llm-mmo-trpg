@@ -1,6 +1,7 @@
 // 技能特效、受擊與結果（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：命中閃白與受擊片段、反應、特殊結果、勝利、地形升降。
 import { Container } from "pixi.js";
 import type { Pos } from "../../api/types";
+import { drawOccupies } from "../../battle/drawModel";
 import { TILE_SIZE } from "../../battle/geometry";
 import { heightAt, liftedOrigin, tileLift, type HeightShift } from "../../battle/elevation";
 import { VFX_TIMING, type StepVfx } from "../../battle/vfx";
@@ -75,7 +76,7 @@ export abstract class VfxLayer extends SkillLayer {
 
   /** 站在 `p` 的異形單位 ID；沒有為 `null`。 */
   private creatureAt(p: Pos): string | null {
-    for (const [id, u] of this.unitDrawOf) if (u.x === p.x && u.y === p.y && creatureOf(u) !== null) return id;
+    for (const [id, u] of this.unitDrawOf) if (drawOccupies(u, p) && creatureOf(u) !== null) return id; // GB-4b：巨型頭目任一佔格
     return null;
   }
 
@@ -118,7 +119,7 @@ export abstract class VfxLayer extends SkillLayer {
 
   /** 站在 `p`、有紙娃娃骨架、沒有倒地的人形單位 ID；沒有為 `null`。 */
   private dollAt(p: Pos): string | null {
-    for (const [id, u] of this.unitDrawOf) if (u.x === p.x && u.y === p.y && hasSkeleton(u) && !isProne(u)) return id;
+    for (const [id, u] of this.unitDrawOf) if (drawOccupies(u, p) && hasSkeleton(u) && !isProne(u)) return id;
     return null;
   }
 
@@ -167,7 +168,7 @@ export abstract class VfxLayer extends SkillLayer {
 
   /** 站在 `p`、受擊時疊白色剪影閃白的單位（形態、召喚物、倒地的人；6C-8）ID；沒有為 `null`。 */
   private overlayFlashAt(p: Pos): string | null {
-    for (const [id, u] of this.unitDrawOf) if (u.x === p.x && u.y === p.y && overlayFlashKind(u) !== null) return id;
+    for (const [id, u] of this.unitDrawOf) if (drawOccupies(u, p) && overlayFlashKind(u) !== null) return id;
     return null;
   }
 

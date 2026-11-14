@@ -78,6 +78,17 @@ def test_one_tile_boss_parts_have_no_tiles() -> None:
     master = next(u for u in view.units if u.id == MASTER)
     assert master.footprint is None and master.tiles is None
     assert all(p.tiles is None for p in master.parts or ())
+    assert all(p.counts_as_behind is None for p in master.parts or ())
+
+
+def test_only_the_shell_seam_counts_as_behind() -> None:
+    """GB-4b（GB-4a 待決 5）：殼縫帶 ``counts_as_behind``，噴口、核心不帶（不輸出）。"""
+    parts = _heart_view(_pit([(5, 9, "hero_fighter")])).parts
+    assert parts is not None
+    behind = {p.id: p.counts_as_behind for p in parts}
+    assert behind == {"core": None, "shell_seam": True, "vent": None}
+    vent = next(p for p in parts if p.id == "vent")
+    assert "counts_as_behind" not in vent.model_dump(exclude_none=True)
 
 
 def test_core_not_exposed_names_the_breath_phase() -> None:

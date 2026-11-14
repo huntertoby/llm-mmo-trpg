@@ -20193,6 +20193,17 @@
               }
             ],
             "title": "Tiles"
+          },
+          "counts_as_behind": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts As Behind"
           }
         },
         "additionalProperties": false,

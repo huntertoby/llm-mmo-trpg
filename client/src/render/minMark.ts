@@ -43,6 +43,11 @@ export const HIDDEN_HP_LABEL = "hidden-hp";
  * 所以另畫一份掛南邊那一排的 `under`（`RowStack.attachMarks`）。
  */
 export const BOSS_RING_FRONT_LABEL = "boss-ring-front";
+/**
+ * GB-4b：3×3 巨型頭目的陣營環（`qBossGiant.giantGroundRing`，圓角方框＋精英金框＋南緣金菱形＋影子）。單位節點在南排，
+ * 環蓋住 3×3 的地面：改在南排的 `under` 畫（地面、表面裝飾之上；攻擊紅框、南排的人之下；`RowStack.attachMarks`）。
+ */
+export const GIANT_RING_LABEL = "giant-ring";
 /** 6F-22：底圈外緣的朝向三角形（沒移到 HP 條下面的那三個朝向）。朝南、有 HP 條時是 `SOUTH_ARROW_LABEL`。 */
 export const FACING_ARROW_LABEL = "facing-arrow";
 /** 6F-22：倒下的人頭上的徽章（愛心等）。 */

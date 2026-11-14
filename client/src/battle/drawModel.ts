@@ -158,6 +158,26 @@ export interface UnitDraw {
   partHudUp?: boolean;
   /** PB-1e：破壞演出中暫時蓋過的樣子（繪製器設，`render/battle/unitLayer.ts`）；不是從伺服器來的。 */
   partFx?: PartFx;
+  /** GB-4b：巨型單位的佔格邊長（`UnitView.footprint`，例 3）；1 格的單位沒有這個欄位（鍵與畫法不變）。`x`／`y` 是中心格。 */
+  footprint?: number;
+  /** GB-4b：巨型單位佔的格子（`UnitView.tiles`，依 (y, x)）；1 格的單位沒有這個欄位。 */
+  tiles?: readonly Pos[];
+}
+
+/** GB-4b：佔不只一格的單位（3×3 巨型頭目）。 */
+export function isGiantDraw(u: Pick<UnitDraw, "footprint" | "tiles">): boolean {
+  return (u.footprint ?? 1) > 1 && (u.tiles?.length ?? 0) > 1;
+}
+
+/** GB-4b：單位節點掛在哪一排（巨型＝南排：中心 y ＋ 半邊；1 格＝自己那一排）。 */
+export function unitRowOf(u: Pick<UnitDraw, "y" | "footprint" | "tiles">): number {
+  return isGiantDraw(u) ? u.y + Math.floor((u.footprint ?? 1) / 2) : u.y;
+}
+
+/** GB-4b：`p` 是 `u` 佔的格子（1 格＝只比 x、y）。 */
+export function drawOccupies(u: Pick<UnitDraw, "x" | "y" | "footprint" | "tiles">, p: Pos): boolean {
+  if (!isGiantDraw(u)) return u.x === p.x && u.y === p.y;
+  return (u.tiles ?? []).some((t) => t.x === p.x && t.y === p.y);
 }
 
 export interface TrapDraw {
@@ -325,7 +345,16 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     equipment: (u.equipment ?? []).map((e) => ({ slot: e.slot, appearance: e.appearance })),
     ...(isTrainingDummy({ template: u.template_id }) ? { noBar: true } : {}), // PR-2c：靶場木樁沒有血條
     ...partFields(view, u),
+    ...giantFields(u),
   };
+}
+
+/** GB-4b：巨型單位的佔格（`footprint`、`tiles`）；1 格的單位不加欄位。 */
+function giantFields(u: UnitView): Pick<UnitDraw, "footprint" | "tiles"> {
+  const n = u.footprint ?? 1;
+  const tiles = u.tiles ?? [];
+  if (n <= 1 || tiles.length <= 1) return {};
+  return { footprint: n, tiles: tiles.map((t) => ({ x: t.x, y: t.y })) };
 }
 
 /** PB-1e：部位（頭頂小格、破壞後外觀）與「南邊有人時 HUD 改掛最上層」。沒有部位時不加欄位。 */

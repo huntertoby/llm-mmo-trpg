@@ -2,7 +2,8 @@
 // 底圈 → 朝向尖角 → 行動中虛線圈 → 小人 → 代號小標 → 倒地徽章 → 狀態徽章 → 血條。
 // 倒地（docs/archive/art/3-18倒地與高度.md 第 1 節）：只有小人套透明度與去色，Container 不透明，徽章與代號維持清楚。
 import { ColorMatrixFilter, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
-import type { UnitDraw } from "../battle/drawModel";
+import { isGiantDraw, type UnitDraw } from "../battle/drawModel";
+import { giantActiveFrame, giantRingNode } from "./giantSprite";
 import { ringArrow } from "../battle/facing";
 import { TILE_SIZE } from "../battle/geometry";
 import { HIGHLIGHT } from "../battle/glossary";
@@ -324,7 +325,14 @@ function summonLookOf(u: UnitDraw): ResolvedLook | null {
 export function creatureOf(u: UnitDraw): ResolvedCreature | null {
   const look = u.dollLook?.creature;
   if (look == null) return null;
-  return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity, field: true, template: u.template, bossPhase: u.bossPhase });
+  // GB-4b：3×3 巨型灰燼之心另帶部位與破壞演出這一格（`qBossGiant.giantLookOf`）；1 格的單位不帶（鍵與畫法不變）
+  const giant = isGiantDraw(u) ? { parts: u.parts, partFx: u.partFx ?? null } : undefined;
+  return resolveCreature({ look, statusIds: u.statusIds, elite: u.elite, affixes: u.dollLook?.affixes, rarity: u.dollLook?.rarity, field: true, template: u.template, bossPhase: u.bossPhase, ...(giant === undefined ? {} : { giant }) });
+}
+
+/** GB-4b：照 3×3 巨型灰燼之心畫的單位（`qBossGiant`）。 */
+export function isGiantUnit(u: UnitDraw): boolean {
+  return isGiantDraw(u) && creatureOf(u)?.boss?.giant !== undefined;
 }
 
 /** 異形在戰場上的額外縮放：頭目照 huge ×1.6（QK-4b；頭目貼圖不含大小，其他異形的大小已畫進貼圖）。 */
@@ -1459,13 +1467,19 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
   const noRing = sl !== null && hasNoRing(sl); // 土牆沒有底圈
   const sr = summonRing(u, sl, rx, ry);
   const lk = ringLineScale(u);
-  if (!noRing) g.ellipse(sr.dx, cy, sr.rx, sr.ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5 * lk, color: ring.stroke });
-  if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
-  if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry, ((T * 0.36) / 13) * lk);
+  const giant = isGiantUnit(u); // GB-4b：3×3 的環是圓角方框（`giantGroundRing`，含精英金框、南緣金菱形、影子），掛南排的 `under`
+  if (giant) {
+    const gr = giantRingNode(art, ring);
+    if (gr !== null) c.addChild(gr);
+  } else {
+    if (!noRing) g.ellipse(sr.dx, cy, sr.rx, sr.ry).fill({ color: ring.fill, alpha: 0.8 }).stroke({ width: 1.5 * lk, color: ring.stroke });
+    if (u.hero) g.ellipse(0, cy, rx + 2.5, ry + 2).stroke({ width: 2, color: HIGHLIGHT.hero });
+    if (hasEliteMark(u) && !noRing) eliteRing(g, cy, rx, ry, ((T * 0.36) / 13) * lk);
+  }
   c.addChild(g);
   // QK-9：頭目的環伸進南邊一排；那一排的地面會蓋掉，伸出去的部分另畫一份（`RowStack.attachMarks` 掛到南邊一排的 `under`）
   // HID-1c：精英的金菱形尖端同因
-  if ((rk > 1 || hasEliteMark(u)) && !noRing) c.addChild(bossRingFront(cy, rx, ry, ring, hasEliteMark(u), lk));
+  if ((rk > 1 || hasEliteMark(u)) && !noRing && !giant) c.addChild(bossRingFront(cy, rx, ry, ring, hasEliteMark(u), lk));
   if (look.dashed !== null) {
     const dashed = dashedEllipse(cy, T * 0.4, T * 0.18, look.dashed.color, 2.5);
     c.addChild(dashed);
@@ -1482,7 +1496,7 @@ export function buildUnitSprite(art: ArtTextures, pulses: Pulses, u: UnitDraw, f
     if (arrowAboveBody(u) || hudDy !== 0) arrowOnTop = arrow;
     else c.addChild(arrow);
   }
-  if (u.active) c.addChild(dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
+  if (u.active) c.addChild(giant ? giantActiveFrame(HIGHLIGHT.active) : dashedEllipse(cy, rx + 6, ry + 4, HIGHLIGHT.active));
   const aura = formAuraSprite(art, u, cy);
   if (aura !== null) c.addChild(aura);
   const effects = u.downed ? null : bodyEffects(u.statusIds ?? []);

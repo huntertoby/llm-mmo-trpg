@@ -25,8 +25,11 @@ const STRIP_X_BASE_SCALE = 1.31;
 /** 部位條的顏色（美術移植需求 2.2）。 */
 export const STRIP_COLOR = { ok: 0xf2e6c8, empty: 0x4a4252, broken: 0x5a1a1a, hidden: 0x0e0e14, x: 0xff5a4a, ink: 0x16121a } as const;
 
-/** 18.2.3「部位」表的順序（頭頂、外觀用）；不認得的部位排在後面、照 ID。 */
-export const PART_ORDER: readonly string[] = ["whisk", "dantian", "sword"];
+/**
+ * 18.2.3「部位」表的順序（頭頂、外觀用）；不認得的部位排在後面、照 ID。
+ * GB-4b：灰燼之心 3×3（19 19.2.3）照由北到南、左到右：熔岩噴口｜殼縫｜核心（美術移植需求第 7 節第 2 條）。
+ */
+export const PART_ORDER: readonly string[] = ["whisk", "dantian", "sword", "vent", "shell_seam", "core"];
 
 export function partOrder<T extends { id: string }>(parts: readonly T[]): T[] {
   const rank = (id: string): number => {
@@ -42,11 +45,13 @@ export interface PartDraw {
   broken: boolean;
   exposed: boolean;
   bar: PartBarState;
+  /** GB-4b：近戰打這個部位算從背後（`PartView.counts_as_behind`，灰燼之心的殼縫）；其他部位沒有這個欄位（鍵不變）。 */
+  behind?: true;
 }
 
 /** 伺服器的部位 → 畫法資料（照 18.2.3 的順序；拿不到血量＝未露出）。 */
 export function partDraws(parts: readonly PartView[] | null | undefined): PartDraw[] {
-  return partOrder(parts ?? []).map((p) => ({ id: p.id, broken: p.broken, exposed: p.exposed, bar: partBarState(p) }));
+  return partOrder(parts ?? []).map((p) => ({ id: p.id, broken: p.broken, exposed: p.exposed, bar: partBarState(p), ...(p.counts_as_behind === true ? { behind: true as const } : {}) }));
 }
 
 /** 破壞演出中繪製器暫時蓋過的樣子：`flash`／`crack`＝部位還在（白閃、裂紋），`fly`＝已經斷了、碎塊還在空中（地上還沒有掉落物）。 */
@@ -54,6 +59,22 @@ export type PartFxK = "flash" | "crack" | "fly";
 export interface PartFx {
   part: string;
   k: PartFxK;
+  /**
+   * GB-4b：巨型頭目（3×3）的破壞演出第幾格（0 命中、1 裂開、2 斷開、3 落地；`qBossGiant` 的 `fx.k`）。
+   * 霧鎖真人（1 格）沒有這個欄位：第 4 格（落地）起就回到伺服器的樣子；巨型頭目第 4 格還有自己的畫法，播完才回去。
+   */
+  frame?: 0 | 1 | 2 | 3;
+  /** GB-4b：殼縫被打中的那一側（`attack_rolled.hit_tile` 在中心格的西 −1、東 1）。 */
+  side?: -1 | 1;
+  /** GB-4b：這次殼縫破時熔殼還在（第 1 階段）：殼片跟著第 3、4 格彈起、飛走。 */
+  shed?: boolean;
+}
+
+/** GB-4b：巨型頭目破壞演出的第幾格 → `PartFx`（霧鎖真人同一組 k：flash、crack、fly；第 4 格也是 fly）。第 5 格（定格）＝`null`。 */
+export function giantBreakFxOf(part: string, frame: number, side: -1 | 1, shed: boolean): PartFx | null {
+  if (frame < 0 || frame > 3) return null;
+  const k: PartFxK = frame === 0 ? "flash" : frame === 1 ? "crack" : "fly";
+  return { part, k, frame: frame as 0 | 1 | 2 | 3, side, shed };
 }
 
 /** 演出中這個部位要不要當成「還沒破」畫。 */
@@ -118,7 +139,8 @@ export function stripLayout(n: number, boardScale: number): StripLayout {
 export function stripBars(parts: readonly PartDraw[], hiddenInfo: boolean, fx?: PartFx | null): PartBarState[] {
   return parts.map((p) => {
     if (hiddenInfo) return { kind: "hidden" };
-    if (fx != null && fx.part === p.id && p.broken) return { kind: "ok", hp: 0, max: 1 };
+    // GB-4b：巨型頭目第 4 格（落地）就換成「×」（移植需求 5.5 第 5 條，同段 1）
+    if (fx != null && fx.part === p.id && p.broken && (fx.frame ?? 0) < 3) return { kind: "ok", hp: 0, max: 1 };
     return p.bar;
   });
 }
