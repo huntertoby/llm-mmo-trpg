@@ -115,6 +115,8 @@ class OpenAICompatClient:
             "none": (),
         }[config.json_schema_mode]
         self._fallback_warned = False
+        self.schema_mode_used: str | None = None
+        """最近一次帶 schema 成功的請求用的寫法（LB-2 量測用；``None`` ＝ 還沒有／不帶約束）。"""
 
     @property
     def accepted_schema_mode(self) -> str | None:
@@ -139,6 +141,7 @@ class OpenAICompatClient:
                 continue
             # 伺服器接受這種寫法（HTTP 2xx）就記住，與回覆內容是否解析得了無關。
             self._modes = (mode,)
+            self.schema_mode_used = mode
             return _extract_content(response)
         raise LLMBadResponse("本機模型的伺服器拒絕了所有 JSON schema 約束寫法（HTTP 400／422）。")
 

@@ -30,6 +30,7 @@ from trpg.skillgen.proposal.build import CATEGORIES
 from trpg.skillgen.proposal.convert import to_skill_def
 from trpg.skillgen.proposal.models import (
     _GENERAL_TAG,
+    DIAGNOSTIC_INPUT_CHARS,
     ProposalContext,
     ProposalError,
     ProposalModels,
@@ -159,9 +160,24 @@ def _pydantic_errors(exc: ValidationError, stage: Stage, data: object) -> list[P
                 code=code,
                 message=message,
                 allowed=allowed,
+                loc=".".join(str(part) for part in error["loc"]),
+                input=_input_text(error.get("input")),
             )
         )
     return out
+
+
+def _input_text(value: object) -> str:
+    """pydantic 錯誤的輸入值 → 診斷文字（LB-2；截到 :data:`DIAGNOSTIC_INPUT_CHARS` 字）。"""
+    if value is None:
+        return ""
+    try:
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True, default=repr)
+    except (TypeError, ValueError):
+        text = repr(value)
+    if len(text) > DIAGNOSTIC_INPUT_CHARS:
+        return text[: DIAGNOSTIC_INPUT_CHARS - 1] + "…"
+    return text
 
 
 def _rule_error(rule: str, message: str, skill: SkillDef | None = None) -> ProposalError:

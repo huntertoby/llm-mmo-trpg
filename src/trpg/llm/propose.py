@@ -13,6 +13,7 @@ LLM 只提議：技能的數值一律來自預算器；耗時只供報表，不�
 
 from __future__ import annotations
 
+import logging
 import time
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
@@ -26,7 +27,7 @@ from trpg.llm.client import LLMClient
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.proposal import build_proposal_prompt
 from trpg.llm.response import clean_response, drop_false_flags
-from trpg.skillgen.proposal import ProposalContext, feedback_payload
+from trpg.skillgen.proposal import ProposalContext, ProposalError, feedback_payload
 from trpg.skillgen.proposal_budget import evaluate_with_repair
 from trpg.skillgen.proposal_fallback import fallback_skill
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError
@@ -34,6 +35,7 @@ from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError
 __all__ = [
     "DEFAULT_MAX_ATTEMPTS",
     "LLM_ERROR_CODES",
+    "AttemptDetail",
     "AttemptRecord",
     "ProposalOutcome",
     "ProposalSource",
@@ -54,6 +56,34 @@ LLM_ERROR_CODES = {
 """呼叫本身失敗時記在 :attr:`AttemptRecord.codes` 的代碼。"""
 SUBSET_ERROR_CODE = "subset.unavailable"
 
+logger = logging.getLogger("trpg.llm")
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptDetail:
+    """一次嘗試的完整診斷（LB-2）：只放在記憶體、供量測腳本寫進 JSON；不進存檔與日誌格式。
+
+    - ``raw``：模型的原始輸出（清理前；呼叫失敗時為空字串）。
+    - ``errors``：每條錯誤的 :meth:`~trpg.skillgen.proposal.ProposalError.diagnostic`
+      （階段、路徑、代碼、訊息全文、可用值、pydantic 原始位置與輸入值）。
+    - ``feedback``：這次失敗後回饋給模型的文字（下一次 prompt 的 ``<errors>``；最後一次或合格時為
+      ``None``）。
+    - ``call_error``：呼叫本身失敗（``llm.*``）時的例外訊息。
+    """
+
+    raw: str = ""
+    errors: tuple[dict[str, object], ...] = ()
+    feedback: str | None = None
+    call_error: str | None = None
+
+    def to_json(self) -> dict[str, object]:
+        data: dict[str, object] = {"raw": self.raw, "errors": [dict(e) for e in self.errors]}
+        if self.feedback is not None:
+            data["feedback"] = self.feedback
+        if self.call_error is not None:
+            data["call_error"] = self.call_error
+        return data
+
 
 @dataclass(frozen=True, slots=True)
 class AttemptRecord:
@@ -62,6 +92,8 @@ class AttemptRecord:
     codes: tuple[str, ...]
     seconds: float
     repaired: tuple[str, ...] = ()
+    detail: AttemptDetail | None = field(default=None, compare=False, repr=False)
+    """診斷（LB-2）：原始輸出、完整錯誤、回饋文字；不參與比較。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +122,20 @@ class ProposalOutcome:
 
 def _error_text(error: Exception) -> str:
     return str(error) or type(error).__name__
+
+
+def _log_errors(number: int, errors: Sequence[ProposalError]) -> None:
+    """不合格的嘗試記進 ``trpg.llm`` 日誌（LB-2）：每條錯誤的代碼、路徑、訊息全文與 pydantic
+    位置；不記模型原始輸出與 prompt（可能含玩家文字）。"""
+    for error in errors:
+        logger.info(
+            "技能提議第 %d 次嘗試不合格：%s｜%s｜%s｜%s",
+            number,
+            error.code,
+            error.path or "（技能層級）",
+            error.message,
+            error.loc or "—",
+        )
 
 
 @dataclass(slots=True)
@@ -125,7 +171,9 @@ class _Loop:
             raw = self.client.complete(prompt.messages, json_schema=prompt.json_schema)
         except (LLMUnavailable, LLMTimeout, LLMBadResponse) as exc:
             code = LLM_ERROR_CODES[type(exc)]
-            self.records.append(AttemptRecord((code,), self.clock() - start))
+            detail = AttemptDetail(call_error=_error_text(exc))
+            self.records.append(AttemptRecord((code,), self.clock() - start, detail=detail))
+            logger.info("技能提議第 %d 次嘗試：%s（%s）", number, code, detail.call_error)
             return f"{code}：{_error_text(exc)}" if isinstance(exc, LLMUnavailable) else None
         text = drop_false_flags(clean_response(raw))
         evaluation = evaluate_with_repair(
@@ -133,11 +181,20 @@ class _Loop:
         )
         result = evaluation.result
         codes = tuple(e.code for e in result.errors)
-        self.records.append(AttemptRecord(codes, self.clock() - start, evaluation.repaired))
+        seconds = self.clock() - start
         if result.ok and result.skill is not None:
+            detail = AttemptDetail(raw=raw)
+            self.records.append(AttemptRecord(codes, seconds, evaluation.repaired, detail))
             return result.skill
         self.previous = text
         self.feedback = feedback_payload(result.errors, number, self.max_attempts)
+        detail = AttemptDetail(
+            raw=raw,
+            errors=tuple(e.diagnostic() for e in result.errors),
+            feedback=self.feedback if number < self.max_attempts else None,
+        )
+        self.records.append(AttemptRecord(codes, seconds, evaluation.repaired, detail))
+        _log_errors(number, result.errors)
         return None
 
     def exhausted(self) -> str:
