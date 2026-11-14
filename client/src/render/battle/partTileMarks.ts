@@ -71,12 +71,15 @@ export function meleeOf(options: readonly PartOption[], action: Action, hero: Pi
 
 /**
  * 這一刻要畫的部位格標示：每隻巨型頭目，點它中心格會送出的動作（`hoverActionAt`：有選取模式照模式，否則普攻）
- * 有伺服器的部位選項才畫（＝選打它的動作）。滑過的那一格照 `giantAim`（和點擊同一套判斷）。
+ * 有伺服器的部位選項才畫（＝選打它的動作）。沒有選取模式時（點敵人＝普攻）只在滑到它的佔格上才畫。
+ * 滑過的那一格照 `giantAim`（和點擊同一套判斷）。
  */
 export function giantMarksOf(s: Pick<TileClickState, "view" | "hero" | "canAct" | "copying" | "command" | "mode" | "hurlPick" | "classified" | "partActions">, hover: Pos | null): GiantMarksDraw[] {
   const out: GiantMarksDraw[] = [];
   for (const boss of s.view.units) {
     if (!isGiant(boss) || boss.downed || boss.escaped) continue;
+    // 沒有選取模式（點敵人＝普攻）時只在滑到它身上才畫：不然輪到自己、打得到它的整段時間都蓋著 3×3（實拍太雜）
+    if (s.mode === null && (hover === null || !occupies(boss, hover))) continue;
     const action = hoverActionAt(s, boss.pos);
     if (action === null) continue;
     const found = partOptionsFor(s.partActions, action);

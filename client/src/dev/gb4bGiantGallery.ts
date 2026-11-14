@@ -6,6 +6,7 @@
 //   ?set=sprites|marks|break|after|shed|field|hud   （逗號接多段；預設 sprites）
 //   &w=1600|800   地圖縮放照美術移植需求 2.3（1600＝1.308、800＝0.531）；`&scale=` 另給
 //   &zoom=<k>     最近鄰放大倍數（預設 0＝不放大；800 的立繪、殼縫格、「破」字特寫用 4）
+//   &only=<i,…>   每一段只畫第幾格（0 起；特寫用）
 //   &grid=0       不畫 3×3 格線（預設畫：佔格外框＋格線，看核心、殼窩只在中排）
 // 畫好後 `document.body.dataset.ready = "1"`。
 import { Rectangle, Sprite } from "pixi.js";
@@ -210,7 +211,7 @@ function marksCell(cap: string, heart: HeartSpec, options: PartOption[], hover: 
     view, hero, canAct: true, copying: false, command: null, mode: null, hurlPick: null,
     classified: classifyActions([attack], view, {}), partActions: [{ type: "attack", skill_id: null, target_id: BOSS, options }],
   };
-  const marks = giantMarksOf(state, hover);
+  const marks = giantMarksOf(state, hover ?? P(2, 3)); // 沒有選取模式時要滑到身上才畫：沒指定滑過時用前殼（打本體，標示不另畫⑤）
   const hl: Highlights = { moves: [], attacks: boss.tiles ?? [], directions: [], preview: [], telegraph: [], focus: null, hover, overlays: [], picked: [], giantMarks: marks };
   return { cap, view, after: (r) => r.setHighlights(hl), zoomBox: { x0: 0.9, y0: 0.9, x1: 4.1, y1: 4.1 } };
 }
@@ -222,7 +223,6 @@ function breakCell(cap: string, before: HeartSpec, after: HeartSpec, partId: str
   return {
     cap,
     view,
-    zoom: 0,
     crop: { x0: 0.3, y0: -1.7, x1: 4.7, y1: 4.1 },
     after: (r) => {
       const p = r as unknown as Pixi;
@@ -324,7 +324,8 @@ for (const set of SETS) {
     document.body.appendChild(h("h3", { textContent: group.title }));
     const row = h("div", { className: "row" });
     document.body.appendChild(row);
-    for (const c of group.cells) await cellOf(c, row);
+    const only = q.get("only")?.split(",").map(Number) ?? null; // 只畫第幾格（0 起；特寫用）
+    for (const [i, c] of group.cells.entries()) if (only === null || only.includes(i)) await cellOf(c, row);
   }
 }
 (window as unknown as { __gb4b?: unknown }).__gb4b = { renderers };

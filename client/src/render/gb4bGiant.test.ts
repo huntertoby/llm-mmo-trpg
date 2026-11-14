@@ -155,11 +155,11 @@ describe("部位格狀態 → 標示（partTileMarks）", () => {
   });
 
   it("第 1 階段近戰：核心未露出、殼縫完好、噴口打不到（要遠程）", () => {
-    const [d] = giantMarksOf(marksState(heart(1), MELEE), null);
+    const [d] = giantMarksOf(marksState(heart(1), MELEE), P(5, 2));
     expect(d!.parts).toEqual({ core: { state: "hidden" }, seam: { state: "ok" }, vent: { state: "off", why: "ranged" } });
     expect(d!.melee).toBe(true);
     expect(d!.behind).toBe(true);
-    expect(d!.hover).toBeNull();
+    expect(d!.hover).toBeNull(); // 噴口打不到：不亮
     expect(d!.pos).toEqual(P(5, 3));
   });
 
@@ -173,8 +173,8 @@ describe("部位格狀態 → 標示（partTileMarks）", () => {
 
   it("背刺記號只給近戰：遠程攻擊者 melee＝false", () => {
     const ok = [opt("core", "核心", null), opt("shell_seam", "殼縫", null), opt("vent", "熔岩噴口", null)];
-    expect(giantMarksOf(marksState(heart(2), ok, "ranged"), null)[0]!.melee).toBe(false);
-    expect(giantMarksOf(marksState(heart(2), ok, "melee"), null)[0]!.melee).toBe(true);
+    expect(giantMarksOf(marksState(heart(2), ok, "ranged"), P(5, 4))[0]!.melee).toBe(false);
+    expect(giantMarksOf(marksState(heart(2), ok, "melee"), P(5, 4))[0]!.melee).toBe(true);
     // 看不出來時：伺服器回了近戰才有的原因 → 近戰
     expect(meleeOf([opt("vent", "", "要貼著那一格才打得到")], { type: "use_skill", unit_id: HERO, skill_id: "x", target_id: HEART } as Action, { weapon_class: "ranged" })).toBe(true);
   });
@@ -187,15 +187,21 @@ describe("部位格狀態 → 標示（partTileMarks）", () => {
     expect(hoverAt(P(5, 4))).toBe("body");
     expect(hoverAt(P(5, 3))).toBe("body"); // 未露出的核心＝打本體
     expect(hoverAt(P(5, 2))).toBeNull(); // 噴口打不到
-    expect(hoverAt(P(8, 8))).toBeNull();
+  });
+
+  it("沒有選取模式時只在滑到它身上才畫（滑到別處、沒滑過＝不畫）", () => {
+    const s = marksState(heart(1), MELEE);
+    expect(giantMarksOf(s, null)).toEqual([]);
+    expect(giantMarksOf(s, P(8, 8))).toEqual([]);
+    expect(giantMarksOf(s, P(4, 4))).toHaveLength(1);
   });
 
   it("只有在選打它的動作時才有：不能行動、沒有部位選項時沒有", () => {
-    expect(giantMarksOf(marksState(heart(1), MELEE, "melee", false), null)).toEqual([]);
+    expect(giantMarksOf(marksState(heart(1), MELEE, "melee", false), P(5, 4))).toEqual([]);
     const s = marksState(heart(1), MELEE);
-    expect(giantMarksOf({ ...s, partActions: [] }, null)).toEqual([]);
+    expect(giantMarksOf({ ...s, partActions: [] }, P(5, 4))).toEqual([]);
     // 1 格頭目（沒有 tiles）不畫格子標示
-    expect(giantMarksOf(marksState(heart(2, {}, false), MELEE), null)).toEqual([]);
+    expect(giantMarksOf(marksState(heart(2, {}, false), MELEE), P(5, 3))).toEqual([]);
   });
 });
 
