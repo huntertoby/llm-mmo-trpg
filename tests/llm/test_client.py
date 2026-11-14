@@ -184,7 +184,8 @@ def test_json_schema_uses_response_format() -> None:
     assert "guided_json" not in bodies[0]
 
 
-def test_auto_falls_back_to_guided_json_and_remembers() -> None:
+def test_auto_falls_back_to_guided_json_only_for_that_call() -> None:
+    """LB-2：退到 guided_json 不記住；下一次仍先試 response_format，並計入沒有約束的次數。"""
     bodies: list[dict[str, Any]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -198,8 +199,32 @@ def test_auto_falls_back_to_guided_json_and_remembers() -> None:
     assert client.complete(MSGS, json_schema=SCHEMA) == "{}"
     assert bodies[1]["guided_json"] == SCHEMA
     client.complete(MSGS, json_schema=SCHEMA)
-    assert len(bodies) == 3  # 第二次直接用 guided_json
-    assert "guided_json" in bodies[2]
+    assert len(bodies) == 4  # 第二次仍先試 response_format
+    assert "response_format" in bodies[2] and "guided_json" in bodies[3]
+    assert client.unconstrained_calls == 2
+    assert client.schema_mode_used == "guided_json"
+
+
+def test_transient_400_after_response_format_accepted_is_bad_response() -> None:
+    """LB-2：response_format 接受過之後的 400（例如換模型時）算一次失敗，不退到沒有約束的寫法。"""
+    bodies: list[dict[str, Any]] = []
+    statuses = iter([200, 400, 200])
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        status = next(statuses)
+        if status == 400:
+            return httpx.Response(400, json={"error": "Model is loading"})
+        return httpx.Response(200, json=ok_body("{}"))
+
+    client = client_with(handler)
+    client.complete(MSGS, json_schema=SCHEMA)
+    with pytest.raises(LLMBadResponse, match="Model is loading"):
+        client.complete(MSGS, json_schema=SCHEMA)
+    client.complete(MSGS, json_schema=SCHEMA)
+    assert all("guided_json" not in b for b in bodies)
+    assert client.unconstrained_calls == 0
+    assert client.accepted_schema_mode == "response_format"
 
 
 def test_schema_rejected_everywhere_is_bad_response() -> None:

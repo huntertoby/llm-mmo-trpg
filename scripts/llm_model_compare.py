@@ -463,6 +463,7 @@ def main(argv: list[str] | None = None) -> int:
         client.close()
         logging.getLogger("trpg.llm").removeHandler(captured)
     result["schema_mode"] = client.schema_mode_used
+    result["unconstrained_calls"] = client.unconstrained_calls
     result["llm_log"] = captured.lines
     result["finished_utc"] = datetime.now(UTC).isoformat(timespec="seconds")
     result["server"] = _server_info(config.base_url, config.model)
@@ -473,6 +474,8 @@ def main(argv: list[str] | None = None) -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     summary = result["summary"]
+    if client.unconstrained_calls:
+        print(f"錯誤：{client.unconstrained_calls} 次呼叫沒有 schema 約束（退到 guided_json）")
     print(
         f"中位數 {summary['seconds_median']} 秒、最慢 {summary['seconds_max']} 秒、"
         f"一次通過 {summary['first_pass']}/{summary['completed']}、"
