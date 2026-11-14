@@ -744,6 +744,18 @@ class AiWeights(ContentModel):
     """（PB-1b2）繞背：玩家方近戰站在頭目背後格，而且頭目有「從背後」才打得到、目前階段已露出、
     還沒破的部位時，位置價值加這個數（每名這樣的頭目一次）。表格層級的 ``parts`` 填入；沒有部位的
     戰鬥不受影響。"""
+    guard_face_bonus: int = 0
+    """（GB-3，D13、T18）巨型頭目：有部位快破（≤ ``near_break_permille``）時，這次動作打到的敵人
+    每名貼著那個部位格子的多加的分數（技能與普攻分數）。表格層級的 ``parts`` 填入；不是巨型頭目時
+    不受影響。"""
+    giant_spot_bonus: int = 0
+    """（GB-3）巨型頭目的部位站位：玩家方近戰貼著開著的部位格、遠程站在打得到看得到噴口類
+    （``reach: ranged``）部位的格子時，位置價值加這個數（每名巨型頭目一次）。表格層級的 ``parts``
+    填入；沒有巨型頭目的戰鬥不受影響。"""
+    prefer_far_from_leader: int = 0
+    """（GB-3，T17）追離頭目遠的敵人：打到的敵人離自己陣營頭目最近佔格的距離（取最遠的一名）×
+    這個值加在動作分數上；位置價值另加「從這格打得到的敵人裡離頭目最遠的距離」× 這個值。只寫在
+    行為模式裡（目前只有 ``ember_brood``）；預設 0 ＝ 不套用。"""
     silent_behind: int = 0
     """（BS-1，#157）無聲：持有無聲（手持匕首類）的近戰單位站在相鄰敵人的背後格時，每名這樣的敵人
     位置價值再加這個數（目標不會轉身，留在背後連續背刺、不要走開；疊在 ``backstab`` 上）。表格層級
@@ -1098,6 +1110,9 @@ class PartAiRules(ContentModel):
       「快破」門檻（‰）；填入每個行為模式的 ``weights``（:class:`AiWeights`）。
     - ``circle_back_bonus``（PB-1b2）：繞背——玩家方近戰站在「背後有能打的部位」的頭目背後格時，
       位置價值多加的分數；填入每個行為模式的 ``weights``。
+    - ``guard_face_bonus``（GB-3，T18）：巨型頭目打貼著快破部位的敵人時多加的分數；
+      ``giant_spot_bonus``（GB-3）：玩家方站在打得到巨型頭目部位的格子時的位置加分；都填入每個
+      行為模式的 ``weights``。
     """
 
     seal_skill: int = Field(default=0, ge=0)
@@ -1109,6 +1124,8 @@ class PartAiRules(ContentModel):
     guard_back_bonus: int = Field(default=0, ge=0)
     near_break_permille: int = Field(default=0, ge=0, le=1000)
     circle_back_bonus: int = Field(default=0, ge=0)
+    guard_face_bonus: int = Field(default=0, ge=0)
+    giant_spot_bonus: int = Field(default=0, ge=0)
 
     def value_of(self, kind: str) -> int:
         """破壞效果種類 ``kind`` 的價值（未知種類為 0）。"""
@@ -1276,7 +1293,13 @@ class AiProfileTable(ContentModel):
         facing = data.get("facing")
         parts = data.get("parts")
         if isinstance(parts, dict):  # PB-1b：頭目護背的兩個權重
-            keys = ("guard_back_bonus", "near_break_permille", "circle_back_bonus")  # PB-1b2：繞背
+            keys = (
+                "guard_back_bonus",
+                "near_break_permille",
+                "circle_back_bonus",  # PB-1b2：繞背
+                "guard_face_bonus",  # GB-3：巨型頭目護面
+                "giant_spot_bonus",  # GB-3：巨型頭目的部位站位
+            )
             guard = {k: parts[k] for k in keys if k in parts}
             facing = {**(facing if isinstance(facing, dict) else {}), **guard}
         for extra_key in ("objective_ai", "weapon_ai", "skill_ai", "formation_ai", "race_ai"):

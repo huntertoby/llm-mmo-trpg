@@ -40,6 +40,8 @@ from trpg.engine.actions import (
     UseSkill,
 )
 from trpg.engine.ai.gamble import cautious, on_miss_cost
+from trpg.engine.ai.leader import far_target_extra
+from trpg.engine.ai.parts import guard_face_extra
 from trpg.engine.ai.priority import (
     delayed_heal_points,
 )
@@ -78,7 +80,7 @@ from trpg.engine.preview import Preview, preview
 from trpg.engine.rules.combat import (
     attack_reach,
 )
-from trpg.engine.rules.footprint import dist_to, unit_dist
+from trpg.engine.rules.footprint import dist_to, is_giant, unit_dist
 from trpg.engine.rules.geometry import (
     XY,
 )
@@ -168,7 +170,20 @@ def _preview_score(
         score += w.multi_target * extra_targets(state, actor, p)
     elif isinstance(action, Attack):  # 蓄力吐息（3J-2）：開始蓄力的收益是預計範圍內的敵人
         score += profile.weights.damage * _delayed_points(state, actor, p, profile.rewrite)
+    if w.prefer_far_from_leader or (w.guard_face_bonus and is_giant(actor)):
+        score += hit * _target_bias(state, actor, p, w)  # GB-3：打誰（T17、T18）
     return score
+
+
+def _target_bias(state: BattleState, actor: UnitState, p: Preview, w: AiWeights) -> int:
+    """挑目標的偏好（GB-3）：殼縫餘燼蜥打離頭目遠的人（T17，:func:`far_target_extra`）、巨型頭目
+    打貼著快破部位的人（T18，:func:`guard_face_extra`）。打到的人＝預覽最多後果裡受到傷害的單位
+    （以動作前的位置算）。"""
+    hit_ids = sorted({e.target_id for e in p.max_events if isinstance(e, DamageDealt)})
+    victims = tuple(
+        u for uid in hit_ids if (u := state.units.get(uid)) is not None and u.id != actor.id
+    )
+    return far_target_extra(state, actor, w, victims) + guard_face_extra(state, actor, w, victims)
 
 
 def _lock_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiProfile) -> Fraction:

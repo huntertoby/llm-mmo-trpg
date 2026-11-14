@@ -37,6 +37,7 @@ from trpg.engine.actions import (
 )
 from trpg.engine.ai.composite import composite_estimate
 from trpg.engine.ai.displace import DISPLACE_PRIMITIVES, displace_estimate
+from trpg.engine.ai.parts import behind_spot
 from trpg.engine.ai.rune import is_inscribe_skill, rune_estimate
 from trpg.engine.ai.scene_objects import SCENE_PRIMITIVES, scene_estimate
 from trpg.engine.ai.summon import (
@@ -52,7 +53,6 @@ from trpg.engine.ai.zone import is_zone_skill, zone_estimate
 from trpg.engine.grants import granted_remaining
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
-from trpg.engine.rules.facing import is_behind
 from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.geometry import (
     XY,
@@ -273,7 +273,7 @@ def _shadowstep_estimate(  # noqa: PLR0917
         return None
     moved = unit.clone()
     moved.pos = Pos(x=dest[0], y=dest[1])
-    behind = w.shadowstep_behind if is_behind(dest, target) else 0
+    behind = w.shadowstep_behind if behind_spot(dest, target) else 0  # GB-3：殼縫也算
     return w.shadowstep + behind + _unit_position_value(state, moved, w, scene) - before
 
 
