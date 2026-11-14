@@ -131,7 +131,7 @@ def test_list_and_detail_show_the_object_table(read_service: TuningService) -> N
     values = {f.path: (f.value, f.limit_min) for f in ai.fields}
     assert values[FACE] == (_now(AI, FACE), 0)
     assert values[SPOT] == (_now(AI, SPOT), 0)
-    assert values[BROOD_FAR] == (_now(AI, BROOD_FAR), None)
+    assert values[BROOD_FAR] == (_now(AI, BROOD_FAR), 0)  # NW-3b：AiWeights ge=0
     assert any("殼縫蟲群" in n for n in ai.notes_zh)
 
 

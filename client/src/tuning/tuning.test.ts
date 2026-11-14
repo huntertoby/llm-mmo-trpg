@@ -255,6 +255,32 @@ describe("T-B1 表單由欄位清單產生；改過標記與差異一致", () =>
     const edits = setEdit({}, objects, well, "20");
     expect(edits[editKey("objects.yaml", "objects[13].max_hp")]).toMatchObject({ old: 15, text: "20", object_id: "objects" });
   });
+
+  it("NW-3b：欄位有 notice_zh 時在那一欄下方顯示提示行（造牆物件的最大 HP），沒有的欄位不顯示；允許下限照後端", () => {
+    const NOTICE = "造牆技能會放出這個物件。改 HP 會讓那些技能變強或變弱，技能預算不會跟著算。";
+    const row = (path: string, label: string, notice: string | null, limitMin: number | null) => ({
+      path, pattern: path, label_zh: label, kind: "int" as const, value: 10, default_zh: null, hint_min: 0, hint_max: 99, limit_min: limitMin, limit_max: null, readonly_zh: null, note_zh: "說明", notice_zh: notice,
+    });
+    const objects: TuningObjectDetail = {
+      kind: "object",
+      id: "objects",
+      name_zh: "格子物件（全體共用）",
+      category: "object",
+      file: "objects.yaml",
+      fields: [row("objects[4].max_hp", "物件「土牆」最大 HP", NOTICE, 1), row("objects[13].max_hp", "物件「冷卻井」最大 HP", null, 1)],
+      notes_zh: [],
+    };
+    const props = { edits: {}, check: null, ladder: [], skills: [], onList: () => undefined, onEdit: () => undefined, onDrop: () => undefined };
+    const html = renderToStaticMarkup(createElement(FieldForm, { detail: objects, ...props }));
+    const wall = rowOf(html, "objects[4].max_hp");
+    expect(wall).toContain('data-testid="field-notice"');
+    expect(wall).toContain(NOTICE);
+    expect(rowOf(html, "objects[13].max_hp")).not.toContain("field-notice");
+    const ai: TuningObjectDetail = { ...objects, kind: "ai", id: "ai_profiles", category: "ai", file: "ai_profiles.yaml", fields: [row("profiles[2].weights.prefer_far_from_leader", "行為模式「殼縫蟲群」：追離頭目遠的人", null, 0)] };
+    const aiHtml = renderToStaticMarkup(createElement(FieldForm, { detail: ai, ...props }));
+    expect(aiHtml).toContain("允許 0～…");
+    expect(aiHtml).not.toContain("field-notice");
+  });
 });
 
 describe("T-B2 後端的驗證錯誤：對得到欄位的在欄位下，對不到的在頁首", () => {

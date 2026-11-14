@@ -147,6 +147,8 @@ class TuningFieldView(_Model):
     readonly_zh: str | None = None
     """唯讀的原因（例：射程是「武器射程」）；``None``＝可改。"""
     note_zh: str
+    notice_zh: str | None = None
+    """欄位下方一直顯示的提示行（NW-3b：會被造牆技能放出來的物件的最大 HP）；``None``＝沒有。"""
     group_zh: str | None = None
     """表單分組標題（PB-1n 待決 2：頭目部位的欄位按部位分組，例「部位 1「拂塵」」）；
     ``None``＝不分組。"""
