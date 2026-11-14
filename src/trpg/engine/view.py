@@ -318,6 +318,8 @@ class PartView(_ViewModel):
     tiles: tuple[Pos, ...] | None = None
     """巨型頭目的部位綁的格子（地圖座標，依 (y, x)；GB-4a，T12）：前端由點的那一格推出
     ``target_part``。一格的頭目（部位沒綁格）為 ``None``。"""
+    counts_as_behind: bool | None = None
+    """近戰打這個部位算從背後（GB-4b；R4，殼縫）：前端在部位格標示畫背刺記號。不算時為 ``None``。"""
 
 
 class ChargeView(_ViewModel):
@@ -1059,6 +1061,7 @@ def _part_views(unit: UnitState) -> tuple[PartView, ...] | None:
                 exposed=not part.exposed_in or phase in part.exposed_in,
                 reach=part.reach,
                 tiles=tuple(Pos(x=x, y=y) for x, y in part_tiles(unit, part)) or None,
+                counts_as_behind=True if part.counts_as_behind else None,
             )
         )
     return tuple(views)
