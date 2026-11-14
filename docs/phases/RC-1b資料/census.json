@@ -1,0 +1,560 @@
+{
+ "format": "recipe-census/1",
+ "params": {
+  "seeds": 50,
+  "thin": 12,
+  "kinds": [
+   "active",
+   "passive",
+   "reaction"
+  ],
+  "tiers": [
+   2
+  ],
+  "rarities": [
+   "epic"
+  ],
+  "diag_seeds": 0
+ },
+ "tier_weights_permille": {
+  "1": 316,
+  "2": 366,
+  "3": 316,
+  "4": 47
+ },
+ "cells": [
+  {
+   "keyword": "marked",
+   "kind": "active",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 50,
+   "legal": 50,
+   "designs": 35,
+   "structures": 42,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "summon",
+      "active",
+      "ground_tile",
+      [
+       "summon:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "area",
+      "active",
+      "cross",
+      [
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     2
+    ],
+    [
+     [
+      "area",
+      "active",
+      "line",
+      [
+       "apply_status:marked",
+       "damage:",
+       "destroy_object:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     1
+    ],
+    [
+     [
+      "builder_finisher",
+      "active",
+      "line",
+      [
+       "apply_status:marked",
+       "consume_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     1
+    ],
+    [
+     [
+      "builder_finisher",
+      "active",
+      "single",
+      [
+       "add_stack:",
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     1
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "diag": {},
+   "timing": {
+    "ms_mean": 26.6,
+    "ms_median": 15.0,
+    "ms_max": 172.7,
+    "total_s": 1.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 5124000
+  },
+  {
+   "keyword": "marked",
+   "kind": "passive",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 50,
+   "legal": 50,
+   "designs": 28,
+   "structures": 31,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     3
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     3
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "diag": {},
+   "timing": {
+    "ms_mean": 5.4,
+    "ms_median": 4.1,
+    "ms_max": 20.7,
+    "total_s": 0.27
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1464000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 50,
+   "legal": 49,
+   "designs": 22,
+   "structures": 49,
+   "reasons": {
+    "keyword_exhausted": 1
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     3
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     2
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "diag": {},
+   "timing": {
+    "ms_mean": 5111.2,
+    "ms_median": 4011.6,
+    "ms_max": 22982.9,
+    "total_s": 255.56
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "summon",
+   "kind": "active",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 50,
+   "legal": 50,
+   "designs": 12,
+   "structures": 48,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "summon",
+      "active",
+      "ground_tile",
+      [
+       "summon:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     19
+    ],
+    [
+     [
+      "summon",
+      "active",
+      "ground_tile",
+      [
+       "summon:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "sacrifice",
+      "active",
+      "single",
+      [
+       "sacrifice_summon:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     4
+    ],
+    [
+     [
+      "sacrifice",
+      "active",
+      "single",
+      [
+       "sacrifice_summon:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     4
+    ],
+    [
+     [
+      "sacrifice",
+      "active",
+      "single",
+      [
+       "sacrifice_summon:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "diag": {},
+   "timing": {
+    "ms_mean": 64.9,
+    "ms_median": 41.4,
+    "ms_max": 397.1,
+    "total_s": 3.24
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 5124000
+  },
+  {
+   "keyword": "summon",
+   "kind": "passive",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 50,
+   "legal": 50,
+   "designs": 8,
+   "structures": 39,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "summon_beside:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.0,
+    "ms_median": 4.4,
+    "ms_max": 25.8,
+    "total_s": 0.3
+   },
+   "status": "thin",
+   "cause": "",
+   "frequency": 1464000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 50,
+   "legal": 50,
+   "designs": 1,
+   "structures": 1,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     50
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "diag": {},
+   "timing": {
+    "ms_mean": 85.9,
+    "ms_median": 65.2,
+    "ms_max": 314.4,
+    "total_s": 4.29
+   },
+   "status": "thin",
+   "cause": "",
+   "frequency": 732000
+  }
+ ]
+}
