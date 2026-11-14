@@ -56,10 +56,11 @@ def test_unheld_second_keyword_is_tried_first_by_new(monkeypatch: pytest.MonkeyP
 @pytest.mark.parametrize(
     ("seed", "first", "second", "kind"),
     [
-        (7, "ignite", "marked", "bridge"),  # 已持有：橋接那張帶兩個
+        # RC-1 組合器補配方與只認專屬規則後候選亂數變了：種子 7 → 10、2 → 39（掃 1～40 仍會發生的）
+        (10, "ignite", "marked", "bridge"),  # 已持有：橋接那張帶兩個
         # KW-2 新方向多 4 個關鍵字，候選亂數全變，種子 5 → 37
         (37, "ignite", "prone", "new"),  # 還沒有：新方向那張帶兩個
-        (2, "charged", "wet", "new"),
+        (39, "charged", "wet", "new"),
     ],
 )
 def test_one_card_carries_both_when_the_composer_can(
