@@ -3,6 +3,7 @@
 import type { BattleView, Pos, PreviewOut } from "../api/types";
 import { objectName } from "./glossary";
 import { auraTiles } from "./summons";
+import { unitTiles } from "./footprint";
 import type { UnitNames } from "./units";
 
 export type OverlayKind =
@@ -114,8 +115,9 @@ function chargeOverlays(m: MoveOut, p: PreviewOut, view: BattleView): Overlay[] 
   if (last === undefined) return [];
   const hits = new Map<string, string>();
   for (const t of p.targets) {
-    const at = t.ally ? null : unitPos(view, t.unit_id);
-    if (at !== null) hits.set(`${at.x},${at.y}`, pct(t.hit_permille));
+    const u = t.ally ? undefined : view.units.find((x) => x.id === t.unit_id);
+    // GB-4a：巨型單位的每一格都標（衝撞路徑碰到哪一格都算撞到它）
+    for (const at of u === undefined ? [] : unitTiles(u)) hits.set(`${at.x},${at.y}`, pct(t.hit_permille));
   }
   const walked = new Set(m.path.map((xy) => `${xy[0]},${xy[1]}`));
   const route: Overlay[] = m.path.slice(1, -1).map((xy) => {

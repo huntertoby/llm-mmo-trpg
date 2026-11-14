@@ -7,7 +7,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Action, BattleView, OrderSet, PartActionOptions, Pos, UnitView } from "../../api/types";
 import type { ClassifiedActions } from "../../battle/actions";
-import { posKey, samePos } from "../../battle/geometry";
+import { giantAimLine, unitAtTile } from "../../battle/footprint";
+import { posKey } from "../../battle/geometry";
 import { withOrder, type OrderKind } from "../../battle/orders";
 import type { CommandSession } from "../../battle/summonControl";
 import type { ActionMode } from "../../battle/targeting";
@@ -15,16 +16,14 @@ import type { TelegraphMark } from "../../battle/telegraph";
 import { marksTextAt } from "../../battle/telegraph";
 import { collapseSections, tileSections, type TileSection } from "../../battle/tileInfo";
 import { loadTileCollapse, saveTileCollapse } from "../../battle/tileCardPrefs";
-import { decideTileClick } from "../../battle/tileClick";
+import { decideTileClick, giantAimAt, hoverActionAt } from "../../battle/tileClick";
 import type { UnitNames } from "../../battle/units";
 import { zoneLinesAt } from "../../battle/zones";
 import { type TileCardApi, useTileCard } from "../../ui/useTileCard";
 import { withTargetPart, type PartMenuState } from "../../ui/PartMenu";
 
 export function unitAt(view: BattleView, tile: Pos | null): UnitView | undefined {
-  if (tile === null) return undefined;
-  const here = view.units.filter((u) => !u.escaped && !u.dismissed && samePos(u.pos, tile));
-  return here.find((u) => !u.downed) ?? here[0];
+  return unitAtTile(view.units, tile);
 }
 
 export interface TileInteraction {
@@ -194,7 +193,12 @@ export function useTileInteraction(c: TileClickContext): TileInteraction {
   const hoverTexts = [...zoneLinesAt(shown, hover, c.liveNames), ...marksTextAt(c.marks, hover)];
   const hoverUnit = unitAt(shown, cardTile) ?? null;
   const fullTileSections = sectionsAt(cardTile);
-  const tileCardSections = hoverUnit !== null && collapseTile ? collapseSections(fullTileSections) : fullTileSections;
+  const baseSections = hoverUnit !== null && collapseTile ? collapseSections(fullTileSections) : fullTileSections;
+  // GB-4a：滑過巨型頭目的格子時，資訊卡多一行「這一格會打到什麼」（打不到的部位寫原因；收起時也留著）
+  const cardAction = hoverActionAt({ view, hero, canAct, copying, command, mode, hurlPick, classified }, cardTile);
+  const cardAim = giantAimAt(view, partActions, cardAction, cardTile);
+  const tileCardSections: TileSection[] =
+    cardAim === null ? baseSections : [...baseSections, { kind: "part", title: giantAimLine(cardAim), lines: [] }];
   const setCollapseTile = (on: boolean) => {
     setCollapseTileState(on);
     saveTileCollapse(on);

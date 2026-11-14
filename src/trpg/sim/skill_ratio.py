@@ -39,6 +39,7 @@ from trpg.engine.battle import begin_battle, legal_actions_with_areas
 from trpg.engine.ids import CONCEALED
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.facing import back_xy
+from trpg.engine.rules.footprint import dist_to
 from trpg.engine.runner import advance, apply_step
 from trpg.engine.setup import BattleSetup, UnitSpawn
 from trpg.engine.skills.conditions import Subject, condition_met
@@ -488,7 +489,7 @@ def _pick(state: BattleState, skill_id: str, target: UnitState) -> Action | None
         units = area.units if area is not None else ()
         tiles = area.tiles if area is not None else ()
         hit = act.target_id == target.id or target.id in units
-        dist = min((abs(x - target.xy[0]) + abs(y - target.xy[1]) for x, y in tiles), default=99)
+        dist = min((dist_to(target, xy) for xy in tiles), default=99)
         others = sum(1 for u in units if u != target.id)
         key = (0 if hit else 1, 0 if act.target_id == target.id else 1, others, dist, i)
         if best is None or key < best[0]:

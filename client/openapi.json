@@ -20179,6 +20179,20 @@
             "type": "array",
             "title": "Break Lines Zh",
             "default": []
+          },
+          "tiles": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Pos"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tiles"
           }
         },
         "additionalProperties": false,
@@ -30551,6 +30565,31 @@
           },
           "pos": {
             "$ref": "#/components/schemas/Pos"
+          },
+          "footprint": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footprint"
+          },
+          "tiles": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Pos"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tiles"
           },
           "hp": {
             "anyOf": [

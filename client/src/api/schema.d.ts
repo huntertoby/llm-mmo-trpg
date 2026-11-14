@@ -8237,6 +8237,8 @@ export interface components {
              * @default []
              */
             break_lines_zh: string[];
+            /** Tiles */
+            tiles?: components["schemas"]["Pos"][] | null;
         };
         /**
          * PartyIntroLine
@@ -12185,6 +12187,10 @@ export interface components {
             name_zh: string;
             team: components["schemas"]["Team"];
             pos: components["schemas"]["Pos"];
+            /** Footprint */
+            footprint?: number | null;
+            /** Tiles */
+            tiles?: components["schemas"]["Pos"][] | null;
             /** Hp */
             hp: number | null;
             /** Max Hp */

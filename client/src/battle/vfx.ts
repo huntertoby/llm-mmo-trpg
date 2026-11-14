@@ -4,6 +4,7 @@
 // 畫布（`render/BattleRenderer.ts` 的 `playVfx`）只負責照描述畫出來；時間在 `playback.ts` 依播放速度縮放。
 import { asEvent, type BattleView, type EventBase, type Pos, type SkillCard } from "../api/types";
 import { areaCenter, immobilityIn, type Immobility } from "./feedback";
+import { hitLocator } from "./footprint";
 import { samePos } from "./geometry";
 import { noteStrike, repeatsStrike } from "./repeatStrike";
 import type { ArcSpec } from "../render/attackVariants";
@@ -688,9 +689,10 @@ function absorb(seg: Segment | null, e: EventBase, at: Locate): VfxHit | null {
  * `immobility`：打的那一刻能不能動（6F-6 `feedback.immobilityOf`；省略時只看 `view`）。
  */
 export function vfxFor(events: readonly Record<string, unknown>[], view: BattleView, cards: VfxCards, immobility: Immobility = immobilityIn(view)): StepVfx {
-  const positions = new Map(view.units.map((u) => [u.id, u.pos]));
+  // GB-4a：巨型單位的演出位置＝打中的那一格（`hit_tile`）或離來源最近的佔格（`hitLocator`）
+  const loc = hitLocator(view.units);
   const hpMax = new Map(view.units.map((u) => [u.id, u.max_hp]));
-  const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
+  const at: Locate = loc.at;
   const maxHp = (id: string) => hpMax.get(id) ?? 0;
   const segments: Segment[] = [];
   const loose: VfxHit[] = [];
@@ -700,6 +702,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
   let current: Segment | null = null;
   for (const raw of events) {
     const e = asEvent(raw);
+    loc.note(e);
     // 戰鬥鍵：戰鬥畫面資料裡同一場戰鬥不變的地圖 ID（沒有戰鬥 ID；見 6N-4 報告）
     const react = reactOf(e, at, maxHp, view.map_id ?? "", (id) => immobility(e, id));
     const imp = impactOf(e, at, maxHp); // 6H-1：停頓分級、微震

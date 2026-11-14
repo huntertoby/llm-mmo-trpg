@@ -35,8 +35,10 @@ from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
 from trpg.engine.infusion import infusion_options
+from trpg.engine.part_breaks import part_tiles
 from trpg.engine.parts import current_phase_id
 from trpg.engine.race.skills import race_skill_of, race_uses_left
+from trpg.engine.rules.footprint import is_giant, tiles_of
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import effective_attribute
@@ -313,6 +315,9 @@ class PartView(_ViewModel):
     exposed: bool
     reach: PartReach
     break_lines_zh: tuple[str, ...] = ()
+    tiles: tuple[Pos, ...] | None = None
+    """巨型頭目的部位綁的格子（地圖座標，依 (y, x)；GB-4a，T12）：前端由點的那一格推出
+    ``target_part``。一格的頭目（部位沒綁格）為 ``None``。"""
 
 
 class ChargeView(_ViewModel):
@@ -381,6 +386,11 @@ class UnitView(_ViewModel):
     name_zh: str
     team: Team
     pos: Pos
+    """所在格；巨型單位（``footprint`` 有值）是佔格的中心格（GB-1a，T1）。"""
+    footprint: int | None = None
+    """佔格邊長（GB-4a）：只有巨型單位輸出（3）；一格的單位為 ``None``。"""
+    tiles: tuple[Pos, ...] | None = None
+    """巨型單位佔的格子（依 (y, x)；GB-4a）；一格的單位為 ``None``。"""
     hp: int | None
     """目前 HP；觀看者看不到資訊（``hidden_info``）時為 ``None``。"""
     max_hp: int
@@ -938,6 +948,8 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         name_zh=unit.name_zh,
         team=unit.team,
         pos=unit.pos,
+        footprint=unit.footprint if is_giant(unit) else None,
+        tiles=tuple(Pos(x=x, y=y) for x, y in tiles_of(unit)) if is_giant(unit) else None,
         hp=unit.hp,
         max_hp=unit.max_hp,
         shield=sum(s.amount for s in unit.statuses if s.amount is not None),
@@ -1046,6 +1058,7 @@ def _part_views(unit: UnitState) -> tuple[PartView, ...] | None:
                 broken=part.id in unit.broken_parts,
                 exposed=not part.exposed_in or phase in part.exposed_in,
                 reach=part.reach,
+                tiles=tuple(Pos(x=x, y=y) for x, y in part_tiles(unit, part)) or None,
             )
         )
     return tuple(views)

@@ -1,7 +1,7 @@
 // 隊友快捷指令（純函式）：按鈕種類、點選目標 → `TacticalOrder`、指令清單與文字。
 // 指令對全隊（`team_orders`）下達，送 `PUT /orders`；每種指令最多一個，新的取代同種舊的。
 import type { BattleView, IgnoredOrder, OrderSet, Pos, TacticalOrder } from "../api/types";
-import { samePos } from "./geometry";
+import { standingAtTile, unitTiles } from "./footprint";
 import type { UnitNames } from "./units";
 
 export type OrderKind = TacticalOrder["kind"];
@@ -33,18 +33,18 @@ export function orderButton(kind: OrderKind): OrderButton {
 }
 
 function livingUnitAt(view: BattleView, tile: Pos) {
-  return view.units.find((u) => !u.downed && !u.escaped && !u.dismissed && samePos(u.pos, tile));
+  return standingAtTile(view.units, tile);
 }
 
 /** 該種指令可以點選的格子（高亮用）：集火＝活著的敵人、保護＝活著的隊友（不含主角）。 */
 export function orderTargetTiles(kind: OrderKind, view: BattleView, heroId: string): Pos[] {
   if (kind === "focus_target") {
-    return view.units.filter((u) => u.team !== view.team && !u.downed && !u.escaped && !u.dismissed).map((u) => u.pos);
+    return view.units.filter((u) => u.team !== view.team && !u.downed && !u.escaped && !u.dismissed).flatMap(unitTiles);
   }
   if (kind === "protect") {
     return view.units
       .filter((u) => u.team === view.team && u.id !== heroId && !u.downed && !u.escaped && !u.dismissed)
-      .map((u) => u.pos);
+      .flatMap(unitTiles);
   }
   return [];
 }

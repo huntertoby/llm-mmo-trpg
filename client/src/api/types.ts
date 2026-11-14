@@ -151,6 +151,23 @@ export function isUnitMoved(e: EventBase): e is UnitMovedEvent {
   return e.type === "unit_moved";
 }
 
+/**
+ * 命中判定（只列前端要讀的欄位）。`hit_tile`：目標是巨型單位時打中的那一格（GB-1b；`/127` 起），
+ * 一格的目標不帶。演出落點用它（`battle/footprint.ts` 的 `hitLocator`）。
+ */
+export interface AttackRolledEvent extends EventBase {
+  type: "attack_rolled";
+  attacker_id: string;
+  target_id: string;
+  hit: boolean;
+  crit?: boolean;
+  hit_tile?: Pos | null;
+}
+
+export function isAttackRolled(e: EventBase): e is AttackRolledEvent {
+  return e.type === "attack_rolled" && typeof e["attacker_id"] === "string" && typeof e["target_id"] === "string";
+}
+
 /** 打中頭目部位（PB-1a 事件；頭目資訊被隱藏時 `hp_before`／`hp_after` 為 null，PB-1c）。 */
 export interface PartDamagedEvent extends EventBase {
   type: "part_damaged";

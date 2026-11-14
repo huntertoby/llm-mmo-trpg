@@ -5,6 +5,7 @@
 // 灌注技能（Phase 3-33d，6.29.3）：1 AP 把主角的一招主動技能借給召喚物，牠在下一個自己的回合開始時
 // 從自己的位置施放；技能選單（含不能灌注的中文原因）由伺服器的 infuse-options 提供。
 import type { Action, BattleView, CommandOption, CommandOptions, InfuseOptions, InfusionPreview, Pos, UnitView } from "../api/types";
+import { unitTiles } from "./footprint";
 import { samePos } from "./geometry";
 import { isAlive, type UnitNames } from "./units";
 
@@ -116,7 +117,7 @@ export function commandMoveTiles(options: CommandOptions): Pos[] {
 export function commandTargetTiles(option: CommandOption | undefined, view: BattleView): Pos[] {
   if (option === undefined) return [];
   const ids = new Set(option.targets);
-  return view.units.filter((u) => ids.has(u.id)).map((u) => u.pos);
+  return view.units.filter((u) => ids.has(u.id)).flatMap(unitTiles);
 }
 
 /** 指揮動作：`option.path` 只有起點（原地）時不帶 path。至少要有移動或攻擊目標，否則 `null`。 */
@@ -197,7 +198,7 @@ export function pendingInfusionText(summon: UnitView, names: Readonly<Record<str
 export function infusionTargetTiles(info: InfusionPreview, view: BattleView): Pos[] {
   const ids = new Set(info.units);
   if (info.target_id != null) ids.add(info.target_id);
-  return view.units.filter((u) => ids.has(u.id) && u.team !== view.team).map((u) => u.pos);
+  return view.units.filter((u) => ids.has(u.id) && u.team !== view.team).flatMap(unitTiles);
 }
 
 /** 灌注預覽的一行說明：「從 (2, 3) 施放 → 盜賊1」「選不到目標：下回合會放棄（法力與冷卻不退）」。 */

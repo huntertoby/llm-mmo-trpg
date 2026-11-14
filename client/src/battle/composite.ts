@@ -3,6 +3,7 @@
 // `followup_target`（方向、單位、物件，或 null＝以落點為中心的形狀）是動作段。這裡把它們分成：
 // 第 1 段＝位移段（點落點格，或衝鋒／瞬步點目標單位）、第 2 段＝動作段（點方向、點目標，或確認施放）。
 import type { Action, BattleView, Direction, Pos } from "../api/types";
+import { unitsOnTile } from "./footprint";
 import { posKey, samePos } from "./geometry";
 
 const DELTA: Readonly<Record<Direction, { dx: number; dy: number }>> = {
@@ -76,7 +77,7 @@ export function soleCenter(first: CompositeFirst): CompositeSecond | null {
 }
 
 function unitsAt(view: BattleView, tile: Pos): string[] {
-  return view.units.filter((u) => !u.escaped && !u.dismissed && samePos(u.pos, tile)).map((u) => u.id);
+  return unitsOnTile(view.units, tile).filter((u) => !u.escaped && !u.dismissed).map((u) => u.id);
 }
 
 /** 位移段：`tile` 上可以選的落點格或目標單位的鍵（沒有時 `null`）。 */

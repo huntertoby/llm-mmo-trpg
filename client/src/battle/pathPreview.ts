@@ -3,6 +3,7 @@
 // 實際停點的驚嘆號、到不了的終點。規則判斷全部來自伺服器（每格的表面、陷阱、事件、走不走得到），這裡只決定畫法。
 import type { components } from "../api/schema";
 import type { BattleView, MoveAction, Pos } from "../api/types";
+import { standingAtTile } from "./footprint";
 import { posKey } from "./geometry";
 import { reactionName, statusName, surfaceName } from "./glossary";
 
@@ -317,8 +318,7 @@ export function hoverPathQuery(i: HoverPathInput): PathQuery | null {
   if (!i.moving || hover === null || hero === null) return null;
   if (hover.x < 0 || hover.y < 0 || hover.x >= view.width || hover.y >= view.height) return null;
   if (hover.x === hero.pos.x && hover.y === hero.pos.y) return null;
-  const onTile = view.units.some((u) => !u.downed && !u.escaped && !u.dismissed && u.pos.x === hover.x && u.pos.y === hover.y);
-  if (onTile) return null;
+  if (standingAtTile(view.units, hover) !== undefined) return null;
   const move = i.moves.get(posKey(hover));
   return pathQuery(move?.path ?? null, hover);
 }

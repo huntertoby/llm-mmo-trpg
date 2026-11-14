@@ -2,6 +2,7 @@
 // 畫布（`render/BattleRenderer.ts`）只負責把項目畫出來；位置一律由該步的 `view` 取得單位所在格。
 // 位移（推、拉、衝鋒、跳躍、傳送、交換）不在這裡，見 `animation.ts`。
 import { asEvent, type BattleView, type EventBase, type Pos } from "../api/types";
+import { hitLocator } from "./footprint";
 import { posKey, samePos } from "./geometry";
 import { statusLook, statusName } from "./glossary";
 
@@ -263,8 +264,8 @@ function linesFor(e: EventBase, at: Locate): Array<{ from: Pos; to: Pos }> {
 
 /** 一步的事件 → 回饋項目（依事件順序；重複的連線只留一條）。`immobility`：打的那一刻能不能動（6F-6 `immobilityOf`；省略時只看 `view`）。 */
 export function feedbackFor(events: readonly Record<string, unknown>[], view: BattleView, immobility: Immobility = immobilityIn(view)): FeedbackItem[] {
-  const positions = new Map(view.units.map((u) => [u.id, u.pos]));
-  const at: Locate = (id) => (typeof id === "string" ? (positions.get(id) ?? null) : null);
+  const loc = hitLocator(view.units); // GB-4a：浮動字落在打中的那一格（巨型單位）
+  const at: Locate = loc.at;
   const items: FeedbackItem[] = [];
   const slots = new Map<string, number>();
   const nextSlot = (pos: Pos): number => {
@@ -276,6 +277,7 @@ export function feedbackFor(events: readonly Record<string, unknown>[], view: Ba
   const lineKeys = new Set<string>();
   for (const raw of events) {
     const e = asEvent(raw);
+    loc.note(e);
     for (const line of linesFor(e, at)) {
       const k = `${posKey(line.from)}>${posKey(line.to)}`;
       if (lineKeys.has(k)) continue;

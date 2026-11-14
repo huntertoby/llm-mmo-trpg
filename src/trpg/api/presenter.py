@@ -54,11 +54,12 @@ from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EffectFizzled, EventBase, TurnStarted
 from trpg.engine.lock_on import LOCK_BLOCKED, LOCK_CONCEALED, LOCK_LOST, lock_blocker
-from trpg.engine.parts import PART_REASON_ZH, part_targets
+from trpg.engine.parts import PART_REASON_ZH, PartTarget, part_targets
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
+from trpg.engine.rules.footprint import is_giant
 from trpg.engine.skills.followups import followup_options
-from trpg.engine.state import BattleState
+from trpg.engine.state import BattleState, UnitState
 from trpg.engine.view import BattleView, UnitView, project_for
 from trpg.narrative.events import battle_started_text, describe_event
 from trpg.narrative.parts import break_lines_zh
@@ -169,6 +170,7 @@ def part_options_out(
         if not targets:
             continue
         seen.add(key)
+        boss = state.units[action.target_id]
         out.append(
             PartActionOut(
                 type="attack" if isinstance(action, Attack) else "use_skill",
@@ -179,13 +181,34 @@ def part_options_out(
                         part_id=t.part_id,
                         name_zh=t.name_zh,
                         ok=t.ok,
-                        reason_zh=None if t.reason is None else PART_REASON_ZH[t.reason],
+                        reason_zh=_part_reason_zh(boss, t),
                     )
                     for t in targets
                 ),
             )
         )
     return tuple(out) if out else None
+
+
+def _part_reason_zh(boss: UnitState, target: PartTarget) -> str | None:
+    """部位打不到的原因中文。巨型頭目的部位還沒露出時寫露出的階段名（GB-4a；美術移植需求第 7 節
+    第 5 條：「呼吸階段才露出」），拿不到階段名時退回引擎通用字。一格的頭目照舊（PB-1 不變）。"""
+    if target.reason is None:
+        return None
+    if target.reason == "not_exposed" and is_giant(boss):
+        phase = _exposed_phase_zh(boss, target.part_id)
+        if phase is not None:
+            return f"{phase}階段才露出"
+    return PART_REASON_ZH[target.reason]
+
+
+def _exposed_phase_zh(boss: UnitState, part_id: str) -> str | None:
+    """部位第一個露出的階段名（照頭目階段的順序、在目前階段之後）；沒有時為 ``None``。"""
+    part = next((p for p in boss.parts if p.id == part_id), None)
+    if part is None or not part.exposed_in:
+        return None
+    later = boss.phases[boss.phase_index + 1 :]
+    return next((ph.name_zh for ph in later if ph.id in part.exposed_in and ph.name_zh), None)
 
 
 def team_events_out(
