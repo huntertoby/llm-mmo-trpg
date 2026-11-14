@@ -95,12 +95,13 @@ def test_explicit_requests_are_not_replaced(library: ContentLibrary) -> None:
 
 def test_naming_flag_adds_generated_names(capsys: pytest.CaptureFixture[str]) -> None:
     """``--naming``（4-L8b）：通過驗證的 LLM 技能再命名（Mock 命名），摘要多一行命名統計；
-    不加時名稱是組合式名稱。"""
-    assert main(["llm", "propose", "--mock", "-n", "6", "--seed", "0", "--naming"]) == 0
+    不加時名稱是組合式名稱。RC-1 起第 4 題換了（評估題要求出題檢查），Mock 命名在第 6 題撞名退回
+    組合式名稱（Mock 命名的已知限制），所以只跑 5 題。"""
+    assert main(["llm", "propose", "--mock", "-n", "5", "--seed", "0", "--naming"]) == 0
     named = capsys.readouterr().out
     assert "（命名 llm，1 次）" in named
     assert "命名：" in named and "組合式名稱 0" in named
-    assert main(["llm", "propose", "--mock", "-n", "6", "--seed", "0"]) == 0
+    assert main(["llm", "propose", "--mock", "-n", "5", "--seed", "0"]) == 0
     plain = capsys.readouterr().out
     assert "命名" not in plain
 
