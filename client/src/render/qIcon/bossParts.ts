@@ -9,7 +9,8 @@
 import { resolveDoll, type DollInput } from "../appearance";
 import { drawQ } from "../qDoll";
 import { GAME_HOOKS, qUnitOf } from "../qSpec";
-import { blank, ci, ctxOf, halo, ln, outlinePx, qCanvasAvailable, render, rr, type Ctx, type QDef, type QOpts } from "./core";
+import { blank, ci, ctxOf, halo, ln, OUT, outlinePx, qCanvasAvailable, render, rr, type Ctx, type DrawFn, type QDef, type QOpts } from "./core";
+import { GIANT_BODY_GLYPH, GIANT_BOSS_TEMPLATE, GIANT_PART_GLYPH } from "./giantParts";
 import { bust, COND } from "./parts";
 
 /** 米白（同第④批 `CREAM`）。 */
@@ -379,8 +380,8 @@ const PART_GLYPH: Readonly<Record<string, (c: Ctx, o: QOpts) => void>> = {
 /** 原因「從背後」的小圖（第④批 `COND.from_behind`）。 */
 export const BACK_ICON = "back";
 
-/** 一個圖樣放進 48 格（放大 1.8，同 `QIconsParts.def`）。 */
-function cell(d: (c: Ctx, o: QOpts) => void): QDef {
+/** 一個圖樣放進 48 格（放大 1.8，同 `QIconsParts.def`）；`pre`（外框底下的光暈）照 48 格座標、不放大。 */
+function cell(d: (c: Ctx, o: QOpts) => void, pre?: DrawFn): QDef {
   return {
     d: (c, o) => {
       c.save();
@@ -389,24 +390,41 @@ function cell(d: (c: Ctx, o: QOpts) => void): QDef {
       d(c, o);
       c.restore();
     },
+    ...(pre === undefined ? {} : { pre }),
   };
 }
 
-function glyphOf(id: string, doll: BossDoll | null): (c: Ctx, o: QOpts) => void {
-  if (id === "body") return doll === null ? (c) => bodyV1Glyph(c) : portraitGlyph(doll);
-  if (id === BACK_ICON) return (c, o) => COND["from_behind"]!.d(c, o);
-  return PART_GLYPH[id] ?? ((c) => bodyV1Glyph(c));
+/** 本體圖示用哪一種：巨型頭目（灰燼之心）整隻縮圖｜頭目小頭像｜沒有外觀時的米白人形。 */
+export type BossBodyKind = "giant" | "portrait" | "placeholder";
+
+/** 本體列的圖示種類（GB-4b：範本是灰燼之心時用整隻縮圖，不用頭像）。 */
+export function bossBodyKind(doll: BossDoll | null): BossBodyKind {
+  if (doll === null) return "placeholder";
+  return doll.template === GIANT_BOSS_TEMPLATE ? "giant" : "portrait";
+}
+
+function defOf(id: string, doll: BossDoll | null): QDef {
+  if (id === "body") {
+    const kind = bossBodyKind(doll);
+    if (kind === "giant") return cell(GIANT_BODY_GLYPH.d);
+    return cell(kind === "portrait" && doll !== null ? portraitGlyph(doll) : (c) => bodyV1Glyph(c));
+  }
+  if (id === BACK_ICON) return cell((c, o) => COND["from_behind"]!.d(c, o));
+  const giant = GIANT_PART_GLYPH[id]; // GB-4b：灰燼之心的熔岩噴口、殼縫、核心
+  if (giant !== undefined) return cell(giant.d, giant.pre);
+  return cell(PART_GLYPH[id] ?? ((c) => bodyV1Glyph(c)));
 }
 
 /** 部位圖示的圖樣（48 格；開發頁量「不帶外框」的像素用）。 */
 export function bossPartDef(id: string, doll: BossDoll | null = null): QDef {
-  return cell(glyphOf(id, doll));
+  return defOf(id, doll);
 }
 
 const icons = new Map<string, HTMLCanvasElement | null>();
 
 /** 快取鍵：圖示（部位 ID 或 `body`、`back`）、頭目外觀（只有本體用）、顯示邊長、內部解析度。 */
 export function bossPartIconKey(id: string, px: number, res: number, doll: BossDoll | null = null): string {
+  if (id === "body" && bossBodyKind(doll) === "giant") return `${id}|${px}|${res}|${GIANT_BOSS_TEMPLATE}`; // 灰燼之心只有一種本體圖
   return `${id}|${px}|${res}|${id === "body" && doll !== null ? JSON.stringify(doll) : ""}`;
 }
 
@@ -419,7 +437,7 @@ export function bossPartIcon(id: string, px: number, res: number, doll: BossDoll
   const key = bossPartIconKey(id, px, res, doll);
   const hit = icons.get(key);
   if (hit !== undefined) return hit;
-  const cv = render(cell(glyphOf(id, doll)), px, res, { ow: px <= 14 ? 0 : outlinePx(px) });
+  const cv = render(defOf(id, doll), px, res,{ ow: px <= 14 ? 0 : outlinePx(px) });
   icons.set(key, cv);
   return cv;
 }
@@ -437,6 +455,49 @@ export function grayIcon(cv: HTMLCanvasElement, a = 0.45): HTMLCanvasElement {
   x.globalAlpha = a;
   x.drawImage(cv, 0, 0);
   return c;
+}
+
+/** 已破壞的紅「×」顏色（樣張 `drawMenu` 的 `UI.danger`）。 */
+export const BROKEN_X = "#ff6a5a";
+
+/**
+ * 已破壞的紅「×」（外框色 3.4＋`BROKEN_X` 1.8、圓頭，20px 圖示內縮 3，其他大小照比例）：畫在邊長 `px`（CSS px）、
+ * 內部解析度 `res` 的畫布上。GB-4b 從 `ui/PartBar.tsx` 搬來，霧鎖真人與灰燼之心共用。
+ */
+export function drawBrokenX(c: Ctx, px: number, res: number): void {
+  c.save();
+  c.scale(res, res);
+  c.lineCap = "round";
+  const k = px / 20;
+  for (const [col, lw] of [
+    [OUT, 3.4],
+    [BROKEN_X, 1.8],
+  ] as const) {
+    c.strokeStyle = col;
+    c.lineWidth = lw;
+    c.beginPath();
+    c.moveTo(3 * k, 3 * k);
+    c.lineTo(17 * k, 17 * k);
+    c.moveTo(17 * k, 3 * k);
+    c.lineTo(3 * k, 17 * k);
+    c.stroke();
+  }
+  c.restore();
+}
+
+/**
+ * 部位圖示的四態（選單、部位條、角色卡共用）：一般＝原圖；打不到、未露出（`ok=false`）＝`grayIcon`；已破壞＝灰掉再壓紅「×」。
+ * 回傳 round(px×res) 的新畫布（畫不出圖示時空白）。GB-4b 從 `ui/PartBar.tsx` 搬來。
+ */
+export function bossPartStateIcon(id: string, px: number, res: number, ok: boolean, broken: boolean, doll: BossDoll | null = null): HTMLCanvasElement {
+  const base = bossPartIcon(id, px, res, doll);
+  const S = Math.round(px * res);
+  const out = blank(S, S);
+  if (base === null) return out;
+  const c = ctxOf(out);
+  c.drawImage(ok ? base : grayIcon(base), 0, 0);
+  if (broken) drawBrokenX(c, px, res);
+  return out;
 }
 
 /** 測試用：清掉快取。 */
