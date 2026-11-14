@@ -112,9 +112,10 @@ def test_summon_list_excludes_afterimage_and_prefers_matching_units() -> None:
         skill = compose_random_skill(
             seed, tier=2, rarity="epic", skeleton="summon", keyword="high_ground", library=lib
         )
-        unit = next(e.unit for e in skill.effects if e.type == "summon")
-        assert "high_ground" in unit_keywords(lib, unit)
-        assert 1 <= next(e.duration for e in skill.effects if e.type == "summon") <= 4
+        effect = next(e for e in skill.effects if e.type == "summon")
+        assert effect.unit is not None and effect.duration is not None
+        assert "high_ground" in unit_keywords(lib, effect.unit)
+        assert 1 <= effect.duration <= 4
 
 
 def test_common_still_has_no_summon() -> None:
