@@ -304,8 +304,18 @@ def _derive_prop(s: _Skill, skill: Mapping[str, Any], rules: IconArtRules) -> st
 
 
 def _derive_motion(s: _Skill, prop: str, rules: IconArtRules) -> str:
-    """出手：形狀 → 近戰武器（突刺／揮砍）→ 單體近距離揮砍 → 射出。吃最後決定的道具。"""
-    raw = s.shape.get("type")
+    """出手：形狀 → 近戰武器（突刺／揮砍）→ 單體近距離揮砍 → 射出。吃最後決定的道具。
+
+    延遲段的錨點不是自身（``followup.anchor``：``cast_tile``、``farthest_enemy``）時，招式實際砸在
+    別處，改用延遲段落下的形狀推導（GB-4b，美術 PM 11-14 移植需求 6.1：熔岩濺落 ``square3`` →
+    ``area``，不讀成自身增益）。"""
+    shape = s.shape
+    anchor = _text(s.followup.get("anchor"))
+    if s.followup.get("when") == "delayed" and anchor not in (None, "self", "caster"):
+        landed = _map(s.followup.get("shape"))
+        if landed:
+            shape = landed
+    raw = shape.get("type")
     kind = raw if isinstance(raw, str) else None
     if raw is None or kind is not None:
         found = rules.shape_motion.get(kind)
@@ -316,7 +326,7 @@ def _derive_motion(s: _Skill, prop: str, rules: IconArtRules) -> str:
         thrust = kind == "single" and prop.partition("/")[0] in rules.thrust_props
         return "thrust" if thrust else "swing"
     ranged_weapon = weapon and prop[2:].partition("/")[0] in rules.ranged_kinds
-    rng = s.shape.get("range")
+    rng = shape.get("range")
     near = rng is None or (isinstance(rng, int) and not isinstance(rng, bool) and rng == 1)
     if kind == "single" and near and not ranged_weapon:
         return "swing"

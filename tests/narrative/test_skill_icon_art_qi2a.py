@@ -327,6 +327,12 @@ def test_spark_is_the_first_variant_element(skill_id: str, spark: str | None) ->
 # ---- T-A2 --------------------------------------------------------------------------------------
 
 
+REFERENCE_OVERRIDES: dict[str, dict[str, str]] = {"skill_lava_splash": {"motion": "area"}}
+"""遊戲端刻意和參考實作（美術的 ``qskills_derive.py``，``docs/`` 不動）不同的欄位：GB-4b 的通用規則
+「延遲段錨點不是自身 → 用落下的形狀推導出手」（``GB巨型頭目-移植需求.md`` 6.1，美術 PM 11-14 不接受
+熔岩濺落讀成 ``aura``）。目前只有熔岩濺落（唯一 ``followup.anchor`` 不是自身的招）。"""
+
+
 def test_every_skill_matches_the_reference_implementation() -> None:
     """402 招：沒填 ``icon_prop`` 的與 ``derive()`` 五欄完全相同；有填的 ``prop`` ＝
     ``icon_prop``、``motion`` ＝ 用 ``icon_prop`` 重算、其餘相同；元素底等於 ``elements[0]``／
@@ -347,6 +353,7 @@ def test_every_skill_matches_the_reference_implementation() -> None:
             filled += 1
             want["prop"] = raw["icon_prop"]
             want["motion"] = ref.derive_motion(raw, raw["icon_prop"])
+        want.update(REFERENCE_OVERRIDES.get(skill_id, {}))
         assert icon.art is not None
         got = icon.art.model_dump()
         els = (icon.elements[:1] or (None,))[0], (icon.elements[1:2] or (None,))[0]
