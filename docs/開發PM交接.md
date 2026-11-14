@@ -46,7 +46,7 @@
 **2. 最後一次全量**：2026-11-14 e2bab3fe1 全過並 push（pytest 17682、vitest 4676、build 0），含 NW-3d（LLM 提議與技能工坊造牆物件改用組合器候選、1600 黑煙壓到 HUD 下）。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量；有 agent 在跑測試時全量常在 99% 卡死，盡量等 agent 都回來再跑。**
 
 **3. 執行中的 agent（分支）**：
-- BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。NW-3c、GB-4d、NW-3d 也已 push。LB-1／LB-1b（本機模型比較、Gemma 重測）已 push（報告 PhaseLB-1報告.md；重要發現：llm.toml 的 enable_thinking 在 LM Studio 無效，要 reasoning_effort=none）。LB-2（LLM 失敗診斷：記錄、schema 相容、溫度、prompt）已 push（d96b5a974，全量 pytest 17698、vitest 4676；改後重測因 GPU 沒載滿未跑）。LB-2b（Q12 被動引導、變奏開放 range_delta、改後重測、上手筆記的換模型規則）已 push（全量 pytest 17709、vitest 4676）；待決 2～3 轉玩法（3.0001），4～6 等玩法答覆後排 LB-2c。LB-CF（config 預設 Gemma＋reasoning_effort=none，實機確認完整技能格有 LLM 候選）、LB-2c（不要求就不給變奏、開放 self_on_high_ground、被動 schema 固定、Gemma 重測 15/18/2）已 push（全量 pytest 17721、vitest 4676）；LB-2c 待決 1（_topup_advice 沒套被動過濾）與 schema 上限餘裕等挑選模式提案結論；挑選模式提案（docs/phases/技能生成-挑選模式提案.md，第 7 節技術開發 PM 寫）等使用者答第 6 節 5 題；使用者「先補這個」：RC-0 組合器配方盤點已 push（cbc8380f6；真正的洞 82 空＋14 薄）；RC-1 補配方（照玩法 4.1.19：召喚主動、被動層數與條件、伴生／召喚物倒下、反應；另含組合器只用專屬規則認關鍵字）11-15 派出；Q4 評估題等使用者回覆（建議不改規則、只修評估題）；模型與 config 等使用者選；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
+- BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。NW-3c、GB-4d、NW-3d 也已 push。LB-1／LB-1b（本機模型比較、Gemma 重測）已 push（報告 PhaseLB-1報告.md；重要發現：llm.toml 的 enable_thinking 在 LM Studio 無效，要 reasoning_effort=none）。LB-2（LLM 失敗診斷：記錄、schema 相容、溫度、prompt）已 push（d96b5a974，全量 pytest 17698、vitest 4676；改後重測因 GPU 沒載滿未跑）。LB-2b（Q12 被動引導、變奏開放 range_delta、改後重測、上手筆記的換模型規則）已 push（全量 pytest 17709、vitest 4676）；待決 2～3 轉玩法（3.0001），4～6 等玩法答覆後排 LB-2c。LB-CF（config 預設 Gemma＋reasoning_effort=none，實機確認完整技能格有 LLM 候選）、LB-2c（不要求就不給變奏、開放 self_on_high_ground、被動 schema 固定、Gemma 重測 15/18/2）已 push（全量 pytest 17721、vitest 4676）；LB-2c 待決 1（_topup_advice 沒套被動過濾）與 schema 上限餘裕等挑選模式提案結論；挑選模式提案（docs/phases/技能生成-挑選模式提案.md，第 7 節技術開發 PM 寫）等使用者答第 6 節 5 題；使用者「先補這個」：RC-0 組合器配方盤點已 push（cbc8380f6；真正的洞 82 空＋14 薄）；RC-1 補配方（會出題的空格 102→32、薄 14→4；Q12 1～4 階 200/200；Q4 照使用者「A」只修評估題）已合併，待決 1～3 轉玩法；模型與 config 等使用者選；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
 > 11-13 清理：KW-2、RG-3、(e3f)(e3h)(e3i)(e3j)(e3k)(e3l)(e3m)(e3) 都已做完（RG-7、RG-8、FL-1h 合併；其中 (e3k) 已在 AF-1、(e3l) 已在 RG-4、PNL-4 可修 2 已在 LW-2b，派工前先 grep 報告確認沒做過）。
@@ -80,6 +80,8 @@
 
 | 給誰 | 來源 | 要做的事 | 細節在 |
 |---|---|---|---|
+| 玩法 PM | RC-1 待決 1～3（請一次答齊，牽涉規則） | (1) `summon_beside`（伴生、護主）沒有關鍵字推導規則，所以帶不到「召喚物」關鍵字；要不要補推導規則？(2) 被動的「召喚物倒下時」要改引擎，還要放寬 sacrifice_summon 只准主動技能用的驗證；做不做？(3) 效果作用在自己、又帶目標型條件（倒地、標記、潮濕、比高）的被動，要改引擎判斷條件的對象；做不做，對象怎麼定？ | `docs/phases/PhaseRC-1報告.md` 待 PM 決定 |
+| 玩法 PM | RC-1 待決 8（知會） | 指定關鍵字、不指定骨架時，組合器交出被動或反應的比例變高（例：標記／主動／epic 1 階合法 185 → 116，因為被動、反應也做得出標記了）。不是洞；要不要限制種類比例由玩法看 | 同上 |
 | 玩法 PM | CW-1 | 平衡疑慮（沒量）：原本開場就有的永久水現在要先打破井；AI 不會專門打井；(3, 4)、(7, 4) 兩口井的 3×3 會鋪到餘燼蜥腳下與殼縫攻擊位；熔心坑 12 場裡 8 場打破至少一口井 | `docs/phases/PhaseCW-1報告.md` 平衡疑慮 |
 | 玩法 PM | GB-3 | 熔心坑改後 12 場都是敵方勝（改前 11 敵 1 我）；平衡疑慮：蜥蜴追遠＋熔岩濺落打最遠的人、殼縫更早破、近戰集中在兩側（都沒量），請記平衡待查 | `docs/phases/PhaseGB-3報告.md` 第 4、10 節 |
 
