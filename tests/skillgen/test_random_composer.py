@@ -210,7 +210,7 @@ def test_no_harmful_status_or_surface_is_aimed_at_allies() -> None:
             if effect.type == "apply_status":
                 assert effect.status is not None and statuses[effect.status].beneficial
             if _wet_passive_puddle(skill, effect):
-                continue  # 06 6.34.1 3W-4b：潮濕被動「被攻擊後，在自己腳下造水」（RC-1 配方）
+                continue  # 06 6.34.1 3W-4b：潮濕被動「被攻擊後，在自己腳下造水」（RC-1 配方；2026-11-15 使用者「A」保留這條放行）
             if effect.type == "create_surface":
                 assert effect.surface is not None and surfaces.get(effect.surface).beneficial
 
