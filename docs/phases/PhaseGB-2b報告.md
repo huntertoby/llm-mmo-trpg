@@ -127,3 +127,18 @@ GB-2 卡在兩處：聚集段第一段形狀只收 `cross`／`square3`／`ring`�
 - 待決 3 平衡觀察、待決 4 圖示動作變更（熔心吸氣 spin → area、熔岩濺落 area → aura）分別轉玩法 PM、美術 PM。
 - 待決 5：蜥蜴出生格 (2, 3)、(8, 3) 接受（蜥蜴是火屬性敵人）。
 - 待決 6：`LOG_FORMAT` 不升（結算程式沒改，規則包雜湊本來就會擋舊紀錄重播）。
+
+## 10. GB-2c（使用者選 B）
+
+使用者對待決 1 回「B」（開發 PM 轉，原話「B」）：閃現強化的空間檢查改成照 `enemy_only` 判斷，不再寫死名單。
+
+- 只改 `tests/skillgen/test_flash_bal10b.py`：拿掉 `NO_ROOM_AT_BASE_TIER`（熔岩濺落、熔心吸氣都是 `enemy_only`），加 helper `_checks_base_tier(skill)`＝`not skill.enemy_only`。`test_followup_potency_only_raises_the_followup` 對敵人專用招只驗 3 階（和舊名單的做法相同），玩家招照舊驗原階＋3 階。
+- 被檢查的招（`_damaging_compounds()`，17 招，其中玩家招 7、敵人專用招 10）：
+
+| | 參數化的招 | 驗原階 | 只驗 3 階 | 玩家招驗原階 |
+|---|---|---|---|---|
+| 改前（GB-2b） | 17 | 15 | 2（熔岩濺落、熔心吸氣） | 7／7 |
+| 改後（GB-2c） | 17 | 7 | 10（全部 `enemy_only`） | 7／7 |
+
+  多跳過原階的 8 招全是敵人專用招（熔心爆、熔岩噴口、岩漿破口、霧鎖千山、裂隙脈衝三招、裂隙粉碎）；**沒有任何非 `enemy_only` 的招被跳過**，3 階檢查 17 招都還在。
+- 驗證：`tests/skillgen` 裡跟閃現有關的 25 檔（`*flash*.py`）703 passed；`ruff check`、`ruff format --check`、`mypy` 都通過。
