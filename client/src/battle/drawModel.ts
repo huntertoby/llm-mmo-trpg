@@ -180,6 +180,15 @@ export function drawOccupies(u: Pick<UnitDraw, "x" | "y" | "footprint" | "tiles"
   return (u.tiles ?? []).some((t) => t.x === p.x && t.y === p.y);
 }
 
+/**
+ * GB-4c（美術 GB-4b 可修 1）：滑過的格子白框——滑到還站著的巨型頭目的佔格上不畫（交給部位框與 3×3 目標紅框），
+ * 其他照舊（`null`＝不畫）。1 格單位不受影響。
+ */
+export function hoverCellFrame(units: readonly Pick<UnitDraw, "x" | "y" | "footprint" | "tiles" | "downed">[], hover: Pos | null): Pos | null {
+  if (hover === null) return null;
+  return units.some((u) => isGiantDraw(u) && !u.downed && drawOccupies(u, hover)) ? null : hover;
+}
+
 export interface TrapDraw {
   x: number;
   y: number;

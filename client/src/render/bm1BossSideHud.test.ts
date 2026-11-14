@@ -4,7 +4,7 @@ import { CanvasTextMetrics, Container, RenderLayer, Texture } from "pixi.js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import type { BattleView, PartView, UnitView } from "../api/types";
 import { buildDrawModel, unitDrawOf, type UnitDraw } from "../battle/drawModel";
-import { HP_W, HP_Y, stripLayout } from "../battle/partStrip";
+import { HP_W, HP_Y } from "../battle/partStrip";
 import { smallView, tile, unit } from "../battle/testFixtures";
 import dolls from "./fixtures/unitDolls.json";
 import type { ArtTextures } from "./artTextures";
@@ -13,6 +13,7 @@ import { BOSS_SIDE_GAP_PX, bossSideHudOn, sideBadgeLayouts, sideBlock, sideRowSh
 import { applyMarkScale, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, STATUS_ROW_LABEL, unitMarksOf } from "./minMark";
 import { RowStack } from "./rowLayers";
 import { COMPACT_ROW_MAX_SCALE, NO_EDGE } from "./rowLayout";
+import { TILE_SIZE as T } from "../battle/geometry";
 import { bossHudDy, buildUnitSprite, isGiantUnit, Pulses, rowShapesOf, SHIELD_OUTLINE } from "./unitSprite";
 
 const art = { figure: () => Texture.WHITE, creature: () => Texture.WHITE, summon: () => Texture.WHITE, dollFx: () => null, canvas: () => null, figureRes: () => 2 } as unknown as ArtTextures;
@@ -62,17 +63,30 @@ describe("什麼時候用兩側排法", () => {
 
 describe("800 寬：狀態列在 HP 條右邊、徽章在左邊", () => {
   const s = 0.53;
-  it("狀態列整排在 HP 條右緣外（空隙畫面 2 px），垂直置中對齊 HP 條＋部位小格；不蓋到身體（HP 條上方）", () => {
+  it("狀態列整排在 HP 條右緣外（空隙畫面 2 px）；GB-4c：下緣對齊 HP 條上緣（讓出鄰居的 HP 條）", () => {
     const { sh } = laidOut(drawOf(), s);
     const sp = span(sh.boxes);
     expect(sp.l).toBeGreaterThanOrEqual(HP_W / 2 + BOSS_SIDE_GAP_PX / s - 1e-6);
-    const mid = (HP_Y + stripLayout(3, s).bottom) / 2;
-    expect((sp.t + sp.b) / 2).toBeCloseTo(mid, 5);
+    expect(sp.b).toBeCloseTo(HP_Y - BOSS_SIDE_GAP_PX / s, 5);
     // 精簡列：1 個圖示＋「+N」膠囊（3 個狀態不再被擠成只留「+3」）
     expect(sh.cap).not.toBeNull();
     expect(sh.boxes.length).toBe(2);
   });
-  it("蓄力徽章在 HP 條左緣外，圓心對齊同一條中線、數字在左下", () => {
+  it("GB-4c：「+N」膠囊疊在圖示右下角（不另佔右邊），東側伸出格子約 0.5 格以內", () => {
+    const { sh } = laidOut(drawOf(), s);
+    const icon = sh.boxes.find((b) => b !== sh.cap)!;
+    const cap = sh.cap!;
+    expect(cap.l).toBeLessThan(icon.r);
+    expect(cap.t).toBeLessThan(icon.b);
+    expect(cap.r).toBeGreaterThan(icon.r);
+    expect(span(sh.boxes).r - T / 2).toBeLessThanOrEqual(0.55 * T); // 約 0.5 格（原本約 1 格）
+  });
+  it("GB-4c：2 個狀態也收成 1 個圖示＋「+1」", () => {
+    const { sh } = laidOut(drawOf({ statuses: ["mist_return", "burning"].map(st) } as Partial<UnitView>), s);
+    expect(sh.boxes.length).toBe(2);
+    expect(sh.cap).not.toBeNull();
+  });
+  it("蓄力徽章在 HP 條左緣外、數字在左下；GB-4c：下緣（含數字）對齊 HP 條上緣", () => {
     const { charge } = laidOut(drawOf(), s);
     const b = sideBlock(drawOf(), s, SHIELD_OUTLINE, NO_EDGE);
     const lay = sideBadgeLayouts([{ kind: "charge", at: { x: 0, y: 0 }, digits: 1 }], s, b)[0]!;
@@ -81,6 +95,7 @@ describe("800 寬：狀態列在 HP 條右邊、徽章在左邊", () => {
     expect(charge.position.y).toBeCloseTo(lay.at.y);
     const shape = badgeShapes("charge", lay.at, lay.sc, 1, "bl");
     expect(Math.max(shape.circle.x + shape.circle.r, shape.box!.r)).toBeCloseTo(-HP_W / 2 - BOSS_SIDE_GAP_PX / s, 5);
+    expect(Math.max(shape.circle.y + shape.circle.r, shape.box!.b)).toBeCloseTo(HP_Y - BOSS_SIDE_GAP_PX / s, 5);
   });
   it("站最右欄：左右對調（狀態列在左、徽章在右）", () => {
     const { sh, charge } = laidOut(drawOf({}, 3), s, { left: false, right: true });
@@ -133,7 +148,8 @@ describe("3×3 巨型灰燼之心同一套", () => {
     // 形狀是未加 `bossHudDy` 的本地座標；節點本身再加（整組在 3×3 頂上）
     expect(row.position.y).toBeLessThan(span(sh.boxes).b + dy + 1e-6);
     expect(charge.position.x).toBeLessThan(-HP_W / 2);
-    expect(charge.position.y).toBeCloseTo((HP_Y + stripLayout(3, 0.531).bottom) / 2 + dy, 5);
+    expect(span(sh.boxes).b).toBeCloseTo(HP_Y - BOSS_SIDE_GAP_PX / 0.531, 5); // GB-4c：下緣對齊 HP 條上緣
+    expect(charge.position.y).toBeLessThan(HP_Y + dy);
     expect(span(laidOut(u, 1.308).sh.boxes).b).toBeLessThanOrEqual(HP_Y + 1e-6);
   });
 });

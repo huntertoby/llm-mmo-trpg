@@ -454,7 +454,7 @@
   {
    "id": "cooling_well",
    "name_zh": "冷卻井",
-   "description_zh": "打破後井水漫出，周圍 3×3 變成水面。",
+   "description_zh": null,
    "tags": [
     "blocks_move",
     "breakable"

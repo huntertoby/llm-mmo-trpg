@@ -75,7 +75,7 @@ export class BattleRenderer extends VfxLayer {
     stage.addChild(this.world);
     // 6F-6：地上的特效在 groundFx（裁在地圖矩形內，`mapClip.ts`），其他特效與浮動字在 effects（不裁）
     this.groundFx.mask = this.groundMask;
-    this.world.addChild(this.rows.root, this.marks, this.attackTop, this.arrowTop, this.ambient.root, this.silhouettes, this.hudTop, this.hover, this.headMarks, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
+    this.world.addChild(this.rows.root, this.marks, this.attackTop, this.giantMarkTop, this.arrowTop, this.ambient.root, this.silhouettes, this.hudTop, this.hover, this.headMarks, this.groundMask, ...EFFECT_LAYER_ORDER.map((id) => this.effectLayer(id)));
     // 6R-F（前端審查第 2 點）：銷毀貼圖前先看畫面上活著的 Sprite 還拿著哪些（安全網）
     this.art.setLiveProbe(() => liveSpriteTextures(stage));
     if (import.meta.env.DEV) (window as unknown as { __texStats?: () => ReturnType<ArtTextures["stats"]> }).__texStats = () => this.art.stats();

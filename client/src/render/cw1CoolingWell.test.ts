@@ -39,12 +39,13 @@ describe("畫法登記與字", () => {
     expect(objectStyle("cooling_well").glyph).toBe("井");
   });
 
-  it("格子資訊卡：名稱、HP，說明放在規則前面（玩法 PM 定的字）", () => {
+  it("格子資訊卡：名稱、HP；GB-4c 起沒有說明句，只留規則行（含「不放頭目格」；玩法PM交接 4.1.13）", () => {
     const view = smallView({ objects: [object("o1", "cooling_well", 2, 0, { hp: 15, max_hp: 15 })] });
     const obj = tileSections(view, { x: 2, y: 0 }, {}).find((s) => s.kind === "object");
     expect(obj?.title).toBe("冷卻井・HP 15/15");
-    expect(obj?.lines[0]).toBe("打破後井水漫出，周圍 3×3 變成水面。");
-    expect(obj?.lines[1]).toBe("不可通行・可被破壞");
+    expect(obj?.lines[0]).toBe("不可通行・可被破壞");
+    expect(obj?.lines.some((l) => l.includes("打破後井水漫出"))).toBe(false);
+    expect(obj?.lines.some((l) => l.includes("漏出水，範圍 3×3") && l.includes("不放在巨型頭目佔的格子上"))).toBe(true);
   });
 
   it("幾何：上緣 15.5 不高於殘牆壓頂石 15.6；最低點在耐久條 43.7 之上；受損小灘不貼格邊", () => {

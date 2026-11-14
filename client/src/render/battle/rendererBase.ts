@@ -53,6 +53,11 @@ export abstract class RendererBase {
   protected readonly marks = new Container();
   /** HID-1b：被南邊高台、屋頂擋住的格子的攻擊紅框（看得到框；一般的框在該排 `RowLayer.frames`，單位之下）。在 `marks` 之上、`hudTop` 之下。 */
   protected readonly attackTop = new Container();
+  /**
+   * GB-4c：3×3 巨型頭目的部位格標示（括號、滑過亮起、紅×、背刺記號；`partTileMarks.ts`）。在 `attackTop` 之上：
+   * 巨型頭目的目標紅框（`attackTop`）在標示層內排最底、不壓滑過框（美術 GB-4b 待決 1 裁定）。
+   */
+  protected readonly giantMarkTop = new Container();
   /** 目前的攻擊紅框格子（`rows.reset` 後 `draw` 重畫要用）。 */
   protected attackCells: readonly Pos[] = [];
   /** 6F-21b：朝南的三角形（南邊那格沒人站時）畫在移動格（`marks`）與崖面之上。 */
