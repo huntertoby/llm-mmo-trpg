@@ -24,12 +24,15 @@ NOTE = "出手更順，用得更多。"
 
 
 def _picker(request: FlashRequest, slots: Sequence[FlashSlot], seed: int) -> MockLLMClient:
-    """每格挑最後一個候選並寫同一句描述。"""
-    body = {
-        f"s{s.index}": {"pick": len(s.candidates) - 1 if not s.fixed else 0, "note_zh": NOTE}
-        for s in slots
-    }
+    """每格挑最後一個同類的候選並寫同一句描述（PK-4 起候選可能借別類；借來的不挑，類別混合不變）。"""
+    body = {f"s{s.index}": {"pick": _last_own(s), "note_zh": NOTE} for s in slots}
     return MockLLMClient([json.dumps(body, ensure_ascii=False)] * 3)
+
+
+def _last_own(slot: FlashSlot) -> int:
+    if slot.fixed:
+        return 0
+    return max(i for i, c in enumerate(slot.candidates) if c.variation.category == slot.category)
 
 
 def test_picks_and_notes_reach_the_offer_the_log_and_the_save(
@@ -48,7 +51,7 @@ def test_picks_and_notes_reach_the_offer_the_log_and_the_save(
         opened = apply_choice(lib, run, FlashChoice(skill=skill))
     (record,) = opened.flash_llm_log
     assert record.picks and len(record.picks) == len(record.accepted)
-    assert record.prompt_version == "flash-pick/1"
+    assert record.prompt_version == "flash-pick/2"
     assert record.texts and all(t.note_zh == NOTE for t in record.texts)
     offer = opened.pending_flash.offer  # type: ignore[union-attr]
     assert [o.variation.key() for o in offer.options] == [v.key() for v in record.accepted]

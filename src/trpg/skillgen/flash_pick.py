@@ -11,6 +11,9 @@
 2. **候選（程式）**：每格的第一個候選就是原本出題的那一個；其餘依同一類的用法統計排序
    （``FlashOptionSource.ranked``）往下取合格的變化（套得上、過強度下限），同一類的幾格輪流分，
    格與格之間不重複，每格最多 ``pool.flash_top_k`` 個。轉型保底那一格固定（只有那一個）。
+   PK-4（06 6.34.7，玩法 PM 4.1.25 題 1 B）：**不指定類別**時，還沒滿的格子再從其他可用類別借
+   （不重複）；挑完後 :func:`keep_mix` 守住「混合至少 2 類」（不夠時從後面的格子改回第一個）。
+   指定類別照舊只出那一類。
 3. **挑選（LLM）**：來源的 :meth:`PickingSource.pick` 為每格挑一個位置、給文字（描述；大變化與轉型
    另有名稱）。位置超出範圍、固定格挑了別的，一律當第一個。
 4. 選中的變化掛上文字（:func:`~trpg.skillgen.flash_text.clean_text`）後重新套用一次（文字影響
@@ -37,6 +40,7 @@ __all__ = [
     "PickingSource",
     "SlotOption",
     "flash_pick_on",
+    "keep_mix",
     "picks_by_key",
 ]
 
@@ -108,3 +112,33 @@ def picks_by_key(slots: Sequence[FlashSlot], accepted: Sequence[Variation]) -> t
         next((i for i, c in enumerate(slot.candidates) if c.variation.key() in keys), 0)
         for slot in slots
     )
+
+
+def keep_mix(
+    slots: Sequence[FlashSlot], positions: Sequence[int], min_categories: int
+) -> tuple[int, ...]:
+    """PK-4（06 6.34.7「程式只守住混合至少涵蓋 2 類」）：每格的位置（超出範圍、固定格挑了別的＝0）；
+    選中的變化（轉型保底不算）涵蓋的類別比原本出題（每格第一個）少、而且少於 ``min_categories`` 時，
+    從後面的格子起把借來的候選改回第一個，直到夠為止（全部改回＝原本那一份，一定夠）。"""
+    out = [
+        p
+        if i < len(positions) and 0 <= (p := positions[i]) < len(s.candidates) and not s.fixed
+        else 0
+        for i, s in enumerate(slots)
+    ]
+
+    def categories(chosen: Sequence[int]) -> int:
+        return len(
+            {
+                s.candidates[p].variation.category
+                for s, p in zip(slots, chosen, strict=True)
+                if not s.fixed
+            }
+        )
+
+    need = min(min_categories, categories([0] * len(slots)))
+    for i in reversed(range(len(slots))):
+        if categories(out) >= need:
+            break
+        out[i] = 0
+    return tuple(out)
