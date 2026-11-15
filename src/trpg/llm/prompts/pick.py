@@ -18,6 +18,7 @@ from trpg.llm.prompts.escape import escape_text
 from trpg.llm.prompts.world import WorldStyle, load_world_style
 
 __all__ = [
+    "AVOID_WORDS",
     "PICK_PROMPT_VERSION",
     "build_pick_messages",
     "pick_prompt_record",
@@ -25,7 +26,31 @@ __all__ = [
 ]
 
 # 改動任何挑選 prompt 文字、區塊格式時必須同步改版本號（快照測試會檢查）。
-PICK_PROMPT_VERSION = "skill-pick/1"
+PICK_PROMPT_VERSION = "skill-pick/2"
+"""``skill-pick/2``（PK-1b）：卡片多 ``fit``（和玩家手上技能的關係）、名稱與描述避開濫用詞。"""
+
+AVOID_WORDS: tuple[str, ...] = (
+    "印記",
+    "沉重",
+    "震盪",
+    "頻率",
+    "強行",
+    "瞬間",
+    "能量",
+    "灼熱",
+    "烙印",
+    "餘燼",
+    "熾熱",
+    "刻印",
+    "劇烈",
+    "磨滅",
+    "痕跡",
+    "無形",
+    "殘餘",
+)
+"""PK-1b：之前的 LLM 技能文字裡用得最多的詞（PK-1 與 LB 系列資料的名稱、概念、施放描述去重後
+567 段，各詞出現的段數 46～12；統計見 ``docs/phases/PhasePK-1b報告.md``）。prompt 要求避開；
+不是檢查（不會因此退回）。"""
 
 PICK_TASK = """任務：資料區 <candidates> 是遊戲已經做好、全部合法的技能候選（每張有編號 index）。
 從裡面挑一張最適合這位玩家的，並為它取名、寫兩段短文字。
@@ -33,13 +58,16 @@ PICK_TASK = """任務：資料區 <candidates> 是遊戲已經做好、全部合
 - pick：你挑的候選的 index（整數）。只能挑，不能修改候選的任何效果、數值或結構。
 - 挑選時看 <request>（這次要的技能：階級、種類、關鍵字、取得地點的風格）與 <player>
   （玩家手上的技能與它們的關鍵字）：優先挑和玩家手上技能能互相配合、主題一致的；
-  都差不多時挑效果最有特色的。候選已經依適合程度排過，index 越小越適合，不確定就挑 0。
+  候選的 fit 寫了它和玩家手上技能的關係（配合的關鍵字、同元素、共同的關鍵字），沒有 fit 代表
+  沒有直接關係。都差不多時挑效果最有特色的。候選已經依適合程度排過，index 越小分數越高。
 - name_zh：你挑的那張的技能名稱，最多 {name_max} 個字，只能用全形中文字（可用「・」與全形括號），
   不可有英文、數字、空白或符號。句式多樣：兩字、三字、四字、『X之Y』混用，不要都用『X・Y』。
   不可以用「施主」，也不要取「某某訣」這種名字。
 - concept：技能概念，一句話，最多 {concept_max} 個字，全形中文。
 - cast_flavor：施放時的描述，一句話，最多 {flavor_max} 個字，全形中文，語氣符合世界觀。
 候選有 fixed_name 時，它是已經有名字的固定技能：挑它時 name_zh 照抄 fixed_name。
+這些詞已經用得太多：{avoid_words}。name_zh 不要用，concept 與 cast_flavor 也盡量不用，
+改寫具體的動作、器物或景象。
 名稱與兩段文字只描述你挑的那張卡片 effects 裡有的效果：不要提到它沒有的控制
 （例如遲緩、定身、暈眩、倒地、擊退、拉近）、元素（例如火、冰、雷、毒、風、大地、神聖、暗影）
 或召喚物；不要在文字中提到數值、代號、欄位名稱或標籤。
@@ -89,6 +117,7 @@ def _system_prompt(world: WorldStyle) -> str:
         prefix_chars="".join(f"「{c}」" for c in terms.name_prefix_chars) or "世界觀詞",
         name_terms=terms.name_max,
         text_terms=terms.text_max,
+        avoid_words="、".join(AVOID_WORDS),
     )
     head = render_system_prompt(world, text=True).split("\n任務：", 1)[0]
     return f"{head}\n\n{task}"

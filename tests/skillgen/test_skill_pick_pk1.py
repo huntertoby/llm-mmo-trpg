@@ -166,14 +166,19 @@ def test_rank_prefers_diverse_designs_and_breaks_ties_by_order() -> None:
 
 
 def test_workshop_weights_change_the_order() -> None:
-    """數值工坊改權重後排序跟著變：手寫技能加分很大時，手寫技能排第一。"""
+    """數值工坊改權重後排序跟著變：手寫技能加分很大時，手寫技能排第一。PK-1b 起預設不放手寫技能
+    （``pool.handwritten_max`` 0），這裡開到 1 再比。"""
     lib = _lib()
-    default = pick_slate(lib, KEYWORD, _ctx(KEYWORD), seed=5)
-    assert any(
-        c.source == "pool" for c in candidate_pool(lib, KEYWORD, _ctx(KEYWORD), seed=5).candidates
+    allowed = lib.skill_pick.model_copy(
+        update={"pool": lib.skill_pick.pool.model_copy(update={"handwritten_max": 1})}
     )
-    boosted = lib.skill_pick.model_copy(
-        update={"weights": lib.skill_pick.weights.model_copy(update={"pool_bonus": 100_000})}
+    default = pick_slate(lib, KEYWORD, _ctx(KEYWORD), seed=5, rules=allowed)
+    assert any(
+        c.source == "pool"
+        for c in candidate_pool(lib, KEYWORD, _ctx(KEYWORD), seed=5, rules=allowed).candidates
+    )
+    boosted = allowed.model_copy(
+        update={"weights": allowed.weights.model_copy(update={"pool_bonus": 100_000})}
     )
     changed = pick_slate(lib, KEYWORD, _ctx(KEYWORD), seed=5, rules=boosted)
     assert changed.ranked[0].source == "pool"

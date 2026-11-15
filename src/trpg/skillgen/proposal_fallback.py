@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from typing import Any, Literal
 
 from trpg.content.library import ContentLibrary
@@ -110,7 +110,12 @@ def _from_composer(
 
 
 def _from_pool(
-    library: ContentLibrary, request: ProposalRequest, ctx: ProposalContext, seed: int
+    library: ContentLibrary,
+    request: ProposalRequest,
+    ctx: ProposalContext,
+    seed: int,
+    *,
+    exclude: frozenset[str] = frozenset(),
 ) -> SkillDef | None:
     kind = wanted_kind(library, request)
     options = [
@@ -118,6 +123,7 @@ def _from_pool(
         for skill in player_skills(library).values()
         if skill.tier == ctx.tier
         and skill.rarity == ctx.rarity
+        and skill.id not in exclude
         and fits_request(skill, request, kind, library)
     ]
     return Rng(seed).fork("fallback.pool").choice(options) if options else None
@@ -303,14 +309,24 @@ def fallback_skill(
     *,
     seed: int,
     skip_composer: bool = False,
+    exclude_ids: Collection[str] = (),
 ) -> tuple[SkillDef, FallbackSource]:
     """依序試組合器、技能池、工坊推導；回傳（技能, 來源）。都失敗時丟 :class:`FallbackError`。
 
     ``skip_composer``（Phase PK-1）：挑選模式的候選池已經抽過組合器（0 個合法候選）時，直接從技能池
-    開始（提案 7.6「組合器 0 個照現行退：技能池 → 工坊」）。預設＝原行為。"""
+    開始（提案 7.6「組合器 0 個照現行退：技能池 → 工坊」）。預設＝原行為。
+
+    ``exclude_ids``（Phase PK-1b）：技能池不選這些 ID（挑選模式：玩家手上已有的技能）。預設空＝原
+    行為（亂數串流不變）。"""
+
+    def pool(
+        lib: ContentLibrary, req: ProposalRequest, c: ProposalContext, s: int
+    ) -> SkillDef | None:
+        return _from_pool(lib, req, c, s, exclude=frozenset(exclude_ids))
+
     sources: tuple[tuple[FallbackSource, _Source], ...] = (
         ("composer", _from_composer),
-        ("pool", _from_pool),
+        ("pool", pool),
         ("workshop", _from_workshop),
     )
     for name, source in sources[1:] if skip_composer else sources:

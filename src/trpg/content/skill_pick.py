@@ -28,6 +28,14 @@ class PickPoolRules(ContentModel):
     """送給 LLM 的候選數（提案第 6 節第 2 題 A：每格 4～6 個）。"""
     min_for_llm: int = Field(default=2, ge=1, le=8)
     """候選少於這個數就不呼叫 LLM，直接用第一名（提案 7.6）。"""
+    handwritten_max: int = Field(default=0, ge=0, le=1)
+    """PK-1b：送給 LLM 的候選裡最多幾個手寫技能（技能池）；0＝完全不放（只在候選池是空的時候照現行
+    退回技能池）。玩家手上已有的技能不論這裡設多少都不會進候選。"""
+    element_seeds: int = Field(default=40, ge=0, le=400)
+    """PK-1b：玩家手上有元素技能、而候選池裡同元素的設計少於 ``element_designs`` 個時，另外用獨立的
+    亂數串流再抽最多這麼多個種子，只收和玩家同元素的新設計；0＝不補抽。"""
+    element_designs: int = Field(default=4, ge=0, le=40)
+    """PK-1b：候選池裡和玩家同元素的設計至少要有幾個（不夠才補抽，補到這個數就停）。"""
 
     @model_validator(mode="after")
     def _check(self) -> PickPoolRules:
@@ -39,10 +47,31 @@ class PickPoolRules(ContentModel):
 class PickWeights(ContentModel):
     """打分權重（分數＝各項的加權和；全部是整數點數）。"""
 
-    synergy_per_link: int = Field(default=300, ge=0)
-    """協同：候選製造的關鍵字有一招手上的技能利用（或反過來），每一條連線加這麼多。"""
-    synergy_max_links: int = Field(default=3, ge=0)
+    synergy_per_link: int = Field(default=150, ge=0)
+    """協同：候選製造的關鍵字有一招手上的技能利用（或反過來），每一條連線（手上技能 × 關鍵字 ×
+    方向）加這麼多（PK-1b 起 300 → 150、上限 3 → 5，讓條數拉開差距）。"""
+    synergy_max_links: int = Field(default=5, ge=0)
     """協同最多算幾條連線。"""
+    keyword_make: int = Field(default=80, ge=0)
+    """PK-1b 關鍵字貼合：題目要的關鍵字，候選是「製造」它的，每個加這麼多。"""
+    keyword_use: int = Field(default=40, ge=0)
+    """PK-1b 關鍵字貼合：題目要的關鍵字，候選是「利用」它的，每個加這麼多（兩者都有就兩項都加）。"""
+    keyword_extra_penalty: int = Field(default=30, ge=0)
+    """PK-1b 關鍵字貼合：候選另外帶的關鍵字既不是題目要的、玩家手上也沒有，每個扣這麼多
+    （主題分散）。"""
+    theme_per_keyword: int = Field(default=60, ge=0)
+    """PK-1b 主題相合：候選帶的關鍵字（題目要的以外）玩家手上的技能也有，每個加這麼多。"""
+    theme_max_keywords: int = Field(default=3, ge=0)
+    """PK-1b 主題相合最多算幾個關鍵字。"""
+    element_match: int = Field(default=150, ge=0)
+    """PK-1b 元素相合：玩家手上每有一招和候選同元素的技能，加這麼多。"""
+    element_match_max: int = Field(default=2, ge=0)
+    """PK-1b 元素相合最多算幾招手上的技能。"""
+    element_any: int = Field(default=40, ge=0)
+    """PK-1b：候選有元素（不是物理）就加這麼多（有元素的招，名稱與描述比較有主題感）。"""
+    odd_condition_penalty: int = Field(default=200, ge=0)
+    """PK-1b：候選帶「怪條件」（第一輪才生效的非傷害效果、有條件的刻紋等；
+    ``trpg.skillgen.skill_pick.odd_conditions``），每一處扣這麼多。只影響挑選的排序，不改合法判定。"""
     behavior_per_point: int = Field(default=20, ge=0)
     """打法：候選帶的關鍵字與玩家用過的動作相符，每 1 次加這麼多（``skill_keywords.yaml`` 的
     ``actions``）。"""
