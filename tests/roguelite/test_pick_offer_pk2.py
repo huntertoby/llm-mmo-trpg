@@ -21,13 +21,14 @@ from trpg.skillgen.candidates import CandidateRules, LlmTrace, follows_attr, ski
 from trpg.skillgen.pick_offer import (
     MAX_OFF_ROUTE,
     OfferPicker,
+    PickedSlot,
     SlotChoice,
     SlotPick,
     pick_slots,
     same_structure,
 )
 from trpg.skillgen.pick_player import PickPlayer
-from trpg.skillgen.skill_pick import design_key, is_nondamage
+from trpg.skillgen.skill_pick import PickCandidate, design_key, is_nondamage
 
 CASES = (("build_push", 0), ("build_fire", 1), ("build_ranged", 0), ("build_healer", 1))
 """固定的 build 與種子（不用 hypothesis 跑候選池：完整技能每份要 1～6 秒）。"""
@@ -154,11 +155,17 @@ def test_slate_entries_satisfy_the_slot_and_nondamage_slot() -> None:
             for c in slot.slate.ranked:
                 base = slot.original.skill
                 assert _family(c.skill.kind, True) == _family(base.kind, True)
-                # PK-3：不符合這一格路線的候選一定帶 route_off 扣分（新方向要不同屬性）
+                # PK-3：不符合這一格路線的候選一定帶 route_off 扣分（加深、橋接要跟主路線；
+                # 新方向照原本那一張），而且排在符合的後面
                 follows = follows_attr(c.skill, top, request.weapon_attrs)
+                if slot.original.kind == "new":
+                    fits = follows == follows_attr(base, top, request.weapon_attrs)
+                else:
+                    fits = follows
                 parts = dict(c.parts)
-                if follows == (slot.original.kind == "new"):
+                if not fits and c.skill.id != base.id:
                     assert parts.get("route_off", 0) < 0
+                    assert all(dict(x.parts).get("route_off", 0) < 0 for x in after(slot, c))
                 if slot.original.keywords:
                     assert _slot_keywords_ok(lib, c.skill, slot.original.keywords)
                     if not skill_has_keywords(c.skill, slot.original.keywords, lib):
@@ -168,6 +175,12 @@ def test_slate_entries_satisfy_the_slot_and_nondamage_slot() -> None:
         if any(s.nondamage for s in slots):
             offer = make_offer(lib, run, "level_up", pick=True)
             assert any(is_nondamage(s) for s in offer.candidates)
+
+
+def after(slot: PickedSlot, candidate: PickCandidate) -> list[PickCandidate]:
+    """排在 ``candidate`` 後面的候選。"""
+    ranked = list(slot.slate.ranked)
+    return ranked[ranked.index(candidate) + 1 :]
 
 
 def test_picker_cannot_change_structure() -> None:

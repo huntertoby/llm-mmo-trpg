@@ -5,13 +5,14 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
 from tests.api.conftest import ClientFactory
+from tests.engine.helpers import lf2_library
 from tests.roguelite.helpers import library as run_library
 from tests.roguelite.test_flash_llm_run import _gear, _ready
 from trpg.api.flash_text import option_llm_text
@@ -19,7 +20,7 @@ from trpg.api.llm_source import MockLlmProvider
 from trpg.api.run_presenter import pending_flash_out
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
-from trpg.llm import flash_propose
+from trpg.llm import flash_pick, flash_propose
 from trpg.llm.client import MockLLMClient
 from trpg.llm.flash_propose import LlmFlashSource, mock_flash_client
 from trpg.roguelite import apply_choice, auto_play
@@ -31,6 +32,7 @@ from trpg.skillgen.flash_offer import (
     FlashRequest,
     make_offer,
 )
+from trpg.skillgen.flash_pick import FlashSlot
 from trpg.skillgen.flash_state import Variation, acquire, with_flash
 from trpg.skillgen.flash_text import VariationText
 from trpg.skillgen.usage import SkillUsage
@@ -106,7 +108,7 @@ def _noted_client(lib: ContentLibrary, request: FlashRequest, seed: int) -> Mock
 
 def test_run_pending_flash_carries_llm_notes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(flash_propose, "note_checker", lambda *_a, **_k: lambda _v, _n: [])
-    lib = run_library()
+    lib = lf2_library()  # PK-3：LF-2 的提議流程（閃現挑選模式關掉）
     run = _gear().model_copy(update={"llm": True})
     with use_flash_source(
         lambda sink: LlmFlashSource(lambda r, s: _noted_client(lib, r, s), sink=sink)
@@ -120,6 +122,29 @@ def test_run_pending_flash_carries_llm_notes(monkeypatch: pytest.MonkeyPatch) ->
     assert all(o.name_source == "template" for o in out.options)
     body = out.model_dump(mode="json")
     assert all("note_zh" in o and "name_source" in o for o in body["options"])
+
+
+def _pick_noted(request: FlashRequest, slots: Sequence[FlashSlot], seed: int) -> MockLLMClient:
+    body = {f"s{s.index}": {"pick": 0, "note_zh": NOTE} for s in slots}
+    return MockLLMClient([json.dumps(body, ensure_ascii=False)] * 3)
+
+
+def test_run_pending_flash_carries_llm_notes_in_pick_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PK-3 挑選模式：每格挑的描述一樣進選項（``note_zh``）；小變化的名稱來源照舊 template。"""
+    monkeypatch.setattr(flash_pick._Checker, "_note_checks", lambda *_a: [])
+    lib = run_library()
+    run = _gear().model_copy(update={"llm": True})
+    with use_flash_source(
+        lambda sink: LlmFlashSource(
+            lambda r, s: _noted_client(lib, r, s), sink=sink, pick_client=_pick_noted
+        )
+    ):
+        opened = apply_choice(lib, run, FlashChoice(skill=_ready(run)))
+    out = pending_flash_out(lib, opened)
+    assert out is not None
+    assert out.options and all(o.note_zh == NOTE for o in out.options)
+    assert all(o.name_source == "template" for o in out.options)
+    assert opened.flash_llm_log[-1].picks
 
 
 # ---- API（Mock 提供者，不命名、不寫描述）------------------------------------------------

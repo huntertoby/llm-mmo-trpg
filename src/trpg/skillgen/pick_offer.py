@@ -169,11 +169,14 @@ class _Maker:
         return follows_attr(skill, self.top, self.request.weapon_attrs)
 
     def on_route(self, skill: SkillDef, original: Candidate) -> bool:
-        """符合這一格的路線（#110）：加深、橋接要跟主路線（主屬性或雙屬性）；新方向要不同屬性
-        （07 7.2「新方向固定 1 張偏離」）。沒有主角屬性時都算符合。"""
+        """符合這一格的路線（#110）：加深、橋接要跟主路線（主屬性或雙屬性）；新方向照原本出題那一張
+        （原本是不同屬性就要不同屬性，07 7.2；原本找不到不同屬性、跟了主路線，就照它），所以沒有 LLM
+        時一份三選一的偏離張數不會比原本多。沒有主角屬性時都算符合。"""
         if self.top is None:
             return True
-        return self.follows(skill) != (original.kind == "new")
+        if original.kind == "new":
+            return self.follows(skill) == self.follows(original.skill)
+        return self.follows(skill)
 
     def level(self, skill: SkillDef, original: Candidate) -> int | None:
         """這張技能在 ``original`` 那一格的放寬層級（PK-3，06 6.7「候選怎麼篩」，#110 的找法）：
@@ -331,18 +334,27 @@ def _slot_pool(
             keep(skill, seed, level)
     found = list(levels[LEVEL_EXACT].values())
     for level in range(LEVEL_RELAXED, LEVEL_OFF_RELAXED + 1):
+        if level == LEVEL_OFF and not found:
+            # 路線符合的一張都做不出來：原本那一張（手寫技能池的補位）若符合路線就留著排第一
+            # （PK-2 同樣的退路），偏離的只當它後面的備選
+            found = _fallback(maker, original, only_on_route=True)
         if len(found) >= relax_until:
             break
         found += list(levels[level].values())[: max(0, enough - len(found))]
-    if not found:  # 這一格一張都做不出來：留原本那一張（手寫技能池的補位、或手上同設計的）
-        key = design_key(original.skill)
-        maker.levels.setdefault(key, LEVEL_EXACT)
-        found = [
-            PickCandidate(
-                original.skill, "pool" if original.source == "pool" else "composer", None, key
-            )
-        ]
-    return found
+    return found or _fallback(maker, original, only_on_route=False)
+
+
+def _fallback(maker: _Maker, original: Candidate, *, only_on_route: bool) -> list[PickCandidate]:
+    """原本那一張（手寫技能池的補位、或手上同設計的）當這一格的退路。"""
+    if only_on_route and not maker.on_route(original.skill, original):
+        return []
+    key = design_key(original.skill)
+    # 前面幾格已送出同一個設計、或和手上的技能同設計：這裡不放（最後的退路照留，同 PK-2）
+    if only_on_route and (key in maker.sent or maker.held.has(original.skill, key)):
+        return []
+    maker.levels.setdefault(key, LEVEL_EXACT)
+    source: Literal["pool", "composer"] = "pool" if original.source == "pool" else "composer"
+    return [PickCandidate(original.skill, source, None, key)]
 
 
 def _nondamage_slot(
@@ -458,10 +470,26 @@ def pick_slots(
             )
             for c in pool
         ]
-        ranked = rank_candidates(drop_thin(scored, pick.weights), pick.weights, pick.pool.top_k)
+        ranked = _rank(scored, maker.levels, pick.weights, pick.pool.top_k)
         slate = PickSlate(ranked, len(pool), seeds)
         slots.append(PickedSlot(original, slate, nondamage=index == chosen))
     return slots
+
+
+def _rank(
+    scored: Sequence[PickCandidate],
+    levels: Mapping[DesignKey, int],
+    weights: PickWeights,
+    top_k: int,
+) -> tuple[PickCandidate, ...]:
+    """單薄的先拿掉（全格都單薄才留，:func:`~trpg.skillgen.skill_pick.drop_thin`），再排序；**符合這一格
+    路線的一律排在偏離的前面**（#110「最後才給不跟主路線的」：分數第一名只有在整格都偏離時才偏離，
+    所以沒有 LLM 時的偏離張數不會比 PK-2 多）。"""
+    kept = drop_thin(scored, weights)
+    fit = [c for c in kept if levels.get(c.key, LEVEL_EXACT) < LEVEL_OFF]
+    off = [c for c in kept if levels.get(c.key, LEVEL_EXACT) >= LEVEL_OFF]
+    first = rank_candidates(fit, weights, top_k)
+    return first + rank_candidates(off, weights, top_k - len(first))
 
 
 def _relaxed(candidate: PickCandidate, level: int, weights: PickWeights) -> PickCandidate:

@@ -766,10 +766,9 @@ class LlmFlashSource(UsageSource):
 
     def _pick_client(self, request: FlashRequest, slots: Sequence[FlashSlot]) -> LLMClient:
         made = self.pick_client
-        if made is None:
-            if isinstance(self.client, LLMClient):
-                return self.client
-            raise TypeError("挑選模式需要固定的 client 或 pick_client")
+        if made is None:  # 沒有挑選專用的 client：用提議的 client（Mock 回應不合格式時照第一個）
+            client = self.client
+            return client if isinstance(client, LLMClient) else client(request, request.seed)
         if isinstance(made, LLMClient):
             return made
         return made(request, slots, request.seed)

@@ -110,7 +110,7 @@ def test_major_flash_names_and_notes_are_logged_and_replayed(
         seq=1, now=NOON, character_id=char.character_id, action=action, generated=tuple(used)
     )
     text = dumps_log((entry,))
-    assert json.loads(text.splitlines()[0])["format"] == WLOG_FORMAT == "trpg-wlog/11"
+    assert json.loads(text.splitlines()[0])["format"] == WLOG_FORMAT == "trpg-wlog/12"
     assert '"texts"' in dumps_log_entry(entry)
     (loaded,) = loads_log(text)
     with using_generated(_never):
