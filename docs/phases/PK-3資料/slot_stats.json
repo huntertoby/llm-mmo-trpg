@@ -1,0 +1,864 @@
+{
+  "min_for_llm": 2,
+  "rows": [
+    {
+      "build": "build_push",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        3,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.15
+    },
+    {
+      "build": "build_push",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        3,
+        1,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 3.72
+    },
+    {
+      "build": "build_push",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        1,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.27
+    },
+    {
+      "build": "build_push",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        1,
+        3,
+        1
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 3.19
+    },
+    {
+      "build": "build_fire",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        5,
+        2,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.24
+    },
+    {
+      "build": "build_fire",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        5,
+        5,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 0,
+      "seconds": 6.34
+    },
+    {
+      "build": "build_fire",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        5,
+        2,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.34
+    },
+    {
+      "build": "build_fire",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        4,
+        5,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 2.74
+    },
+    {
+      "build": "build_ranged",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        4,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 2,
+      "seconds": 0.21
+    },
+    {
+      "build": "build_ranged",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        1,
+        1,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 2.78
+    },
+    {
+      "build": "build_ranged",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 2,
+      "seconds": 0.28
+    },
+    {
+      "build": "build_ranged",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        3,
+        2,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 4.22
+    },
+    {
+      "build": "build_healer",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        3,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.35
+    },
+    {
+      "build": "build_healer",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        5,
+        3,
+        4
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 2.08
+    },
+    {
+      "build": "build_healer",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        4,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.25
+    },
+    {
+      "build": "build_healer",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        5,
+        5,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 2.74
+    },
+    {
+      "build": "build_storm",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.13
+    },
+    {
+      "build": "build_storm",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        5,
+        4,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 3.24
+    },
+    {
+      "build": "build_storm",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        3,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.31
+    },
+    {
+      "build": "build_storm",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        5,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 8.71
+    },
+    {
+      "build": "build_summoner",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        1,
+        5,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.28
+    },
+    {
+      "build": "build_summoner",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        1,
+        1,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 6.63
+    },
+    {
+      "build": "build_summoner",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        1,
+        2,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 2,
+      "seconds": 0.28
+    },
+    {
+      "build": "build_summoner",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        1,
+        1,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 2,
+      "seconds": 4.92
+    },
+    {
+      "build": "build_tank",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        3,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.18
+    },
+    {
+      "build": "build_tank",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        1,
+        4,
+        4
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 5.65
+    },
+    {
+      "build": "build_tank",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        4,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.26
+    },
+    {
+      "build": "build_tank",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        2,
+        3,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 6.83
+    },
+    {
+      "build": "build_runeweaver",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        1,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.41
+    },
+    {
+      "build": "build_runeweaver",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        2,
+        3,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 3.31
+    },
+    {
+      "build": "build_runeweaver",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        1,
+        2,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.37
+    },
+    {
+      "build": "build_runeweaver",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        3,
+        2,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 5.73
+    },
+    {
+      "build": "build_assassin",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 2,
+      "seconds": 0.2
+    },
+    {
+      "build": "build_assassin",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        2,
+        3,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 4.73
+    },
+    {
+      "build": "build_assassin",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        1,
+        1
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 2,
+      "seconds": 0.29
+    },
+    {
+      "build": "build_assassin",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        2,
+        4,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 6.33
+    },
+    {
+      "build": "build_trapper",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        4,
+        4
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.28
+    },
+    {
+      "build": "build_trapper",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        2,
+        5,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 10.05
+    },
+    {
+      "build": "build_trapper",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        2,
+        1
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.35
+    },
+    {
+      "build": "build_trapper",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        2,
+        5,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 12.41
+    },
+    {
+      "build": "build_seer",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        4,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.21
+    },
+    {
+      "build": "build_seer",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        5,
+        3,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 5.85
+    },
+    {
+      "build": "build_seer",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        3,
+        4,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.32
+    },
+    {
+      "build": "build_seer",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        5,
+        5,
+        2
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 7.31
+    },
+    {
+      "build": "build_warlock",
+      "seed": 0,
+      "reason": "level_up",
+      "sizes": [
+        2,
+        1,
+        1
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.21
+    },
+    {
+      "build": "build_warlock",
+      "seed": 0,
+      "reason": "complete",
+      "sizes": [
+        5,
+        4,
+        4
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.96
+    },
+    {
+      "build": "build_warlock",
+      "seed": 1,
+      "reason": "level_up",
+      "sizes": [
+        1,
+        1,
+        3
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 0.24
+    },
+    {
+      "build": "build_warlock",
+      "seed": 1,
+      "reason": "complete",
+      "sizes": [
+        3,
+        3,
+        5
+      ],
+      "kinds": [
+        "deepen",
+        "bridge",
+        "new"
+      ],
+      "off_route_top": 1,
+      "seconds": 3.05
+    }
+  ],
+  "summary": {
+    "offers": 48,
+    "slots": 144,
+    "distribution": {
+      "1": 28,
+      "2": 34,
+      "3": 40,
+      "4": 15,
+      "5": 27
+    },
+    "ask_llm": 116,
+    "mean_candidates": 2.85,
+    "by_reason": {
+      "level_up": {
+        "slots": 72,
+        "distribution": {
+          "1": 17,
+          "2": 16,
+          "3": 26,
+          "4": 7,
+          "5": 6
+        },
+        "ask_llm": 55
+      },
+      "complete": {
+        "slots": 72,
+        "distribution": {
+          "1": 11,
+          "2": 18,
+          "3": 14,
+          "4": 8,
+          "5": 21
+        },
+        "ask_llm": 61
+      }
+    },
+    "off_route_top_mean": 1.1,
+    "off_route_top_max": 2,
+    "seconds_mean": {
+      "level_up": 0.27,
+      "complete": 5.15
+    }
+  }
+}

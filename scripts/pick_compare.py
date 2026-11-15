@@ -1,4 +1,4 @@
-"""技能生成：自由設計 vs 挑選模式的紙面比較（Phase PK-1；PK-2 起輸出 PK-2 的檔案、附 PK-1b 對照）。
+"""技能生成：自由設計 vs 挑選模式的紙面比較（Phase PK-1；PK-3 起輸出 PK-3 的檔案、附 PK-2 對照）。
 
 同一組題目（LB 的 20 題＝``scripts/llm_model_compare.py`` 的題目〔``trpg llm propose -n 20``、
 seed 0〕，另加幾題）各跑兩條路，輸出原始 JSON 與給裁判看的 markdown：
@@ -21,8 +21,11 @@ seed 0〕，另加幾題）各跑兩條路，輸出原始 JSON 與給裁判看�
   確定性的行為紀錄與主屬性（手上技能和 PK-1 相同；行為紀錄用另一條亂數串流）。
 - PK-2：挑選模式用加嚴的名稱檢查（``pick_skill(strict=True)``），打分多「這招有沒有料」；每題多
   ``thin``（收下那招的單薄原因）與 ``strict_mismatch``（加嚴詞組判斷的不符條數）。
-- ``--baseline``（PK-2 起預設 ``docs/phases/PK-1b資料/pick_compare.json``）的指標列在整體
+- ``--baseline``（PK-3 起預設 ``docs/phases/PK-2資料/pick_compare.json``）的指標列在整體
   指標的對照欄。
+- PK-3：report 另外併入三選一「每格候選數」（``scripts/pick_slot_stats.py`` 的
+  ``slot_stats.json``，PK-2 對照 ``slot_stats_pk2.json``）與閃現比較
+  （``scripts/flash_pick_compare.py`` 的 ``flash_compare.json``），檔案在才列。
 """
 
 from __future__ import annotations
@@ -74,9 +77,12 @@ RecordingTransport: Any = _LMC.RecordingTransport
 measure_speed = _LMC.measure_speed
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "docs" / "phases" / "PK-2資料"
-REPORT = ROOT / "docs" / "phases" / "PhasePK-2比較.md"
-BASELINE = ROOT / "docs" / "phases" / "PK-1b資料" / "pick_compare.json"
+DATA_DIR = ROOT / "docs" / "phases" / "PK-3資料"
+REPORT = ROOT / "docs" / "phases" / "PhasePK-3比較.md"
+BASELINE = ROOT / "docs" / "phases" / "PK-2資料" / "pick_compare.json"
+BASELINE_LABEL = "PK-2"
+SLOT_STATS = ("slot_stats.json", "slot_stats_pk2.json")
+FLASH_JSON = "flash_compare.json"
 JSON_NAME = "pick_compare.json"
 FORMAT = "pick-compare/3"
 """``pick-compare/3``（PK-2）：每題多 ``thin``、``strict_mismatch``（``/2``＝PK-1b：多
@@ -95,10 +101,7 @@ PLAYER_SKILLS = 3
 SUMMARY_MARK = "<!-- 摘要 -->"
 """markdown 裡手寫白話摘要的前後標記（重產 markdown 時保留兩個標記之間的文字）。"""
 SUMMARY_PIECES = 2
-BASELINE_NOTE = (
-    "PK-1b 欄是 PK-1b 的原始資料用同一份指標程式重算"
-    "（PK-2 新加的兩項 PK-1b 沒有存技能定義，標「—」）。"
-)
+BASELINE_NOTE = "PK-2 欄是 PK-2 的原始資料用同一份指標程式重算。"
 
 
 # ---------------------------------------------------------------------------
@@ -602,7 +605,10 @@ def _metrics_md(
     """整體指標：本次的自由設計、挑選模式；有 ``baseline``（PK-1 的指標）時另列 PK-1 兩欄。"""
     columns = [("自由設計", metrics["free"]), ("挑選模式", metrics["pick"])]
     if baseline is not None:
-        columns += [("PK-1b 自由設計", baseline["free"]), ("PK-1b 挑選模式", baseline["pick"])]
+        columns += [
+            (f"{BASELINE_LABEL} 自由設計", baseline["free"]),
+            (f"{BASELINE_LABEL} 挑選模式", baseline["pick"]),
+        ]
 
     def row(label: str, cell: Callable[[dict[str, Any]], Any]) -> str:
         return f"| {label} | " + " | ".join(str(cell(m)) for _, m in columns) + " |"
@@ -649,6 +655,120 @@ def _baseline(path: Path | None) -> dict[str, dict[str, Any]] | None:
     return {side: path_metrics(old["rows"], side) for side in ("free", "pick")}
 
 
+def _load(name: str) -> dict[str, Any] | None:
+    path = DATA_DIR / name
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+
+
+def _slots_md() -> list[str]:
+    """PK-3：三選一每格的候選數（``pick_slot_stats.py``；PK-2 對照）。"""
+    now, old = (_load(n) for n in SLOT_STATS)
+    if now is None:
+        return []
+    columns = [("PK-3", now["summary"])]
+    if old is not None:
+        columns.append(("PK-2", old["summary"]))
+    sizes = sorted({int(k) for _, s in columns for k in s["distribution"]})
+
+    def cell(summary: dict[str, Any], size: int) -> str:
+        count = summary["distribution"].get(str(size), summary["distribution"].get(size, 0))
+        return f"{count}（{count * 100 // summary['slots']}%）"
+
+    lines = [
+        "## 三選一每格的候選數（不請 LLM；同一組 48 份三選一、144 格）",
+        "",
+        "| | " + " | ".join(t for t, _ in columns) + " |",
+        "|---" * (len(columns) + 1) + "|",
+    ]
+    for size in sizes:
+        lines.append(f"| {size} 張 | " + " | ".join(cell(s, size) for _, s in columns) + " |")
+    lines += [
+        "| 請 LLM 挑的格子（候選 ≥ 2） | "
+        + " | ".join(f"{s['ask_llm']}/{s['slots']}" for _, s in columns)
+        + " |",
+        "| 每格平均候選數 | " + " | ".join(str(s["mean_candidates"]) for _, s in columns) + " |",
+        "| 升級白板：請 LLM 的格子 | "
+        + " | ".join(
+            f"{s['by_reason']['level_up']['ask_llm']}/{s['by_reason']['level_up']['slots']}"
+            for _, s in columns
+        )
+        + " |",
+        "| 完整技能：請 LLM 的格子 | "
+        + " | ".join(
+            f"{s['by_reason']['complete']['ask_llm']}/{s['by_reason']['complete']['slots']}"
+            for _, s in columns
+        )
+        + " |",
+        "| 分數第一名的偏離（每份平均／最多） | "
+        + " | ".join(f"{s['off_route_top_mean']}／{s['off_route_top_max']}" for _, s in columns)
+        + " |",
+        "| 出題 CPU 秒數（升級／完整技能，平均） | "
+        + " | ".join(
+            f"{s['seconds_mean']['level_up']}／{s['seconds_mean']['complete']}" for _, s in columns
+        )
+        + " |",
+        "",
+    ]
+    return lines
+
+
+def _flash_option(option: dict[str, Any]) -> str:
+    name = option.get("name_zh") or ""
+    note = option.get("note_zh") or ""
+    tail = "".join(
+        [
+            f"｜名稱「{name}」" if name else "",
+            f"｜「{note}」" if note else "",
+            "｜比原本弱" if option.get("weaker") else "",
+        ]
+    )
+    return f"{option['category']}：{option['summary_zh'] or option['key']}{tail}"
+
+
+def _flash_md() -> list[str]:
+    """PK-3：閃現 LF-2 vs 挑選模式（``flash_pick_compare.py``）。"""
+    data = _load(FLASH_JSON)
+    if data is None:
+        return []
+    meta = data["meta"]
+    lines = [
+        "## 閃現：LF-2（LLM 從目錄提議）vs 挑選模式",
+        "",
+        f"> 模型 `{meta['model']}`、溫度 {meta['temperature']}；"
+        f"{'Mock' if meta['mock'] else '真模型'}；{meta['started_utc']}～{meta['finished_utc']}。"
+        f"原始資料 `docs/phases/{DATA_DIR.name}/{FLASH_JSON}`。",
+        "",
+        "| 情境 | 技能 | 第幾次 | LF-2 來源／秒數 | 挑選 來源／秒數 | 挑選每格候選數 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for row in data["rows"]:
+        what = (f"重閃第 {row['slot']} 格" if row.get("slot") else f"第 {row['nth']} 次") + (
+            f"（指定 {row['category']}）" if row.get("category") else ""
+        )
+        a, b = row["lf2"], row["pick"]
+        lines.append(
+            f"| {row['label']} | {row['skill_zh']} | {what} | "
+            f"{a['record']['source']}／{a['seconds']} | {b['record']['source']}／{b['seconds']} | "
+            f"{b.get('slot_sizes', '—')} |"
+        )
+    lines.append("")
+    for row in data["rows"]:
+        lines.append(f"### {row['label']}：{row['skill_zh']}")
+        for side, title in (("lf2", "LF-2"), ("pick", "挑選")):
+            part = row[side]
+            record = part["record"]
+            codes = sorted({c for attempt in record.get("codes", []) for c in attempt})
+            lines.append(
+                f"- **{title}**（{record['source']}，{part['seconds']} 秒，"
+                f"呼叫 {record.get('attempts', 0)} 次"
+                + (f"，錯誤碼 {'、'.join(codes)}" if codes else "")
+                + "）"
+            )
+            lines += [f"  - {_flash_option(o)}" for o in part["options"]]
+        lines.append("")
+    return lines
+
+
 def write_report(
     result: dict[str, Any],
     path: Path | None = None,
@@ -656,7 +776,7 @@ def write_report(
 ) -> None:
     meta = result["meta"]
     lines = [
-        "# PK-2 比較：自由設計 vs 挑選模式（紙面樣本）",
+        "# PK-3 比較：挑選模式（三選一每格候選、閃現）與自由設計（紙面樣本）",
         "",
         SUMMARY_MARK,
         "",
@@ -680,6 +800,8 @@ def write_report(
             *_candidates_md(row["pick"]),
         ]
     lines += ["## 整體指標", "", *_metrics_md(result["metrics"], baseline), ""]
+    lines += _slots_md()
+    lines += _flash_md()
     target = path or REPORT
     old = target.read_text(encoding="utf-8") if target.exists() else ""
     pieces = old.split(SUMMARY_MARK)

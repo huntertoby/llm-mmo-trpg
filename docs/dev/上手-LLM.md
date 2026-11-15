@@ -142,3 +142,14 @@
 4. **紀錄**：`OfferTag.pick`（`llm`／`top`，`None` 不寫出）→ API `OfferTagOut.pick`；`LlmRecord` 照 PK-1 的四欄。`WLOG_FORMAT` `trpg-wlog/11`、`WORLD_RULES_VERSION` 34。
 5. **加嚴的名稱檢查**：`effect_words.yaml` 的 `strict: true` 詞組（高處、墜落、地形、打擊、形狀、單字風／土石）只在 `strict=True` 看；`consistency.strict_facts` 多 `condition:`、`shape:`。閃現、自由設計命名不受影響（`check_added` 也略過 strict 詞組）。
 6. **測試**：`tests/roguelite/test_pick_offer_pk2.py`、`tests/llm/test_pick_pk2.py`；改到 `VICTORY`（`build_fire` 種子 1）。
+
+## 十、PK-3：閃現接上挑選模式（`skill_pick.yaml` 的 `flash_enabled`，預設開）、三選一放寬
+
+1. **開關**：`flash_enabled`（和三選一的 `enabled` 分開；都不進數值工坊）。只有來源會挑選（`skillgen.flash_pick.PickingSource`：`LlmFlashSource`、`RecordedSource`、世界的 `_RecordedFlash`）時 `make_offer` 才走挑選；`UsageSource`（沒開 LLM）照舊。關掉＝逐字回到 LF-2 的提議流程（`tests/llm/test_flash_pick_pk3.py::test_switch_off_is_the_lf2_flow`）。測 LF-2 程式本身的測試用 `tests.engine.helpers.lf2_library()`（開關關掉的內容庫）。
+2. **出題**：`flash_offer._Layout.options(())`（沒有提議、沒有文字）＝原本那一份；`_slots` 每格的第一個候選就是它，其餘依同一類的 `ranked` 往下取合格的（`builder.option`，強度下限照舊），同類的格子輪流分、不重複，每格最多 `pool.flash_top_k`（4）；轉型保底固定（只取名）。所以 Mock 挑 0＝沒有 LLM 時那一份。`flash_slots(library, request)` 給測試與比較腳本。
+3. **LLM**：`llm/flash_pick.py::pick_variations`（`flash-pick/1`，`prompts/flash_pick.py`）一次回答全部格子（`{"s0": {pick, note_zh, name_zh?}}`；`pick` 是每格的 enum）。描述照 LF-2（不合格只丟）；名稱（大變化、轉型格）照 LF-2 的名稱檢查＋**加嚴詞組只看多字詞**（`consistency.multi_char_strict`；單字風、土、石、斬、劈不看），不合格帶 `<errors>` 重問（最多 `max_retries` 次、10 秒）。連不上或用完＝每格第一個、沒有文字。
+4. **紀錄**：`FlashProposalRecord`／`FlashLlmRecord` 多 `picks`（空值不寫出）；`accepted`＝每格選中的變化。重播 `flash_pick.picks_by_key`。世界 `trpg-wlog/12`（`/11` 照讀）、`WORLD_RULES_VERSION` 35；預先生成改呼叫 `LlmFlashSource.prepare`（照開關挑或提議）。
+5. **Mock**：`mock_flash_source(pick_index=0)`（`flash_pick.mock_flash_pick_client`，不寫文字）。
+6. **三選一（`skillgen/pick_offer.py`）**：`_Maker.level` 給放寬層級（`LEVEL_EXACT`／`RELAXED`／`OFF`／`OFF_RELAXED`）；全部關鍵字＋路線符合的不到 `pool.relax_until`（3）時依序補下一層，扣 `weights.keyword_relaxed_penalty`、`route_off_penalty`；`_cap_off_route`：LLM 挑出的偏離讓一份超過 2 張時改回第一名。`skill_pick.drop_thin`：單薄的不進前 K（全都單薄才照分數）。
+7. **組合器**：`composer_parts.build_condition` 不把「第一輪」掛在非傷害效果、不給刻紋掛條件、整招沒有傷害時技能層級不抽第一輪也不給帶刻紋的招抽條件（玩法 PM 4.1.23）；驗證器不改。
+8. **測試**：`tests/llm/test_flash_pick_pk3.py`、`tests/roguelite/test_flash_pick_run_pk3.py`、`tests/roguelite/test_pick_offer_pk3.py`、`tests/skillgen/test_composer_odd_pk3.py`。比較腳本 `scripts/pick_slot_stats.py`（每格候選數）、`scripts/flash_pick_compare.py`（閃現 LF-2 vs 挑選），`scripts/pick_compare.py report` 併成 `docs/phases/PhasePK-3比較.md`。
