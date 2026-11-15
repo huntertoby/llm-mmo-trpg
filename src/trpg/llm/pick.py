@@ -133,6 +133,8 @@ def candidate_card(
     out["category"] = f"{card.category}（{card.weapon_req}）"
     out["cost"] = list(card.cost)
     out["shape"] = card.shape
+    if card.timing is not None:  # 被動的觸發時機、反應技的反應時機
+        out["timing"] = card.timing
     if card.condition is not None:
         out["condition"] = card.condition
     out["effects"] = list(card.effects)

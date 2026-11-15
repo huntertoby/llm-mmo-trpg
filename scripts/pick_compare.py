@@ -161,6 +161,7 @@ def skill_row(library: ContentLibrary, skill: SkillDef) -> dict[str, Any]:
         "shape": card.shape,
         "cost": list(card.cost),
         "condition": card.condition,
+        "timing": card.timing,
         "effects": list(card.effects),
         "effect_types": sorted({e.type for e in skill.effects}),
         "makes": [plain_name(k, library) for k in found.makes],
@@ -496,7 +497,8 @@ def _skill_md(skill: dict[str, Any]) -> list[str]:
         f"- 描述：{skill['concept']}｜{skill['cast_flavor']}",
         f"- 效果：{'；'.join(skill['effects'])}",
         f"- 代價：{'、'.join(skill['cost']) or '—'}"
-        + (f"｜條件：{skill['condition']}" if skill["condition"] else ""),
+        + (f"｜條件：{skill['condition']}" if skill["condition"] else "")
+        + (f"｜{skill['timing']}" if skill.get("timing") else ""),
         f"- 關鍵字：{keywords or '—'}｜元素：{'、'.join(skill['elements_zh']) or '—'}"
         f"｜強度占預算：{budget / 10 if budget is not None else '—'}%",
     ]
@@ -526,8 +528,9 @@ def _candidates_md(part: dict[str, Any]) -> list[str]:
         mark = "→" if cand["index"] == picked else "　"
         name = f"「{card['fixed_name']}」" if "fixed_name" in card else ""
         parts = "、".join(f"{k}{v:+d}" for k, v in cand["parts"].items() if v)
+        timing = f"{card['timing']}／" if card.get("timing") else ""
         lines.append(
-            f"- {mark}{cand['index']}{name}：{card['skeleton']}／{card['shape']}／"
+            f"- {mark}{cand['index']}{name}：{card['skeleton']}／{card['shape']}／{timing}"
             f"{'；'.join(card['effects'])}（分數 {cand['score']}{'：' + parts if parts else ''}）"
         )
     who = "LLM 選" if part.get("index") is not None else "程式取第一名"
