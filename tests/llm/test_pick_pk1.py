@@ -47,7 +47,7 @@ def _pick(client: MockLLMClient, slate: PickSlate | None = None):  # type: ignor
 
 def _same_structure(a, b) -> bool:  # type: ignore[no-untyped-def]
     skip = {"name_zh", "narrative"}
-    return a.model_dump(exclude=skip) == b.model_dump(exclude=skip)
+    return bool(a.model_dump(exclude=skip) == b.model_dump(exclude=skip))
 
 
 @pytest.mark.parametrize("index", [0, 2])
