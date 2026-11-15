@@ -9,7 +9,12 @@
 :class:`~trpg.skillgen.flash_offer.FlashOptionSource`），一輪出閃現題目時讀
 :func:`current_flash_source`。
 
-只有 ``RunState.llm`` 為真 **而且** 裝了提議器時才會用到 LLM；其他情況（包含讀檔重播）完全不呼叫，
+挑選模式（Phase PK-2，``skill_pick.yaml`` 的 ``enabled``）的三選一用 **挑選器**
+（:data:`~trpg.skillgen.pick_offer.OfferPicker`，``trpg.llm.pick.make_offer_picker``）：外層用
+:func:`use_picker` 裝上，``make_offer`` 讀 :func:`current_picker`。
+
+只有 ``RunState.llm`` 為真 **而且** 裝了提議器（挑選模式：挑選器）時才會用到 LLM；其他情況
+（包含讀檔重播）完全不呼叫，
 行為與沒有這個功能時逐字相同。生成的技能與閃現選項存在 run 裡（候選節點、``generated_skills``、
 ``pending_flash``），重播與讀檔直接用，不再呼叫 LLM。
 """
@@ -23,13 +28,16 @@ from contextvars import ContextVar
 from pydantic import BaseModel
 
 from trpg.skillgen.flash_offer import FlashOptionSource
+from trpg.skillgen.pick_offer import OfferPicker
 from trpg.skillgen.proposal_topic import LlmProposer
 
 __all__ = [
     "FlashSourceFactory",
     "current_flash_source",
+    "current_picker",
     "current_proposer",
     "use_flash_source",
+    "use_picker",
     "use_proposer",
 ]
 
@@ -38,6 +46,7 @@ type FlashSourceFactory = Callable[[Callable[[BaseModel], None]], FlashOptionSou
 
 _PROPOSER: ContextVar[LlmProposer | None] = ContextVar("trpg_llm_proposer", default=None)
 _FLASH: ContextVar[FlashSourceFactory | None] = ContextVar("trpg_flash_source", default=None)
+_PICKER: ContextVar[OfferPicker | None] = ContextVar("trpg_offer_picker", default=None)
 
 
 def current_proposer() -> LlmProposer | None:
@@ -68,3 +77,18 @@ def use_flash_source(factory: FlashSourceFactory | None) -> Iterator[None]:
         yield
     finally:
         _FLASH.reset(token)
+
+
+def current_picker() -> OfferPicker | None:
+    """目前裝上的挑選模式挑選器（PK-2；沒有為 ``None``）。"""
+    return _PICKER.get()
+
+
+@contextmanager
+def use_picker(picker: OfferPicker | None) -> Iterator[None]:
+    """在 ``with`` 區塊內裝上挑選模式的挑選器（PK-2；離開時還原）。"""
+    token = _PICKER.set(picker)
+    try:
+        yield
+    finally:
+        _PICKER.reset(token)

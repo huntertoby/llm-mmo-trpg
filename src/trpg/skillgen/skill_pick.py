@@ -21,7 +21,7 @@
    （題目關鍵字是製造還是利用；多帶無關關鍵字扣分）＋主題相合（和手上技能共同的關鍵字）＋元素相合
    （手上同元素的技能招數；有元素另加一點）＋打法（行為紀錄 × 關鍵字的 ``actions``）＋屬性路線
    （:func:`~trpg.skillgen.candidates.route_rank`）＋手寫技能加分 − 怪條件
-   （:func:`odd_conditions`）。
+   （:func:`odd_conditions`）− 單薄（PK-2「這招有沒有料」，:func:`thin_reasons`）。
 3. **排序**（:func:`rank_candidates`）：貪婪取前 K，每取一個時扣掉和已取的候選重複的部分（同骨架、
    同形狀、同效果種類、同元素），分數相同依候選池順序。
 
@@ -56,6 +56,9 @@ __all__ = [
     "ODD_FIRST_ROUND",
     "ODD_INSCRIBE",
     "POOL_FORK",
+    "THIN_CONDITIONAL",
+    "THIN_FEW",
+    "THIN_HOLLOW",
     "CandidatePool",
     "DesignKey",
     "PickCandidate",
@@ -65,11 +68,13 @@ __all__ = [
     "design_key",
     "design_label",
     "element_partners",
+    "is_nondamage",
     "odd_conditions",
     "pick_slate",
     "rank_candidates",
     "score_candidate",
     "synergy_links",
+    "thin_reasons",
 ]
 
 POOL_FORK = "pick.pool"
@@ -89,6 +94,22 @@ _ELEMENTS = frozenset(e.value for e in Element)
 _FIRST_ROUND = "first_round"
 _INSCRIBE = "inscribe"
 _DAMAGE = frozenset({"damage", "delayed_damage"})
+THIN_HOLLOW = "hollow"
+"""PK-2 單薄：有作用的效果一個都沒有（只有刻紋、標記、揭露）。"""
+THIN_CONDITIONAL = "conditional_only"
+"""PK-2 單薄：沒有傷害，而且每個有作用的效果都要條件成立才生效（技能層級或效果自己的條件）。"""
+THIN_FEW = "few_effects"
+"""PK-2 單薄：史詩以上，有作用的效果少於 ``weights.thin_epic_min_effects`` 個。"""
+_HOLLOW_TYPES = frozenset({"inscribe", "reveal"})
+"""本身沒有直接作用的效果（刻紋留給之後的技能讀取、揭露只顯示）。"""
+_HOLLOW_STATUSES = frozenset({"marked"})
+"""本身沒有直接作用的狀態（被標記：只給之後的攻擊優勢）。"""
+_HIGH_RARITIES = frozenset({"epic", "legendary"})
+_DAMAGING_TYPES = frozenset(
+    {"damage", "delayed_damage", "detonate_runes", "charge_through", "hurl_object", "topple"}
+)
+"""會造成傷害的原語（#142 非傷害保底的判定；``damage_multiplier``、``self_damage_of_hit`` 必須搭配
+傷害效果，不另列）。"""
 
 
 def design_key(skill: SkillDef) -> DesignKey:
@@ -119,7 +140,7 @@ class PickCandidate:
     score: int = 0
     parts: tuple[tuple[str, int], ...] = ()
     """各項分數（``synergy``、``keyword``、``theme``、``element``、``behavior``、``route``、
-    ``pool``、``odd``）；排序後才有 ``diversity``（負值）。"""
+    ``pool``、``odd``、``thin``）；排序後才有 ``diversity``（負值）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -323,6 +344,56 @@ def _element_draw(
 # ---------------------------------------------------------------------------
 
 
+def _hollow(effect: object) -> bool:
+    kind = getattr(effect, "type", None)
+    if kind in _HOLLOW_TYPES:
+        return True
+    return kind == "apply_status" and getattr(effect, "status", None) in _HOLLOW_STATUSES
+
+
+def thin_reasons(skill: SkillDef, *, epic_min_effects: int = 2) -> tuple[str, ...]:
+    """PK-2「這招有沒有料」（只給挑選打分扣分，不是規則；不改組合器與驗證器的合法判定）：
+
+    - :data:`THIN_HOLLOW`：技能（第一層效果）有作用的效果一個都沒有——只刻符文、只上「被標記」、
+      只揭露（PK-1b 的 Q5、Q16、Q20）。
+    - :data:`THIN_CONDITIONAL`：沒有傷害，而且每個有作用的效果都要條件成立才生效（技能層級的條件
+      或效果自己的條件；PK-1b 的 Q8「推開 2 格，若居高臨下」）。
+    - :data:`THIN_FEW`：史詩以上，有作用的效果少於 ``epic_min_effects`` 個（PK-1b 的 Q12 史詩被動
+      只有標記 3 回合）。
+
+    沒有效果的技能（修正型被動）不算。依上面的順序回傳。"""
+    effects = skill.effects
+    if not effects:
+        return ()
+    useful = [e for e in effects if not _hollow(e)]
+    found: list[str] = []
+    if not useful:
+        found.append(THIN_HOLLOW)
+    elif not any(e.type in _DAMAGE for e in useful) and all(
+        skill.condition is not None or getattr(e, "condition", None) is not None for e in useful
+    ):
+        found.append(THIN_CONDITIONAL)
+    if skill.rarity in _HIGH_RARITIES and len(useful) < epic_min_effects:
+        found.append(THIN_FEW)
+    return tuple(found)
+
+
+def _damaging(node: object) -> bool:
+    if isinstance(node, list | tuple):
+        return any(_damaging(item) for item in node)
+    if not isinstance(node, dict):
+        return False
+    if node.get("type") in _DAMAGING_TYPES:
+        return True
+    return any(_damaging(value) for key, value in sorted(node.items()) if key != "narrative")
+
+
+def is_nondamage(skill: SkillDef) -> bool:
+    """#142 的「非傷害」技能（輔助、治療、控制、位移、召喚、防守）：技能（含接續段、變奏、條件分支）
+    任何地方都沒有會造成傷害的原語（:data:`_DAMAGING_TYPES`）。召喚物自己的攻擊不算技能的傷害。"""
+    return not _damaging(skill.model_dump(mode="json", exclude={"narrative", "provenance"}))
+
+
 def synergy_links(
     library: ContentLibrary, skill: SkillDef, player: PickPlayer
 ) -> list[tuple[SkillDef, str]]:
@@ -380,13 +451,19 @@ def score_candidate(
     player: PickPlayer,
     weights: PickWeights,
     request: ProposalRequest | None = None,
+    *,
+    keywords: Sequence[str] | None = None,
 ) -> PickCandidate:
     """候選的基本分（不含多樣性）：協同＋關鍵字貼合＋主題相合＋元素相合＋打法＋屬性路線＋手寫技能
-    加分 − 怪條件。``request`` 是題目（關鍵字貼合要看；省略＝不算這一項）。回傳帶分數的候選。"""
+    加分 − 怪條件 − 單薄。``request`` 是題目（關鍵字貼合要看；省略＝不算這一項）；``keywords``
+    （PK-2 三選一的格子）有給時取代題目的關鍵字。回傳帶分數的候選。"""
     skill = candidate.skill
     found = derive_keywords(skill, library.keywords, exclusive_only=True)
     synergy = min(len(synergy_links(library, skill, player)), weights.synergy_max_links)
-    wanted = tuple(request.keywords) if request is not None else ()
+    if keywords is not None:
+        wanted = tuple(keywords)
+    else:
+        wanted = tuple(request.keywords) if request is not None else ()
     held_kw = {
         k
         for held in player.held_skills
@@ -421,6 +498,11 @@ def score_candidate(
         ("route", route),
         ("pool", weights.pool_bonus if candidate.source == "pool" else 0),
         ("odd", -weights.odd_condition_penalty * len(odd_conditions(skill))),
+        (
+            "thin",
+            -weights.thin_penalty
+            * len(thin_reasons(skill, epic_min_effects=weights.thin_epic_min_effects)),
+        ),
     )
     return replace(candidate, score=sum(v for _, v in parts), parts=parts)
 

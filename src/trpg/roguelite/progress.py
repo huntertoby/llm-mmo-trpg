@@ -341,7 +341,8 @@ def _level_up(library: ContentLibrary, run: RunState) -> RunState:
     )
     # 升階重算（3W-9，6.34.9）：角色升階的當下（戰鬥之間）每招照新階級的預算重配
     leveled = sync_skill_tier(library, leveled)
-    offer = make_offer(library, leveled, "level_up")
+    # PK-2：挑選模式（開關見 skill_pick.yaml 的 enabled）
+    offer = make_offer(library, leveled, "level_up", pick=True)
     node = LevelUpNode(
         level=leveled.level,
         points=library.roguelite.attribute_points_per_level,
@@ -355,7 +356,7 @@ def _level_up(library: ContentLibrary, run: RunState) -> RunState:
 
 def _complete_offer(library: ContentLibrary, run: RunState, after: int) -> RunState:
     """完整技能三選一（3W-5，06 6.34.6）：候選照完整技能的強度重調。"""
-    offer = make_offer(library, run, "complete")
+    offer = make_offer(library, run, "complete", pick=True)  # PK-2：挑選模式
     return run.model_copy(
         update={
             "offers_made": run.offers_made + 1,

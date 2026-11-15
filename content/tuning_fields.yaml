@@ -221,6 +221,9 @@ targets:
       - {path: pool.handwritten_max, label_zh: 候選裡最多幾個手寫技能, kind: int, hint_min: 0, hint_max: 1, note_zh: PK-1b：送給本機模型的候選裡最多放幾個內容庫的手寫技能（0＝不放，挑選模式只出新招；1＝最多一個）。玩家手上已有的技能不論這裡設多少都不會進候選。}
       - {path: pool.element_seeds, label_zh: 同元素補抽：最多幾個種子, kind: int, hint_min: 0, hint_max: 200, note_zh: PK-1b：玩家手上有元素技能、而候選池裡同元素的設計不夠時，另外再抽最多這麼多個種子，只收和玩家同元素的新設計；0＝不補抽。越多越慢。}
       - {path: pool.element_designs, label_zh: 同元素補抽：至少要幾個同元素設計, kind: int, hint_min: 0, hint_max: 10, note_zh: PK-1b：候選池裡和玩家手上技能同元素的設計少於這個數才補抽，補到這個數就停。}
+      - {path: pool.slot_seeds, label_zh: 三選一每格另外抽幾個種子, kind: int, hint_min: 0, hint_max: 40, note_zh: PK-2：升級與完整技能三選一的每一格（加深、橋接、新方向），照這一格的出題條件（關鍵字、種類、屬性路線）另外抽這麼多個種子當候選，再打分取前幾名給本機模型挑。越多越慢；0＝每格只有原本出題的那一張。}
+      - {path: pool.complete_slot_seeds, label_zh: 完整技能三選一每格另外抽幾個種子, kind: int, hint_min: 0, hint_max: 20, note_zh: PK-2：完整技能三選一（原型特殊時刻、大世界機遇）的每一格另外抽這麼多個種子。組合器做整招比白板慢（每個種子約 0.05～0.2 秒），越多出題越慢；0＝每格只有原本出題的那一張。}
+      - {path: pool.nondamage_seeds, label_zh: 非傷害保底格最多補抽幾個種子, kind: int, hint_min: 0, hint_max: 40, note_zh: PK-2：每次三選一有一格只放非傷害技能（輔助、治療、控制、位移、召喚、防守）。這一格的非傷害候選不夠（或三格都沒有）時，最多另外補抽這麼多個種子，只收非傷害的；0＝不補抽。}
       - {path: weights.synergy_per_link, label_zh: 協同：每條連線的分數, kind: int, hint_min: 0, hint_max: 1000, note_zh: 候選製造的關鍵字有一招手上的技能利用（或候選利用、手上的技能製造），每一條連線（手上技能 × 關鍵字 × 方向）加這麼多分。}
       - {path: weights.synergy_max_links, label_zh: 協同：最多算幾條連線, kind: int, hint_min: 0, hint_max: 6, note_zh: 協同分數最多算這麼多條連線（避免手上技能多的關鍵字永遠壓過其他候選）。}
       - {path: weights.keyword_make, label_zh: 關鍵字貼合：製造題目關鍵字, kind: int, hint_min: 0, hint_max: 500, note_zh: PK-1b：題目要的關鍵字由候選「製造」（例：題目要冰凍、候選會冰凍敵人），每個加這麼多分。}
@@ -237,6 +240,8 @@ targets:
       - {path: weights.route_dual, label_zh: 屬性路線：雙屬性跟上, kind: int, hint_min: 0, hint_max: 500, note_zh: 雙屬性技能靠第二屬性跟上主屬性時加這麼多分。}
       - {path: weights.pool_bonus, label_zh: 手寫技能加分, kind: int, hint_min: 0, hint_max: 500, note_zh: 候選是內容庫的手寫技能（技能池）時加這麼多分；0＝和組合器的候選一視同仁。「候選裡最多幾個手寫技能」是 0 時用不到。}
       - {path: weights.odd_condition_penalty, label_zh: 怪條件扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: PK-1b：候選帶「怪條件」（例：狀態效果只在第一輪才生效、刻紋要滿足條件才刻得下），每一處扣這麼多分。只影響挑選的排序，不改技能合不合法。}
+      - {path: weights.thin_penalty, label_zh: 單薄扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: PK-2「這招有沒有料」：候選單薄時每一項扣這麼多分——只有沒效果的刻紋、標記或揭露；只有條件式的非傷害效果（例：只有「居高臨下時推開」）；史詩以上有作用的效果太少。只影響挑選的排序。}
+      - {path: weights.thin_epic_min_effects, label_zh: 史詩至少幾個有作用的效果, kind: int, hint_min: 1, hint_max: 4, note_zh: PK-2：史詩以上的候選有作用的效果（刻紋、標記、揭露不算）少於這個數就算單薄、扣「單薄扣分」。}
       - {path: weights.same_skeleton_penalty, label_zh: 多樣性：同骨架扣分, kind: int, hint_min: 0, hint_max: 500, note_zh: 排前幾名時，和已經排進去的候選同骨架，每一個扣這麼多分。}
       - {path: weights.same_shape_penalty, label_zh: 多樣性：同形狀扣分, kind: int, hint_min: 0, hint_max: 500, note_zh: 和已經排進去的候選同形狀，每一個扣這麼多分。}
       - {path: weights.same_effects_penalty, label_zh: 多樣性：同效果種類扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: 和已經排進去的候選效果種類完全相同（只差元素或數字），每一個扣這麼多分。}

@@ -5,7 +5,8 @@
 - 都沒有時看設定檔的 ``generate``（預設關：沒有本機模型時照舊）。
 
 提議器經 :func:`trpg.roguelite.llm_hook.use_proposer` 裝上，閃現的變化提議（3W-7，Phase 3W-5 接上）
-經 :func:`~trpg.roguelite.llm_hook.use_flash_source` 裝上；生成的技能、閃現選項與題目存在 run 裡，
+經 :func:`~trpg.roguelite.llm_hook.use_flash_source` 裝上；挑選模式（PK-2）的挑選器經
+:func:`~trpg.roguelite.llm_hook.use_picker` 裝上；生成的技能、閃現選項與題目存在 run 裡，
 之後的重播與讀檔不再呼叫模型。閃現提議的紀錄另外摘要（:func:`flash_llm_lines`）。
 """
 
@@ -21,7 +22,8 @@ from trpg.content.library import ContentLibrary
 from trpg.llm import LLMConfig, LLMConfigError, OpenAICompatClient, load_llm_config
 from trpg.llm.candidate_source import make_proposer, mock_proposer
 from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
-from trpg.roguelite.llm_hook import use_flash_source, use_proposer
+from trpg.llm.pick import make_offer_picker, mock_offer_picker
+from trpg.roguelite.llm_hook import use_flash_source, use_picker, use_proposer
 from trpg.roguelite.state import RunState
 
 __all__ = ["LlmArgs", "add_llm_args", "llm_lines", "llm_session"]
@@ -68,6 +70,7 @@ def llm_session(
         retries = config.max_retries
         with (
             use_proposer(proposer),
+            use_picker(mock_offer_picker(library)),  # PK-2：挑選模式的 Mock 挑選器
             use_flash_source(
                 lambda sink: mock_flash_source(library, max_attempts=retries, sink=sink)
             ),
@@ -82,6 +85,7 @@ def llm_session(
         proposer = make_proposer(client, library, max_attempts=config.max_retries, naming=client)
         with (
             use_proposer(proposer),
+            use_picker(make_offer_picker(client, library, max_attempts=config.max_retries)),
             use_flash_source(
                 lambda sink: LlmFlashSource(
                     client, max_attempts=config.max_retries, sink=sink, naming=client

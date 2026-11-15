@@ -1,4 +1,4 @@
-"""技能生成：自由設計 vs 挑選模式的紙面比較（Phase PK-1；PK-1b 起輸出 PK-1b 的檔案、附 PK-1 對照）。
+"""技能生成：自由設計 vs 挑選模式的紙面比較（Phase PK-1；PK-2 起輸出 PK-2 的檔案、附 PK-1b 對照）。
 
 同一組題目（LB 的 20 題＝``scripts/llm_model_compare.py`` 的題目〔``trpg llm propose -n 20``、
 seed 0〕，另加幾題）各跑兩條路，輸出原始 JSON 與給裁判看的 markdown：
@@ -19,8 +19,10 @@ seed 0〕，另加幾題）各跑兩條路，輸出原始 JSON 與給裁判看�
 - 每題的「玩家」是確定性的樣本（3 招手寫技能，其中盡量 1 招帶題目的關鍵字），只給挑選模式打分與
   ``<player>`` 區塊用；自由設計的 prompt 沒有玩家手上技能這一欄（現行如此）。PK-1b 起樣本玩家另有
   確定性的行為紀錄與主屬性（手上技能和 PK-1 相同；行為紀錄用另一條亂數串流）。
-- PK-1b：``--baseline``（預設 ``docs/phases/PK-1資料/pick_compare.json``）的指標列在整體指標的
-  「PK-1」欄。
+- PK-2：挑選模式用加嚴的名稱檢查（``pick_skill(strict=True)``），打分多「這招有沒有料」；每題多
+  ``thin``（收下那招的單薄原因）與 ``strict_mismatch``（加嚴詞組判斷的不符條數）。
+- ``--baseline``（PK-2 起預設 ``docs/phases/PK-1b資料/pick_compare.json``）的指標列在整體
+  指標的對照欄。
 """
 
 from __future__ import annotations
@@ -49,7 +51,7 @@ from trpg.content.skills import SkillDef, skill_elements
 from trpg.llm import OpenAICompatClient, load_llm_config
 from trpg.llm.candidate_source import mock_client_for, mock_naming_client
 from trpg.llm.client import LLMClient
-from trpg.llm.consistency import check_mentions, skill_facts
+from trpg.llm.consistency import check_mentions, skill_facts, strict_facts
 from trpg.llm.naming import name_skill
 from trpg.llm.pick import candidate_card, fit_notes, mock_pick_client, pick_skill
 from trpg.llm.propose import propose_skill
@@ -64,7 +66,7 @@ from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal import ProposalContext
 from trpg.skillgen.proposal_fallback import FallbackError
 from trpg.skillgen.proposal_subset import ProposalRequest
-from trpg.skillgen.skill_pick import design_key, design_label, pick_slate
+from trpg.skillgen.skill_pick import design_key, design_label, pick_slate, thin_reasons
 
 _LMC: Any = importlib.import_module("llm_model_compare")  # 同資料夾的 LB-1 量測腳本
 MIN_TPS: float = _LMC.MIN_TPS
@@ -72,12 +74,13 @@ RecordingTransport: Any = _LMC.RecordingTransport
 measure_speed = _LMC.measure_speed
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "docs" / "phases" / "PK-1b資料"
-REPORT = ROOT / "docs" / "phases" / "PhasePK-1b比較.md"
-BASELINE = ROOT / "docs" / "phases" / "PK-1資料" / "pick_compare.json"
+DATA_DIR = ROOT / "docs" / "phases" / "PK-2資料"
+REPORT = ROOT / "docs" / "phases" / "PhasePK-2比較.md"
+BASELINE = ROOT / "docs" / "phases" / "PK-1b資料" / "pick_compare.json"
 JSON_NAME = "pick_compare.json"
-FORMAT = "pick-compare/2"
-"""``pick-compare/2``（PK-1b）：挑選的每題多 ``held_in_slate``、樣本玩家多行為紀錄與主屬性。"""
+FORMAT = "pick-compare/3"
+"""``pick-compare/3``（PK-2）：每題多 ``thin``、``strict_mismatch``（``/2``＝PK-1b：多
+``held_in_slate``、樣本玩家多行為紀錄與主屬性）。"""
 BEHAVIOR_ACTIONS: tuple[str, ...] = ("aim", "shove", "trip", "vault")
 """樣本玩家行為紀錄會出現的動作（``skill_keywords.yaml`` 有 ``actions`` 的四個）。"""
 EXTRA_QUESTIONS: tuple[ProposalRequest, ...] = (
@@ -92,7 +95,10 @@ PLAYER_SKILLS = 3
 SUMMARY_MARK = "<!-- 摘要 -->"
 """markdown 裡手寫白話摘要的前後標記（重產 markdown 時保留兩個標記之間的文字）。"""
 SUMMARY_PIECES = 2
-BASELINE_NOTE = "PK-1 欄是 PK-1 的原始資料用同一份指標程式重算。"
+BASELINE_NOTE = (
+    "PK-1b 欄是 PK-1b 的原始資料用同一份指標程式重算"
+    "（PK-2 新加的兩項 PK-1b 沒有存技能定義，標「—」）。"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -294,6 +300,7 @@ class Runner:
                 player=player,
                 slate=slate,
                 max_attempts=self.attempts,
+                strict=True,
             )
         except FallbackError as exc:
             return {"source": "failed", "error": str(exc), "seconds": _since(start)}
@@ -335,6 +342,8 @@ class Runner:
             ],
             "skill": shown,
             "desc_mismatch": _desc_checks(lib, shown, outcome.skill),
+            "strict_mismatch": _desc_checks(lib, shown, outcome.skill, strict=True),
+            "thin": list(thin_reasons(outcome.skill)),
             "held_in_slate": sum(
                 1
                 for c in slate.ranked
@@ -364,13 +373,16 @@ def loaded_models(base_url: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _desc_checks(library: ContentLibrary, skill: dict[str, Any], sk: SkillDef) -> int:
-    """名稱與兩段文字提到、但效果裡沒有的元素／控制／召喚詞（規則判斷；0＝對得上）。"""
+def _desc_checks(
+    library: ContentLibrary, skill: dict[str, Any], sk: SkillDef, *, strict: bool = False
+) -> int:
+    """名稱與兩段文字提到、但效果裡沒有的元素／控制／召喚詞（規則判斷；0＝對得上）。``strict``
+    （PK-2）：連加嚴詞組（高處、地形、墜落、打擊、形狀、單字元素）一起看。"""
     words = load_effect_words()
-    facts = skill_facts(library, sk)
+    facts = strict_facts(library, sk) if strict else skill_facts(library, sk)
     bad = 0
     for label in ("name_zh", "concept", "cast_flavor"):
-        bad += len(check_mentions(label, str(skill[label]), facts, words))
+        bad += len(check_mentions(label, str(skill[label]), facts, words, strict=strict))
     return bad
 
 
@@ -413,6 +425,14 @@ def path_metrics(rows: Sequence[dict[str, Any]], side: str) -> dict[str, Any]:
         "keyword_fit": fit,
         "keyword_questions": sum(1 for r in rows if r["keywords"]),
         "desc_mismatch": sum(r.get("desc_mismatch", 0) for r in done),
+        "strict_mismatch": (
+            sum(r.get("strict_mismatch", 0) for r in done)
+            if any("strict_mismatch" in r for r in done)
+            else "—"
+        ),
+        "thin_picked": (
+            sum(1 for r in done if r.get("thin")) if any("thin" in r for r in done) else "—"
+        ),
         "element_mentioned": sum(mentions),
         "element_skills": len(mentions),
         "seconds_median": round(statistics.median(seconds), 2) if seconds else None,
@@ -582,7 +602,7 @@ def _metrics_md(
     """整體指標：本次的自由設計、挑選模式；有 ``baseline``（PK-1 的指標）時另列 PK-1 兩欄。"""
     columns = [("自由設計", metrics["free"]), ("挑選模式", metrics["pick"])]
     if baseline is not None:
-        columns += [("PK-1 自由設計", baseline["free"]), ("PK-1 挑選模式", baseline["pick"])]
+        columns += [("PK-1b 自由設計", baseline["free"]), ("PK-1b 挑選模式", baseline["pick"])]
 
     def row(label: str, cell: Callable[[dict[str, Any]], Any]) -> str:
         return f"| {label} | " + " | ".join(str(cell(m)) for _, m in columns) + " |"
@@ -609,6 +629,8 @@ def _metrics_md(
         row("候選裡出現手上已有的技能", key("held_in_slate")),
         row("關鍵字貼合（帶齊題目關鍵字）", ratio("keyword_fit", "keyword_questions")),
         row("名稱與描述提到效果裡沒有的詞（條數，規則判斷）", key("desc_mismatch")),
+        row("同上，加嚴詞組（高處、地形、墜落、打擊、形狀、單字元素）", key("strict_mismatch")),
+        row("收下的招單薄（只有刻紋／標記、只有條件式非傷害、史詩效果太少）", key("thin_picked")),
         row("有元素的招，名稱或描述提到該元素", ratio("element_mentioned", "element_skills")),
         row("強度占預算（中位，‰）", key("budget_median")),
         row("每題秒數（中位）", key("seconds_median")),
@@ -618,7 +640,8 @@ def _metrics_md(
 
 
 def _baseline(path: Path | None) -> dict[str, dict[str, Any]] | None:
-    """PK-1 的結果用同一份 :func:`path_metrics` 重算指標；檔案不在時為 ``None``。"""
+    """對照（PK-2 起是 PK-1b）的結果用同一份 :func:`path_metrics` 重算指標；檔案不在時為
+    ``None``。"""
     source = path or BASELINE
     if not source.exists():
         return None
@@ -633,7 +656,7 @@ def write_report(
 ) -> None:
     meta = result["meta"]
     lines = [
-        "# PK-1b 比較：自由設計 vs 挑選模式（紙面樣本）",
+        "# PK-2 比較：自由設計 vs 挑選模式（紙面樣本）",
         "",
         SUMMARY_MARK,
         "",
@@ -683,7 +706,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         cmd = sub.add_parser(name)
         cmd.add_argument("--out", type=Path, default=None, help="JSON 路徑")
         cmd.add_argument("--report", type=Path, default=None, help="markdown 路徑")
-        cmd.add_argument("--baseline", type=Path, default=None, help="PK-1 的 JSON（對照欄）")
+        cmd.add_argument("--baseline", type=Path, default=None, help="對照的 JSON（預設 PK-1b）")
     run_cmd = sub.choices["run"]
     run_cmd.add_argument("--mock", action="store_true", help="不連模型（Mock 冒煙）")
     run_cmd.add_argument("--limit", type=int, default=0, help="只跑前幾題（0＝全部）")

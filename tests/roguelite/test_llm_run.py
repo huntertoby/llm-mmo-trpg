@@ -7,8 +7,9 @@ import json
 from tests.roguelite.helpers import full_library, library
 from trpg.content.skills import SkillDef
 from trpg.llm.candidate_source import mock_naming_client, name_attempt
+from trpg.llm.pick import mock_offer_picker
 from trpg.roguelite import RunSave, auto_play, dumps_save, loads_save, new_run
-from trpg.roguelite.llm_hook import use_proposer
+from trpg.roguelite.llm_hook import use_picker, use_proposer
 from trpg.roguelite.offers import make_offer, offer_updates
 from trpg.roguelite.state import RunState
 from trpg.skillgen.proposal import ProposalContext
@@ -123,14 +124,16 @@ def test_old_format_7_save_is_readable() -> None:
 
 
 def test_full_run_with_mock_llm_is_deterministic() -> None:
+    # PK-2：一輪的升級與完整技能三選一走挑選模式（預設開），LLM 那一步是挑選器（提議器照樣裝著）
     first = _run(True)
     second = _run(True)
-    with use_proposer(_Counting()):
+    with use_proposer(_Counting()), use_picker(mock_offer_picker(lib)):
         a, _ = auto_play(lib, first)
-    with use_proposer(_Counting()):
+    with use_proposer(_Counting()), use_picker(mock_offer_picker(lib)):
         b, _ = auto_play(lib, second)
     assert a == b and a.ended
     assert a.llm_log
+    assert all(r.prompt_version == "skill-pick/2" for r in a.llm_log if r.attempts)
 
 
 # -- Phase 4-L7：命名與敘事 -----------------------------------------------------

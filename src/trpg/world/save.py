@@ -4,7 +4,7 @@
 |---|---|
 | 世界快照 | ``trpg-world/4``（一個 JSON 物件，:class:`~trpg.world.state.WorldState`） |
 | 角色 | ``trpg-char/15``（一角色一個 JSON 物件，:class:`~trpg.world.state.CharacterState`） |
-| 世界動作日誌 | ``trpg-wlog/10``（JSON Lines：第一行 ``{"format": "trpg-wlog/10"}``，之後一行一筆
+| 世界動作日誌 | ``trpg-wlog/11``（JSON Lines：第一行 ``{"format": "trpg-wlog/11"}``，之後一行一筆
   :class:`~trpg.world.replay.WorldLogEntry`） |
 
 JSON 一律排序鍵、UTF-8 不跳脫，同樣的狀態得到逐字相同的檔案。讀檔時 ``format`` 不認得就拒絕
@@ -114,6 +114,12 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 高 2 層才無視；撤回 RG-5 的「高 1 層」），戰鬥日誌升 ``trpg-battle-log/125``。
 ``trpg.world`` 的程式沒改，:data:`WORLD_RULES_VERSION` 維持 33：日誌規則鍵（:func:`log_rules_key`）
 本來就含戰鬥紀錄版號，``/124`` 的舊日誌照樣標成規則已變、不能重播。
+
+**Phase PK-2**（挑選模式接上機遇的完整技能三選一，06 6.7 #165）：機遇三選一改走挑選模式
+（``skill_pick.yaml`` 的 ``enabled``），日誌 ``generated`` 裡的三選一標示（``OfferTag``）多選填欄位
+``pick``（``llm``／``top``），格式升成 ``trpg-wlog/11``；``/10`` **照讀**（沒有這個欄位）。
+角色存檔的待選三選一也會帶 ``pick``，``CHAR_FORMAT`` 不變（同 LF-1 前例，待 PM 決定）。
+機遇出題的程式改了，:data:`WORLD_RULES_VERSION` 升成 34。
 """
 
 from __future__ import annotations
@@ -166,19 +172,21 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/10"
-READABLE_WLOG_FORMATS: Final = frozenset({"trpg-wlog/7", "trpg-wlog/8", "trpg-wlog/9"})
+WLOG_FORMAT: Final = "trpg-wlog/11"
+READABLE_WLOG_FORMATS: Final = frozenset(
+    {"trpg-wlog/7", "trpg-wlog/8", "trpg-wlog/9", "trpg-wlog/10"}
+)
 """照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``；6T-1a：``/8`` 只少了
 選填欄位 ``counterpart``、``counterpart_actor``；LF-1：``/9`` 只少了閃現提議紀錄的選填欄位
-``texts``）。"""
+``texts``；PK-2：``/10`` 只少了三選一標示的選填欄位 ``pick``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 33
+WORLD_RULES_VERSION: Final = 34
 # 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
-# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2；32＝RG-4；33＝RG-5）
+# 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2；32＝RG-4；33＝RG-5；34＝PK-2）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。
@@ -310,6 +318,9 @@ WORLD_RULES_VERSION: Final = 33
   獎勵照整個陣容（掉材料的成員改成整個敵方陣容）。另外戰鬥紀錄 ``trpg-battle-log/121``（敵方陷阱的
   可疑痕跡；第一季沒有會放陷阱的敵人，世界戰鬥的結果不變）。``CHAR_FORMAT`` 升 ``trpg-char/15``
   （``EncounterResult.duel``，``None`` 不輸出）；``trpg-wlog`` 不變（動作 union 多一種的前例）。
+- 34（PK-2，06 6.7 #165）：機遇的完整技能三選一改走挑選模式（每格另外抽符合該格的候選、依玩家
+  打分取第一名，LLM 開著時每格挑一並命名）；``trpg-wlog/11``（三選一標示多 ``pick``）。（32＝RG-4、
+  33＝RG-5 見上面的段落。）
 
 沒有升版的規則改動（保守判斷：目前的內容觸發不到，同一份日誌重播結果不變）：
 

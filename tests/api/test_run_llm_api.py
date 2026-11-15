@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -19,7 +20,10 @@ from trpg.api.llm_source import LLM_OFF_NOTICE, LocalLlmProvider, MockLlmProvide
 from trpg.api.runs import RunStore
 from trpg.content.library import ContentLibrary
 from trpg.llm.candidate_source import mock_proposer
+from trpg.llm.pick import mock_offer_picker
 from trpg.roguelite.state import CampfireNode
+from trpg.skillgen.pick_offer import OfferPicker, SlotChoice, SlotPick
+from trpg.skillgen.pick_player import PickPlayer
 from trpg.skillgen.proposal import ProposalContext
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.proposal_topic import LlmAttempt, LlmProposer
@@ -28,7 +32,7 @@ START: dict[str, Any] = {"weapon": "fire_staff", "keywords": ["ignite", "marked"
 
 
 class _Provider(MockLlmProvider):
-    """計算提議器被呼叫幾次。"""
+    """計算提議器（PK-2 起含挑選器的每一格）被呼叫幾次。"""
 
     def __init__(self, *, reachable: bool = True) -> None:
         super().__init__(reachable=reachable)
@@ -40,6 +44,17 @@ class _Provider(MockLlmProvider):
         def counted(request: ProposalRequest, ctx: ProposalContext, seed: int) -> LlmAttempt:
             self.calls += 1
             return inner(request, ctx, seed)
+
+        return counted
+
+    def picker(self, library: ContentLibrary) -> OfferPicker:
+        """PK-2：三選一走挑選模式時，LLM 那一步是挑選器；每一格真的請了 LLM 算一次。"""
+        inner = mock_offer_picker(library)
+
+        def counted(slots: Sequence[SlotPick], player: PickPlayer) -> Sequence[SlotChoice | None]:
+            answers = inner(slots, player)
+            self.calls += sum(1 for a in answers if a is not None)
+            return answers
 
         return counted
 

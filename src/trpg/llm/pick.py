@@ -18,6 +18,7 @@ LLM 不能改候選：結果只把名稱與敘事換掉（``apply_naming``）；
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, Literal
@@ -30,7 +31,7 @@ from trpg.content.skills import SkillDef, skill_elements
 from trpg.content.world import WorldStyle, load_world_style
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient
-from trpg.llm.consistency import NameCheck, skill_facts
+from trpg.llm.consistency import NameCheck, skill_facts, strict_facts
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.naming import (
     NamingText,
@@ -42,7 +43,9 @@ from trpg.llm.naming import (
 from trpg.llm.prompts.pick import PICK_PROMPT_VERSION, build_pick_messages, pick_schema
 from trpg.llm.response import clean_response
 from trpg.narrative.skills import skill_card
+from trpg.skillgen.candidates import LlmTrace
 from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.pick_offer import OfferPicker, SlotChoice, SlotPick
 from trpg.skillgen.pick_player import PickPlayer
 from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal import ProposalContext
@@ -53,12 +56,15 @@ from trpg.skillgen.skill_pick import PickSlate, element_partners, pick_slate, sy
 
 __all__ = [
     "DEFAULT_PICK_ATTEMPTS",
+    "OFFER_BUDGET_S",
     "PickOutcome",
     "PickSource",
     "PickText",
     "candidate_card",
     "fit_notes",
+    "make_offer_picker",
     "make_pick_proposer",
+    "mock_offer_picker",
     "mock_pick_client",
     "pick_skill",
 ]
@@ -254,6 +260,8 @@ class _Pick:
     words: EffectWords
     used: set[str]
     archaic_ok: bool
+    strict: bool = False
+    """PK-2：加嚴的一致性檢查（高處、地形、墜落、打擊、形狀、單字元素）。"""
     codes: list[str] = field(default_factory=list)
     raws: list[str] = field(default_factory=list)
     previous: str | None = None
@@ -266,9 +274,12 @@ class _Pick:
         if candidate.source == "pool":  # 手寫技能保留原本的名稱與敘事，不檢查文字
             return []
         naming = text.naming()
-        facts = skill_facts(self.library, candidate.skill)
+        if self.strict:
+            facts = strict_facts(self.library, candidate.skill)
+        else:
+            facts = skill_facts(self.library, candidate.skill)
         errors = check_naming(naming, self.style.naming, self.used, archaic_ok=self.archaic_ok)
-        return errors + check_consistency(naming, facts, self.words)
+        return errors + check_consistency(naming, facts, self.words, strict=self.strict)
 
     def attempt(self, number: int, limit: int) -> PickText | str | None:
         """一次呼叫：合格回傳回應；應立即退回時回傳原因；可以重試時回傳 ``None``。"""
@@ -316,9 +327,12 @@ def pick_skill(
     world: WorldStyle | None = None,
     words: EffectWords | None = None,
     weapon: str | None = None,
+    strict: bool = False,
 ) -> PickOutcome:
     """挑選模式的一題（見模組說明）。``taken`` 是已用過的名稱（內容庫技能的名稱一併避開）；
-    ``weapon`` 是持有者手上的武器名稱（命名照它寫）。候選池與技能池、工坊都做不出時丟
+    ``weapon`` 是持有者手上的武器名稱（命名照它寫）；``strict``（PK-2）＝名稱與描述用加嚴的一致性
+    檢查（``effect_words.yaml`` 的 ``strict: true`` 詞組：高處、地形、墜落、打擊、形狀、單字元素；
+    要在效果、條件或形狀裡找得到對應），不合格照常重試、用盡退回組合式名稱。候選池與技能池、工坊都做不出時丟
     :class:`~trpg.skillgen.proposal_fallback.FallbackError`（上層處理，同現行）。"""
     slate = (
         slate if slate is not None else pick_slate(library, request, ctx, seed=seed, player=player)
@@ -365,6 +379,7 @@ def pick_skill(
         words if words is not None else load_effect_words(),
         used,
         style.archaic_ok(request.region),
+        strict,
     )
     for number in range(1, max_attempts + 1):
         found = loop.attempt(number, max_attempts)
@@ -512,3 +527,106 @@ def mock_pick_client(
     )
     body = json.dumps({"pick": index, **text}, ensure_ascii=False)
     return MockLLMClient([body] * attempts)
+
+
+# ---------------------------------------------------------------------------
+# PK-2：接上三選一（每格各挑一）
+# ---------------------------------------------------------------------------
+
+OFFER_BUDGET_S = 10.0
+"""一份三選一請 LLM 的時間上限（秒；06 6.34.7「超過 10 秒改給組合器或模板版」）：用完後剩下的格子
+不再呼叫，照分數第一名。"""
+
+
+def _slot_trace(slot: SlotPick, outcome: PickOutcome) -> LlmTrace:
+    llm = outcome.source == "llm"
+    return LlmTrace(
+        keywords=slot.keywords,
+        rarity=slot.request.rarity,
+        core_primitive=None,
+        menu_seed=None,
+        theme=None,
+        attempts=outcome.attempts,
+        ok=llm,
+        codes=outcome.codes,
+        reason=None if llm else outcome.reason,
+        name_source="llm" if outcome.name_source == "llm" else "fallback",
+        name_attempts=outcome.attempts,
+        prompt_version=PICK_PROMPT_VERSION if outcome.attempts else None,
+        pick_seeds=outcome.slate.seeds,
+        pick_designs=outcome.slate.designs,
+        pick_index=outcome.index,
+        pick_reason=outcome.reason,
+    )
+
+
+def make_offer_picker(
+    client: LLMClient | Callable[[PickSlate, int], LLMClient],
+    library: ContentLibrary,
+    *,
+    max_attempts: int = DEFAULT_PICK_ATTEMPTS,
+    budget_s: float = OFFER_BUDGET_S,
+    clock: Callable[[], float] = time.monotonic,
+) -> OfferPicker:
+    """挑選模式接上三選一的挑選器（PK-2，:data:`~trpg.skillgen.pick_offer.OfferPicker`）：依序每格
+    呼叫 :func:`pick_skill`（排好的候選由 ``trpg.skillgen.pick_offer`` 給，這裡不再抽）。
+
+    - 候選少於 ``pool.min_for_llm`` 個 → 這格不請 LLM（``None``，照第一名、保留原名）。
+    - 這份三選一已經用掉 ``budget_s`` 秒 → 剩下的格子不請 LLM（耗時只決定「請不請」，結果照樣記進
+      存檔；重播只讀存檔，不呼叫 LLM）。
+    - LLM 失敗 → 第一名＋組合式名稱（``llm`` 為假，紀錄的 ``ok`` 為假）。
+
+    同一份三選一的名稱不重複，也不和玩家手上技能的名稱重複。``client`` 可以是固定的 client，或
+    依（候選，種子）建立 client 的函式（Mock 用）。"""
+
+    def pick(slots: Sequence[SlotPick], player: PickPlayer) -> list[SlotChoice | None]:
+        taken = {s.name_zh for s in player.held_skills}
+        start = clock()
+        out: list[SlotChoice | None] = []
+        for slot in slots:
+            if len(slot.slate.ranked) < library.skill_pick.pool.min_for_llm:
+                out.append(None)
+                continue
+            if clock() - start >= budget_s:
+                out.append(None)
+                continue
+            used = client if isinstance(client, LLMClient) else client(slot.slate, slot.seed)
+            ctx = ProposalContext(tier=slot.request.tier, rarity=slot.request.rarity)
+            outcome = pick_skill(
+                used,
+                library,
+                slot.request,
+                ctx,
+                seed=slot.seed,
+                taken=sorted(taken),
+                player=player,
+                slate=slot.slate,
+                max_attempts=max_attempts,
+                weapon=slot.weapon_zh,
+                strict=True,
+            )
+            taken.add(outcome.skill.name_zh)
+            out.append(
+                SlotChoice(
+                    position=outcome.picked if outcome.picked is not None else 0,
+                    skill=outcome.skill,
+                    trace=_slot_trace(slot, outcome),
+                    llm=outcome.source == "llm",
+                )
+            )
+        return out
+
+    return pick
+
+
+def mock_offer_picker(
+    library: ContentLibrary, *, index: int = 0, attempts: int = DEFAULT_PICK_ATTEMPTS
+) -> OfferPicker:
+    """Mock 挑選器（PK-2；不需網路與金鑰）：每格永遠挑 ``index``（超出範圍時照填，用來測退回），
+    名稱照 Mock 命名（:func:`mock_pick_client`）。"""
+    return make_offer_picker(
+        lambda slate, seed: mock_pick_client(library, slate, seed, index=index, attempts=attempts),
+        library,
+        max_attempts=attempts,
+        budget_s=float("inf"),
+    )

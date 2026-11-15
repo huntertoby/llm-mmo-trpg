@@ -227,12 +227,18 @@ def check_consistency(
     facts: frozenset[str],
     words: EffectWords,
     added: frozenset[str] = frozenset(),
+    *,
+    strict: bool = False,
 ) -> list[NameCheck]:
     """敘事與效果一致（4-L11）：三段文字提到的控制、元素、召喚詞要在 ``facts``
-    （:func:`skill_facts`）找得到；``added``（閃現變化加上的效果）至少要被其中一段提到。"""
+    （:func:`skill_facts`）找得到；``added``（閃現變化加上的效果）至少要被其中一段提到。
+    ``strict``（PK-2 挑選模式）：加嚴詞組（高處、地形、單字元素）也看，``facts`` 要用
+    :func:`~trpg.llm.consistency.strict_facts`。"""
     fields = {"name_zh": text.name_zh, "concept": text.concept, "cast_flavor": text.cast_flavor}
     errors = [
-        e for label, body in fields.items() for e in check_mentions(label, body, facts, words)
+        e
+        for label, body in fields.items()
+        for e in check_mentions(label, body, facts, words, strict=strict)
     ]
     errors += check_added(fields.values(), added, words, code="narrative.missing_added")
     return errors

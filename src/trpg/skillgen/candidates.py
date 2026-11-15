@@ -203,6 +203,9 @@ class Candidate:
     fallback: bool = False
     llm: LlmTrace | None = None
     """這個種類請過 LLM 時的紀錄（成功 ``ok``，或失敗後改走組合器／技能池）。"""
+    pick: Literal["llm", "top"] | None = None
+    """挑選模式（Phase PK-2，:mod:`trpg.skillgen.pick_offer`）：``llm``＝LLM 從這一格的候選挑選並
+    命名；``top``＝這一格分數第一名（沒有 LLM、不請 LLM 或 LLM 失敗）；``None``＝不是挑選模式。"""
 
 
 @dataclass(frozen=True, slots=True)

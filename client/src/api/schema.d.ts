@@ -8074,6 +8074,8 @@ export interface components {
              * @enum {string}
              */
             source: "pool" | "composer" | "llm";
+            /** Pick */
+            pick?: ("llm" | "top") | null;
         };
         /**
          * OpeningClassAction
