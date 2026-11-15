@@ -70,7 +70,8 @@ def test_highest_attribute_change_moves_new_skills() -> None:
     """最高屬性改變後，同一個種子的新技能縮放屬性跟著變（限在允許範圍內）。"""
     lib = library()
     changed = 0
-    for seed in range(30):
+    # PK-3：組合器不再產生怪條件（玩法 PM 4.1.23），原本唯一會變的種子 28 換了結構；擴到 80 個種子
+    for seed in range(80):
         by_top = {
             top: compose_random_skill(
                 seed, tier=1, library=lib, hero_attributes=_attrs(**{top.value: 18})

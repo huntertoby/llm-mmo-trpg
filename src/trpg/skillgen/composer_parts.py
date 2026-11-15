@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 from types import MappingProxyType
@@ -900,9 +900,43 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
     effect_level = ctx.skeleton.composer.effect_level_condition and len(damages) > 1
     if effect_level or (not required and ctx.chance(ctx.rules.condition.effect_level_permille)):
         index = damages[1] if effect_level else ctx.rng.choice(enemy or [0])
-        ctx.effects[index]["condition"] = spec
+        if not _odd_on_effect(ctx.effects[index], spec):  # PK-3（玩法 PM 4.1.23）：怪的不掛
+            ctx.effects[index]["condition"] = spec
         return None
-    return spec
+    return _skill_level(ctx.effects, spec, required=required)
+
+
+def _skill_level(
+    effects: Sequence[Mapping[str, Any]], spec: dict[str, Any], *, required: bool
+) -> dict[str, Any] | None:
+    """技能層級的條件；PK-3（玩法 PM 4.1.23）怪的組合不產生：骨架要求條件時重抽，否則不掛條件
+    （亂數照舊）。"""
+    if not _odd_on_skill(effects, spec):
+        return spec
+    if required:
+        raise Retry
+    return None
+
+
+_DAMAGE_TYPES = frozenset({"damage", "delayed_damage"})
+_FIRST_ROUND = "first_round"
+_INSCRIBE = "inscribe"
+
+
+def _odd_on_effect(effect: Mapping[str, Any], spec: Mapping[str, Any]) -> bool:
+    """PK-3（玩法 PM 4.1.23「組合器不產生、驗證器不改」）：效果層級的條件不掛在刻紋上（刻紋本身沒有
+    效果，06 6.25），「第一輪」只掛在傷害上（非傷害效果只在第一輪生效＝第二輪起只剩代價）。"""
+    if effect["type"] == _INSCRIBE:
+        return True
+    return spec["type"] == _FIRST_ROUND and effect["type"] not in _DAMAGE_TYPES
+
+
+def _odd_on_skill(effects: Sequence[Mapping[str, Any]], spec: Mapping[str, Any]) -> bool:
+    """PK-3（同上）：整招沒有傷害時，技能層級不抽「第一輪」，也不給帶刻紋的招抽條件（同
+    ``skill_pick.odd_conditions`` 的判定，打分扣分留著當保險）。"""
+    if any(e["type"] in _DAMAGE_TYPES for e in effects):
+        return False
+    return spec["type"] == _FIRST_ROUND or any(e["type"] == _INSCRIBE for e in effects)
 
 
 # ---------------------------------------------------------------------------
