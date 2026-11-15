@@ -106,7 +106,7 @@
 - 先預測：挑選模式沒有接出題流程，Mock、一輪、大世界、CLI 輸出都不變；`fallback_skill` 新參數預設空，退回路徑的亂數與選項不變；`skill_pick.yaml` 改了只影響 `ruleset_hash(library)`、`content_digest`，規則包雜湊不變；prompt 快照只多 `skill-pick/2` 一筆。
 - 結果：
   - 挑選 prompt 快照：`tests/llm/test_pick_pk1.py` 的 `SNAPSHOTS` 新增 `skill-pick/2`（`17e77ccf…`），`skill-pick/1` 那筆保留；版本斷言改成讀 `PICK_PROMPT_VERSION`。
-  - CLI 快照（`tests/cli -m slow`）：見第 8 節，沒有任何鍵變動、沒有重產。
+  - CLI 快照（`tests/cli -m slow`）：44 passed，沒有任何鍵變動、沒有重產（和預測一致）。
   - 戰鬥不變比對：改前用 `git archive 119af12fa src content` 的副本（`PYTHONPATH` 指過去），PK-1 同一支腳本（8 張圖 × 種子 1、2＋3 張頭目圖 × 種子 3～12，比去掉規則包的整份紀錄）：**`battles=46 events=20458 different=0`**。腳本在暫存區，不進 repo。
 - 改到的既有測試：
   - `tests/skillgen/test_skill_pick_pk1.py::test_workshop_weights_change_the_order`：PK-1b 預設不放手寫技能，改成先把 `handwritten_max` 開到 1 再比（斷言不變）。
@@ -125,9 +125,10 @@
 - 執行結果（commit 前）：
   - `ruff check`、`ruff format --check`、`uv run mypy`（不帶參數，1646 檔，含 tests）、`lint-imports`（14 kept）都通過。
   - `tests/llm` 單獨 `-n 8`：463 passed（3 分 24 秒）。
-  - `tests/skillgen` 單獨 `-n 8`：見下方補記。
-  - `tests/content`＋`tests/api/tuning`＋`tests/test_architecture.py`：見下方補記。
-  - 交件前：`tests/cli -m slow`、`tests/sim -m slow` 見下方補記。
+  - `tests/skillgen` 單獨 `-n 8`：第一次 2 failed（`test_proposal_fallback.py` 兩項用 `monkeypatch` 把 `_from_pool` 換成 4 個參數的 lambda，我的包裝多傳 `exclude=`）。改成「沒有要排除時直接呼叫原本的 `_from_pool`」後重跑：4423 passed、14 skipped（7 分 06 秒）。
+  - `tests/content`＋`tests/api/tuning`＋`tests/test_architecture.py`：3329 passed。
+  - 交件前：`tests/cli -m slow` 44 passed（沒有任何快照鍵變動、沒有重產）；`tests/sim -m slow` 19 passed（6 分 52 秒）。
+  - 自己啟動的背景程序都已結束。
 - 沒有跑 `scripts/check.py` 全量、平衡量測、戰鬥模擬（不變比對以外）。
 
 ## 9. 待 PM 決定
