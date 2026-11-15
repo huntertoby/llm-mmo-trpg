@@ -133,3 +133,12 @@
    - **插隊**：`WorldPregen` 不再直接把 `_run` 丟給執行緒池；`_submit` 把 `_Entry`（帶自己的 `Future` 與內容庫視圖）放進 `_urgent`（`URGENT_KINDS`＝`{"wish"}`）或 `_normal` 兩條 deque，再丟一個 `_next` 工作；`_next` 從 `_urgent` 先拿、`set_running_or_notify_cancel` 失敗（被取消）就略過。結果：許願排在所有還沒開始的預測前面、許願之間照先後、正在跑的那一筆不被打斷。測試 `tests/api/test_wish_api_wp2.py::test_wish_jumps_the_queue`、`test_cancelled_wish_is_skipped`。
    - 主城：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`）；WP-3 起前端點這兩個開許願池面板（`world/WishPanel.tsx`；前端的事看 `docs/dev/上手-前端戰鬥畫面與動畫.md` 第一節「許願池面板」列）。
    - Mock 注意：Mock 提議器做不做得出完整技能跟技能種子（角色 ID、賽季種子）有關；要測 `llm` 版用 `alice`＋`make_world()`（同 `test_wish_pregen`）。
+
+## 九、PK-2：挑選模式接上三選一（`skill_pick.yaml` 的 `enabled`，預設開）
+
+1. **開關**：`content/skill_pick.yaml` 的 `enabled`（`SkillPickRules.enabled`；不進數值工坊，工坊沒有布林欄位）。只有傳 `make_offer(..., pick=True)` 的呼叫端生效：原型升級（`progress._level_up`）、原型完整技能（`progress._complete_offer`）、大世界機遇（`solutions._opportunity_offer`、`world_pregen.offer`、`offer_prefetch` 的機遇工作、`opportunity_wait_request` 的鍵）。大世界任務、許願池沒傳，照舊。關掉＝逐字回到 PK-2 前（`tests/roguelite/test_pick_offer_pk2.py::test_switch_off_is_the_old_flow`）。
+2. **出題**：`skillgen/pick_offer.py`：先跑原本的產生器（白板或完整技能，不請 LLM）決定格子，每格另外抽（`pick.slot/<格>`，`slot_seeds`／`complete_slot_seeds`，湊到 `top_k` 就停）只收同關鍵字、同種類、同路線的組合器技能；非傷害保底格（`pick.nondamage/<格>`）；打分 `score_candidate(keywords=格子關鍵字)`。手上技能只用 ID＋設計鍵擋（不比名稱：組合式名稱常同名）。
+3. **LLM**：`llm_hook.use_picker`／`current_picker`；`trpg.llm.pick.make_offer_picker`（每格 `pick_skill(strict=True)`，一份三選一 10 秒用完剩下的格子不請、候選少於 `min_for_llm` 不請）、`mock_offer_picker(index=)`。`LlmProvider.picker()`、`RunSession.picker`、`cli/run_llm.py` 都裝上。回來的技能結構和候選不同就不收（`same_structure`）。
+4. **紀錄**：`OfferTag.pick`（`llm`／`top`，`None` 不寫出）→ API `OfferTagOut.pick`；`LlmRecord` 照 PK-1 的四欄。`WLOG_FORMAT` `trpg-wlog/11`、`WORLD_RULES_VERSION` 34。
+5. **加嚴的名稱檢查**：`effect_words.yaml` 的 `strict: true` 詞組（高處、墜落、地形、打擊、形狀、單字風／土石）只在 `strict=True` 看；`consistency.strict_facts` 多 `condition:`、`shape:`。閃現、自由設計命名不受影響（`check_added` 也略過 strict 詞組）。
+6. **測試**：`tests/roguelite/test_pick_offer_pk2.py`、`tests/llm/test_pick_pk2.py`；改到 `VICTORY`（`build_fire` 種子 1）。
