@@ -37,6 +37,7 @@ __all__ = [
     "check_world_terms",
     "effect_phrases",
     "mentioned_groups",
+    "multi_char_strict",
     "skill_facts",
     "strict_facts",
     "world_term_count",
@@ -169,6 +170,23 @@ def strip_similes(text: str, words: EffectWords) -> str:
     end = re.escape(words.simile_end)
     pattern = f"(?:{markers})[^{end}]*" if end else f"(?:{markers}).*"
     return re.sub(pattern, "　", text)
+
+
+_MULTI_CHAR = 2
+
+
+def multi_char_strict(words: EffectWords) -> EffectWords:
+    """PK-3（06 6.34.7，使用者題 3「B 只擋多字詞」）：加嚴詞組（``strict: true``）只留兩個字以上的
+    詞，一個詞都不剩的詞組拿掉（單字的風、土、石、斬、劈不看）；一般詞組不變。給閃現變化名用。"""
+    groups = []
+    for group in words.groups:
+        if not group.strict:
+            groups.append(group)
+            continue
+        kept = tuple(w for w in group.words if len(w) >= _MULTI_CHAR)
+        if kept:
+            groups.append(group.model_copy(update={"words": kept}))
+    return words.model_copy(update={"groups": tuple(groups)})
 
 
 def mentioned_groups(

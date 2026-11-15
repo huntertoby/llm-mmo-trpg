@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.engine.helpers import library
+from tests.engine.helpers import lf2_library
 from trpg.content.effect_words import load_effect_words
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.content.world import WorldTermRules, load_world_style
@@ -32,7 +32,7 @@ from trpg.skillgen.flash_offer import FlashRequest, make_offer, skill_before, tr
 from trpg.skillgen.flash_state import Variation, acquire
 from trpg.skillgen.usage import SkillUsage
 
-LIB = library()
+LIB = lf2_library()  # PK-3：測 LF-2 的提議流程（閃現挑選模式關掉）
 WORDS = load_effect_words()
 RULES = load_world_style().naming
 FIRE_ARROW = LIB.skills["skill_fire_arrow"]

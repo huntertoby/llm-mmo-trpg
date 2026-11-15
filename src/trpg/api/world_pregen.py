@@ -150,9 +150,8 @@ def provider_generators(provider: LlmProvider) -> Generators:
         factory = provider.flash_source(library)
         records: list[BaseModel] = []
         source = None if factory is None else factory(records.append)
-        if isinstance(source, LlmFlashSource):
-            skill = request.request.current or request.request.base
-            source.proposed(library, request.request, skill)
+        if isinstance(source, LlmFlashSource):  # PK-3：挑選模式或提議模式照開關
+            source.prepare(library, request.request)
         if not records:
             return FlashGen(key=request.key, record=FlashLlmRecord(tag=request.key))
         record = FlashLlmRecord.model_validate(records[-1].model_dump(mode="json"))

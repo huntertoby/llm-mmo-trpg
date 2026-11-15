@@ -47,6 +47,14 @@ class PickPoolRules(ContentModel):
     """PK-2 非傷害保底（#142）：保底格只留非傷害的候選，不到 ``top_k`` 個時（或三格都沒有非傷害的
     候選時，依新方向 → 橋接 → 加深）用另一條亂數串流最多補抽這麼多個種子，只收非傷害的；
     0＝不補抽。"""
+    relax_until: int = Field(default=3, ge=1, le=8)
+    """PK-3（06 6.7「候選怎麼篩」，使用者題 1「B 放寬」）：三選一每一格先只收「全部關鍵字＋路線符合
+    這一格」的候選；不到這麼多個時，照 #110 的找法依序放寬補上——同路線但只帶這一格部分關鍵字（橋接
+    之類的多關鍵字格）→ 不跟路線（偏離）的。放寬的候選另外扣分
+    （``weights.keyword_relaxed_penalty``、``weights.route_off_penalty``），排在後面。"""
+    flash_top_k: int = Field(default=4, ge=1, le=8)
+    """PK-3 閃現挑選模式：每個選項格給本機模型幾個候選（格子的類別由程式決定，候選依用法統計排序；
+    第一個就是原本出題的那一個）。越多 prompt 越長。"""
 
     @model_validator(mode="after")
     def _check(self) -> PickPoolRules:
@@ -107,6 +115,12 @@ class PickWeights(ContentModel):
     """多樣性：效果種類完全相同（只差元素或數字），每一個扣這麼多。"""
     same_element_penalty: int = Field(default=60, ge=0)
     """多樣性：元素標籤相同，每一個扣這麼多。"""
+    route_off_penalty: int = Field(default=400, ge=0)
+    """PK-3（06 6.7，題 1 B）：「跟主路線」改成扣分——候選不符合這一格的路線（加深、橋接要跟主路線；
+    新方向要不同屬性），扣這麼多。只有這一格符合路線的候選不夠 ``pool.relax_until`` 個時才會
+    放進來。"""
+    keyword_relaxed_penalty: int = Field(default=150, ge=0)
+    """PK-3（同上）：多關鍵字的格子（橋接）放寬成只帶其中一部分關鍵字的候選，扣這麼多。"""
 
 
 class SkillPickRules(ContentModel):
@@ -115,5 +129,10 @@ class SkillPickRules(ContentModel):
     enabled: bool = True
     """PK-2 開關（06 6.7 #165）：真＝原型的升級三選一（含白板格）與完整技能三選一（原型特殊時刻、
     大世界機遇）走挑選模式（``trpg.skillgen.pick_offer``）；假＝完全回到 PK-2 前的出題流程。"""
+    flash_enabled: bool = True
+    """PK-3 閃現開關（06 6.7、6.34.7 #165）：真＝閃現與重閃走挑選模式
+    （``trpg.skillgen.flash_pick``：程式照原本出題決定每一格的類別與轉型保底，每格依用法統計給幾個
+    合法候選，LLM 只挑與取名）；假＝回到 PK-3 前的流程（LF-2：LLM 從目錄提議）。和 ``enabled``
+    （三選一）分開。"""
     pool: PickPoolRules = Field(default_factory=PickPoolRules)
     weights: PickWeights = Field(default_factory=PickWeights)

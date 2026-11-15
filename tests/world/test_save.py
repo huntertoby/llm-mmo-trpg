@@ -75,7 +75,7 @@ def test_log_roundtrip() -> None:
     ]
     text = dumps_log(entries)
     lines = text.splitlines()
-    assert json.loads(lines[0]) == {"format": "trpg-wlog/11"}
+    assert json.loads(lines[0]) == {"format": "trpg-wlog/12"}
     assert len(lines) == 3
     assert loads_log(text) == tuple(entries)
 
@@ -89,7 +89,7 @@ def test_log_roundtrip() -> None:
         (loads_world, "[1, 2]"),
         (loads_world, "not json"),
         (loads_log, ""),
-        (loads_log, '{"format": "trpg-wlog/12"}\n'),
+        (loads_log, '{"format": "trpg-wlog/13"}\n'),
         (loads_log, '{"format": "trpg-wlog/9"}\n{"seq": 1}\n'),
         (loads_log, '{"format": "trpg-wlog/9"}\n{oops\n'),
         (loads_log, '{"format": "trpg-wlog/9", "stale_through": -1}\n'),

@@ -279,6 +279,9 @@ class FlashLlmRecord(_Model):
     texts: tuple[VariationText, ...] = Field(default=(), exclude_if=lambda v: not v)
     """LLM 的名稱與描述（LF-1，依變化的鍵；出題時由引擎檢查後掛上）。沒有時不輸出（舊紀錄逐字
     不變）。"""
+    picks: tuple[int, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """PK-3 挑選模式：每格選第幾個候選（依格子順序；``accepted`` 是每格選中的變化）。提議模式
+    （LF-2）沒有，不輸出。"""
 
 
 class LevelUpChoice(_Model):

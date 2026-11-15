@@ -56,6 +56,7 @@ from trpg.skillgen.flash_major import (
     transform_variations,
 )
 from trpg.skillgen.flash_merge import merge_options
+from trpg.skillgen.flash_pick import FlashSlot, PickingSource, flash_pick_on
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     SkillFlash,
@@ -89,6 +90,7 @@ __all__ = [
     "category_counts",
     "category_ranking",
     "choose",
+    "flash_slots",
     "has_options",
     "history_problem",
     "make_offer",
@@ -864,34 +866,16 @@ def make_offer(
     tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
     rng = Rng(request.seed).fork(tag)
     builder = _builder(library, request)
-    # LF-1：先拿提議（LLM 來源在這裡呼叫模型），再拿文字，之後建的選項才掛得上名稱與描述
-    variations = _proposed_variations(library, source, request, before)
-    builder.texts = _source_texts(library, source, request)
-    transform = _transform_option(library, request, source, builder, before) if major else None
-    proposed = _proposed_options(builder, variations, allowed=allowed)
-    if focused:
-        assert request.category is not None
-        ranked = source.ranked(library, request, request.category, before)
-        options = merge_options(
-            [o for o in proposed if o.variation.category == request.category],
-            builder.take(ranked, rule.options),
-            rule.options,
-        )
-        if not options:
-            raise ValueError(f"類別 {request.category} 這一次沒有合格的變化（沒有扣點）")
-        # 指定類別（3W-2c）：只出該類，不到 rule.options 個就少出，不拿別類補。
-        if transform is not None:
-            options.append(transform)
+    layout = _Layout(library, request, source, builder, before, allowed, rule.options, rng)
+    if flash_pick_on(library, source):  # PK-3：挑選模式（trpg.skillgen.flash_pick）
+        options = _picked(layout, source, major=major, min_categories=rule.min_categories)
     else:
-        count = rule.options - (1 if transform is not None else 0)
-        queues = {c: list(source.ranked(library, request, c, before)) for c in allowed}
-        options = _mixed(rng, queues, builder, count)
-        options = merge_options(
-            proposed, options, count, min_categories=min(rule.min_categories, count)
-        )
-        options = _fill_up(library, request, source, builder, before, options=options, count=count)
-        if transform is not None:
-            options.insert(rng.randint(0, len(options)), transform)
+        # LF-1：先拿提議（LLM 來源在這裡呼叫模型），再拿文字，之後建的選項才掛得上名稱與描述
+        variations = _proposed_variations(library, source, request, before)
+        builder.texts = _source_texts(library, source, request)
+        transform = _transform_option(library, request, source, builder, before) if major else None
+        proposed = _proposed_options(builder, variations, allowed=allowed)
+        options = layout.options(proposed, transform, min_categories=rule.min_categories)
     return FlashOffer(
         base_id=request.state.base_id,
         nth=request.nth,
@@ -903,6 +887,141 @@ def make_offer(
         options=tuple(options),
         weaker=builder.weaker,
     )
+
+
+@dataclass(slots=True)
+class _Layout:
+    """一次出題的選項排法（提議的放前面、資料順序補位、類別混合、轉型保底的位置；3W-1～3W-7）。"""
+
+    library: ContentLibrary
+    request: FlashRequest
+    source: FlashOptionSource
+    builder: _Builder
+    before: SkillDef
+    allowed: Sequence[str]
+    size: int
+    rng: Rng
+
+    def options(
+        self,
+        proposed: Sequence[FlashOption],
+        transform: FlashOption | None,
+        *,
+        min_categories: int,
+    ) -> list[FlashOption]:
+        library, request, source, builder = self.library, self.request, self.source, self.builder
+        if request.category is not None:
+            ranked = source.ranked(library, request, request.category, self.before)
+            options = merge_options(
+                [o for o in proposed if o.variation.category == request.category],
+                builder.take(ranked, self.size),
+                self.size,
+            )
+            if not options:
+                raise ValueError(f"類別 {request.category} 這一次沒有合格的變化（沒有扣點）")
+            # 指定類別（3W-2c）：只出該類，不到 rule.options 個就少出，不拿別類補。
+            if transform is not None:
+                options.append(transform)
+            return options
+        count = self.size - (1 if transform is not None else 0)
+        queues = {c: list(source.ranked(library, request, c, self.before)) for c in self.allowed}
+        options = _mixed(self.rng, queues, builder, count)
+        options = merge_options(proposed, options, count, min_categories=min(min_categories, count))
+        options = _fill_up(
+            library, request, source, builder, self.before, options=options, count=count
+        )
+        if transform is not None:
+            options.insert(self.rng.randint(0, len(options)), transform)
+        return options
+
+
+def flash_slots(
+    library: ContentLibrary,
+    request: FlashRequest,
+    source: FlashOptionSource | None = None,
+) -> list[FlashSlot]:
+    """PK-3 挑選模式的格子（見 :mod:`trpg.skillgen.flash_pick`；給測試與比較腳本）：照原本出題
+    （沒有提議、沒有文字）決定每一格，每格的候選依同一類的用法統計往下取。不合法的請求同
+    :func:`make_offer` 拋 :class:`ValueError`。"""
+    source = source or UsageSource()
+    table = library.flash
+    major = slot_is_major(table.rules, request.state, request.nth)
+    before = skill_before(library, request)
+    allowed = allowed_categories(table, before, major=major)
+    if request.category is not None and (
+        not table.pricing.allow_focus or request.category not in allowed
+    ):
+        raise ValueError(f"這一次不能指定類別 {request.category}（可用：{', '.join(allowed)}）")
+    rule = table.pricing.rule(request.category is not None)
+    tag = seed_tag(request.state.base_id, request.nth, request.reflashes, request.category)
+    builder = _builder(library, request)
+    rng = Rng(request.seed).fork(tag)
+    layout = _Layout(library, request, source, builder, before, allowed, rule.options, rng)
+    transform = _transform_option(library, request, source, builder, before) if major else None
+    return _slots(layout, layout.options((), transform, min_categories=rule.min_categories))
+
+
+def _slots(layout: _Layout, defaults: Sequence[FlashOption]) -> list[FlashSlot]:
+    """每格的候選：第一個是原本出題的那一個，其餘依同一類的用法統計往下取（同一類的格子輪流分、
+    不重複），每格最多 ``pool.flash_top_k`` 個；轉型保底固定。"""
+    library, request, builder = layout.library, layout.request, layout.builder
+    top_k = library.skill_pick.pool.flash_top_k
+    picked: dict[int, list[FlashOption]] = {i: [o] for i, o in enumerate(defaults)}
+    used = {o.variation.key() for o in defaults}
+    groups: dict[str, list[int]] = {}
+    for i, option in enumerate(defaults):
+        if option.variation.source != "transform":
+            groups.setdefault(option.variation.category, []).append(i)
+    for category, members in groups.items():
+        open_slots = [i for i in members if len(picked[i]) < top_k]
+        turn = 0
+        for variation in layout.source.ranked(library, request, category, layout.before):
+            if not open_slots:
+                break
+            if variation.key() in used:
+                continue
+            extra = builder.option(variation)
+            if extra is None:
+                continue
+            used.add(variation.key())
+            target = open_slots[turn % len(open_slots)]
+            picked[target].append(extra)
+            if len(picked[target]) >= top_k:
+                open_slots.remove(target)
+            else:
+                turn += 1
+    return [
+        FlashSlot(
+            index=i,
+            category=option.variation.category,
+            candidates=tuple(picked[i]),
+            fixed=option.variation.source == "transform",
+        )
+        for i, option in enumerate(defaults)
+    ]
+
+
+def _picked(
+    layout: _Layout, source: FlashOptionSource, *, major: bool, min_categories: int
+) -> list[FlashOption]:
+    """PK-3 挑選模式：照原本出題決定格子，請來源每格挑一個，再掛上文字重新套用。"""
+    library, request, builder = layout.library, layout.request, layout.builder
+    before = layout.before
+    transform = _transform_option(library, request, source, builder, before) if major else None
+    slots = _slots(layout, layout.options((), transform, min_categories=min_categories))
+    assert isinstance(source, PickingSource)
+    picks = source.pick(library, request, slots, before)
+    builder.texts = dict(picks.texts)
+    out: list[FlashOption] = []
+    for i, slot in enumerate(slots):
+        position = picks.positions[i] if i < len(picks.positions) else 0
+        if slot.fixed or not 0 <= position < len(slot.candidates):
+            position = 0
+        chosen = slot.candidates[position]
+        assert isinstance(chosen, FlashOption)
+        named = builder.option(chosen.variation)
+        out.append(chosen if named is None else named)
+    return out
 
 
 def _proposed_variations(

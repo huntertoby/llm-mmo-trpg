@@ -67,6 +67,7 @@ __all__ = [
     "candidate_pool",
     "design_key",
     "design_label",
+    "drop_thin",
     "element_partners",
     "is_nondamage",
     "odd_conditions",
@@ -519,6 +520,17 @@ def _penalty(candidate: PickCandidate, chosen: Sequence[PickCandidate], w: PickW
     return total
 
 
+def drop_thin(candidates: Sequence[PickCandidate], weights: PickWeights) -> list[PickCandidate]:
+    """PK-3（06 6.7「候選怎麼篩」，使用者題 2「B 擠掉」）：單薄的候選（:func:`thin_reasons`）不進給
+    LLM 的前幾名；全部都單薄時照原樣（照分數給，不留空）。只影響挑選，不改合法判定。"""
+    full = [
+        c
+        for c in candidates
+        if not thin_reasons(c.skill, epic_min_effects=weights.thin_epic_min_effects)
+    ]
+    return full or list(candidates)
+
+
 def rank_candidates(
     candidates: Sequence[PickCandidate], weights: PickWeights, k: int
 ) -> tuple[PickCandidate, ...]:
@@ -564,5 +576,5 @@ def pick_slate(
     pool = candidate_pool(library, request, ctx, seed=seed, rules=rules, player=who)
     scored = [score_candidate(library, c, who, rules.weights, request) for c in pool.candidates]
     scored = _limit_handwritten(scored, rules.pool.handwritten_max)
-    ranked = rank_candidates(scored, rules.weights, rules.pool.top_k)
+    ranked = rank_candidates(drop_thin(scored, rules.weights), rules.weights, rules.pool.top_k)
     return PickSlate(ranked, len(pool.candidates), pool.seeds_tried)

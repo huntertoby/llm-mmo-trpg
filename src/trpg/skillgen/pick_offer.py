@@ -38,6 +38,7 @@ from dataclasses import dataclass, field, replace
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
+from trpg.content.skill_pick import PickWeights
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
@@ -61,6 +62,7 @@ from trpg.skillgen.skill_pick import (
     PickCandidate,
     PickSlate,
     design_key,
+    drop_thin,
     is_nondamage,
     rank_candidates,
     score_candidate,
@@ -91,6 +93,16 @@ SLOT_KEYWORD_TRIES = 30
 """完整技能每一格另外抽的候選：每個種子指定關鍵字最多試幾個變體（原本的產生器是 300；這裡只是
 多找幾張候選，做不出來就換下一個種子，省 CPU 時間）。"""
 _TEXT_FIELDS = frozenset({"id", "name_zh", "narrative", "description_zh"})
+LEVEL_EXACT = 0
+"""放寬層級：全部關鍵字＋路線符合這一格（PK-2 的條件）。"""
+LEVEL_RELAXED = 1
+"""放寬層級：路線符合、只帶這一格的部分關鍵字（多關鍵字的格子，#110 ③ 放寬關鍵字）。"""
+LEVEL_OFF = 2
+"""放寬層級：全部關鍵字、但不符合這一格的路線（#110 ④ 最後才給、標偏離）。"""
+LEVEL_OFF_RELAXED = 3
+"""放寬層級：部分關鍵字＋不符合路線。"""
+MAX_OFF_ROUTE = 2
+"""一份三選一最多幾張偏離（06 6.27.4 #110「最多 2 張」；PK-3 起 LLM 挑了偏離的候選時檢查）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,27 +160,57 @@ class _Maker:
     taken: set[str] = field(default_factory=set)
     sent: set[DesignKey] = field(default_factory=set)
     """前面幾格已經送出的設計（這一格不再收）。"""
+    levels: dict[DesignKey, int] = field(default_factory=dict)
+    """PK-3：每個候選設計的放寬層級（打分扣分用）。"""
 
     def follows(self, skill: SkillDef) -> bool:
         if self.top is None:
             return True
         return follows_attr(skill, self.top, self.request.weapon_attrs)
 
-    def fits(self, skill: SkillDef, original: Candidate) -> bool:
-        """完全符合 ``original`` 那一格的出題條件，而且可以給。"""
+    def on_route(self, skill: SkillDef, original: Candidate) -> bool:
+        """符合這一格的路線（#110）：加深、橋接要跟主路線（主屬性或雙屬性）；新方向照原本出題那一張
+        （原本是不同屬性就要不同屬性，07 7.2；原本找不到不同屬性、跟了主路線，就照它），所以沒有 LLM
+        時一份三選一的偏離張數不會比原本多。沒有主角屬性時都算符合。"""
+        if self.top is None:
+            return True
+        if original.kind == "new":
+            return self.follows(skill) == self.follows(original.skill)
+        return self.follows(skill)
+
+    def level(self, skill: SkillDef, original: Candidate) -> int | None:
+        """這張技能在 ``original`` 那一格的放寬層級（PK-3，06 6.7「候選怎麼篩」，#110 的找法）：
+        :data:`LEVEL_EXACT`（全部關鍵字＋路線符合）、:data:`LEVEL_RELAXED`（同路線、只帶這一格的部分
+        關鍵字；只有多關鍵字的格子）、:data:`LEVEL_OFF`、:data:`LEVEL_OFF_RELAXED`（不符合路線）；
+        硬條件不過（傳說、排除、已用、武器、種類、關鍵字完全不對）時 ``None``。種類照舊硬篩。"""
         request = self.request
         if skill.rarity == "legendary" or skill.id in request.exclude or skill.id in self.taken:
-            return False
+            return None
         if weapon_problem(skill, request.weapon_class, request.held) is not None:
-            return False
+            return None
         if _family(skill.kind, self.whiteboard) != _family(original.skill.kind, self.whiteboard):
+            return None
+        relaxed = self._relaxed(skill, original.keywords)
+        if relaxed is None:
+            return None
+        if self.on_route(skill, original):
+            return LEVEL_RELAXED if relaxed else LEVEL_EXACT
+        return LEVEL_OFF_RELAXED if relaxed else LEVEL_OFF
+
+    def _relaxed(self, skill: SkillDef, keywords: tuple[str, ...]) -> bool | None:
+        """關鍵字：全部都有＝``False``；多關鍵字的格子只帶其中一部分＝``True``（#110 ③）；不符合
+        ＝``None``。通用池那一格（#55，沒有關鍵字）照原本只收沒有任何關鍵字的技能。"""
+        library = self.library
+        if not keywords:
+            found = derive_keywords(skill, library.keywords, exclusive_only=True).all()
+            return None if found else False
+        if skill_has_keywords(skill, keywords, library):
             return False
-        if self.follows(skill) != self.follows(original.skill):
-            return False
-        if original.keywords:
-            return skill_has_keywords(skill, original.keywords, self.library)
-        # 通用池那一格（#55）：照原本，只收沒有任何關鍵字的技能
-        return not derive_keywords(skill, self.library.keywords, exclusive_only=True).all()
+        if len(keywords) >= _PAIR and any(
+            skill_has_keywords(skill, (k,), library) for k in keywords
+        ):
+            return True
+        return None
 
     def make(self, seed: int, original: Candidate, turn: int) -> SkillDef | None:
         """一個種子做一張符合這一格的技能；做不出來 ``None``。"""
@@ -262,35 +304,57 @@ def _originals(
 
 
 def _slot_pool(
-    maker: _Maker, index: int, original: Candidate, seeds: int, enough: int
+    maker: _Maker, index: int, original: Candidate, seeds: int, enough: int, *, relax_until: int
 ) -> list[PickCandidate]:
-    """一格的候選：最多抽 ``seeds`` 個種子，湊到 ``enough``（``pool.top_k``）個不同設計就停。"""
-    found: dict[DesignKey, PickCandidate] = {}
+    """一格的候選：最多抽 ``seeds`` 個種子，全部關鍵字＋路線符合的湊到 ``enough``（``pool.top_k``）
+    個不同設計就停。PK-3：這種候選不到 ``relax_until`` 個時，照 #110 的找法依序放寬（部分關鍵字 →
+    偏離路線 → 兩者），每一層整層補上（最多 ``enough`` 個），湊到 ``relax_until`` 個就不再往下。"""
+    levels: list[dict[DesignKey, PickCandidate]] = [{} for _ in range(LEVEL_OFF_RELAXED + 1)]
 
-    def keep(skill: SkillDef, seed: int | None, source: Literal["composer", "pool"]) -> None:
+    def keep(skill: SkillDef, seed: int | None, level: int) -> None:
         key = design_key(skill)
-        if key in found or key in maker.sent or maker.held.has(skill, key):
+        if any(key in found for found in levels):
             return
-        found[key] = PickCandidate(skill, source, seed, key)
+        if key in maker.sent or maker.held.has(skill, key):
+            return
+        levels[level][key] = PickCandidate(skill, "composer", seed, key)
+        maker.levels[key] = level
 
     if original.source == "composer":
-        keep(original.skill, None, "composer")
+        first = maker.level(original.skill, original)
+        keep(original.skill, None, LEVEL_EXACT if first is None else first)
     rng = Rng(maker.request.seed).fork(f"{SLOT_FORK}/{index}")
     for turn in range(seeds):
-        if len(found) >= enough:
+        if len(levels[LEVEL_EXACT]) >= enough:
             break
         seed = rng.next_u32()
         skill = maker.make(seed, original, turn)
-        if skill is not None and maker.fits(skill, original):
-            keep(skill, seed, "composer")
-    if not found:  # 這一格一張都做不出來：留原本那一張（手寫技能池的補位、或手上同設計的）
-        found[design_key(original.skill)] = PickCandidate(
-            original.skill,
-            "pool" if original.source == "pool" else "composer",
-            None,
-            design_key(original.skill),
-        )
-    return list(found.values())
+        level = None if skill is None else maker.level(skill, original)
+        if skill is not None and level is not None:
+            keep(skill, seed, level)
+    found = list(levels[LEVEL_EXACT].values())
+    for level in range(LEVEL_RELAXED, LEVEL_OFF_RELAXED + 1):
+        if level == LEVEL_OFF and not found:
+            # 路線符合的一張都做不出來：原本那一張（手寫技能池的補位）若符合路線就留著排第一
+            # （PK-2 同樣的退路），偏離的只當它後面的備選
+            found = _fallback(maker, original, only_on_route=True)
+        if len(found) >= relax_until:
+            break
+        found += list(levels[level].values())[: max(0, enough - len(found))]
+    return found or _fallback(maker, original, only_on_route=False)
+
+
+def _fallback(maker: _Maker, original: Candidate, *, only_on_route: bool) -> list[PickCandidate]:
+    """原本那一張（手寫技能池的補位、或手上同設計的）當這一格的退路。"""
+    if only_on_route and not maker.on_route(original.skill, original):
+        return []
+    key = design_key(original.skill)
+    # 前面幾格已送出同一個設計、或和手上的技能同設計：這裡不放（最後的退路照留，同 PK-2）
+    if only_on_route and (key in maker.sent or maker.held.has(original.skill, key)):
+        return []
+    maker.levels.setdefault(key, LEVEL_EXACT)
+    source: Literal["pool", "composer"] = "pool" if original.source == "pool" else "composer"
+    return [PickCandidate(original.skill, source, None, key)]
 
 
 def _nondamage_slot(
@@ -348,13 +412,18 @@ def _nondamage_draw(
             break
         seed = rng.next_u32()
         skill = maker.make(seed, original, turn)
-        if skill is None or not is_nondamage(skill) or not maker.fits(skill, original):
+        if skill is None or not is_nondamage(skill):
+            continue
+        level = maker.level(skill, original)
+        if level is None:
             continue
         key = design_key(skill)
         if key in have or key in found or key in maker.sent or maker.held.has(skill, key):
             continue
         found[key] = PickCandidate(skill, "composer", seed, key)
-    return list(found.values())
+        maker.levels[key] = level
+    # 同一層級的放寬順序：全部關鍵字＋路線符合的在前
+    return sorted(found.values(), key=lambda c: maker.levels[c.key])
 
 
 def pick_slots(
@@ -384,7 +453,9 @@ def pick_slots(
     pools: list[list[PickCandidate]] = []
     seeds = pick.pool.slot_seeds if whiteboard else pick.pool.complete_slot_seeds
     for index, original in enumerate(originals):
-        pool = _slot_pool(maker, index, original, seeds, pick.pool.top_k)
+        pool = _slot_pool(
+            maker, index, original, seeds, pick.pool.top_k, relax_until=pick.pool.relax_until
+        )
         pools.append(pool)
         maker.sent.update(c.key for c in pool)
         maker.taken.update(c.skill.id for c in pool)
@@ -392,13 +463,46 @@ def pick_slots(
     slots: list[PickedSlot] = []
     for index, (original, pool) in enumerate(zip(originals, pools, strict=True)):
         scored = [
-            score_candidate(library, c, player, pick.weights, keywords=original.keywords)
+            _relaxed(
+                score_candidate(library, c, player, pick.weights, keywords=original.keywords),
+                maker.levels.get(c.key, LEVEL_EXACT),
+                pick.weights,
+            )
             for c in pool
         ]
-        ranked = rank_candidates(scored, pick.weights, pick.pool.top_k)
+        ranked = _rank(scored, maker.levels, pick.weights, pick.pool.top_k)
         slate = PickSlate(ranked, len(pool), seeds)
         slots.append(PickedSlot(original, slate, nondamage=index == chosen))
     return slots
+
+
+def _rank(
+    scored: Sequence[PickCandidate],
+    levels: Mapping[DesignKey, int],
+    weights: PickWeights,
+    top_k: int,
+) -> tuple[PickCandidate, ...]:
+    """單薄的先拿掉（全格都單薄才留，:func:`~trpg.skillgen.skill_pick.drop_thin`），再排序；**符合這一格
+    路線的一律排在偏離的前面**（#110「最後才給不跟主路線的」：分數第一名只有在整格都偏離時才偏離，
+    所以沒有 LLM 時的偏離張數不會比 PK-2 多）。"""
+    kept = drop_thin(scored, weights)
+    fit = [c for c in kept if levels.get(c.key, LEVEL_EXACT) < LEVEL_OFF]
+    off = [c for c in kept if levels.get(c.key, LEVEL_EXACT) >= LEVEL_OFF]
+    first = rank_candidates(fit, weights, top_k)
+    return first + rank_candidates(off, weights, top_k - len(first))
+
+
+def _relaxed(candidate: PickCandidate, level: int, weights: PickWeights) -> PickCandidate:
+    """PK-3：放寬的候選扣分（``route_off``：不符合這一格的路線；``relaxed``：只帶部分關鍵字）。"""
+    route = -weights.route_off_penalty if level in (LEVEL_OFF, LEVEL_OFF_RELAXED) else 0
+    keyword = -weights.keyword_relaxed_penalty if level in (LEVEL_RELAXED, LEVEL_OFF_RELAXED) else 0
+    if not route and not keyword:
+        return candidate
+    return replace(
+        candidate,
+        score=candidate.score + route + keyword,
+        parts=(*candidate.parts, ("route_off", route), ("relaxed", keyword)),
+    )
 
 
 def same_structure(a: SkillDef, b: SkillDef) -> bool:
@@ -457,7 +561,34 @@ def generate_pick_candidates(
         picker(allowed, player) if picker is not None and allowed else ()
     )
     by_slot = {ask.index: answer for ask, answer in zip(allowed, answers, strict=False)}
-    return tuple(_result(slot, by_slot.get(i)) for i, slot in enumerate(slots))
+    found = [_result(slot, by_slot.get(i)) for i, slot in enumerate(slots)]
+    return tuple(_cap_off_route(found, slots, request))
+
+
+def _cap_off_route(
+    found: list[Candidate], slots: Sequence[PickedSlot], request: CandidateRequest
+) -> list[Candidate]:
+    """PK-3：「跟主路線」改成扣分後，LLM 可能挑到偏離的候選；一份三選一的偏離超過
+    :data:`MAX_OFF_ROUTE` 張（06 6.27.4 #110「最多 2 張」）時，從後面的格子起把「LLM 挑了偏離、而
+    分數第一名不偏離」的格子改回第一名。"""
+    if not request.hero_attributes:
+        return found
+    top = top_attribute(request.hero_attributes)
+
+    def off(skill: SkillDef) -> bool:
+        return not follows_attr(skill, top, request.weapon_attrs)
+
+    for i in reversed(range(len(found))):
+        if sum(off(c.skill) for c in found) <= MAX_OFF_ROUTE:
+            break
+        first = slots[i].slate.ranked[0]
+        if found[i].pick == "llm" and off(found[i].skill) and not off(first.skill):
+            trace = found[i].llm
+            found[i] = replace(
+                _result(slots[i], None),
+                llm=None if trace is None else replace(trace, pick_reason="pick.off_route_cap"),
+            )
+    return found
 
 
 def _result(slot: PickedSlot, answer: SlotChoice | None) -> Candidate:
