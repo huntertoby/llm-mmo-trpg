@@ -6,6 +6,9 @@
 # true＝原型的升級三選一（含白板格）、完整技能三選一（原型特殊時刻、大世界機遇）走挑選模式（每格各挑一）；
 # false＝完全回到 PK-2 前的出題流程（組合器與技能池第一個符合的、LLM 自由設計）。
 enabled: true
+# PK-3 閃現開關（06 6.7、6.34.7 #165）：true＝閃現與重閃走挑選模式（程式照原本出題決定每格的類別、轉型保底，
+# 每格依用法統計給 flash_top_k 個合法候選，LLM 只挑與取名）；false＝回到 PK-3 前（LF-2：LLM 從目錄提議）。
+flash_enabled: true
 pool:
   seeds: 60          # 組合器最多抽幾個種子
   designs: 16        # 湊到這麼多個不同設計就停
@@ -17,6 +20,8 @@ pool:
   slot_seeds: 16     # PK-2 白板三選一每一格：照這格的出題條件最多另外抽幾個種子當候選（湊滿 top_k 個設計就停）
   complete_slot_seeds: 8 # PK-2 完整技能三選一每一格另外抽幾個種子（組合器整招較慢，每個種子約 0.05～0.2 秒）
   nondamage_seeds: 10 # PK-2 非傷害保底格：只收非傷害的候選，不夠 top_k 個（或三格都沒有）時最多補抽幾個種子
+  relax_until: 3     # PK-3 三選一每格：全部關鍵字＋路線符合的候選不到這麼多個時，依序放寬（部分關鍵字 → 偏離路線）補上
+  flash_top_k: 4     # PK-3 閃現每個選項格給 LLM 幾個候選（依用法統計排序，第一個是原本出題的那個）
 weights:
   synergy_per_link: 150      # 協同：候選製造／利用的關鍵字和手上技能接上，每條連線
   synergy_max_links: 5       # 協同最多算幾條
@@ -40,3 +45,5 @@ weights:
   same_shape_penalty: 100    # 多樣性：同形狀
   same_effects_penalty: 250  # 多樣性：效果種類完全相同
   same_element_penalty: 60   # 多樣性：元素相同
+  route_off_penalty: 400     # PK-3 不符合這一格的路線（加深、橋接要跟主路線；新方向要不同屬性），扣
+  keyword_relaxed_penalty: 150 # PK-3 多關鍵字的格子放寬成只帶部分關鍵字，扣

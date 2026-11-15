@@ -10,6 +10,7 @@ import pytest
 
 from tests.roguelite.helpers import library
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
 from trpg.llm.pick import make_offer_picker, mock_offer_picker, mock_pick_client
 from trpg.roguelite import RunState, new_run
 from trpg.roguelite.llm_hook import use_picker, use_proposer
@@ -18,6 +19,7 @@ from trpg.roguelite.state import OfferTag, SkillOffer
 from trpg.shared.types import top_attribute
 from trpg.skillgen.candidates import CandidateRules, LlmTrace, follows_attr, skill_has_keywords
 from trpg.skillgen.pick_offer import (
+    MAX_OFF_ROUTE,
     OfferPicker,
     SlotChoice,
     SlotPick,
@@ -49,22 +51,27 @@ def _family(kind: str, whiteboard: bool) -> str:
     return "active"
 
 
+def _slot_keywords_ok(lib: ContentLibrary, skill: SkillDef, keywords: tuple[str, ...]) -> bool:
+    """PK-3（06 6.7「候選怎麼篩」）：全部關鍵字；多關鍵字的格子可以放寬成只帶其中一部分。"""
+    if skill_has_keywords(skill, keywords, lib):
+        return True
+    return len(keywords) >= 2 and any(skill_has_keywords(skill, (k,), lib) for k in keywords)
+
+
 def _check_slots(lib: ContentLibrary, run: RunState, reason: str, offer: SkillOffer) -> None:
-    """格子規則：每格的關鍵字、種類、跟不跟主路線都和原本出題（開關關）的那一格相同；至少 1 張
-    非傷害（做得到時）；三張不重複、都不是手上的技能。"""
+    """格子規則：每格的關鍵字（多關鍵字的格子可放寬成部分）、種類都和原本出題（開關關）的那一格
+    相同；PK-3 起「跟主路線」改成扣分，偏離最多 2 張（#110）；至少 1 張非傷害（做得到時）；三張不
+    重複、都不是手上的技能。"""
     plain = make_offer(_off(), run, reason, pick=True)
     whiteboard = reason == "level_up"
-    top = top_attribute(run.hero.attributes)
-    weapon = candidate_request(lib, run).weapon_attrs
     assert [(t.kind, t.keywords, t.fallback) for t in offer.tags] == [
         (t.kind, t.keywords, t.fallback) for t in plain.tags
     ]
-    assert offer.off_route == plain.off_route
+    assert len(offer.off_route) <= MAX_OFF_ROUTE
     for skill, base, tag in zip(offer.candidates, plain.candidates, offer.tags, strict=True):
         assert _family(skill.kind, whiteboard) == _family(base.kind, whiteboard)
-        assert follows_attr(skill, top, weapon) == follows_attr(base, top, weapon)
         if tag.keywords:
-            assert skill_has_keywords(skill, tag.keywords, lib)
+            assert _slot_keywords_ok(lib, skill, tag.keywords)
         assert tag.pick in ("llm", "top")
     assert all(s.id not in run.hero.skills for s in offer.candidates)
     assert len({s.id for s in offer.candidates}) == len(offer.candidates)
@@ -147,11 +154,15 @@ def test_slate_entries_satisfy_the_slot_and_nondamage_slot() -> None:
             for c in slot.slate.ranked:
                 base = slot.original.skill
                 assert _family(c.skill.kind, True) == _family(base.kind, True)
-                assert follows_attr(c.skill, top, request.weapon_attrs) == follows_attr(
-                    base, top, request.weapon_attrs
-                )
+                # PK-3：不符合這一格路線的候選一定帶 route_off 扣分（新方向要不同屬性）
+                follows = follows_attr(c.skill, top, request.weapon_attrs)
+                parts = dict(c.parts)
+                if follows == (slot.original.kind == "new"):
+                    assert parts.get("route_off", 0) < 0
                 if slot.original.keywords:
-                    assert skill_has_keywords(c.skill, slot.original.keywords, lib)
+                    assert _slot_keywords_ok(lib, c.skill, slot.original.keywords)
+                    if not skill_has_keywords(c.skill, slot.original.keywords, lib):
+                        assert parts.get("relaxed", 0) < 0
                 if slot.nondamage:
                     assert is_nondamage(c.skill)
         if any(s.nondamage for s in slots):
