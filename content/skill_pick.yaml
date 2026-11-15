@@ -8,8 +8,8 @@ pool:
   top_k: 5           # 送給 LLM 的候選數（每格 4～6 個）
   min_for_llm: 2     # 候選少於這個數就不呼叫 LLM，直接用第一名
   handwritten_max: 0 # PK-1b：候選裡最多幾個手寫技能（0＝不放；手上已有的技能一律不進）
-  element_seeds: 40  # PK-1b：和玩家同元素的設計不夠時，另外補抽幾個種子（獨立亂數串流）
-  element_designs: 4 # PK-1b：和玩家同元素的設計至少要幾個（不夠才補抽）
+  element_seeds: 12  # PK-1b：和玩家同元素的設計不夠時，另外補抽幾個種子（獨立亂數串流）
+  element_designs: 2 # PK-1b：和玩家同元素的設計至少要幾個（不夠才補抽）
 weights:
   synergy_per_link: 150      # 協同：候選製造／利用的關鍵字和手上技能接上，每條連線
   synergy_max_links: 5       # 協同最多算幾條

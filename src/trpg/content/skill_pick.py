@@ -31,10 +31,10 @@ class PickPoolRules(ContentModel):
     handwritten_max: int = Field(default=0, ge=0, le=1)
     """PK-1b：送給 LLM 的候選裡最多幾個手寫技能（技能池）；0＝完全不放（只在候選池是空的時候照現行
     退回技能池）。玩家手上已有的技能不論這裡設多少都不會進候選。"""
-    element_seeds: int = Field(default=40, ge=0, le=400)
+    element_seeds: int = Field(default=12, ge=0, le=400)
     """PK-1b：玩家手上有元素技能、而候選池裡同元素的設計少於 ``element_designs`` 個時，另外用獨立的
     亂數串流再抽最多這麼多個種子，只收和玩家同元素的新設計；0＝不補抽。"""
-    element_designs: int = Field(default=4, ge=0, le=40)
+    element_designs: int = Field(default=2, ge=0, le=40)
     """PK-1b：候選池裡和玩家同元素的設計至少要有幾個（不夠才補抽，補到這個數就停）。"""
 
     @model_validator(mode="after")
