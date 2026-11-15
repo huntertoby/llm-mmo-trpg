@@ -209,3 +209,23 @@ targets:
     glob: objects.yaml
     fields:
       - {path: "objects[*].max_hp", label_zh: 最大 HP, kind: int, hint_min: 1, hint_max: 99, existing_only: true, note_zh: 打破這種物件要的傷害；所有地圖上的這種物件一起變。只能 1 以上。HP 越低越容易被打破（敵我的攻擊、爆炸、範圍技都算），例：冷卻井打破後周圍 3×3 變成水面。}
+  # PK-1（挑選模式提案第 6 節第 5 題 A：打分權重放數值工坊，由使用者調）：skill_pick.yaml 全部開。
+  - kind: pick
+    label_zh: 技能挑選模式
+    glob: skill_pick.yaml
+    fields:
+      - {path: pool.seeds, label_zh: 候選池：組合器抽幾個種子, kind: int, hint_min: 10, hint_max: 200, note_zh: 每次出題組合器最多抽這麼多個種子（每個種子一招，同一個設計只留第一個）。越多候選越多樣，但出題越慢（帶關鍵字的題目每個種子約 20～150 毫秒）。}
+      - {path: pool.designs, label_zh: 候選池：湊到幾個不同設計就停, kind: int, hint_min: 4, hint_max: 40, note_zh: 不同設計（骨架＋種類＋形狀＋效果種類＋元素；只差數字算同一個）湊到這麼多個就不再抽。是打分前的候選上限。}
+      - {path: pool.top_k, label_zh: 送給本機模型幾個候選, kind: int, hint_min: 2, hint_max: 8, note_zh: 打分後取前這麼多個給本機模型挑一個並取名（提案建議 4～6 個）。越多 prompt 越長、越慢。}
+      - {path: pool.min_for_llm, label_zh: 候選少於幾個就不問模型, kind: int, hint_min: 1, hint_max: 4, note_zh: 合法候選少於這個數就直接用分數第一名、取組合式名稱，不呼叫本機模型。不能大於「送給本機模型幾個候選」。}
+      - {path: weights.synergy_per_link, label_zh: 協同：每條連線的分數, kind: int, hint_min: 0, hint_max: 1000, note_zh: 候選製造的關鍵字有一招手上的技能利用（或候選利用、手上的技能製造），每一條連線加這麼多分。}
+      - {path: weights.synergy_max_links, label_zh: 協同：最多算幾條連線, kind: int, hint_min: 0, hint_max: 6, note_zh: 協同分數最多算這麼多條連線（避免手上技能多的關鍵字永遠壓過其他候選）。}
+      - {path: weights.behavior_per_point, label_zh: 打法：每次相符動作的分數, kind: int, hint_min: 0, hint_max: 100, note_zh: 候選帶的關鍵字和玩家用過的動作相符（例：常跳上高台→高處），每用過 1 次加這麼多分。}
+      - {path: weights.behavior_cap, label_zh: 打法：分數上限, kind: int, hint_min: 0, hint_max: 1000, note_zh: 打法這一項最多加這麼多分。}
+      - {path: weights.route_main, label_zh: 屬性路線：跟主屬性, kind: int, hint_min: 0, hint_max: 500, note_zh: 縮放屬性跟主角最高屬性（武器技看手上武器）時加這麼多分。}
+      - {path: weights.route_dual, label_zh: 屬性路線：雙屬性跟上, kind: int, hint_min: 0, hint_max: 500, note_zh: 雙屬性技能靠第二屬性跟上主屬性時加這麼多分。}
+      - {path: weights.pool_bonus, label_zh: 手寫技能加分, kind: int, hint_min: 0, hint_max: 500, note_zh: 候選是內容庫的手寫技能（技能池）時加這麼多分；0＝和組合器的候選一視同仁。}
+      - {path: weights.same_skeleton_penalty, label_zh: 多樣性：同骨架扣分, kind: int, hint_min: 0, hint_max: 500, note_zh: 排前幾名時，和已經排進去的候選同骨架，每一個扣這麼多分。}
+      - {path: weights.same_shape_penalty, label_zh: 多樣性：同形狀扣分, kind: int, hint_min: 0, hint_max: 500, note_zh: 和已經排進去的候選同形狀，每一個扣這麼多分。}
+      - {path: weights.same_effects_penalty, label_zh: 多樣性：同效果種類扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: 和已經排進去的候選效果種類完全相同（只差元素或數字），每一個扣這麼多分。}
+      - {path: weights.same_element_penalty, label_zh: 多樣性：同元素扣分, kind: int, hint_min: 0, hint_max: 500, note_zh: 和已經排進去的候選元素相同，每一個扣這麼多分。}

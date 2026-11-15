@@ -504,6 +504,7 @@ _ITERATING_CALLS = frozenset({"sorted", "list", "tuple", "set", "frozenset", "it
 LIBRARY_SKILLS_ITERATION_ALLOWED: dict[tuple[str, str], str] = {
     ("trpg.llm.naming", "name_skill"): "避免撞名：比對所有內建技能名（含敵人專用）",
     ("trpg.llm.naming", "template_text"): "避免撞名：比對所有內建技能名（含敵人專用）",
+    ("trpg.llm.pick", "pick_skill"): "避免撞名：比對所有內建技能名（PK-1，同命名步驟）",
     ("trpg.llm.flash_eval", "evaluate_flash"): "避免撞名：比對所有內建技能名",
     ("trpg.llm.flash_propose", "name_checker"): "避免撞名：比對所有內建技能名（LF-2）",
     ("trpg.skillgen.proposal_coverage", "round_trip_inventory"): "開發工具：全部手寫技能的結構盤點",

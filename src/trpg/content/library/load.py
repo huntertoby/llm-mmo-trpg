@@ -79,6 +79,7 @@ from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_icon_art import IconArtTable
 from trpg.content.skill_icon_props import IconPropTable
 from trpg.content.skill_keywords import KeywordTable
+from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
 from trpg.content.skill_scaling import SkillScalingRules
 from trpg.content.skill_tags import SkillTagTable
@@ -424,6 +425,7 @@ def load_library(
     icon_props = load("skill_icon_props.yaml", IconPropTable)
     name_problems += icon_prop_problems(t.skills, icon_props)  # IP-1、QI-2a D4：技能圖示道具
     icon_art = load("skill_icon_art.yaml", IconArtTable)  # QI-2a：圖示推導表（不進規則包）
+    skill_pick = load("skill_pick.yaml", SkillPickRules)  # PK-1：挑選模式的權重（不進規則包）
     if name_problems:
         raise ContentError(root / "skills", "；".join(name_problems))
     return ContentLibrary(
@@ -458,6 +460,7 @@ def load_library(
         map_warnings=tuple(map_warnings),
         icon_props=icon_props,
         icon_art=icon_art,
+        skill_pick=skill_pick,
         files=files,
         **extras,
         **world,

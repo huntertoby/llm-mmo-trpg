@@ -33,6 +33,7 @@ from trpg.content.sim_builds import BuildTable
 from trpg.content.skill_icon_art import IconArtTable
 from trpg.content.skill_icon_props import IconPropTable
 from trpg.content.skill_keywords import KeywordTable
+from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SynergyTable
 from trpg.content.skill_scaling import SkillScalingRules
 from trpg.content.skill_triggers import SkillTriggerTable
@@ -83,6 +84,7 @@ KNOWN_CONTENT_FILES: tuple[ContentFile, ...] = (
     ContentFile("skill_scaling.yaml", SkillScalingRules),
     ContentFile("skill_icon_props.yaml", IconPropTable),
     ContentFile("skill_icon_art.yaml", IconArtTable),
+    ContentFile("skill_pick.yaml", SkillPickRules),
     ContentFile("regions.yaml", RegionTable),
     ContentFile("races.yaml", RaceTable),
     ContentFile("origins.yaml", OriginTable),

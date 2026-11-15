@@ -65,6 +65,16 @@ class LlmAttempt:
     """提議 prompt 的版本號（``trpg.llm`` 的 ``PROMPT_VERSION``；4-L8）；沒有請 LLM 為 ``None``。"""
     naming_prompt_version: str | None = None
     """命名 prompt 的版本號（``NAMING_PROMPT_VERSION``；4-L8）；沒有命名步驟為 ``None``。"""
+    pick_seeds: tuple[int | None, ...] = ()
+    """挑選模式（Phase PK-1）：送給 LLM 的前 K 個候選的組合器種子（依排序；手寫技能為
+    ``None``）。"""
+    pick_designs: tuple[str, ...] = ()
+    """挑選模式：前 K 個候選的設計鍵（``skillgen.skill_pick.design_label``，與
+    ``pick_seeds`` 對齊）。"""
+    pick_index: int | None = None
+    """挑選模式：LLM 選的 index；沒有請 LLM 或 LLM 失敗時為 ``None``。"""
+    pick_reason: str | None = None
+    """挑選模式：退回原因（LLM 失敗改用第一名、候選太少、候選池是空的）；正常為 ``None``。"""
 
 
 type LlmProposer = Callable[[ProposalRequest, ProposalContext, int], LlmAttempt]

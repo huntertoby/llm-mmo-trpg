@@ -484,6 +484,10 @@ def _tag(candidate: Candidate, offer_index: int) -> OfferTag:
             name_codes=trace.name_codes,
             prompt_version=trace.prompt_version,
             naming_prompt_version=trace.naming_prompt_version,
+            pick_seeds=trace.pick_seeds,
+            pick_designs=trace.pick_designs,
+            pick_index=trace.pick_index,
+            pick_reason=trace.pick_reason,
         )
     )
     return OfferTag(

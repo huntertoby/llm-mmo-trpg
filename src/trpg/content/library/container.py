@@ -29,6 +29,7 @@ from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_icon_art import IconArtTable
 from trpg.content.skill_icon_props import IconPropTable
 from trpg.content.skill_keywords import KeywordTable
+from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SynergyTable
 from trpg.content.skill_scaling import ScalingBasis, ScalingFacts, SkillScalingRules
 from trpg.content.skills import SkillDef
@@ -163,6 +164,9 @@ class ContentLibrary:
     icon_art: IconArtTable | None = None
     """Q 版技能圖示的推導表（``skill_icon_art.yaml``，Phase QI-2a）；只影響圖示，不嵌入規則包。
     ``None`` 時圖示推導讀預設內容資料夾的表（``trpg.narrative.skill_icon_art.icon_art_rules``）。"""
+    skill_pick: SkillPickRules = field(default_factory=SkillPickRules)
+    """技能生成挑選模式的打分權重與候選池大小（``skill_pick.yaml``，Phase PK-1）；不嵌入規則包。
+    沒有檔案時用 schema 的預設值。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False
