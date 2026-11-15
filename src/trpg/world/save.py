@@ -126,6 +126,13 @@ LLM。角色格式升成 ``trpg-char/8``（``skill_regions``、``PendingOffer.re
 多選填欄位 ``picks``（挑選模式每格選第幾個），
 格式升成 ``trpg-wlog/12``；``/11`` **照讀**（沒有這個欄位）。
 閃現出題、機遇出題與組合器的程式改了，:data:`WORLD_RULES_VERSION` 升成 35。
+
+**Phase PK-4**（許願池「願望驅動」，``skill_pick.yaml`` 的 ``wish_enabled``；閃現不指定類別時候選
+可以借別類）：日誌 ``generated`` 的許願紀錄（``WishGen``）多選填欄位 ``tags``、``wish`` 動作與
+``wish_made`` 事件多選填欄位 ``tags``、三選一標示多 ``wish_reply_zh``／``wish_miss_zh``，格式升成
+``trpg-wlog/13``；``/12`` **照讀**（沒有這些欄位）。許願與閃現出題的程式改了，
+:data:`WORLD_RULES_VERSION` 升成 36。角色存檔的待選三選一多 ``wish``、角色多 ``skill_wishes``
+（都是空值不寫出的選填欄位），``CHAR_FORMAT`` 不變（同 PK-1～3 前例，待 PM 決定）。
 """
 
 from __future__ import annotations
@@ -178,23 +185,30 @@ __all__ = [
     "write_atomic",
 ]
 
-WLOG_FORMAT: Final = "trpg-wlog/12"
+WLOG_FORMAT: Final = "trpg-wlog/13"
 READABLE_WLOG_FORMATS: Final = frozenset(
-    {"trpg-wlog/7", "trpg-wlog/8", "trpg-wlog/9", "trpg-wlog/10", "trpg-wlog/11"}
+    {
+        "trpg-wlog/7",
+        "trpg-wlog/8",
+        "trpg-wlog/9",
+        "trpg-wlog/10",
+        "trpg-wlog/11",
+        "trpg-wlog/12",
+    }
 )
 """照讀、標頭照常解析的舊日誌格式（6L-2：``/7`` 只少了選填欄位 ``generated``；6T-1a：``/8`` 只少了
 選填欄位 ``counterpart``、``counterpart_actor``；LF-1：``/9`` 只少了閃現提議紀錄的選填欄位
 ``texts``；PK-2：``/10`` 只少了三選一標示的選填欄位 ``pick``；PK-3：``/11`` 只少了閃現提議紀錄的
-選填欄位 ``picks``）。"""
+選填欄位 ``picks``；PK-4：``/12`` 只少了許願的選填欄位 ``tags`` 與三選一標示的 ``wish_*``）。"""
 LEGACY_WLOG_FORMATS: Final = frozenset(
     {"trpg-wlog/1", "trpg-wlog/2", "trpg-wlog/3", "trpg-wlog/4", "trpg-wlog/5", "trpg-wlog/6"}
 )
 """照讀、但標成「規則已變、不能重播」的舊日誌格式。"""
 STALE_LOG_ZH: Final = "規則已變、不能重播"
-WORLD_RULES_VERSION: Final = 35
+WORLD_RULES_VERSION: Final = 36
 # 各版見下方說明（19＝6T-1b；20＝6R-1；21＝6R-2；22＝TR-1；23＝OB-1；24＝OB-2；25＝OB-3＋OB-4；
 # 26＝DD-1；27＝OB-7；28＝WP-1；29＝RR-1；30＝RR-2c；31＝RG-2；32＝RG-4；33＝RG-5；34＝PK-2；
-# 35＝PK-3）
+# 35＝PK-3；36＝PK-4）
 """世界規則程式的版號（6D-R1）：改了世界規則的程式（``trpg.world`` 裡會讓同樣的日誌重播出不同結果
 的改動）時手動加一；記在日誌的規則鍵裡（:func:`log_rules_key`），舊日誌就標成規則已變、不能重播。
 只改內容資料不用加（內容 digest 會變）。

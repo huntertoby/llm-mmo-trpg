@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 import pytest
 
+from tests.engine.helpers import wish_off
 from tests.world.helpers import NOON, make_world
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.state import SkillOffer
@@ -36,6 +37,13 @@ from trpg.world.wish import (
     wish_problem,
     wishes_left,
 )
+
+
+@pytest.fixture(scope="module")
+def library(library: ContentLibrary) -> ContentLibrary:
+    """PK-4：這個檔測 WP-1～3 的舊許願流程（願望驅動開關關掉；新流程在 ``*_pk4.py``）。"""
+    return wish_off(library)
+
 
 MakeChar = Callable[..., CharacterState]
 WEEK = 7 * 86_400

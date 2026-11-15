@@ -35,6 +35,7 @@ from trpg.content.world_narration import StoryText, mask_text
 from trpg.content.world_quests import AffinityRank, QuestDef
 from trpg.content.world_situations import Outcome, SituationTemplateDef
 from trpg.shared.types import Attribute
+from trpg.skillgen.wish_pick import tag_labels
 from trpg.world.actions import (
     AffinityChangedEvent,
     EventLeftEvent,
@@ -749,6 +750,8 @@ def pending_offer_view(
         ),
         source=pending.source,
         refund=pending.refund,
+        wish_text_zh=None if pending.wish is None else pending.wish.text,
+        wish_tags_zh=() if pending.wish is None else tag_labels(library, pending.wish.tags),
     )
 
 

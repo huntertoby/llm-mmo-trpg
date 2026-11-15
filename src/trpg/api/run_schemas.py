@@ -689,6 +689,11 @@ class OfferTagOut(_ApiModel):
     pick: Literal["llm", "top"] | None = None
     """挑選模式（PK-2）：``llm``＝本機模型從這一格的候選挑選並命名；``top``＝這一格分數第一名
     （沒有模型、不請模型或模型失敗）；``None``＝不是挑選模式（例：大世界任務、許願池）。"""
+    wish_reply_zh: str | None = None
+    """PK-4 許願池願望驅動：本機模型寫的一句回應願望的話（純文字）；沒有＝``None``。"""
+    wish_miss_zh: str | None = None
+    """PK-4 許願池願望驅動：沒有命中全部願望標籤時卡上加的一行（「最接近你願望的一招：…」）；全部
+    命中或不是許願池＝``None``。"""
 
 
 class OfferOut(_ApiModel):

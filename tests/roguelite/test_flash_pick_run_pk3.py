@@ -24,7 +24,8 @@ NOTE = "出手更順，用得更多。"
 
 
 def _picker(request: FlashRequest, slots: Sequence[FlashSlot], seed: int) -> MockLLMClient:
-    """每格挑最後一個同類的候選並寫同一句描述（PK-4 起候選可能借別類；借來的不挑，類別混合不變）。"""
+    """每格挑最後一個同類的候選並寫同一句描述（PK-4 起候選可能借別類；借來的不挑，類別混合
+    不變）。"""
     body = {f"s{s.index}": {"pick": _last_own(s), "note_zh": NOTE} for s in slots}
     return MockLLMClient([json.dumps(body, ensure_ascii=False)] * 3)
 
