@@ -14,9 +14,9 @@ pool:
   handwritten_max: 0 # PK-1b：候選裡最多幾個手寫技能（0＝不放；手上已有的技能一律不進）
   element_seeds: 12  # PK-1b：和玩家同元素的設計不夠時，另外補抽幾個種子（獨立亂數串流）
   element_designs: 2 # PK-1b：和玩家同元素的設計至少要幾個（不夠才補抽）
-  slot_seeds: 10     # PK-2 白板三選一每一格：照這格的出題條件另外抽幾個種子當候選
-  complete_slot_seeds: 4 # PK-2 完整技能三選一每一格另外抽幾個種子（組合器整招較慢，每個種子約 0.05～0.2 秒）
-  nondamage_seeds: 10 # PK-2：三格都沒有非傷害的候選時，另外為一格補抽幾個種子（只收非傷害）
+  slot_seeds: 16     # PK-2 白板三選一每一格：照這格的出題條件最多另外抽幾個種子當候選（湊滿 top_k 個設計就停）
+  complete_slot_seeds: 8 # PK-2 完整技能三選一每一格另外抽幾個種子（組合器整招較慢，每個種子約 0.05～0.2 秒）
+  nondamage_seeds: 10 # PK-2 非傷害保底格：只收非傷害的候選，不夠 top_k 個（或三格都沒有）時最多補抽幾個種子
 weights:
   synergy_per_link: 150      # 協同：候選製造／利用的關鍵字和手上技能接上，每條連線
   synergy_max_links: 5       # 協同最多算幾條

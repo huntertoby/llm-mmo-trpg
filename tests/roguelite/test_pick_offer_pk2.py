@@ -140,11 +140,10 @@ def test_slate_entries_satisfy_the_slot_and_nondamage_slot() -> None:
         top = top_attribute(run.hero.attributes)
         held = pick_player(lib, run).held_skills
         held_keys = {design_key(h) for h in held}
-        held_names = {h.name_zh for h in held}
         for slot in slots:
             if slot.slate.pool_size > 1:  # 只有一張時是留原本那一張（做不出別的）
                 for c in slot.slate.ranked:
-                    assert c.key not in held_keys and c.skill.name_zh not in held_names
+                    assert c.key not in held_keys and c.skill.id not in {h.id for h in held}
             for c in slot.slate.ranked:
                 base = slot.original.skill
                 assert _family(c.skill.kind, True) == _family(base.kind, True)
@@ -181,9 +180,9 @@ def test_picker_cannot_change_structure() -> None:
     plain = make_offer(lib, run.model_copy(update={"llm": False}), "level_up", pick=True)
     assert offer.candidates == plain.candidates
     assert all(t.pick == "top" for t in offer.tags)
-    assert all(
-        t.llm is not None and t.llm.pick_reason == "pick.structure_changed" for t in offer.tags
-    )
+    asked = [t for t in offer.tags if t.llm is not None]
+    assert asked  # 候選夠多的格子才請 LLM
+    assert all(t.llm is not None and t.llm.pick_reason == "pick.structure_changed" for t in asked)
 
 
 def _trace(slot: SlotPick) -> LlmTrace:
@@ -221,3 +220,14 @@ def test_offer_tag_pick_field_round_trip() -> None:
     assert OfferTag.model_validate(tag.model_dump(mode="json")) == tag
     plain = OfferTag(kind="new", keywords=(), source="composer")
     assert "pick" not in plain.model_dump(mode="json")
+
+
+def test_llm_max_calls_caps_the_slots_asked() -> None:
+    """大世界機遇（``llm_max_calls``＝1）：候選夠多的格子裡只有第 1 格請 LLM。"""
+    lib = library()
+    run = _run("build_ranged", 0).model_copy(update={"llm": True})
+    with use_picker(mock_offer_picker(lib)):
+        free = make_offer(lib, run, "level_up", pick=True)
+        capped = make_offer(lib, run, "level_up", pick=True, llm_max_calls=1)
+    assert sum(t.pick == "llm" for t in free.tags) >= 2
+    assert sum(t.pick == "llm" for t in capped.tags) == 1

@@ -51,6 +51,8 @@ class OfferJob:
     tier_bonus: int = 0
     pinned_keyword: str | None = None
     region: str | None = None
+    pick: bool = False
+    """PK-2：機遇的完整技能三選一走挑選模式（同 ``solutions._opportunity_offer``）。"""
 
     def key(self, view: ContentLibrary) -> str | None:
         return offer_key(
@@ -63,6 +65,7 @@ class OfferJob:
             tier_bonus=self.tier_bonus,
             pinned_keyword=self.pinned_keyword,
             region=self.region,
+            pick=self.pick,
         )
 
     def make(self, view: ContentLibrary) -> SkillOffer:
@@ -76,6 +79,7 @@ class OfferJob:
             tier_bonus=self.tier_bonus,
             pinned_keyword=self.pinned_keyword,
             region=self.region,
+            pick=self.pick,
         )
 
 
@@ -110,6 +114,7 @@ def _opportunity_jobs(
                 tier_bonus=opportunity_tier_bonus(library, world, char, trigger.skeleton),
                 pinned_keyword=keyword,
                 region=trigger.region,
+                pick=True,
             )
         )
     return jobs

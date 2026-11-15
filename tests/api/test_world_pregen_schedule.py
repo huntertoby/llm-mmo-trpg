@@ -21,6 +21,8 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -40,10 +42,13 @@ from trpg.api.world_pregen import (
     provider_generators,
 )
 from trpg.content.library import ContentLibrary
+from trpg.llm.pick import mock_offer_picker
 from trpg.roguelite.llm_hook import use_proposer
 from trpg.roguelite.offers import make_offer
 from trpg.roguelite.state import FlashChoice
 from trpg.skillgen.flash_state import acquire
+from trpg.skillgen.pick_offer import OfferPicker, SlotChoice, SlotPick
+from trpg.skillgen.pick_player import PickPlayer
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.proposal_topic import LlmAttempt, LlmProposer
 from trpg.skillgen.random_composer import compose_random_skill
@@ -87,21 +92,43 @@ class _CountingProvider(MockLlmProvider):
     def proposer(self, library: ContentLibrary) -> LlmProposer | None:
         return _counting_proposer(library, self.calls)
 
+    def picker(self, library: ContentLibrary) -> OfferPicker | None:
+        """PK-2：機遇走挑選模式，每一格真的請了 LLM 記一次（種子記 -1）。"""
+        inner = mock_offer_picker(library)
+
+        def counted(slots: Sequence[SlotPick], player: PickPlayer) -> Sequence[SlotChoice | None]:
+            answers = inner(slots, player)
+            self.calls.extend(-1 for a in answers if a is not None)
+            return answers
+
+        return counted
+
 
 def test_opportunity_asks_llm_for_at_most_one_card(library: ContentLibrary) -> None:
     world, char = make_world(), _at_altar(library)
-    request = opportunity_wait_request(library, world, char, OPPORTUNITY)
-    assert request is not None
     view = world_library(library)
+    assert OPPORTUNITY_LLM_CARDS == 1
+    # PK-2 開關關掉（舊流程）：自由設計的提議器，這個種子擲到請 LLM；上限 1 張
+    off = replace(library, skill_pick=library.skill_pick.model_copy(update={"enabled": False}))
+    old_request = opportunity_wait_request(off, world, char, OPPORTUNITY)
+    assert old_request is not None
     calls: list[int] = []
     gens = provider_generators(_CountingProvider(calls))
     assert gens.offer is not None
-    made = gens.offer(view, request)
-    assert OPPORTUNITY_LLM_CARDS == 1
-    assert len(calls) == 1  # 這個種子擲到請 LLM；上限 1 張
+    made = gens.offer(world_library(off), old_request)
+    assert len(calls) == 1
     assert made.source == "llm" and made.offer is not None
     assert sum(t.source == "llm" for t in made.offer.tags) == 1
     assert len(made.offer.candidates) == 3  # 其餘照常用組合器與技能池補滿
+    # PK-2 開關開（預設）：挑選模式也最多 1 格請 LLM（這個角色的三格都只做得出 1 張候選：
+    # 帶電的完整技能組合器只做得出智力縮放，跟不上感知主路線，所以 0 格請 LLM）
+    request = opportunity_wait_request(library, world, char, OPPORTUNITY)
+    assert request is not None
+    calls.clear()
+    picked = gens.offer(view, request)
+    assert len(calls) <= 1
+    if picked.offer is not None:
+        assert sum(t.pick == "llm" for t in picked.offer.tags) <= 1
 
     # roguelite 照舊：同樣的題目不設上限時每種候選各請一次
     plain: list[int] = []

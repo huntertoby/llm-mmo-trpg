@@ -36,15 +36,17 @@ class PickPoolRules(ContentModel):
     亂數串流再抽最多這麼多個種子，只收和玩家同元素的新設計；0＝不補抽。"""
     element_designs: int = Field(default=2, ge=0, le=40)
     """PK-1b：候選池裡和玩家同元素的設計至少要有幾個（不夠才補抽，補到這個數就停）。"""
-    slot_seeds: int = Field(default=10, ge=0, le=200)
+    slot_seeds: int = Field(default=16, ge=0, le=200)
     """PK-2 三選一的每一格（加深／橋接／新方向）：照這一格的出題條件（關鍵字、種類、屬性路線）另外
-    抽這麼多個種子當候選（獨立亂數串流）；0＝每格只有原本出題的那一張。白板三選一用這個。"""
-    complete_slot_seeds: int = Field(default=4, ge=0, le=200)
+    最多抽這麼多個種子當候選（獨立亂數串流；湊到 ``top_k`` 個不同設計就停）；0＝每格只有原本
+    出題的那一張。白板三選一用這個。"""
+    complete_slot_seeds: int = Field(default=8, ge=0, le=200)
     """PK-2 完整技能三選一的每一格另外抽幾個種子（組合器整招指定關鍵字，每個種子約 0.05～0.2 秒，
     所以比白板少）。"""
     nondamage_seeds: int = Field(default=10, ge=0, le=200)
-    """PK-2 非傷害保底（#142）：三格的候選裡都沒有非傷害技能時，另外為一格（新方向優先）補抽這麼多個
-    種子，只收非傷害的；0＝不補抽。"""
+    """PK-2 非傷害保底（#142）：保底格只留非傷害的候選，不到 ``top_k`` 個時（或三格都沒有非傷害的
+    候選時，依新方向 → 橋接 → 加深）用另一條亂數串流最多補抽這麼多個種子，只收非傷害的；
+    0＝不補抽。"""
 
     @model_validator(mode="after")
     def _check(self) -> PickPoolRules:

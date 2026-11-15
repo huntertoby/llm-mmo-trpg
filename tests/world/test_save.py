@@ -89,7 +89,7 @@ def test_log_roundtrip() -> None:
         (loads_world, "[1, 2]"),
         (loads_world, "not json"),
         (loads_log, ""),
-        (loads_log, '{"format": "trpg-wlog/11"}\n'),
+        (loads_log, '{"format": "trpg-wlog/12"}\n'),
         (loads_log, '{"format": "trpg-wlog/9"}\n{"seq": 1}\n'),
         (loads_log, '{"format": "trpg-wlog/9"}\n{oops\n'),
         (loads_log, '{"format": "trpg-wlog/9", "stale_through": -1}\n'),

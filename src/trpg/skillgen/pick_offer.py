@@ -11,10 +11,11 @@
    〔含姿態〕／被動／反應）、跟不跟主路線（:func:`~trpg.skillgen.candidates.follows_attr`）。
 2. **每格的候選（程式）**：原本那一張（組合器做的才算）＋用獨立亂數串流
    ``Rng(seed).fork("pick.slot/<格>")`` 另外抽 ``pool.slot_seeds``（完整技能
-   ``complete_slot_seeds``）個種子，只收**完全符合這一格出題條件**的組合器技能（白板用
+   ``complete_slot_seeds``）個種子（湊到 ``pool.top_k`` 個不同設計就停），只收
+   **完全符合這一格出題條件**的組合器技能（白板用
    :func:`~trpg.skillgen.whiteboard.compose_whiteboard`，所以白板規則照舊；完整技能用
    :func:`~trpg.skillgen.random_composer.compose_with_stats`）。依設計鍵去重；玩家手上
-   已有的技能（同 ID、同名、同設計）、這份三選一前面幾格已送出的設計、要排除的 ID 都不收。一張都
+   已有的技能（同 ID、同設計）、這份三選一前面幾格已送出的設計、要排除的 ID 都不收。一張都
    沒有時才留原本那一張（例：手寫技能池的補位）。所以不論 LLM 挑哪一張，格子的意義、種類比例、
    偏離張數都和原本一樣。
 3. **非傷害保底（#142）**：選一格只放非傷害候選（:func:`~trpg.skillgen.skill_pick.is_nondamage`）：
@@ -174,7 +175,7 @@ class _Maker:
         try:
             if self.whiteboard:
                 return self._board(seed, original, turn)
-            return self._complete(seed, original)
+            return self._complete(seed, original, turn)
         except ComposeError:
             return None
 
@@ -207,7 +208,7 @@ class _Maker:
             exploit_uses=self.held_keywords if uses is None and board == "active" else (),
         )
 
-    def _complete(self, seed: int, original: Candidate) -> SkillDef | None:
+    def _complete(self, seed: int, original: Candidate, turn: int) -> SkillDef | None:
         if not original.keywords:  # 通用池（手寫的基礎技能）那一格：組合器不做沒有關鍵字的完整技能
             return None
         request = self.request
@@ -218,7 +219,7 @@ class _Maker:
             tier=request.tier,
             category="spell" if request.weapon_class == "focus" else None,
             library=self.library,
-            keyword=original.keywords[0],
+            keyword=original.keywords[turn % len(original.keywords)],  # 雙關鍵字輪流指定
             hero_attributes=self.attrs,
             avoid_attr=self._avoid(original),
             held=request.held or None,
@@ -231,12 +232,14 @@ class _Maker:
 
 @dataclass(frozen=True, slots=True)
 class _Held:
+    """手上已有的技能：同 ID 或同設計鍵的不收。不比名稱（組合器的組合式名稱「火焰・打擊」之類常常
+    同名，名稱由之後的命名步驟決定；同名的照 ``take_candidate`` 加「（二）」）。"""
+
     ids: frozenset[str]
-    names: frozenset[str]
     keys: frozenset[DesignKey]
 
     def has(self, skill: SkillDef, key: DesignKey) -> bool:
-        return skill.id in self.ids or skill.name_zh in self.names or key in self.keys
+        return skill.id in self.ids or key in self.keys
 
 
 def _family(kind: str, whiteboard: bool) -> str:
@@ -258,7 +261,10 @@ def _originals(
     return generate_candidates(library, request, replace(rules, llm_share_permille=0), llm=None)
 
 
-def _slot_pool(maker: _Maker, index: int, original: Candidate, seeds: int) -> list[PickCandidate]:
+def _slot_pool(
+    maker: _Maker, index: int, original: Candidate, seeds: int, enough: int
+) -> list[PickCandidate]:
+    """一格的候選：最多抽 ``seeds`` 個種子，湊到 ``enough``（``pool.top_k``）個不同設計就停。"""
     found: dict[DesignKey, PickCandidate] = {}
 
     def keep(skill: SkillDef, seed: int | None, source: Literal["composer", "pool"]) -> None:
@@ -271,6 +277,8 @@ def _slot_pool(maker: _Maker, index: int, original: Candidate, seeds: int) -> li
         keep(original.skill, None, "composer")
     rng = Rng(maker.request.seed).fork(f"{SLOT_FORK}/{index}")
     for turn in range(seeds):
+        if len(found) >= enough:
+            break
         seed = rng.next_u32()
         skill = maker.make(seed, original, turn)
         if skill is not None and maker.fits(skill, original):
@@ -290,24 +298,32 @@ def _nondamage_slot(
     originals: Sequence[Candidate],
     pools: list[list[PickCandidate]],
     seeds: int,
+    enough: int,
 ) -> int | None:
-    """選非傷害保底格（見模組說明第 3 點）；選到的格子的候選只留非傷害的。做不到時 ``None``。"""
+    """選非傷害保底格（見模組說明第 3 點）；選到的格子的候選只留非傷害的，不到 ``enough`` 個時
+    用非傷害補抽補上（同一條串流）。做不到時 ``None``。"""
     order = list(reversed(range(len(originals))))  # 新方向 → 橋接 → 加深
     chosen = next(
         (i for i in order if is_nondamage(originals[i].skill) and _has_nondamage(pools[i])), None
     )
     if chosen is None:
         chosen = next((i for i in order if _has_nondamage(pools[i])), None)
+    drawn = False
     if chosen is None:
         for i in order:
-            extra = _nondamage_draw(maker, i, originals[i], pools[i], seeds)
+            extra = _nondamage_draw(maker, i, originals[i], pools[i], seeds=seeds, enough=enough)
             if extra:
                 pools[i] = [*pools[i], *extra]
-                chosen = i
+                chosen, drawn = i, True
                 break
     if chosen is None:
         return None
-    pools[chosen] = [c for c in pools[chosen] if is_nondamage(c.skill)]
+    kept = [c for c in pools[chosen] if is_nondamage(c.skill)]
+    if not drawn and len(kept) < enough:
+        kept += _nondamage_draw(
+            maker, chosen, originals[chosen], kept, seeds=seeds, enough=enough - len(kept)
+        )
+    pools[chosen] = kept
     return chosen
 
 
@@ -316,12 +332,20 @@ def _has_nondamage(pool: Sequence[PickCandidate]) -> bool:
 
 
 def _nondamage_draw(
-    maker: _Maker, index: int, original: Candidate, pool: Sequence[PickCandidate], seeds: int
+    maker: _Maker,
+    index: int,
+    original: Candidate,
+    pool: Sequence[PickCandidate],
+    *,
+    seeds: int,
+    enough: int,
 ) -> list[PickCandidate]:
     have = {c.key for c in pool}
     found: dict[DesignKey, PickCandidate] = {}
     rng = Rng(maker.request.seed).fork(f"{NONDAMAGE_FORK}/{index}")
     for turn in range(seeds):
+        if len(found) >= enough:
+            break
         seed = rng.next_u32()
         skill = maker.make(seed, original, turn)
         if skill is None or not is_nondamage(skill) or not maker.fits(skill, original):
@@ -354,18 +378,17 @@ def pick_slots(
         top_attribute(request.hero_attributes) if request.hero_attributes else None,
         _Held(
             frozenset(s.id for s in held_skills),
-            frozenset(s.name_zh for s in held_skills),
             frozenset(design_key(s) for s in held_skills),
         ),
     )
     pools: list[list[PickCandidate]] = []
     seeds = pick.pool.slot_seeds if whiteboard else pick.pool.complete_slot_seeds
     for index, original in enumerate(originals):
-        pool = _slot_pool(maker, index, original, seeds)
+        pool = _slot_pool(maker, index, original, seeds, pick.pool.top_k)
         pools.append(pool)
         maker.sent.update(c.key for c in pool)
         maker.taken.update(c.skill.id for c in pool)
-    chosen = _nondamage_slot(maker, originals, pools, pick.pool.nondamage_seeds)
+    chosen = _nondamage_slot(maker, originals, pools, pick.pool.nondamage_seeds, pick.pool.top_k)
     slots: list[PickedSlot] = []
     for index, (original, pool) in enumerate(zip(originals, pools, strict=True)):
         scored = [
@@ -409,7 +432,8 @@ def generate_pick_candidates(
     picker: OfferPicker | None = None,
 ) -> tuple[Candidate, ...]:
     """挑選模式的三選一（見模組說明）。``picker``＝LLM 挑選器（省略＝每格都用分數第一名）；
-    ``rules.llm_max_calls``（大世界機遇＝1）有設時只有前這麼多格請 LLM。回傳的
+    只有候選至少 ``pool.min_for_llm`` 個的格子請 LLM；``rules.llm_max_calls``（大世界機遇＝1）有設時
+    只有這些格子的前這麼多格請 LLM。回傳的
     :class:`~trpg.skillgen.candidates.Candidate` 帶 ``pick``（``llm``＝LLM 挑選並命名；``top``＝
     分數第一名）。"""
     slots = pick_slots(library, request, rules, player=player, whiteboard=whiteboard)
@@ -425,16 +449,15 @@ def generate_pick_candidates(
         )
         for i, slot in enumerate(slots)
     ]
+    # 只有候選夠多（``pool.min_for_llm``）的格子值得請 LLM；有上限時依格子順序取前幾個
+    worth = [a for a in asks if len(a.slate.ranked) >= library.skill_pick.pool.min_for_llm]
     cap = rules.llm_max_calls
-    allowed = asks if cap <= 0 else asks[:cap]
+    allowed = worth if cap <= 0 else worth[:cap]
     answers: Sequence[SlotChoice | None] = (
         picker(allowed, player) if picker is not None and allowed else ()
     )
-    out: list[Candidate] = []
-    for index, slot in enumerate(slots):
-        answer = answers[index] if index < len(answers) else None
-        out.append(_result(slot, answer))
-    return tuple(out)
+    by_slot = {ask.index: answer for ask, answer in zip(allowed, answers, strict=False)}
+    return tuple(_result(slot, by_slot.get(i)) for i, slot in enumerate(slots))
 
 
 def _result(slot: PickedSlot, answer: SlotChoice | None) -> Candidate:

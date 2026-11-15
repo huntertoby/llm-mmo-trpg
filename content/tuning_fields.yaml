@@ -223,7 +223,7 @@ targets:
       - {path: pool.element_designs, label_zh: 同元素補抽：至少要幾個同元素設計, kind: int, hint_min: 0, hint_max: 10, note_zh: PK-1b：候選池裡和玩家手上技能同元素的設計少於這個數才補抽，補到這個數就停。}
       - {path: pool.slot_seeds, label_zh: 三選一每格另外抽幾個種子, kind: int, hint_min: 0, hint_max: 40, note_zh: PK-2：升級與完整技能三選一的每一格（加深、橋接、新方向），照這一格的出題條件（關鍵字、種類、屬性路線）另外抽這麼多個種子當候選，再打分取前幾名給本機模型挑。越多越慢；0＝每格只有原本出題的那一張。}
       - {path: pool.complete_slot_seeds, label_zh: 完整技能三選一每格另外抽幾個種子, kind: int, hint_min: 0, hint_max: 20, note_zh: PK-2：完整技能三選一（原型特殊時刻、大世界機遇）的每一格另外抽這麼多個種子。組合器做整招比白板慢（每個種子約 0.05～0.2 秒），越多出題越慢；0＝每格只有原本出題的那一張。}
-      - {path: pool.nondamage_seeds, label_zh: 非傷害保底補抽幾個種子, kind: int, hint_min: 0, hint_max: 40, note_zh: PK-2：三格的候選都沒有非傷害技能（輔助、治療、控制、位移、召喚、防守）時，另外為一格補抽這麼多個種子，只收非傷害的；0＝不補抽。}
+      - {path: pool.nondamage_seeds, label_zh: 非傷害保底格最多補抽幾個種子, kind: int, hint_min: 0, hint_max: 40, note_zh: PK-2：每次三選一有一格只放非傷害技能（輔助、治療、控制、位移、召喚、防守）。這一格的非傷害候選不夠（或三格都沒有）時，最多另外補抽這麼多個種子，只收非傷害的；0＝不補抽。}
       - {path: weights.synergy_per_link, label_zh: 協同：每條連線的分數, kind: int, hint_min: 0, hint_max: 1000, note_zh: 候選製造的關鍵字有一招手上的技能利用（或候選利用、手上的技能製造），每一條連線（手上技能 × 關鍵字 × 方向）加這麼多分。}
       - {path: weights.synergy_max_links, label_zh: 協同：最多算幾條連線, kind: int, hint_min: 0, hint_max: 6, note_zh: 協同分數最多算這麼多條連線（避免手上技能多的關鍵字永遠壓過其他候選）。}
       - {path: weights.keyword_make, label_zh: 關鍵字貼合：製造題目關鍵字, kind: int, hint_min: 0, hint_max: 500, note_zh: PK-1b：題目要的關鍵字由候選「製造」（例：題目要冰凍、候選會冰凍敵人），每個加這麼多分。}
