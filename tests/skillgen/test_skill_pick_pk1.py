@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from functools import cache
 
-from hypothesis import given, settings
-from hypothesis import strategies as st
+import pytest
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.player_pool import player_skills
@@ -81,8 +80,7 @@ def test_pool_stops_at_the_design_cap() -> None:
     assert len(composer) == 4
 
 
-@settings(max_examples=5, deadline=None)
-@given(st.integers(min_value=0, max_value=2**31))
+@pytest.mark.parametrize("seed", [0, 12345, 2**31])
 def test_the_slate_is_deterministic(seed: int) -> None:
     lib = _lib()
     first = pick_slate(lib, FAST, _ctx(FAST), seed=seed)
