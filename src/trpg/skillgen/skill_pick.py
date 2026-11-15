@@ -346,25 +346,31 @@ def element_partners(skill: SkillDef, player: PickPlayer) -> list[SkillDef]:
 
 
 def odd_conditions(skill: SkillDef) -> tuple[str, ...]:
-    """PK-1b 怪條件（只給挑選打分扣分，不是規則）：
+    """PK-1b 怪條件（只給挑選打分扣分，不是規則；不改組合器與驗證器的合法判定）：
 
-    - :data:`ODD_FIRST_ROUND`：不是傷害的效果只在第一輪才生效（例「狀態易傷，若第一輪」）。技能
-      層級的「第一輪」只在技能沒有任何傷害效果時才算。
-    - :data:`ODD_INSCRIBE`：刻紋效果要滿足條件才刻得下（刻紋本身沒有效果）。
+    - :data:`ODD_INSCRIBE`：刻紋（本身沒有效果、留給之後的技能讀取）要滿足條件才刻得下——刻紋
+      效果自己帶條件；或技能層級有條件、而技能沒有任何傷害效果（整招只剩有條件的刻紋與附帶效果）。
+    - :data:`ODD_FIRST_ROUND`：不是傷害、也不是刻紋的效果自己帶「第一輪」（例「狀態易傷，若
+      第一輪」）；或技能層級是「第一輪」、技能沒有傷害也沒有刻紋。
 
-    每一處算一個（依效果順序）。"""
+    每一處算一個（依效果順序；技能層級的最後算，最多一個）。"""
     found: list[str] = []
     has_damage = any(e.type in _DAMAGE for e in skill.effects)
-    top = skill.condition.type if skill.condition is not None else None
+    has_inscribe = any(e.type == _INSCRIBE for e in skill.effects)
     for effect in skill.effects:
         own = getattr(effect, "condition", None)
-        own_type = None if own is None else own.type
-        if effect.type not in _DAMAGE and own_type == _FIRST_ROUND:
-            found.append(ODD_FIRST_ROUND)
-        if effect.type == _INSCRIBE and (own_type is not None or top is not None):
+        if own is None:
+            continue
+        if effect.type == _INSCRIBE:
             found.append(ODD_INSCRIBE)
-    if top == _FIRST_ROUND and not has_damage:
-        found.append(ODD_FIRST_ROUND)
+        elif effect.type not in _DAMAGE and own.type == _FIRST_ROUND:
+            found.append(ODD_FIRST_ROUND)
+    top = skill.condition.type if skill.condition is not None else None
+    if top is not None and not has_damage:
+        if has_inscribe:
+            found.append(ODD_INSCRIBE)
+        elif top == _FIRST_ROUND:
+            found.append(ODD_FIRST_ROUND)
     return tuple(found)
 
 

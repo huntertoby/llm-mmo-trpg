@@ -212,41 +212,62 @@ def test_theme_counts_keywords_shared_with_held_skills() -> None:
     assert parts["theme"] >= w.theme_per_keyword
 
 
+_DAMAGE = ("damage", "delayed_damage")
+
+
+def _gate(skill: SkillDef, effect_type: str, condition: str) -> SkillDef:
+    """把 ``effect_type`` 的效果都加上條件（只給偵測用，不驗證）。"""
+    effects = [
+        e.model_copy(update={"condition": ConditionSpec(type=condition)})
+        if e.type == effect_type
+        else e
+        for e in skill.effects
+    ]
+    return skill.model_copy(update={"effects": effects, "condition": None})
+
+
+def _has(skill: SkillDef, *types: str) -> bool:
+    return any(e.type in types for e in skill.effects)
+
+
 def test_odd_conditions_are_detected() -> None:
     lib = _lib()
-    inscribe = _find(lib, FAST, lambda s: any(e.type == "inscribe" for e in s.effects)).skill
-    assert ODD_INSCRIBE not in odd_conditions(inscribe.model_copy(update={"condition": None}))
-    gated = inscribe.model_copy(update={"condition": ConditionSpec(type="adjacent_ally")})
-    assert ODD_INSCRIBE in odd_conditions(gated)
-    first = inscribe.model_copy(update={"condition": ConditionSpec(type="first_round")})
-    codes = odd_conditions(first)
-    if not any(e.type in ("damage", "delayed_damage") for e in inscribe.effects):
-        assert ODD_FIRST_ROUND in codes
-    effects = [
-        e.model_copy(update={"condition": ConditionSpec(type="first_round")})
-        if e.type == "apply_status"
-        else e
-        for e in inscribe.effects
-    ]
-    status_first = inscribe.model_copy(update={"effects": effects, "condition": None})
-    if any(e.type == "apply_status" for e in inscribe.effects):
-        assert ODD_FIRST_ROUND in odd_conditions(status_first)
+    rune_only = _find(lib, FAST, lambda s: _has(s, "inscribe") and not _has(s, *_DAMAGE)).skill
+    rune_hit = _find(lib, FAST, lambda s: _has(s, "inscribe") and _has(s, *_DAMAGE)).skill
+    status = _find(lib, KEYWORD, lambda s: _has(s, "apply_status") and _has(s, *_DAMAGE)).skill
+    plain = rune_only.model_copy(update={"condition": None})
+    assert odd_conditions(_gate(plain, "none", "first_round")) == ()
+    # 刻紋自己帶條件 → 怪；技能層級條件只在沒有傷害時才算
+    assert odd_conditions(_gate(rune_hit, "inscribe", "adjacent_ally")) == (ODD_INSCRIBE,)
+    top = ConditionSpec(type="adjacent_ally")
+    assert odd_conditions(rune_only.model_copy(update={"condition": top})) == (ODD_INSCRIBE,)
+    assert odd_conditions(rune_hit.model_copy(update={"condition": top})) == ()
+    # 非傷害效果只在第一輪生效 → 怪；傷害效果在第一輪生效不算
+    assert odd_conditions(_gate(status, "apply_status", "first_round")) == (ODD_FIRST_ROUND,)
+    assert ODD_FIRST_ROUND not in odd_conditions(_gate(status, "damage", "first_round"))
+    first = ConditionSpec(type="first_round")
+    no_damage = status.model_copy(
+        update={"effects": [e for e in status.effects if e.type not in _DAMAGE], "condition": first}
+    )
+    assert odd_conditions(no_damage) == (ODD_FIRST_ROUND,)
+    assert odd_conditions(status.model_copy(update={"condition": first})) == ()
 
 
 def test_odd_conditions_cost_points() -> None:
     lib = _lib()
     w = PickWeights()
-    inscribe = _find(lib, FAST, lambda s: any(e.type == "inscribe" for e in s.effects))
-    clean = inscribe.skill.model_copy(update={"condition": None})
-    gated = inscribe.skill.model_copy(update={"condition": ConditionSpec(type="adjacent_ally")})
+    rune = _find(lib, FAST, lambda s: _has(s, "inscribe")).skill
+    clean = _gate(rune, "none", "first_round")
+    gated = _gate(rune, "inscribe", "adjacent_ally")
     a = score_candidate(
         lib, PickCandidate(clean, "composer", 1, design_key(clean)), PickPlayer(), w
     )
     b = score_candidate(
         lib, PickCandidate(gated, "composer", 1, design_key(gated)), PickPlayer(), w
     )
-    assert dict(a.parts)["odd"] == -w.odd_condition_penalty * len(odd_conditions(clean))
-    assert dict(b.parts)["odd"] <= dict(a.parts)["odd"] - w.odd_condition_penalty
+    assert dict(a.parts)["odd"] == 0
+    assert dict(b.parts)["odd"] == -w.odd_condition_penalty
+    assert b.score == a.score - w.odd_condition_penalty
 
 
 def test_scores_spread_out_for_a_real_player() -> None:
