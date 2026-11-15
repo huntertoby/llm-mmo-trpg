@@ -73,7 +73,7 @@ REPORT = ROOT / "docs" / "phases" / "PhasePK-1比較.md"
 JSON_NAME = "pick_compare.json"
 FORMAT = "pick-compare/1"
 EXTRA_QUESTIONS: tuple[ProposalRequest, ...] = (
-    ProposalRequest(2, "epic", keywords=("burning",)),
+    ProposalRequest(2, "epic", keywords=("ignite",)),
     ProposalRequest(2, "rare", kind="reaction"),
     ProposalRequest(1, "epic", kind="passive", keywords=("fury",)),
     ProposalRequest(3, "rare", keywords=("poisoned",)),
@@ -357,7 +357,7 @@ def path_metrics(rows: Sequence[dict[str, Any]], side: str) -> dict[str, Any]:
     fit = 0
     for row in rows:
         part = row[side]
-        if part.get("source") == "failed":
+        if part.get("source") == "failed" or not row["keywords"]:
             continue
         need = set(row["keywords"])
         fit += need <= set(part["skill"]["keyword_ids"])
@@ -543,7 +543,8 @@ def _metrics_md(metrics: dict[str, dict[str, Any]]) -> list[str]:
     return [
         "| 指標 | 自由設計 | 挑選模式 |",
         "|---|---|---|",
-        line("題數／完成", "completed"),
+        f"| 完成／題數 | {free['completed']}/{free['questions']} "
+        f"| {pick['completed']}/{pick['questions']} |",
         line("退回（沒有用到 LLM 的設計或名字）", "fallback"),
         line("不同設計數", "designs"),
         line("不同效果原語數", "effect_types"),
