@@ -57,6 +57,12 @@ from trpg.llm.consistency import (
     skill_facts,
 )
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
+from trpg.llm.flash_pick import (
+    FlashPickResult,
+    chosen_variations,
+    mock_flash_pick_client,
+    pick_variations,
+)
 from trpg.llm.flash_repair import normalize_name, normalize_note, repair_fields
 from trpg.llm.naming import apply_naming, check_archaic_text, check_name, name_skill
 from trpg.llm.prompts.flash import (
@@ -65,6 +71,7 @@ from trpg.llm.prompts.flash import (
     build_flash_messages,
     flash_schema,
 )
+from trpg.llm.prompts.flash_pick import FLASH_PICK_PROMPT_VERSION
 from trpg.llm.prompts.naming import NAMING_PROMPT_VERSION
 from trpg.llm.propose import LLM_ERROR_CODES, AttemptRecord
 from trpg.llm.response import clean_response
@@ -75,10 +82,12 @@ from trpg.skillgen.flash_offer import (
     FlashOptionSource,
     FlashRequest,
     UsageSource,
+    flash_slots,
     make_offer,
     skill_before,
     try_variation,
 )
+from trpg.skillgen.flash_pick import FlashPicks, FlashSlot, flash_pick_on, picks_by_key
 from trpg.skillgen.flash_state import Variation, seed_tag, slot_is_major
 from trpg.skillgen.flash_text import VariationText, clean_note, text_map
 
@@ -98,6 +107,7 @@ __all__ = [
     "name_texts",
     "note_checker",
     "note_words",
+    "pick_record",
     "propose_variations",
     "select_flash_source",
 ]
@@ -512,6 +522,9 @@ class FlashProposalRecord(BaseModel):
     """大變化／轉型選項的命名結果（:func:`name_offer`、:func:`name_texts`；命名關閉時為空）。"""
     texts: tuple[VariationText, ...] = Field(default=(), exclude_if=lambda v: not v)
     """LF-1：玩家看得到的名稱與描述（依變化的鍵排序；出題時引擎再檢查一次才掛上）。"""
+    picks: tuple[int, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """PK-3 挑選模式：每格選第幾個候選（依格子順序；``accepted`` 是每格選中的變化）。提議模式
+    （LF-2）沒有，不輸出。"""
 
 
 @dataclass(slots=True)
@@ -681,6 +694,8 @@ def propose_variations(
 # ---------------------------------------------------------------------------
 
 type FlashClient = LLMClient | Callable[[FlashRequest, int], LLMClient]
+type FlashPickClient = LLMClient | Callable[[FlashRequest, Sequence[FlashSlot], int], LLMClient]
+"""PK-3 挑選用的 client，或依（題目, 格子, 種子）建立 client 的函式（Mock 用）。"""
 type NamingClient = LLMClient | Callable[[SkillDef, int], LLMClient]
 """命名用的 client，或依（選項的技能, 種子）建立 client 的函式（Mock 用）。"""
 type RecordSink = Callable[[FlashProposalRecord], None]
@@ -698,7 +713,10 @@ class LlmFlashSource(UsageSource):
     提議紀錄累積在 :attr:`records`，也會交給 ``sink``（寫進 run 紀錄與統計）。
 
     LF-1：提議時模型寫的 ``note_zh`` 收進紀錄的 ``texts``；``naming`` 給了就再為大變化與轉型選項
-    命名（:func:`name_texts`）。:meth:`texts` 把這些文字交給 ``make_offer`` 掛到選項上。"""
+    命名（:func:`name_texts`）。:meth:`texts` 把這些文字交給 ``make_offer`` 掛到選項上。
+
+    PK-3：``skill_pick.yaml`` 的 ``flash_enabled`` 打開時 ``make_offer`` 改呼叫 :meth:`pick`（挑選
+    模式，:mod:`trpg.llm.flash_pick`）；``pick_client`` 省略時用 ``client``（要固定的 client）。"""
 
     def __init__(
         self,
@@ -708,13 +726,62 @@ class LlmFlashSource(UsageSource):
         sink: RecordSink | None = None,
         clock: Clock = time.perf_counter,
         naming: NamingClient | None = None,
+        pick_client: FlashPickClient | None = None,
     ) -> None:
         self.client = client
         self.max_attempts = max_attempts
         self.sink = sink
         self.clock = clock
         self.naming = naming
+        self.pick_client = pick_client
         self.records: list[FlashProposalRecord] = []
+
+    def pick(
+        self,
+        library: ContentLibrary,
+        request: object,
+        slots: Sequence[FlashSlot],
+        before: SkillDef,
+    ) -> FlashPicks:
+        """PK-3 挑選模式：請模型為每格挑一個候選並寫文字
+        （:func:`~trpg.llm.flash_pick.pick_variations`；紀錄寫進 :attr:`records` 與 ``sink``）。"""
+        assert isinstance(request, FlashRequest)
+        used = self._pick_client(request, slots)
+        major = slot_is_major(library.flash.rules, request.state, request.nth)
+        result = pick_variations(
+            used,
+            library,
+            request,
+            slots,
+            before,
+            major=major,
+            max_attempts=self.max_attempts,
+            clock=self.clock,
+        )
+        record = pick_record(request, slots, result)
+        self.records.append(record)
+        if self.sink is not None:
+            self.sink(record)
+        return FlashPicks(result.positions, text_map(result.texts))
+
+    def _pick_client(self, request: FlashRequest, slots: Sequence[FlashSlot]) -> LLMClient:
+        made = self.pick_client
+        if made is None:
+            if isinstance(self.client, LLMClient):
+                return self.client
+            raise TypeError("挑選模式需要固定的 client 或 pick_client")
+        if isinstance(made, LLMClient):
+            return made
+        return made(request, slots, request.seed)
+
+    def prepare(self, library: ContentLibrary, request: FlashRequest) -> None:
+        """預先生成（大世界）：照目前的模式產生這一題的紀錄（挑選模式先做格子再挑；提議模式照舊
+        提議），結果經 ``sink`` 交出。"""
+        if flash_pick_on(library, self):
+            slots = flash_slots(library, request, self)
+            self.pick(library, request, slots, skill_before(library, request))
+            return
+        self.proposed(library, request, request.current or request.base)
 
     def proposed(
         self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
@@ -750,10 +817,24 @@ class LlmFlashSource(UsageSource):
 
 class RecordedSource(UsageSource):
     """重播用：直接取用存下來的提議（:class:`FlashProposalRecord`），不呼叫 LLM。找不到同標籤的
-    紀錄時不提議（全部用模板）。LF-1：文字（名稱與描述）也從紀錄拿。"""
+    紀錄時不提議（全部用模板）。LF-1：文字（名稱與描述）也從紀錄拿。PK-3：挑選模式照紀錄裡每格選中
+    的變化（:func:`~trpg.skillgen.flash_pick.picks_by_key`）。"""
 
     def __init__(self, records: Iterable[FlashProposalRecord]) -> None:
         self.by_tag = {r.tag: r for r in records}
+
+    def pick(
+        self,
+        library: ContentLibrary,
+        request: object,
+        slots: Sequence[FlashSlot],
+        before: SkillDef,
+    ) -> FlashPicks:
+        assert isinstance(request, FlashRequest)
+        record = self.by_tag.get(_request_tag(request))
+        if record is None:
+            return FlashPicks(tuple(0 for _ in slots))
+        return FlashPicks(picks_by_key(slots, record.accepted), text_map(record.texts))
 
     def proposed(
         self, library: ContentLibrary, request: FlashRequest, skill: SkillDef
@@ -967,14 +1048,44 @@ def mock_flash_source(
     max_attempts: int = DEFAULT_FLASH_ATTEMPTS,
     sink: RecordSink | None = None,
     naming: bool = False,
+    pick_index: int = 0,
 ) -> LlmFlashSource:
     """Mock 提議來源：不需網路與金鑰。``naming``（LF-1）為真時大變化與轉型用 Mock 命名
-    （:func:`~trpg.llm.candidate_source.mock_naming_client`）；預設關（不動既有快照）。"""
+    （:func:`~trpg.llm.candidate_source.mock_naming_client`）；預設關（不動既有快照）。PK-3 挑選模式
+    每格永遠挑 ``pick_index``（:func:`~trpg.llm.flash_pick.mock_flash_pick_client`；預設 0＝原本
+    出題的那一個），不寫文字。"""
     return LlmFlashSource(
         lambda request, seed: mock_flash_client(library, request, seed, max_attempts),
         max_attempts=max_attempts,
         sink=sink,
         naming=(lambda skill, seed: mock_naming_client(library, skill, seed)) if naming else None,
+        pick_client=lambda request, slots, seed: mock_flash_pick_client(
+            slots, index=pick_index, attempts=max_attempts
+        ),
+    )
+
+
+def pick_record(
+    request: FlashRequest, slots: Sequence[FlashSlot], result: FlashPickResult
+) -> FlashProposalRecord:
+    """PK-3 挑選的紀錄：``accepted``＝每格選中的變化、``picks``＝位置；``source``：每格都有 LLM 的
+    有效回答＝``llm``、部分＝``partial``、都沒有＝``template``。"""
+    answered = result.answered
+    source: ProposalSource = (
+        "llm" if answered >= len(slots) else ("partial" if answered else "template")
+    )
+    return FlashProposalRecord(
+        tag=_request_tag(request),
+        prompt_version=FLASH_PICK_PROMPT_VERSION,
+        source=source,
+        wanted=len(slots),
+        attempts=result.attempts,
+        codes=result.codes,
+        accepted=chosen_variations(slots, result.positions),
+        reason=result.reason,
+        seconds=result.seconds,
+        texts=result.texts,
+        picks=result.positions,
     )
 
 

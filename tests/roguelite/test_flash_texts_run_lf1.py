@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from tests.roguelite.helpers import library
+from tests.engine.helpers import lf2_library
 from tests.roguelite.test_flash_llm_run import _gear, _ready
 from trpg.content.library import ContentLibrary
 from trpg.llm import flash_propose
@@ -31,7 +31,7 @@ def _noted_client(lib: ContentLibrary, request: FlashRequest, seed: int) -> Mock
 
 def test_notes_reach_the_offer_the_log_and_the_save(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(flash_propose, "note_checker", lambda *_a, **_k: lambda _v, _n: [])
-    lib = library()
+    lib = lf2_library()  # PK-3：LF-2 的提議流程（閃現挑選模式關掉）
     run = _gear().model_copy(update={"llm": True})
     skill = _ready(run)
     with use_flash_source(

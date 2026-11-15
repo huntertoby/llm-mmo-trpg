@@ -28,10 +28,11 @@ from __future__ import annotations
 
 import dataclasses
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Final
 
 from trpg.content.library import ContentLibrary
+from trpg.content.skills import SkillDef
 from trpg.content.world_oaths import OathTable, oath_problems
 from trpg.roguelite.attributes import allocate_attributes, respec_attributes
 from trpg.roguelite.errors import RunError
@@ -59,6 +60,7 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.rng import fnv1a64
 from trpg.skillgen.flash_offer import FlashOptionSource, FlashRequest, UsageSource
+from trpg.skillgen.flash_pick import FlashPicks, FlashSlot, picks_by_key
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.flash_text import VariationText, text_map
 from trpg.world.actions import (
@@ -518,13 +520,23 @@ def _flash(
 
 class _RecordedFlash(UsageSource):
     """日誌（或預先生成）記下的變化提議；``make_offer`` 照樣一一驗證，套不上的用模板補。LF-1：
-    另給名稱與描述（``texts``），引擎檢查後掛到鍵對得上的選項。"""
+    另給名稱與描述（``texts``），引擎檢查後掛到鍵對得上的選項。PK-3 挑選模式：照紀錄裡每格選中的
+    變化挑（:func:`~trpg.skillgen.flash_pick.picks_by_key`；找不到的格子用第一個）。"""
 
     def __init__(
         self, accepted: tuple[Variation, ...], texts: tuple[VariationText, ...] = ()
     ) -> None:
         self.accepted = accepted
         self.by_key = text_map(texts)
+
+    def pick(
+        self,
+        library: ContentLibrary,
+        request: object,
+        slots: Sequence[FlashSlot],
+        before: SkillDef,
+    ) -> FlashPicks:
+        return FlashPicks(picks_by_key(slots, self.accepted), self.by_key)
 
     def proposed(
         self, library: ContentLibrary, request: FlashRequest, skill: object

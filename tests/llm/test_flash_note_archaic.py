@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from tests.engine.helpers import lf2_library
 from trpg.content.library import ContentLibrary
 from trpg.content.world import load_world_style
 from trpg.llm import MockLLMClient
@@ -23,7 +24,7 @@ GOOD = "風裡帶著水氣，地面跟著濕透。"
 
 @pytest.fixture(scope="module")
 def lib(library: ContentLibrary) -> ContentLibrary:
-    return library
+    return lf2_library()  # PK-3：測 LF-2 的提議流程（閃現挑選模式關掉）
 
 
 def _request(lib: ContentLibrary, region: str | None) -> FlashRequest:

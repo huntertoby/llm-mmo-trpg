@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 
-from tests.engine.helpers import library
+from tests.engine.helpers import lf2_library
 from trpg.llm import LLMConfig, MockLLMClient
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import OpenAICompatClient
@@ -50,7 +50,7 @@ from trpg.skillgen.flash_offer import (
 from trpg.skillgen.flash_state import SkillFlash, Variation, acquire
 from trpg.skillgen.usage import SkillUsage
 
-LIB = library()
+LIB = lf2_library()  # PK-3：測 LF-2 的提議流程（閃現挑選模式關掉）
 FIRE_BOLT = "skill_fire_bolt"
 SEED = 7
 
