@@ -317,7 +317,7 @@ def fallback_skill(
     開始（提案 7.6「組合器 0 個照現行退：技能池 → 工坊」）。預設＝原行為。
 
     ``exclude_ids``（Phase PK-1b）：技能池不選這些 ID（挑選模式：玩家手上已有的技能）。預設空＝原
-    行為（亂數串流不變）。"""
+    行為（亂數串流不變，直接呼叫原本的 ``_from_pool``）。"""
 
     def pool(
         lib: ContentLibrary, req: ProposalRequest, c: ProposalContext, s: int
@@ -326,7 +326,7 @@ def fallback_skill(
 
     sources: tuple[tuple[FallbackSource, _Source], ...] = (
         ("composer", _from_composer),
-        ("pool", pool),
+        ("pool", pool if exclude_ids else _from_pool),
         ("workshop", _from_workshop),
     )
     for name, source in sources[1:] if skip_composer else sources:
