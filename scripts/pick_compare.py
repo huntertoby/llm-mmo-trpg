@@ -454,7 +454,8 @@ def run(args: argparse.Namespace) -> int:
     result["metrics"] = {side: path_metrics(rows, side) for side in ("free", "pick")}
     out = args.out or DATA_DIR / JSON_NAME
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
+    out.write_text(text, encoding="utf-8", newline="\n")
     print(f"→ {out}", flush=True)
     write_report(result, args.report)
     return 0
