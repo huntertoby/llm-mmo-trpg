@@ -52,7 +52,7 @@ from trpg.llm.flash_propose import LlmFlashSource
 from trpg.llm.story_skill import StorySkillRequest
 from trpg.llm.wish import match_wish
 from trpg.roguelite.flashes import problem_of
-from trpg.roguelite.llm_hook import use_proposer
+from trpg.roguelite.llm_hook import use_picker, use_proposer
 from trpg.roguelite.offers import make_offer, offer_key
 from trpg.roguelite.state import FlashChoice, FlashLlmRecord
 from trpg.world.common import rules_of
@@ -189,7 +189,7 @@ def provider_generators(provider: LlmProvider) -> Generators:
         proposer = provider.proposer(library)
         if proposer is None:
             return OfferGen(key=request.key)
-        with use_proposer(proposer):
+        with use_proposer(proposer), use_picker(provider.picker(library)):
             made = make_offer(
                 library,
                 request.run.model_copy(update={"llm": True}),
@@ -199,8 +199,9 @@ def provider_generators(provider: LlmProvider) -> Generators:
                 pinned_keyword=request.pinned_keyword,
                 region=request.region,
                 llm_max_calls=OPPORTUNITY_LLM_CARDS,  # 6L-2b：每份最多 1 張請 LLM
+                pick=True,  # PK-2：挑選模式（開關見 skill_pick.yaml）
             )
-        if not any(t.source == "llm" for t in made.tags):
+        if not any(t.source == "llm" or t.pick == "llm" for t in made.tags):
             return OfferGen(key=request.key)
         return OfferGen(key=request.key, source="llm", offer=made)
 
@@ -368,6 +369,7 @@ def opportunity_wait_request(
         tier_bonus=bonus,
         pinned_keyword=keyword,
         region=trigger.region,
+        pick=True,  # PK-2：和 solutions._opportunity_offer 同一把鍵
     )
     if key is None:
         return None

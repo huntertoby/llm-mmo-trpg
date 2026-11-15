@@ -215,6 +215,7 @@ def _opportunity_offer(  # noqa: PLR0917 — make_offer 的參數
             tier_bonus=bonus,
             pinned_keyword=keyword,  # 5B-4d：三張都帶觸發情境的關鍵字（07 7.6）
             region=trigger.region,  # 6L-1（#126）：取得地點的區域
+            pick=True,  # PK-2：挑選模式（開關見 skill_pick.yaml）
         )
 
     key = offer_key(
@@ -225,6 +226,7 @@ def _opportunity_offer(  # noqa: PLR0917 — make_offer 的參數
         tier_bonus=bonus,
         pinned_keyword=keyword,
         region=trigger.region,
+        pick=True,
     )
     if key is None:
         return compute(), "composer"

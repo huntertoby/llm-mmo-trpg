@@ -36,6 +36,15 @@ class PickPoolRules(ContentModel):
     亂數串流再抽最多這麼多個種子，只收和玩家同元素的新設計；0＝不補抽。"""
     element_designs: int = Field(default=2, ge=0, le=40)
     """PK-1b：候選池裡和玩家同元素的設計至少要有幾個（不夠才補抽，補到這個數就停）。"""
+    slot_seeds: int = Field(default=10, ge=0, le=200)
+    """PK-2 三選一的每一格（加深／橋接／新方向）：照這一格的出題條件（關鍵字、種類、屬性路線）另外
+    抽這麼多個種子當候選（獨立亂數串流）；0＝每格只有原本出題的那一張。白板三選一用這個。"""
+    complete_slot_seeds: int = Field(default=4, ge=0, le=200)
+    """PK-2 完整技能三選一的每一格另外抽幾個種子（組合器整招指定關鍵字，每個種子約 0.05～0.2 秒，
+    所以比白板少）。"""
+    nondamage_seeds: int = Field(default=10, ge=0, le=200)
+    """PK-2 非傷害保底（#142）：三格的候選裡都沒有非傷害技能時，另外為一格（新方向優先）補抽這麼多個
+    種子，只收非傷害的；0＝不補抽。"""
 
     @model_validator(mode="after")
     def _check(self) -> PickPoolRules:
@@ -72,6 +81,11 @@ class PickWeights(ContentModel):
     odd_condition_penalty: int = Field(default=200, ge=0)
     """PK-1b：候選帶「怪條件」（第一輪才生效的非傷害效果、有條件的刻紋等；
     ``trpg.skillgen.skill_pick.odd_conditions``），每一處扣這麼多。只影響挑選的排序，不改合法判定。"""
+    thin_penalty: int = Field(default=250, ge=0)
+    """PK-2「這招有沒有料」：候選單薄（``trpg.skillgen.skill_pick.thin_reasons``：只有沒效果的刻紋、
+    標記或揭露；只有條件式的非傷害效果；史詩以上有作用的效果太少），每一項扣這麼多。只影響排序。"""
+    thin_epic_min_effects: int = Field(default=2, ge=1, le=6)
+    """PK-2：史詩以上的候選至少要有幾個「有作用的效果」（刻紋、標記、揭露不算），少於就算單薄。"""
     behavior_per_point: int = Field(default=20, ge=0)
     """打法：候選帶的關鍵字與玩家用過的動作相符，每 1 次加這麼多（``skill_keywords.yaml`` 的
     ``actions``）。"""
@@ -96,5 +110,8 @@ class PickWeights(ContentModel):
 class SkillPickRules(ContentModel):
     """``content/skill_pick.yaml``。"""
 
+    enabled: bool = True
+    """PK-2 開關（06 6.7 #165）：真＝原型的升級三選一（含白板格）與完整技能三選一（原型特殊時刻、
+    大世界機遇）走挑選模式（``trpg.skillgen.pick_offer``）；假＝完全回到 PK-2 前的出題流程。"""
     pool: PickPoolRules = Field(default_factory=PickPoolRules)
     weights: PickWeights = Field(default_factory=PickWeights)

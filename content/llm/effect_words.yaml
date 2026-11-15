@@ -140,3 +140,60 @@ groups:
       primitives: [shield, intercept, create_obstacle, raise_terrain]
       statuses: [shielded, guarded, stoneskin]
       units: [summon_guardian_spirit]
+  # ---- PK-2 加嚴（strict: true）：只有挑選模式的命名檢查看（閃現、自由設計的命名照舊不看）----
+  # 名稱或描述提到高處、地形、墜落、打擊、形狀、單字元素時，效果、條件或形狀裡要有對應。
+  - id: high_ground
+    strict: true
+    words: [高處, 高台, 高地, 居高, 臨下, 俯衝, 俯瞰, 高空, 凌空, 從天而降]
+    matches:
+      conditions: [height_advantage, self_on_high_ground]
+      primitives: [leap, raise_terrain]
+  - id: fall
+    strict: true
+    words: [墜落, 墜擊, 落下, 摔落, 跌落]
+    matches:
+      primitives: [leap, lower_terrain, push, shockwave, topple]
+      statuses: [prone]
+  - id: terrain
+    strict: true
+    words: [地形, 地勢, 深淵, 懸崖, 坑洞, 隆起, 下陷, 塌陷, 障礙, 石牆, 土牆]
+    matches:
+      primitives: [raise_terrain, lower_terrain, create_obstacle, destroy_object, topple, hurl_object, shockwave]
+      conditions: [height_advantage, self_on_high_ground, target_collided]
+      units: [summon_earth_wall]
+  - id: strike
+    strict: true
+    words: [之擊, 一擊, 重擊, 猛擊, 突刺, 射擊, 斬, 劈]
+    ignore: [斬斷退路]
+    matches:
+      primitives: [damage, delayed_damage, detonate_runes, charge_through, hurl_object, topple, shockwave]
+  - id: line_shape
+    strict: true
+    words: [直線, 一線, 貫穿]
+    matches: {shapes: [line, chain]}
+  - id: cone_shape
+    strict: true
+    words: [扇形, 錐形]
+    matches: {shapes: [cone]}
+  - id: ring_shape
+    strict: true
+    words: [環形, 一圈, 圓環]
+    matches: {shapes: [ring, allies_in_radius]}
+  - id: cross_shape
+    strict: true
+    words: [十字]
+    matches: {shapes: [cross]}
+  - id: wind_char
+    strict: true
+    words: [風]
+    ignore: [風格, 作風, 風範, 威風, 風采, 上風, 下風, 風險, 風聲, 風雲, 風度, 風光, 風味, 風骨, 風華, 風情, 風潮, 風靡, 風尚, 風雨, 雷厲風行, 一帆風順, 風塵]
+    matches: {elements: [wind], primitives: [blow_surface]}
+  - id: earth_char
+    strict: true
+    words: [土, 石]
+    ignore: [電光石火, 石火, 鐵石, 土地, 本土, 領土, 塵土, 符石, 寶石, 晶石, 源石]
+    matches:
+      elements: [earth]
+      statuses: [stoneskin]
+      primitives: [raise_terrain, lower_terrain, create_obstacle, topple, hurl_object]
+      units: [summon_earth_wall, summon_golem]

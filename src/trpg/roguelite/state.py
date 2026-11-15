@@ -166,6 +166,10 @@ class OfferTag(_Model):
     source: Literal["pool", "composer", "llm"]
     fallback: bool = False
     llm: LlmRecord | None = None
+    pick: Literal["llm", "top"] | None = Field(default=None, exclude_if=lambda v: v is None)
+    """挑選模式（Phase PK-2，``skill_pick.yaml`` 的 ``enabled``）：``llm``＝LLM 從這一格排好的候選
+    挑選並命名；``top``＝這一格分數第一名（沒有 LLM、不請 LLM 或 LLM 失敗）。不是挑選模式為
+    ``None``（不寫出，舊存檔與關掉開關的存檔逐字不變）。"""
 
 
 class SkillOffer(_Model):
