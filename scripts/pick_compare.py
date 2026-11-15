@@ -1,4 +1,4 @@
-"""技能生成：自由設計 vs 挑選模式的紙面比較（Phase PK-1）。
+"""技能生成：自由設計 vs 挑選模式的紙面比較（Phase PK-1；PK-1b 起輸出 PK-1b 的檔案、附 PK-1 對照）。
 
 同一組題目（LB 的 20 題＝``scripts/llm_model_compare.py`` 的題目〔``trpg llm propose -n 20``、
 seed 0〕，另加幾題）各跑兩條路，輸出原始 JSON 與給裁判看的 markdown：
@@ -17,7 +17,10 @@ seed 0〕，另加幾題）各跑兩條路，輸出原始 JSON 與給裁判看�
 - 量測前查 ``/api/v0/models``：``state=loaded`` 的只能有一個、而且是設定的模型，否則停（結束碼 3）；
   生成速度低於 ``MIN_TPS``（60 t/s）也停（結束碼 2）。一次只送一個請求。
 - 每題的「玩家」是確定性的樣本（3 招手寫技能，其中盡量 1 招帶題目的關鍵字），只給挑選模式打分與
-  ``<player>`` 區塊用；自由設計的 prompt 沒有玩家手上技能這一欄（現行如此）。
+  ``<player>`` 區塊用；自由設計的 prompt 沒有玩家手上技能這一欄（現行如此）。PK-1b 起樣本玩家另有
+  確定性的行為紀錄與主屬性（手上技能和 PK-1 相同；行為紀錄用另一條亂數串流）。
+- PK-1b：``--baseline``（預設 ``docs/phases/PK-1資料/pick_compare.json``）的指標列在整體指標的
+  「PK-1」欄。
 """
 
 from __future__ import annotations
@@ -30,7 +33,7 @@ import statistics
 import sys
 import time
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -48,10 +51,11 @@ from trpg.llm.candidate_source import mock_client_for, mock_naming_client
 from trpg.llm.client import LLMClient
 from trpg.llm.consistency import check_mentions, skill_facts
 from trpg.llm.naming import name_skill
-from trpg.llm.pick import candidate_card, mock_pick_client, pick_skill
+from trpg.llm.pick import candidate_card, fit_notes, mock_pick_client, pick_skill
 from trpg.llm.propose import propose_skill
 from trpg.narrative.skills import skill_card
 from trpg.shared.rng import Rng
+from trpg.shared.types import Attribute
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.candidates import skill_has_keywords
 from trpg.skillgen.keywords import derive_keywords
@@ -68,10 +72,14 @@ RecordingTransport: Any = _LMC.RecordingTransport
 measure_speed = _LMC.measure_speed
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "docs" / "phases" / "PK-1資料"
-REPORT = ROOT / "docs" / "phases" / "PhasePK-1比較.md"
+DATA_DIR = ROOT / "docs" / "phases" / "PK-1b資料"
+REPORT = ROOT / "docs" / "phases" / "PhasePK-1b比較.md"
+BASELINE = ROOT / "docs" / "phases" / "PK-1資料" / "pick_compare.json"
 JSON_NAME = "pick_compare.json"
-FORMAT = "pick-compare/1"
+FORMAT = "pick-compare/2"
+"""``pick-compare/2``（PK-1b）：挑選的每題多 ``held_in_slate``、樣本玩家多行為紀錄與主屬性。"""
+BEHAVIOR_ACTIONS: tuple[str, ...] = ("aim", "shove", "trip", "vault")
+"""樣本玩家行為紀錄會出現的動作（``skill_keywords.yaml`` 有 ``actions`` 的四個）。"""
 EXTRA_QUESTIONS: tuple[ProposalRequest, ...] = (
     ProposalRequest(2, "epic", keywords=("ignite",)),
     ProposalRequest(2, "rare", kind="reaction"),
@@ -84,6 +92,7 @@ PLAYER_SKILLS = 3
 SUMMARY_MARK = "<!-- 摘要 -->"
 """markdown 裡手寫白話摘要的前後標記（重產 markdown 時保留兩個標記之間的文字）。"""
 SUMMARY_PIECES = 2
+BASELINE_NOTE = "PK-1 欄是 PK-1 的原始資料用同一份指標程式重算。"
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +114,9 @@ def questions(library: ContentLibrary) -> list[tuple[ProposalRequest, int, str]]
 
 
 def sample_player(library: ContentLibrary, request: ProposalRequest, seed: int) -> PickPlayer:
-    """確定性的樣本玩家：同階級、非傳說的手寫技能 3 招；題目有關鍵字時其中 1 招盡量帶它。"""
+    """確定性的樣本玩家：同階級、非傳說的手寫技能 3 招；題目有關鍵字時其中 1 招盡量帶它（同 PK-1）。
+    PK-1b 另給行為紀錄（:data:`BEHAVIOR_ACTIONS` 各 0～5 次，``pk1b.behavior`` 串流）與主屬性
+    （手上技能最常見的縮放屬性 16、其餘 10）。"""
     rng = Rng(seed).fork("pk1.player")
     pool = sorted(
         (
@@ -122,7 +133,15 @@ def sample_player(library: ContentLibrary, request: ProposalRequest, seed: int) 
             chosen.append(rng.choice(related))
     rest = [s for s in pool if s not in chosen]
     chosen += rng.shuffled(rest)[: PLAYER_SKILLS - len(chosen)]
-    return PickPlayer(held_skills=tuple(sorted(chosen, key=lambda s: s.id)))
+    held = tuple(sorted(chosen, key=lambda s: s.id))
+    habit = Rng(seed).fork("pk1b.behavior")
+    behavior = {a: n for a in BEHAVIOR_ACTIONS if (n := habit.randint(0, 5))}
+    attrs: dict[Attribute, int] = {}
+    if held:
+        common = Counter(s.scaling_attr for s in held).most_common()
+        top = min((a for a, n in common if n == common[0][1]), key=lambda a: a.value)
+        attrs = {a: 16 if a == top else 10 for a in Attribute}
+    return PickPlayer(held_skills=held, behavior=behavior, hero_attributes=attrs)
 
 
 def describe(library: ContentLibrary, request: ProposalRequest) -> str:
@@ -304,12 +323,24 @@ class Runner:
                     "design": design_label(c.key),
                     "score": c.score,
                     "parts": dict(c.parts),
-                    "card": candidate_card(lib, c.skill, i, fixed=c.source == "pool"),
+                    "card": candidate_card(
+                        lib,
+                        c.skill,
+                        i,
+                        fixed=c.source == "pool",
+                        fit=fit_notes(lib, c.skill, player),
+                    ),
                 }
                 for i, c in enumerate(slate.ranked)
             ],
             "skill": shown,
             "desc_mismatch": _desc_checks(lib, shown, outcome.skill),
+            "held_in_slate": sum(
+                1
+                for c in slate.ranked
+                if c.skill.id in {h.id for h in player.held_skills}
+                or c.skill.name_zh in {h.name_zh for h in player.held_skills}
+            ),
         }
 
 
@@ -365,9 +396,15 @@ def path_metrics(rows: Sequence[dict[str, Any]], side: str) -> dict[str, Any]:
     elements = Counter(e for s in skills for e in (s["elements"] or ["none"]))
     seconds = [r["seconds"] for r in done]
     mentions = [m for s in skills if (m := _mentions_element(s)) is not None]
+    picks = [r.get("index") for r in done if r.get("index") is not None]
     return {
         "questions": len(rows),
         "completed": len(done),
+        "no_element": elements.get("none", 0),
+        "handwritten": sum(1 for r in done if r.get("name_source") == "handwritten"),
+        "index0": sum(1 for i in picks if i == 0),
+        "index_counts": dict(sorted(Counter(picks).items())),
+        "held_in_slate": sum(r.get("held_in_slate", 0) for r in done),
         "fallback": sum(1 for r in done if r["fallback"]),
         "designs": len({s["design"] for s in skills}),
         "effect_types": len({t for s in skills for t in s["effect_types"]}),
@@ -457,7 +494,7 @@ def run(args: argparse.Namespace) -> int:
     text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
     out.write_text(text, encoding="utf-8", newline="\n")
     print(f"→ {out}", flush=True)
-    write_report(result, args.report)
+    write_report(result, args.report, _baseline(args.baseline))
     return 0
 
 
@@ -471,6 +508,7 @@ def _question(
         "request": describe(library, request),
         "keywords": list(request.keywords),
         "player": [s.name_zh for s in player.held_skills],
+        "behavior": dict(player.behavior),
     }
     for side in ("free", "pick"):
         part = runner.free(request, seed) if side == "free" else runner.pick(request, seed, player)
@@ -538,46 +576,72 @@ def _candidates_md(part: dict[str, Any]) -> list[str]:
     return [*lines, f"- {who}：{picked}", ""]
 
 
-def _metrics_md(metrics: dict[str, dict[str, Any]]) -> list[str]:
-    free, pick = metrics["free"], metrics["pick"]
+def _metrics_md(
+    metrics: dict[str, dict[str, Any]], baseline: dict[str, dict[str, Any]] | None = None
+) -> list[str]:
+    """整體指標：本次的自由設計、挑選模式；有 ``baseline``（PK-1 的指標）時另列 PK-1 兩欄。"""
+    columns = [("自由設計", metrics["free"]), ("挑選模式", metrics["pick"])]
+    if baseline is not None:
+        columns += [("PK-1 自由設計", baseline["free"]), ("PK-1 挑選模式", baseline["pick"])]
 
-    def line(label: str, key: str) -> str:
-        return f"| {label} | {free.get(key)} | {pick.get(key)} |"
+    def row(label: str, cell: Callable[[dict[str, Any]], Any]) -> str:
+        return f"| {label} | " + " | ".join(str(cell(m)) for _, m in columns) + " |"
+
+    def ratio(a: str, b: str) -> Callable[[dict[str, Any]], Any]:
+        return lambda m: f"{m.get(a)}/{m.get(b)}"
+
+    def key(name: str) -> Callable[[dict[str, Any]], Any]:
+        return lambda m: m.get(name, "—")
 
     return [
-        "| 指標 | 自由設計 | 挑選模式 |",
-        "|---|---|---|",
-        f"| 完成／題數 | {free['completed']}/{free['questions']} "
-        f"| {pick['completed']}/{pick['questions']} |",
-        line("退回（沒有用到 LLM 的設計或名字）", "fallback"),
-        line("不同設計數", "designs"),
-        line("不同效果原語數", "effect_types"),
-        line("不同骨架數", "skeletons"),
-        f"| 元素分布 | {free['elements']} | {pick['elements']} |",
-        f"| 關鍵字貼合（帶齊題目關鍵字） | {free['keyword_fit']}/{free['keyword_questions']} "
-        f"| {pick['keyword_fit']}/{pick['keyword_questions']} |",
-        line("名稱與描述提到效果裡沒有的詞（條數，規則判斷）", "desc_mismatch"),
-        f"| 有元素的招，名稱或描述提到該元素 "
-        f"| {free['element_mentioned']}/{free['element_skills']} "
-        f"| {pick['element_mentioned']}/{pick['element_skills']} |",
-        line("強度占預算（中位，‰）", "budget_median"),
-        line("每題秒數（中位）", "seconds_median"),
-        line("每題秒數（平均）", "seconds_mean"),
-        line("每題秒數（最慢）", "seconds_max"),
+        "| 指標 | " + " | ".join(t for t, _ in columns) + " |",
+        "|---" * (len(columns) + 1) + "|",
+        row("完成／題數", ratio("completed", "questions")),
+        row("退回（沒有用到 LLM 的設計或名字）", key("fallback")),
+        row("不同設計數", key("designs")),
+        row("不同效果原語數", key("effect_types")),
+        row("不同骨架數", key("skeletons")),
+        row("元素分布", key("elements")),
+        row("沒有元素的招", key("no_element")),
+        row("挑到手寫技能", key("handwritten")),
+        row("LLM 挑第 0 號", key("index0")),
+        row("LLM 挑的 index 分布", key("index_counts")),
+        row("候選裡出現手上已有的技能", key("held_in_slate")),
+        row("關鍵字貼合（帶齊題目關鍵字）", ratio("keyword_fit", "keyword_questions")),
+        row("名稱與描述提到效果裡沒有的詞（條數，規則判斷）", key("desc_mismatch")),
+        row("有元素的招，名稱或描述提到該元素", ratio("element_mentioned", "element_skills")),
+        row("強度占預算（中位，‰）", key("budget_median")),
+        row("每題秒數（中位）", key("seconds_median")),
+        row("每題秒數（平均）", key("seconds_mean")),
+        row("每題秒數（最慢）", key("seconds_max")),
     ]
 
 
-def write_report(result: dict[str, Any], path: Path | None = None) -> None:
+def _baseline(path: Path | None) -> dict[str, dict[str, Any]] | None:
+    """PK-1 的結果用同一份 :func:`path_metrics` 重算指標；檔案不在時為 ``None``。"""
+    source = path or BASELINE
+    if not source.exists():
+        return None
+    old = json.loads(source.read_text(encoding="utf-8"))
+    return {side: path_metrics(old["rows"], side) for side in ("free", "pick")}
+
+
+def write_report(
+    result: dict[str, Any],
+    path: Path | None = None,
+    baseline: dict[str, dict[str, Any]] | None = None,
+) -> None:
     meta = result["meta"]
     lines = [
-        "# PK-1 比較：自由設計 vs 挑選模式（紙面樣本）",
+        "# PK-1b 比較：自由設計 vs 挑選模式（紙面樣本）",
         "",
         SUMMARY_MARK,
         "",
         f"> 模型 `{meta['model']}`、溫度 {meta['temperature']}、`reasoning_effort` "
         f"{meta['reasoning_effort']}；{'Mock（不是真模型）' if meta['mock'] else '真模型'}；"
         f"{meta['started_utc']}～{meta['finished_utc']}。"
-        f"原始資料 `docs/phases/PK-1資料/{JSON_NAME}`。",
+        f"原始資料 `docs/phases/{DATA_DIR.name}/{JSON_NAME}`。"
+        + (BASELINE_NOTE if baseline else ""),
         "",
         "## 每題並排",
         "",
@@ -585,13 +649,14 @@ def write_report(result: dict[str, Any], path: Path | None = None) -> None:
     for row in result["rows"]:
         lines += [
             f"### {row['label']}：{row['request']}",
-            f"樣本玩家手上：{'、'.join(row['player']) or '—'}",
+            f"樣本玩家手上：{'、'.join(row['player']) or '—'}"
+            + (f"｜行為紀錄：{row['behavior']}" if row.get("behavior") else ""),
             "",
             *_side_md(row["free"], "(a) 自由設計"),
             *_side_md(row["pick"], "(b) 挑選模式"),
             *_candidates_md(row["pick"]),
         ]
-    lines += ["## 整體指標", "", *_metrics_md(result["metrics"]), ""]
+    lines += ["## 整體指標", "", *_metrics_md(result["metrics"], baseline), ""]
     target = path or REPORT
     old = target.read_text(encoding="utf-8") if target.exists() else ""
     pieces = old.split(SUMMARY_MARK)
@@ -607,7 +672,7 @@ def report(args: argparse.Namespace) -> int:
     source = args.out or DATA_DIR / JSON_NAME
     result = json.loads(source.read_text(encoding="utf-8"))
     result["metrics"] = {side: path_metrics(result["rows"], side) for side in ("free", "pick")}
-    write_report(result, args.report)
+    write_report(result, args.report, _baseline(args.baseline))
     return 0
 
 
@@ -618,6 +683,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         cmd = sub.add_parser(name)
         cmd.add_argument("--out", type=Path, default=None, help="JSON 路徑")
         cmd.add_argument("--report", type=Path, default=None, help="markdown 路徑")
+        cmd.add_argument("--baseline", type=Path, default=None, help="PK-1 的 JSON（對照欄）")
     run_cmd = sub.choices["run"]
     run_cmd.add_argument("--mock", action="store_true", help="不連模型（Mock 冒煙）")
     run_cmd.add_argument("--limit", type=int, default=0, help="只跑前幾題（0＝全部）")

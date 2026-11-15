@@ -1,4 +1,4 @@
-"""技能生成「挑選模式」的候選池與打分（Phase PK-1；挑選模式提案第 4 節、第 7.1～7.2 節、
+"""技能生成「挑選模式」的候選池與打分（Phase PK-1、PK-1b；挑選模式提案第 4 節、第 7.1～7.2 節、
 第 7.5～7.6 節，``docs/phases/技能生成-挑選模式提案.md``）。
 
 流程（純函式、確定性）：
@@ -9,28 +9,37 @@
    骨架、題目的全部關鍵字，只看專屬規則）＋ ``validate_skill`` 無違規＋武器相容。依 **設計鍵**
    （:func:`design_key`，定義同 ``scripts/recipe_census.py``：骨架＋種類＋形狀類型＋效果類型
    〔含狀態 ID〕＋元素標籤）去重，同一個設計只留第一個；湊滿 ``pool.designs`` 個或抽滿
-   ``pool.seeds`` 個種子就停。之後加入技能池裡符合題目的手寫技能（同階級、同稀有度，依 ID 排序；
-   設計重複的略過）。
+   ``pool.seeds`` 個種子就停。
+   - **PK-1b 同元素補抽**：玩家手上有元素技能、而池裡和它們同元素的設計少於
+     ``pool.element_designs`` 個時，另外用 ``Rng(seed).fork("pick.element")``（獨立串流，不影響
+     上面的種子）再抽最多 ``pool.element_seeds`` 個，只收同元素的新設計。
+   - **手上已有的技能不進候選**（PK-1b）：和手上技能同 ID、同名或同設計鍵的一律略過。
+   - 手寫技能（技能池）只在 ``pool.handwritten_max`` > 0 時加入（同階級、同稀有度，依 ID 排序；
+     設計重複的略過）；送進前 K 前只留分數最高的 ``handwritten_max`` 個（:func:`pick_slate`）。
 2. **打分**（:func:`score_candidate`）：只比「適不適合這位玩家」，**不比強弱**（預算比例不進分數）。
-   關鍵字配合已是第 1 步的篩選；分數＝協同（候選與手上技能的 makes／uses 連線）＋打法（行為紀錄 ×
-   關鍵字的 ``actions``）＋屬性路線（:func:`~trpg.skillgen.candidates.route_rank`）＋手寫技能加分。
+   關鍵字配合已是第 1 步的篩選；分數＝協同（候選與手上技能的 makes／uses 連線條數）＋關鍵字貼合
+   （題目關鍵字是製造還是利用；多帶無關關鍵字扣分）＋主題相合（和手上技能共同的關鍵字）＋元素相合
+   （手上同元素的技能招數；有元素另加一點）＋打法（行為紀錄 × 關鍵字的 ``actions``）＋屬性路線
+   （:func:`~trpg.skillgen.candidates.route_rank`）＋手寫技能加分 − 怪條件
+   （:func:`odd_conditions`）。
 3. **排序**（:func:`rank_candidates`）：貪婪取前 K，每取一個時扣掉和已取的候選重複的部分（同骨架、
    同形狀、同效果種類、同元素），分數相同依候選池順序。
 
 權重與數量在 ``content/skill_pick.yaml``（:class:`~trpg.content.skill_pick.SkillPickRules`，
 數值工坊可改）。LLM 只從排好的前 K 個裡挑（``trpg.llm.pick``）；數值、結構都由這裡保證合法。
+怪條件只在這裡扣分，**不改組合器與驗證器的合法判定**。
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, replace
 from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.player_pool import player_skills
 from trpg.content.skill_pick import PickWeights, SkillPickRules
-from trpg.content.skills import SkillDef, weapon_problem
+from trpg.content.skills import SkillDef, skill_elements, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element, top_attribute
 from trpg.skillgen.candidates import ROUTE_DUAL, ROUTE_MAIN, behavior_weights, route_rank
@@ -43,6 +52,9 @@ from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 from trpg.skillgen.validate import validate_skill
 
 __all__ = [
+    "ELEMENT_FORK",
+    "ODD_FIRST_ROUND",
+    "ODD_INSCRIBE",
     "POOL_FORK",
     "CandidatePool",
     "DesignKey",
@@ -52,19 +64,31 @@ __all__ = [
     "candidate_pool",
     "design_key",
     "design_label",
+    "element_partners",
+    "odd_conditions",
     "pick_slate",
     "rank_candidates",
     "score_candidate",
+    "synergy_links",
 ]
 
 POOL_FORK = "pick.pool"
 """候選池種子的亂數串流名稱（``Rng(seed).fork(POOL_FORK)``）。"""
+ELEMENT_FORK = "pick.element"
+"""PK-1b 同元素補抽的亂數串流名稱（獨立於 :data:`POOL_FORK`）。"""
+ODD_FIRST_ROUND = "first_round_non_damage"
+"""怪條件：不是傷害的效果（狀態、揭露、刻紋…）只在第一輪才生效。"""
+ODD_INSCRIBE = "conditional_inscribe"
+"""怪條件：刻紋（本身沒有效果、留給之後的技能讀取）要滿足條件才刻得下。"""
 
 type PickSource = Literal["composer", "pool"]
 type DesignKey = tuple[str, str, str, tuple[str, ...], tuple[str, ...]]
 """（骨架, 種類, 形狀類型, 效果類型〔含狀態 ID〕, 元素標籤）。"""
 
 _ELEMENTS = frozenset(e.value for e in Element)
+_FIRST_ROUND = "first_round"
+_INSCRIBE = "inscribe"
+_DAMAGE = frozenset({"damage", "delayed_damage"})
 
 
 def design_key(skill: SkillDef) -> DesignKey:
@@ -94,18 +118,20 @@ class PickCandidate:
     key: DesignKey
     score: int = 0
     parts: tuple[tuple[str, int], ...] = ()
-    """各項分數（``synergy``、``behavior``、``route``、``pool``、``diversity``）；排序後才有
-    ``diversity``（負值）。"""
+    """各項分數（``synergy``、``keyword``、``theme``、``element``、``behavior``、``route``、
+    ``pool``、``odd``）；排序後才有 ``diversity``（負值）。"""
 
 
 @dataclass(frozen=True, slots=True)
 class CandidatePool:
-    """:func:`candidate_pool` 的結果：去重後的候選（發現順序）、抽了幾個種子、合法的組合器
-    結果數（含重複的設計）。"""
+    """:func:`candidate_pool` 的結果：去重後的候選（發現順序）、抽了幾個種子（含同元素補抽）、
+    合法的組合器結果數（含重複的設計）。"""
 
     candidates: tuple[PickCandidate, ...]
     seeds_tried: int
     legal: int
+    element_seeds: int = 0
+    """其中同元素補抽用了幾個種子（PK-1b）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,6 +169,73 @@ def _composer_skeleton(library: ContentLibrary, request: ProposalRequest, kind: 
     return request.skeleton
 
 
+@dataclass(frozen=True, slots=True)
+class _Held:
+    """手上已有的技能：ID、名稱、設計鍵（都不能進候選）。"""
+
+    ids: frozenset[str]
+    names: frozenset[str]
+    keys: frozenset[DesignKey]
+
+    @classmethod
+    def of(cls, player: PickPlayer | None) -> _Held:
+        skills = () if player is None else player.held_skills
+        return cls(
+            frozenset(s.id for s in skills),
+            frozenset(s.name_zh for s in skills),
+            frozenset(design_key(s) for s in skills),
+        )
+
+    def has(self, skill: SkillDef, key: DesignKey) -> bool:
+        return skill.id in self.ids or skill.name_zh in self.names or key in self.keys
+
+
+@dataclass(slots=True)
+class _Composer:
+    """組合器抽樣（候選池與同元素補抽共用）。"""
+
+    library: ContentLibrary
+    request: ProposalRequest
+    ctx: ProposalContext
+    kind: str
+    skeleton: str | None
+    keyword: str | None
+    legal: int = 0
+
+    def draw(self, rng: Rng, limit: int) -> Iterator[tuple[int, SkillDef | None]]:
+        """抽 ``limit`` 個種子；每個種子回傳（種子, 合法且符合題目的技能或 ``None``）。"""
+        for _ in range(limit):
+            composer_seed = rng.next_u32()
+            yield composer_seed, self._one(composer_seed)
+
+    def _one(self, composer_seed: int) -> SkillDef | None:
+        try:
+            skill = compose_random_skill(
+                composer_seed,
+                tier=self.ctx.tier,
+                rarity=self.ctx.rarity,
+                skeleton=self.skeleton,
+                library=self.library,
+                keyword=self.keyword,
+                hero_attributes=self.ctx.hero_attributes,
+                kinds=(self.kind,),
+            )
+        except ComposeError:
+            return None
+        if not fits_request(skill, self.request, self.kind, self.library):
+            return None
+        if not _usable(skill, self.ctx) or validate_skill(skill, self.library):
+            return None
+        self.legal += 1
+        return skill
+
+
+def _player_elements(player: PickPlayer | None) -> frozenset[Element]:
+    if player is None:
+        return frozenset()
+    return frozenset(e for s in player.held_skills for e in skill_elements(s))
+
+
 def candidate_pool(
     library: ContentLibrary,
     request: ProposalRequest,
@@ -150,49 +243,79 @@ def candidate_pool(
     *,
     seed: int,
     rules: SkillPickRules | None = None,
+    player: PickPlayer | None = None,
 ) -> CandidatePool:
-    """組合器多種子抽樣＋技能池的手寫技能，依設計去重（見模組說明第 1 點）。"""
+    """組合器多種子抽樣（＋同元素補抽、＋手寫技能），依設計去重，排除手上已有的技能（見模組說明
+    第 1 點）。"""
     rules = rules if rules is not None else library.skill_pick
     kind = wanted_kind(library, request)
-    skeleton = _composer_skeleton(library, request, kind)
-    keyword = request.keywords[0] if request.keywords else None
-    rng = Rng(seed).fork(POOL_FORK)
+    held = _Held.of(player)
+    composer = _Composer(
+        library,
+        request,
+        ctx,
+        kind,
+        _composer_skeleton(library, request, kind),
+        request.keywords[0] if request.keywords else None,
+    )
     found: dict[DesignKey, PickCandidate] = {}
-    legal = 0
+
+    def keep(skill: SkillDef, composer_seed: int) -> bool:
+        key = design_key(skill)
+        if key in found or held.has(skill, key):
+            return False
+        found[key] = PickCandidate(skill, "composer", composer_seed, key)
+        return True
+
     tried = 0
-    while tried < rules.pool.seeds and len(found) < rules.pool.designs:
+    for composer_seed, skill in composer.draw(Rng(seed).fork(POOL_FORK), rules.pool.seeds):
         tried += 1
-        composer_seed = rng.next_u32()
-        try:
-            skill = compose_random_skill(
-                composer_seed,
-                tier=ctx.tier,
-                rarity=ctx.rarity,
-                skeleton=skeleton,
-                library=library,
-                keyword=keyword,
-                hero_attributes=ctx.hero_attributes,
-                kinds=(kind,),
-            )
-        except ComposeError:
-            continue
-        if not fits_request(skill, request, kind, library) or not _usable(skill, ctx):
-            continue
-        if validate_skill(skill, library):
-            continue
-        legal += 1
-        key = design_key(skill)
-        if key not in found:
-            found[key] = PickCandidate(skill, "composer", composer_seed, key)
-    for skill in sorted(player_skills(library).values(), key=lambda s: s.id):
-        if skill.tier != ctx.tier or skill.rarity != ctx.rarity:
-            continue
-        if not fits_request(skill, request, kind, library) or not _usable(skill, ctx):
-            continue
-        key = design_key(skill)
-        if key not in found:
-            found[key] = PickCandidate(skill, "pool", None, key)
-    return CandidatePool(tuple(found.values()), tried, legal)
+        if skill is not None:
+            keep(skill, composer_seed)
+        if len(found) >= rules.pool.designs:
+            break
+    extra = _element_draw(composer, rules=rules, player=player, found=found, keep=keep, seed=seed)
+    if rules.pool.handwritten_max > 0:
+        for skill in sorted(player_skills(library).values(), key=lambda s: s.id):
+            if skill.tier != ctx.tier or skill.rarity != ctx.rarity:
+                continue
+            if not fits_request(skill, request, kind, library) or not _usable(skill, ctx):
+                continue
+            key = design_key(skill)
+            if key not in found and not held.has(skill, key):
+                found[key] = PickCandidate(skill, "pool", None, key)
+    return CandidatePool(tuple(found.values()), tried + extra, composer.legal, extra)
+
+
+def _element_draw(
+    composer: _Composer,
+    *,
+    rules: SkillPickRules,
+    player: PickPlayer | None,
+    found: dict[DesignKey, PickCandidate],
+    keep: Callable[[SkillDef, int], bool],
+    seed: int,
+) -> int:
+    """PK-1b 同元素補抽：回傳用了幾個種子（不需要補抽時為 0）。"""
+    wanted = _player_elements(player)
+    if not wanted or rules.pool.element_seeds <= 0:
+        return 0
+
+    def matching() -> int:
+        return sum(1 for c in found.values() if skill_elements(c.skill) & wanted)
+
+    if matching() >= rules.pool.element_designs:
+        return 0
+    used = 0
+    for composer_seed, skill in composer.draw(
+        Rng(seed).fork(ELEMENT_FORK), rules.pool.element_seeds
+    ):
+        used += 1
+        if skill is not None and skill_elements(skill) & wanted:
+            keep(skill, composer_seed)
+        if matching() >= rules.pool.element_designs:
+            break
+    return used
 
 
 # ---------------------------------------------------------------------------
@@ -200,15 +323,55 @@ def candidate_pool(
 # ---------------------------------------------------------------------------
 
 
-def _links(library: ContentLibrary, skill: SkillDef, player: PickPlayer) -> int:
-    """候選與手上技能的 makes／uses 連線數（只看專屬規則）。"""
+def synergy_links(
+    library: ContentLibrary, skill: SkillDef, player: PickPlayer
+) -> list[tuple[SkillDef, str]]:
+    """候選與手上技能的 makes／uses 連線（只看專屬規則）：每條是（手上的技能, 關鍵字），同一招
+    同一個關鍵字兩個方向都接上算兩條。依手上技能 ID、推導表順序。"""
     mine = derive_keywords(skill, library.keywords, exclusive_only=True)
-    links = 0
-    for held in player.held_skills:
+    links: list[tuple[SkillDef, str]] = []
+    for held in sorted(player.held_skills, key=lambda s: s.id):
         theirs = derive_keywords(held, library.keywords, exclusive_only=True)
-        links += sum(1 for k in mine.makes if k in theirs.uses)
-        links += sum(1 for k in mine.uses if k in theirs.makes)
+        links += [(held, k) for k in mine.makes if k in theirs.uses]
+        links += [(held, k) for k in mine.uses if k in theirs.makes]
     return links
+
+
+def element_partners(skill: SkillDef, player: PickPlayer) -> list[SkillDef]:
+    """手上和候選同元素的技能（物理不算元素），依 ID。"""
+    mine = skill_elements(skill)
+    if not mine:
+        return []
+    return [s for s in sorted(player.held_skills, key=lambda s: s.id) if skill_elements(s) & mine]
+
+
+def odd_conditions(skill: SkillDef) -> tuple[str, ...]:
+    """PK-1b 怪條件（只給挑選打分扣分，不是規則；不改組合器與驗證器的合法判定）：
+
+    - :data:`ODD_INSCRIBE`：刻紋（本身沒有效果、留給之後的技能讀取）要滿足條件才刻得下——刻紋
+      效果自己帶條件；或技能層級有條件、而技能沒有任何傷害效果（整招只剩有條件的刻紋與附帶效果）。
+    - :data:`ODD_FIRST_ROUND`：不是傷害、也不是刻紋的效果自己帶「第一輪」（例「狀態易傷，若
+      第一輪」）；或技能層級是「第一輪」、技能沒有傷害也沒有刻紋。
+
+    每一處算一個（依效果順序；技能層級的最後算，最多一個）。"""
+    found: list[str] = []
+    has_damage = any(e.type in _DAMAGE for e in skill.effects)
+    has_inscribe = any(e.type == _INSCRIBE for e in skill.effects)
+    for effect in skill.effects:
+        own = getattr(effect, "condition", None)
+        if own is None:
+            continue
+        if effect.type == _INSCRIBE:
+            found.append(ODD_INSCRIBE)
+        elif effect.type not in _DAMAGE and own.type == _FIRST_ROUND:
+            found.append(ODD_FIRST_ROUND)
+    top = skill.condition.type if skill.condition is not None else None
+    if top is not None and not has_damage:
+        if has_inscribe:
+            found.append(ODD_INSCRIBE)
+        elif top == _FIRST_ROUND:
+            found.append(ODD_FIRST_ROUND)
+    return tuple(found)
 
 
 def score_candidate(
@@ -216,14 +379,34 @@ def score_candidate(
     candidate: PickCandidate,
     player: PickPlayer,
     weights: PickWeights,
+    request: ProposalRequest | None = None,
 ) -> PickCandidate:
-    """候選的基本分（不含多樣性）：協同＋打法＋屬性路線＋手寫技能加分。回傳帶分數的候選。"""
+    """候選的基本分（不含多樣性）：協同＋關鍵字貼合＋主題相合＋元素相合＋打法＋屬性路線＋手寫技能
+    加分 − 怪條件。``request`` 是題目（關鍵字貼合要看；省略＝不算這一項）。回傳帶分數的候選。"""
     skill = candidate.skill
-    synergy = min(_links(library, skill, player), weights.synergy_max_links)
-    keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
+    found = derive_keywords(skill, library.keywords, exclusive_only=True)
+    synergy = min(len(synergy_links(library, skill, player)), weights.synergy_max_links)
+    wanted = tuple(request.keywords) if request is not None else ()
+    held_kw = {
+        k
+        for held in player.held_skills
+        for k in derive_keywords(held, library.keywords, exclusive_only=True).all()
+    }
+    others = [k for k in found.all() if k not in wanted]
+    keyword = (
+        weights.keyword_make * sum(1 for k in wanted if k in found.makes)
+        + weights.keyword_use * sum(1 for k in wanted if k in found.uses)
+        - weights.keyword_extra_penalty * sum(1 for k in others if k not in held_kw)
+    )
+    theme = weights.theme_per_keyword * min(
+        sum(1 for k in others if k in held_kw), weights.theme_max_keywords
+    )
+    element = weights.element_match * min(
+        len(element_partners(skill, player)), weights.element_match_max
+    ) + (weights.element_any if skill_elements(skill) else 0)
     by_keyword = behavior_weights(library, player.behavior)
     behavior = min(
-        weights.behavior_cap, weights.behavior_per_point * sum(by_keyword[k] for k in keywords)
+        weights.behavior_cap, weights.behavior_per_point * sum(by_keyword[k] for k in found.all())
     )
     route = 0
     if player.hero_attributes:
@@ -231,9 +414,13 @@ def score_candidate(
         route = {ROUTE_MAIN: weights.route_main, ROUTE_DUAL: weights.route_dual}.get(rank, 0)
     parts = (
         ("synergy", synergy * weights.synergy_per_link),
+        ("keyword", keyword),
+        ("theme", theme),
+        ("element", element),
         ("behavior", behavior),
         ("route", route),
         ("pool", weights.pool_bonus if candidate.source == "pool" else 0),
+        ("odd", -weights.odd_condition_penalty * len(odd_conditions(skill))),
     )
     return replace(candidate, score=sum(v for _, v in parts), parts=parts)
 
@@ -272,6 +459,13 @@ def rank_candidates(
     return tuple(chosen)
 
 
+def _limit_handwritten(scored: Sequence[PickCandidate], limit: int) -> list[PickCandidate]:
+    """手寫技能只留分數最高的 ``limit`` 個（同分取候選池較前面的）；組合器的候選照原順序全留。"""
+    pool = [c for c in scored if c.source == "pool"]
+    keep = {id(c) for c in sorted(pool, key=lambda c: -c.score)[:limit]}
+    return [c for c in scored if c.source != "pool" or id(c) in keep]
+
+
 def pick_slate(
     library: ContentLibrary,
     request: ProposalRequest,
@@ -285,7 +479,8 @@ def pick_slate(
     ``ctx.hero_attributes``（屬性路線）。"""
     rules = rules if rules is not None else library.skill_pick
     who = player or PickPlayer(hero_attributes=dict(ctx.hero_attributes or {}))
-    pool = candidate_pool(library, request, ctx, seed=seed, rules=rules)
-    scored = [score_candidate(library, c, who, rules.weights) for c in pool.candidates]
+    pool = candidate_pool(library, request, ctx, seed=seed, rules=rules, player=who)
+    scored = [score_candidate(library, c, who, rules.weights, request) for c in pool.candidates]
+    scored = _limit_handwritten(scored, rules.pool.handwritten_max)
     ranked = rank_candidates(scored, rules.weights, rules.pool.top_k)
     return PickSlate(ranked, len(pool.candidates), pool.seeds_tried)

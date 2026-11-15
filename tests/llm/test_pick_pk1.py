@@ -140,6 +140,7 @@ def test_schema_and_prompt_shape() -> None:
 # 快照：改挑選 prompt（系統指令、區塊格式、世界觀資料）必須同時改 PICK_PROMPT_VERSION 並新增一筆。
 SNAPSHOTS = {
     "skill-pick/1": "8c5c551fcf8f09580142538ed1add0706cd8bba4709c2b7922855a351d3fe91f",
+    "skill-pick/2": "17e77ccf73ddf665eaee367d8259d3bcd11b587b573825aee4feddfc40cc32e1",
 }
 
 
@@ -162,7 +163,7 @@ def test_pick_prompt_snapshot_requires_version_bump() -> None:
         "挑選 prompt 內容改變了：請修改 PICK_PROMPT_VERSION 並在 SNAPSHOTS 新增新版本的雜湊"
     )
     record = pick_prompt_record(build_pick_messages({}, {}, [], []))
-    assert record["prompt_version"] == "skill-pick/1" and len(record["system_hash"]) == 12
+    assert record["prompt_version"] == PICK_PROMPT_VERSION and len(record["system_hash"]) == 12
 
 
 def test_data_blocks_are_escaped() -> None:

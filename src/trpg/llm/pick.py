@@ -18,7 +18,7 @@ LLM 不能改候選：結果只把名稱與敘事換掉（``apply_naming``）；
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any, Literal
 
@@ -26,7 +26,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from trpg.content.effect_words import EffectWords, load_effect_words
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import SkillDef
+from trpg.content.skills import SkillDef, skill_elements
 from trpg.content.world import WorldStyle, load_world_style
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient
@@ -49,7 +49,7 @@ from trpg.skillgen.proposal import ProposalContext
 from trpg.skillgen.proposal_fallback import FallbackError, fallback_skill
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.proposal_topic import LlmAttempt, LlmProposer
-from trpg.skillgen.skill_pick import PickSlate, pick_slate
+from trpg.skillgen.skill_pick import PickSlate, element_partners, pick_slate, synergy_links
 
 __all__ = [
     "DEFAULT_PICK_ATTEMPTS",
@@ -57,6 +57,7 @@ __all__ = [
     "PickSource",
     "PickText",
     "candidate_card",
+    "fit_notes",
     "make_pick_proposer",
     "mock_pick_client",
     "pick_skill",
@@ -120,10 +121,46 @@ def _keyword_names(library: ContentLibrary, skill: SkillDef) -> dict[str, list[s
     return out
 
 
+def fit_notes(library: ContentLibrary, skill: SkillDef, player: PickPlayer | None) -> list[str]:
+    """PK-1b：候選和玩家手上技能的關係（卡片的 ``fit``；給 LLM 判斷主題）：協同（依手上技能分組，
+    列接上的關鍵字）、同元素的手上技能、共同的其他關鍵字。沒有玩家資料時是空的。"""
+    if player is None or not player.held_skills:
+        return []
+    notes: list[str] = []
+    linked: dict[str, list[str]] = {}
+    for held, keyword in synergy_links(library, skill, player):
+        names = linked.setdefault(held.name_zh, [])
+        word = plain_name(keyword, library)
+        if word not in names:
+            names.append(word)
+    notes += [f"和手上「{name}」配合（{'、'.join(words)}）" for name, words in linked.items()]
+    partners = element_partners(skill, player)
+    if partners:
+        element = "、".join(sorted(e.display_name for e in skill_elements(skill)))
+        who = "、".join(f"「{s.name_zh}」" for s in partners)
+        notes.append(f"和手上{who}同元素（{element}）")
+    mine = derive_keywords(skill, library.keywords, exclusive_only=True).all()
+    held_kw = {
+        k
+        for held in player.held_skills
+        for k in derive_keywords(held, library.keywords, exclusive_only=True).all()
+    }
+    shared = [plain_name(k, library) for k in mine if k in held_kw]
+    if shared:
+        notes.append(f"手上技能也有的關鍵字：{'、'.join(shared)}")
+    return notes
+
+
 def candidate_card(
-    library: ContentLibrary, skill: SkillDef, index: int, *, fixed: bool = False
+    library: ContentLibrary,
+    skill: SkillDef,
+    index: int,
+    *,
+    fixed: bool = False,
+    fit: Sequence[str] = (),
 ) -> dict[str, Any]:
-    """一張候選的精簡卡片（中文、帶數值、沒有代號；提案 7.3）。``fixed``＝手寫技能，附原本名稱。"""
+    """一張候選的精簡卡片（中文、帶數值、沒有代號；提案 7.3）。``fixed``＝手寫技能，附原本名稱；
+    ``fit``＝和玩家手上技能的關係（PK-1b，:func:`fit_notes`；空的不寫）。"""
     card = skill_card(library, skill)
     out: dict[str, Any] = {"index": index}
     if fixed:
@@ -143,6 +180,8 @@ def candidate_card(
     keywords = _keyword_names(library, skill)
     if keywords:
         out["keywords"] = keywords
+    if fit:
+        out["fit"] = list(fit)
     return out
 
 
@@ -286,7 +325,10 @@ def pick_skill(
     )
     used = set(taken) | {s.name_zh for s in library.skills.values()}
     if not slate.ranked:
-        skill, origin = fallback_skill(library, request, ctx, seed=seed, skip_composer=True)
+        held = () if player is None else tuple(sorted(s.id for s in player.held_skills))
+        skill, origin = fallback_skill(
+            library, request, ctx, seed=seed, skip_composer=True, exclude_ids=held
+        )
         source: PickSource = "pool" if origin == "pool" else "workshop"
         named = _named(library, skill, used, handwritten=source == "pool")
         return PickOutcome(
@@ -298,7 +340,13 @@ def pick_skill(
     payload = _request_payload(library, request, style, weapon)
     who = _player_payload(library, player)
     cards = [
-        candidate_card(library, c.skill, i, fixed=c.source == "pool")
+        candidate_card(
+            library,
+            c.skill,
+            i,
+            fixed=c.source == "pool",
+            fit=fit_notes(library, c.skill, player),
+        )
         for i, c in enumerate(slate.ranked)
     ]
 
