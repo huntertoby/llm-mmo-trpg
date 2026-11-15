@@ -686,6 +686,9 @@ class OfferTagOut(_ApiModel):
     fallback: bool
     """定義做不到而退回（例：只持有 1 個關鍵字時的橋接改成「持有的 ＋ 新的」）。"""
     source: Literal["pool", "composer", "llm"]
+    pick: Literal["llm", "top"] | None = None
+    """挑選模式（PK-2）：``llm``＝本機模型從這一格的候選挑選並命名；``top``＝這一格分數第一名
+    （沒有模型、不請模型或模型失敗）；``None``＝不是挑選模式（例：大世界任務、許願池）。"""
 
 
 class OfferOut(_ApiModel):

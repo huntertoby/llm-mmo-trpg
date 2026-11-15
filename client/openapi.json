@@ -19800,6 +19800,21 @@
               "llm"
             ],
             "title": "Source"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "llm",
+                  "top"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
           }
         },
         "additionalProperties": false,
