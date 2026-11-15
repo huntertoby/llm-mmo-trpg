@@ -145,6 +145,15 @@ class LlmRecord(_Model):
     """提議 prompt 的版本號（``trpg.llm`` 的 ``PROMPT_VERSION``；4-L8）；沒有請 LLM 為 ``None``。"""
     naming_prompt_version: str | None = None
     """命名 prompt 的版本號（``NAMING_PROMPT_VERSION``；4-L8）；沒有命名步驟為 ``None``。"""
+    pick_seeds: tuple[int | None, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """挑選模式（Phase PK-1）：送給 LLM 的前 K 個候選的組合器種子（依排序；手寫技能為 ``None``）。
+    以下四欄空值不寫出，沒有挑選模式的存檔逐字不變。"""
+    pick_designs: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """挑選模式：前 K 個候選的設計鍵（與 ``pick_seeds`` 對齊）。"""
+    pick_index: int | None = Field(default=None, exclude_if=lambda v: v is None)
+    """挑選模式：LLM 選的 index；沒有請 LLM 或 LLM 失敗時為 ``None``。"""
+    pick_reason: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """挑選模式：退回原因；正常為 ``None``。"""
 
 
 class OfferTag(_Model):

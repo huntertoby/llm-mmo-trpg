@@ -38,6 +38,7 @@ __all__ = [
     "FallbackError",
     "FallbackSource",
     "fallback_skill",
+    "fits_request",
     "wanted_kind",
 ]
 
@@ -63,7 +64,11 @@ def wanted_kind(library: ContentLibrary, request: ProposalRequest) -> str:
     return skeleton.kinds[0] if skeleton is not None else "active"
 
 
-def _fits(skill: SkillDef, request: ProposalRequest, kind: str, library: ContentLibrary) -> bool:
+def fits_request(
+    skill: SkillDef, request: ProposalRequest, kind: str, library: ContentLibrary
+) -> bool:
+    """技能符合題目：種類、骨架（有指定時）、題目的全部關鍵字（只看專屬規則）。退回路徑與挑選模式
+    的候選池（Phase PK-1）共用。"""
     return (
         skill.kind == kind
         and (request.skeleton is None or skill.skeleton == request.skeleton)
@@ -99,7 +104,7 @@ def _from_composer(
             )
         except ComposeError:
             continue
-        if _fits(skill, request, kind, library):
+        if fits_request(skill, request, kind, library):
             return skill
     return None
 
@@ -113,7 +118,7 @@ def _from_pool(
         for skill in player_skills(library).values()
         if skill.tier == ctx.tier
         and skill.rarity == ctx.rarity
-        and _fits(skill, request, kind, library)
+        and fits_request(skill, request, kind, library)
     ]
     return Rng(seed).fork("fallback.pool").choice(options) if options else None
 
@@ -292,15 +297,23 @@ def _from_workshop(
 
 
 def fallback_skill(
-    library: ContentLibrary, request: ProposalRequest, ctx: ProposalContext, *, seed: int
+    library: ContentLibrary,
+    request: ProposalRequest,
+    ctx: ProposalContext,
+    *,
+    seed: int,
+    skip_composer: bool = False,
 ) -> tuple[SkillDef, FallbackSource]:
-    """依序試組合器、技能池、工坊推導；回傳（技能, 來源）。都失敗時丟 :class:`FallbackError`。"""
+    """依序試組合器、技能池、工坊推導；回傳（技能, 來源）。都失敗時丟 :class:`FallbackError`。
+
+    ``skip_composer``（Phase PK-1）：挑選模式的候選池已經抽過組合器（0 個合法候選）時，直接從技能池
+    開始（提案 7.6「組合器 0 個照現行退：技能池 → 工坊」）。預設＝原行為。"""
     sources: tuple[tuple[FallbackSource, _Source], ...] = (
         ("composer", _from_composer),
         ("pool", _from_pool),
         ("workshop", _from_workshop),
     )
-    for name, source in sources:
+    for name, source in sources[1:] if skip_composer else sources:
         skill = source(library, request, ctx, seed)
         if skill is not None:
             return skill, name

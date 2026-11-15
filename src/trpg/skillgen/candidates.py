@@ -225,6 +225,11 @@ class LlmTrace:
     name_codes: tuple[str, ...] = ()
     prompt_version: str | None = None
     naming_prompt_version: str | None = None
+    pick_seeds: tuple[int | None, ...] = ()
+    pick_designs: tuple[str, ...] = ()
+    pick_index: int | None = None
+    pick_reason: str | None = None
+    """挑選模式（Phase PK-1）的紀錄，見 :class:`~trpg.skillgen.proposal_topic.LlmAttempt`。"""
 
 
 def keyword_distribution(skills: Iterable[SkillDef], library: ContentLibrary) -> dict[str, int]:
@@ -414,6 +419,10 @@ class _Search:
             name_codes=result.name_codes,
             prompt_version=result.prompt_version,
             naming_prompt_version=result.naming_prompt_version,
+            pick_seeds=result.pick_seeds,
+            pick_designs=result.pick_designs,
+            pick_index=result.pick_index,
+            pick_reason=result.pick_reason,
         )
         if not ok or skill is None:
             return None
