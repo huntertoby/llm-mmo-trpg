@@ -92,3 +92,4 @@
 - 待決 4：新欄位都是保守初值，已接工坊，由使用者調。
 - 待決 6：同前例，接受。
 - 待決 7：前端由開發 PM 的全量檢查驗。
+- 補記（全量）：第一次全量在 3% 時中斷（電腦休眠，worker 掛掉），重跑後 pytest 17874 passed、2 failed，vitest 4676，build 0。兩條失敗都是 PK-3 漏跑的：(1) `tests/narrative/test_skill_icon.py` 的圖示夾具，因為 4.1.23 改了組合器，random 第 18、28、31 號變了，開發 PM 用 `uv run python -m tests.narrative.icon_fixture` 重產，只變這 3 筆；(2) `tests/test_architecture.py`：`flash_pick.pick_variations` 直接走訪 `library.skills` 來避免撞名，比照 PK-1 的 `pick_skill` 加進允許清單。修完後 ruff、format、tests/narrative＋test_architecture（488 passed）、vitest 4676 都重跑過，結束碼都是 0。
