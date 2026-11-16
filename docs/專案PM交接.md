@@ -106,7 +106,7 @@
 
 **待辦（重開 session 後）**：
 - 重開 session 後，先對一份長 log 呼叫一次 `local_summarize`，確認工具接上。
-- 子 PM 重開時，brief 裡提醒它們也照守則第 5 節使用 local-llm。
+- 子 PM 重開時，brief 裡提醒它們也照守則第 5 節使用 local-llm，並寫明模型例外：只讀的找程式碼 Explore 子 agent 可用 Haiku，其餘照舊 Opus 5.5（2026-11-16 使用者原話「A」）。
 - **local-llm 效益評價**（使用者原話：「還有一個讓各自agent使用llm評價 local_summarize 的效益如何」）：各 PM 和派出的 agent 每次用 `local_summarize`／`local_ask`，就在 `docs/dev/local-llm評價.md` 追加一列，欄位是日期、角色、用途（log、測試輸出、長文件…）、原文行數、摘要準不準（照行號抽查原文：準／漏重點／有錯）、還要不要回頭讀原文、省下多少（估計）、一句話評價。派工 brief 一律寫上這條。累積約 20 筆後由專案 PM 彙整給使用者：值不值得繼續用、哪些用途好、哪些不好。
 - 美術 PM 的 worktree 先合併到 443ee5525，才會有 pm-workflow.json。
 
