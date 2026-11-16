@@ -44,9 +44,9 @@
 
 | 鍵 | 預測 | 結果 |
 |---|---|---|
-| CLI 輸出雜湊（戰鬥、技能列表與 show） | 不變（手寫技能、戰鬥沒動） | 見第 6 節 `tests/cli -m slow` |
-| Mock 提議（`llm_propose_mock.txt`） | 不變 | 同上 |
-| parity 夾具（閃現出題 JSON） | 不變（沒有 LLM 的出題路徑沒改；借別類只在挑選模式） | 見第 6 節 |
+| CLI 輸出雜湊（戰鬥、技能列表與 show） | 不變（手寫技能、戰鬥沒動） | `tests/cli -m slow` 44 passed，沒有重產 |
+| Mock 提議（`llm_propose_mock.txt`） | 不變 | 不變（同上） |
+| parity 夾具（閃現出題 JSON） | 不變（沒有 LLM 的出題路徑沒改；借別類只在挑選模式） | `-m slow` 928 passed，不變 |
 | 技能圖示夾具（`tests/narrative/test_skill_icon.py`） | 不變（組合器沒改） | `tests/narrative` 通過，沒有重產 |
 | 前端夾具（`flashChoice.json`、`skillCards.json`…） | 不變 | 沒重產 |
 | `client/openapi.json`、`schema.d.ts` | 變 | 重產：`WishTags`、`WishTagGroupView`、`WishView.tag_groups`、`WishAction.tags`、`OfferTagOut.wish_reply_zh`／`wish_miss_zh`、`PendingOfferView.wish_text_zh`／`wish_tags_zh`、`WorldCharacterView.skill_wishes`（一起 commit） |
@@ -56,7 +56,7 @@
 | prompt 版號 | 新、升 | `wish-tags/1`、`wish-pick/1`（新）；`flash-pick/1 → /2`；`wish-match/1`、`flash-variation/6`、`skill-pick/2` 沒動 |
 | `ruleset_hash`、`content_digest` | 變（`skill_pick.yaml`、`tuning_fields.yaml`） | 規則包雜湊不變（`skill_pick.yaml` 不嵌入規則包） |
 
-- 改到的既有測試（都沒放寬斷言，只照使用者定案的新規則改寫）：`test_flash_pick_pk3.py` 的格子規則（不指定類別時每格類別可以變，改成「混合至少照原本」、同類候選在前、借來的在後；指定類別照舊每格同類）、`test_flash_pick_run_pk3.py`（Mock 挑最後一個同類的候選）、版號 6 處、WP 三個舊測試檔改用 `wish_off()`、前端 `wp3Wish`／`wp3bWish` 的假資料補 `tag_groups: []`、`test_architecture.py` 的允許清單加 `trpg.llm.wish_pick` 的 `make_wish_picker`／`pick`（理由：避免撞名，比對所有內建技能名，同 PK-1 的 `pick_skill`）。
+- 改到的既有測試（都沒放寬斷言，只照使用者定案的新規則改寫）：`test_flash_pick_pk3.py` 的格子規則（不指定類別時每格類別可以變，改成「混合至少照原本」、同類候選在前、借來的在後；指定類別照舊每格同類）、`test_flash_pick_run_pk3.py`（Mock 挑最後一個同類的候選）、版號 6 處、`test_save` 的未來格式改 `/14`、`test_skill_pick_pk1` 比預設值時拿掉標籤清單、WP 三個舊測試檔改用 `wish_off()`、前端 `wp3Wish`／`wp3bWish` 的假資料補 `tag_groups: []`、`test_architecture.py` 的允許清單加 `trpg.llm.wish_pick` 的 `make_wish_picker`／`pick`（理由：避免撞名，比對所有內建技能名，同 PK-1 的 `pick_skill`）。
 
 ## 5. 實機（`PK-4資料/`）
 
@@ -70,7 +70,8 @@
 ## 6. 測試
 
 - 新增：`tests/skillgen/test_wish_pick_pk4.py`（4）、`tests/world/test_wish_pk4.py`（15）、`tests/llm/test_wish_pk4.py`（8）、`tests/api/test_wish_pk4.py`（9）、`tests/llm/test_flash_pick_pk4.py`（5）、`client/src/world/pk4Wish.test.ts`（6）。不用 hypothesis 跑候選池。
-- 分目錄、一次一組（-n 8）：TESTS_RESULTS
+- 分目錄、一次一組（-n 8）：`tests/llm` 495 passed；`tests/skillgen` 4430 passed、14 skipped（第一次 1 失敗：`test_skill_pick_pk1` 比預設值時沒算到新的標籤清單，改成比預設值前先拿掉 `wish_tags`、另外驗清單非空）；`tests/roguelite` 278；`tests/world` 1328（第一次 1 失敗：`test_save` 的「未知的未來日誌格式」被我的版號取代改成了 `/13`，改回下一版 `/14`）；`tests/api` 1320 passed、1 skipped；`tests/narrative`＋`tests/test_architecture.py` 488（含技能圖示夾具，沒重產）。交件前 `tests/cli -m slow` 44、`tests/sim -m slow` 19、parity `test_refactor_parity.py -m slow` 928 都通過。
+- **戰鬥不變比對**：`git archive main src content` 副本 vs 本分支，8 張圖 × 種子 1、2＋3 張頭目圖（盜賊巢穴、雲頂、熔心坑）× 種子 3～12，去掉 `ruleset_hash`：**`battles=46 events=18092 different=0`**。
 - `ruff check`、`ruff format --check`、`uv run mypy`（含 tests、scripts）、`lint-imports`（14 kept）、前端 `tsc`、vitest（world、run 1006＋新 6）、`vite build` 都是 0。
 - 自己啟動的背景程序（測試、伺服器、Chrome）都已結束；沒有跑 `scripts/check.py` 全量、平衡量測、戰鬥模擬（不變比對以外）。
 
@@ -83,5 +84,6 @@
 5. `CHAR_FORMAT` 沒升（新欄位空值不寫出），同 PK-1～3。
 6. 許願的卡照舊標「偏離路線」（主屬性不同時）；許願不看路線，要不要在許願的三選一不顯示偏離標籤？
 7. 新數值都是保守初值：候選量 18、願望相合 1000（工坊兩欄）；程式常數：種子上限 候選量 × 1.5、標籤補抽 候選量 ÷ 2 個種子／最多 3 個。
-9. 三選一卡上的「源晶推演」小標只認 `source == "llm"`（自由設計）；挑選模式（PK-2 起，含許願）LLM 挑選命名的卡（`pick: llm`）不顯示。要不要兩種都顯示？（前端一行，沒有順手改）
 8. 沒有 LLM 時點選標籤至少要選 1 個（照 WP「挑 1～2 個關鍵字」的保守做法）；07「每一類都可以不選」我解讀成每一類各自可以不選。
+9. 三選一卡上的「源晶推演」小標只認 `source == "llm"`（自由設計）；挑選模式（PK-2 起，含許願）LLM 挑選命名的卡（`pick: llm`）不顯示。要不要兩種都顯示？（前端一行，沒有順手改）
+10. 我跑 `lms ps` 時 LM Studio 印了「Waking up LM Studio service...」，之後 8001 有回應（沒載入模型）；請 PM 確認 LM Studio 現在的狀態是使用者要的。
