@@ -267,3 +267,16 @@
     display: flex;
   }
 }
+
+/* PK-4 願望驅動：「從清單點選」五類標籤（每類一個小標題＋同一種格子） */
+.wish-tag-group {
+  margin-bottom: 8px;
+}
+
+.wish-tag-label {
+  margin: 4px 0;
+}
+
+.world-offer-wish {
+  margin: 4px 0;
+}

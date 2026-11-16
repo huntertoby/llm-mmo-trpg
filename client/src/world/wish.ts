@@ -38,7 +38,49 @@ export const WISH_ZH = {
   refundNote: (refund: number) => `三招都不拿也算一次，退回 ${refund} 任務幣。`,
   skip: "都不拿",
   skipRefund: (refund: number) => `都不拿（退回 ${refund} 任務幣）`,
+  // ---- PK-4 願望驅動（07 7.6「許願池：願望驅動」；`WishView.tag_groups` 有值時用）----
+  tagTextLead: "用一句話說出想要的招式；池子會聽出你要的標籤（關鍵字、元素、效果…），照標籤找三招給你挑。",
+  tagMenuLead: "點選想要的標籤（每一類有上限、都可以不選，至少選一個）：池子照標籤找三招給你挑。",
+  tagMenuShort: "標籤",
+  tabTags: "從清單點選",
+  tagMax: (n: number) => `最多 ${n} 個`,
+  needTag: "先點選 1 個標籤",
+  tagTimeout: "池子這次沒來得及回應（等了 10 秒），改從清單點選標籤吧（沒有扣任務幣）。",
+  tagPicked: "已選：",
+  yourWish: "你的願望",
+  heardTags: "池子聽到的",
+  grimoire: "扉頁",
+  grimoireWish: (text: string) => `你的願望：「${text}」`,
 } as const;
+
+/** PK-4：許願池走願望驅動（伺服器給了標籤清單）。 */
+export function tagMode(w: Pick<WishData, "tag_groups">): boolean {
+  return (w.tag_groups ?? []).length > 0;
+}
+
+/** PK-4：點選的標籤（類別 id → 代碼；關鍵字以外的類別）。關鍵字照舊放在 `picked`。 */
+export type TagPick = Readonly<Record<string, readonly string[]>>;
+
+/** 點一個標籤：已選＝拿掉；沒選而且這一類還沒滿＝加上；滿了＝不變。 */
+export function toggleTag(cur: TagPick, group: string, id: string, max: number): TagPick {
+  const have = cur[group] ?? [];
+  return { ...cur, [group]: toggleKeyword(have, id, max) };
+}
+
+/** 點選了幾個標籤（關鍵字另算）。 */
+export function tagCount(cur: TagPick): number {
+  return Object.values(cur).reduce((n, v) => n + v.length, 0);
+}
+
+/** 已選標籤的中文名（依類別順序；關鍵字在前）。 */
+export function pickedTagNames(w: Pick<WishData, "tag_groups">, picked: readonly string[], tags: TagPick): string[] {
+  const out: string[] = [];
+  for (const g of w.tag_groups ?? []) {
+    const chosen = g.id === "keywords" ? picked : (tags[g.id] ?? []);
+    for (const id of chosen) out.push(g.items.find((i) => i.id === id)?.name_zh ?? id);
+  }
+  return out;
+}
 
 /** 有哪些分頁：LLM 關著（`llm` false）只有選單（規格第 5 節第 1 點）。 */
 export function wishModes(w: Pick<WishData, "llm">): WishMode[] {
@@ -67,16 +109,30 @@ export function pickedFocus<K extends { id: string }>(menu: readonly K[], picked
 }
 
 /** 送出鈕現在為什麼按不下去（`null`＝可以按）。伺服器說不能許時回它的原因（畫面第一行另有「現在不能用」）。 */
-export function wishSubmitBlock(w: Pick<WishData, "available" | "blocked_zh">, mode: WishMode, text: string, picked: readonly string[]): string | null {
+export function wishSubmitBlock(w: Pick<WishData, "available" | "blocked_zh">, mode: WishMode, text: string, picked: readonly string[], tags?: TagPick): string | null {
   if (!w.available) return w.blocked_zh ?? "";
   // 文字超過上限輸入框（maxLength）就打不進去；真的超過讓伺服器回原因
   if (mode === "text") return wishText(text) === "" ? WISH_ZH.needText : null;
+  if (tags !== undefined) return picked.length + tagCount(tags) === 0 ? WISH_ZH.needTag : null;
   return picked.length === 0 ? WISH_ZH.needKeyword : null;
 }
 
-/** 要送的世界動作（TS 型別的 `keywords` 必填：文字許願帶 `[]`，WP-2 待決 5）。 */
-export function wishAction(mode: WishMode, text: string, picked: readonly string[]): WorldAction {
-  return mode === "text" ? { kind: "wish", text: wishText(text), keywords: [] } : { kind: "wish", keywords: [...picked] };
+/** 要送的世界動作（TS 型別的 `keywords` 必填：文字許願帶 `[]`，WP-2 待決 5）。`tags`（PK-4 願望驅動）有給時選單送標籤。 */
+export function wishAction(mode: WishMode, text: string, picked: readonly string[], tags?: TagPick): WorldAction {
+  if (mode === "text") return { kind: "wish", text: wishText(text), keywords: [] };
+  if (tags === undefined) return { kind: "wish", keywords: [...picked] };
+  const kinds = (tags.kinds ?? []).filter((k): k is "active" | "passive" | "reaction" => k === "active" || k === "passive" || k === "reaction");
+  return {
+    kind: "wish",
+    keywords: [],
+    tags: {
+      keywords: [...picked],
+      elements: [...(tags.elements ?? [])],
+      effects: [...(tags.effects ?? [])],
+      shapes: [...(tags.shapes ?? [])],
+      kinds,
+    },
+  };
 }
 
 function row(field: string, name: string, before: string | null, after: string, direction: StatChange["direction"]): StatChange {
