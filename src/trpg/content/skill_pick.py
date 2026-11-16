@@ -137,7 +137,7 @@ class PickWeights(ContentModel):
     放進來。"""
     keyword_relaxed_penalty: int = Field(default=150, ge=0)
     """PK-3（同上）：多關鍵字的格子（橋接）放寬成只帶其中一部分關鍵字的候選，扣這麼多。"""
-    wish_match: int = Field(default=500, ge=0)
+    wish_match: int = Field(default=1000, ge=0)
     """PK-4 許願池「願望相合」（07 7.6「許願池：願望驅動」第 3 點：打分以願望相合為最大權重，高過和
     手上技能的協同）：候選每命中一個願望標籤（關鍵字、元素、效果類型、形狀、種類）加這麼多。只有
     許願池用。"""
