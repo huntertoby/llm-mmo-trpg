@@ -506,6 +506,8 @@ LIBRARY_SKILLS_ITERATION_ALLOWED: dict[tuple[str, str], str] = {
     ("trpg.llm.naming", "template_text"): "避免撞名：比對所有內建技能名（含敵人專用）",
     ("trpg.llm.pick", "pick_skill"): "避免撞名：比對所有內建技能名（PK-1，同命名步驟）",
     ("trpg.llm.flash_pick", "pick_variations"): "避免撞名：比對所有內建技能名（PK-3，同命名步驟）",
+    ("trpg.llm.wish_pick", "make_wish_picker"): "避免撞名：比對所有內建技能名（PK-4，同挑選模式）",
+    ("trpg.llm.wish_pick", "pick"): "避免撞名：比對所有內建技能名（PK-4 make_wish_picker 內的挑選器）",
     ("trpg.llm.flash_eval", "evaluate_flash"): "避免撞名：比對所有內建技能名",
     ("trpg.llm.flash_propose", "name_checker"): "避免撞名：比對所有內建技能名（LF-2）",
     ("trpg.skillgen.proposal_coverage", "round_trip_inventory"): "開發工具：全部手寫技能的結構盤點",
