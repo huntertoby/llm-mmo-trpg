@@ -8,7 +8,8 @@
 2. **照標籤做候選**（:func:`wish_pool`）：用獨立亂數串流 ``Rng(seed).fork("pick.wish")`` 抽組合器
    種子，**關鍵字、種類是出題條件**（有關鍵字標籤時每張至少帶一個；有種類標籤時只收那一種；沒有
    種類標籤時每個種子照 06 6.34.1 的比例擲種類），湊到 ``pool.wish_candidates``（候選量）個不同
-   設計就停（最多抽 :data:`WISH_SEED_FACTOR` 倍的種子）。玩家手上的技能、要排除的 ID、傳說、
+   設計就停（最多抽 :data:`WISH_SEED_PERMILLE` ‰ 的種子）；元素、效果類型、形狀的標籤一張都沒做到時
+   用那個標籤的獨立串流補抽（:func:`_tag_draws`，只收做到它的）。玩家手上的技能、要排除的 ID、傳說、
    武器不合的不收。不到 3 個時用 ``pick.wish.relax`` 串流放寬（不看種類與關鍵字）補到 3 個。
 3. **打分**：一般完整技能的分數（:func:`~trpg.skillgen.skill_pick.score_candidate`，關鍵字＝願望的
    關鍵字）＋ **願望相合**（``weights.wish_match`` × 命中的標籤數，:func:`tag_hits`）；單薄的先
@@ -56,7 +57,7 @@ __all__ = [
     "WISH_CARDS",
     "WISH_FORK",
     "WISH_RELAX_FORK",
-    "WISH_SEED_FACTOR",
+    "WISH_SEED_PERMILLE",
     "WishCard",
     "WishChosen",
     "WishPick",
@@ -79,8 +80,13 @@ WISH_FORK: Final = "pick.wish"
 """照標籤抽候選的亂數串流（``Rng(seed).fork("pick.wish")``）。"""
 WISH_RELAX_FORK: Final = "pick.wish.relax"
 """候選不到 3 個時放寬（不看種類與關鍵字）補抽的亂數串流。"""
-WISH_SEED_FACTOR: Final = 2
-"""最多抽 候選量 × 這個倍數 個種子（湊不到候選量就停在這裡）。"""
+WISH_SEED_PERMILLE: Final = 1500
+"""最多抽 候選量 × 這個千分比 個種子（湊不到候選量就停在這裡；難做的關鍵字每個種子約 0.2 秒，
+所以不抽太多，免得超過 10 秒）。"""
+WISH_TAG_FORK: Final = "pick.wish.tag"
+"""標籤補抽的亂數串流（``pick.wish.tag/<類>/<值>``；:func:`_tag_draws`）。"""
+WISH_TAG_EXTRA: Final = 3
+"""標籤補抽每個標籤最多補幾個設計。"""
 _ACTIVE_FAMILY: tuple[str, ...] = ("active", "stance")
 _KINDS: dict[str, tuple[str, ...]] = {
     "active": _ACTIVE_FAMILY,
@@ -325,8 +331,10 @@ def _draw(  # noqa: PLR0917 — 一次抽樣的參數
     seeds: int,
     enough: int,
     found: dict[DesignKey, PickCandidate],
+    need: Callable[[SkillDef], bool] | None = None,
 ) -> int:
-    """抽到 ``found`` 湊滿 ``enough`` 個不同設計或抽滿 ``seeds`` 個種子；回傳抽了幾個種子。"""
+    """抽到 ``found`` 湊滿 ``enough`` 個不同設計或抽滿 ``seeds`` 個種子；回傳抽了幾個種子。
+    ``need``（標籤補抽）：另外要符合的條件。"""
     rng = Rng(request.seed).fork(fork)
     keywords = () if tags is None else tags.keywords
     tried = 0
@@ -341,11 +349,40 @@ def _draw(  # noqa: PLR0917 — 一次抽樣的參數
             kinds = composer_kinds(library, request.seed, f"wish/{fork}/{turn}")
         keyword = keywords[turn % len(keywords)] if keywords else None
         skill = _compose(library, request, seed, keyword, kinds)
-        if skill is None or not check.ok(skill, tags):
+        if skill is None or not check.ok(skill, tags) or (need is not None and not need(skill)):
             continue
         key = design_key(skill)
         if key not in found:
             found[key] = PickCandidate(skill, "composer", seed, key)
+    return tried
+
+
+def _tag_draws(  # noqa: PLR0917 — 一次補抽的參數
+    library: ContentLibrary,
+    request: CandidateRequest,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+    enough: int,
+) -> int:
+    """標籤補抽：元素、效果類型、形狀（打分用的標籤）有哪一個是候選裡一張都沒做到的，就用那個標籤的
+    獨立串流（``pick.wish.tag/<類>/<值>``）再抽最多 ``候選量 ÷ 2`` 個種子，只收做到它的（出題條件
+    照舊），最多 :data:`WISH_TAG_EXTRA` 個。組合器做不出來就照實寫「做不到」。"""
+    tried = 0
+    for group in WISH_TAG_GROUPS[1:4]:
+        for value in tags.group(group):
+            single = WishTags.model_validate({group: (value,)})
+
+            def hits(skill: SkillDef, single: WishTags = single) -> bool:
+                return bool(tag_hits(library, skill, single)[0])
+
+            if any(hits(c.skill) for c in found.values()):
+                continue
+            fork = f"{WISH_TAG_FORK}/{group}/{value}"
+            target = len(found) + WISH_TAG_EXTRA
+            tried += _draw(
+                library, request, check, tags, fork, enough // 2, target, found, need=hits
+            )
     return tried
 
 
@@ -355,7 +392,7 @@ def wish_pool(
     """模組說明第 2、3 點：照標籤做候選並排好（前 ``pool.wish_candidates`` 個）。"""
     pick = library.skill_pick
     enough = pick.pool.wish_candidates
-    seeds = enough * WISH_SEED_FACTOR
+    seeds = enough * WISH_SEED_PERMILLE // 1000
     check = _Filter(
         library,
         request,
@@ -364,6 +401,7 @@ def wish_pool(
     )
     found: dict[DesignKey, PickCandidate] = {}
     tried = _draw(library, request, check, tags, WISH_FORK, seeds, enough, found)
+    tried += _tag_draws(library, request, check, tags, found, enough)
     if len(found) < WISH_CARDS:  # 願望太窄：放寬補到 3 個（不看種類與關鍵字）
         tried += _draw(library, request, check, None, WISH_RELAX_FORK, seeds, WISH_CARDS, found)
     weight = pick.weights.wish_match
@@ -372,7 +410,11 @@ def wish_pool(
         base = score_candidate(library, candidate, player, pick.weights, keywords=tags.keywords)
         wish = weight * len(tag_hits(library, candidate.skill, tags)[0])
         scored.append(replace(base, score=base.score + wish, parts=(*base.parts, ("wish", wish))))
-    ranked = rank_candidates(drop_thin(scored, pick.weights), pick.weights, enough)
+    kept = drop_thin(scored, pick.weights)
+    if len(kept) < WISH_CARDS:  # 不單薄的不到 3 張：照分數把單薄的補回來（06 6.7「不留空」）
+        thin = sorted((c for c in scored if c not in kept), key=lambda c: -c.score)
+        kept += thin[: WISH_CARDS - len(kept)]
+    ranked = rank_candidates(kept, pick.weights, enough)
     return PickSlate(ranked, len(found), tried)
 
 
