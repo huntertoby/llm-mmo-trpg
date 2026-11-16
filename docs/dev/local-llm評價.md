@@ -9,6 +9,8 @@ pm-workflow plugin 的 `local_summarize`／`local_ask`（LM Studio 8001，`googl
 | 2026-11-16 | 玩法 | `local_summarize` `PhasePK-2比較.md` 問「挑選模式比自由設計好在哪、還有什麼問題」 | 681 | 準 | 不用（只要重點時） | 約 9 成（不必讀 681 行） | 退回 7→1、中位秒數 3.12→1.34、Q5 仍單薄、重問變多平均 1.6→1.7 秒都對；行號偶爾差 1 行，「24 vs 21」標的行號不對 |
 | 2026-11-16 | 玩法 | `local_ask` 同檔抽出「每題 LLM 選了第幾號」 | 681 | 準（1 處歸因錯） | 抽查一下 | 約 8 成；但 `grep -n "LLM 選"` 一行就能做到，grep 更省更準 | 23 題全部對（逐題比過 grep）；Q4 原文是退回、「程式取第一名：0」，模型寫成「選了第 0 號」；要求附行號它沒附 |
 | 2026-11-16 | 美術 | `local_summarize` `美術PM交接.md` 問「目前排在下一個前端段要驗收的項目」 | 278（行很長） | 有錯 | 要 | 負的（會誤導） | 把已結案的 QI-7、FL-1b、PNL-1a、BS-2 必修、⑧ 事件卡當成待驗收；漏了 PB-1e→PB-1f、WP-3 複驗、GB-4b 必修。原因是交接檔新舊狀態疊在一起，模型分不出哪條最新 |
+| 2026-11-16 | 開發 | `local_summarize` 讀程式碼：`src/trpg/content/battle.py`（src/trpg 最大檔）問「分哪幾部分、各負責什麼、主要函式在哪幾行」 | 1917 | 準 | 不用（看結構時）；改程式前照行號確認 | 約 9 成（不必讀 1917 行） | 分 9 段合理，抽查 `Dice` 113、`WeaponDef` 274、`StatusTable` 1080、`UnitTemplate` 1685、`_check_footprint` 1789 都對；validator 差 1～2 行（標到 decorator 那行）、`PhaseTrigger` 1529 其實是別的欄位；漏了召喚物規格（1380～1460）、`template_part_problems` 等函式。`grep -n "^class \|^def "` 一行也能拿到行號，但拿不到「各段負責什麼」 |
+| 2026-11-16 | 開發 | `local_ask` 多檔初篩：`src/trpg/llm` 22 個檔（6858 行）找「跟挑選模式 pick 有關的檔案與函式」 | 6858 | 有錯 | 要 | 負的（全錯，得重做） | 附檔超過 context 被截斷（工具有提示），只看到前幾個檔；回答 `candidate_source.py` 的提議器（該檔根本沒有 pick），漏了 `pick.py`（`pick_skill` 316、`make_pick_proposer` 447 等）、`flash_pick.py`、`wish_pick.py`。grep 找到 llm 7 個、skillgen 20 個相關檔。skillgen（約 3.4 萬行）比 llm 大 5 倍，沒再試 |
 
 ## 總結
 
@@ -27,3 +29,7 @@ pm-workflow plugin 的 `local_summarize`／`local_ask`（LM Studio 8001，`googl
 2. 問清單時，拿回結果後先數項數、對一下原文的標題或編號（例如 grep 該節標題），再相信。
 3. 不要拿它摘要交接文件或決定紀錄來判斷「現在要做什麼」；這類一律讀「現況」那節原文。
 4. 它給的行號只當起點，改東西前照行號讀原文確認（同守則第 5 節）。
+
+**讀程式碼（2026-11-16 補測）**
+- **單一大檔看結構好用**：1917 行的檔分段、主要類別行號大多正確，適合「第一次碰這個檔、想知道去哪幾行看」。行號會差 1～2 行、會漏小段，改程式前一定照行號讀原文。
+- **多檔初篩不要用**：幾千行以上就超過模型的 context，被截斷後它只看得到前幾個檔，還會照樣給出一個看似完整的答案（這次全錯）。跨檔找「哪裡跟 X 有關」一律用 grep（`grep -l`、`grep -n "^def .*x"`），grep 的結果再挑一兩個大檔交給 `local_summarize` 看結構。
