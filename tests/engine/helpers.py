@@ -40,6 +40,14 @@ def lf2_library() -> ContentLibrary:
     )
 
 
+def wish_off(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但許願池願望驅動關掉（``skill_pick.yaml`` 的 ``wish_enabled: false``）：PK-4 前的
+    許願流程（對關鍵字＋自由設計）。測 WP-1～3 程式本身的測試用這份。"""
+    return dataclasses.replace(
+        library, skill_pick=library.skill_pick.model_copy(update={"wish_enabled": False})
+    )
+
+
 def make_map(
     heights: str,
     terrain: str | None = None,

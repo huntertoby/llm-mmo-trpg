@@ -134,7 +134,7 @@ from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import capital_name, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
 from trpg.world.gear import hero_loadout
-from trpg.world.growth import hero_tier
+from trpg.world.growth import hero_tier, skill_wish
 from trpg.world.looks import look_change_problem
 from trpg.world.narration import story_masks
 from trpg.world.opening import opening_limits
@@ -260,6 +260,9 @@ def _character_view(
         race_name_zh=_race_name(library, char.hero.race),
         skills=_cards(library, char, char.hero.skills),
         bench=_cards(library, char, char.bench),
+        skill_wishes={
+            s: w for s in sorted({*char.hero.skills, *char.bench}) if (w := skill_wish(char, s))
+        },
         slots_zh=_slots_zh(library),
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),

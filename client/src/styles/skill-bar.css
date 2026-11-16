@@ -682,3 +682,11 @@
 .skill-eff.cond-off > canvas {
   filter: grayscale(1) brightness(0.8);
 }
+
+/* PK-4 魔導書扉頁：許願池學到的招寫上玩家的願望原文 */
+.skill-card-grimoire {
+  margin: 4px 0;
+  padding: 2px 6px;
+  border-left: 3px solid #b08cff;
+  background: rgba(176, 140, 255, 0.08);
+}

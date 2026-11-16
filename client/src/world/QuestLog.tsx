@@ -28,7 +28,7 @@ import {
 } from "./questPanel";
 import { Portrait } from "./StoryIcons";
 import { sortQuests } from "./story";
-import { offerSkipLabel, offerSubtitle, offerTitle } from "./wish";
+import { offerSkipLabel, offerSubtitle, offerTitle, WISH_ZH } from "./wish";
 
 /** 委託人小頭像（樣張 22）。 */
 export const GIVER_FACE = 22;
@@ -213,8 +213,23 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
       <div className="small" data-testid="world-offer-sub">
         {offerSubtitle(pending)}
       </div>
+      {pending.source === "wish" && (pending.wish_text_zh != null || (pending.wish_tags_zh ?? []).length > 0) && (
+        <div className="small world-offer-wish" data-testid="world-offer-wish">
+          {pending.wish_text_zh != null && (
+            <div data-testid="world-offer-wish-text">
+              {WISH_ZH.yourWish}：「{pending.wish_text_zh}」
+            </div>
+          )}
+          {(pending.wish_tags_zh ?? []).length > 0 && (
+            <div className="muted" data-testid="world-offer-wish-tags">
+              {WISH_ZH.heardTags}：{(pending.wish_tags_zh ?? []).join("、")}
+            </div>
+          )}
+        </div>
+      )}
       <div className="muted small">{pending.place_zh}選之前不能移動或使用其他服務。</div>
       <OfferPicker
+        wish={pending.source === "wish" && (pending.wish_tags_zh ?? []).length + (pending.wish_text_zh != null ? 1 : 0) > 0}
         offer={pending.offer}
         hero={view.hero}
         runSeed={0}

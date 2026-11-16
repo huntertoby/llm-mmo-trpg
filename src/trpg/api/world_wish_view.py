@@ -12,12 +12,20 @@ from __future__ import annotations
 from typing import Final
 
 from trpg.api.world_range import capital_figure
-from trpg.api.world_wish_schemas import WishMenuItemView, WishView
+from trpg.api.world_wish_schemas import WishMenuItemView, WishTagGroupView, WishView
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
+from trpg.content.skill_pick import WISH_TAG_GROUPS
 from trpg.world.common import in_capital
 from trpg.world.state import CharacterState, WorldState
-from trpg.world.wish import wish_menu, wish_problem, wish_refund, wish_rules, wishes_left
+from trpg.world.wish import (
+    wish_driven,
+    wish_menu,
+    wish_problem,
+    wish_refund,
+    wish_rules,
+    wishes_left,
+)
 
 __all__ = [
     "WISH_IN_BATTLE_ZH",
@@ -90,6 +98,7 @@ def wish_view(
     problem = wish_block(library, world, char, now, in_battle=in_battle)
     names = {k.id: k for k in library.keywords.keywords}
     return WishView(
+        tag_groups=_tag_groups(library) if wish_driven(library) else (),
         title_zh=_title(library),
         speaker=capital_figure(library, WISH_KEEPER_OBJECT),
         line_zh=_keeper_line(library),
@@ -108,3 +117,44 @@ def wish_view(
             for k in wish_menu(library)
         ),
     )
+
+
+_GROUP_LABELS: Final = {
+    "keywords": "關鍵字",
+    "elements": "元素",
+    "effects": "效果類型",
+    "shapes": "形狀",
+    "kinds": "種類",
+}
+
+
+def _tag_groups(library: ContentLibrary) -> tuple[WishTagGroupView, ...]:
+    """PK-4：標籤清單（關鍵字照選單；其他照 ``skill_pick.yaml`` 的 ``wish_tags``）。"""
+    rules = library.skill_pick.wish_tags
+    names = {k.id: k for k in library.keywords.keywords}
+    groups = [
+        WishTagGroupView(
+            id="keywords",
+            label_zh=_GROUP_LABELS["keywords"],
+            max=rules.limit("keywords"),
+            items=tuple(
+                WishMenuItemView(
+                    id=k, name_zh=names[k].name_zh, description_zh=names[k].description_zh
+                )
+                for k in wish_menu(library)
+            ),
+        )
+    ]
+    for group in WISH_TAG_GROUPS[1:]:
+        groups.append(
+            WishTagGroupView(
+                id=group,
+                label_zh=_GROUP_LABELS[group],
+                max=rules.limit(group),
+                items=tuple(
+                    WishMenuItemView(id=i.id, name_zh=i.name_zh, description_zh="")
+                    for i in rules.items(group)
+                ),
+            )
+        )
+    return tuple(groups)

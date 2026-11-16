@@ -50,11 +50,13 @@ from trpg.api.world_wish_view import wish_block
 from trpg.content.library import ContentLibrary
 from trpg.llm.flash_propose import LlmFlashSource
 from trpg.llm.story_skill import StorySkillRequest
-from trpg.llm.wish import match_wish
+from trpg.llm.wish import WishSource, match_wish
+from trpg.llm.wish_tags import match_wish_tags
 from trpg.roguelite.flashes import problem_of
 from trpg.roguelite.llm_hook import use_picker, use_proposer
 from trpg.roguelite.offers import make_offer, offer_key
 from trpg.roguelite.state import FlashChoice, FlashLlmRecord
+from trpg.roguelite.wish_offer import make_wish_offer
 from trpg.world.common import rules_of
 from trpg.world.generated import (
     FlashGen,
@@ -220,6 +222,8 @@ def wish_generator(
     source = provider.wish_source(library)
     if source is None:
         return WishGen(key=request.key)
+    if request.tags_mode:  # PK-4 願望驅動
+        return _wish_tags_generator(source, library, request)
     match = match_wish(
         source.client_for(request.text, request.menu),
         library,
@@ -250,6 +254,44 @@ def wish_generator(
             llm_max_calls=request.llm_cards,
         )
     if not any(t.source == "llm" for t in made.tags):
+        return found
+    return found.model_copy(update={"source": "llm", "offer": made})
+
+
+def _wish_tags_generator(
+    source: WishSource, library: ContentLibrary, request: WishGenRequest
+) -> WishGen:
+    """PK-4 願望驅動（07 7.6「許願池：願望驅動」）：願望 → 需求標籤
+    （:func:`~trpg.llm.wish_tags.match_wish_tags`，願望只在 ``<player_input>``）→ 照標籤做候選、請
+    挑選器挑 3 張並回應願望（:func:`~trpg.roguelite.wish_offer.make_wish_offer`）。沒拿到標籤＝
+    ``none``；有標籤但沒有任何一張是 LLM 挑的＝``partial``（引擎照標籤排序取前 3 名）。"""
+    match = match_wish_tags(
+        source.tags_client_for(request.text, request.menu),
+        library,
+        request.text,
+        request.menu,
+        max_attempts=source.max_attempts,
+    )
+    base = WishGen(
+        key=request.key,
+        attempts=match.attempts,
+        codes=match.codes,
+        prompt_version=match.prompt_version,
+    )
+    if match.tags is None:
+        return base
+    found = base.model_copy(
+        update={"source": "partial", "keywords": match.tags.keywords, "tags": match.tags}
+    )
+    if source.picker is None or request.llm_cards <= 0:
+        return found
+    made = make_wish_offer(
+        library,
+        request.run.model_copy(update={"llm": True}),
+        match.tags,
+        picker=source.picker(request.text),
+    )
+    if not any(t.pick == "llm" for t in made.tags):
         return found
     return found.model_copy(update={"source": "llm", "offer": made})
 

@@ -16,6 +16,19 @@
   （``source="wish"``），都不拿時退 ``refund_permille``（:func:`~trpg.world.quests.take_offer`，
   #88 2b「次數照扣、任務幣退一半」）。
 
+**PK-4 願望驅動**（07 7.6「許願池：願望驅動」；``skill_pick.yaml`` 的 ``wish_enabled``，預設開，
+關掉＝上面的舊流程逐字不變）：
+
+- 文字許願：供應者給的 :class:`~trpg.world.generated.WishGen` 帶 **需求標籤**（``tags``；LLM 只能選
+  ``wish_tags`` 清單的值，可以一個都沒有）。引擎驗證：標籤合清單（:func:`~trpg.skillgen.wish_pick.
+  wish_tags_problem`）；LLM 挑的三選一要是同階級的完整技能、3 張設計不重複，每張「做不到」的那一行
+  由引擎照標籤重算。標籤不合格或沒拿到 → 拒絕、不扣錢不算次數（同舊流程）；三選一不合格只丟
+  三選一（引擎照標籤用組合器排序取前 3 名，:func:`~trpg.roguelite.wish_offer.make_wish_offer`）。
+- 點選（沒有 LLM）：玩家從同一份標籤清單點選（``WishAction.tags``，至少一個）；舊用戶端送關鍵字時
+  當成只有關鍵字的標籤。
+- 三選一存進 ``pending_offers`` 時帶 :class:`~trpg.world.state.WishNote`（願望原文與標籤），選到的
+  技能把原文記進 ``skill_wishes``（魔導書扉頁）。每週次數、費用、退款、強度都不變。
+
 純函式：不讀時間（``now`` 由呼叫者傳入）、不呼叫 LLM；
 生成內容只經 :func:`~trpg.world.generated.supply`
 拿資料，日誌記下最後給出的版本，重播只讀日誌。
@@ -28,10 +41,14 @@ from typing import Final, Literal
 
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
+from trpg.content.skill_pick import WishTags
 from trpg.content.world_rules import WishRules
 from trpg.roguelite.offers import make_offer
 from trpg.roguelite.state import RunState, SkillOffer
+from trpg.roguelite.wish_offer import make_wish_offer, wish_offer_tags
+from trpg.skillgen.skill_pick import design_key
 from trpg.skillgen.skill_tier import character_tier
+from trpg.skillgen.wish_pick import WISH_CARDS, wish_tags_problem
 from trpg.world.actions import WishAction, WishMadeEvent, WorldEvent
 from trpg.world.common import rules_of
 from trpg.world.errors import WorldActionError
@@ -40,13 +57,14 @@ from trpg.world.growth import as_run, skill_seed, world_library
 from trpg.world.opening_limits import in_starter_period
 from trpg.world.quests import store_offer
 from trpg.world.season import week_of
-from trpg.world.state import CharacterState, WishWeek, WorldState
+from trpg.world.state import CharacterState, WishNote, WishWeek, WorldState
 from trpg.world.story_gen import checked_offer
 
 __all__ = [
     "WISH_NO_MATCH_ZH",
     "WISH_QUEST",
     "apply_wish",
+    "wish_driven",
     "wish_keywords_problem",
     "wish_menu",
     "wish_offer_ok",
@@ -54,6 +72,7 @@ __all__ = [
     "wish_refund",
     "wish_request",
     "wish_rules",
+    "wish_tags_offer_ok",
     "wishes_left",
     "wishes_used",
 ]
@@ -75,6 +94,11 @@ def wish_refund(library: ContentLibrary) -> int:
     """三選一都不拿時退還的任務幣（費用 × ``refund_permille``，捨去）。"""
     rules = wish_rules(library)
     return rules.cost_quest_coins * rules.refund_permille // 1000
+
+
+def wish_driven(library: ContentLibrary) -> bool:
+    """PK-4：許願走願望驅動（``skill_pick.yaml`` 的 ``wish_enabled``）。"""
+    return library.skill_pick.wish_enabled
 
 
 def wish_menu(library: ContentLibrary) -> tuple[str, ...]:
@@ -156,6 +180,9 @@ def wish_request(
         "max": rules.max_keywords,
         "cards": rules.llm_cards,
     }
+    driven = wish_driven(library)
+    if driven:  # PK-4：願望驅動另一把鍵（舊流程的鍵逐字不變）
+        data["mode"] = "tags"
     return WishGenRequest(
         character_id=char.character_id,
         key=input_key(f"wish/{char.character_id}/{char.offers_made}", data),
@@ -164,6 +191,7 @@ def wish_request(
         run=run,
         max_keywords=rules.max_keywords,
         llm_cards=rules.llm_cards,
+        tags_mode=driven,
     )
 
 
@@ -176,10 +204,26 @@ def wish_offer_ok(offer: SkillOffer | None, tier: int, pinned: str) -> SkillOffe
     return checked
 
 
+def wish_tags_offer_ok(
+    library: ContentLibrary, offer: SkillOffer | None, tier: int, tags: WishTags
+) -> SkillOffer | None:
+    """PK-4 願望驅動的 LLM 版三選一合不合格：:func:`checked_offer`（完整技能、階級相同、候選與標示
+    一一對應）、剛好 3 張、設計不重複；每張「做不到」的那一行由引擎照標籤重算（不信任傳進來的
+    字）。"""
+    checked = checked_offer(offer, tier)
+    if checked is None or len(checked.candidates) != WISH_CARDS:
+        return None
+    if len({design_key(s) for s in checked.candidates}) != len(checked.candidates):
+        return None
+    return wish_offer_tags(world_library(library), checked, tags)
+
+
 def _acceptor(
     library: ContentLibrary, menu: tuple[str, ...], tier: int
 ) -> Callable[[WishGen], WishGen | None]:
     """引擎對 :class:`WishGen` 的驗證（守則 3）。"""
+    if wish_driven(library):
+        return _tags_acceptor(library, menu, tier)
 
     def accept(gen: WishGen) -> WishGen | None:
         if gen.source == "none" or wish_keywords_problem(library, gen.keywords, menu=menu):
@@ -187,6 +231,26 @@ def _acceptor(
         if gen.source == "llm" and wish_offer_ok(gen.offer, tier, gen.keywords[0]) is not None:
             return gen
         # 三選一不合格（或只有關鍵字）：只丟三選一，引擎照關鍵字算組合器版
+        return gen.model_copy(update={"source": "partial", "offer": None})
+
+    return accept
+
+
+def _tags_acceptor(
+    library: ContentLibrary, menu: tuple[str, ...], tier: int
+) -> Callable[[WishGen], WishGen | None]:
+    """PK-4：願望驅動的 :class:`WishGen` 驗證（見模組說明）。"""
+
+    def accept(gen: WishGen) -> WishGen | None:
+        tags = gen.tags
+        if gen.source == "none" or tags is None:
+            return None
+        if wish_tags_problem(library, tags, menu) is not None or gen.keywords != tags.keywords:
+            return None
+        if gen.source == "llm":
+            offer = wish_tags_offer_ok(library, gen.offer, tier, tags)
+            if offer is not None:
+                return gen.model_copy(update={"offer": offer})
         return gen.model_copy(update={"source": "partial", "offer": None})
 
     return accept
@@ -219,6 +283,10 @@ def apply_wish(
     problem = wish_problem(library, world, char, now)
     if problem is not None:
         raise WorldActionError(problem)
+    if wish_driven(library):
+        return _apply_driven(library, world, char, action, now)
+    if action.tags is not None:
+        raise WorldActionError("許願池現在只收願望文字或選單的關鍵字")
     rules = wish_rules(library)
     view = world_library(library)
     run = _wish_run(world, char)
@@ -264,5 +332,74 @@ def apply_wish(
     )
     made = WishMadeEvent(
         via=via, keywords=keywords, made_by=made_by, coins_spent=cost, used=used, refund=refund
+    )
+    return char, (made, offered)
+
+
+def _driven_tags(
+    library: ContentLibrary, world: WorldState, char: CharacterState, action: WishAction, tier: int
+) -> tuple[WishTags, Literal["text", "menu"], SkillOffer | None]:
+    """PK-4：這次許願的標籤、許法與 LLM 版三選一（沒有＝``None``）。"""
+    if action.text is not None:
+        gen = _text_keywords(library, world, char, action.text, tier)
+        assert gen.tags is not None  # _tags_acceptor 已確認
+        return gen.tags, "text", gen.offer if gen.source == "llm" else None
+    if action.tags is not None:
+        tags = action.tags
+        problem = wish_tags_problem(library, tags, wish_menu(library), require_one=True)
+    else:  # 舊用戶端送選單的關鍵字：當成只有關鍵字的標籤
+        tags = WishTags(keywords=action.keywords)
+        problem = wish_keywords_problem(library, action.keywords)
+    if problem is not None:
+        raise WorldActionError(problem)
+    return tags, "menu", None
+
+
+def _apply_driven(
+    library: ContentLibrary,
+    world: WorldState,
+    char: CharacterState,
+    action: WishAction,
+    now: int,
+) -> tuple[CharacterState, tuple[WorldEvent, ...]]:
+    """PK-4 願望驅動（見模組說明）：拿標籤 → 三選一（LLM 版或照標籤排序取前 3 名）→ 扣款與次數
+    照舊。"""
+    rules = wish_rules(library)
+    view = world_library(library)
+    run = _wish_run(world, char)
+    tier = character_tier(view, run.level)
+    tags, via, llm_offer = _driven_tags(library, world, char, action, tier)
+    made_by: Literal["llm", "composer"] = "llm" if llm_offer is not None else "composer"
+    offer = llm_offer or make_wish_offer(view, run, tags)
+    week = week_of(library, world, now)
+    used = wishes_used(library, world, char, now) + 1
+    cost = rules.cost_quest_coins
+    refund = wish_refund(library)
+    char = char.model_copy(
+        update={
+            "quest_coins": char.quest_coins - cost,
+            "wish_week": WishWeek(week=week, used=used),
+        }
+    )
+    text = action.text.strip() if action.text is not None else None
+    char, offered = store_offer(
+        char,
+        WISH_QUEST,
+        f"w{week}_{used}",
+        offer,
+        source="wish",
+        region=char.region,
+        made_by=made_by,
+        refund=refund,
+        wish=WishNote(text=text, tags=tags),
+    )
+    made = WishMadeEvent(
+        via=via,
+        keywords=tags.keywords,
+        made_by=made_by,
+        coins_spent=cost,
+        used=used,
+        refund=refund,
+        tags=tags,
     )
     return char, (made, offered)

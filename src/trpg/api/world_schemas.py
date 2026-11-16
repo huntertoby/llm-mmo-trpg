@@ -266,6 +266,9 @@ class WorldCharacterView(_ApiModel):
     """裝備的技能。"""
     bench: tuple[SkillCard, ...]
     """備用技能（擁有但沒裝上）。"""
+    skill_wishes: dict[str, str] = Field(default_factory=dict)
+    """PK-4 魔導書扉頁（07 7.6「許願池：願望驅動」第 6 點）：裝備與備用技能中從許願池（文字許願）
+    學到的，技能 ID → 玩家的願望原文（純文字，只當文字顯示）。"""
     slots_zh: str
     """技能欄位上限的說明。"""
     insight: int = 0

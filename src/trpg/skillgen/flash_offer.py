@@ -56,7 +56,7 @@ from trpg.skillgen.flash_major import (
     transform_variations,
 )
 from trpg.skillgen.flash_merge import merge_options
-from trpg.skillgen.flash_pick import FlashSlot, PickingSource, flash_pick_on
+from trpg.skillgen.flash_pick import FlashSlot, PickingSource, flash_pick_on, keep_mix
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     SkillFlash,
@@ -962,34 +962,49 @@ def flash_slots(
 
 
 def _slots(layout: _Layout, defaults: Sequence[FlashOption]) -> list[FlashSlot]:
-    """每格的候選：第一個是原本出題的那一個，其餘依同一類的用法統計往下取（同一類的格子輪流分、
-    不重複），每格最多 ``pool.flash_top_k`` 個；轉型保底固定。"""
+    """每格的候選：第一個是原本出題的那一個，其餘先依同一類的用法統計往下取（同一類的格子輪流分、
+    不重複），每格最多 ``pool.flash_top_k`` 個；轉型保底固定。PK-4（06 6.34.7，玩法 PM 4.1.25 題 1
+    B）：**不指定類別**時，還沒滿的格子再從其他可用類別借（各類依用法統計輪流取、不重複）；指定
+    類別照舊只出那一類。混合至少 2 類由 :func:`~trpg.skillgen.flash_pick.keep_mix` 在挑完後守住。"""
     library, request, builder = layout.library, layout.request, layout.builder
     top_k = library.skill_pick.pool.flash_top_k
     picked: dict[int, list[FlashOption]] = {i: [o] for i, o in enumerate(defaults)}
     used = {o.variation.key() for o in defaults}
+    failed: set[str] = set()
     groups: dict[str, list[int]] = {}
     for i, option in enumerate(defaults):
         if option.variation.source != "transform":
             groups.setdefault(option.variation.category, []).append(i)
-    for category, members in groups.items():
+    queues = {
+        c: list(layout.source.ranked(library, request, c, layout.before))
+        for c in (*groups, *(c for c in layout.allowed if c not in groups))
+    }
+
+    def fill(members: list[int], variations: Sequence[Variation]) -> None:
         open_slots = [i for i in members if len(picked[i]) < top_k]
         turn = 0
-        for variation in layout.source.ranked(library, request, category, layout.before):
+        for variation in variations:
             if not open_slots:
                 break
-            if variation.key() in used:
+            key = variation.key()
+            if key in used or key in failed:
                 continue
             extra = builder.option(variation)
             if extra is None:
+                failed.add(key)
                 continue
-            used.add(variation.key())
+            used.add(key)
             target = open_slots[turn % len(open_slots)]
             picked[target].append(extra)
             if len(picked[target]) >= top_k:
                 open_slots.remove(target)
             else:
                 turn += 1
+
+    for category, members in groups.items():
+        fill(members, queues[category])
+    if request.category is None:  # PK-4：不指定類別時從任何類別借
+        fill(sorted(i for members in groups.values() for i in members), _interleave(queues))
     return [
         FlashSlot(
             index=i,
@@ -999,6 +1014,15 @@ def _slots(layout: _Layout, defaults: Sequence[FlashOption]) -> list[FlashSlot]:
         )
         for i, option in enumerate(defaults)
     ]
+
+
+def _interleave(queues: Mapping[str, Sequence[Variation]]) -> list[Variation]:
+    """各類別的用法統計排序輪流取（類別照 ``queues`` 的順序）：借別類候選時每類都輪得到。"""
+    out: list[Variation] = []
+    depth = max((len(q) for q in queues.values()), default=0)
+    for row in range(depth):
+        out += [q[row] for q in queues.values() if row < len(q)]
+    return out
 
 
 def _picked(
@@ -1012,11 +1036,10 @@ def _picked(
     assert isinstance(source, PickingSource)
     picks = source.pick(library, request, slots, before)
     builder.texts = dict(picks.texts)
+    positions = keep_mix(slots, picks.positions, min_categories)
     out: list[FlashOption] = []
     for i, slot in enumerate(slots):
-        position = picks.positions[i] if i < len(picks.positions) else 0
-        if slot.fixed or not 0 <= position < len(slot.candidates):
-            position = 0
+        position = positions[i]
         chosen = slot.candidates[position]
         assert isinstance(chosen, FlashOption)
         named = builder.option(chosen.variation)

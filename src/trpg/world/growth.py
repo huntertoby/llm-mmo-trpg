@@ -106,8 +106,10 @@ __all__ = [
     "passive_count",
     "skill_region",
     "skill_seed",
+    "skill_wish",
     "sync_tier",
     "with_skill_region",
+    "with_skill_wish",
     "world_level_for",
     "world_library",
     "xp_to_level",
@@ -216,7 +218,25 @@ def skill_region(char: CharacterState, skill_id: str) -> str | None:
     """``skill_id`` 取得地點的區域（6L-2，#126）：先查 ``skill_regions``，查不到就沿著閃現前的原本
     技能（``flash[...].base_id``）與階級重配前的 ID（``<原 ID>_t<階級>``）往回找；都沒有＝``None``
     （中性：創角、舊存檔）。"""
-    regions = char.skill_regions
+    return _along_history(char, skill_id, char.skill_regions)
+
+
+def skill_wish(char: CharacterState, skill_id: str) -> str | None:
+    """PK-4 魔導書扉頁（07 7.6「許願池：願望驅動」第 6 點）：``skill_id`` 是從許願池學到的話，玩家的
+    願望原文；同 :func:`skill_region` 沿著重閃前的原本技能與階級重配前的 ID 往回找；
+    沒有＝``None``。"""
+    return _along_history(char, skill_id, char.skill_wishes)
+
+
+def with_skill_wish(char: CharacterState, skill_id: str, text: str | None) -> CharacterState:
+    """記下 ``skill_id`` 的願望原文（``None`` 不記；依 ID 排序）。"""
+    if text is None:
+        return char
+    wishes = {**char.skill_wishes, skill_id: text}
+    return char.model_copy(update={"skill_wishes": dict(sorted(wishes.items()))})
+
+
+def _along_history(char: CharacterState, skill_id: str, regions: dict[str, str]) -> str | None:
     current = skill_id
     for _ in range(8):
         if current in regions:

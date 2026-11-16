@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 import pytest
 
+from tests.engine.helpers import wish_off
 from tests.world.helpers import NOON, hero, make_world
 from trpg.api.llm_source import MockLlmProvider
 from trpg.api.world_pregen import WorldPregen, provider_generators, wish_generator
@@ -38,6 +39,12 @@ WISH = "讓敵人燃燒起來"
 """Mock 對到 ``ignite``（「燃」），Mock 提議器做得出帶點燃的完整技能。"""
 FROZEN = "想把敵人凍住再一錘敲碎"
 """Mock 對到 ``frozen``（「凍」），但 Mock 提議器做不出合格的冰凍完整技能 → 只有關鍵字。"""
+
+
+@pytest.fixture(scope="module")
+def content_library(content_library: ContentLibrary) -> ContentLibrary:
+    """PK-4：這個檔測 WP-1～3 的舊許願流程（願望驅動開關關掉；新流程在 ``*_pk4.py``）。"""
+    return wish_off(content_library)
 
 
 @pytest.fixture

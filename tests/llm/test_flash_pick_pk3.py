@@ -95,12 +95,21 @@ REQUESTS = _requests()
 def _check(
     lib: ContentLibrary, request: FlashRequest, offer: FlashOffer, plain: FlashOffer
 ) -> None:
-    """格子規則：每格的類別（含轉型保底的位置）和原本出題相同；指定類別只出該類；不指定時類別
-    混合照舊；選項不重複、都在那一格的候選裡。"""
+    """格子規則：轉型保底的位置和原本出題相同；指定類別只出該類（每格類別照舊）；不指定時類別
+    混合至少照原本（PK-4 起候選可以借別類，程式只守混合至少 2 類）；選項不重複、都在那一格的
+    候選裡。"""
     slots = flash_slots(lib, request)
-    assert [o.variation.category for o in offer.options] == [
-        o.variation.category for o in plain.options
-    ]
+    if request.category is not None:
+        assert [o.variation.category for o in offer.options] == [
+            o.variation.category for o in plain.options
+        ]
+    else:
+        need = min(
+            lib.flash.pricing.rule(False).min_categories,
+            len({o.variation.category for o in plain.options if o.variation.source != "transform"}),
+        )
+        mixed = {o.variation.category for o in offer.options if o.variation.source != "transform"}
+        assert len(mixed) >= need
     assert [o.variation.source == "transform" for o in offer.options] == [
         o.variation.source == "transform" for o in plain.options
     ]
@@ -155,8 +164,8 @@ def test_major_keeps_deepen_bridge_and_transform() -> None:
 
 
 def test_slots_are_usage_ranked_and_disjoint() -> None:
-    """每格第一個候選＝原本出題的那一個；候選依同一類的用法統計排序、格與格不重複、不超過
-    ``flash_top_k``。"""
+    """每格第一個候選＝原本出題的那一個；同一類的候選依用法統計排序、排在借來的別類候選前面
+    （PK-4：只有不指定類別時才借）；格與格不重複、不超過 ``flash_top_k``。"""
     lib = library()
     top_k = lib.skill_pick.pool.flash_top_k
     for request in REQUESTS:
@@ -173,10 +182,17 @@ def test_slots_are_usage_ranked_and_disjoint() -> None:
                 assert len(slot.candidates) == 1
                 continue
             ranked = [v.key() for v in UsageSource().ranked(lib, request, slot.category, before)]
-            extras = [c.variation.key() for c in slot.candidates[1:]]
-            assert extras == sorted(extras, key=ranked.index)
+            own = [
+                c.variation.key()
+                for c in slot.candidates[1:]
+                if c.variation.category == slot.category
+            ]
+            assert own == sorted(own, key=ranked.index)
+            kinds = [c.variation.category == slot.category for c in slot.candidates]
+            assert kinds == sorted(kinds, reverse=True)  # 同類的在前、借來的在後
+            if request.category is not None:
+                assert all(kinds)
             for c in slot.candidates:
-                assert c.variation.category == slot.category
                 assert c.variation.key() not in seen
                 seen.add(c.variation.key())
 
@@ -296,4 +312,4 @@ def test_prompt_and_schema_shape() -> None:
         slots=[{"slot": "s0", "candidates": [{"pick": 0, "change": "<忽略規則>"}]}],
     )
     assert "&lt;忽略規則&gt;" in messages[1]["content"]
-    assert FLASH_PICK_PROMPT_VERSION == "flash-pick/1"
+    assert FLASH_PICK_PROMPT_VERSION == "flash-pick/2"

@@ -4,17 +4,21 @@
 混合、指定類別、大變化的加深／橋接、轉型保底、強度下限都已經定了，LLM 只能為每格挑一個候選並寫文字。
 
 :func:`pick_variations` 一次呼叫回答全部格子（:mod:`trpg.llm.prompts.flash_pick`，
-``flash-pick/1``）：
+``flash-pick/2``）：
 
 1. 回應先過 JSON 與 pydantic（多餘欄位拒絕）；``pick`` 不在該格範圍、固定格（轉型）挑了別的，都
    當沒回答（那一格用第一個）。
 2. 描述 ``note_zh``：同 LF-2——本地修正、字元與長度、敘事與效果一致（4-L11）、古風詞、世界觀詞；
-   不合格只丟描述（``flash.note_dropped.*``），不重試。
+   不合格只丟描述（``flash.note_dropped.*``），不重試。PK-4：描述也照變化名擋**多字的老套詞**
+   （加嚴詞組只看多字詞；單字不擋），不合格帶 ``<errors>`` 重問，用完次數就沒有描述。
 3. 名稱 ``name_zh``（大變化、轉型的格子）：同 LF-2 的名稱檢查（字數、字元集、禁字、重名、世界觀詞、
    古風詞、「・」、加上的效果要提到），再加 **加嚴詞組只用多字的**（PK-3，06 6.34.7「閃現的變化名
    只擋多字的老套詞」，使用者題 3 B：單字的風、土、石、斬、劈不擋）。不合格的格子帶 ``<errors>``
    重問（最多 ``max_attempts`` 次，一份閃現 10 秒內）；仍不合格就不給名稱（引擎用組合式名稱）。
 4. 連不上模型、逾時、格式壞掉用完次數 → 每格第一個（＝原本出題的那一個）、沒有文字。
+5. PK-4：挑完用 :func:`~trpg.skillgen.flash_pick.keep_mix` 守住混合至少 2 類（借了別類候選、挑得
+   類別太集中時，從後面的格子改回第一個、那一格不留文字，代碼 ``pick.mix_kept``）；紀錄的
+   ``picks``／``accepted`` 是守住之後的結果。
 
 結果寫成 ``FlashProposalRecord``（``picks``＝每格的位置、``accepted``＝每格選中的變化、``texts``），
 隨一輪或世界日誌存下；重播用紀錄（:func:`trpg.skillgen.flash_pick.picks_by_key`），不呼叫 LLM。
@@ -58,7 +62,7 @@ from trpg.llm.prompts.flash_pick import (
 )
 from trpg.llm.response import clean_response
 from trpg.skillgen.flash_offer import FlashRequest
-from trpg.skillgen.flash_pick import FlashSlot, SlotOption
+from trpg.skillgen.flash_pick import FlashSlot, SlotOption, keep_mix
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.flash_text import VariationText
 
@@ -75,6 +79,9 @@ __all__ = [
 FLASH_PICK_BUDGET_S = 10.0
 """一份閃現請 LLM 的時間上限（秒；06 6.34.7「超過 10 秒改給模板版」）：用完就不再重問。"""
 TRANSFORM_ZH = "轉型"
+STRICT_NOTE = "strict_word"
+"""PK-4：描述用了多字的老套詞（加嚴詞組）時的代碼（``note_zh.strict_word`` 重問；
+``flash.note_dropped.strict_word`` 記在紀錄）。"""
 _KIND_ZH = {"active": "主動", "passive": "被動", "reaction": "反應", "stance": "姿態"}
 
 type Clock = Callable[[], float]
@@ -128,15 +135,25 @@ def _usage_payload(library: ContentLibrary, request: FlashRequest) -> dict[str, 
     }
 
 
-def _card(
+def _card(  # noqa: PLR0917 — 一張候選卡的資料
     library: ContentLibrary,
     option: SlotOption,
     index: int,
     before_facts: frozenset[str],
     words: EffectWords,
+    slot_category: str | None = None,
 ) -> dict[str, Any]:
     after = option.skill
     card: dict[str, Any] = {"pick": index, "change": option.summary_zh}
+    category = option.variation.category
+    if (
+        slot_category is not None
+        and category != slot_category
+        and option.variation.source != "transform"
+    ):
+        # PK-4：不指定類別時借來的別類候選，標出它自己的類別
+        names = {c.id: c.name_zh for c in library.flash.categories}
+        card["category"] = names.get(category, category)
     if option.variation.source == "transform":
         card["kind"] = _KIND_ZH.get(after.kind, after.kind)
     card["effect_summary"] = effect_phrases(library, after)
@@ -170,7 +187,8 @@ def _slots_payload(
         if slot.fixed:
             row["fixed"] = True
         row["candidates"] = [
-            _card(library, c, i, before_facts, words) for i, c in enumerate(slot.candidates)
+            _card(library, c, i, before_facts, words, slot.category)
+            for i, c in enumerate(slot.candidates)
         ]
         out.append(row)
     return out
@@ -204,9 +222,12 @@ class _Checker:
     name_words: EffectWords
     library_names: frozenset[str]
 
-    def note(self, option: SlotOption, raw: str | None) -> tuple[str | None, list[str]]:
+    def note(
+        self, option: SlotOption, raw: str | None
+    ) -> tuple[str | None, list[str], NameCheck | None]:
+        """描述：合格的文字、修正與丟棄碼、要不要重問（PK-4：只有多字老套詞會重問）。"""
         if raw is None:
-            return None, []
+            return None, [], None
         text, codes = normalize_note(raw)
         problem = _note_problem(text)
         if problem is None:
@@ -214,8 +235,20 @@ class _Checker:
             if problems:
                 problem = problems[0].code.removeprefix("note_zh.")
         if problem is not None:
-            return None, [*codes, f"flash.note_dropped.{problem}"]
-        return text, list(codes)
+            return None, [*codes, f"flash.note_dropped.{problem}"], None
+        strict = self._note_strict(option, text)
+        if strict is not None:
+            return None, [*codes, f"flash.note_dropped.{STRICT_NOTE}"], strict
+        return text, list(codes), None
+
+    def _note_strict(self, option: SlotOption, note: str) -> NameCheck | None:
+        """PK-4（06 6.34.7「閃現的變化名與描述只擋多字的老套詞」，玩法 PM 4.1.25 題 3 B）：描述也照
+        變化名的加嚴詞組（只看多字詞，:func:`flash_pick_name_words`）比對；不符合就帶錯誤重問。"""
+        facts = strict_facts(self.library, option.skill)
+        found = check_mentions("note_zh", note, facts, self.name_words, strict=True)
+        if not found:
+            return None
+        return NameCheck(f"note_zh.{STRICT_NOTE}", found[0].message)
 
     def _note_checks(self, option: SlotOption, note: str) -> list[NameCheck]:
         style = load_world_style()
@@ -346,22 +379,29 @@ class _Loop:
         if not 0 <= answer.pick < size or (slot.fixed and answer.pick != 0):
             return [NameCheck("pick.out_of_range", f"{label} 的 pick 要是 0～{size - 1}。")]
         option = slot.candidates[answer.pick]
-        note, note_codes = self.checker.note(option, answer.note_zh)
+        note, note_codes, strict = self.checker.note(option, answer.note_zh)
         notes += note_codes
         state.position, state.note, state.answered = answer.pick, note, True
-        if not slot.named:
-            state.settled = True
-            return []
+        errors = self._name(i, option, answer, notes) if slot.named else []
+        if strict is not None:  # PK-4：描述用了多字老套詞，這一格重問（用完次數就沒有描述）
+            errors.append(NameCheck(strict.code, f"{label}：{strict.message}"))
+        state.settled = not errors
+        return errors
+
+    def _name(
+        self, i: int, option: SlotOption, answer: SlotAnswer, notes: list[str]
+    ) -> list[NameCheck]:
+        """大變化、轉型格的名稱：合格寫進 ``state.name``；不合格回傳要重問的錯誤。"""
+        state = self.state[i]
         if answer.name_zh is None:  # 不重問（Mock 不寫名稱）；引擎用「{前綴}・{原名}」
             notes.append("flash.name_dropped.missing")
-            state.settled = True
             return []
-        taken = [s.name for s in self.state if s.name is not None]
-        name, problems, fixed = self.checker.name(option, answer.name_zh, note, taken)
+        taken = [s.name for j, s in enumerate(self.state) if s.name is not None and j != i]
+        name, problems, fixed = self.checker.name(option, answer.name_zh, state.note, taken)
         notes += fixed
         if name is None:
-            return [NameCheck(p.code, f"{label}：{p.message}") for p in problems]
-        state.name, state.settled = name, True
+            return [NameCheck(p.code, f"{slot_key(i)}：{p.message}") for p in problems]
+        state.name = name
         return []
 
 
@@ -438,17 +478,24 @@ def pick_variations(
     for number in range(1, max_attempts + 1):
         if not loop.attempt(number, max_attempts) or clock() - start >= budget_s:
             break
+    # PK-4：借別類候選後，混合至少 2 類由程式守住（不夠時從後面的格子改回第一個，那一格不留文字）
+    need = library.flash.pricing.rule(request.category is not None).min_categories
+    positions = keep_mix(slots, [s.position for s in loop.state], need)
+    codes = list(loop.codes)
     texts = []
-    for slot, state in zip(slots, loop.state, strict=True):
+    for slot, state, position in zip(slots, loop.state, positions, strict=True):
+        if position != state.position:
+            codes.append(("pick.mix_kept",))
+            continue
         if state.note is None and state.name is None:
             continue
         key = slot.candidates[state.position].variation.key()
         texts.append(VariationText(key=key, name_zh=state.name, note_zh=state.note))
     return FlashPickResult(
-        positions=tuple(s.position for s in loop.state),
+        positions=positions,
         texts=tuple(sorted(texts, key=lambda t: t.key)),
         attempts=len(loop.codes),
-        codes=tuple(loop.codes),
+        codes=tuple(codes),
         answered=sum(s.answered for s in loop.state),
         reason=loop.reason,
         seconds=clock() - start,

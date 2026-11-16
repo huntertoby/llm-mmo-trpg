@@ -8076,6 +8076,10 @@ export interface components {
             source: "pool" | "composer" | "llm";
             /** Pick */
             pick?: ("llm" | "top") | null;
+            /** Wish Reply Zh */
+            wish_reply_zh?: string | null;
+            /** Wish Miss Zh */
+            wish_miss_zh?: string | null;
         };
         /**
          * OpeningClassAction
@@ -8541,6 +8545,13 @@ export interface components {
              * @default 0
              */
             refund: number;
+            /** Wish Text Zh */
+            wish_text_zh?: string | null;
+            /**
+             * Wish Tags Zh
+             * @default []
+             */
+            wish_tags_zh: string[];
         };
         /**
          * PendingView
@@ -12717,6 +12728,7 @@ export interface components {
              * @default []
              */
             keywords: string[];
+            tags?: components["schemas"]["WishTags"] | null;
         };
         /**
          * WishMenuItemView
@@ -12729,6 +12741,55 @@ export interface components {
             name_zh: string;
             /** Description Zh */
             description_zh: string;
+        };
+        /**
+         * WishTagGroupView
+         * @description PK-4 願望驅動：標籤清單的一類（沒有 LLM 時玩家從這份清單點選；07 7.6「許願池：願望驅動」
+         *     第 1 點）。``id`` 是 ``keywords``／``elements``／``effects``／``shapes``／``kinds``（送出
+         *     ``wish`` 動作的 ``tags`` 用同名欄位）。
+         */
+        WishTagGroupView: {
+            /** Id */
+            id: string;
+            /** Label Zh */
+            label_zh: string;
+            /** Max */
+            max: number;
+            /** Items */
+            items: components["schemas"]["WishMenuItemView"][];
+        };
+        /**
+         * WishTags
+         * @description 玩家的願望翻成的需求標籤（PK-4；07 7.6「許願池：願望驅動」第 1 點）：每一類都可以不選，值是
+         *     清單的代碼（關鍵字是內容庫的關鍵字 ID）。合不合清單由
+         *     :func:`trpg.skillgen.wish_pick.wish_tags_problem` 檢查（這裡只管格式）。
+         */
+        WishTags: {
+            /**
+             * Keywords
+             * @default []
+             */
+            keywords: string[];
+            /**
+             * Elements
+             * @default []
+             */
+            elements: string[];
+            /**
+             * Effects
+             * @default []
+             */
+            effects: string[];
+            /**
+             * Shapes
+             * @default []
+             */
+            shapes: string[];
+            /**
+             * Kinds
+             * @default []
+             */
+            kinds: ("active" | "passive" | "reaction")[];
         };
         /**
          * WishView
@@ -12764,6 +12825,11 @@ export interface components {
             max_keywords: number;
             /** Menu */
             menu: components["schemas"]["WishMenuItemView"][];
+            /**
+             * Tag Groups
+             * @default []
+             */
+            tag_groups: components["schemas"]["WishTagGroupView"][];
         };
         /**
          * WorkshopArena
@@ -13002,6 +13068,10 @@ export interface components {
             skills: components["schemas"]["SkillCard"][];
             /** Bench */
             bench: components["schemas"]["SkillCard"][];
+            /** Skill Wishes */
+            skill_wishes?: {
+                [key: string]: string;
+            };
             /** Slots Zh */
             slots_zh: string;
             /**

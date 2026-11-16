@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.api.world_range_schemas import RangeSpeakerView
 
-__all__ = ["WishMenuItemView", "WishView"]
+__all__ = ["WishMenuItemView", "WishTagGroupView", "WishView"]
 
 
 class _ApiModel(BaseModel):
@@ -20,6 +20,20 @@ class WishMenuItemView(_ApiModel):
     name_zh: str
     description_zh: str
     """一句說明（內容庫 ``skill_keywords.yaml`` 的 ``description_zh``）。"""
+
+
+class WishTagGroupView(_ApiModel):
+    """PK-4 願望驅動：標籤清單的一類（沒有 LLM 時玩家從這份清單點選；07 7.6「許願池：願望驅動」
+    第 1 點）。``id`` 是 ``keywords``／``elements``／``effects``／``shapes``／``kinds``（送出
+    ``wish`` 動作的 ``tags`` 用同名欄位）。"""
+
+    id: str
+    label_zh: str
+    """類別名稱（關鍵字、元素、效果類型、形狀、種類）。"""
+    max: int
+    """這一類最多選幾個（每一類都可以不選；全部加起來至少 1 個）。"""
+    items: tuple[WishMenuItemView, ...]
+    """可以選的值（``description_zh`` 只有關鍵字有，其他是空字串）。"""
 
 
 class WishView(_ApiModel):
@@ -55,3 +69,7 @@ class WishView(_ApiModel):
     """選單一次最多挑幾個關鍵字（最少 1 個、不重複）。"""
     menu: tuple[WishMenuItemView, ...]
     """可以許的關鍵字（內容庫順序；扣掉開局隱藏的）。"""
+    tag_groups: tuple[WishTagGroupView, ...] = ()
+    """PK-4 願望驅動（``skill_pick.yaml`` 的 ``wish_enabled``）：「從清單挑」改成點選需求標籤
+    （五類）；
+    空＝舊流程（照 ``menu`` 挑 1～``max_keywords`` 個關鍵字）。"""

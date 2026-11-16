@@ -101,7 +101,7 @@ import { RangeDoneDialog, RangeScreen, chooseDoneLines, clearRangeDraft, rangeDo
 import { CHOOSE_AUTO_SEEN, CHOOSE_OPEN_LABEL, RESELECT_HEADING, RESELECT_OPEN_LABEL, chooseAutoOpens, choosePageShown, holdOffer, opensChoose, rangeExitLabel, rangeFightNotes, rangeFightPlace, rangeMode, type ChoosePage, type RangeFight } from "../world/range";
 import { WorkshopPanel } from "../world/WorkshopPanel";
 import { WishPanel, type WishFallback } from "../world/WishPanel";
-import { WISH_ZH, wishAction, type WishMode } from "../world/wish";
+import { tagMode, WISH_ZH, wishAction, type TagPick, type WishMode } from "../world/wish";
 import { ReselectEntry, allocateClosingLines } from "../world/ReselectEntry";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
@@ -493,14 +493,16 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
     });
 
   /** WP-3 許願：文字許願先等 LLM（等待提示同閃現）；逾時或伺服器退回（沒聽懂、不能許）＝不扣錢，面板切到選單並說明。 */
-  const wish = (mode: WishMode, text: string, keywords: string[]) =>
+  const wish = (mode: WishMode, text: string, keywords: string[], tags?: TagPick) =>
     void run(async () => {
       if (charId === null) return;
-      const action = wishAction(mode, text, keywords);
+      const action = wishAction(mode, text, keywords, tags);
       const waited = await waitPregen(charId, action);
       if (waited === "cancel") return;
       if (waited === "timeout" && mode === "text") {
-        setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: WISH_ZH.timeout }));
+        // PK-4：願望驅動時退回「從清單點選」（同一個分頁）
+        const note = view?.wish != null && tagMode(view.wish) ? WISH_ZH.tagTimeout : WISH_ZH.timeout;
+        setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: note }));
         return;
       }
       try {

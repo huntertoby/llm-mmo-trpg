@@ -10,11 +10,23 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field, model_validator
 
 from trpg.content.schemas import ContentModel
 
-__all__ = ["PickPoolRules", "PickWeights", "SkillPickRules"]
+__all__ = [
+    "WISH_TAG_GROUPS",
+    "PickPoolRules",
+    "PickWeights",
+    "SkillPickRules",
+    "WishEffectTag",
+    "WishShapeTag",
+    "WishTagItem",
+    "WishTagRules",
+    "WishTags",
+]
 
 
 class PickPoolRules(ContentModel):
@@ -55,6 +67,10 @@ class PickPoolRules(ContentModel):
     flash_top_k: int = Field(default=4, ge=1, le=8)
     """PK-3 閃現挑選模式：每個選項格給本機模型幾個候選（格子的類別由程式決定，候選依用法統計排序；
     第一個就是原本出題的那一個）。越多 prompt 越長。"""
+    wish_candidates: int = Field(default=18, ge=3, le=30)
+    """PK-4 許願池「候選量」（07 7.6「許願池：願望驅動」第 2 點，初值：一般每格 4～6 個，許願 15～20
+    個）：照願望標籤用組合器做這麼多個不同設計，打分後全部交給本機模型挑 3 張。越多越慢（每個種子約
+    0.05～0.2 秒）。"""
 
     @model_validator(mode="after")
     def _check(self) -> PickPoolRules:
@@ -121,6 +137,103 @@ class PickWeights(ContentModel):
     放進來。"""
     keyword_relaxed_penalty: int = Field(default=150, ge=0)
     """PK-3（同上）：多關鍵字的格子（橋接）放寬成只帶其中一部分關鍵字的候選，扣這麼多。"""
+    wish_match: int = Field(default=1000, ge=0)
+    """PK-4 許願池「願望相合」（07 7.6「許願池：願望驅動」第 3 點：打分以願望相合為最大權重，高過和
+    手上技能的協同）：候選每命中一個願望標籤（關鍵字、元素、效果類型、形狀、種類）加這麼多。只有
+    許願池用。"""
+
+
+WISH_TAG_GROUPS: tuple[str, ...] = ("keywords", "elements", "effects", "shapes", "kinds")
+"""願望標籤的五類（07 7.6「許願池：願望驅動」第 1 點；依這個順序顯示與檢查）。"""
+
+
+class WishTagItem(ContentModel):
+    """願望標籤清單的一個值：代碼與中文名。"""
+
+    id: str = Field(pattern=r"^[a-z][a-z0-9_]*$")
+    name_zh: str = Field(min_length=1)
+
+
+class WishEffectTag(WishTagItem):
+    """效果類型標籤：技能（含接續段、分支）裡出現這些原語、狀態就算命中。``control_statuses``＝
+    有控制類別（``control_group``）的狀態也算；``beneficial_statuses``＝增益狀態（``polarity:
+    buff``）也算，但已經寫在其他效果類型 ``statuses`` 裡的不算（例：護盾）。"""
+
+    primitives: tuple[str, ...] = ()
+    statuses: tuple[str, ...] = ()
+    control_statuses: bool = False
+    beneficial_statuses: bool = False
+
+
+class WishShapeTag(WishTagItem):
+    """形狀標籤：技能（第一段）的形狀是這些之一就算命中。"""
+
+    shapes: tuple[str, ...] = Field(min_length=1)
+
+
+class WishTagRules(ContentModel):
+    """PK-4 願望標籤的固定清單（07 7.6「許願池：願望驅動」第 1 點）。關鍵字用內容庫的 16 個
+    （06 6.27.1），這裡只放每類最多幾個。"""
+
+    max_keywords: int = Field(default=2, ge=0, le=2)
+    max_elements: int = Field(default=1, ge=0, le=1)
+    max_effects: int = Field(default=2, ge=0, le=2)
+    max_shapes: int = Field(default=1, ge=0, le=1)
+    max_kinds: int = Field(default=1, ge=0, le=1)
+    elements: tuple[WishTagItem, ...] = ()
+    effects: tuple[WishEffectTag, ...] = ()
+    shapes: tuple[WishShapeTag, ...] = ()
+    kinds: tuple[WishTagItem, ...] = ()
+
+    def limit(self, group: str) -> int:
+        """某一類最多選幾個。"""
+        return {
+            "keywords": self.max_keywords,
+            "elements": self.max_elements,
+            "effects": self.max_effects,
+            "shapes": self.max_shapes,
+            "kinds": self.max_kinds,
+        }[group]
+
+    def items(self, group: str) -> tuple[WishTagItem, ...]:
+        """某一類的清單（關鍵字不在這裡，回傳空）。"""
+        found: dict[str, tuple[WishTagItem, ...]] = {
+            "elements": self.elements,
+            "effects": self.effects,
+            "shapes": self.shapes,
+            "kinds": self.kinds,
+        }
+        return found.get(group, ())
+
+    @model_validator(mode="after")
+    def _check(self) -> WishTagRules:
+        for group in WISH_TAG_GROUPS[1:]:
+            ids = [i.id for i in self.items(group)]
+            if len(set(ids)) != len(ids):
+                raise ValueError(f"wish_tags.{group} 有重複的代碼")
+        if any(k.id not in ("active", "passive", "reaction") for k in self.kinds):
+            raise ValueError("wish_tags.kinds 只能是 active、passive、reaction")
+        return self
+
+
+class WishTags(ContentModel):
+    """玩家的願望翻成的需求標籤（PK-4；07 7.6「許願池：願望驅動」第 1 點）：每一類都可以不選，值是
+    清單的代碼（關鍵字是內容庫的關鍵字 ID）。合不合清單由
+    :func:`trpg.skillgen.wish_pick.wish_tags_problem` 檢查（這裡只管格式）。"""
+
+    keywords: tuple[str, ...] = ()
+    elements: tuple[str, ...] = ()
+    effects: tuple[str, ...] = ()
+    shapes: tuple[str, ...] = ()
+    kinds: tuple[Literal["active", "passive", "reaction"], ...] = ()
+
+    def group(self, name: str) -> tuple[str, ...]:
+        """某一類選了哪些。"""
+        return tuple(getattr(self, name))
+
+    def empty(self) -> bool:
+        """一個標籤都沒有。"""
+        return not any(self.group(g) for g in WISH_TAG_GROUPS)
 
 
 class SkillPickRules(ContentModel):
@@ -134,5 +247,11 @@ class SkillPickRules(ContentModel):
     （``trpg.skillgen.flash_pick``：程式照原本出題決定每一格的類別與轉型保底，每格依用法統計給幾個
     合法候選，LLM 只挑與取名）；假＝回到 PK-3 前的流程（LF-2：LLM 從目錄提議）。和 ``enabled``
     （三選一）分開。"""
+    wish_enabled: bool = True
+    """PK-4 許願池開關（07 7.6「許願池：願望驅動」）：真＝許願改走願望驅動（願望翻成需求標籤、照標籤
+    做大池候選、以願望相合打分、LLM 挑 3 張並回應願望、做不到時照實寫）；假＝回到 PK-4 前的許願
+    流程（對關鍵字＋自由設計）。"""
     pool: PickPoolRules = Field(default_factory=PickPoolRules)
     weights: PickWeights = Field(default_factory=PickWeights)
+    wish_tags: WishTagRules = Field(default_factory=WishTagRules)
+    """PK-4 願望標籤的固定清單（07 7.6「許願池：願望驅動」第 1 點）。"""

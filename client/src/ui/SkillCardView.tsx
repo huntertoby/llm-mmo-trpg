@@ -46,6 +46,8 @@ interface Props {
   pin?: CardPin | undefined;
   /** BS-2：本場不會發動的效果（`ConditionOffMark.effects`）：第 3 行那幾個效果數字套灰階＋虛線（移植需求 3.7）。 */
   offEffects?: readonly number[] | undefined;
+  /** PK-4 魔導書扉頁（07 7.6「許願池：願望驅動」第 6 點）：從許願池學到的招，玩家的願望原文（純文字）。 */
+  wish?: string | undefined;
 }
 
 /** 第 2 行：AP 圓點、資源、冷卻、射程、時機（每個圖示滑過有說明）。 */
@@ -164,7 +166,10 @@ function Detail({ card, compact, activeVariantId, hideConcept }: Required<Pick<P
   );
 }
 
-export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false, flash, flashRules, detailOpen = false, pin, offEffects }: Props) {
+/** 扉頁（PK-4）的字。 */
+export const GRIMOIRE_ZH = { title: "扉頁", wish: (text: string) => `你的願望：「${text}」` } as const;
+
+export function SkillCardView({ card, compact = false, activeVariantId = null, hideConcept = false, flash, flashRules, detailOpen = false, pin, offEffects, wish }: Props) {
   const [open, setOpen] = useState(detailOpen);
   return (
     <div className={`skill-card rarity-${card.rarity_id}${compact ? " compact" : ""}`} data-testid="skill-card">
@@ -192,6 +197,11 @@ export function SkillCardView({ card, compact = false, activeVariantId = null, h
         )}
       </div>
       <EffectRow card={card} offEffects={offEffects} />
+      {wish !== undefined && (
+        <div className="skill-card-grimoire small" data-testid="skill-card-grimoire">
+          <b>{GRIMOIRE_ZH.title}</b>　{GRIMOIRE_ZH.wish(wish)}
+        </div>
+      )}
       <SkillFlashInfo flash={flash} rules={flashRules} />
       <details className="skill-card-detail" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
         <summary className="skill-card-more small">

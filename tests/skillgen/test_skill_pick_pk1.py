@@ -9,7 +9,7 @@ import pytest
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.player_pool import player_skills
-from trpg.content.skill_pick import PickWeights, SkillPickRules
+from trpg.content.skill_pick import PickWeights, SkillPickRules, WishTagRules
 from trpg.shared.types import Attribute
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.pick_player import PickPlayer
@@ -44,7 +44,9 @@ def _ctx(request: ProposalRequest) -> ProposalContext:
 
 def test_the_table_loads_with_the_defaults() -> None:
     rules = _lib().skill_pick
-    assert rules == SkillPickRules()
+    # PK-4：願望標籤清單（wish_tags）是內容資料、不是數值預設，比預設值時拿掉（清單另外驗）
+    assert rules.model_copy(update={"wish_tags": WishTagRules()}) == SkillPickRules()
+    assert rules.wish_tags.elements and rules.wish_tags.effects
     assert 4 <= rules.pool.top_k <= 6  # 提案第 6 節第 2 題 A：每格 4～6 個
     assert rules.pool.min_for_llm == 2  # 提案 7.6：少於 2 個就不呼叫 LLM
 

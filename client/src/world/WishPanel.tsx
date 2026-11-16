@@ -8,6 +8,8 @@
 // WP-3b（docs/art/WP-3驗收.md 必修 1 乙案）：選單格只放圓章＋名字（＋第 N 個），說明收進 `Hint` 說明卡；最後挑中的那一個的說明
 // 放在下固定區最上面（兩個分頁都預留同樣的高度，切分頁、挑關鍵字時外框與下固定區都不跳）。欄數看面板寬：寬版 4 欄、窄版 3 欄。
 // 分頁圖示與「本週還能許」籌碼圖示是第⑦批的許願池三個圖（`qIcon/hud.ts` 的 `WISH`；移植說明 Q版小圖示-第7批HUD.md 13.7）。
+// PK-4（07 7.6「許願池：願望驅動」）：伺服器給了標籤清單（`tag_groups`）時，選單分頁改成「從清單點選」五類標籤（關鍵字、元素、
+// 效果類型、形狀、種類；每類有上限、至少選一個），下固定區最上面寫「已選：…」。
 import { useEffect, useState, type ReactNode } from "react";
 import { NowOffNote } from "../ui/ConditionOffNote";
 import { Hint } from "../ui/Hint";
@@ -18,7 +20,20 @@ import { PopupSlot } from "../ui/PopupSlot";
 import { DiffRows, KeywordGlyph } from "../run/FlashChoiceParts";
 import { known } from "../render/qIcon/keywords";
 import { Portrait } from "./StoryIcons";
-import { pickedFocus, toggleKeyword, WISH_ZH, wishDiffs, wishModes, wishSubmitBlock, type WishData, type WishMode } from "./wish";
+import {
+  pickedFocus,
+  pickedTagNames,
+  tagMode,
+  toggleKeyword,
+  toggleTag,
+  WISH_ZH,
+  wishDiffs,
+  wishModes,
+  wishSubmitBlock,
+  type TagPick,
+  type WishData,
+  type WishMode,
+} from "./wish";
 
 /** 守池人頭像：寬版 36＋對話泡、窄版（面板 < 560）28＋標題旁一行（同公告板守印人 `KEEPER_FACE`）。 */
 const KEEPER_FACE = { wide: 36, narrow: 28 } as const;
@@ -42,7 +57,7 @@ interface Props {
   wish: WishData;
   busy: boolean;
   fallback: WishFallback | null;
-  onWish(mode: WishMode, text: string, keywords: string[]): void;
+  onWish(mode: WishMode, text: string, keywords: string[], tags?: TagPick): void;
   onBack?: () => void;
 }
 
@@ -103,7 +118,7 @@ function RefundNote({ refund }: { refund: number }) {
 function TextPane({ wish: w, text, off, onText }: { wish: WishData; text: string; off: boolean; onText(t: string): void }) {
   return (
     <div className="wish-pane" data-testid="wish-text-pane">
-      <p className="pnl-l2 wish-lead">{WISH_ZH.textLead}</p>
+      <p className="pnl-l2 wish-lead">{tagMode(w) ? WISH_ZH.tagTextLead : WISH_ZH.textLead}</p>
       <textarea
         className="wish-input"
         rows={3}
@@ -171,8 +186,89 @@ function MenuPane({ wish: w, picked, off, note, onPick }: { wish: WishData; pick
   );
 }
 
-/** 下固定區最上面：最後挑中的那一個關鍵字的說明（`pickedFocus`）。兩個分頁都佔同樣的兩行高，沒有時空白。 */
-function PickedNote({ wish: w, picked, active }: { wish: WishData; picked: readonly string[]; active: WishMode }) {
+/** 一個標籤按鈕（PK-4；關鍵字帶圓章，其他只有名字）。 */
+function TagButton({ id, name, hint, on, locked, glyph, onPick }: { id: string; name: string; hint: string; on: boolean; locked: boolean; glyph: boolean; onPick(): void }) {
+  const button = (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={on}
+      aria-disabled={locked}
+      className={on ? "wish-kw on" : "wish-kw"}
+      onClick={() => {
+        if (!locked) onPick();
+      }}
+      data-kw={id}
+      data-testid="wish-tag"
+    >
+      {glyph && (known([id], 1).length > 0 ? <KeywordGlyph id={id} px={KEYWORD_PX} /> : <span className="wish-kw-noicon" aria-hidden="true" />)}
+      <b className="name">{name}</b>
+    </button>
+  );
+  return hint !== "" ? <Hint text={hint}>{button}</Hint> : button;
+}
+
+/** PK-4：「從清單點選」五類標籤。 */
+function TagPane({ wish: w, picked, tags, off, note, onKeyword, onTag }: { wish: WishData; picked: readonly string[]; tags: TagPick; off: boolean; note: string | null; onKeyword(id: string, max: number): void; onTag(group: string, id: string, max: number): void }) {
+  return (
+    <div className="wish-pane" data-testid="wish-tag-pane">
+      {note !== null && (
+        <Callout tone="warn" testId="wish-fallback">
+          {note}
+        </Callout>
+      )}
+      <p className="pnl-l2 wish-lead">{WISH_ZH.tagMenuLead}</p>
+      {(w.tag_groups ?? []).map((g) => {
+        const chosen = g.id === "keywords" ? picked : (tags[g.id] ?? []);
+        return (
+          <section key={g.id} className="wish-tag-group" data-group={g.id}>
+            <p className="pnl-l2 wish-tag-label">
+              <b>{g.label_zh}</b>
+              <span className="pnl-l3">　{WISH_ZH.tagMax(g.max)}</span>
+            </p>
+            <ul className="wish-menu" role="group" aria-label={g.label_zh} data-testid={`wish-tags-${g.id}`}>
+              {g.items.map((item) => {
+                const on = chosen.includes(item.id);
+                const locked = off || (!on && chosen.length >= g.max);
+                return (
+                  <li key={item.id}>
+                    <TagButton
+                      id={item.id}
+                      name={item.name_zh}
+                      hint={item.description_zh}
+                      on={on}
+                      locked={locked}
+                      glyph={g.id === "keywords"}
+                      onPick={() => (g.id === "keywords" ? onKeyword(item.id, g.max) : onTag(g.id, item.id, g.max))}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        );
+      })}
+      <RefundNote refund={w.refund} />
+    </div>
+  );
+}
+
+/** 下固定區最上面：最後挑中的那一個關鍵字的說明（`pickedFocus`）。兩個分頁都佔同樣的兩行高，沒有時空白。
+ * PK-4 標籤模式：改寫「已選：…」。 */
+function PickedNote({ wish: w, picked, tags, active }: { wish: WishData; picked: readonly string[]; tags: TagPick; active: WishMode }) {
+  if (tagMode(w)) {
+    const names = active === "menu" ? pickedTagNames(w, picked, tags) : [];
+    return (
+      <div className="wish-picked" data-testid="wish-picked">
+        {names.length > 0 && (
+          <p className="pnl-l2 wish-picked-desc" data-testid="wish-picked-tags">
+            {WISH_ZH.tagPicked}
+            {names.join("、")}
+          </p>
+        )}
+      </div>
+    );
+  }
   const k = active === "menu" ? pickedFocus(w.menu, picked) : null;
   return (
     <div className="wish-picked" data-testid="wish-picked" data-kw={k?.id}>
@@ -189,11 +285,11 @@ function PickedNote({ wish: w, picked, active }: { wish: WishData; picked: reado
   );
 }
 
-function WishFoot({ wish: w, block, busy, picked, active, onSubmit }: { wish: WishData; block: string | null; busy: boolean; picked: readonly string[]; active: WishMode; onSubmit(): void }) {
+function WishFoot({ wish: w, block, busy, picked, tags, active, onSubmit }: { wish: WishData; block: string | null; busy: boolean; picked: readonly string[]; tags: TagPick; active: WishMode; onSubmit(): void }) {
   const go = block === null && !busy;
   return (
     <div className={w.available ? "wish-foot" : "wish-foot off"} data-testid="wish-foot">
-      <PickedNote wish={w} picked={picked} active={active} />
+      <PickedNote wish={w} picked={picked} tags={tags} active={active} />
       <DiffRows changes={wishDiffs(w)} terms={{}} />
       <div className="wish-foot-row">
         {/* 為什麼按不下去：一律佔一行（沒有時空白），切分頁、挑關鍵字時下固定區不跳；不能許時原因只寫在第一行 */}
@@ -214,6 +310,8 @@ export function WishPanel({ wish: w, busy, fallback, onWish, onBack }: Props) {
   const [mode, setMode] = useState<WishMode>(forced ?? modes[0] ?? "menu");
   const [text, setText] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
+  const [tags, setTags] = useState<TagPick>({});
+  const tagged = tagMode(w);
   const slots = usePopupSlots();
   // 等不到 LLM 或被退回：切到選單分頁（`PanelTabs` 以 `seq` 為 key 重開在選單）
   const seq = fallback?.seq ?? 0;
@@ -222,20 +320,40 @@ export function WishPanel({ wish: w, busy, fallback, onWish, onBack }: Props) {
   }, [seq]);
   const active: WishMode = modes.includes(mode) ? mode : "menu";
   const off = !w.available;
-  const block = wishSubmitBlock(w, active, text, picked);
+  const block = wishSubmitBlock(w, active, text, picked, tagged ? tags : undefined);
   const note = fallback?.text ?? null;
   const tabs: PanelTabDef[] = modes.map((m) =>
     m === "text"
       ? { id: "text", label: WISH_ZH.tabText, short: WISH_ZH.tabTextShort, icon: <HudBare id="wish_text" px={TAB_ICON_PX} />, render: () => <TextPane wish={w} text={text} off={off} onText={setText} /> }
-      : {
-          id: "menu",
-          label: WISH_ZH.tabMenu,
-          short: WISH_ZH.tabMenuShort,
-          icon: <HudBare id="wish_menu" px={TAB_ICON_PX} />,
-          render: () => <MenuPane wish={w} picked={picked} off={off} note={note} onPick={(id) => setPicked((cur) => toggleKeyword(cur, id, w.max_keywords))} />,
-        },
+      : tagged
+        ? {
+            id: "menu",
+            label: WISH_ZH.tabTags,
+            short: WISH_ZH.tagMenuShort,
+            icon: <HudBare id="wish_menu" px={TAB_ICON_PX} />,
+            render: () => (
+              <TagPane
+                wish={w}
+                picked={picked}
+                tags={tags}
+                off={off}
+                note={note}
+                onKeyword={(id, max) => setPicked((cur) => toggleKeyword(cur, id, max))}
+                onTag={(group, id, max) => setTags((cur) => toggleTag(cur, group, id, max))}
+              />
+            ),
+          }
+        : {
+            id: "menu",
+            label: WISH_ZH.tabMenu,
+            short: WISH_ZH.tabMenuShort,
+            icon: <HudBare id="wish_menu" px={TAB_ICON_PX} />,
+            render: () => <MenuPane wish={w} picked={picked} off={off} note={note} onPick={(id) => setPicked((cur) => toggleKeyword(cur, id, w.max_keywords))} />,
+          },
   );
-  const foot: ReactNode = <WishFoot wish={w} block={block} busy={busy} picked={picked} active={active} onSubmit={() => onWish(active, text, picked)} />;
+  const foot: ReactNode = (
+    <WishFoot wish={w} block={block} busy={busy} picked={picked} tags={tags} active={active} onSubmit={() => onWish(active, text, picked, tagged ? tags : undefined)} />
+  );
   return (
     <div className={off ? "wish-panel off" : "wish-panel"} data-testid="world-hud-wish" data-mode={active} data-available={w.available ? "1" : "0"}>
       <PanelTabs

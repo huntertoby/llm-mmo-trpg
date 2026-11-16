@@ -226,6 +226,7 @@ targets:
       - {path: pool.nondamage_seeds, label_zh: 非傷害保底格最多補抽幾個種子, kind: int, hint_min: 0, hint_max: 40, note_zh: PK-2：每次三選一有一格只放非傷害技能（輔助、治療、控制、位移、召喚、防守）。這一格的非傷害候選不夠（或三格都沒有）時，最多另外補抽這麼多個種子，只收非傷害的；0＝不補抽。}
       - {path: pool.relax_until, label_zh: 三選一每格至少湊幾個候選才停止放寬, kind: int, hint_min: 1, hint_max: 8, note_zh: PK-3：每一格先只收全部關鍵字都對、路線也對的候選；不到這麼多個時，依序放寬（橋接這類多關鍵字的格子先收只帶部分關鍵字的，再收不跟主路線的「偏離」候選）補上，放寬的另外扣分、排在後面。越大越常放寬。}
       - {path: pool.flash_top_k, label_zh: 閃現每格給模型幾個候選, kind: int, hint_min: 1, hint_max: 8, note_zh: PK-3：閃現與重閃的每一個選項格（類別由程式決定），依用法統計排序後給本機模型這麼多個候選挑一個並取名；第一個就是原本會出的那一個。越多 prompt 越長、越慢。}
+      - {path: pool.wish_candidates, label_zh: 許願池：候選量, kind: int, hint_min: 3, hint_max: 30, note_zh: PK-4（07 7.6「許願池：願望驅動」第 2 點，初值一般每格 4～6 個、許願 15～20 個）：照願望標籤用組合器做幾個不同設計，打分後全部交給本機模型挑 3 張。越多越可能找到合願望的招，但出題越慢（帶關鍵字時每個種子約 0.05～0.2 秒；召喚之類難做的關鍵字最多約 4 秒）、prompt 越長。}
       - {path: weights.synergy_per_link, label_zh: 協同：每條連線的分數, kind: int, hint_min: 0, hint_max: 1000, note_zh: 候選製造的關鍵字有一招手上的技能利用（或候選利用、手上的技能製造），每一條連線（手上技能 × 關鍵字 × 方向）加這麼多分。}
       - {path: weights.synergy_max_links, label_zh: 協同：最多算幾條連線, kind: int, hint_min: 0, hint_max: 6, note_zh: 協同分數最多算這麼多條連線（避免手上技能多的關鍵字永遠壓過其他候選）。}
       - {path: weights.keyword_make, label_zh: 關鍵字貼合：製造題目關鍵字, kind: int, hint_min: 0, hint_max: 500, note_zh: PK-1b：題目要的關鍵字由候選「製造」（例：題目要冰凍、候選會冰凍敵人），每個加這麼多分。}
@@ -250,3 +251,4 @@ targets:
       - {path: weights.same_element_penalty, label_zh: 多樣性：同元素扣分, kind: int, hint_min: 0, hint_max: 500, note_zh: 和已經排進去的候選元素相同，每一個扣這麼多分。}
       - {path: weights.route_off_penalty, label_zh: 偏離這一格路線的候選扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: PK-3：「跟主路線」改成扣分。候選不符合這一格的路線（加深、橋接要跟主屬性；新方向要不同屬性）扣這麼多分；只有符合路線的候選不夠時才會放進來。}
       - {path: weights.keyword_relaxed_penalty, label_zh: 只帶部分關鍵字的候選扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: PK-3：橋接這類要兩個關鍵字的格子，放寬收只帶其中一個關鍵字的候選時扣這麼多分。}
+      - {path: weights.wish_match, label_zh: 許願池：願望相合, kind: int, hint_min: 0, hint_max: 3000, note_zh: PK-4（07 7.6「許願池：願望驅動」第 3 點）：許願的候選每命中一個願望標籤（關鍵字、元素、效果類型、形狀、種類）加這麼多分。要高過和手上技能的協同（協同最多「每條連線的分數 × 最多算幾條」＝750），願望才是最大權重；越高越照願望、越不管協同。只有許願池用。}

@@ -9,6 +9,10 @@ enabled: true
 # PK-3 閃現開關（06 6.7、6.34.7 #165）：true＝閃現與重閃走挑選模式（程式照原本出題決定每格的類別、轉型保底，
 # 每格依用法統計給 flash_top_k 個合法候選，LLM 只挑與取名）；false＝回到 PK-3 前（LF-2：LLM 從目錄提議）。
 flash_enabled: true
+# PK-4 許願池開關（07 7.6「許願池：願望驅動」，使用者：「A（建議）」）：true＝願望翻成需求標籤（下面 wish_tags 的清單）、
+# 照標籤用組合器做 wish_candidates 個候選、以「願望相合」打分、本機模型挑 3 張並回應願望、做不到時卡上照實寫；
+# false＝回到 PK-4 前的許願流程（對 1～2 個關鍵字＋本機模型自由設計）。
+wish_enabled: true
 pool:
   seeds: 60          # 組合器最多抽幾個種子
   designs: 16        # 湊到這麼多個不同設計就停
@@ -22,6 +26,7 @@ pool:
   nondamage_seeds: 10 # PK-2 非傷害保底格：只收非傷害的候選，不夠 top_k 個（或三格都沒有）時最多補抽幾個種子
   relax_until: 3     # PK-3 三選一每格：全部關鍵字＋路線符合的候選不到這麼多個時，依序放寬（部分關鍵字 → 偏離路線）補上
   flash_top_k: 4     # PK-3 閃現每個選項格給 LLM 幾個候選（依用法統計排序，第一個是原本出題的那個）
+  wish_candidates: 18 # PK-4 許願池「候選量」：照願望標籤做幾個不同設計，全部交給 LLM 挑 3 張（07 7.6 初值 15～20）
 weights:
   synergy_per_link: 150      # 協同：候選製造／利用的關鍵字和手上技能接上，每條連線
   synergy_max_links: 5       # 協同最多算幾條
@@ -47,3 +52,62 @@ weights:
   same_element_penalty: 60   # 多樣性：元素相同
   route_off_penalty: 400     # PK-3 不符合這一格的路線（加深、橋接要跟主路線；新方向要不同屬性），扣
   keyword_relaxed_penalty: 150 # PK-3 多關鍵字的格子放寬成只帶部分關鍵字，扣
+  wish_match: 1000           # PK-4 許願池「願望相合」：每命中一個願望標籤加（高過協同的上限 150 × 5 = 750）
+# PK-4 願望標籤的固定清單（07 7.6「許願池：願望驅動」第 1 點；關鍵字用內容庫的 16 個）。LLM 只能從這些代碼選，
+# 清單外的那一項丟掉；沒有 LLM 時玩家從同一份清單點選。效果類型、形狀怎麼算命中寫在各項後面（程式依技能資料判定）。
+wish_tags:
+  max_keywords: 2
+  max_elements: 1
+  max_effects: 2
+  max_shapes: 1
+  max_kinds: 1
+  elements:
+    - {id: physical, name_zh: 物理}   # 技能沒有元素（skill_elements 是空的）就算
+    - {id: fire, name_zh: 火焰}
+    - {id: ice, name_zh: 冰霜}
+    - {id: lightning, name_zh: 雷電}
+    - {id: poison, name_zh: 毒素}
+    - {id: wind, name_zh: 風}
+    - {id: earth, name_zh: 大地}
+    - {id: holy, name_zh: 神聖}
+    - {id: shadow, name_zh: 暗影}
+  effects:
+    - id: damage
+      name_zh: 傷害
+      primitives: [damage, delayed_damage, detonate_runes, charge_through, hurl_object, topple, shockwave]
+    - id: control
+      name_zh: 控制
+      primitives: [knock_prone]
+      statuses: [prone, entangled, blinded]
+      control_statuses: true   # 緩速、定身、暈眩、冰凍、嘲諷、恐懼、沉默（statuses.yaml 有 control_group 的）
+    - id: heal
+      name_zh: 治療
+      primitives: [heal, revive]
+      statuses: [regenerating]
+    - id: shield
+      name_zh: 護盾
+      primitives: [shield, intercept]
+      statuses: [shielded, guarded, stoneskin, shielded_thorns, shielded_mending, shielded_wet, shielded_charged, shielded_marking]
+    - id: buff
+      name_zh: 增益
+      primitives: [grant_ap, reset_cooldown, restore_resource, cheat_death, extra_reaction, enter_form, cleanse]
+      beneficial_statuses: true   # 其他增益狀態（激昂、戰意、加速、姿態…；上面護盾列的不算）
+    - id: movement
+      name_zh: 位移
+      primitives: [push, pull, teleport, dash, charge_through, shadowstep, leap, swap, teleport_target, swap_any, shockwave]
+    - id: summon
+      name_zh: 召喚
+      primitives: [summon, summon_beside]
+    - id: terrain
+      name_zh: 地形
+      primitives: [create_surface, create_obstacle, raise_terrain, lower_terrain, destroy_object, zone, place_trap, blow_surface, clear_surface]
+  shapes:
+    - {id: single, name_zh: 單體, shapes: [single, ground_tile, unit_then_tile, object_then_tile, unit_pair]}
+    - {id: area, name_zh: 範圍, shapes: [cross, square3, chain]}
+    - {id: line, name_zh: 直線, shapes: [line]}
+    - {id: cone, name_zh: 錐形, shapes: [cone]}
+    - {id: around, name_zh: 自身周圍, shapes: [self, ring, allies_in_radius]}
+  kinds:   # 不選時照 06 6.34.1 的比例（主動 70／被動 20／反應 10）
+    - {id: active, name_zh: 主動}
+    - {id: passive, name_zh: 被動}
+    - {id: reaction, name_zh: 反應}

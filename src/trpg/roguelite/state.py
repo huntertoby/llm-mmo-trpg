@@ -170,6 +170,12 @@ class OfferTag(_Model):
     """挑選模式（Phase PK-2，``skill_pick.yaml`` 的 ``enabled``）：``llm``＝LLM 從這一格排好的候選
     挑選並命名；``top``＝這一格分數第一名（沒有 LLM、不請 LLM 或 LLM 失敗）。不是挑選模式為
     ``None``（不寫出，舊存檔與關掉開關的存檔逐字不變）。"""
+    wish_reply_zh: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 許願池（07 7.6「許願池：願望驅動」第 4 點）：LLM 寫的一句回應願望的話（只描述這張本來的
+    效果，過了一致性檢查才留）；沒有＝``None``（不寫出）。"""
+    wish_miss_zh: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 許願池（同上第 5 點）：沒有命中全部願望標籤時卡上加的一行（程式依標籤產生）；全部命中或
+    不是許願池＝``None``（不寫出）。"""
 
 
 class SkillOffer(_Model):
