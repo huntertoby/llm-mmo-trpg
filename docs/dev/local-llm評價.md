@@ -11,6 +11,8 @@ pm-workflow plugin 的 `local_summarize`／`local_ask`（LM Studio 8001，`googl
 | 2026-11-16 | 美術 | `local_summarize` `美術PM交接.md` 問「目前排在下一個前端段要驗收的項目」 | 278（行很長） | 有錯 | 要 | 負的（會誤導） | 把已結案的 QI-7、FL-1b、PNL-1a、BS-2 必修、⑧ 事件卡當成待驗收；漏了 PB-1e→PB-1f、WP-3 複驗、GB-4b 必修。原因是交接檔新舊狀態疊在一起，模型分不出哪條最新 |
 | 2026-11-16 | 開發 | `local_summarize` 讀程式碼：`src/trpg/content/battle.py`（src/trpg 最大檔）問「分哪幾部分、各負責什麼、主要函式在哪幾行」 | 1917 | 準 | 不用（看結構時）；改程式前照行號確認 | 約 9 成（不必讀 1917 行） | 分 9 段合理，抽查 `Dice` 113、`WeaponDef` 274、`StatusTable` 1080、`UnitTemplate` 1685、`_check_footprint` 1789 都對；validator 差 1～2 行（標到 decorator 那行）、`PhaseTrigger` 1529 其實是別的欄位；漏了召喚物規格（1380～1460）、`template_part_problems` 等函式。`grep -n "^class \|^def "` 一行也能拿到行號，但拿不到「各段負責什麼」 |
 | 2026-11-16 | 開發 | `local_ask` 多檔初篩：`src/trpg/llm` 22 個檔（6858 行）找「跟挑選模式 pick 有關的檔案與函式」 | 6858 | 有錯 | 要 | 負的（全錯，得重做） | 附檔超過 context 被截斷（工具有提示），只看到前幾個檔；回答 `candidate_source.py` 的提議器（該檔根本沒有 pick），漏了 `pick.py`（`pick_skill` 316、`make_pick_proposer` 447 等）、`flash_pick.py`、`wish_pick.py`。grep 找到 llm 7 個、skillgen 20 個相關檔。skillgen（約 3.4 萬行）比 llm 大 5 倍，沒再試 |
+| 2026-11-16 | 開發 | 新版 `local_scan` 掃 `src/trpg/llm` 頂層 22 個檔（6858 行）問「跟挑選模式 pick 有關的檔案與函式、哪幾行」 | 6858 | 部分對（有多報、有亂碼） | 要 | 約 5 成（真相關的幾個檔都抓到，但要逐條查） | 回報 22/22 檔讀完、沒截斷。抓到 `pick.py`（`pick_skill` 316、`make_pick_proposer` 447 都對）、`flash_pick.py`（378～381 對）、`wish_pick.py`、`flash_eval.py` `pick_skills` 53、`flash_propose.py` `pick` 739／825 對、`story_skill.py` `_pick_element` 83。多報：`candidate_source.py`、`client.py`、`consistency.py`、`naming.py`、`situation.py` 這 5 檔其實沒有 pick（把「加嚴 strict」「schema 模式」當成挑選）；`skill_eval.py` 行號欄是一長串 747～821 的亂碼；`flash_pick.py` 83 標的是 docstring 不是 pick 欄位。`flash_propose.py` 有 35 處 pick 只列 7 條。上次是全錯，這次方向對 |
+| 2026-11-16 | 開發 | `local_ask` 附同一批 10 個檔（13 萬字）問同一題 | 約 6000 | 準（拒絕） | 不用 | 不適用 | 回「附檔共 130954 字，超過約 36561 字，不回答」，不再給截斷的假答案；舊問題已修好 |
 
 ## 總結
 
@@ -33,3 +35,4 @@ pm-workflow plugin 的 `local_summarize`／`local_ask`（LM Studio 8001，`googl
 **讀程式碼（2026-11-16 補測）**
 - **單一大檔看結構好用**：1917 行的檔分段、主要類別行號大多正確，適合「第一次碰這個檔、想知道去哪幾行看」。行號會差 1～2 行、會漏小段，改程式前一定照行號讀原文。
 - **多檔初篩不要用**：幾千行以上就超過模型的 context，被截斷後它只看得到前幾個檔，還會照樣給出一個看似完整的答案（這次全錯）。跨檔找「哪裡跟 X 有關」一律用 grep（`grep -l`、`grep -n "^def .*x"`），grep 的結果再挑一兩個大檔交給 `local_summarize` 看結構。
+- **新版 `local_scan` 補測**：不再截斷、會回報讀了幾檔，找到所有主要的 pick 檔，但仍有 5 個多報檔和亂碼行號；當候選清單用、逐條 grep 核對後再信。`paths` 不收資料夾，要列檔案；`local_ask` 太長現在會乾脆拒絕。
