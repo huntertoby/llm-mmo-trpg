@@ -29,6 +29,7 @@ import {
   type ActionMode,
 } from "../../battle/targeting";
 import { onField } from "../../battle/units";
+import { prepMarksOf } from "../../battle/prep";
 import { unitTiles } from "../../battle/footprint";
 import { giantAimAt, hoverActionAt } from "../../battle/tileClick";
 import { giantMarksOf } from "../../render/battle/partTileMarks";
@@ -155,6 +156,9 @@ export function useHighlights(i: HighlightInput): HighlightState {
       };
     }
     const overlays = previewOverlays(preview, view);
+    // AR-SK3：戰前佈置選了一招：放得下的格子畫金色佈置記號（取代選目標紅框；指著的格子整圈金框＋預覽、不另畫白框）
+    const prepMarks = mode !== null && mode.key.startsWith("prep:") && response.prep != null && mode.skillId != null ? prepMarksOf(response.prep, mode.skillId, hover, i.cards[mode.skillId]) : null;
+    if (prepMarks !== null) return { ...NO_HIGHLIGHTS, ...common, hover: prepMarks.hover === null ? hover : null, prep: prepMarks };
     if (mode !== null) {
       const tt = targetTiles(mode, view, hero, hurlPick);
       const pickedAt = hurlPickPos(mode, view, hurlPick);
@@ -199,6 +203,8 @@ export function useHighlights(i: HighlightInput): HighlightState {
     hurlPick,
     command,
     infuse,
+    response.prep,
+    i.cards,
   ]);
 
   // 滑過戰鬥紀錄的一組：高亮相關單位目前所在的格子與事件指出的格子（疊在預覽範圍的橘色上）。

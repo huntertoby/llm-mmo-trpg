@@ -223,6 +223,10 @@ export function usePlayback(
             if (!skip() && r.durationMs > at) await sleep(r.durationMs - at);
           }
           break;
+        case "placed":
+          // AR-SK3：戰前佈置放下的一下（不等它播完）
+          if (!skip()) rendererRef.current?.playPlaceBurst(op.tiles);
+          break;
         case "victory":
           // 6N-5：我方勝利：全隊舉手或收刀、浮出「勝利」，播完才顯示結束面板
           if (skip()) break;

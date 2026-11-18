@@ -1,5 +1,6 @@
 // 技能特效、受擊與結果（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：命中閃白與受擊片段、反應、特殊結果、勝利、地形升降。
-import { Container } from "pixi.js";
+import { Container, Sprite, Texture } from "pixi.js";
+import { PLACE_BURST_MS, placeBurst } from "../prepMarks";
 import type { Pos } from "../../api/types";
 import { drawOccupies } from "../../battle/drawModel";
 import { TILE_SIZE } from "../../battle/geometry";
@@ -91,6 +92,46 @@ export abstract class VfxLayer extends SkillLayer {
     if (!this.ready || list.length === 0) return;
     const host = { ...this.sk2Host, draw: (id: string) => this.unitDrawOf.get(id) ?? this.downedDrawOf.get(id) };
     this.launch(rerollEffects(host, list, this.effectClock, scale));
+  }
+
+  /**
+   * AR-SK3：戰前佈置放下的一下（`prepMarks.placeBurst`，420 ms，畫面 px）：金框往外擴、淡出＋四角金火花；之後是現行的陷阱、符文、表面。
+   */
+  playPlaceBurst(tiles: readonly Pos[]): void {
+    if (!this.ready || tiles.length === 0 || this.reduced || typeof document === "undefined") return;
+    const S = this.scale > 0 ? this.scale : 1, dpr = window.devicePixelRatio || 1, s = T * S, pad = s * 0.4;
+    const effects: Effect[] = [];
+    for (const p of tiles) {
+      const cv = document.createElement("canvas");
+      cv.width = Math.ceil((s + 2 * pad) * dpr);
+      cv.height = cv.width;
+      const g = cv.getContext("2d");
+      if (g === null) continue;
+      const tex = Texture.from(cv);
+      const node = new Container();
+      const sprite = new Sprite(tex);
+      const o = this.origin(p);
+      sprite.position.set(o.x - pad / S, o.y - pad / S);
+      sprite.width = (s + 2 * pad) / S;
+      sprite.height = sprite.width;
+      node.addChild(sprite);
+      node.visible = false;
+      effects.push({
+        node,
+        startMs: this.effectClock,
+        endMs: this.effectClock + PLACE_BURST_MS,
+        update: (u) => {
+          node.visible = true;
+          g.setTransform(1, 0, 0, 1, 0, 0);
+          g.clearRect(0, 0, cv.width, cv.height);
+          g.setTransform(dpr, 0, 0, dpr, 0, 0);
+          placeBurst(g, pad, pad, s, u);
+          tex.source.update();
+        },
+        end: () => tex.destroy(true),
+      });
+    }
+    this.launch(effects);
   }
 
   /**

@@ -24,6 +24,9 @@ import { TerrainLayer } from "./terrainLayer";
 import { hoverCellFrame, isGiantDraw } from "../../battle/drawModel";
 import { giantTargetFrame } from "../giantSprite";
 import { giantMarkNodes, type GiantMarksDraw } from "./partTileMarks";
+import { Texture as PixiTexture } from "pixi.js";
+import type { PrepMarksDraw } from "../../battle/prep";
+import { ghostOf, placeMark, placeTip, tipSize } from "../prepMarks";
 
 const T = TILE_SIZE;
 export interface DirectionMark {
@@ -68,6 +71,8 @@ export interface Highlights {
   guard?: GuardDraw | null;
   /** GB-4b：3×3 巨型頭目的部位格標示（選打它的動作時；`partTileMarks.giantMarksOf`）。沒有時省略。 */
   giantMarks?: readonly GiantMarksDraw[];
+  /** AR-SK3：戰前佈置的格子記號（金色四角括號＋菱形；指著的整圈金框＋預覽＋「放在這裡」；`render/prepMarks.ts`）。沒有時省略。 */
+  prep?: PrepMarksDraw | null;
 }
 const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
   route: HIGHLIGHT.route,
@@ -95,6 +100,10 @@ const OVERLAY_COLORS: Readonly<Record<OverlayKind, number>> = {
 };
 
 export abstract class HighlightLayer extends TerrainLayer {
+  /** AR-SK3：戰前佈置記號的貼圖（下次重畫時銷毀）與待放格的重畫（括號呼吸，`tickBobs`）。 */
+  private prepTextures: PixiTexture[] = [];
+  private prepPaints: Array<(t: number) => void> = [];
+  private prepPhase = -1;
   /** BM-1：目前畫著的延遲預告字（節點、字、格子左上角）；縮放改變時重排（`telegraphRescale`）。 */
   private telegraphBadges: Array<{ node: Container; glyph: Text; o: { x: number; y: number } }> = [];
 
@@ -259,6 +268,68 @@ export abstract class HighlightLayer extends TerrainLayer {
     const hoverCell = hoverFrameCell(h.hover, h.exitHover);
     this.drawFrames(h.focus, this.model === null ? hoverCell : hoverCellFrame(this.model.units, hoverCell));
     this.drawGiantMarks(h.giantMarks ?? []);
+    this.drawPrepMarks(h.prep ?? null);
+  }
+
+  /**
+   * AR-SK3：戰前佈置的格子記號（`prepMarks.ts`，畫在畫面 px：貼圖照地圖縮放與 DPR 出圖、貼回一格 T）。
+   * 待放的格子括號 1.2 秒呼吸一次（減少動態時不動）；指著的那格整圈金框＋預覽，右邊「放在這裡」。
+   */
+  private drawPrepMarks(d: PrepMarksDraw | null): void {
+    for (const t of this.prepTextures) if (!t.destroyed) t.destroy(true);
+    this.prepTextures = [];
+    this.prepPaints = [];
+    this.prepPhase = -1;
+    if (d === null || typeof document === "undefined") return;
+    const S = this.scale > 0 ? this.scale : 1, dpr = window.devicePixelRatio || 1, s = T * S;
+    const ghost = ghostOf(d.kind, d.surface);
+    const canvasOf = (w: number, h: number): { cv: HTMLCanvasElement; g: CanvasRenderingContext2D } | null => {
+      const cv = document.createElement("canvas");
+      cv.width = Math.max(1, Math.ceil(w * dpr));
+      cv.height = Math.max(1, Math.ceil(h * dpr));
+      const g = cv.getContext("2d");
+      return g === null ? null : { cv, g };
+    };
+    for (const c of d.cells) {
+      const hover = d.hover !== null && d.hover.x === c.x && d.hover.y === c.y;
+      const made = canvasOf(s, s);
+      if (made === null) continue;
+      const tex = PixiTexture.from(made.cv);
+      this.prepTextures.push(tex);
+      const paint = (t: number): void => {
+        made.g.setTransform(1, 0, 0, 1, 0, 0);
+        made.g.clearRect(0, 0, made.cv.width, made.cv.height);
+        made.g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        placeMark(made.g, 0, 0, s, hover ? "hover" : "idle", t, ghost);
+        tex.source.update();
+      };
+      paint(this.reduced ? 0 : this.bobClock);
+      const node = new Sprite(tex);
+      const o = this.origin(c);
+      node.position.set(o.x, o.y);
+      node.width = T;
+      node.height = T;
+      node.label = "prep-mark";
+      this.marks.addChild(node);
+      if (!hover && !this.reduced) this.prepPaints.push(paint);
+    }
+    if (d.hover === null) return;
+    const probe = canvasOf(1, 1);
+    if (probe === null) return;
+    const size = tipSize(probe.g);
+    const made = canvasOf(size.w + 2, size.h + 2);
+    if (made === null) return;
+    made.g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    placeTip(made.g, 0, 0);
+    const tex = PixiTexture.from(made.cv);
+    this.prepTextures.push(tex);
+    const tip = new Sprite(tex);
+    const o = this.origin(d.hover);
+    tip.width = (size.w + 2) / S;
+    tip.height = (size.h + 2) / S;
+    tip.position.set(o.x + T + 1 / S, o.y + T / 2 - size.h / 2 / S);
+    tip.label = "prep-tip";
+    this.hover.addChild(tip);
   }
 
   /** GB-4b：部位格標示（單位之上；GB-4c 起放 `giantMarkTop`，在 3×3 目標紅框之上；`partTileMarks.ts`）。 */
@@ -349,6 +420,14 @@ export abstract class HighlightLayer extends TerrainLayer {
   /** 事件「！」上下浮動（6C-8；週期 1.6 秒、幅度 3px）。 */
   protected tickBobs(dt: number): void {
     this.bobClock += dt;
+    // AR-SK3：戰前佈置待放格的括號呼吸（每 50 ms 重畫一次）
+    if (this.prepPaints.length > 0) {
+      const phase = Math.floor(this.bobClock / 50);
+      if (phase !== this.prepPhase) {
+        this.prepPhase = phase;
+        for (const p of this.prepPaints) p(this.bobClock);
+      }
+    }
     if (this.breaths.length > 0) {
       const a = objectHintAlpha(this.bobClock);
       for (const n of this.breaths) if (!n.destroyed) n.alpha = a;
