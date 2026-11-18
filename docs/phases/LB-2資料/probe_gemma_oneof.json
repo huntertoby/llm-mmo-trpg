@@ -1,0 +1,34 @@
+[
+ {
+  "index": 0,
+  "status": 200,
+  "seconds": 2.49,
+  "finish_reason": "length",
+  "schema_chars": 16129,
+  "body": "{\n  \"id\": \"chatcmpl-eo9brqg0x8dxlvqaf4r2o\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794658938,\n  \"model\": \"google/gemma-4-26b-a4b-qat\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n "
+ },
+ {
+  "index": 1,
+  "status": 200,
+  "seconds": 2.45,
+  "finish_reason": "length",
+  "schema_chars": 90254,
+  "body": "{\n  \"id\": \"chatcmpl-3i2pwj0s0bvgwowy1ce4rp\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794658940,\n  \"model\": \"google/gemma-4-26b-a4b-qat\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n"
+ },
+ {
+  "index": 4,
+  "status": 200,
+  "seconds": 2.44,
+  "finish_reason": "length",
+  "schema_chars": 16129,
+  "body": "{\n  \"id\": \"chatcmpl-holydfzbgcugyjmoc766o\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794658943,\n  \"model\": \"google/gemma-4-26b-a4b-qat\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n "
+ },
+ {
+  "index": 7,
+  "status": 200,
+  "seconds": 2.46,
+  "finish_reason": "length",
+  "schema_chars": 9407,
+  "body": "{\n  \"id\": \"chatcmpl-iox99aea0p1xs4ny00mww\",\n  \"object\": \"chat.completion\",\n  \"created\": 1794658945,\n  \"model\": \"google/gemma-4-26b-a4b-qat\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n "
+ }
+]

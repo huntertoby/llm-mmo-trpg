@@ -1,0 +1,70 @@
+2026-11-14 22:24:55,799 lbcf INFO AUTO_BATTLE run=89aee6242baf node=gear_offer sync_seconds=0.04
+2026-11-14 22:26:10,613 lbcf INFO AUTO_BATTLE run=89aee6242baf node=gear_offer sync_seconds=0.04
+2026-11-14 22:26:11,529 lbcf INFO AUTO_BATTLE run=89aee6242baf node=ended sync_seconds=0.04
+2026-11-14 22:26:54,842 lbcf INFO AUTO_BATTLE run=d9ae25eb5b65 node=gear_offer sync_seconds=0.03
+2026-11-14 22:26:55,201 lbcf INFO AUTO_BATTLE run=d9ae25eb5b65 node=gear_offer sync_seconds=0.03
+2026-11-14 22:26:55,883 lbcf INFO AUTO_BATTLE run=d9ae25eb5b65 node=gear_offer sync_seconds=0.04
+2026-11-14 22:26:59,958 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=3.88
+2026-11-14 22:26:59,972 trpg.llm INFO 技能提議第 1 次嘗試不合格：tier.dual_scaling｜（技能層級）｜角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:00,971 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=0.98
+2026-11-14 22:27:00,985 trpg.llm INFO 技能提議第 2 次嘗試不合格：tier.dual_scaling｜（技能層級）｜角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:02,002 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=0.99
+2026-11-14 22:27:02,015 trpg.llm INFO 技能提議第 3 次嘗試不合格：tier.dual_scaling｜（技能層級）｜角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:02,038 lbcf INFO CANDIDATE tier=2 rarity=rare kind=None keywords=('prone',) ok=False name=None attempts=3 codes=('tier.dual_scaling',) name_source=None name_attempts=0 reason=用盡 3 次（最後一次：tier.dual_scaling） seconds=6.01
+2026-11-14 22:27:07,284 lbcf INFO AUTO_BATTLE run=df9e37a198a2 node=gear_offer sync_seconds=0.03
+2026-11-14 22:27:08,004 lbcf INFO AUTO_BATTLE run=df9e37a198a2 node=gear_offer sync_seconds=0.04
+2026-11-14 22:27:12,314 lbcf INFO AUTO_BATTLE run=18883cfc6cc0 node=gear_offer sync_seconds=0.03
+2026-11-14 22:27:12,822 lbcf INFO AUTO_BATTLE run=18883cfc6cc0 node=gear_offer sync_seconds=0.03
+2026-11-14 22:27:13,280 lbcf INFO AUTO_BATTLE run=18883cfc6cc0 node=gear_offer sync_seconds=0.03
+2026-11-14 22:27:18,558 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=5.03
+2026-11-14 22:27:18,571 trpg.llm INFO 技能提議第 1 次嘗試不合格：tier.dual_scaling｜（技能層級）｜角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:18,571 trpg.llm INFO 技能提議第 1 次嘗試不合格：variant.v1.skeleton.secondary_count｜variants[0]｜重擊：骨架 consume_status：附帶效果最多 1 個，收到 2 個｜—
+2026-11-14 22:27:18,571 trpg.llm INFO 技能提議第 1 次嘗試不合格：variant.v1.skeleton.core_share｜variants[0]｜重擊：骨架 consume_status：核心效果（consume_status）占 61.4%，低於下限 70.0%｜—
+2026-11-14 22:27:18,571 trpg.llm INFO 技能提議第 1 次嘗試不合格：variant.v1.tier.dual_scaling｜variants[0]｜重擊：角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:18,571 trpg.llm INFO 技能提議第 1 次嘗試不合格：variant.v1.budget.over｜variants[0]｜重擊：超出預算：total 23.33 ÷ 可用預算 18.04 ＝ 129.4%（上限 100.0%，階級 2）｜—
+2026-11-14 22:27:20,458 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.85
+2026-11-14 22:27:20,468 trpg.llm INFO 技能提議第 2 次嘗試不合格：tier.dual_scaling｜（技能層級）｜角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:20,468 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.skeleton.core_share｜variants[0]｜碎裂重擊：骨架 consume_status：核心效果（consume_status）占 69.5%，低於下限 70.0%｜—
+2026-11-14 22:27:20,468 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.tier.dual_scaling｜variants[0]｜碎裂重擊：角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:27:20,468 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.budget.over｜variants[0]｜碎裂重擊：超出預算：total 20.63 ÷ 可用預算 18.04 ＝ 114.4%（上限 100.0%，階級 2）｜—
+2026-11-14 22:27:21,580 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.09
+2026-11-14 22:27:22,244 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=0.65
+2026-11-14 22:27:22,734 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=0.49
+2026-11-14 22:27:22,734 lbcf INFO CANDIDATE tier=2 rarity=epic kind=None keywords=('prone',) ok=True name=重壓之墜 attempts=3 codes=('tier.dual_scaling', 'variant.v1.skeleton.secondary_count', 'variant.v1.skeleton.core_share', 'variant.v1.tier.dual_scaling', 'variant.v1.budget.over') name_source=llm name_attempts=2 reason=None seconds=9.27
+2026-11-14 22:27:28,342 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=3.30
+2026-11-14 22:27:28,348 trpg.llm INFO 技能提議第 1 次嘗試不合格：value_error｜variants[0].range_delta｜變奏「荊棘踐踏」：range_delta 只能用在射程是數字的形狀，收到 cone 的射程 None。請拿掉這個變奏的 range_delta（改用 shape、element 或 add_effect），或把技能形狀改成有數字射程的形狀（例：single 並填數字 range）｜—
+2026-11-14 22:27:29,984 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.55
+2026-11-14 22:27:29,997 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.budget.over｜variants[0]｜荊棘踐踏：超出預算：total 19.71 ÷ 可用預算 18.04 ＝ 109.3%（上限 100.0%，階級 2）｜—
+2026-11-14 22:27:31,880 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.78
+2026-11-14 22:27:31,885 trpg.llm INFO 技能提議第 3 次嘗試不合格：value_error｜variants[0].replace_effect.index｜變奏「蔓延毒刺」：主傷害（第 0 個效果）不能被換掉。replace_effect.index 請改成主傷害以外的效果位置（從 0 起算），或改用 add_effect 加一個效果｜—
+2026-11-14 22:27:32,162 lbcf INFO CANDIDATE tier=2 rarity=rare kind=None keywords=('prone', 'ignite') ok=False name=None attempts=3 codes=('value_error', 'variant.v1.budget.over') name_source=None name_attempts=0 reason=用盡 3 次（最後一次：value_error） seconds=7.39
+2026-11-14 22:27:39,124 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=5.10
+2026-11-14 22:27:39,139 trpg.llm INFO 技能提議第 1 次嘗試不合格：budget.weak｜（技能層級）｜過弱：total 11.88 ÷ 可用預算 18.94 ＝ 62.7%（下限 70.0%，階級 2）｜—
+2026-11-14 22:27:39,141 trpg.llm INFO 技能提議第 1 次嘗試不合格：variant.v1.budget.weak｜variants[0]｜雷鳴召喚：過弱：total 6.00 ÷ 可用預算 18.94 ＝ 31.7%（下限 70.0%，階級 2）｜—
+2026-11-14 22:27:41,449 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=2.27
+2026-11-14 22:27:41,468 trpg.llm INFO 技能提議第 2 次嘗試不合格：budget.weak｜（技能層級）｜過弱：total 11.88 ÷ 可用預算 18.94 ＝ 62.7%（下限 70.0%，階級 2）｜—
+2026-11-14 22:27:41,469 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.budget.weak｜variants[0]｜雷鳴震盪：過弱：total 12.60 ÷ 可用預算 18.94 ＝ 66.5%（下限 70.0%，階級 2）｜—
+2026-11-14 22:27:43,337 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.82
+2026-11-14 22:27:43,355 trpg.llm INFO 技能提議第 3 次嘗試不合格：budget.weak｜（技能層級）｜過弱：total 11.88 ÷ 可用預算 18.94 ＝ 62.7%（下限 70.0%，階級 2）｜—
+2026-11-14 22:27:43,355 trpg.llm INFO 技能提議第 3 次嘗試不合格：variant.v1.budget.weak｜variants[0]｜雷鳴震盪：過弱：total 12.60 ÷ 可用預算 18.94 ＝ 66.5%（下限 70.0%，階級 2）｜—
+2026-11-14 22:27:43,630 lbcf INFO CANDIDATE tier=2 rarity=rare kind=None keywords=('summon',) ok=False name=None attempts=3 codes=('budget.weak', 'variant.v1.budget.weak') name_source=None name_attempts=0 reason=用盡 3 次（最後一次：budget.weak、variant.v1.budget.weak） seconds=9.75
+2026-11-14 22:27:48,649 lbcf INFO AUTO_BATTLE run=5e4a77be9673 node=gear_offer sync_seconds=0.04
+2026-11-14 22:27:49,031 lbcf INFO AUTO_BATTLE run=5e4a77be9673 node=gear_offer sync_seconds=0.04
+2026-11-14 22:27:49,633 lbcf INFO AUTO_BATTLE run=5e4a77be9673 node=gear_offer sync_seconds=0.04
+2026-11-14 22:27:53,992 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=4.10
+2026-11-14 22:27:54,779 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=0.77
+2026-11-14 22:27:54,779 lbcf INFO CANDIDATE tier=2 rarity=rare kind=None keywords=('prone',) ok=True name=裂隙瞬躍 attempts=1 codes=() name_source=llm name_attempts=1 reason=None seconds=4.95
+2026-11-14 22:27:59,159 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=3.43
+2026-11-14 22:27:59,163 trpg.llm INFO 技能提議第 1 次嘗試不合格：value_error｜variants[0].range_delta｜變奏「餘燼爆裂」：range_delta 只能用在射程是數字的形狀，收到 ring 的射程 None。請拿掉這個變奏的 range_delta（改用 shape、element 或 add_effect），或把技能形狀改成有數字射程的形狀（例：single 並填數字 range）｜—
+2026-11-14 22:28:00,923 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.71
+2026-11-14 22:28:00,938 trpg.llm INFO 技能提議第 2 次嘗試不合格：skeleton.secondary｜effects[1]｜骨架 control：effects[1]（knock_prone）不在允許的附帶原語內（允許：damage）｜—
+2026-11-14 22:28:00,939 trpg.llm INFO 技能提議第 2 次嘗試不合格：tier.dual_scaling｜（技能層級）｜角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:28:00,939 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.skeleton.secondary｜effects[1]｜餘燼爆裂：骨架 control：effects[1]（knock_prone）不在允許的附帶原語內（允許：damage）｜—
+2026-11-14 22:28:00,939 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.skeleton.secondary_count｜variants[0]｜餘燼爆裂：骨架 control：附帶效果最多 1 個，收到 2 個｜—
+2026-11-14 22:28:00,939 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.skeleton.secondary_share｜variants[0]｜餘燼爆裂：骨架 control：damage 占 43.8%，超過上限 40.0%｜—
+2026-11-14 22:28:00,939 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.tier.dual_scaling｜variants[0]｜餘燼爆裂：角色 2 階還不能用雙屬性縮放（要 3 階）｜—
+2026-11-14 22:28:00,939 trpg.llm INFO 技能提議第 2 次嘗試不合格：variant.v1.budget.over｜variants[0]｜餘燼爆裂：超出預算：total 13.60 ÷ 可用預算 9.02 ＝ 150.8%（上限 100.0%，階級 2）｜—
+2026-11-14 22:28:02,832 lbcf INFO LLM_CALL model=google/gemma-4-26b-a4b-qat seconds=1.57
+2026-11-14 22:28:02,873 trpg.llm INFO 技能提議第 3 次嘗試不合格：budget.weak｜（技能層級）｜過弱：total 10.29 ÷ 可用預算 18.04 ＝ 57.0%（下限 70.0%，階級 2）｜—
+2026-11-14 22:28:02,873 trpg.llm INFO 技能提議第 3 次嘗試不合格：variant.v1.budget.weak｜variants[0]｜燃痕重擊：過弱：total 11.90 ÷ 可用預算 18.04 ＝ 66.0%（下限 70.0%，階級 2）｜—
+2026-11-14 22:28:02,949 lbcf INFO CANDIDATE tier=2 rarity=epic kind=None keywords=('prone', 'ignite') ok=False name=None attempts=3 codes=('value_error', 'skeleton.secondary', 'tier.dual_scaling', 'variant.v1.skeleton.secondary', 'variant.v1.skeleton.secondary_count', 'variant.v1.skeleton.secondary_share', 'variant.v1.tier.dual_scaling', 'variant.v1.budget.over', 'budget.weak', 'variant.v1.budget.weak') name_source=None name_attempts=0 reason=用盡 3 次（最後一次：budget.weak、variant.v1.budget.weak） seconds=7.35

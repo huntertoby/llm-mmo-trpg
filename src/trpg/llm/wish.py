@@ -27,6 +27,7 @@ from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.wish import WISH_PROMPT_VERSION, build_wish_messages, wish_schema
 from trpg.llm.response import clean_response
 from trpg.skillgen.proposal_topic import LlmProposer
+from trpg.skillgen.wish_pick import WishPicker
 
 __all__ = [
     "DEFAULT_WISH_ATTEMPTS",
@@ -61,10 +62,23 @@ class WishSource:
     client: LLMClient | Callable[[str, Sequence[str]], LLMClient]
     proposer: Callable[[str], LlmProposer]
     max_attempts: int = DEFAULT_WISH_ATTEMPTS
+    tag_client: LLMClient | Callable[[str, Sequence[str]], LLMClient] | None = None
+    """PK-4 願望驅動：翻需求標籤用的 client（或依願望與選單建 client 的函式，Mock 用）；``None``＝用
+    ``client``。"""
+    picker: Callable[[str], WishPicker] | None = None
+    """PK-4 願望驅動：``picker(願望)`` 是把願望放進 ``<player_input>`` 的挑選器；``None``＝不請 LLM
+    挑（照標籤排序取前 3 名）。"""
 
     def client_for(self, wish: str, menu: Sequence[str]) -> LLMClient:
         """對關鍵字用的 client（Mock 依願望與選單建）。"""
         return self.client if isinstance(self.client, LLMClient) else self.client(wish, menu)
+
+    def tags_client_for(self, wish: str, menu: Sequence[str]) -> LLMClient:
+        """PK-4：翻需求標籤用的 client。"""
+        made = self.tag_client
+        if made is None:
+            return self.client_for(wish, menu)
+        return made if isinstance(made, LLMClient) else made(wish, menu)
 
 
 def wish_menu_payload(library: ContentLibrary, menu: Sequence[str]) -> list[dict[str, str]]:

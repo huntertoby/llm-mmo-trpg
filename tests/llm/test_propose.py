@@ -235,8 +235,10 @@ def test_charge_through_form_in_prompt_and_schema(library: ContentLibrary) -> No
     assert "charge_through" in layouts and "ground_tile" in layouts["charge_through"]
     user = _user(prompt.messages)
     assert "charge_through" in user and '"layouts"' in user
-    shape = prompt.json_schema["$defs"]["SkillProposal_charge_through"]["properties"]["shape"]
-    assert shape == {"$ref": "#/$defs/Shape_ground_tile"}
+    # LB-2：頂層依技能類別分支（_weapon／_spell），兩支的形狀都只有 ground_tile
+    for category in ("weapon", "spell"):
+        branch = prompt.json_schema["$defs"][f"SkillProposal_charge_through_{category}"]
+        assert branch["properties"]["shape"] == {"$ref": "#/$defs/Shape_ground_tile"}
     rush = _proposal_text(library, "skill_bull_rush")
     assert json.loads(rush)["layout"] == "charge_through"
     outcome = propose_skill(

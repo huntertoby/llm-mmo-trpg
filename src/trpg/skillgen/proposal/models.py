@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated, Any, Literal, TypeAliasType, Union, get_args
 
 from pydantic import (
@@ -68,6 +68,9 @@ CALLER_FIELDS: tuple[str, ...] = ("id", "tier", "rank", "rarity", "provenance", 
 
 type Stage = Literal["proposal", "skill", "rules"]
 
+DIAGNOSTIC_INPUT_CHARS = 200
+""":attr:`ProposalError.input` 的長度上限（診斷用）。"""
+
 
 class _Proposal(BaseModel):
     """提議模型的基底：拼錯或多填的欄位一律報錯（錯誤可定位）。"""
@@ -92,6 +95,21 @@ class ProposalError:
     code: str
     message: str
     allowed: tuple[str, ...] = ()
+    loc: str = field(default="", compare=False)
+    """診斷用（LB-2）：pydantic 的原始位置（含 union 分支標籤，看得出是哪個模型、哪條驗證器）；
+    不送給 LLM、不參與比較。"""
+    input: str = field(default="", compare=False)
+    """診斷用（LB-2）：出錯的輸入值（JSON，最多 :data:`DIAGNOSTIC_INPUT_CHARS` 字）；
+    不送給 LLM。"""
+
+    def diagnostic(self) -> dict[str, Any]:
+        """完整的診斷資料（量測與日誌用）：:meth:`to_json` ＋ ``loc``、``input``。"""
+        data = self.to_json()
+        if self.loc:
+            data["loc"] = self.loc
+        if self.input:
+            data["input"] = self.input
+        return data
 
     def to_json(self) -> dict[str, Any]:
         data: dict[str, Any] = {

@@ -377,6 +377,9 @@ def offer_out(library: ContentLibrary, run: RunState, offer: SkillOffer | None) 
                 keywords=keyword_refs(library, t.keywords),
                 fallback=t.fallback,
                 source=t.source,
+                pick=t.pick,
+                wish_reply_zh=t.wish_reply_zh,
+                wish_miss_zh=t.wish_miss_zh,
             )
             for t in offer.tags
         ),

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Mapping, Sequence
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +28,24 @@ DEMO_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
 def library() -> ContentLibrary:
     """正式內容（與根固件 ``content_library``、``default_library()`` 同一份；CODE-2）。"""
     return default_library()
+
+
+@cache
+def lf2_library() -> ContentLibrary:
+    """正式內容，但閃現挑選模式關掉（``skill_pick.yaml`` 的 ``flash_enabled: false``）：PK-3 前的
+    LF-2 提議流程（LLM 從目錄提議變化）。測 LF-2 程式本身的測試用這份。"""
+    lib = default_library()
+    return dataclasses.replace(
+        lib, skill_pick=lib.skill_pick.model_copy(update={"flash_enabled": False})
+    )
+
+
+def wish_off(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但許願池願望驅動關掉（``skill_pick.yaml`` 的 ``wish_enabled: false``）：PK-4 前的
+    許願流程（對關鍵字＋自由設計）。測 WP-1～3 程式本身的測試用這份。"""
+    return dataclasses.replace(
+        library, skill_pick=library.skill_pick.model_copy(update={"wish_enabled": False})
+    )
 
 
 def make_map(

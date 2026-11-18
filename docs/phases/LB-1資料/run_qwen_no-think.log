@@ -1,0 +1,23 @@
+暖機：5.0 秒（llm）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 0, 'ttft_s': 2.29, 'generation_s': 2.83, 'generation_tps': 176.5}｜VRAM：NVIDIA GeForce RTX 5090, 27281 MiB, 32607 MiB
+  1. 1 階／epic／不限骨架／combo_point｜llm｜嘗試 2｜6.2 秒｜沉刃重壓・終擊
+  2. 1 階／rare／不限骨架／fury｜composer｜嘗試 3｜5.8 秒｜神聖・蓄力與終結
+  3. 1 階／epic／不限骨架／marked｜llm｜嘗試 1｜3.8 秒｜位移
+  4. 1 階／common／不限骨架／summon｜workshop｜嘗試 3｜8.2 秒｜範圍（保底）
+  5. 1 階／rare／rune／無關鍵字｜llm｜嘗試 2｜4.3 秒｜沉岩環印
+  6. 1 階／epic／不限骨架／無關鍵字｜llm｜嘗試 1｜3.1 秒｜熾焰尖錐
+  7. 1 階／common／area／無關鍵字｜llm｜嘗試 1｜3.3 秒｜範圍
+  8. 1 階／rare／不限骨架／high_ground｜composer｜嘗試 3｜4.3 秒｜雷電・連段
+  9. 1 階／epic／builder_finisher／無關鍵字｜llm｜嘗試 1｜3.7 秒｜疊燼燃魂
+ 10. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.2 秒｜赤燼十字
+ 11. 1 階／rare／strike／無關鍵字｜llm｜嘗試 1｜2.6 秒｜裂風侵襲
+ 12. 1 階／epic／passive／high_ground｜pool｜嘗試 3｜6.5 秒｜鷹眼
+ 13. 1 階／common／不限骨架／charged｜llm｜嘗試 1｜3.1 秒｜雷鳴削骨
+ 14. 1 階／rare／combo／無關鍵字｜llm｜嘗試 1｜3.0 秒｜重壓・崩解印
+ 15. 1 階／epic／不限骨架／marked｜composer｜嘗試 3｜4.3 秒｜雷電・刻印
+ 16. 1 階／common／control／無關鍵字｜llm｜嘗試 1｜2.5 秒｜凝滯縛印
+ 17. 1 階／epic／不限骨架／focus｜llm｜嘗試 1｜3.6 秒｜熾痕烙心
+ 18. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜4.3 秒｜神聖・蓄力與終結
+ 19. 1 階／rare／不限骨架／ki｜composer｜嘗試 3｜4.6 秒｜暗影・蓄力與終結
+ 20. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.7 秒｜刻印
+中位數 3.77 秒、最慢 8.19 秒、一次通過 11/20、退回 7/20 → docs\phases\LB-1資料\qwen3.6-35b-a3b_no-think.json

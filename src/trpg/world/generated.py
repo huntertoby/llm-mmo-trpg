@@ -33,6 +33,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from trpg.content.skill_pick import WishTags
 from trpg.content.skills import SkillDef
 from trpg.roguelite.state import FlashLlmRecord, RunState, SkillOffer
 from trpg.skillgen.flash_offer import FlashRequest
@@ -111,6 +112,10 @@ class WishGen(_Model):
     codes: tuple[str, ...] = ()
     """對關鍵字那一步的錯誤碼（每次嘗試依序）。"""
     prompt_version: str = ""
+    tags: WishTags | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 願望驅動（07 7.6）：LLM 把願望翻成的需求標籤（已丟掉清單外的項目；可以一個都沒有）。
+    這時 ``keywords`` 是標籤裡的關鍵字；``partial``＝只有標籤（引擎照標籤用組合器排序取前 3 名）。
+    舊流程 ``None``（不寫出，舊日誌逐字不變）。"""
 
 
 type Generated = Annotated[FlashGen | StoryGen | OfferGen | WishGen, Field(discriminator="kind")]
@@ -171,6 +176,9 @@ class WishGenRequest:
     max_keywords: int
     llm_cards: int
     kind: Literal["wish"] = "wish"
+    tags_mode: bool = False
+    """PK-4：願望驅動（``skill_pick.yaml`` 的 ``wish_enabled``）——生成函式把願望翻成需求標籤、照標籤
+    挑 3 張；``False``＝舊流程（對關鍵字＋自由設計）。"""
 
 
 type GenRequest = FlashGenRequest | StoryGenRequest | OfferGenRequest | WishGenRequest

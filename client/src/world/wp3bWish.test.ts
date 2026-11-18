@@ -36,6 +36,7 @@ function wishData(over: Partial<WishData> = {}): WishData {
     llm: false,
     text_max_chars: 60,
     max_keywords: 2,
+    tag_groups: [],
     menu: MENU,
     ...over,
   };

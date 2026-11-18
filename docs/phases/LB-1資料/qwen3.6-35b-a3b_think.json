@@ -1,0 +1,1385 @@
+{
+  "model": "qwen3.6-35b-a3b",
+  "base_url": "http://localhost:8001/v1",
+  "reasoning_effort": null,
+  "enable_thinking": false,
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "timeout_s": 240.0,
+  "max_retries": 3,
+  "seed": 0,
+  "started_utc": "2026-11-14T11:22:11+00:00",
+  "warmup": {
+    "request": "1 階／common／不限骨架／無關鍵字",
+    "source": "composer",
+    "seconds": 8.452,
+    "calls": [
+      {
+        "step": "propose",
+        "seconds": 8.439,
+        "status": 200,
+        "finish_reason": "length",
+        "prompt_tokens": 1773,
+        "completion_tokens": 1024,
+        "reasoning_tokens": 970
+      }
+    ]
+  },
+  "speed": {
+    "completion_tokens": 500,
+    "reasoning_tokens": 480,
+    "ttft_s": 2.29,
+    "generation_s": 2.96,
+    "generation_tps": 169.0
+  },
+  "gpu_memory": "NVIDIA GeForce RTX 5090, 27183 MiB, 32607 MiB",
+  "finished_utc": "2026-11-14T11:28:33+00:00",
+  "server": {
+    "arch": "qwen35moe",
+    "quantization": "Q4_K_XL",
+    "compatibility_type": "gguf",
+    "loaded_context_length": 13824,
+    "state": "loaded"
+  },
+  "summary": {
+    "questions": 20,
+    "completed": 20,
+    "first_pass": 0,
+    "first_pass_permille": 0,
+    "fallback": 20,
+    "fallback_permille": 1000,
+    "sources": {
+      "composer": 18,
+      "workshop": 1,
+      "pool": 1
+    },
+    "mean_attempts": 3.0,
+    "seconds_median": 18.41,
+    "seconds_max": 21.23,
+    "seconds_mean": 18.38,
+    "propose_seconds_median": 18.41,
+    "call_seconds_median": 6.01,
+    "calls": 60,
+    "completion_tokens_per_second": 167.8,
+    "reasoning_tokens": 58817,
+    "reasoning_tokens_median": 990.5,
+    "completion_tokens_median": 1024.0,
+    "finish_length": 59,
+    "naming_llm": 0,
+    "naming_total": 0,
+    "failures": {
+      "llm": {
+        "llm.bad_response": 59
+      },
+      "format": {},
+      "engine": {
+        "skeleton.core": 1
+      }
+    }
+  },
+  "rows": [
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2171825236,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 21.232,
+      "name_zh": "暗影・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 1682515056，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 21.232,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 8.712,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4799,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 998
+        },
+        {
+          "step": "propose",
+          "seconds": 6.314,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4799,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 993
+        },
+        {
+          "step": "propose",
+          "seconds": 5.943,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4799,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1000
+        }
+      ],
+      "index": 1
+    },
+    {
+      "request": "1 階／rare／不限骨架／fury",
+      "seed": 893870975,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.999,
+      "name_zh": "神聖・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 2434386524，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.999,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.099,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4573,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1002
+        },
+        {
+          "step": "propose",
+          "seconds": 5.922,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4573,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1008
+        },
+        {
+          "step": "propose",
+          "seconds": 5.851,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4573,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1004
+        }
+      ],
+      "index": 2
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 532914297,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.395,
+      "name_zh": "毒素・刻印",
+      "concept": "隨機組合器產生的刻印技能（種子 1430544302，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.395,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.104,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4787,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 997
+        },
+        {
+          "step": "propose",
+          "seconds": 6.005,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4787,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 984
+        },
+        {
+          "step": "propose",
+          "seconds": 6.06,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4787,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 986
+        }
+      ],
+      "index": 3
+    },
+    {
+      "request": "1 階／common／不限骨架／summon",
+      "seed": 4278761754,
+      "source": "workshop",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.83,
+      "name_zh": "範圍（保底）",
+      "concept": "",
+      "cast_flavor": "",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.83,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 5.997,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1890,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 989
+        },
+        {
+          "step": "propose",
+          "seconds": 5.696,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1890,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1001
+        },
+        {
+          "step": "propose",
+          "seconds": 5.766,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1890,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 989
+        }
+      ],
+      "index": 4
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3214451173,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.682,
+      "name_zh": "物理・刻印",
+      "concept": "隨機組合器產生的刻印技能（種子 1978584332，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.682,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 5.777,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2055,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 988
+        },
+        {
+          "step": "propose",
+          "seconds": 5.821,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2055,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 980
+        },
+        {
+          "step": "propose",
+          "seconds": 6.032,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2055,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 985
+        }
+      ],
+      "index": 5
+    },
+    {
+      "request": "1 階／epic／不限骨架／無關鍵字",
+      "seed": 3656944096,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.479,
+      "name_zh": "冰霜・控場",
+      "concept": "隨機組合器產生的控場技能（種子 3988197716，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status",
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.479,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.082,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4647,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 978
+        },
+        {
+          "step": "propose",
+          "seconds": 6.294,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4647,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 983
+        },
+        {
+          "step": "propose",
+          "seconds": 5.91,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4647,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 983
+        }
+      ],
+      "index": 6
+    },
+    {
+      "request": "1 階／common／area／無關鍵字",
+      "seed": 3066109316,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.829,
+      "name_zh": "物理・範圍",
+      "concept": "隨機組合器產生的範圍技能（種子 3475171732，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.829,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.303,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1333,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 968
+        },
+        {
+          "step": "propose",
+          "seconds": 5.758,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1333,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 971
+        },
+        {
+          "step": "propose",
+          "seconds": 5.739,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1333,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 968
+        }
+      ],
+      "index": 7
+    },
+    {
+      "request": "1 階／rare／不限骨架／high_ground",
+      "seed": 1817687911,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.416,
+      "name_zh": "雷電・連段",
+      "concept": "隨機組合器產生的連段技能（種子 3466511313，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "damage",
+        "push"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.416,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.012,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4542,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1007
+        },
+        {
+          "step": "propose",
+          "seconds": 5.89,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4542,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 984
+        },
+        {
+          "step": "propose",
+          "seconds": 6.215,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4542,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1006
+        }
+      ],
+      "index": 8
+    },
+    {
+      "request": "1 階／epic／builder_finisher／無關鍵字",
+      "seed": 690982258,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.941,
+      "name_zh": "物理・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 1880156148，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.941,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.497,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1897,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 993
+        },
+        {
+          "step": "propose",
+          "seconds": 5.691,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1897,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 999
+        },
+        {
+          "step": "propose",
+          "seconds": 5.71,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1897,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1006
+        }
+      ],
+      "index": 9
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3084845306,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "skeleton.core"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 15.2,
+      "name_zh": "神聖・刻印",
+      "concept": "隨機組合器產生的刻印技能（種子 2812724679，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 15.2,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.499,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2055,
+          "completion_tokens": 463,
+          "reasoning_tokens": 342
+        },
+        {
+          "step": "propose",
+          "seconds": 5.909,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2246,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 990
+        },
+        {
+          "step": "propose",
+          "seconds": 5.737,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2246,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1000
+        }
+      ],
+      "index": 10
+    },
+    {
+      "request": "1 階／rare／strike／無關鍵字",
+      "seed": 838456073,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.594,
+      "name_zh": "雷電・打擊",
+      "concept": "隨機組合器產生的打擊技能（種子 3744700241，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "knock_prone"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.594,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.062,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2007,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 986
+        },
+        {
+          "step": "propose",
+          "seconds": 5.786,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2007,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 977
+        },
+        {
+          "step": "propose",
+          "seconds": 5.688,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2007,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 978
+        }
+      ],
+      "index": 11
+    },
+    {
+      "request": "1 階／epic／passive／high_ground",
+      "seed": 3203845091,
+      "source": "pool",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 19.567,
+      "name_zh": "鷹眼",
+      "concept": "站得越高，看得越遠，心也越靜",
+      "cast_flavor": "你在高處俯瞰整片戰場，每個破綻都看得一清二楚",
+      "skill_kind": "passive",
+      "effects": [
+        "shield",
+        "add_stack"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 19.567,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.085,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2672,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 996
+        },
+        {
+          "step": "propose",
+          "seconds": 5.809,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2672,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 976
+        },
+        {
+          "step": "propose",
+          "seconds": 5.79,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2672,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1005
+        }
+      ],
+      "index": 12
+    },
+    {
+      "request": "1 階／common／不限骨架／charged",
+      "seed": 1858532144,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 17.489,
+      "name_zh": "雷電・範圍",
+      "concept": "隨機組合器產生的範圍技能（種子 3869085947，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 17.489,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.02,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1888,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 995
+        },
+        {
+          "step": "propose",
+          "seconds": 5.662,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1888,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1004
+        },
+        {
+          "step": "propose",
+          "seconds": 5.713,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1888,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1001
+        }
+      ],
+      "index": 13
+    },
+    {
+      "request": "1 階／rare／combo／無關鍵字",
+      "seed": 1407370244,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.675,
+      "name_zh": "火焰・連段",
+      "concept": "隨機組合器產生的連段技能（種子 4217929344，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "push"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.675,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.267,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 3036,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 983
+        },
+        {
+          "step": "propose",
+          "seconds": 5.936,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 3036,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 997
+        },
+        {
+          "step": "propose",
+          "seconds": 6.305,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 3036,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 988
+        }
+      ],
+      "index": 14
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 3354077213,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.878,
+      "name_zh": "雷電・刻印",
+      "concept": "隨機組合器產生的刻印技能（種子 3211773546，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.878,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.191,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4787,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 998
+        },
+        {
+          "step": "propose",
+          "seconds": 5.885,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4787,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 999
+        },
+        {
+          "step": "propose",
+          "seconds": 6.523,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4787,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 989
+        }
+      ],
+      "index": 15
+    },
+    {
+      "request": "1 階／common／control／無關鍵字",
+      "seed": 3840270065,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.639,
+      "name_zh": "風・控場",
+      "concept": "隨機組合器產生的控場技能（種子 740188340，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.639,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.533,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1398,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 983
+        },
+        {
+          "step": "propose",
+          "seconds": 6.09,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1398,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 974
+        },
+        {
+          "step": "propose",
+          "seconds": 5.979,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 1398,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 973
+        }
+      ],
+      "index": 16
+    },
+    {
+      "request": "1 階／epic／不限骨架／focus",
+      "seed": 2099149301,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.045,
+      "name_zh": "物理・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 3010851542，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.045,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 5.982,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4782,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 998
+        },
+        {
+          "step": "propose",
+          "seconds": 5.893,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4782,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 981
+        },
+        {
+          "step": "propose",
+          "seconds": 5.993,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4782,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1004
+        }
+      ],
+      "index": 17
+    },
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2962346860,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 19.565,
+      "name_zh": "神聖・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 3528847285，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 19.565,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.392,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4799,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 987
+        },
+        {
+          "step": "propose",
+          "seconds": 6.504,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4799,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1012
+        },
+        {
+          "step": "propose",
+          "seconds": 6.407,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4799,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 991
+        }
+      ],
+      "index": 18
+    },
+    {
+      "request": "1 階／rare／不限骨架／ki",
+      "seed": 4286476637,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 19.252,
+      "name_zh": "暗影・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 2475961516，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 19.252,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.562,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4558,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1002
+        },
+        {
+          "step": "propose",
+          "seconds": 6.386,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4558,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1007
+        },
+        {
+          "step": "propose",
+          "seconds": 6.173,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 4558,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 1001
+        }
+      ],
+      "index": 19
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 1691836196,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ],
+        [
+          "llm.bad_response"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：llm.bad_response）",
+      "first_pass": false,
+      "propose_seconds": 18.969,
+      "name_zh": "暗影・刻印",
+      "concept": "隨機組合器產生的刻印技能（種子 849882208，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe",
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 18.969,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 6.458,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2055,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 977
+        },
+        {
+          "step": "propose",
+          "seconds": 6.258,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2055,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 997
+        },
+        {
+          "step": "propose",
+          "seconds": 6.202,
+          "status": 200,
+          "finish_reason": "length",
+          "prompt_tokens": 2055,
+          "completion_tokens": 1024,
+          "reasoning_tokens": 976
+        }
+      ],
+      "index": 20
+    }
+  ]
+}

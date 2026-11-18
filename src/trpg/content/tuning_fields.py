@@ -26,6 +26,7 @@ from trpg.content.environment import AiProfileTable, ObjectTable
 from trpg.content.loader import load_content_file
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules
 from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import ON_KILL_TYPES
@@ -119,13 +120,15 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "rules": CoreRules,
     "budget": BudgetRules,
     "object": ObjectTable,
+    "pick": SkillPickRules,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
-（無聲的預算成本）；NW-3 起 ``object``＝``objects.yaml``（格子物件的 ``max_hp``）。``ai``、
-``rules``、``budget``、``object`` 都是「一個檔一個全體共用的表」）。"""
+（無聲的預算成本）；NW-3 起 ``object``＝``objects.yaml``（格子物件的 ``max_hp``）；
+PK-1 起 ``pick``＝``skill_pick.yaml``（技能挑選模式的權重）。
+``ai``、``rules``、``budget``、``object``、``pick`` 都是「一個檔一個全體共用的表」）。"""
 
-TABLE_KINDS: Final = ("ai", "rules", "budget", "object")
+TABLE_KINDS: Final = ("ai", "rules", "budget", "object", "pick")
 """一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
 SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
@@ -162,7 +165,7 @@ class TuningField(ContentModel):
 class TuningTarget(ContentModel):
     """一類對象：``glob`` 選到的每個檔是一個對象（檔名＝對象 ID）。"""
 
-    kind: Literal["unit", "skill", "ai", "rules", "budget", "object"]
+    kind: Literal["unit", "skill", "ai", "rules", "budget", "object", "pick"]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
     exclude: tuple[str, ...] = ()

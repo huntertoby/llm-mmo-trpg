@@ -164,7 +164,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
                     </span>
                   )}
                 </summary>
-                <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} />
+                <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} wish={view.character?.skill_wishes?.[card.id]} />
               </details>
               <span className="pnl-skill-tag">{limit !== null && <LockTag text={LEVEL4_TAG_ZH} reason={limit} />}</span>
               <Hint text={can ? undefined : reason}>

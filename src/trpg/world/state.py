@@ -66,6 +66,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
 from trpg.content.equipment import ItemDef
+from trpg.content.skill_pick import WishTags
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SlotType
 from trpg.content.world_newcomer import RangeClass
@@ -127,6 +128,7 @@ __all__ = [
     "TimedFlag",
     "TradeRecord",
     "WeaponMix",
+    "WishNote",
     "WishWeek",
     "WorldEventState",
     "WorldState",
@@ -548,6 +550,15 @@ class QuestState(_Model):
     completed_at: int | None = Field(default=None, ge=0)
 
 
+class WishNote(_Model):
+    """PK-4 許願池「願望驅動」（07 7.6）：這次許願的願望原文（文字許願；點選標籤時 ``None``）與
+    需求標籤。原文只當文字顯示（``<player_input>`` 規則），選到的技能記進
+    ``CharacterState.skill_wishes``（魔導書扉頁）。"""
+
+    text: str | None = None
+    tags: WishTags
+
+
 class PendingOffer(_Model):
     """任務給的技能三選一，還沒選（Phase 5B-4；07 7.6）。候選已經產生好，選的時候不重抽。
 
@@ -568,6 +579,8 @@ class PendingOffer(_Model):
     舊存檔，選的時候用角色當下的區域。"""
     refund: int = Field(default=0, ge=0, exclude_if=lambda v: v == 0)
     """都不拿時退還的任務幣（WP-1 許願池，#88 2b；照許願當時的費用算）；0 不輸出。"""
+    wish: WishNote | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 許願池「願望驅動」：願望原文與需求標籤（舊流程、其他來源 ``None``，不輸出）。"""
 
 
 class WishWeek(_Model):
@@ -1499,6 +1512,10 @@ class CharacterState(_Model):
     skill_regions: dict[str, str] = Field(default_factory=dict)
     """學到的技能（取得時的技能 ID）→ 取得地點的區域。閃現的變化名照原技能的界域
     （:func:`trpg.world.growth.skill_region`）；沒有紀錄（創角、舊存檔）＝中性。"""
+    skill_wishes: dict[str, str] = Field(default_factory=dict, exclude_if=lambda v: not v)
+    """PK-4 魔導書扉頁（07 7.6「許願池：願望驅動」第 6 點，09 9.6.1）：從許願池（文字許願）學到的
+    技能（取得時的技能 ID）→ 玩家的願望原文（只當文字顯示）。重閃後沿著原本的技能找
+    （:func:`trpg.world.growth.skill_wish`）；空的不輸出（舊存檔逐字不變）。"""
 
     # ---- 交易共同前置與郵寄（Phase 6T-1a，08 8.16、#136；邏輯在 trpg.world.trade） ----
     gear_origin: dict[str, GearOrigin] = Field(default_factory=dict)

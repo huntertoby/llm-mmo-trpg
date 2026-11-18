@@ -703,9 +703,19 @@ REGRESSION = ProposalRequest(
 REGRESSION_SEED = 3514268949
 
 
+def _without_recipes(library: ContentLibrary) -> ContentLibrary:
+    """RC-1 前的組合器（三個補配方的機率都是 0）：留著測工坊這條退路。"""
+    recipes = library.composer.recipes.model_copy(
+        update={"passive_permille": 0, "reaction_permille": 0, "summon_permille": 0}
+    )
+    return replace(library, composer=library.composer.model_copy(update={"recipes": recipes}))
+
+
 def test_reaction_heal_high_ground_rare_tier2_falls_back(library: ContentLibrary) -> None:
     """反應技＋高地（階級 2 稀有）：組合器做不出帶高地的反應技、技能池沒有階級 2 的反應技，
-    原本工坊也沒填反應時機而丟 FallbackError；現在由工坊做出反應技。"""
+    原本工坊也沒填反應時機而丟 FallbackError；現在由工坊做出反應技。RC-1 起組合器做得出高處反應，
+    所以用 RC-1 前的組合器測工坊這條退路。"""
+    library = _without_recipes(library)
     ctx = ProposalContext(2, "rare")
     skill, source = fallback_skill(library, REGRESSION, ctx, seed=REGRESSION_SEED)
     assert source == "workshop"
@@ -718,10 +728,24 @@ def test_reaction_heal_high_ground_rare_tier2_falls_back(library: ContentLibrary
 
 @pytest.mark.parametrize("keyword", ["wet", "high_ground", "summon"])
 def test_reaction_keywords_the_composer_cannot_carry(library: ContentLibrary, keyword: str) -> None:
-    """修補前所有階級的稀有／史詩反應技配這三個關鍵字都會丟 FallbackError（掃描 18 組）。"""
+    """修補前所有階級的稀有／史詩反應技配這三個關鍵字都會丟 FallbackError（掃描 18 組）。
+    RC-1 起潮濕、高處由組合器做。召喚物的護主 RC-1b 補上推導規則後 1、2 階由組合器做，3 階起縮小版
+    召喚物到全強度（1000‰）仍進不了預算窗（TF-1 已知），照舊由工坊做（見
+    :func:`test_guardian_reaction_comes_from_the_composer`）。工坊這條退路用 RC-1 前的組合器測。"""
     request = ProposalRequest(3, "epic", kind="reaction", keywords=(keyword,))
     assert _legal(library, request)
-    assert _check(library, request, seed=0) == "workshop"
+    assert _check(_without_recipes(library), request, seed=0) == "workshop"
+    expected = "workshop" if keyword == "summon" else "composer"
+    assert _check(library, request, seed=0) == expected
+
+
+def test_guardian_reaction_comes_from_the_composer(library: ContentLibrary) -> None:
+    """RC-1b：2 階的召喚物反應題，退回路徑由組合器做出護主（``summon_beside``）。"""
+    request = ProposalRequest(2, "rare", kind="reaction", keywords=("summon",))
+    ctx = ProposalContext(request.tier, request.rarity)
+    skill, source = fallback_skill(library, request, ctx, seed=0)
+    assert source == "composer"
+    assert [e.type for e in skill.effects] == ["summon_beside"]
 
 
 # ---------------------------------------------------------------------------

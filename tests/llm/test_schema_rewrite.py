@@ -107,7 +107,9 @@ def test_rewrite_disabled_sends_oneof_untouched() -> None:
 # ---- 退回 guided_json 的警告 ----
 
 
-def test_fallback_to_guided_json_warns_once(caplog: pytest.LogCaptureFixture) -> None:
+def test_fallback_to_guided_json_logs_error_every_time(caplog: pytest.LogCaptureFixture) -> None:
+    """LB-2：退到 guided_json（LM Studio 會忽略＝沒有約束）每次都記 error，附伺服器本文。"""
+
     def handler(request: httpx.Request) -> httpx.Response:
         if "response_format" in json.loads(request.content):
             return httpx.Response(400, json={"error": "oneOf constraints are not supported"})
@@ -118,29 +120,33 @@ def test_fallback_to_guided_json_warns_once(caplog: pytest.LogCaptureFixture) ->
     with caplog.at_level(logging.WARNING, logger="trpg.llm"):
         client.complete(MSGS, json_schema=NESTED)
         client.complete(MSGS, json_schema=NESTED)
-    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
-    assert len(warnings) == 1
-    assert "拒絕 response_format（HTTP 400）" in warnings[0].getMessage()
-    assert "guided_json" in warnings[0].getMessage()
+    errors = [r for r in caplog.records if r.levelno == logging.ERROR]
+    assert len(errors) == 2
+    message = errors[0].getMessage()
+    assert "拒絕 response_format（HTTP 400：" in message
+    assert "oneOf constraints are not supported" in message
+    assert "沒有 schema 約束" in message
     assert client.accepted_schema_mode == "guided_json"
+    assert client.unconstrained_calls == 2
 
 
 def test_no_warning_when_response_format_accepted(caplog: pytest.LogCaptureFixture) -> None:
     client = client_with(lambda r: httpx.Response(200, json=ok_body()))
     with caplog.at_level(logging.WARNING, logger="trpg.llm"):
         client.complete(MSGS, json_schema=NESTED)
-    assert not [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
     assert client.accepted_schema_mode == "response_format"
 
 
-def test_all_modes_rejected_warns_only_for_first_fallback(
+def test_all_modes_rejected_logs_one_error(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     client = client_with(lambda r: httpx.Response(422, json={}))
     with caplog.at_level(logging.WARNING, logger="trpg.llm"), pytest.raises(LLMBadResponse):
         client.complete(MSGS, json_schema=NESTED)
-    assert len([r for r in caplog.records if r.levelno == logging.WARNING]) == 1
+    assert len([r for r in caplog.records if r.levelno == logging.ERROR]) == 1
     assert client.accepted_schema_mode is None
+    assert client.unconstrained_calls == 0
 
 
 # ---- trpg llm ping ----

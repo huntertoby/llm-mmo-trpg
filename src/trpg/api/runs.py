@@ -41,7 +41,7 @@ from trpg.roguelite import (
     write_save,
 )
 from trpg.roguelite.errors import NodeConflictError
-from trpg.roguelite.llm_hook import FlashSourceFactory, use_flash_source, use_proposer
+from trpg.roguelite.llm_hook import FlashSourceFactory, use_flash_source, use_picker, use_proposer
 from trpg.roguelite.start import with_origin, with_race
 from trpg.roguelite.state import (
     AllocateChoice,
@@ -58,6 +58,7 @@ from trpg.roguelite.state import (
 )
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Attribute
+from trpg.skillgen.pick_offer import OfferPicker
 from trpg.skillgen.proposal_topic import LlmProposer
 
 __all__ = ["RunNotFoundError", "RunSession", "RunStore"]
@@ -82,6 +83,8 @@ class RunSession:
         """這一輪的 LLM 提議器（4-L6b；``run.llm`` 為真且有模型來源時才有）。"""
         self.flash_source: FlashSourceFactory | None = None
         """這一輪的閃現變化提議來源（3W-5；``run.llm`` 為真且有模型來源時才有）。"""
+        self.picker: OfferPicker | None = None
+        """這一輪的挑選模式挑選器（PK-2；``run.llm`` 為真且有模型來源時才有）。"""
         self.llm_notice: str | None = None
         """開局時要提示一次的訊息（例如本機模型未啟動）；只在建立的回應帶出。"""
         self.load_notice: str | None = None
@@ -96,7 +99,7 @@ class RunSession:
         with battle.lock:
             if not battle.state.ended:
                 return False
-            with use_proposer(self.proposer):
+            with use_proposer(self.proposer), use_picker(self.picker):
                 self.run = finish_battle(
                     self.library, self.run, battle.state, len(battle.steps), battle.steps
                 )
@@ -218,6 +221,7 @@ class RunStore:
         session.alert_permille = self.llm.alert_permille()
         if session.run.llm:
             session.proposer = self.llm.proposer(self.library)
+            session.picker = self.llm.picker(self.library)
             session.flash_source = self.llm.flash_source(self.library)
 
     def get(self, run_id: str) -> RunSession:
@@ -258,7 +262,11 @@ class RunStore:
         ):
             # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能閃現、配點或換裝
             raise NodeConflictError("戰鬥進行中不能閃現、分配屬性點或換裝")
-        with use_proposer(session.proposer), use_flash_source(session.flash_source):
+        with (
+            use_proposer(session.proposer),
+            use_picker(session.picker),
+            use_flash_source(session.flash_source),
+        ):
             session.run = apply_choice(self.library, session.run, choice)
         self.autosave(session)
 

@@ -7,10 +7,10 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
-from tests.engine.helpers import library
+from tests.engine.helpers import lf2_library
 from trpg.llm.flash_propose import mock_flash_source
 
-LIB = library()
+LIB = lf2_library()  # PK-3：測 LF-2 的提議流程（閃現挑選模式關掉）
 _PATH = Path(__file__).resolve().parents[2] / "scripts" / "eval_flash_diversity.py"
 
 

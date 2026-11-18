@@ -145,6 +145,15 @@ class LlmRecord(_Model):
     """提議 prompt 的版本號（``trpg.llm`` 的 ``PROMPT_VERSION``；4-L8）；沒有請 LLM 為 ``None``。"""
     naming_prompt_version: str | None = None
     """命名 prompt 的版本號（``NAMING_PROMPT_VERSION``；4-L8）；沒有命名步驟為 ``None``。"""
+    pick_seeds: tuple[int | None, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """挑選模式（Phase PK-1）：送給 LLM 的前 K 個候選的組合器種子（依排序；手寫技能為 ``None``）。
+    以下四欄空值不寫出，沒有挑選模式的存檔逐字不變。"""
+    pick_designs: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """挑選模式：前 K 個候選的設計鍵（與 ``pick_seeds`` 對齊）。"""
+    pick_index: int | None = Field(default=None, exclude_if=lambda v: v is None)
+    """挑選模式：LLM 選的 index；沒有請 LLM 或 LLM 失敗時為 ``None``。"""
+    pick_reason: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """挑選模式：退回原因；正常為 ``None``。"""
 
 
 class OfferTag(_Model):
@@ -157,6 +166,16 @@ class OfferTag(_Model):
     source: Literal["pool", "composer", "llm"]
     fallback: bool = False
     llm: LlmRecord | None = None
+    pick: Literal["llm", "top"] | None = Field(default=None, exclude_if=lambda v: v is None)
+    """挑選模式（Phase PK-2，``skill_pick.yaml`` 的 ``enabled``）：``llm``＝LLM 從這一格排好的候選
+    挑選並命名；``top``＝這一格分數第一名（沒有 LLM、不請 LLM 或 LLM 失敗）。不是挑選模式為
+    ``None``（不寫出，舊存檔與關掉開關的存檔逐字不變）。"""
+    wish_reply_zh: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 許願池（07 7.6「許願池：願望驅動」第 4 點）：LLM 寫的一句回應願望的話（只描述這張本來的
+    效果，過了一致性檢查才留）；沒有＝``None``（不寫出）。"""
+    wish_miss_zh: str | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 許願池（同上第 5 點）：沒有命中全部願望標籤時卡上加的一行（程式依標籤產生）；全部命中或
+    不是許願池＝``None``（不寫出）。"""
 
 
 class SkillOffer(_Model):
@@ -266,6 +285,9 @@ class FlashLlmRecord(_Model):
     texts: tuple[VariationText, ...] = Field(default=(), exclude_if=lambda v: not v)
     """LLM 的名稱與描述（LF-1，依變化的鍵；出題時由引擎檢查後掛上）。沒有時不輸出（舊紀錄逐字
     不變）。"""
+    picks: tuple[int, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """PK-3 挑選模式：每格選第幾個候選（依格子順序；``accepted`` 是每格選中的變化）。提議模式
+    （LF-2）沒有，不輸出。"""
 
 
 class LevelUpChoice(_Model):

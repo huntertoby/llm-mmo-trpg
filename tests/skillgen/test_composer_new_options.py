@@ -59,13 +59,15 @@ def test_the_composer_uses_the_new_structural_primitives() -> None:
 
 
 def test_hand_written_only_primitives_are_never_composed() -> None:
-    hand_written = {"summon", "zone", "leap", "swap", "swap_any", "teleport_target", "revive"}
+    hand_written = {"zone", "leap", "swap", "swap_any", "teleport_target", "revive"}
     hand_written |= {"hurl_object", "topple", "charge_through", "shadowstep", "grant_skill"}
     hand_written |= {"copy_skill"}
     for seed in range(200):
         skill = compose_random_skill(seed)
         found = {e.type for e in skill.effects}
         assert found.isdisjoint(hand_written)
+        # RC-1：召喚只出現在整招召喚（召喚骨架、唯一的效果），一般主動流程不抽
+        assert ("summon" in found) == (skill.skeleton == "summon")
 
 
 def test_modifier_skills_cover_many_kinds_of_change() -> None:
@@ -139,8 +141,8 @@ def test_composer_traits_in_yaml() -> None:
     skeletons = lib().skeletons
     by_trait = {
         "legendary": {"aura", "modifier"},
-        "explicit_only_active": {"builder_finisher", "trap", "rune", "sacrifice"},
-        "hand_written_only": {"consume_status", "summon"},
+        "explicit_only_active": {"builder_finisher", "trap", "rune", "sacrifice", "summon"},
+        "hand_written_only": {"consume_status"},
     }
     for trait, expected in by_trait.items():
         assert {n for n, s in skeletons.items() if getattr(s.composer, trait)} == expected

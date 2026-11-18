@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cache
 from types import MappingProxyType
@@ -900,9 +900,43 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
     effect_level = ctx.skeleton.composer.effect_level_condition and len(damages) > 1
     if effect_level or (not required and ctx.chance(ctx.rules.condition.effect_level_permille)):
         index = damages[1] if effect_level else ctx.rng.choice(enemy or [0])
-        ctx.effects[index]["condition"] = spec
+        if not _odd_on_effect(ctx.effects[index], spec):  # PK-3（玩法 PM 4.1.23）：怪的不掛
+            ctx.effects[index]["condition"] = spec
         return None
-    return spec
+    return _skill_level(ctx.effects, spec, required=required)
+
+
+def _skill_level(
+    effects: Sequence[Mapping[str, Any]], spec: dict[str, Any], *, required: bool
+) -> dict[str, Any] | None:
+    """技能層級的條件；PK-3（玩法 PM 4.1.23）怪的組合不產生：骨架要求條件時重抽，否則不掛條件
+    （亂數照舊）。"""
+    if not _odd_on_skill(effects, spec):
+        return spec
+    if required:
+        raise Retry
+    return None
+
+
+_DAMAGE_TYPES = frozenset({"damage", "delayed_damage"})
+_FIRST_ROUND = "first_round"
+_INSCRIBE = "inscribe"
+
+
+def _odd_on_effect(effect: Mapping[str, Any], spec: Mapping[str, Any]) -> bool:
+    """PK-3（玩法 PM 4.1.23「組合器不產生、驗證器不改」）：效果層級的條件不掛在刻紋上（刻紋本身沒有
+    效果，06 6.25），「第一輪」只掛在傷害上（非傷害效果只在第一輪生效＝第二輪起只剩代價）。"""
+    if effect["type"] == _INSCRIBE:
+        return True
+    return spec["type"] == _FIRST_ROUND and effect["type"] not in _DAMAGE_TYPES
+
+
+def _odd_on_skill(effects: Sequence[Mapping[str, Any]], spec: Mapping[str, Any]) -> bool:
+    """PK-3（同上）：整招沒有傷害時，技能層級不抽「第一輪」，也不給帶刻紋的招抽條件（同
+    ``skill_pick.odd_conditions`` 的判定，打分扣分留著當保險）。"""
+    if any(e["type"] in _DAMAGE_TYPES for e in effects):
+        return False
+    return spec["type"] == _FIRST_ROUND or any(e["type"] == _INSCRIBE for e in effects)
 
 
 # ---------------------------------------------------------------------------
@@ -1091,10 +1125,11 @@ def _passive_effect(ctx: Ctx, name: str, target: str, *, core: bool) -> None:
         _status_effect(ctx, beneficial=target == "self")
 
 
-def build_passive_effects(ctx: Ctx, target: str) -> None:
+def build_passive_effects(ctx: Ctx, target: str, *, second: bool = True) -> None:
     """被動的效果：一個核心效果，再依機率多一個不同原語的附帶效果（骨架 ``max_count: 1``）。
 
-    ``target``：``trigger.target``（``other`` 或 ``self``）；形狀固定為 ``self``。
+    ``target``：``trigger.target``（``other`` 或 ``self``）；形狀固定為 ``self``。``second`` 為假時
+    不抽附帶效果（RC-1 配方自己加附帶，例如累積層數）。
     """
     names = _passive_candidates(target)
     beneficial = target == "self"
@@ -1109,7 +1144,7 @@ def build_passive_effects(ctx: Ctx, target: str) -> None:
         for name in _usable_primitives(ctx, names, core=False, beneficial=beneficial)
         if name != first
     ]
-    if rest and ctx.chance(ctx.rules.passive.second_effect_permille):
+    if second and rest and ctx.chance(ctx.rules.passive.second_effect_permille):
         _passive_effect(ctx, ctx.rng.choice(rest), target, core=False)
 
 
@@ -1153,17 +1188,22 @@ def _intercept_effects(ctx: Ctx) -> None:
     _shield_if_allowed(ctx, core=False)
 
 
-def build_reaction_effects(ctx: Ctx, event: str) -> None:
+def build_reaction_effects(
+    ctx: Ctx, event: str, *, second: bool = True, branch: str | None = None
+) -> None:
     """反應技的形狀與效果。
 
     擋攻擊：見 :func:`_intercept_effects`；其他事件：自身增益（形狀 self，只用骨架核心允許的原語）
     或對觸發者的傷害、有害狀態、推拉（形狀 single）。候選原語都由骨架資料篩選。
+
+    RC-1 配方用：``second`` 為假時不抽附帶效果；``branch="other"`` 一定走對觸發者的分支（不擲
+    自身增益的機率）。預設值＝原本的行為與亂數呼叫。
     """
     rules = ctx.rules.reaction
     if event == "ally_hit_adjacent":
         _intercept_effects(ctx)
         return
-    if ctx.chance(rules.self_permille):
+    if branch is None and ctx.chance(rules.self_permille):
         # 沒有骨架允許的自身增益原語時，改走對觸發者的分支。
         own = _usable_primitives(
             ctx, ("heal", "shield", "apply_status"), core=True, beneficial=True
@@ -1186,7 +1226,7 @@ def build_reaction_effects(ctx: Ctx, event: str) -> None:
     build_shape(ctx, [name], only=("single",))
     ctx.core_count = 1
     _make_effect(ctx, name, core=True, beneficial_only=False)
-    if ctx.chance(rules.second_effect_permille):
+    if second and ctx.chance(rules.second_effect_permille):
         pool = _secondary_pool(ctx)
         if pool:
             _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)

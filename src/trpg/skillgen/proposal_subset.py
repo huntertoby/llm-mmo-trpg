@@ -45,6 +45,7 @@ from trpg.skillgen.proposal_followup import (
 )
 from trpg.skillgen.proposal_layouts import layout_hint, plan_layouts
 from trpg.skillgen.proposal_numbers import numeric_param_names
+from trpg.skillgen.proposal_passive import PASSIVE_KIND, unfit_effect_rules
 from trpg.skillgen.proposal_topup import keyword_way_texts
 
 __all__ = [
@@ -107,6 +108,12 @@ class ProposalRequest:
     region: str | None = None
     """技能取得地點的區域 ID（#126，06 6.34.7）：名稱與描述照該區風格。``None``＝中性（創角、
     許願池、測試原型）。由呼叫端依世界狀態傳入；只進 prompt，不影響子集與數值。"""
+    wants_variants: bool = False
+    """題目明確要求戰場變奏（LB-2c，玩法 PM 4.1.18 第 1 點）：只有為真時送給約束解碼的 schema
+    才有 ``variants`` 欄位、prompt 才有變奏說明（數量仍照稀有度上限）。現有的出題（升級候選、
+    許願池、``trpg llm`` 的評估題目）都沒有「要變奏」的資料，一律是 ``False``；之後出題指定
+    戰場變奏、或許願池的願望講到地形時，由呼叫端設為 ``True``。只影響 schema 與 prompt，
+    提議模型與驗證不變。"""
 
     def __post_init__(self) -> None:
         if self.tier < 1:
@@ -149,6 +156,9 @@ class ProposalSubset:
     followup_moves: tuple[str, ...] = ()
     """複合技能第二段另外可用的施放者自身位移（Phase 4-L8；YAML 順序，稀有度夠的
     ``COMPOSITE_MOVES``，即使不在 ``primitives``）。"""
+    tier: int | None = None
+    """題目的階級（LB-2b）：被動題目的關鍵字 ``ways`` 依這一階的被動預算拿掉放不進的產生效果
+    （:func:`_keyword_ways`）；``None`` ＝ 不篩（篩選大小時、手組的子集）。不影響模型與 schema。"""
 
 
 # ---------------------------------------------------------------------------
@@ -180,19 +190,24 @@ def _models_key(subset: ProposalSubset) -> tuple[object, ...]:
     )
 
 
-def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> ProposalModels:
+def build_subset_models(
+    library: ContentLibrary, subset: ProposalSubset, *, split_category: bool = False
+) -> ProposalModels:
     """只含子集的提議模型，同一內容庫物件與同一子集重用（PERF-4）。
+
+    ``split_category``：頂層再依技能類別分支（``weapon_req`` 只列與 ``category`` 配對的值；LB-2，
+    見 :func:`~trpg.skillgen.proposal.build_proposal_models`）。
 
     :class:`ProposalModels` 是 frozen，呼叫端只讀，所以可以共用。快取項目持有內容庫的強參照：
     內容庫物件還活著時 ``id`` 不會被重用；被擠出後就能回收，最多留
     :data:`_MODELS_CACHE_SIZE` 項。"""
-    key = (id(library), _models_key(subset))
+    key = (id(library), (*_models_key(subset), split_category))
     with _models_lock:
         hit = _models_cache.get(key)
         if hit is not None:
             _models_cache.move_to_end(key)
             return hit[1]
-    models = _build_subset_models(library, subset)
+    models = _build_subset_models(library, subset, split_category=split_category)
     with _models_lock:
         _models_cache[key] = (library, models)
         _models_cache.move_to_end(key)
@@ -201,7 +216,9 @@ def build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> Prop
     return models
 
 
-def _build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> ProposalModels:
+def _build_subset_models(
+    library: ContentLibrary, subset: ProposalSubset, *, split_category: bool = False
+) -> ProposalModels:
     """未記憶化的本體（:func:`~trpg.skillgen.proposal.build_proposal_models` 的便利包裝）。"""
     return build_proposal_models(
         library,
@@ -215,6 +232,7 @@ def _build_subset_models(library: ContentLibrary, subset: ProposalSubset) -> Pro
         followup_skeletons=subset.followup_skeletons or None,
         followup_shapes=subset.followup_shapes,
         followup_moves=subset.followup_moves,
+        split_category=split_category,
     )
 
 
@@ -258,20 +276,43 @@ def available_payload(library: ContentLibrary, subset: ProposalSubset) -> dict[s
                 "name_zh": keywords[i].name_zh,
                 "hint": keywords[i].description_zh,
                 # 6S-2：這份選單裡帶得到這個關鍵字的寫法（keyword.required 的主因）
-                "ways": keyword_way_texts(
-                    library,
-                    i,
-                    primitives=subset.primitives,
-                    conditions=subset.conditions,
-                    triggers=subset.triggers,
-                    shapes=subset.shapes,
-                ),
+                "ways": _keyword_ways(library, subset, keywords[i]),
             }
             for i in sorted(subset.keywords)
         ],
     }
     payload.update(_extra_entries(library, subset))
     return payload
+
+
+def _keyword_ways(
+    library: ContentLibrary, subset: ProposalSubset, keyword: KeywordDef
+) -> list[str]:
+    """關鍵字在這份選單裡的寫法（:func:`keyword_way_texts`）。被動題目（LB-2b，玩法 PM 4.1.17）：
+    ``uses``（條件、觸發）排前面當主要寫法，``makes`` 裡做成被動一定超預算的效果不列
+    （:func:`~trpg.skillgen.proposal_passive.unfit_effect_rules`；``tier`` 是 ``None`` 時不篩）。"""
+    passive = subset.kind == PASSIVE_KIND
+    skip: frozenset[str] = frozenset()
+    if passive and subset.tier is not None and subset.rarity is not None:
+        skip = unfit_effect_rules(
+            library,
+            keyword.makes,
+            tier=subset.tier,
+            rarity=subset.rarity,
+            primitives=subset.primitives,
+            triggers=subset.triggers,
+            skeletons=subset.skeletons,
+        )
+    return keyword_way_texts(
+        library,
+        keyword.id,
+        primitives=subset.primitives,
+        conditions=subset.conditions,
+        triggers=subset.triggers,
+        shapes=subset.shapes,
+        skip=skip,
+        uses_first=passive,
+    )
 
 
 def _extra_entries(library: ContentLibrary, subset: ProposalSubset) -> dict[str, Any]:
@@ -664,7 +705,8 @@ def select_subset(
         if item in models.primitive_ids:
             continue  # 只是不能用在變奏
         sel.drop(item, why)
-    final = replace(final, primitives=tuple(sorted(models.primitive_ids)))
+    # LB-2b：階級只在最後放進去（被動題目的 ways 依預算篩）；挑大小時用不篩的估算（只會偏大）
+    final = replace(final, primitives=tuple(sorted(models.primitive_ids)), tier=request.tier)
     return replace(
         final, dropped=tuple(sorted(sel.dropped.items())), tokens=subset_tokens(library, final)
     )

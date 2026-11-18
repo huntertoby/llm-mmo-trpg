@@ -110,7 +110,8 @@ def _caster_condition_met(state: BattleState, caster: UnitState, condition: Cond
         "self_lacks_status": lambda: not caster.has_status(str(condition.status)),
         # 施放者的某種層數達 N 層（KW-1，#161）；施放中由 Cast.holds 改看施放開始時的快照
         SELF_STACK_AT_LEAST: lambda: stack_at_least(caster.stacks, condition),
-        # 施放者站在高處（KW-2，#161 鷹眼）：所在格高度至少 1 層（占位定義，待 PM；飛行不算）
+        # 施放者站在高處（KW-2，#161 鷹眼）：所在格高度至少 1 層、飛行不算
+        # （定義定案：玩法 PM 4.1.18 第 2 點）
         SELF_ON_HIGH_GROUND: lambda: state.tile(*caster.xy).height >= 1,
     }
     if kind in simple:

@@ -5,6 +5,8 @@ LLM 寫的名稱、概念、施放敘事（與閃現 note_zh）只能描述技�
 - :func:`check_mentions`：提到詞表（``content/llm/effect_words.yaml``）裡的控制、元素、召喚等詞時，
   技能效果（:func:`skill_facts`：狀態、元素、表面、原語、召喚物）裡要找得到對應；
 - :func:`check_added`：閃現變化加上的效果（:func:`added_facts`）要被提到；
+- :func:`strict_facts`（PK-2）：再加上條件與形狀（``condition:height_advantage``、``shape:cone``），
+  給挑選模式的加嚴詞組（``strict: true``，高處、地形、單字元素）比對；
 - :func:`check_world_terms`：世界觀詞（``world_shattered.yaml`` 的 ``naming.world_terms``）的
   用量上限。
 
@@ -35,7 +37,9 @@ __all__ = [
     "check_world_terms",
     "effect_phrases",
     "mentioned_groups",
+    "multi_char_strict",
     "skill_facts",
+    "strict_facts",
     "world_term_count",
 ]
 
@@ -101,6 +105,32 @@ def skill_facts(library: ContentLibrary, skill: SkillDef) -> frozenset[str]:
     return frozenset(out)
 
 
+def _conditions(node: Any, out: set[str]) -> None:
+    if isinstance(node, list):
+        for item in node:
+            _conditions(item, out)
+        return
+    if not isinstance(node, dict):
+        return
+    for key in sorted(node):
+        value = node[key]
+        if key == "condition" and isinstance(value, dict) and isinstance(value.get("type"), str):
+            out.add(f"condition:{value['type']}")
+        _conditions(value, out)
+
+
+def strict_facts(library: ContentLibrary, skill: SkillDef) -> frozenset[str]:
+    """PK-2：:func:`skill_facts` 再加上條件（``condition:<種類>``；技能層級、效果、變奏、接續段的
+    條件都算）與形狀（``shape:<種類>``，含接續段）。給加嚴詞組（``strict: true``）比對。"""
+    out = set(skill_facts(library, skill))
+    _conditions(skill.model_dump(mode="json", exclude=_EXCLUDED), out)
+    out.add(f"shape:{skill.shape.type}")
+    follow = skill.followup_skill()
+    if follow is not None:
+        out.add(f"shape:{follow.shape.type}")
+    return frozenset(out)
+
+
 def _rider_facts(status: StatusDef | None) -> set[str]:
     """狀態本身帶的附帶效果（護盾被打破時造表面、雷電傷害、施加狀態；3W-2b 的護盾橋接）。
     技能資料只寫狀態 ID，這些效果在狀態定義上，敘事提到它們（「一灘水」「雷電」）也算有對應。"""
@@ -142,11 +172,33 @@ def strip_similes(text: str, words: EffectWords) -> str:
     return re.sub(pattern, "　", text)
 
 
-def mentioned_groups(text: str, words: EffectWords) -> list[tuple[EffectWordGroup, str]]:
-    """``text`` 提到的詞組與第一個被提到的詞（依詞表順序）；比喻片段不算。"""
+_MULTI_CHAR = 2
+
+
+def multi_char_strict(words: EffectWords) -> EffectWords:
+    """PK-3（06 6.34.7，使用者題 3「B 只擋多字詞」）：加嚴詞組（``strict: true``）只留兩個字以上的
+    詞，一個詞都不剩的詞組拿掉（單字的風、土、石、斬、劈不看）；一般詞組不變。給閃現變化名用。"""
+    groups = []
+    for group in words.groups:
+        if not group.strict:
+            groups.append(group)
+            continue
+        kept = tuple(w for w in group.words if len(w) >= _MULTI_CHAR)
+        if kept:
+            groups.append(group.model_copy(update={"words": kept}))
+    return words.model_copy(update={"groups": tuple(groups)})
+
+
+def mentioned_groups(
+    text: str, words: EffectWords, *, strict: bool = False
+) -> list[tuple[EffectWordGroup, str]]:
+    """``text`` 提到的詞組與第一個被提到的詞（依詞表順序）；比喻片段不算。``strict``（PK-2）＝
+    加嚴詞組（``strict: true``）也看；預設不看。"""
     found: list[tuple[EffectWordGroup, str]] = []
     text = strip_similes(text, words)
     for group in words.groups:
+        if group.strict and not strict:
+            continue
         cleaned = _strip_ignored(text, group)
         word = next((w for w in group.words if w in cleaned), None)
         if word is not None:
@@ -155,13 +207,14 @@ def mentioned_groups(text: str, words: EffectWords) -> list[tuple[EffectWordGrou
 
 
 def check_mentions(
-    label: str, text: str, facts: frozenset[str], words: EffectWords
+    label: str, text: str, facts: frozenset[str], words: EffectWords, *, strict: bool = False
 ) -> list[NameCheck]:
     """``text`` 提到的詞在 ``facts`` 裡找不到對應時回報 ``{label}.effect_mismatch``（一段一個錯誤，
-    說明列出全部不符的詞）。"""
+    說明列出全部不符的詞）。``strict``（PK-2）＝加嚴詞組也看（``facts`` 要用
+    :func:`strict_facts`）。"""
     bad = [
         word
-        for group, word in mentioned_groups(text, words)
+        for group, word in mentioned_groups(text, words, strict=strict)
         if not facts & set(group.matches.facts())
     ]
     if not bad:
@@ -184,7 +237,7 @@ def check_added(
     joined = "\n".join(texts)
     missing: list[str] = []
     for fact in sorted(added):
-        groups = [g for g in words.groups if fact in g.matches.facts()]
+        groups = [g for g in words.groups if not g.strict and fact in g.matches.facts()]
         if len(groups) != 1:  # 沒有對應詞、或同時對應多組（clear_surface 之類）的不要求
             continue
         if not any(any(w in _strip_ignored(joined, g) for w in g.words) for g in groups):
@@ -207,7 +260,7 @@ def added_word_choices(
     ``per_group`` 個詞，以「／」分隔（寫出其中一個就算提到）。沒有要求的效果不列。"""
     out: list[str] = []
     for fact in sorted(added):
-        groups = [g for g in words.groups if fact in g.matches.facts()]
+        groups = [g for g in words.groups if not g.strict and fact in g.matches.facts()]
         if len(groups) == 1:
             out.append("／".join(groups[0].words[:per_group]))
     return list(dict.fromkeys(out))

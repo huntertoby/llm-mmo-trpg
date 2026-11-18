@@ -1,0 +1,31 @@
+AUTO run=859c3a1f6dcd node=gear_offer finish_seconds=0.03
+AUTO run=859c3a1f6dcd node=gear_offer finish_seconds=0.03
+PICK slot source=llm index=0 name=護佑之光 attempts=1 codes=[] reason=None seconds=2.58
+AUTO run=859c3a1f6dcd node=ended finish_seconds=0.03
+AUTO run=2ff309bd71e2 node=gear_offer finish_seconds=0.02
+PICK slot source=llm index=0 name=重斧碎地 attempts=1 codes=[] reason=None seconds=2.56
+PICK slot source=llm index=0 name=重斧蓄勢 attempts=1 codes=[] reason=None seconds=0.56
+AUTO run=2ff309bd71e2 node=gear_offer finish_seconds=0.03
+PICK slot source=llm index=0 name=沉墜重擊 attempts=2 codes=['name_zh.effect_mismatch', 'cast_flavor.effect_mismatch'] reason=None seconds=1.10
+PICK slot source=llm index=0 name=斧刃留痕 attempts=1 codes=[] reason=None seconds=0.50
+AUTO run=2ff309bd71e2 node=ended finish_seconds=0.03
+AUTO run=e9d2f6494bdd node=gear_offer finish_seconds=0.02
+PICK slot source=llm index=0 name=熾焰之舞 attempts=1 codes=[] reason=None seconds=2.58
+PICK slot source=llm index=1 name=意志躍動 attempts=2 codes=['cast_flavor.effect_mismatch'] reason=None seconds=1.06
+AUTO run=e9d2f6494bdd node=gear_offer finish_seconds=0.02
+PICK slot source=llm index=0 name=烈焰圓陣 attempts=2 codes=['concept.charset', 'cast_flavor.charset'] reason=None seconds=1.05
+AUTO run=e9d2f6494bdd node=gear_offer finish_seconds=0.03
+PICK slot source=llm index=0 name=爆裂火種 attempts=1 codes=[] reason=None seconds=0.55
+PICK slot source=llm index=1 name=高處的屏障 attempts=2 codes=['cast_flavor.effect_mismatch'] reason=None seconds=1.16
+AUTO run=ecdfe3306d82 node=gear_offer finish_seconds=0.03
+PICK slot source=llm index=0 name=烈焰重擊 attempts=1 codes=[] reason=None seconds=2.65
+PICK slot source=llm index=0 name=重壓之擊 attempts=1 codes=[] reason=None seconds=0.46
+PICK slot source=llm index=2 name=劍身護殼 attempts=1 codes=[] reason=None seconds=0.52
+AUTO run=ecdfe3306d82 node=gear_offer finish_seconds=0.02
+PICK slot source=llm index=0 name=劍身燃燒 attempts=1 codes=[] reason=None seconds=0.57
+AUTO run=ecdfe3306d82 node=gear_offer finish_seconds=0.03
+PICK slot source=llm index=0 name=火靈伴生 attempts=2 codes=['concept.effect_mismatch'] reason=None seconds=1.04
+AUTO run=1713e52ea5f1 node=gear_offer finish_seconds=0.03
+PICK slot source=llm index=0 name=魔導劍・噬焰 attempts=1 codes=[] reason=None seconds=2.55
+PICK slot source=llm index=0 name=重壓崩裂 attempts=2 codes=['cast_flavor.effect_mismatch'] reason=None seconds=0.93
+PICK slot source=llm index=1 name=鬥志激盪 attempts=1 codes=[] reason=None seconds=0.48

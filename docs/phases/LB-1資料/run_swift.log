@@ -1,0 +1,24 @@
+伺服器拒絕 response_format（HTTP 400），已退回 guided_json；LM Studio 等伺服器會忽略 guided_json，輸出可能不符 schema
+暖機：23.4 秒（composer）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 495, 'ttft_s': 10.8, 'generation_s': 8.04, 'generation_tps': 62.2}｜VRAM：NVIDIA GeForce RTX 5090, 24404 MiB, 32607 MiB
+  1. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜41.5 秒｜暗影・蓄力與終結
+  2. 1 階／rare／不限骨架／fury｜composer｜嘗試 3｜38.3 秒｜神聖・蓄力與終結
+  3. 1 階／epic／不限骨架／marked｜composer｜嘗試 3｜39.6 秒｜毒素・刻印
+  4. 1 階／common／不限骨架／summon｜workshop｜嘗試 3｜39.3 秒｜範圍（保底）
+  5. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜38.5 秒｜物理・刻印
+  6. 1 階／epic／不限骨架／無關鍵字｜composer｜嘗試 3｜42.2 秒｜冰霜・控場
+  7. 1 階／common／area／無關鍵字｜composer｜嘗試 3｜36.4 秒｜物理・範圍
+  8. 1 階／rare／不限骨架／high_ground｜composer｜嘗試 3｜40.6 秒｜雷電・連段
+  9. 1 階／epic／builder_finisher／無關鍵字｜composer｜嘗試 3｜34.9 秒｜物理・蓄力與終結
+ 10. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜36.8 秒｜神聖・刻印
+ 11. 1 階／rare／strike／無關鍵字｜composer｜嘗試 3｜38.7 秒｜雷電・打擊
+ 12. 1 階／epic／passive／high_ground｜pool｜嘗試 3｜40.1 秒｜鷹眼
+ 13. 1 階／common／不限骨架／charged｜composer｜嘗試 3｜38.6 秒｜雷電・範圍
+ 14. 1 階／rare／combo／無關鍵字｜composer｜嘗試 3｜37.9 秒｜火焰・連段
+ 15. 1 階／epic／不限骨架／marked｜composer｜嘗試 3｜37.4 秒｜雷電・刻印
+ 16. 1 階／common／control／無關鍵字｜composer｜嘗試 3｜38.8 秒｜風・控場
+ 17. 1 階／epic／不限骨架／focus｜composer｜嘗試 3｜39.8 秒｜物理・蓄力與終結
+ 18. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜40.3 秒｜神聖・蓄力與終結
+ 19. 1 階／rare／不限骨架／ki｜composer｜嘗試 3｜38.9 秒｜暗影・蓄力與終結
+ 20. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜36.0 秒｜暗影・刻印
+中位數 38.76 秒、最慢 42.15 秒、一次通過 0/20、退回 20/20 → docs\phases\LB-1資料\swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp.json

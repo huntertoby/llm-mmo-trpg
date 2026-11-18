@@ -1,0 +1,1586 @@
+{
+  "model": "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp",
+  "base_url": "http://localhost:8001/v1",
+  "reasoning_effort": "none",
+  "enable_thinking": false,
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "timeout_s": 240.0,
+  "max_retries": 3,
+  "seed": 0,
+  "started_utc": "2026-11-14T13:48:26+00:00",
+  "warmup": {
+    "request": "1 階／common／不限骨架／無關鍵字",
+    "source": "llm",
+    "seconds": 6.517,
+    "calls": [
+      {
+        "step": "propose",
+        "seconds": 4.696,
+        "status": 200,
+        "finish_reason": "stop",
+        "prompt_tokens": 1957,
+        "completion_tokens": 114,
+        "reasoning_tokens": 0
+      },
+      {
+        "step": "naming",
+        "seconds": 1.785,
+        "status": 200,
+        "finish_reason": "stop",
+        "prompt_tokens": 1187,
+        "completion_tokens": 76,
+        "reasoning_tokens": 0
+      }
+    ]
+  },
+  "speed": {
+    "completion_tokens": 500,
+    "reasoning_tokens": 0,
+    "ttft_s": 2.39,
+    "generation_s": 7.85,
+    "generation_tps": 63.7
+  },
+  "gpu_memory": "NVIDIA GeForce RTX 5090, 25999 MiB, 32607 MiB",
+  "schema_mode": "response_format",
+  "unconstrained_calls": 0,
+  "llm_log": [],
+  "finished_utc": "2026-11-14T13:50:41+00:00",
+  "server": {
+    "arch": "qwen35",
+    "quantization": "Q4_K_XL",
+    "compatibility_type": "gguf",
+    "loaded_context_length": 8192,
+    "state": "loaded"
+  },
+  "summary": {
+    "questions": 20,
+    "completed": 20,
+    "first_pass": 12,
+    "first_pass_permille": 600,
+    "fallback": 5,
+    "fallback_permille": 250,
+    "sources": {
+      "llm": 15,
+      "composer": 3,
+      "workshop": 1,
+      "pool": 1
+    },
+    "mean_attempts": 1.65,
+    "seconds_median": 5.61,
+    "seconds_max": 9.35,
+    "seconds_mean": 5.94,
+    "propose_seconds_median": 3.84,
+    "call_seconds_median": 1.79,
+    "calls": 52,
+    "completion_tokens_per_second": 53.2,
+    "reasoning_tokens": 0,
+    "reasoning_tokens_median": 0.0,
+    "completion_tokens_median": 123.0,
+    "finish_length": 0,
+    "naming_llm": 15,
+    "naming_total": 15,
+    "failures": {
+      "llm": {},
+      "format": {
+        "value_error": 1
+      },
+      "engine": {
+        "keyword.required": 5,
+        "skeleton.secondary": 5,
+        "exclusion.terrain_needs_earth": 4,
+        "passive.category": 1,
+        "reference": 1,
+        "skeleton.required_primitive": 1
+      }
+    }
+  },
+  "rows": [
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2171825236,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "skeleton.secondary"
+        ],
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"weapon\",\n  \"weapon_req\": \"melee\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"physical\"\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"combo_point\"\n    }\n  ],\n  \"tags\": []\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects[1]",
+              "code": "skeleton.secondary",
+              "message": "骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"skeleton.secondary\", \"message\": \"骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）\", \"path\": \"effects[1]\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"weapon\",\n  \"weapon_req\": \"melee\",\n  \"skeleton\": \"builder_finisher\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"physical\"\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"combo_point\"\n    }\n  ],\n  \"tags\": []\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 7.681,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "裂空重斬",
+      "concept": "凝聚殘破的氣流於刃尖，蓄力後以極速揮砍，對單一目標造成物理傷害並疊加層數。",
+      "cast_flavor": "刀刃劃過空氣發出低鳴，隨着力量匯聚，一記沉重的橫斬將空間撕開細縫。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack"
+      ],
+      "naming_seconds": 1.673,
+      "seconds": 9.354,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 5.638,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5176,
+          "completion_tokens": 144,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.737,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5424,
+          "completion_tokens": 143,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.67,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1205,
+          "completion_tokens": 90,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 1
+    },
+    {
+      "request": "1 階／rare／不限骨架／fury",
+      "seed": 893870975,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "skeleton.secondary"
+        ],
+        [
+          "keyword.required"
+        ],
+        [
+          "skeleton.secondary"
+        ]
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"weapon\",\n  \"weapon_req\": \"melee\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"fire\"\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"fury\"\n    }\n  ]\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects[1]",
+              "code": "skeleton.secondary",
+              "message": "骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"skeleton.secondary\", \"message\": \"骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）\", \"path\": \"effects[1]\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"weapon\",\n  \"weapon_req\": \"melee\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"fire\"\n    }\n  ]\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects",
+              "code": "keyword.required",
+              "message": "技能必須製造或利用題目的關鍵字 fury，但提議沒有帶到。可用寫法（fury：add_stack（stack＝fury）、consume_stack（stack＝fury））",
+              "allowed": [
+                "fury"
+              ]
+            }
+          ],
+          "feedback": "{\"attempt\": 2, \"errors\": [{\"allowed\": [\"fury\"], \"code\": \"keyword.required\", \"message\": \"技能必須製造或利用題目的關鍵字 fury，但提議沒有帶到。可用寫法（fury：add_stack（stack＝fury）、consume_stack（stack＝fury））\", \"path\": \"effects\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"weapon\",\n  \"weapon_req\": \"melee\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"fire\"\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"fury\"\n    }\n  ]\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects[1]",
+              "code": "skeleton.secondary",
+              "message": "骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）"
+            }
+          ]
+        }
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：skeleton.secondary）",
+      "first_pass": false,
+      "propose_seconds": 7.412,
+      "name_zh": "神聖・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 2434386524，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 7.412,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.739,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4950,
+          "completion_tokens": 140,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.512,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5192,
+          "completion_tokens": 111,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.697,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5170,
+          "completion_tokens": 135,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 2
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 532914297,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"control\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"marked\",\n      \"affects\": \"enemies\"\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 3.77,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "殘影烙印",
+      "concept": "以法術在目標身上留下不可抹除的痕跡，使其狀態被徹底標記。",
+      "cast_flavor": "指尖輕點，一道幽光沒入對方軀體，留下一枚沉默而恆久的標記。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status"
+      ],
+      "naming_seconds": 1.486,
+      "seconds": 5.256,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.68,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5164,
+          "completion_tokens": 126,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.484,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1202,
+          "completion_tokens": 77,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 3
+    },
+    {
+      "request": "1 階／common／不限骨架／summon",
+      "seed": 4278761754,
+      "source": "workshop",
+      "attempts": 3,
+      "codes": [
+        [
+          "exclusion.terrain_needs_earth"
+        ],
+        [
+          "keyword.required"
+        ],
+        [
+          "keyword.required"
+        ]
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"any\",\n  \"skeleton\": \"aura\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 2\n  },\n  \"effects\": [\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"stoneskin\",\n      \"affects\": \"allies\"\n    }\n  ]\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "",
+              "code": "exclusion.terrain_needs_earth",
+              "message": "互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 single（range 2），冷卻 無，效果 apply_status:stoneskin）。請在技能 JSON 的頂層填 element: \"earth\"（效果裡各自的 element 不算）"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"exclusion.terrain_needs_earth\", \"message\": \"互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 single（range 2），冷卻 無，效果 apply_status:stoneskin）。請在技能 JSON 的頂層填 element: \\\"earth\\\"（效果裡各自的 element 不算）\", \"path\": \"\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"any\",\n  \"skeleton\": \"aura\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 2\n  },\n  \"effects\": [\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"stoneskin\",\n      \"affects\": \"allies\"\n    }\n  ],\n  \"element\": \"earth\"\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects",
+              "code": "keyword.required",
+              "message": "技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到。可用寫法（summon：apply_status（status＝commanding））",
+              "allowed": [
+                "summon"
+              ]
+            }
+          ],
+          "feedback": "{\"attempt\": 2, \"errors\": [{\"allowed\": [\"summon\"], \"code\": \"keyword.required\", \"message\": \"技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到。可用寫法（summon：apply_status（status＝commanding））\", \"path\": \"effects\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"any\",\n  \"skeleton\": \"aura\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 2\n  },\n  \"effects\": [\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"stoneskin\",\n      \"affects\": \"allies\"\n    },\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"stoneskin\",\n      \"affects\": \"allies\"\n    }\n  ],\n  \"element\": \"earth\"\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects",
+              "code": "keyword.required",
+              "message": "技能必須製造或利用題目的關鍵字 summon，但提議沒有帶到。可用寫法（summon：apply_status（status＝commanding））",
+              "allowed": [
+                "summon"
+              ]
+            }
+          ]
+        }
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ],
+        [
+          "budget.weak"
+        ],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：keyword.required）",
+      "first_pass": false,
+      "propose_seconds": 6.639,
+      "name_zh": "範圍（保底）",
+      "concept": "",
+      "cast_flavor": "",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 6.639,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.888,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2074,
+          "completion_tokens": 127,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.561,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2360,
+          "completion_tokens": 130,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.851,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2305,
+          "completion_tokens": 164,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 4
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3214451173,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"rune\",\n  \"scaling_attr\": \"wis\",\n  \"shape\": {\n    \"type\": \"cross\",\n    \"range\": 5\n  },\n  \"effects\": [\n    {\n      \"type\": \"inscribe\",\n      \"element\": \"fire\"\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.64,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "concept.world_terms",
+        "concept.effect_mismatch"
+      ],
+      "name_zh": "赤印烙印",
+      "concept": "在目標身上烙下燃燒的十字標記，讓火焰持續啃噬其血肉。",
+      "cast_flavor": "指尖劃過空氣凝成熾熱十字，深深嵌入敵人身軀，灼燒出滾動的紋路。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 2.883,
+      "seconds": 5.523,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.597,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2406,
+          "completion_tokens": 117,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.529,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1204,
+          "completion_tokens": 84,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.35,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1409,
+          "completion_tokens": 77,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 5
+    },
+    {
+      "request": "1 階／epic／不限骨架／無關鍵字",
+      "seed": 3656944096,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"any\",\n  \"skeleton\": \"area\",\n  \"scaling_attr\": \"wis\",\n  \"shape\": {\n    \"type\": \"cross\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"fire\"\n    },\n    {\n      \"type\": \"create_surface\",\n      \"surface\": \"oil\"\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 4.132,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "concept.effect_mismatch"
+      ],
+      "name_zh": "灼油十字",
+      "concept": "火焰劃出十字形痕跡，將地面覆蓋一層滾燙的油膜。",
+      "cast_flavor": "赤紅光線在空氣中交疊成十字，墜落處的地表瞬間浸滿閃爍的熱油。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "create_surface"
+      ],
+      "naming_seconds": 2.754,
+      "seconds": 6.886,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.897,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5024,
+          "completion_tokens": 139,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.522,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1216,
+          "completion_tokens": 81,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.229,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1360,
+          "completion_tokens": 74,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 6
+    },
+    {
+      "request": "1 階／common／area／無關鍵字",
+      "seed": 3066109316,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"area\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"cone\",\n    \"size\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.328,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "地脈震錐",
+      "concept": "將大地的沉重頻率凝結成一道向前擴散的錐形衝擊。",
+      "cast_flavor": "雙掌向地面按壓，腳下的石塊沿著錐形軌跡猛烈隆起並撞開前方。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 1.501,
+      "seconds": 3.829,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.303,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1517,
+          "completion_tokens": 121,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.498,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1204,
+          "completion_tokens": 77,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 7
+    },
+    {
+      "request": "1 階／rare／不限骨架／high_ground",
+      "seed": 1817687911,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "exclusion.terrain_needs_earth"
+        ],
+        [
+          "exclusion.terrain_needs_earth"
+        ],
+        [
+          "exclusion.terrain_needs_earth"
+        ]
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"control\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"ground_tile\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"raise_terrain\",\n      \"affects\": \"tiles\"\n    },\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    }\n  ],\n  \"condition\": {\n    \"type\": \"height_advantage\"\n  }\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "",
+              "code": "exclusion.terrain_needs_earth",
+              "message": "互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 2 回合，效果 raise_terrain、damage）。請在技能 JSON 的頂層填 element: \"earth\"（效果裡各自的 element 不算）"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"exclusion.terrain_needs_earth\", \"message\": \"互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 2 回合，效果 raise_terrain、damage）。請在技能 JSON 的頂層填 element: \\\"earth\\\"（效果裡各自的 element 不算）\", \"path\": \"\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"control\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"ground_tile\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"raise_terrain\",\n      \"affects\": \"tiles\"\n    },\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    }\n  ],\n  \"condition\": {\n    \"type\": \"height_advantage\"\n  }\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "",
+              "code": "exclusion.terrain_needs_earth",
+              "message": "互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 2 回合，效果 raise_terrain、damage）。請在技能 JSON 的頂層填 element: \"earth\"（效果裡各自的 element 不算）"
+            }
+          ],
+          "feedback": "{\"attempt\": 2, \"errors\": [{\"code\": \"exclusion.terrain_needs_earth\", \"message\": \"互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 2 回合，效果 raise_terrain、damage）。請在技能 JSON 的頂層填 element: \\\"earth\\\"（效果裡各自的 element 不算）\", \"path\": \"\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"control\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"ground_tile\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"raise_terrain\",\n      \"affects\": \"tiles\"\n    },\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    }\n  ],\n  \"condition\": {\n    \"type\": \"height_advantage\"\n  }\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "",
+              "code": "exclusion.terrain_needs_earth",
+              "message": "互斥規則「地形、石膚、震波限大地」：隆起地形（raise_terrain）、下陷地形（lower_terrain）、震波（shockwave）與石膚（stoneskin）只有大地元素的技能能用（技能元素要是 earth）（形狀 ground_tile（range 3），冷卻 2 回合，效果 raise_terrain、damage）。請在技能 JSON 的頂層填 element: \"earth\"（效果裡各自的 element 不算）"
+            }
+          ]
+        }
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ],
+        [
+          "budget.weak"
+        ],
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": "用盡 3 次（最後一次：exclusion.terrain_needs_earth）",
+      "first_pass": false,
+      "propose_seconds": 8.623,
+      "name_zh": "雷電・連段",
+      "concept": "隨機組合器產生的連段技能（種子 3466511313，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "damage",
+        "push"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 8.623,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 4.133,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4919,
+          "completion_tokens": 167,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 2.1,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5247,
+          "completion_tokens": 161,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.982,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5247,
+          "completion_tokens": 161,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 8
+    },
+    {
+      "request": "1 階／epic／builder_finisher／無關鍵字",
+      "seed": 690982258,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "skeleton.required_primitive"
+        ],
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"builder_finisher\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\"range\":\"weapon\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    }\n  ]\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "",
+              "code": "skeleton.required_primitive",
+              "message": "骨架 builder_finisher：效果至少要有 add_stack、consume_stack 其中之一"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"skeleton.required_primitive\", \"message\": \"骨架 builder_finisher：效果至少要有 add_stack、consume_stack 其中之一\", \"path\": \"\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"builder_finisher\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\"range\":\"weapon\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"static_charge\"\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 4.609,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "name_zh.effect_mismatch",
+        "cast_flavor.effect_mismatch"
+      ],
+      "name_zh": "厚土疊痕",
+      "concept": "引動大地深沉的重量，在目標身上累積層數並造成傷害。",
+      "cast_flavor": "法杖尖端凝聚厚重的震動，將大地的沉重一層層刻入敵人身軀。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack"
+      ],
+      "naming_seconds": 2.568,
+      "seconds": 7.178,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.746,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2238,
+          "completion_tokens": 120,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.807,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2430,
+          "completion_tokens": 140,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.489,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1228,
+          "completion_tokens": 75,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.075,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1415,
+          "completion_tokens": 71,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 9
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3084845306,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"rune\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"ground_tile\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"inscribe\",\n      \"element\": \"fire\",\n      \"condition\": null\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.77,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "焦紋標記",
+      "concept": "在目標身上留下燃燒的痕跡，使其成為顯眼的火源。",
+      "cast_flavor": "指尖掠過空氣，一道赤紅的刻印憑空浮現，死死釘在對手身上。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 1.33,
+      "seconds": 4.099,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.742,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2406,
+          "completion_tokens": 123,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.327,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1228,
+          "completion_tokens": 71,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 10
+    },
+    {
+      "request": "1 階／rare／strike／無關鍵字",
+      "seed": 838456073,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 5\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\",\n      \"scaling\": null\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.571,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "cast_flavor.simplified"
+      ],
+      "name_zh": "岩脊重擊",
+      "concept": "凝聚大地的重量，對單一目標造成沉重打擊。",
+      "cast_flavor": "法杖頓地，周圍的岩塊隨之沉壓，將目標狠狠砸向地面。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 2.208,
+      "seconds": 4.778,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.519,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2335,
+          "completion_tokens": 120,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.351,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1222,
+          "completion_tokens": 66,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.853,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1335,
+          "completion_tokens": 66,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 11
+    },
+    {
+      "request": "1 階／epic／passive／high_ground",
+      "seed": 3203845091,
+      "source": "pool",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "passive.category"
+        ],
+        [
+          "keyword.required"
+        ]
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"passive\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"passive\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"self\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"shield\",\n      \"affects\": \"self\"\n    }\n  ],\n  \"condition\": {\n    \"type\": \"height_advantage\"\n  }\n}",
+          "errors": [
+            {
+              "stage": "skill",
+              "path": "",
+              "code": "value_error",
+              "message": "被動技能（kind: passive）必須有 trigger",
+              "input": "{\"category\": \"spell\", \"condition\": {\"type\": \"height_advantage\"}, \"effects\": [{\"affects\": \"self\", \"dice\": \"1d4\", \"type\": \"shield\"}], \"id\": \"skill_llm_2037582801\", \"kind\": \"passive\", \"name_zh\": \"提議技能\",…"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"value_error\", \"message\": \"被動技能（kind: passive）必須有 trigger\", \"path\": \"\", \"stage\": \"skill\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"passive\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"passive\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"self\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"shield\",\n      \"affects\": \"self\"\n    }\n  ],\n  \"trigger\": {\n    \"event\": \"on_turn_start\"\n  }\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "",
+              "code": "passive.category",
+              "message": "骨架 passive 要求 category: spell、weapon_req: any（收到 spell、focus）"
+            }
+          ],
+          "feedback": "{\"attempt\": 2, \"errors\": [{\"code\": \"passive.category\", \"message\": \"骨架 passive 要求 category: spell、weapon_req: any（收到 spell、focus）\", \"path\": \"\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"passive\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"any\",\n  \"skeleton\": \"passive\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"self\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"shield\",\n      \"affects\": \"self\"\n    }\n  ],\n  \"trigger\": {\n    \"event\": \"on_turn_start\"\n  }\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects",
+              "code": "keyword.required",
+              "message": "技能必須製造或利用題目的關鍵字 high_ground，但提議沒有帶到。可用寫法（high_ground：raise_terrain、lower_terrain）",
+              "allowed": [
+                "high_ground"
+              ]
+            }
+          ]
+        }
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：keyword.required）",
+      "first_pass": false,
+      "propose_seconds": 8.195,
+      "name_zh": "鷹眼",
+      "concept": "站得越高，看得越遠，心也越靜",
+      "cast_flavor": "你在高處俯瞰整片戰場，每個破綻都看得一清二楚",
+      "skill_kind": "passive",
+      "effects": [
+        "shield",
+        "add_stack"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 8.195,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.788,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2893,
+          "completion_tokens": 129,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.604,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3089,
+          "completion_tokens": 125,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.484,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3097,
+          "completion_tokens": 125,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 12
+    },
+    {
+      "request": "1 階／common／不限骨架／charged",
+      "seed": 1858532144,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": \"weapon\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"lightning\",\n      \"scaling\": null\n    }\n  ],\n  \"element\": \"lightning\",\n  \"cost_overdraft\": true,\n  \"tags\": []\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.823,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "蒼雷觸指",
+      "concept": "將源晶的震盪凝於指尖，瞬間釋放出一道細長而銳利的電弧打擊單一目標。",
+      "cast_flavor": "指尖迸出刺目的藍白光暈，一道細長的閃電如針般直刺而出，在空氣中留下焦灼的餘響。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 1.535,
+      "seconds": 4.358,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.809,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2072,
+          "completion_tokens": 146,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.532,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1239,
+          "completion_tokens": 90,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 13
+    },
+    {
+      "request": "1 階／rare／combo／無關鍵字",
+      "seed": 1407370244,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"weapon\",\n  \"weapon_req\": \"melee\",\n  \"skeleton\": \"combo\",\n  \"scaling_attr\": \"str\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"lightning\",\n      \"scaling\": null\n    },\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"stun\"\n    }\n  ],\n  \"condition\": {\n    \"type\": \"target_has_status\",\n    \"status\": \"burning\"\n  }\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [
+          "exclusion.stun_single_long_cooldown"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 3.903,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "驚蟄電弧",
+      "concept": "將帶電的餘頻凝於刃尖，一擊劈出閃電，使目標陷入短暫失神。",
+      "cast_flavor": "劍身嗡鳴震動，藍白電光沿著金鐵紋路炸開，隨斬擊落下的瞬間纏住敵人四肢。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.785,
+      "seconds": 5.688,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.608,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3388,
+          "completion_tokens": 176,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.781,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1262,
+          "completion_tokens": 90,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 14
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 3354077213,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 5\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"lightning\"\n    },\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"marked\"\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.799,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "蒼電刻痕",
+      "concept": "以高頻雷電刺入目標，留下持續閃爍的標記。",
+      "cast_flavor": "指尖凝聚蒼白弧光，瞬間貫穿敵身並烙下電紋。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.246,
+      "seconds": 4.045,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.719,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5164,
+          "completion_tokens": 139,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.243,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1266,
+          "completion_tokens": 69,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 15
+    },
+    {
+      "request": "1 階／common／control／無關鍵字",
+      "seed": 3840270065,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"control\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 2\n  },\n  \"effects\": [\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"slow\"\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [
+          "budget.weak",
+          "topup.budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.57,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "腐息纏身",
+      "concept": "散佈殘餘氣息，令目標行動遲緩並持續受到侵蝕。",
+      "cast_flavor": "指尖輕彈，無形的瘴氣如蛛網般纏繞上去，將對方的步伐與呼吸一同拖入泥沼。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status",
+        "apply_status"
+      ],
+      "naming_seconds": 1.325,
+      "seconds": 3.895,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.526,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1582,
+          "completion_tokens": 116,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.322,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1268,
+          "completion_tokens": 79,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 16
+    },
+    {
+      "request": "1 階／epic／不限骨架／focus",
+      "seed": 2099149301,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "reference"
+        ],
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"builder_finisher\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 4\n  },\n  \"effects\": [\n    {\n      \"type\": \"consume_stack\",\n      \"stack\": \"focus\"\n    }\n  ],\n  \"element\": \"earth\",\n  \"tags\": []\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects[0].stack",
+              "code": "reference",
+              "message": "消耗層數 focus 的技能至少要有傷害其中一種效果"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"reference\", \"message\": \"消耗層數 focus 的技能至少要有傷害其中一種效果\", \"path\": \"effects[0].stack\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"builder_finisher\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 4\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"earth\"\n    },\n    {\n      \"type\": \"consume_stack\",\n      \"stack\": \"focus\"\n    }\n  ],\n  \"element\": \"earth\",\n  \"tags\": []\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 5.511,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "岩層崩解",
+      "concept": "凝聚大地之力於一點，擊碎目標防禦並消耗其累積的層數。",
+      "cast_flavor": "雙手虛握，腳下泥土翻湧成錐狀突起，猛然刺入敵人身軀。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack"
+      ],
+      "naming_seconds": 1.415,
+      "seconds": 6.926,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.623,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5159,
+          "completion_tokens": 133,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.716,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5363,
+          "completion_tokens": 149,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.412,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1276,
+          "completion_tokens": 75,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 17
+    },
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2962346860,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"builder_finisher\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": 3\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"fire\"\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"combo_point\"\n    }\n  ],\n  \"condition\": null\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.768,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "燎原積薪",
+      "concept": "將火焰層數疊加於目標身上，隨燃燒時間延長而加深灼燒痕跡。",
+      "cast_flavor": "指尖凝結熱浪，一層層火紋纏繞敵身，直至餘燼徹底浸透皮肉。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack"
+      ],
+      "naming_seconds": 1.545,
+      "seconds": 4.313,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.687,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5176,
+          "completion_tokens": 146,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.542,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1281,
+          "completion_tokens": 80,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 18
+    },
+    {
+      "request": "1 階／rare／不限骨架／ki",
+      "seed": 4286476637,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "skeleton.secondary"
+        ],
+        [
+          "skeleton.secondary"
+        ],
+        [
+          "keyword.required"
+        ]
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": \"weapon\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"wind\",\n      \"scaling\": {\n        \"by\": \"distance\"\n      }\n    },\n    {\n      \"type\": \"add_stack\",\n      \"stack\": \"ki\"\n    }\n  ],\n  \"element\": \"wind\"\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects[1]",
+              "code": "skeleton.secondary",
+              "message": "骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）"
+            }
+          ],
+          "feedback": "{\"attempt\": 1, \"errors\": [{\"code\": \"skeleton.secondary\", \"message\": \"骨架 strike：effects[1]（add_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）\", \"path\": \"effects[1]\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": \"weapon\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"wind\",\n      \"scaling\": {\n        \"by\": \"distance\"\n      }\n    },\n    {\n      \"type\": \"consume_stack\",\n      \"stack\": \"ki\"\n    }\n  ],\n  \"element\": \"wind\"\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects[1]",
+              "code": "skeleton.secondary",
+              "message": "骨架 strike：effects[1]（consume_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）"
+            }
+          ],
+          "feedback": "{\"attempt\": 2, \"errors\": [{\"code\": \"skeleton.secondary\", \"message\": \"骨架 strike：effects[1]（consume_stack）不在允許的附帶原語內（允許：apply_status、push、pull、knock_prone、dash、gamble、shadowstep）\", \"path\": \"effects[1]\", \"stage\": \"rules\"}], \"max_attempts\": 3}"
+        },
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"strike\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"single\",\n    \"range\": \"weapon\"\n  },\n  \"effects\": [\n    {\n      \"type\": \"damage\",\n      \"element\": \"wind\",\n      \"scaling\": {\n        \"by\": \"distance\"\n      }\n    },\n    {\n      \"type\": \"apply_status\",\n      \"status\": \"slow\"\n    }\n  ],\n  \"element\": \"wind\"\n}",
+          "errors": [
+            {
+              "stage": "rules",
+              "path": "effects",
+              "code": "keyword.required",
+              "message": "技能必須製造或利用題目的關鍵字 ki，但提議沒有帶到。可用寫法（ki：add_stack（stack＝ki）、consume_stack（stack＝ki））",
+              "allowed": [
+                "ki"
+              ]
+            }
+          ]
+        }
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：keyword.required）",
+      "first_pass": false,
+      "propose_seconds": 7.957,
+      "name_zh": "暗影・蓄力與終結",
+      "concept": "隨機組合器產生的蓄力與終結技能（種子 2475961516，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack",
+        "apply_status"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 7.957,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.911,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4935,
+          "completion_tokens": 163,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.893,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5201,
+          "completion_tokens": 159,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.923,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5201,
+          "completion_tokens": 160,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 19
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 1691836196,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "attempt_details": [
+        {
+          "raw": "{\n  \"layout\": \"standard\",\n  \"kind\": \"active\",\n  \"category\": \"spell\",\n  \"weapon_req\": \"focus\",\n  \"skeleton\": \"rune\",\n  \"scaling_attr\": \"int\",\n  \"shape\": {\n    \"type\": \"cross\",\n    \"range\": 1\n  },\n  \"effects\": [\n    {\n      \"type\": \"inscribe\",\n      \"element\": \"fire\",\n      \"condition\": null\n    }\n  ]\n}",
+          "errors": []
+        }
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.634,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "燃標十字",
+      "concept": "以火焰為墨，在目標身上烙下持續燃燒的十字標記。",
+      "cast_flavor": "指尖劃過空氣，殘留的熱氣凝成灼熱的十字印跡。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 1.185,
+      "seconds": 3.819,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.612,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2406,
+          "completion_tokens": 123,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.182,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1276,
+          "completion_tokens": 68,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 20
+    }
+  ]
+}

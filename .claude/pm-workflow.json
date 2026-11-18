@@ -1,0 +1,12 @@
+{
+  "checks": [
+    {"name": "完整檢查", "cmd": "uv run python scripts/check.py", "timeout": 1800},
+    {"name": "前端建置", "cmd": "corepack pnpm -C client build", "timeout": 900}
+  ],
+  "protect": [
+    "docs/玩法決定紀錄.md",
+    "docs/archive/玩法決定紀錄_1-138.md",
+    "docs/archive/玩法決定紀錄_附錄A代決.md",
+    "docs/archive/art/代決紀錄.md"
+  ]
+}

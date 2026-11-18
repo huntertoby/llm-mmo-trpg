@@ -24,6 +24,7 @@ from trpg.llm.prompts import (
 from trpg.shared import tokens as shared_tokens
 from trpg.skillgen import proposal_subset
 from trpg.skillgen.proposal import CLOSED_SKELETONS, ProposalContext, evaluate_proposal
+from trpg.skillgen.proposal.schema_shape import shape_schema
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError
 
 
@@ -78,7 +79,10 @@ def test_prompt_structure() -> None:
     assert "潮濕" in request_block
     assert '"skeleton":"strike"' in request_block
     assert '"kind":"active"' in request_block
-    assert prompt.json_schema == prompt.models.json_schema()
+    # LB-2：送給約束解碼的 schema ＝ 模型的 schema 收緊（變奏數量與替換內容、去說明文字）；
+    # 頂層依技能類別分支。LB-2c：題目沒要求變奏，schema 沒有 variants（上限 0）
+    assert prompt.json_schema == shape_schema(prompt.models.json_schema(), variant_limit=0)
+    assert {"SkillProposal_weapon", "SkillProposal_spell"} <= set(prompt.json_schema["$defs"])
     assert prompt.subset.skeletons == ("strike",)
     # LLM-1B：<available> 只放這題的子集（與 schema 一致），題目區沒有 allowed 清單
     assert "allowed" not in json.loads(request_block)

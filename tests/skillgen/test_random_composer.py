@@ -8,7 +8,7 @@ from fractions import Fraction
 import pytest
 
 from tests.skillgen.helpers import lib
-from trpg.content.skills import SkillDef, SkillRarity, legendary_cores
+from trpg.content.skills import EffectSpec, SkillDef, SkillRarity, legendary_cores
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
 from trpg.skillgen.composer_tuning import tuning_bounds
@@ -187,15 +187,32 @@ def test_combo_always_has_a_condition_and_conditions_need_rare() -> None:
             assert not has_condition
 
 
+def _wet_passive_puddle(skill: SkillDef, effect: EffectSpec) -> bool:
+    """潮濕被動的白板寫法：受傷時（``on_damaged``）在自己腳下造水，唯一允許的對己非增益表面。"""
+    return (
+        skill.kind == "passive"
+        and skill.trigger is not None
+        and skill.trigger.event == "on_damaged"
+        and effect.type == "create_surface"
+        and effect.surface == "water"
+        and effect.affects == "self"
+    )
+
+
 def test_no_harmful_status_or_surface_is_aimed_at_allies() -> None:
     rules = lib().ruleset
     statuses, surfaces = rules.statuses.by_id(), rules.surfaces
     for seed in range(300):
-        for effect in compose_random_skill(seed).effects:
+        skill = compose_random_skill(seed)
+        for effect in skill.effects:
             if effect.affects not in ("allies", "self"):
                 continue
             if effect.type == "apply_status":
                 assert effect.status is not None and statuses[effect.status].beneficial
+            if _wet_passive_puddle(skill, effect):
+                # 06 6.34.1 3W-4b：潮濕被動「被攻擊後，在自己腳下造水」（RC-1 配方）；
+                # 2026-11-15 使用者「A」保留這條放行
+                continue
             if effect.type == "create_surface":
                 assert effect.surface is not None and surfaces.get(effect.surface).beneficial
 

@@ -238,7 +238,7 @@ function breakCell(cap: string, before: HeartSpec, after: HeartSpec, partId: str
       p.setPartFx(BOSS, giantBreakFxOf(partId, frame, side, shed));
       if (frame >= 4) return;
       const res = p.art.figureRes(1);
-      // GB-4d：煙頂上限照遊戲（`giantBreakEffect` 同一個 `giantSmokeCeil`，看這一格的 HUD 下緣；只 800 寬）
+      // GB-4d：煙頂上限照遊戲（`giantBreakEffect` 同一個 `giantSmokeCeil`，看這一格的 HUD 下緣；800、1600 都壓）
       const d = buildDrawModel(view, HERO, null, undefined, BATTLE_DRAW).units.find((u) => u.id === BOSS);
       const ceil = d === undefined ? undefined : giantSmokeCeil(d, SCALE);
       const cv = giantBreakCanvas({ phase: before.phase ?? 1, fx: { part: GIANT_PART_OF[partId]!, k: frame, side } }, res, SCALE, ceil);

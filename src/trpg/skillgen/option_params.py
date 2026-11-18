@@ -27,6 +27,7 @@ from trpg.content.skills import (
     is_silent_grant,
 )
 from trpg.shared.types import Surface
+from trpg.skillgen.composer_parts import obstacle_candidates
 from trpg.skillgen.option_gear import gear_choices
 from trpg.skillgen.option_models import Choice, FieldSpec, FieldType
 
@@ -279,6 +280,17 @@ def _form_category_choices() -> tuple[Choice, ...]:
     )
 
 
+def _obstacle_choices(library: ContentLibrary) -> tuple[Choice, ...]:
+    """``object`` 型參數（目前只有 ``create_obstacle`` 造牆的 ``object``）的選單：組合器的
+    :func:`~trpg.skillgen.composer_parts.obstacle_candidates`，照 ``objects.yaml`` 的順序。"""
+    allowed = frozenset(obstacle_candidates(library))
+    return tuple(
+        Choice(value=o.id, name_zh=o.name_zh)
+        for o in library.ruleset.objects.objects
+        if o.id in allowed
+    )
+
+
 def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
     if kind in _LITERAL_CHOICES:
         return tuple(
@@ -290,9 +302,8 @@ def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
             Choice(value=e.id.value, name_zh=e.name_zh, description_zh=e.description_zh)
             for e in library.elements.elements
         ),
-        "object": lambda: tuple(
-            Choice(value=o.id, name_zh=o.name_zh) for o in rules.objects.objects
-        ),
+        # NW-3d（4.1.16）：造牆物件和組合器、LLM 提議同一份候選（冷卻井、油桶選不到）
+        "object": lambda: _obstacle_choices(library),
         "stack": lambda: stack_choices(library),
         "summon": lambda: tuple(
             Choice(value=s.id, name_zh=s.template.name_zh) for s in rules.summons.summons

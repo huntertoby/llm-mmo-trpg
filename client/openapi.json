@@ -19800,6 +19800,43 @@
               "llm"
             ],
             "title": "Source"
+          },
+          "pick": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "llm",
+                  "top"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pick"
+          },
+          "wish_reply_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wish Reply Zh"
+          },
+          "wish_miss_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wish Miss Zh"
           }
         },
         "additionalProperties": false,
@@ -21064,6 +21101,25 @@
             "type": "integer",
             "title": "Refund",
             "default": 0
+          },
+          "wish_text_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wish Text Zh"
+          },
+          "wish_tags_zh": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Wish Tags Zh",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -31874,6 +31930,16 @@
             "maxItems": 4,
             "title": "Keywords",
             "default": []
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WishTags"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -31905,6 +31971,92 @@
         ],
         "title": "WishMenuItemView",
         "description": "選單的一個關鍵字（「改用選單」挑 1～2 個）。"
+      },
+      "WishTagGroupView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label_zh": {
+            "type": "string",
+            "title": "Label Zh"
+          },
+          "max": {
+            "type": "integer",
+            "title": "Max"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WishMenuItemView"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label_zh",
+          "max",
+          "items"
+        ],
+        "title": "WishTagGroupView",
+        "description": "PK-4 願望驅動：標籤清單的一類（沒有 LLM 時玩家從這份清單點選；07 7.6「許願池：願望驅動」\n第 1 點）。``id`` 是 ``keywords``／``elements``／``effects``／``shapes``／``kinds``（送出\n``wish`` 動作的 ``tags`` 用同名欄位）。"
+      },
+      "WishTags": {
+        "properties": {
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords",
+            "default": []
+          },
+          "elements": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Elements",
+            "default": []
+          },
+          "effects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Effects",
+            "default": []
+          },
+          "shapes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shapes",
+            "default": []
+          },
+          "kinds": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "active",
+                "passive",
+                "reaction"
+              ]
+            },
+            "type": "array",
+            "title": "Kinds",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WishTags",
+        "description": "玩家的願望翻成的需求標籤（PK-4；07 7.6「許願池：願望驅動」第 1 點）：每一類都可以不選，值是\n清單的代碼（關鍵字是內容庫的關鍵字 ID）。合不合清單由\n:func:`trpg.skillgen.wish_pick.wish_tags_problem` 檢查（這裡只管格式）。"
       },
       "WishView": {
         "properties": {
@@ -31986,6 +32138,14 @@
             },
             "type": "array",
             "title": "Menu"
+          },
+          "tag_groups": {
+            "items": {
+              "$ref": "#/components/schemas/WishTagGroupView"
+            },
+            "type": "array",
+            "title": "Tag Groups",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -32821,6 +32981,13 @@
             },
             "type": "array",
             "title": "Bench"
+          },
+          "skill_wishes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Skill Wishes"
           },
           "slots_zh": {
             "type": "string",

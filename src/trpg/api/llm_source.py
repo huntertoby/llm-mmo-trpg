@@ -28,9 +28,13 @@ from trpg.llm import LLMConfig, LLMConfigError, OpenAICompatClient, load_llm_con
 from trpg.llm.candidate_source import make_proposer, mock_proposer
 from trpg.llm.client import LLMClient, MockLLMClient
 from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
+from trpg.llm.pick import make_offer_picker, mock_offer_picker
 from trpg.llm.story_skill import StoryProposer, make_story_proposer, mock_story_proposer
 from trpg.llm.wish import WishSource, mock_wish_client
+from trpg.llm.wish_pick import make_wish_picker, mock_wish_picker
+from trpg.llm.wish_tags import mock_wish_tags_client
 from trpg.roguelite.llm_hook import FlashSourceFactory
+from trpg.skillgen.pick_offer import OfferPicker
 from trpg.skillgen.proposal_topic import LlmProposer
 
 __all__ = [
@@ -56,6 +60,10 @@ class LlmProvider(Protocol):
 
     def proposer(self, library: ContentLibrary) -> LlmProposer | None:
         """建立候選用的提議器；設定壞掉等做不到時回傳 ``None``（該輪不使用 LLM）。"""
+        ...
+
+    def picker(self, library: ContentLibrary) -> OfferPicker | None:
+        """挑選模式三選一的挑選器（PK-2）；做不到時回傳 ``None``（每格用分數第一名）。"""
         ...
 
     def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
@@ -123,6 +131,13 @@ class LocalLlmProvider:
         client = OpenAICompatClient(config, transport=self._transport)
         return make_proposer(client, library, max_attempts=config.max_retries, naming=client)
 
+    def picker(self, library: ContentLibrary) -> OfferPicker | None:
+        config = self._config()
+        if config is None:
+            return None
+        client = OpenAICompatClient(config, transport=self._transport)
+        return make_offer_picker(client, library, max_attempts=config.max_retries)
+
     def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
         config = self._config()
         if config is None:
@@ -152,6 +167,10 @@ class LocalLlmProvider:
                 client, library, max_attempts=config.max_retries, naming=client, player_text=wish
             ),
             max_attempts=config.max_retries,
+            # PK-4 願望驅動：同一個 client 翻需求標籤、挑 3 張並回應願望
+            picker=lambda wish: make_wish_picker(
+                client, library, wish, max_attempts=config.max_retries
+            ),
         )
 
     def alert_permille(self) -> int:
@@ -195,6 +214,9 @@ class MockLlmProvider:
     def proposer(self, library: ContentLibrary) -> LlmProposer | None:
         return mock_proposer(library, naming=True)
 
+    def picker(self, library: ContentLibrary) -> OfferPicker | None:
+        return mock_offer_picker(library)
+
     def flash_source(self, library: ContentLibrary) -> FlashSourceFactory | None:
         naming = self.flash_naming
         return lambda sink: mock_flash_source(library, sink=sink, naming=naming)
@@ -206,6 +228,8 @@ class MockLlmProvider:
         return WishSource(
             client=lambda wish, menu: mock_wish_client(library, wish, menu),
             proposer=lambda _wish: mock_proposer(library, naming=True),
+            tag_client=lambda wish, menu: mock_wish_tags_client(library, wish, menu),
+            picker=lambda _wish: mock_wish_picker(library),
         )
 
     def alert_permille(self) -> int:

@@ -88,6 +88,7 @@ from trpg.world.growth import (
     gain_xp,
     skill_seed,
     with_skill_region,
+    with_skill_wish,
     world_library,
     xp_to_level,
 )
@@ -98,6 +99,7 @@ from trpg.world.state import (
     DeferredOffer,
     PendingOffer,
     QuestState,
+    WishNote,
     WorldState,
 )
 from trpg.world.story_gen import story_base, story_request, themed_story_skill
@@ -630,10 +632,12 @@ def store_offer(
     region: str | None = None,
     made_by: Literal["llm", "composer"] = "composer",
     refund: int = 0,
+    wish: WishNote | None = None,
 ) -> tuple[CharacterState, WorldEvent]:
     """把產生好的三選一存進 ``pending_offers``（計數 +1）；任務、機遇（5B-4c）、許願池（WP-1）共用。
     ``guaranteed``（5D-2b）：保底觸發的機遇。``region``（6L-2）：取得地點的區域；``made_by``：
-    候選的來源（機遇、許願池的 LLM 版）。``refund``（WP-1）：都不拿時退還的任務幣。"""
+    候選的來源（機遇、許願池的 LLM 版）。``refund``（WP-1）：都不拿時退還的任務幣。``wish``
+    （PK-4）：許願池願望驅動的願望原文與需求標籤。"""
     pending = PendingOffer(
         quest=quest,
         step=step,
@@ -642,6 +646,7 @@ def store_offer(
         guaranteed=guaranteed,
         region=region,
         refund=refund,
+        wish=wish,
     )
     char = char.model_copy(
         update={
@@ -718,6 +723,8 @@ def _take_offer(
     region = char.region if pending.region is None else pending.region
     char = from_run(char, taken).model_copy(update={"pending_offers": rest})
     char = with_skill_region(char, skill_id, region)  # 6L-2（#126）：取得地點的界域
+    if pending.wish is not None:  # PK-4：魔導書扉頁寫上願望原文（07 7.6 第 6 點）
+        char = with_skill_wish(char, skill_id, pending.wish.text)
     char = _note_granted(library, char, pending, skill_id)  # OB-2：重選時要收回的招
     event = SkillOfferTakenEvent(
         quest=pending.quest,

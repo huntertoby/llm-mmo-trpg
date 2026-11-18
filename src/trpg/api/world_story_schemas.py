@@ -306,6 +306,11 @@ class PendingOfferView(_ApiModel):
     refund: int = 0
     """都不拿時退還的任務幣（許願池，#88 2b；其他來源 0）。前端的跳過鈕
     寫「都不拿（退 N 任務幣）」。"""
+    wish_text_zh: str | None = None
+    """PK-4 許願池願望驅動：玩家的願望原文（純文字，``<player_input>`` 規則：只當文字顯示）；點選
+    標籤或舊流程＝``None``。"""
+    wish_tags_zh: tuple[str, ...] = ()
+    """PK-4：這次許願的需求標籤（中文名，依類別順序）；舊流程空。"""
 
 
 class ThreadView(_ApiModel):

@@ -64,12 +64,18 @@
 ## 四、常踩的坑
 
 1. **新 worktree 沒有 `.venv`**：先 `uv sync --frozen`，之後 `UV_NO_SYNC=1`。
-2. **本機模型**：`config/llm.toml` 預設 `localhost:8001`（使用者的 vLLM，可能沒開）；LM Studio 用 `config/llm.local.toml`（gitignored）。Qwen、Gemma 都要 `reasoning_effort = "none"`，否則思考吃光 `max_tokens`、回應是空的（調查報告 B.1）。模型名照 `GET /v1/models`。
+2. **本機模型**：`config/llm.toml` 預設 `localhost:8001` 上 LM Studio 的 `google/gemma-4-26b-a4b-qat`、溫度 0.7、`reasoning_effort = "none"`（LB-CF，2026-11-14 使用者「Gemma 溫度 0.7」）；另一份設定檔只有設了 `TRPG_LLM_CONFIG` 才會讀。Qwen、Gemma 都要 `reasoning_effort = "none"`，否則思考吃光 `max_tokens`、回應是空的（調查報告 B.1）；換回 vLLM 時要拿掉這行（vLLM 可能不接受 none）。模型名照 `GET /v1/models`。
 3. **Mock 命名撞名**：同一題多個選項用同一個種子時 Mock 給同一個名字，命名會 `name_zh.duplicate` 退回（LF-1 前 `name_offer` 就有這個問題，`name_texts` 已依選項分流種子）。
 4. **Mock 命名寫不到橋接加上的效果**（`narrative.missing_added`）：Mock 的 `concept` 只列效果摘要，橋接那一項常退回組合式名稱；測試不要假設每個大變化都命名成功。
 5. **描述的一致性檢查很嚴**（實測 `note_zh.missing_added` 常擋）：LF-2 起不合格只丟說明（`flash.note_dropped.*`）、變化照收；測資料流要說明留下來時，仍可用 `monkeypatch` 把 `flash_propose.note_checker` 換成一律通過（`tests/llm/test_flash_texts_lf1.py::lenient_notes`）。
 6. **`make_offer` 的呼叫順序**（LF-1 起）：先 `proposed`、再 `texts`、再轉型與補位。改這裡要跑 slow 的 `tests/skillgen/test_refactor_parity.py`（閃現出題的 JSON 雜湊）。
 7. **大變化題目的命名延遲**：每個大變化／轉型一次命名呼叫（本機 Qwen 3.8 27B 實測一題 4 個選項約 9 秒），大世界預先生成來不及時整題退回模板（PhaseLF計畫 第 7 節待決 5）。
+8. **LM Studio 換模型規則（必守；2026-11-14 使用者，LB-2b 起）**：之前換模型沒先卸載已載入的模型就載新的，顯存不夠、溢出到 RAM 用 CPU 跑（LB-2 重測 Gemma 只剩 30 t/s）。碰 LM Studio 的工作一律照做：
+   1. 換模型前先卸載全部：`C:\Users\tobby\.lmstudio\bin\lms.exe unload --all`（再用 `lms.exe load <model id>` 載入目標模型；只用環境變數 `TRPG_LLM_MODEL` 或腳本參數指定模型，不改 `config/llm*.toml`）。
+   2. 量測前查 `GET http://localhost:8001/api/v0/models`，確認 `state=loaded` 的**只有目標模型一個**；不只一個就停下回報。
+   3. 保留 60 t/s 門檻（`scripts/llm_model_compare.py` 的 `MIN_TPS`），沒達到就停下回報，不硬跑。
+   4. 全部跑完後把 `google/gemma-4-26b-a4b-qat` 載回來（`lms.exe load`），維持使用者原狀。
+   - LM Studio 一次只跑一個量測；不要啟動、關閉 LM Studio 本身，也不要改它的設定。
 
 ## 五、相關測試
 
@@ -81,6 +87,11 @@
 | prompt 文字 | `tests/llm/test_prompts.py`、`test_prompt_prefix.py` |
 | 許願池（WP-1、WP-2） | `tests/world/test_wish.py`、`tests/llm/test_wish_match.py`、`tests/api/test_wish_pregen.py`、`tests/api/test_wish_api_wp2.py`（API、面板、等待、插隊）；主城 `panel`：`tests/world/test_capital.py`、`test_capital_figures.py`、`client/src/world/atlas.test.ts` |
 | 依賴方向 | `uv run lint-imports`、`tests/test_architecture.py` |
+
+技能提議 prompt／schema（LB-2、LB-2b）：`tests/llm/test_schema_shape_lb2.py`、`test_passive_ways_lb2b.py`、`test_variant_range_lb2b.py`、`test_proposal_prompt.py`、`test_prompts.py`（版本快照）；`tests/skillgen/test_proposal*.py`、`test_upgrade_topup.py`。真模型量測：`scripts/llm_model_compare.py`＋`scripts/llm_failure_stats.py`（先照第四節第 8 點換模型）。
+
+- **LB-2b（`skill-proposal/16`）**：被動題目的關鍵字 `ways` 先列 `uses`（條件、觸發）、`makes` 裡做成被動一定超預算的效果不列（`skillgen/proposal_passive.py::unfit_effect_rules`：最省的被動＝係數最高的觸發＋最省的核心效果＋最小數值、不加條件，用 `skill_budget` 實算；組不出合法技能就照列）；`ProposalSubset.tier` 只在 `select_subset` 最後放進去，挑大小時不篩。變奏開放 `range_delta`（`Literal[1, 2]`，照組合器只開加值），`VARIANT_SWAP_FIELDS` 5 項 → 變奏分支 15 支；`proposal_from_skill` 仍把 `range_delta` 當數值拿掉（Mock 提議器不變）。初版重測 Gemma 在 line／cone／ring 上填 `range_delta`（50 次嘗試 26 次被擋），所以變奏說明列出這題「有射程的形狀」（形狀定義有 `range` 參數），回饋附 `RANGE_DELTA_ADVICE`；被動說明要求明寫 `"affects": "self"`、`passive.affects` 回饋附 `PASSIVE_AFFECTS_ADVICE`。判定都不變。
+- **LB-2c（`skill-proposal/17`，玩法 PM 4.1.18）**：只收窄送給約束解碼的 schema、改 prompt 與回饋，提議模型與驗證都不變（Mock 不受影響）。① `ProposalRequest.wants_variants`（預設 `False`；現有出題都沒有「要變奏」的資料）為真才有 `variants` 欄位與變奏說明（`prompts/proposal.py::variant_limit`；被動一律 0），`VARIANTS_NONE_ZH` 拿掉。② `self_on_high_ground` 拿掉 `handwritten_only`（定義定案：所在格高度 ≥ 1、飛行不算）。③ 被動題目 `fixed_category` → `schema_shape.fix_category`：頂層只留 `spell` 分支、`category`／`weapon_req` 寫成 `const` spell／any，`fields_note_zh.category` 改 `FIXED_CATEGORY_NOTE_ZH`；被動的 `budget.over` 回饋附 `PASSIVE_BUDGET_ADVICE`（`advise(error, library, skill)`，舉這個稀有度係數最高的觸發，目前是 `every_n_hits（n: 3）`）。④ `RANGE_DELTA_ADVICE` 拿掉「single 並填數字 range」的例子。測試 `tests/llm/test_proposal_lb2c.py`。
 
 本機 LLM 冒煙（手動、少量）：寫一支暫存腳本，`load_llm_config(Path("config/llm.local.toml"))` → `OpenAICompatClient` → `LlmFlashSource(client, naming=client)` → `make_offer`，印 `record.names` 與每個選項的 `skill.name_zh`、`variation.note_zh`（LF-1 報告第 3 節有輸出範例）。
 
@@ -122,3 +133,23 @@
    - **插隊**：`WorldPregen` 不再直接把 `_run` 丟給執行緒池；`_submit` 把 `_Entry`（帶自己的 `Future` 與內容庫視圖）放進 `_urgent`（`URGENT_KINDS`＝`{"wish"}`）或 `_normal` 兩條 deque，再丟一個 `_next` 工作；`_next` 從 `_urgent` 先拿、`set_running_or_notify_cancel` 失敗（被取消）就略過。結果：許願排在所有還沒開始的預測前面、許願之間照先後、正在跑的那一筆不被打斷。測試 `tests/api/test_wish_api_wp2.py::test_wish_jumps_the_queue`、`test_cancelled_wish_is_skipped`。
    - 主城：`wishing_pool`、`pool_keeper` 的 `panel: wish`（`ObjectPanel` 多 `wish`）；WP-3 起前端點這兩個開許願池面板（`world/WishPanel.tsx`；前端的事看 `docs/dev/上手-前端戰鬥畫面與動畫.md` 第一節「許願池面板」列）。
    - Mock 注意：Mock 提議器做不做得出完整技能跟技能種子（角色 ID、賽季種子）有關；要測 `llm` 版用 `alice`＋`make_world()`（同 `test_wish_pregen`）。
+
+## 九、PK-2：挑選模式接上三選一（`skill_pick.yaml` 的 `enabled`，預設開）
+
+1. **開關**：`content/skill_pick.yaml` 的 `enabled`（`SkillPickRules.enabled`；不進數值工坊，工坊沒有布林欄位）。只有傳 `make_offer(..., pick=True)` 的呼叫端生效：原型升級（`progress._level_up`）、原型完整技能（`progress._complete_offer`）、大世界機遇（`solutions._opportunity_offer`、`world_pregen.offer`、`offer_prefetch` 的機遇工作、`opportunity_wait_request` 的鍵）。大世界任務、許願池沒傳，照舊。關掉＝逐字回到 PK-2 前（`tests/roguelite/test_pick_offer_pk2.py::test_switch_off_is_the_old_flow`）。
+2. **出題**：`skillgen/pick_offer.py`：先跑原本的產生器（白板或完整技能，不請 LLM）決定格子，每格另外抽（`pick.slot/<格>`，`slot_seeds`／`complete_slot_seeds`，湊到 `top_k` 就停）只收同關鍵字、同種類、同路線的組合器技能；非傷害保底格（`pick.nondamage/<格>`）；打分 `score_candidate(keywords=格子關鍵字)`。手上技能只用 ID＋設計鍵擋（不比名稱：組合式名稱常同名）。
+3. **LLM**：`llm_hook.use_picker`／`current_picker`；`trpg.llm.pick.make_offer_picker`（每格 `pick_skill(strict=True)`，一份三選一 10 秒用完剩下的格子不請、候選少於 `min_for_llm` 不請）、`mock_offer_picker(index=)`。`LlmProvider.picker()`、`RunSession.picker`、`cli/run_llm.py` 都裝上。回來的技能結構和候選不同就不收（`same_structure`）。
+4. **紀錄**：`OfferTag.pick`（`llm`／`top`，`None` 不寫出）→ API `OfferTagOut.pick`；`LlmRecord` 照 PK-1 的四欄。`WLOG_FORMAT` `trpg-wlog/11`、`WORLD_RULES_VERSION` 34。
+5. **加嚴的名稱檢查**：`effect_words.yaml` 的 `strict: true` 詞組（高處、墜落、地形、打擊、形狀、單字風／土石）只在 `strict=True` 看；`consistency.strict_facts` 多 `condition:`、`shape:`。閃現、自由設計命名不受影響（`check_added` 也略過 strict 詞組）。
+6. **測試**：`tests/roguelite/test_pick_offer_pk2.py`、`tests/llm/test_pick_pk2.py`；改到 `VICTORY`（`build_fire` 種子 1）。
+
+## 十、PK-3：閃現接上挑選模式（`skill_pick.yaml` 的 `flash_enabled`，預設開）、三選一放寬
+
+1. **開關**：`flash_enabled`（和三選一的 `enabled` 分開；都不進數值工坊）。只有來源會挑選（`skillgen.flash_pick.PickingSource`：`LlmFlashSource`、`RecordedSource`、世界的 `_RecordedFlash`）時 `make_offer` 才走挑選；`UsageSource`（沒開 LLM）照舊。關掉＝逐字回到 LF-2 的提議流程（`tests/llm/test_flash_pick_pk3.py::test_switch_off_is_the_lf2_flow`）。測 LF-2 程式本身的測試用 `tests.engine.helpers.lf2_library()`（開關關掉的內容庫）。
+2. **出題**：`flash_offer._Layout.options(())`（沒有提議、沒有文字）＝原本那一份；`_slots` 每格的第一個候選就是它，其餘依同一類的 `ranked` 往下取合格的（`builder.option`，強度下限照舊），同類的格子輪流分、不重複，每格最多 `pool.flash_top_k`（4）；轉型保底固定（只取名）。所以 Mock 挑 0＝沒有 LLM 時那一份。`flash_slots(library, request)` 給測試與比較腳本。
+3. **LLM**：`llm/flash_pick.py::pick_variations`（`flash-pick/1`，`prompts/flash_pick.py`）一次回答全部格子（`{"s0": {pick, note_zh, name_zh?}}`；`pick` 是每格的 enum）。描述照 LF-2（不合格只丟）；名稱（大變化、轉型格）照 LF-2 的名稱檢查＋**加嚴詞組只看多字詞**（`consistency.multi_char_strict`；單字風、土、石、斬、劈不看），不合格帶 `<errors>` 重問（最多 `max_retries` 次、10 秒）。連不上或用完＝每格第一個、沒有文字。
+4. **紀錄**：`FlashProposalRecord`／`FlashLlmRecord` 多 `picks`（空值不寫出）；`accepted`＝每格選中的變化。重播 `flash_pick.picks_by_key`。世界 `trpg-wlog/12`（`/11` 照讀）、`WORLD_RULES_VERSION` 35；預先生成改呼叫 `LlmFlashSource.prepare`（照開關挑或提議）。
+5. **Mock**：`mock_flash_source(pick_index=0)`（`flash_pick.mock_flash_pick_client`，不寫文字）。
+6. **三選一（`skillgen/pick_offer.py`）**：`_Maker.level` 給放寬層級（`LEVEL_EXACT`／`RELAXED`／`OFF`／`OFF_RELAXED`）；全部關鍵字＋路線符合的不到 `pool.relax_until`（3）時依序補下一層，扣 `weights.keyword_relaxed_penalty`、`route_off_penalty`；`_cap_off_route`：LLM 挑出的偏離讓一份超過 2 張時改回第一名。`skill_pick.drop_thin`：單薄的不進前 K（全都單薄才照分數）。
+7. **組合器**：`composer_parts.build_condition` 不把「第一輪」掛在非傷害效果、不給刻紋掛條件、整招沒有傷害時技能層級不抽第一輪也不給帶刻紋的招抽條件（玩法 PM 4.1.23）；驗證器不改。
+8. **測試**：`tests/llm/test_flash_pick_pk3.py`、`tests/roguelite/test_flash_pick_run_pk3.py`、`tests/roguelite/test_pick_offer_pk3.py`、`tests/skillgen/test_composer_odd_pk3.py`。比較腳本 `scripts/pick_slot_stats.py`（每格候選數）、`scripts/flash_pick_compare.py`（閃現 LF-2 vs 挑選），`scripts/pick_compare.py report` 併成 `docs/phases/PhasePK-3比較.md`。

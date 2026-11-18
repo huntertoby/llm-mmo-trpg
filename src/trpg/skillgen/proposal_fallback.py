@@ -12,7 +12,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Collection, Iterator
 from typing import Any, Literal
 
 from trpg.content.library import ContentLibrary
@@ -38,6 +38,7 @@ __all__ = [
     "FallbackError",
     "FallbackSource",
     "fallback_skill",
+    "fits_request",
     "wanted_kind",
 ]
 
@@ -63,7 +64,11 @@ def wanted_kind(library: ContentLibrary, request: ProposalRequest) -> str:
     return skeleton.kinds[0] if skeleton is not None else "active"
 
 
-def _fits(skill: SkillDef, request: ProposalRequest, kind: str, library: ContentLibrary) -> bool:
+def fits_request(
+    skill: SkillDef, request: ProposalRequest, kind: str, library: ContentLibrary
+) -> bool:
+    """技能符合題目：種類、骨架（有指定時）、題目的全部關鍵字（只看專屬規則）。退回路徑與挑選模式
+    的候選池（Phase PK-1）共用。"""
     return (
         skill.kind == kind
         and (request.skeleton is None or skill.skeleton == request.skeleton)
@@ -95,16 +100,22 @@ def _from_composer(
                 library=library,
                 keyword=keyword,
                 hero_attributes=ctx.hero_attributes,
+                kinds=(kind,),  # RC-1b（4.1.20 第 4 點）：主動題不讓組合器交出被動、反應
             )
         except ComposeError:
             continue
-        if _fits(skill, request, kind, library):
+        if fits_request(skill, request, kind, library):
             return skill
     return None
 
 
 def _from_pool(
-    library: ContentLibrary, request: ProposalRequest, ctx: ProposalContext, seed: int
+    library: ContentLibrary,
+    request: ProposalRequest,
+    ctx: ProposalContext,
+    seed: int,
+    *,
+    exclude: frozenset[str] = frozenset(),
 ) -> SkillDef | None:
     kind = wanted_kind(library, request)
     options = [
@@ -112,7 +123,8 @@ def _from_pool(
         for skill in player_skills(library).values()
         if skill.tier == ctx.tier
         and skill.rarity == ctx.rarity
-        and _fits(skill, request, kind, library)
+        and skill.id not in exclude
+        and fits_request(skill, request, kind, library)
     ]
     return Rng(seed).fork("fallback.pool").choice(options) if options else None
 
@@ -291,15 +303,33 @@ def _from_workshop(
 
 
 def fallback_skill(
-    library: ContentLibrary, request: ProposalRequest, ctx: ProposalContext, *, seed: int
+    library: ContentLibrary,
+    request: ProposalRequest,
+    ctx: ProposalContext,
+    *,
+    seed: int,
+    skip_composer: bool = False,
+    exclude_ids: Collection[str] = (),
 ) -> tuple[SkillDef, FallbackSource]:
-    """依序試組合器、技能池、工坊推導；回傳（技能, 來源）。都失敗時丟 :class:`FallbackError`。"""
+    """依序試組合器、技能池、工坊推導；回傳（技能, 來源）。都失敗時丟 :class:`FallbackError`。
+
+    ``skip_composer``（Phase PK-1）：挑選模式的候選池已經抽過組合器（0 個合法候選）時，直接從技能池
+    開始（提案 7.6「組合器 0 個照現行退：技能池 → 工坊」）。預設＝原行為。
+
+    ``exclude_ids``（Phase PK-1b）：技能池不選這些 ID（挑選模式：玩家手上已有的技能）。預設空＝原
+    行為（亂數串流不變，直接呼叫原本的 ``_from_pool``）。"""
+
+    def pool(
+        lib: ContentLibrary, req: ProposalRequest, c: ProposalContext, s: int
+    ) -> SkillDef | None:
+        return _from_pool(lib, req, c, s, exclude=frozenset(exclude_ids))
+
     sources: tuple[tuple[FallbackSource, _Source], ...] = (
         ("composer", _from_composer),
-        ("pool", _from_pool),
+        ("pool", pool if exclude_ids else _from_pool),
         ("workshop", _from_workshop),
     )
-    for name, source in sources:
+    for name, source in sources[1:] if skip_composer else sources:
         skill = source(library, request, ctx, seed)
         if skill is not None:
             return skill, name

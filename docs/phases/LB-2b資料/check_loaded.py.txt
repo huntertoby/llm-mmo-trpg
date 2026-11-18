@@ -1,0 +1,12 @@
+"""LM Studio：state=loaded 的模型必須只有引數 1 那一個；否則印出並以 1 結束。"""
+
+import json
+import sys
+import urllib.request
+
+target = sys.argv[1]
+with urllib.request.urlopen("http://localhost:8001/api/v0/models", timeout=30) as resp:
+    data = json.load(resp)
+loaded = [m["id"] for m in data["data"] if m.get("state") == "loaded"]
+print("loaded:", loaded, flush=True)
+sys.exit(0 if loaded == [target] else 1)

@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from tests.engine.helpers import library
+from tests.engine.helpers import lf2_library as library  # PK-3：LF-2 提議流程
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.llm import flash_propose

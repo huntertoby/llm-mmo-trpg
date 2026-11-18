@@ -37,6 +37,7 @@ from trpg.content.skills import (
     rarity_rank,
 )
 from trpg.shared.types import Element, Surface
+from trpg.skillgen.composer_parts import obstacle_candidates
 from trpg.skillgen.option_gear import gear_pool
 from trpg.skillgen.proposal.models import _alias, _get, _id_choice, _literal, _Proposal, _strip_none
 from trpg.skillgen.proposal_numbers import (
@@ -50,6 +51,9 @@ class _Refs:
 
     statuses: tuple[str, ...]
     objects: tuple[str, ...]
+    """``object`` 型參數（目前只有 ``create_obstacle`` 造牆的 ``object``）可選的物件：和組合器同一份
+    :func:`~trpg.skillgen.composer_parts.obstacle_candidates`（NW-3d，玩法 PM 交接 4.1.16；冷卻井、
+    油桶選不到）。投擲（``hurl_object``）丟的是場上已有的物件、不經這個列舉。"""
     stacks: tuple[str, ...]
     summons: tuple[str, ...]
     rule_changes: tuple[str, ...]
@@ -65,7 +69,7 @@ class _Refs:
         rules = library.ruleset
         return cls(
             statuses=tuple(sorted(s.id for s in rules.statuses.statuses if not s.enemy_only)),
-            objects=tuple(sorted(o.id for o in rules.objects.objects)),
+            objects=obstacle_candidates(library),
             stacks=tuple(sorted(rules.stacks.by_id())),
             summons=tuple(sorted(rules.summons.by_id())),
             rule_changes=tuple(sorted(rules.rule_changes.by_id())),

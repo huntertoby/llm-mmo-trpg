@@ -38,6 +38,7 @@ function wishData(over: Partial<WishData> = {}): WishData {
     llm: true,
     text_max_chars: 60,
     max_keywords: 2,
+    tag_groups: [],
     menu: [
       { id: "ignite", name_zh: "點燃", description_zh: "火焰讓目標燃燒。" },
       { id: "frozen", name_zh: "冰凍", description_zh: "寒冰凍結目標。" },

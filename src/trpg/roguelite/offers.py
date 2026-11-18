@@ -34,6 +34,13 @@ LLM 來源（Phase 4-L6）：``run.llm`` 為真而且外層裝了提議器（``t
 ``roguelite.yaml`` 的 ``offer_size``、``off_route_per_offer``、
 ``offer_max_attempts`` 從 3-24b2 起不再使用（保留欄位，見報告待決）。
 
+挑選模式（Phase PK-2，06 6.7 #165）：呼叫端傳 ``pick=True``（原型的升級、完整技能三選一；大世界
+機遇）**而且** ``skill_pick.yaml`` 的 ``enabled`` 為真時，改走
+:func:`trpg.skillgen.pick_offer.generate_pick_candidates`：格子照上面的產生器出題，每格另外做出符合
+該格條件的候選、依玩家（手上技能、行為紀錄、屬性；:func:`pick_player`）打分，LLM 開著時由挑選器
+（``trpg.roguelite.llm_hook.use_picker``）每格挑一個並命名，否則用分數第一名。``enabled`` 為假或
+沒傳 ``pick`` 時完全照舊（大世界任務、許願池目前不傳）。
+
 結果快取（PERF-3）：呼叫端用 :func:`using_offer_cache` 裝上 :class:`OfferCache` 時，
 :func:`make_offer` 先以 :func:`offer_key`（候選產生器的完整輸入＋三選一種類與第幾組的摘要）查表，
 命中就回傳同一組候選；沒命中照常計算再存入。同一把鍵另一個執行緒正在算時等它算完（結果相同）。
@@ -61,7 +68,7 @@ from trpg.content.equipment import Loadout, loadout_held, resolve_loadout
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, skill_slot_problems
 from trpg.roguelite.errors import ChoiceError
-from trpg.roguelite.llm_hook import current_proposer
+from trpg.roguelite.llm_hook import current_picker, current_proposer
 from trpg.roguelite.names import unique_skill_name
 from trpg.roguelite.state import LlmRecord, OfferTag, RunState, SkillOffer
 from trpg.shared.rng import Rng
@@ -75,6 +82,8 @@ from trpg.skillgen.candidates import (
     keyword_distribution,
 )
 from trpg.skillgen.complete import complete_strength
+from trpg.skillgen.pick_offer import generate_pick_candidates
+from trpg.skillgen.pick_player import PickPlayer
 from trpg.skillgen.proposal_topic import primitive_uses
 from trpg.skillgen.skill_tier import character_tier, retier
 from trpg.skillgen.whiteboard_candidates import generate_whiteboard_candidates
@@ -94,6 +103,7 @@ __all__ = [
     "observe_complete",
     "offer_key",
     "offer_updates",
+    "pick_player",
     "skill_defs",
     "take_candidate",
     "using_offer_cache",
@@ -317,15 +327,20 @@ def _jsonable(value: object) -> Any:
     raise TypeError(f"不能放進三選一快取鍵：{type(value).__name__}")
 
 
-def _request_key(run: RunState, complete: bool, request: CandidateRequest) -> str:
+def _request_key(
+    run: RunState, complete: bool, request: CandidateRequest, pick: bool = False
+) -> str:
     """候選產生器的完整輸入＋三選一種類、第幾組（標籤用）、主角最高屬性的摘要（BLAKE2b；不用
-    內建 ``hash()``）。"""
-    data = {
+    內建 ``hash()``）。挑選模式（PK-2）多一個 ``pick`` 鍵；手上技能的定義由 ``request.exclude``
+    （技能 ID 是內容雜湊）涵蓋，不另外放。"""
+    data: dict[str, object] = {
         "complete": complete,
         "offers_made": run.offers_made,
         "top": top_attribute(run.hero.attributes),
         "request": dataclasses.asdict(request),
     }
+    if pick:
+        data["pick"] = True
     text = json.dumps(data, sort_keys=True, ensure_ascii=False, default=_jsonable)
     return hashlib.blake2b(text.encode("utf-8"), digest_size=20).hexdigest()
 
@@ -341,9 +356,11 @@ def offer_key(
     tier_bonus: int = 0,
     pinned_keyword: str | None = None,
     region: str | None = None,
+    pick: bool = False,
 ) -> str | None:
     """:func:`make_offer` 同樣參數的快取鍵（PERF-3）；LLM 來源開著時 ``None``（不快取）。鍵取自
-    ``CandidateRequest`` 全欄位，所以含 ``pinned_keyword``（5B-4d）。"""
+    ``CandidateRequest`` 全欄位，所以含 ``pinned_keyword``（5B-4d）；挑選模式真的生效時多
+    ``pick``。"""
     if run.llm:
         return None
     complete = reason == "complete"
@@ -358,7 +375,7 @@ def offer_key(
         pinned_keyword=pinned_keyword,
         region=region,
     )
-    return _request_key(run, complete, request)
+    return _request_key(run, complete, request, _pick_on(library, pick))
 
 
 def make_offer(
@@ -373,6 +390,7 @@ def make_offer(
     pinned_keyword: str | None = None,
     region: str | None = None,
     llm_max_calls: int = 0,
+    pick: bool = False,
 ) -> SkillOffer:
     """第 ``run.offers_made`` 組候選（呼叫者負責把計數器加 1）。``reason`` 為 ``level_up``（白板
     三選一）或 ``complete``（完整技能三選一，Phase 3W-5）。
@@ -385,6 +403,8 @@ def make_offer(
     ``region``（6L-1，#126）：技能取得地點的區域，只進 LLM 題目的 prompt；預設 ``None``＝中性。
     ``llm_max_calls``（6L-2b）：LLM 來源開著時這份最多請 LLM 幾張（大世界機遇＝1）；預設 0＝不設
     （roguelite 照舊）。不影響組合器與快取鍵（LLM 來源開著時本來就不快取）。
+    ``pick``（PK-2）：這個呼叫端接上挑選模式（原型升級與完整技能、大世界機遇）；``skill_pick.yaml``
+    的 ``enabled`` 為假時不生效。預設 ``False``＝原行為。
 
     裝了 :class:`OfferCache`（:func:`using_offer_cache`）時先查快取（PERF-3，見模組說明）。"""
     complete = reason == "complete"
@@ -399,24 +419,55 @@ def make_offer(
         pinned_keyword=pinned_keyword,
         region=region,
     )
+    picking = _pick_on(library, pick)
     cache = _OFFER_CACHE.get()
     if cache is None or run.llm or _COMPLETE_OBSERVER.get() is not None:
-        return _compute_offer(library, run, complete, request, llm_max_calls)
-    key = _request_key(run, complete, request)
+        return _compute_offer(library, run, complete, request, llm_max_calls, pick=picking)
+    key = _request_key(run, complete, request, picking)
     found = cache.get(library, key)
     if found is not None:
         return found
     future = cache.reserve(library, key)
     if future is None:  # 另一個執行緒剛登記：等它（它失敗時自己算）
         found = cache.get(library, key)
-        return found if found is not None else _compute_offer(library, run, complete, request)
+        if found is not None:
+            return found
+        return _compute_offer(library, run, complete, request, pick=picking)
     try:
-        offer = _compute_offer(library, run, complete, request)
+        offer = _compute_offer(library, run, complete, request, pick=picking)
     except BaseException as error:
         cache.finish(key, future, None, error)
         raise
     cache.finish(key, future, offer)
     return offer
+
+
+def _pick_on(library: ContentLibrary, pick: bool) -> bool:
+    return pick and library.skill_pick.enabled
+
+
+def pick_player(library: ContentLibrary, run: RunState) -> PickPlayer:
+    """挑選模式打分用的玩家摘要（PK-1 待決 2）：手上的技能（裝備＋備用）、這一輪的行為紀錄、主角
+    屬性與手上武器的縮放屬性。"""
+    weapon = library.weapons[run.hero.weapon]
+    return PickPlayer(
+        held_skills=tuple(skill_defs(library, run, (*run.hero.skills, *run.bench))),
+        behavior=dict(run.behavior),
+        hero_attributes=dict(run.hero.attributes),
+        weapon_attrs=weapon_scaling_attrs(weapon),
+    )
+
+
+def _rules(settings: Any, llm_max_calls: int) -> CandidateRules:
+    return CandidateRules(
+        composer_share_permille=settings.composer_share_permille,
+        composer_tries=settings.composer_tries,
+        general_share_permille=settings.general_share_permille,
+        llm_share_permille=settings.llm_share_permille,
+        llm_theme_permille=settings.llm_theme_permille,
+        llm_reaction_permille=settings.llm_reaction_permille,
+        llm_max_calls=llm_max_calls,
+    )
 
 
 def _compute_offer(
@@ -425,24 +476,28 @@ def _compute_offer(
     complete: bool,
     request: CandidateRequest,
     llm_max_calls: int = 0,
+    *,
+    pick: bool = False,
 ) -> SkillOffer:
     settings = library.roguelite.candidates
-    if settings.whiteboard and not complete:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
+    if pick:  # 挑選模式（PK-2）：格子照原本出題，每格挑一（見模組說明）
+        found = generate_pick_candidates(
+            library,
+            request,
+            _rules(settings, llm_max_calls),
+            player=pick_player(library, run),
+            whiteboard=settings.whiteboard and not complete,
+            picker=current_picker() if run.llm else None,
+        )
+        tier = request.tier
+    elif settings.whiteboard and not complete:  # 白板三選一（3W-4）：單一效果、1 階；LLM 來源關閉
         found = generate_whiteboard_candidates(library, request, settings.composer_tries)
         tier = request.tier
     else:
         found = generate_candidates(
             library,
             request,
-            CandidateRules(
-                composer_share_permille=settings.composer_share_permille,
-                composer_tries=settings.composer_tries,
-                general_share_permille=settings.general_share_permille,
-                llm_share_permille=settings.llm_share_permille,
-                llm_theme_permille=settings.llm_theme_permille,
-                llm_reaction_permille=settings.llm_reaction_permille,
-                llm_max_calls=llm_max_calls,
-            ),
+            _rules(settings, llm_max_calls),
             llm=current_proposer() if run.llm else None,
         )
         tier = request.tier
@@ -484,6 +539,10 @@ def _tag(candidate: Candidate, offer_index: int) -> OfferTag:
             name_codes=trace.name_codes,
             prompt_version=trace.prompt_version,
             naming_prompt_version=trace.naming_prompt_version,
+            pick_seeds=trace.pick_seeds,
+            pick_designs=trace.pick_designs,
+            pick_index=trace.pick_index,
+            pick_reason=trace.pick_reason,
         )
     )
     return OfferTag(
@@ -492,6 +551,7 @@ def _tag(candidate: Candidate, offer_index: int) -> OfferTag:
         source=candidate.source,
         fallback=candidate.fallback,
         llm=record,
+        pick=candidate.pick,
     )
 
 

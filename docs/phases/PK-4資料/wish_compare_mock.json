@@ -1,0 +1,1756 @@
+{
+  "meta": {
+    "format": "wish-compare/1",
+    "mock": true,
+    "model": "google/gemma-4-26b-a4b-qat",
+    "temperature": 0.7,
+    "max_retries": 3,
+    "started_utc": "2026-11-16T00:16:04+00:00",
+    "finished_utc": "2026-11-16T00:17:38+00:00"
+  },
+  "rows": [
+    {
+      "label": "W1",
+      "kind": "元素組合",
+      "wish": "想把敵人凍在火裡",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "冰凍"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 0.53,
+        "cards": [
+          {
+            "id": "skill_llm_c0d1f0916c",
+            "name_zh": "星輝回聲",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "消耗目標身上的「冰凍」，然後3d12＋智力加成的冰霜傷害；目標沒有該狀態則不生效（敵方）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wis_frost_bloom_prayer_cp",
+            "name_zh": "霜華祝禱",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 4）",
+            "effects": [
+              "2d4＋感知加成的神聖傷害（敵方）",
+              "生成「冰」表面 2 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "冰霜・位移",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 5）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "1d6＋智力加成的冰霜傷害（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "撞擊"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "冰凍",
+          "火焰"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 2.24,
+        "cards": [
+          {
+            "id": "skill_rand_3905338229",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "生成「冰」表面 4 回合（影響的格子）",
+              "奪取目標身上一個增益（剩餘回合最長者），以相同的剩餘回合施加到自己身上（敵方）",
+              "2d4＋智力加成的火焰傷害（敵方），若目標身邊沒有友方"
+            ],
+            "keywords": [
+              "點燃",
+              "冰凍"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1056019397",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "3d4＋感知加成的神聖傷害（敵方）",
+              "摧毀可破壞的物件（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有冰凍；火焰這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "2d8＋意志加成的暗影傷害（敵方）",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "隱蔽",
+              "冰凍"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有冰凍；火焰這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          2,
+          1,
+          1
+        ],
+        "tag_count": 2
+      }
+    },
+    {
+      "label": "W2",
+      "kind": "控制＋撞擊",
+      "wish": "想把敵人凍住，再一錘敲碎",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "冰凍"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 0.46,
+        "cards": [
+          {
+            "id": "skill_llm_c0d1f0916c",
+            "name_zh": "星輝回聲",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "消耗目標身上的「冰凍」，然後3d12＋智力加成的冰霜傷害；目標沒有該狀態則不生效（敵方）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wis_frost_bloom_prayer_cp",
+            "name_zh": "霜華祝禱",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 4）",
+            "effects": [
+              "2d4＋感知加成的神聖傷害（敵方）",
+              "生成「冰」表面 2 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "冰霜・位移",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 5）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "1d6＋智力加成的冰霜傷害（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "撞擊"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "冰凍"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 2.15,
+        "cards": [
+          {
+            "id": "skill_rand_1056019397",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "3d4＋感知加成的神聖傷害（敵方）",
+              "摧毀可破壞的物件（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "2d8＋意志加成的暗影傷害（敵方）",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "隱蔽",
+              "冰凍"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3513057505",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "範圍光環（半徑 2）",
+            "effects": [
+              "生成「冰」表面 4 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          1,
+          1,
+          1
+        ],
+        "tag_count": 1
+      }
+    },
+    {
+      "label": "W3",
+      "kind": "元素＋範圍",
+      "wish": "讓一整片敵人都燒起來的火焰",
+      "old": {
+        "source": "none",
+        "keywords": [],
+        "attempts": 3,
+        "codes": [
+          "wish.count",
+          "wish.count",
+          "wish.count"
+        ],
+        "seconds": 0.0,
+        "refused": true
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "火焰"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 0.38,
+        "cards": [
+          {
+            "id": "skill_rand_3157452105",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "淨化：移除身上所有負面狀態（增益、姿態與其他中性狀態不受影響）（自己）",
+              "治療 1d12＋感知加成（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3208204081",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 2）",
+            "effects": [
+              "狀態「緩速」 3 回合（敵方）"
+            ],
+            "keywords": [],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3830120015",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 8）",
+            "effects": [
+              "在目標身上綁定時炸彈（定時炸彈）：3 次環境回合後在目標當下的位置爆炸，只波及目標自己（敵我不分），4d8＋智力加成的火焰傷害；目標倒下時立即爆炸；可被淨化移除（敵方）",
+              "1d8＋智力加成的火焰傷害（敵方）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          1,
+          1,
+          1
+        ],
+        "tag_count": 1
+      }
+    },
+    {
+      "label": "W4",
+      "kind": "位移",
+      "wish": "能一下子閃到敵人背後的招式",
+      "old": {
+        "source": "none",
+        "keywords": [],
+        "attempts": 3,
+        "codes": [
+          "wish.count",
+          "wish.count",
+          "wish.count"
+        ],
+        "seconds": 0.0,
+        "refused": true
+      },
+      "new": {
+        "source": "llm",
+        "tags": [],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 0.31,
+        "cards": [
+          {
+            "id": "skill_rand_3674821192",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 9）",
+            "effects": [
+              "8d4＋感知加成的神聖傷害（敵方）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 1d8＋感知加成（自己）",
+              "護盾（吸收量 1d6＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1056019397",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "狀態「再生」 3 回合，強度 121.4%（每回合治療 ×121.4%）（自己）",
+              "生成「火焰」表面 1 回合（影響的格子）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          0,
+          0,
+          0
+        ],
+        "tag_count": 0
+      }
+    },
+    {
+      "label": "W5",
+      "kind": "推擊＋高處",
+      "wish": "把敵人從高台上推下去",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "高處"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 10.28,
+        "cards": [
+          {
+            "id": "skill_rand_3717792854",
+            "name_zh": "神聖・範圍",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 2）",
+            "effects": [
+              "2d8＋感知加成的神聖傷害（敵方）",
+              "推開 2 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_438643168",
+            "name_zh": "大地・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 3）",
+            "effects": [
+              "狀態「石膚」 2 回合（自己）",
+              "降低地形 1 層（影響的格子）"
+            ],
+            "keywords": [
+              "高處"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "火焰・打擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "5d8＋智力加成的火焰傷害（敵方），若居高臨下",
+              "拉近 2 格（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "高處"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 5.3,
+        "cards": [
+          {
+            "id": "skill_rand_945423744",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "1d10＋智力加成的冰霜傷害（敵方）",
+              "狀態「流血」 1 回合，強度 126.2%（每回合傷害 ×126.2%）（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "高處"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_638870438",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 3）",
+            "effects": [
+              "4d10＋智力加成的冰霜傷害（敵方），若居高臨下",
+              "生成「毒」表面 1 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍",
+              "中毒",
+              "高處"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_152007517",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "5d8＋智力加成的毒素傷害（敵方）"
+            ],
+            "keywords": [
+              "高處"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          1,
+          1,
+          1
+        ],
+        "tag_count": 1
+      }
+    },
+    {
+      "label": "W6",
+      "kind": "召喚",
+      "wish": "召喚一隻狼替我擋刀",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "召喚"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 11.59,
+        "cards": [
+          {
+            "id": "skill_rand_1139083515",
+            "name_zh": "物理・召喚",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 15），持續 3 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×112.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_fsum_ember_herald_cp",
+            "name_zh": "燼火喚靈",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 16），持續 3 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×121.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）",
+              "狀態「火焰附魔」 3 回合（自己）"
+            ],
+            "keywords": [
+              "點燃",
+              "召喚"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_summon_spirit_cp",
+            "name_zh": "召喚元素之靈",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 15），持續 3 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×112.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "召喚物",
+          "召喚"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 4.14,
+        "cards": [
+          {
+            "id": "skill_rand_2148048814",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 15），持續 3 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×112.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": [
+              "concept.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_2918746199",
+            "name_zh": "神聖・被動",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "在你身邊召出縮小版的元素之靈（HP 8），持續 2 輪（HP 與傷害只有一般的 60%）；召喚物已滿或身邊沒有空格時不會出現"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "top",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1093042933",
+            "name_zh": "物理・反應技",
+            "description_zh": null,
+            "kind": "反應",
+            "shape": "單體（射程 2）",
+            "effects": [
+              "在你身邊召出縮小版的骷髏戰士（HP 39），持續 1 輪（HP 與傷害只有一般的 90%），召出後立刻反咬攻擊你的敵人一次；召喚物已滿或身邊沒有空格時不會出現"
+            ],
+            "keywords": [
+              "倒地",
+              "召喚"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": "top",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          2,
+          2,
+          2
+        ],
+        "tag_count": 2
+      }
+    },
+    {
+      "label": "W7",
+      "kind": "高處",
+      "wish": "從高處跳下來重重砸在地上",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "倒地",
+          "高處"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 5.59,
+        "cards": [
+          {
+            "id": "skill_rand_975251243",
+            "name_zh": "神聖・範圍",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "錐形（大小 3）",
+            "effects": [
+              "1d10＋感知加成的神聖傷害（敵方）",
+              "擊倒（感知對抗）（敵方）",
+              "狀態「緩速」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "倒地"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wis_humbling_mark_cp",
+            "name_zh": "屈膝印記",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "擊倒（感知對抗）（敵方）",
+              "狀態「被標記」 2 回合（敵方）"
+            ],
+            "keywords": [
+              "倒地",
+              "標記"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_raise_skeleton_cp",
+            "name_zh": "喚起骷髏",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 3）",
+            "effects": [
+              "在目標空格召喚骷髏戰士（HP 49），持續 2 輪（緊接在你之後行動，由 AI 控制）；自帶：普攻命中時絆倒目標使其「倒地」（敏捷對抗，每隻每輪 1 次）；召喚物的 HP 與傷害 ×112.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）"
+            ],
+            "keywords": [
+              "倒地",
+              "召喚"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "倒地",
+          "高處",
+          "大地",
+          "地形"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 2.84,
+        "cards": [
+          {
+            "id": "skill_rand_1931076827",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 5）",
+            "effects": [
+              "擊倒（智力對抗）（敵方）",
+              "生成「冰」表面 5 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍",
+              "倒地"
+            ],
+            "elements": [
+              "風"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有倒地、地形；高處、大地這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3674821192",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 7）",
+            "effects": [
+              "2d12＋智力加成的毒素傷害（敵方）",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "倒地",
+              "高處"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有倒地、高處；大地、地形這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 3）",
+            "effects": [
+              "1d6＋智力加成的火焰傷害（敵方）",
+              "1d4＋智力加成的火焰傷害（敵方），若居高臨下",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "倒地",
+              "高處"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有倒地、高處；大地、地形這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          2,
+          2,
+          2
+        ],
+        "tag_count": 4
+      }
+    },
+    {
+      "label": "W8",
+      "kind": "護盾",
+      "wish": "幫隊友擋下傷害的護盾",
+      "old": {
+        "source": "none",
+        "keywords": [],
+        "attempts": 3,
+        "codes": [
+          "wish.count",
+          "wish.count",
+          "wish.count"
+        ],
+        "seconds": 0.0,
+        "refused": true
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "傷害",
+          "護盾"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 0.31,
+        "cards": [
+          {
+            "id": "skill_rand_2434517382",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "狀態「護衛」 5 回合，強度 108.1%：受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×67.6%（自己）",
+              "1d6＋感知加成的大地傷害（敵方）"
+            ],
+            "keywords": [],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 1d8＋感知加成（自己）",
+              "護盾（吸收量 1d6＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有護盾；傷害這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3000310151",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 3）",
+            "effects": [
+              "拉近 2 格（敵方）",
+              "1d6＋感知加成的神聖傷害（敵方）"
+            ],
+            "keywords": [
+              "撞擊"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有傷害；護盾這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          2,
+          1,
+          1
+        ],
+        "tag_count": 2
+      }
+    },
+    {
+      "label": "W9",
+      "kind": "反應",
+      "wish": "被打的時候自動反擊回去",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "撞擊",
+          "連擊"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 3.35,
+        "cards": [
+          {
+            "id": "skill_wis_repelling_light_cp",
+            "name_zh": "驅逐聖光",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "1d6＋感知加成的神聖傷害（敵方）"
+            ],
+            "keywords": [
+              "撞擊"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wis_banishing_brand_cp",
+            "name_zh": "放逐烙印",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "狀態「被標記」 2 回合（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "標記"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3000064226",
+            "name_zh": "火焰・打擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "8d6＋智力加成的火焰傷害（敵方）",
+              "推開 1 格（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "撞擊"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "撞擊",
+          "連擊",
+          "自身周圍",
+          "主動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 1.02,
+        "cards": [
+          {
+            "id": "skill_rand_3000310151",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 3）",
+            "effects": [
+              "拉近 2 格（敵方）",
+              "1d6＋感知加成的神聖傷害（敵方）"
+            ],
+            "keywords": [
+              "撞擊"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有撞擊、主動；連擊、自身周圍這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3513057505",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "擊倒（感知對抗）（敵方）",
+              "推開 2 格（敵方）"
+            ],
+            "keywords": [
+              "倒地",
+              "撞擊"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有撞擊、主動；連擊、自身周圍這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_83094330",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "錐形（大小 3）",
+            "effects": [
+              "1d10＋智力加成的冰霜傷害（敵方）",
+              "累積 1 點「連擊點」（上限 5）（自己）",
+              "狀態「易傷」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "連擊"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有連擊、主動；撞擊、自身周圍這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          2,
+          2,
+          2
+        ],
+        "tag_count": 4
+      }
+    },
+    {
+      "label": "W10",
+      "kind": "被動",
+      "wish": "一直帶在身上、讓我越打越強的被動",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "帶電"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 4.72,
+        "cards": [
+          {
+            "id": "skill_wis_storm_aegis_cp",
+            "name_zh": "雷殼守護",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "護盾（吸收量 2d4＋感知加成，持續 2 回合；已有護盾時取較大值）（友方）"
+            ],
+            "keywords": [
+              "帶電"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3984556505",
+            "name_zh": "雷電・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "1d6＋感知加成的雷電傷害（敵方），若本回合移動過"
+            ],
+            "keywords": [
+              "帶電",
+              "標記"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1838915425",
+            "name_zh": "雷電・位移",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 5）",
+            "effects": [
+              "拉近 1 格（敵方）",
+              "1d4＋智力加成的雷電傷害（敵方）",
+              "狀態「燃燒」 1 回合，強度 153.2%（每回合傷害 ×153.2%）（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "帶電",
+              "撞擊"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "帶電",
+          "直線",
+          "主動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 1.33,
+        "cards": [
+          {
+            "id": "skill_rand_3905338229",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 4）",
+            "effects": [
+              "2d8＋智力加成的雷電傷害（敵方）",
+              "摧毀可破壞的物件（影響的格子）",
+              "狀態「流血」 3 回合（敵方）"
+            ],
+            "keywords": [
+              "帶電"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 5）",
+            "effects": [
+              "1d6＋智力加成的雷電傷害（敵方）",
+              "1d4＋智力加成的雷電傷害（敵方），若目標站在「火焰」表面上",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "帶電",
+              "倒地",
+              "點燃"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_83094330",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 3）",
+            "effects": [
+              "2d8＋智力加成的雷電傷害（敵方）",
+              "狀態「恐懼」 1 回合（敵方）",
+              "推開 1 格（敵方）"
+            ],
+            "keywords": [
+              "帶電",
+              "撞擊"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          3,
+          3,
+          3
+        ],
+        "tag_count": 3
+      }
+    },
+    {
+      "label": "W11",
+      "kind": "地形＋毒",
+      "wish": "讓毒霧籠罩整個戰場",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "中毒"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 6.06,
+        "cards": [
+          {
+            "id": "skill_llm_a0910084d1",
+            "name_zh": "星輝回聲",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "消耗目標身上的「中毒」，然後4d4＋智力加成的毒素傷害（骰數 × 剩餘回合）；目標沒有該狀態則不生效（敵方）"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3984556505",
+            "name_zh": "大地・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 9）",
+            "effects": [
+              "生成「聖光」表面 2 回合，強度 104%（表面每回合的傷害、治療與施加的狀態 ×104%）（影響的格子）",
+              "生成「木箱」（影響的格子）",
+              "1d6＋感知加成的大地傷害（敵方），若目標站在「毒」表面上"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3000064226",
+            "name_zh": "雷電・打擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 7）",
+            "effects": [
+              "5d4＋智力加成的雷電傷害（敵方）",
+              "狀態「恐懼」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "帶電",
+              "中毒"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "中毒",
+          "毒素"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 3.61,
+        "cards": [
+          {
+            "id": "skill_rand_3905338229",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "錐形（大小 2）",
+            "effects": [
+              "2d10＋智力加成的毒素傷害（敵方）"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3851773823",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "1d10＋感知加成的神聖傷害（敵方），若目標站在「毒」表面上",
+              "賭注（命中後擲 d1000）——60%：本次傷害 ×2｜40%：你受到本次傷害的 25%（不致命）"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有中毒；毒素這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_638870438",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 3）",
+            "effects": [
+              "4d10＋智力加成的冰霜傷害（敵方），若居高臨下",
+              "生成「毒」表面 1 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍",
+              "中毒",
+              "高處"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有中毒；毒素這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          2,
+          1,
+          1
+        ],
+        "tag_count": 2
+      }
+    },
+    {
+      "label": "W12",
+      "kind": "做不到",
+      "wish": "我想要一條會飛的龍載我去月亮",
+      "old": {
+        "source": "none",
+        "keywords": [],
+        "attempts": 3,
+        "codes": [
+          "wish.count",
+          "wish.count",
+          "wish.count"
+        ],
+        "seconds": 0.0,
+        "refused": true
+      },
+      "new": {
+        "source": "llm",
+        "tags": [],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 0.44,
+        "cards": [
+          {
+            "id": "skill_rand_3674821192",
+            "name_zh": "曦痕迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 9）",
+            "effects": [
+              "8d4＋感知加成的神聖傷害（敵方）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "沉霧迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 1d8＋感知加成（自己）",
+              "護盾（吸收量 1d6＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1056019397",
+            "name_zh": "星輝迴旋",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "狀態「再生」 3 回合，強度 121.4%（每回合治療 ×121.4%）（自己）",
+              "生成「火焰」表面 1 回合（影響的格子）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          0,
+          0,
+          0
+        ],
+        "tag_count": 0
+      }
+    }
+  ]
+}

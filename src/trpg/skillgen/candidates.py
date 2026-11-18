@@ -103,6 +103,7 @@ __all__ = [
     "CandidateRules",
     "LlmTrace",
     "behavior_weights",
+    "composer_kinds",
     "follows_attr",
     "generate_candidates",
     "keyword_distribution",
@@ -202,6 +203,9 @@ class Candidate:
     fallback: bool = False
     llm: LlmTrace | None = None
     """這個種類請過 LLM 時的紀錄（成功 ``ok``，或失敗後改走組合器／技能池）。"""
+    pick: Literal["llm", "top"] | None = None
+    """挑選模式（Phase PK-2，:mod:`trpg.skillgen.pick_offer`）：``llm``＝LLM 從這一格的候選挑選並
+    命名；``top``＝這一格分數第一名（沒有 LLM、不請 LLM 或 LLM 失敗）；``None``＝不是挑選模式。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -224,6 +228,11 @@ class LlmTrace:
     name_codes: tuple[str, ...] = ()
     prompt_version: str | None = None
     naming_prompt_version: str | None = None
+    pick_seeds: tuple[int | None, ...] = ()
+    pick_designs: tuple[str, ...] = ()
+    pick_index: int | None = None
+    pick_reason: str | None = None
+    """挑選模式（Phase PK-1）的紀錄，見 :class:`~trpg.skillgen.proposal_topic.LlmAttempt`。"""
 
 
 def keyword_distribution(skills: Iterable[SkillDef], library: ContentLibrary) -> dict[str, int]:
@@ -290,6 +299,31 @@ def skill_has_keywords(skill: SkillDef, keywords: Sequence[str], library: Conten
     """技能（依專屬規則）同時製造或利用 ``keywords`` 的每一個。"""
     found = derive_keywords(skill, library.keywords, exclusive_only=True).all()
     return all(k in found for k in keywords)
+
+
+_ACTIVE_FAMILY: tuple[str, ...] = ("active", "stance")
+"""三選一「主動」那一類交給組合器的種類（姿態也是自己施放的招，不是被動或反應）。"""
+_KIND_FAMILIES: dict[str, tuple[str, ...]] = {
+    "active": _ACTIVE_FAMILY,
+    "passive": ("passive",),
+    "reaction": ("reaction",),
+}
+type _BoardKind = Literal["active", "passive", "reaction"]
+_KIND_ORDER: tuple[_BoardKind, ...] = ("active", "passive", "reaction")
+
+
+def composer_kinds(library: ContentLibrary, seed: int, slot: str) -> tuple[str, ...]:
+    """三選一的組合器候選要的種類（RC-1b，玩法 PM 交接 4.1.20 第 4 點；06 6.34.1、07 7.6）：每個
+    候選（``slot``：加深、橋接、新方向）照 ``whiteboard.kind_permille``（主動 70／被動 20／反應 10）
+    先擲種類，再交給組合器（獨立串流 ``composer.kind/<slot>``，不消耗其他亂數）。組合器做不出擲到的
+    種類時呼叫端改出主動。"""
+    permille = library.composer.whiteboard.kind_permille
+    roll = Rng(seed).fork(f"composer.kind/{slot}").randint(1, sum(permille.values()))
+    for kind in _KIND_ORDER:
+        roll -= permille[kind]
+        if roll <= 0:
+            return _KIND_FAMILIES[kind]
+    return _ACTIVE_FAMILY  # pragma: no cover - roll 一定在 [1, 總和]
 
 
 # ---------------------------------------------------------------------------
@@ -388,6 +422,10 @@ class _Search:
             name_codes=result.name_codes,
             prompt_version=result.prompt_version,
             naming_prompt_version=result.naming_prompt_version,
+            pick_seeds=result.pick_seeds,
+            pick_designs=result.pick_designs,
+            pick_index=result.pick_index,
+            pick_reason=result.pick_reason,
         )
         if not ok or skill is None:
             return None
@@ -437,6 +475,7 @@ class _Search:
         attrs = self.request.hero_attributes or None
         avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
         capped = self.capped(keywords)
+        kinds = composer_kinds(self.library, self.request.seed, self.kind)
         for _ in range(self.rules.composer_tries):
             if self.exhausted(keywords):  # PERF-3：橋接上限用完
                 break
@@ -454,9 +493,11 @@ class _Search:
                     held=self.request.held or None,
                     keyword_tries=left,
                     skip_legendary=True,  # PERF-3：指定關鍵字的組合不抽傳說（傳說不當候選）
+                    kinds=kinds,
                 )
             except KeywordExhaustedError as exc:
                 self.spend(exc.variants if capped else 0)
+                kinds = _ACTIVE_FAMILY  # RC-1b：這個關鍵字做不出擲到的種類，改出主動（同白板）
                 continue
             except ComposeError:
                 continue

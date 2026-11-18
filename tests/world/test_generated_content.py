@@ -273,7 +273,8 @@ def test_opportunity_offer_from_llm(library: ContentLibrary, make_char: MakeChar
     assert isinstance(gen, OfferGen) and gen.source == "llm" and gen.offer is not None
     pending = result.char.pending_offers[0]
     assert pending.offer == gen.offer and pending.region == "cloud_ridge"
-    assert any(t.source == "llm" for t in pending.offer.tags)
+    # PK-3：挑選模式下 LLM 挑的那格標 pick＝llm（同 world_pregen.offer 的判定）
+    assert any(t.source == "llm" or t.pick == "llm" for t in pending.offer.tags)
     # 重播只讀紀錄
     again, _ = _step(library, char, EventSolveAction(solution=OPPORTUNITY), recorded(used))
     assert again.char == result.char

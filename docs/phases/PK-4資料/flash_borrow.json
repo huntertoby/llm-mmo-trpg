@@ -1,0 +1,347 @@
+{
+  "format": "wish-compare/1",
+  "rows": [
+    {
+      "label": "F1",
+      "skill": "skill_fire_bolt",
+      "flashes": 0,
+      "category": null,
+      "slot": null,
+      "cells": [
+        {
+          "category": "combo",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 2,
+          "borrowed_categories": [
+            "element"
+          ]
+        },
+        {
+          "category": "cost",
+          "fixed": false,
+          "own": 2,
+          "borrowed": 1,
+          "borrowed_categories": [
+            "element"
+          ]
+        },
+        {
+          "category": "element",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "area",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 1,
+          "borrowed_categories": [
+            "element"
+          ]
+        }
+      ]
+    },
+    {
+      "label": "F2",
+      "skill": "skill_cleave",
+      "flashes": 1,
+      "category": null,
+      "slot": null,
+      "cells": [
+        {
+          "category": "cost",
+          "fixed": false,
+          "own": 2,
+          "borrowed": 2,
+          "borrowed_categories": [
+            "element"
+          ]
+        },
+        {
+          "category": "combo",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 3,
+          "borrowed_categories": [
+            "element"
+          ]
+        },
+        {
+          "category": "area",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "element",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F3",
+      "skill": "skill_fire_bolt",
+      "flashes": 2,
+      "category": null,
+      "slot": null,
+      "cells": [
+        {
+          "category": "deepen",
+          "fixed": false,
+          "own": 3,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "bridge",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "transform",
+          "fixed": true,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "deepen",
+          "fixed": false,
+          "own": 3,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F4",
+      "skill": "skill_cleave",
+      "flashes": 0,
+      "category": "area",
+      "slot": null,
+      "cells": [
+        {
+          "category": "area",
+          "fixed": false,
+          "own": 2,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "area",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "area",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F5",
+      "skill": "skill_radiant_mend",
+      "flashes": 0,
+      "category": null,
+      "slot": null,
+      "cells": [
+        {
+          "category": "area",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "cost",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "support",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "cost",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F6",
+      "skill": "skill_ember_brand",
+      "flashes": 0,
+      "category": null,
+      "slot": null,
+      "cells": [
+        {
+          "category": "trigger",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "element",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F7",
+      "skill": "skill_cleave",
+      "flashes": 2,
+      "category": null,
+      "slot": null,
+      "cells": [
+        {
+          "category": "transform",
+          "fixed": true,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "bridge",
+          "fixed": false,
+          "own": 3,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "deepen",
+          "fixed": false,
+          "own": 2,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "bridge",
+          "fixed": false,
+          "own": 3,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F8",
+      "skill": "skill_fire_bolt",
+      "flashes": 1,
+      "category": "element",
+      "slot": null,
+      "cells": [
+        {
+          "category": "element",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F9",
+      "skill": "skill_fire_bolt",
+      "flashes": 3,
+      "category": null,
+      "slot": 1,
+      "cells": [
+        {
+          "category": "combo",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "cost",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "element",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "element",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        }
+      ]
+    },
+    {
+      "label": "F10",
+      "skill": "skill_cleave",
+      "flashes": 3,
+      "category": null,
+      "slot": 3,
+      "cells": [
+        {
+          "category": "deepen",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 1,
+          "borrowed_categories": [
+            "bridge"
+          ]
+        },
+        {
+          "category": "transform",
+          "fixed": true,
+          "own": 1,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "bridge",
+          "fixed": false,
+          "own": 4,
+          "borrowed": 0,
+          "borrowed_categories": []
+        },
+        {
+          "category": "deepen",
+          "fixed": false,
+          "own": 1,
+          "borrowed": 1,
+          "borrowed_categories": [
+            "bridge"
+          ]
+        }
+      ]
+    }
+  ]
+}

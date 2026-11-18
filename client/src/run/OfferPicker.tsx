@@ -1,5 +1,6 @@
 // 技能候選（升級三選一、營火重骰）：卡片順序由種子決定；每張標示「加深／橋接／新方向」與帶的關鍵字（Phase 3-24b2）；
 // 偏離路線那張有明顯標籤；可跳過；欄位滿時選要換掉的技能。
+// PK-4 許願池（`wish`）：不畫「加深／橋接／新方向」，改畫本機模型回應願望的一句與「最接近你願望的一招：…」那一行。
 import { useMemo } from "react";
 import type { RunHero, RunOffer } from "../api/types";
 import { Hint } from "../ui/Hint";
@@ -27,6 +28,8 @@ interface Props {
   forceReplace?: boolean;
   /** 每張卡上方加一個固定標籤（完整技能三選一用「完整技能」，3W-6）。 */
   badge?: string;
+  /** PK-4 許願池願望驅動：卡上改畫回應願望與「做不到」那一行（標示的 `wish_reply_zh`／`wish_miss_zh`）。 */
+  wish?: boolean;
   disabled?: boolean;
   onPick(pick: number | null): void;
   onReplace(skillId: string | null): void;
@@ -41,6 +44,7 @@ export function OfferPicker({
   replace,
   forceReplace = false,
   badge,
+  wish = false,
   disabled = false,
   onPick,
   onReplace,
@@ -69,7 +73,21 @@ export function OfferPicker({
                   <b>{badge}</b>
                 </div>
               )}
-              {tag !== undefined && (
+              {wish && tag !== undefined && (tag.wish_reply_zh != null || tag.wish_miss_zh != null) && (
+                <div className="offer-wish" data-testid="offer-wish">
+                  {tag.wish_reply_zh != null && (
+                    <div className="offer-wish-reply" data-testid="offer-wish-reply">
+                      {tag.wish_reply_zh}
+                    </div>
+                  )}
+                  {tag.wish_miss_zh != null && (
+                    <div className="offer-wish-miss small" data-testid="offer-wish-miss">
+                      {tag.wish_miss_zh}
+                    </div>
+                  )}
+                </div>
+              )}
+              {!wish && tag !== undefined && (
                 <div className={`offer-kind-tag offer-kind-${tag.kind}`} data-testid="offer-kind">
                   <b>{offerTagText(tag)}</b>
                   <span className="small">　{offerTagHint(tag)}</span>

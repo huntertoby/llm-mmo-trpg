@@ -40,6 +40,7 @@ from trpg.skillgen.proposal import (
 )
 from trpg.skillgen.proposal_fallback import FallbackError, fallback_skill
 from trpg.skillgen.proposal_subset import ProposalRequest, SubsetError, select_subset
+from trpg.skillgen.proposal_topup import keywords_reachable
 
 __all__ = ["PROPOSE_RARITIES", "ProposeArgs", "cmd_llm_ping", "cmd_llm_propose", "propose_requests"]
 
@@ -145,9 +146,13 @@ def _open_skeletons(library: ContentLibrary, rarity: SkillRarity, tier: int) -> 
 
 
 def _feasible(library: ContentLibrary, request: ProposalRequest, seed: int) -> bool:
-    """題目可行：``select_subset`` 不丟 ``SubsetError``，且三層退回至少一層做得出技能。"""
+    """題目可行：``select_subset`` 不丟 ``SubsetError``、子集帶得到題目的關鍵字（RC-1，Q4：和遊戲
+    出題同一個檢查 ``keywords_reachable``，評估不出遊戲不會出的題，例如 common 召喚物），且三層退回
+    至少一層做得出技能。"""
     try:
-        select_subset(library, request)
+        subset = select_subset(library, request)
+        if not keywords_reachable(library, subset):
+            return False
         fallback_skill(library, request, ProposalContext(request.tier, request.rarity), seed=seed)
     except (SubsetError, FallbackError):
         return False

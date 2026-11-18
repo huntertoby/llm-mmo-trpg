@@ -1,0 +1,1282 @@
+{
+  "model": "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp",
+  "base_url": "http://localhost:8001/v1",
+  "reasoning_effort": "none",
+  "enable_thinking": false,
+  "temperature": 0.7,
+  "max_tokens": 1024,
+  "timeout_s": 240.0,
+  "max_retries": 3,
+  "seed": 0,
+  "started_utc": "2026-11-14T11:42:58+00:00",
+  "warmup": {
+    "request": "1 階／common／不限骨架／無關鍵字",
+    "source": "llm",
+    "seconds": 5.757,
+    "calls": [
+      {
+        "step": "propose",
+        "seconds": 4.232,
+        "status": 200,
+        "finish_reason": "stop",
+        "prompt_tokens": 1775,
+        "completion_tokens": 113,
+        "reasoning_tokens": 0
+      },
+      {
+        "step": "naming",
+        "seconds": 1.503,
+        "status": 200,
+        "finish_reason": "stop",
+        "prompt_tokens": 1189,
+        "completion_tokens": 74,
+        "reasoning_tokens": 0
+      }
+    ]
+  },
+  "speed": {
+    "completion_tokens": 500,
+    "reasoning_tokens": 0,
+    "ttft_s": 2.29,
+    "generation_s": 7.86,
+    "generation_tps": 63.6
+  },
+  "gpu_memory": "NVIDIA GeForce RTX 5090, 24702 MiB, 32607 MiB",
+  "finished_utc": "2026-11-14T11:45:04+00:00",
+  "server": {
+    "arch": "qwen35",
+    "quantization": "Q4_K_XL",
+    "compatibility_type": "gguf",
+    "loaded_context_length": 8192,
+    "state": "loaded"
+  },
+  "summary": {
+    "questions": 20,
+    "completed": 20,
+    "first_pass": 10,
+    "first_pass_permille": 500,
+    "fallback": 3,
+    "fallback_permille": 150,
+    "sources": {
+      "llm": 17,
+      "workshop": 1,
+      "composer": 1,
+      "pool": 1
+    },
+    "mean_attempts": 1.8,
+    "seconds_median": 4.91,
+    "seconds_max": 10.36,
+    "seconds_mean": 5.49,
+    "propose_seconds_median": 3.65,
+    "call_seconds_median": 1.56,
+    "calls": 54,
+    "completion_tokens_per_second": 60.8,
+    "reasoning_tokens": 0,
+    "reasoning_tokens_median": 0.0,
+    "completion_tokens_median": 131.5,
+    "finish_length": 0,
+    "naming_llm": 17,
+    "naming_total": 17,
+    "failures": {
+      "llm": {},
+      "format": {
+        "value_error": 2
+      },
+      "engine": {
+        "budget.weak": 4,
+        "exclusion.terrain_needs_earth": 3,
+        "keyword.required": 3,
+        "reference": 3,
+        "skeleton.secondary": 3,
+        "skeleton.core": 2,
+        "skeleton.core_share": 2,
+        "passive.affects": 1,
+        "skeleton.required_primitive": 1
+      }
+    }
+  },
+  "rows": [
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2171825236,
+      "source": "llm",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "skeleton.secondary"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 8.998,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "裂土重擊",
+      "concept": "將大地的沉悶力量凝於兵刃，一記砸下讓地面崩開，對單一目標造成傷害。",
+      "cast_flavor": "兵刃重重落下，震得腳下的岩石碎裂，塵土中只剩一聲悶響。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 1.362,
+      "seconds": 10.36,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 5.744,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4801,
+          "completion_tokens": 157,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.518,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5031,
+          "completion_tokens": 135,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.539,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5043,
+          "completion_tokens": 140,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.36,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1191,
+          "completion_tokens": 79,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 1
+    },
+    {
+      "request": "1 階／rare／不限骨架／fury",
+      "seed": 893870975,
+      "source": "llm",
+      "attempts": 3,
+      "codes": [
+        [
+          "reference"
+        ],
+        [
+          "skeleton.secondary"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 6.75,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "灼骨餘燼",
+      "concept": "將怒火凝於一點，以熾熱的殘火貫穿敵人身軀，令其血肉在持續燃燒中崩潰。",
+      "cast_flavor": "你呼出滾燙的氣息，指尖迸發出深紅色的光芒，那束火光如利刃般刺入對方，帶走一片灼燒的痛楚。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.664,
+      "seconds": 8.414,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.422,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4575,
+          "completion_tokens": 153,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.49,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4803,
+          "completion_tokens": 135,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.71,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4817,
+          "completion_tokens": 164,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.662,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1210,
+          "completion_tokens": 100,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 2
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 532914297,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 3.613,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "驚雷印",
+      "concept": "將高壓電流凝為可見的紋路，刻入目標體內形成標記。",
+      "cast_flavor": "指尖劃過空氣，一道蒼白電弧纏上對手，留下灼熱的痕跡。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.145,
+      "seconds": 4.757,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.565,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4789,
+          "completion_tokens": 144,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.142,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1221,
+          "completion_tokens": 73,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 3
+    },
+    {
+      "request": "1 階／common／不限骨架／summon",
+      "seed": 4278761754,
+      "source": "workshop",
+      "attempts": 3,
+      "codes": [
+        [
+          "keyword.required"
+        ],
+        [
+          "keyword.required"
+        ],
+        [
+          "keyword.required"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：keyword.required）",
+      "first_pass": false,
+      "propose_seconds": 5.708,
+      "name_zh": "範圍（保底）",
+      "concept": "",
+      "cast_flavor": "",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 5.708,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.604,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1892,
+          "completion_tokens": 126,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.299,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2113,
+          "completion_tokens": 120,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.507,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2113,
+          "completion_tokens": 148,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 4
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3214451173,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.427,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "赤痕標記",
+      "concept": "以熾熱的意志在目標身上烙下不可磨滅的火種印記。",
+      "cast_flavor": "指尖劃過空氣，留下一道灼目的紅線，瞬間纏繞住遠方的敵人。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 1.151,
+      "seconds": 3.578,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.409,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2057,
+          "completion_tokens": 136,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.148,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1213,
+          "completion_tokens": 72,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 5
+    },
+    {
+      "request": "1 階／epic／不限骨架／無關鍵字",
+      "seed": 3656944096,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 3.442,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "凝霜封界",
+      "concept": "將寒氣注入指定區域，使其結成堅固的冰面。",
+      "cast_flavor": "指尖劃過虛空，空氣驟降，地面迅速覆蓋上層薄冰。",
+      "skill_kind": "active",
+      "effects": [
+        "create_surface"
+      ],
+      "naming_seconds": 1.071,
+      "seconds": 4.513,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.393,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4649,
+          "completion_tokens": 138,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.068,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1219,
+          "completion_tokens": 66,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 6
+    },
+    {
+      "request": "1 階／common／area／無關鍵字",
+      "seed": 3066109316,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.224,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "流火錐",
+      "concept": "將火焰壓縮成銳利的形狀，向前方噴射，所經之處都會開始燃燒。",
+      "cast_flavor": "掌心聚起滾燙的光熱，隨手勢向前推出一道灼目的火柱，空氣在尾端被燒得扭曲。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.323,
+      "seconds": 3.547,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.213,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1335,
+          "completion_tokens": 138,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.32,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1231,
+          "completion_tokens": 81,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 7
+    },
+    {
+      "request": "1 階／rare／不限骨架／high_ground",
+      "seed": 1817687911,
+      "source": "composer",
+      "attempts": 3,
+      "codes": [
+        [
+          "exclusion.terrain_needs_earth"
+        ],
+        [
+          "exclusion.terrain_needs_earth"
+        ],
+        [
+          "exclusion.terrain_needs_earth"
+        ]
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ],
+        [
+          "budget.weak"
+        ],
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": "用盡 3 次（最後一次：exclusion.terrain_needs_earth）",
+      "first_pass": false,
+      "propose_seconds": 6.595,
+      "name_zh": "雷電・連段",
+      "concept": "隨機組合器產生的連段技能（種子 3466511313，暫定）",
+      "cast_flavor": "（暫定）力量依你的意志成形。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "damage",
+        "push"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 6.595,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.306,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4544,
+          "completion_tokens": 148,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.579,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4831,
+          "completion_tokens": 142,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.431,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4831,
+          "completion_tokens": 142,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 8
+    },
+    {
+      "request": "1 階／epic／builder_finisher／無關鍵字",
+      "seed": 690982258,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "skeleton.required_primitive"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 4.048,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "纏電蓄力",
+      "concept": "將雷電頻率注入自身，隨時間累積層數以增強後續打擊。",
+      "cast_flavor": "空氣中閃過細微電弧，能量在體內緊繃，等待爆發的瞬間。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack"
+      ],
+      "naming_seconds": 1.104,
+      "seconds": 5.152,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.513,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1899,
+          "completion_tokens": 129,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.504,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2095,
+          "completion_tokens": 137,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.101,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1238,
+          "completion_tokens": 71,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 9
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 3084845306,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.656,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "沉岩刻誌",
+      "concept": "以大地之力在目標身上留下不可磨滅的沉重印記。",
+      "cast_flavor": "腳下浮現蒼老紋路，將大地的重量深深刻入對方的血肉。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 1.179,
+      "seconds": 3.835,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.571,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2057,
+          "completion_tokens": 138,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.176,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1233,
+          "completion_tokens": 67,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 10
+    },
+    {
+      "request": "1 階／rare／strike／無關鍵字",
+      "seed": 838456073,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.295,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "焚心點",
+      "concept": "將熾熱的頻率凝聚於一點，穿透防線並引發持續燃燒。",
+      "cast_flavor": "指尖劃過空氣，一束紅光如針般刺入敵方核心，留下無法熄滅的火種。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 1.165,
+      "seconds": 3.46,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.279,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2009,
+          "completion_tokens": 122,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.163,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1234,
+          "completion_tokens": 74,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 11
+    },
+    {
+      "request": "1 階／epic／passive／high_ground",
+      "seed": 3203845091,
+      "source": "pool",
+      "attempts": 3,
+      "codes": [
+        [
+          "value_error"
+        ],
+        [
+          "passive.affects",
+          "budget.weak"
+        ],
+        [
+          "budget.weak"
+        ]
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": "用盡 3 次（最後一次：budget.weak）",
+      "first_pass": false,
+      "propose_seconds": 7.383,
+      "name_zh": "鷹眼",
+      "concept": "站得越高，看得越遠，心也越靜",
+      "cast_flavor": "你在高處俯瞰整片戰場，每個破綻都看得一清二楚",
+      "skill_kind": "passive",
+      "effects": [
+        "shield",
+        "add_stack"
+      ],
+      "naming_seconds": 0.0,
+      "seconds": 7.383,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.517,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2674,
+          "completion_tokens": 130,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.555,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2871,
+          "completion_tokens": 144,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.371,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2972,
+          "completion_tokens": 134,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 12
+    },
+    {
+      "request": "1 階／common／不限骨架／charged",
+      "seed": 1858532144,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.456,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "瞬閃雷鳴",
+      "concept": "將源晶的震動凝為一道細長的電弧，瞬間刺入目標核心。",
+      "cast_flavor": "空氣驟然繃緊，一線蒼白的電光撕裂靜默，直貫敵人的防線。",
+      "skill_kind": "active",
+      "effects": [
+        "damage"
+      ],
+      "naming_seconds": 1.349,
+      "seconds": 3.806,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.444,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1890,
+          "completion_tokens": 130,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.347,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1240,
+          "completion_tokens": 77,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 13
+    },
+    {
+      "request": "1 階／rare／combo／無關鍵字",
+      "seed": 1407370244,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        []
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 3.46,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "陷足石牢",
+      "concept": "地面驟然隆起，化為堅硬石塊將目標牢牢鎖在原地。",
+      "cast_flavor": "腳下的土地瞬間硬化，粗糙的石壁自四周合攏，將敵人困於方寸之間。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "apply_status"
+      ],
+      "naming_seconds": 1.339,
+      "seconds": 4.799,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.366,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 3038,
+          "completion_tokens": 182,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.337,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1258,
+          "completion_tokens": 74,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 14
+    },
+    {
+      "request": "1 階／epic／不限骨架／marked",
+      "seed": 3354077213,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "reference"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 3.689,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "斷界標",
+      "concept": "在目標身上烙下殘破的頻率紋路，使其成為破碎世界中的顯眼焦點。",
+      "cast_flavor": "指尖劃過空氣，一道晶亮的殘痕懸浮於對手胸前，隨呼吸微微震動。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status"
+      ],
+      "naming_seconds": 1.322,
+      "seconds": 5.011,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.219,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4789,
+          "completion_tokens": 129,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.378,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4992,
+          "completion_tokens": 122,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.32,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1262,
+          "completion_tokens": 75,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 15
+    },
+    {
+      "request": "1 階／common／control／無關鍵字",
+      "seed": 3840270065,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.237,
+      "naming_source": "llm",
+      "naming_attempts": 2,
+      "naming_codes": [
+        "concept.effect_mismatch"
+      ],
+      "name_zh": "沉土拖曳",
+      "concept": "地面土石變得鬆軟黏稠，纏住目標腳步並造成大地傷害。",
+      "cast_flavor": "腳下的土地瞬間塌陷變重，將敵人深深拖入其中。",
+      "skill_kind": "active",
+      "effects": [
+        "apply_status",
+        "damage"
+      ],
+      "naming_seconds": 1.968,
+      "seconds": 4.206,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.219,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1400,
+          "completion_tokens": 138,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.08,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1269,
+          "completion_tokens": 67,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 0.885,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1398,
+          "completion_tokens": 65,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 16
+    },
+    {
+      "request": "1 階／epic／不限骨架／focus",
+      "seed": 2099149301,
+      "source": "llm",
+      "attempts": 3,
+      "codes": [
+        [
+          "reference"
+        ],
+        [
+          "skeleton.secondary"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 6.812,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "引雷盡散",
+      "concept": "將積聚的電荷層數徹底釋放，化為貫穿單體的雷擊。",
+      "cast_flavor": "法器尖端迸出刺目的藍白弧光，所有殘餘的電流瞬間匯聚，化作一道細長雷柱直劈目標。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "consume_stack"
+      ],
+      "naming_seconds": 1.358,
+      "seconds": 8.17,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.34,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4784,
+          "completion_tokens": 133,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.757,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4987,
+          "completion_tokens": 148,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.561,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5039,
+          "completion_tokens": 150,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.356,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1281,
+          "completion_tokens": 83,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 17
+    },
+    {
+      "request": "1 階／epic／不限骨架／combo_point",
+      "seed": 2962346860,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "skeleton.core",
+          "skeleton.core_share",
+          "budget.weak"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 4.601,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "鎖鏈伏雷",
+      "concept": "將高壓電流凝練於武器尖端，隨連擊次數增加而持續累積，最終釋放強烈的雷電傷害。",
+      "cast_flavor": "空氣中繚繞著藍白色的微光，每一次揮擊都讓靜電聲響更清脆，直到最後一擊引爆積蓄的電荷。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack"
+      ],
+      "naming_seconds": 1.565,
+      "seconds": 6.166,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.552,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4801,
+          "completion_tokens": 155,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.937,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 5133,
+          "completion_tokens": 176,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.562,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1288,
+          "completion_tokens": 95,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 18
+    },
+    {
+      "request": "1 階／rare／不限骨架／ki",
+      "seed": 4286476637,
+      "source": "llm",
+      "attempts": 2,
+      "codes": [
+        [
+          "skeleton.core",
+          "skeleton.core_share",
+          "budget.weak"
+        ],
+        []
+      ],
+      "repaired": [
+        [],
+        []
+      ],
+      "reason": null,
+      "first_pass": false,
+      "propose_seconds": 5.421,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "疾風層疊",
+      "concept": "將氣流壓縮成直線，隨蓄力時間加深傷痕。",
+      "cast_flavor": "長息之後，鋒利的風刃沿直線切出，每重疊一次便更銳利。",
+      "skill_kind": "active",
+      "effects": [
+        "damage",
+        "add_stack"
+      ],
+      "naming_seconds": 1.269,
+      "seconds": 6.69,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 3.554,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4560,
+          "completion_tokens": 136,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "propose",
+          "seconds": 1.768,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 4873,
+          "completion_tokens": 156,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.266,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1287,
+          "completion_tokens": 72,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 19
+    },
+    {
+      "request": "1 階／rare／rune／無關鍵字",
+      "seed": 1691836196,
+      "source": "llm",
+      "attempts": 1,
+      "codes": [
+        []
+      ],
+      "repaired": [
+        [
+          "budget.weak"
+        ]
+      ],
+      "reason": null,
+      "first_pass": true,
+      "propose_seconds": 2.324,
+      "naming_source": "llm",
+      "naming_attempts": 1,
+      "naming_codes": [],
+      "name_zh": "烙心火印",
+      "concept": "在目標身上留下燃燒的火焰刻印，使其持續受到灼燒傷害。",
+      "cast_flavor": "指尖劃過虛空，一道赤紅的符號烙印於敵人身軀，火光沿著紋路蔓延不息。",
+      "skill_kind": "active",
+      "effects": [
+        "inscribe"
+      ],
+      "naming_seconds": 1.24,
+      "seconds": 3.564,
+      "calls": [
+        {
+          "step": "propose",
+          "seconds": 2.306,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 2057,
+          "completion_tokens": 123,
+          "reasoning_tokens": 0
+        },
+        {
+          "step": "naming",
+          "seconds": 1.238,
+          "status": 200,
+          "finish_reason": "stop",
+          "prompt_tokens": 1289,
+          "completion_tokens": 77,
+          "reasoning_tokens": 0
+        }
+      ],
+      "index": 20
+    }
+  ]
+}

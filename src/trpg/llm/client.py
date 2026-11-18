@@ -93,16 +93,28 @@ class MockLLMClient:
         return response
 
 
-class _SchemaRejectedError(Exception):
-    """伺服器不接受這種 JSON schema 寫法（HTTP 400／422）。"""
+SERVER_TEXT_CHARS = 300
+"""錯誤訊息與日誌裡附上的伺服器回應本文長度上限。"""
 
-    def __init__(self, status: int) -> None:
+
+class _SchemaRejectedError(Exception):
+    """帶 JSON schema 的請求被伺服器回 HTTP 400／422（不一定是 schema 本身的問題）。"""
+
+    def __init__(self, status: int, text: str = "") -> None:
         super().__init__(f"HTTP {status}")
         self.status = status
+        self.text = text
 
 
 class OpenAICompatClient:
-    """``POST {base_url}/chat/completions``（vLLM 的 OpenAI 相容 API）。"""
+    """``POST {base_url}/chat/completions``（vLLM 的 OpenAI 相容 API）。
+
+    ``auto`` 模式（LB-2）：每次先用 ``response_format``；伺服器接受過一次就只用它。還沒接受過時
+    被回 400／422 才退到 ``guided_json``，**只退這一次**（不記住），並記一則 error 日誌、
+    :attr:`unconstrained_calls` 加一（LM Studio 會忽略 ``guided_json``，那次輸出沒有 schema 約束）。
+    ``response_format`` 接受過之後又被回 400／422，視為那一次請求的錯誤（例如換模型時的暫時錯誤），
+    丟 :class:`LLMBadResponse`（算一次嘗試），不退回沒有約束的寫法。
+    """
 
     def __init__(self, config: LLMConfig, *, transport: httpx.BaseTransport | None = None) -> None:
         self.config = config
@@ -114,13 +126,19 @@ class OpenAICompatClient:
             "guided_json": ("guided_json",),
             "none": (),
         }[config.json_schema_mode]
-        self._fallback_warned = False
+        self.schema_mode_used: str | None = None
+        """最近一次帶 schema 成功的請求用的寫法（LB-2 量測用；``None`` ＝ 還沒有／不帶約束）。"""
+        self.unconstrained_calls = 0
+        """``auto`` 模式退到 ``guided_json`` 的次數（LB-2；LM Studio 上等於沒有 schema 約束）。"""
 
     @property
     def accepted_schema_mode(self) -> str | None:
-        """伺服器已接受的 schema 寫法（``response_format``／``guided_json``）；還沒帶 schema 成功
-        過、或設定為 ``none`` 時為 ``None``。"""
-        return self._modes[0] if len(self._modes) == 1 else None
+        """伺服器接受的 schema 寫法：設定只有一種時就是它；``auto`` 時是最近一次帶 schema 成功的
+        寫法（``response_format``／``guided_json``）；還沒成功過、或設定為 ``none`` 時為
+        ``None``。"""
+        if len(self._modes) == 1:
+            return self._modes[0]
+        return self.schema_mode_used
 
     def close(self) -> None:
         self._http.close()
@@ -130,28 +148,37 @@ class OpenAICompatClient:
     ) -> str:
         if json_schema is None or not self._modes:
             return _extract_content(self._post(messages, None, None))
+        last: _SchemaRejectedError | None = None
         for index, mode in enumerate(self._modes):
             try:
                 response = self._post(messages, mode, json_schema)
             except _SchemaRejectedError as exc:
+                last = exc
                 if index + 1 < len(self._modes):
-                    self._warn_fallback(mode, self._modes[index + 1], exc.status)
+                    self._log_fallback(mode, self._modes[index + 1], exc)
                 continue
-            # 伺服器接受這種寫法（HTTP 2xx）就記住，與回覆內容是否解析得了無關。
-            self._modes = (mode,)
+            if mode == "response_format":
+                # 伺服器接受 response_format（HTTP 2xx）就只用它，與回覆內容解析得了與否無關。
+                self._modes = (mode,)
+            elif index > 0:
+                self.unconstrained_calls += 1
+            self.schema_mode_used = mode
             return _extract_content(response)
-        raise LLMBadResponse("本機模型的伺服器拒絕了所有 JSON schema 約束寫法（HTTP 400／422）。")
+        detail = f"HTTP {last.status}：{last.text}" if last is not None else "HTTP 400／422"
+        if len(self._modes) == 1 and self._modes[0] == "response_format" and last is not None:
+            logger.error("本機模型的伺服器拒絕了這次帶 schema 的請求（%s）", detail)
+            raise LLMBadResponse(f"本機模型的伺服器拒絕了這次請求（{detail}）。")
+        raise LLMBadResponse(f"本機模型的伺服器拒絕了所有 JSON schema 約束寫法（{detail}）。")
 
-    def _warn_fallback(self, rejected: str, fallback: str, status: int) -> None:
-        """auto 模式第一次從被拒的寫法退到下一種時記一則 warning（之後不再重複）。"""
-        if self._fallback_warned:
-            return
-        self._fallback_warned = True
-        logger.warning(
-            "伺服器拒絕 %s（HTTP %d），已退回 %s；LM Studio 等伺服器會忽略 guided_json，"
-            "輸出可能不符 schema",
+    def _log_fallback(self, rejected: str, fallback: str, exc: _SchemaRejectedError) -> None:
+        """``auto`` 從被拒的寫法退到下一種：每次都記 error（LB-2：退到 guided_json 在 LM Studio
+        等於沒有 schema 約束，不能默默發生）。"""
+        logger.error(
+            "伺服器拒絕 %s（HTTP %d：%s），這次改用 %s；LM Studio 等伺服器會忽略 guided_json，"
+            "這次輸出沒有 schema 約束",
             rejected,
-            status,
+            exc.status,
+            exc.text or "（無本文）",
             fallback,
         )
 
@@ -207,7 +234,7 @@ class OpenAICompatClient:
             raise LLMUnavailable(f"連不上本機模型（{url}）：{exc}。{LLM_START_HINT}") from exc
         status = response.status_code
         if mode is not None and status in SCHEMA_REJECTED_STATUSES:
-            raise _SchemaRejectedError(status)
+            raise _SchemaRejectedError(status, response.text[:SERVER_TEXT_CHARS])
         if status >= SERVER_ERROR_MIN:
             raise LLMUnavailable(f"本機模型服務錯誤（HTTP {status}）。{LLM_START_HINT}")
         if status >= CLIENT_ERROR_MIN:

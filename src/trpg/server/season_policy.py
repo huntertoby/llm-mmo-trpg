@@ -149,6 +149,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "hints_off",  # 6F-4「不再顯示提示」（跟著角色走，同 hints_seen）
     "level_seen",  # 6F-4 看過的升級畫面（同 level）
     "skill_regions",  # 6L-2 技能的取得地點界域（跟著技能走，同 generated_skills）
+    "skill_wishes",  # PK-4 魔導書扉頁的願望原文（跟著技能走，同 skill_regions）
     "gear_origin",  # 6T-1a 裝備的來歷與綁定（跟著裝備走，同 gear）
     "mailbox",  # 6T-1a 信箱：季末沒領的信連同附件清掉（玩法 PM 3.5 代決；季末前 3 天寄件時提示）
     "free_race_change_used",  # 6R-1 這一季用過免費換種族（#138；新角色下一季另算）

@@ -16,6 +16,7 @@ from typing import Annotated, Final, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, LookChoice
+from trpg.content.skill_pick import WishTags
 from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
 from trpg.content.world_narration import StoryScene, StoryText
@@ -412,11 +413,15 @@ class WishAction(_Model):
     keywords: tuple[Annotated[str, Field(pattern=ID_PATTERN)], ...] = Field(
         default=(), max_length=4
     )
+    tags: WishTags | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4（07 7.6「許願池：願望驅動」）：沒有 LLM 時從標籤清單點選的需求標籤（不呼叫 LLM）；
+    ``None`` 不寫出。"""
 
     @model_validator(mode="after")
     def _one_way(self) -> WishAction:
-        if (self.text is None) == (not self.keywords):
-            raise ValueError("許願要給願望文字或選單的關鍵字（剛好一種）")
+        given = (self.text is not None) + bool(self.keywords) + (self.tags is not None)
+        if given != 1:
+            raise ValueError("許願要給願望文字、選單的關鍵字或標籤（剛好一種）")
         return self
 
 
@@ -1141,6 +1146,8 @@ class WishMadeEvent(_Model):
     coins_spent: int = Field(ge=0)
     used: int = Field(ge=1)
     refund: int = Field(default=0, ge=0)
+    tags: WishTags | None = Field(default=None, exclude_if=lambda v: v is None)
+    """PK-4 願望驅動：這次用的需求標籤（文字翻的或點選的）；舊流程 ``None``（不寫出）。"""
 
 
 class StorySkillGrantedEvent(_Model):

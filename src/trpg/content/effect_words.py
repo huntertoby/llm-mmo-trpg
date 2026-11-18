@@ -34,6 +34,10 @@ class EffectMatches(ContentModel):
     primitives: tuple[str, ...] = ()
     units: tuple[str, ...] = ()
     """召喚物範本 ID（``content/units/summons/``）。"""
+    conditions: tuple[str, ...] = ()
+    """PK-2：條件種類 ID（``skill_conditions.yaml``；技能層級、效果、變奏的條件都算）。"""
+    shapes: tuple[str, ...] = ()
+    """PK-2：形狀種類 ID（``skill_shapes.yaml``）。"""
 
     def facts(self) -> tuple[str, ...]:
         """``kind:id`` 形式的效果鍵（和 :func:`trpg.llm.consistency.skill_facts` 同格式）。"""
@@ -43,6 +47,8 @@ class EffectMatches(ContentModel):
             *(f"surface:{s}" for s in self.surfaces),
             *(f"primitive:{p}" for p in self.primitives),
             *(f"unit:{u}" for u in self.units),
+            *(f"condition:{c}" for c in self.conditions),
+            *(f"shape:{s}" for s in self.shapes),
         )
 
 
@@ -52,6 +58,9 @@ class EffectWordGroup(ContentModel):
     ignore: tuple[str, ...] = ()
     """含這些詞的片段不算提到（例如「風格」不算提到風）。"""
     matches: EffectMatches
+    strict: bool = False
+    """PK-2 加嚴的詞組（高處、地形、單字元素等）：只有挑選模式的命名檢查
+    （``trpg.llm.pick.pick_skill(strict=True)``）看，閃現、自由設計的命名照舊不看。"""
 
     @model_validator(mode="after")
     def _check(self) -> EffectWordGroup:

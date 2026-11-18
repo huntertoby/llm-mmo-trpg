@@ -1,0 +1,23 @@
+暖機：11.3 秒（llm）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 0, 'ttft_s': 2.3, 'generation_s': 2.23, 'generation_tps': 224.6}｜VRAM：NVIDIA GeForce RTX 5090, 21632 MiB, 32607 MiB
+  1. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜8.4 秒｜暗影・蓄力與終結
+  2. 1 階／rare／不限骨架／fury｜llm｜嘗試 2｜4.1 秒｜餘燼號令
+  3. 1 階／epic／不限骨架／marked｜llm｜嘗試 2｜3.8 秒｜烙印之擊
+  4. 1 階／common／不限骨架／summon｜workshop｜嘗試 3｜8.3 秒｜範圍（保底）
+  5. 1 階／rare／rune／無關鍵字｜llm｜嘗試 3｜7.1 秒｜灼痕刻印
+  6. 1 階／epic／不限骨架／無關鍵字｜llm｜嘗試 1｜2.8 秒｜寒潮裂隙
+  7. 1 階／common／area／無關鍵字｜llm｜嘗試 1｜2.4 秒｜熾熱錐形波
+  8. 1 階／rare／不限骨架／high_ground｜composer｜嘗試 3｜4.3 秒｜雷電・連段
+  9. 1 階／epic／builder_finisher／無關鍵字｜llm｜嘗試 2｜3.5 秒｜連鎖脈衝
+ 10. 1 階／rare／rune／無關鍵字｜composer｜嘗試 3｜4.2 秒｜神聖・刻印
+ 11. 1 階／rare／strike／無關鍵字｜llm｜嘗試 1｜2.1 秒｜重擊碎裂
+ 12. 1 階／epic／passive／high_ground｜pool｜嘗試 3｜6.3 秒｜鷹眼
+ 13. 1 階／common／不限骨架／charged｜composer｜嘗試 3｜6.6 秒｜雷電・範圍
+ 14. 1 階／rare／combo／無關鍵字｜llm｜嘗試 1｜2.9 秒｜震盪迴旋
+ 15. 1 階／epic／不限骨架／marked｜llm｜嘗試 1｜2.7 秒｜溯流重擊
+ 16. 1 階／common／control／無關鍵字｜llm｜嘗試 2｜3.0 秒｜滯重餘波
+ 17. 1 階／epic／不限骨架／focus｜composer｜嘗試 3｜5.5 秒｜物理・蓄力與終結
+ 18. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜7.7 秒｜神聖・蓄力與終結
+ 19. 1 階／rare／不限骨架／ki｜composer｜嘗試 3｜6.7 秒｜暗影・蓄力與終結
+ 20. 1 階／rare／rune／無關鍵字｜llm｜嘗試 2｜3.5 秒｜灼熱烙印
+中位數 4.12 秒、最慢 8.36 秒、一次通過 5/20、退回 9/20 → docs\phases\LB-2資料\gemma_base_t07.json

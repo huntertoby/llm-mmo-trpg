@@ -53,6 +53,7 @@ Thumbs.db
 desktop.ini
 .claude/*
 !.claude/settings.json
+!.claude/pm-workflow.json
 
 # 前端（client/dist 已由上面的 dist/ 涵蓋）
 node_modules/
@@ -65,3 +66,6 @@ saves-backups/
 .scratch_*/
 # scripts/export_workshop_descriptions.py 的預設輸出（MAC-1）
 workshop_descriptions.csv
+
+# pm-workflow plugin 的 push 檢查 log
+.claude/pm-logs/
