@@ -208,6 +208,25 @@ export function usePlayback(
             if (op.vfx.leadMs > 0) await sleep(op.vfx.leadMs + hitHoldMs(op.vfx, reduced));
           }
           break;
+        case "reroll":
+          // AR-SK3：重擲的骰子層在出招前播完（擲、敲、換、比較、淡出）；浮字「重擲！」在骰子比較完才出
+          if (skip()) break;
+          {
+            const r = op.reroll;
+            rendererRef.current?.playReroll(r.fx, r.scale);
+            let at = 0;
+            for (const f of r.floats) {
+              if (f.atMs > at) await sleep(f.atMs - at);
+              at = Math.max(at, f.atMs);
+              if (!skip()) rendererRef.current?.playFeedback(f.items, r.feedbackMs);
+            }
+            if (!skip() && r.durationMs > at) await sleep(r.durationMs - at);
+          }
+          break;
+        case "placed":
+          // AR-SK3：戰前佈置放下的一下（不等它播完）
+          if (!skip()) rendererRef.current?.playPlaceBurst(op.tiles);
+          break;
         case "victory":
           // 6N-5：我方勝利：全隊舉手或收刀、浮出「勝利」，播完才顯示結束面板
           if (skip()) break;

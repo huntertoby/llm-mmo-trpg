@@ -41,7 +41,7 @@ export function minorGlyph(name: string): string {
 }
 
 /** SK-3 戰前佈置時技能列上方的提示。 */
-export const PREP_HINT_ZH = "戰前佈置：在上方視窗選一招，再點高亮的我方起始區格子放下；或按「不佈置，直接開戰」。";
+export const PREP_HINT_ZH = "戰前佈置：在上方視窗選一招，再點框起來的我方起始區格子放下；或按「不佈置，直接開戰」。"; // AR-SK3：玩法 PM 定案字（移植需求第 2 節）
 
 /** 技能列上方的一行提示。 */
 export function actionHintText(state: {

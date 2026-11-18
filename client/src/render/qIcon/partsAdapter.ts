@@ -28,7 +28,10 @@ export function toQParts(icon: SkillIconData, parts: IconParts): QParts {
   };
   const changes = icon.modifier?.changes ?? [];
   const item = (key: string): QPartItem => {
-    if (icon.modifier == null) return { cat: "effect", id: key, seg: segOf(key) };
+    if (icon.modifier == null) {
+      const tint = parts.effects.find((p) => p.key === key)?.q?.tint;
+      return tint == null ? { cat: "effect", id: key, seg: segOf(key) } : { cat: "effect", id: key, seg: segOf(key), tint };
+    }
     const ch = changes.find((c) => c.key === key);
     const first = ch?.part_ids?.[0];
     const value = ch?.value as QPartItem["value"];

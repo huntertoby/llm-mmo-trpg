@@ -55,21 +55,46 @@ export function spreadMark(ctx: Ctx, size: number, unitPx = 1, res = 2, clipR?: 
   ctx.restore();
 }
 
+/**
+ * 頭頂排法（`spreadMarkHeadCanvas(px)`）的記號最右邊離圖示中心幾 CSS px（孢子與小點的外框色都算進去，再加對齊裝置像素：孢子、小點各最多往右 1 個裝置像素，共 1 模型 px）。
+ * AR-SK3（`AR-SK2驗收.md` 小修 1）：1600 寬第 2 個圖示有記號時，「+N」角標膠囊的左緣往右讓到這裡之外，孢子不壓到膠囊。
+ */
+export function headSporeRight(px: number, res = 2): number {
+  const size = px - 2, dev = 1 / res, half = frameOuter(size, 1), rs = 1.5, rd = 1;
+  const x = half - rs - dev, dd = rs + dev + rd + 0.7;
+  return Math.max(x + rs + dev, x + Math.cos(-0.42) * dd + rd + dev) + 1;
+}
+
 const cache = new Map<string, HTMLCanvasElement>();
+
+/**
+ * 戰場（`statusIconCanvas(px)`，框 px−2）這一刻用不用狀態卡的排法（AR-SK3，`AR-SK2驗收.md` 裁定 4）：
+ * 畫面上的框邊長＝(px−2)×`screenPx`（每個模型像素幾個畫面 px：地圖縮放 × 反向放大）≥ `SPORE_HEAD` 就換。
+ */
+export function fieldUsesCardLayout(px: number, screenPx: number): boolean {
+  return (px - 2) * screenPx >= SPORE_HEAD;
+}
+
+/** 狀態卡排法的倍率量化（貼圖快取用）：每 0.05 一級。 */
+export const quantizeScreenPx = (screenPx: number): number => Math.round(screenPx * 20) / 20;
 
 /**
  * 戰場頭頂（`statusIconCanvas(id, px)`：框 px−2）的記號：邊長 px＋2×`HEAD_PAD` 的 canvas，框心在正中（和圖示同一個中心）。
  * 沒有畫布時回 null。只有記號，圖示另外畫。
+ * `screenPx`（AR-SK3）：畫面上的框邊長 ≥ 14 px 時傳每個模型像素幾個畫面 px，改畫狀態卡的排法（孢子、小點的大小是畫面 px）；
+ * 省略＝頭頂排法（AR-SK2 原樣，大小是模型 px）。
  */
-export function spreadMarkHeadCanvas(px: number, res = 2): HTMLCanvasElement | null {
+export function spreadMarkHeadCanvas(px: number, res = 2, screenPx?: number): HTMLCanvasElement | null {
   if (!qCanvasAvailable()) return null;
-  const key = `h|${px}|${res}`;
+  const card = screenPx !== undefined && fieldUsesCardLayout(px, screenPx);
+  const S = card ? quantizeScreenPx(screenPx) : 1, R = card ? Math.max(res, Math.ceil(S * res)) : res;
+  const key = `h|${px}|${R}|${S}`;
   const hit = cache.get(key);
   if (hit !== undefined) return hit;
-  const W = px + 2 * HEAD_PAD, cv = blank(Math.round(W * res)), x = ctxOf(cv);
-  x.scale(res, res);
+  const W = px + 2 * HEAD_PAD, cv = blank(Math.round(W * R)), x = ctxOf(cv);
+  x.scale(R, R);
   x.translate(W / 2, W / 2);
-  spreadMark(x, px - 2, 1, res);
+  spreadMark(x, px - 2, S, R / S);
   cache.set(key, cv);
   return cv;
 }
