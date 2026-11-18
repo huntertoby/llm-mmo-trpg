@@ -159,6 +159,7 @@ _FIELD_ZH: dict[str, str] = {
     "cast_flavor": "施放描述",
     "caster_adjacent_blocker": "施放者身旁有牆",
     "caster_high_ground": "施放者居高",
+    "caster_cast_tag": "本回合施放過帶某標籤的技能",
     "caster_surface": "施放者所在表面",
     "chance_permille": "成功率",
     "change": "改變",

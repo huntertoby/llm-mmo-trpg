@@ -26,13 +26,16 @@ class VariantWhen(ContentModel):
     - ``caster_surface``：施放者所在格的表面是其中之一（表面 id，必須在 ``surfaces.yaml``）；
     - ``caster_high_ground: true``：施放者所在格比目標點高至少 1 層；
     - ``caster_adjacent_blocker: true``：施放者八方向相鄰的格子有牆壁或 ``blocks_move`` 物件；
-    - ``target_surface``：目標點的表面是其中之一。
+    - ``target_surface``：目標點的表面是其中之一；
+    - ``caster_cast_tag``（SK-1，06 6.38 第 7 點，#166）：施放者本回合已經施放過帶這個標籤的技能
+      （不含這次施放；同條件 ``cast_tag_this_turn``，6.16 C）。
     """
 
     caster_surface: tuple[str, ...] | None = None
     caster_high_ground: Literal[True] | None = None
     caster_adjacent_blocker: Literal[True] | None = None
     target_surface: tuple[str, ...] | None = None
+    caster_cast_tag: str | None = Field(default=None, pattern=ID_PATTERN)
 
     @model_validator(mode="after")
     def _check(self) -> VariantWhen:

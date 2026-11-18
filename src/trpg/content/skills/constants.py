@@ -861,8 +861,10 @@ VARIANT_CONDITIONS: tuple[str, ...] = (
     "caster_high_ground",
     "caster_adjacent_blocker",
     "target_surface",
+    "caster_cast_tag",
 )
-"""變奏條件的四種（PM 決定 #2）。"""
+"""變奏條件（PM 決定 #2 的四種；SK-1 加 ``caster_cast_tag``：施放者本回合施放過帶某標籤的技能，
+06 6.38 第 7 點）。"""
 
 
 VARIANT_TARGET_CONDITIONS: tuple[str, ...] = ("caster_high_ground", "target_surface")

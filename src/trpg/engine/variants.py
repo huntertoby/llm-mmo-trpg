@@ -13,7 +13,9 @@
 - ``caster_high_ground``：施放者所在格比 **目標點** 高至少 1 層；
 - ``caster_adjacent_blocker``：施放者八方向相鄰的格子（地圖內）有牆壁（:func:`is_wall`）或
   ``blocks_move`` 物件；地圖邊緣不算；
-- ``target_surface``：**目標點** 的表面在清單中。
+- ``target_surface``：**目標點** 的表面在清單中；
+- ``caster_cast_tag``（SK-1，06 6.38 第 7 點）：施放者本回合已施放過帶這個標籤的技能（同條件
+  ``cast_tag_this_turn``；不看位置與目標點）。
 
 目標點（:func:`target_point`）：單位目標為該單位所在格；否則為指定格；否則為目標物件所在格；
 方向型與自身型沒有目標點，依賴目標點的條件一律不成立。
@@ -79,6 +81,8 @@ def variant_holds(
         return _surface_id(state, caster.xy) in when.caster_surface
     if when.caster_adjacent_blocker is not None:
         return _adjacent_blocker(state, caster.xy)
+    if when.caster_cast_tag is not None:  # SK-1（06 6.38 第 7 點）：本回合施放過帶這個標籤的技能
+        return when.caster_cast_tag in caster.turn_cast_tags
     if target is None or not state.in_bounds(*target):
         return False
     if when.caster_high_ground is not None:

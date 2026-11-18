@@ -44,8 +44,8 @@ def _lower_enemy(state: BattleState, unit: UnitState, xy: XY) -> bool:
 
 def _position_holds(state: BattleState, unit: UnitState, when: VariantWhen) -> bool:
     """與施放者位置有關的條件在 ``unit`` 現在的位置是否成立（居高：比某個存活敵人高）。"""
-    if when.target_surface is not None:
-        return False
+    if when.target_surface is not None or when.caster_cast_tag is not None:
+        return False  # SK-1：出招順序的條件和站位無關，走位不會讓它成立
     if when.caster_high_ground is not None:
         return _lower_enemy(state, unit, unit.xy)
     return variant_holds(state, unit, when, None)
