@@ -33,6 +33,7 @@ from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
+    ON_KEYWORD_EXPLOITED,
     ON_STATUS_APPLIED,
     ON_SUMMON_DOWNED,
     RUNE_BOTH_MESSAGE,
@@ -534,10 +535,23 @@ class TriggerAffix(_AffixBase):
             raise ValueError(f"詞條 {self.id}：melee_only 只能搭配 trigger: on_damaged")
         if (self.trigger == ON_CAST_TAG) != (self.tag is not None):
             raise ValueError(f"詞條 {self.id}：tag 只在 trigger: on_cast_tag 時填寫（且必填）")
-        if self.status is not None and self.trigger != ON_STATUS_APPLIED:
+        if self.status is not None and self.trigger not in (
+            ON_STATUS_APPLIED,
+            ON_KEYWORD_EXPLOITED,
+        ):
             raise ValueError(f"詞條 {self.id}：status 只能搭配 trigger: on_status_applied")
-        if self.surface is not None and self.trigger != ON_ENTER_SURFACE:
+        if self.surface is not None and self.trigger not in (
+            ON_ENTER_SURFACE,
+            ON_KEYWORD_EXPLOITED,
+        ):
             raise ValueError(f"詞條 {self.id}：surface 只能搭配 trigger: on_enter_surface")
+        if self.trigger == ON_KEYWORD_EXPLOITED and (
+            self.effect_target != "self" or (self.status is not None and self.surface is not None)
+        ):  # SK-3（#166 6.38-10）：沒有另一方；狀態與表面擇一
+            raise ValueError(
+                f"詞條 {self.id}：on_keyword_exploited 必須 effect_target: self，"
+                "status 與 surface 擇一"
+            )
         self._check_summon_downed()
         return self
 

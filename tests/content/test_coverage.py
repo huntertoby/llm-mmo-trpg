@@ -15,6 +15,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "trigger": {
         "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能",
         "on_battle_start": "只由閃現轉型「伴生」產生（TF-1，#159），沒有手寫技能",
+        "on_keyword_exploited": "SK-3（#166 6.38-10）新觸發，還沒有技能用（接進出題待 PM 決定）",
     },
     "reaction_event": {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"

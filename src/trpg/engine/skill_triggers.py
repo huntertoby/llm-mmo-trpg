@@ -63,7 +63,7 @@ from trpg.engine.skills.conditions import Subject, condition_met, skill_conditio
 from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.trigger_types import GEAR_ATTACK_RUNE, GEAR_PREFIX, MODIFIER_ON_HIT, Fired
-from trpg.shared.types import UnitId
+from trpg.shared.types import Surface, UnitId
 
 if TYPE_CHECKING:
     from trpg.engine.context import Ctx
@@ -76,6 +76,7 @@ __all__ = [
     "PassiveIndex",
     "check_trigger_depth",
     "collect_cast",
+    "collect_exploit",
     "collect_move",
     "collect_turn_end",
     "collect_turn_start",
@@ -415,6 +416,45 @@ def _on_enter_surface(ctx: Ctx, index: PassiveIndex, event: UnitMoved) -> None:
     _fire_gear(
         ctx, index, "on_enter_surface", event.seq, creator_id, mover.id, surface=tile.surface.value
     )
+
+
+ON_KEYWORD_EXPLOITED = "on_keyword_exploited"
+
+
+def collect_exploit(
+    ctx: Ctx,
+    maker_id: UnitId | None,
+    exploiter_id: UnitId | None,
+    *,
+    status: str | None = None,
+    surface: Surface | None = None,
+) -> None:
+    """``on_keyword_exploited``（SK-3，#166，06 6.38 第 10 點）：``maker_id`` 造的狀態（``status``）
+    或表面（``surface``）被 ``exploiter_id`` 利用了（誰都算，含自己）。持有者的被動與詞條各記一筆；
+    ``trigger.status``／``surface`` 有填時要相符。沒有製造者（地圖原有、天氣、蔓延）或沒有持有者時
+    直接返回（不建立被動索引以外的任何東西）。另一方記成利用者（被動沒有另一方，效果作用在持有者）。"""
+    if maker_id is None:
+        return
+    index = _index(ctx)
+    owned = index.owners(ON_KEYWORD_EXPLOITED)
+    gear_owned = index.gear_owners(ON_KEYWORD_EXPLOITED)
+    if not any(o == maker_id for o, _ in owned) and not any(o == maker_id for o, _ in gear_owned):
+        return
+    seq = ctx.state.next_event_seq
+    for owner, skill in owned:
+        trigger = skill.trigger
+        assert trigger is not None
+        if owner != maker_id:
+            continue
+        if trigger.status is not None and trigger.status != status:
+            continue
+        if trigger.surface is not None and trigger.surface is not surface:
+            continue
+        _fire(ctx, seq, owner, skill, exploiter_id)
+    _fire_gear(
+        ctx, index, ON_KEYWORD_EXPLOITED, seq, maker_id, exploiter_id,
+        status=status, surface=None if surface is None else surface.value,
+    )  # fmt: skip
 
 
 def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:

@@ -38,7 +38,14 @@ def test_the_twelve_triggers_are_defined_with_the_spec_coefficients() -> None:
 
 def test_only_triggers_with_another_party_allow_target_other() -> None:
     rules = library().ruleset
-    no_other = {"on_turn_start", "on_turn_end", "on_move", "on_cast_tag", "on_battle_start"}
+    no_other = {
+        "on_turn_start",
+        "on_turn_end",
+        "on_move",
+        "on_cast_tag",
+        "on_battle_start",
+        "on_keyword_exploited",  # SK-3：效果作用在持有者
+    }
     for trigger in rules.skill_triggers.triggers:
         assert trigger.has_other is (trigger.id not in no_other)
 

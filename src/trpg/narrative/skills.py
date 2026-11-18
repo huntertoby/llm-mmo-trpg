@@ -22,6 +22,7 @@ from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     DAMAGE_MULTIPLIER,
+    ON_KEYWORD_EXPLOITED,
     REDIRECT_STATUS,
     SELF_DAMAGE_OF_HIT,
     ConditionSpec,
@@ -1485,10 +1486,22 @@ def _trigger_timing(library: ContentLibrary, trigger: TriggerSpec) -> str:
         return name.replace(" n ", f" {trigger.n} ")
     if trigger.tag is not None:
         return f"施放帶{tag_text(library, (trigger.tag,))}標籤的技能後"
+    if trigger.event == ON_KEYWORD_EXPLOITED:  # SK-3（#166 6.38-10）
+        return _exploited_timing(library, trigger, name)
     if trigger.surface is not None:
         return f"敵人進入你的「{rules.surface_def(trigger.surface).name_zh}」表面時"
     if trigger.status is not None:
         return f"施加「{rules.status_def(trigger.status).name_zh}」後"
+    return name
+
+
+def _exploited_timing(library: ContentLibrary, trigger: TriggerSpec, name: str) -> str:
+    """「你造的關鍵字被利用時」：指定狀態或表面時寫出名字。"""
+    rules = library.ruleset
+    if trigger.status is not None:
+        return f"你造的「{rules.status_def(trigger.status).name_zh}」被利用時"
+    if trigger.surface is not None:
+        return f"你造的「{rules.surface_def(trigger.surface).name_zh}」表面被利用時"
     return name
 
 

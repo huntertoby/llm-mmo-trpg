@@ -233,6 +233,9 @@ from trpg.content.skills.constants import (
     ON_ENTER_SURFACE as ON_ENTER_SURFACE,
 )
 from trpg.content.skills.constants import (
+    ON_KEYWORD_EXPLOITED as ON_KEYWORD_EXPLOITED,
+)
+from trpg.content.skills.constants import (
     ON_KILL_SECOND_SHAPES as ON_KILL_SECOND_SHAPES,
 )
 from trpg.content.skills.constants import (

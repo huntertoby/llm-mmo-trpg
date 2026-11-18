@@ -229,6 +229,11 @@ def _trigger_field(library: ContentLibrary) -> FieldSpec:
             params.append(FieldSpec(field="status", name_zh="狀態（省略＝任何）", type="text"))
         if timing.id == "on_enter_surface":
             params.append(FieldSpec(field="surface", name_zh="表面（省略＝任何）", type="text"))
+        if timing.id == "on_keyword_exploited":  # SK-3（#166 6.38-10）：狀態與表面擇一
+            params += [
+                FieldSpec(field="status", name_zh="狀態（擇一，省略＝任何）", type="text"),
+                FieldSpec(field="surface", name_zh="表面（擇一，省略＝任何）", type="text"),
+            ]
         targets = [Choice(value="self", name_zh="持有者自己")]
         if timing.has_other:
             targets.append(

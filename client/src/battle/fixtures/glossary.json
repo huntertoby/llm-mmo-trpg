@@ -3977,6 +3977,14 @@
    "rules_zh": []
   },
   {
+   "id": "on_keyword_exploited",
+   "name_zh": "你造的關鍵字被利用時",
+   "description_zh": "持有者施加的狀態被消耗（例：燃燒被引爆），或持有者造出的表面被元素觸發互動（例：水被雷電導電、油被點燃）；誰利用都算，含自己。trigger.status／surface 擇一縮小範圍，都省略時任何一種都算。沒有另一方，效果作用在持有者。每輪最多 1 次。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "targeted_by_melee",
    "name_zh": "被近戰攻擊時",
    "description_zh": "被近戰攻擊命中之後、傷害結算之前。",

@@ -49,6 +49,7 @@ from trpg.engine.rules.footprint import giant_at
 from trpg.engine.rules.geometry import XY, chebyshev
 from trpg.engine.rules.movement import is_flying
 from trpg.engine.rules.race import burn_immune, conduction_immune
+from trpg.engine.skill_triggers import collect_exploit
 from trpg.engine.state import BattleState, ObjectState
 from trpg.engine.triggers import register_trigger
 from trpg.shared.types import Element, Surface, UnitId
@@ -151,7 +152,9 @@ def touch_outcomes(
     """``element`` 觸及 ``xy`` 時，依互動表產生的後續效果（``depth`` 為這些效果的深度）。"""
     state = ctx.state
     effects: list[EffectBase] = []
-    for rule in matching_rules(state, element, xy, categories):
+    rules = matching_rules(state, element, xy, categories)
+    _note_exploited_surface(ctx, rules, xy, source_id)
+    for rule in rules:
         for outcome in rule.then:
             effects.extend(
                 _outcome_effects(
@@ -169,6 +172,22 @@ def touch_outcomes(
                 )
             )
     return effects
+
+
+def _note_exploited_surface(
+    ctx: Ctx, rules: Sequence[InteractionRule], xy: XY, source_id: UnitId | None
+) -> None:
+    """``on_keyword_exploited``（SK-3，#166 6.38-10）：元素觸發了這格表面的互動（表面類規則，或
+    「站在某表面上的單位」類規則，例：雷電打到站在水上的人），表面有製造者時記一次「被利用」
+    （每次觸及最多一次；結算前先讀，互動的結果還沒改掉表面）。"""
+    tile = ctx.state.tile(*xy)
+    if tile.surface_creator is None or tile.surface is Surface.NONE:
+        return
+    if any(
+        rule.target == "surface" or (rule.target == "unit" and rule.unit_surface is not None)
+        for rule in rules
+    ):
+        collect_exploit(ctx, tile.surface_creator, source_id, surface=tile.surface)
 
 
 @dataclass(frozen=True)
