@@ -40,6 +40,8 @@ export interface QPartRef {
   id: string;
   value?: QP.PartOpt["value"];
   base?: QP.PartOpt["base"];
+  /** 染色（AR-SK3：吸收表面照技能指定的表面染色；沒有時畫預設色）。 */
+  tint?: QP.PartOpt["tint"];
 }
 
 /** 部件的浮動說明：分類字，有玩家說明時接在後面（效果原語、條件、觸發）。 */
@@ -734,6 +736,8 @@ export function effectPart(e: EffectLike): Part {
     };
   }
   const g = EFFECT[e.type];
+  // AR-SK3：吸收表面的圖樣照技能指定的表面染色（`AR-SK2驗收.md` 裁定 3）；沒有指定表面時照舊（水色）
+  const tint = e.type === "absorb_surface" && e.surface != null && e.surface !== "" ? QP.surfaceTint(e.surface) : undefined;
   return {
     cat: "effect",
     key: e.type,
@@ -742,7 +746,7 @@ export function effectPart(e: EffectLike): Part {
     label: effectName(e.type),
     note: "效果原語",
     ...described(glossaryDescription("effects", e.type)),
-    q: { cat: "effect", id: e.type },
+    q: tint === undefined ? { cat: "effect", id: e.type } : { cat: "effect", id: e.type, tint },
   };
 }
 
@@ -1356,7 +1360,7 @@ export interface ChipOptions {
 export function drawChip(ctx: Ctx, part: Part, x: number, y: number, r: number, opts: ChipOptions = {}): void {
   if (part.q !== undefined && opts.unitPx !== undefined) {
     // Q 版：圓底與色環同下面（QP.chip 照搬 drawChip），圖樣＝直徑 78%、整數裝置像素貼上
-    QP.chip(ctx, part.q.cat, part.q.id, x, y, r, { ring: opts.ring, ...(opts.bg === undefined ? {} : { bg: opts.bg }), unitPx: opts.unitPx, res: opts.res ?? 2, value: part.q.value, base: part.q.base });
+    QP.chip(ctx, part.q.cat, part.q.id, x, y, r, { ring: opts.ring, ...(opts.bg === undefined ? {} : { bg: opts.bg }), unitPx: opts.unitPx, res: opts.res ?? 2, value: part.q.value, base: part.q.base, ...(part.q.tint === undefined ? {} : { tint: part.q.tint }) });
     return;
   }
   ctx.save();

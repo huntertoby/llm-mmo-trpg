@@ -404,7 +404,7 @@ const FAINT_RING = "rgba(255,255,255,0.3)";
 const CORE_RING = "#ffffff";
 
 function chipTile(cat: string, part: Part, ring: string): AssemblyTile {
-  return { cat, label: part.label, tip: partTip(part), id: `${cat}|${part.key}|${part.label}|${ring}`, draw: (ctx, u = 1, res = ICON_RES) => drawChip(ctx, part, 50, 50, 42, { ring, unitPx: u, res }) };
+  return { cat, label: part.label, tip: partTip(part), id: `${cat}|${part.key}|${part.label}|${ring}${part.q?.tint == null ? "" : `|${part.q.tint.join(",")}`}`, draw: (ctx, u = 1, res = ICON_RES) => drawChip(ctx, part, 50, 50, 42, { ring, unitPx: u, res }) };
 }
 
 /** Q 版部件圓片的一塊（`QP.chip`：深色圓底＋色環，圖樣＝直徑 78%）。 */

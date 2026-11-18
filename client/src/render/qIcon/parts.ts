@@ -50,7 +50,7 @@ export interface PartEntry { zh: string; topic?: string; src?: string; px?: numb
 export type PartTable = Readonly<Record<string, PartEntry | undefined>>;
 export interface PartDef { zh: string; entry: PartEntry; d: DrawFn }
 /** 效果列的一項（樣張 partsOf 的 list 項）：seg＝第幾段（接續記號排在第二段第一個前面）。 */
-export interface QPartItem { cat: string; id: string; seg: number; value?: number | boolean | string | null | undefined; base?: ((c: Ctx, o: QOpts) => void) | undefined }
+export interface QPartItem { cat: string; id: string; seg: number; value?: number | boolean | string | null | undefined; base?: ((c: Ctx, o: QOpts) => void) | undefined; tint?: Tint | null | undefined }
 /** 純資料的部件結構（欄位同樣張 partsOf() 的回傳）。 */
 export interface QParts {
   kind: string;
@@ -65,7 +65,7 @@ export interface QParts {
   core: QPartItem | null;
   shape: string[];
 }
-interface RowItem { cat: string; id: string; r: number; seg?: number; link?: boolean; value?: QPartItem["value"]; base?: QPartItem["base"] }
+interface RowItem { cat: string; id: string; r: number; seg?: number; link?: boolean; value?: QPartItem["value"]; base?: QPartItem["base"]; tint?: QPartItem["tint"] }
 
 const CREAM = "#f2e6c8", ALLY = "#7de0a8", ENEMY = "#ff5a5a", STEEL = "#c3ccd6", GOLD = "#e8bb48", LILAC = "#c8a0d8", STONE = "#b4ac9a", STONE_L = "#ece6d6", STONE_D = "#8c8474", INK = "#2a1c36";
 const st = (c: Ctx, col: string, w: number, fn: (x: Ctx) => void, cap: CanvasLineCap = "round") => { c.beginPath(); fn(c); c.strokeStyle = col; c.lineWidth = w; c.lineCap = cap; c.lineJoin = "round"; c.stroke(); };
@@ -202,6 +202,14 @@ export function link(c: Ctx, x: number, y: number, a: number, L: number, side: b
     if (side) rr(q, dk, -L / 2, -L * 0.17, L, L * 0.34, L * 0.17);
     else { el(q, col, 0, 0, L / 2, L * 0.34); el(q, hole, 0, 0, L * 0.24, L * 0.11); }
   }, a);
+}
+/** 表面名 → 第 3 批元素色（`QS.TINT`）的對照：只有名字不同的（黑暗表面＝暗影色）。 */
+const SURFACE_TINT_KEY: Readonly<Record<string, string>> = { darkness: "shadow" };
+/** 表面的代表色（AR-SK3，`AR-SK2驗收.md` 裁定 3：照樣張的 `T` 參數）：火、冰、毒、聖光、黑暗、水照 `QS.TINT`；沒有對應色（油、煙霧、不認得、沒指定）時用水色。 */
+export function surfaceTint(surface: string | null | undefined): Tint {
+  const T = QS.TINT as Readonly<Record<string, Tint | undefined>>;
+  const id = surface ?? "";
+  return T[SURFACE_TINT_KEY[id] ?? id] ?? (QS.TINT.water as Tint);
 }
 /** 吸收表面的圖樣本體：一灘＋從一灘裡長出來的粗箭頭＋兩側往上飛的倒水滴（≥26px）。T＝表面色（預設水色）。 */
 function absorbArt(c: Ctx, o: QOpts, T?: Tint | null): void {
@@ -788,7 +796,7 @@ export function paintIcon(ctx: Ctx, P: QParts, look: QS.SkillLook, size: number,
     /* 底部效果列：算法照現行 effectRow（核心 11.5、其餘 8.5，放不下就縮）；接續記號（半徑 7）排在第二段第一個效果前面，沒有就放最後 */
     const items: RowItem[] = P.row.map((e, i) => ({ ...e, r: i === 0 ? 11.5 : 8.5 })); if (P.link && items.length) { const j = items.findIndex((e, i) => i > 0 && e.seg === 1); items.splice(j === -1 ? items.length : j, 0, { cat: "link", id: P.link, r: 9, link: true }); } /* 第 2 版：接續記號 7→9 單位、色環換青色（LINK_RING），和效果圓片分開 */
     if (items.length) { const left = P.cond ? 26 : 5, right = 75, gap = 1.5; let total = items.reduce((a, e) => a + e.r * 2, 0) + (items.length - 1) * gap; if (total > right - left) { const f0 = (right - left - 23 - (items.length - 1) * gap) / (total - 23 - (items.length - 1) * gap); for (const e of items.slice(1)) e.r = Math.max(4.5, e.r * f0); total = items.reduce((a, e) => a + e.r * 2, 0) + (items.length - 1) * gap; }
-      let x = (left + right) / 2 - total / 2; items.forEach((e, i) => { C(e.cat, e.id, x + e.r, 85 + (i === 0 ? 0 : 2), e.r, i === 0 ? "#ffffff" : e.link ? LINK_RING : "rgba(255,255,255,0.3)", { value: e.value, base: e.base, tint: e.cat === "shape" ? null : undefined }); x += e.r * 2 + gap; }); }
+      let x = (left + right) / 2 - total / 2; items.forEach((e, i) => { C(e.cat, e.id, x + e.r, 85 + (i === 0 ? 0 : 2), e.r, i === 0 ? "#ffffff" : e.link ? LINK_RING : "rgba(255,255,255,0.3)", { value: e.value, base: e.base, tint: e.cat === "shape" ? null : e.tint /* AR-SK3：吸收表面照表面染色 */ }); x += e.r * 2 + gap; }); }
   }
   ctx.restore();
 }

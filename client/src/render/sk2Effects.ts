@@ -7,7 +7,6 @@ import type { Pos } from "../api/types";
 import type { Sk2Absorb, Sk2Fx, Sk2Hook, Sk2Spread } from "../battle/sk2Fx";
 import { TILE_SIZE } from "../battle/geometry";
 import * as QP from "./qIcon/parts";
-import * as QS from "./qIcon/skills";
 import { ABSORB_MS, ABSORB_SHRINK, absorbTop, absorbUnder, chainMinK, HOOK_FLY_MS, hookOver, moteKind, SPREAD_MS, spreadTop, spreadUnder, type Pt, type Sk2AbsorbGeom, type Sk2HookGeom, type Sk2SpreadGeom } from "./sk2FxArt";
 import type { Effect } from "./vfxEffects";
 
@@ -166,11 +165,8 @@ function canvasEffect(host: Sk2Host, startMs: number, dur: number, scale: number
 
 // ---- 吸收表面 ----
 
-/** 表面的顏色（本色、亮色）：水、火、毒、冰…照 `QS.TINT`；不認得的照水。 */
-function surfaceTint(surface: string): readonly [string, string] {
-  const t = (QS.TINT as Readonly<Record<string, readonly [string, string] | undefined>>)[surface];
-  return t ?? (QS.TINT.water as readonly [string, string]);
-}
+/** 表面的顏色（本色、亮色）：和部件圖樣同一份（`QP.surfaceTint`：照 `QS.TINT`，黑暗＝暗影色，不認得的照水；AR-SK3）。 */
+const surfaceTint = (surface: string): readonly [string, string] => QP.surfaceTint(surface);
 
 /** 收益的圖樣（第④批部件圖樣 16 px）：元素＝元素片、層數＝累積層數、治療、護盾。 */
 function gainGlyph(f: Sk2Absorb): HTMLCanvasElement | null {
