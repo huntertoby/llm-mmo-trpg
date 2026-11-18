@@ -470,7 +470,10 @@ def pick_slots(
             )
             for c in pool
         ]
-        ranked = _rank(scored, maker.levels, pick.weights, pick.pool.top_k)
+        makes = _maker_keywords(original)
+        ranked = _rank(
+            scored, maker.levels, pick.weights, pick.pool.top_k, makes=makes, library=library
+        )
         slate = PickSlate(ranked, len(pool), seeds)
         slots.append(PickedSlot(original, slate, nondamage=index == chosen))
     return slots
@@ -481,15 +484,45 @@ def _rank(
     levels: Mapping[DesignKey, int],
     weights: PickWeights,
     top_k: int,
+    *,
+    makes: tuple[str, ...] = (),
+    library: ContentLibrary | None = None,
 ) -> tuple[PickCandidate, ...]:
     """單薄的先拿掉（全格都單薄才留，:func:`~trpg.skillgen.skill_pick.drop_thin`），再排序；**符合這一格
     路線的一律排在偏離的前面**（#110「最後才給不跟主路線的」：分數第一名只有在整格都偏離時才偏離，
-    所以沒有 LLM 時的偏離張數不會比 PK-2 多）。"""
+    所以沒有 LLM 時的偏離張數不會比 PK-2 多）。
+
+    SK-1（06 6.38 第 6 點，#166）：``makes`` 是「新方向」格的關鍵字（其他格是空的）；同一段（符合
+    路線／偏離）裡，**會製造**其中一個關鍵字的候選（含同時製造又利用的）排在純利用的前面。只改排序，
+    出題規則（6.27.4）不變。"""
     kept = drop_thin(scored, weights)
     fit = [c for c in kept if levels.get(c.key, LEVEL_EXACT) < LEVEL_OFF]
     off = [c for c in kept if levels.get(c.key, LEVEL_EXACT) >= LEVEL_OFF]
-    first = rank_candidates(fit, weights, top_k)
-    return first + rank_candidates(off, weights, top_k - len(first))
+    first: tuple[PickCandidate, ...] = ()
+    groups = (*_makers_first(fit, makes, library), *_makers_first(off, makes, library))
+    for group in groups:
+        first += rank_candidates(group, weights, top_k - len(first))
+    return first
+
+
+def _maker_keywords(original: Candidate) -> tuple[str, ...]:
+    """「新方向」格要優先製造的關鍵字（SK-1）；加深、橋接格是空的（不改排序）。"""
+    return tuple(original.keywords) if original.kind == "new" else ()
+
+
+def _makers_first(
+    candidates: Sequence[PickCandidate], makes: tuple[str, ...], library: ContentLibrary | None
+) -> tuple[list[PickCandidate], list[PickCandidate]]:
+    """分成（會製造 ``makes`` 其中一個的、其餘）兩段；``makes`` 是空的時全部在第一段。關鍵字照
+    :func:`~trpg.skillgen.keywords.derive_keywords`（專屬規則，同打分）。"""
+    if not makes or library is None:
+        return list(candidates), []
+    makers: list[PickCandidate] = []
+    others: list[PickCandidate] = []
+    for candidate in candidates:
+        found = derive_keywords(candidate.skill, library.keywords, exclusive_only=True).makes
+        (makers if any(k in found for k in makes) else others).append(candidate)
+    return makers, others
 
 
 def _relaxed(candidate: PickCandidate, level: int, weights: PickWeights) -> PickCandidate:
