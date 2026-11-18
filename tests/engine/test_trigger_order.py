@@ -20,6 +20,8 @@ from trpg.engine.triggers import _TRIGGERS
 EXPECTED: dict[str, list[str]] = {
     "unit_downed": [
         "trpg.engine.bombs._bomb_on_downed",
+        # SK-2 疾病擴散（LOG_FORMAT /129）；開發 PM 2026-11-19 裁定接受，見 PhaseSK-2報告.md。
+        "trpg.engine.contagion._spread_on_downed",
         "trpg.engine.death_surfaces._surface_on_downed",
         "trpg.engine.delayed._cancel_on_downed",
     ],
