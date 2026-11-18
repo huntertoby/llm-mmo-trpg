@@ -198,3 +198,18 @@ conditions:
     description_zh: 施放者所在格的高度至少 1 層（站在高台、屋頂、土丘上）。飛行不算。只看施放者。
     harshness: common
     min_rarity: rare
+  # SK-1（玩法決定 #166，06 6.38 第 1 點；harshness 為初值，未經模擬）：距離條件。看施放者和對象單位的距離（曼哈頓，
+  # 巨型單位照佔地最近的格子，同 6.18 G 的「依距離」縮放），和 6.18 G 的連續縮放並存（那是比例加成，這是開關）。
+  # 遠距的門檻是 rules/core.yaml 的 far_distance（初值 5，數值工坊「核心戰鬥規則」可調）。
+  - id: point_blank
+    name_zh: 貼身
+    llm_hint: "施放者和目標相鄰（距離 1）時才成立。"
+    description_zh: 施放者和目標的距離是 1（上下左右相鄰；巨型單位看佔地最近的那一格）。只看目標單位，沒有單位的格子不成立。
+    harshness: common
+    min_rarity: rare
+  - id: long_range
+    name_zh: 遠距
+    llm_hint: "施放者和目標距離夠遠（初值 5 格以上）時才成立。"
+    description_zh: 施放者和目標的距離至少是規則的遠距門檻（初值 5 格，曼哈頓距離；巨型單位看佔地最近的那一格）。只看目標單位，沒有單位的格子不成立。
+    harshness: common
+    min_rarity: rare
