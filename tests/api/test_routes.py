@@ -326,6 +326,7 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "oath_warning",  # Phase 5C-3b
         "run_range",  # Phase 3-20
         "strikes",  # DD-2
+        "rerolls",  # SK-3：可能的重擲反應（沒有時 null）
     }
     assert data["action"] == attack
     assert isinstance(data["ap_cost"], int) and data["ap_cost"] >= 1

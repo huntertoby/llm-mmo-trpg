@@ -17,6 +17,7 @@ from trpg.engine.events.base import (
 )
 from trpg.engine.events.combat import (
     AttackIntercepted,
+    AttackRerolled,
     AttackRolled,
     ChainLimitReached,
     ConductBlocked,
@@ -190,6 +191,7 @@ __all__ = [
     "ApGranted",
     "ApRefunded",
     "AttackIntercepted",
+    "AttackRerolled",
     "AttackRolled",
     "BacklashTriggered",
     "BattleEnded",

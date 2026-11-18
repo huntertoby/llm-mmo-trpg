@@ -28,6 +28,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "absorb_surface": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "contagion": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "hook": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
+        "reroll": "SK-3 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
     },
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",

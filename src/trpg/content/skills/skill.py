@@ -59,6 +59,8 @@ from trpg.content.skills.constants import (
     PLACE_TRAP,
     REFUND_AP,
     REFUND_COOLDOWN,
+    REROLL,
+    REROLL_EVENTS,
     RESET_COOLDOWN,
     RESTORE_RESOURCE,
     REVIVE,
@@ -1056,6 +1058,17 @@ class SkillDef(ContentModel):
                 raise ValueError("ally_downed 的反應技形狀必須是 self（另一方已經倒下）")
         elif INTERCEPT in types:
             raise ValueError("intercept 只能用在反應技")
+        self._check_reroll(types)
+
+    def _check_reroll(self, types: list[str]) -> None:
+        """重擲（SK-3，#166 6.38-12）：只能是反應技唯一的效果，事件只能是 :data:`REROLL_EVENTS`；
+        這兩個事件也只能配重擲。"""
+        event = None if self.reaction is None else self.reaction.event
+        rerolls = REROLL in types
+        if rerolls and (self.kind != "reaction" or event not in REROLL_EVENTS):
+            raise ValueError(f"reroll 只能用在 event 為 {'、'.join(REROLL_EVENTS)} 的反應技")
+        if event in REROLL_EVENTS and not rerolls:
+            raise ValueError(f"{event} 的反應技必須有 reroll 效果")
 
     def _check_modifier(self) -> None:
         """修正技能（3C-2）：裝在被動欄位、不花 AP、沒有觸發；效果都寫在 ``modifiers`` 裡。"""

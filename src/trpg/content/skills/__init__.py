@@ -248,6 +248,12 @@ from trpg.content.skills.constants import (
     PER_TURN_LIMIT_CHANGES as PER_TURN_LIMIT_CHANGES,
 )
 from trpg.content.skills.constants import (
+    REROLL as REROLL,
+)
+from trpg.content.skills.constants import (
+    REROLL_EVENTS as REROLL_EVENTS,
+)
+from trpg.content.skills.constants import (
     RESTORE_RESOURCE as RESTORE_RESOURCE,
 )
 from trpg.content.skills.constants import (

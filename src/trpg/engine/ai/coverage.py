@@ -46,6 +46,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "raise_terrain": "候選估計 terrain_estimate；收益 terrain_gains（ai/terrain.py）",
         "lower_terrain": "候選估計 terrain_estimate；收益 terrain_gains（ai/terrain.py）",
         "intercept": "反應技（攔截由反應機制觸發，不是主動施放的評分對象）",
+        "reroll": "反應技（重擲由反應機制觸發，不是主動施放的評分對象；SK-3）",
         "add_stack": f"{_EVENTS}；超載層數的風險 ai/gamble.py（overloads）",
         "consume_stack": f"{_EVENTS}（層數加成反映在傷害）",
         "consume_status": f"{_EVENTS}（消耗後的 then 效果）",

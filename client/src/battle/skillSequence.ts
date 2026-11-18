@@ -104,6 +104,7 @@ const EVENT_PRIMITIVE: Readonly<Partial<Record<string, string>>> = {
   surface_blown: "blow_surface",
   surface_absorbed: "absorb_surface",
   contagion_marked: "contagion",
+  attack_rerolled: "reroll",
   object_created: "create_obstacle",
   object_toppled: "topple",
   wall_toppled: "topple",

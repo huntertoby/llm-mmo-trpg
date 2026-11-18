@@ -207,6 +207,27 @@ class DiseaseSpread(EventBase):
     status_ids: tuple[str, ...]
 
 
+class AttackRerolled(EventBase):
+    """重擲（SK-3 ``reroll``，06 6.38 第 12 點）：``unit_id`` 用反應技 ``skill_id`` 讓
+    ``attacker_id`` 對 ``target_id`` 的命中骰重擲一次。``keep``：``better``（隊友擲失手時，取較好
+    的）或 ``worse``（敵人擲中你時，取較差的）。``first_*``／``second_*`` 是兩次的自然骰、總值與
+    命中；``kept`` 是採用哪一次。緊接著照採用結果發 ``attack_rolled``。"""
+
+    type: Literal["attack_rerolled"] = "attack_rerolled"
+    unit_id: UnitId
+    skill_id: str
+    attacker_id: UnitId
+    target_id: UnitId
+    keep: Literal["better", "worse"]
+    first_natural: int
+    first_total: int
+    first_hit: bool
+    second_natural: int
+    second_total: int
+    second_hit: bool
+    kept: Literal["first", "second"]
+
+
 class StatusSaveRolled(EventBase):
     """施加狀態的抵抗判定：攻方（技能的縮放屬性）對守方（狀態的 ``save_attr``）的比例公式。
 

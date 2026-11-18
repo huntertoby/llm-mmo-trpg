@@ -5,6 +5,7 @@
 - ``consume_stack``：命中判定之後、第一個效果之前消耗（``Cast.consume_stacks``）。
 - ``gamble``：命中判定之後擲骰（``Cast.roll_gamble``）；在效果列表的位置（最後一個）結算擲出的分支。
 - ``intercept``：反應機制（:mod:`trpg.engine.reactions`）。
+- ``reroll``：反應機制（:mod:`trpg.engine.rerolls`；SK-3）：付完代價後由呼叫端重擲命中骰。
 - ``place_trap``：施放時放置陷阱（:func:`trpg.engine.traps.place_trap`），其餘效果等觸發時結算。
 - ``rule_change``：常駐類傳說，施放＝啟動（:mod:`trpg.engine.activations`）。
 """
@@ -35,6 +36,7 @@ HANDLERS: dict[str, Handler] = {
     "shadowstep": no_effects,
     "consume_stack": no_effects,
     "intercept": no_effects,
+    "reroll": no_effects,
     "place_trap": no_effects,
     "rule_change": no_effects,
     "gamble": gamble,

@@ -191,7 +191,7 @@ describe("primitive clips (6N-2 first half, 6N-3 second half)", () => {
     expect(shared.sort()).toEqual(
       [
         ["swap", "swap_any"],
-        ["intercept", "redirect_damage"],
+        ["intercept", "redirect_damage", "reroll"], // SK-3：重擲暫借側擋
         ["extra_reaction", "grant_ap", "grant_skill"],
         ["refund_ap", "refund_cooldown", "reset_cooldown"],
         ["add_stack", "consume_stack", "consume_status"],

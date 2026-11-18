@@ -721,6 +721,13 @@ def _hook(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     )
 
 
+def _reroll(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    """重擲（SK-3，06 6.38 第 12 點）：依反應時機寫取較好或較差。"""
+    if skill.reaction is not None and skill.reaction.event == "enemy_hit_roll":
+        return "逼命中你的敵人重擲命中骰，取較差的結果"
+    return "讓擲失手的隊友重擲命中骰，取較好的結果"
+
+
 def _contagion(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     """疾病擴散（SK-2，06 6.38 第 5 點）。"""
     core = lib.ruleset.core
@@ -1067,6 +1074,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "absorb_surface": _absorb_surface,
     "contagion": _contagion,
     "hook": _hook,
+    "reroll": _reroll,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,
@@ -1148,6 +1156,7 @@ _OWN_TARGET_TEXT: frozenset[str] = frozenset(
     {
         "absorb_surface",
         "hook",
+        "reroll",
         "summon",
         "summon_beside",
         "zone",

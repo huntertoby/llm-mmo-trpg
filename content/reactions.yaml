@@ -11,6 +11,8 @@
 #   enemy_enters_adjacent（3D-3）    敵人主動移動（步行、衝鋒、直線衝撞）進入相鄰格之後；強制位移不算
 #   ally_targeted（3D-3）            相鄰友方被敵人單體技能或普攻選為目標、命中判定之前；另一方是攻擊者（aid: true 時是那名友方）
 #   ally_hit_near（TF-1）            相鄰友方被敵人的攻擊（普攻或技能）命中、傷害之後仍站著；另一方是那名友方（必須 aid: true）
+#   ally_missed_roll（SK-3）         core.reroll_ally_range 格內的隊友攻擊敵人、命中骰沒中時（attack_rolled 之前）；另一方是那名隊友（只給 reroll 原語）
+#   enemy_hit_roll（SK-3）           敵人的攻擊命中骰命中你時（attack_rolled 之前、傷害之前）；另一方是攻擊者（只給 reroll 原語）
 # 內建反應的事件（reactions[].events）：
 #   enemy_moves_in_range（3D-8c）    敵人主動移動（步行、衝鋒、直線衝撞）的一步結束後，位置在持有者武器射程與視線內
 #                                    （強制位移、傳送、跳躍、互換不算）。監視射擊 overwatch_shot 用它
@@ -87,6 +89,8 @@ events:
   - {id: enemy_moves_in_range, name_zh: 敵人在射程內移動時, description_zh: 敵人主動移動一步後，位置在你的武器射程與視線內。}
   - {id: ally_hit_in_range, name_zh: 範圍內隊友受擊時, description_zh: 範圍內的友方被敵人單體攻擊命中、傷害結算之前。}
   - {id: kin_hit_in_range, name_zh: 同門受擊時, description_zh: 範圍內帶同門標籤的友方被敵人的攻擊命中、傷害結算之前。}
+  - {id: ally_missed_roll, name_zh: 隊友擲失手時, description_zh: 身旁的隊友攻擊敵人、命中骰沒中時（結果確定之前）；可以讓他重擲。}
+  - {id: enemy_hit_roll, name_zh: 敵人擲中你時, description_zh: 敵人的攻擊命中骰命中你時（傷害之前）；可以逼他重擲。}
 default_rules:
   - reaction: block
     when: {event: targeted_by_melee}

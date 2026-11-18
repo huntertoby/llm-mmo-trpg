@@ -13,8 +13,9 @@
 
 from __future__ import annotations
 
+import math
 from collections import Counter
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from fractions import Fraction
 from itertools import product
@@ -98,6 +99,7 @@ from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
 from trpg.engine.practice import is_practice_target
 from trpg.engine.race.skills import race_skill_of
+from trpg.engine.rerolls import RerollInfo, possible_rerolls
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import (
     PERMILLE,
@@ -484,6 +486,10 @@ class Preview:
     strikes: int = 1
     """技能的傷害效果打幾下（#153，:func:`skill_strikes`：拿雙匕首施放單體武器技為 2）；
     ``targets`` 的傷害已是這幾下的合計（DD-2：網頁依此標「打 2 下」）。普攻與其他動作為 1。"""
+    rerolls: tuple[RerollInfo, ...] = ()
+    """可能發生的重擲反應（SK-3，06 6.38 第 12 點，:func:`~trpg.engine.rerolls.possible_rerolls`）：
+    普攻的目標、技能每個要擲命中的敵方目標各查一次；說明另寫進 ``notes``。``hit_chance`` 不含重擲
+    （對方是否反應不一定）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -1670,11 +1676,8 @@ def _build(
         notes += _displace_notes(
             state, actor, action, modifiers.acting_skill(state, actor, action.skill_id, action)
         )
-    chance: Fraction | None = None
-    if checks:
-        chance = Fraction(1)
-        for check in checks:
-            chance *= check.chance
+    chance = _all_checks_chance(checks)
+    rerolls = _reroll_infos(state, actor, action, hit, targets)
     return Preview(
         action=action,
         hit_chance=hit,
@@ -1689,7 +1692,7 @@ def _build(
         min_state=low.state,
         max_state=high.state,
         cover=cover,
-        notes=(*notes, *no_turn_notes),
+        notes=(*notes, *no_turn_notes, *_reroll_notes(state, rerolls)),
         targets=targets,
         healed=healed,
         ap_cost=ap_cost,
@@ -1719,7 +1722,56 @@ def _build(
             if isinstance(action, UseSkill)
             else 1
         ),
+        rerolls=rerolls,
     )
+
+
+def _all_checks_chance(checks: Sequence[DisplaceCheck]) -> Fraction | None:
+    """位移判定全部成功的機率（沒有判定為 ``None``）。"""
+    if not checks:
+        return None
+    chance = Fraction(1)
+    for check in checks:
+        chance *= check.chance
+    return chance
+
+
+def _reroll_infos(
+    state: BattleState,
+    actor: UnitState,
+    action: Action,
+    hit: Fraction | None,
+    targets: Sequence[TargetPreview],
+) -> tuple[RerollInfo, ...]:
+    """重擲反應（SK-3）：普攻的目標、技能每個要擲命中的敵方目標（依 ``targets`` 的順序）。"""
+    if isinstance(action, Attack):
+        target = None if action.target_id is None else state.units.get(action.target_id)
+        if target is None or hit is None:
+            return ()
+        return possible_rerolls(state, actor, target, hit)
+    found: list[RerollInfo] = []
+    for t in targets:
+        unit = state.units.get(t.unit_id)
+        if unit is not None and not t.ally:
+            found += possible_rerolls(state, actor, unit, t.hit_chance)
+    return tuple(found)
+
+
+def _percent(chance: Fraction) -> int:
+    return math.floor(chance * 100 + Fraction(1, 2))
+
+
+def _reroll_notes(state: BattleState, rerolls: Sequence[RerollInfo]) -> tuple[str, ...]:
+    """「X 可以用「Y」逼你重擲（取較差）：命中率 70% → 49%」。"""
+    notes: list[str] = []
+    for info in rerolls:
+        name = state.units[UnitId(info.unit_id)].name_zh
+        skill = state.ruleset.skill_def(info.skill_id).name_zh
+        what = "逼你重擲（取較差）" if info.keep == "worse" else "讓你失手時重擲（取較好）"
+        maybe = "" if info.auto else "（看對方是否使用）"
+        chance = _percent(info.hit_chance)
+        notes.append(f"{name} 可以用「{skill}」{what}{maybe}：重擲後命中率約 {chance}%")
+    return tuple(notes)
 
 
 def _infusion_info(state: BattleState, action: InfuseSkill) -> InfusionInfo:
@@ -1777,6 +1829,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "raise_terrain": _OUTCOMES,
         "lower_terrain": _OUTCOMES,
         "intercept": "反應技，不在施放的預覽內（反應時照常結算）",
+        "reroll": "rerolls（對方或隊友的重擲反應：攻擊的預覽列出、附重擲後的命中率；SK-3）",
         "add_stack": _OUTCOMES,
         "consume_stack": f"targets（傷害加成）、{_OUTCOMES}",
         "consume_status": _OUTCOMES,

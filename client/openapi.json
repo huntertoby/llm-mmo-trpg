@@ -21846,6 +21846,20 @@
             "type": "integer",
             "title": "Strikes",
             "default": 1
+          },
+          "rerolls": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RerollOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rerolls"
           }
         },
         "additionalProperties": false,
@@ -23419,6 +23433,50 @@
         ],
         "title": "RerollAction",
         "description": "在附魔台重骰一條詞條（8.20：由「指紋＋位置＋n」決定；越骰越貴）。"
+      },
+      "RerollOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          },
+          "keep": {
+            "type": "string",
+            "enum": [
+              "better",
+              "worse"
+            ],
+            "title": "Keep"
+          },
+          "hit_permille": {
+            "type": "integer",
+            "title": "Hit Permille"
+          },
+          "auto": {
+            "type": "boolean",
+            "title": "Auto"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "skill_id",
+          "target_id",
+          "keep",
+          "hit_permille",
+          "auto"
+        ],
+        "title": "RerollOut",
+        "description": "預覽中可能發生的重擲反應（SK-3，06 6.38 第 12 點）：``unit_id`` 用反應技 ``skill_id`` 讓\n``target_id``（擲命中骰的人）重擲；``keep`` 為 ``better``（隊友讓你重擲取較好）或 ``worse``\n（對方逼你重擲取較差）；``hit_permille`` 是重擲後的命中率；``auto`` 為自動反應。"
       },
       "ResetLine": {
         "properties": {

@@ -467,6 +467,9 @@ class CoreRules(ContentModel):
 
     # 反應（1B）
     reactions_per_round: int = Field(ge=0)
+    reroll_ally_range: int = Field(default=1, ge=1, le=6)
+    """重擲（``reroll``，SK-3，06 6.38 第 12 點）：「隊友擲失手時」幾格內（單位距離，量到最近佔格）
+    的隊友能讓他重擲（初值 1，同其他「身旁隊友」反應）。"""
     default_stamina: int = Field(ge=0)
 
     # 資源上限（3H-2，07 7.2）：主角的法力與耐力上限依屬性

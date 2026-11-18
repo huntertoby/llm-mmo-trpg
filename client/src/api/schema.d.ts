@@ -8810,6 +8810,8 @@ export interface components {
              * @default 1
              */
             strikes: number;
+            /** Rerolls */
+            rerolls?: components["schemas"]["RerollOut"][] | null;
         };
         /**
          * PreviewVariantOut
@@ -9425,6 +9427,29 @@ export interface components {
             item: string;
             /** Index */
             index: number;
+        };
+        /**
+         * RerollOut
+         * @description 預覽中可能發生的重擲反應（SK-3，06 6.38 第 12 點）：``unit_id`` 用反應技 ``skill_id`` 讓
+         *     ``target_id``（擲命中骰的人）重擲；``keep`` 為 ``better``（隊友讓你重擲取較好）或 ``worse``
+         *     （對方逼你重擲取較差）；``hit_permille`` 是重擲後的命中率；``auto`` 為自動反應。
+         */
+        RerollOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Skill Id */
+            skill_id: string;
+            /** Target Id */
+            target_id: string;
+            /**
+             * Keep
+             * @enum {string}
+             */
+            keep: "better" | "worse";
+            /** Hit Permille */
+            hit_permille: number;
+            /** Auto */
+            auto: boolean;
         };
         /** ResetLine */
         ResetLine: {

@@ -133,6 +133,8 @@ type ReactionEvent = Literal[
     "enemy_enters_adjacent",
     "ally_targeted",
     "ally_hit_near",
+    "ally_missed_roll",
+    "enemy_hit_roll",
 ]
 
 
@@ -335,6 +337,14 @@ SKILL_REACTION_EVENTS: tuple[str, ...] = (
 LEGACY_REACTION_EVENTS: tuple[str, ...] = SKILL_REACTION_EVENTS[:4]
 """Phase 2E-2 的四個觸發事件。隨機組合器只從這些抽（3D-3 的新事件只給手寫技能，組合器的亂數
 串流與既有種子的結果因此不變）。"""
+
+
+REROLL = "reroll"
+"""重擲（SK-3，#166，06 6.38 第 12 點）：反應技唯一的效果，只配 :data:`REROLL_EVENTS`。"""
+
+REROLL_EVENTS: tuple[str, ...] = ("ally_missed_roll", "enemy_hit_roll")
+"""重擲反應的觸發事件（SK-3）：隊友擲失手時（取較好的）、敵人擲中你時（取較差的）。不在
+:data:`SKILL_REACTION_EVENTS`（LLM 題目、組合器看那份；接進出題待 PM 決定）。"""
 
 
 INTERCEPT = "intercept"

@@ -759,6 +759,19 @@ class DisplaceCheckOut(_ApiModel):
     lethal: bool
 
 
+class RerollOut(_ApiModel):
+    """預覽中可能發生的重擲反應（SK-3，06 6.38 第 12 點）：``unit_id`` 用反應技 ``skill_id`` 讓
+    ``target_id``（擲命中骰的人）重擲；``keep`` 為 ``better``（隊友讓你重擲取較好）或 ``worse``
+    （對方逼你重擲取較差）；``hit_permille`` 是重擲後的命中率；``auto`` 為自動反應。"""
+
+    unit_id: UnitId
+    skill_id: str
+    target_id: UnitId
+    keep: Literal["better", "worse"]
+    hit_permille: int
+    auto: bool
+
+
 class GambleBranchOut(_ApiModel):
     """賭注一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``permille`` 是這個分支
     發生的機率（命中之後）。``multiplier_permille`` 是本次傷害的倍率；``targets`` 是強制這個分支時
@@ -862,6 +875,9 @@ class PreviewOut(_ApiModel):
     strikes: int = 1
     """技能的傷害效果打幾下（#153：拿雙匕首施放單體武器技為 2；DD-2）：``targets`` 的傷害已是
     這幾下的合計（最少＝只中第一下，最多＝每下都暴擊）。普攻與其他動作為 1。"""
+    rerolls: tuple[RerollOut, ...] | None = None
+    """可能發生的重擲反應（SK-3）；沒有時為 ``None``。說明已在 ``notes``；``hit_permille`` 不含
+    重擲。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -1076,6 +1092,18 @@ def preview_out(
         followup_when=p.followup_when,
         oath_warning=p.oath_warning,
         strikes=p.strikes,
+        rerolls=tuple(
+            RerollOut(
+                unit_id=UnitId(r.unit_id),
+                skill_id=r.skill_id,
+                target_id=UnitId(r.target_id),
+                keep=r.keep,
+                hit_permille=_milli(r.hit_chance),
+                auto=r.auto,
+            )
+            for r in p.rerolls
+        )
+        or None,
         infusion=None
         if p.infusion is None
         else InfusionPreviewOut(

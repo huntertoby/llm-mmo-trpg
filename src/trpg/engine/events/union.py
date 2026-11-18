@@ -8,6 +8,7 @@ from pydantic import Field, TypeAdapter
 
 from trpg.engine.events.combat import (
     AttackIntercepted,
+    AttackRerolled,
     AttackRolled,
     ChainLimitReached,
     ConductBlocked,
@@ -300,7 +301,8 @@ type Event = Annotated[
     | PartDamaged
     | PartBroken
     | SkillSealed
-    | PartStatDown,
+    | PartStatDown
+    | AttackRerolled,
     Field(discriminator="type"),
 ]
 
