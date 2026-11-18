@@ -92,6 +92,23 @@ def without_sk2b_offers(library: ContentLibrary) -> ContentLibrary:
     )
 
 
+SK2B_STREAMS = (
+    "hook_core_permille",
+    "absorb_core_permille",
+    "absorb_secondary_permille",
+    "contagion_permille",
+)
+"""SK-2b 組合器獨立串流的機率欄位（``skill_composer.yaml`` 的 ``structure``）。"""
+
+
+def sk2b_streams_off(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但 SK-2b 的組合器串流機率都是 0：組合器的種子結果和 SK-2b 之前逐字相同（鎖住
+    「某些種子做出某種招」的既有測試用）。"""
+    structure = library.composer.structure.model_copy(update=dict.fromkeys(SK2B_STREAMS, 0))
+    composer = library.composer.model_copy(update={"structure": structure})
+    return dataclasses.replace(library, composer=composer)
+
+
 def wish_off(library: ContentLibrary) -> ContentLibrary:
     """``library`` 但許願池願望驅動關掉（``skill_pick.yaml`` 的 ``wish_enabled: false``）：PK-4 前的
     許願流程（對關鍵字＋自由設計）。測 WP-1～3 程式本身的測試用這份。"""
