@@ -30,6 +30,8 @@ interface Props {
   badge?: string;
   /** PK-4 許願池願望驅動：卡上改畫回應願望與「做不到」那一行（標示的 `wish_reply_zh`／`wish_miss_zh`）。 */
   wish?: boolean;
+  /** PK-4b：不標「偏離路線」（許願池的方向由玩家決定，07 7.6；玩法 PM 4.1.27 題 4）。 */
+  hideOffRoute?: boolean;
   disabled?: boolean;
   onPick(pick: number | null): void;
   onReplace(skillId: string | null): void;
@@ -45,6 +47,7 @@ export function OfferPicker({
   forceReplace = false,
   badge,
   wish = false,
+  hideOffRoute = false,
   disabled = false,
   onPick,
   onReplace,
@@ -61,7 +64,7 @@ export function OfferPicker({
         {order.map((index) => {
           const card = offer.candidates[index];
           if (card === undefined) return null;
-          const off = offer.off_route.includes(index);
+          const off = !hideOffRoute && offer.off_route.includes(index);
           const tag = offer.tags?.[index];
           return (
             <div
