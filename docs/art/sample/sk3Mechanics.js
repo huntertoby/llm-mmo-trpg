@@ -217,10 +217,10 @@ window.SK3Mech = (() => {
     if (p <= 0 || p >= 1) return;
     g.save(); g.globalAlpha = 1 - p; g.beginPath(); g.ellipse(feet.x, feet.y, 14 + 12 * ease(p), (14 + 12 * ease(p)) * 0.42, 0, 0, TAU); g.lineWidth = 3 * MK; g.strokeStyle = "#ffd23f"; g.stroke(); g.restore();
   }
-  /** 比較箭頭（舊 → 新）：往上（變大，綠）或往下（變小，紅）的粗箭頭，外框色墊底；中心 (x,y)。 */
+  /** 比較箭頭（舊 → 新）：往上（變大）或往下（變小）的粗箭頭，一律米白中性色（CREAM＋白亮面，外框色墊底），只表示方向；得失交給金環與「採用」（SK-3 第 2 版複審 N1）。中心 (x,y)。 */
   function fieldCmp(g, x, y, up, a = 1) {
     if (a <= 0) return;
-    const col = up ? ["#5ad06a", "#c8f8d0"] : ["#ff5a5a", "#ffc0b8"], s = MK * 0.62;
+    const col = [CREAM, "#ffffff"], s = MK * 0.62;
     g.save(); g.globalAlpha *= a; g.translate(x, y); g.scale(s, up ? s : -s);
     const P = [[-2.8, 9], [-2.8, -1], [-7.4, -1], [0, -9.6], [7.4, -1], [2.8, -1], [2.8, 9]];
     poly(g, OUT, P.map(([px, py]) => [px * 1.25, py * 1.18]), 0.6); poly(g, col[0], P, 0.4); poly(g, col[1], [[0, -9.6], [-7.4, -1], [-2.8, -1], [-2.8, 9], [-0.8, 9], [-0.8, -6.6]]);
