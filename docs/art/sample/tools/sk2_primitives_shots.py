@@ -37,6 +37,7 @@ r.SHOTS = [
     ("status-t1", "part=status-t1", D + "12-status-spread-true1x-v2.png"),
     ("field-1600", "part=field&w=1600", D + "13-field-1600-v2.png"),
     ("field-800", "part=field&w=800", D + "14-field-800-v2.png"),
+    ("spread-lab", "part=spread-lab", D + "15-spread-variants-v2.png"),
 ]
 
 AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')

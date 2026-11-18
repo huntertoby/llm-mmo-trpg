@@ -11,7 +11,7 @@
 <p class="note">畫圖 agent，2026-11-19。紀錄 docs/art/SK-2原語-美術.md。分段：
 <a href="?part=icons&mute=1">部件圖樣</a><a href="?part=icons-t1&mute=1">部件真 1 倍</a><a href="?part=near&mute=1">撞圖</a><a href="?part=full96&mute=1">96 完整圖示</a>
 <a href="?part=anim&case=absorb&mute=1">吸收表面</a><a href="?part=anim&case=contagion&mute=1">疾病擴散</a><a href="?part=anim&case=hook&mute=1">鉤</a><a href="?part=anim&case=hook_lava&mute=1">鉤＋熔岩</a><a href="?part=anim&case=hook_giant&mute=1">鉤＋巨型頭目</a>
-<a href="?part=live&case=hook&mute=1">動畫播放</a><a href="?part=status&mute=1">會擴散記號</a><a href="?part=status-t1&mute=1">記號真 1 倍</a><a href="?part=field&w=1600&mute=1">戰場 1600</a><a href="?part=field&w=800&mute=1">戰場 800</a><a href="?part=audit&mute=1">自查</a></p>
+<a href="?part=live&case=hook&mute=1">動畫播放</a><a href="?part=status&mute=1">會擴散記號</a><a href="?part=spread-lab&mute=1">記號三案對照</a><a href="?part=status-t1&mute=1">記號真 1 倍</a><a href="?part=field&w=1600&mute=1">戰場 1600</a><a href="?part=field&w=800&mute=1">戰場 800</a><a href="?part=audit&mute=1">自查</a></p>
 <div id="sheet"></div><div id="live"></div>
 <textarea id="out"></textarea>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
@@ -29,6 +29,8 @@ const P = new URLSearchParams(location.search), PART = P.get("part") || "icons",
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", TAU = Math.PI * 2;
 try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
 SK.install();
+/** 會擴散記號用哪一案（&mark=A｜B｜C；預設 B，第 2 版選定）。 */
+const MARKV = ["A", "B", "C"].includes(P.get("mark")) ? P.get("mark") : "B"; SK.setMark(MARKV);
 const TP = PaperDoll.TEMPLATES, R4 = Regions4, REG = (id) => R4.REGIONS.find((r) => r.id === id);
 const ASH = REG("ashen_waste"), CRY = REG("crystal_crown");
 const tile = (region, id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, region, id, 0, 0, gx, gy); ctx.restore(); };
@@ -482,36 +484,65 @@ PARTS.live = () => {
 // 3. 會擴散記號
 // =====================================================================
 const DOTS = [["burning", "燃燒"], ["bleed", "流血"], ["poison", "中毒"]];
+/** 狀態圖示 canvas（一般與會擴散留同樣的邊，並排才對齊）：頭頂 11 四周 4 px、狀態卡 20 四周 3 px。回傳 sheet 的 cell。 */
+const HEAD_PAD = 7, CARD_PAD = 8;
+const headCell = (id, z, o = {}, cap) => { const W = 11 + 2 * HEAD_PAD, cv = SK.headCanvas(id, 11, z, { pad: HEAD_PAD, ...o }); return o.res === 1 && z === 1 ? nn(cv, o.Z ?? 8, cap) : { cv, w: W * z, h: W * z, cap }; };
+const cardCell = (id, z, o = {}, cap) => { const W = 20 + 2 * CARD_PAD, cv = SK.cardCanvas(id, 20, z, { pad: CARD_PAD, ...o }); return o.res === 1 && z === 1 ? nn(cv, o.Z ?? 8, cap) : { cv, w: W * z, h: W * z, cap }; };
 PARTS.status = () => {
-  const blocks = [{ title: "狀態框「會擴散」記號：框的四角各一顆病菌黃綠的孢子（左＝一般、右＝會擴散）" },
-    { note: "狀態卡 20（框 16.8，裁成半徑 9.8 的圓）與戰場頭頂 11（框 9）。2 倍內部解析度（遊戲端 DPR 2）；×4 向量；×6 最近鄰。孢子：頭頂中心離框心 0.478 框邊長、半徑 1.15 px；狀態卡 0.345、1.4 px；外框 1 個裝置像素 #16121a；色 #e2f47a。" }];
+  const blocks = [{ title: `狀態框「會擴散」記號（第 2 版，${MARKV} 案）：右上角一顆病菌黃綠的孢子＋一顆往外跳的小點，框線一個像素都不蓋（左＝一般、右＝會擴散）` },
+    { note: `${SK.MARK_VARIANTS[MARKV]}。狀態卡 20（框 16.8，裁成半徑 9.8 的圓）與戰場頭頂 11（框 9）。2 倍內部解析度（遊戲端 DPR 2）；×4 向量；×6 最近鄰。頭頂孢子 3 px、小點 2 px；狀態卡孢子 4.4 px、小點 2.2 px；外框 1 個裝置像素 #16121a；色 #e2f47a；孢子外框離框線外緣 1 個裝置像素。canvas 四周留邊（頭頂 7 px、狀態卡 8 px），記號凸出圖示格子。` }];
   for (const [id, zh] of DOTS) {
     blocks.push({ title: zh });
     blocks.push({ cells: [
-      { cv: SK.cardCanvas(id, 20, 1), w: 20, h: 20, cap: "卡 20 一般" }, { cv: SK.cardCanvas(id, 20, 1, { spread: true }), w: 20, h: 20, cap: "卡 20 擴散" },
-      { cv: SK.headCanvas(id, 11, 1), w: 11, h: 11, cap: "頭 11 一般" }, { cv: SK.headCanvas(id, 11, 1, { spread: true }), w: 11, h: 11, cap: "頭 11 擴散" },
-      { cv: SK.cardCanvas(id, 20, 4), w: 80, h: 80, cap: "卡 ×4 一般" }, { cv: SK.cardCanvas(id, 20, 4, { spread: true }), w: 80, h: 80, cap: "卡 ×4 擴散" },
-      { cv: SK.headCanvas(id, 11, 6), w: 66, h: 66, cap: "頭 ×6 一般" }, { cv: SK.headCanvas(id, 11, 6, { spread: true }), w: 66, h: 66, cap: "頭 ×6 擴散" },
-      nn(SK.headCanvas(id, 11, 1, { spread: true }), 6, "頭 2 倍解析度 ×6"),
+      cardCell(id, 1, {}, "卡 20 一般"), cardCell(id, 1, { spread: true }, "卡 20 擴散"),
+      headCell(id, 1, {}, "頭 11 一般"), headCell(id, 1, { spread: true }, "頭 11 擴散"),
+      cardCell(id, 4, {}, "卡 ×4 一般"), cardCell(id, 4, { spread: true }, "卡 ×4 擴散"),
+      headCell(id, 6, {}, "頭 ×6 一般"), headCell(id, 6, { spread: true }, "頭 ×6 擴散"),
+      nn(SK.headCanvas(id, 11, 1, { pad: HEAD_PAD, spread: true }), 6, "頭 2 倍解析度 ×6"),
     ], gap: 16 });
   }
-  // 和既有的「圖示旁邊的東西」並排：+N 膠囊、其他狀態（一般）、同色系
-  blocks.push({ title: "撞圖：頭頂 11 一排（2 倍解析度 ×5）" });
-  const row = (ids) => { const c = document.createElement("canvas"), n = ids.length, Z = 2; c.width = (n * 12 + 2) * Z; c.height = 13 * Z; const g = c.getContext("2d"); g.fillStyle = "#3a3a40"; g.fillRect(0, 0, c.width, c.height); ids.forEach(([id, sp], i) => g.drawImage(SK.headCanvas(id, 11, 1, { spread: sp }), (1 + i * 12) * Z, Z)); return { cv: c, w: c.width * 2.5, h: c.height * 2.5, nn: true }; };
+  // 和既有的「圖示旁邊的東西」並排：其他狀態（一般）、同色系；照遊戲端的間距（11 px 一格、間隔 1 px），記號凸出去蓋到隔壁也看得到
+  blocks.push({ title: "撞圖：頭頂 11 一排（照遊戲端間距 1 px；2 倍解析度 ×5）" });
+  const row = (ids) => { const c = document.createElement("canvas"), n = ids.length, Z = 2, top = 7; c.width = (n * 12 + 6) * Z; c.height = (13 + top) * Z; const g = c.getContext("2d"); g.fillStyle = "#3a3a40"; g.fillRect(0, 0, c.width, c.height); ids.forEach(([id, sp], i) => g.drawImage(SK.headCanvas(id, 11, 1, { pad: HEAD_PAD, spread: sp }), (1 + i * 12 - HEAD_PAD) * Z, (1 + top - HEAD_PAD) * Z)); return { cv: c, w: c.width * 2.5, h: c.height * 2.5, nn: true }; };
   blocks.push({ cells: [
     { ...row([["burning", true], ["bleed", false], ["poison", true]]), cap: "燃燒擴散、流血、中毒擴散" },
     { ...row([["burning", false], ["burning", true], ["stun", false], ["taunted", false]]), cap: "燃燒／燃燒擴散／暈眩／嘲諷（染底）" },
     { ...row([["poison", true], ["weakened", false], ["marked", false], ["regen", false]]), cap: "中毒擴散／虛弱／標記／再生" },
   ], gap: 30 });
-  publish(sheet(1200, blocks), "image/png");
+  publish(sheet(1700, blocks), "image/png");
 };
 PARTS["status-t1"] = () => {
-  const blocks = [{ title: "會擴散記號 真 1 倍（res 1）×8 最近鄰：每組左一般、右擴散" }];
-  const cells = [];
-  for (const [id, zh] of DOTS) { cells.push(nn(SK.cardCanvas(id, 20, 1, { res: 1 }), 8, `${zh} 卡 20`), nn(SK.cardCanvas(id, 20, 1, { res: 1, spread: true }), 8, "擴散")); }
-  const cells2 = [];
-  for (const [id, zh] of DOTS) { cells2.push(nn(SK.headCanvas(id, 11, 1, { res: 1 }), 8, `${zh} 頭 11`), nn(SK.headCanvas(id, 11, 1, { res: 1, spread: true }), 8, "擴散")); }
-  publish(sheet(1300, [...blocks, { cells }, { cells: cells2 }]), "image/png");
+  const blocks = [{ title: `會擴散記號 真 1 倍（res 1）×8 最近鄰：每組左一般、右擴散（${MARKV} 案）` }];
+  const cells = [], cells2 = [];
+  for (const [id, zh] of DOTS) cells.push(cardCell(id, 1, { res: 1 }, `${zh} 卡 20`), cardCell(id, 1, { res: 1, spread: true }, "擴散"));
+  for (const [id, zh] of DOTS) cells2.push(headCell(id, 1, { res: 1 }, `${zh} 頭 11`), headCell(id, 1, { res: 1, spread: true }, "擴散"));
+  publish(sheet(1500, [...blocks, { cells }, { cells: cells2 }]), "image/png");
+};
+/** 會擴散記號三案對照（必修 2）：頭頂 11 真 1 倍、戰場 1600、800（真 1 倍狀態列放大）、狀態卡 20 真 1 倍；每案附「蓋到原圖示的像素數」。 */
+PARTS["spread-lab"] = () => {
+  const blocks = [{ title: "會擴散記號：三案對照（頭頂 11 真 1 倍｜戰場 1600 寬｜戰場 800 寬｜狀態卡 20 真 1 倍；全部 ×8 最近鄰，戰場 1600 ×6）" },
+    { note: "每案右邊的數字＝記號蓋到原本圖示（框線與圖樣）的像素數，量法：同一個 canvas 畫一次沒有記號、一次有記號，比對原本不透明的像素（頭頂 11、戰場 1600 的 14 px、800 的 12 px、狀態卡 20，真 1 倍與 2 倍解析度各一次，燃燒／流血／中毒三種加總）。必須全部是 0。戰場 1600 那格是三個狀態並排（燃燒擴散｜中毒擴散｜流血），看記號會不會碰到隔壁。" }];
+  const fieldCrop = (w, v) => {
+    SK.setMark(v); const S = w === 800 ? S800 : S1600, K = rowK(S);
+    const units = [U.bandit({ id: "B1", x: 1, y: 3, status: w === 800 ? [{ id: "burning", spread: true }] : [{ id: "burning", spread: true }, { id: "poison", spread: true }, { id: "bleed" }] }), U.bandit({ id: "B2", x: 2, y: 3, status: [{ id: "poison", spread: true }] })];
+    const V = { S, res: 1, x0: T * 0.6, y0: T * 2.4, w: T * 2.2, h: T * 1.4 }, cv = render({ cols: 4, rows: 6, groundAt: groundStone(), units }, V);
+    void K; return nn(cv, w === 800 ? 8 : 6, `${w} 寬`);
+  };
+  for (const v of ["A", "B", "C"]) {
+    let cover = 0;
+    for (const [id] of DOTS) for (const res of [1, 2]) { cover += SK.coverCount("head", id, 11, res, v) + SK.coverCount("head", id, 14, res, v) + SK.coverCount("head", id, 12, res, v) + SK.coverCount("card", id, 20, res, v); }
+    blocks.push({ title: `${v} 案：${SK.MARK_VARIANTS[v]}　蓋到原圖示的像素：${cover}` });
+    blocks.push({ cells: [
+      headCell("burning", 1, { res: 1, spread: v }, "頭 11 燃燒"), headCell("poison", 1, { res: 1, spread: v }, "頭 11 中毒"),
+      fieldCrop(1600, v), fieldCrop(800, v),
+      cardCell("burning", 1, { res: 1, spread: v }, "卡 20 燃燒"), cardCell("bleed", 1, { res: 1, spread: v }, "卡 20 流血"),
+    ], gap: 22 });
+  }
+  SK.setMark(MARKV);
+  blocks.push({ title: "對照：沒有記號（頭頂 11｜1600｜800｜卡 20）" });
+  const plain = (w) => { const S = w === 800 ? S800 : S1600, units = [U.bandit({ id: "B1", x: 1, y: 3, status: w === 800 ? [{ id: "burning" }] : [{ id: "burning" }, { id: "poison" }, { id: "bleed" }] }), U.bandit({ id: "B2", x: 2, y: 3, status: [{ id: "poison" }] })]; return nn(render({ cols: 4, rows: 6, groundAt: groundStone(), units }, { S, res: 1, x0: T * 0.6, y0: T * 2.4, w: T * 2.2, h: T * 1.4 }), w === 800 ? 8 : 6, `${w} 寬`); };
+  blocks.push({ cells: [headCell("burning", 1, { res: 1 }, "頭 11"), headCell("poison", 1, { res: 1 }, "頭 11"), plain(1600), plain(800), cardCell("burning", 1, { res: 1 }, "卡 20"), cardCell("bleed", 1, { res: 1 }, "卡 20")], gap: 22 });
+  publish(sheet(1700, blocks), "image/png");
 };
 /** 戰場上的實際大小：1600 與 800 寬（地圖縮放、狀態列反向放大照遊戲），真 1 倍；下面 ×4 最近鄰裁切。 */
 PARTS.field = () => {

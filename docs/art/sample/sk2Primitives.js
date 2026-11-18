@@ -122,33 +122,76 @@ window.SK2Prim = (() => {
   }
 
   // =====================================================================
-  // 2. 狀態框的「會擴散」記號：框的四個角各一顆病菌黃綠的「孢子」（深色 1 裝置像素外框），像從框裡往外噴。
-  //    頭頂（框 < 14 CSS px，含戰場上放大縮小後的 10.2～12.4）：孢子中心在框角外側（離框心 0.478 框邊長），半徑＝框邊長 × 0.13（1.15～1.4 CSS px），整個圖示仍在 11×11 以內。
-  //    狀態卡 20（框 16.8、裁成半徑 9.8 的圓）：框角已經被圓裁掉一點，孢子壓在框角上（中心離框心 0.345 框邊長），半徑 1.4。
-  //    其他框形（增益圓框、中性六角）也照「框邊長 × 比例」放四個斜角；這三個狀態都是減益（圓角方框）。
+  // 2. 狀態框的「會擴散」記號（第 2 版，審查必修 2）：右上角一顆病菌黃綠的孢子＋一顆往外跳的小點，全部在框線外面，
+  //    框線一個像素都不蓋（第 1 版四角四顆壓在框角上，框形看起來變成「[ ]」括號、選取把手，違反規則 13「框不動」）。
+  //    三種對照（?part=spread-lab），選 B（理由見紀錄第 2 版；A 的孢子在一排狀態裡落在兩個圖示之間的縫上，看起來像隔壁那個的）：
+  //    A 右上斜外：孢子在框角的對角線外（離框角外緣 1 個裝置像素），小點再往右上偏上跳出去。
+  //    B 頂邊上方：孢子在框頂右段正上方（只往上凸、不往右凸），小點往右上。
+  //    C 右上小病菌：位置同 A，孢子換成帶 6 個刺頭的小病菌（疾病擴散部件 18 的那顆）。
+  //    頭頂（畫面上框邊長 < 14 px）：孢子直徑 3 px、小點 1.6 px；狀態卡 20（框 16.8、裁成半徑 9.8 的圓）：孢子 4.4 px、小點 2 px，
+  //    畫在圓的裁切外面（狀態卡的框角被圓裁掉，圓的邊緣就是框）。記號會凸出圖示的格子（頭頂往上約 6 px、狀態卡往上約 7 px；往右不超過 2 px），畫圖示的
+  //    canvas 要留邊（headCanvas 7 px、cardCanvas 8 px）。
   // =====================================================================
-  const SPORE = { fill: "#e2f47a", ink: OUT };
-  /** 框邊長（CSS px）小於這個值用「頭頂」的排法（孢子在框角外側）：狀態卡 16.8 不是；頭頂 11 的框 9、1600 寬放大後 12.4、800 寬反向放大後 10.2 都是（第一次照第⑤批的 HEAD_MAX 12 分，1600 寬的 12.4 走到狀態卡的排法、孢子壓在框角上，800 寬幾乎看不到）。 */
+  const SPORE = { fill: GERM.knob, ink: OUT, hi: "#fbffd8", dark: GERM.dark };
+  const MARK_VARIANTS = {
+    A: "右上斜外：一顆孢子在框角的對角線外，小點往右上偏上跳出去",
+    B: "頂邊上方：孢子在框頂右段正上方（只往上凸），小點往右上跳",
+    C: "右上斜外的小病菌：位置同 A，孢子換成帶 6 個刺頭的小病菌",
+  };
+  let MARK = "B";
+  const setMark = (v) => { MARK = MARK_VARIANTS[v] ? v : "B"; };
+  /** 框邊長（畫面 CSS px）小於這個值用頭頂的大小（孢子 3 px）；狀態卡 16.8 用 4.4 px。以畫面上的框邊長判斷（第 1 版學到的：1600 寬放大後 12.4、800 寬 10.2 都是頭頂）。 */
   const SPORE_HEAD = 14;
-  /** ctx 原點＝框心；size＝框邊長（ctx 單位）；unitPx、res 同 QIconsStatus.paint。 */
-  function spreadMark(ctx, size, unitPx = 1, res = 2) {
-    const css = size * unitPx, head = css < SPORE_HEAD, a = (head ? 0.478 : 0.345) * size, r = (head ? Math.min(1.4, Math.max(1.15, css * 0.13)) : 1.4) / unitPx, ink = 1 / (res * unitPx);
+  /** 框（減益圓角方框，照 QIconsStatus.framePath 與線寬 max(1.5, 框邊長×0.09)）的外緣：half＝頂邊外緣離框心、D＝框角外緣沿對角線離框心。clipR：狀態卡裁切圓的半徑。 */
+  function frameOuter(size, unitPx, clipR) {
+    const lw = Math.max(1.5, size * unitPx * 0.09) / unitPx, rc = 0.175 * size, half = 0.45 * size + lw / 2;
+    let D = (0.45 * size - rc) * Math.SQRT2 + rc + lw / 2; if (clipR) D = Math.min(D, clipR);
+    return { half: clipR ? Math.min(half, clipR) : half, D, lw };
+  }
+  /** 把 ctx 單位的點對齊到裝置像素的中心（奇數直徑的點才不會糊成兩格）。一律往右上（離開框的方向）對齊，對齊後不會更靠近框。 */
+  function snap(ctx, x, y) { const m = ctx.getTransform(), X = m.a * x + m.c * y + m.e, Y = m.b * x + m.d * y + m.f, sx = Math.ceil(X - 0.5) + 0.5, sy = Math.floor(Y + 0.5) - 0.5, inv = m.inverse(); return [inv.a * sx + inv.c * sy + inv.e, inv.b * sx + inv.d * sy + inv.f]; }
+  /** 一顆孢子（外框 1 裝置像素＋本色＋左上 1 點亮面）；germ＝true 時加 6 個刺頭。 */
+  function spore(ctx, x, y, r, ink, germ6) {
+    if (germ6) { const k = r * 0.62; for (const col of [SPORE.ink, SPORE.fill]) for (let i = 0; i < 6; i++) { const a = 0.26 + (i / 6) * TAU; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 1.05, y + Math.sin(a) * r * 1.05, k * 0.5 + (col === SPORE.ink ? ink : 0), 0, TAU); ctx.fillStyle = col; ctx.fill(); } }
+    ctx.beginPath(); ctx.arc(x, y, r + ink, 0, TAU); ctx.fillStyle = SPORE.ink; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = SPORE.fill; ctx.fill();
+    if (germ6) { ctx.beginPath(); ctx.arc(x + r * 0.3, y + r * 0.3, r * 0.32, 0, TAU); ctx.fillStyle = SPORE.dark; ctx.fill(); }
+  }
+  /** ctx 原點＝框心；size＝框邊長（ctx 單位）；unitPx、res 同 QIconsStatus.paint；opt.variant（A｜B｜C）、opt.clipR（狀態卡的裁切圓）。 */
+  function spreadMark(ctx, size, unitPx = 1, res = 2, opt = {}) {
+    const v = MARK_VARIANTS[opt.variant] ? opt.variant : MARK, dev = 1 / (res * unitPx), head = size * unitPx < SPORE_HEAD;
+    const { half, D } = frameOuter(size, unitPx, opt.clipR), germ6 = v === "C";
+    const rs = (head ? (germ6 ? 1.3 : 1.5) : (germ6 ? 1.7 : 2.2)) / unitPx, rd = (head ? 1 : 1.1) / unitPx, reach = germ6 ? rs * 1.05 + rs * 0.31 : rs; /* reach：孢子（含刺頭）外緣離中心 */
+    let x, y;
+    if (v === "B") { x = half - rs - dev; y = -(half + dev + dev + reach); }
+    else { const d = D + dev + dev + reach; x = d * Math.SQRT1_2; y = -d * Math.SQRT1_2; }
+    [x, y] = snap(ctx, x, y);
+    const ang = v === "B" ? -0.42 : -1.05, dd = reach + dev + rd + 0.7 / unitPx; let [dx, dy] = snap(ctx, x + Math.cos(ang) * dd, y + Math.sin(ang) * dd);
     ctx.save();
-    for (const [sx, sy] of [[1, -1], [1, 1], [-1, 1], [-1, -1]]) {
-      ctx.beginPath(); ctx.arc(sx * a, sy * a, r + ink, 0, TAU); ctx.fillStyle = SPORE.ink; ctx.fill();
-      ctx.beginPath(); ctx.arc(sx * a, sy * a, r, 0, TAU); ctx.fillStyle = SPORE.fill; ctx.fill();
-    }
+    ctx.beginPath(); ctx.arc(dx, dy, rd + dev, 0, TAU); ctx.fillStyle = SPORE.ink; ctx.fill(); ctx.beginPath(); ctx.arc(dx, dy, rd, 0, TAU); ctx.fillStyle = SPORE.fill; ctx.fill();
+    spore(ctx, x, y, rs, dev, germ6);
     ctx.restore();
   }
-  /** 狀態圖示（Q 版框＋圖樣，第⑤批）＋會擴散記號。 */
+  /** 狀態圖示（Q 版框＋圖樣，第⑤批）＋會擴散記號。opt.spread：true 或 "A"｜"B"｜"C"。 */
   function paintStatus(ctx, id, cx, cy, size, unitPx = 1, res = 2, opt = {}) {
+    if (opt.clipR) { ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, opt.clipR, 0, TAU); ctx.clip(); }
     QSt.paint(ctx, id, cx, cy, size, unitPx, res, opt);
-    if (opt.spread) { ctx.save(); ctx.translate(cx, cy); spreadMark(ctx, size, unitPx, res); ctx.restore(); }
+    if (opt.clipR) ctx.restore();
+    if (opt.spread) { ctx.save(); ctx.translate(cx, cy); spreadMark(ctx, size, unitPx, res, { variant: typeof opt.spread === "string" ? opt.spread : undefined, clipR: opt.clipR }); ctx.restore(); }
   }
-  /** 戰場頭頂（statusIconCanvas(id, 11)：框 px−2）。 */
-  function headCanvas(id, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = Q.H.blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); paintStatus(x, id, px / 2, px / 2, px - 2, 1, res, opt); return cv; }
-  /** 狀態卡（statusIconTile＋tileCanvas：100 單位、裁成半徑 49 的圓，框 84）。 */
-  function cardCanvas(id, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = Q.H.blank(Math.round(px * res)); cv.style.width = cv.style.height = px * zoom + "px"; const x = cv.getContext("2d"); x.scale((px * res) / 100, (px * res) / 100); x.beginPath(); x.arc(50, 50, 49, 0, TAU); x.clip(); paintStatus(x, id, 50, 50, 84, px / 100, res, opt); return cv; }
+  /** 記號凸出圖示格子的留邊（CSS px）：會擴散的才留；opt.pad 可指定。 */
+  const padOf = (opt, def) => opt.pad ?? (opt.spread ? def : 0);
+  /** 戰場頭頂（statusIconCanvas(id, 11)：框 px−2）。會擴散的四周各留 7 px（記號往上、右上凸出 5～6 px），圖示仍在 canvas 正中。 */
+  function headCanvas(id, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), pad = padOf(opt, 7), W = px + 2 * pad, cv = Q.H.blank(Math.round(W * res)); cv.style.width = cv.style.height = W * zoom + "px"; const x = cv.getContext("2d"); x.scale(res, res); paintStatus(x, id, W / 2, W / 2, px - 2, 1, res, opt); return cv; }
+  /** 狀態卡（statusIconTile＋tileCanvas：100 單位、裁成半徑 49 的圓，框 84）。會擴散的四周各留 8 px（記號往上凸出約 7 px）。 */
+  function cardCanvas(id, px, zoom = 1, opt = {}) { const res = opt.res ?? (zoom === 1 ? 2 : zoom), pad = padOf(opt, 8), W = px + 2 * pad, cv = Q.H.blank(Math.round(W * res)); cv.style.width = cv.style.height = W * zoom + "px"; const x = cv.getContext("2d"); const u = (px * res) / 100; x.scale(u, u); const o = (pad * 100) / px; paintStatus(x, id, 50 + o, 50 + o, 84, px / 100, res, { ...opt, clipR: 49 }); return cv; }
+  /** 自查：記號蓋到原本圖示的像素數（同一個 canvas 畫一次沒有記號的、一次有記號的，比對原本不透明的像素有沒有被改到）。必須是 0。 */
+  function coverCount(kind, id, px, res, variant) {
+    const mk = kind === "card" ? cardCanvas : headCanvas, a = mk(id, px, 1, { res, pad: 7, spread: false }), b = mk(id, px, 1, { res, pad: 7, spread: variant });
+    const A = a.getContext("2d").getImageData(0, 0, a.width, a.height).data, B = b.getContext("2d").getImageData(0, 0, b.width, b.height).data; let n = 0;
+    for (let i = 0; i < A.length; i += 4) if (A[i + 3] > 0 && (A[i] !== B[i] || A[i + 1] !== B[i + 1] || A[i + 2] !== B[i + 2] || A[i + 3] !== B[i + 3])) n++;
+    return n;
+  }
 
   // =====================================================================
   // 3. 戰場上的鎖鏈與鉤（模型像素，1 格 48）
@@ -208,5 +251,5 @@ window.SK2Prim = (() => {
     void L;
   }
 
-  return { GERM, SPORE, EFFECT, install, germ, hookArt, link, spreadMark, paintStatus, headCanvas, cardCanvas, chain, hookHead, mote, impact, chevrons, DOT, ease, span, lerp, clamp, STEEL, STEEL_D, STEEL_L };
+  return { GERM, SPORE, MARK_VARIANTS, setMark, coverCount, EFFECT, install, germ, hookArt, link, spreadMark, paintStatus, headCanvas, cardCanvas, chain, hookHead, mote, impact, chevrons, DOT, ease, span, lerp, clamp, STEEL, STEEL_D, STEEL_L };
 })();
