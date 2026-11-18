@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>SK-2 原語美術</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+  #live canvas{image-rendering:auto}
+</style></head>
+<body>
+<h1>SK-2 三個新原語（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-19。紀錄 docs/art/SK-2原語-美術.md。分段：
+<a href="?part=icons&mute=1">部件圖樣</a><a href="?part=icons-t1&mute=1">部件真 1 倍</a><a href="?part=near&mute=1">撞圖</a><a href="?part=full96&mute=1">96 完整圖示</a>
+<a href="?part=anim&case=absorb&mute=1">吸收表面</a><a href="?part=anim&case=contagion&mute=1">疾病擴散</a><a href="?part=anim&case=hook&mute=1">鉤</a><a href="?part=anim&case=hook_lava&mute=1">鉤＋熔岩</a><a href="?part=anim&case=hook_giant&mute=1">鉤＋巨型頭目</a>
+<a href="?part=live&case=hook&mute=1">動畫播放</a><a href="?part=status&mute=1">會擴散記號</a><a href="?part=spread-lab&mute=1">記號三案對照</a><a href="?part=status-t1&mute=1">記號真 1 倍</a><a href="?part=field&w=1600&mute=1">戰場 1600</a><a href="?part=field&w=800&mute=1">戰場 800</a><a href="?part=audit&mute=1">自查</a></p>
+<div id="sheet"></div><div id="live"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script>
+<script src="qBossGiant.js"></script>
+<script src="sk2Primitives.js"></script>
+<script>
+const OO = OccludeOutline, SK = SK2Prim, QP = QIconsParts, QS = QIconsSkills, QSt = QIconsStatus, Q = QIcons, GB = QBossGiant, T = OO.T;
+const P = new URLSearchParams(location.search), PART = P.get("part") || "icons", CASE = P.get("case") || "hook";
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", TAU = Math.PI * 2;
+try { QStatusLive.setGlossary(window.QPARTS_GLOSSARY); } catch (e) { console.log("status glossary: " + e); }
+SK.install();
+/** 會擴散記號用哪一案（&mark=A｜B｜C；預設 B，第 2 版選定）。 */
+const MARKV = ["A", "B", "C"].includes(P.get("mark")) ? P.get("mark") : "B"; SK.setMark(MARKV);
+const TP = PaperDoll.TEMPLATES, R4 = Regions4, REG = (id) => R4.REGIONS.find((r) => r.id === id);
+const ASH = REG("ashen_waste"), CRY = REG("crystal_crown");
+const tile = (region, id) => (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x, y); ctx.scale(T / 52, T / 52); R4.tile(ctx, region, id, 0, 0, gx, gy); ctx.restore(); };
+/** 遊戲的地圖縮放（同 rg-marks.html／occlude-outline.html：stageLayout.ts fitScale＋hudSideInsets，12×12 地圖）：1600×900 → 1.31、800×600 → 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+/** 狀態列的反向放大（minMark.ts：registerMark(row, { base: ROW_ICON_FEET − 2, min: MIN_STATUS_GLYPH_PX 10 })）。 */
+const rowK = (S) => Math.max(1, 10 / (9 * S));
+const { ease, span, lerp, clamp } = SK;
+
+// ---------------- 拼圖（照 rg-marks.html） ----------------
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) {
+        const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height;
+        if (x + w > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; }
+        const caps = c.cap ? wrap(c.cap, Math.max(w, c.capW ?? 110), 12) : [];
+        items.push({ c, x, w, h, caps, bg: c.bg }); x += Math.max(w, caps.length ? (c.capW ?? 110) : 0) + gap; rowH = Math.max(rowH, h + (caps.length ? caps.length * 16 + 4 : 0));
+      }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      if (it.bg) { g.fillStyle = it.bg; g.fillRect(it.x, l.y, it.w, it.h); }
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width;
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+  document.documentElement.dataset.done = "1";
+}
+const box = (w, h, fill, draw) => { const c = document.createElement("canvas"); c.width = w; c.height = h; const g = c.getContext("2d"); if (fill) { g.fillStyle = fill; g.fillRect(0, 0, w, h); } draw(g); return c; };
+/** 最近鄰放大（真 1 倍的 canvas 放大 Z 倍）。 */
+const nn = (cv, Z, cap, bg) => ({ cv, w: cv.width * Z, h: cv.height * Z, nn: true, cap, bg });
+/** 放在現行技能介面的深色底上（組裝列、工坊）。 */
+const PANEL = "#1e2230";
+
+// =====================================================================
+// 戰場繪製（模型像素 1 格 48；照 rg-marks.html render 的圖層順序：地面 → 地面標記 → 單位之下 → 一排一排 → 之上 → 頭頂）
+// =====================================================================
+const BODY = new Map();
+/** 單位身體快取（同一個 tpl／view／west／sc 只用 QDoll.stamp 畫一次），貼到 (u.x, u.y)。 */
+function bodySprite(u, sc) {
+  const key = [u.tpl, u.view, !!u.west, sc.toFixed(3), JSON.stringify(u.pose ?? null)].join("|");
+  if (!BODY.has(key)) {
+    const W = Math.ceil(2.4 * T * sc), H = Math.ceil(2.6 * T * sc), c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d"); g.setTransform(sc, 0, 0, sc, 0, 0); g.translate(1.2 * T - 0.5 * T, 1.7 * T - 0.5 * T - OO.FEET);
+    if (u.pose) QDoll.setPose(u.pose);
+    try { OO.drawBody(g, { ...u, x: 0, y: 0, dx: 0, dy: 0, h: 0 }, sc); } finally { QDoll.setPose(null); }
+    BODY.set(key, { c, ox: 1.2 * T, oy: 1.7 * T });
+  }
+  return BODY.get(key);
+}
+function drawUnit(g, u, sc) {
+  const f = OO.feetOf(u), s = bodySprite(u, sc);
+  g.save();
+  if (u.fall) { const sx = u.west ? 1 : -1; g.translate(f.x + sx * 6 * u.fall, f.y - 4 * u.fall); g.rotate(sx * u.fall * Math.PI / 2); g.translate(-f.x, -f.y); g.filter = `grayscale(${0.7 * u.fall}) brightness(${1 - 0.2 * u.fall})`; g.globalAlpha = 1 - 0.25 * u.fall; } /* 倒下：往背後（朝西的往東）躺平、變灰 */
+  g.drawImage(s.c, f.x - s.ox, f.y - s.oy, s.c.width / sc, s.c.height / sc);
+  if (u.flash > 0) { const w = whiteOf(s.c); g.globalAlpha = clamp(u.flash) * (1 - 0.4 * (u.fall ?? 0)); g.drawImage(w, f.x - s.ox, f.y - s.oy, s.c.width / sc, s.c.height / sc); }
+  g.restore();
+}
+const WHITE = new WeakMap();
+function whiteOf(src) { if (!WHITE.has(src)) { const c = document.createElement("canvas"); c.width = src.width; c.height = src.height; const x = c.getContext("2d"); x.drawImage(src, 0, 0); x.globalCompositeOperation = "source-in"; x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height); WHITE.set(src, c); } return WHITE.get(src); }
+/** 腳邊 HP 條＋狀態列（Q 版狀態圖示、第⑤批；會擴散的加記號）。status：[{ id, spread, pop（0～1 剛加上的放大）, a（透明度）}]。 */
+function hud(g, u, sc, K) {
+  if (u.fall >= 1 || u.noHud) return;
+  const c = OO.centerOf(u), w = T * 0.8, y = c.y + T * 0.36, cx = c.x + (u.dx ?? 0);
+  g.fillStyle = "#000"; g.fillRect(cx - w / 2, y, w, 5);
+  const r = u.hp ?? 1; g.fillStyle = r > 0.5 ? "#4cd964" : r > 0.25 ? "#ffcc00" : "#ff3b30"; g.fillRect(cx - w / 2, y, w * r, 5);
+  const list = (u.status ?? []).filter((s) => (s.a ?? 1) > 0);
+  if (!list.length) return;
+  const px = 11 * K, n = Math.min(K > 1 ? 1 : 3, list.length), x0 = cx - (n * px + (n - 1)) / 2;
+  list.slice(0, n).forEach((s, i) => {
+    const k = 1 + 0.6 * (1 - ease(s.pop ?? 1)), q = px * k, cv = SK.headCanvas(s.id, Math.round(q * sc), 1, { res: 1, spread: s.spread }); /* 直接以裝置像素的大小畫（框邊長＝畫面上的 px，記號才用對的排法） */
+    const mx = x0 + i * (px + 1) + px / 2, my = y - 4 - px / 2, m = g.getTransform();
+    const dx = Math.round(m.a * mx + m.e - cv.width / 2), dy = Math.round(m.d * my + m.f - cv.height / 2);
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = s.a ?? 1; g.drawImage(cv, dx, dy); g.restore();
+  });
+}
+/** 表面（遊戲端 SURFACES：表面色疊在地形上；樣張用圓角方塊＋幾道亮紋示意，k＝剩下的比例 0～1）。 */
+const SURF = { ice: { col: "#c8ecff", a: 0.7, hi: "#ffffff" }, water: { col: "#3a7bd5", a: 0.55, hi: "#cfe8ff" }, fire: { col: "#ff6a1a", a: 0.7, hi: "#ffd23f" }, poison: { col: "#7bc043", a: 0.6, hi: "#d6f59a" } };
+function surface(g, gx, gy, id, k = 1, glow = 0) {
+  if (k <= 0) return; const s = SURF[id], cx = (gx + 0.5) * T, cy = (gy + 0.5) * T, h = (T / 2 - 2) * Math.sqrt(k);
+  g.save(); g.globalAlpha = Math.min(0.92, s.a + 0.15) * Math.min(1, k * 1.4); g.beginPath(); g.roundRect(cx - h, cy - h, h * 2, h * 2, 10 * Math.sqrt(k)); g.fillStyle = s.col; g.fill(); g.globalAlpha = Math.min(1, k * 1.4); g.lineWidth = 1; g.strokeStyle = "rgba(22,18,26,0.55)"; g.stroke();
+  g.globalAlpha = 0.55 * Math.min(1, k * 1.4) + glow * 0.4; g.lineWidth = 1.6 + glow * 1.6; g.strokeStyle = s.hi; g.stroke();
+  g.globalAlpha = 0.7 * Math.min(1, k * 1.4); g.strokeStyle = s.hi; g.lineWidth = 1.4; g.lineCap = "round";
+  for (const [a, b, c2, d] of [[-0.6, -0.4, -0.15, -0.55], [0.1, 0.2, 0.55, 0.05], [-0.4, 0.45, -0.05, 0.3]]) { g.beginPath(); g.moveTo(cx + a * h, cy + b * h); g.lineTo(cx + c2 * h, cy + d * h); g.stroke(); }
+  g.restore();
+}
+/** 一個場景畫成一張 canvas。scene＝{ cols, rows, groundAt, units, giant, decals, under, over, top }；view＝{ S, res, x0, y0, w, h }。 */
+function render(scene, view) {
+  const sc = view.S * (view.res ?? 1) * (view.zoom ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+  const xf = () => g.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  SK.setMapScale(view.S); /* 鎖鏈、虛線軌跡的畫面下限照地圖縮放（不看樣張的放大倍率；可修 d、7） */
+  xf(); const K = rowK(view.S);
+  for (let y = 0; y < scene.rows; y++) for (let x = 0; x < scene.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); scene.groundAt(x, y)(g, x * T, y * T, x, y); g.restore(); }
+  g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
+  if (scene.decals) { xf(); scene.decals(g); }
+  if (scene.under) { xf(); scene.under(g); }
+  const units = [...scene.units].sort((a, b) => a.y - b.y || a.x - b.x);
+  const rows = [...new Set([...units.map((u) => u.y), ...(scene.giant ? [scene.giant.row] : [])])].sort((a, b) => a - b);
+  for (const row of rows) {
+    if (scene.giant && scene.giant.row === row) { xf(); drawGiant(g, scene.giant); }
+    const inRow = units.filter((u) => u.y === row);
+    for (const u of inRow) { xf(); if (!u.fall) { g.save(); g.translate(u.dx ?? 0, 0); OO.drawRing(g, u); g.restore(); } drawUnit(g, u, sc); }
+    for (const u of inRow) { xf(); hud(g, u, sc, K); }
+    if (scene.rowFx) { xf(); scene.rowFx(g, row); }
+  }
+  if (scene.over) { xf(); scene.over(g); }
+  if (scene.top) { xf(); scene.top(g); }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return cv;
+}
+/** 巨型頭目（灰燼之心 3×3）：錨點＝3×3 南排的南緣中點；cx,cy 是中心格。flash：撞擊白閃，shake：左右晃（模型 px）。 */
+function drawGiant(g, G) {
+  g.save(); g.translate((G.cx + 0.5) * T + (G.shake ?? 0), (G.cy + 2) * T); GB.draw(g, { phase: 1, t: 0 }, { flash: G.flash ?? 0 }); g.restore();
+}
+
+// ---------------- 角色、手的位置 ----------------
+const U = {
+  mage: (o) => ({ kind: "doll", team: "ally", tpl: "hero_mage", doll: TP.hero_mage, view: "side", hp: 0.9, hero: true, ...o }),
+  bandit: (o) => ({ kind: "doll", team: "enemy", tpl: "bandit", doll: TP.bandit, view: "side", west: true, hp: 0.8, ...o }),
+};
+const HANDS = new Map();
+/** 主手／副手在世界座標的位置（QDoll 的 POSE.hands 記錄；stamp 的離屏原點在 (W/2, H−FOOT)＝(64, 98)×size）。 */
+function handOf(u, who = "off") {
+  const key = [u.tpl, u.view, !!u.west, JSON.stringify(u.pose ?? null)].join("|");
+  if (!HANDS.has(key)) {
+    const P0 = { ...(u.pose ?? {}), hands: {} }, c = document.createElement("canvas"); c.width = 300; c.height = 300; const dpr = 3, size = OO.K;
+    QDoll.setPose(P0); try { QDoll.stamp(c.getContext("2d"), u.doll, u.view, 150, 200, size, !!u.west, { dpr }); } finally { QDoll.setPose(null); }
+    const rel = {}; for (const k of ["main", "off"]) if (P0.hands[k]) rel[k] = [-64 * size + P0.hands[k][0] / dpr, -98 * size + P0.hands[k][1] / dpr];
+    HANDS.set(key, rel);
+  }
+  const r = HANDS.get(key)[who] ?? HANDS.get(key).main ?? [8, -24], f = OO.feetOf(u);
+  return { x: f.x + r[0], y: f.y + r[1] };
+}
+const chestOf = (u) => { const f = OO.feetOf(u); return { x: f.x, y: f.y - 22 }; };
+
+// ---------------- 地面 ----------------
+/** 雲嶺地面（explore.js 的地面；同 rg-marks.html 的 CLOUD）：灰石，特效的顏色看得清楚。熔岩格用灰燼荒原的岩漿。 */
+const CLOUD = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
+const groundStone = (lava = []) => (x, y) => (lava.some(([a, b]) => a === x && b === y) ? tile(ASH, "lava") : CLOUD);
+const VIEWW = (S, res = 1, zoom = 1) => ({ S, res, zoom, x0: 0, y0: T * 1.4, w: T * 9, h: T * 4.2 });
+
+// =====================================================================
+// 演出（t 毫秒 → 場景）。時間軸寫在每個函式的註解；紀錄檔第 3 節有同一張表。
+// =====================================================================
+const CASTER_POSE = { cast: { lean: 0.1, armL: -0.9 }, pull: { lean: -0.18, armL: -0.5 } };
+/**
+ * 吸收表面（gain＝元素）：法師 (1,3) 站在冰上，吸走腳下的冰。
+ *   0–150 按地：法師前傾、冰面邊緣變亮。150–520 抽起：冰面往中心縮、透明；7 顆冰晶從冰面各處沿螺旋往上收進副手。
+ *   380–620 成球：副手前方長出一顆冰色光球。560–1000 化成：光球一閃，收益的圖樣（元素＝冰的元素片；層數／治療／護盾換成那個效果的部件圖樣）
+ *   從頭頂浮起、淡出；法杖頭染成冰色（這一招的元素換掉了）。
+ */
+function sceneAbsorb(t, opt = {}) {
+  const surf = opt.surf ?? "ice", gain = opt.gain ?? "element:ice";
+  const pose = t < 150 ? null : t < 620 ? CASTER_POSE.cast : null;
+  const M = U.mage({ id: "M", x: 1, y: 3, pose }), B = U.bandit({ id: "B", x: 5, y: 3 });
+  const hand = handOf(M, "off"), base = { x: 1.5 * T, y: 3.5 * T };
+  const lift = ease(span(t, 150, 520)), glowRim = t < 150 ? span(t, 0, 150) : 1 - span(t, 150, 300);
+  const col = SURF[surf], tint = surf === "water" ? QS.TINT.water : surf === "fire" ? QS.TINT.fire : surf === "poison" ? QS.TINT.poison : QS.TINT.ice;
+  /* 抽起的光柱（第 2 版，可修 c）：分兩層。單位之下（under）一整片從冰面往上收窄到副手，不透明度 55%；
+     單位之上（top）只畫兩條亮邊線，加 4 道往上跑的短亮條（lighter 混色、40%），不整片蓋在身上。 */
+  const colA = span(t, 160, 260) * (1 - span(t, 460, 560)), w0 = 21, w1 = 4;
+  const colPath = (g) => { g.beginPath(); g.moveTo(base.x - w0, base.y + 4); g.quadraticCurveTo(base.x - w0 * 0.3, base.y - 6, hand.x - w1, hand.y); g.lineTo(hand.x + w1, hand.y); g.quadraticCurveTo(base.x + w0 * 0.3, base.y - 6, base.x + w0, base.y + 4); };
+  const colAt = (q, side) => { const u = 1 - q, x0 = base.x + side * w0, y0 = base.y + 4, cx = base.x + side * w0 * 0.3, cy = base.y - 6, x1 = hand.x + side * w1, y1 = hand.y; return { x: u * u * x0 + 2 * u * q * cx + q * q * x1, y: u * u * y0 + 2 * u * q * cy + q * q * y1 }; };
+  void col;
+  return {
+    cols: 9, rows: 7, groundAt: groundStone(), units: [M, B],
+    decals: (g) => surface(g, 1, 3, surf, 1 - lift, glowRim),
+    under: (g) => { if (colA <= 0) return; g.save(); g.globalAlpha = 0.55 * colA; const gr = g.createLinearGradient(0, base.y, 0, hand.y); gr.addColorStop(0, tint[0]); gr.addColorStop(1, tint[1]); g.fillStyle = gr; colPath(g); g.closePath(); g.fill(); g.restore(); },
+    top: (g) => {
+      // 光柱的亮邊與往上跑的亮條（單位之上）
+      if (colA > 0) {
+        g.save(); g.globalAlpha = 0.85 * colA; g.strokeStyle = tint[1]; g.lineWidth = 1.4; g.lineCap = "round";
+        for (const side of [-1, 1]) { g.beginPath(); for (let q = 0; q <= 1.001; q += 0.1) { const p = colAt(q, side); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.stroke(); }
+        g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.4 * colA; g.strokeStyle = "#ffffff"; g.lineWidth = 2;
+        for (let i = 0; i < 4; i++) { const q = (Math.max(0, t - 160) / 260 + i * 0.25) % 1, f = [0.3, 0.62, 0.45, 0.75][i], a = colAt(q, -1), b = colAt(q, 1), x = lerp(a.x, b.x, f), y = lerp(a.y, b.y, f); g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hand.x - base.x) * 0.06, y - 7); g.stroke(); }
+        g.restore();
+      }
+      // 冰晶：10 顆，從冰面四周（固定角度）沿螺旋往上收進手
+      for (let i = 0; i < 10; i++) {
+        const t0 = 150 + i * 24, p = span(t, t0, t0 + 300); if (p <= 0 || p >= 1) continue;
+        const a0 = (i / 10) * TAU + 0.4, r0 = 23, sx = base.x + Math.cos(a0) * r0, sy = base.y + Math.sin(a0) * r0 * 0.55;
+        const e = ease(p), sw = (1 - e) * 10, ang = a0 + e * 2.2;
+        const x = lerp(sx, hand.x, e) + Math.cos(ang) * sw, y = lerp(sy, hand.y, e) + Math.sin(ang) * sw * 0.6 - Math.sin(e * Math.PI) * 12;
+        // 尾跡（三顆變小的點）
+        for (let k = 1; k <= 3; k++) { const q = Math.max(0, e - k * 0.06), xx = lerp(sx, hand.x, q) + Math.cos(a0 + q * 2.2) * (1 - q) * 10, yy = lerp(sy, hand.y, q) + Math.sin(a0 + q * 2.2) * (1 - q) * 6 - Math.sin(q * Math.PI) * 6; g.globalAlpha = 0.5 - k * 0.12; g.beginPath(); g.arc(xx, yy, 2.2 - k * 0.45, 0, TAU); g.fillStyle = tint[1]; g.fill(); }
+        g.globalAlpha = 1;
+        const s = 5 * (1 - 0.35 * e); g.save(); g.translate(x, y); g.rotate(ang); /* 第 2 版：冰晶邊長 4→5 */
+        g.beginPath(); g.moveTo(0, -s - 1.2); g.lineTo(s * 0.7 + 1.2, 0); g.lineTo(0, s + 1.2); g.lineTo(-s * 0.7 - 1.2, 0); g.closePath(); g.fillStyle = "#16121a"; g.fill();
+        g.beginPath(); g.moveTo(0, -s); g.lineTo(s * 0.7, 0); g.lineTo(0, s); g.lineTo(-s * 0.7, 0); g.closePath(); g.fillStyle = tint[0]; g.fill();
+        g.beginPath(); g.moveTo(0, -s); g.lineTo(-s * 0.7, 0); g.lineTo(0, 0); g.closePath(); g.fillStyle = "#ffffff"; g.fill(); g.restore();
+      }
+      // 光球
+      const orb = t < 380 ? 0 : t < 620 ? ease(span(t, 380, 560)) : 1 - span(t, 620, 700);
+      if (orb > 0) {
+        const R = 6.5 * orb, pulse = t > 560 && t < 640 ? 1 + 0.5 * Math.sin(span(t, 560, 640) * Math.PI) : 1;
+        Q.H.glow(g, hand.x + 4, hand.y - 2, R * 2.6 * pulse, tint[1], 0.7);
+        g.beginPath(); g.arc(hand.x + 4, hand.y - 2, R + 1.3, 0, TAU); g.fillStyle = "#16121a"; g.fill();
+        g.beginPath(); g.arc(hand.x + 4, hand.y - 2, R, 0, TAU); g.fillStyle = tint[0]; g.fill();
+        g.beginPath(); g.arc(hand.x + 4.4, hand.y - 1.6, R * 0.6, 0, TAU); g.fillStyle = tint[1]; g.fill();
+        g.beginPath(); g.arc(hand.x + 4.8, hand.y - 1.4, R * 0.28, 0, TAU); g.fillStyle = "#ffffff"; g.fill();
+        if (t > 560) { const p = span(t, 560, 700); g.save(); g.globalAlpha = 1 - p; g.beginPath(); g.arc(hand.x + 4, hand.y - 2, 6 + p * 14, 0, TAU); g.strokeStyle = tint[1]; g.lineWidth = 2.2 * (1 - p) + 0.6; g.stroke(); g.restore(); }
+      }
+      // 收益的圖樣：從頭頂浮起
+      if (t > 600) {
+        const p = span(t, 600, 1000), k = p < 0.2 ? ease(p / 0.2) : 1, a = p < 0.7 ? 1 : 1 - (p - 0.7) / 0.3, [cat, id] = gain.split(":");
+        const f = OO.feetOf(M), sz = 16 * k; if (sz > 1) { const gcv = QP.glyph(cat, id, 16, 4, { tint: cat === "element" ? undefined : undefined }); g.save(); g.globalAlpha = a; g.drawImage(gcv, f.x - (sz * QP.BOX) / 2, f.y - 52 - 10 * ease(p) - (sz * QP.BOX) / 2, sz * QP.BOX, sz * QP.BOX); g.restore(); }
+      }
+      // 法杖頭染成冰色（這一招的元素換掉了）
+      if (t > 640 && gain.startsWith("element")) { const p = span(t, 640, 760), mh = handOf(M, "main"), a = p * (1 - 0.4 * span(t, 900, 1000)); g.save(); g.globalAlpha = a; Q.H.glow(g, mh.x + 1, mh.y - 26, 9, tint[1], 0.9); g.restore(); }
+    },
+  };
+}
+/**
+ * 疾病擴散（燃燒；流血、中毒同一套，只換微粒的形與色）：盜賊1 (5,3) 帶會擴散的燃燒、剩 1 HP，盜賊2 (6,3) 在 1 格內，盜賊3 (7,2) 在 1 格外。
+ *   0–220 火焰箭飛到盜賊1。220 命中白閃。220–520 盜賊1 倒下（往後倒、變灰）；它頭上的燃燒圖示孢子記號脈動一次。
+ *   300–560 範圍：盜賊1 周圍 1 格內的格子亮一層黃綠（候選）、選中的盜賊2 那格框亮。
+ *   460–860 傳染：一團火從倒下的身體跳起、沿往上拱的弧線飛到盜賊2 的胸口（拖三顆變小的尾巴、身後長出黃綠虛線軌跡，860–1000 軌跡末端一個箭頭），地上同時一列三個 V 從盜賊1 那格指向盜賊2 那格。
+ *   860–1150 著火：盜賊2 身上爆一小圈火、白閃；它的狀態列多一個燃燒（帶會擴散記號，從 1.6 倍縮回）；盜賊1 的圖示淡掉。
+ */
+function sceneContagion(t, opt = {}) {
+  const kind = opt.kind ?? "burning";
+  const fallP = ease(span(t, 220, 520)), hitF = t > 220 && t < 330 ? 1 - span(t, 220, 330) : 0;
+  const leap = span(t, 460, 860), land = span(t, 860, 1150);
+  const M = U.mage({ id: "M", x: 1, y: 3, pose: t < 220 ? CASTER_POSE.cast : null });
+  const B1 = U.bandit({ id: "B1", x: 5, y: 3, hp: t < 220 ? 0.04 : 0, fall: fallP, flash: hitF, status: [{ id: kind, spread: true, a: 1 - span(t, 860, 1000), pop: 1 }] });
+  const B2 = U.bandit({ id: "B2", x: 6, y: 3, flash: t > 860 && t < 980 ? 1 - span(t, 860, 980) : 0, status: t > 860 ? [{ id: kind, spread: true, pop: span(t, 860, 1060) }] : [] });
+  const B3 = U.bandit({ id: "B3", x: 7, y: 2 });
+  const dst = chestOf(B2), from = { x: 5.5 * T + 6, y: 3.5 * T - 4 };
+  const rng = span(t, 300, 360) * (1 - span(t, 860, 1000));
+  return {
+    cols: 9, rows: 7, groundAt: groundStone(), units: [M, B1, B2, B3],
+    decals: (g) => {
+      if (rng > 0) for (const [x, y] of [[4, 3], [6, 3], [5, 2], [5, 4]]) { const pick = x === 6 && y === 3; g.save(); g.globalAlpha = rng * (pick ? 0.38 : 0.18); g.fillStyle = SK.GERM.body; g.beginPath(); g.roundRect(x * T + 3, y * T + 3, T - 6, T - 6, 8); g.fill(); if (pick) { g.globalAlpha = rng; g.lineWidth = 2.5; g.strokeStyle = SK.GERM.knob; g.stroke(); } g.restore(); }
+      if (leap > 0) SK.chevrons(g, { x: 5.5 * T, y: 3.5 * T + 15 }, { x: 6.5 * T, y: 3.5 * T + 15 }, Math.min(1, leap * 1.2) * (1 - span(t, 1000, 1150)), SK.GERM.knob);
+    },
+    top: (g) => {
+      // 火焰箭（起因）
+      if (t < 230) { const h = handOf(M, "main"), p = span(t, 0, 220), x = lerp(h.x + 2, 5.5 * T - 6, ease(p)), y = lerp(h.y - 22, 3.5 * T - 14, ease(p)); SK.mote(g, "burning", x, y, 7, 1, 0); }
+      // 孢子記號脈動（倒下時，頭上的圖示外圈）
+      if (t > 220 && t < 520) { const p = span(t, 220, 520), c = OO.centerOf(B1); g.save(); g.globalAlpha = 1 - p; g.beginPath(); g.arc(c.x, c.y + T * 0.36 - 9.5, 6 + p * 16, 0, TAU); g.strokeStyle = SK.GERM.knob; g.lineWidth = 2; g.setLineDash([3, 3]); g.stroke(); g.restore(); }
+      // 傳染的那一團：弧線（往上拱），尾巴三顆
+      if (leap > 0 && leap < 1) {
+        const pt = (q) => { const e = ease(q); return { x: lerp(from.x, dst.x - 4, e), y: lerp(from.y, dst.y, e) - Math.sin(e * Math.PI) * 30 }; };
+        /* 跳躍的軌跡：黃綠虛線弧＋箭頭（指向被傳染的人），跟著那一團長出來 */
+        g.save(); g.setLineDash([4 * SK.mk(), 3 * SK.mk()]); g.lineCap = "round"; for (const [w, c] of [[4.2 * SK.mk(), "#16121a"], [2.2 * SK.mk(), SK.GERM.knob]]) { g.beginPath(); for (let q = 0; q <= leap; q += 0.02) { const p = pt(q); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.strokeStyle = c; g.lineWidth = w; g.stroke(); } g.restore();
+        for (let k = 3; k >= 1; k--) { const q = Math.max(0, leap - k * 0.07), p = pt(q); SK.mote(g, kind, p.x, p.y, 7 - k * 1.4, 0.75 - k * 0.15, 0); }
+        const p = pt(leap), p2 = pt(Math.min(1, leap + 0.02)); SK.mote(g, kind, p.x, p.y, 11, 1, Math.atan2(p2.y - p.y, p2.x - p.x));
+      }
+      // 軌跡留到 1000 ms：整條虛線＋終點箭頭
+      if (leap >= 1 && t < 1000) { const pt = (q) => ({ x: lerp(from.x, dst.x - 4, ease(q)), y: lerp(from.y, dst.y, ease(q)) - Math.sin(ease(q) * Math.PI) * 30 }); g.save(); g.globalAlpha = 1 - span(t, 900, 1000); g.setLineDash([4 * SK.mk(), 3 * SK.mk()]); g.lineCap = "round"; for (const [w, c] of [[4.2 * SK.mk(), "#16121a"], [2.2 * SK.mk(), SK.GERM.knob]]) { g.beginPath(); for (let q = 0; q <= 0.86; q += 0.02) { const p = pt(q); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.strokeStyle = c; g.lineWidth = w; g.stroke(); } g.setLineDash([]); const a = pt(0.86), b = pt(0.97), ang = Math.atan2(b.y - a.y, b.x - a.x); g.translate(b.x, b.y); g.rotate(ang); g.scale(SK.mk(), SK.mk()); g.beginPath(); g.moveTo(3, 0); g.lineTo(-4, -4.4); g.lineTo(-4, 4.4); g.closePath(); g.lineWidth = 2; g.strokeStyle = "#16121a"; g.stroke(); g.fillStyle = SK.GERM.knob; g.fill(); g.restore(); }
+      // 著火：小圈爆開
+      if (land > 0 && land < 0.6) { const p = land / 0.6, c = { x: dst.x - 4, y: dst.y }; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.6, d = 4 + p * 12; SK.mote(g, kind, c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, 5.5 * (1 - p * 0.5), 1 - p, a); } }
+    },
+  };
+}
+/** 鉤的三種（一般、熔岩前停、巨型頭目）共用：鏈子從副手射出。 */
+function sceneHook(t, opt = {}) {
+  const v = opt.v ?? "hook", giant = v === "giant", lava = v === "lava";
+  const fireP = ease(span(t, 100, 330)), bite = t >= 330, pullEnd = giant ? 520 : lava ? 620 : 700;
+  const pose = t < 100 ? null : t < 330 ? CASTER_POSE.cast : t < pullEnd + 80 ? CASTER_POSE.pull : null;
+  /* 第 2 版（可修 5）：巨型頭目拉不動時法師被往前拖，身體往前傾（lean 往正的方向，0.06→0.2），不只靠位移 3 px */
+  const dragP = giant && t > 330 && t < 560 ? ease(span(t, 330, 520)) * (1 - span(t, 520, 560)) : 0;
+  const M = U.mage({ id: "M", x: 1, y: 3, pose: dragP > 0 ? { lean: 0.06 + 0.14 * dragP, armL: -0.5 } : pose, dx: giant && t > 330 && t < 560 ? 3 * ease(span(t, 330, 520)) * (1 - span(t, 520, 560)) : 0 });
+  const hand = handOf(M, "off");
+  let units = [M], G = null, tx0 = 5, tx1 = 2;
+  if (lava) tx1 = 4;
+  let B1 = null;
+  if (!giant) {
+    const pp = ease(span(t, 400, pullEnd)), x = lerp(tx0, tx1, pp), stopJolt = lava && t > pullEnd && t < pullEnd + 140 ? Math.sin(span(t, pullEnd, pullEnd + 140) * Math.PI) * 3 : 0;
+    B1 = U.bandit({ id: "B1", x: tx0, y: 3, dx: (x - tx0) * T - stopJolt, flash: t > 330 && t < 430 ? 1 - span(t, 330, 430) : 0, pose: t > 400 && t < pullEnd ? { lean: -0.2 } : lava && t >= pullEnd && t < pullEnd + 140 ? { lean: -0.3 + 0.19 * ease(span(t, pullEnd, pullEnd + 140)) } : null }); /* 第 2 版（可修 4）：熔岩前煞住，往後仰約 6°（拉的時候 −0.2，煞住的一下 −0.3，140 ms 回到 −0.11） */
+    units.push(B1);
+    if (!lava) units.push(U.bandit({ id: "B2", x: 6, y: 3 }));
+  } else {
+    const snap = span(t, 520, 640);
+    G = { cx: 5, cy: 3, row: 4, flash: t > 520 && t < 700 ? 1 - span(t, 520, 700) : 0, shake: t > 520 && t < 680 ? Math.sin(span(t, 520, 680) * Math.PI * 5) * 2.4 * (1 - snap) : 0 };
+  }
+  const target = () => (giant ? { x: 4 * T + 8, y: 3.5 * T - 4 } : (() => { const c = chestOf(B1); return { x: c.x - 6, y: c.y + 4 }; /* feetOf 已含 dx */ })());
+  return {
+    cols: 9, rows: 7, groundAt: groundStone(lava ? [[3, 3]] : []), units, giant: G,
+    over: (g) => {
+      const h = { x: hand.x + 2, y: hand.y }, tg = target();
+      if (t < 100) return;
+      // 飛出去（100–330）
+      if (!bite) { const x = lerp(h.x, tg.x, fireP), y = lerp(h.y, tg.y, fireP) - Math.sin(fireP * Math.PI) * 5; SK.chain(g, [[h.x, h.y], [x, y]], { phase: 0 }); SK.hookHead(g, x, y, Math.atan2(tg.y - h.y, tg.x - h.x), 0.78); return; }
+      if (giant) {
+        if (t < 520) { // 繃緊：直、微微抖、白光
+          const p = span(t, 330, 520), j = Math.sin(t / 9) * 1.2 * p; SK.chain(g, [[h.x, h.y], [(h.x + tg.x) / 2, (h.y + tg.y) / 2 + j], [tg.x, tg.y]], { glow: 0.25 + 0.45 * p, rim: Math.min(1, p * 2) });
+          SK.hookHead(g, tg.x, tg.y, 0, 0.78);
+          /* 第 2 版（可修 5）：緊繃線改成受鉤點往西放射的 4 道短粗線（外框色墊底＋米白），從 0.25 開始、越拉越長 */
+          if (p > 0.25) { const q = (p - 0.25) / 0.75; g.save(); g.lineCap = "round"; for (const a of [-2.35, -2.75, 2.75, 2.35]) { const r0 = 7, r1 = 7 + 6 + 6 * q; for (const [w, c] of [[4.4, "#16121a"], [2.4, "#fff6d0"]]) { g.globalAlpha = Math.min(1, q * 1.6); g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(tg.x + Math.cos(a) * r0, tg.y + Math.sin(a) * r0); g.lineTo(tg.x + Math.cos(a) * r1, tg.y + Math.sin(a) * r1); g.stroke(); } } g.restore(); }
+        } else { // 彈回：鉤脫開、鏈子成波浪縮回手上
+          const p = ease(span(t, 520, 780)); if (p >= 1) return; const L = (1 - p), ex = lerp(h.x, tg.x - 4, L), ey = lerp(h.y, tg.y, L), n = 10, pts = [];
+          for (let i = 0; i <= n; i++) { const q = i / n, w = Math.sin(q * Math.PI * 3 + p * 12) * 7 * (1 - p) * Math.sin(q * Math.PI); pts.push([lerp(h.x, ex, q), lerp(h.y, ey, q) + w]); }
+          SK.chain(g, pts, {}); SK.hookHead(g, ex, ey + Math.sin(Math.PI * 3 + p * 12) * 0, Math.PI + 0.5 * (1 - p), 0.78);
+        }
+        return;
+      }
+      if (t < pullEnd) { // 拉回：鏈子收短（鏈節往手裡流）
+        const p = span(t, 400, pullEnd); SK.chain(g, [[h.x, h.y], [tg.x, tg.y]], { phase: -p * 60 }); SK.hookHead(g, tg.x, tg.y, Math.atan2(tg.y - h.y, tg.x - h.x), 0.78);
+        return;
+      }
+      // 放開：熔岩那種先鬆垂再收；一般直接收
+      const p = ease(span(t, pullEnd, pullEnd + (lava ? 240 : 160))); if (p >= 1) return;
+      const ex = lerp(tg.x, h.x, p), ey = lerp(tg.y, h.y, p), sag = lava ? 10 * Math.sin(Math.min(1, p * 2) * Math.PI) : 0, mx = (h.x + ex) / 2, my = (h.y + ey) / 2 + sag;
+      SK.chain(g, [[h.x, h.y], [mx, my], [ex, ey]], {}); SK.hookHead(g, ex, ey, Math.atan2(ey - h.y, ex - h.x) + (lava ? 0.6 * Math.sin(p * Math.PI) : 0), 0.78);
+    },
+    top: (g) => {
+      const tg = target();
+      // 鉤住的一下：小星
+      if (t > 330 && t < 450) { const p = span(t, 330, 450); SK.impact(g, tg.x + 2, tg.y, p, giant ? 7 : 6); }
+      // 熔岩：在邊緣煞住的塵土（腳邊、朝熔岩那一側）＋熔岩火星
+      if (lava && t > pullEnd - 60 && t < pullEnd + 260) {
+        const p = span(t, pullEnd - 60, pullEnd + 260), fx = 4 * T + 8, fy = 3.5 * T + 13;
+        /* 第 2 版（可修 4）：塵土放大 1.5 倍 */
+        for (let i = 0; i < 4; i++) { const a = Math.PI * 1.15 + (i - 1.5) * 0.4, d = (3 + p * 9) * 1.5; g.save(); g.globalAlpha = 0.85 * (1 - p); g.beginPath(); g.arc(fx + Math.cos(a) * d, fy + Math.sin(a) * d * 0.5, (3.6 - i * 0.4 + p * 2) * 1.5, 0, TAU); g.fillStyle = "#d8c8a8"; g.fill(); g.restore(); }
+        for (let i = 0; i < 3; i++) { const q = span(t, pullEnd + i * 40, pullEnd + i * 40 + 200); if (q <= 0 || q >= 1) continue; g.save(); g.globalAlpha = 1 - q; g.beginPath(); g.arc(3.5 * T + (i - 1) * 9, 3.5 * T + 6 - q * 16, 1.6, 0, TAU); g.fillStyle = "#ffd23f"; g.fill(); g.restore(); }
+      }
+      // 第 2 版（可修 4）：熔岩前煞住，腳前兩道往熔岩方向的短拖痕（腳到熔岩邊之間，畫在單位之上才不會被腳下的圈擋住；600–900 淡出）
+      if (lava && t > pullEnd - 40 && t < pullEnd + 300) { const a = clamp((t - (pullEnd - 40)) / 60) * (1 - span(t, pullEnd + 160, pullEnd + 300)), fx = 4 * T + 3, fy = 3.5 * T + 15; g.save(); g.globalAlpha = 0.85 * a; g.lineCap = "round"; for (const dy of [-2.6, 2.6]) { g.strokeStyle = "#3a3026"; g.lineWidth = 2.8; g.beginPath(); g.moveTo(fx, fy + dy * 0.7); g.lineTo(fx + 13, fy + dy); g.stroke(); g.strokeStyle = "#cbb894"; g.lineWidth = 1.1; g.beginPath(); g.moveTo(fx + 1, fy + dy * 0.7 - 0.8); g.lineTo(fx + 12, fy + dy - 0.8); g.stroke(); } g.restore(); }
+      // 熔岩：620 ms 往上冒一次亮橘火舌（差一點就掉下去），580–760
+      if (lava && t > pullEnd - 40 && t < pullEnd + 140) { const q = span(t, pullEnd - 40, pullEnd + 140), k = Math.sin(q * Math.PI), x = 3.5 * T + 6, y = 3.5 * T + 8 - 10 * k; g.save(); g.globalAlpha = Math.min(1, k * 1.6); Q.H.glow(g, x, y, 16 * k + 2, "#ffb03a", 0.6); g.translate(x, y); g.scale(0.4 + 0.75 * k, 0.4 + 0.95 * k); Q.H.flame(g, "#16121a", 0, 0, 1.18); Q.H.flame(g, "#ff8a1a", 0, 0, 1); Q.H.flame(g, "#ffe066", 0.4, 2.6, 0.58); g.restore(); }
+      // 巨型頭目：彈回的一下出撞擊（推不動算撞擊）
+      if (giant && t > 520 && t < 860) SK.impact(g, tg.x - 2, tg.y, span(t, 520, 860), 15);
+    },
+  };
+}
+const SCENES = {
+  absorb: { zh: "吸收表面（吸走腳下的冰，換成這一招的元素）", ms: 1000, fn: (t) => sceneAbsorb(t), keys: [80, 260, 420, 560, 680, 900] },
+  contagion: { zh: "疾病擴散（燃燒）", ms: 1150, fn: (t) => sceneContagion(t), keys: [200, 380, 560, 700, 900, 1150] },
+  hook: { zh: "鉤（一般）", ms: 900, fn: (t) => sceneHook(t), keys: [220, 340, 480, 620, 760, 900] },
+  hook_lava: { zh: "鉤（中間有熔岩：拉到熔岩前一格停下）", ms: 900, fn: (t) => sceneHook(t, { v: "lava" }), keys: [220, 380, 560, 640, 720, 900] },
+  hook_giant: { zh: "鉤（巨型頭目拉不動：繃緊、彈回、撞擊）", ms: 900, fn: (t) => sceneHook(t, { v: "giant" }), keys: [240, 400, 500, 560, 660, 800] },
+};
+
+const PARTS = {};
+// =====================================================================
+// 1. 部件圖樣
+// =====================================================================
+const NEW = [
+  { id: "absorb_surface", old: "clear_surface", zh: "吸收表面" },
+  { id: "contagion", old: "apply_status", zh: "疾病擴散" },
+  { id: "hook", old: "pull", zh: "鉤" },
+];
+const SIZES = [30, 26, 18];
+PARTS.icons = () => {
+  const blocks = [{ title: "SK-2 三個新部件圖樣（組裝列圓片 30／26／18；2 倍內部解析度、×4 向量、×4 最近鄰）" },
+    { note: "每列：現行暫借（client/src/render/qIcon/parts.ts EFFECT_ALIAS）｜新圖 30、26、18｜新圖 ×4 向量（30）｜新圖 18 的 2 倍內部解析度 ×4 最近鄰｜底部效果列 22（96 完整圖示裡的核心圓片，半徑 11.5 單位）。圖樣本身＝直徑 78%：30→23.4、26→20.3、18→14.0（≤14 只留一個主體、不包外框）。" }];
+  for (const e of NEW) {
+    const cells = [];
+    for (const px of SIZES) cells.push({ cv: QP.chipCanvas("effect", e.old, px, 1), w: px, h: px, cap: px === 30 ? `現行（借 ${e.old}）` : "" });
+    for (const px of SIZES) cells.push({ cv: QP.chipCanvas("effect", e.id, px, 1), w: px, h: px, cap: px === 30 ? `新 ${e.zh}` : "" });
+    cells.push({ cv: QP.chipCanvas("effect", e.id, 30, 4), w: 120, h: 120, cap: "×4 向量（30）" });
+    const c18 = QP.chipCanvas("effect", e.id, 18, 1); cells.push(nn(c18, 4, "18 的 2 倍解析度 ×4"));
+    const c26 = QP.chipCanvas("effect", e.id, 26, 1); cells.push(nn(c26, 4, "26 的 2 倍解析度 ×4"));
+    blocks.push({ title: `${e.zh}（${e.id}）` }, { note: QP.CATS.effect[e.id].topic }, { cells });
+  }
+  publish(sheet(1000, blocks), "image/png");
+};
+/** 真 1 倍：canvas 寬高＝CSS px，×6 最近鄰；現行｜新。 */
+PARTS["icons-t1"] = () => {
+  const blocks = [{ title: "部件圖樣 真 1 倍（res 1）×6 最近鄰：每組左＝現行暫借、右＝新" }, { note: "100% 縮放螢幕的最壞情況（遊戲端固定 DPR 2）。圓片底與色環照現行 drawChip。" }];
+  for (const e of NEW) {
+    const cells = [];
+    for (const px of SIZES) { cells.push(nn(QP.chipCanvas("effect", e.old, px, 1, { res: 1 }), 6, `${px} 現行`)); cells.push(nn(QP.chipCanvas("effect", e.id, px, 1, { res: 1 }), 6, `${px} 新`)); }
+    blocks.push({ title: e.zh }, { cells });
+  }
+  publish(sheet(1500, blocks), "image/png");
+};
+/** 撞圖：新圖和同結構、同顏色的既有圖排在一起（26 的 2 倍內部解析度＋18 真 1 倍；最後一排剪影）。 */
+PARTS.near = () => {
+  const groups = [
+    { zh: "吸收表面 vs 地面類", items: [["effect", "absorb_surface"], ["effect", "create_surface"], ["surface", "water"], ["surface", "ice"], ["effect", "blow_surface"], ["effect", "clear_surface"], ["effect", "restore_resource"], ["effect", "lower_terrain"]] },
+    { zh: "疾病擴散 vs 圓、刺、綠", items: [["effect", "contagion"], ["status", "poison"], ["element", "poison"], ["effect", "delayed_damage"], ["effect", "sacrifice_summon"], ["effect", "cleanse"], ["effect", "consume_status"], ["effect", "apply_status"]] },
+    { zh: "鉤 vs 箭頭、鉤形、問號、定身（第 2 版加定身三個：狀態 root、施加狀態：定身、拉扯）", items: [["effect", "hook"], ["effect", "pull"], ["status", "root"], ["effect", "status:root"], ["effect", "hurl_object"], ["effect", "push"], ["effect", "leap"], ["effect", "shadowstep"], ["condition", "target_has_status:poison"], ["effect", "swap"]] },
+  ];
+  const blocks = [{ title: "撞圖：新部件和同結構、同色的既有部件（上排 26 的 2 倍解析度 ×3；中排 18 真 1 倍 ×5；下排 18 剪影 ×5）" }];
+  for (const gr of groups) {
+    const a = [], b = [], s = [];
+    for (const [cat, id] of gr.items) {
+      const zh = QP.entry(cat, id).zh ?? id;
+      a.push({ cv: QP.chipCanvas(cat, id, 26, 3), w: 78, h: 78, cap: zh, capW: 96 });
+      b.push(nn(QP.chipCanvas(cat, id, 18, 1, { res: 1 }), 5, "", undefined));
+      const c = QP.chipCanvas(cat, id, 18, 1, { res: 1 }), x = c.getContext("2d"), d = x.getImageData(0, 0, c.width, c.height); const r = 9;
+      for (let i = 0; i < d.data.length; i += 4) { const p = i / 4, px = p % c.width, py = Math.floor(p / c.width), inRing = Math.hypot(px + 0.5 - r, py + 0.5 - r) < 6.6; const lum = 0.3 * d.data[i] + 0.59 * d.data[i + 1] + 0.11 * d.data[i + 2]; const on = inRing && lum > 70; d.data[i] = d.data[i + 1] = d.data[i + 2] = on ? 235 : 30; d.data[i + 3] = 255; }
+      x.putImageData(d, 0, 0); s.push(nn(c, 5));
+    }
+    blocks.push({ title: gr.zh }, { cells: a, gap: 18 }, { cells: b, gap: 54 }, { cells: s, gap: 54 });
+  }
+  blocks.push({ note: "剪影＝18 真 1 倍裡圓片內（半徑 6.6 px）亮度 > 70 的像素。" });
+  publish(sheet(1420, blocks), "image/png");
+};
+/** 96 完整圖示（工坊）：新部件當核心效果，放在底部效果列第一顆；主圖照第③批（主圖的效果記號不在這次範圍）。 */
+PARTS.full96 = () => {
+  const mk = (eff, el, look) => ({ icon: { kind: "active", rarity: "rare", elements: el ? [el] : [], segments: [{ skeleton: "strike", shape_id: "single", effects: [{ type: eff }, { type: "damage" }] }] }, look: { kind: "active", rarity: "rare", ...look } });
+  const set = [
+    ["absorb_surface", mk("absorb_surface", "ice", { prop: "el:ice", motion: "shot", act: "hit", el: "ice" })],
+    ["contagion", mk("contagion", "fire", { prop: "el:fire", motion: "shot", act: "dot", tint: "fire", el: "fire" })],
+    ["hook", mk("hook", null, { prop: "w:whip", motion: "shot", act: "pull" })],
+  ];
+  const cells = [];
+  for (const [id, s] of set) { cells.push({ cv: QP.canvas(s.icon, s.look, 96, 1), w: 96, h: 96, cap: `${id} 96` }); cells.push({ cv: QP.canvas(s.icon, s.look, 96, 2), w: 192, h: 192, cap: "×2 向量" }); cells.push(nn(QP.canvas(s.icon, s.look, 96, 1, { res: 1 }), 2, "真 1 倍 ×2")); }
+  publish(sheet(1500, [{ title: "96 完整圖示（工坊 CheckPanel）：新部件在底部效果列第一顆（核心，白環）" }, { note: "主圖（道具＋出手＋記號）是第③批的推導，這三個原語的主圖記號不在這次範圍（紀錄 6.3）；這裡的主圖只是讓版面完整。" }, { cells }]), "image/png");
+};
+
+// =====================================================================
+// 2. 演出關鍵影格
+// =====================================================================
+PARTS.anim = () => {
+  const sc = SCENES[CASE], S = S1600, V = VIEWW(S, 1, 1.5), blocks = [{ title: `${sc.zh}：關鍵影格（1600 寬地圖縮放 ${S.toFixed(2)}，再 ×1.5 向量放大）${CASE === "absorb" ? "　表面為示意，遊戲端用現行表面" : ""}` }];
+  const tl = { absorb: "0–150 按地｜150–520 冰面抽起、冰晶螺旋收進副手｜380–620 成球｜560–1000 一閃、收益圖樣從頭頂浮起、法杖頭染冰色", contagion: "0–220 火焰箭｜220–520 盜賊1倒下、狀態列燃燒圖示的孢子記號脈動｜300–560 1 格內的格子亮（選中那格加框）｜460–860 一團火沿弧線跳到盜賊2（黃綠虛線軌跡＋箭頭）、地上三個 V 指方向｜860–1150 著火、狀態列多一個燃燒（從 1.6 倍縮回）", hook: "100–330 鎖鏈從副手射出、鉤頭在前｜330–450 鉤住（小撞擊星、白閃）｜400–700 拉回 3 格（鏈節往手裡流、盜賊後仰）｜700–860 鉤脫開收回", hook_lava: "同一般，拉到熔岩 (3,3) 前一格的 (4,3) 煞住：620 停、往回彈 3 px、腳前一團塵土與熔岩火星｜620–860 鏈子先垂下再收回（不拉進熔岩）", hook_giant: "100–330 射出｜330–520 鉤住、拉不動：鏈子繃直、微抖、發白光，法師被往前拖 3 px｜520 鉤脫開彈回（鏈子成波浪縮回）＋頭目西面出撞擊星、白閃、晃 2.4 px" }[CASE];
+  blocks.push({ note: "時間軸（毫秒）：" + tl });
+  const cells = sc.keys.map((t) => ({ cv: render(sc.fn(t), V), cap: `${t} ms` }));
+  const w = cells[0].cv.width;
+  blocks.push({ cells: cells.slice(0, 3) }, { cells: cells.slice(3) });
+  if (CASE === "absorb") {
+    blocks.push({ title: "收益四種（同一個動作，最後浮起的圖樣不同；680 ms）" });
+    const V2 = { ...VIEWW(S, 1, 2), x0: 0, y0: T * 2.2, w: T * 2.6, h: T * 2 };
+    blocks.push({ cells: [["element:ice", "元素（冰）"], ["effect:add_stack", "層數"], ["effect:heal", "治療"], ["effect:shield", "護盾"]].map(([gain, zh]) => ({ cv: render(sceneAbsorb(700, { gain }), V2), cap: zh })) });
+    blocks.push({ title: "表面不同（水、火、毒；260 ms 抽起中）" });
+    blocks.push({ cells: ["water", "fire", "poison"].map((surf) => ({ cv: render(sceneAbsorb(260, { surf, gain: "element:" + (surf === "water" ? "water" : surf) }), V2), cap: surf })) });
+  }
+  if (CASE === "contagion") {
+    blocks.push({ title: "流血、中毒（同一套，只換微粒；700 ms 跳躍中、1150 ms 著火後）" });
+    const V2 = { ...VIEWW(S, 1, 2), x0: T * 4.5, y0: T * 2.2, w: T * 2.8, h: T * 2 };
+    blocks.push({ cells: ["bleed", "poison"].flatMap((kind) => [700, 1150].map((t) => ({ cv: render(sceneContagion(t, { kind }), V2), cap: `${kind} ${t} ms` }))) });
+  }
+  void w;
+  publish(sheet(Math.max(1300, cells[0].cv.width * 3 + 60), blocks));
+};
+/** 真 1 倍：1600 與 800 寬各拍一格關鍵影格（png）。 */
+PARTS["anim-t1"] = () => {
+  const blocks = [{ title: "演出關鍵影格 真 1 倍（左 1600 寬、右 800 寬），×2 最近鄰" }];
+  for (const [id, sc] of Object.entries(SCENES)) {
+    const t = sc.keys[Math.floor(sc.keys.length / 2)];
+    blocks.push({ title: `${sc.zh} ${t} ms` }, { cells: [nn(render(sc.fn(t), VIEWW(S1600)), 2), nn(render(sc.fn(t), VIEWW(S800)), 2)] });
+  }
+  publish(sheet(1800, blocks), "image/png");
+};
+/** 動畫播放（瀏覽器裡看；1600 縮放 ×1.5，循環）。 */
+PARTS.live = () => {
+  const sc = SCENES[CASE], V = VIEWW(S1600, window.devicePixelRatio || 1, 1.5), host = document.getElementById("live");
+  const cv = render(sc.fn(0), V); cv.style.width = cv.width / (window.devicePixelRatio || 1) + "px"; host.appendChild(cv);
+  const lab = document.createElement("p"); lab.className = "note"; host.appendChild(lab);
+  const g = cv.getContext("2d"); let t0 = performance.now(), slow = P.get("slow") === "1" ? 4 : 1;
+  const loop = (now) => { const t = ((now - t0) / slow) % (sc.ms + 500); const c = render(sc.fn(Math.min(t, sc.ms)), V); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(c, 0, 0); lab.textContent = `${sc.zh}　${Math.round(Math.min(t, sc.ms))} ms（&slow=1 放慢 4 倍）`; requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+};
+
+// =====================================================================
+// 3. 會擴散記號
+// =====================================================================
+const DOTS = [["burning", "燃燒"], ["bleed", "流血"], ["poison", "中毒"]];
+/** 狀態圖示 canvas（一般與會擴散留同樣的邊，並排才對齊）：頭頂 11 四周 4 px、狀態卡 20 四周 3 px。回傳 sheet 的 cell。 */
+const HEAD_PAD = 7, CARD_PAD = 8;
+const headCell = (id, z, o = {}, cap) => { const W = 11 + 2 * HEAD_PAD, cv = SK.headCanvas(id, 11, z, { pad: HEAD_PAD, ...o }); return o.res === 1 && z === 1 ? nn(cv, o.Z ?? 8, cap) : { cv, w: W * z, h: W * z, cap }; };
+const cardCell = (id, z, o = {}, cap) => { const W = 20 + 2 * CARD_PAD, cv = SK.cardCanvas(id, 20, z, { pad: CARD_PAD, ...o }); return o.res === 1 && z === 1 ? nn(cv, o.Z ?? 8, cap) : { cv, w: W * z, h: W * z, cap }; };
+PARTS.status = () => {
+  const blocks = [{ title: `狀態框「會擴散」記號（第 2 版，${MARKV} 案）：右上角一顆病菌黃綠的孢子＋一顆往外跳的小點，框線一個像素都不蓋（左＝一般、右＝會擴散）` },
+    { note: `${SK.MARK_VARIANTS[MARKV]}。狀態卡 20（框 16.8，裁成半徑 9.8 的圓）與戰場頭頂 11（框 9）。2 倍內部解析度（遊戲端 DPR 2）；×4 向量；×6 最近鄰。頭頂孢子 3 px、小點 2 px；狀態卡孢子 4.4 px、小點 2.2 px；外框 1 個裝置像素 #16121a；色 #e2f47a；孢子外框離框線外緣 1 個裝置像素。canvas 四周留邊（頭頂 7 px、狀態卡 8 px），記號凸出圖示格子。` }];
+  for (const [id, zh] of DOTS) {
+    blocks.push({ title: zh });
+    blocks.push({ cells: [
+      cardCell(id, 1, {}, "卡 20 一般"), cardCell(id, 1, { spread: true }, "卡 20 擴散"),
+      headCell(id, 1, {}, "頭 11 一般"), headCell(id, 1, { spread: true }, "頭 11 擴散"),
+      cardCell(id, 4, {}, "卡 ×4 一般"), cardCell(id, 4, { spread: true }, "卡 ×4 擴散"),
+      headCell(id, 6, {}, "頭 ×6 一般"), headCell(id, 6, { spread: true }, "頭 ×6 擴散"),
+      nn(SK.headCanvas(id, 11, 1, { pad: HEAD_PAD, spread: true }), 6, "頭 2 倍解析度 ×6"),
+    ], gap: 16 });
+  }
+  // 和既有的「圖示旁邊的東西」並排：其他狀態（一般）、同色系；照遊戲端的間距（11 px 一格、間隔 1 px），記號凸出去蓋到隔壁也看得到
+  blocks.push({ title: "撞圖：頭頂 11 一排（照遊戲端間距 1 px；2 倍解析度 ×5）" });
+  const row = (ids) => { const c = document.createElement("canvas"), n = ids.length, Z = 2, top = 7; c.width = (n * 12 + 6) * Z; c.height = (13 + top) * Z; const g = c.getContext("2d"); g.fillStyle = "#3a3a40"; g.fillRect(0, 0, c.width, c.height); ids.forEach(([id, sp], i) => g.drawImage(SK.headCanvas(id, 11, 1, { pad: HEAD_PAD, spread: sp }), (1 + i * 12 - HEAD_PAD) * Z, (1 + top - HEAD_PAD) * Z)); return { cv: c, w: c.width * 2.5, h: c.height * 2.5, nn: true }; };
+  blocks.push({ cells: [
+    { ...row([["burning", true], ["bleed", false], ["poison", true]]), cap: "燃燒擴散、流血、中毒擴散" },
+    { ...row([["burning", false], ["burning", true], ["stun", false], ["taunted", false]]), cap: "燃燒／燃燒擴散／暈眩／嘲諷（染底）" },
+    { ...row([["poison", true], ["weakened", false], ["marked", false], ["regen", false]]), cap: "中毒擴散／虛弱／標記／再生" },
+  ], gap: 30 });
+  publish(sheet(1700, blocks), "image/png");
+};
+PARTS["status-t1"] = () => {
+  const blocks = [{ title: `會擴散記號 真 1 倍（res 1）×8 最近鄰：每組左一般、右擴散（${MARKV} 案）` }];
+  const cells = [], cells2 = [];
+  for (const [id, zh] of DOTS) cells.push(cardCell(id, 1, { res: 1 }, `${zh} 卡 20`), cardCell(id, 1, { res: 1, spread: true }, "擴散"));
+  for (const [id, zh] of DOTS) cells2.push(headCell(id, 1, { res: 1 }, `${zh} 頭 11`), headCell(id, 1, { res: 1, spread: true }, "擴散"));
+  publish(sheet(1500, [...blocks, { cells }, { cells: cells2 }]), "image/png");
+};
+/** 會擴散記號三案對照（必修 2）：頭頂 11 真 1 倍、戰場 1600、800（真 1 倍狀態列放大）、狀態卡 20 真 1 倍；每案附「蓋到原圖示的像素數」。 */
+PARTS["spread-lab"] = () => {
+  const blocks = [{ title: "會擴散記號：三案對照（頭頂 11 真 1 倍｜戰場 1600 寬｜戰場 800 寬｜狀態卡 20 真 1 倍；全部 ×8 最近鄰，戰場 1600 ×6）" },
+    { note: "每案右邊的數字＝記號蓋到原本圖示（框線與圖樣）的像素數，量法：同一個 canvas 畫一次沒有記號、一次有記號，比對原本不透明的像素（頭頂 11、戰場 1600 的 14 px、800 的 12 px、狀態卡 20，真 1 倍與 2 倍解析度各一次，燃燒／流血／中毒三種加總）。必須全部是 0。戰場 1600 那格是三個狀態並排（燃燒擴散｜中毒擴散｜流血），看記號會不會碰到隔壁。" }];
+  const fieldCrop = (w, v) => {
+    SK.setMark(v); const S = w === 800 ? S800 : S1600, K = rowK(S);
+    const units = [U.bandit({ id: "B1", x: 1, y: 3, status: w === 800 ? [{ id: "burning", spread: true }] : [{ id: "burning", spread: true }, { id: "poison", spread: true }, { id: "bleed" }] }), U.bandit({ id: "B2", x: 2, y: 3, status: [{ id: "poison", spread: true }] })];
+    const V = { S, res: 1, x0: T * 0.6, y0: T * 2.4, w: T * 2.2, h: T * 1.4 }, cv = render({ cols: 4, rows: 6, groundAt: groundStone(), units }, V);
+    void K; return nn(cv, w === 800 ? 8 : 6, `${w} 寬`);
+  };
+  for (const v of ["A", "B", "C"]) {
+    let cover = 0;
+    for (const [id] of DOTS) for (const res of [1, 2]) { cover += SK.coverCount("head", id, 11, res, v) + SK.coverCount("head", id, 14, res, v) + SK.coverCount("head", id, 12, res, v) + SK.coverCount("card", id, 20, res, v); }
+    blocks.push({ title: `${v} 案：${SK.MARK_VARIANTS[v]}　蓋到原圖示的像素：${cover}` });
+    blocks.push({ cells: [
+      headCell("burning", 1, { res: 1, spread: v }, "頭 11 燃燒"), headCell("poison", 1, { res: 1, spread: v }, "頭 11 中毒"),
+      fieldCrop(1600, v), fieldCrop(800, v),
+      cardCell("burning", 1, { res: 1, spread: v }, "卡 20 燃燒"), cardCell("bleed", 1, { res: 1, spread: v }, "卡 20 流血"),
+    ], gap: 22 });
+  }
+  SK.setMark(MARKV);
+  blocks.push({ title: "對照：沒有記號（頭頂 11｜1600｜800｜卡 20）" });
+  const plain = (w) => { const S = w === 800 ? S800 : S1600, units = [U.bandit({ id: "B1", x: 1, y: 3, status: w === 800 ? [{ id: "burning" }] : [{ id: "burning" }, { id: "poison" }, { id: "bleed" }] }), U.bandit({ id: "B2", x: 2, y: 3, status: [{ id: "poison" }] })]; return nn(render({ cols: 4, rows: 6, groundAt: groundStone(), units }, { S, res: 1, x0: T * 0.6, y0: T * 2.4, w: T * 2.2, h: T * 1.4 }), w === 800 ? 8 : 6, `${w} 寬`); };
+  blocks.push({ cells: [headCell("burning", 1, { res: 1 }, "頭 11"), headCell("poison", 1, { res: 1 }, "頭 11"), plain(1600), plain(800), cardCell("burning", 1, { res: 1 }, "卡 20"), cardCell("bleed", 1, { res: 1 }, "卡 20")], gap: 22 });
+  publish(sheet(1700, blocks), "image/png");
+};
+/** 戰場上的實際大小：1600 與 800 寬（地圖縮放、狀態列反向放大照遊戲），真 1 倍；下面 ×4 最近鄰裁切。 */
+PARTS.field = () => {
+  const w = P.get("w") === "800" ? 800 : 1600, S = w === 800 ? S800 : S1600, K = rowK(S);
+  const units = [
+    U.mage({ id: "M", x: 1, y: 3, view: "front" }),
+    U.bandit({ id: "B1", x: 3, y: 3, status: [{ id: "burning", spread: true }] }),
+    U.bandit({ id: "B2", x: 4, y: 3, status: [{ id: "burning" }] }),
+    U.bandit({ id: "B3", x: 5, y: 3, status: [{ id: "bleed", spread: true }] }),
+    U.bandit({ id: "B4", x: 6, y: 3, status: [{ id: "bleed" }] }),
+    U.bandit({ id: "B5", x: 7, y: 3, status: [{ id: "poison", spread: true }] }),
+    U.bandit({ id: "B6", x: 8, y: 3, status: [{ id: "poison" }] }),
+  ];
+  const scene = { cols: 9, rows: 7, groundAt: groundStone(), units };
+  const V = { S, res: 1, x0: 0, y0: T * 2, w: T * 9, h: T * 2.2 }, cv = render(scene, V);
+  const crop = (mx, mw, Z, cap) => { const s = S, x = Math.round(mx * s), y = Math.round((T * 3.1 - V.y0) * s), ww = Math.round(mw * s), hh = Math.round(T * 0.9 * s); const c = document.createElement("canvas"); c.width = ww; c.height = hh; c.getContext("2d").drawImage(cv, -x, -y); return nn(c, Z, cap); };
+  const Z = w === 800 ? 8 : 5;
+  publish(sheet(w === 800 ? 1300 : 1500, [
+    { title: `戰場上的實際大小・${w} 寬・真 1 倍（一格 ${(T * S).toFixed(1)} px；狀態圖示畫面上約 ${(11 * S * K).toFixed(1)} px）` },
+    { note: `盜賊由左到右：燃燒擴散｜燃燒｜流血擴散｜流血｜中毒擴散｜中毒。地圖縮放 ${S.toFixed(2)}、狀態列反向放大 ×${K.toFixed(2)}（minMark：圖示畫面上至少 10 px）${w === 800 ? "；800 寬是精簡列（1 個圖示＋「+N」），這裡每人只有 1 個狀態" : ""}。樣張直接以畫面大小畫狀態圖示（遊戲端是 11 px 的 2 倍圖再縮放），是較清楚的情況。` },
+    { cells: [{ cv }] },
+    { title: `×${Z} 最近鄰（狀態列那一條）` },
+    { cells: [crop(T * 2.6, T * 2.8, Z, "燃燒擴散｜燃燒"), crop(T * 4.6, T * 2.8, Z, "流血擴散｜流血"), crop(T * 6.6, T * 2.4, Z, "中毒擴散｜中毒")] },
+  ]), "image/png");
+};
+
+// =====================================================================
+// 4. 自查（規則 6、7：圓片 18／26／30 的佔框、亮度、亮面；出色環）
+// =====================================================================
+PARTS.audit = () => {
+  const rows = [];
+  for (const e of NEW) for (const px of [30, 26, 18]) {
+    const res = 4, cpx = px * 0.42 * 1.56, g = QP.glyph("effect", e.id, cpx, res), S = g.width, d = g.getContext("2d").getImageData(0, 0, S, S).data;
+    let n = 0, lumSum = 0, hi = 0, x0 = S, x1 = 0, y0 = S, y1 = 0, out = 0; /* 圓片色環內緣＝半徑 42 − 線寬一半（現行 drawChip：線寬 r×0.12）→ 39.5／42 的圓片單位；圖樣 ±10 單位＝r×1.56／2 → 色環內緣＝圖樣 12.06 單位＝cpx × 0.603 */
+    const c = S / 2, Rin = cpx * 0.603 * res; /* 第 2 版修正：圖樣本身＝圓片半徑 42 單位 × 1.56（chip）＝px × 0.655，18 的圓片是 11.8 px、走 ≤14 的 tiny；第 1 版用 px × 0.78＝14.04，18 量到的是不簡化的那一份 */
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 128) continue; const isOut = d[i] === 0x16 && d[i + 1] === 0x12 && d[i + 2] === 0x1a; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (isOut) continue; if (Math.hypot(x + 0.5 - c, y + 0.5 - c) > Rin) out++; n++; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lumSum += L; if (L >= 150) hi++; }
+    const inner = 2 * Rin;
+    rows.push([e.zh, px, ((Math.max(x1 - x0, y1 - y0) + 1) / inner * 100).toFixed(0) + "%", (lumSum / n).toFixed(0), (hi / n * 100).toFixed(0) + "%", (out / Math.max(1, n) * 100).toFixed(1) + "%"]);
+  }
+  const t = document.createElement("table"); t.innerHTML = "<tr><th>部件</th><th>圓片 px</th><th>佔色環內徑</th><th>平均亮度</th><th>亮度≥150</th><th>色塊超出色環內緣</th></tr>" + rows.map((r) => "<tr>" + r.map((v) => `<td>${v}</td>`).join("") + "</tr>").join("");
+  t.style.cssText = "border-collapse:collapse;font-size:13px"; t.querySelectorAll("td,th").forEach((x) => (x.style.cssText = "border:1px solid #444;padding:2px 8px"));
+  const pre = document.createElement("pre"); pre.id = "audit"; pre.textContent = rows.map((r) => r.join("\t")).join("\n");
+  document.getElementById("sheet").append(t, pre);
+  const cv = box(10, 10, "#000", () => {}); document.getElementById("out").textContent = cv.toDataURL("image/png");
+  document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+};
+try { (PARTS[PART] ?? PARTS.icons)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); }
+</script>
+</body></html>
