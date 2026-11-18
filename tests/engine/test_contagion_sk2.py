@@ -75,10 +75,11 @@ def test_downed_carrier_spreads_with_remaining_rounds_to_the_one_adjacent_ally()
     plagued(state, U2, ("burning", 2), ("poison", 1))
     result, *events = kill(state, U2)
     (spread,) = [e for e in events if isinstance(e, DiseaseSpread)]
-    assert (spread.from_id, spread.to_id, spread.status_ids) == (U2, U3, ("burning", "poison"))
+    # 只傳一種：剩餘回合最多的燃燒（SK-2b，玩法交接 4.1.28 第 3 點）
+    assert (spread.from_id, spread.to_id, spread.status_ids) == (U2, U3, ("burning",))
     got = {s.status_id: s for s in result.state.units[U3].statuses}
-    assert (got["burning"].remaining, got["poison"].remaining) == (2, 1)
-    assert got["burning"].contagious and got["poison"].contagious  # 傳過去照樣會擴散
+    assert set(got) == {"burning"} and got["burning"].remaining == 2
+    assert got["burning"].contagious  # 傳過去照樣會擴散
     assert not result.state.units[U4].statuses
     applied = [e for e in events if isinstance(e, StatusApplied)]
     assert {e.target_id for e in applied} == {U3}
@@ -165,3 +166,37 @@ def test_affects_rules(affects: str) -> None:
 
     skill = make_skill(SID, SINGLE5, [{"type": "contagion", "affects": affects}])
     assert validate_skill(skill, library())
+
+
+@pytest.mark.parametrize(
+    ("statuses", "expected"),
+    [
+        ((("burning", 1), ("poison", 3)), "poison"),  # 剩餘回合最多
+        ((("bleed", 2), ("poison", 2)), "bleed"),  # 一樣多：流血 > 中毒
+        ((("burning", 2), ("bleed", 2), ("poison", 2)), "burning"),  # 燃燒 > 流血 > 中毒
+        ((("bleed", 3), ("burning", 1)), "bleed"),
+    ],
+)
+def test_one_down_spreads_only_one_status(
+    statuses: tuple[tuple[str, int], ...], expected: str
+) -> None:
+    """SK-2b：一次倒下只傳一種——剩餘回合最多，一樣多時燃燒 > 流血 > 中毒。"""
+    skill = make_skill(SID, SINGLE5, [CONTAGION])
+    state = battle(skill, [(5, 3), (5, 4)])
+    plagued(state, U2, *statuses)
+    result, *events = kill(state, U2)
+    (spread,) = [e for e in events if isinstance(e, DiseaseSpread)]
+    assert spread.status_ids == (expected,)
+    assert [s.status_id for s in result.state.units[U3].statuses] == [expected]
+
+
+def test_spread_chains_to_the_next_ally() -> None:
+    """傳過去的狀態仍會擴散：被傳染的人倒下時再傳下去。"""
+    skill = make_skill(SID, SINGLE5, [CONTAGION])
+    state = battle(skill, [(5, 2), (5, 3), (5, 4)])  # U2 只鄰 U3；U3 鄰 U2、U4
+    plagued(state, U2, ("bleed", 3))
+    result, *_ = kill(state, U2)
+    assert [s.status_id for s in result.state.units[U3].statuses] == ["bleed"]
+    result, *events = kill(result.state, U3)
+    (spread,) = [e for e in events if isinstance(e, DiseaseSpread)]
+    assert (spread.from_id, spread.to_id) == (U3, U4)

@@ -723,11 +723,13 @@ def test_a_blocked_charge_is_explained_in_the_log(monkeypatch: pytest.MonkeyPatc
 
 
 def test_the_composer_can_draw_displace_with_dash_and_dash_is_always_first() -> None:
+    from tests.engine.helpers import sk2b_streams_off  # noqa: PLC0415
     from trpg.skillgen.random_composer import compose_with_stats  # noqa: PLC0415
 
+    lib = sk2b_streams_off(library())  # SK-2b：鉤的串流會換掉 454、476 這兩個種子
     found = []
     for seed in range(500):  # 454、476 是已知的 dash＋push＋damage
-        composed = compose_with_stats(seed, library=library(), skeleton="displace", rarity="epic")
+        composed = compose_with_stats(seed, library=lib, skeleton="displace", rarity="epic")
         if any(e.type == "dash" for e in composed.skill.effects):
             found.append(composed.skill)
     assert found

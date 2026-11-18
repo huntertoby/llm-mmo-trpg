@@ -7,7 +7,7 @@ shapes: [self, single, line, cone, cross, square3, ring, ground_tile, chain, all
 core:
   primitives: [apply_status, create_surface, create_obstacle, raise_terrain, lower_terrain, steal_buff, dispel, reveal, zone, delayed_damage, blow_surface, shockwave, clear_surface]   # 3-54a blow_surface（吹送，隨機組合器不當核心）； 3D-8b delayed_damage（定時炸彈）；3D-5 zone（持續區域）；3D-8a dispel（驅散）、reveal（揭露）
 secondary:
-  primitives: [damage]
+  primitives: [damage, contagion]   # SK-2b contagion（疾病擴散，只附在燃燒、流血、中毒上；隨機組合器只以獨立串流加入）
   max_count: 1
   max_share_permille: {damage: 400}
 composer:   # 隨機組合器的骨架專屬設定（3T-8）

@@ -125,6 +125,14 @@ class StructureRules(ContentModel):
     """範圍骨架加上吹送附帶效果的機率（Phase 3-54a；獨立的亂數串流，沒抽中的種子結果不變）。"""
     shockwave_permille: int = Field(default=0, ge=0, le=1000)
     """大地主題、直線形狀的範圍骨架加上震波附帶效果的機率（Phase 3-54b；獨立的亂數串流）。"""
+    hook_core_permille: int = Field(default=0, ge=0, le=1000)
+    """核心可以是鉤的骨架（位移）核心改成鉤的機率（SK-2b；獨立的亂數串流）。"""
+    absorb_core_permille: int = Field(default=0, ge=0, le=1000)
+    """核心可以是吸收表面的骨架（光環）核心改成吸收表面（換治療、護盾）的機率（SK-2b）。"""
+    absorb_secondary_permille: int = Field(default=0, ge=0, le=1000)
+    """附帶可以是吸收表面的骨架（打擊、蓄力／終結）加上吸收表面（換層數、元素）的機率（SK-2b）。"""
+    contagion_permille: int = Field(default=0, ge=0, le=1000)
+    """附帶可以是疾病擴散的骨架加上疾病擴散的機率（SK-2b；技能已施加會擴散的狀態時）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE

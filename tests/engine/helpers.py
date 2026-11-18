@@ -67,6 +67,48 @@ def without_sk1_flash(library: ContentLibrary) -> ContentLibrary:
     return dataclasses.replace(library, flash=library.flash.model_copy(update={"minor": minor}))
 
 
+SK2B_PRIMITIVES = frozenset({"hook", "absorb_surface", "contagion"})
+"""SK-2b 接進骨架（出題）的新原語。"""
+
+
+def without_sk2b_offers(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但骨架拿掉 SK-2b 接進出題的新原語（鉤、吸收表面、疾病擴散）：鎖住「LLM 題目樣本」
+    固定的測試用（例：補強順序的分布表，題目多了新核心後樣本會換一批）。"""
+
+    def strip(skeleton: Any) -> Any:
+        core = skeleton.core.model_copy(
+            update={
+                "primitives": tuple(p for p in skeleton.core.primitives if p not in SK2B_PRIMITIVES)
+            }
+        )
+        secondary = skeleton.secondary
+        if secondary.primitives is not None:
+            kept = tuple(p for p in secondary.primitives if p not in SK2B_PRIMITIVES)
+            secondary = secondary.model_copy(update={"primitives": kept, "harmless_ok": ()})
+        return skeleton.model_copy(update={"core": core, "secondary": secondary})
+
+    return dataclasses.replace(
+        library, skeletons={k: strip(v) for k, v in library.skeletons.items()}
+    )
+
+
+SK2B_STREAMS = (
+    "hook_core_permille",
+    "absorb_core_permille",
+    "absorb_secondary_permille",
+    "contagion_permille",
+)
+"""SK-2b 組合器獨立串流的機率欄位（``skill_composer.yaml`` 的 ``structure``）。"""
+
+
+def sk2b_streams_off(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但 SK-2b 的組合器串流機率都是 0：組合器的種子結果和 SK-2b 之前逐字相同（鎖住
+    「某些種子做出某種招」的既有測試用）。"""
+    structure = library.composer.structure.model_copy(update=dict.fromkeys(SK2B_STREAMS, 0))
+    composer = library.composer.model_copy(update={"structure": structure})
+    return dataclasses.replace(library, composer=composer)
+
+
 def wish_off(library: ContentLibrary) -> ContentLibrary:
     """``library`` 但許願池願望驅動關掉（``skill_pick.yaml`` 的 ``wish_enabled: false``）：PK-4 前的
     許願流程（對關鍵字＋自由設計）。測 WP-1～3 程式本身的測試用這份。"""

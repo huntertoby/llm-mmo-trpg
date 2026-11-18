@@ -115,13 +115,15 @@ primitives:
   - id: cleanse
     name_zh: 淨化
     llm_hint: "移除目標身上所有負面狀態（減益）；增益與中性狀態保留。"
-    description_zh: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
+    description_zh: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；count 填 1 時只移除 1 個（控制類 control_group 優先，再來剩餘回合最多、永久最多，再相同照 statuses.yaml 順序；SK-2b）。增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
     player_description: "移除目標身上所有負面狀態，不能對敵人使用。"
     category: numeric
     harmful: false
     budget_basis: fixed
     base_points: 3
     forbid_affects: [enemies, all]
+    params:
+      count: {llm_hint: "移除 1 個減益，或全部（省略＝全部）。", type: count, min: 1, max: 1, description_zh: 只移除 1 個減益（控制類優先）或 all（全部，同省略）}
   - id: push
     name_zh: 推擊
     llm_hint: "把目標推離自己，被擋住就停下並受到撞擊傷害。"
@@ -883,11 +885,13 @@ primitives:
       magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度, knob: none}
 
   # --- SK-2：#166 第 2 組的新原語（06 6.38 第 4、5、8 點；點數與格數為初值，接數值工坊，未經模擬）---
-  # 目前沒有放進任何骨架的 core／secondary（組合器、LLM 題目不會用到；接進出題由下一段決定）。
+  # SK-2b（玩法交接 4.1.28 第 5 點）接進出題：鉤＝位移骨架核心；吸收表面＝打擊、蓄力／終結骨架的附帶（換層數、換元素）
+  # 與光環骨架的核心（換治療、護盾）；疾病擴散＝打擊、範圍、控場、陷阱的附帶（只附在燃燒、流血、中毒上）。
+  # 隨機組合器只以獨立亂數串流加入（composer_parts._HAND_WRITTEN_PRIMITIVES 排除一般抽選；沒抽到的種子不變）。
   - id: absorb_surface
     name_zh: 吸收表面
-    llm_hint: "吸走施放者腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素。"
-    description_zh: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（只有帶元素的表面：火、冰、毒、聖光、黑暗；水、油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：base_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝base_points）。
+    llm_hint: "吸走腳下或目標格的一種表面，換成層數、治療、護盾，或讓這一招帶上它的元素（吸水＝帶潮濕）。"
+    description_zh: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（帶元素的表面：火、冰、毒、聖光、黑暗；吸到水時元素不變，改成這一招之後的傷害命中時在目標格造水，帶潮濕；油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：base_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝base_points）。
     player_description: "吸走腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素。"
     category: structural
     harmful: false
@@ -904,13 +908,13 @@ primitives:
       gain: {llm_hint: "吸到表面後換成什麼。", type: absorb_gain, required: true, description_zh: stack 層數、heal 治療、shield 護盾、element 這一招改成表面的元素}
       surface: {llm_hint: "只吸這一種表面；省略＝吸那一格的任何表面。", type: surface, description_zh: 只吸這種表面（省略＝任何表面）}
       stack: {llm_hint: "要累積的層數種類（換成層數時）。", type: stack, description_zh: gain 為 stack 時必填；只能是累積在自己身上的層數}
-      amount: {llm_hint: "累積幾層（換成層數時）。", type: int, min: 1, max: 3, description_zh: gain 為 stack 時必填, knob: none}
-      dice: {llm_hint: "治療或護盾的骰子（換成治療、護盾時）。", type: dice, description_zh: gain 為 heal、shield 時必填, knob: none}
+      amount: {llm_hint: "累積幾層（換成層數時）。", type: int, min: 1, max: 3, description_zh: gain 為 stack 時必填, knob: {ladder: stack_amount, weight: other, when: {gain: [stack]}}}   # SK-2b：旋鈕給組合器與 LLM 提議的預算器
+      dice: {llm_hint: "治療或護盾的骰子（換成治療、護盾時）。", type: dice, description_zh: gain 為 heal、shield 時必填, knob: {ladder: dice, weight: caller, when: {gain: [heal, shield]}}}
 
   - id: contagion
     name_zh: 疾病擴散
     llm_hint: "讓目標身上的燃燒、流血、中毒會傳染：目標倒下時，這些狀態傳給身邊的一個敵人。"
-    description_zh: 把被命中目標身上現有的燃燒、流血、中毒（rules/core.yaml contagion_statuses）標成會擴散。帶著會擴散狀態的單位倒下時，這些狀態以剩餘回合傳給 contagion_radius（1）格內的 1 個同陣營單位（施放者的敵人；多個候選時依單位 ID 排序後用戰鬥亂數挑 1 個，只有 1 個時不擲）；每次倒下最多傳 1 次，傳過去的狀態照樣會擴散（06 6.31、6.38 第 5 點）。要放在施加這些狀態的效果之後；目標身上沒有這些狀態時沒有效果。事件 disease_spread。預算：固定 base_points（形狀倍率另算）。
+    description_zh: 把被命中目標身上現有的燃燒、流血、中毒（rules/core.yaml contagion_statuses）標成會擴散。帶著會擴散狀態的單位倒下時，以剩餘回合傳給 contagion_radius（1）格內的 1 個同陣營單位（施放者的敵人；多個候選時依單位 ID 排序後用戰鬥亂數挑 1 個，只有 1 個時不擲）；每次倒下最多傳 1 次、只傳一種（剩餘回合最多的那種，一樣多時燃燒 > 流血 > 中毒），傳過去的狀態照樣會擴散（06 6.31、6.38 第 5 點）。要放在施加這些狀態的效果之後；目標身上沒有這些狀態時沒有效果。事件 disease_spread。預算：固定 base_points（形狀倍率另算）。
     player_description: "讓目標身上的燃燒、流血、中毒會傳染：目標倒下時，這些狀態以剩餘回合傳給身邊的一個敵人。"
     category: structural
     harmful: true

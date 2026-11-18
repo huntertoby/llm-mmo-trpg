@@ -72,6 +72,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         600,
     )
     assert sk["strike"].secondary.max_count == 1 and sk["strike"].secondary.harmful_only
+    assert sk["strike"].secondary.harmless_ok == ("absorb_surface",)  # SK-2b
     assert set(sk["area"].shapes) == {"line", "cone", "cross", "square3", "ring", "chain"}
     assert sk["area"].core.min_share_permille == 500 and sk["area"].secondary.max_count == 2
     assert set(sk["area"].secondary.primitives or ()) == {
@@ -84,6 +85,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "shockwave",  # 3-54b
         "clear_surface",  # 3-54c
         "leave_form",  # 3J-4c（解形爆發，手寫專用）
+        "contagion",  # SK-2b（疾病擴散，組合器只以獨立串流加入）
     }
     assert set(sk["control"].core.primitives) == {
         "apply_status",
@@ -115,6 +117,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "swap_any",  # 3D-2b
         "charge_through",  # 3D-2c
         "shadowstep",  # 3D-8d
+        "hook",  # SK-2b（鉤）
     }
     assert set(sk["displace"].secondary.primitives or ()) >= {"dash"}
     assert sk["displace"].secondary.max_share_permille == {"damage": 500}
@@ -144,6 +147,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "rule_change",  # 3D-6（規則改變型傳說）
         "revive",  # 3D-8b
         "grant_skill",  # 3D-8c
+        "absorb_surface",  # SK-2b（吸自己腳下換治療、護盾）
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1

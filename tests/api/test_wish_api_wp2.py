@@ -21,7 +21,7 @@ from fastapi.testclient import TestClient
 from tests.api.test_offer_prefetch import _at_altar
 from tests.api.test_world_api import FixedClock, _ok
 from tests.api.test_world_pregen import Recorder, _town_char
-from tests.engine.helpers import wish_off
+from tests.engine.helpers import wish_off, without_sk2b_offers
 from tests.world.helpers import hero, make_world
 from trpg.api.app import create_app
 from trpg.api.llm_source import MockLlmProvider
@@ -152,7 +152,8 @@ def _put(client: TestClient, **updates: Any) -> CharacterState:
 @pytest.fixture
 def client(content_library: ContentLibrary, tmp_path: Path) -> Iterator[TestClient]:
     # PK-4：這個檔測 WP-1～3 的舊許願流程（願望驅動開關關掉；新流程在 ``test_wish_pk4.py``）
-    with _client(wish_off(content_library), tmp_path / "saves") as c:
+    # SK-2b：骨架拿掉新原語，LLM 題目的核心抽選照舊（Mock 只用手寫技能扮演答對的模型）
+    with _client(without_sk2b_offers(wish_off(content_library)), tmp_path / "saves") as c:
         _ok(c.post("/api/world/llm", json={"enabled": True}))  # Mock：探測一定成功
         _put(c)
         yield c

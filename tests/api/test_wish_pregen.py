@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 import pytest
 
-from tests.engine.helpers import wish_off
+from tests.engine.helpers import wish_off, without_sk2b_offers
 from tests.world.helpers import NOON, hero, make_world
 from trpg.api.llm_source import MockLlmProvider
 from trpg.api.world_pregen import WorldPregen, provider_generators, wish_generator
@@ -43,8 +43,9 @@ FROZEN = "想把敵人凍住再一錘敲碎"
 
 @pytest.fixture(scope="module")
 def content_library(content_library: ContentLibrary) -> ContentLibrary:
-    """PK-4：這個檔測 WP-1～3 的舊許願流程（願望驅動開關關掉；新流程在 ``*_pk4.py``）。"""
-    return wish_off(content_library)
+    """PK-4：這個檔測 WP-1～3 的舊許願流程（願望驅動開關關掉；新流程在 ``*_pk4.py``）。SK-2b：
+    骨架拿掉新原語，LLM 題目的核心抽選照舊（Mock 只用手寫技能扮演答對的模型）。"""
+    return without_sk2b_offers(wish_off(content_library))
 
 
 @pytest.fixture

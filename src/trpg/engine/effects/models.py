@@ -298,6 +298,9 @@ class CleanseEffect(EffectBase):
 
     kind: Literal["cleanse"] = "cleanse"
     target_id: UnitId
+    count: int | None = Field(default=None, exclude_if=lambda v: v is None)
+    """只移除幾個減益（SK-2b，玩法交接 4.1.29 第 3 點）；``None`` 全部。挑法：控制類
+    （``control_group``）優先 → 剩餘回合最多（永久最多）→ 狀態表順序。"""
 
     def sort_target(self) -> str:
         return self.target_id

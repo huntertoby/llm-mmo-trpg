@@ -396,11 +396,13 @@ def _secondary_entry(
         allowed = [
             i
             for i in rules.primitives
-            if i in available and (not rules.harmful_only or defs[i].harmful)
+            if i in available and rules.admits(i, harmful=defs[i].harmful)
         ]
     note = f"附帶效果（核心以外的效果）最多 {rules.max_count} 個"
     if rules.harmful_only:
         note += "，只能是有害的效果"
+        if rules.harmless_ok:
+            note += f"（{'、'.join(rules.harmless_ok)} 例外）"
     caps = [
         f"{i} 的強度最多占 {permille_pct(limit)}"
         for i, limit in sorted(rules.max_share_permille.items())
@@ -566,7 +568,7 @@ class _Selector:
         )
         legal = self.legal_primitives(pool)
         if rules.harmful_only:
-            legal = [i for i in legal if self.primitive_defs[i].harmful]
+            legal = [i for i in legal if rules.admits(i, harmful=self.primitive_defs[i].harmful)]
         return legal
 
     def skeleton_shapes(self, skeleton: SkeletonDef) -> list[str]:

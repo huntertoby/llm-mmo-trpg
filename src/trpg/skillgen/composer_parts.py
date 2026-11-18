@@ -318,6 +318,9 @@ def _core_count(ctx: Ctx, options: list[str]) -> int:
 
 def choose_core(ctx: Ctx) -> list[str]:
     """核心原語（依 ``skeleton.core.primitives`` 與稀有度），含互斥（推與拉不並存）。"""
+    special = _special_core(ctx)
+    if special is not None:
+        return special
     options = [
         p
         for p in ctx.skeleton.core.primitives
@@ -335,6 +338,44 @@ def choose_core(ctx: Ctx) -> list[str]:
         double = ctx.chance(ctx.rules.structure.combo_double_damage_permille)
         picked = ["damage", "damage"] if double else ["damage"]
     return picked
+
+
+_SPECIAL_CORES: tuple[tuple[str, str], ...] = (
+    ("hook", "composer.hook"),
+    ("absorb_surface", "composer.absorb_core"),
+)
+"""只以獨立串流當核心的原語（SK-2b，玩法交接 4.1.28 第 5 點）：原語 ID 與串流名。"""
+
+
+def _special_ready(ctx: Ctx, name: str, *, core: bool) -> bool:
+    """``name`` 這次可以由獨立串流加入：骨架明列（附帶時不收「不限」的骨架，例如連段、光環）、
+    稀有度與角色階級夠、形狀接受（附帶時）。"""
+    primitive = ctx.primitive(name)
+    listed = core or name in (ctx.skeleton.secondary.primitives or ())
+    return (
+        listed
+        and _skeleton_allows(ctx, name, core=core)
+        and rarity_rank(primitive.min_rarity) <= ctx.rank
+        and ctx.library.budget.min_character_tier.primitives.get(name, 1) <= ctx.tier
+        and (core or _accepts(primitive, ctx.shape))
+    )
+
+
+def _special_core(ctx: Ctx) -> list[str] | None:
+    """鉤（位移骨架）、吸收表面（光環骨架）當核心（SK-2b）：骨架核心有它、稀有度夠時，用各自的
+    獨立串流（``composer.hook``／``composer.absorb_core``）以 ``structure`` 的機率抽；沒抽中回傳
+    ``None``，種子照舊走一般抽選（父串流不推進，既有種子的技能不變）。鉤的冷卻下限
+    ``hook_min_cooldown``。"""
+    rules = ctx.rules.structure
+    permille = {"hook": rules.hook_core_permille, "absorb_surface": rules.absorb_core_permille}
+    for name, label in _SPECIAL_CORES:
+        if not _special_ready(ctx, name, core=True):
+            continue
+        if ctx.rng.fork(label).chance_permille(permille[name]):
+            if name == "hook":
+                ctx.min_cooldown = max(ctx.min_cooldown, ctx.library.budget.hook_min_cooldown)
+            return [name]
+    return None
 
 
 def _has_status(ctx: Ctx, beneficial: bool) -> bool:
@@ -599,6 +640,9 @@ def _make_effect(ctx: Ctx, primitive_id: str, *, core: bool, beneficial_only: bo
         _status_effect(ctx, beneficial=beneficial_only or _wants_buff(ctx, core))
     elif primitive_id == "create_surface":
         _surface_effect(ctx, beneficial_only=beneficial_only)
+    elif primitive_id == "absorb_surface":  # SK-2b：光環的核心，吸自己腳下換治療或護盾
+        gain = ctx.rng.fork("composer.absorb_core.gain").choice(["heal", "shield"])
+        ctx.add_knobbed({"type": primitive_id, "affects": "self", "gain": gain}, weight)
     else:
         _fixed_effect(ctx, primitive_id)
 
@@ -628,7 +672,7 @@ def _secondary_pool(ctx: Ctx) -> list[str]:
             continue
         if not _composable(ctx, name):
             continue
-        if rules.harmful_only and not primitive.harmful:
+        if not rules.admits(name, harmful=primitive.harmful):
             continue
         if name in ("add_stack", "consume_stack", "place_trap"):
             continue  # 層數與陷阱的結構效果由 _stack_effect、_trap_setup 加入
@@ -729,8 +773,10 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
         _make_effect(ctx, ctx.rng.choice(pool), core=False, beneficial_only=False)
     _blow_secondary(ctx)
     _shockwave_secondary(ctx)
+    _contagion_secondary(ctx)
     _dash_first(ctx)
     _gamble_last(ctx)
+    _absorb_secondary(ctx)
 
 
 def _blow_secondary(ctx: Ctx) -> None:
@@ -774,6 +820,75 @@ def _shockwave_secondary(ctx: Ctx) -> None:
     ):
         return
     ctx.add_knobbed({"type": "shockwave"})
+
+
+def _secondary_room(ctx: Ctx) -> bool:
+    """附帶效果與效果數都還有空位。"""
+    secondaries = len(ctx.effects) - ctx.core_count
+    room = ctx.library.budget.rarity[ctx.rarity].max_effects - len(ctx.effects)
+    return room > 0 and secondaries < ctx.skeleton.secondary.max_count
+
+
+def _contagion_secondary(ctx: Ctx) -> None:
+    """疾病擴散（SK-2b，玩法交接 4.1.28 第 5 點）：骨架附帶允許、稀有度夠、技能已對敵人施加會擴散
+    的狀態（``core.contagion_statuses``）、附帶效果還有空位時，以 ``structure.contagion_permille``
+    的機率加在最後（施加狀態之後）。用 ``composer.contagion`` 的獨立串流抽。"""
+    name = "contagion"
+    if ctx.shape == "self" or not _special_ready(ctx, name, core=False):
+        return
+    kinds = set(ctx.library.ruleset.core.contagion_statuses)
+    if not any(
+        e["type"] == "apply_status"
+        and e.get("status") in kinds
+        and _affects_enemies(ctx, "apply_status", e)
+        for e in ctx.effects
+    ):
+        return
+    if not _secondary_room(ctx):
+        return
+    if not ctx.rng.fork("composer.contagion").chance_permille(
+        ctx.rules.structure.contagion_permille
+    ):
+        return
+    ctx.add({"type": name}, ())
+
+
+_FIRST_EFFECTS = frozenset({"dash", "shadowstep", "absorb_surface"})
+"""必須是技能第一個效果的原語（吸收表面不和它們並存）。"""
+
+
+def _absorb_secondary(ctx: Ctx) -> None:
+    """吸收表面當附帶（SK-2b，玩法交接 4.1.28 第 5 點）：骨架附帶允許、稀有度夠、形狀接受（單體）、
+    附帶效果還有空位、沒有其他必須在第一個的效果時，以 ``structure.absorb_secondary_permille`` 的
+    機率加上（換層數或換元素；吸自己腳下或目標格），放在第一個。用 ``composer.absorb`` 的獨立
+    串流抽。層數只用累積在自己身上的層數，技能已經用到其中一種時用同一種。"""
+    name = "absorb_surface"
+    if not _special_ready(ctx, name, core=False) or not _secondary_room(ctx):
+        return
+    if _FIRST_EFFECTS & {e["type"] for e in ctx.effects}:
+        return
+    rng = ctx.rng.fork("composer.absorb")
+    if not rng.chance_permille(ctx.rules.structure.absorb_secondary_permille):
+        return
+    stacks = ctx.library.ruleset.stacks.stacks
+    own = sorted(s.id for s in stacks if s.composer and s.owner == "self")
+    used = [e["stack"] for e in ctx.effects if e.get("stack") in own]
+    gain = rng.choice(["element", "stack"] if own else ["element"])
+    spec: dict[str, Any] = {"type": name, "affects": rng.choice(["self", "tiles"]), "gain": gain}
+    if gain == "stack":
+        spec["stack"] = used[0] if used else rng.choice(own)
+    ctx.add_knobbed(spec)
+    _move_to_front(ctx, len(ctx.effects) - 1)
+
+
+def _move_to_front(ctx: Ctx, at: int) -> None:
+    """把第 ``at`` 個效果移到最前面，旋鈕的索引跟著位移（附帶效果都抽完之後才用）。"""
+    ctx.effects.insert(0, ctx.effects.pop(at))
+    for knob in ctx.knobs:
+        if knob.index < at:
+            knob.index += 1
+        elif knob.index == at:
+            knob.index = 0
 
 
 def _dash_first(ctx: Ctx) -> None:
@@ -1066,6 +1181,9 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "shockwave",  # 3-54b：只由 _shockwave_secondary 的獨立串流加入
         "leave_form",  # 3J-4c：解形爆發專用，隨機組合器不抽
         "summon_beside",  # TF-1：召喚到身邊，只由閃現轉型產生
+        "hook",  # SK-2b：只由 _special_core 的獨立串流當位移核心（既有種子不變）
+        "absorb_surface",  # SK-2b：只由 _special_core／_absorb_secondary 的獨立串流加入
+        "contagion",  # SK-2b：只由 _contagion_secondary 的獨立串流加入
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的

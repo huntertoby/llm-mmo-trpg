@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LlmStats, OfferTag } from "../api/types";
-import { LLM_SOURCE_LABEL, isLlmTag, llmSummaryLines, withLlm } from "./llmFlow";
+import { LLM_SOURCE_LABEL, llmSummaryLines, llmTagHint, withLlm } from "./llmFlow";
 
 const stats = (over: Partial<LlmStats> = {}): LlmStats => ({
   total: 5,
@@ -28,10 +28,10 @@ describe("LLM 開關", () => {
 
   it("來源為 llm 的候選卡才有標記", () => {
     expect(LLM_SOURCE_LABEL).not.toBe("");
-    expect(isLlmTag(tag("llm"))).toBe(true);
-    expect(isLlmTag(tag("composer"))).toBe(false);
-    expect(isLlmTag(tag("pool"))).toBe(false);
-    expect(isLlmTag(undefined)).toBe(false);
+    expect(llmTagHint(tag("llm"))).not.toBeNull();
+    expect(llmTagHint(tag("composer"))).toBeNull();
+    expect(llmTagHint(tag("pool"))).toBeNull();
+    expect(llmTagHint(undefined)).toBeNull();
   });
 
   it("一輪摘要：題數、退回率、命名、提醒", () => {

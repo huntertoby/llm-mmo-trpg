@@ -676,8 +676,11 @@ def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     )
 
 
-def _cleanse(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
-    """淨化（玩法決定 #60）：只移除減益（``polarity: debuff``）；增益與中性狀態保留。"""
+def _cleanse(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """淨化（玩法決定 #60）：只移除減益（``polarity: debuff``）；增益與中性狀態保留。``count: 1``
+    只移除 1 個（SK-2b）。"""
+    if isinstance(spec.count, int):
+        return f"淨化：移除身上 {spec.count} 個負面狀態（控制類優先，再來剩餘回合最多的）"
     return "淨化：移除身上所有負面狀態（增益、姿態與其他中性狀態不受影響）"
 
 
@@ -733,8 +736,8 @@ def _contagion(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     core = lib.ruleset.core
     names = _names(lib.ruleset.status_def(s).name_zh for s in core.contagion_statuses)
     return (
-        f"目標身上的{names}會擴散：目標倒下時，這些狀態以剩餘回合傳到 "
-        f"{core.contagion_radius} 格內的一個敵人（每次倒下傳一次）"
+        f"目標身上的{names}會擴散：目標倒下時，以剩餘回合傳到 "
+        f"{core.contagion_radius} 格內的一個敵人（每次倒下傳一次、只傳一種：剩餘回合最多的那種）"
     )
 
 
@@ -745,9 +748,11 @@ def _absorb_surface(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
         "的表面" if spec.surface is None else f"的{lib.ruleset.surface_def(spec.surface).name_zh}"
     )
     if spec.gain == "element":
+        if spec.surface is Surface.WATER:
+            return f"吸走{where}{what}，這一招之後的傷害帶潮濕（命中時在目標格造水）；沒有水時照常"
         return (
-            f"吸走{where}{what}（只吸帶元素的表面），這一招之後的傷害改成那種表面的元素；"
-            "沒有可吸的表面時照原本的元素"
+            f"吸走{where}{what}（帶元素的表面或水，不吸油、煙霧），這一招之後的傷害改成那種表面的"
+            "元素，吸到水時帶潮濕（命中時在目標格造水）；沒有可吸的表面時照原本的元素"
         )
     if spec.gain == "stack":
         assert spec.stack is not None

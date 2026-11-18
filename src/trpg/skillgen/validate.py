@@ -50,6 +50,7 @@ from trpg.content.skills import (
     ON_MISS_MIN_RARITY,
     REVIVE,
     SPLIT_SKELETONS,
+    ConditionSpec,
     EffectSpec,
     SkillDef,
     SkillRarity,
@@ -431,6 +432,7 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
     out += _self_cost_violations(skill, library)
     out += _rule_rewrite_violations(skill, library)
     out += _revive_violations(skill, library) + _hook_violations(skill, library)
+    out += _distance_condition_violations(skill, library) + _contagion_violations(skill, library)
     return out
 
 
@@ -503,6 +505,78 @@ def _hook_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation
             "cap.hook_cooldown",
             f"有鉤（hook）的技能冷卻至少 {need} 回合（目前：{skill.cost.cooldown or 0}）",
         )
+    ]
+
+
+def _contagion_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """疾病擴散只附在施加燃燒、流血、中毒的效果上（SK-2b，玩法交接 4.1.28 第 5 點）：前面要有
+    施加 ``core.contagion_statuses`` 之一的 ``apply_status``。"""
+    kinds = set(library.ruleset.core.contagion_statuses)
+    out: list[Violation] = []
+    for index, effect in enumerate(skill.effects):
+        if effect.type != "contagion":
+            continue
+        before = skill.effects[:index]
+        if any(e.type == "apply_status" and e.status in kinds for e in before):
+            continue
+        statuses = library.ruleset.core.contagion_statuses
+        names = "、".join(library.ruleset.status_def(k).name_zh for k in statuses)
+        out.append(
+            Violation(
+                skill.id,
+                "cap.contagion_source",
+                f"effects[{index}]（contagion）要放在施加{names}的效果後面",
+            )
+        )
+    return out
+
+
+POINT_BLANK_MIN_REACH = 2
+"""貼身條件要求的最大射程（射程 1 的招一定貼身，條件等於白拿預算折扣；SK-2b，玩法交接 4.1.29
+第 1 點；和組合器、閃現「距離加碼」同一個門檻）。"""
+
+
+def skill_reach(skill: SkillDef) -> int | None:
+    """主動技的最大射程：形狀的固定射程（``range`` 是整數）；直線、錐形沒有 ``range`` 時看
+    ``size``。
+    武器射程（``weapon``）與其他形狀回 ``None``（不檢查）。"""
+    shape = skill.shape
+    if isinstance(shape.range, int):
+        return shape.range
+    if shape.type in ("line", "cone") and shape.size is not None:
+        return shape.size
+    return None
+
+
+def _condition_types(condition: ConditionSpec | None) -> set[str]:
+    if condition is None:
+        return set()
+    found = {condition.type}
+    for part in condition.any_of or ():
+        found.add(part.type)
+    return found
+
+
+def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """一定成立的距離條件（SK-2b，玩法交接 4.1.29 第 1 點，06 6.16）：條件讓預算打折，前提是它可能
+    不成立——貼身要最大射程至少 :data:`POINT_BLANK_MIN_REACH`，遠距要最大射程至少
+    ``core.far_distance``（工坊可調）。只看主動技能、射程可以確定的形狀（:func:`skill_reach`）。"""
+    reach = skill_reach(skill) if skill.kind == "active" else None
+    if reach is None:
+        return []
+    types = _condition_types(skill.condition)
+    for effect in skill.effects:
+        types |= _condition_types(effect.condition)
+    need = {"point_blank": POINT_BLANK_MIN_REACH, "long_range": library.ruleset.core.far_distance}
+    return [
+        Violation(
+            skill.id,
+            "cap.distance_condition",
+            f"{'貼身' if kind == 'point_blank' else '遠距'}條件要最大射程至少 {need[kind]} 格"
+            f"（目前：{reach}），否則條件一定{'成立' if kind == 'point_blank' else '不成立'}",
+        )
+        for kind in sorted(need)
+        if kind in types and reach < need[kind]
     ]
 
 
@@ -981,7 +1055,7 @@ def _effect_role_violations(
     rules = skeleton.secondary
     for index, effect in secondary:
         allowed = rules.primitives is None or effect.type in rules.primitives
-        harmless = rules.harmful_only and not primitives[effect.type].harmful
+        harmless = not rules.admits(effect.type, harmful=primitives[effect.type].harmful)
         if not allowed or harmless:
             why = "不在允許的附帶原語內" if not allowed else "附帶效果必須是有害原語"
             out.append(

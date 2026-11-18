@@ -190,7 +190,9 @@ def _slot_ok(
     if rules.max_count <= 0 or (rules.primitives is not None and primitive not in rules.primitives):
         return False
     found = library.ruleset.primitives.by_id().get(primitive)
-    return not rules.harmful_only or (found is not None and found.harmful)
+    return not rules.harmful_only or (
+        found is not None and rules.admits(primitive, harmful=found.harmful)
+    )
 
 
 def _effect_rule_reachable(

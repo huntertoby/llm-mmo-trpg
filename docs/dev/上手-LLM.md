@@ -160,3 +160,10 @@
 2. **變奏**：`VariantWhen.caster_cast_tag`（本回合施放過帶這個標籤的技能；沒填不輸出）；提議 schema 的 `when` 多一支（`skill-proposal/19`）。
 3. **閃現**：13 個新小變化模板（`flash_templates.yaml` 標「SK-1」的那幾個）；`side: true` 的是側變，一次出題最多 `rules.max_side_per_offer`（1）張，由 `flash_offer._Builder.sides` 記數，挑選模式的候選也一樣。利用地面、距離加碼、換觸發的參數放 `Variation.keyword`（表面 ID、條件 ID、觸發時機），LF-2 的目錄照樣列成 `keyword` 選單；`flash-pick/2`、`flash-variation/6` 的 prompt 文字沒改。
 4. 測「某個重現案例在舊模板下才成立」的測試用 `tests.engine.helpers.without_sk1_flash()`。
+
+## 十二、SK-2b：新原語進骨架選單、新驗證（`skill-proposal/20`）
+
+1. **骨架**：鉤（`hook`）進位移骨架核心；吸收表面（`absorb_surface`）進打擊、蓄力／終結的附帶與光環的核心；疾病擴散（`contagion`）進打擊、範圍、控場、陷阱的附帶。打擊的附帶是 `harmful_only`，吸收表面靠 `SecondaryRules.harmless_ok` 例外（判斷一律用 `SecondaryRules.admits`，選單說明會寫「… 例外」）。`llm_topic.core_exclude` 沒加它們（LLM 可以出鉤、吸收表面當核心）。
+2. **schema**：吸收表面的 `amount`、`dice` 有旋鈕（`when: {gain: …}`），預算器會補；淨化多 `count`（1 或 all）。
+3. **驗證**：`cap.distance_condition`（貼身要最大射程 ≥ 2、遠距要 ≥ `far_distance`；只看主動技、固定射程或直線／錐形長度）、`cap.contagion_source`（疾病擴散要在施加燃燒、流血、中毒之後）。
+4. 隨機組合器：三個原語仍在 `_HAND_WRITTEN_PRIMITIVES`（一般抽選不抽），只由獨立串流加入（`composer.hook`、`composer.absorb_core`、`composer.absorb`、`composer.contagion`；機率在 `skill_composer.yaml` 的 `structure`）。

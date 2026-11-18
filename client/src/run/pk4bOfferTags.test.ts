@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { OfferTag, RunHero, RunOffer, SkillCard } from "../api/types";
 import cards from "../ui/fixtures/skillCards.json";
-import { LLM_PICK_HINT, LLM_SOURCE_HINT, isLlmTag, llmTagHint } from "./llmFlow";
+import { LLM_PICK_HINT, LLM_SOURCE_HINT, llmTagHint } from "./llmFlow";
 import { OfferPicker } from "./OfferPicker";
 
 const CARD = (cards as unknown as Record<string, SkillCard>)["skill_ash_harvest"]!;
@@ -54,8 +54,6 @@ describe("PK-4b 源晶推演小標", () => {
     expect(llmTagHint(tag("composer", "top"))).toBeNull();
     expect(llmTagHint(tag("pool"))).toBeNull();
     expect(llmTagHint(undefined)).toBeNull();
-    expect(isLlmTag(tag("composer", "llm"))).toBe(true);
-    expect(isLlmTag(tag("composer", "top"))).toBe(false);
   });
 
   it("挑選模式的卡畫小標（升級與許願都有），分數第一名（top）不畫", () => {

@@ -717,6 +717,20 @@ def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     ]
 
 
+def _cleanse_order(ctx: Ctx, unit: UnitState, removable: list[str]) -> list[str]:
+    """只移除幾個減益時的順序（SK-2b，玩法交接 4.1.29 第 3 點）：控制類（``control_group``）優先，
+    再來剩餘回合最多（永久最多），再相同照狀態表（``statuses.yaml``）順序。"""
+    table = [s.id for s in ctx.rules.statuses.statuses]
+    remaining = {s.status_id: s.remaining for s in unit.statuses}
+
+    def key(status_id: str) -> tuple[int, int, int, int]:
+        control = 0 if ctx.rules.status_def(status_id).control_group is not None else 1
+        rounds = remaining.get(status_id)
+        return (control, 0 if rounds is None else 1, -(rounds or 0), table.index(status_id))
+
+    return sorted(dict.fromkeys(removable), key=key)
+
+
 @register_effect("cleanse")
 def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, CleanseEffect)
@@ -730,6 +744,8 @@ def _cleanse(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     ]  # 只移除減益；增益與中性保留（#60）；代價狀態（自己付的）移除不了（#62）
     if not removable:
         return []
+    if effect.count is not None:
+        removable = _cleanse_order(ctx, unit, removable)[: effect.count]
     unit.statuses = [s for s in unit.statuses if s.status_id not in removable]
     return [
         ctx.emit(StatusRemoved, target_id=unit.id, status_id=status_id, reason="cleansed")

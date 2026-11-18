@@ -131,14 +131,15 @@ def test_nothing_to_absorb_fizzles_and_keeps_the_rest(
         assert surface_at(result.state, x, y) is Surface(name)
 
 
-def test_element_gain_does_not_take_surfaces_without_an_element() -> None:
-    """水、油、煙霧沒有元素：換元素時不吸（水 → 潮濕待 PM 決定）。"""
+@pytest.mark.parametrize("name", ["oil", "smoke"])
+def test_element_gain_does_not_take_oil_or_smoke(name: str) -> None:
+    """油、煙霧沒有元素：換元素時不吸（水改成潮濕，見 test_absorb_wet_sk2b；SK-2b）。"""
     fire = {"type": "damage", "dice": "1d4", "element": "fire"}
     skill = skill_of(SINGLE5, absorb("element"), fire)
-    state = hit_with(battle(skill, [(5, 3)], surfaces=((3, 3, "water"),)), [(4, 2)])
+    state = hit_with(battle(skill, [(5, 3)], surfaces=((3, 3, name),)), [(4, 2)])
     result = cast(state, target_id=U2)
     assert [e.reason for e in of(result, EffectFizzled)] == ["no_surface"]
-    assert surface_at(result.state, 3, 3) is Surface.WATER
+    assert surface_at(result.state, 3, 3) is Surface(name)
 
 
 @pytest.mark.parametrize(
