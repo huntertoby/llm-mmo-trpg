@@ -23,6 +23,7 @@ import type {
   MapSummary,
   OrderSet,
   HeroCards,
+  Pos,
   PreviewOut,
   PathPreviewOut,
   PathPreviewRequest,
@@ -401,6 +402,9 @@ export const api = {
   seasonReset: (body: SeasonResetRequest) => request<SeasonResetReport>("POST", "/world/season/reset", body),
   /** 管理者刪任何一則留言（5E-3；回 204）。 */
   adminDeleteWorldNote: (noteId: string) => request<null>("DELETE", `/world/notes/${encodeURIComponent(noteId)}`),
+  /** SK-3 戰前佈置：`skillId` 與 `target` 都是 `null` ＝ 不放、直接開戰。 */
+  prepare: (id: string, skillId: string | null, target: Pos | null) =>
+    request<BattleResponse>("POST", `/battles/${id}/prep`, { skill_id: skillId, target_pos: target }),
   decide: (
     id: string,
     accept: boolean,

@@ -40,6 +40,9 @@ export function minorGlyph(name: string): string {
   return first ?? "？";
 }
 
+/** SK-3 戰前佈置時技能列上方的提示。 */
+export const PREP_HINT_ZH = "戰前佈置：在上方視窗選一招，再點高亮的我方起始區格子放下；或按「不佈置，直接開戰」。";
+
 /** 技能列上方的一行提示。 */
 export function actionHintText(state: {
   copying: boolean;
@@ -51,8 +54,11 @@ export function actionHintText(state: {
   summonIdle?: boolean;
   /** 6F-9：選取中的技能或模式自己的提示（`modeBarHint`）；沒有選取時省略或 `null`。 */
   picked?: string | null;
+  /** SK-3：戰前佈置中（`awaiting === "prep"`）。 */
+  prep?: boolean;
 }): string {
   if (state.ended) return "戰鬥結束。";
+  if (state.prep === true) return PREP_HINT_ZH;
   if (state.copying) return "請為複製的技能或複合技能的第二段選擇目標（點高亮格子或左上角的方向鈕），或按 Esc 放棄。";
   if (!state.canAct) return "等待中……";
   if (state.picked != null) return state.picked;
@@ -144,7 +150,7 @@ export function modeBarHint(mode: ActionMode, card?: Pick<SkillCard, "stats">): 
  * 「等待中」「戰鬥結束」「召喚物還能調整」這類狀態句不是，照常顯示。
  */
 export function actionHintKind(state: Parameters<typeof actionHintText>[0]): "move" | "copy" | null {
-  if (state.ended) return null;
+  if (state.ended || state.prep === true) return null; // SK-3：戰前佈置的提示每次都完整顯示
   if (state.copying) return "copy";
   if (!state.canAct || state.picked != null || state.summonIdle === true) return null; // 6F-9：選取中的提示每次都完整顯示
   return "move";

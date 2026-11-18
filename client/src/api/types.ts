@@ -99,6 +99,8 @@ export type Direction = Schemas["Direction"];
 export type Awaiting = BattleResponse["awaiting"];
 export type FollowupTarget = Schemas["FollowupTarget"];
 export type FollowupOption = Schemas["FollowupOptionOut"];
+/** SK-3 戰前佈置：可放的技能與格子。 */
+export type PrepOut = Schemas["PrepOut"];
 export type ChargeOut = Schemas["ChargeOut"];
 export type ReactionRuleView = Schemas["ReactionRuleView"];
 export type ReactionMode = ReactionRuleView["mode"];

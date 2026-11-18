@@ -33,6 +33,8 @@ from trpg.api.schemas import (
     InteractOptionOut,
     PartActionOut,
     PartOptionOut,
+    PrepOptionOut,
+    PrepOut,
     PreviewOut,
     RunOptionOut,
     StepOut,
@@ -55,6 +57,7 @@ from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EffectFizzled, EventBase, TurnStarted
 from trpg.engine.lock_on import LOCK_BLOCKED, LOCK_CONCEALED, LOCK_LOST, lock_blocker
 from trpg.engine.parts import PART_REASON_ZH, PartTarget, part_targets
+from trpg.engine.prep import prep_options
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
 from trpg.engine.rules.footprint import is_giant
@@ -412,4 +415,20 @@ def battle_response(
         telegraph=telegraph_out(state, session.library, VIEW_TEAM),
         steps=tuple(step_out(r, session.library, session.hero_id) for r in records),
         outcome=outcome,
+        prep=_prep_out(state) if awaiting == "prep" else None,
+    )
+
+
+def _prep_out(state: BattleState) -> PrepOut | None:
+    """戰前佈置的選項（SK-3）。"""
+    window = state.prep
+    if window is None:
+        return None
+    return PrepOut(
+        unit_id=window.unit_id,
+        zone=tuple((p.x, p.y) for p in window.zone),
+        options=tuple(
+            PrepOptionOut(skill_id=o.skill_id, kind=o.kind, tiles=o.tiles)
+            for o in prep_options(state)
+        ),
     )

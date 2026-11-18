@@ -60,6 +60,8 @@ def make_client(tmp_path: Path) -> Iterator[ClientFactory]:
             library: ContentLibrary, *, clock: Callable[[], int] | None = None, **kwargs: Any
         ) -> TestClient:
             kwargs.setdefault("save_dir", tmp_path / "saves")
+            # SK-3 戰前佈置：既有 API 測試照原本的流程（不停在佈置）；佈置自己的測試傳 True
+            kwargs.setdefault("prep_placement", False)
             app = create_app(library, **kwargs)
             if clock is not None:
                 store = app.state.world

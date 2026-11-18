@@ -85,7 +85,7 @@ __all__ = [
 
 type XY = tuple[int, int]
 
-Awaiting = Literal["action", "decision", "ended", "stalled"]
+Awaiting = Literal["action", "decision", "ended", "stalled", "prep"]
 """伺服器在等什麼：主角的動作、主角的反應決定、戰鬥已結束；``stalled`` 只在自動推進超過步數
 上限（500）之後出現。"""
 
@@ -539,6 +539,34 @@ class BattleResponse(_ApiModel):
     """這次請求推進的每一步（依序）。"""
     outcome: BattleOutcome | None
     """戰鬥結束時的勝負與原因。"""
+    prep: PrepOut | None = None
+    """戰前佈置（SK-3，``awaiting == "prep"`` 時才有）：可放的技能與每招放得下的格子。"""
+
+
+class PrepOptionOut(_ApiModel):
+    """戰前佈置的一招（SK-3）：``kind`` 為 ``trap``（陷阱）、``rune``（刻印）、``surface``（表面）；
+    ``tiles`` 是我方起始區內這招放得下的格子（依 (y, x)）。"""
+
+    skill_id: str
+    kind: Literal["trap", "rune", "surface"]
+    tiles: tuple[XY, ...]
+
+
+class PrepOut(_ApiModel):
+    """戰前佈置（SK-3，06 6.38 第 11 點）：開戰前（雙方都還沒行動）在我方起始區 ``zone`` 免費放
+    1 個陷阱、刻印或表面（``POST /api/battles/{id}/prep``）；放了那招照常進冷卻。"""
+
+    unit_id: UnitId
+    zone: tuple[XY, ...]
+    options: tuple[PrepOptionOut, ...]
+
+
+class PrepRequest(_ApiModel):
+    """``POST /api/battles/{id}/prep``：``skill_id``＋``target_pos``（從 ``prep.options`` 挑）；
+    兩個都省略＝不放、直接開戰。"""
+
+    skill_id: str | None = None
+    target_pos: Pos | None = None
 
 
 # ---------------------------------------------------------------------------

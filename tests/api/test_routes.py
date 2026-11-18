@@ -440,7 +440,7 @@ def test_log_has_the_cli_format(client: TestClient) -> None:
 def test_exceeding_the_auto_advance_limit_is_500_and_keeps_the_session(
     library: ContentLibrary,
 ) -> None:
-    with TestClient(create_app(library, max_auto_steps=0)) as client:
+    with TestClient(create_app(library, max_auto_steps=0, prep_placement=False)) as client:
         reply = client.post("/api/battles", json=CREATE)
         if reply.status_code == 201:  # 主角先攻：建立時不用推進，結束回合時才超過
             battle = reply.json()

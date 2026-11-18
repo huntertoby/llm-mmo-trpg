@@ -12,6 +12,7 @@ import { DecisionDialog } from "../../ui/DecisionDialog";
 import { FollowupDialog } from "../../ui/FollowupDialog";
 import { InfusionDialog } from "../../ui/InfusionDialog";
 import { OathWarningDialog } from "../../ui/OathWarningDialog";
+import { PrepDialog } from "../../ui/PrepDialog";
 
 interface Props {
   response: BattleResponse;
@@ -36,6 +37,11 @@ interface Props {
   onPickInfusion(action: Action, keywordId: string): void;
   onDecideCopy(pick: Action | null): void;
   onDecide(accept: boolean, always: boolean): void;
+  /** SK-3 戰前佈置：等主角選（`awaiting === "prep"`）、選中的技能、選或取消、直接開戰。 */
+  prepPaused?: boolean;
+  prepSkill?: string | null;
+  onPickPrep?(skillId: string | null): void;
+  onSkipPrep?(): void;
 }
 
 export function BattleDialogs(p: Props) {
@@ -43,6 +49,16 @@ export function BattleDialogs(p: Props) {
   const { infusionPick } = p;
   return (
     <>
+      {p.prepPaused === true && response.prep != null && (
+        <PrepDialog
+          prep={response.prep}
+          skillNames={p.skillNames}
+          picked={p.prepSkill ?? null}
+          enabled={!busy}
+          onPick={(id) => p.onPickPrep?.(id)}
+          onSkip={() => p.onSkipPrep?.()}
+        />
+      )}
       {p.oathWarning !== null && !busy && (
         <OathWarningDialog warning={p.oathWarning} enabled={!busy} onConfirm={p.onConfirmOath} onCancel={p.onCancelOath} />
       )}

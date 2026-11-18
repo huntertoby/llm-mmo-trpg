@@ -98,6 +98,7 @@ from trpg.engine.events.objects import (
     TrapTriggered,
 )
 from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
+from trpg.engine.events.prep import PrepPlaced, PrepSkipped
 from trpg.engine.events.rules import (
     ApGranted,
     ApRefunded,
@@ -302,7 +303,9 @@ type Event = Annotated[
     | PartBroken
     | SkillSealed
     | PartStatDown
-    | AttackRerolled,
+    | AttackRerolled
+    | PrepPlaced
+    | PrepSkipped,
     Field(discriminator="type"),
 ]
 

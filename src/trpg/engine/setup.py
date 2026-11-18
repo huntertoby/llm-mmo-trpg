@@ -109,6 +109,10 @@ class BattleSetup(BaseModel):
     填入）。"""
     practice: PracticeRules | None = None
     """靶場測試模式（#147，:mod:`trpg.engine.practice`）；``None``＝一般戰鬥。"""
+    prep_placement: bool = Field(default=False, exclude_if=lambda v: not v)
+    """戰前佈置（SK-3，06 6.38 第 11 點，:mod:`trpg.engine.prep`）：主角（我方第一個單位）有可放的
+    技能時，開場開一個佈置的窗。只有網頁的戰鬥工作階段會設（CLI、模擬、AI 代打都沒有＝直接跳過）；
+    ``False`` 不輸出（既有紀錄不變）。"""
 
     @property
     def effective_objective(self) -> Objective:

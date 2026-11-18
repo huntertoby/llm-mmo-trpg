@@ -144,6 +144,7 @@ def create_app(
     server: ServerSettings | None = None,
     hold_presence: bool = False,
     tuning: bool | None = None,
+    prep_placement: bool = True,
 ) -> FastAPI:
     """建立應用。``library`` 省略時載入 ``content/``；兩種情況都先檢查效果原語的對應項
     （:func:`~trpg.api.primitive_coverage.check_primitive_coverage`，缺了拋出 ``ContentError``）。
@@ -168,7 +169,9 @@ def create_app(
     app = FastAPI(title="LLM-MMO-TRPG 本機 API", version=__version__)
     lib = library if library is not None else load_library()
     check_primitive_coverage(lib)
-    app.state.store = SessionStore(lib, max_auto_steps=max_auto_steps)
+    app.state.store = SessionStore(
+        lib, max_auto_steps=max_auto_steps, prep_placement=prep_placement
+    )  # prep_placement：戰前佈置（SK-3），測試可關
     saves = save_dir if save_dir is not None else default_save_dir()
     provider = llm if llm is not None else LocalLlmProvider()
     app.state.runs = RunStore(lib, app.state.store, saves, llm=provider)

@@ -25,6 +25,7 @@ from trpg.api.schemas import (
     HeroCards,
     InfuseOptionsOut,
     InfuseSkillOptionOut,
+    PrepRequest,
     PreviewOut,
     SkillReasons,
 )
@@ -90,6 +91,20 @@ def post_decision(battle_id: str, body: DecisionRequest, request: Request) -> Ba
     with session.lock:
         before = session.state
         records = session.decide(body.accept, body.copy_cast, body.followup_target)
+        out = battle_response(session, records, before)
+    runs_of(request).autosave_battle(battle_id)
+    return out
+
+
+@router.post("/{battle_id}/prep")
+def post_prep(battle_id: str, body: PrepRequest, request: Request) -> BattleResponse:
+    """戰前佈置（SK-3，06 6.38 第 11 點）：``awaiting == "prep"`` 時在我方起始區放 1 個陷阱、刻印或
+    表面（從回應的 ``prep.options`` 挑一招與一格）；兩個欄位都省略＝不放、直接開戰。
+    之後自動推進。"""
+    session = owned_battle(request, battle_id)
+    with session.lock:
+        before = session.state
+        records = session.prepare(body.skill_id, body.target_pos)
         out = battle_response(session, records, before)
     runs_of(request).autosave_battle(battle_id)
     return out

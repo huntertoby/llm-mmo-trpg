@@ -40,6 +40,7 @@ __all__ = [
     "InfuseSkill",
     "Interact",
     "Move",
+    "Prepare",
     "Reload",
     "Run",
     "SetReactionMode",
@@ -369,6 +370,17 @@ class InfuseSkill(_ActionBase):
     skill_id: str
 
 
+class Prepare(_ActionBase):
+    """戰前佈置（SK-3，06 6.38 第 11 點，:mod:`trpg.engine.prep`）：開戰前（雙方都還沒行動）在我方
+    起始區的 ``target_pos`` 免費放 1 個 ``skill_id`` 會放的陷阱、刻印或表面；兩個都省略＝不放、直接
+    開戰。只有 ``BattleState.prep`` 開著、而且是窗的主角才合法（不看行動順序）。**不列入**
+    ``legal_actions``（AI 不使用）。"""
+
+    type: Literal["prepare"] = "prepare"
+    skill_id: str | None = None
+    target_pos: Pos | None = None
+
+
 class EndTurn(_ActionBase):
     """結束回合。"""
 
@@ -395,7 +407,8 @@ type Action = Annotated[
     | SetSummonMode
     | CommandSummon
     | InfuseSkill
-    | EndTurn,
+    | EndTurn
+    | Prepare,
     Field(discriminator="type"),
 ]
 
@@ -423,6 +436,7 @@ RACE_ACTION_TYPES: tuple[str, ...] = ("use_race_skill",)
 """種族技（Phase 3R-2）：花 1 AP 但不佔技能欄，也不算基本動作的上限。"""
 
 MANAGEMENT_ACTION_TYPES: tuple[str, ...] = (
+    "prepare",
     "end_turn",
     "end_stance",
     "set_reaction_mode",
@@ -478,6 +492,7 @@ type Step = Annotated[
     | CommandSummon
     | InfuseSkill
     | EndTurn
+    | Prepare
     | Decision,
     Field(discriminator="type"),
 ]

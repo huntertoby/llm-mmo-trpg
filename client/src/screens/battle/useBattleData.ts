@@ -8,6 +8,7 @@ import { conditionOffMap, withConditionOff } from "../../battle/conditionOff";
 import { BATTLE_DRAW, buildDrawModel, type DrawModel } from "../../battle/drawModel";
 import { fxSkillsOf } from "../../battle/fxSkills";
 import { followupMode, isFollowupPending } from "../../battle/followup";
+import { prepMode } from "../../battle/prep";
 import { withPushReasons } from "../../battle/pushReasons";
 import { raceModes } from "../../battle/race";
 import { withReasons } from "../../battle/skillReasons";
@@ -51,6 +52,8 @@ export interface BattleData {
   copyPaused: boolean;
   followPaused: boolean;
   copying: boolean;
+  /** SK-3：戰前佈置（`awaiting === "prep"`）。選了一招時 `copying` 也為真（點格子即送出）。 */
+  prepPaused: boolean;
   copyName: string;
   copyPick: ActionMode | null;
   fallback: LabeledAction[];
@@ -69,6 +72,8 @@ export function useBattleData(
   shown: BattleView,
   acting: string | undefined,
   busy: boolean,
+  /** SK-3：戰前佈置選中的技能（還沒選為 `null`）。 */
+  prepSkill: string | null = null,
 ): BattleData {
   const view = response.view;
   const hero = useMemo(() => view.units.find((u) => u.id === heroId) ?? null, [view, heroId]);
@@ -123,14 +128,21 @@ export function useBattleData(
   // followup_options 當成模式，滑過預覽、點目標送出；`copying` 代表「暫停中為第二段選目標」。
   const copyPaused = response.awaiting === "decision" && isCopyPending(response.pending) && !busy;
   const followPaused = response.awaiting === "decision" && isFollowupPending(response.pending) && !busy;
-  const copying = copyPaused || followPaused;
+  // SK-3 戰前佈置：選了一招之後，那招放得下的格子當成選取模式（同第二段），點格子送 /prep。
+  const prepPaused = response.awaiting === "prep" && response.prep != null && !busy;
+  const prepPick = useMemo(() => {
+    if (!prepPaused || prepSkill === null || response.prep == null) return null;
+    return prepMode(response.prep, prepSkill, skillNames[prepSkill] ?? prepSkill);
+  }, [prepPaused, prepSkill, response.prep, skillNames]);
+  const copying = copyPaused || followPaused || prepPick !== null;
   const pausedSkill = followPaused ? response.pending?.skill_id : response.pending?.copy_skill_id;
   const copyName = pausedSkill == null ? "" : (skillNames[pausedSkill] ?? pausedSkill);
   const copyPick = useMemo(() => {
+    if (prepPick !== null) return prepPick;
     if (!copying || response.pending === null) return null;
     if (followPaused) return followupMode(response.pending, response.followup_options ?? [], copyName);
     return copyMode(response.pending, response.copy_options, copyName);
-  }, [copying, followPaused, response.pending, response.copy_options, response.followup_options, copyName]);
+  }, [prepPick, copying, followPaused, response.pending, response.copy_options, response.followup_options, copyName]);
   const fallback = useMemo<LabeledAction[]>(
     () =>
       hero === null
@@ -171,6 +183,7 @@ export function useBattleData(
     copyPaused,
     followPaused,
     copying,
+    prepPaused,
     copyName,
     copyPick,
     fallback,

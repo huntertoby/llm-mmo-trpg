@@ -176,6 +176,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/battles/{battle_id}/prep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Prep
+         * @description 戰前佈置（SK-3，06 6.38 第 11 點）：``awaiting == "prep"`` 時在我方起始區放 1 個陷阱、刻印或
+         *     表面（從回應的 ``prep.options`` 挑一招與一格）；兩個欄位都省略＝不放、直接開戰。
+         *     之後自動推進。
+         */
+        post: operations["post_prep_api_battles__battle_id__prep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/battles/{battle_id}/preview": {
         parameters: {
             query?: never;
@@ -2054,7 +2076,7 @@ export interface components {
             /** Titles */
             titles?: string[];
         };
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
         /**
          * ActivateCharge
          * @description 啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
@@ -2561,7 +2583,7 @@ export interface components {
              * Awaiting
              * @enum {string}
              */
-            awaiting: "action" | "decision" | "ended" | "stalled";
+            awaiting: "action" | "decision" | "ended" | "stalled" | "prep";
             initial_view: components["schemas"]["BattleView"];
             view: components["schemas"]["BattleView"];
             /** Legal Actions */
@@ -2598,6 +2620,7 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["StepOut"][];
             outcome: components["schemas"]["BattleOutcome"] | null;
+            prep?: components["schemas"]["PrepOut"] | null;
         };
         /**
          * BattleView
@@ -8688,6 +8711,64 @@ export interface components {
             keywords?: string[] | null;
         };
         /**
+         * PrepOptionOut
+         * @description 戰前佈置的一招（SK-3）：``kind`` 為 ``trap``（陷阱）、``rune``（刻印）、``surface``（表面）；
+         *     ``tiles`` 是我方起始區內這招放得下的格子（依 (y, x)）。
+         */
+        PrepOptionOut: {
+            /** Skill Id */
+            skill_id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "trap" | "rune" | "surface";
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
+        };
+        /**
+         * PrepOut
+         * @description 戰前佈置（SK-3，06 6.38 第 11 點）：開戰前（雙方都還沒行動）在我方起始區 ``zone`` 免費放
+         *     1 個陷阱、刻印或表面（``POST /api/battles/{id}/prep``）；放了那招照常進冷卻。
+         */
+        PrepOut: {
+            /** Unit Id */
+            unit_id: string;
+            /** Zone */
+            zone: components["schemas"]["XY"][];
+            /** Options */
+            options: components["schemas"]["PrepOptionOut"][];
+        };
+        /**
+         * PrepRequest
+         * @description ``POST /api/battles/{id}/prep``：``skill_id``＋``target_pos``（從 ``prep.options`` 挑）；
+         *     兩個都省略＝不放、直接開戰。
+         */
+        PrepRequest: {
+            /** Skill Id */
+            skill_id?: string | null;
+            target_pos?: components["schemas"]["Pos"] | null;
+        };
+        /**
+         * Prepare
+         * @description 戰前佈置（SK-3，06 6.38 第 11 點，:mod:`trpg.engine.prep`）：開戰前（雙方都還沒行動）在我方
+         *     起始區的 ``target_pos`` 免費放 1 個 ``skill_id`` 會放的陷阱、刻印或表面；兩個都省略＝不放、直接
+         *     開戰。只有 ``BattleState.prep`` 開著、而且是窗的主角才合法（不看行動順序）。**不列入**
+         *     ``legal_actions``（AI 不使用）。
+         */
+        Prepare: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "prepare";
+            /** Skill Id */
+            skill_id?: string | null;
+            target_pos?: components["schemas"]["Pos"] | null;
+        };
+        /**
          * PreviewOut
          * @description :class:`trpg.engine.preview.Preview` 的公開版本：不含模擬後的完整狀態與原始事件。
          */
@@ -10869,7 +10950,7 @@ export interface components {
              */
             cost_status: boolean;
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity" | "variants";
         /**
@@ -13602,7 +13683,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
             };
         };
         responses: {
@@ -13661,6 +13742,41 @@ export interface operations {
             };
         };
     };
+    post_prep_api_battles__battle_id__prep_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                battle_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrepRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BattleResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     post_preview_api_battles__battle_id__preview_post: {
         parameters: {
             query?: never;
@@ -13672,7 +13788,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
             };
         };
         responses: {

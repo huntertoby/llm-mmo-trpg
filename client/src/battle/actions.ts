@@ -114,6 +114,9 @@ export function actionLabel(
     }
     case "end_stance":
       return "結束姿態";
+    case "prepare": // SK-3 戰前佈置
+      if (action.skill_id == null) return "不佈置，直接開戰";
+      return `戰前佈置：${skills[action.skill_id] ?? action.skill_id}${action.target_pos != null ? ` → ${posText(action.target_pos)}` : ""}`;
     case "set_reaction_mode":
       return `反應設定：${reactionName(action.reaction)} → ${REACTION_MODE_LABELS[action.mode]}`;
     case "set_summon_mode":

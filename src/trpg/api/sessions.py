@@ -27,7 +27,15 @@ from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.api.workshop import custom_skill_defs, equip_custom_skills
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import BOSS_ARCHETYPE, TRAINING_ARCHETYPE
-from trpg.engine.actions import ACTION_ADAPTER, Action, Decision, FollowupTarget, Step, UseSkill
+from trpg.engine.actions import (
+    ACTION_ADAPTER,
+    Action,
+    Decision,
+    FollowupTarget,
+    Prepare,
+    Step,
+    UseSkill,
+)
 from trpg.engine.ai.orders import OrderRecord, OrderSet, validate_order
 from trpg.engine.battle import begin_battle, has_only_end_turn, resolve, resume
 from trpg.engine.events import EventBase
@@ -106,11 +114,15 @@ class BattleSession:
         seed: int,
         *,
         max_auto_steps: int = DEFAULT_MAX_ACTIONS,
+        prep_placement: bool = True,
     ) -> None:
         self.battle_id = battle_id
         self.owner: str | None = None
         """建立這場戰鬥的帳號 ID（6S-1；開發模式關時只有它能讀寫，沒有＝``None``）。"""
         self.library = library
+        # SK-3 戰前佈置（06 6.38 第 11 點）：網頁戰鬥才開
+        # （主角有可放的技能時，開場先等玩家佈置或跳過）
+        setup = setup.model_copy(update={"prep_placement": prep_placement})
         self.setup = setup
         self.seed = seed
         self.max_auto_steps = max_auto_steps
@@ -137,6 +149,8 @@ class BattleSession:
         """
         if pending is not None:
             return pending.unit_id == self.hero_id
+        if state.prep is not None and state.prep.unit_id == self.hero_id:
+            return True  # SK-3：戰前佈置（敵人先手時也在第一個行動之前停下）
         if state.active_unit != self.hero_id:
             return False
         return not has_only_end_turn(state) or self._has_controllable_summon(state)
@@ -158,6 +172,8 @@ class BattleSession:
             return "ended"
         if self.pending is not None and self.pending.unit_id == self.hero_id:
             return "decision"
+        if self.state.prep is not None and self.state.prep.unit_id == self.hero_id:
+            return "prep"
         if self.awaits_player(self.state, self.pending):
             return "action"
         return "stalled"
@@ -212,6 +228,7 @@ class BattleSession:
         reasons = {
             "ended": "戰鬥已結束",
             "decision": "目前在等主角回答反應詢問",
+            "prep": "目前在等主角戰前佈置（或跳過）",
             "action": "目前在等主角的動作",
             "stalled": "自動推進超過上限，戰鬥無法繼續",
         }
@@ -226,6 +243,14 @@ class BattleSession:
         """結算主角的動作，再自動推進。不合法時拋出 ``IllegalActionError``，狀態不變。"""
         self._require("action")
         self._require_hero(action)
+        result = resolve(self.state, action)
+        return [self._commit(action, result), *self._advance()]
+
+    def prepare(self, skill_id: str | None, target: Pos | None) -> list[StepRecord]:
+        """戰前佈置（SK-3）：放 1 個（或兩個都 ``None``＝跳過），再自動推進。不合法時拋出
+        ``IllegalActionError``，狀態不變。"""
+        self._require("prep")
+        action = Prepare(unit_id=self.hero_id, skill_id=skill_id, target_pos=target)
         result = resolve(self.state, action)
         return [self._commit(action, result), *self._advance()]
 
@@ -408,9 +433,12 @@ class SessionStore:
         *,
         max_auto_steps: int = DEFAULT_MAX_ACTIONS,
         new_id: Callable[[], str] = _new_battle_id,
+        prep_placement: bool = True,
     ) -> None:
         self.library = library
         self.max_auto_steps = max_auto_steps
+        self.prep_placement = prep_placement
+        """戰前佈置（SK-3）：網頁戰鬥預設開；API 測試的 client 預設關。"""
         self._new_id = new_id
         self._sessions: dict[str, BattleSession] = {}
         self._lock = threading.Lock()
@@ -494,6 +522,7 @@ class SessionStore:
                 setup,
                 request.seed,
                 max_auto_steps=self.max_auto_steps,
+                prep_placement=self.prep_placement,
             )
         except BattleSetupError as exc:
             raise InvalidRequestError(str(exc)) from exc
@@ -516,7 +545,12 @@ class SessionStore:
             while battle_id in self._sessions:  # pragma: no cover - 機率極低
                 battle_id = self._new_id()
         session = BattleSession(
-            battle_id, self.library, setup, seed, max_auto_steps=self.max_auto_steps
+            battle_id,
+            self.library,
+            setup,
+            seed,
+            max_auto_steps=self.max_auto_steps,
+            prep_placement=self.prep_placement,
         )
         if restore is not None:  # 重播成功才登記
             session.restore(*restore)

@@ -348,6 +348,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/EndTurn"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Prepare"
                   }
                 ],
                 "discriminator": {
@@ -372,7 +375,8 @@
                     "set_summon_mode": "#/components/schemas/SetSummonMode",
                     "command_summon": "#/components/schemas/CommandSummon",
                     "infuse_skill": "#/components/schemas/InfuseSkill",
-                    "end_turn": "#/components/schemas/EndTurn"
+                    "end_turn": "#/components/schemas/EndTurn",
+                    "prepare": "#/components/schemas/Prepare"
                   }
                 },
                 "title": "Action"
@@ -428,6 +432,59 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BattleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/battles/{battle_id}/prep": {
+      "post": {
+        "tags": [
+          "battles"
+        ],
+        "summary": "Post Prep",
+        "description": "戰前佈置（SK-3，06 6.38 第 11 點）：``awaiting == \"prep\"`` 時在我方起始區放 1 個陷阱、刻印或\n表面（從回應的 ``prep.options`` 挑一招與一格）；兩個欄位都省略＝不放、直接開戰。\n之後自動推進。",
+        "operationId": "post_prep_api_battles__battle_id__prep_post",
+        "parameters": [
+          {
+            "name": "battle_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Battle Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepRequest"
               }
             }
           }
@@ -539,6 +596,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/EndTurn"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Prepare"
                   }
                 ],
                 "discriminator": {
@@ -563,7 +623,8 @@
                     "set_summon_mode": "#/components/schemas/SetSummonMode",
                     "command_summon": "#/components/schemas/CommandSummon",
                     "infuse_skill": "#/components/schemas/InfuseSkill",
-                    "end_turn": "#/components/schemas/EndTurn"
+                    "end_turn": "#/components/schemas/EndTurn",
+                    "prepare": "#/components/schemas/Prepare"
                   }
                 },
                 "title": "Action"
@@ -5062,6 +5123,9 @@
           },
           {
             "$ref": "#/components/schemas/EndTurn"
+          },
+          {
+            "$ref": "#/components/schemas/Prepare"
           }
         ],
         "discriminator": {
@@ -5077,6 +5141,7 @@
             "infuse_skill": "#/components/schemas/InfuseSkill",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "prepare": "#/components/schemas/Prepare",
             "reload": "#/components/schemas/Reload",
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",
@@ -6300,7 +6365,8 @@
               "action",
               "decision",
               "ended",
-              "stalled"
+              "stalled",
+              "prep"
             ],
             "title": "Awaiting"
           },
@@ -6424,6 +6490,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/BattleOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prep": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PrepOut"
               },
               {
                 "type": "null"
@@ -21492,6 +21568,141 @@
         "title": "PregenWaitRequest",
         "description": "``POST .../pregen/wait``：``kind`` 是要打開的入口；閃現另給技能、重閃欄位與指定類別。"
       },
+      "PrepOptionOut": {
+        "properties": {
+          "skill_id": {
+            "type": "string",
+            "title": "Skill Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "trap",
+              "rune",
+              "surface"
+            ],
+            "title": "Kind"
+          },
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill_id",
+          "kind",
+          "tiles"
+        ],
+        "title": "PrepOptionOut",
+        "description": "戰前佈置的一招（SK-3）：``kind`` 為 ``trap``（陷阱）、``rune``（刻印）、``surface``（表面）；\n``tiles`` 是我方起始區內這招放得下的格子（依 (y, x)）。"
+      },
+      "PrepOut": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "zone": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Zone"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/PrepOptionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "zone",
+          "options"
+        ],
+        "title": "PrepOut",
+        "description": "戰前佈置（SK-3，06 6.38 第 11 點）：開戰前（雙方都還沒行動）在我方起始區 ``zone`` 免費放\n1 個陷阱、刻印或表面（``POST /api/battles/{id}/prep``）；放了那招照常進冷卻。"
+      },
+      "PrepRequest": {
+        "properties": {
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "target_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PrepRequest",
+        "description": "``POST /api/battles/{id}/prep``：``skill_id``＋``target_pos``（從 ``prep.options`` 挑）；\n兩個都省略＝不放、直接開戰。"
+      },
+      "Prepare": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "prepare",
+            "title": "Type",
+            "default": "prepare"
+          },
+          "skill_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Id"
+          },
+          "target_pos": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Pos"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id"
+        ],
+        "title": "Prepare",
+        "description": "戰前佈置（SK-3，06 6.38 第 11 點，:mod:`trpg.engine.prep`）：開戰前（雙方都還沒行動）在我方\n起始區的 ``target_pos`` 免費放 1 個 ``skill_id`` 會放的陷阱、刻印或表面；兩個都省略＝不放、直接\n開戰。只有 ``BattleState.prep`` 開著、而且是窗的主角才合法（不看行動順序）。**不列入**\n``legal_actions``（AI 不使用）。"
+      },
       "PreviewOut": {
         "properties": {
           "action": {
@@ -26947,6 +27158,9 @@
             "$ref": "#/components/schemas/EndTurn"
           },
           {
+            "$ref": "#/components/schemas/Prepare"
+          },
+          {
             "$ref": "#/components/schemas/Decision"
           }
         ],
@@ -26964,6 +27178,7 @@
             "infuse_skill": "#/components/schemas/InfuseSkill",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
+            "prepare": "#/components/schemas/Prepare",
             "reload": "#/components/schemas/Reload",
             "run": "#/components/schemas/Run",
             "set_reaction_mode": "#/components/schemas/SetReactionMode",

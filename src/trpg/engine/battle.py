@@ -31,6 +31,7 @@ from trpg.engine.actions import (
     InfuseSkill,
     Interact,
     Move,
+    Prepare,
     Reload,
     Run,
     SetReactionMode,
@@ -93,6 +94,7 @@ from trpg.engine.maneuvers import contest
 from trpg.engine.oaths import open_oath
 from trpg.engine.parts import check_target_part
 from trpg.engine.practice import is_practice_protected
+from trpg.engine.prep import do_prepare, open_prep, prep_actor
 from trpg.engine.race.skills import do_race_skill, race_skill_actions
 from trpg.engine.reactions import (
     PauseForDecision,
@@ -468,9 +470,17 @@ def begin_battle(setup: BattleSetup, seed: int) -> ResolveResult:
 
 
 def _settle_placement(setup: BattleSetup, state: BattleState) -> None:
+    """開場那一刻定下的事：巨型單位、獨狼（LW-1）、戰前佈置的窗（SK-3）。"""
+    _settle_giants(setup, state)
+    mark_lone_wolves(state)
+    if setup.prep_placement:  # 戰前佈置（SK-3）：網頁戰鬥、主角有可放的技能時開窗
+        open_prep(state, _zone_of(setup, state, Team.ALLY))
+
+
+def _settle_giants(setup: BattleSetup, state: BattleState) -> None:
     """巨型單位（GB-1a，05 5.12.4、T3、T8）開場的兩件事：朝向改成地圖 ``giant_facing`` 指定的方向
     （沒列的照陣營的開場朝向）；佔格上原有的表面直接清掉（不發事件；內容檢查本來就擋）。沒有巨型
-    單位時什麼都不做。最後標出獨狼（LW-1，#156：開場那一刻定下、整場固定）。"""
+    單位時什麼都不做。"""
     for unit in state.units_sorted():
         if unit.footprint == 1:
             continue
@@ -489,7 +499,6 @@ def _settle_placement(setup: BattleSetup, state: BattleState) -> None:
                         surface_magnitude_permille=PERMILLE,
                     ),
                 )
-    mark_lone_wolves(state)
 
 
 OPENING_STATUS_MAX_DURATION = 2
@@ -590,6 +599,8 @@ def acting_unit(state: BattleState, action: Action) -> UnitState:
     if state.pending is not None:
         who = state.units[state.pending.unit_id].name_zh
         raise IllegalActionError(f"結算暫停中：等待 {who} 決定是否使用反應，請使用 resume")
+    if action.type == "prepare":  # 戰前佈置（SK-3）不看行動順序
+        return prep_actor(state, action.unit_id)
     active = state.active
     if active is None:
         raise IllegalActionError("目前沒有行動中的單位")
@@ -1268,6 +1279,11 @@ def _do_race_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
     do_race_skill(ctx, unit, action)
 
 
+def _do_prepare(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, Prepare)
+    do_prepare(ctx, unit, action.skill_id, action.target_pos)
+
+
 def _do_use_skill(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, UseSkill)
     use_skill(ctx, unit, action)
@@ -1294,6 +1310,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "command_summon": _do_command_summon,
     "infuse_skill": _do_infuse_skill,
     "end_turn": _do_end_turn,
+    "prepare": _do_prepare,
 }
 
 
@@ -1312,6 +1329,8 @@ def resolve_with(
         base.clone(), decisions=decisions, preview=preview, gamble=gamble, fire_lock=fire_lock
     )
     actor = ctx.state.units[action.unit_id]
+    if ctx.state.prep is not None and action.type != "prepare":
+        ctx.state.prep = None  # 戰前佈置（SK-3）：有人行動了就關窗
     try:
         ACTION_HANDLERS[action.type](ctx, actor, action)
         # 測試模式的自動過輪放在 try 內：換手時的結算也可能暫停，恢復時整個動作會重跑。

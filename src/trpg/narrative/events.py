@@ -73,6 +73,8 @@ from trpg.engine.events import (
     PartBroken,
     PartDamaged,
     PartStatDown,
+    PrepPlaced,
+    PrepSkipped,
     PushResisted,
     RaceSkillUsed,
     ReactionDeclined,
@@ -1399,6 +1401,22 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}{why}"
     return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
+
+
+_PREP_KIND_ZH = {"trap": "陷阱", "rune": "刻印", "surface": "表面"}
+
+
+@_handles(PrepPlaced)
+def _prep_placed(e: PrepPlaced, v: _View) -> str:
+    """戰前佈置（SK-3）。"""
+    what = _PREP_KIND_ZH[e.kind]
+    skill = _skill_name(v, e.skill_id)
+    return f"  ◆ 戰前佈置：{v.name[e.unit_id]} 用「{skill}」在 {xy_text(e.pos)} 放了{what}"
+
+
+@_handles(PrepSkipped)
+def _prep_skipped(e: PrepSkipped, v: _View) -> str:
+    return f"  ◆ {v.name[e.unit_id]} 不做戰前佈置，直接開戰"
 
 
 @_handles(AttackRerolled)

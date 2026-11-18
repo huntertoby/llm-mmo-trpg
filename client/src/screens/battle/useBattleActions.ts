@@ -25,8 +25,11 @@ export interface BattleActions {
   setInfusionPick(a: Action | null): void;
   infusionOptions: ReturnType<typeof infusionChoices>;
   decide(accept: boolean): void;
-  /** 複製技能的選目標：`null` ＝ 放棄施放（不付代價）；複合技能第二段的選目標：`null` ＝ 放棄第二段。 */
+  /** 複製技能的選目標：`null` ＝ 放棄施放（不付代價）；複合技能第二段的選目標：`null` ＝ 放棄第二段。
+   * SK-3 戰前佈置時：選到格子＝送出佈置，`null`＝換一招（取消選取）。 */
   decideCopy(pick: Action | null): void;
+  /** SK-3：戰前佈置不放，直接開戰。 */
+  skipPrep(): void;
   decideWith(accept: boolean, always: boolean): void;
   setReaction(reaction: string, m: ReactionMode): void;
   issueOrders(orders: OrderSet): void;
@@ -44,6 +47,9 @@ export function useBattleActions(
   canAct: boolean,
   followPaused: boolean,
   setOrderPick: (kind: null) => void,
+  /** SK-3：戰前佈置中（取消選取時呼叫 `clearPrep`）。 */
+  prepPaused = false,
+  clearPrep: () => void = () => undefined,
 ): BattleActions {
   const send = useCallback((a: Action) => void run(() => api.act(battleId, a)), [battleId, run]);
   // 召喚技能（3-33b）：目標選好後多一步選灌注的關鍵字（可選 2 個以上時才問）
@@ -88,6 +94,14 @@ export function useBattleActions(
   );
   const decideCopy = useCallback(
     (pick: Action | null) => {
+      if (prepPaused) {
+        if (pick === null) clearPrep();
+        else if (pick.type === "prepare" && pick.skill_id != null && pick.target_pos != null) {
+          const { skill_id: skillId, target_pos: target } = pick;
+          void run(() => api.prepare(battleId, skillId, target));
+        }
+        return;
+      }
       if (pick !== null && pick.type !== "use_skill") return;
       if (followPaused) {
         const target = followupTargetOf(pick);
@@ -96,8 +110,9 @@ export function useBattleActions(
       }
       void run(() => api.decide(battleId, pick !== null, pick));
     },
-    [battleId, run, followPaused],
+    [battleId, run, followPaused, prepPaused, clearPrep],
   );
+  const skipPrep = useCallback(() => void run(() => api.prepare(battleId, null, null)), [battleId, run]);
   const decideWith = useCallback(
     (accept: boolean, always: boolean) => {
       const reaction = response.pending?.reaction;
@@ -141,6 +156,7 @@ export function useBattleActions(
     infusionOptions,
     decide,
     decideCopy,
+    skipPrep,
     decideWith,
     setReaction,
     issueOrders,

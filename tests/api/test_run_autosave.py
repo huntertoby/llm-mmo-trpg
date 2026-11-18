@@ -37,7 +37,7 @@ def save_dir(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def runs_client(library: ContentLibrary, save_dir: Path) -> Iterator[TestClient]:
-    with TestClient(create_app(library, save_dir=save_dir)) as c:
+    with TestClient(create_app(library, save_dir=save_dir, prep_placement=False)) as c:
         yield c
 
 
@@ -152,7 +152,9 @@ def test_every_node_change_autosaves(
 def test_autosave_failure_does_not_break_the_game(library: ContentLibrary, tmp_path: Path) -> None:
     blocker = tmp_path / "not-a-dir"
     blocker.write_text("x", encoding="utf-8")  # 存檔資料夾的位置被檔案佔住 → 寫不進去
-    with TestClient(create_app(library, save_dir=blocker / "saves")) as client:
+    with TestClient(
+        create_app(library, save_dir=blocker / "saves", prep_placement=False)
+    ) as client:
         run = _create(client)
         assert _ok(client.post(f"/api/runs/{run['run_id']}/battle"))["battle"]["awaiting"]
 
