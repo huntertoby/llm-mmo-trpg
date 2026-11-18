@@ -348,10 +348,13 @@ _SPECIAL_CORES: tuple[tuple[str, str], ...] = (
 
 
 def _special_ready(ctx: Ctx, name: str, *, core: bool) -> bool:
-    """``name`` 這次可以由獨立串流加入：骨架允許、稀有度與角色階級夠、形狀接受（附帶時）。"""
+    """``name`` 這次可以由獨立串流加入：骨架明列（附帶時不收「不限」的骨架，例如連段、光環）、
+    稀有度與角色階級夠、形狀接受（附帶時）。"""
     primitive = ctx.primitive(name)
+    listed = core or name in (ctx.skeleton.secondary.primitives or ())
     return (
-        _skeleton_allows(ctx, name, core=core)
+        listed
+        and _skeleton_allows(ctx, name, core=core)
         and rarity_rank(primitive.min_rarity) <= ctx.rank
         and ctx.library.budget.min_character_tier.primitives.get(name, 1) <= ctx.tier
         and (core or _accepts(primitive, ctx.shape))

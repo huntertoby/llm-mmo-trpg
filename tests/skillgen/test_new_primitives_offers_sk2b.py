@@ -183,3 +183,18 @@ def test_llm_topics_can_offer_them() -> None:
     )
     strike = select_subset(lib, ProposalRequest(1, "rare", skeleton="strike"))
     assert {"absorb_surface", "contagion"} <= set(strike.primitives)
+
+
+@pytest.mark.parametrize("skeleton", ["combo", "aura"])
+def test_unlisted_secondary_skeletons_never_get_them(skeleton: str) -> None:
+    """附帶「不限」的骨架（連段、光環）不由獨立串流加吸收表面、疾病擴散（只加在明列的骨架）。"""
+    lib = _forced("absorb_secondary_permille")
+    update = {"contagion_permille": 1000, "absorb_core_permille": 0}  # 光環的核心另有串流
+    structure = lib.composer.structure.model_copy(update=update)
+    lib = dataclasses.replace(
+        lib, composer=lib.composer.model_copy(update={"structure": structure})
+    )
+    for seed in range(20):
+        skill = compose_random_skill(seed, tier=2, rarity="epic", skeleton=skeleton, library=lib)
+        assert "contagion" not in _types(skill)
+        assert "absorb_surface" not in _types(skill)
