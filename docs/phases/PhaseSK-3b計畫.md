@@ -30,3 +30,8 @@
 - 快照、夾具先預測再逐鍵核對，不整批重產。版號有升就列出。API 有改就重產 OpenAPI。
 - 紙面小樣本（`scripts/recipe_census.py` 或 `scripts/wish_coverage.py`）：證明新觸發和重擲做得出來。
 - 報告寫在 `docs/phases/PhaseSK-3b報告.md`。
+
+## 追加（AR-SK2 待決，2026-11-19）
+
+7. 後端輸出 `contagious`：`engine/view.StatusView` 加欄位、重產 OpenAPI，快照照預測逐鍵核對。前端記號和標籤 AR-SK2 已經做好，接上後要補一張實機截圖。
+8. `content/` 的原語說明、工坊文字、名詞表裡的「會傳染」改成「擴散」或「會擴散」；「傳給敵人」改成定案句的說法。字以 `docs/art/SK-2原語-移植需求.md` 和玩法交接 4.1.28 為準。
