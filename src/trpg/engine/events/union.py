@@ -11,7 +11,9 @@ from trpg.engine.events.combat import (
     AttackRolled,
     ChainLimitReached,
     ConductBlocked,
+    ContagionMarked,
     DamageDealt,
+    DiseaseSpread,
     Healed,
     ManeuverRolled,
     PushResisted,
@@ -82,6 +84,7 @@ from trpg.engine.events.objects import (
     ObjectMoved,
     ObjectToppled,
     ShotPierced,
+    SurfaceAbsorbed,
     SurfaceBlown,
     SurfaceChanged,
     SurfaceEntered,
@@ -188,6 +191,8 @@ type Event = Annotated[
     | ShieldGained
     | ShieldAbsorbed
     | ShieldEnded
+    | ContagionMarked
+    | DiseaseSpread
     | StatusApplied
     | StatusRemoved
     | StatusSaveRolled
@@ -208,6 +213,7 @@ type Event = Annotated[
     | ObjectCreated
     | ObjectExpired
     | SurfaceChanged
+    | SurfaceAbsorbed
     | SurfaceBlown
     | TerrainChanged
     | ElementTouched

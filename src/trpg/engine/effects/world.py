@@ -531,6 +531,8 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
                 reason=_resist_reason(unit),
             )
         )
+    if distance == 0 and effect.distance > 0 and not effect.harmless:
+        events.append(_immovable_collision(ctx, effect, unit))  # 推不動算撞擊（06 6.38 第 9 點）
     dx, dy = effect.direction
     for step in range(distance):
         nxt = (unit.pos.x + dx, unit.pos.y + dy)
@@ -543,6 +545,8 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
             if not effect.harmless:  # 種族技的推拉被擋住只是停下，不算撞擊（Phase 3R-2）
                 events.append(_collide(ctx, effect, unit, nxt, reason, shortfall=distance - step))
             break
+        if effect.stop_before_deadly and is_deadly(state, nxt):
+            break  # 鉤：不拉進致命地形，停在它前面（SK-2）
         moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
         events.extend(moved)
         if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in moved):
@@ -596,6 +600,23 @@ def _collide(
         source_id=effect.source_id,
         other_id=None if other is None else other.id,
         object_id=object_id,
+        dice=effect.collision_dice,
+        damage_permille=effect.collision_permille,
+    )
+
+
+def _immovable_collision(ctx: Ctx, effect: PushEffect, unit: UnitState) -> EventBase:
+    """推、拉打到推不動的目標（位移免疫、巨型頭目、穩若磐石、距離減到 0 格……）：照撞牆結算
+    一次撞擊傷害，目標不移動（SK-2，#166，06 6.38 第 9 點）。種族技的無害推拉（``harmless``）
+    不算。"""
+    unit.collided_round = ctx.state.round
+    return ctx.emit(
+        Collided,
+        unit_id=unit.id,
+        obstacle="immovable",
+        shortfall=1,
+        pos=unit.pos,
+        source_id=effect.source_id,
         dice=effect.collision_dice,
         damage_permille=effect.collision_permille,
     )

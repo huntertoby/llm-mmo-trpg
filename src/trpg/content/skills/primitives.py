@@ -99,6 +99,7 @@ class PrimitiveParam(ContentModel):
         "weapon",
         "form",
         "form_category",
+        "absorb_gain",
     ]
     required: bool = False
     show_when: dict[str, str] | None = None
@@ -242,6 +243,7 @@ class PrimitiveDef(ContentModel):
             "inscribe",
             "detonate_runes",
             "sacrifice_summon",
+            "absorb_surface",
         ]
         | None
     ) = None

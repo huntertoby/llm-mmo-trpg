@@ -193,6 +193,12 @@ class EffectSpec(ContentModel):
     strike_other: bool | None = Field(default=None, exclude_if=lambda v: v is None)
     """``summon_beside`` 專用（TF-1，#159 護主）：召出後立刻對反應的觸發者（形狀 ``single`` 的
     對象，必須是敵人）普攻一次（打得到才打）。只能填 ``true``。"""
+    gain: Literal["stack", "heal", "shield", "element"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    """``absorb_surface`` 專用（SK-2，06 6.38 第 4 點）：吸到表面後換成什麼——``stack`` 自己的層數
+    （``stack``＋``amount``）、``heal`` 治療／``shield`` 護盾（``dice``）、``element`` 這一招之後的
+    傷害改成表面的元素。沒填不輸出，舊技能的序列化不變。"""
     split_heal: bool | None = None
     """``damage`` 專用（Phase 3D-8a，6.18 B）：聖光雙效——必須搭配 ``affects: all``；敵方依一般命中
     判定受到傷害、友方（含施放者）不擲命中而改為治療同樣的骰值（骰一次）。只能用在 ``aura``、
@@ -374,6 +380,33 @@ def error_path_of(message: str) -> str:
     類型註記（``（damage）``）先去掉再找。"""
     match = _ERROR_PATH.search(_TYPE_NOTE.sub("", message))
     return "" if match is None else match.group(0)
+
+
+_ABSORB_FIELDS: dict[str, tuple[str, ...]] = {
+    "stack": ("stack", "amount"),
+    "heal": ("dice",),
+    "shield": ("dice",),
+    "element": (),
+}
+"""``absorb_surface`` 每種收益必填的參數（其他兩組參數不能填；SK-2，06 6.38 第 4 點）。"""
+
+
+def _check_absorb_surface(where: str, effect: EffectSpec) -> None:
+    """``absorb_surface``（SK-2）：``gain`` 必填，``stack``＋``amount`` 只給層數、``dice`` 只給
+    治療與護盾；其他原語不能填 ``gain``。層數必須累積在自己身上是跨檔案檢查
+    （:func:`trpg.skillgen.validate.skill_problems`）。"""
+    if effect.type != "absorb_surface":
+        if effect.gain is not None:
+            raise ValueError(f"{where}：只有 absorb_surface 使用 gain")
+        return
+    if effect.gain is None:
+        raise ValueError(f"{where}：absorb_surface 必須填 gain（stack、heal、shield 或 element）")
+    need = _ABSORB_FIELDS[effect.gain]
+    for name in ("stack", "amount", "dice"):
+        filled = getattr(effect, name) is not None
+        if filled != (name in need):
+            verb = "必須填" if name in need else "不能填"
+            raise ValueError(f"{where}：gain: {effect.gain} {verb} {name}")
 
 
 def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:

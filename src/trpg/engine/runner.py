@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/128"
-"""目前的戰鬥紀錄版本（``/128``，Phase GB-1c：巨型頭目的部位綁格、限時封招與新落點、生長表面）。
+LOG_FORMAT = "trpg-battle-log/129"
+"""目前的戰鬥紀錄版本（``/129``，Phase SK-2：推不動算撞擊、吸收表面、疾病擴散、鉤）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

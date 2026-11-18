@@ -27,9 +27,11 @@ from trpg.engine.events import (
     CheckRolled,
     Collided,
     ConductBlocked,
+    ContagionMarked,
     DamageDealt,
     DamageRedirected,
     DeathCheated,
+    DiseaseSpread,
     EffectFizzled,
     ElementTouched,
     EnteredDeadlyTerrain,
@@ -110,6 +112,7 @@ from trpg.engine.events import (
     SummonExpired,
     SummonModeSet,
     SummonPulled,
+    SurfaceAbsorbed,
     SurfaceBlown,
     SurfaceChanged,
     SurfaceEntered,
@@ -552,6 +555,8 @@ def _collided(e: Collided, v: _View) -> str:
     name = v.name[e.unit_id]
     if e.obstacle == "excess":
         return f"  {name} 被推得太猛，受到衝擊（{e.shortfall} 次撞擊）"
+    if e.obstacle == "immovable":
+        return f"  {name} 推不動，硬吃下撞擊（{e.shortfall} 次撞擊）"
     target = _OBSTACLE_NAMES[e.obstacle]
     if e.other_id is not None:
         target += v.name[e.other_id]
@@ -1393,6 +1398,34 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}{why}"
     return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
+
+
+@_handles(ContagionMarked)
+def _contagion_marked(e: ContagionMarked, v: _View) -> str:
+    """疾病擴散的標記（SK-2）。"""
+    names = "、".join(v.statuses.get(s, s) for s in e.status_ids)
+    return f"  ☣ {v.name[e.target_id]} 身上的{names}會擴散了"
+
+
+@_handles(DiseaseSpread)
+def _disease_spread(e: DiseaseSpread, v: _View) -> str:
+    """疾病擴散（SK-2）。"""
+    names = "、".join(v.statuses.get(s, s) for s in e.status_ids)
+    return f"  ☣ {v.name[e.from_id]} 倒下，{names}擴散到 {v.name[e.to_id]} 身上"
+
+
+_ABSORB_GAIN_ZH = {"stack": "層數", "heal": "治療", "shield": "護盾"}
+
+
+@_handles(SurfaceAbsorbed)
+def _surface_absorbed(e: SurfaceAbsorbed, v: _View) -> str:
+    """吸收表面（SK-2，06 6.38 第 4 點）。"""
+    name = surface_name(v.state, e.surface)
+    if e.element is not None:
+        gain = f"這一招改帶{e.element.display_name}"
+    else:
+        gain = f"換成{_ABSORB_GAIN_ZH.get(e.gain, e.gain)}"
+    return f"  ◎ {v.name[e.unit_id]} 吸走了 {xy_text(e.pos)} 的{name}，{gain}"
 
 
 @_handles(SurfaceBlown)

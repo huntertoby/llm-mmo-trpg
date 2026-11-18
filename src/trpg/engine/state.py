@@ -101,6 +101,9 @@ class StatusInstance:
     cost_status: bool = False
     """代價狀態（Phase 3-50c，玩法決定 #62）：技能代價施加在自己身上的狀態（``self_paid``），
     淨化與驅散都移除不了。敵人施加的同種狀態沒有這個標記，照常可以淨化。"""
+    contagious: Annotated[bool, Field(exclude_if=_empty)] = False
+    """會擴散（SK-2 ``contagion``，06 6.31、6.38 第 5 點）：帶著它的單位倒下時，這個狀態以剩餘回合
+    傳給身邊的一個同陣營單位（:mod:`trpg.engine.contagion`）。``False`` 不輸出。"""
     magnitude_permille: int = 1000
     """姿態的幅度（‰，Phase 3W-5b，完整技能的 ``apply_status.magnitude_permille``）：狀態倍率欄位
     對持有者有利的那一邊離中性值（1000）的距離乘上它，見

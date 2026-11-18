@@ -420,6 +420,10 @@ class CoreRules(ContentModel):
     wind: WindRules = Field(default_factory=WindRules)
     clear_surfaces: tuple[Surface, ...] = (Surface.SMOKE, Surface.POISON)
     """清除表面（``clear_surface`` 原語，3-54c）省略表面種類時清除的表面。"""
+    contagion_statuses: tuple[str, ...] = ("bleed", "burning", "poison")
+    """疾病擴散（``contagion`` 原語，SK-2，06 6.31、6.38 第 5 點）會擴散的狀態。"""
+    contagion_radius: int = Field(default=1, ge=1, le=3)
+    """疾病擴散傳給幾格內（單位距離，量到最近佔格）的同陣營單位（初值 1）。"""
     """風元素的專屬機制（Phase 3-54a；吹送、元素擴散、風壓撞擊）。"""
     topple_length: int = Field(default=2, ge=1, le=4)
     """推倒（Phase 3C-5a）：``topplable`` 物件倒下時，從物件的下一格起壓住的格數。"""

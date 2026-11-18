@@ -45,6 +45,7 @@ from trpg.content.skills import (
     COMPOSITE_KIND_ZH,
     COMPOSITE_MOVES,
     GATHER_SHAPES,
+    HOOK,
     MAX_EFFECTS,
     ON_MISS_MIN_RARITY,
     REVIVE,
@@ -429,7 +430,7 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
         )
     out += _self_cost_violations(skill, library)
     out += _rule_rewrite_violations(skill, library)
-    out += _revive_violations(skill, library)
+    out += _revive_violations(skill, library) + _hook_violations(skill, library)
     return out
 
 
@@ -485,6 +486,22 @@ def _revive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
             "cap.revive_cost",
             f"有復活（revive）的技能必須每場限一次，或冷卻至少 {min_cooldown} 回合"
             f"（目前：每場 {cost.uses_per_battle or '不限'}、冷卻 {cost.cooldown or 0}）",
+        )
+    ]
+
+
+def _hook_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """鉤（SK-2，06 6.38 第 8 點）：冷卻至少 ``hook_min_cooldown`` 回合（初值 3，工坊可調）。"""
+    if not any(e.type == HOOK for e in skill.effects):
+        return []
+    need = library.budget.hook_min_cooldown
+    if (skill.cost.cooldown or 0) >= need:
+        return []
+    return [
+        Violation(
+            skill.id,
+            "cap.hook_cooldown",
+            f"有鉤（hook）的技能冷卻至少 {need} 回合（目前：{skill.cost.cooldown or 0}）",
         )
     ]
 

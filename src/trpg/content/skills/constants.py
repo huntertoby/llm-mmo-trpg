@@ -496,6 +496,16 @@ SUMMON_BESIDE = "summon_beside"
 """TF-1（#159 伴生、護主）的召喚到身邊原語 ID：被動、反應用，在持有者旁邊召出縮小版召喚物。"""
 
 
+ABSORB_SURFACE = "absorb_surface"
+"""SK-2（#166，06 6.38 第 4 點）的吸收表面原語 ID：移除一格的表面，換成層數、治療、護盾或元素。"""
+
+CONTAGION = "contagion"
+"""SK-2（#166，06 6.38 第 5 點、6.31）的疾病擴散原語 ID：目標身上的持續傷害狀態倒下時會擴散。"""
+
+HOOK = "hook"
+"""SK-2（#166，06 6.38 第 8 點）的鉤原語 ID：直線上第一個單位拉到施放者相鄰格（推拉上限的例外）。"""
+
+
 MAX_SUMMON_COUNT = 2
 """一次召喚的數量上限（Phase 3-33f2，數量型分歧進化：2 隻各 ``power_permille``）。"""
 """Phase 3D-4a 的召喚原語 ID（6.16 B）：在 ``ground_tile`` 選的空格召喚 ``unit`` 範本。"""

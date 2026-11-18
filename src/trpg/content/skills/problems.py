@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
+    ABSORB_SURFACE,
     ADD_STACK,
     ALL_STRIKES_HIT,
     CONSUME_STACK,
@@ -365,6 +366,11 @@ def _stack_effect_problems(
 ) -> list[str]:
     """層數原語的跨檔案檢查：層數的 ``owner`` 決定對象（``self`` 型只能對施放者自己、``target`` 型
     只能對敵方），累積量不超過上限；消耗還要符合層數的消耗規則。"""
+    if effect.type == ABSORB_SURFACE and refs.stacks is not None:  # SK-2：只給施放者自己
+        absorbed = refs.stacks.get(effect.stack or "")
+        if absorbed is not None and absorbed.owner != "self":
+            return [f"{where}.stack：吸收表面只能換成累積在自己身上的層數（owner: self）"]
+        return []
     if effect.type not in (ADD_STACK, CONSUME_STACK) or refs.stacks is None:
         return []
     stack = refs.stacks.get(effect.stack or "")

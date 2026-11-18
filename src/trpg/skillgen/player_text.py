@@ -180,6 +180,7 @@ _FIELD_ZH: dict[str, str] = {
     "explode": "爆骰",
     "followup": "第二段",
     "form_bonus_permille": "形態加成",
+    "gain": "換成",
     "hp_percent": "生命代價",
     "hp_permille": "生命比例",
     "id": "代號",

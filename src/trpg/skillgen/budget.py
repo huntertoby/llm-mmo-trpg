@@ -434,6 +434,26 @@ def _shield_rider_points(
     return points, f" ＋ {status.name_zh}附帶 {points} 點"
 
 
+def _absorb_surface_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``absorb_surface`` 的點數（SK-2，06 6.38 第 4 點；初值，接數值工坊）：``base_points`` ＋
+    收益——層數 ＝ ``add_stack`` 的 ``base_points`` × ``amount``、治療與護盾 ＝ 骰子平均、元素 ＝
+    ``base_points``。"""
+    primitives = by_id(library.ruleset.primitives)
+    base = primitives["absorb_surface"].base_points or 0
+    if effect.gain == "stack":
+        per = primitives["add_stack"].base_points or 0
+        amount = effect.amount or 1
+        return Fraction(base + per * amount), f"{base} ＋ 層數 {per}×{amount}"
+    if effect.gain in ("heal", "shield"):
+        if effect.dice is None:
+            raise BudgetError("absorb_surface 的治療、護盾缺少 dice，無法計算點數")
+        average = _dice_average(effect.dice)
+        return base + average, f"{base} ＋ {effect.dice} 平均"
+    return Fraction(base * 2), f"{base} ＋ 元素 {base}"
+
+
 def _restore_resource_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -1100,6 +1120,7 @@ def _rule_change_points(
 _SPECIAL_BASES: dict[
     str, Callable[[SkillDef, EffectSpec, ContentLibrary], tuple[Fraction, str]]
 ] = {
+    "absorb_surface": _absorb_surface_points,
     "consume_stack": _consume_stack_points,
     "consume_status": _consume_status_points,
     "hurl_object": _hurl_object_points,

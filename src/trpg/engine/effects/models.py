@@ -202,6 +202,8 @@ class ApplyStatusEffect(EffectBase):
     magnitude_permille: int = Field(default=1000, ge=1000)
     """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）；數值型狀態的
     強度（BAL-12e，#76）。其他狀態一律 1000。"""
+    contagious: bool = False
+    """疾病擴散傳過來的狀態照樣會擴散（``StatusInstance.contagious``，SK-2）。"""
 
     def sort_target(self) -> str:
         return self.target_id
@@ -342,6 +344,8 @@ class PushEffect(EffectBase):
     """拉扯（Phase 3R-2）：獸人「沉穩重心」只減「推」的距離，拉與傳送不減。"""
     harmless: bool = False
     """被擋住時只停下、不算撞擊（種族技的龍息震退與拋錨：不加傷害，Phase 3R-2）。"""
+    stop_before_deadly: bool = False
+    """下一格是致命地形（深淵、岩漿）時停在它前面、不算撞擊（鉤，SK-2，06 6.38 第 8 點）。"""
 
     def sort_target(self) -> str:
         return self.target_id or self.object_id or ""
@@ -404,6 +408,8 @@ class ClearSurfaceEffect(EffectBase):
     kind: Literal["clear_surface"] = "clear_surface"
     tiles: tuple[XY, ...]
     surfaces: tuple[Surface, ...]
+    cause: Literal["clear", "absorb"] = "clear"
+    """``surface_changed`` 的原因：``absorb`` 是吸收表面（SK-2 ``absorb_surface``）移除的表面。"""
 
 
 class DamageObjectEffect(EffectBase):

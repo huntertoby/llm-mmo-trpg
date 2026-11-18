@@ -94,6 +94,7 @@ from trpg.content.skills.constants import (
     _ZONE_ONLY_FIELDS as _ZONE_ONLY_FIELDS,
 )
 from trpg.content.skills.constants import (
+    ABSORB_SURFACE,
     ADD_STACK,
     AFFECTS_VALUES,
     ALL_STRIKES_HIT,
@@ -112,6 +113,7 @@ from trpg.content.skills.constants import (
     CONSUME_STACK,
     CONSUME_STATUS,
     CONSUME_THEN_TYPES,
+    CONTAGION,
     COPY_SKILL,
     DAMAGE_MULTIPLIER,
     DASH,
@@ -134,6 +136,7 @@ from trpg.content.skills.constants import (
     GATHER_SHAPES,
     GRANT_AP,
     GRANT_SKILL,
+    HOOK,
     HURL_OBJECT,
     INSCRIBE,
     INTERCEPT,
@@ -517,6 +520,7 @@ from trpg.content.skills.variants import (
 )
 
 __all__ = [
+    "ABSORB_SURFACE",
     "ADD_STACK",
     "AFFECTS_VALUES",
     "ALL_STRIKES_HIT",
@@ -535,6 +539,7 @@ __all__ = [
     "CONSUME_STACK",
     "CONSUME_STATUS",
     "CONSUME_THEN_TYPES",
+    "CONTAGION",
     "COPY_SKILL",
     "DAMAGE_MULTIPLIER",
     "DASH",
@@ -558,6 +563,7 @@ __all__ = [
     "GATHER_SHAPES",
     "GRANT_AP",
     "GRANT_SKILL",
+    "HOOK",
     "HURL_OBJECT",
     "ICON_PROP_KEY",
     "INSCRIBE",

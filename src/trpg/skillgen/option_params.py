@@ -112,6 +112,7 @@ PARAM_TEXT: dict[str, str] = {
     "unit": "召喚物",
     "form": "形態",
     "form_category": "形態類別",
+    "gain": "換成",
     "when": "結算時機",
     "which": "哪些技能",
     "win": "成功時的效果",
@@ -144,6 +145,12 @@ _LITERAL_CHOICES: dict[str, tuple[tuple[str, str, str], ...]] = {
         ("tile", "固定在格子", "區域固定在施放時的格子"),
         ("caster", "跟隨施放者", "區域跟著施放者移動"),
         ("moving", "移動", "每次環境回合沿施放方向前進 speed 格"),
+    ),
+    "absorb_gain": (
+        ("stack", "層數", "累積自己的層數（另填 stack、amount）"),
+        ("heal", "治療", "治療自己（另填 dice）"),
+        ("shield", "護盾", "給自己護盾（另填 dice）"),
+        ("element", "元素", "這一招之後的傷害改成表面的元素（只吸帶元素的表面）"),
     ),
     "zone_when": (
         ("enter", "進入時", "單位進入區域時結算"),
