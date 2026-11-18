@@ -18,7 +18,7 @@ import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { bossSideHudOn, shiftShapes, sideBadgeLayouts, sideBlock, sideRowShift, type SideBlock } from "./bossSideHud";
 import { statusTile, tileCanvas } from "./skillIcon";
-import { HEAD_PAD, spreadMarkHeadCanvas } from "./spreadMark";
+import { fieldUsesCardLayout, HEAD_PAD, headSporeRight, quantizeScreenPx, spreadMarkHeadCanvas } from "./spreadMark";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
@@ -35,6 +35,7 @@ import {
   ROW_MIN_PITCH,
   ROW_PLUS_GAP,
   moreCapBox,
+  SUMMON_MORE_DX_MAX,
   PLUS_CAP_BAR,
   PLUS_CAP_DIGIT_W,
   PLUS_CAP_EDGE,
@@ -1056,14 +1057,19 @@ function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Spr
 
 const rowTextures = new Map<string, Texture>();
 
-/** AR-SK2：狀態列的「會擴散」記號貼圖（頭頂排法；邊長 ROW_ICON_FEET＋2×HEAD_PAD，框心在正中）。 */
-let spreadTex: Texture | null = null;
-function spreadMarkTexture(): Texture | null {
-  if (spreadTex !== null) return spreadTex;
-  const canvas = spreadMarkHeadCanvas(ROW_ICON_FEET);
+/** AR-SK2：狀態列的「會擴散」記號貼圖（邊長 ROW_ICON_FEET＋2×HEAD_PAD，框心在正中）。
+ *  AR-SK3（`AR-SK2驗收.md` 裁定 4）：`screenPx`＝每個模型像素幾個畫面 px；畫面上的框邊長 ≥ 14 px 時換狀態卡的排法（照倍率量化快取）。 */
+const spreadTex = new Map<string, Texture>();
+function spreadMarkTexture(screenPx = 1): Texture | null {
+  const card = fieldUsesCardLayout(ROW_ICON_FEET, screenPx);
+  const key = card ? `c|${quantizeScreenPx(screenPx)}` : "h";
+  const hit = spreadTex.get(key);
+  if (hit !== undefined) return hit;
+  const canvas = card ? spreadMarkHeadCanvas(ROW_ICON_FEET, 2, screenPx) : spreadMarkHeadCanvas(ROW_ICON_FEET);
   if (canvas === null) return null;
-  spreadTex = Texture.from(canvas);
-  return spreadTex;
+  const tex = Texture.from(canvas);
+  spreadTex.set(key, tex);
+  return tex;
 }
 
 function rowIconTexture(id: string): Texture | null {
@@ -1305,7 +1311,11 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
   let base: RowPlan | null = null;
   let mode: RowMode = "normal";
   const widthOf = (lay: RowPlan) => (lay.plusOnly === true ? allW() : lay.compact ? plusW : 0);
-  const shapesOf = (lay: RowPlan) => rowShapes(lay, shown.length, rowK, bottom, extra > 0, widthOf(lay));
+  // AR-SK3（`AR-SK2驗收.md` 小修 1）：第 2 個圖示帶「會擴散」記號時，「+N」角標膠囊往右讓到孢子外面（孢子不壓到膠囊）
+  const lastMarked = extra > 0 && marks[shown.length - 1] != null;
+  const sporeDx = headSporeRight(ROW_ICON_FEET) + 0.5 - ROW_ICON_FEET / 2 + SUMMON_MORE_DX_MAX;
+  const capClear = (lay: RowPlan): RowPlan => (lastMarked && !lay.compact && lay.plusOnly !== true && lay.moreDx < sporeDx ? { ...lay, moreDx: sporeDx } : lay);
+  const shapesOf = (lay: RowPlan) => rowShapes(capClear(lay), shown.length, rowK, bottom, extra > 0, widthOf(lay));
   const arrow = arrowOf(u);
   const apply = (lay: RowPlan) => {
     let sh = shapesOf(lay);
@@ -1330,7 +1340,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     });
     if (more !== null) {
       more.node.visible = !lay.compact;
-      const m = moreCapBox(x0 + (n - 1) * lay.pitch, lay.moreDx, extra);
+      const m = moreCapBox(x0 + (n - 1) * lay.pitch, capClear(lay).moreDx, extra);
       more.node.position.set(m.l, m.t);
     }
     const capY = plusCapsuleY();
@@ -1468,6 +1478,15 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     rowK = k;
     rowS = s;
     mode = "normal";
+    // AR-SK3：畫面上的框邊長 ≥ 14 px 時記號換成狀態卡的排法（`spreadMark.fieldUsesCardLayout`）
+    const markTex = marks.some((m) => m != null) ? spreadMarkTexture(k * s) : null;
+    if (markTex !== null)
+      for (const m of marks)
+        if (m != null && m.texture !== markTex) {
+          m.texture = markTex;
+          m.width = ROW_ICON_FEET + 2 * HEAD_PAD; // 換貼圖後尺寸照貼圖重算，要再設一次
+          m.height = ROW_ICON_FEET + 2 * HEAD_PAD;
+        }
     // 6F-20：膠囊裡「+」的長度照縮放（1600 寬的角標只在縮放 > 0.85 出現，一律 `CAP_WIDE`）
     geom = capGeom(s);
     plusW = plusN > 0 ? plusCapsuleWidth(plusN, geom) : 0;
