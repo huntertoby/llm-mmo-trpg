@@ -157,3 +157,63 @@ def test_main_reads_files_and_globs(
     data = json.loads(capsys.readouterr().out)
     assert data["groups"] == {"使用者": 1, "美術 PM": 1}
     assert ws["main"]([str(tmp_path / "none*.md")]) == 2
+
+
+_SECTIONED = "\n".join(
+    [
+        "## 1. 角色與守則",
+        "- 守則裡等使用者回話",
+        "### 1.1 細節",  # 上層是守則，整節不掃
+        "- 子節等美術答覆",
+        "## 2. 現況",
+        "- 現況等開發交件",
+        "### 2.1 被推翻或作廢的方向",
+        "- 作廢節等玩法 PM 回覆",
+        "### 2.2 待轉開發 PM（玩法 PM 已定案，照這節轉）",  # 括號裡的字不算
+        "- 待轉節等專案 PM 轉達",
+        "## 3. 歸檔",
+        "- 歸檔節等使用者決定",
+        "## 4. 舊稿（`docs/archive/`）",
+        "- 括號裡的 archive 不算，等美術答覆",
+    ]
+)
+
+
+def test_skip_sections_by_title_and_parent(ws: dict[str, Any]) -> None:
+    hits = _scan(ws, _SECTIONED)
+    assert [(h.line, h.owner) for h in hits] == [(6, "開發 PM"), (10, "專案 PM"), (14, "美術 PM")]
+
+
+def test_all_sections_flag_scans_everything(ws: dict[str, Any]) -> None:
+    hits = list(ws["scan_text"](_SECTIONED, "x.md", 60, True))
+    assert [h.line for h in hits] == [2, 4, 6, 8, 10, 12, 14]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "- 使用者原話：「我等你們收尾就會叫他們做」",
+        "- 開工時機：「等美術做完」",
+        "- 不傳「還在等」這類告知",
+        "- 原話「外層『等使用者』內層」之後",
+        "- 沒收尾的「等開發交件",
+    ],
+)
+def test_quotes_are_skipped_by_default(ws: dict[str, Any], line: str) -> None:
+    assert _scan(ws, line) == []
+    hits = list(ws["scan_text"](line, "x.md", 60, False, True))
+    assert len(hits) == 1
+
+
+def test_quote_only_hides_hits_inside_it(ws: dict[str, Any]) -> None:
+    hits = _scan(ws, "- 「等」字以外：LW-2 那行仍等美術答覆")
+    assert [h.owner for h in hits] == ["美術 PM"]
+
+
+def test_main_flags(ws: dict[str, Any], tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    f = tmp_path / "c交接.md"
+    f.write_text("## 流程\n- 等使用者回話\n## 現況\n- 原話「等美術答覆」\n", encoding="utf-8")
+    assert ws["main"]([str(f), "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["total"] == 0
+    assert ws["main"]([str(f), "--json", "--all-sections", "--include-quotes"]) == 0
+    assert json.loads(capsys.readouterr().out)["groups"] == {"使用者": 1, "美術 PM": 1}

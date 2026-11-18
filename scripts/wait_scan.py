@@ -6,11 +6,14 @@
     uv run python scripts/wait_scan.py --json              # 輸出 JSON
     uv run python scripts/wait_scan.py docs/開發PM交接.md   # 指定檔案或 glob（可多個）
     uv run python scripts/wait_scan.py --show-closed       # 連「看起來已結案」的也列出
+    uv run python scripts/wait_scan.py --all-sections --include-quotes  # 不排除小節與引號
 
 判斷全靠下面幾張關鍵字表（只用標準庫，沒有語意理解）：
 
 - ``WAIT_PATTERNS``：哪些字算「在等」。
 - ``NOISE_PHRASES``：命中位置落在這些詞裡就丟掉（「待辦」「待查」等清單標題字）。
+- ``SKIP_SECTION_WORDS``：小節標題（含上層）有這些字就整節不掃（``--all-sections`` 關掉）。
+- 「」引號裡的命中不算（``--include-quotes`` 打開）。
 - ``CLOSED_MARKERS``：同一句（或同一列開頭）有這些字就標成「已結案？」，預設不列入分組。
 - ``OWNER_PATTERNS``：命中處往後一小段裡先出現誰，就算在等誰；都沒有就是「未知」。
 """
@@ -105,6 +108,17 @@ OWNER_PATTERNS: list[tuple[str, str]] = [
     ("美術 PM", r"美術"),
 ]
 OWNER_WINDOW = 25
+
+# 小節標題（含上層標題）有這些字，整節不掃；--all-sections 關掉。
+# 守則、流程類小節在講「怎麼處理等待」，作廢、已定案、歸檔、歷史類是舊紀錄。
+# 只比對標題本文，括號（）裡的補充說明不算：
+# 「4.1 待轉開發 PM（玩法 PM 已定案，……）」是待轉清單，要掃。
+SKIP_SECTION_WORDS: list[str] = ["守則", "流程", "作廢", "已定案", "歸檔", "歷史", "archive"]
+PAREN_NOTE = re.compile(r"（[^）]*）|\([^)]*\)")
+
+# 「」引號裡的命中預設不算（多半是引用使用者原話或字面）；--include-quotes 打開。
+QUOTE_OPEN = "「"
+QUOTE_CLOSE = "」"
 UNKNOWN = "未知"
 OWNER_ORDER = [name for name, _ in OWNER_PATTERNS] + [UNKNOWN]
 
@@ -189,16 +203,40 @@ def _sentences(line: str) -> list[tuple[int, str]]:
     return out
 
 
-def scan_line(line: str) -> list[tuple[str, str, bool, int, str]]:
+def quoted_mask(line: str) -> list[bool]:
+    """每個字是否在「」裡（可巢狀；沒收尾的「一路算到列尾）。"""
+    mask: list[bool] = []
+    depth = 0
+    for ch in line:
+        if ch == QUOTE_OPEN:
+            depth += 1
+            mask.append(True)
+        elif ch == QUOTE_CLOSE and depth > 0:
+            depth -= 1
+            mask.append(True)
+        else:
+            mask.append(depth > 0)
+    return mask
+
+
+def is_skipped_section(titles: list[str]) -> bool:
+    cores = [PAREN_NOTE.sub("", title) for title in titles]
+    return any(word in core for core in cores for word in SKIP_SECTION_WORDS)
+
+
+def scan_line(line: str, include_quotes: bool = False) -> list[tuple[str, str, bool, int, str]]:
     """回傳 (規則, 誰, 是否已結案, 句內位置, 句子)；同一句只算一筆。"""
     head = line.lstrip(" -*|>")[:LINE_HEAD_CHARS]
     head_closed = any(marker in head for marker in LINE_HEAD_MARKERS)
+    mask = [False] * len(line) if include_quotes else quoted_mask(line)
     results: list[tuple[str, str, bool, int, str]] = []
-    for _, sentence in _sentences(line):
+    for offset, sentence in _sentences(line):
         for rule, rx in _WAIT_RES:
             found = None
             for m in rx.finditer(sentence):
                 if _in_noise(sentence, m.start(), m.end()) or _looks_like_etc(sentence, m.start()):
+                    continue
+                if mask[offset + m.start()]:
                     continue
                 found = m
                 break
@@ -213,9 +251,17 @@ def scan_line(line: str) -> list[tuple[str, str, bool, int, str]]:
     return results
 
 
-def scan_text(text: str, file: str, width: int = 60) -> list[Hit]:
+def scan_text(
+    text: str,
+    file: str,
+    width: int = 60,
+    all_sections: bool = False,
+    include_quotes: bool = False,
+) -> list[Hit]:
     hits: list[Hit] = []
     section = ""
+    stack: list[tuple[int, str]] = []  # (標題層級, 標題)，由上到下
+    skipping = False
     in_fence = False
     for lineno, raw in enumerate(text.splitlines(), start=1):
         if FENCE.match(raw):
@@ -225,9 +271,14 @@ def scan_text(text: str, file: str, width: int = 60) -> list[Hit]:
             continue
         heading = HEADING.match(raw)
         if heading:
+            level = len(heading.group(1))
             section = heading.group(2)
+            stack = [item for item in stack if item[0] < level] + [(level, section)]
+            skipping = not all_sections and is_skipped_section([t for _, t in stack])
             continue  # 標題本身不算（「待辦」「待 PM 決定」這類標題字）
-        for rule, owner, closed, pos, sentence in scan_line(raw):
+        if skipping:
+            continue
+        for rule, owner, closed, pos, sentence in scan_line(raw, include_quotes):
             hits.append(
                 Hit(
                     file=file,
@@ -267,10 +318,16 @@ def _display(path: Path) -> str:
         return path.as_posix()
 
 
-def scan_paths(paths: list[Path], width: int = 60) -> list[Hit]:
+def scan_paths(
+    paths: list[Path],
+    width: int = 60,
+    all_sections: bool = False,
+    include_quotes: bool = False,
+) -> list[Hit]:
     hits: list[Hit] = []
     for p in paths:
-        hits.extend(scan_text(p.read_text(encoding="utf-8"), _display(p), width))
+        text = p.read_text(encoding="utf-8")
+        hits.extend(scan_text(text, _display(p), width, all_sections, include_quotes))
     return hits
 
 
@@ -332,13 +389,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", action="store_true", help="輸出 JSON")
     parser.add_argument("--show-closed", action="store_true", help="連看起來已結案的也列出")
     parser.add_argument("--width", type=int, default=60, help="句子片段最多幾個字（預設 60）")
+    parser.add_argument("--all-sections", action="store_true", help="連守則、流程、作廢等小節也掃")
+    parser.add_argument("--include-quotes", action="store_true", help="「」引號裡的也算")
     args = parser.parse_args(argv)
 
     paths = resolve_paths(args.paths or [DEFAULT_GLOB])
     if not paths:
         print("找不到檔案：" + "、".join(args.paths or [DEFAULT_GLOB]), file=sys.stderr)
         return 2
-    hits = scan_paths(paths, args.width)
+    hits = scan_paths(paths, args.width, args.all_sections, args.include_quotes)
     out = (
         render_json(hits, args.show_closed)
         if args.json
