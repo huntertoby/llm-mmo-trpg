@@ -7,7 +7,6 @@ import type { Pos } from "../api/types";
 import type { Sk2Absorb, Sk2Fx, Sk2Hook, Sk2Spread } from "../battle/sk2Fx";
 import { TILE_SIZE } from "../battle/geometry";
 import * as QP from "./qIcon/parts";
-import * as QS from "./qIcon/skills";
 import { ABSORB_MS, ABSORB_SHRINK, absorbTop, absorbUnder, chainMinK, HOOK_FLY_MS, hookOver, moteKind, SPREAD_MS, spreadTop, spreadUnder, type Pt, type Sk2AbsorbGeom, type Sk2HookGeom, type Sk2SpreadGeom } from "./sk2FxArt";
 import type { Effect } from "./vfxEffects";
 
@@ -38,14 +37,14 @@ export interface Sk2Host {
 /** 演出這一刻的施放者手的位置（`playSkill` 給的作用端；沒有時呼叫端給 `null`）。 */
 export type Sk2Origin = Pt | null;
 
-interface Box {
+export interface Box {
   x: number;
   y: number;
   w: number;
   h: number;
 }
 
-function boxOf(pts: readonly Pt[], pad: number): Box {
+export function boxOf(pts: readonly Pt[], pad: number): Box {
   const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
   const x = Math.floor(Math.min(...xs) - pad), y = Math.floor(Math.min(...ys) - pad);
   return { x, y, w: Math.ceil(Math.max(...xs) + pad) - x, h: Math.ceil(Math.max(...ys) + pad) - y };
@@ -134,7 +133,7 @@ class UnderSprite {
 }
 
 /** 一個演出：`dur` 毫秒（未縮放），畫單位之上（`top`）與之下（`under`，可省）。 */
-function canvasEffect(host: Sk2Host, startMs: number, dur: number, scale: number, box: Box, top: (ctx: CanvasRenderingContext2D, t: number) => void, under?: { rows: readonly number[]; draw: (ctx: CanvasRenderingContext2D, t: number) => void }): Effect | null {
+export function canvasEffect(host: Sk2Host, startMs: number, dur: number, scale: number, box: Box, top: (ctx: CanvasRenderingContext2D, t: number) => void, under?: { rows: readonly number[]; draw: (ctx: CanvasRenderingContext2D, t: number) => void }): Effect | null {
   const fxTop = FxCanvas.make(box);
   if (fxTop === null) return null;
   const fxUnder = under === undefined ? null : FxCanvas.make(box);
@@ -166,11 +165,8 @@ function canvasEffect(host: Sk2Host, startMs: number, dur: number, scale: number
 
 // ---- 吸收表面 ----
 
-/** 表面的顏色（本色、亮色）：水、火、毒、冰…照 `QS.TINT`；不認得的照水。 */
-function surfaceTint(surface: string): readonly [string, string] {
-  const t = (QS.TINT as Readonly<Record<string, readonly [string, string] | undefined>>)[surface];
-  return t ?? (QS.TINT.water as readonly [string, string]);
-}
+/** 表面的顏色（本色、亮色）：和部件圖樣同一份（`QP.surfaceTint`：照 `QS.TINT`，黑暗＝暗影色，不認得的照水；AR-SK3）。 */
+const surfaceTint = (surface: string): readonly [string, string] => QP.surfaceTint(surface);
 
 /** 收益的圖樣（第④批部件圖樣 16 px）：元素＝元素片、層數＝累積層數、治療、護盾。 */
 function gainGlyph(f: Sk2Absorb): HTMLCanvasElement | null {

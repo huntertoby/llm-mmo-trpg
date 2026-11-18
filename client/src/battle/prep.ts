@@ -1,7 +1,7 @@
 // 戰前佈置（SK-3，06 6.38 第 11 點）：開戰前（雙方都還沒行動）在我方起始區免費放 1 個自己的
 // 陷阱、刻印或表面。伺服器在 `awaiting === "prep"` 時給 `prep`（可放的技能與每招放得下的格子）；
 // 選了一招後，那招的格子當成一個選取模式（同複合技能第二段），點格子就送 `/prep`。
-import type { Action, PrepOut } from "../api/types";
+import type { Action, Pos, PrepOut, SkillCard } from "../api/types";
 import { buildTargets, type ActionMode } from "./targeting";
 
 export type PrepAction = Extract<Action, { type: "prepare" }>;
@@ -34,5 +34,28 @@ export function prepPromptText(prep: PrepOut, picked: string | null, skillName: 
     return "開戰前可以在我方起始區免費放 1 個自己的陷阱、刻印或表面（每場 1 個；放了那招會照常進冷卻）。先選一招，或直接開戰。";
   const option = prep.options.find((o) => o.skill_id === picked);
   const what = option === undefined ? "" : (PREP_KIND_ZH[option.kind] ?? option.kind);
-  return `「${skillName}」：在高亮的起始區格子點一下放${what}（共 ${option?.tiles.length ?? 0} 格可放）；按 Esc 換一招。`;
+  // AR-SK3：起始區格子換成金色框記號，字照玩法 PM 定案（「高亮的起始區」→「框起來的起始區」）
+  return `「${skillName}」：在框起來的起始區格子點一下放${what}（共 ${option?.tiles.length ?? 0} 格可放）；按 Esc 換一招。`;
+}
+
+/**
+ * AR-SK3：戰前佈置的格子記號（取代借來的選目標紅框；`render/prepMarks.ts` 畫）：
+ * `cells`＝這一招放得下的格子（只畫這些，起始區其他格不畫）、`hover`＝指著的那一格（在 `cells` 裡才算）、
+ * `kind`＝要放什麼（預覽用）、`surface`＝表面的種類（技能卡第一個 `create_surface` 的表面；沒有時 null）。
+ */
+export interface PrepMarksDraw {
+  cells: readonly Pos[];
+  hover: Pos | null;
+  kind: "trap" | "rune" | "surface";
+  surface: string | null;
+}
+
+export function prepMarksOf(prep: PrepOut, skillId: string, hover: Pos | null, card?: SkillCard): PrepMarksDraw | null {
+  const option = prep.options.find((o) => o.skill_id === skillId);
+  if (option === undefined || option.tiles.length === 0) return null;
+  const cells = option.tiles.map(([x, y]): Pos => ({ x, y }));
+  const on = hover !== null && cells.some((c) => c.x === hover.x && c.y === hover.y) ? hover : null;
+  const effects = card?.icon?.segments?.flatMap((seg) => seg.effects ?? []) ?? [];
+  const surface = effects.find((e) => e.type === "create_surface")?.surface ?? null;
+  return { cells, hover: on, kind: option.kind, surface: option.kind === "surface" ? surface : null };
 }

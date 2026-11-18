@@ -50,7 +50,7 @@ export interface PartEntry { zh: string; topic?: string; src?: string; px?: numb
 export type PartTable = Readonly<Record<string, PartEntry | undefined>>;
 export interface PartDef { zh: string; entry: PartEntry; d: DrawFn }
 /** 效果列的一項（樣張 partsOf 的 list 項）：seg＝第幾段（接續記號排在第二段第一個前面）。 */
-export interface QPartItem { cat: string; id: string; seg: number; value?: number | boolean | string | null | undefined; base?: ((c: Ctx, o: QOpts) => void) | undefined }
+export interface QPartItem { cat: string; id: string; seg: number; value?: number | boolean | string | null | undefined; base?: ((c: Ctx, o: QOpts) => void) | undefined; tint?: Tint | null | undefined }
 /** 純資料的部件結構（欄位同樣張 partsOf() 的回傳）。 */
 export interface QParts {
   kind: string;
@@ -65,7 +65,7 @@ export interface QParts {
   core: QPartItem | null;
   shape: string[];
 }
-interface RowItem { cat: string; id: string; r: number; seg?: number; link?: boolean; value?: QPartItem["value"]; base?: QPartItem["base"] }
+interface RowItem { cat: string; id: string; r: number; seg?: number; link?: boolean; value?: QPartItem["value"]; base?: QPartItem["base"]; tint?: QPartItem["tint"] }
 
 const CREAM = "#f2e6c8", ALLY = "#7de0a8", ENEMY = "#ff5a5a", STEEL = "#c3ccd6", GOLD = "#e8bb48", LILAC = "#c8a0d8", STONE = "#b4ac9a", STONE_L = "#ece6d6", STONE_D = "#8c8474", INK = "#2a1c36";
 const st = (c: Ctx, col: string, w: number, fn: (x: Ctx) => void, cap: CanvasLineCap = "round") => { c.beginPath(); fn(c); c.strokeStyle = col; c.lineWidth = w; c.lineCap = cap; c.lineJoin = "round"; c.stroke(); };
@@ -203,6 +203,14 @@ export function link(c: Ctx, x: number, y: number, a: number, L: number, side: b
     else { el(q, col, 0, 0, L / 2, L * 0.34); el(q, hole, 0, 0, L * 0.24, L * 0.11); }
   }, a);
 }
+/** 表面名 → 第 3 批元素色（`QS.TINT`）的對照：只有名字不同的（黑暗表面＝暗影色）。 */
+const SURFACE_TINT_KEY: Readonly<Record<string, string>> = { darkness: "shadow" };
+/** 表面的代表色（AR-SK3，`AR-SK2驗收.md` 裁定 3：照樣張的 `T` 參數）：火、冰、毒、聖光、黑暗、水照 `QS.TINT`；沒有對應色（油、煙霧、不認得、沒指定）時用水色。 */
+export function surfaceTint(surface: string | null | undefined): Tint {
+  const T = QS.TINT as Readonly<Record<string, Tint | undefined>>;
+  const id = surface ?? "";
+  return T[SURFACE_TINT_KEY[id] ?? id] ?? (QS.TINT.water as Tint);
+}
 /** 吸收表面的圖樣本體：一灘＋從一灘裡長出來的粗箭頭＋兩側往上飛的倒水滴（≥26px）。T＝表面色（預設水色）。 */
 function absorbArt(c: Ctx, o: QOpts, T?: Tint | null): void {
   const tint = T ?? (QS.TINT.water as Tint);
@@ -232,6 +240,60 @@ function hookChip(c: Ctx, o: QOpts): void {
     halo(c, o, (q) => at(q, X, Y, k, (p) => hookJ(p, { ...o, thick: true })));
   }, PI / 4);
 }
+// ---------------- AR-SK3：照 docs/art/sample/sk3Mechanics.js 第 2 版逐行搬（SK-3-美術.md 5.1）----------------
+/** 二十面骰的三階色（＋點數字色）：lav＝同「擲出自然 20 時」；red＝敵人的骰子；redT＝≤14 的紅骰；dim＝被換掉的那一次（灰）。 */
+export interface DiePal { face: string; dk: string; hi: string; ink: string }
+export const DIE: Readonly<Record<"lav" | "red" | "redT" | "dim", DiePal>> = {
+  lav: { face: "#cfc4ff", dk: "#8a76d8", hi: "#ffffff", ink: "#3a2a7a" },
+  red: { face: "#ff8a8a", dk: "#d23c4c", hi: "#ffe4e4", ink: "#5a1020" },
+  redT: { face: "#ff8a8a", dk: "#a82434", hi: "#ffffff", ink: "#5a1020" },
+  dim: { face: "#a9a6bc", dk: "#6e6a84", hi: "#dcdae6", ink: "#2a2838" },
+};
+const DIE_HEX: Pt[] = [0, 1, 2, 3, 4, 5].map((i): Pt => [Math.cos((i / 6) * TAU - PI / 2) * 10.6, Math.sin((i / 6) * TAU - PI / 2) * 10.6]);
+export interface D20Opt { rot?: number; face?: number | string | null; ink?: number; hiK?: number }
+/** 二十面骰（中心 x,y、外接半徑 R）：同「擲出自然 20 時」的畫法，只換半徑與色。opt.face＝骰面點數（戰場用）；opt.ink＝外框加粗（戰場用）；opt.hiK＝中央白三角放大（≤14 紅骰）。 */
+export function d20(c: Ctx, x: number, y: number, R: number, pal: DiePal, opt: D20Opt = {}): void {
+  at(c, x, y, R / 10.6, (q) => {
+    if (opt.ink) { const ink = opt.ink; poly(q, OUT, DIE_HEX.map(([a, b]): Pt => [a * (1 + ink / 10.6), b * (1 + ink / 10.6)]), 0.5 + ink); }
+    poly(q, pal.face, DIE_HEX, 0.5);
+    poly(q, pal.dk, [[9.2, -5.3], [9.2, 5.3], [0, 10.6], [5.6, 4]]);
+    poly(q, pal.dk, [[-9.2, 5.3], [0, 10.6], [-5.6, 4]]);
+    const k = opt.hiK ?? 1;
+    poly(q, pal.hi, [[0, -6.2 * k], [5.8 * k, 4], [-5.8 * k, 4]], 0.4);
+    if (opt.face != null) { const s = String(opt.face); q.fillStyle = pal.ink; q.font = `900 ${s.length > 1 ? 7.2 : 8.4}px Arial, sans-serif`; q.textAlign = "center"; q.textBaseline = "middle"; q.fillText(s, 0, 1.4); }
+  }, opt.rot ?? 0);
+}
+/** 重擲：前景一顆淡紫骰（右下、大，halo 包一圈）＋後面往左上退的灰骰；≤14 兩顆都留、灰骰推到角落。 */
+function rerollArt(c: Ctx, o: QOpts): void {
+  const t = o.tiny;
+  d20(c, t ? -5.0 : -4.8, t ? -5.0 : -4.8, t ? 5.0 : 5.6, DIE.dim);
+  halo(c, o, (q) => d20(q, 2.4, 2.4, t ? 8.0 : 7.6, DIE.lav));
+}
+/** 別人的手（第④批「激昂」的膚色）：原點＝食指指尖，手往 +x 長；≤14 只留食指＋手掌一塊。 */
+const SKIN = { body: "#f0c49a", hi: "#ffe8d0", dk: "#c8885a" } as const;
+function hand(c: Ctx, o: QOpts): void {
+  rr(c, SKIN.body, -0.2, -1.5, 7.4, 3.0, 1.5);
+  rr(c, SKIN.body, 4.6, -2.6, 6.6, 7.4, 2.6);
+  el(c, SKIN.body, 6.4, -2.4, 2.4, 1.4, -0.2);
+  if (!o.tiny) {
+    for (const y of [1.4, 3.4]) ln(c, SKIN.dk, 0.8, [[5.2, y], [7.4, y]]);
+    el(c, SKIN.hi, 2.6, -0.7, 2.0, 0.5); el(c, SKIN.hi, 8.2, -1.4, 1.8, 0.7, -0.2);
+  }
+}
+/** 碰觸點的短亮線（金）：往左上、左、左下各一道，外框色墊底；≤14 一道。 */
+function touchLines(c: Ctx, o: QOpts, x: number, y: number): void {
+  const L: readonly Pt[] = o.tiny ? [[-0.7, -0.7]] : [[-0.6, -1.0], [-1.0, 0.05], [-0.6, 1.0]];
+  for (const [dx, dy] of L) { const a: Pt = [x + dx * 1.6, y + dy * 1.6], b: Pt = [x + dx * (o.tiny ? 4.4 : 4.0), y + dy * (o.tiny ? 4.4 : 4.0)]; ln(c, OUT, o.tiny ? 2.8 : 2.6, [a, b]); ln(c, "#ffd23f", o.tiny ? 1.6 : 1.3, [a, b]); }
+}
+/** 紅白靶（目標）：紅外圈、白圈、紅心；≥26 左上一點亮面。 */
+function target(c: Ctx, o: QOpts, x: number, y: number, R: number): void {
+  ci(c, ENEMY, x, y, R); ci(c, "#ffffff", x, y, R * 0.64); ci(c, ENEMY, x, y, R * 0.3);
+  if (!o.tiny) el(c, "#ffd0cc", x - R * 0.5, y - R * 0.55, R * 0.22, R * 0.14, -0.7);
+}
+/** SK-3 重擲的專屬圖樣（取代 EFFECT_ALIAS 暫借的替隊友擋攻擊）。 */
+const SK3_EFFECT: PartTable = {
+  reroll: { zh: "重擲", topic: "前景一顆淡紫二十面骰（右下、大），後面一顆往左上退、縮小、變灰的骰子（同演出裡被換掉的那一顆）。不用圈狀箭頭", d: (c, o) => at(c, 0, 0, 0.98, (q) => rerollArt(q, o)) },
+};
 /** SK-2 三個原語的專屬圖樣（取代 EFFECT_ALIAS 的暫借清除表面／施加狀態／拉扯）；整體縮放照第 2 版自查表。 */
 const SK2_EFFECT: PartTable = {
   absorb_surface: { zh: "吸收表面", topic: "地上一灘表面（染表面色），中間被抽成一根往上的粗箭頭；≥26px 兩側各一顆倒過來的小水滴", d: (c, o, T) => at(c, 0, 0.3, 0.86, (q) => absorbArt(q, o, T)) },
@@ -291,9 +353,10 @@ export const EFFECT: PartTable = {
   inscribe: { zh: "刻印", topic: "圓頂的石碑，上面一個金色菱形符文", d: tablet },
   detonate_runes: { zh: "引爆符文", topic: "符文石碑背後一圈橘色的爆炸", d: fit((c, o) => { poly(c, "#ff7a2a", starPts(0, 0, 11, 6.6, 10), 0.3); halo(c, o, (q) => at(q, 0, 0.4, 0.64, (p) => tablet(p, o))); }, 0.9) }, /* 第 2 版：縮到色環以內 */
   ...SK2_EFFECT, /* AR-SK2：加在效果表最後，前面的順序不動 */
+  ...SK3_EFFECT, /* AR-SK3：重擲，加在最後 */
 };
-/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。AR-SK2：吸收表面、疾病擴散、鉤換成專屬圖樣（`SK2_EFFECT`），拿掉三筆暫借。 */
-export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", reroll: "intercept" /* SK-3：重擲暫借反應的圖，待美術 */ };
+/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。AR-SK2：吸收表面、疾病擴散、鉤換成專屬圖樣（`SK2_EFFECT`），拿掉三筆暫借。AR-SK3：重擲換成專屬圖樣，拿掉暫借。 */
+export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon" };
 
 // =====================================================================
 // 表面 1 個形（8 種表面染色；第 3 批的地面效果記號，依表面換外形）
@@ -437,10 +500,19 @@ export const COND: PartTable = {
   self_stack_at_least: { zh: "自身層數達到", topic: "三個全亮的金色計量格（同 HUD 層數計量的格子）＋右下米白小人形（自身）", d: (c, o) => condPips(c, o) },
   // KW-2：自身站在高處（鷹眼），美術出樣張前借「居高臨下」暫代
   self_on_high_ground: { zh: "自身站在高處", topic: "（暫代）同「居高臨下」：一座山，山頂一個小人頭", d: (c, o) => COND["height_advantage"]!.d(c, o) },
+  /* AR-SK3：SK-1 的距離條件換成專屬圖樣（sk3Mechanics.js 第 2 版），加在最後；同一組「我＋目標」，靠距離分。 */
+  point_blank: { zh: "貼身", topic: "左下米白人形（我），右上一面大的紅白靶貼著人形的頭與前肩（目標，距離 1、中間沒有縫）", d: (c, o) => at(c, 0, 0, 0.94, (u) => { bust(u, CREAM, -4.2, 2.8, 0.92); halo(u, o, (q) => target(q, o, 4.4, -2.0, 5.9)); }) },
+  long_range: {
+    zh: "遠距", topic: "左下一個小的米白人形（我），右上一面小一號的紅白靶（目標，遠），中間兩顆金點連成一條虛線（≤14 一顆）",
+    d: (c, o) => at(c, 0, -0.2, 0.95, (u) => {
+      bust(u, CREAM, -5.0, 3.4, 0.68);
+      for (const [x, y] of o.tiny ? [[-0.47, -2.07]] as const : [[-1.36, -1.61], [0.42, -2.53]] as const) ci(u, "#ffd23f", x, y, o.tiny ? 2.0 : 1.15);
+      halo(u, o, (q) => target(q, o, 5.6, -5.2, 4.2));
+    }),
+  },
 };
-/** 條件的明確退回（同 EFFECT_ALIAS、TRIG_ALIAS）：SK-1 的距離條件還沒有美術圖樣，先借最接近的現有條件圖，等美術補畫（AR-SK2 報告列給美術 PM）。
- *  貼身 point_blank → 夾擊（人形兩側貼著紅色敵方三角＝敵人就在身邊）；遠距 long_range → 目標落單（光柱下一個孤立的人形＝目標離得遠）。 */
-export const COND_ALIAS: Readonly<Record<string, string>> = { point_blank: "flanked", long_range: "target_isolated" };
+/** 條件的明確退回（同 EFFECT_ALIAS、TRIG_ALIAS）。AR-SK3：貼身、遠距換成專屬圖樣，目前沒有暫借。 */
+export const COND_ALIAS: Readonly<Record<string, string>> = {};
 
 // =====================================================================
 // 代價 6 個
@@ -482,9 +554,26 @@ export const TRIG: PartTable = {
   ally_targeted: { zh: "隊友被瞄準時", topic: "綠色人形，外面一圈紅色準星", d: (c, _o) => { bust(c, ALLY, 0, 1.2, 0.86); for (let i = 0; i < 4; i++) st(c, "#ff4a5a", 2.8, (x) => x.arc(0, 0, 9.4, (i * PI) / 2 + 0.3, ((i + 1) * PI) / 2 - 0.3), "butt"); } },
   ally_downed: { zh: "隊友倒下時", topic: "躺平的綠色人形，上面一顆小骷髏", d: (c, o) => { rr(c, ALLY, -10, 3, 13.6, 6, 3); ci(c, ALLY, 6.6, 5.6, 3.8); rr(c, "#3f7a5a", -10.6, 9, 21.2, 1.8, 0.9); halo(c, o, (q) => at(q, -1.6, -4.4, 0.56, (p) => QS.ACT.finisher.d(p, { ...o, small: true }, undefined as unknown as Tint /* 樣張不傳；終結記號不用染色 */))); } },
   ally_hit_adjacent: { zh: "身旁隊友受擊時", topic: "綠色人形，右上一顆紅色撞擊星", d: (c, o) => { bust(c, ALLY, -3.4, 1.4, 0.92); halo(c, o, (q) => redStar(q, 5.2, -4.6, 5.4)); } },
+  /* AR-SK3：SK-3 的三個觸發換成專屬圖樣（sk3Mechanics.js 第 2 版），加在最後。 */
+  on_keyword_exploited: {
+    zh: "你造的關鍵字被利用時", topic: "淡紫小旗（同「施加狀態後」＝你造的關鍵字），右邊伸進來一隻膚色的手、食指碰到旗的右緣，碰觸點三道短金色亮線（別人拿你的東西去用）",
+    d: (c, o) => at(c, 0, 0, 0.98, (u) => {
+      at(u, -2.7, 1.1, 0.88, (q) => banner(q, { ...o, tiny: true }));
+      halo(u, o, (q) => at(q, 3.0, -3.3, 0.72, (p) => hand(p, o), 0.1));
+      touchLines(u, o, 2.9, -3.5);
+    }),
+  },
+  ally_missed_roll: {
+    zh: "隊友擲失手時", topic: "綠色人形（同「身旁隊友受擊時」，完整），右上角一顆小的灰色二十面骰被一道紅斜槓劃掉（同演出裡失敗的那一顆、同「沒有」的語言）",
+    d: (c, o) => { bust(c, ALLY, -3.4, 1.4, 0.92); halo(c, o, (q) => { d20(q, 5.4, -5.2, o.tiny ? 4.6 : 4.3, DIE.dim); const S: Pt[] = [[2.8, -2.6], [8.0, -7.8]]; if (o.tiny) ln(q, OUT, 3.6, S); ln(q, "#ff4a5a", o.tiny ? 2.0 : 1.8, S); }); },
+  },
+  enemy_hit_roll: {
+    zh: "敵人擲中你時", topic: "左上一顆大的紅色二十面骰（佔一半、微斜），砸向右下的小藍盾（同「被攻擊時」的家族）",
+    d: (c, o) => at(c, 0, 0, 0.94, (u) => { shieldAt(u, o); halo(u, o, (q) => d20(q, -3.2, -3.2, 7.4, o.tiny ? DIE.redT : DIE.red, { rot: -0.26, hiK: o.tiny ? 1.3 : 1 })); }),
+  },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent", on_keyword_exploited: "on_status_applied", ally_missed_roll: "ally_hit_adjacent", enemy_hit_roll: "hit_by_attack" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；SK-3 加三個（你造的關鍵字被利用時、隊友擲失手時、敵人擲中你時），等美術出圖
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借
 
 // =====================================================================
 // 接續 6 個
@@ -707,7 +796,7 @@ export function paintIcon(ctx: Ctx, P: QParts, look: QS.SkillLook, size: number,
     /* 底部效果列：算法照現行 effectRow（核心 11.5、其餘 8.5，放不下就縮）；接續記號（半徑 7）排在第二段第一個效果前面，沒有就放最後 */
     const items: RowItem[] = P.row.map((e, i) => ({ ...e, r: i === 0 ? 11.5 : 8.5 })); if (P.link && items.length) { const j = items.findIndex((e, i) => i > 0 && e.seg === 1); items.splice(j === -1 ? items.length : j, 0, { cat: "link", id: P.link, r: 9, link: true }); } /* 第 2 版：接續記號 7→9 單位、色環換青色（LINK_RING），和效果圓片分開 */
     if (items.length) { const left = P.cond ? 26 : 5, right = 75, gap = 1.5; let total = items.reduce((a, e) => a + e.r * 2, 0) + (items.length - 1) * gap; if (total > right - left) { const f0 = (right - left - 23 - (items.length - 1) * gap) / (total - 23 - (items.length - 1) * gap); for (const e of items.slice(1)) e.r = Math.max(4.5, e.r * f0); total = items.reduce((a, e) => a + e.r * 2, 0) + (items.length - 1) * gap; }
-      let x = (left + right) / 2 - total / 2; items.forEach((e, i) => { C(e.cat, e.id, x + e.r, 85 + (i === 0 ? 0 : 2), e.r, i === 0 ? "#ffffff" : e.link ? LINK_RING : "rgba(255,255,255,0.3)", { value: e.value, base: e.base, tint: e.cat === "shape" ? null : undefined }); x += e.r * 2 + gap; }); }
+      let x = (left + right) / 2 - total / 2; items.forEach((e, i) => { C(e.cat, e.id, x + e.r, 85 + (i === 0 ? 0 : 2), e.r, i === 0 ? "#ffffff" : e.link ? LINK_RING : "rgba(255,255,255,0.3)", { value: e.value, base: e.base, tint: e.cat === "shape" ? null : e.tint /* AR-SK3：吸收表面照表面染色 */ }); x += e.r * 2 + gap; }); }
   }
   ctx.restore();
 }

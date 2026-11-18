@@ -2,7 +2,7 @@
 // 每一步的順序固定為：標示行動中的單位 → 該步的移動動畫 → 技能特效（蓄力與飛行，等到命中）→
 // 畫該步的 `view` → 地形升降動畫（3-19）→ 地圖回饋 → 加入該步的紀錄 → 停頓。
 // 最後一定以 `res.view` 為準（播放只是過場）。
-import type { BattleResponse, BattleView, StepOut } from "../api/types";
+import type { BattleResponse, BattleView, Pos, StepOut } from "../api/types";
 import { moveAnimOf, type MoveAnim } from "./animation";
 import { heightShifts, LIFT_MS, type HeightShift } from "./elevation";
 import { feedbackFor, immobilityOf, type FeedbackItem } from "./feedback";
@@ -19,6 +19,7 @@ import type { CreatureAttackType } from "../render/creaturePose";
 import type { WeaponClass } from "../render/skillClips";
 import { scaleCues, stepSfx, type SfxCue } from "../audio/battleSfx";
 import { sk2FxOf } from "./sk2Fx";
+import { REROLL_FLOAT_AT_MS, REROLL_MS, rerollFxOf, type RerollFx } from "./rerollFx";
 import { samePos } from "./geometry";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
@@ -92,6 +93,22 @@ export interface Frame {
   viewSfx?: SfxCue[];
   /** 我方勝利（6N-5）：全隊舉手或收刀、浮出「勝利」；`ms` 是等多久才結束（已縮放），`clipMs` 是片段長度。 */
   victory?: FrameVictory;
+  /** AR-SK3：重擲的骰子層（在出招之前播；減少動態時沒有，浮字照舊在回饋裡）。 */
+  reroll?: FrameReroll;
+  /** AR-SK3：戰前佈置放下的格子（`prep_placed`；畫面更新時播「放下的一下」）。 */
+  placed?: Pos[];
+}
+
+/**
+ * AR-SK3：一步裡的重擲演出。`durationMs`＝全部骰子層的長度（已縮放，一個接一個）；
+ * `floats`＝浮字「重擲！」（從這一步的回饋搬過來），各在骰子比較完（`REROLL_FLOAT_AT_MS`，已縮放）才出。
+ */
+export interface FrameReroll {
+  fx: RerollFx[];
+  scale: number;
+  durationMs: number;
+  floats: { atMs: number; items: FeedbackItem[] }[];
+  feedbackMs: number;
 }
 
 export interface FrameVictory extends Victory {
@@ -115,6 +132,8 @@ export type PlayOp =
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
   | { op: "victory"; victory: FrameVictory }
+  | { op: "reroll"; reroll: FrameReroll }
+  | { op: "placed"; tiles: Pos[] }
   | { op: "pause"; ms: number };
 
 function pauseFor(stepType: string | undefined, actorId: string | null, heroId: string, speed: PlaySpeed): number {
@@ -248,15 +267,34 @@ export function playbackPlan(
       else sk = stepSkill(step, before, cards, scale, moved, weaponOf, attackOf, heroId, strikeOf, reduced); // 接不起來：照舊落地再起飛
     }
     const won = victoryOf(step.events, step.view, heroId);
+    const kept = step.events.filter((_, k) => !consumed.has(k));
+    const immobile = immobilityOf(step.events, before); // 6F-6：照打的那一刻判斷閃避／失手
+    // AR-SK3：重擲的骰子層排在出招前；浮字「重擲！」從回饋搬到骰子比較完才出（減少動態時照舊）
+    const rerolls = reduced ? [] : rerollFxOf(step.events);
+    const isReroll = (e: Record<string, unknown>): boolean => rerolls.length > 0 && e.type === "attack_rerolled";
+    const reroll: FrameReroll | null =
+      rerolls.length === 0
+        ? null
+        : {
+            fx: rerolls,
+            scale,
+            durationMs: Math.round(REROLL_MS * scale * rerolls.length),
+            floats: kept.filter(isReroll).map((e, i) => ({ atMs: Math.round((REROLL_FLOAT_AT_MS + i * REROLL_MS) * scale), items: feedbackFor([e], step.view, immobile) })),
+            feedbackMs,
+          };
+    // AR-SK3：戰前佈置放下的格子（只有自己看得到的那份事件；減少動態時不播）
+    const placed = reduced ? [] : step.events.flatMap((e) => (e.type === "prep_placed" && isPos(e.pos) ? [{ x: e.pos.x, y: e.pos.y }] : []));
     frames.push({
+      ...(reroll === null ? {} : { reroll }),
+      ...(placed.length === 0 ? {} : { placed }),
       ...(won === null ? {} : { victory: { ...won, ms: Math.round(VICTORY_HOLD_MS * scale), clipMs: Math.max(160, Math.round(VICTORY_MS * scale)) } }),
       actorId: step.actor_id,
       motions: sk.motions,
       // 停頓時已在那一格跳過的數字與狀態，一步結束時不再跳一次
       feedback: feedbackFor(
-        step.events.filter((_, k) => !consumed.has(k)),
+        kept.filter((e) => !isReroll(e)),
         step.view,
-        immobilityOf(step.events, before), // 6F-6：照打的那一刻判斷閃避／失手
+        immobile,
       ),
       feedbackMs,
       vfx: sk.vfx,
@@ -292,9 +330,11 @@ export function frameOps(frame: Frame): PlayOp[] {
   const ops: PlayOp[] = [{ op: "mark", unitId: frame.actorId }];
   const motion = (m: Motion<MoveAnim>): PlayOp => (m.kind === "walk" ? { op: "walk", walk: m.walk } : { op: "move", anim: m.anim });
   for (const m of frame.motions) ops.push(motion(m));
+  if (frame.reroll !== undefined) ops.push({ op: "reroll", reroll: frame.reroll });
   if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs, ...(frame.skill === undefined ? {} : { skill: frame.skill }), ...(frame.sfx === undefined ? {} : { sfx: frame.sfx }) });
   for (const m of frame.after ?? []) ops.push(motion(m));
   ops.push({ op: "view", view: frame.view, ...(frame.viewSfx === undefined ? {} : { sfx: frame.viewSfx }) });
+  if (frame.placed !== undefined) ops.push({ op: "placed", tiles: frame.placed });
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });
   if (frame.lines.length > 0) ops.push({ op: "log", lines: frame.lines });
@@ -311,4 +351,10 @@ export function motionMs(m: Motion<MoveAnim>): number {
 /** 從第 `from` 格開始的所有紀錄（中途按「略過」時一次補上）。 */
 export function remainingLines(plan: PlaybackPlan, from: number): LogLine[] {
   return plan.frames.slice(from).flatMap((f) => f.lines);
+}
+
+/** 事件欄位是不是一個格子座標（`prep_placed.pos`）。 */
+function isPos(v: unknown): v is Pos {
+  const p = v as { x?: unknown; y?: unknown } | null;
+  return p !== null && typeof p === "object" && typeof p.x === "number" && typeof p.y === "number";
 }
