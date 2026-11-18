@@ -312,7 +312,9 @@ def test_shape_table_must_define_every_engine_shape(tmp_path: Path) -> None:
 def test_condition_table_defines_every_engine_condition_with_a_harshness() -> None:
     table = library().ruleset.conditions
     assert {c.id for c in table.conditions} == set(REQUIRED_CONDITIONS)
-    assert {c.harshness for c in table.conditions} == {"common", "harsh"}
+    assert {c.harshness for c in table.conditions} == {"mild", "common", "harsh"}
+    # SK-1（06 6.38 第 2 點）：寬鬆一級只給「本回合移動過」
+    assert [c.id for c in table.conditions if c.harshness == "mild"] == ["moved_this_turn"]
 
 
 def test_demo_skills_use_conditions_at_both_levels() -> None:

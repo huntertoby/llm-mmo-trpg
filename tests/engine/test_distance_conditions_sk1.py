@@ -96,3 +96,15 @@ def test_composer_only_gives_distance_conditions_to_fitting_ranges() -> None:
             assert reach >= (2 if cond.type == "point_blank" else far), skill.id
     assert seen["point_blank"] > 0
     assert seen["long_range"] > 0
+
+
+def test_moved_this_turn_is_the_only_mild_condition() -> None:
+    """SK-1（06 6.38 第 2 點）：「本回合移動過」定義不變，折扣改成寬鬆一級（工坊可調）。"""
+    lib = library()
+    mild = lib.budget.condition_permille["mild"]
+    assert lib.budget.condition_permille["common"] < mild < 1000
+    conditions = lib.ruleset.conditions.by_id()
+    assert conditions["moved_this_turn"].harshness == "mild"
+    skill = lib.skills["skill_charging_strike"]
+    second = skill_budget(skill, lib).effects[1]
+    assert second.condition == Fraction(mild, 1000)

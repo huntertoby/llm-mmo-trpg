@@ -191,7 +191,7 @@ def test_budget_rules_match_the_spec() -> None:
     assert (b.min_ratio_permille, b.max_ratio_permille) == (700, 1000)
     assert b.ap_coefficient_permille == {1: 500, 2: 1000, 3: 1600}
     assert b.reaction_coefficient_permille == 600
-    assert b.condition_permille == {"none": 1000, "common": 850, "harsh": 600}
+    assert b.condition_permille == {"none": 1000, "mild": 925, "common": 850, "harsh": 600}
     assert b.all_target_permille == 800
     a = b.allowance
     assert (a.cooldown_per_turn, a.cooldown_cap) == (50, 300)

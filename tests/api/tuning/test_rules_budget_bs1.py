@@ -23,6 +23,7 @@ CORE_PATHS = (
     "backstab_hit_bonus",
     "backstab_crit_range_bonus",
     "ambush_hit_bonus",
+    "far_distance",  # SK-1（#166）條件「遠距」的門檻
     "trap_trace_radius",  # RG-2（#162）陷阱痕跡
     "shield_guard_hit_penalty",  # RG-1（#162）盾兵掩護
     "shield_formation_hit_penalty",  # RG-4（#163）塔盾詞條「護陣」
@@ -30,6 +31,7 @@ CORE_PATHS = (
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
     "silent_strike_round_milli",
+    "condition_permille.mild",  # SK-1（#166）寬鬆條件（本回合移動過）的倍率
     "flash_cost.damage_rungs",  # FL-1a：閃現蓄力、輕巧的調整幅度
     "flash_cost.magnitude_step",
     "flash_transform.companion_power_permille",  # TF-1：伴生、護主的縮小幅度與輪數

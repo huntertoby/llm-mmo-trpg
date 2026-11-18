@@ -6,7 +6,7 @@
 # 效果層級的 condition：對該效果的每個對象（單位，或地形類效果的格子）分別判斷，不成立的對象
 #   不受這個效果影響。效果依技能內的順序結算，判斷的是「結算到該效果當下」的狀態。
 #
-# harshness：common 常見／harsh 嚴苛，決定預算的條件倍率（2B-2：0.85／0.6）
+# harshness：mild 寬鬆／common 常見／harsh 嚴苛，決定預算的條件倍率（2B-2：0.85／0.6；SK-1 加 mild 0.925）
 # min_rarity：使用此條件的最低稀有度（2B-2：條件從 rare 起才能使用）
 # params：沿用原語參數的格式（type：int／status／surface／tag）
 #
@@ -56,7 +56,9 @@ conditions:
     name_zh: 本回合移動過
     llm_hint: "施放者這個回合主動移動過才成立。"
     description_zh: 施放者本回合做過主動移動（步行；傳送與被強制位移不算）。
-    harshness: common
+    # SK-1（#166，06 6.38 第 2 點，第 8 題 B）：定義不變；移動不花 AP、幾乎每回合成立，改成寬鬆一級（mild），
+    # 倍率是 skill_budget.yaml 的 condition_permille.mild（工坊「技能預算表」可調）。
+    harshness: mild
     min_rarity: rare
   - id: adjacent_ally
     name_zh: 身旁有友方

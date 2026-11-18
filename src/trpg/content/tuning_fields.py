@@ -286,6 +286,8 @@ def _step(candidates: list[Any], part: PathPart) -> list[Any]:
 def _key_ok(key_type: Any, key: str) -> bool:
     if key_type is str:
         return True
+    if get_origin(key_type) is Literal:  # SK-1：condition_permille 的鍵是 Literal
+        return key in get_args(key_type)
     try:
         key_type(key)
     except (TypeError, ValueError):
