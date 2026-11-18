@@ -93,6 +93,10 @@ restore_cooldown_points: 3
 # 3D-8a：驅散與揭露的點數（初值，未經模擬）：驅散 1 個增益 3 點、全部 6 點；揭露 ＝ 2 ＋ 1 × duration 點。
 dispel_one_points: 3
 dispel_all_points: 6
+# SK-3b（SK-2b 待決 1）：SK-2 三個新原語的預算點數，從 skill_primitives.yaml 的 base_points 搬來（值不變，初值，接數值工坊）。
+hook_points: 6             # 鉤：固定點數（形狀倍率另算）
+contagion_points: 2        # 疾病擴散：固定點數（形狀倍率另算）
+absorb_surface_points: 1   # 吸收表面：基礎點數（另加收益：層數＝add_stack 點數 × 層數、治療／護盾＝骰子平均、元素＝再加一次這個點數）
 # 3-11 暫時障礙：create_obstacle 持續 n 回合（1–10）的點數 ＝ 基礎 3 × 第 n 項（‰）；永久 ＝ 1000‰（現狀）。
 obstacle_duration_permille: [400, 500, 600, 700, 750, 800, 850, 900, 950, 1000]
 # 3-23 刻印（初值，未經模擬）：inscribe 的點數 ＝ 基礎 5 × 第 n 項（‰，n ＝ duration 1–5，省略取預設 3 輪）；

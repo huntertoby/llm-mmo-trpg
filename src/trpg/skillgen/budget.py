@@ -439,9 +439,9 @@ def _absorb_surface_points(
 ) -> tuple[Fraction, str]:
     """``absorb_surface`` 的點數（SK-2，06 6.38 第 4 點；初值，接數值工坊）：``base_points`` ＋
     收益——層數 ＝ ``add_stack`` 的 ``base_points`` × ``amount``、治療與護盾 ＝ 骰子平均、元素 ＝
-    ``base_points``。"""
+    ``base_points``。SK-3b：基礎點數改讀 ``skill_budget.yaml`` 的 ``absorb_surface_points``。"""
     primitives = by_id(library.ruleset.primitives)
-    base = primitives["absorb_surface"].base_points or 0
+    base = library.budget.absorb_surface_points
     if effect.gain == "stack":
         per = primitives["add_stack"].base_points or 0
         amount = effect.amount or 1
@@ -478,6 +478,21 @@ def _dispel_points(
     if effect.count == "all":
         return Fraction(rules.dispel_all_points), "驅散全部增益"
     return Fraction(rules.dispel_one_points), "驅散 1 個增益"
+
+
+def _hook_points(
+    _skill: SkillDef, _effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``hook`` 的點數（SK-2；SK-3b 起讀 ``skill_budget.yaml`` 的 ``hook_points``）：固定。"""
+    return Fraction(library.budget.hook_points), "固定"
+
+
+def _contagion_points(
+    _skill: SkillDef, _effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``contagion`` 的點數（SK-2；SK-3b 起讀 ``skill_budget.yaml`` 的
+    ``contagion_points``）：固定。"""
+    return Fraction(library.budget.contagion_points), "固定"
 
 
 def _obstacle_points(
@@ -1131,6 +1146,8 @@ _SPECIAL_BASES: dict[
     "rule_change": _rule_change_points,
     "gamble": _gamble_points,
     "dispel": _dispel_points,
+    "hook": _hook_points,
+    "contagion": _contagion_points,
     "reveal": _reveal_points,
     "obstacle": _obstacle_points,
     "inscribe": _inscribe_points,

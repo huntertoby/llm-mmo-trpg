@@ -474,6 +474,13 @@ class BudgetRules(ContentModel):
     """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
     dispel_all_points: int = Field(default=6, ge=0)
     """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
+    hook_points: int = Field(default=6, ge=0)
+    """``hook``（鉤，SK-2）的固定預算點數（形狀倍率另算；SK-3b 從 ``skill_primitives.yaml`` 的
+    ``base_points`` 搬來，開放數值工坊；初值）。"""
+    contagion_points: int = Field(default=2, ge=0)
+    """``contagion``（疾病擴散，SK-2）的固定預算點數（形狀倍率另算；SK-3b 搬來；初值）。"""
+    absorb_surface_points: int = Field(default=1, ge=0)
+    """``absorb_surface``（吸收表面，SK-2）的基礎點數（另加收益點數；SK-3b 搬來；初值）。"""
     obstacle_duration_permille: tuple[int, ...] = Field(
         default=(400, 500, 600, 700, 750, 800, 850, 900, 950, 1000), min_length=10, max_length=10
     )
