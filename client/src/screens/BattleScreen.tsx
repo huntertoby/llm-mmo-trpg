@@ -95,7 +95,11 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
   useBattleAmbience(shown); // AU-3：戰場的環境音（區域、天氣、岩漿；優先於大世界）
   useBurnLoop(shown); // AU-3：有人在燃燒時全場一條劈啪循環
   useRegionTheme(shown.region); // RT-1：戰鬥是開戰地點的區域（沒有＝hub）
-  const data = useBattleData(battleId, heroId, response, shown, pb.acting, busy);
+  // SK-3 戰前佈置：選中的技能（回應換了就清掉）
+  const [prepSkill, setPrepSkill] = useState<string | null>(null);
+  useEffect(() => setPrepSkill(null), [response]);
+  const clearPrep = useCallback(() => setPrepSkill(null), []);
+  const data = useBattleData(battleId, heroId, response, shown, pb.acting, busy, prepSkill);
   const { view, hero, cards, copying } = data;
   cardsRef.current = cards;
   const sel = useSelection(response, data.canAct, copying, data.copyPick, data.modes);
@@ -137,6 +141,8 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
     data.canAct,
     data.followPaused,
     sel.setOrderPick,
+    data.prepPaused,
+    clearPrep,
   );
   const cmds = useSelectionCommands(
     battleId,
@@ -497,6 +503,10 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
         }}
         onDecideCopy={actions.decideCopy}
         onDecide={actions.decideWith}
+        prepPaused={data.prepPaused}
+        prepSkill={prepSkill}
+        onPickPrep={setPrepSkill}
+        onSkipPrep={actions.skipPrep}
       />
     </div>
   );

@@ -22,6 +22,7 @@ from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     DAMAGE_MULTIPLIER,
+    ON_KEYWORD_EXPLOITED,
     REDIRECT_STATUS,
     SELF_DAMAGE_OF_HIT,
     ConditionSpec,
@@ -720,6 +721,13 @@ def _hook(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     )
 
 
+def _reroll(_lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    """重擲（SK-3，06 6.38 第 12 點）：依反應時機寫取較好或較差。"""
+    if skill.reaction is not None and skill.reaction.event == "enemy_hit_roll":
+        return "逼命中你的敵人重擲命中骰，取較差的結果"
+    return "讓擲失手的隊友重擲命中骰，取較好的結果"
+
+
 def _contagion(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     """疾病擴散（SK-2，06 6.38 第 5 點）。"""
     core = lib.ruleset.core
@@ -1066,6 +1074,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "absorb_surface": _absorb_surface,
     "contagion": _contagion,
     "hook": _hook,
+    "reroll": _reroll,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,
@@ -1151,6 +1160,7 @@ _OWN_TARGET_TEXT: frozenset[str] = frozenset(
     {
         "absorb_surface",
         "hook",
+        "reroll",
         "summon",
         "summon_beside",
         "zone",
@@ -1489,10 +1499,22 @@ def _trigger_timing(library: ContentLibrary, trigger: TriggerSpec) -> str:
         return name.replace(" n ", f" {trigger.n} ")
     if trigger.tag is not None:
         return f"施放帶{tag_text(library, (trigger.tag,))}標籤的技能後"
+    if trigger.event == ON_KEYWORD_EXPLOITED:  # SK-3（#166 6.38-10）
+        return _exploited_timing(library, trigger, name)
     if trigger.surface is not None:
         return f"敵人進入你的「{rules.surface_def(trigger.surface).name_zh}」表面時"
     if trigger.status is not None:
         return f"施加「{rules.status_def(trigger.status).name_zh}」後"
+    return name
+
+
+def _exploited_timing(library: ContentLibrary, trigger: TriggerSpec, name: str) -> str:
+    """「你造的關鍵字被利用時」：指定狀態或表面時寫出名字。"""
+    rules = library.ruleset
+    if trigger.status is not None:
+        return f"你造的「{rules.status_def(trigger.status).name_zh}」被利用時"
+    if trigger.surface is not None:
+        return f"你造的「{rules.surface_def(trigger.surface).name_zh}」表面被利用時"
     return name
 
 

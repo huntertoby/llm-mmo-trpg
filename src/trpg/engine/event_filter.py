@@ -21,6 +21,7 @@ from typing import Any
 
 from trpg.engine.events import (
     EventBase,
+    PrepPlaced,
     SkillUsed,
     TrapExpired,
     TrapPlaced,
@@ -72,6 +73,13 @@ def _trigger_limit(event: TriggerLimitReached, state: BattleState, team: Team) -
     return _owner_only_by_unit(event, state, team)
 
 
+def _prep_placed(event: PrepPlaced, state: BattleState, team: Team) -> EventBase | None:
+    """戰前佈置（SK-3）：放陷阱時對方看不到（同 ``trap_placed``）；刻印、表面所有人可見。"""
+    if event.kind != "trap":
+        return event
+    return event if _team_of(state, event.unit_id) is team else None
+
+
 _RULES: dict[type[EventBase], _Rule] = {
     TrapPlaced: _owner_only_by_team,
     TrapExpired: _owner_only_by_unit,
@@ -79,6 +87,7 @@ _RULES: dict[type[EventBase], _Rule] = {
     TrapTraced: _revealer_only,
     SkillUsed: _trap_skill_used,
     TriggerLimitReached: _trigger_limit,
+    PrepPlaced: _prep_placed,
 }
 
 

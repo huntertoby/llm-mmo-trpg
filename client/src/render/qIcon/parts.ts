@@ -206,7 +206,7 @@ export const EFFECT: PartTable = {
   detonate_runes: { zh: "引爆符文", topic: "符文石碑背後一圈橘色的爆炸", d: fit((c, o) => { poly(c, "#ff7a2a", starPts(0, 0, 11, 6.6, 10), 0.3); halo(c, o, (q) => at(q, 0, 0.4, 0.64, (p) => tablet(p, o))); }, 0.9) }, /* 第 2 版：縮到色環以內 */
 };
 /** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。 */
-export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", absorb_surface: "clear_surface", contagion: "apply_status", hook: "pull" /* SK-2：專屬圖樣待美術 */ };
+export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", absorb_surface: "clear_surface", contagion: "apply_status", hook: "pull" /* SK-2：專屬圖樣待美術 */, reroll: "intercept" /* SK-3：重擲暫借反應的圖，待美術 */ };
 
 // =====================================================================
 // 表面 1 個形（8 種表面染色；第 3 批的地面效果記號，依表面換外形）
@@ -394,7 +394,7 @@ export const TRIG: PartTable = {
   ally_hit_adjacent: { zh: "身旁隊友受擊時", topic: "綠色人形，右上一顆紅色撞擊星", d: (c, o) => { bust(c, ALLY, -3.4, 1.4, 0.92); halo(c, o, (q) => redStar(q, 5.2, -4.6, 5.4)); } },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // TF-1 加後兩個（戰鬥開始時、身旁隊友受擊後），等美術出圖
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent", on_keyword_exploited: "on_status_applied", ally_missed_roll: "ally_hit_adjacent", enemy_hit_roll: "hit_by_attack" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；SK-3 加三個（你造的關鍵字被利用時、隊友擲失手時、敵人擲中你時），等美術出圖
 
 // =====================================================================
 // 接續 6 個

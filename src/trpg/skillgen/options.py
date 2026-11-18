@@ -37,6 +37,8 @@ from trpg.content.skills import (
     ON_HIT_PRIMITIVES,
     PLACE_TRAP,
     RARITY_ORDER,
+    REROLL,
+    REROLL_EVENTS,
     SELF_CONDITIONS,
     SELF_ONLY_CHANGES,
     SKELETON_IDS,
@@ -229,6 +231,11 @@ def _trigger_field(library: ContentLibrary) -> FieldSpec:
             params.append(FieldSpec(field="status", name_zh="狀態（省略＝任何）", type="text"))
         if timing.id == "on_enter_surface":
             params.append(FieldSpec(field="surface", name_zh="表面（省略＝任何）", type="text"))
+        if timing.id == "on_keyword_exploited":  # SK-3（#166 6.38-10）：狀態與表面擇一
+            params += [
+                FieldSpec(field="status", name_zh="狀態（擇一，省略＝任何）", type="text"),
+                FieldSpec(field="surface", name_zh="表面（擇一，省略＝任何）", type="text"),
+            ]
         targets = [Choice(value="self", name_zh="持有者自己")]
         if timing.has_other:
             targets.append(
@@ -291,6 +298,8 @@ def _reaction_field() -> FieldSpec:
         "enemy_enters_adjacent": "敵人主動走進相鄰格之後",
         "ally_targeted": "相鄰友方被敵人選為目標、命中判定之前",
         "ally_hit_near": "相鄰友方被敵人攻擊命中、傷害結算之後",
+        "ally_missed_roll": "身旁隊友攻擊擲失手時（只能用「重擲」，取較好的）",  # SK-3
+        "enemy_hit_roll": "敵人的攻擊擲中你時、傷害之前（只能用「重擲」，取較差的）",  # SK-3
     }
     return FieldSpec(
         field="reaction",
@@ -303,7 +312,10 @@ def _reaction_field() -> FieldSpec:
                 name_zh="時機",
                 type="choice",
                 required=True,
-                choices=tuple(Choice(value=e, name_zh=texts[e]) for e in SKILL_REACTION_EVENTS),
+                choices=tuple(
+                    Choice(value=e, name_zh=texts[e])
+                    for e in (*SKILL_REACTION_EVENTS, *REROLL_EVENTS)  # SK-3：重擲的兩個時機
+                ),
             ),
         ),
     )
@@ -631,6 +643,8 @@ def _primitive_usable(primitive: PrimitiveDef, draft: Draft, shape: str) -> bool
         return False
     if primitive.id == INTERCEPT:  # 只能出現在 ally_hit_adjacent 的反應技
         return _mapping(draft.get("reaction")).get("event") == "ally_hit_adjacent"
+    if primitive.id == REROLL:  # SK-3：只能出現在重擲時機的反應技
+        return _mapping(draft.get("reaction")).get("event") in REROLL_EVENTS
     return True
 
 

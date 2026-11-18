@@ -85,7 +85,7 @@ __all__ = [
 
 type XY = tuple[int, int]
 
-Awaiting = Literal["action", "decision", "ended", "stalled"]
+Awaiting = Literal["action", "decision", "ended", "stalled", "prep"]
 """伺服器在等什麼：主角的動作、主角的反應決定、戰鬥已結束；``stalled`` 只在自動推進超過步數
 上限（500）之後出現。"""
 
@@ -539,6 +539,34 @@ class BattleResponse(_ApiModel):
     """這次請求推進的每一步（依序）。"""
     outcome: BattleOutcome | None
     """戰鬥結束時的勝負與原因。"""
+    prep: PrepOut | None = None
+    """戰前佈置（SK-3，``awaiting == "prep"`` 時才有）：可放的技能與每招放得下的格子。"""
+
+
+class PrepOptionOut(_ApiModel):
+    """戰前佈置的一招（SK-3）：``kind`` 為 ``trap``（陷阱）、``rune``（刻印）、``surface``（表面）；
+    ``tiles`` 是我方起始區內這招放得下的格子（依 (y, x)）。"""
+
+    skill_id: str
+    kind: Literal["trap", "rune", "surface"]
+    tiles: tuple[XY, ...]
+
+
+class PrepOut(_ApiModel):
+    """戰前佈置（SK-3，06 6.38 第 11 點）：開戰前（雙方都還沒行動）在我方起始區 ``zone`` 免費放
+    1 個陷阱、刻印或表面（``POST /api/battles/{id}/prep``）；放了那招照常進冷卻。"""
+
+    unit_id: UnitId
+    zone: tuple[XY, ...]
+    options: tuple[PrepOptionOut, ...]
+
+
+class PrepRequest(_ApiModel):
+    """``POST /api/battles/{id}/prep``：``skill_id``＋``target_pos``（從 ``prep.options`` 挑）；
+    兩個都省略＝不放、直接開戰。"""
+
+    skill_id: str | None = None
+    target_pos: Pos | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -759,6 +787,19 @@ class DisplaceCheckOut(_ApiModel):
     lethal: bool
 
 
+class RerollOut(_ApiModel):
+    """預覽中可能發生的重擲反應（SK-3，06 6.38 第 12 點）：``unit_id`` 用反應技 ``skill_id`` 讓
+    ``target_id``（擲命中骰的人）重擲；``keep`` 為 ``better``（隊友讓你重擲取較好）或 ``worse``
+    （對方逼你重擲取較差）；``hit_permille`` 是重擲後的命中率；``auto`` 為自動反應。"""
+
+    unit_id: UnitId
+    skill_id: str
+    target_id: UnitId
+    keep: Literal["better", "worse"]
+    hit_permille: int
+    auto: bool
+
+
 class GambleBranchOut(_ApiModel):
     """賭注一個分支的預覽（Phase 3D-7a）：``kind`` 為 ``win``／``lose``，``permille`` 是這個分支
     發生的機率（命中之後）。``multiplier_permille`` 是本次傷害的倍率；``targets`` 是強制這個分支時
@@ -862,6 +903,9 @@ class PreviewOut(_ApiModel):
     strikes: int = 1
     """技能的傷害效果打幾下（#153：拿雙匕首施放單體武器技為 2；DD-2）：``targets`` 的傷害已是
     這幾下的合計（最少＝只中第一下，最多＝每下都暴擊）。普攻與其他動作為 1。"""
+    rerolls: tuple[RerollOut, ...] | None = None
+    """可能發生的重擲反應（SK-3）；沒有時為 ``None``。說明已在 ``notes``；``hit_permille`` 不含
+    重擲。"""
 
 
 def _damage(d: DamageRange | None) -> DamageOut | None:
@@ -1076,6 +1120,18 @@ def preview_out(
         followup_when=p.followup_when,
         oath_warning=p.oath_warning,
         strikes=p.strikes,
+        rerolls=tuple(
+            RerollOut(
+                unit_id=UnitId(r.unit_id),
+                skill_id=r.skill_id,
+                target_id=UnitId(r.target_id),
+                keep=r.keep,
+                hit_permille=_milli(r.hit_chance),
+                auto=r.auto,
+            )
+            for r in p.rerolls
+        )
+        or None,
         infusion=None
         if p.infusion is None
         else InfusionPreviewOut(

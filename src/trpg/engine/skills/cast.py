@@ -77,6 +77,7 @@ from trpg.engine.reactions import (
     hit_reactions,
     kin_ward_reactions,
     opportunity_attacks,
+    reroll_attack,
     spell_hit_reactions,
     take_decoy,
     try_intercept,
@@ -336,6 +337,24 @@ class Cast:
             backstab_allowed=backstab,
             at=self.hit_tile(unit),
             from_behind=part_breaks.part_behind(unit, self.part_for(unit)),  # GB-1c，R4
+        )
+        roll = reroll_attack(  # 重擲反應（SK-3）：同樣的參數再擲一次
+            ctx,
+            self.caster,
+            unit,
+            roll,
+            lambda: roll_attack(
+                ctx.state,
+                ctx.rng,
+                self.caster,
+                defender,
+                forced,
+                self.profile,
+                bonus=bonus,
+                backstab_allowed=backstab,
+                at=self.hit_tile(unit),
+                from_behind=part_breaks.part_behind(unit, self.part_for(unit)),
+            ),
         )
         rolled_event = ctx.emit(
             AttackRolled,

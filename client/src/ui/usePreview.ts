@@ -17,7 +17,7 @@ export function usePreview(battleId: string, stateKey: unknown, action: Action |
   const key = action === null ? "" : JSON.stringify(action);
 
   useEffect(() => {
-    if (action === null) return undefined;
+    if (action === null || action.type === "prepare") return undefined; // SK-3：戰前佈置沒有預覽
     const cached = cache.current.get(key);
     if (cached !== undefined) {
       setResult({ key, preview: cached });

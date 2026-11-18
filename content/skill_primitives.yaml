@@ -933,3 +933,17 @@ primitives:
     forbid_affects: [allies, all, self]
     budget_basis: fixed
     base_points: 6
+  # --- SK-3（#166，06 6.38 第 12 點）：重擲（只限反應）。點數為初值，未經模擬；還沒放進任何骨架（接進出題待 PM 決定）。
+  - id: reroll
+    name_zh: 重擲
+    llm_hint: "反應：讓擲失手的隊友重擲取較好的，或逼命中你的敵人重擲取較差的。"
+    description_zh: 只能是反應技唯一的效果，形狀 self，反應事件只能是 ally_missed_roll（core.reroll_ally_range 格內的隊友攻擊擲骰沒命中時，讓他重擲一次、取較好的結果）或 enemy_hit_roll（敵人的攻擊擲骰命中你時、傷害之前，逼他重擲一次、取較差的結果）。只改命中骰，不改其他判定；每輪次數照反應規則。預算：固定 base_points。
+    player_description: "反應：隊友擲失手時讓他重擲取較好的；或敵人打中你時逼他重擲取較差的。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    acts_on: caster
+    allowed_shapes: [self]
+    sole_effect: true
+    budget_basis: fixed
+    base_points: 5

@@ -326,6 +326,7 @@ def test_preview_returns_the_numbers_and_does_not_change_the_session(client: Tes
         "oath_warning",  # Phase 5C-3b
         "run_range",  # Phase 3-20
         "strikes",  # DD-2
+        "rerolls",  # SK-3：可能的重擲反應（沒有時 null）
     }
     assert data["action"] == attack
     assert isinstance(data["ap_cost"], int) and data["ap_cost"] >= 1
@@ -439,7 +440,7 @@ def test_log_has_the_cli_format(client: TestClient) -> None:
 def test_exceeding_the_auto_advance_limit_is_500_and_keeps_the_session(
     library: ContentLibrary,
 ) -> None:
-    with TestClient(create_app(library, max_auto_steps=0)) as client:
+    with TestClient(create_app(library, max_auto_steps=0, prep_placement=False)) as client:
         reply = client.post("/api/battles", json=CREATE)
         if reply.status_code == 201:  # 主角先攻：建立時不用推進，結束回合時才超過
             battle = reply.json()

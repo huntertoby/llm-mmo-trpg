@@ -15,6 +15,7 @@ from trpg.engine.events import (
     ApGranted,
     ApRefunded,
     AttackIntercepted,
+    AttackRerolled,
     AttackRolled,
     BacklashTriggered,
     BattleEnded,
@@ -72,6 +73,8 @@ from trpg.engine.events import (
     PartBroken,
     PartDamaged,
     PartStatDown,
+    PrepPlaced,
+    PrepSkipped,
     PushResisted,
     RaceSkillUsed,
     ReactionDeclined,
@@ -1398,6 +1401,40 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}{why}"
     return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
+
+
+_PREP_KIND_ZH = {"trap": "陷阱", "rune": "刻印", "surface": "表面"}
+
+
+@_handles(PrepPlaced)
+def _prep_placed(e: PrepPlaced, v: _View) -> str:
+    """戰前佈置（SK-3）。"""
+    what = _PREP_KIND_ZH[e.kind]
+    skill = _skill_name(v, e.skill_id)
+    return f"  ◆ 戰前佈置：{v.name[e.unit_id]} 用「{skill}」在 {xy_text(e.pos)} 放了{what}"
+
+
+@_handles(PrepSkipped)
+def _prep_skipped(e: PrepSkipped, v: _View) -> str:
+    return f"  ◆ {v.name[e.unit_id]} 不做戰前佈置，直接開戰"
+
+
+@_handles(AttackRerolled)
+def _attack_rerolled(e: AttackRerolled, v: _View) -> str:
+    """重擲（SK-3，06 6.38 第 12 點）。"""
+    skill = _skill_name(v, e.skill_id)
+    if e.keep == "worse":
+        why = f"逼 {v.name[e.attacker_id]} 重擲命中骰（取較差的）"
+    else:
+        why = f"讓 {v.name[e.attacker_id]} 重擲命中骰（取較好的）"
+
+    def roll(natural: int, total: int, hit: bool) -> str:
+        return f"d20={natural}，總值 {total}（{'命中' if hit else '未命中'}）"
+
+    first = roll(e.first_natural, e.first_total, e.first_hit)
+    second = roll(e.second_natural, e.second_total, e.second_hit)
+    kept = "第二次" if e.kept == "second" else "第一次"
+    return f"  ↻ {v.name[e.unit_id]} 的「{skill}」{why}：{first} → {second}，採用{kept}"
 
 
 @_handles(ContagionMarked)

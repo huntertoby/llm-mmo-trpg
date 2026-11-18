@@ -17,6 +17,7 @@ from trpg.engine.events.base import (
 )
 from trpg.engine.events.combat import (
     AttackIntercepted,
+    AttackRerolled,
     AttackRolled,
     ChainLimitReached,
     ConductBlocked,
@@ -108,6 +109,7 @@ from trpg.engine.events.objects import (
     TrapTriggered,
 )
 from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
+from trpg.engine.events.prep import PrepPlaced, PrepSkipped
 from trpg.engine.events.rules import (
     ApGranted,
     ApRefunded,
@@ -190,6 +192,7 @@ __all__ = [
     "ApGranted",
     "ApRefunded",
     "AttackIntercepted",
+    "AttackRerolled",
     "AttackRolled",
     "BacklashTriggered",
     "BattleEnded",
@@ -256,6 +259,8 @@ __all__ = [
     "PartBroken",
     "PartDamaged",
     "PartStatDown",
+    "PrepPlaced",
+    "PrepSkipped",
     "PushResisted",
     "RaceSkillUsed",
     "ReactionDeclined",

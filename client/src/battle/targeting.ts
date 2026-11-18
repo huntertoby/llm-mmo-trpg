@@ -166,6 +166,9 @@ function addTarget(t: TargetSet, action: Action): void {
     case "vault":
       setOnce(t.tiles, posKey(action.dest), action); // 攀跳的落點（Phase 3-21b）
       return;
+    case "prepare": // SK-3 戰前佈置：起始區的格子
+      if (action.target_pos != null) setOnce(t.tiles, posKey(action.target_pos), action);
+      return;
     case "interact":
       setOnce(t.objects, action.object_id, action);
       return;

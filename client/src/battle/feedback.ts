@@ -76,6 +76,8 @@ export const WORD_ABSORB = "吸收";
 /** SK-2：疾病擴散（標成會傳染；倒下時傳過去）。 */
 export const WORD_CONTAGIOUS = "會傳染";
 export const WORD_SPREAD = "擴散";
+/** SK-3：重擲（隊友讓你重擲取較好的、對方逼你重擲取較差的；字在擲骰的人頭上）。 */
+export const WORD_REROLL = "重擲！";
 
 /**
  * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
@@ -235,6 +237,9 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
     case "disease_spread":
       // SK-2：帶著會擴散狀態的單位倒下，傳到旁邊的人身上
       return [{ pos: at(e.to_id), text: WORD_SPREAD, tone: "bad" }];
+    case "attack_rerolled":
+      // SK-3：重擲（06 6.38 第 12 點）；結果看緊接著的 attack_rolled
+      return [{ pos: at(e.attacker_id), text: WORD_REROLL, tone: e.keep === "better" ? "good" : "bad" }];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];

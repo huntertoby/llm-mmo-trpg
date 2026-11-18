@@ -44,6 +44,7 @@ from trpg.engine.effects.models import (
 )
 from trpg.engine.events import (
     AttackIntercepted,
+    AttackRerolled,
     AttackRolled,
     DamageDealt,
     EventBase,
@@ -63,6 +64,7 @@ from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.lock_on import lock_target_of
 from trpg.engine.practice import is_practice_target
 from trpg.engine.quiet_strikes import NoTurn, no_turn_reason
+from trpg.engine.rerolls import ALLY_MISSED_ROLL, ENEMY_HIT_ROLL, Keep, kept_roll, reroll_helpers
 from trpg.engine.results import Pending
 from trpg.engine.rules.combat import AttackRoll, ForcedOutcome, attack_problem, roll_attack
 from trpg.engine.rules.facing import face_toward
@@ -119,6 +121,7 @@ __all__ = [
     "kin_ward_reactions",
     "opportunity_attacks",
     "perform_unit_attack",
+    "reroll_attack",
     "spell_hit_reactions",
     "take_decoy",
     "try_intercept",
@@ -455,6 +458,67 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
     elif picked is not None:
         perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
     ally_hit_near_reactions(ctx, attacker, target)  # 援手（TF-1）：身邊友方替受擊者補血
+
+
+def reroll_attack(
+    ctx: Ctx,
+    attacker: UnitState,
+    target: UnitState,
+    roll: AttackRoll,
+    again: Callable[[], AttackRoll],
+    *,
+    skill_id: str | None = None,
+) -> AttackRoll:
+    """重擲（SK-3，06 6.38 第 12 點；:mod:`trpg.engine.rerolls`）：命中骰擲完、``attack_rolled``
+    之前。對方的攻擊命中 ``target`` 時，``target`` 的「敵人擲中你時」反應技逼他重擲取較差的；
+    攻擊者擲失手時，身旁隊友（依 ID）的「隊友擲失手時」反應技讓他重擲取較好的。``again`` 以同樣的
+    參數再擲一次。預覽不重擲（:func:`~trpg.engine.rerolls.possible_rerolls` 另外列出）。"""
+    del skill_id  # 呼叫端的技能 ID 目前不用（事件記的是重擲的反應技）
+    if ctx.preview is not None or target.team is attacker.team or not attacker.alive:
+        return roll
+    if roll.hit:
+        picked = _react(ctx, target, (ENEMY_HIT_ROLL,), attacker, skills=True)
+        if picked is None:
+            return roll
+        return _rerolled(ctx, target, picked, attacker, target, roll, again, "worse")
+    for helper in reroll_helpers(ctx.state, attacker):
+        picked = _react(ctx, helper, (ALLY_MISSED_ROLL,), attacker, skills=True)
+        if picked is not None:
+            return _rerolled(ctx, helper, picked, attacker, target, roll, again, "better")
+    return roll
+
+
+def _rerolled(  # noqa: PLR0917
+    ctx: Ctx,
+    reactor: UnitState,
+    picked: ReactionDef | SkillDef,
+    attacker: UnitState,
+    target: UnitState,
+    roll: AttackRoll,
+    again: Callable[[], AttackRoll],
+    keep: Keep,
+) -> AttackRoll:
+    """付反應技的代價（``reroll`` 原語本身沒有效果），再擲一次，照 ``keep`` 取一次並發
+    ``attack_rerolled``。"""
+    _run_skill(ctx, reactor, ctx.rules.skill_def(picked.id), attacker)
+    second = again()
+    final, took_second = kept_roll(keep, roll, second)
+    ctx.emit(
+        AttackRerolled,
+        unit_id=reactor.id,
+        skill_id=picked.id,
+        attacker_id=attacker.id,
+        target_id=target.id,
+        keep=keep,
+        first_natural=roll.natural,
+        first_total=roll.total,
+        first_hit=roll.hit,
+        second_natural=second.natural,
+        second_total=second.total,
+        second_hit=second.hit,
+        kept="second" if took_second else "first",
+    )
+    return final
 
 
 def take_decoy(
@@ -830,6 +894,23 @@ def _attack_once(
         backstab_allowed=backstab_allowed,
         at=part_breaks.part_hit_tile(attacker, target, part_id),  # 巨型頭目的部位格（GB-1c）
         from_behind=part_breaks.part_behind(target, part_id),  # 殼縫算從背後（GB-1c，R4）
+    )
+    roll = reroll_attack(  # 重擲反應（SK-3）：同樣的參數再擲一次
+        ctx,
+        attacker,
+        target,
+        roll,
+        lambda: roll_attack(
+            state,
+            ctx.rng,
+            attacker,
+            part_breaks.defense_view(target, part_id),
+            forced,
+            bonus=bonus,
+            backstab_allowed=backstab_allowed,
+            at=part_breaks.part_hit_tile(attacker, target, part_id),
+            from_behind=part_breaks.part_behind(target, part_id),
+        ),
     )
     rolled_event = _emit_attack_rolled(ctx, attacker, target, roll, no_turn)
     if not roll.hit:

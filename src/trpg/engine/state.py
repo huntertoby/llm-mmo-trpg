@@ -46,6 +46,7 @@ __all__ = [
     "LastCast",
     "ObjectState",
     "PendingResolution",
+    "PrepWindow",
     "RuneState",
     "SpawnTemplate",
     "StatusInstance",
@@ -199,6 +200,16 @@ class ZoneState:
     speed: int = 0
     shape: str = "self"
     radius: int | None = None
+
+
+@dataclass(slots=True, frozen=True)
+class PrepWindow:
+    """戰前佈置的窗（SK-3，06 6.38 第 11 點，:mod:`trpg.engine.prep`）：``unit_id`` 是可以佈置的
+    主角、``zone`` 是我方起始區（依 (y, x)）。佈置、跳過或任何其他動作結算後關掉
+    （``BattleState.prep`` 回到 ``None``）。"""
+
+    unit_id: UnitId
+    zone: tuple[Pos, ...]
 
 
 @dataclass(slots=True, frozen=True)
@@ -766,6 +777,8 @@ class BattleState:
     """靶場測試模式（#147，``BattleSetup.practice``）；``None``＝一般戰鬥。"""
     practice_homes: dict[UnitId, Pos] = field(default_factory=dict)
     """測試模式的主角與木樁開場位置（被推進致命地形時回到這裡）；一般戰鬥為空，戰鬥中不變。"""
+    prep: Annotated[PrepWindow | None, Field(exclude_if=_empty)] = None
+    """戰前佈置的窗（SK-3，``BattleSetup.prep_placement``）；沒開或已關為 ``None``（不輸出）。"""
 
     # ------------------------------------------------------------------
     # 複製
@@ -817,6 +830,7 @@ class BattleState:
             oath=self.oath,
             practice=self.practice,
             practice_homes=self.practice_homes,
+            prep=self.prep,
         )
 
     # ------------------------------------------------------------------

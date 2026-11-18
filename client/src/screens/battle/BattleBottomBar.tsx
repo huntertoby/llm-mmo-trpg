@@ -58,6 +58,7 @@ export function BattleBottomBar(p: Props) {
   const runReason = runButton(sprintMode, p.response.run_option).reason;
   const hintState = {
     copying,
+    prep: p.response.awaiting === "prep",
     canAct,
     ended: p.ended,
     moveCount: classified.moves.size,

@@ -14,6 +14,7 @@ from trpg.content.skills.constants import (
     _PERMILLE,
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
+    ON_KEYWORD_EXPLOITED,
     ON_STATUS_APPLIED,
     SKELETON_IDS,
     DelayedAnchor,
@@ -130,6 +131,8 @@ class TriggerSpec(ContentModel):
     - ``tag``：只有 ``on_cast_tag`` 使用且必填（施放帶這個標籤的技能；Phase 3C-3a）。
     - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
     - ``surface``：只有 ``on_enter_surface`` 使用，可省略（省略＝任何表面；Phase 3C-3b）。
+    - ``on_keyword_exploited``（SK-3）：``status``／``surface`` 擇一（可都省略），``max_per_round``
+      只能是 1（06 6.38 第 10 點「每回合最多觸發 1 次」）。
     """
 
     event: str = Field(pattern=ID_PATTERN)
@@ -157,10 +160,20 @@ class TriggerSpec(ContentModel):
                 raise ValueError("on_cast_tag 必須填 tag")
         elif self.tag is not None:
             raise ValueError(f"只有 on_cast_tag 使用 tag，{self.event} 不可填 tag")
-        if self.status is not None and self.event != ON_STATUS_APPLIED:
+        if self.status is not None and self.event not in (ON_STATUS_APPLIED, ON_KEYWORD_EXPLOITED):
             raise ValueError(f"只有 on_status_applied 使用 status，{self.event} 不可填 status")
-        if self.surface is not None and self.event != ON_ENTER_SURFACE:
+        if self.surface is not None and self.event not in (ON_ENTER_SURFACE, ON_KEYWORD_EXPLOITED):
             raise ValueError(f"只有 on_enter_surface 使用 surface，{self.event} 不可填 surface")
         if self.surface is Surface.NONE:
             raise ValueError("trigger.surface 不可為 none")
+        self._check_exploited()
         return self
+
+    def _check_exploited(self) -> None:
+        """``on_keyword_exploited``（SK-3，#166 6.38-10）：狀態與表面擇一，每輪最多 1 次。"""
+        if self.event != ON_KEYWORD_EXPLOITED:
+            return
+        if self.status is not None and self.surface is not None:
+            raise ValueError("on_keyword_exploited 的 status 與 surface 只能擇一")
+        if self.max_per_round != 1:
+            raise ValueError("on_keyword_exploited 每輪最多觸發 1 次（max_per_round 只能是 1）")

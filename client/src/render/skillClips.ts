@@ -418,6 +418,7 @@ export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   enter_form: { role: "post", clip: "form_gather" },
   leave_form: { role: "post", clip: "form_release" },
   intercept: { role: "post", clip: "side_guard" },
+  reroll: { role: "post", clip: "side_guard" }, // SK-3：重擲暫借替隊友擋攻擊的側擋動作
   redirect_damage: { role: "post", clip: "side_guard" },
   cheat_death: { role: "post", clip: "rally_up" },
   reveal: { role: "post", clip: "shade_look" },

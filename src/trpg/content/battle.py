@@ -1120,6 +1120,8 @@ class ReactionWhen(ContentModel):
         "enemy_moves_in_range",
         "ally_hit_in_range",
         "kin_hit_in_range",
+        "ally_missed_roll",
+        "enemy_hit_roll",
     ]
     """``kin_hit_in_range``（Phase 5A-M1）：內建反應「同門相護」的事件——範圍內帶同門標籤的友方
     被敵人的攻擊（普攻或技能）命中、傷害之前。"""

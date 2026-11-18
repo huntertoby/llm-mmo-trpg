@@ -33,6 +33,7 @@ from trpg.engine.resources import (
 )
 from trpg.engine.rules.combat import PERMILLE
 from trpg.engine.rules.footprint import unit_dist
+from trpg.engine.skill_triggers import collect_exploit
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.primitives.base import Handler
 from trpg.engine.skills.targeting import (
@@ -68,6 +69,8 @@ def consume_status(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
         if instance is None:
             continue
         consumed = True
+        # SK-3（#166 6.38-10）：施加這個狀態的人「造的關鍵字被利用」
+        collect_exploit(ctx, instance.source_id, cast.caster.id, status=spec.status)
         scale = _consume_scale(cast, unit, spec, instance.remaining)
         execute(
             ctx,
