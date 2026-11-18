@@ -39,6 +39,12 @@ export const WATER_COLOR = "#4aa8ff";
 /** 沒有元素、不認得的元素。 */
 export const NEUTRAL_COLOR = "#d8d8e0";
 
+/**
+ * 「會擴散」的共同色：病菌黃綠（AR-SK2；美術 `docs/art/SK-2原語-美術.md` 第 1 節、第 7 節第 4 點）。
+ * 只給疾病擴散的部件、演出與狀態框的「會擴散」記號用；和中毒的綠 `#7ddc3a` 拉開（偏黃、較亮）。
+ */
+export const GERM_COLORS = { body: "#c4e44c", hi: "#f0ffb0", dark: "#7a9a26", knob: "#e2f47a" } as const;
+
 /** 元素的代表色（狀態圖樣、腳邊粒子、陷阱與區域）；水＝水色，不認得 → 中性色。 */
 export function elementColor(el: string | null | undefined): string {
   if (el == null) return NEUTRAL_COLOR;

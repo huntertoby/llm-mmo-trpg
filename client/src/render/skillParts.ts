@@ -1383,14 +1383,14 @@ export function drawChip(ctx: Ctx, part: Part, x: number, y: number, r: number, 
 
 /**
  * 有專屬圖示的部件代碼（其他走預設圖；測試用來對照 `content/` 檢查有沒有漏）。
- * QI-2c：照 Q 版的表（`qIcon/parts.ts`；效果含 `EFFECT_ALIAS`、觸發含暫代的 `TRIG_ALIAS`）；狀態仍是現行全表——
+ * QI-2c：照 Q 版的表（`qIcon/parts.ts`；效果含 `EFFECT_ALIAS`、觸發含暫代的 `TRIG_ALIAS`、條件含暫代的 `COND_ALIAS`）；狀態仍是現行全表——
  * Q 版 `STATUS` 只有 32 種，其餘經 `QP.hooks.status`（QI-4a 起畫 `qIcon/status.ts` 的圖樣，它不認得的才畫現行 `GLYPH`）。
  */
 export const KNOWN_PARTS = {
   effects: [...Object.keys(QP.EFFECT), ...Object.keys(QP.EFFECT_ALIAS)],
   statuses: Object.keys(STATUS),
   surfaces: Object.keys(QP.SURFACE),
-  conditions: Object.keys(QP.COND),
+  conditions: [...Object.keys(QP.COND), ...Object.keys(QP.COND_ALIAS)],
   triggers: [...Object.keys(QP.TRIG), ...Object.keys(QP.TRIG_ALIAS)],
   links: Object.keys(QP.LINK),
   costs: Object.keys(QP.COST),

@@ -1,6 +1,6 @@
 // 視圖 → 繪製模型（純函式；PixiJS 只負責照著畫）。
 import { partDraws, partHudUp, type PartDraw, type PartFx } from "./partStrip";
-import type { BattleView, DollLook, Facing, Pos, Surface, UnitView } from "../api/types";
+import type { BattleView, DollLook, Facing, Pos, StatusView, Surface, UnitView } from "../api/types";
 import type { DollInput } from "../render/appearance";
 import type { AmbientScene } from "../render/ambientModel";
 import type { FieldScenery } from "../render/sceneryModel";
@@ -124,6 +124,8 @@ export interface UnitDraw {
   charge?: number | null;
   /** 身上所有狀態的 ID（Phase 3-36a：頭頂狀態列與身上特效；沒有資料視為沒有）。 */
   statusIds?: readonly string[];
+  /** AR-SK2：帶「會擴散」的狀態（狀態列畫會擴散記號）；沒有時省略。 */
+  spreadIds?: readonly string[];
   /** 召喚物身上有待施放的灌注技能（Phase 3-33d，頭上畫「灌」）。 */
   infused?: boolean;
   /** 朝向（Phase 3D-8d）：圖示外緣畫小箭頭；背後格站著近戰敵人時會被背刺。 */
@@ -339,6 +341,7 @@ export function unitDrawOf(view: BattleView, u: UnitView, marker: string, acting
     bomb: bombCountdown(u),
     charge: chargeCountdown(u.statuses),
     statusIds: u.statuses.map((s) => s.status_id),
+    ...spreadIdsOf(u.statuses),
     infused: u.infused_skill_id != null,
     facing: u.facing,
     dollLook: regionDollLook(view.region, u.template_id, u.doll_look), // QK-8：盜賊三套的區域外觀（content/ui/region_dolls.yaml）
@@ -460,4 +463,10 @@ export function buildDrawModel(
 
 export function tileAt(model: DrawModel, p: Pos): TileDraw | undefined {
   return model.tiles[p.y * model.width + p.x];
+}
+
+/** AR-SK2：帶「會擴散」的狀態 ID（`contagious`）；沒有時回空物件（`UnitDraw` 不多一個鍵，既有快照不變）。 */
+function spreadIdsOf(statuses: readonly StatusView[]): { spreadIds?: readonly string[] } {
+  const ids = statuses.filter((s) => s.contagious === true).map((s) => s.status_id);
+  return ids.length === 0 ? {} : { spreadIds: ids };
 }

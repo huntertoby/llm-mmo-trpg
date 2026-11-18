@@ -18,6 +18,7 @@ import { CHARGING } from "../battle/followup";
 import { TIME_BOMB } from "../battle/bombs";
 import { bossSideHudOn, shiftShapes, sideBadgeLayouts, sideBlock, sideRowShift, type SideBlock } from "./bossSideHud";
 import { statusTile, tileCanvas } from "./skillIcon";
+import { HEAD_PAD, spreadMarkHeadCanvas } from "./spreadMark";
 import { bodyEffects, bodyOver, bodyUnder, CONCEALED, CONCEALED_ALPHA, effectsKey, hasOverEffect, hasUnderEffect, statusIconCanvas, statusIconKey, sortStatuses, type BodyEffects } from "./statusIcon";
 import { fontEpoch } from "./fontLoad";
 import { BOMB_BADGE_LABEL, BOSS_RING_FRONT_LABEL, CHARGE_BADGE_LABEL, DOWNED_BADGE_LABEL, FACING_ARROW_LABEL, HIDDEN_HP_LABEL, HP_BAR_LABEL, INFUSED_BADGE_LABEL, MIN_BADGE_FONT_PX, MIN_STATUS_GLYPH_PX, registerMark, SOUTH_ARROW_LABEL, STATUS_ROW_LABEL, SUMMON_BADGE_LABEL } from "./minMark";
@@ -1055,6 +1056,16 @@ function effectSprite(kind: "under" | "over", e: BodyEffects, feet: number): Spr
 
 const rowTextures = new Map<string, Texture>();
 
+/** AR-SK2：狀態列的「會擴散」記號貼圖（頭頂排法；邊長 ROW_ICON_FEET＋2×HEAD_PAD，框心在正中）。 */
+let spreadTex: Texture | null = null;
+function spreadMarkTexture(): Texture | null {
+  if (spreadTex !== null) return spreadTex;
+  const canvas = spreadMarkHeadCanvas(ROW_ICON_FEET);
+  if (canvas === null) return null;
+  spreadTex = Texture.from(canvas);
+  return spreadTex;
+}
+
 function rowIconTexture(id: string): Texture | null {
   const canvas = statusIconCanvas(id, ROW_ICON_FEET);
   if (canvas === null) return null;
@@ -1257,6 +1268,18 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       icons.push(icon);
     } else icons.push(null);
   }
+  // AR-SK2：帶「會擴散」的狀態在圖示上面疊記號（框頂右段上方一顆孢子；往上凸出格子），排在「+N」膠囊之下（膠囊不被蓋到）
+  const spread = new Set(u.spreadIds ?? []);
+  const marks = shown.map((id, i) => {
+    const tex = spread.has(id) && icons[i] != null ? spreadMarkTexture() : null;
+    if (tex === null) return null;
+    const mark = new Sprite(tex);
+    mark.anchor.set(0.5);
+    mark.width = ROW_ICON_FEET + 2 * HEAD_PAD;
+    mark.height = ROW_ICON_FEET + 2 * HEAD_PAD;
+    row.addChild(mark);
+    return mark;
+  });
   // 6F-19：「+N」一律是膠囊（角標、精簡列、只留「+N」三種；大小照位數算，不量字寬）
   const more = extra > 0 ? plusCapsule(extra) : null;
   if (more !== null) {
@@ -1299,6 +1322,11 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
       if (icon === null) return;
       icon.visible = !only && i < n;
       icon.position.set(x0 + i * lay.pitch, 0);
+      const mark = marks[i];
+      if (mark != null) {
+        mark.visible = icon.visible;
+        mark.position.set(icon.x, icon.y);
+      }
     });
     if (more !== null) {
       more.node.visible = !lay.compact;

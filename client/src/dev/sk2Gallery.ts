@@ -5,6 +5,8 @@
 //   ?case=absorb|contagion|hook|hook_lava|hook_giant（預設 absorb）
 //   &freeze=<毫秒>  中間那格停在演出開始後第幾毫秒（預設照各案例）
 //   &scale=<倍率>   畫面縮放（預設 1.2）
+//   &strip=<毫秒,…> AR-SK2：只畫「演出中」一排關鍵影格（每格停在演出開始後第幾毫秒），不畫施放前、結算後
+//   &w=1600|800     AR-SK2：畫面縮放照遊戲的地圖縮放（1600 寬 1.31、800 寬 0.53；真 1 倍看鎖鏈的畫面下限）
 // 每列三格：施放前、演出中（停格，浮字看得到）、結算後。畫好後 `document.body.dataset.ready = "1"`。
 import type { Application } from "pixi.js";
 import type { BattleResponse, BattleView, Glossary, SkillCard, StatusView, StepOut, TileView, UnitView } from "../api/types";
@@ -27,7 +29,9 @@ const W = 9;
 const H = 7;
 const params = new URLSearchParams(location.search);
 const caseId = params.get("case") ?? "absorb";
-const scale = Number(params.get("scale") ?? "1.2");
+const WIDTH_SCALE: Readonly<Record<string, number>> = { "1600": 1.31, "800": 0.53 };
+const scale = WIDTH_SCALE[params.get("w") ?? ""] ?? Number(params.get("scale") ?? "1.2");
+const strip = (params.get("strip") ?? "").split(",").filter((x) => x !== "").map(Number);
 
 type FixtureUnit = { pos: [number, number]; hp: number; downed: boolean; statuses: { status_id: string; remaining: number | null }[] };
 type FixtureCase = { events: Record<string, unknown>[]; units: Record<string, FixtureUnit>; log: string[] };
@@ -163,6 +167,8 @@ async function play(r: BattleRenderer, res: BattleResponse, c: Case, freeze: num
       } else if (op.op === "view") r.draw(buildDrawModel(op.view, HERO));
       else if (op.op === "pause") await wait(op.ms);
     }
+  // AR-SK2：操作播完時效果可能還在播（擴散接在倒下之後）：等到停格那一刻（最多 4 秒）
+  for (let i = 0; i < 80 && !frozen; i++) await wait(50);
 }
 
 const c = CASES[caseId] ?? CASES.absorb!;
@@ -176,13 +182,22 @@ document.body.appendChild(row);
 const before = view(c, c.before, c.surfaces ?? {});
 const consumed = Object.fromEntries(Object.entries(c.surfaces ?? {}).filter(([k]) => !data.events.some((e) => e.type === "surface_changed" && `${(e.pos as { x: number }).x},${(e.pos as { y: number }).y}` === k)));
 const after = view(c, afterUnits(c, data), consumed);
-(await cell(row, "施放前")).draw(buildDrawModel(before, HERO));
-const mid = await cell(row, `演出中（第 ${freeze} ms 停格）`);
 const step = { actor_id: HERO, events: data.events, view: after, step: { type: "use_skill" } } as unknown as StepOut;
 const res = { steps: [step], initial_view: before, view: after } as unknown as BattleResponse;
-const done = play(mid, res, c, freeze);
-(await cell(row, "結算後")).draw(buildDrawModel(after, HERO));
-await Promise.race([done, wait(freeze + 1500)]);
-const app = (mid as unknown as { app: Application }).app;
-app.render();
+if (strip.length > 0) {
+  // AR-SK2：關鍵影格一排（每格各自一個繪製器，停在第幾毫秒）
+  row.style.flexWrap = "wrap";
+  const cells: BattleRenderer[] = [];
+  for (const ms of strip) cells.push(await cell(row, `${ms} ms`));
+  await Promise.all(cells.map((r, i) => Promise.race([play(r, res, c, strip[i] as number), wait((strip[i] as number) + 6000)])));
+  for (const r of cells) (r as unknown as { app: Application }).app.render();
+} else {
+  (await cell(row, "施放前")).draw(buildDrawModel(before, HERO));
+  const mid = await cell(row, `演出中（第 ${freeze} ms 停格）`);
+  const done = play(mid, res, c, freeze);
+  (await cell(row, "結算後")).draw(buildDrawModel(after, HERO));
+  await Promise.race([done, wait(freeze + 1500)]);
+  const app = (mid as unknown as { app: Application }).app;
+  app.render();
+}
 document.body.dataset.ready = "1";

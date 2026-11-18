@@ -409,6 +409,20 @@
   font-weight: 700;
 }
 
+/* AR-SK2：名稱後面的小標籤（狀態「會擴散」：病菌黃綠，同記號的顏色） */
+.part-tip-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border: 1px solid #c4e44c;
+  border-radius: 8px;
+  color: #e2f47a;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 14px;
+  vertical-align: 1px;
+}
+
 .part-tip-text {
   margin-top: 2px;
   color: #d0d0dc;

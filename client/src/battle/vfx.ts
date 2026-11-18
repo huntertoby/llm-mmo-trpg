@@ -11,6 +11,7 @@ import type { ArcSpec } from "../render/attackVariants";
 import type { FxLook } from "../render/skillVariants";
 import { dodgeSide, reactVariant } from "../render/reactClips";
 import { DEFAULT_VFX_KEY, statusVfxKey, SUPPORT_VFX_KEY, WATER_VFX_KEY } from "./vfxPalette";
+import type { Sk2Fx } from "./sk2Fx";
 
 /** 特效的種類：飛行物、揮砍弧、單點爆發、範圍逐格爆發、光束、扇形擴散、向外擴散的環。 */
 export type VfxKind = "projectile" | "slash" | "burst" | "area" | "beam" | "cone" | "aura";
@@ -197,6 +198,8 @@ export interface StepVfx {
   shakes?: VfxShake[];
   /** 最後一擊放慢（6H-1，`impact.ts`）：一場最多一次。 */
   slow?: VfxSlow;
+  /** AR-SK2：吸收表面、疾病擴散、鉤的演出（`sk2Fx.ts`）。時間一律未縮放（繪製器照播放速度的倍率換算），`scaleVfx` 原樣帶過去。 */
+  sk2?: Sk2Fx[];
 }
 
 /** 鏡頭微震（6H-1；需求 docs/archive/art/打擊感移植需求.md 第 3 節）。 */
@@ -795,6 +798,7 @@ export function scaleVfx(vfx: StepVfx, scale: number): StepVfx {
     ...(vfx.impacts === undefined ? {} : { impacts: vfx.impacts.map((x) => ({ ...x, atMs: s(x.atMs) })) }),
     ...(vfx.shakes === undefined ? {} : { shakes: vfx.shakes.map((x) => ({ ...x, atMs: s(x.atMs), ms: s(x.ms) })) }),
     ...(vfx.slow === undefined ? {} : { slow: { ...vfx.slow, atMs: s(vfx.slow.atMs), fromMs: s(vfx.slow.fromMs), toMs: s(vfx.slow.toMs), rampMs: s(vfx.slow.rampMs) } }),
+    ...(vfx.sk2 === undefined ? {} : { sk2: vfx.sk2 }),
   };
 }
 
