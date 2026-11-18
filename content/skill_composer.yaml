@@ -36,6 +36,12 @@ structure:
   blow_distances: [2, 3]              # 吹送（3-54a）距離旋鈕的階梯
   blow_surface_permille: 80           # 範圍骨架（稀有以上）加上吹送附帶效果的機率（3-54a；獨立亂數串流，沒抽中的種子不變）
   shockwave_permille: 250             # 大地主題＋直線形狀的範圍骨架（稀有以上）加上震波附帶效果的機率（3-54b；獨立亂數串流）
+  # SK-2b（玩法交接 4.1.28 第 5 點）：#166 新原語接進出題，都用獨立亂數串流（沒抽中的種子不變）。初值＝大約和骨架裡一個一般原語
+  # 被抽到的機會相當（不另外加權），未經模擬，接數值工坊。
+  hook_core_permille: 200             # 位移骨架（稀有以上）核心改成鉤（直線）的機率
+  absorb_core_permille: 100           # 光環骨架（稀有以上）核心改成吸收表面（吸自己腳下換治療或護盾）的機率
+  absorb_secondary_permille: 150      # 打擊、蓄力／終結骨架（稀有以上、單體形狀、附帶效果還有空位）加上吸收表面（換層數或元素）的機率
+  contagion_permille: 150             # 打擊、範圍、控場、陷阱骨架（稀有以上、已施加燃燒／流血／中毒、附帶效果還有空位）加上疾病擴散的機率
   displace_second_core_permille: 250  # 位移骨架有第二個核心原語
   combo_double_damage_permille: 500   # 連段有第二段傷害
   control_buff_permille: 250          # 控場核心狀態為自我增益

@@ -826,15 +826,21 @@ class SkeletonCore(ContentModel):
 class SecondaryRules(ContentModel):
     """骨架的附帶效果（不是核心的效果）。
 
-    - ``primitives``：允許的原語；``None`` 表示不限。``harmful_only``：只能是有害原語。
+    - ``primitives``：允許的原語；``None`` 表示不限。``harmful_only``：只能是有害原語；
+      ``harmless_ok`` 列的原語例外（SK-2b：打擊骨架的吸收表面，收益給自己）。
     - ``max_count``：數量上限。
     - ``max_share_permille``：個別原語占全部效果點數的上限（‰），例如 ``{damage: 400}``。
     """
 
     primitives: tuple[str, ...] | None = None
     harmful_only: bool = False
+    harmless_ok: tuple[str, ...] = ()
     max_count: int = Field(default=0, ge=0, le=4)
     max_share_permille: dict[str, int] = Field(default_factory=dict)
+
+    def admits(self, primitive_id: str, *, harmful: bool) -> bool:
+        """有害性這一關：``harmful_only`` 時只收有害原語（``harmless_ok`` 例外）。"""
+        return harmful or not self.harmful_only or primitive_id in self.harmless_ok
 
 
 class ComposerTraits(ContentModel):

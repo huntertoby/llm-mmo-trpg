@@ -432,7 +432,7 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
     out += _self_cost_violations(skill, library)
     out += _rule_rewrite_violations(skill, library)
     out += _revive_violations(skill, library) + _hook_violations(skill, library)
-    out += _distance_condition_violations(skill, library)
+    out += _distance_condition_violations(skill, library) + _contagion_violations(skill, library)
     return out
 
 
@@ -506,6 +506,29 @@ def _hook_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation
             f"有鉤（hook）的技能冷卻至少 {need} 回合（目前：{skill.cost.cooldown or 0}）",
         )
     ]
+
+
+def _contagion_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """疾病擴散只附在施加燃燒、流血、中毒的效果上（SK-2b，玩法交接 4.1.28 第 5 點）：前面要有
+    施加 ``core.contagion_statuses`` 之一的 ``apply_status``。"""
+    kinds = set(library.ruleset.core.contagion_statuses)
+    out: list[Violation] = []
+    for index, effect in enumerate(skill.effects):
+        if effect.type != "contagion":
+            continue
+        before = skill.effects[:index]
+        if any(e.type == "apply_status" and e.status in kinds for e in before):
+            continue
+        statuses = library.ruleset.core.contagion_statuses
+        names = "、".join(library.ruleset.status_def(k).name_zh for k in statuses)
+        out.append(
+            Violation(
+                skill.id,
+                "cap.contagion_source",
+                f"effects[{index}]（contagion）要放在施加{names}的效果後面",
+            )
+        )
+    return out
 
 
 POINT_BLANK_MIN_REACH = 2
@@ -1032,7 +1055,7 @@ def _effect_role_violations(
     rules = skeleton.secondary
     for index, effect in secondary:
         allowed = rules.primitives is None or effect.type in rules.primitives
-        harmless = rules.harmful_only and not primitives[effect.type].harmful
+        harmless = not rules.admits(effect.type, harmful=primitives[effect.type].harmful)
         if not allowed or harmless:
             why = "不在允許的附帶原語內" if not allowed else "附帶效果必須是有害原語"
             out.append(

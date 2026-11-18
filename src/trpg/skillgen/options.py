@@ -621,7 +621,7 @@ def _roles(primitive: PrimitiveDef, skeleton: SkeletonDef) -> tuple[bool, bool]:
     secondary = (
         rules.max_count > 0
         and (rules.primitives is None or primitive.id in rules.primitives)
-        and (primitive.harmful or not rules.harmful_only)
+        and rules.admits(primitive.id, harmful=primitive.harmful)
     )
     return core, secondary
 

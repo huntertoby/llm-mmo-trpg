@@ -885,7 +885,9 @@ primitives:
       magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度, knob: none}
 
   # --- SK-2：#166 第 2 組的新原語（06 6.38 第 4、5、8 點；點數與格數為初值，接數值工坊，未經模擬）---
-  # 目前沒有放進任何骨架的 core／secondary（組合器、LLM 題目不會用到；接進出題由下一段決定）。
+  # SK-2b（玩法交接 4.1.28 第 5 點）接進出題：鉤＝位移骨架核心；吸收表面＝打擊、蓄力／終結骨架的附帶（換層數、換元素）
+  # 與光環骨架的核心（換治療、護盾）；疾病擴散＝打擊、範圍、控場、陷阱的附帶（只附在燃燒、流血、中毒上）。
+  # 隨機組合器只以獨立亂數串流加入（composer_parts._HAND_WRITTEN_PRIMITIVES 排除一般抽選；沒抽到的種子不變）。
   - id: absorb_surface
     name_zh: 吸收表面
     llm_hint: "吸走腳下或目標格的一種表面，換成層數、治療、護盾，或讓這一招帶上它的元素（吸水＝帶潮濕）。"
@@ -906,8 +908,8 @@ primitives:
       gain: {llm_hint: "吸到表面後換成什麼。", type: absorb_gain, required: true, description_zh: stack 層數、heal 治療、shield 護盾、element 這一招改成表面的元素}
       surface: {llm_hint: "只吸這一種表面；省略＝吸那一格的任何表面。", type: surface, description_zh: 只吸這種表面（省略＝任何表面）}
       stack: {llm_hint: "要累積的層數種類（換成層數時）。", type: stack, description_zh: gain 為 stack 時必填；只能是累積在自己身上的層數}
-      amount: {llm_hint: "累積幾層（換成層數時）。", type: int, min: 1, max: 3, description_zh: gain 為 stack 時必填, knob: none}
-      dice: {llm_hint: "治療或護盾的骰子（換成治療、護盾時）。", type: dice, description_zh: gain 為 heal、shield 時必填, knob: none}
+      amount: {llm_hint: "累積幾層（換成層數時）。", type: int, min: 1, max: 3, description_zh: gain 為 stack 時必填, knob: {ladder: stack_amount, weight: other, when: {gain: [stack]}}}   # SK-2b：旋鈕給組合器與 LLM 提議的預算器
+      dice: {llm_hint: "治療或護盾的骰子（換成治療、護盾時）。", type: dice, description_zh: gain 為 heal、shield 時必填, knob: {ladder: dice, weight: caller, when: {gain: [heal, shield]}}}
 
   - id: contagion
     name_zh: 疾病擴散

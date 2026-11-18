@@ -192,6 +192,10 @@ SNAPSHOTS = {
     "skill-proposal/18": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
     # SK-1（06 6.38 第 7 點）：變奏條件 when 多一支 caster_cast_tag（schema 與說明），雜湊同 /18
     "skill-proposal/19": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # SK-2b（#166，玩法交接 4.1.28、4.1.29）：鉤、吸收表面、疾病擴散進骨架選單（打擊附帶的有害限制
+    # 註明吸收表面例外）；吸收表面的提示與數值旋鈕、淨化多 count 參數；新驗證（距離條件的射程、
+    # 疾病擴散要在燃燒／流血／中毒之後）。都在 <available>／schema／evaluate 這層，雜湊同 /19
+    "skill-proposal/20": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 
