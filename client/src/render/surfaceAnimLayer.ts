@@ -76,6 +76,8 @@ interface Transition {
   well: WellPos | null;
   /** 水沫、漣漪（只有冷卻井的水）。 */
   fx: Graphics | null;
+  /** AR-SK2 吸收表面：演出裡提早播的消失，下面墊一張沒有表面的地形貼圖（這一步重畫前，格子貼圖還有表面）。 */
+  base?: Texture | null;
 }
 
 interface ShimmerNode {
@@ -115,6 +117,9 @@ export class SurfaceAnimator {
     if (prev !== null && this.enabled && timeScale !== null && timeScale > 0) {
       for (const w of broken) this.wells.set(key(w.x, w.y), { pos: w, start: this.clock, scale: timeScale, air: [], node: null });
       for (const c of surfaceChanges(prev, model)) {
+        // AR-SK2：吸收表面已在演出裡提早播的消失，重畫時接著播、不重播
+        const early = this.transitions.get(key(c.x, c.y));
+        if (early?.base !== undefined && early.change.before === c.before && early.change.after === c.after) continue;
         this.transitions.set(key(c.x, c.y), { change: c, start: this.clock, scale: timeScale, from: prev, node: null, mask: null, well: spillSource(c, broken), fx: null });
       }
     }
@@ -144,6 +149,12 @@ export class SurfaceAnimator {
     const tex = old === undefined ? null : host.oldTile(tr.from, old);
     if (tex === null) return;
     const node = new Container();
+    if (tr.base != null) {
+      const under = new Sprite(tr.base);
+      under.width = T;
+      under.height = T;
+      node.addChild(under);
+    }
     const sprite = new Sprite(tex);
     sprite.width = T;
     sprite.height = T;
@@ -282,6 +293,25 @@ export class SurfaceAnimator {
     this.shimmers.push({ tile: t, theme, sprites, node });
   }
 
+  /**
+   * AR-SK2 吸收表面（docs/art/SK-2原語-移植需求.md 第 2 項）：不等這一步重畫，演出裡就讓 (x, y) 的表面往中心收縮
+   * （同「消失」：下面墊一張沒有表面的地形貼圖，上面疊舊的樣子用縮小的圓遮）。這一步重畫時同一個變化接著播、不重播。
+   * `delayMs` 未縮放；「略過」、減少動態、那一格沒有表面時不做（照舊由重畫決定）。
+   */
+  absorbNow(x: number, y: number, host: SurfaceHost, timeScale: number | null, delayMs = 0): void {
+    const prev = this.prev;
+    if (!this.enabled || prev === null || timeScale === null || timeScale <= 0) return;
+    const t = tileOf(prev, { x, y });
+    if (t === undefined || String(t.surface) === "none") return;
+    const change: SurfaceChange = { x, y, before: String(t.surface), after: "none", kind: "vanish", delayMs };
+    const tr: Transition = { change, start: this.clock, scale: timeScale, from: prev, node: null, mask: null, well: null, fx: null, base: host.oldTile(prev, { ...t, surface: "none" } as TileDraw) };
+    const old = this.transitions.get(key(x, y));
+    if (old?.node != null && !old.node.destroyed) old.node.destroy({ children: true });
+    this.transitions.set(key(x, y), tr);
+    this.buildTransition(tr, t, host);
+    this.apply();
+  }
+
   /** 開關（prefers-reduced-motion）；關掉時拿掉轉場、表面停下來（下一次重畫前先藏起來）。 */
   setEnabled(on: boolean): void {
     if (this.enabled === on) return;
@@ -319,6 +349,11 @@ export class SurfaceAnimator {
       }
       const f = revealAt(tr.change, this.clock - tr.start, tr.scale);
       if (tr.change.kind === "appear" && !f.done) reveal.set(k, f.radius / 0.75);
+      if (f.done && tr.base != null) {
+        // AR-SK2：提早播的消失播完了，格子貼圖還有表面（這一步還沒重畫）：留著墊底那張、遮罩收到 0，重畫時才拿掉
+        if (tr.mask !== null && !tr.mask.destroyed) tr.mask.clear().circle(T / 2, T / 2, 0.01).fill(0xffffff);
+        continue;
+      }
       if (f.done) {
         if (tr.node !== null && !tr.node.destroyed) tr.node.destroy({ children: true });
         this.transitions.delete(k);

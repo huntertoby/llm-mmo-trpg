@@ -15,7 +15,11 @@ export type RuneView = Schemas["RuneView"];
 export type ActivationView = Schemas["ActivationView"];
 export type GearSkillView = Schemas["GearSkillView"];
 export type GrantedSkillView = Schemas["GrantedSkillView"];
-export type StatusView = Schemas["StatusView"];
+/**
+ * AR-SK2：`contagious`＝疾病擴散標成「會擴散」（後端 `StatusInstance.contagious`，false 時不輸出）。
+ * 目前後端的狀態 JSON（`engine/view.StatusView`）還沒有這個欄位（待 PM 決定），前端先收選填。
+ */
+export type StatusView = Schemas["StatusView"] & { contagious?: boolean | null };
 export type Pending = Schemas["Pending"];
 export type Action = Schemas["Action"];
 export type MoveAction = Schemas["Move"];

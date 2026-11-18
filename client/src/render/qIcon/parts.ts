@@ -23,6 +23,7 @@
 import { blank, blit, ci, ctxOf, el, f, flame, halo, ln, OUT, outlinePx, poly, render, rr, starPts, TAU, type Ctx, type DrawFn, type Pt, type QOpts } from "./core";
 import { drop, ART } from "./legacy48";
 import * as QS from "./skills";
+import { GERM_COLORS } from "../palette";
 
 type Tint = QS.Tint;
 /** 樣張 `QIcons` 用到的部分。 */
@@ -152,6 +153,91 @@ export const stancePlate = (col: string, hi: string, emblem: (c: Ctx, o: QOpts) 
 export const SURF_TINT: Readonly<Record<string, string>> = { fire: "fire", water: "water", ice: "ice", poison: "poison", holy: "holy", oil: "earth", darkness: "shadow", smoke: "steel" };
 const surface = (id: string): PartFn => (c, o) => { const t = SURF_TINT[id] ?? "water"; QS.ACT.surface.d(c, o, QS.TINT[t] ?? QS.TINT.water, t); };
 const spirit = (T?: Tint): PartFn => (c, o) => QS.ACT.summon.d(c, o, T ?? (QS.ACT.summon.def as Tint));
+// =====================================================================
+// AR-SK2：SK-2 三個新原語的部件圖樣（docs/art/sample/sk2Primitives.js 第 2 版逐行搬；紀錄 docs/art/SK-2原語-美術.md）。
+// 和樣張不同的地方（都不改畫法）：`ln(..., "butt")` 改傳 "miter"（core.ln 的第 5 參數是 lineJoin，不是 "round" 時線端就是 butt；
+// 都是兩點的線，join 不影響）；病菌黃綠放在 `palette.ts` 的 `GERM_COLORS`；`germ`、`hookJ`、`link`、`HOOK` export 給戰場演出共用。
+// =====================================================================
+/** 病菌：圓身體＋一圈短柄圓頭的刺（6～8 根）＋兩三個暗斑。≤14px 刺減成 6 根、不畫柄、留一個暗斑。 */
+export function germ(c: Ctx, o: QOpts, x: number, y: number, R: number, n = 8, rot = 0): void {
+  const tiny = o.tiny, k = tiny ? 6 : n, G = GERM_COLORS;
+  for (let i = 0; i < k; i++) {
+    const a = rot + (i / k) * TAU, ca = Math.cos(a), sa = Math.sin(a);
+    if (!tiny) ln(c, G.dark, R * 0.26, [[x + ca * R * 0.8, y + sa * R * 0.8], [x + ca * R * 1.32, y + sa * R * 1.32]]);
+    ci(c, G.knob, x + ca * R * (tiny ? 1.12 : 1.42), y + sa * R * (tiny ? 1.12 : 1.42), R * (tiny ? 0.36 : 0.27));
+  }
+  ci(c, G.body, x, y, R);
+  if (tiny) ci(c, G.dark, x + R * 0.25, y + R * 0.25, R * 0.3); /* ≤14px 留一個暗斑：和消耗狀態的橘色爆星剪影分開 */
+  if (!tiny) { ci(c, G.dark, x + R * 0.32, y + R * 0.3, R * 0.24); ci(c, G.dark, x - R * 0.12, y + R * 0.52, R * 0.15); ci(c, G.dark, x + R * 0.55, y - R * 0.18, R * 0.13); }
+  el(c, G.hi, x - R * 0.36, y - R * 0.38, R * 0.36, R * 0.22, -0.7);
+}
+/** 爪鉤的鋼色（第 2 版提亮一階）；戰場的鎖鏈與鉤頭同一組。 */
+export const HOOK = { body: "#dfe5ec", dark: "#9aa4b0", hi: "#ffffff" } as const;
+const CLAW = { cx: 4.4, cy: -2.4, r: 4.4, a0: PI, a1: PI * 2.3 };
+/** 不對稱的單爪抓鉤（直立座標：繩環在下 (0, 9.4)、直柄往上、頂上短尖刺、一支往 +x 翻出去再往下彎回來的大爪，爪尖帶倒刺）。
+ *  w0＞0：外框那一遍（整個形加粗）；flat：只畫剪影；o.thick：縮小的那一份線條加粗到 5 單位。 */
+export function hookJ(c: Ctx, o: QOpts & { thick?: boolean }, col: string = HOOK.body, w0 = 0, flat = false): void {
+  const W = (o.tiny ? 4.4 : o.thick ? 5 : 3.9) + w0;
+  const tip = (ang: number, out: number): Pt[] => { const ex = CLAW.cx + Math.cos(ang) * CLAW.r, ey = CLAW.cy + Math.sin(ang) * CLAW.r, tx = -Math.sin(ang), ty = Math.cos(ang), nx = Math.cos(ang), ny = Math.sin(ang), L = 3.8 + out * 0.7, B = 3.3 + out / 2; return [[ex + tx * L, ey + ty * L], [ex + nx * B - tx * 0.8, ey + ny * B - ty * 0.8], [ex - nx * (B - 0.6) - tx * 0.4, ey - ny * (B - 0.6) - ty * 0.4]]; };
+  ln(c, col, W, [[0, 7], [0, -2.4]], "miter");
+  poly(c, col, [[0, -13 - w0 * 0.7], [2.1 + w0 / 2, -4.6], [0, -2.4], [-2.1 - w0 / 2, -4.6]], 0.4);
+  st(c, col, W, (x) => x.arc(CLAW.cx, CLAW.cy, CLAW.r, CLAW.a0, CLAW.a1), "butt");
+  poly(c, col, tip(CLAW.a1, w0), 0.3);
+  ci(c, col, 0, 9.4, (o.tiny ? 3.4 : 3.2) + w0 / 2);
+  if (flat) return;
+  ci(c, OUT, 0, 9.4, o.tiny ? 1.3 : 1.25);
+  if (o.tiny) { ln(c, HOOK.hi, 1.3, [[-0.9, 5.4], [-0.9, -5]], "miter"); return; }
+  ln(c, HOOK.hi, 1.1, [[-0.85, 5.6], [-0.7, -7.6]], "miter");
+  st(c, HOOK.hi, 1.1, (x) => x.arc(CLAW.cx, CLAW.cy, CLAW.r + 0.9, PI * 1.25, PI * 1.75), "butt");
+  ln(c, HOOK.dark, 1.1, [[0.95, 5.6], [0.95, -1.6]], "miter");
+  st(c, HOOK.dark, 1.1, (x) => x.arc(CLAW.cx, CLAW.cy, CLAW.r - 1.1, PI * 1.95, PI * 2.3), "butt");
+}
+/** 圖樣用：爪鉤轉 45°（繩環在左下、尖刺在右上、爪在右下），外接框中心先移到原點。 */
+function hookArt(c: Ctx, o: QOpts, x = 0, y = 0, k = 1): void { at(c, x, y, k, (q) => { q.translate(-4.2, 0.3); hookJ(q, o); }, PI / 4); }
+/** 拉近的青色（拉扯部件的箭頭色）。 */
+const PULL_CYAN = { body: "#6ae0ff", hi: "#d8f8ff" } as const;
+/** 一節鎖鏈（中心 x,y、沿 a 方向）：side＝true 是側面（細長條），false 是正面（橢圓環＋洞）。 */
+export function link(c: Ctx, x: number, y: number, a: number, L: number, side: boolean, col = "#c3ccd6", dk = "#7d8794", hole = OUT): void {
+  at(c, x, y, 1, (q) => {
+    if (side) rr(q, dk, -L / 2, -L * 0.17, L, L * 0.34, L * 0.17);
+    else { el(q, col, 0, 0, L / 2, L * 0.34); el(q, hole, 0, 0, L * 0.24, L * 0.11); }
+  }, a);
+}
+/** 吸收表面的圖樣本體：一灘＋從一灘裡長出來的粗箭頭＋兩側往上飛的倒水滴（≥26px）。T＝表面色（預設水色）。 */
+function absorbArt(c: Ctx, o: QOpts, T?: Tint | null): void {
+  const tint = T ?? (QS.TINT.water as Tint);
+  el(c, tint[0], 0, 7.4, 10.8, 3.3);
+  f(c, tint[0], () => { c.moveTo(-6.8, 6.4); c.quadraticCurveTo(-2.6, 5.6, -2.6, 0.6); c.lineTo(-2.6, -1.6); c.lineTo(-8, -1.6); c.lineTo(0, -10.8); c.lineTo(8, -1.6); c.lineTo(2.6, -1.6); c.lineTo(2.6, 0.6); c.quadraticCurveTo(2.6, 5.6, 6.8, 6.4); c.closePath(); });
+  poly(c, tint[1], [[0, -10.8], [-8, -1.6], [-2.6, -1.6], [-2.6, 0.6], [-0.6, 0.6], [-0.6, -6.4]]);
+  el(c, tint[1], -4.8, 7.9, 3.4, 0.95);
+  if (o.tiny) return;
+  for (const [x, y, k] of [[-7.4, 1.6, 0.27], [7.4, 0.6, 0.23]] as const) halo(c, o, (q) => at(q, x, y, k, (p) => { drop(p, tint[0], 0, 0, 1); el(p, tint[1], -2.2, 3.4, 1.8, 3, 0.3); }, PI));
+}
+function contagionArt(c: Ctx, o: QOpts): void {
+  const G = GERM_COLORS;
+  if (o.tiny) { germ(c, o, 0, 0.2, 6.2, 6, 0.26); return; }
+  germ(c, o, -2.6, 2.6, 5.8, 8, 0.2);
+  halo(c, o, (q) => { ci(q, G.knob, 3.6, -2.2, 1.15); ci(q, G.knob, 5.1, -4.3, 1.3); });
+  halo(c, o, (q) => { for (let i = 0; i < 5; i++) { const a = 0.6 + (i / 5) * TAU; ci(q, G.knob, 7.2 + Math.cos(a) * 3.4, -6.8 + Math.sin(a) * 3.4, 1.05); } ci(q, G.body, 7.2, -6.8, 2.6); ci(q, G.hi, 6.4, -7.6, 0.9); });
+}
+/** ≥26：爪鉤＋繩環往左下接一節鎖鏈＋鏈尾一個指向左下（施放者那一側）的青色箭頭尖＝「拉近」。≤14：只留爪鉤。 */
+function hookChip(c: Ctx, o: QOpts): void {
+  if (o.tiny) { hookArt(c, o, 0.6, -0.6, 1.0); return; }
+  const k = 0.62, X = -2.6, Y = -3.4, eye = 9.4 * k + Y, ly = eye + 3.2 * k + 1.7, ay = ly + 2.2;
+  at(c, 0, 0, 1, () => {
+    halo(c, o, (q) => {
+      at(q, X, ay, 1, (p) => { poly(p, PULL_CYAN.body, [[0, 3.6], [-3.5, -1.2], [3.5, -1.2]], 0.5); poly(p, PULL_CYAN.hi, [[0, 3.6], [-3.5, -1.2], [-0.3, -1.2]], 0); });
+    });
+    halo(c, o, (q) => link(q, X, ly, PI / 2, 4.2, false, HOOK.body, HOOK.dark));
+    halo(c, o, (q) => at(q, X, Y, k, (p) => hookJ(p, { ...o, thick: true })));
+  }, PI / 4);
+}
+/** SK-2 三個原語的專屬圖樣（取代 EFFECT_ALIAS 的暫借清除表面／施加狀態／拉扯）；整體縮放照第 2 版自查表。 */
+const SK2_EFFECT: PartTable = {
+  absorb_surface: { zh: "吸收表面", topic: "地上一灘表面（染表面色），中間被抽成一根往上的粗箭頭；≥26px 兩側各一顆倒過來的小水滴", d: (c, o, T) => at(c, 0, 0.3, 0.86, (q) => absorbArt(q, o, T)) },
+  contagion: { zh: "疾病擴散", topic: "一顆黃綠病菌，往右上兩顆小點跳到一顆小病菌；≤14px 只留大的那顆", d: (c, o) => at(c, 0, 0, o.tiny ? 0.98 : 0.8, (q) => contagionArt(q, o)) },
+  hook: { zh: "鉤", topic: "一支不對稱的單爪抓鉤，斜放；≥26px 繩環往左下接一節鎖鏈＋一個指向左下的青色箭頭尖；≤14px 只留爪鉤", d: (c, o) => at(c, 0, 0, 0.88, (q) => hookChip(q, o)) },
+};
 export const EFFECT: PartTable = {
   damage: { zh: "傷害", topic: "白色四芒閃光", src: "b3:hit", d: act("hit") },
   heal: { zh: "治療", topic: "綠色粗十字", src: "b3:heal", d: act("heal") },
@@ -204,9 +290,10 @@ export const EFFECT: PartTable = {
   sacrifice_summon: { zh: "獻祭召喚物", topic: "小靈背後一圈橘色的爆炸", d: fit((c, o) => { poly(c, "#ff7a2a", starPts(0, 0, 11, 6.6, 10), 0.3); halo(c, o, (q) => at(q, 0, 0.6, 0.74, (p) => QS.ACT.summon.d(p, o, QS.ACT.summon.def as Tint))); }, 0.9) }, /* 第 2 版：縮到色環以內 */
   inscribe: { zh: "刻印", topic: "圓頂的石碑，上面一個金色菱形符文", d: tablet },
   detonate_runes: { zh: "引爆符文", topic: "符文石碑背後一圈橘色的爆炸", d: fit((c, o) => { poly(c, "#ff7a2a", starPts(0, 0, 11, 6.6, 10), 0.3); halo(c, o, (q) => at(q, 0, 0.4, 0.64, (p) => tablet(p, o))); }, 0.9) }, /* 第 2 版：縮到色環以內 */
+  ...SK2_EFFECT, /* AR-SK2：加在效果表最後，前面的順序不動 */
 };
-/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。 */
-export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", absorb_surface: "clear_surface", contagion: "apply_status", hook: "pull" /* SK-2：專屬圖樣待美術 */, reroll: "intercept" /* SK-3：重擲暫借反應的圖，待美術 */ };
+/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。AR-SK2：吸收表面、疾病擴散、鉤換成專屬圖樣（`SK2_EFFECT`），拿掉三筆暫借。 */
+export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", reroll: "intercept" /* SK-3：重擲暫借反應的圖，待美術 */ };
 
 // =====================================================================
 // 表面 1 個形（8 種表面染色；第 3 批的地面效果記號，依表面換外形）
@@ -351,6 +438,9 @@ export const COND: PartTable = {
   // KW-2：自身站在高處（鷹眼），美術出樣張前借「居高臨下」暫代
   self_on_high_ground: { zh: "自身站在高處", topic: "（暫代）同「居高臨下」：一座山，山頂一個小人頭", d: (c, o) => COND["height_advantage"]!.d(c, o) },
 };
+/** 條件的明確退回（同 EFFECT_ALIAS、TRIG_ALIAS）：SK-1 的距離條件還沒有美術圖樣，先借最接近的現有條件圖，等美術補畫（AR-SK2 報告列給美術 PM）。
+ *  貼身 point_blank → 夾擊（人形兩側貼著紅色敵方三角＝敵人就在身邊）；遠距 long_range → 目標落單（光柱下一個孤立的人形＝目標離得遠）。 */
+export const COND_ALIAS: Readonly<Record<string, string>> = { point_blank: "flanked", long_range: "target_isolated" };
 
 // =====================================================================
 // 代價 6 個
@@ -550,6 +640,7 @@ export const hooks: { status: ((c: Ctx, o: QOpts, id: string) => void) | null } 
 export function entry(cat: string, id: string): PartEntry {
   if (cat === "effect" && typeof id === "string") { if (id.startsWith("status:")) return entry("status", id.slice(7)); if (id.startsWith("surface:")) return entry("surface", id.slice(8)); id = EFFECT_ALIAS[id] ?? id; }
   if (cat === "trigger") id = TRIG[id] ? id : (TRIG_ALIAS[id] ?? id);
+  if (cat === "condition" && typeof id === "string") id = COND[id] ? id : (COND_ALIAS[id] ?? id);
   if (cat === "condition" && typeof id === "string" && id.startsWith("target_has_status:")) { const s = entry("status", id.slice(18)); return { zh: "目標帶有狀態：" + (s.zh ?? id.slice(18)), topic: "那個狀態的圖，右上一個問號", live: s.live, d: (c, o, T, opt) => { at(c, -1.6, 1.4, 0.84, (q) => s.d(q, o, T, opt)); if (!o.tiny) qmark(c, o, 7.4, -6, 0.8); } }; }
   const e = CATS[cat]?.[id]; if (e) return e;
   if (cat === "status") return { zh: id, topic: "（沒有 Q 版圖樣：現行圖樣頂著）", live: true, d: (c, o) => (hooks.status ? hooks.status(c, o, id) : QS.ACT.buff.d(c, o, QS.ACT.buff.def as Tint)) };

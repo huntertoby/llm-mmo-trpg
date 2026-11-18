@@ -21,6 +21,8 @@ import { FEET } from "../unitSprite";
 import { reduceVfx, REDUCED_FLASH_MS } from "../reducedMotion";
 import { SkillLayer } from "./skillLayer";
 import { DOLL_PX, type LiftState } from "./rendererBase";
+import { sk2Effects, type Sk2Host } from "../sk2Effects";
+import { surfaceTimeScale } from "../motionAnims";
 
 const T = TILE_SIZE;
 /** 減少動態時的白閃（6H-1）：開頭的強度（人形、異形、疊層都一樣），之後線性淡掉。 */
@@ -56,6 +58,19 @@ export abstract class VfxLayer extends SkillLayer {
     },
     // OCL-1b：受擊閃白交給被遮擋外框（k ＝ 白閃 ÷ 呼叫點傳的峰值）、倒下片段藏外框
     outline: { flash: (id, flash, peak) => this.flashOutline(id, flash, peak), hide: (id) => this.hideOutline(id) },
+  };
+
+  /** AR-SK2 演出（`sk2Effects.ts`）用的操作。 */
+  private readonly sk2Host: Sk2Host = {
+    center: (p) => this.center(p),
+    unitNode: (id) => {
+      const s = this.unitSprites.get(id) ?? this.downedSprites.get(id);
+      return s === undefined || s.destroyed ? null : s;
+    },
+    side: (id) => ((this.unitDrawOf.get(id) ?? this.downedDrawOf.get(id))?.facing === "west" ? -1 : 1),
+    deco: (y) => this.rows.row(y).deco,
+    boardScale: () => this.scale,
+    absorbSurface: (p, delayMs) => this.motion.surface.absorbNow(p.x, p.y, this.surfaceHost, surfaceTimeScale(), delayMs),
   };
 
   /** 特殊結果、復活、勝利（6N-5，`resultEffects.ts`）用的操作：受擊的操作再加地圖大小。 */
@@ -218,7 +233,10 @@ export abstract class VfxLayer extends SkillLayer {
     const effects: Effect[] = [];
     const auraHits = vfx.casts.some((c) => c.kind === "aura");
     const at = (p: Pos) => this.center(p);
+    // AR-SK2：鉤的鎖鏈換掉施放者發出的那一段特效（`sk2Effects`）
+    const chained = new Set((vfx.sk2 ?? []).flatMap((f) => (f.kind === "hook" && f.castIndex >= 0 ? [f.castIndex] : [])));
     vfx.casts.forEach((cast, i) => {
+      if (chained.has(i)) return;
       // 6N-1：飛行物、光束、扇形從出招那一刻的作用端（杖頭、劍尖、槍口、弓弦）發出，不從格子中心
       const o = origins.get(i);
       const from = o !== undefined && (cast.kind === "projectile" || cast.kind === "beam" || cast.kind === "cone") ? o : null;
@@ -249,6 +267,8 @@ export abstract class VfxLayer extends SkillLayer {
       if (flat !== null) effects.push(this.isDummy(flat) ? dummyFlashEffect(this.reactHost, flat, now + hit.atMs, scale) : this.overlayHit(flat, now + hit.atMs, Math.max(160, impactMs)));
     }
     for (const blast of vfx.blasts) effects.push(blastEffect(blast, now, impactMs, at));
+    // AR-SK2：吸收表面、疾病擴散、鉤（減少動態時不播；表面照重畫直接消失）
+    if (vfx.sk2 !== undefined && vfx.sk2.length > 0 && !this.reduced) effects.push(...sk2Effects(this.sk2Host, vfx.sk2, now, scale, vfx.casts, origins));
     // 6H-1：鏡頭微震只在重擊、爆炸、Boss 大招（`battle/impact.ts`）；版面設定關掉、減少動態時不震
     const quake = shake ? impactShakeEffect(vfx.shakes ?? [], now, (x, y) => stage.position.set(x / this.scale, y / this.scale)) : null; // 幅度是畫面像素：場景座標要除以縮放
     if (quake !== null) effects.push(quake);
