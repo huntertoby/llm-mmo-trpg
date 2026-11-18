@@ -906,3 +906,15 @@ primitives:
       stack: {llm_hint: "要累積的層數種類（換成層數時）。", type: stack, description_zh: gain 為 stack 時必填；只能是累積在自己身上的層數}
       amount: {llm_hint: "累積幾層（換成層數時）。", type: int, min: 1, max: 3, description_zh: gain 為 stack 時必填, knob: none}
       dice: {llm_hint: "治療或護盾的骰子（換成治療、護盾時）。", type: dice, description_zh: gain 為 heal、shield 時必填, knob: none}
+
+  - id: contagion
+    name_zh: 疾病擴散
+    llm_hint: "讓目標身上的燃燒、流血、中毒會傳染：目標倒下時，這些狀態傳給身邊的一個敵人。"
+    description_zh: 把被命中目標身上現有的燃燒、流血、中毒（rules/core.yaml contagion_statuses）標成會擴散。帶著會擴散狀態的單位倒下時，這些狀態以剩餘回合傳給 contagion_radius（1）格內的 1 個同陣營單位（施放者的敵人；多個候選時依單位 ID 排序後用戰鬥亂數挑 1 個，只有 1 個時不擲）；每次倒下最多傳 1 次，傳過去的狀態照樣會擴散（06 6.31、6.38 第 5 點）。要放在施加這些狀態的效果之後；目標身上沒有這些狀態時沒有效果。事件 disease_spread。預算：固定 base_points（形狀倍率另算）。
+    player_description: "讓目標身上的燃燒、流血、中毒會傳染：目標倒下時，這些狀態以剩餘回合傳給身邊的一個敵人。"
+    category: structural
+    harmful: true
+    min_rarity: rare
+    forbid_affects: [allies, self]
+    budget_basis: fixed
+    base_points: 2

@@ -73,6 +73,9 @@ export const WORD_LOCK_INTERRUPTED = "被打斷";
 /** SK-2：推、拉打到推不動的目標（照撞牆算一次撞擊）；吸收表面。 */
 export const WORD_IMMOVABLE = "推不動！撞擊";
 export const WORD_ABSORB = "吸收";
+/** SK-2：疾病擴散（標成會傳染；倒下時傳過去）。 */
+export const WORD_CONTAGIOUS = "會傳染";
+export const WORD_SPREAD = "擴散";
 
 /**
  * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
@@ -226,6 +229,12 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
     case "surface_absorbed":
       // SK-2：吸收表面（06 6.38 第 4 點）
       return [{ pos: at(e.unit_id), text: WORD_ABSORB, tone: "good" }];
+    case "contagion_marked":
+      // SK-2：疾病擴散（06 6.38 第 5 點）：目標身上的持續傷害會傳染
+      return [{ pos: at(e.target_id), text: WORD_CONTAGIOUS, tone: "bad" }];
+    case "disease_spread":
+      // SK-2：帶著會擴散狀態的單位倒下，傳到旁邊的人身上
+      return [{ pos: at(e.to_id), text: WORD_SPREAD, tone: "bad" }];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];

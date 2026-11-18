@@ -404,6 +404,7 @@ export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   blow_surface: { role: "post", clip: "blow_sleeve" },
   clear_surface: { role: "post", clip: "press_clear" },
   absorb_surface: { role: "post", clip: "press_clear" }, // SK-2：吸收表面暫借清除表面的按地動作
+  contagion: { role: "post", clip: "point_at" }, // SK-2：疾病擴散暫借施加減益的指向動作
   create_obstacle: { role: "post", clip: "raise_both" },
   raise_terrain: { role: "post", clip: "stomp_raise" },
   lower_terrain: { role: "post", clip: "press_lower" },

@@ -712,6 +712,16 @@ def _clear_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> s
     return f"清除範圍內的表面（{names}），不帶元素、不引發其他反應"
 
 
+def _contagion(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+    """疾病擴散（SK-2，06 6.38 第 5 點）。"""
+    core = lib.ruleset.core
+    names = _names(lib.ruleset.status_def(s).name_zh for s in core.contagion_statuses)
+    return (
+        f"目標身上的{names}會擴散：目標倒下時，這些狀態以剩餘回合傳給 {core.contagion_radius} 格內的"
+        "一個敵人（每次倒下傳一次）"
+    )
+
+
 def _absorb_surface(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """吸收表面（SK-2，06 6.38 第 4 點）。"""
     where = "你腳下" if spec.affects == "self" else "目標格"
@@ -1046,6 +1056,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "blow_surface": _blow_surface,
     "clear_surface": _clear_surface,
     "absorb_surface": _absorb_surface,
+    "contagion": _contagion,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,

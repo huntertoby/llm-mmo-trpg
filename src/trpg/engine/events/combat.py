@@ -187,6 +187,26 @@ class StatusApplied(EventBase):
     source_id: UnitId | None
 
 
+class ContagionMarked(EventBase):
+    """疾病擴散（SK-2 ``contagion``，06 6.38 第 5 點）：``unit_id`` 把 ``target_id`` 身上的
+    ``status_ids``（燃燒、流血、中毒）標成會擴散。"""
+
+    type: Literal["contagion_marked"] = "contagion_marked"
+    unit_id: UnitId
+    target_id: UnitId
+    status_ids: tuple[str, ...]
+
+
+class DiseaseSpread(EventBase):
+    """疾病擴散：帶著會擴散狀態的 ``from_id`` 倒下，``status_ids`` 以剩餘回合傳給 ``to_id``
+    （緊接著各自的 ``status_applied``；06 6.31、6.38 第 5 點）。每次倒下最多一次。"""
+
+    type: Literal["disease_spread"] = "disease_spread"
+    from_id: UnitId
+    to_id: UnitId
+    status_ids: tuple[str, ...]
+
+
 class StatusSaveRolled(EventBase):
     """施加狀態的抵抗判定：攻方（技能的縮放屬性）對守方（狀態的 ``save_attr``）的比例公式。
 

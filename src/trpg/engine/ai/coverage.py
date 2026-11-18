@@ -48,6 +48,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "add_stack": f"{_EVENTS}；超載層數的風險 ai/gamble.py（overloads）",
         "consume_stack": f"{_EVENTS}（層數加成反映在傷害）",
         "consume_status": f"{_EVENTS}（消耗後的 then 效果）",
+        "contagion": "不加分（標記本身沒有預覽收益；倒下時才擴散；SK-2，AI 估值待補）",
         "place_trap": "候選估計 _trap_estimate；放置收益 _trap_gains",
         "grant_ap": "_rewrite_gains（ai_profiles.yaml rewrite）；友方支援 _SUPPORT_CHECKS",
         "reset_cooldown": "_rewrite_gains；友方支援 _SUPPORT_CHECKS",

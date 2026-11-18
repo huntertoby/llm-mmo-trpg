@@ -202,6 +202,8 @@ class ApplyStatusEffect(EffectBase):
     magnitude_permille: int = Field(default=1000, ge=1000)
     """姿態的幅度（``StatusInstance.magnitude_permille``，Phase 3W-5b；完整姿態技能）；數值型狀態的
     強度（BAL-12e，#76）。其他狀態一律 1000。"""
+    contagious: bool = False
+    """疾病擴散傳過來的狀態照樣會擴散（``StatusInstance.contagious``，SK-2）。"""
 
     def sort_target(self) -> str:
         return self.target_id

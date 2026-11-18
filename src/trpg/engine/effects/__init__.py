@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from trpg.engine import bombs as _bombs
+from trpg.engine import contagion as _contagion
 from trpg.engine import death_surfaces as _death_surfaces
 from trpg.engine import delayed as _delayed
 from trpg.engine import interactions as _interactions
@@ -94,6 +95,7 @@ __all__ = [
 del (
     _blow,
     _bombs,
+    _contagion,
     _death_surfaces,
     _delayed,
     _handlers,

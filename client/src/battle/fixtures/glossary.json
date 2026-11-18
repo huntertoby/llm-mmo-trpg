@@ -3655,6 +3655,16 @@
    ],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "contagion",
+   "name_zh": "疾病擴散",
+   "description_zh": "讓目標身上的燃燒、流血、中毒會傳染：目標倒下時，這些狀態以剩餘回合傳給身邊的一個敵人。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "conditions": [

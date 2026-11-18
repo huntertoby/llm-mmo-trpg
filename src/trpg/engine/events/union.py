@@ -11,7 +11,9 @@ from trpg.engine.events.combat import (
     AttackRolled,
     ChainLimitReached,
     ConductBlocked,
+    ContagionMarked,
     DamageDealt,
+    DiseaseSpread,
     Healed,
     ManeuverRolled,
     PushResisted,
@@ -189,6 +191,8 @@ type Event = Annotated[
     | ShieldGained
     | ShieldAbsorbed
     | ShieldEnded
+    | ContagionMarked
+    | DiseaseSpread
     | StatusApplied
     | StatusRemoved
     | StatusSaveRolled

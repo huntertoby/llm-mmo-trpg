@@ -27,9 +27,11 @@ from trpg.engine.events import (
     CheckRolled,
     Collided,
     ConductBlocked,
+    ContagionMarked,
     DamageDealt,
     DamageRedirected,
     DeathCheated,
+    DiseaseSpread,
     EffectFizzled,
     ElementTouched,
     EnteredDeadlyTerrain,
@@ -1396,6 +1398,20 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}{why}"
     return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
+
+
+@_handles(ContagionMarked)
+def _contagion_marked(e: ContagionMarked, v: _View) -> str:
+    """疾病擴散的標記（SK-2）。"""
+    names = "、".join(v.statuses.get(s, s) for s in e.status_ids)
+    return f"  ☣ {v.name[e.target_id]} 身上的{names}會擴散了"
+
+
+@_handles(DiseaseSpread)
+def _disease_spread(e: DiseaseSpread, v: _View) -> str:
+    """疾病擴散（SK-2）。"""
+    names = "、".join(v.statuses.get(s, s) for s in e.status_ids)
+    return f"  ☣ {v.name[e.from_id]} 倒下，{names}擴散到 {v.name[e.to_id]} 身上"
 
 
 _ABSORB_GAIN_ZH = {"stack": "層數", "heal": "治療", "shield": "護盾"}
