@@ -13,6 +13,7 @@ pm-workflow plugin 的 `local_summarize`／`local_ask`（LM Studio 8001，`googl
 | 2026-11-16 | 開發 | `local_ask` 多檔初篩：`src/trpg/llm` 22 個檔（6858 行）找「跟挑選模式 pick 有關的檔案與函式」 | 6858 | 有錯 | 要 | 負的（全錯，得重做） | 附檔超過 context 被截斷（工具有提示），只看到前幾個檔；回答 `candidate_source.py` 的提議器（該檔根本沒有 pick），漏了 `pick.py`（`pick_skill` 316、`make_pick_proposer` 447 等）、`flash_pick.py`、`wish_pick.py`。grep 找到 llm 7 個、skillgen 20 個相關檔。skillgen（約 3.4 萬行）比 llm 大 5 倍，沒再試 |
 | 2026-11-16 | 開發 | 新版 `local_scan` 掃 `src/trpg/llm` 頂層 22 個檔（6858 行）問「跟挑選模式 pick 有關的檔案與函式、哪幾行」 | 6858 | 部分對（有多報、有亂碼） | 要 | 約 5 成（真相關的幾個檔都抓到，但要逐條查） | 回報 22/22 檔讀完、沒截斷。抓到 `pick.py`（`pick_skill` 316、`make_pick_proposer` 447 都對）、`flash_pick.py`（378～381 對）、`wish_pick.py`、`flash_eval.py` `pick_skills` 53、`flash_propose.py` `pick` 739／825 對、`story_skill.py` `_pick_element` 83。多報：`candidate_source.py`、`client.py`、`consistency.py`、`naming.py`、`situation.py` 這 5 檔其實沒有 pick（把「加嚴 strict」「schema 模式」當成挑選）；`skill_eval.py` 行號欄是一長串 747～821 的亂碼；`flash_pick.py` 83 標的是 docstring 不是 pick 欄位。`flash_propose.py` 有 35 處 pick 只列 7 條。上次是全錯，這次方向對 |
 | 2026-11-16 | 開發 | `local_ask` 附同一批 10 個檔（13 萬字）問同一題 | 約 6000 | 準（拒絕） | 不用 | 不適用 | 回「附檔共 130954 字，超過約 36561 字，不回答」，不再給截斷的假答案；舊問題已修好 |
+| 2026-11-18 | 專案 PM | `local_summarize` push 前檢查 log（完整檢查＋前端建置）問「每項結束碼、有沒有失敗或警告」 | 473 | 準（行號錯 1 處） | 不用 | 約 9 成 | 各項通過、pytest 16887 passed、兩個警告都對；VIRTUAL_ENV 警告標第 644 行，實際是 333 行（檔案只有 473 行）；沒分開寫兩個檢查各自的結束碼，但「全部 0」正確 |
 
 ## 總結
 
