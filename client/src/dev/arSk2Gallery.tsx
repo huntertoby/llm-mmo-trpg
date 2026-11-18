@@ -82,7 +82,8 @@ const ROW: readonly [string, boolean][] = [
 ];
 
 async function field(w: 1600 | 800): Promise<void> {
-  const scale = w === 800 ? 0.53 : 1.31;
+  // AR-SK3：`&scale=` 指定地圖縮放（例：1.7＝畫面上的框邊長 ≥ 14 px，記號換成狀態卡的排法）
+  const scale = Number(params.get("scale") ?? (w === 800 ? 0.53 : 1.31));
   const W = 8, H = 4;
   const tiles = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) tiles.push(tile(x, y, { terrain: "stone" }));
