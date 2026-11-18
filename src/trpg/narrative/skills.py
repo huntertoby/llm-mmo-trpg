@@ -1472,6 +1472,8 @@ REACTION_TIMING_TEXT: dict[str, str] = {
     "enemy_enters_adjacent": "敵人走進相鄰格時",
     "ally_targeted": "相鄰的友方被敵人瞄準時（命中判定之前）",
     "ally_hit_near": "相鄰的友方被敵人攻擊命中後",
+    "ally_missed_roll": "隊友擲失手時",  # SK-3b（名詞表，玩法交接 4.1.30 第 6 點）
+    "enemy_hit_roll": "敵人擲中你時",
 }
 """反應技觸發事件的中文說明（Phase 3C-6a：技能卡片的「反應時機」一行）。"""
 

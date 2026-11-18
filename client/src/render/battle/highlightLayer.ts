@@ -26,7 +26,7 @@ import { giantTargetFrame } from "../giantSprite";
 import { giantMarkNodes, type GiantMarksDraw } from "./partTileMarks";
 import { Texture as PixiTexture } from "pixi.js";
 import type { PrepMarksDraw } from "../../battle/prep";
-import { ghostOf, placeMark, placeTip, tipSize } from "../prepMarks";
+import { ghostOf, placeMark, placeTip, tipPlacement, tipSize } from "../prepMarks";
 
 const T = TILE_SIZE;
 export interface DirectionMark {
@@ -319,15 +319,17 @@ export abstract class HighlightLayer extends TerrainLayer {
     const size = tipSize(probe.g);
     const made = canvasOf(size.w + 2, size.h + 2);
     if (made === null) return;
+    const o = this.origin(d.hover);
+    // SK-3b：右邊會超出地圖時翻到格子左邊（美術 AR-SK3 驗收）
+    const at = tipPlacement(o.x, T + 1 / S, (size.w + 2) / S, (this.model?.width ?? Infinity) * T);
     made.g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    placeTip(made.g, 0, 0);
+    placeTip(made.g, 0, 0, undefined, at.side);
     const tex = PixiTexture.from(made.cv);
     this.prepTextures.push(tex);
     const tip = new Sprite(tex);
-    const o = this.origin(d.hover);
     tip.width = (size.w + 2) / S;
     tip.height = (size.h + 2) / S;
-    tip.position.set(o.x + T + 1 / S, o.y + T / 2 - size.h / 2 / S);
+    tip.position.set(at.x, o.y + T / 2 - size.h / 2 / S);
     tip.label = "prep-tip";
     this.hover.addChild(tip);
   }

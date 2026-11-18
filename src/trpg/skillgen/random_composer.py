@@ -22,7 +22,14 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skill_scaling import ScalingFacts
 from trpg.content.skill_triggers import EVERY_N_HITS
-from trpg.content.skills import SkillDef, SkillRarity, rarity_rank
+from trpg.content.skills import (
+    ON_KEYWORD_EXPLOITED,
+    REROLL,
+    REROLL_EVENTS,
+    SkillDef,
+    SkillRarity,
+    rarity_rank,
+)
 from trpg.shared.errors import TrpgError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
@@ -60,7 +67,7 @@ from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.keywords import has_keyword
 from trpg.skillgen.mechanics import mechanic_tags
-from trpg.skillgen.memo import draft_key, library_memo
+from trpg.skillgen.memo import by_id, draft_key, library_memo
 from trpg.skillgen.scaling import retarget_scaling
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.variant_gen import variant_specs
@@ -418,18 +425,27 @@ def _fit_attr(library: ContentLibrary, base: dict[str, Any], ctx: Ctx) -> dict[s
     return {**base, "scaling_attr": allowed[0]}
 
 
-def _attempt_passive(
-    rng: Rng, library: ContentLibrary, seed: int, tier: int, rarity: SkillRarity
+def _attempt_passive(  # noqa: PLR0917
+    rng: Rng,
+    library: ContentLibrary,
+    seed: int,
+    tier: int,
+    rarity: SkillRarity,
+    timing_id: str | None = None,
 ) -> SkillDef:
-    """被動技能的一次嘗試：觸發時機 → 作用對象 → 效果 → 代價 → 調整強度。"""
+    """被動技能的一次嘗試：觸發時機 → 作用對象 → 效果 → 代價 → 調整強度。``timing_id``（SK-3b）：
+    指定觸發時機（不抽，例：獨立串流的「你造的關鍵字被利用時」）。"""
     rules = library.composer
     skeleton = library.skeletons["passive"]
-    timings = [
-        t
-        for t in sorted(library.ruleset.skill_triggers.triggers, key=lambda t: t.id)
-        if rarity_rank(t.min_rarity) <= rarity_rank(rarity) and t.random_composer
-    ]
-    timing = rng.choice(timings)
+    if timing_id is not None:
+        timing = library.ruleset.skill_triggers.by_id()[timing_id]
+    else:
+        timings = [
+            t
+            for t in sorted(library.ruleset.skill_triggers.triggers, key=lambda t: t.id)
+            if rarity_rank(t.min_rarity) <= rarity_rank(rarity) and t.random_composer
+        ]
+        timing = rng.choice(timings)
     n = rng.choice((2, 3)) if timing.id == EVERY_N_HITS else None
     target = (
         "other"
@@ -597,6 +613,81 @@ def _compose_summon(
     return _first_valid(lib, build)
 
 
+def _compose_exploit_passive(
+    seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
+) -> ComposeResult | None:
+    """「你造的關鍵字被利用時」的被動（SK-3b，玩法交接 4.1.30 第 5 點）：獨立串流
+    ``composer.exploit`` 以 ``structure.exploit_passive_permille`` 決定要不要用，組法用
+    ``composer.exploit.build``；沒抽中、指定了關鍵字或組不出合格技能回傳 ``None``，呼叫端照原本的
+    組法（主串流沒動過，結果與改前相同）。"""
+    permille = lib.composer.structure.exploit_passive_permille
+    timing = lib.ruleset.skill_triggers.by_id().get(ON_KEYWORD_EXPLOITED)
+    if keyword is not None or permille <= 0 or timing is None:
+        return None
+    if rarity_rank(timing.min_rarity) > rarity_rank(rarity):
+        return None
+    if not Rng(seed).fork("composer.exploit").chance_permille(permille):
+        return None
+    rng = Rng(seed).fork("composer.exploit.build")
+
+    def build() -> SkillDef:
+        return _attempt_passive(rng, lib, seed, tier, rarity, ON_KEYWORD_EXPLOITED)
+
+    return _first_valid(lib, build)
+
+
+def _compose_reroll_reaction(
+    seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
+) -> ComposeResult | None:
+    """重擲反應技（SK-3b，玩法交接 4.1.30 第 5 點）：獨立串流 ``composer.reroll`` 以
+    ``structure.reroll_reaction_permille`` 決定要不要用；時機在「隊友擲失手時」「敵人擲中你時」
+    兩個裡抽，效果只有重擲（形狀自身）。沒抽中、指定了關鍵字或組不出合格技能回傳 ``None``。"""
+    permille = lib.composer.structure.reroll_reaction_permille
+    reroll = by_id(lib.ruleset.primitives).get(REROLL)
+    if keyword is not None or permille <= 0 or reroll is None:
+        return None
+    if rarity_rank(reroll.min_rarity) > rarity_rank(rarity):
+        return None
+    if not Rng(seed).fork("composer.reroll").chance_permille(permille):
+        return None
+    rng = Rng(seed).fork("composer.reroll.build")
+
+    def build() -> SkillDef:
+        return _attempt_reroll(rng, lib, seed, tier=tier, rarity=rarity)
+
+    return _first_valid(lib, build)
+
+
+def _attempt_reroll(
+    rng: Rng, library: ContentLibrary, seed: int, *, tier: int, rarity: SkillRarity
+) -> SkillDef:
+    """重擲反應技的一次嘗試：時機 → 代價（照反應技的代價抽法）→ 不調強度（重擲沒有旋鈕）。
+    縮放屬性取身體類（重擲沒有法術主題，``scaling.range`` 只收力量、敏捷、體質）。"""
+    skeleton = library.skeletons["reaction"]
+    event = rng.choice(REROLL_EVENTS)
+    ctx = Ctx(library, rng, skeleton, rarity, tier, "spell", 1, Element.PHYSICAL)
+    ctx.shape = "self"
+    ctx.effects = [{"type": REROLL}]
+    base: dict[str, Any] = {
+        "id": f"skill_rand_{seed}",
+        "name_zh": "暫定",
+        "tier": tier,
+        "rarity": rarity,
+        "kind": "reaction",
+        "skeleton": skeleton.id,
+        "category": "spell",
+        "weapon_req": "any",
+        "scaling_attr": rng.choice(("dex", "con")),
+        "shape": {"type": "self"},
+        "condition": None,
+        "reaction": {"event": event},
+        "ap_cost": None,
+        "cost": build_reaction_cost(ctx),
+        "provenance": {"origin": "level_up"},
+    }
+    return _finish(library, seed, base, ctx)
+
+
 def _compose_passive_recipe(
     seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
 ) -> ComposeResult | None:
@@ -664,7 +755,12 @@ def _compose_special(
     if kind == _SUMMON:
         return _compose_summon(seed, lib, tier=tier, rarity=rarity, keyword=keyword)
     if kind == "reaction":
-        found = _compose_reaction_recipe(
+        reroll = category in (None, "spell")  # 重擲是法術技（不看武器）
+        found = (
+            _compose_reroll_reaction(seed, lib, tier=tier, rarity=rarity, keyword=keyword)
+            if reroll
+            else None
+        ) or _compose_reaction_recipe(
             seed, lib, tier=tier, rarity=rarity, category=category, keyword=keyword
         )
         if found is not None:
@@ -1015,7 +1111,8 @@ def _compose_plain(
             return found
     _check_passive_args(passive, ap_cost, category)
     recipe = (
-        _compose_passive_recipe(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
+        _compose_exploit_passive(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
+        or _compose_passive_recipe(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
         if passive
         else None
     )

@@ -132,6 +132,9 @@ class StatusView(_ViewModel):
     （可為 ``None`` 是為了讓前端型別保持選填，既有的狀態夾具不必補欄位。）"""
     cost_status: bool = False
     """代價狀態（Phase 3-50c）：技能代價自己付的狀態，淨化與驅散移除不了。"""
+    contagious: bool | None = Field(default=None, exclude_if=lambda v: v is None)
+    """會擴散（SK-2 疾病擴散標上的；SK-3b 輸出給前端畫記號與「會擴散」標籤）：只在 ``True`` 時有值，
+    其他為 ``None`` 而且不輸出（既有的狀態 JSON 逐字不變；前端型別保持選填）。"""
 
 
 REACTION_TRIGGER_TEXT: dict[str, str] = {
@@ -149,6 +152,8 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
     "ally_hit_near": "相鄰友方被敵人擊中後",
     "kin_hit_in_range": "範圍內的同門被攻擊命中時（傷害之前）",
+    "ally_missed_roll": "隊友擲失手時",  # SK-3b（重擲；名詞表）
+    "enemy_hit_roll": "敵人擲中你時",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
 
@@ -693,6 +698,7 @@ def _status_view(state: BattleState, unit: UnitState, status: StatusInstance) ->
         charge_tiles=() if charge is None else charge.tiles,
         charge_anchored=True if charge is not None and charge.anchored else None,
         cost_status=status.cost_status,
+        contagious=True if status.contagious else None,
     )
 
 

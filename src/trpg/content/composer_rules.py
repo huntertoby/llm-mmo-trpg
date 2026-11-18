@@ -133,6 +133,10 @@ class StructureRules(ContentModel):
     """附帶可以是吸收表面的骨架（打擊、蓄力／終結）加上吸收表面（換層數、元素）的機率（SK-2b）。"""
     contagion_permille: int = Field(default=0, ge=0, le=1000)
     """附帶可以是疾病擴散的骨架加上疾病擴散的機率（SK-2b；技能已施加會擴散的狀態時）。"""
+    exploit_passive_permille: int = Field(default=0, ge=0, le=1000)
+    """被動的觸發時機改成「你造的關鍵字被利用時」的機率（SK-3b；獨立的亂數串流）。"""
+    reroll_reaction_permille: int = Field(default=0, ge=0, le=1000)
+    """反應技改成重擲（隊友擲失手時／敵人擲中你時）的機率（SK-3b；獨立的亂數串流）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE

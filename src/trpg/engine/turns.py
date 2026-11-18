@@ -56,6 +56,7 @@ from trpg.engine.skill_infusion import release_infusion
 from trpg.engine.skill_triggers import (
     collect_turn_end,
     collect_turn_start,
+    reset_exploit_counts,
     reset_round_counts,
     settle,
 )
@@ -101,6 +102,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.turn_cast_tags = ()
     unit.ap_gain_turn = unit.ap_pending  # 回合外存下的 AP 算在這個回合的 AP 回復上限內（3G-G3a）
     unit.gear_turn_counts = {}  # 裝備觸發的每回合 1 次（3G-G3a）
+    reset_exploit_counts(state.units.values())  # 被利用時：任何單位的回合開始都清除（SK-3b）
     unit.ap_pending = 0  # grant_ap 給的、等到這個回合才加上的 AP（Phase 3C-4a）
     unit.move_points = _turn_move_points(state, ctx.rules, unit)
     gained = max(0, min(unit.stamina_regen, unit.max_stamina - unit.stamina))  # 耐力回復（3H-5）

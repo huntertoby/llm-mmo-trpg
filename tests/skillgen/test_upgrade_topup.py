@@ -41,7 +41,7 @@ from typing import Any
 
 import pytest
 
-from tests.engine.helpers import without_sk2b_offers
+from tests.engine.helpers import without_sk2b_offers, without_sk3b_offers
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillRarity
@@ -608,7 +608,7 @@ def cases(library: ContentLibrary) -> list[Case]:
     # 題目（關掉可行解檢查），讓前後對照的樣本不變。
     with pytest.MonkeyPatch.context() as patched:
         patched.setattr(proposal_topic, "has_witness", lambda *_a, **_k: True)
-        return _build_cases(without_sk2b_offers(library))
+        return _build_cases(without_sk3b_offers(without_sk2b_offers(library)))
 
 
 type Outcome = tuple[str, ...]
@@ -639,7 +639,8 @@ def _filler_counts(outcomes: list[Outcome]) -> Counter[str]:
 def test_upgrade_topup_distribution(
     library: ContentLibrary, cases: list[Case], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    library = without_sk2b_offers(library)  # 同一批題目（SK-2b 的新核心會換掉樣本）
+    # 同一批題目（SK-2b 的新核心、SK-3b 的重擲會換掉樣本）
+    library = without_sk3b_offers(without_sk2b_offers(library))
     assert len(cases) >= 30  # 可建構的提議夠多才有意義
     new = _outcomes(library, cases)
     assert new == _outcomes(library, cases)  # 確定性：重跑相同

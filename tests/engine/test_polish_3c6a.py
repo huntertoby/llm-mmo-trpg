@@ -256,10 +256,10 @@ def test_reaction_and_passive_cards_show_their_timing() -> None:
     assert thorn.timing is not None and thorn.timing.startswith("觸發時機：")
     plain = skill_card(lib, lib.skills["skill_pincer_strike"])
     assert plain.timing is None
-    from trpg.content.skills import SKILL_REACTION_EVENTS  # noqa: PLC0415
+    from trpg.content.skills import REROLL_EVENTS, SKILL_REACTION_EVENTS  # noqa: PLC0415
     from trpg.narrative.skills import REACTION_TIMING_TEXT  # noqa: PLC0415
 
-    assert set(REACTION_TIMING_TEXT) == set(SKILL_REACTION_EVENTS)
+    assert set(REACTION_TIMING_TEXT) == {*SKILL_REACTION_EVENTS, *REROLL_EVENTS}  # SK-3b：重擲時機
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,12 @@ from typing import Any
 from trpg.content.composer_rules import ComposerRules, RecipeSummonUnit
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_triggers import EVERY_N_HITS, SkillTriggerDef
-from trpg.content.skills import CASTER_CONDITIONS, SkillRarity, rarity_rank
+from trpg.content.skills import (
+    CASTER_CONDITIONS,
+    ON_KEYWORD_EXPLOITED,
+    SkillRarity,
+    rarity_rank,
+)
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.composer_parts import (
@@ -146,7 +151,29 @@ def trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, A
         return {"status": rng.choice(statuses)}
     if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):
         return {"surface": rng.choice(_SURFACES)}
+    if event == ON_KEYWORD_EXPLOITED and rng.chance_permille(_PARAM_PERMILLE):
+        # SK-3b：一半機率縮小成某種狀態或表面（各半）；只由 composer.exploit 的獨立串流走到
+        statuses, surfaces = _exploitable(library)
+        if rng.chance_permille(_PARAM_PERMILLE):
+            return {"surface": rng.choice(surfaces)}
+        return {"status": rng.choice(statuses)}
     return {}
+
+
+def _exploitable(library: ContentLibrary) -> tuple[list[str], list[str]]:
+    """關鍵字推導表（``skill_keywords.yaml`` 的 ``uses``）裡會被利用的狀態（條件「目標有狀態」、
+    消耗狀態）與表面（條件「目標站在表面上」），各自排序。"""
+    statuses: set[str] = set()
+    surfaces: set[str] = set()
+    for keyword in library.keywords.keywords:
+        for rule in keyword.uses:
+            if rule.status is not None and (
+                rule.condition == "target_has_status" or rule.effect == "consume_status"
+            ):
+                statuses.add(rule.status)
+            if rule.surface is not None and rule.condition == "target_on_surface":
+                surfaces.add(rule.surface.value)
+    return sorted(statuses), sorted(surfaces)
 
 
 # ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
     BACKLASH_TYPES,
+    REROLL_EVENTS,
     SKILL_REACTION_EVENTS,
     VARIANT_CONDITIONS,
     ZONE,
@@ -433,10 +434,11 @@ def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ())
 
 
 def reaction_events(library: ContentLibrary) -> tuple[tuple[str, str], ...]:
-    """反應技能用的觸發事件（ID、說明；Phase 4-L8）：:data:`SKILL_REACTION_EVENTS` 的順序，說明取
-    ``reactions.yaml`` 的 ``events``（給玩家看的短句；沒有就用 ID）。"""
+    """反應技能用的觸發事件（ID、說明；Phase 4-L8）：:data:`SKILL_REACTION_EVENTS` 的順序，再接
+    重擲的兩個時機（:data:`REROLL_EVENTS`，SK-3b；只能配重擲）；說明取 ``reactions.yaml`` 的
+    ``events``（給玩家看的短句；沒有就用 ID）。"""
     texts = {e.id: e.description_zh for e in library.ruleset.reactions.events}
-    return tuple((e, texts.get(e, e)) for e in SKILL_REACTION_EVENTS)
+    return tuple((e, texts.get(e, e)) for e in LLM_REACTION_EVENTS)
 
 
 def _reaction_model(library: ContentLibrary) -> Any:
@@ -446,5 +448,9 @@ def _reaction_model(library: ContentLibrary) -> Any:
         "Reaction",
         __base__=_Proposal,
         __doc__=f"反應技能（kind: reaction）必填：不花 AP、在事件發生時自動施放。{lines}",
-        event=(_literal(SKILL_REACTION_EVENTS), ...),
+        event=(_literal(LLM_REACTION_EVENTS), ...),
     )
+
+
+LLM_REACTION_EVENTS: tuple[str, ...] = (*SKILL_REACTION_EVENTS, *REROLL_EVENTS)
+"""LLM 提議的反應事件（SK-3b 起含重擲的兩個時機；那兩個時機只能配重擲，驗證器擋）。"""

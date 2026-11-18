@@ -95,7 +95,13 @@ from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import collect_move
-from trpg.engine.skills.conditions import Subject, condition_met, stack_at_least
+from trpg.engine.skills.conditions import Subject, condition_met, stack_at_least, subjects_of
+from trpg.engine.skills.exploits import (
+    Exploit,
+    condition_exploits,
+    exploit_parts,
+    report_exploits,
+)
 from trpg.engine.skills.mobility import dash_route, shadowstep_behind
 from trpg.engine.skills.primitives import primitive_handler
 from trpg.engine.skills.primitives.base import TOUCHING_AFFECTS
@@ -524,6 +530,31 @@ class Cast:
         cells = {u.xy for u in self.targets(affects, condition)}
         return sorted(cells, key=lambda p: (p[1], p[0]))
 
+    def effect_exploits(self, effect: ResolvedEffect, spec: EffectSpec) -> list[Exploit]:
+        """效果層級的條件因別人造的狀態、表面或自己的符文而成立的對象（SK-3b；結算前判斷）。"""
+        if not exploit_parts(spec.condition):
+            return []
+        state = self.ctx.state
+        if effect.affects == "tiles":
+            cells = self.tiles("tiles", spec.condition)
+            subjects = [Subject(state.unit_at(*xy), xy) for xy in cells]
+        else:
+            subjects = [Subject(u, u.xy) for u in self.targets(effect.affects, spec.condition)]
+        return condition_exploits(state, self.caster, spec.condition, subjects)
+
+    def skill_exploits(self) -> list[Exploit]:
+        """技能層級的條件因別人造的狀態、表面或自己的符文而成立的對象（SK-3b）。"""
+        condition = self.skill.condition
+        if not exploit_parts(condition):
+            return []
+        state = self.ctx.state
+        subjects = [
+            s
+            for s in subjects_of(state, self.caster, self.area.tiles)
+            if condition_met(state, self.caster, condition, s)
+        ]
+        return condition_exploits(state, self.caster, condition, subjects)
+
     # ------------------------------------------------------------------
     # 展開
     # ------------------------------------------------------------------
@@ -542,10 +573,12 @@ class Cast:
         self.roll_gamble()
         if self.repeated_damage():
             self.deferred_hit_backlash = []
+        exploited, start = self.skill_exploits(), len(self.ctx.events)  # SK-3b：技能條件的利用
         for effect in self.effects:
             if not self.after_all_strikes(effect):
                 self.resolve_effect(effect)
         self.extra_strikes()
+        report_exploits(self.ctx, self.caster.id, exploited, start)
         self.settle_deferred_hit_backlash()
         self.backlash_on_miss()
         self.react_to_hits()
@@ -556,9 +589,11 @@ class Cast:
         武器多打的那一下（#153）重打的傷害效果——元素觸及格子與風的擴散是附加效果，不再做。"""
         spec = self.skill.effects[effect.spec_index]
         start = len(self.ctx.events)
+        exploited = self.effect_exploits(effect, spec)  # SK-3b：效果條件的利用（結算前判斷）
         batch = self.build(effect, spec)
         if batch:
             execute(self.ctx, batch)
+        report_exploits(self.ctx, self.caster.id, exploited, start)
         if effect.type == "damage":
             if effect.affects in TOUCHING_AFFECTS and not extra:
                 self.touch_untouched_tiles(spec, start)

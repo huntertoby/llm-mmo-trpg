@@ -167,3 +167,4 @@
 2. **schema**：吸收表面的 `amount`、`dice` 有旋鈕（`when: {gain: …}`），預算器會補；淨化多 `count`（1 或 all）。
 3. **驗證**：`cap.distance_condition`（貼身要最大射程 ≥ 2、遠距要 ≥ `far_distance`；只看主動技、固定射程或直線／錐形長度）、`cap.contagion_source`（疾病擴散要在施加燃燒、流血、中毒之後）。
 4. 隨機組合器：三個原語仍在 `_HAND_WRITTEN_PRIMITIVES`（一般抽選不抽），只由獨立串流加入（`composer.hook`、`composer.absorb_core`、`composer.absorb`、`composer.contagion`；機率在 `skill_composer.yaml` 的 `structure`）。
+5. **SK-3b（`skill-proposal/21`）**：反應事件清單 `proposal/builder.LLM_REACTION_EVENTS`＝`SKILL_REACTION_EVENTS`＋重擲的兩個時機（只能配 `reroll`，驗證器擋）；反應骨架核心多 `reroll`；新觸發 `on_keyword_exploited` 本來就在觸發清單（照 `skill_triggers.yaml` 全部列），llm_hint 改寫。組合器只用獨立串流 `composer.exploit`／`composer.reroll`（`skill_composer.yaml` 的 `exploit_passive_permille`、`reroll_reaction_permille`；題目指定關鍵字時不走）。鎖「LLM 題目樣本」的舊測試用 `tests.engine.helpers.without_sk3b_offers()`，組合器樣本用 `sk3b_streams(lib, 0)`。

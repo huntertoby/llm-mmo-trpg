@@ -109,6 +109,33 @@ def sk2b_streams_off(library: ContentLibrary) -> ContentLibrary:
     return dataclasses.replace(library, composer=composer)
 
 
+def without_sk3b_offers(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但反應骨架拿掉 SK-3b 接進出題的重擲：鎖住「LLM 題目樣本」固定的測試用（同
+    :func:`without_sk2b_offers`）。"""
+
+    def strip(skeleton: Any) -> Any:
+        kept = tuple(p for p in skeleton.core.primitives if p != "reroll")
+        return skeleton.model_copy(
+            update={"core": skeleton.core.model_copy(update={"primitives": kept})}
+        )
+
+    return dataclasses.replace(
+        library, skeletons={k: strip(v) for k, v in library.skeletons.items()}
+    )
+
+
+SK3B_STREAMS = ("exploit_passive_permille", "reroll_reaction_permille")
+"""SK-3b 接進出題的組合器串流（「你造的關鍵字被利用時」被動、重擲反應技）。"""
+
+
+def sk3b_streams(library: ContentLibrary, permille: int) -> ContentLibrary:
+    """``library`` 但 SK-3b 的兩個組合器串流機率都設成 ``permille``（0＝和 SK-3b 之前逐字相同；
+    1000＝能做就做）。"""
+    structure = library.composer.structure.model_copy(update=dict.fromkeys(SK3B_STREAMS, permille))
+    composer = library.composer.model_copy(update={"structure": structure})
+    return dataclasses.replace(library, composer=composer)
+
+
 def wish_off(library: ContentLibrary) -> ContentLibrary:
     """``library`` 但許願池願望驅動關掉（``skill_pick.yaml`` 的 ``wish_enabled: false``）：PK-4 前的
     許願流程（對關鍵字＋自由設計）。測 WP-1～3 程式本身的測試用這份。"""

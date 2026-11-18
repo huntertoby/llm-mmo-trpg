@@ -24,6 +24,7 @@ from trpg.content.library import Ruleset
 from trpg.content.skills import (
     DETONATE_RUNES,
     INSCRIBE,
+    ON_KEYWORD_EXPLOITED,
     ON_SUMMON_DOWNED,
     EffectSpec,
     ShapeSpec,
@@ -146,6 +147,8 @@ def _resolve_trigger(ctx: Ctx, owner: UnitState, affix: TriggerAffix, fired: Fir
     if skip_turn_status(ctx.rules, owner) is not None:
         return
     counts = owner.gear_turn_counts if affix.limit == "per_turn" else owner.gear_round_counts
+    if timing == ON_KEYWORD_EXPLOITED:  # SK-3b：被動與詞條同一套，任何單位的每回合 1 次
+        counts = owner.exploit_turn_counts
     if counts.get(affix.id, 0) >= 1:
         return
     other = None if fired.other_id is None else ctx.state.units.get(fired.other_id)

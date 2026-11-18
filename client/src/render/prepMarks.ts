@@ -190,11 +190,25 @@ export function tipSize(g: CanvasRenderingContext2D, text = PREP_TIP_ZH): { w: n
   g.restore();
   return { w: w + 6, h: 22 };
 }
-/** 滑過提示「放在這裡」：左上 (x,y)（畫面 px）；左邊一個指向格子的小三角。 */
-export function placeTip(g: CanvasRenderingContext2D, x: number, y: number, text = PREP_TIP_ZH): void {
+export type TipSide = "right" | "left";
+
+/**
+ * SK-3b（美術 AR-SK3 驗收）：提示框放格子哪一邊。預設右邊；右邊會超出地圖右緣時翻到左邊。
+ * `cellX`＝格子左緣、`cell`＝一格寬、`tipW`＝提示框寬（含小三角）、`mapRight`＝地圖右緣，單位一致即可。
+ * 回傳那一邊與提示框的左緣。
+ */
+export function tipPlacement(cellX: number, cell: number, tipW: number, mapRight: number): { side: TipSide; x: number } {
+  const right = cellX + cell;
+  if (right + tipW <= mapRight) return { side: "right", x: right };
+  return { side: "left", x: cellX - tipW };
+}
+
+/** 滑過提示「放在這裡」：左上 (x,y)（畫面 px）；小三角指向格子（`side` 是提示框在格子的哪一邊）。 */
+export function placeTip(g: CanvasRenderingContext2D, x: number, y: number, text = PREP_TIP_ZH, side: TipSide = "right"): void {
   g.save();
   g.font = `500 12px ${FONT}`;
-  const w = Math.ceil(g.measureText(text).width) + 14, h = 22, bx = x + 5;
+  const w = Math.ceil(g.measureText(text).width) + 14, h = 22, bx = side === "right" ? x + 5 : x;
+  const edge = side === "right" ? bx + 0.5 : bx + w + 0.5, tipX = side === "right" ? bx - 4 : bx + w + 5;
   g.beginPath();
   g.roundRect(bx + 0.5, y + 0.5, w, h, 4);
   g.fillStyle = "rgba(24,27,42,0.94)";
@@ -203,9 +217,9 @@ export function placeTip(g: CanvasRenderingContext2D, x: number, y: number, text
   g.lineWidth = 1;
   g.stroke();
   g.beginPath();
-  g.moveTo(bx + 0.5, y + h / 2 - 4);
-  g.lineTo(bx - 4, y + h / 2);
-  g.lineTo(bx + 0.5, y + h / 2 + 4);
+  g.moveTo(edge, y + h / 2 - 4);
+  g.lineTo(tipX, y + h / 2);
+  g.lineTo(edge, y + h / 2 + 4);
   g.closePath();
   g.fillStyle = "#c9a65a";
   g.fill();

@@ -37,6 +37,8 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_crane_piercing_shot",
   "skill_crumbling_fist",
   "skill_eagle_eye",
+  "skill_ember_resonance", // SK-3b：新觸發與重擲的示範 4 招
+  "skill_fate_deflect",
   "skill_flowing_cut",
   "skill_fury_slam",
   "skill_grit_teeth",
@@ -46,6 +48,7 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_lava_splash",
   "skill_lone_strider",
   "skill_lone_wolf_pounce",
+  "skill_lucky_whisper",
   "skill_mind_eye_shot",
   "skill_qigong_wave",
   "skill_rift_flicker",
@@ -54,6 +57,7 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_silent_step",
   "skill_swift_stab",
   "skill_throat_cut",
+  "skill_tidal_draw",
   "skill_unguarded_shot",
   "skill_war_cry",
 ];

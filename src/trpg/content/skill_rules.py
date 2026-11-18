@@ -474,6 +474,16 @@ class BudgetRules(ContentModel):
     """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
     dispel_all_points: int = Field(default=6, ge=0)
     """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
+    hook_points: int = Field(default=6, ge=0)
+    """``hook``（鉤，SK-2）的固定預算點數（形狀倍率另算；SK-3b 從 ``skill_primitives.yaml`` 的
+    ``base_points`` 搬來，開放數值工坊；初值）。"""
+    contagion_points: int = Field(default=2, ge=0)
+    """``contagion``（疾病擴散，SK-2）的固定預算點數（形狀倍率另算；SK-3b 搬來；初值）。"""
+    absorb_surface_points: int = Field(default=1, ge=0)
+    """``absorb_surface``（吸收表面，SK-2）的基礎點數（另加收益點數；SK-3b 搬來；初值）。"""
+    reroll_budget_permille: int = Field(default=850, ge=0, le=2000)
+    """``reroll``（重擲，SK-3）的點數 ＝ 階級預算 × 反應技係數 × 這個值（‰）：SK-3b 起隨階級長
+    （固定 5 點時階級 1 也只到預算 60%，做不出合格的招；初值，接數值工坊）。"""
     obstacle_duration_permille: tuple[int, ...] = Field(
         default=(400, 500, 600, 700, 750, 800, 850, 900, 950, 1000), min_length=10, max_length=10
     )

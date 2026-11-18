@@ -15,7 +15,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "trigger": {
         "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能",
         "on_battle_start": "只由閃現轉型「伴生」產生（TF-1，#159），沒有手寫技能",
-        "on_keyword_exploited": "SK-3（#166 6.38-10）新觸發，還沒有技能用（接進出題待 PM 決定）",
     },
     "reaction_event": {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
@@ -30,7 +29,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "absorb_surface": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "contagion": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "hook": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
-        "reroll": "SK-3 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
     },
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
@@ -134,6 +132,11 @@ _POOL_ONLY = frozenset(
         "skill_shatter_ice",
         "skill_downpour",
         "skill_holy_water",
+        # SK-3b（4.1.30 第 5 點）：新觸發與重擲的示範招（builds.yaml 是回歸範本，不為示範改動）
+        "skill_ember_resonance",
+        "skill_tidal_draw",
+        "skill_fate_deflect",
+        "skill_lucky_whisper",
         # 3-24c：關鍵字池的真實利用者與不限武器的 1 階技能（由池給出）
         "skill_bone_pursuit",
         "skill_shock_follow",

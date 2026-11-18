@@ -317,7 +317,11 @@ def test_explicit_reactions_are_valid_in_every_tier_and_cover_every_event() -> N
             assert skill.shape.type in ("self", "single")
             events.add(skill.reaction.event)
             assert low <= skill_budget(skill, library).ratio <= high, (tier, seed)
-    assert events == {"hit_by_melee", "hit_by_attack", "enemy_leaves_adjacent", "ally_hit_adjacent"}
+    # SK-3b：重擲的兩個時機由獨立串流 composer.reroll 產生
+    assert events == {
+        "hit_by_melee", "hit_by_attack", "enemy_leaves_adjacent", "ally_hit_adjacent",
+        "ally_missed_roll", "enemy_hit_roll",
+    }  # fmt: skip
 
 
 def test_explicit_stances_are_valid_in_every_tier_and_have_a_stance_status() -> None:
