@@ -323,6 +323,9 @@ def test_basic_actions_stay_within_the_limit_of_ten() -> None:
         "reload",
         "activate_charge",
         "use_race_skill",  # 種族技（3R-2）：不佔技能欄也不算基本動作
+        # 戰前佈置（SK-3，6.38-11）：開戰前用一招已裝備的技能，等同 use_skill，不算基本動作
+        # （開發 PM 2026-11-19 裁定，見 PhaseSK-3報告.md）
+        "prepare",
     }
     assert {"move", "attack", "run", "defend", "swap", "aim", "vault"} <= basic
     assert len(basic) <= 10
