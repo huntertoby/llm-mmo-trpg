@@ -129,3 +129,13 @@
 8. **美術**：重擲的 Q 版部件、演出暫借（側擋、`intercept` 圖）；三個觸發圖樣暫借；戰前佈置視窗沿用 `DialogFrame`，起始區格子用選目標的紅框。
 9. **和 SK-1 的合併點**：`engine/skills/cast.py`（`roll_one` 多一個 `reroll_attack` 呼叫）、`content/skills/constants.py`、`skill.py`、`skillgen/options.py`、`content/workshop_text.yaml` 尾端與 `test_workshop_feedback.py` 的條數、`qIconSkills.test.ts` 的數量那一行、`LOG_FORMAT`（SK-1 也升的話改成 `/131`）。
 10. **工坊白名單**：`core.reroll_ally_range`、`reroll` 的 5 點、新觸發係數 300 都是初值；`tuning_fields.yaml` 沒加（沒有對應的技能可調）。
+
+## 開發 PM 裁定（2026-11-19）
+
+- **驗收通過，合併。** 合併時和 SK-1、SK-2 沒有文字衝突。三項都有引擎測試和重播測試。不變比對 60 場 different=0：戰前佈置只在網頁戰鬥開，CLI、模擬、AI 代打都不開。`LOG_FORMAT` 升到 /130，OpenAPI 已重產，接受。截圖我看過（戰前佈置的視窗、起始區紅框、可以「不佈置直接開戰」）。
+- `ccbba67fd` 單看那一點全庫 ruff／mypy 不過，下一個 commit 修好了，合併後的結果是乾淨的，接受。
+- 待決 2（「利用」只算兩種）、3（被動是每輪 1 次，比設計的每回合嚴）、4（重擲只重擲命中骰、問的時機、範圍）、5（戰前佈置只有主角、只放 1 格、不結算其他效果）：轉玩法 PM。
+- 待決 1（接進出題）、10（工坊白名單）：等玩法答覆後和上面幾題一起排成 SK-3b。
+- 待決 6（API 測試的 client 預設關佈置，正式伺服器預設開）、7（AI 不用戰前佈置、不估重擲）：照保守做法接受。
+- 待決 8（重擲、觸發的美術暫借）：轉美術 PM。
+- 待決 9（和 SK-1 的合併點）：由開發 PM 合併後跑受影響的目錄確認。
