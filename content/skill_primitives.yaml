@@ -892,7 +892,7 @@ primitives:
     name_zh: 吸收表面
     llm_hint: "吸走腳下或目標格的一種表面，換成層數、治療、護盾，或讓這一招帶上它的元素（吸水＝帶潮濕）。"
     description_zh: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（帶元素的表面：火、冰、毒、聖光、黑暗；吸到水時元素不變，改成這一招之後的傷害命中時在目標格造水，帶潮濕；油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：base_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝base_points）。
-    player_description: "吸走腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素。"
+    player_description: "吸走腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素；吸水會讓這招帶潮濕。"
     category: structural
     harmful: false
     min_rarity: rare
