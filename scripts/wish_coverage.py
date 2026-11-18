@@ -44,8 +44,9 @@ from trpg.content.library import ContentLibrary, load_library
 from trpg.content.skill_pick import WISH_TAG_GROUPS
 from trpg.content.skills import SkillDef
 from trpg.content.skills.constants import SkillRarity
+from trpg.skillgen.composer_parts import _HAND_WRITTEN_PRIMITIVES
 from trpg.skillgen.pick_offer import SLOT_KEYWORD_TRIES
-from trpg.skillgen.random_composer import ComposeError, compose_with_stats
+from trpg.skillgen.random_composer import _STACK_SKELETON, ComposeError, compose_with_stats
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.wish_pick import skill_tag_ids, tag_label
 
@@ -372,32 +373,72 @@ def rule_verdict(lib: ContentLibrary, tags: Sequence[Tag]) -> Verdict | None:
     return None
 
 
+def _stack_keywords(lib: ContentLibrary) -> set[str]:
+    """組合器會抽的層數關鍵字（同 ``random_composer._is_stack_keyword``）。"""
+    return {s.id for s in lib.ruleset.stacks.stacks if s.composer}
+
+
+def _composer_recipe(lib: ContentLibrary, tags: Sequence[Tag], example: str | None) -> str | None:
+    """看得出是組合器配方造成的（a）：回傳理由；看不出＝``None``。"""
+    has = f"手寫技能 `{example}` 有；" if example is not None else ""
+    off = [v for g, v in tags if g == "keywords" and not _keyword_composable(lib, v)]
+    if off:
+        return f"{has}內容把關鍵字 {'、'.join(off)} 標成組合器不做（composable: false）"
+    stacks = [v for g, v in tags if g == "keywords" and v in _stack_keywords(lib)]
+    if stacks:
+        skeleton = lib.skeletons[_STACK_SKELETON]
+        extra = skeleton.secondary.primitives or ()
+        return (
+            f"{has}組合器指定層數關鍵字（{'、'.join(stacks)}）時固定用蓄力骨架 "
+            f"`{_STACK_SKELETON}`：形狀只有 {'、'.join(skeleton.shapes)}，核心只有 "
+            f"{'、'.join(skeleton.core.primitives)}，附帶只有 {'、'.join(extra)}，"
+            "一招只抽一種層數；手寫技能不受這個骨架限制"
+        )
+    for group, value in tags:
+        if group != "effects":
+            continue
+        names, statuses = _effect_ways(lib, value)
+        if not statuses and set(names) <= _HAND_WRITTEN_PRIMITIVES:
+            return (
+                f"{has}{tag_label(lib, group, value)}的原語（{'、'.join(names)}）組合器不抽"
+                "（手寫／閃現轉型專用），只在少數骨架的特殊路徑出現"
+            )
+    return None
+
+
+_EXCLUSION_HINTS: dict[frozenset[str], str] = {
+    frozenset({"effects:damage", "effects:heal"}): "no_damage_with_ally_heal",
+}
+"""部分被互斥規則擋下的組合（``content/skill_exclusions.yaml``）：擋掉一部分寫法，剩下的寫法規則
+允許，所以程式判斷不了是 (a) 還是 (b)。"""
+
+
 def classify(lib: ContentLibrary, tags: Sequence[Tag], singles: Mapping[Tag, int]) -> Verdict:
     """做不到（或極低）的組合的分類。``singles``＝每個標籤單獨的最佳一格（‰）。"""
     ruled = rule_verdict(lib, tags)
     if ruled is not None:
         return ruled
-    labels = "＋".join(tag_label(lib, g, v) for g, v in tags)
     example = handwritten_example(lib, tags)
-    off = [v for g, v in tags if g == "keywords" and not _keyword_composable(lib, v)]
-    if off:
-        has = f"手寫技能 `{example}` 有；" if example is not None else ""
-        return Verdict(
-            "a",
-            f"{has}內容把關鍵字 {'、'.join(off)} 標成組合器不做（composable: false）",
-            "content/skill_keywords.yaml",
-        )
+    recipe = _composer_recipe(lib, tags, example)
+    if recipe is not None:
+        return Verdict("a", recipe, "—")
     weak = [t for t in tags if singles.get(t, 0) == 0]
     if weak and len(tags) == PAIR:
         names = "、".join(tag_label(lib, g, v) for g, v in weak)
-        return Verdict(
-            "a",
-            f"{names}單獨就做不到（見單一標籤的分類）；組合跟著做不到",
-            "—",
-        )
+        return Verdict("a", f"{names}單獨就做不到（見單一標籤的分類）；組合跟著做不到", "—")
+    labels = "＋".join(tag_label(lib, g, v) for g, v in tags)
     if example is not None:
         return Verdict(
             "a", f"手寫技能 `{example}` 同時帶{labels}：引擎做得到，組合器沒有這個配方", "—"
+        )
+    rule = _EXCLUSION_HINTS.get(frozenset(tag_code(t) for t in tags))
+    if rule is not None:
+        found = next(r for r in lib.exclusions.rules if r.id == rule)
+        return Verdict(
+            "需人工",
+            f"互斥規則 `{rule}` 擋掉一部分寫法（{found.message_zh}）；剩下的寫法規則允許但組合器"
+            "沒做，手寫技能也沒有例子",
+            "content/skill_exclusions.yaml；06 6.6 互斥規則表、6.18 A、B（吸血與聖光雙效放寬）",
         )
     return Verdict(
         "需人工",
