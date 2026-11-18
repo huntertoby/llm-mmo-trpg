@@ -18,6 +18,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from tests.engine.helpers import without_sk1_flash
 from trpg.api.flash_changes import base_stats, flash_changes
 from trpg.api.run_presenter import _flash_out, pending_flash_out
 from trpg.content.library import ContentLibrary
@@ -43,6 +44,13 @@ from trpg.skillgen.flash_state import with_reflash
 
 SEED = 2
 BLOCKED_SLOT = 1
+
+
+@pytest.fixture(scope="module")
+def library(content_library: ContentLibrary) -> ContentLibrary:
+    """SK-1 前的閃現模板：這裡的重現案例（下限卡住的重閃格）在 SK-1 的新模板（每場一次等）下有了
+    選項、不再卡住；RR-2 的規則本身沒變，用舊模板照樣鎖住。"""
+    return without_sk1_flash(content_library)
 
 
 @pytest.fixture(scope="module")

@@ -567,7 +567,9 @@ class BudgetRules(ContentModel):
     """超載（Phase 3D-7b）：帶標籤技能的傷害加成以「平均層數 ＝ (門檻 − 1) ÷ 2」×
     這個比例（‰）估計；累積層數的技能另外扣「反噬點數 × 自傷折合 ÷ 門檻 × 累積層數」
     （初值，未經模擬）。"""
-    condition_permille: dict[Literal["none", "common", "harsh"], int]
+    condition_permille: dict[Literal["none", "mild", "common", "harsh"], int]
+    """條件倍率（‰）：沒有條件、寬鬆（SK-1，06 6.38 第 2 點：幾乎每回合都成立的「本回合移動過」）、
+    常見、嚴苛。"""
     all_target_permille: int = Field(ge=1, le=1000)
     """``affects: all``（敵我不分）的對象係數。"""
     allowance: CostAllowance
@@ -600,8 +602,8 @@ class BudgetRules(ContentModel):
             raise ValueError("min_ratio_permille 必須小於 max_ratio_permille")
         if sorted(self.ap_coefficient_permille) != [1, 2, 3]:
             raise ValueError("ap_coefficient_permille 必須剛好有 AP 1、2、3")
-        if sorted(self.condition_permille) != ["common", "harsh", "none"]:
-            raise ValueError("condition_permille 必須剛好有 none、common、harsh")
+        if sorted(self.condition_permille) != ["common", "harsh", "mild", "none"]:
+            raise ValueError("condition_permille 必須剛好有 none、mild、common、harsh")
         if set(self.rarity) != set(RARITY_ORDER):
             raise ValueError(f"rarity 必須剛好有 {', '.join(RARITY_ORDER)}")
         if sorted(self.cost_resource) != ["spell", "weapon"]:

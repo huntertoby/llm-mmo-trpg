@@ -156,6 +156,12 @@ class ConditionRules(ContentModel):
     """低權重的額外目標型條件（Phase 3-24c）：已經抽到目標型條件時，以 ``extra_permille`` 的機率改成
     從這裡抽（用 ``rng.fork`` 的獨立串流，沒有抽到的種子得到與加入之前完全相同的技能）。"""
     extra_permille: int = 0
+    distance_conditions: tuple[str, ...] = ()
+    """距離條件（SK-1，06 6.38 第 1 點：貼身、遠距）：抽到目標型條件（而且沒有改成額外條件）時，以
+    ``distance_permille`` 的機率改成從這裡抽（``rng.fork`` 的獨立串流，沒有抽到的種子得到與加入之前
+    完全相同的技能）。只給射程用得上的招：貼身要固定射程至少 2（射程 1 的招一定貼身，等於白拿
+    折扣）、遠距要固定射程至少 ``CoreRules.far_distance``（打不到那麼遠就永遠不成立）。"""
+    distance_permille: int = 0
     affinity_permille: int = 0
     """武器親和（Phase 3I-5）：給了主角手上的裝備時，附帶效果上的常見條件換成「手持某種武器時」的
     機率（‰；:func:`trpg.skillgen.affinity.grant_affinity`，用技能 ID 決定的確定性抽籤）。"""

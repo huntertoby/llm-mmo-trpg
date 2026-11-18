@@ -61,12 +61,21 @@ def _surface_choices(library: ContentLibrary) -> tuple[Choice, ...]:
     )
 
 
+def _tag_choices(library: ContentLibrary) -> tuple[Choice, ...]:
+    """變奏條件「本回合施放過帶某標籤的技能」的選項（``skill_tags.yaml`` 的標籤，依 ID 排序）。"""
+    return tuple(
+        Choice(value=tag_id, name_zh=tag.name_zh)
+        for tag_id, tag in sorted(library.ruleset.skill_tags.by_id().items())
+    )
+
+
 def _when_field(library: ContentLibrary) -> FieldSpec:
     surfaces = _surface_choices(library)
     return FieldSpec(
         field="when",
         name_zh="條件",
-        description_zh="恰好填一種：站在某種表面、居高、身旁有牆、目標點在某種表面",
+        description_zh="恰好填一種：站在某種表面、居高、身旁有牆、目標點在某種表面、"
+        "本回合施放過帶某標籤的技能",
         type="object",
         required=True,
         fields=(
@@ -91,6 +100,12 @@ def _when_field(library: ContentLibrary) -> FieldSpec:
                 name_zh="目標點在這些表面上",
                 type="multi_choice",
                 choices=surfaces,
+            ),
+            FieldSpec(  # SK-1（06 6.38 第 7 點）：出招順序
+                field="caster_cast_tag",
+                name_zh="本回合施放過帶這個標籤的技能",
+                type="choice",
+                choices=_tag_choices(library),
             ),
         ),
     )

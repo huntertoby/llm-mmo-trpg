@@ -466,6 +466,33 @@ def _op_converge_step(
     return _with_shape(skill, template, shape.model_copy(update={"size": shape.size - 1}), library)
 
 
+def _op_range_reclaim(
+    skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """收回射程（SK-1，06 6.38 第 3 點，收回家族）：固定射程 ``delta``（−2）格，不低於形狀的最小
+    射程與 1；省下的預算全部換成威力。武器射程、沒有射程、複合技與陷阱不出。"""
+    shape = skill.shape
+    if (
+        skill.kind != "active"
+        or skill.followup is not None
+        or skill.trap is not None
+        or not isinstance(shape.range, int)
+        or not any(e.type in ("damage", "heal", "shield") for e in skill.effects)
+    ):
+        return []
+    param = library.ruleset.shape_def(shape.type).params.get("range")
+    if param is None:
+        return []
+    value = shape.range + (template.delta or 0)
+    if value >= shape.range or value < max(param.min, 1):
+        return []
+    base, effects = base_draft(skill)
+    base["shape"] = shape.model_copy(update={"range": value}).model_dump(
+        mode="json", exclude_none=True
+    )
+    return [(base, effects)]
+
+
 TRADES: dict[str, Trade] = {
     "converge_single": Trade(remove=_op_converge_single, gain=converge_gain),
     "converge_step": Trade(remove=_op_converge_step, gain=converge_gain),
@@ -477,6 +504,8 @@ TRADES: dict[str, Trade] = {
     "focus_condition": Trade(remove=op_focus_condition, tighten=True),
     "focus_mod_range": Trade(remove=op_focus_mod_range, gain=modifier_gain),
     "focus_mod_condition": Trade(remove=op_focus_mod_condition, gain=modifier_gain, tighten=True),
+    # SK-1：收回射程
+    "range_reclaim": Trade(remove=_op_range_reclaim),
 }
 """收回家族的登錄表（``op`` → :class:`Trade`）：收束（BAL-10d）與精煉、合體、專注（BAL-10e）。"""
 

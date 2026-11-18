@@ -1122,6 +1122,10 @@ def variant_condition_text(library: ContentLibrary, when: VariantWhen) -> str:
         return f"目標點在{_surface_names(library, when.target_surface)}上"
     if when.caster_high_ground is not None:
         return "施放者比目標點高至少 1 層"
+    if when.caster_cast_tag is not None:  # SK-1（06 6.38 第 7 點）
+        return (
+            f"本回合已施放過帶「{library.ruleset.skill_tags.name(when.caster_cast_tag)}」標籤的技能"
+        )
     return "施放者身旁（八方向）有牆壁或擋路物件"
 
 
@@ -1587,7 +1591,8 @@ class SkillVariantCard(BaseModel):
     condition: str
     """條件的一句話，例如「施放者站在「水」上」。"""
     condition_kind: str
-    """``caster_surface``、``caster_high_ground``、``caster_adjacent_blocker``、``target_surface``。"""
+    """``caster_surface``、``caster_high_ground``、``caster_adjacent_blocker``、``target_surface``、
+    ``caster_cast_tag``（SK-1）。"""
     target_dependent: bool
     """條件看目標點（居高、目標點表面）：施放前要看預覽才知道生效哪個型態。"""
     change: str

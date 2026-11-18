@@ -29,9 +29,10 @@ def _with(skill_id: str, *, used: bool = True) -> RunState:
 
 def test_a_skill_without_options_is_greyed_out() -> None:
     lib = library()
-    run = _with("skill_afterimage_vow")
-    assert not flash_available(lib, run, "skill_afterimage_vow")
-    out = _flash_out(lib, run, "skill_afterimage_vow")
+    # SK-1 起殘影之誓有「每場一次」可閃，改用仍沒有選項的血痕疾行
+    run = _with("skill_bloodwake_stride")
+    assert not flash_available(lib, run, "skill_bloodwake_stride")
+    out = _flash_out(lib, run, "skill_bloodwake_stride")
     assert out.flash_available is False
     assert out.can_flash is False
     assert out.flash_problem_zh == NO_OPTIONS_ZH == "這招目前沒有可以閃的變化"

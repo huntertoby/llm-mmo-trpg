@@ -29,6 +29,7 @@ height_hit_bonus: 2           # 高打低 +2、低打高 −2
 backstab_hit_bonus: 2         # 背刺：命中 +2
 backstab_crit_range_bonus: 1  # 背刺：暴擊範圍 +1（武器 20 → 19–20）
 ambush_hit_bonus: 2           # 潛行偷襲：帶 concealed 狀態時發動攻擊命中 +2，攻擊結算完後移除 concealed
+far_distance: 5               # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻，施放者和目標距離至少這麼多格（初值，工坊）
 melee_height_limit: 1         # 近戰（射程 <= melee_height_limit_max_range）攻擊的高度差上限
 melee_height_limit_max_range: 2   # 射程不超過此值的武器（近戰、長柄）受高度差限制
 initiative_attr_base: 10      # 先攻：d20 + (敏捷 − 10) // 2

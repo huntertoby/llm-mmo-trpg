@@ -62,6 +62,10 @@ condition:
   # 低權重的額外目標型條件（3-24c；獨立的亂數串流，沒有被抽中的種子結果不變）：撞擊的真實利用者
   extra_conditions: [target_collided]
   extra_permille: 60
+  # SK-1（#166，06 6.38 第 1 點）：距離條件（貼身、遠距；獨立的亂數串流，沒有被抽中的種子結果不變）。貼身只給固定射程
+  # 至少 2 的招、遠距只給固定射程達到遠距門檻的招（composer_parts._with_distance_condition）。機率是初值。
+  distance_conditions: [point_blank, long_range]
+  distance_permille: 60
   # 武器親和（3I-5，初值）：給了主角手上的裝備時，組好的技能的附帶效果上的常見條件有這個機率換成「手持
   # 某種武器時」（預算不變；獨立於組合的亂數串流，沒給手上裝備時結果完全相同）
   affinity_permille: 400

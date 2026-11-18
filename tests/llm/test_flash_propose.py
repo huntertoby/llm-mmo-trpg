@@ -159,6 +159,26 @@ def test_schema_binds_each_template_to_its_own_parameter_menu() -> None:
     assert set(plain["properties"]) == {"category", "template", "note_zh"}
     snapshot = {t: (b["required"], sorted(b["properties"])) for t, b in sorted(by_template.items())}
     assert snapshot == {
+        # SK-1（06 6.38 第 3 點）的新模板
+        "cost_blood": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "cost_once": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "distance_bonus": (
+            ["category", "template", "keyword", "note_zh"],
+            ["category", "keyword", "note_zh", "template"],
+        ),
+        "element_swap": (
+            ["category", "template", "element", "note_zh"],
+            ["category", "element", "note_zh", "template"],
+        ),
+        "range_reclaim": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
+        "reshape_skeleton": (
+            ["category", "template", "shape", "note_zh"],
+            ["category", "note_zh", "shape", "template"],
+        ),
+        "surface_exploit": (
+            ["category", "template", "keyword", "note_zh"],
+            ["category", "keyword", "note_zh", "template"],
+        ),
         "cost_charge": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
         "cost_light": (["category", "template", "note_zh"], ["category", "note_zh", "template"]),
         "keyword_exploit": (

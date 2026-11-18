@@ -867,6 +867,31 @@ def _with_extra_condition(ctx: Ctx, kind: str) -> str:
     return extra_rng.choice(extras) if extra_rng.chance_permille(rules.extra_permille) else kind
 
 
+def _with_distance_condition(ctx: Ctx, kind: str) -> str:
+    """抽到目標型條件時，小機率改成距離條件（SK-1，06 6.38 第 1 點；獨立串流，沒抽到的種子
+    不變）。"""
+    rules = ctx.rules.condition
+    if kind not in rules.target_conditions or ctx.skeleton.composer.condition_mode == "allies":
+        return kind
+    reach = ctx.shape_params.get("range")
+    if not isinstance(reach, int):
+        return kind
+    far = ctx.library.ruleset.core.far_distance
+    available = _available(ctx)
+    fits = {"point_blank": reach >= _POINT_BLANK_MIN_RANGE, "long_range": reach >= far}
+    kinds = [k for k in rules.distance_conditions if k in available and fits.get(k, True)]
+    if not kinds:
+        return kind
+    distance_rng = ctx.rng.fork("composer.distance_condition")
+    if not distance_rng.chance_permille(rules.distance_permille):
+        return kind
+    return distance_rng.choice(kinds)
+
+
+_POINT_BLANK_MIN_RANGE = 2
+"""貼身只給固定射程至少 2 的招（射程 1 一定貼身，條件等於白拿預算折扣；SK-1）。"""
+
+
 def _available(ctx: Ctx) -> set[str]:
     return {
         c.id
@@ -895,7 +920,8 @@ def build_condition(ctx: Ctx) -> dict[str, Any] | None:
         if required:
             raise Retry
         return None
-    spec = _condition_spec(ctx, _with_extra_condition(ctx, ctx.rng.choice(kinds)))
+    kind = _with_extra_condition(ctx, ctx.rng.choice(kinds))
+    spec = _condition_spec(ctx, _with_distance_condition(ctx, kind))
     damages = [i for i, e in enumerate(ctx.effects) if e["type"] == "damage"]
     effect_level = ctx.skeleton.composer.effect_level_condition and len(damages) > 1
     if effect_level or (not required and ctx.chance(ctx.rules.condition.effect_level_permille)):

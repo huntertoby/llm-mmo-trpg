@@ -3853,6 +3853,22 @@
    "tags": [],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "point_blank",
+   "name_zh": "貼身",
+   "description_zh": "施放者和目標的距離是 1（上下左右相鄰；巨型單位看佔地最近的那一格）。只看目標單位，沒有單位的格子不成立。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "long_range",
+   "name_zh": "遠距",
+   "description_zh": "施放者和目標的距離至少是規則的遠距門檻（初值 5 格，曼哈頓距離；巨型單位看佔地最近的那一格）。只看目標單位，沒有單位的格子不成立。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "triggers": [

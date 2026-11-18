@@ -153,3 +153,10 @@
 6. **三選一（`skillgen/pick_offer.py`）**：`_Maker.level` 給放寬層級（`LEVEL_EXACT`／`RELAXED`／`OFF`／`OFF_RELAXED`）；全部關鍵字＋路線符合的不到 `pool.relax_until`（3）時依序補下一層，扣 `weights.keyword_relaxed_penalty`、`route_off_penalty`；`_cap_off_route`：LLM 挑出的偏離讓一份超過 2 張時改回第一名。`skill_pick.drop_thin`：單薄的不進前 K（全都單薄才照分數）。
 7. **組合器**：`composer_parts.build_condition` 不把「第一輪」掛在非傷害效果、不給刻紋掛條件、整招沒有傷害時技能層級不抽第一輪也不給帶刻紋的招抽條件（玩法 PM 4.1.23）；驗證器不改。
 8. **測試**：`tests/llm/test_flash_pick_pk3.py`、`tests/roguelite/test_flash_pick_run_pk3.py`、`tests/roguelite/test_pick_offer_pk3.py`、`tests/skillgen/test_composer_odd_pk3.py`。比較腳本 `scripts/pick_slot_stats.py`（每格候選數）、`scripts/flash_pick_compare.py`（閃現 LF-2 vs 挑選），`scripts/pick_compare.py report` 併成 `docs/phases/PhasePK-3比較.md`。
+
+## 十一、SK-1：距離條件、變奏讀出招順序、閃現側變（`skill-proposal/19`）
+
+1. **條件**：`point_blank`（貼身，距離 1）、`long_range`（遠距，距離 ≥ `rules/core.yaml` 的 `far_distance`）；條件表進 schema 就自動進提議 prompt，所以升了 `skill-proposal/18`。`moved_this_turn` 的 `harshness` 改成新的一級 `mild`（`condition_permille.mild`）。
+2. **變奏**：`VariantWhen.caster_cast_tag`（本回合施放過帶這個標籤的技能；沒填不輸出）；提議 schema 的 `when` 多一支（`skill-proposal/19`）。
+3. **閃現**：13 個新小變化模板（`flash_templates.yaml` 標「SK-1」的那幾個）；`side: true` 的是側變，一次出題最多 `rules.max_side_per_offer`（1）張，由 `flash_offer._Builder.sides` 記數，挑選模式的候選也一樣。利用地面、距離加碼、換觸發的參數放 `Variation.keyword`（表面 ID、條件 ID、觸發時機），LF-2 的目錄照樣列成 `keyword` 選單；`flash-pick/2`、`flash-variation/6` 的 prompt 文字沒改。
+4. 測「某個重現案例在舊模板下才成立」的測試用 `tests.engine.helpers.without_sk1_flash()`。

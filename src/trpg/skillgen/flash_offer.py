@@ -306,7 +306,7 @@ class UsageSource(DataOrderSource):
         skill: SkillDef,
     ) -> list[Variation]:
         base = {"source": "minor", "template": template.id, "category": template.category}
-        if template.op in ("reshape", "terrain_area"):
+        if template.op in ("reshape", "terrain_area", "reshape_skeleton"):
             reach = (
                 _FAR_SHAPES
                 if request.usage.avg_distance_permille >= (library.evolution.far_distance * 1000)
@@ -317,6 +317,8 @@ class UsageSource(DataOrderSource):
         if template.op == "dual_scaling":
             attrs = [a.value for a in library.secondary_range(skill) if a != skill.scaling_attr]
             return [Variation.model_validate({**base, "keyword": a}) for a in attrs]
+        if template.op in _SK1_PARAM_OPS:
+            return [Variation.model_validate({**base, **p}) for p in _sk1_params(template, skill)]
         if template.op in ("element", "followup_element"):
             followup = (
                 skill.followup.effects
@@ -333,6 +335,28 @@ class UsageSource(DataOrderSource):
 
 
 _KEYWORD_OPS = frozenset({"keyword_imbue", "keyword_exploit", "mod_keyword"})
+
+_SK1_PARAM_OPS = frozenset({"element_swap", "surface_exploit", "distance_bonus", "trigger_swap"})
+"""SK-1 帶參數的小變化（06 6.38 第 3 點）：換元素（``element``）、利用地面（表面 ID）、距離加碼
+（條件 ID）、換觸發（新的觸發時機）；後三個放在 ``keyword``（同雙屬性縮放把屬性放在
+``keyword``）。"""
+
+
+def _sk1_params(template: FlashTemplate, skill: SkillDef) -> list[dict[str, str]]:
+    """:data:`_SK1_PARAM_OPS` 的參數選單（依資料順序；套不套得上由改法判斷）。"""
+    if template.op == "element_swap":
+        own = {e.element.value for e in skill.effects if e.element is not None}
+        return [{"element": e} for e in template.elements if e not in own]
+    if template.op == "surface_exploit":
+        return [{"keyword": s} for s in template.surfaces]
+    if template.op == "distance_bonus":
+        return [{"keyword": "point_blank"}, {"keyword": "long_range"}]
+    current = (
+        skill.trigger.event
+        if skill.trigger is not None
+        else (str(skill.reaction.event) if skill.reaction is not None else None)
+    )
+    return [{"keyword": to} for frm, to in template.trigger_swaps if frm == current]
 
 
 def _keyword_signal(usage: SkillUsage, keyword: str) -> int:
@@ -458,9 +482,14 @@ class _Builder:
     強度下限」，玩法 PM 選 (b)：換了種類預算類別不同，分數不能比，只要落在新種類的預算窗內）；畫面上
     有轉型選項的面板寫「（轉型除外）」、轉型卡句末接「轉型後照新種類重算強度，不跟原本比。」
     （前端 ``client/src/run/flashChoice.ts``，FL-1h）。"""
+    sides: int = 0
+    """這次出題已經做出幾張側變（SK-1：最多 ``rules.max_side_per_offer`` 張）。"""
 
     def option(self, variation: Variation) -> FlashOption | None:
         request = self.request
+        side = is_side(self.library, variation)
+        if side and self.sides >= self.library.flash.rules.max_side_per_offer:
+            return None  # SK-1（06 6.38 第 3 點）：每次閃現最多出 1 張側變
         variation = clean_text(variation, self.texts.get(variation.key()))
         state = (
             with_flash(request.state, variation)
@@ -491,6 +520,7 @@ class _Builder:
         )
         if below and not self.weaker:
             return None  # RR-2c：重閃後整招低於現在的卡，照原規則不合格
+        self.sides += int(side)
         return FlashOption(
             variation=variation,
             skill=skill,
@@ -552,6 +582,14 @@ def _whole_floor(
         ),
         library,
     )
+
+
+def is_side(library: ContentLibrary, variation: Variation) -> bool:
+    """這個變化是不是側變（SK-1，模板的 ``side``）。"""
+    if variation.source != "minor":
+        return False
+    template = library.flash.minor_template(variation.template)
+    return template is not None and template.side
 
 
 def try_variation(
@@ -702,10 +740,11 @@ def category_counts(
     before = skill_before(library, request)
     builder = _builder(library, request)
     cap = table.pricing.rule(True).options
-    return {
-        category: len(builder.take(source.ranked(library, request, category, before), cap))
-        for category in allowed_categories(table, before, major=major)
-    }
+    counts: dict[str, int] = {}
+    for category in allowed_categories(table, before, major=major):
+        builder.sides = 0  # 指定類別是各自出題：側變的上限每類各算
+        counts[category] = len(builder.take(source.ranked(library, request, category, before), cap))
+    return counts
 
 
 NO_OPTIONS_ZH = "這招目前沒有可以閃的變化"

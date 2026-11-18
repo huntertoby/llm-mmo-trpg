@@ -35,6 +35,7 @@ from trpg.content.skills import (
 )
 from trpg.engine.ids import CONCEALED
 from trpg.engine.rules.facing import is_behind
+from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.forms import active_form, held_weapon
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rune_queries import has_own_rune
@@ -170,8 +171,15 @@ def _unit_condition_met(
         return is_flanked(state, caster, unit)
     if kind == "from_behind":
         return behind or is_behind(caster.xy, unit)
-    if kind == "target_collided":  # 本回合（這一輪）受過撞擊（Phase 3-24c）
-        return unit.collided_round == state.round
+    simple: dict[str, Callable[[], bool]] = {
+        # 本回合（這一輪）受過撞擊（Phase 3-24c）
+        "target_collided": lambda: unit.collided_round == state.round,
+        # 貼身／遠距（SK-1，06 6.38 第 1 點）：距離 1／至少 far_distance（工坊）
+        "point_blank": lambda: unit_dist(caster, unit) == 1,
+        "long_range": lambda: unit_dist(caster, unit) >= state.ruleset.core.far_distance,
+    }
+    if kind in simple:
+        return simple[kind]()
     assert kind == "target_isolated"
     return not _has_living_ally_beside(state, unit)
 
@@ -184,6 +192,8 @@ _UNIT_CONDITIONS = frozenset(
         "flanked",
         "from_behind",
         "target_collided",
+        "point_blank",
+        "long_range",
     }
 )
 

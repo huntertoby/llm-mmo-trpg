@@ -216,7 +216,8 @@ composite_self_combo_permille: 1000
 # 再乘複合加成。初值，未經模擬。
 composite_delayed_discount_permille: 800
 
-condition_permille: {none: 1000, common: 850, harsh: 600}
+# SK-1（#166，06 6.38 第 2 點）：mild 寬鬆一級，給幾乎每回合都成立的「本回合移動過」；初值取 common 與 none 的中間，工坊可調
+condition_permille: {none: 1000, mild: 925, common: 850, harsh: 600}
 all_target_permille: 800    # affects: all（敵我不分）的對象係數
 
 # 代價折抵（‰，各項加總、以 total_cap 截斷後乘上去）

@@ -181,6 +181,8 @@ targets:
       - {path: backstab_hit_bonus, label_zh: 背刺命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 近戰攻擊者站在目標背後格時命中加這麼多（敵我、頭目都適用）。有「無聲」的刺客可以留在背後連續吃到。}
       - {path: backstab_crit_range_bonus, label_zh: 背刺暴擊範圍, kind: int, hint_min: 0, hint_max: 3, note_zh: 背刺時暴擊範圍擴大這麼多（1＝武器 20 變 19～20）。}
       - {path: ambush_hit_bonus, label_zh: 潛行偷襲命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 帶隱蔽狀態出手時命中加這麼多；出手後脫離隱蔽，從隱蔽中近戰出手時目標不會轉身。}
+      # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻。
+      - {path: far_distance, label_zh: 遠距條件的距離, kind: int, hint_min: 3, hint_max: 8, note_zh: 技能條件「遠距」在施放者和目標距離至少這麼多格時成立（曼哈頓距離，巨型單位看佔地最近的一格）。越大越難成立；條件「貼身」固定是距離 1。只能 2～20。}
       # RG-1（#162，09 9.6.6「數值照工坊」）：盾兵替相鄰的遠程同伴擋遠程攻擊。
       # RG-2（#162，05 5.7）：玩家方看到敵方陷阱的可疑痕跡。
       - {path: trap_trace_radius, label_zh: 陷阱痕跡距離, kind: int, hint_min: 0, hint_max: 5, note_zh: 我方單位走到敵方陷阱這麼多格內（直走橫走的步數）就看到那一格有「可疑痕跡」，只知道格子、不知道種類；0＝看不到痕跡。敵人看不到我方陷阱的痕跡。}
@@ -194,6 +196,8 @@ targets:
     fields:
       - {path: modifier.points_milli.silent_strike, label_zh: 無聲（被動常駐）的價值, kind: int, hint_min: 0, hint_max: 1000, note_zh: 千分之一點；每次近戰攻擊不讓目標轉身值多少，乘上預估使用次數（所有攻擊 10 次）就是無聲被動的預算點數（360＝3.6 點）。改了「無聲步」這類被動的預算比例跟著變。}
       - {path: silent_strike_round_milli, label_zh: 主動給 1 回合無聲的價值, kind: int, hint_min: 0, hint_max: 2000, note_zh: 千分之一點；主動技能（例：影纏）用 grant_skill 給「無聲」時，每給 1 回合算這麼多點（600＝0.6 點）。}
+      # SK-1（#166，06 6.38 第 2 點）：「本回合移動過」用的寬鬆一級條件倍率。
+      - {path: condition_permille.mild, label_zh: 寬鬆條件的預算倍率（‰）, kind: permille, hint_min: 850, hint_max: 1000, note_zh: 帶寬鬆條件（目前只有「本回合移動過」）的技能或效果，預算乘這個千分比；越接近 1000 折扣越小（1000＝不打折）。常見條件是 850、嚴苛是 600。}
       # FL-1a（06 6.34「費用方向」第 4 點）：閃現蓄力、輕巧每一級調多少（規則「一定要變、順序、回合 +1／累計 +2／最少留 1」不開）。
       - {path: flash_cost.damage_rungs, label_zh: 蓄力：傷害每次往上調幾格, kind: int, hint_min: 1, hint_max: 3, note_zh: 閃現「蓄力」在預算重調後沒有任何一項變強時，改把傷害（再來治療、護盾）的骰子或武器倍率往上調這麼多格（骰子依平均排序、倍率每格 100‰）；調完預算比例還低於 70% 時同一項再往上。1＝最小的一步。改了所有招的蓄力選項跟著變。}
       - {path: flash_cost.magnitude_step, label_zh: 蓄力／輕巧：狀態強度每級（‰）, kind: int, hint_min: 10, hint_max: 100, note_zh: 閃現「蓄力」「輕巧」調數值型狀態（燃燒、中毒、減速、易傷等）的強度時每一級多少千分比（25＝每級 +2.5%）。蓄力只在狀態回合已經加不上去（到 6 回合或原招 +2）時才加強度，最多到 2000‰；輕巧往下最多降回 1000‰。}

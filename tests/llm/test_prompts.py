@@ -187,6 +187,11 @@ SNAPSHOTS = {
     # self_on_high_ground 開放、budget.over 與 range_delta 回饋改寫。都在 build_proposal_prompt／
     # evaluate 這層，雜湊同 /16
     "skill-proposal/17": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # SK-1（#166，06 6.38 第 1 點）：條件清單多「貼身」「遠距」（point_blank、long_range），都在
+    # <available>／schema 這層，雜湊同 /17
+    "skill-proposal/18": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # SK-1（06 6.38 第 7 點）：變奏條件 when 多一支 caster_cast_tag（schema 與說明），雜湊同 /18
+    "skill-proposal/19": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

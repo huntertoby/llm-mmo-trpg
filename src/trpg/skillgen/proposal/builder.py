@@ -365,6 +365,7 @@ _WHEN_DOCS: dict[str, str] = {
     "caster_high_ground": "施放者所在格比目標點高（填 true）",
     "caster_adjacent_blocker": "施放者相鄰的格子有牆壁或阻擋物（填 true）",
     "target_surface": "目標點的表面是其中之一",
+    "caster_cast_tag": "施放者本回合已經施放過帶這個標籤的技能（填標籤 ID）",
 }
 
 
@@ -379,6 +380,7 @@ def _when_model(surfaces: Sequence[str]) -> Any:
         "caster_high_ground": (Literal[True], ...),
         "caster_adjacent_blocker": (Literal[True], ...),
         "target_surface": listed,
+        "caster_cast_tag": (Annotated[str, Field(pattern=ID_PATTERN)], ...),
     }
     branches = []
     for name in VARIANT_CONDITIONS:

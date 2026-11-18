@@ -35,14 +35,11 @@ MANA_ONLY_LIGHT = (
     "skill_wil_storm_hex",
 )
 """FL-1a 報告第 6 節第 2 點：輕巧只減法力、實付沒變的 7 招。"""
+# SK-1（06 6.38 第 3 點）：「每場一次」「以血支付」讓殘影之誓、吹送、慈焰誓約、鏡像施法、
+# 挑釁怒吼有了選項
 STILL_NO_OPTIONS = (
-    "skill_afterimage_vow",
     "skill_bloodwake_stride",
-    "skill_gust_blow",
-    "skill_kindred_flame",
-    "skill_mirror_cast",
     "skill_mountain_mover",
-    "skill_taunting_roar",
 )
 """補完第 5、6 點後仍然沒有任何閃現選項的 1 階主動技（FL-1c 掃描）。"""
 
@@ -140,7 +137,7 @@ def test_skills_with_options_are_known_in_advance(skill_id: str) -> None:
 
 
 def test_the_answer_is_cached_on_the_library() -> None:
-    request = _request(LIB.skills["skill_afterimage_vow"])
+    request = _request(LIB.skills["skill_bloodwake_stride"])
     has_options(LIB, request)
     assert False in LIB.flash_option_cache.values()
 

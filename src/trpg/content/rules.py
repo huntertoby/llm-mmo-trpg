@@ -458,6 +458,9 @@ class CoreRules(ContentModel):
     """背刺（Phase 3D-8d）：暴擊範圍擴大的格數（1 ＝ 武器 20 → 19–20）。"""
     ambush_hit_bonus: int = Field(default=2, ge=0, le=10)
     """潛行偷襲（Phase 3D-8d）：攻擊者帶 ``concealed`` 狀態時的命中加值（攻擊結算完後移除隱蔽）。"""
+    far_distance: int = Field(default=5, ge=2, le=20)
+    """條件「遠距」（``long_range``，SK-1，06 6.38 第 1 點）的門檻：施放者和目標的距離（曼哈頓，
+    巨型單位照佔地）至少這麼多格。初值 5，數值工坊可調。"""
     revive_landing_radius: int = Field(default=2, ge=0, le=6)
     """復活（``revive``，Phase 3D-8b）：原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；
     範圍內沒有空格就不能施放。舊紀錄沒有此欄位。"""
