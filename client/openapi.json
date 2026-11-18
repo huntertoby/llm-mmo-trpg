@@ -27083,6 +27083,17 @@
             "type": "boolean",
             "title": "Cost Status",
             "default": false
+          },
+          "contagious": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contagious"
           }
         },
         "additionalProperties": false,
