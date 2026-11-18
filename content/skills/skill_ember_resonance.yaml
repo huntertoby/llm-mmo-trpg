@@ -1,0 +1,27 @@
+# SK-3b 示範（#166，06 6.38 第 10 點；玩法交接 4.1.30 第 5 點，名稱玩法 PM 定；數值為初值，未經模擬）：
+# 你造的燃燒被利用時（被消耗、或別人的招因為目標燃燒中而生效）累積 1 層專注。被動骨架的核心不收 add_stack，
+# 借一個小護盾當核心（同鷹眼、怒火中燒；待 PM）。
+id: skill_ember_resonance
+schema_version: 1
+name_zh: 餘燼共鳴
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d3, affects: self}
+  - {type: add_stack, stack: focus, amount: 1, affects: self}
+condition: null
+trigger: {event: on_keyword_exploited, status: burning, target: self, max_per_round: 1}
+cost: {mana: 0}
+tags: [passive, fire]
+narrative:
+  concept: 你點起的火每被人利用一次，餘燼就在心裡多亮一分
+  cast_flavor: 遠處的火光一跳，你胸口的餘燼也跟著一亮，心神隨之沉定
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

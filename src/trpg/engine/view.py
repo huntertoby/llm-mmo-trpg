@@ -152,6 +152,8 @@ REACTION_TRIGGER_TEXT: dict[str, str] = {
     "ally_targeted": "相鄰友方被敵人瞄準時（命中之前）",
     "ally_hit_near": "相鄰友方被敵人擊中後",
     "kin_hit_in_range": "範圍內的同門被攻擊命中時（傷害之前）",
+    "ally_missed_roll": "隊友擲失手時",  # SK-3b（重擲；名詞表）
+    "enemy_hit_roll": "敵人擲中你時",
 }
 """反應規則觸發事件的中文說明（``ReactionWhen.event`` → 文字）。"""
 

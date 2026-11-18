@@ -1,0 +1,27 @@
+# SK-3b 示範（#166，06 6.38 第 10 點；玩法交接 4.1.30 第 5 點，名稱玩法 PM 定；數值為初值，未經模擬）：
+# 你造的水表面被利用時（被雷電導電、被凍結，或別人的招因為目標站在水上而生效）回 1 點法力。被動骨架的核心不收
+# restore_resource，借一個小護盾當核心（同鷹眼、怒火中燒；待 PM）。
+id: skill_tidal_draw
+schema_version: 1
+name_zh: 潮引
+tier: 1
+rank: 1
+rarity: epic
+kind: passive
+skeleton: passive
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: shield, dice: 1d4, affects: self}
+  - {type: restore_resource, resource: mana, amount: 1, affects: self}
+condition: null
+trigger: {event: on_keyword_exploited, surface: water, target: self, max_per_round: 1}
+cost: {mana: 0}
+tags: [passive, water]
+narrative:
+  concept: 你引來的水每被人借用一次，潮氣就把一點力量送回你身上
+  cast_flavor: 水面閃過一道電光，一縷潮氣順著地面回到你掌心
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

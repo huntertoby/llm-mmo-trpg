@@ -115,7 +115,9 @@ def without_sk3b_offers(library: ContentLibrary) -> ContentLibrary:
 
     def strip(skeleton: Any) -> Any:
         kept = tuple(p for p in skeleton.core.primitives if p != "reroll")
-        return skeleton.model_copy(update={"core": skeleton.core.model_copy(update={"primitives": kept})})
+        return skeleton.model_copy(
+            update={"core": skeleton.core.model_copy(update={"primitives": kept})}
+        )
 
     return dataclasses.replace(
         library, skeletons={k: strip(v) for k, v in library.skeletons.items()}

@@ -1,0 +1,26 @@
+# SK-3b 示範（#166，06 6.38 第 12 點；玩法交接 4.1.30 第 5 點，名稱玩法 PM 定；數值為初值，未經模擬）：
+# 身旁（core.reroll_ally_range 格內）的隊友攻擊擲失手時，讓他重擲一次、取較好的結果。
+id: skill_lucky_whisper
+schema_version: 1
+name_zh: 幸運低語
+tier: 1
+rank: 1
+rarity: rare
+kind: reaction
+skeleton: reaction
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: reroll}
+condition: null
+trigger: null
+reaction: {event: ally_missed_roll}
+cost: {mana: 2}
+tags: [reaction]
+narrative:
+  concept: 隊友失手的那一瞬間，你在他耳邊低聲說了一句「再來一次」
+  cast_flavor: 你湊近同伴低語一聲，他深吸一口氣，重新瞄準
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

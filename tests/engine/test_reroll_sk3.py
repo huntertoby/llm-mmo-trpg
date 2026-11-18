@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from tests.engine.helpers import (
     caster_template,
     give_turn,
+    library,
     make_map,
     make_skill,
     make_state,
@@ -116,7 +117,7 @@ def scene(
             spawn(Team.ENEMY, (4, 3), no_reactions(max_hp=999)),
             spawn(Team.ALLY, helper_xy, supporter),
         ],
-        skills=skills,
+        skills=[s for s in skills if s.id not in library().skills],  # SK-3b 示範招已在內容庫
     )
     return give_turn(state, U1)
 

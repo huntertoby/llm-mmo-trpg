@@ -134,7 +134,7 @@ triggers:
   # random_composer 仍是 false（一般抽選不抽，既有種子不變）；組合器只以獨立串流 composer.exploit 產生（skill_composer.yaml）。
   - id: on_keyword_exploited
     name_zh: 你造的關鍵字被利用時
-    llm_hint: "持有者製造的狀態、表面或符文被任何人利用（消耗狀態、元素觸發表面互動、效果因目標帶著它而成立、符文被讀取或引爆）時自動發動，每回合最多一次。"
+    llm_hint: "持有者造的狀態、表面或符文被任何人利用（消耗、元素互動、效果因它成立、符文被讀取或引爆）時發動，每回合一次。"
     params:
       status: {llm_hint: "只在這個狀態被利用時發動；和表面擇一，都不填則任何狀態或表面都算。", type: status}
       surface: {llm_hint: "只在這種表面被利用時發動；和狀態擇一，都不填則任何狀態或表面都算。", type: surface}
