@@ -18,6 +18,8 @@ import type { AttackFamily } from "../render/attackVariants";
 import type { CreatureAttackType } from "../render/creaturePose";
 import type { WeaponClass } from "../render/skillClips";
 import { scaleCues, stepSfx, type SfxCue } from "../audio/battleSfx";
+import { sk2FxOf } from "./sk2Fx";
+import { samePos } from "./geometry";
 
 export type PlaySpeed = "crawl" | "slow" | "normal" | "fast" | "skip";
 
@@ -170,14 +172,25 @@ function stepSkill(step: StepOut, before: BattleView, cards: VfxCards, scale: nu
         };
   const tl = weaponOf === undefined ? null : skillTimeline(step.events, step.view, cards, raw, weaponOf, attackOf, strikeOf, before);
   if (tl === null) {
-    const v = special(raw);
+    const v = withSk2(special(raw), step, before, cards, 0);
     return { vfx: scaleVfx(v, scale), motions, sfx: sfxOf(v) };
   }
   const placed = placeMotions(motions, tl.segments, before, scale);
   const caster = tl.segments[0]?.casterId;
   const end = step.view.units.find((u) => u.id === caster)?.pos ?? null;
-  const v = special(castFromBefore(tl.vfx, placed.casterFrom, end));
+  const afterMs = scale > 0 ? placed.after.reduce((n, m) => n + motionMs(m), 0) / scale : 0;
+  const v = withSk2(special(castFromBefore(tl.vfx, placed.casterFrom, end)), step, before, cards, afterMs);
   return { vfx: scaleVfx(v, scale), skill: scaleRows(tl.rows, scale), motions: placed.before, after: placed.after, sfx: sfxOf(v, tl) };
+}
+
+/**
+ * AR-SK2：這一步的吸收表面、疾病擴散、鉤的演出（`sk2Fx.ts`），時間都在未縮放的特效時鐘上：
+ * 擴散從倒下的人的倒下片段開始；鉤的鎖鏈換掉施放者發出的那一段特效，拉的位移接在命中之後（`afterMs`＝出招後位移的總長，未縮放）。
+ */
+function withSk2(v: StepVfx, step: StepOut, before: BattleView, cards: VfxCards, afterMs: number): StepVfx {
+  const downAt = (id: string): number => v.reactions?.find((r) => r.unitId === id && r.kind === "down")?.atMs ?? v.leadMs;
+  const fx = sk2FxOf(step.events, before, step.view, cards, downAt).map((f) => (f.kind === "hook" ? { ...f, castIndex: v.casts.findIndex((c) => samePos(c.from, f.caster)), pullAtMs: v.leadMs, pullMs: Math.round(afterMs) } : f));
+  return fx.length === 0 ? v : { ...v, sk2: fx };
 }
 
 /**
