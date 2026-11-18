@@ -225,7 +225,7 @@ minor:
     category: area
     op: reshape_skeleton
     side: true
-    prefix_zh: 擴散
+    prefix_zh: 廣域   # SK-2b（玩法交接 4.1.29 第 5 點）：避免和疾病擴散的「會擴散」撞字
     summary_zh: 換形狀並換骨架：單體打擊改成直線 3、錐形 2 或十字的範圍招（傷害依預算調整）
     headline_zh: "單體改成範圍，一次打到更多敵人"
     shapes:
@@ -357,7 +357,7 @@ minor:
     category: element
     op: element_swap
     side: true
-    prefix_zh: 轉元
+    prefix_zh: 易元   # SK-2b（4.1.29 第 5 點）：和換觸發的「易時」成對
     summary_zh: 換元素：這招的傷害改成別種元素，關鍵字跟著換（強度依預算重算）
     headline_zh: "傷害改成{keyword}"
     elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
@@ -718,7 +718,7 @@ minor:
     category: extend
     op: kill_reset
     kinds: [active]
-    prefix_zh: 連斬
+    prefix_zh: 連殺   # SK-2b（4.1.29 第 5 點）：法術也會拿到
     summary_zh: 擊殺重置：這招擊殺目標時冷卻歸零
     headline_zh: "打倒敵人時，這招的冷卻歸零"
   # SK-1（#166，06 6.38 第 3 點）：cost_blood
@@ -728,8 +728,8 @@ minor:
     side: true
     kinds: [active]
     prefix_zh: 血契
-    summary_zh: 以血支付：不花法力或耐力，改扣自己的生命，威力略升
-    headline_zh: "改用自己的血付代價，威力略升"
+    summary_zh: 以血支付：法力或耐力只花 1 點，其餘改扣自己的生命，威力略升   # SK-2b（4.1.29 第 2 點）
+    headline_zh: "大部分代價改用自己的血付，威力略升"
   # SK-1（#166，06 6.38 第 3 點）：cost_once
   - id: cost_once
     category: cost
