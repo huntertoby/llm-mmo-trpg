@@ -115,13 +115,15 @@ primitives:
   - id: cleanse
     name_zh: 淨化
     llm_hint: "移除目標身上所有負面狀態（減益）；增益與中性狀態保留。"
-    description_zh: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
+    description_zh: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；count 填 1 時只移除 1 個（控制類 control_group 優先，再來剩餘回合最多、永久最多，再相同照 statuses.yaml 順序；SK-2b）。增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
     player_description: "移除目標身上所有負面狀態，不能對敵人使用。"
     category: numeric
     harmful: false
     budget_basis: fixed
     base_points: 3
     forbid_affects: [enemies, all]
+    params:
+      count: {llm_hint: "移除 1 個減益，或全部（省略＝全部）。", type: count, min: 1, max: 1, description_zh: 只移除 1 個減益（控制類優先）或 all（全部，同省略）}
   - id: push
     name_zh: 推擊
     llm_hint: "把目標推離自己，被擋住就停下並受到撞擊傷害。"

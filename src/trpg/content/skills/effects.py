@@ -124,7 +124,8 @@ class EffectSpec(ContentModel):
     count: int | Literal["all"] | None = Field(default=None)
     """``summon`` 專用（Phase 3D-4a）：一次召喚的數量（1；數量型分歧進化 3-33f2 可為 2，此時必須
     填 ``power_permille``）。``dispel`` 專用（Phase 3D-8a）：驅散的增益個數（1）或
-    ``all``（全部）。"""
+    ``all``（全部）。``cleanse``（SK-2b）：只移除 1 個減益（控制類優先）或 ``all``／省略（全部）。
+    """
     power_permille: int | None = None
     """``summon`` 專用（Phase 3-33f2，數量型分歧進化）：每隻召喚物的最大 HP 與傷害只有一般的這麼多
     ‰（例如 600 ＝ 60%）；一次召喚 2 隻（``count: 2``）時必填，必須小於 1000。只有一隻時不能小於

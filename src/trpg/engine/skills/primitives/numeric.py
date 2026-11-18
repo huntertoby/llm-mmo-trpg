@@ -156,7 +156,11 @@ def shield(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectB
 
 def cleanse(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     return [
-        CleanseEffect(target_id=unit.id, source_id=cast.caster.id)
+        CleanseEffect(
+            target_id=unit.id,
+            source_id=cast.caster.id,
+            count=spec.count if isinstance(spec.count, int) else None,
+        )
         for unit in cast.targets(effect.affects, spec.condition)
     ]
 

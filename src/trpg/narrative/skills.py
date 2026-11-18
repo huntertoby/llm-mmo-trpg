@@ -675,8 +675,11 @@ def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     )
 
 
-def _cleanse(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
-    """淨化（玩法決定 #60）：只移除減益（``polarity: debuff``）；增益與中性狀態保留。"""
+def _cleanse(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """淨化（玩法決定 #60）：只移除減益（``polarity: debuff``）；增益與中性狀態保留。``count: 1``
+    只移除 1 個（SK-2b）。"""
+    if isinstance(spec.count, int):
+        return f"淨化：移除身上 {spec.count} 個負面狀態（控制類優先，再來剩餘回合最多的）"
     return "淨化：移除身上所有負面狀態（增益、姿態與其他中性狀態不受影響）"
 
 

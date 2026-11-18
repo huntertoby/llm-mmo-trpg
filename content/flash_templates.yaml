@@ -742,10 +742,10 @@ minor:
   - id: support_cleanse
     category: support
     op: active_rider
-    rider: {type: cleanse}
+    rider: {type: cleanse, count: 1}
     prefix_zh: 滌清
-    summary_zh: 附淨化：治療時順便移除目標身上的減益（治療量依預算調整）
-    headline_zh: "治療時順便淨化減益"
+    summary_zh: 附淨化：治療時順便移除目標身上 1 個減益（控制類優先）
+    headline_zh: "治療時順便解除 1 個減益"
   # SK-1（#166，06 6.38 第 3 點）：support_haste
   - id: support_haste
     category: support
