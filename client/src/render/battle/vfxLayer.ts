@@ -22,6 +22,8 @@ import { reduceVfx, REDUCED_FLASH_MS } from "../reducedMotion";
 import { SkillLayer } from "./skillLayer";
 import { DOLL_PX, type LiftState } from "./rendererBase";
 import { sk2Effects, type Sk2Host } from "../sk2Effects";
+import { rerollEffects } from "../rerollEffects";
+import type { RerollFx } from "../../battle/rerollFx";
 import { surfaceTimeScale } from "../motionAnims";
 
 const T = TILE_SIZE;
@@ -80,6 +82,16 @@ export abstract class VfxLayer extends SkillLayer {
     partFx: (id, fx) => this.setPartFx(id, fx),
     boardScale: () => this.scale, // PB-1f：「破」字記號的最小尺寸
   };
+
+  /**
+   * AR-SK3：重擲的骰子層（`rerollEffects.ts`）：畫在單位之上的效果層，從現在起一個接一個播 `REROLL_MS × scale`。
+   * 不等待結束（呼叫端照 `durationMs` 等）。
+   */
+  playReroll(list: readonly RerollFx[], scale: number): void {
+    if (!this.ready || list.length === 0) return;
+    const host = { ...this.sk2Host, draw: (id: string) => this.unitDrawOf.get(id) ?? this.downedDrawOf.get(id) };
+    this.launch(rerollEffects(host, list, this.effectClock, scale));
+  }
 
   /**
    * 我方勝利（6N-5）：站著的我方每人播舉手或收刀、地圖上方浮出「勝利」。不等待結束（呼叫端照 `v.ms` 等）。
