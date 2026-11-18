@@ -16,11 +16,6 @@ export function withLlm<T extends Partial<CreateRunRequest>>(body: T, on: boolea
   return on ? { ...body, llm: true } : body;
 }
 
-/** 這張候選卡有本機模型的手筆：自由設計（來源為 `llm`）或挑選模式由模型挑選並命名（`pick: llm`，PK-4b）。 */
-export function isLlmTag(tag: OfferTag | undefined): boolean {
-  return tag !== undefined && (tag.source === "llm" || tag.pick === "llm");
-}
-
 /** 「源晶推演」小標的說明句：自由設計照舊，挑選模式用挑選的說明（4.1.27 題 5）；不是 LLM 的卡為 `null`。 */
 export function llmTagHint(tag: OfferTag | undefined): string | null {
   if (tag === undefined) return null;
