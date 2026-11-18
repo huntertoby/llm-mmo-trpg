@@ -68,6 +68,7 @@ from trpg.engine.rules.landing import landing_problem, nearest_free
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.race import hazard_push_reduction
 from trpg.engine.runes import inscribe_rune, remove_rune
+from trpg.engine.skill_triggers import collect_exploit
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
@@ -476,7 +477,12 @@ def _inscribe(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 def _detonate_rune(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     assert isinstance(effect, DetonateRuneEffect)
     rune = next((r for r in ctx.state.runes if r.id == effect.rune_id), None)
-    return [] if rune is None else [remove_rune(ctx, rune, "detonated")]
+    if rune is None:
+        return []
+    removed = remove_rune(ctx, rune, "detonated")
+    # SK-3b（玩法交接 4.1.30 第 1 點）：符文被引爆算「你造的關鍵字被利用」；只有刻下的人引爆得了
+    collect_exploit(ctx, rune.owner_id, rune.owner_id)
+    return [removed]
 
 
 def _new_object(ctx: Ctx, xy: XY, kind: str, duration: int | None = None) -> EventBase:

@@ -24,6 +24,7 @@ _COPIED = {
         "sealed_until",
         "part_hp",
         "part_mods",
+        "exploit_turn_counts",  # SK-3b
     },
     ObjectState: set(),
 }

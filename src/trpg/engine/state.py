@@ -573,6 +573,12 @@ class UnitState:
     """獨狼（LW-1，06 6.37、#156；``lone_wolf`` 條件）：開戰那一刻自己的陣營除了自己沒有其他非召喚
     單位。開場時算一次（:func:`trpg.engine.battle.begin_battle`），整場固定；之後加入的單位（援軍、
     召喚、階段召喚）的值一律 ``False``。``False`` 時不輸出（JSON 與改前相同）。"""
+    exploit_turn_counts: Annotated[dict[str, int], Field(exclude_if=_empty)] = field(
+        default_factory=dict
+    )
+    """「你造的關鍵字被利用時」（``on_keyword_exploited``，SK-3b，玩法交接 4.1.30 第 2 點）這個回合
+    已觸發的次數（被動技能 ID 或詞條 ID → 次數）：被動與詞條同一套，每回合最多 1 次；「回合」是
+    **任何一個單位** 的回合，所以每個單位的回合開始時全體清除。空的時候不輸出。"""
     footprint: Annotated[int, Field(exclude_if=_single)] = 1
     """佔格邊長（GB-1a，05 5.12.4、T1）：1＝一般單位；3＝不動巨型頭目（佔 3×3，``pos`` 是中心格）。
     由範本帶入、整場不變；佔哪些格一律走 :func:`trpg.engine.rules.footprint.tiles_of`。等於 1 時不
@@ -714,6 +720,7 @@ class UnitState:
             part_mods=dict(self.part_mods),
             suppressed_statuses=self.suppressed_statuses,
             lone_wolf=self.lone_wolf,
+            exploit_turn_counts=dict(self.exploit_turn_counts),
             footprint=self.footprint,
         )
 

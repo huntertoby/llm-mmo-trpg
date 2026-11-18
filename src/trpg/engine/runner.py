@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/130"
-"""目前的戰鬥紀錄版本（``/130``，Phase SK-3：你造的關鍵字被利用時、重擲、戰前佈置）。
+LOG_FORMAT = "trpg-battle-log/131"
+"""目前的戰鬥紀錄版本（``/131``，Phase SK-3b：「利用」多算條件型與符文、每回合 1 次）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

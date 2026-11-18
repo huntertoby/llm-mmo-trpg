@@ -32,7 +32,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
 from typing import TYPE_CHECKING, Literal
@@ -80,13 +80,16 @@ __all__ = [
     "collect_move",
     "collect_turn_end",
     "collect_turn_start",
+    "exploit_spent",
     "holding",
     "observe",
     "redirect_fired",
     "register_downed_handler",
     "register_fired_resolver",
+    "reset_exploit_counts",
     "reset_round_counts",
     "settle",
+    "spend_exploit",
 ]
 
 _OBSERVED = frozenset(
@@ -532,6 +535,22 @@ def redirect_fired(ctx: Ctx, seq: int, old: UnitId, new: UnitId) -> None:
     ]
 
 
+def reset_exploit_counts(units: Iterable[UnitState]) -> None:
+    """任何單位的回合開始：「被利用時」的每回合次數全體歸零（SK-3b，玩法交接 4.1.30 第 2 點）。"""
+    for unit in units:
+        if unit.exploit_turn_counts:
+            unit.exploit_turn_counts = {}
+
+
+def exploit_spent(owner: UnitState, key: str) -> bool:
+    """``owner`` 的被動或詞條 ``key`` 這個回合已經因「被利用時」觸發過（每回合最多 1 次）。"""
+    return owner.exploit_turn_counts.get(key, 0) >= 1
+
+
+def spend_exploit(owner: UnitState, key: str) -> None:
+    owner.exploit_turn_counts[key] = owner.exploit_turn_counts.get(key, 0) + 1
+
+
 def reset_round_counts(units: Iterator[UnitState]) -> None:
     """每輪開始：被動技能的本輪觸發次數歸零。"""
     for unit in units:
@@ -657,7 +676,10 @@ def _usable(ctx: Ctx, owner: UnitState, skill: SkillDef) -> bool:
     assert skill.trigger is not None
     if not owner.alive or skip_turn_status(ctx.rules, owner) is not None:
         return False
-    if owner.trigger_counts.get(skill.id, 0) >= skill.trigger.max_per_round:
+    if skill.trigger.event == ON_KEYWORD_EXPLOITED:  # SK-3b：每回合 1 次（不看每輪次數）
+        if exploit_spent(owner, skill.id):
+            return False
+    elif owner.trigger_counts.get(skill.id, 0) >= skill.trigger.max_per_round:
         return False
     return resource_problem(ctx.state, owner, skill) is None
 
@@ -793,7 +815,10 @@ def _resolve_on_hit(ctx: Ctx, fired: Fired) -> None:
 
 def _pay(ctx: Ctx, owner: UnitState, skill: SkillDef, fired: Fired) -> None:
     paid: PaidCost = pay_skill_cost(ctx.core, owner, skill)
-    owner.trigger_counts[skill.id] = owner.trigger_counts.get(skill.id, 0) + 1
+    if fired.event == ON_KEYWORD_EXPLOITED:
+        spend_exploit(owner, skill.id)  # SK-3b：每回合計數（被動與詞條同一套）
+    else:
+        owner.trigger_counts[skill.id] = owner.trigger_counts.get(skill.id, 0) + 1
     ctx.emit(
         SkillTriggered,
         unit_id=owner.id,

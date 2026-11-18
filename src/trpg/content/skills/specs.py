@@ -132,7 +132,8 @@ class TriggerSpec(ContentModel):
     - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
     - ``surface``：只有 ``on_enter_surface`` 使用，可省略（省略＝任何表面；Phase 3C-3b）。
     - ``on_keyword_exploited``（SK-3）：``status``／``surface`` 擇一（可都省略），``max_per_round``
-      只能是 1（06 6.38 第 10 點「每回合最多觸發 1 次」）。
+      只能是 1（06 6.38 第 10 點「每回合最多觸發 1 次」）。SK-3b 起引擎不看每輪次數，改以「任何
+      單位的每回合 1 次」計數（``UnitState.exploit_turn_counts``，被動與詞條同一套）。
     """
 
     event: str = Field(pattern=ID_PATTERN)
