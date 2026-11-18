@@ -1414,7 +1414,12 @@ def _disease_spread(e: DiseaseSpread, v: _View) -> str:
     return f"  ☣ {v.name[e.from_id]} 倒下，{names}擴散到 {v.name[e.to_id]} 身上"
 
 
-_ABSORB_GAIN_ZH = {"stack": "層數", "heal": "治療", "shield": "護盾"}
+_ABSORB_GAIN_ZH = {
+    "stack": "層數",
+    "heal": "治療",
+    "shield": "護盾",
+    "element": "潮濕（命中時在目標格造水）",
+}
 
 
 @_handles(SurfaceAbsorbed)

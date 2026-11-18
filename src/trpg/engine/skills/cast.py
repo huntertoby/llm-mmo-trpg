@@ -46,6 +46,7 @@ from trpg.engine.control import status_effect
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
+    CreateSurfaceEffect,
     DamageEffect,
     EffectBase,
     ElementTouchEffect,
@@ -119,7 +120,7 @@ from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.stacks import consume_stacks
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.wind import spread_wind
-from trpg.shared.types import Element, Pos, UnitId
+from trpg.shared.types import Element, Pos, Surface, UnitId
 
 _OWN_CHECK = (SWAP, SWAP_ANY, TELEPORT_TARGET, ZONE, REVEAL, DETONATE_RUNES)
 """位移類原語自己擲抵抗判定（Phase 3D-2b），不另外擲命中；揭露（Phase 3D-8a）自動命中範圍內的
@@ -175,6 +176,10 @@ class Cast:
     absorbed_element: Element | None = None
     """吸收表面換來的元素（SK-2 ``absorb_surface`` 的 ``gain: element``）：:func:`absorb_surface`
     吸到帶元素的表面時在實例上設定，這一招之後的傷害效果改用它（元素觸及格子也是）。"""
+    absorbed_wet = False
+    """吸收表面吸到水（``gain: element``，SK-2b，玩法交接 4.1.28 第 1 點）：
+    :func:`absorb_surface` 在實例上設成真，這一招之後的傷害效果命中時在目標格造水（帶潮濕，
+    同召喚灌注 ``wet``）。"""
     stacks_at_cast: Mapping[str, int] | None = None
     """施放開始時施放者的層數快照（KW-1 ``self_stack_at_least``，#161）：:meth:`run` 在任何效果與
     消耗之前在實例上設定；``holds`` 對這個條件看快照，所以同一招消耗或累積的層數不影響判斷。"""
@@ -539,6 +544,7 @@ class Cast:
             if effect.affects in TOUCHING_AFFECTS and not extra:
                 self.touch_untouched_tiles(spec, start)
                 self.spread_wind(spec)
+                self.soak_hit_tiles(start)
             if spec.lifesteal_permille is not None:
                 self.lifesteal(spec.lifesteal_permille, start)
             if spec.on_kill:
@@ -1083,6 +1089,31 @@ class Cast:
         ]
         if remaining:
             execute(self.ctx, remaining)
+
+    def soak_hit_tiles(self, start: int) -> None:
+        """吸收表面吸到水（:attr:`absorbed_wet`，SK-2b）：這次傷害命中的單位所在格造水（帶潮濕，同
+        召喚灌注 ``wet``）；每格一次，依座標排序。"""
+        if not self.absorbed_wet:
+            return
+        hit: set[XY] = {
+            (event.pos.x, event.pos.y)
+            for event in self.ctx.events[start:]
+            if isinstance(event, DamageDealt)
+            and event.source_id == self.caster.id
+            and event.cause == "attack"
+            and event.pos is not None
+        }
+        if hit:
+            team = self.caster.team
+            execute(
+                self.ctx,
+                [
+                    CreateSurfaceEffect(
+                        source_id=self.caster.id, pos=xy, surface=Surface.WATER, team=team
+                    )
+                    for xy in sorted(hit, key=lambda t: (t[1], t[0]))
+                ],
+            )
 
     def spread_wind(self, spec: EffectSpec) -> None:
         """元素擴散（Phase 3-54a，06 6.33）：``element: wind`` 的傷害效果吹到影響格的表面與區域時，

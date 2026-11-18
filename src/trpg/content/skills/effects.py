@@ -389,6 +389,9 @@ _ABSORB_FIELDS: dict[str, tuple[str, ...]] = {
     "element": (),
 }
 """``absorb_surface`` 每種收益必填的參數（其他兩組參數不能填；SK-2，06 6.38 第 4 點）。"""
+ABSORB_NO_ELEMENT: frozenset[Surface] = frozenset({Surface.OIL, Surface.SMOKE})
+"""``absorb_surface`` 的 ``gain: element`` 吸不了的表面（SK-2b，玩法交接 4.1.28 第 1 點）：
+沒有元素、也不是水（水換成「潮濕」）。"""
 
 
 def _check_absorb_surface(where: str, effect: EffectSpec) -> None:
@@ -401,6 +404,11 @@ def _check_absorb_surface(where: str, effect: EffectSpec) -> None:
         return
     if effect.gain is None:
         raise ValueError(f"{where}：absorb_surface 必須填 gain（stack、heal、shield 或 element）")
+    if effect.gain == "element" and effect.surface in ABSORB_NO_ELEMENT:
+        raise ValueError(
+            f"{where}：gain: element 不能吸 {effect.surface.value}"
+            "（油、煙霧沒有元素，只能換層數、治療、護盾）"
+        )
     need = _ABSORB_FIELDS[effect.gain]
     for name in ("stack", "amount", "dice"):
         filled = getattr(effect, name) is not None

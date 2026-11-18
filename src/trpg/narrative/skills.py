@@ -737,9 +737,11 @@ def _absorb_surface(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
         "的表面" if spec.surface is None else f"的{lib.ruleset.surface_def(spec.surface).name_zh}"
     )
     if spec.gain == "element":
+        if spec.surface is Surface.WATER:
+            return f"吸走{where}{what}，這一招之後的傷害帶潮濕（命中時在目標格造水）；沒有水時照常"
         return (
-            f"吸走{where}{what}（只吸帶元素的表面），這一招之後的傷害改成那種表面的元素；"
-            "沒有可吸的表面時照原本的元素"
+            f"吸走{where}{what}（帶元素的表面或水，不吸油、煙霧），這一招之後的傷害改成那種表面的"
+            "元素，吸到水時帶潮濕（命中時在目標格造水）；沒有可吸的表面時照原本的元素"
         )
     if spec.gain == "stack":
         assert spec.stack is not None

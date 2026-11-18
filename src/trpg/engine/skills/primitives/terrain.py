@@ -90,8 +90,8 @@ def _absorbable(cast: Cast, spec: EffectSpec, surface: Surface) -> Element | boo
     if surface is Surface.NONE or (spec.surface is not None and surface is not spec.surface):
         return False
     element = cast.ctx.rules.surface_def(surface).element
-    if spec.gain == "element" and element is None:
-        return False  # 水、油、煙霧沒有元素，不能換成元素（SK-2 待 PM 決定：水 → 潮濕）
+    if spec.gain == "element" and element is None and surface is not Surface.WATER:
+        return False  # 油、煙霧沒有元素，不能換元素；水換成「潮濕」（SK-2b，4.1.28 第 1 點）
     return element
 
 
@@ -122,6 +122,8 @@ def absorb_surface(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
     ]
     if element is not None:
         cast.absorbed_element = element  # 這一招之後的傷害改成表面的元素
+    elif spec.gain == "element":
+        cast.absorbed_wet = True  # 吸水：這一招之後的傷害命中時在目標格造水（帶潮濕）
     elif spec.gain == "stack":
         assert spec.stack is not None and spec.amount is not None
         add_stacks(ctx, caster, spec.stack, spec.amount, source_id=caster.id)
