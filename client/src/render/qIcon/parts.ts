@@ -351,6 +351,9 @@ export const COND: PartTable = {
   // KW-2：自身站在高處（鷹眼），美術出樣張前借「居高臨下」暫代
   self_on_high_ground: { zh: "自身站在高處", topic: "（暫代）同「居高臨下」：一座山，山頂一個小人頭", d: (c, o) => COND["height_advantage"]!.d(c, o) },
 };
+/** 條件的明確退回（同 EFFECT_ALIAS、TRIG_ALIAS）：SK-1 的距離條件還沒有美術圖樣，先借最接近的現有條件圖，等美術補畫（AR-SK2 報告列給美術 PM）。
+ *  貼身 point_blank → 夾擊（人形兩側貼著紅色敵方三角＝敵人就在身邊）；遠距 long_range → 目標落單（光柱下一個孤立的人形＝目標離得遠）。 */
+export const COND_ALIAS: Readonly<Record<string, string>> = { point_blank: "flanked", long_range: "target_isolated" };
 
 // =====================================================================
 // 代價 6 個
@@ -550,6 +553,7 @@ export const hooks: { status: ((c: Ctx, o: QOpts, id: string) => void) | null } 
 export function entry(cat: string, id: string): PartEntry {
   if (cat === "effect" && typeof id === "string") { if (id.startsWith("status:")) return entry("status", id.slice(7)); if (id.startsWith("surface:")) return entry("surface", id.slice(8)); id = EFFECT_ALIAS[id] ?? id; }
   if (cat === "trigger") id = TRIG[id] ? id : (TRIG_ALIAS[id] ?? id);
+  if (cat === "condition" && typeof id === "string") id = COND[id] ? id : (COND_ALIAS[id] ?? id);
   if (cat === "condition" && typeof id === "string" && id.startsWith("target_has_status:")) { const s = entry("status", id.slice(18)); return { zh: "目標帶有狀態：" + (s.zh ?? id.slice(18)), topic: "那個狀態的圖，右上一個問號", live: s.live, d: (c, o, T, opt) => { at(c, -1.6, 1.4, 0.84, (q) => s.d(q, o, T, opt)); if (!o.tiny) qmark(c, o, 7.4, -6, 0.8); } }; }
   const e = CATS[cat]?.[id]; if (e) return e;
   if (cat === "status") return { zh: id, topic: "（沒有 Q 版圖樣：現行圖樣頂著）", live: true, d: (c, o) => (hooks.status ? hooks.status(c, o, id) : QS.ACT.buff.d(c, o, QS.ACT.buff.def as Tint)) };
