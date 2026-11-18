@@ -27,6 +27,7 @@ CORE_PATHS = (
     "trap_trace_radius",  # RG-2（#162）陷阱痕跡
     "shield_guard_hit_penalty",  # RG-1（#162）盾兵掩護
     "contagion_radius",  # SK-2b：疾病擴散的距離
+    "reroll_ally_range",  # SK-3b：重擲幫隊友的範圍
     "shield_formation_hit_penalty",  # RG-4（#163）塔盾詞條「護陣」
 )
 BUDGET_PATHS = (
@@ -36,6 +37,7 @@ BUDGET_PATHS = (
     "hook_min_cooldown",  # SK-2b：鉤的冷卻下限
     "hook_points",  # SK-3b：SK-2 三個新原語的預算點數（從原語表搬來）
     "contagion_points",
+    "reroll_budget_permille",  # SK-3b：重擲的預算
     "absorb_surface_points",
     "flash_cost.damage_rungs",  # FL-1a：閃現蓄力、輕巧的調整幅度
     "flash_cost.magnitude_step",

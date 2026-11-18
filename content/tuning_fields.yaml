@@ -190,6 +190,8 @@ targets:
       # RG-4（#163，08 8.11）：玩家塔盾的詞條「盾陣」，判定同盾兵、數值分開調。
       # SK-2b（SK-2 待決 5）：疾病擴散的距離（SK-3b 改字：傳染 → 擴散）。
       - {path: contagion_radius, label_zh: 疾病擴散的距離, kind: int, hint_min: 1, hint_max: 2, note_zh: 帶「會擴散」狀態（燃燒、流血、中毒）的單位倒下時，傳給這麼多格內（直走橫走的步數，巨型單位看佔地最近的一格）的一名同伴。越大越容易傳出去。只能 1～3。}
+      # SK-3b（SK-3 待決 10）：重擲反應「隊友擲失手時」的範圍。
+      - {path: reroll_ally_range, label_zh: 重擲：幫隊友的範圍, kind: int, hint_min: 1, hint_max: 3, note_zh: 帶「隊友擲失手時」重擲反應的人，要在攻擊者這麼多格內（直走橫走的步數，巨型單位看佔地最近的一格）才能讓他重擲、取較好的結果。越大越常幫得上。}
       - {path: shield_formation_hit_penalty, label_zh: 盾陣命中懲罰, kind: int, hint_min: 0, hint_max: 6, note_zh: 塔盾詞條「盾陣」：和持盾者相鄰（上下左右）的隊友被遠程攻擊時，攻擊者命中減這麼多；持盾者自己不算（由塔盾本體護）。0＝盾陣不擋。同一次攻擊被好幾個盾陣、或盾陣和半掩護、盾兵一起罩到時只算一次、取最高。}
   # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
   - kind: budget
@@ -205,6 +207,8 @@ targets:
       # SK-3b（SK-2b 待決 1）：SK-2 三個新原語的預算點數（從 skill_primitives.yaml 搬來，值不變）。
       - {path: hook_points, label_zh: 鉤的預算點數, kind: int, hint_min: 3, hint_max: 10, note_zh: 「鉤」（把直線上第一個敵人拉到身邊）算多少預算點數（再乘形狀倍率）。越大，帶鉤的招其他效果越弱；改了所有帶鉤的招跟著重算。只能 0 以上。}
       - {path: contagion_points, label_zh: 疾病擴散的預算點數, kind: int, hint_min: 1, hint_max: 5, note_zh: 「疾病擴散」（讓燃燒、流血、中毒會擴散）算多少預算點數（再乘形狀倍率）。越大，帶擴散的招其他效果越弱。只能 0 以上。}
+      # SK-3b（SK-3 待決 10）：重擲的預算（反應技可用預算的千分比，隨階級長）。
+      - {path: reroll_budget_permille, label_zh: 重擲的預算（‰）, kind: permille, hint_min: 700, hint_max: 1000, note_zh: 「重擲」算多少預算點數＝階級預算 × 反應技係數 × 這個千分比。700～1000 之間的招才合格（低於 700 太弱、高於 1000 超出預算；另有代價折抵會讓比例再低一點）。改了所有重擲反應技跟著重算。}
       - {path: absorb_surface_points, label_zh: 吸收表面的基礎點數, kind: int, hint_min: 0, hint_max: 4, note_zh: 「吸收表面」的基礎預算點數；另加收益（層數、治療、護盾的點數；換元素時再加一次這個點數）。越大，帶吸收的招其他效果越弱。只能 0 以上。}
       # FL-1a（06 6.34「費用方向」第 4 點）：閃現蓄力、輕巧每一級調多少（規則「一定要變、順序、回合 +1／累計 +2／最少留 1」不開）。
       - {path: flash_cost.damage_rungs, label_zh: 蓄力：傷害每次往上調幾格, kind: int, hint_min: 1, hint_max: 3, note_zh: 閃現「蓄力」在預算重調後沒有任何一項變強時，改把傷害（再來治療、護盾）的骰子或武器倍率往上調這麼多格（骰子依平均排序、倍率每格 100‰）；調完預算比例還低於 70% 時同一項再往上。1＝最小的一步。改了所有招的蓄力選項跟著變。}
