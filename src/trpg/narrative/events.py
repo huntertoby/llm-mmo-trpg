@@ -552,6 +552,8 @@ def _collided(e: Collided, v: _View) -> str:
     name = v.name[e.unit_id]
     if e.obstacle == "excess":
         return f"  {name} 被推得太猛，受到衝擊（{e.shortfall} 次撞擊）"
+    if e.obstacle == "immovable":
+        return f"  {name} 推不動，硬吃下撞擊（{e.shortfall} 次撞擊）"
     target = _OBSTACLE_NAMES[e.obstacle]
     if e.other_id is not None:
         target += v.name[e.other_id]
