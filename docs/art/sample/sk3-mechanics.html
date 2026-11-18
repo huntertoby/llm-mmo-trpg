@@ -7,9 +7,9 @@
 </style></head>
 <body>
 <h1>SK-3 新機制（樣張）</h1>
-<p class="note">畫圖 agent，2026-11-19。紀錄 docs/art/SK-3-美術.md。分段：
+<p class="note">畫圖 agent，2026-11-19（第 2 版同日）。紀錄 docs/art/SK-3-美術.md。分段：
 <a href="?part=icons&mute=1">部件圖樣</a><a href="?part=icons-t1&mute=1">部件真 1 倍</a><a href="?part=near&mute=1">撞圖</a><a href="?part=full96&mute=1">完整圖示</a>
-<a href="?part=anim&case=worse&mute=1">重擲（變壞）</a><a href="?part=anim&case=better&mute=1">重擲（變好）</a><a href="?part=anim-t1&mute=1">演出真 1 倍</a><a href="?part=live&case=worse&mute=1">動畫播放</a>
+<a href="?part=anim&case=worse&mute=1">重擲（變壞）</a><a href="?part=anim&case=better&mute=1">重擲（變好）</a><a href="?part=anim-t1&mute=1">演出真 1 倍</a><a href="?part=m4&w=1600&mute=1">上一排有人（1600）</a><a href="?part=m4&w=800&mute=1">上一排有人（800）</a><a href="?part=beam&mute=1">引線五方向</a><a href="?part=live&case=worse&mute=1">動畫播放</a>
 <a href="?part=prep&mute=1">戰前佈置（畫面）</a><a href="?part=prep-mark&mute=1">佈置標記</a><a href="?part=audit&mute=1">自查</a></p>
 <div id="sheet"></div><div id="live"></div>
 <textarea id="out"></textarea>
@@ -115,15 +115,17 @@ PARTS["icons-t1"] = () => {
 const SIL = (cat, id, px) => { const c = QP.chipCanvas(cat, id, px, 1, { res: 1 }), x = c.getContext("2d"), d = x.getImageData(0, 0, c.width, c.height), r = px / 2, rin = px * 0.42 * 0.94;
   for (let i = 0; i < d.data.length; i += 4) { const p = i / 4, X = p % c.width, Y = Math.floor(p / c.width), inR = Math.hypot(X + 0.5 - r, Y + 0.5 - r) < rin; const L = 0.3 * d.data[i] + 0.59 * d.data[i + 1] + 0.11 * d.data[i + 2]; const on = inR && L > 70; d.data[i] = d.data[i + 1] = d.data[i + 2] = on ? 235 : 30; d.data[i + 3] = 255; }
   x.putImageData(d, 0, 0); return c; };
+/** 完全紅色盲（protanopia）模擬：常用的 sRGB 近似矩陣（Viénot 1999 簡化），只給撞圖看。 */
+const PROTAN = (c) => { const x = c.getContext("2d"), d = x.getImageData(0, 0, c.width, c.height); for (let i = 0; i < d.data.length; i += 4) { const r = d.data[i], g = d.data[i + 1], b = d.data[i + 2]; d.data[i] = 0.567 * r + 0.433 * g; d.data[i + 1] = 0.558 * r + 0.442 * g; d.data[i + 2] = 0.242 * g + 0.758 * b; } x.putImageData(d, 0, 0); return c; };
 const GROUPS = [
-  { zh: "重擲 vs 骰子、回轉箭頭（自然 20、賭注、骨架「反應」、效果「替隊友擋攻擊」＝現行暫借）", items: [["effect", "reroll"], ["trigger", "on_natural_20"], ["cost", "gamble"], ["skeleton", "reaction"], ["effect", "intercept"], ["trigger", "enemy_hit_roll"], ["trigger", "ally_missed_roll"]] },
-  { zh: "你造的關鍵字被利用時 vs 小旗、閃光、雷（施加狀態後＝現行暫借、命中時、元素雷、暴擊時、每命中 n 次）", items: [["trigger", "on_keyword_exploited"], ["trigger", "on_status_applied"], ["trigger", "on_hit"], ["element", "lightning"], ["trigger", "on_crit"], ["trigger", "every_n_hits"], ["effect", "consume_status"]] },
-  { zh: "隊友擲失手時 vs 綠人形家族（身旁隊友受擊時＝現行暫借、隊友被瞄準時、隊友倒下時）＋紅斜槓（自身沒有狀態）", items: [["trigger", "ally_missed_roll"], ["trigger", "ally_hit_adjacent"], ["trigger", "ally_targeted"], ["trigger", "ally_downed"], ["condition", "self_lacks_status"], ["trigger", "on_natural_20"]] },
+  { zh: "重擲 vs 骰子、回轉箭頭（自然 20、賭注、骨架「反應」＝一定同框、效果「替隊友擋攻擊」＝現行暫借、額外反應）", items: [["effect", "reroll"], ["trigger", "on_natural_20"], ["cost", "gamble"], ["skeleton", "reaction"], ["effect", "extra_reaction"], ["effect", "intercept"], ["trigger", "enemy_hit_roll"], ["trigger", "ally_missed_roll"]] },
+  { zh: "你造的關鍵字被利用時 vs 小旗、閃光、雷、爆星（施加狀態後＝現行暫借、命中時、元素雷、暴擊時、每命中 n 次、消耗狀態）", items: [["trigger", "on_keyword_exploited"], ["trigger", "on_status_applied"], ["trigger", "on_hit"], ["element", "lightning"], ["trigger", "on_crit"], ["trigger", "every_n_hits"], ["effect", "consume_status"]] },
+  { zh: "隊友擲失手時 vs 綠人形家族（身旁隊友受擊時＝現行暫借、隊友被瞄準時、隊友倒下時）＋紅斜槓（自身沒有狀態）；第四排＝完全紅色盲（protanopia）模擬", protan: true, items: [["trigger", "ally_missed_roll"], ["trigger", "ally_hit_adjacent"], ["trigger", "ally_targeted"], ["trigger", "ally_downed"], ["condition", "self_lacks_status"], ["trigger", "on_natural_20"]] },
   { zh: "敵人擲中你時 vs 「被…擊中」家族（被攻擊時＝現行暫借、被法術擊中時、被近戰擊中時、受傷時）", items: [["trigger", "enemy_hit_roll"], ["trigger", "hit_by_attack"], ["trigger", "hit_by_spell"], ["trigger", "hit_by_melee"], ["trigger", "on_damaged"], ["trigger", "on_natural_20"]] },
   { zh: "貼身、遠距 vs 人形＋距離類條件（身旁有友方、夾擊、目標落單、背刺、每一下都命中、居高臨下、觸發「敵人靠近時」）", items: [["condition", "point_blank"], ["condition", "long_range"], ["condition", "adjacent_ally"], ["condition", "flanked"], ["condition", "target_isolated"], ["condition", "from_behind"], ["condition", "all_strikes_hit"], ["condition", "height_advantage"], ["trigger", "enemy_enters_adjacent"]] },
 ];
 PARTS.near = () => {
-  const blocks = [{ title: "撞圖：新部件（每組第一個，遠距在第五組第二個）和最相近的既有部件（上排 26 的 2 倍解析度 ×3；中排 18 真 1 倍 ×5；下排 18 剪影 ×5）" }];
+  const blocks = [{ title: "撞圖（第 2 版）：新部件（每組第一個，遠距在第五組第二個）和最相近的既有部件（上排 26 的 2 倍解析度 ×3；中排 18 真 1 倍 ×5；下排 18 剪影 ×5）" }];
   for (const gr of GROUPS) {
     const a = [], b = [], s = [];
     for (const [cat, id] of gr.items) {
@@ -133,6 +135,7 @@ PARTS.near = () => {
       s.push(nn(SIL(cat, id, 18), 5));
     }
     blocks.push({ title: gr.zh }, { cells: a, gap: 18 }, { cells: b, gap: 54 }, { cells: s, gap: 54 });
+    if (gr.protan) blocks.push({ cells: gr.items.map(([cat, id]) => nn(PROTAN(QP.chipCanvas(cat, id, 18, 1, { res: 1 })), 5)), gap: 54 });
   }
   blocks.push({ note: "剪影＝18 真 1 倍裡圓片色環以內（半徑 0.395 × 18 px）亮度 > 70 的像素。骨架「反應」是徽章（深色圓底、沒有色環），照現行 skeletonTile 畫。" });
   publish(sheet(1460, blocks), "image/png");
@@ -144,6 +147,7 @@ PARTS.full96 = () => {
     ["厄運之眼（反應：敵人擲中你時 → 重擲）", mk("reaction", "enemy_hit_roll", ["reroll"], null, { prop: "el:shadow", motion: "aura", act: "curse", el: "shadow" })],
     ["鼓舞（反應：隊友擲失手時 → 重擲）", mk("reaction", "ally_missed_roll", ["reroll"], null, { prop: "el:holy", motion: "aura", act: "buff", el: "holy" })],
     ["潮汐共鳴（被動：你造的關鍵字被利用時 → 回血）", mk("passive", "on_keyword_exploited", ["heal"], null, { prop: "el:water", motion: "aura", act: "heal", el: "water" })],
+    ["（第 2 版補）雷主圖＋被利用：被動，你造的關鍵字被利用時 → 傷害（例：導電）", mk("passive", "on_keyword_exploited", ["damage"], null, { prop: "el:lightning", motion: "aura", act: "hit", el: "lightning" })],
     ["貼身條件的主動技", mk("active", null, ["damage"], "point_blank", { prop: "el:fire", motion: "shot", act: "hit", el: "fire" })],
     ["遠距條件的主動技", mk("active", null, ["damage"], "long_range", { prop: "el:lightning", motion: "shot", act: "hit", el: "lightning" })],
   ];
@@ -196,6 +200,7 @@ const U = {
   fighter: (o) => ({ kind: "doll", team: "ally", tpl: "hero_fighter", doll: TP.hero_fighter, view: "side", hp: 1, hero: true, ...o }),
   mage: (o) => ({ kind: "doll", team: "ally", tpl: "hero_mage", doll: TP.hero_mage, view: "side", hp: 1, ...o }),
   bandit: (o) => ({ kind: "doll", team: "enemy", tpl: "bandit", doll: TP.bandit, view: "side", west: true, hp: 1, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", tpl: "hero_archer", doll: TP.hero_archer, view: "side", hp: 1, ...o }),
 };
 const STONE = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
 const GRASS = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "g", gx, gy); ctx.restore(); };
@@ -203,79 +208,125 @@ const chestOf = (u) => { const f = OO.feetOf(u); return { x: f.x, y: f.y - 22 };
 
 // =====================================================================
 // 3. 重擲演出（t 毫秒 → 場景）。單位、站位照開發頁 client/src/dev/sk3Gallery.ts（戰士 (4,3)、盜賊 (5,3)、法師 (4,4)）。
-//   0–160 第一次：骰子從擲骰的人頭上彈出（0→1.15→1），骰面＝第一次的數字。160–260 停一下（看得到第一次的結果）。
-//   260–480 反應：反應者腳下金色光圈往外擴；一道金色引線從反應者胸口沿往上拱的弧線長到骰子。
-//   440–580 回轉：骰子外面長出金色回轉箭頭（同部件的 ↻），轉一圈；骰子白閃。
-//   560–640 舊的那一次退到左上（縮 0.72、變灰）留著。
-//   580–860 重擲：新骰子往上跳 12、轉兩圈，骰面每 60 ms 換一個數字。860–940 落地（壓扁 0.8 → 1），骰面＝第二次的數字。
-//   940–1250 比較：兩顆中間一個粗箭頭（變大＝綠、往上；變小＝紅、往下）；採用的那顆外面一圈金環、放大 1.1；沒採用的那顆一道紅斜槓、淡到 45%。
-//   1250–1450 全部淡出（之後照現行播命中／失手）。
+//   第 2 版（必修 M4、M1 連帶、採用標記）：骰子在擲骰者自己那一格「頭頂到血條之間」（SK.dieDy）；第一次往左（同一排）退；
+//   第 1 版的金色 ↻ 換成「敲一下」（左右短金線）＋白閃；比較時算數的那一顆壓「採用」；現行浮字「重擲！」延到 1250 ms 才出。
+//   0–160 第一次：骰子在擲骰者身上彈出（0→1.15→1），骰面＝第一次的數字。160–260 停一下（看得到第一次的結果）。
+//   260–560 反應者腳下金色光圈往外擴；280–470 金色引線從反應者胸口沿往旁邊拱的弧線長到骰子。
+//   440–600 敲一下：骰子白閃、左右兩邊各兩道短金線往外彈（只往左右）。
+//   560–660 第一次退到左邊（往左 30、往下 2，× MK；縮 0.84〔第 1 版 0.72，可修 2：點數要讀得出〕、變灰）留著。
+//   580–860 新骰子從原位長出來（0.5 → 1）、原地轉兩圈、跳起來不超過採用時的上緣，骰面每 60 ms 換一個數字。860–940 落地，骰面＝第二次的數字。
+//   940–1250 比較：兩顆中間一個粗箭頭（數字變大＝綠往上、變小＝紅往下）；算數的那一顆外面一圈金環、放大 1.1、下半壓「採用」；
+//            沒算數的那一顆一道紅斜槓、淡到 70%（點數在斜槓上再描一次）。
+//   1250–1450 全部淡出；1250 起現行浮字「重擲！」（照 feedbackLayer：頭頂上方、Noto Sans TC 700 20px、黑邊 4、往上飄 16、1000 ms）。
 // =====================================================================
 const FLICK = [7, 13, 4, 16, 9, 11, 3, 15, 6, 12];
+/** keep：1＝算第一次、2＝算第二次。mode：better＝隊友讓你重擲取較好、worse＝對方逼你重擲取較差（浮字色照 feedback.ts：better＝good #ffe066、worse＝bad #ff9f43）。 */
 const CASES = {
-  worse: { zh: "重擲（取較差）：盜賊擲 19 命中戰士 → 戰士的反應逼他重擲 → 2，取較差的 2（失手）", roller: "B", reactor: "F", first: 19, second: 2, keep: 2, firstHit: true, secondHit: false },
-  better: { zh: "重擲（取較好）：戰士擲 1 失手 → 身旁法師的反應讓他重擲 → 18，取較好的 18（命中）", roller: "F", reactor: "M", first: 1, second: 18, keep: 2, firstHit: false, secondHit: true },
-  keepfirst: { zh: "（補）取較好、但重擲沒有比較好：12 → 5，留第一次的 12", roller: "F", reactor: "M", first: 12, second: 5, keep: 1, firstHit: true, secondHit: false },
+  worse: { zh: "變壞（對方逼你重擲、取較差）：盜賊擲 19 命中戰士 → 戰士的反應逼他重擲 → 2，算 2（失手）", mode: "worse", roller: "B", reactor: "F", first: 19, second: 2, keep: 2 },
+  worseup: { zh: "對方逼你重擲、重擲反而比較好：盜賊擲 6 → 逼他重擲 → 15，取較差的仍是第一次的 6（「採用」落在第一次）", mode: "worse", roller: "B", reactor: "F", first: 6, second: 15, keep: 1 },
+  better: { zh: "變好（隊友讓你重擲、取較好）：戰士擲 1 失手 → 身旁法師的反應讓他重擲 → 18，算 18（命中）", mode: "better", roller: "F", reactor: "M", first: 1, second: 18, keep: 2 },
+  keepfirst: { zh: "沒比較好（隊友讓你重擲、取較好）：12 → 5，算第一次的 12", mode: "better", roller: "F", reactor: "M", first: 12, second: 5, keep: 1 },
 };
-const DIE_UP = 60; /* 骰子中心在擲骰者腳底往上幾 px（頭頂上方） */
-function sceneReroll(t, cs) {
-  const F = U.fighter({ id: "F", x: 4, y: 3 }), B = U.bandit({ id: "B", x: 5, y: 3 }), M = U.mage({ id: "M", x: 4, y: 4 });
-  const who = { F, B, M }, roller = who[cs.roller], reactor = who[cs.reactor], rf = OO.feetOf(roller), home = { x: rf.x, y: rf.y - DIE_UP };
-  const mk = () => SK.mk(), GH = () => ({ x: home.x - 34 * mk(), y: home.y - 6 * mk() });
-  return {
-    cols: 9, rows: 7, groundAt: () => STONE, units: [F, B, M],
-    top: (g) => {
-      const fade = 1 - span(t, 1250, 1450); if (fade <= 0) return;
-      g.save(); g.globalAlpha = fade;
-      // 反應者腳下光圈＋引線
-      SK.fieldPulse(g, OO.feetOf(reactor), span(t, 260, 560));
-      SK.fieldBeam(g, chestOf(reactor), home, ease(span(t, 280, 470)), 1 - span(t, 560, 700));
-      const firstDie = cs.keep === 1, keptGlow = ease(span(t, 960, 1080)), cmpA = span(t, 940, 1020);
-      // 舊的那一次（第一次）：0–560 在原位，560–640 退到左上
-      const pop = t < 160 ? (t < 110 ? 1.15 * ease(span(t, 0, 110)) : lerp(1.15, 1, span(t, 110, 160))) : 1;
-      const back = ease(span(t, 560, 640)), gh = GH(), ox = lerp(home.x, gh.x, back), oy = lerp(home.y, gh.y, back);
-      const oldKept = firstDie && t > 940, oldCross = !firstDie && t > 960 ? ease(span(t, 960, 1060)) : 0;
-      SK.fieldDie(g, ox, oy, { k: pop * lerp(1, 0.72, back) * (oldKept ? lerp(1, 1.1 / 0.72, keptGlow) : 1) /* 留第一次時，第一次那顆放大回 1.1（被採用的那顆一律 1.1） */, face: cs.first, pal: back > 0.5 && !oldKept ? SK.DIE.dim : SK.DIE.lav, flash: t > 440 && t < 580 ? Math.sin(span(t, 440, 580) * Math.PI) * 0.45 : 0, ring: oldKept ? keptGlow : 0, cross: oldCross, a: oldCross ? 1 - 0.55 * oldCross : 1 });
-      // 回轉箭頭（繞在原位）
-      if (t > 440 && t < 700) SK.fieldSpin(g, home.x, home.y, span(t, 440, 700) * TAU, ease(span(t, 440, 520)), 1 - span(t, 620, 700));
-      // 新的一次
-      if (t > 580) {
-        const p = span(t, 580, 860), land = span(t, 860, 940), jump = Math.sin(p * Math.PI) * 12 * mk();
-        const face = t < 860 ? FLICK[Math.floor((t - 580) / 60) % FLICK.length] : cs.second, rot = t < 860 ? ease(p) * TAU * 2 : 0;
-        const sy = t < 860 ? 1 : 1 - 0.2 * Math.sin(land * Math.PI), newCross = firstDie && t > 960 ? ease(span(t, 960, 1060)) : 0;
-        SK.fieldDie(g, home.x, home.y - jump, { k: (0.5 + 0.5 * ease(span(t, 580, 660))) * (!firstDie && t > 940 ? 1 + 0.1 * keptGlow : 1), sy, rot, face, ring: !firstDie ? keptGlow : 0, cross: newCross, a: newCross ? 1 - 0.55 * newCross : 1, pal: newCross > 0.5 ? SK.DIE.dim : SK.DIE.lav });
-      }
-      // 比較箭頭（舊 → 新：數字變大往上綠、變小往下紅）
-      if (t > 940) SK.fieldCmp(g, (gh.x + home.x) / 2 + 1, (gh.y + home.y) / 2 - 2 * mk(), cs.second > cs.first, cmpA);
-      g.restore();
-    },
-  };
+/** 現行浮字（照 rgMarks.js floatText／uiAnim.ts floatFrame 原樣抄；字的下緣貼頭頂上方 2，往上飄）：headY＝unitTopY（格子中心往上 26.1）。 */
+const HEAD_TOP = OO.FEET - 38 * (T / 52) * 1.06;
+function floatFrame(p) { const q = Math.max(0, Math.min(1, p)), POP = 0.22, bounce = (u) => { if (u >= 1) return 1; const c = 2.2, v = u - 1; return 1 + (c + 1) * v * v * v + c * v * v; }; return { alpha: q < 0.7 ? 1 : 1 - (q - 0.7) / 0.3, rise: Math.min(1, q * 1.5) * 16, scale: q < POP ? 0.6 + 0.4 * bounce(q / POP) : 1 }; }
+function floatWord(g, text, x, headY, p, color) {
+  if (p <= 0 || p >= 1) return; const f = floatFrame(p), px = 20;
+  g.save(); g.globalAlpha = f.alpha; g.translate(x, headY - 2 - px * 0.5 - f.rise); g.scale(f.scale, f.scale);
+  g.font = `700 ${px}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+  g.lineJoin = "round"; g.strokeStyle = "#000"; g.lineWidth = 4; g.strokeText(text, 0, 0); g.fillStyle = color; g.fillText(text, 0, 0);
+  g.restore();
 }
-const KEYS = { worse: [120, 360, 520, 700, 900, 1120], better: [120, 360, 520, 700, 900, 1120], keepfirst: [900, 1120] };
-const VIEWR = (S, res = 1, zoom = 1) => ({ S, res, zoom, x0: T * 2.6, y0: T * 1.6, w: T * 4.4, h: T * 3.6 });
+const FLOAT_AT = 1250, FLOAT_MS = 1000, WORD_REROLL = "重擲！" /* feedback.ts WORD_REROLL（現行的字，沒改） */;
+/** 骰子層（畫在所有排之上）：roller、reactor＝單位；cs＝情況；t 毫秒。 */
+function rerollTop(g, t, cs, roller, reactor) {
+  const c = OO.centerOf(roller), home = { x: c.x, y: c.y + SK.dieDy() }, off = SK.oldOff(), gh = { x: home.x + off.x, y: home.y + off.y };
+  const fade = 1 - span(t, 1250, 1450);
+  if (fade > 0) {
+    g.save(); g.globalAlpha = fade;
+    SK.fieldPulse(g, OO.feetOf(reactor), span(t, 260, 560));
+    SK.fieldBeam(g, chestOf(reactor), home, ease(span(t, 280, 470)), 1 - span(t, 560, 700));
+    const firstKept = cs.keep === 1, kg = ease(span(t, 960, 1080)), cmpA = span(t, 940, 1020);
+    // 第一次：0–560 在原位，560–660 退到左邊
+    const pop = t < 160 ? (t < 110 ? 1.15 * ease(span(t, 0, 110)) : lerp(1.15, 1, span(t, 110, 160))) : 1;
+    const back = ease(span(t, 560, 660)), ox = lerp(home.x, gh.x, back), oy = lerp(home.y, gh.y, back);
+    const oldKept = firstKept && t > 940, oldCross = !firstKept && t > 960 ? ease(span(t, 960, 1060)) : 0, oldK = pop * lerp(1, 0.84, back) * (oldKept ? lerp(1, SK.KEEP_K / 0.84, kg) : 1);
+    SK.fieldDie(g, ox, oy, { k: oldK, face: cs.first, pal: back > 0.5 && !oldKept ? SK.DIE.dim : SK.DIE.lav, flash: t > 440 && t < 600 ? Math.sin(span(t, 440, 600) * Math.PI) * 0.5 : 0, ring: oldKept ? kg : 0, cross: oldCross, a: oldCross ? 1 - 0.3 * oldCross : 1 });
+    SK.fieldKnock(g, home.x, home.y, span(t, 440, 600));
+    // 新的一次
+    let newK = 0;
+    if (t > 580) {
+      const p = span(t, 580, 860), land = span(t, 860, 940), jump = Math.sin(p * Math.PI) * SK.jumpMax();
+      const face = t < 860 ? FLICK[Math.floor((t - 580) / 60) % FLICK.length] : cs.second, rot = t < 860 ? ease(p) * TAU * 2 : 0;
+      const sy = t < 860 ? 1 : 1 - 0.2 * Math.sin(land * Math.PI), newCross = firstKept && t > 960 ? ease(span(t, 960, 1060)) : 0;
+      newK = (0.5 + 0.5 * ease(span(t, 580, 660))) * (!firstKept && t > 940 ? 1 + (SK.KEEP_K - 1) * kg : 1);
+      SK.fieldDie(g, home.x, home.y - jump, { k: newK, sy, rot, face, ring: !firstKept ? kg : 0, cross: newCross, a: newCross ? 1 - 0.3 * newCross : 1, pal: newCross > 0.5 ? SK.DIE.dim : SK.DIE.lav });
+    }
+    // 比較箭頭（舊 → 新：數字變大往上綠、變小往下紅），放在兩顆中間
+    if (t > 940) SK.fieldCmp(g, (gh.x + home.x) / 2, (gh.y + home.y) / 2 + 1 * SK.mk(), cs.second > cs.first, cmpA);
+    // 採用：算數的那一顆下半
+    if (t > 960) { if (firstKept) SK.fieldAdopt(g, gh.x, gh.y, oldK, kg); else SK.fieldAdopt(g, home.x, home.y, newK, kg); }
+    g.restore();
+  }
+  // 現行浮字「重擲！」：延到 1250 ms（骰子比較完、開始淡出）才出，頭頂上同時只有一樣東西
+  floatWord(g, WORD_REROLL, c.x, c.y + HEAD_TOP, (t - FLOAT_AT) / FLOAT_MS, cs.mode === "better" ? "#ffe066" : "#ff9f43");
+}
+function sceneReroll(t, cs, extra = []) {
+  const F = U.fighter({ id: "F", x: 4, y: 3 }), B = U.bandit({ id: "B", x: 5, y: 3 }), M = U.mage({ id: "M", x: 4, y: 4 });
+  const who = { F, B, M };
+  return { cols: 9, rows: 7, groundAt: () => STONE, units: [F, B, M, ...extra], top: (g) => rerollTop(g, t, cs, who[cs.roller], who[cs.reactor]) };
+}
+/** 上一排有人（必修 M4 補拍）：擲骰者正上方、左上、右上都站人（弓手、盜賊弓手、持盾弟子），看骰子會不會蓋到他們的血條與腳。 */
+const UPPER = () => [U.archer({ id: "A", x: 4, y: 2 }), U.bandit({ id: "BA", tpl: "bandit_archer", doll: TP.bandit_archer, x: 5, y: 2 }), U.bandit({ id: "BS", tpl: "bandit_shieldbearer", doll: TP.bandit_shieldbearer, x: 6, y: 2 }), U.mage({ id: "M2", x: 3, y: 2 })];
+const KEYS = [120, 360, 520, 760, 1120, 1350];
+const VIEWR = (S, res = 1, zoom = 1, y0 = 1.6, h = 3.6) => ({ S, res, zoom, x0: T * 2.6, y0: T * y0, w: T * 4.4, h: T * h });
 PARTS.anim = () => {
-  const cs = CASES[CASE] ?? CASES.worse, S = S1600, V = VIEWR(S, 1, 1.5);
-  const blocks = [{ title: `${cs.zh}：關鍵影格（1600 寬地圖縮放 ${S.toFixed(2)}，再 ×1.5 向量放大）` },
-    { note: "時間軸（毫秒）：0–160 第一次的骰子從擲骰者頭上彈出｜260–480 反應者腳下金色光圈、金色引線長到骰子｜440–580 骰子外長出金色回轉箭頭、轉一圈、白閃｜560–640 第一次退到左上變灰｜580–860 新骰子跳起、轉兩圈、骰面閃換｜860–940 落地｜940–1250 比較：中間粗箭頭（變大綠↑／變小紅↓）、採用的那顆金環、沒採用的紅斜槓｜1250–1450 淡出，接現行的命中／失手。骰面數字是骰子點數，不是說明字。" }];
-  const cells = KEYS[CASE === "keepfirst" ? "keepfirst" : "worse"].map((t) => ({ cv: render(sceneReroll(t, cs), V), cap: `${t} ms` }));
-  blocks.push({ cells: cells.slice(0, 3) }, { cells: cells.slice(3) });
-  if (CASE === "better") { blocks.push({ title: CASES.keepfirst.zh }); blocks.push({ cells: KEYS.keepfirst.map((t) => ({ cv: render(sceneReroll(t, CASES.keepfirst), V), cap: `${t} ms` })) }); }
-  publish(sheet(Math.max(1300, cells[0].cv.width * 3 + 60), blocks));
+  const ids = CASE === "better" ? ["better", "keepfirst"] : ["worse", "worseup"], S = S1600, V = VIEWR(S, 1, 1.5);
+  const blocks = [{ title: `重擲演出（第 2 版）：關鍵影格（1600 寬地圖縮放 ${S.toFixed(2)}，再 ×1.5 向量放大）` },
+    { note: "時間軸（毫秒）：0–160 第一次的骰子在擲骰者身上彈出｜260–560 反應者腳下金色光圈、280–470 金色引線長到骰子｜440–600 敲一下（白閃＋左右短金線）｜560–660 第一次往左退、變灰｜580–860 新骰子長出來、原地轉兩圈、骰面閃換｜860–940 落地｜940–1250 比較：中間粗箭頭（變大綠↑／變小紅↓）、算數的那顆金環＋「採用」、沒算數的紅斜槓｜1250–1450 淡出；1250 起現行浮字「重擲！」。骰面數字是點數，不是說明字。" }];
+  for (const id of ids) {
+    const cs = CASES[id], cells = KEYS.map((t) => ({ cv: render(sceneReroll(t, cs), V), cap: `${t} ms` }));
+    blocks.push({ title: cs.zh }, { cells: cells.slice(0, 3) }, { cells: cells.slice(3) });
+  }
+  publish(sheet(1300, blocks));
 };
 PARTS["anim-t1"] = () => {
-  const blocks = [{ title: "重擲演出 真 1 倍（左 1600 寬、右 800 寬），×3 最近鄰；每種兩格：520 ms（回轉）、1120 ms（比較）" }, { note: `骰子外接半徑 11 模型 px；800 寬地圖縮放 ${S800.toFixed(2)} 時照畫面下限放大（骰子半徑 ≥ 9 畫面 px，倍率 ${Math.max(1, 9 / (11 * S800)).toFixed(2)}）。` }];
-  for (const id of ["worse", "better"]) {
+  const blocks = [{ title: "重擲演出 真 1 倍（左 1600 寬、右 800 寬），×3 最近鄰；每種兩格：520 ms（敲一下）、1120 ms（比較＋採用）" }, { note: `骰子外接半徑 11 模型 px；800 寬地圖縮放 ${S800.toFixed(2)} 時照畫面下限放大（骰子半徑 ≥ 9 畫面 px，倍率 ${Math.max(1, 9 / (11 * S800)).toFixed(2)}）。「採用」字級 12 模型 px、畫面下限 10 px。` }];
+  for (const id of ["worse", "worseup", "better", "keepfirst"]) {
     const cs = CASES[id];
     blocks.push({ title: cs.zh }, { cells: [520, 1120].flatMap((t) => [nn(render(sceneReroll(t, cs), VIEWR(S1600)), 3, `1600 ${t} ms`), nn(render(sceneReroll(t, cs), VIEWR(S800)), 3, `800 ${t} ms`)]), gap: 16 });
   }
-  publish(sheet(1900, blocks), "image/png");
+  publish(sheet(2400, blocks), "image/png");
+};
+/** 必修 M4 補拍：上一排有人、和浮字同框；W＝1600｜800，真 1 倍最近鄰（1600 ×2、800 ×4）。 */
+PARTS.m4 = () => {
+  const W = P.get("w") === "800" ? 800 : 1600, S = W === 800 ? S800 : S1600, Z = W === 800 ? 4 : 2, V = VIEWR(S, 1, 1, 1.0, 4.2);
+  const blocks = [{ title: `必修 M4：上一排站人（正上方、左上、右上）＋現行浮字「重擲！」同框，${W} 寬（地圖縮放 ${S.toFixed(2)}）真 1 倍 ×${Z} 最近鄰` },
+    { note: "骰子在擲骰者自己那一格（頭頂到血條之間）；整組上緣（採用時金環的外框）收在上一排血條下緣再往下 1 模型 px。第一次往左退（同一排）。浮字「重擲！」1250 ms 才出（骰子開始淡出），位置、字級、顏色照現行 feedbackLayer。每列：120（第一次）｜760（新骰子在轉）｜1120（比較＋採用）｜1350（淡出＋浮字）。" }];
+  for (const id of ["worse", "better"]) {
+    const cs = CASES[id];
+    blocks.push({ title: cs.zh }, { cells: [120, 760, 1120, 1350].map((t) => nn(render(sceneReroll(t, cs, UPPER()), V), Z, `${t} ms`)), gap: 12 });
+  }
+  publish(sheet(W === 800 ? 2000 : 2400, blocks), "image/png");
+};
+/** 可修 1：引線五種相對位置（反應者在擲骰者的南、北、東、西、斜），1600 寬真 1 倍 ×3，440 ms（引線長滿）。 */
+PARTS.beam = () => {
+  const R0 = { x: 4, y: 3 }, pos = [["南", 4, 4], ["北", 4, 2], ["東", 5, 3], ["西", 3, 3], ["斜（右上）", 5, 2], ["斜（左下）", 3, 4]];
+  const cells = pos.map(([zh, x, y]) => {
+    const roller = U.bandit({ id: "B", x: R0.x, y: R0.y }), reactor = U.fighter({ id: "F", x, y, west: x > R0.x });
+    const scene = { cols: 9, rows: 7, groundAt: () => STONE, units: [roller, reactor], top: (g) => rerollTop(g, 440, CASES.worse, roller, reactor) };
+    return nn(render(scene, VIEWR(S1600, 1, 1, 1.0, 4.4)), 3, `反應者在${zh}`);
+  });
+  publish(sheet(2700, [{ title: "可修 1：金色引線的五種相對位置（擲骰者＝盜賊 (4,3)；反應者＝戰士；440 ms 引線長滿），1600 寬真 1 倍 ×3" },
+    { note: "曲線往旁邊拱（控制點＝中點沿法線外推 0.35 倍長＋10；兩條法線取較往上的那條，一樣高時取往左）。骰子在擲骰者自己身上，引線畫在骰子底下，終點被骰子蓋住。" },
+    { cells: cells.slice(0, 3), gap: 16 }, { cells: cells.slice(3), gap: 16 }]), "image/png");
 };
 PARTS.live = () => {
-  const cs = CASES[CASE] ?? CASES.worse, dpr = window.devicePixelRatio || 1, V = VIEWR(S1600, dpr, 1.5), host = document.getElementById("live");
-  const cv = render(sceneReroll(0, cs), V); cv.style.width = cv.width / dpr + "px"; host.appendChild(cv);
+  const cs = CASES[CASE] ?? CASES.worse, dpr = window.devicePixelRatio || 1, V = VIEWR(S1600, dpr, 1.5, 1.0, 4.2), host = document.getElementById("live");
+  const cv = render(sceneReroll(0, cs, UPPER()), V); cv.style.width = cv.width / dpr + "px"; host.appendChild(cv);
   const lab = document.createElement("p"); lab.className = "note"; host.appendChild(lab);
   const g = cv.getContext("2d"), t0 = performance.now(), slow = P.get("slow") === "1" ? 4 : 1;
-  const loop = (now) => { const t = ((now - t0) / slow) % 1900; const c = render(sceneReroll(Math.min(t, 1450), cs), V); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(c, 0, 0); lab.textContent = `${cs.zh}　${Math.round(Math.min(t, 1450))} ms（&slow=1 放慢 4 倍）`; requestAnimationFrame(loop); };
+  const loop = (now) => { const t = ((now - t0) / slow) % 2600; const c = render(sceneReroll(Math.min(t, 2250), cs, UPPER()), V); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(c, 0, 0); lab.textContent = `${cs.zh}　${Math.round(Math.min(t, 2250))} ms（&slow=1 放慢 4 倍）`; requestAnimationFrame(loop); };
   requestAnimationFrame(loop);
   document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
 };
@@ -295,7 +346,15 @@ function trapPad(ctx) {
 }
 const GHOST = {
   trap: (g, x, y, s) => { g.save(); g.translate(x - s / 2, y - s / 2); g.scale(s / 52, s / 52); trapPad(g); g.restore(); },
-  rune: (g, x, y, s) => { const px = Math.round(s * 0.62), cv = QP.glyph("skeleton", "rune", px, 2); g.drawImage(cv, x - px * QP.BOX / 2, y - px * QP.BOX / 2, px * QP.BOX, px * QP.BOX); },
+  /* 第 2 版（可修 4）：第 1 版用部件圖樣（直立的符文石碑）像墓碑；改成現行的地面符文（client/src/render/battle/terrainLayer.ts drawRunes 原樣抄：
+     菱形外框＝我方陣營色、淡填色＋內菱形＋四端短刻痕＝元素色；沒有元素用陷阱踏板同一個灰 #d8d8e0），平放在格子上。虛擬格 48。 */
+  rune: (g, x, y, s) => {
+    const k = s / 48, half = 48 * 0.3 * k, team = "#5aa0ff", col = "#d8d8e0", dia = (h) => { g.beginPath(); g.moveTo(x, y - h); g.lineTo(x + h, y); g.lineTo(x, y + h); g.lineTo(x - h, y); g.closePath(); };
+    g.save(); dia(half); g.globalAlpha *= 0.18; g.fillStyle = col; g.fill(); g.globalAlpha /= 0.18; g.lineWidth = 2 * k; g.strokeStyle = team; g.globalAlpha *= 0.95; g.stroke(); g.globalAlpha /= 0.95;
+    dia(half * 0.5); g.globalAlpha *= 0.75; g.fillStyle = col; g.fill(); g.globalAlpha /= 0.75;
+    g.beginPath(); for (const [ux, uy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) { g.moveTo(x + ux * half * 0.62, y + uy * half * 0.62); g.lineTo(x + ux * half, y + uy * half); } g.lineWidth = 1.5 * k; g.strokeStyle = col; g.globalAlpha *= 0.9; g.stroke();
+    g.restore();
+  },
   surface: (g, x, y, s) => { const px = Math.round(s * 0.62), cv = QP.glyph("surface", "water", px, 2); g.drawImage(cv, x - px * QP.BOX / 2, y - px * QP.BOX / 2, px * QP.BOX, px * QP.BOX); },
 };
 const IMG = {};
@@ -310,7 +369,23 @@ function prepShot(kind, t = 0) {
     for (const [cx, cy] of ZONE) { const q = CELL(cx, cy), x = Math.floor(q.x) - 1, y = Math.floor(q.y) - 1, w = Math.ceil(q.s) + 2; g.drawImage(IMG.p1, x, y, w, w, x, y, w, w); }
     for (const [cx, cy] of ZONE) { const q = CELL(cx, cy); SK.placeMark(g, q.x, q.y, q.s, { state: kind === "hover" && cx === 0 && cy === 6 ? "hover" : "idle", t, ghost: GHOST.trap }); }
   } else { const q = CELL(1, 5); SK.placeBurst(g, q.x, q.y, q.s, t / 420); }
+  if (kind === "hover") tipAt(g, CELL(0, 6), "放在這裡");
+  if (kind !== "placed") hintFix(g);
   return c;
+}
+/** 第 2 版（玩法 PM 定案的提示字）：視窗第一行「在高亮的起始區格子點一下」的「高亮的起始區」換成「框起來的起始區」。
+ *  做法：用視窗底色蓋掉原字那一行（左緣 425、中線 y 113.5），照原字的大小（14 px、Noto Sans TC 500、米白）重寫整行；換行照原截圖（第二行不動）。 */
+function hintFix(g) {
+  const bg = g.getImageData(700, 113, 1, 1).data, ink = "#e9e2d4";
+  g.save(); g.fillStyle = `rgb(${bg[0]},${bg[1]},${bg[2]})`; g.fillRect(422, 103, 262, 21);
+  g.font = "500 14px 'Noto Sans TC','Microsoft JhengHei',sans-serif"; g.textBaseline = "middle"; g.fillStyle = ink; g.fillText("「捕獸夾」：在框起來的起始區格子點一下", 425, 113.5); g.restore();
+}
+/** 滑過提示「放在這裡」（玩法 PM 定案的字）：格子右邊一個小提示框（照截圖裡面板的樣子：深藍底、金色細框、米白 12 px 字），不蓋格子。 */
+function tipAt(g, q, text) {
+  g.save(); g.font = "500 12px 'Noto Sans TC','Microsoft JhengHei',sans-serif"; const w = Math.ceil(g.measureText(text).width) + 14, h = 22, x = Math.round(q.x + q.s + 4), y = Math.round(q.y + q.s / 2 - h / 2);
+  g.beginPath(); g.roundRect(x + 0.5, y + 0.5, w, h, 4); g.fillStyle = "rgba(24,27,42,0.94)"; g.fill(); g.strokeStyle = "#c9a65a"; g.lineWidth = 1; g.stroke();
+  g.beginPath(); g.moveTo(x + 0.5, y + h / 2 - 4); g.lineTo(x - 4, y + h / 2); g.lineTo(x + 0.5, y + h / 2 + 4); g.closePath(); g.fillStyle = "#c9a65a"; g.fill();
+  g.fillStyle = "#eadfcc"; g.textBaseline = "middle"; g.fillText(text, x + 7.5, y + h / 2 + 0.5); g.restore();
 }
 const crop = (cv, x, y, w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(cv, -x, -y); return c; };
 PARTS.prep = async () => {
@@ -318,11 +393,11 @@ PARTS.prep = async () => {
   const pick = prepShot("pick", 0), hover = prepShot("hover", 0), placed = prepShot("placed", 140);
   const z = (cv, cap) => ({ cv: crop(cv, 380, 290, 260, 200), w: 520, h: 400, cap });
   publish(sheet(1310, [
-    { title: "戰前佈置畫面：放得下的格子換成正式標記（版面不動；其他像素是開發截圖 prep_2_pick.jpg 原樣）" },
-    { note: "暫借的是「選目標的紅框」（PhaseSK-3報告 待決 8）。正式版：金色四角括號＋淡金底＋中央金菱形（同戰鬥紀錄「◆ 戰前佈置」）；滑鼠指著的格子換成整圈金框＋要放的東西半透明預覽；放下時金框往外擴一下。視窗、按鈕、提示字、技能列都沒動。三格的地面用 prep_1_dialog.jpg 同位置補回（同一張地圖、還沒有紅框）。" },
+    { title: "戰前佈置畫面（第 2 版）：放得下的格子換成正式標記；提示字換成定案的「框起來的起始區」、指著時「放在這裡」（其他像素是開發截圖 prep_2_pick.jpg 原樣）" },
+    { note: "暫借的是「選目標的紅框」（PhaseSK-3報告 待決 8）。正式版：金色四角括號＋淡金底＋中央金菱形（同戰鬥紀錄「◆ 戰前佈置」）；滑鼠指著的格子換成整圈金框＋要放的東西半透明預覽；放下時金框往外擴一下。視窗、按鈕、技能列都沒動；第 2 版只把視窗第一行的「高亮的起始區」換成定案的「框起來的起始區」（技能列那行「高亮的我方起始區」沒有定案字，沒動）。三格的地面用 prep_1_dialog.jpg 同位置補回（同一張地圖、還沒有紅框）。" },
     { cells: [{ cv: pick, cap: "選了一招：三格待放（idle）" }] },
     { title: "放大 ×2（向量重畫的標記＋截圖底）：待放｜指著左下那格｜放下的一下（prep_3 底，140 ms）" },
-    { cells: [z(pick, "待放"), z(hover, "指著 (0,6)：整圈金框＋陷阱預覽")], gap: 16 },
+    { cells: [z(pick, "待放"), z(hover, "指著 (0,6)：整圈金框＋陷阱預覽＋滑過提示「放在這裡」")], gap: 16 },
     { cells: [z(placed, "放下 (1,5) 140 ms：金框往外擴＋四顆金火花（陷阱圖示是現行的）")] },
   ]));
 };
@@ -332,15 +407,21 @@ PARTS["prep-mark"] = () => {
   /* 現有的兩種格子標記（照開發截圖的外觀重畫，只為並排比較）：移動範圍＝淡青底＋白青細框（prep_3）；選目標＝紅框（prep_2）。 */
   const moveMark = (g, x, y, s) => { g.save(); g.fillStyle = "rgba(120,200,230,0.35)"; g.beginPath(); g.roundRect(x + s * 0.05, y + s * 0.05, s * 0.9, s * 0.9, s * 0.12); g.fill(); g.strokeStyle = "rgba(220,245,255,0.75)"; g.lineWidth = Math.max(1, s * 0.03); g.stroke(); g.restore(); };
   const redMark = (g, x, y, s) => { g.save(); g.strokeStyle = "#e85a50"; g.lineWidth = Math.max(1.5, s * 0.045); g.strokeRect(x + s * 0.04, y + s * 0.04, s * 0.92, s * 0.92); g.restore(); };
+  /* 第 2 版（可修 6）：戰場上現有的另一個金色格子標記＝守點格（client/src/render/battle/terrainLayer.ts drawMarkers 原樣抄，glossary.ts HIGHLIGHT.point #ffc83d；出口 #5ee08a 一起放）。虛擬格 48。 */
+  const goalMark = (g, x, y, s, kind) => { const k = s / 48, col = kind === "exit" ? "#5ee08a" : "#ffc83d"; g.save(); g.translate(x, y); g.scale(k, k);
+    if (kind === "exit") { g.beginPath(); g.roundRect(3, 3, 42, 42, 6); g.globalAlpha = 0.24; g.fillStyle = col; g.fill(); g.globalAlpha = 0.95; g.lineWidth = 3; g.strokeStyle = col; g.stroke(); g.beginPath(); g.roundRect(9, 9, 30, 30, 4); g.globalAlpha = 0.7; g.lineWidth = 1.5; g.stroke(); }
+    else { g.beginPath(); g.arc(24, 24, 48 * 0.42, 0, TAU); g.globalAlpha = 0.2; g.fillStyle = col; g.fill(); g.globalAlpha = 0.95; g.lineWidth = 3; g.strokeStyle = col; g.stroke(); g.beginPath(); g.arc(24, 24, 48 * 0.28, 0, TAU); g.globalAlpha = 0.7; g.lineWidth = 1.5; g.stroke(); }
+    g.globalAlpha = 1; g.font = "700 14px 'Noto Sans TC','Microsoft JhengHei',sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.lineJoin = "round"; g.lineWidth = 3; g.strokeStyle = "#000"; const ch = kind === "exit" ? "出" : "守"; g.strokeText(ch, 24, 24); g.fillStyle = col; g.fillText(ch, 24, 24); g.restore(); };
   const row = (s, gr, label) => {
     const cells = [];
     cells.push(nn(tile(gr, s, (g) => { SK.placeMark(g, 0, 0, s, { state: "idle", t: 0 }); SK.placeMark(g, s, 0, s, { state: "idle", t: 600 }); SK.placeMark(g, 2 * s, 0, s, { state: "hover", ghost: GHOST.trap }); }), s < 40 ? 4 : 3, `${label}：待放（收）｜待放（放）｜指著＋陷阱`));
     cells.push(nn(tile(gr, s, (g) => { SK.placeMark(g, 0, 0, s, { state: "hover", ghost: GHOST.rune }); SK.placeMark(g, s, 0, s, { state: "hover", ghost: GHOST.surface }); SK.placeBurst(g, 2 * s, 0, s, 0.3); }), s < 40 ? 4 : 3, "指著＋刻印｜指著＋表面｜放下 30%"));
     cells.push(nn(tile(gr, s, (g) => { moveMark(g, 0, 0, s); redMark(g, s, 0, s); SK.placeMark(g, 2 * s, 0, s, { state: "idle", t: 0 }); }), s < 40 ? 4 : 3, "對照：移動範圍（青）｜選目標（紅，暫借的）｜佈置（金）"));
+    cells.push(nn(tile(gr, s, (g) => { goalMark(g, 0, 0, s, "point"); goalMark(g, s, 0, s, "exit"); SK.placeMark(g, 2 * s, 0, s, { state: "idle", t: 0 }); }), s < 40 ? 4 : 3, "可修 6：守點格（金雙圈＋守）｜出口格（綠）｜佈置（金）"));
     return { cells, gap: 20 };
   };
-  publish(sheet(1900, [
-    { title: "戰前佈置的格子標記：真 1 倍 ×3（一格 63、49）／×4（一格 25）最近鄰" },
+  publish(sheet(2500, [
+    { title: "戰前佈置的格子標記（第 2 版：刻印預覽換成現行地面符文、加守點格對照）：真 1 倍 ×3（一格 63、49）／×4（一格 25）最近鄰" },
     { note: "一格 63＝1600 寬（地圖縮放 1.31）、49＝開發截圖（1280 寬、103%）、25＝800 寬（0.53）。草地＝開闊平原、石板＝雲嶺。括號粗 max(2, 一格 6%)、外面墊 1 px 外框色；菱形半徑 max(3, 一格 10%)。指著時預覽 68% 不透明。" },
     { title: "一格 63（1600 寬）" }, row(63, GRASS, "草地"), row(63, STONE, "石板"),
     { title: "一格 49（截圖）" }, row(49, GRASS, "草地"),

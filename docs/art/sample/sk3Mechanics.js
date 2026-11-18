@@ -93,15 +93,15 @@ window.SK3Mech = (() => {
       /* 第 2 版（必修 M2）：拿掉閃電（＝元素「雷」）。小旗不再縮到 0.84、左下不被蓋；右邊伸進來一隻別人的手，食指碰到旗的右緣，碰觸點三道短金線（亮起來）。 */
       zh: "你造的關鍵字被利用時", topic: "淡紫小旗（同「施加狀態後」＝你造的關鍵字），右邊伸進來一隻膚色的手、食指碰到旗的右緣，碰觸點三道短金色亮線（別人拿你的東西去用）",
       d: (c, o) => at(c, 0, 0, 0.98, (u) => {
-        at(u, -3.0, 0.8, 0.9, (q) => banner(q, { ...o, tiny: true })); /* 旗上的白星拿掉（金色亮線落在星的位置會疊成一團），其他照「施加狀態後」 */
-        halo(u, o, (q) => at(q, 3.1, -3.4, 0.8, (p) => hand(p, o), 0.1));
+        at(u, -2.7, 1.1, 0.88, (q) => banner(q, { ...o, tiny: true })); /* 旗上的白星拿掉（金色亮線落在星的位置會疊成一團），其他照「施加狀態後」 */
+        halo(u, o, (q) => at(q, 3.0, -3.3, 0.72, (p) => hand(p, o), 0.1)); /* 0.72：手腕收進色環 */
         touchLines(u, o, 2.9, -3.5);
       }),
     },
     ally_missed_roll: {
       /* 第 2 版（必修 M3）：人形照「身旁隊友受擊時」完整畫（同位置、同大小）；骰子縮小推到右上角、換成灰骰（DIE.dim＝演出裡被劃掉的那一顆）加紅斜槓，和人頭之間留縫。 */
       zh: "隊友擲失手時", topic: "綠色人形（同「身旁隊友受擊時」，完整），右上角一顆小的灰色二十面骰被一道紅斜槓劃掉（同演出裡失敗的那一顆、同「沒有」的語言）",
-      d: (c, o) => { bust(c, ALLY, -3.4, 1.4, 0.92); halo(c, o, (q) => { d20(q, 5.8, -5.6, o.tiny ? 4.6 : 4.3, DIE.dim); const S = [[3.0, -2.8], [8.6, -8.4]]; if (o.tiny) ln(q, OUT, 3.6, S); ln(q, "#ff4a5a", o.tiny ? 2.0 : 1.8, S); }); },
+      d: (c, o) => { bust(c, ALLY, -3.4, 1.4, 0.92); halo(c, o, (q) => { d20(q, 5.4, -5.2, o.tiny ? 4.6 : 4.3, DIE.dim); const S = [[2.8, -2.6], [8.0, -7.8]]; if (o.tiny) ln(q, OUT, 3.6, S); ln(q, "#ff4a5a", o.tiny ? 2.0 : 1.8, S); }); },
     },
     enemy_hit_roll: {
       zh: "敵人擲中你時", topic: "左上一顆大的紅色二十面骰（佔一半、微斜），砸向右下的小藍盾（同「被攻擊時」的家族）",
@@ -145,32 +145,60 @@ window.SK3Mech = (() => {
   const LIVE = { "effect:reroll": ["effect", "intercept"], "trigger:on_keyword_exploited": ["trigger", "on_status_applied"], "trigger:ally_missed_roll": ["trigger", "ally_hit_adjacent"], "trigger:enemy_hit_roll": ["trigger", "hit_by_attack"], "condition:point_blank": ["condition", "__none_point_blank"], "condition:long_range": ["condition", "__none_long_range"] };
 
   // =====================================================================
-  // 5. 戰場：重擲的骰子層（模型像素，1 格 48）。演出只畫骰子、回轉箭頭、金色引線、比較箭頭；單位與身體動作照現行。
+  // 5. 戰場：重擲的骰子層（模型像素，1 格 48）。演出只畫骰子、金色引線、敲一下的短亮線、比較箭頭、「採用」字；單位與身體動作照現行。
   //    MK＝畫面下限的倍率（同 SK-2 的鎖鏈：骰子外接半徑 ≥ 9 畫面 px → MK＝max(1, 9 ÷ (DIE_R × 地圖縮放))）。
+  //    第 2 版（必修 M4，美術 PM 裁定）：骰子不再放頭頂上方（腳底往上 60 會蓋到上一排的血條與腳），改在擲骰者自己那一格「頭頂到血條之間」：
+  //    骰子整組的上緣（採用時金環的外框）收在上一排血條下緣再往下 1；第一次的骰子往左（同一排）退，不往左上。
+  //    人形的頭頂（unitSprite.ts unitTopY＝FEET − 38 × (T/52) × 1.06）在格子中心往上 26.1，上一排血條下緣在往上 25.7，兩者幾乎同高，
+  //    頭頂上方沒有放骰子的空間，所以骰子蓋在擲骰者自己的身上（臉與胸口），1.45 秒後淡出、接現行的命中／失手。
   // =====================================================================
-  const DIE_R = 11, DIE_MIN_PX = 9; let MK = 1;
-  const setMapScale = (S) => { MK = Math.max(1, DIE_MIN_PX / (DIE_R * S)); return MK; };
-  /** 戰場上的一顆骰子：中心 (x,y)；k 縮放（彈出、落地壓扁用 sy）；a 透明度；pal；face 數字；ring＝外面一圈「採用」的金環（0～1）；cross＝紅斜槓（0～1）。 */
+  const DIE_R = 11, DIE_MIN_PX = 9; let MK = 1, MAP_S = 1;
+  const setMapScale = (S) => { MAP_S = S; MK = Math.max(1, DIE_MIN_PX / (DIE_R * S)); return MK; };
+  const KEEP_K = 1.1, RING_K = 1.2; /* 採用的那顆放大 1.1；金環半徑 1.2R（第 1 版 1.32，收小才放得進一格） */
+  const UPPER_HP_BOTTOM = -48 + 48 * 0.36 + 5; /* 上一排血條的下緣（相對擲骰者格子中心；HP 條在 c.y＋0.36T、高 5） */
+  /** 骰子整組的「上半徑」：採用時的金環外框（R × 1.1 × 1.2 ＋ 外框色線寬的一半）。 */
+  const envelope = () => DIE_R * MK * KEEP_K * RING_K + 2.1 * MK;
+  /** 骰子中心相對擲骰者格子中心的 y（往下為正）。1600 寬（MK 1）＝−8.1，800 寬（MK 1.54）＝＋0.9。 */
+  const dieDy = () => UPPER_HP_BOTTOM + 1 + envelope();
+  /** 第一次的骰子退到哪（相對骰子原位）：往左 30、往下 2（× MK），同一排、不往上。 */
+  const oldOff = () => ({ x: -30 * MK, y: 2 * MK });
+  /** 新骰子跳起來最多多高：不超過採用時的上緣（不碰上一排）。 */
+  const jumpMax = () => envelope() - DIE_R * MK;
+  /** 戰場上的一顆骰子：中心 (x,y)；k 縮放（彈出、落地壓扁用 sy）；a 透明度；pal；face 數字；ring＝外面一圈「採用」的金環（0～1）；cross＝紅斜槓（0～1）。
+   *  第 2 版（可修 2）：被劃掉的那顆淡到 70%（第 1 版 45%），點數在紅斜槓之上再描一次，19 → 2 的 19 讀得出。 */
   function fieldDie(g, x, y, opt = {}) {
     const R = DIE_R * MK * (opt.k ?? 1), a = opt.a ?? 1; if (R < 0.5 || a <= 0) return;
+    const pal = opt.pal ?? DIE.lav;
     g.save(); g.globalAlpha *= a; g.translate(x, y); g.scale(1, opt.sy ?? 1);
-    if (opt.ring > 0) { g.save(); g.globalAlpha *= opt.ring; Q.H.glow(g, 0, 0, R * 2.1, "#ffe066", 0.55); g.beginPath(); g.arc(0, 0, R * 1.32, 0, TAU); g.lineWidth = 4.2 * MK; g.strokeStyle = OUT; g.stroke(); g.lineWidth = 2.2 * MK; g.strokeStyle = "#ffd23f"; g.stroke(); g.restore(); }
-    d20(g, 0, 0, R, opt.pal ?? DIE.lav, { rot: opt.rot ?? 0, face: opt.face, ink: 1.6 * 10.6 / R * MK });
+    if (opt.ring > 0) { g.save(); g.globalAlpha *= opt.ring; Q.H.glow(g, 0, 0, R * 1.9, "#ffe066", 0.5); g.beginPath(); g.arc(0, 0, R * RING_K, 0, TAU); g.lineWidth = 4.2 * MK; g.strokeStyle = OUT; g.stroke(); g.lineWidth = 2.2 * MK; g.strokeStyle = "#ffd23f"; g.stroke(); g.restore(); }
+    d20(g, 0, 0, R, pal, { rot: opt.rot ?? 0, face: opt.face, ink: 1.6 * 10.6 / R * MK });
     if (opt.flash > 0) { g.save(); g.globalAlpha *= opt.flash; at(g, 0, 0, R / 10.6, (q) => poly(q, "#ffffff", HEX, 0.5), opt.rot ?? 0); g.restore(); } /* 白閃：一般疊色（不用 lighter，淡紫加白會整顆變白、看不到點數） */
-    if (opt.cross > 0) { const L = R * 0.95 * opt.cross; g.lineCap = "round"; for (const [w, col] of [[4.4 * MK, OUT], [2.4 * MK, "#ff4a5a"]]) { g.beginPath(); g.moveTo(-R * 0.95, R * 0.95); g.lineTo(-R * 0.95 + 2 * L, R * 0.95 - 2 * L); g.lineWidth = w; g.strokeStyle = col; g.stroke(); } }
+    if (opt.cross > 0) {
+      const L = R * 0.95 * opt.cross; g.lineCap = "round";
+      for (const [w, col] of [[3.8 * MK, OUT], [2.0 * MK, "#ff4a5a"]]) { g.beginPath(); g.moveTo(-R * 0.95, R * 0.95); g.lineTo(-R * 0.95 + 2 * L, R * 0.95 - 2 * L); g.lineWidth = w; g.strokeStyle = col; g.stroke(); }
+      if (opt.face != null) at(g, 0, 0, R / 10.6, (q) => { const s = String(opt.face); q.font = `900 ${s.length > 1 ? 7.2 : 8.4}px Arial, sans-serif`; q.textAlign = "center"; q.textBaseline = "middle"; q.lineJoin = "round"; q.lineWidth = 1.6; q.strokeStyle = pal.face; q.strokeText(s, 0, 1.4); q.fillStyle = pal.ink; q.fillText(s, 0, 1.4); }, opt.rot ?? 0);
+    }
     g.restore();
   }
-  /** 戰場上的回轉箭頭（同部件的金色 ↻，外框色墊底）：繞 (x,y)，半徑 R，旋轉 rot，掃 sweep（0～1 長出來）。 */
-  function fieldSpin(g, x, y, rot, sweep = 1, a = 1) {
-    const R = DIE_R * MK * 1.5, w = 3 * MK; if (sweep <= 0) return;
-    g.save(); g.globalAlpha *= a; g.translate(x, y); g.rotate(rot);
-    const a0 = PI * 0.82, a1 = a0 + PI * 1.36 * sweep;
-    for (const [ww, col, head] of [[w + 2.4 * MK, OUT, 1.24 * MK], [w, GOLD.body, 0]]) {
-      st(g, col, ww, (p) => p.arc(0, 0, R, a0, a1), "butt");
-      const px = Math.cos(a1) * R, py = Math.sin(a1) * R, tx = -Math.sin(a1), ty = Math.cos(a1), nx = Math.cos(a1), ny = Math.sin(a1), L = w * 1.5 + head, B = w * 1.1 + head;
-      poly(g, col, [[px + tx * L, py + ty * L], [px + nx * B - tx * head, py + ny * B - ty * head], [px - nx * B - tx * head, py - ny * B - ty * head]], 0.2);
+  /** 敲一下（第 2 版：取代第 1 版的金色 ↻，和新部件同一個說法＝這一顆要被換掉）：骰子左右各兩道短金線往外彈、淡出；只往左右，不往上（不碰上一排）。p＝0～1。 */
+  function fieldKnock(g, x, y, p) {
+    if (p <= 0 || p >= 1) return;
+    const R = DIE_R * MK, e = ease(p), a = 1 - p;
+    g.save(); g.globalAlpha *= a; g.lineCap = "round";
+    for (const ang of [-0.32, 0.32, PI - 0.32, PI + 0.32]) {
+      const c0 = Math.cos(ang), s0 = Math.sin(ang), r0 = R * (1.15 + 0.35 * e), r1 = r0 + R * (0.55 - 0.15 * e);
+      for (const [w, col] of [[3.6 * MK, OUT], [1.8 * MK, "#ffd23f"]]) { g.beginPath(); g.moveTo(x + c0 * r0, y + s0 * r0); g.lineTo(x + c0 * r1, y + s0 * r1); g.lineWidth = w; g.strokeStyle = col; g.stroke(); }
     }
-    st(g, GOLD.hi, w * 0.34, (p) => p.arc(0, 0, R + w * 0.16, a0 + 0.2, Math.min(a1, a0 + 1.1)), "butt");
+    g.restore();
+  }
+  /** 「採用」（玩法 PM 定案的字；字型照現行浮字：Noto Sans TC 700、黑邊、金色 #ffe066〔浮字 good 色〕）：壓在算數的那一顆下半（點數下面）。
+   *  字級 12 模型 px，畫面下限 10 px（800 寬放大到 18.9）。a＝0～1（淡入、跟著整組淡出）。 */
+  const ADOPT = "採用";
+  function fieldAdopt(g, x, y, k, a) {
+    if (a <= 0) return;
+    const R = DIE_R * MK * k, px = Math.max(12, 10 / MAP_S), cy = y + R * 0.5 + px * 0.55;
+    g.save(); g.globalAlpha *= a; g.font = `700 ${px}px 'Noto Sans TC','Microsoft JhengHei',sans-serif`; g.textAlign = "center"; g.textBaseline = "middle";
+    g.lineJoin = "round"; g.strokeStyle = "#000"; g.lineWidth = Math.max(3, px * 0.24); g.strokeText(ADOPT, x, cy); g.fillStyle = "#ffe066"; g.fillText(ADOPT, x, cy);
     g.restore();
   }
   /** 金色引線（施放反應的人 → 骰子）：二次曲線往旁邊拱（控制點＝中點沿法線外推 0.35 倍長＋10；兩條法線取較往上的那條，一樣高時取往左〔遠離敵方那一側〕），
@@ -224,5 +252,5 @@ window.SK3Mech = (() => {
     g.restore();
   }
 
-  return { DIE, d20, EFFECT, TRIG, COND, LIVE, install, setMapScale, mk: () => MK, fieldDie, fieldSpin, fieldBeam, fieldPulse, fieldCmp, placeMark, placeBurst, PLACE, ease, span, lerp, clamp, GOLD };
+  return { DIE, d20, EFFECT, TRIG, COND, LIVE, install, setMapScale, mk: () => MK, dieDy, oldOff, jumpMax, envelope, KEEP_K, ADOPT, fieldDie, fieldKnock, fieldAdopt, fieldBeam, fieldPulse, fieldCmp, placeMark, placeBurst, PLACE, ease, span, lerp, clamp, GOLD };
 })();

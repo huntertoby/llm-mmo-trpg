@@ -22,16 +22,20 @@ import rg_marks_shots as r
 
 r.PAGE = r.ART / "sample" / "sk3-mechanics.html"
 D = "shots/sk3-mechanics/"
+# Version 2 (*-v2; version-1 files stay in the folder). prep-mark keeps its name pattern.
 r.SHOTS = [
-    ("icons", "part=icons", D + "1-icons.png"),
-    ("icons-t1", "part=icons-t1", D + "2-icons-true1x.png"),
-    ("near", "part=near", D + "3-icons-near.png"),
-    ("full96", "part=full96", D + "4-icons-full96.png"),
-    ("worse", "part=anim&case=worse", D + "5-anim-reroll-worse.jpg"),
-    ("better", "part=anim&case=better", D + "6-anim-reroll-better.jpg"),
-    ("anim-t1", "part=anim-t1", D + "7-anim-true1x.png"),
-    ("prep", "part=prep", D + "8-prep-screen.jpg"),
-    ("prep-mark", "part=prep-mark", D + "9-prep-marks-true1x.png"),
+    ("icons", "part=icons", D + "1-icons-v2.png"),
+    ("icons-t1", "part=icons-t1", D + "2-icons-true1x-v2.png"),
+    ("near", "part=near", D + "3-icons-near-v2.png"),
+    ("full96", "part=full96", D + "4-icons-full96-v2.png"),
+    ("worse", "part=anim&case=worse", D + "5-anim-reroll-worse-v2.jpg"),
+    ("better", "part=anim&case=better", D + "6-anim-reroll-better-v2.jpg"),
+    ("anim-t1", "part=anim-t1", D + "7-anim-true1x-v2.png"),
+    ("prep", "part=prep", D + "8-prep-screen-v2.jpg"),
+    ("prep-mark", "part=prep-mark", D + "9-prep-marks-true1x-v2.png"),
+    ("m4-1600", "part=m4&w=1600", D + "10-anim-upper-row-1600-v2.png"),
+    ("m4-800", "part=m4&w=800", D + "11-anim-upper-row-800-v2.png"),
+    ("beam", "part=beam", D + "12-anim-beam-dirs-v2.png"),
 ]
 
 AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')
