@@ -197,7 +197,8 @@ SNAPSHOTS = {
     # 疾病擴散要在燃燒／流血／中毒之後）。都在 <available>／schema／evaluate 這層，雜湊同 /19
     "skill-proposal/20": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
     # SK-3b（#166，玩法交接 4.1.28 第 6 點、4.1.30）：疾病擴散的 llm_hint 改字（會傳染 → 會擴散、
-    # 傳給一名同伴）。都在 schema 這層，雜湊同 /20
+    # 傳給一名同伴）；反應事件多重擲的兩個時機、反應骨架核心多重擲；新觸發的 llm_hint 改寫（利用
+    # 多兩種、每回合一次）。都在 <available>／schema 這層，雜湊同 /20
     "skill-proposal/21": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 

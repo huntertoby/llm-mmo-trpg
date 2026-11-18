@@ -1184,6 +1184,7 @@ _HAND_WRITTEN_PRIMITIVES = frozenset(
         "hook",  # SK-2b：只由 _special_core 的獨立串流當位移核心（既有種子不變）
         "absorb_surface",  # SK-2b：只由 _special_core／_absorb_secondary 的獨立串流加入
         "contagion",  # SK-2b：只由 _contagion_secondary 的獨立串流加入
+        "reroll",  # SK-3b：只由 random_composer._compose_reroll_reaction 的獨立串流產生
     }
 )
 """只給手寫技能的結構型原語（Phase 3C-5a 的場景物件原語：需要地圖上有對應的物件；3D-2 的

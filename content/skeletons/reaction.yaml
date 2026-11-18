@@ -11,5 +11,5 @@ kinds: [reaction]
 enabled: true
 min_rarity: rare
 shapes: [self, single]
-core: {primitives: [damage, heal, shield, apply_status, push, pull, intercept, summon_beside]}   # summon_beside：TF-1 護主（轉型專用）
+core: {primitives: [damage, heal, shield, apply_status, push, pull, intercept, summon_beside, reroll]}   # summon_beside：TF-1 護主（轉型專用）；reroll：SK-3b 重擲（只配 ally_missed_roll、enemy_hit_roll，組合器只以獨立串流 composer.reroll 產生）
 secondary: {max_count: 1}

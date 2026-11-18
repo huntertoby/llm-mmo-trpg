@@ -495,6 +495,20 @@ def _contagion_points(
     return Fraction(library.budget.contagion_points), "固定"
 
 
+def _reroll_points(
+    skill: SkillDef, _effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``reroll`` 的點數（SK-3b）：階級預算 × 反應技係數 × ``reroll_budget_permille``。"""
+    rules = library.budget
+    base = library.ruleset.core.tier_budget[skill.tier]
+    coefficient = Fraction(rules.reaction_coefficient_permille, _PERMILLE)
+    permille = rules.reroll_budget_permille
+    return (
+        base * coefficient * Fraction(permille, _PERMILLE),
+        f"階級預算 {base} × 反應 {_fmt(coefficient)} × {permille}‰",
+    )
+
+
 def _obstacle_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -1148,6 +1162,7 @@ _SPECIAL_BASES: dict[
     "dispel": _dispel_points,
     "hook": _hook_points,
     "contagion": _contagion_points,
+    "reroll": _reroll_points,
     "reveal": _reveal_points,
     "obstacle": _obstacle_points,
     "inscribe": _inscribe_points,
