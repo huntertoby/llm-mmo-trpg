@@ -17,9 +17,11 @@ interface Props {
   /** 包在可點選的東西裡面（例如工坊選項按鈕）時設為 false：只在滑過時顯示，不攔截點擊。 */
   pin?: boolean;
   className?: string;
+  /** AR-SK2：名稱後面的小標籤（例：狀態帶「會擴散」）。 */
+  tags?: readonly string[];
 }
 
-export function PartTip({ cat, label, tip, lines, children, pin = true, className }: Props) {
+export function PartTip({ cat, label, tip, lines, children, pin = true, className, tags }: Props) {
   const f = useFloatCard({ pinOn: pin ? "always" : "touch" });
   const { onKeyDown: triggerKeyDown, ...trigger } = f.triggerProps;
   return (
@@ -43,7 +45,14 @@ export function PartTip({ cat, label, tip, lines, children, pin = true, classNam
       {f.open && (
         <FloatCard float={f} className={`part-tip-box${pin ? "" : " no-bridge"}`} align="center" role="tooltip">
           <div className="part-tip-cat">{cat}</div>
-          <div className="part-tip-name">{label}</div>
+          <div className="part-tip-name">
+            {label}
+            {tags?.map((t) => (
+              <span key={t} className="part-tip-tag">
+                {t}
+              </span>
+            ))}
+          </div>
           {lines === undefined
             ? tip !== "" && <div className="part-tip-text">{keepWords(tip)}</div>
             : lines.map((l, i) => (

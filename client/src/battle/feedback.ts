@@ -73,8 +73,7 @@ export const WORD_LOCK_INTERRUPTED = "被打斷";
 /** SK-2：推、拉打到推不動的目標（照撞牆算一次撞擊）；吸收表面。 */
 export const WORD_IMMOVABLE = "推不動！撞擊";
 export const WORD_ABSORB = "吸收";
-/** SK-2：疾病擴散（標成會傳染；倒下時傳過去）。 */
-export const WORD_CONTAGIOUS = "會傳染";
+/** SK-2：疾病擴散（標成會擴散；倒下時傳過去）。AR-SK2：發生時的浮字統一成「擴散」（玩法 PM，交接 4.1.28 第 6 點；取代「會傳染」）。 */
 export const WORD_SPREAD = "擴散";
 /** SK-3：重擲（隊友讓你重擲取較好的、對方逼你重擲取較差的；字在擲骰的人頭上）。 */
 export const WORD_REROLL = "重擲！";
@@ -232,8 +231,8 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
       // SK-2：吸收表面（06 6.38 第 4 點）
       return [{ pos: at(e.unit_id), text: WORD_ABSORB, tone: "good" }];
     case "contagion_marked":
-      // SK-2：疾病擴散（06 6.38 第 5 點）：目標身上的持續傷害會傳染
-      return [{ pos: at(e.target_id), text: WORD_CONTAGIOUS, tone: "bad" }];
+      // SK-2：疾病擴散（06 6.38 第 5 點）：目標身上的持續傷害標成會擴散（AR-SK2：浮字統一成「擴散」）
+      return [{ pos: at(e.target_id), text: WORD_SPREAD, tone: "bad" }];
     case "disease_spread":
       // SK-2：帶著會擴散狀態的單位倒下，傳到旁邊的人身上
       return [{ pos: at(e.to_id), text: WORD_SPREAD, tone: "bad" }];

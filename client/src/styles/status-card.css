@@ -147,6 +147,15 @@
   display: block;
 }
 
+/* AR-SK2：「會擴散」記號（ui/StatusCardParts.tsx 的 SpreadMark）：疊在 20px 圖示上，四周各多 8px（記號往上凸出約 7px），不佔版面、不擋滑鼠。
+   徽章 24px、邊框 1px，圖示在內容區正中（離內緣 1px），所以記號的左上角在 1 − 8 ＝ −7px。 */
+.stat-badge canvas.stat-spread {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  pointer-events: none;
+}
+
 .stack-badge {
   border-color: #806a30;
 }

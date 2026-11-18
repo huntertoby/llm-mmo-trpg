@@ -1,9 +1,12 @@
 // 主角狀態卡與單位小卡共用的零件（Phase 6A-2）：條、圖示＋數字、狀態／層數／表面圖示。
 // 每個零件滑過都有說明卡（名稱、現值、一句說明）：條與圖示用 `Hint`（本身沒有動作，觸控點一下開說明，6A-1 規則），
 // 狀態、層數、表面用 `PartTip`（點一下釘住）。畫法移植自 docs/art/sample/textless.html 的 symbol。
+import { useEffect, useRef } from "react";
 import type { SkillCard, StatusView } from "../api/types";
 import { SOURCE_PIP_PX, sourcePipId, STAT_ICON_ID } from "../render/hudIcon";
 import { statusIconTile, surfaceTile } from "../render/skillIcon";
+import { CARD_PAD, spreadMarkCardCanvas } from "../render/spreadMark";
+import { iconCanvasPx } from "../render/weaponIcon";
 import { CARD_GLYPH_PX, ChipGlyph, EffectGlyph } from "./SkillCardGlyphs";
 import { HudGlyph } from "./HudGlyph";
 import { Hint } from "./Hint";
@@ -59,16 +62,39 @@ export function StatChipView({ chip }: { chip: StatChip }) {
   );
 }
 
-/** 狀態圖示，右下角寫回合數或數值；滑過看「狀態句＋說明」。 */
+/** AR-SK2：狀態帶「會擴散」時，狀態卡的標籤與多一行的說明（玩法 PM 定案，交接 4.1.28 第 6 點）。 */
+export const SPREAD_TAG = "會擴散";
+export const SPREAD_NOTE = "會擴散：帶著這個狀態倒下時，以剩下的回合傳給身邊 1 格內的一名同伴；身上有好幾種時只傳一種，傳過去的仍會擴散。";
+
+/** 狀態圖示，右下角寫回合數或數值；滑過看「狀態句＋說明」。帶「會擴散」時框頂上方疊記號、說明多一行。 */
 export function StatusBadge({ status, text }: { status: StatusView; text: string }) {
   const tile = statusIconTile(status.status_id);
   const corner = statusCorner(status);
+  const spread = status.contagious === true;
+  const tip = spread ? (tile.tip === "" ? SPREAD_NOTE : `${tile.tip}
+${SPREAD_NOTE}`) : tile.tip;
   return (
-    <PartTip cat="狀態" label={text} tip={tile.tip} className="stat-badge status-badge">
+    <PartTip cat="狀態" label={text} tip={tip} className="stat-badge status-badge" {...(spread ? { tags: [SPREAD_TAG] } : {})}>
       <TileCanvas tile={tile} px={20} />
+      {spread && <SpreadMark px={20} />}
       {corner !== "" && <b className="stat-corner">{corner}</b>}
     </PartTip>
   );
+}
+
+/** AR-SK2：狀態卡 20 的「會擴散」記號：圖示四周各多 `CARD_PAD`，疊在圖示上、不裁切（往上凸出約 7 px）。 */
+function SpreadMark({ px }: { px: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas?.getContext("2d");
+    const src = spreadMarkCardCanvas(px);
+    if (canvas == null || ctx == null || src === null) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(src, 0, 0);
+  }, [px]);
+  const side = px + 2 * CARD_PAD;
+  return <canvas ref={ref} className="stat-spread" width={iconCanvasPx(side)} height={iconCanvasPx(side)} style={{ width: side, height: side }} aria-hidden="true" />;
 }
 
 /** 層數圖示，右下角寫層數；滑過看層數說明（`StackTip`）。 */
