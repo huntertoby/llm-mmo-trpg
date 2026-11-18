@@ -202,3 +202,5 @@
 **第 2 版重拍**：`1-icons-v2.png`、`2-icons-true1x-v2.png`、`3-icons-near-v2.png`、`4-icons-full96-v2.png`、`5-anim-reroll-worse-v2.jpg`、`6-anim-reroll-better-v2.jpg`、`7-anim-true1x-v2.png`、`8-prep-screen-v2.jpg`、`9-prep-marks-true1x-v2.png`；新增 `10-anim-upper-row-1600-v2.png`、`11-anim-upper-row-800-v2.png`、`12-anim-beam-dirs-v2.png`。重拍腳本的 `SHOTS` 已換成 `-v2` 檔名（`m4-1600`、`m4-800`、`beam` 是新的名稱）。
 
 **自查規則 6、7**：見 1.1（第 2 版重量，量實際走到的那一份：30、26 是一般版，18、16 是 tiny 簡化版）；全部過。
+
+**N1 小修（第 2 版複審必修，2026-11-19）**：比較箭頭不再照點數漲跌上紅／綠，一律改成米白中性色（`CREAM` `#f2e6c8`＋白 `#ffffff` 亮面，外框色墊底；樣張現有色票，沒有新增顏色），只表示方向；得失交給金環和「採用」（沒動）。`sk3-mechanics.html` 時間軸說明字同步改成「米白，變大↑／變小↓」。重拍 `5-anim-reroll-worse-v2.jpg`、`6-anim-reroll-better-v2.jpg`、`7-anim-true1x-v2.png`（覆蓋）；第 2 節 90、109 行寫的紅綠箭頭以這一行為準。`10`、`11` 也有比較箭頭，這次沒重拍，仍是舊的紅綠。
