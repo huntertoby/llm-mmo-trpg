@@ -230,6 +230,7 @@ export function WorldOfferPending({ view, busy, onAct }: { view: WorldView; busy
       <div className="muted small">{pending.place_zh}選之前不能移動或使用其他服務。</div>
       <OfferPicker
         wish={pending.source === "wish" && (pending.wish_tags_zh ?? []).length + (pending.wish_text_zh != null ? 1 : 0) > 0}
+        hideOffRoute={pending.source === "wish"}
         offer={pending.offer}
         hero={view.hero}
         runSeed={0}
