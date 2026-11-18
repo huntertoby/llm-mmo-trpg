@@ -404,6 +404,8 @@ class ClearSurfaceEffect(EffectBase):
     kind: Literal["clear_surface"] = "clear_surface"
     tiles: tuple[XY, ...]
     surfaces: tuple[Surface, ...]
+    cause: Literal["clear", "absorb"] = "clear"
+    """``surface_changed`` 的原因：``absorb`` 是吸收表面（SK-2 ``absorb_surface``）移除的表面。"""
 
 
 class DamageObjectEffect(EffectBase):

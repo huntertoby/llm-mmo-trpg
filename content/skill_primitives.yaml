@@ -881,3 +881,28 @@ primitives:
     params:
       form: {llm_hint: "要化身的形態。", type: form, required: true, description_zh: 形態 ID（content/forms.yaml）}
       magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度, knob: none}
+
+  # --- SK-2：#166 第 2 組的新原語（06 6.38 第 4、5、8 點；點數與格數為初值，接數值工坊，未經模擬）---
+  # 目前沒有放進任何骨架的 core／secondary（組合器、LLM 題目不會用到；接進出題由下一段決定）。
+  - id: absorb_surface
+    name_zh: 吸收表面
+    llm_hint: "吸走施放者腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素。"
+    description_zh: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（只有帶元素的表面：火、冰、毒、聖光、黑暗；水、油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：base_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝base_points）。
+    player_description: "吸走腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素。"
+    category: structural
+    harmful: false
+    min_rarity: rare
+    active_only: true
+    position: first
+    max_per_skill: 1
+    acts_on: tile
+    allowed_shapes: [self, single, ground_tile]
+    forbid_affects: [enemies, allies, all]
+    budget_basis: absorb_surface
+    base_points: 1
+    params:
+      gain: {llm_hint: "吸到表面後換成什麼。", type: absorb_gain, required: true, description_zh: stack 層數、heal 治療、shield 護盾、element 這一招改成表面的元素}
+      surface: {llm_hint: "只吸這一種表面；省略＝吸那一格的任何表面。", type: surface, description_zh: 只吸這種表面（省略＝任何表面）}
+      stack: {llm_hint: "要累積的層數種類（換成層數時）。", type: stack, description_zh: gain 為 stack 時必填；只能是累積在自己身上的層數}
+      amount: {llm_hint: "累積幾層（換成層數時）。", type: int, min: 1, max: 3, description_zh: gain 為 stack 時必填, knob: none}
+      dice: {llm_hint: "治療或護盾的骰子（換成治療、護盾時）。", type: dice, description_zh: gain 為 heal、shield 時必填, knob: none}

@@ -110,6 +110,7 @@ from trpg.engine.events import (
     SummonExpired,
     SummonModeSet,
     SummonPulled,
+    SurfaceAbsorbed,
     SurfaceBlown,
     SurfaceChanged,
     SurfaceEntered,
@@ -1395,6 +1396,20 @@ def _surface_changed(e: SurfaceChanged, v: _View) -> str:
     if e.before is Surface.NONE:
         return f"  {xy_text(e.pos)} 出現了{after}{why}"
     return f"  {xy_text(e.pos)} 的{before}變成了{after}{why}"
+
+
+_ABSORB_GAIN_ZH = {"stack": "層數", "heal": "治療", "shield": "護盾"}
+
+
+@_handles(SurfaceAbsorbed)
+def _surface_absorbed(e: SurfaceAbsorbed, v: _View) -> str:
+    """吸收表面（SK-2，06 6.38 第 4 點）。"""
+    name = surface_name(v.state, e.surface)
+    if e.element is not None:
+        gain = f"這一招改帶{e.element.display_name}"
+    else:
+        gain = f"換成{_ABSORB_GAIN_ZH.get(e.gain, e.gain)}"
+    return f"  ◎ {v.name[e.unit_id]} 吸走了 {xy_text(e.pos)} 的{name}，{gain}"
 
 
 @_handles(SurfaceBlown)

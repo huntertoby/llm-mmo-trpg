@@ -1770,6 +1770,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "destroy_object": _OUTCOMES,
         "blow_surface": f"affected_tiles、{_OUTCOMES}",
         "clear_surface": f"affected_tiles、{_OUTCOMES}",
+        "absorb_surface": f"{_OUTCOMES}（吸走的表面、收益；換元素的傷害照 targets；SK-2）",
         "create_obstacle": f"affected_tiles、{_OUTCOMES}",
         "raise_terrain": _OUTCOMES,
         "lower_terrain": _OUTCOMES,

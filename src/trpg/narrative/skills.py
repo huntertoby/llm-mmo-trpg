@@ -712,6 +712,28 @@ def _clear_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> s
     return f"清除範圍內的表面（{names}），不帶元素、不引發其他反應"
 
 
+def _absorb_surface(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    """吸收表面（SK-2，06 6.38 第 4 點）。"""
+    where = "你腳下" if spec.affects == "self" else "目標格"
+    what = (
+        "的表面" if spec.surface is None else f"的{lib.ruleset.surface_def(spec.surface).name_zh}"
+    )
+    if spec.gain == "element":
+        return (
+            f"吸走{where}{what}（只吸帶元素的表面），這一招之後的傷害改成那種表面的元素；"
+            "沒有可吸的表面時照原本的元素"
+        )
+    if spec.gain == "stack":
+        assert spec.stack is not None
+        stack = lib.ruleset.stack_def(spec.stack)
+        gain = f"累積 {spec.amount} {stack.unit_zh}「{stack.name_zh}」"
+    elif spec.gain == "heal":
+        gain = f"治療自己 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
+    else:
+        gain = f"護盾 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
+    return f"吸走{where}{what}，換成{gain}；沒有可吸的表面時沒有收益"
+
+
 def _create_obstacle(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.object is not None
     turns = f"，{spec.duration} 回合後消失" if spec.duration else ""
@@ -1023,6 +1045,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "create_surface": _create_surface,
     "blow_surface": _blow_surface,
     "clear_surface": _clear_surface,
+    "absorb_surface": _absorb_surface,
     "create_obstacle": _create_obstacle,
     "destroy_object": _destroy_object,
     "inscribe": _inscribe,
@@ -1102,6 +1125,7 @@ def variant_change_text(library: ContentLibrary, skill: SkillDef, variant: Varia
 
 _OWN_TARGET_TEXT: frozenset[str] = frozenset(
     {
+        "absorb_surface",
         "summon",
         "summon_beside",
         "zone",

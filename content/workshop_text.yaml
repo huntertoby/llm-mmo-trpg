@@ -526,3 +526,27 @@ texts:
 - id: 工坊.effects.effects=heal.form_bonus_permille
   source: '在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)'
   player: 在形態中的加成：你在形態中施放時，這個效果的傷害（或治療）整體多出這個千分比（300 就是 +30%）；不在形態中沒有加成。只有技能自己的傷害或治療能用，同一招的其他數值會被預算壓低一點。
+- id: 原語.absorb_surface
+  source: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（只有帶元素的表面：火、冰、毒、聖光、黑暗；水、油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：base_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝base_points）。
+  player: 吸走一格的地面表面（你腳下，或這招選中的那一格），換成一種收益給你自己：層數、治療、護盾，或讓這一招接下來的傷害改成那種表面的元素（只有火、冰、毒、聖光、黑暗這些帶元素的表面可以）。可以指定只吸某一種表面。那一格沒有可吸的表面時這個效果沒作用，其他效果照常。必須是這招的第一個效果、只能用在主動技能。
+- id: 原語.absorb_surface.amount
+  source: gain 為 stack 時必填
+  player: 換成層數時，累積幾層。
+- id: 原語.absorb_surface.dice
+  source: gain 為 heal、shield 時必填
+  player: 換成治療或護盾時的骰子。
+- id: 原語.absorb_surface.gain
+  source: stack 層數、heal 治療、shield 護盾、element 這一招改成表面的元素
+  player: 吸到表面後換成什麼：層數、治療、護盾，或這一招改成表面的元素。
+- id: 原語.absorb_surface.stack
+  source: gain 為 stack 時必填；只能是累積在自己身上的層數
+  player: 換成層數時累積哪一種層數（只能是累積在你自己身上的）。
+- id: 工坊.effects.effects=absorb_surface.gain=stack
+  source: 累積自己的層數（另填 stack、amount）
+  player: 累積你自己的層數（另外選層數種類與數量）。
+- id: 工坊.effects.effects=absorb_surface.gain=heal
+  source: 治療自己（另填 dice）
+  player: 治療你自己（另外選骰子）。
+- id: 工坊.effects.effects=absorb_surface.gain=shield
+  source: 給自己護盾（另填 dice）
+  player: 給你自己護盾（另外選骰子）。

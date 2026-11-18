@@ -82,6 +82,7 @@ from trpg.engine.events.objects import (
     ObjectMoved,
     ObjectToppled,
     ShotPierced,
+    SurfaceAbsorbed,
     SurfaceBlown,
     SurfaceChanged,
     SurfaceEntered,
@@ -208,6 +209,7 @@ type Event = Annotated[
     | ObjectCreated
     | ObjectExpired
     | SurfaceChanged
+    | SurfaceAbsorbed
     | SurfaceBlown
     | TerrainChanged
     | ElementTouched

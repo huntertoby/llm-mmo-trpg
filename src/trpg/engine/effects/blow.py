@@ -155,5 +155,5 @@ def _clear_surface(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     events: list[EventBase] = []
     for xy in sorted(set(effect.tiles), key=lambda p: (p[1], p[0])):
         if state.in_bounds(*xy) and state.tile(*xy).surface in effect.surfaces:
-            events += set_surface(ctx, xy, Surface.NONE, cause=CLEAR_CAUSE, depth=effect.depth)
+            events += set_surface(ctx, xy, Surface.NONE, cause=effect.cause, depth=effect.depth)
     return events

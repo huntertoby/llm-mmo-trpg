@@ -165,6 +165,21 @@ class SurfaceBlown(EventBase):
     """被推進致命地形（深淵、岩漿；上面不能有表面）：``to_pos`` 是消失的那一格，沒有落點。"""
 
 
+class SurfaceAbsorbed(EventBase):
+    """吸收表面（SK-2 ``absorb_surface``，06 6.38 第 4 點）：``unit_id`` 吸走 ``pos`` 的
+    ``surface``，換成 ``gain``（``stack``／``heal``／``shield``／``element``）；``element`` 是這一招
+    之後的傷害改成的元素（只有 ``gain: element``）。緊接著是 ``surface_changed``（原因
+    ``absorb``），收益另有層數、治療、護盾的事件。"""
+
+    type: Literal["surface_absorbed"] = "surface_absorbed"
+    unit_id: UnitId
+    skill_id: str
+    pos: Pos
+    surface: Surface
+    gain: Literal["stack", "heal", "shield", "element"]
+    element: Element | None = None
+
+
 class TerrainChanged(EventBase):
     type: Literal["terrain_changed"] = "terrain_changed"
     pos: Pos

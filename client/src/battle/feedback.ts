@@ -70,6 +70,9 @@ export const WORD_MISS = "失手";
 export const WORD_LOCK_MISS = "落空";
 export const WORD_LOCK_BLOCKED = "被擋下";
 export const WORD_LOCK_INTERRUPTED = "被打斷";
+/** SK-2：推、拉打到推不動的目標（照撞牆算一次撞擊）；吸收表面。 */
+export const WORD_IMMOVABLE = "推不動！撞擊";
+export const WORD_ABSORB = "吸收";
 
 /**
  * 躺在地上的姿勢（6R-F）：`prone` 在狀態資料裡沒有「不能動」的標記（倒地只是移動前要先站起來），
@@ -217,6 +220,12 @@ function textFor(e: EventBase, at: Locate, immobile: (id: unknown) => boolean): 
     case "followup_cancelled":
       // RG-3：瞄準中被近戰打中，瞄準取消（字在弓手頭上）
       return e.reason === "interrupted" ? [{ pos: at(e.unit_id), text: WORD_LOCK_INTERRUPTED, tone: "good" }] : [];
+    case "collided":
+      // SK-2：推、拉打到推不動的目標照撞牆算一次撞擊（06 6.38 第 9 點）
+      return [{ pos: at(e.unit_id) ?? posOf(e.pos), text: e.obstacle === "immovable" ? WORD_IMMOVABLE : EVENT_WORDS.collided!.text, tone: "bad", big: true }];
+    case "surface_absorbed":
+      // SK-2：吸收表面（06 6.38 第 4 點）
+      return [{ pos: at(e.unit_id), text: WORD_ABSORB, tone: "good" }];
     case "unit_ran":
       // 跑步（UI-T1：使用者「啟用跑步應該要有 ui 文字跳」）：跑的人頭上跳「跑步 移動＋N」
       return [{ pos: at(e.unit_id), text: num(e.bonus) > 0 ? `跑步 移動＋${num(e.bonus)}` : "跑步", tone: "good" }];

@@ -92,6 +92,7 @@ from trpg.content.skills.effects import (
     EffectSpec,
     ShapeSpec,
     SkillRuleError,
+    _check_absorb_surface,
     _check_composition,
     composition_shapes,
     error_path_of,
@@ -1279,6 +1280,7 @@ class SkillDef(ContentModel):
             )
         self._check_form_bonus(where, effect, top=top)
         self._check_flat_bonus(where, effect, top=top)
+        _check_absorb_surface(where, effect)
         if effect.type != "damage":
             return
         if self.category == "spell":

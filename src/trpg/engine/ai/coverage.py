@@ -40,6 +40,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "destroy_object": f"{_EVENTS}（掩護與位置價值）",
         "blow_surface": f"{_EVENTS}（表面移動後的位置價值）",
         "clear_surface": f"{_EVENTS}（表面移除後的位置價值）",
+        "absorb_surface": f"{_EVENTS}（層數、治療、護盾、換元素後的傷害與位置價值；SK-2）",
         "create_obstacle": f"{_EVENTS}（場地型技能：位置價值）",
         "raise_terrain": "候選估計 terrain_estimate；收益 terrain_gains（ai/terrain.py）",
         "lower_terrain": "候選估計 terrain_estimate；收益 terrain_gains（ai/terrain.py）",
