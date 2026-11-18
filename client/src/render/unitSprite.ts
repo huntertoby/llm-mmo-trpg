@@ -1317,7 +1317,8 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
   const capClear = (lay: RowPlan): RowPlan => (lastMarked && !lay.compact && lay.plusOnly !== true && lay.moreDx < sporeDx ? { ...lay, moreDx: sporeDx } : lay);
   const shapesOf = (lay: RowPlan) => rowShapes(capClear(lay), shown.length, rowK, bottom, extra > 0, widthOf(lay));
   const arrow = arrowOf(u);
-  const apply = (lay: RowPlan) => {
+  const apply = (plan: RowPlan) => {
+    const lay = capClear(plan); // AR-SK3：角標膠囊讓到孢子外面（冪等）
     let sh = shapesOf(lay);
     // BM-1：800 寬有部位的頭目，整排搬到 HP 條旁邊（排法照原本，只平移；`bossSideHud.ts`）
     const side = bossSideHudOn(u, rowS) ? sideRowShift(sh, sideBlock(u, rowS, SHIELD_OUTLINE, edge), rowS, arrow) : { dx: 0, dy: 0 };
@@ -1340,7 +1341,7 @@ function statusRow(u: UnitDraw, badge: Container | null, edge: MapEdge = NO_EDGE
     });
     if (more !== null) {
       more.node.visible = !lay.compact;
-      const m = moreCapBox(x0 + (n - 1) * lay.pitch, capClear(lay).moreDx, extra);
+      const m = moreCapBox(x0 + (n - 1) * lay.pitch, lay.moreDx, extra);
       more.node.position.set(m.l, m.t);
     }
     const capY = plusCapsuleY();
