@@ -35,7 +35,10 @@ class VariantWhen(ContentModel):
     caster_high_ground: Literal[True] | None = None
     caster_adjacent_blocker: Literal[True] | None = None
     target_surface: tuple[str, ...] | None = None
-    caster_cast_tag: str | None = Field(default=None, pattern=ID_PATTERN)
+    caster_cast_tag: str | None = Field(
+        default=None, pattern=ID_PATTERN, exclude_if=lambda v: v is None
+    )
+    """SK-1：沒填時不輸出（既有技能的序列化逐字不變）。"""
 
     @model_validator(mode="after")
     def _check(self) -> VariantWhen:
