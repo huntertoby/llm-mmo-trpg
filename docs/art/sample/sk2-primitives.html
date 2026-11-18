@@ -142,6 +142,7 @@ function render(scene, view) {
   const sc = view.S * (view.res ?? 1) * (view.zoom ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
   const xf = () => g.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  SK.setMapScale(view.S); /* 鎖鏈、虛線軌跡的畫面下限照地圖縮放（不看樣張的放大倍率；可修 d、7） */
   xf(); const K = rowK(view.S);
   for (let y = 0; y < scene.rows; y++) for (let x = 0; x < scene.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); scene.groundAt(x, y)(g, x * T, y * T, x, y); g.restore(); }
   g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
@@ -209,14 +210,26 @@ function sceneAbsorb(t, opt = {}) {
   const hand = handOf(M, "off"), base = { x: 1.5 * T, y: 3.5 * T };
   const lift = ease(span(t, 150, 520)), glowRim = t < 150 ? span(t, 0, 150) : 1 - span(t, 150, 300);
   const col = SURF[surf], tint = surf === "water" ? QS.TINT.water : surf === "fire" ? QS.TINT.fire : surf === "poison" ? QS.TINT.poison : QS.TINT.ice;
+  /* 抽起的光柱（第 2 版，可修 c）：分兩層。單位之下（under）一整片從冰面往上收窄到副手，不透明度 55%；
+     單位之上（top）只畫兩條亮邊線，加 4 道往上跑的短亮條（lighter 混色、40%），不整片蓋在身上。 */
+  const colA = span(t, 160, 260) * (1 - span(t, 460, 560)), w0 = 21, w1 = 4;
+  const colPath = (g) => { g.beginPath(); g.moveTo(base.x - w0, base.y + 4); g.quadraticCurveTo(base.x - w0 * 0.3, base.y - 6, hand.x - w1, hand.y); g.lineTo(hand.x + w1, hand.y); g.quadraticCurveTo(base.x + w0 * 0.3, base.y - 6, base.x + w0, base.y + 4); };
+  const colAt = (q, side) => { const u = 1 - q, x0 = base.x + side * w0, y0 = base.y + 4, cx = base.x + side * w0 * 0.3, cy = base.y - 6, x1 = hand.x + side * w1, y1 = hand.y; return { x: u * u * x0 + 2 * u * q * cx + q * q * x1, y: u * u * y0 + 2 * u * q * cy + q * q * y1 }; };
+  void col;
   return {
     cols: 9, rows: 7, groundAt: groundStone(), units: [M, B],
     decals: (g) => surface(g, 1, 3, surf, 1 - lift, glowRim),
+    under: (g) => { if (colA <= 0) return; g.save(); g.globalAlpha = 0.55 * colA; const gr = g.createLinearGradient(0, base.y, 0, hand.y); gr.addColorStop(0, tint[0]); gr.addColorStop(1, tint[1]); g.fillStyle = gr; colPath(g); g.closePath(); g.fill(); g.restore(); },
     top: (g) => {
-      // 冰晶：7 顆，從冰面四周（固定角度）沿螺旋往上收進手
-      // 抽起的光柱：從冰面往上收窄到手（半透明、兩側一道亮邊）
-      const col = span(t, 160, 260) * (1 - span(t, 460, 560));
-      if (col > 0) { const w0 = 21, w1 = 4; g.save(); g.globalAlpha = 0.32 * col; const gr = g.createLinearGradient(0, base.y, 0, hand.y); gr.addColorStop(0, tint[0]); gr.addColorStop(1, tint[1]); g.fillStyle = gr; g.beginPath(); g.moveTo(base.x - w0, base.y + 4); g.quadraticCurveTo(base.x - w0 * 0.3, base.y - 6, hand.x - w1, hand.y); g.lineTo(hand.x + w1, hand.y); g.quadraticCurveTo(base.x + w0 * 0.3, base.y - 6, base.x + w0, base.y + 4); g.closePath(); g.fill(); g.globalAlpha = 0.8 * col; g.strokeStyle = tint[1]; g.lineWidth = 1.4; g.stroke(); g.restore(); }
+      // 光柱的亮邊與往上跑的亮條（單位之上）
+      if (colA > 0) {
+        g.save(); g.globalAlpha = 0.85 * colA; g.strokeStyle = tint[1]; g.lineWidth = 1.4; g.lineCap = "round";
+        for (const side of [-1, 1]) { g.beginPath(); for (let q = 0; q <= 1.001; q += 0.1) { const p = colAt(q, side); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.stroke(); }
+        g.globalCompositeOperation = "lighter"; g.globalAlpha = 0.4 * colA; g.strokeStyle = "#ffffff"; g.lineWidth = 2;
+        for (let i = 0; i < 4; i++) { const q = (Math.max(0, t - 160) / 260 + i * 0.25) % 1, f = [0.3, 0.62, 0.45, 0.75][i], a = colAt(q, -1), b = colAt(q, 1), x = lerp(a.x, b.x, f), y = lerp(a.y, b.y, f); g.beginPath(); g.moveTo(x, y); g.lineTo(x + (hand.x - base.x) * 0.06, y - 7); g.stroke(); }
+        g.restore();
+      }
+      // 冰晶：10 顆，從冰面四周（固定角度）沿螺旋往上收進手
       for (let i = 0; i < 10; i++) {
         const t0 = 150 + i * 24, p = span(t, t0, t0 + 300); if (p <= 0 || p >= 1) continue;
         const a0 = (i / 10) * TAU + 0.4, r0 = 23, sx = base.x + Math.cos(a0) * r0, sy = base.y + Math.sin(a0) * r0 * 0.55;
@@ -225,7 +238,7 @@ function sceneAbsorb(t, opt = {}) {
         // 尾跡（三顆變小的點）
         for (let k = 1; k <= 3; k++) { const q = Math.max(0, e - k * 0.06), xx = lerp(sx, hand.x, q) + Math.cos(a0 + q * 2.2) * (1 - q) * 10, yy = lerp(sy, hand.y, q) + Math.sin(a0 + q * 2.2) * (1 - q) * 6 - Math.sin(q * Math.PI) * 6; g.globalAlpha = 0.5 - k * 0.12; g.beginPath(); g.arc(xx, yy, 2.2 - k * 0.45, 0, TAU); g.fillStyle = tint[1]; g.fill(); }
         g.globalAlpha = 1;
-        const s = 4 * (1 - 0.35 * e); g.save(); g.translate(x, y); g.rotate(ang);
+        const s = 5 * (1 - 0.35 * e); g.save(); g.translate(x, y); g.rotate(ang); /* 第 2 版：冰晶邊長 4→5 */
         g.beginPath(); g.moveTo(0, -s - 1.2); g.lineTo(s * 0.7 + 1.2, 0); g.lineTo(0, s + 1.2); g.lineTo(-s * 0.7 - 1.2, 0); g.closePath(); g.fillStyle = "#16121a"; g.fill();
         g.beginPath(); g.moveTo(0, -s); g.lineTo(s * 0.7, 0); g.lineTo(0, s); g.lineTo(-s * 0.7, 0); g.closePath(); g.fillStyle = tint[0]; g.fill();
         g.beginPath(); g.moveTo(0, -s); g.lineTo(-s * 0.7, 0); g.lineTo(0, 0); g.closePath(); g.fillStyle = "#ffffff"; g.fill(); g.restore();
@@ -283,12 +296,12 @@ function sceneContagion(t, opt = {}) {
       if (leap > 0 && leap < 1) {
         const pt = (q) => { const e = ease(q); return { x: lerp(from.x, dst.x - 4, e), y: lerp(from.y, dst.y, e) - Math.sin(e * Math.PI) * 30 }; };
         /* 跳躍的軌跡：黃綠虛線弧＋箭頭（指向被傳染的人），跟著那一團長出來 */
-        g.save(); g.setLineDash([4, 3]); g.lineCap = "round"; for (const [w, c] of [[4.2, "#16121a"], [2.2, SK.GERM.knob]]) { g.beginPath(); for (let q = 0; q <= leap; q += 0.02) { const p = pt(q); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.strokeStyle = c; g.lineWidth = w; g.stroke(); } g.restore();
+        g.save(); g.setLineDash([4 * SK.mk(), 3 * SK.mk()]); g.lineCap = "round"; for (const [w, c] of [[4.2 * SK.mk(), "#16121a"], [2.2 * SK.mk(), SK.GERM.knob]]) { g.beginPath(); for (let q = 0; q <= leap; q += 0.02) { const p = pt(q); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.strokeStyle = c; g.lineWidth = w; g.stroke(); } g.restore();
         for (let k = 3; k >= 1; k--) { const q = Math.max(0, leap - k * 0.07), p = pt(q); SK.mote(g, kind, p.x, p.y, 7 - k * 1.4, 0.75 - k * 0.15, 0); }
         const p = pt(leap), p2 = pt(Math.min(1, leap + 0.02)); SK.mote(g, kind, p.x, p.y, 11, 1, Math.atan2(p2.y - p.y, p2.x - p.x));
       }
       // 軌跡留到 1000 ms：整條虛線＋終點箭頭
-      if (leap >= 1 && t < 1000) { const pt = (q) => ({ x: lerp(from.x, dst.x - 4, ease(q)), y: lerp(from.y, dst.y, ease(q)) - Math.sin(ease(q) * Math.PI) * 30 }); g.save(); g.globalAlpha = 1 - span(t, 900, 1000); g.setLineDash([4, 3]); g.lineCap = "round"; for (const [w, c] of [[4.2, "#16121a"], [2.2, SK.GERM.knob]]) { g.beginPath(); for (let q = 0; q <= 0.86; q += 0.02) { const p = pt(q); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.strokeStyle = c; g.lineWidth = w; g.stroke(); } g.setLineDash([]); const a = pt(0.86), b = pt(0.97), ang = Math.atan2(b.y - a.y, b.x - a.x); g.translate(b.x, b.y); g.rotate(ang); g.beginPath(); g.moveTo(3, 0); g.lineTo(-4, -4.4); g.lineTo(-4, 4.4); g.closePath(); g.lineWidth = 2; g.strokeStyle = "#16121a"; g.stroke(); g.fillStyle = SK.GERM.knob; g.fill(); g.restore(); }
+      if (leap >= 1 && t < 1000) { const pt = (q) => ({ x: lerp(from.x, dst.x - 4, ease(q)), y: lerp(from.y, dst.y, ease(q)) - Math.sin(ease(q) * Math.PI) * 30 }); g.save(); g.globalAlpha = 1 - span(t, 900, 1000); g.setLineDash([4 * SK.mk(), 3 * SK.mk()]); g.lineCap = "round"; for (const [w, c] of [[4.2 * SK.mk(), "#16121a"], [2.2 * SK.mk(), SK.GERM.knob]]) { g.beginPath(); for (let q = 0; q <= 0.86; q += 0.02) { const p = pt(q); q ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); } g.strokeStyle = c; g.lineWidth = w; g.stroke(); } g.setLineDash([]); const a = pt(0.86), b = pt(0.97), ang = Math.atan2(b.y - a.y, b.x - a.x); g.translate(b.x, b.y); g.rotate(ang); g.scale(SK.mk(), SK.mk()); g.beginPath(); g.moveTo(3, 0); g.lineTo(-4, -4.4); g.lineTo(-4, 4.4); g.closePath(); g.lineWidth = 2; g.strokeStyle = "#16121a"; g.stroke(); g.fillStyle = SK.GERM.knob; g.fill(); g.restore(); }
       // 著火：小圈爆開
       if (land > 0 && land < 0.6) { const p = land / 0.6, c = { x: dst.x - 4, y: dst.y }; for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + (i - 2) * 0.6, d = 4 + p * 12; SK.mote(g, kind, c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, 5.5 * (1 - p * 0.5), 1 - p, a); } }
     },
@@ -299,14 +312,16 @@ function sceneHook(t, opt = {}) {
   const v = opt.v ?? "hook", giant = v === "giant", lava = v === "lava";
   const fireP = ease(span(t, 100, 330)), bite = t >= 330, pullEnd = giant ? 520 : lava ? 620 : 700;
   const pose = t < 100 ? null : t < 330 ? CASTER_POSE.cast : t < pullEnd + 80 ? CASTER_POSE.pull : null;
-  const M = U.mage({ id: "M", x: 1, y: 3, pose, dx: giant && t > 330 && t < 560 ? 3 * ease(span(t, 330, 520)) * (1 - span(t, 520, 560)) : 0 });
+  /* 第 2 版（可修 5）：巨型頭目拉不動時法師被往前拖，身體往前傾（lean 往正的方向，0.06→0.2），不只靠位移 3 px */
+  const dragP = giant && t > 330 && t < 560 ? ease(span(t, 330, 520)) * (1 - span(t, 520, 560)) : 0;
+  const M = U.mage({ id: "M", x: 1, y: 3, pose: dragP > 0 ? { lean: 0.06 + 0.14 * dragP, armL: -0.5 } : pose, dx: giant && t > 330 && t < 560 ? 3 * ease(span(t, 330, 520)) * (1 - span(t, 520, 560)) : 0 });
   const hand = handOf(M, "off");
   let units = [M], G = null, tx0 = 5, tx1 = 2;
   if (lava) tx1 = 4;
   let B1 = null;
   if (!giant) {
     const pp = ease(span(t, 400, pullEnd)), x = lerp(tx0, tx1, pp), stopJolt = lava && t > pullEnd && t < pullEnd + 140 ? Math.sin(span(t, pullEnd, pullEnd + 140) * Math.PI) * 3 : 0;
-    B1 = U.bandit({ id: "B1", x: tx0, y: 3, dx: (x - tx0) * T - stopJolt, flash: t > 330 && t < 430 ? 1 - span(t, 330, 430) : 0, pose: t > 400 && t < pullEnd ? { lean: -0.2 } : null });
+    B1 = U.bandit({ id: "B1", x: tx0, y: 3, dx: (x - tx0) * T - stopJolt, flash: t > 330 && t < 430 ? 1 - span(t, 330, 430) : 0, pose: t > 400 && t < pullEnd ? { lean: -0.2 } : lava && t >= pullEnd && t < pullEnd + 140 ? { lean: -0.3 + 0.19 * ease(span(t, pullEnd, pullEnd + 140)) } : null }); /* 第 2 版（可修 4）：熔岩前煞住，往後仰約 6°（拉的時候 −0.2，煞住的一下 −0.3，140 ms 回到 −0.11） */
     units.push(B1);
     if (!lava) units.push(U.bandit({ id: "B2", x: 6, y: 3 }));
   } else {
@@ -323,9 +338,10 @@ function sceneHook(t, opt = {}) {
       if (!bite) { const x = lerp(h.x, tg.x, fireP), y = lerp(h.y, tg.y, fireP) - Math.sin(fireP * Math.PI) * 5; SK.chain(g, [[h.x, h.y], [x, y]], { phase: 0 }); SK.hookHead(g, x, y, Math.atan2(tg.y - h.y, tg.x - h.x), 0.78); return; }
       if (giant) {
         if (t < 520) { // 繃緊：直、微微抖、白光
-          const p = span(t, 330, 520), j = Math.sin(t / 9) * 1.2 * p; SK.chain(g, [[h.x, h.y], [(h.x + tg.x) / 2, (h.y + tg.y) / 2 + j], [tg.x, tg.y]], { glow: 0.25 + 0.45 * p });
+          const p = span(t, 330, 520), j = Math.sin(t / 9) * 1.2 * p; SK.chain(g, [[h.x, h.y], [(h.x + tg.x) / 2, (h.y + tg.y) / 2 + j], [tg.x, tg.y]], { glow: 0.25 + 0.45 * p, rim: Math.min(1, p * 2) });
           SK.hookHead(g, tg.x, tg.y, 0, 0.78);
-          if (p > 0.4) for (const s of [-1, 1]) { g.save(); g.globalAlpha = (p - 0.4) / 0.6 * 0.9; g.strokeStyle = "#fff6d0"; g.lineWidth = 1.6; g.lineCap = "round"; g.beginPath(); g.moveTo(tg.x - 6, tg.y + s * 7); g.lineTo(tg.x - 13, tg.y + s * 11); g.stroke(); g.restore(); }
+          /* 第 2 版（可修 5）：緊繃線改成受鉤點往西放射的 4 道短粗線（外框色墊底＋米白），從 0.25 開始、越拉越長 */
+          if (p > 0.25) { const q = (p - 0.25) / 0.75; g.save(); g.lineCap = "round"; for (const a of [-2.35, -2.75, 2.75, 2.35]) { const r0 = 7, r1 = 7 + 6 + 6 * q; for (const [w, c] of [[4.4, "#16121a"], [2.4, "#fff6d0"]]) { g.globalAlpha = Math.min(1, q * 1.6); g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.moveTo(tg.x + Math.cos(a) * r0, tg.y + Math.sin(a) * r0); g.lineTo(tg.x + Math.cos(a) * r1, tg.y + Math.sin(a) * r1); g.stroke(); } } g.restore(); }
         } else { // 彈回：鉤脫開、鏈子成波浪縮回手上
           const p = ease(span(t, 520, 780)); if (p >= 1) return; const L = (1 - p), ex = lerp(h.x, tg.x - 4, L), ey = lerp(h.y, tg.y, L), n = 10, pts = [];
           for (let i = 0; i <= n; i++) { const q = i / n, w = Math.sin(q * Math.PI * 3 + p * 12) * 7 * (1 - p) * Math.sin(q * Math.PI); pts.push([lerp(h.x, ex, q), lerp(h.y, ey, q) + w]); }
@@ -349,9 +365,14 @@ function sceneHook(t, opt = {}) {
       // 熔岩：在邊緣煞住的塵土（腳邊、朝熔岩那一側）＋熔岩火星
       if (lava && t > pullEnd - 60 && t < pullEnd + 260) {
         const p = span(t, pullEnd - 60, pullEnd + 260), fx = 4 * T + 8, fy = 3.5 * T + 13;
-        for (let i = 0; i < 4; i++) { const a = Math.PI * 1.15 + (i - 1.5) * 0.4, d = 3 + p * 9; g.save(); g.globalAlpha = 0.85 * (1 - p); g.beginPath(); g.arc(fx + Math.cos(a) * d, fy + Math.sin(a) * d * 0.5, 3.6 - i * 0.4 + p * 2, 0, TAU); g.fillStyle = "#d8c8a8"; g.fill(); g.restore(); }
+        /* 第 2 版（可修 4）：塵土放大 1.5 倍 */
+        for (let i = 0; i < 4; i++) { const a = Math.PI * 1.15 + (i - 1.5) * 0.4, d = (3 + p * 9) * 1.5; g.save(); g.globalAlpha = 0.85 * (1 - p); g.beginPath(); g.arc(fx + Math.cos(a) * d, fy + Math.sin(a) * d * 0.5, (3.6 - i * 0.4 + p * 2) * 1.5, 0, TAU); g.fillStyle = "#d8c8a8"; g.fill(); g.restore(); }
         for (let i = 0; i < 3; i++) { const q = span(t, pullEnd + i * 40, pullEnd + i * 40 + 200); if (q <= 0 || q >= 1) continue; g.save(); g.globalAlpha = 1 - q; g.beginPath(); g.arc(3.5 * T + (i - 1) * 9, 3.5 * T + 6 - q * 16, 1.6, 0, TAU); g.fillStyle = "#ffd23f"; g.fill(); g.restore(); }
       }
+      // 第 2 版（可修 4）：熔岩前煞住，腳前兩道往熔岩方向的短拖痕（腳到熔岩邊之間，畫在單位之上才不會被腳下的圈擋住；600–900 淡出）
+      if (lava && t > pullEnd - 40 && t < pullEnd + 300) { const a = clamp((t - (pullEnd - 40)) / 60) * (1 - span(t, pullEnd + 160, pullEnd + 300)), fx = 4 * T + 3, fy = 3.5 * T + 15; g.save(); g.globalAlpha = 0.85 * a; g.lineCap = "round"; for (const dy of [-2.6, 2.6]) { g.strokeStyle = "#3a3026"; g.lineWidth = 2.8; g.beginPath(); g.moveTo(fx, fy + dy * 0.7); g.lineTo(fx + 13, fy + dy); g.stroke(); g.strokeStyle = "#cbb894"; g.lineWidth = 1.1; g.beginPath(); g.moveTo(fx + 1, fy + dy * 0.7 - 0.8); g.lineTo(fx + 12, fy + dy - 0.8); g.stroke(); } g.restore(); }
+      // 熔岩：620 ms 往上冒一次亮橘火舌（差一點就掉下去），580–760
+      if (lava && t > pullEnd - 40 && t < pullEnd + 140) { const q = span(t, pullEnd - 40, pullEnd + 140), k = Math.sin(q * Math.PI), x = 3.5 * T + 6, y = 3.5 * T + 8 - 10 * k; g.save(); g.globalAlpha = Math.min(1, k * 1.6); Q.H.glow(g, x, y, 16 * k + 2, "#ffb03a", 0.6); g.translate(x, y); g.scale(0.4 + 0.75 * k, 0.4 + 0.95 * k); Q.H.flame(g, "#16121a", 0, 0, 1.18); Q.H.flame(g, "#ff8a1a", 0, 0, 1); Q.H.flame(g, "#ffe066", 0.4, 2.6, 0.58); g.restore(); }
       // 巨型頭目：彈回的一下出撞擊（推不動算撞擊）
       if (giant && t > 520 && t < 860) SK.impact(g, tg.x - 2, tg.y, span(t, 520, 860), 15);
     },
@@ -439,7 +460,7 @@ PARTS.full96 = () => {
 // 2. 演出關鍵影格
 // =====================================================================
 PARTS.anim = () => {
-  const sc = SCENES[CASE], S = S1600, V = VIEWW(S, 1, 1.5), blocks = [{ title: `${sc.zh}：關鍵影格（1600 寬地圖縮放 ${S.toFixed(2)}，再 ×1.5 向量放大）` }];
+  const sc = SCENES[CASE], S = S1600, V = VIEWW(S, 1, 1.5), blocks = [{ title: `${sc.zh}：關鍵影格（1600 寬地圖縮放 ${S.toFixed(2)}，再 ×1.5 向量放大）${CASE === "absorb" ? "　表面為示意，遊戲端用現行表面" : ""}` }];
   const tl = { absorb: "0–150 按地｜150–520 冰面抽起、冰晶螺旋收進副手｜380–620 成球｜560–1000 一閃、收益圖樣從頭頂浮起、法杖頭染冰色", contagion: "0–220 火焰箭｜220–520 盜賊1倒下、狀態列燃燒圖示的孢子記號脈動｜300–560 1 格內的格子亮（選中那格加框）｜460–860 一團火沿弧線跳到盜賊2（黃綠虛線軌跡＋箭頭）、地上三個 V 指方向｜860–1150 著火、狀態列多一個燃燒（從 1.6 倍縮回）", hook: "100–330 鎖鏈從副手射出、鉤頭在前｜330–450 鉤住（小撞擊星、白閃）｜400–700 拉回 3 格（鏈節往手裡流、盜賊後仰）｜700–860 鉤脫開收回", hook_lava: "同一般，拉到熔岩 (3,3) 前一格的 (4,3) 煞住：620 停、往回彈 3 px、腳前一團塵土與熔岩火星｜620–860 鏈子先垂下再收回（不拉進熔岩）", hook_giant: "100–330 射出｜330–520 鉤住、拉不動：鏈子繃直、微抖、發白光，法師被往前拖 3 px｜520 鉤脫開彈回（鏈子成波浪縮回）＋頭目西面出撞擊星、白閃、晃 2.4 px" }[CASE];
   blocks.push({ note: "時間軸（毫秒）：" + tl });
   const cells = sc.keys.map((t) => ({ cv: render(sc.fn(t), V), cap: `${t} ms` }));

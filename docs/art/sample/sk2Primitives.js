@@ -198,14 +198,21 @@ window.SK2Prim = (() => {
   // =====================================================================
   const STEEL = HOOK.body, STEEL_D = HOOK.dark, STEEL_L = "#eef2f6";
   /** 鎖鏈：沿折線 pts（[x,y] 陣列）每 step 一節，交錯正面／側面；先整條畫外框色粗線，再畫鏈節。sag：中段往下垂（鬆掉時）。 */
+  // 畫面下限（第 2 版，可修 d、7）：鏈節長 4.2 模型 px 在 800 寬（地圖縮放 0.53）只剩 2.2 畫面 px、整條像一條 1 px 的線。
+  // 照 minMark.minMarkScale 的做法給一個倍率：鏈節長 ≥ 3 畫面 px → K＝max(1, 3 ÷ (4.2 × 地圖縮放))（1600 寬 1.00、800 寬 1.35）。
+  // 鏈節、鏈的外框粗線、鉤頭、疾病擴散的虛線軌跡與地上的 V 都乘同一個 K。樣張的 render() 每張圖先呼叫 setMapScale(地圖縮放)。
+  const LINK_MIN_PX = 3; let MK = 1;
+  const setMapScale = (S) => { MK = Math.max(1, LINK_MIN_PX / (4.2 * S)); return MK; };
+  const mk = () => MK;
   function chain(ctx, pts, opt = {}) {
-    const step = opt.step ?? 3.6, L = opt.L ?? 4.2, glow = opt.glow ?? 0;
+    const step = (opt.step ?? 3.6) * MK, L = (opt.L ?? 4.2) * MK, glow = opt.glow ?? 0;
     // 沿路徑取樣
     const seg = []; let total = 0;
     for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(d); total += d; }
     const pos = (s) => { let i = 0; while (i < seg.length - 1 && s > seg[i]) { s -= seg[i]; i++; } const t = seg[i] ? s / seg[i] : 0, a = pts[i], b = pts[i + 1]; return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), Math.atan2(b[1] - a[1], b[0] - a[0])]; };
     if (total < 0.5) return;
     if (glow > 0) { ctx.save(); ctx.globalAlpha = glow; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); ctx.restore(); }
+    if (opt.rim) { ctx.save(); ctx.globalAlpha = opt.rim; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = "#fff6d0"; ctx.lineWidth = L * 0.68 + 1.6 + 2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); ctx.restore(); } /* 第 2 版（可修 5）：繃緊時整條外面一圈 1 px 亮邊 */
     ctx.save(); ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.strokeStyle = OUT; ctx.lineWidth = L * 0.68 + 1.6; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); ctx.restore();
     const n = Math.max(1, Math.floor(total / step)), off = opt.phase ?? 0;
     for (let k = 0; k <= n; k++) { const s = Math.min(total, k * step + (off % step)); const [x, y, a] = pos(s); link(ctx, x, y, a, L, (k + Math.floor(off / step)) % 2 === 1, STEEL, STEEL_D, OUT); }
@@ -213,7 +220,7 @@ window.SK2Prim = (() => {
   /** 鉤頭（戰場）：x,y＝繩環，a＝鉤指向的方向（弧度），k＝大小（1 ≈ 圖樣格 1 單位 = 0.7 模型 px）。open：鉤張開（飛行中）0～1。 */
   /** 戰場上的爪鉤：繩環在 (x,y)、爪朝 a 方向；k＝圖樣 1 單位幾個模型 px。 */
   function hookHead(ctx, x, y, a, k = 0.6) {
-    ctx.save(); ctx.translate(x, y); ctx.rotate(a + PI / 2); ctx.scale(k, k); ctx.translate(0, -9.4);
+    k *= MK; ctx.save(); ctx.translate(x, y); ctx.rotate(a + PI / 2); ctx.scale(k, k); ctx.translate(0, -9.4);
     hookJ(ctx, { tiny: false }, OUT, 2.6 / k, true); hookJ(ctx, { tiny: false }, STEEL, 0, false);
     ctx.restore();
   }
@@ -244,12 +251,12 @@ window.SK2Prim = (() => {
     const dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
     for (let i = 0; i < 3; i++) {
       const t = 0.3 + i * 0.2, on = clamp((p - i * 0.18) / 0.3); if (on <= 0) continue;
-      ctx.save(); ctx.translate(a.x + dx * t, a.y + dy * t); ctx.rotate(ang); ctx.globalAlpha = on * (1 - clamp((p - 0.85) / 0.15));
+      ctx.save(); ctx.translate(a.x + dx * t, a.y + dy * t); ctx.rotate(ang); ctx.scale(MK, MK); ctx.globalAlpha = on * (1 - clamp((p - 0.85) / 0.15));
       const v = (col2, w) => { ctx.beginPath(); ctx.moveTo(-3.4, -4.4); ctx.lineTo(1.6, 0); ctx.lineTo(-3.4, 4.4); ctx.strokeStyle = col2; ctx.lineWidth = w; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.stroke(); };
       v(OUT, 4.4); v(col, 2.4); ctx.restore();
     }
     void L;
   }
 
-  return { GERM, SPORE, MARK_VARIANTS, setMark, coverCount, EFFECT, install, germ, hookArt, link, spreadMark, paintStatus, headCanvas, cardCanvas, chain, hookHead, mote, impact, chevrons, DOT, ease, span, lerp, clamp, STEEL, STEEL_D, STEEL_L };
+  return { setMapScale, mk, GERM, SPORE, MARK_VARIANTS, setMark, coverCount, EFFECT, install, germ, hookArt, link, spreadMark, paintStatus, headCanvas, cardCanvas, chain, hookHead, mote, impact, chevrons, DOT, ease, span, lerp, clamp, STEEL, STEEL_D, STEEL_L };
 })();
