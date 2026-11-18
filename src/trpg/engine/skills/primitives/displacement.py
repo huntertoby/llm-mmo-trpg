@@ -30,7 +30,7 @@ from trpg.engine.reactions import (
     enemy_enters_adjacent_reactions,
     enemy_moves_in_range_reactions,
 )
-from trpg.engine.rules.footprint import dist_to, nearest_tile
+from trpg.engine.rules.footprint import dist_to, nearest_tile, unit_dist
 from trpg.engine.rules.geometry import XY, axis_direction
 from trpg.engine.rules.movement import is_deadly, is_flying
 from trpg.engine.skill_triggers import collect_move
@@ -96,6 +96,31 @@ def _displace(
                 collision_permille=collision_permille,
                 extra_collisions=extra,
                 pull=pull,
+            )
+        )
+    return batch
+
+
+def hook(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """鉤（SK-2，06 6.38 第 8 點）：命中的那一個單位沿直線拉到施放者相鄰格（推拉 2 格上限的
+    例外，不吃修正規則的距離）；下一格是致命地形時停在它前面；被擋住照拉扯撞擊；推不動的目標
+    照撞牆算一次（6.38 第 9 點，:func:`~trpg.engine.effects.world._immovable_collision`）。"""
+    direction = cast.area.direction
+    assert direction is not None  # 只能搭配直線（skill_primitives.yaml allowed_shapes）
+    back = (-direction[0], -direction[1])
+    batch: list[EffectBase] = []
+    for unit in cast.targets(effect.affects, spec.condition):
+        distance = unit_dist(cast.caster, unit) - 1
+        if distance <= 0:
+            continue  # 已經在旁邊
+        batch.append(
+            PushEffect(
+                source_id=cast.caster.id,
+                target_id=unit.id,
+                direction=back,
+                distance=distance,
+                pull=True,
+                stop_before_deadly=True,
             )
         )
     return batch
@@ -428,6 +453,7 @@ def charge_through(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list
 HANDLERS: dict[str, Handler] = {
     "push": push,
     "pull": pull,
+    "hook": hook,
     "teleport": teleport,
     "leap": leap,
     "swap": swap,

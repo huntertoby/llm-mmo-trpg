@@ -24,6 +24,7 @@ from trpg.content.skills import (
     FOLLOWUP_AUTO_WHENS,
     FOLLOWUP_CENTERED,
     GAMBLE,
+    HOOK,
     HURL_OBJECT,
     LEAP,
     LEAVE_FORM,
@@ -1032,6 +1033,35 @@ def _check_form_element(state: BattleState, skill: SkillDef, action: UseSkill) -
         raise IllegalActionError(problem)
 
 
+def _narrowed(
+    state: BattleState,
+    caster: UnitState,
+    effects: tuple[ResolvedEffect, ...],
+    tiles: tuple[XY, ...],
+    units: tuple[UnitId, ...],
+) -> tuple[tuple[XY, ...], tuple[UnitId, ...]]:
+    """依原語縮小影響範圍：鉤只打到直線上第一個單位（SK-2）；直線衝撞時隊友讓路，只有沿途的敵人
+    會被撞。"""
+    if any(e.type == HOOK for e in effects):
+        tiles, units = _hook_reach(state, caster, tiles, units)
+    if any(e.type == CHARGE_THROUGH for e in effects):
+        units = tuple(u for u in units if state.units[u].team is not caster.team)
+    return tiles, units
+
+
+def _hook_reach(
+    state: BattleState, caster: UnitState, tiles: tuple[XY, ...], units: tuple[UnitId, ...]
+) -> tuple[tuple[XY, ...], tuple[UnitId, ...]]:
+    """鉤（SK-2，06 6.38 第 8 點）：直線只到第一個單位（離施放者最近，同距離依單位 ID）為止；
+    第一個單位是施放者的隊友時鉤子被擋下，沒有對象。直線上沒有單位時照原樣。"""
+    if not units:
+        return tiles, units
+    first = min((state.units[u] for u in units), key=lambda u: (unit_dist(u, caster), u.id))
+    reach = unit_dist(first, caster)
+    kept = tuple(t for t in tiles if dist_to(caster, t) <= reach)
+    return kept, (() if first.team is caster.team else (first.id,))
+
+
 def compute_area(
     state: BattleState, caster: UnitState, skill: SkillDef, action: UseSkill
 ) -> SkillArea:
@@ -1069,8 +1099,7 @@ def compute_area(
     if skill.include_caster and caster.xy not in tiles and targeting in _AREA_TARGETING:
         tiles = _sorted_tiles(*tiles, caster.xy)  # allow_self_target（3D-3）：施放者自己也算在內
     units = _tiles_to_units(state, tiles, chain)
-    if any(e.type == CHARGE_THROUGH for e in effects):  # 隊友讓路：只有沿途的敵人會被撞
-        units = tuple(u for u in units if state.units[u].team is not caster.team)
+    tiles, units = _narrowed(state, caster, effects, tiles, units)
     ref = origin if direction is None else face_tile(caster, direction)
     return SkillArea(
         tiles=tiles,

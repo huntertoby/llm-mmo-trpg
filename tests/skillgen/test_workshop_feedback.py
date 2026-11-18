@@ -394,8 +394,9 @@ def test_table_has_the_164_rewritten_entries() -> None:
     # ＋ BAL-12e 的表面強度（原語參數一筆，實作者初稿，待玩法 PM 改寫）
     # ＋ TF-1 的召喚到身邊（原語與反咬參數各一，實作者初稿，待玩法 PM 改寫）
     # ＋ KW-1b 的自身層數達到的層數參數（條件參數一筆，實作者初稿，待玩法 PM 改寫）
-    assert len(TABLE.texts) == 173
-    assert len({e.id for e in TABLE.texts}) == 173
+    # ＋ SK-2 的吸收表面（原語、4 個參數、4 種收益選項）、疾病擴散、鉤（原語），實作者初稿
+    assert len(TABLE.texts) == 183
+    assert len({e.id for e in TABLE.texts}) == 183
 
 
 def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:

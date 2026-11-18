@@ -196,6 +196,9 @@ describe("primitive clips (6N-2 first half, 6N-3 second half)", () => {
         ["refund_ap", "refund_cooldown", "reset_cooldown"],
         ["add_stack", "consume_stack", "consume_status"],
         ["summon", "summon_beside"], // TF-1：召喚到身邊暫借召喚的動作
+        ["absorb_surface", "clear_surface"], // SK-2：吸收表面暫借清除表面的按地動作
+        ["apply_status:debuff", "contagion"], // SK-2：疾病擴散暫借施加減益的指向動作
+        ["hook", "pull"], // SK-2：鉤暫借拉扯的猛拉動作
       ]
         .map((g) => [...g].sort())
         .sort(),

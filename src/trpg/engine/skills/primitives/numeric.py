@@ -34,6 +34,7 @@ def damage(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectB
         cast.ctx.state, cast.caster, cast.skill, spec, modified=cast.modified
     )
     dice, flat, scaled, multiplier, element = params
+    element = cast.absorbed_element or element  # 吸收表面換來的元素（SK-2）
     min_damage = cast.ctx.core.min_damage_on_hit
     gamble = cast.gamble_for(effect)
     explode_max = cast.ctx.core.explode_max if spec.explode else 0

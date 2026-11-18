@@ -172,6 +172,9 @@ class Cast:
     都中、都沒被守護者攔下時才在實例上設成真；``holds`` 對這個條件回傳它。"""
     redirected = False
     """這次施放有某一下被守護者攔下（:meth:`_redirect` 在實例上設成真）。"""
+    absorbed_element: Element | None = None
+    """吸收表面換來的元素（SK-2 ``absorb_surface`` 的 ``gain: element``）：:func:`absorb_surface`
+    吸到帶元素的表面時在實例上設定，這一招之後的傷害效果改用它（元素觸及格子也是）。"""
     stacks_at_cast: Mapping[str, int] | None = None
     """施放開始時施放者的層數快照（KW-1 ``self_stack_at_least``，#161）：:meth:`run` 在任何效果與
     消耗之前在實例上設定；``holds`` 對這個條件看快照，所以同一招消耗或累積的層數不影響判斷。"""
@@ -1058,9 +1061,12 @@ class Cast:
 
     def touch_untouched_tiles(self, spec: EffectSpec, start: int) -> None:
         """帶元素的傷害：沒有單位或物件受到傷害的影響格，補上一次元素觸及（每格一次）。"""
-        element = damage_parameters(
-            self.ctx.state, self.caster, self.skill, spec, modified=self.modified
-        ).element
+        element = (
+            self.absorbed_element
+            or damage_parameters(
+                self.ctx.state, self.caster, self.skill, spec, modified=self.modified
+            ).element
+        )
         if element is Element.PHYSICAL:
             return
         touched: set[XY] = set()

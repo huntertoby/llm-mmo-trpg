@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from trpg.content.battle import Dice
@@ -20,6 +21,7 @@ from trpg.engine.effects.models import (
     ShieldEffect,
 )
 from trpg.engine.events import (
+    ContagionMarked,
     EffectFizzled,
 )
 from trpg.engine.forms import enter_form as enter_unit_form
@@ -289,6 +291,23 @@ def _add_stack(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> None:
         add_stacks(cast.ctx, unit, spec.stack, amount, source_id=cast.caster.id)
 
 
+def contagion(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """疾病擴散（SK-2，06 6.38 第 5 點）：被命中目標身上現有的燃燒、流血、中毒標成會擴散
+    （倒下時傳出去，見 :mod:`trpg.engine.contagion`）。沒有這些狀態的目標沒有效果、不發事件。"""
+    kinds = cast.ctx.core.contagion_statuses
+    for unit in cast.targets(effect.affects, spec.condition):
+        marked = sorted(s.status_id for s in unit.statuses if s.status_id in kinds)
+        if not marked:
+            continue
+        unit.statuses = [
+            replace(s, contagious=True) if s.status_id in kinds else s for s in unit.statuses
+        ]
+        cast.ctx.emit(
+            ContagionMarked, unit_id=cast.caster.id, target_id=unit.id, status_ids=tuple(marked)
+        )
+    return []
+
+
 def add_stack(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     _add_stack(cast, effect, spec)
     return []
@@ -315,6 +334,7 @@ def leave_form(cast: Cast, _effect: ResolvedEffect, _spec: EffectSpec) -> list[E
 
 HANDLERS: dict[str, Handler] = {
     "apply_status": apply_status,
+    "contagion": contagion,
     "enter_form": enter_form,
     "leave_form": leave_form,
     "consume_status": consume_status,

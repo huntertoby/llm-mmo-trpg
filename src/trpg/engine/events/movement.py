@@ -134,9 +134,10 @@ class MoveBlocked(EventBase):
     """強制位移（推擊）被擋下（Phase 3C-6a）：緊接著的 ``collided`` 事件才是紀錄的主角。"""
 
 
-type CollisionObstacle = Literal["wall", "edge", "object", "unit", "excess"]
+type CollisionObstacle = Literal["wall", "edge", "object", "unit", "excess", "immovable"]
 """撞到什麼：``wall`` 不可走的地形（含過高的階梯）、``edge`` 地圖邊界、``object`` ``blocks_move``
-物件、``unit`` 其他單位、``excess`` 沒有撞到東西（技能把推擊距離加到超過上限的部分）。"""
+物件、``unit`` 其他單位、``excess`` 沒有撞到東西（技能把推擊距離加到超過上限的部分）、
+``immovable`` 目標推不動（位移免疫、巨型頭目……；照撞牆算一次，SK-2，06 6.38 第 9 點）。"""
 
 
 class Collided(EventBase):
@@ -152,7 +153,7 @@ class Collided(EventBase):
     obstacle: CollisionObstacle
     shortfall: int = Field(ge=1)
     pos: Pos
-    """被擋住的格子（``excess`` 時為單位目前所在格）。"""
+    """被擋住的格子（``excess``、``immovable`` 時為單位目前所在格）。"""
     source_id: UnitId | None = None
     """位移的來源單位（推擊者、施放者）；環境造成的位移為 ``None``。"""
     other_id: UnitId | None = None

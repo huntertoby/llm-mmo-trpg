@@ -892,6 +892,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         and (definition.skip_turn or definition.blocks_spells)
         and ctx.state.active_unit == unit.id,  # 自暈／自我沉默：本回合照常，回合結束才生效
         cost_status=effect.self_paid,  # 代價狀態：淨化與驅散移除不了（#62）
+        contagious=effect.contagious,  # 疾病擴散（SK-2）
         magnitude_permille=(
             effect.magnitude_permille
             if definition.stance or definition.scales_with_magnitude
@@ -951,6 +952,8 @@ def _reapplied(
     06 6.34.9「BAL-12e 定」）。新的連結（``redirects``）一律取代舊的（連結者與比例都可能不同）。"""
     if redirects:
         return instance
+    if existing.contagious and not instance.contagious:  # 會擴散的標記不會被重複施加洗掉（SK-2）
+        instance = replace(instance, contagious=True)
     if _outlasts(existing.remaining, instance.remaining):
         return replace(existing, dormant=False)  # 舊實例的內容照舊（自暈的延後生效旗標不留）
     if existing.remaining == instance.remaining:
