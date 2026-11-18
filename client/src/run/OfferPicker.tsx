@@ -14,7 +14,7 @@ import {
   SLOT_LABELS,
   slotOf,
 } from "./flow";
-import { isLlmTag, LLM_SOURCE_HINT, LLM_SOURCE_LABEL } from "./llmFlow";
+import { LLM_SOURCE_LABEL, llmTagHint } from "./llmFlow";
 import { offerTagHint, offerTagText } from "./startFlow";
 
 interface Props {
@@ -66,6 +66,7 @@ export function OfferPicker({
           if (card === undefined) return null;
           const off = !hideOffRoute && offer.off_route.includes(index);
           const tag = offer.tags?.[index];
+          const llmHint = llmTagHint(tag);
           return (
             <div
               key={card.id}
@@ -96,8 +97,8 @@ export function OfferPicker({
                   <span className="small">　{offerTagHint(tag)}</span>
                 </div>
               )}
-              {isLlmTag(tag) && (
-                <Hint text={LLM_SOURCE_HINT}>
+              {llmHint !== null && (
+                <Hint text={llmHint}>
                   <div className="offer-llm-tag" data-testid="offer-llm" tabIndex={0}>
                     <b>{LLM_SOURCE_LABEL}</b>
                   </div>

@@ -5,6 +5,8 @@ import type { CreateRunRequest, LlmStats, OfferTag } from "../api/types";
 /** 候選卡的 LLM 來源標記（暫定）。 */
 export const LLM_SOURCE_LABEL = "源晶推演";
 export const LLM_SOURCE_HINT = "這張技能由本機模型提議，數值由規則補齊。";
+/** 挑選模式（`pick: llm`，許願、升級等三選一）的說明句（玩法 PM 2026-11-19，4.1.27 題 5）。 */
+export const LLM_PICK_HINT = "這張技能的名字和描述由本機模型取；效果和數值都照規則出題。";
 /** 開新一輪畫面的開關文字與說明（說明走共用浮動卡）。 */
 export const LLM_TOGGLE_LABEL = "用本機模型生成升級技能";
 export const LLM_TOGGLE_HINT = "由本機模型生成升級技能；需要先啟動本機模型。沒有啟動時，這一輪照常使用一般技能生成。";
@@ -14,9 +16,16 @@ export function withLlm<T extends Partial<CreateRunRequest>>(body: T, on: boolea
   return on ? { ...body, llm: true } : body;
 }
 
-/** 這張候選卡是 LLM 提議的（來源為 `llm`）。 */
+/** 這張候選卡有本機模型的手筆：自由設計（來源為 `llm`）或挑選模式由模型挑選並命名（`pick: llm`，PK-4b）。 */
 export function isLlmTag(tag: OfferTag | undefined): boolean {
-  return tag !== undefined && tag.source === "llm";
+  return tag !== undefined && (tag.source === "llm" || tag.pick === "llm");
+}
+
+/** 「源晶推演」小標的說明句：自由設計照舊，挑選模式用挑選的說明（4.1.27 題 5）；不是 LLM 的卡為 `null`。 */
+export function llmTagHint(tag: OfferTag | undefined): string | null {
+  if (tag === undefined) return null;
+  if (tag.source === "llm") return LLM_SOURCE_HINT;
+  return tag.pick === "llm" ? LLM_PICK_HINT : null;
 }
 
 /** 一輪結束摘要的 LLM 統計列；沒開 LLM 且沒有題目時為空。 */
