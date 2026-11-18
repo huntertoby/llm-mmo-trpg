@@ -54,6 +54,10 @@ rules:
   converge_usage_score: 3
   # 專注的條件收緊一級（BAL-10e2，06 6.34.4「BAL-10e 定」）：預算器不幫條件計價，固定視為拿掉這麼多‰，加這次的 +40‰ 一起換
   tighten_permille: 100
+  # SK-1（#166，06 6.38 第 3 點）：每次閃現（或重閃）最多出幾張側變（模板的 side: true）
+  max_side_per_offer: 1
+  # SK-1 的模板（標 SK-1 的那幾個）：側變＝換方向、不換強度，強度照預算重算；新小變化都用現有原語。數值一律是初值。
+  # 收回家族（range_reclaim）照 BAL-10e 排在類別最後，其他插在各類別的收回模板之前。
   form_magnitudes: [1000, 1050, 1100, 1150, 1200, 1250, 1300, 1350, 1400, 1450, 1500, 1550, 1600, 1650, 1700, 1750, 1800, 1850, 1900, 1950, 2000]
   complete:                   # 完整技能（6.34.6）：視為已閃 3 次、+120‰、不能再閃、可以重閃
     flashes: 3
@@ -216,6 +220,28 @@ minor:
     shapes:
       - {type: square3, range: 4}
       - {type: allies_in_radius, radius: 2}
+  # SK-1（#166，06 6.38 第 3 點）：reshape_skeleton
+  - id: reshape_skeleton
+    category: area
+    op: reshape_skeleton
+    side: true
+    prefix_zh: 擴散
+    summary_zh: 換形狀並換骨架：單體打擊改成直線 3、錐形 2 或十字的範圍招（傷害依預算調整）
+    headline_zh: "單體改成範圍，一次打到更多敵人"
+    shapes:
+      - {type: line, size: 3}
+      - {type: cone, size: 2}
+      - {type: cross, range: 3}
+    skeletons: [area, combo]
+  # SK-1（#166，06 6.38 第 3 點）：push_pull_swap
+  - id: push_pull_swap
+    category: area
+    op: push_pull
+    side: true
+    kinds: [active]
+    prefix_zh: 反勢
+    summary_zh: 推 ↔ 拉：推擊改成拉扯（或反過來），距離照舊（強度依預算重算）
+    headline_zh: "推改成拉（或拉改成推）"
   # 合體（BAL-10e，#75；BAL-10e2 玩法 PM 改歸「範圍」：數量換強度，同收束）：一次召喚 2 隻以上的召喚技，隻數 −1，
   # 換成召喚物更強（最大 HP，照強壯 summon_toughen 的階梯）。
   - id: fuse
@@ -225,6 +251,14 @@ minor:
     prefix_zh: 合體
     summary_zh: 合體：召喚隻數 −1，省下的預算全部換成召喚物的生命（一隻時恢復完整強度）
     headline_zh: "召喚物合成一隻，更耐打"
+  # SK-1（#166，06 6.38 第 3 點）：range_reclaim
+  - id: range_reclaim
+    category: area
+    op: range_reclaim
+    delta: -2
+    prefix_zh: 抵近
+    summary_zh: 收回射程：距離 −2，省下的預算全部換成威力
+    headline_zh: "射程短 2 格，換更高的傷害"
   # 收束（BAL-10d，#74；06 6.34.4「收束」「收回家族」）：把範圍收小，省下的預算＋這次的 +40‰ 全部換成威力
   # （trpg.skillgen.flash_trade）。只對有傷害／治療／護盾量的主動技；BAL-10e 補陷阱（觸發範圍）與地面格（持續區域
   # 裡的傷害／治療／護盾）；複合技只動第一段形狀；
@@ -264,6 +298,15 @@ minor:
     prefix_zh: 續勁
     summary_zh: 接續段強化：接續段的傷害提高（依預算）
     headline_zh: "後面那一段更痛"
+  # SK-1（#166，06 6.38 第 3 點）：momentum_buff
+  - id: momentum_buff
+    category: combo
+    op: active_rider
+    kinds: [active]
+    rider: {type: apply_status, status: empowered, duration: 1, affects: self}
+    prefix_zh: 蓄勢
+    summary_zh: 蓄勢：命中後自己得到激昂 1 回合，下一招更痛（這招的傷害依預算調整）
+    headline_zh: "打中後自己進入激昂，下一招更痛"
   # 精煉・多段併一段（BAL-10e，#75；06 6.34.4「收回家族」）：同一目標的多段同元素傷害併成一段，總量不變、只換成單發
   - id: refine_merge
     category: combo
@@ -309,6 +352,30 @@ minor:
     prefix_zh: 借勢
     summary_zh: 加第二個關鍵字：目標帶有該關鍵字時加碼
     headline_zh: "敵人身上有{keyword}時，這招多傷一截"
+  # SK-1（#166，06 6.38 第 3 點）：element_swap
+  - id: element_swap
+    category: element
+    op: element_swap
+    side: true
+    prefix_zh: 轉元
+    summary_zh: 換元素：這招的傷害改成別種元素，關鍵字跟著換（強度依預算重算）
+    headline_zh: "傷害改成{keyword}"
+    elements: [fire, ice, lightning, poison, wind, earth, holy, shadow]
+  # SK-1（#166，06 6.38 第 3 點）：surface_exploit
+  - id: surface_exploit
+    category: element
+    op: surface_exploit
+    prefix_zh: 借地
+    summary_zh: 利用地面：目標站在某種表面上時加碼
+    headline_zh: "目標站在指定的地面上時，這招多傷一截"
+    surfaces: [water, oil, ice, fire, poison]
+  # SK-1（#166，06 6.38 第 3 點）：distance_bonus
+  - id: distance_bonus
+    category: element
+    op: distance_bonus
+    prefix_zh: 量距
+    summary_zh: 距離加碼：貼身或遠距時加碼
+    headline_zh: "貼身或遠距時，這招多傷一截"
   # 精煉（BAL-10e，#75；06 6.34.4「收回家族」）：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字、接續段），
   # 拿掉的預算＋這次的 +40‰ 全部換成主要效果的威力（trpg.skillgen.flash_reclaim；共用 trpg.skillgen.flash_trade）。
   - id: refine
@@ -479,6 +546,22 @@ minor:
     summary_zh: 附帶回氣：反應觸發時，自己所有技能的冷卻 −1（強度依預算重新分配）
     headline_zh: "觸發時你所有技能的冷卻 −1"
     say_zh: "這個反應觸發時，你所有技能的冷卻都少 1 回合。"
+  # SK-1（#166，06 6.38 第 3 點）：trigger_swap
+  - id: trigger_swap
+    category: trigger
+    op: trigger_swap
+    side: true
+    prefix_zh: 易時
+    summary_zh: 換觸發時機：例「命中時」改成「暴擊時」換更強，或改成「受傷時」換方向（效果依預算重算）
+    headline_zh: "換一個觸發時機"
+    trigger_swaps:
+      - [on_hit, on_crit]
+      - [on_hit, on_damaged]
+      - [on_crit, on_hit]
+      - [on_damaged, on_hit]
+      - [on_kill, on_hit]
+      - [hit_by_melee, hit_by_attack]
+      - [hit_by_attack, hit_by_melee]
   # 專注（BAL-10e，#75；06 6.34.4「收回家族」）：觸發範圍收回一級，或觸發條件收緊一級，換成觸發效果的威力
   - id: focus_range
     category: trigger
@@ -630,6 +713,47 @@ minor:
     prefix_zh: 專注
     summary_zh: 專注：條件收緊一級（沒有條件 → 目標血量低於 50%；血量門檻收緊；「或」拿掉一支），換成修正幅度
     headline_zh: "條件變嚴，換更大的加成"
+  # SK-1（#166，06 6.38 第 3 點）：kill_reset
+  - id: kill_reset
+    category: extend
+    op: kill_reset
+    kinds: [active]
+    prefix_zh: 連斬
+    summary_zh: 擊殺重置：這招擊殺目標時冷卻歸零
+    headline_zh: "打倒敵人時，這招的冷卻歸零"
+  # SK-1（#166，06 6.38 第 3 點）：cost_blood
+  - id: cost_blood
+    category: cost
+    op: blood_price
+    side: true
+    kinds: [active]
+    prefix_zh: 血契
+    summary_zh: 以血支付：不花法力或耐力，改扣自己的生命，威力略升
+    headline_zh: "改用自己的血付代價，威力略升"
+  # SK-1（#166，06 6.38 第 3 點）：cost_once
+  - id: cost_once
+    category: cost
+    op: once_per_battle
+    kinds: [active]
+    prefix_zh: 絕招
+    summary_zh: 每場一次：每場只能用 1 次，換大幅威力
+    headline_zh: "每場只能用一次，換大幅威力"
+  # SK-1（#166，06 6.38 第 3 點）：support_cleanse
+  - id: support_cleanse
+    category: support
+    op: active_rider
+    rider: {type: cleanse}
+    prefix_zh: 滌清
+    summary_zh: 附淨化：治療時順便移除目標身上的減益（治療量依預算調整）
+    headline_zh: "治療時順便淨化減益"
+  # SK-1（#166，06 6.38 第 3 點）：support_haste
+  - id: support_haste
+    category: support
+    op: active_rider
+    rider: {type: apply_status, status: hasted, duration: 1}
+    prefix_zh: 疾癒
+    summary_zh: 附加速：治療後目標加速 1 回合（治療量依預算調整）
+    headline_zh: "治療後目標加速 1 回合"
 
 # 大變化（第 3 次）：沿用 skill_evolution.yaml 的進化模板。
 major:
@@ -850,6 +974,20 @@ headlines:
   - {template: support_keyword, keyword: concealed, headline_zh: 施放時讓目標躲進隱蔽}
 
 # 新加的條件傷害「（……才有）」的白話；沒有的退回條件的一句話（「目標本回合受過撞擊時才有」）。
+  # SK-1（#166，06 6.38 第 3 點）：利用地面、距離加碼、換觸發的大標（參數放在 Variation.keyword）。暫定字，請玩法 PM 定。
+  - {template: surface_exploit, keyword: water, headline_zh: 目標站在水裡時，這招多傷一截}
+  - {template: surface_exploit, keyword: oil, headline_zh: 目標站在油上時，這招多傷一截}
+  - {template: surface_exploit, keyword: ice, headline_zh: 目標站在冰上時，這招多傷一截}
+  - {template: surface_exploit, keyword: fire, headline_zh: 目標站在火裡時，這招多傷一截}
+  - {template: surface_exploit, keyword: poison, headline_zh: 目標站在毒地上時，這招多傷一截}
+  - {template: distance_bonus, keyword: point_blank, headline_zh: 貼身時，這招多傷一截}
+  - {template: distance_bonus, keyword: long_range, headline_zh: 隔得夠遠時，這招多傷一截}
+  - {template: trigger_swap, keyword: on_crit, headline_zh: 改成暴擊時才觸發，效果更強}
+  - {template: trigger_swap, keyword: on_damaged, headline_zh: 改成受傷時觸發}
+  - {template: trigger_swap, keyword: on_hit, headline_zh: 改成命中時觸發}
+  - {template: trigger_swap, keyword: hit_by_attack, headline_zh: 改成被任何攻擊擊中時觸發}
+  - {template: trigger_swap, keyword: hit_by_melee, headline_zh: 改成只在被近戰擊中時觸發}
+
 condition_zh:
   target_collided: 目標這回合被[[kw:collision|撞過]]才有
 

@@ -40,6 +40,33 @@ def lf2_library() -> ContentLibrary:
     )
 
 
+SK1_FLASH_TEMPLATES = frozenset(
+    {
+        "reshape_skeleton",
+        "push_pull_swap",
+        "range_reclaim",
+        "momentum_buff",
+        "element_swap",
+        "surface_exploit",
+        "distance_bonus",
+        "trigger_swap",
+        "kill_reset",
+        "cost_blood",
+        "cost_once",
+        "support_cleanse",
+        "support_haste",
+    }
+)
+"""SK-1（06 6.38 第 3 點）加的閃現小變化模板。"""
+
+
+def without_sk1_flash(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但拿掉 SK-1 加的閃現模板：鎖住「某個重現案例在舊模板下才成立」的測試用
+    （例：RR-2 的強度下限卡住的重閃格，SK-1 的「每場一次」讓它有了選項）。"""
+    minor = tuple(t for t in library.flash.minor if t.id not in SK1_FLASH_TEMPLATES)
+    return dataclasses.replace(library, flash=library.flash.model_copy(update={"minor": minor}))
+
+
 def wish_off(library: ContentLibrary) -> ContentLibrary:
     """``library`` 但許願池願望驅動關掉（``skill_pick.yaml`` 的 ``wish_enabled: false``）：PK-4 前的
     許願流程（對關鍵字＋自由設計）。測 WP-1～3 程式本身的測試用這份。"""

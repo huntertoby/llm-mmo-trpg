@@ -38,13 +38,14 @@ def _headline(
 
 
 def test_every_template_has_a_headline() -> None:
-    """90 個模板（含 TF-1 的 4 個轉型）都有大標；support_keyword 寫在「模板 × 關鍵字」表。"""
+    """103 個模板（含 TF-1 的 4 個轉型、SK-1 的 13 個小變化）都有大標；support_keyword 寫在「模板 ×
+    關鍵字」表。"""
     flash = LIB.flash
     heads = [(t.id, t.headline_zh) for t in flash.minor]
     heads += [(t.id, t.headline_zh) for t in flash.major]
     heads += [(t.id, t.headline_zh) for t in flash.extra_major]
     heads += [(t.id, t.headline_zh) for t in flash.transforms]
-    assert len(heads) == 90
+    assert len(heads) == 103  # SK-1 +13（90 → 103）
     missing = [template for template, headline in heads if headline is None]
     assert missing == ["support_keyword"]
     for keyword in ("wet", "concealed"):

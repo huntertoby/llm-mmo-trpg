@@ -168,17 +168,19 @@ def test_good_notes_are_kept() -> None:
 
 
 def test_focused_question_asks_only_for_what_the_catalog_has() -> None:
-    request = _request(category="cost")  # 火焰箭的費用類只有蓄力、輕巧兩個
-    client = MockLLMClient([_text(_item("cost_charge", "cost"), _item("cost_light", "cost"))])
+    # 火焰箭的費用類：蓄力、輕巧，SK-1 起多以血支付、每場一次（4 個，指定類別出 3 個）
+    request = _request(category="cost")
+    items = (_item("cost_charge", "cost"), _item("cost_light", "cost"), _item("cost_once", "cost"))
+    client = MockLLMClient([_text(*items)])
     record = propose_variations(client, LIB, request, max_attempts=3)
-    assert record.wanted == 2 and record.source == "llm" and record.attempts == 1
+    assert record.wanted == 3 and record.source == "llm" and record.attempts == 1
     assert client.schemas[0] is not None
-    assert client.schemas[0]["properties"]["variations"]["maxItems"] == 2
+    assert client.schemas[0]["properties"]["variations"]["maxItems"] == 3
     request_block = client.calls[0][1]["content"].split("<request>")[1].split("</request>")[0]
     header = json.loads(request_block)
-    assert header["count"] == 2
+    assert header["count"] == 3
     assert header["categories"] == ["cost"]
-    assert header["choices"] == {"cost_charge": 1, "cost_light": 1}
+    assert header["choices"] == {"cost_blood": 1, "cost_charge": 1, "cost_light": 1, "cost_once": 1}
 
 
 # ---------------------------------------------------------------------------

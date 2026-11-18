@@ -1348,6 +1348,236 @@ def _magnitude_drafts(
 
 
 # ---------------------------------------------------------------------------
+# SK-1（#166，06 6.38 第 3 點）：側變與補模板
+# ---------------------------------------------------------------------------
+
+
+def _op_reshape_skeleton(
+    skill: SkillDef, template: FlashTemplate, variation: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """側變「換形狀並換骨架」：原骨架不允許新形狀時（例：打擊骨架只能單體），改試模板的
+    ``skeletons``（範圍、連擊），比照收束的換骨架寫法。原骨架本來就允許的形狀交給「換形狀」
+    （``reshape``），這裡不出，避免同一個變化出兩次。"""
+    if not _reshapable(skill) or not any(e.type == "damage" for e in skill.effects):
+        return []
+    own = library.skeletons.get(skill.skeleton)
+    shapes = (variation.shape,) if variation.shape is not None else template.shapes
+    drafts: list[Draft] = []
+    for shape in shapes:
+        if shape.type == skill.shape.type or (own is not None and shape.type in own.shapes):
+            continue
+        for name in template.skeletons:
+            skeleton = library.skeletons.get(name)
+            if skeleton is None or skill.kind not in skeleton.kinds:
+                continue
+            if shape.type not in skeleton.shapes:
+                continue
+            base, effects = base_draft(skill)
+            base["shape"] = shape.model_dump(mode="json", exclude_none=True)
+            base["skeleton"] = name
+            drafts.append((base, effects))
+    return drafts
+
+
+def _op_element_swap(
+    skill: SkillDef, template: FlashTemplate, variation: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """側變「換元素」：這招所有帶元素的傷害效果（同一種元素）改成 ``variation.element``；關鍵字由
+    元素推導，跟著換。只給「傷害只有一種非物理元素、其他效果不帶元素」的招（附帶的狀態、表面、
+    區域跟元素綁在一起，換了會變成另一招，先不出）。"""
+    new = variation.element
+    if new is None or skill.kind not in ("active", "passive", "reaction") or skill.trap is not None:
+        return []
+    if template.elements and new not in template.elements:
+        return []
+    damages = [e for e in skill.effects if e.type == "damage"]
+    elements = {e.element.value for e in damages if e.element is not None}
+    if len(elements) != 1 or elements in ({new}, {Element.PHYSICAL.value}):
+        return []
+    if any(e.element is not None for e in skill.effects if e.type != "damage"):
+        return []
+    if skill.followup is not None or skill.variants:
+        return []
+    base, effects = base_draft(skill)
+    for effect in effects:
+        if effect["type"] == "damage" and effect.get("element") is not None:
+            effect["element"] = new
+    return [(base, effects)]
+
+
+_PUSH_PULL = {"push": "pull", "pull": "push"}
+
+
+def _op_push_pull(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """側變「推 ↔ 拉」：推擊換成拉扯（或反過來），距離與其他欄位照舊（強度依預算重算）。只給帶
+    傷害的招（純位移的招換了之後沒有旋鈕能把強度調回預算窗）。"""
+    if skill.kind != "active" or skill.trap is not None:
+        return []
+    if not any(e.type == "damage" for e in skill.effects):
+        return []
+    index = next((i for i, e in enumerate(skill.effects) if e.type in _PUSH_PULL), None)
+    if index is None:
+        return []
+    base, effects = base_draft(skill)
+    effects[index]["type"] = _PUSH_PULL[effects[index]["type"]]
+    return [(base, effects)]
+
+
+def _op_trigger_swap(
+    skill: SkillDef, template: FlashTemplate, variation: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """側變「換觸發時機」：被動的 ``trigger.event``（或反應的 ``reaction.event``）照模板的
+    ``trigger_swaps`` 換成 ``variation.keyword``（例：命中時 → 暴擊時、受傷時）。合不合法（另一方、
+    骨架、預算）交給驗證器。"""
+    target = variation.keyword
+    if target is None:
+        return []
+    if skill.kind == "passive" and skill.trigger is not None:
+        current, field = skill.trigger.event, "trigger"
+    elif skill.kind == "reaction" and skill.reaction is not None and not skill.reaction.aid:
+        current, field = str(skill.reaction.event), "reaction"
+    else:
+        return []
+    if (current, target) not in template.trigger_swaps:
+        return []
+    base, effects = base_draft(skill)
+    base[field] = {**base[field], "event": target}
+    return [(base, effects)]
+
+
+_BLOOD_BONUS_PERMILLE = 50
+"""以血支付：生命代價比省下的法力／耐力折抵多這麼多 ‰（「威力略升」的初值）。"""
+
+
+def _op_blood_price(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """側變「以血支付」：法力、耐力只留 1 點（驗證器規定主動技至少花 1 點資源），其餘改付最大 HP 的
+    千分比（``cost.hp_percent``）。生命代價的折抵＝省下的法力／耐力折抵 ＋
+    :data:`_BLOOD_BONUS_PERMILLE`（不超過預算表的 ``hp_cap``），多出來的由預算器換成威力
+    （「略升」）。"""
+    cost = skill.cost
+    if skill.kind != "active" or cost.hp_percent is not None:
+        return []
+    mana, stamina = min(cost.mana, 1), min(cost.stamina, 1)
+    allowance = library.budget.allowance
+    saved = (cost.mana - mana) * allowance.mana_per_point + (
+        cost.stamina - stamina
+    ) * allowance.mana_per_point // allowance.stamina_per_mana
+    if saved <= 0:
+        return []
+    hp = min(saved + _BLOOD_BONUS_PERMILLE, allowance.hp_cap) // allowance.hp_per_permille
+    if hp < 1:
+        return []
+    base, effects = base_draft(skill)
+    base["cost"] = {**base["cost"], "mana": mana, "stamina": stamina, "hp_percent": hp}
+    return [(base, effects)]
+
+
+def _op_once_per_battle(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """每場一次：``cost.uses_per_battle`` 設成 1、拿掉冷卻（每場一次之後冷卻沒有意義），多出來的
+    折抵由預算器換成威力。已經有次數上限的不出。"""
+    if skill.kind != "active" or skill.cost.uses_per_battle is not None:
+        return []
+    base, effects = base_draft(skill)
+    cost = {**base["cost"], "uses_per_battle": 1}
+    cost.pop("cooldown", None)
+    base["cost"] = cost
+    return [(base, effects)]
+
+
+def _op_kill_reset(
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """擊殺重置（6.18 F）：第一個傷害效果加 ``on_kill: refund_cooldown``（這招擊殺目標時冷卻歸零）；
+    要有冷卻。"""
+    base, effects = base_draft(skill)
+    index = _first_damage(effects)
+    if skill.kind != "active" or index is None or "on_kill" in effects[index]:
+        return []
+    if not skill.cost.cooldown:
+        return []
+    effects[index]["on_kill"] = [{"type": "refund_cooldown"}]
+    return [(base, effects)]
+
+
+def _op_active_rider(
+    skill: SkillDef, template: FlashTemplate, _v: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """主動技多一個附帶效果（``template.rider``）：
+
+    - ``affects: self``（蓄勢）：要有傷害效果；命中後自己得到狀態（例：激昂 1 回合）。
+    - 其他（附淨化、附加速）：只給輔助技（有治療效果、沒有傷害），對象照治療的對象。
+    數值是起點，由預算器重調；附帶效果的個數上限、合不合法交給驗證器。"""
+    rider = template.rider
+    if rider is None or skill.kind != "active" or skill.trap is not None:
+        return []
+    extra = rider.model_dump(mode="json", exclude_none=True)
+    base, effects = base_draft(skill)
+    if any(e["type"] == extra["type"] and e.get("status") == extra.get("status") for e in effects):
+        return []
+    if rider.affects == "self":
+        if not any(e.type == "damage" for e in skill.effects):
+            return []
+        return [(base, [*effects, extra])]
+    heal = next((e for e in skill.effects if e.type == "heal"), None)
+    if heal is None or any(e.type in ("damage", "delayed_damage") for e in skill.effects):
+        return []
+    extra.pop("affects", None)
+    if heal.affects is not None:
+        extra["affects"] = heal.affects
+    return [(base, [*effects, extra])]
+
+
+def _conditional_bonus(skill: SkillDef, condition: dict[str, Any]) -> list[Draft]:
+    """加一段有條件的傷害（同「借勢」的寫法：目標符合條件時加碼）；數值由預算器補。"""
+    if skill.kind != "active" or skill.trap is not None or _graft_blocked(skill):
+        return []
+    index = _first_damage([e.model_dump(mode="json") for e in skill.effects])
+    if index is None:
+        return []
+    base, effects = base_draft(skill)
+    if any(e.get("condition") == condition for e in effects):
+        return []
+    extra = _new_damage(skill, effects[index], _damage_element(skill))
+    extra["condition"] = condition
+    return [(base, [*effects, extra])]
+
+
+def _op_surface_exploit(
+    skill: SkillDef, template: FlashTemplate, variation: Variation, _lib: ContentLibrary
+) -> list[Draft]:
+    """利用地面：目標站在 ``variation.keyword``（表面 ID，模板的 ``surfaces``）上時多一段傷害。"""
+    surface = variation.keyword
+    if surface is None or surface not in template.surfaces:
+        return []
+    return _conditional_bonus(skill, {"type": "target_on_surface", "surface": surface})
+
+
+_DISTANCE_CONDITIONS = ("point_blank", "long_range")
+
+
+def _op_distance_bonus(
+    skill: SkillDef, _t: FlashTemplate, variation: Variation, library: ContentLibrary
+) -> list[Draft]:
+    """距離加碼（6.38 第 1 點的條件）：``variation.keyword`` 是 ``point_blank``（貼身）或
+    ``long_range``（遠距）；目標符合時多一段傷害。只給射程用得上的招（同組合器：貼身要固定射程
+    至少 2、遠距要固定射程達到遠距門檻）。"""
+    kind = variation.keyword
+    reach = skill.shape.range
+    if kind not in _DISTANCE_CONDITIONS or not isinstance(reach, int):
+        return []
+    need = 2 if kind == "point_blank" else library.ruleset.core.far_distance
+    if reach < need:
+        return []
+    return _conditional_bonus(skill, {"type": kind})
+
+
+# ---------------------------------------------------------------------------
 # 登錄表與重調的額外旋鈕
 # ---------------------------------------------------------------------------
 
@@ -1390,6 +1620,17 @@ FLASH_OPS: dict[str, FlashOp] = {
     # BAL-19e
     "stance_enter_heavy": _op_stance_enter_heavy,
     "self_rider": _op_self_rider,
+    # SK-1（#166，06 6.38 第 3 點）
+    "reshape_skeleton": _op_reshape_skeleton,
+    "element_swap": _op_element_swap,
+    "push_pull": _op_push_pull,
+    "trigger_swap": _op_trigger_swap,
+    "blood_price": _op_blood_price,
+    "once_per_battle": _op_once_per_battle,
+    "kill_reset": _op_kill_reset,
+    "active_rider": _op_active_rider,
+    "surface_exploit": _op_surface_exploit,
+    "distance_bonus": _op_distance_bonus,
 }
 """小變化的改法登錄表（``op`` → 草稿）。資料裡 ``op`` 沒有登錄的模板不會出現
 （:func:`trpg.skillgen.flash_derive.unimplemented_ops` 列出）。"""

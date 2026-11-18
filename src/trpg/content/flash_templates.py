@@ -216,6 +216,8 @@ class FlashRules(ContentModel):
     """專注的條件收緊一級（BAL-10e2，06 6.34.4「BAL-10e 定」）：預算器不幫條件計價，收緊一級固定
     視為拿掉這麼多‰（佔同階可用預算），和這次閃現的 ``budget_step_permille`` 一起換觸發效果或
     修正幅度。"""
+    max_side_per_offer: int = Field(default=1, ge=0, le=4)
+    """每次閃現（或重閃）最多出幾張側變（SK-1，06 6.38 第 3 點：最多 1 張）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
@@ -280,6 +282,10 @@ class FlashCategory(ContentModel):
     見 :func:`trpg.skillgen.flash_category.is_support_skill`）。"""
 
 
+_RIDER_OPS = frozenset({"self_rider", "active_rider"})
+"""帶 ``rider`` 的改法（BAL-19e 附帶護身；SK-1 蓄勢、附淨化、附加速）。"""
+
+
 class FlashTemplate(ContentModel):
     """一個小變化模板。數值欄位依 ``op`` 使用；強度不寫在這裡（套用後由預算器重調）。"""
 
@@ -329,13 +335,23 @@ class FlashTemplate(ContentModel):
     打擊、連擊）；只取允許新形狀的。空 ＝ 只用原骨架。"""
     rider: EffectSpec | None = None
     """附帶護身（``self_rider``，BAL-19e）：姿態進入時、反應觸發時多一個作用於自己的效果（護盾、
-    治療、回復資源、淨化）。數值只是起點，套用後由預算器重調。"""
+    治療、回復資源、淨化）。數值只是起點，套用後由預算器重調。SK-1 的 ``active_rider``（蓄勢、
+    附淨化、附加速）也用這個欄位。"""
+    side: bool = False
+    """側變（SK-1，06 6.38 第 3 點）：換方向、不換強度的變化（換骨架、換元素、推 ↔ 拉、換觸發、
+    以血支付）。每次閃現最多出 ``rules.max_side_per_offer`` 張。"""
+    surfaces: tuple[str, ...] = ()
+    """``surface_exploit``（利用地面，SK-1）的候選表面 ID。"""
+    trigger_swaps: tuple[tuple[str, str], ...] = ()
+    """``trigger_swap``（換觸發時機，SK-1）可以換的（原本, 換成）觸發時機或反應事件。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashTemplate:
-        if (self.op == "self_rider") != (self.rider is not None):
-            raise ValueError(f"模板 {self.id}：rider 只給 self_rider 用，而且 self_rider 必須填")
-        if self.rider is not None and self.rider.affects != "self":
+        if (self.op in _RIDER_OPS) != (self.rider is not None):
+            raise ValueError(
+                f"模板 {self.id}：rider 只給 self_rider／active_rider 用，而且它們必須填"
+            )
+        if self.op == "self_rider" and self.rider is not None and self.rider.affects != "self":
             raise ValueError(f"模板 {self.id}：附帶護身的效果只能作用於自己（affects: self）")
         if self.op in ("area", "range") and not self.delta:
             raise ValueError(f"模板 {self.id}：{self.op} 必須填非 0 的 delta")
