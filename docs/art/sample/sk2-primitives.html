@@ -402,7 +402,7 @@ PARTS.near = () => {
   const groups = [
     { zh: "吸收表面 vs 地面類", items: [["effect", "absorb_surface"], ["effect", "create_surface"], ["surface", "water"], ["surface", "ice"], ["effect", "blow_surface"], ["effect", "clear_surface"], ["effect", "restore_resource"], ["effect", "lower_terrain"]] },
     { zh: "疾病擴散 vs 圓、刺、綠", items: [["effect", "contagion"], ["status", "poison"], ["element", "poison"], ["effect", "delayed_damage"], ["effect", "sacrifice_summon"], ["effect", "cleanse"], ["effect", "consume_status"], ["effect", "apply_status"]] },
-    { zh: "鉤 vs 箭頭、鉤形、問號", items: [["effect", "hook"], ["effect", "pull"], ["effect", "hurl_object"], ["effect", "push"], ["effect", "leap"], ["effect", "shadowstep"], ["condition", "target_has_status:poison"], ["effect", "swap"]] },
+    { zh: "鉤 vs 箭頭、鉤形、問號、定身（第 2 版加定身三個：狀態 root、施加狀態：定身、拉扯）", items: [["effect", "hook"], ["effect", "pull"], ["status", "root"], ["effect", "status:root"], ["effect", "hurl_object"], ["effect", "push"], ["effect", "leap"], ["effect", "shadowstep"], ["condition", "target_has_status:poison"], ["effect", "swap"]] },
   ];
   const blocks = [{ title: "撞圖：新部件和同結構、同色的既有部件（上排 26 的 2 倍解析度 ×3；中排 18 真 1 倍 ×5；下排 18 剪影 ×5）" }];
   for (const gr of groups) {
@@ -418,7 +418,7 @@ PARTS.near = () => {
     blocks.push({ title: gr.zh }, { cells: a, gap: 18 }, { cells: b, gap: 54 }, { cells: s, gap: 54 });
   }
   blocks.push({ note: "剪影＝18 真 1 倍裡圓片內（半徑 6.6 px）亮度 > 70 的像素。" });
-  publish(sheet(1240, blocks), "image/png");
+  publish(sheet(1420, blocks), "image/png");
 };
 /** 96 完整圖示（工坊）：新部件當核心效果，放在底部效果列第一顆；主圖照第③批（主圖的效果記號不在這次範圍）。 */
 PARTS.full96 = () => {
@@ -544,9 +544,9 @@ PARTS.field = () => {
 PARTS.audit = () => {
   const rows = [];
   for (const e of NEW) for (const px of [30, 26, 18]) {
-    const res = 4, g = QP.glyph("effect", e.id, px * 0.78, res), S = g.width, d = g.getContext("2d").getImageData(0, 0, S, S).data;
+    const res = 4, cpx = px * 0.42 * 1.56, g = QP.glyph("effect", e.id, cpx, res), S = g.width, d = g.getContext("2d").getImageData(0, 0, S, S).data;
     let n = 0, lumSum = 0, hi = 0, x0 = S, x1 = 0, y0 = S, y1 = 0, out = 0; /* 圓片色環內緣＝半徑 42 − 線寬一半（現行 drawChip：線寬 r×0.12）→ 39.5／42 的圓片單位；圖樣 ±10 單位＝r×1.56／2 → 色環內緣＝圖樣 12.06 單位＝cpx × 0.603 */
-    const c = S / 2, cpx = px * 0.78, Rin = cpx * 0.603 * res;
+    const c = S / 2, Rin = cpx * 0.603 * res; /* 第 2 版修正：圖樣本身＝圓片半徑 42 單位 × 1.56（chip）＝px × 0.655，18 的圓片是 11.8 px、走 ≤14 的 tiny；第 1 版用 px × 0.78＝14.04，18 量到的是不簡化的那一份 */
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 128) continue; const isOut = d[i] === 0x16 && d[i + 1] === 0x12 && d[i + 2] === 0x1a; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (isOut) continue; if (Math.hypot(x + 0.5 - c, y + 0.5 - c) > Rin) out++; n++; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lumSum += L; if (L >= 150) hi++; }
     const inner = 2 * Rin;
     rows.push([e.zh, px, ((Math.max(x1 - x0, y1 - y0) + 1) / inner * 100).toFixed(0) + "%", (lumSum / n).toFixed(0), (hi / n * 100).toFixed(0) + "%", (out / Math.max(1, n) * 100).toFixed(1) + "%"]);

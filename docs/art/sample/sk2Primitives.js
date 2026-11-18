@@ -35,22 +35,31 @@ window.SK2Prim = (() => {
     el(c, GERM.hi, x - R * 0.36, y - R * 0.38, R * 0.36, R * 0.22, -0.7);
   }
 
-  /** 爪鉤（直立：繩環在下 (0, 9.4)、直柄、頂上一根尖刺＋左右兩支往回彎的爪，爪尖朝下＝朝繩環）。
-   *  第 1 次試的單支 J 鉤（繩環＋彎鉤＋倒刺）在圓片裡讀成問號「?」與回轉箭頭，改成三爪的爪鉤。外接框 x ±8.4、y −11.6～12.4。
-   *  w0＞0：外框那一遍（整個形加粗）；flat：只畫剪影。 */
-  function hookJ(c, o, col = "#c3ccd6", w0 = 0, flat = false) {
-    /* 爪：圓弧（中心 (±4.2, −4.6)、半徑 4.2）從柄頂往外、往下繞回來，爪尖一個朝柄的倒刺（像錨爪）；第 1 版的薄月牙爪讀成鎬頭 */
-    const claw = (sx) => { c.save(); c.scale(sx, 1); st(c, col, 3.6 + w0, (x) => x.arc(-4.2, -4.6, 4.2, 0, PI * 0.84, true), "butt"); const ex = -4.2 + Math.cos(PI * 0.84) * 4.2, ey = -4.6 + Math.sin(PI * 0.84) * 4.2, tx = Math.sin(PI * 0.84), ty = -Math.cos(PI * 0.84); poly(c, col, [[ex + tx * (3 + w0 * 0.6), ey + ty * (3 + w0 * 0.6)], [ex - ty * (2.2 + w0 / 2) - tx * 0.6, ey + tx * (2.2 + w0 / 2) - ty * 0.6], [ex + ty * (2.2 + w0 / 2) - tx * 0.6, ey - tx * (2.2 + w0 / 2) - ty * 0.6]], 0.3); c.restore(); };
-    ln(c, col, 3.8 + w0, [[0, 7], [0, -6]], "butt");
-    poly(c, col, [[0, -11.6 - w0 * 0.7], [2 + w0 / 2, -6], [-2 - w0 / 2, -6]], 0.4);
-    claw(-1); claw(1);
-    ci(c, col, 0, 9.4, 3.2 + w0 / 2);
+  /** 爪鉤（第 2 版，必修 1：不對稱的單爪抓鉤）。直立座標：繩環在下 (0, 9.4)、直柄往上、頂上一根短尖刺；只有一支大彎爪
+   *  從柄頂往 +x 側翻出去、繞過頂上再往下彎回來，爪尖帶倒刺（箭頭形、比爪寬），像篙鉤、抓鉤。第 1 版左右兩支對稱的爪
+   *  加中間尖刺在 18 讀成「錨」（錨＝固定不動，和「拉近」相反），審查必修 1。
+   *  w0＞0：外框那一遍（整個形加粗）；flat：只畫剪影。tiny（≤14px）線條加粗到 18 真 1 倍 ≥2 px。外接框約 x −2.4～11.4、y −11.4～12.4。 */
+  const HOOK = { body: "#dfe5ec", dark: "#9aa4b0", hi: "#ffffff" }; /* 第 2 版：鋼色提亮一階（審查必修 1：本色 #c3ccd6→#dfe5ec、暗 #7d8794→#9aa4b0） */
+  const CLAW = { cx: 4.4, cy: -2.4, r: 4.4, a0: PI, a1: PI * 2.3 }; /* 爪：圓弧從柄頂 (0,−3.4) 往上翻、繞到 +x 側往下，終點斜向柄（約 4 點鐘方向） */
+  function hookJ(c, o, col = HOOK.body, w0 = 0, flat = false) {
+    const W = (o.tiny ? 4.4 : o.thick ? 5 : 3.9) + w0, tip = (ang, out) => { const ex = CLAW.cx + Math.cos(ang) * CLAW.r, ey = CLAW.cy + Math.sin(ang) * CLAW.r, tx = -Math.sin(ang), ty = Math.cos(ang), nx = Math.cos(ang), ny = Math.sin(ang), L = 3.8 + out * 0.7, B = 3.3 + out / 2; return [[ex + tx * L, ey + ty * L], [ex + nx * B - tx * 0.8, ey + ny * B - ty * 0.8], [ex - nx * (B - 0.6) - tx * 0.4, ey - ny * (B - 0.6) - ty * 0.4]]; };
+    ln(c, col, W, [[0, 7], [0, -2.4]], "butt");
+    poly(c, col, [[0, -13 - w0 * 0.7], [2.1 + w0 / 2, -4.6], [0, -2.4], [-2.1 - w0 / 2, -4.6]], 0.4); /* 頂上短尖刺：比爪短、比爪細，和爪一起成不對稱的外形 */
+    st(c, col, W, (x) => x.arc(CLAW.cx, CLAW.cy, CLAW.r, CLAW.a0, CLAW.a1), "butt");
+    poly(c, col, tip(CLAW.a1, w0), 0.3); /* 爪尖：箭頭形倒刺（比爪寬，往柄的方向） */
+    ci(c, col, 0, 9.4, (o.tiny ? 3.4 : 3.2) + w0 / 2);
     if (flat) return;
-    ci(c, OUT, 0, 9.4, 1.25);
-    if (!o.tiny) { ln(c, "#ffffff", 1, [[-0.75, 5.6], [-0.75, -5]], "butt"); st(c, "#ffffff", 1, (x) => x.arc(-4.2, -4.6, 4.2, -PI * 0.15, -PI * 0.85, true), "butt"); ln(c, "#7d8794", 1, [[0.8, 5.6], [0.8, -3.4]], "butt"); }
+    ci(c, OUT, 0, 9.4, o.tiny ? 1.3 : 1.25);
+    if (o.tiny) { ln(c, HOOK.hi, 1.3, [[-0.9, 5.4], [-0.9, -5]], "butt"); return; }
+    ln(c, HOOK.hi, 1.1, [[-0.85, 5.6], [-0.7, -7.6]], "butt");
+    st(c, HOOK.hi, 1.1, (x) => x.arc(CLAW.cx, CLAW.cy, CLAW.r + 0.9, PI * 1.25, PI * 1.75), "butt");
+    ln(c, HOOK.dark, 1.1, [[0.95, 5.6], [0.95, -1.6]], "butt");
+    st(c, HOOK.dark, 1.1, (x) => x.arc(CLAW.cx, CLAW.cy, CLAW.r - 1.1, PI * 1.95, PI * 2.3), "butt");
   }
-  /** 圖樣用：爪鉤轉 45°（繩環在左下、爪在右上），中心 (x,y)。 */
-  function hookArt(c, o, x = 0, y = 0, k = 1) { at(c, x, y, k, (q) => { q.translate(0, -0.4); hookJ(q, o); }, PI / 4); }
+  /** 圖樣用：爪鉤轉 45°（繩環在左下、尖刺在右上、爪在右下），中心 (x,y)；外接框中心先移到原點。 */
+  function hookArt(c, o, x = 0, y = 0, k = 1) { at(c, x, y, k, (q) => { q.translate(-4.2, 0.3); hookJ(q, o); }, PI / 4); }
+  /** 拉近的青色（拉扯部件 QS.ACT.pull 的箭頭色）：鉤和「拉近」同一個家族，也和定身的灰色鎖鏈分開。 */
+  const PULL = { body: "#6ae0ff", hi: "#d8f8ff" };
   /** 一節鎖鏈（中心 x,y、沿 a 方向）：side＝true 是側面（細長條），false 是正面（橢圓環＋洞）。 */
   function link(c, x, y, a, L, side, col = "#c3ccd6", dk = "#7d8794", hole = OUT) {
     at(c, x, y, 1, (q) => {
@@ -78,11 +87,18 @@ window.SK2Prim = (() => {
     halo(c, o, (q) => { ci(q, GERM.knob, 3.6, -2.2, 1.15); ci(q, GERM.knob, 5.1, -4.3, 1.3); });
     halo(c, o, (q) => { for (let i = 0; i < 5; i++) { const a = 0.6 + (i / 5) * TAU; ci(q, GERM.knob, 7.2 + Math.cos(a) * 3.4, -6.8 + Math.sin(a) * 3.4, 1.05); } ci(q, GERM.body, 7.2, -6.8, 2.6); ci(q, GERM.hi, 6.4, -7.6, 0.9); });
   }
+  /** ≥26：爪鉤＋繩環往左下接一節鎖鏈＋鏈尾一個指向左下（施放者那一側）的青色箭頭尖＝「拉近」。≤14：只留爪鉤。
+   *  整組排在「轉 45° 的直立座標」：鏈的軸線往上是尖刺、往下是箭頭；爪往 +x 鼓出去，軸線往 −x 讓 2.6 單位，整組才置中。 */
   function hookChip(c, o) {
-    if (o.tiny) { hookArt(c, o, 0.4, -0.2, 0.9); return; }
-    const k = 0.8, cx = 1.4, cy = -1.4, eye = [cx - 6.65 * k, cy + 6.65 * k];
-    link(c, eye[0] - 3.4, eye[1] + 3.4, -PI / 4, 4.6, false, "#c3ccd6", "#a8b2be");
-    halo(c, o, (q) => hookArt(q, o, cx, cy, k));
+    if (o.tiny) { hookArt(c, o, 0.6, -0.6, 1.0); return; }
+    const k = 0.62, X = -2.6, Y = -3.4, eye = 9.4 * k + Y, ly = eye + 3.2 * k + 1.7, ay = ly + 2.2;
+    at(c, 0, 0, 1, (u) => {
+      halo(c, o, (q) => { /* 青色箭頭尖：尖端朝左下（施放者那一側），和拉扯部件同色 */
+        at(q, X, ay, 1, (p) => { poly(p, PULL.body, [[0, 3.6], [-3.5, -1.2], [3.5, -1.2]], 0.5); poly(p, PULL.hi, [[0, 3.6], [-3.5, -1.2], [-0.3, -1.2]], 0); });
+      });
+      halo(c, o, (q) => link(q, X, ly, PI / 2, 4.2, false, HOOK.body, HOOK.dark));
+      halo(c, o, (q) => at(q, X, Y, k, (p) => hookJ(p, { ...o, thick: true }))); /* 縮到 0.62 的那一份線條加粗（5 單位），26 的圓片裡爪不會太細 */
+    }, PI / 4);
   }
   const EFFECT = {
     absorb_surface: {
@@ -91,12 +107,12 @@ window.SK2Prim = (() => {
     },
     contagion: {
       zh: "疾病擴散", topic: "一顆黃綠病菌（圓身、一圈短柄圓頭的刺、暗斑），往右上兩顆小點跳到一顆小病菌；≤14px 只留大的那顆",
-      d: (c, o) => at(c, 0, 0, 0.84, (q) => contagionArt(q, o)), /* 縮到 0.84：刺與小病菌收在色環內 */
+      d: (c, o) => at(c, 0, 0, o.tiny ? 0.98 : 0.80, (q) => contagionArt(q, o)), /* 第 2 版（可修 e）：30／26 從 0.84 縮到 0.80，小病菌的刺頭不出色環內緣（26 原本 1.1%）；≤14（18 的圓片）從 0.84 放大到 0.98：只留一顆病菌時佔色環內徑只有 63%，不到規則 7 的 70%（第 1 版自查把 18 量成不簡化的那一份，見紀錄第 2 版） */
     },
 
     hook: {
-      zh: "鉤", topic: "一支鋼爪鉤（繩環、直柄、頂上尖刺＋兩支往回彎的爪），斜放：繩環在左下、爪在右上；≥26px 繩環再往左下接一節鎖鏈；≤14px 只留爪鉤",
-      d: (c, o) => at(c, 0, 0, 0.88, (q) => hookChip(q, o)), /* 縮到 0.88：爪與鎖鏈收在色環內 */
+      zh: "鉤", topic: "一支不對稱的單爪抓鉤（繩環、直柄、頂上短尖刺＋一支往回彎、帶倒刺的大爪），斜放：繩環在左下、尖刺在右上；≥26px 繩環往左下接一節鎖鏈＋一個指向左下的青色箭頭尖（拉近）；≤14px 只留爪鉤",
+      d: (c, o) => at(c, 0, 0, 0.88, (q) => hookChip(q, o)), /* 縮到 0.88：爪、鎖鏈與箭頭收在色環內 */
     },
 
   };
@@ -137,7 +153,7 @@ window.SK2Prim = (() => {
   // =====================================================================
   // 3. 戰場上的鎖鏈與鉤（模型像素，1 格 48）
   // =====================================================================
-  const STEEL = "#c3ccd6", STEEL_D = "#7d8794", STEEL_L = "#eef2f6";
+  const STEEL = HOOK.body, STEEL_D = HOOK.dark, STEEL_L = "#eef2f6";
   /** 鎖鏈：沿折線 pts（[x,y] 陣列）每 step 一節，交錯正面／側面；先整條畫外框色粗線，再畫鏈節。sag：中段往下垂（鬆掉時）。 */
   function chain(ctx, pts, opt = {}) {
     const step = opt.step ?? 3.6, L = opt.L ?? 4.2, glow = opt.glow ?? 0;

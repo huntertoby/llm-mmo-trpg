@@ -23,20 +23,20 @@ import rg_marks_shots as r
 r.PAGE = r.ART / "sample" / "sk2-primitives.html"
 D = "shots/sk2-primitives/"
 r.SHOTS = [
-    ("icons", "part=icons", D + "1-icons.png"),
-    ("icons-t1", "part=icons-t1", D + "2-icons-true1x.png"),
-    ("near", "part=near", D + "3-icons-near.png"),
-    ("full96", "part=full96", D + "4-icons-full96.png"),
-    ("absorb", "part=anim&case=absorb", D + "5-anim-absorb.jpg"),
-    ("contagion", "part=anim&case=contagion", D + "6-anim-contagion.jpg"),
-    ("hook", "part=anim&case=hook", D + "7-anim-hook.jpg"),
-    ("hook_lava", "part=anim&case=hook_lava", D + "8-anim-hook-lava.jpg"),
-    ("hook_giant", "part=anim&case=hook_giant", D + "9-anim-hook-giant.jpg"),
-    ("anim-t1", "part=anim-t1", D + "10-anim-true1x.png"),
-    ("status", "part=status", D + "11-status-spread.png"),
-    ("status-t1", "part=status-t1", D + "12-status-spread-true1x.png"),
-    ("field-1600", "part=field&w=1600", D + "13-field-1600.png"),
-    ("field-800", "part=field&w=800", D + "14-field-800.png"),
+    ("icons", "part=icons", D + "1-icons-v2.png"),
+    ("icons-t1", "part=icons-t1", D + "2-icons-true1x-v2.png"),
+    ("near", "part=near", D + "3-icons-near-v2.png"),
+    ("full96", "part=full96", D + "4-icons-full96-v2.png"),
+    ("absorb", "part=anim&case=absorb", D + "5-anim-absorb-v2.jpg"),
+    ("contagion", "part=anim&case=contagion", D + "6-anim-contagion-v2.jpg"),
+    ("hook", "part=anim&case=hook", D + "7-anim-hook-v2.jpg"),
+    ("hook_lava", "part=anim&case=hook_lava", D + "8-anim-hook-lava-v2.jpg"),
+    ("hook_giant", "part=anim&case=hook_giant", D + "9-anim-hook-giant-v2.jpg"),
+    ("anim-t1", "part=anim-t1", D + "10-anim-true1x-v2.png"),
+    ("status", "part=status", D + "11-status-spread-v2.png"),
+    ("status-t1", "part=status-t1", D + "12-status-spread-true1x-v2.png"),
+    ("field-1600", "part=field&w=1600", D + "13-field-1600-v2.png"),
+    ("field-800", "part=field&w=800", D + "14-field-800-v2.png"),
 ]
 
 AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')
