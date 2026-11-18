@@ -344,6 +344,8 @@ class PushEffect(EffectBase):
     """拉扯（Phase 3R-2）：獸人「沉穩重心」只減「推」的距離，拉與傳送不減。"""
     harmless: bool = False
     """被擋住時只停下、不算撞擊（種族技的龍息震退與拋錨：不加傷害，Phase 3R-2）。"""
+    stop_before_deadly: bool = False
+    """下一格是致命地形（深淵、岩漿）時停在它前面、不算撞擊（鉤，SK-2，06 6.38 第 8 點）。"""
 
     def sort_target(self) -> str:
         return self.target_id or self.object_id or ""

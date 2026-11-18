@@ -26,6 +26,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "summon_beside": "只由閃現轉型「伴生」「護主」產生（TF-1，#159），沒有手寫技能",
         "absorb_surface": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "contagion": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
+        "hook": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
     },
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",

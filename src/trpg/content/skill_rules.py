@@ -576,6 +576,8 @@ class BudgetRules(ContentModel):
     """每個技能的改寫規則型原語上限。"""
     rule_rewrite_min_cooldown: int = Field(ge=1)
     """有改寫規則型原語的技能：``uses_per_battle: 1`` 或冷卻至少這麼多回合。"""
+    hook_min_cooldown: int = Field(default=3, ge=1)
+    """有鉤（``hook``，SK-2，06 6.38 第 8 點）的技能：冷卻至少這麼多回合（初值 3）。"""
     rule_rewrite_min_cooldown_with_source: int = Field(default=2, ge=1)
     """花源力（``cost.source``，傳說技能）的改寫規則型技能：改為 ``uses_per_battle: 1`` 或冷卻至少
     這麼多回合（Phase 3C-4a；初值）。"""

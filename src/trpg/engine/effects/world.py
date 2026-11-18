@@ -545,6 +545,8 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
             if not effect.harmless:  # 種族技的推拉被擋住只是停下，不算撞擊（Phase 3R-2）
                 events.append(_collide(ctx, effect, unit, nxt, reason, shortfall=distance - step))
             break
+        if effect.stop_before_deadly and is_deadly(state, nxt):
+            break  # 鉤：不拉進致命地形，停在它前面（SK-2）
         moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
         events.extend(moved)
         if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in moved):

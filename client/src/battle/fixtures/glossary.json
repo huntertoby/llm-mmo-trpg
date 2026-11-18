@@ -3665,6 +3665,16 @@
    ],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "hook",
+   "name_zh": "鉤",
+   "description_zh": "沿直線射出鉤子，鉤住路上第一個敵人，拉到你身邊；不會拉進深淵或岩漿。",
+   "tags": [
+    "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "conditions": [

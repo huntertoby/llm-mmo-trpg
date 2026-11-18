@@ -918,3 +918,18 @@ primitives:
     forbid_affects: [allies, self]
     budget_basis: fixed
     base_points: 2
+
+  - id: hook
+    name_zh: 鉤
+    llm_hint: "沿直線射出鉤子，鉤住路上第一個敵人，拉到施放者身邊。"
+    description_zh: 形狀只能是直線（長度＝射程，初值 5）。打中直線上離施放者最近的第一個單位（這一招的其他效果也只作用在這個單位身上；第一個單位是友方時整招落空）；命中後把目標沿直線拉到施放者相鄰的格子，是推拉 2 格上限（06 6.6）的唯一例外。途中被擋住照拉扯的規則停下並撞擊；下一格是致命地形（深淵、岩漿）時停在它前面。推不動的目標（巨型頭目等）照撞牆算一次撞擊（6.38 第 9 點）。冷卻至少 skill_budget.yaml 的 hook_min_cooldown（3）回合。只能用在主動技能、一招最多一個。預算：固定 base_points（形狀倍率另算）。
+    player_description: "沿直線射出鉤子，鉤住路上第一個敵人，拉到你身邊；不會拉進深淵或岩漿。"
+    category: structural
+    harmful: true
+    min_rarity: rare
+    active_only: true
+    max_per_skill: 1
+    allowed_shapes: [line]
+    forbid_affects: [allies, all, self]
+    budget_basis: fixed
+    base_points: 6
