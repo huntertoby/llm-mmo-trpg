@@ -1,0 +1,748 @@
+{
+ "absorb": {
+  "events": [
+   {
+    "seq": 6,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_absorb",
+    "name_zh": "吸冰火球",
+    "ap": 1,
+    "mana": 0,
+    "mana_after": 155,
+    "stamina": 0,
+    "stamina_after": 24,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 5,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "variant": null
+   },
+   {
+    "seq": 7,
+    "round": 1,
+    "type": "attack_rolled",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "rolls": [
+     19
+    ],
+    "advantage": "none",
+    "natural": 19,
+    "attack_value": 16,
+    "defense_value_permille": 16000,
+    "hit_modifier": 0,
+    "proficiency": 2,
+    "situational": 0,
+    "total": 21,
+    "target_number": 8,
+    "hit": true,
+    "crit": false,
+    "cover": 0,
+    "cover_object_id": null,
+    "skill_id": "skill_sk2_absorb",
+    "modifier_bonus": 0,
+    "backstab": 0,
+    "ambush": 0
+   },
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "surface_absorbed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_absorb",
+    "pos": {
+     "x": 1,
+     "y": 3
+    },
+    "surface": "ice",
+    "gain": "element",
+    "element": "ice"
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "surface_changed",
+    "pos": {
+     "x": 1,
+     "y": 3
+    },
+    "before": "ice",
+    "after": "none",
+    "remaining": null,
+    "cause": "absorb"
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "damage_dealt",
+    "target_id": "unit_0002",
+    "source_id": "unit_0001",
+    "cause": "attack",
+    "element": "ice",
+    "rolls": [
+     4
+    ],
+    "crit": false,
+    "element_mod_ppm": 1000000,
+    "amount": 12,
+    "hp_before": 40,
+    "hp_after": 28,
+    "pos": {
+     "x": 5,
+     "y": 3
+    },
+    "weather_permille": 1000,
+    "multiplier_permille": 1000,
+    "pierce_permille": 1000,
+    "chain_permille": 1000,
+    "base_amount": 12,
+    "status_ppm": 1000000,
+    "absorbed": 0,
+    "redirected": 0,
+    "shared": 0,
+    "formation_permille": 1000,
+    "ward_permille": 1000,
+    "exploded": 0,
+    "flat": 0,
+    "scaled_permille": 8000,
+    "block_permille": 1000,
+    "scale_attr": "int"
+   }
+  ],
+  "units": {
+   "unit_0001": {
+    "pos": [
+     1,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   },
+   "unit_0002": {
+    "pos": [
+     5,
+     3
+    ],
+    "hp": 28,
+    "downed": false,
+    "statuses": []
+   }
+  },
+  "log": [
+   "法師 施放「吸冰火球」（AP 1）→ 影響 1 格",
+   "法師 以「吸冰火球」攻擊 盜賊：d20=19 攻防修正 +0（攻擊 16 對防禦 16） 熟練 +2 = 21（需 ≥ 8）→ 命中",
+   "◎ 法師 吸走了 (1, 3) 的冰，這一招改帶冰霜",
+   "(1, 3) 的冰消失了",
+   "盜賊 受到 12 點冰霜傷害［骰 4 ＋ 智力加成 8］，HP 40 → 28"
+  ]
+ },
+ "contagion": {
+  "events": [
+   {
+    "seq": 7,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_fire",
+    "name_zh": "火焰箭",
+    "ap": 1,
+    "mana": 0,
+    "mana_after": 155,
+    "stamina": 0,
+    "stamina_after": 24,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 5,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "variant": null
+   },
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "attack_rolled",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "rolls": [
+     19
+    ],
+    "advantage": "none",
+    "natural": 19,
+    "attack_value": 16,
+    "defense_value_permille": 16000,
+    "hit_modifier": 0,
+    "proficiency": 2,
+    "situational": 0,
+    "total": 21,
+    "target_number": 8,
+    "hit": true,
+    "crit": false,
+    "cover": 0,
+    "cover_object_id": null,
+    "skill_id": "skill_sk2_fire",
+    "modifier_bonus": 0,
+    "backstab": 0,
+    "ambush": 0
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "damage_dealt",
+    "target_id": "unit_0002",
+    "source_id": "unit_0001",
+    "cause": "attack",
+    "element": "fire",
+    "rolls": [
+     4
+    ],
+    "crit": false,
+    "element_mod_ppm": 1000000,
+    "amount": 12,
+    "hp_before": 1,
+    "hp_after": 0,
+    "pos": {
+     "x": 5,
+     "y": 3
+    },
+    "weather_permille": 1000,
+    "multiplier_permille": 1000,
+    "pierce_permille": 1000,
+    "chain_permille": 1000,
+    "base_amount": 12,
+    "status_ppm": 1000000,
+    "absorbed": 0,
+    "redirected": 0,
+    "shared": 0,
+    "formation_permille": 1000,
+    "ward_permille": 1000,
+    "exploded": 0,
+    "flat": 0,
+    "scaled_permille": 8000,
+    "block_permille": 1000,
+    "scale_attr": "int"
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "unit_downed",
+    "unit_id": "unit_0002"
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "disease_spread",
+    "from_id": "unit_0002",
+    "to_id": "unit_0003",
+    "status_ids": [
+     "burning"
+    ]
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "status_applied",
+    "target_id": "unit_0003",
+    "status_id": "burning",
+    "duration": 2,
+    "refreshed": false,
+    "source_id": "unit_0001"
+   }
+  ],
+  "units": {
+   "unit_0001": {
+    "pos": [
+     1,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   },
+   "unit_0002": {
+    "pos": [
+     5,
+     3
+    ],
+    "hp": 0,
+    "downed": true,
+    "statuses": [
+     {
+      "status_id": "burning",
+      "remaining": 2
+     }
+    ]
+   },
+   "unit_0003": {
+    "pos": [
+     5,
+     4
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": [
+     {
+      "status_id": "burning",
+      "remaining": 2
+     }
+    ]
+   }
+  },
+  "log": [
+   "法師 施放「火焰箭」（AP 1）→ 影響 1 格",
+   "法師 以「火焰箭」攻擊 盜賊1：d20=19 攻防修正 +0（攻擊 16 對防禦 16） 熟練 +2 = 21（需 ≥ 8）→ 命中",
+   "盜賊1 受到 12 點火焰傷害［骰 4 ＋ 智力加成 8］，HP 1 → 0",
+   "＊ 盜賊1 倒下了！",
+   "☣ 盜賊1 倒下，燃燒擴散到 盜賊2 身上",
+   "盜賊2 獲得狀態「燃燒」（2 回合）"
+  ]
+ },
+ "hook": {
+  "events": [
+   {
+    "seq": 7,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_hook",
+    "name_zh": "鉤鎖",
+    "ap": 1,
+    "mana": 0,
+    "mana_after": 155,
+    "stamina": 0,
+    "stamina_after": 24,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 2,
+      "y": 3
+     },
+     {
+      "x": 3,
+      "y": 3
+     },
+     {
+      "x": 4,
+      "y": 3
+     },
+     {
+      "x": 5,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "variant": null
+   },
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_hook",
+    "remaining": 3
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "attack_rolled",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "rolls": [
+     19
+    ],
+    "advantage": "none",
+    "natural": 19,
+    "attack_value": 16,
+    "defense_value_permille": 16000,
+    "hit_modifier": 0,
+    "proficiency": 2,
+    "situational": 0,
+    "total": 21,
+    "target_number": 8,
+    "hit": true,
+    "crit": false,
+    "cover": 0,
+    "cover_object_id": null,
+    "skill_id": "skill_sk2_hook",
+    "modifier_bonus": 0,
+    "backstab": 0,
+    "ambush": 0
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "unit_moved",
+    "unit_id": "unit_0002",
+    "from_pos": {
+     "x": 5,
+     "y": 3
+    },
+    "to_pos": {
+     "x": 4,
+     "y": 3
+    },
+    "mode": "forced",
+    "cost": 0
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "unit_moved",
+    "unit_id": "unit_0002",
+    "from_pos": {
+     "x": 4,
+     "y": 3
+    },
+    "to_pos": {
+     "x": 3,
+     "y": 3
+    },
+    "mode": "forced",
+    "cost": 0
+   },
+   {
+    "seq": 12,
+    "round": 1,
+    "type": "unit_moved",
+    "unit_id": "unit_0002",
+    "from_pos": {
+     "x": 3,
+     "y": 3
+    },
+    "to_pos": {
+     "x": 2,
+     "y": 3
+    },
+    "mode": "forced",
+    "cost": 0
+   }
+  ],
+  "units": {
+   "unit_0001": {
+    "pos": [
+     1,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   },
+   "unit_0002": {
+    "pos": [
+     2,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   },
+   "unit_0003": {
+    "pos": [
+     6,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   }
+  },
+  "log": [
+   "法師 施放「鉤鎖」（AP 1，冷卻 3 回合）→ 影響 4 格",
+   "法師 以「鉤鎖」攻擊 盜賊1：d20=19 攻防修正 +0（攻擊 16 對防禦 16） 熟練 +2 = 21（需 ≥ 8）→ 命中",
+   "盜賊1 被推到 (4, 3)",
+   "盜賊1 被推到 (3, 3)",
+   "盜賊1 被推到 (2, 3)"
+  ]
+ },
+ "hook_lava": {
+  "events": [
+   {
+    "seq": 6,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_hook",
+    "name_zh": "鉤鎖",
+    "ap": 1,
+    "mana": 0,
+    "mana_after": 155,
+    "stamina": 0,
+    "stamina_after": 24,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 2,
+      "y": 3
+     },
+     {
+      "x": 3,
+      "y": 3
+     },
+     {
+      "x": 4,
+      "y": 3
+     },
+     {
+      "x": 5,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "variant": null
+   },
+   {
+    "seq": 7,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_hook",
+    "remaining": 3
+   },
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "attack_rolled",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "rolls": [
+     19
+    ],
+    "advantage": "none",
+    "natural": 19,
+    "attack_value": 16,
+    "defense_value_permille": 16000,
+    "hit_modifier": 0,
+    "proficiency": 2,
+    "situational": 0,
+    "total": 21,
+    "target_number": 8,
+    "hit": true,
+    "crit": false,
+    "cover": 0,
+    "cover_object_id": null,
+    "skill_id": "skill_sk2_hook",
+    "modifier_bonus": 0,
+    "backstab": 0,
+    "ambush": 0
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "unit_moved",
+    "unit_id": "unit_0002",
+    "from_pos": {
+     "x": 5,
+     "y": 3
+    },
+    "to_pos": {
+     "x": 4,
+     "y": 3
+    },
+    "mode": "forced",
+    "cost": 0
+   }
+  ],
+  "units": {
+   "unit_0001": {
+    "pos": [
+     1,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   },
+   "unit_0002": {
+    "pos": [
+     4,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   }
+  },
+  "log": [
+   "法師 施放「鉤鎖」（AP 1，冷卻 3 回合）→ 影響 4 格",
+   "法師 以「鉤鎖」攻擊 盜賊：d20=19 攻防修正 +0（攻擊 16 對防禦 16） 熟練 +2 = 21（需 ≥ 8）→ 命中",
+   "盜賊 被推到 (4, 3)"
+  ]
+ },
+ "hook_giant": {
+  "events": [
+   {
+    "seq": 6,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_hook",
+    "name_zh": "鉤鎖",
+    "ap": 1,
+    "mana": 0,
+    "mana_after": 155,
+    "stamina": 0,
+    "stamina_after": 24,
+    "hp_spent": 0,
+    "cooldown": 3,
+    "tiles": [
+     {
+      "x": 2,
+      "y": 3
+     },
+     {
+      "x": 3,
+      "y": 3
+     },
+     {
+      "x": 4,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "variant": null
+   },
+   {
+    "seq": 7,
+    "round": 1,
+    "type": "skill_cooldown_changed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_sk2_hook",
+    "remaining": 3
+   },
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "attack_rolled",
+    "attacker_id": "unit_0001",
+    "target_id": "unit_0002",
+    "rolls": [
+     19
+    ],
+    "advantage": "none",
+    "natural": 19,
+    "attack_value": 16,
+    "defense_value_permille": 16000,
+    "hit_modifier": 0,
+    "proficiency": 2,
+    "situational": 0,
+    "total": 21,
+    "target_number": 8,
+    "hit": true,
+    "crit": false,
+    "cover": 0,
+    "cover_object_id": null,
+    "skill_id": "skill_sk2_hook",
+    "modifier_bonus": 0,
+    "backstab": 0,
+    "ambush": 0,
+    "hit_tile": {
+     "x": 4,
+     "y": 3
+    }
+   },
+   {
+    "seq": 9,
+    "round": 1,
+    "type": "push_resisted",
+    "unit_id": "unit_0002",
+    "requested": 2,
+    "distance": 0,
+    "reason": "immovable"
+   },
+   {
+    "seq": 10,
+    "round": 1,
+    "type": "collided",
+    "unit_id": "unit_0002",
+    "obstacle": "immovable",
+    "shortfall": 1,
+    "pos": {
+     "x": 5,
+     "y": 3
+    },
+    "source_id": "unit_0001",
+    "other_id": null,
+    "object_id": null,
+    "dice": null,
+    "damage_permille": 1000
+   },
+   {
+    "seq": 11,
+    "round": 1,
+    "type": "damage_dealt",
+    "target_id": "unit_0002",
+    "source_id": "unit_0001",
+    "cause": "collision",
+    "element": "physical",
+    "rolls": [
+     3
+    ],
+    "crit": false,
+    "element_mod_ppm": 1000000,
+    "amount": 3,
+    "hp_before": 200,
+    "hp_after": 197,
+    "pos": {
+     "x": 5,
+     "y": 3
+    },
+    "weather_permille": 1000,
+    "multiplier_permille": 1000,
+    "pierce_permille": 1000,
+    "chain_permille": 1000,
+    "base_amount": 3,
+    "status_ppm": 1000000,
+    "absorbed": 0,
+    "redirected": 0,
+    "shared": 0,
+    "formation_permille": 1000,
+    "ward_permille": 1000,
+    "exploded": 0,
+    "flat": 0,
+    "scaled_permille": 0,
+    "block_permille": 1000,
+    "scale_attr": null
+   }
+  ],
+  "units": {
+   "unit_0001": {
+    "pos": [
+     1,
+     3
+    ],
+    "hp": 40,
+    "downed": false,
+    "statuses": []
+   },
+   "unit_0002": {
+    "pos": [
+     5,
+     3
+    ],
+    "hp": 197,
+    "downed": false,
+    "statuses": []
+   }
+  },
+  "log": [
+   "法師 施放「鉤鎖」（AP 1，冷卻 3 回合）→ 影響 3 格",
+   "法師 以「鉤鎖」攻擊 盜賊：d20=19 攻防修正 +0（攻擊 16 對防禦 16） 熟練 +2 = 21（需 ≥ 8）→ 命中",
+   "盜賊 紋風不動：不會被推動、拉扯或傳送",
+   "盜賊 推不動，硬吃下撞擊（1 次撞擊）",
+   "盜賊 受到 3 點撞擊物理傷害［骰 3］，HP 200 → 197"
+  ]
+ }
+}
