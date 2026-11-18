@@ -111,6 +111,7 @@ OWNER_ORDER = [name for name, _ in OWNER_PATTERNS] + [UNKNOWN]
 # 斷句：句號、問號、驚嘆號、分號、箭頭、表格直線。
 SENTENCE_SPLIT = re.compile(r"[。！？；|→]")
 HEADING = re.compile(r"^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$")
+LIST_MARKER = re.compile(r"\s*(?:(?:[-*+>]|\d+\.)\s+)*")
 FENCE = re.compile(r"^\s*(```|~~~)")
 
 _WAIT_RES = [(name, re.compile(rx)) for name, rx in WAIT_PATTERNS]
@@ -167,8 +168,9 @@ def guess_owner(text: str) -> str:
 
 
 def _snippet(sentence: str, pos: int, width: int) -> str:
-    s = sentence.strip()
-    offset = len(sentence) - len(sentence.lstrip())
+    lead = LIST_MARKER.match(sentence)
+    offset = lead.end() if lead else 0
+    s = sentence[offset:].rstrip()
     pos = max(0, pos - offset)
     if len(s) <= width:
         return s
