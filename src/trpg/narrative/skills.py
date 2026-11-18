@@ -725,8 +725,8 @@ def _contagion(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     core = lib.ruleset.core
     names = _names(lib.ruleset.status_def(s).name_zh for s in core.contagion_statuses)
     return (
-        f"目標身上的{names}會擴散：目標倒下時，這些狀態以剩餘回合傳到 "
-        f"{core.contagion_radius} 格內的一個敵人（每次倒下傳一次）"
+        f"目標身上的{names}會擴散：目標倒下時，以剩餘回合傳到 "
+        f"{core.contagion_radius} 格內的一個敵人（每次倒下傳一次、只傳一種：剩餘回合最多的那種）"
     )
 
 
