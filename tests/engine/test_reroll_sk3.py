@@ -83,7 +83,7 @@ def d20s(monkeypatch: pytest.MonkeyPatch, rolls: Sequence[int]) -> list[int]:
     queue = list(rolls)
 
     def roll(_self: Rng, sides: int) -> int:
-        if sides == 20:  # noqa: PLR2004
+        if sides == 20:
             return queue.pop(0) if queue else 10
         return 1
 
@@ -331,7 +331,7 @@ def test_the_log_line_describes_the_reroll(monkeypatch: pytest.MonkeyPatch) -> N
     d20s(monkeypatch, [MISS, HIT])
     result = resolve(state, Attack(unit_id=U1, target_id=U2))
     (rerolled,) = of(result.events, AttackRerolled)
-    line = describe_event(rerolled, result.state)
+    line = describe_event(rerolled, result.state) or ""
     assert "重擲" in line and "取較好的" in line and "採用第二次" in line
 
 
