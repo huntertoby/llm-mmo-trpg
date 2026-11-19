@@ -32,8 +32,9 @@ def test_open_plain_battle_uses_guard_and_replays(
     # CB-1（#146）：門檻 8 後 AI 很少瞄準（aim_hit_permille 500，1500 個種子只有 85 場用到），
     # 沒有一場同時出現換位、瞄準、守護，拆成兩場驗；兩場都照舊重播。
     # AP-1（玩家方 4 AP、失手返還）後 18 → 27
+    # X10-2b（量類 ×10，捨去讓戰鬥分岔，27 不再守護）27 → 44（重掃 0～59 只有 44）
     data, out = _log(
-        "open_plain", 27, tmp_path, capsys
+        "open_plain", 44, tmp_path, capsys
     )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98；3H-1 常駐數值後 → 222；3H-2 武器技花耐力後 → 98
     assert data["format"] == "trpg-battle-log/135"
     assert any(a["type"] == "defend" and a.get("target_id") for a in data["actions"])

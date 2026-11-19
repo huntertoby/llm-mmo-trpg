@@ -22,7 +22,8 @@ def test_striker_battle_accumulates_and_consumes_static_charge_and_replays(
     log = tmp_path / "striker.json"
     # 3H-2：武器技花耐力，AI 軌跡改變（種子 69 → 49）；BAL-15b 敵我同一套資源公式（55 → 35）
     # CB-1 門檻 8 後 35 → 115；AP-1（玩家方 4 AP、失手返還）後 46 → 20
-    argv = ["battle", "--map", "test_flat_6x6", "--ally-build", "build_striker", "--seed", "20"]
+    # X10-2b（量類 ×10，捨去讓戰鬥分岔，20 不再放雷霆終結）20 → 64（重掃 0～299：64、67、76…）
+    argv = ["battle", "--map", "test_flat_6x6", "--ally-build", "build_striker", "--seed", "64"]
     code, out = _run([*argv, "--log-json", str(log)], capsys)
     assert code == 0
     assert "施放「雷霆終結」" in out and "的「靜電」消耗：" in out

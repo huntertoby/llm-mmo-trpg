@@ -25,8 +25,9 @@ DEMOS = {
 SEEDS = {
     "bridge_chasm": 169,
     "swamp": 1,
-    "ruined_fort": 3,
+    "ruined_fort": 4,
 }  # CB-1 門檻 8 改變軌跡：吊橋 26 → 3、廢墟要塞 1 → 3；AP-1（玩家方 4 AP、失手返還）吊橋 4 → 169
+# X10-2b（量類 ×10，捨去讓戰鬥分岔，種子 3 不再出現半掩護）廢墟要塞 3 → 4（重掃 0～59 有 34 個可用）
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
@@ -124,7 +125,9 @@ def test_simple_ai_weather_and_deploy_options(
     core = lib.ruleset.core
     mana = core.template_max_resource("mana", fighter, wclass)
     stamina = core.template_max_resource("stamina", fighter, wclass)
-    assert f"戰士：HP 60/60 法力 {mana}/{mana} 源力 1/3 耐力 {stamina} 位置 (1, 5)" in out
+    assert (
+        f"戰士：HP 600/600 法力 {mana}/{mana} 源力 1/3 耐力 {stamina} 位置 (1, 5)" in out
+    )  # X10-2b
     code, _, err = _run(
         ["battle", "--map", "test_flat_6x6", "--seed", "1", "--deploy", "5,5"], capsys
     )
