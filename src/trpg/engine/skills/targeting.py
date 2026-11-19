@@ -106,6 +106,7 @@ __all__ = [
     "ResolvedEffect",
     "SkillArea",
     "aims_first",
+    "around_area",
     "center_tiles",
     "checked_area",
     "composite_area",
@@ -1178,6 +1179,22 @@ def anchored_area(state: BattleState, caster: UnitState, skill: SkillDef, center
     units = _tiles_to_units(state, tiles, None)
     return SkillArea(
         tiles=tiles, units=units, origin=center, hit_tiles=_hit_tiles(state, units, tiles, center)
+    )
+
+
+def around_area(state: BattleState, owner: UnitState, skill: SkillDef) -> SkillArea:
+    """以持有者為中心、不必選取的形狀（WC-2，#167：被動骨架的「自身周圍」小範圍，06 6.9）：環形
+    以 ``owner`` 為中心展開（巨型單位把整個佔格當中心，同 :func:`~.shapes.around_tiles`），影響範圍
+    裡站著的單位都算；原點是持有者所在格（推擊、拉扯往外）。沒有射程、視線與選取。"""
+    spec = skill.shape
+    assert spec.radius is not None
+    tiles = shapes.around_tiles(state, owner, spec.type, spec.radius)
+    units = _tiles_to_units(state, tiles, None)
+    return SkillArea(
+        tiles=tiles,
+        units=units,
+        origin=owner.xy,
+        hit_tiles=_hit_tiles(state, units, tiles, owner.xy),
     )
 
 

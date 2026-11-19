@@ -243,6 +243,9 @@ class PassiveRules(ContentModel):
     """觸發時機有另一方時，效果作用在另一方（``target: other``）的機率（其餘作用在持有者）。"""
     second_effect_permille: int = _PERMILLE
     """被動多帶一個附帶效果的機率。"""
+    around_permille: int = Field(default=0, ge=0, le=1000)
+    """被動改成「自身周圍」小範圍的機率（WC-2，#167；06 6.9）：持有者周圍一圈（環形，半徑照被動
+    骨架的 ``max_radius``）的敵人受到傷害或有害狀態。獨立的亂數串流，沒抽中或組不出來的種子不變。"""
     mana: IntRange
     """法力（階級 −1 後另加 ``mana_per_tier`` × 階級）。"""
     mana_per_tier: int = Field(ge=0)

@@ -106,6 +106,7 @@ passive:
   skeleton_permille: 150
   other_permille: 600                 # 有「另一方」的時機：效果作用在另一方（其餘作用在持有者）
   second_effect_permille: 350         # 多帶一個附帶效果
+  around_permille: 150                # WC-2（#167，06 6.9）：改成「自身周圍」小範圍（持有者周圍一圈的敵人；獨立亂數串流，沒抽中的種子不變）。初值，未經模擬，接數值工坊
   mana: {min: 0, max: 3}              # 法力 ＝ 亂數 ＋ (階級 − 1) × mana_per_tier
   mana_per_tier: 1
   cooldown_permille: 250

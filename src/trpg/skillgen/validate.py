@@ -621,6 +621,8 @@ def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[V
 
 def _passive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """被動技能（2E-1 3.2）：法術技、任何武器；``target: self`` 時效果只能作用在持有者自己。
+    形狀是「自身周圍」（環形，WC-2，#167；06 6.9）時以持有者為中心，``target`` 只能是 ``self``，
+    效果照 ``affects`` 作用在範圍裡的單位。
 
     ``trigger`` 的有無、時機存在、``n``、``target: other`` 與 ``has_other``、
     ``max_per_round`` 的範圍由 schema 與 :func:`trpg.content.skills.skill_problems` 檢查。
@@ -640,7 +642,16 @@ def _passive_violations(skill: SkillDef, library: ContentLibrary) -> list[Violat
                 f"（收到 {skill.category}、{skill.weapon_req}）",
             )
         )
-    if trigger.target == "self":
+    if skill.shape.type != "self" and trigger.target != "self":
+        out.append(
+            Violation(
+                skill.id,
+                "passive.around",
+                f"形狀 {skill.shape.type}（自身周圍）以持有者為中心：trigger.target 只能是 self，"
+                f"收到 {trigger.target}",
+            )
+        )
+    if trigger.target == "self" and skill.shape.type == "self":
         for index, effect in enumerate(skill.effects):
             affects = resolved_affects(library.ruleset, effect)
             if affects != "self":
@@ -940,6 +951,9 @@ def _skeleton_violations(
         add("kind", f"只適用 {'、'.join(skeleton.kinds)} 技能，收到 {skill.kind}")
     if skill.shape.type not in skeleton.shapes:
         add("shape", f"形狀只能是 {'、'.join(skeleton.shapes)}，收到 {skill.shape.type}")
+    radius = skill.shape.radius
+    if skeleton.max_radius is not None and radius is not None and radius > skeleton.max_radius:
+        add("radius", f"範圍半徑最多 {skeleton.max_radius}，收到 {radius}")  # WC-2（#167）
     out += _effect_role_violations(skill, library, skeleton)
     if report is not None:
         out += _share_violations(skill, library, skeleton, report)

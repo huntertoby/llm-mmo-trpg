@@ -636,6 +636,80 @@ def _compose_exploit_passive(
     return _first_valid(lib, build)
 
 
+_AROUND = "ring"
+"""被動的「自身周圍」形狀（WC-2）。"""
+
+
+def _compose_around_passive(
+    seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity
+) -> ComposeResult | None:
+    """「自身周圍」小範圍的被動（WC-2，#167；06 6.9）：獨立串流 ``composer.passive.around`` 以
+    ``passive.around_permille`` 決定要不要用，組法用 ``composer.passive.around.build``；被動骨架
+    沒有開環形、沒抽中或組不出合格技能回傳 ``None``，呼叫端照原本的組法（主串流沒動過，結果與改前
+    相同）。"""
+    permille = lib.composer.passive.around_permille
+    skeleton = lib.skeletons.get("passive")
+    if permille <= 0 or skeleton is None or _AROUND not in skeleton.shapes:
+        return None
+    if not Rng(seed).fork("composer.passive.around").chance_permille(permille):
+        return None
+    rng = Rng(seed).fork("composer.passive.around.build")
+
+    def build() -> SkillDef:
+        return _attempt_around_passive(rng, lib, seed, tier, rarity)
+
+    return _first_valid(lib, build)
+
+
+def _attempt_around_passive(
+    rng: Rng, library: ContentLibrary, seed: int, tier: int, rarity: SkillRarity
+) -> SkillDef:
+    """「自身周圍」被動的一次嘗試：觸發時機 → 持有者周圍一圈（半徑照骨架的 ``max_radius``）→ 對敵的
+    傷害或有害狀態（同 ``target: other`` 的效果候選）→ 代價 → 調整強度。"""
+    rules = library.composer
+    skeleton = library.skeletons["passive"]
+    timings = [
+        t
+        for t in sorted(library.ruleset.skill_triggers.triggers, key=lambda t: t.id)
+        if rarity_rank(t.min_rarity) <= rarity_rank(rarity) and t.random_composer
+    ]
+    timing = rng.choice(timings)
+    n = rng.choice((2, 3)) if timing.id == EVERY_N_HITS else None
+    w = rules.spell_attr_weights
+    scaling = _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
+    theme = rng.choice(_SPELL_ELEMENTS)
+    ctx = Ctx(library, rng, skeleton, rarity, tier, "spell", 1, theme)
+    radius = skeleton.max_radius or 1
+    ctx.shape, ctx.shape_params = _AROUND, {"radius": radius}
+    build_passive_effects(ctx, "other")
+    for effect in ctx.effects:
+        effect["affects"] = "enemies"
+    trigger: dict[str, Any] = {"event": timing.id, "target": "self", "max_per_round": 1}
+    if n is not None:
+        trigger["n"] = n
+    trigger.update(_trigger_params(rng, library, timing.id))
+    base: dict[str, Any] = {
+        "id": f"skill_rand_{seed}",
+        "name_zh": "暫定",
+        "tier": tier,
+        "rarity": rarity,
+        "kind": "passive",
+        "skeleton": skeleton.id,
+        "category": "spell",
+        "weapon_req": "any",
+        "ap_cost": None,
+        "scaling_attr": scaling,
+        "shape": {"type": _AROUND, "radius": radius},
+        "condition": None,
+        "trigger": trigger,
+        "cost": build_passive_cost(ctx),
+        "provenance": {"origin": "level_up"},
+    }
+    if tune(rng, library, base, ctx.effects, ctx.knobs):
+        return _finish(library, seed, base, ctx)
+    raise Retry
+
+
 def _compose_reroll_reaction(
     seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
 ) -> ComposeResult | None:
@@ -1112,6 +1186,7 @@ def _compose_plain(
     _check_passive_args(passive, ap_cost, category)
     recipe = (
         _compose_exploit_passive(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
+        or _compose_around_passive(seed, lib, tier=tier_value, rarity=rarity_value)
         or _compose_passive_recipe(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
         if passive
         else None

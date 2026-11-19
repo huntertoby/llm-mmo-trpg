@@ -257,6 +257,19 @@ def _kind_of(skill: SkillDef) -> Literal["active", "passive", "reaction"]:
     return "active"
 
 
+_SINGLE = "single"
+
+
+def _shape_of(skill: SkillDef) -> str:
+    """命中判定用的形狀：被動作用在「觸發的那個人」（形狀自身、``trigger.target`` 不是持有者）算
+    單體（WC-2，#167；07 7.6 第 2 點「命中判定」）；其他照技能的形狀。"""
+    trigger = skill.trigger
+    passive = skill.kind == "passive" and skill.shape.type == "self"
+    if passive and trigger is not None and trigger.target != "self":
+        return _SINGLE
+    return skill.shape.type
+
+
 def skill_tag_ids(library: ContentLibrary, skill: SkillDef) -> WishTags:
     """這招技能本身有的標籤（每一類全列，不受上限限制；給命中判定與測試）。元素連第二元素一起算
     （:func:`~trpg.content.skills.damage_elements`，WC-2）；沒有元素＝物理。"""
@@ -270,7 +283,7 @@ def skill_tag_ids(library: ContentLibrary, skill: SkillDef) -> WishTags:
         keywords=tuple(keywords),
         elements=tuple(i.id for i in rules.elements if i.id in elements),
         effects=tuple(t.id for t in rules.effects if _effect_hit(library, t, types, statuses)),
-        shapes=tuple(t.id for t in rules.shapes if skill.shape.type in t.shapes),
+        shapes=tuple(t.id for t in rules.shapes if _shape_of(skill) in t.shapes),
         kinds=(_kind_of(skill),),
     )
 
