@@ -1,15 +1,18 @@
 // AR-AP2：預支的施放演出 `borrow_pull`（`borrowFx.ts` 的位置與時間軸、`skillClips.ts` 的片段、接到播放計畫）。
 // 事件是真引擎跑的（`dev/fixtures/ap2Events.json`：U1 施放預支 +1，自身）。美術：docs/art/AP-2-美術.md 第 4 節、5.3。
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { BattleResponse, BattleView, SkillCard, StepOut, UnitView } from "../api/types";
 import fixture from "../dev/fixtures/ap2Events.json";
-import { clipDef, PRIMITIVE_PLAYS } from "../render/skillClips";
-import { BORROW_MS, borrowFrame, borrowMK, CHEST_DY, chestAt, GEM_R, MIN_GEM_PX, SLOT_R, slotAt } from "./borrowFx";
+import { clipDef, PRIMITIVE_PLAYS, type ClipId } from "../render/skillClips";
+import { AP_FRESH_DELAY_VAR, delayApFade } from "../ui/apFade";
+import { BORROW_MS, borrowApDelayMs, borrowFrame, borrowMK, CHEST_DY, chestAt, GEM_R, MIN_GEM_PX, SLOT_R, slotAt } from "./borrowFx";
 import { frameOps, playbackPlan } from "./playback";
 import { UPPER_HP_BOTTOM } from "./rerollFx";
 import { tile, unit } from "./testFixtures";
 import { TILE_SIZE } from "./geometry";
 
+const nodeFs = "node:fs";
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
 const HERO = "unit_0001";
 const SKILL = "skill_t_prim";
 const EVENTS = (fixture as unknown as { borrow: { events: Record<string, unknown>[] } }).borrow.events;
@@ -97,5 +100,52 @@ describe("時間軸（第 4 節的表）", () => {
     expect(borrowFrame(321, 1, 1)).toBeNull();
     expect(borrowFrame(-1, 1, 1)).toBeNull();
     expect(BORROW_MS).toBe(320);
+  });
+});
+
+describe("AP 列淡入對齊演出 215 ms（第 5 項；美術 PM 裁定 4）", () => {
+  const row = { clip: "borrow_pull" as ClipId, recover: false, startMs: 600, ms: 320 };
+  it("畫面更新在 215 ms 之前：延到 215 ms；之後才到：等到演出結束（320 ms）；沒有預支演出：0", () => {
+    expect(borrowApDelayMs([row], 0)).toBe(815);
+    expect(borrowApDelayMs([row], 700)).toBe(115);
+    expect(borrowApDelayMs([row], 815)).toBe(0);
+    expect(borrowApDelayMs([row], 850)).toBe(70); /* 215 之後、320 之前：等到 320 */
+    expect(borrowApDelayMs([row], 1000)).toBe(0);
+    expect(borrowApDelayMs([{ ...row, clip: "shoulder_tap" as ClipId }], 0)).toBe(0);
+    expect(borrowApDelayMs([{ ...row, recover: true }], 0)).toBe(0);
+    expect(borrowApDelayMs(undefined, 0)).toBe(0);
+  });
+  it("照播放速度縮放（快速時片段變短，215 ms 跟著縮）", () => {
+    expect(borrowApDelayMs([{ ...row, ms: 160 }], 600)).toBe(108); /* 215 × 0.5 ≈ 107.5 */
+  });
+  it("真引擎事件 → 播放計畫：畫面更新那一步帶延後，畫面更新＋延後＝演出 215 ms，不早於 100 ms", () => {
+    const frame = plan().frames.find((f) => f.skill?.some((r) => r.clip === "borrow_pull"))!;
+    const ops = frameOps(frame);
+    const vfx = ops.find((o) => o.op === "vfx");
+    const view = ops.find((o) => o.op === "view");
+    if (vfx?.op !== "vfx" || view?.op !== "view") throw new Error("no vfx/view");
+    const r = frame.skill!.find((x) => x.clip === "borrow_pull")!;
+    const viewAt = vfx.vfx.leadMs > 0 ? vfx.vfx.leadMs : 0;
+    const fadeAt = viewAt + (view.apFadeDelayMs ?? 0);
+    expect(fadeAt - r.startMs).toBeGreaterThanOrEqual(100 * (r.ms / BORROW_MS));
+    expect(Math.abs(fadeAt - (r.startMs + 215 * (r.ms / BORROW_MS))) <= 1 || fadeAt >= r.startMs + r.ms - 1).toBe(true);
+  });
+  it("CSS：淡入 200 ms 不變，延後讀 --ap-fresh-delay、延後期間藏起來（backwards）", () => {
+    const css = readFileSync("src/styles/status-card.css", "utf8");
+    expect(css).toMatch(/\.stat-pip\.ap\.fresh \{[^}]*animation: ap-borrow-in 0\.2s ease-out var\(--ap-fresh-delay, 0ms\) backwards;/);
+  });
+  it("delayApFade：設 CSS 變數，淡入播完清掉；0 直接清掉", () => {
+    vi.useFakeTimers();
+    const props = new Map<string, string>();
+    const root = { style: { setProperty: (k: string, v: string) => void props.set(k, v), removeProperty: (k: string) => void props.delete(k) } };
+    delayApFade(380, root);
+    expect(props.get(AP_FRESH_DELAY_VAR)).toBe("380ms");
+    vi.advanceTimersByTime(380 + 200 + 49);
+    expect(props.has(AP_FRESH_DELAY_VAR)).toBe(true);
+    vi.advanceTimersByTime(2);
+    expect(props.has(AP_FRESH_DELAY_VAR)).toBe(false);
+    delayApFade(0, root);
+    expect(props.has(AP_FRESH_DELAY_VAR)).toBe(false);
+    vi.useRealTimers();
   });
 });
