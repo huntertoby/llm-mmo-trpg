@@ -87,6 +87,7 @@ from trpg.engine.skill_triggers import (
 )
 from trpg.engine.skills.casting import use_reaction_skill
 from trpg.engine.skills.conditions import Subject, skill_condition_met
+from trpg.engine.skills.exploits import report_exploits, rule_exploits
 from trpg.engine.skills.targeting import (
     reaction_problem,
     reaction_target_problem,
@@ -882,6 +883,8 @@ def _attack_once(
         return attacker.has_status(CONCEALED), False, target  # 狐火誘餌：落空，不擲命中（3R-2b）
     forced = _forced_outcome(ctx, primary=primary or is_practice_target(ctx.state, target))
     state = ctx.state
+    # SK-3c：修正規則的條件因別人造的狀態、表面而對目標成立（命中判定之前判斷）
+    exploits = rule_exploits(state, attacker, modifiers.ATTACK, (Subject(target, target.xy),))
     bonus = _attack_hit_bonus(ctx, attacker, target, reaction=reaction)
     part_id = None if part_breaks.live_part(target, part_id) is None else part_id
     roll = roll_attack(
@@ -920,6 +923,9 @@ def _attack_once(
         target = guardian  # 替隊友擋攻擊：傷害改作用在守護者身上（不重擲命中）
         part_id = None
     use = modifiers.ATTACK
+    if guardian is not None:  # 守護者擋下：傷害的修正規則看守護者
+        exploits += rule_exploits(state, attacker, use, (Subject(target, target.xy),))
+    start = len(ctx.events)
     block, multiplier = _hit_multiplier(ctx, attacker, target, extra_permille)
     weapon = attacker.weapon
     execute(
@@ -943,6 +949,7 @@ def _attack_once(
             )
         ],
     )
+    report_exploits(ctx, attacker.id, exploits, start, set())  # 真的作用在目標上才算
     apply_hit_traits(ctx, attacker, target)  # 武器小特性：破甲、震退、祝禱（3-24a1）
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
     if extra_permille is None and attacker.alive:  # 普攻流：分裂與連擊（3-32a）
