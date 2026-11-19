@@ -3,6 +3,10 @@
 #   uv run python scripts/gen_hit_table.py
 # 重新產生 rules/hit_table.yaml（載入時會檢查兩者一致）。
 
+# --- 數值尺度（X10-2a，docs/design/05-戰鬥.md 5.4.1，#169 題 10）---
+quantity_scale: 1            # 量類的倍率，只能是 1 或 10：擲出的骰面 × 這個值（d20 不乘）、預算的固定值 ÷ 這個值；
+                             # 換算腳本 scripts/x10/rescale.py 把內容 ×10 時一起改成 10（已經是 10 就拒絕再跑）
+
 # --- 行動經濟 ---
 ap_per_turn: 3                # 每回合 AP：召喚物，以及單位檔沒寫 ap_per_turn 的一般敵人（AP-1，#168）
 party_ap_per_turn: 4          # 玩家方（玩家與隊友角色，不含召喚物）的每回合 AP（AP-1，#168 初值）

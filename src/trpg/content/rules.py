@@ -350,6 +350,12 @@ class CoreRules(ContentModel):
     # 行動經濟
     ap_per_turn: int = Field(ge=0)
     """每回合 AP：召喚物，以及範本沒寫 ``ap_per_turn`` 的一般敵人（AP-1，#168）。"""
+    # 數值尺度（X10-2a，05 5.4.1，#169 題 10）
+    quantity_scale: Literal[1, 10] = 1
+    """量類（HP、傷害、治療、護盾、屬性、法力、耐力……）的倍率：擲出的骰面 × 這個值（d20 不乘）、
+    寫死的「1 點」下限 × 這個值、技能預算吃的固定值 ÷ 這個值、AI 評分的量 ÷ 這個值。內容換算
+    （``scripts/x10/rescale.py``）時從 1 改成 10。舊紀錄沒有此欄位（＝1）。不放在第一個欄位：
+    ``tests/cli/test_battle_cli.py`` 改內嵌規則包的第一個整數欄位來測雜湊。"""
     party_ap_per_turn: int = Field(default=3, ge=0)
     """玩家方（玩家與隊友角色，不含召喚物）的每回合 AP（AP-1，#168，05 5.2；初值 4）。"""
     elite_ap_per_turn: int = Field(default=3, ge=0)

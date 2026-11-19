@@ -8,7 +8,7 @@
 # 路徑語法見 scripts/x10/rescale.py 開頭。
 #
 # 共同做法（開發 PM 定）：
-#   - 骰子記法不變（2d8 照寫），擲出的面值由引擎乘 core.yaml 新加的 dice_value_scale（X10-2）；骰子數量、
+#   - 骰子記法不變（2d8 照寫），擲出的面值由引擎乘 core.yaml 的 quantity_scale（X10-2a）；骰子數量、
 #     骰面、骰子相關的預算點數都不動。
 #   - 固定值（flat）×10，預算按 ÷10 計（X10-2 改 skillgen/budget.py）。
 #   - 名稱是 *_permille 的欄位一律不變；例外（實際是「每 1000 份的量」）逐條寫在 scale 並加註解。
@@ -616,6 +616,7 @@ groups:
       - summon_growth.flat_per_attr_mod_permille
       - summon_traits.sturdy.armor_bonus          # 護甲 +1
     keep:
+      - quantity_scale                            # 換算腳本自己改（1 → 10），兼防重跑的標記
       - hp_per_con_point                          # 屬性差與 HP 一起 ×10，每點不變
       - resources.*.per_point                     # 同上
       - resources.mana_cap_permille

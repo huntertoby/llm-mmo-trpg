@@ -44,6 +44,9 @@ groups:
       - base
     keep:
       - shared_keep
+  - files: rules/core.yaml
+    keep:
+      - quantity_scale
 """
 
 _UNIT = (
@@ -59,12 +62,16 @@ _UNIT = (
 
 _RULES = "﻿base: &b 10\nshared_keep: 4\nname_zh: 規則\n"
 
+_CORE = "# 核心規則\nquantity_scale: 1   # 標記\n"
+
 
 def _setup(tmp_path: Path) -> tuple[Path, list[Any]]:
     content = tmp_path / "content"
     (content / "units").mkdir(parents=True)
     (content / "units" / "grunt.yaml").write_bytes(_UNIT.encode("utf-8"))
     (content / "rules.yaml").write_bytes(_RULES.encode("utf-8"))
+    (content / "rules").mkdir()
+    (content / "rules" / "core.yaml").write_bytes(_CORE.encode("utf-8"))
     fields = tmp_path / "fields.yaml"
     fields.write_text(_FIELDS, encoding="utf-8")
     return content, rs.load_fields(fields)
@@ -96,10 +103,9 @@ def test_dry_run_does_not_write(tmp_path: Path) -> None:
 
 def test_apply_keeps_comments_newlines_and_bom(tmp_path: Path) -> None:
     content, changes = _plan(tmp_path)
-    assert rs.apply(changes, content) == ["rules.yaml", "units/grunt.yaml"]
+    assert rs.apply(changes, content) == ["rules.yaml", "rules/core.yaml", "units/grunt.yaml"]
     unit = (content / "units" / "grunt.yaml").read_bytes().decode("utf-8")
     assert unit == (
-        rs.MARKER + "\r\n"
         "# 敵人：註解要保留\r\n"
         "id: grunt\r\n"
         "max_hp: 180   # 行尾註解\r\n"
@@ -110,7 +116,10 @@ def test_apply_keeps_comments_newlines_and_bom(tmp_path: Path) -> None:
         "  - {type: heal, flat: 2}\r\n"
     )
     rules = (content / "rules.yaml").read_bytes().decode("utf-8")
-    assert rules == "﻿" + rs.MARKER + "\nbase: &b 100\nshared_keep: 4\nname_zh: 規則\n"
+    assert rules == "﻿base: &b 100\nshared_keep: 4\nname_zh: 規則\n"
+    core = (content / "rules" / "core.yaml").read_bytes().decode("utf-8")
+    assert core == "# 核心規則\nquantity_scale: 10   # 標記\n"
+    assert rs.current_scale(content) == 10
 
 
 def test_second_run_is_refused(tmp_path: Path) -> None:
@@ -121,6 +130,16 @@ def test_second_run_is_refused(tmp_path: Path) -> None:
     again = rs.plan(rs.classify(groups, content))
     with pytest.raises(rs.RescaleError, match="已經換算過"):
         rs.apply(again, content)
+    assert {p: p.read_bytes() for p in content.rglob("*.yaml")} == before
+
+
+def test_missing_scale_is_refused(tmp_path: Path) -> None:
+    """找不到 ``quantity_scale`` 時不知道換算過沒有：整批拒絕，一個檔也不寫。"""
+    content, changes = _plan(tmp_path)
+    (content / "rules" / "core.yaml").write_text("other: 1\n", encoding="utf-8")
+    before = {p: p.read_bytes() for p in content.rglob("*.yaml")}
+    with pytest.raises(rs.RescaleError, match="quantity_scale"):
+        rs.apply(changes, content)
     assert {p: p.read_bytes() for p in content.rglob("*.yaml")} == before
 
 
@@ -167,12 +186,12 @@ def test_csv_columns(tmp_path: Path) -> None:
 
 
 def test_real_content_dry_run() -> None:
-    """真的 content/：清單完整、每一筆都能改寫、而且沒有任何一個檔已經換算過。"""
+    """真的 content/：清單完整、每一筆都能改寫、而且還沒換算過（``quantity_scale`` 是 1）。"""
     changes = rs.plan()
-    texts = rs.rewrite(changes)
+    texts = rs.rewrite([*changes, rs.scale_change()])
     assert changes
-    assert len(texts) == len({c.file for c in changes})
-    assert not rs.marked_files()
+    assert len(texts) == len({c.file for c in changes} | {rs.SCALE_FILE})
+    assert rs.current_scale() == 1
 
 
 _TUNE_LOG = (
