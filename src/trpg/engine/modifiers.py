@@ -56,6 +56,7 @@ __all__ = [
     "INTERACT",
     "SHOVE",
     "SILENT_WEAPONS",
+    "TARGET_CHANGES",
     "TRIP",
     "ActiveRule",
     "Use",
@@ -92,6 +93,7 @@ __all__ = [
     "summon_duration_delta",
     "summon_hp_permille",
     "summon_limit_delta",
+    "target_rules",
     "unit_rules",
 ]
 
@@ -519,6 +521,30 @@ def on_hit_rules(state: BattleState, unit: UnitState, use: Use) -> list[ActiveRu
         a
         for a in rules
         if a.rule.change.on_hit_effects is not None and _matches(state, a.rule, use, tags)
+    ]
+
+
+TARGET_CHANGES: frozenset[str] = frozenset(
+    {"damage_permille", "hit_bonus", "cooldown_delta", "push_distance_delta", "on_hit_effects"}
+)
+"""條件看這次動作的目標的改變種類（:class:`~trpg.content.skills.ModifierSpec` 的說明：傷害、命中、
+推擊距離看該目標；冷卻看被命中的敵人；命中後效果看被命中的目標）。其他種類的條件看持有者自己。"""
+
+
+def target_rules(state: BattleState, unit: UnitState, use: Use) -> list[ActiveRule]:
+    """``unit`` 套用在 ``use`` 上、有條件、而且條件看目標（:data:`TARGET_CHANGES`）的規則；本回合
+    次數已用完的不算（SK-3c 修正規則條件的「利用」用；依技能 ID、規則索引）。"""
+    rules = unit_rules(state, unit)
+    if not rules:
+        return []
+    tags = effective_tags(state, unit, use.skill) if use.skill is not None else ()
+    return [
+        a
+        for a in rules
+        if a.rule.condition is not None
+        and a.rule.change.kind in TARGET_CHANGES
+        and _matches(state, a.rule, use, tags)
+        and not rule_limit_reached(unit, a)
     ]
 
 

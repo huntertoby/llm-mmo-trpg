@@ -98,9 +98,11 @@ from trpg.engine.skill_triggers import collect_move
 from trpg.engine.skills.conditions import Subject, condition_met, stack_at_least, subjects_of
 from trpg.engine.skills.exploits import (
     Exploit,
+    ExploitKey,
     condition_exploits,
     exploit_parts,
     report_exploits,
+    rule_exploits,
 )
 from trpg.engine.skills.mobility import dash_route, shadowstep_behind
 from trpg.engine.skills.primitives import primitive_handler
@@ -139,6 +141,10 @@ _STRIKE_AFFECTS = ("enemies", "all")
 
 _NO_ALLY_ROLL = "shockwave"
 """震波（Phase 3-54d，06 6.33 #64）：對敵方先擲命中，對友方（``affects: all`` 也一樣）不擲命中。"""
+
+
+def _by_id(unit: UnitState) -> str:
+    return unit.id
 
 
 def _decoy_miss() -> AttackRoll:
@@ -187,6 +193,7 @@ class Cast:
     """吸收表面吸到水（``gain: element``，SK-2b，玩法交接 4.1.28 第 1 點）：
     :func:`absorb_surface` 在實例上設成真，這一招之後的傷害效果命中時在目標格造水（帶潮濕，
     同召喚灌注 ``wet``）。"""
+    _exploits_seen: set[ExploitKey] | None = None
     stacks_at_cast: Mapping[str, int] | None = None
     """施放開始時施放者的層數快照（KW-1 ``self_stack_at_least``，#161）：:meth:`run` 在任何效果與
     消耗之前在實例上設定；``holds`` 對這個條件看快照，所以同一招消耗或累積的層數不影響判斷。"""
@@ -555,6 +562,32 @@ class Cast:
         ]
         return condition_exploits(state, self.caster, condition, subjects)
 
+    def rule_exploits(self) -> list[Exploit]:
+        """施放者的修正規則條件因別人造的狀態、表面或自己的符文、對這次擲了命中的對象成立（SK-3c，
+        玩法交接 4.1.31 第 5 點；命中判定之後、效果結算前判斷）。被動、陷阱與命中後效果的施放
+        不受修正，沒有。"""
+        if not self.modified or not self.hits:
+            return []
+        rolled = sorted((u for u in (*self.enemies, *self.allies) if u.id in self.hits), key=_by_id)
+        subjects = [Subject(u, u.xy) for u in rolled]
+        return rule_exploits(self.ctx.state, self.caster, self.use, subjects)
+
+    def landed_exploits(self, exploits: list[Exploit]) -> list[Exploit]:
+        """修正規則的利用只算最後仍判定命中的對象（落空不算；連擊武器是任一下命中）。"""
+        return [e for e in exploits if e.unit_id is not None and self.hits_unit(e.unit_id)]
+
+    @property
+    def exploits_seen(self) -> set[ExploitKey]:
+        """這次施放已經交出去的「利用」（SK-3c：同一個製造者、狀態或表面、對象只算一筆；第一次用到
+        時在實例上建立）。"""
+        if self._exploits_seen is None:
+            self._exploits_seen = set()
+        return self._exploits_seen
+
+    def hits_unit(self, unit_id: str) -> bool:
+        roll = self.hits.get(unit_id)
+        return roll is not None and roll.hit
+
     # ------------------------------------------------------------------
     # 展開
     # ------------------------------------------------------------------
@@ -574,11 +607,14 @@ class Cast:
         if self.repeated_damage():
             self.deferred_hit_backlash = []
         exploited, start = self.skill_exploits(), len(self.ctx.events)  # SK-3b：技能條件的利用
+        by_rules = self.rule_exploits()  # SK-3c：修正規則條件的利用
         for effect in self.effects:
             if not self.after_all_strikes(effect):
                 self.resolve_effect(effect)
         self.extra_strikes()
-        report_exploits(self.ctx, self.caster.id, exploited, start)
+        seen = self.exploits_seen
+        report_exploits(self.ctx, self.caster.id, exploited, start, seen)
+        report_exploits(self.ctx, self.caster.id, self.landed_exploits(by_rules), start, seen)
         self.settle_deferred_hit_backlash()
         self.backlash_on_miss()
         self.react_to_hits()
@@ -593,7 +629,7 @@ class Cast:
         batch = self.build(effect, spec)
         if batch:
             execute(self.ctx, batch)
-        report_exploits(self.ctx, self.caster.id, exploited, start)
+        report_exploits(self.ctx, self.caster.id, exploited, start, self.exploits_seen)
         if effect.type == "damage":
             if effect.affects in TOUCHING_AFFECTS and not extra:
                 self.touch_untouched_tiles(spec, start)
