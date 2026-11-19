@@ -16,7 +16,7 @@ scaling_attr: wis
 shape: {type: self}
 effects:
   - {type: shield, dice: 1d4, affects: self}
-  - {type: restore_resource, resource: mana, amount: 1, affects: self}
+  - {type: restore_resource, resource: mana, amount: 10, affects: self}
 condition: null
 trigger: {event: on_keyword_exploited, surface: water, target: self, max_per_round: 1}
 cost: {mana: 0}

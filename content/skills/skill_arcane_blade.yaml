@@ -17,7 +17,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 2400, element: lightning}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [lightning, melee]
 narrative:
   concept: 把魔力灌進劍身，以劍勢與咒力各出一半的力量斬出雷光

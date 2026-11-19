@@ -19,7 +19,7 @@ effects:
       - {type: damage, dice: 5d6, element: ice}
 
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [ice, spell, detonate]
 narrative:
   concept: 把封住目標的冰一口氣震成碎片

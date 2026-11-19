@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 1400, element: holy}
   - {type: knock_prone}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [holy, melee, control]
 narrative:
   concept: 刀刃裹著聖光，一劍把罪人劈得跪倒

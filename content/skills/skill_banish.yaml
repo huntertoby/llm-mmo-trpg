@@ -15,7 +15,7 @@ shape: {type: unit_then_tile, range: 5}
 effects:
   - {type: teleport_target}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [arcane, spell, teleport, mobility]
 narrative:
   concept: 在空間上撕開一道縫，把目標丟到另一個地方；丟進深淵與岩漿的機會很小，但值得一試

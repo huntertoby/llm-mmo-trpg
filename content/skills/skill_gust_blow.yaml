@@ -15,7 +15,7 @@ shape: {type: cone, size: 4}
 effects:
   - {type: blow_surface, distance: 3}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [wind, spell, control, area]
 narrative:
   concept: 一陣風把地上的火、毒、水、油和煙霧整片往前推

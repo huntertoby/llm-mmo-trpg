@@ -26,48 +26,48 @@ affixes:
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: str
-    value: {min: 1, max: 4}
+    value: {min: 10, max: 40}
   - id: affix_attr_dex
     category: stat
     name_zh: 敏捷 +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: dex
-    value: {min: 1, max: 4}
+    value: {min: 10, max: 40}
   - id: affix_attr_con
     category: stat
     name_zh: 體質 +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: con
-    value: {min: 1, max: 4}
+    value: {min: 10, max: 40}
   - id: affix_attr_int
     category: stat
     name_zh: 智力 +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: int
-    value: {min: 1, max: 4}
+    value: {min: 10, max: 40}
   - id: affix_attr_wis
     category: stat
     name_zh: 感知 +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: wis
-    value: {min: 1, max: 4}
+    value: {min: 10, max: 40}
   - id: affix_attr_wil
     category: stat
     name_zh: 意志 +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: attribute
     attribute: wil
-    value: {min: 1, max: 4}
+    value: {min: 10, max: 40}
   - id: affix_max_hp
     category: stat
     name_zh: 最大 HP +{n}
     slots: [weapon, offhand, head, body, hands, feet, neck, ring]
     stat: max_hp
-    value: {min: 4, max: 16}
+    value: {min: 40, max: 160}
   - id: affix_resist_fire
     category: stat
     name_zh: 火焰抗性 +{n}
@@ -492,7 +492,7 @@ affixes:
     name_zh: 回合開始時失去 {down.turn_start_hp_loss} HP（不會致死）；技能冷卻 −{up.cooldown_delta}
     slots: [neck, ring, body]
     upside: [{stat: cooldown_delta, amount: -1}]
-    downside: [{stat: turn_start_hp_loss, amount: 2}]
+    downside: [{stat: turn_start_hp_loss, amount: 20}]
   - id: affix_cost_swift
     category: cost
     name_zh: 移動 +{up.move}；防禦 −{down.defense_permille}

@@ -26,7 +26,7 @@ followup:
     - {type: damage, multiplier_permille: 1500, element: fire}
     - {type: create_surface, surface: fire}
 condition: null
-cost: {stamina: 10, cooldown: 3}
+cost: {stamina: 100, cooldown: 3}
 tags: [fire, melee, aoe]
 narrative:
   concept: 背上的熔岩池整個傾倒，熔流沿著地面潰堤而出

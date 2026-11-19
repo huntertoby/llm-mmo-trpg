@@ -4,10 +4,10 @@
 # element_mods（個別元素修正 ‰：正值為弱點、負值為抗性）、tags。
 id: hero_fighter
 name_zh: 戰士
-attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-max_hp: 48
+attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+max_hp: 480
 speed: 5
-armor_bonus: 4
+armor_bonus: 40
 weapon: one_handed_sword
 resist: {physical: 100}
 element_mods: {}

@@ -21,7 +21,7 @@ effects:
       - {type: refund_ap, amount: 1}
       - {type: refund_cooldown}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [fire, spell, finisher]
 narrative:
   concept: 火焰收走一條性命的同時，也把你的力氣還給你

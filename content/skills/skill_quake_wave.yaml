@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: earth}
   - {type: shockwave}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [earth, spell, area]
 element: earth
 narrative:

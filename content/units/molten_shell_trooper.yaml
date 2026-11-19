@@ -4,10 +4,10 @@
 # 外觀（RG-4）：熔岩甲蟲＋特徵 molten_shield（美術 A 立殼，docs/art/RG樣張.md 9.2、9.8 第 3 條；只給敵人）。
 id: molten_shell_trooper
 name_zh: 熔殼甲兵
-attributes: {str: 13, dex: 8, con: 16, int: 3, wis: 8, wil: 10}
-max_hp: 30
+attributes: {str: 130, dex: 80, con: 160, int: 30, wis: 80, wil: 100}
+max_hp: 300
 speed: 4
-armor_bonus: 5
+armor_bonus: 50
 weapon: stone_fist
 ai_profile: guard
 resist: {}

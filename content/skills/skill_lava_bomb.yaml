@@ -21,7 +21,7 @@ effects:
   - {type: damage, dice: 3d8, element: fire}
   - {type: apply_status, status: burning, duration: 2}
 condition: null
-cost: {mana: 10, cooldown: 4}
+cost: {mana: 100, cooldown: 4}
 tags: [fire, spell, burn]
 narrative:
   concept: 背殼像小火山，先把殼口轉向獵物，下一刻噴出一團熔岩

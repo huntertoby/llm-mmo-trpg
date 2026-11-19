@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 600, element: poison}
   - {type: create_surface, surface: poison, duration: 2}
 condition: null
-cost: {stamina: 10, cooldown: 3}
+cost: {stamina: 100, cooldown: 3}
 tags: [poison, ranged, area]
 narrative:
   concept: 箭桿綁著毒囊，落地炸開成一片毒霧

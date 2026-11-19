@@ -7,10 +7,10 @@
 # 真人全程拿單手劍（換武器不做，代決 5F2-8）。
 id: sect_mist_lock_master
 name_zh: 霧鎖真人
-attributes: {str: 14, dex: 12, con: 14, int: 14, wis: 16, wil: 14}
-max_hp: 120
+attributes: {str: 140, dex: 120, con: 140, int: 140, wis: 160, wil: 140}
+max_hp: 1200
 speed: 5
-armor_bonus: 3
+armor_bonus: 30
 weapon: one_handed_sword
 ai_profile: archer
 resist: {}
@@ -20,7 +20,7 @@ skills: [skill_cluster_bolt, skill_mist_shift, skill_guardian_aegis]
 reactions:
   - reaction: block
     when: {event: targeted_by_melee}
-    unless: {self_stamina_below: 20}
+    unless: {self_stamina_below: 200}
   - reaction: opportunity_attack
     when: {event: enemy_leaves_adjacent}
 phases:

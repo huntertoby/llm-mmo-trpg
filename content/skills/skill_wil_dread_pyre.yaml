@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: feared, duration: 1}
   - {type: apply_status, status: burning, duration: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [shadow, spell, fear, fire]
 narrative:
   concept: 讓對手看見自己被烈火吞沒的幻象，恐懼成真時，身上也真的燒了起來

@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 1300}
   - {type: knock_prone, condition: {type: self_stack_at_least, stack: fury, count: 3}}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, melee, rage]
 narrative:
   concept: 怒氣攢夠了，這一擊連人帶地一起砸翻

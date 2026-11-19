@@ -4,10 +4,10 @@
 # 石靈被打碎後立刻解除（取代 5A-3 的「只是高護甲物件」，代決 5A3-2）。
 id: sect_array_stone
 name_zh: 陣眼石靈
-attributes: {str: 10, dex: 6, con: 16, int: 6, wis: 10, wil: 10}
-max_hp: 30
+attributes: {str: 100, dex: 60, con: 160, int: 60, wis: 100, wil: 100}
+max_hp: 300
 speed: 0
-armor_bonus: 4
+armor_bonus: 40
 weapon: fist
 ai_profile: idle
 resist: {}

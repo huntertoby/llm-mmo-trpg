@@ -17,7 +17,7 @@ shape: {type: single, range: 5}
 effects:
   - {type: delayed_damage, dice: 3d6, element: fire, rounds: 2, radius: 1}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [fire, spell, bomb]
 narrative:
   concept: 把一枚燃燒的符印貼在敵人身上，讓他自己帶著炸彈走進人群

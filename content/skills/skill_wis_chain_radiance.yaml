@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: holy}
   - {type: damage, dice: 1d4, element: lightning}
 condition: null
-cost: {mana: 7, cooldown: 2}
+cost: {mana: 70, cooldown: 2}
 tags: [holy, lightning, spell, chain]
 narrative:
   concept: 一束聖光帶著雷鳴，從一個敵人跳到下一個

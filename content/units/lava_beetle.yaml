@@ -2,10 +2,10 @@
 # 熔岩甲蟲：坦、硬殼（高護甲）；翻滾撞擊。
 id: lava_beetle
 name_zh: 熔岩甲蟲
-attributes: {str: 14, dex: 8, con: 16, int: 3, wis: 8, wil: 10}
-max_hp: 38
+attributes: {str: 140, dex: 80, con: 160, int: 30, wis: 80, wil: 100}
+max_hp: 380
 speed: 4
-armor_bonus: 4
+armor_bonus: 40
 weapon: stone_fist
 ai_profile: brute
 resist: {}

@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: shadow}
   - {type: apply_status, status: burning, duration: 1}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, curse, fire]
 narrative:
   concept: 在目標身上烙下一道悶燒的詛咒，暗影咬過之後，傷口跟著冒出火來

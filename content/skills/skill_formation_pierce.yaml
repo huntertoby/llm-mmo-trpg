@@ -16,7 +16,7 @@ shape: {type: line, size: 2}
 effects:
   - {type: damage, multiplier_permille: 1400}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [physical, melee, line]
 narrative:
   concept: 一劍直送，劍勢穿過面前的人，連站在後面的也一併刺中

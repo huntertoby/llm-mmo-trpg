@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: shadow}
   - {type: create_surface, surface: ice, duration: 2}
 condition: null
-cost: {mana: 8, cooldown: 2}
+cost: {mana: 80, cooldown: 2}
 tags: [shadow, spell, curse, ice, area]
 narrative:
   concept: 墳土裡的寒氣被喚上地面，一整片敵人被凍在原地

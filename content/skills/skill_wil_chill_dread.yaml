@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: feared, duration: 2}
   - {type: damage, dice: 1d4, element: ice}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [shadow, spell, fear, ice]
 narrative:
   concept: 讓對手感到一股從骨子裡冒出來的寒意，冷到他只想往後退

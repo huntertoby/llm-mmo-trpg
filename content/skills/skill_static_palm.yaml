@@ -17,7 +17,7 @@ effects:
   - {type: damage, dice: 1d8, element: lightning}
   - {type: add_stack, stack: static_charge, amount: 1, affects: self}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [lightning, spell, builder]
 narrative:
   concept: 掌心貼上對手的瞬間，電流倒灌回自己的經脈

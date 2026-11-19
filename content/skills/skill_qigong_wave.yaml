@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 950}
   - {type: consume_stack, stack: ki, per_stack_permille: 150, affects: self}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, melee, martial, aoe, finisher]
 narrative:
   concept: 把攢下的氣一掌推出，化成一道貫穿的氣浪

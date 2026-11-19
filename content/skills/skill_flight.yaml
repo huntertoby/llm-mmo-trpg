@@ -17,7 +17,7 @@ effects:
   - {type: teleport}
   - {type: apply_status, status: concealed, duration: 2, affects: self}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [wind, teleport, mobility, flight]
 narrative:
   concept: 一對光之翼托著你掠過地面

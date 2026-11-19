@@ -27,7 +27,7 @@ effects:
   affects: self
 condition: null
 cost:
-  stamina: 8
+  stamina: 80
   cooldown: 3
 tags:
 - physical

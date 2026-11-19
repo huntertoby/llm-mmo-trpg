@@ -15,7 +15,7 @@ shape: {type: allies_in_radius, radius: 3}
 effects:
   - {type: detonate_runes, dice: 3d6}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [spell, rune_read, rune_detonate]
 narrative:
   concept: 先前刻下的每一道符文，在同一瞬間全部炸開

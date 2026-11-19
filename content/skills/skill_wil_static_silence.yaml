@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: silenced, duration: 1}
   - {type: damage, dice: 1d4, element: lightning}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [shadow, spell, silence, lightning]
 narrative:
   concept: 一道帶電的暗影封住對手的喉嚨，他一開口就被電得說不出話

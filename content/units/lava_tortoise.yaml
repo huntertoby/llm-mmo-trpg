@@ -2,10 +2,10 @@
 # 噴岩龜：遠程（拋射）、拋射熔岩彈造火地（火牆）。
 id: lava_tortoise
 name_zh: 噴岩龜
-attributes: {str: 12, dex: 8, con: 16, int: 10, wis: 10, wil: 10}
-max_hp: 32
+attributes: {str: 120, dex: 80, con: 160, int: 100, wis: 100, wil: 100}
+max_hp: 320
 speed: 3
-armor_bonus: 4
+armor_bonus: 40
 weapon: fire_staff
 ai_profile: archer
 resist: {}

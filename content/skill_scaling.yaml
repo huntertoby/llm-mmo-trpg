@@ -57,7 +57,7 @@ weapon_class_attrs: {melee: str, ranged: dex}
 # 「武器的縮放值」與「心智屬性值」的平均，無條件捨去）；法術技的第二屬性限在上面主題允許的集合內，身體類法術不給。
 # 產生器只在主角第二高屬性與最高屬性的差不超過 dual_max_gap 時給（機率在 skill_composer.yaml 的 scaling.dual_permille）。
 weapon_second_attrs: [int, wis, wil]
-dual_max_gap: 4
+dual_max_gap: 40
 
 # 組合主題（玩法 PM 2026-10-23，06 6.10）：法術同時帶元素和另一個主題時，可以看兩者之一，產生技能時取主角
 # 較高的那個（例：火焰詛咒看智力或意志；聖水看智力或感知；召喚物自帶的元素不算，召喚一律看意志）。純元素傷害仍只看智力。

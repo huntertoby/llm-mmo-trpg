@@ -9,10 +9,10 @@
 # 原文做不到的地方用現有機制近似（代決 5F3-13）：晶蝕不能疊層、晶傀儡只召喚一次、「每回合結束全場傷害」與「每回合換邊」交給 AI。
 id: rift_shard_lord
 name_zh: 碎晶之主
-attributes: {str: 12, dex: 12, con: 14, int: 16, wis: 14, wil: 14}
-max_hp: 380
+attributes: {str: 120, dex: 120, con: 140, int: 160, wis: 140, wil: 140}
+max_hp: 3800
 speed: 4
-armor_bonus: 3
+armor_bonus: 30
 weapon: lightning_staff
 ai_profile: archer
 resist: {}

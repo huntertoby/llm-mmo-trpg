@@ -1,8 +1,8 @@
 # 召喚物（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：斥候。利爪、速度 7、固有「標記」；命中同時揭露目標。「會飛」在 3-33e1 只以高速度近似（沒有新增移動規則）。
 id: summon_hawk
 name_zh: 鷹隼
-attributes: {str: 6, dex: 16, con: 10, int: 8, wis: 12, wil: 8}
-max_hp: 8
+attributes: {str: 60, dex: 160, con: 100, int: 80, wis: 120, wil: 80}
+max_hp: 80
 speed: 7
 armor_bonus: 0
 weapon: talons

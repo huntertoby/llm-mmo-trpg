@@ -15,7 +15,7 @@ shape: {type: unit_pair, range: 5}
 effects:
   - {type: swap_any}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {mana: 50, cooldown: 3}
 tags: [arcane, spell, swap, mobility]
 narrative:
   concept: 讓戰場上的兩個身影在虛空中對調，把敵人換進包圍圈，把隊友換出險境

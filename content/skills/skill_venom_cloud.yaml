@@ -15,7 +15,7 @@ effects:
   - {type: apply_status, status: poison, duration: 5}
   - {type: apply_status, status: vulnerable, duration: 2}
 condition: null
-cost: {mana: 10, cooldown: 3}
+cost: {mana: 100, cooldown: 3}
 tags: [poison, spell, area, control]
 narrative:
   concept: 一團綠色的霧氣，吸進去的人會失去抵抗力

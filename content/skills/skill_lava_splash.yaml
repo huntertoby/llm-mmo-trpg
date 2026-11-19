@@ -31,7 +31,7 @@ followup:
     - {type: damage, dice: 1d6, element: fire}
     - {type: create_surface, surface: fire, duration: 2}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [fire, spell, aoe]
 narrative:
   concept: 殼頂噴出的熔岩在半空散開，下一刻一團一團砸在選好的地方

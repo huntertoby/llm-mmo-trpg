@@ -3,10 +3,10 @@
 # 山中修士・刺客：「霧襲」瞬步背刺；受擊時隱蔽。
 id: sect_mist_walker
 name_zh: 霧行者
-attributes: {str: 10, dex: 16, con: 10, int: 10, wis: 10, wil: 10}
-max_hp: 24
+attributes: {str: 100, dex: 160, con: 100, int: 100, wis: 100, wil: 100}
+max_hp: 240
 speed: 6
-armor_bonus: 1
+armor_bonus: 10
 weapon: dagger
 ai_profile: assassin
 resist: {}
@@ -16,7 +16,7 @@ skills: [skill_shadow_backstab, skill_rx_slip_away]
 reactions:
   - reaction: block
     when: {event: targeted_by_melee}
-    unless: {self_stamina_below: 20}
+    unless: {self_stamina_below: 200}
   - reaction: opportunity_attack
     when: {event: enemy_leaves_adjacent}
   - reaction: skill_rx_slip_away

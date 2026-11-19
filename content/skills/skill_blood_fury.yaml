@@ -17,7 +17,7 @@ effects:
   - {type: apply_status, status: empowered, duration: 1, affects: self}
   - {type: add_stack, stack: fury, amount: 2, affects: self}
 condition: null
-cost: {mana: 2, cooldown: 2, hp_percent: 60}
+cost: {mana: 20, cooldown: 2, hp_percent: 60}
 tags: [physical, rage, builder]
 narrative:
   concept: 咬破自己的傷口，讓痛楚燒成怒火

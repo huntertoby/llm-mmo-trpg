@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d10, element: shadow}
   - {type: apply_status, status: poison, duration: 3}
 condition: null
-cost: {mana: 9, cooldown: 2}
+cost: {mana: 90, cooldown: 2}
 tags: [shadow, spell, curse, poison, area]
 narrative:
   concept: 一團帶著瘟疫的暗影罩住敵群，散去之後，每個人身上都留下了病

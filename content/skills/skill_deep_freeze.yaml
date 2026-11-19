@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: frozen, duration: 1}
   - {type: apply_status, status: vulnerable, duration: 2}
 condition: null
-cost: {mana: 8, cooldown: 4}
+cost: {mana: 80, cooldown: 4}
 tags: [ice, spell, control]
 narrative:
   concept: 把對手凍成一尊脆弱的冰雕

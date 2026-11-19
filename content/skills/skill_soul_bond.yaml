@@ -14,7 +14,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: redirect_damage, permille: 400, duration: 3, affects: allies}
 condition: null
-cost: {mana: 6, cooldown: 4}
+cost: {mana: 60, cooldown: 4}
 tags: [holy, spell, support, guard]
 narrative:
   concept: 以自己的生命線繫住同伴，替他分擔一部分的傷害

@@ -21,7 +21,7 @@ effects:
     collision_dice: 4d6
     condition: {type: target_has_status, status: prone}
 condition: null
-cost: {stamina: 6, cooldown: 1}
+cost: {stamina: 60, cooldown: 1}
 tags: [physical, melee, pull]
 narrative:
   concept: 揪住倒地的敵人往回一拖，撞上東西時摔得更重

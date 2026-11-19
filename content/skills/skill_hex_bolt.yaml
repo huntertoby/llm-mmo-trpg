@@ -15,7 +15,7 @@ effects:
   - {type: damage, dice: 1d8, element: shadow}
   - {type: apply_status, status: marked, duration: 1}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, mark]
 narrative:
   concept: 射出一枚帶著咒印的暗影，讓目標成為所有人的靶子

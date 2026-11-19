@@ -16,7 +16,7 @@ effects:
   - {type: shield, dice: 1d6, affects: allies}
   - {type: pull, distance: 2, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [spell, shield, support]
 narrative:
   concept: 一條發光的繩索，把陷入危險的同伴拉回身邊

@@ -3,10 +3,10 @@
 # 源晶失控造物：近戰；倒下時碎成源晶碎片（狀態 shard_burst：留下導電的水，5A-M1 代決 5AM1-6）。
 id: shard_golem
 name_zh: 碎晶傀儡
-attributes: {str: 14, dex: 8, con: 14, int: 4, wis: 8, wil: 10}
-max_hp: 36
+attributes: {str: 140, dex: 80, con: 140, int: 40, wis: 80, wil: 100}
+max_hp: 360
 speed: 4
-armor_bonus: 3
+armor_bonus: 30
 weapon: stone_fist
 ai_profile: brute
 resist: {}

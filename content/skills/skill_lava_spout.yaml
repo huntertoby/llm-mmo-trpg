@@ -25,7 +25,7 @@ followup:
     - {type: damage, dice: 1d6, element: fire}
     - {type: create_surface, surface: fire}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [fire, spell, aoe]
 narrative:
   concept: 殼縫裡的熔岩鼓脹起來，下一刻朝四周噴濺

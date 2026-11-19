@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: enemy_enters_adjacent}
-cost: {mana: 3, cooldown: 2}
+cost: {mana: 30, cooldown: 2}
 tags: [fear, reaction, spell, shadow]
 narrative:
   concept: 敢貼上來的人，會先在你的眼神裡看見自己的下場

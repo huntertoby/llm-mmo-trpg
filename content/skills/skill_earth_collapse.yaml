@@ -15,7 +15,7 @@ shape: {type: square3, range: 4}
 effects:
   - {type: lower_terrain, amount: 1, affects: tiles}
 condition: null
-cost: {mana: 8, cooldown: 2}
+cost: {mana: 80, cooldown: 2}
 tags: [earth, spell, terrain]
 element: earth
 narrative:

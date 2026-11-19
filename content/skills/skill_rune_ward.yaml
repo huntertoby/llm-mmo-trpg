@@ -16,7 +16,7 @@ shape: {type: allies_in_radius, radius: 2}
 effects:
   - {type: shield, dice: 2d6, affects: allies, condition: {type: on_own_rune}}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [spell, shield, support, rune]
 narrative:
   concept: 你刻下的符紋會替站在上面的同伴撐起一層護盾

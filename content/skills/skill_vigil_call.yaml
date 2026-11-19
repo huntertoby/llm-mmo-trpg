@@ -14,7 +14,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: extra_reaction, amount: 1, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 4}
+cost: {mana: 40, cooldown: 4}
 tags: [holy, spell, support, guard]
 narrative:
   concept: 喝出警戒的號令，讓同伴在這一輪多一次反擊的機會

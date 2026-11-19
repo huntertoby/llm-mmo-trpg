@@ -16,7 +16,7 @@ effects:
   - {type: create_obstacle, object: thorn_wall, duration: 2}
   - {type: create_surface, surface: poison, duration: 2}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {mana: 30, cooldown: 2}
 tags: [nature, spell, obstacle]
 narrative:
   concept: 在自己周圍催生一圈帶刺的荊棘叢（地上帶毒），擋住去路卻擋不住視線，兩輪後枯萎

@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 3}
 effects:
   - {type: summon, unit: summon_skeleton_warrior, duration: 2}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [shadow, spell, summon]
 narrative:
   concept: 從地底喚起一具聽命的骷髏戰士，替你擋在前線

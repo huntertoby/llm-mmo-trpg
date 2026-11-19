@@ -15,7 +15,7 @@ shape: {type: self}
 effects:
   - {type: grant_skill, skill: skill_flight, duration: 3, affects: self}
 condition: null
-cost: {mana: 4, cooldown: 4}
+cost: {mana: 40, cooldown: 4}
 tags: [wind, spell, buff, flight]
 narrative:
   concept: 背後長出光之翼，接下來三輪可以飛

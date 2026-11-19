@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: marked, duration: 2}
   - {type: apply_status, status: poison, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [poison, spell, mark]
 narrative:
   concept: 一枚蛇形的印記，讓同伴看得見獵物，也讓毒慢慢滲進去

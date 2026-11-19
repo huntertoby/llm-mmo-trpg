@@ -15,7 +15,7 @@ shape: {type: single, range: 3}
 effects:
   - {type: shield, dice: 1d8, status: shielded_charged, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [lightning, spell, shield]
 narrative:
   concept: 替同伴披上一層劈啪作響的雷殼，敢打破它的人會被電得一縮

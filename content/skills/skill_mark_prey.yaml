@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: marked, duration: 2}
   - {type: damage, dice: 1d4, element: shadow}
 condition: null
-cost: {mana: 3, cooldown: 1}
+cost: {mana: 30, cooldown: 1}
 tags: [shadow, spell, mark]
 narrative:
   concept: 替目標烙上一個大家都看得見的印記

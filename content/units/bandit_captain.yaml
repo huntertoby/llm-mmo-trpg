@@ -2,10 +2,10 @@
 # 擊倒時照精英給源力）。用在 open_plain、oil_depot 的預設陣容（原本放頭目）。
 id: bandit_captain
 name_zh: 盜賊隊長
-attributes: {str: 14, dex: 12, con: 14, int: 8, wis: 10, wil: 10}
-max_hp: 45
+attributes: {str: 140, dex: 120, con: 140, int: 80, wis: 100, wil: 100}
+max_hp: 450
 speed: 5
-armor_bonus: 3
+armor_bonus: 30
 weapon: one_handed_sword
 resist: {physical: 50}
 element_mods: {}

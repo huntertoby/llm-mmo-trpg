@@ -1,8 +1,8 @@
 # 召喚物（Phase 3-33e1，docs/design/06-技能.md 6.29.5；數值為初值，未經模擬）：遠程輸出。火焰法杖、固有「點燃」（命中燃燒）。
 id: summon_fire_spirit
 name_zh: 火靈
-attributes: {str: 8, dex: 14, con: 10, int: 12, wis: 10, wil: 10}
-max_hp: 14
+attributes: {str: 80, dex: 140, con: 100, int: 120, wis: 100, wil: 100}
+max_hp: 140
 speed: 5
 armor_bonus: 0
 weapon: fire_staff

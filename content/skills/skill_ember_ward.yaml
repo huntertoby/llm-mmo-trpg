@@ -16,7 +16,7 @@ effects:
   - {type: shield, dice: 1d6, affects: self}
 condition: null
 trigger: {event: on_cast_tag, tag: fire, target: self, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [fire, spell, passive]
 narrative:
   concept: 每一次點火，都有一層熱浪替你擋在身前

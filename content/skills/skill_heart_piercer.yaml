@@ -18,7 +18,7 @@ effects:
   - {type: consume_stack, stack: focus, per_stack_permille: 150, affects: self}
   - {type: apply_status, status: marked, duration: 2, condition: {type: self_stack_at_least, stack: focus, count: 3}}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, ranged, finisher]
 narrative:
   concept: 凝到極致的一箭，直取要害還留下記號

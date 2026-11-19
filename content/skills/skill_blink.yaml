@@ -16,7 +16,7 @@ effects:
   # 閃現之後短暫隱蔽：2B-2 預算驗證要求（只有傳送的點數低於 AP 1 技能的合格下限）
   - {type: apply_status, status: concealed, duration: 2, affects: self}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {mana: 50, cooldown: 3}
 tags: [arcane, teleport, mobility]
 narrative:
   concept: 在眨眼之間出現在別的地方

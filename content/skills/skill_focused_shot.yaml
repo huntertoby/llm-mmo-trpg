@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 1500}
   - {type: consume_stack, stack: focus, per_stack_permille: 150, affects: self}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, ranged, finisher]
 narrative:
   concept: 一動不動的人，下一箭才會穿透一切

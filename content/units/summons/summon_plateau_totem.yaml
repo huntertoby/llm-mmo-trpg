@@ -2,8 +2,8 @@
 # inert）；召喚時在旁邊（離召喚者最近的空格）升起 1 格高台，圖騰消失（到期、被打倒…）時高台恢復。
 id: summon_plateau_totem
 name_zh: 高台圖騰
-attributes: {str: 6, dex: 6, con: 12, int: 6, wis: 6, wil: 6}
-max_hp: 12
+attributes: {str: 60, dex: 60, con: 120, int: 60, wis: 60, wil: 60}
+max_hp: 120
 speed: 0
 armor_bonus: 0
 weapon: totem_stone

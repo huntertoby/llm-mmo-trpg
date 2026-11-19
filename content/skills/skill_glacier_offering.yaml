@@ -15,7 +15,7 @@ shape: {type: single, range: 5}
 effects:
   - {type: sacrifice_summon, dice: 2d8, radius: 1, element: ice}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [ice, spell, sacrifice]
 narrative:
   concept: 讓聽命的召喚物凝成寒冰，在敵群中碎開

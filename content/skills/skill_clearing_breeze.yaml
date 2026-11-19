@@ -15,7 +15,7 @@ shape: {type: square3, range: 4}
 effects:
   - {type: clear_surface, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [wind, spell, support, cleanse]
 narrative:
   concept: 一陣清涼的微風，吹走友方腳下的煙霧與毒（不是一般的風，不會吹動別的東西）

@@ -18,7 +18,7 @@ effects:
   - {type: damage, multiplier_permille: 1100}
   - {type: apply_status, status: poison, duration: 3}
 condition: null
-cost: {stamina: 10, cooldown: 1}
+cost: {stamina: 100, cooldown: 1}
 tags: [poison, melee]
 narrative:
   concept: 帶著硫味的獠牙頂進肉裡，毒順著傷口往裡鑽

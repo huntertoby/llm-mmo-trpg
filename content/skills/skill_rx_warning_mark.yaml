@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: ally_targeted}
-cost: {mana: 2, cooldown: 1}
+cost: {mana: 20, cooldown: 1}
 tags: [mark, reaction, scout, spell]
 narrative:
   concept: 敵人剛把目光鎖向同伴，你已經在他身上點出破綻

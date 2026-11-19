@@ -14,7 +14,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: topple}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [arcane, spell, telekinesis]
 narrative:
   concept: 隔空推倒戰場上的石柱與枯樹，壓向躲在後面的敵人

@@ -18,7 +18,7 @@ effects:
   - {type: dash}
   - {type: damage, dice: 3d4, element: physical, form_bonus_permille: 300}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [physical, melee, mobility]
 narrative:
   concept: 一個箭步撲到敵人面前，變了身的時候撲得更凶

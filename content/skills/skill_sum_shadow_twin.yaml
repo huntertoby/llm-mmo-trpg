@@ -17,7 +17,7 @@ shape: {type: ground_tile, range: 3}
 effects:
   - {type: summon, unit: summon_shade, duration: 2}
 condition: null
-cost: {stamina: 6, cooldown: 4}
+cost: {stamina: 60, cooldown: 4}
 tags: [shadow, melee, summon]
 narrative:
   concept: 短刃在影子上一劃，劃出一個影魅，專從敵人背後下手

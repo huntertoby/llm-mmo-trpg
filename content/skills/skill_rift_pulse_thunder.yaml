@@ -24,7 +24,7 @@ followup:
   effects:
     - {type: damage, dice: 2d8, element: lightning}
 condition: null
-cost: {mana: 2, cooldown: 1}
+cost: {mana: 20, cooldown: 1}
 tags: [lightning, spell, aoe]
 narrative:
   concept: 源晶柱把雷光沿著浮台的裂縫劈出去

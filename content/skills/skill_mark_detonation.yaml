@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d6, element: shadow, affects: enemies}
 condition: {type: target_has_status, status: marked}
 trigger: {event: on_hit, target: other, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [shadow, spell, passive, mark]
 narrative:
   concept: 命中帶著咒印的敵人時，讓咒印當場炸開

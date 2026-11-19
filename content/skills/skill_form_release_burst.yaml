@@ -17,7 +17,7 @@ effects:
   - {type: leave_form, affects: self}
   - {type: damage, dice: 3d6, element: physical}
 condition: null
-cost: {mana: 8}
+cost: {mana: 80}
 tags: [physical, area, aoe]
 narrative:
   concept: 讓變身的力量一口氣炸開，身邊的敵人被震飛，而你變回原形

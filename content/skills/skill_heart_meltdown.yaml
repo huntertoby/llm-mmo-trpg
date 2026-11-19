@@ -24,7 +24,7 @@ followup:
   effects:
     - {type: damage, dice: 3d8, element: fire}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [fire, spell, aoe]
 narrative:
   concept: 核心把整座坑的熱都收進來，往四個方向一口氣炸開

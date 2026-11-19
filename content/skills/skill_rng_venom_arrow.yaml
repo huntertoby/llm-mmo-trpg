@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 650, element: poison}
   - {type: apply_status, status: poison}
 condition: null
-cost: {stamina: 6, cooldown: 2}
+cost: {stamina: 60, cooldown: 2}
 tags: [poison, ranged]
 narrative:
   concept: 箭頭泡過蛇毒，擦破皮就會一路毒下去

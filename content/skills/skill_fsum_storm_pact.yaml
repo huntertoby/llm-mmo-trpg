@@ -17,7 +17,7 @@ effects:
   - {type: summon, unit: summon_thunder_spirit, duration: 2}
   - {type: shield, dice: 1d6, status: shielded_charged, affects: self}
 condition: null
-cost: {mana: 12, cooldown: 4}
+cost: {mana: 120, cooldown: 4}
 tags: [lightning, spell, summon, shield]
 narrative:
   concept: 喚出雷靈替你出手，剩下的電流在你身上結成一層會咬人的護盾

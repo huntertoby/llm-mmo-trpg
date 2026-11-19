@@ -27,7 +27,7 @@ effects:
       any_of:
         - {type: wielding_weapon, weapon: dual_dagger}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [physical, melee, stealth]
 narrative:
   concept: 一刀落下，人就纏上對手的影子，之後的每一刀都不讓他回頭

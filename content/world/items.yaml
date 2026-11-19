@@ -88,7 +88,7 @@ items:
       scaling_attr: wis
       shape: {type: self}
       effects:
-        - {type: restore_resource, resource: mana, amount: 10, affects: self}
+        - {type: restore_resource, resource: mana, amount: 100, affects: self}
       condition: null
       cost: {mana: 0, uses_per_battle: 1}
       tags: [item, support, mana]

@@ -2,10 +2,10 @@
 # 碎晶之主進入「碎界脈動」時召喚 2 個；本體倒下時一起碎掉（勝利條件 leader_retreat）。數值是初值。
 id: rift_crystal_golem
 name_zh: 晶傀儡
-attributes: {str: 14, dex: 8, con: 14, int: 6, wis: 8, wil: 10}
-max_hp: 26
+attributes: {str: 140, dex: 80, con: 140, int: 60, wis: 80, wil: 100}
+max_hp: 260
 speed: 4
-armor_bonus: 3
+armor_bonus: 30
 weapon: stone_fist
 ai_profile: brute
 resist: {}

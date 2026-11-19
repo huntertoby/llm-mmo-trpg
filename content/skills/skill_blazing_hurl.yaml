@@ -16,7 +16,7 @@ shape: {type: object_then_tile, range: 3}
 effects:
   - {type: hurl_object, range: 3, dice: 5d6, knock_prone: true}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [fire, spell, telekinesis]
 narrative:
   concept: 把念力舉起的物件先點著，再朝敵人砸過去

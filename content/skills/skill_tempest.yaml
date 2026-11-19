@@ -15,7 +15,7 @@ shape: {type: square3, range: 4}
 effects:
   - {type: damage, dice: 2d6, element: wind, spread: 2}
 condition: null
-cost: {mana: 9, cooldown: 3}
+cost: {mana: 90, cooldown: 3}
 tags: [wind, spell, area]
 narrative:
   concept: 一場小型的暴風，吹到火、冰、毒和雷時會把它們一起吹大

@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 1300}
   - {type: consume_stack, stack: fury, per_stack_permille: 200, affects: self}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, melee, finisher, rage]
 narrative:
   concept: 積壓的怒火一次釋放

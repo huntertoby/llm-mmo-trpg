@@ -15,7 +15,7 @@ shape: {type: cross, range: 4}
 effects:
   - {type: lower_terrain}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [earth, spell, terrain]
 narrative:
   concept: 腳下的土地忽然塌陷，讓站得高的人失去優勢

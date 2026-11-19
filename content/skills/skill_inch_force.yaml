@@ -23,7 +23,7 @@ followup:
   effects:
     - {type: push, distance: 1}
 condition: null
-cost: {stamina: 6, cooldown: 1}
+cost: {stamina: 60, cooldown: 1}
 tags: [physical, melee, martial, push, builder]
 narrative:
   concept: 拳頭貼著對手才發力，一寸的距離就把人震開

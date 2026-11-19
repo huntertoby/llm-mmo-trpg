@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 1300}
   - {type: knock_prone, condition: {type: self_stack_at_least, stack: ki, count: 2}}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, melee, martial]
 narrative:
   concept: 氣聚在拳頭上，一拳就把人打得站不住

@@ -3,10 +3,10 @@
 # 山中修士・精英（煉丹師升級版）：群體治療、每回合結束回血、蓄力強招「九轉回天」（5A-M1，提前一輪預告）；同門相護。
 id: sect_steward
 name_zh: 青霧執事
-attributes: {str: 10, dex: 10, con: 14, int: 12, wis: 16, wil: 12}
-max_hp: 50
+attributes: {str: 100, dex: 100, con: 140, int: 120, wis: 160, wil: 120}
+max_hp: 500
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: totem_staff
 ai_profile: support
 resist: {}
@@ -16,7 +16,7 @@ skills: [skill_sanctuary, skill_nine_turns_revival, skill_steady_breath]
 reactions:
   - reaction: block
     when: {event: targeted_by_melee}
-    unless: {self_stamina_below: 20}
+    unless: {self_stamina_below: 200}
   - reaction: opportunity_attack
     when: {event: enemy_leaves_adjacent}
   - reaction: kin_ward          # 同門相護（5A-M1）

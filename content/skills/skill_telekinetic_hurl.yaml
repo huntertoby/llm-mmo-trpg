@@ -17,7 +17,7 @@ shape: {type: object_then_tile, range: 4}
 effects:
   - {type: hurl_object, range: 4, dice: 3d6, knock_prone: true}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [arcane, spell, telekinesis]
 narrative:
   concept: 用念力舉起戰場上的箱子與油桶，當成砲彈砸向敵人

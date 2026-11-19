@@ -62,10 +62,10 @@ builds:
     hero:
       id: build_push
       name_zh: 位移流英雄
-      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 48
+      attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+      max_hp: 480
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
@@ -77,10 +77,10 @@ builds:
     hero:
       id: build_fire
       name_zh: 火焰流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -93,10 +93,10 @@ builds:
     hero:
       id: build_storm
       name_zh: 雷電流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: lightning_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -109,10 +109,10 @@ builds:
     hero:
       id: build_tank
       name_zh: 坦克英雄
-      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 48
+      attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+      max_hp: 480
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: one_handed_sword
       ai_profile: guard
       resist: {physical: 100}
@@ -126,10 +126,10 @@ builds:
     hero:
       id: build_ranged
       name_zh: 遠程英雄
-      attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
-      max_hp: 40
+      attributes: {str: 100, dex: 160, con: 120, int: 100, wis: 120, wil: 100}
+      max_hp: 400
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: bow
       tags: [hero, sim]
       skills: [skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot, skill_overwatch, skill_lucky_break, skill_time_surge, skill_armor_piercing_arrow, skill_timber_piercer, skill_covering_fire]
@@ -140,10 +140,10 @@ builds:
     hero:
       id: build_assassin
       name_zh: 刺殺英雄
-      attributes: {str: 14, dex: 16, con: 12, int: 10, wis: 10, wil: 10}   # 匕首吃敏捷、技能吃力量
-      max_hp: 53   # BAL-12d：44 ×1.2（存活率仍 < 30%）
+      attributes: {str: 140, dex: 160, con: 120, int: 100, wis: 100, wil: 100}   # 匕首吃敏捷、技能吃力量
+      max_hp: 530   # BAL-12d：44 ×1.2（存活率仍 < 30%）
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: dagger
       ai_profile: assassin   # BAL-12d：夾擊／背刺位置＋打完退出敵人堆（原為 flanker）
       tags: [hero, sim]
@@ -155,10 +155,10 @@ builds:
     hero:
       id: build_support
       name_zh: 輔助英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 16, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 120, wis: 160, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: frost_staff
       ai_profile: support
       resist: {elemental: 150}
@@ -171,10 +171,10 @@ builds:
     hero:
       id: build_healer
       name_zh: 治療英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 16, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 120, wis: 160, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: frost_staff
       ai_profile: support
       resist: {elemental: 150}
@@ -187,10 +187,10 @@ builds:
     hero:
       id: build_warlock
       name_zh: 術士英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 12, wil: 16}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 120, wis: 120, wil: 160}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -204,10 +204,10 @@ builds:
     hero:
       id: build_guardian
       name_zh: 守護者英雄
-      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 48
+      attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+      max_hp: 480
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: one_handed_sword
       ai_profile: guard
       resist: {physical: 100}
@@ -220,10 +220,10 @@ builds:
     hero:
       id: build_striker
       name_zh: 蓄力流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: lightning_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -236,10 +236,10 @@ builds:
     hero:
       id: build_trapper
       name_zh: 陷阱流英雄
-      attributes: {str: 8, dex: 14, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 140, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: archer
       resist: {elemental: 150}
@@ -252,10 +252,10 @@ builds:
     hero:
       id: build_charger
       name_zh: 衝鋒流英雄
-      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 48
+      attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+      max_hp: 480
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
@@ -267,10 +267,10 @@ builds:
     hero:
       id: build_banisher
       name_zh: 放逐流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -283,10 +283,10 @@ builds:
     hero:
       id: build_summoner
       name_zh: 召喚師英雄
-      attributes: {str: 8, dex: 12, con: 12, int: 14, wis: 12, wil: 16}
-      max_hp: 36
+      attributes: {str: 80, dex: 120, con: 120, int: 140, wis: 120, wil: 160}
+      max_hp: 360
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: archer
       resist: {elemental: 100}
@@ -299,10 +299,10 @@ builds:
     hero:
       id: build_gambler
       name_zh: 賭徒英雄
-      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 44
+      attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+      max_hp: 440
       speed: 5
-      armor_bonus: 3
+      armor_bonus: 30
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
@@ -315,10 +315,10 @@ builds:
     hero:
       id: build_seer
       name_zh: 偵察破咒流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 16, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 120, wis: 160, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: seer   # BAL-13d：狡猾＋不重視自我回復（原為 cunning）
       resist: {elemental: 150}
@@ -331,10 +331,10 @@ builds:
     hero:
       id: build_bomber
       name_zh: 定時炸彈流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -347,10 +347,10 @@ builds:
     hero:
       id: build_winged
       name_zh: 飛翼流英雄
-      attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 14, wil: 10}
-      max_hp: 38
+      attributes: {str: 100, dex: 160, con: 120, int: 100, wis: 140, wil: 100}
+      max_hp: 380
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: bow
       tags: [hero, sim]
       skills: [skill_wing_spread, skill_wing_gift, skill_raise_perch, skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot]
@@ -361,10 +361,10 @@ builds:
     hero:
       id: build_telekinesis
       name_zh: 念力流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -377,10 +377,10 @@ builds:
     hero:
       id: build_wallburn
       name_zh: 推牆焚燒英雄
-      attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-      max_hp: 48
+      attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+      max_hp: 480
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
@@ -392,10 +392,10 @@ builds:
     hero:
       id: build_detonator
       name_zh: 狀態引爆英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -408,10 +408,10 @@ builds:
     hero:
       id: build_runeweaver
       name_zh: 刻印流英雄
-      attributes: {str: 8, dex: 12, con: 10, int: 16, wis: 12, wil: 12}
-      max_hp: 40
+      attributes: {str: 80, dex: 120, con: 100, int: 160, wis: 120, wil: 120}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: lightning_staff
       ai_profile: cunning
       resist: {elemental: 150}
@@ -427,10 +427,10 @@ builds:
     hero:
       id: build_blank_warrior
       name_zh: 白板戰士
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: one_handed_sword
       resist: {physical: 100}
       tags: [hero, sim]
@@ -443,10 +443,10 @@ builds:
     hero:
       id: build_blank_mage
       name_zh: 白板法師
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 40
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       resist: {elemental: 150}
       tags: [hero, sim]
@@ -461,10 +461,10 @@ builds:
     hero:
       id: build_blank_axe
       name_zh: 白板斧手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: axe
       resist: {physical: 100}
       tags: [hero, sim]
@@ -477,10 +477,10 @@ builds:
     hero:
       id: build_blank_hammer
       name_zh: 白板錘手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: hammer
       resist: {physical: 100}
       tags: [hero, sim]
@@ -493,10 +493,10 @@ builds:
     hero:
       id: build_blank_spear
       name_zh: 白板矛兵
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: spear
       resist: {physical: 100}
       tags: [hero, sim]
@@ -509,10 +509,10 @@ builds:
     hero:
       id: build_blank_priest
       name_zh: 白板牧師
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 40
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: scepter
       resist: {elemental: 150}
       tags: [hero, sim]
@@ -525,10 +525,10 @@ builds:
     hero:
       id: build_blank_totemist
       name_zh: 白板圖騰師
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 40
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 400
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: totem_staff
       resist: {elemental: 150}
       tags: [hero, sim]
@@ -543,10 +543,10 @@ builds:
     hero:
       id: build_blank_crossbow
       name_zh: 白板弩手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 50
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 500
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: crossbow
       resist: {physical: 50}
       tags: [hero, sim]
@@ -559,10 +559,10 @@ builds:
     hero:
       id: build_blank_longgun
       name_zh: 白板槍手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 50
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 500
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: longgun
       resist: {physical: 50}
       tags: [hero, sim]
@@ -577,10 +577,10 @@ builds:
     hero:
       id: build_blank_fist
       name_zh: 白板拳師
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: fist
       resist: {physical: 100}
       tags: [hero, sim]
@@ -593,10 +593,10 @@ builds:
     hero:
       id: build_blank_scythe
       name_zh: 白板鐮刀手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: scythe
       resist: {physical: 100}
       tags: [hero, sim]
@@ -609,10 +609,10 @@ builds:
     hero:
       id: build_blank_whip
       name_zh: 白板鞭手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: whip
       resist: {physical: 100}
       tags: [hero, sim]
@@ -626,10 +626,10 @@ builds:
     hero:
       id: build_blank_arcane_blade
       name_zh: 白板魔劍士
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: arcane_blade
       resist: {physical: 100}
       tags: [hero, sim]
@@ -643,10 +643,10 @@ builds:
     hero:
       id: build_blank_dual_dagger
       name_zh: 白板雙刀手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 60
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 600
       speed: 5
-      armor_bonus: 4
+      armor_bonus: 40
       weapon: dual_dagger
       resist: {physical: 100}
       tags: [hero, sim]
@@ -659,10 +659,10 @@ builds:
     hero:
       id: build_blank_shotgun
       name_zh: 白板霰彈手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 50
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 500
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: shotgun
       resist: {physical: 50}
       tags: [hero, sim]
@@ -675,10 +675,10 @@ builds:
     hero:
       id: build_blank_pistol
       name_zh: 白板手槍手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 50
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 500
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: pistol
       resist: {physical: 50}
       tags: [hero, sim]
@@ -691,10 +691,10 @@ builds:
     hero:
       id: build_blank_dual_pistol
       name_zh: 白板雙槍手
-      attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-      max_hp: 50
+      attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+      max_hp: 500
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: dual_pistol
       resist: {physical: 50}
       tags: [hero, sim]
@@ -707,10 +707,10 @@ builds:
     hero:
       id: build_attack_archer
       name_zh: 普攻流弓手
-      attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
-      max_hp: 40
+      attributes: {str: 100, dex: 160, con: 120, int: 100, wis: 120, wil: 100}
+      max_hp: 400
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: bow
       tags: [hero, sim]
       skills: [skill_attack_mastery, skill_piercing_shot, skill_high_ground_shot, skill_sniper_shot]
@@ -724,10 +724,10 @@ builds:
     hero:
       id: build_skill_archer
       name_zh: 技能流弓手
-      attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
-      max_hp: 40
+      attributes: {str: 100, dex: 160, con: 120, int: 100, wis: 120, wil: 100}
+      max_hp: 400
       speed: 5
-      armor_bonus: 2
+      armor_bonus: 20
       weapon: bow
       tags: [hero, sim]
       skills: [skill_piercing_shot, skill_thunder_clap, skill_bear_trap, skill_sniper_shot]
@@ -742,10 +742,10 @@ builds:
     hero:
       id: build_summon_swarm
       name_zh: 群召召喚師
-      attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
-      max_hp: 36
+      attributes: {str: 80, dex: 120, con: 120, int: 160, wis: 140, wil: 120}
+      max_hp: 360
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: archer
       resist: {elemental: 100}
@@ -759,10 +759,10 @@ builds:
     hero:
       id: build_summon_elite
       name_zh: 精英召喚師
-      attributes: {str: 8, dex: 12, con: 12, int: 16, wis: 14, wil: 12}
-      max_hp: 36
+      attributes: {str: 80, dex: 120, con: 120, int: 160, wis: 140, wil: 120}
+      max_hp: 360
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: fire_staff
       ai_profile: archer
       resist: {elemental: 100}
@@ -777,10 +777,10 @@ builds:
     hero:
       id: build_form_tester
       name_zh: 形態測試
-      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 10}
-      max_hp: 44
+      attributes: {str: 140, dex: 120, con: 140, int: 120, wis: 120, wil: 100}
+      max_hp: 440
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
@@ -794,10 +794,10 @@ builds:
     hero:
       id: build_form_mastery
       name_zh: 化形專精
-      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 12}
-      max_hp: 44
+      attributes: {str: 140, dex: 120, con: 140, int: 120, wis: 120, wil: 120}
+      max_hp: 440
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
@@ -811,10 +811,10 @@ builds:
     hero:
       id: build_form_tester_2
       name_zh: 形態測試二
-      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 10}
-      max_hp: 44
+      attributes: {str: 140, dex: 120, con: 140, int: 120, wis: 120, wil: 100}
+      max_hp: 440
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]
@@ -828,10 +828,10 @@ builds:
     hero:
       id: build_form_user
       name_zh: 形態利用者
-      attributes: {str: 14, dex: 12, con: 14, int: 12, wis: 12, wil: 10}
-      max_hp: 44
+      attributes: {str: 140, dex: 120, con: 140, int: 120, wis: 120, wil: 100}
+      max_hp: 440
       speed: 5
-      armor_bonus: 1
+      armor_bonus: 10
       weapon: one_handed_sword
       resist: {physical: 50}
       tags: [hero, sim]

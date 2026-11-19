@@ -3,8 +3,8 @@
 # 的敵人受 2d6 火焰傷害，爆心與周圍各格留下火表面，自己消失（detonate 欄位）。固有「點燃」。
 id: summon_bomb_puppet
 name_zh: 爆裂傀儡
-attributes: {str: 12, dex: 10, con: 10, int: 6, wis: 6, wil: 6}
-max_hp: 8
+attributes: {str: 120, dex: 100, con: 100, int: 60, wis: 60, wil: 60}
+max_hp: 80
 speed: 5
 armor_bonus: 0
 weapon: bomb_casing

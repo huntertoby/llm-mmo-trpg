@@ -17,7 +17,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: ally_downed}
-cost: {mana: 3, cooldown: 2}
+cost: {mana: 30, cooldown: 2}
 tags: [heal, reaction, holy, spell]
 narrative:
   concept: 同伴倒下時，你低聲念出禱詞，把撐下去的力氣留給自己

@@ -109,7 +109,7 @@ story_skills:
       - {type: create_surface, surface: ice}
       - {type: damage, dice: 1d4, element: ice}
     condition: null
-    cost: {mana: 6, cooldown: 4}
+    cost: {mana: 60, cooldown: 4}
     tags: [ice, spell, area, control]
     narrative:
       concept: 一道冷鋒橫掃過去，火滅了，地上結起一層薄冰

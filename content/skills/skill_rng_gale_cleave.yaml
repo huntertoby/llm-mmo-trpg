@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 1400, element: wind}
   - {type: push, distance: 1}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [wind, melee, push]
 narrative:
   concept: 揮得夠快，刀鋒會帶出一道撕裂空氣的風壓

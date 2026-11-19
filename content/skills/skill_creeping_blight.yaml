@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: shadow, affects: enemies}
 condition: null
 trigger: {event: on_status_applied, target: other, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [shadow, spell, passive]
 narrative:
   concept: 每一道落在敵人身上的詛咒，都會順著傷口再啃一口

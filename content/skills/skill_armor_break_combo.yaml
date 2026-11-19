@@ -24,7 +24,7 @@ followup:
   effects:
     - {type: damage, dice: 1d8, element: lightning}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [lightning, spell, aoe, debuff]
 narrative:
   concept: 第一掌震碎護甲，第二掌的雷勁沿著裂縫貫穿過去

@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: ally_missed_roll}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [reaction]
 narrative:
   concept: 隊友失手的那一瞬間，你在他耳邊低聲說了一句「再來一次」

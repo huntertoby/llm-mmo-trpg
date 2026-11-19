@@ -15,7 +15,7 @@ effects:
   - {type: create_obstacle, object: ice_wall, duration: 3}
   - {type: create_surface, surface: ice, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [ice, spell, obstacle]
 narrative:
   concept: 凍出一道透明的冰牆擋住去路與視線，三輪後自行融化

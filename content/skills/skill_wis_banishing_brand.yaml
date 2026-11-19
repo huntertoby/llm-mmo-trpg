@@ -16,7 +16,7 @@ effects:
   - {type: push, distance: 2}
   - {type: apply_status, status: marked, duration: 2}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [spell, mark, control]
 narrative:
   concept: 烙印落下的瞬間迸出一股斥力，把目標推離你身邊

@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: burning, duration: 3, affects: enemies}
 condition: null
 trigger: {event: on_hit, target: other, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [fire, spell, passive]
 narrative:
   concept: 每一次命中都在敵人身上留下一點燒不盡的餘燼

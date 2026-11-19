@@ -26,7 +26,7 @@ effects:
     weapon: tome
 condition: null
 cost:
-  mana: 6
+  mana: 60
   cooldown: 4
 tags:
 - ice

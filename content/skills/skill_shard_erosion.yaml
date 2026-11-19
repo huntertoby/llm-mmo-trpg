@@ -19,7 +19,7 @@ effects:
   - {type: damage, dice: 2d6, element: physical}
   - {type: apply_status, status: bleed, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [arcane, spell, dot]
 narrative:
   concept: 一枚碎晶射進傷口，在血肉裡慢慢生長

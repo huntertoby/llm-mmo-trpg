@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d6, element: shadow}
   - {type: pull, distance: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [shadow, spell, curse, pull]
 narrative:
   concept: 從虛空伸出的暗影抓住對手，把他硬生生拖到你面前

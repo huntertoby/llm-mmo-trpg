@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: weaken, duration: 2, affects: enemies}
 condition: null
 trigger: {event: on_crit, target: other, max_per_round: 1}
-cost: {mana: 2, cooldown: 3}
+cost: {mana: 20, cooldown: 3}
 tags: [physical, spell, passive, crit, debuff]
 narrative:
   concept: 暴擊打在要害上，讓對手手臂發軟、使不上力

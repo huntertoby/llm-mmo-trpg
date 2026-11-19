@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 1300}
   - {type: consume_stack, stack: combo_point, per_stack_permille: 200, affects: self}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, melee, finisher]
 narrative:
   concept: 把累積的節奏全部灌進最後一擊

@@ -14,7 +14,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: shield, dice: 2d6, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [holy, spell, shield, support]
 narrative:
   concept: 把自己的堅韌化成一面護盾，罩在同伴身上

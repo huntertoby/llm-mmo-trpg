@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 5}
 effects:
   - {type: summon, unit: summon_fire_spirit, duration: 2}
 condition: null
-cost: {stamina: 6, cooldown: 4}
+cost: {stamina: 60, cooldown: 4}
 tags: [fire, ranged, summon]
 narrative:
   concept: 射出一支火引箭，落點燃起一縷火靈，替你從遠處噴吐火焰

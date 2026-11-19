@@ -2,8 +2,8 @@
 # 但速度 3、行為模式 drift——有人走到 2 格內就往後退、不攻擊（試追擊、範圍與射程用）。
 id: training_dummy_moving
 name_zh: 會動的木樁
-attributes: {str: 10, dex: 10, con: 10, int: 10, wis: 10, wil: 10}
-max_hp: 300
+attributes: {str: 100, dex: 100, con: 100, int: 100, wis: 100, wil: 100}
+max_hp: 3000
 speed: 3
 armor_bonus: 0
 weapon: dagger

@@ -15,7 +15,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: apply_status, status: feared, duration: 2}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, control, fear]
 narrative:
   concept: 直視對方的雙眼，讓他看見自己最害怕的東西

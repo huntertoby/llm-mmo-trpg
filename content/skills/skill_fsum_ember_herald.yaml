@@ -17,7 +17,7 @@ effects:
   - {type: summon, unit: summon_elemental_spirit, duration: 3}
   - {type: apply_status, status: infused_fire, duration: 3, affects: self}
 condition: null
-cost: {mana: 10, cooldown: 4}
+cost: {mana: 100, cooldown: 4}
 tags: [fire, spell, summon]
 narrative:
   concept: 以火為引喚出一縷元素之靈，餘燼順勢纏上你的兵刃

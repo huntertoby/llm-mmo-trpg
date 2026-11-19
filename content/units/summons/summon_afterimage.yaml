@@ -2,10 +2,10 @@
 # 不是由 summon 原語召喚，而是由規則改變產生；召喚者已倒下，所以在第 N 輪的環境回合消失（rule_changes.yaml）。
 id: summon_afterimage
 name_zh: 殘影分身
-attributes: {str: 10, dex: 12, con: 10, int: 10, wis: 10, wil: 10}
-max_hp: 14
+attributes: {str: 100, dex: 120, con: 100, int: 100, wis: 100, wil: 100}
+max_hp: 140
 speed: 4
-armor_bonus: 2
+armor_bonus: 20
 weapon: dagger
 ai_profile: brute
 resist: {}

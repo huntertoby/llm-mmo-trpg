@@ -17,7 +17,7 @@ effects:
   - {type: damage, dice: 1d8, element: lightning}
   - {type: add_stack, stack: overload_surge, amount: 1, affects: self}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [lightning, spell, builder, overcurrent, gamble]
 narrative:
   concept: 把電流越灌越滿，威力一層比一層猛，直到自己也扛不住

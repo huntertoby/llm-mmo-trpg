@@ -24,7 +24,7 @@ effects:
   multiplier_permille: 1000
 condition: null
 cost:
-  stamina: 8
+  stamina: 80
   cooldown: 2
 tags:
 - physical

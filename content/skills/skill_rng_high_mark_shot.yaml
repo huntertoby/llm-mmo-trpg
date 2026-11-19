@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 2200
     condition: {type: height_advantage}
 condition: {type: target_has_status, status: marked}
-cost: {stamina: 8, cooldown: 1}
+cost: {stamina: 80, cooldown: 1}
 tags: [physical, ranged, height, mark]
 narrative:
   concept: 只射被標記的獵物；站得比牠高時，這一箭格外沉重

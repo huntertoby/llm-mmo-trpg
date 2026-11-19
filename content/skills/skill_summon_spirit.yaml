@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 4}
 effects:
   - {type: summon, unit: summon_elemental_spirit, duration: 3}
 condition: null
-cost: {mana: 10, cooldown: 4}
+cost: {mana: 100, cooldown: 4}
 tags: [fire, spell, summon]
 narrative:
   concept: 呼喚一縷聽命的元素之靈；牠是一張白紙，元素與戰法依你灌注的關鍵字變化（點燃、冰凍、帶電……）

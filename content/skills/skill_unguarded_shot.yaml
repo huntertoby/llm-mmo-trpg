@@ -25,7 +25,7 @@ effects:
   # 獨自出戰時，射完就隱進暗處
   - {type: apply_status, status: concealed, duration: 2, affects: self, condition: {type: lone_wolf}}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, ranged]
 narrative:
   concept: 沒有人替你擋，那就讓他們找不到你

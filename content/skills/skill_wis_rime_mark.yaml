@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: marked, duration: 2}
   - {type: damage, dice: 1d4, element: ice}
 condition: null
-cost: {mana: 3, cooldown: 1}
+cost: {mana: 30, cooldown: 1}
 tags: [ice, spell, mark]
 narrative:
   concept: 在敵人身上留下一道結霜的記號，寒氣讓它無處可藏

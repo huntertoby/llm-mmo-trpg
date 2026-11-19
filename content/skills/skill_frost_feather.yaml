@@ -17,7 +17,7 @@ effects:
   - {type: damage, dice: 3d8, element: ice}
   - {type: apply_status, status: slow, duration: 1}
 condition: null
-cost: {mana: 6, cooldown: 4}
+cost: {mana: 60, cooldown: 4}
 tags: [ice, spell, control]
 narrative:
   concept: 羽箭帶著寒氣，釘中的地方結了一層霜，腿跟著抬不起來

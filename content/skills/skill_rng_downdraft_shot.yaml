@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 700, element: wind}
   - {type: knock_prone}
 condition: null
-cost: {stamina: 6, cooldown: 3}
+cost: {stamina: 60, cooldown: 3}
 tags: [wind, ranged, control]
 narrative:
   concept: 箭矢帶起一股向下的強風，把目標整個壓趴

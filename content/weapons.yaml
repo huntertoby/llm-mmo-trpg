@@ -183,7 +183,7 @@ weapons:
     element: holy
     crit_range: 20
     two_handed: false
-    blessing: {flat: 3}
+    blessing: {flat: 30}
   - id: totem_staff
     name_zh: 圖騰杖
     look: {kind: staff, material: wood, form: totem}

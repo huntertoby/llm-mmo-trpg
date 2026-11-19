@@ -3,10 +3,10 @@
 # 中立野獸：從草叢撲擊。
 id: mountain_leopard
 name_zh: 山豹
-attributes: {str: 12, dex: 16, con: 10, int: 4, wis: 12, wil: 8}
-max_hp: 26
+attributes: {str: 120, dex: 160, con: 100, int: 40, wis: 120, wil: 80}
+max_hp: 260
 speed: 6
-armor_bonus: 1
+armor_bonus: 10
 weapon: talons
 ai_profile: assassin
 resist: {}

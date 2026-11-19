@@ -17,7 +17,7 @@ items:
     material: steel
     weapon: one_handed_sword
     affixes:
-      - {affix: affix_attr_str, value: 2}
+      - {affix: affix_attr_str, value: 20}
       - {affix: affix_cond_height_hit, value: 1}
   - id: item_test_hammer
     name_zh: 試煉戰錘
@@ -37,7 +37,7 @@ items:
     material: wood
     weapon: bow
     affixes:
-      - {affix: affix_max_hp, value: 8}
+      - {affix: affix_max_hp, value: 80}
   - id: item_test_twin_daggers
     name_zh: 試煉雙匕首
     slot_type: weapon
@@ -47,7 +47,7 @@ items:
     weapon: dual_dagger
     paired: true
     affixes:
-      - {affix: affix_attr_str, value: 1}
+      - {affix: affix_attr_str, value: 10}
   # --- Phase 3I-4 成對武器本體（沒有詞條；工坊「成對武器」勾選框由 paired 物品推導）---
   - id: item_dual_dagger
     name_zh: 雙匕首
@@ -74,8 +74,8 @@ items:
     material: iron
     tags: [shield]
     affixes:
-      - {affix: affix_max_hp, value: 8}
-      - {affix: affix_attr_str, value: 1}
+      - {affix: affix_max_hp, value: 80}
+      - {affix: affix_attr_str, value: 10}
   # --- Phase 3I-2 副手本體（offhands.yaml；沒有詞條，只有副手的常駐特性）---
   - id: item_offhand_round_shield
     name_zh: 圓盾
@@ -127,7 +127,7 @@ items:
     form: chain
     material: iron
     affixes:
-      - {affix: affix_max_hp, value: 12}
+      - {affix: affix_max_hp, value: 120}
       - {affix: affix_resist_fire, value: 150}
       - {affix: affix_cond_still_defense, value: 200}
   # --- 手 ---
@@ -139,8 +139,8 @@ items:
     material: leather
     dye: brown
     affixes:
-      - {affix: affix_attr_str, value: 1}
-      - {affix: affix_max_hp, value: 4}
+      - {affix: affix_attr_str, value: 10}
+      - {affix: affix_max_hp, value: 40}
   # --- 腳 ---
   - id: item_test_boots
     name_zh: 試煉疾行靴
@@ -151,7 +151,7 @@ items:
     dye: black
     affixes:
       - {affix: affix_cost_swift}
-      - {affix: affix_max_hp, value: 4}
+      - {affix: affix_max_hp, value: 40}
   # --- 項鍊 ---
   - id: item_test_amulet
     name_zh: 試煉血契項鍊
@@ -179,7 +179,7 @@ items:
     form: signet
     material: silver
     affixes:
-      - {affix: affix_attr_str, value: 2}
+      - {affix: affix_attr_str, value: 20}
       - {affix: affix_cond_height_hit, value: 1}
   - id: item_test_ring_hp
     name_zh: 試煉生命戒
@@ -188,7 +188,7 @@ items:
     form: plain
     material: copper
     affixes:
-      - {affix: affix_max_hp, value: 16}
+      - {affix: affix_max_hp, value: 160}
   # --- Phase 3G-G2：技能強化、普攻附加、武器特性強化 ---
   - id: item_g2_hammer
     name_zh: 震地戰錘

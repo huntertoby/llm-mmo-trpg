@@ -20,7 +20,7 @@ effects:
     condition: {type: height_advantage}
   - {type: apply_status, status: marked, duration: 2}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [physical, ranged, height, mark]
 narrative:
   concept: 從高處看清獵物的破綻，射中後替同伴指出要害

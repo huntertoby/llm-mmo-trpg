@@ -18,7 +18,7 @@ effects:
   - {type: apply_status, status: taunted, duration: 1}
   - {type: add_stack, stack: fury, amount: 1, affects: self}
 condition: null
-cost: {stamina: 6, cooldown: 3}
+cost: {stamina: 60, cooldown: 3}
 tags: [physical, melee, taunt, shout, rage, builder]
 narrative:
   concept: 一聲怒吼把前方的敵人全都吸過來

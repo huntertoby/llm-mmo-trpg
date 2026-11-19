@@ -16,7 +16,7 @@ effects:
   - {type: damage, multiplier_permille: 400, element: wind}
   - {type: push, distance: 2}
 condition: null
-cost: {stamina: 6, cooldown: 2}
+cost: {stamina: 60, cooldown: 2}
 tags: [wind, ranged, push]
 narrative:
   concept: 箭尾綁著風羽，命中時捲起一陣狂風

@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d4, element: earth}
   - {type: create_surface, surface: oil, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 3}
+cost: {mana: 40, cooldown: 3}
 tags: [earth, area, oil]
 narrative:
   concept: 隨身帶的燈油瓶，砸在地上就是一灘等著被點燃的油

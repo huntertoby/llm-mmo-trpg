@@ -19,7 +19,7 @@ effects:
     element: lightning
     scaling: {by: enemies_adjacent_target, per_step_permille: 150, cap_permille: 450}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [lightning, spell]
 narrative:
   concept: 敵人擠得越緊，電流越愛在他們之間來回竄跳

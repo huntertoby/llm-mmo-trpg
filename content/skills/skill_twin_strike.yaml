@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d4, element: lightning, affects: enemies}
 condition: null
 trigger: {event: every_n_hits, n: 2, target: other, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [lightning, spell, passive, combo]
 narrative:
   concept: 每命中兩次，第二下就帶著一道跳動的電弧

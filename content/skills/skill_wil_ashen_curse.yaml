@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d6, element: shadow}
   - {type: apply_status, status: burning, duration: 2}
 condition: null
-cost: {mana: 10, cooldown: 2}
+cost: {mana: 100, cooldown: 2}
 tags: [shadow, spell, curse, fire, area]
 narrative:
   concept: 一片詛咒的灰燼落在敵群頭上，沾到的人從裡到外慢慢燒成灰

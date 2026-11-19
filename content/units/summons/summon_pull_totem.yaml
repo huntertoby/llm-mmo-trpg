@@ -2,8 +2,8 @@
 # inert）；每個自己的回合開始把 2 格內最近的一個敵人（再依座標）往自己拉近 1 格，拉進火牆、陷阱照常結算。
 id: summon_pull_totem
 name_zh: 吸引圖騰
-attributes: {str: 6, dex: 6, con: 12, int: 6, wis: 6, wil: 6}
-max_hp: 12
+attributes: {str: 60, dex: 60, con: 120, int: 60, wis: 60, wil: 60}
+max_hp: 120
 speed: 0
 armor_bonus: 0
 weapon: totem_stone

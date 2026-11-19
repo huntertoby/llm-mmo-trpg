@@ -2,10 +2,10 @@
 # （ai_profiles.yaml：不推撞、不利用環境）。拿掉「推撞型盜賊」讓新手不會被連推撞到隊友身上。
 id: bandit_rookie
 name_zh: 盜賊
-attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
-max_hp: 17   # 6F-4 C1：bandit 的 29 × 0.6（×0.8 時 A、B 勝率 90%；模擬摘要見 docs/phases/Phase6F-4報告.md）
+attributes: {str: 120, dex: 140, con: 120, int: 80, wis: 100, wil: 80}
+max_hp: 170   # 6F-4 C1：bandit 的 29 × 0.6（×0.8 時 A、B 勝率 90%；模擬摘要見 docs/phases/Phase6F-4報告.md）
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: dagger
 resist: {}
 element_mods: {}

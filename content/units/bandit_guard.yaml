@@ -1,10 +1,10 @@
 # Boss 戰護衛與援軍（BAL-4b）：bandit 的複本（帶 boss_escort 標籤），Boss 戰的陣容與一般遭遇分開調。
 id: bandit_guard
 name_zh: 盜賊
-attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
-max_hp: 29   # Boss 戰護衛／援軍專用（BAL-4b）：預設與 bandit 相同，可獨立調
+attributes: {str: 120, dex: 140, con: 120, int: 80, wis: 100, wil: 80}
+max_hp: 290   # Boss 戰護衛／援軍專用（BAL-4b）：預設與 bandit 相同，可獨立調
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: dagger
 resist: {}
 element_mods: {}

@@ -15,7 +15,7 @@ effects:
   - {type: apply_status, status: hasted, affects: allies}
   - {type: apply_status, status: guarded, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [wind, spell, buff, support]
 narrative:
   concept: 一陣順風推著同伴向前，也替他擋下迎面而來的力道

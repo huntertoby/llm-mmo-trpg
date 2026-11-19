@@ -15,7 +15,7 @@ shape: {type: ground_tile, range: 4}
 effects:
   - {type: summon, unit: summon_vine, duration: 4}
 condition: null
-cost: {mana: 8, cooldown: 4}
+cost: {mana: 80, cooldown: 4}
 tags: [nature, spell, summon, control]
 narrative:
   concept: 讓一叢藤蔓破土而出，纏住踏進來的敵人

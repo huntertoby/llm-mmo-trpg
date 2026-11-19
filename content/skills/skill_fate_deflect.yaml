@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: enemy_hit_roll}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [reaction]
 narrative:
   concept: 刀鋒落下的前一刻，你輕輕撥動了命運的線

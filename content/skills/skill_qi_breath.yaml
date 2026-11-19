@@ -17,7 +17,7 @@ effects:
   - {type: heal, dice: 3d6, affects: self}
   - {type: consume_stack, stack: ki, per_stack_permille: 150, affects: self}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [martial, spell, heal, finisher]
 narrative:
   concept: 把攢下的氣慢慢吐出，傷勢隨呼吸癒合

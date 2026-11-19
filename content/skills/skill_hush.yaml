@@ -14,7 +14,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: apply_status, status: silenced, duration: 1}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, control, silence]
 narrative:
   concept: 封住敵人的喉嚨，讓咒語卡在嘴邊

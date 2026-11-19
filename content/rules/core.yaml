@@ -4,7 +4,7 @@
 # 重新產生 rules/hit_table.yaml（載入時會檢查兩者一致）。
 
 # --- 數值尺度（X10-2a，docs/design/05-戰鬥.md 5.4.1，#169 題 10）---
-quantity_scale: 1            # 量類的倍率，只能是 1 或 10：擲出的骰面 × 這個值（d20 不乘）、預算的固定值 ÷ 這個值；
+quantity_scale: 10            # 量類的倍率，只能是 1 或 10：擲出的骰面 × 這個值（d20 不乘）、預算的固定值 ÷ 這個值；
                              # 換算腳本 scripts/x10/rescale.py 把內容 ×10 時一起改成 10（已經是 10 就拒絕再跑）
 
 # --- 行動經濟 ---
@@ -40,18 +40,18 @@ ambush_hit_bonus: 2           # 潛行偷襲：帶 concealed 狀態時發動攻�
 far_distance: 5               # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻，施放者和目標距離至少這麼多格（初值，工坊）
 melee_height_limit: 1         # 近戰（射程 <= melee_height_limit_max_range）攻擊的高度差上限
 melee_height_limit_max_range: 2   # 射程不超過此值的武器（近戰、長柄）受高度差限制
-initiative_attr_base: 10      # 先攻：d20 + (敏捷 − 10) // 2
-initiative_attr_divisor: 2
+initiative_attr_base: 100      # 先攻：d20 + (敏捷 − 10) // 2
+initiative_attr_divisor: 20
 
 # --- 衍生數值（Phase 3-7；初值）---
-hp_con_base: 10                # 體質 10 為基準：最大 HP ＝ 範本基礎 HP ＋（體質 − 10）× hp_per_con_point（至少 1）
+hp_con_base: 100                # 體質 10 為基準：最大 HP ＝ 範本基礎 HP ＋（體質 − 10）× hp_per_con_point（至少 1）
 hp_per_con_point: 3           # 每點體質 +3 最大 HP（敵我同一公式）
 level_hp_permille: 50          # roguelite 每升一級：最大 HP + 基礎 HP × 5%（向下取整）
 
 # --- 傷害 ---
 basic_attack_attr_multiplier_permille: 300   # 普攻的屬性倍率（0.3）
 element_mod_floor_permille: 250              # 元素修正下限（總減傷上限 75%）
-min_damage_on_hit: 1                         # 命中時的最低傷害
+min_damage_on_hit: 10                         # 命中時的最低傷害
 defend_defense_bonus_permille: 250           # 防禦動作：防禦值 +25%
 
 # --- 移動與環境 ---
@@ -96,13 +96,13 @@ revive_landing_radius: 2
 # 3D-7b：爆骰（explode: true）每顆骰最多再擲 explode_max 次；依情況縮放（scaling）的 cap_permille 上限（初值，未經模擬）
 explode_max: 2
 scale_cap_max_permille: 800
-ability_mod_base: 10          # 檢定的屬性修正：(屬性 − 10) // 2
-ability_mod_divisor: 2
+ability_mod_base: 100          # 檢定的屬性修正：(屬性 − 10) // 2
+ability_mod_divisor: 20
 
 # --- 反應（Phase 1B）---
 reactions_per_round: 1        # 每輪反應次數
 reroll_ally_range: 1          # 重擲（reroll，SK-3，06 6.38 第 12 點）：隊友擲失手時，幾格內（單位距離）的隊友能讓他重擲（初值，同其他「身旁隊友」反應）
-default_stamina: 30           # 一輪主角範本未指定耐力時的退路（戰鬥中的單位依武器大類，見 resources.class_base）
+default_stamina: 300           # 一輪主角範本未指定耐力時的退路（戰鬥中的單位依武器大類，見 resources.class_base）
 
 # --- 資源上限（Phase 3H-2，docs/design/07-角色成長.md 7.2；初值，平衡階段調整）---
 # BAL-15b（玩法決定 #80）起敵我同一套：所有單位（主角、敵人、隊友、召喚物）上限 ＝ 基礎 ＋（attrs 最高者 − base）× per_point
@@ -110,14 +110,14 @@ default_stamina: 30           # 一輪主角範本未指定耐力時的退路（
 # 取 class_base（和 roguelite.yaml 的 start.heroes 同值）。召喚物的屬性加成用施放者的屬性（6.29）。
 resources:
   class_base:
-    melee:  {mana: 20, stamina: 40}
-    ranged: {mana: 20, stamina: 30}
-    focus:  {mana: 40, stamina: 20}
-  base: 10
+    melee:  {mana: 200, stamina: 400}
+    ranged: {mana: 200, stamina: 300}
+    focus:  {mana: 400, stamina: 200}
+  base: 100
   mana:    {attrs: [int, wis, wil], per_point: 2}   # 法力：法術技
   stamina: {attrs: [str, dex, con], per_point: 2}   # 耐力：武器技、格擋（反應）共用同一個池
   mana_cap_permille: 1400   # 法力上限 ×1.4（BAL-4b，原型專用；BAL-15b 起敵我都適用）
-  stamina_regen: 5          # 耐力每回合開始回復（3H-5，初值；BAL-15b 起所有單位，不超過上限；戰後回滿見 roguelite.yaml）
+  stamina_regen: 50          # 耐力每回合開始回復（3H-5，初值；BAL-15b 起所有單位，不超過上限；戰後回滿見 roguelite.yaml）
 
 # --- 視線與隱蔽（Phase 1B）---
 base_sight_range: 24          # 基準視線距離（曼哈頓）；濃霧等天氣以倍率縮短
@@ -188,10 +188,10 @@ summon_infuse_ap_cost: 1      # 灌注技能（Phase 3-33d，6.29.3）：施放�
 summon_infused_cast_ap_cost: 1  # 召喚物在自己回合開始時施放灌注的技能，佔用牠自己的 AP（取代一次普攻；初值）
 # 召喚物成長（Phase 3-33b，6.29.1；初值，未經模擬）：召喚當下依施放者等級 L 與縮放屬性修正 M 快照。
 summon_growth:
-  hp_per_level: 2
-  hp_per_attr_mod: 1
-  flat_per_level_permille: 250        # 普攻固定傷害：(此值 × (L-1) + 下行 × M) / 1000，無條件捨去
-  flat_per_attr_mod_permille: 250
+  hp_per_level: 20
+  hp_per_attr_mod: 10
+  flat_per_level_permille: 2500        # 普攻固定傷害：(此值 × (L-1) + 下行 × M) / 1000，無條件捨去
+  flat_per_attr_mod_permille: 2500
   bonus_per_level_permille: 10        # 傷害加成‰：與施放者自己的傷害加成合計套全身 +50% 上限
   bonus_per_attr_mod_permille: 10
 # 灌注關鍵字（Phase 3-33b）：召喚技能可選一個「施放者持有、且在此表中」的關鍵字，召喚物普攻命中後附加。
@@ -210,7 +210,7 @@ summon_infusions:
 # 召喚物小特性（Phase 3-33f2，6.29.4）：召喚技能分歧進化「加深」多給的一個小特性（初值，未經模擬）。
 # 進化時依召喚物定位挑：不動或不攻擊的挑 sturdy、近戰挑 swift、遠程挑 keen（content/skill_evolution.yaml）。
 summon_traits:
-  sturdy: {name_zh: 堅韌, description_zh: 護甲 +1, armor_bonus: 1, budget_points: 1}
+  sturdy: {name_zh: 堅韌, description_zh: 護甲 +1, armor_bonus: 10, budget_points: 1}
   swift: {name_zh: 迅捷, description_zh: 移動 +1, speed_bonus: 1, budget_points: 1}
   keen: {name_zh: 銳利, description_zh: 暴擊範圍擴大 1（自然 19 起暴擊）, crit_range_delta: 1, budget_points: 1}
 
@@ -230,11 +230,11 @@ legendary_timed_rounds: 3     # activation: timed 的持續輪數：持有者連
 # 屬性高於 base 每 step 點升一階（14＝1 階、18＝2 階、22＝3 階）；角色面板直接顯示，說明文字由這裡產生。
 # 敏捷（防禦、先攻）、體質（HP）本來就有常駐數值，不另加。kind 對應引擎的結算點（content/rules.py AttributePerks）。
 attribute_perks:
-  base: 10
-  step: 4
+  base: 100
+  step: 40
   perks:
-    - {attr: str, kind: collision_dealt,   per_tier: 1, text_zh: "你造成的撞擊傷害 +{n}"}
-    - {attr: str, kind: collision_taken,   per_tier: 1, text_zh: "你受到的撞擊傷害 −{n}"}
+    - {attr: str, kind: collision_dealt,   per_tier: 10, text_zh: "你造成的撞擊傷害 +{n}"}
+    - {attr: str, kind: collision_taken,   per_tier: 10, text_zh: "你受到的撞擊傷害 −{n}"}
     - {attr: int, kind: surface_duration,  per_tier: 1, text_zh: "你產生的表面與持續區域 +{n} 回合"}
     - {attr: wis, kind: reaction_hit,      per_tier: 1, text_zh: "反應攻擊命中 +{n}"}
     - {attr: wis, kind: reveal_range,      per_tier: 1, text_zh: "看見隱蔽單位與陷阱的距離 +{n} 格"}

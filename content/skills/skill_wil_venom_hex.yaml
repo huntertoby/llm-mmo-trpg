@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d6, element: shadow}
   - {type: apply_status, status: poison, duration: 2}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, curse, poison]
 narrative:
   concept: 一道帶毒的詛咒，暗影鑽進傷口，把毒一起留在裡面

@@ -166,7 +166,7 @@ races:
       uses_per_battle: 1
       shape: {type: self}
       effects:
-        - {type: restore_choice, resources: [stamina, mana], amount: 10}
+        - {type: restore_choice, resources: [stamina, mana], amount: 100}
     passive:
       id: cyborg_insulated
       name_zh: 絕緣

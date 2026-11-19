@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d8, element: shadow}
   - {type: consume_stack, stack: soul_shard, per_stack_permille: 200, affects: self}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [shadow, spell, finisher, curse]
 narrative:
   concept: 收集來的魂魄一齊炸開

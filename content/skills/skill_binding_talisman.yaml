@@ -20,7 +20,7 @@ effects:
   - {type: damage, dice: 1d4, element: ice}
   - {type: apply_status, status: root, duration: 1}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [ice, spell, control]
 narrative:
   concept: 符紙在指間燃起青光，先對準了人，下一刻才擲出去

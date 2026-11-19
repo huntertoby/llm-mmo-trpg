@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d6, element: shadow}
   - {type: knock_prone}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [shadow, spell, curse, knockdown, area]
 narrative:
   concept: 敵人腳下的影子活了過來，纏住腳踝一扯，一片人跟著摔倒

@@ -18,7 +18,7 @@ effects:
   - {type: shield, dice: 2d4, affects: self}
   - {type: add_stack, stack: focus, amount: 1, affects: self}
 condition: null
-cost: {mana: 2, cooldown: 1}
+cost: {mana: 20, cooldown: 1}
 tags: [spell, shield, builder]
 narrative:
   concept: 站定、收心，讓呼吸與準星一起靜下來

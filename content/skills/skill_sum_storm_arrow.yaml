@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 5}
 effects:
   - {type: summon, unit: summon_thunder_spirit, duration: 2}
 condition: null
-cost: {stamina: 8, cooldown: 4}
+cost: {stamina: 80, cooldown: 4}
 tags: [lightning, ranged, summon]
 narrative:
   concept: 朝天射出一支引雷箭，落雷之處凝出一縷雷靈

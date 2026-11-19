@@ -23,7 +23,7 @@ effects:
     multiplier_permille: 800
     condition: {type: height_advantage}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, ranged, height]
 narrative:
   concept: 鶴唳一聲，箭已搭弦；先盯死獵物，下一刻才放

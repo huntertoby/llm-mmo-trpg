@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 2d4, element: physical, form_bonus_permille: 300}
   - {type: apply_status, status: weaken, duration: 1, affects: enemies}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [physical, area, debuff]
 narrative:
   concept: 仰頭一聲咆哮，震得身邊的敵人手腳發軟

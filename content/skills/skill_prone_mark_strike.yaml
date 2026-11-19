@@ -23,7 +23,7 @@ effects:
     condition: {type: target_has_status, status: marked}
   - {type: knock_prone}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [physical, melee, mark, control]
 narrative:
   concept: 一記掃腿把敵人絆倒；身上有印記的，這一擊格外沉重

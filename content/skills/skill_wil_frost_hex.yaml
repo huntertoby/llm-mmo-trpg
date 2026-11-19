@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: shadow}
   - {type: apply_status, status: frozen, duration: 1}
 condition: null
-cost: {mana: 6, cooldown: 4}
+cost: {mana: 60, cooldown: 4}
 tags: [shadow, spell, curse, ice]
 narrative:
   concept: 暗影傷害＋冰凍 1 回合：冰冷的詛咒從腳底爬上來，連逃跑的念頭都凍住

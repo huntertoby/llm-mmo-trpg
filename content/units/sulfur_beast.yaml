@@ -2,10 +2,10 @@
 # 硫煙獸：控制、噴硫煙（煙霧＋中毒）。
 id: sulfur_beast
 name_zh: 硫煙獸
-attributes: {str: 12, dex: 10, con: 14, int: 6, wis: 10, wil: 10}
-max_hp: 28
+attributes: {str: 120, dex: 100, con: 140, int: 60, wis: 100, wil: 100}
+max_hp: 280
 speed: 4
-armor_bonus: 2
+armor_bonus: 20
 weapon: fangs
 ai_profile: brute
 resist: {}

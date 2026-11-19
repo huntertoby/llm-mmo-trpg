@@ -2,8 +2,8 @@
 # 每個自己的回合開始給最虛弱的友方（含召喚者與其他召喚物，不含自己）一層護盾（1d4＋2）。
 id: summon_guardian_spirit
 name_zh: 守護靈
-attributes: {str: 8, dex: 10, con: 10, int: 10, wis: 14, wil: 12}
-max_hp: 14
+attributes: {str: 80, dex: 100, con: 100, int: 100, wis: 140, wil: 120}
+max_hp: 140
 speed: 4
 armor_bonus: 0
 weapon: guardian_rod
@@ -15,4 +15,4 @@ tags: [summoned, spirit, support]
 reactions: []
 summon: true
 role: support   # 定位（3-33f1；HP 係數見 rules/core.yaml summon_role_hp_permille）
-pulse: {shield_dice: 1d4, shield_flat: 2}   # 每個自己的回合開始：最虛弱的友方獲得護盾
+pulse: {shield_dice: 1d4, shield_flat: 20}   # 每個自己的回合開始：最虛弱的友方獲得護盾

@@ -15,7 +15,7 @@ shape: {type: line, size: 3}
 effects:
   - {type: inscribe, element: fire, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [fire, spell, rune]
 narrative:
   concept: 一串只有你看得見的火紋，沿著地面延伸出去

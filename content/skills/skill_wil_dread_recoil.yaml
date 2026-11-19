@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: feared, duration: 1}
   - {type: push, distance: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [shadow, spell, fear, push]
 narrative:
   concept: 恐懼讓對手猛然向後彈開，撞上身後的東西才停得下來

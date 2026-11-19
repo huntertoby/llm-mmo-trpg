@@ -17,7 +17,7 @@ shape: {type: ring, radius: 2}
 effects:
   - {type: damage, dice: 2d4, element: physical}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [arcane, spell, aoe]
 narrative:
   concept: 碎裂的界域一陣陣脈動，整座浮台都在震

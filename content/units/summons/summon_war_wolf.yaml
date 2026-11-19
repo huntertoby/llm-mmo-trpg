@@ -2,8 +2,8 @@
 # 快速突擊：移動 6；固有「倒地」——撲倒：普攻命中時絆倒目標（敏捷對抗，每輪 1 次，沿用 3-33e1）。
 id: summon_war_wolf
 name_zh: 戰狼
-attributes: {str: 12, dex: 16, con: 10, int: 4, wis: 8, wil: 6}
-max_hp: 14
+attributes: {str: 120, dex: 160, con: 100, int: 40, wis: 80, wil: 60}
+max_hp: 140
 speed: 6
 armor_bonus: 0
 weapon: fangs

@@ -17,7 +17,7 @@ effects:
   - {type: create_surface, surface: water}
   - {type: apply_status, status: slow, duration: 1}
 condition: null
-cost: {mana: 4}
+cost: {mana: 40}
 tags: [water, spell, area, utility]
 narrative:
   concept: 隨身水瓶一摔，讓腳下的地面濕滑難行

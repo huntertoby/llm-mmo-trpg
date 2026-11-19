@@ -14,7 +14,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: restore_resource, resource: cooldown, amount: 2, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 3}
+cost: {mana: 40, cooldown: 3}
 tags: [holy, spell, support, tempo]
 narrative:
   concept: 讓同伴的招式更快回到手上（花源力的傳說技能除外）

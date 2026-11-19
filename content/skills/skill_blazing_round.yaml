@@ -28,7 +28,7 @@ effects:
   duration: 1
 condition: null
 cost:
-  stamina: 8
+  stamina: 80
   cooldown: 3
 tags:
 - physical

@@ -2,10 +2,10 @@
 # 熔晶魅：霧魅的火版，碰到就點燃（命中時燃燒）；只在核心殘片附近（角魔古祭壇、熔心坑周邊）。
 id: molten_wraith
 name_zh: 熔晶魅
-attributes: {str: 8, dex: 14, con: 10, int: 10, wis: 12, wil: 14}
-max_hp: 22
+attributes: {str: 80, dex: 140, con: 100, int: 100, wis: 120, wil: 140}
+max_hp: 220
 speed: 5
-armor_bonus: 1
+armor_bonus: 10
 weapon: shade_blades
 ai_profile: assassin
 resist: {}

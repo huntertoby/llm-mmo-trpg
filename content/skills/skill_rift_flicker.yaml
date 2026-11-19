@@ -27,7 +27,7 @@ followup:
   effects:
     - {type: teleport}
 condition: {type: self_lacks_status, status: root}   # LW-1（BAL-21c 候選 B）：被定身時不能閃擊
-cost: {mana: 3, cooldown: 3}
+cost: {mana: 30, cooldown: 3}
 tags: [arcane, spell, teleport, mobility]
 narrative:
   concept: 核心的裂縫一亮，一枚碎晶射向你，本體已閃到浮台的另一側

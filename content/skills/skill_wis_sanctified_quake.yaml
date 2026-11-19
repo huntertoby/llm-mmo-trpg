@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d6, element: holy}
   - {type: knock_prone}
 condition: null
-cost: {mana: 9, cooldown: 3}
+cost: {mana: 90, cooldown: 3}
 tags: [holy, spell, control, area]
 narrative:
   concept: 像敲響一口看不見的聖鐘，聲波把周圍的敵人震倒

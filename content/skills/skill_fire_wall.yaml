@@ -25,7 +25,7 @@ effects:
     effects:
       - {type: damage, dice: 1d6, element: fire}
 condition: null
-cost: {mana: 10, cooldown: 4}
+cost: {mana: 100, cooldown: 4}
 tags: [fire, spell, zone]
 narrative:
   concept: 一道會自己往前推進的火牆，把敵人逼退或吞沒

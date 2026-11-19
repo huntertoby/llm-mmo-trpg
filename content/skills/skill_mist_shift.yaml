@@ -18,7 +18,7 @@ effects:
   - {type: teleport}
   - {type: apply_status, status: concealed, duration: 2, affects: self}
 condition: null
-cost: {mana: 3, cooldown: 1}
+cost: {mana: 30, cooldown: 1}
 tags: [arcane, teleport, mobility, stealth]
 narrative:
   concept: 身形化入山霧，從另一團霧裡走出來

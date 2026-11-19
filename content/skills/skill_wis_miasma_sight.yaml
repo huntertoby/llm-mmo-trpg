@@ -16,7 +16,7 @@ effects:
   - {type: reveal, duration: 3}
   - {type: create_surface, surface: poison, duration: 2}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [poison, spell, reveal, area]
 narrative:
   concept: 放出一陣帶毒的瘴氣，躲著的人一咳嗽就露了餡
