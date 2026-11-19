@@ -34,6 +34,7 @@ def test_the_basic_borrow_skill(lib: ContentLibrary) -> None:
     skill = lib.skills[BORROW]
     assert skill.kind == "active" and skill.ap_cost == 0
     assert skill.cost.cooldown == 2
+    assert skill.cost.mana == 0 and skill.cost.stamina == 0  # AP-2b：預支不受最低花費限制
     assert skill.shape.type == "self"
     assert [(e.type, e.amount) for e in skill.effects] == [("borrow_ap", 1)]
     assert skill.rarity == "rare" and skill.tier == 1

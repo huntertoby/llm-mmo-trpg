@@ -244,9 +244,10 @@ def _fill_conditions(out: dict[str, Any], library: ContentLibrary) -> None:
 def _fill_cost(out: dict[str, Any], library: ContentLibrary, category: str) -> None:
     """AP、源力與最低花費：主動技能 AP 取 2（帶預支 ``borrow_ap`` 的一律 0，AP-2：06 6.3「⚠ 0 AP
     例外」）；傳說技能必須花源力（3C-4a），補最小值；主動法術技至少 1 法力、主動武器技至少 1 耐力
-    （06 6.10）。"""
+    （06 6.10；帶預支的不受限制、不補，AP-2b）。"""
     active = out.get("kind") == "active"
-    if active and any(e.get("type") == BORROW_AP for e in out.get("effects") or ()):
+    borrows = active and any(e.get("type") == BORROW_AP for e in out.get("effects") or ())
+    if borrows:
         out["ap_cost"] = 0
         cost = dict(out.get("cost") or {})
         if cost.get("uses_per_battle") != 1:  # 預支的冷卻下限（AP-2）
@@ -259,7 +260,7 @@ def _fill_cost(out: dict[str, Any], library: ContentLibrary, category: str) -> N
         cost = dict(out.get("cost") or {})
         cost.setdefault("source", MIN_SOURCE)
         out["cost"] = cost
-    if active and category in ("weapon", "spell"):
+    if active and not borrows and category in ("weapon", "spell"):
         resource = library.budget.resource_of(category)  # type: ignore[arg-type]
         cost = dict(out.get("cost") or {})
         if not isinstance(cost.get(resource), int) or cost[resource] < 1:

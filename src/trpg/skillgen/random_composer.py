@@ -377,7 +377,7 @@ def _borrow_skill(  # noqa: PLR0917 — 一次組合的參數（同 _attempt）
     ctx: Ctx,
 ) -> SkillDef:
     """預支的基本款（AP-2，06 6.3）：0 AP、冷卻 ``structure.borrow_cooldown``、形狀自身、預支 1 AP、
-    只給自己，花 1 點資源（主動技的最低花費）；沒有條件與附帶效果。"""
+    只給自己，不花法力、耐力（06 6.10 最低花費的例外，AP-2b）；沒有條件與附帶效果。"""
     tier, rarity, skeleton, category = fixed
     ctx.shape, ctx.shape_params = "self", {}
     ctx.effects = [{"type": BORROW_AP, "amount": 1}]
@@ -395,7 +395,7 @@ def _borrow_skill(  # noqa: PLR0917 — 一次組合的參數（同 _attempt）
         "condition": None,
         "provenance": {"origin": "level_up"},
         "ap_cost": 0,
-        "cost": {"mana": 1, "cooldown": library.composer.structure.borrow_cooldown},
+        "cost": {"cooldown": library.composer.structure.borrow_cooldown},
     }
     return _finish(library, seed, base, ctx)
 

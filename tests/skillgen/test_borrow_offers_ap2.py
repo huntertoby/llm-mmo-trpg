@@ -28,6 +28,7 @@ def test_the_composer_makes_the_basic_borrow_skill() -> None:
             found.append(skill)
             assert skill.ap_cost == 0
             assert skill.cost.cooldown == lib.composer.structure.borrow_cooldown
+            assert skill.cost.mana == 0 and skill.cost.stamina == 0  # AP-2b
             assert skill.shape.type == "self"
             assert [(e.type, e.amount) for e in skill.effects] == [("borrow_ap", 1)]
             assert validate_skill(skill, lib) == []
