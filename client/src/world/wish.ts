@@ -44,6 +44,8 @@ export const WISH_ZH = {
   tagMenuShort: "標籤",
   tabTags: "從清單點選",
   tagMax: (n: number) => `最多 ${n} 個`,
+  /** AR-SK4：元素類有物理時（同伺服器的「（物理另外算）」）。 */
+  tagMaxPhysical: (n: number) => `最多 ${n} 個（物理另外算）`,
   needTag: "先點選 1 個標籤",
   tagTimeout: "池子這次沒來得及回應（等了 10 秒），改從清單點選標籤吧（沒有扣任務幣）。",
   tagPicked: "已選：",
@@ -61,10 +63,38 @@ export function tagMode(w: Pick<WishData, "tag_groups">): boolean {
 /** PK-4：點選的標籤（類別 id → 代碼；關鍵字以外的類別）。關鍵字照舊放在 `picked`。 */
 export type TagPick = Readonly<Record<string, readonly string[]>>;
 
-/** 點一個標籤：已選＝拿掉；沒選而且這一類還沒滿＝加上；滿了＝不變。 */
-export function toggleTag(cur: TagPick, group: string, id: string, max: number): TagPick {
+/** 元素類裡的「物理」（後端 `wish_pick.PHYSICAL`）。 */
+export const PHYSICAL_TAG = "physical";
+
+/**
+ * AR-SK4（WC-2b）：這一類有沒有「物理不佔名額」的規則——元素類、而且清單裡有物理。
+ * 伺服器給的 `max` 已經多給物理 1 格（`wish_pick.menu_limits`），所以物理以外最多 `max − 1` 個。
+ */
+export function physicalSlot(group: string, items: readonly { id: string }[]): boolean {
+  return group === "elements" && items.some((i) => i.id === PHYSICAL_TAG);
+}
+
+/**
+ * 這一類現在還能不能再點 `id`（已選的一律可以拿掉）。`physical`（`physicalSlot`）時物理不佔名額：
+ * 物理以外的元素到 `max − 1` 個就擋，物理照總數 `max` 算。其他類照總數 `max` 算。
+ */
+export function tagRoom(chosen: readonly string[], id: string, max: number, physical = false): boolean {
+  if (chosen.includes(id)) return true;
+  if (!physical || id === PHYSICAL_TAG) return chosen.length < max;
+  return chosen.filter((v) => v !== PHYSICAL_TAG).length < max - 1;
+}
+
+/** 物理以外的元素上限（`physical` 時 `max − 1`）；標籤旁「最多 N 個」用。 */
+export function tagShownMax(max: number, physical: boolean): number {
+  return physical ? Math.max(0, max - 1) : max;
+}
+
+/** 點一個標籤：已選＝拿掉；沒選而且這一類還有名額（`tagRoom`）＝加上；滿了＝不變。 */
+export function toggleTag(cur: TagPick, group: string, id: string, max: number, physical = false): TagPick {
   const have = cur[group] ?? [];
-  return { ...cur, [group]: toggleKeyword(have, id, max) };
+  if (have.includes(id)) return { ...cur, [group]: have.filter((k) => k !== id) };
+  if (!tagRoom(have, id, max, physical)) return { ...cur, [group]: [...have] };
+  return { ...cur, [group]: [...have, id] };
 }
 
 /** 點選了幾個標籤（關鍵字另算）。 */

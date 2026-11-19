@@ -10,6 +10,7 @@ import type { ClassifiedActions } from "../../battle/actions";
 import { giantAimLine, unitAtTile } from "../../battle/footprint";
 import { posKey } from "../../battle/geometry";
 import { withOrder, type OrderKind } from "../../battle/orders";
+import { prepHidesTileCard } from "../../battle/prep";
 import type { CommandSession } from "../../battle/summonControl";
 import type { ActionMode } from "../../battle/targeting";
 import type { TelegraphMark } from "../../battle/telegraph";
@@ -188,7 +189,9 @@ export function useTileInteraction(c: TileClickContext): TileInteraction {
   // 浮動資訊卡顯示的格子（3-30 起寬限期內可能與滑鼠所在格不同，見 ui/hoverCard.ts）
   const sectionsAt = (tile: Pos | null) =>
     tileSections(shown, tile, c.skillNames, [...zoneLinesAt(shown, tile, c.liveNames), ...marksTextAt(c.marks, tile)]);
-  tileCard.ctl.hasContent = (tile) => unitAt(shown, tile) !== undefined || sectionsAt(tile).length > 0;
+  // AR-SK4：佈置選格時，可放的格子不出資訊卡（`battle/prep.ts::prepHidesTileCard`）
+  tileCard.ctl.hasContent = (tile) =>
+    !prepHidesTileCard(mode, tile) && (unitAt(shown, tile) !== undefined || sectionsAt(tile).length > 0);
   const cardTile = tileCard.ctl.visible ? tileCard.ctl.shown : null;
   const hoverTexts = [...zoneLinesAt(shown, hover, c.liveNames), ...marksTextAt(c.marks, hover)];
   const hoverUnit = unitAt(shown, cardTile) ?? null;

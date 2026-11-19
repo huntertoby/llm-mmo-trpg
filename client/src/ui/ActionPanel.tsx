@@ -10,6 +10,7 @@ import { noTurnRows, type NoTurnKind } from "../battle/noTurn";
 import { objectStyle } from "../battle/glossary";
 import { pickCountText, tileCount } from "../battle/pickCount";
 import { PRACTICE_SURE_NOTE_ZH, practiceWording } from "../battle/skillTray";
+import { isPrepModeKey, prepModeHint } from "../battle/prep";
 import {
   DIRECTION_ARROWS,
   DIRECTION_ORDER,
@@ -179,6 +180,7 @@ export function modeHint(mode: ActionMode): string {
   if (mode.kind === "defend" && t.self !== null)
     return `點自己守護自己，或點相鄰的隊友（紅框）改由你替他承受單體攻擊。Esc／右鍵取消。`;
   if (isSelfOnly(t)) return "對自身施放。";
+  if (isPrepModeKey(mode.key)) return prepModeHint(t.tiles.size);
   return `點選格子上的目標（紅框 ${pickCountText(t.units.size + t.objects.size, t.tiles.size)}${t.directions.size > 0 ? "，或選擇方向" : ""}）。Esc／右鍵取消。`;
 }
 
