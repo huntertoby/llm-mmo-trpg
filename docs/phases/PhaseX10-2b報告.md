@@ -235,3 +235,31 @@
 3. 接受。
 4. 接受，X10-3 一起掃手寫說明文字裡的量類數字。
 5. 接受。
+
+## 補件：非 slow 的 cli 測試（2026-11-20，合併後全量檢查擋下）
+
+原因：交件前分目錄跑時漏了 `tests/cli`（只跑了 `-m slow` 的 parity＋cli），7 個一般 cli 測試沒跑到。在分支 merge main（`fa609647a`）後修正。
+
+### 碎骨重擊的預算：不是 bug
+- `test_budget_cli::test_budget_shows_when_the_allowance_is_capped` 在測試裡把碎骨重擊的代價改成 `{"stamina": 80, ...}`，寫的是**舊單位**的 80。換算後 80 耐力＝舊的 8，折抵只有 20‰（不是 200→上限 150），所以總折抵到不了 850、也就不會截斷，比例算成 64.3%。
+- 預算程式照新單位算是對的：`耐力 × mana_per_point ÷ (stamina_per_mana × quantity_scale)`，800 → 200 → 上限 150，150＋300＋400＝850 → 上限 500，和換算前完全相同。測試輸入改成 800 後通過。
+- 全內容掃描：換算前內容（`f6d2bc957`）與現在內容各算一次 434 招的預算（`total`、`usable`、比例、合格、每一筆折抵的 ‰）：**數值 0 筆不同**（373 招只有折抵的標籤文字變了，例如「法力 6」→「法力 60」）；換算前合格、換算後不合格的 **0 招**；不合格的招數前後都是 4 招（同一批既有例外）。所以沒有補「scale 1 對 scale 10」的新測試；既有的 `tests/test_x10_scale.py::test_budget_points_same_before_and_after_x10` 已逐招比總點數與每筆折抵（343 招，召喚技除外），這次的全內容掃描把召喚技也涵蓋了。
+
+### 修正
+| 測試 | 原因 | 改法 |
+|---|---|---|
+| `test_budget_cli::test_budget_shows_when_the_allowance_is_capped` | 測試輸入是舊單位 | 耐力 80→800 |
+| `test_run_cli::test_run_new_rejects_bad_input` | 開局配點 4→40 | `str=10`、「必須分配 40 點」 |
+| `test_run_cli::test_run_new_writes_a_save_and_show_reads_it` | 配點輸入是舊單位（`str=3,con=1` 配不滿 40 點） | `str=30,con=10`、「力量 130」「體質 110」 |
+| `test_demo_maps::test_simple_ai_weather_and_deploy_options` | 戰士 HP 寫死 60 | 600 |
+| `test_demo_maps::…[ruined_fort]` | 換種子 3 → 4：種子 3 換算後不再出現半掩護（捨去分岔） | 重掃 0～59 有 34 個可用 |
+| `test_basic_actions_cli::test_open_plain_battle_uses_guard_and_replays` | 換種子 27 → 44：27 不再守護 | 重掃 0～59 只有 44 |
+| `test_striker_trapper_battle::test_striker_battle…` | 換種子 20 → 64：20 不再放雷霆終結 | 重掃 0～299：64、67、76、79、92、96、111、124、167、218 |
+
+換種子累計 18 處（第 5 節的 15 處＋這 3 處）。三個舊種子在換算前的內容下都照舊通過，原因同第 6 節：捨去讓戰鬥分岔。
+
+commit：`bbeb5c532`（數字）、`6f4df4190`（換種子與戰士 HP）。
+
+### 補件後的檢查（`6f4df4190`）
+- 每個目錄的非 slow 測試各跑一輪，`-n 8`，結束碼全部 0：cli 148、engine 5120、skillgen 4634（7 skipped）、content 3166、api 1336（1 skipped）、world 1328、roguelite 279、narrative 475、sim 180、llm 495、server 77、bot 67、shared 72、頂層 180 passed。
+- `ruff check`、`ruff format --check` 0。只改了測試，沒有動 `src/`、`content/`。
