@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal, localcontext
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, Dice, UnitTemplate
 from trpg.content.schemas import ContentModel
@@ -226,6 +226,21 @@ class SkillSlots(ContentModel):
     passive: int = Field(ge=0)
     reaction: int = Field(ge=0)
     stance: int = Field(ge=0)
+
+
+def explicit_missing(model: BaseModel, prefix: str, names: tuple[str, ...]) -> list[str]:
+    """``names`` 中沒有在資料裡寫明（用了 Python 預設值）的欄位，寫成 ``prefix.name``
+    （X10-2a：``quantity_scale`` 不是 1 時，量類的預設值不能用）。"""
+    return [f"{prefix}.{n}" for n in names if n not in model.model_fields_set]
+
+
+_RESOURCE_QUANTITIES = ("class_base", "base", "stamina_regen")
+_GROWTH_QUANTITIES = (
+    "hp_per_level",
+    "hp_per_attr_mod",
+    "flat_per_level_permille",
+    "flat_per_attr_mod_permille",
+)
 
 
 class SummonGrowth(ContentModel):
@@ -630,6 +645,23 @@ class CoreRules(ContentModel):
         low, high = _ROLE_HP_RANGE
         if any(not low <= v <= high for v in self.summon_role_hp_permille.values()):
             raise ValueError(f"summon_role_hp_permille 的係數必須在 {low}～{high}‰")
+        return self
+
+    @model_validator(mode="after")
+    def _check_quantity_defaults(self) -> CoreRules:
+        """``quantity_scale`` 不是 1 時，量類欄位不能用 Python 預設值（預設是換算前的單位；
+        X10-2a）。"""
+        if self.quantity_scale != 1:
+            missing = [
+                *explicit_missing(self.resources, "resources", _RESOURCE_QUANTITIES),
+                *explicit_missing(self.attribute_perks, "attribute_perks", ("base", "step")),
+                *explicit_missing(self.summon_growth, "summon_growth", _GROWTH_QUANTITIES),
+            ]
+            if missing:
+                raise ValueError(
+                    f"quantity_scale 是 {self.quantity_scale} 時這些量類要寫在 core.yaml"
+                    f"（Python 預設值是換算前的單位）：{'、'.join(missing)}"
+                )
         return self
 
     @model_validator(mode="after")

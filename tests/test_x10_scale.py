@@ -14,10 +14,11 @@ from pydantic import ValidationError
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, template, with_rolls
 from trpg.content.environment import SummonAiRules
-from trpg.content.library import ContentLibrary
+from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.content.summons import summon_dpr
+from trpg.content.world_encounters import ArmorMods
 from trpg.engine import Attack, BattleState, resolve
 from trpg.engine.ai.infuse import survival
 from trpg.engine.ai.utility.gains import _useful_damage
@@ -251,3 +252,39 @@ def test_infuse_survival_same_after_x10(scale: int) -> None:
     unit.hp = 7 * scale
     rules = SummonAiRules(infuse_threat_damage=2)
     assert survival(state, unit, rules) == Fraction(7, 7 + 2)  # 相鄰的戰士 1 名
+
+
+# ---------------------------------------------------------------------------
+# Python 預設值：scale 不是 1 時量類不能用預設值（預設是換算前的單位）
+
+
+def test_quantity_defaults_must_be_explicit_at_x10(library: ContentLibrary) -> None:
+    data = library.ruleset.core.model_dump()
+    for section, key in (
+        ("resources", "stamina_regen"),
+        ("attribute_perks", "base"),
+        ("summon_growth", "hp_per_level"),
+    ):
+        partial = {**data, section: {k: v for k, v in data[section].items() if k != key}}
+        assert CoreRules.model_validate(partial).quantity_scale == 1  # 倍率 1：照舊用預設值
+        with pytest.raises(ValidationError, match=f"{section}.{key}"):
+            CoreRules.model_validate({**partial, "quantity_scale": 10})
+
+
+def test_form_upkeep_must_be_explicit_at_x10(library: ContentLibrary) -> None:
+    ruleset = library.ruleset
+    core = ruleset.core.model_copy(update={"quantity_scale": 10})
+    forms = ruleset.forms.model_dump()
+    del forms["upkeep_mana"]
+    data = {**ruleset.model_dump(), "core": core.model_dump(), "forms": forms}
+    with pytest.raises(ValidationError, match=r"forms.upkeep_mana"):
+        Ruleset.model_validate(data)
+    data["forms"] = ruleset.forms.model_dump()
+    assert Ruleset.model_validate(data).core.quantity_scale == 10
+
+
+def test_armor_mods_bounds_have_no_default() -> None:
+    with pytest.raises(ValidationError, match="min_total"):
+        ArmorMods.model_validate(
+            {"unit": "ember_heart", "max_total": 1, "mods": [{"world_flag": "a", "amount": 1}]}
+        )
