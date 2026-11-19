@@ -460,7 +460,13 @@ class UnitView(_ViewModel):
     """這個回合開始時被扣掉的 AP（透支；AP 列的紅斜線，畫在一般 AP 的最後）；不是自己的回合時
     為 0。"""
     ap_next_loss: int
-    """下一個自己回合開始時會少的 AP（透支；AP 列分隔線右邊的紅斜線）。"""
+    """下一個自己回合開始時會少的 AP（透支、預支；AP 列分隔線右邊的紅斜線）。"""
+    ap_borrowed: int
+    """這個回合用預支多拿的 AP（AP-2；已含在 ``ap``；AP 列的橘色菱形）；不是自己的回合時為 0。"""
+    ap_lost_borrowed: int
+    """``ap_lost`` 裡來自預支的部分（AP-2，AP 列的用字：只有預支、只有透支、兩者疊加）。"""
+    ap_next_loss_borrowed: int
+    """``ap_next_loss`` 裡來自預支的部分（AP-2，AP 列的用字）。"""
     source: int
     """源力（Phase 3C-4a；傳說技能的代價，敵人一律 0）。"""
     source_max: int
@@ -1013,6 +1019,11 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         ap_lost=unit.ap_lost,
         ap_next_loss=next_turn_ap_penalty(
             state.ruleset, unit, own_turn=state.active_unit == unit.id
+        ),
+        ap_borrowed=unit.ap_borrowed,
+        ap_lost_borrowed=unit.ap_lost_borrowed,
+        ap_next_loss_borrowed=next_turn_ap_penalty(
+            state.ruleset, unit, own_turn=state.active_unit == unit.id, borrowed=True
         ),
         source=unit.source,
         source_max=state.ruleset.core.source_max,

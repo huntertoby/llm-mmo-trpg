@@ -101,6 +101,8 @@ from trpg.content.skills.constants import (
     BACKLASH_TYPES,
     BASIC_ACTIONS,
     BLOW_SURFACE,
+    BORROW_AP,
+    BORROWED_AP_STATUS,
     BUILTIN_GATHER_SHAPES,
     CASTER_CONDITIONS,
     CHANGE_TARGETS,
@@ -222,6 +224,9 @@ from trpg.content.skills.constants import (
 )
 from trpg.content.skills.constants import (
     MAX_REFUND_AP as MAX_REFUND_AP,
+)
+from trpg.content.skills.constants import (
+    ON_AP_SPENT_ALL as ON_AP_SPENT_ALL,
 )
 from trpg.content.skills.constants import (
     ON_CAST_TAG as ON_CAST_TAG,
@@ -538,6 +543,8 @@ __all__ = [
     "BACKLASH_TYPES",
     "BASIC_ACTIONS",
     "BLOW_SURFACE",
+    "BORROWED_AP_STATUS",
+    "BORROW_AP",
     "BUILTIN_GATHER_SHAPES",
     "CASTER_CONDITIONS",
     "CHANGE_TARGETS",

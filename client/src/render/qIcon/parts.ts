@@ -356,7 +356,7 @@ export const EFFECT: PartTable = {
   ...SK3_EFFECT, /* AR-SK3：重擲，加在最後 */
 };
 /** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。AR-SK2：吸收表面、疾病擴散、鉤換成專屬圖樣（`SK2_EFFECT`），拿掉三筆暫借。AR-SK3：重擲換成專屬圖樣，拿掉暫借。 */
-export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon" };
+export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", borrow_ap: "grant_ap" }; // AP-2：預支暫借給予 AP，待美術補畫
 
 // =====================================================================
 // 表面 1 個形（8 種表面染色；第 3 批的地面效果記號，依表面換外形）
@@ -573,7 +573,7 @@ export const TRIG: PartTable = {
   },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent", on_ap_spent_all: "on_turn_end" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借
 
 // =====================================================================
 // 接續 6 個

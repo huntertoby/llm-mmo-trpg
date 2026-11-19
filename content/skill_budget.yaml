@@ -97,6 +97,9 @@ dispel_all_points: 6
 hook_points: 6             # 鉤：固定點數（形狀倍率另算）
 contagion_points: 2        # 疾病擴散：固定點數（形狀倍率另算）
 reroll_budget_permille: 850   # SK-3b：重擲（reroll）的點數 ＝ 階級預算 × 反應技係數 × 這個值（‰）；固定 5 點時階級 1 只到預算 60%（待 PM 決定）
+# AP-2（#168，06 6.3「預支」：預算約等於 0，計價放工坊）：預支（borrow_ap）每 1 AP 的點數。0 AP 的預支技能可用預算照 AP 1 的係數算、
+# 不套過弱下限（只是挪時間，代價是冷卻與稀有度），只擋超出預算。
+borrow_ap_points: 0
 absorb_surface_points: 1   # 吸收表面：基礎點數（另加收益：層數＝add_stack 點數 × 層數、治療／護盾＝骰子平均、元素＝再加一次這個點數）
 # 3-11 暫時障礙：create_obstacle 持續 n 回合（1–10）的點數 ＝ 基礎 3 × 第 n 項（‰）；永久 ＝ 1000‰（現狀）。
 obstacle_duration_permille: [400, 500, 600, 700, 750, 800, 850, 900, 950, 1000]
@@ -327,6 +330,7 @@ modifier:
 # 改寫規則型原語（Phase 3C-4a 起：grant_ap、reset_cooldown、cheat_death）
 max_rule_rewrite: 1           # 每個技能最多 1 個
 rule_rewrite_min_cooldown: 4  # 必須 uses_per_battle: 1 或冷卻至少這麼多回合
+borrow_min_cooldown: 2   # 預支（borrow_ap，AP-2，06 6.3）：每場限一次，或冷卻至少這麼多回合（初值；基本款冷卻 2）
 hook_min_cooldown: 3   # 鉤（hook，SK-2，06 6.38 第 8 點）：冷卻至少這麼多回合（初值）
 rule_rewrite_min_cooldown_with_source: 2   # 花源力（傳說，cost.source）時改為冷卻至少 2 回合（初值）
 

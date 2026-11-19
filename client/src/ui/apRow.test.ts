@@ -73,3 +73,56 @@ describe("AP 列的畫法", () => {
     expect(css).toMatch(/animation: ap-keep-flash 0\.6s ease-in-out 2;/);
   });
 });
+
+// AP-2（#168）：預支技能——橘色菱形（預支來的那格）、紅斜線（下回合會少的那格）與用字（畫法文件第 2、3、5 節）。
+describe("AP 列的預支", () => {
+  it("施放預支後：4 顆金＋1 顆橘菱形｜1 顆紅斜線，用字照第 5 節", () => {
+    const row = apRow(hero({ ap: 5, ap_borrowed: 1, ap_next_loss: 1, ap_next_loss_borrowed: 1 }), "AP");
+    expect(row.now.map((p) => `${p.kind}${p.on ? "+" : "-"}`)).toEqual(["ap+", "ap+", "ap+", "ap+", "borrow+"]);
+    expect(row.now[4]).toMatchObject({ hint: "預支來的 AP（下回合 −1）", fresh: true });
+    expect(row.next.map((p) => [p.kind, p.hint, p.fresh])).toEqual([["lost", "預支：下回合少 1 AP", true]]);
+  });
+  it("預支的那格最先用掉、變空心橘框；用了預支的回合沒有會被保留的那顆", () => {
+    const row = apRow(hero({ ap: 2, ap_borrowed: 1, ap_next_loss: 1, ap_next_loss_borrowed: 1 }), "AP");
+    expect(row.now.map((p) => `${p.kind}${p.on ? "+" : "-"}`)).toEqual(["ap+", "ap+", "ap-", "ap-", "borrow-"]);
+    expect(row.now.some((p) => p.keep)).toBe(false);
+  });
+  it("預支 +2：兩顆菱形｜兩顆紅斜線，合計 2 格以上寫合計", () => {
+    const row = apRow(hero({ ap: 6, ap_borrowed: 2, ap_next_loss: 2, ap_next_loss_borrowed: 2 }), "AP");
+    expect(row.now.filter((p) => p.kind === "borrow")).toHaveLength(2);
+    expect(row.now[4]?.hint).toBe("預支來的 AP（下回合 −2）");
+    expect(row.next.map((p) => p.hint)).toEqual(["下回合少 2 AP", "下回合少 2 AP"]);
+  });
+  it("和透支疊加：下回合 −2 兩顆紅斜線寫合計；只有透支 1 格照舊寫透支", () => {
+    const both = apRow(hero({ ap: 5, ap_borrowed: 1, ap_next_loss: 2, ap_next_loss_borrowed: 1 }), "AP").next;
+    expect(both.map((p) => p.hint)).toEqual(["下回合少 2 AP", "下回合少 2 AP"]);
+    const over = apRow(hero({ ap: 2, ap_next_loss: 1 }), "AP").next;
+    expect(over.map((p) => p.hint)).toEqual(["透支：下回合少 1 AP"]);
+  });
+  it("回合開始已扣掉的那格：只有預支、只有透支、兩者疊加（不寫原因）", () => {
+    const hint = (lost: number, borrowed: number) => apRow(hero({ ap: 4 - lost, ap_lost: lost, ap_lost_borrowed: borrowed }), "AP").now.find((p) => p.kind === "lost")?.hint;
+    expect(hint(1, 1)).toBe("預支：這回合少 1 AP");
+    expect(hint(2, 2)).toBe("預支：這回合少 2 AP");
+    expect(hint(1, 0)).toBe("透支：這回合少 1 AP");
+    expect(hint(2, 1)).toBe("這回合少 2 AP");
+  });
+  it("菱形、紅斜線各最多畫 2 個（多的寫在說明裡）", () => {
+    const row = apRow(hero({ ap: 5, ap_lost: 3, ap_lost_borrowed: 1, ap_next_loss: 3, ap_next_loss_borrowed: 2 }), "AP");
+    expect(row.now.filter((p) => p.kind === "lost")).toHaveLength(2);
+    expect(row.next).toHaveLength(2);
+    expect(row.next[0]?.hint).toBe("下回合少 3 AP");
+  });
+  it("畫法：菱形有自己的 class、淡入 200 ms；改寫數字時字至少 10px", () => {
+    const html = renderToStaticMarkup(createElement(StatChipView, { chip: apChip(hero({ ap: 5, ap_borrowed: 1, ap_next_loss: 1, ap_next_loss_borrowed: 1 })) }));
+    expect(html).toContain('class="stat-pip ap borrow on fresh"');
+    expect(html).toContain('aria-label="預支來的 AP（下回合 −1）"');
+    const css = readFileSync("src/styles/status-card.css", "utf8");
+    expect(css).toMatch(/\.stat-pip\.ap\.borrow \{[^}]*border-color: #b8641a;[^}]*transform: rotate\(45deg\);/);
+    expect(css).toMatch(/\.stat-pip\.ap\.borrow\.on \{[^}]*background: #ff9a3a;/);
+    expect(css).toMatch(/\.stat-pip\.ap\.fresh \{[^}]*animation: ap-borrow-in 0\.2s/);
+    const size = /\.stat-chip \{[^}]*font-size: (\d+)px;/.exec(css)?.[1];
+    expect(Number(size)).toBeGreaterThanOrEqual(10);
+    const many = apChip(hero({ ap: 9, ap_carried_in: 1, ap_borrowed: 2, ap_next_loss: 2 }));
+    expect(many.label).toBe("9");
+  });
+});

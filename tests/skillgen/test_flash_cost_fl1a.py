@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.engine.helpers import library
+from tests.engine.helpers import library, with_whiteboard_ap
 from trpg.content.skills import SkillDef
 from trpg.skillgen.flash_cost import (
     CHARGE_DURATION_CAP,
@@ -44,8 +44,10 @@ LIGHT_STRONGER_BEFORE = (
 
 
 def _kindle() -> SkillDef:
-    """點燃斬（白板配方 kindle，種子 75；調查第 2 節）：AP 2、耐力 2、冷卻 2、燃燒 5 回合。"""
-    return compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=LIB)
+    """點燃斬（白板配方 kindle，種子 75；調查第 2 節）：AP 2、耐力 2、冷卻 2、燃燒 5 回合（AP-2 起
+    白板預設 1 AP，這裡鎖回 2 AP 的樣本）。"""
+    lib = with_whiteboard_ap(LIB, 2)
+    return compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=lib)
 
 
 def _flash(base: SkillDef, *variations: Variation) -> SkillDef:

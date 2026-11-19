@@ -146,7 +146,7 @@ def trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, A
         statuses = sorted(
             s.id
             for s in library.ruleset.statuses.statuses
-            if not s.beneficial and not s.stance and not s.enemy_only  # 5F-5c
+            if not s.beneficial and not s.stance and not s.skill_pool_excluded  # 5F-5c、AP-2
         )
         return {"status": rng.choice(statuses)}
     if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):

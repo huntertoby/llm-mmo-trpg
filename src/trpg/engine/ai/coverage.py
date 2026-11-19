@@ -53,6 +53,7 @@ PRIMITIVE_VALUATION: Mapping[str, str] = MappingProxyType(
         "contagion": "不加分（標記本身沒有預覽收益；倒下時才擴散；SK-2，AI 估值待補）",
         "place_trap": "候選估計 _trap_estimate；放置收益 _trap_gains",
         "grant_ap": "_rewrite_gains（ai_profiles.yaml rewrite）；友方支援 _SUPPORT_CHECKS",
+        "borrow_ap": "_rewrite_gains（同給自己 AP）；使用條件 self_costs.borrow_allowed（AP-2）",
         "reset_cooldown": "_rewrite_gains；友方支援 _SUPPORT_CHECKS",
         "cheat_death": "_rewrite_gains；友方支援 _SUPPORT_CHECKS",
         "redirect_damage": "_rewrite_gains；友方支援 _SUPPORT_CHECKS",

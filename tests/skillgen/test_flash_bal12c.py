@@ -116,7 +116,7 @@ def test_light_at_ap1_cuts_cooldown_or_resource_by_one_keeping_one() -> None:
         drafts = _drafts(skill, "cost_light")
         assert drafts, skill.id
         for base, _ in drafts:
-            assert base.get("ap_cost") in (None, 1)
+            assert base.get("ap_cost") in (None, 0, 1)  # AP-2：預支技能是 0 AP
             before = skill.cost.model_dump(mode="json")
             changed = {k: v for k, v in base["cost"].items() if v != before.get(k)}
             assert len(changed) == 1, (skill.id, changed)

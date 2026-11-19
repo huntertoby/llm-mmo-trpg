@@ -480,6 +480,15 @@ def _dispel_points(
     return Fraction(rules.dispel_one_points), "驅散 1 個增益"
 
 
+def _borrow_ap_points(
+    _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """``borrow_ap`` 的點數（AP-2）：``skill_budget.yaml`` 的 ``borrow_ap_points`` × ``amount``。"""
+    per = library.budget.borrow_ap_points
+    amount = effect.amount or 1
+    return Fraction(per * amount), f"預支 {per}×{amount}"
+
+
 def _hook_points(
     _skill: SkillDef, _effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -1161,6 +1170,7 @@ _SPECIAL_BASES: dict[
     "gamble": _gamble_points,
     "dispel": _dispel_points,
     "hook": _hook_points,
+    "borrow_ap": _borrow_ap_points,
     "contagion": _contagion_points,
     "reroll": _reroll_points,
     "reveal": _reveal_points,
@@ -1599,7 +1609,8 @@ def _ap_coefficient(skill: SkillDef, budget: BudgetRules) -> Fraction:
     if skill.kind == "stance":
         return Fraction(budget.stance_coefficient_permille, _PERMILLE)
     if skill.kind == "active" and skill.ap_cost is not None:
-        coefficient = budget.ap_coefficient_permille.get(skill.ap_cost)
+        # 0 AP 只有預支（AP-2）：可用預算照 AP 1 的係數（預支本身的點數初值 0，只擋超出預算）
+        coefficient = budget.ap_coefficient_permille.get(max(skill.ap_cost, 1))
         if coefficient is None:
             raise BudgetError(f"沒有 AP {skill.ap_cost} 的預算係數")
         return Fraction(coefficient, _PERMILLE)
@@ -1837,7 +1848,8 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         ap_coefficient=coefficient,
         allowance_parts=_allowance_parts(skill, budget, by_id(rules.statuses)),
         allowance_cap=budget.allowance.total_cap,
-        min_ratio=Fraction(budget.min_ratio_permille, _PERMILLE),
+        # 預支（AP-2）只是挪時間、預算約等於 0：不套過弱下限
+        min_ratio=Fraction(0 if skill.borrows_ap else budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),
         coefficient_label=label,
         range_value=range_value,

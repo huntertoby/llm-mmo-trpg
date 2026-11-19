@@ -950,3 +950,22 @@ primitives:
     allowed_shapes: [self]
     sole_effect: true
     budget_basis: reroll
+  # --- AP-2（#168，06 6.3「新原語『預支』」）：本回合 +N AP、下回合 −N AP。點數為初值，未經模擬。
+  # 帶這個原語的主動技是唯一可以 0 AP 的（06 6.3「⚠ 0 AP 例外」）；這裡另外規定它是唯一的效果、只對自己。
+  - id: borrow_ap
+    name_zh: 預支
+    llm_hint: "預支：施放者本回合多 amount AP、下回合少 amount AP（0 AP 主動技，只給自己）。"
+    description_zh: 施放者本回合立刻多 amount AP（1–2），不超過本回合上限（單位的每回合 AP ＋ ap_carry_max，超過的部分不給）；實際多出來的 AP 在施放者下一個回合開始時扣回（狀態 borrowed_ap，可以和透支疊加，AP 最少 0）。用了預支的那一回合結束時不保留 AP。一點都給不了時（已到上限）這個效果落空（effect_fizzled ap_cap），也不扣下回合。只能是主動技唯一的效果、形狀 self；帶這個原語的主動技必須是 0 AP（也只有它可以 0 AP）。預算：skill_budget.yaml 的 borrow_ap_points × amount（初值 0：只是挪時間，代價是冷卻與稀有度）。
+    player_description: "預支：這回合多拿 AP，下回合少同樣的 AP。"
+    category: rule_rewrite
+    harmful: false
+    min_rarity: rare
+    acts_on: caster
+    allowed_shapes: [self]
+    sole_effect: true
+    active_only: true
+    max_per_skill: 1
+    status: borrowed_ap
+    budget_basis: borrow_ap
+    params:
+      amount: {llm_hint: "預支的 AP 點數（本回合多、下回合少）。", type: int, required: true, min: 1, max: 2, description_zh: 預支的 AP, knob: none}

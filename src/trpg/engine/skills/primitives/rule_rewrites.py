@@ -27,6 +27,9 @@ from trpg.engine.resources import (
     restore_mana,
 )
 from trpg.engine.rewrites import (
+    borrow_ap as borrow_ap_for,
+)
+from trpg.engine.rewrites import (
     grant_ap as grant_ap_to,
 )
 from trpg.engine.rewrites import (
@@ -130,6 +133,12 @@ def grant_ap(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[Effec
     return []
 
 
+def borrow_ap(cast: Cast, _effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
+    """``borrow_ap``（AP-2）：只給施放者自己（``acts_on: caster``）。"""
+    borrow_ap_for(cast.ctx, cast.caster, cast.skill.id, spec.amount or 1)
+    return []
+
+
 def reset_cooldown(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
     targets = cast.targets(effect.affects, spec.condition)
     done = [reset_cooldowns(cast.ctx, cast.caster, u, cast.skill, spec) for u in targets]
@@ -160,6 +169,7 @@ def copy_skill(cast: Cast, _effect: ResolvedEffect, _spec: EffectSpec) -> list[E
 
 HANDLERS: dict[str, Handler] = {
     "grant_ap": grant_ap,
+    "borrow_ap": borrow_ap,
     "reset_cooldown": reset_cooldown,
     "cheat_death": cheat_death,
     "redirect_damage": redirect_damage,

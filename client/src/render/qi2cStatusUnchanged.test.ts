@@ -45,6 +45,9 @@ function record(draw: () => HTMLCanvasElement | null): string {
 
 const ELEMENT_STANCE = /^stance_(\w+)_[1-5]$/;
 
+/** QI-3b 之後新增的狀態（基準只多這幾個鍵，既有的鍵不重錄）：AP-2 的預支扣回。 */
+const AFTER_QI3B = ["borrowed_ap"];
+
 describe("QI-2c T-C6（QI-3b 改寫）狀態圖示的畫面基準", () => {
   let saved: unknown;
   beforeEach(() => {
@@ -64,11 +67,12 @@ describe("QI-2c T-C6（QI-3b 改寫）狀態圖示的畫面基準", () => {
       now[`head|${id}`] = record(() => tileCanvas(statusTile(id), 24));
       now[`card|${id}`] = record(() => tileCanvas(statusIconTile(id), 20));
     }
-    expect(STATUS_IDS.length).toBe(118); // 名詞表快照 118 個（需求 1.1）
+    expect(STATUS_IDS.length).toBe(119); // 名詞表快照 118 個（需求 1.1）＋ AP-2 的預支扣回 borrowed_ap
     expect(now).toEqual(baseline);
     const old = oldBaseline as Record<string, string>;
-    expect(Object.keys(old).sort()).toEqual(Object.keys(now).sort());
-    expect(Object.keys(now).filter((k) => now[k] === old[k])).toEqual([]);
+    const later = new Set(AFTER_QI3B.flatMap((id) => [`head|${id}`, `card|${id}`])); // QI-3b 之後才加的狀態沒有舊基準
+    expect(Object.keys(old).sort()).toEqual(Object.keys(now).filter((k) => !later.has(k)).sort());
+    expect(Object.keys(old).filter((k) => now[k] === old[k])).toEqual([]);
   });
 
   // QI-4a 改寫（規格 T-A8、第 8.2 節「元素架勢 45 個會是 9 組同圖」）：舊＝同雜湊只有 `card|stance_`、部件圓片 118 個兩兩不同
@@ -86,7 +90,7 @@ describe("QI-2c T-C6（QI-3b 改寫）狀態圖示的畫面基準", () => {
       expect(els.size, keys.join(",")).toBe(1);
       expect(keys).toHaveLength(5);
     }
-    expect(new Set(STATUS_IDS.map((id) => b[`head|${id}`])).size).toBe(82); // 118 − 9 元素 × (5 − 1)
+    expect(new Set(STATUS_IDS.map((id) => b[`head|${id}`])).size).toBe(83); // 118 − 9 元素 × (5 − 1)，AP-2 ＋1
   });
 
   it("換成什麼：statusTile＝Q 版部件圓片（半徑 42、淡色環）、statusIconTile＝qIcon/status.ts 的 cardCanvas（逐筆紀錄相同）", () => {

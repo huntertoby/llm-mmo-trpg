@@ -599,6 +599,12 @@ class UnitState:
     miss_refunded: Annotated[bool, Field(exclude_if=_empty)] = False
     """這個回合已經拿過失手返還（AP-1，05 5.2；每個單位每回合最多 1 次）；自己回合開始時清除。
     ``False`` 時不輸出。"""
+    ap_borrowed: Annotated[int, Field(exclude_if=_empty)] = 0
+    """這個回合用預支（``borrow_ap``，AP-2）實際多拿的 AP（AP 列的橘色菱形；已併入 ``ap``）。不是 0
+    時這回合結束不保留 AP；回合結束時歸零；0 時不輸出。"""
+    ap_lost_borrowed: Annotated[int, Field(exclude_if=_empty)] = 0
+    """``ap_lost`` 裡來自預支的部分（AP-2，AP 列的用字）；同 ``ap_lost`` 的設定與歸零；0 時
+    不輸出。"""
 
     @property
     def alive(self) -> bool:
@@ -686,6 +692,8 @@ class UnitState:
             miss_refunded=self.miss_refunded,
             ap_carried_in=self.ap_carried_in,
             ap_lost=self.ap_lost,
+            ap_borrowed=self.ap_borrowed,
+            ap_lost_borrowed=self.ap_lost_borrowed,
             hits_landed=self.hits_landed,
             attack_hits_landed=self.attack_hits_landed,
             stacks=dict(self.stacks),

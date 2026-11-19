@@ -15,6 +15,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "trigger": {
         "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能",
         "on_battle_start": "只由閃現轉型「伴生」產生（TF-1，#159），沒有手寫技能",
+        "on_ap_spent_all": "AP-2：給組合器、LLM 與裝備詞條用，沒有手寫示範",
     },
     "reaction_event": {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
@@ -32,6 +33,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     },
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
+        "borrowed_ap": "只由預支（borrow_ap，AP-2）施加，技能不能直接施加（mechanic_only）",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
         "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "array_ward": "只由陣眼石靈範本的 opening_statuses 開場掛上（5A-M2b），沒有技能施加",
@@ -111,6 +113,8 @@ _POOL_ONLY = frozenset(
     {
         # KW-2：連擊、怒氣、專注、氣的示範招與利用者（#161；builds.yaml 是模擬回歸範本，
         # 不為示範而改動）
+        # AP-2：通用池的預支技能（不裝在 build 或敵人上，以免改動既有戰鬥；精英、頭目要帶時另排）
+        "skill_borrowed_beat",
         "skill_blood_fury",
         "skill_breathing_qi",
         "skill_centering",

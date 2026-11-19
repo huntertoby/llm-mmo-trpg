@@ -240,6 +240,10 @@ def _family(affix: AffixDef) -> str:
         return "family:attack_element"
     if isinstance(affix, AttackAffix) and affix.weapon_element is not None:
         return "family:weapon_element"
+    if isinstance(affix, TriggerAffix) and any(e.type == "grant_ap" for e in affix.effects):
+        # AP-2：擊殺回 AP、每第 3 次命中回 AP 同一族。族名沿用原本的詞條 ID，排序位置不變，
+        # 抽族的結果不變；抽到這一族時才多擲一次挑成員。
+        return "affix_trig_kill_ap"
     return affix.id
 
 

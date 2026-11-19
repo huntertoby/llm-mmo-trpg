@@ -397,8 +397,10 @@ def test_table_has_the_164_rewritten_entries() -> None:
     # ＋ SK-2 的吸收表面（原語、4 個參數、4 種收益選項）、疾病擴散、鉤（原語），實作者初稿
     # ＋ SK-3 的「你造的關鍵字被利用時」（觸發一筆）、重擲（原語一筆），實作者初稿
     # ＋ SK-2b 的淨化個數（原語參數一筆，實作者初稿）
-    assert len(TABLE.texts) == 186
-    assert len({e.id for e in TABLE.texts}) == 186
+    # ＋ AP-2 的預支（原語一筆，實作者初稿，待玩法 PM 改寫）
+    # ＋ AP-2 的「這回合用完所有 AP 時」（觸發一筆，實作者初稿，待玩法 PM 改寫）
+    assert len(TABLE.texts) == 188
+    assert len({e.id for e in TABLE.texts}) == 188
 
 
 def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:

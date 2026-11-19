@@ -32,6 +32,7 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_berserker_fury_cleave", // RG-2：荒原狂戰士
   "skill_binding_talisman", // RG-1：瞄準預告的 3 招
   "skill_blood_fury", // KW-2：連擊、怒氣、專注、氣的示範招與利用者
+  "skill_borrowed_beat", // AP-2：基本款預支技能
   "skill_breathing_qi",
   "skill_centering",
   "skill_crane_piercing_shot",

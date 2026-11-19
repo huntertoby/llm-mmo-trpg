@@ -1830,6 +1830,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "lower_terrain": _OUTCOMES,
         "intercept": "反應技，不在施放的預覽內（反應時照常結算）",
         "reroll": "rerolls（對方或隊友的重擲反應：攻擊的預覽列出、附重擲後的命中率；SK-3）",
+        "borrow_ap": f"{_OUTCOMES}（這回合多的 AP；下回合少的 AP 看 ap_next_loss；AP-2）",
         "add_stack": _OUTCOMES,
         "consume_stack": f"targets（傷害加成）、{_OUTCOMES}",
         "consume_status": _OUTCOMES,

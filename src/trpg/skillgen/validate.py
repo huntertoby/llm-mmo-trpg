@@ -433,6 +433,7 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
     out += _self_cost_violations(skill, library)
     out += _rule_rewrite_violations(skill, library)
     out += _revive_violations(skill, library) + _hook_violations(skill, library)
+    out += _borrow_violations(skill, library)
     out += _distance_condition_violations(skill, library) + _contagion_violations(skill, library)
     return out
 
@@ -505,6 +506,25 @@ def _hook_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation
             skill.id,
             "cap.hook_cooldown",
             f"有鉤（hook）的技能冷卻至少 {need} 回合（目前：{skill.cost.cooldown or 0}）",
+        )
+    ]
+
+
+def _borrow_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
+    """預支（AP-2，06 6.3）：每場限一次，或冷卻至少 ``borrow_min_cooldown`` 回合（初值 2；沒有冷卻
+    就等於每回合都能預支，是選項題 3 C、沒有採用）。"""
+    if not skill.borrows_ap:
+        return []
+    need = library.budget.borrow_min_cooldown
+    cost = skill.cost
+    if cost.uses_per_battle == 1 or (cost.cooldown or 0) >= need:
+        return []
+    return [
+        Violation(
+            skill.id,
+            "cap.borrow_cooldown",
+            f"有預支（borrow_ap）的技能必須每場限一次，或冷卻至少 {need} 回合"
+            f"（目前：每場 {cost.uses_per_battle or '不限'}、冷卻 {cost.cooldown or 0}）",
         )
     ]
 
@@ -583,7 +603,12 @@ def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> 
 
 def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     primitives = by_id(library.ruleset.primitives)
-    rewrites = [e.type for e in skill.effects if primitives[e.type].category == "rule_rewrite"]
+    # 預支（AP-2，06 6.3）：代價是冷卻 2 與稀有度，不套改寫規則的個數與冷卻下限
+    rewrites = [
+        e.type
+        for e in skill.effects
+        if primitives[e.type].category == "rule_rewrite" and e.type != "borrow_ap"
+    ]
     if not rewrites:
         return []
     out: list[Violation] = []

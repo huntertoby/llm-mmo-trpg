@@ -2789,6 +2789,22 @@
    "rules_zh": [
     "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×50%"
    ]
+  },
+  {
+   "id": "borrowed_ap",
+   "name_zh": "預支",
+   "description_zh": "這回合預支了 AP，下一個回合開始時 AP 少同樣的數量。",
+   "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
   }
  ],
  "stacks": [
@@ -3685,6 +3701,16 @@
    ],
    "status_look": null,
    "rules_zh": []
+  },
+  {
+   "id": "borrow_ap",
+   "name_zh": "預支",
+   "description_zh": "預支：這回合多拿 AP，下回合少同樣的 AP。",
+   "tags": [
+    "rule_rewrite"
+   ],
+   "status_look": null,
+   "rules_zh": []
   }
  ],
  "conditions": [
@@ -4006,6 +4032,14 @@
    "id": "on_keyword_exploited",
    "name_zh": "你造的關鍵字被利用時",
    "description_zh": "持有者施加的狀態被消耗（例：燃燒被引爆）、持有者造出的表面被元素觸發互動（例：水被雷電導電、油被點燃）、某個效果因為目標身上有持有者造的狀態或站在持有者造的表面上而成立並且生效（條件型），或持有者刻的符文被讀取（條件成立並生效）或引爆；層數不算；誰利用都算，含自己。trigger.status／surface 擇一縮小範圍（符文兩者都不符），都省略時任何一種都算。沒有另一方，效果作用在持有者。任何單位的每回合最多 1 次（SK-3b）。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "on_ap_spent_all",
+   "name_zh": "這回合用完所有 AP 時",
+   "description_zh": "持有者自己的回合裡，一個動作（技能、普攻、跑步、互動等）結算完後 AP 剛好用光（動作前還有 AP）時觸發；結束回合不算。每回合最多 1 次。沒有另一方，效果作用在持有者。",
    "tags": [],
    "status_look": null,
    "rules_zh": []

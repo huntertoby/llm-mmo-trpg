@@ -28,6 +28,12 @@ COMPOSER_PATHS = (
     "structure.absorb_core_permille",
     "structure.absorb_secondary_permille",
     "structure.contagion_permille",
+    # AP-2：白板主動技的預設 AP 與退回的 AP（整數，不是千分比）
+    "whiteboard.ap_cost",
+    "whiteboard.fallback_ap_cost",
+    # AP-2
+    "structure.borrow_core_permille",
+    "structure.ap_spent_passive_permille",
     # SK-3b
     "structure.exploit_passive_permille",
     "structure.reroll_reaction_permille",
@@ -89,7 +95,8 @@ def test_composer_opens_only_the_listed_values(read_service: TuningService) -> N
     assert [f.value for f in detail.fields] == [_now(COMPOSER, p) for p in COMPOSER_PATHS]
     limits = {f.path: (f.limit_min, f.limit_max) for f in detail.fields}
     assert limits["structure.lifesteal_amount_permille"] == (1, 500)
-    assert {limits[p] for p in COMPOSER_PATHS[:-1]} == {(0, 1000)}
+    whiteboard = {"whiteboard.ap_cost", "whiteboard.fallback_ap_cost"}
+    assert {limits[p] for p in COMPOSER_PATHS[:-1] if p not in whiteboard} == {(0, 1000)}
     # 結構性的清單不開（SK-5 規格「不開放結構性欄位」）
     assert read_service.table.target("skill_composer") is not None
     assert all("skeletons" not in f.path for f in detail.fields)

@@ -31147,6 +31147,18 @@
             "type": "integer",
             "title": "Ap Next Loss"
           },
+          "ap_borrowed": {
+            "type": "integer",
+            "title": "Ap Borrowed"
+          },
+          "ap_lost_borrowed": {
+            "type": "integer",
+            "title": "Ap Lost Borrowed"
+          },
+          "ap_next_loss_borrowed": {
+            "type": "integer",
+            "title": "Ap Next Loss Borrowed"
+          },
           "source": {
             "type": "integer",
             "title": "Source"
@@ -31446,6 +31458,9 @@
           "ap_carried_in",
           "ap_lost",
           "ap_next_loss",
+          "ap_borrowed",
+          "ap_lost_borrowed",
+          "ap_next_loss_borrowed",
           "source",
           "source_max",
           "downed",

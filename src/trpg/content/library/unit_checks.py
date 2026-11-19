@@ -74,6 +74,32 @@ def _check_units(
             raise ContentError(path, "；".join(problems))
 
 
+BORROW_RANK_TAGS: tuple[str, ...] = ("elite", "boss")
+"""可以帶預支技能（``borrow_ap``，AP-2，06 6.3：精英、頭目可以帶，一般敵人不帶）的敵人標籤。"""
+
+
+def borrow_carrier_problems(
+    unit_id: str, template: UnitTemplate, skills: Mapping[str, SkillDef]
+) -> list[str]:
+    """``units/`` 的範本（敵人）裝了預支技能（含 Boss 階段換的技能組）卻不是精英、頭目（AP-2）。"""
+    if any(tag in template.tags for tag in BORROW_RANK_TAGS):
+        return []
+    staged = [template.skills, *(p.skills for p in template.phases if p.skills is not None)]
+    found = sorted(
+        {sid for group in staged for sid in group if (s := skills.get(sid)) and s.borrows_ap}
+    )
+    return [f"{unit_id}：預支技能 {sid} 只有精英、頭目（標籤 elite／boss）可以帶" for sid in found]
+
+
+def _check_borrow_carriers(
+    root: Path, units: Mapping[str, UnitTemplate], skills: Mapping[str, SkillDef]
+) -> None:
+    for unit_id, template in units.items():
+        problems = borrow_carrier_problems(unit_id, template, skills)
+        if problems:
+            raise ContentError(root / "units" / f"{unit_id}.yaml", "；".join(problems))
+
+
 def _check_summon_traits(path: Path, template: UnitTemplate, ruleset: Ruleset) -> None:
     """召喚物的固有灌注關鍵字在對照表中、命中特性的狀態存在（Phase 3-33e1）。"""
     if template.innate is not None and template.innate not in ruleset.core.summon_infusions:

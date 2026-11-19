@@ -112,4 +112,6 @@ def test_hand_written_budgets_untouched() -> None:
     """旋鈕只在補值器：內容庫每一招手寫技能的預算比例仍在驗證範圍內（逐字比對見報告）。"""
     lib = _lib()
     for skill in lib.skills.values():
+        if skill.borrows_ap:  # AP-2：預支的點數初值 0（不套過弱下限）
+            continue
         assert skill_budget(skill, lib).ratio > 0

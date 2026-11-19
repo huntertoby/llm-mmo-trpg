@@ -129,10 +129,19 @@ class StructureRules(ContentModel):
     """核心可以是鉤的骨架（位移）核心改成鉤的機率（SK-2b；獨立的亂數串流）。"""
     absorb_core_permille: int = Field(default=0, ge=0, le=1000)
     """核心可以是吸收表面的骨架（光環）核心改成吸收表面（換治療、護盾）的機率（SK-2b）。"""
+    borrow_core_permille: int = Field(default=0, ge=0, le=1000)
+    """核心可以是預支的骨架（光環）核心改成預支的機率（AP-2；獨立的亂數串流
+    ``composer.borrow_core``，沒抽中的種子結果不變）。做出來的是基本款：0 AP、冷卻
+    ``borrow_cooldown``、預支 1、只給自己。"""
+    borrow_cooldown: int = Field(default=2, ge=1, le=6)
+    """組合器做的預支技能的冷卻（AP-2，06 6.3 基本款：冷卻 2）。"""
     absorb_secondary_permille: int = Field(default=0, ge=0, le=1000)
     """附帶可以是吸收表面的骨架（打擊、蓄力／終結）加上吸收表面（換層數、元素）的機率（SK-2b）。"""
     contagion_permille: int = Field(default=0, ge=0, le=1000)
     """附帶可以是疾病擴散的骨架加上疾病擴散的機率（SK-2b；技能已施加會擴散的狀態時）。"""
+    ap_spent_passive_permille: int = Field(default=0, ge=0, le=1000)
+    """被動的觸發時機改成「這回合用完所有 AP 時」的機率（AP-2；獨立的亂數串流
+    ``composer.ap_spent``）。"""
     exploit_passive_permille: int = Field(default=0, ge=0, le=1000)
     """被動的觸發時機改成「你造的關鍵字被利用時」的機率（SK-3b；獨立的亂數串流）。"""
     reroll_reaction_permille: int = Field(default=0, ge=0, le=1000)
@@ -673,7 +682,9 @@ class WhiteboardRules(ContentModel):
     tier: int = Field(default=1, ge=1)
     """沒有指定階級時的階級（創角的起始技能一律 1 階，6.34.9 創角例外）。"""
     ap_cost: int = Field(default=2, ge=1, le=3)
-    """主動白板的預設 AP。"""
+    """主動白板的預設 AP（AP-2 起 1，06 6.34.1 ⚠ #168 題 5）。"""
+    fallback_ap_cost: int = Field(default=2, ge=1, le=3)
+    """預設 AP 調不進預算窗時退回的 AP（AP-2：照預算調退回 2 AP）；配方自己指定 AP 的不退。"""
     cooldown: IntRange
     """主動白板的冷卻範圍（含兩端）。"""
     passive_mana: IntRange

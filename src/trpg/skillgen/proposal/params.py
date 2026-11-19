@@ -68,7 +68,9 @@ class _Refs:
     def of(cls, library: ContentLibrary) -> _Refs:
         rules = library.ruleset
         return cls(
-            statuses=tuple(sorted(s.id for s in rules.statuses.statuses if not s.enemy_only)),
+            statuses=tuple(
+                sorted(s.id for s in rules.statuses.statuses if not s.skill_pool_excluded)
+            ),
             objects=obstacle_candidates(library),
             stacks=tuple(sorted(rules.stacks.by_id())),
             summons=tuple(sorted(rules.summons.by_id())),
@@ -289,7 +291,7 @@ def rarity_statuses(library: ContentLibrary, rarity: SkillRarity) -> tuple[str, 
         sorted(
             s.id
             for s in library.ruleset.statuses.statuses
-            if rarity_rank(s.min_rarity) <= rank and not s.enemy_only  # 5F-5c
+            if rarity_rank(s.min_rarity) <= rank and not s.skill_pool_excluded  # 5F-5c、AP-2
         )
     )
 

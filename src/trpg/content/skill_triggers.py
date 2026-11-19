@@ -46,6 +46,7 @@ REQUIRED_TRIGGERS: tuple[str, ...] = (
     "on_summon_downed",
     "on_battle_start",
     "on_keyword_exploited",
+    "on_ap_spent_all",  # AP-2：這回合用完所有 AP 時
 )
 """引擎實作的觸發時機，資料檔必須全部定義、不可多出引擎沒有的。``on_battle_start``（TF-1，#159
 伴生）：戰鬥開始、先攻排好之後，每場一次。``on_keyword_exploited``（SK-3，#166 6.38-10）：持有者

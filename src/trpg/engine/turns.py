@@ -192,14 +192,15 @@ def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
 
 def _refill_ap(ctx: Ctx, unit: UnitState) -> None:
     """回合開始的 AP：每回合 AP ＋ 保留（最多 ``ap_carry_max``）＋ 回合外存下的，不超過上限，
-    再扣透支（Phase 3-50）。順便記下 AP 列要畫的（AP-1）：帶進來的保留 ``ap_carried_in``、
-    被扣掉的 ``ap_lost``。"""
+    再扣透支（Phase 3-50）與預支（AP-2），最少 0。順便記下 AP 列要畫的（AP-1）：帶進來的保留
+    ``ap_carried_in``、被扣掉的 ``ap_lost``（其中來自預支的 ``ap_lost_borrowed``）。"""
     core = ctx.core
     carried = min(unit.ap_carry, core.ap_carry_max)
     gross = min(unit.ap_per_turn + carried + unit.ap_pending, ap_cap(core, unit))
     unit.ap = max(0, gross - ap_penalty(ctx.rules, unit))
     unit.ap_carried_in = min(carried, max(0, gross - unit.ap_per_turn))
     unit.ap_lost = gross - unit.ap
+    unit.ap_lost_borrowed = min(unit.ap_lost, ap_penalty(ctx.rules, unit, borrowed=True))
 
 
 def skip_turn_if_stunned(ctx: Ctx) -> bool:
@@ -321,9 +322,11 @@ def end_turn(ctx: Ctx) -> None:
         riders = expiry_effects(ctx, unit, status_id)  # 護盾到期的結束回復（3W-2b）
         if riders:
             execute(ctx, riders)
-    unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)
+    # 用了預支（AP-2）的回合不保留 AP
+    unit.ap_carry = 0 if unit.ap_borrowed else min(unit.ap, ctx.core.ap_carry_max)
     unit.ap = 0
     unit.ap_carried_in = unit.ap_lost = 0  # AP 列只畫自己的回合（AP-1）
+    unit.ap_borrowed = unit.ap_lost_borrowed = 0
     unit.move_points = 0
     unit.aimed = False  # 瞄準到回合結束失效（Phase 3-21a）
     expire_granted_skills(ctx, unit)  # 暫時獲得的技能倒數（Phase 3D-8c）

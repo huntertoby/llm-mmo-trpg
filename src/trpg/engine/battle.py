@@ -132,7 +132,12 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.setup import BattleSetup, BattleSetupError, UnitSpawn, starting_source
 from trpg.engine.skill_infusion import do_infuse_skill
-from trpg.engine.skill_triggers import collect_battle_start, collect_move, settle
+from trpg.engine.skill_triggers import (
+    collect_ap_spent,
+    collect_battle_start,
+    collect_move,
+    settle,
+)
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.exploits import Exploit, report_exploits, rule_exploits
 from trpg.engine.skills.followups import second_problem
@@ -1329,6 +1334,17 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
 }
 
 
+def run_action(ctx: Ctx, actor: UnitState, action: Action) -> None:
+    """執行動作；這個動作把行動者這回合的 AP 用到 0 時（動作前有 AP、動作後是 0、還站著、回合還
+    沒換人），觸發「這回合用完所有 AP 時」（``on_ap_spent_all``，AP-2）。"""
+    before = actor.ap
+    ACTION_HANDLERS[action.type](ctx, actor, action)
+    unit = ctx.state.units[actor.id]
+    spent = before > 0 and unit.ap == 0 and unit.alive and ctx.state.active_unit == unit.id
+    if spent and collect_ap_spent(ctx, unit):
+        settle(ctx)
+
+
 def resolve_with(
     base: BattleState,
     action: Action,
@@ -1347,7 +1363,7 @@ def resolve_with(
     if ctx.state.prep is not None and action.type != "prepare":
         ctx.state.prep = None  # 戰前佈置（SK-3）：有人行動了就關窗
     try:
-        ACTION_HANDLERS[action.type](ctx, actor, action)
+        run_action(ctx, actor, action)
         # 測試模式的自動過輪放在 try 內：換手時的結算也可能暫停，恢復時整個動作會重跑。
         practice_pass_round(ctx, action.type, actor)
     except PauseForDecision as pause:
@@ -1387,7 +1403,7 @@ def simulate_preview(
     相同，直接重用而不再模擬一次（例如沒有藉機攻擊、沒有踩上冰面的移動）。
     """
     low_ctx = Ctx(base.clone(), preview="min", gamble=gamble, fire_lock=fire_lock)
-    ACTION_HANDLERS[action.type](low_ctx, low_ctx.state.units[action.unit_id], action)
+    run_action(low_ctx, low_ctx.state.units[action.unit_id], action)
     low = finish_resolution(low_ctx)
     if not low_ctx.preview_branched():
         return low, low
@@ -1407,7 +1423,7 @@ def simulate_branch(
 
     回傳 ``(結果, 擲過的檢定, 是否經過分歧點)``；不修改 ``base``、不消耗它的亂數。"""
     ctx = Ctx(base.clone(), preview=preview, gamble=gamble, check_override=override)
-    ACTION_HANDLERS[action.type](ctx, ctx.state.units[action.unit_id], action)
+    run_action(ctx, ctx.state.units[action.unit_id], action)
     result = finish_resolution(ctx)
     return result, tuple(ctx.check_log), ctx.preview_branched()
 

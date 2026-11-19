@@ -828,6 +828,8 @@ class StatusDef(ContentModel):
     - ``move_reduction``（Phase 3I-1）：回合開始時移動點數再減狀態的數值
       （``StatusInstance.amount``），最低 0；多個時取最大（鞭的纏繞）。
     - ``ap_penalty``（Phase 3-50）：回合開始時 AP 少這麼多（最低 0；透支）。
+    - ``ap_penalty_per_amount``（AP-2）：回合開始時 AP 少狀態的數值（``StatusInstance.amount``）；
+      和 ``ap_penalty`` 只能擇一（預支）。
     - ``prevents_move``：不能主動移動（定身；強制位移照常）。
     - ``skip_turn``：回合開始時跳過整個回合，且不能執行反應（暈眩）。
     - ``damage_dealt_permille``：自己造成的攻擊傷害（``cause: attack``）倍率（虛弱 750）。
@@ -930,6 +932,7 @@ class StatusDef(ContentModel):
     move_permille: int = Field(default=1000, ge=0, le=10000)
     move_reduction: bool = False
     ap_penalty: int = Field(default=0, ge=0, le=3)
+    ap_penalty_per_amount: bool = False
     prevents_move: bool = False
     skip_turn: bool = False
     damage_dealt_permille: int = Field(default=1000, ge=0, le=10000)
@@ -985,11 +988,24 @@ class StatusDef(ContentModel):
     """（Phase 5F-5c，玩法 PM 2026-11-03 代決）只給敵人：只能由敵方單位範本的 ``opening_statuses``
     掛上，不能給玩家、影子、傭兵，也不能進技能池（技能引用它＝引用錯誤，生成器、候選、閃現、
     工坊、LLM 可選清單都排除）。必須沒有 ``budget_points``。"""
+    mechanic_only: bool = False
+    """（AP-2）只由機制施加的狀態（預支 ``borrow_ap`` 的扣回 ``borrowed_ap``）：敵我都可能帶，但
+    同 ``enemy_only`` 不進技能池（技能引用它＝引用錯誤，組合器、工坊、LLM 可選清單都排除）。必須沒有
+    ``budget_points``。"""
+
+    @property
+    def skill_pool_excluded(self) -> bool:
+        """不進技能池（技能不能引用、各種可選清單排除）：``enemy_only`` 或 ``mechanic_only``。"""
+        return self.enemy_only or self.mechanic_only
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
-        if self.enemy_only and self.budget_points is not None:
-            raise ValueError(f"狀態 {self.id}：enemy_only 的狀態不能有 budget_points")
+        if self.skill_pool_excluded and self.budget_points is not None:
+            raise ValueError(
+                f"狀態 {self.id}：enemy_only、mechanic_only 的狀態不能有 budget_points"
+            )
+        if self.ap_penalty_per_amount and self.ap_penalty:
+            raise ValueError(f"狀態 {self.id}：ap_penalty 與 ap_penalty_per_amount 只能擇一")
         for name, spec in (
             ("on_death_surface", self.on_death_surface),
             ("formation", self.formation),

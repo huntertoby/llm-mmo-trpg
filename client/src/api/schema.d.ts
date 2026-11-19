@@ -12412,6 +12412,12 @@ export interface components {
             ap_lost: number;
             /** Ap Next Loss */
             ap_next_loss: number;
+            /** Ap Borrowed */
+            ap_borrowed: number;
+            /** Ap Lost Borrowed */
+            ap_lost_borrowed: number;
+            /** Ap Next Loss Borrowed */
+            ap_next_loss_borrowed: number;
             /** Source */
             source: number;
             /** Source Max */

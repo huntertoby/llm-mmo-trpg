@@ -1,0 +1,22 @@
+id: skill_borrowed_beat
+schema_version: 1
+name_zh: 搶拍
+tier: 1
+rank: 1
+rarity: rare
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 0
+scaling_attr: wis
+shape: {type: self}
+effects:
+  - {type: borrow_ap, amount: 1}
+condition: null
+cost: {mana: 1, cooldown: 2}
+tags: [spell, support]
+narrative:
+  concept: 把下一拍的力氣先借過來用，這回合多動一次，下回合慢一拍
+  cast_flavor: 你深吸一口氣、搶在節拍之前出手，身體記下了這筆欠帳
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

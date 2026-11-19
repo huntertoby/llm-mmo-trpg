@@ -905,6 +905,15 @@ def _grant_ap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     return f"立刻獲得 {spec.amount or 1} AP（不超過本回合上限，每輪限一次）"
 
 
+def _borrow_ap(_lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
+    """預支（AP-2）。"""
+    amount = spec.amount or 1
+    return (
+        f"預支：這回合立刻多 {amount} AP、下一個回合開始時少 {amount} AP"
+        "（不超過本回合上限；用了預支的回合不保留 AP）"
+    )
+
+
 def _reset_cooldown(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     which = "全部技能" if spec.which == "all" else f"帶{tag_text(lib, (spec.tag or '',))}標籤的技能"
     return f"{which}的冷卻歸零（花源力的技能除外）"
@@ -1092,6 +1101,7 @@ _EFFECT_TEXT: dict[str, _EffectText] = {
     "raise_terrain": _terrain,
     "lower_terrain": _terrain,
     "grant_ap": _grant_ap,
+    "borrow_ap": _borrow_ap,
     "reset_cooldown": _reset_cooldown,
     "cheat_death": _cheat_death,
     "redirect_damage": _redirect_damage,
@@ -1164,6 +1174,7 @@ def variant_change_text(library: ContentLibrary, skill: SkillDef, variant: Varia
 _OWN_TARGET_TEXT: frozenset[str] = frozenset(
     {
         "absorb_surface",
+        "borrow_ap",
         "hook",
         "reroll",
         "summon",

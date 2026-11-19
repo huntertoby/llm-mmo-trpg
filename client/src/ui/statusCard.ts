@@ -83,57 +83,90 @@ export interface StatChip {
 /**
  * AP 列的一顆圓點（AP-1，#168；畫法見 docs/art/AP-1-AP列畫法.md）：
  * `ap`＝一般 AP（實心金／用掉空心）；`kept`＝上回合保留的那格（多一圈米白環，用掉後環還在）；
+ * `borrow`＝預支來的那格（AP-2：橘色菱形，用掉後變空心橘框）；
  * `lost`＝少掉的那格（空心＋紅斜線）。`keep`＝現在結束回合會被保留的那顆（滑過「結束回合」時閃米白環）。
+ * `fresh`＝這回合預支剛畫上的菱形與下回合紅斜線（淡入 200 ms）。
  */
 export interface ApPip {
-  kind: "ap" | "kept" | "lost";
+  kind: "ap" | "kept" | "borrow" | "lost";
   on: boolean;
   keep: boolean;
   hint: string;
+  fresh?: boolean;
 }
 
-/** AP 列：分隔線左邊是這回合（一般 AP、少掉的、保留的），右邊是下回合會少的。 */
+/** AP 列：分隔線左邊是這回合（一般 AP、少掉的、保留的、預支的），右邊是下回合會少的。 */
 export interface ApRow {
   now: ApPip[];
   next: ApPip[];
 }
 
-/** AP 圓點最多畫幾顆（含保留、少掉、下回合會少的；4 金＋1 保留＋2 預支｜2 紅斜線也放得下），多了寫數字。 */
+/** AP 圓點最多畫幾顆（含保留、少掉、預支、下回合會少的；4 金＋1 保留＋2 預支｜2 紅斜線也放得下），多了寫數字。 */
 const AP_PIP_LIMIT = 9;
+
+/** 菱形、紅斜線各最多畫幾個（AP-2，畫法文件第 3 節：預支一次 +2／−2 要能並排畫 2 顆；多的寫在說明裡）。 */
+const AP_MARK_LIMIT = 2;
 
 /** 玩家看得到的字（docs/art/AP-1-AP列畫法.md 第 5 節，玩法 PM 定案）。 */
 export const AP_PIP_TEXT = {
   kept: "上回合保留的 AP",
+  borrowed: (n: number) => `預支來的 AP（下回合 −${n}）`,
   overdraftNext: "透支：下回合少 1 AP",
+  borrowNext: "預支：下回合少 1 AP",
   nextMany: (n: number) => `下回合少 ${n} AP`,
-  /** 回合開始時已經扣掉的那格（第 5 節沒有這一句，AP-1 報告待決）。 */
+  /** 回合開始時已經扣掉的那格：只有透支、只有預支、兩者疊加（不寫原因）。 */
   lostNow: (n: number) => `透支：這回合少 ${n} AP`,
+  lostNowBorrow: (n: number) => `預支：這回合少 ${n} AP`,
+  lostNowMixed: (n: number) => `這回合少 ${n} AP`,
 } as const;
 
+/** 回合開始時已扣掉那格的說明（AP-2 用字）：只有透支、只有預支、兩者疊加。 */
+function lostNowText(lost: number, borrowed: number): string {
+  if (borrowed <= 0) return AP_PIP_TEXT.lostNow(lost);
+  return borrowed >= lost ? AP_PIP_TEXT.lostNowBorrow(lost) : AP_PIP_TEXT.lostNowMixed(lost);
+}
+
+/** 下回合會少那格的說明：合計 2 格以上寫合計，1 格寫來源（預支或透支）。 */
+function nextText(next: number, borrowed: number): string {
+  if (next >= 2) return AP_PIP_TEXT.nextMany(next);
+  return borrowed > 0 ? AP_PIP_TEXT.borrowNext : AP_PIP_TEXT.overdraftNext;
+}
+
 /**
- * AP 列的圓點（AP-1）：`[一般 AP][這回合少掉的][上回合保留的] ｜ [下回合會少的]`。
+ * AP 列的圓點（AP-1、AP-2）：`[一般 AP][這回合少掉的][上回合保留的][預支來的] ｜ [下回合會少的]`。
  * 一般 AP＝每回合 AP − 這回合少掉的；AP 被給、被返還而多出來的接在一般 AP 後面。實心的是還沒用的
- * （從左數 `ap` 顆，所以保留的那格最先變空心）。
+ * （從左數 `ap` 顆，所以預支、保留的那格最先變空心）。用了預支的回合不保留，所以沒有會被保留的那顆。
  */
 export function apRow(unit: UnitView, chipHint: string): ApRow {
   const lost = Math.max(0, unit.ap_lost);
   const kept = Math.max(0, unit.ap_carried_in);
+  const borrowedAll = Math.max(0, unit.ap_borrowed);
+  const borrowed = Math.min(borrowedAll, AP_MARK_LIMIT);
   const base = Math.max(0, unit.ap_per_turn - lost);
-  const extra = Math.max(0, unit.ap - base - kept);
-  const fill = [...Array<"ap">(base + extra).fill("ap"), ...Array<"kept">(kept).fill("kept")];
-  const carryMax = Math.max(0, unit.ap_max - unit.ap_per_turn);
+  const extra = Math.max(0, unit.ap - base - kept - borrowedAll) + (borrowedAll - borrowed);
+  const fill = [
+    ...Array<"ap">(base + extra).fill("ap"),
+    ...Array<"kept">(kept).fill("kept"),
+    ...Array<"borrow">(borrowed).fill("borrow"),
+  ];
+  const carryMax = borrowedAll > 0 ? 0 : Math.max(0, unit.ap_max - unit.ap_per_turn);
   const keepFrom = unit.ap - Math.min(unit.ap, carryMax); // 結束回合會保留的：還沒用的最後幾顆
+  const borrowHint = AP_PIP_TEXT.borrowed(Math.max(borrowedAll, unit.ap_next_loss_borrowed));
+  const hintOf = (kind: "ap" | "kept" | "borrow"): string =>
+    kind === "kept" ? AP_PIP_TEXT.kept : kind === "borrow" ? borrowHint : chipHint;
   const gold: ApPip[] = fill.map((kind, i) => ({
     kind,
     on: i < unit.ap,
     keep: i < unit.ap && i >= keepFrom,
-    hint: kind === "kept" ? AP_PIP_TEXT.kept : chipHint,
+    hint: hintOf(kind),
+    ...(kind === "borrow" ? { fresh: true } : {}),
   }));
-  const slash = (hint: string): ApPip => ({ kind: "lost", on: false, keep: false, hint });
-  const nowLost = Array.from({ length: lost }, () => slash(AP_PIP_TEXT.lostNow(lost)));
+  const slash = (hint: string, fresh = false): ApPip => ({ kind: "lost", on: false, keep: false, hint, ...(fresh ? { fresh } : {}) });
+  const lostHint = lostNowText(lost, Math.max(0, unit.ap_lost_borrowed));
+  const nowLost = Array.from({ length: Math.min(lost, AP_MARK_LIMIT) }, () => slash(lostHint));
   const nextN = Math.max(0, unit.ap_next_loss);
-  const nextHint = nextN >= 2 ? AP_PIP_TEXT.nextMany(nextN) : AP_PIP_TEXT.overdraftNext;
-  const next = Array.from({ length: nextN }, () => slash(nextHint));
+  const nextHint = nextText(nextN, Math.max(0, unit.ap_next_loss_borrowed));
+  const next = Array.from({ length: Math.min(nextN, AP_MARK_LIMIT) }, () => slash(nextHint, borrowedAll > 0));
   return { now: [...gold.slice(0, base + extra), ...nowLost, ...gold.slice(base + extra)], next };
 }
 

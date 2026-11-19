@@ -152,6 +152,7 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "revive",  # 3D-8b
         "grant_skill",  # 3D-8c
         "absorb_surface",  # SK-2b（吸自己腳下換治療、護盾）
+        "borrow_ap",  # AP-2（預支；組合器只以獨立串流當核心）
     }
     assert (
         set(sk["aura"].forbid_affects) == {"enemies", "all"} and sk["aura"].secondary.max_count == 1

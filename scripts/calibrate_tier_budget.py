@@ -27,6 +27,8 @@ def implied_windows(library: ContentLibrary) -> dict[int, list[tuple[str, Fracti
     for skill_id in sorted(library.skills):
         skill = library.skills[skill_id]
         report = skill_budget(skill, library)
+        if report.min_ratio == 0:  # AP-2：預支（預算約 0、不套過弱下限）沒有階級窗，不參與校準
+            continue
         factor = report.ap_coefficient * Fraction(1000 + report.allowance_permille, 1000)
         low = report.total / (factor * report.max_ratio)
         high = report.total / (factor * report.min_ratio)

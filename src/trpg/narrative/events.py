@@ -12,6 +12,7 @@ from typing import Any
 
 from trpg.engine.events import (
     ActivationExpired,
+    ApBorrowed,
     ApGranted,
     ApRefunded,
     AttackIntercepted,
@@ -945,6 +946,16 @@ def _ap_granted(e: ApGranted, v: _View) -> str:
     if e.deferred:
         return f"    {target} 獲得 {e.amount} AP（下次回合開始時加上，共 {e.ap_after}）"
     return f"    {target} 獲得 {e.amount} AP（現在 {e.ap_after} AP）"
+
+
+@_handles(ApBorrowed)
+def _ap_borrowed(e: ApBorrowed, v: _View) -> str:
+    """預支（AP-2）。"""
+    name = v.name[e.unit_id]
+    return (
+        f"    {name} 預支了 {e.amount} AP（現在 {e.ap_after} AP；下回合少 {e.next_turn_loss} AP，"
+        "這回合結束不保留）"
+    )
 
 
 @_handles(ApRefunded)

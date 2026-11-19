@@ -175,6 +175,8 @@ def test_every_shipped_skill_fits_the_options() -> None:
             continue  # BAL-14c：召喚上限 −1 只有內建召喚專精能帶，工坊選單不列
         if skill.shape.type in BUILTIN_GATHER_SHAPES and skill.followup is not None:
             continue  # GB-2b：範圍光環聚集（熔心吸氣）只給內建、敵人專用招，工坊選單不列
+        if skill.borrows_ap:
+            continue  # AP-2：預支技能是 0 AP，工坊的 AP 選單照舊 1～3（工坊做不出預支，待 PM 決定）
         assert _fits(lib, data) == (None, ()), skill_id
 
 

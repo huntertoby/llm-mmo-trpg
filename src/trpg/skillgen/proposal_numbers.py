@@ -20,7 +20,7 @@ from copy import deepcopy
 from typing import Any
 
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import PrimitiveParam, param_required_for
+from trpg.content.skills import BORROW_AP, PrimitiveParam, param_required_for
 
 __all__ = [
     "SCALING_NUMBER_FIELDS",
@@ -242,10 +242,18 @@ def _fill_conditions(out: dict[str, Any], library: ContentLibrary) -> None:
 
 
 def _fill_cost(out: dict[str, Any], library: ContentLibrary, category: str) -> None:
-    """AP、源力與最低花費：主動技能 AP 取 2；傳說技能必須花源力（3C-4a），補最小值；主動法術技
-    至少 1 法力、主動武器技至少 1 耐力（06 6.10）。"""
+    """AP、源力與最低花費：主動技能 AP 取 2（帶預支 ``borrow_ap`` 的一律 0，AP-2：06 6.3「⚠ 0 AP
+    例外」）；傳說技能必須花源力（3C-4a），補最小值；主動法術技至少 1 法力、主動武器技至少 1 耐力
+    （06 6.10）。"""
     active = out.get("kind") == "active"
-    if active and out.get("ap_cost") is None:
+    if active and any(e.get("type") == BORROW_AP for e in out.get("effects") or ()):
+        out["ap_cost"] = 0
+        cost = dict(out.get("cost") or {})
+        if cost.get("uses_per_battle") != 1:  # 預支的冷卻下限（AP-2）
+            floor = library.budget.borrow_min_cooldown
+            cost["cooldown"] = max(int(cost.get("cooldown") or 0), floor)
+        out["cost"] = cost
+    elif active and out.get("ap_cost") is None:
         out["ap_cost"] = DEFAULT_ACTIVE_AP
     if out.get("rarity") == LEGENDARY:
         cost = dict(out.get("cost") or {})
