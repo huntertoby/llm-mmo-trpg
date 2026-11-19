@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 from tests.engine.helpers import lf2_library
 from trpg.llm.flash_propose import mock_flash_source
 
@@ -23,6 +25,8 @@ def _load() -> ModuleType:
     return module
 
 
+# 單獨跑約 155～170 秒，全量平行時會超過 300 秒逾時（2026-11-20）
+@pytest.mark.slow
 def test_diversity_script_runs_on_the_mock_and_summarises(tmp_path: Path) -> None:
     script = _load()
     samples = script.build_samples(LIB, 1, 0, 1)

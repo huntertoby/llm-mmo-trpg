@@ -45,7 +45,7 @@ def test_kindle_charge_lists_cooldown_and_rounds() -> None:
     base = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=LIB)
     rows = _rows(base, _flash(base, "cost_charge"))
     assert rows == {
-        "cost.cooldown": ("2", "4", "cost"),
+        "cost.cooldown": ("1", "3", "cost"),  # AP-2 起白板 1 AP，冷卻少 1
         "effects[0].amount": ("5", "6", "better"),
     }
     labels = {c.field: c.label_zh for c in flash_changes(LIB, base, _flash(base, "cost_charge"))}
