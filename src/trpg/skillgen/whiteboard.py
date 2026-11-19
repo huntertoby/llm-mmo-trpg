@@ -35,7 +35,13 @@ from trpg.content.whiteboard_exploit import exploit_recipes
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.budget import BudgetError
-from trpg.skillgen.composer_parts import Ctx, Retry, _needs_cooldown, build_shape
+from trpg.skillgen.composer_parts import (
+    Ctx,
+    Retry,
+    _needs_cooldown,
+    build_shape,
+    quantity_randint,
+)
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.random_composer import (
     ComposeError,
@@ -330,7 +336,8 @@ def _attempt_passive(
         "max_per_round": 1,
     }
     trigger |= recipe.skill.get("trigger", {})  # 例：擊倒時得護盾，作用在自己而不是倒下的敵人
-    mana = rng.randint(rules.passive_mana.min, rules.passive_mana.max)
+    scale = library.ruleset.core.quantity_scale  # 法力步距 × 量類倍率（X10-2b）
+    mana = quantity_randint(rng, rules.passive_mana.min, rules.passive_mana.max, scale)
     base: dict[str, Any] = {
         **_base(recipe, seed, tier, "spell", ctx),
         "kind": "passive",
@@ -368,7 +375,8 @@ def _attempt_reaction(
         only=_shapes(library, recipe, tier),
     )
     _build_effect(ctx, recipe)
-    mana = rng.randint(rules.reaction_mana.min, rules.reaction_mana.max)
+    scale = library.ruleset.core.quantity_scale  # 法力步距 × 量類倍率（X10-2b）
+    mana = quantity_randint(rng, rules.reaction_mana.min, rules.reaction_mana.max, scale)
     cooldown = rng.randint(rules.reaction_cooldown.min, rules.reaction_cooldown.max)
     base: dict[str, Any] = {
         **_base(recipe, seed, tier, category, ctx),
@@ -422,7 +430,8 @@ def _template_cost(ctx: Ctx, rules: WhiteboardRules, kind: str) -> dict[str, Any
         return _active_cost(ctx, rules)
     if kind == "stance":
         span = ctx.rules.stance.mana
-        return {"mana": ctx.rng.randint(span.min, span.max) + (ctx.tier - 1)}
+        # 姿態法力：步距與每階 +1 都 × 量類倍率（X10-2b，同 composer 的姿態）
+        return {"mana": ctx.quantity_randint(span.min, span.max) + (ctx.tier - 1) * ctx.scale}
     return {}
 
 

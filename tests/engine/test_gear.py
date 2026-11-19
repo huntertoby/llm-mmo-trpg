@@ -235,8 +235,9 @@ def test_blood_loses_hp_at_turn_start_but_never_kills() -> None:
     assert lost[0].affix_id == "affix_cost_blood"
     low = state.clone()
     low.units[U1].hp = 20
-    assert [(e.amount, e.hp_after) for e in _turn_start_events(low, U1)] == [(19, 1)]
-    low.units[U1].hp = 1
+    # 不會致死：最低剩 1 × quantity_scale（X10-2b）
+    assert [(e.amount, e.hp_after) for e in _turn_start_events(low, U1)] == [(10, 10)]
+    low.units[U1].hp = 10
     assert _turn_start_events(low, U1) == []
     assert _turn_start_events(state, U2) == []  # 沒有裝備的單位不受影響
 

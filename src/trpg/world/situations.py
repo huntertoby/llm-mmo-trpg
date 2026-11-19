@@ -452,7 +452,9 @@ def _apply_outcome(
     xp = budget.xp_for(battle_xp) * rew.xp_permille // 1000
     hp_lost = 0
     if pen.hurt_permille:
-        hp_lost = max(0, min(char.hp - 1, _max_hp(library, char) * pen.hurt_permille // 1000))
+        floor = library.ruleset.core.quantity_scale  # 不會致死：最低剩 1 × 量類倍率（X10-2b）
+        hurt = _max_hp(library, char) * pen.hurt_permille // 1000
+        hp_lost = max(0, min(char.hp - floor, hurt))
     mods = [
         *(
             NextBattleMod(kind="buff", status=s, source=template.id)

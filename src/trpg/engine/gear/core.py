@@ -455,11 +455,13 @@ def gear_cooldown(unit: UnitState, base: int | None) -> int | None:
 
 
 def gear_turn_start(ctx: Ctx, unit: UnitState) -> None:
-    """回合開始時的裝備效果：代價型的失去 HP（依詞條 id 順序；不會致死，最低剩 1）。"""
+    """回合開始時的裝備效果：代價型的失去 HP（依詞條 id 順序；不會致死，最低剩
+    1 × ``quantity_scale``，X10-2b）。"""
+    floor = ctx.core.quantity_scale
     for bonus in unit.gear.bonuses:
         if bonus.stat != "turn_start_hp_loss" or bonus.amount <= 0:
             continue
-        amount = min(bonus.amount, unit.hp - 1)
+        amount = min(bonus.amount, unit.hp - floor)
         if amount <= 0:
             continue
         before = unit.hp

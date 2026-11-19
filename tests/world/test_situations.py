@@ -319,12 +319,12 @@ def test_three_outcomes(library: ContentLibrary, make_char: MakeChar) -> None:
 
 
 def test_hurt_leaves_one_hp(library: ContentLibrary, make_char: MakeChar) -> None:
-    char = at_event(make_char(hp=2), "wounded_peddler", strong=True)
+    char = at_event(make_char(hp=20), "wounded_peddler", strong=True)  # X10-2b ×10
     bad = world_step(
         sure(library, "peddler_safe_path", "failure"), make_world(), char, peddler(), NOON
     )
-    assert bad.char.hp == 1
-    assert result_of(bad.events).hp_lost == 1
+    assert bad.char.hp == 10  # 最低剩 1 × quantity_scale
+    assert result_of(bad.events).hp_lost == 10
 
 
 def test_supplies_clamped(library: ContentLibrary, make_char: MakeChar) -> None:
