@@ -33,6 +33,8 @@ CORE_PATHS = (
     "ap_per_turn",
     "elite_ap_per_turn",
     "ap_carry_max",
+    "miss_refund_ap",
+    "miss_refund_min_cost",
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",

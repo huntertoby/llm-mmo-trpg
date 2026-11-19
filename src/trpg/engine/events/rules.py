@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
+from pydantic import Field
+
 from trpg.engine.events.base import EventBase
 from trpg.shared.types import Element, ObjectId, Pos, UnitId
 
@@ -55,6 +57,9 @@ class ApRefunded(EventBase):
     skill_id: str
     amount: int
     ap_after: int
+    on_miss: bool = Field(default=False, exclude_if=lambda v: not v)
+    """失手返還（AP-1，#168）：``skill_id`` 的所有目標都沒命中而返還；擊殺時效果為 ``False``
+    （不輸出）。"""
 
 
 class UnitRevived(EventBase):

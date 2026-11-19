@@ -356,6 +356,11 @@ class CoreRules(ContentModel):
     """範本沒寫 ``ap_per_turn`` 的精英、頭目（標籤 ``elite``／``boss``）的每回合 AP
     （AP-1；初值 4）。"""
     ap_carry_max: int = Field(ge=0)
+    miss_refund_ap: int = Field(default=0, ge=0)
+    """失手返還（AP-1，#168，05 5.2）：AP 耗費至少 ``miss_refund_min_cost`` 的技能所有目標都沒命中時
+    返還的 AP（每個單位每回合最多 1 次；初值 1；0＝不返還）。"""
+    miss_refund_min_cost: int = Field(default=2, ge=1)
+    """失手返還只看實際花了至少這麼多 AP 的施放（初值 2）。"""
     basic_attack_ap_cost: int = Field(ge=0)
     defend_ap_cost: int = Field(ge=0)
     run_ap_cost: int = Field(ge=0)

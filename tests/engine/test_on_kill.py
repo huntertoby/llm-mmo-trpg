@@ -92,7 +92,8 @@ def test_a_miss_means_no_refund() -> None:
 
     state = with_rolls(state, [(20, 1)])  # 自然 1：失手
     result = cast(state, target_id=U2)
-    assert of(result, DamageDealt) == [] and of(result, ApRefunded) == []
+    assert of(result, DamageDealt) == []
+    assert [e for e in of(result, ApRefunded) if not e.on_miss] == []  # 失手返還（AP-1）另計
 
 
 def test_the_effect_resolves_once_even_when_several_enemies_go_down() -> None:

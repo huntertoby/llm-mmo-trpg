@@ -373,10 +373,10 @@ def test_ai_battle_with_wings_replays(tmp_path: Path, capsys: pytest.CaptureFixt
         "--map",
         "open_plain",
         "--seed",
-        "7",
+        "11",
         "--ally-build",
         "build_winged",
-    ]  # CB-1 門檻 8 後 2 → 7
+    ]  # CB-1 門檻 8 後 2 → 7；AP-1（玩家方 4 AP、失手返還）後 7 → 11
     assert main([*argv, "--log-json", str(log)]) == 0
     text = capsys.readouterr().out
     assert "暫時獲得技能「飛行」" in text and "施放「飛行」" in text

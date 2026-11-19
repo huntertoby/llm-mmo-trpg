@@ -67,8 +67,8 @@ def without_sk1_flash(library: ContentLibrary) -> ContentLibrary:
     return dataclasses.replace(library, flash=library.flash.model_copy(update={"minor": minor}))
 
 
-PRE_AP1_CORE: dict[str, int] = {"party_ap_per_turn": 3, "elite_ap_per_turn": 3}
-"""AP-1（#168）之前的行動經濟：每個單位每回合 3 AP（工坊值，關回舊行為）。"""
+PRE_AP1_CORE: dict[str, int] = {"party_ap_per_turn": 3, "elite_ap_per_turn": 3, "miss_refund_ap": 0}
+"""AP-1（#168）之前的行動經濟：每個單位每回合 3 AP、沒有失手返還（工坊值，關回舊行為）。"""
 
 
 def with_pre_ap1_turns(library: ContentLibrary) -> ContentLibrary:

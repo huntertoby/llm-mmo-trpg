@@ -98,6 +98,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit.ap = max(0, unit.ap - ap_penalty(ctx.rules, unit))  # 透支（Phase 3-50）
     unit.ap_carry = 0
     unit.moved_this_turn = False  # 連段條件的「本回合」紀錄（Phase 3D-1）
+    unit.miss_refunded = False  # 失手返還每回合最多 1 次（AP-1）
     unit.ran_this_turn = False  # 跑步每回合限 1 次（Phase 3-20）
     unit.guarding_id = None  # 守護到自己的下回合開始（Phase 3-21a）
     unit.turn_cast_tags = ()

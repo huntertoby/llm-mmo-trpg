@@ -45,6 +45,7 @@ from trpg.engine.reactions import (
     PauseForDecision,
     after_attack,
 )
+from trpg.engine.refunds import refund_on_miss
 from trpg.engine.results import Pending
 from trpg.engine.rules.geometry import XY
 from trpg.engine.self_costs import pay_self_costs
@@ -82,7 +83,7 @@ from trpg.engine.variants import target_point, varied_skill
 from trpg.engine.weapon_traits import gunshot_reveals, reveal_after_gunshot, spend_ammo
 from trpg.engine.zones import zone_spec
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Pos
+from trpg.shared.types import Pos, UnitId
 
 __all__ = [
     "run_delayed",
@@ -126,7 +127,7 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
     gun = fires_gun(caster, skill)
     reveal = gun and gunshot_reveals(ctx.state, caster)  # 槍聲：開火前是隱蔽的，開火後被揭露
     with holding(ctx):  # 被動的觸發等整個技能結算完才處理
-        _pay_costs(ctx, caster, skill, paid_area, variant=variant)
+        paid_ap = _pay_costs(ctx, caster, skill, paid_area, variant=variant)
         if gun:
             spend_ammo(caster)  # 火器武器技也算開火：用掉 1 發（3-24c）
         if skill.is_activatable:  # 常駐類傳說（Phase 3D-6）：施放＝啟動，沒有立即的效果
@@ -138,7 +139,9 @@ def use_skill(ctx: Ctx, caster: UnitState, action: UseSkill) -> None:
             assert action.target_id is not None
             charge_lock_on(ctx, caster, skill, ctx.state.units[action.target_id])
         else:
-            _resolve_cast(ctx, caster, skill, action, area, origin)
+            start = len(ctx.events)
+            casts = _resolve_cast(ctx, caster, skill, action, area, origin)
+            refund_on_miss(ctx, caster, skill.id, paid_ap, rolls=_target_rolls(casts), start=start)
             if reveal:
                 reveal_after_gunshot(ctx, caster)
         if skill.kind == "active":  # copy_skill 的複製對象（Phase 3C-4b）
@@ -155,8 +158,9 @@ def _resolve_cast(  # noqa: PLR0917
     action: UseSkill,
     area: SkillArea,
     origin: XY | None,
-) -> None:
-    """一般技能（含複合技能的第二段）的結算與施放後的轉向、潛行偷襲脫離。"""
+) -> list[Cast]:
+    """一般技能（含複合技能的第二段）的結算與施放後的轉向、潛行偷襲脫離；回傳結算過的施放（第一段、
+    有第二段時接在後面），失手返還（AP-1）看它們的命中。"""
     cast = Cast(ctx, caster, skill, action, area)
     cast.part_id = action.target_part  # 只有第一段打部位（PB-1a）；第二段、延遲段打本體
     face = _primary_xy(ctx.state, caster, action)
@@ -175,6 +179,19 @@ def _resolve_cast(  # noqa: PLR0917
         victims = [*victims, *second.melee_victims]
         face = _primary_xy(ctx.state, caster, second.action) or face
     after_attack(ctx, caster, face, ambushed=ambushed, turns=victims)
+    return [cast] if second is None else [cast, second]
+
+
+def _target_rolls(casts: list[Cast]) -> dict[str, list[bool]]:
+    """失手返還（AP-1）：各段施放的敵方目標 → 對它擲命中的結果（沒擲為空）。"""
+    rolls: dict[str, list[bool]] = {}
+    for cast in casts:
+        for unit in cast.enemies:
+            rolls.setdefault(unit.id, [])
+        for uid, roll in sorted(cast.hits.items()):
+            if cast.ctx.state.units[UnitId(uid)].team is not cast.caster.team:
+                rolls.setdefault(uid, []).append(roll.hit)
+    return rolls
 
 
 def _planned_followup(
@@ -569,7 +586,8 @@ def use_reaction_skill(
 
 def _pay_costs(
     ctx: Ctx, caster: UnitState, skill: SkillDef, area: SkillArea, *, variant: str | None = None
-) -> None:
+) -> int:
+    """支付技能的代價並發出 ``skill_used``；回傳實際花的 AP（失手返還看它，AP-1）。"""
     ap = skill_ap_cost(ctx.state, skill, caster)
     paid: PaidCost = pay_skill_cost(ctx.core, caster, skill, ap=ap)
     ctx.emit(
@@ -593,6 +611,7 @@ def _pay_costs(
             SkillCooldownChanged, unit_id=caster.id, skill_id=skill.id, remaining=paid.cooldown
         )
     spend_source(ctx, caster, skill.cost.source or 0, skill.id)  # 傳說技能（Phase 3C-4a）
+    return paid.ap
 
 
 def _apply_self_status(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:

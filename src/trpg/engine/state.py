@@ -590,6 +590,9 @@ class UnitState:
     召喚物 ``ap_per_turn``、敵人照範本的 ``ap_per_turn``（沒寫時精英與頭目 ``elite_ap_per_turn``、
     其他 ``ap_per_turn``）。本回合上限＝此值＋``ap_carry_max``
     （:func:`trpg.engine.rewrites.ap_cap`）。"""
+    miss_refunded: Annotated[bool, Field(exclude_if=_empty)] = False
+    """這個回合已經拿過失手返還（AP-1，05 5.2；每個單位每回合最多 1 次）；自己回合開始時清除。
+    ``False`` 時不輸出。"""
 
     @property
     def alive(self) -> bool:
@@ -674,6 +677,7 @@ class UnitState:
             gear_round_counts=dict(self.gear_round_counts),
             ap_gain_turn=self.ap_gain_turn,
             ap_per_turn=self.ap_per_turn,
+            miss_refunded=self.miss_refunded,
             hits_landed=self.hits_landed,
             attack_hits_landed=self.attack_hits_landed,
             stacks=dict(self.stacks),
