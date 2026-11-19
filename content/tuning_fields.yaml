@@ -297,6 +297,9 @@ targets:
       - {path: structure.absorb_core_permille, label_zh: 光環骨架改成吸收表面的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 組合器做光環骨架（稀有以上）時，核心改成「吸收表面」（吸自己腳下的表面換治療或護盾）的機率。只能 0～1000。}
       - {path: structure.absorb_secondary_permille, label_zh: 打擊／蓄力加上吸收表面的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 打擊、蓄力／終結骨架（稀有以上、單體形狀、附帶效果還有空位）加上吸收表面（換層數或元素）的機率。只能 0～1000。}
       - {path: structure.contagion_permille, label_zh: 加上疾病擴散的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 打擊、範圍、控場、陷阱骨架（稀有以上、已施加燃燒／流血／中毒、附帶效果還有空位）加上「疾病擴散」的機率。只能 0～1000。}
+      # AP-2：白板主動技的預設 AP（06 6.34.1 ⚠ #168 題 5）
+      - {path: whiteboard.ap_cost, label_zh: 白板主動技的預設 AP, kind: int, hint_min: 1, hint_max: 3, note_zh: 升級、任務三選一與創角給的白板主動技預設花幾 AP（初值 1）。調不進預算範圍時退回「白板退回的 AP」；召喚、自身增益、位移這些配方自己寫了 AP 的不受影響。只能 1～3。}
+      - {path: whiteboard.fallback_ap_cost, label_zh: 白板退回的 AP, kind: int, hint_min: 1, hint_max: 3, note_zh: 白板主動技用預設 AP 調不進預算範圍（70～100%）時改用這個 AP 再調一次（初值 2）。只能 1～3。}
       # AP-2：預支與「這回合用完所有 AP 時」接進出題
       - {path: structure.borrow_core_permille, label_zh: 光環骨架改成預支的機率（‰）, kind: permille, hint_min: 0, hint_max: 300, note_zh: 組合器做光環骨架（稀有以上）時，核心改成「預支」（0 AP：這回合多 1 AP、下回合少 1 AP，冷卻 2）的機率。越大越常出預支。只能 0～1000。}
       - {path: structure.ap_spent_passive_permille, label_zh: 被動改成「用完所有 AP 時」的機率（‰）, kind: permille, hint_min: 0, hint_max: 300, note_zh: 組合器做被動（史詩以上、題目沒指定關鍵字）時，觸發時機改成「這回合用完所有 AP 時」的機率。只能 0～1000。}

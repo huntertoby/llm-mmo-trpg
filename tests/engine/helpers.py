@@ -152,6 +152,14 @@ def without_ap2_offers(library: ContentLibrary) -> ContentLibrary:
     )
 
 
+def with_whiteboard_ap(library: ContentLibrary, ap: int) -> ContentLibrary:
+    """``library`` 但白板主動技的預設 AP 是 ``ap``（AP-2 起 1）：鎖住「某個種子的白板剛好是某個
+    樣子」的測試用（例：點燃斬種子 75 在 AP-2 之前是 2 AP、燃燒 5 回合）。"""
+    whiteboard = library.composer.whiteboard.model_copy(update={"ap_cost": ap})
+    composer = library.composer.model_copy(update={"whiteboard": whiteboard})
+    return dataclasses.replace(library, composer=composer)
+
+
 SK3B_STREAMS = ("exploit_passive_permille", "reroll_reaction_permille")
 """SK-3b 接進出題的組合器串流（「你造的關鍵字被利用時」被動、重擲反應技）。"""
 

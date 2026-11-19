@@ -182,7 +182,8 @@ def test_run_auto_flashes_and_shows_flash_counts(
 # 有大閃現的種子改前改後都是 6 個）。
 # AP-1（玩家方 4 AP、失手返還）4、6 → 11、13（重掃 11～20：改後 11、13、17、18、20；
 # 關掉失手返還也成立的是 11、13）
-@pytest.mark.parametrize("seed", [11, 13])
+# AP-2（白板主動技預設 1 AP，候選與戰鬥都變）11、13 → 17、18（重掃 11～20：17、18、20）
+@pytest.mark.parametrize("seed", [17, 18])
 @pytest.mark.slow
 def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]

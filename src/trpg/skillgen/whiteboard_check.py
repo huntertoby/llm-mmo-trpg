@@ -197,8 +197,12 @@ def _cost_problems(skill: SkillDef, rules: WhiteboardRules) -> list[str]:
         or (first in rules.terrain_effects and skill.shape.type == "ground_tile")
     ):
         expected_ap = rules.self_ap_cost
-    if skill.ap_cost != expected_ap:
-        problems.append(f"主動白板的 AP 必須是 {expected_ap}，收到 {skill.ap_cost}")
+    allowed = {expected_ap}
+    if expected_ap == rules.ap_cost:  # AP-2：預設 AP 調不進預算窗時照預算調退回
+        allowed.add(rules.fallback_ap_cost)
+    if skill.ap_cost not in allowed:
+        wanted = "或".join(str(a) for a in sorted(allowed))
+        problems.append(f"主動白板的 AP 必須是 {wanted}，收到 {skill.ap_cost}")
     if (cost.cooldown or 0) > max_cooldown:
         problems.append(f"主動白板的冷卻最多 {max_cooldown}，收到 {cost.cooldown}")
     for label, present in (

@@ -115,14 +115,17 @@ def test_every_keyword_with_recipes_composes_valid_whiteboards(kind: str) -> Non
 
 
 def test_active_whiteboards_use_the_default_cost() -> None:
-    """主動白板：AP 2、冷卻 0～2、沒有每場次數／自身狀態／透支；單體或小範圍的形狀。"""
+    """主動白板：AP 1（AP-2 起；1 AP 調不進預算窗時退回 2）、冷卻 0～2、沒有每場次數／自身狀態／
+    透支；單體或小範圍的形狀。"""
     seen_shapes: set[str] = set()
     for keyword in sorted(whiteboard_keywords(LIB, "active", RULES.tier) - {"summon", GENERIC}):
         for seed in range(10):
             skill = compose_whiteboard(seed, keyword=keyword, library=LIB)
             # 3W-9：1 階的隆地只升一格（AP 1，同自身類白板）
-            want = RULES.self_ap_cost if skill.effects[0].type == "raise_terrain" else RULES.ap_cost
-            assert skill.ap_cost == want
+            if skill.effects[0].type == "raise_terrain":
+                assert skill.ap_cost == RULES.self_ap_cost
+            else:
+                assert skill.ap_cost in (RULES.ap_cost, RULES.fallback_ap_cost)
             assert (skill.cost.cooldown or 0) <= RULES.cooldown.max
             assert skill.cost.uses_per_battle is None and skill.cost.overdraft is None
             assert skill.cost.self_status is None
@@ -224,7 +227,7 @@ def test_validator_rejects_each_part_of_the_definition() -> None:
     board = _board()
     assert is_whiteboard(board, LIB)
     assert "必須是 2 階" in "；".join(whiteboard_problems(board, LIB, 2))
-    assert "AP 必須是 2" in _problems(board.model_copy(update={"ap_cost": 3}))
+    assert "AP 必須是 1或2" in _problems(board.model_copy(update={"ap_cost": 3}))  # AP-2
     cost = board.cost.model_copy(update={"cooldown": 3})
     assert "冷卻最多 2" in _problems(board.model_copy(update={"cost": cost}))
     cost = board.cost.model_copy(update={"uses_per_battle": 1})

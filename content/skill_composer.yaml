@@ -267,7 +267,8 @@ llm_cost:
 whiteboard:
   kind_permille: {active: 700, passive: 200, reaction: 100}   # 升級與任務三選一的種類比例（07 7.6）
   tier: 1                             # 沒指定階級時（創角）；升級與任務三選一用角色目前階級（roguelite.yaml 的 offer_tier_by_level，#72）
-  ap_cost: 2
+  ap_cost: 1                          # AP-2（06 6.34.1 ⚠ #168 題 5「白板預設改1AP」）：全部主動白板預設 1 AP（原本 2）
+  fallback_ap_cost: 2                 # AP-2：1 AP 調不進預算窗（70～100%）時照預算調退回 2 AP；配方自己寫 ap_cost 的不退
   cooldown: {min: 0, max: 2}
   passive_mana: {min: 0, max: 2}
   reaction_mana: {min: 0, max: 2}

@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from tests.engine.helpers import library
+from tests.engine.helpers import library, with_whiteboard_ap
 from trpg.content.skills import SkillDef
 from trpg.skillgen.flash_cost import (
     LIGHT_UNPRICED_STEP,
@@ -69,7 +69,8 @@ def test_soul_bond_light_link_three_to_two() -> None:
 
 
 def test_kindle_light_still_drops_the_burn_to_two() -> None:
-    kindle = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=LIB)
+    lib = with_whiteboard_ap(LIB, 2)  # AP-2 之前的 2 AP 樣本（白板預設改 1 AP）
+    kindle = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=lib)
     light = _flash(kindle)
     assert kindle.effects[0].duration == 5
     assert light.effects[0].duration == 2

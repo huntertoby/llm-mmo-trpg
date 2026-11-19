@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from tests.api.conftest import ClientFactory
 from tests.engine.helpers import library as _load_library
+from tests.engine.helpers import with_whiteboard_ap
 from trpg.api.flash_changes import base_stats, flash_changes, ratio_zh
 from trpg.api.flash_text import (
     FlashTextContext,
@@ -36,7 +37,10 @@ from trpg.skillgen.whiteboard import compose_whiteboard
 
 LIB = _load_library()
 SEED = 12345
-KINDLE = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=LIB)
+# AP-2：白板預設改 1 AP；這份文字樣本鎖回 2 AP 的點燃斬（種子 75）
+KINDLE = compose_whiteboard(
+    75, recipe_id="kindle", weapon_class="melee", tier=1, library=with_whiteboard_ap(LIB, 2)
+)
 """點燃斬（使用者截圖那組：射程 4、冷卻 2、燃燒 5 回合）。"""
 
 

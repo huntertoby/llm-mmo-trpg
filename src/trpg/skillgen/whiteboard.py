@@ -296,6 +296,14 @@ def _attempt_active(
     base |= {"weapon_req": req, "scaling_attr": scaling, "ap_cost": ap}
     base["rarity"] = _min_rarity({**base, "cost": {}}, ctx.effects, library)
     base["cost"] = _active_cost(ctx, rules, recipe.min_cooldown)
+    if tune(rng, library, base, ctx.effects, ctx.knobs):
+        return _named(_finish(library, seed, base, ctx), recipe)
+    fallback = rules.fallback_ap_cost
+    if "ap_cost" in recipe.skill or fallback == ap:
+        raise Retry
+    # AP-2（06 6.34.1 ⚠ #168 題 5）：預設 AP 調不進預算窗時，照預算調退回 fallback_ap_cost（2 AP）
+    ctx.ap_cost = fallback
+    base |= {"ap_cost": fallback, "cost": _active_cost(ctx, rules, recipe.min_cooldown)}
     if not tune(rng, library, base, ctx.effects, ctx.knobs):
         raise Retry
     return _named(_finish(library, seed, base, ctx), recipe)
@@ -457,13 +465,38 @@ def _attempt_template(
     _merge(base["cost"], cost_patch)
     _merge(base, spec)
     base["rarity"] = _min_rarity({**base, "cost": {}}, ctx.effects, library)
+    done = _tune_patches(rng, library, seed, recipe, ctx, base)
+    if done is not None:
+        return done
+    if kind != "active" or "ap_cost" in recipe.skill or rules.fallback_ap_cost == ap:
+        raise Retry
+    # AP-2（06 6.34.1 ⚠ #168 題 5）：預設 AP 調不進預算窗時，照預算調退回 fallback_ap_cost（2 AP）
+    ctx.ap_cost = rules.fallback_ap_cost
+    base["ap_cost"] = rules.fallback_ap_cost
+    base["cost"] = _template_cost(ctx, rules, kind)
+    _merge(base["cost"], cost_patch)
+    done = _tune_patches(rng, library, seed, recipe, ctx, base)
+    if done is None:
+        raise Retry
+    return done
+
+
+def _tune_patches(  # noqa: PLR0917 — 一次嘗試的參數（同 _attempt_template）
+    rng: Rng,
+    library: ContentLibrary,
+    seed: int,
+    recipe: WhiteboardRecipe,
+    ctx: Ctx,
+    base: dict[str, Any],
+) -> SkillDef | None:
+    """``vary`` 的選項隨機排序後逐一調整強度，第一個進得了預算窗的完成；都不行回傳 ``None``。"""
     for patch in rng.shuffled(list(recipe.vary)) if recipe.vary else [{}]:
         trial, effects = deepcopy(base), deepcopy(ctx.effects)
         _apply_patch(trial, effects, patch)
         if tune(rng, library, trial, effects, ctx.knobs):
             ctx.effects = effects
             return _named(_finish(library, seed, trial, ctx), recipe)
-    raise Retry
+    return None
 
 
 def _without_icon_prop(skill: SkillDef) -> SkillDef:
