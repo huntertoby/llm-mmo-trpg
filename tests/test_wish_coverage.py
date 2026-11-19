@@ -110,6 +110,20 @@ def test_derived_versions_count_only_for_element_wishes(wc: Any) -> None:
     assert measured.rate([("keywords", "form"), ("kinds", "passive")], 2, "rare") == 0
 
 
+def test_lifesteal_versions_count_only_for_damage_heal_wishes(wc: Any) -> None:
+    """SK-5：吸血版本（``#L``）只在效果同時有傷害和治療時算。"""
+    drained = "effects:damage|effects:heal|shapes:single"
+    rows = {"-/active/1/common": {f"effects:damage|shapes:single#R#D#L{drained}": 1, "": 1}}
+    measured = wc.Measured.from_payload(_payload(rows, seeds=2), {"active": 1})
+    damage_heal = [("effects", "damage"), ("effects", "heal")]
+    assert measured.rate(damage_heal, 1, "common") == Fraction(1, 2)
+    assert measured.rate([("effects", "heal")], 1, "common") == 0  # 只許治療不算
+    assert measured.rate([("effects", "damage")], 1, "common") == Fraction(1, 2)
+    old = wc.Group.parse("effects:damage#Relements:ice#D")  # /2 的字串（沒有 L）照舊讀得懂
+    assert old.drained == ()
+    assert old.swapped == (frozenset({"elements:ice"}),)
+
+
 def test_compare_lists_fixed_and_remaining(wc: Any) -> None:
     head = ["| 組合 | 最佳格 | 類別 | 理由 | 出處 |", "|---|---|---|---|---|"]
     none = "## 做不到清單（每一格都 0）"

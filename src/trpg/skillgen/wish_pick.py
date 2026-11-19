@@ -16,7 +16,9 @@
    有召喚時，補抽指定召喚骨架（:data:`SUMMON_HINT`）；關鍵字標籤是組合器不做的（形態）時，候選另外
    放進同關鍵字的手寫技能（:func:`handwritten_pool`，07 7.6 第 2 點「形態例外」）；有元素標籤時，
    沒帶到那個元素的候選另外換成那個元素（:func:`_element_draws`，
-   :func:`~trpg.skillgen.composer_retheme.retheme`）。玩家手上的技能、要排除的 ID、傳說、
+   :func:`~trpg.skillgen.composer_retheme.retheme`）。SK-5（玩法交接 4.1.34 第 10 點後補）：效果
+   標籤同時有傷害和治療時，另外做吸血版本（:func:`_lifesteal_draws`，
+   :func:`~trpg.skillgen.composer_lifesteal.add_lifesteal`）。玩家手上的技能、要排除的 ID、傳說、
    武器不合的不收。不到 3 個時用 ``pick.wish.relax`` 串流放寬（不看種類與關鍵字）補到 3 個。
 3. **打分**：一般完整技能的分數（:func:`~trpg.skillgen.skill_pick.score_candidate`，關鍵字＝願望的
    關鍵字）＋ **願望相合**（``weights.wish_match`` × 命中的標籤數，:func:`tag_hits`）；單薄的先
@@ -46,6 +48,7 @@ from trpg.skillgen.candidates import (
     skill_has_keywords,
 )
 from trpg.skillgen.composer_dual import add_second_element, second_element_tier
+from trpg.skillgen.composer_lifesteal import add_lifesteal, lifesteal_ready
 from trpg.skillgen.composer_retheme import retheme
 from trpg.skillgen.keywords import derive_keywords, pool_skills
 from trpg.skillgen.memo import by_id
@@ -69,6 +72,7 @@ __all__ = [
     "WISH_CARDS",
     "WISH_DUAL_FORK",
     "WISH_FORK",
+    "WISH_LIFESTEAL_FORK",
     "WISH_RELAX_FORK",
     "WISH_SEED_PERMILLE",
     "WishCard",
@@ -109,6 +113,11 @@ WISH_TAG_EXTRA: Final = 3
 WISH_DUAL_FORK: Final = "pick.wish.dual"
 """雙元素（WC-2，#167）：帶其中一個元素的候選加上另一個元素的亂數串流（每個候選再 ``fork`` 它的
 位置）；最多加 :data:`WISH_TAG_EXTRA` 個設計。"""
+WISH_LIFESTEAL_FORK: Final = "pick.wish.lifesteal"
+"""吸血版本（SK-5）：重調強度的亂數（``…/have/<位置>``）與專門補抽的組合器種子（``…/draw``，每個
+種子再 ``fork`` 它的序號）；最多加 :data:`WISH_TAG_EXTRA` 個設計。"""
+LIFESTEAL_TAGS: Final = ("damage", "heal")
+"""效果標籤同時有這兩個才做吸血版本（SK-5；只許「治療」時不做，治療本來就由光環出）。"""
 _ACTIVE_FAMILY: tuple[str, ...] = ("active", "stance")
 _KINDS: dict[str, tuple[str, ...]] = {
     "active": _ACTIVE_FAMILY,
@@ -611,6 +620,81 @@ def _dual_draws(
             added += 1
 
 
+def _add_lifesteal_versions(
+    library: ContentLibrary,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+    sources: Sequence[PickCandidate],
+    *,
+    rng: Rng,
+    room: int,
+) -> int:
+    """``sources`` 依序做吸血版本（亂數 ``rng.fork(<序號>)``），收進 ``found``，最多 ``room`` 個新
+    設計；回傳加了幾個。"""
+    added = 0
+    for position, candidate in enumerate(sources):
+        if added >= room:
+            break
+        skill = add_lifesteal(library, candidate.skill, rng.fork(str(position)))
+        if skill is None or not check.ok(skill, tags):
+            continue
+        key = design_key(skill)
+        if key not in found:
+            found[key] = PickCandidate(skill, candidate.source, candidate.seed, key)
+            added += 1
+    return added
+
+
+def _lifesteal_draws(  # noqa: PLR0917 — 一次補抽的參數（同 _tag_draws）
+    library: ContentLibrary,
+    request: CandidateRequest,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+    enough: int,
+) -> int:
+    """吸血配方（SK-5；07 7.6 第 2 點「照標籤專門做候選」）：效果標籤同時有傷害和治療、種類可以是
+    主動時，
+
+    1. 候選裡做得到吸血的組合器技能（打擊、範圍骨架的對敵傷害，:func:`lifesteal_ready`）依「命中
+       其他標籤數」由多到少做吸血版本；
+    2. 一個都沒做出來時，用 ``pick.wish.lifesteal/draw`` 串流專門補抽（骨架輪流指定
+       ``structure.lifesteal_skeletons``，出題條件照舊）最多 ``候選量 ÷ 2`` 個種子，做吸血版本。
+
+    兩步合計最多加 :data:`WISH_TAG_EXTRA` 個新設計；回傳補抽了幾個種子。"""
+    if not set(LIFESTEAL_TAGS) <= set(tags.effects) or (tags.kinds and tags.kinds[0] != "active"):
+        return 0
+    rng = Rng(request.seed).fork(WISH_LIFESTEAL_FORK)
+    others = WishTags.model_validate({**tags.model_dump(), "effects": ()})
+    ready = [c for c in found.values() if c.source != "pool" and lifesteal_ready(library, c.skill)]
+    ready.sort(key=lambda c: -len(tag_hits(library, c.skill, others)[0]))
+    added = _add_lifesteal_versions(
+        library, check, tags, found, ready, rng=rng.fork("have"), room=WISH_TAG_EXTRA
+    )
+    if added:
+        return 0
+    draw = rng.fork("draw")
+    skeletons = library.composer.structure.lifesteal_skeletons
+    keywords = tags.keywords
+    tried = 0
+    for turn in range(enough // 2):
+        if added >= WISH_TAG_EXTRA:
+            break
+        seed = draw.next_u32()
+        tried += 1
+        keyword = keywords[turn % len(keywords)] if keywords else None
+        skeleton = skeletons[turn % len(skeletons)]
+        skill = _compose(library, request, seed, keyword, _ACTIVE_FAMILY, skeleton)
+        if skill is None or not check.ok(skill, tags):
+            continue
+        source = PickCandidate(skill, "composer", seed, design_key(skill))
+        added += _add_lifesteal_versions(
+            library, check, tags, found, (source,), rng=draw.fork(str(turn)), room=1
+        )
+    return tried
+
+
 def wish_pool(
     library: ContentLibrary, request: CandidateRequest, tags: WishTags, player: PickPlayer
 ) -> PickSlate:
@@ -630,6 +714,7 @@ def wish_pool(
     tried += _tag_draws(library, request, check, tags, found, enough)
     _element_draws(library, check, tags, found)
     _dual_draws(library, request, check, tags, found)
+    tried += _lifesteal_draws(library, request, check, tags, found, enough)
     if len(found) < WISH_CARDS:  # 願望太窄：放寬補到 3 個（不看種類與關鍵字）
         tried += _draw(library, request, check, None, WISH_RELAX_FORK, seeds, WISH_CARDS, found)
     weight = pick.weights.wish_match
