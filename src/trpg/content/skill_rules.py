@@ -479,6 +479,8 @@ class BudgetRules(ContentModel):
     ``base_points`` 搬來，開放數值工坊；初值）。"""
     contagion_points: int = Field(default=2, ge=0)
     """``contagion``（疾病擴散，SK-2）的固定預算點數（形狀倍率另算；SK-3b 搬來；初值）。"""
+    borrow_ap_points: int = Field(default=0, ge=0)
+    """``borrow_ap``（預支，AP-2）每 1 AP 的預算點數（初值 0，開放數值工坊）。"""
     absorb_surface_points: int = Field(default=1, ge=0)
     """``absorb_surface``（吸收表面，SK-2）的基礎點數（另加收益點數；SK-3b 搬來；初值）。"""
     reroll_budget_permille: int = Field(default=850, ge=0, le=2000)

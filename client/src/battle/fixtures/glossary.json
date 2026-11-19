@@ -2789,6 +2789,22 @@
    "rules_zh": [
     "受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×50%"
    ]
+  },
+  {
+   "id": "borrowed_ap",
+   "name_zh": "預支",
+   "description_zh": "這回合預支了 AP，下一個回合開始時 AP 少同樣的數量。",
+   "tags": [],
+   "status_look": {
+    "polarity": "debuff",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": []
   }
  ],
  "stacks": [
@@ -3682,6 +3698,16 @@
    "description_zh": "反應：隊友擲失手時讓他重擲取較好的；或敵人打中你時逼他重擲取較差的。",
    "tags": [
     "structural"
+   ],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
+   "id": "borrow_ap",
+   "name_zh": "預支",
+   "description_zh": "預支：這回合多拿 AP，下回合少同樣的 AP。",
+   "tags": [
+    "rule_rewrite"
    ],
    "status_look": null,
    "rules_zh": []

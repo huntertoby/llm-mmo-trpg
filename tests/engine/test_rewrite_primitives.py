@@ -580,6 +580,8 @@ def test_demo_battles_use_the_new_primitives_and_replay(
 def test_all_six_rule_rewrite_primitives_have_equipped_hand_written_skills() -> None:
     lib = library()
     rewrites = {p.id for p in lib.ruleset.primitives.primitives if p.category == "rule_rewrite"}
+    # AP-2：預支（borrow_ap）在通用池、不裝在示範 build 上（裝上去會改既有戰鬥）
+    rewrites.discard("borrow_ap")
     assert rewrites == {
         "grant_ap",
         "reset_cooldown",

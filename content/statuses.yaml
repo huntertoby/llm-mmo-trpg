@@ -1417,3 +1417,14 @@ statuses:
     stacking: refresh
     beneficial: true
     damage_taken_permille: 500
+  # AP-2（#168，06 6.3「新原語『預支』」）：預支（borrow_ap）的下回合扣回。只能由 borrow_ap 施加（沒有 budget_points）；
+  # 同透支：施放當回合結束 −1，剩下的 1 在下一個回合開始時扣 amount AP、該回合結束移除。同一回合預支兩次時 amount 相加。
+  - id: borrowed_ap
+    polarity: debuff
+    name_zh: 預支
+    description_zh: 這回合預支了 AP，下一個回合開始時 AP 少同樣的數量。
+    duration: 2
+    expires: turn_end
+    stacking: refresh
+    ap_penalty_per_amount: true
+    mechanic_only: true

@@ -285,6 +285,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "infused_fire": 6,  # 3I-6：臨時附魔
         "infused_holy": 6,
         "overdrawn": None,  # 3-50：只能由 cost.overdraft 施加
+        "borrowed_ap": None,  # AP-2：只能由 borrow_ap 施加（mechanic_only）
         "charging": None,  # 3F-4b：延遲段的等待狀態，不能由效果施加
         "prone": 3,
         "burning": 3,

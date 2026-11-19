@@ -377,6 +377,15 @@ PLACE_TRAP = "place_trap"
 GRANT_AP = "grant_ap"
 
 
+BORROW_AP = "borrow_ap"
+"""AP-2（#168，06 6.3「新原語『預支』」）的預支原語 ID：施放者本回合 +N AP、下回合 −N AP；帶它的
+主動技是唯一可以 0 AP 的。"""
+
+BORROWED_AP_STATUS = primitive_status("borrow_ap")
+"""``borrow_ap`` 施加的狀態（``statuses.yaml``，``ap_penalty_per_amount``：下回合少 ``amount``
+AP）。"""
+
+
 RESET_COOLDOWN = "reset_cooldown"
 
 

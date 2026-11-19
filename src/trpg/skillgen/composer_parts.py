@@ -970,7 +970,7 @@ def _condition_spec(ctx: Ctx, kind: str) -> dict[str, Any]:
         names = sorted(
             s.id
             for s in ctx.library.ruleset.statuses.statuses
-            if not s.beneficial and not s.enemy_only  # 5F-5c：只給敵人的狀態不進技能池
+            if not s.beneficial and not s.skill_pool_excluded  # 5F-5c、AP-2：不進技能池
         )
         return {"type": kind, "status": rng.choice(names)}
     return {"type": kind}

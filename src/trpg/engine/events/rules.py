@@ -62,6 +62,18 @@ class ApRefunded(EventBase):
     （不輸出）。"""
 
 
+class ApBorrowed(EventBase):
+    """預支（``borrow_ap``，AP-2）：``unit_id`` 本回合多 ``amount`` AP（已扣掉超過本回合上限的
+    部分），下一個回合開始時少 ``next_turn_loss`` AP（這回合所有預支的合計）。"""
+
+    type: Literal["ap_borrowed"] = "ap_borrowed"
+    unit_id: UnitId
+    skill_id: str
+    amount: int
+    ap_after: int
+    next_turn_loss: int
+
+
 class UnitRevived(EventBase):
     """復活（``revive``，Phase 3D-8b）：倒下的 ``unit_id`` 以 ``hp`` 站起來，站在 ``pos``（原位置
     ``from_pos`` 被占用或不能站立時為最近的空格）；``source_id`` 是施放者。"""

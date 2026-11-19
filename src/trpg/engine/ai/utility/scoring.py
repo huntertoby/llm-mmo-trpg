@@ -16,6 +16,7 @@ from trpg.content.environment import (
     RunAiRules,
 )
 from trpg.content.skills import (
+    BORROW_AP,
     CHEAT_DEATH,
     CHEAT_DEATH_STATUS,
     DELAYED_DAMAGE,
@@ -60,6 +61,7 @@ from trpg.engine.ai.utility.position import (
 from trpg.engine.ai.variant import cast_form
 from trpg.engine.bombs import blast_tiles
 from trpg.engine.events import (
+    ApBorrowed,
     ApGranted,
     ApRefunded,
     DamageDealt,
@@ -217,6 +219,7 @@ def extra_targets(state: BattleState, actor: UnitState, p: Preview) -> Fraction:
 _REWRITE_SCORED = frozenset(
     {
         GRANT_AP,
+        BORROW_AP,
         RESET_COOLDOWN,
         CHEAT_DEATH,
         REDIRECT_DAMAGE,
@@ -239,6 +242,8 @@ def _rewrite_gains(
     """改寫規則型原語的收益減去源力成本（Phase 3C-4a；``ai_profiles.yaml`` 的 ``rewrite``，
     × ``damage`` 權重）。最簡單的近似：
 
+    - ``borrow_ap``（AP-2）：同給自己的 ``grant_ap``；只在本回合差 AP 湊不出大招時才用，由
+      :func:`~trpg.engine.ai.self_costs.self_cost_gate` 擋；
     - ``grant_ap``：獲得的 AP × ``ap_points``（≈ 多一次動作的價值；與其他動作一樣不扣這次動作
       本身花的 AP）；給友方的 AP 再 × ``ally_ap_permille``（所以優先給自己）；
     - ``reset_cooldown``：被重置的冷卻回合數 × ``cooldown_points``；
@@ -359,15 +364,25 @@ def _delayed_points(
     return Fraction(0)
 
 
+def _ap_event_points(actor: UnitState, e: EventBase, rules: RewriteAiRules) -> Fraction | None:
+    """給 AP（``grant_ap``）與預支（``borrow_ap``，AP-2；同給自己 AP）的加分；其他事件 ``None``。"""
+    if isinstance(e, ApBorrowed):
+        return Fraction(rules.ap_points * e.amount) if e.unit_id == actor.id else Fraction(0)
+    if isinstance(e, ApGranted):
+        ally = Fraction(rules.ally_ap_permille, 1000)
+        return rules.ap_points * e.amount * (Fraction(1) if e.unit_id == actor.id else ally)
+    return None
+
+
 def _rewrite_event_points(
     state: BattleState, actor: UnitState, e: EventBase, types: set[str], rules: RewriteAiRules
 ) -> Fraction:
     """預覽事件在 :func:`_rewrite_gains` 的加分（數值見 ``ai_profiles.yaml`` 的 ``rewrite``）。"""
+    points = _ap_event_points(actor, e, rules)
+    if points is not None:
+        return points
     points = Fraction(0)
-    if isinstance(e, ApGranted):
-        ally = Fraction(rules.ally_ap_permille, 1000)
-        points = rules.ap_points * e.amount * (Fraction(1) if e.unit_id == actor.id else ally)
-    elif isinstance(e, SkillCooldownChanged) and RESET_COOLDOWN in types and e.remaining == 0:
+    if isinstance(e, SkillCooldownChanged) and RESET_COOLDOWN in types and e.remaining == 0:
         points = Fraction(
             rules.cooldown_points * state.units[e.unit_id].cooldowns.get(e.skill_id, 0)
         )

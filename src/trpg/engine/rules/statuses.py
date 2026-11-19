@@ -16,7 +16,7 @@ from trpg.engine.gear.core import gear_damage_taken_permille
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.forms import form_move_delta, form_taken_permille
 from trpg.engine.rules.race import surface_move_bonus, weather_move_bonus
-from trpg.engine.state import UnitState
+from trpg.engine.state import StatusInstance, UnitState
 from trpg.shared.types import Attribute, Element, Surface, UnitId
 
 __all__ = [
@@ -171,24 +171,43 @@ def move_reduction(rules: Ruleset, unit: UnitState) -> int:
     return best
 
 
-def ap_penalty(rules: Ruleset, unit: UnitState) -> int:
-    """``ap_penalty`` 狀態（透支，Phase 3-50）在回合開始時少給的 AP：多個相加。"""
-    return sum(rules.status_def(s.status_id).ap_penalty for s in unit.statuses)
+def _status_ap_penalty(definition: StatusDef, status: StatusInstance) -> int:
+    """一個狀態在回合開始時少給的 AP：``ap_penalty``（透支），或 ``ap_penalty_per_amount`` 時是
+    狀態的數值（預支，AP-2）。"""
+    if definition.ap_penalty_per_amount:
+        return status.amount or 0
+    return definition.ap_penalty
 
 
-def next_turn_ap_penalty(rules: Ruleset, unit: UnitState, *, own_turn: bool) -> int:
-    """下一個自己回合開始時會少給的 AP（AP-1 第 6 項，AP 列的紅斜線）：``ap_penalty`` 狀態裡到那時
-    還在的。``expires: turn_end`` 的狀態在自己回合結束時 −1，所以自己的回合中只剩 1 回合的（已經
-    在這回合扣過）不算；不在自己回合時都算。"""
+def ap_penalty(rules: Ruleset, unit: UnitState, *, borrowed: bool | None = None) -> int:
+    """``ap_penalty`` 狀態（透支，Phase 3-50；預支，AP-2）在回合開始時少給的 AP：多個相加。
+    ``borrowed`` 為 ``True``／``False`` 時只算預支／只算預支以外的（AP 列的用字）。"""
     total = 0
     for status in unit.statuses:
         definition = rules.status_def(status.status_id)
-        if definition.ap_penalty == 0:
+        if borrowed is None or definition.ap_penalty_per_amount is borrowed:
+            total += _status_ap_penalty(definition, status)
+    return total
+
+
+def next_turn_ap_penalty(
+    rules: Ruleset, unit: UnitState, *, own_turn: bool, borrowed: bool | None = None
+) -> int:
+    """下一個自己回合開始時會少給的 AP（AP-1 第 6 項，AP 列的紅斜線）：``ap_penalty`` 狀態裡到那時
+    還在的。``expires: turn_end`` 的狀態在自己回合結束時 −1，所以自己的回合中只剩 1 回合的（已經
+    在這回合扣過）不算；不在自己回合時都算。``borrowed`` 同 :func:`ap_penalty`。"""
+    total = 0
+    for status in unit.statuses:
+        definition = rules.status_def(status.status_id)
+        if borrowed is not None and definition.ap_penalty_per_amount is not borrowed:
+            continue
+        penalty = _status_ap_penalty(definition, status)
+        if penalty == 0:
             continue
         ends_now = definition.expires == "turn_end" and status.remaining is not None
         if ends_now and own_turn and status.remaining is not None and status.remaining <= 1:
             continue
-        total += definition.ap_penalty
+        total += penalty
     return total
 
 

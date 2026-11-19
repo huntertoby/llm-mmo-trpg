@@ -426,6 +426,7 @@ def test_rule_rewrite_primitives_are_hand_written_only() -> None:
         "redirect_damage",
         "copy_skill",
         "extra_reaction",
+        "borrow_ap",  # AP-2：組合器只由第 4 項的獨立串流產生
     }
     for seed in range(60):
         skill = compose_random_skill(seed, rarity="epic", skeleton="aura")

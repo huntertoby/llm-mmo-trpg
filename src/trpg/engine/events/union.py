@@ -100,6 +100,7 @@ from trpg.engine.events.objects import (
 from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
 from trpg.engine.events.prep import PrepPlaced, PrepSkipped
 from trpg.engine.events.rules import (
+    ApBorrowed,
     ApGranted,
     ApRefunded,
     BombExploded,
@@ -261,6 +262,7 @@ type Event = Annotated[
     | TrapTriggered
     | TrapExpired
     | SourceChanged
+    | ApBorrowed
     | ApGranted
     | ApRefunded
     | UnitRevived

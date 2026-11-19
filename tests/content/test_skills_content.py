@@ -76,6 +76,7 @@ def test_all_demo_skills_load_and_cover_shapes_and_primitives() -> None:
         "absorb_surface",  # SK-2：新原語，還沒放進骨架與內建技能（接進出題待 PM 決定）
         "contagion",  # SK-2：同上
         "hook",  # SK-2：同上
+        "borrow_ap",  # AP-2 第 1 項：基本款預支技能在第 2 項加入
     }
     assert all(s.skeleton in SKELETON_IDS for s in skills)
     assert lib.ruleset.skill_def("skill_ashen_oath").name_zh == "灰燼誓約"

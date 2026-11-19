@@ -7,6 +7,10 @@
 - ``grant_ap``：目標立刻獲得 AP，超過本回合上限（:func:`ap_cap`）的部分不保留；目標不在自己的
   回合時，AP 存進 ``ap_pending``，在它下次回合開始時加上（同樣不超過上限）。同一單位每輪最多被給
   一次，之後的給予發出 ``effect_fizzled``（``already_granted``）。
+- ``borrow_ap``（AP-2，#168）：施放者本回合多 ``amount`` AP（不超過 :func:`ap_cap`），實際多出來的
+  在下一個回合開始時扣回（狀態 ``borrowed_ap`` 的數值，同一回合預支兩次時相加）；這回合不保留 AP
+  （``UnitState.ap_borrowed``，:func:`trpg.engine.turns.end_turn`）。一點都給不了時發出
+  ``effect_fizzled``（``ap_cap``），也不扣下回合。
 - ``extra_reaction``（Phase 3C-4b）：目標本輪的反應次數上限 +``amount``，每輪開始時歸零。
 - ``reset_cooldown``：目標的冷卻歸零（``which: all`` 全部、``tag`` 只有帶該標籤的技能——含修正規則
   加上的標籤）；花源力的技能（``cost.source``）與施放的這個技能本身不重置；施放者自己不受影響。
@@ -15,15 +19,25 @@
 from __future__ import annotations
 
 from trpg.content.rules import CoreRules
-from trpg.content.skills import EffectSpec, SkillDef
+from trpg.content.skills import BORROWED_AP_STATUS, EffectSpec, SkillDef
 from trpg.engine import modifiers
 from trpg.engine.context import Ctx
-from trpg.engine.events import ApGranted, EffectFizzled, ReactionsGranted, SkillCooldownChanged
+from trpg.engine.effects import execute
+from trpg.engine.effects.models import ApplyStatusEffect
+from trpg.engine.events import (
+    ApBorrowed,
+    ApGranted,
+    EffectFizzled,
+    ReactionsGranted,
+    SkillCooldownChanged,
+)
 from trpg.engine.gear.core import cap_ap_gain
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
     "ap_cap",
+    "borrow_ap",
+    "borrow_gain",
     "gear_grant_ap",
     "grant_ap",
     "grant_ap_problem",
@@ -71,6 +85,47 @@ def grant_ap(ctx: Ctx, caster: UnitState, target: UnitState, amount: int) -> Non
         amount=after - before,
         ap_after=after,
         deferred=deferred,
+    )
+
+
+def borrow_gain(core: CoreRules, unit: UnitState, amount: int) -> int:
+    """``unit`` 現在預支 ``amount`` AP 實際拿得到的 AP（不超過本回合上限，AP-2；AI 的估計也
+    用它）。"""
+    return max(0, min(unit.ap + amount, ap_cap(core, unit)) - unit.ap)
+
+
+def borrow_ap(ctx: Ctx, unit: UnitState, skill_id: str, amount: int) -> None:
+    """``borrow_ap`` 的結算（見模組說明）。"""
+    gain = borrow_gain(ctx.core, unit, amount)
+    if gain <= 0:
+        ctx.emit(EffectFizzled, effect_kind="borrow_ap", pos=unit.pos, reason="ap_cap")
+        return
+    unit.ap += gain
+    unit.ap_borrowed += gain
+    existing = unit.get_status(BORROWED_AP_STATUS)
+    duration = ctx.rules.status_def(BORROWED_AP_STATUS).duration
+    owed = gain
+    if existing is not None and existing.remaining == duration:  # 這回合已經預支過：相加
+        owed += existing.amount or 0
+    execute(
+        ctx,
+        [
+            ApplyStatusEffect(
+                source_id=unit.id,
+                target_id=unit.id,
+                status_id=BORROWED_AP_STATUS,
+                amount=owed,
+                self_paid=True,
+            )
+        ],
+    )
+    ctx.emit(
+        ApBorrowed,
+        unit_id=unit.id,
+        skill_id=skill_id,
+        amount=gain,
+        ap_after=unit.ap,
+        next_turn_loss=owed,
     )
 
 

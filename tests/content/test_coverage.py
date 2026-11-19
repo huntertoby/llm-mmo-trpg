@@ -29,9 +29,11 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "absorb_surface": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "contagion": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "hook": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
+        "borrow_ap": "AP-2 第 1 項：基本款預支技能在第 2 項加入",
     },
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
+        "borrowed_ap": "AP-2 第 1 項：預支（borrow_ap）施加，基本款預支技能在第 2 項加入",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
         "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "array_ward": "只由陣眼石靈範本的 opening_statuses 開場掛上（5A-M2b），沒有技能施加",

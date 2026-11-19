@@ -45,6 +45,7 @@ BUDGET_PATHS = (
     "contagion_points",
     "reroll_budget_permille",  # SK-3b：重擲的預算
     "absorb_surface_points",
+    "borrow_ap_points",  # AP-2：預支的預算點數
     "flash_cost.damage_rungs",  # FL-1a：閃現蓄力、輕巧的調整幅度
     "flash_cost.magnitude_step",
     "flash_transform.companion_power_permille",  # TF-1：伴生、護主的縮小幅度與輪數

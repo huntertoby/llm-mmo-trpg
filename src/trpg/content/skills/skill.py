@@ -26,6 +26,7 @@ from trpg.content.skills.constants import (
     _ZONE_ONLY_FIELDS,
     ADD_STACK,
     BACKLASH_TYPES,
+    BORROW_AP,
     BUILTIN_GATHER_SHAPES,
     CHARGE_THROUGH,
     CONSUME_STACK,
@@ -264,6 +265,22 @@ class SkillDef(ContentModel):
             raise ValueError("只有修正型被動（kind: modifier）可以填 exclusive_group")
         return self
 
+    @property
+    def borrows_ap(self) -> bool:
+        """帶預支原語（``borrow_ap``，AP-2）的技能：唯一可以 0 AP 的主動技。"""
+        return any(effect.type == BORROW_AP for effect in self.effects)
+
+    def _check_ap_cost(self) -> None:
+        """主動技能的 AP：1～3；帶預支（AP-2，06 6.3「⚠ 0 AP 例外」）的必須是 0，也只有它可以 0。"""
+        if self.borrows_ap:
+            if self.ap_cost != 0:
+                raise ValueError(
+                    f"帶預支（borrow_ap）的主動技能 ap_cost 必須是 0，收到 {self.ap_cost}"
+                )
+            return
+        if self.ap_cost is None or not 1 <= self.ap_cost <= _MAX_AP_COST:
+            raise ValueError(f"主動技能的 ap_cost 必須是 1 到 {_MAX_AP_COST}，收到 {self.ap_cost}")
+
     @model_validator(mode="after")
     def _check(self) -> SkillDef:
         if self.kind == "modifier":
@@ -278,10 +295,7 @@ class SkillDef(ContentModel):
                     f"只有修正技能（kind: modifier）可以有 modifiers，收到 {self.kind}"
                 )
         if self.kind == "active":
-            if self.ap_cost is None or not 1 <= self.ap_cost <= _MAX_AP_COST:
-                raise ValueError(
-                    f"主動技能的 ap_cost 必須是 1 到 {_MAX_AP_COST}，收到 {self.ap_cost}"
-                )
+            self._check_ap_cost()
         elif self.ap_cost is not None:
             raise ValueError(f"{self.kind} 技能的 ap_cost 必須為 null（不花 AP）")
         self._check_self_costs()

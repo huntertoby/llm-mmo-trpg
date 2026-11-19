@@ -239,6 +239,7 @@ def test_composition_rules_cover_the_known_primitives() -> None:
     assert rules["charge_through"].allowed_shapes == ("ground_tile",)
     assert rules["gamble"].position == "last"
     assert {p for p, r in rules.items() if r.sole_effect} == {
+        "borrow_ap",  # AP-2：0 AP 主動技唯一的效果
         "copy_skill",
         "enter_form",
         "rule_change",

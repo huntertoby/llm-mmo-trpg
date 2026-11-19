@@ -111,6 +111,7 @@ from trpg.engine.events.objects import (
 from trpg.engine.events.parts import PartBroken, PartDamaged, PartStatDown, SkillSealed
 from trpg.engine.events.prep import PrepPlaced, PrepSkipped
 from trpg.engine.events.rules import (
+    ApBorrowed,
     ApGranted,
     ApRefunded,
     BombCause,
@@ -189,6 +190,7 @@ __all__ = [
     "EVENT_LIST_ADAPTER",
     "ActivationExpired",
     "AdvantageState",
+    "ApBorrowed",
     "ApGranted",
     "ApRefunded",
     "AttackIntercepted",
