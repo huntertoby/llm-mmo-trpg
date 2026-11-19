@@ -218,13 +218,20 @@ def _build_ruleset(root: Path, t: _BaseTables, races: RaceTable | None) -> Rules
 
 
 def _check_composer_objects(root: Path, t: _BaseTables) -> None:
-    """組合器的造牆排除清單（NW-3c）只能寫 ``objects.yaml`` 的物件。"""
+    """組合器的造牆排除清單（NW-3c）只能寫 ``objects.yaml`` 的物件；吸血配方的骨架（SK-4）只能寫
+    已有的骨架。"""
     known = {o.id for o in t.objects.objects}
     unknown = sorted(set(t.composer.structure.obstacle_exclude) - known)
     if unknown:
         raise ContentError(
             root / "skill_composer.yaml",
             f"structure.obstacle_exclude 有不存在的物件：{', '.join(unknown)}",
+        )
+    missing = sorted(set(t.composer.structure.lifesteal_skeletons) - set(t.skeletons))
+    if missing:  # SK-4：吸血配方的骨架
+        raise ContentError(
+            root / "skill_composer.yaml",
+            f"structure.lifesteal_skeletons 有不存在的骨架：{', '.join(missing)}",
         )
 
 

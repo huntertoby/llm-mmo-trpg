@@ -777,6 +777,34 @@ def build_effects(ctx: Ctx, core: list[str]) -> None:
     _dash_first(ctx)
     _gamble_last(ctx)
     _absorb_secondary(ctx)
+    _lifesteal_damage(ctx)
+
+
+def _lifesteal_damage(ctx: Ctx) -> None:
+    """吸血配方（SK-4，玩法交接 4.1.34 第 10 點；06 6.18 A）：
+    ``structure.lifesteal_skeletons`` 的骨架（打擊、範圍），以 ``structure.lifesteal_permille`` 的
+    機率在第一個對敵的傷害效果（沒有聖光雙效）附上 ``lifesteal_permille``（值
+    ``structure.lifesteal_amount_permille``）。不新增效果，預算由 :mod:`~trpg.skillgen.budget`
+    照吸血計價、之後的旋鈕重調。用 ``composer.lifesteal`` 的獨立串流抽，沒抽中的種子得到與加入
+    配方之前完全相同的技能。"""
+    rules = ctx.rules.structure
+    if ctx.skeleton.id not in rules.lifesteal_skeletons:
+        return
+    damage = next(
+        (
+            e
+            for e in ctx.effects
+            if e["type"] == "damage"
+            and not e.get("split_heal")
+            and (e.get("affects") or default_affects(ctx.primitive("damage"))) == "enemies"
+        ),
+        None,
+    )
+    if damage is None or "lifesteal_permille" in damage:
+        return
+    if not ctx.rng.fork("composer.lifesteal").chance_permille(rules.lifesteal_permille):
+        return
+    damage["lifesteal_permille"] = rules.lifesteal_amount_permille
 
 
 def _blow_secondary(ctx: Ctx) -> None:
