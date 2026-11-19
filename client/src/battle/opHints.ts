@@ -8,7 +8,8 @@ export const OP_HINT_LIMIT = 3;
 export const OP_HINTS_KEY = "trpg.opHints.v1";
 
 /** 說明句的種類：同一種共用次數。 */
-export type OpHintKind = "move" | "copy" | "target" | "vault" | "defend" | "self" | "aside" | "composite" | "hurl" | "order";
+// AR-SK4（美術 PM 驗收）：戰前佈置選格（`prep`）自己計次，不和一般選目標（`target`）共用。
+export type OpHintKind = "move" | "copy" | "target" | "vault" | "defend" | "self" | "aside" | "composite" | "hurl" | "order" | "prep";
 
 /** 讀寫次數用的儲存區（測試可換成假的）。 */
 export interface HintStore {
