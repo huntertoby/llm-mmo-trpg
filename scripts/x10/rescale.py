@@ -1,12 +1,20 @@
-"""量類 ×10 換算（X10-1；``docs/design/05-戰鬥.md`` 5.4.1，#169 題 10）：欄位清單的檢查。
+"""量類 ×10 換算（X10-1；``docs/design/05-戰鬥.md`` 5.4.1，#169 題 10）。
 
-``scripts/x10/fields.yaml`` 列出 ``content/`` 每個數字欄位是 ×10、不變或待定。
+照 ``scripts/x10/fields.yaml`` 的欄位清單，把 ``content/`` 裡標 ``scale`` 的數字乘 10。
 
 用法::
 
     uv run python scripts/x10/rescale.py --check          # 檢查清單（有問題時結束碼 1）
     uv run python scripts/x10/rescale.py --unclassified   # 列出清單沒涵蓋的數字欄位
     uv run python scripts/x10/rescale.py --stats          # 清單統計
+    uv run python scripts/x10/rescale.py --dry-run --csv docs/phases/X10-換算預覽.csv
+    uv run python scripts/x10/rescale.py                  # 真的改寫 content/（X10-2 才跑）
+
+改寫方式和數值工坊的 ``yaml_patch`` 相同：用 ``yaml.compose`` 拿到純量的位置，只替換那段文字，
+註解、縮排、行尾（LF／CRLF）、BOM 都不動；改完重新 parse，必須等於「原資料只把那幾個值乘 10」。
+
+防止跑兩次（變成 ×100）：改過的檔第一行加上 :data:`MARKER` 註解；``content/`` 裡任何一個檔已經有
+這行就整批拒絕，一個檔也不寫。
 
 欄位清單的路徑語法（每段用 ``.`` 分開）：
 
@@ -23,13 +31,14 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import fnmatch
 import re
 import sys
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Final
+from typing import Final, TextIO
 
 import yaml
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
@@ -37,12 +46,16 @@ from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 ROOT: Final = Path(__file__).resolve().parents[2]
 CONTENT_DIR: Final = ROOT / "content"
 FIELDS_PATH: Final = Path(__file__).resolve().parent / "fields.yaml"
+FACTOR: Final = 10
+MARKER: Final = "# x10: 量類已 ×10（scripts/x10/rescale.py，#169 題 10）"
 CATEGORIES: Final = ("scale", "keep", "pending", "unit_change")
 _INT_TAG: Final = "tag:yaml.org,2002:int"
 _FLOAT_TAG: Final = "tag:yaml.org,2002:float"
+_PLAIN_INT: Final = re.compile(r"[-+]?[0-9]+")
 _BOM: Final = "﻿"
 _ABSENT: Final = "~"
 _QUOTE: Final = '"'
+_ANCHOR: Final = re.compile(r"(?:&\S+[ \t]+)?")
 
 
 class RescaleError(ValueError):
@@ -384,6 +397,135 @@ def problems(result: Classified) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# 換算
+
+
+@dataclass(frozen=True, slots=True)
+class Change:
+    file: str
+    path: str
+    old: str
+    new: str
+    start: int
+    end: int
+
+
+def _scaled(leaf: Leaf) -> str:
+    node = leaf.node
+    if node.tag != _INT_TAG or node.style is not None or not _PLAIN_INT.fullmatch(node.value):
+        raise RescaleError(
+            f"{leaf.file} {leaf.display()}：只換算沒加引號的十進位整數，這裡是 {node.value!r}"
+        )
+    return str(int(node.value) * FACTOR)
+
+
+def _check_aliases(result: Classified) -> None:
+    """YAML 錨點（``&a``／``*a``）共用的純量，從每條路徑看都要是 ×10；否則沒辦法只改一處。"""
+    scaled = {(leaf.file, leaf.start) for leaf in result.by_category["scale"]}
+    for category in CATEGORIES[1:]:
+        for leaf in result.by_category[category]:
+            if (leaf.file, leaf.start) in scaled:
+                raise RescaleError(
+                    f"{leaf.file} {leaf.display()}：和 ×10 的欄位共用 YAML 錨點，卻列在 {category}"
+                )
+
+
+def plan(result: Classified | None = None) -> list[Change]:
+    """要改的每一筆（錨點共用的純量只算一次，引用它的地方一起變）。"""
+    result = classify() if result is None else result
+    blockers = problems(result)
+    if blockers:
+        raise RescaleError("欄位清單有問題：\n" + "\n".join(blockers[:50]))
+    _check_aliases(result)
+    changes: dict[tuple[str, int], Change] = {}
+    for leaf in result.by_category["scale"]:
+        end = int(leaf.node.end_mark.index)
+        change = Change(leaf.file, leaf.display(), leaf.value, _scaled(leaf), leaf.start, end)
+        changes.setdefault((leaf.file, leaf.start), change)
+    return sorted(changes.values(), key=lambda c: (c.file, c.start))
+
+
+def marked_files(content_dir: Path = CONTENT_DIR) -> list[str]:
+    return [
+        p.relative_to(content_dir).as_posix()
+        for p in content_files(content_dir)
+        if MARKER in _read(p)
+    ]
+
+
+def _leaf_values(text: str) -> list[tuple[tuple[str | int, ...], int, object]]:
+    """每個數字欄位的（路徑, 起始位置, 值）；路徑只用鍵與索引。"""
+    node = compose(text)
+    if node is None:
+        return []
+    return [
+        (
+            tuple(s.key if s.key is not None else s.index for s in leaf.steps),
+            leaf.start,
+            yaml.safe_load(leaf.node.value),
+        )
+        for leaf in _walk(node, "", ())
+    ]
+
+
+def _apply_text(text: str, changes: Sequence[Change]) -> str:
+    """``changes`` 的位置以去掉 BOM 之後的文字計；第一行加上 :data:`MARKER`。"""
+    bom = _BOM if text.startswith(_BOM) else ""
+    body = text.removeprefix(_BOM)
+    for change in sorted(changes, key=lambda c: c.start, reverse=True):
+        # 有錨點（``&a 10``）時節點從 ``&`` 開始，數字在最後
+        head = body[change.start : change.end].removesuffix(change.old)
+        if head + change.old != body[change.start : change.end] or not _ANCHOR.fullmatch(head):
+            raise RescaleError(f"{change.file} {change.path}：位置對不上（{change.old!r}）")
+        body = body[: change.end - len(change.old)] + change.new + body[change.end :]
+    newline = "\r\n" if "\r\n" in body else "\n"
+    return bom + MARKER + newline + body
+
+
+def rewrite(changes: Sequence[Change], content_dir: Path = CONTENT_DIR) -> dict[str, str]:
+    """算出每個檔改寫後的文字並驗證（不寫檔）。"""
+    by_file: dict[str, list[Change]] = {}
+    for change in changes:
+        by_file.setdefault(change.file, []).append(change)
+    out: dict[str, str] = {}
+    for rel, items in sorted(by_file.items()):
+        if not rel.endswith((".yaml", ".yml")):
+            raise RescaleError(f"{rel}：只能改 YAML（JSON 沒辦法加註解標記）")
+        old_text = _read(content_dir / rel)
+        new_text = _apply_text(old_text, items)
+        starts = {c.start for c in items}
+        expected = [
+            (keys, value * FACTOR if start in starts else value)  # type: ignore[operator]
+            for keys, start, value in _leaf_values(old_text)
+        ]
+        after = [(keys, value) for keys, _start, value in _leaf_values(new_text)]
+        if after != expected:
+            raise RescaleError(f"{rel}：改寫後重新 parse 的結果不對")
+        out[rel] = new_text
+    return out
+
+
+def apply(changes: Sequence[Change], content_dir: Path = CONTENT_DIR) -> list[str]:
+    """寫回 ``content/``。已經有 :data:`MARKER` 的話整批拒絕（防止 ×100）。"""
+    done = marked_files(content_dir)
+    if done:
+        raise RescaleError(
+            f"content/ 已經換算過（{len(done)} 個檔有 x10 標記，例如 {done[0]}），拒絕再乘一次"
+        )
+    texts = rewrite(changes, content_dir)
+    for rel, text in texts.items():
+        (content_dir / rel).write_bytes(text.encode("utf-8"))
+    return sorted(texts)
+
+
+def write_csv(changes: Sequence[Change], out: TextIO) -> None:
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(["file", "path", "old", "new"])
+    for change in changes:
+        writer.writerow([change.file, change.path, change.old, change.new])
+
+
+# ---------------------------------------------------------------------------
 # CLI
 
 
@@ -418,23 +560,44 @@ def _unclassified_summary(result: Classified) -> str:
     )
 
 
+def _run(args: argparse.Namespace) -> int:
+    changes = plan()
+    if not args.dry_run:
+        written = apply(changes)
+        print(f"已換算 {len(changes)} 筆，{len(written)} 個檔")
+        return 0
+    rewrite(changes)  # 驗證改寫可行，但不寫檔
+    if args.csv:
+        with args.csv.open("w", encoding="utf-8", newline="") as fh:
+            write_csv(changes, fh)
+    else:
+        write_csv(changes, sys.stdout)
+    files = len({c.file for c in changes})
+    print(f"dry-run：{len(changes)} 筆，{files} 個檔", file=sys.stderr)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="量類 ×10 換算（scripts/x10/fields.yaml）")
+    parser.add_argument("--dry-run", action="store_true", help="不寫檔，只輸出換算預覽 CSV")
+    parser.add_argument("--csv", type=Path, help="dry-run 的 CSV 寫到這個檔（預設印到標準輸出）")
     parser.add_argument("--check", action="store_true", help="檢查清單，有問題時結束碼 1")
     parser.add_argument("--unclassified", action="store_true", help="列出清單沒涵蓋的數字欄位")
     parser.add_argument("--stats", action="store_true", help="清單統計")
     args = parser.parse_args(argv)
 
     try:
-        result = classify()
-        found = problems(result)
-        if args.unclassified:
-            print(_unclassified_summary(result))
-        if args.check:
-            print("\n".join(found) if found else "欄位清單沒有問題")
-        if args.stats:
-            print(stats(result))
-        return 1 if args.check and found else 0
+        if args.check or args.unclassified or args.stats:
+            result = classify()
+            found = problems(result)
+            if args.unclassified:
+                print(_unclassified_summary(result))
+            if args.check:
+                print("\n".join(found) if found else "欄位清單沒有問題")
+            if args.stats:
+                print(stats(result))
+            return 1 if args.check and found else 0
+        return _run(args)
     except RescaleError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
         return 1
