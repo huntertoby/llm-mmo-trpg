@@ -36,7 +36,7 @@ function wishData(elementMax: number): WishData {
   };
 }
 
-describe("AR-SK4 元素名額：物理另外算", () => {
+describe("AR-SK4 元素名額：物理不佔名額", () => {
   it("只有元素類、而且清單裡有物理時才套用", () => {
     expect(physicalSlot("elements", ELEMENTS)).toBe(true);
     expect(physicalSlot("elements", ELEMENTS.slice(1))).toBe(false);
@@ -85,11 +85,14 @@ describe("AR-SK4 元素名額：物理另外算", () => {
     expect(tagShownMax(2, true)).toBe(1);
   });
 
-  it("面板：元素類寫物理以外的上限＋「（物理另外算）」，其他類照舊", () => {
+  it("面板：元素類照定案字（1 階「最多 1 個（可另加物理）」、2 階起「最多 2 個（可另加物理）」），其他類照舊", () => {
+    expect(WISH_ZH.tagMaxPhysical(1)).toBe("最多 1 個（可另加物理）");
+    expect(WISH_ZH.tagMaxPhysical(2)).toBe("最多 2 個（可另加物理）");
     const html = renderToStaticMarkup(createElement(WishPanel, { wish: wishData(2), busy: false, fallback: null, onWish: () => {} }));
-    expect(html).toContain(WISH_ZH.tagMaxPhysical(1));
+    expect(html).toContain("最多 1 個（可另加物理）");
+    expect(html).not.toContain("物理另外算");
     expect(html).toContain(WISH_ZH.tagMax(2)); // 關鍵字、效果類型
     const tier2 = renderToStaticMarkup(createElement(WishPanel, { wish: wishData(3), busy: false, fallback: null, onWish: () => {} }));
-    expect(tier2).toContain(WISH_ZH.tagMaxPhysical(2));
+    expect(tier2).toContain("最多 2 個（可另加物理）");
   });
 });
