@@ -325,6 +325,10 @@ export function borrowArt(c: Ctx, o: QOpts): void {
   gem(c, o, -2.5, -2.5, 8.3);
   halo(c, o, (q) => slot(q, o, 5.3, 5.3, 4.3));
 }
+/** AP-2 預支的專屬圖樣（取代 EFFECT_ALIAS 暫借的給予 AP）：和狀態「預支」同一個圖，不另加「＋」（美術 PM 裁定 1）。 */
+const AP2_EFFECT: PartTable = {
+  borrow_ap: { zh: "預支", topic: "左上一顆大的橘色寶石菱形（AP 列「預支來的那格」），右下一個深色小圓洞、灰框裡一道紅斜線（AP 列「下回合會少的那格」）", d: (c, o) => borrowArt(c, o) },
+};
 /** SK-3 重擲的專屬圖樣（取代 EFFECT_ALIAS 暫借的替隊友擋攻擊）。 */
 const SK3_EFFECT: PartTable = {
   reroll: { zh: "重擲", topic: "前景一顆淡紫二十面骰（右下、大），後面一顆往左上退、縮小、變灰的骰子（同演出裡被換掉的那一顆）。不用圈狀箭頭", d: (c, o) => at(c, 0, 0, 0.98, (q) => rerollArt(q, o)) },
@@ -389,9 +393,10 @@ export const EFFECT: PartTable = {
   detonate_runes: { zh: "引爆符文", topic: "符文石碑背後一圈橘色的爆炸", d: fit((c, o) => { poly(c, "#ff7a2a", starPts(0, 0, 11, 6.6, 10), 0.3); halo(c, o, (q) => at(q, 0, 0.4, 0.64, (p) => tablet(p, o))); }, 0.9) }, /* 第 2 版：縮到色環以內 */
   ...SK2_EFFECT, /* AR-SK2：加在效果表最後，前面的順序不動 */
   ...SK3_EFFECT, /* AR-SK3：重擲，加在最後 */
+  ...AP2_EFFECT, /* AR-AP2：預支，加在最後 */
 };
-/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。AR-SK2：吸收表面、疾病擴散、鉤換成專屬圖樣（`SK2_EFFECT`），拿掉三筆暫借。AR-SK3：重擲換成專屬圖樣，拿掉暫借。 */
-export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon", borrow_ap: "grant_ap" }; // AP-2：預支暫借給予 AP，待美術補畫
+/** TF-1：召喚到身邊（伴生、護主）暫借召喚的圖，等美術出圖。AR-SK2：吸收表面、疾病擴散、鉤換成專屬圖樣（`SK2_EFFECT`），拿掉三筆暫借。AR-SK3：重擲換成專屬圖樣，拿掉暫借。AR-AP2：預支換成專屬圖樣，拿掉暫借。 */
+export const EFFECT_ALIAS: Readonly<Record<string, string>> = { teleport_target: "swap", swap_any: "swap", summon_beside: "summon" };
 
 // =====================================================================
 // 表面 1 個形（8 種表面染色；第 3 批的地面效果記號，依表面換外形）

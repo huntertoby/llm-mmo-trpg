@@ -37,6 +37,15 @@ describe("1. 狀態「預支」borrowed_ap", () => {
     expect(card).toContain("#b3a994");
     expect(card).toContain("#ff4a5a");
   });
+  it("2. 效果「預支」borrow_ap：EFFECT 有專屬圖（和狀態同一個圖、不加「＋」），EFFECT_ALIAS 拿掉暫借的給予 AP", () => {
+    expect(QP.EFFECT_ALIAS.borrow_ap).toBeUndefined();
+    expect(QP.EFFECT.borrow_ap?.zh).toBe("預支");
+    expect(Object.keys(QP.EFFECT).at(-1)).toBe("borrow_ap"); /* 加在表最後 */
+    for (const cpx of [19.7, 17.0, 11.8]) {
+      const o = opts(cpx);
+      expect(calls((c) => QP.entry("effect", "borrow_ap").d(c, o))).toEqual(calls((c) => QP.borrowArt(c, o)));
+    }
+  });
   it("色：亮面、桌面、那格的框照混色算（#ffc793、#ffac5d、#b3a994）", () => {
     expect(QP.BORROW.hi).toBe("#ffc793");
     expect(QP.SLOT_ICON.ring).toBe("#b3a994");
