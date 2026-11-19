@@ -1307,8 +1307,10 @@ def _cost_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         fields.append(_overdraft_field(library))
     fields += _legendary_fields(draft, library)
     allowance = library.budget.allowance
+    scale = library.ruleset.core.quantity_scale  # X10-2a：法力每 scale 點
+    per = "每點" if scale == 1 else f"每 {scale} 點"
     notes = (
-        f"代價越重可用預算越多：冷卻每回合 +{allowance.cooldown_per_turn}‰、法力每點 "
+        f"代價越重可用預算越多：冷卻每回合 +{allowance.cooldown_per_turn}‰、法力{per} "
         f"+{allowance.mana_per_point}‰（耐力 {allowance.stamina_per_mana} 點折合法力 1 點）；"
         f"合計最多 +{allowance.total_cap}‰",
         "沒有冷卻的技能不能用大範圍形狀（互斥規則）",

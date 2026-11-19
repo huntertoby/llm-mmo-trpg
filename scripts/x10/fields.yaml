@@ -502,10 +502,9 @@ groups:
 
   # ------------------------------------------------------------------ 預算
   - files: skill_budget.yaml
-    unit_change:
-      - allowance.mana_per_point                  # 每 1 法力 5‰ → 每 10 法力 5‰（整數放不下 0.5，欄位格式要改）
-      - restore_mana_point_permille               # 回復每點法力 700‰ → 70‰（或改成每 10 點 700‰）
     keep:
+      - allowance.mana_per_point                  # X10-2a：程式改成「每 quantity_scale 點法力」計價，值不變
+      - restore_mana_point_permille               # X10-2a：同上，每 quantity_scale 點法力 700‰，值不變
       - allowance.stamina_per_mana                # 耐力與法力一起 ×10，比例不變
       - allowance.stance_upkeep_per_point         # 技能的 stance_upkeep 點數不變（見 forms.yaml）
       - allowance.hp_per_permille                 # hp_percent 是百分比

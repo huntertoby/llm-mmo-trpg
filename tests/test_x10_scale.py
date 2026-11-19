@@ -5,12 +5,17 @@
 
 from __future__ import annotations
 
+import dataclasses
+from typing import Any
+
 import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, template, with_rolls
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import CoreRules
+from trpg.content.skills import SkillDef
+from trpg.content.summons import summon_dpr
 from trpg.engine import Attack, BattleState, resolve
 from trpg.engine.effects import (
     ApplyStatusEffect,
@@ -22,6 +27,7 @@ from trpg.engine.effects import (
 from trpg.engine.events import AttackRolled, DamageDealt, Healed, ShieldGained
 from trpg.engine.preview import dice_distribution
 from trpg.shared.types import Team, UnitId
+from trpg.skillgen.budget import skill_budget
 
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
@@ -91,3 +97,80 @@ def test_preview_distribution_scales_faces() -> None:
     assert dice_distribution(1, 6, 2, 10) == {
         k * 10: v for k, v in dice_distribution(1, 6, 2).items()
     }
+
+
+# ---------------------------------------------------------------------------
+# 預算：固定值 ÷ scale，同一招換算前後點數相同
+
+
+def scaled_library(library: ContentLibrary, scale: int = 10) -> ContentLibrary:
+    """只把 ``core.quantity_scale`` 換掉的內容庫（內容本身沒換算）。"""
+    core = library.ruleset.core.model_copy(update={"quantity_scale": scale})
+    ruleset = library.ruleset.model_copy(update={"core": core})
+    return dataclasses.replace(library, ruleset=ruleset)
+
+
+def _times_ten(node: Any) -> Any:
+    """技能資料裡的量類 ×10：代價的法力與耐力、``flat_bonus``、回復法力的 ``amount``。"""
+    if isinstance(node, list):
+        return [_times_ten(v) for v in node]
+    if not isinstance(node, dict):
+        return node
+    out = {k: _times_ten(v) for k, v in node.items()}
+    if isinstance(out.get("flat_bonus"), int):
+        out["flat_bonus"] *= 10
+    if (
+        out.get("type") == "restore_resource"
+        and out.get("resource") == "mana"
+        and out.get("amount")
+    ):
+        out["amount"] *= 10
+    cost = out.get("cost")
+    if isinstance(cost, dict):
+        out["cost"] = {
+            k: v * 10 if k in ("mana", "stamina") and isinstance(v, int) else v
+            for k, v in cost.items()
+        }
+    return out
+
+
+def _quantity_skills(library: ContentLibrary) -> list[SkillDef]:
+    def has(node: Any) -> bool:
+        if isinstance(node, list):
+            return any(has(v) for v in node)
+        if not isinstance(node, dict):
+            return False
+        if node.get("flat_bonus") or (node.get("type") == "restore_resource"):
+            return True
+        return any(has(v) for v in node.values())
+
+    out = []
+    for skill in library.ruleset.skills.skills:
+        data = skill.model_dump(mode="json", exclude_none=True)
+        quantity = has(data.get("effects")) or skill.cost.mana or skill.cost.stamina
+        if quantity and not any(e.type == "summon" for e in skill.effects):
+            out.append(skill)
+    return out
+
+
+def test_budget_points_same_before_and_after_x10(library: ContentLibrary) -> None:
+    ten = scaled_library(library)
+    skills = _quantity_skills(library)
+    assert len(skills) > 100
+    flat = restore = 0
+    for skill in skills:
+        data = _times_ten(skill.model_dump(mode="json", exclude_none=True))
+        scaled = SkillDef.model_validate(data)
+        before, after = skill_budget(skill, library), skill_budget(scaled, ten)
+        assert before.total == after.total, skill.id
+        assert [v for _, v in before.allowance_parts] == [v for _, v in after.allowance_parts]
+        flat += any(e.flat_bonus for e in skill.effects)
+        restore += any(e.type == "restore_resource" for e in skill.effects)
+    assert flat and restore  # 兩種固定值都有被比到
+
+
+def test_summon_dpr_divides_flat(library: ContentLibrary) -> None:
+    first = next(s for s in library.ruleset.summons.summons if not s.template.inert)
+    summon = first.model_copy(update={"weapon": first.weapon.model_copy(update={"flat": 2})})
+    ten = first.model_copy(update={"weapon": first.weapon.model_copy(update={"flat": 20})})
+    assert summon_dpr(ten, flat=30, scale=10) == summon_dpr(summon, flat=3)

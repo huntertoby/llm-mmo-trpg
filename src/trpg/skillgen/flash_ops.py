@@ -1454,18 +1454,19 @@ _BLOOD_BONUS_PERMILLE = 50
 def _op_blood_price(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """側變「以血支付」：法力、耐力只留 1 點（驗證器規定主動技至少花 1 點資源），其餘改付最大 HP 的
-    千分比（``cost.hp_percent``）。生命代價的折抵＝省下的法力／耐力折抵 ＋
+    """側變「以血支付」：法力、耐力只留 1 點 × ``quantity_scale``（驗證器規定主動技至少花 1 點
+    資源），其餘改付最大 HP 的千分比（``cost.hp_percent``）。生命代價的折抵＝省下的法力／耐力折抵 ＋
     :data:`_BLOOD_BONUS_PERMILLE`（不超過預算表的 ``hp_cap``），多出來的由預算器換成威力
     （「略升」）。"""
     cost = skill.cost
     if skill.kind != "active" or cost.hp_percent is not None:
         return []
-    mana, stamina = min(cost.mana, 1), min(cost.stamina, 1)
+    scale = library.ruleset.core.quantity_scale  # X10-2a：留 1 × 倍率；折抵每 scale 點計
+    mana, stamina = min(cost.mana, scale), min(cost.stamina, scale)
     allowance = library.budget.allowance
-    saved = (cost.mana - mana) * allowance.mana_per_point + (
+    saved = (cost.mana - mana) * allowance.mana_per_point // scale + (
         cost.stamina - stamina
-    ) * allowance.mana_per_point // allowance.stamina_per_mana
+    ) * allowance.mana_per_point // (allowance.stamina_per_mana * scale)
     if saved <= 0:
         return []
     hp = min(saved + _BLOOD_BONUS_PERMILLE, allowance.hp_cap) // allowance.hp_per_permille
