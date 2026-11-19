@@ -26,8 +26,12 @@ from trpg.engine.effects import (
 )
 from trpg.engine.events import AttackRolled, DamageDealt, Healed, ShieldGained
 from trpg.engine.preview import dice_distribution
+from trpg.shared.rng import Rng
 from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
+from trpg.skillgen.composer_parts import _param_range_ladder, effect_knobs, quantity_randint
+from trpg.skillgen.flash_ops import TRIGGER_FINE_OPS, trigger_fine_knobs
+from trpg.skillgen.proposal_numbers import _fill_cost
 
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
@@ -174,3 +178,50 @@ def test_summon_dpr_divides_flat(library: ContentLibrary) -> None:
     summon = first.model_copy(update={"weapon": first.weapon.model_copy(update={"flat": 2})})
     ten = first.model_copy(update={"weapon": first.weapon.model_copy(update={"flat": 20})})
     assert summon_dpr(ten, flat=30, scale=10) == summon_dpr(summon, flat=3)
+
+
+# ---------------------------------------------------------------------------
+# 組合器與 LLM：法力等範圍步距 × scale，最低花費 × scale
+
+
+def test_quantity_randint_steps_by_scale() -> None:
+    for seed in range(200):
+        one = quantity_randint(Rng(seed), 2, 4, 1)
+        ten = quantity_randint(Rng(seed), 20, 40, 10)
+        assert ten == one * 10
+
+
+def test_restore_mana_ladder_steps_by_scale(library: ContentLibrary) -> None:
+    effect = {"type": "restore_resource", "resource": "mana"}
+    knobs = dict((n, v) for n, v, _ in effect_knobs(library, effect, category="spell", weight=1))
+    assert knobs["amount"] == tuple(range(1, 11))
+    ten = scaled_library(library)
+    primitive = ten.ruleset.find_primitive("restore_resource")
+    assert primitive is not None
+    param = primitive.params["amount"]
+    knob = next(k for k in param.knobs() if k.applies("spell", effect))
+    wide = param.model_copy(update={"max": param.max * 10 if param.max else None})
+    assert _param_range_ladder(ten, knob, wide, effect) == tuple(range(10, 101, 10))
+
+
+def test_trigger_flat_bonus_steps_by_scale(library: ContentLibrary) -> None:
+    base = {"kind": "passive", "category": "spell"}
+    effects = [{"type": "heal", "dice": "1d4"}]
+    op = sorted(TRIGGER_FINE_OPS)[0]
+    top = library.flash.rules.trigger_flat_bonus
+    (one,) = trigger_fine_knobs(op, base, effects, library)
+    assert one.values == (None, *range(1, top + 1))
+    flash = library.flash.model_copy(
+        update={"rules": library.flash.rules.model_copy(update={"trigger_flat_bonus": top * 10})}
+    )
+    ten = dataclasses.replace(scaled_library(library), flash=flash)
+    (scaled,) = trigger_fine_knobs(op, base, effects, ten)
+    assert scaled.values == (None, *range(10, top * 10 + 1, 10))
+
+
+@pytest.mark.parametrize("scale", [1, 10])
+def test_minimal_cost_is_one_times_scale(library: ContentLibrary, scale: int) -> None:
+    lib = library if scale == 1 else scaled_library(library, scale)
+    out: dict[str, Any] = {"kind": "active", "category": "spell", "effects": [], "cost": {}}
+    _fill_cost(out, lib, "spell")
+    assert out["cost"]["mana"] == scale

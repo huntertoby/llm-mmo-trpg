@@ -263,8 +263,9 @@ def _fill_cost(out: dict[str, Any], library: ContentLibrary, category: str) -> N
     if active and not borrows and category in ("weapon", "spell"):
         resource = library.budget.resource_of(category)  # type: ignore[arg-type]
         cost = dict(out.get("cost") or {})
-        if not isinstance(cost.get(resource), int) or cost[resource] < 1:
-            cost[resource] = 1
+        floor = library.ruleset.core.quantity_scale  # 最低花費 1 × 量類倍率（X10-2a）
+        if not isinstance(cost.get(resource), int) or cost[resource] < floor:
+            cost[resource] = floor
         out["cost"] = cost
     if any(e.get("type") == "refund_cooldown" for _, e in _walk_effects(out, followup=False)):
         # 擊殺時冷卻歸零（4-L8b）要有冷卻可以歸零

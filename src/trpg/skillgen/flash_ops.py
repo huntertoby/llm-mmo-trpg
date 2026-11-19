@@ -1685,7 +1685,8 @@ def trigger_fine_knobs(
     if op not in TRIGGER_FINE_OPS or not top or base.get("kind") not in ("passive", "reaction"):
         return []
     spell = base.get("category") == "spell"
-    values: tuple[int | None, ...] = (None, *range(1, top + 1))
+    scale = library.ruleset.core.quantity_scale  # 固定值是量類：步距 × 倍率（X10-2a）
+    values: tuple[int | None, ...] = (None, *range(scale, top + 1, scale))
     return [
         Knob(i, "flat_bonus", values)
         for i, e in enumerate(effects)

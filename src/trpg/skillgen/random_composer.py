@@ -588,7 +588,7 @@ def _attempt_stance(
         "scaling_attr": scaling,
         "shape": {"type": "self"},
         "condition": None,
-        "cost": {"mana": rng.randint(mana.min, mana.max) + (tier - 1)},
+        "cost": {"mana": ctx.quantity_randint(mana.min, mana.max) + (tier - 1) * ctx.scale},
         "provenance": {"origin": "level_up"},
     }
     if tune(rng, library, base, ctx.effects, ctx.knobs):
