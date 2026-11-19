@@ -1,0 +1,54 @@
+{
+ "borrow": {
+  "events": [
+   {
+    "seq": 6,
+    "round": 1,
+    "type": "skill_used",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_t_prim",
+    "name_zh": "測試預支",
+    "ap": 0,
+    "mana": 0,
+    "mana_after": 155,
+    "stamina": 0,
+    "stamina_after": 24,
+    "hp_spent": 0,
+    "cooldown": null,
+    "tiles": [
+     {
+      "x": 1,
+      "y": 3
+     }
+    ],
+    "source": 0,
+    "variant": null
+   },
+   {
+    "seq": 7,
+    "round": 1,
+    "type": "status_applied",
+    "target_id": "unit_0001",
+    "status_id": "borrowed_ap",
+    "duration": 2,
+    "refreshed": false,
+    "source_id": "unit_0001"
+   },
+   {
+    "seq": 8,
+    "round": 1,
+    "type": "ap_borrowed",
+    "unit_id": "unit_0001",
+    "skill_id": "skill_t_prim",
+    "amount": 1,
+    "ap_after": 4,
+    "next_turn_loss": 1
+   }
+  ],
+  "before_ap": 3,
+  "after": {
+   "ap": 4,
+   "ap_borrowed": 1
+  }
+ }
+}

@@ -1,0 +1,75 @@
+// AR-AP2（docs/phases/PhaseAR-AP2計畫.md）：預支三樣暫借換成美術的圖（docs/art/AP-2-美術.md 第 1 節、5.1、5.2；樣張 docs/art/sample/ap2Borrow.js）。
+import { afterEach, describe, expect, it } from "vitest";
+import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
+import { setQCanvasFactory, type Ctx, type QOpts } from "./qIcon/core";
+import * as QP from "./qIcon/parts";
+import * as QT from "./qIcon/status";
+import { PRIMITIVE_PLAYS } from "./skillClips";
+
+afterEach(() => setQCanvasFactory(null));
+
+/** 用假畫布畫一次，回傳呼叫紀錄（`halo` 另建的畫布記在同一份）。 */
+function calls(draw: (c: Ctx) => void): string[] {
+  const log: FakeCanvasLog = { calls: [] };
+  const make = fakeCanvasFactory(log);
+  setQCanvasFactory((w, h) => make(w, h));
+  const cv = make(48, 48);
+  draw(cv.getContext("2d") as Ctx);
+  return log.calls ?? [];
+}
+/** 圖樣本身 `cpx` px 的選項（同 `core.render`：u＝48 ÷ 圖樣格邊長＝48 ÷ (cpx × BOX)）。 */
+const opts = (cpx: number): QOpts => ({ small: cpx <= 24, tiny: cpx <= 14, owPx: 0, badge: false, u: 48 / (cpx * QP.BOX) });
+
+describe("1. 狀態「預支」borrowed_ap", () => {
+  it("和效果「預支」同一個函式（borrowArt）；不再畫透支的黃閃電", () => {
+    const d = QT.NEW.borrowed_ap!.d;
+    for (const cpx of [20, 12.4, 10.4, 6.4]) {
+      const o = opts(cpx);
+      expect(calls((c) => d(c, o))).toEqual(calls((c) => QP.borrowArt(c, o)));
+    }
+    expect(calls((c) => d(c, opts(12.4))).join(";")).not.toContain("#ffd23a");
+  });
+  it("頭頂 11（圖樣本身 <8 px）只留菱形、中間挖一個深色小菱形；狀態卡 20、說明行 16 是菱形＋右下那格", () => {
+    const head = calls((c) => QP.borrowArt(c, opts(6.4))).join(";");
+    expect(head).toContain("#ff9a3a");
+    expect(head).toContain("#16121a");
+    expect(head).not.toContain("#b3a994"); /* 沒有那格的灰框 */
+    const card = calls((c) => QP.borrowArt(c, opts(12.4))).join(";");
+    expect(card).toContain("#b3a994");
+    expect(card).toContain("#ff4a5a");
+  });
+  it("2. 效果「預支」borrow_ap：EFFECT 有專屬圖（和狀態同一個圖、不加「＋」），EFFECT_ALIAS 拿掉暫借的給予 AP", () => {
+    expect(QP.EFFECT_ALIAS.borrow_ap).toBeUndefined();
+    expect(QP.EFFECT.borrow_ap?.zh).toBe("預支");
+    expect(Object.keys(QP.EFFECT).at(-1)).toBe("borrow_ap"); /* 加在表最後 */
+    for (const cpx of [19.7, 17.0, 11.8]) {
+      const o = opts(cpx);
+      expect(calls((c) => QP.entry("effect", "borrow_ap").d(c, o))).toEqual(calls((c) => QP.borrowArt(c, o)));
+    }
+  });
+  it("3. 觸發「這回合用完所有 AP 時」on_ap_spent_all：TRIG 有專屬圖（灰閃電＋金火花），TRIG_ALIAS 拿掉暫借的回合結束時", () => {
+    expect(QP.TRIG_ALIAS.on_ap_spent_all).toBeUndefined();
+    expect(QP.TRIG.on_ap_spent_all?.zh).toBe("這回合用完所有 AP 時");
+    expect(Object.keys(QP.TRIG).at(-1)).toBe("on_ap_spent_all");
+    const big = calls((c) => QP.entry("trigger", "on_ap_spent_all").d(c, opts(19.7))).join(";");
+    for (const col of ["#a9a6bc", "#6e6a84", "#dcdae6", "#ffd23f", "#ffffff"]) expect(big).toContain(col);
+    const tiny = calls((c) => QP.entry("trigger", "on_ap_spent_all").d(c, opts(11.8))).join(";");
+    expect(tiny).not.toContain("#dcdae6"); /* tiny 不畫亮條 */
+    expect(tiny).not.toContain("#ffffff"); /* 火花不帶白芯 */
+    expect(big).not.toContain("#d8c0ff"); /* 不是回合結束時的月牙 */
+  });
+  it("7. 部件暫代清單拿掉這三樣：效果、觸發都不再退回別的部件，施放動作不再共用拍肩，狀態不再是暫用圖", () => {
+    const aliased = new Set([...Object.keys(QP.EFFECT_ALIAS), ...Object.keys(QP.TRIG_ALIAS), ...Object.keys(QP.COND_ALIAS)]);
+    for (const id of ["borrow_ap", "on_ap_spent_all", "borrowed_ap"]) expect(aliased.has(id), id).toBe(false);
+    expect(QP.EFFECT.borrow_ap?.src ?? "new").toBe("new");
+    expect(QP.TRIG.on_ap_spent_all?.src ?? "new").toBe("new");
+    expect(PRIMITIVE_PLAYS.borrow_ap?.clip).toBe("borrow_pull");
+    expect(Object.entries(PRIMITIVE_PLAYS).filter(([, p]) => p.clip === "borrow_pull").map(([id]) => id)).toEqual(["borrow_ap"]);
+    expect(QT.NEW.borrowed_ap?.topic).not.toMatch(/暫用|暫借|待美術/);
+  });
+  it("色：亮面、桌面、那格的框照混色算（#ffc793、#ffac5d、#b3a994）", () => {
+    expect(QP.BORROW.hi).toBe("#ffc793");
+    expect(QP.SLOT_ICON.ring).toBe("#b3a994");
+    expect(calls((c) => QP.gem(c, { tiny: false }, 0, 0, 10)).join(";")).toContain("#ffac5d");
+  });
+});

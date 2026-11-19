@@ -18,6 +18,7 @@ import { loadShake, saveShake } from "../../battle/vfxPrefs";
 import type { BattleRenderer } from "../../render/BattleRenderer";
 import { needsLogRestore } from "../../run/flow";
 import { loadSpeed, saveSpeed } from "../../ui/SpeedControl";
+import { delayApFade } from "../../ui/apFade";
 import { cueRealMs, moveCues, walkCues, type SfxCue } from "../../audio/battleSfx";
 import { audio } from "../../audio";
 import { battleScheduler } from "../../audio/scene";
@@ -237,6 +238,8 @@ export function usePlayback(
           await sleep(op.victory.ms);
           break;
         case "view":
+          // AR-AP2：預支的 AP 列記號延到演出 215 ms 才淡入（略過、減少動態時照舊：畫面更新就淡入）
+          if (op.apFadeDelayMs !== undefined && !skip() && !prefersReducedMotion()) delayApFade(op.apFadeDelayMs);
           flushSync(() => setShown(op.view));
           if (!skip()) scheduleSfx(op.sfx);
           break;

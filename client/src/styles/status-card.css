@@ -168,7 +168,8 @@
 }
 
 .stat-pip.ap.fresh {
-  animation: ap-borrow-in 0.2s ease-out;
+  /* AR-AP2：施放預支時延到演出 215 ms（菱形到胸口）才開始（播放器設 --ap-fresh-delay，src/ui/apFade.ts）；延後期間先藏起來 */
+  animation: ap-borrow-in 0.2s ease-out var(--ap-fresh-delay, 0ms) backwards;
 }
 
 /* 分隔線：1px 寬、9px 高，同空心框色；左右各留 3px（.stat-pips 的 gap） */

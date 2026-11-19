@@ -12,7 +12,8 @@ import { isEmptyVfx, scaleVfx, vfxFor, VFX_TIMING, type StepVfx, type VfxCards }
 import { asEvent } from "../api/types";
 import { castFromBefore, placeMotions, scaleRows, skillTimeline, type AttackOf, type SkillRow, type SkillTimeline, type StrikeOf, type WeaponOf, type CreatureStrike } from "./skillSequence";
 import { ENEMY_WALK_RATE, stepMotions, trackRunning, walkDurationMs, type Motion, type WalkAnim } from "./walkAnim";
-import { withImpact } from "./impact";
+import { hitHoldMs, withImpact } from "./impact";
+import { borrowApDelayMs } from "./borrowFx";
 import { victoryOf, VICTORY_HOLD_MS, VICTORY_MS, withSpecials, type Victory } from "./specials";
 import type { AttackFamily } from "../render/attackVariants";
 import type { CreatureAttackType } from "../render/creaturePose";
@@ -127,7 +128,8 @@ export type PlayOp =
   | { op: "move"; anim: MoveAnim }
   | { op: "walk"; walk: WalkAnim }
   | { op: "vfx"; vfx: StepVfx; impactMs: number; skill?: SkillRow[]; sfx?: SfxCue[] }
-  | { op: "view"; view: BattleView; sfx?: SfxCue[] }
+  /** `apFadeDelayMs`（AR-AP2）：AP 列預支記號的淡入延後幾毫秒（對齊預支演出 215 ms）；沒有預支演出時不帶。 */
+  | { op: "view"; view: BattleView; sfx?: SfxCue[]; apFadeDelayMs?: number }
   | { op: "lift"; shifts: HeightShift[]; durationMs: number }
   | { op: "feedback"; items: FeedbackItem[]; durationMs: number }
   | { op: "log"; lines: LogLine[] }
@@ -333,7 +335,10 @@ export function frameOps(frame: Frame): PlayOp[] {
   if (frame.reroll !== undefined) ops.push({ op: "reroll", reroll: frame.reroll });
   if (frame.vfx !== null) ops.push({ op: "vfx", vfx: frame.vfx, impactMs: frame.vfxImpactMs, ...(frame.skill === undefined ? {} : { skill: frame.skill }), ...(frame.sfx === undefined ? {} : { sfx: frame.sfx }) });
   for (const m of frame.after ?? []) ops.push(motion(m));
-  ops.push({ op: "view", view: frame.view, ...(frame.viewSfx === undefined ? {} : { sfx: frame.viewSfx }) });
+  // AR-AP2：畫面更新在出招的時間原點的哪一刻（播放器等完 `leadMs`＋命中停頓、再播完出招後的位移才更新）→ AP 列淡入要延後多久
+  const viewAt = (frame.vfx !== null && frame.vfx.leadMs > 0 ? frame.vfx.leadMs + hitHoldMs(frame.vfx, false) : 0) + (frame.after ?? []).reduce((s, m) => s + motionMs(m), 0);
+  const apFadeDelayMs = frame.vfx === null ? 0 : borrowApDelayMs(frame.skill, viewAt);
+  ops.push({ op: "view", view: frame.view, ...(frame.viewSfx === undefined ? {} : { sfx: frame.viewSfx }), ...(apFadeDelayMs > 0 ? { apFadeDelayMs } : {}) });
   if (frame.placed !== undefined) ops.push({ op: "placed", tiles: frame.placed });
   if (frame.lifts.length > 0) ops.push({ op: "lift", shifts: frame.lifts, durationMs: frame.liftMs });
   if (frame.feedback.length > 0) ops.push({ op: "feedback", items: frame.feedback, durationMs: frame.feedbackMs });

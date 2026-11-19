@@ -544,7 +544,7 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     arrow(c, -1, 0, false);
   },
   borrowed_ap: (c) => {
-    // 預支（AP-2）：下回合少 AP——同透支的空電池＋↓（實作者暫用，待美術 PM 補畫）
+    // 預支（AP-2）：下回合少 AP——Q 版已正式補畫；線稿不會出現，沿用透支（空電池＋↓；美術 PM 裁定 5，AP-2-美術.md 第 9 節）
     c.beginPath();
     c.roundRect(-8, -6, 14, 12, 2);
     c.stroke();
