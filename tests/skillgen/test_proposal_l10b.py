@@ -247,7 +247,13 @@ def test_lifted_skill_card_numbers_match_the_battle(
     before = state.units[CASTER]
     result = answered(resolve(state, actions[0]))
     after = result.state.units[CASTER]
-    assert before.ap - after.ap == card.ap_cost
+    # 失手返還（AP-1）：2 AP 以上的技能全沒命中會還 AP，扣掉返還的部分再比
+    refund = (
+        library.ruleset.core.miss_refund_ap
+        if after.miss_refunded and not before.miss_refunded
+        else 0
+    )
+    assert before.ap - after.ap + refund == card.ap_cost
     restored = sum(
         e.amount or 0
         for e in skill.effects
