@@ -173,3 +173,36 @@ def test_real_content_dry_run() -> None:
     assert changes
     assert len(texts) == len({c.file for c in changes})
     assert not rs.marked_files()
+
+
+_TUNE_LOG = (
+    "aaaaaaaaaaaa\x1f2026-11-19\x1ftune(grunt): max_hp 18→20 等 2 項\n\n"
+    "- units/grunt.yaml max_hp: 18 → 20（哥布林 最大 HP）\n"
+    "- units/grunt.yaml speed: 5 → 6（哥布林 速度）\n\n"
+    "Tuned-by: number-workshop\n\x1e\n"
+    "bbbbbbbbbbbb\x1f2026-11-18\x1ftune(grunt): max_hp 16→18\n\n"
+    "- units/grunt.yaml max_hp: 16 → 18（哥布林 最大 HP）\n\n"
+    "Tuned-by: number-workshop\n\x1e\n"
+    "cccccccccccc\x1f2026-11-17\x1ftune(ai): close_range weight 40\n\n"
+    "- units/grunt.yaml max_hp: 1 → 2（不是工坊：沒有 Tuned-by）\n\x1e\n"
+)
+
+
+def test_tuned_fields_from_workshop_commits(tmp_path: Path) -> None:
+    content, groups = _setup(tmp_path)
+    tuned = rs.tuned_from_log(_TUNE_LOG)
+    assert [(t.commit, t.path, t.value) for t in tuned] == [
+        ("aaaaaaaaa", "max_hp", "20"),
+        ("aaaaaaaaa", "speed", "6"),
+        ("bbbbbbbbb", "max_hp", "18"),
+    ]
+    text = rs.tuned_markdown(tuned, rs.classify(groups, content))
+    assert "| units/grunt.yaml | `max_hp` | 20 | 200 | aaaaaaaaa | 2026-11-19 |" in text
+    assert "| units/grunt.yaml | `speed` | 6 | 6 | aaaaaaaaa | 2026-11-19 |" in text
+    assert "工坊寫回的 commit：2 筆；調過的欄位：2 個。" in text
+
+
+def test_tuned_markdown_without_commits(tmp_path: Path) -> None:
+    content, groups = _setup(tmp_path)
+    text = rs.tuned_markdown([], rs.classify(groups, content))
+    assert "目前沒有任何數值工坊寫回的 commit" in text

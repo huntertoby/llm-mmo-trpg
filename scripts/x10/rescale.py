@@ -9,6 +9,7 @@
     uv run python scripts/x10/rescale.py --stats          # 清單統計
     uv run python scripts/x10/rescale.py --dry-run --csv docs/phases/X10-換算預覽.csv
     uv run python scripts/x10/rescale.py                  # 真的改寫 content/（X10-2 才跑）
+    uv run python scripts/x10/rescale.py --tuned-md docs/phases/X10-工坊調過的欄位.md
 
 改寫方式和數值工坊的 ``yaml_patch`` 相同：用 ``yaml.compose`` 拿到純量的位置，只替換那段文字，
 註解、縮排、行尾（LF／CRLF）、BOM 都不動；改完重新 parse，必須等於「原資料只把那幾個值乘 10」。
@@ -34,6 +35,7 @@ import argparse
 import csv
 import fnmatch
 import re
+import subprocess
 import sys
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass, field
@@ -526,6 +528,126 @@ def write_csv(changes: Sequence[Change], out: TextIO) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 數值工坊調過的欄位（X10-3 的換算紀錄用）
+
+TUNED_BY: Final = "Tuned-by: number-workshop"  # src/trpg/api/tuning/writeback.py 的 commit 結尾
+_TUNE_LINE: Final = re.compile(r"^- (\S+) (\S+): (.+?) → (.+?)（")
+_PATH_PART: Final = re.compile(r"^([^\[\]]+)((?:\[\d+\])*)$")
+
+
+@dataclass(frozen=True, slots=True)
+class Tuned:
+    commit: str
+    date: str
+    file: str
+    path: str
+    value: str
+
+
+def tuned_from_log(log: str) -> list[Tuned]:
+    """``git log --format=%H%x1f%ad%x1f%B%x1e`` 的輸出 → 工坊寫回的每一筆（新的在前）。
+
+    只認數值工坊的 commit：標題 ``tune(`` 開頭，而且有一行 :data:`TUNED_BY`。內文一行一筆
+    ``- <檔> <路徑>: <舊> → <新>（…）``（``writeback.commit_message``）。"""
+    out: list[Tuned] = []
+    for record in log.split("\x1e"):
+        parts = record.strip("\n").split("\x1f")
+        if len(parts) != 3:  # noqa: PLR2004 — 雜湊、日期、訊息
+            continue
+        commit, date, body = parts
+        lines = body.splitlines()
+        if not lines or not lines[0].startswith("tune(") or TUNED_BY not in lines:
+            continue
+        for line in lines[1:]:
+            match = _TUNE_LINE.match(line)
+            if match is not None:
+                file, path, _old, new = match.groups()
+                out.append(Tuned(commit[:9], date, file, path, new))
+    return out
+
+
+def _path_keys(path: str) -> tuple[str | int, ...] | None:
+    keys: list[str | int] = []
+    for part in path.split("."):
+        match = _PATH_PART.match(part)
+        if match is None:
+            return None
+        keys.append(match.group(1))
+        keys.extend(int(i) for i in re.findall(r"\[(\d+)\]", match.group(2)))
+    return tuple(keys)
+
+
+def _converted(item: Tuned, result: Classified) -> str:
+    """使用者調成的值換算後是多少（看欄位清單的分類）。"""
+    keys = _path_keys(item.path)
+    for category, leaves in result.by_category.items():
+        for leaf in leaves:
+            leaf_keys = tuple(s.key if s.key is not None else s.index for s in leaf.steps)
+            if leaf.file == item.file and leaf_keys == keys:
+                if category == "scale" and _PLAIN_INT.fullmatch(item.value):
+                    return str(int(item.value) * FACTOR)
+                return {
+                    "pending": f"{item.value}（待定）",
+                    "unit_change": f"{item.value}（改單位）",
+                }.get(category, item.value)
+    return f"{item.value}（欄位已不在內容裡，要人工看）"
+
+
+def tuned_markdown(tuned: Sequence[Tuned], result: Classified) -> str:
+    latest: dict[tuple[str, str], Tuned] = {}
+    for item in tuned:  # 新的在前：同一個欄位只留最後一次調的值
+        latest.setdefault((item.file, item.path), item)
+    lines = [
+        "# X10：數值工坊調過的欄位",
+        "",
+        "> 由 `uv run python scripts/x10/rescale.py --tuned-md "
+        "docs/phases/X10-工坊調過的欄位.md` 產生（X10-1）。",
+        "> 來源：`git log` 裡數值工坊寫回的 commit（標題 `tune(`、結尾 `" + TUNED_BY + "`，"
+        "格式見 `src/trpg/api/tuning/writeback.py` 的 `commit_message`）。",
+        "> 同一個欄位調過幾次只列最後一次；「換算後」照 `scripts/x10/fields.yaml`：scale ×10，"
+        "其餘不變。給 X10-3 做工坊的換算紀錄用。",
+        "",
+        f"工坊寫回的 commit：{len({t.commit for t in tuned})} 筆；調過的欄位：{len(latest)} 個。",
+        "",
+    ]
+    if not latest:
+        lines += ["目前沒有任何數值工坊寫回的 commit，所以沒有使用者調過的欄位。", ""]
+        return "\n".join(lines)
+    lines += [
+        "| 檔 | 路徑 | 使用者調成的值 | 換算後的值 | commit | 日期 |",
+        "|---|---|---|---|---|---|",
+    ]
+    for (file, path), item in sorted(latest.items()):
+        lines.append(
+            f"| {file} | `{path}` | {item.value} | {_converted(item, result)} | {item.commit} "
+            f"| {item.date} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def git_tune_log(root: Path = ROOT) -> str:
+    proc = subprocess.run(
+        [
+            "git",
+            "log",
+            "--format=%H%x1f%ad%x1f%B%x1e",
+            "--date=short",
+            "--fixed-strings",
+            f"--grep={TUNED_BY}",
+            "--",
+            "content",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    return proc.stdout
+
+
+# ---------------------------------------------------------------------------
 # CLI
 
 
@@ -584,6 +706,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--check", action="store_true", help="檢查清單，有問題時結束碼 1")
     parser.add_argument("--unclassified", action="store_true", help="列出清單沒涵蓋的數字欄位")
     parser.add_argument("--stats", action="store_true", help="清單統計")
+    parser.add_argument("--tuned-md", type=Path, help="把數值工坊調過的欄位寫成 Markdown")
     args = parser.parse_args(argv)
 
     try:
@@ -597,6 +720,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             if args.stats:
                 print(stats(result))
             return 1 if args.check and found else 0
+        if args.tuned_md:
+            text = tuned_markdown(tuned_from_log(git_tune_log()), classify())
+            args.tuned_md.write_bytes(text.encode("utf-8"))
+            return 0
         return _run(args)
     except RescaleError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
