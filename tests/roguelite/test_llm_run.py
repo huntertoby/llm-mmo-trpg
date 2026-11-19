@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from tests.roguelite.helpers import full_library, library
 from trpg.content.skills import SkillDef
 from trpg.llm.candidate_source import mock_naming_client, name_attempt
@@ -123,6 +125,8 @@ def test_old_format_7_save_is_readable() -> None:
     assert back.format == "trpg-run/13" and not back.run.llm and back.run.llm_log == ()
 
 
+# 整輪跑兩次，單獨約 240 秒，接近預設 300 秒逾時，負載高時會被砍（2026-11-19）
+@pytest.mark.slow
 def test_full_run_with_mock_llm_is_deterministic() -> None:
     # PK-2：一輪的升級與完整技能三選一走挑選模式（預設開），LLM 那一步是挑選器（提議器照樣裝著）
     first = _run(True)
@@ -174,6 +178,8 @@ def test_generated_names_and_narrative_are_recorded_and_replay_is_silent() -> No
     assert any(r.name_source for r in back.run.llm_log)
 
 
+# 整輪跑兩次，單獨約 240 秒，接近預設 300 秒逾時，負載高時會被砍（2026-11-19）
+@pytest.mark.slow
 def test_full_run_with_naming_is_deterministic() -> None:
     first: list[str] = []
     second: list[str] = []
