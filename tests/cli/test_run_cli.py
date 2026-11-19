@@ -21,13 +21,22 @@ def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str,
 def test_run_new_writes_a_save_and_show_reads_it(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    argv = ["run", "new", "--seed", "4", "--build", "build_push", "--attrs", "str=3,con=1"]
+    argv = [
+        "run",
+        "new",
+        "--seed",
+        "4",
+        "--build",
+        "build_push",
+        "--attrs",
+        "str=30,con=10",
+    ]  # X10-2b ×10
     code, out, _ = _run([*argv, "--save-dir", str(tmp_path)], capsys)
     assert code == 0
     saves = list(tmp_path.glob("run-*.json"))
     assert len(saves) == 1
     assert str(saves[0]) in out
-    assert "力量 13" in out and "體質 11" in out
+    assert "力量 130" in out and "體質 110" in out
     assert "第 6 場 頭目・" in out
     raw = json.loads(saves[0].read_text(encoding="utf-8"))
     assert raw["format"] == "trpg-run/13"
@@ -41,7 +50,7 @@ def test_run_new_writes_a_save_and_show_reads_it(
     ("argv", "message"),
     [
         (["--build", "build_nobody"], "未知的 build"),
-        (["--build", "build_push", "--attrs", "str=1"], "必須分配 4 點"),
+        (["--build", "build_push", "--attrs", "str=10"], "必須分配 40 點"),  # X10-2b ×10
     ],
 )
 def test_run_new_rejects_bad_input(

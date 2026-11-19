@@ -90,7 +90,8 @@ def test_budget_shows_when_the_allowance_is_capped(
     shutil.copytree(PROJECT_ROOT / "content", content)
     path = content / "skills" / "skill_bone_crusher.yaml"
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    data["cost"] = {"stamina": 80, "cooldown": 6, "uses_per_battle": 1}  # 150 + 300 + 400 ＝ 850
+    # X10-2b：耐力 800（新單位；舊 80）折抵 200 → 上限 150
+    data["cost"] = {"stamina": 800, "cooldown": 6, "uses_per_battle": 1}  # 150 + 300 + 400 ＝ 850
     path.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
     monkeypatch.setenv(CONTENT_DIR_ENV, str(content))
     _, out, _ = _run(["skills", "budget", "skill_bone_crusher"], capsys)
