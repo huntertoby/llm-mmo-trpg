@@ -126,3 +126,47 @@
 2. 「最多 N 個（物理另外算）」：先照這樣做，用字請美術 PM 和玩法 PM 確認。
 3. 佈置說明和選目標共用「前 3 次」計數：照現狀，請美術 PM 看要不要分開計次。
 4. 起始區在右邊的真地圖出現後再重拍：接受。
+
+## 補做（2026-11-19，同一個 worktree，先 `git merge main`）
+
+### A. 重閃夾具改走第二種做法（裁定 1）— `412d27cce`
+- **產生腳本**（`scripts/export_flash_choice_fixture.py`）：`reflash`、`reflash_major` 各自一個案例（`ReflashCase`：種子、重閃第幾格、照卡名或照 RR-2 的挑法），不再共用同一輪。
+  - `reflash`：第一個開發起始包（`dev_blaze`）**種子 16**，打到營火，「火海灼燒」重閃第 1 格。這一格照樣是 #160 例外格：4 個選項，3 張「比原本弱」，1 張整招和現在一樣。
+  - `reflash_major`：照舊是種子 2「灼燃・燃燒爆」重閃第 3 格。
+- **怎麼找的**：暫存區的搜尋腳本（沒 commit），掃了各開發起始包、種子 0～29，條件照 fl1h 測試的要求（有 `weaker_foot_zh`、3 張比原本弱、1 張和現在一樣、共 4 張）。符合的有 7 組；選 `dev_blaze` 16，因為起始包和原本的案例相同、也是火焰技能。
+- **重產結果**：只有 `reflash`（新案例，`sets` 315 處、`bases` 47 處）和 `reflash_major`（21 處）有差異，其他組都沒變。
+  - `reflash` 從 4 個選項變成 1 個：照實記在第 4 節，原因是 SK-1 合併 `c492b7fec`。原本的種子 2 改用種子 16，沒有回復原本的資料。
+  - `reflash_major` 從「雷鳴」變成「霜結」：照實記在第 4 節，原因是 WC-2 的 `f71c3c8df`。接受新資料，沒有回復。
+- **5 個測試**：
+  - `fl1hFlashWords` 的 4 個：沒改一個字，新夾具下全過。
+  - `fl1jFlashWrap`「1600 斷錯的兩張重閃大變化卡」：大變化格接受新資料以後，第 2 張的額外傷害是 3d4，不是 1d4。斷言沒放寬，逐張寫死：
+    - 第 1 張是「1d4 火焰」＋「傷害」。
+    - 第 2 張是「3d4 火焰」＋「傷害」。
+    - 兩張都還要有「少 1 回合」。
+  - 檢查的寫法和原本一樣，都是 `toContain` 整段 `.fc-nobr` 的 HTML。
+- 腳本：`ruff check` 0、`ruff format --check` 0、`mypy` 0。
+
+### B. 佈置說明自己計「前 3 次」（美術 PM 驗收）— `d6c2313c3`
+- `OpHintKind` 加一種 `prep`。`modeHintKind` 碰到佈置選格模式時回 `prep`，不再和一般選目標（`target`）共用次數。
+- 新測試 `battle/arSk4PrepHintCount.test.ts`（3 個）：
+  - 佈置的說明句種類是 `prep`。
+  - `target` 用滿 3 次以後，`prep` 仍會完整顯示。
+  - 反過來也一樣：`prep` 用滿 3 次，`target` 不受影響。
+- 截圖 `docs/art/shots/ar-sk4/7-prep-hint-after-3-targets-1600.png`：
+  - 實機畫面，本機儲存的次數先設成 `{"target":3}`，再第一次進入佈置。
+  - 左上說明卡是展開的；拍完以後次數變成 `{"target":3,"prep":1}`。
+  - 無頭 Chrome 靜音（`--mute-audio`、`mute=1`）。
+
+### C. 許願元素上限字定案 — `3071e2a42`
+- `WISH_ZH.tagMaxPhysical`：1 階「最多 1 個（可另加物理）」，2 階起「最多 2 個（可另加物理）」。
+- `world/arSk4Wish.test.ts` 跟著改：兩句定案字逐字比對，面板上已經沒有「物理另外算」。
+- 截圖 `docs/art/shots/ar-sk4/8-wish-tier1-label-1600.png`：1 階實機，點了火焰，元素旁寫「最多 1 個（可另加物理）」。
+
+### 檢查（交件前）
+| 檢查 | 結束碼 |
+|---|---|
+| `npx tsc --noEmit -p client` | 0 |
+| vitest 相關（`src/battle src/ui src/world src/screens src/run src/dev src/render/prepTipSide.test.ts`，242 檔、2840 個） | 0 |
+| `corepack pnpm -C client build` | 0 |
+
+伺服器（8766）與無頭 Chrome（9766）都是我自己開的，做完已經停掉，兩個埠都沒人在聽。這一段沒碰 `src/trpg/skillgen`、`content/`、`scripts/wish_coverage.py`。
