@@ -215,7 +215,11 @@ def test_description_export_lists_the_dev_flavoured_texts() -> None:
 def test_random_composer_always_pays_the_minimum_cost() -> None:
     for seed in range(300):
         skill = compose_random_skill(seed, library=LIB, tier=1 + seed % 3)
-        assert LIB.budget.min_cost_problem(skill.kind, skill.category, skill.cost) is None, seed
+        # AP-2b：預支（borrow_ap）不受最低花費限制（06 6.10 例外）
+        problem = LIB.budget.min_cost_problem(
+            skill.kind, skill.category, skill.cost, borrows=skill.borrows_ap
+        )
+        assert problem is None, seed
 
 
 # --- 原 test_workshop_48f.py ---
