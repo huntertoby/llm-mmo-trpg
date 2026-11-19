@@ -137,3 +137,40 @@
 3. 接受，轉美術 PM 確認。
 4. 接受。
 5. 轉美術 PM 決定預支要不要播 aura 起手特效。
+
+## 小修紀錄：預支不播 aura 起手的粉紅圈（2026-11-20，美術 PM 驗收）
+
+美術 PM 的要求：預支施放時不要畫 aura 起手的粉紅圈，其他起手特效照舊。
+
+**做法**（開工前先 merge main `376df87d0`）
+- 粉紅圈是 `vfxEffects.ts` 的 `auraEffect`，也就是 `castEffects` 對 `kind: "aura"` 畫的那一圈，顏色取自預支狀態色。
+- `battle/vfx.ts`：
+  - 這一段事件裡有 `ap_borrowed` 時，`Segment.borrow` 記成真。
+  - 這一段產生的 cast 帶 `noAura: true`（`VfxCast` 新增的選填欄位）。
+- `render/vfxEffects.ts`：`noAura` 時不放 `auraEffect`。
+- 照舊沒動的：
+  - 蓄力光 `chargeEffect`；
+  - 起手片段 `raise`、`aura_pulse`，以及 `aura_pulse` 自帶的 `ringUp`；
+  - cast 的種類（仍是 `aura`）與時間軸。
+- 其他技能不帶 `noAura`，畫法不變。
+
+**測試**
+- `battle/arAp2BorrowFx.test.ts` 加 3 條：
+  - 有預支的那一段帶 `noAura`，起手片段仍是 `raise`、`aura_pulse`、`borrow_pull`；
+  - 同一招拿掉 `ap_borrowed` 後，不帶 `noAura`；
+  - `castEffects` 在 `noAura` 時跳過光環圈。
+
+**截圖**（`docs/art/shots/ar-ap2/`）
+- `9-fix-no-aura-1600-a.png`：1600 寬 (a) 站位的 50、110 ms 兩格，真 1 倍 ×2。上排是改之前（有粉紅圈），下排是改之後（沒有），其他都一樣。
+- 這幾張原本也拍到那一圈，一起重拍：
+  - `5-anim-1600-true1x.png`、`6-anim-800-true1x.png`；
+  - `7-aprow-1600.png`、`8-aprow-800.png` 的 100 ms 那格。
+- 做法同第 2 節：vite `127.0.0.1:5341`，無頭 Chrome 加 `--mute-audio`，網址帶 `mute=1`。結束時只停了自己起的 vite，5341 已沒在聽。
+
+**檢查**
+
+| 檢查 | 結束碼 |
+|---|---|
+| `npx tsc --noEmit -p client` | 0 |
+| `vitest run`（全部，387 檔、4788 個） | 0 |
+| `corepack pnpm build` | 0 |

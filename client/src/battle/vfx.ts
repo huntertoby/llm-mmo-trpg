@@ -112,6 +112,8 @@ export interface VfxCast {
    * `skillTimeline` 的朝向、異形動作類型、轉向特效照它（`aimOf`），身體和改之前完全相同；特效本身照 `to`。
    */
   aim?: Pos;
+  /** AR-AP2 小修（美術 PM 驗收）：預支施放時不畫光環的圈（`auraEffect`）；蓄力光與其他起手特效照舊。 */
+  noAura?: boolean;
 }
 
 /** 身體片段要朝的格子（VFX-1）：有 `aim` 用它，否則＝`to`。 */
@@ -490,6 +492,8 @@ interface Segment {
   elsewhere: boolean;
   /** 技能段裡施放者已擲過命中的單位（DD-2：認出雙匕首多打的那一下，`repeatStrike.ts`）。 */
   rolled: string[];
+  /** AR-AP2 小修：這一段有預支（`ap_borrowed`）：施放演出自己畫「下回合的那格」，光環的圈不畫（美術 PM 驗收）。 */
+  borrow: boolean;
 }
 
 export type VfxCards = Readonly<Record<string, SkillCard | undefined>>;
@@ -577,6 +581,7 @@ function toCast(seg: Segment, startMs: number): VfxCast {
     chargeMs,
     startMs,
     impactMs,
+    ...(seg.borrow ? { noAura: true } : {}),
   };
   const self = onlySelfAt(seg);
   return self === null ? cast : onCaster(cast, self);
@@ -601,7 +606,7 @@ function onCaster(cast: VfxCast, at: Pos): VfxCast {
 type Locate = (id: unknown) => Pos | null;
 
 function openSegment(e: EventBase, at: Locate, cards: VfxCards): Segment | null {
-  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [], selfFx: false, elsewhere: false, rolled: [] };
+  const base = { element: null, touched: null, support: false, water: false, status: null, legendary: false, crit: false, hitPath: [], hits: [], reacts: [], impacts: [], selfFx: false, elsewhere: false, rolled: [], borrow: false };
   if (e.type === "skill_used" || e.type === "skill_followup") {
     const caster = String(e.unit_id);
     const casterPos = at(caster);
@@ -735,6 +740,7 @@ export function vfxFor(events: readonly Record<string, unknown>[], view: BattleV
     const hit = absorb(current, e, at);
     if (hit !== null) loose.push(hit);
     if (current !== null) noteReach(current, e, at);
+    if (current !== null && e.type === "ap_borrowed") current.borrow = true;
     if (react !== null) addReact(reactBelongs(current, e) ?? looseReacts, react);
   }
   return assemble(segments, loose, blasts, looseReacts, looseImpacts);
