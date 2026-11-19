@@ -455,7 +455,7 @@ export function castEffects(cast: VfxCast, now: number, impactMs: number, at: Lo
       out.push(...tileBursts(cast, pal, impact, impactMs, cast.to, at));
       break;
     case "aura":
-      out.push(auraEffect(cast, pal, start, impact, impactMs, at));
+      if (cast.noAura !== true) out.push(auraEffect(cast, pal, start, impact, impactMs, at)); // AR-AP2 小修：預支不畫光環的圈
       break;
   }
   return out;

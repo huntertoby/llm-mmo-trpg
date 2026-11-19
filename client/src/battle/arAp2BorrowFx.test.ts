@@ -50,6 +50,28 @@ describe("片段 borrow_pull（5.3 第 1、2 點）", () => {
   });
 });
 
+describe("小修（美術 PM 驗收）：預支不畫 aura 起手的光環圈，其他起手照舊", () => {
+  it("有 ap_borrowed 的那一段：cast 帶 noAura；蓄力、起手片段照舊", () => {
+    const frame = plan().frames.find((f) => f.skill?.some((r) => r.clip === "borrow_pull"))!;
+    const casts = frame.vfx!.casts;
+    expect(casts).toHaveLength(1);
+    expect(casts[0]).toMatchObject({ kind: "aura", noAura: true, charge: true });
+    expect(frame.skill!.filter((r) => !r.recover).map((r) => r.clip)).toEqual(["raise", "aura_pulse", "borrow_pull"]);
+  });
+  it("沒有預支的同一招（拿掉 ap_borrowed）：照舊畫光環圈", () => {
+    const res = resOf();
+    const step = { ...res.steps[0]!, events: EVENTS.filter((e) => e.type !== "ap_borrowed") } as StepOut;
+    const p = playbackPlan({ ...res, steps: [step] } as BattleResponse, HERO, "normal", { [SKILL]: BORROW_CARD }, new Set(), () => "staff", () => null, () => null, false);
+    const casts = p.frames.flatMap((f) => f.vfx?.casts ?? []);
+    expect(casts.length).toBeGreaterThan(0);
+    for (const c of casts) expect(c.noAura).toBeUndefined();
+  });
+  it("castEffects：noAura 時不放光環圈（原始碼）", () => {
+    const src = readFileSync("src/render/vfxEffects.ts", "utf8");
+    expect(src).toContain("if (cast.noAura !== true) out.push(auraEffect(");
+  });
+});
+
 describe("位置與畫面下限（5.3 第 3、4、5 點）", () => {
   it("菱形半對角 ≥ 4.5 畫面 px：1600 寬（1.31）MK 1、800 寬（0.53）約 1.70", () => {
     expect(borrowMK(1.31)).toBe(1);
