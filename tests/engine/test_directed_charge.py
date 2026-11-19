@@ -44,6 +44,7 @@ from trpg.engine.delayed import charge_infos
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, DamageEffect
 from trpg.engine.events import (
+    AttackRolled,
     DamageDealt,
     FollowupCancelled,
     FollowupCharged,
@@ -298,6 +299,20 @@ def test_narrative_lines_for_start_and_cancel() -> None:
     cancelled = resolve(result.state, EndStance(unit_id=U1))
     cancel_lines = [describe_event(e, cancelled.state) for e in of(cancelled, FollowupCancelled)]
     assert cancel_lines[0] is not None and "解除" in cancel_lines[0]
+
+
+def test_narrative_line_for_the_released_breath_attack(monkeypatch: pytest.MonkeyPatch) -> None:
+    """QF-1：吐息的技能 ID 不登錄在規則包，命中骰的描述以天生武器名稱代替（以前拋 KeyError）。"""
+    always(monkeypatch, d20=19, die=5)
+    charging = start_charge(in_dragon(scene(), Element.FIRE))
+    state, events = until_turn_of(charging, U1)
+    rolls = [e for e in of_events(events, AttackRolled) if e.attacker_id == U1]
+    assert rolls and all(e.skill_id == "skill_form_breath_dragon" for e in rolls)
+    name = state.ruleset.form_def("dragon").natural_weapon.name_zh
+    for event in events:
+        describe_event(event, state)  # 整串事件都描述得出來
+    line = describe_event(rolls[0], state)
+    assert line is not None and f"以「{name}」攻擊" in line
 
 
 def test_ai_dragon_charges_toward_the_most_enemies() -> None:

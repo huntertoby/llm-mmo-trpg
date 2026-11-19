@@ -358,7 +358,19 @@ _SCALAR_LIMITS: Final[dict[str, tuple[int | None, int | None]]] = {
     "cost.mana": (0, None),
     "cost.cooldown": (1, 6),
 }
+_BORROW_AP_LIMITS: Final = (0, 0)
+"""帶預支（``borrow_ap``，AP-2）的技能的 ``ap_cost``：只能是 0（``SkillDef`` 的硬規則；QF-1）。"""
 _ZERO_DEFAULT: Final = frozenset({"cost.stamina", "cost.mana"})
+_SAME_ZH: Final = "改完和原值相同（或已到邊界）"
+_BORROW_SAME_ZH: Final = "預支技能的 AP 固定是 0，不能改"
+
+
+def _borrows_ap(data: Any) -> bool:
+    """草稿資料有沒有預支原語（不經 schema 驗證；和 ``SkillDef.borrows_ap`` 同判定）。"""
+    effects = data.get("effects") if isinstance(data, dict) else None
+    return isinstance(effects, list) and any(
+        isinstance(e, dict) and e.get("type") == "borrow_ap" for e in effects
+    )
 
 
 def _clamp(value: int, low: int | None, high: int | None) -> int:
@@ -463,10 +475,11 @@ def _scalar_edit(
     if base is None and request.op.kind != "set":
         return [], "這招沒有寫這個值（例如沒有冷卻），只能用「設定」"
     raw = _apply_int(int(base or 0), request.op.kind, request.op.value)
-    low, high = _SCALAR_LIMITS.get(path) or limits(path)
+    borrow = path == "ap_cost" and _borrows_ap(data)
+    low, high = _BORROW_AP_LIMITS if borrow else (_SCALAR_LIMITS.get(path) or limits(path))
     new = None if raw is None else _clamp(raw, low, high)
     if new is None or new == current or (current is None and new == base):
-        return [], "改完和原值相同（或已到邊界）"
+        return [], _BORROW_SAME_ZH if borrow else _SAME_ZH
     return [(path, current, new)], None
 
 

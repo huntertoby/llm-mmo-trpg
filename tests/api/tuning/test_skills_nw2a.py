@@ -207,6 +207,39 @@ def test_ladder_top_is_skipped_and_scalar_fields_clamp(read_service: TuningServi
     assert "武器射程" in (weapon["skill_fire_arrow"].skipped_reason_zh or "")  # type: ignore[attr-defined]
 
 
+@pytest.mark.parametrize(
+    "op",
+    [
+        {"kind": "set", "value": 2},
+        {"kind": "add", "value": 1},
+        {"kind": "add", "value": -1},
+        {"kind": "scale_permille", "value": 2000},
+    ],
+)
+def test_group_ap_cost_keeps_borrow_skills_at_zero(
+    read_service: TuningService, op: dict[str, int]
+) -> None:
+    """QF-1：預支技能（``borrow_ap``）的 AP 只能是 0；分組改 AP 跳過它，不夾成 1 再驗證失敗。"""
+    rows = _preview(
+        read_service,
+        skills=["skill_borrowed_beat", "skill_fire_arrow"],
+        target="ap_cost",
+        op=op,
+    )
+    borrow = rows["skill_borrowed_beat"]
+    assert borrow.verdict == "skipped" and borrow.changes == []  # type: ignore[attr-defined]
+    assert "預支" in (borrow.skipped_reason_zh or "")  # type: ignore[attr-defined]
+    assert "skill_fire_arrow" in rows
+
+
+def test_group_ap_cost_non_borrow_skills_still_floor_at_one(read_service: TuningService) -> None:
+    """QF-1：不帶預支的照舊 1～3（0 不放行；火箭本來 1 AP → 夾成 1 → 跳過）。"""
+    rows = _preview(
+        read_service, skills=["skill_fire_arrow"], target="ap_cost", op={"kind": "set", "value": 0}
+    )
+    assert rows["skill_fire_arrow"].verdict == "skipped"  # type: ignore[attr-defined]
+
+
 def test_group_limits_and_determinism(read_service: TuningService) -> None:
     with pytest.raises(GroupError, match="篩選"):
         read_service.group_preview(

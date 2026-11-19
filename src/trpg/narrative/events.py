@@ -10,6 +10,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from trpg.content.form_breath import BREATH_PREFIX
 from trpg.engine.events import (
     ActivationExpired,
     ApBorrowed,
@@ -283,10 +284,17 @@ class _View:
 
 def _skill_name(v: _View, skill_id: str) -> str:
     """技能名稱。裝備的規則改變詞條（``skill_gear_<詞條>``，Phase 3G-G3b）沒有技能定義：以詞條名稱
-    代替（3K-2 起戰後會拿到傳說裝備，不能因此在描述事件時找不到技能）。"""
+    代替（3K-2 起戰後會拿到傳說裝備，不能因此在描述事件時找不到技能）。形態的蓄力吐息
+    （``skill_form_breath_<形態>``，3J-2）也不登錄：以天生武器名稱代替（QF-1）。"""
     try:
         return v.state.ruleset.skill_def(skill_id).name_zh
     except KeyError:
+        if skill_id.startswith(BREATH_PREFIX):
+            form_id = skill_id.removeprefix(BREATH_PREFIX)
+            try:
+                return v.state.ruleset.form_def(form_id).natural_weapon.name_zh
+            except KeyError:
+                return skill_id
         for unit in v.state.units_sorted():
             for entry in unit.gear.active_affixes("rule"):
                 if skill_id == f"skill_gear_{entry.affix.id.removeprefix('affix_')}":
@@ -641,7 +649,7 @@ def _attack(e: AttackRolled, v: _View) -> str:
         verdict = ("暴擊！" if e.crit else "命中") if e.hit else "失手"
     verb = "攻擊"
     if e.skill_id is not None:
-        verb = f"以「{state.ruleset.skill_def(e.skill_id).name_zh}」攻擊"
+        verb = f"以「{_skill_name(v, e.skill_id)}」攻擊"
     if e.backstab:
         verb = f"從背後{verb}"
     return (
