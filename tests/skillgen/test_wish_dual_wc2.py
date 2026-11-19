@@ -7,7 +7,7 @@ import pytest
 
 from tests.roguelite.helpers import library
 from trpg.content.skill_pick import WishTags
-from trpg.content.skills import SkillDef, card_elements, damage_elements
+from trpg.content.skills import SkillDef, card_elements, damage_elements, skill_elements
 from trpg.shared.rng import Rng
 from trpg.skillgen.candidates import CandidateRequest
 from trpg.skillgen.composer_dual import add_second_element, second_element_tier
@@ -95,14 +95,16 @@ def test_composer_refuses_below_the_tier() -> None:
     assert add_second_element(lib, _fire_skill(1), "ice", Rng(1)) is None
 
 
-def test_card_elements_only_for_elemental_skills() -> None:
-    """技能本身沒有元素（物理）時卡片照舊不寫元素（效果自己的元素不讓它變元素技能，06 6.33）。"""
+def test_card_elements_follow_the_wish_hits() -> None:
+    """WC-2b（玩法交接 4.1.34 第 1 點）：技能本身是物理、傷害效果帶元素時，卡片也寫出那個元素，和
+    命中判定一致；規則上的技能元素（06 6.33）照舊是空的。"""
     lib = library()
     skill = _fire_skill(2)
     assert [e.value for e in card_elements(skill)] == ["fire"]
     physical = lib.skills["skill_marrow_thorn"]
-    assert card_elements(physical) == ()
+    assert [e.value for e in card_elements(physical)] == ["poison"]
     assert {e.value for e in damage_elements(physical)} == {"poison"}
+    assert not skill_elements(physical)
 
 
 def _request(tier: int, seed: int) -> CandidateRequest:

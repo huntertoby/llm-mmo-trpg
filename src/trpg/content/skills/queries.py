@@ -86,11 +86,10 @@ def damage_elements(skill: SkillDef) -> frozenset[Element]:
 
 def card_elements(skill: SkillDef) -> tuple[Element, ...]:
     """卡片與說明寫的元素（WC-2，#167「卡片照實寫兩個元素」）：技能的元素（:func:`skill_elements`）
-    在前，之後是第二元素（:func:`damage_elements` 多出來的，依代碼排序）。技能本身沒有元素（物理）時
-    是空的，效果自己寫的元素不讓它變成元素技能（06 6.33）。"""
+    在前，之後是傷害效果自己寫的元素（:func:`damage_elements` 多出來的，依代碼排序）。WC-2b（玩法
+    交接 4.1.34 第 1 點）：技能本身是物理、傷害效果帶元素時也寫出來，和許願的命中判定一致。只改卡片
+    顯示；規則上的技能元素（06 6.33）仍是 :func:`skill_elements`。"""
     theme = sorted(skill_elements(skill), key=lambda e: e.value)
-    if not theme:
-        return ()
     others = sorted(damage_elements(skill) - set(theme), key=lambda e: e.value)
     return (*theme, *others)
 
