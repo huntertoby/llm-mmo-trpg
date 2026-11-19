@@ -14,7 +14,7 @@ import { DelayTrail } from "./MotionBits";
 import { PartTip } from "./PartTip";
 import { TileCanvas } from "./SkillIconView";
 import { StackTip } from "./StackTip";
-import { barFill, statusCorner, type BarData, type StatChip, type StatIcon } from "./statusCard";
+import { barFill, statusCorner, type ApPip, type ApRow, type BarData, type StatChip, type StatIcon } from "./statusCard";
 
 /** 條：三條一樣粗，條上寫「HP 41 / 50」；HP 條上疊淺藍的護盾段。 */
 export function StatBar({ bar }: { bar: BarData }) {
@@ -43,8 +43,44 @@ function StatPip({ icon, on }: { icon: StatIcon; on: boolean }) {
   return <span className={`stat-pip ${icon}${on ? " on" : ""}`} />;
 }
 
+/** AP 列的一顆圓點（AP-1）：每顆有自己的說明卡。 */
+function ApPipView({ pip }: { pip: ApPip }) {
+  const cls = ["stat-pip", "ap", pip.kind === "ap" ? "" : pip.kind, pip.on ? "on" : "", pip.keep ? "keep" : ""];
+  return (
+    <Hint text={pip.hint}>
+      <span className={cls.filter((c) => c !== "").join(" ")} data-ap-pip={pip.kind} aria-label={pip.hint.split("\n")[0]} />
+    </Hint>
+  );
+}
+
+/**
+ * AP 列（AP-1，docs/art/AP-1-AP列畫法.md）：`[這回合] ｜ [下回合會少的]`。整格不包一層說明卡（每顆圓點各有說明，
+ * 外層再包會兩張卡打架），圖示自己帶 AP 的說明。
+ */
+function ApChipView({ chip, row }: { chip: StatChip; row: ApRow }) {
+  return (
+    <span className={`stat-chip ap-row${chip.dim ? " dim" : ""}`} data-testid={`stat-chip-${chip.key}`} aria-label={chip.hint.split("\n")[0]}>
+      <Hint text={chip.hint}>
+        <span className="ap-row-glyph">
+          <StatGlyph icon={chip.icon} />
+        </span>
+      </Hint>
+      <span className="stat-pips">
+        {row.now.map((p, i) => (
+          <ApPipView key={`n${i}`} pip={p} />
+        ))}
+        {row.next.length > 0 && <i className="stat-pip-sep" aria-hidden="true" />}
+        {row.next.map((p, i) => (
+          <ApPipView key={`x${i}`} pip={p} />
+        ))}
+      </span>
+    </span>
+  );
+}
+
 /** 圖示＋數字（或圓點）；用過或沒有了變灰。 */
 export function StatChipView({ chip }: { chip: StatChip }) {
+  if (chip.apRow !== undefined) return <ApChipView chip={chip} row={chip.apRow} />;
   return (
     <Hint text={chip.hint}>
       <span className={`stat-chip${chip.dim ? " dim" : ""}`} data-testid={`stat-chip-${chip.key}`} aria-label={chip.hint.split("\n")[0]}>

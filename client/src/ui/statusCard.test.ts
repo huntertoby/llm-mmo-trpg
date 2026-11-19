@@ -109,7 +109,7 @@ describe("主角狀態卡：三條一樣粗、條上寫字", () => {
   });
   it("下面一排：AP 圓點、移動、反應、源力 3 點、狀態（右下角回合）、層數、腳下表面", () => {
     expect(heroChips(hero).map((c) => c.key)).toEqual(["ap", "move", "reaction", "source"]);
-    expect(heroChips(hero)[0]?.pips).toEqual([true, true, true]);
+    expect(heroChips(hero)[0]?.pips).toEqual([true, true, true, false]); // AP-1：每回合 4 AP，用掉 1 點是空心
     expect(sourceChip(hero).pips).toEqual([true, false, false]);
     expect(html).toContain('class="part-tip stat-badge status-badge"');
     expect(html).toContain('<b class="stat-corner">2</b>');
