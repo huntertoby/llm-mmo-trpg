@@ -62,6 +62,7 @@ from trpg.engine.skills.targeting import (
     PaidCost,
     SkillArea,
     aims_first,
+    around_area,
     center_tiles,
     checked_area,
     composite_area,
@@ -413,8 +414,12 @@ def use_triggered_skill(
     """結算被動技能的效果（代價與 ``skill_triggered`` 已由呼叫端處理）。
 
     作用的單位是 ``other``（``trigger.target: other``，倒下時沒有對象）或持有者自己；效果自動命中
-    （不擲命中、沒有格擋與暴擊），狀態照常擲抵抗。
+    （不擲命中、沒有格擋與暴擊），狀態照常擲抵抗。形狀是「自身周圍」（環形，WC-2，#167）時作用在
+    持有者周圍的範圍（:func:`~.targeting.around_area`；``trigger.target`` 一定是 ``self``）。
     """
+    if skill.shape.type != "self":
+        TriggeredCast(ctx, owner, skill, around_area(ctx.state, owner, skill)).run()
+        return
     subject = owner if other is None else other
     units = (subject.id,) if subject.alive else ()
     area = SkillArea(tiles=(subject.xy,), units=units, origin=owner.xy)

@@ -57,6 +57,7 @@ from trpg.roguelite.llm_hook import use_picker, use_proposer
 from trpg.roguelite.offers import make_offer, offer_key
 from trpg.roguelite.state import FlashChoice, FlashLlmRecord
 from trpg.roguelite.wish_offer import make_wish_offer
+from trpg.skillgen.skill_tier import character_tier
 from trpg.world.common import rules_of
 from trpg.world.generated import (
     FlashGen,
@@ -271,6 +272,7 @@ def _wish_tags_generator(
         request.text,
         request.menu,
         max_attempts=source.max_attempts,
+        tier=character_tier(world_library(library), request.run.level),
     )
     base = WishGen(
         key=request.key,

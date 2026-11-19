@@ -1,5 +1,5 @@
-"""許願覆蓋表腳本（WC-1，``scripts/wish_coverage.py``）：標籤清單、成功率的加權、做不到的分類、
-單桶量測的確定性。"""
+"""許願覆蓋表腳本（WC-1，WC-2 起格式 /2，``scripts/wish_coverage.py``）：標籤清單、成功率的加權、
+衍生版本（換元素、第二元素）、召喚桶與手寫技能池、做不到的分類、單桶量測的確定性。"""
 
 from __future__ import annotations
 
@@ -67,13 +67,62 @@ def test_rate_weights_kinds_and_alternates_keywords(wc: Any) -> None:
 
 def test_classify_rules(wc: Any, library: ContentLibrary) -> None:
     singles = {t: 100 for t in wc.all_tags(library)}
-    two_elements = wc.classify(library, [("elements", "fire"), ("elements", "ice")], singles)
-    assert two_elements.category == "b" and "07 7.6" in two_elements.source
+    # WC-2（#167）：兩個元素 2 階起可以，只剩「物理＋元素」是規則禁止
+    physical = wc.classify(library, [("elements", "physical"), ("elements", "ice")], singles)
+    assert physical.category == "b" and "07 7.6" in physical.source
+    assert wc.rule_verdict(library, [("elements", "fire"), ("elements", "ice")]) is None
+    two_shapes = wc.classify(library, [("shapes", "line"), ("shapes", "cone")], singles)
+    assert two_shapes.category == "b"
     passive_line = wc.classify(library, [("shapes", "line"), ("kinds", "passive")], singles)
     assert passive_line.category == "b" and "skeleton" in passive_line.reason
     assert wc._kind_shape_block(library, [("shapes", "around"), ("kinds", "passive")]) is None
+    assert wc._kind_shape_block(library, [("shapes", "single"), ("kinds", "passive")]) is None
     ghost = wc.classify(library, [("keywords", "no_such_keyword")], singles)
     assert ghost.category == "c"
+
+
+def test_derived_versions_count_only_for_element_wishes(wc: Any) -> None:
+    """WC-2：換元素的版本只在願望有元素時算，加第二元素的版本只在有兩個元素時算；召喚桶取較高；
+    手寫技能池有一招全帶到＝1。"""
+    rows = {
+        "-/active/2/rare": {
+            "elements:fire|shapes:area#Relements:ice|shapes:area#Delements:fire|elements:ice": 1,
+            "shapes:single": 1,
+        },
+        "-/active/2/rare/summon": {"effects:summon|kinds:active|shapes:single": 2},
+    }
+    payload = {
+        "params": {"tiers": [2]},
+        "buckets": [{"key": k, "seeds": 2, "signatures": v} for k, v in rows.items()],
+    }
+    pool = {("form", "active", 2): (frozenset({"keywords:form", "kinds:active"}),)}
+    measured = wc.Measured.from_payload(payload, {"active": 1}, pool)
+    area = [("shapes", "area")]
+    assert measured.rate(area, 2, "rare") == Fraction(1, 2)
+    ice_area = [("elements", "ice"), ("shapes", "area")]
+    assert measured.rate(ice_area, 2, "rare") == Fraction(1, 2)
+    fire_ice = [("elements", "fire"), ("elements", "ice")]
+    assert measured.rate(fire_ice, 2, "rare") == Fraction(1, 2)
+    assert measured.rate([("elements", "ice")], 2, "rare") == Fraction(1, 2)
+    summon = [("effects", "summon"), ("kinds", "active")]
+    assert measured.rate(summon, 2, "rare") == 1
+    form = [("keywords", "form"), ("kinds", "active")]
+    assert measured.rate(form, 2, "rare") == 1
+    assert measured.rate([("keywords", "form"), ("kinds", "passive")], 2, "rare") == 0
+
+
+def test_compare_lists_fixed_and_remaining(wc: Any) -> None:
+    head = ["| 組合 | 最佳格 | 類別 | 理由 | 出處 |", "|---|---|---|---|---|"]
+    none = "## 做不到清單（每一格都 0）"
+    low = "## 極低清單（最好的一格不到 2%）"
+    old = "NL".join([none, "", *head, "| A | 0% |", "| B | 0% |", "| C | 0% |"])
+    new = "NL".join([none, "", *head, "| C | 0% |", "| D | 0% |", low, "", *head, "| B | 1% |"])
+    found = wc.compare_lines(old.replace("NL", chr(10)), new.replace("NL", chr(10)))
+    at = {line: i for i, line in enumerate(found)}
+    assert found[at["### 做不到 → 做得到（最好的一格 ≥ 2%）（1）"] + 2] == "- A"
+    assert found[at["### 做不到 → 極低（最好的一格 < 2%）（1）"] + 2] == "- B"
+    assert found[at["### 還是做不到（1）"] + 2] == "- C"
+    assert found[at["### 新出現的做不到（舊表沒有）（1）"] + 2] == "- D"
 
 
 def test_bucket_measurement_is_deterministic(wc: Any) -> None:

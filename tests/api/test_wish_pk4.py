@@ -119,6 +119,14 @@ def test_view_has_tag_groups(client: TestClient, content_library: ContentLibrary
     assert [i["name_zh"] for i in groups[4]["items"]] == ["主動", "被動", "反應"]
 
 
+def test_tag_groups_allow_two_elements_from_tier_two(content_library: ContentLibrary) -> None:
+    """WC-2（#167，07 7.6 第 1 點）：角色 2 階起元素最多 2 個；1 階照舊 1 個。"""
+    from trpg.api.world_wish_view import _tag_groups  # noqa: PLC0415 — 只有這個測試用私有函式
+
+    assert [g.max for g in _tag_groups(content_library, 1)] == [2, 1, 2, 1, 1]
+    assert [g.max for g in _tag_groups(content_library, 2)] == [2, 2, 2, 1, 1]
+
+
 def test_view_without_switch_has_no_tag_groups(
     content_library: ContentLibrary, tmp_path: Path
 ) -> None:

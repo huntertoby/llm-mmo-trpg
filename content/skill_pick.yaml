@@ -58,6 +58,7 @@ weights:
 wish_tags:
   max_keywords: 2
   max_elements: 1
+  max_elements_dual: 2   # WC-2（#167，07 7.6 第 1 點）：角色到第二元素的階級（skill_budget.yaml min_character_tier.second_element，初值 2 階）起最多 2 個元素
   max_effects: 2
   max_shapes: 1
   max_kinds: 1
@@ -84,6 +85,7 @@ wish_tags:
       name_zh: 治療
       primitives: [heal, revive]
       statuses: [regenerating]
+      params: [lifesteal_permille, split_heal]   # WC-2（#167，06 6.18 A、B）：吸血（傷害依比例回復自己）、聖光雙效（對友治療、對敵傷害）也算
     - id: shield
       name_zh: 護盾
       primitives: [shield, intercept]

@@ -2,14 +2,21 @@
 「A（建議）」；06 6.7 挑選模式）。
 
 1. **需求標籤**（:class:`~trpg.content.skill_pick.WishTags`）：關鍵字（內容庫的 16 個，最多
-   2）、元素（最多 1）、效果類型（最多 2）、形狀（最多 1）、種類（最多 1），清單在
+   2）、元素（最多 1；角色到第二元素的階級起最多 2，WC-2，#167）、效果類型（最多 2）、形狀（最多
+   1）、種類（最多 1），清單在
    ``skill_pick.yaml`` 的 ``wish_tags``。LLM 翻出來的標籤經 :func:`clean_wish_tags` 丟掉清單外的
    那一項、其餘照用；玩家從清單點選的、引擎收到的一律用 :func:`wish_tags_problem` 檢查。
 2. **照標籤做候選**（:func:`wish_pool`）：用獨立亂數串流 ``Rng(seed).fork("pick.wish")`` 抽組合器
    種子，**關鍵字、種類是出題條件**（有關鍵字標籤時每張至少帶一個；有種類標籤時只收那一種；沒有
    種類標籤時每個種子照 06 6.34.1 的比例擲種類），湊到 ``pool.wish_candidates``（候選量）個不同
    設計就停（最多抽 :data:`WISH_SEED_PERMILLE` ‰ 的種子）；元素、效果類型、形狀的標籤一張都沒做到時
-   用那個標籤的獨立串流補抽（:func:`_tag_draws`，只收做到它的）。玩家手上的技能、要排除的 ID、傳說、
+   用那個標籤的獨立串流補抽（:func:`_tag_draws`，只收做到它的）。願望有兩個元素時，帶其中一個元素的
+   候選另外用 ``pick.wish.dual`` 串流加上另一個元素（:func:`_dual_draws`，
+   :func:`~trpg.skillgen.composer_dual.add_second_element`）。WC-2 補配方（#167 第 5 題）：效果標籤
+   有召喚時，補抽指定召喚骨架（:data:`SUMMON_HINT`）；關鍵字標籤是組合器不做的（形態）時，候選另外
+   放進同關鍵字的手寫技能（:func:`handwritten_pool`，07 7.6 第 2 點「形態例外」）；有元素標籤時，
+   沒帶到那個元素的候選另外換成那個元素（:func:`_element_draws`，
+   :func:`~trpg.skillgen.composer_retheme.retheme`）。玩家手上的技能、要排除的 ID、傳說、
    武器不合的不收。不到 3 個時用 ``pick.wish.relax`` 串流放寬（不看種類與關鍵字）補到 3 個。
 3. **打分**：一般完整技能的分數（:func:`~trpg.skillgen.skill_pick.score_candidate`，關鍵字＝願望的
    關鍵字）＋ **願望相合**（``weights.wish_match`` × 命中的標籤數，:func:`tag_hits`）；單薄的先
@@ -30,7 +37,7 @@ from typing import Final, Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_pick import WISH_TAG_GROUPS, WishEffectTag, WishTags
-from trpg.content.skills import SkillDef, skill_elements, weapon_problem
+from trpg.content.skills import SkillDef, damage_elements, weapon_problem
 from trpg.shared.rng import Rng
 from trpg.skillgen.candidates import (
     CandidateRequest,
@@ -38,7 +45,9 @@ from trpg.skillgen.candidates import (
     composer_kinds,
     skill_has_keywords,
 )
-from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.composer_dual import add_second_element, second_element_tier
+from trpg.skillgen.composer_retheme import retheme
+from trpg.skillgen.keywords import derive_keywords, pool_skills
 from trpg.skillgen.memo import by_id
 from trpg.skillgen.pick_offer import SLOT_KEYWORD_TRIES, same_structure
 from trpg.skillgen.pick_player import PickPlayer
@@ -52,9 +61,12 @@ from trpg.skillgen.skill_pick import (
     rank_candidates,
     score_candidate,
 )
+from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
+    "SUMMON_HINT",
     "WISH_CARDS",
+    "WISH_DUAL_FORK",
     "WISH_FORK",
     "WISH_RELAX_FORK",
     "WISH_SEED_PERMILLE",
@@ -64,10 +76,14 @@ __all__ = [
     "WishPicker",
     "WishResult",
     "clean_wish_tags",
+    "dual_elements",
+    "handwritten_keywords",
+    "handwritten_pool",
     "skill_tag_ids",
     "tag_hits",
     "tag_label",
     "tag_labels",
+    "tag_limits",
     "wish_cards",
     "wish_miss_zh",
     "wish_pool",
@@ -87,12 +103,19 @@ WISH_TAG_FORK: Final = "pick.wish.tag"
 """標籤補抽的亂數串流（``pick.wish.tag/<類>/<值>``；:func:`_tag_draws`）。"""
 WISH_TAG_EXTRA: Final = 3
 """標籤補抽每個標籤最多補幾個設計。"""
+WISH_DUAL_FORK: Final = "pick.wish.dual"
+"""雙元素（WC-2，#167）：帶其中一個元素的候選加上另一個元素的亂數串流（每個候選再 ``fork`` 它的
+位置）；最多加 :data:`WISH_TAG_EXTRA` 個設計。"""
 _ACTIVE_FAMILY: tuple[str, ...] = ("active", "stance")
 _KINDS: dict[str, tuple[str, ...]] = {
     "active": _ACTIVE_FAMILY,
     "passive": ("passive",),
     "reaction": ("reaction",),
 }
+SUMMON_HINT: Final = "summon"
+"""效果標籤「召喚」補抽時指定給組合器的骨架（WC-2，#167 第 5 題「組合器會抽召喚」）。"""
+_DUAL = 2
+"""雙元素（WC-2）：願望的兩個元素。"""
 _SKIPPED_KEYS = frozenset({"narrative", "provenance", "cost"})
 
 
@@ -107,19 +130,38 @@ def _allowed(library: ContentLibrary, group: str, menu: Sequence[str]) -> tuple[
     return tuple(i.id for i in library.skill_pick.wish_tags.items(group))
 
 
-def wish_tags_problem(
-    library: ContentLibrary, tags: WishTags, menu: Sequence[str], *, require_one: bool = False
-) -> str | None:
-    """標籤不合格的原因（繁體中文）；合格 ``None``。每一類：值在清單裡、不重複、不超過上限。
-    ``require_one``（玩家從清單點選）＝至少要選一個。"""
+def dual_elements(library: ContentLibrary, tier: int) -> bool:
+    """角色階級 ``tier`` 已到第二元素的階級（願望的元素上限改用 ``max_elements_dual``；WC-2，#167，
+    07 7.6 第 1 點「角色 2 階起最多 2 個」）。"""
+    return tier >= second_element_tier(library)
+
+
+def tag_limits(library: ContentLibrary, tier: int = 1) -> dict[str, int]:
+    """角色階級 ``tier`` 時每一類最多選幾個（依類別順序）。"""
     rules = library.skill_pick.wish_tags
+    dual = dual_elements(library, tier)
+    return {g: rules.limit(g, dual=dual) for g in WISH_TAG_GROUPS}
+
+
+def wish_tags_problem(
+    library: ContentLibrary,
+    tags: WishTags,
+    menu: Sequence[str],
+    *,
+    tier: int = 1,
+    require_one: bool = False,
+) -> str | None:
+    """標籤不合格的原因（繁體中文）；合格 ``None``。每一類：值在清單裡、不重複、不超過角色階級
+    ``tier`` 的上限（:func:`tag_limits`；省略＝1 階）。``require_one``（玩家從清單點選）＝至少要選
+    一個。"""
+    limits = tag_limits(library, tier)
     for group in WISH_TAG_GROUPS:
         values = tags.group(group)
         allowed = _allowed(library, group, menu)
         if len(set(values)) != len(values):
             return "標籤不能重複"
-        if len(values) > rules.limit(group):
-            return f"{_GROUP_ZH[group]}最多選 {rules.limit(group)} 個"
+        if len(values) > limits[group]:
+            return f"{_GROUP_ZH[group]}最多選 {limits[group]} 個"
         unknown = [v for v in values if v not in allowed]
         if unknown:
             return f"沒有這個{_GROUP_ZH[group]}：{'、'.join(unknown)}"
@@ -138,12 +180,12 @@ _GROUP_ZH: dict[str, str] = {
 
 
 def clean_wish_tags(
-    library: ContentLibrary, raw: Mapping[str, object], menu: Sequence[str]
+    library: ContentLibrary, raw: Mapping[str, object], menu: Sequence[str], *, tier: int = 1
 ) -> tuple[WishTags, tuple[str, ...]]:
-    """LLM 翻出來的標籤（已過 JSON 格式）：每一類只留清單裡的、不重複的值，超過上限的丟掉後面的
-    （07 7.6「清單外或不合法的那一項丟掉，其餘照用」）。回傳標籤與丟掉的代碼
-    （``wish.dropped.<類>``）。"""
-    rules = library.skill_pick.wish_tags
+    """LLM 翻出來的標籤（已過 JSON 格式）：每一類只留清單裡的、不重複的值，超過角色階級 ``tier``
+    的上限（:func:`tag_limits`）的丟掉後面的（07 7.6「清單外或不合法的那一項丟掉，其餘照用」）。回傳
+    標籤與丟掉的代碼（``wish.dropped.<類>``）。"""
+    limits = tag_limits(library, tier)
     kept: dict[str, tuple[str, ...]] = {}
     codes: list[str] = []
     for group in WISH_TAG_GROUPS:
@@ -155,7 +197,7 @@ def clean_wish_tags(
             if not isinstance(value, str) or value not in allowed or value in out:
                 codes.append(f"wish.dropped.{group}")
                 continue
-            if len(out) >= rules.limit(group):
+            if len(out) >= limits[group]:
                 codes.append(f"wish.dropped.{group}")
                 continue
             out.append(value)
@@ -182,10 +224,11 @@ def tag_labels(library: ContentLibrary, tags: WishTags) -> tuple[str, ...]:
 # ---------------------------------------------------------------------------
 
 
-def _walk(node: object, types: set[str], statuses: set[str]) -> None:
+def _walk(node: object, types: set[str], statuses: set[str], params: set[str]) -> None:
+    """技能資料裡的原語、施加的狀態、效果上有值的參數名（給命中判定）。"""
     if isinstance(node, list | tuple):
         for item in node:
-            _walk(item, types, statuses)
+            _walk(item, types, statuses, params)
         return
     if not isinstance(node, dict):
         return
@@ -195,13 +238,16 @@ def _walk(node: object, types: set[str], statuses: set[str]) -> None:
         status = node.get("status")
         if kind == "apply_status" and isinstance(status, str):
             statuses.add(status)
+        params.update(k for k, v in node.items() if v not in (None, False, 0, "", [], {}))
     for key, value in sorted(node.items()):
         if key not in _SKIPPED_KEYS:
-            _walk(value, types, statuses)
+            _walk(value, types, statuses, params)
 
 
-def _effect_hit(library: ContentLibrary, tag: WishEffectTag, types: set[str], st: set[str]) -> bool:
-    if types & set(tag.primitives) or st & set(tag.statuses):
+def _effect_hit(
+    library: ContentLibrary, tag: WishEffectTag, types: set[str], st: set[str], params: set[str]
+) -> bool:
+    if types & set(tag.primitives) or st & set(tag.statuses) or params & set(tag.params):
         return True
     if not (tag.control_statuses or tag.beneficial_statuses):
         return False
@@ -226,19 +272,36 @@ def _kind_of(skill: SkillDef) -> Literal["active", "passive", "reaction"]:
     return "active"
 
 
+_SINGLE = "single"
+
+
+def _shape_of(skill: SkillDef) -> str:
+    """命中判定用的形狀：被動作用在「觸發的那個人」（形狀自身、``trigger.target`` 不是持有者）算
+    單體（WC-2，#167；07 7.6 第 2 點「命中判定」）；其他照技能的形狀。"""
+    trigger = skill.trigger
+    passive = skill.kind == "passive" and skill.shape.type == "self"
+    if passive and trigger is not None and trigger.target != "self":
+        return _SINGLE
+    return skill.shape.type
+
+
 def skill_tag_ids(library: ContentLibrary, skill: SkillDef) -> WishTags:
-    """這招技能本身有的標籤（每一類全列，不受上限限制；給命中判定與測試）。"""
+    """這招技能本身有的標籤（每一類全列，不受上限限制；給命中判定與測試）。元素連第二元素一起算
+    （:func:`~trpg.content.skills.damage_elements`，WC-2）；沒有元素＝物理。"""
     rules = library.skill_pick.wish_tags
     types: set[str] = set()
     statuses: set[str] = set()
-    _walk(skill.model_dump(mode="json", exclude=set(_SKIPPED_KEYS)), types, statuses)
+    params: set[str] = set()
+    _walk(skill.model_dump(mode="json", exclude=set(_SKIPPED_KEYS)), types, statuses, params)
     keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
-    elements = {e.value for e in skill_elements(skill)} or {"physical"}
+    elements = {e.value for e in damage_elements(skill)} or {"physical"}
     return WishTags.model_construct(
         keywords=tuple(keywords),
         elements=tuple(i.id for i in rules.elements if i.id in elements),
-        effects=tuple(t.id for t in rules.effects if _effect_hit(library, t, types, statuses)),
-        shapes=tuple(t.id for t in rules.shapes if skill.shape.type in t.shapes),
+        effects=tuple(
+            t.id for t in rules.effects if _effect_hit(library, t, types, statuses, params)
+        ),
+        shapes=tuple(t.id for t in rules.shapes if _shape_of(skill) in t.shapes),
         kinds=(_kind_of(skill),),
     )
 
@@ -298,17 +361,21 @@ class _Filter:
         )
 
 
-def _compose(
+def _compose(  # noqa: PLR0917 — 一次組合的參數（同 _draw）
     library: ContentLibrary,
     request: CandidateRequest,
     seed: int,
     keyword: str | None,
     kinds: tuple[str, ...],
+    skeleton: str | None = None,
 ) -> SkillDef | None:
+    if keyword is not None and keyword in handwritten_keywords(library):
+        return None  # 組合器不做（形態）：候選由 :func:`_handwritten_draws` 放
     try:
         return compose_with_stats(
             seed,
             tier=request.tier,
+            skeleton=skeleton,
             category="spell" if request.weapon_class == "focus" else None,
             library=library,
             keyword=keyword,
@@ -332,9 +399,11 @@ def _draw(  # noqa: PLR0917 — 一次抽樣的參數
     enough: int,
     found: dict[DesignKey, PickCandidate],
     need: Callable[[SkillDef], bool] | None = None,
+    skeleton: str | None = None,
 ) -> int:
     """抽到 ``found`` 湊滿 ``enough`` 個不同設計或抽滿 ``seeds`` 個種子；回傳抽了幾個種子。
-    ``need``（標籤補抽）：另外要符合的條件。"""
+    ``need``（標籤補抽）：另外要符合的條件；``skeleton``（WC-2 召喚）：指定給組合器的骨架（種類固定
+    主動那一族）。"""
     rng = Rng(request.seed).fork(fork)
     keywords = () if tags is None else tags.keywords
     tried = 0
@@ -343,12 +412,14 @@ def _draw(  # noqa: PLR0917 — 一次抽樣的參數
             break
         seed = rng.next_u32()
         tried += 1
-        if tags is not None and tags.kinds:
+        if skeleton is not None:
+            kinds = _ACTIVE_FAMILY
+        elif tags is not None and tags.kinds:
             kinds = _KINDS[tags.kinds[0]]
         else:
             kinds = composer_kinds(library, request.seed, f"wish/{fork}/{turn}")
         keyword = keywords[turn % len(keywords)] if keywords else None
-        skill = _compose(library, request, seed, keyword, kinds)
+        skill = _compose(library, request, seed, keyword, kinds, skeleton)
         if skill is None or not check.ok(skill, tags) or (need is not None and not need(skill)):
             continue
         key = design_key(skill)
@@ -380,10 +451,120 @@ def _tag_draws(  # noqa: PLR0917 — 一次補抽的參數
                 continue
             fork = f"{WISH_TAG_FORK}/{group}/{value}"
             target = len(found) + WISH_TAG_EXTRA
+            hint = _summon_hint(group, value, tags)
             tried += _draw(
-                library, request, check, tags, fork, enough // 2, target, found, need=hits
+                library, request, check, tags, fork, enough // 2, target, found, hits, hint
             )
     return tried
+
+
+def _summon_hint(group: str, value: str, tags: WishTags) -> str | None:
+    """效果標籤「召喚」、種類可以是主動時，補抽指定召喚骨架（WC-2，#167 第 5 題）。"""
+    if group != "effects" or value != SUMMON_HINT:
+        return None
+    return SUMMON_HINT if not tags.kinds or tags.kinds[0] == "active" else None
+
+
+def handwritten_keywords(library: ContentLibrary) -> frozenset[str]:
+    """組合器不做、候選從手寫技能放的關鍵字（``composable: false``；目前是形態，07 7.6 第 2 點
+    「形態例外」，#167）。"""
+    return frozenset(k.id for k in library.keywords.keywords if not k.composable)
+
+
+def handwritten_pool(
+    library: ContentLibrary, keyword: str, tier: int, kinds: Sequence[str] | None = None
+) -> tuple[SkillDef, ...]:
+    """``keyword`` 的手寫技能（專屬規則；依 ID）：不是傳說、角色階級 ``tier`` 用得到、種類在
+    ``kinds`` 裡（``None``＝不限）。"""
+    skills = pool_skills(library, keyword, starter_only=False, exclusive_only=True)
+    return tuple(
+        s
+        for s in skills
+        if s.rarity != "legendary"
+        and (kinds is None or s.kind in kinds)
+        and minimum_tier(s, library) <= tier
+    )
+
+
+def _handwritten_draws(
+    library: ContentLibrary,
+    request: CandidateRequest,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+) -> None:
+    """形態例外（WC-2，#167；07 7.6 第 2 點）：關鍵字標籤是組合器不做的，同關鍵字的手寫技能全部放進
+    候選（出題條件照舊：種類、手上已有、武器）。"""
+    kinds = _KINDS[tags.kinds[0]] if tags.kinds else None
+    for keyword in tags.keywords:
+        if keyword not in handwritten_keywords(library):
+            continue
+        for skill in handwritten_pool(library, keyword, request.tier, kinds):
+            key = design_key(skill)
+            if key not in found and check.ok(skill, tags):
+                found[key] = PickCandidate(skill, "pool", None, key)
+
+
+def _element_draws(
+    library: ContentLibrary,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+) -> None:
+    """元素配方（WC-2，#167 第 5 題）：每個願望元素（物理除外），沒帶到它的組合器候選依「命中其他
+    標籤數」由多到少換成那個元素（:func:`~trpg.skillgen.composer_retheme.retheme`），最多加
+    :data:`WISH_TAG_EXTRA` 個新設計。"""
+    for element in tags.elements:
+        others = WishTags.model_validate({**tags.model_dump(), "elements": ()})
+        lacking = [
+            c
+            for c in found.values()
+            if element not in skill_tag_ids(library, c.skill).elements and c.source != "pool"
+        ]
+        lacking.sort(key=lambda c: -len(tag_hits(library, c.skill, others)[0]))
+        added = 0
+        for candidate in lacking:
+            if added >= WISH_TAG_EXTRA:
+                break
+            skill = retheme(library, candidate.skill, element)
+            if skill is None or not check.ok(skill, tags):
+                continue
+            key = design_key(skill)
+            if key not in found:
+                found[key] = PickCandidate(skill, candidate.source, candidate.seed, key)
+                added += 1
+
+
+def _dual_draws(
+    library: ContentLibrary,
+    request: CandidateRequest,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+) -> None:
+    """雙元素（WC-2，#167；模組說明第 2 點）：願望有兩個元素、角色已到第二元素的階級時，候選裡帶其中
+    一個元素（沒有另一個）的，依發現順序加上另一個元素
+    （:func:`~trpg.skillgen.composer_dual.add_second_element`，串流 ``pick.wish.dual/<位置>``），
+    最多加 :data:`WISH_TAG_EXTRA` 個新設計（不抽組合器種子）。"""
+    wanted = set(tags.elements)
+    if len(wanted) != _DUAL or not dual_elements(library, request.tier):
+        return
+    rng = Rng(request.seed).fork(WISH_DUAL_FORK)
+    added = 0
+    for position, candidate in enumerate(list(found.values())):
+        if added >= WISH_TAG_EXTRA:
+            break
+        have = {e.value for e in damage_elements(candidate.skill)} & wanted
+        if len(have) != 1:
+            continue
+        (other,) = wanted - have
+        skill = add_second_element(library, candidate.skill, other, rng.fork(str(position)))
+        if skill is None or not check.ok(skill, tags):
+            continue
+        key = design_key(skill)
+        if key not in found:
+            found[key] = PickCandidate(skill, candidate.source, candidate.seed, key)
+            added += 1
 
 
 def wish_pool(
@@ -401,7 +582,10 @@ def wish_pool(
     )
     found: dict[DesignKey, PickCandidate] = {}
     tried = _draw(library, request, check, tags, WISH_FORK, seeds, enough, found)
+    _handwritten_draws(library, request, check, tags, found)
     tried += _tag_draws(library, request, check, tags, found, enough)
+    _element_draws(library, check, tags, found)
+    _dual_draws(library, request, check, tags, found)
     if len(found) < WISH_CARDS:  # 願望太窄：放寬補到 3 個（不看種類與關鍵字）
         tried += _draw(library, request, check, None, WISH_RELAX_FORK, seeds, WISH_CARDS, found)
     weight = pick.weights.wish_match

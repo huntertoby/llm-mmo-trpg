@@ -921,6 +921,9 @@ class SkeletonDef(ContentModel):
     """隨機組合器的骨架專屬設定（3T-8）。"""
     min_rarity: SkillRarity = "common"
     """使用此骨架的最低稀有度（2E：被動 epic；之後的反應技、姿態、蓄力／終結、陷阱 rare）。"""
+    max_radius: int | None = Field(default=None, ge=1)
+    """形狀半徑（環形等 ``radius`` 參數）的上限；``None``＝照形狀本身的上限（WC-2：被動的「自身
+    周圍」小範圍只到 1，06 6.9、#167）。"""
 
     @model_validator(mode="after")
     def _check(self) -> SkeletonDef:

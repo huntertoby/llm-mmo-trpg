@@ -34,6 +34,7 @@ from trpg.content.skills import (
     TriggerSpec,
     VariantSpec,
     VariantWhen,
+    card_elements,
     condition_text,
     default_affects,
     is_wind_skill,
@@ -1694,6 +1695,7 @@ class SkillCard(BaseModel):
     tags: tuple[str, ...]
     element: str | None = None
     """技能元素的中文名（Phase 3-54d，:func:`~trpg.content.skills.skill_elements`），例如「大地」；
+    有第二元素時兩個都寫，例如「火焰、冰霜」（WC-2，:func:`~trpg.content.skills.card_elements`）；
     沒有元素（物理或不填）為 ``None``。"""
     element_id: str | None = None
     """技能元素的代碼（``earth`` 等），給前端上色用。"""
@@ -1916,8 +1918,8 @@ def _element_id(skill: SkillDef) -> str | None:
 
 
 def _element_name(skill: SkillDef) -> str | None:
-    found = sorted(skill_elements(skill), key=lambda e: e.value)
-    return found[0].display_name if found else None
+    found = card_elements(skill)  # WC-2：有第二元素時兩個都寫（「火焰、冰霜」）
+    return "、".join(e.display_name for e in found) if found else None
 
 
 def skeleton_name(library: ContentLibrary, skeleton_id: str) -> str:

@@ -68,6 +68,33 @@ def skill_elements(skill: SkillDef) -> frozenset[Element]:
     return frozenset(found)
 
 
+_DAMAGE_EFFECTS = ("damage", "delayed_damage")
+
+
+def damage_elements(skill: SkillDef) -> frozenset[Element]:
+    """技能帶的元素，連第二元素一起算（WC-2，#167；06 6.34.9「第二元素：傷害帶兩種以上的元素」）：
+    :func:`skill_elements` 加上傷害效果（含接續段）自己寫的元素，物理不算。驗證器的第二元素階級
+    門檻、許願池的元素命中、卡片的元素一行都用這個。"""
+    found = set(skill_elements(skill))
+    follow = skill.followup.effects if skill.followup is not None else ()
+    for effect in (*skill.effects, *follow):
+        if effect.type in _DAMAGE_EFFECTS and effect.element is not None:
+            found.add(effect.element)
+    found.discard(Element.PHYSICAL)
+    return frozenset(found)
+
+
+def card_elements(skill: SkillDef) -> tuple[Element, ...]:
+    """卡片與說明寫的元素（WC-2，#167「卡片照實寫兩個元素」）：技能的元素（:func:`skill_elements`）
+    在前，之後是第二元素（:func:`damage_elements` 多出來的，依代碼排序）。技能本身沒有元素（物理）時
+    是空的，效果自己寫的元素不讓它變成元素技能（06 6.33）。"""
+    theme = sorted(skill_elements(skill), key=lambda e: e.value)
+    if not theme:
+        return ()
+    others = sorted(damage_elements(skill) - set(theme), key=lambda e: e.value)
+    return (*theme, *others)
+
+
 def is_wind_skill(skill: SkillDef) -> bool:
     """風元素的技能（Phase 3-54a，06 6.33）：頂層有 ``element: wind`` 的傷害效果。
 

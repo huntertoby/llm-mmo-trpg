@@ -200,6 +200,12 @@ SNAPSHOTS = {
     # 傳給一名同伴）；反應事件多重擲的兩個時機、反應骨架核心多重擲；新觸發的 llm_hint 改寫（利用
     # 多兩種、每回合一次）。都在 <available>／schema 這層，雜湊同 /20
     "skill-proposal/21": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # WC-2 第 3 項（#167，06 6.9）：被動骨架的形狀多 ring（自身周圍，半徑最多 1）。都在
+    # <available> 這層，雜湊同 /21
+    "skill-proposal/22": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # WC-2 第 5 項（#167 第 5 題）：範圍、控場、位移骨架的附帶多 add_stack、consume_stack（層數
+    # 關鍵字的附帶配方）。都在 <available> 這層，雜湊同 /22
+    "skill-proposal/23": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

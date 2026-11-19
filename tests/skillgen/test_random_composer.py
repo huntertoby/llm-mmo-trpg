@@ -279,7 +279,10 @@ def test_explicit_passive_composes_valid_passives_for_every_trigger() -> None:
         skill = compose_random_skill(seed, skeleton="passive", rarity="epic")
         assert validate_skill(skill, library) == []
         assert skill.kind == "passive" and skill.ap_cost is None and skill.trigger is not None
-        assert skill.category == "spell" and skill.shape.type == "self"
+        # WC-2（#167）：被動多「自身周圍」小範圍（環形半徑 1，以持有者為中心）
+        assert skill.category == "spell" and skill.shape.type in ("self", "ring")
+        if skill.shape.type == "ring":
+            assert skill.shape.radius == 1 and skill.trigger.target == "self"
         events.add(skill.trigger.event)
         low, high = tuning_bounds(library)
         assert low <= skill_budget(skill, library).ratio <= high, seed
