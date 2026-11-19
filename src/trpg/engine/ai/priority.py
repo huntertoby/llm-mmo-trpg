@@ -176,4 +176,5 @@ def share_discount(  # noqa: PLR0917
             if state.ruleset.status_def(e.status_id).share_damage is None:
                 continue
             total += e.amount
+    total /= state.ruleset.core.quantity_scale  # 量類 ÷ 倍率（X10-2a）
     return total / 2 * hit * rules.share_discount_permille / 1000

@@ -85,9 +85,16 @@ def _last_cause(events: tuple[EventBase, ...]) -> dict[UnitId, str]:
     return cause
 
 
-def _useful_damage(damage: DamageRange, hit: Fraction, hp: int) -> Fraction:
-    """命中時有用的傷害：超過目標剩餘 HP 的部分是浪費（擊倒另由 ``kill`` 計分）。"""
-    return min(damage.expected_if_hit, Fraction(hp)) * hit
+def _useful_damage(damage: DamageRange, hit: Fraction, hp: int, scale: int) -> Fraction:
+    """命中時有用的傷害：超過目標剩餘 HP 的部分是浪費（擊倒另由 ``kill`` 計分）。÷ ``scale``
+    （量類倍率，X10-2a）：AI 的權重與點數是換算前的單位。"""
+    return min(damage.expected_if_hit, Fraction(hp)) * hit / scale
+
+
+def _scale(state: BattleState) -> int:
+    """量類倍率（``core.quantity_scale``，X10-2a）：AI 評分的量（傷害、HP、護盾、治療）÷ 這個值，
+    ``ai_profiles.yaml`` 的權重與點數不必換算，決策和換算前一樣（X10-1 裁定 2）。"""
+    return state.ruleset.core.quantity_scale
 
 
 def _has_usable_spell(state: BattleState, unit: UnitState) -> bool:
@@ -172,7 +179,7 @@ def _support_gains(state: BattleState, p: Preview, profile: AiProfile) -> Fracti
             for e in events:
                 if isinstance(e, ShieldGained) and state.units[e.unit_id].team is actor.team:
                     gained += max(0, e.total - shield_amount(state.ruleset, state.units[e.unit_id]))
-        gains += w.shield * gained / 2
+        gains += w.shield * gained / 2 / _scale(state)
     if w.support:
         gains += _buff_gains(state, actor, p, profile)
     return gains
@@ -280,7 +287,8 @@ def _event_damage(f: _GainFrame) -> tuple[Fraction, Fraction, Fraction]:
                         env_enemy += e.amount - e.absorbed
             elif e.target_id in f.state.units and f.only is None:
                 friendly += e.amount - e.absorbed
-    return other_enemy, env_enemy, friendly
+    scale = _scale(f.state)
+    return other_enemy / scale, env_enemy / scale, friendly / scale
 
 
 def _shield_broken(f: _GainFrame) -> Fraction:
@@ -299,19 +307,21 @@ def _shield_broken(f: _GainFrame) -> Fraction:
                 and f.counts(e.target_id)
             ):
                 broken += e.absorbed
-    return broken
+    return broken / _scale(f.state)
 
 
 def _damage_gains(f: _GainFrame) -> Fraction:
     """傷害：主要傷害用精確期望；其他取 min／max 平均 × 命中率；對友方的傷害扣分；打掉敵人的護盾
     照 ``shield`` 權重給分（:func:`_shield_broken`，6F-3）。"""
     w, state = f.w, f.state
+    scale = _scale(state)
     gains = Fraction(0)
     if f.p.damage is not None and f.primary is not None and f.counts(f.primary):
-        gains += w.damage * _useful_damage(f.p.damage, f.hit, state.units[f.primary].hp)
+        gains += w.damage * _useful_damage(f.p.damage, f.hit, state.units[f.primary].hp, scale)
     for t in f.p.targets:  # 技能：每個目標各自的命中率與期望傷害
         if t.damage is not None and not t.ally and f.counts(t.unit_id):
-            gains += w.damage * _useful_damage(t.damage, t.hit_chance, state.units[t.unit_id].hp)
+            hp = state.units[t.unit_id].hp
+            gains += w.damage * _useful_damage(t.damage, t.hit_chance, hp, scale)
     other_enemy, env_enemy, friendly = _event_damage(f)
     gains += w.damage * f.hit * other_enemy / 2
     gains += w.env_damage * f.hit * env_enemy / 2
@@ -326,6 +336,7 @@ def _ally_gains(f: _GainFrame) -> Fraction:
         return Fraction(0)
     p, state = f.p, f.state
     healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
+    healed = Fraction(healed) / _scale(state)
     gains = Fraction(f.w.heal) * healed
     if isinstance(p.action, UseSkill):  # 防禦動作的 defending 由 ``defend`` 權重計分，不重複算
         gains += _support_gains(state, p, f.profile)
@@ -588,7 +599,7 @@ def _cover_gains(  # noqa: PLR0917
                 for e in events
                 if isinstance(e, ObjectDamaged) and e.object_id in shields
             )
-            gains += w.cover_damage * hit * Fraction(dealt, 2)
+            gains += w.cover_damage * hit * Fraction(dealt, 2 * _scale(state))
     return gains
 
 

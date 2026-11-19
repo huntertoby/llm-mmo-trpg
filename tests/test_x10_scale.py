@@ -6,17 +6,21 @@
 from __future__ import annotations
 
 import dataclasses
+from fractions import Fraction
 from typing import Any
 
 import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import give_turn, make_map, make_state, spawn, template, with_rolls
+from trpg.content.environment import SummonAiRules
 from trpg.content.library import ContentLibrary
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.content.summons import summon_dpr
 from trpg.engine import Attack, BattleState, resolve
+from trpg.engine.ai.infuse import survival
+from trpg.engine.ai.utility.gains import _useful_damage
 from trpg.engine.effects import (
     ApplyStatusEffect,
     DamageEffect,
@@ -25,7 +29,7 @@ from trpg.engine.effects import (
     run_effects,
 )
 from trpg.engine.events import AttackRolled, DamageDealt, Healed, ShieldGained
-from trpg.engine.preview import dice_distribution
+from trpg.engine.preview import DamageRange, dice_distribution
 from trpg.shared.rng import Rng
 from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
@@ -225,3 +229,25 @@ def test_minimal_cost_is_one_times_scale(library: ContentLibrary, scale: int) ->
     out: dict[str, Any] = {"kind": "active", "category": "spell", "effects": [], "cost": {}}
     _fill_cost(out, lib, "spell")
     assert out["cost"]["mana"] == scale
+
+
+# ---------------------------------------------------------------------------
+# AI 評分：量類 ÷ scale（X10-1 裁定 2），ai_profiles.yaml 的點數不動
+
+
+def test_useful_damage_divides_by_scale() -> None:
+    one = DamageRange(3, 9, Fraction(5), Fraction(6))
+    ten = DamageRange(30, 90, Fraction(50), Fraction(60))
+    hit = Fraction(3, 4)
+    for hp in (4, 20):
+        assert _useful_damage(ten, hit, hp * 10, 10) == _useful_damage(one, hit, hp, 1)
+
+
+@pytest.mark.parametrize("scale", [1, 10])
+def test_infuse_survival_same_after_x10(scale: int) -> None:
+    """``infuse_threat_damage`` 是換算前的單位：× scale 再和 HP 相加，存活率不變。"""
+    state = _duel(scale)
+    unit = state.units[U2]
+    unit.hp = 7 * scale
+    rules = SummonAiRules(infuse_threat_damage=2)
+    assert survival(state, unit, rules) == Fraction(7, 7 + 2)  # 相鄰的戰士 1 名

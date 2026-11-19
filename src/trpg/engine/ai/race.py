@@ -147,7 +147,7 @@ def _restore_score(state: BattleState, unit: UnitState, action: UseRaceSkill) ->
         if action.choice == "stamina"
         else (unit.mana, unit.max_mana)
     )
-    deficit = maximum - current
+    deficit = (maximum - current) // state.ruleset.core.quantity_scale  # X10-2a：換算前的單位
     low = maximum > 0 and current * 2 <= maximum
     return deficit if low and deficit >= _RESTORE_MIN_DEFICIT else 0
 

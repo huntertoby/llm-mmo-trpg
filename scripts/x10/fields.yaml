@@ -769,11 +769,10 @@ groups:
 
   # ------------------------------------------------------------------ AI
   - files: ai_profiles.yaml
-    # AI 的分數以「預估傷害（HP）× 權重」為單位，再加上固定的點數。傷害 ×10 後，固定點數要不要跟著 ×10
-    # （或改由引擎把傷害 ÷10 再評分）是 X10-2 的做法問題，先列 pending、不動。
-    scale:
-      - summon.infuse_threat_damage               # 與召喚物 HP 直接相加比較
-    pending:
+    # AI 的分數以「預估傷害（HP）× 權重」為單位，再加上固定的點數。X10-1 裁定 2：引擎評分時把量類（傷害、
+    # HP、護盾、治療、法力、耐力）÷ quantity_scale（X10-2a），這個檔的權重與點數全部不變。
+    keep:
+      - summon.infuse_threat_damage               # 換算前的單位；引擎 × quantity_scale 再和召喚物 HP 相加
       - profiles[].weights.*
       - profiles[].rewrite.*_points
       - status_values.*
@@ -805,7 +804,6 @@ groups:
       - summon.*_points
       - terrain.*_points
       - weapon_ai.*
-    keep:
       - basic.*_permille
       - gamble.*_permille
       - orders.*_permille
@@ -861,9 +859,8 @@ groups:
       - targets[kind=unit].fields[path=attributes.str|attributes.dex|attributes.con|attributes.int|attributes.wis|attributes.wil].hint_*
       - targets[kind=skill].fields[path=cost.mana|cost.stamina].hint_*
       - targets[kind=object].fields[path="objects[*].max_hp"].hint_*
-    pending:
-      - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起決定
     keep:
+      - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起不變（X10-1 裁定 2）
       - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
       - targets[kind=unit].fields[kind=permille].hint_*
       - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*

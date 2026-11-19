@@ -349,8 +349,9 @@ def _restore_supports(
     state: BattleState, _caster: UnitState, skill: SkillDef, spec: EffectSpec, target: UnitState
 ) -> bool:
     """``restore_resource`` 對 ``target`` 有沒有用：法力有空間或有可縮短的冷卻。"""
-    if spec.resource == "mana":
-        return target.max_mana - target.mana >= (spec.amount or 1) // 2 + 1
+    if spec.resource == "mana":  # 量類倍率（X10-2a）：在換算前的單位比
+        scale = state.ruleset.core.quantity_scale
+        return target.max_mana - target.mana >= ((spec.amount or scale) // scale // 2 + 1) * scale
     return bool(restorable_cooldowns(state, target, skill))
 
 
