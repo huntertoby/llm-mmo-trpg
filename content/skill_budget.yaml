@@ -53,7 +53,7 @@ hurl_object_discount_permille: 800
 # 直線衝撞（Phase 3D-2c）：點數 ＝（dice 平均 ＋ on_hit 的點數：knock_prone 為該原語的 base_points、
 # push_aside 為 push 的 base_points）× 預期被撞到的敵人數（‰）÷ 1000。初值，未經模擬。
 charge_through_expected_targets_permille: 1500
-# 召喚（Phase 3D-4a）：點數 ＝ 召喚物每輪預估傷害（武器骰平均 ＋ 固定傷害）× duration × 這個值 ÷ 1000
+# 召喚（Phase 3D-4a）：點數 ＝ 召喚物每輪預估傷害（武器骰平均 ＋ 固定傷害 ÷ quantity_scale）× duration × 這個值 ÷ 1000
 # （命中率與吸引火力的折合）。初值，未經模擬。
 summon_round_value_permille: 800
 # 3D-4b 圖騰：點數 ＝ 光環狀態的 budget_points × 預期受惠的友方數 × duration × summon_round_value_permille ÷ 1000²。初值，未經模擬。
@@ -87,7 +87,7 @@ zone_cell_round_permille: 120
 zone_both_permille: 1500
 zone_moving_permille: 1500
 zone_surface_permille: 300
-# 3D-1：restore_resource 的點數（初值，未經模擬）：法力每點 700‰ 點、冷卻每回合 3 點
+# 3D-1：restore_resource 的點數（初值，未經模擬）：法力每 quantity_scale 點（core.yaml，現為 10）700‰ 點、冷卻每回合 3 點
 restore_mana_point_permille: 700
 restore_cooldown_points: 3
 # 3D-8a：驅散與揭露的點數（初值，未經模擬）：驅散 1 個增益 3 點、全部 6 點；揭露 ＝ 2 ＋ 1 × duration 點。
@@ -237,10 +237,10 @@ allowance:
   stance_cooldown_cap: 50
   uses_per_battle: {1: 400, 2: 250}
   uses_default: 100         # 每場 3 次以上
-  mana_per_point: 5         # 法力每點
+  mana_per_point: 5         # 法力每 quantity_scale 點（core.yaml，現為 10）
   mana_cap: 150
-  # 耐力（Phase 3H-2，06 6.10：武器技花耐力；初值）：耐力 2 點 ＝ 法力 1 點，預算點數等價——
-  # 折抵 ＝ 耐力 × mana_per_point ÷ stamina_per_mana（向下取整），上限同 mana_cap。內建武器技一律「耐力 ＝ 原法力 × 2」，強度不變。
+  # 耐力（Phase 3H-2，06 6.10：武器技花耐力；初值）：耐力 20 點 ＝ 法力 10 點，預算點數等價——
+  # 折抵 ＝ 耐力 × mana_per_point ÷（stamina_per_mana × quantity_scale）（向下取整），上限同 mana_cap。內建武器技一律「耐力 ＝ 原法力 × 2」，強度不變。
   stamina_per_mana: 2
   hp_per_permille: 1        # hp_percent 每 1‰
   hp_cap: 200
@@ -316,7 +316,7 @@ modifier:
     grant_pierce: 1200    # 技能獲得穿透（3C-5b；命中前就生效；每次使用的價值，3 次 ≈ 3.6 點）
     area_delta: 1400      # 範圍 +1（3D-3）：基準傷害 7 × 直線每格的形狀倍率加成 200‰
     allow_self_target: 2800   # 治療、護盾、增益類技能也包含自己（3D-3；約半個小治療）
-    summon_hp_per_100: 500    # 召喚物最大 HP 每 +10%（3-24b1；召喚物約 14 HP，每 +10% ≈ 1.4 HP；初值，未經模擬）
+    summon_hp_per_100: 500    # 召喚物最大 HP 每 +10%（3-24b1；召喚物約 140 HP，每 +10% ≈ 14 HP；初值，未經模擬）
     summon_attack_die: 1200   # 召喚物攻擊每多 1 顆傷害骰（3-24b1；初值，未經模擬）
     summon_limit: 3500        # 召喚物同時上限 ±1（3-33f1 召喚專精；與下兩項一起反推：群召與精英召喚都落在預算 70～100%；初值，未經模擬）
     summon_duration: 400      # 召喚物持續 +1 輪（3-33f1；反推值，持續輪數本身多半受戰鬥長度限制，價值低）

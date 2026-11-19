@@ -681,11 +681,13 @@ class CoreRules(ContentModel):
 
     def mana_cost(self, mana: int) -> int:
         """施放者實際付的法力（BAL-4c；BAL-15b 起敵我都適用）：``mana × mana_cost_permille‰``，
-        四捨五入（半數進位）、原本有費用者至少 1；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
+        四捨五入（半數進位）、原本有費用者至少 1 × ``quantity_scale``（X10-2b；原費用比這個還少時
+        以原費用為下限，打折不會變貴）；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
         permille = self.mana_cost_permille
         if mana == 0 or permille == _PERMILLE:
             return mana
-        return max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
+        floor = min(mana, self.quantity_scale)
+        return max(floor, (mana * permille + _PERMILLE // 2) // _PERMILLE)
 
     def max_hp_for(self, base_hp: int, con: int) -> int:
         """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""

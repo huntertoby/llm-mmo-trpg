@@ -186,12 +186,15 @@ def test_csv_columns(tmp_path: Path) -> None:
 
 
 def test_real_content_dry_run() -> None:
-    """真的 content/：清單完整、每一筆都能改寫、而且還沒換算過（``quantity_scale`` 是 1）。"""
+    """真的 content/：清單完整、每一筆都能改寫；X10-2b 已換算過（``quantity_scale`` 是 10），
+    再換算一次會被拒絕。"""
     changes = rs.plan()
-    texts = rs.rewrite([*changes, rs.scale_change()])
+    texts = rs.rewrite(changes)
     assert changes
-    assert len(texts) == len({c.file for c in changes} | {rs.SCALE_FILE})
-    assert rs.current_scale() == 1
+    assert len(texts) == len({c.file for c in changes})
+    assert rs.current_scale() == 10
+    with pytest.raises(rs.RescaleError, match="已經換算過"):
+        rs.scale_change()
 
 
 _TUNE_LOG = (

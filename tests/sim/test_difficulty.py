@@ -105,27 +105,31 @@ def test_mana_cost_knob_scales_the_ally_permille_not_the_skill_data(
     other = with_difficulty(library, Difficulty(mana_cost=800))
     assert other.ruleset.core.mana_cost_permille == 640  # 800 × 800‰
     assert other.ruleset.skill_def(skill_id) == raw
-    assert other.ruleset.core.mana_cost(raw.cost.mana) == max(1, scale_int(raw.cost.mana, 640))
+    floor = other.ruleset.core.quantity_scale  # 至少 1 × 量類倍率（X10-2b）
+    assert other.ruleset.core.mana_cost(raw.cost.mana) == max(floor, scale_int(raw.cost.mana, 640))
     clone = raw.model_copy(update={"id": "skill_bal4_clone"})
     assert library.ruleset.with_skills([clone]).skill_def("skill_bal4_clone") == clone
 
 
 def test_ally_mana_keeps_minimum_one_and_identity(library: ContentLibrary) -> None:
     core = library.ruleset.core
-    assert core.model_copy(update={"mana_cost_permille": 100}).mana_cost(1) == 1
-    assert core.model_copy(update={"mana_cost_permille": 1000}).mana_cost(7) == 7
+    assert core.quantity_scale == 10  # X10-2b：下限是 1 × 量類倍率
+    assert core.model_copy(update={"mana_cost_permille": 100}).mana_cost(10) == 10
+    assert core.model_copy(update={"mana_cost_permille": 100}).mana_cost(5) == 5  # 原費用更少時
+    assert core.model_copy(update={"mana_cost_permille": 1000}).mana_cost(70) == 70
     assert core.mana_cost(0) == 0
-    assert core.mana_cost(10) == 8  # 800‰
-    assert core.mana_cost(7) == 6  # 5.6 → 6（四捨五入）
+    assert core.mana_cost(100) == 80  # 800‰
+    assert core.mana_cost(75) == 60  # 800‰
+    assert core.mana_cost(7) == 7  # 5.6 → 6，但下限 10 封頂在原費用 7
 
 
 def test_mana_cap_scales_only_mana(library: ContentLibrary) -> None:
-    attrs = {a: 10 for a in Attribute}
+    attrs = {a: 100 for a in Attribute}
     base = library.ruleset.core.resources
     other = with_difficulty(library, Difficulty(mana_cap=1400)).ruleset.core.resources
-    assert base.max_for("mana", 20, attrs) == 28  # content：×1.4
-    assert other.max_for("mana", 20, attrs) == 39  # 1400 × 1400‰ ＝ 1960‰：39.2 → 39
-    assert other.max_for("stamina", 20, attrs) == base.max_for("stamina", 20, attrs)
+    assert base.max_for("mana", 200, attrs) == 280  # content：×1.4
+    assert other.max_for("mana", 200, attrs) == 392  # 1400 × 1400‰ ＝ 1960‰
+    assert other.max_for("stamina", 200, attrs) == base.max_for("stamina", 200, attrs)
 
 
 def test_damage_knob_changes_battle_and_neutral_is_unchanged(library: ContentLibrary) -> None:
