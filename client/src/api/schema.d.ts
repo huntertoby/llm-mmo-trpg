@@ -12402,6 +12402,16 @@ export interface components {
             reaction_rules: components["schemas"]["ReactionRuleView"][];
             /** Ap Carry */
             ap_carry: number;
+            /** Ap Per Turn */
+            ap_per_turn: number;
+            /** Ap Max */
+            ap_max: number;
+            /** Ap Carried In */
+            ap_carried_in: number;
+            /** Ap Lost */
+            ap_lost: number;
+            /** Ap Next Loss */
+            ap_next_loss: number;
             /** Source */
             source: number;
             /** Source Max */

@@ -554,13 +554,13 @@ def test_the_ai_gives_extra_reactions_only_to_units_that_react() -> None:
 @pytest.mark.parametrize(
     ("build", "map_id", "seed", "event"),
     [
-        ("build_support", "oil_depot", 0, SkillCopied),
+        ("build_support", "oil_depot", 1, SkillCopied),  # AP-1（失手返還）後 0 → 1
         (
             "build_guardian",
             "open_plain",
-            0,
+            1,
             DamageRedirected,
-        ),  # 3-24a1：弓有拋射，AI 軌跡改變，種子 2 → 0
+        ),  # 3-24a1：弓有拋射，AI 軌跡改變，種子 2 → 0；AP-1（玩家方 4 AP、失手返還）後 0 → 1
         ("build_guardian", "open_plain", 0, ReactionsGranted),
     ],
 )

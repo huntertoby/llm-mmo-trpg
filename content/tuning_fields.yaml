@@ -78,6 +78,8 @@ targets:
       # NW-2a：招式組（skill_ids＝技能 ID 清單；只能選 content/skills/ 既有的招，武器相容與敵人專用照載入檢查）
       - {path: skills, label_zh: 技能（開場）, kind: skill_ids, note_zh: 單位開場會用的招；數量上限依 core.yaml 的 skill_slots，武器需求要和單位武器相容。}
       - {path: "phases[*].skills", label_zh: 階段技能, kind: skill_ids, note_zh: 進入這個階段後換成這組招；刪掉＝沿用上一階段，空清單＝這個階段不放招。開場階段不能設。}
+      # AP-1（#168，05 5.2「⚠ AP 改版」）：敵人的每回合 AP。沒寫時一般敵人照核心規則的「每回合 AP」、精英與頭目照「精英、頭目的每回合 AP」。
+      - {path: ap_per_turn, label_zh: 每回合 AP, kind: int, hint_min: 1, hint_max: 6, note_zh: 這種敵人每回合的 AP（初值：一般 3、精英與頭目 4）；沒寫時照核心規則。本回合上限＝每回合 AP＋可保留的 AP。只對敵方有效：當隊友時一律照玩家方的每回合 AP。}
 
   # NW-2a：技能（docs/phases/PhaseNW-2計畫.md 3.1）。效果層級的欄位＝effect_sites × effect_fields（effect_types 只展開到該原語的效果）。
   # existing_only＝只有已寫的招展開（沒寫時插入會多一個機制，屬結構）；kinds＝只展開給這些技能種類（沒寫 kind＝active）。
@@ -193,6 +195,13 @@ targets:
       # SK-3b（SK-3 待決 10）：重擲反應「隊友擲失手時」的範圍。
       - {path: reroll_ally_range, label_zh: 重擲：幫隊友的範圍, kind: int, hint_min: 1, hint_max: 3, note_zh: 帶「隊友擲失手時」重擲反應的人，要在攻擊者這麼多格內（直走橫走的步數，巨型單位看佔地最近的一格）才能讓他重擲、取較好的結果。越大越常幫得上。}
       - {path: shield_formation_hit_penalty, label_zh: 盾陣命中懲罰, kind: int, hint_min: 0, hint_max: 6, note_zh: 塔盾詞條「盾陣」：和持盾者相鄰（上下左右）的隊友被遠程攻擊時，攻擊者命中減這麼多；持盾者自己不算（由塔盾本體護）。0＝盾陣不擋。同一次攻擊被好幾個盾陣、或盾陣和半掩護、盾兵一起罩到時只算一次、取最高。}
+      # AP-1（#168，05 5.2「⚠ AP 改版」）：每回合 AP 與保留。數值都是初值。
+      - {path: party_ap_per_turn, label_zh: 玩家方每回合 AP, kind: int, hint_min: 2, hint_max: 6, note_zh: 玩家與隊友角色每回合的 AP（初值 4；召喚物不算）。本回合上限＝這個值＋可保留的 AP。}
+      - {path: ap_per_turn, label_zh: 敵人每回合 AP, kind: int, hint_min: 2, hint_max: 6, note_zh: 一般敵人（單位檔沒寫每回合 AP 的）與召喚物每回合的 AP（初值 3）。}
+      - {path: elite_ap_per_turn, label_zh: 精英、頭目每回合 AP, kind: int, hint_min: 2, hint_max: 6, note_zh: 精英與頭目（單位檔沒寫每回合 AP 的；大世界加了精英詞條的也算）每回合的 AP（初值 4）。}
+      - {path: ap_carry_max, label_zh: 可保留的 AP, kind: int, hint_min: 0, hint_max: 3, note_zh: 回合結束時沒用完的 AP 最多留這麼多到下回合（初值 1）；本回合上限也跟著是每回合 AP＋這個值。}
+      - {path: miss_refund_ap, label_zh: 失手返還的 AP, kind: int, hint_min: 0, hint_max: 2, note_zh: 技能所有目標都沒命中（被豁免擋下也算）時返還的 AP（初值 1）；敵我都適用，每個單位每回合最多返還 1 次。0＝不返還。}
+      - {path: miss_refund_min_cost, label_zh: 失手返還的最低耗費, kind: int, hint_min: 1, hint_max: 3, note_zh: 實際花了至少這麼多 AP 的技能才會失手返還（初值 2；1 AP 的技能不返還）。}
   # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
   - kind: budget
     label_zh: 技能預算表

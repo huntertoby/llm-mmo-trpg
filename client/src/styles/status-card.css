@@ -111,6 +111,66 @@
   border-color: #c89a10;
 }
 
+/* AP-1（#168，docs/art/AP-1-AP列畫法.md）：AP 列。整格的說明卡在圖示上，每顆圓點各有自己的說明卡。 */
+.stat-chip.ap-row {
+  cursor: default;
+}
+
+.ap-row-glyph {
+  display: inline-flex;
+  cursor: help;
+}
+
+.stat-chip.ap-row .stat-pip {
+  cursor: help;
+}
+
+/* 上回合保留的那格：外面一圈 1px 米白環、和圓點隔 1px（整顆 13px）；用掉變空心，環留到回合結束 */
+.stat-pip.ap.kept {
+  --keep-ring: #f2e6c8;
+  outline: 1px solid var(--keep-ring);
+  outline-offset: 1px;
+  margin: 0 2px;
+}
+
+/* 少掉的那格（這回合已扣、或下回合會少）：空心灰框＋一道紅斜線（左下到右上），整顆 0.8 */
+.stat-pip.ap.lost {
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 0.75px),
+    #e05a4a calc(50% - 0.75px),
+    #e05a4a calc(50% + 0.75px),
+    transparent calc(50% + 0.75px)
+  );
+  opacity: 0.8;
+}
+
+/* 分隔線：1px 寬、9px 高，同空心框色；左右各留 3px（.stat-pips 的 gap） */
+.stat-pip-sep {
+  display: block;
+  width: 1px;
+  height: 9px;
+  align-self: center;
+  background: #8a7a5a;
+}
+
+/* 滑過「結束回合」：會被保留的那顆外面閃一下米白環（0.6 秒一次，最多 2 次） */
+@keyframes ap-keep-flash {
+  0%,
+  100% {
+    outline-color: var(--keep-ring, transparent);
+  }
+  50% {
+    outline-color: #f2e6c8;
+  }
+}
+
+body:has(.end-turn-button:hover:not(:disabled)) .stat-pip.ap.keep {
+  outline: 1px solid var(--keep-ring, transparent);
+  outline-offset: 1px;
+  animation: ap-keep-flash 0.6s ease-in-out 2;
+}
+
 /* QI-5：源力圓點是 9px 小晶石 canvas（亮＝晶石、暗＝同形紫框深底；畫布 18×18），位置與間距照現行（9px、.stat-pips 的 gap 3px），不畫 CSS 的圓框 */
 .stat-pip.source {
   display: block;

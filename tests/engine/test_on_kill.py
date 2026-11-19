@@ -92,7 +92,8 @@ def test_a_miss_means_no_refund() -> None:
 
     state = with_rolls(state, [(20, 1)])  # 自然 1：失手
     result = cast(state, target_id=U2)
-    assert of(result, DamageDealt) == [] and of(result, ApRefunded) == []
+    assert of(result, DamageDealt) == []
+    assert [e for e in of(result, ApRefunded) if not e.on_miss] == []  # 失手返還（AP-1）另計
 
 
 def test_the_effect_resolves_once_even_when_several_enemies_go_down() -> None:
@@ -107,9 +108,9 @@ def test_the_effect_resolves_once_even_when_several_enemies_go_down() -> None:
 def test_the_refund_never_goes_above_the_ap_cap() -> None:
     skill = strike([{"type": "refund_ap", "amount": 2}], ap_cost=1)
     state = hit_with(arena(skill, [weak((4, 3))]))
-    state.units[U1].ap = ap_cap(state.ruleset.core)
+    state.units[U1].ap = ap_cap(state.ruleset.core, state.units[U1])
     result = cast(state, target_id=U2)
-    assert result.state.units[U1].ap == ap_cap(state.ruleset.core)
+    assert result.state.units[U1].ap == ap_cap(state.ruleset.core, state.units[U1])
     (refund,) = of(result, ApRefunded)
     assert refund.amount == 1  # 付 1 點之後只能補回 1 點
 
@@ -117,7 +118,7 @@ def test_the_refund_never_goes_above_the_ap_cap() -> None:
 def test_a_full_ap_pool_produces_no_event() -> None:
     skill = strike([REFUND_AP], ap_cost=1)
     state = hit_with(arena(skill, [weak((4, 3))]))
-    state.units[U1].ap = ap_cap(state.ruleset.core) + 1  # 超過上限（測試用）
+    state.units[U1].ap = ap_cap(state.ruleset.core, state.units[U1]) + 1  # 超過上限（測試用）
     assert of(cast(state, target_id=U2), ApRefunded) == []
 
 

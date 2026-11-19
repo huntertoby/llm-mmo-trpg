@@ -41,8 +41,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/133"
-"""目前的戰鬥紀錄版本（``/133``，Phase SK-3d：推擊、絆倒的修正規則條件也算「利用」）。
+LOG_FORMAT = "trpg-battle-log/134"
+"""目前的戰鬥紀錄版本（``/134``，Phase AP-1：每回合 AP 依單位、失手返還，#168）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

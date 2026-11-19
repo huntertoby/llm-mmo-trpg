@@ -44,9 +44,14 @@ def _fight(library: ContentLibrary, char: CharacterState) -> StepResult:
     )
 
 
+def _wounded(make_char: MakeChar) -> int:
+    """帶傷上陣的 HP（滿血的三分之一）：AP-1 玩家方 4 AP 後滿血打渡口幾乎用不到藥水。"""
+    return make_char().hp // 3
+
+
 def _used_seed(library: ContentLibrary, make_char: MakeChar) -> tuple[CharacterState, StepResult]:
     for seed in range(12):
-        char = _ready(make_char, seed)
+        char = _ready(make_char, seed, hp=_wounded(make_char))
         result = _fight(library, char)
         if any(isinstance(e, PouchUsedEvent) for e in result.events):
             return char, result
@@ -100,7 +105,7 @@ def test_win_gives_gold(library: ContentLibrary, make_char: MakeChar) -> None:
 def test_oath_no_items_breaks(library: ContentLibrary, make_char: MakeChar) -> None:
     oath = OathState(template="oath_no_items", difficulty="easy", sworn_at=NOON)
     for seed in range(12):
-        char = _ready(make_char, seed, oath=oath)
+        char = _ready(make_char, seed, oath=oath, hp=_wounded(make_char))
         result = _fight(library, char)
         if any(isinstance(e, PouchUsedEvent) for e in result.events):
             broken = [e for e in result.events if isinstance(e, OathBrokenEvent)]

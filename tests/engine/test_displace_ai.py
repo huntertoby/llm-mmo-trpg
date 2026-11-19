@@ -192,11 +192,11 @@ def test_an_ai_battle_with_a_void_swap_replays(
         "--map",
         "open_plain",
         "--seed",
-        "32",
+        "4",
         "--ally-build",
         "build_banisher",
     ]  # CB-1 門檻 8 後 17 → 55；CB-2e AI 增益表補 concealed（主角帶瞬步）後 90 → 11；
-    # BAL-20 AI 估值表補 burning（主角帶火焰箭）後 11 → 32
+    # BAL-20 AI 估值表補 burning（主角帶火焰箭）後 11 → 32；AP-1（玩家方 4 AP、失手返還）後 32 → 4
     assert main([*argv, "--log-json", str(log)]) == 0
     assert "施放「虛空互換」" in capsys.readouterr().out
     replayed = io.StringIO()

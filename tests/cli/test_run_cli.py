@@ -180,7 +180,9 @@ def test_run_auto_flashes_and_shows_flash_counts(
 # WC-2（層數、召喚物的附帶配方改了組合器候選；範圍、控場、位移骨架可帶層數，閃現草稿跟著變）7 → 6
 # （重掃 1～20：改前 4、6、7、9、15，改後 1、4、6、9、15 三項都練得到；
 # 有大閃現的種子改前改後都是 6 個）。
-@pytest.mark.parametrize("seed", [4, 6])
+# AP-1（玩家方 4 AP、失手返還）4、6 → 11、13（重掃 11～20：改後 11、13、17、18、20；
+# 關掉失手返還也成立的是 11、13）
+@pytest.mark.parametrize("seed", [11, 13])
 @pytest.mark.slow
 def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]

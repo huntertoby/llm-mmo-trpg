@@ -76,21 +76,80 @@ export interface StatChip {
   /** 用過、沒有了：變灰。 */
   dim: boolean;
   hint: string;
+  /** AP 列（AP-1）：有的時候圓點照這裡畫（每顆有自己的說明、保留環、紅斜線、分隔線），`pips` 只是實心與否。 */
+  apRow?: ApRow;
 }
 
-/** AP 圓點：5 點以內畫圓點，多了寫數字。 */
-const AP_PIP_LIMIT = 5;
+/**
+ * AP 列的一顆圓點（AP-1，#168；畫法見 docs/art/AP-1-AP列畫法.md）：
+ * `ap`＝一般 AP（實心金／用掉空心）；`kept`＝上回合保留的那格（多一圈米白環，用掉後環還在）；
+ * `lost`＝少掉的那格（空心＋紅斜線）。`keep`＝現在結束回合會被保留的那顆（滑過「結束回合」時閃米白環）。
+ */
+export interface ApPip {
+  kind: "ap" | "kept" | "lost";
+  on: boolean;
+  keep: boolean;
+  hint: string;
+}
+
+/** AP 列：分隔線左邊是這回合（一般 AP、少掉的、保留的），右邊是下回合會少的。 */
+export interface ApRow {
+  now: ApPip[];
+  next: ApPip[];
+}
+
+/** AP 圓點最多畫幾顆（含保留、少掉、下回合會少的；4 金＋1 保留＋2 預支｜2 紅斜線也放得下），多了寫數字。 */
+const AP_PIP_LIMIT = 9;
+
+/** 玩家看得到的字（docs/art/AP-1-AP列畫法.md 第 5 節，玩法 PM 定案）。 */
+export const AP_PIP_TEXT = {
+  kept: "上回合保留的 AP",
+  overdraftNext: "透支：下回合少 1 AP",
+  nextMany: (n: number) => `下回合少 ${n} AP`,
+  /** 回合開始時已經扣掉的那格（第 5 節沒有這一句，AP-1 報告待決）。 */
+  lostNow: (n: number) => `透支：這回合少 ${n} AP`,
+} as const;
+
+/**
+ * AP 列的圓點（AP-1）：`[一般 AP][這回合少掉的][上回合保留的] ｜ [下回合會少的]`。
+ * 一般 AP＝每回合 AP − 這回合少掉的；AP 被給、被返還而多出來的接在一般 AP 後面。實心的是還沒用的
+ * （從左數 `ap` 顆，所以保留的那格最先變空心）。
+ */
+export function apRow(unit: UnitView, chipHint: string): ApRow {
+  const lost = Math.max(0, unit.ap_lost);
+  const kept = Math.max(0, unit.ap_carried_in);
+  const base = Math.max(0, unit.ap_per_turn - lost);
+  const extra = Math.max(0, unit.ap - base - kept);
+  const fill = [...Array<"ap">(base + extra).fill("ap"), ...Array<"kept">(kept).fill("kept")];
+  const carryMax = Math.max(0, unit.ap_max - unit.ap_per_turn);
+  const keepFrom = unit.ap - Math.min(unit.ap, carryMax); // 結束回合會保留的：還沒用的最後幾顆
+  const gold: ApPip[] = fill.map((kind, i) => ({
+    kind,
+    on: i < unit.ap,
+    keep: i < unit.ap && i >= keepFrom,
+    hint: kind === "kept" ? AP_PIP_TEXT.kept : chipHint,
+  }));
+  const slash = (hint: string): ApPip => ({ kind: "lost", on: false, keep: false, hint });
+  const nowLost = Array.from({ length: lost }, () => slash(AP_PIP_TEXT.lostNow(lost)));
+  const nextN = Math.max(0, unit.ap_next_loss);
+  const nextHint = nextN >= 2 ? AP_PIP_TEXT.nextMany(nextN) : AP_PIP_TEXT.overdraftNext;
+  const next = Array.from({ length: nextN }, () => slash(nextHint));
+  return { now: [...gold.slice(0, base + extra), ...nowLost, ...gold.slice(base + extra)], next };
+}
 
 export function apChip(unit: UnitView): StatChip {
-  const pips = unit.ap <= AP_PIP_LIMIT ? Array.from({ length: Math.max(1, unit.ap) }, () => unit.ap > 0) : null;
   const carry = unit.ap_carry > 0 ? `（下回合保留 +${unit.ap_carry}）` : null;
+  const hint = lines(`AP ${unit.ap}${carry ?? ""}`, "剩餘行動點數（自己的回合已含上回合保留的 AP）");
+  const row = apRow(unit, hint);
+  const fits = row.now.length + row.next.length <= AP_PIP_LIMIT && row.now.length > 0;
   return {
     key: "ap",
     icon: "ap",
-    label: pips === null ? String(unit.ap) : "",
-    pips,
+    label: fits ? "" : String(unit.ap),
+    pips: fits ? row.now.map((p) => p.on) : null,
     dim: unit.ap <= 0,
-    hint: lines(`AP ${unit.ap}${carry ?? ""}`, "剩餘行動點數（自己的回合已含上回合保留的 AP）"),
+    hint,
+    ...(fits ? { apRow: row } : {}),
   };
 }
 
@@ -158,7 +217,9 @@ export function unitChips(unit: UnitView): StatChip[] {
   if (unit.max_mana > 0) {
     chips.push({ key: "mana", icon: "mana", label: String(unit.mana), pips: null, dim: unit.mana <= 0, hint: lines(`法力 ${unit.mana} / ${unit.max_mana}`, RESOURCE_TEXT.mana) });
   }
-  chips.push({ ...apChip(unit), label: String(unit.ap), pips: null });
+  const { apRow: _row, ...ap } = apChip(unit); // 小卡只寫數字（AP 列只畫在主角狀態卡）
+  void _row;
+  chips.push({ ...ap, label: String(unit.ap), pips: null });
   chips.push(moveChip(unit));
   if (unit.weapon_name_zh !== "") {
     chips.push({

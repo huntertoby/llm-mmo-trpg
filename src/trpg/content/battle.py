@@ -1724,6 +1724,10 @@ class UnitTemplate(ContentModel):
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     skills: tuple[str, ...] = Field(default=(), max_length=32)
     max_mana: int | None = Field(default=None, ge=0)
+    ap_per_turn: int | None = Field(default=None, ge=0, exclude_if=lambda v: v is None)
+    """每回合 AP（AP-1，#168，05 5.2）：只對敵方單位有效；省略時一般敵人是 ``core.yaml`` 的
+    ``ap_per_turn``、精英與頭目是 ``elite_ap_per_turn``。玩家方一律 ``party_ap_per_turn``、
+    召喚物一律 ``ap_per_turn``，不看這個欄位。"""
     scaled_resources: bool = False
     """舊旗標（Phase 3H-2：只有主角的法力與耐力上限依屬性）。BAL-15b（玩法決定 #80）起敵我同一套
     公式，引擎不再看這個旗標；保留欄位讓舊存檔與舊資料照常載入。``max_mana``／``stamina`` 是基礎

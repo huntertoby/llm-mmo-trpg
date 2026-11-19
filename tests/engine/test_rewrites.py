@@ -82,10 +82,10 @@ def test_grant_ap_gives_the_caster_ap_immediately() -> None:
 
 def test_grant_ap_above_the_turn_cap_is_lost() -> None:
     state = scene(rewrite(SELF_AP))
-    state.units[U1].ap = 4  # 本回合上限 ＝ ap_per_turn 3 ＋ ap_carry_max 1
+    state.units[U1].ap = 5  # 本回合上限 ＝ 玩家方每回合 4 ＋ ap_carry_max 1（AP-1）
     result = cast(state)
     (event,) = [e for e in result.events if isinstance(e, ApGranted)]
-    assert (event.amount, event.ap_after) == (1, 4)
+    assert (event.amount, event.ap_after) == (1, 5)
 
 
 def test_grant_ap_only_once_per_unit_per_round() -> None:
@@ -112,7 +112,7 @@ def test_grant_ap_to_an_ally_waits_for_their_turn_and_respects_the_cap() -> None
     state.units[U2].ap_carry = 1
     ctx = Ctx(state)
     start_turn(ctx, U2)
-    assert state.units[U2].ap == 4  # min(3 ＋ 保留 1 ＋ 給予 2, 上限 4)
+    assert state.units[U2].ap == 5  # min(4 ＋ 保留 1 ＋ 給予 2, 上限 5)（AP-1：玩家方 4）
     assert state.units[U2].ap_pending == 0
 
 

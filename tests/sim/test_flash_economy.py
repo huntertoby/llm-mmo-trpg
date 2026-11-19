@@ -74,9 +74,9 @@ def test_sweep_small_deterministic_and_start_bonus_counts() -> None:
 
 def test_preboss_bonus_lands_after_last_normal_battle() -> None:
     lib = library()
-    rows = run_economy_sweep(
-        lib, [Economy(1, 0, 2)], ["none"], list(range(8)), jobs=1
-    )  # BAL-4b 後較難，多幾個種子才有跑到第 5 場的
+    # BAL-4b 後較難，多幾個種子才有跑到第 5 場的；AP-1（失手返還）後種子 5 一輪要 2 分多鐘，
+    # 平行跑時會超過單一測試 300 秒的上限，改挑 0、4、6、7（4、7 開關失手返還都打到第 5 場）
+    rows = run_economy_sweep(lib, [Economy(1, 0, 2)], ["none"], [0, 4, 6, 7], jobs=1)
     seen = 0
     for run in rows[0].runs:
         for n, held, spent in run.curve:

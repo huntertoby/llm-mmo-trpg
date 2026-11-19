@@ -67,6 +67,19 @@ def without_sk1_flash(library: ContentLibrary) -> ContentLibrary:
     return dataclasses.replace(library, flash=library.flash.model_copy(update={"minor": minor}))
 
 
+PRE_AP1_CORE: dict[str, int] = {"party_ap_per_turn": 3, "elite_ap_per_turn": 3, "miss_refund_ap": 0}
+"""AP-1（#168）之前的行動經濟：每個單位每回合 3 AP、沒有失手返還（工坊值，關回舊行為）。"""
+
+
+def with_pre_ap1_turns(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但用 AP-1 之前的行動經濟（:data:`PRE_AP1_CORE`）：鎖住「某個重現案例在舊 AP
+    下才成立」的測試用（例：開發一輪種子 2 打到營火的閃現歷程，玩家方 4 AP 後戰鬥變短、歷程
+    換了）。"""
+    rs = library.ruleset
+    core = rs.core.model_copy(update=PRE_AP1_CORE)
+    return dataclasses.replace(library, ruleset=rs.model_copy(update={"core": core}))
+
+
 SK2B_PRIMITIVES = frozenset({"hook", "absorb_surface", "contagion"})
 """SK-2b 接進骨架（出題）的新原語。"""
 

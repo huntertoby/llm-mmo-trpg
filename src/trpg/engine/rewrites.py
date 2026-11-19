@@ -33,9 +33,10 @@ __all__ = [
 ]
 
 
-def ap_cap(core: CoreRules) -> int:
-    """單位同時持有的 AP 上限（本回合上限）：``ap_per_turn ＋ ap_carry_max``。"""
-    return core.ap_per_turn + core.ap_carry_max
+def ap_cap(core: CoreRules, unit: UnitState) -> int:
+    """單位同時持有的 AP 上限（本回合上限）：單位的每回合 AP（``UnitState.ap_per_turn``，AP-1）
+    ＋ ``ap_carry_max``。"""
+    return unit.ap_per_turn + core.ap_carry_max
 
 
 def grant_ap_problem(state: BattleState, target: UnitState) -> str | None:
@@ -52,7 +53,7 @@ def grant_ap(ctx: Ctx, caster: UnitState, target: UnitState, amount: int) -> Non
         ctx.emit(EffectFizzled, effect_kind="grant_ap", pos=target.pos, reason="already_granted")
         return
     target.ap_granted_round = state.round
-    cap = ap_cap(ctx.core)
+    cap = ap_cap(ctx.core, target)
     deferred = state.active_unit != target.id
     if deferred:
         before = target.ap_pending
@@ -81,7 +82,7 @@ def gear_grant_ap(ctx: Ctx, owner: UnitState, target: UnitState, amount: int) ->
 
     state = ctx.state
     granted = cap_ap_gain(ctx.rules, target.ap_gain_turn, amount)
-    cap = ap_cap(ctx.core)
+    cap = ap_cap(ctx.core, target)
     deferred = state.active_unit != target.id
     before = target.ap_pending if deferred else target.ap
     after = max(before, min(before + granted, cap))
