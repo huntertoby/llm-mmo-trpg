@@ -99,7 +99,7 @@ class UnderSprite {
   private readonly bands: { row: number; tex: Texture; x: number; y: number; w: number; h: number }[] = [];
   constructor(
     fx: FxCanvas,
-    private readonly host: Sk2Host,
+    private readonly host: Pick<Sk2Host, "deco">,
     rows: readonly number[],
   ) {
     const b = fx.box;
@@ -133,7 +133,7 @@ class UnderSprite {
 }
 
 /** 一個演出：`dur` 毫秒（未縮放），畫單位之上（`top`）與之下（`under`，可省）。 */
-export function canvasEffect(host: Sk2Host, startMs: number, dur: number, scale: number, box: Box, top: (ctx: CanvasRenderingContext2D, t: number) => void, under?: { rows: readonly number[]; draw: (ctx: CanvasRenderingContext2D, t: number) => void }): Effect | null {
+export function canvasEffect(host: Pick<Sk2Host, "deco">, startMs: number, dur: number, scale: number, box: Box, top: (ctx: CanvasRenderingContext2D, t: number) => void, under?: { rows: readonly number[]; draw: (ctx: CanvasRenderingContext2D, t: number) => void }): Effect | null {
   const fxTop = FxCanvas.make(box);
   if (fxTop === null) return null;
   const fxUnder = under === undefined ? null : FxCanvas.make(box);

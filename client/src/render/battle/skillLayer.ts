@@ -26,6 +26,8 @@ import { eggArcEffect, eggArcPlan } from "../eggArc";
 import { MotionLayer } from "./motionLayer";
 import { DOLL_PX } from "./rendererBase";
 import { battleTrace } from "./devTrace";
+import { BORROW_MS } from "../../battle/borrowFx";
+import { borrowEffect } from "../borrowEffects";
 
 const T = TILE_SIZE;
 
@@ -296,15 +298,29 @@ export abstract class SkillLayer extends MotionLayer {
       return { x: f.x, y: f.y - T * 0.95 };
     };
     const chest = () => ({ x: this.feetOf(r.unitId).x, y: this.feetOf(r.unitId).y - T * 0.35 });
-    return cues.map((c) => {
+    return cues.flatMap((c): Effect[] => {
+      if (c.kind === "borrowSlot") {
+        // AR-AP2：預支的「下回合的那格」與菱形（離屏 canvas；位置相對施放者格子中心、胸口同 `chest()`）；減少動態時不畫
+        const e = this.borrowCue(r, c, now);
+        return e === null ? [] : [{ ...e, motion: "fx" as const }];
+      }
       const pos = c.where === "anchor" ? anchor : c.where === "feet" ? () => this.feetOf(r.unitId) : c.where === "head" ? head : c.where === "targetFeet" ? target(FEET) : c.where === "targetHead" ? target(-T * 0.75) : target(-T * 0.05);
       const link =
         c.where === "link" ? { from: tc ?? this.feetOf(r.unitId), to: chest } : c.where === "linkOut" ? { from: chest(), to: () => (tc === null ? chest() : { x: tc.x, y: tc.y - T * 0.05 }) } : undefined;
       const e = cueEffect(c.kind, pos, r.element, now + r.startMs + r.ms * c.from, now + r.startMs + r.ms * c.to, link, r.icon);
       // 6R-F：減少動態時不畫；6F-6：落在目標格上的（光柱、地上的法陣…）裁在地圖內
       const ground = c.where === "target" || c.where === "targetFeet";
-      return { ...e, motion: "fx" as const, ...(ground ? { clip: "map" as const } : {}) };
+      return [{ ...e, motion: "fx" as const, ...(ground ? { clip: "map" as const } : {}) }];
     });
+  }
+
+  /** AR-AP2：`borrowSlot` 特效（`render/borrowEffects.ts`）：施放者格子中心＝單位節點，面向西＝−1、其他＝＋1；時間照這一列的縮放。 */
+  private borrowCue(r: SkillRow, c: FxCue, now: number): Effect | null {
+    const s = this.unitSprites.get(r.unitId);
+    if (s === undefined || s.destroyed) return null;
+    const dir = this.unitDrawOf.get(r.unitId)?.facing === "west" ? -1 : 1;
+    const scale = (r.ms * (c.to - c.from)) / BORROW_MS; /* 這一段（已照播放速度縮放）÷ 演出的未縮放長度 */
+    return borrowEffect({ deco: (y) => this.rows.row(y).deco }, { x: s.x, y: s.y }, dir, this.scale, now + r.startMs + r.ms * c.from, scale);
   }
 
   private feetOf(unitId: string): { x: number; y: number } {

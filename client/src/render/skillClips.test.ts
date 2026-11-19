@@ -192,7 +192,7 @@ describe("primitive clips (6N-2 first half, 6N-3 second half)", () => {
       [
         ["swap", "swap_any"],
         ["intercept", "redirect_damage", "reroll"], // SK-3：重擲暫借側擋
-        ["borrow_ap", "extra_reaction", "grant_ap", "grant_skill"], // AP-2：預支暫借給予 AP 的拍肩動作
+        ["extra_reaction", "grant_ap", "grant_skill"], // AR-AP2：預支換成專屬的 borrow_pull
         ["refund_ap", "refund_cooldown", "reset_cooldown"],
         ["add_stack", "consume_stack", "consume_status"],
         ["summon", "summon_beside"], // TF-1：召喚到身邊暫借召喚的動作

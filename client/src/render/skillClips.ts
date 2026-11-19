@@ -101,7 +101,9 @@ export type FxKind =
   | "snap"
   | "wound"
   // 6N-8 技能變體（治療增益的「花瓣散落」）
-  | "petals";
+  | "petals"
+  // AR-AP2 預支：施放者面前「下回合的那格」、菱形被拉回胸口（`render/borrowEffects.ts`，離屏 canvas；位置相對施放者格子中心）
+  | "borrowSlot";
 /** `head` 施放者頭頂；`link` 目標 → 施放者；`linkOut` 施放者 → 目標（6N-3）。 */
 export type FxWhere = "anchor" | "feet" | "head" | "target" | "targetFeet" | "targetHead" | "link" | "linkOut";
 export interface FxCue {
@@ -311,6 +313,9 @@ export const PRIMITIVE_CLIPS = {
   snatch: { ms: 320, anchor: "hand", keys: [[0, {}], [0.35, { arm: -1.6, elbow: 0, lean: 0.12 }], [1, { arm: -0.5, elbow: -1.7, lean: -0.08 }]], fx: [fx("iconFly", "link", 0.35, 1)] },
   // 給予（共用：靠飛過去的圖示分辨）
   shoulder_tap: { ms: 320, anchor: "offhand", keys: [[0, {}], [0.45, { armF: -1.7, elbowF: -0.1, lean: 0.1 }], [0.7, { armF: -1.5, elbowF: -0.3, lean: 0.1 }], [1, { armF: -1.6, elbowF: -0.1, lean: 0.08 }]], fx: [fx("iconFly", "linkOut", 0.4, 1)] },
+  // AR-AP2 預支（AP-2-美術.md 第 4 節、5.3 第 2 點）：0.34（110 ms）另一隻手往前上方伸到最遠、0.75（240 ms）拉回胸前（借 `snatch` 的收手值）、1 回站姿；
+  // 特效＝面前浮出「下回合的那格」、菱形被拉回胸口（整段 0～1，時間點在 `battle/borrowFx.ts`）
+  borrow_pull: { ms: 320, anchor: "offhand", keys: [[0, {}], [0.34, { armF: -1.7, elbowF: -0.1, lean: 0.1 }], [0.75, { armF: -0.5, elbowF: -1.7, lean: -0.18 }], [1, {}]], fx: [fx("borrowSlot", "feet", 0, 1)] },
   // 退還、層數（共用；沒有身體動作）
   rewind_still: { ms: 420, anchor: "head", still: true, keys: [[0, {}], [1, {}]], fx: [fx("rewind", "head", 0, 1)] },
   stack_still: { ms: 360, anchor: "head", still: true, keys: [[0, {}], [1, {}]], fx: [fx("stack", "head", 0, 1)] },
@@ -425,7 +430,7 @@ export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   copy_skill: { role: "post", clip: "snatch" },
   grant_skill: { role: "post", clip: "shoulder_tap", icon: "skill" },
   grant_ap: { role: "post", clip: "shoulder_tap", icon: "ap" },
-  borrow_ap: { role: "post", clip: "shoulder_tap", icon: "ap" }, // AP-2：預支暫借給予 AP 的動作
+  borrow_ap: { role: "post", clip: "borrow_pull" }, // AR-AP2：預支換成專屬的拉回動作（AP-2-美術.md 第 4 節）
   extra_reaction: { role: "post", clip: "shoulder_tap", icon: "reaction" },
   refund_ap: { role: "post", clip: "rewind_still", icon: "ap" },
   refund_cooldown: { role: "post", clip: "rewind_still", icon: "cooldown" },
