@@ -137,6 +137,12 @@ class StructureRules(ContentModel):
     """被動的觸發時機改成「你造的關鍵字被利用時」的機率（SK-3b；獨立的亂數串流）。"""
     reroll_reaction_permille: int = Field(default=0, ge=0, le=1000)
     """反應技改成重擲（隊友擲失手時／敵人擲中你時）的機率（SK-3b；獨立的亂數串流）。"""
+    stack_rider_permille: int = Field(default=0, ge=0, le=1000)
+    """指定層數關鍵字時，改成「一般主動技＋累積／消耗那種層數」的機率（WC-2，#167；獨立的亂數串流，
+    沒抽中或做不出來時照原本的蓄力骨架）。"""
+    summon_rider_permille: int = Field(default=0, ge=0, le=1000)
+    """指定召喚物關鍵字時，改成「一般主動技＋號令（你的召喚物傷害提高）」的機率（WC-2，#167；獨立的
+    亂數串流，沒抽中或做不出來時照原本的組法）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE

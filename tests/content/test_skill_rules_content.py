@@ -86,7 +86,11 @@ def test_the_initial_skeleton_structure_matches_the_spec() -> None:
         "clear_surface",  # 3-54c
         "leave_form",  # 3J-4c（解形爆發，手寫專用）
         "contagion",  # SK-2b（疾病擴散，組合器只以獨立串流加入）
+        "add_stack",  # WC-2（#167）：層數關鍵字的附帶配方
+        "consume_stack",  # WC-2
     }
+    assert {"add_stack", "consume_stack"} <= set(sk["control"].secondary.primitives or ())
+    assert {"add_stack", "consume_stack"} <= set(sk["displace"].secondary.primitives or ())
     assert set(sk["control"].core.primitives) == {
         "apply_status",
         "create_surface",

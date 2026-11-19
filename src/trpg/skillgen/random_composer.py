@@ -63,6 +63,7 @@ from trpg.skillgen.composer_recipes import (
     weapon_and_attr,
     weighted,
 )
+from trpg.skillgen.composer_rider import SUMMON_KEYWORD, add_rider, rider_keywords
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
 from trpg.skillgen.composer_tuning import tune
 from trpg.skillgen.keywords import has_keyword
@@ -941,6 +942,42 @@ def _is_stack_keyword(keyword: str, lib: ContentLibrary) -> bool:
     return any(s.id == keyword and s.composer for s in lib.ruleset.stacks.stacks)
 
 
+def _rider_permille(keyword: str, lib: ContentLibrary) -> int:
+    """關鍵字附帶配方（WC-2）的機率：召喚物 ``summon_rider_permille``、層數
+    ``stack_rider_permille``。"""
+    rules = lib.composer.structure
+    if keyword == SUMMON_KEYWORD:
+        return rules.summon_rider_permille
+    return rules.stack_rider_permille
+
+
+def _compose_rider(
+    variant: int, keyword: str, lib: ContentLibrary, kwargs: Mapping[str, Any]
+) -> ComposeResult | None:
+    """關鍵字附帶配方（WC-2，#167 第 5 題；:mod:`trpg.skillgen.composer_rider`）：獨立串流
+    ``composer.rider`` 以 :func:`_rider_permille` 決定這個變體要不要改走附帶配方——不指定關鍵字組一招
+    主動技，再多一個累積／消耗層數或號令；沒抽中或做不出來回傳 ``None``，呼叫端照原本的組法（主串流
+    沒動過，結果與改前相同）。呼叫端指定了骨架或種類不含主動時不用。"""
+    permille = _rider_permille(keyword, lib)
+    kinds: Kinds = kwargs.get("kinds")
+    if (
+        permille <= 0
+        or keyword not in rider_keywords(lib)
+        or kwargs.get("skeleton") is not None
+        or not _allows_active(kinds)
+    ):
+        return None
+    if not Rng(variant).fork("composer.rider").chance_permille(permille):
+        return None
+    fixed = {**kwargs, "kinds": ("active",)}
+    try:
+        found = _compose_plain(variant, lib, **fixed)
+    except ComposeError:
+        return None
+    skill = add_rider(lib, found.skill, keyword, Rng(variant).fork("composer.rider.build"))
+    return None if skill is None else ComposeResult(skill, found.attempts)
+
+
 def _compose_with_keyword(
     seed: int,
     keyword: str,
@@ -961,15 +998,18 @@ def _compose_with_keyword(
     if not lib.keywords.by_id()[keyword].composable:
         raise ComposeError(f"組合器做不出關鍵字 {keyword} 的技能（該關鍵字需要手寫技能）")
     kinds: Kinds = kwargs.get("kinds")
+    original = dict(kwargs)
     if kwargs.get("skeleton") is None and _is_stack_keyword(keyword, lib) and _allows_active(kinds):
         # KW-2（#161）：層數關鍵字只有蓄力骨架做得出來（累積或消耗層數），不指定骨架時固定用它；
         # 這四個關鍵字 KW-2 前組合器不做，所以既有關鍵字的結果不變
         kwargs = {**kwargs, "skeleton": _STACK_SKELETON}
     limit = min(tries, KEYWORD_TRIES)
+    plain = {"rarity": rarity, "no_legendary": skip_legendary and rarity is None, **original}
     for index in range(limit):
         variant = seed + index * _VARIANT_STEP
+        rider = _compose_rider(variant, keyword, lib, plain)  # WC-2：沒抽中＝None，照原本
         try:
-            found = _with_affinity(
+            found = rider or _with_affinity(
                 _compose_plain(
                     variant,
                     lib,
