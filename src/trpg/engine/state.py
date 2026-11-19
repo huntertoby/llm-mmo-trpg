@@ -584,6 +584,13 @@ class UnitState:
     由範本帶入、整場不變；佔哪些格一律走 :func:`trpg.engine.rules.footprint.tiles_of`。等於 1 時不
     輸出（JSON 與改前相同）。"""
 
+    ap_per_turn: int = 3
+    """每回合 AP（AP-1，#168，05 5.2「⚠ AP 改版」）：建立單位時依陣營與範本決定、整場不變
+    （:meth:`trpg.content.rules.CoreRules.template_ap_per_turn`）——玩家方 ``party_ap_per_turn``、
+    召喚物 ``ap_per_turn``、敵人照範本的 ``ap_per_turn``（沒寫時精英與頭目 ``elite_ap_per_turn``、
+    其他 ``ap_per_turn``）。本回合上限＝此值＋``ap_carry_max``
+    （:func:`trpg.engine.rewrites.ap_cap`）。"""
+
     @property
     def alive(self) -> bool:
         """仍在戰場上（未倒下、未撤離、召喚物未消失）。"""
@@ -666,6 +673,7 @@ class UnitState:
             gear_turn_counts=dict(self.gear_turn_counts),
             gear_round_counts=dict(self.gear_round_counts),
             ap_gain_turn=self.ap_gain_turn,
+            ap_per_turn=self.ap_per_turn,
             hits_landed=self.hits_landed,
             attack_hits_landed=self.attack_hits_landed,
             stacks=dict(self.stacks),

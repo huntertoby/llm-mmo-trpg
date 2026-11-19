@@ -162,7 +162,7 @@ def test_every_resource_is_full_after_an_action() -> None:
     hero.skill_uses = {LIMITED_SKILL.id: 1}
     me = resolve(state, Move(unit_id=HERO, path=(Pos(x=1, y=1), Pos(x=1, y=0)))).state.units[HERO]
     core = state.ruleset.core
-    assert me.ap == core.ap_per_turn + core.ap_carry_max
+    assert me.ap == me.ap_per_turn + core.ap_carry_max == core.party_ap_per_turn + 1  # AP-1
     assert (me.stamina, me.mana, me.hp) == (me.max_stamina, me.max_mana, me.max_hp)
     assert me.source == core.source_max
     assert (me.cooldowns, me.form_cooldowns, me.skill_uses) == ({}, {}, {})

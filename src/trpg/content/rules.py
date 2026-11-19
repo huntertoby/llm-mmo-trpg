@@ -24,7 +24,7 @@ from typing import Literal
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import SUMMON_ROLES, Dice, UnitTemplate
+from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, Dice, UnitTemplate
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Attribute, Element, Surface
 
@@ -337,6 +337,10 @@ class WindRules(ContentModel):
     collision_permille: int = Field(default=1500, ge=1000)
 
 
+ELITE_TAG = "elite"
+"""精英標籤（同 ``trpg.engine.ids.ELITE_TAG``；content 不匯入引擎）。"""
+
+
 class CoreRules(ContentModel):
     """``content/rules/core.yaml``：所有可調整的戰鬥規則數值。
 
@@ -345,6 +349,12 @@ class CoreRules(ContentModel):
 
     # 行動經濟
     ap_per_turn: int = Field(ge=0)
+    """每回合 AP：召喚物，以及範本沒寫 ``ap_per_turn`` 的一般敵人（AP-1，#168）。"""
+    party_ap_per_turn: int = Field(default=3, ge=0)
+    """玩家方（玩家與隊友角色，不含召喚物）的每回合 AP（AP-1，#168，05 5.2；初值 4）。"""
+    elite_ap_per_turn: int = Field(default=3, ge=0)
+    """範本沒寫 ``ap_per_turn`` 的精英、頭目（標籤 ``elite``／``boss``）的每回合 AP
+    （AP-1；初值 4）。"""
     ap_carry_max: int = Field(ge=0)
     basic_attack_ap_cost: int = Field(ge=0)
     defend_ap_cost: int = Field(ge=0)
@@ -638,6 +648,21 @@ class CoreRules(ContentModel):
         """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""
         return max(1, base_hp + (con - self.hp_con_base) * self.hp_per_con_point)
 
+    def template_ap_per_turn(self, template: UnitTemplate, *, party: bool) -> int:
+        """範本建立出的單位的每回合 AP（AP-1，#168，05 5.2「⚠ AP 改版」）：召喚物 ``ap_per_turn``
+        （照現行）；玩家方（``party``）``party_ap_per_turn``；敵人照範本的 ``ap_per_turn``，沒寫時
+        精英、頭目（標籤 ``elite``／``boss``，大世界加了精英詞條的也算）``elite_ap_per_turn``、其他
+        ``ap_per_turn``。"""
+        if template.summon:
+            return self.ap_per_turn
+        if party:
+            return self.party_ap_per_turn
+        if template.ap_per_turn is not None:
+            return template.ap_per_turn
+        if ELITE_TAG in template.tags or BOSS_TAG in template.tags:
+            return self.elite_ap_per_turn
+        return self.ap_per_turn
+
     def template_max_hp(self, template: UnitTemplate) -> int:
         """範本建立出的單位的最大 HP（引擎對敵我所有單位用同一公式）。"""
         return self.max_hp_for(template.max_hp, template.attributes[Attribute.CON])
@@ -693,7 +718,10 @@ class CoreRules(ContentModel):
         return base_hp * self.level_hp_permille * max(0, level - 1) // 1000
 
     def summary(self) -> str:
-        return f"每回合 {self.ap_per_turn} AP、命中門檻 {self.hit_target}"
+        return (
+            f"每回合 AP：玩家方 {self.party_ap_per_turn}、敵人 {self.ap_per_turn}"
+            f"（精英、頭目 {self.elite_ap_per_turn}）、命中門檻 {self.hit_target}"
+        )
 
 
 class HitThreshold(ContentModel):

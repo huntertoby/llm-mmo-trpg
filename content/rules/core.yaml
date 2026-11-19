@@ -4,8 +4,10 @@
 # 重新產生 rules/hit_table.yaml（載入時會檢查兩者一致）。
 
 # --- 行動經濟 ---
-ap_per_turn: 3                # 每回合 AP
-ap_carry_max: 1               # 可保留到下回合的 AP
+ap_per_turn: 3                # 每回合 AP：召喚物，以及單位檔沒寫 ap_per_turn 的一般敵人（AP-1，#168）
+party_ap_per_turn: 4          # 玩家方（玩家與隊友角色，不含召喚物）的每回合 AP（AP-1，#168 初值）
+elite_ap_per_turn: 4          # 單位檔沒寫 ap_per_turn 的精英、頭目（標籤 elite／boss）的每回合 AP（AP-1 初值）
+ap_carry_max: 1               # 可保留到下回合的 AP（本回合上限＝每回合 AP＋這個值）
 basic_attack_ap_cost: 1       # 普攻消耗
 defend_ap_cost: 1             # 防禦動作消耗
 run_ap_cost: 1                # 跑步（3-20，玩法 #22）消耗

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.engine.helpers import with_pre_ap1_turns
 from tests.world.helpers import make_world
 from trpg.api.run_presenter import _flash_out
 from trpg.content.library import ContentLibrary
@@ -35,6 +36,13 @@ from trpg.world.step import new_character
 
 SEED = 2
 IMBUE_NTH = 2
+
+
+@pytest.fixture(scope="module")
+def library(content_library: ContentLibrary) -> ContentLibrary:
+    """重現案例（開發一輪種子 2 打到營火的閃現歷程）是在 AP-1 之前的行動經濟下定的：玩家方 4 AP
+    後戰鬥變短、歷程換了，所以這裡用舊的每回合 AP（``with_pre_ap1_turns``）照樣鎖住。"""
+    return with_pre_ap1_turns(content_library)
 
 
 @pytest.fixture(scope="module")

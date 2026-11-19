@@ -28,7 +28,6 @@ from trpg.api.sessions import SessionStore
 from trpg.api.world import SEASON_ID, WorldStore
 from trpg.api.world_newcomer_view import PRACTICE_SEEN
 from trpg.content.library import ContentLibrary
-from trpg.engine.rewrites import ap_cap
 from trpg.engine.runner import BattleLog, log_replay_problem
 from trpg.engine.view import project_for
 from trpg.roguelite.offers import make_offer
@@ -298,7 +297,8 @@ def test_a3_test_mode_rules_through_the_api(client: TestClient) -> None:
     me = _hero_unit(after)
     assert all(v == 0 for v in me["cooldowns"].values())
     assert me["hp"] == me["max_hp"] and me["mana"] == me["max_mana"]
-    assert me["ap"] == ap_cap(library.ruleset.core)
+    core = library.ruleset.core
+    assert me["ap"] == core.party_ap_per_turn + core.ap_carry_max  # 主角是玩家方（AP-1）
     assert after["view"]["round"] == round_before + 1
     hero_steps = [s["step"] for s in after["steps"] if s["actor_id"] == hero_id and s["step"]]
     assert all(s["type"] != "end_turn" for s in hero_steps)

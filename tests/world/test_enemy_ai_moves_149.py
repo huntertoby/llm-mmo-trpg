@@ -75,6 +75,8 @@ RARELY_CHOSEN = frozenset(
         # 引爆目標身上的燃燒：這個空地圖的戰鬥裡目標幾乎不會帶燃燒，AI 算出零收益（CB-2a 報告）
         ("ember_lizard", "skill_kindle_pop"),
         ("heart_ember_lizard", "skill_kindle_pop"),
+        # AP-1（玩家方 4 AP）：兩隻火塵蝠在這個空地圖 1～2 輪就倒，每次都先放火球術
+        ("fire_dust_bat", "skill_cinder_dive"),
     }
 )
 

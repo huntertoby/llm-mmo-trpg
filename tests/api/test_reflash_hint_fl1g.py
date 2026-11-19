@@ -18,7 +18,7 @@ from trpg.roguelite.state import FlashChoice
 
 def test_transform_hint_only_when_the_slot_has_options(library: ContentLibrary) -> None:
     pack = library.dev_starters.packs[0].id
-    run = new_dev_run(library, pack, 2)
+    run = new_dev_run(library, pack, 4)  # AP-1（玩家方 4 AP）後種子 2 → 4
     run, _ = auto_play(library, run, stop=lambda r, _b: r.node.kind == "campfire")
     run = run.model_copy(update={"insight": 8})
     major = library.flash.rules.major_flash

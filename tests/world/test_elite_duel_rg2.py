@@ -28,7 +28,7 @@ from trpg.world.state import CharacterState, EncounterResult
 from trpg.world.step import StepResult, new_character, world_step
 
 MakeChar = Callable[..., CharacterState]
-WON_SEEDS = (0, 1)  # 北坡狼王：一對一與全隊都打贏的種子
+WON_SEEDS = (0, 11)  # 北坡狼王：一對一與全隊都打贏的種子（AP-1 後 1 → 11）
 
 
 def _encounter(region: str, location: str, *, bounty: str | None = None) -> EncounterResult:

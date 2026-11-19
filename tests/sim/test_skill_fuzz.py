@@ -10,6 +10,7 @@ from types import ModuleType
 
 import pytest
 
+from tests.engine.helpers import with_pre_ap1_turns
 from tests.skillgen.helpers import lib, skill
 from trpg.content.skills import SkillDef
 from trpg.sim import skill_fuzz
@@ -35,7 +36,9 @@ def _battle_only(skill: SkillDef) -> bool:
 
 
 def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> None:
-    report = run_fuzz(lib(), count=100)
+    # AP-1：玩家方 4 AP 後這 100 個種子裡的兩個被動（擊殺時）在試打中都輪不到施放者擊殺，
+    # 「被動有觸發」量不到；試打用 AP-1 之前的行動經濟（with_pre_ap1_turns）照樣鎖住
+    report = run_fuzz(with_pre_ap1_turns(lib()), count=100)
     assert report.compose_errors == []
     assert len(report.outcomes) == 100
     assert all(o.violations == 0 for o in report.outcomes)

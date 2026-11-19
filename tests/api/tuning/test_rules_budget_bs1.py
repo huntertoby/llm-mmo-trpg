@@ -29,6 +29,10 @@ CORE_PATHS = (
     "contagion_radius",  # SK-2b：疾病擴散的距離
     "reroll_ally_range",  # SK-3b：重擲幫隊友的範圍
     "shield_formation_hit_penalty",  # RG-4（#163）塔盾詞條「護陣」
+    "party_ap_per_turn",  # AP-1（#168）
+    "ap_per_turn",
+    "elite_ap_per_turn",
+    "ap_carry_max",
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",

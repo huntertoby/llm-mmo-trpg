@@ -395,7 +395,7 @@ def _run(build: str, map_id: str, seed: int) -> tuple[Any, Any]:
 
 
 def test_the_ai_activates_a_modifier_legendary_on_its_first_turn() -> None:
-    _, run = _run("build_charger", "swamp", 0)
+    _, run = _run("build_charger", "swamp", 1)  # AP-1（玩家方 4 AP、失手返還）後 0 → 1
     activated = [e for e in of(run.events, SkillActivated) if e.skill_id == AVATAR]
     assert activated and activated[0].round == 1
     assert activated[0].expires_round == 4

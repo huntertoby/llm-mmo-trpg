@@ -1,6 +1,7 @@
 """回合流程（``docs/專案計畫.md`` 5.2.1、``docs/phases/Phase1計畫.md`` 4.4）。
 
-回合開始：AP 回復為 ``ap_per_turn + min(保留, ap_carry_max)``、移動點數回滿、
+回合開始：AP 回復為單位的每回合 AP（``UnitState.ap_per_turn``，AP-1）``+ min(保留, ap_carry_max)``、
+移動點數回滿、
 移除「到自己下回合開始」的狀態、結算持續傷害（燃燒），再結算站立表面的回合開始效果
 （毒、聖光、火焰）。
 回合結束：倒數型狀態 −1（歸零移除）、記錄保留的 AP、到期的召喚物（Phase 3D-4a）與持續區域
@@ -91,8 +92,8 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit = state.units[unit_id]
     state.active_unit = unit.id
     unit.ap = min(
-        core.ap_per_turn + min(unit.ap_carry, core.ap_carry_max) + unit.ap_pending,
-        ap_cap(core),
+        unit.ap_per_turn + min(unit.ap_carry, core.ap_carry_max) + unit.ap_pending,
+        ap_cap(core, unit),
     )
     unit.ap = max(0, unit.ap - ap_penalty(ctx.rules, unit))  # 透支（Phase 3-50）
     unit.ap_carry = 0
@@ -441,7 +442,7 @@ def _refill_practice_heroes(ctx: Ctx) -> None:
         unit.cooldowns = {}
         unit.skill_uses = {}  # 含種族技的每場次數
         unit.form_cooldowns = {}
-        unit.ap = ap_cap(ctx.core)
+        unit.ap = ap_cap(ctx.core, unit)
         unit.move_points = max(unit.move_points, _turn_move_points(state, ctx.rules, unit))
         unit.ran_this_turn = False
         unit.stamina = unit.max_stamina

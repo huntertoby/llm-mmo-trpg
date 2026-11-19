@@ -21,7 +21,7 @@ __all__ = ["refund_ap", "refund_cooldown"]
 def refund_ap(ctx: Ctx, caster: UnitState, skill_id: str, amount: int) -> None:
     """施放者獲得 ``amount`` AP（不超過上限）；實際沒有增加時不產生事件。"""
     before = caster.ap
-    caster.ap = max(before, min(before + amount, ap_cap(ctx.core)))
+    caster.ap = max(before, min(before + amount, ap_cap(ctx.core, caster)))
     if caster.ap > before:
         caster.ap_gain_turn += caster.ap - before
         ctx.emit(
