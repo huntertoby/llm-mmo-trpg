@@ -180,14 +180,14 @@ def test_non_shield_skills_do_not_get_shield_templates() -> None:
 
 
 def _shielded_duel(
-    skill: SkillDef, *, hp: int = 100, foe: str = "bandit", foe_xy: tuple[int, int] = (4, 3)
+    skill: SkillDef, *, hp: int = 1000, foe: str = "bandit", foe_xy: tuple[int, int] = (4, 3)
 ) -> BattleState:
-    """U1（法師）剛為自己施放 ``skill``（護盾）；之後輪到敵人 U2（預設相鄰）。"""
+    """U1（法師）剛為自己施放 ``skill``（護盾）；之後輪到敵人 U2（預設相鄰）。X10-2b：HP ×10。"""
     m = make_map(FLAT7, ally=[(3, 3)], enemy=[foe_xy])
-    owner = caster_template([skill], base="hero_mage", max_hp=200).model_copy(
-        update={"max_hp": 200}
+    owner = caster_template([skill], base="hero_mage", max_hp=2000).model_copy(
+        update={"max_hp": 2000}
     )
-    enemy = no_reactions(foe, max_hp=999)
+    enemy = no_reactions(foe, max_hp=9990)
     state = give_turn(
         make_state(
             m, [spawn(Team.ALLY, (3, 3), owner), spawn(Team.ENEMY, foe_xy, enemy)], skills=[skill]
@@ -201,10 +201,10 @@ def _shielded_duel(
 
 
 def _fragile(state: BattleState) -> BattleState:
-    """護盾只剩 1 點吸收量：一次命中就打破（測試破盾的附帶效果）。"""
+    """護盾只剩 10 點吸收量（X10-2b：1 → 10）：一次命中就打破（測試破盾的附帶效果）。"""
     weak = state.clone()
     weak.units[U1].statuses = [
-        replace(s, amount=1) if LIB.ruleset.status_def(s.status_id).absorbs_damage else s
+        replace(s, amount=10) if LIB.ruleset.status_def(s.status_id).absorbs_damage else s
         for s in weak.units[U1].statuses
     ]
     return weak
@@ -244,7 +244,7 @@ def test_thorns_shield_does_not_reflect_ranged_attacks(monkeypatch: pytest.Monke
 def test_mending_shield_heals_when_broken(monkeypatch: pytest.MonkeyPatch) -> None:
     skill = _playable("shield_mending")
     always(monkeypatch, die=99)
-    state = _shielded_duel(skill, hp=100)
+    state = _shielded_duel(skill, hp=1000)
     heal = LIB.ruleset.status_def("shielded_mending").shield_end_heal
     result = answered(resolve(_fragile(state), Attack(unit_id=U2, target_id=U1)))
     ended = of(result, ShieldEnded)
@@ -255,7 +255,7 @@ def test_mending_shield_heals_when_broken(monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_mending_shield_heals_when_it_expires() -> None:
     skill = _playable("shield_mending")
-    state = _shielded_duel(skill, hp=100)
+    state = _shielded_duel(skill, hp=1000)
     hp = state.units[U1].hp
     remaining = next(
         s.remaining for s in state.units[U1].statuses if s.status_id == "shielded_mending"
@@ -269,7 +269,7 @@ def test_mending_shield_heals_when_it_expires() -> None:
         cur = give_turn(answered(resolve(ended.state, EndTurn(unit_id=U2))).state, U1)
         if not cur.units[U1].has_status("shielded_mending"):
             break
-    assert healed and healed[0].amount == min(3, state.units[U1].max_hp - hp)
+    assert healed and healed[0].amount == min(30, state.units[U1].max_hp - hp)  # X10-2b：3 → 30
 
 
 def test_wet_shield_leaves_water_under_the_owner_when_broken(

@@ -60,7 +60,7 @@ def test_the_object_definition_follows_the_gameplay_ruling() -> None:
 
 
 def test_breaking_the_well_makes_a_3x3_pool_in_row_order() -> None:
-    result = run_effects(_well_scene(), [DamageObjectEffect(object_id=O1, flat=99)])
+    result = run_effects(_well_scene(), [DamageObjectEffect(object_id=O1, flat=990)])
     destroyed = [e for e in result.events if isinstance(e, ObjectDestroyed)]
     assert [(e.object_id, e.cause) for e in destroyed] == [(O1, "damage")]
     changed = [e for e in result.events if isinstance(e, SurfaceChanged)]
@@ -71,7 +71,7 @@ def test_breaking_the_well_makes_a_3x3_pool_in_row_order() -> None:
 
 def test_fire_damage_also_spills_water_and_never_explodes() -> None:
     result = run_effects(
-        _well_scene(), [DamageObjectEffect(object_id=O1, flat=99, element=Element.FIRE)]
+        _well_scene(), [DamageObjectEffect(object_id=O1, flat=990, element=Element.FIRE)]
     )
     assert not any(isinstance(e, ObjectExploded) for e in result.events)
     assert len(_water(result.state)) == 9
@@ -79,7 +79,7 @@ def test_fire_damage_also_spills_water_and_never_explodes() -> None:
 
 def test_water_skips_the_tiles_a_giant_occupies() -> None:
     state = _well_scene(giant=True)
-    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=99)])
+    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=990)])
     # 巨人佔 x 3～5、y 3～5：3×3 的左邊一欄 (5, 3～5) 不放
     assert _water(result.state) == [(x, y) for y in (3, 4, 5) for x in (6, 7)]
     changed = [e for e in result.events if isinstance(e, SurfaceChanged)]
@@ -94,7 +94,7 @@ def test_old_spill_without_radius_keeps_the_cross_and_its_serialization() -> Non
     assert "description_zh" not in barrel.model_dump_json()
     m = make_map(FLAT, objects=[(4, 4, "oil_barrel")], ally=[(8, 8)], enemy=[(0, 8)])
     state = make_state(m, [spawn(Team.ALLY, (8, 8)), spawn(Team.ENEMY, (0, 8))])
-    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=99)])
+    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=990)])
     oil = sorted(
         (x, y)
         for y in range(state.height)

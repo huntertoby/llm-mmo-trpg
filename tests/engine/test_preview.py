@@ -65,7 +65,7 @@ def test_expected_damage_matches_brute_force() -> None:
             m,
             [
                 spawn(Team.ALLY, (0, 0), "bandit"),
-                spawn(Team.ENEMY, (1, 0), no_reactions(max_hp=99)),
+                spawn(Team.ENEMY, (1, 0), no_reactions(max_hp=990)),
             ],
         ),
         U1,
@@ -75,8 +75,8 @@ def test_expected_damage_matches_brute_force() -> None:
     hit, crit = _exhaustive(-1 + 2, crit_from=19)  # 攻擊 14 vs 防禦 16 → 修正 −1；匕首 19–20 暴擊
     assert (p.hit_chance, p.crit_chance) == (hit, crit)
 
-    def amount(s: int) -> int:
-        return max((s * 1000 + 14 * 300) // 1000, 1)  # 敏捷 14 × 0.3
+    def amount(s: int) -> int:  # X10-2b：骰面、屬性、最低傷害 ×10
+        return max((s * 10 * 1000 + 140 * 300) // 1000, 10)  # 敏捷 140 × 0.3
 
     normal = Fraction(sum(amount(s) * n for s, n in dice_distribution(1, 4).items()), 4)
     doubled = Fraction(sum(amount(s) * n for s, n in dice_distribution(2, 4).items()), 16)
@@ -144,7 +144,7 @@ def test_certain_explosion_chain_matches_actual() -> None:
 
 def test_possible_chain_includes_kill_on_max_damage() -> None:
     m = make_map("000")
-    victim = no_reactions("bandit", max_hp=10)
+    victim = no_reactions("bandit", max_hp=100)  # X10-2b ×10
     state = give_turn(
         make_state(
             m, [spawn(Team.ALLY, (0, 0), "hero_fighter"), spawn(Team.ENEMY, (1, 0), victim)]

@@ -619,7 +619,9 @@ def test_previews_include_the_new_reactions() -> None:
     ("build", "map_id", "seed", "reaction"),
     [
         ("build_assassin", "open_plain", 1, "迎頭痛擊"),
-        ("build_tank", "swamp", 2, "悲憤"),  # BAL-15c 種子 0 → 1；CB-1 門檻 8 後 1 → 5
+        # BAL-15c 種子 0 → 1；CB-1 門檻 8 後 1 → 5
+        # X10-2b 換種子 2 → 3（捨去差異使戰鬥分岔；掃 0～29）
+        ("build_tank", "swamp", 3, "悲憤"),
         (
             "build_ranged",
             "dark_forest",

@@ -49,7 +49,8 @@ def _set(state: BattleState, uid: UnitId, **attrs: int) -> BattleState:
 
 
 @pytest.mark.parametrize(
-    ("value", "tier"), [(80, 0), (100, 0), (139, 0), (140, 1), (179, 1), (180, 2), (219, 2), (220, 3)]
+    ("value", "tier"),
+    [(80, 0), (100, 0), (139, 0), (140, 1), (179, 1), (180, 2), (219, 2), (220, 3)],
 )
 def test_every_four_points_above_ten_is_one_tier(value: int, tier: int) -> None:
     assert (PERKS.base, PERKS.step) == (100, 40)

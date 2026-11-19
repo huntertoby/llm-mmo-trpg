@@ -233,7 +233,7 @@ def test_trigger_fine_knob_only_for_triggered_dice_effects() -> None:
     base, effects = base_draft(passive)
     knobs = trigger_fine_knobs("potency", base, effects, lib)
     assert [(effects[k.index]["type"], k.field, k.values) for k in knobs] == [
-        ("heal", "flat_bonus", (None, 1))
+        ("heal", "flat_bonus", (None, 10))  # X10-2b：+1 固定值 ×10
     ]
     assert trigger_fine_knobs("trigger_range", base, effects, lib) == []
     assert trigger_fine_knobs("potency", *base_draft(lib.skills["skill_fire_bolt"]), lib) == []
@@ -287,7 +287,7 @@ def test_trigger_fine_rescues_a_ladder_skip() -> None:
     assert _potency(_without_fine(), skill, 3) is None
     option = _potency(lib, skill, 3)
     assert option is not None
-    assert any(e.flat_bonus == 1 for e in option.skill.effects)
+    assert any(e.flat_bonus == 10 for e in option.skill.effects)  # X10-2b：+1 → +10
 
 
 def test_trigger_fine_never_loses_an_option() -> None:

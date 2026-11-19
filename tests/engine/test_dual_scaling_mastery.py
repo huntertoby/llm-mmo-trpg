@@ -62,33 +62,35 @@ DUAL: dict[str, Any] = {"scaling_attr": "str", "secondary_scaling_attr": "int"}
 
 def test_scaling_value_is_the_floored_average_of_the_two_effective_attributes() -> None:
     dual = _skill(**DUAL)
-    state = _state(dual, {"str": 15, "int": 10})
+    state = _state(dual, {"str": 150, "int": 100})  # X10-2b 屬性 ×10
     rules = state.ruleset
-    assert skill_scaling_value(rules, state.units[U1], dual) == 12  # (15 + 10) // 2，奇數捨去
-    state.units[U1].attributes[Attribute.STR] = 16
-    assert skill_scaling_value(rules, state.units[U1], dual) == 13
-    assert skill_scaling_value(rules, state.units[U1], _skill(scaling_attr="str")) == 16
+    assert skill_scaling_value(rules, state.units[U1], dual) == 125  # (150 + 100) // 2
+    state.units[U1].attributes[Attribute.STR] = 151
+    assert skill_scaling_value(rules, state.units[U1], dual) == 125  # (151 + 100) // 2，奇數捨去
+    state.units[U1].attributes[Attribute.STR] = 160
+    assert skill_scaling_value(rules, state.units[U1], dual) == 130
+    assert skill_scaling_value(rules, state.units[U1], _skill(scaling_attr="str")) == 160
 
 
 def test_scaling_value_uses_effective_attributes_including_status_bonuses() -> None:
     dual = _skill(**DUAL)
-    state = _state(dual, {"str": 10, "int": 11})
-    state.units[U1].statuses = [StatusInstance("empowered", 2, U1)]  # 六屬性各 +2
-    assert skill_scaling_value(state.ruleset, state.units[U1], dual) == (12 + 13) // 2
+    state = _state(dual, {"str": 100, "int": 110})  # X10-2b 屬性 ×10
+    state.units[U1].statuses = [StatusInstance("empowered", 2, U1)]  # 六屬性各 +20
+    assert skill_scaling_value(state.ruleset, state.units[U1], dual) == (120 + 130) // 2
 
 
 def test_spell_damage_uses_the_average() -> None:
-    as_wis = _skill(scaling_attr="wis")  # wis 12 = (8 + 16) / 2
+    as_wis = _skill(scaling_attr="wis")  # wis 120 = (80 + 160) / 2（X10-2b 屬性 ×10）
     as_int = _skill(scaling_attr="int")
-    attrs = {"str": 8, "int": 16, "wis": 12}
+    attrs = {"str": 80, "int": 160, "wis": 120}
     assert _amount(_skill(**DUAL), attrs) == _amount(as_wis, attrs)
     assert _amount(_skill(**DUAL), attrs) != _amount(as_int, attrs)
 
 
 def test_spell_hit_uses_the_average() -> None:
-    result = cast(hit_with(_state(_skill(**DUAL), {"str": 8, "int": 16})), target_id=U2)
+    result = cast(hit_with(_state(_skill(**DUAL), {"str": 80, "int": 160})), target_id=U2)
     rolled = next(e for e in of(result, AttackRolled) if e.skill_id == SID)
-    assert rolled.attack_value == 12
+    assert rolled.attack_value == 120
 
 
 def test_heal_scaling_uses_the_average() -> None:
@@ -96,8 +98,8 @@ def test_heal_scaling_uses_the_average() -> None:
     amounts = []
     for kwargs in ({"scaling_attr": "wis"}, DUAL):
         skill = _skill({"type": "self"}, [heal], **kwargs)
-        state = _state(skill, {"str": 8, "int": 16, "wis": 12})
-        state.units[U1].hp = 5
+        state = _state(skill, {"str": 80, "int": 160, "wis": 120})
+        state.units[U1].hp = 50
         result = resolve(hit_with(state), UseSkill(unit_id=U1, skill_id=SID))
         amounts.append(of(result, Healed)[0].amount)
     assert amounts[0] == amounts[1]
@@ -106,21 +108,21 @@ def test_heal_scaling_uses_the_average() -> None:
 def test_status_save_uses_the_average() -> None:
     effects = [{"type": "apply_status", "status": "slow", "duration": 2}]
     dual = _skill(effects=effects, **DUAL)
-    result = cast(hit_with(_state(dual, {"str": 8, "int": 16})), target_id=U2)
+    result = cast(hit_with(_state(dual, {"str": 80, "int": 160})), target_id=U2)
     save = of(result, StatusSaveRolled)[0]
-    assert (save.attack_attr, save.attack_value) == (Attribute.STR, 12)
+    assert (save.attack_attr, save.attack_value) == (Attribute.STR, 120)
 
 
 def _flat_defender(state: Any) -> None:
     for attr in Attribute:
-        state.units[U2].attributes[attr] = 12
+        state.units[U2].attributes[attr] = 120
 
 
 def test_knock_prone_contest_uses_the_average_for_the_attacker() -> None:
     effects: list[dict[str, Any]] = [SPELL, {"type": "knock_prone"}]
     modifiers = []
     for kwargs in ({"scaling_attr": "wis"}, DUAL):
-        state = _state(_skill(effects=effects, **kwargs), {"str": 8, "int": 16, "wis": 12})
+        state = _state(_skill(effects=effects, **kwargs), {"str": 80, "int": 160, "wis": 120})
         _flat_defender(state)
         result = cast(hit_with(state), target_id=U2)
         modifiers.append(of(result, ManeuverRolled)[0].modifier)
@@ -131,7 +133,7 @@ def test_preview_uses_the_average() -> None:
     effects = [{"type": "apply_status", "status": "slow", "duration": 2}]
     chances = []
     for kwargs in ({"scaling_attr": "wis"}, DUAL):
-        state = _state(_skill(effects=effects, **kwargs), {"str": 8, "int": 16, "wis": 12})
+        state = _state(_skill(effects=effects, **kwargs), {"str": 80, "int": 160, "wis": 120})
         _flat_defender(state)
         view = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_id=U2))
         chances.append(view.targets[0].status_chances[0].apply_chance)
@@ -181,19 +183,19 @@ def test_the_validator_rejects_a_dual_skill_below_rare() -> None:
 
 def test_mastery_is_active_when_the_scaling_attribute_is_the_highest_including_ties() -> None:
     skill = _skill(mastery="range", scaling_attr="int")
-    unit = _state(skill, {}).units[U1]  # hero_mage：int 16 為最高
+    unit = _state(skill, {}).units[U1]  # hero_mage：int 160 為最高（X10-2b 屬性 ×10）
     assert mastery_active(unit, skill)
-    unit.attributes[Attribute.STR] = 16  # 並列
+    unit.attributes[Attribute.STR] = 160  # 並列
     assert mastery_active(unit, skill)
-    unit.attributes[Attribute.STR] = 17
+    unit.attributes[Attribute.STR] = 170
     assert not mastery_active(unit, skill)
     assert not mastery_active(unit, _skill(scaling_attr="int"))  # 沒有 mastery
 
 
 def test_mastery_uses_base_attributes_not_status_bonuses() -> None:
     skill = _skill(mastery="range", scaling_attr="wis")
-    unit = _state(skill, {}).units[U1]  # int 16 > wis 12
-    unit.statuses = [StatusInstance("empowered", 2, U1)]  # 全屬性 +2 也不改變最高屬性
+    unit = _state(skill, {}).units[U1]  # int 160 > wis 120
+    unit.statuses = [StatusInstance("empowered", 2, U1)]  # 全屬性 +20 也不改變最高屬性
     assert not mastery_active(unit, skill)
 
 
@@ -207,7 +209,7 @@ def test_range_mastery_makes_a_target_one_tile_farther_legal() -> None:
     mastered = _skill(mastery="range", scaling_attr="int")
     assert U2 not in _targets(_state(plain, {}, far, (0, 3)))
     assert U2 in _targets(_state(mastered, {}, far, (0, 3)))
-    assert U2 not in _targets(_state(mastered, {"str": 20}, far, (0, 3)))  # 非最高屬性：不生效
+    assert U2 not in _targets(_state(mastered, {"str": 200}, far, (0, 3)))  # 非最高屬性：不生效
 
 
 def test_range_mastery_extends_the_cast_distance_but_not_the_area_size() -> None:
@@ -226,7 +228,7 @@ def test_range_mastery_extends_the_cast_distance_but_not_the_area_size() -> None
 def test_duration_mastery_adds_one_turn_to_the_applied_status() -> None:
     effects = [{"type": "apply_status", "status": "feared", "duration": 2}]
     got = []
-    for mastery, str_ in ((None, 8), ("duration", 8), ("duration", 20)):
+    for mastery, str_ in ((None, 80), ("duration", 80), ("duration", 200)):  # X10-2b 屬性 ×10
         skill = _skill(effects=effects, scaling_attr="int", mastery=mastery)
         state = _state(skill, {"str": str_})
         _flat_defender(state)

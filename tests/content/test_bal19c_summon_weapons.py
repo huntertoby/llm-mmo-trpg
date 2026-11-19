@@ -54,7 +54,7 @@ def _battle(skill: SkillDef, strength: int):  # type: ignore[no-untyped-def]
 @pytest.mark.parametrize("sid", ["skill_sum_grave_blade", "skill_sum_spirit_arrow"])
 def test_weapon_summons_play_and_grow_with_the_weapon_attribute(sid: str) -> None:
     skill = LIB.skills[sid]
-    weak, strong = _battle(skill, 10), _battle(skill, 18)
+    weak, strong = _battle(skill, 100), _battle(skill, 180)  # X10-2b：屬性 ×10
     caster = weak.units["unit_0001"]
     assert (
         growth_of(strong, strong.units["unit_0001"], sid).attr_mod

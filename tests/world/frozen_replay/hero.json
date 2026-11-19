@@ -1,13 +1,13 @@
 {
  "ai_profile": "support",
- "armor_bonus": 1,
+ "armor_bonus": 10,
  "attributes": {
-  "con": 10,
-  "dex": 12,
-  "int": 12,
-  "str": 8,
-  "wil": 12,
-  "wis": 16
+  "con": 100,
+  "dex": 120,
+  "int": 120,
+  "str": 80,
+  "wil": 120,
+  "wis": 160
  },
  "default_mode": "follow",
  "detonate": null,
@@ -20,7 +20,7 @@
  "innate": null,
  "level": 1,
  "look": null,
- "max_hp": 40,
+ "max_hp": 400,
  "max_mana": null,
  "name_zh": "輔助英雄",
  "opening_statuses": [],

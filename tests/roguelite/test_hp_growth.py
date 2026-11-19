@@ -41,49 +41,49 @@ def test_start_hp_is_authored_hp_when_constitution_is_not_allocated() -> None:
 def test_allocating_constitution_at_the_start_raises_the_starting_hp() -> None:
     lib = library()
     core = lib.ruleset.core
-    plain = new_run(lib, "build_fire", 1, {Attribute.INT: 4})
-    tough = new_run(lib, "build_fire", 1, {Attribute.INT: 1, Attribute.CON: 3})
-    assert tough.hp == tough.max_hp_in(core) == plain.hp + 3 * core.hp_per_con_point
+    plain = new_run(lib, "build_fire", 1, {Attribute.INT: 40})
+    tough = new_run(lib, "build_fire", 1, {Attribute.INT: 10, Attribute.CON: 30})
+    assert tough.hp == tough.max_hp_in(core) == plain.hp + 30 * core.hp_per_con_point
 
 
 def test_max_hp_formula_for_a_run() -> None:
     lib = library()
     core = lib.ruleset.core
-    run = new_run(lib, "build_fire", 1, {Attribute.INT: 4})  # 基礎 40、體質 10
-    assert run.max_hp_in(core) == 40
-    attrs = {**run.hero.attributes, Attribute.CON: 14}
+    run = new_run(lib, "build_fire", 1, {Attribute.INT: 40})  # 基礎 400、體質 100
+    assert run.max_hp_in(core) == 400
+    attrs = {**run.hero.attributes, Attribute.CON: 140}
     run = run.model_copy(
         update={"hero": run.hero.model_copy(update={"attributes": attrs}), "level": 5}
     )
-    # 40 + (14 − 10) × 3 + 40 × 50‰ × 4
-    assert run.max_hp_in(core) == 40 + 12 + 8
+    # 400 + (140 − 100) × 3 + 400 × 50‰ × 4
+    assert run.max_hp_in(core) == 400 + 120 + 80
 
 
 def test_level_up_raises_max_hp_and_current_hp_by_the_same_amount() -> None:
     lib = library()
     core = lib.ruleset.core
-    run = new_run(lib, "build_push", 2, {Attribute.STR: 4})  # 基礎 60
-    hurt = run.model_copy(update={"hp": 25})
+    run = new_run(lib, "build_push", 2, {Attribute.STR: 40})  # 基礎 600
+    hurt = run.model_copy(update={"hp": 250})
     leveled = _leveled(hurt, 2)
-    gain = core.level_hp_bonus(60, 2)
-    assert gain == 3
+    gain = core.level_hp_bonus(600, 2)
+    assert gain == 30
     assert leveled.max_hp_in(core) == run.max_hp_in(core) + gain
-    assert leveled.hp == 25 + gain
+    assert leveled.hp == 250 + gain
 
 
 def test_level_up_allocation_to_constitution_raises_max_and_current_hp() -> None:
     lib = library()
     core = lib.ruleset.core
     run = _leveled(
-        new_run(lib, "build_fire", 3, {Attribute.INT: 4}).model_copy(update={"hp": 20}), 2
+        new_run(lib, "build_fire", 3, {Attribute.INT: 40}).model_copy(update={"hp": 200}), 2
     )
     node = run.node
     assert isinstance(node, LevelUpNode)
     before_max, before_hp = run.max_hp_in(core), run.hp
-    choice = LevelUpChoice(attributes={Attribute.CON: 2}, pick=None)
+    choice = LevelUpChoice(attributes={Attribute.CON: 20}, pick=None)
     after = apply_choice(lib, run, choice)
-    gain = 2 * core.hp_per_con_point
-    assert after.hero.attributes[Attribute.CON] == run.hero.attributes[Attribute.CON] + 2
+    gain = 20 * core.hp_per_con_point
+    assert after.hero.attributes[Attribute.CON] == run.hero.attributes[Attribute.CON] + 20
     assert after.max_hp_in(core) == before_max + gain
     assert after.hp == before_hp + gain
 
@@ -92,20 +92,20 @@ def test_level_up_without_constitution_keeps_current_hp() -> None:
     lib = library()
     core = lib.ruleset.core
     run = _leveled(
-        new_run(lib, "build_fire", 3, {Attribute.INT: 4}).model_copy(update={"hp": 20}), 2
+        new_run(lib, "build_fire", 3, {Attribute.INT: 40}).model_copy(update={"hp": 200}), 2
     )
-    after = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.INT: 2}, pick=None))
+    after = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.INT: 20}, pick=None))
     assert after.hp == run.hp
     assert after.max_hp_in(core) == run.max_hp_in(core)
 
 
 def test_a_decrease_never_drops_current_hp_below_one() -> None:
     lib = library()
-    run = new_run(lib, "build_fire", 3, {Attribute.INT: 4}).model_copy(update={"hp": 2})
+    run = new_run(lib, "build_fire", 3, {Attribute.INT: 40}).model_copy(update={"hp": 20})
     lowered = run.model_copy(
         update={
             "hero": run.hero.model_copy(
-                update={"attributes": {**run.hero.attributes, Attribute.CON: 1}}
+                update={"attributes": {**run.hero.attributes, Attribute.CON: 10}}
             )
         }
     )
@@ -116,7 +116,7 @@ def test_a_decrease_never_drops_current_hp_below_one() -> None:
 def test_the_battle_hero_has_the_runs_max_hp(level: int) -> None:
     lib = library()
     core = lib.ruleset.core
-    run = new_run(lib, "build_fire", 4, {Attribute.INT: 1, Attribute.CON: 3})
+    run = new_run(lib, "build_fire", 4, {Attribute.INT: 10, Attribute.CON: 30})
     while run.level < level:
         run = _leveled(run, run.level + 1)
     run = run.model_copy(update={"node": new_run(lib, "build_fire", 4).node})
@@ -131,8 +131,8 @@ def test_save_and_load_keep_max_and_current_hp() -> None:
     core = lib.ruleset.core
     run = apply_choice(
         lib,
-        _leveled(new_run(lib, "build_push", 5, {Attribute.STR: 4}), 3),
-        LevelUpChoice(attributes={Attribute.CON: 2}, pick=None),
+        _leveled(new_run(lib, "build_push", 5, {Attribute.STR: 40}), 3),
+        LevelUpChoice(attributes={Attribute.CON: 20}, pick=None),
     )
     loaded = loads_save(dumps_save(RunSave(run_id="hp", run=run))).run
     assert loaded == run
@@ -145,5 +145,5 @@ def test_blank_mage_auto_allocation_follows_the_staff() -> None:
     lib = library()
     mage = new_run(lib, "build_blank_mage", 1)
     warrior = new_run(lib, "build_blank_warrior", 1)
-    assert mage.hero.attributes[Attribute.INT] == 14 and mage.hero.skills == ()
-    assert warrior.hero.attributes[Attribute.STR] == 14
+    assert mage.hero.attributes[Attribute.INT] == 140 and mage.hero.skills == ()
+    assert warrior.hero.attributes[Attribute.STR] == 140

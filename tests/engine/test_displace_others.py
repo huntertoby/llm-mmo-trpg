@@ -314,9 +314,9 @@ def test_the_check_scales_with_the_casters_attribute() -> None:
     state = arena(tele_skill(), foes=[(2, 3)])
     foe = state.units[U2]
     skill = state.ruleset.skill_def(TELE)
-    strong = contest_chance(state, foe, skill.scaling_attr, 40, 10)
-    weak = contest_chance(state, foe, skill.scaling_attr, 1, 10)
-    assert strong > contest_chance(state, foe, skill.scaling_attr, 16, 10) > weak
+    strong = contest_chance(state, foe, skill.scaling_attr, 400, 10)  # 屬性 ×10（X10-2b）
+    weak = contest_chance(state, foe, skill.scaling_attr, 10, 10)
+    assert strong > contest_chance(state, foe, skill.scaling_attr, 160, 10) > weak
     assert float(weak) == 0.05
 
 

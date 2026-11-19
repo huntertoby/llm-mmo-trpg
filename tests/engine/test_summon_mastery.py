@@ -79,8 +79,8 @@ def alive_summons(state: BattleState) -> list[UnitId]:
 
 
 def role_hp(state: BattleState) -> int:
-    """骷髏（近戰定位）：範本 20 HP ＋ 施放者屬性修正的成長 3，再 × 定位係數。"""
-    return 23 * state.ruleset.core.summon_role_hp_permille["melee"] // 1000
+    """骷髏（近戰定位）：範本 200 HP ＋ 施放者屬性修正的成長 30，再 × 定位係數（X10-2b ×10）。"""
+    return 230 * state.ruleset.core.summon_role_hp_permille["melee"] // 1000
 
 
 # ---------------------------------------------------------------------------
@@ -194,4 +194,4 @@ def test_melee_and_immobile_summons_are_tougher_than_ranged_ones() -> None:
 def test_role_coefficient_scales_the_summons_hp() -> None:
     state, [made] = cast(arena(None), 1)
     assert state.units[made].max_hp == role_hp(state)
-    assert state.units[made].max_hp > 23
+    assert state.units[made].max_hp > 230

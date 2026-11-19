@@ -265,13 +265,13 @@ def test_level_up_text(library: ContentLibrary, make_char: MakeChar) -> None:
     # 靈感照規則（world/rules.yaml insight_per_level＝2；玩法 PM 稿寫「+1」，列在報告的待 PM 決定）
     insight = rules_of(library).hero_growth.insight_per_level
     assert up.text_zh == (
-        f"升到 2 級：屬性點 +2、靈感 +{insight}。回霧渡鎮找導師堂的葛蘭，學怎麼配點。"
+        f"升到 2 級：屬性點 +20、靈感 +{insight}。回霧渡鎮找導師堂的葛蘭，學怎麼配點。"
     )
     taught = char.model_copy(
         update={"level": 3, "level_seen": 2, "hints_seen": ("lesson:allocate",)}
     )
     later = level_up_view(library, taught)
-    assert later is not None and later.text_zh == f"升到 3 級：屬性點 +2、靈感 +{insight}。"
+    assert later is not None and later.text_zh == f"升到 3 級：屬性點 +20、靈感 +{insight}。"
     seen = _do(library, char.model_copy(update={"level": 2}), HintSeenAction(level=2))
     assert seen.level_seen == 2 and level_up_view(library, seen) is None
     capped = _do(library, char, HintSeenAction(level=5))
@@ -309,10 +309,10 @@ def test_recommended_level_up_goes_to_the_lower(library: ContentLibrary) -> None
 
 def test_world_start_uses_recommended(library: ContentLibrary) -> None:
     run = new_keyword_run(library, "dagger", ["frozen", "concealed"], 1000, "recommended")
-    base = {a: 10 for a in Attribute}
+    base = {a: 100 for a in Attribute}  # X10-2b：屬性 ×10
     spent = {a: v - base[a] for a, v in run.hero.attributes.items() if v != base[a]}
     assert sum(spent.values()) == library.roguelite.start_free_points
-    assert all(v in (2, 4) for v in spent.values())  # 同屬性 4、不同各 2
+    assert all(v in (20, 40) for v in spent.values())  # 同屬性 40、不同各 20
 
 
 # ---------------------------------------------------------------------------

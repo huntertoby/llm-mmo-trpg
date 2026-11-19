@@ -90,7 +90,7 @@ def test_won_battle_writes_back_hp_mana_and_source_plus_reward() -> None:
     # 下一場以寫回的值開戰（戰鬥之間不回復）
     node = after.node
     assert isinstance(node, LevelUpNode)  # 第 1 場後升到 2 級
-    skipped = apply_choice(lib, after, LevelUpChoice(attributes={Attribute.STR: 2}))
+    skipped = apply_choice(lib, after, LevelUpChoice(attributes={Attribute.STR: 20}))
     assert skipped.node == BattleNode(index=2)
     setup = battle_setup(lib, skipped)
     assert (setup.units[0].hp, setup.units[0].mana) == (after.hp, after.mana)
@@ -201,13 +201,13 @@ def test_level_up_gives_two_points_and_a_skippable_offer() -> None:
     run = _after(new_run(lib, "build_push", 2), 1, levels_pending=1)
     node = run.node
     assert isinstance(node, LevelUpNode)
-    assert (node.level, node.points, run.level) == (2, 2, 2)
-    with pytest.raises(ChoiceError, match="必須分配 2 點"):
-        apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 1}))
+    assert (node.level, node.points, run.level) == (2, 20, 2)
+    with pytest.raises(ChoiceError, match="必須分配 20 點"):
+        apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 10}))
     with pytest.raises(NodeConflictError, match="升級"):
         apply_choice(lib, run, LeaveChoice())
-    after = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.WIL: 2}))
-    assert after.hero.attributes[Attribute.WIL] == run.hero.attributes[Attribute.WIL] + 2
+    after = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.WIL: 20}))
+    assert after.hero.attributes[Attribute.WIL] == run.hero.attributes[Attribute.WIL] + 20
     assert after.hero.skills == run.hero.skills
     assert after.node == BattleNode(index=2)
 
@@ -215,7 +215,7 @@ def test_level_up_gives_two_points_and_a_skippable_offer() -> None:
 def test_two_levels_at_once_give_two_level_up_nodes() -> None:
     lib = library()
     run = _after(new_run(lib, "build_push", 2), 1, levels_pending=2)
-    first = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 2}))
+    first = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 20}))
     assert isinstance(first.node, LevelUpNode) and first.node.level == 3
     assert first.node.offer != run.node.offer  # type: ignore[union-attr]
 

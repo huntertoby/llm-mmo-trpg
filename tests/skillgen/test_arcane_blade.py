@@ -36,7 +36,8 @@ LIB = library()
 
 
 def _hero(**over: int) -> dict[Attribute, int]:
-    values = {a: 10 for a in A} | {Attribute(k): v for k, v in over.items()}
+    """參數照舊單位寫（10 為基準、差 4）；X10-2b 起屬性 ×10，這裡一起乘上去。"""
+    values = {a: 100 for a in A} | {Attribute(k): v * 10 for k, v in over.items()}
     return values
 
 

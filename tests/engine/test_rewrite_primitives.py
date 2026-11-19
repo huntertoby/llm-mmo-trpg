@@ -188,10 +188,10 @@ def test_the_caster_going_down_from_the_transfer_ends_the_link(
 def test_undying_on_the_caster_survives_the_transfer(monkeypatch: pytest.MonkeyPatch) -> None:
     always(monkeypatch, die=6)
     state = linked(link_scene(), permille=500)
-    state.units[U1].hp = 1
+    state.units[U1].hp = 10  # X10-2b：免死留下 1 × 10
     state.units[U1].statuses.append(StatusInstance("undying", 2, U1))
     result = resolve(give_turn(state, U3), Attack(unit_id=U3, target_id=U2))
-    assert result.state.units[U1].hp == 1 and not result.state.units[U1].downed
+    assert result.state.units[U1].hp == 10 and not result.state.units[U1].downed
     assert result.state.units[U2].has_status("soul_link")
 
 
@@ -554,7 +554,9 @@ def test_the_ai_gives_extra_reactions_only_to_units_that_react() -> None:
 @pytest.mark.parametrize(
     ("build", "map_id", "seed", "event"),
     [
-        ("build_support", "oil_depot", 1, SkillCopied),  # AP-1（失手返還）後 0 → 1
+        # AP-1（失手返還）後 0 → 1
+        # X10-2b 換種子 1 → 4（捨去差異使戰鬥分岔、不再複製技能；掃 0～39）
+        ("build_support", "oil_depot", 4, SkillCopied),
         (
             "build_guardian",
             "open_plain",

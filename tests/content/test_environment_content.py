@@ -115,13 +115,13 @@ def test_weather_table(library: ContentLibrary) -> None:
 def test_reactions_defaults(library: ContentLibrary) -> None:
     table = library.ruleset.reactions
     block = table.by_id()["block"]
-    assert (block.stamina_cost, block.damage_reduction_permille) == (10, 500)
+    assert (block.stamina_cost, block.damage_reduction_permille) == (100, 500)  # X10-2b：耐力 ×10
     rules = {r.reaction: r for r in table.default_rules}
     assert rules["block"].when.event == "targeted_by_melee"
-    assert rules["block"].unless is not None and rules["block"].unless.self_stamina_below == 20
+    assert rules["block"].unless is not None and rules["block"].unless.self_stamina_below == 200
     assert rules["opportunity_attack"].when.event == "enemy_leaves_adjacent"
     assert all(r.mode == "auto" for r in table.default_rules)
-    assert library.ruleset.core.default_stamina == 30
+    assert library.ruleset.core.default_stamina == 300
 
 
 # ---------------------------------------------------------------------------

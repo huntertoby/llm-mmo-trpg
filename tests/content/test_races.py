@@ -116,7 +116,7 @@ def test_table_values_match_design_7_7(library: ContentLibrary) -> None:
     assert races["dragonkin"].passive.permille == -200
     assert races["seafolk"].skill.effects[0].distance == 2
     assert races["seafolk"].skill.shape.range == 4
-    assert races["cyborg"].skill.effects[0].amount == 10
+    assert races["cyborg"].skill.effects[0].amount == 100  # X10-2b：耐力、法力回復量 ×10
 
 
 def test_no_bundled_race_data_contains_forbidden_keys() -> None:

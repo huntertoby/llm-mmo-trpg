@@ -287,7 +287,8 @@ def test_flashed_followup_card_shows_the_engine_numbers() -> None:
             hits += 1
             follow = dealt[-1]
             assert len(follow.rolls) == damage.dice.count
-            assert all(1 <= r <= damage.dice.sides for r in follow.rolls)
+            scale = lib.ruleset.core.quantity_scale  # X10-2b：骰面 × quantity_scale
+            assert all(scale <= r <= damage.dice.sides * scale for r in follow.rolls)
     assert hits > 0
 
 
@@ -654,7 +655,7 @@ def test_flashed_form_entry_cooldown_is_the_engine_cooldown() -> None:
     skill = _renamed(got)
     card = skill_card(lib, skill)
     assert f"冷卻 {skill.cost.cooldown} 回合" in card.cost
-    assert "−8 耐力" in " ".join(card.effects)  # 物理形態維持費 8（#67）不變
+    assert "−80 耐力" in " ".join(card.effects)  # 物理形態維持費 80（#67；X10-2b ×10）不變
     m = make_map("000\n000", ally=[(0, 0)], enemy=[(2, 1)])
     spawns = [spawn(Team.ALLY, (0, 0), caster_template([skill])), spawn(Team.ENEMY, (2, 1))]
     battle = give_turn(make_state(m, spawns, skills=[skill]), "unit_0001")

@@ -122,7 +122,7 @@ def test_frost_touch_light_is_not_offered() -> None:
     """FL-1a 時霜寒之觸輕巧＝法力 3 → 2、1d8 → 1d6；FL-1c（第 5 點）起法力實付 3 → 2 都是 2，
     當作沒少付，不出輕巧（``tests/skillgen/test_flash_cost_fl1c.py``）。"""
     base = _named("霜寒之觸")
-    assert base.cost.mana == 3
+    assert base.cost.mana == 30  # X10-2b：法力 ×10
     with pytest.raises(FlashError):
         _flash(base, LIGHT)
 

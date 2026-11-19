@@ -29,7 +29,7 @@
   "per_level_permille": 30
  },
  "enemy_growth": {
-  "attribute_points_per_level": 2,
+  "attribute_points_per_level": 20,
   "skill_tier_by_level": [
    1,
    1,

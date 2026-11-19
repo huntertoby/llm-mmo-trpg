@@ -55,7 +55,7 @@ def arena(
         make_map(FLAT, ally=[hero_at, *extra], enemy=[(3, 3)]),
         [
             spawn(Team.ALLY, hero_at, template(hero, reactions=())),
-            spawn(Team.ENEMY, (3, 3), boss or master(max_hp=120)),
+            spawn(Team.ENEMY, (3, 3), boss or master(max_hp=1200)),  # X10-2b ×10
             *(spawn(Team.ALLY, xy, template(hero, reactions=())) for xy in extra),
         ],
     )
@@ -123,7 +123,7 @@ def test_a_nearly_broken_whisk_is_picked_while_mist_shift_is_ready() -> None:
     boss = state.units[MASTER]
     boss.part_hp["whisk"] = 1
     assert "skill_mist_shift" in boss.skills
-    boss.mana = 99
+    boss.mana = 990
     choice = ai()(state)
     assert isinstance(choice, Attack | UseSkill)
     assert (choice.target_id, choice.target_part) == (MASTER, "whisk")
@@ -133,7 +133,7 @@ def test_priority_needs_the_next_skill_or_a_charge() -> None:
     state = arena(phase="mist_lock")
     boss = state.units[MASTER]
     boss.part_hp["whisk"] = 1
-    boss.mana = 99
+    boss.mana = 990
     rules = library().ai_profiles.parts
     action = Attack(unit_id=HERO, target_id=MASTER, target_part="whisk")
     p = preview(state, action)

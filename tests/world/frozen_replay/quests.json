@@ -623,7 +623,7 @@
    "cost": {
     "cooldown": 4,
     "hp_percent": null,
-    "mana": 6,
+    "mana": 60,
     "on_miss": [],
     "overdraft": null,
     "self_status": null,

@@ -125,11 +125,12 @@ def test_initiative_order_and_ties() -> None:
     """先攻：總值高者先；同值比敏捷；仍相同以戰鬥亂數決定並寫入事件（PM 決定，1B）。"""
     m = make_map("0000\n0000")
     spawns = [
-        spawn(Team.ALLY, (0, 0), template("hero_fighter", attributes={"dex": 16})),
-        spawn(Team.ALLY, (0, 1), template("hero_fighter", attributes={"dex": 9})),
-        spawn(Team.ENEMY, (3, 0), template("bandit", attributes={"dex": 10})),
-        spawn(Team.ENEMY, (3, 1), template("bandit", attributes={"dex": 10})),
-        spawn(Team.ENEMY, (2, 1), template("bandit", attributes={"dex": 11})),
+        # X10-2b 屬性 ×10
+        spawn(Team.ALLY, (0, 0), template("hero_fighter", attributes={"dex": 160})),
+        spawn(Team.ALLY, (0, 1), template("hero_fighter", attributes={"dex": 90})),
+        spawn(Team.ENEMY, (3, 0), template("bandit", attributes={"dex": 100})),
+        spawn(Team.ENEMY, (3, 1), template("bandit", attributes={"dex": 100})),
+        spawn(Team.ENEMY, (2, 1), template("bandit", attributes={"dex": 110})),
     ]
     setup = make_setup(m, spawns)
     saw_dex_tiebreak = False
@@ -158,7 +159,7 @@ def test_initiative_order_and_ties() -> None:
             totals[i] == totals[i + 1] and dex[i] > dex[i + 1] for i in range(len(order) - 1)
         )
     assert saw_dex_tiebreak
-    # 兩個敏捷 10 的盜賊同值時，兩種順序都出現過（由亂數決定，而非 ID）
+    # 兩個敏捷 100 的盜賊同值時，兩種順序都出現過（由亂數決定，而非 ID）
     pair = {UnitId("unit_0003"), UnitId("unit_0004")}
     assert {o for o in tie_orders if set(o) == pair} == {
         (UnitId("unit_0003"), UnitId("unit_0004")),

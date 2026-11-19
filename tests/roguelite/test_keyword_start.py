@@ -66,7 +66,7 @@ def test_keyword_start_is_deterministic_and_gives_one_whiteboard_per_keyword() -
         assert skill.kind == "active" and is_whiteboard(skill, lib)
         assert derive_keywords(skill, lib.keywords, exclusive_only=True).all() == (keyword,)
     assert run.hero.weapon == "fire_staff" and run.level == 1
-    assert run.hero.attributes[Attribute.INT] == 14  # 預設配點：武器的縮放屬性
+    assert run.hero.attributes[Attribute.INT] == 140  # 預設配點：武器的縮放屬性
     assert run.hp == run.max_hp_in(lib.ruleset.core) and run.mana == run.max_mana_in(
         lib.ruleset.core
     )
@@ -140,9 +140,9 @@ def test_a_pool_without_compatible_starters_is_rejected(monkeypatch: pytest.Monk
 
 def test_allocation_is_checked() -> None:
     with pytest.raises(ChoiceError, match="必須分配"):
-        new_keyword_run(library(), "bow", ("marked", "ignite"), 1, {Attribute.DEX: 1})
-    run = new_keyword_run(library(), "bow", ("marked", "ignite"), 1, {Attribute.CON: 4})
-    assert run.hero.attributes[Attribute.CON] == 14
+        new_keyword_run(library(), "bow", ("marked", "ignite"), 1, {Attribute.DEX: 10})
+    run = new_keyword_run(library(), "bow", ("marked", "ignite"), 1, {Attribute.CON: 40})
+    assert run.hero.attributes[Attribute.CON] == 140
 
 
 def test_dev_packs_all_start_and_stay_out_of_the_player_start() -> None:

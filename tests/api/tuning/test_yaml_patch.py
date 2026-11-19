@@ -167,6 +167,6 @@ def test_unsafe_patches_are_refused(
 
 def test_real_boss_file_round_trip(tmp_path: Path) -> None:
     text = TEXTS["units/ashen_heart.yaml"]
-    forward = patch_text(text, [(("max_hp",), 150), (("phases", 2, "trigger", "permille"), 250)])
-    back = patch_text(forward, [(("max_hp",), 160), (("phases", 2, "trigger", "permille"), 300)])
+    forward = patch_text(text, [(("max_hp",), 1500), (("phases", 2, "trigger", "permille"), 250)])
+    back = patch_text(forward, [(("max_hp",), 1600), (("phases", 2, "trigger", "permille"), 300)])
     assert back == text

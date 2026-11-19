@@ -39,9 +39,9 @@ def test_tier_budget_comes_from_core_yaml() -> None:
 
 
 def test_hand_case_1_weapon_skill() -> None:
-    """武器技：傷害 ×1.8 ＝ 1.8 × 7 ＝ 12.6；單體 ×1；AP 2 ×1；折抵 冷卻 2（+100）＋法力 4（+20）
+    """武器技：傷害 ×1.8 ＝ 1.8 × 7 ＝ 12.6；單體 ×1；AP 2 ×1；折抵 冷卻 2（+100）＋耐力 80（+20）
     ＝ +120‰；可用 ＝ 14 × 1 × 1.12 ＝ 15.68；比例 ＝ 12.6 ÷ 15.68 ＝ 45/56。"""
-    report = skill_budget(skill(), lib())
+    report = skill_budget(skill(cost={"stamina": 80, "cooldown": 2}), lib())  # X10-2b：耐力 8 → 80
     assert [e.points for e in report.effects] == [F(63, 5)]
     assert report.raw == report.total == F(63, 5)
     assert report.allowance_permille == 120
@@ -51,12 +51,12 @@ def test_hand_case_1_weapon_skill() -> None:
 
 
 def test_hand_case_2_spell_skill_with_dice_average() -> None:
-    """法術技：3d6 平均 10.5；單體；階級 2（18）、AP 2、冷卻 1（+50）＋法力 10（+50）＝ +100‰；
+    """法術技：3d6 平均 10.5；單體；階級 2（18）、AP 2、冷卻 1（+50）＋法力 100（+50）＝ +100‰；
     可用 ＝ 18 × 1.1 ＝ 19.8；比例 ＝ 10.5 ÷ 19.8 ＝ 35/66。"""
     s = _spell(
         tier=2,
         effects=[{"type": "damage", "dice": "3d6", "element": "fire"}],
-        cost={"mana": 10, "cooldown": 1},
+        cost={"mana": 100, "cooldown": 1},
     )
     report = skill_budget(s, lib())
     assert report.total == F(21, 2)
@@ -106,7 +106,7 @@ def test_hand_case_4_effect_and_skill_conditions() -> None:
 
 def test_hand_case_5_synergy_area_and_control() -> None:
     """協同：方陣 3（2.0）的 2d6 傷害 ＝ 14，緩速（3）× 2.0 ＝ 6 → raw 20；標籤 damage／area／
-    control → area+control ×1.2 → total 24；折抵 冷卻 3（+150）＋法力 8（+40）＝ +190‰；
+    control → area+control ×1.2 → total 24；折抵 冷卻 3（+150）＋法力 80（+40）＝ +190‰；
     可用 ＝ 14 × 1.19 ＝ 16.66。"""
     s = _spell(
         shape={"type": "square3", "range": 4},
@@ -114,7 +114,7 @@ def test_hand_case_5_synergy_area_and_control() -> None:
             {"type": "damage", "dice": "2d6", "element": "fire"},
             {"type": "apply_status", "status": "slow"},
         ],
-        cost={"mana": 8, "cooldown": 3},
+        cost={"mana": 80, "cooldown": 3},
     )
     report = skill_budget(s, lib())
     assert report.raw == F(20)
@@ -125,14 +125,14 @@ def test_hand_case_5_synergy_area_and_control() -> None:
 
 
 def test_hand_case_6_cost_allowance_caps() -> None:
-    """代價折抵：冷卻 6 回合 ＝ 300（上限）、每場 2 次 ＝ 250、法力 40 ＝ 200 → 上限 150、
+    """代價折抵：冷卻 6 回合 ＝ 300（上限）、每場 2 次 ＝ 250、法力 400 ＝ 200 → 上限 150、
     HP 300‰ ＝ 300 → 上限 200；加總 900‰，再以總上限截斷為 500‰（2C-1 3.1）。"""
-    s = skill(cost={"mana": 40, "cooldown": 6, "uses_per_battle": 2, "hp_percent": 300})
+    s = skill(cost={"mana": 400, "cooldown": 6, "uses_per_battle": 2, "hp_percent": 300})
     report = skill_budget(s, lib())
     assert dict(report.allowance_parts) == {
         "冷卻 6 回合": 300,
         "每場 2 次": 250,
-        "法力 40": 150,
+        "法力 400": 150,
         "HP 30%": 200,
     }
     assert report.allowance_raw_permille == 900
@@ -146,8 +146,8 @@ def test_total_allowance_cap_comes_from_skill_budget_yaml() -> None:
 
 
 def test_allowance_below_the_total_cap_is_untouched() -> None:
-    """冷卻 4（+200）＋ 法力 10（+50）＝ 250‰ < 500‰：不截斷。"""
-    report = skill_budget(skill(cost={"mana": 10, "cooldown": 4}), lib())
+    """冷卻 4（+200）＋ 法力 100（+50）＝ 250‰ < 500‰：不截斷。"""
+    report = skill_budget(skill(cost={"mana": 100, "cooldown": 4}), lib())
     assert report.allowance_permille == report.allowance_raw_permille == 250
     assert not report.allowance_capped
 
@@ -155,8 +155,8 @@ def test_allowance_below_the_total_cap_is_untouched() -> None:
 def test_total_allowance_cap_applies_after_each_part_cap() -> None:
     """各項的個別上限先套用（冷卻 300、法力 150＝450），未達 500 → 不截斷；
     再加每場 1 次（400）→ 850 → 截斷為 500。"""
-    assert skill_budget(skill(cost={"mana": 99, "cooldown": 6}), lib()).allowance_permille == 450
-    report = skill_budget(skill(cost={"mana": 99, "cooldown": 6, "uses_per_battle": 1}), lib())
+    assert skill_budget(skill(cost={"mana": 990, "cooldown": 6}), lib()).allowance_permille == 450
+    report = skill_budget(skill(cost={"mana": 990, "cooldown": 6, "uses_per_battle": 1}), lib())
     assert (report.allowance_raw_permille, report.allowance_permille) == (850, 500)
 
 
@@ -381,7 +381,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
 
 
 def test_the_budget_is_exact_not_floating_point() -> None:
-    report = skill_budget(skill(), lib())
+    report = skill_budget(skill(cost={"stamina": 80, "cooldown": 2}), lib())  # X10-2b：耐力 8 → 80
     for value in (report.raw, report.total, report.usable, report.ratio):
         assert isinstance(value, F)
 

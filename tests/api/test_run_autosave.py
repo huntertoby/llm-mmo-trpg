@@ -101,13 +101,14 @@ def _steps_in_memory(client: TestClient, run_id: str) -> int:
 def test_every_battle_action_autosaves(
     runs_client: TestClient, library: ContentLibrary, save_dir: Path
 ) -> None:
-    run = _create(runs_client)
+    # X10-2b 換種子 0 → 4（捨去差異使戰況分岔，種子 0 第 3 個動作就結束；掃 0～11）
+    run = _create(runs_client, seed=4)
     run_id = run["run_id"]
     assert _file(save_dir, run_id).is_file()  # 開局就有存檔
     _assert_file_matches_memory(runs_client, save_dir, run_id)
     battle = _ok(runs_client.post(f"/api/runs/{run_id}/battle"))["battle"]
     _assert_file_matches_memory(runs_client, save_dir, run_id)
-    for _ in range(3):  # 種子 0 的第一場在第 4 個動作結束
+    for _ in range(3):  # 種子 4 的第一場在第 4 個動作結束
         assert battle["awaiting"] == "action"
         before = _steps_in_memory(runs_client, run_id)
         battle = _step(runs_client, library, battle)
@@ -200,7 +201,7 @@ def _texts(steps: list[dict[str, Any]]) -> list[str]:
 def test_history_restores_the_battle_log_after_load(
     runs_client: TestClient, library: ContentLibrary
 ) -> None:
-    run = _create(runs_client)
+    run = _create(runs_client, seed=4)  # X10-2b 換種子 0 → 4（同上）
     run_id = run["run_id"]
     battle = _ok(runs_client.post(f"/api/runs/{run_id}/battle"))["battle"]
     streamed = _texts(battle["steps"])

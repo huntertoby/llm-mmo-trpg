@@ -159,7 +159,7 @@ def test_stance_effects_change_damage_taken_and_attributes(
     base = scene()
     rules = state.ruleset
     assert effective_attribute(rules, state.units[U1], Attribute.STR) == (
-        effective_attribute(rules, base.units[U1], Attribute.STR) + 2
+        effective_attribute(rules, base.units[U1], Attribute.STR) + 20  # X10-2b 屬性 ×10
     )
 
 

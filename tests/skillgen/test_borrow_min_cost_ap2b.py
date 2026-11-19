@@ -83,4 +83,4 @@ def test_proposal_filler_leaves_borrow_cost_alone(lib: ContentLibrary) -> None:
 def test_proposal_filler_still_tops_up_other_skills(lib: ContentLibrary) -> None:
     out: dict[str, Any] = {"kind": "active", "effects": [{"type": "damage"}], "cost": {}}
     _fill_cost(out, lib, "spell")
-    assert out["cost"]["mana"] == 1
+    assert out["cost"]["mana"] == 10  # X10-2b：最低費用 1 × quantity_scale

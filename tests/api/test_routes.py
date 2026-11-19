@@ -240,7 +240,9 @@ def test_a_decision_while_waiting_for_an_action_is_409(client: TestClient) -> No
 
 
 def test_waiting_for_a_decision_rejects_actions_with_409(prompt_client: TestClient) -> None:
-    battle = _until(prompt_client, _create(prompt_client, hero_build="build_tank"), "decision")
+    # X10-2b 換種子 7 → 8（捨去差異使戰況分岔，種子 7 等不到詢問就結束；掃 0～15）
+    created = _create(prompt_client, hero_build="build_tank", seed=8)
+    battle = _until(prompt_client, created, "decision")
     pending = battle["pending"]
     assert pending["unit_id"] == battle["hero_id"] and pending["kind"] == "reaction"
     assert battle["legal_actions"] == []

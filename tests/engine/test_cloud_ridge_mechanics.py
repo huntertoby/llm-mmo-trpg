@@ -416,9 +416,11 @@ def test_formation_scales_attack_damage_and_log() -> None:
 
 
 def test_formation_alone_is_weaker() -> None:
-    state = _5am2_state([((3, 0), _5am2_hero(max_hp=200))], [((3, 5), _disciple())])
-    hit = _dealt(_hit(state, U1_5AM2, U2_5AM2, flat=10), U1_5AM2)
-    assert hit.formation_permille == 800 and hit.amount == 8
+    # X10-2b：HP、傷害 ×10（最低傷害 10 不再蓋過 ×0.8）
+    state = _5am2_state([((3, 0), _5am2_hero(max_hp=2000))], [((3, 5), _disciple())])
+    hit = _dealt(_hit(state, U1_5AM2, U2_5AM2, flat=100), U1_5AM2)
+    # 100 × 0.8 × 1.2 × 0.9 = 86.4（舊單位 8.64 → 8 是捨去差異）
+    assert hit.formation_permille == 800 and hit.amount == 86
 
 
 def test_formation_schema_limits() -> None:
@@ -657,10 +659,10 @@ def test_ward_reduces_kin_damage_in_range_only() -> None:
     assert ward_permille(state, state.units[U3_5AM2B]) == 800
     assert ward_permille(state, state.units[U4_5AM2B]) == 1000  # 距離 6 格
     assert ward_permille(state, state.units[U2_5AM2B]) == 1000  # 石靈自己不算
-    near = _5am2b_dealt(_5am2b_hit(state, U3_5AM2B, 10), U3_5AM2B)
-    far = _5am2b_dealt(_5am2b_hit(state, U4_5AM2B, 10), U4_5AM2B)
-    assert near.ward_permille == 800 and near.amount == 8
-    assert far.ward_permille == 1000 and far.amount == 10
+    near = _5am2b_dealt(_5am2b_hit(state, U3_5AM2B, 100), U3_5AM2B)  # X10-2b 傷害 ×10
+    far = _5am2b_dealt(_5am2b_hit(state, U4_5AM2B, 100), U4_5AM2B)
+    assert near.ward_permille == 800 and near.amount == 80
+    assert far.ward_permille == 1000 and far.amount == 100
     assert "護陣 ×0.8" in (describe_event(near, state) or "")
 
 

@@ -12,7 +12,7 @@ from trpg.narrative.skills import cost_summary, skill_card
 from trpg.shared.types import Team, UnitId
 
 FIRE_BOLT = "skill_fire_bolt"
-"""法力 5（BAL-12d 火系 ×0.9）；我方 ×0.8 ＝ 4。"""
+"""法力 50（BAL-12d 火系 ×0.9；X10-2b ×10）；我方 ×0.8 ＝ 40。"""
 
 
 def _raw_and_ally() -> tuple[int, int]:
@@ -22,7 +22,7 @@ def _raw_and_ally() -> tuple[int, int]:
 
 
 def test_fixture_skill_has_a_visible_discount() -> None:
-    assert _raw_and_ally() == (5, 4)
+    assert _raw_and_ally() == (50, 40)
 
 
 def test_skill_card_shows_the_ally_cost_and_cli_summary_the_raw_cost() -> None:

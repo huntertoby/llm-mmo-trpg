@@ -279,11 +279,11 @@ def test_cunning_attacks_cover_object_when_it_can_break_it() -> None:
         U1,
     )
     crate = ObjectId("obj_0001")
-    state.objects[crate].hp = 2
+    state.objects[crate].hp = 20  # X10-2b ×10
     assert ai("cunning")(state) == Attack(unit_id=U1, target_object_id=crate)
     # 木箱還很堅固時（打不掉），直接射擊盜賊
     sturdy = state.clone()
-    sturdy.objects[crate].hp = 15
+    sturdy.objects[crate].hp = 150  # X10-2b ×10
     assert ai("cunning")(sturdy) == Attack(unit_id=U1, target_id=U2)
 
 

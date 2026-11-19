@@ -170,7 +170,8 @@ def test_released_at_next_turn_start_and_damage_matches_the_card(
     hits = [e for e in of_events(events, DamageDealt) if e.source_id == U1]
     assert {e.target_id for e in hits} == {U2, U3}  # 東邊的兩個敵人；北邊的沒被打到
     assert all(e.element is Element.FIRE for e in hits)
-    expected = 5 + attr * 300 // 1000  # 1d8（骰面 5）＋ 智力 × 0.3（卡片句的數字）
+    # 1d8（骰面 5，×10 = 50；X10-2b）＋ 智力 × 0.3（卡片句的數字）
+    expected = 50 + attr * 300 // 1000
     assert all(e.amount == expected for e in hits)
 
 

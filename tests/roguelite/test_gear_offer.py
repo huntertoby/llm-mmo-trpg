@@ -184,7 +184,7 @@ def test_bad_gear_choices_are_rejected() -> None:
     with pytest.raises(ChoiceError):
         apply_choice(library(), after, GearPickChoice(pick=3))
     with pytest.raises(NodeConflictError):
-        apply_choice(library(), after, LevelUpChoice(attributes={Attribute.STR: 2}))
+        apply_choice(library(), after, LevelUpChoice(attributes={Attribute.STR: 20}))
     with pytest.raises(NodeConflictError):
         apply_choice(library(), after, EquipChoice(item_id="x"))  # 只能在營火換裝
 
@@ -356,7 +356,7 @@ def test_the_hero_spawns_with_the_run_equipment() -> None:
     assert isinstance(node, GearOfferNode)
     taken = apply_choice(lib, after, GearPickChoice(pick=0))
     setup = battle_setup(
-        lib, apply_choice(lib, taken, LevelUpChoice(attributes={Attribute.STR: 2}, pick=None))
+        lib, apply_choice(lib, taken, LevelUpChoice(attributes={Attribute.STR: 20}, pick=None))
     )
     hero = setup.units[0]
     assert hero.equipment == run_loadout(lib, taken)
@@ -390,7 +390,7 @@ def test_battle_in_progress_replays_identically_with_run_equipment() -> None:
     lib = library()
     after = _after_first_win()
     run = apply_choice(lib, after, GearPickChoice(pick=0))
-    run = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 2}))
+    run = apply_choice(lib, run, LevelUpChoice(attributes={Attribute.STR: 20}))
     assert isinstance(run.node, BattleNode)
     battle = ActiveBattle(lib, run)
     battle.auto(lambda b: len(b.steps) >= 8)

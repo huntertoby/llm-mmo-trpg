@@ -37,6 +37,7 @@ def test_summon_gains_are_dpr_times_rounds_minus_distance() -> None:
         state.ruleset.summon_def("summon_skeleton_warrior"),
         flat=grown.flat,
         bonus_permille=grown.bonus_permille,
+        scale=state.ruleset.core.quantity_scale,  # 固定值 ÷ 倍率（X10-2a）
     )
     [summoned] = [e for e in p.min_events if isinstance(e, UnitSummoned)]
     assert summoned.infusion == "prone"  # 3-33e1：技能製造「倒地」「召喚物」，預設灌注第一個

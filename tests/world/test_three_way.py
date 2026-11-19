@@ -85,7 +85,8 @@ def test_terrace_clash_uses_the_weaker_bandits_only(library: ContentLibrary) -> 
     assert "bandit_rookie_terrace" not in table["bandit_raiders"].all_units
     rookie = library.units["bandit_rookie"]
     weaker = library.units["bandit_rookie_terrace"]
-    assert weaker.max_hp == rookie.max_hp * 900 // 1000
+    scale = library.ruleset.core.quantity_scale  # X10-2b：內容照換算前單位捨去（17→15）後 ×10
+    assert weaker.max_hp == rookie.max_hp // scale * 900 // 1000 * scale
     same = {"max_hp": 0, "id": ""}
     assert weaker.model_copy(update=same) == rookie.model_copy(update=same)
 

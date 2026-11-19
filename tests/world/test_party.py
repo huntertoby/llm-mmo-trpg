@@ -157,7 +157,8 @@ def test_mercenaries_grow_with_hero_level(library: ContentLibrary, make_char: Ma
     grown, skills = grow_allies(library, party_spawns(library, char), 5)
     assert merc.template == grown[0].template  # 同標準隊友的成長（5A-SIM2）
     assert merc.template.level == 5
-    assert merc.template.attributes[Attribute.INT] == base.attributes[Attribute.INT] + 8
+    # X10-2b：屬性 ×10
+    assert merc.template.attributes[Attribute.INT] == base.attributes[Attribute.INT] + 80
     assert merc.template.max_hp > base.max_hp
     tier = library.world_rules.enemy_growth.tier_for(5) if library.world_rules else 1
     assert all(s.endswith(f"_t{tier}") for s in merc.template.skills if s not in base.skills)

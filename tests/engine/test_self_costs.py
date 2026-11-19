@@ -389,11 +389,11 @@ def test_a_battle_with_the_four_demo_skills_replays_identically() -> None:
     flat = "\n".join(["000000000"] * 9)
     m = make_map(flat, None, ally=[(1, 2), (1, 5)], enemy=[(6, 2), (6, 4), (7, 3)])
     spawns = [
-        spawn(Team.ALLY, (1, 2), caster_template([demo[0], demo[1]], max_hp=60)),
-        spawn(Team.ALLY, (1, 5), caster_template(demo[2:], base="hero_fighter", max_hp=80)),
-        spawn(Team.ENEMY, (6, 2), no_reactions(max_hp=90)),
-        spawn(Team.ENEMY, (6, 4), no_reactions(max_hp=90)),
-        spawn(Team.ENEMY, (7, 3), no_reactions(max_hp=90)),
+        spawn(Team.ALLY, (1, 2), caster_template([demo[0], demo[1]], max_hp=600)),  # X10-2b ×10
+        spawn(Team.ALLY, (1, 5), caster_template(demo[2:], base="hero_fighter", max_hp=800)),
+        spawn(Team.ENEMY, (6, 2), no_reactions(max_hp=900)),
+        spawn(Team.ENEMY, (6, 4), no_reactions(max_hp=900)),
+        spawn(Team.ENEMY, (7, 3), no_reactions(max_hp=900)),
     ]
     setup = make_setup(m, spawns, max_rounds=14)
     policy = UtilityAI(lib().ai_profiles)

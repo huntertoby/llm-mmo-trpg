@@ -80,12 +80,13 @@ def arena(
     terrain: str | None = None,
     skill: SkillDef | str = HURL,
 ) -> BattleState:
-    """U1 法師（在 ``HERO``，裝備 ``skill``）；之後依序是 ``foes``（不反應、HP 200）與 ``allies``。
+    """U1 法師（在 ``HERO``，裝備 ``skill``）；之後依序是 ``foes``（不反應、HP 2000）與 ``allies``
+    （X10-2b HP ×10）。
     規則集多一個測試專用的「巨石」（可推動、不可破壞）。"""
     m = make_map(FLAT, terrain, ally=[HERO, *allies], enemy=list(foes), objects=objects)
     spawns = [spawn(Team.ALLY, HERO, caster_template([skill]))]
-    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in foes]
-    spawns += [spawn(Team.ALLY, xy, no_reactions(max_hp=200)) for xy in allies]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=2000)) for xy in foes]
+    spawns += [spawn(Team.ALLY, xy, no_reactions(max_hp=2000)) for xy in allies]
     extra = [skill] if isinstance(skill, SkillDef) and skill.id != HURL.id else []
     setup = make_setup(m, spawns, skills=[HURL, *extra])
     rs = setup.ruleset
@@ -119,7 +120,7 @@ def test_the_unit_at_the_landing_tile_is_hit_and_the_crate_shatters(
     assert (dmg.cause, dmg.element.value, dmg.rolls, dmg.source_id) == (
         "attack",
         "physical",
-        (4, 4),
+        (40, 40),  # 骰面 ×10（X10-2b）
         U1,
     )
     (thrown,) = of(result.events, ObjectHurled)
@@ -305,7 +306,7 @@ def test_a_knocked_down_target_with_the_demo_skill(monkeypatch: pytest.MonkeyPat
     assert any(
         s.target_id == U2 and s.status_id == "prone" for s in of(result.events, StatusApplied)
     )
-    assert [d.rolls for d in of(result.events, DamageDealt) if d.target_id == U2] == [(4, 4, 4)]
+    assert [d.rolls for d in of(result.events, DamageDealt) if d.target_id == U2] == [(40, 40, 40)]
 
 
 # ---------------------------------------------------------------------------
@@ -408,11 +409,12 @@ def test_the_demo_skill_budget_discounts_the_dice_and_adds_the_knockdown() -> No
 def test_an_ai_battle_hurls_objects_and_replays(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """build_telekinesis 在 narrow_halls 種子 11：AI 丟出物件（油桶摔破漏油），紀錄重播一致。"""
+    """build_telekinesis 在 narrow_halls 種子 81：AI 丟出物件（油桶摔破漏油），紀錄重播一致。"""
     log = tmp_path / "hurl.json"
     # 3-24a1：弓有拋射，AI 軌跡改變，種子 5 → 11；CB-1 門檻 8 後 11 → 14
     # CB-2e：AI 增益表補 concealed（主角帶瞬步）後 38 → 27；AP-1（玩家方 4 AP、失手返還）後 27 → 35
-    argv = ["battle", "--map", "narrow_halls", "--seed", "35", "--ally-build", "build_telekinesis"]
+    # X10-2b 換種子 35 → 81（捨去差異使戰鬥分岔、不再丟油桶；掃 0～199，0～59 都沒有）
+    argv = ["battle", "--map", "narrow_halls", "--seed", "81", "--ally-build", "build_telekinesis"]
     assert main([*argv, "--log-json", str(log)]) == 0
     out = capsys.readouterr().out
     assert "丟向" in out and "出現了油" in out

@@ -158,7 +158,7 @@ def test_melee_ignores_half_cover() -> None:
 def test_destroyed_crate_no_longer_covers() -> None:
     state = _archery((0, 2), (3, 2))
     assert half_cover(state, state.units[U1], state.units[U2]) is not None
-    broken = run_effects(state, [DamageObjectEffect(object_id=CRATE, flat=99)]).state
+    broken = run_effects(state, [DamageObjectEffect(object_id=CRATE, flat=990)]).state
     assert broken.objects[CRATE].destroyed
     assert half_cover(broken, broken.units[U1], broken.units[U2]) is None
     assert preview(broken, Attack(unit_id=U1, target_id=U2)).hit_chance == Fraction(3, 4)

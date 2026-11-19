@@ -78,18 +78,18 @@ def scene(
     foe_at: tuple[int, int] = (4, 3),
     extra_foe: tuple[int, int] | None = None,
     ally_at: tuple[int, int] | None = None,
-    hp: int = 999,
-    foe_hp: int = 999,
+    hp: int = 9990,  # X10-2b：HP、耐力、法力 ×10
+    foe_hp: int = 9990,
     extra_skills: tuple[object, ...] = (),
 ) -> BattleState:
     """U1（戰士，帶 9 個形態技能）在 (3, 3) 手上有回合；U2 是敵人（友方加入時 U2 是友方）。"""
     foes = [foe_at] + ([extra_foe] if extra_foe else [])
     allies = [caster_at] + ([ally_at] if ally_at else [])
     m = make_map(FLAT7, ally=allies, enemy=foes)
-    owner = caster_template([*ALL, *extra_skills], base="hero_fighter", max_hp=hp, stamina=40)  # type: ignore[list-item]
+    owner = caster_template([*ALL, *extra_skills], base="hero_fighter", max_hp=hp, stamina=400)  # type: ignore[list-item]
     spawns = [spawn(Team.ALLY, caster_at, owner)]
     if ally_at:
-        spawns.append(spawn(Team.ALLY, ally_at, no_reactions("hero_fighter", max_hp=100)))
+        spawns.append(spawn(Team.ALLY, ally_at, no_reactions("hero_fighter", max_hp=1000)))
     spawns.append(spawn(Team.ENEMY, foe_at, no_reactions(max_hp=foe_hp)))
     if extra_foe:
         spawns.append(spawn(Team.ENEMY, extra_foe, no_reactions(max_hp=foe_hp)))
@@ -100,8 +100,8 @@ def scene(
         skills=[s for s in extra_skills if not isinstance(s, str)],  # type: ignore[misc]
     )
     state = give_turn(state, U1)
-    state.units[U1].stamina = 40
-    state.units[U1].mana = 40
+    state.units[U1].stamina = 400
+    state.units[U1].mana = 400
     state.units[U1].stamina_regen = 0
     return state
 

@@ -95,7 +95,7 @@ def arena(
     objects: Sequence[tuple[int, int, str]] = (),
     surfaces: Sequence[tuple[int, int, str]] = (),
     reactive: Sequence[int] = (),
-    foe_hp: int = 200,
+    foe_hp: int = 2000,  # X10-2b ×10
 ) -> BattleState:
     """U1 是施放者（我方戰士，裝備 ``sk``）；之後依序是 ``allies``、``foes``（預設不反應；
     ``reactive`` 列出的敵人保留反應規則）。"""
@@ -393,7 +393,7 @@ def test_hits_and_misses_are_rolled_separately(monkeypatch: pytest.MonkeyPatch) 
     assert [d.target_id for d in of(result, DamageDealt)] == [U3]
     assert result.state.units[U3].has_status("prone")
     assert not result.state.units[U2].has_status("prone")
-    assert result.state.units[U2].hp == 200
+    assert result.state.units[U2].hp == 2000
     assert result.state.units[U1].xy == (6, 3)  # 失手也照樣穿過去
 
 
@@ -403,8 +403,8 @@ def test_a_hit_deals_the_dice_physical_damage(monkeypatch: pytest.MonkeyPatch) -
     result = go(state, SID, (4, 3))
     (dealt,) = of(result, DamageDealt)
     assert dealt.element.value == "physical" and dealt.cause == "attack"
-    assert result.state.units[U2].hp == 200 - dealt.amount
-    assert dealt.amount >= 10  # 2d6 的兩顆都是 5（不加屬性）
+    assert result.state.units[U2].hp == 2000 - dealt.amount
+    assert dealt.amount >= 100  # 2d6 的兩顆都是 5，骰面 ×10（不加屬性）
 
 
 def test_knock_prone_rolls_a_contest_and_can_fail(monkeypatch: pytest.MonkeyPatch) -> None:

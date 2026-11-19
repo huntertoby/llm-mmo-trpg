@@ -75,17 +75,17 @@ def arena(
     skills: list[str],
     *,
     foes: tuple[tuple[int, int], ...] = ((4, 3),),
-    hp: int = 999,
+    hp: int = 9990,
 ) -> BattleState:
-    """U1（戰士）在 (3, 3) 手上有回合，資源充足；敵人們各 999 HP、沒有反應。"""
+    """U1（戰士）在 (3, 3) 手上有回合，資源充足；敵人們各 9990 HP、沒有反應（X10-2b ×10）。"""
     m = make_map(FLAT7, ally=[(3, 3)], enemy=list(foes))
-    owner = caster_template(skills, base="hero_fighter", max_hp=hp, stamina=40)
+    owner = caster_template(skills, base="hero_fighter", max_hp=hp, stamina=400)
     spawns = [spawn(Team.ALLY, (3, 3), owner)]
-    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=999)) for xy in foes]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=9990)) for xy in foes]
     state = give_turn(make_state(m, spawns, skill_slots=SLOTS), U1)  # type: ignore[arg-type]
     unit = state.units[U1]
-    unit.stamina = 40
-    unit.mana = 40
+    unit.stamina = 400
+    unit.mana = 400
     unit.stamina_regen = 0
     unit.ap = 8
     return state
@@ -166,13 +166,13 @@ def test_the_pounce_dashes_and_the_form_adds_exactly_thirty_percent(
     foes = ((6, 3),)
     plain = use(arena([POUNCE, BEAR], foes=foes), POUNCE, target_id=U2)
     (dealt,) = of(plain, DamageDealt)  # type: ignore[arg-type]
-    assert dealt.rolls == (1, 1, 1) and dealt.scaled_permille == bonus * 500
-    assert dealt.multiplier_permille == 1000 and dealt.amount == _exact(3, bonus * 500, 1000)
+    assert dealt.rolls == (10, 10, 10) and dealt.scaled_permille == bonus * 500
+    assert dealt.multiplier_permille == 1000 and dealt.amount == _exact(30, bonus * 500, 1000)
     assert plain.state.units[U1].xy == (5, 3)  # type: ignore[attr-defined]  # 衝鋒到目標身旁
     inside = use(into_bear(arena([POUNCE, BEAR], foes=foes)), POUNCE, target_id=U2)
     (hit,) = of(inside, DamageDealt)  # type: ignore[arg-type]
-    assert hit.rolls == (1, 1, 1) and hit.scaled_permille == bonus * 500  # 屬性加成只算一次
-    assert hit.multiplier_permille == 1300 and hit.amount == _exact(3, bonus * 500, 1300)
+    assert hit.rolls == (10, 10, 10) and hit.scaled_permille == bonus * 500  # 屬性加成只算一次
+    assert hit.multiplier_permille == 1300 and hit.amount == _exact(30, bonus * 500, 1300)
     assert inside.state.units[U1].xy == (5, 3)  # type: ignore[attr-defined]
 
 
@@ -185,14 +185,14 @@ def test_the_roar_hits_adjacent_enemies_only_and_the_form_adds_exactly_thirty_pe
     foes = ((4, 3), (6, 3))  # 第二個不在自己周圍 1 格
     plain = use(arena([ROAR, BEAR], foes=foes), ROAR)
     (hit,) = of(plain, DamageDealt)  # type: ignore[arg-type]
-    assert (hit.target_id, hit.rolls) == (U2, (1, 1))
-    assert hit.amount == _exact(2, bonus * 500, 1000)
+    assert (hit.target_id, hit.rolls) == (U2, (10, 10))
+    assert hit.amount == _exact(20, bonus * 500, 1000)
     weak = [e for e in of(plain, StatusApplied) if e.status_id == "weaken"]  # type: ignore[arg-type]
     assert [(e.target_id, e.duration) for e in weak] == [(U2, 1)]
     inside = use(into_bear(arena([ROAR, BEAR], foes=foes)), ROAR)
     (hit,) = of(inside, DamageDealt)  # type: ignore[arg-type]
-    assert (hit.target_id, hit.rolls) == (U2, (1, 1)) and hit.multiplier_permille == 1300
-    assert hit.amount == _exact(2, bonus * 500, 1300)
+    assert (hit.target_id, hit.rolls) == (U2, (10, 10)) and hit.multiplier_permille == 1300
+    assert hit.amount == _exact(20, bonus * 500, 1300)
     assert U3 not in {h.target_id for h in of(inside, DamageDealt)}  # type: ignore[arg-type]
 
 
@@ -201,18 +201,18 @@ def test_the_form_renewal_heals_exactly_thirty_percent_more_inside_a_form(
 ) -> None:
     always(monkeypatch, d20=15, die=1)
     assert any("若你在形態中，整體 +30%" in x for x in _card_lines(RENEWAL))
-    state = arena([RENEWAL, BEAR], hp=200)
-    state.units[U1].hp = 50
+    state = arena([RENEWAL, BEAR], hp=2000)  # X10-2b ×10
+    state.units[U1].hp = 500
     plain = use(state, RENEWAL)
     (healed,) = of(plain, Healed)  # type: ignore[arg-type]
-    assert healed.rolls == (1, 1) and healed.target_id == U1
+    assert healed.rolls == (10, 10) and healed.target_id == U1  # 骰面 ×10
     wis = effective_attribute(library().ruleset, state.units[U1], Attribute.WIS)
-    assert healed.amount == _exact(2, wis * 500, 1000)
+    assert healed.amount == _exact(20, wis * 500, 1000)
     inside_state = into_bear(state)
-    inside_state.units[U1].hp = 50
+    inside_state.units[U1].hp = 500
     inside = use(inside_state, RENEWAL)
     (healed,) = of(inside, Healed)  # type: ignore[arg-type]
-    assert healed.rolls == (1, 1) and healed.amount == _exact(2, wis * 500, 1300)
+    assert healed.rolls == (10, 10) and healed.amount == _exact(20, wis * 500, 1300)
 
 
 def test_the_exploiters_belong_to_the_form_pool() -> None:

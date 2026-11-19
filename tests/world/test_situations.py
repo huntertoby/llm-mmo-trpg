@@ -115,10 +115,12 @@ def sure(library: ContentLibrary, template_id: str, outcome: str) -> ContentLibr
 def at_event(
     char: CharacterState, skeleton: str, location: str | None = None, *, strong: bool = False
 ) -> CharacterState:
-    """把角色放到 ``skeleton`` 的事件上；``strong``＝六屬性都 28（修正 +9，給 :func:`sure` 用）。"""
+    """把角色放到 ``skeleton`` 的事件上；``strong``＝六屬性都 280（修正 +9，給 :func:`sure` 用）。
+
+    X10-2b：屬性 ×10（28 → 280）。"""
     location = location or SKELETON_LOCATION[skeleton]
     if strong:
-        hero = char.hero.model_copy(update={"attributes": dict.fromkeys(Attribute, 28)})
+        hero = char.hero.model_copy(update={"attributes": dict.fromkeys(Attribute, 280)})
         char = char.model_copy(update={"hero": hero})
     trigger = EventTrigger(
         region="cloud_ridge",

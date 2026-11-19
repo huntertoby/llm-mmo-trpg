@@ -32,12 +32,12 @@ def _in(path: str, old: int | None, new: int | str | None, file: str = HEART) ->
 @pytest.mark.parametrize(
     ("change", "message"),
     [
-        (_in("max_hp", 160, 0), "不能小於 1"),
+        (_in("max_hp", 1600, 0), "不能小於 1"),
         (_in("speed", 0, -1), "不能小於 0"),
-        (_in("attributes.str", 12, "abc"), "要填整數"),
+        (_in("attributes.str", 120, "abc"), "要填整數"),
         (_in("phases[1].trigger.permille", 600, 1500), "不能大於 999"),
         (_in("level", None, 0), "不能小於 1"),
-        (_in("max_hp", 999, 150), "已經被改過（現在是 160）"),
+        (_in("max_hp", 999, 1500), "已經被改過（現在是 1600）"),
         (_in("max_mana", 1, 5), "已經被改過（現在是 沒寫）"),
         (_in("name_zh", None, 1), "不開放"),
         (_in("phases[0].trigger.permille", None, 500), "不開放"),  # 開場階段沒有門檻
@@ -70,7 +70,7 @@ def test_cross_field_problem_goes_to_the_page(read_service: TuningService) -> No
 
 def test_valid_draft_passes_the_full_content_check(read_service: TuningService) -> None:
     changes = [
-        _in("max_hp", 160, 150),
+        _in("max_hp", 1600, 1500),
         _in("element_mods.wind", None, 250),
         _in("phases[1].mana_restore", None, 6),
     ]
@@ -85,7 +85,7 @@ def test_library_error_on_a_changed_file_is_attached_to_its_fields(
     prepared = prepare(
         bundled_content_dir(),
         TuningService(bundled_content_dir(), tmp_path).table,
-        [Change(file=HEART, path="max_hp", old=160, new=150)],
+        [Change(file=HEART, path="max_hp", old=1600, new=1500)],
     )
 
     def boom(root: Path) -> ContentLibrary:
@@ -116,7 +116,7 @@ def test_superseded_check_is_dropped(read_service: TuningService) -> None:
     start = read_service._generation
 
     def run(tag: str) -> None:
-        results[tag] = read_service.check("current", [_in("max_hp", 160, 0)])
+        results[tag] = read_service.check("current", [_in("max_hp", 1600, 0)])
 
     with read_service._check_lock:  # 前一個驗證還在跑
         first = threading.Thread(target=run, args=("first",))
@@ -146,11 +146,11 @@ def test_untouched_copy_has_the_same_digests(
     prepared = prepare(
         read_service.content_dir,
         read_service.table,
-        [Change(file=HEART, path="max_hp", old=160, new=150)],
+        [Change(file=HEART, path="max_hp", old=1600, new=1500)],
     )
     changed = load_library(read_service.workspace.draft(prepared.texts))
-    assert changed.unit("ashen_heart").max_hp == 150
-    assert content_library.unit("ashen_heart").max_hp == 160
+    assert changed.unit("ashen_heart").max_hp == 1500
+    assert content_library.unit("ashen_heart").max_hp == 1600
     assert content_digest(changed) != content_digest(content_library)
     assert ruleset_hash(changed) != ruleset_hash(content_library)
     assert hash_ruleset(changed.ruleset) == hash_ruleset(content_library.ruleset)
@@ -164,13 +164,13 @@ def test_diff_text_only_has_the_changed_lines(read_service: TuningService) -> No
         read_service.content_dir,
         read_service.table,
         [
-            Change(file=HEART, path="max_hp", old=160, new=150),
+            Change(file=HEART, path="max_hp", old=1600, new=1500),
             Change(file=HEART, path="phases[1].trigger.permille", old=600, new=550),
         ],
     )
     text = diff_text(prepared)
     assert "--- a/content/units/ashen_heart.yaml" in text
-    assert "-max_hp: 160\n+max_hp: 150\n" in text
+    assert "-max_hp: 1600\n+max_hp: 1500\n" in text
     assert "-    trigger: {kind: hp_below, permille: 600}\n" in text
     assert "+    trigger: {kind: hp_below, permille: 550}\n" in text
     body = [

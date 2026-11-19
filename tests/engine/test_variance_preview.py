@@ -136,7 +136,7 @@ def test_the_battle_log_describes_the_burst_and_the_overload(
     result = cast(state, target_id=U2)
     (hit,) = of(result, DamageDealt)
     text = describe_event(hit, result.state) or ""
-    assert "［骰 6+6+3 ＋ 智力加成" in text and "爆骰 ×2" in text
+    assert "［骰 60+60+30 ＋ 智力加成" in text and "爆骰 ×2" in text  # 骰面 ×10（X10-2b）
 
     over = cast(charged, target_id=U2)
     (triggered,) = of(over, OverloadTriggered)

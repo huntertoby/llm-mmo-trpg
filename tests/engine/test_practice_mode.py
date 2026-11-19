@@ -245,7 +245,7 @@ def test_auto_pass_waits_for_the_paused_decision() -> None:
     dummy = state.units[DUMMY]
     block = library().ruleset.reactions.default_rules
     dummy.reactions = tuple(r.model_copy(update={"mode": "prompt"}) for r in block)
-    dummy.stamina = dummy.max_stamina = 99
+    dummy.stamina = dummy.max_stamina = 990  # X10-2b ×10（格擋門檻 200）
     paused = resolve(state, _attack())
     assert paused.pending is not None
     assert not _passed(paused) and paused.state.active_unit == HERO
@@ -324,7 +324,7 @@ def _lethal(target: UnitId) -> DamageEffect:
 def test_hero_never_goes_down() -> None:
     result = run_effects(_state(), [_lethal(HERO)])
     assert not _of(result, UnitDowned)
-    assert _of(result, DamageDealt)[0].hp_after == 1
+    assert _of(result, DamageDealt)[0].hp_after == 10  # 免死留下 1 × quantity_scale（X10-2b）
     hero = result.state.units[HERO]
     assert hero.alive and hero.hp == hero.max_hp
 
@@ -332,7 +332,7 @@ def test_hero_never_goes_down() -> None:
 def test_dummy_stays_at_one_then_refills_next_round() -> None:
     result = run_effects(_state(), [_lethal(DUMMY)])
     assert not _of(result, UnitDowned)
-    assert result.state.units[DUMMY].hp == 1 and result.state.units[DUMMY].alive
+    assert result.state.units[DUMMY].hp == 10 and result.state.units[DUMMY].alive  # 1 × 10
     assert not result.state.ended
     state = result.state
     start_round = state.round

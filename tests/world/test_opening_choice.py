@@ -206,7 +206,7 @@ def _check_numbers(
     rules = library.roguelite
     picked = pick_starters(library, weapon, keywords, played.opening.seed)
     points = rules.start_free_points + 2 * rules.attribute_points_per_level
-    assert points == 8
+    assert points == 80  # X10-2b：屬性點 ×10
     weapon_def = library.weapons[weapon]
     allocation = full_allocation(library, picked, weapon_def, points)
     expected = apply_allocation(start_hero(library, weapon, char.hero.skills), allocation)
@@ -468,9 +468,10 @@ def test_manual_respec_before_choice_does_not_change_result(
     played = _fast_played(library, make_char)
     plain = _step(library, played, _confirm("melee"), world).char
     respecced = _step(library, played, RespecAction(), world).char
-    assert respecced.attribute_points == 4  # 升級的 4 點退回；開局的 4 點不在 attribute_spent
-    partly = _step(library, respecced, AllocateAction(attributes={Attribute.CON: 1}), world).char
-    assert partly.attribute_points == 3
+    # 升級的 40 點退回（X10-2b ×10）；開局的 40 點不在 attribute_spent
+    assert respecced.attribute_points == 40
+    partly = _step(library, respecced, AllocateAction(attributes={Attribute.CON: 10}), world).char
+    assert partly.attribute_points == 30
     for char in (respecced, partly):
         chosen = _step(library, char, _confirm("melee"), world).char
         assert chosen.hero == plain.hero

@@ -205,7 +205,7 @@ def _6f4_ok(reply: Any, status: int = 200) -> dict[str, Any]:
 def test_start_preview_links_and_recommended(client_6f4: TestClient) -> None:
     body = {"weapon": "lightning_staff", "keywords": ["wet", "charged"], "seed": 0}
     preview = _6f4_ok(client_6f4.post("/api/runs/start-preview", json=body))
-    assert sum(preview["recommended"].values()) == 4
+    assert sum(preview["recommended"].values()) == 40  # X10-2b：屬性點 ×10
     assert preview["recommended_zh"]
     for link in preview["links"]:
         assert link["text_zh"] == (
@@ -219,8 +219,8 @@ def test_start_preview_links_and_recommended(client_6f4: TestClient) -> None:
 def test_world_character_is_auto_allocated(client_6f4: TestClient) -> None:
     view = _6f4_ok(client_6f4.post("/api/world/characters", json=START_6F4), 201)
     attrs = view["hero"]["attributes"]
-    spent = {a: v - 10 for a, v in attrs.items() if v != 10}
-    assert sum(spent.values()) == 4
+    spent = {a: v - 100 for a, v in attrs.items() if v != 100}  # X10-2b：屬性 ×10
+    assert sum(spent.values()) == 40
     assert view["hero"].get("attribute_points", 0) == 0
     assert view["hints"] == {"seen": [], "off": False}
     assert view["level_up"] is None

@@ -113,7 +113,7 @@ def test_physical_attack_destroys_barrel_without_explosion() -> None:
     state = give_turn(
         make_state(m, [spawn(Team.ALLY, (0, 0), "hero_fighter"), spawn(Team.ENEMY, (2, 1))]), U1
     )
-    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=100, source_id=U1)])
+    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=1000, source_id=U1)])
     assert [type(e) for e in result.events if isinstance(e, ObjectExploded)] == []
     assert result.state.objects[O1].destroyed
     assert surfaces(result.state) == {
@@ -175,7 +175,7 @@ def _bridge(victim: str) -> BattleState:
 
 def test_breaking_bridge_drops_normal_unit() -> None:
     state = _bridge("bandit")
-    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=100, source_id=U1)])
+    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=1000, source_id=U1)])
     types = [type(e) for e in result.events]
     assert ObjectDestroyed in types and EnteredDeadlyTerrain in types
     assert result.state.units[U2].downed
@@ -183,9 +183,9 @@ def test_breaking_bridge_drops_normal_unit() -> None:
 
 def test_breaking_bridge_boss_takes_30_percent_and_moves_to_safe_tile() -> None:
     state = _bridge("bandit_boss")
-    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=100, source_id=U1)])
+    result = run_effects(state, [DamageObjectEffect(object_id=O1, flat=1000, source_id=U1)])
     boss = result.state.units[U2]
-    assert not boss.downed and boss.hp == 80 - 24
+    assert not boss.downed and boss.hp == 800 - 240  # X10-2b ×10
     # 最近的安全格：距離 1 的 (1, 0)、(0, 1)、(2, 1)、(1, 2) 中，(1, 0) 與 (1, 2) 是深淵、
     # (0, 1) 有英雄 → (2, 1)
     assert boss.pos == P(2, 1)
@@ -478,10 +478,10 @@ def _turn_start_on(
     surface: str, victim: str = "bandit", tags: list[str] | None = None
 ) -> list[object]:
     m = make_map("000", surfaces=[(1, 0, surface)], enemy=[(1, 0)])
-    t = template(victim, max_hp=100, tags=tags or ["humanoid"])
+    t = template(victim, max_hp=1000, tags=tags or ["humanoid"])  # X10-2b ×10
     state = make_state(m, [spawn(Team.ALLY, (0, 0)), spawn(Team.ENEMY, (1, 0), t)])
     state = give_turn(state, U1)
-    state.units[U2].hp = 50
+    state.units[U2].hp = 500
     result = resolve(state, EndTurn(unit_id=U1))
     return list(result.events)
 
@@ -490,7 +490,7 @@ def test_poison_surface_damages_at_turn_start() -> None:
     events = _turn_start_on("poison")
     dmg = [e for e in events if isinstance(e, DamageDealt) and e.target_id == U2]
     assert len(dmg) == 1 and dmg[0].element is Element.POISON and dmg[0].cause == "surface"
-    assert 1 <= dmg[0].rolls[0] <= 4
+    assert 10 <= dmg[0].rolls[0] <= 40  # 骰面 ×10（X10-2b）
 
 
 def test_holy_surface_heals_living_and_hurts_undead() -> None:
@@ -581,16 +581,16 @@ def test_fog_halves_sight_and_gives_ranged_disadvantage() -> None:
 def test_rain_modifies_fire_and_lightning_damage() -> None:
     m = make_map("000")
     for weather, element, expected in (
-        ("rain", Element.FIRE, 7),
-        ("rain", Element.LIGHTNING, 12),
-        ("rain", Element.PHYSICAL, 10),
-        (None, Element.FIRE, 10),
+        ("rain", Element.FIRE, 70),  # X10-2b 傷害 ×10
+        ("rain", Element.LIGHTNING, 120),
+        ("rain", Element.PHYSICAL, 100),
+        (None, Element.FIRE, 100),
     ):
         state = make_state(
             m,
-            [spawn(Team.ALLY, (0, 0)), spawn(Team.ENEMY, (2, 0), template("bandit", max_hp=99))],
+            [spawn(Team.ALLY, (0, 0)), spawn(Team.ENEMY, (2, 0), template("bandit", max_hp=990))],
             weather=weather,
         )
-        r = run_effects(state, [DamageEffect(target_id=U2, element=element, flat=10)])
+        r = run_effects(state, [DamageEffect(target_id=U2, element=element, flat=100)])
         dmg = next(e for e in r.events if isinstance(e, DamageDealt))
         assert dmg.amount == expected, (weather, element)

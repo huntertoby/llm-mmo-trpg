@@ -82,17 +82,21 @@ def test_not_enough_mana_blocks_the_spell_and_stamina_does_not_help() -> None:
 
 
 def test_block_shares_the_stamina_pool_with_weapon_skills() -> None:
-    """格擋照舊花 10 耐力；武器技先花掉耐力，耐力低於門檻（20）時就不再格擋。"""
+    """格擋照舊花 100 耐力；武器技先花掉耐力，耐力低於門檻（200）時就不再格擋（X10-2b ×10）。"""
     skill = make_skill(
-        SID, {"type": "single", "range": "weapon"}, [SLASH], category="weapon", cost={"stamina": 12}
+        SID,
+        {"type": "single", "range": "weapon"},
+        [SLASH],
+        category="weapon",
+        cost={"stamina": 120},
     )
     m = make_map(FLAT7, ally=[(3, 3)], enemy=[(4, 3)])
-    hero = template("hero_fighter", max_hp=300, skills=[SID])  # 預設反應規則（含格擋）
-    foe = no_reactions(max_hp=300)
+    hero = template("hero_fighter", max_hp=3000, skills=[SID])  # 預設反應規則（含格擋）
+    foe = no_reactions(max_hp=3000)
     fresh = make_state(
         m, [spawn(Team.ALLY, (3, 3), hero), spawn(Team.ENEMY, (4, 3), foe)], skills=[skill]
     )
-    fresh.units[U1].stamina = 30  # 上限由公式算出（BAL-15b）；情境要的是目前耐力 30
+    fresh.units[U1].stamina = 300  # 上限由公式算出（BAL-15b）；情境要的是目前耐力 300
 
     def attacked(state: BattleState) -> list[ReactionTriggered]:
         s = with_rolls(give_turn(state, "unit_0002"), [(20, 15), (4, 4)])
@@ -100,9 +104,9 @@ def test_block_shares_the_stamina_pool_with_weapon_skills() -> None:
         return [e for e in events if isinstance(e, ReactionTriggered)]
 
     blocks = attacked(fresh)
-    assert [(b.reaction, b.stamina_spent) for b in blocks] == [("block", 10)]
+    assert [(b.reaction, b.stamina_spent) for b in blocks] == [("block", 100)]
     spent = resolve(give_turn(fresh, U1), UseSkill(unit_id=U1, skill_id=SID, target_id=U2)).state
-    assert spent.units[U1].stamina == fresh.units[U1].stamina - 12 < 20
+    assert spent.units[U1].stamina == fresh.units[U1].stamina - 120 < 200
     assert attacked(spent) == []
 
 
@@ -122,17 +126,25 @@ def _unit(**overrides: object) -> tuple[int, int]:
 
 def test_hero_caps_follow_the_highest_attribute_of_each_group() -> None:
     core = library().ruleset.core
-    attrs = {a: 10 for a in Attribute} | {Attribute.WIL: 16, Attribute.INT: 12, Attribute.CON: 13}
-    mana, stamina = _unit(attributes=attrs, max_mana=40, stamina=30, scaled_resources=True)
+    # X10-2b：屬性、法力、耐力 ×10（每點仍 +2）
+    attrs = {a: 100 for a in Attribute} | {
+        Attribute.WIL: 160,
+        Attribute.INT: 120,
+        Attribute.CON: 130,
+    }
+    mana, stamina = _unit(attributes=attrs, max_mana=400, stamina=300, scaled_resources=True)
     assert core.resources.mana.per_point == core.resources.stamina.per_point == 2
     cap = core.resources.mana_cap_permille  # 法力上限倍率（BAL-4b，content）
 
     def capped(v: int) -> int:
         return (v * cap + 500) // 1000
 
-    assert (mana, stamina) == (capped(40 + (16 - 10) * 2), 30 + (13 - 10) * 2)
-    low = {a: 8 for a in Attribute}
-    assert _unit(attributes=low, max_mana=40, stamina=30, scaled_resources=True) == (capped(36), 26)
+    assert (mana, stamina) == (capped(400 + (160 - 100) * 2), 300 + (130 - 100) * 2)
+    low = {a: 80 for a in Attribute}
+    assert _unit(attributes=low, max_mana=400, stamina=300, scaled_resources=True) == (
+        capped(360),
+        260,
+    )
 
 
 def test_other_units_use_the_same_formula() -> None:
@@ -187,7 +199,7 @@ def test_stamina_regenerates_each_turn_up_to_the_cap_for_every_unit() -> None:
 
     lib = library_with_builds(library())
     regen = lib.ruleset.core.resources.stamina_regen
-    assert regen == 5
+    assert regen == 50
     setup = build_setup(lib, "open_plain", ["build_push"], ["bandit", "bandit"], max_rounds=8)
     run = run_battle(setup, 3, UtilityAI(lib.ai_profiles))
     turns = [e for e in run.events if isinstance(e, TurnStarted)]

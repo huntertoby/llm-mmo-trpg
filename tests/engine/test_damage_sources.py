@@ -101,7 +101,7 @@ def _bridge() -> BattleState:
 
 
 def test_breaking_the_bridge_credits_whoever_broke_it() -> None:
-    result = run_effects(_bridge(), [DamageObjectEffect(object_id=O1, flat=100, source_id=U1)])
+    result = run_effects(_bridge(), [DamageObjectEffect(object_id=O1, flat=1000, source_id=U1)])
     assert _damage(result.events, "deadly_terrain").source_id == U1
 
 

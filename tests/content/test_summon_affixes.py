@@ -132,5 +132,5 @@ def test_test_items_with_the_new_affixes_are_legal() -> None:
 def test_summon_traits_table() -> None:
     traits = library().ruleset.core.summon_traits
     assert set(traits) == {"sturdy", "swift", "keen"}
-    assert traits["sturdy"].armor_bonus == 1 and traits["swift"].speed_bonus == 1
+    assert traits["sturdy"].armor_bonus == 10 and traits["swift"].speed_bonus == 1
     assert traits["keen"].crit_range_delta == 1

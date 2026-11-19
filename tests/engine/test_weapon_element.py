@@ -94,7 +94,7 @@ def test_weapon_element_changes_basic_attack_and_weapon_skill(element: Element) 
 
 
 def test_without_the_affix_the_attack_stays_physical() -> None:
-    state = _state(_hero({"main_hand": [("affix_attr_str", 1)]}))
+    state = _state(_hero({"main_hand": [("affix_attr_str", 10)]}))  # X10-2b 屬性 ×10
     assert weapon_affix_element(state.units[U1]) is None
     assert _attack_element(state) is Element.PHYSICAL
 

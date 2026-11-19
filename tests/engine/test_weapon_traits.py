@@ -56,9 +56,9 @@ def armed(
     base: str = "hero_fighter",
     **overrides: Any,
 ) -> UnitSpawn:
-    """裝備指定武器資料的單位（預設沒有反應規則、HP 200，不干擾驗證）。"""
+    """裝備指定武器資料的單位（預設沒有反應規則、HP 2000（X10-2b ×10），不干擾驗證）。"""
     overrides.setdefault("reactions", [])
-    overrides.setdefault("max_hp", 200)
+    overrides.setdefault("max_hp", 2000)
     return UnitSpawn(template=template(base, **overrides), weapon=w, team=team, position=pos)
 
 
@@ -140,7 +140,7 @@ def test_trait_text_follows_the_parameters() -> None:
     assert axe2.trait_lines_zh() == ("破甲：命中後目標防禦 −25%，2 回合",)
     assert weapon("hammer").trait_lines_zh() == ("震退：普攻命中推 1 格（會撞擊）",)
     assert any("觸及 2 格" in line for line in weapon("spear").trait_lines_zh())
-    assert weapon("scepter").trait_lines_zh() == ("祝禱：普攻命中時，最近的隊友回復 3 HP",)
+    assert weapon("scepter").trait_lines_zh() == ("祝禱：普攻命中時，最近的隊友回復 30 HP",)
     assert "統御" in weapon("totem_staff").trait_lines_zh()[0]
     assert "拋射" in weapon("bow").trait_lines_zh()[0]
     assert weapon("one_handed_sword").trait_lines_zh() == ()
@@ -349,7 +349,7 @@ def spear_state(**changes: Any) -> BattleState:
     return state_of(
         [
             UnitSpawn(
-                template=template("hero_fighter", max_hp=200),
+                template=template("hero_fighter", max_hp=2000),
                 weapon=weapon("spear", **changes),
                 team=Team.ALLY,
                 position=(1, 2),
@@ -393,7 +393,7 @@ def test_sword_has_no_opportunity_attack_at_two_tiles() -> None:
     state = state_of(
         [
             UnitSpawn(
-                template=template("hero_fighter", max_hp=200),
+                template=template("hero_fighter", max_hp=2000),
                 weapon=weapon("one_handed_sword"),
                 team=Team.ALLY,
                 position=(1, 2),
@@ -412,7 +412,7 @@ def test_changing_reach_changes_the_opportunity_range() -> None:
     adjacent = state_of(
         [
             UnitSpawn(
-                template=template("hero_fighter", max_hp=200),
+                template=template("hero_fighter", max_hp=2000),
                 weapon=weapon("spear", reach=1),
                 team=Team.ALLY,
                 position=(1, 2),
@@ -432,14 +432,14 @@ def test_changing_reach_changes_the_opportunity_range() -> None:
 
 def scepter_state(**changes: Any) -> BattleState:
     """牧師 U1 (1,2)；隊友 U2 (0,2) 受傷、U3 (1,0) 受傷更遠；敵人 U4 (4,2)。"""
-    ally = armed(Team.ALLY, (0, 2), weapon("one_handed_sword"), max_hp=100)
-    far = armed(Team.ALLY, (1, 0), weapon("one_handed_sword"), max_hp=100)
+    ally = armed(Team.ALLY, (0, 2), weapon("one_handed_sword"), max_hp=1000)
+    far = armed(Team.ALLY, (1, 0), weapon("one_handed_sword"), max_hp=1000)
     foe = armed(Team.ENEMY, (4, 2), weapon("one_handed_sword"), base="bandit")
     priest = armed(Team.ALLY, (1, 2), weapon("scepter", **changes), base="hero_mage")
     state = state_of([priest, ally, far, foe])
     # state_of 依序配 ID：priest U1、ally U2、far U3、foe U4
     for uid in (U2, U3):
-        state.units[uid].hp = 50
+        state.units[uid].hp = 500
     return state
 
 
@@ -451,7 +451,7 @@ def test_scepter_hit_heals_the_nearest_ally_by_the_data_amount(
     assert blessing_target(state, state.units[U1]) is state.units[U2]
     events = resolve(state, Attack(unit_id=U1, target_id=U4)).events
     (healed,) = kinds(events, Healed)
-    assert (healed.target_id, healed.amount, healed.source_id) == (U2, 3, U1)
+    assert (healed.target_id, healed.amount, healed.source_id) == (U2, 30, U1)  # X10-2b ×10
 
 
 def test_scepter_miss_does_not_heal(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -650,7 +650,7 @@ def melee_vs_hero(w: WeaponDef, *, foe_x: int, hero_xy: tuple[int, int] = (1, 2)
     return state_of(
         [
             UnitSpawn(
-                template=template("bandit", max_hp=200, reactions=[]),
+                template=template("bandit", max_hp=2000, reactions=[]),
                 weapon=w,
                 team=Team.ENEMY,
                 position=(foe_x, 2),
@@ -699,7 +699,7 @@ def test_ai_hammer_prefers_the_angle_that_makes_the_knockback_collide() -> None:
     m = make_map(FLAT7, terrain, ally=[(1, 2)], enemy=[(2, 2)])
     spawns = [
         UnitSpawn(
-            template=template("bandit", max_hp=200, reactions=[]),
+            template=template("bandit", max_hp=2000, reactions=[]),
             weapon=weapon("hammer"),
             team=Team.ENEMY,
             position=(2, 2),

@@ -240,10 +240,10 @@ def test_mastery_is_mutually_exclusive_with_the_other_masteries() -> None:
 @pytest.mark.parametrize(
     ("skill_id", "resource", "plain", "halved"),
     [
-        (BEAR, "stamina", 8, 4),
-        (WEREWOLF, "stamina", 8, 4),
-        (ROC, "mana", 3, 1),
-        (DRAGON, "mana", 3, 1),
+        (BEAR, "stamina", 80, 40),  # X10-2b ×10（舊 3 → 1 的捨去，新單位 30 → 15 剛好整除）
+        (WEREWOLF, "stamina", 80, 40),
+        (ROC, "mana", 30, 15),
+        (DRAGON, "mana", 30, 15),
     ],
 )
 def test_mastery_halves_the_upkeep_rounding_down(
@@ -259,9 +259,10 @@ def test_mastery_halves_the_upkeep_rounding_down(
 
 
 def test_mastery_upkeep_that_rounds_to_zero_is_not_paid() -> None:
-    """3 法力減半 → 1；再減半的情況不存在，但付得起的判斷用減半後的值（法力 1 就夠）。"""
+    """30 法力減半 → 15；再減半的情況不存在，但付得起的判斷用減半後的值（法力 15 就夠）。
+    X10-2b：法力 ×10。"""
     state = enter(with_mastery(), ROC)
-    state.units[U1].mana = 1
+    state.units[U1].mana = 15
     state, events = _next_own_turn(state)
     assert state.units[U1].form is not None and not [e for e in events if isinstance(e, FormLeft)]
 
@@ -311,7 +312,7 @@ def test_mastery_scales_the_treant_adjacent_heal_and_the_elemental_burst(
     always(monkeypatch, d20=19, die=4)
     heals = []
     for build in (scene(ally_at=(2, 3)), with_mastery(ally_at=(2, 3))):
-        build.units[U2].hp = 10  # 友方（第二個友方）先打殘才吃得到治療
+        build.units[U2].hp = 100  # 友方（第二個友方）先打殘才吃得到治療（X10-2b ×10）
         result = resolve(build, UseSkill(unit_id=U1, skill_id=TREANT))
         heals.append(sum(e.amount for e in of(result, Healed)))
     # 倍率在最後一步才乘（無條件捨去），所以比「先捨去再 ×1.5」最多多 1

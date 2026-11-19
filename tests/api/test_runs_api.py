@@ -78,7 +78,7 @@ def _play_battle(
 
 
 def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) -> None:
-    run = _create(runs_client, attributes={"int": 3, "wis": 1})
+    run = _create(runs_client, attributes={"int": 30, "wis": 10})
     assert run["node"] == {
         "kind": "battle",
         "battle_index": 1,
@@ -92,7 +92,7 @@ def test_create_run_returns_hero_plan_and_first_battle(runs_client: TestClient) 
         "gear": None,
     }
     hero = run["hero"]
-    assert hero["attributes"]["int"] == 13 and hero["attributes"]["wis"] == 11
+    assert hero["attributes"]["int"] == 130 and hero["attributes"]["wis"] == 110  # X10-2b ×10
     assert hero["level"] == 1 and hero["xp_next"] == 100
     assert hero["hp"] == hero["max_hp"] and hero["source_max"] == 3
     assert [c["id"] for c in hero["skills"]]
@@ -193,7 +193,7 @@ def test_finished_battle_writes_back_and_levels_up(
     assert after["hero"]["hp"] == max(hero_view["hp"], 1) + level_gain
     assert after["history"][0]["won"] and after["history"][0]["index"] == 1
     node = after["node"]
-    assert node["kind"] == "level_up" and node["points"] == 2
+    assert node["kind"] == "level_up" and node["points"] == 20  # X10-2b：屬性點 ×10
     offer = node["offer"]
     assert len(offer["candidates"]) == 3
     assert [t["kind"] for t in offer["tags"]] == ["deepen", "bridge", "new"]
@@ -202,14 +202,14 @@ def test_finished_battle_writes_back_and_levels_up(
     generated = offer["candidates"][0]["id"]
     assert _ok(runs_client.get(f"/api/skills/{generated}"))["id"] == generated
     assert runs_client.post(f"{url}/choice", json={"kind": "leave"}).status_code == 409
-    bad = {"kind": "level_up", "attributes": {"int": 1}, "pick": None}
+    bad = {"kind": "level_up", "attributes": {"int": 10}, "pick": None}
     assert runs_client.post(f"{url}/choice", json=bad).status_code == 422
-    pick = {"kind": "level_up", "attributes": {"int": 2}, "pick": 0, "replace": None}
+    pick = {"kind": "level_up", "attributes": {"int": 20}, "pick": 0, "replace": None}
     reply = runs_client.post(f"{url}/choice", json=pick)
     if reply.status_code == 422:  # 欄位滿：換掉第一個同種技能以外的情況改為跳過
         reply = runs_client.post(f"{url}/choice", json={**pick, "pick": None})
     chosen = _ok(reply)
-    assert chosen["hero"]["attributes"]["int"] == after["hero"]["attributes"]["int"] + 2
+    assert chosen["hero"]["attributes"]["int"] == after["hero"]["attributes"]["int"] + 20
     assert chosen["hero"]["level"] == 2
     assert chosen["node"]["kind"] == "battle" and chosen["node"]["battle_index"] == 2
 

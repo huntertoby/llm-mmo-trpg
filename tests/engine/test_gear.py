@@ -108,47 +108,47 @@ def test_stat_affixes_merge_into_unit_totals() -> None:
     plain = _state(spawn(Team.ALLY, (0, 0), no_reactions("hero_fighter"))).units[U1]
     unit = _unit(
         {
-            "main_hand": [("affix_attr_str", 2)],
-            "body": [("affix_max_hp", 12), ("affix_resist_fire", 100)],
+            "main_hand": [("affix_attr_str", 20)],  # X10-2b 屬性、HP ×10
+            "body": [("affix_max_hp", 120), ("affix_resist_fire", 100)],
         }
     )
-    assert unit.attributes[Attribute.STR] == plain.attributes[Attribute.STR] + 2
-    assert unit.max_hp == plain.max_hp + 12 and unit.hp == unit.max_hp
+    assert unit.attributes[Attribute.STR] == plain.attributes[Attribute.STR] + 20
+    assert unit.max_hp == plain.max_hp + 120 and unit.hp == unit.max_hp
     assert unit.element_mods.get(Element.FIRE, 0) == plain.element_mods.get(Element.FIRE, 0) - 100
-    assert dict(unit.gear.merged) == {"attr:str": 2, "max_hp": 12, "resist:fire": 100}
+    assert dict(unit.gear.merged) == {"attr:str": 20, "max_hp": 120, "resist:fire": 100}
 
 
 @pytest.mark.parametrize("attr", list(Attribute))
 def test_all_six_attribute_affixes_exist_and_raise_their_attribute(attr: Attribute) -> None:
-    """3H-1（08 8.24）：六種屬性詞條都有，部位同力量，範圍 1～4，合併進總屬性。"""
+    """3H-1（08 8.24）：六種屬性詞條都有，部位同力量，範圍 10～40（X10-2b ×10），合併進總屬性。"""
     lib = library()
     affix = lib.affixes[f"affix_attr_{attr.value}"]
     assert isinstance(affix, StatAffix)
     assert affix.attribute is attr
     assert affix.slots == lib.affixes["affix_attr_str"].slots
-    assert (affix.value.min, affix.value.max) == (1, 4)  # type: ignore[union-attr]
+    assert (affix.value.min, affix.value.max) == (10, 40)  # type: ignore[union-attr]
     assert affix.name_zh == f"{attr.display_name} +{{n}}"
     plain = _unit({})
-    unit = _unit({"ring_1": [(affix.id, 3)], "neck": [(affix.id, 3)]})
+    unit = _unit({"ring_1": [(affix.id, 30)], "neck": [(affix.id, 30)]})
     # 同 id 遞減疊加：100%＋50%（rules/equipment.yaml）
-    assert unit.attributes[attr] > plain.attributes[attr] + 3
+    assert unit.attributes[attr] > plain.attributes[attr] + 30
 
 
 def test_constitution_from_gear_also_raises_hp() -> None:
     lib = library()
     con = lib.affixes["affix_attr_con"]
     item = _item("ring_1", [])
-    item = item.model_copy(update={"affixes": (EquippedAffix(affix=con, value=2),)})
+    item = item.model_copy(update={"affixes": (EquippedAffix(affix=con, value=20),)})  # X10-2b ×10
     hero = spawn(Team.ALLY, (0, 0), no_reactions("hero_fighter"))
     plain = _state(hero).units[U1]
     geared = _state(hero.model_copy(update={"equipment": Loadout(items=(item,))})).units[U1]
     per_con = lib.ruleset.core.hp_per_con_point
-    assert geared.max_hp == plain.max_hp + 2 * per_con
+    assert geared.max_hp == plain.max_hp + 20 * per_con
 
 
 def test_strength_from_gear_changes_attack_value() -> None:
     plain = give_turn(_state(spawn(Team.ALLY, (0, 0), no_reactions("hero_fighter")), "00"), U1)
-    geared = give_turn(_state(_geared({"main_hand": [("affix_attr_str", 4)]}), "00"), U1)
+    geared = give_turn(_state(_geared({"main_hand": [("affix_attr_str", 40)]}), "00"), U1)
     low = preview(plain, Attack(unit_id=U1, target_id=U2))
     high = preview(geared, Attack(unit_id=U1, target_id=U2))
     assert high.damage is not None and low.damage is not None
@@ -231,11 +231,11 @@ def _turn_start_events(state: BattleState, uid: UnitId) -> list[GearHpLost]:
 def test_blood_loses_hp_at_turn_start_but_never_kills() -> None:
     state = _state(_geared({"neck": [("affix_cost_blood", None)]}))
     lost = _turn_start_events(state, U1)
-    assert [(e.amount, e.hp_after) for e in lost] == [(2, state.units[U1].hp - 2)]
+    assert [(e.amount, e.hp_after) for e in lost] == [(20, state.units[U1].hp - 20)]  # X10-2b ×10
     assert lost[0].affix_id == "affix_cost_blood"
     low = state.clone()
-    low.units[U1].hp = 2
-    assert [(e.amount, e.hp_after) for e in _turn_start_events(low, U1)] == [(1, 1)]
+    low.units[U1].hp = 20
+    assert [(e.amount, e.hp_after) for e in _turn_start_events(low, U1)] == [(19, 1)]
     low.units[U1].hp = 1
     assert _turn_start_events(low, U1) == []
     assert _turn_start_events(state, U2) == []  # 沒有裝備的單位不受影響
@@ -271,12 +271,13 @@ def test_swift_adds_move_and_lowers_defense() -> None:
 @pytest.mark.parametrize(
     ("values", "expected"),
     [
-        ((16,), 16),
-        ((16, 16), 24),  # 100 ＋ 50
-        ((16, 16, 16), 28),  # 100 ＋ 50 ＋ 25
-        ((16, 16, 16, 16), 28),  # 第 4 條起 0
-        ((8, 16), 20),  # 大到小：16 ＋ 8 × 50%
-        ((5, 5, 5), 8),  # 加總後才捨去：5 ＋ 2.5 ＋ 1.25 ＝ 8.75 → 8
+        # X10-2b：HP 詞條 ×10
+        ((160,), 160),
+        ((160, 160), 240),  # 100 ＋ 50
+        ((160, 160, 160), 280),  # 100 ＋ 50 ＋ 25
+        ((160, 160, 160, 160), 280),  # 第 4 條起 0
+        ((80, 160), 200),  # 大到小：160 ＋ 80 × 50%
+        ((50, 50, 50), 87),  # 加總後才捨去：50 ＋ 25 ＋ 12.5 ＝ 87.5 → 87
     ],
 )
 def test_numeric_affixes_diminish(values: tuple[int, ...], expected: int) -> None:
@@ -286,7 +287,7 @@ def test_numeric_affixes_diminish(values: tuple[int, ...], expected: int) -> Non
 
 
 def test_ties_follow_slot_order() -> None:
-    loadout = _loadout({"ring_2": [("affix_max_hp", 8)], "head": [("affix_max_hp", 8)]})
+    loadout = _loadout({"ring_2": [("affix_max_hp", 80)], "head": [("affix_max_hp", 80)]})
     gear = build_gear(loadout, library().ruleset.equipment)
     assert [(a.slot, a.weight_permille, a.rank) for a in gear.affixes] == [
         ("head", 1000, 0),
@@ -322,7 +323,7 @@ def test_non_numeric_same_id_counts_once() -> None:
 def test_numeric_fourth_copy_is_inactive() -> None:
     slots = ("head", "body", "hands", "feet")
     gear = build_gear(
-        _loadout({s: [("affix_max_hp", 4)] for s in slots}), library().ruleset.equipment
+        _loadout({s: [("affix_max_hp", 40)] for s in slots}), library().ruleset.equipment
     )
     assert [a.weight_permille for a in gear.affixes] == [1000, 500, 250, 0]
     assert [a.active for a in gear.affixes] == [True, True, True, False]
@@ -474,7 +475,7 @@ def test_unit_view_lists_equipment() -> None:
     sword = hero.equipment[0]
     assert sword.name_zh == "試煉長劍" and sword.slot_zh == "主手"
     texts = {a.text_zh for a in sword.affixes}
-    assert texts == {"力量 +2", "站在高處時命中 +1"}
+    assert texts == {"力量 +20", "站在高處時命中 +1"}  # X10-2b 屬性 ×10
     helm = next(e for e in hero.equipment if e.slot == "head")
     assert "火焰抗性 +10%" in {a.text_zh for a in helm.affixes}
     foe = next(u for u in project_for(state, Team.ENEMY).units if u.template_id == "bandit")

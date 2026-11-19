@@ -264,7 +264,8 @@ def test_item_problems_detect_slot_value_and_unknown_affix() -> None:
     def problems(item: ItemDef) -> list[str]:
         return item_problems(item, lib.affixes, lib.weapons, _rules())
 
-    assert problems(_item(slot_type="ring", affixes=[{"affix": "affix_max_hp", "value": 8}])) == []
+    # X10-2b：最大 HP 詞條值 ×10（8→80、99→990）
+    assert problems(_item(slot_type="ring", affixes=[{"affix": "affix_max_hp", "value": 80}])) == []
     assert problems(_item(slot_type="ring", affixes=[{"affix": "affix_nope"}]))
     # 火焰抗性不能出現在武器上
     bad_slot = _item(
@@ -273,7 +274,7 @@ def test_item_problems_detect_slot_value_and_unknown_affix() -> None:
         affixes=[{"affix": "affix_resist_fire", "value": 100}],
     )
     assert any("不能出現在" in p for p in problems(bad_slot))
-    out_of_range = _item(slot_type="ring", affixes=[{"affix": "affix_max_hp", "value": 99}])
+    out_of_range = _item(slot_type="ring", affixes=[{"affix": "affix_max_hp", "value": 990}])
     assert any("超出範圍" in p for p in problems(out_of_range))
     missing_value = _item(slot_type="ring", affixes=[{"affix": "affix_max_hp"}])
     assert any("需要 value" in p for p in problems(missing_value))

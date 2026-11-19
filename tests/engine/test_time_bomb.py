@@ -186,7 +186,7 @@ def test_the_damage_is_the_dice_plus_half_the_scaling_attribute(
     from trpg.shared.types import Attribute  # noqa: PLC0415
 
     bonus = attr[Attribute.INT] // 2
-    assert hit.rolls == (3, 4, 5) and hit.base_amount == 12 + bonus
+    assert hit.rolls == (30, 40, 50) and hit.base_amount == 120 + bonus  # 骰面 ×10（X10-2b）
 
 
 def test_the_bomb_explodes_where_the_carrier_stands_after_it_moves() -> None:

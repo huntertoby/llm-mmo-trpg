@@ -89,8 +89,9 @@ def test_without_the_burning_entry_the_bite_loses_by_its_cost() -> None:
     bite, attack = _scores(state, bare)
     w = profile.weights
     skill = library().ruleset.skill_def(BITE)
+    scale = library().ruleset.core.quantity_scale
     cost = (
-        Fraction(skill.cost.stamina * w.stamina_permille, 1000)
+        Fraction(skill.cost.stamina * w.stamina_permille, 1000 * scale)  # 量類 ÷ 倍率（X10-2a）
         + (skill.cost.cooldown or 0) * w.cooldown
     )
     assert cost > 0

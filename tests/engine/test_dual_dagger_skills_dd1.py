@@ -64,7 +64,7 @@ def duel(
     skill: SkillDef,
     *,
     w: WeaponDef | None = None,
-    foe_hp: int = 200,
+    foe_hp: int = 2000,  # X10-2b ×10
     facing: str = "east",
     base: str = "hero_fighter",
 ) -> BattleState:
@@ -119,7 +119,7 @@ def test_a_single_weapon_skill_strikes_twice_with_dual_daggers(
     for d in dealt:  # 每一下都套技能倍率、各擲一次武器的骰子、吃同樣的屬性加成
         assert d.multiplier_permille == dealt[0].multiplier_permille
         assert d.multiplier_permille >= 1500 * 9 // 10
-        assert d.rolls == (DIE,)
+        assert d.rolls == (DIE * library().ruleset.core.quantity_scale,)  # 骰面 ×10（X10-2b）
         assert d.scaled_permille == dealt[0].scaled_permille > 0
 
 

@@ -74,9 +74,10 @@ def test_war_hymn_charge_lists_the_aura_rounds() -> None:
 
 def test_cost_rows_follow_the_card() -> None:
     base = _named("霜寒之觸")
-    cheaper = base.model_copy(update={"cost": base.cost.model_copy(update={"mana": 1})})
-    assert _rows(base, cheaper) == {"cost.mana": ("2", "1", "better")}
-    assert _rows(cheaper, base) == {"cost.mana": ("1", "2", "cost")}
+    cheaper = base.model_copy(update={"cost": base.cost.model_copy(update={"mana": 10})})
+    # X10-2b：法力 ×10（我方 ×0.8，下限 10）
+    assert _rows(base, cheaper) == {"cost.mana": ("24", "10", "better")}
+    assert _rows(cheaper, base) == {"cost.mana": ("10", "24", "cost")}
 
 
 def test_one_up_one_down_is_expressed() -> None:

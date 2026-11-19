@@ -29,8 +29,8 @@ def test_level_five_growth(library: ContentLibrary) -> None:
     template = library.units["sect_swordsman"]
     grown, extra = grow_enemy(library, template, 5)
     assert grown.level == 5
-    # 最高屬性（力量 14）＋ 2 × 4
-    assert grown.attributes[Attribute.STR] == template.attributes[Attribute.STR] + 8
+    # 最高屬性（力量 140）＋ 20 × 4（X10-2b：屬性 ×10）
+    assert grown.attributes[Attribute.STR] == template.attributes[Attribute.STR] + 80
     for attr in (Attribute.DEX, Attribute.CON, Attribute.INT, Attribute.WIS, Attribute.WIL):
         assert grown.attributes[attr] == template.attributes[attr]
     # HP ＋ 基礎 × 5% × 4
@@ -65,15 +65,15 @@ def test_ties_go_to_first_attribute(library: ContentLibrary) -> None:
         {
             "id": "flat_unit",
             "name_zh": "平",
-            "attributes": {a.value: 10 for a in Attribute},
-            "max_hp": 20,
+            "attributes": {a.value: 100 for a in Attribute},
+            "max_hp": 200,  # X10-2b：屬性、HP ×10
             "weapon": "dagger",
         }
     )
     grown, extra = grow_enemy(library, template, 3)
     assert extra == ()
-    assert grown.attributes[Attribute.STR] == 14
-    assert sum(grown.attributes.values()) == 60 + 4
+    assert grown.attributes[Attribute.STR] == 140
+    assert sum(grown.attributes.values()) == 600 + 40
 
 
 def test_enemy_level_uses_level_min(library: ContentLibrary) -> None:

@@ -102,6 +102,7 @@ def test_standard_enemies_follow_the_tier_budget_hp_formula() -> None:
     for tier in range(1, 6):
         enemy = lib.unit(f"std_enemy_t{tier}")
         expected = (30 * budget[tier] * 2 + budget[1]) // (2 * budget[1])  # 四捨五入
+        expected *= core.quantity_scale  # X10-2b：內容照舊單位四捨五入後 ×10
         assert core.template_max_hp(enemy) == expected, tier
         assert enemy.skills == () and enemy.ai_profile == "brute" and "sim" in enemy.tags
         assert enemy.attributes == bandit.attributes
@@ -111,11 +112,11 @@ def test_standard_enemies_follow_the_tier_budget_hp_formula() -> None:
             bandit.resist,
         )
     assert [core.template_max_hp(lib.unit(f"std_enemy_t{t}")) for t in range(1, 6)] == [
-        30,
-        39,
-        49,
-        62,
-        77,
+        300,
+        390,
+        490,
+        620,
+        770,
     ]
 
 
@@ -127,6 +128,6 @@ def test_blank_builds_have_no_skills_and_stay_out_of_simulations() -> None:
     assert warrior.blank and mage.blank
     assert warrior.hero.skills == () and mage.hero.skills == ()
     assert (warrior.hero.weapon, mage.hero.weapon) == ("one_handed_sword", "fire_staff")
-    assert all(v == 10 for v in warrior.hero.attributes.values())
+    assert all(v == 100 for v in warrior.hero.attributes.values())  # X10-2b：屬性 ×10
     sim_ids = {b.id for b in lib.builds.sim_builds()}
     assert "build_blank_warrior" not in sim_ids and "build_blank_mage" not in sim_ids

@@ -101,7 +101,7 @@ def test_the_shield_gain_is_scored_by_the_shield_weight() -> None:
     assert scored[(AEGIS, U2)] > 0
     # 已經有大護盾時，再罩一次的增加量（取較大值）很小，分數低很多
     big = state.clone()
-    big.units[U2].statuses = [StatusInstance("shielded", 2, U1, 99)]
+    big.units[U2].statuses = [StatusInstance("shielded", 2, U1, 990)]  # X10-2b 護盾 ×10
     again = {
         (s.action.skill_id, s.action.target_id): s.score
         for s in _ai().rank(big)

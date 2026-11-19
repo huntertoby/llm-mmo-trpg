@@ -321,7 +321,7 @@ def test_war_totem_gives_rallied_to_allies_and_other_summons_within_two() -> Non
     rules = ctx.state.ruleset
     assert ctx.state.units[U1].has_status("rallied")
     assert ctx.state.units[skeleton.id].has_status("rallied")
-    assert status_attack_bonus(rules, ctx.state.units[U1]) == 1
+    assert status_attack_bonus(rules, ctx.state.units[U1]) == 10  # 攻擊值 ×10（X10-2b）
     assert not ctx.state.units[U2].has_status("rallied")
 
 
@@ -334,7 +334,7 @@ def test_rallied_raises_the_attack_value_by_one() -> None:
     from trpg.engine.effects import execute  # noqa: PLC0415
 
     execute(ctx, [ApplyStatusEffect(target_id=U1, status_id="rallied", duration=2)])
-    assert attack_value(ctx.state.units[U1], ctx.state.ruleset) == base + 1
+    assert attack_value(ctx.state.units[U1], ctx.state.ruleset) == base + 10  # 攻擊值 ×10（X10-2b）
 
 
 def test_afterimage_keeps_its_look_fields() -> None:

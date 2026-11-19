@@ -66,11 +66,11 @@ def arena(
     objects: Sequence[tuple[int, int, str]] = (),
     second: tuple[int, int] | None = None,
 ) -> BattleState:
-    """U1 我方戰士（在 (0, 0)）；U2 敵人（不反應、HP 200）；``second`` 為另一個敵人 U3。"""
+    """U1 我方戰士（在 (0, 0)）；U2 敵人（不反應、HP 2000）；``second`` 為另一個敵人 U3。"""
     enemies = [foe] + ([] if second is None else [second])
     m = make_map(heights, terrain, ally=[(0, 0)], enemy=enemies, objects=objects)
     spawns = [spawn(Team.ALLY, (0, 0), template("hero_fighter", attributes=NO_PERK))]
-    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in enemies]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=2000)) for xy in enemies]
     return give_turn(make_state(m, spawns), U1)
 
 
@@ -100,10 +100,10 @@ def test_pushed_into_a_wall_two_tiles_short_takes_two_collision_hits(
     assert result.state.units[U2].xy == FOE  # 第一步就被擋住
     damage = collisions(result.events)
     assert [(d.target_id, d.source_id, d.amount, d.element.value) for d in damage] == [
-        (U2, U1, 4, "physical"),
-        (U2, U1, 4, "physical"),
+        (U2, U1, 40, "physical"),
+        (U2, U1, 40, "physical"),
     ]
-    assert result.state.units[U2].hp == 200 - 8
+    assert result.state.units[U2].hp == 2000 - 80
 
 
 def test_one_tile_short_is_one_hit(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -133,7 +133,7 @@ def test_hitting_another_unit_hurts_both_and_credits_the_pusher(
     assert (hit.obstacle, hit.other_id, hit.shortfall) == ("unit", U3, 2)
     damage = collisions(result.events)
     assert sorted((d.target_id, d.source_id) for d in damage) == [(U2, U1)] * 2 + [(U3, U1)] * 2
-    assert result.state.units[U3].hp == 200 - 8 and result.state.units[U2].hp == 200 - 8
+    assert result.state.units[U3].hp == 2000 - 80 and result.state.units[U2].hp == 2000 - 80
 
 
 def test_hitting_a_breakable_object_damages_the_object_too(
@@ -145,8 +145,8 @@ def test_hitting_a_breakable_object_damages_the_object_too(
     assert (hit.obstacle, hit.object_id) == ("object", "obj_0001")
     (dealt,) = collisions(result.events)
     (obj,) = of(result.events, ObjectDamaged)
-    assert dealt.amount == 4 and (obj.cause, obj.amount, obj.source_id) == ("collision", 4, U1)
-    assert hit.object_id is not None and result.state.objects[hit.object_id].hp == 60 - 4
+    assert dealt.amount == 40 and (obj.cause, obj.amount, obj.source_id) == ("collision", 40, U1)
+    assert hit.object_id is not None and result.state.objects[hit.object_id].hp == 600 - 40
 
 
 def test_a_step_up_blocks_like_a_wall(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -198,7 +198,7 @@ def test_collision_dice_replace_the_default(monkeypatch: pytest.MonkeyPatch) -> 
         arena(terrain=terrain_with("#", 3)), [east(1, collision_dice=Dice(count=2, sides=6))]
     )
     (dealt,) = collisions(result.events)
-    assert dealt.rolls == (4, 4) and dealt.amount == 8
+    assert dealt.rolls == (40, 40) and dealt.amount == 80  # 骰面 ×10（X10-2b）
 
 
 def test_the_core_dice_can_be_changed() -> None:
@@ -219,7 +219,7 @@ def test_push_distance_over_the_cap_becomes_collision_damage(
     m = make_map(FLAT, ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
-            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=200))]
+            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=2000))]
         ),
         U1,
     )
@@ -244,7 +244,7 @@ def test_basic_shove_collides_too() -> None:
     state = give_turn(
         make_state(
             m,
-            [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=200))],
+            [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=2000))],
         ),
         U1,
     )
@@ -275,7 +275,7 @@ def shove_scene(
     enemies = [foe] + ([] if second is None else [second])
     m = make_map(FLAT, terrain, ally=[shover], enemy=enemies, objects=objects)
     spawns = [spawn(Team.ALLY, shover, template("hero_fighter", attributes=NO_PERK))]
-    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=200)) for xy in enemies]
+    spawns += [spawn(Team.ENEMY, xy, no_reactions(max_hp=2000)) for xy in enemies]
     return give_turn(make_state(m, spawns), U1)
 
 
@@ -335,7 +335,7 @@ def test_a_failed_contest_does_not_collide() -> None:
 
 def test_a_halved_distance_of_zero_is_still_illegal() -> None:
     """其他不合法原因不變：steadfast 把 1 格減半成 0 格仍然「推不動」。"""
-    steady = no_reactions(max_hp=200, tags=["steadfast"])
+    steady = no_reactions(max_hp=2000, tags=["steadfast"])
     m = make_map(FLAT, terrain_with("#", 3), ally=[SHOVER], enemy=[PUSHED])
     state = give_turn(
         make_state(
@@ -355,7 +355,7 @@ def test_a_halved_distance_of_zero_is_still_illegal() -> None:
 def test_the_shove_preview_shows_the_collision_damage() -> None:
     p = preview(shove_scene(terrain=terrain_with("#", 3)), Shove(unit_id=U1, target_id=U2))
     ((unit, low, high),) = p.collisions
-    assert unit == U2 and 1 <= low <= high <= 6
+    assert unit == U2 and 10 <= low <= high <= 60  # 1d6，骰面 ×10（X10-2b）
 
 
 def test_the_shove_preview_against_a_unit_lists_both_victims() -> None:
@@ -381,7 +381,7 @@ def test_gale_kick_into_a_wall_deals_collision_damage(monkeypatch: pytest.Monkey
     m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
-            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=200))]
+            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=2000))]
         ),
         U1,
     )
@@ -398,18 +398,18 @@ def test_battering_ram_uses_its_own_collision_dice(monkeypatch: pytest.MonkeyPat
         attributes=NO_PERK,
         reactions=[],
         skills=["skill_battering_ram"],
-        max_mana=99,
+        max_mana=990,
     )
     m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
-            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=200))]
+            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=2000))]
         ),
         U1,
     )
     result = resolve(state, UseSkill(unit_id=U1, skill_id="skill_battering_ram", target_id=U2))
     hits = collisions(result.events)
-    assert [d.rolls for d in hits] == [(4, 4), (4, 4)]  # 少走 2 格，每次 2d6
+    assert [d.rolls for d in hits] == [(40, 40), (40, 40)]  # 少走 2 格，每次 2d6（骰面 ×10）
 
 
 # ---------------------------------------------------------------------------
@@ -422,13 +422,13 @@ def test_preview_shows_the_possible_collision_damage() -> None:
     m = make_map(FLAT, terrain_with("#", 3), ally=[(1, 3)], enemy=[FOE])
     state = give_turn(
         make_state(
-            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=200))]
+            m, [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=2000))]
         ),
         U1,
     )
     p = preview(state, UseSkill(unit_id=U1, skill_id="skill_gale_kick", target_id=U2))
     ((unit, low, high),) = p.collisions
-    assert unit == U2 and 2 <= high <= 12 and low <= high  # 兩次 1d6（最多 12）
+    assert unit == U2 and 20 <= high <= 120 and low <= high  # 兩次 1d6（最多 120，骰面 ×10）
 
 
 def test_preview_without_a_collision_is_empty() -> None:
@@ -439,10 +439,11 @@ def test_preview_without_a_collision_is_empty() -> None:
 def test_ai_battles_with_collisions_are_deterministic_and_replay(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """build_push 在 oil_depot（種子 1；3C-5a 地圖多了木箱後種子 3 不再撞擊）的戰鬥裡出現撞擊；
-    同種子重跑結果相同、重播一致。"""
+    """build_push 在 oil_depot（種子 2；3C-5a 地圖多了木箱後種子 3 不再撞擊）的戰鬥裡出現撞擊；
+    同種子重跑結果相同、重播一致。
+    X10-2b 換種子 1 → 2（量 ×10 後捨去差異使戰鬥分岔、種子 1 不再撞擊；掃 0～29）。"""
     log = tmp_path / "collision.json"
-    argv = ["battle", "--map", "oil_depot", "--seed", "1", "--ally-build", "build_push"]
+    argv = ["battle", "--map", "oil_depot", "--seed", "2", "--ally-build", "build_push"]
     assert main(argv) == 0
     first = capsys.readouterr().out
     assert "次撞擊" in first and "撞擊物理傷害" in first
@@ -468,7 +469,7 @@ def test_ai_scores_a_push_into_a_wall_higher_than_the_same_push_in_the_open() ->
         state = give_turn(
             make_state(
                 m,
-                [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=200))],
+                [spawn(Team.ALLY, (1, 3), hero), spawn(Team.ENEMY, FOE, no_reactions(max_hp=2000))],
             ),
             U1,
         )

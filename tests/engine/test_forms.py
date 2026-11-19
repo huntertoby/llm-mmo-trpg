@@ -74,18 +74,19 @@ FURY = "skill_fury_stance"
 SLOTS = SkillSlots(active=8, passive=2, reaction=1, stance=2)
 
 
-def scene(*, hp: int = 999, foe_hp: int = 999, foe_at: tuple[int, int] = (4, 3)) -> BattleState:
+def scene(*, hp: int = 9990, foe_hp: int = 9990, foe_at: tuple[int, int] = (4, 3)) -> BattleState:
     """U1（戰士，帶 5 個形態技能與狂怒姿態，耐力與法力充足）在 (3, 3) 手上有回合；U2（敵人）。"""
     m = make_map(FLAT7, ally=[(3, 3)], enemy=[foe_at])
-    owner = caster_template([*FORM_SKILLS, FURY], base="hero_fighter", max_hp=hp, stamina=40)
+    # X10-2b ×10
+    owner = caster_template([*FORM_SKILLS, FURY], base="hero_fighter", max_hp=hp, stamina=400)
     state = make_state(
         m,
         [spawn(Team.ALLY, (3, 3), owner), spawn(Team.ENEMY, foe_at, no_reactions(max_hp=foe_hp))],
         skill_slots=SLOTS,  # type: ignore[arg-type]
     )
     state = give_turn(state, U1)
-    state.units[U1].stamina = 40
-    state.units[U1].mana = 40
+    state.units[U1].stamina = 400
+    state.units[U1].mana = 400
     state.units[U1].stamina_regen = 0
     return state
 
@@ -182,7 +183,7 @@ def test_form_cooldown_ticks_on_own_turn_starts() -> None:
 
 def test_a_form_ends_when_the_unit_goes_down(monkeypatch: pytest.MonkeyPatch) -> None:
     always(monkeypatch, d20=19, die=8)
-    state = enter(scene(hp=5), CAT)
+    state = enter(scene(hp=50), CAT)
     result = resolve(give_turn(state, U2), Attack(unit_id=U2, target_id=U1))
     assert result.state.units[U1].downed and form_of(result.state) is None
     assert [(e.form_id, e.reason) for e in of(result, FormLeft)] == [("cat", "downed")]
@@ -195,7 +196,8 @@ def test_a_form_ends_when_the_battle_ends(monkeypatch: pytest.MonkeyPatch) -> No
     assert result.state.ended
     assert [(e.form_id, e.reason) for e in of(result, FormLeft)] == [("bear", "battle_end")]
     unit = result.state.units[U1]
-    assert unit.form is None and unit.max_hp == state.units[U1].max_hp - 149  # 999 × 15%
+    # 9990 × 15%（X10-2b ×10）
+    assert unit.form is None and unit.max_hp == state.units[U1].max_hp - 1498
 
 
 # ---------------------------------------------------------------------------
@@ -217,7 +219,7 @@ def _next_own_turn(state: BattleState) -> tuple[BattleState, list[object]]:
 
 @pytest.mark.parametrize(
     ("skill_id", "resource", "amount"),
-    [(BEAR, "stamina", 8), (WEREWOLF, "stamina", 8), (ROC, "mana", 3), (ELEMENTAL, "mana", 3)],
+    [(BEAR, "stamina", 80), (WEREWOLF, "stamina", 80), (ROC, "mana", 30), (ELEMENTAL, "mana", 30)],
 )
 def test_upkeep_is_paid_at_each_turn_start(skill_id: str, resource: str, amount: int) -> None:
     state = enter(scene(), skill_id)
@@ -316,7 +318,7 @@ def test_elemental_chooses_an_element_and_bursts_adjacent_enemies(
     assert unit.form is not None and unit.form.element is Element.ICE
     assert unit.weapon.element is Element.ICE
     (burst,) = [e for e in of(result, DamageDealt) if e.target_id == U2]
-    assert burst.element is Element.ICE and burst.rolls == (4,)
+    assert burst.element is Element.ICE and burst.rolls == (40,)  # 骰面 ×10（X10-2b）
     rules = result.state.ruleset
     assert damage_taken_permille(rules, unit, Element.ICE) == (
         damage_taken_permille(rules, state.units[U1], Element.ICE) * 500 // 1000
@@ -372,9 +374,9 @@ def test_natural_weapon_damage_matches_the_card_bonus(
     assert match is not None
     result = resolve(state, Attack(unit_id=U1, target_id=U2))
     (dealt,) = of(result, DamageDealt)
-    assert dealt.rolls == (1,)
+    assert dealt.rolls == (10,)  # 骰面 ×10（X10-2b）
     assert dealt.scaled_permille // 1000 == int(match.group(1))
-    assert dealt.amount == 1 + int(match.group(1))
+    assert dealt.amount == 10 + int(match.group(1))
 
 
 def test_weapon_skills_still_use_the_hand_weapon_in_a_form() -> None:
@@ -477,7 +479,7 @@ def test_unit_view_shows_the_form_the_hand_weapon_and_form_cooldowns() -> None:
     assert view.form.natural_weapon_zh.startswith("熊爪 1d8 近戰")
     assert "目前 +" in view.form.natural_weapon_zh
     assert view.form.effects_zh == ("最大 HP +15%", "防禦 +10%", "移動 −1")
-    assert view.form.upkeep_zh.startswith("每回合開始 −8 耐力")
+    assert view.form.upkeep_zh.startswith("每回合開始 −80 耐力")
     assert view.weapon_id == hand.id  # 紙娃娃仍是手上的武器
     assert [(c.form_id, c.name_zh, c.remaining) for c in view.form_cooldowns] == [("cat", "貓", 2)]
     log = [describe_event(e, entered) for e in resolve(entered, EndStance(unit_id=U1)).events]

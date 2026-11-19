@@ -122,7 +122,7 @@ def test_win_writes_back_xp_level_and_last_battle(won: dict[str, Any]) -> None:
     gained = char["xp"] - (won["first_xp"] - 1)
     assert gained in (100, 300) and char["level"] == 2
     insight = 2 if gained == 100 else 3
-    assert char["attribute_points"] == 2 and char["insight"] == insight
+    assert char["attribute_points"] == 20 and char["insight"] == insight
     assert first["growth"]["insight"] == insight
     assert first["hero"]["insight"] == insight
     assert any(e.startswith("升到 2 級") for e in first["events"])
@@ -140,23 +140,23 @@ def test_win_writes_back_xp_level_and_last_battle(won: dict[str, Any]) -> None:
 
 def test_allocate_and_respec(calm_client: TestClient) -> None:
     cid = _create(calm_client)["character"]["character_id"]
-    _patch(calm_client, cid, attribute_points=2)
+    _patch(calm_client, cid, attribute_points=20)  # X10-2b：屬性點 ×10
     view = _ok(calm_client.get(f"/api/world/characters/{cid}"))
     assert view["growth"]["can_allocate"] is True
     con = view["hero"]["attributes"]["con"]
     preview = _ok(
         calm_client.post(
-            f"/api/world/characters/{cid}/allocation-preview", json={"attributes": {"con": 2}}
+            f"/api/world/characters/{cid}/allocation-preview", json={"attributes": {"con": 20}}
         )
     )
     assert "最大 HP" in preview["summary_zh"]
-    too_many = _post(calm_client, cid, kind="allocate", attributes={"con": 3})
+    too_many = _post(calm_client, cid, kind="allocate", attributes={"con": 30})
     assert too_many.status_code == 422
-    done = _act(calm_client, cid, kind="allocate", attributes={"con": 2})
-    assert done["hero"]["attributes"]["con"] == con + 2
+    done = _act(calm_client, cid, kind="allocate", attributes={"con": 20})
+    assert done["hero"]["attributes"]["con"] == con + 20
     assert done["character"]["attribute_points"] == 0
     assert done["character"]["max_hp"] == preview["hp"]
-    assert any(e.startswith("分配屬性點：體質 ＋2") for e in done["events"])
+    assert any(e.startswith("分配屬性點：體質 ＋20") for e in done["events"])
     # 重配：野外不行、小鎮可以
     _act(calm_client, cid, kind="travel", to="ferry_steps")
     wild = _post(calm_client, cid, kind="respec")
@@ -164,7 +164,7 @@ def test_allocate_and_respec(calm_client: TestClient) -> None:
     assert "城鎮與營火" in wild.json()["detail"]
     _act(calm_client, cid, kind="travel", to="mist_ferry")
     back = _act(calm_client, cid, kind="respec")
-    assert back["character"]["attribute_points"] == 2
+    assert back["character"]["attribute_points"] == 20
     assert any(e.startswith("重配屬性") for e in back["events"])
 
 

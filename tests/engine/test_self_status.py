@@ -133,11 +133,12 @@ def test_the_allowance_is_points_times_effective_turns_with_its_own_cap(
 
 
 def test_the_self_status_allowance_is_truncated_by_the_total_cap() -> None:
-    """冷卻 6（300）＋ 法力 99（150）＋ 自身虛弱 3 回合（250）＝ 700 → 總上限 500。"""
+    """冷卻 6（300）＋ 法力 990（150）＋ 自身虛弱 3 回合（250）＝ 700 → 總上限 500。
+    X10-2b：法力 ×10。"""
     report = skill_budget(
         skill(
             cost={
-                "mana": 99,
+                "mana": 990,
                 "cooldown": 6,
                 "self_status": {"status": "weaken", "duration": 3},
             }

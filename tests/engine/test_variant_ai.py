@@ -44,7 +44,7 @@ def _scene(
 ) -> BattleState:
     m = make_map(heights, terrain, ally=[caster], enemy=foes, surfaces=surfaces)
     spawns = [spawn(Team.ALLY, caster, caster_template([skill_id], base=BASES[skill_id]))]
-    foe = no_reactions("bandit", max_hp=200, element_mods=element_mods or {})
+    foe = no_reactions("bandit", max_hp=2000, element_mods=element_mods or {})  # X10-2b ×10
     spawns += [spawn(Team.ENEMY, xy, foe) for xy in foes]
     return give_turn(make_state(m, spawns), U1)
 

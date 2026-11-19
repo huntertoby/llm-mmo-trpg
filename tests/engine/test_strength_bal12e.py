@@ -60,7 +60,8 @@ def test_poison_strength_scales_the_tick_and_the_healing_cut() -> None:
     assert healing_received_permille(rules, state.units[U2]) == 250
     result = resolve(with_rolls(state, [(4, 3)]), EndTurn(unit_id=U1))
     (tick,) = _ticks(result, "status")
-    assert tick.rolls == (3,) and tick.amount == 4  # 3 × 1.5 = 4.5 → 4
+    # X10-2b 骰面 ×10：30 × 1.5 = 45（舊單位 4.5 → 4 是捨去差異）
+    assert tick.rolls == (30,) and tick.amount == 45
     # 回合結束倒數後強度還在
     kept = result.state.units[U2].get_status("poison")
     assert kept is not None and kept.magnitude_permille == 1500
@@ -71,7 +72,8 @@ def test_strength_floors_and_scales_debuff_and_buff_numbers() -> None:
     rules = state.ruleset
     assert damage_dealt_permille(rules, state.units[U2], None) == 625  # 1000 − 250 × 1.5
     hero = state.units[U1]
-    assert effective_attribute(rules, hero, Attribute.STR) == hero.attributes[Attribute.STR] + 3
+    # 強化 +20（X10-2b 屬性 ×10）× 1.5
+    assert effective_attribute(rules, hero, Attribute.STR) == hero.attributes[Attribute.STR] + 30
 
 
 def test_unscalable_and_control_statuses_ignore_strength() -> None:
@@ -84,7 +86,7 @@ def test_unscalable_and_control_statuses_ignore_strength() -> None:
 def test_strength_1000_keeps_old_numbers() -> None:
     plain = _apply(_duel(), "poison", 1000)
     result = resolve(with_rolls(plain, [(4, 3)]), EndTurn(unit_id=U1))
-    assert _ticks(result, "status")[0].amount == 3
+    assert _ticks(result, "status")[0].amount == 30  # 骰面 ×10（X10-2b）
 
 
 def test_poison_surface_strength_scales_the_turn_start_damage() -> None:
@@ -95,7 +97,7 @@ def test_poison_surface_strength_scales_the_turn_start_damage() -> None:
     assert state.tile(2, 1).surface_magnitude_permille == 1500
     result = resolve(with_rolls(state, [(4, 4)]), EndTurn(unit_id=U1))
     (tick,) = _ticks(result, "surface")
-    assert tick.amount == 6  # 4 × 1.5
+    assert tick.amount == 60  # 40 × 1.5（X10-2b 骰面 ×10）
 
 
 def test_fire_surface_passes_strength_to_burning_and_water_resets_it() -> None:
@@ -112,10 +114,10 @@ def test_fire_surface_passes_strength_to_burning_and_water_resets_it() -> None:
 
 def test_regeneration_strength_scales_the_heal() -> None:
     state = _apply(_duel(), "regenerating", 2000)
-    state.units[U2].hp = 1
+    state.units[U2].hp = 10  # X10-2b ×10
     result = resolve(with_rolls(state, [(4, 2)]), EndTurn(unit_id=U1))
     heals = [e for e in result.events if isinstance(e, Healed) and e.target_id == U2]
-    assert heals and heals[0].amount == 4  # 2 × 2.0
+    assert heals and heals[0].amount == 40  # 20 × 2.0（骰面 ×10）
 
 
 def _reapply(state: BattleState, duration: int, magnitude: int) -> BattleState:

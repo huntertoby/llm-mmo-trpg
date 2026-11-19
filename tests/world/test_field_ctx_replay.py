@@ -41,8 +41,12 @@ from trpg.world.step import new_character, world_step
 
 type XY = tuple[int, int]
 
-BEFORE_6CR2 = "d2aedac47c76eb039169e9ffeb022221631653004516091b65e2d83c5ec73144"
-"""重構前（``680b2d38``）同一串動作的 SHA-256（遮掉 ``lineup_seed``）。"""
+BEFORE_6CR2 = "837a1238f82639ba022c46345b590a6a72aa38e7739c5db416175348ee9c6473"
+"""重構前（``680b2d38``）同一串動作的 SHA-256（遮掉 ``lineup_seed``）。
+
+X10-2b：``frozen_replay/`` 的量類跟正式內容一起 ×10（主角範本的屬性、HP、護甲；大世界規則的
+每級屬性點；任務技能的法力費用），雜湊從 ``d2aedac4…`` 換成這個。逐步比對換算前後的輸出，只差在
+這些欄位 ×10 與法力上限 17 → 168（×1400‰ 四捨五入的捨去差異）。"""
 
 FROZEN = Path(__file__).resolve().parent / "frozen_replay"
 REGION = "cloud_ridge"

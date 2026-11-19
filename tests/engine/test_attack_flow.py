@@ -554,7 +554,7 @@ def test_equipment_view_marks_inactive_duplicates_with_the_winning_slot() -> Non
 
 def test_diminishing_numeric_duplicates_stay_active_until_the_fourth() -> None:
     slots: dict[str, Rolls] = {
-        s: [("affix_attr_str", 1)] for s in ("main_hand", "neck", "ring_1", "ring_2")
+        s: [("affix_attr_str", 10)] for s in ("main_hand", "neck", "ring_1", "ring_2")
     }
     state = _fighting(slots)
     view = project_for(state, Team.ALLY)
@@ -567,7 +567,7 @@ def test_diminishing_numeric_duplicates_stay_active_until_the_fourth() -> None:
         (1000, True),
     ]
     dup = next(a for a in lines if not a.active)
-    assert dup.duplicate_of == "主手的力量 +1"
+    assert dup.duplicate_of == "主手的力量 +10"
 
 
 def test_equal_duplicates_report_the_first_slot() -> None:

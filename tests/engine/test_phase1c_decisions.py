@@ -203,13 +203,14 @@ def _conduct_scene(weather: str | None = None) -> BattleState:
         make_state(
             m,
             [
-                spawn(Team.ALLY, (4, 0), template("hero_mage", max_hp=200), "lightning_staff"),
-                spawn(Team.ENEMY, (0, 0), no_reactions(max_hp=200, resist={"elemental": 500})),
-                spawn(Team.ENEMY, (1, 0), no_reactions(max_hp=200)),
+                # X10-2b：HP、傷害 ×10
+                spawn(Team.ALLY, (4, 0), template("hero_mage", max_hp=2000), "lightning_staff"),
+                spawn(Team.ENEMY, (0, 0), no_reactions(max_hp=2000, resist={"elemental": 500})),
+                spawn(Team.ENEMY, (1, 0), no_reactions(max_hp=2000)),
                 spawn(
-                    Team.ENEMY, (2, 0), no_reactions(max_hp=200, element_mods={"lightning": 500})
+                    Team.ENEMY, (2, 0), no_reactions(max_hp=2000, element_mods={"lightning": 500})
                 ),
-                spawn(Team.ALLY, (3, 0), template("hero_fighter", max_hp=200)),
+                spawn(Team.ALLY, (3, 0), template("hero_fighter", max_hp=2000)),
             ],
             weather=weather,
         ),
@@ -227,19 +228,19 @@ def test_conduct_base_is_damage_before_primary_resistance() -> None:
         state,
         [
             DamageEffect(
-                target_id=U2, source_id=U1, cause="attack", element=Element.LIGHTNING, flat=10
+                target_id=U2, source_id=U1, cause="attack", element=Element.LIGHTNING, flat=100
             )
         ],
     )
     dealt = _damage_by_target(result.events)
     primary = next(e for e in result.events if isinstance(e, DamageDealt) and e.cause == "attack")
-    assert (primary.amount, primary.base_amount) == (5, 10)  # 元素抗性 50%
-    # 擴散：基準 10，各自套用元素修正；友方戰士與施法者自己也受到傷害
-    assert dealt[U3] == 10
-    assert dealt[U4] == 15  # 雷電弱點 +50%
+    assert (primary.amount, primary.base_amount) == (50, 100)  # 元素抗性 50%
+    # 擴散：基準 100，各自套用元素修正；友方戰士與施法者自己也受到傷害
+    assert dealt[U3] == 100
+    assert dealt[U4] == 150  # 雷電弱點 +50%
     fighter = UnitId("unit_0005")
-    assert dealt[fighter] == 10
-    assert dealt[U1] == 8  # 施法者自己：元素抗性 15% → 8.5 無條件捨去
+    assert dealt[fighter] == 100
+    assert dealt[U1] == 85  # 施法者自己：元素抗性 15%（舊單位 8.5 → 8 是捨去差異）
     conducted = [e for e in result.events if isinstance(e, DamageDealt) and e.cause == "conduct"]
     assert {e.target_id for e in conducted} == {U1, U3, U4, fighter}
     assert all(e.weather_permille == 1000 for e in conducted)
@@ -255,27 +256,27 @@ def test_conduct_base_ignores_block_multiplier_and_includes_weather() -> None:
                 source_id=U1,
                 cause="attack",
                 element=Element.LIGHTNING,
-                flat=10,
+                flat=100,
                 multiplier_permille=500,  # 格擋：傷害減半
             )
         ],
     )
     dealt = _damage_by_target(blocked.events)
-    assert dealt[U3] == 5
-    assert dealt[U2] == 5  # 基準 10 × 元素抗性 50%
-    assert dealt[U4] == 15
+    assert dealt[U3] == 50
+    assert dealt[U2] == 50  # 基準 100 × 元素抗性 50%
+    assert dealt[U4] == 150
     wet = run_effects(
         with_conduct_permille(_conduct_scene("rain")),
         [
             DamageEffect(
-                target_id=U3, source_id=U1, cause="attack", element=Element.LIGHTNING, flat=10
+                target_id=U3, source_id=U1, cause="attack", element=Element.LIGHTNING, flat=100
             )
         ],
     )
     dealt = _damage_by_target(wet.events)
-    assert dealt[U3] == 12
-    assert dealt[UnitId("unit_0005")] == 12  # 下雨 +20% 只算一次
-    assert dealt[U2] == 6
+    assert dealt[U3] == 120
+    assert dealt[UnitId("unit_0005")] == 120  # 下雨 +20% 只算一次
+    assert dealt[U2] == 60
 
 
 # ---------------------------------------------------------------------------

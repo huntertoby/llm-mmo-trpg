@@ -73,7 +73,7 @@ def test_a_failed_save_applies_the_status(monkeypatch: pytest.MonkeyPatch) -> No
         Attribute.INT,
         Attribute.STR,
     )
-    assert (save.attack_value, save.defense_value, save.diminished) == (16, 12, False)
+    assert (save.attack_value, save.defense_value, save.diminished) == (160, 120, False)  # 屬性 ×10
     assert save.applied and save.natural == WIN
     assert not of(result, StatusResisted)
     assert [e.status_id for e in of(result, StatusApplied)] == ["root"]
@@ -189,10 +189,10 @@ def test_the_second_root_inside_the_window_uses_150_percent_defense(
     second = cast(first.state, target_id=U2)
     (b,) = of(second, StatusSaveRolled)
     rules = library().ruleset
-    assert (a.defense_value, a.diminished) == (12, False)
-    assert (b.defense_value, b.diminished) == (18, True)  # 12 × 1500‰
-    assert a.modifier == rules.hit_table.modifier(16, 12)
-    assert b.modifier == rules.hit_table.modifier(16, 18)
+    assert (a.defense_value, a.diminished) == (120, False)  # X10-2b 屬性 ×10
+    assert (b.defense_value, b.diminished) == (180, True)  # 120 × 1500‰
+    assert a.modifier == rules.hit_table.modifier(160, 120)
+    assert b.modifier == rules.hit_table.modifier(160, 180)
     assert b.modifier < a.modifier
 
 
@@ -204,7 +204,7 @@ def test_the_window_covers_round_r_plus_2_and_then_recovers() -> None:
         state.round = round_no
         assert control_dr_active(state, unit, "movement") is expected
         plan = plan_status(state, unit, "root")
-        assert (plan.diminished, plan.defense_value) == (expected, 18 if expected else 12)
+        assert (plan.diminished, plan.defense_value) == (expected, 180 if expected else 120)
 
 
 def test_control_groups_do_not_affect_each_other() -> None:
@@ -326,7 +326,7 @@ def _preview_action() -> UseSkill:
 def test_preview_reports_the_resist_chance() -> None:
     state = _foe_state()
     (target,) = preview(state, _preview_action()).targets
-    expected = _chance(state, "root", attack_attr=Attribute.INT, defense=12)
+    expected = _chance(state, "root", attack_attr=Attribute.INT, defense=120)
     assert target.status_chances == (StatusChance("root", "root", expected),)
     (chance,) = target.status_chances
     assert chance.apply_chance == expected and chance.resist_chance == 1 - expected
@@ -339,7 +339,7 @@ def test_preview_includes_the_diminishing_penalty() -> None:
     state.units[U2].control_dr = {"movement": 3}
     diminished = preview(state, _preview_action()).targets[0].status_chances[0]
     assert diminished.diminished and not plain.diminished
-    assert diminished.apply_chance == _chance(state, "root", attack_attr=Attribute.INT, defense=18)
+    assert diminished.apply_chance == _chance(state, "root", attack_attr=Attribute.INT, defense=180)
     assert diminished.apply_chance < plain.apply_chance
 
 

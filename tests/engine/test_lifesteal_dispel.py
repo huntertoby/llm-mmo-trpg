@@ -116,13 +116,13 @@ def test_lifesteal_is_floored_and_ignores_the_shield_absorption(
 
 def test_a_fully_absorbed_hit_steals_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(spell(SINGLE5, drain(500, "1d4")), [(5, 3)])
-    _wound(state, U1, 5)
-    state.units[U2].statuses = [StatusInstance("shielded", 2, U2, 99)]
+    _wound(state, U1, 50)  # X10-2b：HP、護盾 ×10
+    state.units[U2].statuses = [StatusInstance("shielded", 2, U2, 990)]
     script_randint(monkeypatch, [19, 4])
     result = cast(state, target_id=U2)
     (hit,) = of(result, DamageDealt)
     assert hit.amount == hit.absorbed
-    assert of(result, Healed) == [] and result.state.units[U1].hp == 5
+    assert of(result, Healed) == [] and result.state.units[U1].hp == 50
 
 
 def test_lifesteal_never_heals_above_the_maximum_hp(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -223,8 +223,8 @@ def test_the_split_effect_damages_enemies_and_heals_allies_with_one_roll(
     result = cast(state, target_pos=Pos(x=5, y=3))
     (hit,) = of(result, DamageDealt)
     (heal,) = of(result, Healed)
-    assert hit.target_id == U3 and hit.rolls == (7,)
-    assert heal.target_id == U2 and heal.rolls == (7,) and heal.cause == "heal"
+    assert hit.target_id == U3 and hit.rolls == (70,)  # 骰面 ×10（X10-2b）
+    assert heal.target_id == U2 and heal.rolls == (70,) and heal.cause == "heal"
     assert heal.amount > 0 and result.state.units[U2].hp > 1
     assert queue == []  # 全部骰值剛好用完：沒有第二次擲骰
 
@@ -251,7 +251,7 @@ def test_a_critical_hit_adds_dice_for_the_enemy_only(monkeypatch: pytest.MonkeyP
     result = cast(state, target_pos=Pos(x=5, y=3))
     (hit,) = of(result, DamageDealt)
     (heal,) = of(result, Healed)
-    assert hit.crit and hit.rolls == (5, 9) and heal.rolls == (5,) and queue == []
+    assert hit.crit and hit.rolls == (50, 90) and heal.rolls == (50,) and queue == []  # 骰面 ×10
 
 
 def test_a_split_effect_with_no_one_in_the_area_rolls_nothing(

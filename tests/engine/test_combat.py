@@ -140,9 +140,9 @@ def test_crit_doubles_dice_not_flat() -> None:
     rolled = next(e for e in events if isinstance(e, AttackRolled))
     damage = next(e for e in events if isinstance(e, DamageDealt))
     assert rolled.hit and rolled.crit
-    assert damage.rolls == (5, 6) and damage.crit
-    # (5 + 6) + 力量 16 × 0.3 = 15.8 → 15（無條件捨去）
-    assert damage.amount == 15
+    assert damage.rolls == (50, 60) and damage.crit  # 骰面 ×10（X10-2b）
+    # (50 + 60) + 力量 160 × 0.3 = 158
+    assert damage.amount == 158
 
 
 def test_crit_range_requires_hit() -> None:
@@ -169,7 +169,7 @@ def test_crit_range_requires_hit() -> None:
 
 def test_natural_one_misses_even_with_huge_bonus() -> None:
     m = make_map(FLAT3)
-    a = spawn(Team.ALLY, (0, 1), template("hero_fighter", attributes={"str": 500}))
+    a = spawn(Team.ALLY, (0, 1), template("hero_fighter", attributes={"str": 999}))
     t = spawn(Team.ENEMY, (1, 1), "bandit")
     s = with_rolls(give_turn(make_state(m, [a, t]), U1), [(20, 1)])
     events = resolve(s, Attack(unit_id=U1, target_id=U2)).events
@@ -183,9 +183,10 @@ def test_damage_minimum_one_on_hit() -> None:
     s = with_rolls(state, [(20, 15), (8, 1)])
     events = resolve(s, Attack(unit_id=U1, target_id=U2)).events
     damage = next(e for e in events if isinstance(e, DamageDealt))
-    # 物理抗性 100% → 元素修正下限 25%：(1 + 4.8) × 0.25 = 1.45 → 1
+    # 物理抗性 100% → 元素修正下限 25%：(10 + 48) × 0.25 = 14.5 → 14
+    # （X10-2b ×10；舊單位 1.45 → 1 是捨去差異）
     assert damage.element_mod_ppm == 250_000
-    assert damage.amount == 1
+    assert damage.amount == 14
 
 
 def test_defend_raises_defense_by_quarter() -> None:
@@ -260,11 +261,11 @@ def test_element_modifier_applied_to_damage() -> None:
     state = _duel(resist={"elemental": 200}, element_mods={"fire": 500})
     result = run_effects(
         with_rolls(state, [(6, 4)]),
-        [DamageEffect(target_id=U2, element=Element.FIRE, dice="1d6", flat=6)],  # type: ignore[arg-type]
+        [DamageEffect(target_id=U2, element=Element.FIRE, dice="1d6", flat=60)],  # type: ignore[arg-type]
     )
     damage = next(e for e in result.events if isinstance(e, DamageDealt))
-    # (4 + 6) × 0.8 × 1.5 = 12
-    assert damage.amount == 12
+    # (40 + 60) × 0.8 × 1.5 = 120（X10-2b：骰面與固定值 ×10）
+    assert damage.amount == 120
     assert result.state.units[U2].resist[ResistGroup.ELEMENTAL] == 200
 
 

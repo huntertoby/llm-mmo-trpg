@@ -43,7 +43,7 @@ def _with(state: BattleState, uid: str, status_id: str, remaining: int = 2) -> B
     return s
 
 
-def _hit(state: BattleState, flat: int = 10) -> DamageDealt:
+def _hit(state: BattleState, flat: int = 100) -> DamageDealt:  # X10-2b ×10
     effect = DamageEffect(
         source_id=U1, target_id=U2, cause="attack", flat=flat, element=Element.PHYSICAL
     )
@@ -59,15 +59,16 @@ def _hit(state: BattleState, flat: int = 10) -> DamageDealt:
 def test_guarded_takes_seventy_percent_of_the_damage() -> None:
     plain = _hit(_duel()).amount
     guarded = _hit(_with(_duel(), U2, "guarded"))
-    assert plain == 10
-    assert guarded.amount == 7 and guarded.status_ppm == 700_000
+    assert plain == 100
+    assert guarded.amount == 70 and guarded.status_ppm == 700_000
 
 
 def test_guarded_and_vulnerable_multiply_in_order_and_floor_once() -> None:
     state = _with(_with(_duel(), U2, "guarded"), U2, "vulnerable")
-    event = _hit(state, flat=11)
+    # X10-2b：舊值 11 ×10 ＝ 110 時逐步捨去也剛好相同，改用 111 才分得出「只捨去一次」
+    event = _hit(state, flat=111)
     assert event.status_ppm == 700 * 1250
-    assert event.amount == 9  # 11 × 0.875 = 9.625 → 9（逐步捨去會得到 8）
+    assert event.amount == 97  # 111 × 0.875 = 97.125 → 97（逐步捨去會得到 77 × 1.25 → 96）
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ def test_empowered_adds_two_to_every_effective_attribute() -> None:
     rules = state.ruleset
     unit = state.units[U1]
     for attr in Attribute:
-        assert effective_attribute(rules, unit, attr) == unit.attributes[attr] + 2
+        assert effective_attribute(rules, unit, attr) == unit.attributes[attr] + 20  # X10-2b ×10
     plain = _duel()
     assert defense_value_permille(unit, rules) > defense_value_permille(plain.units[U1], rules)
 
@@ -111,12 +112,13 @@ def test_empowered_boosts_spell_scaling_and_the_status_save() -> None:
     low = preview(state, action).targets[0].damage
     high = preview(boosted, action).targets[0].damage
     assert low is not None and high is not None
-    assert high.minimum == low.minimum + 1  # 智力 +2 × 0.5
+    assert high.minimum == low.minimum + 10  # 智力 +20 × 0.5（X10-2b 屬性 ×10）
     # 抵抗判定：受術者的 save_attr 也看有效屬性
     shielded_wil = _with(state, U2, "empowered")
     base_value = plan_status(state, state.units[U2], "taunted").defense_value
     assert (
-        plan_status(shielded_wil, shielded_wil.units[U2], "taunted").defense_value == base_value + 2
+        plan_status(shielded_wil, shielded_wil.units[U2], "taunted").defense_value
+        == base_value + 20
     )
 
 
@@ -152,27 +154,27 @@ def test_regenerating_heals_at_turn_start_and_lasts_three_turns(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     state = _duel()
-    state.units[U2].hp = 10
+    state.units[U2].hp = 100  # X10-2b ×10
     state = _with(state, U2, "regenerating", 3)
     script_rolls(monkeypatch, [3, 3, 3])
     expected_remaining = [2, 1, None]
     for remaining in expected_remaining:
         result = resolve(state, EndTurn(unit_id=U1))
         (healed,) = [e for e in of(result, Healed) if e.target_id == U2]
-        assert healed.amount == 3 and healed.rolls == (3,)
+        assert healed.amount == 30 and healed.rolls == (30,)  # 骰面 ×10
         state = resolve(result.state, EndTurn(unit_id=U2)).state
         status = state.units[U2].get_status("regenerating")
         assert (None if status is None else status.remaining) == remaining
-    assert state.units[U2].hp == 19
+    assert state.units[U2].hp == 190
 
 
 def test_regenerating_is_halved_by_poison(monkeypatch: pytest.MonkeyPatch) -> None:
     state = _with(_with(_duel(), U2, "regenerating", 3), U2, "poison", 3)
-    state.units[U2].hp = state.units[U2].max_hp - 10
+    state.units[U2].hp = state.units[U2].max_hp - 100  # X10-2b ×10
     script_rolls(monkeypatch, [2, 4])  # 狀態依 ID 排序：poison 的 1d4＝2，再 regenerating 的 1d4＝4
     result = resolve(state, EndTurn(unit_id=U1))
     (healed,) = [e for e in of(result, Healed) if e.target_id == U2]
-    assert healed.received_permille == 500 and healed.amount == 2  # 4 × 50%
+    assert healed.received_permille == 500 and healed.amount == 20  # 40 × 50%（骰面 ×10）
 
 
 def test_regenerating_never_exceeds_max_hp(monkeypatch: pytest.MonkeyPatch) -> None:

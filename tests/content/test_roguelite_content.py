@@ -23,8 +23,8 @@ def test_shipped_rules_load_and_pass_cross_checks() -> None:
     assert rules.battles == 5
     assert rules.offer_size == 3
     assert rules.off_route_per_offer == 1
-    assert rules.attribute_points_per_level == 2
-    assert rules.start_free_points == 4
+    assert rules.attribute_points_per_level == 20  # X10-2b：屬性 ×10
+    assert rules.start_free_points == 40
     assert roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget) == []
 
 

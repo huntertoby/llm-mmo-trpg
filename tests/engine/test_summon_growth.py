@@ -106,8 +106,8 @@ def melee_permille() -> int:
 
 
 def test_growth_follows_the_owner_level() -> None:
-    base_hp, base_flat = hp_of({"level": 1, "attributes": {"int": 10}})
-    hp5, flat5 = hp_of({"level": 5, "attributes": {"int": 10}})
+    base_hp, base_flat = hp_of({"level": 1, "attributes": {"int": 100}})
+    hp5, flat5 = hp_of({"level": 5, "attributes": {"int": 100}})
     growth = library().ruleset.core.summon_growth
     # 成長的 HP 也跟著定位係數（骷髏是近戰，3-33f1）放大；取整容許差 1
     scaled = growth.hp_per_level * 4 * melee_permille() / 1000
@@ -116,19 +116,19 @@ def test_growth_follows_the_owner_level() -> None:
 
 
 def test_growth_follows_the_scaling_attribute() -> None:
-    low, _ = hp_of({"attributes": {"int": 10}})
-    high, _ = hp_of({"attributes": {"int": 20}})
+    low, _ = hp_of({"attributes": {"int": 100}})
+    high, _ = hp_of({"attributes": {"int": 200}})  # X10-2b 屬性 ×10
     core = library().ruleset.core
-    mod = (20 - core.ability_mod_base) // core.ability_mod_divisor
+    mod = (200 - core.ability_mod_base) // core.ability_mod_divisor
     scaled = core.summon_growth.hp_per_attr_mod * mod * melee_permille() / 1000
     assert abs((high - low) - scaled) <= 1
     # 縮放屬性之外的屬性不影響（召喚技能縮放智力）
-    other, _ = hp_of({"attributes": {"int": 10, "str": 20}})
+    other, _ = hp_of({"attributes": {"int": 100, "str": 200}})
     assert other == low
 
 
 def test_growth_values_are_integers_from_core_rules() -> None:
-    state = arena([summon_skill()], owner={"level": 3, "attributes": {"int": 14}})
+    state = arena([summon_skill()], owner={"level": 3, "attributes": {"int": 140}})
     g = growth_of(state, state.units[U1], "skill_t_summon")
     core = state.ruleset.core.summon_growth
     assert g.hp == core.hp_per_level * 2 + core.hp_per_attr_mod * 2

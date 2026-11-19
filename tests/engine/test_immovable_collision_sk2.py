@@ -46,7 +46,7 @@ def arena(foe_tags: tuple[str, ...] = (), *, base: str = "bandit") -> BattleStat
     m = make_map(FLAT, None, ally=[(0, 4)], enemy=[(2, 4)])
     spawns = [
         spawn(Team.ALLY, (0, 4), template("hero_fighter", attributes=NO_PERK)),
-        spawn(Team.ENEMY, (2, 4), no_reactions(base, max_hp=200, tags=foe_tags)),
+        spawn(Team.ENEMY, (2, 4), no_reactions(base, max_hp=2000, tags=foe_tags)),
     ]
     return give_turn(make_state(m, spawns), U1)
 
@@ -77,8 +77,8 @@ def test_an_immovable_tag_takes_one_wall_collision_and_stays(pull: bool, distanc
     assert (hit.unit_id, hit.obstacle, hit.shortfall, hit.source_id) == (U2, "immovable", 1, U1)
     assert (hit.pos.x, hit.pos.y) == (2, 4)
     assert [(d.target_id, d.source_id, d.amount) for d in collisions(result.events)] == [
-        (U2, U1, 4)
-    ]  # 推 2 格也只算一次（照撞牆一次）
+        (U2, U1, 40)
+    ]  # 推 2 格也只算一次（照撞牆一次；X10-2b 骰面 ×10）
     assert result.state.units[U2].xy == (2, 4)
     assert result.state.units[U2].collided_round == result.state.round
     (resisted,) = of(result.events, PushResisted)
@@ -98,7 +98,7 @@ def test_the_giant_boss_takes_one_collision(pull: bool) -> None:
     (hit,) = of(result.events, Collided)
     assert (hit.unit_id, hit.obstacle, hit.shortfall) == (giant.id, "immovable", 1)
     assert result.state.units[giant.id].xy == (4, 4)
-    assert result.state.units[giant.id].hp == giant.hp - 4
+    assert result.state.units[giant.id].hp == giant.hp - 40  # X10-2b 骰面 ×10
 
 
 def test_steadfast_reduced_to_zero_counts_but_a_partial_push_does_not() -> None:
