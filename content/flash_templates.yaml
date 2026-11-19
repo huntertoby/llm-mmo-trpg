@@ -786,6 +786,8 @@ extra_major:
   - {id: summon_deepen, category: deepen, op: summon_deepen, only: summon, prefix_zh: 強化, summary_zh: 加深：召喚物更強壯，並多一個小特性, headline_zh: "召喚物更強，還多一個小本事"}
   - {id: summon_count, category: deepen, op: summon_count, only: summon, prefix_zh: 雙生, summary_zh: 加深：一次召喚 2 隻較弱的召喚物, headline_zh: "一次召出 2 隻，各自弱一點", say_zh: "一次召出 2 隻，每隻比原本弱，但能分頭行動、多擋一個位置。"}
   - {id: summon_bridge, category: bridge, op: summon_bridge, only: summon, prefix_zh: 灌注, summary_zh: "橋接{keyword}：召喚物多帶一個{keyword}灌注", headline_zh: "召喚物的攻擊帶上{keyword}"}
+  # AP-2（#168，06 6.3「預支」：閃現可以變化，例如大變化 +2／−2，每場 1 次）：預支技能只出這一類（其他補充大變化不給它）。
+  - {id: borrow_deep, category: deepen, op: borrow_deep, only: borrow, amount: 2, uses: 1, prefix_zh: 豪借, summary_zh: 加深：一次預支 2 AP（下回合少 2 AP），每場只能用 1 次, headline_zh: "一次預支 2 AP，每場只能用一次", say_zh: "這招一次預支 2 AP：這回合多 2、下回合少 2，每場只能用一次。"}
 
 # 轉型（6.34.5、#73）：第 3 次閃現（或重閃第 3 次）有合法轉型時一定是選項之一（#70）；可轉的種類有好幾種時
 # 由種子挑一種。min_tier：最低角色階級（1 階被動、反應；2 階起召喚、陷阱、姿態；3 階起修正型被動）。

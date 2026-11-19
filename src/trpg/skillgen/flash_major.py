@@ -749,11 +749,12 @@ def extra_variations(
     out: list[Variation] = []
     summon = is_summon_skill(skill)
     shield = _shield_index(skill) is not None
+    borrow = skill.borrows_ap  # 預支技能（AP-2）只出 only: borrow 的模板
     held = held or {}
     for template in library.flash.extra_major:
         if template.category != category:
             continue
-        if (
+        if (template.only == "borrow") != borrow or (
             (template.only == "support" and not support)
             or (template.only == "summon" and not summon)
             or (template.only == "shield" and not shield)
@@ -918,11 +919,32 @@ def apply_extra(
         return _apply_summon(library, skill, template, variation)
     if template.only == "shield":
         return _apply_shield(library, skill, template, rng)
+    if template.only == "borrow":
+        return _apply_borrow(library, skill, template)
     for index, (base, effects) in enumerate(_support_drafts(skill, template, variation, library)):
         done = finish_transform(base, effects, rng.fork(str(index)), library)
         if done is not None and meets_floor(skill, done, library):
             return done
     return None
+
+
+def _apply_borrow(
+    library: ContentLibrary, skill: SkillDef, template: ExtraMajorTemplate
+) -> SkillDef | None:
+    """預支技能的大變化（AP-2，06 6.3「閃現可以變化，例如大變化 +2／−2，每場 1 次」）：``op`` 是
+    ``borrow_deep``——預支的 AP 改成模板的 ``delta``（2），每場只能用 ``uses``（1）次。固定強度，
+    照預算窗與驗證器檢查。"""
+    if template.op != "borrow_deep" or not skill.borrows_ap:
+        return None
+    base, effects = _base(skill)
+    amount = template.amount or 2
+    for effect in effects:
+        if effect["type"] == "borrow_ap":
+            if int(effect.get("amount") or 1) >= amount:
+                return None  # 已經預支這麼多：沒有變化
+            effect["amount"] = amount
+    base["cost"] = {**base["cost"], "uses_per_battle": template.uses or 1}
+    return fixed_strength(base, effects, library)
 
 
 def _apply_summon(

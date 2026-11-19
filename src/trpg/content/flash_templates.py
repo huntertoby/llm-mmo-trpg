@@ -458,14 +458,19 @@ class ExtraMajorTemplate(ContentModel):
     id: str = Field(pattern=ID_PATTERN)
     category: str = Field(pattern=ID_PATTERN)
     op: str = Field(pattern=ID_PATTERN)
-    only: Literal["support", "summon", "shield"]
-    """適用對象：輔助技（治療、護盾、增益）、召喚技能或護盾類（有護盾效果，3W-2b）。"""
+    only: Literal["support", "summon", "shield", "borrow"]
+    """適用對象：輔助技（治療、護盾、增益）、召喚技能、護盾類（有護盾效果，3W-2b）或預支技能（帶
+    ``borrow_ap``，AP-2；預支技能只出這一類）。"""
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     """``only: shield`` 的加深／橋接：護盾改用的狀態（``statuses.yaml`` 的 ``shielded_*``）。"""
     keyword: str | None = Field(default=None, pattern=ID_PATTERN)
     """``only: shield`` 的橋接：這個模板橋接到的關鍵字（持有者持有越多越優先）。"""
     needs_held: bool = False
     """``only: shield`` 的橋接：true ＝ 持有者必須持有 ``keyword`` 才會出現（3W-2c，帶電）。"""
+    amount: int | None = Field(default=None, ge=1, le=2)
+    """``only: borrow``（AP-2）：預支改成幾 AP。"""
+    uses: int | None = Field(default=None, ge=1)
+    """``only: borrow``（AP-2）：每場可以用幾次。"""
     prefix_zh: str = Field(min_length=1)
     summary_zh: str = Field(min_length=1)
     llm_hint: str = ""

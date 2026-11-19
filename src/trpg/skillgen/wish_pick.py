@@ -38,6 +38,7 @@ from dataclasses import dataclass, replace
 from typing import Final, Literal
 
 from trpg.content.library import ContentLibrary
+from trpg.content.player_pool import player_skills
 from trpg.content.skill_pick import WISH_TAG_GROUPS, WishEffectTag, WishTags
 from trpg.content.skills import SkillDef, damage_elements, weapon_problem
 from trpg.shared.rng import Rng
@@ -67,6 +68,7 @@ from trpg.skillgen.skill_pick import (
 from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
+    "BORROW_WISH",
     "PHYSICAL",
     "SUMMON_HINT",
     "WISH_CARDS",
@@ -80,6 +82,7 @@ __all__ = [
     "WishPick",
     "WishPicker",
     "WishResult",
+    "borrow_pool",
     "clean_wish_tags",
     "dual_elements",
     "element_slots",
@@ -556,6 +559,38 @@ def _handwritten_draws(
                 found[key] = PickCandidate(skill, "pool", None, key)
 
 
+BORROW_WISH: Final = ("buff", "around")
+"""預支技能（AP-2，06 6.3「許願池對到『增益』＋形狀『自身』時可以出現」）：效果標籤與形狀標籤。"""
+
+
+def borrow_pool(library: ContentLibrary, tier: int) -> tuple[SkillDef, ...]:
+    """手寫的預支技能（帶 ``borrow_ap``；依 ID）：不是傳說、角色階級 ``tier`` 用得到。組合器只由
+    獨立串流做預支，許願另外把手寫的放進候選。"""
+    return tuple(
+        s
+        for _, s in sorted(player_skills(library).items())
+        if s.borrows_ap and s.rarity != "legendary" and minimum_tier(s, library) <= tier
+    )
+
+
+def _borrow_draws(
+    library: ContentLibrary,
+    request: CandidateRequest,
+    check: _Filter,
+    tags: WishTags,
+    found: dict[DesignKey, PickCandidate],
+) -> None:
+    """願望的效果標籤有「增益」、形狀標籤有「自身周圍」時，手寫的預支技能放進候選（出題條件照舊：
+    種類、關鍵字、手上已有、武器）。其他願望不動（既有的許願結果不變）。"""
+    effect, shape = BORROW_WISH
+    if effect not in tags.effects or shape not in tags.shapes:
+        return
+    for skill in borrow_pool(library, request.tier):
+        key = design_key(skill)
+        if key not in found and check.ok(skill, tags):
+            found[key] = PickCandidate(skill, "pool", None, key)
+
+
 def _element_draws(
     library: ContentLibrary,
     check: _Filter,
@@ -711,6 +746,7 @@ def wish_pool(
     found: dict[DesignKey, PickCandidate] = {}
     tried = _draw(library, request, check, tags, WISH_FORK, seeds, enough, found)
     _handwritten_draws(library, request, check, tags, found)
+    _borrow_draws(library, request, check, tags, found)  # AP-2：增益＋自身時放進預支技能
     tried += _tag_draws(library, request, check, tags, found, enough)
     _element_draws(library, check, tags, found)
     _dual_draws(library, request, check, tags, found)

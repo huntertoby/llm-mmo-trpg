@@ -583,7 +583,12 @@ def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> 
 
 def _rule_rewrite_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     primitives = by_id(library.ruleset.primitives)
-    rewrites = [e.type for e in skill.effects if primitives[e.type].category == "rule_rewrite"]
+    # 預支（AP-2，06 6.3）：代價是冷卻 2 與稀有度，不套改寫規則的個數與冷卻下限
+    rewrites = [
+        e.type
+        for e in skill.effects
+        if primitives[e.type].category == "rule_rewrite" and e.type != "borrow_ap"
+    ]
     if not rewrites:
         return []
     out: list[Violation] = []

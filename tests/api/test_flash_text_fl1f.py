@@ -45,7 +45,7 @@ def test_every_template_has_a_headline() -> None:
     heads += [(t.id, t.headline_zh) for t in flash.major]
     heads += [(t.id, t.headline_zh) for t in flash.extra_major]
     heads += [(t.id, t.headline_zh) for t in flash.transforms]
-    assert len(heads) == 103  # SK-1 +13（90 → 103）
+    assert len(heads) == 104  # SK-1 +13（90 → 103）；AP-2 +1（預支大變化 borrow_deep）
     missing = [template for template, headline in heads if headline is None]
     assert missing == ["support_keyword"]
     for keyword in ("wet", "concealed"):

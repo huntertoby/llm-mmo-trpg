@@ -58,6 +58,7 @@ from trpg.content.library.tables import (
     _load_summons,
 )
 from trpg.content.library.unit_checks import (
+    _check_borrow_carriers,
     _check_builds,
     _check_unit_phases,
     _check_units,
@@ -292,6 +293,7 @@ def _load_units(
         "ai_profiles": t.ai_profiles,
     }
     _check_units(root, units, gear=gear, **checks)
+    _check_borrow_carriers(root, units, skills)  # AP-2：預支技能只給精英、頭目
     summons = {s.id: s.template for s in t.summons.summons}
     _check_units(root, summons, source=root / "units" / "summons", **checks)
     _check_builds(root, t.builds, units, gear=gear, **checks)

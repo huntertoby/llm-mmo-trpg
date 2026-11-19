@@ -29,11 +29,10 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "absorb_surface": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "contagion": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
         "hook": "SK-2 新原語：還沒放進骨架與內建技能（接進出題待 PM 決定）",
-        "borrow_ap": "AP-2 第 1 項：基本款預支技能在第 2 項加入",
     },
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
-        "borrowed_ap": "AP-2 第 1 項：預支（borrow_ap）施加，基本款預支技能在第 2 項加入",
+        "borrowed_ap": "只由預支（borrow_ap，AP-2）施加，技能不能直接施加（mechanic_only）",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
         "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "array_ward": "只由陣眼石靈範本的 opening_statuses 開場掛上（5A-M2b），沒有技能施加",
@@ -113,6 +112,8 @@ _POOL_ONLY = frozenset(
     {
         # KW-2：連擊、怒氣、專注、氣的示範招與利用者（#161；builds.yaml 是模擬回歸範本，
         # 不為示範而改動）
+        # AP-2：通用池的預支技能（不裝在 build 或敵人上，以免改動既有戰鬥；精英、頭目要帶時另排）
+        "skill_borrowed_beat",
         "skill_blood_fury",
         "skill_breathing_qi",
         "skill_centering",

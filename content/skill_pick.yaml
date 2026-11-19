@@ -92,7 +92,7 @@ wish_tags:
       statuses: [shielded, guarded, stoneskin, shielded_thorns, shielded_mending, shielded_wet, shielded_charged, shielded_marking]
     - id: buff
       name_zh: 增益
-      primitives: [grant_ap, reset_cooldown, restore_resource, cheat_death, extra_reaction, enter_form, cleanse]
+      primitives: [grant_ap, reset_cooldown, restore_resource, cheat_death, extra_reaction, enter_form, cleanse, borrow_ap]   # AP-2：預支
       beneficial_statuses: true   # 其他增益狀態（激昂、戰意、加速、姿態…；上面護盾列的不算）
     - id: movement
       name_zh: 位移
