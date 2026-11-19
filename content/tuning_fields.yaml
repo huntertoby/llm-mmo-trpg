@@ -268,3 +268,31 @@ targets:
       - {path: weights.route_off_penalty, label_zh: 偏離這一格路線的候選扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: PK-3：「跟主路線」改成扣分。候選不符合這一格的路線（加深、橋接要跟主屬性；新方向要不同屬性）扣這麼多分；只有符合路線的候選不夠時才會放進來。}
       - {path: weights.keyword_relaxed_penalty, label_zh: 只帶部分關鍵字的候選扣分, kind: int, hint_min: 0, hint_max: 1000, note_zh: PK-3：橋接這類要兩個關鍵字的格子，放寬收只帶其中一個關鍵字的候選時扣這麼多分。}
       - {path: weights.wish_match, label_zh: 許願池：願望相合, kind: int, hint_min: 0, hint_max: 3000, note_zh: PK-4（07 7.6「許願池：願望驅動」第 3 點）：許願的候選每命中一個願望標籤（關鍵字、元素、效果類型、形狀、種類）加這麼多分。要高過和手上技能的協同（協同最多「每條連線的分數 × 最多算幾條」＝750），願望才是最大權重；越高越照願望、越不管協同。只有許願池用。}
+  # SK-5（SK-3b 待決 4、WC-2 待決 11、SK-4 待決 4）：被動觸發時機的預算係數（skill_triggers.yaml，全體共用）。
+  # 只展開有 budget_coefficient_permille 的時機（every_n_hits 依 n 查表，鍵是數字，路徑寫不出來，不開）。
+  - kind: skill_triggers
+    label_zh: 被動觸發時機
+    glob: skill_triggers.yaml
+    fields:
+      - {path: "triggers[*].budget_coefficient_permille", label_zh: 的預算係數（‰）, kind: permille, hint_min: 100, hint_max: 600, existing_only: true, note_zh: 用這個時機的被動技能，可用預算＝階級預算 × 這個係數（取代主動技能的 AP 係數）。越大，用這個時機的被動效果可以越強；改了所有用這個時機的被動（手寫、組合器、LLM、裝備詞條）預算比例跟著變，超出合格區間的會在驗證時列出。例：「你造的關鍵字被利用時」300、「命中時」400、「回合開始時」500。只能 1 以上。}
+  # SK-5：組合器的附帶配方機率（skill_composer.yaml，全體共用）。只開 SK-2b、SK-3b、WC-2、SK-4 加的這幾個值；
+  # 結構性的清單（例 structure.lifesteal_skeletons）與其他抽選機率不開。都是獨立亂數串流：改了只影響抽中與否，沒抽中的種子不變。
+  - kind: skill_composer
+    label_zh: 技能組合器的附帶配方
+    glob: skill_composer.yaml
+    fields:
+      # SK-2b：#166 新原語接進出題
+      - {path: structure.hook_core_permille, label_zh: 位移骨架改成鉤的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 組合器做位移骨架（稀有以上）時，核心改成「鉤」（把直線上第一個敵人拉到身邊）的機率。越大越常出鉤。只能 0～1000。}
+      - {path: structure.absorb_core_permille, label_zh: 光環骨架改成吸收表面的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 組合器做光環骨架（稀有以上）時，核心改成「吸收表面」（吸自己腳下的表面換治療或護盾）的機率。只能 0～1000。}
+      - {path: structure.absorb_secondary_permille, label_zh: 打擊／蓄力加上吸收表面的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 打擊、蓄力／終結骨架（稀有以上、單體形狀、附帶效果還有空位）加上吸收表面（換層數或元素）的機率。只能 0～1000。}
+      - {path: structure.contagion_permille, label_zh: 加上疾病擴散的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 打擊、範圍、控場、陷阱骨架（稀有以上、已施加燃燒／流血／中毒、附帶效果還有空位）加上「疾病擴散」的機率。只能 0～1000。}
+      # SK-3b：SK-3 的新觸發與重擲
+      - {path: structure.exploit_passive_permille, label_zh: 被動改成「被利用時」的機率（‰）, kind: permille, hint_min: 0, hint_max: 300, note_zh: 組合器做被動（史詩以上、題目沒指定關鍵字）時，觸發時機改成「你造的關鍵字被利用時」的機率。只能 0～1000。}
+      - {path: structure.reroll_reaction_permille, label_zh: 反應技改成重擲的機率（‰）, kind: permille, hint_min: 0, hint_max: 300, note_zh: 組合器做反應技（稀有以上、法術或不限類別、題目沒指定關鍵字）時，改成「重擲」的機率。只能 0～1000。}
+      # WC-2：自身周圍被動、層數與召喚物的附帶配方
+      - {path: passive.around_permille, label_zh: 被動改成「自身周圍」的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 組合器做被動時，效果改成作用在持有者周圍一圈敵人（自身周圍小範圍）的機率。只能 0～1000。}
+      - {path: structure.stack_rider_permille, label_zh: 層數關鍵字走附帶配方的機率（‰）, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 題目指定層數關鍵字（連擊、怒氣、專注、氣）時，改成「一般主動技＋累積或消耗那種層數」的機率（其餘照原本的蓄力骨架）。只能 0～1000。}
+      - {path: structure.summon_rider_permille, label_zh: 召喚物關鍵字走附帶配方的機率（‰）, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 題目指定召喚物關鍵字時，改成「一般主動技＋對自己施加號令（你的召喚物傷害提高）」的機率（其餘照原本）。只能 0～1000。}
+      # SK-4：吸血配方
+      - {path: structure.lifesteal_permille, label_zh: 傷害附吸血的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 打擊、範圍骨架的對敵傷害（沒有聖光雙效）附上吸血的機率。越大越常出吸血招；許願同時有「傷害＋治療」時另有專門補抽，不靠這個機率。只能 0～1000。}
+      - {path: structure.lifesteal_amount_permille, label_zh: 附上的吸血比例（‰）, kind: permille, hint_min: 100, hint_max: 500, note_zh: 組合器附上的吸血是造成傷害的這麼多千分比（300＝回復傷害的 30%）。預算照吸血的價值計價，比例越高，同一招的傷害會被重調得越低。只能 1～500（原語上限）。}

@@ -25,6 +25,9 @@ WC-2（#167）另外照許願池的新出題量：
   補抽）；兩個桶取較高的。
 - **形態**（關鍵字）：候選另外放進同關鍵字的手寫技能（``wish_pick.handwritten_pool``）；有一招帶到
   全部標籤就算 100%（手寫技能一定在候選裡）。
+- **吸血**（SK-5）：吸血配方做得到的合法技能（``composer_lifesteal.lifesteal_ready``：打擊、範圍
+  骨架的主動技）另記下吸血版本（``L``，``composer_lifesteal.add_lifesteal``）；願望的效果同時有傷害和治療時
+  算數（同許願池的 ``_lifesteal_draws``；許願池另有指定骨架的補抽，這裡不另跑桶）。
 
 做不到（每一格都是 0）與極低（最好的一格也低於 :data:`LOW_PERMILLE`）的組合分三類：(a) 引擎有原語、
 組合器缺配方；(b) 規則禁止（附設計文件出處）；(c) 連原語都沒有；判斷不了的標「需人工」。
@@ -65,12 +68,14 @@ from trpg.content.skills import SkillDef, damage_elements
 from trpg.content.skills.constants import SkillRarity
 from trpg.shared.rng import Rng
 from trpg.skillgen.composer_dual import add_second_element, second_element_tier
+from trpg.skillgen.composer_lifesteal import add_lifesteal, lifesteal_ready
 from trpg.skillgen.composer_parts import _HAND_WRITTEN_PRIMITIVES
 from trpg.skillgen.composer_retheme import retheme
 from trpg.skillgen.pick_offer import SLOT_KEYWORD_TRIES
 from trpg.skillgen.random_composer import _STACK_SKELETON, ComposeError, compose_with_stats
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.wish_pick import (
+    LIFESTEAL_TAGS,
     SUMMON_HINT,
     handwritten_keywords,
     handwritten_pool,
@@ -82,10 +87,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "docs" / "phases" / "WC-2資料"
 REPORT = ROOT / "docs" / "phases" / "許願覆蓋表-WC2.md"
 OLD_REPORT = ROOT / "docs" / "phases" / "許願覆蓋表.md"
-FORMAT = "wish-coverage/2"
+FORMAT = "wish-coverage/3"
 HINT_SEP = "/"
 DERIVED_SEP = "#"
-"""一個種子的結果字串：``基本簽名#R換元素簽名;…#D雙元素簽名;…``（沒有衍生版本時只有基本簽名）。"""
+"""一個種子的結果字串：``基本簽名#R換元素簽名;…#D雙元素簽名;…#L吸血簽名``（沒有衍生版本時只有基本
+簽名；SK-5 起多 ``L``，格式 /3）。"""
 NO_KEYWORD = "-"
 KINDS: tuple[str, ...] = ("active", "passive", "reaction")
 KIND_FAMILY: dict[str, tuple[str, ...]] = {
@@ -178,9 +184,15 @@ def derived(lib: ContentLibrary, skill: SkillDef, tier: int, seed: int) -> str:
             made = add_second_element(lib, skill, element, rng.fork(element))
             if made is not None:
                 dual.append(skill_signature(lib, made))
-    if not swapped and not dual:
+    drained = []
+    if lifesteal_ready(lib, skill):  # SK-5：吸血版本
+        made = add_lifesteal(lib, skill, Rng(seed).fork("wish-coverage.lifesteal"))
+        if made is not None:
+            drained.append(skill_signature(lib, made))
+    if not swapped and not dual and not drained:
         return ""
-    return f"{DERIVED_SEP}R{';'.join(swapped)}{DERIVED_SEP}D{';'.join(dual)}"
+    out = f"{DERIVED_SEP}R{';'.join(swapped)}{DERIVED_SEP}D{';'.join(dual)}"
+    return out + (f"{DERIVED_SEP}L{';'.join(drained)}" if drained else "")
 
 
 def attempt(lib: ContentLibrary, bucket: Bucket, seed: int) -> tuple[str, str]:
@@ -274,6 +286,7 @@ def measure(buckets: Sequence[Bucket], seeds: int, workers: int) -> list[dict[st
 
 
 type Sig = frozenset[str]
+_LIFESTEAL_NEED: Sig = frozenset(f"effects:{t}" for t in LIFESTEAL_TAGS)
 
 
 def _sig(text: str) -> Sig:
@@ -282,23 +295,27 @@ def _sig(text: str) -> Sig:
 
 @dataclass(frozen=True, slots=True)
 class Group:
-    """一個種子的結果：基本技能的標籤、換主題元素的版本、加第二元素的版本。"""
+    """一個種子的結果：基本技能的標籤、換主題元素的版本、加第二元素的版本、吸血版本（SK-5）。"""
 
     base: Sig
     swapped: tuple[Sig, ...] = ()
     dual: tuple[Sig, ...] = ()
+    drained: tuple[Sig, ...] = ()
 
     @classmethod
     def parse(cls, text: str) -> Group:
         parts = text.split(DERIVED_SEP)
         found = {p[0]: tuple(_sig(x) for x in p[1:].split(";") if x) for p in parts[1:] if p}
-        return cls(_sig(parts[0]), found.get("R", ()), found.get("D", ()))
+        return cls(_sig(parts[0]), found.get("R", ()), found.get("D", ()), found.get("L", ()))
 
     def hits(self, need: Sig, elements: int) -> bool:
-        """``need`` 全帶到：基本技能；願望有元素時換元素的版本；有兩個元素時加第二元素的版本。"""
+        """``need`` 全帶到：基本技能；願望有元素時換元素的版本；有兩個元素時加第二元素的版本；效果
+        同時有傷害和治療時吸血版本（SK-5）。"""
         if need <= self.base:
             return True
         if elements >= 1 and any(need <= s for s in self.swapped):
+            return True
+        if need >= _LIFESTEAL_NEED and any(need <= s for s in self.drained):
             return True
         return elements >= PAIR and any(need <= s for s in self.dual)
 
@@ -714,6 +731,7 @@ def render(lib: ContentLibrary, cov: Coverage, payload: Mapping[str, Any]) -> st
         "（2 階起；物理＋元素 1 階起，WC-2b）；效果有召喚時主動另看指定召喚骨架的桶；"
         "形態的候選另外放進手寫形態技"
         "（有一招全帶到＝100%，每個稀有度欄都一樣）。",
+        "- SK-5：效果同時有傷害和治療時，另算打擊、範圍骨架的主動技加上吸血的版本。",
         f"- 做不到＝每一格都 0；極低＝最好的一格也不到 {LOW_PERMILLE / 10:g}%。",
         "",
         "## 摘要",

@@ -256,6 +256,24 @@ describe("T-B1 表單由欄位清單產生；改過標記與差異一致", () =>
     expect(edits[editKey("objects.yaml", "objects[13].max_hp")]).toMatchObject({ old: 15, text: "20", object_id: "objects" });
   });
 
+  it("SK-5：觸發時機表與組合器表放在規則與預算一組、依清單的 kind 讀欄位；畫面另讀這兩類", () => {
+    const list = [
+      { kind: "unit", id: "ashen_heart", name_zh: "灰燼之心", category: "boss" as const, file: FILE },
+      { kind: "skill_triggers", id: "skill_triggers", name_zh: "被動觸發時機（全體共用）", category: "rules" as const, file: "skill_triggers.yaml" },
+      { kind: "skill_composer", id: "skill_composer", name_zh: "技能組合器的附帶配方（全體共用）", category: "rules" as const, file: "skill_composer.yaml" },
+    ];
+    expect(objectKind("unit", list, "skill_triggers")).toBe("skill_triggers");
+    expect(objectKind("unit", list, "skill_composer")).toBe("skill_composer");
+    const listHtml = renderToStaticMarkup(
+      createElement(ObjectList, { objects: list, selected: "skill_composer", query: "", edits: {}, onQuery: () => undefined, onSelect: () => undefined }),
+    );
+    expect(listHtml).toContain("規則與預算（全體共用）（2）");
+    expect(listHtml).toContain('data-object="skill_composer"');
+    const screen = stripTsComments(readFile(SRC_DIR, "screens/TuningScreen.tsx"));
+    expect(screen).toContain('tapi.tuningObjects("skill_triggers")');
+    expect(screen).toContain('tapi.tuningObjects("skill_composer")');
+  });
+
   it("NW-3b：欄位有 notice_zh 時在那一欄下方顯示提示行（造牆物件的最大 HP），沒有的欄位不顯示；允許下限照後端", () => {
     const NOTICE = "造牆技能會放出這個物件。改 HP 會讓那些技能變強或變弱，技能預算不會跟著算。";
     const row = (path: string, label: string, notice: string | null, limitMin: number | null) => ({
