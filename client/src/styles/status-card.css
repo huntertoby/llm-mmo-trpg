@@ -145,6 +145,32 @@
   opacity: 0.8;
 }
 
+/* AP-2：預支來的那格——9px 菱形（正方形轉 45°）：實心橘、框深橘；用掉後變空心橘框 */
+.stat-pip.ap.borrow {
+  width: 7px;
+  height: 7px;
+  margin: 1px;
+  border-radius: 0;
+  border-color: #b8641a;
+  transform: rotate(45deg);
+}
+
+.stat-pip.ap.borrow.on {
+  background: #ff9a3a;
+  border-color: #b8641a;
+}
+
+/* AP-2：施放預支後，菱形與下回合會少的紅斜線同時淡入 200 ms（不加其他特效） */
+@keyframes ap-borrow-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.stat-pip.ap.fresh {
+  animation: ap-borrow-in 0.2s ease-out;
+}
+
 /* 分隔線：1px 寬、9px 高，同空心框色；左右各留 3px（.stat-pips 的 gap） */
 .stat-pip-sep {
   display: block;

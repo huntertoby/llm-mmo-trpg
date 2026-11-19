@@ -45,7 +45,7 @@ function StatPip({ icon, on }: { icon: StatIcon; on: boolean }) {
 
 /** AP 列的一顆圓點（AP-1）：每顆有自己的說明卡。 */
 function ApPipView({ pip }: { pip: ApPip }) {
-  const cls = ["stat-pip", "ap", pip.kind === "ap" ? "" : pip.kind, pip.on ? "on" : "", pip.keep ? "keep" : ""];
+  const cls = ["stat-pip", "ap", pip.kind === "ap" ? "" : pip.kind, pip.on ? "on" : "", pip.keep ? "keep" : "", pip.fresh === true ? "fresh" : ""];
   return (
     <Hint text={pip.hint}>
       <span className={cls.filter((c) => c !== "").join(" ")} data-ap-pip={pip.kind} aria-label={pip.hint.split("\n")[0]} />
