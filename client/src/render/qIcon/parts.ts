@@ -325,6 +325,19 @@ export function borrowArt(c: Ctx, o: QOpts): void {
   gem(c, o, -2.5, -2.5, 8.3);
   halo(c, o, (q) => slot(q, o, 5.3, 5.3, 4.3));
 }
+/** 用掉的 AP（SK-3 的灰骰 DIE.dim＝「用掉、被換掉」）。 */
+const SPENT = { body: "#a9a6bc", dk: "#6e6a84", hi: "#dcdae6" } as const;
+/** 卡片 AP 的閃電（`bolt` 的外形原樣），換成用掉的灰色三階；右側下半一塊暗面。 */
+function spentBolt(c: Ctx, o: QOpts): void {
+  poly(c, SPENT.body, [[1.6, -10.6], [-7.6, 1.6], [-1.6, 1.6], [-4.2, 10.6], [7, -2.6], [1, -2.6], [4.2, -10.6]], 0.5);
+  poly(c, SPENT.dk, [[7, -2.6], [1, -2.6], [-0.2, 0.2], [2.2, 0.2], [-4.2, 10.6]]); /* 下半右側的暗面 */
+  if (!o.tiny) poly(c, SPENT.hi, [[1.8, -9.4], [-5.6, 0.6], [-3.4, 0.6], [3.2, -9.4]]); /* 同 bolt 的亮條 */
+}
+/** 這回合用完所有 AP 時：灰色的閃電（AP 用光了），左下尖端掉出最後一顆金色火花。tiny：灰閃電＋一顆不帶白芯的金火花。 */
+function spentAll(c: Ctx, o: QOpts): void {
+  at(c, 0.8, 0, 0.9, (q) => spentBolt(q, o));
+  halo(c, o, (q) => star4(q, "#ffd23f", -5.6, 6.0, o.tiny ? 3.9 : 3.7, o.tiny ? null : "#ffffff"));
+}
 /** AP-2 預支的專屬圖樣（取代 EFFECT_ALIAS 暫借的給予 AP）：和狀態「預支」同一個圖，不另加「＋」（美術 PM 裁定 1）。 */
 const AP2_EFFECT: PartTable = {
   borrow_ap: { zh: "預支", topic: "左上一顆大的橘色寶石菱形（AP 列「預支來的那格」），右下一個深色小圓洞、灰框裡一道紅斜線（AP 列「下回合會少的那格」）", d: (c, o) => borrowArt(c, o) },
@@ -611,9 +624,11 @@ export const TRIG: PartTable = {
     zh: "敵人擲中你時", topic: "左上一顆大的紅色二十面骰（佔一半、微斜），砸向右下的小藍盾（同「被攻擊時」的家族）",
     d: (c, o) => at(c, 0, 0, 0.94, (u) => { shieldAt(u, o); halo(u, o, (q) => d20(q, -3.2, -3.2, 7.4, o.tiny ? DIE.redT : DIE.red, { rot: -0.26, hiK: o.tiny ? 1.3 : 1 })); }),
   },
+  /* AR-AP2：AP-2 的觸發換成專屬圖樣（ap2Borrow.js），加在最後。 */
+  on_ap_spent_all: { zh: "這回合用完所有 AP 時", topic: "卡片 AP 的閃電換成用掉的灰色，左下尖端掉出最後一顆金色四芒火花", d: spentAll },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent", on_ap_spent_all: "on_turn_end" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借；AR-AP2：用完所有 AP 時換成專屬圖樣，拿掉暫借
 
 // =====================================================================
 // 接續 6 個

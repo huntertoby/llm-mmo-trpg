@@ -46,6 +46,17 @@ describe("1. 狀態「預支」borrowed_ap", () => {
       expect(calls((c) => QP.entry("effect", "borrow_ap").d(c, o))).toEqual(calls((c) => QP.borrowArt(c, o)));
     }
   });
+  it("3. 觸發「這回合用完所有 AP 時」on_ap_spent_all：TRIG 有專屬圖（灰閃電＋金火花），TRIG_ALIAS 拿掉暫借的回合結束時", () => {
+    expect(QP.TRIG_ALIAS.on_ap_spent_all).toBeUndefined();
+    expect(QP.TRIG.on_ap_spent_all?.zh).toBe("這回合用完所有 AP 時");
+    expect(Object.keys(QP.TRIG).at(-1)).toBe("on_ap_spent_all");
+    const big = calls((c) => QP.entry("trigger", "on_ap_spent_all").d(c, opts(19.7))).join(";");
+    for (const col of ["#a9a6bc", "#6e6a84", "#dcdae6", "#ffd23f", "#ffffff"]) expect(big).toContain(col);
+    const tiny = calls((c) => QP.entry("trigger", "on_ap_spent_all").d(c, opts(11.8))).join(";");
+    expect(tiny).not.toContain("#dcdae6"); /* tiny 不畫亮條 */
+    expect(tiny).not.toContain("#ffffff"); /* 火花不帶白芯 */
+    expect(big).not.toContain("#d8c0ff"); /* 不是回合結束時的月牙 */
+  });
   it("色：亮面、桌面、那格的框照混色算（#ffc793、#ffac5d、#b3a994）", () => {
     expect(QP.BORROW.hi).toBe("#ffc793");
     expect(QP.SLOT_ICON.ring).toBe("#b3a994");
