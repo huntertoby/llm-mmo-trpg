@@ -134,6 +134,7 @@ from trpg.engine.setup import BattleSetup, BattleSetupError, UnitSpawn, starting
 from trpg.engine.skill_infusion import do_infuse_skill
 from trpg.engine.skill_triggers import collect_battle_start, collect_move, settle
 from trpg.engine.skills.conditions import Subject
+from trpg.engine.skills.exploits import Exploit, report_exploits, rule_exploits
 from trpg.engine.skills.followups import second_problem
 from trpg.engine.skills.forms import has_skill_selection, skill_selections
 from trpg.engine.skills.interpreter import use_skill
@@ -1129,7 +1130,9 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
         raise IllegalActionError(problem)
     unit.ap -= cost
     distance, extra = shove_split(ctx.state, unit, target)
+    exploits = _maneuver_exploits(ctx, unit, modifiers.SHOVE, target)
     if contest(ctx, "shove", unit, target, Attribute.STR):
+        start = len(ctx.events)
         execute(
             ctx,
             [
@@ -1142,6 +1145,15 @@ def _do_shove(ctx: Ctx, unit: UnitState, action: Action) -> None:
                 )
             ],
         )
+        report_exploits(ctx, unit.id, exploits, start, set())
+
+
+def _maneuver_exploits(
+    ctx: Ctx, unit: UnitState, use: modifiers.Use, target: UnitState
+) -> list[Exploit]:
+    """推擊、絆倒的修正規則條件因別人造的狀態、表面而對目標成立（SK-3d，玩法交接 4.1.33；對抗
+    之前判斷，對抗成功而且真的作用在目標上才交出）。"""
+    return rule_exploits(ctx.state, unit, use, (Subject(target, target.xy),))
 
 
 def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
@@ -1152,8 +1164,11 @@ def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
     if target.has_status(PRONE):
         raise IllegalActionError(f"目標已經倒地：{target.name_zh}")
     unit.ap -= cost
+    exploits = _maneuver_exploits(ctx, unit, modifiers.TRIP, target)
     if contest(ctx, "trip", unit, target, Attribute.DEX):
+        start = len(ctx.events)
         execute(ctx, [ApplyStatusEffect(target_id=target.id, status_id=PRONE, source_id=unit.id)])
+        report_exploits(ctx, unit.id, exploits, start, set())
 
 
 def _do_interact(ctx: Ctx, unit: UnitState, action: Action) -> None:
