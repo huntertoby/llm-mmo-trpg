@@ -343,6 +343,7 @@ def choose_core(ctx: Ctx) -> list[str]:
 _SPECIAL_CORES: tuple[tuple[str, str], ...] = (
     ("hook", "composer.hook"),
     ("absorb_surface", "composer.absorb_core"),
+    ("borrow_ap", "composer.borrow_core"),  # AP-2：預支（光環骨架，稀有以上）
 )
 """只以獨立串流當核心的原語（SK-2b，玩法交接 4.1.28 第 5 點）：原語 ID 與串流名。"""
 
@@ -367,7 +368,11 @@ def _special_core(ctx: Ctx) -> list[str] | None:
     ``None``，種子照舊走一般抽選（父串流不推進，既有種子的技能不變）。鉤的冷卻下限
     ``hook_min_cooldown``。"""
     rules = ctx.rules.structure
-    permille = {"hook": rules.hook_core_permille, "absorb_surface": rules.absorb_core_permille}
+    permille = {
+        "hook": rules.hook_core_permille,
+        "absorb_surface": rules.absorb_core_permille,
+        "borrow_ap": rules.borrow_core_permille,
+    }
     for name, label in _SPECIAL_CORES:
         if not _special_ready(ctx, name, core=True):
             continue

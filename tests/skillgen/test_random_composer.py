@@ -428,6 +428,7 @@ def test_rule_rewrite_primitives_are_hand_written_only() -> None:
         "extra_reaction",
         "borrow_ap",  # AP-2：組合器只由第 4 項的獨立串流產生
     }
+    rewrites.discard("borrow_ap")  # AP-2：預支由獨立串流 composer.borrow_core 產生（另有測試）
     for seed in range(60):
         skill = compose_random_skill(seed, rarity="epic", skeleton="aura")
         assert not {e.type for e in skill.effects} & rewrites, seed

@@ -330,6 +330,7 @@ modifier:
 # 改寫規則型原語（Phase 3C-4a 起：grant_ap、reset_cooldown、cheat_death）
 max_rule_rewrite: 1           # 每個技能最多 1 個
 rule_rewrite_min_cooldown: 4  # 必須 uses_per_battle: 1 或冷卻至少這麼多回合
+borrow_min_cooldown: 2   # 預支（borrow_ap，AP-2，06 6.3）：每場限一次，或冷卻至少這麼多回合（初值；基本款冷卻 2）
 hook_min_cooldown: 3   # 鉤（hook，SK-2，06 6.38 第 8 點）：冷卻至少這麼多回合（初值）
 rule_rewrite_min_cooldown_with_source: 2   # 花源力（傳說，cost.source）時改為冷卻至少 2 回合（初值）
 

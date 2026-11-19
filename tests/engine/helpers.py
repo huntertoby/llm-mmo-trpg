@@ -137,6 +137,21 @@ def without_sk3b_offers(library: ContentLibrary) -> ContentLibrary:
     )
 
 
+def without_ap2_offers(library: ContentLibrary) -> ContentLibrary:
+    """``library`` 但光環骨架拿掉 AP-2 接進出題的預支（``borrow_ap``）：鎖住「LLM 題目樣本」固定的
+    測試用（同 :func:`without_sk3b_offers`）。"""
+
+    def strip(skeleton: Any) -> Any:
+        kept = tuple(p for p in skeleton.core.primitives if p != "borrow_ap")
+        return skeleton.model_copy(
+            update={"core": skeleton.core.model_copy(update={"primitives": kept})}
+        )
+
+    return dataclasses.replace(
+        library, skeletons={k: strip(v) for k, v in library.skeletons.items()}
+    )
+
+
 SK3B_STREAMS = ("exploit_passive_permille", "reroll_reaction_permille")
 """SK-3b 接進出題的組合器串流（「你造的關鍵字被利用時」被動、重擲反應技）。"""
 

@@ -206,6 +206,10 @@ SNAPSHOTS = {
     # WC-2 第 5 項（#167 第 5 題）：範圍、控場、位移骨架的附帶多 add_stack、consume_stack（層數
     # 關鍵字的附帶配方）。都在 <available> 這層，雜湊同 /22
     "skill-proposal/23": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
+    # AP-2（#168，06 6.3「預支」）：光環骨架核心多預支（borrow_ap，0 AP、唯一效果、只對自己）、觸發
+    # 多「這回合用完所有 AP 時」；補值器把預支補成 0 AP 與冷卻下限。都在 <available>／schema 這層，
+    # 雜湊同 /23
+    "skill-proposal/24": "08524118ced0ff69c1c42828597cad4645514a90c2fba89693aa1024c4f49d9f",
 }
 
 

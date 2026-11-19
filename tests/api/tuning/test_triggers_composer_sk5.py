@@ -28,6 +28,9 @@ COMPOSER_PATHS = (
     "structure.absorb_core_permille",
     "structure.absorb_secondary_permille",
     "structure.contagion_permille",
+    # AP-2
+    "structure.borrow_core_permille",
+    "structure.ap_spent_passive_permille",
     # SK-3b
     "structure.exploit_passive_permille",
     "structure.reroll_reaction_permille",

@@ -40,6 +40,9 @@ structure:
   # 被抽到的機會相當（不另外加權），未經模擬，接數值工坊。
   hook_core_permille: 200             # 位移骨架（稀有以上）核心改成鉤（直線）的機率
   absorb_core_permille: 100           # 光環骨架（稀有以上）核心改成吸收表面（吸自己腳下換治療或護盾）的機率
+  borrow_core_permille: 50            # AP-2：光環骨架（稀有以上）核心改成預支（基本款：0 AP、冷卻 borrow_cooldown、預支 1）的機率；獨立串流 composer.borrow_core
+  borrow_cooldown: 2                  # AP-2：組合器做的預支冷卻（06 6.3 基本款）
+  ap_spent_passive_permille: 50       # AP-2：被動（史詩以上、題目沒指定關鍵字）改成「這回合用完所有 AP 時」的機率；獨立串流 composer.ap_spent
   absorb_secondary_permille: 150      # 打擊、蓄力／終結骨架（稀有以上、單體形狀、附帶效果還有空位）加上吸收表面（換層數或元素）的機率
   contagion_permille: 150             # 打擊、範圍、控場、陷阱骨架（稀有以上、已施加燃燒／流血／中毒、附帶效果還有空位）加上疾病擴散的機率
   # SK-3b（玩法交接 4.1.30 第 5 點）：SK-3 的新觸發與重擲接進出題，同樣用獨立亂數串流（沒抽中或組不出來的種子不變）。
@@ -213,7 +216,7 @@ variant:
 llm_topic:
   secondary_count: 6
   condition_count: 4
-  core_exclude: [enter_form, leave_form, summon_beside, borrow_ap]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）；summon_beside 只由閃現轉型產生（TF-1）；borrow_ap：AP-2 第 2 項先不出，第 4 項接進 LLM 出題
+  core_exclude: [enter_form, leave_form, summon_beside]   # 形態只由手寫內容提供（Phase 3J；LLM 題目不出形態）；summon_beside 只由閃現轉型產生（TF-1）
   base_weight: 100
   quota_percent_per_use: 100
   core_weights: {}                          # 個別原語的基礎權重（沒列出的用 base_weight）

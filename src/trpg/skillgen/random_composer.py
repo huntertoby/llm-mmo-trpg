@@ -23,6 +23,8 @@ from trpg.content.skill_rules import SkeletonDef
 from trpg.content.skill_scaling import ScalingFacts
 from trpg.content.skill_triggers import EVERY_N_HITS
 from trpg.content.skills import (
+    BORROW_AP,
+    ON_AP_SPENT_ALL,
     ON_KEYWORD_EXPLOITED,
     REROLL,
     REROLL_EVENTS,
@@ -330,6 +332,10 @@ def _attempt(
         )
     ctx = Ctx(library, rng, skeleton, rarity, tier, category, order[0], theme)
     core = choose_core(ctx)
+    if core == [BORROW_AP]:  # AP-2：預支的基本款（獨立串流抽中；不走一般的形狀、效果與代價）
+        if ap_cost is not None:
+            raise Retry  # 指定了 AP 的題目做不出 0 AP 的預支
+        return _borrow_skill(library, seed, fixed, weapon_req, scaling, ctx)
     build_shape(ctx, core)
     build_effects(ctx, core)
     condition = build_condition(ctx)
@@ -360,6 +366,38 @@ def _attempt(
         if tune(rng, library, base, ctx.effects, ctx.knobs):
             return _finish(library, seed, _with_scaling_extras(rng, library, base, ctx), ctx)
     raise Retry
+
+
+def _borrow_skill(  # noqa: PLR0917 — 一次組合的參數（同 _attempt）
+    library: ContentLibrary,
+    seed: int,
+    fixed: tuple[int, SkillRarity, SkeletonDef, str],
+    weapon_req: str,
+    scaling: str,
+    ctx: Ctx,
+) -> SkillDef:
+    """預支的基本款（AP-2，06 6.3）：0 AP、冷卻 ``structure.borrow_cooldown``、形狀自身、預支 1 AP、
+    只給自己，花 1 點資源（主動技的最低花費）；沒有條件與附帶效果。"""
+    tier, rarity, skeleton, category = fixed
+    ctx.shape, ctx.shape_params = "self", {}
+    ctx.effects = [{"type": BORROW_AP, "amount": 1}]
+    base: dict[str, Any] = {
+        "id": f"skill_rand_{seed}",
+        "name_zh": "暫定",
+        "tier": tier,
+        "rarity": rarity,
+        "kind": "active",
+        "skeleton": skeleton.id,
+        "category": category,
+        "weapon_req": weapon_req,
+        "scaling_attr": scaling,
+        "shape": {"type": "self"},
+        "condition": None,
+        "provenance": {"origin": "level_up"},
+        "ap_cost": 0,
+        "cost": {"mana": 1, "cooldown": library.composer.structure.borrow_cooldown},
+    }
+    return _finish(library, seed, base, ctx)
 
 
 def _with_scaling_extras(
@@ -633,6 +671,29 @@ def _compose_exploit_passive(
 
     def build() -> SkillDef:
         return _attempt_passive(rng, lib, seed, tier, rarity, ON_KEYWORD_EXPLOITED)
+
+    return _first_valid(lib, build)
+
+
+def _compose_ap_spent_passive(
+    seed: int, lib: ContentLibrary, *, tier: int, rarity: SkillRarity, keyword: str | None
+) -> ComposeResult | None:
+    """「這回合用完所有 AP 時」的被動（AP-2，#168，05 5.2）：獨立串流 ``composer.ap_spent`` 以
+    ``structure.ap_spent_passive_permille`` 決定要不要用，組法用 ``composer.ap_spent.build``；
+    沒抽中、指定了關鍵字或組不出合格技能回傳 ``None``，呼叫端照原本的組法（主串流沒動過，結果與改前
+    相同）。"""
+    permille = lib.composer.structure.ap_spent_passive_permille
+    timing = lib.ruleset.skill_triggers.by_id().get(ON_AP_SPENT_ALL)
+    if keyword is not None or permille <= 0 or timing is None:
+        return None
+    if rarity_rank(timing.min_rarity) > rarity_rank(rarity):
+        return None
+    if not Rng(seed).fork("composer.ap_spent").chance_permille(permille):
+        return None
+    rng = Rng(seed).fork("composer.ap_spent.build")
+
+    def build() -> SkillDef:
+        return _attempt_passive(rng, lib, seed, tier, rarity, ON_AP_SPENT_ALL)
 
     return _first_valid(lib, build)
 
@@ -1226,6 +1287,9 @@ def _compose_plain(
     _check_passive_args(passive, ap_cost, category)
     recipe = (
         _compose_exploit_passive(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
+        or _compose_ap_spent_passive(
+            seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword
+        )
         or _compose_around_passive(seed, lib, tier=tier_value, rarity=rarity_value)
         or _compose_passive_recipe(seed, lib, tier=tier_value, rarity=rarity_value, keyword=keyword)
         if passive

@@ -832,6 +832,8 @@ def legal_core_primitives(library: ContentLibrary, request: ProposalRequest) -> 
         raise SubsetError("沒有可用的骨架")
     found = {p for s in skeletons for p in sel.core_primitives(s)}
     excluded = set(library.composer.llm_topic.core_exclude)
+    if request.keywords:  # AP-2：預支不屬於任何關鍵字（通用池），指定關鍵字的題目不出
+        excluded.add("borrow_ap")
     return tuple(
         p.id
         for p in library.ruleset.primitives.primitives
