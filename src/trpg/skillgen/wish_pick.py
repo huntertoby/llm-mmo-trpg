@@ -64,6 +64,7 @@ from trpg.skillgen.skill_pick import (
 from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
+    "PHYSICAL",
     "SUMMON_HINT",
     "WISH_CARDS",
     "WISH_DUAL_FORK",
@@ -77,8 +78,10 @@ __all__ = [
     "WishResult",
     "clean_wish_tags",
     "dual_elements",
+    "element_slots",
     "handwritten_keywords",
     "handwritten_pool",
+    "menu_limits",
     "skill_tag_ids",
     "tag_hits",
     "tag_label",
@@ -136,11 +139,32 @@ def dual_elements(library: ContentLibrary, tier: int) -> bool:
     return tier >= second_element_tier(library)
 
 
+PHYSICAL: Final = "physical"
+"""物理（WC-2b，#167 補：另外一格，不佔元素名額，1 階起就能和元素一起選；07 7.6 第 1 點）。"""
+
+
+def element_slots(values: Sequence[str]) -> int:
+    """元素標籤佔幾個名額：物理不算（WC-2b）。"""
+    return sum(1 for v in values if v != PHYSICAL)
+
+
 def tag_limits(library: ContentLibrary, tier: int = 1) -> dict[str, int]:
-    """角色階級 ``tier`` 時每一類最多選幾個（依類別順序）。"""
+    """角色階級 ``tier`` 時每一類最多選幾個（依類別順序）。元素是「物理以外」的上限，物理另外可以
+    再選（:func:`element_slots`，WC-2b）。"""
     rules = library.skill_pick.wish_tags
     dual = dual_elements(library, tier)
     return {g: rules.limit(g, dual=dual) for g in WISH_TAG_GROUPS}
+
+
+def menu_limits(library: ContentLibrary, tier: int = 1) -> dict[str, int]:
+    """清單上每一類最多能點幾個（面板與 LLM schema 用）：:func:`tag_limits`，元素再加物理那一格
+    （WC-2b：物理不佔元素名額；清單裡有物理時才加）。超過的由 :func:`wish_tags_problem` 與
+    :func:`clean_wish_tags` 照名額擋。"""
+    limits = tag_limits(library, tier)
+    ids = {i.id for i in library.skill_pick.wish_tags.elements}
+    if PHYSICAL in ids:
+        limits["elements"] += 1
+    return limits
 
 
 def wish_tags_problem(
@@ -160,8 +184,10 @@ def wish_tags_problem(
         allowed = _allowed(library, group, menu)
         if len(set(values)) != len(values):
             return "標籤不能重複"
-        if len(values) > limits[group]:
-            return f"{_GROUP_ZH[group]}最多選 {limits[group]} 個"
+        used = element_slots(values) if group == "elements" else len(values)
+        if used > limits[group]:
+            extra = "（物理另外算）" if group == "elements" else ""
+            return f"{_GROUP_ZH[group]}最多選 {limits[group]} 個{extra}"
         unknown = [v for v in values if v not in allowed]
         if unknown:
             return f"沒有這個{_GROUP_ZH[group]}：{'、'.join(unknown)}"
@@ -197,7 +223,9 @@ def clean_wish_tags(
             if not isinstance(value, str) or value not in allowed or value in out:
                 codes.append(f"wish.dropped.{group}")
                 continue
-            if len(out) >= limits[group]:
+            used = element_slots(out) if group == "elements" else len(out)
+            physical = group == "elements" and value == PHYSICAL
+            if not physical and used >= limits[group]:
                 codes.append(f"wish.dropped.{group}")
                 continue
             out.append(value)
@@ -285,6 +313,18 @@ def _shape_of(skill: SkillDef) -> str:
     return skill.shape.type
 
 
+_DAMAGE_TYPES = ("damage", "delayed_damage")
+
+
+def _physical_damage(skill: SkillDef) -> bool:
+    """技能（含接續段）有一段沒有元素（或寫物理）的傷害（WC-2b）。"""
+    follow = skill.followup.effects if skill.followup is not None else ()
+    return any(
+        e.type in _DAMAGE_TYPES and (e.element is None or e.element.value == PHYSICAL)
+        for e in (*skill.effects, *follow)
+    )
+
+
 def skill_tag_ids(library: ContentLibrary, skill: SkillDef) -> WishTags:
     """這招技能本身有的標籤（每一類全列，不受上限限制；給命中判定與測試）。元素連第二元素一起算
     （:func:`~trpg.content.skills.damage_elements`，WC-2）；沒有元素＝物理。"""
@@ -294,7 +334,9 @@ def skill_tag_ids(library: ContentLibrary, skill: SkillDef) -> WishTags:
     params: set[str] = set()
     _walk(skill.model_dump(mode="json", exclude=set(_SKIPPED_KEYS)), types, statuses, params)
     keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
-    elements = {e.value for e in damage_elements(skill)} or {"physical"}
+    elements = {e.value for e in damage_elements(skill)}
+    if not elements or _physical_damage(skill):
+        elements.add(PHYSICAL)  # WC-2b：一段物理（武器）傷害也算物理（「火焰劍」＝物理＋火焰）
     return WishTags.model_construct(
         keywords=tuple(keywords),
         elements=tuple(i.id for i in rules.elements if i.id in elements),
@@ -542,22 +584,24 @@ def _dual_draws(
     tags: WishTags,
     found: dict[DesignKey, PickCandidate],
 ) -> None:
-    """雙元素（WC-2，#167；模組說明第 2 點）：願望有兩個元素、角色已到第二元素的階級時，候選裡帶其中
-    一個元素（沒有另一個）的，依發現順序加上另一個元素
-    （:func:`~trpg.skillgen.composer_dual.add_second_element`，串流 ``pick.wish.dual/<位置>``），
-    最多加 :data:`WISH_TAG_EXTRA` 個新設計（不抽組合器種子）。"""
+    """雙元素（WC-2，#167；模組說明第 2 點）：願望有兩個元素時，候選裡只差其中一個（不是物理）的，依
+    發現順序加上那個元素（:func:`~trpg.skillgen.composer_dual.add_second_element`，串流
+    ``pick.wish.dual/<位置>``），最多加 :data:`WISH_TAG_EXTRA` 個新設計（不抽組合器種子）。兩個都不
+    是物理時角色要到第二元素的階級；「物理＋元素」1 階起就做（WC-2b：物理不佔名額）。"""
     wanted = set(tags.elements)
-    if len(wanted) != _DUAL or not dual_elements(library, request.tier):
+    if len(wanted) < _DUAL:
+        return
+    if element_slots(tuple(wanted)) >= _DUAL and not dual_elements(library, request.tier):
         return
     rng = Rng(request.seed).fork(WISH_DUAL_FORK)
     added = 0
     for position, candidate in enumerate(list(found.values())):
         if added >= WISH_TAG_EXTRA:
             break
-        have = {e.value for e in damage_elements(candidate.skill)} & wanted
-        if len(have) != 1:
+        missing = wanted - set(skill_tag_ids(library, candidate.skill).elements)
+        if len(missing) != 1 or PHYSICAL in missing:
             continue
-        (other,) = wanted - have
+        (other,) = missing
         skill = add_second_element(library, candidate.skill, other, rng.fork(str(position)))
         if skill is None or not check.ok(skill, tags):
             continue

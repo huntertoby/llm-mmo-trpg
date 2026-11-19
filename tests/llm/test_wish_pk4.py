@@ -73,7 +73,7 @@ def test_tags_from_mock_and_player_input_only() -> None:
     schema = client.schemas[0]
     assert schema is not None
     assert schema["required"] == ["keywords", "elements", "effects", "shapes", "kinds"]
-    assert schema["properties"]["elements"]["maxItems"] == 1
+    assert schema["properties"]["elements"]["maxItems"] == 2  # WC-2b：1 個元素＋物理
     assert schema["properties"]["effects"]["items"]["enum"] == list(
         wish_tag_choices(lib, menu)["effects"]
     )
@@ -230,12 +230,12 @@ def test_tags_two_elements_from_the_second_element_tier() -> None:
     assert one.codes == ("wish.dropped.elements",)
     low_schema = low.schemas[0]
     assert low_schema is not None
-    assert low_schema["properties"]["elements"]["maxItems"] == 1
+    assert low_schema["properties"]["elements"]["maxItems"] == 2
     high = MockLLMClient([json.dumps(body)])
     two = match_wish_tags(high, lib, "冰火", menu, tier=2)
     assert two.tags == WishTags(elements=("fire", "ice"))
     assert two.codes == ()
     high_schema = high.schemas[0]
     assert high_schema is not None
-    assert high_schema["properties"]["elements"]["maxItems"] == 2
-    assert '"elements": 2' in high.calls[0][1]["content"]
+    assert high_schema["properties"]["elements"]["maxItems"] == 3
+    assert '"elements": 3' in high.calls[0][1]["content"]

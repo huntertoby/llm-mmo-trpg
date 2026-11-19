@@ -55,8 +55,8 @@ def test_limit_is_one_below_the_second_element_tier() -> None:
 
 def test_problem_and_clean_follow_the_tier() -> None:
     lib = library()
-    assert wish_tags_problem(lib, TWO, MENU) == "元素最多選 1 個"
-    assert wish_tags_problem(lib, TWO, MENU, tier=1) == "元素最多選 1 個"
+    assert wish_tags_problem(lib, TWO, MENU) == "元素最多選 1 個（物理另外算）"
+    assert wish_tags_problem(lib, TWO, MENU, tier=1) == "元素最多選 1 個（物理另外算）"
     assert wish_tags_problem(lib, TWO, MENU, tier=2) is None
     raw = {"elements": ["fire", "ice"]}
     tags, codes = clean_wish_tags(lib, raw, MENU)

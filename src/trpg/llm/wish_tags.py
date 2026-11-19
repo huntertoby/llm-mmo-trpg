@@ -29,7 +29,7 @@ from trpg.llm.prompts.wish_tags import (
     wish_tags_schema,
 )
 from trpg.llm.response import clean_response
-from trpg.skillgen.wish_pick import clean_wish_tags, tag_limits
+from trpg.skillgen.wish_pick import clean_wish_tags, menu_limits, tag_limits
 
 __all__ = [
     "WishTagMatch",
@@ -90,7 +90,7 @@ def wish_tags_payload(
     }
     for group in WISH_TAG_GROUPS[1:]:
         out[group] = [{"id": i.id, "name": i.name_zh} for i in rules.items(group)]
-    out["max"] = tag_limits(library, tier)
+    out["max"] = menu_limits(library, tier)
     return out
 
 
@@ -115,7 +115,7 @@ def match_wish_tags(
     （報表）。"""
     start = clock()
     choices = wish_tag_choices(library, menu)
-    schema = wish_tags_schema(choices, tag_limits(library, tier))
+    schema = wish_tags_schema(choices, menu_limits(library, tier))
     request = wish_tags_payload(library, menu, tier=tier)
     codes: list[str] = []
     errors: str | None = None

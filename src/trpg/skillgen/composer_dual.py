@@ -54,17 +54,18 @@ def add_second_element(
     library: ContentLibrary, skill: SkillDef, element: str, rng: Rng
 ) -> SkillDef | None:
     """``skill`` 多一段 ``element`` 的傷害（見模組說明）；``element`` 不能是物理、不能是技能已經有的
-    元素；技能要有元素、有傷害效果、效果數沒滿、不是陷阱或複合技，角色階級（技能的 ``tier``）要到
-    第二元素的階級。"""
+    元素；技能要有傷害效果、效果數沒滿、不是陷阱或複合技。技能已經有一個元素時是第二元素，角色階級
+    （技能的 ``tier``）要到第二元素的階級；技能是物理（武器傷害沒有元素）時是「物理＋元素」，1 階
+    起就做（WC-2b，#167 補：物理不佔元素名額，例「火焰劍」）。"""
     have = {e.value for e in damage_elements(skill)}
     if (
         element == Element.PHYSICAL.value
         or element in have
-        or not have
+        or len(have) > 1
         or skill.kind not in _KINDS
         or skill.trap is not None
         or skill.followup is not None
-        or skill.tier < second_element_tier(library)
+        or (have and skill.tier < second_element_tier(library))
         or len(skill.effects) >= MAX_EFFECTS
     ):
         return None

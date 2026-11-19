@@ -67,10 +67,9 @@ def test_rate_weights_kinds_and_alternates_keywords(wc: Any) -> None:
 
 def test_classify_rules(wc: Any, library: ContentLibrary) -> None:
     singles = {t: 100 for t in wc.all_tags(library)}
-    # WC-2（#167）：兩個元素 2 階起可以，只剩「物理＋元素」是規則禁止
-    physical = wc.classify(library, [("elements", "physical"), ("elements", "ice")], singles)
-    assert physical.category == "b" and "07 7.6" in physical.source
+    # WC-2（#167）：兩個元素 2 階起可以；WC-2b：物理＋元素也可以（物理不佔元素名額）
     assert wc.rule_verdict(library, [("elements", "fire"), ("elements", "ice")]) is None
+    assert wc.rule_verdict(library, [("elements", "physical"), ("elements", "ice")]) is None
     two_shapes = wc.classify(library, [("shapes", "line"), ("shapes", "cone")], singles)
     assert two_shapes.category == "b"
     passive_line = wc.classify(library, [("shapes", "line"), ("kinds", "passive")], singles)

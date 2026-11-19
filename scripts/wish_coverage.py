@@ -19,7 +19,8 @@ WC-2（#167）另外照許願池的新出題量：
 - **換主題元素**（``composer_retheme.retheme``）：每個合法技能另記下換成其他元素的版本（``R``）；
   願望有元素標籤時算數。
 - **雙元素**（``composer_dual.add_second_element``）：2 階起，帶一個元素的技能另記下加第二元素的版本
-  （``D``）；願望有兩個元素標籤時算數。
+  （``D``）；物理（武器傷害沒有元素）的技能每一階都記下「物理＋元素」的版本（WC-2b，#167 補：物理
+  不佔元素名額）。願望有兩個元素標籤（含物理）時算數。
 - **召喚**：效果標籤有召喚時，主動那一族另外用「指定召喚骨架」的桶（``…/summon``，同許願池的標籤
   補抽）；兩個桶取較高的。
 - **形態**（關鍵字）：候選另外放進同關鍵字的手寫技能（``wish_pick.handwritten_pool``）；有一招帶到
@@ -164,7 +165,9 @@ def derived(lib: ContentLibrary, skill: SkillDef, tier: int, seed: int) -> str:
         if made is not None:
             swapped.append(skill_signature(lib, made))
     dual = []
-    if len(have) == 1 and tier >= second_element_tier(lib):
+    physical = not have and _PHYSICAL in skill_tag_ids(lib, skill).elements
+    if (len(have) == 1 and tier >= second_element_tier(lib)) or physical:
+        # WC-2b：物理（武器傷害沒有元素）的技能加一段元素＝「物理＋元素」，1 階起
         rng = Rng(seed).fork("wish-coverage.dual")
         for element in elements:
             made = add_second_element(lib, skill, element, rng.fork(element))
@@ -469,27 +472,11 @@ def _kind_shape_block(lib: ContentLibrary, tags: Sequence[Tag]) -> Verdict | Non
     )
 
 
-def _element_pair(tags: Sequence[Tag]) -> Verdict | None:
-    """兩個元素（WC-2，#167）：2 階起可以，但物理＝沒有元素，不能和別的元素並存。"""
-    if len(tags) != PAIR or any(g != "elements" for g, _ in tags):
-        return None
-    if any(v == _PHYSICAL for _, v in tags):
-        return Verdict(
-            "b",
-            "物理＝沒有元素，不能和別的元素在同一招（第二元素是「傷害帶兩種以上的元素」）",
-            "07 7.6 第 1 點；06 6.34.9（第二元素 2 階開放）",
-        )
-    return None
-
-
 def rule_verdict(lib: ContentLibrary, tags: Sequence[Tag]) -> Verdict | None:
     """(b) 規則禁止、(c) 沒有原語；都不是＝``None``。"""
     if len(tags) == PAIR and tags[0][0] == tags[1][0] and tags[0][0] in _ONE_PER_SKILL:
         reason, source = _ONE_PER_SKILL[tags[0][0]]
         return Verdict("b", reason, source)
-    pair = _element_pair(tags)
-    if pair is not None:
-        return pair
     blocked = _kind_shape_block(lib, tags)
     if blocked is not None:
         return blocked
@@ -718,7 +705,8 @@ def render(lib: ContentLibrary, cov: Coverage, payload: Mapping[str, Any]) -> st
         "- 被動的骨架至少史詩、反應至少稀有（06 6.12「目前實作」），"
         "所以「被動」「反應」在較低稀有度一定是 0。",
         "- WC-2（#167）：願望有元素時另算組合器「換主題元素」的版本，有兩個元素時另算「加第二元素」"
-        "（2 階起）；效果有召喚時主動另看指定召喚骨架的桶；形態的候選另外放進手寫形態技"
+        "（2 階起；物理＋元素 1 階起，WC-2b）；效果有召喚時主動另看指定召喚骨架的桶；"
+        "形態的候選另外放進手寫形態技"
         "（有一招全帶到＝100%，每個稀有度欄都一樣）。",
         f"- 做不到＝每一格都 0；極低＝最好的一格也不到 {LOW_PERMILLE / 10:g}%。",
         "",
