@@ -14,8 +14,8 @@
 改寫方式和數值工坊的 ``yaml_patch`` 相同：用 ``yaml.compose`` 拿到純量的位置，只替換那段文字，
 註解、縮排、行尾（LF／CRLF）、BOM 都不動；改完重新 parse，必須等於「原資料只把那幾個值乘 10」。
 
-防止跑兩次（變成 ×100）：改過的檔第一行加上 :data:`MARKER` 註解；``content/`` 裡任何一個檔已經有
-這行就整批拒絕，一個檔也不寫。
+防止跑兩次（變成 ×100）：``content/rules/core.yaml`` 的 ``quantity_scale``（X10-2a）就是標記。換算時
+把它從 1 改成 10；已經是 10（或找不到這個欄位）就整批拒絕，一個檔也不寫（X10-1 裁定 7）。
 
 欄位清單的路徑語法（每段用 ``.`` 分開）：
 
@@ -49,7 +49,9 @@ ROOT: Final = Path(__file__).resolve().parents[2]
 CONTENT_DIR: Final = ROOT / "content"
 FIELDS_PATH: Final = Path(__file__).resolve().parent / "fields.yaml"
 FACTOR: Final = 10
-MARKER: Final = "# x10: 量類已 ×10（scripts/x10/rescale.py，#169 題 10）"
+SCALE_FILE: Final = "rules/core.yaml"
+SCALE_KEY: Final = "quantity_scale"
+"""防重跑的標記：``content/rules/core.yaml`` 的 ``quantity_scale``（1 → 10）。"""
 CATEGORIES: Final = ("scale", "keep", "pending", "unit_change")
 _INT_TAG: Final = "tag:yaml.org,2002:int"
 _FLOAT_TAG: Final = "tag:yaml.org,2002:float"
@@ -447,12 +449,34 @@ def plan(result: Classified | None = None) -> list[Change]:
     return sorted(changes.values(), key=lambda c: (c.file, c.start))
 
 
-def marked_files(content_dir: Path = CONTENT_DIR) -> list[str]:
-    return [
-        p.relative_to(content_dir).as_posix()
-        for p in content_files(content_dir)
-        if MARKER in _read(p)
-    ]
+def _scale_leaf(content_dir: Path) -> Leaf:
+    path = content_dir / SCALE_FILE
+    node = compose(_read(path)) if path.exists() else None
+    leaves = [] if node is None else list(_walk(node, SCALE_FILE, ()))
+    found = [leaf for leaf in leaves if [s.key for s in leaf.steps] == [SCALE_KEY]]
+    if not found:
+        raise RescaleError(f"{SCALE_FILE} 沒有 {SCALE_KEY}，不知道內容是不是已經換算過")
+    return found[0]
+
+
+def current_scale(content_dir: Path = CONTENT_DIR) -> int:
+    """``content/rules/core.yaml`` 的 ``quantity_scale``（1＝還沒換算、10＝已換算）。"""
+    leaf = _scale_leaf(content_dir)
+    if not _PLAIN_INT.fullmatch(leaf.value):
+        raise RescaleError(f"{SCALE_FILE} {SCALE_KEY}：不是整數（{leaf.value!r}）")
+    return int(leaf.value)
+
+
+def scale_change(content_dir: Path = CONTENT_DIR) -> Change:
+    """把 ``quantity_scale`` 從 1 改成 10 的那一筆；已經不是 1 就拒絕（防止 ×100）。"""
+    leaf = _scale_leaf(content_dir)
+    scale = current_scale(content_dir)
+    if scale != 1:
+        raise RescaleError(
+            f"content/ 已經換算過（{SCALE_FILE} 的 {SCALE_KEY} 是 {scale}），拒絕再乘一次"
+        )
+    end = int(leaf.node.end_mark.index)
+    return Change(SCALE_FILE, SCALE_KEY, leaf.value, _scaled(leaf), leaf.start, end)
 
 
 def _leaf_values(text: str) -> list[tuple[tuple[str | int, ...], int, object]]:
@@ -471,7 +495,7 @@ def _leaf_values(text: str) -> list[tuple[tuple[str | int, ...], int, object]]:
 
 
 def _apply_text(text: str, changes: Sequence[Change]) -> str:
-    """``changes`` 的位置以去掉 BOM 之後的文字計；第一行加上 :data:`MARKER`。"""
+    """``changes`` 的位置以去掉 BOM 之後的文字計。"""
     bom = _BOM if text.startswith(_BOM) else ""
     body = text.removeprefix(_BOM)
     for change in sorted(changes, key=lambda c: c.start, reverse=True):
@@ -480,8 +504,7 @@ def _apply_text(text: str, changes: Sequence[Change]) -> str:
         if head + change.old != body[change.start : change.end] or not _ANCHOR.fullmatch(head):
             raise RescaleError(f"{change.file} {change.path}：位置對不上（{change.old!r}）")
         body = body[: change.end - len(change.old)] + change.new + body[change.end :]
-    newline = "\r\n" if "\r\n" in body else "\n"
-    return bom + MARKER + newline + body
+    return bom + body
 
 
 def rewrite(changes: Sequence[Change], content_dir: Path = CONTENT_DIR) -> dict[str, str]:
@@ -492,7 +515,7 @@ def rewrite(changes: Sequence[Change], content_dir: Path = CONTENT_DIR) -> dict[
     out: dict[str, str] = {}
     for rel, items in sorted(by_file.items()):
         if not rel.endswith((".yaml", ".yml")):
-            raise RescaleError(f"{rel}：只能改 YAML（JSON 沒辦法加註解標記）")
+            raise RescaleError(f"{rel}：只能改 YAML")
         old_text = _read(content_dir / rel)
         new_text = _apply_text(old_text, items)
         starts = {c.start for c in items}
@@ -508,13 +531,11 @@ def rewrite(changes: Sequence[Change], content_dir: Path = CONTENT_DIR) -> dict[
 
 
 def apply(changes: Sequence[Change], content_dir: Path = CONTENT_DIR) -> list[str]:
-    """寫回 ``content/``。已經有 :data:`MARKER` 的話整批拒絕（防止 ×100）。"""
-    done = marked_files(content_dir)
-    if done:
-        raise RescaleError(
-            f"content/ 已經換算過（{len(done)} 個檔有 x10 標記，例如 {done[0]}），拒絕再乘一次"
-        )
-    texts = rewrite(changes, content_dir)
+    """寫回 ``content/``，連同 ``quantity_scale`` 1 → 10；已經是 10 的話整批拒絕（防止 ×100）。"""
+    marker = scale_change(content_dir)
+    if any(c.file == marker.file and c.start == marker.start for c in changes):
+        raise RescaleError(f"{SCALE_FILE} {SCALE_KEY} 不能列在 scale（由腳本自己改）")
+    texts = rewrite([*changes, marker], content_dir)
     for rel, text in texts.items():
         (content_dir / rel).write_bytes(text.encode("utf-8"))
     return sorted(texts)

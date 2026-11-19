@@ -136,7 +136,7 @@ def _trait_value(
     if pulse is not None:
         if pulse.shield_dice is not None or pulse.shield_flat:
             dice = pulse.shield_dice
-            avg = Fraction(pulse.shield_flat)
+            avg = Fraction(pulse.shield_flat, state.ruleset.core.quantity_scale)  # X10-2a
             if dice is not None:
                 avg += Fraction(dice.count * (dice.sides + 1), 2)
             shield = (
@@ -187,7 +187,8 @@ def _value(
     spec = summon.template.totem
     if spec is None:
         template = summon.template
-        dpr = summon_dpr(summon, flat=flat, bonus_permille=bonus_permille)
+        scale = state.ruleset.core.quantity_scale  # 固定值 ÷ 倍率（X10-2a）
+        dpr = summon_dpr(summon, flat=flat, bonus_permille=bonus_permille, scale=scale)
         if infused:
             dpr += rules.infusion_points
         extra = Fraction(0)
@@ -197,7 +198,9 @@ def _value(
             template.detonate is not None
         ):  # 自爆（爆裂傀儡，3-33e2a）：爆炸算一次，一般攻擊只算 1 輪
             blast = template.detonate
-            average = Fraction(blast.dice.count * (blast.dice.sides + 1), 2) + blast.flat
+            average = Fraction(blast.dice.count * (blast.dice.sides + 1), 2) + Fraction(
+                blast.flat, scale
+            )
             extra += average * Fraction(rules.detonate_targets_permille, _PERMILLE)
             rounds = min(rounds, 1)
         traits, shield = _trait_value(state, summon, rounds, team, profile)

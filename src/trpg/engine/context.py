@@ -298,6 +298,11 @@ class Ctx:
                 return rule.outcome(index)
         return None
 
+    def roll_quantity(self, sides: int) -> int:
+        """擲一顆量類骰（傷害、治療、護盾）：骰面 × ``core.quantity_scale``（X10-2a，05 5.4.1；
+        2d8 擲出 9 在 ×10 時算 90）。d20 檢定不經過這裡，不乘。"""
+        return self.rng.roll(sides) * self.core.quantity_scale
+
     def check_d20(self, kind: CheckKind, reason: str, unit_id: UnitId | None = None) -> int:
         """守方自己擲的檢定骰（例如冰面滑倒）：預覽 ``min``（或覆寫 ``best``）回傳 20（通過，沒有
         後果）、``max``（或 ``worst``）回傳 1；正式結算擲 d20。"""

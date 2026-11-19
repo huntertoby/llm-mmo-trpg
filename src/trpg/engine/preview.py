@@ -529,12 +529,13 @@ def _exploding_die(sides: int, rerolls: int) -> Counter[int]:
     return dist
 
 
-def dice_distribution(count: int, sides: int, explode_max: int = 0) -> Counter[int]:
+def dice_distribution(count: int, sides: int, explode_max: int = 0, scale: int = 1) -> Counter[int]:
     """``count`` 顆 ``sides`` 面骰總和的分布（次數）。``count == 0`` 時為 ``{0: 1}``。
 
     ``explode_max > 0``：每顆骰會爆骰（Phase 3D-7b，每顆最多再擲 ``explode_max`` 次）。
+    ``scale``：骰面的倍率（``core.quantity_scale``，X10-2a；同引擎擲出的量類骰）。
     """
-    die = _exploding_die(sides, explode_max)
+    die = Counter({face * scale: n for face, n in _exploding_die(sides, explode_max).items()})
     dist: Counter[int] = Counter({0: 1})
     for _ in range(count):
         nxt: Counter[int] = Counter()
@@ -798,14 +799,14 @@ def _attack_numbers(
         )
         backstab = positional.backstab > 0
         dice = attack_dice(state, actor, backstab=backstab)
-        crit_dist = dice_distribution(dice.count * 2, dice.sides)
+        crit_dist = dice_distribution(dice.count * 2, dice.sides, scale=core.quantity_scale)
         target_key = action.target_id
     low = _primary_damage(min_events, actor.id, target_key)
     high = _primary_damage(max_events, actor.id, target_key)
     if low is None or high is None:
         return hit, crit, None
     dice = attack_dice(state, actor, backstab=backstab)
-    normal_dist = dice_distribution(dice.count, dice.sides)
+    normal_dist = dice_distribution(dice.count, dice.sides, scale=core.quantity_scale)
     status_ppm = PPM
     ward = PERMILLE
     shield = 0
@@ -987,8 +988,8 @@ def _damage_expectation(  # noqa: PLR0917
         dice = params.dice
         count, sides = (0, 1) if dice is None else (dice.count, dice.sides)
         explode = core.explode_max if spec.explode else 0
-        normal = dice_distribution(count, sides, explode)
-        doubled = dice_distribution(count * 2, sides, explode)
+        normal = dice_distribution(count, sides, explode, core.quantity_scale)
+        doubled = dice_distribution(count * 2, sides, explode, core.quantity_scale)
         table: dict[int, int] = {}
         for value in sorted(set(normal) | set(doubled)):
             nominal = rolled_damage_amount(

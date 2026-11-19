@@ -24,7 +24,7 @@ from trpg.content.maps import MapDef, SpawnUnitsEvent
 from trpg.content.races import RaceDef, RaceTable
 from trpg.content.roguelite import RunRules
 from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
-from trpg.content.rules import CoreRules, HitTable
+from trpg.content.rules import CoreRules, HitTable, explicit_missing
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_tags import SkillTagTable
@@ -162,6 +162,20 @@ class Ruleset(ContentModel):
         self._race_index = {} if self.races is None else self.races.by_id()
         self._rule_change_index = self.rule_changes.by_id()
         self._modifier_ids = frozenset(s.id for s in self.skills.skills if s.is_modifier)
+
+    @model_validator(mode="after")
+    def _check_form_quantities(self) -> Ruleset:
+        """``quantity_scale`` 不是 1 時，形態的維持費要寫在 ``forms.yaml``（Python 預設值是換算前的
+        單位；X10-2a）。"""
+        if self.core.quantity_scale != 1:
+            names = ("upkeep_stamina", "upkeep_mana", "stance_upkeep_stamina", "stance_upkeep_mana")
+            missing = explicit_missing(self.forms, "forms", names)
+            if missing:
+                raise ValueError(
+                    f"quantity_scale 是 {self.core.quantity_scale} 時這些量類要寫在 forms.yaml"
+                    f"（Python 預設值是換算前的單位）：{'、'.join(missing)}"
+                )
+        return self
 
     @model_validator(mode="after")
     def _check(self) -> Ruleset:

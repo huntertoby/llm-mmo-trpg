@@ -143,8 +143,9 @@ class ArmorMods(ContentModel):
     ``min_total``～``max_total``，結果護甲不低於 0。不耗亂數。"""
 
     unit: str = Field(pattern=ID_PATTERN)
-    min_total: int = Field(default=-5, ge=-100, le=0)  # X10-1：量類 ×10 放寬
-    max_total: int = Field(default=5, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    # X10-1：量類 ×10 放寬；X10-2a：拿掉預設值（-5／5 是換算前的單位），一律寫在內容檔
+    min_total: int = Field(ge=-100, le=0)
+    max_total: int = Field(ge=0, le=100)
     mods: tuple[ArmorMod, ...] = Field(min_length=1)
 
     def total(

@@ -134,6 +134,16 @@ class Ctx:
     def rank(self) -> int:
         return rarity_rank(self.rarity)
 
+    @property
+    def scale(self) -> int:
+        """量類倍率（``core.quantity_scale``，X10-2a）。"""
+        return self.library.ruleset.core.quantity_scale
+
+    def quantity_randint(self, low: int, high: int) -> int:
+        """在 ``low``～``high`` 之間取量類（法力等）的值，步距 ``quantity_scale``（X10-1 裁定 5）：
+        範圍 ×10 之後只取 10 的倍數，抽到的機率和換算前一樣；倍率 1 時就是 ``randint``。"""
+        return quantity_randint(self.rng, low, high, self.scale)
+
     def primitive(self, primitive_id: str) -> PrimitiveDef:
         return by_id(self.library.ruleset.primitives)[primitive_id]
 
@@ -159,6 +169,12 @@ class Ctx:
 # ---------------------------------------------------------------------------
 # 旋鈕的階梯
 # ---------------------------------------------------------------------------
+
+
+def quantity_randint(rng: Rng, low: int, high: int, scale: int) -> int:
+    """``low``～``high`` 之間 ``scale`` 的倍數，均勻抽（X10-2a；``scale`` 1 時同 ``randint``，
+    耗用的亂數也相同）。"""
+    return rng.randint(-(-low // scale), high // scale) * scale
 
 
 @cache
@@ -229,12 +245,17 @@ def _per_stack_ladder(
 
 
 def _param_range_ladder(
-    _library: ContentLibrary, knob: PrimitiveKnob, param: PrimitiveParam, _effect: Mapping[str, Any]
+    library: ContentLibrary, knob: PrimitiveKnob, param: PrimitiveParam, effect: Mapping[str, Any]
 ) -> tuple[Any, ...]:
     low = param.min if knob.start is None else knob.start
     high = param.max if knob.max is None else knob.max
     assert low is not None and high is not None  # PrimitiveParam 驗證過
-    return tuple(range(low, high + 1, knob.step))
+    step = knob.step
+    if effect.get("type") == "restore_resource" and effect.get("resource") == "mana":
+        # 回復法力是量類（X10-2a）：步距 × quantity_scale，從第一個倍數開始（換算前後階數相同）
+        scale = library.ruleset.core.quantity_scale
+        low, step = -(-low // scale) * scale, step * scale
+    return tuple(range(low, high + 1, step))
 
 
 KNOB_LADDERS: Mapping[str, _Ladder] = MappingProxyType(
@@ -1134,15 +1155,15 @@ def build_cost(ctx: Ctx) -> dict[str, Any]:
     ap = ctx.ap_cost
     if ctx.category == "spell":
         mana_range = rules.spell_mana_per_ap
-        mana = rng.randint(mana_range.min, mana_range.max) * ap + (ctx.tier - 1) * (
+        mana = ctx.quantity_randint(mana_range.min, mana_range.max) * ap + (ctx.tier - 1) * (
             rules.spell_mana_per_tier
         )
     else:
         mana_range = rules.weapon_mana_per_ap
         mana = (
-            1  # 主動武器技至少 1 耐力（06 6.10 最低花費；「不花資源」那一檔改成最低花費）
+            ctx.scale  # 主動武器技至少 1 耐力 × 倍率（06 6.10 最低花費；「不花資源」那一檔改成它）
             if ctx.chance(rules.weapon_free_permille)
-            else rng.randint(mana_range.min, mana_range.max) * ap
+            else ctx.quantity_randint(mana_range.min, mana_range.max) * ap
         )
     cost: dict[str, Any] = {"mana": mana}
     cooldown: int | None = None
@@ -1329,7 +1350,9 @@ def build_passive_effects(ctx: Ctx, target: str, *, second: bool = True) -> None
 def build_passive_cost(ctx: Ctx) -> dict[str, Any]:
     """被動的代價：法力（隨階級增加）與偶爾的冷卻。"""
     rules = ctx.rules.passive
-    mana = ctx.rng.randint(rules.mana.min, rules.mana.max) + (ctx.tier - 1) * rules.mana_per_tier
+    mana = (
+        ctx.quantity_randint(rules.mana.min, rules.mana.max) + (ctx.tier - 1) * rules.mana_per_tier
+    )
     cost: dict[str, Any] = {"mana": mana}
     if ctx.chance(rules.cooldown_permille):
         cost["cooldown"] = ctx.rng.randint(rules.cooldown.min, rules.cooldown.max)
@@ -1413,7 +1436,9 @@ def build_reaction_effects(
 def build_reaction_cost(ctx: Ctx) -> dict[str, Any]:
     """反應技的代價：法力（隨階級增加）與偶爾的冷卻（不花 AP）。"""
     rules = ctx.rules.reaction
-    mana = ctx.rng.randint(rules.mana.min, rules.mana.max) + (ctx.tier - 1) * rules.mana_per_tier
+    mana = (
+        ctx.quantity_randint(rules.mana.min, rules.mana.max) + (ctx.tier - 1) * rules.mana_per_tier
+    )
     cost: dict[str, Any] = {"mana": mana}
     cooldown = (
         ctx.rng.randint(rules.cooldown.min, rules.cooldown.max)

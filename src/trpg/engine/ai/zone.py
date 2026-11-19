@@ -128,7 +128,8 @@ def _trigger_value(state: BattleState, spec: EffectSpec, profile: AiProfile) -> 
         elif sub.type == "heal":
             value += w.heal * average
         elif sub.type == "shield":
-            value += w.shield * (sub.amount or average)
+            amount = Fraction(sub.amount or 0, state.ruleset.core.quantity_scale)  # X10-2a
+            value += w.shield * (amount or average)
         elif sub.type == "apply_status" and sub.status is not None:
             value += _status_value(state, sub.status, profile)
     return value

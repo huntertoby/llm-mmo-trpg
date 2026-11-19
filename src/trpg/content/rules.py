@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal, localcontext
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, Dice, UnitTemplate
 from trpg.content.schemas import ContentModel
@@ -228,6 +228,21 @@ class SkillSlots(ContentModel):
     stance: int = Field(ge=0)
 
 
+def explicit_missing(model: BaseModel, prefix: str, names: tuple[str, ...]) -> list[str]:
+    """``names`` 中沒有在資料裡寫明（用了 Python 預設值）的欄位，寫成 ``prefix.name``
+    （X10-2a：``quantity_scale`` 不是 1 時，量類的預設值不能用）。"""
+    return [f"{prefix}.{n}" for n in names if n not in model.model_fields_set]
+
+
+_RESOURCE_QUANTITIES = ("class_base", "base", "stamina_regen")
+_GROWTH_QUANTITIES = (
+    "hp_per_level",
+    "hp_per_attr_mod",
+    "flat_per_level_permille",
+    "flat_per_attr_mod_permille",
+)
+
+
 class SummonGrowth(ContentModel):
     """召喚物數值成長（Phase 3-33b，``docs/design/06-技能.md`` 6.29.1；初值，未經模擬）。
 
@@ -350,6 +365,12 @@ class CoreRules(ContentModel):
     # 行動經濟
     ap_per_turn: int = Field(ge=0)
     """每回合 AP：召喚物，以及範本沒寫 ``ap_per_turn`` 的一般敵人（AP-1，#168）。"""
+    # 數值尺度（X10-2a，05 5.4.1，#169 題 10）
+    quantity_scale: Literal[1, 10] = 1
+    """量類（HP、傷害、治療、護盾、屬性、法力、耐力……）的倍率：擲出的骰面 × 這個值（d20 不乘）、
+    寫死的「1 點」下限 × 這個值、技能預算吃的固定值 ÷ 這個值、AI 評分的量 ÷ 這個值。內容換算
+    （``scripts/x10/rescale.py``）時從 1 改成 10。舊紀錄沒有此欄位（＝1）。不放在第一個欄位：
+    ``tests/cli/test_battle_cli.py`` 改內嵌規則包的第一個整數欄位來測雜湊。"""
     party_ap_per_turn: int = Field(default=3, ge=0)
     """玩家方（玩家與隊友角色，不含召喚物）的每回合 AP（AP-1，#168，05 5.2；初值 4）。"""
     elite_ap_per_turn: int = Field(default=3, ge=0)
@@ -624,6 +645,23 @@ class CoreRules(ContentModel):
         low, high = _ROLE_HP_RANGE
         if any(not low <= v <= high for v in self.summon_role_hp_permille.values()):
             raise ValueError(f"summon_role_hp_permille 的係數必須在 {low}～{high}‰")
+        return self
+
+    @model_validator(mode="after")
+    def _check_quantity_defaults(self) -> CoreRules:
+        """``quantity_scale`` 不是 1 時，量類欄位不能用 Python 預設值（預設是換算前的單位；
+        X10-2a）。"""
+        if self.quantity_scale != 1:
+            missing = [
+                *explicit_missing(self.resources, "resources", _RESOURCE_QUANTITIES),
+                *explicit_missing(self.attribute_perks, "attribute_perks", ("base", "step")),
+                *explicit_missing(self.summon_growth, "summon_growth", _GROWTH_QUANTITIES),
+            ]
+            if missing:
+                raise ValueError(
+                    f"quantity_scale 是 {self.quantity_scale} 時這些量類要寫在 core.yaml"
+                    f"（Python 預設值是換算前的單位）：{'、'.join(missing)}"
+                )
         return self
 
     @model_validator(mode="after")

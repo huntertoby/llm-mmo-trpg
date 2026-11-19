@@ -324,7 +324,7 @@ def _damage_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return []
     rolls: tuple[int, ...] = ()
     if effect.dice is not None:
-        rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
+        rolls = tuple(ctx.roll_quantity(effect.dice.sides) for _ in range(effect.dice.count))
     raw_permille = (sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille
     weather = weather_permille(ctx.state, effect.element)
     amount = max(

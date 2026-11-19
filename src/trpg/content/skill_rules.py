@@ -109,6 +109,7 @@ class CostAllowance(ContentModel):
     """每場次數 → 折抵；次數超過表中最大值時用 ``uses_default``。"""
     uses_default: int = Field(ge=0)
     mana_per_point: int = Field(ge=0)
+    """法力代價的折抵（‰）：每 ``core.quantity_scale`` 點法力（X10-2a；倍率 1 時＝每點）。"""
     mana_cap: int = Field(ge=0)
     stamina_per_mana: int = Field(default=2, ge=1)
     """耐力與法力的預算換算（Phase 3H-2，06 6.10；初值）：耐力 ``stamina_per_mana`` 點 ＝ 法力
@@ -467,7 +468,8 @@ class BudgetRules(ContentModel):
     zone_surface_permille: int = Field(default=300, ge=0, le=5000)
     """``zone`` 留下的表面：每個新覆蓋格的表面點數折合（‰）。"""
     restore_mana_point_permille: int = Field(default=700, ge=0, le=5000)
-    """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。"""
+    """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。X10-2a 起是
+    每 ``core.quantity_scale`` 點法力（倍率 1 時＝每點）。"""
     restore_cooldown_points: int = Field(default=3, ge=0)
     """``restore_resource`` 縮短冷卻：每回合折合的預算點數（Phase 3D-1；初值）。"""
     dispel_one_points: int = Field(default=3, ge=0)

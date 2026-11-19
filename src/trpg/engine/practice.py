@@ -69,6 +69,7 @@ def is_practice_protected(state: BattleState, unit: UnitState) -> bool:
 
 
 def hold_standing(state: BattleState, unit: UnitState) -> None:
-    """測試模式：主角與木樁 HP 歸 0 時改成 1（不倒下）。其他單位與實戰不受影響。"""
+    """測試模式：主角與木樁 HP 歸 0 時改成 1 × ``quantity_scale``（不倒下）。其他單位與實戰
+    不受影響。"""
     if unit.hp <= 0 and is_practice_protected(state, unit):
-        unit.hp = 1
+        unit.hp = state.ruleset.core.quantity_scale

@@ -48,8 +48,10 @@ def survival(state: BattleState, summon: UnitState, rules: SummonAiRules) -> Fra
         for e in state.living_units()
         if e.team is not summon.team and unit_dist(e, summon) <= e.weapon.range + e.speed
     )
-    incoming = threats * rules.infuse_threat_damage
-    return Fraction(summon.hp, max(summon.hp + incoming, 1))
+    # infuse_threat_damage 是換算前的單位（X10-1 裁定 2）：× 量類倍率再和 HP 相加
+    scale = state.ruleset.core.quantity_scale
+    incoming = threats * rules.infuse_threat_damage * scale
+    return Fraction(summon.hp, max(summon.hp + incoming, scale))
 
 
 def _cast_state(

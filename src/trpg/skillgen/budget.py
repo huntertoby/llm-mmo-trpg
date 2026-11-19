@@ -218,6 +218,12 @@ def _dice_average(dice: Dice) -> Fraction:
     return Fraction(dice.count * (dice.sides + 1), 2)
 
 
+def _scale(library: ContentLibrary) -> int:
+    """量類倍率（``core.quantity_scale``，X10-2a）：固定值（傷害、治療、法力……）÷ 這個值再計點數，
+    骰子平均不除（引擎擲出的骰面才乘）；換算前後點數相同。"""
+    return library.ruleset.core.quantity_scale
+
+
 def _duration_ratio(duration: int | None, default: int | None) -> Fraction:
     if duration is None or default is None:
         return Fraction(1)
@@ -403,7 +409,8 @@ def _plain_base_points(  # noqa: PLR0911
         if effect.dice is None:
             raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
         extra, extra_note = _shield_rider_points(primitive.id, effect, library)
-        average = _dice_average(effect.dice) + (effect.flat_bonus or 0)  # BAL-12b：固定值加成
+        flat = Fraction(effect.flat_bonus or 0, _scale(library))  # X10-2a：固定值 ÷ 量類倍率
+        average = _dice_average(effect.dice) + flat  # BAL-12b：固定值加成
         dice = f"{effect.dice}＋{effect.flat_bonus}" if effect.flat_bonus else str(effect.dice)
         if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
             permille = library.budget.shield_duration_permille[min(max(effect.duration, 2), 3) - 2]
@@ -467,7 +474,10 @@ def _restore_resource_points(
             f"冷卻 −{amount} × {rules.restore_cooldown_points} 點",
         )
     permille = rules.restore_mana_point_permille
-    return Fraction(permille * amount, _PERMILLE), f"法力 {amount} × {permille}‰"
+    scale = _scale(library)  # X10-2a：每 quantity_scale 點法力 permille‰
+    return Fraction(permille * amount, _PERMILLE * scale), (
+        f"法力 {amount} × {permille}‰" if scale == 1 else f"法力 {amount} ÷ {scale} × {permille}‰"
+    )
 
 
 def _dispel_points(
@@ -737,7 +747,7 @@ def _summon_points(
             f"{status.id} {status.budget_points} × 預期 {allies}‰ 個友方 × {effect.duration} 輪"
             f" × {permille}‰"
         )
-    dpr = summon_dpr(summon)
+    dpr = summon_dpr(summon, scale=_scale(library))
     per_round, once, notes = summon_trait_points(summon, library, dpr)
     value = Fraction(permille, _PERMILLE)
     rounds = effect.duration
@@ -894,9 +904,9 @@ def _rule_trait_points(
             surface = library.ruleset.surfaces.get(pulse.surface).budget_points or 0
             per_round += surface * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
         if pulse.heal_dice is not None or pulse.heal_flat:
-            heal = (
-                _dice_average(pulse.heal_dice) if pulse.heal_dice else Fraction(0)
-            ) + pulse.heal_flat
+            heal = (_dice_average(pulse.heal_dice) if pulse.heal_dice else Fraction(0)) + Fraction(
+                pulse.heal_flat, _scale(library)
+            )
             per_round += heal * Fraction(rules.summon_trait_heal_permille, _PERMILLE)
         notes.append("脈動")
     if weapon.backstab_dice:
@@ -906,7 +916,7 @@ def _rule_trait_points(
         notes.append("背刺骰")
     if template.detonate is not None:
         blast = template.detonate
-        once += (_dice_average(blast.dice) + blast.flat) * Fraction(
+        once += (_dice_average(blast.dice) + Fraction(blast.flat, _scale(library))) * Fraction(
             rules.summon_detonate_targets_permille, _PERMILLE
         )
         if blast.surface is not None:
@@ -1318,9 +1328,9 @@ def _effect_budget(
 
 
 def _allowance_parts(
-    skill: SkillDef, budget: BudgetRules, statuses: dict[str, StatusDef]
+    skill: SkillDef, budget: BudgetRules, statuses: dict[str, StatusDef], scale: int = 1
 ) -> tuple[tuple[str, int], ...]:
-    """代價折抵（‰）的各項；沒有該代價的項目不列出。"""
+    """代價折抵（‰）的各項；沒有該代價的項目不列出。``scale`` 是量類倍率（X10-2a）。"""
     allowance, cost = budget.allowance, skill.cost
     parts: list[tuple[str, int]] = []
     if cost.cooldown is not None:
@@ -1333,12 +1343,11 @@ def _allowance_parts(
     if cost.uses_per_battle is not None:
         value = allowance.uses_per_battle.get(cost.uses_per_battle, allowance.uses_default)
         parts.append((f"每場 {cost.uses_per_battle} 次", value))
-    if cost.mana:
-        parts.append(
-            (f"法力 {cost.mana}", min(cost.mana * allowance.mana_per_point, allowance.mana_cap))
-        )
+    if cost.mana:  # X10-2a：mana_per_point 是「每 quantity_scale 點法力」的折抵
+        value = cost.mana * allowance.mana_per_point // scale
+        parts.append((f"法力 {cost.mana}", min(value, allowance.mana_cap)))
     if cost.stamina:  # 3H-2：耐力與法力預算點數等價（stamina_per_mana 點耐力 ＝ 1 點法力）
-        value = cost.stamina * allowance.mana_per_point // allowance.stamina_per_mana
+        value = cost.stamina * allowance.mana_per_point // (allowance.stamina_per_mana * scale)
         parts.append((f"耐力 {cost.stamina}", min(value, allowance.mana_cap)))
     if cost.hp_percent is not None:
         parts.append(
@@ -1846,7 +1855,7 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         total=total,
         tier_budget=tier_budget,
         ap_coefficient=coefficient,
-        allowance_parts=_allowance_parts(skill, budget, by_id(rules.statuses)),
+        allowance_parts=_allowance_parts(skill, budget, by_id(rules.statuses), _scale(library)),
         allowance_cap=budget.allowance.total_cap,
         # 預支（AP-2）只是挪時間、預算約等於 0：不套過弱下限
         min_ratio=Fraction(0 if skill.borrows_ap else budget.min_ratio_permille, _PERMILLE),

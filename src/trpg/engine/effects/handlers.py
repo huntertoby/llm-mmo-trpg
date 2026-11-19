@@ -169,7 +169,7 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     unit.hp = max(0, unit.hp - (amount - absorbed - redirected - shared))
     cheated = _undying_status(ctx, unit, effect)
     if cheated is not None:
-        unit.hp = 1
+        unit.hp = _hp_floor(ctx)
     hold_standing(ctx.state, unit)  # 測試模式：主角與木樁不倒下（#147）
     events += [
         ctx.emit(
@@ -208,7 +208,10 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     events += _redirect(ctx, unit, link, redirected, effect) + _share(ctx, unit, shares, effect)
     if cheated is not None:
         events += _cheat_death(
-            ctx, unit, cheated, amount - absorbed - redirected - shared - (hp_before - 1)
+            ctx,
+            unit,
+            cheated,
+            amount - absorbed - redirected - shared - (hp_before - _hp_floor(ctx)),
         )
     if amount > 0:
         events.extend(_thaw(ctx, unit, effect.element))
@@ -317,7 +320,9 @@ def _damage_rolls(ctx: Ctx, effect: DamageEffect) -> tuple[tuple[int, ...], int]
     count = effect.dice.count * (2 if effect.crit else 1)
     if effect.preset_rolls is None:
         return _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
-    extra = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(count - len(effect.preset_rolls)))
+    extra = tuple(
+        ctx.roll_quantity(effect.dice.sides) for _ in range(count - len(effect.preset_rolls))
+    )
     return effect.preset_rolls + extra, 0
 
 
@@ -325,27 +330,34 @@ def _roll_damage_dice(
     ctx: Ctx, sides: int, count: int, explode_max: int
 ) -> tuple[tuple[int, ...], int]:
     """擲 ``count`` 顆傷害骰；爆骰（Phase 3D-7b）：一顆骰擲到最大值就再擲一顆，每顆原本的骰子最多
-    再擲 ``explode_max`` 次。回傳（全部擲出的值，依擲骰順序；多擲的顆數）。"""
+    再擲 ``explode_max`` 次。回傳（全部擲出的值 × ``quantity_scale``，依擲骰順序；多擲的顆數）。
+    爆骰看的是骰面本身（X10-2a）。"""
+    scale = ctx.core.quantity_scale
     rolls: list[int] = []
     extra = 0
     for _ in range(count):
         value = ctx.rng.roll(sides)
-        rolls.append(value)
+        rolls.append(value * scale)
         again = 0
         while sides > 1 and value == sides and again < explode_max:
             value = ctx.rng.roll(sides)
-            rolls.append(value)
+            rolls.append(value * scale)
             again += 1
             extra += 1
     return tuple(rolls), extra
 
 
+def _hp_floor(ctx: Ctx) -> int:
+    """免死、反噬留下的 HP：1 點 × ``quantity_scale``（X10-2a）。"""
+    return ctx.core.quantity_scale
+
+
 def _cap_backlash(ctx: Ctx, unit: UnitState, effect: DamageEffect, amount: int) -> int:
-    """反噬（``cause: backlash``，Phase 3D-7a）不會讓單位的 HP 低於 1：護盾先吸收，超過的部分
-    截斷。其他傷害不受影響。"""
+    """反噬（``cause: backlash``，Phase 3D-7a）不會讓單位的 HP 低於 1（× ``quantity_scale``）：護盾
+    先吸收，超過的部分截斷。其他傷害不受影響。"""
     if effect.cause != "backlash":
         return amount
-    return min(amount, unit.hp - 1 + shield_amount(ctx.rules, unit))
+    return min(amount, max(0, unit.hp - _hp_floor(ctx) + shield_amount(ctx.rules, unit)))
 
 
 def _dealt_permille(ctx: Ctx, effect: DamageEffect, target: UnitState) -> int:
@@ -426,7 +438,7 @@ def _share(
         kin.hp = max(0, kin.hp - amount)
         cheated = _undying_status(ctx, kin, effect)
         if cheated is not None:
-            kin.hp = 1
+            kin.hp = _hp_floor(ctx)
         hold_standing(ctx.state, kin)
         events.append(
             ctx.emit(
@@ -440,7 +452,7 @@ def _share(
             )
         )
         if cheated is not None:
-            events += _cheat_death(ctx, kin, cheated, amount - (hp_before - 1))
+            events += _cheat_death(ctx, kin, cheated, amount - (hp_before - _hp_floor(ctx)))
         if kin.hp <= 0:
             events.extend(down_unit(ctx, kin))
     return events
@@ -525,7 +537,7 @@ def _redirect(
     linked.hp = max(0, linked.hp - amount)
     cheated = _undying_status(ctx, linked, effect)
     if cheated is not None:
-        linked.hp = 1
+        linked.hp = _hp_floor(ctx)
     hold_standing(ctx.state, linked)
     events: list[EventBase] = [
         ctx.emit(
@@ -539,7 +551,7 @@ def _redirect(
         )
     ]
     if cheated is not None:
-        events += _cheat_death(ctx, linked, cheated, amount - (hp_before - 1))
+        events += _cheat_death(ctx, linked, cheated, amount - (hp_before - _hp_floor(ctx)))
     if linked.hp <= 0:
         events.extend(down_unit(ctx, linked))
     return events
@@ -655,7 +667,7 @@ def _heal(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if effect.preset_rolls is not None:
         rolls = effect.preset_rolls
     elif effect.dice is not None:
-        rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
+        rolls = tuple(ctx.roll_quantity(effect.dice.sides) for _ in range(effect.dice.count))
     received = _received_permille(ctx, unit)  # 中毒、潮濕
     amount = max(
         0,
@@ -689,7 +701,7 @@ def _shield(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return []
     rolls: tuple[int, ...] = ()
     if effect.dice is not None:
-        rolls = tuple(ctx.rng.roll(effect.dice.sides) for _ in range(effect.dice.count))
+        rolls = tuple(ctx.roll_quantity(effect.dice.sides) for _ in range(effect.dice.count))
     amount = max(
         0,
         ((sum(rolls) + effect.flat) * PERMILLE + effect.scaled_permille)

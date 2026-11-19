@@ -212,14 +212,15 @@ def _active_cost(
     if ctx.category == "spell":
         span = cost_rules.spell_mana_per_ap
         mana = (
-            rng.randint(span.min, span.max) * ap + (ctx.tier - 1) * cost_rules.spell_mana_per_tier
+            ctx.quantity_randint(span.min, span.max) * ap
+            + (ctx.tier - 1) * cost_rules.spell_mana_per_tier
         )
     else:
         span = cost_rules.weapon_mana_per_ap
         mana = (
-            1
+            ctx.scale  # 最低花費 1 × 量類倍率（X10-2a）
             if ctx.chance(cost_rules.weapon_free_permille)
-            else rng.randint(span.min, span.max) * ap
+            else ctx.quantity_randint(span.min, span.max) * ap
         )
     cost: dict[str, Any] = {"mana": mana}
     cooldown = rng.randint(rules.cooldown.min, rules.cooldown.max)

@@ -111,7 +111,7 @@ def _split_rolls(cast: Cast, spec: EffectSpec, anyone: bool) -> tuple[int, ...] 
     """聖光雙效的骰值：傷害與治療共用的一次擲骰（沒有對象時不擲）；不是聖光雙效為 ``None``。"""
     if not spec.split_heal or spec.dice is None or not anyone:
         return None
-    return tuple(cast.ctx.rng.roll(spec.dice.sides) for _ in range(spec.dice.count))
+    return tuple(cast.ctx.roll_quantity(spec.dice.sides) for _ in range(spec.dice.count))
 
 
 def _pierced_tiles(cast: Cast) -> list[XY]:

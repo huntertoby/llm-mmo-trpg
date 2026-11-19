@@ -403,7 +403,11 @@ def _rewrite_event_points(
         points = Fraction(rules.reaction_points * e.amount)
     elif isinstance(e, ResourceRestored) and state.units[e.unit_id].team is actor.team:
         per_point = rules.mana_points if e.resource == "mana" else rules.cooldown_points
-        points = Fraction(per_point * e.amount * (1 if e.resource == "mana" else len(e.skill_ids)))
+        mana = e.resource == "mana"  # 法力是量類：÷ 倍率（X10-2a）
+        points = Fraction(
+            per_point * e.amount * (1 if mana else len(e.skill_ids)),
+            state.ruleset.core.quantity_scale if mana else 1,
+        )
     elif isinstance(e, StatusRemoved) and e.reason == "stolen":
         points = Fraction(rules.steal_points)
     elif isinstance(e, StatusRemoved) and e.reason == "dispelled":  # 驅散敵方增益（3D-8a）
@@ -478,11 +482,12 @@ def skill_cost(
     ``duration − 1``，價值取 ``status_values``，沒列出的狀態用 ``status`` 權重，與對敵人施加
     同一狀態的收益對稱）。"""
     skill = state.ruleset.skill_def(action.skill_id)
+    scale = state.ruleset.core.quantity_scale  # 法力、耐力、HP ÷ 量類倍率（X10-2a）
     cost = Fraction(
-        w.mana * skill_mana_cost(state.ruleset.core, actor, skill)
-        + Fraction(w.stamina_permille * skill.cost.stamina, 1000)
+        Fraction(w.mana * skill_mana_cost(state.ruleset.core, actor, skill), scale)
+        + Fraction(w.stamina_permille * skill.cost.stamina, 1000 * scale)
         + w.cooldown * (skill.cost.cooldown or 0)
-        + w.friendly_fire * hp_cost(actor, skill)
+        + Fraction(w.friendly_fire * hp_cost(actor, skill), scale)
     )
     self_status = skill.cost.self_status
     if self_status is not None:

@@ -8,7 +8,7 @@
 # 路徑語法見 scripts/x10/rescale.py 開頭。
 #
 # 共同做法（開發 PM 定）：
-#   - 骰子記法不變（2d8 照寫），擲出的面值由引擎乘 core.yaml 新加的 dice_value_scale（X10-2）；骰子數量、
+#   - 骰子記法不變（2d8 照寫），擲出的面值由引擎乘 core.yaml 的 quantity_scale（X10-2a）；骰子數量、
 #     骰面、骰子相關的預算點數都不動。
 #   - 固定值（flat）×10，預算按 ÷10 計（X10-2 改 skillgen/budget.py）。
 #   - 名稱是 *_permille 的欄位一律不變；例外（實際是「每 1000 份的量」）逐條寫在 scale 並加註解。
@@ -502,10 +502,9 @@ groups:
 
   # ------------------------------------------------------------------ 預算
   - files: skill_budget.yaml
-    unit_change:
-      - allowance.mana_per_point                  # 每 1 法力 5‰ → 每 10 法力 5‰（整數放不下 0.5，欄位格式要改）
-      - restore_mana_point_permille               # 回復每點法力 700‰ → 70‰（或改成每 10 點 700‰）
     keep:
+      - allowance.mana_per_point                  # X10-2a：程式改成「每 quantity_scale 點法力」計價，值不變
+      - restore_mana_point_permille               # X10-2a：同上，每 quantity_scale 點法力 700‰，值不變
       - allowance.stamina_per_mana                # 耐力與法力一起 ×10，比例不變
       - allowance.stance_upkeep_per_point         # 技能的 stance_upkeep 點數不變（見 forms.yaml）
       - allowance.hp_per_permille                 # hp_percent 是百分比
@@ -616,6 +615,7 @@ groups:
       - summon_growth.flat_per_attr_mod_permille
       - summon_traits.sturdy.armor_bonus          # 護甲 +1
     keep:
+      - quantity_scale                            # 換算腳本自己改（1 → 10），兼防重跑的標記
       - hp_per_con_point                          # 屬性差與 HP 一起 ×10，每點不變
       - resources.*.per_point                     # 同上
       - resources.mana_cap_permille
@@ -769,11 +769,10 @@ groups:
 
   # ------------------------------------------------------------------ AI
   - files: ai_profiles.yaml
-    # AI 的分數以「預估傷害（HP）× 權重」為單位，再加上固定的點數。傷害 ×10 後，固定點數要不要跟著 ×10
-    # （或改由引擎把傷害 ÷10 再評分）是 X10-2 的做法問題，先列 pending、不動。
-    scale:
-      - summon.infuse_threat_damage               # 與召喚物 HP 直接相加比較
-    pending:
+    # AI 的分數以「預估傷害（HP）× 權重」為單位，再加上固定的點數。X10-1 裁定 2：引擎評分時把量類（傷害、
+    # HP、護盾、治療、法力、耐力）÷ quantity_scale（X10-2a），這個檔的權重與點數全部不變。
+    keep:
+      - summon.infuse_threat_damage               # 換算前的單位；引擎 × quantity_scale 再和召喚物 HP 相加
       - profiles[].weights.*
       - profiles[].rewrite.*_points
       - status_values.*
@@ -805,7 +804,6 @@ groups:
       - summon.*_points
       - terrain.*_points
       - weapon_ai.*
-    keep:
       - basic.*_permille
       - gamble.*_permille
       - orders.*_permille
@@ -861,9 +859,8 @@ groups:
       - targets[kind=unit].fields[path=attributes.str|attributes.dex|attributes.con|attributes.int|attributes.wis|attributes.wil].hint_*
       - targets[kind=skill].fields[path=cost.mana|cost.stamina].hint_*
       - targets[kind=object].fields[path="objects[*].max_hp"].hint_*
-    pending:
-      - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起決定
     keep:
+      - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起不變（X10-1 裁定 2）
       - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
       - targets[kind=unit].fields[kind=permille].hint_*
       - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*

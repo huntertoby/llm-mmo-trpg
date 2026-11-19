@@ -62,14 +62,17 @@ def cautious(
     return score * Fraction(rules.low_hp_permille, _PERMILLE)
 
 
-def _self_damage_estimate(actor: UnitState, skill: SkillDef, sub: EffectSpec) -> Fraction:
-    """失手反噬傷害的粗估：法術技為效果自己的骰子平均，武器技為武器骰平均（含固定值）× 倍率。"""
+def _self_damage_estimate(
+    actor: UnitState, skill: SkillDef, sub: EffectSpec, scale: int = 1
+) -> Fraction:
+    """失手反噬傷害的粗估：法術技為效果自己的骰子平均，武器技為武器骰平均（含固定值）× 倍率。
+    固定值 ÷ ``scale``（量類倍率，X10-2a；骰子平均是換算前的單位）。"""
     if skill.category == "spell" and sub.dice is not None:
         dice, flat, mult = sub.dice, 0, Fraction(1)
     else:
         dice, flat = actor.weapon.dice, actor.weapon.flat
         mult = Fraction(sub.multiplier_permille or _PERMILLE, _PERMILLE)
-    return (Fraction(dice.count * (dice.sides + 1), 2) + flat) * mult
+    return (Fraction(dice.count * (dice.sides + 1), 2) + Fraction(flat, scale)) * mult
 
 
 def on_miss_cost(actor: UnitState, skill: SkillDef, p: Preview, profile: AiProfile) -> Fraction:
@@ -87,7 +90,8 @@ def on_miss_cost(actor: UnitState, skill: SkillDef, p: Preview, profile: AiProfi
     cost = Fraction(0)
     for sub in skill.cost.on_miss:
         if sub.type == "damage":
-            cost += w.friendly_fire * _self_damage_estimate(actor, skill, sub)
+            scale = p.min_state.ruleset.core.quantity_scale
+            cost += w.friendly_fire * _self_damage_estimate(actor, skill, sub, scale)
         elif sub.status is not None:
             points = profile.status_values.get(sub.status)
             cost += w.status if points is None else w.damage * points
