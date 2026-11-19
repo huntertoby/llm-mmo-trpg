@@ -21,7 +21,7 @@ templates:
   - id: reshape
     branch: deepen
     op: reshape
-    prefix_zh: 擴散
+    prefix_zh: 易形   # SK-3c（玩法交接 4.1.31 第 6 點）：同閃現模板 reshape_shape，避開疾病的「擴散」
     summary_zh: 換形狀：一次打到更多目標（傷害依預算調整）
     skeletons: [area]
     shapes:
