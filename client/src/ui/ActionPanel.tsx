@@ -167,6 +167,7 @@ function AsideHelp({ mode, enabled, interactOptions, view, onAction, onPreviewAc
 
 /** 一般選目標模式的說明句種類（6A-3：同一種共用「前 3 次」的次數）。 */
 export function modeHintKind(mode: ActionMode): OpHintKind {
+  if (isPrepModeKey(mode.key)) return "prep"; // AR-SK4：佈置自己計「前 3 次」
   if (mode.kind === "vault") return "vault";
   if (mode.kind === "defend" && mode.targets.self !== null) return "defend";
   if (isSelfOnly(mode.targets)) return "self";

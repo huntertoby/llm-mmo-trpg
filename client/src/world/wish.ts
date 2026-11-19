@@ -44,8 +44,8 @@ export const WISH_ZH = {
   tagMenuShort: "標籤",
   tabTags: "從清單點選",
   tagMax: (n: number) => `最多 ${n} 個`,
-  /** AR-SK4：元素類有物理時（同伺服器的「（物理另外算）」）。 */
-  tagMaxPhysical: (n: number) => `最多 ${n} 個（物理另外算）`,
+  /** AR-SK4：元素類有物理時（定案字：1 階「最多 1 個（可另加物理）」、2 階起「最多 2 個（可另加物理）」）。 */
+  tagMaxPhysical: (n: number) => `最多 ${n} 個（可另加物理）`,
   needTag: "先點選 1 個標籤",
   tagTimeout: "池子這次沒來得及回應（等了 10 秒），改從清單點選標籤吧（沒有扣任務幣）。",
   tagPicked: "已選：",
