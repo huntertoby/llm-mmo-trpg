@@ -161,6 +161,9 @@ class WishEffectTag(WishTagItem):
 
     primitives: tuple[str, ...] = ()
     statuses: tuple[str, ...] = ()
+    params: tuple[str, ...] = ()
+    """效果上有這些參數（有值）也算（WC-2，#167：吸血 ``lifesteal_permille``、聖光雙效
+    ``split_heal`` 算「治療」；06 6.18 A、B）。"""
     control_statuses: bool = False
     beneficial_statuses: bool = False
 

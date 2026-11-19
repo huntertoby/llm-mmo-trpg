@@ -213,10 +213,11 @@ def tag_labels(library: ContentLibrary, tags: WishTags) -> tuple[str, ...]:
 # ---------------------------------------------------------------------------
 
 
-def _walk(node: object, types: set[str], statuses: set[str]) -> None:
+def _walk(node: object, types: set[str], statuses: set[str], params: set[str]) -> None:
+    """技能資料裡的原語、施加的狀態、效果上有值的參數名（給命中判定）。"""
     if isinstance(node, list | tuple):
         for item in node:
-            _walk(item, types, statuses)
+            _walk(item, types, statuses, params)
         return
     if not isinstance(node, dict):
         return
@@ -226,13 +227,16 @@ def _walk(node: object, types: set[str], statuses: set[str]) -> None:
         status = node.get("status")
         if kind == "apply_status" and isinstance(status, str):
             statuses.add(status)
+        params.update(k for k, v in node.items() if v not in (None, False, 0, "", [], {}))
     for key, value in sorted(node.items()):
         if key not in _SKIPPED_KEYS:
-            _walk(value, types, statuses)
+            _walk(value, types, statuses, params)
 
 
-def _effect_hit(library: ContentLibrary, tag: WishEffectTag, types: set[str], st: set[str]) -> bool:
-    if types & set(tag.primitives) or st & set(tag.statuses):
+def _effect_hit(
+    library: ContentLibrary, tag: WishEffectTag, types: set[str], st: set[str], params: set[str]
+) -> bool:
+    if types & set(tag.primitives) or st & set(tag.statuses) or params & set(tag.params):
         return True
     if not (tag.control_statuses or tag.beneficial_statuses):
         return False
@@ -276,13 +280,16 @@ def skill_tag_ids(library: ContentLibrary, skill: SkillDef) -> WishTags:
     rules = library.skill_pick.wish_tags
     types: set[str] = set()
     statuses: set[str] = set()
-    _walk(skill.model_dump(mode="json", exclude=set(_SKIPPED_KEYS)), types, statuses)
+    params: set[str] = set()
+    _walk(skill.model_dump(mode="json", exclude=set(_SKIPPED_KEYS)), types, statuses, params)
     keywords = derive_keywords(skill, library.keywords, exclusive_only=True).all()
     elements = {e.value for e in damage_elements(skill)} or {"physical"}
     return WishTags.model_construct(
         keywords=tuple(keywords),
         elements=tuple(i.id for i in rules.elements if i.id in elements),
-        effects=tuple(t.id for t in rules.effects if _effect_hit(library, t, types, statuses)),
+        effects=tuple(
+            t.id for t in rules.effects if _effect_hit(library, t, types, statuses, params)
+        ),
         shapes=tuple(t.id for t in rules.shapes if _shape_of(skill) in t.shapes),
         kinds=(_kind_of(skill),),
     )

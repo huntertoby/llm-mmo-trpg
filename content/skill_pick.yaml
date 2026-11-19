@@ -85,6 +85,7 @@ wish_tags:
       name_zh: 治療
       primitives: [heal, revive]
       statuses: [regenerating]
+      params: [lifesteal_permille, split_heal]   # WC-2（#167，06 6.18 A、B）：吸血（傷害依比例回復自己）、聖光雙效（對友治療、對敵傷害）也算
     - id: shield
       name_zh: 護盾
       primitives: [shield, intercept]
