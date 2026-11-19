@@ -468,6 +468,8 @@ from trpg.content.skills.problems import (
 )
 from trpg.content.skills.queries import (
     SILENT_STRIKE,
+    card_elements,
+    damage_elements,
     has_silent_rule,
     held_gear,
     is_silent_grant,
@@ -676,9 +678,11 @@ __all__ = [
     "VariantEffectSwap",
     "VariantSpec",
     "VariantWhen",
+    "card_elements",
     "composition_rules",
     "composition_shapes",
     "condition_text",
+    "damage_elements",
     "default_affects",
     "drop_icon_prop",
     "error_path_of",

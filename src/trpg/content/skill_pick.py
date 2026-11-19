@@ -177,6 +177,9 @@ class WishTagRules(ContentModel):
 
     max_keywords: int = Field(default=2, ge=0, le=2)
     max_elements: int = Field(default=1, ge=0, le=1)
+    max_elements_dual: int = Field(default=2, ge=0, le=2)
+    """角色到第二元素的階級（``skill_budget.yaml`` 的 ``min_character_tier.second_element``，初值
+    2 階）起元素最多幾個（WC-2，#167；07 7.6 第 1 點、06 6.34.9 第二元素 2 階開放）。"""
     max_effects: int = Field(default=2, ge=0, le=2)
     max_shapes: int = Field(default=1, ge=0, le=1)
     max_kinds: int = Field(default=1, ge=0, le=1)
@@ -185,11 +188,11 @@ class WishTagRules(ContentModel):
     shapes: tuple[WishShapeTag, ...] = ()
     kinds: tuple[WishTagItem, ...] = ()
 
-    def limit(self, group: str) -> int:
-        """某一類最多選幾個。"""
+    def limit(self, group: str, *, dual: bool = False) -> int:
+        """某一類最多選幾個。``dual``＝角色已到第二元素的階級（元素改用 ``max_elements_dual``）。"""
         return {
             "keywords": self.max_keywords,
-            "elements": self.max_elements,
+            "elements": self.max_elements_dual if dual else self.max_elements,
             "effects": self.max_effects,
             "shapes": self.max_shapes,
             "kinds": self.max_kinds,

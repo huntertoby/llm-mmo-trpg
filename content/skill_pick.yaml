@@ -58,6 +58,7 @@ weights:
 wish_tags:
   max_keywords: 2
   max_elements: 1
+  max_elements_dual: 2   # WC-2（#167，07 7.6 第 1 點）：角色到第二元素的階級（skill_budget.yaml min_character_tier.second_element，初值 2 階）起最多 2 個元素
   max_effects: 2
   max_shapes: 1
   max_kinds: 1

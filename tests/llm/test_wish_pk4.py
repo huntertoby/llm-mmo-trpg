@@ -216,3 +216,26 @@ def test_changed_structure_is_not_taken() -> None:
 
     result = wish_cards(_lib(), request, TAGS, player, picker=picker)
     assert all(c.skill.tier == slate.ranked[0].skill.tier for c in result.cards)
+
+
+def test_tags_two_elements_from_the_second_element_tier() -> None:
+    """WC-2（#167，07 7.6 第 1 點）：角色 2 階起元素最多 2 個；schema 與 ``<request>`` 的上限
+    跟著變。"""
+    lib = _lib()
+    menu = wish_menu(lib)
+    body = {"keywords": [], "elements": ["fire", "ice"], "effects": [], "shapes": [], "kinds": []}
+    low = MockLLMClient([json.dumps(body)])
+    one = match_wish_tags(low, lib, "冰火", menu)
+    assert one.tags == WishTags(elements=("fire",))
+    assert one.codes == ("wish.dropped.elements",)
+    low_schema = low.schemas[0]
+    assert low_schema is not None
+    assert low_schema["properties"]["elements"]["maxItems"] == 1
+    high = MockLLMClient([json.dumps(body)])
+    two = match_wish_tags(high, lib, "冰火", menu, tier=2)
+    assert two.tags == WishTags(elements=("fire", "ice"))
+    assert two.codes == ()
+    high_schema = high.schemas[0]
+    assert high_schema is not None
+    assert high_schema["properties"]["elements"]["maxItems"] == 2
+    assert '"elements": 2' in high.calls[0][1]["content"]

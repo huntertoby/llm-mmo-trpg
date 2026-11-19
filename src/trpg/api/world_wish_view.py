@@ -16,6 +16,7 @@ from trpg.api.world_wish_schemas import WishMenuItemView, WishTagGroupView, Wish
 from trpg.content.fields import CAPITAL_REGION
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_pick import WISH_TAG_GROUPS
+from trpg.skillgen.wish_pick import tag_limits
 from trpg.world.common import in_capital
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.wish import (
@@ -24,6 +25,7 @@ from trpg.world.wish import (
     wish_problem,
     wish_refund,
     wish_rules,
+    wish_tier,
     wishes_left,
 )
 
@@ -98,7 +100,9 @@ def wish_view(
     problem = wish_block(library, world, char, now, in_battle=in_battle)
     names = {k.id: k for k in library.keywords.keywords}
     return WishView(
-        tag_groups=_tag_groups(library) if wish_driven(library) else (),
+        tag_groups=_tag_groups(library, wish_tier(library, world, char))
+        if wish_driven(library)
+        else (),
         title_zh=_title(library),
         speaker=capital_figure(library, WISH_KEEPER_OBJECT),
         line_zh=_keeper_line(library),
@@ -128,15 +132,17 @@ _GROUP_LABELS: Final = {
 }
 
 
-def _tag_groups(library: ContentLibrary) -> tuple[WishTagGroupView, ...]:
-    """PK-4：標籤清單（關鍵字照選單；其他照 ``skill_pick.yaml`` 的 ``wish_tags``）。"""
+def _tag_groups(library: ContentLibrary, tier: int) -> tuple[WishTagGroupView, ...]:
+    """PK-4：標籤清單（關鍵字照選單；其他照 ``skill_pick.yaml`` 的 ``wish_tags``）；上限照角色階級
+    ``tier``（WC-2：元素 2 階起最多 2 個）。"""
     rules = library.skill_pick.wish_tags
+    limits = tag_limits(library, tier)
     names = {k.id: k for k in library.keywords.keywords}
     groups = [
         WishTagGroupView(
             id="keywords",
             label_zh=_GROUP_LABELS["keywords"],
-            max=rules.limit("keywords"),
+            max=limits["keywords"],
             items=tuple(
                 WishMenuItemView(
                     id=k, name_zh=names[k].name_zh, description_zh=names[k].description_zh
@@ -150,7 +156,7 @@ def _tag_groups(library: ContentLibrary) -> tuple[WishTagGroupView, ...]:
             WishTagGroupView(
                 id=group,
                 label_zh=_GROUP_LABELS[group],
-                max=rules.limit(group),
+                max=limits[group],
                 items=tuple(
                     WishMenuItemView(id=i.id, name_zh=i.name_zh, description_zh="")
                     for i in rules.items(group)

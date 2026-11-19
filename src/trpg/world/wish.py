@@ -73,6 +73,7 @@ __all__ = [
     "wish_request",
     "wish_rules",
     "wish_tags_offer_ok",
+    "wish_tier",
     "wishes_left",
     "wishes_used",
 ]
@@ -157,6 +158,11 @@ def _wish_run(world: WorldState, char: CharacterState) -> RunState:
     return as_run(char, seed=skill_seed(world, char)).model_copy(
         update={"offers_made": char.offers_made}
     )
+
+
+def wish_tier(library: ContentLibrary, world: WorldState, char: CharacterState) -> int:
+    """許願的角色階級（大世界的主角階級表；WC-2：願望的元素上限依它，07 7.6 第 1 點）。"""
+    return character_tier(world_library(library), _wish_run(world, char).level)
 
 
 def wish_request(
@@ -245,7 +251,8 @@ def _tags_acceptor(
         tags = gen.tags
         if gen.source == "none" or tags is None:
             return None
-        if wish_tags_problem(library, tags, menu) is not None or gen.keywords != tags.keywords:
+        problem = wish_tags_problem(library, tags, menu, tier=tier)
+        if problem is not None or gen.keywords != tags.keywords:
             return None
         if gen.source == "llm":
             offer = wish_tags_offer_ok(library, gen.offer, tier, tags)
@@ -346,7 +353,7 @@ def _driven_tags(
         return gen.tags, "text", gen.offer if gen.source == "llm" else None
     if action.tags is not None:
         tags = action.tags
-        problem = wish_tags_problem(library, tags, wish_menu(library), require_one=True)
+        problem = wish_tags_problem(library, tags, wish_menu(library), tier=tier, require_one=True)
     else:  # 舊用戶端送選單的關鍵字：當成只有關鍵字的標籤
         tags = WishTags(keywords=action.keywords)
         problem = wish_keywords_problem(library, action.keywords)

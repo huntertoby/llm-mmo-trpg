@@ -29,7 +29,7 @@ from trpg.llm.prompts.wish_tags import (
     wish_tags_schema,
 )
 from trpg.llm.response import clean_response
-from trpg.skillgen.wish_pick import clean_wish_tags
+from trpg.skillgen.wish_pick import clean_wish_tags, tag_limits
 
 __all__ = [
     "WishTagMatch",
@@ -74,8 +74,11 @@ def wish_tag_choices(library: ContentLibrary, menu: Sequence[str]) -> dict[str, 
     return out
 
 
-def wish_tags_payload(library: ContentLibrary, menu: Sequence[str]) -> dict[str, object]:
-    """``<request>``：每一類的清單（代碼、名稱；關鍵字另有一句說明）與上限。"""
+def wish_tags_payload(
+    library: ContentLibrary, menu: Sequence[str], *, tier: int = 1
+) -> dict[str, object]:
+    """``<request>``：每一類的清單（代碼、名稱；關鍵字另有一句說明）與角色階級 ``tier`` 的上限
+    （WC-2：元素 2 階起最多 2 個）。"""
     rules = library.skill_pick.wish_tags
     by_id = {k.id: k for k in library.keywords.keywords}
     out: dict[str, object] = {
@@ -87,7 +90,7 @@ def wish_tags_payload(library: ContentLibrary, menu: Sequence[str]) -> dict[str,
     }
     for group in WISH_TAG_GROUPS[1:]:
         out[group] = [{"id": i.id, "name": i.name_zh} for i in rules.items(group)]
-    out["max"] = {g: rules.limit(g) for g in WISH_TAG_GROUPS}
+    out["max"] = tag_limits(library, tier)
     return out
 
 
@@ -104,15 +107,16 @@ def match_wish_tags(
     menu: Sequence[str],
     *,
     max_attempts: int = 3,
+    tier: int = 1,
     clock: Callable[[], float] = time.perf_counter,
 ) -> WishTagMatch:
-    """請模型把願望翻成需求標籤（見模組說明）。``LLMUnavailable`` 立刻停；``LLMTimeout``／
-    ``LLMBadResponse`` 算一次嘗試。``clock`` 只用來計時（報表）。"""
+    """請模型把願望翻成需求標籤（見模組說明）。``tier`` 是許願角色的階級（上限照它，WC-2）。
+    ``LLMUnavailable`` 立刻停；``LLMTimeout``／``LLMBadResponse`` 算一次嘗試。``clock`` 只用來計時
+    （報表）。"""
     start = clock()
-    rules = library.skill_pick.wish_tags
     choices = wish_tag_choices(library, menu)
-    schema = wish_tags_schema(choices, {g: rules.limit(g) for g in WISH_TAG_GROUPS})
-    request = wish_tags_payload(library, menu)
+    schema = wish_tags_schema(choices, tag_limits(library, tier))
+    request = wish_tags_payload(library, menu, tier=tier)
     codes: list[str] = []
     errors: str | None = None
     reason = ""
@@ -140,7 +144,7 @@ def match_wish_tags(
                 "只輸出 keywords、elements、effects、shapes、kinds 五個字串陣列。",
             )
             continue
-        tags, dropped = clean_wish_tags(library, text.model_dump(), menu)
+        tags, dropped = clean_wish_tags(library, text.model_dump(), menu, tier=tier)
         codes.extend(dropped)
         return WishTagMatch(tags, number, tuple(codes), "", clock() - start)
     return WishTagMatch(
@@ -153,17 +157,18 @@ def match_wish_tags(
 
 
 def mock_wish_tags_client(
-    library: ContentLibrary, wish: str, menu: Sequence[str], *, attempts: int = 3
+    library: ContentLibrary, wish: str, menu: Sequence[str], *, attempts: int = 3, tier: int = 1
 ) -> MockLLMClient:
     """Mock（不需網路與金鑰）：每一類照清單順序，名稱有任一字出現在願望裡的就選（「凍」→ 冰凍、
-    「火」→ 火焰、「召」→ 召喚），取到上限為止；都沒有＝空陣列。確定性。"""
+    「火」→ 火焰、「召」→ 召喚），取到角色階級 ``tier`` 的上限為止；都沒有＝空陣列。確定性。"""
     rules = library.skill_pick.wish_tags
+    limits = tag_limits(library, tier)
     names = {k.id: k.name_zh for k in library.keywords.keywords}
     body: dict[str, list[str]] = {
-        "keywords": [k for k in menu if set(names.get(k, "")) & set(wish)][: rules.max_keywords]
+        "keywords": [k for k in menu if set(names.get(k, "")) & set(wish)][: limits["keywords"]]
     }
     for group in WISH_TAG_GROUPS[1:]:
         body[group] = [i.id for i in rules.items(group) if set(i.name_zh) & set(wish)][
-            : rules.limit(group)
+            : limits[group]
         ]
     return MockLLMClient([json.dumps(body, ensure_ascii=False)] * attempts)

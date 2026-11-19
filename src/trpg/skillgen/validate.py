@@ -54,6 +54,7 @@ from trpg.content.skills import (
     EffectSpec,
     SkillDef,
     SkillRarity,
+    damage_elements,
     rarity_rank,
     skill_elements,
 )
@@ -1321,20 +1322,14 @@ class TierNeed:
     minimum: int
 
 
-_DAMAGE_TYPES = ("damage", "delayed_damage")
 _SECOND_ELEMENT = 2
 _SUMMON = "summon"
 
 
 def _damage_elements(skill: SkillDef) -> set[str]:
-    """傷害效果（含接續段）的元素（不含物理），加上技能自己的主題元素。"""
-    found = {e.value for e in skill_elements(skill)}
-    follow = skill.followup.effects if skill.followup is not None else ()
-    for effect in (*skill.effects, *follow):
-        if effect.type in _DAMAGE_TYPES and effect.element is not None:
-            found.add(effect.element.value)
-    found.discard("physical")
-    return found
+    """傷害效果（含接續段）的元素（不含物理），加上技能自己的主題元素
+    （:func:`~trpg.content.skills.damage_elements`）。"""
+    return {e.value for e in damage_elements(skill)}
 
 
 def _shape_tier_needs(skill: SkillDef, library: ContentLibrary) -> list[TierNeed]:
