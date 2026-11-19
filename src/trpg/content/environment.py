@@ -562,7 +562,7 @@ class ReactionDef(ContentModel):
     kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """``shield_ally`` 的同門標籤（持有者與受擊者都要帶，Phase 5A-M1）。"""
     shield_dice: Dice | None = None
-    shield_flat: int = Field(default=0, ge=0, le=20)
+    shield_flat: int = Field(default=0, ge=0, le=200)  # X10-1：量類 ×10 放寬
     blocked_by_silence: bool = False
     stamina_cost: int = Field(default=0, ge=0)
     damage_reduction_permille: int = Field(default=0, ge=0, le=1000)

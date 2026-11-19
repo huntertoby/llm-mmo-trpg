@@ -190,7 +190,7 @@ _PERMILLE = 1000
 _MAX_MULTIPLIER_PERMILLE = 10_000
 
 
-_MAX_FLAT_BONUS = 10
+_MAX_FLAT_BONUS = 100  # X10-1：量類 ×10 放寬；實際範圍由 skill_primitives.yaml 限制
 FLAT_BONUS_EFFECTS = frozenset({"damage", "heal", "shield"})
 """可以填 ``flat_bonus`` 的效果（BAL-12b；傷害只限法術技）。"""
 """``damage.flat_bonus`` 的 schema 上限（BAL-12b；閃現實際只加 ``rules.trigger_flat_bonus``）。"""
