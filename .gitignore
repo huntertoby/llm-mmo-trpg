@@ -73,3 +73,6 @@ workshop_descriptions.csv
 # 許願覆蓋表的量測資料（SK-4）：太大不進版控，用 scripts/wish_coverage.py run 重產
 docs/phases/WC-1資料/buckets.json
 docs/phases/WC-2資料/buckets.json
+
+# 存檔備份（季末重置、×10 換算前）
+saves_backup/
