@@ -590,6 +590,12 @@ class UnitState:
     召喚物 ``ap_per_turn``、敵人照範本的 ``ap_per_turn``（沒寫時精英與頭目 ``elite_ap_per_turn``、
     其他 ``ap_per_turn``）。本回合上限＝此值＋``ap_carry_max``
     （:func:`trpg.engine.rewrites.ap_cap`）。"""
+    ap_carried_in: Annotated[int, Field(exclude_if=_empty)] = 0
+    """這個回合開始時從上回合保留帶進來的 AP（AP-1 第 6 項，AP 列畫米白環那格用；已併入 ``ap``）。
+    自己回合開始時設定、回合結束時歸零；0 時不輸出。"""
+    ap_lost: Annotated[int, Field(exclude_if=_empty)] = 0
+    """這個回合開始時被扣掉的 AP（透支等 ``ap_penalty``；AP-1 第 6 項，AP 列畫紅斜線那格用）。
+    自己回合開始時設定、回合結束時歸零；0 時不輸出。"""
     miss_refunded: Annotated[bool, Field(exclude_if=_empty)] = False
     """這個回合已經拿過失手返還（AP-1，05 5.2；每個單位每回合最多 1 次）；自己回合開始時清除。
     ``False`` 時不輸出。"""
@@ -678,6 +684,8 @@ class UnitState:
             ap_gain_turn=self.ap_gain_turn,
             ap_per_turn=self.ap_per_turn,
             miss_refunded=self.miss_refunded,
+            ap_carried_in=self.ap_carried_in,
+            ap_lost=self.ap_lost,
             hits_landed=self.hits_landed,
             attack_hits_landed=self.attack_hits_landed,
             stacks=dict(self.stacks),

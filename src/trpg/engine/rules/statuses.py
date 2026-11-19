@@ -38,6 +38,7 @@ __all__ = [
     "is_rooted",
     "move_points_for_turn",
     "move_reduction",
+    "next_turn_ap_penalty",
     "prevents_concealment",
     "scaled_bonus",
     "scaled_permille",
@@ -173,6 +174,22 @@ def move_reduction(rules: Ruleset, unit: UnitState) -> int:
 def ap_penalty(rules: Ruleset, unit: UnitState) -> int:
     """``ap_penalty`` 狀態（透支，Phase 3-50）在回合開始時少給的 AP：多個相加。"""
     return sum(rules.status_def(s.status_id).ap_penalty for s in unit.statuses)
+
+
+def next_turn_ap_penalty(rules: Ruleset, unit: UnitState, *, own_turn: bool) -> int:
+    """下一個自己回合開始時會少給的 AP（AP-1 第 6 項，AP 列的紅斜線）：``ap_penalty`` 狀態裡到那時
+    還在的。``expires: turn_end`` 的狀態在自己回合結束時 −1，所以自己的回合中只剩 1 回合的（已經
+    在這回合扣過）不算；不在自己回合時都算。"""
+    total = 0
+    for status in unit.statuses:
+        definition = rules.status_def(status.status_id)
+        if definition.ap_penalty == 0:
+            continue
+        ends_now = definition.expires == "turn_end" and status.remaining is not None
+        if ends_now and own_turn and status.remaining is not None and status.remaining <= 1:
+            continue
+        total += definition.ap_penalty
+    return total
 
 
 def is_rooted(rules: Ruleset, unit: UnitState) -> bool:

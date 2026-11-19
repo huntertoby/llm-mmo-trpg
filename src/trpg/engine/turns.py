@@ -88,14 +88,9 @@ __all__ = [
 def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     """開始 ``unit_id`` 的回合（可能因持續傷害而倒下，此時 ``active_unit`` 變回 ``None``）。"""
     state = ctx.state
-    core = ctx.core
     unit = state.units[unit_id]
     state.active_unit = unit.id
-    unit.ap = min(
-        unit.ap_per_turn + min(unit.ap_carry, core.ap_carry_max) + unit.ap_pending,
-        ap_cap(core, unit),
-    )
-    unit.ap = max(0, unit.ap - ap_penalty(ctx.rules, unit))  # 透支（Phase 3-50）
+    _refill_ap(ctx, unit)
     unit.ap_carry = 0
     unit.moved_this_turn = False  # 連段條件的「本回合」紀錄（Phase 3D-1）
     unit.miss_refunded = False  # 失手返還每回合最多 1 次（AP-1）
@@ -193,6 +188,18 @@ def _turn_start_hooks(ctx: Ctx, unit: UnitState) -> None:
     if unit.alive and unit.infused_skill is not None:  # 灌注的技能（Phase 3-33d）：行動之前施放
         release_infusion(ctx, unit)
         settle(ctx)
+
+
+def _refill_ap(ctx: Ctx, unit: UnitState) -> None:
+    """回合開始的 AP：每回合 AP ＋ 保留（最多 ``ap_carry_max``）＋ 回合外存下的，不超過上限，
+    再扣透支（Phase 3-50）。順便記下 AP 列要畫的（AP-1）：帶進來的保留 ``ap_carried_in``、
+    被扣掉的 ``ap_lost``。"""
+    core = ctx.core
+    carried = min(unit.ap_carry, core.ap_carry_max)
+    gross = min(unit.ap_per_turn + carried + unit.ap_pending, ap_cap(core, unit))
+    unit.ap = max(0, gross - ap_penalty(ctx.rules, unit))
+    unit.ap_carried_in = min(carried, max(0, gross - unit.ap_per_turn))
+    unit.ap_lost = gross - unit.ap
 
 
 def skip_turn_if_stunned(ctx: Ctx) -> bool:
@@ -316,6 +323,7 @@ def end_turn(ctx: Ctx) -> None:
             execute(ctx, riders)
     unit.ap_carry = min(unit.ap, ctx.core.ap_carry_max)
     unit.ap = 0
+    unit.ap_carried_in = unit.ap_lost = 0  # AP 列只畫自己的回合（AP-1）
     unit.move_points = 0
     unit.aimed = False  # 瞄準到回合結束失效（Phase 3-21a）
     expire_granted_skills(ctx, unit)  # 暫時獲得的技能倒數（Phase 3D-8c）
