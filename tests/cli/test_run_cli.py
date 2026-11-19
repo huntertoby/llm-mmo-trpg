@@ -177,7 +177,10 @@ def test_run_auto_flashes_and_shows_flash_counts(
 # MAP-1（dark_forest 改圖）1 → 2；BAL-20（AI 表 burning: 3）2 → 5（FIX-1 重掃 1～20：5、7、11、16、
 # 18、19、20 三項都練得到；拿掉 burning: 3 時 2 仍可，故歸因 BAL-20）。
 # KW-2（層數關鍵字進三選一新方向，候選全變）5 → 4（重掃 1～20：4、6、7、9 三項都練得到）。
-@pytest.mark.parametrize("seed", [4, 7])
+# WC-2（層數、召喚物的附帶配方改了組合器候選；範圍、控場、位移骨架可帶層數，閃現草稿跟著變）7 → 6
+# （重掃 1～20：改前 4、6、7、9、15，改後 1、4、6、9、15 三項都練得到；
+# 有大閃現的種子改前改後都是 6 個）。
+@pytest.mark.parametrize("seed", [4, 6])
 @pytest.mark.slow
 def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]

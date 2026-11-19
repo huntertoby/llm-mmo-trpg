@@ -40,7 +40,6 @@ from trpg.content.skills import (
     is_wind_skill,
     on_hit_carrier,
     silent_rounds_shown,
-    skill_elements,
 )
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
@@ -1913,8 +1912,8 @@ def _build_card(
 
 
 def _element_id(skill: SkillDef) -> str | None:
-    found = sorted(e.value for e in skill_elements(skill))
-    return found[0] if found else None
+    found = card_elements(skill)  # WC-2b：和元素一行同一個來源（物理技能的效果元素也上色）
+    return found[0].value if found else None
 
 
 def _element_name(skill: SkillDef) -> str | None:
