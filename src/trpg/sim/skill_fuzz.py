@@ -74,7 +74,7 @@ _BASE_UNIT = {
 _BINS = 10
 _BIN_LOW = Fraction(70, 100)
 _BIN_HIGH = Fraction(1)
-_MANA = 99
+_MANA = 990  # 量類 ×10（X10-2b）
 _STATUS_TURNS = 3
 _MIN_TIER, _MAX_TIER = 1, 5
 

@@ -9,12 +9,14 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
 from tests.engine.helpers import library
 from trpg.content.skills import SkillDef
 from trpg.skillgen.flash_cost import _has_rounds, strength_moves
-from trpg.skillgen.flash_derive import FlashError, derive_skill
+from trpg.skillgen.flash_derive import derive_skill
 from trpg.skillgen.flash_offer import FlashRequest, has_options, make_offer
 from trpg.skillgen.flash_ops import _light_cost_drafts
 from trpg.skillgen.flash_state import Variation, acquire, with_flash
@@ -34,7 +36,10 @@ MANA_ONLY_LIGHT = (
     "skill_wil_cinder_hex",
     "skill_wil_storm_hex",
 )
-"""FL-1a 報告第 6 節第 2 點：輕巧只減法力、實付沒變的 7 招。"""
+"""FL-1a 報告第 6 節第 2 點：輕巧只減法力、實付沒變的 7 招。
+
+X10-2b 起法力一格是 10（30 → 20，實付 24 → 16），尾數變細後實付會變，這 7 招都會出輕巧
+（開發 PM 2026-11-20 裁定：尾數變細的結果，不是 bug）。"""
 # SK-1（06 6.38 第 3 點）：「每場一次」「以血支付」讓殘影之誓、吹送、慈焰誓約、鏡像施法、
 # 挑釁怒吼有了選項
 STILL_NO_OPTIONS = (
@@ -62,25 +67,33 @@ def _request(skill: SkillDef) -> FlashRequest:
 
 
 @pytest.mark.parametrize("skill_id", MANA_ONLY_LIGHT)
-def test_light_is_not_offered_when_the_paid_mana_stays_the_same(skill_id: str) -> None:
+def test_light_is_offered_now_that_the_paid_mana_changes(skill_id: str) -> None:
     base = LIB.skills[skill_id]
     core = LIB.ruleset.core
     assert base.ap_cost == 1
-    mana = base.cost.mana
-    assert core.mana_cost(mana - 1) == core.mana_cost(mana)  # 例：3 → 2 實付都是 2
-    with pytest.raises(FlashError):
-        _flash(base, LIGHT)
+    mana, step = base.cost.mana, core.quantity_scale
+    assert (mana, core.mana_cost(mana), core.mana_cost(mana - step)) == (30, 24, 16)
+    light = _flash(base, LIGHT)
+    assert light.cost.mana == mana - step
+    assert strength_moves(base, light) == (False, True)
 
 
 def test_unchanged_paid_mana_stops_instead_of_trying_the_next_field() -> None:
-    """法力減 1 實付不變時不出草稿，也不改試後面的耐力（「不改試別的項目」）。"""
+    """法力減一格實付不變時不出草稿，也不改試後面的耐力（「不改試別的項目」）。
+
+    X10-2b：內容的 800‰ 下，法力減 10 實付一定會變，所以用 100‰ 的規則造出「實付不變」：
+    20 → 10 實付都是下限 10。"""
+    core = LIB.ruleset.core.model_copy(update={"mana_cost_permille": 100})
+    cheap = dataclasses.replace(LIB, ruleset=LIB.ruleset.model_copy(update={"core": core}))
     base = LIB.skills["skill_rime_touch"]
-    both = base.model_copy(update={"cost": base.cost.model_copy(update={"stamina": 3})})
-    assert _light_cost_drafts(both, ("mana", "stamina"), LIB) == []
+    cost = base.cost.model_copy(update={"mana": 20, "stamina": 30})
+    both = base.model_copy(update={"cost": cost})
+    assert core.mana_cost(20) == core.mana_cost(10) == 10
+    assert _light_cost_drafts(both, ("mana", "stamina"), cheap) == []
     # 實付會變的法力照舊出草稿
-    big = base.model_copy(update={"cost": base.cost.model_copy(update={"mana": 6})})
+    big = base.model_copy(update={"cost": base.cost.model_copy(update={"mana": 60})})
     drafts = _light_cost_drafts(big, ("mana",), LIB)
-    assert [d[0]["cost"]["mana"] for d in drafts] == [5]
+    assert [d[0]["cost"]["mana"] for d in drafts] == [50]
 
 
 # ---------------------------------------------------------------------------

@@ -263,12 +263,12 @@ def _param_knobs(
 
 
 def _cut(library: ContentLibrary, skill: SkillDef, cut: CostCut) -> _Trial | None:
-    """``skill`` 的 ``cut.field`` 減一格並驗證；減完會低於 1（等於把這項代價拿掉）或不合法時
-    ``None``——只減不拿掉，例如冷卻最少留 1 回合。"""
+    """``skill`` 的 ``cut.field`` 減一格並驗證；減完會低於下限（等於把這項代價拿掉，見
+    ``CoreRules.cost_floor``）或不合法時 ``None``——只減不拿掉，例如冷卻最少留 1 回合。"""
     data = skill.model_dump(mode="json")
     holder = data if cut.field in ("stance_upkeep", "ap_cost") else data["cost"]
     value = holder.get(cut.field)
-    if not value or value - cut.step < 1:
+    if not value or value - cut.step < library.ruleset.core.cost_floor(cut.field):
         return None
     holder[cut.field] = value - cut.step
     return _checked(library, data)

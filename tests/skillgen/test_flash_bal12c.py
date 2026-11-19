@@ -122,7 +122,8 @@ def test_light_at_ap1_cuts_cooldown_or_resource_by_one_keeping_one() -> None:
             assert len(changed) == 1, (skill.id, changed)
             ((field, value),) = changed.items()
             assert field in ("cooldown", "mana", "stamina")
-            assert value == before[field] - 1 >= 1
+            step = library().ruleset.core.cost_floor(field)  # X10-2b：量類一格 ×scale
+            assert value == before[field] - step >= step
 
 
 def test_light_at_ap1_without_anything_to_cut_is_not_offered() -> None:

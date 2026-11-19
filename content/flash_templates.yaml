@@ -76,8 +76,8 @@ rules:
     cost_cuts:
       - {field: stance_upkeep, step: 1}
       - {field: cooldown, step: 1}
-      - {field: mana, step: 1}
-      - {field: stamina, step: 1}
+      - {field: mana, step: 10}       # 法力、耐力是量類：一格 10（X10-2b，步距 × quantity_scale）
+      - {field: stamina, step: 10}
       - {field: ap_cost, step: 1}
 
 # 出題方式（#70，使用者：「選擇 類別 多花1點」）。重閃和閃現同價。

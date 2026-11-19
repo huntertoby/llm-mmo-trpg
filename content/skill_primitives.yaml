@@ -481,8 +481,8 @@ primitives:
     status: undying
     name_zh: 免死
     llm_hint: "在受到致命傷害時保住一條命。"
-    description_zh: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
-    player_description: "讓自己或友方在一段時間內，致命傷害改為剩下 1 點生命。"
+    description_zh: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 10（1 × quantity_scale）並移除此狀態（墜落與致命地形照樣生效）。
+    player_description: "讓自己或友方在一段時間內，致命傷害改為剩下 10 點生命。"
     category: rule_rewrite
     harmful: false
     min_rarity: epic

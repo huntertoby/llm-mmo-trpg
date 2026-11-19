@@ -210,7 +210,7 @@ summon_infusions:
 # 召喚物小特性（Phase 3-33f2，6.29.4）：召喚技能分歧進化「加深」多給的一個小特性（初值，未經模擬）。
 # 進化時依召喚物定位挑：不動或不攻擊的挑 sturdy、近戰挑 swift、遠程挑 keen（content/skill_evolution.yaml）。
 summon_traits:
-  sturdy: {name_zh: 堅韌, description_zh: 護甲 +1, armor_bonus: 10, budget_points: 1}
+  sturdy: {name_zh: 堅韌, description_zh: 護甲 +10, armor_bonus: 10, budget_points: 1}
   swift: {name_zh: 迅捷, description_zh: 移動 +1, speed_bonus: 1, budget_points: 1}
   keen: {name_zh: 銳利, description_zh: 暴擊範圍擴大 1（自然 19 起暴擊）, crit_range_delta: 1, budget_points: 1}
 

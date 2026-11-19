@@ -41,10 +41,12 @@ def _scene(
     terrain: str | None = None,
     surfaces: Sequence[tuple[int, int, str]] = (),
     element_mods: dict[str, int] | None = None,
+    armor_bonus: int | None = None,
 ) -> BattleState:
     m = make_map(heights, terrain, ally=[caster], enemy=foes, surfaces=surfaces)
     spawns = [spawn(Team.ALLY, caster, caster_template([skill_id], base=BASES[skill_id]))]
-    foe = no_reactions("bandit", max_hp=2000, element_mods=element_mods or {})  # X10-2b ×10
+    extra = {} if armor_bonus is None else {"armor_bonus": armor_bonus}
+    foe = no_reactions("bandit", max_hp=2000, element_mods=element_mods or {}, **extra)  # X10-2b
     spawns += [spawn(Team.ENEMY, xy, foe) for xy in foes]
     return give_turn(make_state(m, spawns), U1)
 
@@ -55,13 +57,18 @@ def _ai() -> UtilityAI:
 
 def test_the_ai_steps_into_water_and_casts_the_tidal_spear_line() -> None:
     """敵人在 4 格外（基礎型態射程 3 打不到），而且免疫火焰法杖的普攻；腳邊的水格讓矛化成直線
-    貫穿 3 格：這一回合 AI 先走進水裡（變奏位置加分），再施放水中貫穿。"""
+    貫穿 3 格：這一回合 AI 先走進水裡（變奏位置加分），再施放水中貫穿。
+
+    X10-2b（開發 PM 裁定調場景輸入）：換算後普攻在火焰下限 25% 的捨去變細，期望傷害從 1.17 變成
+    15.8（÷10＝1.58），普攻分數 5.84 → 7.91，高過走進水裡的 6.0。敵人護甲加值 20 → 160 後
+    普攻分數 5.86，情境照舊成立。"""
     state = _scene(
         TIDAL,
         caster=(3, 8),
         foes=[(3, 4)],
         surfaces=[(3, 7, "water")],
         element_mods={"fire": -1000},
+        armor_bonus=160,
     )
     ai = _ai()
     moved_into_water = False

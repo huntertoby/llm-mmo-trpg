@@ -689,6 +689,11 @@ class CoreRules(ContentModel):
         floor = min(mana, self.quantity_scale)
         return max(floor, (mana * permille + _PERMILLE // 2) // _PERMILLE)
 
+    def cost_floor(self, field: str) -> int:
+        """技能代價減一格的單位與最少留下的量（X10-2b）：法力、耐力是量類，1 × ``quantity_scale``；
+        冷卻、維持費、AP 等是 1。"""
+        return self.quantity_scale if field in ("mana", "stamina") else 1
+
     def max_hp_for(self, base_hp: int, con: int) -> int:
         """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""
         return max(1, base_hp + (con - self.hp_con_base) * self.hp_per_con_point)

@@ -118,13 +118,15 @@ def test_light_on_one_ap_never_gets_stronger(name: str) -> None:
     assert down and not up
 
 
-def test_frost_touch_light_is_not_offered() -> None:
+def test_frost_touch_light_is_offered_again() -> None:
     """FL-1a 時霜寒之觸輕巧＝法力 3 → 2、1d8 → 1d6；FL-1c（第 5 點）起法力實付 3 → 2 都是 2，
-    當作沒少付，不出輕巧（``tests/skillgen/test_flash_cost_fl1c.py``）。"""
+    當作沒少付、不出輕巧。X10-2b 起法力一格 10：30 → 20 實付 24 → 16，又出輕巧
+    （開發 PM 裁定接受；``tests/skillgen/test_flash_cost_fl1c.py``）。"""
     base = _named("霜寒之觸")
     assert base.cost.mana == 30  # X10-2b：法力 ×10
-    with pytest.raises(FlashError):
-        _flash(base, LIGHT)
+    light = _flash(base, LIGHT)
+    assert light.cost.mana == 20
+    assert strength_moves(base, light) == (False, True)
 
 
 @pytest.mark.parametrize("name", ["喚起骷髏", "召喚石像", "隱匿"])

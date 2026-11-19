@@ -424,9 +424,10 @@ def advance_turn(ctx: Ctx) -> None:
 
 
 def _refill_practice_targets(state: BattleState) -> None:
-    """測試模式：HP 被打到底（留 1）的木樁，下一輪開始前補滿（#147）。"""
+    """測試模式：HP 被打到底（留 1 × ``quantity_scale``）的木樁，下一輪開始前補滿（#147）。"""
+    floor = state.ruleset.core.quantity_scale  # 免死下限 1 × 量類倍率（X10-2b）
     for unit in state.units_sorted():
-        if unit.alive and unit.hp <= 1 and is_practice_target(state, unit):
+        if unit.alive and unit.hp <= floor and is_practice_target(state, unit):
             unit.hp = unit.max_hp
 
 
