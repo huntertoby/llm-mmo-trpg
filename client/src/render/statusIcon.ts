@@ -543,6 +543,14 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[6, -2], [9, -2], [9, 2], [6, 2]]);
     arrow(c, -1, 0, false);
   },
+  borrowed_ap: (c) => {
+    // 預支（AP-2）：下回合少 AP——同透支的空電池＋↓（實作者暫用，待美術 PM 補畫）
+    c.beginPath();
+    c.roundRect(-8, -6, 14, 12, 2);
+    c.stroke();
+    line(c, [[6, -2], [9, -2], [9, 2], [6, 2]]);
+    arrow(c, -1, 0, false);
+  },
   silenced: (c) => {
     c.beginPath();
     c.roundRect(-9, -7, 18, 12, 4);

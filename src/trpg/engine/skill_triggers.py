@@ -38,7 +38,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Literal
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
-from trpg.content.skills import SkillDef, TriggerSpec
+from trpg.content.skills import ON_AP_SPENT_ALL, SkillDef, TriggerSpec
 from trpg.engine import modifiers, stack_gain
 from trpg.engine.charge_queries import DELAYED_RELEASE, attacked_release
 from trpg.engine.events import (
@@ -501,6 +501,23 @@ def collect_turn_end(ctx: Ctx, unit: UnitState) -> None:
     """``on_turn_end``：回合結束，在狀態倒數之前。"""
     stack_gain.collect_turn_end(ctx, unit)  # 專注：這回合沒有移動（3-52）
     _collect_own(ctx, unit, "on_turn_end")
+
+
+def collect_ap_spent(ctx: Ctx, unit: UnitState) -> bool:
+    """``on_ap_spent_all``（AP-2）：行動者自己回合的一個動作把 AP 用到 0 時（由
+    :func:`trpg.engine.battle.run_action` 判斷）。沒有持有者（被動或詞條）時什麼都不做、回傳
+    ``False``；有時觸發並回傳 ``True``（呼叫端接著 ``settle``）。每回合最多一次由被動的
+    ``max_per_round``、詞條的 ``limit`` 管。"""
+    index = _index(ctx)
+    if not index.any:
+        return False
+    owned = any(o == unit.id for o, _ in index.owners(ON_AP_SPENT_ALL)) or any(
+        o == unit.id for o, _ in index.gear_owners(ON_AP_SPENT_ALL)
+    )
+    if not owned:
+        return False
+    _collect_own(ctx, unit, ON_AP_SPENT_ALL)
+    return True
 
 
 def collect_battle_start(ctx: Ctx) -> None:

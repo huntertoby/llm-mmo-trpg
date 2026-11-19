@@ -98,6 +98,7 @@ WHITELIST: dict[str, tuple[str, ...]] = {
     ),
     "trigger": (
         "affix_trig_every3_prone",
+        "affix_trig_every3_ap",  # AP-2
         "affix_trig_kill_ap",
         "affix_trig_thorns_burn",
         "affix_trig_summon_blast",
@@ -132,12 +133,13 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_80_affixes_in_11_categories() -> None:
+def test_whitelist_has_all_81_affixes_in_11_categories() -> None:
     """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66；5D-3 加 3 條獨特詞條 → 69；
     5D-2b 補 8 條技能強化（潮濕、隱蔽、點燃、倒地、中毒）→ 77；5D-4 補帶電利用 → 78；
-    LW-1 加獨狼條件數值「獨行的」→ 79；RG-4 加塔盾的「護陣」→ 80。"""
+    LW-1 加獨狼條件數值「獨行的」→ 79；RG-4 加塔盾的「護陣」→ 80；
+    AP-2 加「每第 3 次命中回 1 AP」→ 81。"""
     affixes = library().affixes
-    assert len(affixes) == 80
+    assert len(affixes) == 81
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

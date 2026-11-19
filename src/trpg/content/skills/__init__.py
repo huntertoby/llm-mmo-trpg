@@ -226,6 +226,9 @@ from trpg.content.skills.constants import (
     MAX_REFUND_AP as MAX_REFUND_AP,
 )
 from trpg.content.skills.constants import (
+    ON_AP_SPENT_ALL as ON_AP_SPENT_ALL,
+)
+from trpg.content.skills.constants import (
     ON_CAST_TAG as ON_CAST_TAG,
 )
 from trpg.content.skills.constants import (

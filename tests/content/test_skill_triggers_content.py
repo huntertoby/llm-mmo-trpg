@@ -45,6 +45,7 @@ def test_only_triggers_with_another_party_allow_target_other() -> None:
         "on_cast_tag",
         "on_battle_start",
         "on_keyword_exploited",  # SK-3：效果作用在持有者
+        "on_ap_spent_all",  # AP-2：效果作用在持有者
     }
     for trigger in rules.skill_triggers.triggers:
         assert trigger.has_other is (trigger.id not in no_other)

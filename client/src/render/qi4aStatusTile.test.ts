@@ -58,8 +58,8 @@ afterEach(() => {
 
 describe("T-A8 statusTile 其餘 86 種＝Q 版圓片＋qIcon/status.ts 的圖樣", () => {
   it("名詞表 118 個：32 種是第④批 STATUS、86 種 status.ts 都認得", () => {
-    expect(IDS).toHaveLength(118);
-    expect(OTHER).toHaveLength(86);
+    expect(IDS).toHaveLength(119); // AP-2 ＋1（borrowed_ap）
+    expect(OTHER).toHaveLength(87); // AP-2 ＋1
     for (const id of IDS) expect(QT.entry(id), id).not.toBeNull();
   });
 
@@ -68,7 +68,7 @@ describe("T-A8 statusTile 其餘 86 種＝Q 版圓片＋qIcon/status.ts 的圖�
   it("86 種的呼叫紀錄＝掛鉤畫 status.ts 的 entry(id).d（stance_* 直接畫、其他經 fit 0.86 縮進色環；不經 statusGlyph），而且和現行圖樣不同", () => {
     const fitted = OTHER.filter(statusTileFits);
     expect(STATUS_TILE_FIT).toBe(0.86);
-    expect(fitted).toHaveLength(38);
+    expect(fitted).toHaveLength(39); // AP-2 ＋1（borrowed_ap）
     expect(OTHER.filter((id) => !statusTileFits(id)).every((id) => id.startsWith("stance_"))).toBe(true);
     for (const id of OTHER) {
       clearSkillIconCache();

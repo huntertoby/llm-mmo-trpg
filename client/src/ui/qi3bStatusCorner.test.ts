@@ -1,5 +1,5 @@
 // QI-3b T-B5：狀態卡角落數字——元素架勢級數、晶能湧動／狂湧 1／2 優先於回合數與數值（規格 docs/phases/PhaseQI-3計畫.md 第 0 節第 4 列、D2、D3）。
-// 名詞表快照 battle/fixtures/glossary.json（118 個）。原有的 3 條在 ui/statusCard.test.ts（不改）。
+// 名詞表快照 battle/fixtures/glossary.json（119 個；AP-2 加預支的扣回 borrowed_ap）。原有的 3 條在 ui/statusCard.test.ts（不改）。
 import { describe, expect, it } from "vitest";
 import type { StatusView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
@@ -36,7 +36,7 @@ describe("T-B5 角落級數", () => {
 
   it("其他狀態照現行（剩餘回合 → 數值 → 空）；姿態、像架勢但不合樣式的 ID 不算級數", () => {
     const others = IDS.filter((id) => statusTier(id) === null);
-    expect(others).toHaveLength(118 - 45 - 2);
+    expect(others).toHaveLength(119 - 45 - 2);
     for (const id of others) {
       expect(statusCorner(st(id, 3, 7)), id).toBe("3");
       expect(statusCorner(st(id, null, 7)), id).toBe("7");

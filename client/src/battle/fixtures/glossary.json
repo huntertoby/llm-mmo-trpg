@@ -4037,6 +4037,14 @@
    "rules_zh": []
   },
   {
+   "id": "on_ap_spent_all",
+   "name_zh": "這回合用完所有 AP 時",
+   "description_zh": "持有者自己的回合裡，一個動作（技能、普攻、跑步、互動等）結算完後 AP 剛好用光（動作前還有 AP）時觸發；結束回合不算。每回合最多 1 次。沒有另一方，效果作用在持有者。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": []
+  },
+  {
    "id": "targeted_by_melee",
    "name_zh": "被近戰攻擊時",
    "description_zh": "被近戰攻擊命中之後、傷害結算之前。",

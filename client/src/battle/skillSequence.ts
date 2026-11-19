@@ -120,6 +120,7 @@ const EVENT_PRIMITIVE: Readonly<Partial<Record<string, string>>> = {
   skill_copied: "copy_skill",
   skill_granted: "grant_skill",
   ap_granted: "grant_ap",
+  ap_borrowed: "borrow_ap",
   reactions_granted: "extra_reaction",
   ap_refunded: "refund_ap",
   gamble_rolled: "gamble",

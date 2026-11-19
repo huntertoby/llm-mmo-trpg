@@ -321,6 +321,8 @@ ON_ENTER_SURFACE = "on_enter_surface"
 """帶參數或需要特別處理的觸發時機 ID（Phase 3C-3a；其餘見 ``content/skill_triggers.yaml``）。"""
 
 ON_KEYWORD_EXPLOITED = "on_keyword_exploited"
+ON_AP_SPENT_ALL = "on_ap_spent_all"
+"""AP-2（#168，05 5.2）：持有者自己回合的一個動作把 AP 用到 0 時（每回合 1 次）。"""
 """你造的關鍵字被利用時（SK-3，#166，06 6.38 第 10 點）：``status``／``surface`` 擇一縮小範圍，
 被動的 ``max_per_round`` 只能是 1。"""
 

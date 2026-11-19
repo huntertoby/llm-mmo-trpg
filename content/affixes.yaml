@@ -436,6 +436,17 @@ affixes:
     effect_target: self
     effects: [{type: grant_ap, amount: 1}]
     limit: per_turn
+  # AP-2（#168，05 5.2「詞條『累積到門檻 +1 AP』」）：每第 3 次命中回 1 AP（裝備的 AP 回復上限照舊 +1／回合）。
+  # 和「擊殺時回 AP」同一族（item_gen._family：family:ap_trigger），抽到這一族時才在兩者間挑，其他詞條的抽法不變。
+  - id: affix_trig_every3_ap
+    category: trigger
+    name_zh: 每第 {every} 次命中：回 {effect.amount} AP（每回合 1 次）
+    slots: [weapon, hands, ring]
+    trigger: every_n_hits
+    n: 3
+    effect_target: self
+    effects: [{type: grant_ap, amount: 1}]
+    limit: per_turn
   - id: affix_trig_thorns_burn
     category: trigger
     name_zh: 受到近戰傷害時：攻擊者「{effect.status}」{effect.duration} 回合（每輪 1 次）

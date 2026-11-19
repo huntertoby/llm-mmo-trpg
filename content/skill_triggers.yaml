@@ -143,3 +143,13 @@ triggers:
     budget_coefficient_permille: 300
     min_rarity: epic
     random_composer: false
+  # --- AP-2（#168，05 5.2「會給 AP 的內容」）：這回合用完所有 AP 時。給被動與裝備詞條用。係數為初值，未經模擬（工坊可調）。
+  # random_composer: false（一般抽選不抽，既有種子不變）；組合器只以獨立串流產生（AP-2 第 4 項）。
+  - id: on_ap_spent_all
+    name_zh: 這回合用完所有 AP 時
+    llm_hint: "持有者自己的回合裡，一個動作把 AP 用到 0 時發動，每回合一次。"
+    description_zh: 持有者自己的回合裡，一個動作（技能、普攻、跑步、互動等）結算完後 AP 剛好用光（動作前還有 AP）時觸發；結束回合不算。每回合最多 1 次。沒有另一方，效果作用在持有者。
+    has_other: false
+    budget_coefficient_permille: 400
+    min_rarity: epic
+    random_composer: false

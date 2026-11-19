@@ -12,6 +12,7 @@ from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
     _MAX_COOLDOWN,
     _PERMILLE,
+    ON_AP_SPENT_ALL,
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
     ON_KEYWORD_EXPLOITED,
@@ -168,6 +169,8 @@ class TriggerSpec(ContentModel):
         if self.surface is Surface.NONE:
             raise ValueError("trigger.surface 不可為 none")
         self._check_exploited()
+        if self.event == ON_AP_SPENT_ALL and self.max_per_round != 1:  # AP-2：每回合一次
+            raise ValueError("on_ap_spent_all 每輪最多觸發 1 次（max_per_round 只能是 1）")
         return self
 
     def _check_exploited(self) -> None:

@@ -425,6 +425,7 @@ export const PRIMITIVE_PLAYS: Readonly<Record<string, PrimitivePlay>> = {
   copy_skill: { role: "post", clip: "snatch" },
   grant_skill: { role: "post", clip: "shoulder_tap", icon: "skill" },
   grant_ap: { role: "post", clip: "shoulder_tap", icon: "ap" },
+  borrow_ap: { role: "post", clip: "shoulder_tap", icon: "ap" }, // AP-2：預支暫借給予 AP 的動作
   extra_reaction: { role: "post", clip: "shoulder_tap", icon: "reaction" },
   refund_ap: { role: "post", clip: "rewind_still", icon: "ap" },
   refund_cooldown: { role: "post", clip: "rewind_still", icon: "cooldown" },
