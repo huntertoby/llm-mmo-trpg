@@ -37,6 +37,11 @@ WC-2（#167）另外照許願池的新出題量：
 
     uv run python scripts/wish_coverage.py run --seeds 40 --workers 8
     uv run python scripts/wish_coverage.py report
+
+**資料不進版控**（SK-4）：``buckets.json``（WC-2 起 8 MB 以上；WC-1 的
+``docs/phases/WC-1資料/buckets.json`` 同樣）列在 ``.gitignore``，repo 裡只留覆蓋表 md。要重出表或
+改 ``report`` 時，先在本機用上面的 ``run`` 重產（同一份內容、同樣參數，計時以外的欄位逐字相同；
+8 個行程約 15 分鐘），再跑 ``report``。``report`` 找不到資料檔時會提示先跑 ``run``。
 """
 
 from __future__ import annotations
@@ -691,7 +696,8 @@ def render(lib: ContentLibrary, cov: Coverage, payload: Mapping[str, Any]) -> st
         "# 許願覆蓋表",
         "",
         "由 `scripts/wish_coverage.py report` 從 `docs/phases/WC-2資料/buckets.json` 產生"
-        f"（格式 `{FORMAT}`），不要手改；重跑見 `docs/phases/PhaseWC-2報告.md`。"
+        f"（格式 `{FORMAT}`），不要手改。資料檔不進版控，重產照 `scripts/wish_coverage.py` "
+        "開頭的說明（先 `run` 再 `report`）。"
         "舊表（WC-1）留在 `docs/phases/許願覆蓋表.md` 對照。",
         "",
         f"- 標籤：許願池固定清單 {len(cov.tags)} 個（`content/skill_pick.yaml` 的 `wish_tags`；"
@@ -806,6 +812,13 @@ def compare_lines(old_text: str, new_text: str) -> list[str]:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
+    if not args.data.exists():  # SK-4：資料不進版控，要先在本機重產
+        print(
+            f"找不到 {args.data}（不進版控）：先跑 "
+            "uv run python scripts/wish_coverage.py run --seeds 40 --workers 8",
+            file=sys.stderr,
+        )
+        return 2
     lib = load_library()
     measured, payload = load_measured(lib, args.data)
     cov = build_coverage(lib, measured)

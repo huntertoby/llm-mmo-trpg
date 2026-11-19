@@ -50,6 +50,12 @@ structure:
   # 初值＝一半改走附帶配方（層數不再只有蓄力骨架）、召喚物三成（獻祭以外的「利用召喚物」），未經模擬，接數值工坊。
   stack_rider_permille: 500           # 層數關鍵字（連擊、怒氣、專注、氣）：一般主動技＋累積或消耗那種層數
   summon_rider_permille: 300          # 召喚物關鍵字：一般主動技＋對自己施加號令（你的召喚物傷害提高）
+  # SK-4（玩法交接 4.1.34 第 10 點）：吸血配方。打擊、範圍骨架的傷害（對敵、沒有聖光雙效）附 lifesteal_permille，
+  # 獨立亂數串流（沒抽中的種子不變）；預算照 skill_budget.yaml 的 lifesteal_value_permille 計價，強度由旋鈕重調。
+  # 初值＝大約和其他獨立串流的附帶相當（100‰）；吸血 300‰（原語上限 500，手寫的生命汲取 400），未經模擬，接數值工坊。
+  lifesteal_permille: 100             # 打擊、範圍骨架的傷害附吸血的機率
+  lifesteal_amount_permille: 300      # 附上的吸血千分比（回復造成傷害的 30%）
+  lifesteal_skeletons: [strike, area]
   displace_second_core_permille: 250  # 位移骨架有第二個核心原語
   combo_double_damage_permille: 500   # 連段有第二段傷害
   control_buff_permille: 250          # 控場核心狀態為自我增益

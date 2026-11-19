@@ -143,6 +143,14 @@ class StructureRules(ContentModel):
     summon_rider_permille: int = Field(default=0, ge=0, le=1000)
     """指定召喚物關鍵字時，改成「一般主動技＋號令（你的召喚物傷害提高）」的機率（WC-2，#167；獨立的
     亂數串流，沒抽中或做不出來時照原本的組法）。"""
+    lifesteal_permille: int = Field(default=0, ge=0, le=1000)
+    """``lifesteal_skeletons`` 骨架的傷害附吸血的機率（SK-4，玩法交接 4.1.34 第 10 點；獨立的亂數
+    串流，沒抽中的種子不變）。"""
+    lifesteal_amount_permille: int = Field(default=1, ge=1, le=500)
+    """組合器附上的吸血千分比（傷害效果的 ``lifesteal_permille``，原語上限 500）。預算照
+    ``skill_budget.yaml`` 的 ``lifesteal_value_permille`` 計價，強度由旋鈕重調。"""
+    lifesteal_skeletons: tuple[str, ...] = ()
+    """傷害可以附吸血的骨架（SK-4：打擊、範圍）。"""
     displace_second_core_permille: int = _PERMILLE
     combo_double_damage_permille: int = _PERMILLE
     control_buff_permille: int = _PERMILLE

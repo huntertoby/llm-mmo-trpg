@@ -133,3 +133,21 @@ def test_bucket_measurement_is_deterministic(wc: Any) -> None:
     assert first == second
     assert sum(first["reasons"].values()) == 3
     assert sum(first["signatures"].values()) == first["legal"]
+
+
+def test_report_without_data_asks_to_run_first(
+    wc: Any, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """SK-4：``buckets.json`` 不進版控；沒有資料時 ``report`` 不寫表，提示先跑 ``run``。"""
+    out = tmp_path / "table.md"
+    code = wc.main(["report", "--data", str(tmp_path / "missing.json"), "--out", str(out)])
+    assert code == 2
+    assert not out.exists()
+    assert "wish_coverage.py run" in capsys.readouterr().err
+
+
+def test_bucket_data_is_not_tracked() -> None:
+    """SK-4：覆蓋表的大資料檔列在 ``.gitignore``。"""
+    ignore = (SCRIPT.parents[1] / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "docs/phases/WC-1資料/buckets.json" in ignore
+    assert "docs/phases/WC-2資料/buckets.json" in ignore
