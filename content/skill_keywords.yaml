@@ -19,6 +19,10 @@
 #
 # actions（選填）：和關鍵字相符的基本動作；候選產生器（trpg.skillgen.candidates）依玩家用過的次數偏向該關鍵字。
 #
+# 「你造的○○被利用時」（trigger: on_keyword_exploited）限定了狀態或表面時，算收了那個狀態（target_has_status）或表面
+# （target_on_surface）的關鍵字的利用（SK-3c，玩法交接 4.1.31 第 8 點）：uses 加這兩種條件時要一起加對應的觸發
+# （tests/content/test_keyword_exploited_derive_sk3c.py 檢查兩邊一一對應）；沒限定的不算任何關鍵字。
+#
 # 技能池（trpg.skillgen.keywords.keyword_pools）：技能製造或利用某關鍵字就歸入該池，一招可在多個池。
 keywords:
   - id: ignite
@@ -44,8 +48,11 @@ keywords:
       - {change: add_element, element: fire}
     uses:
       - {condition: target_has_status, status: burning}
+      - {trigger: on_keyword_exploited, status: burning}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個狀態
       - {condition: target_on_surface, surface: fire}
+      - {trigger: on_keyword_exploited, surface: fire}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個表面
       - {condition: target_on_surface, surface: oil}
+      - {trigger: on_keyword_exploited, surface: oil}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個表面
       - {effect: consume_status, status: burning}
       - {trigger: on_status_applied, status: burning}
       - {condition: cast_tag_this_turn, tag: fire}
@@ -63,6 +70,7 @@ keywords:
       - {effect: zone, surface: water}
     uses:
       - {condition: target_on_surface, surface: water}
+      - {trigger: on_keyword_exploited, surface: water}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個表面
       - {trigger: on_enter_surface, surface: water}
       - {condition: cast_tag_this_turn, tag: water}
       - {effect: heal, grade: general, reason_zh: 站在水上的目標受到的治療 +20%}   # 通用：潮濕 × 治療（BAL-16b，玩法決定 #93；core.yaml wet_heal_permille；不含護盾）
@@ -102,7 +110,9 @@ keywords:
       - {effect: inscribe, element: ice}
     uses:
       - {condition: target_has_status, status: frozen}
+      - {trigger: on_keyword_exploited, status: frozen}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個狀態
       - {condition: target_on_surface, surface: ice}
+      - {trigger: on_keyword_exploited, surface: ice}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個表面
       - {effect: consume_status, status: frozen}
   - id: prone
     name_zh: 倒地
@@ -123,6 +133,7 @@ keywords:
       - {effect: apply_status, status: prone}
     uses:
       - {condition: target_has_status, status: prone}
+      - {trigger: on_keyword_exploited, status: prone}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個狀態
       - {effect: consume_status, status: prone}
       - {effect: damage, weapon_req: melee, category: weapon, grade: general, reason_zh: 近戰攻擊倒地的目標有優勢}   # 通用：近戰攻擊倒地者有優勢（statuses.yaml prone）
   - id: collision
@@ -163,6 +174,7 @@ keywords:
       - {effect: apply_status, status: overwatch}
     uses:
       - {condition: target_has_status, status: marked}
+      - {trigger: on_keyword_exploited, status: marked}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個狀態
       - {effect: detonate_runes}
       - {condition: on_own_rune}
       - {effect: consume_status, grade: general, reason_zh: 消耗目標身上的狀態，和標記一樣是先上狀態再引爆}   # 通用：引爆任何狀態
@@ -238,7 +250,9 @@ keywords:
       - {effect: zone, surface: poison}
     uses:
       - {condition: target_has_status, status: poison}
+      - {trigger: on_keyword_exploited, status: poison}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個狀態
       - {condition: target_on_surface, surface: poison}
+      - {trigger: on_keyword_exploited, surface: poison}   # SK-3c（玩法交接 4.1.31 第 8 點）：「你造的○○被利用時」限定了這個表面
       - {effect: consume_status, status: poison}
       - {trigger: on_status_applied, status: poison}
   # 3J-3（玩法決定 #48，06 6.27.1、6.30）：第 12 個關鍵字。製造＝進入形態；利用＝「在形態中」才生效或變強的技能，
