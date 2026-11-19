@@ -31,6 +31,8 @@ r.SHOTS = [
     ("anim", "part=anim", D + "6-anim-keyframes.jpg"),
     ("anim-1600", "part=anim-t1&w=1600", D + "7-anim-true1x-1600.png"),
     ("anim-800", "part=anim-t1&w=800", D + "8-anim-true1x-800.png"),
+    ("cases-1600", "part=anim-cases&w=1600", D + "9-anim-cases-1600.png"),
+    ("cases-800", "part=anim-cases&w=800", D + "10-anim-cases-800.png"),
 ]
 
 AUDIT_RE = re.compile(r'<pre id="audit">([^<]*)</pre>')

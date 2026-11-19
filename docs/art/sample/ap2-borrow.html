@@ -9,7 +9,7 @@
 <h1>AP-2 預支（樣張）</h1>
 <p class="note">畫圖 agent，2026-11-19。紀錄 docs/art/AP-2-美術.md。分段：
 <a href="?part=icons&mute=1">圖樣</a><a href="?part=icons-t1&mute=1">真 1 倍</a><a href="?part=near&mute=1">撞圖</a><a href="?part=full96&mute=1">完整圖示</a>
-<a href="?part=statusrow&mute=1">戰場狀態列</a><a href="?part=anim&mute=1">演出</a><a href="?part=anim-t1&w=1600&mute=1">演出真 1 倍（1600）</a><a href="?part=anim-t1&w=800&mute=1">演出真 1 倍（800）</a><a href="?part=live&mute=1">動畫播放</a><a href="?part=audit&mute=1">自查</a></p>
+<a href="?part=statusrow&mute=1">戰場狀態列</a><a href="?part=anim&mute=1">演出</a><a href="?part=anim-t1&w=1600&mute=1">演出真 1 倍（1600）</a><a href="?part=anim-t1&w=800&mute=1">演出真 1 倍（800）</a><a href="?part=anim-cases&w=1600&mute=1">三種站位（1600）</a><a href="?part=anim-cases&w=800&mute=1">三種站位（800）</a><a href="?part=live&mute=1">動畫播放</a><a href="?part=audit&mute=1">自查</a></p>
 <div id="sheet"></div><div id="live"></div>
 <textarea id="out"></textarea>
 <script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
@@ -200,6 +200,7 @@ function render(scene, view) {
   g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
   const units = [...scene.units].sort((a, b) => a.y - b.y || a.x - b.x), rows = [...new Set(units.map((u) => u.y))].sort((a, b) => a - b);
   for (const row of rows) { const inRow = units.filter((u) => u.y === row); for (const u of inRow) { xf(); OO.drawRing(g, u); drawUnit(g, u, sc); } for (const u of inRow) { xf(); hpBar(g, u); } }
+  if (scene.under) { g.setTransform(1, 0, 0, 1, 0, 0); scene.under(g, (x, y) => ({ x: (x - view.x0) * sc, y: (y - view.y0) * sc })); } /* 頭頂狀態列（特效層在它上面） */
   if (scene.top) { xf(); scene.top(g); }
   g.setTransform(1, 0, 0, 1, 0, 0);
   if (scene.screen) scene.screen(g, (x, y) => ({ x: (x - view.x0) * sc, y: (y - view.y0) * sc }), sc, view);
@@ -248,18 +249,22 @@ PARTS.statusrow = () => {
 // =====================================================================
 // 4. 施放演出：只對自己、0 AP、≤ 320 ms（現行給予 AP 的拍肩 shoulder_tap 是 320 ms）
 // =====================================================================
-const chestOf = (u) => { const f = OO.feetOf(u); return { x: f.x + (u.west ? -3 : 3), y: f.y - 22 }; };
+/** 胸口＝遊戲端 skillLayer.ts 的 chest()：腳底往上 T × 0.35（＝16.8）、往面向 3（第 1 版是往上 22，菱形與光圈落在臉上；AP-2 審查 M2 定案用 chest()）。 */
+const chestOf = (u) => { const f = OO.feetOf(u); return { x: f.x + (u.west ? -3 : 3), y: f.y - T * 0.35 }; };
 /** 現行（暫借）：shoulder_tap——另一隻手往前伸（pose cast 0–320），128–320 ms 一顆淡金菱形（深色圓底）從胸口飛到「目標＝自己」的格子中心往上 T×0.05（skillLayer.ts linkOut、skillFxLower.ts iconFly／drawIcon("ap")）；示意重畫。 */
 function liveFx(g, t, u) {
   if (t < 128 || t > 320) return; const p = (t - 128) / 192, c = OO.centerOf(u), from = chestOf(u), to = { x: c.x, y: c.y - T * 0.05 };
   const q = { x: lerp(from.x, to.x, p), y: lerp(from.y, to.y, p) - T * 0.25 * Math.sin(p * Math.PI) }, a = p > 0.8 ? (1 - p) / 0.2 : 1;
   g.save(); g.globalAlpha = 0.5 * a; g.fillStyle = "#1a1420"; g.beginPath(); g.arc(q.x, q.y, 5, 0, TAU); g.fill(); g.globalAlpha = a; g.fillStyle = "#ffe9a8"; g.beginPath(); g.moveTo(q.x, q.y - 3.2); g.lineTo(q.x + 3.2, q.y); g.lineTo(q.x, q.y + 3.2); g.lineTo(q.x - 3.2, q.y); g.closePath(); g.fill(); g.restore();
 }
-function sceneBorrow(t, live = false, upper = true) {
-  const M = U.mage({ id: "M", x: 4, y: 3, pose: live ? (t >= 0 && t <= 320 ? AP.POSE.cast : null) : AP.poseAt(t) });
+/** opt（M1 補拍的三種站位）：status＝施放者頭頂狀態（陣列，照 rowLayout）｜front＝面前那格站一個單位｜west＝面向西；S＝地圖縮放（畫狀態列用）。 */
+function sceneBorrow(t, live = false, upper = true, opt = {}) {
+  const M = U.mage({ id: "M", x: 4, y: 3, west: !!opt.west, pose: live ? (t >= 0 && t <= 320 ? AP.POSE.cast : null) : AP.poseAt(t) });
   const extra = upper ? [U.archer({ id: "A", x: 4, y: 2 }), U.bandit({ id: "B2", x: 5, y: 2 }), U.fighter({ id: "F", x: 3, y: 2 })] : [];
   const units = [M, U.bandit({ id: "B", x: 6, y: 3 }), ...extra];
-  return { cols: 9, rows: 7, groundAt: () => STONE, units, top: (g) => (live ? liveFx(g, t, M) : AP.borrowFx(g, t, OO.centerOf(M), chestOf(M), M.west ? -1 : 1)) };
+  if (opt.front) units.push(U.bandit({ id: "B3", x: opt.west ? 3 : 5, y: 3, west: !opt.west, hp: 0.8 }));
+  const under = opt.status ? (g, map) => statusRow(g, map, M, opt.status, opt.S) : null;
+  return { cols: 9, rows: 7, groundAt: () => STONE, units, under, top: (g) => (live ? liveFx(g, t, M) : AP.borrowFx(g, t, OO.centerOf(M), chestOf(M), M.west ? -1 : 1)) };
 }
 const KEYS = [50, 110, 170, 220, 270, 310];
 const VIEWA = (S, res = 1, zoom = 1) => ({ S, res, zoom, x0: T * 2.7, y0: T * 1.55, w: T * 4.1, h: T * 2.75 });
@@ -283,6 +288,20 @@ PARTS["anim-t1"] = () => {
     { cells: KEYS.slice(0, 3).map((t) => nn(render(sceneBorrow(t), VIEWA(S)), Z, `${t} ms`)), gap: 14 },
     { cells: KEYS.slice(3).map((t) => nn(render(sceneBorrow(t), VIEWA(S)), Z, `${t} ms`)), gap: 14 },
   ]), "image/png");
+};
+/** M1 補拍：三種站位 × 6 個關鍵影格，真 1 倍（w＝1600 ×2｜800 ×4）。(a) 頭頂兩個狀態（透支＋預支）(b) 面前那格有人 (c) 面向西。 */
+PARTS["anim-cases"] = () => {
+  const W = P.get("w") === "800" ? 800 : 1600, S = W === 800 ? S800 : S1600, Z = W === 800 ? 4 : 2;
+  const V = VIEWA(S), VW = { ...V, x0: T * 2.2 }; /* 面向西時往左移半格，那格才在畫面裡 */
+  const CASES = [
+    ["(a) 施放者頭頂兩個狀態（透支＋預支，照 rowLayout）", { status: ["overdrawn", "borrowed_ap"], S }, V],
+    ["(b) 施放者面前那格站一個單位（盜賊，面向施放者）", { front: true }, V],
+    ["(c) 施放者面向西", { west: true }, VW],
+  ];
+  const blocks = [{ title: `施放演出「預支」補拍 ${W} 寬（地圖縮放 ${S.toFixed(2)}）真 1 倍 ×${Z} 最近鄰：三種站位` },
+    { note: "胸口＝遊戲端 chest()（腳底往上 16.8）。上一排照舊站人。每列 6 個關鍵影格：50／110／170／220／270／310 ms。" }];
+  for (const [zh, opt, view] of CASES) blocks.push({ title: zh }, { cells: KEYS.map((t) => nn(render(sceneBorrow(t, false, true, opt), view), Z, `${t} ms`)), gap: 14 });
+  publish(sheet(W === 800 ? 1900 : 1720, blocks), "image/png");
 };
 PARTS.live = () => {
   const dpr = window.devicePixelRatio || 1, V = VIEWA(S1600, dpr, 2), host = document.getElementById("live");
