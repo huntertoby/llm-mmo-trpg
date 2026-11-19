@@ -67,3 +67,13 @@
 2. **工坊說明文字沒改**：費用欄位說明仍是「主動技能至少要花 1 點」。工坊的 AP 選單是 1～3（AP-2 待決 10），做不出預支技能，所以沒加例外說明。
 3. **數值工坊批次改 `ap_cost` 的範圍是 1～3**（`api/tuning/skills.py` `_SCALAR_LIMITS`）：對搶拍批次改 AP 會被夾成 1、然後驗證失敗。AP-2 就有，不在本段範圍，記一下。
 4. **`build_form_mastery`、`build_form_tester_2` 在 `trpg battle --ally-build` 開場報錯**（`skill_form_breath_dragon`），改前就有，與本段無關。
+
+## 開發 PM 裁定（2026-11-20）
+
+合併：`Merge AP-2b`（--no-ff）。合併後 ruff、format、mypy、lint-imports、`trpg content check` 都是 0；全量檢查合併後跑一次。
+
+待決 4 件：
+1. 接受：「可以 0」，不強制。設計寫的是不受最低花費限制，沒寫必須是 0。
+2. 接受。工坊做不出預支技能，說明文字先不改。
+3. 排進佇列：數值工坊批次改 `ap_cost` 時，遇到預支技能要放行 0。
+4. 排進佇列：兩個 form build 用 `--ally-build` 開場就報錯（`skill_form_breath_dragon`），改前就有，要另外查原因。
