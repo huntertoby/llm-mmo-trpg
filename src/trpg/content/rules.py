@@ -237,10 +237,10 @@ class SummonGrowth(ContentModel):
     （無條件捨去）；傷害加成（‰）＝ ``bonus_per_level_permille × (L−1) +
     bonus_per_attr_mod_permille × M``，與施放者自己的傷害加成合計套全身上限。"""
 
-    hp_per_level: int = Field(default=2, ge=0, le=20)
-    hp_per_attr_mod: int = Field(default=1, ge=0, le=20)
-    flat_per_level_permille: int = Field(default=250, ge=0, le=5000)
-    flat_per_attr_mod_permille: int = Field(default=250, ge=0, le=5000)
+    hp_per_level: int = Field(default=2, ge=0, le=200)  # X10-1：量類 ×10 放寬
+    hp_per_attr_mod: int = Field(default=1, ge=0, le=200)  # X10-1：量類 ×10 放寬
+    flat_per_level_permille: int = Field(default=250, ge=0, le=50000)  # X10-1：量類 ×10 放寬
+    flat_per_attr_mod_permille: int = Field(default=250, ge=0, le=50000)  # X10-1：量類 ×10 放寬
     bonus_per_level_permille: int = Field(default=10, ge=0, le=200)
     bonus_per_attr_mod_permille: int = Field(default=10, ge=0, le=200)
 
@@ -294,7 +294,7 @@ class SummonTrait(ContentModel):
 
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
-    armor_bonus: int = Field(default=0, ge=0, le=3)
+    armor_bonus: int = Field(default=0, ge=0, le=30)  # X10-1：量類 ×10 放寬
     speed_bonus: int = Field(default=0, ge=0, le=3)
     crit_range_delta: int = Field(default=0, ge=0, le=2)
     """暴擊範圍擴大幾點（最低自然骰值 −N；不低於 2）。"""

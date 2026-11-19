@@ -302,11 +302,16 @@ _EFFECT_PARAM_FIELDS = (
 )
 
 
+_AMOUNT_MAX = 10
+"""``restore_choice`` 以外的 ``amount`` 上限（X10-1 前的 schema 上限，量類 ×10 不影響它們）。"""
+
+
 class RaceEffect(ContentModel):
     """種族技的一個效果。哪些參數合法由 :data:`RACE_EFFECT_SPECS` 決定。"""
 
     type: RaceEffectType
-    amount: int | None = Field(default=None, ge=1, le=10)
+    amount: int | None = Field(default=None, ge=1, le=100)
+    """X10-1：上限放寬給 ``restore_choice``（耐力、法力 ×10）；其他效果仍限 10。"""
     distance: int | None = Field(default=None, ge=1, le=2)
     duration: int | None = Field(default=None, ge=1, le=10)
     range: int | None = Field(default=None, ge=1, le=6)
@@ -339,6 +344,8 @@ class RaceEffect(ContentModel):
                 problems.append(f"{name} 必須明寫為 true（種族技不加傷害）")
             elif value is not None and name not in allowed:
                 problems.append(f"不可使用參數 {name}")
+        if self.amount is not None and self.type != "restore_choice" and self.amount > _AMOUNT_MAX:
+            problems.append(f"amount 不可超過 {_AMOUNT_MAX}")
         if self.type == "create_surface" and self.surface in (None, Surface.NONE):
             problems.append("surface 必須是實際的表面")
         if self.resources is not None and (

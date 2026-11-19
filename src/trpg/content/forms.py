@@ -250,13 +250,13 @@ class FormDef(ContentModel):
 class FormTable(ContentModel):
     """``content/forms.yaml``。"""
 
-    upkeep_stamina: int = Field(default=5, ge=0, le=20)
+    upkeep_stamina: int = Field(default=5, ge=0, le=200)  # X10-1：量類 ×10 放寬
     """物理形態每回合開始扣的耐力（不夠付就自動解除）。"""
-    upkeep_mana: int = Field(default=3, ge=0, le=20)
+    upkeep_mana: int = Field(default=3, ge=0, le=200)  # X10-1：量類 ×10 放寬
     """心智形態每回合開始扣的法力（不夠付就自動解除）。"""
-    stance_upkeep_stamina: int = Field(default=2, ge=1, le=10)
+    stance_upkeep_stamina: int = Field(default=2, ge=1, le=100)  # X10-1：量類 ×10 放寬
     """一般姿態（``SkillDef.stance_upkeep``）每點維持費的耐力數（武器技姿態；3W-2b）。"""
-    stance_upkeep_mana: int = Field(default=1, ge=1, le=10)
+    stance_upkeep_mana: int = Field(default=1, ge=1, le=100)  # X10-1：量類 ×10 放寬
     """一般姿態每點維持費的法力數（法術技姿態；3W-2b）。"""
     cooldown: int = Field(default=2, ge=1, le=5)
     """離開一個形態（自己取消、被迫解除、切換）後該形態的冷卻回合（同技能冷卻的倒數）。"""

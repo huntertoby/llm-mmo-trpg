@@ -126,7 +126,7 @@ class ArmorMod(ContentModel):
     world_flag: str | None = Field(default=None, pattern=ID_PATTERN)
     story_flag: str | None = Field(default=None, pattern=ID_PATTERN)
     thread: str | None = Field(default=None, pattern=ID_PATTERN)
-    amount: int = Field(ge=-5, le=5)
+    amount: int = Field(ge=-50, le=50)  # X10-1：量類 ×10 放寬
 
     @model_validator(mode="after")
     def _one_source(self) -> ArmorMod:
@@ -143,8 +143,8 @@ class ArmorMods(ContentModel):
     ``min_total``～``max_total``，結果護甲不低於 0。不耗亂數。"""
 
     unit: str = Field(pattern=ID_PATTERN)
-    min_total: int = Field(default=-5, ge=-10, le=0)
-    max_total: int = Field(default=5, ge=0, le=10)
+    min_total: int = Field(default=-5, ge=-100, le=0)  # X10-1：量類 ×10 放寬
+    max_total: int = Field(default=5, ge=0, le=100)  # X10-1：量類 ×10 放寬
     mods: tuple[ArmorMod, ...] = Field(min_length=1)
 
     def total(
