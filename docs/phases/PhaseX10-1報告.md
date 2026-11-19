@@ -159,3 +159,21 @@ uv run python scripts/x10/rescale.py --tuned-md docs/phases/X10-工坊調過的�
 ## 10. 工坊調過的欄位
 
 `git log`（HEAD 的歷史）裡**沒有任何數值工坊寫回的 commit**（標題 `tune(` ＋ 結尾 `Tuned-by: number-workshop`），所以清單是空的。唯一長得像的 `dcd94d4ae tune(ai): close_range weight 40`（BAL-5）是手動 commit、沒有 `Tuned-by`，不算；那個欄位（`weapon_ai.close_range`）也在待決 2 的 pending 裡。X10-2／X10-3 開工前重跑 `--tuned-md` 即可更新。
+
+## 開發 PM 裁定（2026-11-20）
+
+合併：`Merge X10-1`（--no-ff）。合併後 ruff、mypy、x10 欄位涵蓋測試都是 0。
+
+待決 10 件：
+1. 接受。`skill_primitives.yaml` 的範圍列進 ×10，由 X10-2 跟內容一起換。
+2. **選 (b)**：引擎評分時把量類（傷害、HP、護盾等）除以 `quantity_scale`，`ai_profiles.yaml` 和工坊裡 AI 那組的數字都不動。`infuse_threat_damage` 改回不變。
+   - 理由：AI 的點數是抽象權重，逐項歸類容易錯；統一除掉，AI 的決策就和換算前一樣。
+   - 待定的 349 個值全部改列「不變」。
+3. 接受。
+4. 接受。尾數變細，是 5.4.1 想要的效果。
+5. **範圍 ×10，取值步距 10**：例如 2～4 變成 20～40，只取 20、30、40。生成的分布不變，內容檔也用新單位。步距用 `quantity_scale`。
+6. 接受。Python 預設值由 X10-2 一起改。
+7. **改成單一標記**：`content/rules/core.yaml` 加 `quantity_scale`。腳本看到它已經是 10 就拒絕再跑。516 個檔不加首行註解，單一檔被還原的情況靠 git 和涵蓋測試處理。
+8. 知道了。QF-1 沒有新增數字欄位。
+9. 接受。
+10. 接受。
