@@ -170,3 +170,7 @@
 | `corepack pnpm -C client build` | 0 |
 
 伺服器（8766）與無頭 Chrome（9766）都是我自己開的，做完已經停掉，兩個埠都沒人在聽。這一段沒碰 `src/trpg/skillgen`、`content/`、`scripts/wish_coverage.py`。
+
+### 開發 PM 裁定・補做（2026-11-19）
+
+三件補做都接受，已合併。重閃夾具找回了 #160 例外格（種子 16）。`fl1jFlashWrap` 改成逐張寫死新資料，比對方式沒有放寬，接受。新截圖 7、8 交美術 PM 看。
