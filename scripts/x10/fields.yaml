@@ -1,0 +1,964 @@
+# 量類 ×10 的欄位清單（X10-1；docs/design/05-戰鬥.md 5.4.1，#169 題 10；盤點 docs/phases/X10-影響盤點.md）。
+#
+# content/ 每個有數字的檔都要落在某一個 group，每個數字欄位都要落在下面其中一類（tests/test_x10_fields.py 檢查）：
+#   scale        ×10（scripts/x10/rescale.py 會改）
+#   keep         不變（AP、格數、回合、冷卻、d20、命中、‰、預算點數、金幣、經驗、座標……）
+#   pending      待定：先不 ×10，等 PM 決定（理由寫在旁邊的註解與 docs/phases/PhaseX10-1報告.md）
+#   unit_change  不 ×10，但 X10-2 要手動改單位或格式（預算係數）
+# 路徑語法見 scripts/x10/rescale.py 開頭。
+#
+# 共同做法（開發 PM 定）：
+#   - 骰子記法不變（2d8 照寫），擲出的面值由引擎乘 core.yaml 新加的 dice_value_scale（X10-2）；骰子數量、
+#     骰面、骰子相關的預算點數都不動。
+#   - 固定值（flat）×10，預算按 ÷10 計（X10-2 改 skillgen/budget.py）。
+#   - 名稱是 *_permille 的欄位一律不變；例外（實際是「每 1000 份的量」）逐條寫在 scale 並加註解。
+
+groups:
+  # ------------------------------------------------------------------ 戰鬥單位
+  - files: units/*.yaml
+    scale:
+      - max_hp
+      - armor_bonus
+      - attributes.*
+      - stamina                                   # 耐力基礎（目前只有 0）
+      - reactions[].unless.self_stamina_below     # 耐力門檻
+    keep:
+      - speed
+      - footprint
+      - doll.scale                                # 紙娃娃縮放（外觀）
+      - element_mods.*                            # ‰
+      - resist.*                                  # ‰
+      - parts[].hp_permille
+      - parts[].tiles[][]
+      - parts[].on_break[type=seal_skill].rounds
+      - parts[].on_break[type=stat_down,stat=damage_dealt].amount   # ‰（stat 為 armor 時才是量類，目前沒有）
+      - phases[].add_statuses[].duration
+      - phases[].grow_surface.max_rows
+      - phases[].spawns[].at[]
+      - phases[].spawns[].count
+      - phases[].tiles[].at[]
+      - phases[].trigger.count
+      - phases[].trigger.permille
+      - phases[].trigger.round
+
+  - files: units/summons/*.yaml
+    scale:
+      - max_hp
+      - armor_bonus
+      - attributes.*
+      - pulse.shield_flat
+    keep:
+      - speed
+      - detonate.radius
+      - element_mods.*
+      - resist.*
+      - hit_rules[].chain_permille
+      - hit_rules[].chain_radius
+      - hit_rules[].chain_targets
+      - hit_rules[].duration
+      - platform.height
+      - pulse.heal_radius
+      - pulse.pull_radius
+      - snare.duration
+      - totem.duration
+      - totem.radius
+
+  - files: sim/*.yaml                             # builds.yaml（另一段在改，這段只列不改）
+    scale:
+      - builds[].hero.max_hp
+      - builds[].hero.armor_bonus
+      - builds[].hero.attributes.*
+    keep:
+      - builds[].hero.speed
+      - builds[].hero.resist.*
+
+  - files: roguelite.yaml
+    scale:
+      - base_attribute
+      - attribute_points_per_level
+      - start_free_points
+      - start.heroes.*.max_hp
+      - start.heroes.*.max_mana
+      - start.heroes.*.stamina
+      - start.heroes.*.armor_bonus
+    keep:
+      - start.heroes.*.resist.*
+      - battles
+      - campfire_after[]
+      - complete_skill_after[]
+      - candidates.*
+      - level_thresholds[]                        # 經驗
+      - xp_per_battle
+      - max_rounds
+      - objective_rotation.*
+      - off_route_per_offer
+      - offer_max_attempts
+      - offer_size
+      - offer_tier_by_level[]
+      - source.*                                  # 源力
+      - start.composer_tries
+      - start.keywords
+
+  # ------------------------------------------------------------------ 武器、狀態、物件、表面
+  - files: weapons.yaml
+    scale:
+      - weapons[].flat
+      - weapons[].attack_bonus
+      - weapons[].blessing.flat
+    keep:
+      - weapons[].armor_break.*
+      - weapons[].armor_pierce_permille
+      - weapons[].backstab_dice                   # 骰子顆數
+      - weapons[].crit_range
+      - weapons[].entangle.move_penalty
+      - weapons[].knockback
+      - weapons[].lob
+      - weapons[].magazine
+      - weapons[].pierce_line
+      - weapons[].pierce_permille
+      - weapons[].range
+      - weapons[].range_mod[].*
+      - weapons[].reach
+      - weapons[].reap.*
+      - weapons[].reload_ap
+      - weapons[].steady.*
+      - weapons[].strikes
+      - weapons[].summon_dice_bonus               # 骰子顆數
+
+  - files: statuses.yaml
+    scale:
+      - statuses[].attack_bonus
+      - statuses[].attr_bonus.*
+      - statuses[].shield_end_heal                # 護盾結束回復的 HP
+      - statuses[].shield_reflect                 # 反彈的物理傷害
+      - statuses[].shield_break_lightning         # 破盾的雷電傷害
+    keep:
+      - statuses[].ap_penalty
+      - statuses[].attack_range_cap
+      - statuses[].budget_points
+      - statuses[].duration
+      - statuses[].*_permille
+      - statuses[].formation.*
+      - statuses[].move_delta
+      - statuses[].on_death_surface.*
+      - statuses[].share_damage.*
+      - statuses[].status_duration_bonus.*
+      - statuses[].ward.*
+
+  - files: objects.yaml
+    scale:
+      - objects[].max_hp
+      - objects[].explosion.flat
+    keep:
+      - objects[].explosion.radius
+      - objects[].spill.radius
+
+  - files: surfaces.yaml
+    keep:
+      - surfaces[].budget_points
+      - surfaces[].duration
+      - surfaces[].on_enter.check.dc
+      - surfaces[].on_enter.check.slide_max
+
+  - files: interactions.yaml
+    scale:
+      - rules[].then[].min_damage                 # 導電的最低傷害
+    keep:
+      - rules[].then[].damage_permille
+      - rules[].then[].duration
+
+  - files: reactions.yaml
+    scale:
+      - reactions[].shield_flat
+      - reactions[].stamina_cost
+      - default_rules[].unless.self_stamina_below
+    keep:
+      - reactions[].damage_reduction_permille
+      - reactions[].range
+
+  - files: forms.yaml
+    scale:
+      - upkeep_mana
+      - upkeep_stamina
+      - stance_upkeep_mana                        # 姿態每點維持費的法力數（技能的 stance_upkeep 是點數，不變）
+      - stance_upkeep_stamina
+    keep:
+      - cooldown
+      - forms[].effects.damage_taken[].permille
+      - forms[].effects.*_permille
+      - forms[].effects.flat_height               # 高度格數
+      - forms[].effects.move
+      - forms[].entry.burst.radius
+      - forms[].entry.*_permille
+      - forms[].entry.heal_adjacent.attr_permille
+      - forms[].entry.conceal
+      - forms[].entry.move
+      - forms[].entry.next_attack_crit
+      - forms[].entry.next_attack_hit
+      - forms[].natural_weapon.charge.size
+      - forms[].natural_weapon.damage_permille
+      - forms[].natural_weapon.range
+      - forms[].natural_weapon.traits.*
+
+  - files: races.yaml
+    scale:
+      - races[].skill.effects[type=restore_choice].amount   # 回復耐力或法力
+    keep:
+      - races[].passive.amount                    # 視線格數
+      - races[].passive.permille
+      - races[].skill.effects[type=bonus_move].amount
+      - races[].skill.effects[].duration
+      - races[].skill.effects[].range
+      - races[].skill.effects[].max_rise
+      - races[].skill.effects[].distance
+      - races[].skill.shape.*
+      - races[].skill.uses_per_battle
+
+  - files: offhands.yaml
+    keep:
+      - offhands[].block_bonus.*
+      - offhands[].move_penalty
+      - offhands[].spell_damage_permille
+      - offhands[].spell_range_bonus
+
+  - files: weather.yaml
+    keep:
+      - weather[].*
+      - weather[].element_damage_permille.*
+
+  - files: stacks.yaml
+    keep:
+      - stacks[].ai_value                         # 預算／AI 點數
+      - stacks[].auto_consume.per_stack_permille
+      - stacks[].expires_after_rounds
+      - stacks[].max
+      - stacks[].overload.*
+
+  - files: rule_changes.yaml
+    keep:
+      - kinds.*.points
+      - rule_changes[].duration
+      - rule_changes[].permille
+
+  - files: modifier_changes.yaml
+    keep:
+      - changes[].budget.per                      # ‰ 的單位
+
+  # ------------------------------------------------------------------ 技能
+  - files: skills/*.yaml
+    scale:
+      - cost.mana
+      - cost.stamina
+      - effects[type=damage].flat_bonus
+      - effects[type=restore_resource,resource=mana].amount
+    keep:
+      - schema_version
+      - tier
+      - rank
+      - ap_cost
+      - crit_range
+      - damage_permille
+      - stance_upkeep                             # 維持費點數；乘 forms.yaml 的 stance_upkeep_*（那邊 ×10）
+      - cost.cooldown
+      - cost.hp_percent
+      - cost.overdraft
+      - cost.self_status.duration
+      - cost.source
+      - cost.stacks
+      - cost.uses_per_battle
+      - condition.count
+      - condition.permille
+      - shape.*
+      - trap.rounds
+      - trigger.*
+      - variants[].add_effect.distance
+      - variants[].range_delta
+      - variants[].shape.size
+      - followup.shape.*
+      - followup.effects[].duration
+      - followup.effects[].distance
+      - followup.effects[].multiplier_permille
+      - modifiers[].change.*
+      - modifiers[].empty_slots_cap
+      - modifiers[].per_turn_limit
+      - "**.duration"
+      - "**.distance"
+      - "**.radius"
+      - "**.range"
+      - "**.rounds"
+      - "**.speed"
+      - "**.spread"
+      - "**.splash"
+      - "**.*_permille"
+      - "**.*_permille_of_hit"
+      - "**.condition.count"
+      - effects[type=add_stack].amount
+      - effects[type=borrow_ap].amount
+      - effects[type=extra_reaction].amount
+      - effects[type=grant_ap].amount
+      - effects[type=lower_terrain].amount
+      - effects[type=restore_resource,resource=cooldown].amount
+      - effects[type=redirect_damage].permille
+      - effects[type=damage].on_kill[type=refund_ap].amount
+
+  - files: skill_primitives.yaml
+    # 原語參數範圍（LLM 提議與組合器取值都讀這裡）。量類的上限放在 X10-2 跟內容一起由腳本 ×10，
+    # 不在 X10-1 先放寬：先放寬會讓組合器與 LLM 在舊單位下就能出大數字（見報告「待 PM 決定」）。
+    scale:
+      - primitives[].params.flat_bonus.max
+      - primitives[id=restore_resource].params.amount.max   # mana 用；cooldown 另有 knob 上限 2
+    keep:
+      - primitives[].params.flat_bonus.min        # 下限 1 在新單位仍合法
+      - primitives[id=restore_resource].params.amount.min
+      - primitives[].base_points
+      - primitives[].max_per_skill
+      - primitives[].params.amount.knob[].max     # restore_resource 冷卻的上限 2
+      - primitives[id!=restore_resource].params.amount.*
+      - primitives[].params.*_permille.*
+      - primitives[].params.permille.*
+      - primitives[].params.*_permille.knob.*
+      - primitives[].params.count.*
+      - primitives[].params.distance.*
+      - primitives[].params.distance.knob.*
+      - primitives[].params.duration.*
+      - primitives[].params.radius.*
+      - primitives[].params.range.*
+      - primitives[].params.rounds.*
+      - primitives[].params.speed.*
+      - primitives[].params.splash.*
+      - primitives[].params.spread.*
+      - nested_only_effects[].params.*.*
+
+  - files: skill_shapes.yaml
+    keep:
+      - "**"                                      # 形狀格數、範圍與預算倍率，沒有量類
+
+  - files: skill_conditions.yaml
+    keep:
+      - conditions[].budget_permille
+      - conditions[].params.*.*
+
+  - files: skill_exclusions.yaml
+    keep:
+      - "**"
+
+  - files: skill_scaling.yaml
+    scale:
+      - dual_max_gap                              # 主角第一、第二高屬性的差
+
+  - files: skill_synergies.yaml
+    keep:
+      - synergies[].coefficient_permille
+
+  - files: skill_triggers.yaml
+    keep:
+      - triggers[].budget_by_n_permille.*
+      - triggers[].budget_coefficient_permille
+      - triggers[].params.n.*
+
+  - files: skill_evolution.yaml
+    keep:
+      - "**"                                      # 次數、回合、格數與 ‰
+
+  - files: skeletons/*.yaml
+    keep:
+      - "**"
+
+  - files: skill_pick.yaml
+    keep:
+      - "**"                                      # 抽技能的權重與數量
+
+  - files: skill_composer.yaml
+    scale:
+      - cost.spell_mana_per_ap.*
+      - cost.spell_mana_per_tier
+      - cost.weapon_mana_per_ap.*
+      - passive.mana.*
+      - passive.mana_per_tier
+      - reaction.mana.*
+      - reaction.mana_per_tier
+      - stance.mana.*
+      - llm_cost.steps[].mana
+      - llm_cost.weak_steps[].mana
+      - recipes.summon_costs[].cost.mana
+      - whiteboard.active[].vary[].cost.mana
+      - whiteboard.passive_mana.*
+      - whiteboard.reaction_mana.*
+    keep:
+      - ap_weights.*
+      - builder.*
+      - builder.per_stack.*
+      - condition.*
+      - condition.*.*
+      - cost.cooldown_base_max
+      - cost.cooldown_cap
+      - cost.no_cooldown_max_ap
+      - cost.*_permille
+      - cost.self_status_duration.*
+      - cost.uses_per_battle.*
+      - dice.*                                    # 骰子顆數與骰面
+      - dice.sides[]
+      - duration.*
+      - infuse_permille
+      - llm_cost.max_cooldown
+      - llm_cost.steps[].ap
+      - llm_cost.steps[].cooldown
+      - llm_cost.weak_steps[].ap
+      - llm_cost.weak_steps[].cooldown
+      - llm_topic.*
+      - melee_dex_permille
+      - melee_permille
+      - multipliers[].*
+      - passive.cooldown.*
+      - passive.*_permille
+      - rarity_weights.*
+      - reaction.cooldown.*
+      - reaction.*_permille
+      - recipes.*_permille
+      - recipes.stack_counts.*
+      - recipes.summon_costs[].cost.cooldown
+      - recipes.summon_units[].range
+      - rune.*
+      - sacrifice.*
+      - scaling.*
+      - special.*
+      - spell_any_weapon_permille
+      - spell_attr_weights.*
+      - spell_share_permille.*
+      - stance.*_permille
+      - structure.*
+      - structure.*[]
+      - trap.*
+      - trap.*.*
+      - tuning.*
+      - variant.*
+      - variant.changes[].*
+      - variant.changes[].shape.*
+      - whiteboard.*
+      - whiteboard.cooldown.*
+      - whiteboard.reaction_cooldown.*
+      - whiteboard.exploit.*
+      - whiteboard.kind_permille.*
+      - whiteboard.active[].condition.count
+      - whiteboard.active[].creation_tier
+      - whiteboard.active[].effect.amount         # 升高地形格數
+      - whiteboard.active[].max_tier
+      - whiteboard.active[].min_cooldown
+      - whiteboard.active[].min_tier
+      - whiteboard.active[].rider.amount          # 堆疊數
+      - whiteboard.active[].rider.distance
+      - whiteboard.active[].rider.duration
+      - whiteboard.active[].skill.ap_cost
+      - whiteboard.active[].skill.shape.range
+      - whiteboard.active[].skill.trap.rounds
+      - whiteboard.active[].vary[].cost.cooldown
+      - whiteboard.passive[].effect.duration
+      - whiteboard.passive[].min_tier
+      - whiteboard.passive[].skill.modifiers[].change.damage_permille
+      - whiteboard.passive[].skill.trigger.max_distance
+      - whiteboard.passive[].vary[].modifiers[].change.damage_permille
+      - whiteboard.reaction[].effect.distance
+      - whiteboard.reaction[].max_tier
+
+  - files: flash_templates.yaml
+    scale:
+      - rules.trigger_flat_bonus                  # 被動、反應「效果 +」的固定值上限（+1～+n）
+      - minor[].rider{type=restore_resource,resource=mana}.amount
+    keep:
+      - extra_major[].amount                      # 預支 AP
+      - extra_major[].uses
+      - minor[].delta
+      - minor[].max_cells
+      - minor[].min_cells
+      - minor[].min_tier
+      - minor[].rider{resource=cooldown}.amount
+      - minor[].rider.count
+      - minor[].rider.duration
+      - minor[].shapes[].*
+      - minor[].usage_base
+      - pricing.*.*
+      - rules.budget_step_permille
+      - rules.converge_*
+      - rules.dissolve_refund_permille
+      - rules.followup_multiplier_step
+      - rules.insight_*
+      - rules.major_flash
+      - rules.max_*
+      - rules.modifier_*_step
+      - rules.single_hit_cap_permille
+      - rules.tighten_permille
+      - rules.usage_min_uses
+      - rules.complete.*
+      - rules.complete.cost_cuts[].step
+      - rules.complete.*[]
+      - rules.form_magnitudes[]
+      - rules.modifier_knobs.*[]
+      - rules.stance_magnitudes[]
+      - transforms[].*
+      - transforms[].damage_permille_steps[]
+      - transforms[].summon_boosts[].*
+      - transforms[].trap.rounds
+      - transforms[].trigger.max_distance
+
+  # ------------------------------------------------------------------ 預算
+  - files: skill_budget.yaml
+    unit_change:
+      - allowance.mana_per_point                  # 每 1 法力 5‰ → 每 10 法力 5‰（整數放不下 0.5，欄位格式要改）
+      - restore_mana_point_permille               # 回復每點法力 700‰ → 70‰（或改成每 10 點 700‰）
+    keep:
+      - allowance.stamina_per_mana                # 耐力與法力一起 ×10，比例不變
+      - allowance.stance_upkeep_per_point         # 技能的 stance_upkeep 點數不變（見 forms.yaml）
+      - allowance.hp_per_permille                 # hp_percent 是百分比
+      - allowance.cooldown_cap
+      - allowance.cooldown_per_turn
+      - allowance.hp_cap
+      - allowance.leave_form_permille
+      - allowance.mana_cap                        # ‰ 的上限
+      - allowance.overdraft_permille
+      - allowance.self_status.*
+      - allowance.self_status.*.*
+      - allowance.source_cap
+      - allowance.source_per_point
+      - allowance.stance_cooldown_cap
+      - allowance.stance_cooldown_per_turn
+      - allowance.total_cap
+      - allowance.uses_default
+      - allowance.uses_per_battle.*
+      - collision_die_points                      # 每顆撞擊骰的點數，骰子不變
+      - revive_hp_point_permille                  # 乘的是 hp_permille（‰）
+      - summon_trait_*
+      - explode_weapon_sides                      # 骰面
+      - absorb_surface_points
+      - all_target_permille
+      - ap_coefficient_permille.*
+      - borrow_ap_points
+      - borrow_min_cooldown
+      - charge_through_expected_targets_permille
+      - composite_*
+      - condition_permille.*
+      - consume_*
+      - contagion_points
+      - delayed_damage_*
+      - detonate_runes_permille
+      - dispel_*_points
+      - flash_cost.*
+      - flash_transform.*
+      - form_coefficient_permille
+      - gamble_*
+      - grant_skill_expected_uses_per_round_permille
+      - hook_*
+      - hurl_object_discount_permille
+      - inscribe_duration_permille[]
+      - legendary_battle_budget_permille
+      - lifesteal_value_permille
+      - max_ratio_permille
+      - max_rule_rewrite
+      - min_character_tier.*
+      - min_character_tier.*.*
+      - min_character_tier.terrain_area[].*
+      - min_ratio_permille
+      - modifier.*
+      - modifier.points_milli.*
+      - modifier.uses.*
+      - obstacle_duration_permille[]
+      - on_kill_expected_permille
+      - overload_expected_permille
+      - passive_extra_trigger_permille
+      - pierce_bonus_permille
+      - range_baseline
+      - range_step_permille
+      - rarity.*.max_effects
+      - reaction_coefficient_permille
+      - refund_ap_points
+      - reroll_budget_permille
+      - restore_cooldown_points
+      - retier_growth.*
+      - retier_growth.stretch.*.duration
+      - reveal_*_points
+      - revive_base_points
+      - rule_rewrite_min_cooldown*
+      - sacrifice_summon_permille
+      - scale_expected_steps_milli.*
+      - shield_duration_permille[]
+      - silent_strike_round_milli
+      - stance_coefficient_permille
+      - summon_detonate_*
+      - summon_hp_weight_permille
+      - summon_round_value_permille
+      - summon_topple_targets_permille
+      - terrain_area_rarity[].min_cells
+      - totem_expected_allies_permille
+      - trap_coefficient_permille
+      - variance_dice_share_permille
+      - variant_surcharge_permille
+      - wind_spread_permille[]
+      - zone_*
+
+  # ------------------------------------------------------------------ 規則
+  - files: rules/core.yaml
+    scale:
+      - ability_mod_base                          # (屬性 − 100) ÷ 20，修正值不變
+      - ability_mod_divisor
+      - initiative_attr_base                      # 先攻同上
+      - initiative_attr_divisor
+      - hp_con_base                               # HP ＝ 基礎 ＋（體質 − 100）× hp_per_con_point，每點仍 +3
+      - min_damage_on_hit
+      - default_stamina
+      - resources.base                            # 上限 ＝ 基礎 ＋（屬性 − 100）× per_point
+      - resources.class_base.*.*
+      - resources.stamina_regen
+      - attribute_perks.base                      # 每 40 點一階（14→140）
+      - attribute_perks.step
+      - attribute_perks.perks[kind=collision_dealt|collision_taken].per_tier   # 撞擊傷害 +n
+      - summon_growth.hp_per_level
+      - summon_growth.hp_per_attr_mod             # M 是屬性修正（不變），乘出 HP
+      - summon_growth.flat_per_level_permille     # 名稱是 ‰，實際是「固定傷害 × 1000」；÷1000 捨去，新單位尾數更細
+      - summon_growth.flat_per_attr_mod_permille
+      - summon_traits.sturdy.armor_bonus          # 護甲 +1
+    keep:
+      - hp_per_con_point                          # 屬性差與 HP 一起 ×10，每點不變
+      - resources.*.per_point                     # 同上
+      - resources.mana_cap_permille
+      - attribute_perks.perks[kind=surface_duration|reaction_hit|reveal_range|control_resist].per_tier
+      - summon_growth.bonus_per_*_permille
+      - summon_traits.*.budget_points
+      - summon_traits.keen.crit_range_delta
+      - summon_traits.swift.speed_bonus
+      - summon_infusions.*.*
+      - summon_role_hp_permille.*
+      - budget_reference_weapon_damage            # 預算點數（倍率 100% ＝ 7 點）
+      - tier_budget.*
+      - skill_slots.*
+      - variant_max_by_rarity.*
+      - wind.*
+      - teleport_*_resist_bonus                   # d20 抵抗
+      - proficiency
+      - "*_permille"
+      - "*_ap_cost"
+      - "*_hit_bonus"
+      - "*_hit_penalty"
+      - fall_damage_permille_per_level
+      - legendary_activation_ap
+      - ap_carry_max
+      - ap_per_turn
+      - backstab_crit_range_bonus
+      - base_sight_range
+      - burning_object_rounds
+      - concealed_ranged_max_distance
+      - consume_status_max_scale
+      - contagion_radius
+      - control_dr_rounds
+      - elite_ap_per_turn
+      - explode_max
+      - fall_damage_min_drop
+      - far_distance
+      - guard_transfers_per_round
+      - hit_mod_cap
+      - hit_slope
+      - hit_target
+      - hurl_scatter_radius
+      - interact_height_limit
+      - legendary_timed_rounds
+      - max_chain_depth
+      - max_climb_height
+      - max_displace_distance
+      - max_trigger_depth
+      - melee_height_limit
+      - melee_height_limit_max_range
+      - miss_refund_ap
+      - miss_refund_min_cost
+      - move_climb_extra_cost
+      - party_ap_per_turn
+      - reactions_per_round
+      - reroll_ally_range
+      - revive_landing_radius
+      - run_move_bonus
+      - rune_default_rounds
+      - rune_limit_per_owner
+      - rune_max_rounds
+      - shove_distance
+      - source_max
+      - source_min_at_start
+      - summon_hard_cap
+      - summon_limit_per_owner
+      - summon_max_duration
+      - topple_length
+      - trap_trace_radius
+      - vault_climb_height
+      - vault_jump_width
+      - vault_move_cost
+      - zone_limit_per_owner
+
+  - files: rules/equipment.yaml
+    keep:
+      - "**"                                      # 詞條數、上限（‰、AP、冷卻、暴擊、移動）
+
+  - files: rules/hit_table.yaml
+    keep:
+      - "**"                                      # 攻防比例的門檻表，比例不變
+
+  # ------------------------------------------------------------------ 裝備
+  - files: affixes.yaml
+    scale:
+      - affixes[stat=attribute|max_hp].value.*
+      - affixes[].downside[stat=turn_start_hp_loss].amount
+    keep:
+      - affixes[stat=element_resist].value.*
+      - affixes[category=conditional|keyword|attack].value.*
+      - affixes[].amount
+      - affixes[].condition.permille
+      - affixes[].cost_ap
+      - affixes[].cost_stacks
+      - affixes[].delta
+      - affixes[].downside[stat=damage_taken_permille|defense_permille].amount
+      - affixes[].upside[].amount                 # 傷害 ‰、冷卻、移動
+      - affixes[].effects[].*
+      - affixes[].max_stacks
+      - affixes[].n
+      - affixes[].range
+      - affixes[].rune_rounds
+      - affixes[].scale_permille
+      - affixes[].status_duration
+      - affixes[].strike_permille
+      - affixes[].uses
+
+  - files: items.yaml
+    scale:
+      - items[].affixes[affix=affix_attr_str|affix_attr_dex|affix_attr_con|affix_attr_int|affix_attr_wis|affix_attr_wil|affix_max_hp].value
+    keep:
+      - items[].affixes[affix=affix_resist_fire|affix_cond_height_hit|affix_cond_still_defense|affix_cond_low_hp_damage|affix_cond_lone_defense|affix_kw_prone_damage|affix_kw_wet_damage|affix_kw_conceal_damage|affix_kw_ignite_damage|affix_kw_poison_damage|affix_kw_shock_damage|affix_attack_rune_read|affix_attack_combo|affix_summon_sacrifice|affix_trait_longgun_still_crit].value
+
+  - files: item_gen.yaml
+    scale:                                        # 預算單位價：per 跟著數值 ×10，點數不變（屬性 +10 ＝ 3 點）
+      - stat_prices.attribute.per
+      - stat_prices.max_hp.per
+      - cost_prices.turn_start_hp_loss.per
+    keep:
+      - stat_prices.*.points
+      - stat_prices.element_resist.per            # ‰
+      - stat_prices.defense.per                   # ‰
+      - stat_prices.move.per
+      - conditional_prices.*.*                    # 命中、‰
+      - cost_prices.*.points
+      - cost_prices.*_permille.per
+      - cost_prices.cooldown_delta.per
+      - cost_prices.hit.per
+      - cost_prices.move.per
+      - affix_permille.*
+      - base_bonus.*
+      - base_strength.*
+      - category_points.*
+      - condition_rates_permille.*
+      - cost_min_points
+      - max_attempts
+      - min_affix_points
+      - min_fill_permille
+      - offer_attempts
+      - offer_size
+      - rarities.*.*
+      - rarity_weights.*
+      - slot_permille.*
+      - total_budget[].*
+      - trigger_limit_permille
+      - weapon_attribute_preference_permille
+      - weapon_element_points
+
+  - files: equipment/*.yaml
+    keep:
+      - max_keywords
+
+  # ------------------------------------------------------------------ AI
+  - files: ai_profiles.yaml
+    # AI 的分數以「預估傷害（HP）× 權重」為單位，再加上固定的點數。傷害 ×10 後，固定點數要不要跟著 ×10
+    # （或改由引擎把傷害 ÷10 再評分）是 X10-2 的做法問題，先列 pending、不動。
+    scale:
+      - summon.infuse_threat_damage               # 與召喚物 HP 直接相加比較
+    pending:
+      - profiles[].weights.*
+      - profiles[].rewrite.*_points
+      - status_values.*
+      - ally_status_values.*
+      - self_status_values.*
+      - basic.*_points
+      - basic.variant_position_bonus
+      - facing.*
+      - form.*_value
+      - formation_ai.*
+      - objective_ai.contest
+      - objective_ai.hold_guard
+      - objective_ai.hold_point
+      - objective_ai.intercept
+      - objective_ai.rush_exit
+      - orders.*_weight
+      - orders.protect_min
+      - parts.*_bonus
+      - parts.control
+      - parts.interrupt_charge
+      - parts.seal_skill
+      - parts.stat_down
+      - parts.stop_mechanic
+      - race_ai.light_body_height
+      - rewrite.*_points
+      - run.*_points
+      - rune.*_points
+      - skill_ai.multi_target
+      - summon.*_points
+      - terrain.*_points
+      - weapon_ai.*
+    keep:
+      - basic.*_permille
+      - gamble.*_permille
+      - orders.*_permille
+      - parts.near_break_permille
+      - rewrite.*_permille
+      - run.*_permille
+      - rune.*_permille
+      - self_cost.*_permille
+      - stance.*_permille
+      - summon.*_permille
+      - trap.*_permille
+      - trap.shape_factor_permille.*
+      - trap_likelihood_permille
+      - zone.*_permille
+      - basic.*_radius
+      - objective_ai.hold_radius
+      - run.*_radius
+      - self_cost.*_radius
+      - stance.*_radius
+      - summon.*_radius
+      - summon.guard_threat_range
+      - basic.aim_min_attack_ap
+      - basic.vault_min_saving
+      - move_candidates
+      - rewrite.activation_battle_rounds
+      - rewrite.overwatch_max_enemies
+      - self_cost.overdraft_min_targets
+      - stance.enter_enemy_turns
+      - trap.max_active
+      - trap.near
+
+  # ------------------------------------------------------------------ 地圖與畫面（座標、格數、回合）
+  - files: maps/*.yaml
+    keep:
+      - "**"
+  - files: audio/*.yaml
+    keep:
+      - "**"
+  - files: ui/*.yaml
+    keep:
+      - "**"
+  - files: llm/*.yaml
+    keep:
+      - "**"
+  - files: workshop.yaml
+    keep:
+      - max_rounds
+
+  - files: tuning_fields.yaml
+    # 工坊的建議範圍：跟著被 ×10 的欄位一起 ×10。
+    scale:
+      - targets[kind=unit].fields[path=max_hp|armor_bonus|max_mana|stamina|"phases[*].mana_restore"|"parts[*].armor_bonus"].hint_*
+      - targets[kind=unit].fields[path=attributes.str|attributes.dex|attributes.con|attributes.int|attributes.wis|attributes.wil].hint_*
+      - targets[kind=skill].fields[path=cost.mana|cost.stamina].hint_*
+      - targets[kind=object].fields[path="objects[*].max_hp"].hint_*
+    pending:
+      - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起決定
+    keep:
+      - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
+      - targets[kind=unit].fields[kind=permille].hint_*
+      - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*
+      - targets[kind=rules|budget|pick|skill_composer|skill_triggers].fields[].hint_*
+
+  # ------------------------------------------------------------------ 大世界
+  - files: world/rules.yaml
+    scale:
+      - enemy_growth.attribute_points_per_level   # 敵人每級配點（屬性）
+    keep:
+      - battle.*
+      - calendar.*
+      - camp_cost
+      - default_weather.*.*
+      - encounter.*
+      - enemy_growth.skill_tier_by_level[]
+      - field.*
+      - hasten.*
+      - hero_growth.*
+      - hero_growth.*[]
+      - opportunity.*
+      - perception.*                              # DC 與等級除數；屬性修正走 core.yaml
+      - supplies.*
+      - weather[].*.*
+      - week_days
+      - wish.*
+      - xp.*
+      - xp.shares_permille.*
+  - files: world/encounters/*.yaml
+    scale:
+      - locations[].armor_mods.mods[].amount      # 護甲加減（盤點沒列；schema 上限也要放寬）
+      - locations[].armor_mods.min_total
+      - locations[].armor_mods.max_total
+    keep:
+      - camp_elite_permille
+      - ranged_cap
+      - locations[].ranged_cap
+      - locations[].groups[].weight
+      - locations[].unit_min_levels[].min_level
+  - files: world/items.yaml
+    scale:
+      - items[].skill.cost.mana
+      - items[].skill.effects[type=restore_resource,resource=mana].amount
+    keep:
+      - items[].field_hp_permille
+      - items[].field_mana_permille
+      - items[].price
+      - items[].supplies
+      - items[].skill.ap_cost
+      - items[].skill.cost.uses_per_battle
+      - items[].skill.effects[].duration
+      - items[].skill.rank
+      - items[].skill.schema_version
+      - items[].skill.shape.range
+      - items[].skill.tier
+  - files: world/resonance.yaml
+    scale:
+      - resonances[].affixes[affix=affix_attr_str|affix_attr_dex|affix_attr_con|affix_attr_int|affix_attr_wis|affix_attr_wil|affix_max_hp].value
+    keep:
+      - resonances[].affixes[affix=affix_resist_fire|affix_kw_prone_damage].value
+      - pieces                                    # 共鳴要幾件
+  - files: world/quests/*.yaml
+    scale:
+      - story_skills[].cost.mana
+    keep:
+      - quests[].**
+      - story_skills[].ap_cost
+      - story_skills[].cost.cooldown
+      - story_skills[].effects[].duration
+      - story_skills[].rank
+      - story_skills[].schema_version
+      - story_skills[].shape.range
+      - story_skills[].tier
+  - files:
+      - world/address.yaml
+      - world/affinity.yaml
+      - world/announcements.yaml
+      - world/crafting.yaml
+      - world/economy.yaml
+      - world/enemies.yaml
+      - world/event_rules.yaml
+      - world/loot.yaml
+      - world/mercenaries.yaml
+      - world/narration.yaml
+      - world/newcomer.yaml
+      - world/oaths.yaml
+      - world/season.yaml
+      - world/situation_rules.yaml
+      - world/trade.yaml
+      - world/events/*.yaml
+      - world/maps/*.yaml
+      - world/npcs/*.yaml
+      - world/shops/*.yaml
+      - world/situations/*.yaml
+      - world/social/*.yaml
+      - world/fields/**
+    keep:
+      - "**"                                      # 金幣、經驗、天數、DC、座標、機率；逐檔看過沒有量類
