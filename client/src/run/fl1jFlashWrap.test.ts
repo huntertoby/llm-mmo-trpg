@@ -66,16 +66,18 @@ describe("FL-1j (2) 數字和單位不拆開（通用規則）", () => {
     }
   });
 
-  it("1600 斷錯的兩張重閃大變化卡：「燃燒少 1 回合」「1d4 火焰」「傷害」都包成 .fc-nobr", () => {
+  it("1600 斷錯的兩張重閃大變化卡：「燃燒少 1 回合」「Nd4 火焰」「傷害」都包成 .fc-nobr", () => {
     const p = FIXTURE.sets.reflash_major;
     if (p === undefined) throw new Error("夾具缺 reflash_major");
     const plain = p.options.filter((o) => !o.transform && o.say_zh !== "");
     expect(plain.length).toBe(2);
-    for (const o of plain) {
+    // AR-SK4 重產：WC-2 之後第 2 張的額外傷害是 3d4（原本 1d4），照夾具逐張寫死
+    const fire = ["1d4 火焰", "3d4 火焰"];
+    plain.forEach((o, i) => {
       const html = renderToStaticMarkup(createElement(TermText, { text: sayText(o), terms: p.terms ?? {}, nobr: true }));
       expect(html).toContain('<span class="fc-nobr">少 1 回合</span>');
-      expect(html).toContain('<span class="fc-nobr">1d4 火焰</span><span class="fc-nobr">傷害</span>');
-    }
+      expect(html).toContain(`<span class="fc-nobr">${fire[i]}</span><span class="fc-nobr">傷害</span>`);
+    });
   });
 });
 
