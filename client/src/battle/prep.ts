@@ -2,6 +2,7 @@
 // 陷阱、刻印或表面。伺服器在 `awaiting === "prep"` 時給 `prep`（可放的技能與每招放得下的格子）；
 // 選了一招後，那招的格子當成一個選取模式（同複合技能第二段），點格子就送 `/prep`。
 import type { Action, Pos, PrepOut, SkillCard } from "../api/types";
+import { posKey } from "./geometry";
 import { buildTargets, type ActionMode } from "./targeting";
 
 export type PrepAction = Extract<Action, { type: "prepare" }>;
@@ -36,6 +37,14 @@ export function isPrepModeKey(key: string): boolean {
 /** AR-SK4：佈置選格時左上技能說明卡的字（玩法 PM 11-19 定案；不寫顏色）。`count`＝可放的格數。 */
 export function prepModeHint(count: number): string {
   return `點框起來的起始區裡的一格放下（可選 ${count} 格）。Esc／右鍵取消。`;
+}
+
+/**
+ * AR-SK4（AR-SK3 驗收第 10 件）：佈置選格時，滑過可放的格子不顯示格子資訊卡（「放在這裡」就是那一格最重要的資訊）；
+ * 滑過其他格子照舊。
+ */
+export function prepHidesTileCard(mode: ActionMode | null, tile: Pos | null): boolean {
+  return mode !== null && tile !== null && isPrepModeKey(mode.key) && mode.targets.tiles.has(posKey(tile));
 }
 
 export function prepPromptText(prep: PrepOut, picked: string | null, skillName: string): string {

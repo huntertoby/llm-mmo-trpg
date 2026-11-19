@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import type { PrepOut } from "../api/types";
 import { modeHint } from "../ui/ActionPanel";
-import { isPrepModeKey, prepMode, prepModeHint } from "./prep";
+import { TileCardController } from "../ui/hoverCard";
+import { isPrepModeKey, prepHidesTileCard, prepMode, prepModeHint } from "./prep";
 
 const PREP: PrepOut = {
   unit_id: "unit_0001",
@@ -31,5 +32,30 @@ describe("AR-SK4 佈置說明卡", () => {
     expect(isPrepModeKey("prep:skill_bear_trap")).toBe(true);
     expect(isPrepModeKey("skill:skill_bear_trap")).toBe(false);
     expect(prepModeHint(2)).toContain("可選 2 格");
+  });
+});
+
+describe("AR-SK4 佈置時的格子資訊卡", () => {
+  it("佈置選格時滑過可放的格子不出資訊卡，其他格子照舊", () => {
+    const mode = prepMode(PREP, "skill_bear_trap", "捕獸夾");
+    expect(prepHidesTileCard(mode, { x: 1, y: 0 })).toBe(true);
+    expect(prepHidesTileCard(mode, { x: 0, y: 0 })).toBe(false); // 起始區但這招放不下
+    expect(prepHidesTileCard(mode, { x: 5, y: 5 })).toBe(false);
+    expect(prepHidesTileCard(mode, null)).toBe(false);
+    expect(prepHidesTileCard(null, { x: 1, y: 0 })).toBe(false);
+  });
+  it("一般選目標模式（不是佈置）不受影響", () => {
+    const mode = prepMode(PREP, "skill_bear_trap", "捕獸夾")!;
+    expect(prepHidesTileCard({ ...mode, key: "skill:skill_bear_trap" }, { x: 1, y: 0 })).toBe(false);
+  });
+  it("資訊卡控制器：hasContent 回 false 時不顯示", () => {
+    const ctl = new TileCardController();
+    const mode = prepMode(PREP, "skill_bear_trap", "捕獸夾");
+    ctl.hasContent = (tile) => !prepHidesTileCard(mode, tile);
+    ctl.setHover({ x: 1, y: 0 });
+    expect(ctl.visible).toBe(false);
+    ctl.setHover({ x: 0, y: 0 });
+    expect(ctl.visible).toBe(true);
+    ctl.dispose();
   });
 });
