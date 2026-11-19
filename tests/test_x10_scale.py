@@ -350,8 +350,8 @@ def test_control_resist_per_tier_is_scaled(library: ContentLibrary) -> None:
 def test_default_min_damage_is_one_times_scale(scale: int) -> None:
     state = _duel(scale)
     hp = state.units[U2].hp
-    percent = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0)  # type: ignore[arg-type]
+    percent = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0)
     after = run_effects(state, [percent]).state
     assert hp - after.units[U2].hp == scale
-    explicit = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0, min_damage=3)  # type: ignore[arg-type]
+    explicit = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0, min_damage=3)
     assert hp - run_effects(state, [explicit]).state.units[U2].hp == 3
