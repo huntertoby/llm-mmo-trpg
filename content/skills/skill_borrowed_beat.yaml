@@ -14,7 +14,7 @@ shape: {type: self}
 effects:
   - {type: borrow_ap, amount: 1}
 condition: null
-cost: {mana: 1, cooldown: 2}
+cost: {cooldown: 2}
 tags: [spell, support]
 narrative:
   concept: 把下一拍的力氣先借過來用，這回合多動一次，下回合慢一拍
