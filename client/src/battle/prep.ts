@@ -28,6 +28,16 @@ export function prepMode(prep: PrepOut, skillId: string, skillName: string): Act
   };
 }
 
+/** 選目標模式是戰前佈置選格（`prepMode` 做的 key）。 */
+export function isPrepModeKey(key: string): boolean {
+  return key.startsWith("prep:");
+}
+
+/** AR-SK4：佈置選格時左上技能說明卡的字（玩法 PM 11-19 定案；不寫顏色）。`count`＝可放的格數。 */
+export function prepModeHint(count: number): string {
+  return `點框起來的起始區裡的一格放下（可選 ${count} 格）。Esc／右鍵取消。`;
+}
+
 export function prepPromptText(prep: PrepOut, picked: string | null, skillName: string): string {
   if (prep.options.length === 0) return "目前沒有可以佈置的技能，直接開戰。";
   if (picked === null)
