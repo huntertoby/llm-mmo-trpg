@@ -21,9 +21,12 @@ import { DiffRows, KeywordGlyph } from "../run/FlashChoiceParts";
 import { known } from "../render/qIcon/keywords";
 import { Portrait } from "./StoryIcons";
 import {
+  physicalSlot,
   pickedFocus,
   pickedTagNames,
   tagMode,
+  tagRoom,
+  tagShownMax,
   toggleKeyword,
   toggleTag,
   WISH_ZH,
@@ -209,7 +212,7 @@ function TagButton({ id, name, hint, on, locked, glyph, onPick }: { id: string; 
 }
 
 /** PK-4：「從清單點選」五類標籤。 */
-function TagPane({ wish: w, picked, tags, off, note, onKeyword, onTag }: { wish: WishData; picked: readonly string[]; tags: TagPick; off: boolean; note: string | null; onKeyword(id: string, max: number): void; onTag(group: string, id: string, max: number): void }) {
+function TagPane({ wish: w, picked, tags, off, note, onKeyword, onTag }: { wish: WishData; picked: readonly string[]; tags: TagPick; off: boolean; note: string | null; onKeyword(id: string, max: number): void; onTag(group: string, id: string, max: number, physical: boolean): void }) {
   return (
     <div className="wish-pane" data-testid="wish-tag-pane">
       {note !== null && (
@@ -220,16 +223,18 @@ function TagPane({ wish: w, picked, tags, off, note, onKeyword, onTag }: { wish:
       <p className="pnl-l2 wish-lead">{WISH_ZH.tagMenuLead}</p>
       {(w.tag_groups ?? []).map((g) => {
         const chosen = g.id === "keywords" ? picked : (tags[g.id] ?? []);
+        // AR-SK4（WC-2b）：元素類的物理不佔名額，物理以外到上限就當場擋（不等送出被伺服器擋）
+        const physical = physicalSlot(g.id, g.items);
         return (
           <section key={g.id} className="wish-tag-group" data-group={g.id}>
             <p className="pnl-l2 wish-tag-label">
               <b>{g.label_zh}</b>
-              <span className="pnl-l3">　{WISH_ZH.tagMax(g.max)}</span>
+              <span className="pnl-l3">　{physical ? WISH_ZH.tagMaxPhysical(tagShownMax(g.max, true)) : WISH_ZH.tagMax(g.max)}</span>
             </p>
             <ul className="wish-menu" role="group" aria-label={g.label_zh} data-testid={`wish-tags-${g.id}`}>
               {g.items.map((item) => {
                 const on = chosen.includes(item.id);
-                const locked = off || (!on && chosen.length >= g.max);
+                const locked = off || !tagRoom(chosen, item.id, g.max, physical);
                 return (
                   <li key={item.id}>
                     <TagButton
@@ -239,7 +244,7 @@ function TagPane({ wish: w, picked, tags, off, note, onKeyword, onTag }: { wish:
                       on={on}
                       locked={locked}
                       glyph={g.id === "keywords"}
-                      onPick={() => (g.id === "keywords" ? onKeyword(item.id, g.max) : onTag(g.id, item.id, g.max))}
+                      onPick={() => (g.id === "keywords" ? onKeyword(item.id, g.max) : onTag(g.id, item.id, g.max, physical))}
                     />
                   </li>
                 );
@@ -339,7 +344,7 @@ export function WishPanel({ wish: w, busy, fallback, onWish, onBack }: Props) {
                 off={off}
                 note={note}
                 onKeyword={(id, max) => setPicked((cur) => toggleKeyword(cur, id, max))}
-                onTag={(group, id, max) => setTags((cur) => toggleTag(cur, group, id, max))}
+                onTag={(group, id, max, physical) => setTags((cur) => toggleTag(cur, group, id, max, physical))}
               />
             ),
           }
