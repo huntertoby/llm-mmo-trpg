@@ -25,7 +25,7 @@ from trpg.world.state import WorldState
 
 START = {"name": "阿霧", "weapon": "fire_staff", "keywords": ["ignite", "marked"], "seed": 0}
 CHARGE_SEASON_SEED = 20261104
-CHARGE_CHARACTER_ID = "c_0000b055"
+CHARGE_CHARACTER_ID = "c_0000b056"  # AP-1（玩家方 4 AP）後 b055 → b056
 """``ai_until=charge`` 測試用的世界種子與角色 ID（這一組等得到 Boss 蓄力、畫面也看得到）。"""
 CHARGE_PARTY = ("merc_tiebi", "merc_huichun")
 """挑上面那組種子時的隊伍（OB-7 前新角色的預設：賽倫＋回春）。"""

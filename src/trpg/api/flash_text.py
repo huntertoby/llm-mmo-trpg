@@ -274,7 +274,7 @@ def _numbers(library: ContentLibrary) -> dict[str, str]:
     core = library.ruleset.core
     water = library.ruleset.surface_def(Surface.WATER).duration
     return {
-        "ap_per_turn": str(core.ap_per_turn),
+        "ap_per_turn": str(core.party_ap_per_turn),  # 說明卡寫的是玩家方（AP-1）
         "ap_carry_max": str(core.ap_carry_max),
         "water_rounds": "" if water is None else str(water),
         "wet_heal_percent": f"{(core.wet_heal_permille - _PERMILLE) / 10:g}",

@@ -70,25 +70,27 @@ def test_ap_per_turn_and_carry() -> None:
     state = _duel()
     first = state.active_unit
     assert first is not None
-    assert state.units[first].ap == 3
-    # 用 2 AP，保留 1 → 下回合 4
+    base = state.units[first].ap_per_turn  # AP-1：玩家方 4、一般敵人 3
+    assert state.units[first].ap == base
+    # 用 2 AP，保留 1 → 下回合 base + 1
     s = _attack(_attack(state))
-    assert s.units[first].ap == 1
+    assert s.units[first].ap == base - 2
     s = _next_turn_of(s, first)
-    assert s.units[first].ap == 4
-    # 一點都不用：最多只保留 1 → 下回合 3 + 1 = 4
+    assert s.units[first].ap == base + 1
+    # 一點都不用：最多只保留 1 → 下回合 base + 1
     s = _next_turn_of(s, first)
-    assert s.units[first].ap == 4
-    # 用光 → 下回合 3
-    for _ in range(4):
+    assert s.units[first].ap == base + 1
+    # 用光 → 下回合 base
+    for _ in range(base + 1):
         s = _attack(s)
     s = _next_turn_of(s, first)
-    assert s.units[first].ap == 3
+    assert s.units[first].ap == base
 
 
 def test_ap_shortage_is_rejected_with_reason() -> None:
     state = _duel()
-    for _ in range(3):
+    assert state.active_unit is not None
+    for _ in range(state.units[state.active_unit].ap_per_turn):
         state = _attack(state)
     assert state.active_unit is not None
     with pytest.raises(IllegalActionError, match="AP 不足：需要 1，剩餘 0"):
@@ -99,7 +101,7 @@ def test_ap_shortage_is_rejected_with_reason() -> None:
 
 
 def test_ap_values_come_from_rules() -> None:
-    state = _duel(ap_per_turn=5, ap_carry_max=2)
+    state = _duel(ap_per_turn=5, party_ap_per_turn=5, ap_carry_max=2)
     first = state.active_unit
     assert first is not None
     assert state.units[first].ap == 5

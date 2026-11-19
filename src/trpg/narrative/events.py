@@ -949,6 +949,9 @@ def _ap_granted(e: ApGranted, v: _View) -> str:
 
 @_handles(ApRefunded)
 def _ap_refunded(e: ApRefunded, v: _View) -> str:
+    if e.on_miss:  # 失手返還（AP-1，#168）
+        name = v.name[e.unit_id]
+        return f"    {name} 全部落空，返還了 {e.amount} AP（失手返還，現在 {e.ap_after} AP）"
     return f"    {v.name[e.unit_id]} 返還了 {e.amount} AP（擊殺時效果，現在 {e.ap_after} AP）"
 
 

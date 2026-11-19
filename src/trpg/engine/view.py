@@ -38,10 +38,11 @@ from trpg.engine.infusion import infusion_options
 from trpg.engine.part_breaks import part_tiles
 from trpg.engine.parts import current_phase_id
 from trpg.engine.race.skills import race_skill_of, race_uses_left
+from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.footprint import is_giant, tiles_of
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
-from trpg.engine.rules.statuses import effective_attribute
+from trpg.engine.rules.statuses import effective_attribute, next_turn_ap_penalty
 from trpg.engine.skills.revive import revivable
 from trpg.engine.skills.targeting import skill_mana_cost
 from trpg.engine.state import (
@@ -449,6 +450,17 @@ class UnitView(_ViewModel):
     """反應規則與目前模式；只有自己陣營的單位會列出（其他陣營的單位為空）。"""
     ap_carry: int
     """結束回合時保留、下回合開始時加上的 AP（自己的回合中為 0，已併入 ``ap``）。"""
+    ap_per_turn: int
+    """每回合 AP（AP-1，#168：玩家方 4、一般敵人 3、精英與頭目 4，數值在工坊）。"""
+    ap_max: int
+    """本回合可以同時持有的 AP 上限（每回合 AP ＋ 可保留的 AP）。"""
+    ap_carried_in: int
+    """這個回合從上回合保留帶進來的 AP（已含在 ``ap``；AP 列的米白環）；不是自己的回合時為 0。"""
+    ap_lost: int
+    """這個回合開始時被扣掉的 AP（透支；AP 列的紅斜線，畫在一般 AP 的最後）；不是自己的回合時
+    為 0。"""
+    ap_next_loss: int
+    """下一個自己回合開始時會少的 AP（透支；AP 列分隔線右邊的紅斜線）。"""
     source: int
     """源力（Phase 3C-4a；傳說技能的代價，敵人一律 0）。"""
     source_max: int
@@ -995,6 +1007,13 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
             tuple(_rule_view(state, unit, r) for r in unit.reactions) if unit.team is team else ()
         ),
         ap_carry=unit.ap_carry,
+        ap_per_turn=unit.ap_per_turn,
+        ap_max=ap_cap(state.ruleset.core, unit),
+        ap_carried_in=unit.ap_carried_in,
+        ap_lost=unit.ap_lost,
+        ap_next_loss=next_turn_ap_penalty(
+            state.ruleset, unit, own_turn=state.active_unit == unit.id
+        ),
         source=unit.source,
         source_max=state.ruleset.core.source_max,
         downed=unit.downed,

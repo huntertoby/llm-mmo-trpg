@@ -165,7 +165,7 @@ def test_terms_fill_numbers_from_data() -> None:
     terms = flash_terms(LIB, KINDLE, ids, ctx)
     assert "nope" not in terms
     core = LIB.ruleset.core
-    assert f"每回合 {core.ap_per_turn} 點" in terms["ap"].text_zh
+    assert f"每回合 {core.party_ap_per_turn} 點" in terms["ap"].text_zh
     assert f"最多留 {core.ap_carry_max} 點" in terms["ap"].text_zh
     water = LIB.ruleset.surface_def(Surface.WATER).duration
     assert f"預設留 {water} 回合" in terms["surface:water"].text_zh

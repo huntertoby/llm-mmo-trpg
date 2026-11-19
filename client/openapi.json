@@ -31127,6 +31127,26 @@
             "type": "integer",
             "title": "Ap Carry"
           },
+          "ap_per_turn": {
+            "type": "integer",
+            "title": "Ap Per Turn"
+          },
+          "ap_max": {
+            "type": "integer",
+            "title": "Ap Max"
+          },
+          "ap_carried_in": {
+            "type": "integer",
+            "title": "Ap Carried In"
+          },
+          "ap_lost": {
+            "type": "integer",
+            "title": "Ap Lost"
+          },
+          "ap_next_loss": {
+            "type": "integer",
+            "title": "Ap Next Loss"
+          },
           "source": {
             "type": "integer",
             "title": "Source"
@@ -31421,6 +31441,11 @@
           "reaction_available",
           "reaction_rules",
           "ap_carry",
+          "ap_per_turn",
+          "ap_max",
+          "ap_carried_in",
+          "ap_lost",
+          "ap_next_loss",
           "source",
           "source_max",
           "downed",

@@ -240,7 +240,7 @@ def _turn_actions(core: CoreRules, refill: Sequence[str]) -> list[InfoText]:
             "結束回合",
             f"結束這個回合；最多保留 {core.ap_carry_max} AP 到下回合",
             (
-                f"結束這個回合；每回合 {core.ap_per_turn} AP，"
+                f"結束這個回合；每回合 {core.party_ap_per_turn} AP，"
                 f"未用完的 AP 最多保留 {core.ap_carry_max} 點到下回合",
             ),
         ),

@@ -301,7 +301,7 @@ def _kill_points(actor: UnitState, skill: SkillDef, p: Preview, rules: RewriteAi
     命中率近似。"""
     total = Fraction(0)
     for e in p.max_events:
-        if isinstance(e, ApRefunded) and e.unit_id == actor.id:
+        if isinstance(e, ApRefunded) and e.unit_id == actor.id and not e.on_miss:
             total += rules.refund_ap_points * e.amount
         elif (
             isinstance(e, SkillCooldownChanged)

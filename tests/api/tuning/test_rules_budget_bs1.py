@@ -29,6 +29,12 @@ CORE_PATHS = (
     "contagion_radius",  # SK-2b：疾病擴散的距離
     "reroll_ally_range",  # SK-3b：重擲幫隊友的範圍
     "shield_formation_hit_penalty",  # RG-4（#163）塔盾詞條「護陣」
+    "party_ap_per_turn",  # AP-1（#168）
+    "ap_per_turn",
+    "elite_ap_per_turn",
+    "ap_carry_max",
+    "miss_refund_ap",
+    "miss_refund_min_cost",
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
@@ -54,7 +60,16 @@ def _now(file: str, path: str) -> Any:
 
 
 def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> None:
-    assert TABLE_KINDS == ("ai", "rules", "budget", "object", "pick")  # NW-3 物件表、PK-1 挑選
+    # NW-3 物件表、PK-1 挑選、SK-5 觸發時機與組合器
+    assert TABLE_KINDS == (
+        "ai",
+        "rules",
+        "budget",
+        "object",
+        "pick",
+        "skill_triggers",
+        "skill_composer",
+    )
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (
         "core",

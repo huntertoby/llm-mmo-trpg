@@ -250,7 +250,7 @@ CASES: list[tuple[OathCheck, int, Oracle]] = [
 @pytest.mark.parametrize(
     ("check", "unit", "oracle"), CASES, ids=[f"{c.kind}-{i}" for i, (c, _u, _o) in enumerate(CASES)]
 )
-@pytest.mark.parametrize("seed", [0, 6])
+@pytest.mark.parametrize("seed", [2, 6])  # AP-1（失手返還）後 0、6 → 2、6
 def test_auto_battle_breaks_after_first_violation(
     check: OathCheck, unit: int, oracle: Oracle, seed: int
 ) -> None:
