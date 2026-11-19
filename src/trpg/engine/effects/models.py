@@ -100,7 +100,8 @@ class DamageEffect(EffectBase):
     permille: int = Field(default=0, ge=0)
     apply_element_mod: bool = True
     apply_weather: bool = True
-    min_damage: int = Field(default=1, ge=0)
+    min_damage: int | None = Field(default=None, ge=0)
+    """最低傷害；``None``＝1 × ``quantity_scale``（X10-2b）。"""
     multiplier_permille: int = Field(default=1000, ge=0)
     pierce_permille: int = Field(default=1000, ge=0)
     """穿透後方折扣（Phase 3C-6a，僅供紀錄顯示）：已包含在 ``multiplier_permille`` 裡，不再乘。"""
@@ -116,6 +117,10 @@ class DamageEffect(EffectBase):
     """打頭目的部位（PB-1a）：只有動作的主要目標、主要選取的傷害帶上（:mod:`trpg.engine.parts`）。
     部位沒破時元素修正用部位的覆寫，扣完 HP 後部位扣同樣的數字（:mod:`trpg.engine.part_breaks`）；
     ``None`` 時走原本的程式路徑。"""
+
+    def min_damage_for(self, scale: int) -> int:
+        """實際的最低傷害：沒指定時 1 × ``scale``（``quantity_scale``，X10-2b）。"""
+        return scale if self.min_damage is None else self.min_damage
 
     def sort_target(self) -> str:
         return self.target_id
@@ -424,10 +429,15 @@ class DamageObjectEffect(EffectBase):
     dice: Dice | None = None
     flat: int = 0
     scaled_permille: int = 0
-    min_damage: int = Field(default=1, ge=0)
+    min_damage: int | None = Field(default=None, ge=0)
+    """最低傷害；``None``＝1 × ``quantity_scale``（X10-2b）。"""
     cause: DamageCause = "effect"
     multiplier_permille: int = Field(default=1000, ge=0)
     """最後再乘上的倍率（武器技的技能倍率），無條件捨去，最低 ``min_damage``。"""
+
+    def min_damage_for(self, scale: int) -> int:
+        """實際的最低傷害：沒指定時 1 × ``scale``（``quantity_scale``，X10-2b）。"""
+        return scale if self.min_damage is None else self.min_damage
 
     def sort_target(self) -> str:
         return self.object_id

@@ -238,4 +238,4 @@ attribute_perks:
     - {attr: int, kind: surface_duration,  per_tier: 1, text_zh: "你產生的表面與持續區域 +{n} 回合"}
     - {attr: wis, kind: reaction_hit,      per_tier: 1, text_zh: "反應攻擊命中 +{n}"}
     - {attr: wis, kind: reveal_range,      per_tier: 1, text_zh: "看見隱蔽單位與陷阱的距離 +{n} 格"}
-    - {attr: wil, kind: control_resist,    per_tier: 1, text_zh: "所有控制的抵抗 +{n}"}
+    - {attr: wil, kind: control_resist,    per_tier: 10, text_zh: "所有控制的抵抗 +{n}"}

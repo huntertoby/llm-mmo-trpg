@@ -381,7 +381,9 @@ def block_multiplier(
     offhand = target.gear.offhand
     if definition.id == BLOCK_REACTION and offhand is not None:  # 圓盾的格擋強化（3I-2）
         rules = ctx.state.ruleset
-        reduction += offhand.block_extra_permille(lambda a: effective_attribute(rules, target, a))
+        reduction += offhand.block_extra_permille(
+            lambda a: effective_attribute(rules, target, a), rules.core.quantity_scale
+        )
     return max(0, PERMILLE - reduction)
 
 

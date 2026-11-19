@@ -329,7 +329,7 @@ def _damage_object(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     weather = weather_permille(ctx.state, effect.element)
     amount = max(
         raw_permille * weather * effect.multiplier_permille // (PERMILLE * PERMILLE * PERMILLE),
-        effect.min_damage,
+        effect.min_damage_for(ctx.core.quantity_scale),
     )
     hp_before = obj.hp
     obj.hp = max(0, obj.hp - amount)

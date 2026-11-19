@@ -590,7 +590,8 @@ class WeaponTable(ContentModel):
 
 class BlockBonus(ContentModel):
     """圓盾「格擋反應強化」（Phase 3I-2，08 8.11）：持有者的格擋反應多減傷 ``permille_per_point``‰ ×
-    副手縮放屬性值，最多 ``max_permille``‰（再加上格擋反應本身的減傷，總減傷不超過 100%）。
+    副手縮放屬性值 ÷ ``quantity_scale``（X10-2b：每點是換算前的屬性點），最多 ``max_permille``‰
+    （再加上格擋反應本身的減傷，總減傷不超過 100%）。
     確切數值設計未定，初值保守（見 Phase3I-2 報告「待 PM 決定」）。"""
 
     permille_per_point: int = Field(ge=1, le=100)
@@ -652,12 +653,13 @@ class OffhandDef(ContentModel):
         names = f"{self.scaling_attr.display_name}／{self.secondary_scaling_attr.display_name}"
         return f"{names}（{'取較高' if self.attr_mode == 'max' else '取平均'}）"
 
-    def block_extra_permille(self, get: Callable[[Attribute], int]) -> int:
-        """圓盾的格擋強化（‰）：縮放屬性值 × 每點‰，最多 ``max_permille``；沒有強化為 0。"""
+    def block_extra_permille(self, get: Callable[[Attribute], int], scale: int = 1) -> int:
+        """圓盾的格擋強化（‰）：縮放屬性值 × 每點‰ ÷ ``scale``（``quantity_scale``，無條件捨去），
+        最多 ``max_permille``；沒有強化為 0。"""
         bonus = self.block_bonus
         if bonus is None:
             return 0
-        return min(bonus.max_permille, self.scaling_value(get) * bonus.permille_per_point)
+        return min(bonus.max_permille, self.scaling_value(get) * bonus.permille_per_point // scale)
 
     def trait_lines_zh(
         self, core: CoreRules, get: Callable[[Attribute], int] | None = None
@@ -667,12 +669,11 @@ class OffhandDef(ContentModel):
         lines = [f"縮放屬性：{self.scaling_names_zh()}"]
         if self.block_bonus is not None:
             cap = self.block_bonus.max_permille / 10
-            text = (
-                f"格擋強化：格擋反應多減傷 縮放屬性 × {self.block_bonus.permille_per_point / 10:g}%"
-                f"（最多 {cap:g}%）"
-            )
+            per_point = self.block_bonus.permille_per_point / core.quantity_scale
+            text = f"格擋強化：格擋反應多減傷 縮放屬性 × {per_point / 10:g}%（最多 {cap:g}%）"
             if get is not None:
-                text += f"（目前 +{self.block_extra_permille(get) / 10:g}%）"
+                extra = self.block_extra_permille(get, core.quantity_scale)
+                text += f"（目前 +{extra / 10:g}%）"
             lines.append(text)
         if self.ranged_cover:
             lines.append(

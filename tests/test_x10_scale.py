@@ -322,3 +322,36 @@ def test_armor_mods_bounds_have_no_default() -> None:
         ArmorMods.model_validate(
             {"unit": "ember_heart", "max_total": 1, "mods": [{"world_flag": "a", "amount": 1}]}
         )
+
+
+# ---------------------------------------------------------------------------
+# X10-2b 補列：加在屬性值或量類上的常駐數值也要照比例
+
+
+def test_round_shield_block_bonus_is_per_old_attribute_point(library: ContentLibrary) -> None:
+    """圓盾「縮放屬性 × 每點‰」：屬性 ×10 後 ÷ scale，減傷和換算前相同。"""
+    shield = library.offhands["round_shield"]
+    assert shield.block_bonus is not None
+    assert shield.block_extra_permille(lambda _a: 140, 10) == shield.block_extra_permille(
+        lambda _a: 14
+    )
+    assert shield.block_extra_permille(lambda _a: 145, 10) == 72  # 145 × 5 ÷ 10，捨去
+
+
+def test_control_resist_per_tier_is_scaled(library: ContentLibrary) -> None:
+    perks = library.ruleset.core.attribute_perks
+    by_kind = {p.kind: p.per_tier for p in perks.perks}
+    assert by_kind["control_resist"] == 10  # 加在抵抗的屬性值上
+    assert by_kind["collision_dealt"] == by_kind["collision_taken"] == 10
+    assert by_kind["reaction_hit"] == by_kind["reveal_range"] == by_kind["surface_duration"] == 1
+
+
+@pytest.mark.parametrize("scale", [1, 10])
+def test_default_min_damage_is_one_times_scale(scale: int) -> None:
+    state = _duel(scale)
+    hp = state.units[U2].hp
+    percent = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0)  # type: ignore[arg-type]
+    after = run_effects(state, [percent]).state
+    assert hp - after.units[U2].hp == scale
+    explicit = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0, min_damage=3)  # type: ignore[arg-type]
+    assert hp - run_effects(state, [explicit]).state.units[U2].hp == 3

@@ -609,6 +609,7 @@ groups:
       - attribute_perks.base                      # 每 40 點一階（14→140）
       - attribute_perks.step
       - attribute_perks.perks[kind=collision_dealt|collision_taken].per_tier   # 撞擊傷害 +n
+      - attribute_perks.perks[kind=control_resist].per_tier   # 加在抵抗的屬性值上（engine/control.py plan_status），和攻擊值比比例（X10-2b 補列）
       - summon_growth.hp_per_level
       - summon_growth.hp_per_attr_mod             # M 是屬性修正（不變），乘出 HP
       - summon_growth.flat_per_level_permille     # 名稱是 ‰，實際是「固定傷害 × 1000」；÷1000 捨去，新單位尾數更細
@@ -619,7 +620,7 @@ groups:
       - hp_per_con_point                          # 屬性差與 HP 一起 ×10，每點不變
       - resources.*.per_point                     # 同上
       - resources.mana_cap_permille
-      - attribute_perks.perks[kind=surface_duration|reaction_hit|reveal_range|control_resist].per_tier
+      - attribute_perks.perks[kind=surface_duration|reaction_hit|reveal_range].per_tier   # 回合、d20 命中、格數
       - summon_growth.bonus_per_*_permille
       - summon_traits.*.budget_points
       - summon_traits.keen.crit_range_delta

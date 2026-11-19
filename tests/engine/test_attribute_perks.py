@@ -49,10 +49,10 @@ def _set(state: BattleState, uid: UnitId, **attrs: int) -> BattleState:
 
 
 @pytest.mark.parametrize(
-    ("value", "tier"), [(8, 0), (10, 0), (13, 0), (14, 1), (17, 1), (18, 2), (21, 2), (22, 3)]
+    ("value", "tier"), [(80, 0), (100, 0), (139, 0), (140, 1), (179, 1), (180, 2), (219, 2), (220, 3)]
 )
 def test_every_four_points_above_ten_is_one_tier(value: int, tier: int) -> None:
-    assert (PERKS.base, PERKS.step) == (10, 4)
+    assert (PERKS.base, PERKS.step) == (100, 40)
     assert PERKS.tier(value) == tier
 
 
@@ -89,9 +89,9 @@ def test_duplicate_perks_are_rejected() -> None:
 def test_status_bonus_counts_toward_the_tier() -> None:
     state = battle(_noop(), [(5, 3)])
     unit = state.units[U1]
-    unit.attributes[Attribute.INT] = 10
+    unit.attributes[Attribute.INT] = 100
     assert attribute_perk(state.ruleset, unit, "surface_duration") == 0
-    unit.attributes[Attribute.INT] = 18
+    unit.attributes[Attribute.INT] = 180
     assert attribute_perk(state.ruleset, unit, "surface_duration") == 2
 
 
@@ -113,20 +113,20 @@ def _wall_hits(monkeypatch: pytest.MonkeyPatch, pusher: int, victim: int) -> lis
 def test_strength_tiers_add_to_the_collision_damage_you_deal(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert _wall_hits(monkeypatch, 10, 10) == [4, 4]  # 預設撞擊骰（固定 4）
-    assert _wall_hits(monkeypatch, 14, 10) == [5, 5]  # 1 階 +1
-    assert _wall_hits(monkeypatch, 22, 10) == [7, 7]  # 3 階 +3
+    assert _wall_hits(monkeypatch, 100, 100) == [40, 40]  # 預設撞擊骰（固定 4，×10）
+    assert _wall_hits(monkeypatch, 140, 100) == [50, 50]  # 1 階 +10
+    assert _wall_hits(monkeypatch, 220, 100) == [70, 70]  # 3 階 +30
 
 
 def test_strength_tiers_reduce_the_collision_damage_you_take(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert _wall_hits(monkeypatch, 10, 18) == [2, 2]  # 受害者 2 階 −2
-    assert _wall_hits(monkeypatch, 14, 14) == [4, 4]  # 一加一減
+    assert _wall_hits(monkeypatch, 100, 180) == [20, 20]  # 受害者 2 階 −20
+    assert _wall_hits(monkeypatch, 140, 140) == [40, 40]  # 一加一減
 
 
 def test_the_reduction_never_goes_below_the_minimum_hit(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert _wall_hits(monkeypatch, 10, 50) == [1, 1]  # 最低 1 點（min_damage）
+    assert _wall_hits(monkeypatch, 100, 500) == [10, 10]  # 最低 10 點（min_damage）
 
 
 # ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ def _surface_turns(int_value: int) -> int:
 
 
 def test_intelligence_tiers_extend_your_surfaces() -> None:
-    assert [_surface_turns(v) for v in (10, 13, 14, 18, 22)] == [3, 3, 4, 5, 6]
+    assert [_surface_turns(v) for v in (100, 139, 140, 180, 220)] == [3, 3, 4, 5, 6]
 
 
 def test_intelligence_tiers_extend_your_zones() -> None:
@@ -157,7 +157,7 @@ def test_intelligence_tiers_extend_your_zones() -> None:
         [created] = zone_of(result, ZoneCreated)
         return created.expires_round - result.state.round
 
-    assert [lasts(v) for v in (10, 14, 18)] == [2, 3, 4]
+    assert [lasts(v) for v in (100, 140, 180)] == [2, 3, 4]
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ def test_intelligence_tiers_extend_your_zones() -> None:
 def _reaction_bonus(wis: int) -> int:
     state = _line(
         guard=template("hero_fighter", attributes={"wis": wis}),
-        mover=template("bandit", max_hp=300, reactions=[]),
+        mover=template("bandit", max_hp=3000, reactions=[]),
     )
     rolls = [e for e in _walk_away(state) if isinstance(e, AttackRolled)]
     assert len(rolls) == 1
@@ -176,7 +176,7 @@ def _reaction_bonus(wis: int) -> int:
 
 
 def test_wisdom_tiers_raise_the_hit_of_reaction_attacks() -> None:
-    assert [_reaction_bonus(v) for v in (10, 14, 18)] == [0, 1, 2]
+    assert [_reaction_bonus(v) for v in (100, 140, 180)] == [0, 1, 2]
 
 
 def test_wisdom_does_not_raise_the_hit_of_your_own_turn_attacks() -> None:
@@ -184,7 +184,7 @@ def test_wisdom_does_not_raise_the_hit_of_your_own_turn_attacks() -> None:
     from trpg.engine import Attack, resolve  # noqa: PLC0415
 
     m = make_map("000000\n000000", ally=[(1, 0)], enemy=[(2, 0)])
-    hero = template("hero_fighter", attributes={"wis": 22})
+    hero = template("hero_fighter", attributes={"wis": 220})
     state = give_turn(
         make_state(m, [spawn(Team.ALLY, (1, 0), hero), spawn(Team.ENEMY, (2, 0), no_reactions())]),
         "unit_0001",
@@ -204,10 +204,10 @@ def _concealed_problem(wis: int, distance: int) -> str | None:
 def test_wisdom_tiers_extend_how_far_you_can_target_concealed_units() -> None:
     base = library().ruleset.core.concealed_ranged_max_distance
     assert base == 2
-    assert _concealed_problem(10, 3) is not None  # 預設 2 格內
-    assert _concealed_problem(14, 3) is None  # 1 階：3 格
-    assert _concealed_problem(14, 4) is not None
-    assert _concealed_problem(18, 4) is None  # 2 階：4 格
+    assert _concealed_problem(100, 3) is not None  # 預設 2 格內
+    assert _concealed_problem(140, 3) is None  # 1 階：3 格
+    assert _concealed_problem(140, 4) is not None
+    assert _concealed_problem(180, 4) is None  # 2 階：4 格
 
 
 def _enemy_trap(xy: tuple[int, int]) -> TrapState:
@@ -217,7 +217,7 @@ def _enemy_trap(xy: tuple[int, int]) -> TrapState:
         pos=Pos(x=xy[0], y=xy[1]),
         skill_id="skill_bear_trap",
         remaining=3,
-        attributes=tuple((a, 10) for a in Attribute),
+        attributes=tuple((a, 100) for a in Attribute),
     )
 
 
@@ -231,9 +231,9 @@ def _seen_traps(wis: int) -> list[tuple[int, int]]:
 
 
 def test_wisdom_tiers_reveal_nearby_enemy_traps() -> None:
-    assert _seen_traps(10) == []  # 沒有階數：和以前一樣看不見
-    assert _seen_traps(14) == [(3, 4)]  # 1 階：1 格
-    assert _seen_traps(18) == [(3, 4), (3, 5)]  # 2 階：2 格
+    assert _seen_traps(100) == []  # 沒有階數：和以前一樣看不見
+    assert _seen_traps(140) == [(3, 4)]  # 1 階：1 格
+    assert _seen_traps(180) == [(3, 4), (3, 5)]  # 2 階：2 格
 
 
 # ---------------------------------------------------------------------------
@@ -243,25 +243,25 @@ def test_wisdom_tiers_reveal_nearby_enemy_traps() -> None:
 
 def _resist(status: str, wil: int, **others: int) -> int:
     state = battle(_noop(), [(5, 3)])
-    _set(state, U2, wil=wil, str=10, con=10, dex=10, int=10, wis=10, **others)
+    _set(state, U2, wil=wil, str=100, con=100, dex=100, int=100, wis=100, **others)
     return plan_status(state, state.units[U2], status).defense_value
 
 
 def test_willpower_tiers_raise_the_resist_of_every_control() -> None:
-    for control, base in (("root", 10), ("stun", 10), ("slow", 10), ("feared", 10)):
-        assert _resist(control, 10) == base
-        assert _resist(control, 14) == base + 1
-        assert _resist(control, 22) == base + 3
+    for control, base in (("root", 100), ("stun", 100), ("slow", 100), ("feared", 100)):
+        assert _resist(control, 100) == base
+        assert _resist(control, 140) == base + 10  # 每階 +10（X10-2b：加在屬性值上，×10）
+        assert _resist(control, 220) == base + 30
 
 
 def test_willpower_does_not_help_against_non_control_debuffs() -> None:
-    assert _resist("weaken", 22) == _resist("weaken", 10)  # 沒有 control_group
-    assert _resist("poison", 22) == _resist("poison", 10)
+    assert _resist("weaken", 220) == _resist("weaken", 100)  # 沒有 control_group
+    assert _resist("poison", 220) == _resist("poison", 100)
 
 
 def test_the_resist_value_is_still_diminished_after_the_bonus() -> None:
     """遞減只乘在加成之後的值（資料決定的順序）。"""
     state = battle(_noop(), [(5, 3)])
-    _set(state, U2, wil=14, con=10)
+    _set(state, U2, wil=140, con=100)
     base = plan_status(state, state.units[U2], "stun")
-    assert base.defense_value == 11 and not base.diminished
+    assert base.defense_value == 110 and not base.diminished
