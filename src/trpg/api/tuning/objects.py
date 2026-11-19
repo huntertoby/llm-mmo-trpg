@@ -136,9 +136,11 @@ TABLE_NAMES_ZH: Final = {
     "budget": "技能預算表（全體共用）",
     "object": "格子物件（全體共用）",
     "pick": "技能挑選模式的權重（全體共用）",
+    "skill_triggers": "被動觸發時機（全體共用）",
+    "skill_composer": "技能組合器的附帶配方（全體共用）",
 }
 """全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
-``object``）。"""
+``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -160,6 +162,20 @@ TABLE_NOTES_ZH: Final = {
         "合法候選，依這些權重排出前幾名交給本機模型挑一個並取名。",
         "分數只比「適不適合這位玩家」（協同、打法、屬性路線、多樣性），不比強弱；"
         "挑選模式目前要在 LLM 設定打開才會用到（預設是自由設計）。",
+    ),
+    "skill_triggers": (
+        "這份是全體共用的被動觸發時機表（skill_triggers.yaml）：每種時機的預算係數決定用這個時機的"
+        "被動能有多強（係數越大，同階級的被動效果越強）。",
+        "改了係數，所有用這個時機的被動技能（手寫、組合器、LLM、裝備詞條）的預算比例跟著變，"
+        "超出合格區間的技能會在驗證時列出。",
+        "只開放係數（SK-5）；「每命中 n 次」依 n 查表，這裡沒開。",
+    ),
+    "skill_composer": (
+        "這份是技能組合器的抽選機率（skill_composer.yaml）：決定隨機組合器多常加上某種附帶配方"
+        "（鉤、吸收表面、疾病擴散、被利用時、重擲、自身周圍、層數、召喚物、吸血）。",
+        "改任何一個值都會改變「種子 → 技能」的對應：同一個種子之後組出來的招可能不同，"
+        "已經發給玩家的技能不受影響。",
+        "只開放這幾個機率與吸血的千分比（SK-5）；結構性的清單（例如吸血可用的骨架）不開。",
     ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""
@@ -246,8 +262,9 @@ def _phase_label(data: Any, index: int) -> str:
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
 
 
-_ENTRY_WORDS: Final = {"profiles": "行為模式", "objects": "物件"}
-"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件）在標籤前的稱呼。"""
+_ENTRY_WORDS: Final = {"profiles": "行為模式", "objects": "物件", "triggers": "觸發時機"}
+"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件；SK-5：觸發時機表的時機）在標籤前的
+稱呼。"""
 
 
 def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
@@ -407,7 +424,7 @@ def concrete_fields(
                 label = f"{_phase_label(data, parts[1])}{field.label_zh}"
             elif parts[:1] == ("parts",) and len(parts) > 1 and isinstance(parts[1], int):
                 label = _part_label(data, parts, field)
-            elif parts[:1] in (("profiles",), ("objects",)) and len(parts) > 1:
+            elif parts[:1] in (("profiles",), ("objects",), ("triggers",)) and len(parts) > 1:
                 label = f"{_entry_label(data, parts)}{field.label_zh}"
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
@@ -657,6 +674,17 @@ def _schema_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] |
         return 1, None
     if parts[:1] == ("profiles",) and parts[-1] == "prefer_far_from_leader":  # NW-3b：ge=0
         return 0, None
+    return _sk5_limits(parts)
+
+
+def _sk5_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] | None:
+    """SK-5 的兩張表：觸發時機的係數（``ge=1``）、組合器的機率（0～1000）與吸血比例（1～500）。"""
+    if parts[:1] == ("triggers",) and parts[-1] == "budget_coefficient_permille":
+        return 1, None
+    if parts[-1] == "lifesteal_amount_permille":  # StructureRules（原語上限 500）
+        return 1, 500
+    if parts[:1] in (("structure",), ("passive",)) and str(parts[-1]).endswith("_permille"):
+        return 0, 1000  # StructureRules／PassiveRules
     return None
 
 

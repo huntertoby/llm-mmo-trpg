@@ -254,20 +254,36 @@ def _replace(text: str, node: Node, value: PatchValue, where: str, key: Node | N
     return text[: node.start_mark.index] + literal + text[node.end_mark.index :]
 
 
-def _uses_anchors(text: str) -> bool:
-    return any(
-        isinstance(e, yaml.AliasEvent) or getattr(e, "anchor", None)
-        for e in yaml.parse(text, Loader=yaml.SafeLoader)
-    )
+def _shared_nodes(root: Node) -> set[int]:
+    """被別名引用的節點（``yaml.compose`` 把別名接到錨點的同一個節點物件；出現兩次以上＝共用）。
+
+    SK-5：原本整個檔有錨點就擋；``skill_composer.yaml`` 的白板配方用了錨點，所以改成只擋路徑
+    經過共用節點的改動（改共用的節點會同時改到別名的地方）。改完仍照 :func:`patch_text` 比對
+    整份資料。"""
+    seen: set[int] = set()
+    shared: set[int] = set()
+    stack: list[Node] = [root]
+    while stack:
+        node = stack.pop()
+        if id(node) in seen:
+            shared.add(id(node))
+            continue
+        seen.add(id(node))
+        if isinstance(node, MappingNode):
+            stack += [n for pair in node.value for n in pair]
+        elif isinstance(node, SequenceNode):
+            stack += list(node.value)
+    return shared
 
 
 def _patch_one(text: str, parts: Sequence[PathPart], value: PatchValue) -> str:
     where = format_path(parts)
-    if _uses_anchors(text):
-        raise PatchError(f"{where}：這個檔用了錨點或別名（& / *），不能自動改")
     node: Node = yaml.compose(text, Loader=yaml.SafeLoader)
+    shared = _shared_nodes(node)
     key: Node | None = None
     for depth, part in enumerate(parts):
+        if id(node) in shared:
+            raise PatchError(f"{where}：這一項用了錨點或別名（& / *），不能自動改")
         last = depth == len(parts) - 1
         if isinstance(part, int):
             if not isinstance(node, SequenceNode) or not 0 <= part < len(node.value):
@@ -288,6 +304,8 @@ def _patch_one(text: str, parts: Sequence[PathPart], value: PatchValue) -> str:
                 raise PatchError(f"{where}：原本的寫法不能自動刪除")
             return _delete(text, node, index, where)
         key, node = node.value[index]
+    if id(node) in shared:
+        raise PatchError(f"{where}：這一項用了錨點或別名（& / *），不能自動改")
     return _replace(text, node, value, where, key)
 
 
