@@ -26,7 +26,7 @@ import { FONT } from "../labels";
 import { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity } from "../statusFrame";
 import { blank, blit, ci, ctxOf, el, f, flame, halo, ICON_RES, ln, OUT, outlinePx, poly, qCanvasAvailable, render, rr, starPts, TAU, type Ctx, type Pt, type QDef, type QOpts } from "./core";
 import { ART, drop } from "./legacy48";
-import { BOX, bladeSword, bolt, bust, crystal, diagSword, entry as partEntry, heart, shieldBlue, stancePlate, star4, STATUS, upArrow } from "./parts";
+import { BOX, bladeSword, bolt, borrowArt, bust, crystal, diagSword, entry as partEntry, heart, shieldBlue, stancePlate, star4, STATUS, upArrow } from "./parts";
 import * as QS from "./skills";
 import FIT from "./statusFit.json";
 
@@ -118,8 +118,8 @@ export const NEW: Readonly<Record<string, NewEntry | undefined>> = {
   armor_broken: { zh: "破甲", topic: "亮鋼灰胸甲（T 字形：寬肩甲、挖進去的袖洞、深 V 領），一道深色裂縫，右下崩掉一塊", d: (c, o) => { const P: Pt[] = [[-10.6, -6.2], [-7.8, -9.8], [-3.8, -9.8], [0, -2.6], [3.8, -9.8], [7.8, -9.8], [10.6, -6.2], [9.8, -2], [6.4, -1.4], [6.6, 9.8], [-6.6, 9.8], [-6.4, -1.4], [-9.8, -2]]; c.save(); c.beginPath(); P.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.moveTo(7, 2.6); c.lineTo(3, 5); c.lineTo(4, 10.4); c.lineTo(7.4, 10.4); c.closePath(); c.clip("evenodd"); poly(c, "#a4aebb", P, 0.6); poly(c, "#d2d9e2", [[-10.6, -6.2], [-7.8, -9.8], [-3.8, -9.8], [0, -2.6], [0, 9.8], [-6.6, 9.8], [-6.4, -1.4], [-9.8, -2]]); f(c, "#7d8794", () => c.rect(4.2, -1.4, 2.6, 11.4)); f(c, "#8a96a4", () => c.rect(-6.6, 4, 13.2, 1.6)); c.restore(); ln(c, OUT, 1.7, [[0.2, -2.2], [-1.4, 0.8], [1.2, 3.4], [-0.6, 6.4], [0.6, 9.6]], "miter"); halo(c, o, (q) => poly(q, "#a4aebb", [[10.4, 4.4], [7.8, 6], [8.4, 9.8], [10.8, 8.8]], 0.3)); } }, /* 第 2 版：第 1 版像撕開的紙箱；改成 T 字形（寬肩甲、袖洞挖進去、V 領挖深），本體換亮鋼灰不接近純白 */
   entangled: { zh: "纏繞", topic: "褐色靴子（同 HUD「移動」）的靴筒被兩圈淡褐繩子纏住", d: (c, o) => { at(c, 0.6, 0.6, 0.47, (q) => { q.translate(-27, -24); ART.hud.move.d(q, o); }); halo(c, o, (q) => { for (const y of [-6.4, -1.2]) { ln(q, "#ecc890", 2.6, [[-8.6, y + 2.4], [7.2, y - 1.8]]); } ln(q, "#ecc890", 2.2, [[7.2, -3], [10, -7.4]]); }); } },
   overdrawn: { zh: "透支", topic: "黃閃電（同卡片 AP），右下一個紅色減號", d: (c, o) => { at(c, -1.6, -0.6, 0.95, (q) => bolt(q, o)); halo(c, o, (q) => rr(q, "#ff5a5a", 2.6, 5.4, 8.6, 3.4, 1.2)); } },
-  // AP-2：預支的扣回（實作者暫用「透支」的圖、減號改成預支的橘色 #ff9a3a，待美術 PM 補畫或確認）
-  borrowed_ap: { zh: "預支", topic: "黃閃電（同卡片 AP），右下一個橘色減號（同 AP 列的預支菱形色）", d: (c, o) => { at(c, -1.6, -0.6, 0.95, (q) => bolt(q, o)); halo(c, o, (q) => rr(q, "#ff9a3a", 2.6, 5.4, 8.6, 3.4, 1.2)); } },
+  // AR-AP2：預支（AP-2-美術.md 第 1 節、5.2）：和效果「預支」同一個圖（`parts.ts::borrowArt`）；頭頂 11（圖樣本身 <8 px）是中間挖洞的菱形
+  borrowed_ap: { zh: "預支", topic: "同效果「預支」：橘色寶石菱形＋右下的「下回合會少的那格」（灰圈、紅斜線）；頭頂 11 只留菱形、中間挖一個深色小菱形", d: (c, o) => borrowArt(c, o) },
   heart_link: { zh: "連心", topic: "兩顆疊著的心（後面粉、前面紅）", d: (c, o) => { heart(c, "#f49ab0", -3.6, -1.8, 0.86); if (!o.tiny) el(c, "#ffd8e0", -7, -4.6, 1.8, 1.1, -0.6); halo(c, o, (q) => { heart(q, "#f0503e", 3.4, 2.6, 0.9); if (!o.tiny) el(q, "#ffb0a0", 0.4, 0.4, 1.8, 1.1, -0.6); }); } },
   mist_return: { zh: "歸一", topic: "一道灰白的霧旋往中心收，中心一個綠十字（回血）", d: (c, o) => { st(c, "#dfe4ee", 3, (x) => { x.arc(0, 0, 8.6, PI * 0.9, PI * 2.1); }, "butt"); st(c, "#b8c0d0", 2.6, (x) => { x.arc(0.6, 0.6, 5.4, PI * 1.9, PI * 3.0); }, "butt"); halo(c, o, (q) => { rr(q, "#5ad06a", -1.5, -4.2, 3, 8.4, 0.8); rr(q, "#5ad06a", -4.2, -1.5, 8.4, 3, 0.8); }); } },
   // ---- 陣法（劍陣、護陣、鎖霧大陣） ----

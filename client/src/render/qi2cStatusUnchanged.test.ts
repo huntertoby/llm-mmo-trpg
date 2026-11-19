@@ -10,6 +10,7 @@
 // docs/phases/PhaseQI-4a報告.md 第 3 節）。之後同樣不得整批重錄。
 // QI-4b（美術 PM QI-4a 驗收可修 1）：掛鉤的圖樣套第④批 `fit()`（0.86）縮進色環、六角臂章 `stance_*` 不縮，再逐筆重錄：
 // 只有 86 種裡非 `stance_*` 的 38 個 `head|<id>` 變（名單見 docs/phases/PhaseQI-4b報告.md 第 3 節）。
+// AR-AP2（AP-2-美術.md 5.2 第 3 點）：預支 `borrowed_ap` 換成美術的圖，只重錄 `head|borrowed_ap`、`card|borrowed_ap` 兩鍵。
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import glossary from "../battle/fixtures/glossary.json";
 import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";

@@ -48,7 +48,7 @@ const CARD_FRAME = 84 * (20 / 100), HEAD_FRAME = (11 - 2) * 1;
 
 describe("T-A1 名詞表 118 個都有 Q 版圖樣", () => {
   it("每個 entry(id) 都不是 null；來源：沿用 40（STATUS 32＋聖輝／暗影貳～伍 8）、借用 4、新畫 74（手畫 39＋紋章 35）", () => {
-    expect(IDS.length).toBe(119); // AP-2 ＋1（borrowed_ap，新畫：暫用透支的圖、橘色減號）
+    expect(IDS.length).toBe(119); // AP-2 ＋1（borrowed_ap；AR-AP2 換成美術的預支圖，和效果「預支」同一個）
     const es = IDS.map((id) => [id, QT.entry(id)] as const);
     for (const [id, e] of es) expect(e, id).not.toBeNull();
     const kinds = (k: string, family?: string | null): number => es.filter(([, e]) => e?.kind === k && (family === undefined || (e.family ?? null) === family)).length;

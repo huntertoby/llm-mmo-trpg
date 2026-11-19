@@ -20,7 +20,7 @@
 //   `CHANGE.form_upkeep_permille`、`bowArrow`、`cardFan`（沒用到的 `o` 改 `_o`）、`TARGET` 13、`TARGET_TAG`、`targetOf`（`applies` 型別標成任意物件、`skill_tags[0]` 加 `as string`）、
 //   `CATS`／`CAT_ZH`／`RING` 加 `target`（放最後）。值都沒改。
 // ---------------------------------------------------------------------------------------------
-import { blank, blit, ci, ctxOf, el, f, flame, halo, ln, OUT, outlinePx, poly, render, rr, starPts, TAU, type Ctx, type DrawFn, type Pt, type QOpts } from "./core";
+import { blank, blit, ci, ctxOf, el, f, flame, halo, ln, mix, OUT, outlinePx, poly, render, rr, starPts, TAU, type Ctx, type DrawFn, type Pt, type QOpts } from "./core";
 import { drop, ART } from "./legacy48";
 import * as QS from "./skills";
 import { GERM_COLORS } from "../palette";
@@ -289,6 +289,41 @@ function touchLines(c: Ctx, o: QOpts, x: number, y: number): void {
 function target(c: Ctx, o: QOpts, x: number, y: number, R: number): void {
   ci(c, ENEMY, x, y, R); ci(c, "#ffffff", x, y, R * 0.64); ci(c, ENEMY, x, y, R * 0.3);
   if (!o.tiny) el(c, "#ffd0cc", x - R * 0.5, y - R * 0.55, R * 0.22, R * 0.14, -0.7);
+}
+// ---------------- AR-AP2：照 docs/art/sample/ap2Borrow.js 逐行搬（AP-2-美術.md 第 1 節、5.1、5.2）----------------
+/** AP 列「預支來的那格」：實心橘＋框色；亮面＝本色混白 45%（#ffc793）。 */
+export const BORROW = { body: "#ff9a3a", dk: "#b8641a", hi: mix("#ff9a3a", "#ffffff", 0.45), glint: "#ffffff" } as const;
+/** 圖示裡「下回合會少的那格」：灰框在深底上亮一階（AP 列 #8a7a5a 混白 35%＝#b3a994）；紅斜線用第④批「沒有」的紅。戰場演出也用這一組（美術 PM 裁定 6）。 */
+export const SLOT_ICON = { ring: mix("#8a7a5a", "#ffffff", 0.35), slash: "#ff4a5a" } as const;
+/** 圖樣本身的 CSS px（`o.u`＝48 格裡 1 CSS px 是幾單位；圖樣本身＝48 格的 1/BOX）。 */
+const cpxOf = (o: QOpts): number => 36 / (o.u || 2);
+/** 預支來的那格：橘色寶石菱形（中心 x,y、半對角 R）。一般：四個斜面（左上亮、右下暗）＋中間的桌面＋左上一點白；tiny：左上亮半、右下暗半兩階。 */
+export function gem(c: Ctx, o: Pick<QOpts, "tiny">, x: number, y: number, R: number): void {
+  const T: Pt = [x, y - R], Rt: Pt = [x + R, y], B: Pt = [x, y + R], L: Pt = [x - R, y];
+  poly(c, BORROW.body, [T, Rt, B, L], 0.5);
+  if (o.tiny) { poly(c, BORROW.hi, [T, L, [x - R * 0.12, y - R * 0.12]]); poly(c, BORROW.dk, [Rt, B, [x + R * 0.12, y + R * 0.12]]); return; }
+  const k = 0.46, t: Pt = [x, y - R * k], rt: Pt = [x + R * k, y], b: Pt = [x, y + R * k], l: Pt = [x - R * k, y];
+  poly(c, BORROW.hi, [T, L, l, t]); /* 左上斜面（亮） */
+  poly(c, BORROW.dk, [Rt, B, b, rt]); /* 右下斜面（暗＝AP 列菱形的框色） */
+  poly(c, mix(BORROW.body, "#ffffff", 0.18), [t, rt, b, l]); /* 桌面：本色稍亮一點 */
+  el(c, BORROW.glint, x - R * 0.42, y - R * 0.36, R * 0.16, R * 0.09, -0.78); /* 左上一點白 */
+}
+/** 下回合會少的那格：深色圓洞、灰框、裡面一道紅斜線（左下到右上；AP 列同一個寫法）。洞用外框色。 */
+function slot(c: Ctx, o: QOpts, x: number, y: number, r: number): void {
+  ci(c, SLOT_ICON.ring, x, y, r);
+  ci(c, OUT, x, y, r - (o.tiny ? 1.7 : 1.35));
+  const d = r * 0.6, S: Pt[] = [[x - d, y + d], [x + d, y - d]];
+  ln(c, SLOT_ICON.slash, o.tiny ? 2.3 : 1.9, S);
+}
+/**
+ * 預支（狀態 `borrowed_ap` 與效果 `borrow_ap` 同一個圖：名詞表兩個都叫「預支」）：左上一顆大的橘色菱形（預支來的那格），右下一個小的「下回合會少的那格」。
+ * 狀態頭頂 11（圖樣本身 <8 px）只留菱形、放大置中、中間挖一個深色小菱形（實心一團會和「燃燒」的橘火在紅框裡分不開）。
+ */
+export function borrowArt(c: Ctx, o: QOpts): void {
+  if (cpxOf(o) < 8) { gem(c, o, 0, 0, 10.2); poly(c, OUT, [[0, -3.4], [3.4, 0], [0, 3.4], [-3.4, 0]]); return; }
+  if (o.tiny) { gem(c, o, -2.8, -2.8, 7.8); halo(c, o, (q) => slot(q, o, 5.0, 5.0, 4.9)); return; } /* tiny：菱形小一點、那格大一點（真 1 倍要看得到圈與斜線） */
+  gem(c, o, -2.5, -2.5, 8.3);
+  halo(c, o, (q) => slot(q, o, 5.3, 5.3, 4.3));
 }
 /** SK-3 重擲的專屬圖樣（取代 EFFECT_ALIAS 暫借的替隊友擋攻擊）。 */
 const SK3_EFFECT: PartTable = {
