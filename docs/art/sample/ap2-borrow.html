@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>AP-2 預支美術</title>
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  h1{font-size:18px;margin:0 0 6px}.note{color:#b8ab96;font-size:13px;margin:0 0 8px;line-height:1.55;max-width:1280px}
+  a{color:#e8bb48;margin-right:12px}canvas{display:block}#out{display:none}
+</style></head>
+<body>
+<h1>AP-2 預支（樣張）</h1>
+<p class="note">畫圖 agent，2026-11-19。紀錄 docs/art/AP-2-美術.md。分段：
+<a href="?part=icons&mute=1">圖樣</a><a href="?part=icons-t1&mute=1">真 1 倍</a><a href="?part=near&mute=1">撞圖</a><a href="?part=full96&mute=1">完整圖示</a>
+<a href="?part=statusrow&mute=1">戰場狀態列</a><a href="?part=anim&mute=1">演出</a><a href="?part=anim-t1&w=1600&mute=1">演出真 1 倍（1600）</a><a href="?part=anim-t1&w=800&mute=1">演出真 1 倍（800）</a><a href="?part=live&mute=1">動畫播放</a><a href="?part=audit&mute=1">自查</a></p>
+<div id="sheet"></div><div id="live"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script>
+<script src="qDoll.js"></script><script src="storyDoll.js"></script><script src="realms.js"></script><script src="enemyArt.js"></script>
+<script src="explore.js"></script><script src="regions4.js"></script>
+<script src="qCreature.js"></script><script src="qCreatureAnim.js"></script><script src="qBoss.js"></script>
+<script src="tools/qStatusLive.js"></script><script src="qPartsData.js"></script>
+<script src="occludeOutline.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script>
+<script src="ap2Borrow.js"></script>
+<script>
+const OO = OccludeOutline, AP = AP2Borrow, QP = QIconsParts, QST = QIconsStatus, Q = QIcons, T = OO.T;
+const P = new URLSearchParams(location.search), PART = P.get("part") || "icons";
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", TAU = Math.PI * 2;
+AP.install();
+const TP = PaperDoll.TEMPLATES;
+/** 遊戲的地圖縮放（同 sk3-mechanics.html：stageLayout.ts fitScale＋hudSideInsets，12×12 地圖）：1600×900 → 1.31、800×600 → 0.53。 */
+const S1600 = Math.min((1600 - 268 - 240 - 16) / 588, (900 - 60 - 16) / 630), S800 = Math.min((800 - 246 - 226 - 16) / 588, (600 - 60 - 16) / 630);
+const { ease, span, lerp } = AP;
+
+// ---------------- 拼圖（照 sk3-mechanics.html） ----------------
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) {
+        const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height;
+        if (x + w > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; }
+        const caps = c.cap ? wrap(c.cap, Math.max(w, c.capW ?? 110), 12) : [];
+        items.push({ c, x, w, h, caps, bg: c.bg }); x += Math.max(w, caps.length ? (c.capW ?? 110) : 0) + gap; rowH = Math.max(rowH, h + (caps.length ? caps.length * 16 + 4 : 0));
+      }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      if (it.bg) { g.fillStyle = it.bg; g.fillRect(it.x, l.y, it.w, it.h); }
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/jpeg") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.w = cv.width;
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+  document.documentElement.dataset.done = "1";
+}
+const nn = (cv, Z, cap, bg) => ({ cv, w: cv.width * Z, h: cv.height * Z, nn: true, cap, bg });
+
+// =====================================================================
+// 1. 圖樣：部件（效果、觸發）走第④批的組裝列圓片；狀態走第 5 批的狀態框（狀態卡 20＝tileCanvas、16＝statusIconCanvas(16)、頭頂 11）
+// =====================================================================
+const NEW = [
+  { cat: "effect", id: "borrow_ap", zh: "預支（效果原語 borrow_ap）" },
+  { cat: "trigger", id: "on_ap_spent_all", zh: "這回合用完所有 AP 時（觸發 on_ap_spent_all）" },
+  { cat: "status", id: "borrowed_ap", zh: "預支（狀態 borrowed_ap）" },
+];
+const SIZES = { effect: [30, 26, 18], trigger: [30, 26, 18], status: [20, 16, 11] };
+const SZ_ZH = (cat, px) => (cat !== "status" ? `圓片 ${px}` : px === 20 ? "狀態卡 20" : px === 16 ? "說明行 16" : "頭頂 11");
+/** 一格圖：部件＝chipCanvas；狀態＝狀態卡 20 用 cardCanvas、16／11 用 headCanvas（框 px−2，同現行 statusIconCanvas）。 */
+function cell(cat, id, px, zoom = 1, opt = {}) {
+  if (cat === "status") return px === 20 ? QST.cardCanvas(id, px, zoom, opt) : QST.headCanvas(id, px, zoom, opt);
+  return QP.chipCanvas(cat, id, px, zoom, { ...opt, ring: opt.ring ?? QP.RING[cat] });
+}
+const live = (e) => AP.LIVE[`${e.cat}:${e.id}`];
+const liveZh = (e) => { const [c, i] = live(e); return c === "status" ? "現行（暫用：透支閃電＋橘減號）" : `現行（借 ${QP.entry(c, i).zh}）`; };
+const zhOf = (cat, id) => (cat === "status" ? (QST.entry(id)?.zh ?? id) : (QP.entry(cat, id).zh ?? id));
+const topicOf = (e) => (e.cat === "status" ? QST.entry(e.id).topic : QP.entry(e.cat, e.id).topic);
+const PARTS = {};
+PARTS.icons = () => {
+  const blocks = [{ title: "AP-2 預支：新圖樣（部件＝組裝列圓片 30／26／18；狀態＝狀態卡 20、說明行 16、戰場頭頂 11）" },
+    { note: "每列：現行（暫借）各尺寸｜新圖各尺寸｜×4 向量（最大的尺寸）｜最小尺寸的 2 倍解析度 ×4 最近鄰｜次小的 2 倍解析度 ×4 最近鄰。部件的圓片底與色環照現行 drawChip（效果白灰環、觸發白環）；狀態的框照現行（減益＝紅色圓角方框）。圖樣本身：圓片 30→19.7、26→17.0、18→11.8 px；狀態卡 20→12.4、16→10.4、頭頂 11→6.7 px（≤14 走簡化版、不包外框；頭頂 11 只留菱形）。" }];
+  for (const e of NEW) {
+    const cells = [], [lc, li] = live(e), S = SIZES[e.cat];
+    for (const px of S) cells.push({ cv: cell(lc, li, px, 1, { ring: QP.RING[e.cat] }), w: px, h: px, cap: px === S[0] ? liveZh(e) : "", capW: 92 });
+    for (const px of S) cells.push({ cv: cell(e.cat, e.id, px, 1), w: px, h: px, cap: px === S[0] ? "新" : "", capW: 40 });
+    cells.push({ cv: cell(e.cat, e.id, S[0], 4), w: S[0] * 4, h: S[0] * 4, cap: `×4 向量（${SZ_ZH(e.cat, S[0])}）`, capW: 120 });
+    cells.push(nn(cell(e.cat, e.id, S[2], 1), 4, `${SZ_ZH(e.cat, S[2])} 2 倍解析度 ×4`));
+    cells.push(nn(cell(e.cat, e.id, S[1], 1), 4, `${SZ_ZH(e.cat, S[1])} 2 倍解析度 ×4`));
+    blocks.push({ title: e.zh }, { note: topicOf(e) }, { cells });
+  }
+  publish(sheet(1100, blocks), "image/png");
+};
+/** 真 1 倍：canvas 寬高＝CSS px，×6 最近鄰；現行｜新。 */
+PARTS["icons-t1"] = () => {
+  const blocks = [{ title: "真 1 倍（res 1）×6 最近鄰：每組左＝現行（暫借）、右＝新" }, { note: "100% 縮放螢幕的最壞情況（遊戲端固定 DPR 2）。狀態：狀態卡 20（tileCanvas）、說明行 16（statusIconCanvas(16)，靈感閃現的變更列）、戰場頭頂 11。" }];
+  for (const e of NEW) {
+    const cells = [], [lc, li] = live(e);
+    for (const px of SIZES[e.cat]) { cells.push(nn(cell(lc, li, px, 1, { res: 1, ring: QP.RING[e.cat] }), 6, `${SZ_ZH(e.cat, px)} 現行`)); cells.push(nn(cell(e.cat, e.id, px, 1, { res: 1 }), 6, `${SZ_ZH(e.cat, px)} 新`)); }
+    blocks.push({ title: e.zh }, { cells, gap: 16 });
+  }
+  publish(sheet(1500, blocks), "image/png");
+};
+/** 剪影：圖樣範圍內亮度 > 70 的像素（部件＝色環以內；狀態＝框內緣以內）。 */
+const SIL = (cat, id, px) => { const c = cell(cat, id, px, 1, { res: 1 }), x = c.getContext("2d"), d = x.getImageData(0, 0, c.width, c.height), r = px / 2, rin = cat === "status" ? (px === 20 ? px * 0.84 : px - 2) * 0.45 - Math.max(1.5, (px === 20 ? px * 0.84 : px - 2) * 0.09) / 2 - 0.5 : px * 0.42 * 0.94; /* 狀態：減益圓角方框的內緣（半邊 0.9r − 線寬一半）再內縮 0.5 */
+  for (let i = 0; i < d.data.length; i += 4) { const p = i / 4, X = p % c.width, Y = Math.floor(p / c.width), inR = cat === "status" ? Math.max(Math.abs(X + 0.5 - r), Math.abs(Y + 0.5 - r)) < rin : Math.hypot(X + 0.5 - r, Y + 0.5 - r) < rin; const L = 0.3 * d.data[i] + 0.59 * d.data[i + 1] + 0.11 * d.data[i + 2]; const on = inR && L > 70; d.data[i] = d.data[i + 1] = d.data[i + 2] = on ? 235 : 30; d.data[i + 3] = 255; }
+  x.putImageData(d, 0, 0); return c; };
+/** 完全紅色盲（protanopia）模擬：同 sk3-mechanics.html（Viénot 1999 簡化），只給撞圖看。 */
+const PROTAN = (c) => { const x = c.getContext("2d"), d = x.getImageData(0, 0, c.width, c.height); for (let i = 0; i < d.data.length; i += 4) { const r = d.data[i], g = d.data[i + 1], b = d.data[i + 2]; d.data[i] = 0.567 * r + 0.433 * g; d.data[i + 1] = 0.558 * r + 0.442 * g; d.data[i + 2] = 0.242 * g + 0.758 * b; } x.putImageData(d, 0, 0); return c; };
+const GROUPS = [
+  { zh: "狀態「預支」vs 透支（最常同一排出現）、現行暫用、菱形／橘色／紅斜槓的狀態", note: "護陣（菱形陣眼）、蓄力（橘）、燃燒（橘紅）、晶能湧動（寶石＋箭頭）、破誓（紅斜槓）、虛弱。上排狀態卡 20 ×3 向量｜第二排狀態卡 20 真 1 倍 ×5｜第三排頭頂 11 真 1 倍 ×5｜第四排狀態卡 20 剪影（框內緣以內）｜第五排頭頂 11 真 1 倍完全紅色盲模擬 ×5。", status: true, items: ["borrowed_ap", "overdrawn", "borrowed_ap__live", "array_ward", "charging", "burning", "crystal_surge", "oath_broken", "weaken"] },
+  { zh: "效果「預支」vs AP 家族與現行暫借", note: "給予 AP（現行暫借）、額外反應、修正內容 AP、卡片 AP、源力代價（寶石）、元素雷、條件「自身沒有狀態」（紅斜槓）。上排 26 的 2 倍 ×3｜中排 18 真 1 倍 ×5｜下排 18 剪影。", items: [["effect", "borrow_ap"], ["effect", "grant_ap"], ["effect", "extra_reaction"], ["change", "ap_delta"], ["card", "ap"], ["cost", "source"], ["element", "lightning"], ["condition", "self_lacks_status"]] },
+  { zh: "觸發「這回合用完所有 AP 時」vs 回合家族與閃光類", note: "回合結束時（現行暫借）、回合開始時、元素雷、給予 AP、暴擊時、每命中 n 次、擲出自然 20 時。上排 26 的 2 倍 ×3｜中排 18 真 1 倍 ×5｜下排 18 剪影。", items: [["trigger", "on_ap_spent_all"], ["trigger", "on_turn_end"], ["trigger", "on_turn_start"], ["element", "lightning"], ["effect", "grant_ap"], ["trigger", "on_crit"], ["trigger", "every_n_hits"], ["trigger", "on_natural_20"]] },
+];
+PARTS.near = () => {
+  const blocks = [{ title: "撞圖：新圖（每組第一個）和最相近的既有圖並排" }];
+  for (const gr of GROUPS) {
+    if (gr.status) {
+      const ids = gr.items.filter((id) => id.endsWith("__live") || QST.entry(id)), cap = (id) => (id === "borrowed_ap" ? "★新 " : "") + (QST.entry(id)?.zh ?? id);
+      blocks.push({ title: gr.zh }, { note: gr.note },
+        { cells: ids.map((id) => ({ cv: QST.cardCanvas(id, 20, 3), w: 60, h: 60, cap: cap(id), capW: 96 })), gap: 36 },
+        { cells: ids.map((id) => nn(QST.cardCanvas(id, 20, 1, { res: 1 }), 5)), gap: 32 },
+        { cells: ids.map((id) => ({ ...nn(QST.headCanvas(id, 11, 1, { res: 1 }), 5), w: 55, h: 55 })), gap: 77 },
+        { cells: ids.map((id) => nn(SIL("status", id, 20), 5)), gap: 32 },
+        { cells: ids.map((id) => ({ ...nn(PROTAN(QST.headCanvas(id, 11, 1, { res: 1 })), 5), w: 55, h: 55 })), gap: 77 });
+      continue;
+    }
+    const a = [], b = [], s = [];
+    for (const [cat, id] of gr.items) {
+      const e = QP.entry(cat, id), mine = e.src === "new:ap2";
+      a.push({ cv: QP.chipCanvas(cat, id, 26, 3, { ring: QP.RING[cat] }), w: 78, h: 78, cap: (mine ? "★新 " : "") + (e.zh ?? id), capW: 96 });
+      b.push(nn(QP.chipCanvas(cat, id, 18, 1, { res: 1, ring: QP.RING[cat] }), 5));
+      s.push(nn(SIL(cat, id, 18), 5));
+    }
+    blocks.push({ title: gr.zh }, { note: gr.note }, { cells: a, gap: 18 }, { cells: b, gap: 54 }, { cells: s, gap: 54 });
+  }
+  blocks.push({ note: "剪影＝真 1 倍裡圖樣範圍（圓片色環以內／狀態框內緣以內）亮度 > 70 的像素。修正內容、卡片小圖、代價、元素照第④批 chipCanvas 畫成圓片，只為了同尺寸並排。" });
+  publish(sheet(1460, blocks), "image/png");
+};
+/** 完整技能圖示：96（工坊 CheckPanel）與 56 mid（技能卡）。 */
+PARTS.full96 = () => {
+  const seg = (sk, shape, eff) => [{ skeleton: sk, shape_id: shape, effects: eff.map((type) => ({ type })) }];
+  const set = [
+    ["搶拍（skill_borrowed_beat：主動、光環、自身、預支 1；skill_icons.json 原樣）", { kind: "active", rarity: "rare", trigger: null, elements: [], condition: null, segments: seg("aura", "self", ["borrow_ap"]) }, { kind: "active", rarity: "rare", prop: "none", motion: "aura", act: "buff" }],
+    ["示意：被動「這回合用完所有 AP 時 → 自身護盾」（組合器 composer.ap_spent 會做出這種）", { kind: "passive", rarity: "epic", trigger: "on_ap_spent_all", elements: [], condition: null, segments: seg("aura", "self", ["shield"]) }, { kind: "passive", rarity: "epic", prop: "none", motion: "aura", act: "shield" }],
+    ["對照：被動「回合結束時 → 自身護盾」（現行暫借的那一個）", { kind: "passive", rarity: "epic", trigger: "on_turn_end", elements: [], condition: null, segments: seg("aura", "self", ["shield"]) }, { kind: "passive", rarity: "epic", prop: "none", motion: "aura", act: "shield" }],
+  ];
+  const blocks = [{ title: "完整技能圖示：96（工坊；觸發左上白環、效果列在底、核心白環）與 56 mid（技能卡：觸發左上＋骨架徽章）" },
+    { note: "主圖（道具＋出手＋記號）照第③批推導，不在這次範圍。每招：96 的 2 倍解析度｜96 真 1 倍 ×2｜56 mid 2 倍解析度｜56 mid 真 1 倍 ×3。" }];
+  for (const [zh, icon, look] of set) {
+    blocks.push({ title: zh }, { cells: [
+      { cv: QP.canvas(icon, look, 96, 1), w: 96, h: 96, cap: "96" },
+      nn(QP.canvas(icon, look, 96, 1, { res: 1 }), 2, "96 真 1 倍 ×2"),
+      { cv: QP.canvas(icon, look, 56, 1, { level: "mid" }), w: 56, h: 56, cap: "56 mid" },
+      nn(QP.canvas(icon, look, 56, 1, { res: 1, level: "mid" }), 3, "56 mid 真 1 倍 ×3"),
+    ], gap: 24 });
+  }
+  publish(sheet(1100, blocks), "image/png");
+};
+
+// =====================================================================
+// 2. 戰場繪製（照 sk3-mechanics.html 的 render：地面 → 一排一排（腳下圈、身體、血條）→ 之上）
+// =====================================================================
+const BODY = new Map();
+function bodySprite(u, sc) {
+  const key = [u.tpl, u.view, !!u.west, sc.toFixed(3), JSON.stringify(u.pose ?? null)].join("|");
+  if (!BODY.has(key)) {
+    const W = Math.ceil(2.4 * T * sc), H = Math.ceil(2.6 * T * sc), c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d"); g.setTransform(sc, 0, 0, sc, 0, 0); g.translate(1.2 * T - 0.5 * T, 1.7 * T - 0.5 * T - OO.FEET);
+    if (u.pose) QDoll.setPose(u.pose);
+    try { OO.drawBody(g, { ...u, x: 0, y: 0, dx: 0, dy: 0, h: 0 }, sc); } finally { QDoll.setPose(null); }
+    BODY.set(key, { c, ox: 1.2 * T, oy: 1.7 * T });
+  }
+  return BODY.get(key);
+}
+function drawUnit(g, u, sc) { const f = OO.feetOf(u), s = bodySprite(u, sc); g.drawImage(s.c, f.x - s.ox, f.y - s.oy, s.c.width / sc, s.c.height / sc); }
+function hpBar(g, u) { const c = OO.centerOf(u), w = T * 0.8, y = c.y + T * 0.36; g.fillStyle = "#000"; g.fillRect(c.x - w / 2, y, w, 5); const r = u.hp ?? 1; g.fillStyle = r > 0.5 ? "#4cd964" : r > 0.25 ? "#ffcc00" : "#ff3b30"; g.fillRect(c.x - w / 2, y, w * r, 5); }
+/** 回傳 { canvas, map(x,y)→畫面 px }；scene.screen(g, map) 在畫面 px 上畫（狀態列用：照遊戲端貼圖、對齊整數像素）。 */
+function render(scene, view) {
+  const sc = view.S * (view.res ?? 1) * (view.zoom ?? 1), W = Math.round(view.w * sc), H = Math.round(view.h * sc);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const g = cv.getContext("2d");
+  const xf = () => g.setTransform(sc, 0, 0, sc, -view.x0 * sc, -view.y0 * sc);
+  AP.setMapScale(view.S); /* 菱形的畫面下限照地圖縮放（不看樣張的放大倍率） */
+  xf();
+  for (let y = 0; y < scene.rows; y++) for (let x = 0; x < scene.cols; x++) { g.save(); g.beginPath(); g.rect(x * T, y * T, T, T); g.clip(); scene.groundAt(x, y)(g, x * T, y * T, x, y); g.restore(); }
+  g.save(); g.strokeStyle = "rgba(0,0,0,0.22)"; g.lineWidth = 1 / sc; for (let y = 0; y <= scene.rows; y++) { g.beginPath(); g.moveTo(0, y * T); g.lineTo(scene.cols * T, y * T); g.stroke(); } for (let x = 0; x <= scene.cols; x++) { g.beginPath(); g.moveTo(x * T, 0); g.lineTo(x * T, scene.rows * T); g.stroke(); } g.restore();
+  const units = [...scene.units].sort((a, b) => a.y - b.y || a.x - b.x), rows = [...new Set(units.map((u) => u.y))].sort((a, b) => a - b);
+  for (const row of rows) { const inRow = units.filter((u) => u.y === row); for (const u of inRow) { xf(); OO.drawRing(g, u); drawUnit(g, u, sc); } for (const u of inRow) { xf(); hpBar(g, u); } }
+  if (scene.top) { xf(); scene.top(g); }
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  if (scene.screen) scene.screen(g, (x, y) => ({ x: (x - view.x0) * sc, y: (y - view.y0) * sc }), sc, view);
+  return cv;
+}
+const U = {
+  fighter: (o) => ({ kind: "doll", team: "ally", tpl: "hero_fighter", doll: TP.hero_fighter, view: "side", hp: 1, hero: true, ...o }),
+  mage: (o) => ({ kind: "doll", team: "ally", tpl: "hero_mage", doll: TP.hero_mage, view: "side", hp: 1, ...o }),
+  archer: (o) => ({ kind: "doll", team: "ally", tpl: "hero_archer", doll: TP.hero_archer, view: "side", hp: 1, ...o }),
+  bandit: (o) => ({ kind: "doll", team: "enemy", tpl: "bandit", doll: TP.bandit, view: "side", west: true, hp: 1, ...o }),
+};
+const STONE = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "s", gx, gy); ctx.restore(); };
+const GRASS = (ctx, x, y, gx, gy) => { ctx.save(); ctx.translate(x - gx * T, y - gy * T); ctx.scale(T / 52, T / 52); Explore.ground(ctx, "g", gx, gy); ctx.restore(); };
+
+// =====================================================================
+// 3. 戰場狀態列：和「透支」並排（照遊戲端 rowLayout.ts：圖示 11、間距 12、置中、下緣在 HP 條上方 4；整排倍率 k＝max(1, 10 ÷ (11 × 地圖縮放))）
+// =====================================================================
+const ROW_ICON = 11, ROW_PITCH = 12, ROW_BOTTOM = T * 0.36 - 4;
+function statusRow(g, map, u, ids, S) {
+  const k = Math.max(1, 10 / (ROW_ICON * S)), c = OO.centerOf(u), n = ids.length;
+  ids.forEach((id, i) => {
+    const mx = c.x + k * (i - (n - 1) / 2) * ROW_PITCH, my = c.y + ROW_BOTTOM - k * ROW_ICON / 2, p = map(mx, my), side = ROW_ICON * S * k;
+    const cv = QST.headCanvas(id, ROW_ICON, 1, { res: S * k }); g.drawImage(cv, Math.round(p.x - cv.width / 2), Math.round(p.y - cv.height / 2)); /* 照原尺寸貼、對齊整數像素（不重新取樣） */
+    void side;
+  });
+}
+const VIEWS = (S, x0 = 2.6, w = 4.8, y0 = 1.35, h = 1.95) => ({ S, res: 1, zoom: 1, x0: T * x0, y0: T * y0, w: T * w, h: T * h });
+PARTS.statusrow = () => {
+  const scene = (S) => {
+    const A = U.mage({ id: "A", x: 3, y: 2, hp: 0.7 }), B = U.fighter({ id: "B", x: 4, y: 2, hp: 0.9 }), C = U.archer({ id: "C", x: 5, y: 2, hp: 0.55 }), D = U.bandit({ id: "D", x: 6, y: 2 });
+    return { cols: 9, rows: 6, groundAt: () => GRASS, units: [A, B, C, D], screen: (g, map) => { statusRow(g, map, A, ["overdrawn", "borrowed_ap"], S); statusRow(g, map, B, ["borrowed_ap"], S); statusRow(g, map, C, ["overdrawn"], S); statusRow(g, map, D, ["borrowed_ap__live"], S); } };
+  };
+  /* 狀態卡（側欄的狀態列表：TileCanvas 20＋名稱），照 StatusCardParts.tsx 的排法示意 */
+  const card = (ids) => { const W = 260, H = 30 * ids.length + 8, c = document.createElement("canvas"); c.width = W; c.height = H; const g = c.getContext("2d"); g.fillStyle = "#1b1f2c"; g.fillRect(0, 0, W, H); g.strokeStyle = "#3a3f52"; g.strokeRect(0.5, 0.5, W - 1, H - 1);
+    ids.forEach(([id, zh, txt], i) => { const t = QST.cardCanvas(id, 20, 1, { res: 1 }); g.drawImage(t, 8, 9 + i * 30); g.font = `600 13px ${FONT}`; g.fillStyle = "#eadfcc"; g.textBaseline = "middle"; g.fillText(zh, 36, 19 + i * 30); g.font = `12px ${FONT}`; g.fillStyle = "#a89c88"; g.fillText(txt, 72, 19 + i * 30); }); return c; };
+  const blocks = [{ title: "戰場狀態列：「預支」和「透支」並排（真 1 倍，最近鄰放大）" },
+    { note: "由左到右：法師＝透支＋預支（同一排兩個）｜戰士＝只有預支｜弓手＝只有透支｜盜賊＝現行暫用的預支（透支閃電＋橘減號）。照 rowLayout.ts：圖示 11 模型 px、間距 12、兩個時置中、下緣在 HP 條上方 4；整排倍率 k＝max(1, 10 ÷ (11 × 地圖縮放))，1600 寬 k＝1、800 寬 k＝1.72（800 寬只有 2 個狀態時兩個都畫）。圖示照 headCanvas 原尺寸貼、對齊整數像素。" },
+    { title: `1600 寬（地圖縮放 ${S1600.toFixed(2)}）真 1 倍 ×3` }, { cells: [nn(render(scene(S1600), VIEWS(S1600)), 3)] },
+    { title: `800 寬（地圖縮放 ${S800.toFixed(2)}）真 1 倍 ×4` }, { cells: [nn(render(scene(S800), VIEWS(S800)), 4)] },
+    { title: "狀態卡（側欄）20：真 1 倍 ×2｜×1" }, { cells: [nn(card([["overdrawn", "透支", ""], ["borrowed_ap", "預支", ""]]), 2), { cv: card([["overdrawn", "透支", ""], ["borrowed_ap", "預支", ""]]) }], gap: 24 },
+    { note: "狀態卡只示意「圖示 20＋名稱」那一段（名稱是名詞表 name_zh），其他欄位照現行、沒畫。" },
+  ];
+  publish(sheet(1500, blocks), "image/png");
+};
+
+// =====================================================================
+// 4. 施放演出：只對自己、0 AP、≤ 320 ms（現行給予 AP 的拍肩 shoulder_tap 是 320 ms）
+// =====================================================================
+const chestOf = (u) => { const f = OO.feetOf(u); return { x: f.x + (u.west ? -3 : 3), y: f.y - 22 }; };
+/** 現行（暫借）：shoulder_tap——另一隻手往前伸（pose cast 0–320），128–320 ms 一顆淡金菱形（深色圓底）從胸口飛到「目標＝自己」的格子中心往上 T×0.05（skillLayer.ts linkOut、skillFxLower.ts iconFly／drawIcon("ap")）；示意重畫。 */
+function liveFx(g, t, u) {
+  if (t < 128 || t > 320) return; const p = (t - 128) / 192, c = OO.centerOf(u), from = chestOf(u), to = { x: c.x, y: c.y - T * 0.05 };
+  const q = { x: lerp(from.x, to.x, p), y: lerp(from.y, to.y, p) - T * 0.25 * Math.sin(p * Math.PI) }, a = p > 0.8 ? (1 - p) / 0.2 : 1;
+  g.save(); g.globalAlpha = 0.5 * a; g.fillStyle = "#1a1420"; g.beginPath(); g.arc(q.x, q.y, 5, 0, TAU); g.fill(); g.globalAlpha = a; g.fillStyle = "#ffe9a8"; g.beginPath(); g.moveTo(q.x, q.y - 3.2); g.lineTo(q.x + 3.2, q.y); g.lineTo(q.x, q.y + 3.2); g.lineTo(q.x - 3.2, q.y); g.closePath(); g.fill(); g.restore();
+}
+function sceneBorrow(t, live = false, upper = true) {
+  const M = U.mage({ id: "M", x: 4, y: 3, pose: live ? (t >= 0 && t <= 320 ? AP.POSE.cast : null) : AP.poseAt(t) });
+  const extra = upper ? [U.archer({ id: "A", x: 4, y: 2 }), U.bandit({ id: "B2", x: 5, y: 2 }), U.fighter({ id: "F", x: 3, y: 2 })] : [];
+  const units = [M, U.bandit({ id: "B", x: 6, y: 3 }), ...extra];
+  return { cols: 9, rows: 7, groundAt: () => STONE, units, top: (g) => (live ? liveFx(g, t, M) : AP.borrowFx(g, t, OO.centerOf(M), chestOf(M), M.west ? -1 : 1)) };
+}
+const KEYS = [50, 110, 170, 220, 270, 310];
+const VIEWA = (S, res = 1, zoom = 1) => ({ S, res, zoom, x0: T * 2.7, y0: T * 1.55, w: T * 4.1, h: T * 2.75 });
+PARTS.anim = () => {
+  const S = S1600, V = VIEWA(S, 1, 1.5);
+  publish(sheet(1300, [
+    { title: `施放演出「預支」：關鍵影格（1600 寬地圖縮放 ${S.toFixed(2)}，再 ×1.5 向量放大）` },
+    { note: "時間軸（毫秒，共 320，同現行給予 AP 的拍肩）：0–90 施放者面前、胸口前方（手杖外側）浮出「下回合的那格」（灰框空心圓、不透明度 0.8），裡面一顆橘色菱形｜0–110 另一隻手往前上方伸（抓）｜100–230 菱形被拉出來、沿往上拱的短弧飛進胸口；110–240 手拉回胸前｜150–220 空下來的那格畫上紅斜線｜215–320 菱形到胸口：一圈橘色光圈往外擴、菱形縮小淡出；230–320 那格淡出。之後 AP 列淡入橘色菱形與紅斜線（AP-2 已做，200 ms）。上一排站人（弓手、盜賊、戰士）看會不會蓋到。" },
+    { title: "新：預支（先跟下回合借：從自己面前「下回合的那格」把 AP 拉過來，那格留下紅斜線）" },
+    { cells: KEYS.slice(0, 3).map((t) => ({ cv: render(sceneBorrow(t), V), cap: `${t} ms` })) }, { cells: KEYS.slice(3).map((t) => ({ cv: render(sceneBorrow(t), V), cap: `${t} ms` })) },
+    { title: "現行（暫借給予 AP 的拍肩，示意重畫：另一隻手前伸、一顆淡金菱形從胸口飛向「自己」）" },
+    { cells: [130, 220, 300].map((t) => ({ cv: render(sceneBorrow(t, true), V), cap: `${t} ms（現行）` })) },
+  ]));
+};
+/** 真 1 倍關鍵影格：w＝1600（×2）｜800（×4）。 */
+PARTS["anim-t1"] = () => {
+  const W = P.get("w") === "800" ? 800 : 1600, S = W === 800 ? S800 : S1600, Z = W === 800 ? 4 : 2, mk = Math.max(1, 4.5 / (AP.GEM_R * S));
+  publish(sheet(W === 800 ? 1900 : 1720, [
+    { title: `施放演出「預支」 ${W} 寬（地圖縮放 ${S.toFixed(2)}）真 1 倍 ×${Z} 最近鄰：關鍵影格` },
+    { note: `菱形半對角 5 模型 px、畫面下限 4.5 px（＝畫面上 9 px，同 AP 列的菱形），這個寬度的倍率 ${mk.toFixed(2)}；「下回合的那格」半徑 6.5 × 倍率、在施放者前方 17＋(倍率−1)×8，整顆上緣不高於上一排血條下緣再往下 1。上一排站人。` },
+    { cells: KEYS.slice(0, 3).map((t) => nn(render(sceneBorrow(t), VIEWA(S)), Z, `${t} ms`)), gap: 14 },
+    { cells: KEYS.slice(3).map((t) => nn(render(sceneBorrow(t), VIEWA(S)), Z, `${t} ms`)), gap: 14 },
+  ]), "image/png");
+};
+PARTS.live = () => {
+  const dpr = window.devicePixelRatio || 1, V = VIEWA(S1600, dpr, 2), host = document.getElementById("live");
+  const cv = render(sceneBorrow(0), V); cv.style.width = cv.width / dpr + "px"; host.appendChild(cv);
+  const lab = document.createElement("p"); lab.className = "note"; host.appendChild(lab);
+  const g = cv.getContext("2d"), t0 = performance.now(), slow = P.get("slow") === "1" ? 4 : 1;
+  const loop = (now) => { const t = ((now - t0) / slow) % 1000; const c = render(sceneBorrow(Math.min(t, 400)), V); g.clearRect(0, 0, cv.width, cv.height); g.drawImage(c, 0, 0); lab.textContent = `預支　${Math.round(Math.min(t, 400))} ms（&slow=1 放慢 4 倍）`; requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+};
+
+// =====================================================================
+// 5. 自查（規則 6、7）：量實際走到的那一份（圖樣本身 ≤14 是 tiny 簡化版；頭頂 11 只有菱形）
+//    部件：分母＝色環內緣直徑（圖樣 12.06 單位，同 sk3）；狀態：分母＝框內緣寬度（innerWidth），圖樣大小照 paint()（框邊長 × 0.74 × fitK）。
+// =====================================================================
+PARTS.audit = () => {
+  const rows = [], res = 4;
+  const measure = (g, Rin, denom) => { const S = g.width, d = g.getContext("2d").getImageData(0, 0, S, S).data, c = S / 2; let n = 0, lumSum = 0, hi = 0, x0 = S, x1 = 0, y0 = S, y1 = 0, out = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 128) continue; const isOut = d[i] === 0x16 && d[i + 1] === 0x12 && d[i + 2] === 0x1a; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (isOut) continue; if (Rin && Math.hypot(x + 0.5 - c, y + 0.5 - c) > Rin) out++; n++; const L = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lumSum += L; if (L >= 150) hi++; }
+    return { occ: (Math.max(x1 - x0, y1 - y0) + 1) / denom, lum: lumSum / n, hi: hi / n, out: out / Math.max(1, n) }; };
+  for (const e of NEW) for (const px of SIZES[e.cat]) {
+    let cpx, m;
+    if (e.cat === "status") { const frame = px === 20 ? 16.8 : px - 2, k = QST.fitK(e.id, frame); cpx = frame * QST.GLYPH_K * k; m = measure(QST.glyph(e.id, cpx, res, { ow: 0 }), 0, QST.innerWidth("debuff", frame) * res); m.k = k; }
+    else { cpx = px * 0.42 * 1.56; const Rin = cpx * 0.603 * res; m = measure(QP.glyph(e.cat, e.id, cpx, res), Rin, 2 * Rin); }
+    rows.push([e.zh, SZ_ZH(e.cat, px), cpx.toFixed(1) + (cpx <= 14 ? " tiny" : "") + (m.k ? ` fitK ${m.k}` : ""), (m.occ * 100).toFixed(0) + "%", m.lum.toFixed(0), (m.hi * 100).toFixed(0) + "%", e.cat === "status" ? "-" : (m.out * 100).toFixed(1) + "%"]);
+  }
+  const t = document.createElement("table"); t.innerHTML = "<tr><th>圖樣</th><th>尺寸</th><th>圖樣 px</th><th>佔框（色環內徑／框內緣）</th><th>平均亮度</th><th>亮度≥150</th><th>超出色環內緣</th></tr>" + rows.map((r) => "<tr>" + r.map((v) => `<td>${v}</td>`).join("") + "</tr>").join("");
+  t.style.cssText = "border-collapse:collapse;font-size:13px"; t.querySelectorAll("td,th").forEach((x) => (x.style.cssText = "border:1px solid #444;padding:2px 8px"));
+  const pre = document.createElement("pre"); pre.id = "audit"; pre.textContent = rows.map((r) => r.join("\t")).join("\n");
+  document.getElementById("sheet").append(t, pre);
+  const cv = document.createElement("canvas"); cv.width = cv.height = 10; document.getElementById("out").textContent = cv.toDataURL("image/png");
+  document.documentElement.dataset.h = document.documentElement.scrollHeight; document.documentElement.dataset.done = "1";
+};
+(async () => { try { await (PARTS[PART] ?? PARTS.icons)(); } catch (e) { console.log("ERR " + e.stack); document.documentElement.dataset.err = String(e); } })();
+</script>
+</body></html>
