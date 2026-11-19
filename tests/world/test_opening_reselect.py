@@ -135,7 +135,7 @@ def _check_numbers(
     rules = library.roguelite
     picked = pick_starters(library, weapon, keywords, before.opening.seed)
     points = rules.start_free_points + 2 * rules.attribute_points_per_level
-    assert sum(before.attribute_spent.values()) == points == 8
+    assert sum(before.attribute_spent.values()) == points == 80  # X10-2b：屬性點 ×10
     allocation = full_allocation(library, picked, library.weapons[weapon], points)
     expected = apply_allocation(start_hero(library, weapon, char.hero.skills), allocation)
     expected = expected.model_copy(

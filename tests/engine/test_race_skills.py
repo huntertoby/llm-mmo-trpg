@@ -385,7 +385,7 @@ def test_overcharge_restores_chosen_resource_by_the_data_amount() -> None:
     assert amount in _numbers(_skill("cyborg").description_zh)
     state = race_state("cyborg")
     me = state.units[U1]
-    me.stamina, me.mana, me.max_mana = 0, 0, 50
+    me.stamina, me.mana, me.max_mana = 0, 0, 500  # X10-2b ×10
     stamina = act(state, choice="stamina").state.units[U1]
     assert (stamina.stamina, stamina.mana) == (amount, 0)
     mana = act(state, choice="mana").state.units[U1]

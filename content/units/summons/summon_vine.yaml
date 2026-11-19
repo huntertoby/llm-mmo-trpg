@@ -2,8 +2,8 @@
 # 敵人踏入（走進、被推進、被拉進）相鄰格時纏住（緩速 2 回合＋倒地，每隻每輪 1 次）。
 id: summon_vine
 name_zh: 藤蔓
-attributes: {str: 12, dex: 6, con: 12, int: 4, wis: 8, wil: 6}
-max_hp: 10
+attributes: {str: 120, dex: 60, con: 120, int: 40, wis: 80, wil: 60}
+max_hp: 100
 speed: 0
 armor_bonus: 0
 weapon: vine_lash

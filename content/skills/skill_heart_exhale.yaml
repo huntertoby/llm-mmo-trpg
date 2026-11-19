@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d6, element: fire}
   - {type: apply_status, status: burning, duration: 1}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [fire, spell, aoe]
 narrative:
   concept: 核心把吸進去的熱一口氣吐出來，整片坑底都燙了一下

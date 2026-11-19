@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: holy}
   - {type: create_surface, surface: ice, duration: 2}
 condition: null
-cost: {mana: 7, cooldown: 2}
+cost: {mana: 70, cooldown: 2}
 tags: [holy, ice, spell, area]
 narrative:
   concept: 一陣帶著霜花的祝禱，聖光落處結滿薄冰，敵人站都站不穩

@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 1000}
   - {type: damage, multiplier_permille: 1000, element: poison, condition: {type: target_has_status, status: poison}}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [physical, melee, finisher]
 narrative:
   concept: 對已經中毒的對手，一刺直達骨髓

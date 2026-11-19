@@ -17,7 +17,7 @@ shape: {type: ground_tile, range: 2}
 effects:
   - {type: summon, unit: summon_mist_shade, duration: 3}
 condition: {type: first_round}
-cost: {mana: 4, cooldown: 4}
+cost: {mana: 40, cooldown: 4}
 tags: [shadow, spell, summon]
 narrative:
   concept: 劍客在霧裡一晃，留下一個和自己一模一樣的影子

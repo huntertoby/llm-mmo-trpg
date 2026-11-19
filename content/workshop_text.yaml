@@ -41,8 +41,8 @@ texts:
   source: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）
   player: 命中沿途敵人後的額外效果：擊倒，或推到路徑旁邊一格。
 - id: 原語.cheat_death
-  source: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
-  player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 1，然後免死消失。墜落和致命地形照樣會死。
+  source: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 10（1 × quantity_scale）並移除此狀態（墜落與致命地形照樣生效）。
+  player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 10，然後免死消失。墜落和致命地形照樣會死。
 - id: 原語.cleanse
   source: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；count 填 1 時只移除 1 個（控制類 control_group 優先，再來剩餘回合最多、永久最多，再相同照 statuses.yaml 順序；SK-2b）。增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
   player: 移除目標身上所有負面狀態；也可以只移除 1 個（控制類優先，再來剩下回合最多的）。只能用在自己或友方。
@@ -286,8 +286,8 @@ texts:
   source: 命中後的額外效果（knock_prone 擊倒、push_aside 推到路徑旁）
   player: 命中沿途敵人後的額外效果：擊倒，或推到路徑旁邊一格。
 - id: 工坊.effects.effects=cheat_death
-  source: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 1 並移除此狀態（墜落與致命地形照樣生效）。
-  player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 1，然後免死消失。墜落和致命地形照樣會死。
+  source: 目標（自己或友方）獲得狀態「免死」（undying）duration 回合（省略時用狀態的預設持續）：期間 HP 會降到 0 時改為 10（1 × quantity_scale）並移除此狀態（墜落與致命地形照樣生效）。
+  player: 目標（自己或友方）獲得「免死」：持續期間受到致命傷害時 HP 留在 10，然後免死消失。墜落和致命地形照樣會死。
 - id: 工坊.effects.effects=cleanse
   source: 移除影響單位身上所有減益（polarity 為 debuff）狀態，依狀態 ID 排序逐一移除；count 填 1 時只移除 1 個（控制類 control_group 優先，再來剩餘回合最多、永久最多，再相同照 statuses.yaml 順序；SK-2b）。增益與中性狀態（隱蔽、姿態、免死、靈魂連結、蓄力等）保留。不能對敵方使用。
   player: 移除目標身上所有負面狀態；也可以只移除 1 個（控制類優先，再來剩下回合最多的）。只能用在自己或友方。

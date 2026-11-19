@@ -16,7 +16,7 @@ effects:
   - {type: knock_prone}
   - {type: damage, dice: 1d4, element: holy}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [holy, spell, control]
 narrative:
   concept: 一記從天而降的聖光，壓得敵人跪倒在地

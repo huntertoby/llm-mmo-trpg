@@ -20,7 +20,7 @@ effects:
     multiplier_permille: 1300   # BAL-13d：500 → 1300（瞬步 3 點、背刺條件 700‰ 後補滿預算，99.5%）
     condition: {type: from_behind}
 condition: null
-cost: {stamina: 10, cooldown: 3}
+cost: {stamina: 100, cooldown: 3}
 tags: [physical, melee, mobility, stealth]
 narrative:
   concept: 影子一閃，人已經在敵人背後，刀鋒比他回頭還快

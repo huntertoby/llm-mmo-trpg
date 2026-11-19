@@ -4,10 +4,10 @@
 # 模擬見 docs/phases/Phase5F-5b報告.md）。只出現在熔心坑（Boss 陣容與第 2 階段的召喚）。
 id: heart_ember_lizard
 name_zh: 殼縫餘燼蜥
-attributes: {str: 10, dex: 14, con: 10, int: 3, wis: 10, wil: 6}
-max_hp: 18
+attributes: {str: 100, dex: 140, con: 100, int: 30, wis: 100, wil: 60}
+max_hp: 180
 speed: 6
-armor_bonus: 1
+armor_bonus: 10
 weapon: fangs
 ai_profile: ember_brood   # GB-3（T17）：莽夫＋追離頭目遠的人
 resist: {}

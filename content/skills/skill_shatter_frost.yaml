@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d8, element: ice}
   - {type: consume_stack, stack: hoarfrost, per_stack_permille: 250, affects: enemies}
 condition: null
-cost: {mana: 7, cooldown: 2}
+cost: {mana: 70, cooldown: 2}
 tags: [ice, spell, finisher]
 narrative:
   concept: 凍得越深，碎裂得越徹底

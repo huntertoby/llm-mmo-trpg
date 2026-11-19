@@ -1,10 +1,10 @@
 # build 矩陣的標準隊友（Phase 2C-3 5.3）：屬性比照 hero_archer，只有普通攻擊、沒有技能。
 id: sim_companion_archer
 name_zh: 標準隊友（弓手）
-attributes: {str: 10, dex: 16, con: 12, int: 10, wis: 12, wil: 10}
-max_hp: 40
+attributes: {str: 100, dex: 160, con: 120, int: 100, wis: 120, wil: 100}
+max_hp: 400
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: bow
 resist: {}
 element_mods: {}

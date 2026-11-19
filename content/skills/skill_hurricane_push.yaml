@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d6, element: wind}
   - {type: push, distance: 2, collision_dice: 2d6}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [wind, spell, push, area]
 narrative:
   concept: 一股筆直的強風把敵人整排往後推，撞到東西時風壓讓撞擊更重

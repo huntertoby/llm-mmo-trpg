@@ -17,7 +17,7 @@ effects:
   - {type: summon, unit: summon_fire_spirit, duration: 3}
   - {type: apply_status, status: infused_fire, duration: 3, affects: self}
 condition: null
-cost: {mana: 12, cooldown: 4}
+cost: {mana: 120, cooldown: 4}
 tags: [fire, spell, summon]
 narrative:
   concept: 與火靈立下契約：牠替你在遠處噴火，你的攻擊也帶上牠的火

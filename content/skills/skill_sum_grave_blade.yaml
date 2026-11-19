@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 3}
 effects:
   - {type: summon, unit: summon_skeleton_warrior, duration: 2}
 condition: null
-cost: {stamina: 6, cooldown: 4}
+cost: {stamina: 60, cooldown: 4}
 tags: [physical, melee, summon]
 narrative:
   concept: 把武器往地上一插，喚起一具骷髏戰士替你擋在前線；骷髏的強度跟著你的武器走

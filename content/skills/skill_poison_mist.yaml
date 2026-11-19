@@ -15,7 +15,7 @@ shape: {type: square3, range: 4}
 effects:
   - {type: create_surface, surface: poison, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [poison, spell, area, control]
 narrative:
   concept: 在地上留下一片毒霧，站進去的人每回合都會受傷

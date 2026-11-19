@@ -17,7 +17,7 @@ effects:
   - {type: dispel, count: all, affects: enemies}
   - {type: damage, dice: 1d3, element: shadow}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {mana: 50, cooldown: 3}
 tags: [shadow, spell, dispel]
 narrative:
   concept: 把敵人身上的祝福與護符一把全撕下來

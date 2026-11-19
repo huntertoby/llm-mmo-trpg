@@ -58,18 +58,18 @@ def heal_arena(
     shape: dict[str, Any] | None = None,
     tags: tuple[str, ...] = (),
 ) -> BattleState:
-    """U1（施放者）與受傷的友方 U2（HP 5/200）。"""
+    """U1（施放者）與受傷的友方 U2（HP 50/2000；X10-2b ×10）。"""
     skill = make_skill(HEAL, shape or {"type": "single", "range": 3}, effects)
     skill = skill.model_copy(update={"tags": tags})
     m = make_map(FLAT7, ally=[HERO, ALLY], enemy=[(6, 6)])
     spawns = [
         spawn(Team.ALLY, HERO, caster_template([skill, *mods], base="hero_mage")),
-        spawn(Team.ALLY, ALLY, no_reactions("hero_archer", max_hp=200)),
-        spawn(Team.ENEMY, (6, 6), no_reactions(max_hp=999)),
+        spawn(Team.ALLY, ALLY, no_reactions("hero_archer", max_hp=2000)),
+        spawn(Team.ENEMY, (6, 6), no_reactions(max_hp=9990)),
     ]
     state = make_state(m, spawns, skills=[skill, *mods])
     state = give_turn(state, U1)
-    state.units[U2].hp = 5
+    state.units[U2].hp = 50
     return state
 
 
@@ -167,7 +167,7 @@ def summon_arena(mods: list[SkillDef], *, tags: tuple[str, ...] = ()) -> BattleS
     m = make_map(FLAT7, ally=[(0, 3)], enemy=[(6, 6)])
     spawns = [
         spawn(Team.ALLY, (0, 3), caster_template([skill, *mods])),
-        spawn(Team.ENEMY, (6, 6), no_reactions(max_hp=200)),
+        spawn(Team.ENEMY, (6, 6), no_reactions(max_hp=2000)),
     ]
     return give_turn(make_state(m, spawns, skills=[skill, *mods]), U1)
 
@@ -179,9 +179,10 @@ def summoned(state: BattleState) -> Any:
 
 
 def role_hp() -> int:
-    """骷髏（近戰定位）：範本 20 HP ＋ 施放者屬性修正的成長 3（3-33b），再 × 定位係數（3-33f1）。"""
+    """骷髏（近戰定位）：範本 200 HP ＋ 施放者屬性修正的成長 30（3-33b），再 × 定位係數（3-33f1）。
+    X10-2b：HP ×10。"""
     coefficient = summon_arena([]).ruleset.core.summon_role_hp_permille["melee"]
-    return 23 * coefficient // 1000
+    return 230 * coefficient // 1000
 
 
 def test_summon_hp_permille_raises_the_summons_max_hp_and_fills_it() -> None:

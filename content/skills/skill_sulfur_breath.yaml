@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d4, element: poison}
   - {type: apply_status, status: poison, duration: 3}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [poison, spell, area, smoke]
 narrative:
   concept: 一口黃濁的硫煙噴出來，嗆得人睜不開眼

@@ -26,7 +26,7 @@ followup:
     - {type: damage, dice: 2d6, element: physical}
     - {type: apply_status, status: blinded, duration: 1}
 condition: null
-cost: {mana: 2, cooldown: 1}
+cost: {mana: 20, cooldown: 1}
 tags: [arcane, spell, aoe, control]
 narrative:
   concept: 源晶柱吐出一圈濃霧，霧裡的人什麼都看不清

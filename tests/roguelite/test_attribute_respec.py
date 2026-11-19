@@ -49,10 +49,10 @@ def _campfire(seed: int = 3) -> RunState:  # CB-1 門檻 8 後種子 1 打不到
 
 def test_new_run_records_the_opening_allocation_as_refundable() -> None:
     lib = library()
-    run = new_run(lib, BUILD, 0, {A.CON: 3, A.WIL: 1})
-    assert run.attribute_spent == {A.CON: 3, A.WIL: 1}
+    run = new_run(lib, BUILD, 0, {A.CON: 30, A.WIL: 10})
+    assert run.attribute_spent == {A.CON: 30, A.WIL: 10}
     assert run.attribute_points == 0
-    assert run.hero.attributes[A.CON] == lib.roguelite.base_attribute + 3
+    assert run.hero.attributes[A.CON] == lib.roguelite.base_attribute + 30
 
 
 def test_level_up_allocation_is_recorded() -> None:
@@ -122,14 +122,14 @@ def test_respec_is_only_allowed_at_the_campfire() -> None:
 def test_constitution_respec_adjusts_hp_with_max_hp() -> None:
     lib = library()
     core = lib.ruleset.core
-    run = new_run(lib, BUILD, 0, {A.CON: 4})
+    run = new_run(lib, BUILD, 0, {A.CON: 40})
     camp = run.model_copy(update={"node": CampfireNode(after_battle=2)})
     camp = camp.model_copy(update={"hp": camp.max_hp_in(core)})
     refunded = apply_choice(lib, camp, RespecAttributesChoice())
     drop = camp.max_hp_in(core) - refunded.max_hp_in(core)
     assert drop > 0
     assert refunded.hp == camp.hp - drop  # 目前 HP 同步減少，仍是滿的
-    back = apply_choice(lib, refunded, AllocateChoice(attributes={A.CON: 4}))
+    back = apply_choice(lib, refunded, AllocateChoice(attributes={A.CON: 40}))
     assert back.hp == refunded.hp + drop
 
 

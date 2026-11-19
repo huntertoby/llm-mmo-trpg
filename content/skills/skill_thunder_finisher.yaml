@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d10, element: lightning}
   - {type: consume_stack, stack: static_charge, per_stack_permille: 250, affects: self}
 condition: null
-cost: {mana: 8, cooldown: 3, stacks: 2}
+cost: {mana: 80, cooldown: 3, stacks: 2}
 tags: [lightning, spell, finisher]
 narrative:
   concept: 把累積的靜電一次放出，化作貫穿一點的落雷

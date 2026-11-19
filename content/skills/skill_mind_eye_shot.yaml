@@ -16,7 +16,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 2000}
 condition: {type: self_stack_at_least, stack: focus, count: 2}
-cost: {stamina: 8, cooldown: 1}
+cost: {stamina: 80, cooldown: 1}
 tags: [physical, ranged]
 narrative:
   concept: 心先瞄準了，眼睛才跟上

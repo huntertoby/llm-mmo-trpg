@@ -20,7 +20,7 @@ effects:
     element: earth
     condition: {type: target_has_status, status: prone}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [earth, melee, combo]
 element: earth
 narrative:

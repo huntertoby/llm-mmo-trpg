@@ -34,7 +34,7 @@ def test_check_when_arriving_next_to_hidden(calm: ContentLibrary, make_char: Mak
 
 
 def test_sharp_eyes_always_find(calm: ContentLibrary, make_char: MakeChar) -> None:
-    char = make_char(location="winter_lake", wis=40)  # 修正 +15：擲 1 也過 13
+    char = make_char(location="winter_lake", wis=400)  # X10-2b：屬性 ×10；修正 +15：擲 1 也過 13
     result = world_step(calm, make_world(), char, TravelAction(to="north_slope"), NOON)
     assert any(isinstance(e, LocationRevealedEvent) for e in result.events)
     assert result.char.has_revealed("cloud_ridge", "crane_cliff")
@@ -68,14 +68,14 @@ def test_failure_has_no_penalty_and_once_per_day(calm: ContentLibrary, make_char
 
 def test_situation_only_hidden_is_not_checked(calm: ContentLibrary, make_char: MakeChar) -> None:
     # 丹爐洞只有 situation（情境判定）一種發現方式：走到藥師谷不做感知判定。
-    char = make_char(location="cliff_gang_fort", wis=40)
+    char = make_char(location="cliff_gang_fort", wis=400)  # X10-2b：屬性 ×10
     result = world_step(calm, make_world(), char, TravelAction(to="herb_valley"), NOON)
     assert _checks(result.events) == []
     assert not result.char.has_revealed("cloud_ridge", "elixir_cave")
 
 
 def test_already_revealed_is_not_checked(calm: ContentLibrary, make_char: MakeChar) -> None:
-    char = make_char(location="winter_lake", wis=40)
+    char = make_char(location="winter_lake", wis=400)  # X10-2b：屬性 ×10
     found = world_step(calm, make_world(), char, TravelAction(to="north_slope"), NOON).char
     back = world_step(calm, make_world(), found, TravelAction(to="winter_lake"), NOON).char
     tomorrow = next_refresh_at(NOON)

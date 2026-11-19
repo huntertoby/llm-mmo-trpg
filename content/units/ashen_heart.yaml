@@ -15,10 +15,10 @@
 # 護甲調整（19.4 骨架 13、雲嶺骨架 14 的世界線頭到期）寫在遭遇表 encounters/ashen_waste.yaml 的 armor_mods（開戰時套用）。
 id: ashen_heart
 name_zh: 灰燼之心
-attributes: {str: 12, dex: 6, con: 16, int: 14, wis: 12, wil: 14}
-max_hp: 160
+attributes: {str: 120, dex: 60, con: 160, int: 140, wis: 120, wil: 140}
+max_hp: 1600
 speed: 0
-armor_bonus: 5
+armor_bonus: 50
 weapon: fire_staff
 ai_profile: archer
 resist: {}

@@ -80,7 +80,7 @@ def test_the_new_fields_are_whitelisted() -> None:
     far = ai.field_for(BROOD_FAR)
     assert far is not None and far.existing_only
     assert [f.path for f in obj.fields] == [MAX_HP]
-    assert obj.fields[0].existing_only and obj.fields[0].hint_min == 1
+    assert obj.fields[0].existing_only and obj.fields[0].hint_min == 10  # X10-2b：HP ×10
     assert TARGET_MODELS["object"].__name__ == "ObjectTable"
     assert [p.name for p in target_files(CONTENT, obj)] == [OBJECTS]
 

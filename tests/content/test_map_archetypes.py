@@ -125,7 +125,7 @@ def test_frozen_lake_has_ice_surface_holes_and_thin_ice() -> None:
     assert thin and all(o.at in holes for o in thin)
     thin_def = lib.ruleset.objects.by_id()["thin_ice"]
     assert {"breakable", "over_chasm"} <= set(thin_def.tags)
-    assert thin_def.max_hp is not None and thin_def.max_hp <= 10
+    assert thin_def.max_hp is not None and thin_def.max_hp <= 100  # X10-2b：HP ×10
 
 
 def test_map_list_command_shows_every_map_with_its_archetype(

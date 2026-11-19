@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: slow, duration: 2, affects: enemies}
 condition: null
 trigger: {event: on_enter_surface, surface: water, target: other, max_per_round: 2}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [water, spell, passive]
 narrative:
   concept: 你召來的潮水會纏住每一個闖進來的敵人

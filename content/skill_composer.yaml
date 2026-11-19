@@ -97,10 +97,10 @@ condition:
 
 # 代價
 cost:
-  spell_mana_per_ap: {min: 2, max: 4}     # 法術法力 ＝ 亂數 × AP ＋ (階級 − 1) × spell_mana_per_tier
-  spell_mana_per_tier: 2
+  spell_mana_per_ap: {min: 20, max: 40}     # 法術法力 ＝ 亂數 × AP ＋ (階級 − 1) × spell_mana_per_tier
+  spell_mana_per_tier: 20
   weapon_free_permille: 350               # 武器技不花法力
-  weapon_mana_per_ap: {min: 1, max: 3}
+  weapon_mana_per_ap: {min: 10, max: 30}
   no_cooldown_permille: 300               # AP ≤ no_cooldown_max_ap 時沒有冷卻
   no_cooldown_max_ap: 2
   cooldown_base_max: 2                    # 冷卻 ＝ 1 到 (cooldown_base_max + AP)
@@ -120,8 +120,8 @@ passive:
   other_permille: 600                 # 有「另一方」的時機：效果作用在另一方（其餘作用在持有者）
   second_effect_permille: 350         # 多帶一個附帶效果
   around_permille: 150                # WC-2（#167，06 6.9）：改成「自身周圍」小範圍（持有者周圍一圈的敵人；獨立亂數串流，沒抽中的種子不變）。初值，未經模擬，接數值工坊
-  mana: {min: 0, max: 3}              # 法力 ＝ 亂數 ＋ (階級 − 1) × mana_per_tier
-  mana_per_tier: 1
+  mana: {min: 0, max: 30}              # 法力 ＝ 亂數 ＋ (階級 − 1) × mana_per_tier
+  mana_per_tier: 10
   cooldown_permille: 250
   cooldown: {min: 1, max: 2}
 
@@ -131,8 +131,8 @@ reaction:
   intercept_permille: 300             # 事件為「相鄰友方被命中」（擋攻擊）的機率
   self_permille: 350                  # 其他事件：自身增益（其餘對觸發者）
   second_effect_permille: 300
-  mana: {min: 0, max: 3}
-  mana_per_tier: 1
+  mana: {min: 0, max: 30}
+  mana_per_tier: 10
   cooldown_permille: 400
   cooldown: {min: 1, max: 3}
 
@@ -140,7 +140,7 @@ reaction:
 stance:
   skeleton_permille: 60
   shield_permille: 500                # 階級 2 以上一定帶
-  mana: {min: 0, max: 2}
+  mana: {min: 0, max: 20}
 
 # 蓄力與終結（Phase 2E-3，初值）：稀有度 rare 以上、未指定骨架時改組蓄力／終結技的機率（獨立的亂數串流）
 builder:
@@ -233,16 +233,16 @@ llm_cost:
     - {cooldown: 3}
     - {cooldown: 4}
     - {cooldown: 5}
-    - {cooldown: 5, mana: 3}
-    - {cooldown: 5, mana: 6}
-    - {cooldown: 5, mana: 10}
+    - {cooldown: 5, mana: 30}
+    - {cooldown: 5, mana: 60}
+    - {cooldown: 5, mana: 100}
     - {ap: 3}
     - {ap: 3, cooldown: 1}
     - {ap: 3, cooldown: 2}
     - {ap: 3, cooldown: 3}
     - {ap: 3, cooldown: 4}
     - {ap: 3, cooldown: 5}
-    - {ap: 3, cooldown: 5, mana: 6}
+    - {ap: 3, cooldown: 5, mana: 60}
   # 過弱階梯（Phase 4-L10b，4-L9 建議 B1，使用者採 b）：沒有旋鈕的結構（傳送、互換、地形、淨化等核心）在旋鈕全部調完
   # （含巢狀效果的數值，例如 consume_status 的 then）後仍低於預算下限 70% 時，補值器依序試 weak_steps（由輕到重），取第一個讓
   # 比例落進驗證器窗（70～100%）且占比合格的。ap：AP 往下取（取「原本」與「這一階」中較小者；AP 1 的係數 500‰）；cooldown／mana：
@@ -255,9 +255,9 @@ llm_cost:
     - {ap: 1, cooldown: 3}
     - {ap: 1, cooldown: 4}
     - {ap: 1, cooldown: 5}
-    - {ap: 1, cooldown: 5, mana: 3}
-    - {ap: 1, cooldown: 5, mana: 6}
-    - {ap: 1, cooldown: 5, mana: 10}
+    - {ap: 1, cooldown: 5, mana: 30}
+    - {ap: 1, cooldown: 5, mana: 60}
+    - {ap: 1, cooldown: 5, mana: 100}
 
 # 白板技能（Phase 3W-4，docs/design/06-技能.md 6.34.1、玩法決定 #69；trpg.skillgen.whiteboard）：1 階、一個核心效果、一個關鍵字、
 # 形狀簡單（單體或小範圍）、沒有附帶效果、沒有條件；主動技用預設費用（AP 2、冷卻 0～2）；預算照同階規則（比例收在 tuning 區間內，
@@ -270,8 +270,8 @@ whiteboard:
   ap_cost: 1                          # AP-2（06 6.34.1 ⚠ #168 題 5「白板預設改1AP」）：全部主動白板預設 1 AP（原本 2）
   fallback_ap_cost: 2                 # AP-2：1 AP 調不進預算窗（70～100%）時照預算調退回 2 AP；配方自己寫 ap_cost 的不退
   cooldown: {min: 0, max: 2}
-  passive_mana: {min: 0, max: 2}
-  reaction_mana: {min: 0, max: 2}
+  passive_mana: {min: 0, max: 20}
+  reaction_mana: {min: 0, max: 20}
   reaction_cooldown: {min: 1, max: 2}
   max_attempts: 60
   # 3W-R2：白板的形狀與原語分類（原本寫在 skillgen/whiteboard_check.py）
@@ -378,7 +378,7 @@ whiteboard:
     # 3W-9：召喚要角色 2 階（6.34.9）；基本召喚物的 1 階只給創角（creation_tier，創角例外），三選一 2 階起才出
     # BAL-19c（#110，06 6.27.4）：開放 1 階召喚白板——兩種基本召喚物三選一也 1 階就出（skill_budget.yaml basic_summon_units）；
     # 依關鍵字挑的召喚物仍 2 階起
-    - {id: summon_spirit, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_elemental_spirit}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: &summon_cooldowns [{cost: {cooldown: 2}}, {cost: {cooldown: 3}}, {cost: {cooldown: 4}}, {cost: {cooldown: 3, mana: 8}}, {cost: {cooldown: 4, mana: 8}}, {cost: {cooldown: 4, mana: 12}}, {cost: {cooldown: 4, mana: 16}}], name_zh: 喚出元素火花, concept_zh: 呼喚一縷元素之靈，替你在遠處噴吐火花, flavor_zh: 你的手往地上一指，一團光霧凝聚成形}
+    - {id: summon_spirit, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_elemental_spirit}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: &summon_cooldowns [{cost: {cooldown: 2}}, {cost: {cooldown: 3}}, {cost: {cooldown: 4}}, {cost: {cooldown: 3, mana: 80}}, {cost: {cooldown: 4, mana: 80}}, {cost: {cooldown: 4, mana: 120}}, {cost: {cooldown: 4, mana: 160}}], name_zh: 喚出元素火花, concept_zh: 呼喚一縷元素之靈，替你在遠處噴吐火花, flavor_zh: 你的手往地上一指，一團光霧凝聚成形}
     - {id: summon_skeleton, species: summon, keyword: summon, min_tier: 1, creation_tier: 1, skeleton: summon, effect: {type: summon, unit: summon_skeleton_warrior}, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 3}}, vary: *summon_cooldowns, name_zh: 喚出骸骨僕從, concept_zh: 從地底喚起一具聽命的骷髏戰士，替你擋在前線, flavor_zh: 泥土翻動，一隻白骨手臂破土而出}
     - {id: summon_fire, species: summon, min_tier: 2, keyword: ignite, skeleton: summon, effect: {type: summon, unit: summon_fire_spirit}, theme: fire, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出火苗精, concept_zh: 呼喚一縷火靈，替你在遠處噴吐火焰, flavor_zh: 一團火光從空中凝聚成形}
     - {id: summon_ice, species: summon, min_tier: 2, keyword: frozen, skeleton: summon, effect: {type: summon, unit: summon_ice_spirit}, theme: ice, skill: {category: spell, ap_cost: 1, shape: {type: ground_tile, range: 4}}, vary: *summon_cooldowns, name_zh: 喚出霜晶精, concept_zh: 呼喚一縷冰靈，用寒氣拖慢敵人, flavor_zh: 空氣中凝出細碎的冰晶，聚成一個人形}

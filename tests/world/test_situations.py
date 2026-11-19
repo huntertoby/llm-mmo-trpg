@@ -115,10 +115,12 @@ def sure(library: ContentLibrary, template_id: str, outcome: str) -> ContentLibr
 def at_event(
     char: CharacterState, skeleton: str, location: str | None = None, *, strong: bool = False
 ) -> CharacterState:
-    """把角色放到 ``skeleton`` 的事件上；``strong``＝六屬性都 28（修正 +9，給 :func:`sure` 用）。"""
+    """把角色放到 ``skeleton`` 的事件上；``strong``＝六屬性都 280（修正 +9，給 :func:`sure` 用）。
+
+    X10-2b：屬性 ×10（28 → 280）。"""
     location = location or SKELETON_LOCATION[skeleton]
     if strong:
-        hero = char.hero.model_copy(update={"attributes": dict.fromkeys(Attribute, 28)})
+        hero = char.hero.model_copy(update={"attributes": dict.fromkeys(Attribute, 280)})
         char = char.model_copy(update={"hero": hero})
     trigger = EventTrigger(
         region="cloud_ridge",
@@ -317,12 +319,12 @@ def test_three_outcomes(library: ContentLibrary, make_char: MakeChar) -> None:
 
 
 def test_hurt_leaves_one_hp(library: ContentLibrary, make_char: MakeChar) -> None:
-    char = at_event(make_char(hp=2), "wounded_peddler", strong=True)
+    char = at_event(make_char(hp=20), "wounded_peddler", strong=True)  # X10-2b ×10
     bad = world_step(
         sure(library, "peddler_safe_path", "failure"), make_world(), char, peddler(), NOON
     )
-    assert bad.char.hp == 1
-    assert result_of(bad.events).hp_lost == 1
+    assert bad.char.hp == 10  # 最低剩 1 × quantity_scale
+    assert result_of(bad.events).hp_lost == 10
 
 
 def test_supplies_clamped(library: ContentLibrary, make_char: MakeChar) -> None:

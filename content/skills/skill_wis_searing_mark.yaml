@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: marked, duration: 2}
   - {type: apply_status, status: burning, duration: 2}
 condition: null
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [fire, spell, mark]
 narrative:
   concept: 在敵人身上烙下一枚燃燒的印記，讓同伴看得見，也讓它一直痛著

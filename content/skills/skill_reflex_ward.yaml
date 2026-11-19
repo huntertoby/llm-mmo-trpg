@@ -17,7 +17,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: hit_by_attack}
-cost: {mana: 3, cooldown: 1}
+cost: {mana: 30, cooldown: 1}
 tags: [holy, reaction, shield]
 narrative:
   concept: 挨了一擊的同一瞬間，在身前撐開一層護幕

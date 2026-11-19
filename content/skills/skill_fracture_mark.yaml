@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: bleed, duration: 3, affects: enemies}
 condition: null
 trigger: {event: on_collision, target: other, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [physical, passive]
 narrative:
   concept: 被你推出去的人，撞上的不只是牆

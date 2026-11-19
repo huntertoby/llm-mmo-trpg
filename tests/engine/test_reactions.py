@@ -99,7 +99,7 @@ def test_block_halves_melee_damage_and_costs_stamina() -> None:
     state = make_state(
         m,
         [
-            spawn(Team.ALLY, (0, 0), template("hero_fighter", max_hp=300)),
+            spawn(Team.ALLY, (0, 0), template("hero_fighter", max_hp=3000)),  # X10-2b ×10
             spawn(Team.ENEMY, (1, 0), "bandit"),
         ],
     )
@@ -107,16 +107,17 @@ def test_block_halves_melee_damage_and_costs_stamina() -> None:
     s = with_rolls(s, [(20, 15), (4, 4)])
     result = resolve(s, Attack(unit_id=U2, target_id=U1))
     blocked = [e for e in result.events if isinstance(e, ReactionTriggered)]
-    assert [(b.unit_id, b.reaction, b.stamina_spent) for b in blocked] == [(U1, "block", 10)]
+    assert [(b.unit_id, b.reaction, b.stamina_spent) for b in blocked] == [(U1, "block", 100)]
     damage = next(e for e in result.events if isinstance(e, DamageDealt))
     # 匕首 1d4=4 + 敏捷 14 × 0.3 = 8.2；格擋 ×0.5 → 4.1 → 4（再套用戰士物理抗性 10%：3.69 → 3）
     # 敵方傷害倍率（BAL-4b，content 1200）：格擋 ×0.5 再乘 enemy_damage_permille ＝ ×0.6，
     # 8.2 × 0.6 = 4.92 → 套用戰士物理抗性 10%：4.43 → 4
+    # X10-2b（骰面、屬性 ×10）：(40 + 42) × 0.6 = 49.2 → ×0.9 = 44.28 → 44（舊單位 4 是捨去差異）
     enemy = state.ruleset.core.enemy_damage_permille
     assert enemy == 1200
     assert damage.multiplier_permille == 500 * enemy // 1000
-    assert damage.amount == 4
-    assert result.state.units[U1].stamina == s.units[U1].stamina - 10  # 上限由公式算出（BAL-15b）
+    assert damage.amount == 44
+    assert result.state.units[U1].stamina == s.units[U1].stamina - 100  # 上限由公式算出（BAL-15b）
 
 
 def test_block_unless_stamina_below_threshold() -> None:

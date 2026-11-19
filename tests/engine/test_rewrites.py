@@ -210,11 +210,11 @@ def test_cheat_death_applies_undying_to_an_ally() -> None:
 def test_undying_blocks_lethal_damage_once(monkeypatch: pytest.MonkeyPatch) -> None:
     always(monkeypatch, die=6)
     state = _undying(scene(rewrite(SELF_AP)))
-    state.units[U2].hp = 3
+    state.units[U2].hp = 30  # X10-2b ×10：免死留下 1 × 10
     enemy_turn = give_turn(state, U3)
     first = resolve(enemy_turn, Attack(unit_id=U3, target_id=U2))
     saved = first.state.units[U2]
-    assert saved.hp == 1 and not saved.downed and not saved.has_status("undying")
+    assert saved.hp == 10 and not saved.downed and not saved.has_status("undying")
     (cheated,) = [e for e in first.events if isinstance(e, DeathCheated)]
     removed = [e for e in first.events if isinstance(e, StatusRemoved)]
     assert cheated.unit_id == U2 and cheated.prevented > 0

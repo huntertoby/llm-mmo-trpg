@@ -15,7 +15,7 @@ effects:
   - {type: damage, dice: 1d4, element: ice}
   - {type: apply_status, status: root, duration: 1}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [ice, spell, control]
 narrative:
   concept: 讓腳下的寒氣凝成鎖鏈，把逼近的敵人釘在原地

@@ -12,9 +12,9 @@ ap_cost: 1
 scaling_attr: wis
 shape: {type: single, range: 4}
 effects:
-  - {type: restore_resource, resource: mana, amount: 10, affects: allies}
+  - {type: restore_resource, resource: mana, amount: 100, affects: allies}
 condition: null
-cost: {mana: 2, cooldown: 3}
+cost: {mana: 20, cooldown: 3}
 tags: [holy, spell, support, mana]
 narrative:
   concept: 把自己的專注分給同伴，讓他能再多施放一兩招

@@ -202,7 +202,7 @@ def _to_passive(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> 
             ap_cost=None,
             shape={"type": "self"},
             trigger=t.trigger.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=_lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "passive"),
             narrative=_concept(skill, t),
         )
@@ -223,7 +223,7 @@ def _to_reaction(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) ->
             ap_cost=None,
             shape={"type": "single", "range": 2},
             reaction=t.reaction.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=_lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "reaction"),
             narrative=_concept(skill, t),
         )
@@ -253,7 +253,7 @@ def _to_summon(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> l
                     skeleton="summon",
                     ap_cost=1,
                     shape={"type": "ground_tile", "range": 4},
-                    cost=cost,
+                    cost=_lib.ruleset.core.scaled_cost(cost),
                     tags=_retag(skill, "summon"),
                     narrative=_concept(skill, t),
                 )
@@ -275,7 +275,7 @@ def _to_trap(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> lis
             ap_cost=2,
             shape={"type": "ground_tile", "range": 4},
             trap=t.trap.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=_lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "trap"),
             narrative=_concept(skill, t),
         )
@@ -410,7 +410,7 @@ def _to_companion(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) ->
             ap_cost=None,
             shape={"type": "self"},
             trigger=t.trigger.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "passive", "summon"),
             narrative=_concept(skill, t),
         )
@@ -442,7 +442,7 @@ def _to_guardian(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> 
             ap_cost=None,
             shape={"type": "single", "range": 2},
             reaction=t.reaction.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "reaction", "summon"),
             narrative=_concept(skill, t),
         )
@@ -487,7 +487,7 @@ def _to_blessing(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> 
             ap_cost=None,
             shape={"type": "self"},
             trigger=t.trigger.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "passive"),
             narrative=_concept(skill, t),
         )
@@ -512,7 +512,7 @@ def _to_aid(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[
             ap_cost=None,
             shape={"type": "single", "range": 1},
             reaction=reaction.model_dump(mode="json", exclude_none=True),
-            cost=cost,
+            cost=lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "reaction"),
             narrative=_concept(skill, t),
         )

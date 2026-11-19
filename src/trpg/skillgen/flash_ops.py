@@ -742,7 +742,9 @@ _LIGHT_COST_FIELDS = frozenset({"cooldown", "mana", "stamina"})
 def _light_cost_drafts(
     skill: SkillDef, fields: Sequence[str], library: ContentLibrary
 ) -> list[Draft]:
-    """``fields`` 依序各減 1 的草稿（每項最少留 1；沒有可減的就不出）。
+    """``fields`` 依序各減一格的草稿（法力、耐力一格 1 × ``quantity_scale``、冷卻 1；
+    每項最少留一格；
+    沒有可減的就不出）。
 
     FL-1c（06 6.34「費用方向」第 5 點）：「少付」以卡片上的實付值為準。減 1 之後實付沒變（法力照
     ``core.mana_cost`` 四捨五入，例：3 → 2 實付都是 2）就當作沒少付：這一項不出草稿，**也不改試
@@ -750,12 +752,13 @@ def _light_cost_drafts(
     drafts: list[Draft] = []
     for field in fields:
         current = getattr(skill.cost, field, None) if field in _LIGHT_COST_FIELDS else None
-        if not isinstance(current, int) or current - 1 < 1:
+        step = library.ruleset.core.cost_floor(field)  # X10-2b：量類一格 1 × quantity_scale
+        if not isinstance(current, int) or current - step < step:
             continue
-        if _paid(library, field, current - 1) == _paid(library, field, current):
+        if _paid(library, field, current - step) == _paid(library, field, current):
             break
         base, effects = base_draft(skill)
-        base["cost"] = {**base["cost"], field: current - 1}
+        base["cost"] = {**base["cost"], field: current - step}
         drafts.append((base, effects))
     return drafts
 

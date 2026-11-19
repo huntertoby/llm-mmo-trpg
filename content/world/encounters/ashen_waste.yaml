@@ -102,9 +102,9 @@ locations:
     groups: [{group: ashen_heart_court}]   # Boss 地點的戰鬥＝Boss 戰（5F-2，代決 5F2-13）
     armor_mods:
       unit: ashen_heart
-      min_total: -3
-      max_total: 1
+      min_total: -30
+      max_total: 10
       mods:
-        - {world_flag: ashen_heart_hardened, amount: 1}   # 雲嶺骨架 14 的世界線頭到期
-        - {story_flag: ashen_convoy_stopped, amount: -1}  # 主線第 2 步：攔截斷崖幫運輸隊
-        - {thread: convoy_intercepted, amount: -1}        # 荒原骨架 13：被攔下的碎片
+        - {world_flag: ashen_heart_hardened, amount: 10}   # 雲嶺骨架 14 的世界線頭到期
+        - {story_flag: ashen_convoy_stopped, amount: -10}  # 主線第 2 步：攔截斷崖幫運輸隊
+        - {thread: convoy_intercepted, amount: -10}        # 荒原骨架 13：被攔下的碎片

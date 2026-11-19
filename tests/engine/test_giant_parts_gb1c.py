@@ -429,7 +429,7 @@ def _break_core(state: BattleState) -> Ctx:
                 target_id=g.id,
                 source_id=UnitId("unit_0002"),
                 cause="attack",
-                flat=60,
+                flat=600,  # X10-2b ×10
                 part_id="core",
             )
         ],
@@ -652,7 +652,7 @@ def test_same_seed_same_battle_and_the_log_replays() -> None:
         update={"giant_facing": {GIANT_ID: "south"}}
     )
     spawns = [
-        spawn_giant(Team.ENEMY, (6, 6), giant_boss(max_hp=60, phases=GROW_PHASES)),
+        spawn_giant(Team.ENEMY, (6, 6), giant_boss(max_hp=600, phases=GROW_PHASES)),  # X10-2b ×10
         spawn(Team.ALLY, (6, 11), template("hero_archer"), skills=None),
         spawn(Team.ALLY, (4, 6), template("hero_fighter"), skills=None),
     ]

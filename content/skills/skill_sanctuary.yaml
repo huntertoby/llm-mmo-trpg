@@ -15,7 +15,7 @@ effects:
   - {type: heal, dice: 1d10}
   - {type: create_surface, surface: holy, affects: allies}
 condition: null
-cost: {mana: 10, cooldown: 3}
+cost: {mana: 100, cooldown: 3}
 tags: [holy, spell, heal, aura]
 narrative:
   concept: 在同伴腳下展開一片溫暖的光

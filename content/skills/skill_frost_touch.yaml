@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: frozen, duration: 1}
   - {type: damage, dice: 2d4, element: ice}
 condition: null
-cost: {mana: 8, cooldown: 4}
+cost: {mana: 80, cooldown: 4}
 tags: [ice, spell, control]
 narrative:
   concept: 指尖一觸，寒意順著手臂鑽進目標的血液

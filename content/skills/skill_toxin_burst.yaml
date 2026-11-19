@@ -21,7 +21,7 @@ effects:
     then:
       - {type: damage, dice: 2d6, element: poison}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [poison, spell, detonate]
 narrative:
   concept: 把還在目標血管裡流動的毒一口氣催到沸騰

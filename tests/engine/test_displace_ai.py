@@ -66,7 +66,7 @@ def _scene(
     spawns += [spawn(Team.ALLY, xy, no_reactions("hero_archer")) for xy in allies]
     for xy in foes:
         tags = list(foe_tags) if foe_tags else list(library().unit("bandit").tags)
-        spawns.append(spawn(Team.ENEMY, xy, no_reactions("bandit", max_hp=200, tags=tags)))
+        spawns.append(spawn(Team.ENEMY, xy, no_reactions("bandit", max_hp=2000, tags=tags)))
     state = give_turn(make_state(m, spawns, skills=[]), U1)
     for index in hurt:
         unit = state.units[UnitId(f"unit_000{index + 2}")]
@@ -130,7 +130,8 @@ def test_the_ai_swaps_a_nearly_dead_ally_out_of_the_enemies_reach() -> None:
     """快倒下的隊友被敵人包夾，AI 用虛空互換把他換到後面（與離敵人較遠的單位互換）。"""
     state = _scene(VOID, allies=[(4, 3), (1, 3)], foes=[(5, 3)], hurt=[0])
     # CB-1（#146）：門檻 8 時普攻的期望傷害超過救援分數（權重排平衡段），場景維持原校準的門檻 11。
-    core = state.ruleset.core.model_copy(update={"hit_target": 11})
+    # X10-2b 門檻 11 → 12（量 ×10 後普攻期望傷害的捨去變少，25.8 對救援 25.0；12 時 23.7）
+    core = state.ruleset.core.model_copy(update={"hit_target": 12})
     state.ruleset = state.ruleset.model_copy(update={"core": core})
     action = _ai()(state)
     assert isinstance(action, UseSkill) and action.skill_id == VOID

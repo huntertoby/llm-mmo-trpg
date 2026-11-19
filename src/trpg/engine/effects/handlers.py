@@ -153,7 +153,8 @@ def _damage(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     if effect.mode == "lethal":
         amount = unit.hp
     elif effect.mode == "percent_max_hp":
-        amount = max(unit.max_hp * effect.permille // PERMILLE, effect.min_damage)
+        floor = effect.min_damage_for(ctx.core.quantity_scale)
+        amount = max(unit.max_hp * effect.permille // PERMILLE, floor)
     else:
         roll = _rolled_damage(ctx, effect, unit, formation, ward)
         rolls, exploded, mod_ppm, weather = roll.rolls, roll.exploded, roll.mod_ppm, roll.weather
@@ -264,7 +265,7 @@ def _rolled_damage(
         multiplier=multiplier,
         status_ppm=status_ppm,
         ward=ward,
-        min_damage=effect.min_damage,
+        min_damage=effect.min_damage_for(ctx.core.quantity_scale),
     )
     base_amount = max(
         raw_permille
@@ -272,7 +273,7 @@ def _rolled_damage(
         * dealt
         * effect.chain_permille
         // (PERMILLE * PERMILLE * PERMILLE * PERMILLE),
-        effect.min_damage,
+        effect.min_damage_for(ctx.core.quantity_scale),
     )
     return _RolledDamage(
         amount, rolls, exploded, mod_ppm, weather, multiplier, status_ppm, base_amount

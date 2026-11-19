@@ -14,7 +14,7 @@ shape: {type: cross, range: 3}
 effects:
   - {type: create_obstacle, object: earth_wall}
 condition: null
-cost: {mana: 5}
+cost: {mana: 50}
 tags: [earth, spell, obstacle]
 narrative:
   concept: 憑空立起一面牆，擋住視線也擋住去路

@@ -23,21 +23,24 @@ def _ok(reply: Any) -> Any:
 def test_panel_perk_tiers_use_the_effective_attribute_with_gear(
     client: TestClient, library: ContentLibrary
 ) -> None:
-    """基礎力量 12（0 階）＋ 裝備力量 +2 ＝ 有效 14（1 階）：面板的階數依有效屬性，與引擎一致。"""
+    """基礎力量 120（0 階）＋ 裝備力量 +20 ＝ 有效 140（1 階）：面板的階數依有效屬性，與引擎一致。
+
+    X10-2b：屬性 ×10。"""
     body = {
         **BODY,
-        "attributes": {"str": 2, "dex": 2},
+        "attributes": {"str": 20, "dex": 20},
         "test_mode": True,
         "test_equipment": {"main_hand": "item_test_sword"},
     }
     hero = _ok(client.post("/api/runs", json=body))["hero"]
-    assert hero["attributes"]["str"] == 12  # 基礎值（配點用）
-    assert hero["effective_attributes"]["str"] == 14
+    assert hero["attributes"]["str"] == 120  # 基礎值（配點用）
+    assert hero["effective_attributes"]["str"] == 140
     strength = next(p for p in hero["attribute_perks"] if p["attr"] == "str")
     perks = library.ruleset.core.attribute_perks
-    assert strength["tier"] == perks.tier(14) == 1
+    assert strength["tier"] == perks.tier(140) == 1
     # 沒有裝備時有效屬性＝基礎屬性
-    plain = _ok(client.post("/api/runs", json={**BODY, "attributes": {"str": 2, "dex": 2}}))["hero"]
+    attrs = {"str": 20, "dex": 20}
+    plain = _ok(client.post("/api/runs", json={**BODY, "attributes": attrs}))["hero"]
     assert plain["effective_attributes"] == plain["attributes"]
 
 
@@ -67,7 +70,7 @@ def test_start_preview_suggests_the_attribute_most_skills_scale_with(
     assert len(picked) == 2
     # 建議和「自動配點」同一個規則：開局省略配點時點在同一個屬性
     hero = _ok(client.post("/api/runs", json=BODY))["hero"]
-    assert hero["attributes"][suggestion["attr"]] == 14  # 4 點自由配點全在建議的屬性
+    assert hero["attributes"][suggestion["attr"]] == 140  # 40 點自由配點全在建議的屬性
     assert any(a["lines_zh"] for a in preview["attribute_affects"])
     empty = _ok(
         client.post(
@@ -105,16 +108,16 @@ def test_campfire_attribute_respec_and_allocate_over_the_api(
     assert refunded["node"]["kind"] == "campfire"
     assert refunded["hero"]["attribute_points"] == spent
     assert refunded["hero"]["attribute_spent"] == {}
-    assert set(refunded["hero"]["attributes"].values()) == {10}
+    assert set(refunded["hero"]["attributes"].values()) == {100}
     again = _ok(
         client.post(
             f"/api/runs/{run_id}/choice", json={"kind": "allocate", "attributes": {"wis": spent}}
         )
     )
-    assert again["hero"]["attributes"]["wis"] == 10 + spent
+    assert again["hero"]["attributes"]["wis"] == 100 + spent
     assert again["hero"]["attribute_points"] == 0
     too_many = client.post(
-        f"/api/runs/{run_id}/choice", json={"kind": "allocate", "attributes": {"wis": 1}}
+        f"/api/runs/{run_id}/choice", json={"kind": "allocate", "attributes": {"wis": 10}}
     )
     assert too_many.status_code == 422
 

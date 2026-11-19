@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d6, element: shadow}
   - {type: damage, dice: 1d4, element: lightning}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, curse, lightning]
 narrative:
   concept: 詛咒裡藏著一道雷，暗影先咬上去，雷電再順著咒紋劈下

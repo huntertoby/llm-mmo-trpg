@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d8, element: physical}
   - {type: apply_status, status: root, duration: 2}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [physical, spell, trap, control]
 narrative:
   concept: 鋸齒狀的鐵顎藏在落葉底下，等著獵物自己踩進來

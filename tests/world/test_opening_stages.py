@@ -112,7 +112,7 @@ def test_pick_class_gives_starter_kit(
     assert char.hero.name_zh == "小靶" and char.hero.race == "human"
     # 開局 4 點照推薦配法（同 ``recommended_allocation``，全部讀資料，不寫死招）
     points = library.roguelite.start_free_points
-    assert points == 4
+    assert points == 40  # X10-2b：屬性點 ×10
     skills = [library.skills[s] for s in demos]
     expected = recommended_allocation(skills, library.weapons[weapon], points)
     base = pending.hero.attributes

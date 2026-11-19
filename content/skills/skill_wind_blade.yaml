@@ -15,7 +15,7 @@ shape: {type: line, size: 4}
 effects:
   - {type: damage, dice: 2d6, element: wind}
 condition: null
-cost: {mana: 5, cooldown: 1}
+cost: {mana: 50, cooldown: 1}
 tags: [wind, spell, area]
 narrative:
   concept: 一道壓縮的風，沿直線切開前方的所有敵人

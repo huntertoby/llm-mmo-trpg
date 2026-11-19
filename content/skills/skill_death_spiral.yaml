@@ -23,7 +23,7 @@ followup:
     - {type: dash}
     - {type: damage, dice: 3d6, element: fire}
 condition: null
-cost: {mana: 5, cooldown: 3}
+cost: {mana: 50, cooldown: 3}
 tags: [fire, spell, finisher, mobility]
 narrative:
   concept: 一個倒下，下一個就在火圈的盡頭——收割者不會停下腳步

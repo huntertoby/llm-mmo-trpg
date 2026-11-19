@@ -123,7 +123,7 @@ def test_cost_once_and_blood_price() -> None:
     once = _apply(_at("skill_air_burst"), _variation("cost_once"))
     assert once.cost.uses_per_battle == 1 and once.cost.cooldown is None
     blood = _apply(_at("skill_fire_bolt"), _variation("cost_blood"))
-    assert blood.cost.mana == 1 and blood.cost.stamina == 0  # 主動技至少花 1 點資源（驗證器）
+    assert blood.cost.mana == 10 and blood.cost.stamina == 0  # 主動技至少花 1 × 倍率（驗證器）
     assert blood.cost.hp_percent is not None and blood.cost.hp_percent > 0
 
 

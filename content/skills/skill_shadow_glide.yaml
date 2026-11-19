@@ -23,7 +23,7 @@ followup:
   effects:
     - {type: leap}
 condition: null
-cost: {stamina: 6, cooldown: 3}
+cost: {stamina: 60, cooldown: 3}
 tags: [physical, melee, leap, mobility, builder]
 narrative:
   concept: 刀尖一點就掠開，節奏一點都沒斷

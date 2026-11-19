@@ -16,7 +16,7 @@ effects:
   - {type: heal, dice: 2d6, affects: self}
 condition: null
 trigger: {event: on_turn_end, target: self, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [nature, spell, passive, heal]
 narrative:
   concept: 回合結束前停下來吐納，讓呼吸與心跳慢慢平穩

@@ -26,7 +26,7 @@ effects:
   dice: 2d8
 condition: null
 cost:
-  mana: 6
+  mana: 60
   cooldown: 1
 tags:
 - lightning

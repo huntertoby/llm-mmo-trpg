@@ -15,7 +15,7 @@ effects:
   - {type: steal_buff, affects: enemies}
   - {type: damage, dice: 1d4, element: shadow}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [shadow, spell, steal]
 narrative:
   concept: 把敵人身上的增益據為己有，從他手中奪走優勢

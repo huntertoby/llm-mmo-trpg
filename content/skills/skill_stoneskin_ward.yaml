@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: stoneskin, duration: 2, affects: allies}
   - {type: shield, dice: 1d6, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [earth, spell, buff, shield]
 element: earth
 narrative:

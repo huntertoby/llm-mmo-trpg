@@ -16,7 +16,7 @@ shape: {type: self}
 effects:
   - {type: shield, dice: 4d4, duration: 3, affects: self}
 condition: null
-cost: {mana: 6, cooldown: 4, self_status: {status: stun, duration: 2}}
+cost: {mana: 60, cooldown: 4, self_status: {status: stun, duration: 2}}
 tags: [ice, spell, shield, defense]
 narrative:
   concept: 把自己整個封進冰裡，什麼都不能做，也什麼都打不穿

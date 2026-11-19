@@ -15,7 +15,7 @@ shape: {type: square3, range: 5}
 effects:
   - {type: damage, multiplier_permille: 1100, element: lightning}
 condition: null
-cost: {stamina: 14, cooldown: 3}
+cost: {stamina: 140, cooldown: 3}
 tags: [lightning, ranged, aoe]
 narrative:
   concept: 一把箭射向雷雲，落下時化成一片帶電的箭雨

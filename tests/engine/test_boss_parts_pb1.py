@@ -343,18 +343,18 @@ def test_a_part_takes_exactly_what_the_boss_lost() -> None:
 
 
 def test_shields_and_multipliers_only_pass_on_the_hp_actually_lost() -> None:
-    state = arena()
+    state = arena(max_hp=1000)  # X10-2b：HP、傷害、護盾 ×10（最低傷害 10 不再蓋過減半）
     ctx = Ctx(state.clone())
-    execute(ctx, [ShieldEffect(target_id=BOSS, flat=6)])
-    shielded = damage(ctx.state, "head", flat=10)
-    assert [e.amount for e in of(shielded.events, PartDamaged)] == [4]  # 10 − 護盾 6
-    halved = damage(state, "head", flat=10, multiplier_permille=500)
-    assert [e.amount for e in of(halved.events, PartDamaged)] == [5]
-    absorbed = damage(state.clone(), "head", flat=3)
+    execute(ctx, [ShieldEffect(target_id=BOSS, flat=60)])
+    shielded = damage(ctx.state, "head", flat=100)
+    assert [e.amount for e in of(shielded.events, PartDamaged)] == [40]  # 100 − 護盾 60
+    halved = damage(state, "head", flat=100, multiplier_permille=500)
+    assert [e.amount for e in of(halved.events, PartDamaged)] == [50]
+    absorbed = damage(state.clone(), "head", flat=30)
     absorbed.state.units[BOSS].statuses.clear()
     ctx = Ctx(state.clone())
-    execute(ctx, [ShieldEffect(target_id=BOSS, flat=9)])
-    assert of(damage(ctx.state, "head", flat=5).events, PartDamaged) == []  # 全被護盾吸收
+    execute(ctx, [ShieldEffect(target_id=BOSS, flat=90)])
+    assert of(damage(ctx.state, "head", flat=50).events, PartDamaged) == []  # 全被護盾吸收
 
 
 def test_part_armor_overrides_the_hit_defense() -> None:
@@ -372,9 +372,9 @@ def test_part_armor_overrides_the_hit_defense() -> None:
 
 def test_part_resistance_overrides_the_element_modifier() -> None:
     resist = [dict(PARTS[1], resist={"elemental": 500}), PARTS[0]]
-    state = arena(parts=resist)
-    body = damage(state, None, element=Element.FIRE)
-    part = damage(state, "head", element=Element.FIRE)
+    state = arena(parts=resist, max_hp=1000)  # X10-2b：HP、傷害 ×10
+    body = damage(state, None, flat=100, element=Element.FIRE)
+    part = damage(state, "head", flat=100, element=Element.FIRE)
     assert of(part.events, DamageDealt)[0].amount * 2 == of(body.events, DamageDealt)[0].amount
     assert of(part.events, PartDamaged)[0].amount == of(part.events, DamageDealt)[0].amount
 

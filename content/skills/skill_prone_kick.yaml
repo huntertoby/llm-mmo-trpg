@@ -21,7 +21,7 @@ effects:
     collision_dice: 3d6
     condition: {type: target_has_status, status: prone}
 condition: null
-cost: {stamina: 6, cooldown: 1}
+cost: {stamina: 60, cooldown: 1}
 tags: [physical, melee, push]
 narrative:
   concept: 把倒在地上的敵人一腳踢翻推開，撞上東西時傷得更重

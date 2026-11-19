@@ -4,10 +4,10 @@
 # 數值照盜賊加厚一點（初值，未經模擬；照工坊）。外觀先用盜賊的紙娃娃換配色（美術 PM 之後出圖）。
 id: ashen_berserker
 name_zh: 荒原狂戰士
-attributes: {str: 15, dex: 10, con: 14, int: 6, wis: 8, wil: 10}
-max_hp: 34
+attributes: {str: 150, dex: 100, con: 140, int: 60, wis: 80, wil: 100}
+max_hp: 340
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: axe
 resist: {}
 element_mods: {}

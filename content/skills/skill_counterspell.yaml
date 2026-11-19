@@ -17,7 +17,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: hit_by_spell}
-cost: {mana: 4, cooldown: 1}
+cost: {mana: 40, cooldown: 1}
 tags: [counter, reaction, spell, shadow]
 narrative:
   concept: 對方的咒語還沒落到身上，你已經循著魔力的來路把它反彈了回去

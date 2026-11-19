@@ -151,7 +151,7 @@ def make_skill_like(skill: SkillDef, new_id: str, **spec: Any) -> SkillDef:
 @pytest.mark.parametrize(
     ("trait", "check"),
     [
-        ("sturdy", lambda u, b: u.armor_bonus == b.armor_bonus + 1),
+        ("sturdy", lambda u, b: u.armor_bonus == b.armor_bonus + 10),  # X10-2b 防禦值 ×10
         ("swift", lambda u, b: u.speed == b.speed + 1),
         ("keen", lambda u, b: u.weapon.crit_range == b.weapon.crit_range - 1),
     ],

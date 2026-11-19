@@ -43,7 +43,7 @@ from trpg.shared.types import Element, Team
 SID = "skill_t_eng1"
 Mode = Literal["attack", "skill"]
 Check = Callable[[DamageDealt], bool]
-MIN_DAMAGE_ROW = 50  # 高於這場所有可能的傷害，整張表都會落在最低傷害
+MIN_DAMAGE_ROW = 500  # 高於這場所有可能的傷害，整張表都會落在最低傷害（X10-2b ×10）
 
 
 @dataclass(frozen=True)
@@ -112,7 +112,7 @@ ROWS = [
     ),
     Row(  # status_ppm == 0 不等於護陣 ×0：沒有護陣時仍要套最低傷害
         "status_zero_without_ward",
-        lambda e: e.status_ppm == 0 and e.ward_permille == PERMILLE and e.amount == 1,
+        lambda e: e.status_ppm == 0 and e.ward_permille == PERMILLE and e.amount == 10,
         zero_taken=True,
     ),
 ]
@@ -182,7 +182,7 @@ def _dealt(
         if isinstance(e, DamageDealt) and e.cause == "attack" and e.target_id == U2
     ]
     assert event.crit is (natural == 20)
-    assert sum(event.rolls) == sum(faces)
+    assert sum(event.rolls) == sum(faces) * state.ruleset.core.quantity_scale  # 骰面 ×10（X10-2b）
     return event
 
 

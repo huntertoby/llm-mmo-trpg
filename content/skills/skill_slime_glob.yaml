@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d8, element: earth}
   - {type: apply_status, status: slow, duration: 2}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {mana: 30, cooldown: 2}
 tags: [earth, spell, control]
 narrative:
   concept: 一團發燙的黏液甩出去，黏在腿上就邁不開步

@@ -429,10 +429,11 @@ def test_a_battle_with_wind_test_skills_replays_identically() -> None:
         flat, ally=[(1, 3), (1, 5)], enemy=[(6, 3), (7, 4)], surfaces=[*poison, (5, 5, "fire")]
     )
     spawns = [
-        spawn(Team.ALLY, (1, 3), caster_template(kit, max_hp=60)),
-        spawn(Team.ALLY, (1, 5), caster_template(kit, max_hp=60)),
-        spawn(Team.ENEMY, (6, 3), no_reactions(max_hp=80)),
-        spawn(Team.ENEMY, (7, 4), no_reactions(max_hp=80)),
+        # X10-2b HP ×10
+        spawn(Team.ALLY, (1, 3), caster_template(kit, max_hp=600)),
+        spawn(Team.ALLY, (1, 5), caster_template(kit, max_hp=600)),
+        spawn(Team.ENEMY, (6, 3), no_reactions(max_hp=800)),
+        spawn(Team.ENEMY, (7, 4), no_reactions(max_hp=800)),
     ]
     setup = make_setup(m, spawns, skills=kit, max_rounds=12)
     run = run_battle(setup, 7, UtilityAI(library().ai_profiles))

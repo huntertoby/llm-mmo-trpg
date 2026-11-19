@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: wind}
   - {type: push, distance: 1}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [wind, spell, push, area]
 narrative:
   concept: 身邊的空氣猛然炸開，把貼上來的敵人轟開；撞到牆或同伴時更痛

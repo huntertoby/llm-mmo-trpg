@@ -18,7 +18,7 @@ effects:
   # 獨自出戰時，撲上去的這一下再補一口
   - {type: damage, multiplier_permille: 1000, condition: {type: lone_wolf}}
 condition: null
-cost: {stamina: 8, cooldown: 2}
+cost: {stamina: 80, cooldown: 2}
 tags: [physical, melee]
 narrative:
   concept: 沒有人掩護的獨行者，撲上去就不留餘地

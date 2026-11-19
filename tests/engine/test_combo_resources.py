@@ -365,7 +365,7 @@ def test_restore_resource_can_target_an_ally() -> None:
             "冷卻最多",
         ),
         (
-            {"type": "restore_resource", "resource": "mana", "amount": 11, "affects": "self"},
+            {"type": "restore_resource", "resource": "mana", "amount": 101, "affects": "self"},
             "amount",
         ),
         (
@@ -561,7 +561,11 @@ def _with_hero_profile(lib: Any, build: str, profile: str | None) -> Any:
 @pytest.mark.parametrize(
     ("build", "seed", "check"),
     [
-        ("build_seer", 9, lambda e: isinstance(e, ResourceRestored) and e.resource == "mana"),
+        (  # X10-2b 換種子 9 → 11（量 ×10 後捨去差異使戰鬥分岔、種子 9 不再回復法力；掃 0～39）
+            "build_seer",
+            11,
+            lambda e: isinstance(e, ResourceRestored) and e.resource == "mana",
+        ),
         (
             "build_seer",
             0,  # BAL-6：換隊長後 0 → 5；CB-1 5 → 2；CB-2a 補招後換種子

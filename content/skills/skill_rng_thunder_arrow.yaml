@@ -15,7 +15,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 800, element: lightning}
 condition: null
-cost: {stamina: 6}
+cost: {stamina: 60}
 tags: [lightning, ranged]
 narrative:
   concept: 金屬箭頭在弦上積滿靜電，射出時拖著一道雷光

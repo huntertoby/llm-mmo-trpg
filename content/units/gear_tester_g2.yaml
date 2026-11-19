@@ -2,10 +2,10 @@
 #   uv run trpg battle --map test_flat_6x6 --allies gear_tester_g2 --enemies bandit,bandit --seed 7 --log-json <檔案>
 id: gear_tester_g2
 name_zh: 震地戰士
-attributes: {str: 16, dex: 10, con: 14, int: 10, wis: 10, wil: 10}
-max_hp: 48
+attributes: {str: 160, dex: 100, con: 140, int: 100, wis: 100, wil: 100}
+max_hp: 480
 speed: 5
-armor_bonus: 4
+armor_bonus: 40
 weapon: hammer
 resist: {physical: 100}
 element_mods: {}

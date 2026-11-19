@@ -442,9 +442,10 @@ def _use(
     if not item.field_usable:
         raise WorldActionError(f"{item.name_zh}不能在野外使用")
     top_hp, top_mana = max_hp(library, char), max_mana(library, char)
-    gain_hp = max(1, top_hp * item.field_hp_permille // 1000) if item.field_hp_permille else 0
+    least = library.ruleset.core.quantity_scale  # 至少回復 1 × 量類倍率（X10-2b）
+    gain_hp = max(least, top_hp * item.field_hp_permille // 1000) if item.field_hp_permille else 0
     gain_mana = (
-        max(1, top_mana * item.field_mana_permille // 1000) if item.field_mana_permille else 0
+        max(least, top_mana * item.field_mana_permille // 1000) if item.field_mana_permille else 0
     )
     hp = min(top_hp, char.hp + gain_hp)
     mana = min(top_mana, char.mana + gain_mana)

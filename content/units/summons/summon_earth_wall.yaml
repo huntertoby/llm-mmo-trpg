@@ -3,10 +3,10 @@
 # 標籤 topplable：被推擊時朝推的方向倒下，壓到的單位受推倒傷害並倒地，土牆消失。
 id: summon_earth_wall
 name_zh: 土牆
-attributes: {str: 10, dex: 4, con: 12, int: 4, wis: 4, wil: 4}
-max_hp: 14
+attributes: {str: 100, dex: 40, con: 120, int: 40, wis: 40, wil: 40}
+max_hp: 140
 speed: 0
-armor_bonus: 1
+armor_bonus: 10
 weapon: stone_fist
 ai_profile: guard
 default_mode: hold   # 6.29.5「AI 預設」＝不動

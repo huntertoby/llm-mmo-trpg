@@ -13,8 +13,8 @@ from trpg.engine.events.skills import SkillUsed
 from trpg.shared.types import Attribute, Team
 
 SEEDS = 60
-SLUG_INT = 8
-OLD_SLUG_INT = 4
+SLUG_INT = 80  # X10-2b 屬性 ×10
+OLD_SLUG_INT = 40
 
 
 def _arena(template: UnitTemplate, *, distance: int = 1, heroes: int = 1) -> BattleState:
@@ -188,7 +188,7 @@ def test_affix_adds_one_castable_move(unit: str, affix: str, skill_id: str) -> N
 
 
 def test_slime_accuracy_follows_intelligence_eight() -> None:
-    """CB-2d：蛞蝓智力 8，黏液的命中判定實際帶入 8，比舊的 4 高。"""
+    """CB-2d：蛞蝓智力 80，黏液的命中判定實際帶入 80，比舊的 40 高（X10-2b 屬性 ×10）。"""
     current = _template("magma_slug")
     assert current.attributes[Attribute.INT] == SLUG_INT
     old = current.model_copy(

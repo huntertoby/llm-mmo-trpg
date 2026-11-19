@@ -97,7 +97,7 @@ def test_formal_choice_through_api(client: TestClient) -> None:
     assert after["pending_offer"] is not None
     char = _store(client).character(cid)
     assert char.hero.weapon == "greatsword" and len(char.pending_offers) == 1
-    assert char.attribute_points == 0 and sum(char.attribute_spent.values()) == 4
+    assert char.attribute_points == 0 and sum(char.attribute_spent.values()) == 40  # X10-2b ×10
     for _ in range(2):
         after = _ok(client.post(url, json={"kind": "offer_pick", "pick": 0}))
     assert after["pending_offer"] is None

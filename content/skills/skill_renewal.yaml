@@ -15,7 +15,7 @@ effects:
   - {type: apply_status, status: regenerating, affects: allies}
   - {type: heal, dice: 1d6, affects: allies}
 condition: null
-cost: {mana: 5, cooldown: 1}
+cost: {mana: 50, cooldown: 1}
 tags: [nature, spell, heal, support]
 narrative:
   concept: 先敷上一口氣的療癒，再讓生機慢慢流回身體

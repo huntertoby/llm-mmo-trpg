@@ -3,10 +3,10 @@
 # 山中修士・召喚：喚出會爆裂的木傀儡（既有「爆裂傀儡」）。
 id: sect_puppeteer
 name_zh: 傀儡師
-attributes: {str: 8, dex: 12, con: 10, int: 12, wis: 10, wil: 14}
-max_hp: 24
+attributes: {str: 80, dex: 120, con: 100, int: 120, wis: 100, wil: 140}
+max_hp: 240
 speed: 5
-armor_bonus: 1
+armor_bonus: 10
 weapon: totem_staff
 ai_profile: cunning
 resist: {}

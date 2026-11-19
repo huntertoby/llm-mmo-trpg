@@ -253,7 +253,7 @@ def test_ashen_heart_armor_mods(library: ContentLibrary, make_char: MakeChar) ->
     plain = _encounter("molten_heart_pit")
     assert _boss_armor(library, char, plain) == base
     hardened = _encounter("molten_heart_pit", world_flags=("ashen_heart_hardened",))
-    assert _boss_armor(library, char, hardened) == base + 1
+    assert _boss_armor(library, char, hardened) == base + 10  # X10-2b：護甲 ×10（±1 → ±10）
     thread = ThreadState(
         thread="convoy_intercepted",
         skeleton="ashen_convoy",
@@ -264,10 +264,10 @@ def test_ashen_heart_armor_mods(library: ContentLibrary, make_char: MakeChar) ->
     stopped = char.model_copy(
         update={"story_flags": ("ashen_convoy_stopped",), "threads": (thread,)}
     )
-    assert _boss_armor(library, stopped, hardened) == base - 1
-    assert _boss_armor(library, stopped, plain) == base - 2
+    assert _boss_armor(library, stopped, hardened) == base - 10
+    assert _boss_armor(library, stopped, plain) == base - 20
     expired = _encounter("molten_heart_pit", at=NOON + 10)  # 線頭在遇敵時刻已到期
-    assert _boss_armor(library, stopped, expired) == base - 1
+    assert _boss_armor(library, stopped, expired) == base - 10
     other = [library.unit("ember_lizard")]
     assert armored(library, stopped, plain, other) == tuple(other)  # 只調灰燼之心
 

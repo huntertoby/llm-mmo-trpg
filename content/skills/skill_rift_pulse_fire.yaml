@@ -24,7 +24,7 @@ followup:
     - {type: damage, dice: 1d8, element: fire}
     - {type: apply_status, status: burning, duration: 2}
 condition: null
-cost: {mana: 2, cooldown: 1}
+cost: {mana: 20, cooldown: 1}
 tags: [fire, spell, aoe]
 narrative:
   concept: 源晶柱噴出一圈烈火，把周圍的人都點著

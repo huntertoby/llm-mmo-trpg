@@ -117,7 +117,7 @@ def test_summon_places_an_allied_unit_owned_by_the_caster() -> None:
     assert summon.xy == (2, 3) and summon.team is Team.ALLY and summon.owner_id == U1
     assert (
         summon.name_zh == "骷髏戰士1"
-        and summon.max_hp == 23 * state.ruleset.core.summon_role_hp_permille["melee"] // 1000
+        and summon.max_hp == 230 * state.ruleset.core.summon_role_hp_permille["melee"] // 1000
         and summon.source == 0
     )
     assert summon.ai_profile == "brute" and summon.is_summon

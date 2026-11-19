@@ -86,7 +86,7 @@ def test_allocate_lesson_after_the_formal_choice(calm: ContentLibrary, make_char
     assert lesson is not None and lesson.kind == "allocate"
     assert lesson.respec and not lesson.reminder
     assert chosen.attribute_points == 0  # 都配好了：教學要先重配
-    assert lesson.points == sum(chosen.attribute_spent.values()) == 8
+    assert lesson.points == sum(chosen.attribute_spent.values()) == 80  # X10-2b：屬性點 ×10
     assert lesson.start_points == 0
     assert dict(lesson.recommended) == dict(chosen.attribute_spent)  # 推薦＝現在這套
     assert lesson.recommended_zh and lesson.skip_zh and {n.attr for n in lesson.notes}
@@ -94,7 +94,7 @@ def test_allocate_lesson_after_the_formal_choice(calm: ContentLibrary, make_char
     assert lesson_view(calm, capital) is None  # 葛蘭在霧渡鎮
     # 照教學做：重配、自己分、記上完——不再出；4 級前也不會接閃現教學
     done = _do(calm, chosen, RespecAction())
-    assert done.attribute_points == 8
+    assert done.attribute_points == 80
     done = _do(calm, done, AllocateAction(attributes={Attribute.CON: 8}))
     done = _seen(calm, done, LESSON_ALLOCATE)
     assert lesson_view(calm, done) is None
@@ -113,7 +113,7 @@ def test_skipped_lesson_comes_back_once(calm: ContentLibrary, make_char: MakeCha
     back = _do(calm, away, TravelAction(to="mist_ferry"))
     again = lesson_view(calm, back)
     assert again is not None and again.kind == "allocate" and again.reminder and again.respec
-    assert again.points == 8
+    assert again.points == 80
     assert [line.speaker_zh for line in again.lines] == ["葛蘭"]
     assert again.lines != lesson_view(calm, chosen).lines  # type: ignore[union-attr]
     shown = _seen(calm, back, LESSON_ALLOCATE_AGAIN)
@@ -143,14 +143,14 @@ def test_old_characters_keep_the_old_lesson_order(
     """已完成開局的舊角色：2 級、有沒分的點、在霧渡鎮＝配點教學（不用重配）；之後接第一次閃現
     （新手第 1 步打完就教，和改前相同）；換地點不會記略過的紀錄。"""
     quest = QuestState(quest="starter_ferry", steps_done=1, started_at=NOON)
-    old = make_char(level=2, attribute_points=2, location="mist_ferry", quests=(quest,))
+    old = make_char(level=2, attribute_points=20, location="mist_ferry", quests=(quest,))
     flash = {s: acquire(s).model_copy(update={"used": True}) for s in old.hero.skills}
     old = old.model_copy(update={"flash": dict(sorted(flash.items())), "insight": 1})
     assert old.opening is None
     lesson = lesson_view(calm, old)
     assert lesson is not None and lesson.kind == "allocate"
     assert not lesson.respec and not lesson.reminder
-    assert lesson.points == 2 and lesson.start_points == calm.roguelite.start_free_points
+    assert lesson.points == 20 and lesson.start_points == calm.roguelite.start_free_points
     after = lesson_view(calm, _seen(calm, old, LESSON_ALLOCATE))
     assert after is not None and after.kind == "flash"
     moved = _do(calm, _seen(calm, old, LESSON_ALLOCATE), TravelAction(to="ferry_steps"))

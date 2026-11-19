@@ -70,15 +70,19 @@ def test_every_demo_skill_passes_validation(skill_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+# X10-2b：基準技能（helpers.skill）預設的耐力 8 是舊單位；預算案例改用 ×10 後的 80（折抵 +20‰ 不變）
+COST = {"stamina": 80, "cooldown": 2}
+
+
 def test_over_budget_is_rejected_with_the_ratio() -> None:
-    found = violations(skill(effects=[{"type": "damage", "multiplier_permille": 3000}]))
+    found = violations(skill(effects=[{"type": "damage", "multiplier_permille": 3000}], cost=COST))
     (over,) = [v for v in found if v.rule == "budget.over"]
     assert "超出預算" in over.message and "133.9%" in over.message  # 21 ÷ 15.68
     assert over.skill_id == "skill_test"
 
 
 def test_too_weak_is_rejected_with_the_ratio() -> None:
-    found = violations(skill(effects=[{"type": "damage", "multiplier_permille": 1000}]))
+    found = violations(skill(effects=[{"type": "damage", "multiplier_permille": 1000}], cost=COST))
     (weak,) = [v for v in found if v.rule == "budget.weak"]
     assert "過弱" in weak.message and "44.6%" in weak.message  # 7 ÷ 15.68
 
@@ -88,7 +92,9 @@ def test_budget_boundaries_are_inclusive() -> None:
     ×1.568 ＝ 10.976（剛好 70%）合格、×1.567 過弱。"""
 
     def rules(permille: int) -> set[str]:
-        return rules_of(skill(effects=[{"type": "damage", "multiplier_permille": permille}]))
+        return rules_of(
+            skill(effects=[{"type": "damage", "multiplier_permille": permille}], cost=COST)
+        )
 
     assert rules(2240) == set() and rules(1568) == set()
     assert rules(2241) == {"budget.over"} and rules(1567) == {"budget.weak"}

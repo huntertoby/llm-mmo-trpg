@@ -162,11 +162,11 @@ races:
     skill:
       id: race_overcharge
       name_zh: 過充
-      description_zh: 立刻回復 10 點耐力或 10 點法力（擇一）。每場限用 1 次。
+      description_zh: 立刻回復 100 點耐力或 100 點法力（擇一）。每場限用 1 次。
       uses_per_battle: 1
       shape: {type: self}
       effects:
-        - {type: restore_choice, resources: [stamina, mana], amount: 10}
+        - {type: restore_choice, resources: [stamina, mana], amount: 100}
     passive:
       id: cyborg_insulated
       name_zh: 絕緣

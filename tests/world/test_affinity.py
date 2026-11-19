@@ -189,7 +189,7 @@ def test_tavern_rumors_same_for_everyone_this_week(
 ) -> None:
     world = make_world()
     a = world_step(library, world, make_char("alice"), TavernAction(), NOON)
-    b = world_step(library, world, make_char("bob", wis=18), TavernAction(), NOON + 2 * DAY)
+    b = world_step(library, world, make_char("bob", wis=180), TavernAction(), NOON + 2 * DAY)
     heard_a, heard_b = a.events[0], b.events[0]
     assert isinstance(heard_a, RumorsHeardEvent) and isinstance(heard_b, RumorsHeardEvent)
     assert heard_a == heard_b

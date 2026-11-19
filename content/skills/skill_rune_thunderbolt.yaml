@@ -19,7 +19,7 @@ effects:
     element: lightning
     condition: {type: on_own_rune, element: lightning}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [lightning, spell, combo, rune_read]
 narrative:
   concept: 雷紋像一個靶心，電光只認得它

@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: slow, duration: 4, affects: enemies}
 condition: {type: on_own_rune}
 trigger: {event: on_hit, target: other, max_per_round: 2}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [spell, passive, rune]
 narrative:
   concept: 你刻下的符紋會咬住踏上去的敵人，讓他每一步都慢半拍

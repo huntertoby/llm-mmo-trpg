@@ -424,12 +424,12 @@ def test_orb_bonus_follows_the_data_and_the_card() -> None:
 # ---------------------------------------------------------------------------
 
 BLOCK_TABLE = [
-    # (力量, 體質, 期望多減傷‰)  每點 5‰，最多 100‰
-    (10, 10, 50),
-    (14, 8, 70),  # 取較高：力量
-    (6, 12, 60),  # 取較高：體質
-    (20, 5, 100),  # 到上限
-    (30, 30, 100),
+    # (力量, 體質, 期望多減傷‰)  每點 5‰（X10-2b：屬性 ×10，程式 ÷ quantity_scale），最多 100‰
+    (100, 100, 50),
+    (140, 80, 70),  # 取較高：力量
+    (60, 120, 60),  # 取較高：體質
+    (200, 50, 100),  # 到上限
+    (300, 300, 100),
 ]
 _PCT = re.compile(r"目前 \+([\d.]+)%")
 
@@ -465,7 +465,7 @@ def test_round_shield_strengthens_block_by_the_scaling_attribute(
 
 
 def test_the_unit_view_card_lines_match_the_data() -> None:
-    state = _block_state({"str": 14, "con": 8})
+    state = _block_state({"str": 140, "con": 80})
     view = next(u for u in project_for(state, Team.ALLY).units if u.id == U2)
     assert view.offhand_name_zh == "圓盾"
     assert view.offhand_traits_zh[0] == "縮放屬性：力量／體質（取較高）"
@@ -479,10 +479,10 @@ def test_round_shield_only_strengthens_the_block_reaction(monkeypatch: pytest.Mo
     """沒有格擋反應（反應規則關掉）時圓盾不減傷；其他副手不強化格擋。"""
     dice(monkeypatch)
     for held in ("tower_shield", "tome", "orb"):
-        state = _block_state({"str": 20, "con": 20}, held=held)
+        state = _block_state({"str": 200, "con": 200}, held=held)
         (dealt,) = [e for e in kinds(hit(state), DamageDealt) if e.target_id == U2]
         assert dealt.block_permille == 500, held
-    state = _block_state({"str": 20, "con": 20})
+    state = _block_state({"str": 200, "con": 200})
     unit = state.units[U2]
     unit.reactions = tuple(r.model_copy(update={"mode": "off"}) for r in unit.reactions)
     (dealt,) = [e for e in kinds(hit(state), DamageDealt) if e.target_id == U2]
@@ -491,7 +491,7 @@ def test_round_shield_only_strengthens_the_block_reaction(monkeypatch: pytest.Mo
 
 def test_block_bonus_follows_the_data(monkeypatch: pytest.MonkeyPatch) -> None:
     dice(monkeypatch)
-    state = _block_state({"str": 10, "con": 10})
+    state = _block_state({"str": 100, "con": 100})
     unit = state.units[U2]
     unit.gear = dataclasses.replace(
         unit.gear,

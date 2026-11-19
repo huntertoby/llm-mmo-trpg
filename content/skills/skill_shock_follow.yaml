@@ -20,7 +20,7 @@ effects:
     element: physical
     condition: {type: target_collided}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [arcane, spell, combo]
 narrative:
   concept: 把撞擊的餘震推進對手的身體深處

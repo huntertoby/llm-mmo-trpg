@@ -250,7 +250,7 @@ def test_base_strip_of_kindle() -> None:
     stats = [(s.name_zh, s.value_zh, s.term) for s in base_stats(LIB, KINDLE)]
     assert stats == [
         ("AP", "2", "ap"),
-        ("耐力", "2", "stamina"),
+        ("耐力", "20", "stamina"),  # X10-2b：耐力 ×10
         ("冷卻", "2", "cooldown"),
         ("射程", "4", "range"),
         ("燃燒", "5 回合", "status:burning"),

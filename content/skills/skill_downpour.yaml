@@ -16,7 +16,7 @@ effects:
   - {type: create_surface, surface: water}
   - {type: apply_status, status: slow, duration: 1}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [water, spell, area, utility]
 narrative:
   concept: 一朵烏雲憑空聚在頭頂，雨水把整片地面澆得濕透

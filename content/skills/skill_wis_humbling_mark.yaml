@@ -16,7 +16,7 @@ effects:
   - {type: knock_prone}
   - {type: apply_status, status: marked, duration: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [spell, mark, control]
 narrative:
   concept: 印記一落，目標的膝蓋就不聽使喚

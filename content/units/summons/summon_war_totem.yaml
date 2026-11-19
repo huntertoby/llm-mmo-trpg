@@ -3,8 +3,8 @@
 # （攻擊值 +1）2 回合（Phase 3-33e1 改版，6.29.5：原本是激昂）。HP 低、容易被打掉，是召喚者要保護的對象。
 id: summon_war_totem
 name_zh: 戰意圖騰
-attributes: {str: 6, dex: 6, con: 12, int: 6, wis: 6, wil: 6}
-max_hp: 12
+attributes: {str: 60, dex: 60, con: 120, int: 60, wis: 60, wil: 60}
+max_hp: 120
 speed: 0
 armor_bonus: 0
 weapon: one_handed_sword

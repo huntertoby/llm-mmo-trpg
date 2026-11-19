@@ -35,10 +35,10 @@ def test_catalog_lists_slots_items_and_the_whitelist(client: TestClient) -> None
     )  # 3K-1：+7 普攻附加元素、+8 武器元素；5D-3：+3 獨特；5D-2b：+8 技能強化；5D-4：+1；AP-2：+1
     assert {a["category_number"] for a in body["affixes"]} == set(range(1, 12))
     strength = next(a for a in body["affixes"] if a["id"] == "affix_attr_str")
-    assert (strength["value_min"], strength["value_max"]) == (1, 4)
+    assert (strength["value_min"], strength["value_max"]) == (10, 40)  # X10-2b：屬性詞條 ×10
     assert body["max_affixes_per_item"] == 4 and body["max_cost_affixes"] == 2
     sword = next(i for i in body["items"] if i["id"] == "item_test_sword")
-    assert sword["appearance"]["kind"] == "sword" and sword["affixes"][0]["text_zh"] == "力量 +2"
+    assert sword["appearance"]["kind"] == "sword" and sword["affixes"][0]["text_zh"] == "力量 +20"
 
 
 def test_check_empty_loadout_is_legal_and_has_no_gear(client: TestClient) -> None:
@@ -104,9 +104,9 @@ def test_damage_cap_is_marked_as_truncated(client: TestClient) -> None:
 
 
 def test_illegal_custom_items_report_chinese_reasons(client: TestClient) -> None:
-    five = ({"affix": f"affix_attr_{a}", "value": 1} for a in ("str", "dex", "con", "int", "wis"))
+    five = ({"affix": f"affix_attr_{a}", "value": 10} for a in ("str", "dex", "con", "int", "wis"))
     cases: list[tuple[dict[str, Any], str]] = [
-        ({"head": _custom({"affix": "affix_attr_str", "value": 9})}, "超出範圍"),
+        ({"head": _custom({"affix": "affix_attr_str", "value": 90})}, "超出範圍"),
         ({"head": _custom({"affix": "affix_made_up", "value": 1})}, "不在白名單"),
         ({"ring_1": _custom({"affix": "affix_act_shield_wall"})}, "戒指"),
         ({"head": _custom(*five)}, "詞條最多 4 條"),
@@ -158,7 +158,7 @@ def test_battle_creation_applies_equipment_to_the_hero(client: TestClient) -> No
         "ally_builds": [],
         "equipment": {
             "head": {"item_id": "item_test_helm"},
-            "neck": _custom({"affix": "affix_max_hp", "value": 16}, name="健壯項鍊"),
+            "neck": _custom({"affix": "affix_max_hp", "value": 160}, name="健壯項鍊"),
         },
     }
     res = client.post("/api/battles", json=body)
@@ -178,7 +178,7 @@ def test_battle_creation_rejects_illegal_equipment_with_reasons(client: TestClie
         "map_id": "training_range",
         "seed": 3,
         "hero_build": BUILD,
-        "equipment": {"head": _custom({"affix": "affix_attr_str", "value": 9}, name="壞帽")},
+        "equipment": {"head": _custom({"affix": "affix_attr_str", "value": 90}, name="壞帽")},
     }
     res = client.post("/api/battles", json=body)
     assert res.status_code == 422
@@ -203,9 +203,9 @@ def test_custom_gear_battle_log_replays(client: TestClient, tmp_path: Path) -> N
         "ally_builds": [],
         "equipment": {
             "main_hand": _custom(
-                glass, {"affix": "affix_attr_str", "value": 3}, weapon="one_handed_sword"
+                glass, {"affix": "affix_attr_str", "value": 30}, weapon="one_handed_sword"
             ),
-            "neck": _custom({"affix": "affix_max_hp", "value": 12}, name="健壯項鍊"),
+            "neck": _custom({"affix": "affix_max_hp", "value": 120}, name="健壯項鍊"),
         },
     }
     created = client.post("/api/battles", json=body)
@@ -248,7 +248,7 @@ def test_offhand_items_and_custom_offhands_are_checked(client: TestClient) -> No
         body = _check(client, {"off_hand": {"item_id": f"item_offhand_{item}"}})
         assert body["legal"] is True, body
         assert body["hero"]["offhand_name_zh"] != ""
-    affix = {"affix": "affix_max_hp", "value": 4}
+    affix = {"affix": "affix_max_hp", "value": 40}  # X10-2b：最大 HP 詞條 ×10
     custom = _check(client, {"off_hand": _custom(affix, offhand="orb")})
     assert custom["legal"] is True, custom
     assert custom["hero"]["offhand_name_zh"] == "法器珠"

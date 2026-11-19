@@ -17,7 +17,7 @@ effects:
   - {type: heal, dice: 1d6, affects: self}
   - {type: add_stack, stack: ki, amount: 1, affects: self}
 condition: null
-cost: {mana: 2, cooldown: 1}
+cost: {mana: 20, cooldown: 1}
 tags: [martial, spell, heal, builder]
 narrative:
   concept: 一吸一吐之間，氣沉丹田，傷口也跟著收斂

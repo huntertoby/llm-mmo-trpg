@@ -13,17 +13,17 @@ from trpg.shared.types import Attribute
 
 def test_new_run_uses_the_build_hero_with_base_attributes_and_four_free_points() -> None:
     lib = library()
-    run = new_run(lib, "build_push", 3, {Attribute.STR: 3, Attribute.CON: 1})
+    run = new_run(lib, "build_push", 3, {Attribute.STR: 30, Attribute.CON: 10})
     build = lib.builds.by_id()["build_push"].hero
     assert run.hero.skills == build.skills
     assert run.hero.weapon == build.weapon
-    assert run.hero.attributes[Attribute.STR] == 13
-    assert run.hero.attributes[Attribute.CON] == 11
-    assert sum(run.hero.attributes.values()) == 6 * 10 + 4
-    # 體質加 1 點：起始 HP ＝ build 英雄原本的 HP ＋ 1 × 每點體質的 HP（Phase 3-7）
+    assert run.hero.attributes[Attribute.STR] == 130
+    assert run.hero.attributes[Attribute.CON] == 110
+    assert sum(run.hero.attributes.values()) == 6 * 100 + 40
+    # 體質加 10 點：起始 HP ＝ build 英雄原本的 HP ＋ 10 × 每點體質的 HP（Phase 3-7）
     core = lib.ruleset.core
     assert (run.hp, run.mana) == (
-        core.template_max_hp(build) + core.hp_per_con_point,
+        core.template_max_hp(build) + 10 * core.hp_per_con_point,
         core.resources.max_for(
             "mana",
             core.template_base_resource("mana", build, lib.weapons[build.weapon].weapon_class),
@@ -41,15 +41,15 @@ def test_default_allocation_goes_to_the_most_used_scaling_attribute() -> None:
     run = new_run(lib, "build_fire", 1)
     skills = [lib.skills[s] for s in run.hero.skills]
     attr = primary_attribute(skills)
-    assert run.hero.attributes[attr] == 14
+    assert run.hero.attributes[attr] == 140
     assert top_attribute(run.hero.attributes) is attr
 
 
 @pytest.mark.parametrize(
     ("allocation", "message"),
     [
-        ({Attribute.STR: 3}, "必須分配 4 點"),
-        ({Attribute.STR: 5, Attribute.DEX: -1}, "不可為負"),
+        ({Attribute.STR: 30}, "必須分配 40 點"),
+        ({Attribute.STR: 50, Attribute.DEX: -10}, "不可為負"),
     ],
 )
 def test_bad_allocation_is_rejected(allocation: dict[Attribute, int], message: str) -> None:

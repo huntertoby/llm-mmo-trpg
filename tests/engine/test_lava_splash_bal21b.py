@@ -91,7 +91,7 @@ def test_the_shell_phase_swaps_spout_for_splash_and_molten_lord_keeps_spout() ->
 def test_the_numbers_follow_the_q1_defaults() -> None:
     skill = library().skills[SPLASH]
     assert skill.enemy_only and skill.ap_cost == 2
-    assert (skill.cost.mana, skill.cost.cooldown) == (6, 2)
+    assert (skill.cost.mana, skill.cost.cooldown) == (60, 2)  # X10-2b 法力 ×10
     assert skill.shape.type == "self"  # GB-2：不選格
     assert [(e.type, str(e.dice), e.affects) for e in skill.effects] == [("shield", "1d4", "self")]
     follow = skill.followup

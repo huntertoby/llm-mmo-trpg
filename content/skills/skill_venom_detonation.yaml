@@ -15,7 +15,7 @@ shape: {type: single, range: 5}
 effects:
   - {type: consume_status, status: poison, scale: remaining_rounds, then: [{type: damage, dice: 2d10, element: poison}]}
 condition: null
-cost: {mana: 7, cooldown: 2}
+cost: {mana: 70, cooldown: 2}
 tags: [poison, spell, detonate]
 narrative:
   concept: 把目標身上的毒一次催發，毒越深爆得越痛；沒有中毒就不生效

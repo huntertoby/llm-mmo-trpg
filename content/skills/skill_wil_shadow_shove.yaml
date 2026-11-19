@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d6, element: shadow}
   - {type: push, distance: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [shadow, spell, curse, push]
 narrative:
   concept: 一團暗影猛地撞上對手，把他推出去；撞上牆或同伴時更痛

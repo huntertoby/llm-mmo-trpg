@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 3d8, element: holy}
   - {type: apply_status, status: frozen, duration: 1}
 condition: null
-cost: {mana: 9, cooldown: 4}
+cost: {mana: 90, cooldown: 4}
 tags: [holy, ice, spell, control]
 narrative:
   concept: 審判的光落下時，罪人連同影子一起被凍住

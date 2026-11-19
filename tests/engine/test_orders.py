@@ -171,7 +171,7 @@ def _two_targets() -> BattleState:
         ],
     )
     state = give_turn(state, U1)
-    state.units[U2].hp = 8  # 殘血的 A：預設會打它
+    state.units[U2].hp = 80  # 殘血的 A：預設會打它（X10-2b ×10）
     return state
 
 

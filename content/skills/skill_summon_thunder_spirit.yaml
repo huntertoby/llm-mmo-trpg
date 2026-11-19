@@ -15,7 +15,7 @@ shape: {type: ground_tile, range: 4}
 effects:
   - {type: summon, unit: summon_thunder_spirit, duration: 2}
 condition: null
-cost: {mana: 10, cooldown: 4}
+cost: {mana: 100, cooldown: 4}
 tags: [lightning, spell, summon]
 narrative:
   concept: 呼喚一縷雷靈，站在水裡時它的電光會沿著水面連鎖

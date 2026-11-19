@@ -3,10 +3,10 @@
 # 中立野獸・坦克：震地擊倒。
 id: stoneback_bear
 name_zh: 石背熊
-attributes: {str: 16, dex: 8, con: 16, int: 4, wis: 10, wil: 10}
-max_hp: 44
+attributes: {str: 160, dex: 80, con: 160, int: 40, wis: 100, wil: 100}
+max_hp: 440
 speed: 4
-armor_bonus: 3
+armor_bonus: 30
 weapon: talons
 ai_profile: brute
 resist: {}

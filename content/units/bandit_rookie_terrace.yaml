@@ -2,10 +2,10 @@
 # 不改 bandit_rookie 本身，因為新手第 1 場（渡口石階）也用它。
 id: bandit_rookie_terrace
 name_zh: 盜賊
-attributes: {str: 12, dex: 14, con: 12, int: 8, wis: 10, wil: 8}
-max_hp: 15   # CB-2d：bandit_rookie 的 17 × 0.9（捨去），只用在梯田固定戰 terrace_clash；第 1 場渡口仍用 bandit_rookie
+attributes: {str: 120, dex: 140, con: 120, int: 80, wis: 100, wil: 80}
+max_hp: 150   # CB-2d：bandit_rookie 的 17 × 0.9（捨去），只用在梯田固定戰 terrace_clash；第 1 場渡口仍用 bandit_rookie
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: dagger
 resist: {}
 element_mods: {}

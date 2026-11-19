@@ -2,10 +2,10 @@
 # 灰燼犬：近戰包抄、側擊加傷；「吐火星」用引爆燃燒（和餘燼蜥的點燃配合）。
 id: ash_hound
 name_zh: 灰燼犬
-attributes: {str: 12, dex: 14, con: 10, int: 4, wis: 12, wil: 8}
-max_hp: 22
+attributes: {str: 120, dex: 140, con: 100, int: 40, wis: 120, wil: 80}
+max_hp: 220
 speed: 6
-armor_bonus: 1
+armor_bonus: 10
 weapon: fangs
 ai_profile: flanker
 resist: {}

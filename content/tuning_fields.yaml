@@ -26,18 +26,18 @@ targets:
       - gear_tester*
       - training_dummy*
     fields:
-      - {path: max_hp, label_zh: 最大 HP, kind: int, hint_min: 1, hint_max: 999, note_zh: 單位檔的基礎值；實戰時另依等級成長與遭遇調整。}
+      - {path: max_hp, label_zh: 最大 HP, kind: int, hint_min: 10, hint_max: 9990, note_zh: 單位檔的基礎值；實戰時另依等級成長與遭遇調整。}
       - {path: level, label_zh: 等級, kind: int, hint_min: 1, hint_max: 20, note_zh: 範本等級；大世界的敵人等級多半由遭遇決定。}
-      - {path: attributes.str, label_zh: 力量, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
-      - {path: attributes.dex, label_zh: 敏捷, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
-      - {path: attributes.con, label_zh: 體質, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
-      - {path: attributes.int, label_zh: 智力, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
-      - {path: attributes.wis, label_zh: 感知, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
-      - {path: attributes.wil, label_zh: 意志, kind: int, hint_min: 1, hint_max: 30, note_zh: 六屬性之一。}
+      - {path: attributes.str, label_zh: 力量, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
+      - {path: attributes.dex, label_zh: 敏捷, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
+      - {path: attributes.con, label_zh: 體質, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
+      - {path: attributes.int, label_zh: 智力, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
+      - {path: attributes.wis, label_zh: 感知, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
+      - {path: attributes.wil, label_zh: 意志, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
       - {path: speed, label_zh: 速度, kind: int, hint_min: 0, hint_max: 10, note_zh: 每回合可移動的格數基礎；沒寫時是 5。}
-      - {path: armor_bonus, label_zh: 護甲加值, kind: int, hint_min: 0, hint_max: 15, note_zh: 沒寫時是 0；實戰時另加遭遇的護甲調整。}
-      - {path: max_mana, label_zh: 法力基礎, kind: int, hint_min: 0, hint_max: 60, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
-      - {path: stamina, label_zh: 耐力基礎, kind: int, hint_min: 0, hint_max: 60, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
+      - {path: armor_bonus, label_zh: 護甲加值, kind: int, hint_min: 0, hint_max: 150, note_zh: 沒寫時是 0；實戰時另加遭遇的護甲調整。}
+      - {path: max_mana, label_zh: 法力基礎, kind: int, hint_min: 0, hint_max: 600, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
+      - {path: stamina, label_zh: 耐力基礎, kind: int, hint_min: 0, hint_max: 600, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
       - {path: resist.physical, label_zh: 物理抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰）；負值是易傷。}
       - {path: resist.elemental, label_zh: 元素抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰），含火焰、冰霜、雷電。}
       - {path: resist.nature, label_zh: 自然抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 抗性分組（‰），含毒素、風、大地。}
@@ -52,13 +52,13 @@ targets:
       - {path: element_mods.holy, label_zh: 神聖弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: element_mods.shadow, label_zh: 暗影弱點／抗性, kind: permille, hint_min: -900, hint_max: 1000, note_zh: 個別元素（‰）：正值是弱點、負值是抗性。}
       - {path: "phases[*].trigger.permille", label_zh: 階段 HP 門檻, kind: permille, hint_min: 100, hint_max: 900, note_zh: 頭目 HP 跌到這個千分比以下時進入該階段；後面的階段要比前面低。}
-      - {path: "phases[*].mana_restore", label_zh: 階段回復法力, kind: int, hint_min: 1, hint_max: 60, note_zh: 頭目進入這個階段時回復的法力點數（不超過最大法力）；沒寫＝不回復。開場階段不能設。}
+      - {path: "phases[*].mana_restore", label_zh: 階段回復法力, kind: int, hint_min: 10, hint_max: 600, note_zh: 頭目進入這個階段時回復的法力點數（不超過最大法力）；沒寫＝不回復。開場階段不能設。}
       # GB-2：階段的生長表面（content/battle.py 的 PhaseGrowSurface；只展開已寫 grow_surface 的階段，例：灰燼之心第 3 階段的火地）。
       - {path: "phases[*].grow_surface.max_rows", label_zh: 表面生長排數, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 這個階段的表面（例：火地）從頭目南緣往南最多長到幾排（含進階段時放的第 1 排；每輪結束長 1 排，遇到人、物件、水、岩漿、牆就停在那一欄）。越大越會把坑底封住。只能 1～9。}
       # PB-1n：頭目部位（content/parts.py 的 BossPart；只有寫了 parts 的頭目才展開）。
       # 加總 600‰、部位數、ID 等結構照 schema 擋；on_break[*].amount 只展開 stat_down（其他破壞效果沒有數量）。
       - {path: "parts[*].hp_permille", label_zh: 部位血量（‰）, kind: permille, hint_min: 50, hint_max: 400, note_zh: 部位血量＝頭目開場最大 HP 的這麼多千分比（200＝20%）；同一隻頭目所有部位加總不能超過 600‰。部位越少血越快破。}
-      - {path: "parts[*].armor_bonus", label_zh: 部位護甲加值, kind: int, hint_min: 0, hint_max: 15, note_zh: 瞄準這個部位時，命中判定用這個護甲加值；沒寫＝和本體相同。比本體高＝更難打中。}
+      - {path: "parts[*].armor_bonus", label_zh: 部位護甲加值, kind: int, hint_min: 0, hint_max: 150, note_zh: 瞄準這個部位時，命中判定用這個護甲加值；沒寫＝和本體相同。比本體高＝更難打中。}
       - {path: "parts[*].resist.physical", label_zh: 部位物理抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 打這個部位時的抗性（‰；負值是易傷）；沒寫＝和本體相同。瞄準部位的那一下改用這個抗性算傷害，頭目 HP 與部位血條扣同樣的數字。}
       - {path: "parts[*].resist.elemental", label_zh: 部位元素抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含火焰、冰霜、雷電（‰；負值是易傷）；沒寫＝和本體相同。}
       - {path: "parts[*].resist.nature", label_zh: 部位自然抗性, kind: permille, hint_min: -500, hint_max: 750, note_zh: 含毒素、風、大地（‰；負值是易傷）；沒寫＝和本體相同。}
@@ -91,8 +91,8 @@ targets:
       - skill_gear_*           # 裝備附帶的技能（預算本來就不檢查）
     fields:
       - {path: ap_cost, label_zh: AP 消耗, kind: int, hint_min: 1, hint_max: 3, kinds: [active], existing_only: true, note_zh: 改 AP 會換預算係數（1 AP×0.5、2 AP×1.0、3 AP×1.6），預算比例會大跳。}
-      - {path: cost.stamina, label_zh: 耐力消耗, kind: int, hint_min: 0, hint_max: 30, note_zh: 沒寫＝0。武器技花耐力。}
-      - {path: cost.mana, label_zh: 法力消耗, kind: int, hint_min: 0, hint_max: 40, note_zh: 沒寫＝0。法術技花法力。}
+      - {path: cost.stamina, label_zh: 耐力消耗, kind: int, hint_min: 0, hint_max: 300, note_zh: 沒寫＝0。武器技花耐力。}
+      - {path: cost.mana, label_zh: 法力消耗, kind: int, hint_min: 0, hint_max: 400, note_zh: 沒寫＝0。法術技花法力。}
       - {path: cost.cooldown, label_zh: 冷卻（回合）, kind: int, hint_min: 1, hint_max: 6, note_zh: 1～6；清空＝沒有冷卻。冷卻會換預算的代價折抵。}
       - {path: cost.uses_per_battle, label_zh: 每場次數上限, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 每場最多放幾次。}
       - {path: cost.hp_percent, label_zh: 消耗生命（‰）, kind: permille, hint_min: 1, hint_max: 999, existing_only: true, note_zh: 施放時付出最大 HP 的這麼多千分比。}
@@ -235,7 +235,7 @@ targets:
     label_zh: 格子物件
     glob: objects.yaml
     fields:
-      - {path: "objects[*].max_hp", label_zh: 最大 HP, kind: int, hint_min: 1, hint_max: 99, existing_only: true, note_zh: 打破這種物件要的傷害；所有地圖上的這種物件一起變。只能 1 以上。HP 越低越容易被打破（敵我的攻擊、爆炸、範圍技都算），例：冷卻井打破後周圍 3×3 變成水面。}
+      - {path: "objects[*].max_hp", label_zh: 最大 HP, kind: int, hint_min: 10, hint_max: 990, existing_only: true, note_zh: 打破這種物件要的傷害；所有地圖上的這種物件一起變。只能 1 以上。HP 越低越容易被打破（敵我的攻擊、爆炸、範圍技都算），例：冷卻井打破後周圍 3×3 變成水面。}
   # PK-1（挑選模式提案第 6 節第 5 題 A：打分權重放數值工坊，由使用者調）：skill_pick.yaml 全部開。
   - kind: pick
     label_zh: 技能挑選模式

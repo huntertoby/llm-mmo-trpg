@@ -17,7 +17,7 @@ effects:
   - {type: damage, multiplier_permille: 650, element: poison}
   - {type: apply_status, status: poison}
 condition: null
-cost: {stamina: 6, cooldown: 2}
+cost: {stamina: 60, cooldown: 2}
 tags: [poison, melee]
 narrative:
   concept: 刃上淬了毒，被劃到的人會一路中毒下去

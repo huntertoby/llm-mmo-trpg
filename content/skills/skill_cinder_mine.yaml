@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d8, element: fire}
   - {type: create_surface, surface: fire, duration: 2}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [fire, spell, trap]
 narrative:
   concept: 埋在地下的餘燼，過一會兒就會自己炸開

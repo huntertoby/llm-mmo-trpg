@@ -3,10 +3,10 @@
 # 山中修士・補師（區域題目核心）：「回春丹」群體治療；「丹爆」毒霧表面；同門相護（5A-M1）。
 id: sect_alchemist
 name_zh: 煉丹師
-attributes: {str: 8, dex: 10, con: 12, int: 12, wis: 14, wil: 10}
-max_hp: 26
+attributes: {str: 80, dex: 100, con: 120, int: 120, wis: 140, wil: 100}
+max_hp: 260
 speed: 5
-armor_bonus: 1
+armor_bonus: 10
 weapon: totem_staff
 ai_profile: support
 resist: {}
@@ -16,7 +16,7 @@ skills: [skill_sanctuary, skill_poison_mist]
 reactions:
   - reaction: block
     when: {event: targeted_by_melee}
-    unless: {self_stamina_below: 20}
+    unless: {self_stamina_below: 200}
   - reaction: opportunity_attack
     when: {event: enemy_leaves_adjacent}
   - reaction: kin_ward          # 同門相護（5A-M1）

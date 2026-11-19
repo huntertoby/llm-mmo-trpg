@@ -18,7 +18,7 @@ effects:
   - {type: consume_stack, stack: combo_point, per_stack_permille: 200, affects: self}
   - {type: apply_status, status: bleed, duration: 2, condition: {type: self_stack_at_least, stack: combo_point, count: 5}}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [physical, melee, finisher]
 narrative:
   concept: 攢滿的節奏化成一道割喉的弧光

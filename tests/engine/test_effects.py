@@ -80,7 +80,7 @@ def test_elite_takes_30_percent_and_moves_to_nearest_safe_tile() -> None:
     result = run_effects(state, [MoveUnitEffect(unit_id=U1, dest=(1, 1))])
     boss = result.state.units[U1]
     assert not boss.downed
-    assert boss.hp == 80 - 24  # 80 × 30%
+    assert boss.hp == 800 - 240  # 800 × 30%（X10-2b ×10）
     # 距離 1 的候選：(1,0)、(0,1)、(2,1)、(1,2)；依 y 再依 x → (1, 0)
     assert boss.pos == Pos(x=1, y=0)
     moves = [e for e in result.events if isinstance(e, UnitMoved)]
@@ -262,7 +262,7 @@ def test_burning_ticks_twice_then_expires() -> None:
         m,
         [
             spawn(Team.ALLY, (0, 0), template("hero_fighter", max_hp=100)),
-            spawn(Team.ENEMY, (3, 0), template("bandit_archer", max_hp=100)),
+            spawn(Team.ENEMY, (3, 0), template("bandit_archer", max_hp=1000)),  # X10-2b ×10
         ],
     )
     state = give_turn(state, "unit_0001")
@@ -278,10 +278,10 @@ def test_burning_ticks_twice_then_expires() -> None:
     assert len(ticks) == 2
     for tick in ticks:
         assert tick.cause == "status" and tick.element.value == "fire" and tick.source_id == U1
-        assert len(tick.rolls) == 1 and 1 <= tick.rolls[0] <= 6
+        assert len(tick.rolls) == 1 and 10 <= tick.rolls[0] <= 60  # 骰面 ×10（X10-2b）
         # 盜賊弓手火焰弱點 +25%
         assert tick.element_mod_ppm == 1_250_000
-        assert tick.amount == max(1, tick.rolls[0] * 1250 // 1000)
+        assert tick.amount == max(10, tick.rolls[0] * 1250 // 1000)
     assert len(removed) == 1 and removed[0].reason == "expired"
     assert not state.units[U2].statuses
 
@@ -313,4 +313,4 @@ def test_burning_can_kill_at_turn_start_and_turn_passes() -> None:
 def test_with_rolls_helper_controls_damage() -> None:
     state = with_rolls(_pit_state(), [(6, 6)])
     result = run_effects(state, [DamageEffect(target_id=U1, dice="1d6")])  # type: ignore[arg-type]
-    assert next(e for e in result.events if isinstance(e, DamageDealt)).amount == 6
+    assert next(e for e in result.events if isinstance(e, DamageDealt)).amount == 60  # 骰面 ×10

@@ -3,10 +3,10 @@
 # 精英詞綴（霧隱的）由懸賞資料套上（content/world/season.yaml）；外觀（doll）見檔尾（5A-ART4）。
 id: sect_mist_swordsman
 name_zh: 霧中劍客
-attributes: {str: 14, dex: 12, con: 12, int: 8, wis: 10, wil: 10}
-max_hp: 30
+attributes: {str: 140, dex: 120, con: 120, int: 80, wis: 100, wil: 100}
+max_hp: 300
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: one_handed_sword
 ai_profile: brute
 resist: {}

@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: ice}
   - {type: add_stack, stack: hoarfrost, amount: 1, affects: enemies}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [ice, spell, builder]
 narrative:
   concept: 寒意一層一層滲進對手的骨頭

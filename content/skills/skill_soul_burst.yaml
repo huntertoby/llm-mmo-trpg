@@ -15,7 +15,7 @@ shape: {type: single, range: 5}
 effects:
   - {type: sacrifice_summon, dice: 2d8, radius: 1, element: fire}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [fire, spell, sacrifice]
 narrative:
   concept: 讓聽命的召喚物燃盡自己，在敵群中炸開

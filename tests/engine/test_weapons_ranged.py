@@ -90,7 +90,7 @@ def armed(
     **overrides: Any,
 ) -> UnitSpawn:
     overrides.setdefault("reactions", [])
-    overrides.setdefault("max_hp", 200)
+    overrides.setdefault("max_hp", 2000)  # X10-2b ×10
     overrides.setdefault("skills", [])
     return UnitSpawn(template=template(base, **overrides), weapon=w, team=team, position=pos)
 

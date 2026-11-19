@@ -39,10 +39,10 @@ def test_single_attribute_weapon_is_unchanged() -> None:
 
 
 def test_arcane_blade_start_has_at_most_two_off_route_candidates() -> None:
-    """魔導劍（力量 14）開局的第一次與第二次升級三選一：偏離的不超過 2 張，平均接近 1。"""
+    """魔導劍（力量 140）開局的第一次與第二次升級三選一：偏離的不超過 2 張，平均接近 1。"""
     counts: list[int] = []
     for seed in range(12):
-        run = new_keyword_run(LIB, "arcane_blade", ("charged", "concealed"), seed, {A.STR: 4})
+        run = new_keyword_run(LIB, "arcane_blade", ("charged", "concealed"), seed, {A.STR: 40})
         for made in range(2):
             offer = make_offer(LIB, run.model_copy(update={"offers_made": made}), "level_up")
             counts.append(len(offer.off_route))

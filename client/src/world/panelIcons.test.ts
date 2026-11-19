@@ -131,7 +131,7 @@ const card = (id: keyof typeof cards) => cards[id] as unknown as SkillCard;
 
 describe("技能面板用技能卡（#8、G3）", () => {
   it("花費行同戰鬥底列：主動照卡片、被動／反應另標", () => {
-    expect(cardCosts(card("skill_ash_harvest"))).toEqual(["AP 2", "法力 4", "冷卻 2 回合"]);
+    expect(cardCosts(card("skill_ash_harvest"))).toEqual(["AP 2", "法力 40", "冷卻 2 回合"]); // X10-2b：法力 ×10
     expect(cardCosts(card("skill_counterspell"))[0]).toBe("被動／反應");
   });
 

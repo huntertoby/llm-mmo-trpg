@@ -26,7 +26,7 @@ followup:
     - {type: damage, dice: 2d8, element: physical}
     - {type: apply_status, status: root, duration: 1}
 condition: null
-cost: {mana: 10, cooldown: 3}
+cost: {mana: 100, cooldown: 3}
 tags: [arcane, spell, aoe, control]
 narrative:
   concept: 以身為陣眼，讓千山的霧在四方鎖死

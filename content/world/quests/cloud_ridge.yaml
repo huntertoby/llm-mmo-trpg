@@ -215,7 +215,7 @@ story_skills:
       - {type: clear_surface, affects: tiles}
       - {type: damage, dice: 1d4, element: holy}
     condition: null
-    cost: {mana: 6, cooldown: 4}
+    cost: {mana: 60, cooldown: 4}
     tags: [wind, spell, reveal, area]
     narrative:
       concept: 一聲清嘯震開山霧，躲在霧裡的人與東西都無所遁形

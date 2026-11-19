@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d4, element: shadow}
   - {type: knock_prone}
 condition: null
-cost: {mana: 4}
+cost: {mana: 40}
 tags: [shadow, spell, curse, knockdown]
 narrative:
   concept: 一隻看不見的暗影之手壓在對手的肩上，把他按倒在地

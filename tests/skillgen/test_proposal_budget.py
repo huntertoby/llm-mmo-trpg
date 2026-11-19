@@ -219,7 +219,7 @@ def test_repairable_codes(library: ContentLibrary) -> None:
         (
             {"type": "restore_resource", "resource": "mana"},
             "spell",
-            (("amount", tuple(range(1, 11)), 1),),
+            (("amount", tuple(range(10, 101, 10)), 1),),  # X10-2b：法力回復量 ×10
         ),
         ({"type": "gamble"}, "spell", (("chance_permille", tuple(range(300, 951, 50)), 1),)),
         ({"type": "inscribe"}, "spell", (("duration", (1, 2, 3, 4, 5), "core"),)),

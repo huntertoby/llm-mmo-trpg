@@ -2,10 +2,10 @@
 # 近戰（單手劍）；由效用 AI 的 brute 模式控制。Phase 3-33e1：固有「倒地」（盾擊）。
 id: summon_skeleton_warrior
 name_zh: 骷髏戰士
-attributes: {str: 12, dex: 10, con: 12, int: 6, wis: 8, wil: 8}
-max_hp: 14
+attributes: {str: 120, dex: 100, con: 120, int: 60, wis: 80, wil: 80}
+max_hp: 140
 speed: 4
-armor_bonus: 2
+armor_bonus: 20
 weapon: one_handed_sword
 ai_profile: brute
 resist: {}

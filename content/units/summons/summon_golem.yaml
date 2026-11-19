@@ -3,10 +3,10 @@
 # 受傷（撞到的雙方都受撞擊傷害）。預設守護我；固有「撞擊」（普攻震退 1 格）。
 id: summon_golem
 name_zh: 石像
-attributes: {str: 14, dex: 6, con: 14, int: 4, wis: 6, wil: 6}
-max_hp: 12
+attributes: {str: 140, dex: 60, con: 140, int: 40, wis: 60, wil: 60}
+max_hp: 120
 speed: 3
-armor_bonus: 3
+armor_bonus: 30
 weapon: stone_fist
 ai_profile: brute
 default_mode: guard   # 6.29.5「AI 預設」＝守衛

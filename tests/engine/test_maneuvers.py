@@ -91,8 +91,9 @@ def test_trip_failure_leaves_target_standing() -> None:
 
 def test_trip_uses_dex_contest_and_shove_uses_str() -> None:
     """Trip 比敏捷、Shove 比力量（比例公式）：改變敏捷只影響 Trip 的成功率。"""
-    base = _duel(dex=12, str=16)  # 敏捷 12 vs 盜賊 14；力量 16 vs 12
-    quick = _duel(dex=28, str=16)  # 敏捷 28 vs 14 → 2 倍 → +4
+    # X10-2b 屬性 ×10
+    base = _duel(dex=120, str=160)  # 敏捷 120 vs 盜賊 140；力量 160 vs 120
+    quick = _duel(dex=280, str=160)  # 敏捷 280 vs 140 → 2 倍 → +4
     for state, trip_mod in ((base, -1), (quick, 4)):
         p_trip = preview(state, Trip(unit_id=U1, target_id=U2))
         p_shove = preview(state, Shove(unit_id=U1, target_id=U2))
@@ -210,7 +211,8 @@ def test_create_obstacle_blocks_movement_and_sight() -> None:
     assert fizzled == ["occupied", "occupied"]
     s = result.state
     oid = created[0].object_id
-    assert s.tile(2, 0).object_id == oid and s.objects[oid].hp == s.objects[oid].max_hp == 25
+    # X10-2b ×10
+    assert s.tile(2, 0).object_id == oid and s.objects[oid].hp == s.objects[oid].max_hp == 250
     assert not has_line_of_sight(s, (0, 0), (4, 0))
     s = give_turn(s, U1)
     with pytest.raises(IllegalActionError):

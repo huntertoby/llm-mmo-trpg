@@ -58,14 +58,14 @@ def test_an_exploding_die_rerolls_on_its_maximum(monkeypatch: pytest.MonkeyPatch
     state = battle(spell(damage(explode=True)), [(5, 3)])
     script_randint(monkeypatch, [19, 6, 6, 3])  # 命中；6 爆、6 再爆、3 停
     (hit,) = of(cast(state, target_id=U2), DamageDealt)
-    assert hit.rolls == (6, 6, 3) and hit.exploded == 2
+    assert hit.rolls == (60, 60, 30) and hit.exploded == 2  # 骰面 ×10（X10-2b）
 
 
 def test_the_explosion_stops_at_the_reroll_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(spell(damage(explode=True)), [(5, 3)])
     queue = script_randint(monkeypatch, [19, 6, 6, 6])  # 第三顆也是 6，但每顆最多再擲 2 次
     (hit,) = of(cast(state, target_id=U2), DamageDealt)
-    assert hit.rolls == (6, 6, 6) and hit.exploded == 2 and queue == []
+    assert hit.rolls == (60, 60, 60) and hit.exploded == 2 and queue == []
 
 
 def test_a_die_that_does_not_reach_its_maximum_does_not_explode(
@@ -74,21 +74,21 @@ def test_a_die_that_does_not_reach_its_maximum_does_not_explode(
     state = battle(spell(damage(explode=True)), [(5, 3)])
     queue = script_randint(monkeypatch, [19, 5])
     (hit,) = of(cast(state, target_id=U2), DamageDealt)
-    assert hit.rolls == (5,) and hit.exploded == 0 and queue == []
+    assert hit.rolls == (50,) and hit.exploded == 0 and queue == []
 
 
 def test_without_explode_the_maximum_roll_is_final(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(spell(damage()), [(5, 3)])
     queue = script_randint(monkeypatch, [19, 6])
     (hit,) = of(cast(state, target_id=U2), DamageDealt)
-    assert hit.rolls == (6,) and hit.exploded == 0 and queue == []
+    assert hit.rolls == (60,) and hit.exploded == 0 and queue == []
 
 
 def test_every_die_of_a_critical_hit_can_explode(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(spell(damage(explode=True)), [(5, 3)])
     script_randint(monkeypatch, [20, 6, 2, 4])  # 自然 20 暴擊：2 顆骰，第一顆爆骰
     (hit,) = of(cast(state, target_id=U2), DamageDealt)
-    assert hit.crit and hit.rolls == (6, 2, 4) and hit.exploded == 1
+    assert hit.crit and hit.rolls == (60, 20, 40) and hit.exploded == 1
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +143,7 @@ def test_the_discount_explode_and_crit_range_can_be_combined(
     state = battle(spell(damage(explode=True), damage_permille=750, crit_range=17), [(5, 3)])
     script_randint(monkeypatch, [18, 6, 4, 6, 1])  # 18 暴擊：2 顆骰，兩顆都是 6 而各自爆骰
     (hit,) = of(cast(state, target_id=U2), DamageDealt)
-    assert hit.crit and hit.rolls == (6, 4, 6, 1) and hit.exploded == 2
+    assert hit.crit and hit.rolls == (60, 40, 60, 10) and hit.exploded == 2  # 骰面 ×10
     assert hit.multiplier_permille == 750
 
 
@@ -208,17 +208,17 @@ def test_reaching_the_threshold_strikes_the_caster_and_clears_the_stacks(
     assert "overload_surge" not in result.state.units[U1].stacks
     hit, back = of(result, DamageDealt)
     assert hit.multiplier_permille == 1800  # 以施放前的 4 層計算
-    assert (back.target_id, back.cause, back.rolls) == (U1, "backlash", (3, 5))
+    assert (back.target_id, back.cause, back.rolls) == (U1, "backlash", (30, 50))  # 骰面 ×10
     assert result.state.units[U1].hp == hp - back.amount
 
 
 def test_the_overload_backlash_never_kills_the_caster(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(surge_skill(), [(5, 3)])
     state.units[U1].stacks["overload_surge"] = 4
-    state.units[U1].hp = 2
+    state.units[U1].hp = 20  # X10-2b ×10：反噬留下的 HP 下限 1 × 10
     script_randint(monkeypatch, [19, 4, 6, 6])
     result = cast(state, target_id=U2)
-    assert result.state.units[U1].hp == 1 and result.state.units[U1].alive
+    assert result.state.units[U1].hp == 10 and result.state.units[U1].alive
 
 
 def test_overload_bonus_is_a_pure_function_of_stacks_and_tags() -> None:

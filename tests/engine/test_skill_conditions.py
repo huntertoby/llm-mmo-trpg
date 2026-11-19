@@ -72,11 +72,17 @@ def test_skill_condition_target_hp_below() -> None:
 
 def test_target_hp_below_is_strict_at_the_boundary() -> None:
     skill = _with_condition({"type": "target_hp_below", "permille": 500})
-    state = battle(skill, [(4, 3)])
-    state.units[U2].max_hp = 36  # 邊界測試要偶數 HP（範本 HP 隨平衡調整）
-    half = state.units[U2].max_hp // 2
-    assert not _usable(_set_hp(battle(skill, [(4, 3)]), U2, half))  # 剛好 50% 不算「低於」
-    assert _usable(_set_hp(battle(skill, [(4, 3)]), U2, half - 1))
+
+    # 邊界測試要偶數 HP（範本 HP 隨平衡調整）。X10-2b：原本改的是沒用到的 state，實際跑的是範本 HP
+    # （舊 35 時 18／17 剛好落在 17.5 兩側）；×10 後範本 350 不再成立，改成每場都設成 360
+    def at(hp: int) -> BattleState:
+        state = battle(skill, [(4, 3)])
+        state.units[U2].max_hp = 360
+        return _set_hp(state, U2, hp)
+
+    half = 360 // 2
+    assert not _usable(at(half))  # 剛好 50% 不算「低於」
+    assert _usable(at(half - 1))
 
 
 def test_skill_condition_self_hp_below() -> None:

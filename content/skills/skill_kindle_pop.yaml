@@ -20,7 +20,7 @@ effects:
       - {type: damage, dice: 2d8, element: fire}
 
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [fire, spell, detonate]
 narrative:
   concept: 把目標身上的火焰收攏成一團，轟然引爆

@@ -17,7 +17,7 @@ shape: {type: ground_tile, range: 2}
 effects:
   - {type: summon, unit: summon_ember_whelp, duration: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [fire, spell, summon]
 narrative:
   concept: 母獸發光的腹部一陣收縮，一隻小小的餘燼蜥滾了出來

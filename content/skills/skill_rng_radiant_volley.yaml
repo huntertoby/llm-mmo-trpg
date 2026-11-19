@@ -15,7 +15,7 @@ shape: {type: cross, range: 5}
 effects:
   - {type: damage, multiplier_permille: 900, element: holy}
 condition: null
-cost: {stamina: 10, cooldown: 3}
+cost: {stamina: 100, cooldown: 3}
 tags: [holy, ranged, aoe]
 narrative:
   concept: 祝福過的箭束在空中散開，化成一片光雨

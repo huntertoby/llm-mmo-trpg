@@ -3,10 +3,10 @@
 # 懸賞「熔核領主」（19.8）與熔岩洞窟的精英陣容。
 id: molten_lord
 name_zh: 熔核領主
-attributes: {str: 16, dex: 8, con: 18, int: 4, wis: 10, wil: 12}
-max_hp: 64
+attributes: {str: 160, dex: 80, con: 180, int: 40, wis: 100, wil: 120}
+max_hp: 640
 speed: 4
-armor_bonus: 5
+armor_bonus: 50
 weapon: stone_fist
 ai_profile: brute
 resist: {}

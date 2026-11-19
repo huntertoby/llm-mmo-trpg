@@ -3,10 +3,10 @@
 # 中立野獸：飛行、帶電俯衝。
 id: thunder_hawk
 name_zh: 雷羽鷹
-attributes: {str: 10, dex: 16, con: 8, int: 4, wis: 12, wil: 8}
-max_hp: 20
+attributes: {str: 100, dex: 160, con: 80, int: 40, wis: 120, wil: 80}
+max_hp: 200
 speed: 6
-armor_bonus: 1
+armor_bonus: 10
 weapon: talons
 ai_profile: flanker
 resist: {}

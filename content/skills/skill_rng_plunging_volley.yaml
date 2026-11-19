@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 500
     condition: {type: height_advantage}
 condition: null
-cost: {stamina: 10, cooldown: 3}
+cost: {stamina: 100, cooldown: 3}
 tags: [physical, ranged, aoe, height]
 narrative:
   concept: 從高處把箭雨往下潑，站得越高越密

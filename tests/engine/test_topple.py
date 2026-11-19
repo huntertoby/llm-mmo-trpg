@@ -138,8 +138,8 @@ def test_units_under_the_pillar_take_damage_and_fall_prone(monkeypatch: pytest.M
     assert event.units == (U2, U3)
     hits = [d for d in of(result.events, DamageDealt) if d.cause == "topple"]
     assert [(d.target_id, d.source_id, d.rolls, d.element.value) for d in hits] == [
-        (U2, U1, (4, 4), "physical"),
-        (U3, U1, (4, 4), "physical"),
+        (U2, U1, (40, 40), "physical"),  # 骰面 ×10（X10-2b）
+        (U3, U1, (40, 40), "physical"),
     ]
     prone = {s.target_id for s in of(result.events, StatusApplied) if s.status_id == "prone"}
     assert prone == {U2, U3}
@@ -164,8 +164,8 @@ def test_a_breakable_object_under_the_pillar_takes_the_same_damage(
     crate = ObjectId("obj_0002")
     assert event.objects == (crate,) and tiles(event) == [(4, 3), (5, 3)]
     (hit,) = of(result.events, ObjectDamaged)
-    assert (hit.object_id, hit.cause, hit.rolls, hit.source_id) == (crate, "topple", (4, 4), U1)
-    assert result.state.objects[crate].hp == 15 - 8
+    assert (hit.object_id, hit.cause, hit.rolls, hit.source_id) == (crate, "topple", (40, 40), U1)
+    assert result.state.objects[crate].hp == 150 - 80  # X10-2b ×10
     assert event.rubble_pos == Pos(x=5, y=3)
 
 
@@ -197,7 +197,7 @@ def test_a_toppled_pillar_crushes_old_rubble_because_rubble_is_breakable(
     rubble = ObjectId("obj_0002")
     assert event.objects == (rubble,) and tiles(event) == [(4, 3), (5, 3)]
     assert event.units == (U2,)
-    assert result.state.objects[rubble].hp == 15 - 8
+    assert result.state.objects[rubble].hp == 150 - 80
 
 
 def test_rubble_is_a_breakable_object_with_the_crate_hp_and_can_be_destroyed(

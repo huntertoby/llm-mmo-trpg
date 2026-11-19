@@ -17,7 +17,7 @@ shape: {type: square3, range: 4}
 effects:
   - {type: reveal, duration: 2}
 condition: null
-cost: {mana: 4, cooldown: 3}
+cost: {mana: 40, cooldown: 3}
 tags: [light, spell, scout, reveal]
 narrative:
   concept: 把藏在暗處的人與機關全部照出來

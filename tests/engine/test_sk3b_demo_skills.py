@@ -61,7 +61,7 @@ def test_tidal_draw_restores_mana_when_your_water_is_exploited(
     result = use(state)
     fired = [e for e in result.events if isinstance(e, SkillTriggered)]
     assert [(e.unit_id, e.skill_id) for e in fired] == [(U3, demo.id)]
-    assert result.state.units[U3].mana == 1
+    assert result.state.units[U3].mana == 10  # X10-2b 法力 ×10
 
 
 def test_fate_deflect_forces_the_enemy_to_keep_the_worse_roll(

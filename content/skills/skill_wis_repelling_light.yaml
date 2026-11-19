@@ -16,7 +16,7 @@ effects:
   - {type: push, distance: 2}
   - {type: damage, dice: 1d6, element: holy}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [holy, spell, control]
 narrative:
   concept: 一股聖光的衝擊，把邪物推得撞上牆

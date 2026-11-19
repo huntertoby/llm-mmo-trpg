@@ -16,7 +16,7 @@ effects:
   - {type: knock_prone}
   - {type: damage, multiplier_permille: 400}
 condition: null
-cost: {stamina: 6, cooldown: 2}
+cost: {stamina: 60, cooldown: 2}
 tags: [physical, ranged, control]
 narrative:
   concept: 瞄準腳踝，一箭讓對手跪下

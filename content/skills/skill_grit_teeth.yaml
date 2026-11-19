@@ -17,7 +17,7 @@ effects:
   - {type: shield, dice: 2d4, affects: self}
   - {type: consume_stack, stack: fury, per_stack_permille: 250, affects: self}
 condition: null
-cost: {mana: 3, cooldown: 2}
+cost: {mana: 30, cooldown: 2}
 tags: [physical, rage, shield, finisher]
 narrative:
   concept: 把滿腔怒火壓成一口硬氣，硬扛下一波攻勢

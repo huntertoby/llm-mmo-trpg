@@ -20,7 +20,7 @@ effects:
     element: fire
     condition: {type: target_has_status, status: burning}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [fire, spell, combo]
 narrative:
   concept: 對正在燃燒的敵人再補一道火，讓火勢一口氣竄高

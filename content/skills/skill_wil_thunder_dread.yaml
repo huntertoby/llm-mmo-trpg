@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d6, element: shadow}
   - {type: damage, dice: 1d6, element: lightning}
 condition: null
-cost: {mana: 9, cooldown: 2}
+cost: {mana: 90, cooldown: 2}
 tags: [shadow, spell, curse, lightning, chain]
 narrative:
   concept: 被詛咒的雷不劈最近的導體，專挑心裡最怕它的人

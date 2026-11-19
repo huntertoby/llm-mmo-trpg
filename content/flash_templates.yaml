@@ -39,7 +39,7 @@ rules:
   #   area_tile_shapes    「範圍 +1」用在地面格：指定格 → 十字（半徑 +1）
   #   extend_effects      「延長」原本的狀態／表面／區域延長不了時，改延長這些效果的回合（召喚物存活、障礙、刻印）
   #   extend_trap         「延長」也加陷阱持續回合（trap.rounds +1）
-  trigger_flat_bonus: 1
+  trigger_flat_bonus: 10
   area_trap_shapes: [single, cross, square3]
   area_tile_shapes: [ground_tile, cross]
   extend_effects: [summon, create_obstacle, inscribe]
@@ -76,8 +76,8 @@ rules:
     cost_cuts:
       - {field: stance_upkeep, step: 1}
       - {field: cooldown, step: 1}
-      - {field: mana, step: 1}
-      - {field: stamina, step: 1}
+      - {field: mana, step: 10}       # 法力、耐力是量類：一格 10（X10-2b，步距 × quantity_scale）
+      - {field: stamina, step: 10}
       - {field: ap_cost, step: 1}
 
 # 出題方式（#70，使用者：「選擇 類別 多花1點」）。重閃和閃現同價。
@@ -644,7 +644,7 @@ minor:
     usage_base: 1
     op: self_rider
     kinds: [stance]
-    rider: {type: restore_resource, resource: mana, amount: 2, affects: self}
+    rider: {type: restore_resource, resource: mana, amount: 20, affects: self}
     prefix_zh: 蓄能
     summary_zh: 姿態附帶回魔：進入姿態時回復法力（回復量依預算）
     headline_zh: "進入姿態時回一點法力"

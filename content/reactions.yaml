@@ -32,7 +32,7 @@ reactions:
     description_zh: 被近戰攻擊命中後，傷害減半，消耗 10 耐力。
     effect: reduce_damage
     events: [targeted_by_melee, targeted_by_attack]
-    stamina_cost: 10
+    stamina_cost: 100
     damage_reduction_permille: 500
   - id: opportunity_attack
     name_zh: 藉機攻擊
@@ -70,7 +70,7 @@ reactions:
     range: 2
     kin_tag: sect
     shield_dice: 1d4
-    shield_flat: 2
+    shield_flat: 20
     blocked_by_silence: true
 # events（Phase 3E-2e）：反應事件的中文名與說明，ReactionWhen.event 的每個值都要有一列（schema 與測試檢查）；
 # 技能卡的「反應時機」部件與 glossary API 用，前端不再手寫。
@@ -94,6 +94,6 @@ events:
 default_rules:
   - reaction: block
     when: {event: targeted_by_melee}
-    unless: {self_stamina_below: 20}
+    unless: {self_stamina_below: 200}
   - reaction: opportunity_attack
     when: {event: enemy_leaves_adjacent}

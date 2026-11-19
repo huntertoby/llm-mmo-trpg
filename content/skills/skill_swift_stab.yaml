@@ -17,7 +17,7 @@ effects:
   - {type: add_stack, stack: combo_point, amount: 1, affects: self}
   - {type: add_stack, stack: combo_point, amount: 1, affects: self, condition: {type: from_behind}}
 condition: null
-cost: {stamina: 6}
+cost: {stamina: 60}
 tags: [physical, melee, builder]
 narrative:
   concept: 快得看不清的一刺，繞到背後時更是一刺接一刺

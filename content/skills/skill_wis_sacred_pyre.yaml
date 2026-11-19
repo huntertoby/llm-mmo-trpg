@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 2d6, element: holy}
   - {type: create_surface, surface: fire, duration: 2}
 condition: null
-cost: {mana: 8, cooldown: 2}
+cost: {mana: 80, cooldown: 2}
 tags: [holy, fire, spell, area]
 narrative:
   concept: 一道十字聖光落下，在地上留下久久不熄的聖火

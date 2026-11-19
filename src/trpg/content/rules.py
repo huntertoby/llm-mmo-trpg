@@ -20,7 +20,7 @@ import itertools
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal, localcontext
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -681,11 +681,26 @@ class CoreRules(ContentModel):
 
     def mana_cost(self, mana: int) -> int:
         """施放者實際付的法力（BAL-4c；BAL-15b 起敵我都適用）：``mana × mana_cost_permille‰``，
-        四捨五入（半數進位）、原本有費用者至少 1；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
+        四捨五入（半數進位）、原本有費用者至少 1 × ``quantity_scale``（X10-2b；原費用比這個還少時
+        以原費用為下限，打折不會變貴）；沒有費用或倍率 1000 時原值。整數運算、確定性。"""
         permille = self.mana_cost_permille
         if mana == 0 or permille == _PERMILLE:
             return mana
-        return max(1, (mana * permille + _PERMILLE // 2) // _PERMILLE)
+        floor = min(mana, self.quantity_scale)
+        return max(floor, (mana * permille + _PERMILLE // 2) // _PERMILLE)
+
+    def cost_floor(self, field: str) -> int:
+        """技能代價減一格的單位與最少留下的量（X10-2b）：法力、耐力是量類，1 × ``quantity_scale``；
+        冷卻、維持費、AP 等是 1。"""
+        return self.quantity_scale if field in ("mana", "stamina") else 1
+
+    def scaled_cost(self, cost: Mapping[str, Any]) -> dict[str, Any]:
+        """程式裡寫死的候選費用（換算前的單位）換成新單位：法力、耐力 × ``quantity_scale``，
+        冷卻等不變（X10-2b）。"""
+        return {
+            k: v * self.quantity_scale if k in ("mana", "stamina") and isinstance(v, int) else v
+            for k, v in cost.items()
+        }
 
     def max_hp_for(self, base_hp: int, con: int) -> int:
         """最大 HP ＝ 基礎 HP ＋（體質 − ``hp_con_base``）× ``hp_per_con_point``（至少 1）。"""

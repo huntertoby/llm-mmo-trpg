@@ -2,10 +2,10 @@
 # 熔爐母獸：召喚，每 2 回合產下 1 隻幼蜥（召喚原語，冷卻 2）。
 id: furnace_matriarch
 name_zh: 熔爐母獸
-attributes: {str: 12, dex: 8, con: 16, int: 8, wis: 12, wil: 12}
-max_hp: 38
+attributes: {str: 120, dex: 80, con: 160, int: 80, wis: 120, wil: 120}
+max_hp: 380
 speed: 3
-armor_bonus: 2
+armor_bonus: 20
 weapon: fangs
 ai_profile: support
 resist: {}

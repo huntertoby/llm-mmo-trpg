@@ -3,10 +3,10 @@
 # 山中修士・前排：「劍勢」連斬；被同門相護的前排（同門相護由補師型修士提供，5A-M1）。
 id: sect_swordsman
 name_zh: 持劍弟子
-attributes: {str: 14, dex: 12, con: 12, int: 8, wis: 10, wil: 10}
-max_hp: 30
+attributes: {str: 140, dex: 120, con: 120, int: 80, wis: 100, wil: 100}
+max_hp: 300
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: one_handed_sword
 ai_profile: brute
 resist: {}

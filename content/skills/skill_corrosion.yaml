@@ -17,7 +17,7 @@ effects:
   - {type: apply_status, status: vulnerable, duration: 3}
   - {type: damage, dice: 1d8, element: poison}
 condition: null
-cost: {mana: 7, cooldown: 3}
+cost: {mana: 70, cooldown: 3}
 tags: [poison, spell, control]
 narrative:
   concept: 腐蝕性的毒液爬上目標，讓他中毒，也讓他的護甲與皮肉變得脆弱

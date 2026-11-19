@@ -19,7 +19,7 @@ effects:
   - {type: damage, multiplier_permille: 1300}
   - {type: consume_stack, stack: fury, per_stack_permille: 200, affects: self}
 condition: {type: self_stack_at_least, stack: fury, count: 4}
-cost: {stamina: 10, cooldown: 1}
+cost: {stamina: 100, cooldown: 1}
 tags: [physical, melee, finisher, rage]
 narrative:
   concept: 挨過的每一下都記在帳上，滿了就一斧連本帶利砍回去

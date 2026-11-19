@@ -281,7 +281,7 @@ def test_a_toppled_wall_falls_the_way_it_was_pushed() -> None:
 def test_the_wall_has_hp_and_can_be_destroyed() -> None:
     state, wid = summoned(WALL, at=(3, 3))
     ctx = Ctx(state.clone())
-    execute(ctx, [DamageEffect(source_id=U2, target_id=wid, flat=99, min_damage=99)])
+    execute(ctx, [DamageEffect(source_id=U2, target_id=wid, flat=990, min_damage=990)])
     assert not ctx.state.units[wid].alive
     assert has_line_of_sight(ctx.state, (1, 3), (5, 3))
 

@@ -15,7 +15,7 @@ effects:
   - {type: apply_status, status: blinded, duration: 1}
   - {type: damage, dice: 1d4, element: shadow}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [shadow, spell, control, blind]
 narrative:
   concept: 在敵群之中撒下一團黑霧，讓他們只看得見眼前幾步

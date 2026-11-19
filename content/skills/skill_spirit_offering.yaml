@@ -15,7 +15,7 @@ shape: {type: single, range: 5}
 effects:
   - {type: sacrifice_summon, dice: 2d8, radius: 1}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [holy, spell, sacrifice, support]
 narrative:
   concept: 召喚物把自己的力量還給身邊的同伴

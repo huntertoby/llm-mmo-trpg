@@ -4,10 +4,10 @@
 # 外觀：副手是門派大盾（RG-4，`kite_shield` 的敵人專用形制 sect_great）：青面月白邊的雲紋碑盾、盾心三峰山紋（docs/art/RG樣張.md 9.1、9.8）。
 id: sect_shield_disciple
 name_zh: 持盾弟子
-attributes: {str: 13, dex: 10, con: 14, int: 8, wis: 10, wil: 10}
-max_hp: 24
+attributes: {str: 130, dex: 100, con: 140, int: 80, wis: 100, wil: 100}
+max_hp: 240
 speed: 4
-armor_bonus: 6
+armor_bonus: 60
 weapon: one_handed_sword
 ai_profile: guard
 resist: {physical: 100}

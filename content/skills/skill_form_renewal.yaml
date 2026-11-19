@@ -16,7 +16,7 @@ shape: {type: self}
 effects:
   - {type: heal, dice: 2d4, form_bonus_permille: 300}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [nature, spell, heal]
 narrative:
   concept: 野獸的身體癒合得比人快，變了身的時候更快

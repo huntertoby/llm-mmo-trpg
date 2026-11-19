@@ -16,7 +16,7 @@ shape: {type: single, range: weapon}
 effects:
   - {type: damage, multiplier_permille: 2000}
 condition: {type: self_stack_at_least, stack: combo_point, count: 3}
-cost: {stamina: 8, cooldown: 1}
+cost: {stamina: 80, cooldown: 1}
 tags: [physical, melee]
 narrative:
   concept: 節奏起來之後，每一刀都順著上一刀的勢落下

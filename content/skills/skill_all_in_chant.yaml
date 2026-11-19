@@ -16,7 +16,7 @@ shape: {type: square3, range: 4}
 effects:
   - {type: damage, dice: 2d12, element: lightning}
 condition: null
-cost: {mana: 10, cooldown: 4, self_status: {status: silenced, duration: 2}}
+cost: {mana: 100, cooldown: 4, self_status: {status: silenced, duration: 2}}
 tags: [lightning, spell, area]
 narrative:
   concept: 賭上接下來的每一句咒語，換這一發最大的

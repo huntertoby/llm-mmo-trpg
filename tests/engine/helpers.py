@@ -271,11 +271,12 @@ def spawn(
 
 
 def giant_template(base: str = "bandit", **overrides: object) -> UnitTemplate:
-    """合成的不動巨型頭目（GB-1a，05 5.12.4）：佔 3×3、帶 ``boss`` 標籤、速度 0、預設 200 HP。
+    """合成的不動巨型頭目（GB-1a，05 5.12.4）：佔 3×3、帶 ``boss`` 標籤、速度 0、預設 2000 HP
+    （X10-2b ×10）。
     只放在測試裡，不進 ``content/``；**不帶** ``immovable`` 標籤（證明免疫來自佔格，不是標籤）。"""
     overrides.setdefault("tags", ("boss",))
     overrides.setdefault("speed", 0)
-    overrides.setdefault("max_hp", 200)
+    overrides.setdefault("max_hp", 2000)
     return template(base, footprint=3, **overrides)
 
 
@@ -417,9 +418,9 @@ def make_skill(
 def caster_template(
     skills: Sequence[SkillDef | str], *, base: str = "hero_mage", **overrides: object
 ) -> UnitTemplate:
-    """施放者範本：沒有反應規則、法力 99、裝備 ``skills``。"""
+    """施放者範本：沒有反應規則、法力 990（X10-2b ×10）、裝備 ``skills``。"""
     ids = [s if isinstance(s, str) else s.id for s in skills]
-    return template(base, reactions=[], max_mana=99, skills=ids, **overrides)
+    return template(base, reactions=[], max_mana=990, skills=ids, **overrides)
 
 
 def answered(result: ResolveResult) -> ResolveResult:

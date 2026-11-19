@@ -15,7 +15,7 @@ shape: {type: ground_tile, range: 4}
 effects:
   - {type: summon, unit: summon_guardian_spirit, duration: 4}
 condition: null
-cost: {mana: 8, cooldown: 4}
+cost: {mana: 80, cooldown: 4}
 tags: [holy, spell, summon, support]
 narrative:
   concept: 召喚一位守護靈，每回合替最虛弱的同伴撐起護盾

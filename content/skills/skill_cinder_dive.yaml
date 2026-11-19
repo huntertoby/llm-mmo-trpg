@@ -17,7 +17,7 @@ effects:
   - {type: damage, dice: 1d6, element: fire}
   - {type: apply_status, status: burning, duration: 2}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [fire, spell, area]
 narrative:
   concept: 翅膜一抖，火塵像雪一樣落下，沾到的地方都燒了起來

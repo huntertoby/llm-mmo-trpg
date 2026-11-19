@@ -16,7 +16,7 @@ effects:
   - {type: heal, dice: 1d8, affects: allies}
   - {type: add_stack, stack: holy_power, amount: 1, affects: self}
 condition: null
-cost: {mana: 5}
+cost: {mana: 50}
 tags: [holy, spell, heal, builder]
 narrative:
   concept: 每一次療癒都在你身上留下一點未散的光

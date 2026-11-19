@@ -21,7 +21,7 @@ effects:
     element: physical
     condition: {type: height_advantage}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [arcane, spell, combo, height]
 narrative:
   concept: 把腳下的高度化成一道向下的氣流

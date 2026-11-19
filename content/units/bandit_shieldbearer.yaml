@@ -2,16 +2,16 @@
 # 盾牌讓格擋對遠程攻擊也有效（targeted_by_attack）；耐力降到 10 以下時不再格擋。
 id: bandit_shieldbearer
 name_zh: 盜賊盾衛
-attributes: {str: 13, dex: 10, con: 14, int: 8, wis: 10, wil: 10}
-max_hp: 24   # BAL-4b 原型專用：×1.2（原 20，四捨五入）；Boss 戰護衛見 bandit_shieldbearer_guard
+attributes: {str: 130, dex: 100, con: 140, int: 80, wis: 100, wil: 100}
+max_hp: 240   # BAL-4b 原型專用：×1.2（原 20，四捨五入）；Boss 戰護衛見 bandit_shieldbearer_guard
 speed: 4
-armor_bonus: 6
+armor_bonus: 60
 weapon: one_handed_sword
 ai_profile: guard
 reactions:
   - reaction: block
     when: {event: targeted_by_attack}
-    unless: {self_stamina_below: 10}
+    unless: {self_stamina_below: 100}
   - reaction: opportunity_attack
     when: {event: enemy_leaves_adjacent}
 resist: {physical: 100}

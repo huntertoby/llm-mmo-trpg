@@ -132,7 +132,7 @@ def test_a_high_intelligence_adds_no_damage_to_a_strength_weapon_skill() -> None
 
 def test_hit_uses_the_weapon_attack_value_and_not_the_skill_attribute() -> None:
     rolled = []
-    for intel in (10, 40):
+    for intel in (100, 400):  # X10-2b 屬性 ×10
         result = cast(
             hit_with(_state(_weapon_skill(), "one_handed_sword", {"int": intel})), target_id=U2
         )
@@ -146,14 +146,14 @@ def test_status_save_and_knock_prone_contests_use_the_weapon_attribute() -> None
         {"type": "apply_status", "status": "slow", "duration": 2},
     ]
     saves = []
-    for intel in (10, 40):
+    for intel in (100, 400):  # X10-2b 屬性 ×10
         state = _state(_weapon_skill(effects), "one_handed_sword", {"str": 13, "int": intel})
         save = of(cast(hit_with(state), target_id=U2), StatusSaveRolled)[0]
         saves.append((save.attack_attr, save.attack_value))
     assert saves[0] == saves[1] == (Attribute.STR, 13)
     prone: list[dict[str, Any]] = [STRIKE, {"type": "knock_prone"}]
     mods = []
-    for intel in (10, 40):
+    for intel in (100, 400):  # X10-2b 屬性 ×10
         state = _state(_weapon_skill(prone), "one_handed_sword", {"str": 13, "int": intel})
         mods.append(of(cast(hit_with(state), target_id=U2), ManeuverRolled)[0].modifier)
     assert mods[0] == mods[1]
@@ -165,7 +165,7 @@ def test_preview_status_chance_follows_the_weapon() -> None:
         {"type": "apply_status", "status": "slow", "duration": 2},
     ]
     chances = []
-    for intel in (10, 40):
+    for intel in (100, 400):  # X10-2b 屬性 ×10
         state = _state(_weapon_skill(effects), "one_handed_sword", {"int": intel})
         view = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_id=U2))
         chances.append(view.targets[0].status_chances[0].apply_chance)
@@ -175,18 +175,18 @@ def test_preview_status_chance_follows_the_weapon() -> None:
 def test_mastery_for_a_weapon_skill_looks_at_the_weapon_attribute() -> None:
     skill = _weapon_skill(rarity="epic", mastery="range", shape={"type": "single", "range": 2})
     # 力量武器：力量是最高屬性 → 專精生效，即使技能自己的屬性（智力）不是最高
-    state = _state(skill, "one_handed_sword", {"str": 16, "int": 10})
+    state = _state(skill, "one_handed_sword", {"str": 160, "int": 100})  # X10-2b 屬性 ×10
     assert mastery_active(state.units[U1], skill)
     # 力量不是最高屬性 → 不生效，即使技能自己的屬性（智力）是最高
-    state = _state(skill, "one_handed_sword", {"str": 10, "int": 18})
+    state = _state(skill, "one_handed_sword", {"str": 100, "int": 180})
     assert not mastery_active(state.units[U1], skill)
     # 雙屬性取平均：兩個都要是最高（平均不低於最高）才生效
-    state = _state(skill, "scythe", {"str": 14, "wil": 14})
+    state = _state(skill, "scythe", {"str": 140, "wil": 140})
     assert mastery_active(state.units[U1], skill)
-    state = _state(skill, "scythe", {"str": 10, "wil": 16})
+    state = _state(skill, "scythe", {"str": 100, "wil": 160})
     assert not mastery_active(state.units[U1], skill)
     # 雙屬性取較高：任一個是最高即可
-    state = _state(skill, "dagger", {"str": 10, "dex": 16})
+    state = _state(skill, "dagger", {"str": 100, "dex": 160})
     assert mastery_active(state.units[U1], skill)
 
 

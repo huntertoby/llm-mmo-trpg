@@ -295,6 +295,11 @@ def minimal_filler(library: ContentLibrary) -> NumberFiller:
                 )
                 if required and effect.get(name) is None:
                     effect[name] = _min_value(spec)
+                    if (type_id, name) == ("restore_resource", "amount") and effect.get(
+                        "resource"
+                    ) == "mana":
+                        # 回復法力是量類：下限 1 × 量類倍率（X10-2b）；冷卻回合不乘
+                        effect[name] = max(effect[name], library.ruleset.core.quantity_scale)
             if isinstance(effect.get("scaling"), dict):
                 effect["scaling"].update(DEFAULT_SCALING)
 

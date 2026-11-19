@@ -18,7 +18,7 @@ effects:
   - {type: damage, dice: 1d6, element: poison}
   - {type: create_surface, surface: poison, duration: 4}
 condition: null
-cost: {mana: 6, cooldown: 3}
+cost: {mana: 60, cooldown: 3}
 tags: [poison, spell, trap]
 narrative:
   concept: 埋下一個毒囊，敵人踩上去就會破裂，在一片範圍留下毒池

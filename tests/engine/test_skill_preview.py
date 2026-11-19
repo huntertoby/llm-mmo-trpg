@@ -85,7 +85,8 @@ def test_preview_expected_damage_matches_exhaustive_enumeration() -> None:
     # （火焰箭的骰子隨預算校準調整，從技能資料讀取）
     dice = library().ruleset.skill_def(FIRE_BOLT).effects[0].dice
     assert dice is not None
-    average = Fraction(dice.count * (dice.sides + 1), 2)
+    scale = library().ruleset.core.quantity_scale  # 骰面 ×10（X10-2b）
+    average = Fraction(dice.count * (dice.sides + 1), 2) * scale
     attr = state.units[U1].attributes["int"]  # type: ignore[index]
     flat = Fraction(attr, 2)
     crit_share = target.crit_chance / target.hit_chance

@@ -230,7 +230,7 @@ def test_on_damaged_does_not_trigger_when_that_damage_downs_the_holder(
 def test_on_turn_start_triggers_after_the_turn_start_effects() -> None:
     skill = passive("skill_t_ts", "on_turn_start", target="self")
     state = scene([skill])
-    state.units[U1].hp = 10
+    state.units[U1].hp = 100  # X10-2b ×10
     state.units[U1].statuses = [StatusInstance("poison", 2, U2)]
     result = resolve(give_turn(state, U2), EndTurn(unit_id=U2))
     kinds = [type(e) for e in result.events]

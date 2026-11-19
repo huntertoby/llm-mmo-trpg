@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 2}
 effects:
   - {type: summon, unit: summon_golem, duration: 2}
 condition: null
-cost: {stamina: 8, cooldown: 4}
+cost: {stamina: 80, cooldown: 4}
 tags: [earth, melee, summon]
 narrative:
   concept: 用武器重重砸地，震出一尊石像替你頂住前線、把敵人撞開

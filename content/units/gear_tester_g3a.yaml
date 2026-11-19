@@ -3,10 +3,10 @@
 #   uv run trpg battle --map test_flat_6x6 --allies gear_tester_g3a --enemies bandit,bandit --seed 7 --log-json <檔案>
 id: gear_tester_g3a
 name_zh: 蓄電戰士
-attributes: {str: 16, dex: 12, con: 14, int: 10, wis: 10, wil: 10}
-max_hp: 48
+attributes: {str: 160, dex: 120, con: 140, int: 100, wis: 100, wil: 100}
+max_hp: 480
 speed: 5
-armor_bonus: 4
+armor_bonus: 40
 weapon: one_handed_sword
 resist: {physical: 100}
 element_mods: {}

@@ -172,7 +172,7 @@ def test_affix_names_fill_numbers_and_names_from_fields() -> None:
     assert affixes["affix_rule_bleeding_wake"].name_zh == (
         "規則改變「血痕」：你步行經過敵人的相鄰格時，對他施加「流血」2 回合（每次移動每個敵人一次）"
     )
-    assert affixes["affix_cost_blood"].name_zh == "回合開始時失去 2 HP（不會致死）；技能冷卻 −1"
+    assert affixes["affix_cost_blood"].name_zh == "回合開始時失去 20 HP（不會致死）；技能冷卻 −1"
     assert affixes["affix_trig_summon_blast"].name_zh.startswith(
         "召喚物倒下時：原地爆炸，對 1 格內的敵人造成 1d8 火焰傷害"
     )
@@ -478,13 +478,13 @@ def test_weapon_scaling_value_is_the_single_source() -> None:
 
 
 @pytest.mark.parametrize("weapon", ["one_handed_sword", "bow", "fire_staff"])
-@pytest.mark.parametrize("alloc", [{}, {Attribute.CON: 4}, {Attribute.INT: 2, Attribute.STR: 2}])
+@pytest.mark.parametrize("alloc", [{}, {Attribute.CON: 40}, {Attribute.INT: 20, Attribute.STR: 20}])
 def test_start_preview_equals_the_new_run_hero(weapon: str, alloc: dict[Attribute, int]) -> None:
     """開局預覽的 HP／法力／耐力 ＝ 開新一輪建立出的主角（同一個函式），含配點加成。"""
     lib = library()
     full = dict(alloc)
-    if sum(full.values()) < 4:
-        full[Attribute.WIS] = full.get(Attribute.WIS, 0) + 4 - sum(full.values())
+    if sum(full.values()) < 40:
+        full[Attribute.WIS] = full.get(Attribute.WIS, 0) + 40 - sum(full.values())
     preview = start_resources(lib, weapon, full)
     keywords = lib.keywords.ids()[:2]
     run = new_keyword_run(lib, weapon, keywords, 7, full)

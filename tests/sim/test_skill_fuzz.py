@@ -38,7 +38,9 @@ def _battle_only(skill: SkillDef) -> bool:
 def test_one_hundred_seeds_pass_validation_cast_and_run_without_exceptions() -> None:
     # AP-1：玩家方 4 AP 後這 100 個種子裡的兩個被動（擊殺時）在試打中都輪不到施放者擊殺，
     # 「被動有觸發」量不到；試打用 AP-1 之前的行動經濟（with_pre_ap1_turns）照樣鎖住
-    report = run_fuzz(with_pre_ap1_turns(lib()), count=100)
+    # X10-2b 換種子 0 → 100（×10 後傷害捨去差異讓 AI 換目標，種子 17、73 的被動戰都輸、0 次觸發；
+    # 掃 0–399 的被動：155、170、191 會觸發，取 100–199 這段）
+    report = run_fuzz(with_pre_ap1_turns(lib()), count=100, seed_start=100)
     assert report.compose_errors == []
     assert len(report.outcomes) == 100
     assert all(o.violations == 0 for o in report.outcomes)

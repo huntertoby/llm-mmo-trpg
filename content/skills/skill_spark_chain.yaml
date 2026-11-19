@@ -15,7 +15,7 @@ shape: {type: chain, range: 4, jumps: 1, jump_range: 2}
 effects:
   - {type: damage, dice: 1d8, element: lightning}
 condition: null
-cost: {mana: 5, cooldown: 1}
+cost: {mana: 50, cooldown: 1}
 tags: [lightning, spell, chain]
 narrative:
   concept: 電弧挑最近的敵人，一次跳過去

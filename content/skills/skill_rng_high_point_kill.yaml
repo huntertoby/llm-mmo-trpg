@@ -19,7 +19,7 @@ effects:
     multiplier_permille: 2200
     condition: {type: target_has_status, status: marked}
 condition: {type: height_advantage}
-cost: {stamina: 8, cooldown: 1}
+cost: {stamina: 80, cooldown: 1}
 tags: [physical, ranged, height, mark]
 narrative:
   concept: 站在高處時，朝被標記的目標射出致命的一箭

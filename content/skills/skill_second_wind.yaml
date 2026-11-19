@@ -16,7 +16,7 @@ effects:
   - {type: heal, dice: 3d6, affects: self}
 condition: {type: self_hp_below, permille: 500}
 trigger: {event: on_turn_start, target: self, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [nature, spell, passive, heal]
 narrative:
   concept: 傷勢沉重時，每次回合開始都能擠出一口氣緩過來

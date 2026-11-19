@@ -16,7 +16,7 @@ effects:
   - {type: heal, dice: 1d6, affects: self}
 condition: null
 trigger: {event: on_kill, target: self, max_per_round: 1}
-cost: {mana: 2}
+cost: {mana: 20}
 tags: [physical, spell, passive, heal, kill]
 narrative:
   concept: 每一次擊倒敵人，都讓血液重新沸騰、傷口癒合

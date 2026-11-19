@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: feared, duration: 1}
   - {type: knock_prone}
 condition: null
-cost: {mana: 4}
+cost: {mana: 40}
 tags: [shadow, spell, fear, knockdown]
 narrative:
   concept: 讓對手怕到雙腿發軟，當場跪倒，連爬都想往後爬

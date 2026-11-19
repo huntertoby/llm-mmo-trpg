@@ -4,10 +4,10 @@
 # 取代 5A-3 的替代品「並肩斬」（代決 5A3-2）。
 id: sect_array_disciple
 name_zh: 劍陣弟子
-attributes: {str: 12, dex: 14, con: 10, int: 8, wis: 10, wil: 10}
-max_hp: 26
+attributes: {str: 120, dex: 140, con: 100, int: 80, wis: 100, wil: 100}
+max_hp: 260
 speed: 5
-armor_bonus: 2
+armor_bonus: 20
 weapon: one_handed_sword
 ai_profile: flanker
 resist: {}

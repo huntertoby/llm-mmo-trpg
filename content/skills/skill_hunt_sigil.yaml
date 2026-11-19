@@ -15,7 +15,7 @@ shape: {type: ground_tile, range: 5}
 effects:
   - {type: inscribe, tag: hunt, duration: 5}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [spell, rune]
 narrative:
   concept: 在獵物會經過的地方刻下記號，等牠自己走進來

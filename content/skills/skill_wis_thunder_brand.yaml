@@ -16,7 +16,7 @@ effects:
   - {type: apply_status, status: marked, duration: 2}
   - {type: damage, dice: 1d4, element: lightning}
 condition: null
-cost: {mana: 3, cooldown: 1}
+cost: {mana: 30, cooldown: 1}
 tags: [lightning, spell, mark]
 narrative:
   concept: 用一道細雷在敵人身上點出記號，讓全隊都知道該打誰

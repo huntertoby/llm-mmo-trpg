@@ -16,7 +16,7 @@ shape: {type: ground_tile, range: 3}
 effects:
   - {type: summon, unit: summon_guardian_spirit, duration: 4}
 condition: null
-cost: {stamina: 8, cooldown: 4}
+cost: {stamina: 80, cooldown: 4}
 tags: [holy, melee, summon]
 narrative:
   concept: 高舉武器號令，喚出一道英靈先鋒跟著你一起出手

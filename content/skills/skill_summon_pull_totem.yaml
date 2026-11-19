@@ -15,7 +15,7 @@ shape: {type: ground_tile, range: 3}
 effects:
   - {type: summon, unit: summon_pull_totem, duration: 4}
 condition: null
-cost: {mana: 8, cooldown: 4}
+cost: {mana: 80, cooldown: 4}
 tags: [spirit, spell, summon, control]
 narrative:
   concept: 立起一根吸引圖騰，每回合把附近的敵人拉近一步

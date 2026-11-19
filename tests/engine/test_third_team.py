@@ -189,23 +189,23 @@ def test_third_on_defend_point_loses_it() -> None:
 
 
 def test_enemy_ai_attacks_adjacent_third() -> None:
-    state = _state([((0, 0), _hero())], [((3, 3), _plain())], [((3, 4), _plain(max_hp=5))])
+    state = _state([((0, 0), _hero())], [((3, 3), _plain())], [((3, 4), _plain(max_hp=50))])
     action = UtilityAI(library().ai_profiles)(give_turn(state, U2))
     assert isinstance(action, Attack) and action.target_id == U3
 
 
 def test_third_ai_attacks_both_sides() -> None:
     lib = library()
-    near_enemy = _state([((0, 0), _hero())], [((3, 3), _plain(max_hp=5))], [((3, 4), _plain())])
+    near_enemy = _state([((0, 0), _hero())], [((3, 3), _plain(max_hp=50))], [((3, 4), _plain())])
     action = UtilityAI(lib.ai_profiles)(give_turn(near_enemy, U3))
     assert isinstance(action, Attack) and action.target_id == U2
-    near_ally = _state([((3, 3), _hero(max_hp=5))], [((6, 0), _plain())], [((3, 4), _plain())])
+    near_ally = _state([((3, 3), _hero(max_hp=50))], [((6, 0), _plain())], [((3, 4), _plain())])
     action = UtilityAI(lib.ai_profiles)(give_turn(near_ally, U3))
     assert isinstance(action, Attack) and action.target_id == U1
 
 
 def test_ally_ai_attacks_third() -> None:
-    state = _state([((3, 3), _hero())], [((6, 0), _plain())], [((3, 4), _plain(max_hp=5))])
+    state = _state([((3, 3), _hero())], [((6, 0), _plain())], [((3, 4), _plain(max_hp=50))])
     action = UtilityAI(library().ai_profiles)(give_turn(state, U1))
     assert isinstance(action, Attack) and action.target_id == U3
 

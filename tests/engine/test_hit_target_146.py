@@ -67,7 +67,7 @@ def _swing(state: BattleState, natural: int) -> AttackRolled:
     return rolled
 
 
-@pytest.mark.parametrize("dex", [None, 20, 40], ids=["same_level", "harder", "hardest"])
+@pytest.mark.parametrize("dex", [None, 200, 400], ids=["same_level", "harder", "hardest"])
 @pytest.mark.parametrize(("total", "hits"), BOUNDARY)
 def test_attack_boundary(dex: int | None, total: int, hits: bool) -> None:
     state = _attack_state(dex=dex)
@@ -79,12 +79,12 @@ def test_attack_boundary(dex: int | None, total: int, hits: bool) -> None:
 
 
 def test_attack_natural_one_misses_even_above_the_target() -> None:
-    rolled = _swing(_attack_state(attacker={"str": 500}), 1)
+    rolled = _swing(_attack_state(attacker={"str": 999}), 1)
     assert rolled.total >= TARGET and not rolled.hit
 
 
 def test_attack_natural_twenty_hits_at_the_lowest_modifier() -> None:
-    rolled = _swing(_attack_state(dex=500), 20)
+    rolled = _swing(_attack_state(dex=999), 20)
     assert rolled.hit_modifier == -library().ruleset.core.hit_mod_cap
     assert rolled.hit
 
@@ -118,7 +118,7 @@ def test_skill_attack_boundary(total: int, hits: bool) -> None:
 
 
 def _control_state(strength: int | None = None) -> BattleState:
-    """施放者 U1（法師，智力 16）對盜賊 U2 定身；抵抗屬性是力量。"""
+    """施放者 U1（法師，智力 160）對盜賊 U2 定身；抵抗屬性是力量（X10-2b 屬性 ×10）。"""
     skill = make_skill(SID, SINGLE, [{"type": "apply_status", "status": "root"}])
     foe = no_reactions() if strength is None else no_reactions(attributes={"str": strength})
     return battle(skill, [(5, 3, foe)])
@@ -131,7 +131,7 @@ def _save(state: BattleState, natural: int, monkeypatch: pytest.MonkeyPatch) -> 
     return save
 
 
-@pytest.mark.parametrize("strength", [None, 24], ids=["normal", "resistant"])
+@pytest.mark.parametrize("strength", [None, 240], ids=["normal", "resistant"])
 @pytest.mark.parametrize(("total", "applied"), BOUNDARY)
 def test_control_boundary(
     strength: int | None, total: int, applied: bool, monkeypatch: pytest.MonkeyPatch
@@ -145,14 +145,14 @@ def test_control_boundary(
 def test_control_natural_one_fails_even_above_the_target(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    save = _save(_control_state(1), 1, monkeypatch)
+    save = _save(_control_state(10), 1, monkeypatch)
     assert save.total >= TARGET and not save.applied
 
 
 def test_control_natural_twenty_succeeds_at_the_lowest_modifier(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    save = _save(_control_state(500), 20, monkeypatch)
+    save = _save(_control_state(999), 20, monkeypatch)
     assert save.modifier == -library().ruleset.core.hit_mod_cap
     assert save.applied
 
@@ -194,7 +194,7 @@ def test_maneuver_boundary(action: Maneuver, attr: str, total: int, success: boo
 
 @pytest.mark.parametrize(("action", "attr"), MANEUVERS, ids=["shove", "trip"])
 def test_maneuver_natural_one_fails_even_above_the_target(action: Maneuver, attr: str) -> None:
-    rolled = _contest(_maneuver_state(attr, 1), action, 1)
+    rolled = _contest(_maneuver_state(attr, 10), action, 1)
     assert rolled.total >= TARGET and not rolled.success
 
 
@@ -202,7 +202,7 @@ def test_maneuver_natural_one_fails_even_above_the_target(action: Maneuver, attr
 def test_maneuver_natural_twenty_succeeds_at_the_lowest_modifier(
     action: Maneuver, attr: str
 ) -> None:
-    rolled = _contest(_maneuver_state(attr, 500), action, 20)
+    rolled = _contest(_maneuver_state(attr, 999), action, 20)
     assert rolled.modifier == -library().ruleset.core.hit_mod_cap
     assert rolled.success
 
@@ -212,7 +212,7 @@ def test_maneuver_natural_twenty_succeeds_at_the_lowest_modifier(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("dex", [None, 20, 40], ids=["same_level", "harder", "hardest"])
+@pytest.mark.parametrize("dex", [None, 200, 400], ids=["same_level", "harder", "hardest"])
 def test_preview_matches_engine_for_attack(dex: int | None) -> None:
     state = _attack_state(dex=dex)
     wins = sum(_swing(state, n).hit for n in range(1, 21))
@@ -227,7 +227,7 @@ def test_preview_matches_engine_for_skill_attack() -> None:
     assert target.hit_chance == Fraction(wins, 20)
 
 
-@pytest.mark.parametrize("strength", [None, 24], ids=["normal", "resistant"])
+@pytest.mark.parametrize("strength", [None, 240], ids=["normal", "resistant"])
 def test_preview_matches_engine_for_control(
     strength: int | None, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -239,7 +239,7 @@ def test_preview_matches_engine_for_control(
 
 
 @pytest.mark.parametrize(("action", "attr"), MANEUVERS, ids=["shove", "trip"])
-@pytest.mark.parametrize("value", [None, 24], ids=["normal", "resistant"])
+@pytest.mark.parametrize("value", [None, 240], ids=["normal", "resistant"])
 def test_preview_matches_engine_for_maneuver(
     action: Maneuver, attr: str, value: int | None
 ) -> None:

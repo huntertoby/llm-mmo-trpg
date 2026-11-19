@@ -136,7 +136,7 @@ def test_stun_still_ticks_damage_and_cooldowns_at_turn_start() -> None:
     state.units[U2].cooldowns["skill_x"] = 2
     result = _end_turn(with_rolls(state, [(4, 2)]))
     ticks = [e for e in _of(result, DamageDealt) if e.target_id == U2 and e.cause == "status"]
-    assert [t.amount for t in ticks] == [2]
+    assert [t.amount for t in ticks] == [20]  # 骰面 ×10（X10-2b）
     assert result.state.units[U2].cooldowns == {"skill_x": 1}
 
 
@@ -217,7 +217,8 @@ def test_vulnerable_does_not_scale_percentage_damage() -> None:
     state = _with_status(_duel(), U2, "vulnerable", 2)
     plain = _hit(_duel(), percent=100)
     boosted = _hit(state, percent=100)
-    assert plain.amount == boosted.amount == 3  # 30 HP × 10%
+    # 盜賊 350 HP × 10% = 35（X10-2b；舊單位 35 HP × 10% = 3.5 → 3 是捨去差異）
+    assert plain.amount == boosted.amount == 35
     assert boosted.status_ppm == 1_000_000
 
 
@@ -249,8 +250,8 @@ def test_bleed_and_poison_tick_at_turn_start(status: str, element: Element) -> N
     result = _end_turn(state)
     ticks = [e for e in _of(result, DamageDealt) if e.target_id == U2 and e.cause == "status"]
     assert len(ticks) == 1
-    assert (ticks[0].element, ticks[0].rolls, ticks[0].amount) == (element, (3,), 3)
-    assert result.state.units[U2].hp == state.units[U2].hp - 3
+    assert (ticks[0].element, ticks[0].rolls, ticks[0].amount) == (element, (30,), 30)  # 骰面 ×10
+    assert result.state.units[U2].hp == state.units[U2].hp - 30
     assert result.state.units[U2].get_status(status) is not None
 
 

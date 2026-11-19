@@ -15,7 +15,7 @@ shape: {type: cross, range: 4}
 effects:
   - {type: inscribe, element: lightning, duration: 2}
 condition: null
-cost: {mana: 4, cooldown: 2}
+cost: {mana: 40, cooldown: 2}
 tags: [lightning, spell, rune]
 narrative:
   concept: 在地上畫下只有你認得的雷紋，等電光回來找它

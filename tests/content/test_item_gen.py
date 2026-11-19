@@ -110,10 +110,11 @@ def test_every_rarity_gets_the_same_budget(level: int, slot_type: SlotType) -> N
 @pytest.mark.parametrize(
     ("affix_id", "value", "points"),
     [
-        ("affix_attr_str", 1, Fraction(3)),
-        ("affix_attr_wil", 4, Fraction(12)),
-        ("affix_max_hp", 4, Fraction(3)),
-        ("affix_max_hp", 16, Fraction(12)),
+        # X10-2b：屬性、最大 HP 詞條值 ×10
+        ("affix_attr_str", 10, Fraction(3)),
+        ("affix_attr_wil", 40, Fraction(12)),
+        ("affix_max_hp", 40, Fraction(3)),
+        ("affix_max_hp", 160, Fraction(12)),
         ("affix_resist_fire", 50, Fraction(3)),
         ("affix_resist_fire", 150, Fraction(9)),
         ("affix_cond_still_defense", 200, Fraction(30) * Fraction(6, 10)),
@@ -458,11 +459,12 @@ def _item(rolls: list[tuple[str, int | None]], **kw: object) -> ItemDef:
 
 def test_budget_validator_rejects_bad_items() -> None:
     lib, r = library(), rules()
-    ok = _item([("affix_kw_prone_damage", 150), ("affix_attr_str", 1)])  # 8 + 3 ＝ 11／12
+    # X10-2b：力量詞條值 ×10（1／2／3 → 10／20／30），點數不變
+    ok = _item([("affix_kw_prone_damage", 150), ("affix_attr_str", 10)])  # 8 + 3 ＝ 11／12
     assert item_budget_problems(r, ok, lib.affixes) == []
-    over = _item([("affix_kw_prone_damage", 150), ("affix_attr_str", 2)])  # 14 > 12
+    over = _item([("affix_kw_prone_damage", 150), ("affix_attr_str", 20)])  # 14 > 12
     assert any("不在預算" in p for p in item_budget_problems(r, over, lib.affixes))
-    under = _item([("affix_attr_str", 2)])  # 6 < 8.4
+    under = _item([("affix_attr_str", 20)])  # 6 < 8.4
     assert any("不在預算" in p for p in item_budget_problems(r, under, lib.affixes))
     keywords = _item(
         [("affix_kw_prone_damage", 60), ("affix_kw_burn_duration", None)], item_level=6
@@ -470,7 +472,7 @@ def test_budget_validator_rejects_bad_items() -> None:
     assert any("build 詞條" in p for p in item_budget_problems(r, keywords, lib.affixes))
     common_kw = _item([("affix_kw_prone_damage", 150)], rarity="common")
     assert any("不能有 keyword" in p for p in item_budget_problems(r, common_kw, lib.affixes))
-    base_on_rare = _item([("affix_attr_str", 3)], base_bonus_permille=20, item_level=1)
+    base_on_rare = _item([("affix_attr_str", 30)], base_bonus_permille=20, item_level=1)
     assert any("基礎加成" in p for p in item_budget_problems(r, base_on_rare, lib.affixes))
     triggers = _item(
         [("affix_trig_every3_prone", None), ("affix_trig_kill_ap", None)],
@@ -478,7 +480,7 @@ def test_budget_validator_rejects_bad_items() -> None:
         rarity="epic",
     )
     assert any("觸發詞條每件最多 1 條" in p for p in item_budget_problems(r, triggers, lib.affixes))
-    no_level = _item([("affix_attr_str", 3)], item_level=None)
+    no_level = _item([("affix_attr_str", 30)], item_level=None)
     assert any("沒有物品等級" in p for p in item_budget_problems(r, no_level, lib.affixes))
 
 

@@ -23,7 +23,7 @@ effects:
     effects:
       - {type: apply_status, status: empowered, duration: 1}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [spell, buff, aura, support]
 narrative:
   concept: 一首激昂的戰歌，歌聲走到哪裡，身邊的人就覺得自己無所不能

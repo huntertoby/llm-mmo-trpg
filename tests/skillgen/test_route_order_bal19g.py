@@ -187,8 +187,8 @@ def test_whiteboard_grade_ranks_main_dual_off() -> None:
 
 def test_offer_off_route_uses_route_rank() -> None:
     for weapon, keywords, alloc in (
-        ("totem_staff", ("summon", "ignite"), {A.WIL: 4}),
-        ("one_handed_sword", ("prone", "collision"), {A.STR: 4}),
+        ("totem_staff", ("summon", "ignite"), {A.WIL: 40}),
+        ("one_handed_sword", ("prone", "collision"), {A.STR: 40}),
     ):
         run = new_keyword_run(LIB, weapon, keywords, 3, alloc)
         offer = make_offer(LIB, run, "level_up")

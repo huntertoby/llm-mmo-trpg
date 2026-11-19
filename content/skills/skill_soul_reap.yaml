@@ -16,7 +16,7 @@ effects:
   - {type: damage, dice: 1d8, element: shadow}
   - {type: add_stack, stack: soul_shard, amount: 1, affects: self}
 condition: null
-cost: {mana: 3}
+cost: {mana: 30}
 tags: [shadow, spell, builder, curse]
 narrative:
   concept: 每一道傷口都逸出一縷不肯散去的魂

@@ -20,7 +20,7 @@ effects:
   - {type: damage, multiplier_permille: 1000}
   - {type: apply_status, status: burning, duration: 3}
 condition: null
-cost: {stamina: 10, cooldown: 1}
+cost: {stamina: 100, cooldown: 1}
 tags: [fire, melee]
 narrative:
   concept: 一口咬下去，背上的裂縫噴出火星，傷口跟著燒了起來

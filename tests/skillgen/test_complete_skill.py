@@ -72,7 +72,7 @@ def test_stance_gets_a_bigger_magnitude(skill_id: str) -> None:
 def test_no_number_knob_cuts_the_cost_instead() -> None:
     """沒有數值旋鈕（只有冷卻與法力）：依 cost_cuts 的順序減冷卻、再減法力，每項最少留 1。"""
     before, after = _done("skill_rune_burst")
-    assert before.cost.cooldown == 3 and before.cost.mana == 8
+    assert before.cost.cooldown == 3 and before.cost.mana == 80
     assert after.effects == before.effects
     assert after.cost.cooldown == 1 and after.cost.mana is not None and after.cost.mana >= 1
     assert complete_gain_permille(before, after, library()) >= GAIN

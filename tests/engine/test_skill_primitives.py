@@ -34,18 +34,18 @@ SINGLE5: dict[str, Any] = {"type": "single", "range": 5}
 
 
 def test_spell_damage_uses_dice_plus_attribute_and_the_hit_roll() -> None:
-    skill = make_skill(SID, SINGLE5, [FIRE], cost={"mana": 7})
+    skill = make_skill(SID, SINGLE5, [FIRE], cost={"mana": 70})  # X10-2b 法力 ×10
     state = hit_with(battle(skill, [(5, 3)]), [(6, 3), (6, 4)])
     result = cast(state, target_id=U2)
     (roll,) = of(result, AttackRolled)
     assert (roll.attacker_id, roll.target_id, roll.skill_id, roll.hit) == (U1, U2, SID, True)
     (dmg,) = of(result, DamageDealt)
-    assert dmg.rolls == (3, 4) and dmg.element.value == "fire" and dmg.cause == "attack"
+    assert dmg.rolls == (30, 40) and dmg.element.value == "fire" and dmg.cause == "attack"
     mage_int = state.units[U1].attributes["int"]  # type: ignore[index]
-    assert dmg.amount == (7 * 1000 + mage_int * 500) // 1000  # 骰值 + 智力 × 0.5
+    assert dmg.amount == (70 * 1000 + mage_int * 500) // 1000  # 骰值（×10）+ 智力 × 0.5
     assert result.state.units[U2].hp == state.units[U2].hp - dmg.amount
     caster = result.state.units[U1]
-    paid = ally_mana(7)  # 打折後的費用（BAL-4c；BAL-15b 起敵我同一套）
+    paid = ally_mana(70)  # 打折後的費用（BAL-4c；BAL-15b 起敵我同一套）
     start = state.units[U1].mana  # 上限由公式算出（BAL-15b）
     assert (caster.ap, caster.mana) == (state.units[U1].ap - 1, start - paid)
     (used,) = of(result, SkillUsed)
@@ -53,19 +53,19 @@ def test_spell_damage_uses_dice_plus_attribute_and_the_hit_roll() -> None:
 
 
 def test_a_miss_deals_no_damage_but_still_costs() -> None:
-    skill = make_skill(SID, SINGLE5, [FIRE], cost={"mana": 7})
+    skill = make_skill(SID, SINGLE5, [FIRE], cost={"mana": 70})
     state = with_rolls(battle(skill, [(5, 3)]), [(20, 1)])
     result = cast(state, target_id=U2)
     assert not of(result, AttackRolled)[0].hit
     assert not of(result, DamageDealt)
-    assert result.state.units[U1].mana == state.units[U1].mana - ally_mana(7)
+    assert result.state.units[U1].mana == state.units[U1].mana - ally_mana(70)
 
 
 def test_critical_hit_doubles_the_dice_count() -> None:
     skill = make_skill(SID, SINGLE5, [FIRE])
     state = with_rolls(battle(skill, [(5, 3)]), [(20, 20), (6, 1), (6, 2), (6, 3), (6, 4)])
     (dmg,) = of(cast(state, target_id=U2), DamageDealt)
-    assert dmg.crit and dmg.rolls == (1, 2, 3, 4)
+    assert dmg.crit and dmg.rolls == (10, 20, 30, 40)  # 骰面 ×10（X10-2b）
 
 
 def test_weapon_skill_damage_uses_the_weapon_dice_and_multiplier() -> None:

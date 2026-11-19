@@ -86,8 +86,8 @@ def test_shield_amount_is_dice_plus_half_the_scaling_attribute(
     (gained,) = of(result, ShieldGained)
     attr = state.units[U1].attributes["int"]  # type: ignore[index]
     scaled = attr * state.ruleset.core.spell_attr_multiplier_permille // 1000
-    assert gained.unit_id == U2 and gained.rolls == (3, 4)
-    assert gained.amount == 7 + scaled == gained.total
+    assert gained.unit_id == U2 and gained.rolls == (30, 40)  # 骰面 ×10（X10-2b）
+    assert gained.amount == 70 + scaled == gained.total
     status = result.state.units[U2].get_status("shielded")
     assert status is not None and status.amount == gained.total
     assert (status.remaining, status.source_id) == (2, U1)

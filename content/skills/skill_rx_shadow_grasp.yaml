@@ -18,7 +18,7 @@ effects:
 condition: null
 trigger: null
 reaction: {event: enemy_leaves_adjacent}
-cost: {mana: 3, cooldown: 1}
+cost: {mana: 30, cooldown: 1}
 tags: [reaction, shadow, spell]
 narrative:
   concept: 想從你身邊溜走，就得先甩掉自己的影子

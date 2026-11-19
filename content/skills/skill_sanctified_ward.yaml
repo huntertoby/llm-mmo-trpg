@@ -16,7 +16,7 @@ effects:
   - {type: shield, dice: 3d6, affects: allies}
   - {type: consume_stack, stack: holy_power, per_stack_permille: 200, affects: self}
 condition: null
-cost: {mana: 8, cooldown: 3}
+cost: {mana: 80, cooldown: 3}
 tags: [holy, spell, shield, finisher]
 narrative:
   concept: 把積存的聖光一次撐成一面盾

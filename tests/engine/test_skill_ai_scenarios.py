@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from fractions import Fraction
 
 import pytest
 
@@ -146,10 +147,10 @@ def test_sanctuary_counts_only_the_hp_actually_restored() -> None:
 
 def test_the_ai_saves_its_only_big_spell_when_nothing_is_worth_it() -> None:
     # 唯一的敵人在錐形之外（北邊太遠、也看不到值得的選取）：不施放，法力原封不動
-    state = _scene(["skill_ashen_oath"], [(6, 6)], base="hero_mage", max_mana=12)
+    state = _scene(["skill_ashen_oath"], [(6, 6)], base="hero_mage", max_mana=120)  # X10-2b ×10
     action = _ai()(state)
     assert not (isinstance(action, UseSkill))
-    assert state.units[U1].mana == 12
+    assert state.units[U1].mana == 120
 
 
 def test_the_ai_does_not_spend_its_last_mana_on_a_target_a_plain_attack_finishes() -> None:
@@ -164,7 +165,7 @@ def test_the_ai_does_not_spend_its_last_mana_on_a_target_a_plain_attack_finishes
 
 
 def test_the_ai_does_spend_the_mana_when_the_target_value_is_there() -> None:
-    state = _scene(["skill_ashen_oath"], [(5, 2), (5, 3), (5, 4)], base="hero_mage", max_mana=12)
+    state = _scene(["skill_ashen_oath"], [(5, 2), (5, 3), (5, 4)], base="hero_mage", max_mana=120)
     action = _ai()(state)
     assert isinstance(action, UseSkill) and action.skill_id == "skill_ashen_oath"
 
@@ -179,7 +180,8 @@ def test_mana_and_cooldown_weights_lower_a_skills_score() -> None:
     cost = score_action(state, action, free).score - score_action(state, action, profile).score
     weights = profile.weights
     mana = ally_mana(library().skills["skill_ashen_oath"].cost.mana)  # 我方實付（BAL-4c）
-    assert cost == weights.mana * mana + weights.cooldown * 2 and cost > 0
+    scale = library().ruleset.core.quantity_scale  # AI 評分把量類 ÷ 倍率（X10-2a）
+    assert cost == weights.mana * Fraction(mana, scale) + weights.cooldown * 2 and cost > 0
 
 
 # ---------------------------------------------------------------------------

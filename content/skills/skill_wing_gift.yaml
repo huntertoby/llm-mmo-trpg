@@ -15,7 +15,7 @@ shape: {type: single, range: 4}
 effects:
   - {type: grant_skill, skill: skill_flight, duration: 3, affects: allies}
 condition: null
-cost: {mana: 4, cooldown: 4}
+cost: {mana: 40, cooldown: 4}
 tags: [wind, spell, buff, flight, support]
 narrative:
   concept: 把風之翼借給同伴，讓他三輪內也能掠過戰場

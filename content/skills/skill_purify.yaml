@@ -15,7 +15,7 @@ effects:
   - {type: cleanse, affects: allies}
   - {type: apply_status, status: defending, affects: allies}
 condition: null
-cost: {mana: 1}
+cost: {mana: 10}
 tags: [holy, spell, cleanse, support]
 narrative:
   concept: 一道潔白的光洗去身上的汙穢，也讓人重新站穩腳步

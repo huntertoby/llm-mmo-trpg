@@ -198,7 +198,7 @@ def test_offer_follows_top_attribute_and_keeps_one_new_direction() -> None:
     assert first == _offer(run)
     top = top_attribute(run.hero.attributes)
     assert first.candidates[2].scaling_attr is not top
-    attrs = {**run.hero.attributes, Attribute.WIL: 30}
+    attrs = {**run.hero.attributes, Attribute.WIL: 300}
     heavy = run.model_copy(update={"hero": run.hero.model_copy(update={"attributes": attrs})})
     again = _offer(heavy)
     assert again.top_attribute is Attribute.WIL

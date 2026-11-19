@@ -15,7 +15,7 @@ shape: {type: cone, size: 2}
 effects:
   - {type: damage, dice: 1d8, element: lightning}
 condition: null
-cost: {mana: 5, cooldown: 2}
+cost: {mana: 50, cooldown: 2}
 tags: [lightning, spell, area]
 narrative:
   concept: 推出的一道雷霆，在身前炸成扇形

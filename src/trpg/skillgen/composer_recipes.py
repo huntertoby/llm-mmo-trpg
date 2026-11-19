@@ -518,7 +518,8 @@ def _companion_drafts(ctx: Ctx, seed: int, scaling: str, keyword: str | None) ->
         base = _skill_base(
             seed, ctx.tier, ctx.rarity, ctx,
             kind="passive", category="spell", weapon_req="any", ap_cost=None,
-            scaling_attr=scaling, trigger=dict(trigger), cost={"mana": 0, **cost},
+            scaling_attr=scaling, trigger=dict(trigger),
+            cost={"mana": 0, **library.ruleset.core.scaled_cost(cost)},
         )  # fmt: skip
         drafts.append((base, [_beside(unit, rules.companion_duration, power)]))
     return drafts
@@ -598,7 +599,8 @@ def _guardian_drafts(
         base = _skill_base(
             seed, tier, rarity, ctx,
             kind="reaction", category="spell", weapon_req="any", scaling_attr=scaling,
-            reaction={"event": _GUARDIAN_EVENT}, ap_cost=None, cost=dict(cost),
+            reaction={"event": _GUARDIAN_EVENT}, ap_cost=None,
+            cost=library.ruleset.core.scaled_cost(cost),
         )  # fmt: skip
         drafts.append((base, [_beside(unit, rules.guardian_duration, power, strike=True)]))
     return ctx, drafts

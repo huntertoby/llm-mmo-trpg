@@ -167,7 +167,8 @@ def _summoner_run(map_id: str, seed: int) -> tuple[Any, Any]:
 
 def test_the_summoner_build_summons_and_the_totem_empowers_allies_in_a_full_battle() -> None:
     # 3-21a 守護、換位、瞄準改變 AI 軌跡，種子原為 4；CB-1 門檻 8 後 0 → 2
-    _, run = _summoner_run("swamp", 2)
+    # X10-2b 換種子 2 → 4（捨去差異使戰鬥分岔、不再放圖騰；掃 0～29）
+    _, run = _summoner_run("swamp", 4)
     summoned = next(e for e in of(run.events, UnitSummoned) if e.template_id == TOTEM)
     assert summoned.skill_id == "skill_plant_totem"
     pulses = [p for p in of(run.events, TotemPulsed) if p.unit_id == summoned.unit_id]
@@ -187,8 +188,8 @@ def test_a_totem_battle_replays_exactly() -> None:
     from trpg.engine import state_to_json  # noqa: PLC0415
     from trpg.engine.runner import replay  # noqa: PLC0415
 
-    setup, run = _summoner_run("swamp", 2)
-    again = replay(setup, 2, run.actions)
+    setup, run = _summoner_run("swamp", 4)  # X10-2b 2 → 4（同上）
+    again = replay(setup, 4, run.actions)
     assert state_to_json(again.state) == state_to_json(run.state)
     assert [e.model_dump() for e in again.events] == [e.model_dump() for e in run.events]
 
@@ -219,6 +220,7 @@ def test_the_preview_lists_the_summon_and_the_oldest_it_replaces() -> None:
     totems = [u.id for u in state.units_sorted() if u.template_id == TOTEM]
     p = preview(ready, UseSkill(unit_id=U1, skill_id=SID, target_pos=Pos(x=1, y=4)))
     [info] = p.summons
-    assert (info.template_id, info.pos, info.totem_radius, info.max_hp) == (TOTEM, (1, 4), 2, 18)
+    # X10-2b HP ×10
+    assert (info.template_id, info.pos, info.totem_radius, info.max_hp) == (TOTEM, (1, 4), 2, 180)
     assert info.replaces == (totems[0],)  # 最舊的先消失
     assert info.name_zh == "戰意圖騰"

@@ -2,10 +2,10 @@
 # 焦岩巨像：坦（慢）、震地擊倒。「受火回血」引擎沒有，用高火抗近似（代決 5F5a-7）。
 id: scorched_colossus
 name_zh: 焦岩巨像
-attributes: {str: 16, dex: 6, con: 18, int: 3, wis: 8, wil: 12}
-max_hp: 46
+attributes: {str: 160, dex: 60, con: 180, int: 30, wis: 80, wil: 120}
+max_hp: 460
 speed: 3
-armor_bonus: 4
+armor_bonus: 40
 weapon: stone_fist
 ai_profile: brute
 resist: {}

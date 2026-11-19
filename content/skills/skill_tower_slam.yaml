@@ -23,7 +23,7 @@ effects:
     weapon: tower_shield
 condition: null
 cost:
-  stamina: 8
+  stamina: 80
   cooldown: 4
 tags:
 - physical

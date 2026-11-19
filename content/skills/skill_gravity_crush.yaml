@@ -20,7 +20,7 @@ effects:
     element: physical
     condition: {type: target_has_status, status: prone}
 condition: null
-cost: {mana: 6, cooldown: 2}
+cost: {mana: 60, cooldown: 2}
 tags: [arcane, spell, combo]
 narrative:
   concept: 對已經倒下的敵人加倍施壓

@@ -1,6 +1,6 @@
 """X10-2a：程式認得 ``quantity_scale``（``docs/phases/PhaseX10-2a計畫.md``）。
 
-內容的 ``quantity_scale`` 是 1，所有結果都不變；這裡把它換成 10 檢查各處的倍率。
+X10-2b 起內容已換算，``quantity_scale`` 是 10；這裡把它換回 1（量類 ÷10）比對各處的倍率。
 """
 
 from __future__ import annotations
@@ -36,13 +36,13 @@ from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import _param_range_ladder, effect_knobs, quantity_randint
 from trpg.skillgen.flash_ops import TRIGGER_FINE_OPS, trigger_fine_knobs
-from trpg.skillgen.proposal_numbers import _fill_cost
+from trpg.skillgen.proposal_numbers import _fill_cost, minimal_filler
 
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
 
-def test_content_scale_is_one(library: ContentLibrary) -> None:
-    assert library.ruleset.core.quantity_scale == 1
+def test_content_scale_is_ten(library: ContentLibrary) -> None:
+    assert library.ruleset.core.quantity_scale == 10
 
 
 @pytest.mark.parametrize("value", [0, 2, 5, 100])
@@ -113,31 +113,37 @@ def test_preview_distribution_scales_faces() -> None:
 
 
 def scaled_library(library: ContentLibrary, scale: int = 10) -> ContentLibrary:
-    """只把 ``core.quantity_scale`` 換掉的內容庫（內容本身沒換算）。"""
+    """只把 ``core.quantity_scale`` 換掉的內容庫（內容本身不動）。"""
     core = library.ruleset.core.model_copy(update={"quantity_scale": scale})
     ruleset = library.ruleset.model_copy(update={"core": core})
     return dataclasses.replace(library, ruleset=ruleset)
 
 
-def _times_ten(node: Any) -> Any:
-    """技能資料裡的量類 ×10：代價的法力與耐力、``flat_bonus``、回復法力的 ``amount``。"""
+def _tenth(value: int) -> int:
+    assert value % 10 == 0, value  # 內容換算後量類都是 10 的倍數
+    return value // 10
+
+
+def _div_ten(node: Any) -> Any:
+    """技能資料裡的量類 ÷10（換回換算前）：代價的法力與耐力、``flat_bonus``、
+    回復法力的 ``amount``。"""
     if isinstance(node, list):
-        return [_times_ten(v) for v in node]
+        return [_div_ten(v) for v in node]
     if not isinstance(node, dict):
         return node
-    out = {k: _times_ten(v) for k, v in node.items()}
+    out = {k: _div_ten(v) for k, v in node.items()}
     if isinstance(out.get("flat_bonus"), int):
-        out["flat_bonus"] *= 10
+        out["flat_bonus"] = _tenth(out["flat_bonus"])
     if (
         out.get("type") == "restore_resource"
         and out.get("resource") == "mana"
         and out.get("amount")
     ):
-        out["amount"] *= 10
+        out["amount"] = _tenth(out["amount"])
     cost = out.get("cost")
     if isinstance(cost, dict):
         out["cost"] = {
-            k: v * 10 if k in ("mana", "stamina") and isinstance(v, int) else v
+            k: _tenth(v) if k in ("mana", "stamina") and isinstance(v, int) else v
             for k, v in cost.items()
         }
     return out
@@ -163,14 +169,14 @@ def _quantity_skills(library: ContentLibrary) -> list[SkillDef]:
 
 
 def test_budget_points_same_before_and_after_x10(library: ContentLibrary) -> None:
-    ten = scaled_library(library)
+    one = scaled_library(library, 1)
     skills = _quantity_skills(library)
     assert len(skills) > 100
     flat = restore = 0
     for skill in skills:
-        data = _times_ten(skill.model_dump(mode="json", exclude_none=True))
-        scaled = SkillDef.model_validate(data)
-        before, after = skill_budget(skill, library), skill_budget(scaled, ten)
+        data = _div_ten(skill.model_dump(mode="json", exclude_none=True))
+        unscaled = SkillDef.model_validate(data)
+        before, after = skill_budget(unscaled, one), skill_budget(skill, library)
         assert before.total == after.total, skill.id
         assert [v for _, v in before.allowance_parts] == [v for _, v in after.allowance_parts]
         flat += any(e.flat_bonus for e in skill.effects)
@@ -199,14 +205,14 @@ def test_quantity_randint_steps_by_scale() -> None:
 def test_restore_mana_ladder_steps_by_scale(library: ContentLibrary) -> None:
     effect = {"type": "restore_resource", "resource": "mana"}
     knobs = dict((n, v) for n, v, _ in effect_knobs(library, effect, category="spell", weight=1))
-    assert knobs["amount"] == tuple(range(1, 11))
-    ten = scaled_library(library)
-    primitive = ten.ruleset.find_primitive("restore_resource")
+    assert knobs["amount"] == tuple(range(10, 101, 10))
+    one = scaled_library(library, 1)
+    primitive = one.ruleset.find_primitive("restore_resource")
     assert primitive is not None
     param = primitive.params["amount"]
     knob = next(k for k in param.knobs() if k.applies("spell", effect))
-    wide = param.model_copy(update={"max": param.max * 10 if param.max else None})
-    assert _param_range_ladder(ten, knob, wide, effect) == tuple(range(10, 101, 10))
+    narrow = param.model_copy(update={"max": _tenth(param.max) if param.max else None})
+    assert _param_range_ladder(one, knob, narrow, effect) == tuple(range(1, 11))
 
 
 def test_trigger_flat_bonus_steps_by_scale(library: ContentLibrary) -> None:
@@ -214,22 +220,49 @@ def test_trigger_flat_bonus_steps_by_scale(library: ContentLibrary) -> None:
     effects = [{"type": "heal", "dice": "1d4"}]
     op = sorted(TRIGGER_FINE_OPS)[0]
     top = library.flash.rules.trigger_flat_bonus
-    (one,) = trigger_fine_knobs(op, base, effects, library)
-    assert one.values == (None, *range(1, top + 1))
-    flash = library.flash.model_copy(
-        update={"rules": library.flash.rules.model_copy(update={"trigger_flat_bonus": top * 10})}
+    (ten,) = trigger_fine_knobs(op, base, effects, library)
+    assert ten.values == (None, *range(10, top + 1, 10))
+    rules = library.flash.rules.model_copy(update={"trigger_flat_bonus": _tenth(top)})
+    one = dataclasses.replace(
+        scaled_library(library, 1), flash=library.flash.model_copy(update={"rules": rules})
     )
-    ten = dataclasses.replace(scaled_library(library), flash=flash)
-    (scaled,) = trigger_fine_knobs(op, base, effects, ten)
-    assert scaled.values == (None, *range(10, top * 10 + 1, 10))
+    (unscaled,) = trigger_fine_knobs(op, base, effects, one)
+    assert unscaled.values == (None, *range(1, _tenth(top) + 1))
 
 
 @pytest.mark.parametrize("scale", [1, 10])
 def test_minimal_cost_is_one_times_scale(library: ContentLibrary, scale: int) -> None:
-    lib = library if scale == 1 else scaled_library(library, scale)
+    lib = scaled_library(library, scale)
     out: dict[str, Any] = {"kind": "active", "category": "spell", "effects": [], "cost": {}}
     _fill_cost(out, lib, "spell")
     assert out["cost"]["mana"] == scale
+
+
+@pytest.mark.parametrize("scale", [1, 10])
+def test_minimal_filler_restore_mana_is_one_times_scale(
+    library: ContentLibrary, scale: int
+) -> None:
+    """X10-2b（X10-2a 裁定 3）：回復法力補的最小值 1 × scale；冷卻回合不乘。"""
+    fill = minimal_filler(scaled_library(library, scale))
+    effects = [
+        {"type": "restore_resource", "resource": "mana", "target": "self"},
+        {"type": "restore_resource", "resource": "cooldown", "target": "self"},
+    ]
+    out = fill({"kind": "active", "category": "spell", "effects": effects})
+    assert [e["amount"] for e in out["effects"]] == [scale, 1]
+
+
+@pytest.mark.parametrize("scale", [1, 10])
+def test_mana_cost_floor_is_one_times_scale(library: ContentLibrary, scale: int) -> None:
+    """X10-2b（X10-2a 裁定 3）：打折後至少 1 × scale；原費用更少時以原費用為下限。"""
+    core = library.ruleset.core.model_copy(
+        update={"quantity_scale": scale, "mana_cost_permille": 100}
+    )
+    assert core.mana_cost(4 * scale) == scale  # 0.4 × scale → 0，下限 1 × scale
+    assert core.mana_cost(30 * scale) == 3 * scale
+    assert core.mana_cost(0) == 0
+    if scale == 10:
+        assert core.mana_cost(5) == 5
 
 
 # ---------------------------------------------------------------------------
@@ -266,9 +299,10 @@ def test_quantity_defaults_must_be_explicit_at_x10(library: ContentLibrary) -> N
         ("summon_growth", "hp_per_level"),
     ):
         partial = {**data, section: {k: v for k, v in data[section].items() if k != key}}
-        assert CoreRules.model_validate(partial).quantity_scale == 1  # 倍率 1：照舊用預設值
+        one = {**partial, "quantity_scale": 1}
+        assert CoreRules.model_validate(one).quantity_scale == 1  # 倍率 1：照舊用預設值
         with pytest.raises(ValidationError, match=f"{section}.{key}"):
-            CoreRules.model_validate({**partial, "quantity_scale": 10})
+            CoreRules.model_validate(partial)  # 內容是 10
 
 
 def test_form_upkeep_must_be_explicit_at_x10(library: ContentLibrary) -> None:
@@ -288,3 +322,36 @@ def test_armor_mods_bounds_have_no_default() -> None:
         ArmorMods.model_validate(
             {"unit": "ember_heart", "max_total": 1, "mods": [{"world_flag": "a", "amount": 1}]}
         )
+
+
+# ---------------------------------------------------------------------------
+# X10-2b 補列：加在屬性值或量類上的常駐數值也要照比例
+
+
+def test_round_shield_block_bonus_is_per_old_attribute_point(library: ContentLibrary) -> None:
+    """圓盾「縮放屬性 × 每點‰」：屬性 ×10 後 ÷ scale，減傷和換算前相同。"""
+    shield = library.offhands["round_shield"]
+    assert shield.block_bonus is not None
+    assert shield.block_extra_permille(lambda _a: 140, 10) == shield.block_extra_permille(
+        lambda _a: 14
+    )
+    assert shield.block_extra_permille(lambda _a: 145, 10) == 72  # 145 × 5 ÷ 10，捨去
+
+
+def test_control_resist_per_tier_is_scaled(library: ContentLibrary) -> None:
+    perks = library.ruleset.core.attribute_perks
+    by_kind = {p.kind: p.per_tier for p in perks.perks}
+    assert by_kind["control_resist"] == 10  # 加在抵抗的屬性值上
+    assert by_kind["collision_dealt"] == by_kind["collision_taken"] == 10
+    assert by_kind["reaction_hit"] == by_kind["reveal_range"] == by_kind["surface_duration"] == 1
+
+
+@pytest.mark.parametrize("scale", [1, 10])
+def test_default_min_damage_is_one_times_scale(scale: int) -> None:
+    state = _duel(scale)
+    hp = state.units[U2].hp
+    percent = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0)
+    after = run_effects(state, [percent]).state
+    assert hp - after.units[U2].hp == scale
+    explicit = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0, min_damage=3)
+    assert hp - run_effects(state, [explicit]).state.units[U2].hp == 3

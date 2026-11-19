@@ -19,7 +19,7 @@ effects:
     element: lightning
     condition: {type: cast_tag_this_turn, tag: lightning}
 condition: null
-cost: {mana: 6, cooldown: 1}
+cost: {mana: 60, cooldown: 1}
 tags: [lightning, spell, combo]
 narrative:
   concept: 接在另一道雷電之後，電光互相呼應

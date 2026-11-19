@@ -14,7 +14,7 @@
   "ap_cost": 2,
   "cost": [
    "AP 2",
-   "法力 4",
+   "法力 40",
    "冷卻 2 回合"
   ],
   "source_cost": null,
@@ -133,9 +133,9 @@
     {
      "index": 1,
      "kind": "mana",
-     "value": 4,
+     "value": 40,
      "unit": "法力",
-     "label": "4"
+     "label": "40"
     },
     {
      "index": 2,
@@ -182,7 +182,7 @@
   "ap_cost": 1,
   "cost": [
    "AP 1",
-   "耐力 6",
+   "耐力 60",
    "冷卻 2 回合"
   ],
   "source_cost": null,
@@ -309,9 +309,9 @@
     {
      "index": 1,
      "kind": "stamina",
-     "value": 6,
+     "value": 60,
      "unit": "耐力",
-     "label": "6"
+     "label": "60"
     },
     {
      "index": 2,
@@ -372,7 +372,7 @@
   "scaling": "意志",
   "ap_cost": null,
   "cost": [
-   "法力 3",
+   "法力 32",
    "冷卻 1 回合"
   ],
   "source_cost": null,
@@ -485,9 +485,9 @@
     {
      "index": 0,
      "kind": "mana",
-     "value": 3,
+     "value": 32,
      "unit": "法力",
-     "label": "3"
+     "label": "32"
     },
     {
      "index": 1,
@@ -534,7 +534,7 @@
   "ap_cost": 2,
   "cost": [
    "AP 2",
-   "耐力 8",
+   "耐力 80",
    "冷卻 2 回合"
   ],
   "source_cost": null,
@@ -663,9 +663,9 @@
     {
      "index": 1,
      "kind": "stamina",
-     "value": 8,
+     "value": 80,
      "unit": "耐力",
-     "label": "8"
+     "label": "80"
     },
     {
      "index": 2,
@@ -886,7 +886,7 @@
   "ap_cost": 1,
   "cost": [
    "AP 1",
-   "法力 5",
+   "法力 48",
    "冷卻 2 回合"
   ],
   "source_cost": null,
@@ -1008,9 +1008,9 @@
     {
      "index": 1,
      "kind": "mana",
-     "value": 5,
+     "value": 48,
      "unit": "法力",
-     "label": "5"
+     "label": "48"
     },
     {
      "index": 2,

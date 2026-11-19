@@ -67,10 +67,10 @@ def test_the_burst_releases_the_form_with_the_usual_cooldown_then_hits_for_the_c
     hit_at = next(i for i, e in enumerate(events) if isinstance(e, DamageDealt))
     assert left_at < hit_at
     (hit,) = of(result, DamageDealt)  # type: ignore[arg-type]
-    assert hit.target_id == U2 and hit.rolls == (1, 1, 1)
+    assert hit.target_id == U2 and hit.rolls == (10, 10, 10)  # 骰面 ×10（X10-2b）
     con = effective_attribute(lib.ruleset, me, Attribute.CON)
     assert hit.multiplier_permille == 1000
-    assert hit.amount == (3 * 1000 + con * 500) // 1000  # 卡片：3d6＋體質加成
+    assert hit.amount == (30 * 1000 + con * 500) // 1000  # 卡片：3d6＋體質加成
     assert "3d6" in "".join(skill_card(lib, skill).effects)
     # 之後不在形態中，不能再施放
     me.ap = 8

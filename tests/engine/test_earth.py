@@ -489,7 +489,8 @@ def test_stoneskin_ward_on_an_ally_gives_skin_and_shield_to_the_same_target() ->
     plain = battle(skill.model_copy(update={"id": SID}), foes=[(6, 6)], allies=[(4, 3)])
     before = move_points_for_turn(plain.ruleset, plain.units[U2])
     assert move_points_for_turn(result.state.ruleset, ally) == max(0, before - 1)
-    assert len(shield.rolls) == 1 and 1 <= shield.rolls[0] <= 6 and not of(result, DamageDealt)
+    # 骰面 ×10
+    assert len(shield.rolls) == 1 and 10 <= shield.rolls[0] <= 60 and not of(result, DamageDealt)
 
 
 def test_stoneskin_ward_can_target_the_caster_too() -> None:

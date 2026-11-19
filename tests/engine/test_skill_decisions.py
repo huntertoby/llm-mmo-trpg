@@ -102,7 +102,7 @@ def test_the_knock_chance_follows_the_attribute_matchup() -> None:
     )
     weak = battle(skill, [(4, 3)], base="hero_fighter")
     strong = battle(skill, [(4, 3)], base="hero_fighter")
-    strong.units[U2].attributes = {**strong.units[U2].attributes, "str": 30}  # type: ignore[dict-item]
+    strong.units[U2].attributes = {**strong.units[U2].attributes, "str": 300}  # type: ignore[dict-item]
     action = UseSkill(unit_id=U1, skill_id=SID, target_id=U2)
     strong_chance = preview(strong, action).targets[0].knock_chance
     weak_chance = preview(weak, action).targets[0].knock_chance

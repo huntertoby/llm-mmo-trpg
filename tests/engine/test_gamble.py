@@ -210,12 +210,12 @@ def test_a_natural_one_triggers_the_backlash_even_against_a_defenseless_target(
 def test_backlash_damage_never_kills_the_caster(monkeypatch: pytest.MonkeyPatch) -> None:
     full_back = {"type": "self_damage_of_hit", "self_damage_permille_of_hit": 1000}
     state = battle(gamble_skill(lose=[full_back]), [(5, 3)])
-    state.units[U1].hp = 2
+    state.units[U1].hp = 20  # X10-2b ×10：反噬留下的 HP 下限 1 × 10
     script_randint(monkeypatch, [19, 999, 6, 6])
     result = cast(state, target_id=U2)
     back = [e for e in of(result, DamageDealt) if e.target_id == U1]
-    assert back and back[0].cause == "backlash" and back[0].hp_after == 1
-    assert result.state.units[U1].hp == 1 and result.state.units[U1].alive
+    assert back and back[0].cause == "backlash" and back[0].hp_after == 10
+    assert result.state.units[U1].hp == 10 and result.state.units[U1].alive
 
 
 def test_miss_backlash_damage_leaves_one_hp_and_shields_absorb_first(
@@ -223,11 +223,11 @@ def test_miss_backlash_damage_leaves_one_hp_and_shields_absorb_first(
 ) -> None:
     cost = {"mana": 0, "on_miss": [{"type": "damage", "dice": "3d6", "element": "physical"}]}
     state = battle(miss_skill(cost), [(5, 3)])
-    state.units[U1].hp = 4
+    state.units[U1].hp = 40  # X10-2b ×10：反噬留下的 HP 下限 1 × 10
     script_randint(monkeypatch, [2, 6, 6, 6])
     result = cast(state, target_id=U2)
     (back,) = of(result, DamageDealt)
-    assert back.cause == "backlash" and result.state.units[U1].hp == 1
+    assert back.cause == "backlash" and result.state.units[U1].hp == 10
 
 
 def test_other_damage_is_not_capped_by_the_backlash_rule(monkeypatch: pytest.MonkeyPatch) -> None:

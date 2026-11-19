@@ -25,7 +25,7 @@ followup:
     - {type: damage, dice: 3d8, element: physical}
     - {type: push, distance: 1}
 condition: null
-cost: {mana: 10, cooldown: 3}
+cost: {mana: 100, cooldown: 3}
 tags: [arcane, spell, aoe, push]
 narrative:
   concept: 碎晶之主把界域的裂縫整個掀開，十字形的虛空吞向四方

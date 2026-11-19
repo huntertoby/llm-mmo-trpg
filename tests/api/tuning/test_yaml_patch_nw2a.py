@@ -106,7 +106,7 @@ def test_flow_and_block_effects_and_cost_insert_and_cooldown_delete() -> None:
     assert "    multiplier_permille: 1200\n" in block and "  # 標記就是靶心" in block
     fire = TEXTS["skills/skill_fire_arrow.yaml"]
     inserted = patch_text(fire, [(("cost", "cooldown"), 2)])
-    assert "cost: {stamina: 6, cooldown: 2}\n" in inserted
+    assert "cost: {stamina: 60, cooldown: 2}\n" in inserted
     assert patch_text(inserted, [(("cost", "cooldown"), None)]) == fire  # 清空冷卻＝刪鍵
 
 

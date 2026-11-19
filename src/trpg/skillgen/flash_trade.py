@@ -283,7 +283,7 @@ def _cost_cuts(base: dict[str, Any], library: ContentLibrary) -> Iterator[dict[s
         holder = current if cut.field in ("stance_upkeep", "ap_cost") else current.get("cost")
         while isinstance(holder, dict) and made < _MAX_COST_CUTS:
             value = holder.get(cut.field)
-            if not value or value - cut.step < 1:
+            if not value or value - cut.step < library.ruleset.core.cost_floor(cut.field):
                 break
             holder[cut.field] = value - cut.step
             made += 1

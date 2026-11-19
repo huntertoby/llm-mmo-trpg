@@ -16,7 +16,7 @@ shape: {type: single, range: 3}
 effects:
   - {type: revive, hp_permille: 300}
 condition: null
-cost: {mana: 8, uses_per_battle: 1}
+cost: {mana: 80, uses_per_battle: 1}
 tags: [holy, spell, revive, support]
 narrative:
   concept: 把倒下的同伴從死亡邊緣拉回來，讓他再站起來戰鬥一次

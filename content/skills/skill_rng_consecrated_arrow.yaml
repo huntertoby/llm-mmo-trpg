@@ -20,7 +20,7 @@ effects:
     element: holy
     condition: {type: target_has_status, status: marked}
 condition: null
-cost: {stamina: 10, cooldown: 2}
+cost: {stamina: 100, cooldown: 2}
 tags: [holy, ranged, combo]
 narrative:
   concept: 在聖水裡浸過的箭，會循著獵人的標記找到目標

@@ -59,8 +59,8 @@ def test_start_preview_returns_the_hint_and_creation_is_not_blocked(client: Test
     preview = _ok(client.post("/api/runs/start-preview", json=body))
     hint = preview["route_hint"]
     assert hint is not None and "str" not in hint["fits"] and hint["text_zh"]
-    created = _ok(client.post("/api/runs", json={**body, "attributes": {"str": 4}}))
-    assert created["hero"]["attributes"]["str"] == 14  # 只提示，不擋
+    created = _ok(client.post("/api/runs", json={**body, "attributes": {"str": 40}}))
+    assert created["hero"]["attributes"]["str"] == 140  # 只提示，不擋（X10-2b 屬性 ×10）
     none = _ok(
         client.post(
             "/api/runs/start-preview",
