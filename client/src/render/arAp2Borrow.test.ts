@@ -4,6 +4,7 @@ import { fakeCanvasFactory, type FakeCanvasLog } from "../test/fakeCanvas";
 import { setQCanvasFactory, type Ctx, type QOpts } from "./qIcon/core";
 import * as QP from "./qIcon/parts";
 import * as QT from "./qIcon/status";
+import { PRIMITIVE_PLAYS } from "./skillClips";
 
 afterEach(() => setQCanvasFactory(null));
 
@@ -56,6 +57,15 @@ describe("1. 狀態「預支」borrowed_ap", () => {
     expect(tiny).not.toContain("#dcdae6"); /* tiny 不畫亮條 */
     expect(tiny).not.toContain("#ffffff"); /* 火花不帶白芯 */
     expect(big).not.toContain("#d8c0ff"); /* 不是回合結束時的月牙 */
+  });
+  it("7. 部件暫代清單拿掉這三樣：效果、觸發都不再退回別的部件，施放動作不再共用拍肩，狀態不再是暫用圖", () => {
+    const aliased = new Set([...Object.keys(QP.EFFECT_ALIAS), ...Object.keys(QP.TRIG_ALIAS), ...Object.keys(QP.COND_ALIAS)]);
+    for (const id of ["borrow_ap", "on_ap_spent_all", "borrowed_ap"]) expect(aliased.has(id), id).toBe(false);
+    expect(QP.EFFECT.borrow_ap?.src ?? "new").toBe("new");
+    expect(QP.TRIG.on_ap_spent_all?.src ?? "new").toBe("new");
+    expect(PRIMITIVE_PLAYS.borrow_ap?.clip).toBe("borrow_pull");
+    expect(Object.entries(PRIMITIVE_PLAYS).filter(([, p]) => p.clip === "borrow_pull").map(([id]) => id)).toEqual(["borrow_ap"]);
+    expect(QT.NEW.borrowed_ap?.topic).not.toMatch(/暫用|暫借|待美術/);
   });
   it("色：亮面、桌面、那格的框照混色算（#ffc793、#ffac5d、#b3a994）", () => {
     expect(QP.BORROW.hi).toBe("#ffc793");

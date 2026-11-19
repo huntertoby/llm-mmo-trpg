@@ -84,7 +84,8 @@ describe("T-B2 部件代碼齊全", () => {
     for (const id of KNOWN_PARTS.triggers) known("trigger", id);
     for (const id of KNOWN_PARTS.links) known("link", id);
     for (const id of KNOWN_PARTS.costs) known("cost", id);
-    // 觸發的 7 個暫代（TF-1 加 2 個）：名詞表有、目前沒有招用到（需求 4.4 第 21 點）
+    // 觸發的 7 個暫代（TF-1 加 2 個；AP-2 加的「用完所有 AP 時」AR-AP2 已換成專屬圖樣）：名詞表有、目前沒有招用到（需求 4.4 第 21 點）
+    expect(Object.keys(QP.TRIG_ALIAS)).toHaveLength(7);
     const used = new Set(ALL_ICONS.map((i) => i.trigger));
     for (const id of Object.keys(QP.TRIG_ALIAS)) expect(used.has(id), id).toBe(false);
   });
