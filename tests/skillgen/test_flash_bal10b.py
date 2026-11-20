@@ -569,31 +569,42 @@ def test_enter_light_only_cuts_the_casting_cost() -> None:
 
 @pytest.mark.parametrize("field", ["mana", "stamina"])
 def test_enter_light_cuts_mana_or_stamina_but_keeps_one(field: str) -> None:
-    """BAL-10c：進入代價 −1 也能減進入時的法力、耐力；最少留 1，維持費不動。"""
+    """BAL-10c：進入代價 −1 也能減進入時的法力、耐力；最少留一格，維持費不動。
+
+    X10-3c：法力、耐力一格是 1 × ``quantity_scale``——scale 10 時一次減 10、最少留 10。"""
     lib = library()
+    scale = lib.ruleset.core.quantity_scale
+    assert scale == 10  # 這條回歸測試寫的是新單位
     fury = lib.skills["skill_fury_stance"]
     template = lib.flash.minor_template("stance_enter_light")
     assert template is not None and field in template.cost_fields
     paid = fury.model_copy(
-        update={"id": f"fury_{field}_test", "cost": fury.cost.model_copy(update={field: 3})}
+        update={"id": f"fury_{field}_test", "cost": fury.cost.model_copy(update={field: 30})}
     )
     drafts = FLASH_OPS[template.op](paid, template, _var("stance_enter_light"), lib)
-    assert [d[0]["cost"][field] for d in drafts] == [2]
+    assert [d[0]["cost"][field] for d in drafts] == [20]
     assert all(d[0]["stance_upkeep"] == paid.stance_upkeep for d in drafts)
-    one = fury.model_copy(
-        update={"id": f"fury_{field}_one_test", "cost": fury.cost.model_copy(update={field: 1})}
-    )
-    assert FLASH_OPS[template.op](one, template, _var("stance_enter_light"), lib) == []
+    for floor in (10, 19):  # 減一格會低於 10：不出
+        one = fury.model_copy(
+            update={
+                "id": f"fury_{field}_{floor}_test",
+                "cost": fury.cost.model_copy(update={field: floor}),
+            }
+        )
+        assert FLASH_OPS[template.op](one, template, _var("stance_enter_light"), lib) == []
     for tier in (1, 2, 3):
         before = at_tier(paid, tier)
         got = _apply(before, "stance_enter_light")
         if got is None:
             continue
         _sound(before, got)
-        assert getattr(got.cost, field) == 2
+        assert getattr(got.cost, field) == 20
         assert got.stance_upkeep == before.stance_upkeep and got.effects == before.effects
         skill = _renamed(got)
-        assert str(getattr(skill.cost, field)) in " ".join(skill_card(lib, skill).cost)
+        shown = getattr(skill.cost, field)
+        if field == "mana":
+            shown = lib.ruleset.core.mana_cost(shown)  # 卡片顯示實付
+        assert str(shown) in " ".join(skill_card(lib, skill).cost)
 
 
 def test_enter_light_is_not_offered_without_an_entry_cost() -> None:

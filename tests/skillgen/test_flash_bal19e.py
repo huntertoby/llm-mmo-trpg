@@ -91,7 +91,9 @@ def test_enter_heavy_raises_the_entry_cost_and_the_stance(skill_id: str) -> None
     got = _sound(
         stance, apply_variation(lib, stance, _variation("stance_enter_heavy"), bonus=40, rng=Rng(3))
     )
-    assert got.cost.mana + got.cost.stamina == stance.cost.mana + stance.cost.stamina + 1
+    step = lib.ruleset.core.quantity_scale  # X10-3c：法力、耐力一格 1 × quantity_scale
+    assert step == 10  # scale 10：一次加 10
+    assert got.cost.mana + got.cost.stamina == stance.cost.mana + stance.cost.stamina + step
     assert got.stance_upkeep == stance.stance_upkeep  # 維持費不動（#67）
     assert got.effects[0] != stance.effects[0]  # 姿態本體提高一級（幅度或階梯）
     form = _at("skill_form_bear", 2)

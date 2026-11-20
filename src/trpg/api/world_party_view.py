@@ -396,7 +396,7 @@ def my_shadow_view(
 
 
 def allies_line(library: ContentLibrary, char: CharacterState, hero_hp: int) -> str:
-    """遇敵面板的我方說明（例「主角（開場 HP 30）＋青鋒、阿霧的影子」；沒有隊友「・獨行」）。"""
+    """遇敵面板的我方說明（例「主角（開場 HP 300）＋青鋒、阿霧的影子」；沒有隊友「・獨行」）。"""
     hero = f"主角（開場 HP {hero_hp}{'，疲憊' if char.fatigued else ''}）"
     names = [m.name_zh for m in party_mercenaries(library, char)]
     names += [f"{s.hero.name_zh}的影子" for s in char.shadows]

@@ -442,16 +442,17 @@ minor:
     prefix_zh: 蓄力
     summary_zh: 蓄力：姿態維持費 +1，效果提高
     headline_zh: "維持費多 {n}，姿態效果強一點"
-  # BAL-10b／10c：進入代價 −1——只減進入時的施放費用（冷卻、法力、耐力，每項最少留 1；姿態的進入 AP 由規則固定），維持費不動
+  # BAL-10b／10c：進入代價 −1——只減進入時的施放費用（冷卻一格 1、法力、耐力一格 10＝1 × quantity_scale，每項最少留一格；
+  # 姿態的進入 AP 由規則固定），維持費不動（X10-3c）
   - id: stance_enter_light
     category: cost
     op: stance_enter_light
     kinds: [stance]
     cost_fields: [ap_cost, cooldown, mana, stamina]
     prefix_zh: 俐落
-    summary_zh: 進入代價 −1：進入姿態的冷卻、法力或耐力 −1（最少留 1；維持費不變，效果不變）
+    summary_zh: 進入代價 −1：進入姿態的冷卻 −1，或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10；維持費不變，效果不變）
     headline_zh: "進入姿態更便宜"
-  # BAL-19e（#110「閃現的姿態變化模板補到約 10 種」）：進入代價 +1 的反向——進入時的法力或耐力 +1，姿態本體提高一級；
+  # BAL-19e（#110「閃現的姿態變化模板補到約 10 種」）：進入代價 +1 的反向——進入時的法力或耐力 +10（一格 1 × quantity_scale），姿態本體提高一級；
   # 維持費不動（#67）；變身姿態不出（BAL-10c）；進入冷卻不算代價（BAL-10c），不列
   - id: stance_enter_heavy
     category: cost
@@ -459,7 +460,7 @@ minor:
     kinds: [stance]
     cost_fields: [mana, stamina]
     prefix_zh: 沉勢
-    summary_zh: 進入代價 +1：進入姿態的法力或耐力 +1，姿態效果提高一級（維持費不變）
+    summary_zh: 進入代價 +1：進入姿態的法力或耐力 +10，姿態效果提高一級（維持費不變）
     headline_zh: "進入姿態多付一點，效果強一級"
   # ---- 輔助（治療、護盾、增益） ----
   - id: support_potency

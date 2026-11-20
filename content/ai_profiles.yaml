@@ -102,7 +102,7 @@ trap:
 #   redirect_points   靈魂連結 × 目標已損失 HP 的比例（施放者 HP 不到一半不連結）
 #   reaction_points   每個額外反應次數（目標有反應規則才有價值）
 # Phase 3D-1（初值，未經模擬）：
-#   mana_points       友方每回復 1 點法力（restore_resource；冷卻縮短沿用 cooldown_points）
+#   mana_points       友方每回復 10 點法力（1 × quantity_scale）（restore_resource；冷卻縮短沿用 cooldown_points）
 #   steal_points      每奪取 1 個增益（steal_buff）
 # Phase 3D-8a（初值，未經模擬）：
 #   dispel_points     每驅散敵人 1 個增益（dispel）

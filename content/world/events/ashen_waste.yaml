@@ -188,7 +188,7 @@ skeletons:
       - {kind: combat, note_zh: 攔截（撤離）, objective: escape, threads: [convoy_intercepted]}
       - {kind: situation, attributes: [dex], note_zh: 靈巧（偷走）}
     threads:
-      # 有效期間灰燼之心第 1 階段護甲 −1（encounters/ashen_waste.yaml 的 armor_mods；代決 5F5a-5）
+      # 有效期間灰燼之心第 1 階段護甲 −10（encounters/ashen_waste.yaml 的 armor_mods；代決 5F5a-5）
       - {id: convoy_intercepted, text_zh: 被攔下的碎片數, aliases_zh: [被攔下的碎片, 攔下碎片]}
   - id: molten_lord_pool
     number: 14

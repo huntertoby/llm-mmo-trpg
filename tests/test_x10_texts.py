@@ -69,6 +69,12 @@ def test_flash_cost_texts(library: ContentLibrary, scale: int) -> None:
     assert "冷卻最少留 1" in light and "AP −1（最少 1）" in light  # 冷卻、AP 不變
     blood = _by_id(minor, "cost_blood")["summary_zh"]
     assert f"只花 {scale} 點" in blood
+    # X10-3c：姿態進入代價的法力、耐力一格也是 1 × scale（flash_ops._entry_cost）
+    enter_light = _by_id(minor, "stance_enter_light")["summary_zh"]
+    assert f"法力、耐力 −{scale}" in enter_light and f"法力、耐力最少留 {scale}" in enter_light
+    assert "冷卻 −1" in enter_light and "冷卻最少留 1" in enter_light  # 冷卻不變
+    enter_heavy = _by_id(minor, "stance_enter_heavy")["summary_zh"]
+    assert f"法力或耐力 +{scale}" in enter_heavy
 
 
 def test_newcomer_attribute_notes(library: ContentLibrary) -> None:
