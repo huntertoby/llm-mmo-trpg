@@ -2200,7 +2200,7 @@
      "category": "cost",
      "category_zh": "費用",
      "template": "cost_light",
-     "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）",
+     "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
      "transform": false,
      "card": {
       "id": "skill_akimbo_burst_fl_c5a9d9d65f",
@@ -3417,7 +3417,7 @@
      "category": "cost",
      "category_zh": "費用",
      "template": "cost_light",
-     "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）",
+     "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
      "transform": false,
      "card": {
       "id": "skill_rand_75_fl_c5a9d9d65f",
@@ -4474,7 +4474,7 @@
      "category": "cost",
      "category_zh": "費用",
      "template": "cost_light",
-     "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）",
+     "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
      "transform": false,
      "card": {
       "id": "skill_rand_75_fl_c5a9d9d65f",

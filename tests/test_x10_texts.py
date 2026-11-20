@@ -108,3 +108,13 @@ def _rows_with_armor_mods(node: Any) -> list[dict[str, Any]]:
         for value in node:
             found.extend(_rows_with_armor_mods(value))
     return found
+
+
+@pytest.mark.parametrize("item_id", ["item_hp_potion_small", "item_hp_potion_medium"])
+def test_potion_dice_texts_are_ranges(library: ContentLibrary, scale: int, item_id: str) -> None:
+    """X10-3b：道具說明的骰子照卡片的規則寫成範圍（骰面 × 倍率），不寫「2d6」。"""
+    potion = _by_id(_yaml(library, "world/items.yaml")["items"], item_id)
+    (effect,) = potion["skill"]["effects"]
+    count, sides = (int(x) for x in effect["dice"].split("d"))
+    assert f"戰鬥中回 {count * scale}–{count * sides * scale} HP" in potion["description_zh"]
+    assert effect["dice"] not in potion["description_zh"]
