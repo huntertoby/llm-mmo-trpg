@@ -42,8 +42,8 @@
 ``mod_stack``      計數上限 +1（修正型被動：依空欄位計算的格數，BAL-10b）
 ``mod_cooldown``   命中後冷卻 −1 → −2（修正型被動，BAL-10b）
 ``mod_cost``       代價減輕（修正型被動：負的幅度減輕一格，不讓代價消失，BAL-10b／10c）
-``stance_enter_light``  進入代價 −1（姿態：進入時的冷卻、法力、耐力 −1，維持費不動，BAL-10b／10c）
-``stance_enter_heavy``  進入代價 +1（姿態：進入時的法力或耐力 +1、本體提高一級，BAL-19e）
+``stance_enter_light``  進入代價 −1（姿態：冷卻、法力、耐力減一格，維持費不動，BAL-10b／10c）
+``stance_enter_heavy``  進入代價 +1（姿態：進入時的法力或耐力加一格、本體提高一級，BAL-19e）
 ``self_rider``     附帶護身（姿態進入時、反應觸發時多一個作用於自己的效果，BAL-19e）
 =================  ============================================================
 
@@ -715,9 +715,9 @@ def _op_light(
 ) -> list[Draft]:
     """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。
 
-    BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）−1，
-    每項最少留 1（只減不拿掉）。FL-1a：至少一項一定要嚴格變弱、沒有一項變強
-    （:mod:`trpg.skillgen.flash_cost`）。"""
+    BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）減一格
+    （冷卻 1；法力、耐力 1 × ``quantity_scale``），每項最少留一格（只減不拿掉）。FL-1a：至少一項
+    一定要嚴格變弱、沒有一項變強（:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     if (skill.ap_cost or 1) <= 1:

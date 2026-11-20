@@ -472,7 +472,7 @@ class EncounterView(_ApiModel):
     opening_zh: tuple[str, ...] = ()
     """開場說明（先手、開場狀態、增援）的句子；戰鬥畫面開場也顯示（5A-7）。"""
     allies_zh: str = ""
-    """我方的說明（例「主角（開場 HP 30）＋青鋒、回春」；5C-1）。"""
+    """我方的說明（例「主角（開場 HP 300）＋青鋒、回春」；5C-1）。"""
     battlefield: BattlefieldRectView | None = None
     """就地開打切出的戰場（6C-2）；``None``＝用地點原本的戰鬥地圖模板。"""
     battlefield_fallback_zh: str | None = None

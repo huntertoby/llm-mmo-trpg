@@ -40,11 +40,11 @@ ambush_hit_bonus: 2           # 潛行偷襲：帶 concealed 狀態時發動攻�
 far_distance: 5               # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻，施放者和目標距離至少這麼多格（初值，工坊）
 melee_height_limit: 1         # 近戰（射程 <= melee_height_limit_max_range）攻擊的高度差上限
 melee_height_limit_max_range: 2   # 射程不超過此值的武器（近戰、長柄）受高度差限制
-initiative_attr_base: 100      # 先攻：d20 + (敏捷 − 10) // 2
+initiative_attr_base: 100      # 先攻：d20 + (敏捷 − 100) // 20
 initiative_attr_divisor: 20
 
 # --- 衍生數值（Phase 3-7；初值）---
-hp_con_base: 100                # 體質 10 為基準：最大 HP ＝ 範本基礎 HP ＋（體質 − 10）× hp_per_con_point（至少 1）
+hp_con_base: 100                # 體質 100 為基準：最大 HP ＝ 範本基礎 HP ＋（體質 − 100）× hp_per_con_point（至少 1）
 hp_per_con_point: 3           # 每點體質 +3 最大 HP（敵我同一公式）
 level_hp_permille: 50          # roguelite 每升一級：最大 HP + 基礎 HP × 5%（向下取整）
 
@@ -96,7 +96,7 @@ revive_landing_radius: 2
 # 3D-7b：爆骰（explode: true）每顆骰最多再擲 explode_max 次；依情況縮放（scaling）的 cap_permille 上限（初值，未經模擬）
 explode_max: 2
 scale_cap_max_permille: 800
-ability_mod_base: 100          # 檢定的屬性修正：(屬性 − 10) // 2
+ability_mod_base: 100          # 檢定的屬性修正：(屬性 − 100) // 20
 ability_mod_divisor: 20
 
 # --- 反應（Phase 1B）---
@@ -227,7 +227,7 @@ legendary_activation_ap: 1    # 啟動修正型與規則改變型傳說（activa
 legendary_timed_rounds: 3     # activation: timed 的持續輪數：持有者連同啟動那一回合共 3 個回合，第 4 個回合開始時結束
 
 # --- 屬性的常駐數值（Phase 3H-1，docs/design/07-角色成長.md 7.2，玩法決定 #45；初值，平衡待辦 B13）---
-# 屬性高於 base 每 step 點升一階（14＝1 階、18＝2 階、22＝3 階）；角色面板直接顯示，說明文字由這裡產生。
+# 屬性高於 base 每 step 點升一階（140＝1 階、180＝2 階、220＝3 階）；角色面板直接顯示，說明文字由這裡產生。
 # 敏捷（防禦、先攻）、體質（HP）本來就有常駐數值，不另加。kind 對應引擎的結算點（content/rules.py AttributePerks）。
 attribute_perks:
   base: 100

@@ -276,7 +276,8 @@ def _random_target(library: ContentLibrary, rng: Rng) -> Fraction:
 
 
 def _cost_cuts(base: dict[str, Any], library: ContentLibrary) -> Iterator[dict[str, Any]]:
-    """依 ``complete.cost_cuts`` 的順序一次減一格代價（累計）；只減不拿掉（最少留 1）。"""
+    """依 ``complete.cost_cuts`` 的順序一次減一格代價（累計）；只減不拿掉（最少留一格，
+    ``CoreRules.cost_floor``）。"""
     current = copy.deepcopy(base)
     made = 0
     for cut in library.flash.rules.complete.cost_cuts:
