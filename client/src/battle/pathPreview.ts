@@ -134,9 +134,14 @@ function frameOf(step: PathStep): FrameKind | null {
   return null;
 }
 
-const maybe = (certain: boolean): string => (certain ? "" : "（可能）");
+/** 不確定的那一項前面加「可能」（AR-X10，玩法 PM 定案：前綴、只加在不確定的那一項上）；數字開頭的空一格（「可能 60–140 傷害」）。 */
+export function maybe(text: string, certain: boolean): string {
+  if (certain) return text;
+  return /^\d/u.test(text) ? `可能 ${text}` : `可能${text}`;
+}
 
-/** 傷害的數字：「−8」「−6–8」（X10-3d：連接號和戰鬥預覽 previewText 的 damageText 一樣用「–」）；只在骰子不利時才受傷的寫最大值。 */
+/** 傷害：「140 傷害」「60–140 傷害」（AR-X10：不加負號，範圍用「–」，同戰鬥預覽 previewText 的 damageText）；
+ * 只在骰子不利時才受傷（最少後果沒有傷害）的寫「最多 140 傷害」。 */
 export function damageText(events: readonly PathEvent[]): string {
   let min = 0;
   let max = 0;
@@ -147,8 +152,17 @@ export function damageText(events: readonly PathEvent[]): string {
     else min += e.amount_min;
   }
   if (max <= 0) return "";
-  if (unsure) return `−${max}`;
-  return min === max ? `−${max}` : `−${min}–${max}`;
+  if (unsure) return `最多 ${max} 傷害`;
+  return min === max ? `${max} 傷害` : `${min}–${max} 傷害`;
+}
+
+/** 陷阱一張（AR-X10）：「陷阱：60–140 傷害・可能定身」；陷阱本身不確定時整張「可能觸發陷阱：60–140 傷害・定身」。
+ * `iced`：在冰面之後，不加「可能」（改畫紅色虛線，6A-4f）。 */
+export function trapText(trapCertain: boolean, dmg: string, statuses: ReadonlyArray<{ word: string; certain: boolean }>, iced: boolean): string {
+  const whole = iced || trapCertain;
+  const items = [...(dmg === "" ? [] : [dmg]), ...statuses.map((s) => (whole ? maybe(s.word, iced || s.certain) : s.word))];
+  const head = whole ? "陷阱" : "可能觸發陷阱";
+  return items.length === 0 ? head : `${head}：${items.join("・")}`;
 }
 
 /** 狀態的短名（「點燃」「定身」；其餘用對照表的名稱）。 */
@@ -163,7 +177,7 @@ interface Part {
   text: string;
 }
 
-/** 連續冰面一段的小牌文字（6A-4f；#123 只在第一格擲一次，失敗沿方向滑到停點 ◆ 倒地）：有百分比就不加「（可能）」。
+/** 連續冰面一段的小牌文字（6A-4f；#123 只在第一格擲一次，失敗沿方向滑到停點 ◆ 倒地）：有百分比就不加「可能」。
  * 一格都沒滑（下一格就擋住）時寫「失敗就地倒地」。 */
 export function slipRunText(run: SlipRun): string {
   if (run.immune) return `冰 ${run.tiles} 格・不會滑倒`;
@@ -188,7 +202,8 @@ export function slipStops(pv: PathPreview): Array<{ pos: Pos; slide: Pos[] }> {
 
 /** 一格的事件 → 小牌的各段（依序：滑倒、陷阱、點燃、其他狀態、潮濕、反應、墜落、致命、其餘傷害）。
  * 滑倒由連續冰面的段（`slip_runs`）合成一張，放在段的第一格（`run`）；段內其他格不再寫。
- * `iced`：這一格在冰面之後，陷阱是否發生取決於前面有沒有滑倒，字上不加「（可能）」，改畫紅色虛線。 */
+ * `iced`：這一格在冰面之後，陷阱是否發生取決於前面有沒有滑倒，字上不加「可能」，改畫紅色虛線。
+ * AR-X10：「可能」是前綴、只加在不確定的那一項上；傷害不加負號（`damageText`）。 */
 function stepParts(step: PathStep, run: SlipRun | undefined, iced: boolean): Part[] {
   const parts: Part[] = [];
   const used = new Set<PathEvent>();
@@ -202,35 +217,31 @@ function stepParts(step: PathStep, run: SlipRun | undefined, iced: boolean): Par
     take((x) => x.kind === "status" && x.status_id === e.status_id); // 滑倒的倒地已經寫在「失敗滑到 ◆ 倒地」
   }
   take((x) => x.kind === "displaced" && x.detail === "slide"); // 滑行的每一格由 ◆ 表示
-  const trapMaybe = (certain: boolean): string => (iced ? "" : maybe(certain));
   for (const trap of take((x) => x.kind === "trap")) {
     const dmg = damageText(take((x) => x.kind === "damage" && x.other_id === trap.other_id));
-    const statuses = take((x) => x.kind === "status" && x.status_id !== "burning").map(
-      (s) => `${statusWord(s.status_id ?? "")}${trapMaybe(s.certain)}`,
-    );
-    const head = `陷阱${dmg === "" ? "" : ` ${dmg}`}${trapMaybe(trap.certain)}`;
-    parts.push({ icon: "trap", text: [head, ...statuses].join("・") });
+    const statuses = take((x) => x.kind === "status" && x.status_id !== "burning").map((s) => ({ word: statusWord(s.status_id ?? ""), certain: s.certain }));
+    parts.push({ icon: "trap", text: trapText(trap.certain, dmg, statuses, iced) });
   }
   for (const s of take((x) => x.kind === "status" && x.status_id === "burning")) {
-    parts.push({ icon: "fire", text: `點燃${maybe(s.certain)}` });
+    parts.push({ icon: "fire", text: maybe("點燃", s.certain) });
   }
   for (const s of take((x) => x.kind === "status")) {
-    parts.push({ icon: "status", text: `${statusWord(s.status_id ?? "")}${maybe(s.certain)}` });
+    parts.push({ icon: "status", text: maybe(statusWord(s.status_id ?? ""), s.certain) });
   }
   if (step.surface === "water") parts.push({ icon: "water", text: "潮濕" });
   for (const r of take((x) => x.kind === "reaction")) {
     const dmg = damageText(take((x) => x.kind === "damage" && x.other_id === r.other_id));
     const name = r.detail === null ? "反應" : reactionName(r.detail);
-    parts.push({ icon: "hit", text: `${name}${dmg === "" ? "" : ` ${dmg}`}${maybe(r.certain)}` });
+    parts.push({ icon: "hit", text: maybe(`${name}${dmg === "" ? "" : ` ${dmg}`}`, r.certain) });
   }
-  for (const e of take((x) => x.kind === "fell")) parts.push({ icon: "hit", text: `墜落${maybe(e.certain)}` });
-  for (const e of take((x) => x.kind === "deadly")) parts.push({ icon: "hit", text: `致命地形${maybe(e.certain)}` });
+  for (const e of take((x) => x.kind === "fell")) parts.push({ icon: "hit", text: maybe("墜落", e.certain) });
+  for (const e of take((x) => x.kind === "deadly")) parts.push({ icon: "hit", text: maybe("致命地形", e.certain) });
   const rest = take((x) => x.kind === "damage");
   if (rest.length > 0) {
     const dmg = damageText(rest);
-    if (dmg !== "") parts.push({ icon: "hit", text: `${dmg}${maybe(rest.every((e) => e.certain))}` });
+    if (dmg !== "") parts.push({ icon: "hit", text: maybe(dmg, rest.every((e) => e.certain)) });
   }
-  for (const e of take((x) => x.kind === "downed")) parts.push({ icon: "hit", text: `倒下${maybe(e.certain)}` });
+  for (const e of take((x) => x.kind === "downed")) parts.push({ icon: "hit", text: maybe("倒下", e.certain) });
   return parts;
 }
 

@@ -429,6 +429,12 @@
   white-space: pre-line;
 }
 
+/* AR-X10：狀態提示的骰子行「擲 1d6，每點 ×10」自己一行、次要字色（同技能長說明的 skill-card-dice），緊貼上一句 */
+.part-tip-text.part-tip-secondary {
+  margin-top: 0;
+  color: var(--muted);
+}
+
 /* 符文資訊卡（Phase 3-23）：標題用強調色，同陷阱與持續區域 */
 
 .tile-section.rune .tile-title {
