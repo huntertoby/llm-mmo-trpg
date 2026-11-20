@@ -2,8 +2,8 @@
 
 ``scripts/hardcoded/scan_py.py``（``src/trpg/``）和 ``scan_ts.py``（``client/src/``）列出的每一個
 數字字面值、含數字的中文字串，都要被 ``scripts/hardcoded/classes.yaml`` 的某一條規則歸類
-（config／scale／const／text／layout）。新寫的數字沒有規則時這裡失敗：先決定它是玩法數值（搬進
-content 或工坊設定）、量類、真的常數、說明文字還是排版，再寫進歸類檔。
+（config／scale／const／text／layout／guard）。新寫的數字沒有規則時這裡失敗：先決定它是玩法數值（搬進
+content 或工坊設定）、量類、真的常數、說明文字、排版還是 schema 的護欄，再寫進歸類檔。
 """
 
 from __future__ import annotations
@@ -43,9 +43,9 @@ def test_every_hardcoded_number_is_classified(result: Any) -> None:
 
 
 def test_todo_classes_and_status(result: Any) -> None:
-    """const／layout 不用搬（done）；config／scale／text 每條規則的 status 都是 todo 或 done。"""
+    """const／layout／guard 不用搬（done）；config／scale／text 的 status 是 todo 或 done。"""
     for rule in result.classes.rules:
-        if rule.cls in ("const", "layout"):
+        if rule.cls in ("const", "layout", "guard"):
             assert rule.status == "done", rule.id
         else:
             assert rule.status in ("todo", "done"), rule.id
@@ -59,7 +59,10 @@ def _class_of(result: Any, file: str, predicate: Any) -> set[str]:
     ("file", "owner", "expected"),
     [
         ("src/trpg/content/forms.py", "upkeep_mana", "scale"),
-        ("src/trpg/content/battle.py", "MAX_ATTRIBUTE", "scale"),
+        ("src/trpg/content/battle.py", "MAX_ATTRIBUTE", "guard"),
+        ("src/trpg/content/battle.py", "_MAX_DICE_COUNT", "guard"),
+        ("src/trpg/content/skill_pick.py", "max_elements_dual", "config"),
+        ("src/trpg/content/composer_rules.py", "ap_cost", "config"),
         ("src/trpg/content/rules.py", "party_ap_per_turn", "config"),
         ("src/trpg/skillgen/flash_ops.py", "RELAX_PERMILLE", "config"),
         ("src/trpg/content/rules.py", "_PERMILLE", "const"),
@@ -146,6 +149,7 @@ def _write(tmp_path: Path, text: str) -> Path:
     [
         "{id: a, class: nope, status: todo}",
         "{id: a, class: const, status: todo}",
+        "{id: a, class: guard, status: todo}",
         "{id: a, class: config, status: later}",
         "{id: a, class: config, status: todo, colour: red}",
         "{class: config, status: todo}",
