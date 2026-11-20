@@ -13,10 +13,12 @@
 - ``exposed_in``：只有這些階段（``phases[*].id``）才露出；空＝全程露出。和 ``reach`` 並存。
 - ``armor_bonus``／``resist``／``element_mods``：部位自己的防禦；沒寫＝和本體相同（``resist``、
   ``element_mods`` 只覆寫有寫的鍵）。
-- ``on_break``：破掉的效果（1～2 項，依序結算；:data:`PartBreakEffect`）。
+- ``on_break``：破掉的效果（1～``core.yaml`` 的 ``boss_parts.break_effects_max`` 項，依序結算；
+  :data:`PartBreakEffect`）。
 
-本模組只放資料 schema 與單檔結構檢查；跨檔引用（狀態存在、封的招在技能組裡、階段 ID）由
-:func:`trpg.content.library.unit_checks.unit_part_problems` 與 ``UnitTemplate`` 的驗證檢查。
+本模組只放資料 schema 與單檔結構檢查；跨檔引用（狀態存在、封的招在技能組裡、階段 ID）與規則型的
+上下限（部位數、血量加總、破壞效果數；HC-4a 搬到 ``core.yaml`` 的 ``boss_parts``，
+:class:`BossPartRules`）由 :func:`trpg.content.library.unit_checks.unit_part_problems` 檢查。
 """
 
 from __future__ import annotations
@@ -29,11 +31,9 @@ from trpg.content.schemas import ContentModel
 from trpg.shared.types import Element, ResistGroup
 
 __all__ = [
-    "PARTS_MAX",
-    "PARTS_MIN",
-    "PART_HP_TOTAL_MAX",
     "STAT_DOWN_STATS",
     "BossPart",
+    "BossPartRules",
     "ControlBreak",
     "InterruptChargeBreak",
     "PartBreakEffect",
@@ -45,16 +45,32 @@ __all__ = [
     "check_parts",
     "max_part_hp",
     "opening_part_hp",
+    "part_rule_problems",
 ]
 
 _ID = r"^[a-z][a-z0-9_]*$"
 _PERMILLE = 1000
 
-PARTS_MIN = 2
-PARTS_MAX = 4
-"""每隻頭目的部位數（05 5.12.2 第 1 點）。"""
-PART_HP_TOTAL_MAX = 600
-"""同一隻頭目的部位 ``hp_permille`` 加總上限（05 5.12.2 第 3 點）。"""
+
+class BossPartRules(ContentModel):
+    """頭目部位的規則（``core.yaml`` 的 ``boss_parts``；05 5.12.2；HC-4a 從程式常數搬來，
+    值不變）。"""
+
+    count_min: int = Field(ge=1)
+    """每隻頭目最少幾個部位（第 1 點）。"""
+    count_max: int = Field(ge=1)
+    """每隻頭目最多幾個部位（第 1 點）。"""
+    hp_total_max_permille: int = Field(ge=1, le=_PERMILLE)
+    """同一隻頭目的部位 ``hp_permille`` 加總上限（‰；第 3 點，數值工坊可調）。"""
+    break_effects_max: int = Field(ge=1)
+    """每個部位最多幾種破壞效果（``on_break``；第 7 點）。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> BossPartRules:
+        if self.count_min > self.count_max:
+            raise ValueError("boss_parts 的 count_min 不能大於 count_max")
+        return self
+
 
 type PartReach = Literal["any", "behind", "high_or_far", "disabled", "ranged"]
 
@@ -134,13 +150,15 @@ class BossPart(ContentModel):
 
     id: str = Field(pattern=_ID)
     name_zh: str = Field(min_length=1)
-    hp_permille: int = Field(default=200, ge=1, le=1000)
+    hp_permille: int = Field(ge=1, le=1000)
     reach: PartReach = "any"
     exposed_in: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
     armor_bonus: int | None = Field(default=None, exclude_if=lambda v: v is None)
     resist: dict[ResistGroup, int] | None = Field(default=None, exclude_if=lambda v: v is None)
     element_mods: dict[Element, int] | None = Field(default=None, exclude_if=lambda v: v is None)
-    on_break: tuple[PartBreakEffect, ...] = Field(min_length=1, max_length=2)
+    on_break: tuple[PartBreakEffect, ...] = Field(min_length=1)
+    """破掉的效果；項數上限是規則（``core.yaml`` 的 ``boss_parts.break_effects_max``，載入
+    內容庫時檢查）。"""
     break_text_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
     """破掉時的一句敘事（戰鬥紀錄；沒寫時由效果自動組一句）。"""
     tiles: tuple[tuple[int, int], ...] = Field(default=(), exclude_if=lambda v: not v)
@@ -163,18 +181,33 @@ class BossPart(ContentModel):
 
 
 def check_parts(parts: tuple[BossPart, ...]) -> list[str]:
-    """``UnitTemplate.parts`` 的結構問題（不看其他欄位；空列表＝沒問題）。"""
+    """``UnitTemplate.parts`` 的結構問題（不看其他欄位；空列表＝沒問題）。規則型的上下限見
+    :func:`part_rule_problems`。"""
+    ids = [p.id for p in parts]
+    if len(set(ids)) != len(ids):
+        return ["parts 的 id 不能重複"]
+    return []
+
+
+def part_rule_problems(parts: tuple[BossPart, ...], rules: BossPartRules) -> list[str]:
+    """``UnitTemplate.parts`` 違反部位規則（``core.yaml`` 的 ``boss_parts``）的問題：部位數、
+    血量加總、每個部位的破壞效果數（HC-4a；空列表＝沒問題）。"""
     if not parts:
         return []
     problems: list[str] = []
-    if not PARTS_MIN <= len(parts) <= PARTS_MAX:
-        problems.append(f"parts 要有 {PARTS_MIN}～{PARTS_MAX} 個部位（收到 {len(parts)} 個）")
-    ids = [p.id for p in parts]
-    if len(set(ids)) != len(ids):
-        problems.append("parts 的 id 不能重複")
+    low, high = rules.count_min, rules.count_max
+    if not low <= len(parts) <= high:
+        problems.append(f"parts 要有 {low}～{high} 個部位（收到 {len(parts)} 個）")
     total = sum(p.hp_permille for p in parts)
-    if total > PART_HP_TOTAL_MAX:
-        problems.append(f"所有部位的血量加總不能超過 {PART_HP_TOTAL_MAX}‰（收到 {total}‰）")
+    if total > rules.hp_total_max_permille:
+        problems.append(
+            f"所有部位的血量加總不能超過 {rules.hp_total_max_permille}‰（收到 {total}‰）"
+        )
+    problems += [
+        f"部位 {p.id} 的 on_break 最多 {rules.break_effects_max} 項（收到 {len(p.on_break)} 項）"
+        for p in parts
+        if len(p.on_break) > rules.break_effects_max
+    ]
     return problems
 
 

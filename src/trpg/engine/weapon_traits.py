@@ -99,6 +99,7 @@ def _infusion_effects(
         return batch
     for infusion in infusions:
         if infusion.status is not None:
+            assert infusion.duration is not None  # 有 status 時必填（SummonInfusion 的驗證）
             batch.append(
                 ApplyStatusEffect(
                     source_id=attacker.id,
@@ -192,6 +193,7 @@ def _hit_rule_effects(ctx: Ctx, attacker: UnitState, target: UnitState) -> list[
         if not _rule_holds(ctx.state, rule, attacker, target):
             continue
         if rule.status is not None:
+            assert rule.duration is not None  # 有 status 時必填（SummonHitRule 的驗證）
             batch.append(
                 ApplyStatusEffect(
                     source_id=attacker.id,
@@ -201,6 +203,7 @@ def _hit_rule_effects(ctx: Ctx, attacker: UnitState, target: UnitState) -> list[
                 )
             )
         for other in chain_targets(ctx.state, attacker, target, rule):
+            assert rule.chain_permille is not None  # 有連鎖時必填（SummonHitRule 的驗證）
             batch.append(
                 DamageEffect(
                     source_id=attacker.id,

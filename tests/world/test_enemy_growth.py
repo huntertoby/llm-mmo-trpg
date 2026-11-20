@@ -67,6 +67,7 @@ def test_ties_go_to_first_attribute(library: ContentLibrary) -> None:
             "name_zh": "平",
             "attributes": {a.value: 100 for a in Attribute},
             "max_hp": 200,  # X10-2b：屬性、HP ×10
+            "speed": 5,
             "weapon": "dagger",
         }
     )

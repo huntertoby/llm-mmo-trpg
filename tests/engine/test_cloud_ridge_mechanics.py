@@ -431,7 +431,7 @@ def test_formation_schema_limits() -> None:
         "polarity": "neutral",
         "expires": "never",
     }
-    spec = {"kin_tag": "sect", "per_ally_permille": 100, "max_allies": 2}
+    spec = {"kin_tag": "sect", "per_ally_permille": 100, "max_allies": 2, "range": 3}
     StatusDef.model_validate({**base, "formation": spec})
     with pytest.raises(ValidationError):
         StatusDef.model_validate({**base, "formation": {**spec, "range": 6}})

@@ -35,6 +35,7 @@ CORE_PATHS = (
     "ap_carry_max",
     "miss_refund_ap",
     "miss_refund_min_cost",
+    "boss_parts.hp_total_max_permille",  # HC-4a：部位血量加總上限（從 parts.py 搬來）
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",

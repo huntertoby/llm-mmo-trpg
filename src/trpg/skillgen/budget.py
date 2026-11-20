@@ -893,6 +893,7 @@ def _rule_trait_points(
             per_round += status_points
             notes.append(f"命中{rule.status}")
         if rule.chain_targets:
+            assert rule.chain_permille is not None  # 有連鎖時必填（SummonHitRule 的驗證）
             chain = (
                 _dice_average(weapon.dice)
                 * rule.chain_targets

@@ -1,4 +1,7 @@
-"""PB-1a：``UnitTemplate.parts`` 的 schema 與內容檢查（05 5.12.2；``PhasePB-1計畫.md`` 4.1）。"""
+"""PB-1a：``UnitTemplate.parts`` 的 schema 與內容檢查（05 5.12.2；``PhasePB-1計畫.md`` 4.1）。
+
+HC-4a：部位數、血量加總、破壞效果數是規則（``core.yaml`` 的 ``boss_parts``），改在載入內容庫時檢查
+（:func:`unit_phase_problems`），不在範本驗證。"""
 
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ def part(pid: str, **extra: Any) -> dict[str, Any]:
     data: dict[str, Any] = {
         "id": pid,
         "name_zh": pid,
+        "hp_permille": 200,
         "on_break": [{"type": "interrupt_charge"}],
     }
     data.update(extra)
@@ -40,20 +44,8 @@ SEAL_UNKNOWN = {"type": "seal_skill", "skill": "skill_fireball"}
     ("data", "message"),
     [
         (with_parts(TWO, tags=["humanoid"]), "boss"),
-        (with_parts([part("a")]), "2～4"),
-        (
-            with_parts(
-                [part(c) for c in "abcde"],
-            ),
-            "2～4",
-        ),
-        (with_parts([part("a", hp_permille=301), part("b", hp_permille=300)]), "600"),
         (with_parts([part("a"), part("a")]), "重複"),
         (with_parts([part("a", on_break=[]), part("b")]), "on_break"),
-        (
-            with_parts([part("a", on_break=[{"type": "interrupt_charge"}] * 3), part("b")]),
-            "on_break",
-        ),
         (
             with_parts(
                 [
@@ -69,6 +61,39 @@ SEAL_UNKNOWN = {"type": "seal_skill", "skill": "skill_fireball"}
 def test_bad_parts_fail_validation(data: dict[str, Any], message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         UnitTemplate.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    ("parts", "message"),
+    [
+        ([part("a")], "parts 要有 2～4 個部位（收到 1 個）"),
+        ([part(c) for c in "abcde"], "parts 要有 2～4 個部位（收到 5 個）"),
+        (
+            [part("a", hp_permille=301), part("b", hp_permille=300)],
+            "所有部位的血量加總不能超過 600‰（收到 601‰）",
+        ),
+        (
+            [part("a", on_break=[{"type": "interrupt_charge"}] * 3), part("b")],
+            "部位 a 的 on_break 最多 2 項（收到 3 項）",
+        ),
+    ],
+)
+def test_part_rules_are_checked_when_the_library_loads(
+    parts: list[dict[str, Any]], message: str
+) -> None:
+    """HC-4a：範本本身組得起來；部位規則（core.yaml 的 boss_parts）在載入內容庫時擋。"""
+    lib = library()
+    template = UnitTemplate.model_validate(with_parts(parts))
+    problems = unit_phase_problems(
+        template,
+        units=lib.units,
+        weapons=lib.weapons,
+        skills=lib.skills,
+        ruleset=lib.ruleset,
+        ai_profiles=lib.ai_profiles,
+        weather=lib.weather,
+    )
+    assert message in problems
 
 
 def test_summons_cannot_have_parts() -> None:

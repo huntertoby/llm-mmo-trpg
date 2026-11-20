@@ -1022,12 +1022,12 @@ rules:
     note: 同上一條：情境解法的線索數、方法的屬性數上限。
   - id: py-content-rule-bounds-boss-parts
     class: config
-    status: todo
+    status: done
     kind: number
     files: src/trpg/content/parts.py
     where: BossPart
     owner: on_break
-    note: 規則型上下限：每個部位最多 2 種破壞效果（05 5.12.2 第 7 點）。
+    note: 規則型上下限：每個部位最多 2 種破壞效果（05 5.12.2 第 7 點）；HC-4a 搬到 core.yaml 的 boss_parts（0 筆）。
   - id: py-content-guard-bounds
     class: guard
     status: done
@@ -1088,7 +1088,7 @@ rules:
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
   - id: py-content-battle-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/battle.py
     kind: number
     where:
@@ -1126,7 +1126,7 @@ rules:
       - 'WardSpec'
       - 'WeaponDef'
       - 'weapon_attr_examples_zh'
-    note: 保守：content schema 的預設值、上下限與驗證門檻（應由 content／工坊設定帶；上下限要跟著資料走）。
+    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-composer-rules-config-number
     class: config
     status: todo
@@ -1180,7 +1180,7 @@ rules:
     note: 同上一條（content config）。
   - id: py-content-equipment-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/equipment.py
     kind: number
     where:
@@ -1194,7 +1194,7 @@ rules:
       - 'ReactionAffix'
       - 'TriggerAffix'
       - 'WeaponTraitAffix'
-    note: 同上一條（content config）。
+    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-fields-config-number
     class: config
     status: todo
@@ -1225,7 +1225,7 @@ rules:
     note: 同上一條（content config）。
   - id: py-content-forms-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/forms.py
     kind: number
     where:
@@ -1241,14 +1241,14 @@ rules:
       - 'NaturalTraits'
       - 'NaturalWeapon'
       - 'TakenMod'
-    note: 同上一條（content config）。
+    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-item-budget-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/item_budget.py
     kind: number
     where: ['ItemGenRules', 'RarityRule']
-    note: 同上一條（content config）。
+    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-loader-config-number
     class: config
     status: todo
@@ -1265,7 +1265,7 @@ rules:
     note: 同上一條（content config）。
   - id: py-content-parts-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/parts.py
     kind: number
     where:
@@ -1274,7 +1274,7 @@ rules:
       - '<module>.PART_HP_TOTAL_MAX'
       - 'BossPart'
       - 'ControlBreak'
-    note: 同上一條（content config）。
+    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-races-config-number
     class: config
     status: todo
@@ -1305,9 +1305,16 @@ rules:
     kind: number
     where: ['<module>._MAX_DURATION']
     note: 同上一條（content config）。
-  - id: py-content-rules-config-number
+  - id: py-content-rules-tier-count
     class: config
     status: todo
+    files: src/trpg/content/rules.py
+    kind: number
+    where: CoreRules._check_tier_budget
+    note: 保守：tier_budget 的鍵要剛好是階級 1～5＝「技能 5 個階級」的規則（同 SkillDef.tier ≤ 5）；HC-4a 沒搬，留給 HC-4b 和 SkillDef.tier 一起搬。
+  - id: py-content-rules-config-number
+    class: config
+    status: done
     files: src/trpg/content/rules.py
     kind: number
     where:
@@ -1322,7 +1329,7 @@ rules:
       - 'SummonTrait'
       - 'WindRules'
       - 'compute_hit_thresholds'
-    note: 同上一條（content config）。
+    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-skill-evolution-config-number
     class: config
     status: todo

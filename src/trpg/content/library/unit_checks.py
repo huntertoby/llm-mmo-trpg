@@ -12,12 +12,13 @@ from trpg.content.battle import (
     UnitTemplate,
     WeaponDef,
     part_reference_problems,
+    phase_count_problems,
 )
 from trpg.content.environment import AiProfileTable, WeatherDef, check_rule
 from trpg.content.library.gear_checks import _GearCatalog
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.maps import MapDef, SpawnUnitsEvent
-from trpg.content.parts import ControlBreak, StopMechanicBreak
+from trpg.content.parts import ControlBreak, StopMechanicBreak, part_rule_problems
 from trpg.content.rules import CoreRules
 from trpg.content.sim_builds import BuildTable
 from trpg.content.skills import SkillDef, held_gear, skill_slot_problems, weapon_problem
@@ -212,7 +213,7 @@ def unit_phase_problems(
 ) -> list[str]:
     """範本 ``phases``（Phase 5F-2）引用的技能（存在、符合武器、欄位上限）、行為模式、狀態、天氣、
     召喚範本與地形都存在（繁體中文，空串列為通過）。"""
-    problems: list[str] = []
+    problems = phase_count_problems(template.phases, ruleset.core.boss_phases)
     status_ids = set(ruleset.statuses.by_id())
     profiles = ai_profiles.by_id()
     terrain_ids = set(ruleset.terrain.by_id())
@@ -248,8 +249,11 @@ def unit_phase_problems(
 def unit_part_problems(template: UnitTemplate, ruleset: Ruleset) -> list[str]:
     """範本 ``parts``（PB-1a）引用的狀態：``control`` 的狀態要存在、而且是控制（有
     ``control_group`` 或 ``skip_turn``）；``stop_mechanic`` 的狀態要存在（繁體中文，空串列為通過）。
+    部位數、血量加總、破壞效果數照 ``core.yaml`` 的 ``boss_parts``（HC-4a，
+    :func:`part_rule_problems`）。
     結構與封招、階段 ID 的檢查在 ``UnitTemplate`` 本身（:func:`template_part_problems`）。"""
-    problems = part_reference_problems(template)
+    problems = part_rule_problems(template.parts, ruleset.core.boss_parts)
+    problems += part_reference_problems(template)
     statuses = ruleset.statuses.by_id()
     for part in template.parts:
         where = f"部位 {part.id}"

@@ -24,7 +24,8 @@ from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
-from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, Dice, UnitTemplate
+from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, BossPhaseRules, Dice, UnitTemplate
+from trpg.content.parts import BossPartRules
 from trpg.content.quantity import QuantityScale, quantity_cap
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Attribute, Element, Surface
@@ -252,7 +253,8 @@ class SummonInfusion(ContentModel):
     ``conceal_rounds``（獲得隱蔽幾回合）、``hp_permille``（最大 HP ＋‰）。"""
 
     status: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]*$")
-    duration: int = Field(default=2, ge=1, le=6)
+    duration: int | None = Field(default=None, ge=1, le=6)
+    """``status`` 的回合數：有 ``status`` 時必填（HC-4a：沒有 Python 預設值，寫在內容檔）。"""
     knockback: int = Field(default=0, ge=0, le=2)
     surface: Surface | None = None
     extra_damage: Dice | None = None
@@ -276,6 +278,8 @@ class SummonInfusion(ContentModel):
             or self.hp_permille
         ):
             raise ValueError("灌注關鍵字至少要有一項效果")
+        if self.status is not None and self.duration is None:
+            raise ValueError("灌注關鍵字有 status 時要寫 duration")
         return self
 
 
@@ -330,7 +334,7 @@ class WindRules(ContentModel):
         Element.LIGHTNING,
     )
     spread_distance: int = Field(default=1, ge=1, le=2)
-    collision_permille: int = Field(default=1500, ge=1000)
+    collision_permille: int = Field(ge=1000)
 
 
 ELITE_TAG = "elite"
@@ -352,16 +356,16 @@ class CoreRules(ContentModel):
     寫死的「1 點」下限 × 這個值、技能預算吃的固定值 ÷ 這個值、AI 評分的量 ÷ 這個值。內容換算
     （``scripts/x10/rescale.py``）時從 1 改成 10。舊紀錄沒有此欄位（＝1）。不放在第一個欄位：
     ``tests/cli/test_battle_cli.py`` 改內嵌規則包的第一個整數欄位來測雜湊。"""
-    party_ap_per_turn: int = Field(default=3, ge=0)
+    party_ap_per_turn: int = Field(ge=0)
     """玩家方（玩家與隊友角色，不含召喚物）的每回合 AP（AP-1，#168，05 5.2；初值 4）。"""
-    elite_ap_per_turn: int = Field(default=3, ge=0)
+    elite_ap_per_turn: int = Field(ge=0)
     """範本沒寫 ``ap_per_turn`` 的精英、頭目（標籤 ``elite``／``boss``）的每回合 AP
     （AP-1；初值 4）。"""
     ap_carry_max: int = Field(ge=0)
     miss_refund_ap: int = Field(default=0, ge=0)
     """失手返還（AP-1，#168，05 5.2）：AP 耗費至少 ``miss_refund_min_cost`` 的技能所有目標都沒命中時
     返還的 AP（每個單位每回合最多 1 次；初值 1；0＝不返還）。"""
-    miss_refund_min_cost: int = Field(default=2, ge=1)
+    miss_refund_min_cost: int = Field(ge=1)
     """失手返還只看實際花了至少這麼多 AP 的施放（初值 2）。"""
     basic_attack_ap_cost: int = Field(ge=0)
     defend_ap_cost: int = Field(ge=0)
@@ -426,15 +430,15 @@ class CoreRules(ContentModel):
     interact_ap_cost: int = Field(ge=0)
     interact_height_limit: int = Field(ge=0)
     shove_distance: int = Field(ge=0)
-    max_displace_distance: int = Field(default=2, ge=1)
+    max_displace_distance: int = Field(ge=1)
     """推擊與拉扯的距離上限（6.6）：修正規則加長距離時截斷在這裡（Phase 3C-2；舊紀錄沒有
     此欄位）。"""
-    collision_damage_dice: Dice = Field(default_factory=lambda: Dice(count=1, sides=6))
+    collision_damage_dice: Dice
     """撞擊傷害（Phase 3C-3a）：被強制位移的單位因障礙提前停下時，每少走 1 格受一次，物理、不加
     屬性；技能的 ``collision_dice`` 可取代。舊紀錄沒有此欄位。"""
-    consume_status_max_scale: int = Field(default=3, ge=1)
+    consume_status_max_scale: int = Field(ge=1)
     """``consume_status`` 的 ``scale`` 倍率上限（Phase 3C-3b；舊紀錄沒有此欄位）。"""
-    wind: WindRules = Field(default_factory=WindRules)
+    wind: WindRules
     clear_surfaces: tuple[Surface, ...] = (Surface.SMOKE, Surface.POISON)
     """清除表面（``clear_surface`` 原語，3-54c）省略表面種類時清除的表面。"""
     contagion_statuses: tuple[str, ...] = ("burning", "bleed", "poison")
@@ -443,43 +447,43 @@ class CoreRules(ContentModel):
     contagion_radius: int = Field(default=1, ge=1, le=3)
     """疾病擴散傳給幾格內（單位距離，量到最近佔格）的同陣營單位（初值 1）。"""
     """風元素的專屬機制（Phase 3-54a；吹送、元素擴散、風壓撞擊）。"""
-    topple_length: int = Field(default=2, ge=1, le=4)
+    topple_length: int = Field(ge=1, le=4)
     """推倒（Phase 3C-5a）：``topplable`` 物件倒下時，從物件的下一格起壓住的格數。"""
-    topple_damage_dice: Dice = Field(default_factory=lambda: Dice(count=2, sides=6))
+    topple_damage_dice: Dice
     """推倒壓到的單位（與 ``breakable`` 物件）受到的物理傷害（Phase 3C-5a）。"""
     topple_rubble_object: str = Field(default="rubble", pattern=r"^[a-z][a-z0-9_]*$")
     """推倒後產生的物件（``objects.yaml`` 的 ID；Phase 3C-5a）。"""
     hurl_scatter_radius: int = Field(default=1, ge=0, le=2)
     """投擲物件（Phase 3C-5a）：落點有單位或物件時，物件放在這個曼哈頓距離內最近的空格；
     沒有空格就摧毀。"""
-    teleport_enemy_resist_bonus: int = Field(default=2, ge=0, le=10)
+    teleport_enemy_resist_bonus: int = Field(ge=0, le=10)
     """傳送他人（Phase 3D-2b ``teleport_target``）：敵方目標的抵抗加成（從對抗判定的 d20 總和扣除；
     門檻 8（#146）時同級成功率 75% → 65%）。"""
-    teleport_lethal_resist_bonus: int = Field(default=10, ge=0, le=20)
+    teleport_lethal_resist_bonus: int = Field(ge=0, le=20)
     """傳送到致命地形時，目標再加的抵抗加成（與 ``teleport_enemy_resist_bonus`` 相加；同級時
     總 +10；門檻 8（#146）時 d20 自然 16 以上才成功，成功率 25%）。"""
-    chain_falloff_permille: int = Field(default=250, ge=0, le=1000)
+    chain_falloff_permille: int = Field(ge=0, le=1000)
     """連鎖衰減（BAL-13c，#77）：``chain`` 形狀每跳一次，傷害、治療、護盾的威力少這麼多‰
     （第 1 個目標 1000、第 2 個 1000 − 此值……）。"""
-    chain_floor_permille: int = Field(default=250, ge=0, le=1000)
+    chain_floor_permille: int = Field(ge=0, le=1000)
     """連鎖衰減的下限（‰）：之後每跳都不低於這個值。"""
-    pierce_behind_permille: int = Field(default=700, ge=1, le=1000)
+    pierce_behind_permille: int = Field(ge=1, le=1000)
     """穿透（Phase 3C-5b）：穿過 ``penetrable`` 物件之後，後方目標受到的傷害（‰；物件本身受全額
     傷害）。舊紀錄沒有此欄位。"""
-    explode_max: int = Field(default=2, ge=1, le=5)
+    explode_max: int = Field(ge=1, le=5)
     """爆骰（``explode: true``，Phase 3D-7b）：每顆骰最多再擲的次數。舊紀錄沒有此欄位。"""
-    scale_cap_max_permille: int = Field(default=800, ge=1, le=5000)
+    scale_cap_max_permille: int = Field(ge=1, le=5000)
     """依情況縮放（``scaling``，Phase 3D-7b）：``cap_permille`` 的上限（‰）。舊紀錄沒有此欄位。"""
-    backstab_hit_bonus: int = Field(default=2, ge=0, le=10)
+    backstab_hit_bonus: int = Field(ge=0, le=10)
     """背刺（Phase 3D-8d）：近戰攻擊者站在目標的背後格時的命中加值。舊紀錄沒有此欄位。"""
     backstab_crit_range_bonus: int = Field(default=1, ge=0, le=5)
     """背刺（Phase 3D-8d）：暴擊範圍擴大的格數（1 ＝ 武器 20 → 19–20）。"""
-    ambush_hit_bonus: int = Field(default=2, ge=0, le=10)
+    ambush_hit_bonus: int = Field(ge=0, le=10)
     """潛行偷襲（Phase 3D-8d）：攻擊者帶 ``concealed`` 狀態時的命中加值（攻擊結算完後移除隱蔽）。"""
-    far_distance: int = Field(default=5, ge=2, le=20)
+    far_distance: int = Field(ge=2, le=20)
     """條件「遠距」（``long_range``，SK-1，06 6.38 第 1 點）的門檻：施放者和目標的距離（曼哈頓，
     巨型單位照佔地）至少這麼多格。初值 5，數值工坊可調。"""
-    revive_landing_radius: int = Field(default=2, ge=0, le=6)
+    revive_landing_radius: int = Field(ge=0, le=6)
     """復活（``revive``，Phase 3D-8b）：原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；
     範圍內沒有空格就不能施放。舊紀錄沒有此欄位。"""
     steadfast_push_permille: int = Field(ge=0, le=1000)
@@ -502,10 +506,10 @@ class CoreRules(ContentModel):
 
     # 掩護（1C）
     half_cover_hit_penalty: int = Field(ge=0)
-    shield_guard_hit_penalty: int = Field(default=2, ge=0)
+    shield_guard_hit_penalty: int = Field(ge=0)
     """盾兵掩護（RG-1，#162，09 9.6.6）：帶 ``shield_guard`` 的單位替相鄰的遠程同伴擋遠程攻擊時的
     命中懲罰（0＝不擋）。和半掩護、塔盾不疊加。"""
-    shield_formation_hit_penalty: int = Field(default=2, ge=0)
+    shield_formation_hit_penalty: int = Field(ge=0)
     """塔盾詞條「盾陣」（RG-4，#163，08 8.11）：帶盾陣的單位替相鄰的隊友（不分遠近）擋遠程攻擊時的
     命中懲罰（0＝不擋）。判定同盾兵；和半掩護、盾兵、塔盾不疊加，取最高。另開欄位，不和盾兵共用。"""
 
@@ -516,9 +520,7 @@ class CoreRules(ContentModel):
     spell_attr_multiplier_permille: int = Field(ge=0)
     dual_scaling_min_rarity: Literal["common", "rare", "epic", "legendary"] = "epic"
     """雙屬性縮放（``secondary_scaling_attr``，Phase 2H-2）的最低技能稀有度。"""
-    variant_max_by_rarity: dict[str, int] = Field(
-        default_factory=lambda: {"common": 0, "rare": 1, "epic": 2, "legendary": 2}
-    )
+    variant_max_by_rarity: dict[str, int]
     """各稀有度最多可帶的戰場變奏數（Phase 3-25a，6.24；PM 決定 #7）。沒列的稀有度為 0。"""
     skill_slots: SkillSlots
 
@@ -538,9 +540,9 @@ class CoreRules(ContentModel):
     max_chain_depth: int = Field(ge=0)
 
     # 技能觸發（2E-1）
-    max_trigger_depth: int = Field(default=3, ge=0)
+    max_trigger_depth: int = Field(ge=0)
     """技能觸發的連鎖深度上限：動作本身為 0，由觸發產生的觸發深度 +1，超過上限不結算。"""
-    trap_trace_radius: int = Field(default=2, ge=0)
+    trap_trace_radius: int = Field(ge=0)
     """敵方陷阱的「可疑痕跡」（RG-2，#162，05 5.7）：玩家方單位移動抵達或回合開始時，曼哈頓這麼多
     格內還沒揭露的敵方陷阱記成痕跡（只知道格子）。0＝看不到痕跡。"""
 
@@ -549,23 +551,28 @@ class CoreRules(ContentModel):
     """進入姿態（``kind: stance``）花的 AP；取消姿態（``EndStance``）免費。"""
 
     # 源力（3C-4a）
-    source_max: int = Field(default=3, ge=0)
+    source_max: int = Field(ge=0)
     """單位持有源力的上限（Phase 3C-4a；舊紀錄沒有此欄位）。"""
     source_min_at_start: int = Field(default=1, ge=0)
     """我方單位每場戰鬥開場至少有這麼多源力（敵人一律 0）。"""
 
     # 召喚（3D-4a）
-    summon_limit_per_owner: int = Field(default=2, ge=1, le=6)
+    summon_limit_per_owner: int = Field(ge=1, le=6)
     """同一召喚者同時存在的召喚物上限（Phase 3D-4a）；超過時最舊的消失。"""
-    summon_hard_cap: int = Field(default=3, ge=1, le=6)
+    summon_hard_cap: int = Field(ge=1, le=6)
     """召喚物同時存在的硬上限（Phase 3-33b）：之後專精可提高上限，但不得超過這個值。"""
     summon_role_hp_permille: dict[str, int] = Field(default_factory=dict)
     """依定位的召喚物 HP 係數（‰；Phase 3-33f1）：召喚當下 ``(範本 HP ＋ 成長) ×`` 這個值；
     定位見 ``battle.SUMMON_ROLES``，沒列出的定位視為 1000。近戰擋路與不動型調高、遠程維持。"""
-    summon_max_duration: int = Field(default=4, ge=1, le=10)
+    summon_max_duration: int = Field(ge=1, le=10)
     """召喚物持續輪數的上限（Phase 3-33b）：召喚技能的 ``duration`` 超過時以此為準。"""
-    boss_summon_damage_permille: int = Field(default=2000, ge=1000, le=5000)
+    boss_summon_damage_permille: int = Field(ge=1000, le=5000)
     """Boss（``boss`` 標籤）對召喚物造成的傷害倍率（‰；Phase 3-33b，預設 ×2）。"""
+    boss_parts: BossPartRules
+    """頭目部位的規則（05 5.12.2：部位數、血量加總上限、破壞效果數；HC-4a 從 ``parts.py``
+    搬來）。"""
+    boss_phases: BossPhaseRules
+    """頭目階段的項數範圍（HC-4a 從 ``battle.py`` 搬來）。"""
     enemy_damage_permille: int = Field(default=1000, ge=100, le=5000)
     """一般敵方（非 ``boss``、非 ``boss_escort`` 標籤）對我方造成的傷害倍率（‰；BAL-4b，**原型專用**
     難度數值）。欄位預設 1000；``content/rules/core.yaml`` 寫 1200。進序列化與規則包雜湊。"""
@@ -598,21 +605,21 @@ class CoreRules(ContentModel):
     """召喚物小特性對照（Phase 3-33f2）：特性 ID → 效果；召喚技能的 ``trait`` 引用這裡。"""
 
     # 持續區域（3D-5）
-    zone_limit_per_owner: int = Field(default=2, ge=1, le=6)
+    zone_limit_per_owner: int = Field(ge=1, le=6)
     """同一施放者同時存在的區域上限（Phase 3D-5）；超過時最舊的消失。"""
 
     # 刻印（3-23）
-    rune_limit_per_owner: int = Field(default=6, ge=1, le=12)
+    rune_limit_per_owner: int = Field(ge=1, le=12)
     """同一施放者同時存在的符文格上限（Phase 3-23）；超過時最舊的消失。"""
-    rune_default_rounds: int = Field(default=3, ge=1, le=6)
+    rune_default_rounds: int = Field(ge=1, le=6)
     """``inscribe`` 省略 ``duration`` 時符文的持續環境回合數（Phase 3-23）。"""
-    rune_max_rounds: int = Field(default=5, ge=1, le=10)
+    rune_max_rounds: int = Field(ge=1, le=10)
     """``inscribe`` 的 ``duration`` 上限（Phase 3-23）。"""
 
     # 常駐類傳說的啟動（3D-6）
     legendary_activation_ap: int = Field(default=1, ge=1, le=3)
     """啟動常駐類傳說（修正型與規則改變型，``activation``）花的 AP（Phase 3D-6）。"""
-    legendary_timed_rounds: int = Field(default=3, ge=1, le=10)
+    legendary_timed_rounds: int = Field(ge=1, le=10)
     """``activation: timed`` 的持續輪數（Phase 3D-6；初值，以模擬調整）：啟動後在持有者第
     ``N`` 次之後的回合開始時結束（也就是持有者連同啟動的那一回合共有 ``N`` 個回合）。"""
 

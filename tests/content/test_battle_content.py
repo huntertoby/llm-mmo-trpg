@@ -123,6 +123,7 @@ def _unit_data(**overrides: object) -> dict[str, object]:
         "name_zh": "測試",
         "attributes": {a.value: 10 for a in Attribute},
         "max_hp": 10,
+        "speed": 5,
         "weapon": "dagger",
     }
     data.update(overrides)
@@ -131,7 +132,6 @@ def _unit_data(**overrides: object) -> dict[str, object]:
 
 def test_unit_defaults() -> None:
     unit = UnitTemplate.model_validate(_unit_data())
-    assert unit.speed == 5
     assert unit.resist == dict.fromkeys(ResistGroup, 0)
     assert unit.element_mods == {}
 

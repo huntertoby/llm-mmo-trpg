@@ -36,6 +36,7 @@ __all__ = [
     "BlockBonus",
     "BossPart",
     "BossPhase",
+    "BossPhaseRules",
     "CreatureLook",
     "DeathSurfaceSpec",
     "Dice",
@@ -90,6 +91,7 @@ __all__ = [
     "WeaponTable",
     "check_phases",
     "part_reference_problems",
+    "phase_count_problems",
     "template_part_problems",
     "weapon_attr_examples_zh",
 ]
@@ -769,7 +771,7 @@ class FormationSpec(ContentModel):
     """同門標籤；省略＝任何友方都算。"""
     kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
     """同門標籤在畫面上的中文名（Phase 5F-2b；見 :class:`WardSpec`）。"""
-    range: int = Field(default=3, ge=1, le=5)
+    range: int = Field(ge=1, le=5)
     per_ally_permille: int = Field(ge=1, le=1000)
     max_allies: int = Field(ge=1, le=5)
     alone_permille: int = Field(default=1000, ge=100, le=1000)
@@ -791,7 +793,7 @@ class WardSpec(ContentModel):
     kin_name_zh: str | None = Field(default=None, min_length=1, exclude_if=lambda v: v is None)
     """同門標籤在單位卡、狀態說明上的中文名（Phase 5F-2b，例：``mist_lock_core`` →「霧鎖真人」）；
     省略時照舊顯示標籤 ID。只能和 ``kin_tag`` 一起寫。"""
-    range: int = Field(default=3, ge=1, le=24)
+    range: int = Field(ge=1, le=24)
     taken_permille: int = Field(ge=0, le=999)
     """受到的骰值傷害倍率（‰）；0＝持有者在場時完全不受骰值傷害（Phase 5F-3 源晶柱）。"""
 
@@ -1195,7 +1197,7 @@ class TotemSpec(ContentModel):
 
     radius: int = Field(ge=1, le=4)
     status: str = Field(pattern=ID_PATTERN)
-    duration: int = Field(default=2, ge=1, le=4)
+    duration: int = Field(ge=1, le=4)
 
 
 SummonLookBody = Literal["humanoid", "spirit", "construct", "beast", "plant", "totem"]
@@ -1416,15 +1418,21 @@ class SummonHitRule(ContentModel):
 
     when: HitCondition = "always"
     status: str | None = Field(default=None, pattern=ID_PATTERN)
-    duration: int = Field(default=2, ge=1, le=6)
+    duration: int | None = Field(default=None, ge=1, le=6)
+    """``status`` 的回合數：有 ``status`` 時必填（HC-4a：沒有 Python 預設值，寫在內容檔）。"""
     chain_targets: int = Field(default=0, ge=0, le=3)
     chain_radius: int = Field(default=1, ge=1, le=3)
-    chain_permille: int = Field(default=500, ge=0, le=2000)
+    chain_permille: int | None = Field(default=None, ge=0, le=2000)
+    """連鎖的傷害倍率（‰）：``chain_targets`` 大於 0 時必填（HC-4a）。"""
 
     @model_validator(mode="after")
     def _has_effect(self) -> SummonHitRule:
         if self.status is None and self.chain_targets == 0:
             raise ValueError("命中特性至少要有狀態或連鎖")
+        if self.status is not None and self.duration is None:
+            raise ValueError("命中特性有 status 時要寫 duration")
+        if self.chain_targets and self.chain_permille is None:
+            raise ValueError("命中特性有連鎖（chain_targets）時要寫 chain_permille")
         return self
 
 
@@ -1481,7 +1489,7 @@ class SummonSnare(ContentModel):
     ``status``（``duration`` 回合）；``prone`` 為真時並使其倒地。每隻每輪最多觸發 1 次。"""
 
     status: str = Field(default="slow", pattern=ID_PATTERN)
-    duration: int = Field(default=2, ge=1, le=6)
+    duration: int = Field(ge=1, le=6)
     prone: bool = True
 
 
@@ -1586,7 +1594,7 @@ class PhaseGrowSurface(ContentModel):
 
     surface: Surface
     rows_from: Literal["south_edge"] = "south_edge"
-    max_rows: int = Field(default=4, ge=1, le=9)
+    max_rows: int = Field(ge=1, le=9)
     """最多長到幾排（含第 1 排；占位 4，工坊可調）。"""
     every: Literal["round_end"] = "round_end"
 
@@ -1644,18 +1652,34 @@ class BossPhase(ContentModel):
         )
 
 
-PHASES_MIN = 2
-PHASES_MAX = 4
-"""``phases`` 的項數範圍（開場階段＋1～3 次轉換；09 9.6.8「2～3 個階段」，留一格給之後的 Boss）。"""
+class BossPhaseRules(ContentModel):
+    """頭目階段的項數（``core.yaml`` 的 ``boss_phases``；開場階段＋轉換；09 9.6.8「2～3 個階段」，
+    留一格給之後的 Boss）。HC-4a 從程式常數搬來，值不變。"""
+
+    count_min: int = Field(ge=1)
+    count_max: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> BossPhaseRules:
+        if self.count_min > self.count_max:
+            raise ValueError("boss_phases 的 count_min 不能大於 count_max")
+        return self
+
+
+def phase_count_problems(phases: tuple[BossPhase, ...], rules: BossPhaseRules) -> list[str]:
+    """``UnitTemplate.phases`` 的項數不在規則範圍（HC-4a：載入內容庫時檢查；空列表＝沒問題）。"""
+    if not phases or rules.count_min <= len(phases) <= rules.count_max:
+        return []
+    low, high = rules.count_min, rules.count_max
+    return [f"phases 要有 {low}～{high} 項（開場階段＋{low - 1}～{high - 1} 次轉換）"]
 
 
 def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
-    """``UnitTemplate.phases`` 的結構問題（空列表＝沒問題）。"""
+    """``UnitTemplate.phases`` 的結構問題（空列表＝沒問題）。項數範圍是規則，見
+    :func:`phase_count_problems`。"""
     if not phases:
         return []
     problems: list[str] = []
-    if not PHASES_MIN <= len(phases) <= PHASES_MAX:
-        problems.append("phases 要有 2～4 項（開場階段＋1～3 次轉換）")
     first = phases[0]
     if not first.is_opening or first.changes_anything():
         problems.append("phases 第 1 項是開場階段：只能有 id 與 name_zh")
@@ -1676,8 +1700,9 @@ def check_phases(phases: tuple[BossPhase, ...]) -> list[str]:
 
 
 def template_part_problems(template: UnitTemplate) -> list[str]:
-    """``UnitTemplate.parts``（PB-1a）的結構問題（範本驗證時檢查）：只給頭目、不給召喚物；2～4 個、
-    ID 不重複、``hp_permille`` 加總 ≤ 600‰。"""
+    """``UnitTemplate.parts``（PB-1a）的結構問題（範本驗證時檢查）：只給頭目、不給召喚物；
+    ID 不重複；巨型頭目的部位綁格。部位數與血量加總是規則，載入內容庫時檢查
+    （:func:`trpg.content.parts.part_rule_problems`）。"""
     parts = template.parts
     if not parts:
         return []
@@ -1739,7 +1764,7 @@ class UnitTemplate(ContentModel):
     name_zh: str = Field(min_length=1)
     attributes: dict[Attribute, int]
     max_hp: int = Field(ge=1)
-    speed: int = Field(default=5, ge=0)
+    speed: int = Field(ge=0)
     armor_bonus: int = 0
     weapon: str = Field(pattern=ID_PATTERN)
     resist: dict[ResistGroup, int] = Field(default_factory=dict, validate_default=True)

@@ -431,10 +431,11 @@ def test_equipment_rules_from_yaml() -> None:
 
 
 def test_diminishing_weights_must_start_at_1000_and_not_grow() -> None:
-    with pytest.raises(ValidationError):
-        EquipmentRules(diminishing_permille=(500, 250))
-    with pytest.raises(ValidationError):
-        EquipmentRules(diminishing_permille=(1000, 250, 500))
+    base = library().ruleset.equipment.model_dump()
+    with pytest.raises(ValidationError, match="diminishing_permille"):
+        EquipmentRules.model_validate({**base, "diminishing_permille": (500, 250)})
+    with pytest.raises(ValidationError, match="diminishing_permille"):
+        EquipmentRules.model_validate({**base, "diminishing_permille": (1000, 250, 500)})
 
 
 def test_attack_flow_strike_affixes_after_3_32d() -> None:

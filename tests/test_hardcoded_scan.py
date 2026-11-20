@@ -63,7 +63,6 @@ def _class_of(result: Any, file: str, predicate: Any) -> set[str]:
         ("src/trpg/content/battle.py", "_MAX_DICE_COUNT", "guard"),
         ("src/trpg/content/skill_pick.py", "max_elements_dual", "config"),
         ("src/trpg/content/composer_rules.py", "ap_cost", "config"),
-        ("src/trpg/content/rules.py", "party_ap_per_turn", "config"),
         ("src/trpg/skillgen/flash_ops.py", "RELAX_PERMILLE", "config"),
         ("src/trpg/content/rules.py", "_PERMILLE", "const"),
     ],
