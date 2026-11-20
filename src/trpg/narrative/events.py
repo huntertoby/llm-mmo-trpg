@@ -1271,7 +1271,8 @@ def _weather_changed(e: WeatherChanged, v: _View) -> str:
 
 @_handles(DeathCheated)
 def _death_cheated(e: DeathCheated, v: _View) -> str:
-    return f"  ✦ {v.name[e.unit_id]} 的「{v.statuses[e.status_id]}」擋下了致命傷害，HP 留在 1"
+    floor = v.state.ruleset.core.quantity_scale  # 免死留下 1 × 量類倍率（X10-2a）
+    return f"  ✦ {v.name[e.unit_id]} 的「{v.statuses[e.status_id]}」擋下了致命傷害，HP 留在 {floor}"
 
 
 @_handles(TrapPlaced)

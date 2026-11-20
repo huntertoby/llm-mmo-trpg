@@ -926,7 +926,11 @@ def _reset_cooldown(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> 
 def _cheat_death(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:
     status = lib.ruleset.status_def(CHEAT_DEATH_STATUS)
     turns = spec.duration or status.duration
-    return f"狀態「{status.name_zh}」{turns} 回合：受到致命傷害時 HP 留在 1（墜落與致命地形除外）"
+    floor = lib.ruleset.core.quantity_scale  # 免死留下 1 × 量類倍率（X10-2a）
+    return (
+        f"狀態「{status.name_zh}」{turns} 回合：受到致命傷害時 HP 留在 {floor}"
+        "（墜落與致命地形除外）"
+    )
 
 
 def _redirect_damage(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> str:

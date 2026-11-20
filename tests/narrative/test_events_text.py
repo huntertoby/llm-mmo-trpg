@@ -53,4 +53,6 @@ def test_source_and_rewrite_events_read_in_chinese() -> None:
     later = ApGranted(seq=0, round=1, unit_id=u1, source_id=u1, amount=1, ap_after=1, deferred=True)
     assert "下次回合開始時加上" in (describe_event(later, state) or "")
     cheated = DeathCheated(seq=0, round=1, unit_id=u1, status_id="undying", prevented=3)
-    assert describe_event(cheated, state) == f"  ✦ {name} 的「免死」擋下了致命傷害，HP 留在 1"
+    floor = state.ruleset.core.quantity_scale  # X10-3b：免死留下 1 × 倍率（10）
+    assert floor == 10
+    assert describe_event(cheated, state) == f"  ✦ {name} 的「免死」擋下了致命傷害，HP 留在 {floor}"
