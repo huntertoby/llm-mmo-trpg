@@ -105,10 +105,12 @@ def _copy_skill(cast: Cast) -> None:
 
 
 def restore_resource(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-    """``restore_resource``：對每個對象直接結算（:mod:`trpg.engine.resources`）。"""
+    """``restore_resource``：對每個對象直接結算（:mod:`trpg.engine.resources`）。法力沒寫 ``amount``
+    時回復 1 × ``quantity_scale``（HC-2；``amount`` 是必填參數，這是後備）。"""
     for unit in cast.targets(effect.affects, spec.condition):
         if spec.resource == "mana":
-            restore_mana(cast.ctx, cast.caster, unit, spec.amount or 1)
+            amount = spec.amount or cast.ctx.core.quantity_scale
+            restore_mana(cast.ctx, cast.caster, unit, amount)
         else:
             restore_cooldowns(cast.ctx, cast.caster, unit, cast.skill, spec)
     return []

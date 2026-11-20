@@ -72,11 +72,12 @@ class CoverageInputs:
     區域等級下限；不超過等級上限）。"""
     races: tuple[str, ...]
     """要列的種族（``race_methods`` 的種族＋種族表裡沒有方法的種族）。"""
+    base_attribute: int
+    points_per_level: int
+    ability_mod_base: int
+    ability_mod_divisor: int
+    """屬性與檢定修正（量類，HC-2：沒有預設值，:func:`inputs_from_library` 從內容取）。"""
     race_names: Mapping[str, str] = field(default_factory=dict)
-    base_attribute: int = 10
-    points_per_level: int = 2
-    ability_mod_base: int = 10
-    ability_mod_divisor: int = 2
 
 
 @dataclass(frozen=True)

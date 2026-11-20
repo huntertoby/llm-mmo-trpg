@@ -28,6 +28,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.quantity import quantity_cap
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import EffectSpec, ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
 from trpg.content.skills.modifiers import ModifierChange
@@ -184,7 +185,7 @@ class FlashRules(ContentModel):
     followup_multiplier_step: int | None = Field(default=None, ge=1, le=100)
     """接續段強化類（BAL-10b 的 ``followup_*``）重調接續段武器倍率的細階梯間距（‰；3000‰ 以下，
     與原階梯合併；BAL-11b）。省略時用原階梯。"""
-    trigger_flat_bonus: int = Field(default=0, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    trigger_flat_bonus: int = Field(default=0, ge=0, le=quantity_cap(10))
     """被動、反應「效果 +」的細旋鈕（BAL-12b 定）：骰子重調不進預算窗時，法術傷害再試固定值
     +1～+n（``damage.flat_bonus``）。0 ＝ 不用。"""
     area_trap_shapes: tuple[str, ...] = ()

@@ -143,9 +143,12 @@ class BattleRules(ContentModel):
 
 
 class EnemyGrowthRules(ContentModel):
-    """敵人依地點建議等級成長（5A-4 追加 A；和主角同樣的成長，範本＝1 級基準）。"""
+    """敵人依地點建議等級成長（5A-4 追加 A；和主角同樣的成長，範本＝1 級基準）。
 
-    attribute_points_per_level: int = Field(default=2, ge=0)
+    ``attribute_points_per_level`` 是屬性點（量類，HC-2）：沒有 Python 預設值，一律寫在
+    ``world/rules.yaml``。"""
+
+    attribute_points_per_level: int = Field(ge=0)
     skill_tier_by_level: tuple[int, ...] = Field(
         default=(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), min_length=1
     )
@@ -354,7 +357,7 @@ class WorldRules(ContentModel):
     """沒有列在 ``weather`` 的區域用這組。"""
     weather: tuple[RegionWeather, ...] = ()
     battle: BattleRules = BattleRules()
-    enemy_growth: EnemyGrowthRules = EnemyGrowthRules()
+    enemy_growth: EnemyGrowthRules
     hero_growth: HeroGrowthRules = HeroGrowthRules()
     xp: XpRules = XpRules()
     opportunity: OpportunityRules = OpportunityRules()

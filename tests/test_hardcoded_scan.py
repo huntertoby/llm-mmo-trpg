@@ -59,7 +59,7 @@ def _class_of(result: Any, file: str, predicate: Any) -> set[str]:
     ("file", "owner", "expected"),
     [
         ("src/trpg/content/forms.py", "upkeep_mana", "scale"),
-        ("src/trpg/engine/gear/core.py", "_MAX_ATTR", "scale"),
+        ("src/trpg/content/battle.py", "MAX_ATTRIBUTE", "scale"),
         ("src/trpg/content/rules.py", "party_ap_per_turn", "config"),
         ("src/trpg/skillgen/flash_ops.py", "RELAX_PERMILLE", "config"),
         ("src/trpg/content/rules.py", "_PERMILLE", "const"),
@@ -75,7 +75,6 @@ def test_backend_spot_checks(result: Any, file: str, owner: str, expected: str) 
     [
         ("client/src/run/flow.ts", "SLOT_LIMITS", "config"),
         ("client/src/run/flash.ts", "const FALLBACK", "config"),
-        ("client/src/run/AttributeAllocator.tsx", "?? 10", "scale"),
     ],
 )
 def test_frontend_spot_checks(result: Any, file: str, needle: str, expected: str) -> None:

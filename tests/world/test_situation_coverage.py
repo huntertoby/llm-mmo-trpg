@@ -103,6 +103,10 @@ def fake_inputs() -> CoverageInputs:
         template_levels={("r1", t.id): 3 for t in templates},
         races=("human", "elf", "orc", "nomethod"),
         race_names={"human": "人類"},
+        base_attribute=10,  # 假資料用換算前的單位（HC-2 拿掉預設值前的值；修正和新單位相同）
+        points_per_level=2,
+        ability_mod_base=10,
+        ability_mod_divisor=2,
     )
 
 

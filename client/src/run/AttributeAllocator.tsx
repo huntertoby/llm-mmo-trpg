@@ -65,7 +65,7 @@ export function AttributeAllocator({ base, points, alloc, onChange, disabled = f
                 −
               </button>
               <span className="run-alloc-value">
-                {base[a.id] ?? 10}
+                {base[a.id] ?? "—"}
                 {add > 0 && <span className="run-alloc-add"> +{add}</span>}
               </span>
               <button

@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Literal
 from pydantic import Field, field_validator, model_serializer, model_validator
 
 from trpg.content.parts import BossPart, SealSkillBreak, check_part_tiles, check_parts
+from trpg.content.quantity import quantity_cap
 from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.bonus_text import bonus_text
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 __all__ = [
     "GIANT_FOOTPRINTS",
     "ID_PATTERN",
+    "MAX_ATTRIBUTE",
     "SUMMON_MODES",
     "ArmorBreak",
     "Blessing",
@@ -934,7 +936,7 @@ class StatusDef(ContentModel):
     prevents_concealment: bool = False
     defense_break: bool = False
     attack_element: Element | None = None
-    attack_bonus: int = Field(default=0, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    attack_bonus: int = Field(default=0, ge=0, le=quantity_cap(10))
     move_permille: int = Field(default=1000, ge=0, le=10000)
     move_reduction: bool = False
     ap_penalty: int = Field(default=0, ge=0, le=3)
@@ -953,16 +955,16 @@ class StatusDef(ContentModel):
     element_dealt_wet_permille: int = Field(default=1000, ge=1000, le=3000)
     """元素姿態（Phase 3W-2c，雷霆架勢的「雷電導水」）：目標站在水上時，``element_dealt`` 元素的
     傷害再 × 這個倍率（‰）。只能與 ``element_dealt`` 一起設定。"""
-    shield_reflect: int = Field(default=0, ge=0, le=50)  # X10-1：量類 ×10 放寬
+    shield_reflect: int = Field(default=0, ge=0, le=quantity_cap(5))
     """護盾附反傷（Phase 3W-2b，只有 ``absorbs_damage`` 的狀態）：護盾吸收一次相鄰（近戰）攻擊
     時，對攻擊者反彈這麼多點物理傷害。"""
-    shield_end_heal: int = Field(default=0, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    shield_end_heal: int = Field(default=0, ge=0, le=quantity_cap(10))
     """護盾結束時（被打破或到期）回復持有者這麼多點生命。"""
     shield_break_surface: Surface | None = None
     """護盾被打破時在持有者自己的格子造出這種表面（例：水＝潮濕）。"""
     shield_break_status: str | None = Field(default=None, pattern=ID_PATTERN)
     """護盾被打破時對打破它的攻擊者施加這個狀態（例：標記）。"""
-    shield_break_lightning: int = Field(default=0, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    shield_break_lightning: int = Field(default=0, ge=0, le=quantity_cap(10))
     """護盾被打破時對打破它的攻擊者造成這麼多點雷電傷害（Phase 3W-2c，橋接「帶電」）。"""
     status_duration_bonus: dict[str, int] = Field(default_factory=dict)
     """帶有者施加的狀態多持續幾回合（Phase 3W-2b，元素姿態的小特色：``{burning: 1}`` ＝ 你造成的
@@ -1171,7 +1173,9 @@ class ReactionRule(ContentModel):
 # 單位範本
 # ---------------------------------------------------------------------------
 
-_MAX_ATTR = 999
+MAX_ATTRIBUTE = 999
+"""屬性值的護欄（範本驗證與裝備加成的上限；HC-2 起兩處共用）。換算後實際屬性約 100～300，
+999 仍涵蓋；要不要改成 100 × ``quantity_scale`` 見 ``docs/phases/PhaseHC-2報告.md`` 待決。"""
 _PERMILLE = 1000
 
 
@@ -1434,7 +1438,7 @@ class SummonDetonate(ContentModel):
 
     radius: int = Field(default=1, ge=1, le=2)
     dice: Dice
-    flat: int = Field(default=0, ge=0, le=200)  # X10-1：量類 ×10 放寬
+    flat: int = Field(default=0, ge=0, le=quantity_cap(20))
     element: Element = Element.FIRE
     surface: Surface | None = None
 
@@ -1453,9 +1457,9 @@ class SummonPulse(ContentModel):
     surface: Surface | None = None
     heal_radius: int = Field(default=1, ge=1, le=3)
     heal_dice: Dice | None = None
-    heal_flat: int = Field(default=0, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    heal_flat: int = Field(default=0, ge=0, le=quantity_cap(10))
     shield_dice: Dice | None = None
-    shield_flat: int = Field(default=0, ge=0, le=100)  # X10-1：量類 ×10 放寬
+    shield_flat: int = Field(default=0, ge=0, le=quantity_cap(10))
     pull_radius: int = Field(default=0, ge=0, le=4)
 
     @model_validator(mode="after")
@@ -1910,9 +1914,9 @@ class UnitTemplate(ContentModel):
         missing = [a.value for a in Attribute if a not in value]
         if missing:
             raise ValueError(f"缺少屬性：{', '.join(missing)}")
-        bad = [f"{a.value}={v}" for a, v in value.items() if not 1 <= v <= _MAX_ATTR]
+        bad = [f"{a.value}={v}" for a, v in value.items() if not 1 <= v <= MAX_ATTRIBUTE]
         if bad:
-            raise ValueError(f"屬性值必須在 1–{_MAX_ATTR}：{', '.join(bad)}")
+            raise ValueError(f"屬性值必須在 1–{MAX_ATTRIBUTE}：{', '.join(bad)}")
         return {a: value[a] for a in Attribute}
 
     @field_validator("resist")

@@ -84,7 +84,7 @@ def test_the_spec_table_attributes_and_kinds() -> None:
 def test_duplicate_perks_are_rejected() -> None:
     one = {"attr": "str", "kind": "collision_dealt", "per_tier": 1, "text_zh": "x{n}"}
     with pytest.raises(ValueError, match="重複"):
-        AttributePerks.model_validate({"perks": [one, one]})
+        AttributePerks.model_validate({"base": 100, "step": 40, "perks": [one, one]})
 
 
 def test_status_bonus_counts_toward_the_tier() -> None:
