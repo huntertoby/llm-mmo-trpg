@@ -116,11 +116,11 @@ def test_the_new_tables_are_open_with_names_notes_and_groups(
 
 STRUCTURE: dict[str, tuple[str, ...]] = {
     "forms": (),
-    "equipment": ("caps.damage_reduction_permille",),
+    "equipment": (),
     "item_gen": ("total_budget[", "max_attempts", "offer_attempts"),
 }
-"""三個檔裡不開的整數（HC-W2 報告的欄位表）：總減傷上限要和核心規則一致；全身預算的等級是表的
-鍵；重試次數是程式的參數。"""
+"""三個檔裡不開的整數（HC-W2 報告的欄位表）：全身預算的等級是表的鍵；重試次數是程式的參數。
+總減傷上限 HC-4b 起和核心規則的元素修正下限一起開。"""
 
 
 @pytest.mark.parametrize("kind", sorted(NEW_TABLES))
