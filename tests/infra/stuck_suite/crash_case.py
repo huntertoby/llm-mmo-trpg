@@ -17,10 +17,16 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_crash_once() -> None:
-    with Path("crash_runs.txt").open("a", encoding="utf-8") as file:
-        file.write("run\n")
+def _crash(name: str) -> None:
+    # 每次執行各寫一個檔（兩個行程同時用附加模式寫同一檔，在 Windows 會互相蓋掉）。
+    runs = Path("crash_runs")
+    runs.mkdir(exist_ok=True)
+    (runs / f"{name}.{os.getpid()}").write_text("run", encoding="utf-8")
     os._exit(1)
+
+
+def test_crash_once() -> None:
+    _crash("once")
 
 
 def test_a() -> None:
