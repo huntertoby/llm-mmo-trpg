@@ -423,7 +423,7 @@ minor:
     op: light
     kinds: [active]
     prefix_zh: 輕巧
-    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻或資源 −1（每項最少留 1）
+    summary_zh: 輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）
     headline_zh: 省一點代價，這招弱一點     # FL-1b（9.1 #30）
     cost_fields: [cooldown, mana, stamina]   # BAL-12b 定：AP 已是 1 時依序試這些代價 −1
   # BAL-10c（玩法 PM 2026-10-31）：cost_fields 清空，變身姿態不出費用類（回到 BAL-2c）——姿態進入後一直持續，
@@ -728,7 +728,7 @@ minor:
     side: true
     kinds: [active]
     prefix_zh: 血契
-    summary_zh: 以血支付：法力或耐力只花 1 點，其餘改扣自己的生命，威力略升   # SK-2b（4.1.29 第 2 點）
+    summary_zh: 以血支付：法力或耐力只花 10 點，其餘改扣自己的生命，威力略升   # SK-2b（4.1.29 第 2 點）
     headline_zh: "大部分代價改用自己的血付，威力略升"
   # SK-1（#166，06 6.38 第 3 點）：cost_once
   - id: cost_once

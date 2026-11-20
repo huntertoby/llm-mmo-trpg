@@ -6,7 +6,7 @@ max_rounds: 30
 opponents:
   - id: dummy
     name_zh: 木樁
-    description_zh: 三個不移動、不攻擊、沒有反應的木樁（HP 300），可以安心反覆施放、看每一下的數字。
+    description_zh: 三個不移動、不攻擊、沒有反應的木樁（HP 3000），可以安心反覆施放、看每一下的數字。
     enemies: [training_dummy, training_dummy, training_dummy]
   - id: fighting
     name_zh: 會反擊

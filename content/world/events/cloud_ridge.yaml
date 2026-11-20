@@ -231,7 +231,7 @@ skeletons:
         aliases_zh: [送往灰燼荒原, 運往荒原, 運到荒原]
         scope: world
         text_zh: 碎片被送往灰燼荒原（接主線第 2 章）
-        on_expire_zh: 灰燼之心第 1 階段護甲 +1（全服；荒原骨架 13 的個人攔截可抵銷）
+        on_expire_zh: 灰燼之心第 1 階段護甲 +10（全服；荒原骨架 13 的個人攔截可抵銷）
         on_expire_flag: ashen_heart_hardened   # 5B-4c：永久世界旗標；灰燼之心與荒原骨架 13 在 5F 接上
   - id: poison_spring
     number: 15

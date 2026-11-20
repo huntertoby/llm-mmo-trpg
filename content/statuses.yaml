@@ -437,7 +437,7 @@ statuses:
   - id: undying
     polarity: neutral
     name_zh: 免死
-    description_zh: 受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。
+    description_zh: 受到致命傷害時 HP 留在 10，然後此狀態消失（墜落與致命地形除外）。
     duration: 2
     expires: turn_end
     stacking: refresh
