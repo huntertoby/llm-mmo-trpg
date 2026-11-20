@@ -35,6 +35,7 @@ from trpg.shared.rng import Rng
 from trpg.shared.types import Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import _param_range_ladder, effect_knobs, quantity_randint
+from trpg.skillgen.composer_special import compose_legendary
 from trpg.skillgen.flash_ops import TRIGGER_FINE_OPS, trigger_fine_knobs
 from trpg.skillgen.proposal_numbers import _fill_cost, minimal_filler
 
@@ -355,3 +356,16 @@ def test_default_min_damage_is_one_times_scale(scale: int) -> None:
     assert hp - after.units[U2].hp == scale
     explicit = DamageEffect(target_id=U2, mode="percent_max_hp", permille=0, min_damage=3)
     assert hp - run_effects(state, [explicit]).state.units[U2].hp == 3
+
+
+@pytest.mark.parametrize("core", ["rule_change", "rule_rewrite"])
+def test_lasting_legendary_mana_candidates_are_scaled(library: ContentLibrary, core: str) -> None:
+    """X10-3c：常駐類傳說的候選法力（換算前 1、4、8、12）× quantity_scale。"""
+    scale = library.ruleset.core.quantity_scale
+    allowed = {1 * scale, 4 * scale, 8 * scale, 12 * scale}
+    made = [
+        compose_legendary(seed, library, tier=1 + seed % 3, cores=(core,)) for seed in range(12)
+    ]
+    skills = [s for s in made if s is not None]
+    assert skills
+    assert all(s.cost.mana in allowed for s in skills), [s.cost.mana for s in skills]
