@@ -147,3 +147,133 @@
 - 有一個行為改變：閃現「俐落」「沉勢」「變身姿態的輕巧／蓄力」一次改 10 點法力或耐力（原本實際只改 1，等於舊單位的 0.1），最少留 10。這就是裁定要的修正。
 - 預算器會照新費用重算強度，沒有另外調數值。
 - 戰鬥不變比對 different=0，既有戰鬥沒有改變。
+
+---
+
+## 補件（開發 PM 裁定待決 2 之後；基準 merge main `0d1716186`）
+
+| # | 項目 | commit |
+|---|---|---|
+| 3 | 升階減費的法力、耐力取到一格的倍數（`skill_tier._cost_variants`） | `9b6e2e9e6` |
+| 4 | 最低花費驗證改成 ≥ 一格；舊單位的測試輸入與存檔夾具 ×10 | `59c5eee40` |
+| 5 | 常駐類傳說的候選法力 × scale（`composer_special._lasting_candidates`） | `53867b122` |
+
+### 掃描（第 4 項之前，照 PM 要求）
+- 掃描範圍：content 434 招，加上照 parity 跑法重跑出來的 2361 份產物（complete、升到 2、3 階的 retier、41 招 × 3 種子 × 3 次閃現題目）。
+- content 裡沒有法力或耐力落在 1～9 的主動技。
+- 產物裡有 1 招中了：`skill_taunting_roar` 升到 2、3 階後是法力 5。已回報，PM 選擇第 3、4 項兩個都做。
+- 第 3、4、5 項做完後重跑掃描：1～9 的有 0 份，不是 10 倍數的也是 0 份。
+
+### 第 3 項：升階減費
+- 原因：`_cost_variants` 把法力、耐力乘 1000／500／0‰，換算後 10 × 50% 得到 5。換算前是 1 × 50% → 0，會被最低花費擋下。
+- 修法：乘完 ‰ 往下取到 `cost_floor`（10）的倍數，取到 0 的版本交給驗證器去擋。
+- 同類掃描（skillgen 的費用計算）：
+  - 「費用 × ‰」只有這一處；
+  - 閃現輕巧、`flash_trade`、`complete` 已經用 `cost_floor`；
+  - 組合器、白板、LLM 補值的費用來自 content（都是 10 的倍數）或 `ctx.scale`；`stamina_for_mana` 是 ×2；
+  - 寫死的候選費用走 `scaled_cost`，只有傳說候選是例外，見第 5 項。
+- parity：
+  - 預測：先用修正前的程式列出所有產物裡不是 10 倍數的，共 7 招，都在 retier：`blessing_thief`、`dispel_magic`、`frost_shackle`、`sum_shadow_twin`、`taunting_roar`、`void_swap`、`wis_repelling_light`。預測就是這 7 個 retier 鍵會變，complete、flash 不變。
+  - 實際：slow parity 剛好這 7 鍵失敗。重產後逐鍵比對：retier 7／406、complete 0／406、flash 0／123，鍵數都沒增減。
+- 和換算前（`f6d2bc957` 的 src 加 content）比：7 招的 2 階、3 階，差別只在費用，而且都正好 ×10：
+
+| 技能 | 2 階 | 3 階 |
+|---|---|---|
+| blessing_thief | 法力 2 → 20 | 2 → 20 |
+| dispel_magic | 5 → 50 | 2 → 20 |
+| frost_shackle | 2 → 20 | 2 → 20 |
+| sum_shadow_twin | 耐力 3 → 30 | 1 → 10 |
+| taunting_roar | 法力 1 → 10 | 1 → 10 |
+| void_swap | 2 → 20 | 2 → 20 |
+| wis_repelling_light | 2 → 20 | 2 → 20 |
+
+- 回歸測試 `tests/skillgen/test_skill_tier.py::test_retier_cost_cuts_stay_on_quantity_steps`：
+  - 法力 10 的變體依序是 [10, 0]，法力 30 的是 [30, 10, 0]；
+  - 嘲諷怒吼升到 2、3 階後法力都是 10。
+
+### 第 4 項：最低花費
+- `content/skill_rules.py` `min_cost_problem`：
+  - 加上必填的 `scale` 參數，判斷改成 `>= scale`（和 `cost_floor` 相同）；
+  - 提示文字「主動的法術技至少要花 {scale} 點法力」，數字由程式算，不寫死；
+  - 呼叫端 `validate.py`、`proposal_coverage.py` 傳 `core.quantity_scale`。
+- `skillgen/options.py` 的費用欄位說明：「主動技能至少要花 {scale} 點（空白或少於 {scale} 檢查會不通過）」。
+- 回歸測試 `test_borrow_min_cost_ap2b.py::test_min_cost_is_one_quantity_step`（法術、武器各一組）：
+  - 花 5 被擋，提示寫「至少要花 10 點」；
+  - 花 10 通過；
+  - 預支技能的 0 照舊放行。
+- 驗證器變嚴後失敗的測試，都是輸入還寫著舊單位的費用，照 ×10 修正（斷言沒有放寬）：
+
+| 檔案 | 舊 | 新 |
+|---|---|---|
+| `tests/skillgen/workshop_walks.py`（15 個測試檔共用的工坊走法） | stamina 2（兩處） | 20 |
+| `tests/engine/test_composite_skills.py`、`test_composite_followups.py`、`test_delayed_followup.py` | stamina 1 | 10 |
+| `tests/api/test_workshop_api.py` `test_equipment_limits_are_checked` | mana 4 | 40 |
+| `tests/skillgen/test_keywords.py` | mana 6 | 60 |
+| `tests/skillgen/test_wind.py` | mana 4 | 40 |
+| `tests/skillgen/test_weapon_affinity.py`（兩處） | stamina 8 | 80 |
+| `tests/skillgen/test_workshop_feedback.py` | 斷言「1 點耐力」「1 點法力」 | `{scale} 點` |
+
+  沒有失敗的舊單位輸入沒有動，例如 `test_workshop_api` 的 rune 草稿 mana 4、`test_workshop_feedback` 的 `_rune_draft`，以及 X10-3a 待決 4 已經裁定不改的 `test_self_costs`、`test_stamina_cost`。
+- 其他呼叫 `min_cost_problem` 的測試（`test_proposal.py`、`test_workshop_feedback.py`、`test_borrow_min_cost_ap2b.py`）補上 `scale=`。
+
+#### 存檔夾具 `tests/roguelite/fixtures/flash_history_3wr1.json` ×10（PM 裁定 A，比照 X10-2b B7）
+- 為什麼要改：整份是舊單位，fire_bolt 存的定義是法力 6。驗證器變嚴後，閃現候選全部不合法。照程序重產的話，新跑出的局裡第 2 次閃現不是 `range_plus`，有 6 個測試靠這個前提，所以不重產，閃現歷史保留。
+- 做法：腳本 `C:\Users\tobby\AppData\Local\Temp\claude\9f1b79de9b6f77a5\9d8cd6cd-f0cd-4696-a663-73ef271d469e\scratchpad\x3c\scale_fh.py`。
+  - 用 `scripts/x10/rescale.py` 的 `load_fields`、`_walk`、`_classify_leaf` 分類：
+    - `run.hero` 照 `units/*.yaml`，沒列到的再照 `roguelite.yaml` 的 `start.heroes.*`；
+    - `run.generated_skills[]` 照 `skills/*.yaml`。
+  - 跑局才有的數字（目前 HP、法力、耐力，戰後資源，已分配的屬性點）沒有對應的內容欄位，比照對應的內容欄位判斷，逐條寫在腳本裡。
+  - 有沒分類到的數字欄位就中止。
+  - 用 `json.dumps(indent=1)` 寫回：先驗證沒改時和原檔逐字相同，寫回後再用 `loads_save` 讀一次。
+- 改了 27 個值，diff 正好 27 行：
+
+| 欄位 | 依據 | 舊 → 新 |
+|---|---|---|
+| `hero.attributes.str／dex／con／wis／wil` | units `attributes.*` | 10 → 100 |
+| `hero.attributes.int` | 同上 | 18 → 180 |
+| `hero.max_hp` | units `max_hp` | 40 → 400 |
+| `hero.armor_bonus` | units `armor_bonus` | 1 → 10 |
+| `hero.max_mana` | roguelite `start.heroes.*.max_mana` | 40 → 400 |
+| `generated_skills` 的 `cost.mana`：cinder_mine_cp、ember_ward_t2、fire_bolt_fl_…、rand_1734607427、rand_2114948101、shatter_blast_t2 | skills `cost.mana` | 7→70、2→20、6→60、6→60、10→100、6→60 |
+| `run.hp／mana／stamina` | 同 max_hp／max_mana／stamina 的單位 | 44→440、56→560、30→300 |
+| `run.history[0..2].hp` | 戰後 HP | 40→400、30→300、11→110 |
+| `run.history[0..1].mana` | 戰後法力 | 14→140、4→40（[2] 是 0） |
+| `run.history[0..2].stamina` | 戰後耐力 | 30→300 |
+| `run.attribute_spent.int` | 屬性點（`attribute_points_per_level` 是 scale） | 8 → 80 |
+
+- 值是 0 的量類欄位（各技能的 `cost.stamina`、`attribute_points`、`history[2].mana`）乘了也是 0。
+- 不改的：
+  - hero 的 speed、level、resist‰；
+  - 技能的 cooldown、tier、ap_cost、骰子、‰ 等（照 skills keep 清單）；
+  - seed、level、xp、源力、skill_tier、各種計數；
+  - flash 紀錄（nth、reflashes、floor‰、spent 靈感點）；
+  - skill_usage（次數、格數）、plan（地圖、種子）；
+  - history 的回合、步數、源力、`state_digest`。`state_digest` 是戰鬥最終狀態的雜湊，沒有程式驗證它；
+  - 裝備的 `item_level`、`base_bonus_permille`（item_gen 的 base_bonus 是 keep；詞條是空的）。
+- 結果：`test_retier.py` 17 個測試全過（含 `test_a_stale_history_flashes_from_the_saved_definition`）。只有這個測試檔用到這個夾具。
+
+### 第 5 項：常駐類傳說的候選法力
+- `_lasting_candidates` 的候選法力 `(1, 4, 8, 12)` 改成 × `quantity_scale`，現在是 10、40、80、120。
+- 和換算前比：`compose_legendary` 只用 `rule_change`、`rule_rewrite` 兩種核心，種子 0～199（階級 1～3 輪流），兩邊都產出 267 招（有產出的種子相同）。逐欄比對：**只有 `cost.mana` 不同，267 處都正好 ×10，沒有其他差異**。修正前的 HEAD 和換算前比，有 68 處不是 ×10（法力 23＋30、源力 9、冷卻 6），也就是選到不同的候選。
+- parity：預測不變（parity 不走隨機組合器）。實際 slow parity 979 passed，沒有重產。
+- 回歸測試 `tests/test_x10_scale.py::test_lasting_legendary_mana_candidates_are_scaled`（rule_change、rule_rewrite 兩組）：候選法力都在 {10, 40, 80, 120} 裡。
+
+### 補件檢查（最後一個程式 commit `53867b122`）
+
+| 檢查 | 結束碼 |
+|---|---|
+| `ruff check .`、`ruff format --check .` | 0 |
+| `mypy`（1735 檔） | 0 |
+| `lint-imports` | 0（14 kept） |
+| `trpg content check` | 0（696 檔、434 技能） |
+| 分目錄 `pytest -n 8`（預設標記） | 全部 0：api 1336（1 skipped）、bot 67、cli 148、content 3166、engine 5120、llm 495、narrative 475、roguelite 279、server 77、shared 72、sim 180、skillgen 4637（7 skipped）、world 1328、頂層 200 |
+| `-m slow tests/skillgen/test_refactor_parity.py tests/cli` | 0（979 passed） |
+| 不變比對 78 場（基準 `ca9429fac`） | `battles=78 events=26446 different=0` |
+
+- 第 3、4 項的 commit 在 commit 前各跑過一次上面整組測試，都是 0。
+- 第 3 項另外跑過 skillgen（4635 passed）、slow parity 加 cli（parity 重產前 7 鍵失敗，就是預測的那 7 鍵）。
+- CLI 快照三項都沒變，`client/` 沒動。
+
+### 補件待決
+- 沒有新的待決。
+- X10-3a 待決 1 那兩處（narrative 的「HP 留在 1」）照 PM 裁定交給 X10-3b，這段沒動。
