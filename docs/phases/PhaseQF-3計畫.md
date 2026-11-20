@@ -55,3 +55,11 @@
 > 專案 PM 轉使用者決定：「同時跑的份數從 8 調到 12」。
 
 6. **QF-3a 一併做**：`scripts/check.py` 的 `TRPG_PYTEST_WORKERS` 預設值從 8 改成 12。報告附改前（8）、改後（12）各一次的全量秒數；量的時候不能有別的 agent 同時跑測試（這段派出時 PM 不會同時派別的 agent）。QF-3b 的其他部分照舊取消。
+
+## 追加：push hook 卡死的線索（2026-11-21）
+
+7. **看門狗也要涵蓋 push hook 這條路徑**（專案 PM 轉達）。線索如下：
+   - 2026-11-20 22:01，push hook 跑 `scripts/check.py`，紀錄檔 `.claude/pm-logs/push-check-20261120-220135.log` 只有標題一行。
+   - 到 22:39，`pytest -q -n 8` 的 8 個 worker 都還在，但其中一個是 22:19 才建立的，前 7 個都是 22:01:5x。也就是說 22:19 有一個 worker 死了，xdist 補了一個新的，之後整組不再前進。
+   - hook 對完整檢查的上限是 1800 秒，應該在 22:31 逾時，卻沒有生效：hook 自己的程序（check.py 的父程序）已經不在了，但 `uv run python scripts/check.py` 底下整棵程序樹還活著，沒人收。要查清楚 hook 逾時或被中斷時，為什麼只結束了自己、沒結束子程序樹。修法要讓逾時和中斷都會結束整棵樹。hook 本身在 plugin 裡（不在這個 repo）的話，先在 `scripts/check.py` 這一層自己做看門狗和收樹，hook 那邊的修法寫進報告，由 PM 轉達。
+   - 這次是 PM 在使用者同意後用 PID 停掉整棵樹的。
