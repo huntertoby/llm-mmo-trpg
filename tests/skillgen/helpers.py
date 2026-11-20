@@ -82,11 +82,12 @@ def lib_with_rewrite_primitive() -> ContentLibrary:
         harmful=False,
         acts_on="caster",
         budget_basis="fixed",
-        base_points=6,
     )
     fields = {name: getattr(base.ruleset, name) for name in Ruleset.model_fields}
     fields["primitives"] = PrimitiveTable(primitives=(*base.ruleset.primitives.primitives, fake))
-    return replace(base, ruleset=Ruleset(**fields))
+    points = {**base.budget.primitive_points, "fake_rewrite": 6}  # HC-B：點數在預算表
+    budget = base.budget.model_copy(update={"primitive_points": points})
+    return replace(base, ruleset=Ruleset(**fields), budget=budget)
 
 
 def standard_form(schema: dict[str, Any]) -> dict[str, Any]:

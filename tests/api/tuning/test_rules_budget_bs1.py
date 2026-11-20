@@ -92,8 +92,10 @@ def test_the_detail_shows_the_current_values(read_service: TuningService) -> Non
     assert [f.value for f in core.fields] == [_now(CORE, p) for p in CORE_PATHS]
     assert any("全體共用" in n for n in core.notes_zh)
     budget = object_detail(CONTENT, read_service.table, "budget", "skill_budget")
-    assert [f.path for f in budget.fields] == list(BUDGET_PATHS)
-    assert [f.value for f in budget.fields] == [_now(BUDGET, p) for p in BUDGET_PATHS]
+    paths = [f.path for f in budget.fields]
+    # HC-B 起預算表全部開放（原語點數、形狀倍率、係數……），這裡只確認 BS-1 起逐段開的欄位都還在
+    assert [p for p in paths if p in BUDGET_PATHS] == list(BUDGET_PATHS)
+    assert [f.value for f in budget.fields] == [_now(BUDGET, p) for p in paths]
 
 
 def test_changes_validate_and_bad_values_are_refused(read_service: TuningService) -> None:

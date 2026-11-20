@@ -21,10 +21,10 @@ from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_keywords import KeywordTable
-from trpg.content.skill_rules import BudgetRules, SkeletonDef
+from trpg.content.skill_rules import BudgetRules, SkeletonDef, primitive_points_problems
 from trpg.content.skill_scaling import SkillScalingRules, scaling_problems
 from trpg.content.skill_triggers import SkillTriggerTable
-from trpg.content.skills import ModifierChange, SkillDef
+from trpg.content.skills import ModifierChange, PrimitiveTable, SkillDef
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.shared.errors import ContentError
 
@@ -36,6 +36,14 @@ def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: Budg
     if problems:
         lines = "\n".join(f"  - {p}" for p in problems)
         raise ContentError(root / MODIFIER_CHANGES_FILE, f"修正規則的改變種類對不上：\n{lines}")
+
+
+def _check_primitive_points(root: Path, primitives: PrimitiveTable, budget: BudgetRules) -> None:
+    """``skill_budget.yaml`` 的 ``primitive_points`` 與原語表對得上（HC-B）。"""
+    problems = primitive_points_problems(primitives, budget)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"原語點數對不上：\n{lines}")
 
 
 def _check_unit_races(

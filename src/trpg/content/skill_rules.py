@@ -15,9 +15,9 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, NonNegativeInt, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.rules import ResourceKind
@@ -27,6 +27,7 @@ from trpg.content.skills import (
     RARITY_ORDER,
     SKELETON_IDS,
     Affects,
+    PrimitiveTable,
     SkillCategory,
     SkillCost,
     SkillKind,
@@ -37,6 +38,7 @@ from trpg.shared.types import Element
 
 __all__ = [
     "MODIFIER_USE_KEYS",
+    "POINTS_BASES",
     "BudgetRules",
     "CharacterTierRules",
     "CostAllowance",
@@ -53,6 +55,7 @@ __all__ = [
     "SkillMatch",
     "SynergyRule",
     "SynergyTable",
+    "primitive_points_problems",
 ]
 
 _PERMILLE_MAX = 10_000
@@ -152,7 +155,7 @@ class ModifierPoints(ContentModel):
 
     ``damage_permille`` 與 ``push_distance_delta`` 沒有列在這裡：前者以基準武器傷害
     （``core.yaml`` 的 ``budget_reference_weapon_damage``）× ‰ 計算，後者沿用 ``push`` 原語的
-    ``base_points``（每格）；``on_hit_effects`` 以效果本身的預算點數計算。
+    點數（``primitive_points.push``，每格）；``on_hit_effects`` 以效果本身的預算點數計算。
     """
 
     hit_bonus: int = Field(ge=0)
@@ -427,9 +430,9 @@ class BudgetRules(ContentModel):
     summon_trait_backstab_permille: int = Field(default=250, ge=0, le=5000)
     """背刺多出的傷害骰（影魅）：多出的骰子平均 × 此值（要繞到背後才生效）。"""
     summon_trait_trip_permille: int = Field(default=300, ge=0, le=5000)
-    """絆倒（倒地關鍵字、骷髏、戰狼）：擊倒原語的 ``base_points`` × 此值（對抗判定、每輪 1 次）。"""
+    """絆倒（倒地關鍵字、骷髏、戰狼）：擊倒原語的點數 × 此值（對抗判定、每輪 1 次）。"""
     summon_trait_knockback_permille: int = Field(default=200, ge=0, le=5000)
-    """震退（撞擊關鍵字、石像）：推擊原語的 ``base_points`` × 震退格數 × 此值。"""
+    """震退（撞擊關鍵字、石像）：推擊原語的點數 × 震退格數 × 此值。"""
     summon_trait_height_permille: int = Field(default=300, ge=0, le=5000)
     """高處加傷（鷹隼的利爪）：武器每輪傷害 × 加傷比例 × 此值（要站得比目標高才生效）。"""
     summon_trait_conceal_points: int = Field(default=1, ge=0, le=10)
@@ -476,6 +479,12 @@ class BudgetRules(ContentModel):
     """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
     dispel_all_points: int = Field(default=6, ge=0)
     """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
+    primitive_points: dict[str, NonNegativeInt] = Field(default_factory=dict)
+    """原語的基礎預算點數（HC-B：從 ``skill_primitives.yaml`` 的 ``base_points`` 搬來，值不變，開放
+    數值工坊）：``budget_basis`` 為 ``fixed``（固定）、``per_distance``（× 格數）、``per_amount``
+    （× 數量）、``obstacle``、``inscribe``（× 持續時間係數）的原語必須有一項（載入時檢查，
+    :func:`primitive_points_problems`）；其他算法的原語不能有。召喚物特性（絆倒、震退、拉扯、
+    高台、被推倒壓人）、擲物與衝撞附帶的擊倒、吸收表面的層數收益也讀這張表。"""
     hook_points: int = Field(default=6, ge=0)
     """``hook``（鉤，SK-2）的固定預算點數（形狀倍率另算；SK-3b 從 ``skill_primitives.yaml`` 的
     ``base_points`` 搬來，開放數值工坊；初值）。"""
@@ -684,6 +693,29 @@ class BudgetRules(ContentModel):
 
     def summary(self) -> str:
         return f"合格區間 {self.min_ratio_permille / 10:g}%–{self.max_ratio_permille / 10:g}%"
+
+
+POINTS_BASES: Final = frozenset({"fixed", "per_distance", "per_amount", "obstacle", "inscribe"})
+"""要在 ``primitive_points`` 有一項的原語預算算法（HC-B；原本是 ``PrimitiveDef`` 的
+「必須填 ``base_points``」檢查）。"""
+
+
+def primitive_points_problems(primitives: PrimitiveTable, budget: BudgetRules) -> list[str]:
+    """``skill_budget.yaml`` 的 ``primitive_points`` 與 ``skill_primitives.yaml`` 對得上（HC-B）：
+    用固定點數計價的原語都有一項，表裡沒有未知或用不到的原語。"""
+    known = {p.id: p.budget_basis for p in primitives.primitives}
+    problems = [
+        f"原語 {pid}：budget_basis {basis} 必須在 primitive_points 有一項"
+        for pid, basis in known.items()
+        if basis in POINTS_BASES and pid not in budget.primitive_points
+    ]
+    for pid in sorted(budget.primitive_points):
+        if pid not in known:
+            problems.append(f"primitive_points.{pid}：沒有這個原語")
+        elif known[pid] not in POINTS_BASES:
+            basis = known[pid]
+            problems.append(f"primitive_points.{pid}：budget_basis {basis} 的原語不用這個點數")
+    return problems
 
 
 # ---------------------------------------------------------------------------

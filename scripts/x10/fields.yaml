@@ -311,7 +311,6 @@ groups:
     keep:
       - primitives[].params.flat_bonus.min        # 下限 1 在新單位仍合法
       - primitives[id=restore_resource].params.amount.min
-      - primitives[].base_points
       - primitives[].max_per_skill
       - primitives[].params.amount.knob[].max     # restore_resource 冷卻的上限 2
       - primitives[id!=restore_resource].params.amount.*
@@ -565,6 +564,7 @@ groups:
       - overload_expected_permille
       - passive_extra_trigger_permille
       - pierce_bonus_permille
+      - primitive_points.*                        # HC-B：原語的基礎預算點數（從 skill_primitives.yaml 搬來）
       - range_baseline
       - range_step_permille
       - rarity.*.max_effects

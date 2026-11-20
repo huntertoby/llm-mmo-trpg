@@ -2,7 +2,7 @@
 
 ::
 
-    效果點數  ＝ base_points × 強度係數 × 形狀倍率 × 對象係數 × 效果條件倍率
+    效果點數  ＝ 基礎點數 × 強度係數 × 形狀倍率 × 對象係數 × 效果條件倍率
     raw       ＝ Σ 效果點數
     total     ＝ raw × 技能條件倍率 × Π 協同係數
     可用預算  ＝ tier_budget[tier] × AP係數 × (1000 ＋ 代價折抵‰) ÷ 1000
@@ -355,11 +355,12 @@ def _overload_stack_cost(
 def _per_distance_points(
     skill: SkillDef, effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
 ) -> tuple[Fraction, str]:
-    """``per_distance``：base_points × 距離，加上撞擊骰與風壓撞擊（3-54a）的點數。"""
-    assert primitive.base_points is not None
+    """``per_distance``：基礎點數（``primitive_points``）× 距離，加上撞擊骰與風壓撞擊（3-54a）的
+    點數。"""
+    base = library.budget.primitive_points[primitive.id]
     distance = effect.distance or 1
-    points = Fraction(primitive.base_points * distance)
-    note = f"{primitive.base_points}×{distance} 格"
+    points = Fraction(base * distance)
+    note = f"{base}×{distance} 格"
     if effect.collision_dice is not None:
         extra = effect.collision_dice.count * library.budget.collision_die_points
         points += extra
@@ -388,20 +389,20 @@ def _plain_base_points(  # noqa: PLR0911
     if basis is None:
         raise BudgetError(f"原語 {primitive.id} 沒有預算算法（budget_basis）")
     if basis == "fixed":
-        assert primitive.base_points is not None
+        base = library.budget.primitive_points[primitive.id]
         magnitude = effect.magnitude_permille
         if primitive.id == ENTER_FORM and magnitude and magnitude != _PERMILLE:
             # 形態幅度（BAL-2c）：同完整姿態，點數等比例放大
             ratio = Fraction(magnitude, _PERMILLE)
-            return primitive.base_points * ratio, f"固定 × 形態幅度 {_fmt(ratio)}"
-        return Fraction(primitive.base_points), "固定"
+            return base * ratio, f"固定 × 形態幅度 {_fmt(ratio)}"
+        return Fraction(base), "固定"
     if basis == "per_distance":
         return _per_distance_points(skill, effect, primitive, library)
     if basis == "per_amount":
-        assert primitive.base_points is not None
+        base = library.budget.primitive_points[primitive.id]
         amount = effect.amount or 1
         unit = {GRANT_AP: "AP", EXTRA_REACTION: "次"}.get(primitive.id, "層")
-        return Fraction(primitive.base_points * amount), f"{primitive.base_points}×{amount} {unit}"
+        return Fraction(base * amount), f"{base}×{amount} {unit}"
     special = _SPECIAL_BASES.get(basis)
     if special is not None:
         return special(skill, effect, library)
@@ -444,13 +445,12 @@ def _shield_rider_points(
 def _absorb_surface_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
-    """``absorb_surface`` 的點數（SK-2，06 6.38 第 4 點；初值，接數值工坊）：``base_points`` ＋
-    收益——層數 ＝ ``add_stack`` 的 ``base_points`` × ``amount``、治療與護盾 ＝ 骰子平均、元素 ＝
-    ``base_points``。SK-3b：基礎點數改讀 ``skill_budget.yaml`` 的 ``absorb_surface_points``。"""
-    primitives = by_id(library.ruleset.primitives)
+    """``absorb_surface`` 的點數（SK-2，06 6.38 第 4 點；初值，接數值工坊）：基礎點數 ＋ 收益——
+    層數 ＝ ``add_stack`` 的點數（``primitive_points``，HC-B）× ``amount``、治療與護盾 ＝ 骰子平均、
+    元素 ＝ 基礎點數。SK-3b：基礎點數改讀 ``skill_budget.yaml`` 的 ``absorb_surface_points``。"""
     base = library.budget.absorb_surface_points
     if effect.gain == "stack":
-        per = primitives["add_stack"].base_points or 0
+        per = library.budget.primitive_points.get("add_stack", 0)
         amount = effect.amount or 1
         return Fraction(base + per * amount), f"{base} ＋ 層數 {per}×{amount}"
     if effect.gain in ("heal", "shield"):
@@ -535,14 +535,13 @@ def _obstacle_points(
 ) -> tuple[Fraction, str]:
     """``create_obstacle`` 的點數（3-11）：基礎點數 × 持續時間係數（永久 ＝ 基礎）。"""
     rules = library.budget
-    primitive = by_id(library.ruleset.primitives)[effect.type]
-    assert primitive.base_points is not None
+    base = rules.primitive_points[effect.type]
     if effect.duration is None:
-        return Fraction(primitive.base_points), "固定（永久）"
+        return Fraction(base), "固定（永久）"
     permille = rules.obstacle_duration_permille[min(effect.duration, 10) - 1]
     return (
-        Fraction(primitive.base_points * permille, _PERMILLE),
-        f"{primitive.base_points} × {effect.duration} 回合 {permille}‰",
+        Fraction(base * permille, _PERMILLE),
+        f"{base} × {effect.duration} 回合 {permille}‰",
     )
 
 
@@ -551,13 +550,12 @@ def _inscribe_points(
 ) -> tuple[Fraction, str]:
     """``inscribe`` 的點數（3-23）：基礎點數 × 持續時間係數（省略 ``duration`` ＝ 預設輪數）。"""
     rules = library.budget
-    primitive = by_id(library.ruleset.primitives)[effect.type]
-    assert primitive.base_points is not None
+    base = rules.primitive_points[effect.type]
     rounds = effect.duration or library.ruleset.core.rune_default_rounds
     permille = rules.inscribe_duration_permille[min(rounds, 5) - 1]
     return (
-        Fraction(primitive.base_points * permille, _PERMILLE),
-        f"{primitive.base_points} × {rounds} 輪 {permille}‰",
+        Fraction(base * permille, _PERMILLE),
+        f"{base} × {rounds} 輪 {permille}‰",
     )
 
 
@@ -705,7 +703,7 @@ def _hurl_object_points(
     points = _dice_average(effect.dice) * Fraction(discount, _PERMILLE)
     note = f"{effect.dice} 平均 × 需有物件 {discount}‰"
     if effect.knock_prone:
-        prone = by_id(library.ruleset.primitives)["knock_prone"].base_points or 0
+        prone = library.budget.primitive_points.get("knock_prone", 0)
         points += prone
         note += f" ＋ 擊倒 {prone}"
     return points, note
@@ -715,12 +713,12 @@ def _charge_through_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     """``charge_through`` 的點數（3D-2c）：（骰子平均 ＋ ``on_hit`` 的點數）× 預期被撞到的敵人數。
-    ``on_hit`` 的點數：``knock_prone`` 為擊倒原語的 ``base_points``、``push_aside`` 為推擊 1 格。"""
+    ``on_hit`` 的點數：``knock_prone`` 為擊倒原語的點數、``push_aside`` 為推擊 1 格（都是
+    ``primitive_points``）。"""
     if effect.dice is None or effect.on_hit is None:
         raise BudgetError("charge_through 缺少 dice 或 on_hit，無法計算點數")
-    primitives = by_id(library.ruleset.primitives)
-    follow = (
-        primitives["knock_prone" if effect.on_hit == "knock_prone" else "push"].base_points or 0
+    follow = library.budget.primitive_points.get(
+        "knock_prone" if effect.on_hit == "knock_prone" else "push", 0
     )
     expected = library.budget.charge_through_expected_targets_permille
     points = (_dice_average(effect.dice) + follow) * Fraction(expected, _PERMILLE)
@@ -836,7 +834,6 @@ def _infusion_trait_points(
     notes: list[str] = []
     if infusion is None:
         return per_round, once, notes
-    primitives = by_id(library.ruleset.primitives)
     if infusion.status is not None:
         per_round += _status_value(library, infusion.status) * Fraction(
             rules.summon_trait_status_permille, _PERMILLE
@@ -852,11 +849,11 @@ def _infusion_trait_points(
         )
         notes.append(f"額外 {infusion.extra_damage}")
     if infusion.trip:
-        prone = primitives["knock_prone"].base_points or 0
+        prone = rules.primitive_points.get("knock_prone", 0)
         per_round += prone * Fraction(rules.summon_trait_trip_permille, _PERMILLE)
         notes.append("絆倒")
     if infusion.knockback:
-        push = primitives["push"].base_points or 0
+        push = rules.primitive_points.get("push", 0)
         per_round += (
             push * infusion.knockback * Fraction(rules.summon_trait_knockback_permille, _PERMILLE)
         )
@@ -928,7 +925,7 @@ def _rule_trait_points(
             once += surface * tiles * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
         notes.append("自爆")
     if "topplable" in template.tags:
-        prone = by_id(library.ruleset.primitives)["knock_prone"].base_points or 0
+        prone = rules.primitive_points.get("knock_prone", 0)
         topple = _dice_average(library.ruleset.core.topple_damage_dice) + prone
         once += topple * Fraction(rules.summon_topple_targets_permille, _PERMILLE)
         notes.append("被推倒壓人")
@@ -952,12 +949,12 @@ def summon_trait_points(
         notes.append("不會被推動")
     pulse = summon.template.pulse
     if pulse is not None and pulse.pull_radius > 0:  # 拉扯（吸引圖騰，3-33e2b）：每輪拉近 1 格
-        pull = by_id(library.ruleset.primitives)["pull"].base_points or 0
+        pull = library.budget.primitive_points.get("pull", 0)
         per_round += pull * Fraction(library.budget.summon_trait_pull_permille, _PERMILLE)
         notes.append("拉扯")
     platform = summon.template.platform
     if platform is not None:  # 高台（高台圖騰，3-33e2b）：高台在的每一輪都有地形價值
-        raised = by_id(library.ruleset.primitives)["raise_terrain"].base_points or 0
+        raised = library.budget.primitive_points.get("raise_terrain", 0)
         per_round += (
             raised
             * platform.height
@@ -1477,7 +1474,7 @@ def _push_change_value(
     _skill: SkillDef, change: ModifierChange, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     assert change.push_distance_delta is not None
-    base = library.ruleset.primitive_def("push").base_points or 0
+    base = library.budget.primitive_points.get("push", 0)
     return Fraction(base * change.push_distance_delta), f"推擊 +{change.push_distance_delta} 格"
 
 
