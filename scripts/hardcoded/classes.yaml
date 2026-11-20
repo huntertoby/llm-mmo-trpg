@@ -729,6 +729,35 @@ rules:
     where: ResourceRules
     owner: base
     note: 法力／耐力上限的基礎值（量類）。
+  # HC-2 第 1 項專查（HC-1 開發 PM 裁定 3）：掃描器不列 0、1、-1，量類的「預設 1」要另外查。
+  # 查法：把掃描器的略過集合拿掉 1，篩欄位、參數、所在敘述含 hp、mana、stamina、damage、heal、shield、armor、
+  # attr、flat、upkeep、bonus 的數字 1（93 筆＋依原文再篩一輪），逐筆判斷。是量類的 6 筆列在下面兩條；
+  # 掃描器照舊不列 1，所以這兩條在清單裡是 0 筆，只作紀錄（判斷與理由見 docs/phases/PhaseHC-2報告.md）。
+  #   content：forms.py FormTable.stance_upkeep_mana 預設 1、rules.py SummonGrowth.hp_per_attr_mod 預設 1、
+  #            roguelite.py _default_heroes 法器主角 armor_bonus=1、environment.py InteractionOutcome.min_damage 預設 1。
+  #   零星：engine/skills/primitives/rule_rewrites.py restore_resource 的法力 amount 後備 1、
+  #         skillgen/budget.py _restore_resource_points 的法力 amount 後備 1。
+  # 不是量類（不列）：ge=1 的正數護欄（HP、法力、屬性下限）、max(1, …) 的「活著／最大 HP 至少 1」（X10-2b 已裁定不改）、
+  #   SkillDef.stance_upkeep 與 _STANCE_UPKEEPS（維持費的「點數」，每點數量在 forms.yaml）、熟練、層數、格數、等級 − 1。
+  - id: py-scale-one-defaults-content
+    class: scale
+    status: todo
+    lang: py
+    kind: number
+    value: '1'
+    files: [src/trpg/content/forms.py, src/trpg/content/rules.py, src/trpg/content/roguelite.py,
+            src/trpg/content/environment.py]
+    owner: [stance_upkeep_mana, hp_per_attr_mod, armor_bonus, min_damage]
+    note: 專查（HC-2）：content 的量類預設 1（掃描器不列 1，0 筆，只作紀錄）。
+  - id: py-scale-one-defaults-misc
+    class: scale
+    status: todo
+    lang: py
+    kind: number
+    value: '1'
+    files: [src/trpg/engine/skills/primitives/rule_rewrites.py, src/trpg/skillgen/budget.py]
+    scope: [restore_resource, _restore_resource_points]
+    note: 專查（HC-2）：restore_resource 法力 amount 的後備 1（掃描器不列 1，0 筆，只作紀錄）。
 
   # ---------------------------------------------------- 後端 api：config
   # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
