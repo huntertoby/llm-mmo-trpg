@@ -134,11 +134,15 @@ function frameOf(step: PathStep): FrameKind | null {
   return null;
 }
 
-/** 不確定的那一項前面加「可能」（AR-X10，玩法 PM 定案：前綴、只加在不確定的那一項上）；數字開頭的空一格（「可能 60–140 傷害」）。 */
+/** 不確定的那一項前面加「可能」（AR-X10，玩法 PM 定案：前綴、只加在不確定的那一項上）；
+ * 「可能」後面直接接數字時中間加「受」（「可能受 30 傷害」；AR-X10 追加）。 */
 export function maybe(text: string, certain: boolean): string {
   if (certain) return text;
-  return /^\d/u.test(text) ? `可能 ${text}` : `可能${text}`;
+  return /^\d/u.test(text) ? `可能受 ${text}` : `可能${text}`;
 }
+
+/** 「名稱：效果」（陷阱、反應；AR-X10 追加）；沒有效果時只寫名稱。 */
+const named = (name: string, items: readonly string[]): string => (items.length === 0 ? name : `${name}：${items.join("・")}`);
 
 /** 傷害：「140 傷害」「60–140 傷害」（AR-X10：不加負號，範圍用「–」，同戰鬥預覽 previewText 的 damageText）；
  * 只在骰子不利時才受傷（最少後果沒有傷害）的寫「最多 140 傷害」。 */
@@ -156,13 +160,14 @@ export function damageText(events: readonly PathEvent[]): string {
   return min === max ? `${max} 傷害` : `${min}–${max} 傷害`;
 }
 
-/** 陷阱一張（AR-X10）：「陷阱：60–140 傷害・可能定身」；陷阱本身不確定時整張「可能觸發陷阱：60–140 傷害・定身」。
+/** 陷阱一張（AR-X10）：「陷阱：60–140 傷害・可能定身」；陷阱本身不確定時「可能觸發陷阱：60–140 傷害・…」。
+ * 狀態看觸發之後還要不要另外擲（玩法 PM 追加，取代「整張只在開頭寫可能」）：還要擲的加「可能」，觸發就一定附上的不加。
+ * 用狀態事件的 `certain` 判斷。注意：伺服器的 `certain` 是「最少／最多後果兩次模擬都出現」，陷阱本身不確定時，
+ * 隨陷阱附上的狀態目前也一律是 `false`（見報告待決）。
  * `iced`：在冰面之後，不加「可能」（改畫紅色虛線，6A-4f）。 */
 export function trapText(trapCertain: boolean, dmg: string, statuses: ReadonlyArray<{ word: string; certain: boolean }>, iced: boolean): string {
-  const whole = iced || trapCertain;
-  const items = [...(dmg === "" ? [] : [dmg]), ...statuses.map((s) => (whole ? maybe(s.word, iced || s.certain) : s.word))];
-  const head = whole ? "陷阱" : "可能觸發陷阱";
-  return items.length === 0 ? head : `${head}：${items.join("・")}`;
+  const items = [...(dmg === "" ? [] : [dmg]), ...statuses.map((s) => maybe(s.word, iced || s.certain))];
+  return named(iced || trapCertain ? "陷阱" : "可能觸發陷阱", items);
 }
 
 /** 狀態的短名（「點燃」「定身」；其餘用對照表的名稱）。 */
@@ -232,7 +237,7 @@ function stepParts(step: PathStep, run: SlipRun | undefined, iced: boolean): Par
   for (const r of take((x) => x.kind === "reaction")) {
     const dmg = damageText(take((x) => x.kind === "damage" && x.other_id === r.other_id));
     const name = r.detail === null ? "反應" : reactionName(r.detail);
-    parts.push({ icon: "hit", text: maybe(`${name}${dmg === "" ? "" : ` ${dmg}`}`, r.certain) });
+    parts.push({ icon: "hit", text: named(maybe(name, r.certain), dmg === "" ? [] : [dmg]) });
   }
   for (const e of take((x) => x.kind === "fell")) parts.push({ icon: "hit", text: maybe("墜落", e.certain) });
   for (const e of take((x) => x.kind === "deadly")) parts.push({ icon: "hit", text: maybe("致命地形", e.certain) });
