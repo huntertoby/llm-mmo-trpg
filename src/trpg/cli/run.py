@@ -30,6 +30,7 @@ from trpg.roguelite import (
     RunSave,
     RunState,
     auto_play,
+    check_quantity_scale,
     load_save,
     load_save_noted,
     new_dev_run,
@@ -289,6 +290,11 @@ def _new_run_id() -> str:
     return secrets.token_hex(4)
 
 
+def _new_save(library: ContentLibrary, run_id: str, run: RunState) -> RunSave:
+    """戰鬥之間的存檔，記下目前內容的量類倍率（X10-3a）。"""
+    return RunSave(run_id=run_id, run=run, quantity_scale=library.ruleset.core.quantity_scale)
+
+
 def cmd_run_new(
     library: ContentLibrary,
     *,
@@ -307,7 +313,7 @@ def cmd_run_new(
     if llm:  # LLM 生成開關寫進這一輪（Phase 4-L6）；之後 trpg run auto --from 接續時沿用
         run = run.model_copy(update={"llm": True})
     run_id = _new_run_id()
-    path = write_save(save_dir, RunSave(run_id=run_id, run=run))
+    path = write_save(save_dir, _new_save(library, run_id, run))
     _print_summary(library, run, out)
     print(f"已存檔：{path}（run id {run_id}）", file=out)
     return 0
@@ -355,6 +361,7 @@ def _run_auto(
     try:
         if from_path is not None:
             loaded, notice = load_save_noted(from_path)  # 格式過舊的戰鬥捨棄（3W-R1）
+            check_quantity_scale(library, loaded)  # 數值改版前的存檔直接拒絕（X10-3a）
             save = upgrade_save(library, loaded)  # 舊存檔照角色階級重配（3W-9）
             run, run_id = save.run, save.run_id
             battle = restore_battle(library, save)
@@ -380,13 +387,13 @@ def _run_auto(
         return 1
     _print_result(library, final, out)
     if save_dir is not None:
-        print(f"已存檔：{write_save(save_dir, RunSave(run_id=run_id, run=final))}", file=out)
+        print(f"已存檔：{write_save(save_dir, _new_save(library, run_id, final))}", file=out)
     return 0
 
 
 def cmd_run_show(library: ContentLibrary, path: Path, out: TextIO) -> int:
     try:
-        save = load_save(path)
+        save = check_quantity_scale(library, load_save(path))  # 數值改版前的存檔拒絕（X10-3a）
     except RunError as exc:
         print(f"錯誤：{exc}", file=sys.stderr)
         return 1

@@ -70,7 +70,7 @@ items:
   - id: item_mana_potion
     name_zh: 回魔藥
     kind: consumable
-    description_zh: 戰鬥中回 10 法力；野外喝一瓶回 25% 法力。
+    description_zh: 戰鬥中回 100 法力；野外喝一瓶回 25% 法力。
     price: 30
     field_mana_permille: 250
     skill:

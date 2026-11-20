@@ -29,9 +29,11 @@ from trpg.roguelite.errors import ChoiceError, NodeConflictError, RunError, Save
 from trpg.roguelite.progress import apply_choice, battle_setup, finish_battle, next_node
 from trpg.roguelite.save import (
     CONTENT_CHANGED_NOTICE,
+    OLD_UNIT_SAVE_NOTICE,
     SAVE_FORMAT,
     STALE_BATTLE_NOTICE,
     RunSave,
+    check_quantity_scale,
     dumps_save,
     load_save,
     load_save_noted,
@@ -50,6 +52,7 @@ __all__ = [
     "ALL_FLASH_POLICIES",
     "CONTENT_CHANGED_NOTICE",
     "FLASH_POLICIES",
+    "OLD_UNIT_SAVE_NOTICE",
     "SAVE_FORMAT",
     "STALE_BATTLE_NOTICE",
     "ActiveBattle",
@@ -65,6 +68,7 @@ __all__ = [
     "auto_choice",
     "auto_play",
     "battle_setup",
+    "check_quantity_scale",
     "dumps_save",
     "finish_battle",
     "load_save",

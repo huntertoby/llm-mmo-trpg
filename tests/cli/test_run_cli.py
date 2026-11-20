@@ -92,7 +92,15 @@ def test_run_auto_from_a_mid_battle_save_finishes_the_same(
         stop=lambda r, b: b is not None and b.index == 2 and len(b.steps) >= 10,
     )
     assert battle is not None
-    path = write_save(tmp_path, RunSave(run_id="mid", run=run, battle=battle.to_saved()))
+    path = write_save(
+        tmp_path,
+        RunSave(
+            run_id="mid",
+            run=run,
+            battle=battle.to_saved(),
+            quantity_scale=lib.ruleset.core.quantity_scale,
+        ),
+    )
     code, out, _ = _run(
         ["run", "auto", "--from", str(path), "--save", "--save-dir", str(tmp_path)], capsys
     )

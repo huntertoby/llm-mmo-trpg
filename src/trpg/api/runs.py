@@ -29,6 +29,7 @@ from trpg.roguelite import (
     SaveFormatError,
     apply_choice,
     battle_setup,
+    check_quantity_scale,
     finish_battle,
     load_save,
     load_save_noted,
@@ -116,7 +117,8 @@ class RunSession:
                     steps=list(self.battle.steps),
                     orders=self.battle.order_log,
                 )
-        return RunSave(run_id=self.run_id, run=self.run, battle=saved)
+        scale = self.library.ruleset.core.quantity_scale  # X10-3a：新存檔一律記量類倍率
+        return RunSave(run_id=self.run_id, run=self.run, battle=saved, quantity_scale=scale)
 
     def battle_index(self) -> int:
         node = self.run.node
@@ -312,6 +314,7 @@ class RunStore:
         if not path.is_file():
             raise RunNotFoundError(f"找不到存檔 {path.name}")
         loaded, notice = load_save_noted(path)  # 引擎版本不符的戰鬥中存檔捨棄那場戰鬥（3W-R1）
+        check_quantity_scale(self.library, loaded)  # 數值改版前的存檔直接拒絕（X10-3a）
         if loaded.battle is not None and loaded.ruleset_hash != self.ruleset_hash():
             # 內容檔改過（或舊存檔沒有雜湊）：同樣捨棄那場戰鬥、回到該戰鬥節點開頭
             loaded = loaded.model_copy(update={"battle": None})
@@ -335,13 +338,13 @@ class RunStore:
         return self._register(session)
 
     def saves(self) -> list[RunSave]:
-        """存檔資料夾裡的存檔（依檔名排序；讀不了的略過）。"""
+        """存檔資料夾裡的存檔（依檔名排序；讀不了的、數值改版前的略過）。"""
         if not self.save_dir.is_dir():
             return []
         found: list[RunSave] = []
         for path in sorted(self.save_dir.glob("run-*.json")):
             try:
-                found.append(load_save(path))
+                found.append(check_quantity_scale(self.library, load_save(path)))
             except SaveFormatError:
                 continue
         return found

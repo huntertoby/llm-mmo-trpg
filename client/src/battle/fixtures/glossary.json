@@ -1161,7 +1161,7 @@
   {
    "id": "undying",
    "name_zh": "免死",
-   "description_zh": "受到致命傷害時 HP 留在 1，然後此狀態消失（墜落與致命地形除外）。",
+   "description_zh": "受到致命傷害時 HP 留在 10，然後此狀態消失（墜落與致命地形除外）。",
    "tags": [
     "beneficial"
    ],
@@ -2951,7 +2951,7 @@
   {
    "id": "block",
    "name_zh": "格擋",
-   "description_zh": "被近戰攻擊命中後，傷害減半，消耗 10 耐力。",
+   "description_zh": "被近戰攻擊命中後，傷害減半，消耗 100 耐力。",
    "tags": [],
    "status_look": null,
    "rules_zh": []

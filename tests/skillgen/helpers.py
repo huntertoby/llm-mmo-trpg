@@ -28,7 +28,7 @@ def lib() -> ContentLibrary:
 
 
 def skill(**overrides: Any) -> SkillDef:
-    """合格的基準技能（T1 打擊、AP 2、傷害 ×1.8、冷卻 2、耐力 8；比例 80.4%），可覆寫任何欄位。
+    """合格的基準技能（T1 打擊、AP 2、傷害 ×1.8、冷卻 2、耐力 80；比例 80.4%），可覆寫任何欄位。
 
     覆寫值會經過 schema 驗證，所以 schema 層級的錯誤仍會在這裡被擋下；
     要測 schema 擋不到的上限（例如效果超過 4 個），請改用 :func:`skill_raw`。
@@ -56,7 +56,7 @@ def _data(**overrides: Any) -> dict[str, Any]:
         "shape": {"type": "single", "range": "weapon"},
         "effects": [{"type": "damage", "multiplier_permille": 1800}],
         "condition": None,
-        "cost": {"stamina": 8, "cooldown": 2},
+        "cost": {"stamina": 80, "cooldown": 2},  # X10-3a：新單位（舊 8 × quantity_scale）
     }
     data.update(overrides)
     return data

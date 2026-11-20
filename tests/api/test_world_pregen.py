@@ -33,7 +33,7 @@ from trpg.world.generated import (
     StoryGenRequest,
 )
 from trpg.world.replay import replay
-from trpg.world.save import dumps_char
+from trpg.world.save import dumps_char_save
 from trpg.world.state import CharacterState
 from trpg.world.step import new_character
 
@@ -223,7 +223,9 @@ def _store(library: ContentLibrary, tmp_path: Path, *chars: CharacterState) -> W
     folder.mkdir(parents=True, exist_ok=True)
     for char in chars:
         (folder / f"{char.character_id}.json").write_text(
-            dumps_char(char), encoding="utf-8", newline="\n"
+            dumps_char_save(char, quantity_scale=library.ruleset.core.quantity_scale),  # X10-3a
+            encoding="utf-8",
+            newline="\n",
         )
     return store
 

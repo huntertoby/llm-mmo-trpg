@@ -99,11 +99,11 @@ from trpg.world.opening import new_opening, pending_hero
 from trpg.world.replay import WorldLogEntry
 from trpg.world.save import (
     append_log_line,
-    dumps_char,
+    dumps_char_save,
     dumps_log,
     dumps_log_header,
     dumps_world,
-    loads_char,
+    loads_char_save,
     loads_world,
     log_rules_key,
     read_log,
@@ -282,6 +282,10 @@ class WorldStore:
     def _char_path(self, character_id: str) -> Path:
         return char_path(self.root, character_id)
 
+    def _quantity_scale(self) -> int:
+        """目前內容的量類倍率（角色存檔記下、讀檔時比對，X10-3a）。"""
+        return self.library.ruleset.core.quantity_scale
+
     # -- 讀取 -----------------------------------------------------------------
 
     def world(self) -> WorldState:
@@ -366,7 +370,9 @@ class WorldStore:
             path = self._char_path(character_id)
             if not character_id.isalnum() or not path.is_file():
                 raise WorldCharacterNotFoundError(f"找不到角色 {character_id}")
-            char = loads_char(path.read_text(encoding="utf-8"))
+            char = loads_char_save(  # 數值改版前的角色存檔直接拒絕（X10-3a）
+                path.read_text(encoding="utf-8"), quantity_scale=self._quantity_scale()
+            )
             self._chars[character_id] = char
             self.offers.prefetch(self.world(), char)  # PERF-3：讀檔時已有的機遇、劇情步驟
             if self.pregen is not None:  # 6L-2：讀檔時看得到的閃現、劇情技能、機遇
@@ -382,7 +388,10 @@ class WorldStore:
                 char = self._chars.get(cid)
                 if char is None:
                     try:
-                        char = loads_char(self._char_path(cid).read_text(encoding="utf-8"))
+                        char = loads_char_save(
+                            self._char_path(cid).read_text(encoding="utf-8"),
+                            quantity_scale=self._quantity_scale(),
+                        )
                     except (OSError, WorldError):
                         continue
                 visits[cid] = (char.hero.name_zh, _places(char))
@@ -886,7 +895,8 @@ class WorldStore:
         self.league.forget()
 
     def _save_char(self, char: CharacterState) -> None:
-        write_atomic(self._char_path(char.character_id), dumps_char(char))
+        text = dumps_char_save(char, quantity_scale=self._quantity_scale())  # X10-3a
+        write_atomic(self._char_path(char.character_id), text)
         self._chars[char.character_id] = char
         if self._visits is not None:  # 6C-R3：足跡的索引跟著存檔更新
             self._visits[char.character_id] = (char.hero.name_zh, _places(char))

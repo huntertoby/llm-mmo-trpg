@@ -29,7 +29,7 @@
 reactions:
   - id: block
     name_zh: 格擋
-    description_zh: 被近戰攻擊命中後，傷害減半，消耗 10 耐力。
+    description_zh: 被近戰攻擊命中後，傷害減半，消耗 100 耐力。
     effect: reduce_damage
     events: [targeted_by_melee, targeted_by_attack]
     stamina_cost: 100

@@ -40,6 +40,9 @@
   目前節點與候選）。
 - ``ruleset_hash``：寫入時內容庫的穩定雜湊（:func:`ruleset_hash`，Phase 3-5c-1）。可省略（舊存檔）；
   戰鬥中的存檔讀檔時要與目前的內容庫相同（沒有此欄位視為不符），戰鬥之間的存檔不檢查。
+- ``quantity_scale``：寫入時內容的量類倍率（``core.quantity_scale``，X10-3a）。新存檔一律寫入
+  （:func:`write_save` 不收沒有倍率的存檔）；讀檔時沒有或和目前的內容不同，視為數值改版前的存檔，
+  由 :func:`check_quantity_scale` 拒絕（:data:`OLD_UNIT_SAVE_NOTICE`），不讀成很弱的角色。
 - ``battle``：進行中的戰鬥（:class:`~trpg.roguelite.battle.SavedBattle`：種子、步驟、指令），
   沒有時為 ``null``。
 
@@ -69,11 +72,13 @@ __all__ = [
     "COMPATIBLE_FORMATS",
     "CONTENT_CHANGED_NOTICE",
     "OLD_FORMATS",
+    "OLD_UNIT_SAVE_NOTICE",
     "RUN_ID_PATTERN",
     "SAVE_DIR_ENV",
     "SAVE_FORMAT",
     "STALE_BATTLE_NOTICE",
     "RunSave",
+    "check_quantity_scale",
     "convert_raw_hero",
     "convert_raw_run",
     "default_save_dir",
@@ -113,6 +118,8 @@ SAVE_DIR_ENV = "TRPG_SAVE_DIR"
 STALE_BATTLE_NOTICE = "這場戰鬥的紀錄格式已更新，從這場的開頭重新開始。"
 CONTENT_CHANGED_NOTICE = "內容檔已更新，這場戰鬥從開頭重新開始。"
 """戰鬥中的存檔引擎版本不符、捨棄那場戰鬥時給玩家的提示（3W-R1）。"""
+OLD_UNIT_SAVE_NOTICE = "這是數值改版前的存檔，已經不能使用，請開新一輪。"
+"""存檔的量類倍率沒有記、或和目前的內容不同時的錯誤訊息（X10-3a）。"""
 
 
 def default_save_dir() -> Path:
@@ -134,6 +141,7 @@ class RunSave(BaseModel):
     run: RunState
     battle: SavedBattle | None = None
     ruleset_hash: str | None = None
+    quantity_scale: int | None = None
 
 
 def ruleset_hash(library: ContentLibrary) -> str:
@@ -249,6 +257,14 @@ def fill_resource_base(library: ContentLibrary, run: RunState) -> RunState:
     return run.model_copy(update={"hero": hero})
 
 
+def check_quantity_scale(library: ContentLibrary, save: RunSave) -> RunSave:
+    """存檔的量類倍率沒有記、或和目前的內容（``core.quantity_scale``）不同時拋出
+    :class:`SaveFormatError`（:data:`OLD_UNIT_SAVE_NOTICE`，X10-3a）；相同時原樣回傳。"""
+    if save.quantity_scale != library.ruleset.core.quantity_scale:
+        raise SaveFormatError(OLD_UNIT_SAVE_NOTICE)
+    return save
+
+
 def save_path(save_dir: Path, run_id: str) -> Path:
     if re.match(RUN_ID_PATTERN, run_id) is None:
         raise SaveFormatError(f"不合法的 run_id：{run_id!r}")
@@ -256,7 +272,10 @@ def save_path(save_dir: Path, run_id: str) -> Path:
 
 
 def write_save(save_dir: Path, save: RunSave) -> Path:
-    """寫入 ``save_dir/run-<run_id>.json``（資料夾不存在時建立），回傳路徑。"""
+    """寫入 ``save_dir/run-<run_id>.json``（資料夾不存在時建立），回傳路徑。存檔一定要記
+    ``quantity_scale``（X10-3a），沒有時拋出 :class:`ValueError`。"""
+    if save.quantity_scale is None:
+        raise ValueError("存檔沒有記 quantity_scale")
     path = save_path(save_dir, save.run_id)
     save_dir.mkdir(parents=True, exist_ok=True)
     path.write_text(dumps_save(save), encoding="utf-8", newline="\n")
