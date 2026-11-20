@@ -5,6 +5,7 @@
 - ``crash_case.py``：一個測試讓 worker 直接結束。``tests/xdist_loadgroup.py`` 修正前，xdist 3.8 的
   ``--dist loadgroup`` 會在補上新 worker 後永遠卡住；這裡限 90 秒，超過就用 PID 結束整棵程序樹
   並判失敗。
+- ``crash_twice_case.py``：兩個 worker 接連掛掉；修正前 master 會 ``KeyError``（INTERNALERROR）。
 - ``timeout_case.py``：一個測試超過 pytest-timeout（thread 方式）的逾時，worker 被 ``os._exit``；
   ``tests/pytest_trace.py`` 要在那之前把 stack 寫進 ``.stacks``，``.trace`` 留下沒結束的測試。
 """
@@ -76,6 +77,20 @@ def test_loadgroup_finishes_after_a_worker_crash(tmp_path: Path) -> None:
     assert runs == ["run"]
     summary = run_pytest.read_traces(trace_dir)
     assert [t.nodeid for t in summary.running] == ["test_crash_case.py::test_crash_once"]
+
+
+@pytest.mark.timeout(150)
+def test_loadgroup_survives_two_workers_crashing_together(tmp_path: Path) -> None:
+    returncode, text, trace_dir = _run_case(tmp_path, "crash_twice_case.py")
+    assert "INTERNALERROR" not in text, text
+    assert "2 failed, 3 passed" in text, text
+    assert returncode == 1, text
+    runs = (tmp_path / "crash_runs.txt").read_text(encoding="utf-8").splitlines()
+    assert sorted(runs) == ["first", "second"]
+    assert sorted(t.nodeid for t in run_pytest.read_traces(trace_dir).running) == [
+        "test_crash_twice_case.py::test_crash_first",
+        "test_crash_twice_case.py::test_crash_second",
+    ]
 
 
 @pytest.mark.timeout(150)

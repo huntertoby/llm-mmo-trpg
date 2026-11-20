@@ -21,7 +21,8 @@
 測試和 worker 留下的 stack 寫進留證資料夾的 ``stuck.txt``，印出來，再重跑。
 
 **結束碼**：pytest 的結束碼原樣傳回；連續卡住判失敗時是 :data:`STALL_EXIT_CODE`（124）；
-被 Ctrl+C 中斷是 130（中斷時同樣先結束整棵樹）。看門狗的父程序消失時也會結束整棵樹。
+被 Ctrl+C 中斷是 130（中斷時同樣先結束整棵樹）。看門狗的父程序（``TRPG_WATCHDOG_PARENT_PID``，
+``scripts/check.py`` 會設）消失時也會結束整棵樹、回 130。
 
 既有的單一測試逾時（``pyproject.toml`` 的 ``timeout = 300``，slow 1800）照舊由 pytest-timeout 管。
 """
@@ -46,6 +47,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LOG_ROOT = PROJECT_ROOT / ".claude" / "pm-logs" / "pytest"
 TRACE_DIR_ENV = "TRPG_PYTEST_TRACE_DIR"  # 與 tests/pytest_trace.py 一致
 STALL_ENV = "TRPG_PYTEST_STALL_MINUTES"
+PARENT_PID_ENV = "TRPG_WATCHDOG_PARENT_PID"
 DEFAULT_STALL_MINUTES = 10.0
 DEFAULT_RETRIES = 1
 STALL_EXIT_CODE = 124
@@ -173,14 +175,22 @@ def kill_tree(proc: subprocess.Popen[bytes]) -> None:
 
 
 class ParentWatch:
-    """看門狗的父程序還在不在（父程序被結束時，看門狗收掉自己的樹再離開）。"""
+    """看門狗的父程序還在不在（父程序被結束時，看門狗收掉自己的樹再離開）。
 
-    def __init__(self) -> None:
-        self._ppid = os.getppid()
+    看的是環境變數 ``TRPG_WATCHDOG_PARENT_PID``（``scripts/check.py`` 設成自己的 PID），沒設時看
+    ``os.getppid()``。Windows 上 ``uv run`` 與 venv 的 ``python.exe`` 會多一層轉接程序，直接父程序
+    不一定是呼叫者，所以 check.py 明確傳 PID。開始時就取得程序 handle，PID 之後被重用也不會誤判。
+    """
+
+    def __init__(self, environ: dict[str, str] | None = None) -> None:
+        env = os.environ if environ is None else environ
+        given = env.get(PARENT_PID_ENV, "").strip()
+        self._explicit = given.isdigit()
+        self._pid = int(given) if self._explicit else os.getppid()
         self._handle: int | None = None
         if sys.platform == "win32":
             synchronize = 0x00100000
-            handle = ctypes.windll.kernel32.OpenProcess(synchronize, False, self._ppid)
+            handle = ctypes.windll.kernel32.OpenProcess(synchronize, False, self._pid)
             self._handle = int(handle) if handle else None
 
     def alive(self) -> bool:
@@ -189,7 +199,15 @@ class ParentWatch:
                 return True
             wait_timeout = 0x102
             return bool(ctypes.windll.kernel32.WaitForSingleObject(self._handle, 0) == wait_timeout)
-        return os.getppid() == self._ppid
+        if self._explicit:
+            try:
+                os.kill(self._pid, 0)
+            except ProcessLookupError:
+                return False
+            except PermissionError:
+                return True
+            return True
+        return os.getppid() == self._pid
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +255,7 @@ def run_attempt(
     trace_dir = attempt_dir / "trace"
     trace_dir.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, TRACE_DIR_ENV: str(trace_dir), "PYTHONUNBUFFERED": "1"}
+    env.pop(PARENT_PID_ENV, None)
     with (attempt_dir / "output.log").open("wb") as log:
         proc = popen_tree(command, env)
         assert proc.stdout is not None

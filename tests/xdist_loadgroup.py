@@ -3,7 +3,7 @@
 ``tests/conftest.py`` 匯入本模組的 :func:`pytest_xdist_make_scheduler`，``--dist loadgroup`` 時
 改用 :class:`SafeLoadGroupScheduling`。
 
-xdist 原本的 ``LoadScopeScheduling``（``loadgroup`` 的父類別）有兩個問題，在 Windows 實測重現：
+xdist 原本的 ``LoadScopeScheduling``（``loadgroup`` 的父類別）有三個問題，在 Windows 實測重現：
 
 1. **補上的新 worker 永遠不開始跑**：worker 掛掉後，xdist 把它沒跑完的工作放回佇列，再補一個
    新 worker。新 worker 收集完時，``schedule()`` 只對每個 worker 呼叫一次 ``_reschedule``，新
@@ -14,10 +14,13 @@ xdist 原本的 ``LoadScopeScheduling``（``loadgroup`` 的父類別）有兩個
 2. **掛掉時正在跑的測試會被重跑**：``remove_node`` 把整個工作單位（包含掛掉時那一個測試）
    放回佇列。逾時（pytest-timeout 的 thread 方式會 ``os._exit``）造成的掛掉，重跑時通常又卡滿
    逾時秒數；``--dist load`` 不會重跑，這裡改成一致。
+3. **兩個 worker 接連掛掉時 master 內部錯誤**：補上的兩個新 worker 中，一個收集完就觸發
+   ``schedule()``，對**還沒收集完**的另一個也排工作，``registered_collections[node]`` 找不到而
+   ``KeyError``（INTERNALERROR）。2026-11-19 07:40 的推送前檢查紀錄就是這樣結束的。
 
 修法：掛掉的那個測試照樣回報失敗，但標成已完成、不再排；``schedule()`` 補排時每個 worker 呼叫
 兩次 ``_reschedule``（和 xdist 第一次分配時一樣，#277），佇列空了就送 shutdown，讓 worker
-開始跑最後一個測試。
+開始跑最後一個測試；還沒收集完的 worker 先不排（它收集完時會再呼叫 ``schedule()``）。
 """
 
 from __future__ import annotations
@@ -47,6 +50,11 @@ class SafeLoadGroupScheduling(LoadGroupScheduling):  # type: ignore[misc]
         for other in self.assigned_work:
             self._reschedule(other)
         return crashitem
+
+    def _reschedule(self, node: Any) -> None:
+        if node not in self.registered_collections:
+            return  # 補上的新 worker 還沒收集完；收集完時 schedule() 會再排它。
+        super()._reschedule(node)
 
     def schedule(self) -> None:
         if self.collection is None:

@@ -40,6 +40,7 @@ from pathlib import Path
 from trpg.cli.frontend import pnpm_command
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WATCHDOG_SCRIPT = "scripts/run_pytest.py"
 
 
 @dataclass(frozen=True)
@@ -72,7 +73,7 @@ STEPS: tuple[Step, ...] = (
     Step("mypy", "mypy", "mypy", ()),
     Step("lint-imports", None, "lint-imports", (), optional=True),
     # QF-3a：經看門狗 scripts/run_pytest.py 跑（卡住時只結束自己的程序樹、重跑一次）。
-    Step("pytest", None, "pytest", ("-q", "-n", pytest_workers()), script="scripts/run_pytest.py"),
+    Step("pytest", None, "pytest", ("-q", "-n", pytest_workers()), script=WATCHDOG_SCRIPT),
     # 前端（Phase 3-3）：找不到 pnpm（沒有安裝 Node）時印出警告並略過，不算失敗。
     _client_step("client install", "install", "--frozen-lockfile"),
     _client_step("client typecheck", "typecheck"),
@@ -166,7 +167,11 @@ def run_step(step: Step) -> str:
             return "略過"
         print(red(f"錯誤：找不到 {step.executable}，請先執行 `uv sync`。"), flush=True)
         return "失敗"
-    completed = subprocess.run([*command, *step.args], cwd=PROJECT_ROOT, check=False)
+    env = None
+    if step.script == WATCHDOG_SCRIPT:
+        # QF-3a：check.py 被單獨結束（例如 hook 逾時）時，看門狗會跟著收掉整棵 pytest 樹。
+        env = {**os.environ, "TRPG_WATCHDOG_PARENT_PID": str(os.getpid())}
+    completed = subprocess.run([*command, *step.args], cwd=PROJECT_ROOT, check=False, env=env)
     if completed.returncode == 0:
         return "通過"
     return "警告" if step.warn_only else "失敗"

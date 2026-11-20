@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -78,3 +79,8 @@ def test_item_timeout_reads_the_marker(request: pytest.FixtureRequest) -> None:
     assert pytest_trace.item_timeout(request.node) == 7.0
     assert pytest_trace.dump_lead_seconds(300.0) == 5.0
     assert pytest_trace.dump_lead_seconds(4.0) == 1.0
+
+
+def test_parent_watch_follows_the_given_pid() -> None:
+    assert run_pytest.ParentWatch({run_pytest.PARENT_PID_ENV: str(os.getpid())}).alive()
+    assert run_pytest.ParentWatch({}).alive()
