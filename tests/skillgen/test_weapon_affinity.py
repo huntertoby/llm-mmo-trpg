@@ -80,7 +80,7 @@ def test_the_disabled_options_are_exactly_what_the_validator_rejects() -> None:
         "name_zh": "測試",
         "rarity": "rare",
         "ap_cost": 2,
-        "cost": {"stamina": 8, "cooldown": 2},
+        "cost": {"stamina": 80, "cooldown": 2},
         "effects": [
             {"type": "damage", "multiplier_permille": 1100, "affects": "enemies"},
             {"type": "damage", "multiplier_permille": 800, "affects": "enemies"},
@@ -128,7 +128,7 @@ def test_an_affinity_draft_fits_the_options_and_validates() -> None:
         "name_zh": "鞭擊",
         "rarity": "rare",
         "ap_cost": 2,
-        "cost": {"stamina": 8, "cooldown": 2},
+        "cost": {"stamina": 80, "cooldown": 2},
         "effects": [
             {"type": "damage", "multiplier_permille": 1100, "affects": "enemies"},
             {

@@ -1284,8 +1284,10 @@ def _resource_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
         field = _cost_int("mana", "法力", resource_cost_text(library, "mana"))
     if draft.get("kind") != "active":
         return field
-    # 最低花費（3-48c）：欄位範圍不收緊（內建技能有 0 的），由檢查回報違規
-    desc = f"{field.description_zh}。主動技能至少要花 1 點（空白或 0 檢查會不通過）"
+    # 最低花費（3-48c）：欄位範圍不收緊（內建技能有 0 的），由檢查回報違規；
+    # 一格 1 × 量類倍率（X10-3c）
+    least = library.ruleset.core.quantity_scale
+    desc = f"{field.description_zh}。主動技能至少要花 {least} 點（空白或少於 {least} 檢查會不通過）"
     return field.model_copy(update={"description_zh": desc})
 
 

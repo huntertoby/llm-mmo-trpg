@@ -135,7 +135,7 @@ def delayed_data(**follow: Any) -> dict[str, Any]:
         "shape": {"type": "self"},
         "effects": [{"type": "shield", "dice": "1d4", "affects": "self"}],
         "followup": data,
-        "cost": {"stamina": 1, "cooldown": 2},
+        "cost": {"stamina": 10, "cooldown": 2},
     }
 
 

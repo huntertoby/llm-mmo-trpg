@@ -10,16 +10,16 @@
    "id": "build_fire",
    "name_zh": "火焰流英雄",
    "attributes": {
-    "str": 10,
-    "dex": 10,
-    "con": 10,
-    "int": 18,
-    "wis": 10,
-    "wil": 10
+    "str": 100,
+    "dex": 100,
+    "con": 100,
+    "int": 180,
+    "wis": 100,
+    "wil": 100
    },
-   "max_hp": 40,
+   "max_hp": 400,
    "speed": 5,
-   "armor_bonus": 1,
+   "armor_bonus": 10,
    "weapon": "fire_staff",
    "resist": {
     "physical": 0,
@@ -46,7 +46,7 @@
     "skill_ember_ward_t2",
     "skill_cinder_mine_cp"
    ],
-   "max_mana": 40,
+   "max_mana": 400,
    "scaled_resources": true,
    "summon": false,
    "totem": null,
@@ -68,9 +68,9 @@
   "origin": null,
   "level": 3,
   "xp": 300,
-  "hp": 44,
-  "mana": 56,
-  "stamina": 30,
+  "hp": 440,
+  "mana": 560,
+  "stamina": 300,
   "source": 3,
   "generated_skills": [
    {
@@ -286,7 +286,7 @@
      "shape": "cross"
     },
     "cost": {
-     "mana": 7,
+     "mana": 70,
      "stamina": 0,
      "cooldown": 3,
      "uses_per_battle": null,
@@ -545,7 +545,7 @@
     "reaction": null,
     "trap": null,
     "cost": {
-     "mana": 2,
+     "mana": 20,
      "stamina": 0,
      "cooldown": null,
      "uses_per_battle": null,
@@ -874,7 +874,7 @@
     "reaction": null,
     "trap": null,
     "cost": {
-     "mana": 6,
+     "mana": 60,
      "stamina": 0,
      "cooldown": null,
      "uses_per_battle": null,
@@ -1008,7 +1008,7 @@
     "reaction": null,
     "trap": null,
     "cost": {
-     "mana": 6,
+     "mana": 60,
      "stamina": 0,
      "cooldown": null,
      "uses_per_battle": null,
@@ -1140,7 +1140,7 @@
     "reaction": null,
     "trap": null,
     "cost": {
-     "mana": 10,
+     "mana": 100,
      "stamina": 0,
      "cooldown": null,
      "uses_per_battle": null,
@@ -1449,7 +1449,7 @@
     "reaction": null,
     "trap": null,
     "cost": {
-     "mana": 6,
+     "mana": 60,
      "stamina": 0,
      "cooldown": 2,
      "uses_per_battle": null,
@@ -1585,11 +1585,11 @@
     "end_reason": "eliminate",
     "rounds": 2,
     "steps": 35,
-    "hp": 40,
-    "mana": 14,
+    "hp": 400,
+    "mana": 140,
     "source": 2,
     "hero_downed": false,
-    "stamina": 30,
+    "stamina": 300,
     "state_digest": "943e192a1a96ebfe84bb0bab43726c5605def31f22809edd40bc5eff52739918"
    },
    {
@@ -1600,11 +1600,11 @@
     "end_reason": "eliminate",
     "rounds": 2,
     "steps": 45,
-    "hp": 30,
-    "mana": 4,
+    "hp": 300,
+    "mana": 40,
     "source": 3,
     "hero_downed": false,
-    "stamina": 30,
+    "stamina": 300,
     "state_digest": "02907ca59685c99012d2e97c1efadb2611e4972d600f3f8b8b47591e6d72552a"
    },
    {
@@ -1615,11 +1615,11 @@
     "end_reason": "eliminate",
     "rounds": 3,
     "steps": 67,
-    "hp": 11,
+    "hp": 110,
     "mana": 0,
     "source": 3,
     "hero_downed": false,
-    "stamina": 30,
+    "stamina": 300,
     "state_digest": "02e15842af3353002ebf67773c3a5696584763cc10afaef1b12a905c646e260a"
    }
   ],
@@ -1774,7 +1774,7 @@
   },
   "attribute_points": 0,
   "attribute_spent": {
-   "int": 8
+   "int": 80
   },
   "equipment": {
    "body": {

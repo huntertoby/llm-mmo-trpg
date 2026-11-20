@@ -94,11 +94,14 @@ def test_workshop_check_rejects_an_active_skill_without_the_minimum_cost() -> No
     assert check_draft(draft, LIB).legal
     result = check_draft({**draft, "cost": {}}, LIB)
     assert not result.legal
-    assert any(p.rule == "cap.min_cost" and "1 點耐力" in p.message_zh for p in result.problems)
+    least = LIB.ruleset.core.quantity_scale  # X10-3c：最低花費一格 1 × quantity_scale
+    assert any(
+        p.rule == "cap.min_cost" and f"{least} 點耐力" in p.message_zh for p in result.problems
+    )
     spell = {**draft, "category": "spell", "weapon_req": "focus", "scaling_attr": "int"}
     spell["effects"] = [{"type": "damage", "dice": "2d6", "element": "fire"}]
     spell["cost"] = {}
-    assert any("1 點法力" in p.message_zh for p in check_draft(spell, LIB).problems)
+    assert any(f"{least} 點法力" in p.message_zh for p in check_draft(spell, LIB).problems)
 
 
 def _walk_fields(fields: Any) -> Any:
@@ -217,7 +220,11 @@ def test_random_composer_always_pays_the_minimum_cost() -> None:
         skill = compose_random_skill(seed, library=LIB, tier=1 + seed % 3)
         # AP-2b：預支（borrow_ap）不受最低花費限制（06 6.10 例外）
         problem = LIB.budget.min_cost_problem(
-            skill.kind, skill.category, skill.cost, borrows=skill.borrows_ap
+            skill.kind,
+            skill.category,
+            skill.cost,
+            scale=LIB.ruleset.core.quantity_scale,
+            borrows=skill.borrows_ap,
         )
         assert problem is None, seed
 

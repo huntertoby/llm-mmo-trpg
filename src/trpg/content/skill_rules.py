@@ -652,20 +652,23 @@ class BudgetRules(ContentModel):
         cost: SkillCost,
         tags: Iterable[str] = (),
         *,
+        scale: int,
         borrows: bool = False,
     ) -> str | None:
-        """最低花費（06 6.10，2026-10-24）：主動的法術技至少 1 法力、主動的武器技至少 1 耐力；
-        被動、反應、姿態、修正照各自的規則。例外（06 6.10 `244974a`）：花源力的技能（源力就是代價）
-        與裝備解鎖的動作（標籤 ``gear``，預算由詞條計價）不受限制；帶預支原語（``borrows``，
-        ``borrow_ap``，06 6.10／6.3，AP-2b）的技能也不受限制，可以 0 法力、0 耐力。"""
+        """最低花費（06 6.10，2026-10-24）：主動的法術技至少一格法力、主動的武器技至少一格耐力——
+        法力、耐力是量類，一格 1 × ``scale``（``core.quantity_scale``，同 ``CoreRules.cost_floor``；
+        X10-3c）；被動、反應、姿態、修正照各自的規則。例外（06 6.10 `244974a`）：花源力的技能
+        （源力就是代價）與裝備解鎖的動作（標籤 ``gear``，預算由詞條計價）不受限制；帶預支原語
+        （``borrows``，``borrow_ap``，06 6.10／6.3，AP-2b）的技能也不受限制，可以 0 法力、
+        0 耐力。"""
         if kind != "active" or cost.source is not None or "gear" in tags or borrows:
             return None
         want = self.resource_of(category)
-        if getattr(cost, want) >= 1:
+        if getattr(cost, want) >= scale:
             return None
         names = {"mana": "法力", "stamina": "耐力"}
         label = "武器技" if category == "weapon" else "法術技"
-        return f"主動的{label}至少要花 1 點{names[want]}"
+        return f"主動的{label}至少要花 {scale} 點{names[want]}"
 
     def stamina_for_mana(self, mana: int) -> int:
         """法力代價換成等價的耐力代價（預算點數相同）。"""

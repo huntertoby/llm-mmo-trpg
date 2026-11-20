@@ -1,5 +1,6 @@
 """AP-2b：帶預支（``borrow_ap``）的技能不受最低花費限制（06 6.10 例外、6.3「預支」）——0 法力、
-0 耐力可以通過；不帶預支的主動技照舊至少 1 法力／1 耐力。驗證器、LLM 提議補值、往返覆蓋都照同一條。
+0 耐力可以通過；不帶預支的主動技照舊至少一格法力／耐力（X10-3c：1 × quantity_scale）。
+驗證器、LLM 提議補值、往返覆蓋都照同一條。
 """
 
 from __future__ import annotations
@@ -39,7 +40,16 @@ def test_borrow_skill_with_no_mana_or_stamina_passes(
     assert skill.cost.mana == 0 and skill.cost.stamina == 0
     assert skill.borrows_ap
     assert "cap.min_cost" not in _rules(lib, skill)
-    assert lib.budget.min_cost_problem(skill.kind, skill.category, skill.cost, borrows=True) is None
+    assert (
+        lib.budget.min_cost_problem(
+            skill.kind,
+            skill.category,
+            skill.cost,
+            scale=lib.ruleset.core.quantity_scale,
+            borrows=True,
+        )
+        is None
+    )
 
 
 def _plain_active(lib: ContentLibrary, category: str) -> SkillDef:
@@ -66,7 +76,12 @@ def test_skill_without_borrow_still_needs_one(lib: ContentLibrary, category: str
     cost = {k: v for k, v in data["cost"].items() if k not in ("mana", "stamina")}
     skill = SkillDef.model_validate({**data, "cost": cost})
     assert "cap.min_cost" in _rules(lib, skill)
-    assert lib.budget.min_cost_problem(skill.kind, skill.category, skill.cost) is not None
+    assert (
+        lib.budget.min_cost_problem(
+            skill.kind, skill.category, skill.cost, scale=lib.ruleset.core.quantity_scale
+        )
+        is not None
+    )
 
 
 def test_proposal_filler_leaves_borrow_cost_alone(lib: ContentLibrary) -> None:
@@ -84,3 +99,25 @@ def test_proposal_filler_still_tops_up_other_skills(lib: ContentLibrary) -> None
     out: dict[str, Any] = {"kind": "active", "effects": [{"type": "damage"}], "cost": {}}
     _fill_cost(out, lib, "spell")
     assert out["cost"]["mana"] == 10  # X10-2b：最低費用 1 × quantity_scale
+
+
+@pytest.mark.parametrize(("category", "resource"), [("spell", "mana"), ("weapon", "stamina")])
+def test_min_cost_is_one_quantity_step(lib: ContentLibrary, category: str, resource: str) -> None:
+    """X10-3c：最低花費是一格（1 × quantity_scale）——scale 10 時花 5 被擋、花 10 通過；
+    預支技能的 0 照舊放行。提示文字的數字照 scale 算。"""
+    scale = lib.ruleset.core.quantity_scale
+    assert scale == 10  # 這條回歸測試寫的是新單位
+    base = _plain_active(lib, category)
+    data = base.model_dump(mode="json")
+    other = {k: v for k, v in data["cost"].items() if k not in ("mana", "stamina")}
+    five = SkillDef.model_validate({**data, "cost": {**other, resource: 5}})
+    ten = SkillDef.model_validate({**data, "cost": {**other, resource: 10}})
+    problem = lib.budget.min_cost_problem(five.kind, five.category, five.cost, scale=scale)
+    assert problem is not None and "至少要花 10 點" in problem
+    assert "cap.min_cost" in _rules(lib, five)
+    assert lib.budget.min_cost_problem(ten.kind, ten.category, ten.cost, scale=scale) is None
+    assert "cap.min_cost" not in _rules(lib, ten)
+    req = "melee" if category == "weapon" else "any"
+    borrow = _variant(lib, BORROW, category=category, weapon_req=req, cost={"cooldown": 2})
+    assert borrow.borrows_ap and getattr(borrow.cost, resource) == 0
+    assert "cap.min_cost" not in _rules(lib, borrow)

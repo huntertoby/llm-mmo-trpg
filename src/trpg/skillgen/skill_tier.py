@@ -279,7 +279,7 @@ def _area_candidates(job: _Job) -> Iterator[SkillDef | None]:
     再用旋鈕調到目標比例；只有地形的沒有旋鈕，在費用的組合裡取比例最接近目標的。"""
     for grown in _grown_skills(job):
         if not has_strength_knobs(grown, job.library) and _terrain(grown, job.library):
-            drafts = [*_growth_drafts(grown, job.library), *_cost_drafts(grown)]
+            drafts = [*_growth_drafts(grown, job.library), *_cost_drafts(grown, job.library)]
             yield _closest(drafts, job)
             continue
         for draft in _growth_drafts(grown, job.library):
@@ -323,9 +323,14 @@ def _summon_variants(moved: SkillDef) -> list[dict[int, dict[str, Any]]]:
     return [{index: {"max_hp_permille": step or None}} for step in _SUMMON_HP_STEPS]
 
 
-def _cost_variants(moved: SkillDef) -> list[dict[str, Any]]:
-    """費用：原本的、再把冷卻與資源（法力、耐力）往下減輕（代價折抵變小，預算比例變高）。"""
+def _cost_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[str, Any]]:
+    """費用：原本的、再把冷卻與資源（法力、耐力）往下減輕（代價折抵變小，預算比例變高）。
+
+    法力、耐力是量類：乘完 ‰ 往下取到一格（``CoreRules.cost_floor``，1 × ``quantity_scale``）的
+    倍數，和換算前的整數等價（X10-3c：例 10 × 50% ＝ 5 → 0，同換算前 1 × 50% → 0）；取到 0 的版本
+    交給驗證器的最低花費去擋。"""
     cost = moved.cost
+    core = library.ruleset.core
     cooldowns: list[int | None] = [cost.cooldown]
     if cost.cooldown:
         cooldowns += [c or None for c in range(cost.cooldown - 1, -1, -1)]
@@ -336,14 +341,15 @@ def _cost_variants(moved: SkillDef) -> list[dict[str, Any]]:
             for field in ("mana", "stamina"):
                 value = getattr(cost, field)
                 if value:
-                    changed[field] = value * scale // 1000
+                    unit = core.cost_floor(field)
+                    changed[field] = value * scale // 1000 // unit * unit
             if changed not in out:
                 out.append(changed)
     return out
 
 
-def _cost_drafts(moved: SkillDef) -> Iterator[Draft]:
-    for cost in _cost_variants(moved):
+def _cost_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
+    for cost in _cost_variants(moved, library):
         base, effects = base_draft(moved)
         base["cost"] = {**base["cost"], **cost}
         yield base, effects
@@ -358,7 +364,7 @@ def _strength_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft
         or [{}]
     )
     for structure in structures:
-        for cost in _cost_variants(moved):
+        for cost in _cost_variants(moved, library):
             base, effects = base_draft(moved)
             for index, fields in structure.items():
                 for name, value in fields.items():

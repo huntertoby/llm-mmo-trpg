@@ -34,7 +34,7 @@ def _draft(skeleton: str, effects: list[dict[str, Any]]) -> dict[str, Any]:
         "tier": 1,
         "shape": {"type": "cone", "size": 3},
         "effects": effects,
-        "cost": {"mana": 4, "cooldown": 2},
+        "cost": {"mana": 40, "cooldown": 2},
     }
 
 

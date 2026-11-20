@@ -258,9 +258,10 @@ def _lasting_candidates(
     else:
         effect, shape = _rewrite_effect(rng, rng.choice(_REWRITE))
     out: list[dict[str, Any]] = []
+    scale = library.ruleset.core.quantity_scale  # 法力是量類：候選 × 倍率（X10-3c）
     for tier in tiers:
         for source in (1, 2):
-            for mana in (1, 4, 8, 12):  # 主動法術技至少 1 法力（06 6.10）
+            for mana in (1 * scale, 4 * scale, 8 * scale, 12 * scale):  # 至少一格法力（06 6.10）
                 for cooldown in (None,) if rule_change else (2, 3, 4, 5, 6):
                     cost: dict[str, Any] = {"mana": mana, "source": source}
                     if cooldown is not None:

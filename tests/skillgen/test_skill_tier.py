@@ -49,7 +49,7 @@ from trpg.skillgen.evolution import budget_power
 from trpg.skillgen.flash_derive import at_role_tier
 from trpg.skillgen.flash_offer import FlashRequest, make_offer
 from trpg.skillgen.flash_state import acquire
-from trpg.skillgen.skill_tier import character_tier, retier, retier_report
+from trpg.skillgen.skill_tier import _cost_variants, character_tier, retier, retier_report
 from trpg.skillgen.usage import SkillUsage
 from trpg.skillgen.validate import (
     minimum_tier,
@@ -661,3 +661,25 @@ def test_exemption_is_narrow() -> None:
         )
         if numeric:
             assert not weak_floor_exempt(skill, LIB_3W9B), recipe
+
+
+def _mana_cuts(skill: SkillDef) -> list[int]:
+    """``_cost_variants`` 在原冷卻下試的法力（依序）。"""
+    variants = _cost_variants(skill, library())
+    return [v["mana"] for v in variants if v["cooldown"] == skill.cost.cooldown]
+
+
+def test_retier_cost_cuts_stay_on_quantity_steps() -> None:
+    """X10-3c：升階減輕費用時，法力、耐力乘完 ‰ 往下取到一格（1 × quantity_scale）的倍數，
+    和換算前等價（10 × 50% → 0，同換算前 1 × 50% → 0；0 交給最低花費去擋）。"""
+    lib = library()
+    assert lib.ruleset.core.quantity_scale == 10  # 這條回歸測試寫的是新單位
+    roar = lib.skills["skill_taunting_roar"]
+    assert roar.cost.mana == 10
+    assert _mana_cuts(roar) == [10, 0]
+    thirty = roar.model_copy(update={"cost": roar.cost.model_copy(update={"mana": 30})})
+    assert _mana_cuts(thirty) == [30, 10, 0]
+    skill = roar
+    for tier in (2, 3):
+        skill = retier(lib, skill, tier)
+        assert skill.cost.mana == 10  # 換算前（f6d2bc957）同一招升階是 1

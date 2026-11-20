@@ -29,7 +29,7 @@ STRIKE: Walk = [
         {"effects": [{"type": "damage", "multiplier_permille": 1400}, {"type": "knock_prone"}]},
     ),
     ("condition", {}),
-    ("cost", {"cost": {"stamina": 2}}),
+    ("cost", {"cost": {"stamina": 20}}),
     ("rarity", {"rarity": "rare"}),
 ]
 
@@ -59,7 +59,7 @@ DISPLACE: Walk = [
         },
     ),
     ("condition", {}),
-    ("cost", {"cost": {"cooldown": 2, "stamina": 2}}),
+    ("cost", {"cost": {"cooldown": 2, "stamina": 20}}),
     ("rarity", {"rarity": "rare"}),
 ]
 
