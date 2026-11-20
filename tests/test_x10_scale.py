@@ -289,33 +289,34 @@ def test_infuse_survival_same_after_x10(scale: int) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Python 預設值：scale 不是 1 時量類不能用預設值（預設是換算前的單位）
+# Python 預設值：量類沒有預設值（X10-2a 擋 scale 10；HC-2 起一律必填）
 
 
-def test_quantity_defaults_must_be_explicit_at_x10(library: ContentLibrary) -> None:
+@pytest.mark.parametrize("scale", [1, 10])
+def test_quantity_fields_are_required(library: ContentLibrary, scale: int) -> None:
     data = library.ruleset.core.model_dump()
     for section, key in (
         ("resources", "stamina_regen"),
+        ("resources", "class_base"),
         ("attribute_perks", "base"),
         ("summon_growth", "hp_per_level"),
     ):
         partial = {**data, section: {k: v for k, v in data[section].items() if k != key}}
-        one = {**partial, "quantity_scale": 1}
-        assert CoreRules.model_validate(one).quantity_scale == 1  # 倍率 1：照舊用預設值
-        with pytest.raises(ValidationError, match=f"{section}.{key}"):
-            CoreRules.model_validate(partial)  # 內容是 10
+        with pytest.raises(ValidationError, match=rf"{section}\.{key}\s+Field required"):
+            CoreRules.model_validate({**partial, "quantity_scale": scale})
 
 
-def test_form_upkeep_must_be_explicit_at_x10(library: ContentLibrary) -> None:
+@pytest.mark.parametrize("scale", [1, 10])
+def test_form_upkeep_is_required(library: ContentLibrary, scale: int) -> None:
     ruleset = library.ruleset
-    core = ruleset.core.model_copy(update={"quantity_scale": 10})
+    core = ruleset.core.model_copy(update={"quantity_scale": scale})
     forms = ruleset.forms.model_dump()
     del forms["upkeep_mana"]
     data = {**ruleset.model_dump(), "core": core.model_dump(), "forms": forms}
-    with pytest.raises(ValidationError, match=r"forms.upkeep_mana"):
+    with pytest.raises(ValidationError, match=r"forms\.upkeep_mana\s+Field required"):
         Ruleset.model_validate(data)
     data["forms"] = ruleset.forms.model_dump()
-    assert Ruleset.model_validate(data).core.quantity_scale == 10
+    assert Ruleset.model_validate(data).core.quantity_scale == scale
 
 
 def test_armor_mods_bounds_have_no_default() -> None:

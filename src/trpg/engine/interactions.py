@@ -300,7 +300,8 @@ def _destroy_object(h: _Hit) -> list[EffectBase]:
 
 def _conduct(h: _Hit) -> list[EffectBase]:
     state = h.state
-    amount = max(h.damage * h.outcome.damage_permille // 1000, h.outcome.min_damage)
+    floor = h.outcome.min_damage_for(state.ruleset.core.quantity_scale)
+    amount = max(h.damage * h.outcome.damage_permille // 1000, floor)
     targets = [
         unit
         for tile in conducting_tiles(state, h.xy)

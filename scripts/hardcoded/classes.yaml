@@ -698,6 +698,21 @@ rules:
     note: 「兩個」「第二個」「2 倍半徑＋1」這類結構常數。
 
   # ======================================================================== 後端：量類（任何檔）
+  # HC-2：搬完的量類（done）寫在 todo 的寬規則前面。
+  - id: py-scale-caps
+    class: scale
+    status: done
+    lang: py
+    kind: number
+    slot: 'quantity_cap(#0)'
+    note: HC-2：量類欄位的 schema 上限寫成 quantity_cap(換算前的上限)＝× 最大倍率（content/quantity.py）。
+  - id: py-skill-stance-upkeep-points
+    class: config
+    status: todo
+    files: src/trpg/content/skills/skill.py
+    where: SkillDef
+    owner: stance_upkeep
+    note: 保守：姿態維持費的「點數」上限 2（每點的數量是 forms.yaml 的量類）；不是量類，HC-2 從 scale 改判 config。
   - id: py-scale-names
     class: scale
     status: todo
@@ -741,14 +756,14 @@ rules:
   #   SkillDef.stance_upkeep 與 _STANCE_UPKEEPS（維持費的「點數」，每點數量在 forms.yaml）、熟練、層數、格數、等級 − 1。
   - id: py-scale-one-defaults-content
     class: scale
-    status: todo
+    status: done
     lang: py
     kind: number
     value: '1'
     files: [src/trpg/content/forms.py, src/trpg/content/rules.py, src/trpg/content/roguelite.py,
             src/trpg/content/environment.py]
     owner: [stance_upkeep_mana, hp_per_attr_mod, armor_bonus, min_damage]
-    note: 專查（HC-2）：content 的量類預設 1（掃描器不列 1，0 筆，只作紀錄）。
+    note: 專查（HC-2）：content 的量類預設 1（掃描器不列 1，0 筆，只作紀錄）。已改：拿掉預設、改必填；min_damage 改 None＝1 × quantity_scale。
   - id: py-scale-one-defaults-misc
     class: scale
     status: todo

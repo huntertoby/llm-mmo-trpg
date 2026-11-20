@@ -22,9 +22,10 @@ from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal, localcontext
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
 
 from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, Dice, UnitTemplate
+from trpg.content.quantity import QuantityScale, quantity_cap
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Attribute, Element, Surface
 
@@ -111,14 +112,6 @@ class ClassResourceBase(ContentModel):
     stamina: int = Field(ge=0)
 
 
-def _default_class_base() -> dict[WeaponClass, ClassResourceBase]:
-    return {
-        "melee": ClassResourceBase(mana=20, stamina=40),
-        "ranged": ClassResourceBase(mana=20, stamina=30),
-        "focus": ClassResourceBase(mana=40, stamina=20),
-    }
-
-
 class ResourceRules(ContentModel):
     """法力與耐力上限（Phase 3H-2，``docs/design/07-角色成長.md`` 7.2；初值，平衡待辦）::
 
@@ -126,19 +119,18 @@ class ResourceRules(ContentModel):
 
     BAL-15b（玩法決定 #80）起 **敵我同一套**：所有單位（主角、敵人、隊友、召喚物）都照這個式子。
     基礎是範本的 ``max_mana``／``stamina``；範本沒寫時依武器大類取 ``class_base``（和
-    ``roguelite.yaml`` 的 ``start.heroes`` 同值）。召喚物的屬性加成用施放者的屬性（6.29）。"""
+    ``roguelite.yaml`` 的 ``start.heroes`` 同值）。召喚物的屬性加成用施放者的屬性（6.29）。
 
-    class_base: dict[WeaponClass, ClassResourceBase] = Field(default_factory=_default_class_base)
+    ``class_base``、``base``、``mana``、``stamina``、``stamina_regen`` 是量類（HC-2）：沒有 Python
+    預設值，一律寫在 ``core.yaml``。"""
+
+    class_base: dict[WeaponClass, ClassResourceBase]
     """武器大類的法力／耐力基礎（BAL-15b）：範本沒寫 ``max_mana``／``stamina`` 時用。"""
 
-    base: int = Field(default=10, ge=0)
-    mana: ResourcePool = ResourcePool(
-        attrs=(Attribute.INT, Attribute.WIS, Attribute.WIL), per_point=2
-    )
-    stamina: ResourcePool = ResourcePool(
-        attrs=(Attribute.STR, Attribute.DEX, Attribute.CON), per_point=2
-    )
-    stamina_regen: int = Field(default=5, ge=0)
+    base: int = Field(ge=0)
+    mana: ResourcePool
+    stamina: ResourcePool
+    stamina_regen: int = Field(ge=0)
     """耐力每回合開始回復的點數（Phase 3H-5，07 7.2；初值，平衡待辦 B15）。BAL-15b 起所有
     單位都有（敵我同公式）；不超過上限。戰後回滿見 ``roguelite.yaml`` 的
     ``refill_after_battle``。"""
@@ -175,10 +167,12 @@ class AttributePerks(ContentModel):
     - ``reaction_hit``：反應攻擊（藉機攻擊、監視射擊）的命中 +；
     - ``reveal_range``：能鎖定隱蔽單位的距離 +，也是自動看見敵方陷阱的距離；
     - ``control_resist``：有 ``control_group`` 的狀態（控制）的抵抗屬性值 +。
+
+    ``base``、``step`` 是屬性值（量類，HC-2）：沒有 Python 預設值，一律寫在 ``core.yaml``。
     """
 
-    base: int = Field(default=10, ge=0)
-    step: int = Field(default=4, ge=1)
+    base: int = Field(ge=0)
+    step: int = Field(ge=1)
     perks: tuple[AttributePerk, ...] = ()
 
     @model_validator(mode="after")
@@ -228,21 +222,6 @@ class SkillSlots(ContentModel):
     stance: int = Field(ge=0)
 
 
-def explicit_missing(model: BaseModel, prefix: str, names: tuple[str, ...]) -> list[str]:
-    """``names`` 中沒有在資料裡寫明（用了 Python 預設值）的欄位，寫成 ``prefix.name``
-    （X10-2a：``quantity_scale`` 不是 1 時，量類的預設值不能用）。"""
-    return [f"{prefix}.{n}" for n in names if n not in model.model_fields_set]
-
-
-_RESOURCE_QUANTITIES = ("class_base", "base", "stamina_regen")
-_GROWTH_QUANTITIES = (
-    "hp_per_level",
-    "hp_per_attr_mod",
-    "flat_per_level_permille",
-    "flat_per_attr_mod_permille",
-)
-
-
 class SummonGrowth(ContentModel):
     """召喚物數值成長（Phase 3-33b，``docs/design/06-技能.md`` 6.29.1；初值，未經模擬）。
 
@@ -250,12 +229,14 @@ class SummonGrowth(ContentModel):
     ability_mod_divisor``，下限 0）快照：最大 HP ＋ ``hp_per_level × (L−1) + hp_per_attr_mod × M``；
     普攻固定傷害 ＋ ``(flat_per_level_permille × (L−1) + flat_per_attr_mod_permille × M) ÷ 1000``
     （無條件捨去）；傷害加成（‰）＝ ``bonus_per_level_permille × (L−1) +
-    bonus_per_attr_mod_permille × M``，與施放者自己的傷害加成合計套全身上限。"""
+    bonus_per_attr_mod_permille × M``，與施放者自己的傷害加成合計套全身上限。
 
-    hp_per_level: int = Field(default=2, ge=0, le=200)  # X10-1：量類 ×10 放寬
-    hp_per_attr_mod: int = Field(default=1, ge=0, le=200)  # X10-1：量類 ×10 放寬
-    flat_per_level_permille: int = Field(default=250, ge=0, le=50000)  # X10-1：量類 ×10 放寬
-    flat_per_attr_mod_permille: int = Field(default=250, ge=0, le=50000)  # X10-1：量類 ×10 放寬
+    HP 與固定傷害的四個成長是量類（HC-2）：沒有 Python 預設值，一律寫在 ``core.yaml``。"""
+
+    hp_per_level: int = Field(ge=0, le=quantity_cap(20))
+    hp_per_attr_mod: int = Field(ge=0, le=quantity_cap(20))
+    flat_per_level_permille: int = Field(ge=0, le=quantity_cap(5000))
+    flat_per_attr_mod_permille: int = Field(ge=0, le=quantity_cap(5000))
     bonus_per_level_permille: int = Field(default=10, ge=0, le=200)
     bonus_per_attr_mod_permille: int = Field(default=10, ge=0, le=200)
 
@@ -309,7 +290,7 @@ class SummonTrait(ContentModel):
 
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
-    armor_bonus: int = Field(default=0, ge=0, le=30)  # X10-1：量類 ×10 放寬
+    armor_bonus: int = Field(default=0, ge=0, le=quantity_cap(3))
     speed_bonus: int = Field(default=0, ge=0, le=3)
     crit_range_delta: int = Field(default=0, ge=0, le=2)
     """暴擊範圍擴大幾點（最低自然骰值 −N；不低於 2）。"""
@@ -366,7 +347,7 @@ class CoreRules(ContentModel):
     ap_per_turn: int = Field(ge=0)
     """每回合 AP：召喚物，以及範本沒寫 ``ap_per_turn`` 的一般敵人（AP-1，#168）。"""
     # 數值尺度（X10-2a，05 5.4.1，#169 題 10）
-    quantity_scale: Literal[1, 10] = 1
+    quantity_scale: QuantityScale = 1
     """量類（HP、傷害、治療、護盾、屬性、法力、耐力……）的倍率：擲出的骰面 × 這個值（d20 不乘）、
     寫死的「1 點」下限 × 這個值、技能預算吃的固定值 ÷ 這個值、AI 評分的量 ÷ 這個值。內容換算
     （``scripts/x10/rescale.py``）時從 1 改成 10。舊紀錄沒有此欄位（＝1）。不放在第一個欄位：
@@ -423,7 +404,7 @@ class CoreRules(ContentModel):
     level_hp_permille: int = Field(ge=0)
 
     # 屬性的常駐數值（Phase 3H-1，07 7.2）：每高於基準 40 點升一階
-    attribute_perks: AttributePerks = AttributePerks()
+    attribute_perks: AttributePerks
 
     # 傷害
     basic_attack_attr_multiplier_permille: int = Field(ge=0)
@@ -513,7 +494,7 @@ class CoreRules(ContentModel):
     default_stamina: int = Field(ge=0)
 
     # 資源上限（3H-2，07 7.2）：主角的法力與耐力上限依屬性
-    resources: ResourceRules = ResourceRules()
+    resources: ResourceRules
 
     # 視線與隱蔽（1B）
     base_sight_range: int = Field(ge=1)
@@ -609,7 +590,7 @@ class CoreRules(ContentModel):
     summon_infused_cast_ap_cost: int = Field(default=1, ge=0, le=3)
     """召喚物在自己回合開始時施放灌注的技能，佔用牠自己的 AP（Phase 3-33d；取代一次普攻，
     不足時扣到 0）。"""
-    summon_growth: SummonGrowth = Field(default_factory=SummonGrowth)
+    summon_growth: SummonGrowth
     """召喚物 HP 與傷害的成長（Phase 3-33b）。"""
     summon_infusions: dict[str, SummonInfusion] = Field(default_factory=dict)
     """灌注關鍵字對照（Phase 3-33b）：關鍵字 ID → 召喚物普攻附加效果；不在表中的關鍵字不可灌注。"""
@@ -645,23 +626,6 @@ class CoreRules(ContentModel):
         low, high = _ROLE_HP_RANGE
         if any(not low <= v <= high for v in self.summon_role_hp_permille.values()):
             raise ValueError(f"summon_role_hp_permille 的係數必須在 {low}～{high}‰")
-        return self
-
-    @model_validator(mode="after")
-    def _check_quantity_defaults(self) -> CoreRules:
-        """``quantity_scale`` 不是 1 時，量類欄位不能用 Python 預設值（預設是換算前的單位；
-        X10-2a）。"""
-        if self.quantity_scale != 1:
-            missing = [
-                *explicit_missing(self.resources, "resources", _RESOURCE_QUANTITIES),
-                *explicit_missing(self.attribute_perks, "attribute_perks", ("base", "step")),
-                *explicit_missing(self.summon_growth, "summon_growth", _GROWTH_QUANTITIES),
-            ]
-            if missing:
-                raise ValueError(
-                    f"quantity_scale 是 {self.quantity_scale} 時這些量類要寫在 core.yaml"
-                    f"（Python 預設值是換算前的單位）：{'、'.join(missing)}"
-                )
         return self
 
     @model_validator(mode="after")

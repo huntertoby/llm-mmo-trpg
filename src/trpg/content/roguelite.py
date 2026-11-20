@@ -81,32 +81,6 @@ class StartHero(ContentModel):
     resist: dict[ResistGroup, int] = Field(default_factory=dict)
 
 
-def _default_heroes() -> dict[str, StartHero]:
-    return {
-        "melee": StartHero(
-            name_zh="冒險者",
-            max_hp=60,
-            armor_bonus=4,
-            max_mana=20,
-            resist={ResistGroup.PHYSICAL: 100},
-        ),
-        "ranged": StartHero(
-            name_zh="冒險者",
-            max_hp=50,
-            armor_bonus=2,
-            max_mana=20,
-            resist={ResistGroup.PHYSICAL: 50},
-        ),
-        "focus": StartHero(
-            name_zh="冒險者",
-            max_hp=40,
-            armor_bonus=1,
-            max_mana=40,
-            resist={ResistGroup.ELEMENTAL: 150},
-        ),
-    }
-
-
 class StartRules(ContentModel):
     """新開局（Phase 3-24b2，06 6.27.3）：自選武器 ＋ 選 ``keywords`` 個關鍵字，各給 1 招
     起始技能。"""
@@ -118,8 +92,9 @@ class StartRules(ContentModel):
     """2 招起始技能是主動白板（Phase 3W-4，06 6.34.1）：單一效果、1 階，由組合器的單一效果模式
     產生（``trpg.skillgen.whiteboard``）；形態池照舊給 1 階化身（6.30）；沒有白板配方的關鍵字
     （召喚物、倒地、撞擊、潮濕）退回手寫的起始技能池。``False`` ＝ 全部走手寫池（舊行為）。"""
-    heroes: dict[str, StartHero] = Field(default_factory=_default_heroes)
-    """武器大類（``melee``／``ranged``／``focus``）→ 主角的基礎數值。"""
+    heroes: dict[str, StartHero]
+    """武器大類（``melee``／``ranged``／``focus``）→ 主角的基礎數值。HP、防禦、法力、耐力是量類
+    （HC-2）：沒有 Python 預設值，一律寫在 ``roguelite.yaml``。"""
 
     @model_validator(mode="after")
     def _classes(self) -> StartRules:
@@ -194,7 +169,7 @@ class RunRules(ContentModel):
     """每場一般戰鬥打贏後主角回復最大生命的千分比（BAL-4c 設定點，預設 0 ＝ 不回復；模擬掃描用，
     是否採用由 PM 決定）。四捨五入向下、不超過最大生命。"""
     source: RunSourceRules
-    start: StartRules = Field(default_factory=StartRules)
+    start: StartRules
     """新開局（Phase 3-24b2）。"""
     candidates: CandidateSettings = Field(default_factory=CandidateSettings)
     """升級與完整技能三選一的候選產生器（Phase 3-24b2）。"""

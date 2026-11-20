@@ -15,6 +15,7 @@ from typing import Any, Literal
 from pydantic import Field, PrivateAttr, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, Dice, ReactionRule, ReactionUnless, ReactionWhen
+from trpg.content.quantity import quantity_cap
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute, Element, Surface
@@ -369,7 +370,12 @@ class InteractionOutcome(ContentModel):
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     duration: int | None = Field(default=None, ge=1)
     damage_permille: int = Field(default=1000, ge=0)
-    min_damage: int = Field(default=1, ge=0)
+    min_damage: int | None = Field(default=None, ge=0)
+    """``conduct`` 的最低傷害；``None``＝1 × ``quantity_scale``（HC-2，同引擎效果）。"""
+
+    def min_damage_for(self, scale: int) -> int:
+        """實際的最低傷害：沒指定時 1 × ``scale``（``quantity_scale``）。"""
+        return scale if self.min_damage is None else self.min_damage
 
     @model_validator(mode="after")
     def _check(self) -> InteractionOutcome:
@@ -562,7 +568,7 @@ class ReactionDef(ContentModel):
     kin_tag: str | None = Field(default=None, pattern=ID_PATTERN)
     """``shield_ally`` 的同門標籤（持有者與受擊者都要帶，Phase 5A-M1）。"""
     shield_dice: Dice | None = None
-    shield_flat: int = Field(default=0, ge=0, le=200)  # X10-1：量類 ×10 放寬
+    shield_flat: int = Field(default=0, ge=0, le=quantity_cap(20))
     blocked_by_silence: bool = False
     stamina_cost: int = Field(default=0, ge=0)
     damage_reduction_permille: int = Field(default=0, ge=0, le=1000)

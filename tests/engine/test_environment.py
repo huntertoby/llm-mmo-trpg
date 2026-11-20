@@ -284,7 +284,8 @@ def _conduct_rule(state: BattleState) -> InteractionRule:
 def _conducted(state: BattleState, base: int) -> int:
     """互動表的擴散傷害：``max(基準 × damage_permille ÷ 1000, min_damage)``（讀 content）。"""
     outcome = _conduct_rule(state).then[0]
-    return max(base * outcome.damage_permille // 1000, outcome.min_damage)
+    floor = outcome.min_damage_for(state.ruleset.core.quantity_scale)
+    return max(base * outcome.damage_permille // 1000, floor)
 
 
 def test_lightning_conduct_applies_rain_bonus_only_once() -> None:
