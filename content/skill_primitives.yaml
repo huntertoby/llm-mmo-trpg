@@ -6,7 +6,7 @@
 #   primitive_points（HC-B 從這裡的 base_points 搬去，值不變，開放數值工坊）。
 #   fixed 固定基礎點數／per_distance 基礎點數 × 距離／dice_average 骰子平均值／
 #   damage 法術為骰子平均值、武器為倍率 × core.yaml 的 budget_reference_weapon_damage／
-#   status、surface 為該狀態或表面的 budget_points × 持續 ÷ 預設持續
+#   status、surface 為該狀態或表面的點數（skill_budget.yaml 的 status_points／surface_points）× 持續 ÷ 預設持續
 # harmful：有害。省略 affects 時的預設：地形類 tiles、施放者專屬 self、有害 enemies、有益 allies
 # acts_on：unit（對單位）／tile（對格子；affects 為單位類別時作用在這些單位腳下的格子）／caster
 # allowed_shapes：只能搭配這些形狀

@@ -138,9 +138,12 @@ TABLE_NAMES_ZH: Final = {
     "pick": "技能挑選模式的權重（全體共用）",
     "skill_triggers": "被動觸發時機（全體共用）",
     "skill_composer": "技能組合器的附帶配方（全體共用）",
+    "skill_conditions": "技能條件的預算倍率（全體共用）",
+    "skill_synergies": "技能協同係數（全體共用）",
 }
 """全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
-``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``）。"""
+``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``；HC-B 加
+``skill_conditions``、``skill_synergies``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -150,7 +153,10 @@ TABLE_NOTES_ZH: Final = {
     "budget": (
         "這份是全體共用的技能預算表（skill_budget.yaml）：改了會讓相關技能的預算比例跟著變，"
         "超出合格區間的技能會在驗證時列出。",
-        "目前只開放「無聲」的預算成本（BS-1）：被動常駐一份、主動技能給 1 回合一份。",
+        "HC-B 起計價全部在這裡，依分組收合：原語、狀態、表面的點數，形狀倍率，各種係數，"
+        "召喚、代價折抵、特殊效果、修正技能……",
+        "階級預算與武器基準傷害在「核心戰鬥規則」；條件的個別倍率、協同係數、被動觸發時機各有一張表。"
+        "依參數值查表的形狀倍率（錐形、環形、十字、連鎖）還在形狀表，這裡沒開。",
     ),
     "object": (
         "這份是全體共用的格子物件表（objects.yaml）：改一種物件的值，所有地圖上的這種物件一起變。",
@@ -168,7 +174,7 @@ TABLE_NOTES_ZH: Final = {
         "被動能有多強（係數越大，同階級的被動效果越強）。",
         "改了係數，所有用這個時機的被動技能（手寫、組合器、LLM、裝備詞條）的預算比例跟著變，"
         "超出合格區間的技能會在驗證時列出。",
-        "只開放係數（SK-5）；「每命中 n 次」依 n 查表，這裡沒開。",
+        "只開放係數（SK-5）；「每命中 n 次」依 n 查的係數 HC-B 起也開了（n＝2、3 各一格）。",
     ),
     "skill_composer": (
         "這份是技能組合器的抽選機率（skill_composer.yaml）：決定隨機組合器多常加上某種附帶配方"
@@ -176,6 +182,16 @@ TABLE_NOTES_ZH: Final = {
         "改任何一個值都會改變「種子 → 技能」的對應：同一個種子之後組出來的招可能不同，"
         "已經發給玩家的技能不受影響。",
         "只開放這幾個機率與吸血的千分比（SK-5）；結構性的清單（例如吸血可用的骨架）不開。",
+    ),
+    "skill_conditions": (
+        "這份是技能條件表（skill_conditions.yaml）：條件的預算倍率平常照嚴苛度（技能預算表的"
+        "「條件的預算倍率」），這裡是個別條件的覆寫。",
+        "只展開已經寫了覆寫的條件（HC-B）；沒寫的條件要改嚴苛度的倍率。",
+    ),
+    "skill_synergies": (
+        "這份是技能協同係數表（skill_synergies.yaml）：技能同時帶有一條規則的全部機制標籤時，"
+        "總點數乘上該係數（符合多條時全部相乘）。",
+        "越大，帶這組機制的招算得越貴、其他效果越弱（HC-B）。標籤組合是結構，不開。",
     ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""
@@ -262,9 +278,29 @@ def _phase_label(data: Any, index: int) -> str:
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
 
 
-_ENTRY_WORDS: Final = {"profiles": "行為模式", "objects": "物件", "triggers": "觸發時機"}
+_ENTRY_WORDS: Final[dict[str, str]] = {
+    "profiles": "行為模式",
+    "objects": "物件",
+    "triggers": "觸發時機",
+    "conditions": "條件",
+    "synergies": "協同",
+}
 """全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件；SK-5：觸發時機表的時機）在標籤前的
 稱呼。"""
+
+
+_MECHANIC_ZH: Final = {
+    "damage": "傷害",
+    "heal": "治療",
+    "area": "範圍",
+    "displace": "位移",
+    "control": "控制",
+    "debuff": "削弱",
+    "dot": "持續傷害",
+    "surface": "表面",
+    "terrain": "地形",
+}
+"""協同規則的機制標籤（``skill_synergies.yaml``）在標籤裡的中文（HC-B）。"""
 
 
 def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
@@ -272,7 +308,10 @@ def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
     index = parts[1]
     assert isinstance(index, int)
     entry = (data.get(str(parts[0])) or [])[index]
-    name = f"{_ENTRY_WORDS[str(parts[0])]}「{entry.get('name_zh') or entry.get('id')}」"
+    title = entry.get("name_zh") or entry.get("id")
+    if title is None and entry.get("tags"):  # HC-B：協同規則沒有名字，用機制標籤
+        title = "＋".join(_MECHANIC_ZH.get(str(t), str(t)) for t in entry["tags"])
+    name = f"{_ENTRY_WORDS[str(parts[0])]}「{title}」"
     return f"{name}：" if parts[0] == "profiles" else name
 
 
@@ -424,12 +463,20 @@ def concrete_fields(
                 label = f"{_phase_label(data, parts[1])}{field.label_zh}"
             elif parts[:1] == ("parts",) and len(parts) > 1 and isinstance(parts[1], int):
                 label = _part_label(data, parts, field)
-            elif parts[:1] in (("profiles",), ("objects",), ("triggers",)) and len(parts) > 1:
+            elif parts[:1] in tuple((w,) for w in _ENTRY_WORDS) and len(parts) > 1:
                 label = f"{_entry_label(data, parts)}{field.label_zh}"
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
-            out.append((field, format_path(parts), label))
+            out.append((field, format_path(parts), _numbered(label, parts)))
     return out
+
+
+def _numbered(label: str, parts: Sequence[PathPart]) -> str:
+    """標籤裡的 ``{n}`` 換成最後一個清單索引 ＋ 1（HC-B：純數字清單，例「持續 {n} 回合」）。"""
+    if "{n}" not in label:
+        return label
+    index = next((p for p in reversed(parts) if isinstance(p, int)), None)
+    return label.replace("{n}", "?" if index is None else str(index + 1))
 
 
 def field_value(data: Any, path: str) -> Value:

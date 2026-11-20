@@ -51,6 +51,7 @@ from trpg.content.library.skill_checks import (
 from trpg.content.library.tables import (
     _check_evolution,
     _check_modifier_changes,
+    _check_price_tables,
     _check_primitive_points,
     _check_scaling,
     _dev_starter_problems,
@@ -133,6 +134,7 @@ def _load_base_tables(
     modifier_changes = load(MODIFIER_CHANGES_FILE, ModifierChangeTable)
     _check_modifier_changes(root, modifier_changes, budget)
     _check_primitive_points(root, primitives, budget)
+    _check_price_tables(root, (statuses, surfaces, shapes), budget)
     composer = load("skill_composer.yaml", ComposerRules)
     builds = load("sim/builds.yaml", BuildTable)
     synergies = load("skill_synergies.yaml", SynergyTable)

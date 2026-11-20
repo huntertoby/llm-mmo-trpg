@@ -254,7 +254,7 @@ class _Builder:
         self, primitive: PrimitiveDef, name: str, spec: PrimitiveParam, *, backlash: bool = False
     ) -> tuple[Any, dict[str, Any]]:
         """參數型別；稀有度檢查狀態的原語（``apply_status``）只列稀有度夠的狀態（Phase 4-L5b）；
-        以狀態點數計預算的原語（``budget_basis: status``）只列有 ``budget_points`` 的狀態
+        以狀態點數計預算的原語（``budget_basis: status``）只列 ``status_points`` 有的狀態
         （4-L5c）；失手反噬不列不能當反噬的狀態（硬控、跳過回合、持續傷害；4-L10a）。"""
         if spec.type == "status":
             ids = self._status_choices(primitive)

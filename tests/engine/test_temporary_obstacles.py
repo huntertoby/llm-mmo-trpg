@@ -210,7 +210,8 @@ def test_smoke_blocks_sight_conceals_and_has_no_element() -> None:
     smoke = library().ruleset.surface_def(Surface.SMOKE)
     assert smoke.blocks_sight and smoke.conceal and smoke.element is None
     assert smoke.duration == 3
-    assert smoke.budget_points == library().ruleset.surface_def(Surface.DARKNESS).budget_points
+    points = library().budget.surface_points  # HC-B：點數在 skill_budget.yaml
+    assert points["smoke"] == points["darkness"]
     state = run_effects(
         _field(), [CreateSurfaceEffect(pos=(2, 1), surface=Surface.SMOKE, team=Team.ALLY)]
     ).state

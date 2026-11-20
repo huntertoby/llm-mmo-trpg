@@ -135,7 +135,6 @@ groups:
     keep:
       - statuses[].ap_penalty
       - statuses[].attack_range_cap
-      - statuses[].budget_points
       - statuses[].duration
       - statuses[].*_permille
       - statuses[].formation.*
@@ -155,7 +154,6 @@ groups:
 
   - files: surfaces.yaml
     keep:
-      - surfaces[].budget_points
       - surfaces[].duration
       - surfaces[].on_enter.check.dc
       - surfaces[].on_enter.check.slide_max
@@ -565,6 +563,9 @@ groups:
       - passive_extra_trigger_permille
       - pierce_bonus_permille
       - primitive_points.*                        # HC-B：原語的基礎預算點數（從 skill_primitives.yaml 搬來）
+      - status_points.*                           # HC-B：狀態的預算點數（從 statuses.yaml 搬來）
+      - surface_points.*                          # HC-B：表面的預算點數（從 surfaces.yaml 搬來）
+      - shape_budget.*.*                          # HC-B：形狀倍率（‰，從 skill_shapes.yaml 搬來）
       - range_baseline
       - range_step_permille
       - rarity.*.max_effects
@@ -868,7 +869,7 @@ groups:
       - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
       - targets[kind=unit].fields[kind=permille].hint_*
       - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*
-      - targets[kind=rules|budget|pick|skill_composer|skill_triggers].fields[].hint_*
+      - targets[kind=rules|budget|pick|skill_composer|skill_triggers|skill_conditions|skill_synergies].fields[].hint_*
 
   # ------------------------------------------------------------------ 大世界
   - files: world/rules.yaml

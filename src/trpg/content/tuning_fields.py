@@ -28,9 +28,9 @@ from trpg.content.loader import load_content_file
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_pick import SkillPickRules
-from trpg.content.skill_rules import BudgetRules
+from trpg.content.skill_rules import BudgetRules, SynergyTable
 from trpg.content.skill_triggers import SkillTriggerTable
-from trpg.content.skills import SkillDef
+from trpg.content.skills import ConditionTable, SkillDef
 from trpg.content.skills.constants import ON_KILL_TYPES
 from trpg.content.skills.primitives import PrimitiveTable
 from trpg.shared.errors import ContentError
@@ -50,6 +50,7 @@ __all__ = [
     "effect_type_ids",
     "format_path",
     "load_tuning_fields",
+    "map_key",
     "parse_path",
     "path_matches",
     "target_files",
@@ -125,15 +126,29 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "pick": SkillPickRules,
     "skill_triggers": SkillTriggerTable,
     "skill_composer": ComposerRules,
+    "skill_conditions": ConditionTable,
+    "skill_synergies": SynergyTable,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
 （無聲的預算成本）；NW-3 起 ``object``＝``objects.yaml``（格子物件的 ``max_hp``）；
 PK-1 起 ``pick``＝``skill_pick.yaml``（技能挑選模式的權重）；SK-5 起 ``skill_triggers``＝
 ``skill_triggers.yaml``（被動觸發時機的預算係數）、``skill_composer``＝``skill_composer.yaml``
-（組合器的附帶配方機率）。這幾種都是「一個檔一個全體共用的表」）。"""
+（組合器的附帶配方機率）；HC-B 起 ``skill_conditions``＝``skill_conditions.yaml``（條件的預算
+倍率覆寫）、``skill_synergies``＝``skill_synergies.yaml``（協同係數）。這幾種都是「一個檔一個全體
+共用的表」）。"""
 
-TABLE_KINDS: Final = ("ai", "rules", "budget", "object", "pick", "skill_triggers", "skill_composer")
+TABLE_KINDS: Final = (
+    "ai",
+    "rules",
+    "budget",
+    "object",
+    "pick",
+    "skill_triggers",
+    "skill_composer",
+    "skill_conditions",
+    "skill_synergies",
+)
 """一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
 SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
@@ -141,7 +156,7 @@ SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
 
 type FieldKind = Literal["int", "permille", "dice", "range", "skill_ids"]
 
-_SEGMENT = re.compile(r"^([a-z_][a-z0-9_]*)(?:\[(\*|\d+)\])?$")
+_SEGMENT = re.compile(r"^([a-z_][a-z0-9_]*|[0-9]+)(?:\[(\*|\d+)\])?$")
 
 type PathPart = str | int
 """具體路徑的一段：鍵（字串）或清單索引（整數）。"""
@@ -150,7 +165,9 @@ type PathPart = str | int
 class TuningField(ContentModel):
     """一個可改的欄位。"""
 
-    path: str = Field(pattern=r"^[a-z_][a-z0-9_]*(\[\*\])?(\.[a-z_][a-z0-9_]*(\[\*\])?)*$")
+    path: str = Field(pattern=r"^[a-z_][a-z0-9_]*(\[\*\])?(\.([a-z_][a-z0-9_]*|[0-9]+)(\[\*\])?)*$")
+    """點號分段；HC-B 起對照表的鍵可以是數字（例 ``ap_coefficient_permille.2``：YAML 裡的鍵是
+    整數 2），和清單索引 ``[2]`` 不同。"""
     label_zh: str = Field(min_length=1)
     kind: FieldKind
     """``int``／``permille``：整數；``dice``：``NdM`` 字串；``range``：整數射程（現值是 ``weapon``
@@ -180,6 +197,8 @@ class TuningTarget(ContentModel):
         "pick",
         "skill_triggers",
         "skill_composer",
+        "skill_conditions",
+        "skill_synergies",
     ]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
@@ -230,7 +249,8 @@ class TuningFields(ContentModel):
 
 def parse_path(path: str) -> tuple[PathPart, ...]:
     """``phases[1].trigger.permille`` → ``("phases", 1, "trigger", "permille")``；``[*]`` 保留成
-    字串 ``"*"``。格式不對拋 ``ValueError``。"""
+    字串 ``"*"``；數字的鍵（HC-B，``ap_coefficient_permille.2``）保留成字串 ``"2"``（清單索引才是
+    整數）。格式不對拋 ``ValueError``。"""
     parts: list[PathPart] = []
     for segment in path.split("."):
         match = _SEGMENT.match(segment)
@@ -241,6 +261,14 @@ def parse_path(path: str) -> tuple[PathPart, ...]:
         if index is not None:
             parts.append("*" if index == "*" else int(index))
     return tuple(parts)
+
+
+def map_key(node: dict[Any, Any], part: str) -> Any:
+    """對照表 ``node`` 裡對應路徑段 ``part`` 的鍵：數字的段（HC-B）在 YAML 讀成整數鍵時取整數；
+    沒有這個鍵時照原字串（給「插入」用）。"""
+    if part not in node and part.isdigit() and int(part) in node:
+        return int(part)
+    return part
 
 
 def format_path(parts: Sequence[PathPart]) -> str:

@@ -175,7 +175,8 @@ class PrimitiveDef(ContentModel):
       ``inscribe`` 基礎點數 × ``inscribe_duration_permille``（依 ``duration``，3-23）、
       ``detonate_runes`` 骰子平均 × ``detonate_runes_permille``（需要先刻印的折扣，3-23）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
-      ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續、
+      ``status``／``surface`` 為該狀態或表面的點數 × 持續 ÷ 預設持續
+      （點數在 ``status_points``／``surface_points``）、
       ``hook``／``contagion`` 固定 ``skill_budget.yaml`` 的 ``hook_points``／``contagion_points``、
       ``absorb_surface`` ``absorb_surface_points`` ＋ 收益（SK-3b：這三個點數搬到預算表，
       開放數值工坊）、``reroll`` 階級預算 × 反應技係數 × ``reroll_budget_permille``（SK-3b）、

@@ -297,8 +297,12 @@ def rarity_statuses(library: ContentLibrary, rarity: SkillRarity) -> tuple[str, 
 
 
 def budget_statuses(library: ContentLibrary) -> tuple[str, ...]:
-    """技能能施加的狀態 ID（有 ``budget_points``；規則與預算的 ``budget.unavailable`` 相同，
+    """技能能施加的狀態 ID（``status_points`` 有它；規則與預算的 ``budget.unavailable`` 相同，
     Phase 4-L5c；排序）。"""
     return tuple(
-        sorted(s.id for s in library.ruleset.statuses.statuses if s.budget_points is not None)
+        sorted(
+            s.id
+            for s in library.ruleset.statuses.statuses
+            if library.budget.status_point(s.id) is not None
+        )
     )

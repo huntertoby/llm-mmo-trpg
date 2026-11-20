@@ -1,7 +1,7 @@
 # 技能預算的規則數值（docs/phases/Phase2B計畫.md 4.2–4.3、4.6）。‰＝千分比（1000 = ×1）。
 # 階級預算 tier_budget 與武器基準傷害 budget_reference_weapon_damage 在 rules/core.yaml；
-# 基礎點數在 skill_primitives.yaml、狀態與表面的 budget_points 在 statuses.yaml／surfaces.yaml、
-# 形狀倍率在 skill_shapes.yaml、協同係數在 skill_synergies.yaml。
+# HC-B 起原語的基礎點數（primitive_points）、狀態與表面的點數（status_points、surface_points）、形狀倍率（shape_budget）
+# 都在這個檔（開放數值工坊）；依參數值查表的形狀倍率在 skill_shapes.yaml、協同係數在 skill_synergies.yaml。
 #
 #   可用預算 ＝ tier_budget[階級] × AP 係數 × (1000 ＋ 代價折抵) ÷ 1000
 #   合格     ＝ min_ratio ≤ total ÷ 可用預算 ≤ max_ratio
@@ -21,10 +21,10 @@ range_step_permille: 50
 ap_coefficient_permille: {1: 500, 2: 1000, 3: 1600}   # 主動技能依 ap_cost
 reaction_coefficient_permille: 600                     # 反應技（2E-2 起可生成；初值，未經模擬）
 # 姿態技能（Phase 2E-2）：可用預算 ＝ tier_budget × 這個係數 × (1000 ＋ 代價折抵) ÷ 1000。
-# 姿態狀態的點數在 statuses.yaml 的 budget_points（持續到取消，不乘持續比例）。初值，未經模擬。
+# 姿態狀態的點數在下面的 status_points（持續到取消，不乘持續比例）。初值，未經模擬。
 stance_coefficient_permille: 1000
 # 形態技能（Phase 3J-1a，enter_form；06 6.30「照姿態計」）：可用預算 ＝ tier_budget × 這個係數 × (1000 ＋ 代價折抵) ÷ 1000，
-# 取代姿態係數。enter_form 的點數是 skill_primitives.yaml 的 base_points（固定，11）。3J-4 由 1000 改 800：1 階 14×0.8＝11.2（98%）、
+# 取代姿態係數。enter_form 的點數是下面 primitive_points 的 enter_form（固定，11）。3J-4 由 1000 改 800：1 階 14×0.8＝11.2（98%）、
 # 2 階 18×0.8＝14.4（76%），十種形態才都落在合格區間 70～100%（係數 1000 時 2 階形態只有 61%）。初值，未經模擬。
 form_coefficient_permille: 800
 # 被動技能（Phase 2E-1）：可用預算 ＝ tier_budget × 觸發時機的係數（skill_triggers.yaml）× (1000 ＋ 代價折抵) ÷ 1000；
@@ -48,15 +48,15 @@ consume_status_discount_permille: 700
 # 撞擊強化（Phase 3C-3a）：push／pull 填了 collision_dice 時，每顆骰加這麼多點（初值，未經模擬）。
 collision_die_points: 1
 # 投擲物件（Phase 3C-5a）：點數 ＝ 骰子平均 × 這個折扣（需要附近有可投擲的物件）÷ 1000；knock_prone: true 另加
-# knock_prone 原語的 base_points。形狀倍率照一般效果（object_then_tile 為 1.0）。初值，未經模擬。
+# knock_prone 原語的點數（primitive_points）。形狀倍率照一般效果（object_then_tile 為 1.0）。初值，未經模擬。
 hurl_object_discount_permille: 800
-# 直線衝撞（Phase 3D-2c）：點數 ＝（dice 平均 ＋ on_hit 的點數：knock_prone 為該原語的 base_points、
-# push_aside 為 push 的 base_points）× 預期被撞到的敵人數（‰）÷ 1000。初值，未經模擬。
+# 直線衝撞（Phase 3D-2c）：點數 ＝（dice 平均 ＋ on_hit 的點數：knock_prone 為該原語的點數、
+# push_aside 為 push 的點數，都在 primitive_points）× 預期被撞到的敵人數（‰）÷ 1000。初值，未經模擬。
 charge_through_expected_targets_permille: 1500
 # 召喚（Phase 3D-4a）：點數 ＝ 召喚物每輪預估傷害（武器骰平均 ＋ 固定傷害 ÷ quantity_scale）× duration × 這個值 ÷ 1000
 # （命中率與吸引火力的折合）。初值，未經模擬。
 summon_round_value_permille: 800
-# 3D-4b 圖騰：點數 ＝ 光環狀態的 budget_points × 預期受惠的友方數 × duration × summon_round_value_permille ÷ 1000²。初值，未經模擬。
+# 3D-4b 圖騰：點數 ＝ 光環狀態的點數（status_points）× 預期受惠的友方數 × duration × summon_round_value_permille ÷ 1000²。初值，未經模擬。
 totem_expected_allies_permille: 1000
 # 3-33e2a 召喚物特性計入預算（初值，未經模擬）：特性價值 ＝ 各項（見 skill_rules.py 的 summon_trait_*）加總，
 # 與武器骰平均相加後乘持續輪數與 summon_round_value_permille；自爆與被推倒壓人是一次性（不乘持續輪數）。
@@ -129,6 +129,123 @@ primitive_points:
   blow_surface: 1     # 吹送（× 格數）
   clear_surface: 3    # 清除表面（固定）
   enter_form: 11       # 進入形態（固定）
+# HC-B：形狀倍率（‰），從 skill_shapes.yaml 的 budget 搬來（值不變；開放數值工坊）。順序同形狀表。
+#   倍率 ＝ base_permille ＋ per_unit_permille × 參數值（參數見 skill_shapes.yaml 的 budget.param）；
+#   錐形、十字、環形、連鎖依參數值查表（表留在 skill_shapes.yaml），base_permille 只在參數沒填時用。
+#   只套用在對象為 enemies／allies／all／tiles 的效果（affects: self 與 teleport 一律 1.0）。
+shape_budget:
+  self:             {base_permille: 1000}   # 自身
+  single:           {base_permille: 1000}   # 單體
+  line:             {base_permille: 800, per_unit_permille: 200}   # 直線
+  cone:             {base_permille: 1000}   # 錐形（查表）
+  cross:            {base_permille: 1800}   # 十字（查表）
+  square3:          {base_permille: 2000}   # 方陣
+  ring:             {base_permille: 1000}   # 環形（查表）
+  ground_tile:      {base_permille: 1000}   # 指定格
+  chain:            {base_permille: 1000}   # 連鎖（查表）
+  allies_in_radius: {base_permille: 1000, per_unit_permille: 400}   # 範圍光環
+  object_then_tile: {base_permille: 1000}   # 物件與落點
+  unit_then_tile:   {base_permille: 1000}   # 單位與落點
+  unit_pair:        {base_permille: 1000}   # 兩個單位
+# HC-B：技能施加狀態（預設持續時間）的預算點數，從 statuses.yaml 的 budget_points 搬來（值不變；開放數值工坊）。
+# 沒有列在這裡的狀態不能由技能施加；只給敵人（enemy_only）、只由機制施加（mechanic_only）的狀態不能列。順序同狀態表。
+status_points:
+  defending: 2           # 守護
+  prone: 3               # 倒地
+  burning: 3             # 燃燒
+  concealed: 3           # 隱蔽
+  overwatch: 6           # 監視
+  slow: 3                # 緩速
+  root: 4                # 定身
+  stun: 8                # 暈眩
+  frozen: 8              # 冰凍
+  weaken: 4              # 虛弱
+  vulnerable: 4          # 易傷
+  bleed: 3               # 流血
+  poison: 3              # 中毒
+  guarded: 4             # 護衛
+  stoneskin: 3           # 石膚
+  empowered: 4           # 激昂
+  rallied: 4             # 戰意
+  hasted: 3              # 加速
+  regenerating: 4        # 再生
+  taunted: 3             # 嘲諷；玩法 PM 2026-10-23：加 mental 後由 4 降 3，控制遞減就是代價、不再用預算加價
+  feared: 5              # 恐懼
+  silenced: 5            # 沉默
+  blinded: 4             # 致盲
+  marked: 4              # 被標記
+  stance_fury: 11         # 狂怒姿態
+  stance_bulwark: 11      # 堅壁姿態
+  stance_guard: 14        # 堅守姿態
+  stance_ironwall: 18     # 鐵壁姿態
+  stance_flame: 14        # 焰刃姿態
+  stance_blaze: 18        # 烈焰姿態
+  stance_frost: 14        # 霜刃姿態
+  stance_glacier: 18      # 冰川姿態
+  infused_fire: 6        # 火焰附魔
+  infused_holy: 6        # 神聖附魔
+  commanding: 3          # 號令
+  stance_physical_1: 15   # 戰意架勢·壹
+  stance_physical_2: 17   # 戰意架勢·貳
+  stance_physical_3: 19   # 戰意架勢·參
+  stance_physical_4: 22   # 戰意架勢·肆
+  stance_physical_5: 28   # 戰意架勢·伍
+  stance_fire_1: 15       # 烈焰架勢·壹
+  stance_fire_2: 17       # 烈焰架勢·貳
+  stance_fire_3: 19       # 烈焰架勢·參
+  stance_fire_4: 22       # 烈焰架勢·肆
+  stance_fire_5: 28       # 烈焰架勢·伍
+  stance_ice_1: 15        # 寒霜架勢·壹
+  stance_ice_2: 17        # 寒霜架勢·貳
+  stance_ice_3: 19        # 寒霜架勢·參
+  stance_ice_4: 22        # 寒霜架勢·肆
+  stance_ice_5: 28        # 寒霜架勢·伍
+  stance_lightning_1: 15  # 雷霆架勢·壹
+  stance_lightning_2: 17  # 雷霆架勢·貳
+  stance_lightning_3: 19  # 雷霆架勢·參
+  stance_lightning_4: 22  # 雷霆架勢·肆
+  stance_lightning_5: 28  # 雷霆架勢·伍
+  stance_poison_1: 15     # 劇毒架勢·壹
+  stance_poison_2: 17     # 劇毒架勢·貳
+  stance_poison_3: 19     # 劇毒架勢·參
+  stance_poison_4: 22     # 劇毒架勢·肆
+  stance_poison_5: 28     # 劇毒架勢·伍
+  stance_wind_1: 15       # 疾風架勢·壹
+  stance_wind_2: 17       # 疾風架勢·貳
+  stance_wind_3: 19       # 疾風架勢·參
+  stance_wind_4: 22       # 疾風架勢·肆
+  stance_wind_5: 28       # 疾風架勢·伍
+  stance_earth_1: 15      # 大地架勢·壹
+  stance_earth_2: 17      # 大地架勢·貳
+  stance_earth_3: 19      # 大地架勢·參
+  stance_earth_4: 22      # 大地架勢·肆
+  stance_earth_5: 28      # 大地架勢·伍
+  stance_holy_1: 15       # 聖輝架勢·壹
+  stance_holy_2: 17       # 聖輝架勢·貳
+  stance_holy_3: 19       # 聖輝架勢·參
+  stance_holy_4: 22       # 聖輝架勢·肆
+  stance_holy_5: 28       # 聖輝架勢·伍
+  stance_shadow_1: 15     # 暗影架勢·壹
+  stance_shadow_2: 17     # 暗影架勢·貳
+  stance_shadow_3: 19     # 暗影架勢·參
+  stance_shadow_4: 22     # 暗影架勢·肆
+  stance_shadow_5: 28     # 暗影架勢·伍
+  stance_bastion: 21      # 堡壘姿態
+  shielded_thorns: 2     # 反傷護盾
+  shielded_mending: 2    # 回春護盾
+  shielded_wet: 1        # 水幕護盾
+  shielded_charged: 2    # 帶電護盾
+  shielded_marking: 2    # 烙印護盾
+# HC-B：技能產生表面（預設持續時間）的預算點數，從 surfaces.yaml 的 budget_points 搬來（值不變）。順序同表面表。
+surface_points:
+  oil: 2       # 油
+  water: 1     # 水
+  fire: 3      # 火焰
+  ice: 3       # 冰
+  poison: 3    # 毒
+  holy: 4      # 聖光
+  darkness: 2  # 黑暗
+  smoke: 2     # 煙霧
 # SK-3b（SK-2b 待決 1）：SK-2 三個新原語的預算點數，從 skill_primitives.yaml 的 base_points 搬來（值不變，初值，接數值工坊）。
 hook_points: 6             # 鉤：固定點數（形狀倍率另算）
 contagion_points: 2        # 疾病擴散：固定點數（形狀倍率另算）
@@ -280,7 +397,7 @@ allowance:
   stamina_per_mana: 2
   hp_per_permille: 1        # hp_percent 每 1‰
   hp_cap: 200
-  # 自身狀態代價（Phase 2H-1，初值，未經模擬）：折抵 ＝ 狀態 budget_points × 有效回合 × per_point_permille，
+  # 自身狀態代價（Phase 2H-1，初值，未經模擬）：折抵 ＝ 狀態點數（status_points）× 有效回合 × per_point_permille，
   # 有效回合 ＝ duration − 1（狀態在施放當回合結束就 −1，所以 duration 限制為 2–3）；先套用 cap，再和其他折抵一起截斷在 total_cap。
   # 狀態只能是 allowed 之內的自身負面狀態；只有主動技能可以使用。
   #
@@ -330,7 +447,7 @@ cost_resource: {weapon: stamina, spell: mana}
 #   可用預算 ＝ tier_budget × coefficient_permille ÷ 1000（修正技能沒有代價，不折抵）
 # 使用次數：applies_to 各項加總，all_attacks 涵蓋 attack、all_skills 涵蓋 skill_tags；skill_tag 為「每個標籤」，上限 uses_cap。
 # 命中後才生效：damage_permille、cooldown_delta、push_distance_delta、add_element、on_hit_effects（命中前就生效：hit_bonus、ap_delta、range_delta、add_tags）。
-# 每次的價值：damage_permille ＝ budget_reference_weapon_damage × ‰；push_distance_delta ＝ push 原語 base_points × 格數；
+# 每次的價值：damage_permille ＝ budget_reference_weapon_damage × ‰；push_distance_delta ＝ push 原語點數（primitive_points）× 格數；
 #   on_hit_effects ＝ 效果本身的點數（同一般技能的效果點數，形狀倍率以 self 計）；其他見 points_milli（千分之一點）。
 modifier:
   coefficient_permille: 300

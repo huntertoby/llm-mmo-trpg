@@ -36,6 +36,15 @@ CORE_PATHS = (
     "miss_refund_ap",
     "miss_refund_min_cost",
     "boss_parts.hp_total_max_permille",  # HC-4a：部位血量加總上限（從 parts.py 搬來）
+    "tier_budget.1",  # HC-B：階級預算（數字鍵）、武器基準傷害、召喚物小特性的點數
+    "tier_budget.2",
+    "tier_budget.3",
+    "tier_budget.4",
+    "tier_budget.5",
+    "budget_reference_weapon_damage",
+    "summon_traits.sturdy.budget_points",
+    "summon_traits.swift.budget_points",
+    "summon_traits.keen.budget_points",
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
@@ -71,6 +80,8 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "pick",
         "skill_triggers",
         "skill_composer",
+        "skill_conditions",  # HC-B：條件的預算倍率覆寫、協同係數
+        "skill_synergies",
     )
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (
@@ -93,8 +104,8 @@ def test_the_detail_shows_the_current_values(read_service: TuningService) -> Non
     assert any("全體共用" in n for n in core.notes_zh)
     budget = object_detail(CONTENT, read_service.table, "budget", "skill_budget")
     paths = [f.path for f in budget.fields]
-    # HC-B 起預算表全部開放（原語點數、形狀倍率、係數……），這裡只確認 BS-1 起逐段開的欄位都還在
-    assert [p for p in paths if p in BUDGET_PATHS] == list(BUDGET_PATHS)
+    # HC-B 起預算表全部開放並分組（原語點數、形狀、係數……），這裡只確認 BS-1 起逐段開的欄位都還在
+    assert set(BUDGET_PATHS) <= set(paths)
     assert [f.value for f in budget.fields] == [_now(BUDGET, p) for p in paths]
 
 

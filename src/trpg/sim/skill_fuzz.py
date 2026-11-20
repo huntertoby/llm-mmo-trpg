@@ -107,7 +107,7 @@ class FuzzReport:
     primitive_ids: tuple[str, ...] = ()
     """規則集中的全部原語（摘要列出沒出現的，次數 0）。"""
     status_ids: tuple[str, ...] = ()
-    """規則集中可由技能施加的狀態（有 ``budget_points``）。"""
+    """規則集中可由技能施加的狀態（``skill_budget.yaml`` 的 ``status_points`` 有它）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -435,7 +435,11 @@ def run_fuzz(
         seed_start,
         primitive_ids=tuple(sorted(p.id for p in rules.primitives.primitives)),
         status_ids=tuple(
-            sorted(s.id for s in rules.statuses.statuses if s.budget_points is not None)
+            sorted(
+                s.id
+                for s in rules.statuses.statuses
+                if library.budget.status_point(s.id) is not None
+            )
         ),
     )
     for index in range(count):

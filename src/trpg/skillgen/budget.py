@@ -341,7 +341,7 @@ def _overload_stack_cost(
             assert sub.dice is not None
             backlash += _dice_average(sub.dice)
         else:
-            backlash += _status_points(sub, by_id(rules.statuses))[0]
+            backlash += _status_points(sub, by_id(rules.statuses), library.budget)[0]
     harm = Fraction(library.budget.gamble_self_harm_permille, _PERMILLE)
     amount = effect.amount or 1
     cost = backlash * harm * amount / stack.overload.threshold
@@ -425,7 +425,7 @@ def _plain_base_points(  # noqa: PLR0911
         reference = rules.core.budget_reference_weapon_damage
         return Fraction(permille * reference, _PERMILLE), f"武器 ×{permille / _PERMILLE:g}"
     if basis == "status":
-        return _status_points(effect, by_id(rules.statuses))
+        return _status_points(effect, by_id(rules.statuses), library.budget)
     if basis == "surface":
         return _surface_points(effect, library)
     raise BudgetError(f"原語 {primitive.id} 的預算算法 {basis} 沒有實作")
@@ -438,7 +438,7 @@ def _shield_rider_points(
     if primitive_id != "shield" or effect.status is None:
         return Fraction(0), ""
     status = library.ruleset.status_def(effect.status)
-    points = Fraction(status.budget_points or 0)
+    points = Fraction(library.budget.status_point(status.id) or 0)
     return points, f" ＋ {status.name_zh}附帶 {points} 點"
 
 
@@ -741,11 +741,11 @@ def _summon_points(
     if totem is not None:  # 圖騰（3D-4b）：光環狀態的點數 × 預期受惠的友方數 × 持續輪數
         status = library.ruleset.status_def(totem.status)
         allies = library.budget.totem_expected_allies_permille
-        value = Fraction(status.budget_points or 0) * Fraction(allies, _PERMILLE)
+        aura = library.budget.status_point(status.id)
+        value = Fraction(aura or 0) * Fraction(allies, _PERMILLE)
         points = value * effect.duration * Fraction(permille, _PERMILLE)
         return points, (
-            f"{status.id} {status.budget_points} × 預期 {allies}‰ 個友方 × {effect.duration} 輪"
-            f" × {permille}‰"
+            f"{status.id} {aura} × 預期 {allies}‰ 個友方 × {effect.duration} 輪 × {permille}‰"
         )
     dpr = summon_dpr(summon, scale=_scale(library))
     per_round, once, notes = summon_trait_points(summon, library, dpr)
@@ -820,7 +820,8 @@ def _summon_variant_points(
 
 
 def _status_value(library: ContentLibrary, status_id: str) -> Fraction:
-    return Fraction(library.ruleset.status_def(status_id).budget_points or 0)
+    library.ruleset.status_def(status_id)  # 未知的狀態照舊丟錯
+    return Fraction(library.budget.status_point(status_id) or 0)
 
 
 def _infusion_trait_points(
@@ -840,7 +841,7 @@ def _infusion_trait_points(
         )
         notes.append(f"命中{infusion.status}")
     if infusion.surface is not None:
-        surface = library.ruleset.surfaces.get(infusion.surface).budget_points or 0
+        surface = library.budget.surface_point(infusion.surface.value) or 0
         per_round += surface * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
         notes.append(f"命中造{infusion.surface.value}")
     if infusion.extra_damage is not None:
@@ -901,7 +902,7 @@ def _rule_trait_points(
     pulse = template.pulse
     if pulse is not None:
         if pulse.surface is not None:
-            surface = library.ruleset.surfaces.get(pulse.surface).budget_points or 0
+            surface = library.budget.surface_point(pulse.surface.value) or 0
             per_round += surface * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
         if pulse.heal_dice is not None or pulse.heal_flat:
             heal = (_dice_average(pulse.heal_dice) if pulse.heal_dice else Fraction(0)) + Fraction(
@@ -921,7 +922,7 @@ def _rule_trait_points(
         )
         if blast.surface is not None:
             tiles = 2 * blast.radius * (blast.radius + 1) + 1
-            surface = library.ruleset.surfaces.get(blast.surface).budget_points or 0
+            surface = library.budget.surface_point(blast.surface.value) or 0
             once += surface * tiles * Fraction(rules.summon_trait_surface_permille, _PERMILLE)
         notes.append("自爆")
     if "topplable" in template.tags:
@@ -1225,11 +1226,11 @@ def _shape_parts(
         return Fraction(1), Fraction(1)
     if skill.trap is not None:
         shape = by_id(rules.shapes)[skill.trap.shape]
-        return Fraction(shape.budget.permille_for({}), _PERMILLE), Fraction(1)
+        return Fraction(library.budget.shape_permille(shape, {}), _PERMILLE), Fraction(1)
     shape = by_id(rules.shapes)[skill.shape.type]
     # 連鎖的非威力效果（狀態等）不衰減，維持衰減前的倍率（BAL-13d，06 6.5「BAL-13c 定」）
     values = shape.with_defaults(skill.shape.param_values())
-    permille = shape.budget.permille_for(values, primitive.id)
+    permille = library.budget.shape_permille(shape, values, primitive.id)
     return Fraction(permille, _PERMILLE), range_coefficient(skill.shape, library.budget)[1]
 
 
@@ -1241,17 +1242,20 @@ def _shape_multiplier(
     return shape * reach
 
 
-def _status_points(effect: EffectSpec, statuses: dict[str, StatusDef]) -> tuple[Fraction, str]:
+def _status_points(
+    effect: EffectSpec, statuses: dict[str, StatusDef], budget: BudgetRules
+) -> tuple[Fraction, str]:
     status = statuses.get(effect.status or "")
     if status is None:
         raise BudgetError(f"未知的狀態 {effect.status!r}")
-    if status.budget_points is None:
+    points = budget.status_point(status.id)
+    if points is None:
         raise BudgetError(f"狀態 {status.id}（{status.name_zh}）沒有預算點數，不能由技能施加")
     ratio = _duration_ratio(effect.duration, status.duration)
     # 完整姿態的幅度（3W-5b）、數值型狀態的強度（BAL-12e，#76）：點數等比例放大
     if effect.magnitude_permille and (status.stance or status.scales_with_magnitude):
         ratio *= Fraction(effect.magnitude_permille, _PERMILLE)
-    return status.budget_points * ratio, f"{status.id} {status.budget_points}×{_fmt(ratio)}"
+    return points * ratio, f"{status.id} {points}×{_fmt(ratio)}"
 
 
 def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fraction, str]:
@@ -1261,15 +1265,16 @@ def _surface_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fracti
         surface = library.ruleset.surfaces.get(effect.surface)
     except KeyError:  # 例如 LLM 提議的 surface: none（不是可製造的表面）
         raise BudgetError(f"表面 {effect.surface.value} 不能製造") from None
-    if surface.budget_points is None:
+    points = library.budget.surface_point(surface.id.value)
+    if points is None:
         raise BudgetError(f"表面 {surface.id.value}（{surface.name_zh}）沒有預算點數")
     ratio = _duration_ratio(effect.duration, surface.duration)
     magnitude = effect.magnitude_permille
     if magnitude and library.ruleset.surface_scales_with_magnitude(surface.id):
         ratio *= Fraction(magnitude, _PERMILLE)  # 表面的強度（BAL-12e，#76）：點數等比例放大
     return (
-        surface.budget_points * ratio,
-        f"{surface.id.value} {surface.budget_points}×{_fmt(ratio)}",
+        points * ratio,
+        f"{surface.id.value} {points}×{_fmt(ratio)}",
     )
 
 
@@ -1385,9 +1390,10 @@ def _self_status_allowance(
     """自身狀態代價的折抵：狀態點數 × 有效回合（duration − 1）× 每點折抵，先套用自己的上限。"""
     rule = budget.allowance.self_status
     status = statuses.get(cost.status)
-    if status is None or status.budget_points is None:
+    points = None if status is None else budget.status_point(status.id)
+    if status is None or points is None:
         raise BudgetError(f"自身狀態代價 {cost.status!r} 沒有預算點數")
-    value = status.budget_points * (cost.duration - 1) * rule.per_point_permille
+    value = points * (cost.duration - 1) * rule.per_point_permille
     return (f"自身{status.name_zh} {cost.duration} 回合", min(value, rule.cap_of(cost.status)))
 
 
@@ -1561,8 +1567,8 @@ def _shape_to_value(library: ContentLibrary, target: str) -> tuple[Fraction, str
             name: _REFERENCE_PARAM for name in conv.keep if name in ("size", "radius")
         }
         after_params: dict[str, int | str] = {**conv.params, **before_params}
-        before = shape_defs[conv.from_shape].budget.permille_for(before_params)
-        after = shape_defs[conv.to].budget.permille_for(after_params)
+        before = library.budget.shape_permille(shape_defs[conv.from_shape], before_params)
+        after = library.budget.shape_permille(shape_defs[conv.to], after_params)
         damage = library.ruleset.core.budget_reference_weapon_damage
         gains.append(
             (
