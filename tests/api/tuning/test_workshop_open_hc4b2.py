@@ -114,3 +114,43 @@ def test_whiteboard_ap_over_the_ap_cap_is_refused(read_service: TuningService) -
     assert not result.ok
     messages = [e.message_zh for e in result.field_errors] + list(result.page_errors)
     assert any("whiteboard.summon_ap_cost" in m for m in messages), result
+
+
+TIER_GROUP = "階級與升階"
+
+
+def test_the_budget_table_has_a_tier_and_retier_group(read_service: TuningService) -> None:
+    """HC-4b 裁定 4：預算表多一組「階級與升階」，放升階重配與最低角色階級的數字。"""
+    detail = object_detail(CONTENT, read_service.table, "budget", "skill_budget")
+    group = [f for f in detail.fields if f.group_zh == TIER_GROUP]
+    data = read_data(CONTENT / "skill_budget.yaml")
+    expected: list[str] = []
+
+    def walk(node: object, path: str) -> None:
+        if isinstance(node, dict):
+            for key, value in node.items():
+                walk(value, f"{path}.{key}")
+        elif isinstance(node, list):
+            for i, value in enumerate(node):
+                walk(value, f"{path}[{i}]")
+        elif isinstance(node, int) and not isinstance(node, bool):
+            expected.append(path)
+
+    for top in ("retier_growth", "min_character_tier"):
+        walk(data[top], top)
+    # 升降地形格數表的「階級」欄路徑上有 tier（工坊一律不開的欄位名），只開格數
+    expected = [p for p in expected if not p.endswith("].tier")]
+    assert sorted(f.path for f in group) == sorted(expected)
+    for field in group:
+        assert field.value == _now("skill_budget.yaml", field.path), field.path
+        assert not field.label_zh.isascii(), field.path
+        assert "調高" in field.note_zh and "調低" in field.note_zh, field.path
+
+
+def test_a_tier_draft_validates(read_service: TuningService) -> None:
+    path = "min_character_tier.kinds.stance"
+    now = _now("skill_budget.yaml", path)
+    assert isinstance(now, int)
+    item = TuningChangeIn(file="skill_budget.yaml", path=path, old=now, new=now - 1)
+    result = read_service.check("hc4b2-tier", [item])
+    assert result.ok, (result.field_errors, result.page_errors)

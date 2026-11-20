@@ -557,6 +557,39 @@ targets:
       - {path: flash_transform.companion_duration, label_zh: 伴生：開場召喚物待幾輪, group_zh: 閃現, kind: int, hint_min: 1, hint_max: 4, note_zh: 伴生召出的召喚物存在幾輪（同一般召喚：在你第這麼多次回合結束時消失）。}
       - {path: flash_transform.guardian_power_permille, label_zh: 護主：反咬召喚物的強度（‰）, group_zh: 閃現, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「護主」後，被近戰攻擊時冒出來反咬的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比。這是起點：不在預算範圍時會每 100‰ 往上下找最接近、合格的強度。}
       - {path: flash_transform.guardian_duration, label_zh: 護主：反咬召喚物待幾輪, group_zh: 閃現, kind: int, hint_min: 1, hint_max: 4, note_zh: 護主召出的召喚物存在幾輪（設計是 1 回合）。}
+      # HC-4b2（HC-4b 裁定 4）：升階重配（retier_growth）與技能內容的最低角色階級（min_character_tier）。
+      # 升降地形格數表的「階級」欄（terrain_area[*].tier）路徑上有 tier，工坊一律不開；召喚物、原語等的清單是結構。
+      - {path: retier_growth.stretch.apply_status.duration, label_zh: 升階：狀態持續最多放大到幾回合, group_zh: 階級與升階, kind: int, hint_min: 3, hint_max: 8, note_zh: 點數固定的狀態技能升階重配時，狀態持續回合最多放大到這麼多（原本就超過的不縮短；控制類狀態不放大）。調高：升階後狀態技能撐更久、比較容易回到原本的預算比例；調低：更早改加強度或補不到比例。}
+      - {path: retier_growth.stretch.create_surface.duration, label_zh: 升階：表面持續最多放大到幾回合, group_zh: 階級與升階, kind: int, hint_min: 3, hint_max: 8, note_zh: 點數固定的表面技能升階重配時，表面持續回合最多放大到這麼多（先放大格數再放大回合）。調高：升階後表面留得更久；調低：更早改加強度。}
+      - {path: retier_growth.magnitude_step, label_zh: 升階：強度每級（‰）, group_zh: 階級與升階, kind: permille, hint_min: 10, hint_max: 100, note_zh: 持續回合放大到上限之後，數值型狀態與表面改加強度，每級加這麼多千分比（25＝每級 +2.5%）。調高：每級跳得大、比較難貼近原本的比例；調低：更細、貼得更近。}
+      - {path: retier_growth.magnitude_max, label_zh: 升階：強度上限（‰）, group_zh: 階級與升階, kind: permille, hint_min: 1000, hint_max: 2000, note_zh: 升階重配時狀態與表面的強度最多加到這麼多千分比（2000＝兩倍）。調高：升階後狀態技能能變得更強；調低：更早停，比例可能補不到。只能 1000～2000。}
+      - {path: retier_growth.max_extra_cooldown, label_zh: 升階：換大形狀時最多多加幾回合冷卻, group_zh: 階級與升階, kind: int, hint_min: 0, hint_max: 6, note_zh: 升階時表面或升降地形換成較大的形狀，超過預算上限（或大範圍不能無冷卻）時最多多加這麼多回合冷卻。調高：比較能換到大形狀；調低：換不了就維持小形狀。}
+      - {path: retier_growth.max_cooldown, label_zh: 升階：換大形狀時冷卻的總上限, group_zh: 階級與升階, kind: int, hint_min: 3, hint_max: 10, note_zh: 升階換成較大形狀時，加完冷卻後總冷卻最多這麼多回合（原本就超過的不再加）。調高：允許更長的冷卻換大形狀；調低：大形狀比較難換到。}
+      - {path: retier_growth.max_extra_ap, label_zh: 升階：換大形狀時最多多加幾 AP, group_zh: 階級與升階, kind: int, hint_min: 0, hint_max: 2, note_zh: 加冷卻還超過預算上限時（例：1 AP 的隆地放大到十字），最多再多加這麼多 AP（不超過 3 AP）。調高：比較能換到大形狀但更貴；調低：0＝不加 AP。只能 0～2。}
+      - {path: retier_growth.target_tolerance_permille, label_zh: 升階：維持原比例的容許差（‰）, group_zh: 階級與升階, kind: permille, hint_min: 0, hint_max: 150, note_zh: 升階重配時，候選的預算比例和升階前相差在這麼多千分比內就採用，否則取最接近的。調高：比較快採用、比例可能差得較多；調低：更堅持維持原比例。只能 0～300。}
+      - {path: min_character_tier.kinds.modifier, label_zh: 修正型被動最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 角色到這個階級才能拿到修正型被動（所有來源：三選一、白板、閃現、技能工坊、LLM 提議）。調高：修正型被動更晚出現；調低：更早出現。}
+      - {path: min_character_tier.kinds.stance, label_zh: 姿態最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 角色到這個階級才能拿到姿態技能。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.skeletons.summon, label_zh: 召喚骨架最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 召喚骨架的技能最低要這個角色階級（基本召喚物例外，1 階就能召）。調高：召喚技更晚出現；調低：更早出現。}
+      - {path: min_character_tier.skeletons.trap, label_zh: 陷阱骨架最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 陷阱骨架的技能最低要這個角色階級。調高：陷阱技更晚出現；調低：更早出現。}
+      - {path: min_character_tier.skeletons.stance, label_zh: 姿態骨架最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 姿態骨架的技能最低要這個角色階級（通常和「姿態最低幾階」一起改）。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.summon, label_zh: 原語「召喚」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「召喚」最低要這個角色階級（基本召喚物例外）。調高：召喚效果更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.sacrifice_summon, label_zh: 原語「犧牲召喚物」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「犧牲召喚物」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.place_trap, label_zh: 原語「放置陷阱」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「放置陷阱」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.teleport, label_zh: 原語「傳送」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶自身「傳送」最低要這個角色階級（傳送別人另算 1 階）。調高：自身位移更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.dash, label_zh: 原語「衝鋒」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「衝鋒」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.charge_through, label_zh: 原語「穿身衝撞」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「穿身衝撞」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.shadowstep, label_zh: 原語「影步」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「影步」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.leap, label_zh: 原語「跳躍」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「跳躍」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.swap, label_zh: 原語「互換」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「和目標互換位置」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.primitives.swap_any, label_zh: 原語「任意互換」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能帶「任意兩個單位互換」最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.shapes.square3, label_zh: 形狀「3×3」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能用 3×3 範圍最低要這個角色階級。調高：大範圍技更晚出現；調低：更早出現。}
+      - {path: min_character_tier.shapes.chain, label_zh: 形狀「連鎖跳躍」最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 技能用連鎖跳躍最低要這個角色階級。調高：連鎖技更晚出現；調低：更早出現。}
+      - {path: min_character_tier.line_length, label_zh: 整排直線：從多長算起, group_zh: 階級與升階, kind: int, hint_min: 3, hint_max: 8, note_zh: 直線長度不小於這個值算「整排直線」，要到「整排直線最低幾階」才能用。調高：更長的直線才受限；調低：較短的直線就受限。只能 2 以上。}
+      - {path: min_character_tier.line_tier, label_zh: 整排直線最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 整排直線（長度見上一格）最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: min_character_tier.followup, label_zh: 接續段（複合技能）最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 帶第二段的複合技能最低要這個角色階級。調高：複合技能更晚出現；調低：更早出現。}
+      - {path: min_character_tier.second_element, label_zh: 第二元素最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 傷害帶兩種以上元素的技能最低要這個角色階級；許願池的「元素最多 2 個」也從這一階開始。調高：雙元素更晚出現；調低：更早出現。}
+      - {path: min_character_tier.dual_scaling, label_zh: 雙屬性縮放最低幾階, group_zh: 階級與升階, kind: int, hint_min: 1, hint_max: 5, note_zh: 雙屬性縮放的技能最低要這個角色階級。調高：更晚出現；調低：更早出現。}
+      - {path: "min_character_tier.terrain_area[*].min_cells", label_zh: 升降地形：從幾格算起, group_zh: 階級與升階, kind: int, hint_min: 2, hint_max: 12, existing_only: true, note_zh: 升降地形影響這麼多格以上時，要到表上對應的角色階級（目前 4 格 2 階、7 格 3 階；階級本身不開）。調高：更大的升降地形才受限；調低：較小的就受限。後一列要比前一列大。}
   # NW-3（CW-1 報告待決 5）：格子物件（content/objects.yaml，所有物件在同一個檔、全體共用）。只開 max_hp，只展開已寫的物件
   # （沒寫＝打不破，插入會變成結構改動）；爆炸、漏出、標籤等不開。
   - kind: object
