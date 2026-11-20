@@ -114,16 +114,17 @@ class _Scanner(ast.NodeVisitor):
     def _scoped(self, node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> None:
         for deco in node.decorator_list:
             self.visit(deco)
-        if not isinstance(node, ast.ClassDef):
-            self.visit(node.args)
-            if node.returns is not None:
-                self.visit(node.returns)
-        else:
+        if isinstance(node, ast.ClassDef):
             for base in node.bases:
                 self.visit(base)
             for kw in node.keywords:
                 self.visit(kw)
         self.scope.append(node.name)
+        if not isinstance(node, ast.ClassDef):
+            # 參數預設值算在函式自己裡面（``def f(x=7)`` 的 7 的 scope 是 ``f``）。
+            self.visit(node.args)
+            if node.returns is not None:
+                self.visit(node.returns)
         for stmt in node.body:
             self.visit(stmt)
         self.scope.pop()
@@ -271,10 +272,13 @@ def iter_files() -> Iterator[Path]:
     yield from sorted(SRC_DIR.rglob("*.py"))
 
 
-def scan_file(path: Path) -> list[Hit]:
-    source = path.read_text(encoding="utf-8")
-    rel = path.relative_to(ROOT).as_posix()
+def scan_source(rel: str, source: str) -> list[Hit]:
+    """掃一段原始碼（``rel`` 是要記在結果裡的路徑）。"""
     return _Scanner(rel, source).scan(ast.parse(source, filename=rel))
+
+
+def scan_file(path: Path) -> list[Hit]:
+    return scan_source(path.relative_to(ROOT).as_posix(), path.read_text(encoding="utf-8"))
 
 
 def scan() -> list[Hit]:

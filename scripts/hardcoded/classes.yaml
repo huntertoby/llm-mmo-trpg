@@ -704,7 +704,6 @@ rules:
     owner: base
     note: 法力／耐力上限的基礎值（量類）。
 
-
   # ---------------------------------------------------- 後端 api：config
   # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
   - id: py-api-attribute-text-config-number
@@ -888,8 +887,6 @@ rules:
       - '<module>.PHASES_MIN'
       - '<module>._MAX_DICE_COUNT'
       - '<module>._MAX_DURATION_BONUS'
-      - '<module>.max_groups'
-      - '<module>.per_group'
       - 'ArmorBreak'
       - 'BlockBonus'
       - 'BossPhase'
@@ -918,6 +915,7 @@ rules:
       - 'UnitTemplate'
       - 'WardSpec'
       - 'WeaponDef'
+      - 'weapon_attr_examples_zh'
     note: 保守：content schema 的預設值、上下限與驗證門檻（應由 content／工坊設定帶；上下限要跟著資料走）。
   - id: py-content-composer-rules-config-number
     class: config
@@ -1666,21 +1664,21 @@ rules:
     status: todo
     files: src/trpg/llm/flash_eval.py
     kind: number
-    where: ['<module>.alert_permille']
+    where: ['evaluate_flash']
     note: 同上一條（llm config）。
   - id: py-llm-flash-pick-config-number
     class: config
     status: todo
     files: src/trpg/llm/flash_pick.py
     kind: number
-    where: ['<module>.FLASH_PICK_BUDGET_S', '<module>.attempts', '<module>.max_attempts']
+    where: ['<module>.FLASH_PICK_BUDGET_S', 'mock_flash_pick_client', 'pick_variations']
     note: 同上一條（llm config）。
   - id: py-llm-flash-propose-config-number
     class: config
     status: todo
     files: src/trpg/llm/flash_propose.py
     kind: number
-    where: ['<module>.DEFAULT_FLASH_ATTEMPTS', 'FlashProposalStats']
+    where: ['<module>.DEFAULT_FLASH_ATTEMPTS', 'FlashProposalStats', 'FlashProposalStats.of']
     note: 同上一條（llm config）。
   - id: py-llm-pick-config-number
     class: config
@@ -1715,7 +1713,7 @@ rules:
     status: todo
     files: src/trpg/llm/propose.py
     kind: number
-    where: ['<module>.DEFAULT_MAX_ATTEMPTS', 'ProposalStats']
+    where: ['<module>.DEFAULT_MAX_ATTEMPTS', 'ProposalStats', 'ProposalStats.of']
     note: 同上一條（llm config）。
   - id: py-llm-situation-config-number
     class: config
@@ -1736,7 +1734,7 @@ rules:
     status: todo
     files: src/trpg/llm/wish.py
     kind: number
-    where: ['<module>.DEFAULT_WISH_ATTEMPTS', '<module>.max_keywords']
+    where: ['<module>.DEFAULT_WISH_ATTEMPTS', 'match_wish', 'mock_wish_client']
     note: 同上一條（llm config）。
   - id: py-llm-wish-pick-config-number
     class: config
@@ -1745,16 +1743,16 @@ rules:
     kind: number
     where:
       - '<module>.WISH_PICK_BUDGET_S'
-      - '<module>.attempts'
-      - '<module>.max_attempts'
-      - '<module>.picks'
+      - 'make_wish_picker'
+      - 'mock_wish_pick_client'
+      - 'mock_wish_picker'
     note: 同上一條（llm config）。
   - id: py-llm-wish-tags-config-number
     class: config
     status: todo
     files: src/trpg/llm/wish_tags.py
     kind: number
-    where: ['<module>.attempts', '<module>.max_attempts']
+    where: ['match_wish_tags', 'mock_wish_tags_client']
     note: 同上一條（llm config）。
 
   # ---------------------------------------------------- 後端 narrative：config
@@ -2140,7 +2138,7 @@ rules:
     status: todo
     files: src/trpg/skillgen/skill_pick.py
     kind: number
-    where: ['<module>.epic_min_effects']
+    where: ['thin_reasons']
     note: 同上一條（skillgen config）。
   - id: py-skillgen-skill-tier-config-number
     class: config
@@ -2165,7 +2163,7 @@ rules:
     status: todo
     files: src/trpg/skillgen/whiteboard_candidates.py
     kind: number
-    where: ['<module>._SPARE', '<module>.tries']
+    where: ['<module>._SPARE', 'generate_whiteboard_candidates']
     note: 同上一條（skillgen config）。
   - id: py-skillgen-wish-pick-config-number
     class: config
@@ -2924,7 +2922,7 @@ rules:
     status: done
     files: src/trpg/api/login_limit.py
     kind: number
-    where: ['LoginLimiter']
+    where: ['LoginLimiter.__init__']
     note: 同上一條（api const）。
   - id: py-api-schemas-const-number
     class: const
@@ -3195,7 +3193,7 @@ rules:
     status: done
     files: src/trpg/llm/consistency.py
     kind: number
-    where: ['<module>._MULTI_CHAR', '<module>.per_group']
+    where: ['<module>._MULTI_CHAR', 'added_word_choices']
     note: 同上一條（llm const）。
   - id: py-llm-naming-const-number
     class: const
@@ -3229,9 +3227,9 @@ rules:
       - '<module>.KEYWORD_TRIES'
       - '<module>.LOW_SHARE_DIVISOR'
       - '<module>.RUN_LENGTH'
-      - '<module>.alert_permille'
-      - '<module>.per'
+      - 'forced_items'
       - 'free_items'
+      - 'suite_summary'
       - 'upgrade_items'
     note: 同上一條（llm const）。
 
@@ -3288,7 +3286,7 @@ rules:
       - '<module>.SCRYPT_DKLEN'
       - '<module>.SCRYPT_N'
       - '<module>.SCRYPT_R'
-      - 'AccountStore'
+      - 'AccountStore.__init__'
       - '_scrypt'
     note: 同上一條（server const）。
   - id: py-server-announce-const-number

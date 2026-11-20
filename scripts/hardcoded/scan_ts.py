@@ -379,11 +379,15 @@ def iter_files() -> Iterator[Path]:
         yield path
 
 
-def scan_file(path: Path) -> list[Hit]:
-    src = path.read_text(encoding="utf-8")
+def scan_source(rel: str, src: str) -> list[Hit]:
+    """掃一段原始碼（``rel`` 是要記在結果裡的路徑）。"""
     lexer = _Lexer(src)
     lexer.run()
-    return _Walker(path.relative_to(ROOT).as_posix(), src, lexer.toks).walk()
+    return _Walker(rel, src, lexer.toks).walk()
+
+
+def scan_file(path: Path) -> list[Hit]:
+    return scan_source(path.relative_to(ROOT).as_posix(), path.read_text(encoding="utf-8"))
 
 
 def scan() -> list[Hit]:
