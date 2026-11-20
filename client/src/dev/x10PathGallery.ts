@@ -1,7 +1,8 @@
 // 開發用：X10-3d 走路預覽的傷害範圍（開 `client/dev/x10-3d-path.html`；自己的 vite 後 /dev/x10-3d-path.html?mute=1）。不屬於正式 build。
-// 目前的內容沒有敵方陷阱，實機走不出「陷阱 −a–b」（藉機攻擊落空時沒有最小值，只寫最大值），所以用手寫的路徑預覽
+// 目前的內容沒有敵方陷阱，實機走不出「陷阱：a–b 傷害」（藉機攻擊落空時沒有最小值，只寫最大值），所以用手寫的路徑預覽
 // （和 `pathPreview.test.ts` 的冰後陷阱同一種形狀），經過真的 `pathDraw` ＋ `BattleRenderer.setHighlights` 畫在戰場上。
-// 參數：&w=1600|800（地圖縮放照美術移植需求 2.3：1600＝1.308、800＝0.531）。畫好後 `document.body.dataset.ready = "1"`。
+// 參數：&w=1600|800（地圖縮放：1600＝1.308；800＝0.62，AR-X10 照美術 PM X10-3d 驗收附註改用實機 800 寬的自動縮放，原本 0.531）、
+// &scale=數字（覆寫縮放）。畫好後 `document.body.dataset.ready = "1"`。
 import type { BattleView, Glossary, TileView, UnitView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { BATTLE_DRAW, buildDrawModel } from "../battle/drawModel";
@@ -17,7 +18,7 @@ await waitForFonts();
 
 const q = new URLSearchParams(location.search);
 const W = q.get("w") === "800" ? 800 : 1600;
-const SCALE = W === 800 ? 0.531 : 1.308;
+const SCALE = Number(q.get("scale") ?? (W === 800 ? 0.62 : 1.308));
 const HERO = "unit_0001";
 const COLS = 10;
 const ROWS = 3;
@@ -58,7 +59,7 @@ const host = document.createElement("div");
 const cell = document.createElement("div");
 cell.className = "cell";
 const title = document.createElement("h2");
-title.textContent = `走路預覽：陷阱的傷害範圍用「–」（${W} 寬、地圖縮放 ${SCALE}）`;
+title.textContent = `走路預覽：陷阱的傷害與「可能」（${W} 寬、地圖縮放 ${SCALE}）`;
 document.body.append(title, cell);
 cell.appendChild(host);
 const r = new BattleRenderer();

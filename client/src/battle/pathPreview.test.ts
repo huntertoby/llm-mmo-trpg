@@ -5,7 +5,7 @@ import type { MoveAction } from "../api/types";
 import { dashRuns, outerEdges, polylineLength, roundedPieces } from "./pathGeometry";
 import { PathPreviewFetcher, PathPreviewScope, PATH_PREVIEW_THROTTLE_MS } from "./pathFetch";
 import { readFile, SRC_DIR } from "../test/sourceScan";
-import { surfaceName } from "./glossary";
+import { statusName, surfaceName } from "./glossary";
 import {
   damageText,
   hoverPathQuery,
@@ -89,7 +89,7 @@ function slipRun(start: number, end: number, chance: number, y = 0, slid = end -
 
 const plain = preview([step(0, 0, 0), step(1, 1, 0), step(2, 2, 0), step(3, 2, 1)]);
 
-// 冰面滑倒 45%（失敗倒地停在冰上）→ 陷阱 −8、定身（可能）→ 後面因定身可能走不到
+// 冰面滑倒 45%（失敗倒地停在冰上）→ 陷阱 8 傷害、可能定身 → 後面因定身可能走不到
 const hazard = preview(
   [
     step(0, 0, 0),
@@ -187,10 +187,10 @@ describe("結果小牌", () => {
     expect(d.slipStops).toEqual([{ pos: { x: 3, y: 0 }, slide: [{ x: 2, y: 0 }, { x: 3, y: 0 }] }]);
   });
 
-  it("陷阱：「陷阱 −8・定身（可能）」；在冰面後面時不加「（可能）」（6A-4f）", () => {
+  it("陷阱：「陷阱：8 傷害・可能定身」；在冰面後面時不加「可能」（6A-4f；AR-X10 用字）", () => {
     const tags = pathDraw(hazard).tags;
     expect(tags[1]?.icon).toBe("trap");
-    expect(tags[1]?.text).toBe("陷阱 −8・定身");
+    expect(tags[1]?.text).toBe("陷阱：8 傷害・定身");
     const sure = pathDraw(
       preview([
         step(0, 0, 0),
@@ -204,7 +204,7 @@ describe("結果小牌", () => {
         }),
       ]),
     );
-    expect(sure.tags[0]?.text).toBe("陷阱 −8・定身（可能）");
+    expect(sure.tags[0]?.text).toBe("陷阱：8 傷害・可能定身");
   });
 
   it("火：「點燃」；水：「潮濕」", () => {
@@ -227,10 +227,50 @@ describe("結果小牌", () => {
   });
 
   it("傷害數字：確定、範圍、只在骰子不利時", () => {
-    expect(damageText([ev("damage", { amount_min: 8, amount_max: 8 })])).toBe("−8");
-    expect(damageText([ev("damage", { amount_min: 6, amount_max: 9 })])).toBe("−6–9");
-    expect(damageText([ev("damage", { amount_min: null, amount_max: 5 })])).toBe("−5");
+    expect(damageText([ev("damage", { amount_min: 8, amount_max: 8 })])).toBe("8 傷害");
+    expect(damageText([ev("damage", { amount_min: 6, amount_max: 9 })])).toBe("6–9 傷害");
+    expect(damageText([ev("damage", { amount_min: null, amount_max: 5 })])).toBe("最多 5 傷害");
     expect(damageText([])).toBe("");
+  });
+});
+
+describe("AR-X10：走路預覽的用字（不加負號、「可能」是前綴）", () => {
+  const tagOf = (events: PathEvent[], over: Partial<PathStep> = {}): string | undefined =>
+    pathDraw(preview([step(0, 0, 0), step(1, 1, 0, { events, ...over })])).tags[0]?.text;
+  const trap = (certain: boolean, min: number | null, max: number, root: boolean): PathEvent[] => [
+    ev("trap", { other_id: "e1", certain }),
+    ev("damage", { other_id: "e1", amount_min: min, amount_max: max }),
+    ev("status", { status_id: "root", certain: root }),
+  ];
+  it("陷阱確定、狀態不確定：「陷阱：60–140 傷害・可能定身」", () => {
+    expect(tagOf(trap(true, 60, 140, false), { trap: true })).toBe("陷阱：60–140 傷害・可能定身");
+  });
+  it("最小值等於最大值：「陷阱：140 傷害・定身」", () => {
+    expect(tagOf(trap(true, 140, 140, true), { trap: true })).toBe("陷阱：140 傷害・定身");
+  });
+  it("只有骰子不利才受傷：「陷阱：最多 140 傷害・定身」", () => {
+    expect(tagOf(trap(true, null, 140, true), { trap: true })).toBe("陷阱：最多 140 傷害・定身");
+  });
+  it("陷阱本身不確定：整張「可能觸發陷阱：60–140 傷害・定身」", () => {
+    expect(tagOf(trap(false, 60, 140, false), { trap: true })).toBe("可能觸發陷阱：60–140 傷害・定身");
+  });
+  it("多個狀態用「・」連接；沒有傷害、沒有狀態只寫「陷阱」", () => {
+    const ev2 = [ev("trap", { other_id: "e1" }), ev("status", { status_id: "root" }), ev("status", { status_id: "slowed", certain: false })];
+    expect(tagOf(ev2, { trap: true })).toBe(`陷阱：定身・可能${statusName("slowed")}`);
+    expect(tagOf([ev("trap", { other_id: "e1" })], { trap: true })).toBe("陷阱");
+  });
+  it("火：「可能點燃」；墜落與其他傷害照傷害的寫法、不再有負號", () => {
+    expect(tagOf([ev("surface", { surface: "fire" }), ev("status", { status_id: "burning", certain: false })], { surface: "fire" })).toBe("可能點燃");
+    expect(tagOf([ev("fell", { certain: false }), ev("damage", { amount_min: 30, amount_max: 30, certain: false })])).toBe("可能墜落・可能 30 傷害");
+    expect(tagOf([ev("damage", { amount_min: null, amount_max: 50 })])).toBe("最多 50 傷害");
+    expect(tagOf([ev("downed", { certain: false })])).toBe("可能倒下");
+  });
+  it("整個小牌都沒有負號與「（可能）」", () => {
+    const texts = [trap(true, 60, 140, false), trap(false, null, 140, true)].map((e) => tagOf(e, { trap: true }) ?? "");
+    for (const t of texts) {
+      expect(t).not.toContain("−");
+      expect(t).not.toContain("（可能）");
+    }
   });
 });
 
@@ -543,7 +583,7 @@ describe("畫法", () => {
   });
 });
 
-// 6A-4f：兩格冰（整段滑倒 80%）→ 後方陷阱 −6–14・定身
+// 6A-4f：兩格冰（整段滑倒 80%）→ 後方陷阱：6–14 傷害・定身
 const iceRun = preview(
   [
     step(0, 0, 0),
@@ -579,11 +619,11 @@ const iceRun = preview(
 );
 
 describe("連續冰面合成一張小牌（6A-4f）", () => {
-  it("兩格冰只出一張，放在第一格冰旁：「冰 2 格・滑倒 80%・失敗滑到 ◆ 倒地」，不加「（可能）」", () => {
+  it("兩格冰只出一張，放在第一格冰旁：「冰 2 格・滑倒 80%・失敗滑到 ◆ 倒地」，不加「可能」", () => {
     const tags = pathDraw(iceRun).tags;
     const ice = tags.filter((t) => t.icon === "ice");
     expect(ice).toEqual([{ pos: { x: 1, y: 0 }, icon: "ice", text: "冰 2 格・滑倒 80%・失敗滑到 ◆ 倒地" }]);
-    expect(tags.some((t) => t.text.includes("（可能）"))).toBe(false);
+    expect(tags.some((t) => t.text.includes("可能"))).toBe(false);
   });
 
   it("小牌文字：「冰 N 格・滑倒 xx%・失敗滑到 ◆ 倒地」；一格都沒滑時「失敗就地倒地」、不畫 ◆", () => {
@@ -623,9 +663,9 @@ describe("連續冰面合成一張小牌（6A-4f）", () => {
     expect(pathDraw(pv).tags.map((t) => t.text)).toEqual(["冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地"]);
   });
 
-  it("冰後面的陷阱：「陷阱 −6–14・定身」", () => {
+  it("冰後面的陷阱：「陷阱：6–14 傷害・定身」", () => {
     const trap = pathDraw(iceRun).tags.find((t) => t.icon === "trap");
-    expect(trap).toEqual({ pos: { x: 3, y: 0 }, icon: "trap", text: "陷阱 −6–14・定身" });
+    expect(trap).toEqual({ pos: { x: 3, y: 0 }, icon: "trap", text: "陷阱：6–14 傷害・定身" });
   });
 
   it("冰後面的陷阱段改紅色虛線；沒有冰時陷阱段是實線", () => {
