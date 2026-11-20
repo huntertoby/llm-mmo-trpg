@@ -5,7 +5,8 @@
     uv run python scripts/check.py          # 快速版（不跑標 slow 的測試、前端抽樣）
     uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1）
 
-pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（數字或 ``auto``）。
+pytest 平行數預設 12（QF-3a 從 8 調高），可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫
+（數字或 ``auto``）。
 單一測試預設逾時 300 秒（標 slow 的 1800 秒），見 ``pyproject.toml`` 的 ``timeout``。
 pytest 經看門狗 ``scripts/run_pytest.py`` 執行（QF-3a）：超過 10 分鐘沒有測試跑完就用 PID 結束
 自己開的整棵程序樹、重跑一次，再卡住判失敗並寫出卡在哪個測試（``TRPG_PYTEST_STALL_MINUTES`` 可改）。
@@ -53,8 +54,8 @@ class Step:
 
 
 def pytest_workers() -> str:
-    """pytest 的平行數：環境變數 ``TRPG_PYTEST_WORKERS``（數字或 ``auto``），預設 8。"""
-    value = os.environ.get("TRPG_PYTEST_WORKERS", "").strip() or "8"
+    """pytest 的平行數：環境變數 ``TRPG_PYTEST_WORKERS``（數字或 ``auto``），預設 12。"""
+    value = os.environ.get("TRPG_PYTEST_WORKERS", "").strip() or "12"
     if value != "auto" and not (value.isdigit() and int(value) >= 0):
         raise SystemExit(f"TRPG_PYTEST_WORKERS 必須是非負整數或 auto，收到：{value!r}")
     return value
