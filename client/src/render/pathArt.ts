@@ -4,7 +4,7 @@
 // - 經過的特殊格加地表色外框、原終點畫虛線框＋淡影、實際停點的紅色驚嘆號（`drawPathMarks`）；
 // - 結果小牌（圖示＋一兩個詞；`pathTagNode`）。
 // 只負責畫：要畫什麼由 `battle/pathPreview.ts` 依伺服器的路徑預覽決定。畫筆用介面（`Pen`），測試可以換成紀錄器。
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Text } from "pixi.js";
 import type { Pos } from "../api/types";
 import { TILE_SIZE } from "../battle/geometry";
 import { dashRuns, outerEdges, roundedPieces, type Pt } from "../battle/pathGeometry";
@@ -17,6 +17,7 @@ import {
   type TagIcon,
 } from "../battle/pathPreview";
 import { label } from "./labels";
+import { minMarkScale } from "./minMark";
 
 const T = TILE_SIZE;
 
@@ -281,12 +282,36 @@ function drawTagIcon(g: Pen, icon: TagIcon, x: number, y: number): void {
 }
 
 export const TAG_HEIGHT = 22;
+/** 小牌字級（世界座標；1600 寬地圖 1.308 時畫面約 16 px）。 */
+export const PATH_TAG_FONT = 12;
+/**
+ * AR-X10（美術 PM `docs/art/AR-X10驗收.md`）：小牌字在畫面上至少幾 px（同狀態圖示、預告字的「畫面字 ≥10 px」）。
+ * 800 寬地圖縮到 0.62 時字原本只剩約 7 px；小牌整張（底、圖示、字）反向放大，變寬蓋到旁邊的格子可以接受。
+ */
+export const MIN_PATH_TAG_FONT_PX = 10;
+
+/** 這個地圖縮放下小牌的倍率：畫面字 ≥ `MIN_PATH_TAG_FONT_PX`；地圖夠大時 1。不設上限。 */
+export function pathTagScale(boardScale: number): number {
+  return minMarkScale(PATH_TAG_FONT, MIN_PATH_TAG_FONT_PX, boardScale);
+}
+
+/** 小牌字在畫面上的 px（字級 × 地圖縮放 × 倍率）。 */
+export function pathTagFontPx(boardScale: number): number {
+  return PATH_TAG_FONT * boardScale * pathTagScale(boardScale);
+}
+
+/** 小牌節點照倍率放大（AR-X10）；`res`（裝置像素比 × 地圖縮放 × 倍率）給時字的解析度跟著提高，放大後不糊。 */
+export function scaleTagNode(node: Container, k: number, res?: number): void {
+  node.scale.set(k);
+  if (res === undefined) return;
+  for (const c of node.children) if (c instanceof Text) c.resolution = Math.max(1, res);
+}
 
 /**
  * 各張小牌放在哪裡（世界座標的左上角），依序擺、不互相疊：依序試格子的右上、右下、左上、左下；
- * 都疊到時放右上再往上疊。`o` 是格子頂面的左上角，`w` 是小牌寬度。
+ * 都疊到時放右上再往上疊。`o` 是格子頂面的左上角，`w` 是小牌寬度，`h` 是小牌高度（AR-X10：放大後的高度）。
  */
-export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: readonly Pt[] = []): Pt[] {
+export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: readonly Pt[] = [], h: number = TAG_HEIGHT): Pt[] {
   // `avoid`：驚嘆號泡泡的中心（不讓小牌蓋住）
   const placed: Array<{ x: number; y: number; w: number; h: number }> = avoid.map((c) => ({
     x: c.x - BANG_R,
@@ -295,9 +320,9 @@ export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: rea
     h: BANG_R * 2 + 6,
   }));
   const hits = (x: number, y: number, w: number) =>
-    placed.some((r) => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + TAG_HEIGHT + 2 > r.y);
+    placed.some((r) => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y);
   return items.map(({ o, w }) => {
-    const above = o.y - TAG_HEIGHT + 4;
+    const above = o.y - h + 4;
     const below = o.y + T - 4;
     const right = o.x + T * 0.5;
     const left = o.x + T * 0.5 - w;
@@ -310,10 +335,10 @@ export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: rea
     let at = tries.find((p) => !hits(p.x, p.y, w));
     if (at === undefined) {
       let y = above;
-      while (hits(right, y, w)) y -= TAG_HEIGHT + 2;
+      while (hits(right, y, w)) y -= h + 2;
       at = { x: right, y };
     }
-    placed.push({ x: at.x, y: at.y, w, h: TAG_HEIGHT });
+    placed.push({ x: at.x, y: at.y, w, h });
     return at;
   });
 }
@@ -321,7 +346,7 @@ export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: rea
 /** 一張結果小牌：深色圓角底、地表色邊、圖示、文字（`at` 之後再設）。 */
 export function pathTagNode(tag: PathTag, at: Pt = { x: 0, y: 0 }): Container {
   const node = new Container();
-  const text = label(tag.text, 12, 0xffffff, true);
+  const text = label(tag.text, PATH_TAG_FONT, 0xffffff, true);
   const w = Math.ceil(text.width) + 32;
   const bg = new Graphics();
   bg.roundRect(0, 0, w, TAG_HEIGHT, TAG_HEIGHT / 2).fill({ color: 0x181410, alpha: 0.9 }).stroke({ width: 2, color: TAG_COLORS[tag.icon] });
@@ -333,15 +358,21 @@ export function pathTagNode(tag: PathTag, at: Pt = { x: 0, y: 0 }): Container {
   return node;
 }
 
-/** 「到不了」的小牌（終點下方）。 */
-export function missTagNode(o: Pt): Container {
+/** 「到不了」的小牌（終點下方）；`k` 是放大倍率（AR-X10，同結果小牌），置中照放大後的寬度算。 */
+export function missTagNode(o: Pt, k = 1, res?: number): Container {
   const node = new Container();
-  const text = label("到不了", 12, 0xffffff, true);
+  const text = label("到不了", PATH_TAG_FONT, 0xffffff, true);
   const w = Math.ceil(text.width) + 16;
   const bg = new Graphics().roundRect(0, 0, w, TAG_HEIGHT, TAG_HEIGHT / 2).fill({ color: 0x181410, alpha: 0.9 }).stroke({ width: 2, color: 0xc8c8c8 });
   text.anchor.set(0.5, 0.5);
   text.position.set(w / 2, TAG_HEIGHT / 2 + 0.5);
   node.addChild(bg, text);
-  node.position.set(o.x + (T - w) / 2, o.y + T - 6);
+  scaleTagNode(node, k, res);
+  placeMissTag(node, o, w * k);
   return node;
+}
+
+/** 「到不了」小牌的位置：終點格下緣、水平置中（`w` 是放大後的寬度）。 */
+export function placeMissTag(node: Container, o: Pt, w: number): void {
+  node.position.set(o.x + (T - w) / 2, o.y + T - 6);
 }
