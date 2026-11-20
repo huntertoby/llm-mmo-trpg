@@ -17,7 +17,6 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef, damage_elements
-from trpg.content.skills.constants import MAX_EFFECTS
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
 from trpg.skillgen.budget import BudgetError
@@ -66,7 +65,7 @@ def add_second_element(
         or skill.trap is not None
         or skill.followup is not None
         or (have and skill.tier < second_element_tier(library))
-        or len(skill.effects) >= MAX_EFFECTS
+        or len(skill.effects) >= library.ruleset.core.skill_limits.max_effects
     ):
         return None
     base, effects = base_draft(skill)

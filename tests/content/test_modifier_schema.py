@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import library
+from tests.skillgen.helpers import limit_problems
 from trpg.cli.budget import print_skill_budget
 from trpg.content.skills import MODIFIER_CHANGES, SkillDef, skill_problems
 from trpg.narrative.skills import modifier_summary, skill_card
@@ -145,8 +146,7 @@ def test_every_change_kind_has_a_valid_example() -> None:
             {},
             "條件只能是 self_hp_below",
         ),
-        ([], {}, "1 到 2 條"),
-        ([VALID_CHANGES["hit_bonus"]] * 3, {}, "1 到 2 條"),
+        ([], {}, "至少 1 條"),
         (
             [VALID_CHANGES["hit_bonus"]],
             {"effects": [{"type": "heal", "dice": "1d4"}]},
@@ -172,6 +172,12 @@ def test_invalid_modifier_skills_are_rejected(
 ) -> None:
     with pytest.raises(ValidationError, match=message):
         SkillDef.model_validate(data(*rules, **fields))
+
+
+def test_modifier_rule_count_is_limited_by_the_ruleset() -> None:
+    """HC-4b：修正規則數的上限在 ``core.yaml`` 的 ``skill_limits``（``Ruleset`` 層檢查）。"""
+    skill = SkillDef.model_validate(data(*[VALID_CHANGES["hit_bonus"]] * 3))
+    assert "修正技能的 modifiers 必須有 1 到 2 條，收到 3 條" in limit_problems(skill)
 
 
 def test_only_modifier_skills_may_have_modifiers() -> None:

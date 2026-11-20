@@ -25,6 +25,7 @@ from tests.engine.helpers import (
     spawn,
     template,
 )
+from tests.skillgen.helpers import limit_problems
 from trpg.content.battle import UnitTemplate
 from trpg.content.skills import SkillDef
 from trpg.engine import (
@@ -267,15 +268,18 @@ def test_legal_kinds_pass_the_schema_and_the_structure_rules(
             ),
             "不能套娃",
         ),
-        (
-            kind_data("on_kill", [HIT, HIT, HIT], SINGLE, ("strike", SINGLE, [HIT, HIT])),
-            "兩段合計最多 4 個效果",
-        ),
     ],
 )
 def test_illegal_kinds_are_rejected(data: dict[str, Any], message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         SkillDef.model_validate(data)
+
+
+def test_two_segments_share_the_effect_limit() -> None:
+    """HC-4b：兩段合計的效果數上限（core.yaml skill_limits.max_effects）在 Ruleset 層檢查。"""
+    data = kind_data("on_kill", [HIT, HIT, HIT], SINGLE, ("strike", SINGLE, [HIT, HIT]))
+    problems = limit_problems(SkillDef.model_validate(data))
+    assert any("兩段合計最多 4 個效果" in p for p in problems), problems
 
 
 @pytest.mark.parametrize("skill_id", sorted(DEMOS))

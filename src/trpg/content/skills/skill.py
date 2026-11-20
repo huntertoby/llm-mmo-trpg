@@ -14,14 +14,6 @@ from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
     _ELEMENT_VALUES,
     _GAMBLE_ONLY_FIELDS,
-    _MAX_AP_COST,
-    _MAX_BRANCH_EFFECTS,
-    _MAX_CONSUME_THEN,
-    _MAX_COOLDOWN_RESTORE,
-    _MAX_DISPLACE,
-    _MAX_MASTERY_MODIFIERS,
-    _MAX_MODIFIERS,
-    _MAX_ZONE_EFFECTS,
     _PERMILLE,
     _ZONE_ONLY_FIELDS,
     ADD_STACK,
@@ -46,13 +38,7 @@ from trpg.content.skills.constants import (
     HURL_OBJECT,
     INSCRIBE,
     INTERCEPT,
-    MAX_EFFECTS,
-    MAX_GRANT_DURATION,
-    MAX_ON_KILL_EFFECTS,
-    MAX_REFUND_AP,
-    MAX_SUMMON_COUNT,
     MAX_VARIANTS,
-    MIN_SKILL_CRIT_RANGE,
     ON_KILL_TYPES,
     PAIR_MOVES,
     PAIR_SHAPES,
@@ -138,7 +124,9 @@ class SkillDef(ContentModel):
     schema_version: Literal[1] = 1
     name_zh: str = Field(min_length=1)
     description_zh: str | None = None
-    tier: int = Field(ge=1, le=5)
+    tier: int = Field(ge=1)
+    """技能（＝角色）階級；上限是 ``core.yaml`` 的 ``skill_limits.tiers``（HC-4b，``Ruleset`` 層
+    檢查）。"""
     rank: int = Field(default=1, ge=1, le=5)
     rarity: SkillRarity
     kind: SkillKind = "active"
@@ -164,9 +152,10 @@ class SkillDef(ContentModel):
     reaction: ReactionSpec | None = None
     trap: TrapSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
-    crit_range: int | None = Field(default=None, ge=MIN_SKILL_CRIT_RANGE, le=19)
+    crit_range: int | None = Field(default=None, le=19)
     """擴大暴擊範圍（Phase 3D-7b，6.17 B）：自然骰不小於它就暴擊（17 ＝ 17–20）；取技能與武器
-    （法術技為 20）中較寬的。需要有傷害效果。"""
+    （法術技為 20）中較寬的。需要有傷害效果。下限是 ``core.yaml`` 的
+    ``skill_limits.min_crit_range``（HC-4b，``Ruleset`` 層檢查）。"""
     damage_permille: int | None = Field(default=None, ge=100, le=_PERMILLE - 1)
     """基礎傷害折扣（Phase 3D-7b，6.17 B）：技能的每個傷害效果再 × 它（‰；750 ＝ −25%），
     例如高變異技能用較低的基礎傷害換取暴擊與爆骰。需要有傷害效果。"""
@@ -272,25 +261,24 @@ class SkillDef(ContentModel):
         return any(effect.type == BORROW_AP for effect in self.effects)
 
     def _check_ap_cost(self) -> None:
-        """主動技能的 AP：1～3；帶預支（AP-2，06 6.3「⚠ 0 AP 例外」）的必須是 0，也只有它可以 0。"""
+        """主動技能的 AP：至少 1（上限 ``skill_limits.max_ap_cost``，``Ruleset`` 層檢查）；帶預支
+        （AP-2，06 6.3「⚠ 0 AP 例外」）的必須是 0，也只有它可以 0。"""
         if self.borrows_ap:
             if self.ap_cost != 0:
                 raise ValueError(
                     f"帶預支（borrow_ap）的主動技能 ap_cost 必須是 0，收到 {self.ap_cost}"
                 )
             return
-        if self.ap_cost is None or not 1 <= self.ap_cost <= _MAX_AP_COST:
-            raise ValueError(f"主動技能的 ap_cost 必須是 1 到 {_MAX_AP_COST}，收到 {self.ap_cost}")
+        if self.ap_cost is None or self.ap_cost < 1:
+            raise ValueError(f"主動技能的 ap_cost 至少 1，收到 {self.ap_cost}")
 
     @model_validator(mode="after")
     def _check(self) -> SkillDef:
         if self.kind == "modifier":
             self._check_modifier()
         else:
-            if not 1 <= len(self.effects) <= MAX_EFFECTS:
-                raise ValueError(
-                    f"效果原語必須有 1 到 {MAX_EFFECTS} 個，收到 {len(self.effects)} 個"
-                )
+            if not self.effects:  # 上限：skill_limits.max_effects（Ruleset 層）
+                raise ValueError(f"效果原語至少 1 個，收到 {len(self.effects)} 個")
             if self.modifiers:
                 raise ValueError(
                     f"只有修正技能（kind: modifier）可以有 modifiers，收到 {self.kind}"
@@ -534,9 +522,6 @@ class SkillDef(ContentModel):
                 f"聚集段的形狀只能是 {'、'.join(GATHER_SHAPES)}，收到 {self.shape.type}"
             )
         _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
-        total = len(self.effects) + len(follow.effects)
-        if total > MAX_EFFECTS:
-            raise ValueError(f"複合技能兩段合計最多 {MAX_EFFECTS} 個效果，收到 {total} 個")
         try:
             self.followup_skill()
         except ValueError as exc:
@@ -691,9 +676,9 @@ class SkillDef(ContentModel):
         summons = [e for e in self.effects if e.type == SUMMON]
         if not summons:
             return
-        count = summons[0].count or 1
-        if count not in (1, MAX_SUMMON_COUNT):
-            raise ValueError(f"summon 的 count 只能是 1 或 {MAX_SUMMON_COUNT}，收到 {count}")
+        count = summons[0].count or 1  # 1 或 skill_limits.max_summon_count（Ruleset 層）
+        if count == "all":
+            raise ValueError("summon 的 count 不能是 all")
         power = summons[0].power_permille
         if count > 1 and (power is None or power >= _PERMILLE):
             raise ValueError(
@@ -754,10 +739,6 @@ class SkillDef(ContentModel):
             raise ValueError("grant_skill 必須填 skill 與 duration")
         if grant.skill == self.id:
             raise ValueError("grant_skill 不能給出自己")
-        if grant.duration > MAX_GRANT_DURATION:
-            raise ValueError(
-                f"grant_skill 的 duration 最多 {MAX_GRANT_DURATION}，收到 {grant.duration}"
-            )
 
     def _check_delayed_damage(self) -> None:
         """定時炸彈（Phase 3D-8b）：只能用在法術技；``dice``、``element``、``rounds``、
@@ -785,8 +766,8 @@ class SkillDef(ContentModel):
         if not top or self.kind != "active":
             raise ValueError(f"{where}：on_kill 只能用在主動技能自己的傷害效果")
         subs = effect.on_kill
-        if not 1 <= len(subs) <= MAX_ON_KILL_EFFECTS:
-            raise ValueError(f"{where}：on_kill 必須有 1 到 {MAX_ON_KILL_EFFECTS} 個效果")
+        if not subs:  # 上限：skill_limits.max_on_kill_effects（Ruleset 層）
+            raise ValueError(f"{where}：on_kill 至少 1 個效果")
         for i, sub in enumerate(subs):
             self._check_on_kill_sub(f"{at}.on_kill[{i}]", sub)
 
@@ -800,8 +781,8 @@ class SkillDef(ContentModel):
                 f"{at}：對象只能是施放者（省略 affects 或寫 self），不可自帶 condition"
             )
         if sub.type == REFUND_AP:
-            if sub.amount is None or not 1 <= sub.amount <= MAX_REFUND_AP:
-                raise ValueError(f"{at}：必須填 amount（1–{MAX_REFUND_AP}）")
+            if sub.amount is None or sub.amount < 1:  # 上限：skill_limits.max_refund_ap
+                raise ValueError(f"{at}：必須填 amount（至少 1）")
         elif sub.type == REFUND_COOLDOWN:
             if not self.cost.cooldown:
                 raise ValueError(f"{at}：技能沒有冷卻（cost.cooldown），沒有東西可以歸零")
@@ -869,8 +850,8 @@ class SkillDef(ContentModel):
             allowed = "、".join(ZONE_CASTER_SHAPES)
             raise ValueError(f"{where}：anchor: caster 的形狀必須是 {allowed}")
         subs = zone.effects or ()
-        if not 1 <= len(subs) <= _MAX_ZONE_EFFECTS:
-            raise ValueError(f"{where}：effects 必須有 1 到 {_MAX_ZONE_EFFECTS} 個效果")
+        if not subs:  # 上限：skill_limits.max_zone_effects（Ruleset 層）
+            raise ValueError(f"{where}：effects 至少 1 個效果")
         for sub_index, sub in enumerate(subs):
             if sub.type not in ZONE_EFFECT_TYPES:
                 allowed = "、".join(ZONE_EFFECT_TYPES)
@@ -939,10 +920,8 @@ class SkillDef(ContentModel):
         """賭注分支或失手反噬的效果列表：1–2 個、類型在 ``allowed`` 內、不自帶 ``condition``；
         反噬的對象只能是施放者自己；倍率與自傷各至多一個，而且技能要有傷害效果可以乘。
         ``path`` 是分支的完整路徑（省略＝``where``；4-L10a 讓巢狀錯誤帶完整路徑）。"""
-        if not 1 <= len(branch) <= _MAX_BRANCH_EFFECTS:
-            raise ValueError(
-                f"{where}：必須有 1 到 {_MAX_BRANCH_EFFECTS} 個效果，收到 {len(branch)}"
-            )
+        if not branch:  # 上限：skill_limits.max_branch_effects（Ruleset 層）
+            raise ValueError(f"{where}：至少 1 個效果，收到 {len(branch)}")
         has_damage = any(e.type == "damage" for e in self.effects)
         for i, sub in enumerate(branch):
             at = f"{where}[{i}]（{sub.type}）"
@@ -1087,10 +1066,8 @@ class SkillDef(ContentModel):
 
     def _check_modifier(self) -> None:
         """修正技能（3C-2）：裝在被動欄位、不花 AP、沒有觸發；效果都寫在 ``modifiers`` 裡。"""
-        limit = _MAX_MODIFIERS if self.exclusive_group is None else _MAX_MASTERY_MODIFIERS
-        if not 1 <= len(self.modifiers) <= limit:
-            count = len(self.modifiers)
-            raise ValueError(f"修正技能的 modifiers 必須有 1 到 {limit} 條，收到 {count} 條")
+        if not self.modifiers:  # 上限：skill_limits.max_modifiers／max_mastery_modifiers
+            raise ValueError(f"修正技能的 modifiers 至少 1 條，收到 {len(self.modifiers)} 條")
         if self.effects:
             raise ValueError("修正技能（kind: modifier）的 effects 必須為空（效果寫在 modifiers）")
         if self.shape.type != "self":
@@ -1175,10 +1152,8 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：只有 consume_status 使用 then、scale、splash")
             return
         then = effect.then or ()
-        if not 1 <= len(then) <= _MAX_CONSUME_THEN:
-            raise ValueError(
-                f"{where}：then 必須有 1 到 {_MAX_CONSUME_THEN} 個效果，收到 {len(then)}"
-            )
+        if not then:  # 上限：skill_limits.max_consume_then（Ruleset 層）
+            raise ValueError(f"{where}：then 至少 1 個效果，收到 {len(then)}")
         if effect.scale == "stacks" and effect.stack is None:
             raise ValueError(f"{where}：scale: stacks 必須填 stack（目標型層數）")
         if effect.scale != "stacks" and effect.stack is not None:
@@ -1194,11 +1169,10 @@ class SkillDef(ContentModel):
             self._check_effect(f"{at}.then[{sub_index}]", sub)
 
     def _check_restore_resource(self, where: str, effect: EffectSpec) -> None:
-        """``restore_resource`` 的結構（3D-1）：必須填 ``resource``；冷卻最多 −2。"""
+        """``restore_resource`` 的結構（3D-1）：必須填 ``resource``（冷卻一次最多縮短幾回合是
+        ``skill_limits.max_cooldown_restore``，``Ruleset`` 層檢查）。"""
         if effect.resource is None:
             raise ValueError(f"{where}：restore_resource 必須填 resource（mana 或 cooldown）")
-        if effect.resource == "cooldown" and (effect.amount or 1) > _MAX_COOLDOWN_RESTORE:
-            raise ValueError(f"{where}：冷卻最多縮短 {_MAX_COOLDOWN_RESTORE} 回合")
 
     def _check_variable_damage(self, where: str, effect: EffectSpec, *, top: bool) -> None:
         """``explode``、``scaling``（Phase 3D-7b）與 ``lifesteal_permille``、``split_heal``
@@ -1300,11 +1274,10 @@ class SkillDef(ContentModel):
             self._check_restore_resource(where, effect)
         elif effect.resource is not None:
             raise ValueError(f"{where}：只有 restore_resource 使用 resource")
-        if effect.type in ("push", "pull") and (
-            effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
-        ):
+        if effect.type in ("push", "pull") and (effect.distance is None or effect.distance < 1):
+            # 上限：skill_primitives.yaml 的參數範圍（載入內容庫與驗證器的引用檢查；HC-4b）
             raise ValueError(
-                f"{where}：推擊與拉扯的距離必須是 1 到 {_MAX_DISPLACE} 格，收到 {effect.distance}"
+                f"{where}：推擊與拉扯必須填 distance，而且不可為 0 或負數，收到 {effect.distance}"
             )
         self._check_form_bonus(where, effect, top=top)
         self._check_flat_bonus(where, effect, top=top)

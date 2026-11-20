@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import library
+from tests.skillgen.helpers import limit_problems
 from trpg.content.library import skill_reference_problems
 from trpg.content.skills import SkillDef
 from trpg.narrative.skill_icon import icon_of
@@ -190,8 +191,7 @@ def test_only_active_skills_may_carry_variants() -> None:
     [
         ({**_WATER, "when": {}}, "恰好填一種"),
         ({**_WATER, "when": {"caster_surface": ["water"], "caster_high_ground": True}}, "恰好"),
-        ({**_WATER, "range_delta": None}, "1～2 項"),
-        ({**_WATER, "element": "fire", "shape": {"type": "line", "size": 3}}, "1～2 項"),
+        ({**_WATER, "range_delta": None}, "至少要填 1 項"),
         ({**_WATER, "range_delta": 0}, "不可為 0"),
         ({**_WATER, "cooldown": 1}, "Extra inputs"),  # 不能改代價
         ({**_WATER, "range_delta": None, "skeleton": "strike"}, "Extra inputs"),  # 不能改骨架
@@ -200,6 +200,13 @@ def test_only_active_skills_may_carry_variants() -> None:
 def test_bad_variant_shapes_are_rejected(variant: dict[str, Any], message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         SkillDef.model_validate(_data(variants=[variant]))
+
+
+def test_variant_replacement_count_is_limited_by_the_ruleset() -> None:
+    """HC-4b：替換內容的上限（``skill_limits.max_variant_replacements``）在 ``Ruleset`` 層檢查。"""
+    variant = {**_WATER, "element": "fire", "shape": {"type": "single", "range": 3}}
+    skill = SkillDef.model_validate(_data(variants=[variant]))
+    assert f"variants.{_WATER['id']}：替換內容最多填 2 項，收到 3 項" in limit_problems(skill)
 
 
 def test_unknown_surfaces_are_cross_checked() -> None:

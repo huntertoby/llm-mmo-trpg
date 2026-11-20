@@ -149,6 +149,25 @@ boss_control_conversion: {stun: slow, frozen: slow}  # Boss 的硬控（control_
 # --- 技能預算（Phase 2B-2，docs/phases/Phase2B計畫.md 4.2；其餘預算數值在 skill_budget.yaml）---
 tier_budget: {1: 14, 2: 18, 3: 23, 4: 29, 5: 36}   # 各階級的基礎預算點數（每階約 +27%；2B-3 PM 決定，取代 2B-2 的校準值 14／15／19／24／30）
 budget_reference_weapon_damage: 7      # 武器技的預算基準：倍率 100% ＝ 7 點
+# 技能結構的規則型上限（HC-4b 從 skills/constants.py 與 SkillDef.tier 搬來，值不變；技能在載入內容庫與
+# 驗證器裡檢查）。推擊、拉扯的距離上限是 skill_primitives.yaml 的參數範圍（1～2），不在這裡。
+skill_limits:
+  tiers: 5                    # 技能（＝角色）階級 1～5；tier_budget 的鍵要剛好是 1～5
+  max_ap_cost: 3              # 主動技 AP 1～3（帶預支的是 0）；skill_budget.yaml 的 ap_coefficient_permille 鍵要剛好是 1～3
+  max_effects: 4              # 一個技能（複合技能兩段合計）最多幾個效果原語
+  max_cooldown: 6             # 技能冷卻最多幾回合
+  min_crit_range: 15          # 技能擴大暴擊範圍（crit_range）的下限（6.17 B）：最寬 15–20
+  max_grant_duration: 4       # 暫時獲得技能（grant_skill）最多幾輪（6.20）
+  max_summon_count: 2         # 一次召喚的數量只能是 1 或這個值（3-33f2 數量型分歧進化）
+  max_on_kill_effects: 2      # 擊殺時效果（on_kill）最多幾個
+  max_refund_ap: 2            # 擊殺時返還 AP（refund_ap）一次最多幾點
+  max_zone_effects: 2         # 持續區域（zone）最多幾個子效果
+  max_branch_effects: 2       # 賭注分支（win／lose）與失手反噬（cost.on_miss）各最多幾個效果
+  max_consume_then: 2         # 消耗狀態（consume_status）的 then 最多幾個效果
+  max_cooldown_restore: 2     # 回復資源（restore_resource）縮短冷卻一次最多幾回合
+  max_modifiers: 2            # 修正技能最多幾條修正規則
+  max_mastery_modifiers: 4    # 專精（帶 exclusive_group 的修正技能）最多幾條修正規則
+  max_variant_replacements: 2 # 一個戰場變奏最多填幾項替換內容
 
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限

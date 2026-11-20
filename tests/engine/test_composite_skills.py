@@ -23,6 +23,7 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
+from tests.skillgen.helpers import limit_problems
 from trpg.content.skills import SkillDef
 from trpg.engine import (
     BattleState,
@@ -187,7 +188,6 @@ def test_legal_composites_pass_the_schema_and_the_structure_rules(
             },
             "區域",
         ),
-        ({"followup_effects": [HIT, HIT, HIT, HIT]}, "兩段合計最多 4 個效果"),
         ({"move_effects": [{"type": "teleport"}, HIT]}, "位移段只能有一個"),
         ({"move_effects": [HIT]}, "位移段只能有一個"),
         ({"followup_shape": {"type": "cross", "range": 2}}, "range 必須是 0"),
@@ -211,6 +211,14 @@ def test_illegal_composites_are_rejected(change: dict[str, Any], message: str) -
     with pytest.raises(ValidationError) as info:
         SkillDef.model_validate(data)
     assert message in str(info.value)
+
+
+def test_two_segments_share_the_effect_limit() -> None:
+    """HC-4b：兩段合計的效果數上限（core.yaml skill_limits.max_effects）在 Ruleset 層檢查。"""
+    data = combo_data()
+    data["followup"]["effects"] = [HIT, HIT, HIT, HIT]
+    problems = limit_problems(SkillDef.model_validate(data))
+    assert any("兩段合計最多 4 個效果" in p for p in problems), problems
 
 
 def test_the_followup_is_checked_with_its_own_skeleton_and_the_composite_needs_rare() -> None:

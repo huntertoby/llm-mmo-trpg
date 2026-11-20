@@ -402,6 +402,8 @@ def library_errors(
                 for c in prepared.changes
                 if prepared.kinds.get(c.file) == "unit" and f"{Path(c.file).stem}：" in exc.reason
             ]
+        if not mine:  # HC-4b：跨檔的一致檢查（例：總減傷上限＝1000 − 元素修正下限）點名改過的欄位時
+            mine = [c for c in prepared.changes if c.path in exc.reason]
         if mine:
             return [
                 TuningFieldError(file=c.file, path=c.path, message_zh=exc.reason) for c in mine

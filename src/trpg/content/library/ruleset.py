@@ -218,11 +218,13 @@ class Ruleset(ContentModel):
             raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
         self._check_rule_changes(ids)
         self._check_overloads(ids)
-        reduction = 1000 - self.core.element_mod_floor_permille
-        if self.equipment.caps.damage_reduction_permille != reduction:
+        floor = self.core.element_mod_floor_permille
+        reduction = 1000 - floor
+        cap = self.equipment.caps.damage_reduction_permille
+        if cap != reduction:  # HC-4b：兩格一起開進工坊，訊息寫兩邊的值、兩格都標
             raise ValueError(
-                "rules/equipment.yaml 的 caps.damage_reduction_permille 必須等於 1000 − "
-                f"core.yaml 的 element_mod_floor_permille（{reduction}）"
+                f"rules/equipment.yaml 的 caps.damage_reduction_permille（{cap}）必須等於 1000 − "
+                f"core.yaml 的 element_mod_floor_permille（{floor}）＝ {reduction}；兩格要一起改"
             )
         return self
 

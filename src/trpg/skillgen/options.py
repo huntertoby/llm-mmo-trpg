@@ -32,7 +32,6 @@ from trpg.content.skills import (
     CHANGE_TARGETS,
     GATHER_SHAPES,
     INTERCEPT,
-    MAX_MODIFIERS,
     MODIFIER_CHANGES,
     ON_HIT_PRIMITIVES,
     PLACE_TRAP,
@@ -1056,7 +1055,7 @@ def _modifier_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         type="modifiers",
         required=True,
         min_count=1,
-        max_count=MAX_MODIFIERS,
+        max_count=library.ruleset.core.skill_limits.max_modifiers,
         fields=(
             FieldSpec(
                 field="applies_to",

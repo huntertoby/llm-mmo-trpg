@@ -14,6 +14,7 @@ from trpg.content.skill_icon_props import IconPropTable, icon_prop_problem
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SkillMatch
 from trpg.content.skills import MODIFIER_CHANGES, SKELETON_IDS, SkillDef
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.shared.errors import ContentError
 
 
@@ -69,6 +70,8 @@ def _check_skills(
     限定武器與手持條件引用的裝備存在且大類相符（3I-5）。"""
     for skill_id, skill in skills.items():
         problems = skill_reference_problems(skill, ruleset, skills)
+        # HC-4b：技能結構的規則型上限（core.yaml 的 skill_limits；原本在 SkillDef schema）
+        problems += skill_limit_problems(skill, ruleset.core.skill_limits)
         if weapons is not None and offhands is not None:
             problems += gear_reference_problems(skill, weapons, offhands)
         cost = budget.cost_problem(skill.category, skill.cost)

@@ -1002,13 +1002,14 @@ rules:
     note: 同上一條：願望的關鍵字數、元素數（「最多 2 個元素」）、效果數的上限。
   - id: py-content-rule-bounds-budget-durations
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/skill_rules.py
     kind: number
     where: BudgetRules
     owner: [obstacle_duration_permille, inscribe_duration_permille, shield_duration_permille, wind_spread_permille]
     slot: ['Field(min_length)', 'Field(max_length)']
     note: 同上一條：依持續回合／格數查表的長度＝那個效果允許的最長回合或格數（例 inscribe 5＝rune_max_rounds）。
+      HC-4b 搬完：項數由內容檔決定（skillgen/budget.py 查表改讀項數），inscribe 的項數在載入時對照 rune_max_rounds（0 筆）。
   - id: py-content-rule-bounds-skills
     class: config
     status: todo
@@ -1018,8 +1019,9 @@ rules:
             src/trpg/content/skill_evolution.py]
     where: [ConditionSpec, ModifierChange, SkillDef, SelfStatusCost, SkillCost, SummonEvolution]
     owner: [any_of, damage_permille, hit_bonus, cooldown_delta, push_distance_delta, range_delta, heal_permille,
-            summon_duration_delta, form_upkeep_permille, tier, rank, duration, source, count_number]
-    note: 同上一條：技能的條件數、修正幅度、階級／等階數、自身狀態代價的回合、源力代價、群召數量。
+            summon_duration_delta, form_upkeep_permille, rank, duration, source, count_number]
+    note: 同上一條：技能的條件數、修正幅度、等階數、自身狀態代價的回合、源力代價、群召數量（階級 tier 的上限
+      HC-4b 搬到 core.yaml 的 skill_limits.tiers）。
   - id: py-content-rule-bounds-world
     class: config
     status: todo
@@ -1080,8 +1082,11 @@ rules:
       - '<module>.ALIAS_MIN_CHARS'
       - '<module>.ALIAS_MAX_CHARS'
       - '<module>._MAX_DELTA'
+      - '<module>.MAX_VARIANTS'
       - 'WeatherDef._mods'
     note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、形態幅度、錯誤列印數）。
+      HC-4b 加 MAX_VARIANTS：一招最多 2 個變奏是護欄，實際上限依稀有度（core.yaml 的 variant_max_by_rarity，
+      Ruleset 層檢查）。
   - id: py-content-math-constants
     class: const
     status: done
@@ -1094,47 +1099,6 @@ rules:
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
-  - id: py-content-battle-config-number
-    class: config
-    status: done
-    files: src/trpg/content/battle.py
-    kind: number
-    where:
-      - '<module>.GIANT_FOOTPRINTS'
-      - '<module>.PHASES_MAX'
-      - '<module>.PHASES_MIN'
-      - '<module>._MAX_DICE_COUNT'
-      - '<module>._MAX_DURATION_BONUS'
-      - 'ArmorBreak'
-      - 'BlockBonus'
-      - 'BossPhase'
-      - 'CreatureLook'
-      - 'DeathSurfaceSpec'
-      - 'DollLook'
-      - 'Entangle'
-      - 'FormationSpec'
-      - 'HpBelowTrigger'
-      - 'OffhandDef'
-      - 'OpeningStatus'
-      - 'PhaseGrowSurface'
-      - 'PhaseSpawn'
-      - 'PhaseTile'
-      - 'RangeMod'
-      - 'RoundTrigger'
-      - 'ShareDamageSpec'
-      - 'StatusDef'
-      - 'Steady'
-      - 'SummonDetonate'
-      - 'SummonHitRule'
-      - 'SummonPulse'
-      - 'SummonSnare'
-      - 'TagDownTrigger'
-      - 'TotemSpec'
-      - 'UnitTemplate'
-      - 'WardSpec'
-      - 'WeaponDef'
-      - 'weapon_attr_examples_zh'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-composer-rules-config-number
     class: config
     status: todo
@@ -1186,23 +1150,6 @@ rules:
       - 'WeatherDef._mods'
       - 'ZoneAiRules'
     note: 同上一條（content config）。
-  - id: py-content-equipment-config-number
-    class: config
-    status: done
-    files: src/trpg/content/equipment.py
-    kind: number
-    where:
-      - '<module>.MIN_COMBO_N'
-      - 'AttackAffix'
-      - 'ChargeAffix'
-      - 'CostAffix'
-      - 'EquipmentCaps'
-      - 'EquipmentRules'
-      - 'ItemDef'
-      - 'ReactionAffix'
-      - 'TriggerAffix'
-      - 'WeaponTraitAffix'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-fields-config-number
     class: config
     status: todo
@@ -1231,32 +1178,6 @@ rules:
       - 'PriceRule'
       - 'TransformTemplate'
     note: 同上一條（content config）。
-  - id: py-content-forms-config-number
-    class: config
-    status: done
-    files: src/trpg/content/forms.py
-    kind: number
-    where:
-      - '<module>.MAX_MAGNITUDE'
-      - '<module>._MAX_ATTRS'
-      - '<module>._MAX_MELEE_RANGE'
-      - 'EntryBurst'
-      - 'EntryHealAdjacent'
-      - 'FormEffects'
-      - 'FormEntry'
-      - 'FormTable'
-      - 'NaturalCharge'
-      - 'NaturalTraits'
-      - 'NaturalWeapon'
-      - 'TakenMod'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-item-budget-config-number
-    class: config
-    status: done
-    files: src/trpg/content/item_budget.py
-    kind: number
-    where: ['ItemGenRules', 'RarityRule']
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-loader-config-number
     class: config
     status: todo
@@ -1271,18 +1192,6 @@ rules:
     kind: number
     where: ['<module>.MAX_HEIGHT', '<module>._MAX_SIZE', 'TileChange']
     note: 同上一條（content config）。
-  - id: py-content-parts-config-number
-    class: config
-    status: done
-    files: src/trpg/content/parts.py
-    kind: number
-    where:
-      - '<module>.PARTS_MAX'
-      - '<module>.PARTS_MIN'
-      - '<module>.PART_HP_TOTAL_MAX'
-      - 'BossPart'
-      - 'ControlBreak'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-races-config-number
     class: config
     status: todo
@@ -1315,29 +1224,12 @@ rules:
     note: 同上一條（content config）。
   - id: py-content-rules-tier-count
     class: config
-    status: todo
-    files: src/trpg/content/rules.py
-    kind: number
-    where: CoreRules._check_tier_budget
-    note: 保守：tier_budget 的鍵要剛好是階級 1～5＝「技能 5 個階級」的規則（同 SkillDef.tier ≤ 5）；HC-4a 沒搬，留給 HC-4b 和 SkillDef.tier 一起搬。
-  - id: py-content-rules-config-number
-    class: config
     status: done
     files: src/trpg/content/rules.py
     kind: number
-    where:
-      - '<module>._DECIMAL_PRECISION'
-      - '<module>._ROLE_HP_RANGE'
-      - 'AttributePerks'
-      - 'CoreRules'
-      - 'CoreRules._check_tier_budget'
-      - 'ResourceRules'
-      - 'SummonGrowth'
-      - 'SummonInfusion'
-      - 'SummonTrait'
-      - 'WindRules'
-      - 'compute_hit_thresholds'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
+    where: CoreRules._check_tier_budget
+    note: 保守：tier_budget 的鍵要剛好是階級 1～5＝「技能 5 個階級」的規則（同 SkillDef.tier ≤ 5）；HC-4b 和
+      SkillDef.tier 一起搬到 core.yaml 的 skill_limits.tiers（0 筆）。
   - id: py-content-skill-evolution-config-number
     class: config
     status: todo
@@ -1354,7 +1246,7 @@ rules:
     note: 同上一條（content config）。
   - id: py-content-skill-rules-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/skill_rules.py
     kind: number
     where:
@@ -1370,7 +1262,7 @@ rules:
       - 'RetierGrowthRules'
       - 'SecondaryRules'
       - 'SynergyRule'
-    note: 同上一條（content config）。
+    note: HC-4b 搬完（內容檔都有寫的預設值改必填；AP 1～3 的鍵、刻印的項數改對照 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-skill-scaling-config-number
     class: config
     status: todo
@@ -1398,27 +1290,32 @@ rules:
     files: src/trpg/content/skills/constants.py
     kind: number
     where:
+      - '<module>._MAX_DISPLACE'
+      - '<module>._MAX_ON_HIT_EFFECTS'
+    note: 只剩修正規則（skills/modifiers.py）用的兩個，HC-4b2 和 modifiers.py 一起搬（技能本身的推拉上限是
+      skill_primitives.yaml 的參數範圍，HC-4b 起 SkillDef 不再另外擋）。
+  - id: py-content-skills-constants-moved
+    class: config
+    status: done
+    files: src/trpg/content/skills/constants.py
+    kind: number
+    where:
       - '<module>.MAX_AP_COST'
       - '<module>.MAX_EFFECTS'
       - '<module>.MAX_GRANT_DURATION'
       - '<module>.MAX_ON_KILL_EFFECTS'
       - '<module>.MAX_REFUND_AP'
       - '<module>.MAX_SUMMON_COUNT'
-      - '<module>.MAX_VARIANTS'
       - '<module>.MIN_SKILL_CRIT_RANGE'
       - '<module>._MAX_BRANCH_EFFECTS'
       - '<module>._MAX_CONSUME_THEN'
       - '<module>._MAX_COOLDOWN'
       - '<module>._MAX_COOLDOWN_RESTORE'
-      - '<module>._MAX_DISPLACE'
-      - '<module>._MAX_FLAT_BONUS'
       - '<module>._MAX_MASTERY_MODIFIERS'
       - '<module>._MAX_MODIFIERS'
-      - '<module>._MAX_MULTIPLIER_PERMILLE'
-      - '<module>._MAX_ON_HIT_EFFECTS'
       - '<module>._MAX_VARIANT_REPLACEMENTS'
       - '<module>._MAX_ZONE_EFFECTS'
-    note: 同上一條（content config）。
+    note: HC-4b 搬到 core.yaml 的 skill_limits（技能在 Ruleset 層檢查，skills/limits.py；0 筆）。
   - id: py-content-skills-effects-config-number
     class: config
     status: todo
@@ -2750,6 +2647,13 @@ rules:
     kind: text
     where: ['skill_slot_problems']
     note: 同上一條（content text）。
+  - id: py-content-skills-limits-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/limits.py
+    kind: text
+    where: ['_primitive_problems']
+    note: 同上一條（content text；HC-4b 從 SkillDef._check_summon 搬來的訊息，「1 或 N」的 1）。
   - id: py-content-skills-skill-text-text
     class: text
     status: todo

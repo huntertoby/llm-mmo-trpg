@@ -40,7 +40,6 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
 from trpg.shared.types import Surface
 from trpg.skillgen.budget import BudgetError, skill_budget, weak_floor_exempt
@@ -248,11 +247,11 @@ def _reshaped(moved: SkillDef, shape_id: str, library: ContentLibrary) -> SkillD
 
 def _growth_drafts(skill: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
     """換成較大形狀時試的費用：原本的，再往上加冷卻（``max_extra_cooldown``），最後才加 AP
-    （``max_extra_ap``，不超過 3）。"""
+    （``max_extra_ap``，不超過 ``skill_limits.max_ap_cost``）。"""
     rules = library.budget.retier_growth
     start = skill.cost.cooldown or 0
     ap_cost = skill.ap_cost or 0  # 只有主動技能會換形狀（_bigger_shapes），一定有 AP
-    top = min(ap_cost + rules.max_extra_ap, MAX_AP_COST)
+    top = min(ap_cost + rules.max_extra_ap, library.ruleset.core.skill_limits.max_ap_cost)
     for ap in range(ap_cost, max(top, ap_cost) + 1):
         last = max(start, min(start + rules.max_extra_cooldown, rules.max_cooldown))
         for cooldown in range(start, last + 1):
@@ -380,7 +379,8 @@ def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
     """升降地形：「地形＋落石」（多一個大地傷害效果，數值由預算器調；3W-2b 地形變化模板的做法）。
     ``grown``：用放大過格數的形狀（由大到小，費用照 :func:`_growth_drafts`）；否則用原本的形狀。"""
     moved = job.moved
-    if not _terrain(moved, job.library) or len(moved.effects) >= MAX_EFFECTS:
+    limits = job.library.ruleset.core.skill_limits
+    if not _terrain(moved, job.library) or len(moved.effects) >= limits.max_effects:
         return
     if grown:
         drafts: Iterable[Draft] = (

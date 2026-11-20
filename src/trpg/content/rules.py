@@ -28,6 +28,7 @@ from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, BossPhaseRules, Dice, Un
 from trpg.content.parts import BossPartRules
 from trpg.content.quantity import QuantityScale, quantity_cap
 from trpg.content.schemas import ContentModel
+from trpg.content.skills.limits import SkillLimits
 from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
@@ -532,7 +533,11 @@ class CoreRules(ContentModel):
 
     # 技能預算（2B-2）
     tier_budget: dict[int, int]
-    """各階級（1–5）的基礎預算點數，必須嚴格遞增。"""
+    """各階級（1～``skill_limits.tiers``）的基礎預算點數，必須嚴格遞增。"""
+    skill_limits: SkillLimits
+    """技能結構的規則型上限（HC-4b 從 ``skills/constants.py`` 與 ``SkillDef.tier`` 搬來：階級數、
+    AP、效果數、冷卻、暴擊範圍下限、巢狀效果數……）；技能的檢查在 ``Ruleset`` 層
+    （:func:`trpg.content.skills.limits.skill_limit_problems`）。"""
     budget_reference_weapon_damage: int = Field(ge=1)
     """武器技的預算基準：倍率 100% ＝ 這麼多點。"""
 
@@ -643,9 +648,10 @@ class CoreRules(ContentModel):
 
     @model_validator(mode="after")
     def _check_tier_budget(self) -> CoreRules:
-        if sorted(self.tier_budget) != [1, 2, 3, 4, 5]:
-            raise ValueError("tier_budget 必須剛好有階級 1 到 5")
-        values = [self.tier_budget[t] for t in range(1, 6)]
+        tiers = list(range(1, self.skill_limits.tiers + 1))  # HC-4b：階級數讀 skill_limits
+        if sorted(self.tier_budget) != tiers:
+            raise ValueError(f"tier_budget 必須剛好有階級 1 到 {self.skill_limits.tiers}")
+        values = [self.tier_budget[t] for t in tiers]
         if any(a >= b for a, b in itertools.pairwise(values)) or values[0] < 1:
             raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
         return self

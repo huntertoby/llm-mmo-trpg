@@ -64,7 +64,6 @@ from trpg.content.skills.constants import (
     ENTER_FORM,
     FLAT_BONUS_EFFECTS,
     FOLLOWUP_FORBIDDEN,
-    MAX_EFFECTS,
 )
 from trpg.content.skills.effects import composition_rules
 from trpg.engine.shape_growth import grow_shape
@@ -283,7 +282,7 @@ def _op_terrain_area(
             base, effects = base_draft(skill)
             base["shape"] = shape.model_dump(mode="json", exclude_none=True)
             if rocks:
-                if len(effects) >= MAX_EFFECTS:
+                if len(effects) >= library.ruleset.core.skill_limits.max_effects:
                     continue
                 effects.append(_new_damage(skill, {}, "earth"))
             drafts.append((base, effects))
@@ -307,12 +306,12 @@ def cell_count(shape: Any, library: ContentLibrary) -> int | None:
 
 
 def _op_multi_hit(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """多打一下：第一個傷害效果之後再加一個同元素、同對象的傷害效果（同一目標多一段命中）。"""
     base, effects = base_draft(skill)
     index = _first_damage(effects)
-    full = len(effects) >= MAX_EFFECTS
+    full = len(effects) >= library.ruleset.core.skill_limits.max_effects
     if not _hits(skill) or skill.followup is not None or index is None or full:
         return []
     source = effects[index]
@@ -490,7 +489,7 @@ def _op_followup_element(
     index = _first_damage(second)
     if (
         index is None
-        or len(second) >= MAX_EFFECTS
+        or len(second) >= library.ruleset.core.skill_limits.max_effects
         or (template.elements and element not in template.elements)
         or element == (second[index].get("element") or Element.PHYSICAL.value)
         or any(e.get("element") == element for e in (*second, *effects))
@@ -531,7 +530,7 @@ def _followup_eased(draft: Draft, library: ContentLibrary) -> list[Draft]:
 
 
 def _op_element(
-    skill: SkillDef, template: FlashTemplate, variation: Variation, _lib: ContentLibrary
+    skill: SkillDef, template: FlashTemplate, variation: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """第二元素：多一個 ``variation.element`` 的傷害效果（和主要傷害不同元素）。"""
     base, effects = base_draft(skill)
@@ -541,7 +540,7 @@ def _op_element(
         not _hits(skill)
         or element is None
         or index is None
-        or len(effects) >= MAX_EFFECTS
+        or len(effects) >= library.ruleset.core.skill_limits.max_effects
         or (template.elements and element not in template.elements)
         or element == (effects[index].get("element") or Element.PHYSICAL.value)
         or any(e.get("element") == element for e in effects)

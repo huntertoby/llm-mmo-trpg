@@ -21,7 +21,7 @@ from pydantic import Field, NonNegativeInt, model_validator
 
 from trpg.content.battle import ID_PATTERN, StatusTable
 from trpg.content.environment import SurfaceTable
-from trpg.content.rules import ResourceKind
+from trpg.content.rules import CoreRules, ResourceKind
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
     AFFECTS_VALUES,
@@ -59,6 +59,7 @@ __all__ = [
     "SkillMatch",
     "SynergyRule",
     "SynergyTable",
+    "budget_rule_problems",
     "price_table_problems",
     "primitive_points_problems",
     "shape_budget_problems",
@@ -120,7 +121,7 @@ class CostAllowance(ContentModel):
     mana_per_point: int = Field(ge=0)
     """法力代價的折抵（‰）：每 ``core.quantity_scale`` 點法力（X10-2a；倍率 1 時＝每點）。"""
     mana_cap: int = Field(ge=0)
-    stamina_per_mana: int = Field(default=2, ge=1)
+    stamina_per_mana: int = Field(ge=1)
     """耐力與法力的預算換算（Phase 3H-2，06 6.10；初值）：耐力 ``stamina_per_mana`` 點 ＝ 法力
     1 點，預算點數等價——耐力代價的折抵 ＝ 耐力 × ``mana_per_point`` ÷ ``stamina_per_mana``
     （向下取整），上限同 ``mana_cap``。武器技由法力改花耐力時，耐力 ＝ 法力 × 這個值，折抵與
@@ -129,16 +130,16 @@ class CostAllowance(ContentModel):
     """``hp_percent`` 每 1‰ 的折抵。"""
     hp_cap: int = Field(ge=0)
     self_status: SelfStatusAllowance
-    overdraft_permille: int = Field(default=200, ge=0)
+    overdraft_permille: int = Field(ge=0)
     """透支（``cost.overdraft``，Phase 3-50，06 6.5）的固定折抵（‰）：下一個回合少 1 AP。"""
-    leave_form_permille: int = Field(default=200, ge=0)
+    leave_form_permille: int = Field(ge=0)
     """解除形態（``leave_form`` 原語，Phase 3J-4c，06 6.30 解形爆發）的固定折抵（‰；初值，未經
     模擬）：施放時先解除自己的形態（照常冷卻），算代價。"""
-    stance_upkeep_per_point: int = Field(default=200, ge=0)
+    stance_upkeep_per_point: int = Field(ge=0)
     """姿態維持費（``SkillDef.stance_upkeep``，Phase 3W-2b）每點的折抵（‰；初值，未經模擬）。"""
-    source_per_point: int = Field(default=250, ge=0)
+    source_per_point: int = Field(ge=0)
     """源力代價（``cost.source``，Phase 3C-4a）每點的折抵（‰；初值，未經模擬）。"""
-    source_cap: int = Field(default=500, ge=0)
+    source_cap: int = Field(ge=0)
     total_cap: int = Field(ge=0)
     """各項先套用自己的上限，加總後再以此截斷（‰）。"""
 
@@ -219,7 +220,7 @@ class ModifierBudget(ContentModel):
     的比例：變形只有在目標的站位剛好受益時才有價值（類似命中率之於命中後效果）。"""
     uses: dict[str, int]
     uses_cap: int = Field(ge=1)
-    per_turn_limit_uses: int = Field(default=8, ge=1)
+    per_turn_limit_uses: int = Field(ge=1)
     """帶 ``per_turn_limit`` 的規則（Phase 3-31）每場的預估使用次數：每個自己的回合最多 1 次，
     不看 ``uses`` 表（初值，未經模擬）。"""
     on_hit_rune_permille: int = Field(default=1000, ge=1, le=1000)
@@ -277,18 +278,18 @@ class RetierGrowthRules(ContentModel):
     """
 
     stretch: dict[str, dict[str, int]] = Field(default_factory=dict)
-    magnitude_step: int = Field(default=25, ge=1, le=500)
+    magnitude_step: int = Field(ge=1, le=500)
     """BAL-12e（#76）：持續回合放大到 ``stretch`` 的上限（6）之後，數值型狀態與表面改加強度
     （``magnitude_permille``）的級距（‰）。表面要先放大到最大的形狀才加強度。"""
-    magnitude_max: int = Field(default=2000, ge=1000, le=2000)
+    magnitude_max: int = Field(ge=1000, le=2000)
     """升階重配的強度上限（‰；同原語參數的上限）。"""
     area_shapes: tuple[str, ...] = ()
     max_extra_cooldown: int = Field(default=0, ge=0)
-    max_cooldown: int = Field(default=6, ge=0)
+    max_cooldown: int = Field(ge=0)
     """換成較大的形狀時冷卻的總上限（06 6.34，玩法 PM 6fc1e9b0：6 回合）；原本就超過的不再加。"""
     max_extra_ap: int = Field(default=0, ge=0, le=2)
     """換成較大的形狀時最多多加幾 AP（加冷卻還超過預算上限時，例如 1 AP 的隆地；不超過 3 AP）。"""
-    target_tolerance_permille: int = Field(default=50, ge=0, le=300)
+    target_tolerance_permille: int = Field(ge=0, le=300)
     """重配維持原本比例的容許差（‰）：候選的比例與升階前相差在這之內就採用，否則取最接近的。"""
     terrain_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain")
     """升降地形的原語（3W-R2 從程式移到資料）：放大格數、補「落石」只看這些。"""
@@ -304,7 +305,7 @@ class FlashCostRules(ContentModel):
     damage_rungs: int = Field(default=1, ge=1, le=5)
     """蓄力在預算重調後沒有任何一項變強時，傷害（之後是治療、護盾）的骰子或倍率一次往上調幾格
     （組合器的骰子、倍率階梯；調完比例仍低於 70% 時同一項再往上，直到進窗或到頂）。"""
-    magnitude_step: int = Field(default=25, ge=1, le=500)
+    magnitude_step: int = Field(ge=1, le=500)
     """蓄力、輕巧調狀態強度（``magnitude_permille``）時每一級多少‰（蓄力往上到
     ``retier_growth.magnitude_max``；輕巧往下最多到 1000）。"""
 
@@ -315,11 +316,11 @@ class FlashTransformRules(ContentModel):
     :mod:`trpg.skillgen.flash_major`。庇佑、援手的治療量、護盾量、增益回合照新種類的預算重算，
     不在這裡。"""
 
-    companion_power_permille: int = Field(default=500, ge=100, le=1000)
+    companion_power_permille: int = Field(ge=100, le=1000)
     """伴生：開場召出的縮小版召喚物的最大 HP 與傷害是一般的幾‰。"""
-    companion_duration: int = Field(default=2, ge=1, le=4)
+    companion_duration: int = Field(ge=1, le=4)
     """伴生：開場召出的召喚物存在幾輪。"""
-    guardian_power_permille: int = Field(default=500, ge=100, le=1000)
+    guardian_power_permille: int = Field(ge=100, le=1000)
     """護主：被近戰攻擊時召出的縮小版召喚物的最大 HP 與傷害是一般的幾‰。"""
     guardian_duration: int = Field(default=1, ge=1, le=4)
     """護主：召出的召喚物存在幾輪（設計：1 回合）。"""
@@ -347,11 +348,11 @@ class CharacterTierRules(ContentModel):
     primitives: dict[str, int] = Field(default_factory=dict)
     skeletons: dict[str, int] = Field(default_factory=dict)
     shapes: dict[str, int] = Field(default_factory=dict)
-    line_length: int = Field(default=6, ge=2)
-    line_tier: int = Field(default=3, ge=1)
-    followup: int = Field(default=2, ge=1)
-    second_element: int = Field(default=2, ge=1)
-    dual_scaling: int = Field(default=3, ge=1)
+    line_length: int = Field(ge=2)
+    line_tier: int = Field(ge=1)
+    followup: int = Field(ge=1)
+    second_element: int = Field(ge=1)
+    dual_scaling: int = Field(ge=1)
     terrain_area: tuple[TerrainAreaTier, ...] = ()
     basic_summon_units: tuple[str, ...] = ()
 
@@ -399,39 +400,41 @@ class BudgetRules(ContentModel):
     min_ratio_permille: int = Field(ge=1, le=_PERMILLE_MAX)
     max_ratio_permille: int = Field(ge=1, le=_PERMILLE_MAX)
     ap_coefficient_permille: dict[int, int]
+    """主動技能依 ``ap_cost`` 的係數（‰）；鍵要剛好是 1～``core.skill_limits.max_ap_cost``（HC-4b 起
+    載入時檢查，:func:`budget_rule_problems`）。"""
     reaction_coefficient_permille: int = Field(ge=1)
     stance_coefficient_permille: int = Field(default=1000, ge=1)
     """姿態技能的預算係數（‰；2E-2）：可用預算 ＝ tier_budget × 係數 ×（1000 ＋ 折抵）÷ 1000。"""
     form_coefficient_permille: int = Field(default=1000, ge=1)
     """形態技能（``enter_form``，Phase 3J-1a，6.30「照姿態計」）的預算係數（‰）：取代姿態係數。"""
-    passive_extra_trigger_permille: int = Field(default=800, ge=1, le=1000)
+    passive_extra_trigger_permille: int = Field(ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
     known_budget_exceptions: tuple[str, ...] = ()
     """已知超出預算範圍（70～100%）的內建技能 ID（Phase 3-49：射程係數上線後，依規格不改技能數值，
     先標記，交玩法 PM 決定）。``trpg content check`` 不把它們的 ``budget.over``／``budget.weak``
     算成錯誤（``trpg skills budget`` 仍標出）；調整技能後從 ``content/skill_budget.yaml`` 移除。"""
-    range_baseline: int = Field(default=4, ge=1)
+    range_baseline: int = Field(ge=1)
     """射程係數（Phase 3-49，玩法決定 #53）：固定射程 N 的技能，形狀倍率再乘
     ``1000 ＋ (N − range_baseline) × range_step_permille``（‰）；射程 4＝×1.00。"""
-    range_step_permille: int = Field(default=50, ge=0, le=200)
+    range_step_permille: int = Field(ge=0, le=200)
     """射程每多 1 格的係數增減（‰）：射程 1＝850、10＝1300。武器射程與沒有射程的形狀為 1000。"""
-    trap_coefficient_permille: int = Field(default=800, ge=1, le=1000)
+    trap_coefficient_permille: int = Field(ge=1, le=1000)
     """陷阱技能（Phase 2E-3）：觸發不確定，可用預算再 × 這個值（‰；初值，未經模擬）。"""
-    consume_stack_expected_permille: int = Field(default=500, ge=1, le=1000)
+    consume_stack_expected_permille: int = Field(ge=1, le=1000)
     """``consume_stack`` 的預算以「期望消耗層數 ＝ 該層數上限 × 這個值」估算加成點數（‰；初值）。"""
-    consume_status_scale_expected: int = Field(default=2, ge=1)
+    consume_status_scale_expected: int = Field(ge=1)
     """``consume_status`` 的預算以 ``then`` 的點數 × 這個期望倍率估算（Phase 3C-3b；初值）。"""
-    consume_status_splash_permille: int = Field(default=500, ge=0, le=2000)
+    consume_status_splash_permille: int = Field(ge=0, le=2000)
     """``splash`` 讓 ``then`` 的點數再加這個比例（‰；預期多波及的敵人；初值）。"""
-    consume_status_discount_permille: int = Field(default=700, ge=1, le=1000)
+    consume_status_discount_permille: int = Field(ge=1, le=1000)
     """「需要先有狀態」的條件折扣（‰；沿用條件折扣的做法；初值）。"""
     collision_die_points: int = Field(default=1, ge=0)
     """``push``／``pull`` 填了 ``collision_dice`` 時，每顆骰加的預算點數（Phase 3C-3a；初值）。"""
-    hurl_object_discount_permille: int = Field(default=800, ge=1, le=1000)
+    hurl_object_discount_permille: int = Field(ge=1, le=1000)
     """``hurl_object`` 的「需要附近有可投擲的物件」折扣（Phase 3C-5a；初值，未經模擬）。"""
-    charge_through_expected_targets_permille: int = Field(default=1500, ge=100, le=5000)
+    charge_through_expected_targets_permille: int = Field(ge=100, le=5000)
     """``charge_through`` 預期被撞到的敵人數（‰；Phase 3D-2c；初值，未經模擬）。"""
-    summon_round_value_permille: int = Field(default=800, ge=1, le=5000)
+    summon_round_value_permille: int = Field(ge=1, le=5000)
     """``summon`` 的點數 ＝ 召喚物每輪預估傷害 × 持續輪數 × 這個值（‰；Phase 3D-4a；命中率與
     吸引火力的折合，初值，未經模擬）。"""
     summon_trait_extra_damage_permille: int = Field(default=1000, ge=0, le=5000)
@@ -443,27 +446,27 @@ class BudgetRules(ContentModel):
     """普攻命中附帶狀態（點燃、冰凍、標記、揭露…）：狀態的點數 × 此值。"""
     summon_trait_surface_permille: int = Field(default=100, ge=0, le=5000)
     """造表面（命中造水、脈動造水）：表面的點數 × 此值。"""
-    summon_trait_chain_permille: int = Field(default=400, ge=0, le=5000)
+    summon_trait_chain_permille: int = Field(ge=0, le=5000)
     """水面連鎖（雷靈）：連鎖傷害（武器骰平均 × 連鎖人數 × 連鎖倍率）× 此值（要站在水裡才生效）。"""
-    summon_trait_heal_permille: int = Field(default=600, ge=0, le=5000)
+    summon_trait_heal_permille: int = Field(ge=0, le=5000)
     """脈動治療（水精）：治療骰平均 × 此值（預期約 1 名受傷的友方在範圍內）。"""
-    summon_trait_backstab_permille: int = Field(default=250, ge=0, le=5000)
+    summon_trait_backstab_permille: int = Field(ge=0, le=5000)
     """背刺多出的傷害骰（影魅）：多出的骰子平均 × 此值（要繞到背後才生效）。"""
-    summon_trait_trip_permille: int = Field(default=300, ge=0, le=5000)
+    summon_trait_trip_permille: int = Field(ge=0, le=5000)
     """絆倒（倒地關鍵字、骷髏、戰狼）：擊倒原語的點數 × 此值（對抗判定、每輪 1 次）。"""
-    summon_trait_knockback_permille: int = Field(default=200, ge=0, le=5000)
+    summon_trait_knockback_permille: int = Field(ge=0, le=5000)
     """震退（撞擊關鍵字、石像）：推擊原語的點數 × 震退格數 × 此值。"""
-    summon_trait_height_permille: int = Field(default=300, ge=0, le=5000)
+    summon_trait_height_permille: int = Field(ge=0, le=5000)
     """高處加傷（鷹隼的利爪）：武器每輪傷害 × 加傷比例 × 此值（要站得比目標高才生效）。"""
     summon_trait_conceal_points: int = Field(default=1, ge=0, le=10)
     """召喚時隱蔽：一次性的點數（不乘持續輪數）。"""
-    summon_detonate_targets_permille: int = Field(default=1500, ge=0, le=5000)
+    summon_detonate_targets_permille: int = Field(ge=0, le=5000)
     """自爆（爆裂傀儡）：爆炸傷害骰平均 × 預期被炸到的敵人數（‰），一次性（不乘持續輪數）；
     留下的表面另加 ``summon_trait_surface_permille`` × 表面點數 × 格數。"""
-    summon_trait_conditional_permille: int = Field(default=400, ge=0, le=1000)
+    summon_trait_conditional_permille: int = Field(ge=0, le=1000)
     """有條件才生效的命中特性（``hit_rules`` 的 ``when`` 不是 ``always``，如冰靈只凍水裡的目標）：
     狀態點數再 × 此值。"""
-    summon_trait_immovable_permille: int = Field(default=500, ge=0, le=5000)
+    summon_trait_immovable_permille: int = Field(ge=0, le=5000)
     """不會被推動（石像）：每輪折合的點數（‰，擋路的價值）。"""
     summon_detonate_rounds: int = Field(default=1, ge=1, le=6)
     """會自爆的召喚物（爆裂傀儡）：一般攻擊與特性只算這麼多輪（自爆後就消失了），自爆另計。"""
@@ -473,31 +476,31 @@ class BudgetRules(ContentModel):
     """高台（高台圖騰，Phase 3-33e2b）：升起地形原語點數 × 高度 × 此比例（‰），每輪。"""
     summon_topple_targets_permille: int = Field(default=1000, ge=0, le=5000)
     """被推倒壓人（土牆）：推倒傷害骰平均 ＋ 擊倒原語點數，× 預期被壓到的敵人數（‰），一次性。"""
-    summon_hp_weight_permille: int = Field(default=300, ge=0, le=2000)
+    summon_hp_weight_permille: int = Field(ge=0, le=2000)
     """召喚技能的 ``max_hp_permille``（加深進化，Phase 3-33f2）：召喚物每輪價值 ×（1 ＋ 多出的
     HP 比例 × 此值）；HP 的價值只佔每輪價值的這個比例（‰，初值，未經模擬）。"""
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
     """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的點數 × 預期受惠的友方數（‰）× 持續輪數
     × ``summon_round_value_permille``（初值，未經模擬）。"""
-    legendary_battle_budget_permille: int = Field(default=600, ge=100, le=1000)
+    legendary_battle_budget_permille: int = Field(ge=100, le=1000)
     """常駐類傳說 ``activation: battle``（整場）的可用預算倍率（‰；Phase 3D-6，使用者決定
     「整場較弱」；初值，以模擬調整）。``timed``（限時）為基準 1000‰。"""
-    zone_cell_round_permille: int = Field(default=120, ge=1, le=5000)
+    zone_cell_round_permille: int = Field(ge=1, le=5000)
     """``zone``（Phase 3D-5）：每格每輪預估的觸發次數（‰；初值，未經模擬）。"""
-    zone_both_permille: int = Field(default=1500, ge=1000, le=5000)
+    zone_both_permille: int = Field(ge=1000, le=5000)
     """``zone`` 的 ``when: both``（進入與回合開始都結算）的倍率（‰）。"""
-    zone_moving_permille: int = Field(default=1500, ge=1000, le=5000)
+    zone_moving_permille: int = Field(ge=1000, le=5000)
     """``zone`` 的 ``anchor: moving``（掃過更多格子）的倍率（‰）。"""
-    zone_surface_permille: int = Field(default=300, ge=0, le=5000)
+    zone_surface_permille: int = Field(ge=0, le=5000)
     """``zone`` 留下的表面：每個新覆蓋格的表面點數折合（‰）。"""
-    restore_mana_point_permille: int = Field(default=700, ge=0, le=5000)
+    restore_mana_point_permille: int = Field(ge=0, le=5000)
     """``restore_resource`` 回復法力：每點法力折合的預算點數（‰；Phase 3D-1；初值）。X10-2a 起是
     每 ``core.quantity_scale`` 點法力（倍率 1 時＝每點）。"""
-    restore_cooldown_points: int = Field(default=3, ge=0)
+    restore_cooldown_points: int = Field(ge=0)
     """``restore_resource`` 縮短冷卻：每回合折合的預算點數（Phase 3D-1；初值）。"""
-    dispel_one_points: int = Field(default=3, ge=0)
+    dispel_one_points: int = Field(ge=0)
     """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
-    dispel_all_points: int = Field(default=6, ge=0)
+    dispel_all_points: int = Field(ge=0)
     """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
     primitive_points: dict[str, NonNegativeInt] = Field(default_factory=dict)
     """原語的基礎預算點數（HC-B：從 ``skill_primitives.yaml`` 的 ``base_points`` 搬來，值不變，開放
@@ -515,106 +518,97 @@ class BudgetRules(ContentModel):
     surface_points: dict[str, NonNegativeInt] = Field(default_factory=dict)
     """技能產生表面（預設持續時間）的預算點數（HC-B：從 ``surfaces.yaml`` 的 ``budget_points``
     搬來，值不變）。沒有那一項的表面不能由技能產生。"""
-    hook_points: int = Field(default=6, ge=0)
+    hook_points: int = Field(ge=0)
     """``hook``（鉤，SK-2）的固定預算點數（形狀倍率另算；SK-3b 從 ``skill_primitives.yaml`` 的
     ``base_points`` 搬來，開放數值工坊；初值）。"""
-    contagion_points: int = Field(default=2, ge=0)
+    contagion_points: int = Field(ge=0)
     """``contagion``（疾病擴散，SK-2）的固定預算點數（形狀倍率另算；SK-3b 搬來；初值）。"""
     borrow_ap_points: int = Field(default=0, ge=0)
     """``borrow_ap``（預支，AP-2）每 1 AP 的預算點數（初值 0，開放數值工坊）。"""
     absorb_surface_points: int = Field(default=1, ge=0)
     """``absorb_surface``（吸收表面，SK-2）的基礎點數（另加收益點數；SK-3b 搬來；初值）。"""
-    reroll_budget_permille: int = Field(default=850, ge=0, le=2000)
+    reroll_budget_permille: int = Field(ge=0, le=2000)
     """``reroll``（重擲，SK-3）的點數 ＝ 階級預算 × 反應技係數 × 這個值（‰）：SK-3b 起隨階級長
     （固定 5 點時階級 1 也只到預算 60%，做不出合格的招；初值，接數值工坊）。"""
-    obstacle_duration_permille: tuple[int, ...] = Field(
-        default=(400, 500, 600, 700, 750, 800, 850, 900, 950, 1000), min_length=10, max_length=10
-    )
+    obstacle_duration_permille: tuple[int, ...] = Field(min_length=1)
     """``create_obstacle``（Phase 3-11）：``duration`` 為 n 回合時，點數 ＝ 基礎 × 第 n 項（‰）；
-    共 10 項（1–10 回合），永久（省略 ``duration``）＝ 基礎 × 1000‰ ＝ 現狀（初值，未經模擬）。"""
-    inscribe_duration_permille: tuple[int, ...] = Field(
-        default=(600, 800, 1000, 1200, 1400), min_length=5, max_length=5
-    )
-    """``inscribe``（Phase 3-23）：``duration`` 為 n 輪時，點數 ＝ 基礎 × 第 n 項（‰）；共 5 項
-    （1–5 輪），省略 ``duration`` 時取 ``core.rune_default_rounds`` 對應的項（初值，未經模擬）。"""
-    shield_duration_permille: tuple[int, ...] = Field(
-        default=(1000, 1300), min_length=2, max_length=2
-    )
+    內容檔寫 10 項（1–10 回合；更長的回合用最後一項），永久（省略 ``duration``）＝ 基礎 × 1000‰
+    ＝ 現狀（初值，未經模擬）。HC-4b：項數由內容檔決定，不再寫死在 schema。"""
+    inscribe_duration_permille: tuple[int, ...] = Field(min_length=1)
+    """``inscribe``（Phase 3-23）：``duration`` 為 n 輪時，點數 ＝ 基礎 × 第 n 項（‰）；項數要
+    等於 ``core.rune_max_rounds``（1～上限輪；HC-4b 起載入時檢查，
+    :func:`budget_rule_problems`），省略 ``duration`` 時取 ``core.rune_default_rounds`` 對應的項
+    （初值，未經模擬）。"""
+    shield_duration_permille: tuple[int, ...] = Field(min_length=1)
     """``shield``（Phase 3-50b）：``duration`` 為 2 或 3 回合時，點數 ＝ 骰子平均 × 第 n 項（‰；
-    省略 ＝ 2 回合 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
+    省略 ＝ 2 回合 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。第 1 項是 2 回合，之後每項多 1 回合，更長的
+    回合用最後一項（HC-4b：項數由內容檔決定）。"""
     terrain_area_rarity: tuple[TerrainAreaRarity, ...] = ()
     """升降地形（``raise_terrain``、``lower_terrain``）的影響格數對應的最低稀有度（Phase 3-54b，
     06 6.33，#58）：形狀影響格數 ≥ ``min_cells`` 的最高一項生效（依 ``min_cells`` 由小到大）。"""
-    wind_spread_permille: tuple[int, ...] = Field(default=(1000, 1150), min_length=2, max_length=2)
+    wind_spread_permille: tuple[int, ...] = Field(min_length=1)
     """風元素傷害的元素擴散格數（``spread``，Phase 3-54b）：擴散 n 格時，傷害效果的點數 × 第 n 項
-    （‰；1 格或省略 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。"""
-    detonate_runes_permille: int = Field(default=700, ge=1, le=3000)
+    （‰；1 格或省略 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。擴散格數超過項數時用最後一項（HC-4b）。"""
+    detonate_runes_permille: int = Field(ge=1, le=3000)
     """``detonate_runes``（Phase 3-23）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先刻印、且敵人要站在
     符文上的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""
-    sacrifice_summon_permille: int = Field(default=800, ge=1, le=3000)
+    sacrifice_summon_permille: int = Field(ge=1, le=3000)
     """``sacrifice_summon``（Phase 3-24c）：點數 ＝ 骰子平均 × 此值 ÷ 1000（需要先有召喚物、而且
     召喚物會消失的折扣；形狀倍率另外照一般效果計算；初值，未經模擬）。"""
-    reveal_base_points: int = Field(default=2, ge=0)
+    reveal_base_points: int = Field(ge=0)
     reveal_round_points: int = Field(default=1, ge=0)
     """``reveal`` 的預算點數 ＝ ``reveal_base_points`` ＋ ``reveal_round_points`` × ``duration``
     （Phase 3D-8a；初值，未經模擬）。"""
-    revive_base_points: int = Field(default=6, ge=0)
+    revive_base_points: int = Field(ge=0)
     revive_hp_point_permille: int = Field(default=10, ge=0, le=100)
     """``revive`` 的預算點數 ＝ ``revive_base_points`` ＋ ``hp_permille`` ×
     ``revive_hp_point_permille`` ÷ 1000（Phase 3D-8b；初值，未經模擬）。"""
     delayed_damage_base_targets_permille: int = Field(default=1000, ge=0, le=5000)
-    delayed_damage_radius_targets_permille: int = Field(default=400, ge=0, le=3000)
+    delayed_damage_radius_targets_permille: int = Field(ge=0, le=3000)
     """``delayed_damage`` 的預算點數 ＝ 骰子平均 ×（``delayed_damage_base_targets_permille`` ＋
     半徑 × ``delayed_damage_radius_targets_permille``）÷ 1000（預期波及的人數；Phase 3D-8b）。"""
-    on_kill_expected_permille: int = Field(default=300, ge=0, le=1000)
+    on_kill_expected_permille: int = Field(ge=0, le=1000)
     """``on_kill`` 各效果的點數 × 這個預估擊殺率（‰；Phase 3D-8b；初值，未經模擬）。"""
-    refund_ap_points: int = Field(default=6, ge=0)
+    refund_ap_points: int = Field(ge=0)
     """``on_kill`` 的 ``refund_ap`` 每返還 1 點 AP 折合的預算點數（Phase 3D-8b；初值）。"""
-    grant_skill_expected_uses_per_round_permille: int = Field(default=800, ge=0, le=3000)
-    silent_strike_round_milli: int = Field(default=600, ge=0, le=10000)
+    grant_skill_expected_uses_per_round_permille: int = Field(ge=0, le=3000)
+    silent_strike_round_milli: int = Field(ge=0, le=10000)
     """主動技能給「無聲」（``grant_skill`` 給的技能只有 ``silent_strike`` 修正，BS-1，#157）時每給
     1 回合的預算點數（千分之一點）；取代「被給技能總點數 × 預期使用次數」。"""
     """``grant_skill`` 的預算點數 ＝ 被給技能的總點數 × 這個值 ÷ 1000 × 持續輪數（預期每輪使用
     次數；Phase 3D-8c；初值，未經模擬）。"""
-    lifesteal_value_permille: int = Field(default=800, ge=0, le=2000)
+    lifesteal_value_permille: int = Field(ge=0, le=2000)
     """吸血（``lifesteal_permille``，Phase 3D-8a）：回復的 HP 折合傷害點數的比例（‰）。傷害效果的
     點數 × (1 ＋ 吸血‰ × 這個值 ÷ 10⁶)（初值，未經模擬）。"""
-    pierce_bonus_permille: int = Field(default=150, ge=0, le=1000)
+    pierce_bonus_permille: int = Field(ge=0, le=1000)
     """有 ``pierce`` 的技能，總點數再加這個比例（‰；Phase 3C-5b；初值，未經模擬）。"""
     variant_surcharge_permille: int = Field(default=100, ge=0, le=1000)
     """戰場變奏（Phase 3-25a，6.24）：每個變奏的加價（‰）。基礎型態的總點數 ×（1000 ＋ 這個值 ×
     變奏數）÷ 1000；每個變奏型態另外照一般技能計算，各自落在預算窗內（初值，之後以模擬調整）。"""
-    composite_tax_permille: int = Field(default=150, ge=0, le=1000)
+    composite_tax_permille: int = Field(ge=0, le=1000)
     """複合技能（Phase 3F-3a，6.23）的加成：總點數 ＝（位移段點數 ＋ 動作段點數）×（1000 ＋ 這個值）
     ÷ 1000（省下一次行動的代價；初值，之後以模擬調整）。"""
     composite_self_combo_permille: int = Field(default=1000, ge=0, le=5000)
     """複合技能兩段之間形成元素／表面連鎖（第一段造表面或施加狀態、第二段的元素引爆或與之互動；
     Phase 3F-4a，6.23「同一招不能自己造環境又引爆它」）時，總點數再 ×（1000 ＋ 這個值）÷ 1000
     （初值 1000‰，即點數翻倍）。"""
-    composite_delayed_discount_permille: int = Field(default=800, ge=0, le=1000)
+    composite_delayed_discount_permille: int = Field(ge=0, le=1000)
     """延遲段（Phase 3F-4b，6.23 #5）的折扣：第二段點數 × 這個值 ÷ 1000 再乘複合加成（敵人看得到
     倒數與範圍、能反應；初值，未經模擬）。"""
-    gamble_variance_bonus_permille: int = Field(default=1100, ge=1000, le=2000)
+    gamble_variance_bonus_permille: int = Field(ge=1000, le=2000)
     """帶賭博機制的技能（Phase 3D-7a，6.17）：預算以期望值計，可用預算再 × 這個「變異加成」（‰；
     平均強度略高於同級穩定技能，作為冒險的補償；初值，未經模擬）。"""
-    gamble_self_harm_permille: int = Field(default=500, ge=0, le=1000)
+    gamble_self_harm_permille: int = Field(ge=0, le=1000)
     """賭注分支與失手反噬中，對施放者自己的有害效果（自傷、反噬狀態）折合的預算：效果點數 × 這個值
     （‰）後從總點數扣除（Phase 3D-7a；初值）。"""
-    gamble_on_miss_rate_permille: int = Field(default=300, ge=0, le=1000)
+    gamble_on_miss_rate_permille: int = Field(ge=0, le=1000)
     """失手反噬 ``cost.on_miss`` 的預估觸發率（‰；Phase 3D-7a；約等於未命中的比例，初值）。"""
-    variance_dice_share_permille: int = Field(default=700, ge=0, le=1000)
+    variance_dice_share_permille: int = Field(ge=0, le=1000)
     """高變異（Phase 3D-7b）：武器技的傷害裡「骰子」所占的比例（‰；其餘是固定值與屬性加成）。
     爆骰與擴大暴擊範圍只增加骰子的部分（初值，未經模擬）。"""
-    explode_weapon_sides: int = Field(default=8, ge=2, le=20)
+    explode_weapon_sides: int = Field(ge=2, le=20)
     """武器技的 ``explode`` 以幾面骰估計期望值（法術技用自己的骰子面數；Phase 3D-7b；初值）。"""
-    scale_expected_steps_milli: dict[str, int] = Field(
-        default_factory=lambda: {
-            "missing_hp_10pct": 2000,
-            "distance": 3000,
-            "enemies_adjacent_target": 1500,
-            "enemies_adjacent_self": 1500,
-        }
-    )
+    scale_expected_steps_milli: dict[str, int]
     """依情況縮放（Phase 3D-7b）：每種依據預估的平均步數（千分之一步）。"""
     overload_expected_permille: int = Field(default=1000, ge=0, le=3000)
     """超載（Phase 3D-7b）：帶標籤技能的傷害加成以「平均層數 ＝ (門檻 − 1) ÷ 2」×
@@ -631,33 +625,31 @@ class BudgetRules(ContentModel):
     """每個技能的改寫規則型原語上限。"""
     rule_rewrite_min_cooldown: int = Field(ge=1)
     """有改寫規則型原語的技能：``uses_per_battle: 1`` 或冷卻至少這麼多回合。"""
-    borrow_min_cooldown: int = Field(default=2, ge=1)
+    borrow_min_cooldown: int = Field(ge=1)
     """有預支（``borrow_ap``，AP-2）的技能：``uses_per_battle: 1`` 或冷卻至少這麼多回合（初值
     2）。"""
-    hook_min_cooldown: int = Field(default=3, ge=1)
+    hook_min_cooldown: int = Field(ge=1)
     """有鉤（``hook``，SK-2，06 6.38 第 8 點）的技能：冷卻至少這麼多回合（初值 3）。"""
-    rule_rewrite_min_cooldown_with_source: int = Field(default=2, ge=1)
+    rule_rewrite_min_cooldown_with_source: int = Field(ge=1)
     """花源力（``cost.source``，傳說技能）的改寫規則型技能：改為 ``uses_per_battle: 1`` 或冷卻至少
     這麼多回合（Phase 3C-4a；初值）。"""
     modifier: ModifierBudget
     """修正技能的預算（Phase 3C-2）。"""
     cost_resource: dict[SkillCategory, ResourceKind] = Field(default_factory=_default_cost_resource)
     """技能的費用花哪種資源（Phase 3H-2，06 6.10）：武器技花耐力、法術技花法力。"""
-    min_character_tier: CharacterTierRules = Field(default_factory=CharacterTierRules)
+    min_character_tier: CharacterTierRules
     """技能內容的最低角色階級（Phase 3W-9，06 6.34.9）：取代原語、骨架、形狀的「最低稀有度」門檻
     （稀有度改成只由結構自動算的標記）。"""
-    retier_growth: RetierGrowthRules = Field(default_factory=RetierGrowthRules)
+    retier_growth: RetierGrowthRules
     """升階時放大效果本身（Phase 3W-9b）：點數固定的狀態、表面與升降地形。"""
-    flash_cost: FlashCostRules = Field(default_factory=FlashCostRules)
-    flash_transform: FlashTransformRules = Field(default_factory=FlashTransformRules)
+    flash_cost: FlashCostRules
+    flash_transform: FlashTransformRules
     """閃現蓄力、輕巧的調整幅度（FL-1a；數值工坊可改）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BudgetRules:
         if self.min_ratio_permille >= self.max_ratio_permille:
             raise ValueError("min_ratio_permille 必須小於 max_ratio_permille")
-        if sorted(self.ap_coefficient_permille) != [1, 2, 3]:
-            raise ValueError("ap_coefficient_permille 必須剛好有 AP 1、2、3")
         if sorted(self.condition_permille) != ["common", "harsh", "mild", "none"]:
             raise ValueError("condition_permille 必須剛好有 none、mild、common、harsh")
         if set(self.rarity) != set(RARITY_ORDER):
@@ -748,6 +740,27 @@ class BudgetRules(ContentModel):
 
     def summary(self) -> str:
         return f"合格區間 {self.min_ratio_permille / 10:g}%–{self.max_ratio_permille / 10:g}%"
+
+
+def budget_rule_problems(budget: BudgetRules, core: CoreRules) -> list[str]:
+    """``skill_budget.yaml`` 依規則數值分項的表對得上 ``rules/core.yaml``（HC-4b：原本寫死在 schema
+    的「AP 1、2、3」「刻印 5 項」改讀規則）：``ap_coefficient_permille`` 的鍵剛好是 1～
+    ``skill_limits.max_ap_cost``、``inscribe_duration_permille`` 的項數等於 ``rune_max_rounds``。"""
+    problems: list[str] = []
+    top = core.skill_limits.max_ap_cost
+    if sorted(budget.ap_coefficient_permille) != list(range(1, top + 1)):
+        aps = "、".join(str(ap) for ap in range(1, top + 1))
+        problems.append(
+            f"ap_coefficient_permille 必須剛好有 AP {aps}（core.yaml 的 skill_limits.max_ap_cost）"
+        )
+    rounds = core.rune_max_rounds
+    if len(budget.inscribe_duration_permille) != rounds:
+        count = len(budget.inscribe_duration_permille)
+        problems.append(
+            f"inscribe_duration_permille 必須剛好有 {rounds} 項（core.yaml 的 rune_max_rounds），"
+            f"收到 {count} 項"
+        )
+    return problems
 
 
 POINTS_BASES: Final = frozenset({"fixed", "per_distance", "per_amount", "obstacle", "inscribe"})

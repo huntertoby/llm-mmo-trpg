@@ -23,7 +23,6 @@ from trpg.content.skills import (
     COMPOSITE_MOVES,
     DELAYED_RELEASE_VALUES,
     FOLLOWUP_WHEN_VALUES,
-    MAX_EFFECTS,
     SHADOWSTEP,
     ZONE,
     ZONE_CASTER_SHAPES,
@@ -210,7 +209,7 @@ def _followup_model(
         "shape": (builder.shape_union(shapes), ...),
         "effects": (
             _list_of(_tagged_effects(models, members, general)),
-            Field(min_length=1, max_length=MAX_EFFECTS - 1),
+            Field(min_length=1, max_length=library.ruleset.core.skill_limits.max_effects - 1),
         ),
         "release": (_literal(DELAYED_RELEASE_VALUES) | None, None),
     }

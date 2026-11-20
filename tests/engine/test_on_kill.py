@@ -9,6 +9,7 @@ import pytest
 
 from tests.engine.helpers import library, make_skill, no_reactions
 from tests.engine.skill_helpers import SID, U1, U2, battle, cast, hit_with, of
+from tests.skillgen.helpers import limit_problems
 from trpg.content.skills import SkillDef
 from trpg.engine import BattleState, UseSkill, preview, state_to_json
 from trpg.engine.events import ApRefunded, DamageDealt, Healed, SkillCooldownChanged, UnitDowned
@@ -161,14 +162,14 @@ def _skill_with(on_kill: list[dict[str, Any]] | None, **fields: Any) -> dict[str
 
 def test_schema_limits_on_kill() -> None:
     SkillDef.model_validate(_skill_with([REFUND_AP, REFUND_COOLDOWN]))
-    with pytest.raises(ValueError, match="1 到 2"):
-        SkillDef.model_validate(_skill_with([REFUND_AP, REFUND_COOLDOWN, REFUND_AP]))
-    with pytest.raises(ValueError, match="1 到 2"):
+    three = SkillDef.model_validate(_skill_with([REFUND_AP, REFUND_COOLDOWN, REFUND_AP]))
+    assert any("on_kill 必須有 1 到 2 個效果" in p for p in limit_problems(three))  # HC-4b
+    with pytest.raises(ValueError, match="至少 1"):
         SkillDef.model_validate(_skill_with([]))
     with pytest.raises(ValueError, match="只能使用"):
         SkillDef.model_validate(_skill_with([{"type": "damage", "dice": "1d4"}]))
-    with pytest.raises(ValueError, match="amount"):
-        SkillDef.model_validate(_skill_with([{"type": "refund_ap", "amount": 3}]))
+    big = SkillDef.model_validate(_skill_with([{"type": "refund_ap", "amount": 3}]))
+    assert any("amount（1–2）" in p for p in limit_problems(big))  # HC-4b：Ruleset 層
     with pytest.raises(ValueError, match="amount"):
         SkillDef.model_validate(_skill_with([{"type": "refund_ap"}]))
     with pytest.raises(ValueError, match="施放者"):

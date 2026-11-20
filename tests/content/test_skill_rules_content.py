@@ -13,7 +13,12 @@ from pydantic import ValidationError
 from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.content.library import load_library
 from trpg.content.rules import CoreRules
-from trpg.content.skill_rules import BudgetRules, SkeletonDef, shape_budget_problems
+from trpg.content.skill_rules import (
+    BudgetRules,
+    SkeletonDef,
+    budget_rule_problems,
+    shape_budget_problems,
+)
 from trpg.content.skills import SKELETON_IDS, ShapeDef
 from trpg.shared.errors import ContentError
 
@@ -234,8 +239,27 @@ def test_budget_rules_reject_inconsistent_data() -> None:
     data = yaml.safe_load((PROJECT_ROOT / "content/skill_budget.yaml").read_text("utf-8"))
     with pytest.raises(ValidationError, match="min_ratio_permille"):
         BudgetRules.model_validate({**data, "min_ratio_permille": 1000})
-    with pytest.raises(ValidationError, match="AP 1、2、3"):
-        BudgetRules.model_validate({**data, "ap_coefficient_permille": {1: 500, 2: 1000}})
+    # HC-4b：AP 的鍵、刻印的項數對照 core.yaml（skill_limits.max_ap_cost、rune_max_rounds），
+    # 載入內容庫時檢查
+    core = library().ruleset.core
+    two_ap = BudgetRules.model_validate({**data, "ap_coefficient_permille": {1: 500, 2: 1000}})
+    assert budget_rule_problems(two_ap, core) == [
+        "ap_coefficient_permille 必須剛好有 AP 1、2、3（core.yaml 的 skill_limits.max_ap_cost）"
+    ]
+    four = BudgetRules.model_validate(
+        {**data, "inscribe_duration_permille": [600, 800, 1000, 1200]}
+    )
+    assert budget_rule_problems(four, core) == [
+        "inscribe_duration_permille 必須剛好有 5 項（core.yaml 的 rune_max_rounds），收到 4 項"
+    ]
+    assert budget_rule_problems(library().budget, core) == []
+
+
+def test_budget_rule_mismatch_is_rejected_when_loading(tmp_path: Path) -> None:
+    root = _copy(tmp_path)
+    _edit(root / "skill_budget.yaml", lambda d: d["ap_coefficient_permille"].pop(3))
+    with pytest.raises(ContentError, match="AP 1、2、3"):
+        load_library(root)
 
 
 def test_synergy_and_exclusion_tables() -> None:

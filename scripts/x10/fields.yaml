@@ -682,6 +682,7 @@ groups:
       - rune_max_rounds
       - boss_parts.*                              # HC-4a：部位數、‰、效果數
       - boss_phases.*                             # HC-4a：階段數
+      - skill_limits.*                            # HC-4b：技能結構的上限（階級、AP、效果數、回合、暴擊範圍）
       - shove_distance
       - source_max
       - source_min_at_start

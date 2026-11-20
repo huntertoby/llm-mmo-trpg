@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.skillgen.budget import (
     BudgetError,
     BudgetReport,
@@ -312,6 +313,11 @@ def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
         draft = {**draft, "provenance": {"origin": "workshop"}}
     try:
         skill = build_skill(draft)
+        # HC-4b：技能結構的規則型上限從 SkillDef schema 搬到 core.yaml 的 skill_limits；工坊照舊
+        # 當成 schema 錯誤（超出時不算預算：階級、AP 超出時查表會失敗）
+        limits = skill_limit_problems(skill, library.ruleset.core.skill_limits)
+        if limits:
+            raise DraftError(limits)
     except DraftError as exc:
         problems = tuple(
             Problem(rule="schema", message_zh=plainify(m, library)) for m in exc.messages
