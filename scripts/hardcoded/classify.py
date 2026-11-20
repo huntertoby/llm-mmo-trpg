@@ -380,8 +380,8 @@ def _item_list(result: Result, cls: str) -> list[str]:
             for hit, rule in sorted(grouped[block][file], key=lambda pair: pair[0].line):
                 owner = f" `{hit.owner}`" if hit.owner and hit.owner != hit.scope else ""
                 lines.append(
-                    f"  - {hit.line}｜{hit.scope}{owner}｜`{_md_escape(hit.value, 50)}`"
-                    f"｜{_md_escape(hit.context, 80)}｜{rule.id}｜{rule.status}"
+                    f"  - {hit.line}｜`{hit.scope}`{owner}｜`{_md_escape(hit.value, 50)}`"
+                    f"｜`{_md_escape(hit.context, 80)}`｜{rule.id}｜{rule.status}"
                 )
         lines.append("")
     return lines

@@ -46,8 +46,34 @@ references:
   - '[A-Za-z_][A-Za-z_]*[0-9]+[A-Za-z0-9_]*'     # 識別字裡的數字：d20、utf-8 以外的 x10、ring_1
   - '代決 *[0-9A-Za-z-]+'
 
+# 建議的搬家分段（classify.py --md 原樣抄進清單文件第 2 節）。每段 2～3 件、同一塊；數字是 HC-1 當時的筆數。
+plan:
+  - '- **HC-2 量類（scale 68）**：同一件事（量類要跟 quantity_scale 走），一段做完。'
+  - '  - a. content 的量類預設值與上下限：`rules.py`（資源池、職業基礎、HP 成長）、`forms.py`（維持費）、`battle.py`（護盾、治療、`_MAX_ATTR`）、`roguelite.py`（起始英雄）。做法：有 YAML 的欄位拿掉程式預設，上下限改成「× quantity_scale」或改由 YAML 驗證。'
+  - '  - b. 生成器寫死的法力代價：`skillgen/flash_major.py`、`composer_recipes.py`（乘 scale，比照 `composer_special` 已有的 `* scale`）。'
+  - '  - c. 其餘零星：`engine/gear/core.py` `_MAX_ATTR`、`engine/rules/statuses.py` `DEFAULT_DEFENSE_BREAK`、`world/situation_coverage.py` 的屬性預設、前端 `AttributeAllocator` 的 `?? 10`。'
+  - '- **HC-3 前端副本（前端 config 56）**：前端重寫的後端規則改由 API 帶。'
+  - '  - a. 閃現與技能欄：`run/flash.ts` FALLBACK、`run/flow.ts` SLOT_LIMITS、`ui/SkillCardView` SOURCE_MAX、`gear/affixStatus`、`run/StartPicker`。'
+  - '  - b. 大世界與工坊：`bagGrid`、`fieldModel` WALK_MAX、`hud` 鐘點、`tuning/*` 的預設種子與上限（對齊 `api/tuning/schemas.py`）。'
+  - '- **HC-4 content schema 預設值與上下限（content config 992）**：先定一條通則再分批套用（見報告待決 1）。'
+  - '  - a. 戰鬥核心：`rules.py`、`battle.py`、`forms.py`、`parts.py`、`equipment.py`、`item_budget.py`（約 260）。'
+  - '  - b. 技能規則：`skill_rules.py`、`composer_rules.py`、`flash_templates.py`、`skill_pick.py`、`skills/*`（約 330）。'
+  - '  - c. AI 與環境：`environment.py`（AI 權重）＋ `engine/ai/*`（約 160）。'
+  - '  - d. 大世界：`world_*.py`、`fields.py`、`races.py`、`roguelite.py`（約 240）。'
+  - '- **HC-5 技能生成常數（skillgen config 約 210）**：閃現、組合器的步階、上限、權重、預設代價搬進 `content/` 的生成規則。'
+  - '  - a. 閃現：`flash_ops.py`、`flash_major.py`、`flash_offer.py`、`flash_trade.py`、`flash_reclaim.py`。'
+  - '  - b. 組合器與候選：`composer_*.py`、`random_composer.py`、`candidates.py`、`pick_offer.py`、`proposal_*.py`、`skill_tier.py`、`evolution.py`。'
+  - '- **HC-6 說明文字（text 296）**：寫死的規則數字改從資料帶。'
+  - '  - a. 後端敘事與卡片：`narrative/skills.py`、`action_info.py`、`summon_info.py`、`status_info.py`、`skillgen/option_*.py`、`budget.py` 標籤。'
+  - '  - b. content 驗證訊息（約 70）：訊息裡的上下限改用 schema 常數。'
+  - '  - c. 前端說明（99）＋ `api/*_view.py`、`api/tuning` 的說明：改成 API 帶數字或用常數組字。'
+  - '- **HC-7 其餘 config**：`engine/*`（非 AI，約 20）、`world/*`（約 40）、`api/*`（約 60）、`llm/*`（約 40，LLM 呼叫設定，可能歸 `config/`）、`server/notes.py`。'
+  - '  - a. engine＋world：暴擊下限、預設持續回合、好感門檻、時鐘、動作請求上限。'
+  - '  - b. api＋llm＋server：工坊上下限、預生成上限、LLM 重試與等待秒數。'
+
 rules:
   # ======================================================================== 共通
+
   - id: py-docstring
     class: const
     status: done
