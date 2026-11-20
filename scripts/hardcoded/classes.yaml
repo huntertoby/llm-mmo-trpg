@@ -1,0 +1,3615 @@
+# 寫死數值歸類（HC-1；docs/phases/PhaseHC-1計畫.md 第 3 項；盤點初稿 docs/phases/寫死數值-盤點初稿.md）。
+#
+# scan_py.py（src/trpg/）和 scan_ts.py（client/src/）列出的每一筆都要被下面某一條規則涵蓋
+# （tests/test_hardcoded_scan.py 檢查）。規則由上往下比對，**第一條符合的勝出**：窄的寫前面、寬的寫後面。
+#
+# 五類：
+#   config  應該進 content 或工坊設定的玩法數值                 status: todo（搬完改 done）
+#   scale   量類，應該由 quantity_scale 推導                      status: todo
+#   text    說明文字裡的數字，應該從資料帶入                      status: todo
+#   const   真的是常數：格數、AP、d20、‰ 換算、程式邏輯、開發說明  status: done
+#   layout  前端呈現：排版、繪圖座標、動畫毫秒、顏色、音效合成    status: done
+# 拿不準 config 還是 const 時歸 config（保守）；這類規則的 note 開頭寫「保守」，報告會列出來。
+#
+# 每條規則的欄位（除了 id／class／status／note，其他都是「要全部成立」的條件；沒寫就不限）：
+#   lang     py 或 ts
+#   files    檔案路徑（從專案根目錄起算），fnmatch 樣式：* 可跨資料夾，例 src/trpg/content/*
+#   scope    所在函式或類別（巢狀用 . 連起來，模組層是 <module>），fnmatch 樣式
+#   kind     number（數字字面值）／text（含數字的中文字串）／docstring（後端的 docstring 與屬性說明）
+#   where    scope 的簡寫：函式或類別裡的是 scope，模組層的是 <module>.常數名（例 <module>.MAX_X）
+#   slot     數字所在的位置，fnmatch 樣式：
+#              後端 Field(le)＝關鍵字參數、max(#1)＝第 2 個位置參數、=NAME＝指派、{key}＝dict 的值、
+#                   def:param＝函式預設值、cmp:左邊＝比較、return、index＝下標
+#              前端 {key}＝物件鍵、=name＝指派、attr=name＝JSX 屬性、name()＝呼叫參數、[]＝陣列、
+#                   cmp＝比較、op:*＝運算、return、?:＝三元
+#   owner    所在敘述的指派目標（欄位名、常數名；前端是物件鍵或宣告名），fnmatch 樣式
+#   ann      後端欄位的型別註記，fnmatch 樣式
+#   value    數字的值，fnmatch 樣式（照掃描結果的寫法：'2'、'0.5'、'-2'、'0x*'）
+#   text     值的正規表示式（re.search），用在字串
+#   context  那一行原文的正規表示式（re.search）
+#   bare_digits  true／false：字串去掉占位（{x}、${x}）和下面 references 的引用之後還有沒有數字
+#   not      條件的 mapping（欄位同上）：這些條件「全部成立」時排除，例 not: {owner: '*permille*'}
+#
+# 不比對行號：別人改動檔案、行號移動時歸類照舊成立。新增的寫死數字沒有規則涵蓋時測試會失敗，
+# 失敗訊息會附一段規則範本。
+
+# 字串裡這些樣式的數字算「引用」（決定編號、章節、階段代號、日期、識別字），不算數值。
+references:
+  - '#\d+'                                       # 決定編號 #169
+  - '(?<![\d.])\d+(\.\d+)+'                      # 章節 5.4.1、6.29.5、版本號
+  - '\b\d{2}(?= \d+\.\d)'                        # 設計文件編號「06 6.15」的 06
+  - '\b(Phase|phase)\s*[0-9A-Za-z]+(-[0-9A-Za-z]+)*'  # Phase 3-33f1、Phase 2H-1
+  - '\b[0-9]*[A-Z][A-Za-z]*[0-9]*-[0-9A-Za-z]+(-[0-9A-Za-z]+)*'  # BAL-12e、X10-1、5F-4b、3G-G1、FL-1g
+  - '\b[0-9]+[A-Z]+[0-9]*[a-z]*\b'               # 3H、5D2、6L
+  - '\b[A-Z]{1,4}[0-9]+[a-z]?\b'                 # B7、B16、P95、S1
+  - '\d{4}-\d{2}-\d{2}'                          # 日期
+  - '[A-Za-z_][A-Za-z_]*[0-9]+[A-Za-z0-9_]*'     # 識別字裡的數字：d20、utf-8 以外的 x10、ring_1
+  - '代決 *[0-9A-Za-z-]+'
+
+rules:
+  # ======================================================================== 共通
+  - id: py-docstring
+    class: const
+    status: done
+    kind: docstring
+    note: 後端 docstring 與欄位說明（開發文件，玩家看不到）；數值本身另外列在 number。改數值時順手更新。
+  - id: text-refs-only
+    class: const
+    status: done
+    kind: text
+    bare_digits: false
+    note: 字串裡的數字只有引用（決定編號、章節、階段代號）或占位，沒有寫死的數值。
+  - id: text-structural-0-1
+    class: const
+    status: done
+    kind: text
+    text: '^(?:[^0-9{]|\{[^}]*\})*(?:至少 ?1(?! ?(?:層|格|AP|回合|輪|次|名|招))|不可為 ?0|大於 ?0|≥ ?1|>= ?1|> ?0|必須是 ?0|不能是 ?0|0～\{|1 ?(?:到|～|–) ?\{)(?:[^0-9{]|\{[^}]*\})*$'
+    note: 只有「至少 1」「不可為 0」「1 到 {上限}」這種結構性的 0／1（上限本身已經從常數帶入）。
+  - id: text-slot-labels
+    class: const
+    status: done
+    kind: text
+    text: '^戒指 \d$'
+    note: 欄位序號。
+
+
+  # ======================================================================== 前端：整個資料夾
+  - id: ts-render
+    class: layout
+    status: done
+    files: client/src/render/*
+    note: 繪圖程式（角色、圖示、地形、特效的座標、顏色、圖樣說明）。
+  - id: ts-audio
+    class: layout
+    status: done
+    files: client/src/audio/*
+    note: 音效合成參數（頻率、包絡、毫秒）。
+  - id: ts-dev
+    class: const
+    status: done
+    files: client/src/dev/*
+    note: 開發頁（?dev 樣張、夾具），不出貨；數字是樣張場景。
+
+  # ======================================================================== 前端：排版樣式（任何檔）
+  - id: ts-color-literal
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    value: ['0x*']
+    note: 十六進位色碼。
+  - id: ts-style-keys
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    slot:
+      - '{width}'
+      - '{height}'
+      - '{minWidth}'
+      - '{maxWidth}'
+      - '{minHeight}'
+      - '{maxHeight}'
+      - '{top}'
+      - '{left}'
+      - '{right}'
+      - '{bottom}'
+      - '{gap}'
+      - '{pad*}'
+      - '{padding*}'
+      - '{margin*}'
+      - '{font*}'
+      - '{lineHeight}'
+      - '{letterSpacing}'
+      - '{zIndex}'
+      - '{opacity}'
+      - '{alpha}'
+      - '{radius}'
+      - '{borderRadius}'
+      - '{border*}'
+      - '{size}'
+      - '{scale}'
+      - '{x}'
+      - '{y}'
+      - '{w}'
+      - '{h}'
+      - '{dx}'
+      - '{dy}'
+      - '{color}'
+      - '{tint}'
+      - '{fill}'
+      - '{stroke}'
+      - '{rotation}'
+      - '{angle}'
+      - '{gridRow}'
+      - '{gridColumn}'
+      - '{flex*}'
+      - '{inset*}'
+      - '{outline*}'
+      - '{blur}'
+      - '{priority}'
+    note: 樣式物件與座標鍵（寬高、位置、間距、字級、z-index、透明度、顏色）。
+  - id: ts-style-attrs
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    slot: ['attr=size', 'attr=px', 'attr=width', 'attr=height', 'attr=rows', 'attr=cols', 'attr=gap',
+           'attr=x', 'attr=y', 'attr=r', 'attr=strokeWidth', 'attr=opacity', 'attr=fontSize', 'attr=viewBox',
+           'attr=delay*', 'attr=*Ms', 'attr=duration*', 'attr=scale', 'attr=zIndex', 'attr=tabIndex',
+           'attr=min', 'attr=step', 'attr=cx', 'attr=cy', 'attr=x*', 'attr=y*', 'attr=w', 'attr=h',
+           'attr=offset*', 'attr=radius', 'attr=dot*', 'attr=icon*', 'attr=lines', 'attr=maxLines']
+    note: JSX 的尺寸、位置、延遲屬性。
+  - id: ts-timing
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    slot: ['setTimeout()', 'setInterval()', '{ms}', '{*Ms}', '{duration*}', '{delay*}', '{dur}', '{t}',
+           '{t0}', '{t1}', '{ease*}', 'attr=autoCloseMs', '=*_MS', '=*Ms', '=*MS', '=*_ms', '{fade*}',
+           'sleep()', 'wait()', 'delay()', 'tween()', 'animate()', 'lerp()', 'clamp01()', 'easeInOut()',
+           'easeOut()', 'easeIn()']
+    note: 動畫與延遲的毫秒、緩動。
+  - id: ts-canvas-calls
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    slot: ['rect()', 'roundRect()', 'fillRect()', 'strokeRect()', 'moveTo()', 'lineTo()', 'arc()',
+           'ellipse()', 'circle()', 'quadraticCurveTo()', 'bezierCurveTo()', 'translate()', 'scale()',
+           'rotate()', 'setTransform()', 'drawImage()', 'fillText()', 'stroke()', 'fill()', 'poly()',
+           'rgba()', 'rgb()', 'hsl()', 'mix()', 'fromColors()', 'shade()', 'tint()', 'lighten()', 'darken()',
+           'createLinearGradient()', 'createRadialGradient()', 'addColorStop()', 'span()', 'vfx()',
+           'jitter()', 'ground()', 'glow()', 'setLineDash()', 'toFixed()', 'padStart()', 'padEnd()']
+    note: 繪圖、顏色、格式化（小數位數、補零）的參數。
+  - id: ts-format-radix
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    slot: ['parseInt()', 'toString()']
+    value: ['10', '16', '36', '2']
+    note: 進位制。
+  - id: ts-visual-files
+    class: layout
+    status: done
+    lang: ts
+    files:
+      - client/src/battle/rgMarks.ts
+      - client/src/battle/vfxPalette.ts
+      - client/src/battle/rerollFx.ts
+      - client/src/battle/borrowFx.ts
+      - client/src/battle/walkAnim.ts
+      - client/src/battle/partStrip.ts
+      - client/src/battle/stageLayout.ts
+      - client/src/battle/pathGeometry.ts
+      - client/src/battle/elevation.ts
+      - client/src/battle/animation.ts
+      - client/src/battle/drawModel.ts
+      - client/src/battle/scenePreview.ts
+      - client/src/battle/hudLayout.ts
+      - client/src/battle/hudFade.ts
+      - client/src/battle/layoutPrefs.ts
+      - client/src/battle/telegraph.ts
+      - client/src/world/hudAvoid.ts
+      - client/src/world/gainFx.ts
+      - client/src/world/camera.ts
+      - client/src/world/devCamera.ts
+      - client/src/world/enemyThumb.tsx
+      - client/src/world/GainEffects.tsx
+      - client/src/world/fieldScenery.ts
+      - client/src/world/fieldAmbient.ts
+      - client/src/world/useHudStage.ts
+      - client/src/world/HudIcons.tsx
+      - client/src/world/HudBarIcons.tsx
+      - client/src/world/StoryIcons.tsx
+      - client/src/world/DuelArt.tsx
+      - client/src/ui/floatCard.ts
+      - client/src/ui/PanelKit.tsx
+      - client/src/ui/smallFrames.ts
+      - client/src/ui/cornerClear.ts
+      - client/src/ui/regionCorners.ts
+      - client/src/ui/hoverCard.ts
+      - client/src/ui/LayoutPanel.tsx
+      - client/src/ui/scrollReveal.ts
+      - client/src/ui/SkillCardGlyphs.tsx
+      - client/src/ui/ItemIcon.tsx
+      - client/src/ui/GearIcon.tsx
+      - client/src/ui/EntryBackdrop.tsx
+      - client/src/ui/regionTheme.ts
+      - client/src/ui/heroFace.tsx
+      - client/src/ui/SkillIconView.tsx
+      - client/src/ui/MotionBits.tsx
+      - client/src/ui/CreateIcons.tsx
+      - client/src/ui/apFade.ts
+      - client/src/ui/WeaponIcon.tsx
+      - client/src/ui/BattleToolIcons.tsx
+      - client/src/screens/battle/useBoardViewport.ts
+    kind: number
+    note: 純呈現的檔（特效、色票、動畫、版面、相機、圖示、浮動卡位置）。
+
+  # ======================================================================== 前端：玩法數值（要搬）
+  - id: ts-flash-fallback
+    class: config
+    status: todo
+    files: client/src/run/flash.ts
+    context: 'FALLBACK|COMPLETE_BONUS_PERMILLE'
+    kind: number
+    note: 閃現規則的前端後備值與完整技能加成（伺服器沒給時用；後端 content 已有）。
+  - id: ts-slot-limits
+    class: config
+    status: todo
+    files: client/src/run/flow.ts
+    context: 'SLOT_LIMITS'
+    note: 技能欄上限（後端規則已有，前端重寫一份）。
+  - id: ts-source-max
+    class: config
+    status: todo
+    files: client/src/ui/SkillCardView.tsx
+    owner: SOURCE_MAX
+    note: 源力上限 3（core.yaml source_max 的前端副本）。
+  - id: ts-attr-base
+    class: scale
+    status: todo
+    files: client/src/run/AttributeAllocator.tsx
+    kind: number
+    value: '10'
+    note: 屬性基礎值的後備 ?? 10（量類）。
+  - id: ts-vfx-damage-tiers
+    class: config
+    status: todo
+    files: [client/src/battle/impact.ts, client/src/battle/vfx.ts]
+    owner: [TIER_PERMILLE, HEAVY_HIT_PERMILLE]
+    note: 保守：受擊頓格、重擊特效的失血門檻（‰）；是呈現用的門檻，PM 可改判 layout。
+  - id: ts-arena-defaults
+    class: config
+    status: todo
+    files: [client/src/screens/GearScreen.tsx, client/src/workshop/tryout.ts]
+    kind: number
+    context: 'max_rounds'
+    note: 木樁、試招的回合上限後備 ?? 30。
+  - id: ts-start-keywords
+    class: config
+    status: todo
+    files: client/src/run/StartPicker.tsx
+    kind: number
+    note: 開局關鍵字數的後備 ?? 2 與「至少 2 個」判斷。
+  - id: ts-affix-duplicate
+    class: config
+    status: todo
+    files: client/src/gear/affixStatus.ts
+    kind: number
+    note: 同詞條重複的判斷（2 條）；後端 item_budget 規則的前端副本。
+  - id: ts-walk-max
+    class: config
+    status: todo
+    files: client/src/world/fieldModel.ts
+    owner: WALK_MAX
+    note: 一次 walk 最多幾格的後備（伺服器 walk_max_steps）。
+  - id: ts-bag-size
+    class: config
+    status: todo
+    files: client/src/world/bagGrid.ts
+    owner: [BAG_COLS, BAG_ROWS]
+    note: 保守：背包格數 6×5 的後備（伺服器 slots_max）。
+  - id: ts-crystal-tier
+    class: config
+    status: todo
+    files: client/src/ui/statusCard.ts
+    context: 'const CRYSTAL_SURGE_TIER'
+
+    note: 保守：狀態 id → 層級的對照（應由狀態資料帶）。
+  - id: ts-day-phase-hours
+    class: config
+    status: todo
+    files: client/src/world/hud.ts
+    kind: number
+    value: ['11', '18', '21', '24']
+    context: '\bh\b'
+    note: 保守：早／午／晚／夜的鐘點分界（11、18、21 點）。
+  - id: ts-tuning-presets
+    class: config
+    status: todo
+    kind: number
+    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
+            client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx,
+            client/src/ui/workshop/ToolPanels.tsx]
+    context: 'seeds|battles|SMALL_SAMPLE|MAX_MAPS|BUDGET_SCALE_MAX|MAX_GROUP|250|\[1, 2, 3'
+    note: 數值工坊的預設種子數、場數、上限、階級與 AP 選項（工坊設定；部分是伺服器上限的副本）。
+
+  # ======================================================================== 前端：常數
+  - id: ts-http-status
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    value: ['401', '403', '404', '409', '422', '429', '500', '503']
+    note: HTTP 狀態碼。
+  - id: ts-permille-conversion
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    value: ['10', '100', '1000']
+    slot: ['op:/', 'op:*', 'cmp', 'min()', '?:', '']
+    note: ‰、%、秒↔毫秒換算（÷10、×100、<1000）；‰ 的 1000 本身。
+  - id: ts-math
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    slot: ['op:**', 'op:%', 'op:/', 'imul()', 'slice()']
+    note: 數學運算（平方、取餘、對半、雜湊、取前幾個字元）。
+  - id: ts-hash
+    class: const
+    status: done
+    lang: ts
+    files: [client/src/run/flow.ts, client/src/run/lookOptions.ts, client/src/screens/StartScreen.tsx]
+    owner: [mulberry32, next, soft, randomSeed]
+    note: 前端亂數、雜湊常數。
+  - id: ts-test-fixtures
+    class: const
+    status: done
+    files: client/src/battle/testFixtures.ts
+    note: 測試用的假戰場（不出貨）。
+  - id: ts-input-limits
+    class: const
+    status: done
+    lang: ts
+    owner: [USERNAME_MAX, PASSWORD_MAX, NOTE_MAX, PLAYER_TEXT_MAX, CITE_MAX, NAME_MAX, BUBBLE_MAX]
+    note: 輸入、顯示長度上限（帳號、筆記、對話）；和後端重複的見報告待決。
+  - id: ts-input-maxlength
+    class: const
+    status: done
+    lang: ts
+    slot: 'attr=maxLength'
+    note: 輸入框長度上限。
+  - id: ts-small-logic
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/battle/composite.ts, client/src/battle/infusion.ts, client/src/battle/log.ts,
+            client/src/battle/units.ts, client/src/battle/pathPreview.ts, client/src/battle/bossPhase.ts,
+            client/src/battle/gamble.ts, client/src/battle/previewText.ts, client/src/battle/reactions.ts,
+            client/src/battle/feedback.ts, client/src/battle/specials.ts, client/src/battle/geometry.ts,
+            client/src/battle/facing.ts, client/src/battle/logGroups.ts, client/src/battle/zones.ts,
+            client/src/run/flashChoice.ts, client/src/run/gearOffer.ts, client/src/run/llmFlow.ts,
+            client/src/gear/gearDraft.ts, client/src/ui/ruleText.tsx, client/src/ui/keepWords.tsx,
+            client/src/ui/imeEnter.ts, client/src/ui/panelTabRules.ts, client/src/ui/waitNarration.ts,
+            client/src/world/board.ts, client/src/world/boardTabs.ts, client/src/world/league.ts,
+            client/src/world/notes.ts, client/src/world/narration.ts, client/src/world/fieldPeople.ts,
+            client/src/world/fieldTiles.ts, client/src/world/regionModel.ts, client/src/world/solutionGrid.ts,
+            client/src/world/story.ts, client/src/world/WorldField.tsx, client/src/world/hireSkills.ts,
+            client/src/world/ChroniclePanel.tsx, client/src/world/EventCard.tsx, client/src/world/AtlasMap.tsx,
+            client/src/world/NotesPanel.tsx, client/src/world/SeasonTimeline.tsx, client/src/tuning/model.ts,
+            client/src/tuning/DraftPanel.tsx, client/src/tuning/ratioModel.ts, client/src/tuning/RatioView.tsx,
+            client/src/tuning/skillModel.ts, client/src/ui/workshop/FieldEditor.tsx, client/src/App.tsx]
+    note: 程式邏輯（排序權重、正規表示式群組、單位換算、雜湊、重試次數、顯示用的位數與字數）。
+
+  # ======================================================================== 前端：排版（其餘 UI 檔）
+  - id: ts-ui-layout-files
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/world/hud.ts, client/src/world/opening.ts, client/src/world/WorldHud.tsx,
+            client/src/world/bagGrid.ts,
+
+            client/src/world/MapStage.tsx, client/src/world/mapView.ts, client/src/world/BoardPanes.tsx,
+            client/src/world/WishPanel.tsx, client/src/world/WorkshopPanel.tsx, client/src/world/SolutionTile.tsx,
+            client/src/world/StoryParts.tsx, client/src/world/RangeParts.tsx, client/src/world/QuestLog.tsx,
+            client/src/world/PartyShadowPanel.tsx, client/src/world/PartyIntroDialog.tsx,
+            client/src/world/MailPanel.tsx, client/src/world/FieldHeads.tsx, client/src/world/WorldGrowth.tsx,
+            client/src/world/SmithyPanel.tsx, client/src/world/LookChange.tsx, client/src/world/RangeScreen.tsx,
+            client/src/world/PartyPanel.tsx, client/src/world/OpeningDialog.tsx,
+            client/src/world/GrowthLookRows.tsx, client/src/world/RangeClassPick.tsx, client/src/world/NpcPanel.tsx,
+            client/src/world/FieldPanels.tsx, client/src/world/WorldCharacterPicker.tsx,
+            client/src/world/mailModel.ts, client/src/world/pregen.ts,
+            client/src/battle/logRoom.ts, client/src/battle/logToasts.ts, client/src/battle/opHints.ts,
+            client/src/battle/playback.ts, client/src/battle/skillSequence.ts, client/src/battle/skillTray.ts,
+            client/src/battle/targeting.ts, client/src/battle/impact.ts, client/src/battle/vfx.ts,
+            client/src/battle/runes.ts, client/src/battle/legend.ts,
+            client/src/run/FlashChoiceParts.tsx, client/src/run/LookPicker.tsx, client/src/run/raceFace.ts,
+            client/src/run/RaceOriginPicker.tsx, client/src/run/RunHeroPanel.tsx,
+            client/src/run/LoadoutEditor.tsx, client/src/run/TestModePanel.tsx, client/src/run/FlashSection.tsx,
+            client/src/screens/battle/usePlayback.ts, client/src/screens/WorldScreen.tsx,
+            client/src/screens/RunScreen.tsx, client/src/screens/WorkshopScreen.tsx,
+            client/src/screens/StartScreen.tsx, client/src/screens/BattleScreen.tsx,
+            client/src/screens/RunFlashPending.tsx, client/src/tuning/SimPanel.tsx, client/src/tuning/SkillForm.tsx,
+            client/src/tuning/RatioView.tsx, client/src/tuning/SkillIdsEditor.tsx, client/src/tuning/SkillList.tsx,
+            client/src/tuning/FieldForm.tsx, client/src/ui/*, client/src/workshop/state.ts]
+    note: UI 元件的尺寸、斷點、顯示筆數上限、延遲、縮放（純呈現）。
+
+  # ======================================================================== 前端：說明文字
+  - id: ts-text-steps
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    text: '^\d+(\. |　)'
+    note: 步驟編號（「1. 選招」「1　寄給誰」）。
+  - id: ts-text-ordinal-labels
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    text: '戒指 \d|^第 \d 名$|^選 1$|^選 1，|\$\d'
+    note: 欄位序號（戒指 1／2）、名次、正規表示式的群組參照。
+  - id: ts-text-px
+    class: layout
+    status: done
+    lang: ts
+    kind: text
+    text: '\d+px'
+    note: 說明裡的像素尺寸。
+  - id: ts-text-unit-count
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    text: '^(\$\{[^}]*\})?(買|使用|少寄|多寄|少|多) 1 個|至少 1 個（要拿掉|例 ?[12]d6|例：1d6|^[−＋]1 級$'
+
+    note: 一次加減一個的按鈕文字、骰子寫法範例（2d6）。
+  - id: ts-ui-text
+    class: text
+    status: todo
+    lang: ts
+    kind: text
+    note: 玩家（或工坊使用者）看得到的說明、提示、錯誤訊息裡寫死的規則數字（技能欄、AP、次數、上限、秒數、場數）。
+    files:
+      - client/src/battle/composite.ts
+      - client/src/battle/legend.ts
+      - client/src/battle/objective.ts
+      - client/src/battle/prep.ts
+      - client/src/battle/race.ts
+      - client/src/battle/skillTray.ts
+      - client/src/battle/summonControl.ts
+      - client/src/battle/targeting.ts
+      - client/src/gear/gearDraft.ts
+      - client/src/run/CampfireSkillCare.tsx
+      - client/src/run/FlashChooser.tsx
+      - client/src/run/FlashSection.tsx
+      - client/src/run/RaceOriginPicker.tsx
+      - client/src/run/StartPicker.tsx
+      - client/src/run/flash.ts
+      - client/src/screens/RunCampfire.tsx
+      - client/src/screens/RunGearOffer.tsx
+      - client/src/screens/RunNewScreen.tsx
+      - client/src/screens/RunScreen.tsx
+      - client/src/screens/StartScreen.tsx
+      - client/src/tuning/DraftPanel.tsx
+      - client/src/tuning/FieldForm.tsx
+      - client/src/tuning/GroupPanel.tsx
+      - client/src/tuning/RatioView.tsx
+      - client/src/tuning/ScaleNotice.tsx
+      - client/src/tuning/SimPanel.tsx
+      - client/src/tuning/SkillForm.tsx
+      - client/src/tuning/SkillIdsEditor.tsx
+      - client/src/tuning/model.ts
+      - client/src/tuning/ratioModel.ts
+      - client/src/tuning/skillModel.ts
+      - client/src/ui/LayoutPanel.tsx
+      - client/src/ui/StatusCardParts.tsx
+      - client/src/ui/SummonPanel.tsx
+      - client/src/ui/gear/CustomItemForm.tsx
+      - client/src/ui/skillCost.ts
+      - client/src/ui/statusCard.ts
+      - client/src/ui/workshop/CheckPanel.tsx
+      - client/src/ui/workshop/FieldEditor.tsx
+      - client/src/ui/workshop/TryoutPanel.tsx
+      - client/src/world/BagScreen.tsx
+      - client/src/world/BoardPanes.tsx
+      - client/src/world/EconomyPanel.tsx
+      - client/src/world/EventCard.tsx
+      - client/src/world/MailPanel.tsx
+      - client/src/world/OpeningDialog.tsx
+      - client/src/world/SmithyPanel.tsx
+      - client/src/world/WorldGrowth.tsx
+      - client/src/world/WorldPanel.tsx
+      - client/src/world/bagView.ts
+      - client/src/world/growthPanel.ts
+      - client/src/world/pregen.ts
+      - client/src/world/questPanel.ts
+      - client/src/world/range.ts
+      - client/src/world/wish.ts
+
+  # ======================================================================== 後端：整個資料夾或檔案
+  - id: py-shared-rng
+    class: const
+    status: done
+    files: [src/trpg/shared/rng.py, src/trpg/shared/ids.py, src/trpg/shared/tokens.py]
+    note: 亂數演算法（xoshiro128**）、ID 與權杖格式的常數。
+  - id: py-cli
+    class: const
+    status: done
+    files: src/trpg/cli/*
+    note: 開發用 CLI（欄寬、說明、模擬指令的預設場數與種子）；不影響遊戲本身。
+  - id: py-sim
+    class: const
+    status: done
+    files: src/trpg/sim/*
+    note: 保守待決：模擬與平衡報表工具（場數、報表門檻、目標區間）；不影響遊戲本身，PM 可改判 config。
+
+  # ======================================================================== 後端：通用常數
+  - id: py-http-status
+    class: const
+    status: done
+    lang: py
+    kind: number
+    slot: ['*(status_code)', 'HTTPException(#0)', 'Response(status_code)']
+    note: HTTP 狀態碼。
+  - id: py-http-thresholds
+    class: const
+    status: done
+    lang: py
+    kind: number
+    owner: ['*ERROR_MIN*', '*_STATUSES', 'ERROR_STATUS']
+    note: HTTP 狀態碼的分界（4xx、5xx）與錯誤對照表。
+  - id: py-permille-1000
+
+    class: const
+    status: done
+    lang: py
+    kind: number
+    value: ['1000', '1000.0']
+    note: ‰ 的 1 倍（1000＝100%）、‰ 換算、千分比上限。
+  - id: py-percent-conversion
+    class: const
+    status: done
+    lang: py
+    kind: number
+    value: ['10', '100']
+    context: '(//|/|\*|%) ?(10|100)\b|\b(10|100) ?(//|\*)|permille|‰|pct|percent'
+    note: ‰↔%（÷10）、百分比（×100）換算。
+  - id: py-string-length
+    class: const
+    status: done
+    lang: py
+    kind: number
+    slot: ['Field(max_length)', 'Field(min_length)']
+    ann: ['str*', '*str | None*', 'Annotated[str*']
+    note: 字串欄位的長度上限（名稱、說明、ID）。
+  - id: py-d20
+    class: const
+    status: done
+    lang: py
+    kind: number
+    value: '20'
+    context: 'd20|natural|NATURAL|crit|CRIT|自然|sides'
+    note: d20 的面數、自然 20。
+  - id: py-math-half
+    class: const
+    status: done
+    lang: py
+    kind: number
+    value: ['2', '0.5', '2.0']
+    context: '/ ?2\b|// ?2\b|\*\* ?2\b|% ?2\b|\* ?0\.5|Fraction\('
+    note: 對半、平方、奇偶（數學運算）。
+  - id: py-json-format
+    class: const
+    status: done
+    lang: py
+    kind: number
+    slot: ['dumps(indent)', 'dump(indent)', 'token_hex(#0)', 'token_urlsafe(#0)', 'round(#1)', 'percentile(#1)',
+           'ljust(#0)', 'rjust(#0)', 'pad(#1)', 'zfill(#0)']
+    note: 格式化（JSON 縮排、小數位數、補空白、權杖長度）。
+  - id: py-index-and-regex-groups
+    class: const
+    status: done
+    lang: py
+    kind: number
+    slot: ['index', 'group(#0)', 'enumerate(start)', 'combinations(#1)', 'product(repeat)', 'divmod(#1)',
+           'int(#1)', 'chr(#0)', 'date(#0)', 'join(timeout)', 'join(#0)', 'Query(max_length)', 'Query(le)',
+           'safe_dump(width)', 'lru_cache(maxsize)', 'blake2b(digest_size)', 'randbits(#0)', 'randbelow(#0)']
+    note: 下標、正規表示式群組、配對、進位、日期起點、執行緒等待、查詢參數長度、雜湊長度。
+  - id: py-slices-and-digests
+    class: const
+    status: done
+    lang: py
+    kind: number
+    context: 'digest|hexdigest|sha256|from_bytes|\[:-?\d+\]|\[-?\d+:\]|\[\d+:\d+\]|\[::\d+\]|parents\[\d\]|<< ?64|2 ?\*\* ?(31|32|64)|0x[0-9A-Fa-f]+'
+    note: 字串切片、雜湊長度、種子位元數、路徑層數。
+  - id: py-cache-limits
+    class: const
+    status: done
+    lang: py
+    kind: number
+    owner: ['*CACHE*', 'MEMO_LIMIT', '_INDEX_LIMIT', '*_CACHE_SIZE', 'limit']
+    slot: ['=*', 'def:*']
+    note: 快取大小。
+  - id: py-time-units
+    class: const
+    status: done
+    lang: py
+    kind: number
+    value: ['60', '3600', '24', '59', '1970', '86400', '60.0']
+    context: '(\* ?60|60 ?\*|3600|// ?60|divmod|_s\b|seconds|minutes|hours|HOUR|DAY|_DAY|offset|date)'
+    note: 時間單位換算（秒、分、時、日）。
+  - id: py-roll-permille
+    class: const
+    status: done
+    lang: py
+    kind: number
+    slot: 'randint(#1)'
+    value: '999'
+    note: 擲 0～999 比千分比。
+  - id: py-ppm
+    class: const
+    status: done
+    lang: py
+    kind: number
+    value: ['1000000', '4294967295', '999', '1000003']
+    context: 'PPM|ppm|0xFFFFFFFF|\+ 999\) // 1000|_VARIANT_STEP|HIT_TABLE_SCALE'
+    note: 百萬分比、無號 32 位元上限、無條件進位、質數步長。
+  - id: py-pairs
+    class: const
+    status: done
+    lang: py
+    kind: number
+    owner: ['_PAIR', '_TWO', '_DUAL', '_SECOND_ELEMENT', 'e2', 'side', 'period', 'tiles', 'mark', 'n']
+    value: '2'
+    note: 「兩個」「第二個」「2 倍半徑＋1」這類結構常數。
+
+  # ======================================================================== 後端：量類（任何檔）
+  - id: py-scale-names
+    class: scale
+    status: todo
+    lang: py
+    kind: number
+    owner: ['max_hp', 'hp', '*_hp', 'hp_*', '*mana*', '*stamina*', 'armor_bonus', 'attack_bonus', 'flat',
+            'flat_*', '*_flat', '*flat_bonus', 'min_damage*', 'shield_break_lightning', 'shield_end_heal',
+            'shield_reflect', '*upkeep*', 'ability_mod_base', 'ability_mod_divisor', 'base_attribute',
+            'attribute_points_per_level', 'points_per_level', 'start_free_points', 'initiative_attr_*',
+            '*_heal', 'heal_flat', '_MAX_ATTR', 'DEFAULT_DEFENSE_BREAK', 'hp_per_*', 'hp_con_base',
+            'self_stamina_below']
+    not: {owner: ['*permille*', '*_per_point', '*_per_mana', 'flat_height']}
+
+    note: 量類欄位（HP、法力、耐力、護盾、固定加值、屬性）的預設值與上下限；X10 之後要跟 quantity_scale 走。
+  - id: py-scale-dict-keys
+    class: scale
+    status: todo
+    lang: py
+    kind: number
+    slot: ['{mana}', '{stamina}', '{hp}', '{max_hp}', '{flat}', '{flat_bonus}', '{shield_flat}', '{heal_flat}',
+           '*(mana)', '*(stamina)', '*(max_mana)', '*(max_hp)', '*(armor_bonus)', '*(stamina_regen)',
+           'ResourcePool(per_point)']
+    not: {context: '\bscale\b'}
+    note: 寫在程式裡的量類值（技能代價的法力、耐力；起始英雄、武器大類的 HP、法力、耐力、防禦）。
+  - id: py-scale-resource-base
+    class: scale
+    status: todo
+    files: src/trpg/content/rules.py
+    where: ResourceRules
+    owner: base
+    note: 法力／耐力上限的基礎值（量類）。
+
+
+  # ---------------------------------------------------- 後端 api：config
+  # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
+  - id: py-api-attribute-text-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/attribute_text.py
+    kind: number
+    where: ['<module>._EARLY_TIER']
+    note: 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
+  - id: py-api-flash-changes-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/flash_changes.py
+    kind: number
+    where: ['<module>._SHIELD_DEFAULT_DURATION']
+    note: 同上一條（api config）。
+  - id: py-api-gear-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/gear_schemas.py
+    kind: number
+    where: ['GearCustomItem']
+    note: 同上一條（api config）。
+  - id: py-api-llm-source-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/llm_source.py
+    kind: number
+    where: ['<module>.DEFAULT_ALERT_PERMILLE', '<module>.DEFAULT_PROBE_TIMEOUT_S']
+    note: 同上一條（api config）。
+  - id: py-api-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/schemas.py
+    kind: number
+    where: ['CreateBattleRequest']
+    note: 同上一條（api config）。
+  - id: py-api-tuning-objects-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/tuning/objects.py
+    kind: number
+    where:
+      - '_part_label'
+      - '_part_limits'
+      - '_part_skipped'
+      - '_schema_limits'
+      - '_sk5_limits'
+      - 'field_limits'
+      - 'skill_facets'
+    note: 同上一條（api config）。
+  - id: py-api-tuning-ratios-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/tuning/ratios.py
+    kind: number
+    where: ['<module>.DEFAULT_SEEDS', '<module>.MAX_WORK']
+    note: 同上一條（api config）。
+  - id: py-api-tuning-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/tuning/schemas.py
+    kind: number
+    where:
+      - '<module>.MAX_RATIO_SEEDS'
+      - '<module>.SMALL_SAMPLE'
+      - 'TuningApplyIn'
+      - 'TuningBudgetIn'
+      - 'TuningDraftIn'
+      - 'TuningRatioPlanIn'
+      - 'TuningSimOptions'
+      - 'TuningSimRequest'
+    note: 同上一條（api config）。
+  - id: py-api-tuning-service-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/tuning/service.py
+    kind: number
+    where: ['<module>.DEFAULT_MAP_SEEDS', '<module>.DEFAULT_SIM_SEEDS', '<module>.MAX_SIM_MAPS']
+    note: 同上一條（api config）。
+  - id: py-api-tuning-sim-jobs-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/tuning/sim_jobs.py
+    kind: number
+    where: ['<module>.MAX_BATTLES']
+    note: 同上一條（api config）。
+  - id: py-api-tuning-skills-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/tuning/skills.py
+    kind: number
+    where:
+      - '<module>.GROUP_PRESETS'
+      - '<module>.MAX_GROUP'
+      - '<module>._SCALAR_LIMITS'
+      - '_matches'
+      - '_round_div'
+      - 'permille'
+    note: 同上一條（api config）。
+  - id: py-api-workshop-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/workshop_schemas.py
+    kind: number
+    where: ['WorkshopRandomRequest']
+    note: 同上一條（api config）。
+  - id: py-api-world-field-people-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_field_people.py
+    kind: number
+    where: ['<module>.TOWN_FRIENDS_MAX']
+    note: 同上一條（api config）。
+  - id: py-api-world-field-things-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_field_things.py
+    kind: number
+    where: ['<module>.FOOTPRINT_FRIENDS_MAX', '<module>.PRINTS_MAX']
+    note: 同上一條（api config）。
+  - id: py-api-world-newcomer-view-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_newcomer_view.py
+    kind: number
+    where: ['_allocate_lesson']
+    note: 同上一條（api config）。
+  - id: py-api-world-party-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_party_schemas.py
+    kind: number
+    where: ['PartyView']
+    note: 同上一條（api config）。
+  - id: py-api-world-party-view-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_party_view.py
+    kind: number
+    where: ['<module>.REPORTS_SHOWN']
+    note: 同上一條（api config）。
+  - id: py-api-world-pregen-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_pregen.py
+    kind: number
+    where:
+      - '<module>.FLASH_LIMIT'
+      - '<module>.QUEUE_LIMIT'
+      - '<module>.STORY_LIMIT'
+      - '<module>.STORY_WAIT_SECONDS'
+      - '<module>.WAIT_SECONDS'
+      - '<module>._POLL_SECONDS'
+    note: 同上一條（api config）。
+  - id: py-api-world-range-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_range_schemas.py
+    kind: number
+    where: ['RangeTrialRequest']
+    note: 同上一條（api config）。
+  - id: py-api-world-story-schemas-config-number
+    class: config
+    status: todo
+    files: src/trpg/api/world_story_schemas.py
+    kind: number
+    where: ['<module>.CARE_CITE_MAX']
+    note: 同上一條（api config）。
+
+  # ---------------------------------------------------- 後端 content：config
+  # 保守：content schema 的預設值、上下限與驗證門檻（應由 content／工坊設定帶；上下限要跟著資料走）。
+  - id: py-content-battle-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/battle.py
+    kind: number
+    where:
+      - '<module>.GIANT_FOOTPRINTS'
+      - '<module>.PHASES_MAX'
+      - '<module>.PHASES_MIN'
+      - '<module>._MAX_DICE_COUNT'
+      - '<module>._MAX_DURATION_BONUS'
+      - '<module>.max_groups'
+      - '<module>.per_group'
+      - 'ArmorBreak'
+      - 'BlockBonus'
+      - 'BossPhase'
+      - 'CreatureLook'
+      - 'DeathSurfaceSpec'
+      - 'DollLook'
+      - 'Entangle'
+      - 'FormationSpec'
+      - 'HpBelowTrigger'
+      - 'OffhandDef'
+      - 'OpeningStatus'
+      - 'PhaseGrowSurface'
+      - 'PhaseSpawn'
+      - 'PhaseTile'
+      - 'RangeMod'
+      - 'RoundTrigger'
+      - 'ShareDamageSpec'
+      - 'StatusDef'
+      - 'Steady'
+      - 'SummonDetonate'
+      - 'SummonHitRule'
+      - 'SummonPulse'
+      - 'SummonSnare'
+      - 'TagDownTrigger'
+      - 'TotemSpec'
+      - 'UnitTemplate'
+      - 'WardSpec'
+      - 'WeaponDef'
+    note: 保守：content schema 的預設值、上下限與驗證門檻（應由 content／工坊設定帶；上下限要跟著資料走）。
+  - id: py-content-composer-rules-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/composer_rules.py
+    kind: number
+    where:
+      - '<module>._MIN_SIDES'
+      - 'ComposerRules._check'
+      - 'CostRules._check_self_status_duration'
+      - 'CostStep'
+      - 'LlmCostRules'
+      - 'LlmTopicRules'
+      - 'RecipeSummonUnit'
+      - 'StructureRules'
+      - 'WhiteboardRules'
+    note: 同上一條（content config）。
+  - id: py-content-enemy-moves-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/enemy_moves.py
+    kind: number
+    where: ['<module>.']
+    note: 同上一條（content config）。
+  - id: py-content-environment-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/environment.py
+    kind: number
+    where:
+      - 'AiProfile'
+      - 'AiProfileTable'
+      - 'AiWeights'
+      - 'BasicActionAiRules'
+      - 'ExplosionDef'
+      - 'FormAiRules'
+      - 'GambleAiRules'
+      - 'OrderBonuses'
+      - 'ReactionDef'
+      - 'RewriteAiRules'
+      - 'RunAiRules'
+      - 'RuneAiRules'
+      - 'SelfCostAiRules'
+      - 'SpillDef'
+      - 'StanceAiRules'
+      - 'SummonAiRules'
+      - 'SurfaceCheck'
+      - 'TerrainAiRules'
+      - 'TrapAiRules'
+      - 'WeatherDef._mods'
+      - 'ZoneAiRules'
+    note: 同上一條（content config）。
+  - id: py-content-equipment-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/equipment.py
+    kind: number
+    where:
+      - '<module>.MIN_COMBO_N'
+      - 'AttackAffix'
+      - 'ChargeAffix'
+      - 'CostAffix'
+      - 'EquipmentCaps'
+      - 'EquipmentRules'
+      - 'ItemDef'
+      - 'ReactionAffix'
+      - 'TriggerAffix'
+      - 'WeaponTraitAffix'
+    note: 同上一條（content config）。
+  - id: py-content-fields-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/fields.py
+    kind: number
+    where:
+      - '<module>.DECOR_FIXED_SIZE'
+      - '<module>.LAYOUT_SIZES'
+      - '<module>.STONES_PER_REGION'
+      - '<module>._MAX_SIZE'
+      - '<module>._MIN_SIZE'
+    note: 同上一條（content config）。
+  - id: py-content-flash-templates-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/flash_templates.py
+    kind: number
+    where:
+      - '<module>._MAX_FORM_MAGNITUDE'
+      - 'CompleteSkillRules'
+      - 'CostCut'
+      - 'ExtraMajorTemplate'
+      - 'FlashPricing'
+      - 'FlashRules'
+      - 'FlashTemplate'
+      - 'PriceRule'
+      - 'TransformTemplate'
+    note: 同上一條（content config）。
+  - id: py-content-forms-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/forms.py
+    kind: number
+    where:
+      - '<module>.MAX_MAGNITUDE'
+      - '<module>._MAX_ATTRS'
+      - '<module>._MAX_MELEE_RANGE'
+      - 'EntryBurst'
+      - 'EntryHealAdjacent'
+      - 'FormEffects'
+      - 'FormEntry'
+      - 'FormTable'
+      - 'NaturalCharge'
+      - 'NaturalTraits'
+      - 'NaturalWeapon'
+      - 'TakenMod'
+    note: 同上一條（content config）。
+  - id: py-content-item-budget-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/item_budget.py
+    kind: number
+    where: ['ItemGenRules', 'RarityRule']
+    note: 同上一條（content config）。
+  - id: py-content-loader-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/loader.py
+    kind: number
+    where: ['<module>._MAX_REPORTED_ERRORS']
+    note: 同上一條（content config）。
+  - id: py-content-maps-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/maps.py
+    kind: number
+    where: ['<module>.MAX_HEIGHT', '<module>._MAX_SIZE', 'TileChange']
+    note: 同上一條（content config）。
+  - id: py-content-parts-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/parts.py
+    kind: number
+    where:
+      - '<module>.PARTS_MAX'
+      - '<module>.PARTS_MIN'
+      - '<module>.PART_HP_TOTAL_MAX'
+      - 'BossPart'
+      - 'ControlBreak'
+    note: 同上一條（content config）。
+  - id: py-content-races-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/races.py
+    kind: number
+    where:
+      - '<module>.MAX_RACE_EFFECTS'
+      - '<module>.MAX_RACE_USES'
+      - '<module>.MAX_RESIST_PERMILLE'
+      - '<module>.MAX_SIGHT_REDUCTION_PERMILLE'
+      - '<module>.ORIGIN_TAGLINE_MAX'
+      - '<module>.RACE_BLURB_MAX'
+      - '<module>._AMOUNT_MAX'
+      - 'RaceEffect'
+      - 'RacePassive'
+    note: 同上一條（content config）。
+  - id: py-content-roguelite-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/roguelite.py
+    kind: number
+    where: ['CandidateSettings', 'StartHero', 'StartRules', '_default_heroes']
+    note: 同上一條（content config）。
+  - id: py-content-rule-changes-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/rule_changes.py
+    kind: number
+    where: ['<module>._MAX_DURATION']
+    note: 同上一條（content config）。
+  - id: py-content-rules-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/rules.py
+    kind: number
+    where:
+      - '<module>._DECIMAL_PRECISION'
+      - '<module>._ROLE_HP_RANGE'
+      - 'AttributePerks'
+      - 'CoreRules'
+      - 'CoreRules._check_tier_budget'
+      - 'ResourceRules'
+      - 'SummonGrowth'
+      - 'SummonInfusion'
+      - 'SummonTrait'
+      - 'WindRules'
+      - 'compute_hit_thresholds'
+    note: 同上一條（content config）。
+  - id: py-content-skill-evolution-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skill_evolution.py
+    kind: number
+    where: ['EvolutionTable', 'EvolutionTemplate', 'SummonEvolution']
+    note: 同上一條（content config）。
+  - id: py-content-skill-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skill_pick.py
+    kind: number
+    where: ['PickPoolRules', 'PickWeights', 'WishTagRules']
+    note: 同上一條（content config）。
+  - id: py-content-skill-rules-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skill_rules.py
+    kind: number
+    where:
+      - '<module>._PERMILLE_MAX'
+      - 'BudgetRules'
+      - 'BudgetRules._check'
+      - 'CharacterTierRules'
+      - 'CostAllowance'
+      - 'FlashCostRules'
+      - 'FlashTransformRules'
+      - 'ModifierBudget'
+      - 'RarityLimit'
+      - 'RetierGrowthRules'
+      - 'SecondaryRules'
+      - 'SynergyRule'
+    note: 同上一條（content config）。
+  - id: py-content-skill-scaling-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skill_scaling.py
+    kind: number
+    where: ['SkillScalingRules', 'ThemeCombo']
+    note: 同上一條（content config）。
+  - id: py-content-skill-triggers-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skill_triggers.py
+    kind: number
+    where: ['SkillTriggerDef._check']
+    note: 同上一條（content config）。
+  - id: py-content-skills-conditions-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/conditions.py
+    kind: number
+    where: ['ConditionSpec']
+    note: 同上一條（content config）。
+  - id: py-content-skills-constants-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/constants.py
+    kind: number
+    where:
+      - '<module>.MAX_AP_COST'
+      - '<module>.MAX_EFFECTS'
+      - '<module>.MAX_GRANT_DURATION'
+      - '<module>.MAX_ON_KILL_EFFECTS'
+      - '<module>.MAX_REFUND_AP'
+      - '<module>.MAX_SUMMON_COUNT'
+      - '<module>.MAX_VARIANTS'
+      - '<module>.MIN_SKILL_CRIT_RANGE'
+      - '<module>._MAX_BRANCH_EFFECTS'
+      - '<module>._MAX_CONSUME_THEN'
+      - '<module>._MAX_COOLDOWN'
+      - '<module>._MAX_COOLDOWN_RESTORE'
+      - '<module>._MAX_DISPLACE'
+      - '<module>._MAX_FLAT_BONUS'
+      - '<module>._MAX_MASTERY_MODIFIERS'
+      - '<module>._MAX_MODIFIERS'
+      - '<module>._MAX_MULTIPLIER_PERMILLE'
+      - '<module>._MAX_ON_HIT_EFFECTS'
+      - '<module>._MAX_VARIANT_REPLACEMENTS'
+      - '<module>._MAX_ZONE_EFFECTS'
+    note: 同上一條（content config）。
+  - id: py-content-skills-effects-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/effects.py
+    kind: number
+    where: ['EffectSpec']
+    note: 同上一條（content config）。
+  - id: py-content-skills-modifiers-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/modifiers.py
+    kind: number
+    where: ['ModifierChange', 'ModifierChange._check_tags', 'ModifierSpec']
+    note: 同上一條（content config）。
+  - id: py-content-skills-reactions-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/reactions.py
+    kind: number
+    where: ['TrapSpec']
+    note: 同上一條（content config）。
+  - id: py-content-skills-skill-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/skill.py
+    kind: number
+    where: ['<module>._MIN_BESIDE_POWER', 'SkillDef']
+    note: 同上一條（content config）。
+  - id: py-content-skills-specs-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/skills/specs.py
+    kind: number
+    where: ['SelfStatusCost', 'SkillCost', 'TriggerSpec', 'TriggerSpec._check']
+    note: 同上一條（content config）。
+  - id: py-content-stacks-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/stacks.py
+    kind: number
+    where: ['<module>._MAX_BACKLASH', 'GainSpec', 'OverloadSpec', 'StackDef']
+    note: 同上一條（content config）。
+  - id: py-content-ui-wait-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/ui_wait.py
+    kind: number
+    where: ['<module>.Line', 'WaitNarration', 'WaitSceneLines']
+    note: 同上一條（content config）。
+  - id: py-content-workshop-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/workshop.py
+    kind: number
+    where: ['WorkshopRules']
+    note: 同上一條（content config）。
+  - id: py-content-world-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world.py
+    kind: number
+    where: ['NamingRules', 'StyleEvalRules', 'WorldTermRules']
+    note: 同上一條（content config）。
+  - id: py-content-world-crafting-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_crafting.py
+    kind: number
+    where: ['CraftRules', 'EnhanceRules', 'HiddenRecipe', 'ResonanceRules']
+    note: 同上一條（content config）。
+  - id: py-content-world-economy-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_economy.py
+    kind: number
+    where:
+      - '<module>._STACKS'
+      - 'BattleGold'
+      - 'EconomyRules'
+      - 'ShopAffinity'
+      - 'WeeklyStock'
+      - 'WorldItemDef'
+    note: 同上一條（content config）。
+  - id: py-content-world-encounters-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_encounters.py
+    kind: number
+    where: ['<module>.MAX_GROUP_SIZE', '<module>.MAX_THIRD_SIZE', 'ArmorMod', 'ArmorMods']
+    note: 同上一條（content config）。
+  - id: py-content-world-enemies-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_enemies.py
+    kind: number
+    where: ['EliteAffixDef']
+    note: 同上一條（content config）。
+  - id: py-content-world-events-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_events.py
+    kind: number
+    where: ['<module>._MAX_SITUATION_ATTRIBUTES', 'NpcPortrait', 'SolutionDef']
+    note: 同上一條（content config）。
+  - id: py-content-world-loot-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_loot.py
+    kind: number
+    where: ['MainHandMix']
+    note: 同上一條（content config）。
+  - id: py-content-world-map-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_map.py
+    kind: number
+    where: ['<module>.MAX_LOCATIONS', '<module>.MIN_LOCATIONS', 'MapPos']
+    note: 同上一條（content config）。
+  - id: py-content-world-mercenaries-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_mercenaries.py
+    kind: number
+    where: ['<module>.MIN_PER_ROLE', 'CompanionDef', 'MercenaryTable']
+    note: 同上一條（content config）。
+  - id: py-content-world-narration-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_narration.py
+    kind: number
+    where:
+      - '<module>.ACTOR_MAX_CHARS'
+      - '<module>.MORE_MAX_CHARS'
+      - '<module>.MOTIVE_MAX_CHARS'
+      - '<module>.STORY_REFS_MAX'
+      - '<module>.STORY_SENTENCES_MAX'
+      - '<module>.TEXT_MAX_CHARS'
+    note: 同上一條（content config）。
+  - id: py-content-world-newcomer-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_newcomer.py
+    kind: number
+    where: ['<module>.DEMOS_PER_CLASS', 'NewcomerContent', 'RangeContent']
+    note: 同上一條（content config）。
+  - id: py-content-world-oaths-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_oaths.py
+    kind: number
+    where: ['<module>.OATH_TEXT_LIMIT', 'OathCheck', 'OathTable']
+    note: 同上一條（content config）。
+  - id: py-content-world-quests-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_quests.py
+    kind: number
+    where:
+      - '<module>.OFFER_SIZE'
+      - '<module>._MAX_DELTA'
+      - '<module>._MAX_LEVEL'
+      - 'AffinityRules'
+      - 'AnyOf'
+      - 'OfferMix'
+      - 'StepReward'
+    note: 同上一條（content config）。
+  - id: py-content-world-rules-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_rules.py
+    kind: number
+    where:
+      - '<module>.DEFAULT_SHARES'
+      - '<module>.DEFAULT_WEEK_DAYS'
+      - 'BattleRules'
+      - 'CalendarRules'
+      - 'EnemyGrowthRules'
+      - 'FieldRules'
+      - 'HeroGrowthRules'
+      - 'OpportunityRules'
+      - 'WishRules'
+      - 'XpRules'
+    note: 同上一條（content config）。
+  - id: py-content-world-season-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_season.py
+    kind: number
+    where:
+      - 'BossScore'
+      - 'BossUnlock'
+      - 'DailyGoalRules'
+      - 'LeagueRules'
+      - 'SeasonBossDef'
+      - 'ShopPriceEffect'
+      - 'WorldEventDef'
+    note: 同上一條（content config）。
+  - id: py-content-world-situations-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_situations.py
+    kind: number
+    where:
+      - '<module>.ALIAS_MAX_CHARS'
+      - '<module>.ALIAS_MIN_CHARS'
+      - '<module>.CARE_LIMIT'
+      - '<module>.DC_SHIFT_LIMIT'
+      - '<module>.FACT_MAX_CHARS'
+      - '<module>.MAX_CARE_CLAIMS'
+      - '<module>.PLAYER_TEXT_LIMIT'
+      - '<module>._DANGER_LEVELS'
+      - '<module>._MAX_ATTRIBUTES'
+      - '<module>._MAX_METHODS'
+      - '<module>._MIN_ATTRIBUTES'
+      - 'CheckRules'
+      - 'DangerDef'
+      - 'MethodDef'
+      - 'SituationBudget'
+      - 'SituationTemplateDef'
+    note: 同上一條（content config）。
+  - id: py-content-world-trade-config-number
+    class: config
+    status: todo
+    files: src/trpg/content/world_trade.py
+    kind: number
+    where: ['MailRules', 'TradeAudit', 'TradeCommon']
+    note: 同上一條（content config）。
+
+  # ---------------------------------------------------- 後端 engine：config
+  # 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
+  - id: py-engine-battle-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/battle.py
+    kind: number
+    where: ['<module>.OPENING_STATUS_MAX_DURATION']
+    note: 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
+  - id: py-engine-effects-handlers-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/effects/handlers.py
+    kind: number
+    where: ['_damage_rolls']
+    note: 同上一條（engine config）。
+  - id: py-engine-effects-models-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/effects/models.py
+    kind: number
+    where: ['ChangeTileEffect']
+    note: 同上一條（engine config）。
+  - id: py-engine-gear-triggers-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/gear/triggers.py
+    kind: number
+    where: ['<module>.DEFAULT_RUNE_ROUNDS']
+    note: 同上一條（engine config）。
+  - id: py-engine-oath-tracking-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/oath_tracking.py
+    kind: number
+    where: ['OathSetup']
+    note: 同上一條（engine config）。
+  - id: py-engine-parts-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/parts.py
+    kind: number
+    where: ['<module>.FAR_BEYOND']
+    note: 同上一條（engine config）。
+  - id: py-engine-preview-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/preview.py
+    kind: number
+    where: ['_attack_numbers', '_damage_expectation']
+    note: 同上一條（engine config）。
+  - id: py-engine-rules-combat-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/rules/combat.py
+    kind: number
+    where: ['positional_bonus', 'roll_attack', 'weapon_profile']
+    note: 同上一條（engine config）。
+  - id: py-engine-skill-infusion-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/skill_infusion.py
+    kind: number
+    where: ['<module>._ALLY_HIT_POINTS', '<module>._ENEMY_POINTS']
+    note: 同上一條（engine config）。
+  - id: py-engine-skills-targeting-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/skills/targeting.py
+    kind: number
+    where: ['skill_profile']
+    note: 同上一條（engine config）。
+  - id: py-engine-state-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/state.py
+    kind: number
+    where: ['UnitState']
+    note: 同上一條（engine config）。
+  - id: py-engine-summons-variants-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/summons/variants.py
+    kind: number
+    where: ['<module>._MIN_CRIT']
+    note: 同上一條（engine config）。
+
+  # ---------------------------------------------------- 後端 engine/ai：config
+  # 保守：AI 評分權重、半徑與門檻（PM 初稿 A 類）。
+  - id: py-engine-ai-charge-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/charge.py
+    kind: number
+    where: ['<module>._DEFAULT_BUFF_VALUE']
+    note: 保守：AI 評分權重、半徑與門檻（PM 初稿 A 類）。
+  - id: py-engine-ai-composite-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/composite.py
+    kind: number
+    where: ['composite_estimate']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-displace-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/displace.py
+    kind: number
+    where:
+      - '<module>._DEADLY_HARM'
+      - '<module>._EXPOSURE_RADIUS'
+      - '<module>._LOW_HP_PERMILLE'
+      - '<module>._SURFACE_HARM'
+      - '<module>._TRAP_HARM'
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-objective-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/objective.py
+    kind: number
+    where: ['<module>._THREAT_RADIUS']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-orders-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/orders.py
+    kind: number
+    where: ['HoldPosition']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-priority-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/priority.py
+    kind: number
+    where: ['<module>._POSSIBLE_DIVISOR']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-race-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/race.py
+    kind: number
+    where:
+      - '<module>.RACE_EFFECT_SCORERS'
+      - '<module>._LEAP_RISE_POINTS'
+      - '<module>._MIN_AP_AFTER'
+      - '<module>._MIN_CLUSTER'
+      - '<module>._RESTORE_MIN_DEFICIT'
+      - '_adapt_score'
+      - '_pull_score'
+      - '_push_score'
+      - '_restore_score'
+      - '_surface_score'
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-rune-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/rune.py
+    kind: number
+    where: ['<module>._CELL_SCORES', 'rune_gains']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-scene-objects-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/scene_objects.py
+    kind: number
+    where: ['<module>._ENEMY_VALUE', '<module>._FRIEND_PENALTY']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-summon-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/summon.py
+    kind: number
+    where: ['<module>._ESTIMATE_BASE', '_value', 'sacrifice_estimate']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-terrain-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/terrain.py
+    kind: number
+    where: ['<module>._ALLY_VALUE', '<module>._ENEMY_VALUE', '<module>._PIT_VALUE']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-utility-gains-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/utility/gains.py
+    kind: number
+    where:
+      - '<module>._DEFEND_RADIUS'
+      - '<module>._POSSIBLE_KILL_DIVISOR'
+      - '<module>._SURFACE_HARM'
+      - '_buff_gains'
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-utility-moves-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/utility/moves.py
+    kind: number
+    where: ['<module>._OBJECT_NEAR_ENEMY']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-utility-position-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/utility/position.py
+    kind: number
+    where: ['<module>._FORMATION_STEP', '<module>._KEEP_DISTANCE']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-utility-scoring-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/utility/scoring.py
+    kind: number
+    where: ['_rewrite_event_points', 'extra_targets']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-utility-skill-estimate-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/utility/skill_estimate.py
+    kind: number
+    where: ['_field_value', '_trap_estimate', 'skill_estimate']
+    note: 同上一條（engine/ai config）。
+  - id: py-engine-ai-zone-config-number
+    class: config
+    status: todo
+    files: src/trpg/engine/ai/zone.py
+    kind: number
+    where: ['_status_value', 'zone_estimate']
+    note: 同上一條（engine/ai config）。
+
+  # ---------------------------------------------------- 後端 llm：config
+  # 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。
+  - id: py-llm-config-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/config.py
+    kind: number
+    where: ['LLMConfig']
+    note: 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。
+  - id: py-llm-flash-eval-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/flash_eval.py
+    kind: number
+    where: ['<module>.alert_permille']
+    note: 同上一條（llm config）。
+  - id: py-llm-flash-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/flash_pick.py
+    kind: number
+    where: ['<module>.FLASH_PICK_BUDGET_S', '<module>.attempts', '<module>.max_attempts']
+    note: 同上一條（llm config）。
+  - id: py-llm-flash-propose-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/flash_propose.py
+    kind: number
+    where: ['<module>.DEFAULT_FLASH_ATTEMPTS', 'FlashProposalStats']
+    note: 同上一條（llm config）。
+  - id: py-llm-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/pick.py
+    kind: number
+    where: ['<module>.DEFAULT_PICK_ATTEMPTS', '<module>.OFFER_BUDGET_S']
+    note: 同上一條（llm config）。
+  - id: py-llm-prompts-flash-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/prompts/flash.py
+    kind: number
+    where: ['<module>.MAX_SCHEMA_BRANCHES', '<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
+    note: 同上一條（llm config）。
+  - id: py-llm-prompts-flash-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/prompts/flash_pick.py
+    kind: number
+    where: ['<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
+    note: 同上一條（llm config）。
+  - id: py-llm-prompts-wish-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/prompts/wish_pick.py
+    kind: number
+    where: ['<module>.WISH_REPLY_MAX_CHARS', 'wish_pick_schema']
+    note: 同上一條（llm config）。
+  - id: py-llm-propose-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/propose.py
+    kind: number
+    where: ['<module>.DEFAULT_MAX_ATTEMPTS', 'ProposalStats']
+    note: 同上一條（llm config）。
+  - id: py-llm-situation-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/situation.py
+    kind: number
+    where: ['<module>.DEFAULT_SITUATION_ATTEMPTS']
+    note: 同上一條（llm config）。
+  - id: py-llm-story-skill-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/story_skill.py
+    kind: number
+    where: ['<module>.DEFAULT_STORY_ATTEMPTS']
+    note: 同上一條（llm config）。
+  - id: py-llm-wish-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/wish.py
+    kind: number
+    where: ['<module>.DEFAULT_WISH_ATTEMPTS', '<module>.max_keywords']
+    note: 同上一條（llm config）。
+  - id: py-llm-wish-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/wish_pick.py
+    kind: number
+    where:
+      - '<module>.WISH_PICK_BUDGET_S'
+      - '<module>.attempts'
+      - '<module>.max_attempts'
+      - '<module>.picks'
+    note: 同上一條（llm config）。
+  - id: py-llm-wish-tags-config-number
+    class: config
+    status: todo
+    files: src/trpg/llm/wish_tags.py
+    kind: number
+    where: ['<module>.attempts', '<module>.max_attempts']
+    note: 同上一條（llm config）。
+
+  # ---------------------------------------------------- 後端 narrative：config
+  # 保守：敘事生成的重試次數。
+  - id: py-narrative-storyteller-config-number
+    class: config
+    status: todo
+    files: src/trpg/narrative/storyteller.py
+    kind: number
+    where: ['<module>.DEFAULT_STORY_ATTEMPTS']
+    note: 保守：敘事生成的重試次數。
+
+  # ---------------------------------------------------- 後端 roguelite：config
+  # 保守：roguelite 傳承的上限。
+  - id: py-roguelite-state-config-number
+    class: config
+    status: todo
+    files: src/trpg/roguelite/state.py
+    kind: number
+    where: ['InheritChoice']
+    note: 保守：roguelite 傳承的上限。
+
+  # ---------------------------------------------------- 後端 server：config
+  # 保守：社群功能（留言板、腳印、循環賽人數）的上限。
+  - id: py-server-league-config-number
+    class: config
+    status: todo
+    files: src/trpg/server/league.py
+    kind: number
+    where: ['<module>.MIN_ENTRIES']
+    note: 保守：社群功能（留言板、腳印、循環賽人數）的上限。
+  - id: py-server-notes-config-number
+    class: config
+    status: todo
+    files: src/trpg/server/notes.py
+    kind: number
+    where: ['<module>.BOARD_NOTES', '<module>.FOOTPRINT_MAX', '<module>.NOTE_MAX_LEN']
+    note: 同上一條（server config）。
+
+  # ---------------------------------------------------- 後端 skillgen：config
+  # 保守：技能生成與閃現的權重、步階、上限、預設代價、重試次數。
+  - id: py-skillgen-budget-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/budget.py
+    kind: number
+    where:
+      - '<module>._EXEMPT_MIN_TIER'
+      - '<module>._REFERENCE_PARAM'
+      - '_inscribe_points'
+      - '_plain_base_points'
+    note: 保守：技能生成與閃現的權重、步階、上限、預設代價、重試次數。
+  - id: py-skillgen-candidates-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/candidates.py
+    kind: number
+    where: ['<module>.BRIDGE_VARIANT_CAP', '<module>.ROUTE_OFF', 'CandidateRules', '_Search._grade']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-complete-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/complete.py
+    kind: number
+    where: ['<module>._MAX_STEPS']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-composer-dual-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/composer_dual.py
+    kind: number
+    where: ['<module>._FIRST_MULTIPLIER']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-composer-parts-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/composer_parts.py
+    kind: number
+    where:
+      - '<module>._GAMBLE_BACKLASH'
+      - '<module>._GAMBLE_WIN'
+      - '<module>._POINT_BLANK_MIN_RANGE'
+      - '_core_count'
+      - '_fixed_effect'
+      - '_gamble_effect'
+      - '_sacrifice_effect'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-composer-recipes-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/composer_recipes.py
+    kind: number
+    where:
+      - '<module>._GUARDIAN_COSTS'
+      - '<module>._GUARDIAN_RANGE'
+      - '<module>._HALF'
+      - '<module>._MIN_POWER'
+      - '<module>._PARAM_PERMILLE'
+      - '<module>._POWER_STEP'
+      - 'passive_drafts'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-composer-rider-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/composer_rider.py
+    kind: number
+    where: ['rider_effect']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-composer-special-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/composer_special.py
+    kind: number
+    where:
+      - '<module>._ATTEMPTS'
+      - '<module>._CORE_TRIES'
+      - '<module>._LADDERS'
+      - '_lasting_candidates'
+      - '_modifier_candidates'
+      - '_rewrite_effect'
+      - '_rule'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-evolution-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/evolution.py
+    kind: number
+    where:
+      - '<module>.EXTRA_COOLDOWN_STEPS'
+      - '<module>.MAX_EVOLVED_COOLDOWN'
+      - '<module>.MAX_VARIANT_DRAFTS'
+      - '<module>.MIN_COOLDOWN'
+      - '<module>._LOW_MULTIPLIER_FLOOR'
+      - '<module>._LOW_MULTIPLIER_STEP'
+      - '_knobs'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-cost-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_cost.py
+    kind: number
+    where: ['<module>.CHARGE_DURATION_CAP', '<module>._SHIELD_DEFAULT_DURATION']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-derive-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_derive.py
+    kind: number
+    where: ['<module>.STRICT_MARGIN', '<module>.TUNE_ATTEMPTS']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-major-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_major.py
+    kind: number
+    where:
+      - '<module>._GUARDIAN_COSTS'
+      - '<module>._MAX_CARRIED'
+      - '<module>._MAX_TRAP_EFFECTS'
+      - '<module>._MIN_POWER'
+      - '<module>._POWER_STEP'
+      - '<module>._STANCE_UPKEEPS'
+      - '<module>._STRICT_MARGIN'
+      - '<module>._SUMMON_COSTS'
+      - '_apply_borrow'
+      - '_to_aid'
+      - '_to_blessing'
+      - '_to_guardian'
+      - '_to_passive'
+      - '_to_reaction'
+      - '_to_summon'
+      - '_to_trap'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-offer-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_offer.py
+    kind: number
+    where:
+      - '<module>._FREQUENT_USES'
+      - '<module>._KEYWORD_CAP'
+      - '<module>._MULTI_TARGETS_PERMILLE'
+      - '_usage_score'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-ops-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_ops.py
+    kind: number
+    where:
+      - '<module>.CHARGE_COOLDOWN_STEP'
+      - '<module>.MAX_CHARGE_COOLDOWN'
+      - '<module>.MAX_COOLDOWN_DELTA'
+      - '<module>.MAX_EMPTY_SLOTS_CAP'
+      - '<module>.MAX_RELAX_PERMILLE'
+      - '<module>.MAX_STANCE_UPKEEP'
+      - '<module>.MAX_SUMMON_DURATION_DELTA'
+      - '<module>.MAX_TRIGGERS_PER_ROUND'
+      - '<module>.RELAX_PERMILLE'
+      - '<module>.SUMMON_HP_STEPS'
+      - '<module>._BLOOD_BONUS_PERMILLE'
+      - '<module>._FINE_MULTIPLIER_TOP'
+      - '<module>._FOLLOWUP_EASE_STEPS'
+      - '<module>._FOLLOWUP_POTENCY_STEPS'
+      - '<module>._RELAX_ALTERNATIVES'
+      - '_new_damage'
+      - '_op_distance_bonus'
+      - '_op_light'
+      - '_op_mod_cost'
+      - '_op_mod_range'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-reclaim-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_reclaim.py
+    kind: number
+    where:
+      - '<module>.MIN_TIGHTEN_PERMILLE'
+      - '<module>.TIGHTEN_PERMILLE'
+      - '<module>._SELF_CONDITION'
+      - '<module>._TARGET_CONDITION'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-trade-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/flash_trade.py
+    kind: number
+    where:
+      - '<module>._CAP_SHRINK_PERMILLE'
+      - '<module>._CAP_SHRINK_STEPS'
+      - '<module>._MAX_COST_CUTS'
+      - '<module>._TUNE_ATTEMPTS'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-option-effect-rules-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/option_effect_rules.py
+    kind: number
+    where: ['_assumed_cooldown']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-option-fill-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/option_fill.py
+    kind: number
+    where: ['_scalar']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-option-nested-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/option_nested.py
+    kind: number
+    where: ['<module>.NESTED_PARAMS', '<module>._SPECIAL']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-option-variant-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/option_variant.py
+    kind: number
+    where: ['variant_fields']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-options-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/options.py
+    kind: number
+    where: ['_change_field', '_self_status_choice', '_trap_field', '_trigger_field']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-pick-offer-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/pick_offer.py
+    kind: number
+    where:
+      - '<module>.LEVEL_OFF'
+      - '<module>.LEVEL_OFF_RELAXED'
+      - '<module>.MAX_OFF_ROUTE'
+      - '<module>.SLOT_KEYWORD_TRIES'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-models-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal/models.py
+    kind: number
+    where: ['<module>._MAX_NESTED', '<module>._MAX_TAGS', '<module>._MAX_VARIANTS']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-schema-shape-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal/schema_shape.py
+    kind: number
+    where: ['<module>.VARIANT_SWAP_MAX']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-budget-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_budget.py
+    kind: number
+    where: ['<module>.REPAIR_TUNES']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-costs-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_costs.py
+    kind: number
+    where: ['<module>.DEFAULT_HP_PERMILLE', 'hp_cost_permille']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-fallback-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_fallback.py
+    kind: number
+    where:
+      - '<module>.COMPOSER_TRIES'
+      - '<module>.WORKSHOP_MAX_EFFECTS'
+      - '<module>.WORKSHOP_MAX_SHAPES'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-numbers-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_numbers.py
+    kind: number
+    where: ['<module>.DEFAULT_ACTIVE_AP']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-subset-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_subset.py
+    kind: number
+    where: ['<module>.MAX_KEYWORDS']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-topic-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_topic.py
+    kind: number
+    where: ['<module>.CORE_RETRIES', '<module>.WITNESS_MIN_KEYWORDS']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-topup-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_topup.py
+    kind: number
+    where: ['<module>.FILLER_STATUS_MAX', '<module>.TOPUP_GROUP_MAX', '<module>.TOPUP_MAX']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-proposal-witness-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/proposal_witness.py
+    kind: number
+    where:
+      - '<module>.WITNESS_MAX'
+      - '<module>._CORES'
+      - '<module>._EVENTS'
+      - '<module>._KEYWORD_WAYS'
+      - '<module>._PAIR_KEYWORDS'
+      - '<module>._SHAPES'
+      - '<module>._TEMPLATES_PER_PRIMITIVE'
+      - '_shape'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-random-composer-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/random_composer.py
+    kind: number
+    where:
+      - '<module>.KEYWORD_TRIES'
+      - '<module>.MAX_ATTEMPTS'
+      - '<module>.VARIANT_ATTEMPTS'
+      - '_attempt_around_passive'
+      - '_attempt_passive'
+      - '_compose_plain'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-self-penalty-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/self_penalty.py
+    kind: number
+    where: ['<module>._MIN_DURATION']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-skill-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/skill_pick.py
+    kind: number
+    where: ['<module>.epic_min_effects']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-skill-tier-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/skill_tier.py
+    kind: number
+    where:
+      - '<module>.RETIER_ATTEMPTS'
+      - '<module>._SUMMON_HP_STEPS'
+      - '_cost_variants'
+      - '_rock_drafts'
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-validate-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/validate.py
+    kind: number
+    where: ['<module>.POINT_BLANK_MIN_REACH']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-whiteboard-candidates-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/whiteboard_candidates.py
+    kind: number
+    where: ['<module>._SPARE', '<module>.tries']
+    note: 同上一條（skillgen config）。
+  - id: py-skillgen-wish-pick-config-number
+    class: config
+    status: todo
+    files: src/trpg/skillgen/wish_pick.py
+    kind: number
+    where: ['<module>.WISH_CARDS', '<module>.WISH_SEED_PERMILLE', '<module>.WISH_TAG_EXTRA']
+    note: 同上一條（skillgen config）。
+
+  # ---------------------------------------------------- 後端 world：config
+  # 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
+  - id: py-world-actions-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/actions.py
+    kind: number
+    where:
+      - 'HireAction'
+      - 'InheritAction'
+      - 'OpeningConfirmAction'
+      - 'OpeningReselectAction'
+      - 'WishAction'
+    note: 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
+  - id: py-world-affinity-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/affinity.py
+    kind: number
+    where: ['<module>.DEFAULT_AFFINITY_RULES']
+    note: 同上一條（world config）。
+  - id: py-world-clock-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/clock.py
+    kind: number
+    where: ['<module>.GAME_DAY_SECONDS', '<module>.REFRESH_HOUR', '<module>._GAME_DAY_START_MINUTE']
+    note: 同上一條（world config）。
+  - id: py-world-companions-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/companions.py
+    kind: number
+    where: ['_max_hired']
+    note: 同上一條（world config）。
+  - id: py-world-crafting-actions-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/crafting_actions.py
+    kind: number
+    where: ['CraftAction', 'ImbueAction', 'RerollAction']
+    note: 同上一條（world config）。
+  - id: py-world-economy-actions-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/economy_actions.py
+    kind: number
+    where: ['BuyAction', 'LootChooseAction', 'PouchAction', 'SellAction']
+    note: 同上一條（world config）。
+  - id: py-world-growth-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/growth.py
+    kind: number
+    where: ['<module>.OPENING_END_LEVEL']
+    note: 同上一條（world config）。
+  - id: py-world-opening-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/opening.py
+    kind: number
+    where: ['<module>.MAX_TRIAL_KEYWORDS']
+    note: 同上一條（world config）。
+  - id: py-world-opening-limits-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/opening_limits.py
+    kind: number
+    where: ['<module>.STARTER_STEPS']
+    note: 同上一條（world config）。
+  - id: py-world-shadows-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/shadows.py
+    kind: number
+    where: ['record_lent']
+    note: 同上一條（world config）。
+  - id: py-world-solutions-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/solutions.py
+    kind: number
+    where: ['<module>.MAX_SKILL_TIER']
+    note: 同上一條（world config）。
+  - id: py-world-state-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/state.py
+    kind: number
+    where: ['CraftRecipe', 'GearMod', 'RecipeStep']
+    note: 同上一條（world config）。
+  - id: py-world-trade-actions-config-number
+    class: config
+    status: todo
+    files: src/trpg/world/trade_actions.py
+    kind: number
+    where: ['MailSendAction']
+    note: 同上一條（world config）。
+
+  # ---------------------------------------------------- 後端 api：text
+  # API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
+  - id: py-api-gear-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/gear.py
+    kind: text
+    where: ['_build_custom']
+    note: API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
+  - id: py-api-league-view-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/league_view.py
+    kind: text
+    where: ['_rules_zh']
+    note: 同上一條（api text）。
+  - id: py-api-season-boss-view-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/season_boss_view.py
+    kind: text
+    where: ['season_boss_event_line']
+    note: 同上一條（api text）。
+  - id: py-api-season-view-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/season_view.py
+    kind: text
+    where: ['_season_info']
+    note: 同上一條（api text）。
+  - id: py-api-tuning-check-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/tuning/check.py
+    kind: text
+    where: ['<module>._INT_ZH', '_to_dice']
+    note: 同上一條（api text）。
+  - id: py-api-tuning-objects-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/tuning/objects.py
+    kind: text
+    where:
+      - '<module>.AI_NOTES_ZH'
+      - '<module>.RETIER_NOTE_ZH'
+      - '<module>.TABLE_NOTES_ZH'
+      - '<module>._DEFAULTS_ZH'
+      - '<module>._STAT_ZH'
+      - 'retier_notes'
+    note: 同上一條（api text）。
+  - id: py-api-tuning-skills-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/tuning/skills.py
+    kind: text
+    where: ['<module>.GROUP_PRESETS', '<module>._BORROW_SAME_ZH']
+    note: 同上一條（api text）。
+  - id: py-api-world-economy-view-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/world_economy_view.py
+    kind: text
+    where: ['_battle_zh']
+    note: 同上一條（api text）。
+  - id: py-api-world-growth-view-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/world_growth_view.py
+    kind: text
+    where: ['<module>.SLOT_ZH', '_oath_line', '_swear_problem', 'next_battle_lines', 'opening_lines']
+    note: 同上一條（api text）。
+  - id: py-api-world-story-view-text-text
+    class: text
+    status: todo
+    files: src/trpg/api/world_story_view.py
+    kind: text
+    where: ['_left_zh', '_remaining_zh']
+    note: 同上一條（api text）。
+
+  # ---------------------------------------------------- 後端 bot：text
+  # Bot 指令說明裡的帳號規則數字。
+  - id: py-bot-commands-text-text
+    class: text
+    status: todo
+    files: src/trpg/bot/commands.py
+    kind: text
+    where: ['<module>.SLASH_COMMANDS']
+    note: Bot 指令說明裡的帳號規則數字。
+  - id: py-bot-service-text-text
+    class: text
+    status: todo
+    files: src/trpg/bot/service.py
+    kind: text
+    where: ['BotService._pick_username']
+    note: 同上一條（bot text）。
+
+  # ---------------------------------------------------- 後端 content：text
+  # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。
+  - id: py-content-battle-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/battle.py
+    kind: text
+    where:
+      - 'Dice._parse_text'
+      - 'OffhandDef.trait_lines_zh'
+      - 'StatusDef._check_elemental_stance'
+      - 'UnitTemplate._check_footprint'
+      - 'UnitTemplate._check_totem'
+      - 'UnitTemplate._element_mod_range'
+      - 'UnitTemplate._resist_range'
+      - 'check_phases'
+    note: content 驗證訊息裡的上下限數字（應從 schema 常數帶）。
+  - id: py-content-composer-rules-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/composer_rules.py
+    kind: text
+    where:
+      - 'ComposerRules._check'
+      - 'CostRules._check_self_status_duration'
+      - 'DiceRules._check'
+      - 'WhiteboardRules._check'
+    note: 同上一條（content text）。
+  - id: py-content-environment-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/environment.py
+    kind: text
+    where: ['WeatherDef._mods']
+    note: 同上一條（content text）。
+  - id: py-content-equipment-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/equipment.py
+    kind: text
+    where:
+      - 'AttackAffix._check_strike'
+      - 'EquipmentRules._check'
+      - 'TriggerAffix._check_summon_downed'
+      - 'ValueRange._check'
+      - 'weapon_element_problems'
+    note: 同上一條（content text）。
+  - id: py-content-fields-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/fields.py
+    kind: text
+    where:
+      - 'FieldBuilding._size_positive'
+      - 'FieldDecor._shape'
+      - 'FieldMapDef._kind_problems'
+      - '_map_stone_checks'
+      - '_npc_problems'
+    note: 同上一條（content text）。
+  - id: py-content-flash-templates-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/flash_templates.py
+    kind: text
+    where: ['FlashTemplate._check', '_ladder']
+    note: 同上一條（content text）。
+  - id: py-content-item-budget-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/item_budget.py
+    kind: text
+    where: ['_rarity_problems', 'item_budget_problems']
+    note: 同上一條（content text）。
+  - id: py-content-library-giant-checks-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/library/giant_checks.py
+    kind: text
+    where: ['_lineup_problems']
+    note: 同上一條（content text）。
+  - id: py-content-library-ruleset-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/library/ruleset.py
+    kind: text
+    where: ['Ruleset._check']
+    note: 同上一條（content text）。
+  - id: py-content-library-world-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/library/world.py
+    kind: text
+    where: ['_check_post_facilities', '_range_problems']
+    note: 同上一條（content text）。
+  - id: py-content-parts-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/parts.py
+    kind: text
+    where: ['BossPart._check', 'StatDownBreak._check']
+    note: 同上一條（content text）。
+  - id: py-content-races-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/races.py
+    kind: text
+    where: ['RacePassive._permille_problems', 'RaceTable.summary', 'forbidden_key_problems']
+    note: 同上一條（content text）。
+  - id: py-content-roguelite-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/roguelite.py
+    kind: text
+    where: ['EncounterStep._non_empty']
+    note: 同上一條（content text）。
+  - id: py-content-rules-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/rules.py
+    kind: text
+    where: ['CoreRules._check_tier_budget']
+    note: 同上一條（content text）。
+  - id: py-content-skill-rules-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skill_rules.py
+    kind: text
+    where: ['BudgetRules._check']
+    note: 同上一條（content text）。
+  - id: py-content-skill-triggers-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skill_triggers.py
+    kind: text
+    where: ['SkillTriggerDef._check']
+    note: 同上一條（content text）。
+  - id: py-content-skills-modifiers-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/modifiers.py
+    kind: text
+    where: ['ModifierChange._check_on_hit_rune', 'ModifierChange._check_tags']
+    note: 同上一條（content text）。
+  - id: py-content-skills-problems-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/problems.py
+    kind: text
+    where: ['_legendary_problems']
+    note: 同上一條（content text）。
+  - id: py-content-skills-queries-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/queries.py
+    kind: text
+    where: ['skill_slot_problems']
+    note: 同上一條（content text）。
+  - id: py-content-skills-skill-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/skill.py
+    kind: text
+    where:
+      - 'SkillDef._check_branch_fields'
+      - 'SkillDef._check_legendary'
+      - 'SkillDef._check_pierce'
+      - 'SkillDef._check_stance_upkeep'
+      - 'SkillDef._check_summon'
+      - 'SkillDef._check_summon_beside'
+    note: 同上一條（content text）。
+  - id: py-content-skills-specs-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/specs.py
+    kind: text
+    where: ['TriggerSpec._check', 'TriggerSpec._check_exploited']
+    note: 同上一條（content text）。
+  - id: py-content-skills-variants-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/skills/variants.py
+    kind: text
+    where: ['VariantSpec._check']
+    note: 同上一條（content text）。
+  - id: py-content-world-economy-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_economy.py
+    kind: text
+    where: ['EconomyRules._check', 'WorldItemDef._check']
+    note: 同上一條（content text）。
+  - id: py-content-world-encounters-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_encounters.py
+    kind: text
+    where: ['_lineup_problems']
+    note: 同上一條（content text）。
+  - id: py-content-world-events-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_events.py
+    kind: text
+    where: ['SolutionDef._check']
+    note: 同上一條（content text）。
+  - id: py-content-world-loot-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_loot.py
+    kind: text
+    where: ['_weights_ok']
+    note: 同上一條（content text）。
+  - id: py-content-world-map-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_map.py
+    kind: text
+    where:
+      - 'LocationDef._battle_map_problems'
+      - 'LocationMapDef._count_problems'
+      - 'LocationMapDef._town_problems'
+    note: 同上一條（content text）。
+  - id: py-content-world-season-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_season.py
+    kind: text
+    where: ['_check_range']
+    note: 同上一條（content text）。
+  - id: py-content-world-situations-text-text
+    class: text
+    status: todo
+    files: src/trpg/content/world_situations.py
+    kind: text
+    where: ['SituationRules._check']
+    note: 同上一條（content text）。
+
+  # ---------------------------------------------------- 後端 engine：text
+  # 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
+  - id: py-engine-activations-text-text
+    class: text
+    status: todo
+    files: src/trpg/engine/activations.py
+    kind: text
+    where: ['activation_problem']
+    note: 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
+  - id: py-engine-battle-text-text
+    class: text
+    status: todo
+    files: src/trpg/engine/battle.py
+    kind: text
+    where: ['run_problem', 'shove_problem']
+    note: 同上一條（engine text）。
+  - id: py-engine-oath-tracking-text-text
+    class: text
+    status: todo
+    files: src/trpg/engine/oath_tracking.py
+    kind: text
+    where: ['<module>.BREACH_TEXT']
+    note: 同上一條（engine text）。
+  - id: py-engine-parts-text-text
+    class: text
+    status: todo
+    files: src/trpg/engine/parts.py
+    kind: text
+    where: ['<module>.PART_REASON_ZH']
+    note: 同上一條（engine text）。
+  - id: py-engine-preview-text-text
+    class: text
+    status: todo
+    files: src/trpg/engine/preview.py
+    kind: text
+    where: ['_miss_notes']
+    note: 同上一條（engine text）。
+
+  # ---------------------------------------------------- 後端 llm：text
+  # LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
+  - id: py-llm-prompts-proposal-text-text
+    class: text
+    status: todo
+    files: src/trpg/llm/prompts/proposal.py
+    kind: text
+    where: ['<module>.BUDGET_NOTE_ZH', '<module>.EFFECTS_NOTE_ZH', '<module>.VARIANTS_NOTE_ZH']
+    note: LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
+  - id: py-llm-prompts-storyteller-text-text
+    class: text
+    status: todo
+    files: src/trpg/llm/prompts/storyteller.py
+    kind: text
+    where: ['<module>.STORY_STYLE', '<module>.STORY_TASKS']
+    note: 同上一條（llm text）。
+  - id: py-llm-wish-pick-text-text
+    class: text
+    status: todo
+    files: src/trpg/llm/wish_pick.py
+    kind: text
+    where: ['_Loop._card']
+    note: 同上一條（llm text）。
+
+  # ---------------------------------------------------- 後端 narrative：text
+  # 敘事文字裡寫死的規則數字（每回合 1 次、格數、暴擊範圍）。
+  - id: py-narrative-action-info-text-text
+    class: text
+    status: todo
+    files: src/trpg/narrative/action_info.py
+    kind: text
+    where: ['_maneuvers', '_move_and_attack']
+    note: 敘事文字裡寫死的規則數字（每回合 1 次、格數、暴擊範圍）。
+  - id: py-narrative-events-text-text
+    class: text
+    status: todo
+    files: src/trpg/narrative/events.py
+    kind: text
+    where: ['_summon_pulled']
+    note: 同上一條（narrative text）。
+  - id: py-narrative-skills-text-text
+    class: text
+    status: todo
+    files: src/trpg/narrative/skills.py
+    kind: text
+    where:
+      - '<module>._SCALE_TEXT'
+      - '<module>._SIMPLE_CHANGE_TEXT'
+      - '_damage_parts'
+      - '_damage_text'
+      - '_detonate_runes'
+      - '_hook'
+      - '_place_trap'
+      - 'mark_repeats'
+      - 'mastery_text'
+      - 'variant_condition_text'
+    note: 同上一條（narrative text）。
+  - id: py-narrative-status-info-text-text
+    class: text
+    status: todo
+    files: src/trpg/narrative/status_info.py
+    kind: text
+    where: ['_entangle_line', '_modifier_lines']
+    note: 同上一條（narrative text）。
+  - id: py-narrative-summon-info-text-text
+    class: text
+    status: todo
+    files: src/trpg/narrative/summon_info.py
+    kind: text
+    where:
+      - 'SummonInfoCard'
+      - '_actual_note'
+      - '_attack_phrases'
+      - '_baseline_note'
+      - '_pulse_lines'
+      - 'summon_info'
+      - 'summon_innate_lines'
+    note: 同上一條（narrative text）。
+
+  # ---------------------------------------------------- 後端 skillgen：text
+  # 技能工坊、閃現說明裡寫死的規則數字。
+  - id: py-skillgen-budget-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/budget.py
+    kind: text
+    where:
+      - '_allowance_parts'
+      - '_dispel_points'
+      - '_modifier_uses'
+      - '_passive_coefficient'
+      - '_variance_factor'
+    note: 技能工坊、閃現說明裡寫死的規則數字。
+  - id: py-skillgen-option-conform-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/option_conform.py
+    kind: text
+    where: ['_scalar_problems']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-option-followup-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/option_followup.py
+    kind: text
+    where: ['_effects_field', 'followup_notes']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-option-nested-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/option_nested.py
+    kind: text
+    where: ['<module>._SPECIAL']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-option-params-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/option_params.py
+    kind: text
+    where: ['<module>._LITERAL_CHOICES', '<module>._SCALE_BY_TEXT']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-option-scaling-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/option_scaling.py
+    kind: text
+    where: ['<module>._MASTERY_TEXT']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-option-variant-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/option_variant.py
+    kind: text
+    where: ['_when_field', 'variant_fields', 'variant_notes']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-options-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/options.py
+    kind: text
+    where: ['_basics_step', '_cost_step', '_self_status_field', '_tier_notes']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-proposal-builder-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/proposal/builder.py
+    kind: text
+    where: ['_variant_model']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-proposal-evaluate-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/proposal/evaluate.py
+    kind: text
+    where: ['<module>.MAIN_DAMAGE_ADVICE']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-proposal-budget-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/proposal_budget.py
+    kind: text
+    where: ['<module>.WEAK_ADVICE']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-proposal-costs-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/proposal_costs.py
+    kind: text
+    where: ['<module>.COST_DOCS']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-proposal-followup-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/proposal_followup.py
+    kind: text
+    where: ['<module>.FOLLOWUP_DOC']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-validate-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/validate.py
+    kind: text
+    where: ['_summon_limit_cost_violations']
+    note: 同上一條（skillgen text）。
+  - id: py-skillgen-whiteboard-check-text-text
+    class: text
+    status: todo
+    files: src/trpg/skillgen/whiteboard_check.py
+    kind: text
+    where: ['_structure_problems']
+    note: 同上一條（skillgen text）。
+
+  # ---------------------------------------------------- 後端 world：text
+  # 大世界錯誤訊息與說明裡寫死的規則數字。
+  - id: py-world-battlefield-text-text
+    class: text
+    status: todo
+    files: src/trpg/world/battlefield.py
+    kind: text
+    where: ['<module>.FALLBACK_ZH']
+    note: 大世界錯誤訊息與說明裡寫死的規則數字。
+  - id: py-world-crafting-text-text
+    class: text
+    status: todo
+    files: src/trpg/world/crafting.py
+    kind: text
+    where: ['_recipe_from_fields']
+    note: 同上一條（world text）。
+  - id: py-world-growth-text-text
+    class: text
+    status: todo
+    files: src/trpg/world/growth.py
+    kind: text
+    where: ['_oath']
+    note: 同上一條（world text）。
+  - id: py-world-opening-text-text
+    class: text
+    status: todo
+    files: src/trpg/world/opening.py
+    kind: text
+    where: ['<module>._BEFORE_LEVEL_4_ZH']
+    note: 同上一條（world text）。
+  - id: py-world-season-boss-text-text
+    class: text
+    status: todo
+    files: src/trpg/world/season_boss.py
+    kind: text
+    where: ['challenge_problem']
+    note: 同上一條（world text）。
+
+  # ---------------------------------------------------- 後端 api：const
+  # API 的錯誤碼、分頁、快取、開發頁、工坊內部的檔案與 git 設定。
+  - id: py-api-absence-view-const-number
+    class: const
+    status: done
+    files: src/trpg/api/absence_view.py
+    kind: number
+    where: ['absence_summary']
+    note: API 的錯誤碼、分頁、快取、開發頁、工坊內部的檔案與 git 設定。
+  - id: py-api-attribute-text-const-number
+    class: const
+    status: done
+    files: src/trpg/api/attribute_text.py
+    kind: number
+    where: ['<module>._MAX_LISTED', 'route_hint']
+    note: 同上一條（api const）。
+  - id: py-api-chronicle-schemas-const-number
+    class: const
+    status: done
+    files: src/trpg/api/chronicle_schemas.py
+    kind: number
+    where: ['<module>.BOARD_TOP']
+    note: 同上一條（api const）。
+  - id: py-api-flash-changes-const-number
+    class: const
+    status: done
+    files: src/trpg/api/flash_changes.py
+    kind: number
+    where: ['<module>._TENTH', '_name_segments', 'magnitude_zh']
+    note: 同上一條（api const）。
+  - id: py-api-league-schemas-const-number
+    class: const
+    status: done
+    files: src/trpg/api/league_schemas.py
+    kind: number
+    where: ['LeagueView']
+    note: 同上一條（api const）。
+  - id: py-api-league-view-const-number
+    class: const
+    status: done
+    files: src/trpg/api/league_view.py
+    kind: number
+    where: ['<module>.PAGE_SIZE']
+    note: 同上一條（api const）。
+  - id: py-api-login-limit-const-number
+    class: const
+    status: done
+    files: src/trpg/api/login_limit.py
+    kind: number
+    where: ['LoginLimiter']
+    note: 同上一條（api const）。
+  - id: py-api-schemas-const-number
+    class: const
+    status: done
+    files: src/trpg/api/schemas.py
+    kind: number
+    where: ['permille']
+    note: 同上一條（api const）。
+  - id: py-api-server-config-const-number
+    class: const
+    status: done
+    files: src/trpg/api/server_config.py
+    kind: number
+    where: ['<module>.DEFAULT_HEALTH_INTERVAL_S']
+    note: 同上一條（api const）。
+  - id: py-api-tuning-check-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/check.py
+    kind: number
+    where: ['_field_path']
+    note: 同上一條（api const）。
+  - id: py-api-tuning-git-guard-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/git_guard.py
+    kind: number
+    where: ['<module>._LOG_FIELDS', '<module>._TIMEOUT_S']
+    note: 同上一條（api const）。
+  - id: py-api-tuning-ratios-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/ratios.py
+    kind: number
+    where: ['<module>.DEFAULT_RATE', '<module>.KEEP_RUNS']
+    note: 同上一條（api const）。
+  - id: py-api-tuning-routes-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/routes.py
+    kind: number
+    where: ['get_history']
+    note: 同上一條（api const）。
+  - id: py-api-tuning-sim-jobs-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/sim_jobs.py
+    kind: number
+    where:
+      - '<module>.DEFAULT_MAP_SECONDS_PER_BATTLE'
+      - '<module>.DEFAULT_RATIO_RATE'
+      - '<module>.DEFAULT_SECONDS_PER_BATTLE'
+      - 'SimJobs._launch'
+      - 'SimJobs._record_timing'
+      - 'default_workers'
+    note: 同上一條（api const）。
+  - id: py-api-tuning-workspace-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/workspace.py
+    kind: number
+    where: ['<module>.KEEP_DRAFT_DIRS', '<module>.KEEP_TREES']
+    note: 同上一條（api const）。
+  - id: py-api-tuning-writeback-const-number
+    class: const
+    status: done
+    files: src/trpg/api/tuning/writeback.py
+    kind: number
+    where: ['<module>.BACKUP_KEEP', '<module>._SUBJECT_IDS']
+    note: 同上一條（api const）。
+  - id: py-api-world-const-number
+    class: const
+    status: done
+    files: src/trpg/api/world.py
+    kind: number
+    where: ['<module>._RULES_KEYS_MAX']
+    note: 同上一條（api const）。
+  - id: py-api-world-dev-const-number
+    class: const
+    status: done
+    files: src/trpg/api/world_dev.py
+    kind: number
+    where:
+      - '<module>.MAX_DEV_LEVEL'
+      - '<module>._BESIDE'
+      - '<module>._LOW_PERMILLE'
+      - '<module>._SPREAD'
+      - '_face_setup'
+      - '_offsets'
+    note: 同上一條（api const）。
+  - id: py-api-world-field-things-const-number
+    class: const
+    status: done
+    files: src/trpg/api/world_field_things.py
+    kind: number
+    where: ['<module>.FOOTPRINT_NAMES', 'footprint_cells']
+    note: 同上一條（api const）。
+  - id: py-api-world-field-view-const-number
+    class: const
+    status: done
+    files: src/trpg/api/world_field_view.py
+    kind: number
+    where: ['<module>._TILES_MAX']
+    note: 同上一條（api const）。
+  - id: py-api-world-schemas-const-number
+    class: const
+    status: done
+    files: src/trpg/api/world_schemas.py
+    kind: number
+    where: ['<module>.NAME_MAX']
+    note: 同上一條（api const）。
+
+  # ---------------------------------------------------- 後端 bot：const
+  # Discord Bot 的運作設定（非玩法）。
+  - id: py-bot-announcer-const-number
+    class: const
+    status: done
+    files: src/trpg/bot/announcer.py
+    kind: number
+    where: ['<module>._LEGACY_KEY_PARTS']
+    note: Discord Bot 的運作設定（非玩法）。
+  - id: py-bot-config-const-number
+    class: const
+    status: done
+    files: src/trpg/bot/config.py
+    kind: number
+    where: ['<module>._MASK_LEN', '<module>._SHOWN', 'AnnounceSettings']
+    note: 同上一條（bot const）。
+  - id: py-bot-discord-adapter-const-number
+    class: const
+    status: done
+    files: src/trpg/bot/discord_adapter.py
+    kind: number
+    where: ['<module>.ANNOUNCE_INTERVAL_S', '<module>.CALL_TIMEOUT_S']
+    note: 同上一條（bot const）。
+  - id: py-bot-service-const-number
+    class: const
+    status: done
+    files: src/trpg/bot/service.py
+    kind: number
+    where:
+      - '<module>.PASSWORD_BYTES'
+      - '<module>.SUFFIX_LEN'
+      - '<module>.USERNAME_MAX'
+      - '<module>.USERNAME_MIN'
+      - '<module>._MAX_TRIES'
+    note: 同上一條（bot const）。
+
+  # ---------------------------------------------------- 後端 content：const
+  # content 的音效 schema 上下限與解析用常數。
+  - id: py-content-audio-const-number
+    class: const
+    status: done
+    files: src/trpg/content/audio.py
+    kind: number
+    where:
+      - '<module>.Db'
+      - '<module>._MAX_HZ'
+      - '<module>._MAX_SECONDS'
+      - '<module>._MIN_HZ'
+      - 'ChordLayer'
+      - 'CrackleLayer'
+      - 'FmLayer'
+      - 'NoiseLayer'
+      - 'PulseLayer'
+      - 'SfxDef'
+      - 'ToneLayer'
+    note: content 的音效 schema 上下限與解析用常數。
+
+  # ---------------------------------------------------- 後端 engine：const
+  # 引擎的 d20 機率（÷20、21 種結果）、幾何、上限保護、重播格式。
+  - id: py-engine-basics-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/basics.py
+    kind: number
+    where: ['vault_destinations']
+    note: 引擎的 d20 機率（÷20、21 種結果）、幾何、上限保護、重播格式。
+  - id: py-engine-branching-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/branching.py
+    kind: number
+    where: ['<module>.MAX_BRANCHES']
+    note: 同上一條（engine const）。
+  - id: py-engine-context-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/context.py
+    kind: number
+    where: ['Ctx.check_d20', 'Ctx.opposed_d20']
+    note: 同上一條（engine const）。
+  - id: py-engine-control-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/control.py
+    kind: number
+    where: ['status_save_chance']
+    note: 同上一條（engine const）。
+  - id: py-engine-ice-slide-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/ice_slide.py
+    kind: number
+    where: ['slide_fail_chance']
+    note: 同上一條（engine const）。
+  - id: py-engine-maneuvers-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/maneuvers.py
+    kind: number
+    where: ['contest_chance']
+    note: 同上一條（engine const）。
+  - id: py-engine-path-preview-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/path_preview.py
+    kind: number
+    where: ['_convert_own']
+    note: 同上一條（engine const）。
+  - id: py-engine-preview-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/preview.py
+    kind: number
+    where: ['_knock_chance', '_maneuver_chance']
+    note: 同上一條（engine const）。
+  - id: py-engine-runner-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/runner.py
+    kind: number
+    where: ['<module>.DEFAULT_MAX_ACTIONS']
+    note: 同上一條（engine const）。
+  - id: py-engine-setup-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/setup.py
+    kind: number
+    where: ['BattleSetup']
+    note: 同上一條（engine const）。
+  - id: py-engine-weapon-traits-const-number
+    class: const
+    status: done
+    files: src/trpg/engine/weapon_traits.py
+    kind: number
+    where: ['pierce_line_targets']
+    note: 同上一條（engine const）。
+
+  # ---------------------------------------------------- 後端 llm：const
+  # LLM 用戶端的 HTTP 碼與輸入長度保護。
+  - id: py-llm-candidate-source-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/candidate_source.py
+    kind: number
+    where: ['<module>.MOCK_TRIES']
+    note: LLM 用戶端的 HTTP 碼與輸入長度保護。
+  - id: py-llm-client-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/client.py
+    kind: number
+    where: ['<module>.SERVER_TEXT_CHARS']
+    note: 同上一條（llm const）。
+  - id: py-llm-consistency-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/consistency.py
+    kind: number
+    where: ['<module>._MULTI_CHAR', '<module>.per_group']
+    note: 同上一條（llm const）。
+  - id: py-llm-naming-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/naming.py
+    kind: number
+    where: ['<module>.DEFAULT_NAMING_ATTEMPTS']
+    note: 同上一條（llm const）。
+  - id: py-llm-prompts-escape-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/escape.py
+    kind: number
+    where: ['<module>.PLAYER_NAME_MAX_CHARS', '<module>.PLAYER_TEXT_MAX_CHARS']
+    note: 同上一條（llm const）。
+  - id: py-llm-prompts-proposal-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/proposal.py
+    kind: number
+    where: ['<module>.LOCAL_CONTEXT_TOKENS', '<module>.USER_RESERVE_TOKENS']
+    note: 同上一條（llm const）。
+  - id: py-llm-skill-eval-const-number
+    class: const
+    status: done
+    files: src/trpg/llm/skill_eval.py
+    kind: number
+    where:
+      - '<module>.EVAL_TIERS'
+      - '<module>.KEYWORD_PERMILLE'
+      - '<module>.KEYWORD_TRIES'
+      - '<module>.LOW_SHARE_DIVISOR'
+      - '<module>.RUN_LENGTH'
+      - '<module>.alert_permille'
+      - '<module>.per'
+      - 'free_items'
+      - 'upgrade_items'
+    note: 同上一條（llm const）。
+
+  # ---------------------------------------------------- 後端 narrative：const
+  # 敘事顯示的格式與上限（列幾格、幾個效果）。
+  - id: py-narrative-events-const-number
+    class: const
+    status: done
+    files: src/trpg/narrative/events.py
+    kind: number
+    where: ['_damage']
+    note: 敘事顯示的格式與上限（列幾格、幾個效果）。
+  - id: py-narrative-keyword-hints-const-number
+    class: const
+    status: done
+    files: src/trpg/narrative/keyword_hints.py
+    kind: number
+    where: ['<module>.MAX_WAYS_PER_SIDE']
+    note: 同上一條（narrative const）。
+  - id: py-narrative-skill-icon-const-number
+    class: const
+    status: done
+    files: src/trpg/narrative/skill_icon.py
+    kind: number
+    where: ['<module>._MAX_EFFECTS_PER_SEGMENT']
+    note: 同上一條（narrative const）。
+  - id: py-narrative-skills-const-number
+    class: const
+    status: done
+    files: src/trpg/narrative/skills.py
+    kind: number
+    where: ['shape_summary']
+    note: 同上一條（narrative const）。
+
+  # ---------------------------------------------------- 後端 server：const
+  # 伺服器帳號安全、心跳、備份、公告的運作常數（非玩法）。
+  - id: py-server-account-config-const-number
+    class: const
+    status: done
+    files: src/trpg/server/account_config.py
+    kind: number
+    where: ['AccountSettings']
+    note: 伺服器帳號安全、心跳、備份、公告的運作常數（非玩法）。
+  - id: py-server-accounts-const-number
+    class: const
+    status: done
+    files: src/trpg/server/accounts.py
+    kind: number
+    where:
+      - '<module>.MAX_SESSIONS'
+      - '<module>.PASSWORD_MAX'
+      - '<module>.PASSWORD_MIN'
+      - '<module>.SALT_BYTES'
+      - '<module>.SCRYPT_DKLEN'
+      - '<module>.SCRYPT_N'
+      - '<module>.SCRYPT_R'
+      - 'AccountStore'
+      - '_scrypt'
+    note: 同上一條（server const）。
+  - id: py-server-announce-const-number
+    class: const
+    status: done
+    files: src/trpg/server/announce.py
+    kind: number
+    where: ['<module>.NAME_LIMIT']
+    note: 同上一條（server const）。
+  - id: py-server-file-lock-const-number
+    class: const
+    status: done
+    files: src/trpg/server/file_lock.py
+    kind: number
+    where: ['<module>._RETRY_WAIT_S']
+    note: 同上一條（server const）。
+  - id: py-server-server-presence-const-number
+    class: const
+    status: done
+    files: src/trpg/server/server_presence.py
+    kind: number
+    where: ['<module>.HEARTBEAT_INTERVAL_S', '<module>.STALE_AFTER_S']
+    note: 同上一條（server const）。
+
+  # ---------------------------------------------------- 後端 skillgen：const
+  # 技能生成的字數、權杖預算、結構常數。
+  - id: py-skillgen-flash-text-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/flash_text.py
+    kind: number
+    where: ['<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
+    note: 技能生成的字數、權杖預算、結構常數。
+  - id: py-skillgen-option-conform-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/option_conform.py
+    kind: number
+    where: ['<module>._MAX_LISTED']
+    note: 同上一條（skillgen const）。
+  - id: py-skillgen-proposal-build-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/proposal/build.py
+    kind: number
+    where: ['_common_fields']
+    note: 同上一條（skillgen const）。
+  - id: py-skillgen-proposal-builder-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/proposal/builder.py
+    kind: number
+    where: ['_variant_model']
+    note: 同上一條（skillgen const）。
+  - id: py-skillgen-proposal-models-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/proposal/models.py
+    kind: number
+    where: ['<module>.DIAGNOSTIC_INPUT_CHARS']
+    note: 同上一條（skillgen const）。
+  - id: py-skillgen-proposal-subset-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/proposal_subset.py
+    kind: number
+    where: ['<module>.DEFAULT_SUBSET_TOKEN_BUDGET', '<module>.SCHEMA_CHAR_LIMIT']
+    note: 同上一條（skillgen const）。
+  - id: py-skillgen-proposal-topup-const-number
+    class: const
+    status: done
+    files: src/trpg/skillgen/proposal_topup.py
+    kind: number
+    where: ['_hostile_statuses', 'filler_order']
+    note: 同上一條（skillgen const）。
+
+  # ---------------------------------------------------- 後端 text-dev：const
+  # 開發者訊息：索引範圍、種子範圍、正規表示式、報表標題（不是玩法數字）。
+  - id: py-api-tuning-check-const-text
+    class: const
+    status: done
+    files: src/trpg/api/tuning/check.py
+    kind: text
+    where: ['<module>._UNIT_PREFIX']
+    note: 開發者訊息：索引範圍、種子範圍、正規表示式、報表標題（不是玩法數字）。
+  - id: py-api-tuning-ratios-const-text
+    class: const
+    status: done
+    files: src/trpg/api/tuning/ratios.py
+    kind: text
+    where: ['<module>._NOT_MEASURABLE_ZH', 'plan_view']
+    note: 同上一條（text-dev const）。
+  - id: py-api-tuning-sim-jobs-const-text
+    class: const
+    status: done
+    files: src/trpg/api/tuning/sim_jobs.py
+    kind: text
+    where: ['SimJobs.start_ratio']
+    note: 同上一條（text-dev const）。
+  - id: py-api-tuning-yaml-patch-const-text
+    class: const
+    status: done
+    files: src/trpg/api/tuning/yaml_patch.py
+    kind: text
+    where: ['_value_text']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-client-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/client.py
+    kind: text
+    where: ['_extract_content']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-flash-pick-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/flash_pick.py
+    kind: text
+    where: ['_Loop._take']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-pick-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/pick.py
+    kind: text
+    where: ['_Pick.check']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-builder-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/builder.py
+    kind: text
+    where: ['<module>.SYSTEM_TEMPLATE']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-flash-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/flash.py
+    kind: text
+    where: ['<module>.FLASH_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-flash-pick-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/flash_pick.py
+    kind: text
+    where: ['<module>.FLASH_PICK_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-naming-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/naming.py
+    kind: text
+    where: ['<module>.NAMING_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-pick-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/pick.py
+    kind: text
+    where: ['<module>.PICK_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-story-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/story.py
+    kind: text
+    where: ['<module>.STORY_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-storyteller-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/storyteller.py
+    kind: text
+    where: ['<module>.STORY_SAFETY']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-wish-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/wish.py
+    kind: text
+    where: ['<module>.WISH_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-wish-pick-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/wish_pick.py
+    kind: text
+    where: ['<module>.WISH_PICK_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-prompts-wish-tags-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/wish_tags.py
+    kind: text
+    where: ['<module>.WISH_TAGS_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-situation-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/situation.py
+    kind: text
+    where: ['<module>.SITUATION_TASK']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-skill-eval-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/skill_eval.py
+    kind: text
+    where: ['free_table', 'suite_summary']
+    note: 同上一條（text-dev const）。
+  - id: py-llm-wish-pick-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/wish_pick.py
+    kind: text
+    where: ['_Loop._card', '_Loop.attempt']
+    note: 同上一條（text-dev const）。
+  - id: py-narrative-events-const-text
+    class: const
+    status: done
+    files: src/trpg/narrative/events.py
+    kind: text
+    where: ['_attack']
+    note: 同上一條（text-dev const）。
+  - id: py-narrative-skills-const-text
+    class: const
+    status: done
+    files: src/trpg/narrative/skills.py
+    kind: text
+    where: ['miss_text']
+    note: 同上一條（text-dev const）。
+  - id: py-roguelite-start-const-text
+    class: const
+    status: done
+    files: src/trpg/roguelite/start.py
+    kind: text
+    where: ['_check_seed', 'new_run']
+    note: 同上一條（text-dev const）。
+  - id: py-server-accounts-const-text
+    class: const
+    status: done
+    files: src/trpg/server/accounts.py
+    kind: text
+    where: ['AccountStore.create']
+    note: 同上一條（text-dev const）。
+  - id: py-server-season-reset-const-text
+    class: const
+    status: done
+    files: src/trpg/server/season_reset.py
+    kind: text
+    where: ['_plan']
+    note: 同上一條（text-dev const）。
+  - id: py-skillgen-player-text-const-text
+    class: const
+    status: done
+    files: src/trpg/skillgen/player_text.py
+    kind: text
+    where: ['<module>._PYDANTIC']
+    note: 同上一條（text-dev const）。
+  - id: py-world-situation-coverage-const-text
+    class: const
+    status: done
+    files: src/trpg/world/situation_coverage.py
+    kind: text
+    where: ['format_report']
+    note: 同上一條（text-dev const）。
+
+  # ---------------------------------------------------- 後端 world：const
+  # 大世界的雜湊、存檔格式、路線幾何、工具報表。
+  - id: py-world-clock-const-number
+    class: const
+    status: done
+    files: src/trpg/world/clock.py
+    kind: number
+    where: ['<module>.UTC_OFFSET_SECONDS']
+    note: 大世界的雜湊、存檔格式、路線幾何、工具報表。
+  - id: py-world-field-enemies-const-number
+    class: const
+    status: done
+    files: src/trpg/world/field_enemies.py
+    kind: number
+    where: ['spawn_place']
+    note: 同上一條（world const）。
+  - id: py-world-growth-const-number
+    class: const
+    status: done
+    files: src/trpg/world/growth.py
+    kind: number
+    where: ['xp_to_level']
+    note: 同上一條（world const）。
+  - id: py-world-league-const-number
+    class: const
+    status: done
+    files: src/trpg/world/league.py
+    kind: number
+    where: ['matches_per_pair']
+    note: 同上一條（world const）。
+  - id: py-world-loot-const-number
+    class: const
+    status: done
+    files: src/trpg/world/loot.py
+    kind: number
+    where: ['add_loot']
+    note: 同上一條（world const）。
+  - id: py-world-save-const-number
+    class: const
+    status: done
+    files: src/trpg/world/save.py
+    kind: number
+    where: ['<module>.WORLD_RULES_VERSION', 'dumps_char', 'dumps_world']
+    note: 同上一條（world const）。
+  - id: py-world-situation-coverage-const-number
+    class: const
+    status: done
+    files: src/trpg/world/situation_coverage.py
+    kind: number
+    where:
+      - '<module>.DICE_PAIRS'
+      - '<module>.LOW_DC'
+      - '<module>.MIN_TEMPLATES'
+      - 'CoverageReport'
+      - 'inputs_from_library'
+    note: 同上一條（world const）。
