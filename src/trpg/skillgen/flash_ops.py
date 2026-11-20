@@ -42,8 +42,8 @@
 ``mod_stack``      計數上限 +1（修正型被動：依空欄位計算的格數，BAL-10b）
 ``mod_cooldown``   命中後冷卻 −1 → −2（修正型被動，BAL-10b）
 ``mod_cost``       代價減輕（修正型被動：負的幅度減輕一格，不讓代價消失，BAL-10b／10c）
-``stance_enter_light``  進入代價 −1（姿態：進入時的冷卻、法力、耐力 −1，維持費不動，BAL-10b／10c）
-``stance_enter_heavy``  進入代價 +1（姿態：進入時的法力或耐力 +1、本體提高一級，BAL-19e）
+``stance_enter_light``  進入代價 −1（姿態：冷卻、法力、耐力減一格，維持費不動，BAL-10b／10c）
+``stance_enter_heavy``  進入代價 +1（姿態：進入時的法力或耐力加一格、本體提高一級，BAL-19e）
 ``self_rider``     附帶護身（姿態進入時、反應觸發時多一個作用於自己的效果，BAL-19e）
 =================  ============================================================
 
@@ -715,9 +715,9 @@ def _op_light(
 ) -> list[Draft]:
     """輕巧：AP −1（最少 1），冷卻壓到 0～1 回合，威力由預算器依較低的 AP 係數降低。
 
-    BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）−1，
-    每項最少留 1（只減不拿掉）。FL-1a：至少一項一定要嚴格變弱、沒有一項變強
-    （:mod:`trpg.skillgen.flash_cost`）。"""
+    BAL-12b 定：AP 已經是 1 時，改成 ``template.cost_fields`` 依序的冷卻或資源（法力／耐力）減一格
+    （冷卻 1；法力、耐力 1 × ``quantity_scale``），每項最少留一格（只減不拿掉）。FL-1a：至少一項
+    一定要嚴格變弱、沒有一項變強（:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     if (skill.ap_cost or 1) <= 1:
@@ -1121,9 +1121,13 @@ def _stance_drafts(
     return drafts
 
 
-def _entry_cost(skill: SkillDef, field: str, step: int) -> dict[str, Any] | None:
-    """姿態的進入代價（施放費用）``field`` 改 ``step``（+1 加重、−1 減輕）後的 ``cost``；做不到
-    （姿態的進入 AP 由規則固定、已經是 0、超過上限）時 ``None``。維持費不在這裡（#67、BAL-10b）。"""
+def _entry_cost(
+    skill: SkillDef, field: str, step: int, library: ContentLibrary
+) -> dict[str, Any] | None:
+    """姿態的進入代價（施放費用）``field`` 改 ``step`` 格（+1 加重、−1 減輕）後的 ``cost``；做不到
+    （姿態的進入 AP 由規則固定、已經是 0、超過上限）時 ``None``。維持費不在這裡（#67、BAL-10b）。
+
+    一格：冷卻 1；法力、耐力是量類，1 × ``quantity_scale``（``CoreRules.cost_floor``，X10-3c）。"""
     if field == "ap_cost":
         return None  # 姿態的 ap_cost 必須是 null（進入固定花 1 AP），沒有可動的
     cost = skill.cost.model_dump(mode="json")
@@ -1135,9 +1139,11 @@ def _entry_cost(skill: SkillDef, field: str, step: int) -> dict[str, Any] | None
         cost["cooldown"] = value or None
         return cost
     current = int(getattr(skill.cost, field))
-    if current + step < (1 if step < 0 else 0):
-        return None  # 法力、耐力減到 0 ＝ 代價消失，最少留 1（BAL-10c）
-    cost[field] = current + step
+    unit = library.ruleset.core.cost_floor(field)  # X10-3c：量類一格 1 × quantity_scale
+    value = current + step * unit
+    if value < (unit if step < 0 else 0):
+        return None  # 法力、耐力減到 0 ＝ 代價消失，最少留一格（BAL-10c）
+    cost[field] = value
     return cost
 
 
@@ -1149,7 +1155,7 @@ def _form_cost_drafts(
     ``cost_fields`` 時不出（同 BAL-2c）。"""
     drafts: list[Draft] = []
     for field in template.cost_fields:
-        cost = _entry_cost(skill, field, -1 if down else 1)
+        cost = _entry_cost(skill, field, -1 if down else 1, library)
         if cost is not None:
             drafts += _magnitude_drafts(skill, library, 0, down=down, cost=cost)
     return drafts
@@ -1216,13 +1222,14 @@ def _op_stance_potency(
 def _op_stance_enter_light(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """進入代價 −1（姿態，BAL-10b）：施放費用（``template.cost_fields`` 依序）−1，姿態本體與維持費都
-    不動（#67）。所有姿態（元素、白板、變身、多效果）都適用；沒有進入代價可減就不出。"""
+    """進入代價 −1（姿態，BAL-10b）：施放費用（``template.cost_fields`` 依序）減一格（冷卻 1；法力、
+    耐力 1 × ``quantity_scale``），姿態本體與維持費都不動（#67）。所有姿態（元素、白板、變身、
+    多效果）都適用；沒有進入代價可減就不出。"""
     if _stance_family(skill, library) is None:
         return []
     drafts: list[Draft] = []
     for field in template.cost_fields:
-        cost = _entry_cost(skill, field, -1)
+        cost = _entry_cost(skill, field, -1, library)
         if cost is not None:
             base, effects = base_draft(skill)
             base["cost"] = cost
@@ -1233,8 +1240,9 @@ def _op_stance_enter_light(
 def _op_stance_enter_heavy(
     skill: SkillDef, template: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
-    """沉勢（姿態，BAL-19e）：進入代價（``template.cost_fields`` 依序，法力、耐力）+1，姿態本體提高
-    一級（元素姿態換到較高的級別、其他姿態狀態的姿態幅度提高）；維持費不動（#67）。
+    """沉勢（姿態，BAL-19e）：進入代價（``template.cost_fields`` 依序，法力、耐力）加一格（1 ×
+    ``quantity_scale``），姿態本體提高一級（元素姿態換到較高的級別、其他姿態狀態的姿態幅度提高）；
+    維持費不動（#67）。
 
     ``stance_enter_light`` 的反向。變身姿態不出（BAL-10c：變身姿態只出修正類）；進入冷卻不算代價
     （BAL-10c），模板不列。"""
@@ -1243,7 +1251,7 @@ def _op_stance_enter_heavy(
         return []
     drafts: list[Draft] = []
     for field in template.cost_fields:
-        cost = _entry_cost(skill, field, 1)
+        cost = _entry_cost(skill, field, 1, library)
         if cost is None:
             continue
         for base, effects in _stronger_body(skill, library):

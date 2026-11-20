@@ -422,7 +422,7 @@ class CoreRules(ContentModel):
     hp_per_con_point: int = Field(ge=0)
     level_hp_permille: int = Field(ge=0)
 
-    # 屬性的常駐數值（Phase 3H-1，07 7.2）：每高於基準 4 點升一階
+    # 屬性的常駐數值（Phase 3H-1，07 7.2）：每高於基準 40 點升一階
     attribute_perks: AttributePerks = AttributePerks()
 
     # 傷害

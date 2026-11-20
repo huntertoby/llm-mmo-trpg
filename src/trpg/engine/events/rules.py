@@ -119,13 +119,14 @@ class BombExploded(EventBase):
 
 
 class DeathCheated(EventBase):
-    """免死（``cheat_death`` 的狀態）擋下致命傷害：HP 留在 1，之後移除該狀態（``spent``）。"""
+    """免死（``cheat_death`` 的狀態）擋下致命傷害：HP 留在 1 × ``quantity_scale``（10），之後移除
+    該狀態（``spent``）。"""
 
     type: Literal["death_cheated"] = "death_cheated"
     unit_id: UnitId
     status_id: str
     prevented: int
-    """多擋下的傷害（原本會扣到 0 以下的部分 ＋ 1）。"""
+    """多擋下的傷害（原本會扣到 0 以下的部分 ＋ 留下的 HP，1 × ``quantity_scale``）。"""
 
 
 class DamageRedirected(EventBase):

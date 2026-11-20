@@ -321,7 +321,7 @@ def new_run(
         raise ChoiceError("；".join(problems))
     base = {a: rules.base_attribute for a in Attribute}
     core = library.ruleset.core
-    # 範本的基礎 HP ＝ build 英雄在「體質 10」時的 HP（亦即 build 英雄以自己的體質算出的最終 HP），
+    # 範本的基礎 HP ＝ build 英雄在「體質 100」時的 HP（亦即 build 英雄以自己的體質算出的最終 HP），
     # 開局配點加體質之後才額外增加（Phase 3-7）
     authored_hp = core.template_max_hp(build.hero)
     wclass = library.weapons[build.hero.weapon].weapon_class
