@@ -296,11 +296,11 @@ rules:
     note: 源力上限 3（core.yaml source_max 的前端副本）。
   - id: ts-attr-base
     class: scale
-    status: todo
+    status: done
     files: client/src/run/AttributeAllocator.tsx
     kind: number
     value: '10'
-    note: 屬性基礎值的後備 ?? 10（量類）。
+    note: 屬性基礎值的後備 ?? 10（量類）。HC-2：呼叫端一律帶齊六項屬性，後備改成「—」（0 筆）。
   - id: ts-vfx-damage-tiers
     class: config
     status: todo
@@ -706,6 +706,26 @@ rules:
     kind: number
     slot: 'quantity_cap(#0)'
     note: HC-2：量類欄位的 schema 上限寫成 quantity_cap(換算前的上限)＝× 最大倍率（content/quantity.py）。
+  - id: py-scale-generator-costs
+    class: scale
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/skillgen/flash_major.py, src/trpg/skillgen/composer_recipes.py]
+    slot: ['{mana}']
+    note: 生成器寫死的候選法力（換算前的單位）；X10-2b 起呼叫點一律經 core.scaled_cost（× quantity_scale），HC-2 確認。
+  - id: py-scale-max-attribute
+    class: scale
+    status: todo
+    files: src/trpg/content/battle.py
+    owner: MAX_ATTRIBUTE
+    note: 屬性值的護欄 999（範本驗證與裝備加成共用，HC-2 合併成一個常數；數值沒改）；要不要改成 100 × quantity_scale 待 PM 定。
+  - id: py-defense-break-default
+    class: config
+    status: todo
+    files: src/trpg/engine/rules/statuses.py
+    owner: DEFAULT_DEFENSE_BREAK
+    note: 保守：破甲狀態沒帶數值時的防禦降幅 100‰；是千分比不是量類，HC-2 從 scale 改判 config（執行時會用到的預設值）。
   - id: py-skill-stance-upkeep-points
     class: config
     status: todo
@@ -766,13 +786,13 @@ rules:
     note: 專查（HC-2）：content 的量類預設 1（掃描器不列 1，0 筆，只作紀錄）。已改：拿掉預設、改必填；min_damage 改 None＝1 × quantity_scale。
   - id: py-scale-one-defaults-misc
     class: scale
-    status: todo
+    status: done
     lang: py
     kind: number
     value: '1'
     files: [src/trpg/engine/skills/primitives/rule_rewrites.py, src/trpg/skillgen/budget.py]
     scope: [restore_resource, _restore_resource_points]
-    note: 專查（HC-2）：restore_resource 法力 amount 的後備 1（掃描器不列 1，0 筆，只作紀錄）。
+    note: 專查（HC-2）：restore_resource 法力 amount 的後備 1（掃描器不列 1，0 筆，只作紀錄）。已改成 1 × quantity_scale。
 
   # ---------------------------------------------------- 後端 api：config
   # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。

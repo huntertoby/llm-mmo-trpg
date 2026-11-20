@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 __all__ = [
     "GIANT_FOOTPRINTS",
     "ID_PATTERN",
+    "MAX_ATTRIBUTE",
     "SUMMON_MODES",
     "ArmorBreak",
     "Blessing",
@@ -1172,7 +1173,9 @@ class ReactionRule(ContentModel):
 # 單位範本
 # ---------------------------------------------------------------------------
 
-_MAX_ATTR = 999
+MAX_ATTRIBUTE = 999
+"""屬性值的護欄（範本驗證與裝備加成的上限；HC-2 起兩處共用）。換算後實際屬性約 100～300，
+999 仍涵蓋；要不要改成 100 × ``quantity_scale`` 見 ``docs/phases/PhaseHC-2報告.md`` 待決。"""
 _PERMILLE = 1000
 
 
@@ -1911,9 +1914,9 @@ class UnitTemplate(ContentModel):
         missing = [a.value for a in Attribute if a not in value]
         if missing:
             raise ValueError(f"缺少屬性：{', '.join(missing)}")
-        bad = [f"{a.value}={v}" for a, v in value.items() if not 1 <= v <= _MAX_ATTR]
+        bad = [f"{a.value}={v}" for a, v in value.items() if not 1 <= v <= MAX_ATTRIBUTE]
         if bad:
-            raise ValueError(f"屬性值必須在 1–{_MAX_ATTR}：{', '.join(bad)}")
+            raise ValueError(f"屬性值必須在 1–{MAX_ATTRIBUTE}：{', '.join(bad)}")
         return {a: value[a] for a in Attribute}
 
     @field_validator("resist")

@@ -465,16 +465,18 @@ def _restore_resource_points(
     _skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
     """``restore_resource`` 的點數（3D-1）：法力 ＝ 點數 × ``restore_mana_point_permille``‰；
-    冷卻 ＝ 回合數 × ``restore_cooldown_points``。"""
-    amount = effect.amount or 1
+    冷卻 ＝ 回合數 × ``restore_cooldown_points``。沒寫 ``amount`` 時冷卻 1、法力 1 × 倍率
+    （``quantity_scale``；HC-2，``amount`` 是必填參數，這是後備）。"""
     rules = library.budget
+    scale = _scale(library)  # X10-2a：每 quantity_scale 點法力 permille‰
     if effect.resource == "cooldown":
+        amount = effect.amount or 1
         return (
             Fraction(rules.restore_cooldown_points * amount),
             f"冷卻 −{amount} × {rules.restore_cooldown_points} 點",
         )
     permille = rules.restore_mana_point_permille
-    scale = _scale(library)  # X10-2a：每 quantity_scale 點法力 permille‰
+    amount = effect.amount or scale
     return Fraction(permille * amount, _PERMILLE * scale), (
         f"法力 {amount} × {permille}‰" if scale == 1 else f"法力 {amount} ÷ {scale} × {permille}‰"
     )

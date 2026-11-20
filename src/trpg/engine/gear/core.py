@@ -40,7 +40,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from trpg.content.appearance import derive_keywords
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import MAX_ATTRIBUTE, UnitTemplate
 from trpg.content.equipment import (
     ActionAffix,
     AttackAffix,
@@ -98,7 +98,6 @@ __all__ = [
 ]
 
 _PERMILLE = 1000
-_MAX_ATTR = 999
 EMPTY_GEAR = GearState()
 
 _CONDITIONAL_STAT: dict[str, BonusStat] = {
@@ -291,7 +290,7 @@ def geared_template(template: UnitTemplate, gear: GearState, rules: Ruleset) -> 
         kind, _, name = key.partition(":")
         if kind == "attr":
             attr = Attribute(name)
-            attributes[attr] = max(1, min(_MAX_ATTR, attributes[attr] + amount))
+            attributes[attr] = max(1, min(MAX_ATTRIBUTE, attributes[attr] + amount))
         elif kind == "resist":
             element = Element(name)
             base = -element_mods.get(element, 0)
