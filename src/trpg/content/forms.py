@@ -81,7 +81,7 @@ class NaturalCharge(ContentModel):
     的回合開始時**朝該方向以錐形（大小 ``size``）釋放天生武器的傷害（骰、屬性 × 0.3、元素）。
     蓄力中倒下、暈眩、冰凍、離開形態就取消；預告格同環境預告。"""
 
-    size: int = Field(default=3, ge=2, le=4)
+    size: int = Field(ge=2, le=4)
     """錐形的大小（``skill_shapes.yaml`` 的 ``cone`` 參數 ``size``）。"""
 
 
@@ -189,7 +189,7 @@ class EntryHealAdjacent(ContentModel):
 
     dice: Dice
     attr: Attribute
-    attr_permille: int = Field(default=500, ge=0, le=1000)
+    attr_permille: int = Field(ge=0, le=1000)
 
 
 class FormEntry(ContentModel):
@@ -206,7 +206,9 @@ class FormEntry(ContentModel):
     """
 
     shield_max_hp_permille: int | None = Field(default=None, ge=1, le=1000)
-    shield_duration: int = Field(default=2, ge=1, le=3)
+    shield_duration: int | None = Field(default=None, ge=1, le=3)
+    """護盾的回合數：有 ``shield_max_hp_permille`` 時必填（HC-4a：沒有 Python 預設值，寫在
+    內容檔）。"""
     heal_max_hp_permille: int | None = Field(default=None, ge=1, le=1000)
     next_attack_hit: int = Field(default=0, ge=0, le=5)
     next_attack_crit: int = Field(default=0, ge=0, le=5)
@@ -215,6 +217,12 @@ class FormEntry(ContentModel):
     burst: EntryBurst | None = None
     heal_adjacent: EntryHealAdjacent | None = None
     collision_permille: int = Field(default=0, ge=0, le=2000)
+
+    @model_validator(mode="after")
+    def _check_shield(self) -> FormEntry:
+        if self.shield_max_hp_permille is not None and self.shield_duration is None:
+            raise ValueError("進入獎勵有 shield_max_hp_permille 時要寫 shield_duration")
+        return self
 
 
 class FormDef(ContentModel):
@@ -259,7 +267,7 @@ class FormTable(ContentModel):
     """一般姿態（``SkillDef.stance_upkeep``）每點維持費的耐力數（武器技姿態；3W-2b）。"""
     stance_upkeep_mana: int = Field(ge=1, le=quantity_cap(10))
     """一般姿態每點維持費的法力數（法術技姿態；3W-2b）。"""
-    cooldown: int = Field(default=2, ge=1, le=5)
+    cooldown: int = Field(ge=1, le=5)
     """離開一個形態（自己取消、被迫解除、切換）後該形態的冷卻回合（同技能冷卻的倒數）。"""
     forms: tuple[FormDef, ...] = ()
 

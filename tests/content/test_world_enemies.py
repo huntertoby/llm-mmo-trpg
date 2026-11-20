@@ -103,6 +103,7 @@ def test_apply_variant_swaps_reaction_rule() -> None:
             "name_zh": "底",
             "attributes": {a: 10 for a in ("str", "dex", "con", "int", "wis", "wil")},
             "max_hp": 10,
+            "speed": 5,
             "weapon": "dagger",
             "skills": ["skill_rx_slip_away"],
             "reactions": [{"reaction": "skill_rx_slip_away", "when": {"event": "hit_by_attack"}}],
@@ -176,6 +177,7 @@ def test_apply_affix_hp_floor() -> None:
             "name_zh": "小",
             "attributes": {a: 10 for a in ("str", "dex", "con", "int", "wis", "wil")},
             "max_hp": 1,
+            "speed": 5,
             "weapon": "dagger",
         }
     )

@@ -158,6 +158,7 @@ def _entry_effects(
     unit.move_points += entry.move * scale // PERMILLE
     effects: list[EffectBase] = []
     if entry.shield_max_hp_permille is not None:
+        assert entry.shield_duration is not None  # 有護盾時必填（FormEntry 的驗證）
         amount = unit.max_hp * entry.shield_max_hp_permille // PERMILLE * scale // PERMILLE
         if amount > 0:
             effects.append(

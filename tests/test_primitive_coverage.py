@@ -343,10 +343,13 @@ def test_every_form_field_has_card_text(library: ContentLibrary) -> None:
         "move": 1,
         "conceal": 1,
         "burst": EntryBurst(radius=1, dice=Dice(count=1, sides=4), element=Element.FIRE),
-        "heal_adjacent": EntryHealAdjacent(dice=Dice(count=1, sides=4), attr=Attribute.WIL),
+        "heal_adjacent": EntryHealAdjacent(
+            dice=Dice(count=1, sides=4), attr=Attribute.WIL, attr_permille=500
+        ),
         "collision_permille": 100,
     }
     # shield_duration 只是護盾的持續回合，文字與護盾同一行
     assert set(entry) | {"shield_duration"} == set(FormEntry.model_fields)
     for name, value in entry.items():
-        assert form_entry_lines(FormEntry.model_validate({name: value})), name
+        extra = {"shield_duration": 2} if name == "shield_max_hp_permille" else {}
+        assert form_entry_lines(FormEntry.model_validate({name: value, **extra})), name

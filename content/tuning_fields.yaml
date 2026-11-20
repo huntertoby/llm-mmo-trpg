@@ -34,7 +34,7 @@ targets:
       - {path: attributes.int, label_zh: 智力, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
       - {path: attributes.wis, label_zh: 感知, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
       - {path: attributes.wil, label_zh: 意志, kind: int, hint_min: 10, hint_max: 300, note_zh: 六屬性之一。}
-      - {path: speed, label_zh: 速度, kind: int, hint_min: 0, hint_max: 10, note_zh: 每回合可移動的格數基礎；沒寫時是 5。}
+      - {path: speed, label_zh: 速度, kind: int, hint_min: 0, hint_max: 10, note_zh: 每回合可移動的格數基礎（單位檔必填，HC-4a 起沒有預設值）。}
       - {path: armor_bonus, label_zh: 護甲加值, kind: int, hint_min: 0, hint_max: 150, note_zh: 沒寫時是 0；實戰時另加遭遇的護甲調整。}
       - {path: max_mana, label_zh: 法力基礎, kind: int, hint_min: 0, hint_max: 600, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
       - {path: stamina, label_zh: 耐力基礎, kind: int, hint_min: 0, hint_max: 600, note_zh: 沒寫時依武器大類；引擎再加屬性加成。}
@@ -202,6 +202,9 @@ targets:
       - {path: ap_carry_max, label_zh: 可保留的 AP, kind: int, hint_min: 0, hint_max: 3, note_zh: 回合結束時沒用完的 AP 最多留這麼多到下回合（初值 1）；本回合上限也跟著是每回合 AP＋這個值。}
       - {path: miss_refund_ap, label_zh: 失手返還的 AP, kind: int, hint_min: 0, hint_max: 2, note_zh: 技能所有目標都沒命中（被豁免擋下也算）時返還的 AP（初值 1）；敵我都適用，每個單位每回合最多返還 1 次。0＝不返還。}
       - {path: miss_refund_min_cost, label_zh: 失手返還的最低耗費, kind: int, hint_min: 1, hint_max: 3, note_zh: 實際花了至少這麼多 AP 的技能才會失手返還（初值 2；1 AP 的技能不返還）。}
+      # HC-4a（05 5.12.2 第 3 點「數值工坊可調」）：頭目部位血量加總的上限，從 parts.py 的常數搬到 core.yaml 的 boss_parts。
+      # 部位數（2～4）、破壞效果數（最多 2）、階段數（2～4）是結構，不開。
+      - {path: boss_parts.hp_total_max_permille, label_zh: 部位血量加總上限（‰）, kind: permille, hint_min: 400, hint_max: 800, note_zh: 同一隻頭目所有部位的血量（部位血量‰）加總不能超過這個千分比（初值 600＝頭目最大 HP 的 60%）。調低後，現有頭目的部位加總超過的話會擋下，要先調低各部位血量。只能 1～1000。}
   # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
   - kind: budget
     label_zh: 技能預算表

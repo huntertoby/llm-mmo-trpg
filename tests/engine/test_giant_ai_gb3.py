@@ -63,6 +63,7 @@ AI_PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "core",
         "name_zh": "核心",
+        "hp_permille": 200,
         "tiles": [[0, 0]],
         "melee_from": "any_face",
         "exposed_in": ["breath"],
@@ -74,6 +75,7 @@ AI_PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "seam",
         "name_zh": "殼縫",
+        "hp_permille": 200,
         "tiles": [[-1, 0], [1, 0]],
         "counts_as_behind": True,
         "on_break": [{"type": "stop_mechanic", "status": "molten_shell"}],
@@ -81,6 +83,7 @@ AI_PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "vent",
         "name_zh": "噴口",
+        "hp_permille": 200,
         "tiles": [[-1, -1], [0, -1], [1, -1]],
         "reach": "ranged",
         "on_break": [{"type": "seal_skill", "skill": SPLASH}],

@@ -21,7 +21,7 @@ forms:
     look: form_bear
     natural_weapon: {name_zh: 熊爪, dice: 1d8, attack: melee, attrs: [str, con]}
     effects: {max_hp_permille: 150, defense_permille: 100, move: -1}
-    entry: {shield_max_hp_permille: 100}
+    entry: {shield_max_hp_permille: 100, shield_duration: 2}
   - id: cat
     name_zh: 貓
     category: physical
@@ -87,4 +87,4 @@ forms:
     natural_weapon:
       {name_zh: 吐息, dice: 1d8, attack: ranged, range: 3, attrs: [int], element_choices: [fire, ice, lightning], charge: {size: 3}}
     effects: {max_hp_permille: 100, move: -1}
-    entry: {shield_max_hp_permille: 50}
+    entry: {shield_max_hp_permille: 50, shield_duration: 2}

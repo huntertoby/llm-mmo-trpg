@@ -74,6 +74,7 @@ PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "core",
         "name_zh": "核心",
+        "hp_permille": 200,
         "tiles": [[0, 0]],
         "melee_from": "any_face",
         "exposed_in": ["breath"],
@@ -85,6 +86,7 @@ PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "seam",
         "name_zh": "殼縫",
+        "hp_permille": 200,
         "tiles": [[-1, 0], [1, 0]],
         "counts_as_behind": True,
         "on_break": [{"type": "stop_mechanic", "status": "molten_shell"}],
@@ -92,6 +94,7 @@ PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "vent",
         "name_zh": "噴口",
+        "hp_permille": 200,
         "tiles": [[-1, -1], [0, -1], [1, -1]],
         "reach": "ranged",
         "armor_bonus": 30,
@@ -227,7 +230,12 @@ def test_t11_giant_parts_need_tiles_inside_the_body_without_overlap() -> None:
 
 def test_t11_new_fields_are_not_serialised_when_unused() -> None:
     plain = BossPart.model_validate(
-        {"id": "head", "name_zh": "頭", "on_break": [{"type": "seal_skill", "skill": INHALE}]}
+        {
+            "id": "head",
+            "name_zh": "頭",
+            "hp_permille": 200,
+            "on_break": [{"type": "seal_skill", "skill": INHALE}],
+        }
     )
     assert set(plain.model_dump(mode="json")) == {
         "id",

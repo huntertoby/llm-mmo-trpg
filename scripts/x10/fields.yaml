@@ -195,6 +195,7 @@ groups:
       - forms[].entry.move
       - forms[].entry.next_attack_crit
       - forms[].entry.next_attack_hit
+      - forms[].entry.shield_duration             # 回合（HC-4a 熊、龍補寫）
       - forms[].natural_weapon.charge.size
       - forms[].natural_weapon.damage_permille
       - forms[].natural_weapon.range
@@ -677,6 +678,8 @@ groups:
       - rune_default_rounds
       - rune_limit_per_owner
       - rune_max_rounds
+      - boss_parts.*                              # HC-4a：部位數、‰、效果數
+      - boss_phases.*                             # HC-4a：階段數
       - shove_distance
       - source_max
       - source_min_at_start

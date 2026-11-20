@@ -7,6 +7,8 @@
 - ``const``：真的是常數（格數、AP、d20、‰ 換算、程式邏輯、開發說明……）
 - ``text``：說明文字裡的數字，應該從資料帶入
 - ``layout``：前端呈現（排版、繪圖、動畫、音效）
+- ``guard``：schema 的護欄（擋不合理輸入的上下限），留在 schema 不搬（HC-4a；
+  ``PhaseHC-1報告.md`` 開發 PM 裁定 2）
 
 規則由上往下比對，**第一條符合的規則勝出**；規則的寫法見 ``classes.yaml`` 開頭。不比對行號，所以別人
 改動檔案、行號移動時歸類照舊成立。
@@ -39,9 +41,9 @@ import yaml
 HERE: Final = Path(__file__).resolve().parent
 ROOT: Final = HERE.parents[1]
 CLASSES_PATH: Final = HERE / "classes.yaml"
-CLASSES: Final = ("config", "scale", "const", "text", "layout")
+CLASSES: Final = ("config", "scale", "const", "text", "layout", "guard")
 TODO_CLASSES: Final = ("config", "scale", "text")
-"""要搬家的三類；``const``、``layout`` 不用搬，``status`` 一律是 ``done``。"""
+"""要搬家的三類；``const``、``layout``、``guard`` 不用搬，``status`` 一律是 ``done``。"""
 STATUSES: Final = ("todo", "done")
 _LIST_KEYS: Final = ("lang", "files", "scope", "where", "kind", "slot", "owner", "ann", "value")
 _REGEX_KEYS: Final = ("text", "context")
@@ -285,7 +287,8 @@ def unclassified_message(result: Result, limit: int = 40) -> str:
         f"有 {len(result.unclassified)} 筆寫死的數字或含數字的中文字串沒有歸類。",
         "請在 scripts/hardcoded/classes.yaml 加規則（第一條符合的規則勝出，寫在較寬的規則前面）：",
         "  config＝玩法數值要搬進 content／工坊；scale＝量類（由 quantity_scale 推導）；",
-        "  const＝真的常數；text＝說明文字裡的數字（要從資料帶入）；layout＝前端呈現。",
+        "  const＝真的常數；text＝說明文字裡的數字（要從資料帶入）；layout＝前端呈現；",
+        "  guard＝schema 的護欄（純驗證用的上下限，留在 schema）。",
         "  拿不準 config 還是 const 時歸 config。例：",
     ]
     if result.unclassified:
@@ -415,9 +418,9 @@ def markdown(result: Result, plan: list[str]) -> str:
         "",
         *_rule_table(result, TODO_CLASSES),
         "",
-        "## 4. 不搬的規則（const／layout）",
+        "## 4. 不搬的規則（const／layout／guard）",
         "",
-        *_rule_table(result, ("const", "layout")),
+        *_rule_table(result, ("const", "layout", "guard")),
         "",
         "## 5. 完整清單（config／scale／text，依區塊、檔案分組）",
         "",

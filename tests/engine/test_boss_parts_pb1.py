@@ -85,6 +85,7 @@ PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "back",
         "name_zh": "背",
+        "hp_permille": 200,
         "reach": "behind",
         "on_break": [{"type": "stop_mechanic", "status": "mist_return"}],
     },
@@ -97,6 +98,7 @@ PARTS: tuple[dict[str, Any], ...] = (
     {
         "id": "tail",
         "name_zh": "尾",
+        "hp_permille": 200,
         "exposed_in": ["two"],
         "on_break": [
             {"type": "stat_down", "stat": "damage_dealt", "amount": 750},
@@ -202,12 +204,14 @@ HIGH: tuple[dict[str, Any], ...] = (
     {
         "id": "crown",
         "name_zh": "冠",
+        "hp_permille": 200,
         "reach": "high_or_far",
         "on_break": [{"type": "interrupt_charge"}],
     },
     {
         "id": "knee",
         "name_zh": "膝",
+        "hp_permille": 200,
         "reach": "disabled",
         "on_break": [{"type": "interrupt_charge"}],
     },

@@ -120,7 +120,7 @@ class Ruleset(ContentModel):
     races: RaceTable | None = None
     """可玩種族（Phase 3R-2，``content/races.yaml``）：種族技與環境被動，嵌入規則包，重播不依賴資料
     檔；沒有這個檔案時為 ``None``（單位帶 ``race`` 會在載入時報錯）。"""
-    equipment: EquipmentRules = EquipmentRules()
+    equipment: EquipmentRules
     """裝備的遞減權重與硬上限（Phase 3G-G1，``content/rules/equipment.yaml``）。"""
     keywords: KeywordTable = KeywordTable.model_construct(keywords=())
     """關鍵字推導表（Phase 3G-G2，``content/skill_keywords.yaml``）：裝備的技能強化詞條依關鍵字

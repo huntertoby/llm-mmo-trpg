@@ -10,7 +10,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import give_turn, library, make_setup, spawn, template
-from trpg.content.battle import BossPhase, UnitTemplate
+from trpg.content.battle import BossPhase, UnitTemplate, phase_count_problems
 from trpg.content.skills import CHARGING
 from trpg.engine import BattleState, UseSkill, resolve
 from trpg.engine.actions import EndTurn
@@ -245,7 +245,6 @@ def test_battle_log_text() -> None:
 @pytest.mark.parametrize(
     ("phases", "message"),
     [
-        ([{"id": "a", "name_zh": "甲"}], "2～4 項"),
         (
             [
                 {"id": "a", "name_zh": "甲", "trigger": {"kind": "hp_below", "permille": 900}},
@@ -277,6 +276,14 @@ def test_battle_log_text() -> None:
 def test_phase_schema_rejects(phases: list[dict[str, object]], message: str) -> None:
     with pytest.raises(ValidationError, match=message):
         _boss(phases=phases)
+
+
+def test_phase_count_is_a_core_rule() -> None:
+    """HC-4a：階段數 2～4 是規則（core.yaml 的 boss_phases），載入內容庫時檢查，不在範本驗證。"""
+    rules = library().ruleset.core.boss_phases
+    one = (BossPhase.model_validate({"id": "a", "name_zh": "甲"}),)
+    assert phase_count_problems(one, rules) == ["phases 要有 2～4 項（開場階段＋1～3 次轉換）"]
+    assert phase_count_problems((), rules) == []
 
 
 def test_unknown_trigger_kind_rejected() -> None:

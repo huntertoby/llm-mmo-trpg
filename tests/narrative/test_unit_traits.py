@@ -46,4 +46,4 @@ def test_summit_array_stone_shows_the_kin_name_in_chinese(library: ContentLibrar
 
 def test_kin_name_needs_a_kin_tag() -> None:
     with pytest.raises(ValidationError, match="kin_name_zh 必須和 kin_tag 一起寫"):
-        WardSpec(kin_name_zh="霧鎖真人", taken_permille=500)
+        WardSpec(kin_name_zh="霧鎖真人", range=3, taken_permille=500)

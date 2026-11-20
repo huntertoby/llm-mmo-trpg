@@ -128,6 +128,7 @@ def _hit_rule_text(lib: ContentLibrary, rule: SummonHitRule) -> str:
     if rule.status is not None:
         parts.append(f"施加「{_status(lib, rule.status)}」{rule.duration} 回合")
     if rule.chain_targets:
+        assert rule.chain_permille is not None  # 有連鎖時必填（SummonHitRule 的驗證）
         parts.append(
             f"攻擊沿水面連鎖到目標 {rule.chain_radius} 格內最多 {rule.chain_targets} 名其他敵人"
             f"（各受武器傷害 ×{rule.chain_permille / 1000:g}）"

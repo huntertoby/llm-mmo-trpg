@@ -897,14 +897,14 @@ class EquipmentCaps(ContentModel):
     - 觸發連鎖沿用 ``core.max_trigger_depth``（G3）。
     """
 
-    damage_bonus_permille: int = Field(default=500, ge=0)
-    damage_reduction_permille: int = Field(default=750, ge=0, le=1000)
-    element_resist_permille: int = Field(default=500, ge=0, le=1000)
+    damage_bonus_permille: int = Field(ge=0)
+    damage_reduction_permille: int = Field(ge=0, le=1000)
+    element_resist_permille: int = Field(ge=0, le=1000)
     ap_gain_per_round: int = Field(default=1, ge=0)
     cooldown_min: int = Field(default=1, ge=0)
-    crit_range_min: int = Field(default=18, ge=2, le=20)
-    move_bonus: int = Field(default=2, ge=0)
-    cost_affixes: int = Field(default=2, ge=0)
+    crit_range_min: int = Field(ge=2, le=20)
+    move_bonus: int = Field(ge=0)
+    cost_affixes: int = Field(ge=0)
     rule_affixes: int = Field(default=1, ge=0)
 
 
@@ -916,9 +916,9 @@ class EquipmentRules(ContentModel):
     - ``max_affixes_per_item``：每件物品的詞條上限。
     """
 
-    diminishing_permille: tuple[int, ...] = Field(default=(1000, 500, 250), min_length=1)
-    max_affixes_per_item: int = Field(default=4, ge=1, le=8)
-    caps: EquipmentCaps = EquipmentCaps()
+    diminishing_permille: tuple[int, ...] = Field(min_length=1)
+    max_affixes_per_item: int = Field(ge=1, le=8)
+    caps: EquipmentCaps
 
     @model_validator(mode="after")
     def _check(self) -> EquipmentRules:
