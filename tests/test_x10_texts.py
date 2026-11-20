@@ -124,3 +124,7 @@ def test_potion_dice_texts_are_ranges(library: ContentLibrary, scale: int, item_
     count, sides = (int(x) for x in effect["dice"].split("d"))
     assert f"戰鬥中回 {count * scale}–{count * sides * scale} HP" in potion["description_zh"]
     assert effect["dice"] not in potion["description_zh"]
+    # X10-3d：道具技能是法術治療，實際再加體質 × 倍率；說明不知道是誰喝，範圍不疊加成、另寫一句
+    skill = potion["skill"]
+    assert (skill["category"], skill["scaling_attr"]) == ("spell", "con")
+    assert "HP，另加體質加成；" in potion["description_zh"]
