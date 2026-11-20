@@ -987,9 +987,26 @@ _APPLIES_TO_ZH: dict[str, str] = {
 """修正規則「套用對象」的玩家用語（玩法 PM 2026-10-24）。"""
 
 
+def _change_bounds(name: str, library: ContentLibrary) -> tuple[int | None, int | None]:
+    """修正改變的數值範圍：schema 留下的一側，加上 ``core.yaml`` 的
+    ``skill_limits.modifier_bounds``（規則上下限，HC-4b2 從 schema 搬走的那一側）。"""
+    low, high = model_range(ModifierChange.model_fields[name])
+    rules = library.ruleset.core.skill_limits.modifier_bounds
+    moved: dict[str, tuple[int | None, int | None]] = {
+        "damage_permille": (rules.damage_permille_min, None),
+        "heal_permille": (rules.heal_permille_min, None),
+        "hit_bonus": (-rules.hit_bonus_max, rules.hit_bonus_max),
+        "cooldown_delta": (-rules.cooldown_delta_max, None),
+        "push_distance_delta": (None, rules.push_distance_delta_max),
+        "range_delta": (None, rules.range_delta_max),
+        "summon_duration_delta": (None, rules.summon_duration_delta_max),
+    }
+    rule_low, rule_high = moved.get(name, (None, None))
+    return (low if rule_low is None else rule_low), (high if rule_high is None else rule_high)
+
+
 def _change_field(name: str, library: ContentLibrary, category: str | None) -> FieldSpec:
-    info = ModifierChange.model_fields[name]
-    low, high = model_range(info)
+    low, high = _change_bounds(name, library)
     targets = sorted(CHANGE_TARGETS[name])
     when = "；選目標之前就決定，條件只能是自身血量" if name in SELF_ONLY_CHANGES else ""
     player = "可以套用在：" + "、".join(_APPLIES_TO_ZH.get(t, t) for t in targets) + "。"
@@ -1018,7 +1035,8 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
             ),
         )
     elif name == "add_tags":
-        value = FieldSpec(**base, type="tags", min_count=1, max_count=3)
+        max_tags = library.ruleset.core.skill_limits.modifier_bounds.max_add_tags
+        value = FieldSpec(**base, type="tags", min_count=1, max_count=max_tags)
     elif name == "on_hit_effects":
         primitives = library.ruleset.primitives.by_id()
         ctx = ParamContext(library, category=category)
@@ -1026,7 +1044,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
             **base,
             type="effects",
             min_count=1,
-            max_count=2,
+            max_count=library.ruleset.core.skill_limits.modifier_bounds.max_on_hit_effects,
             choices=tuple(
                 Choice(
                     value=p,

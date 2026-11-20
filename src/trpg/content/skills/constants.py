@@ -169,12 +169,6 @@ def rarity_rank(rarity: str) -> int:
     return RARITY_ORDER.index(rarity)
 
 
-_MAX_DISPLACE = 2
-"""修正規則（``modifiers.py``）的推擊、拉扯距離上限；技能本身的上限是原語表
-（``skill_primitives.yaml``）的參數範圍（HC-4b 起 ``SkillDef`` 不再另外擋）。``modifiers.py``
-在 HC-4b2 一起搬。"""
-
-
 _PERMILLE = 1000
 
 
@@ -830,9 +824,6 @@ PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset(
     c.id for c in _CHANGES.changes if c.per_turn_limit
 )
 """可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31；YAML 的 ``per_turn_limit``）。"""
-
-
-_MAX_ON_HIT_EFFECTS = 2
 
 
 # ---------------------------------------------------------------------------

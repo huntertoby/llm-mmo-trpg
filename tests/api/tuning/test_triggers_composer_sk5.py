@@ -45,6 +45,14 @@ COMPOSER_PATHS = (
     "structure.lifesteal_permille",
     "structure.lifesteal_amount_permille",
 )
+MOVED_PATHS = (
+    # HC-4b2：從程式搬進 skill_composer.yaml 的規則數值（整數，不是千分比）
+    "whiteboard.summon_ap_cost",
+    "whiteboard.self_ap_cost",
+    "whiteboard.summon_cooldown_max",
+    "structure.borrow_cooldown",
+    "llm_cost.max_cooldown",
+)
 EXPLOITED = "on_keyword_exploited"
 
 
@@ -95,8 +103,11 @@ def test_trigger_coefficients_and_the_n_table_are_open(read_service: TuningServi
 
 def test_composer_opens_only_the_listed_values(read_service: TuningService) -> None:
     detail = object_detail(CONTENT, read_service.table, "skill_composer", "skill_composer")
-    assert [f.path for f in detail.fields] == list(COMPOSER_PATHS)
-    assert [f.value for f in detail.fields] == [_now(COMPOSER, p) for p in COMPOSER_PATHS]
+    units = len(read_data(CONTENT / COMPOSER)["recipes"]["summon_units"])
+    ranges = tuple(f"recipes.summon_units[{i}].range" for i in range(units))  # HC-4b2
+    every = (*COMPOSER_PATHS, *MOVED_PATHS, *ranges)
+    assert [f.path for f in detail.fields] == list(every)
+    assert [f.value for f in detail.fields] == [_now(COMPOSER, p) for p in every]
     limits = {f.path: (f.limit_min, f.limit_max) for f in detail.fields}
     assert limits["structure.lifesteal_amount_permille"] == (1, 500)
     whiteboard = {"whiteboard.ap_cost", "whiteboard.fallback_ap_cost"}

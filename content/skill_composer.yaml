@@ -274,6 +274,10 @@ whiteboard:
   reaction_mana: {min: 0, max: 20}
   reaction_cooldown: {min: 1, max: 2}
   max_attempts: 60
+  # HC-4b2：原本是程式的預設值（skill_composer.yaml 沒寫），搬進來、值不變
+  summon_ap_cost: 1                   # 召喚白板的 AP（召喚物的點數固定，AP 2 湊不到預算下限）
+  summon_cooldown_max: 4              # 召喚白板的冷卻上限（冷卻換來較高的可用預算）
+  self_ap_cost: 1                     # 自身位移、互換與自身增益白板、單格升降地形的 AP（單一效果的點數固定）
   # 3W-R2：白板的形狀與原語分類（原本寫在 skillgen/whiteboard_check.py）
   # BAL-19f（#110，06 6.27.4「白板配方補直線、錐形、環形、連鎖」）：加 line、cone、ring、chain（連鎖照 6.34.9 3 階；長 6 的直線 3 階）
   simple_shapes: [self, single, ground_tile, cross, square3, line, cone, ring, chain]   # 白板允許的形狀：自身、單體、單格、十字、3×3、直線、錐形、環形、連鎖

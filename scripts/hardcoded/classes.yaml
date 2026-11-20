@@ -983,45 +983,17 @@ rules:
   # 代價持續、願望關鍵字……）＝規則；只擋手寫或工坊填出離譜值的（射程、半徑、回合、‰ 上限、清單長度、
   # 字數、地圖尺寸）＝guard。拿不準時歸 config（保守），留給 HC-4b～d 逐檔再看。
   # 先寫規則型的例外（config todo），再寫 guard 的寬規則；順序不能換（第一條符合的勝出）。
-  - id: py-content-rule-bounds
-    class: config
-    status: todo
-    files: src/trpg/content/composer_rules.py
-    kind: number
-    where: [CostStep, WhiteboardRules]
-    owner: [ap, ap_cost, fallback_ap_cost, summon_ap_cost, self_ap_cost]
-    slot: ['Field(le)', 'Field(ge)']
-    note: 保守：上下限本身是遊戲規則（主動技 AP 1～3；HC-1 裁定 2 的例子），歸 config；HC-4b 搬。
-  - id: py-content-rule-bounds-wish
-    class: config
-    status: todo
-    files: src/trpg/content/skill_pick.py
-    kind: number
-    where: WishTagRules
-    owner: [max_keywords, max_elements_dual, max_effects]
-    note: 同上一條：願望的關鍵字數、元素數（「最多 2 個元素」）、效果數的上限。
-  - id: py-content-rule-bounds-budget-durations
-    class: config
-    status: done
-    files: src/trpg/content/skill_rules.py
-    kind: number
-    where: BudgetRules
-    owner: [obstacle_duration_permille, inscribe_duration_permille, shield_duration_permille, wind_spread_permille]
-    slot: ['Field(min_length)', 'Field(max_length)']
-    note: 同上一條：依持續回合／格數查表的長度＝那個效果允許的最長回合或格數（例 inscribe 5＝rune_max_rounds）。
-      HC-4b 搬完：項數由內容檔決定（skillgen/budget.py 查表改讀項數），inscribe 的項數在載入時對照 rune_max_rounds（0 筆）。
   - id: py-content-rule-bounds-skills
     class: config
     status: todo
     kind: number
-    files: [src/trpg/content/skills/conditions.py, src/trpg/content/skills/modifiers.py,
-            src/trpg/content/skills/skill.py, src/trpg/content/skills/specs.py,
-            src/trpg/content/skill_evolution.py]
-    where: [ConditionSpec, ModifierChange, SkillDef, SelfStatusCost, SkillCost, SummonEvolution]
-    owner: [any_of, damage_permille, hit_bonus, cooldown_delta, push_distance_delta, range_delta, heal_permille,
-            summon_duration_delta, form_upkeep_permille, rank, duration, source, count_number]
-    note: 同上一條：技能的條件數、修正幅度、等階數、自身狀態代價的回合、源力代價、群召數量（階級 tier 的上限
-      HC-4b 搬到 core.yaml 的 skill_limits.tiers）。
+    files: [src/trpg/content/skills/conditions.py, src/trpg/content/skills/skill.py,
+            src/trpg/content/skills/specs.py]
+    where: [ConditionSpec, SkillDef, SelfStatusCost, SkillCost]
+    owner: [any_of, rank, duration, source]
+    note: 同上一條：技能的條件數、等階數、自身狀態代價的回合、源力代價（階級 tier 的上限 HC-4b 搬到 core.yaml 的
+      skill_limits.tiers；修正幅度與群召數量 HC-4b2 搬到 skill_limits.modifier_bounds、對照 max_summon_count；修正的
+      形態維持費下限 −1000 改判 guard：減免 100% 是數學下限）。
   - id: py-content-rule-bounds-world
     class: config
     status: todo
@@ -1083,10 +1055,11 @@ rules:
       - '<module>.ALIAS_MAX_CHARS'
       - '<module>._MAX_DELTA'
       - '<module>.MAX_VARIANTS'
+      - '<module>._MIN_SIDES'
       - 'WeatherDef._mods'
     note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、形態幅度、錯誤列印數）。
       HC-4b 加 MAX_VARIANTS：一招最多 2 個變奏是護欄，實際上限依稀有度（core.yaml 的 variant_max_by_rarity，
-      Ruleset 層檢查）。
+      Ruleset 層檢查）。HC-4b2 加 _MIN_SIDES：骰子至少 2 面是護欄（組合器的骰面階梯在 skill_composer.yaml）。
   - id: py-content-math-constants
     class: const
     status: done
@@ -1099,22 +1072,6 @@ rules:
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
-  - id: py-content-composer-rules-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/composer_rules.py
-    kind: number
-    where:
-      - '<module>._MIN_SIDES'
-      - 'ComposerRules._check'
-      - 'CostRules._check_self_status_duration'
-      - 'CostStep'
-      - 'LlmCostRules'
-      - 'LlmTopicRules'
-      - 'RecipeSummonUnit'
-      - 'StructureRules'
-      - 'WhiteboardRules'
-    note: 同上一條（content config）。
   - id: py-content-enemy-moves-config-number
     class: config
     status: todo
@@ -1222,47 +1179,6 @@ rules:
     kind: number
     where: ['<module>._MAX_DURATION']
     note: 同上一條（content config）。
-  - id: py-content-rules-tier-count
-    class: config
-    status: done
-    files: src/trpg/content/rules.py
-    kind: number
-    where: CoreRules._check_tier_budget
-    note: 保守：tier_budget 的鍵要剛好是階級 1～5＝「技能 5 個階級」的規則（同 SkillDef.tier ≤ 5）；HC-4b 和
-      SkillDef.tier 一起搬到 core.yaml 的 skill_limits.tiers（0 筆）。
-  - id: py-content-skill-evolution-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_evolution.py
-    kind: number
-    where: ['EvolutionTable', 'EvolutionTemplate', 'SummonEvolution']
-    note: 同上一條（content config）。
-  - id: py-content-skill-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_pick.py
-    kind: number
-    where: ['PickPoolRules', 'PickWeights', 'WishTagRules']
-    note: 同上一條（content config）。
-  - id: py-content-skill-rules-config-number
-    class: config
-    status: done
-    files: src/trpg/content/skill_rules.py
-    kind: number
-    where:
-      - '<module>._PERMILLE_MAX'
-      - 'BudgetRules'
-      - 'BudgetRules._check'
-      - 'CharacterTierRules'
-      - 'CostAllowance'
-      - 'FlashCostRules'
-      - 'FlashTransformRules'
-      - 'ModifierBudget'
-      - 'RarityLimit'
-      - 'RetierGrowthRules'
-      - 'SecondaryRules'
-      - 'SynergyRule'
-    note: HC-4b 搬完（內容檔都有寫的預設值改必填；AP 1～3 的鍵、刻印的項數改對照 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-skill-scaling-config-number
     class: config
     status: todo
@@ -1284,51 +1200,12 @@ rules:
     kind: number
     where: ['ConditionSpec']
     note: 同上一條（content config）。
-  - id: py-content-skills-constants-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/constants.py
-    kind: number
-    where:
-      - '<module>._MAX_DISPLACE'
-      - '<module>._MAX_ON_HIT_EFFECTS'
-    note: 只剩修正規則（skills/modifiers.py）用的兩個，HC-4b2 和 modifiers.py 一起搬（技能本身的推拉上限是
-      skill_primitives.yaml 的參數範圍，HC-4b 起 SkillDef 不再另外擋）。
-  - id: py-content-skills-constants-moved
-    class: config
-    status: done
-    files: src/trpg/content/skills/constants.py
-    kind: number
-    where:
-      - '<module>.MAX_AP_COST'
-      - '<module>.MAX_EFFECTS'
-      - '<module>.MAX_GRANT_DURATION'
-      - '<module>.MAX_ON_KILL_EFFECTS'
-      - '<module>.MAX_REFUND_AP'
-      - '<module>.MAX_SUMMON_COUNT'
-      - '<module>.MIN_SKILL_CRIT_RANGE'
-      - '<module>._MAX_BRANCH_EFFECTS'
-      - '<module>._MAX_CONSUME_THEN'
-      - '<module>._MAX_COOLDOWN'
-      - '<module>._MAX_COOLDOWN_RESTORE'
-      - '<module>._MAX_MASTERY_MODIFIERS'
-      - '<module>._MAX_MODIFIERS'
-      - '<module>._MAX_VARIANT_REPLACEMENTS'
-      - '<module>._MAX_ZONE_EFFECTS'
-    note: HC-4b 搬到 core.yaml 的 skill_limits（技能在 Ruleset 層檢查，skills/limits.py；0 筆）。
   - id: py-content-skills-effects-config-number
     class: config
     status: todo
     files: src/trpg/content/skills/effects.py
     kind: number
     where: ['EffectSpec']
-    note: 同上一條（content config）。
-  - id: py-content-skills-modifiers-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/modifiers.py
-    kind: number
-    where: ['ModifierChange', 'ModifierChange._check_tags', 'ModifierSpec']
     note: 同上一條（content config）。
   - id: py-content-skills-reactions-config-number
     class: config
@@ -2067,11 +1944,9 @@ rules:
     where:
       - '<module>.CHARGE_COOLDOWN_STEP'
       - '<module>.MAX_CHARGE_COOLDOWN'
-      - '<module>.MAX_COOLDOWN_DELTA'
       - '<module>.MAX_EMPTY_SLOTS_CAP'
       - '<module>.MAX_RELAX_PERMILLE'
       - '<module>.MAX_STANCE_UPKEEP'
-      - '<module>.MAX_SUMMON_DURATION_DELTA'
       - '<module>.MAX_TRIGGERS_PER_ROUND'
       - '<module>.RELAX_PERMILLE'
       - '<module>.SUMMON_HP_STEPS'
@@ -2631,8 +2506,8 @@ rules:
     status: todo
     files: src/trpg/content/skills/modifiers.py
     kind: text
-    where: ['ModifierChange._check_on_hit_rune', 'ModifierChange._check_tags']
-    note: 同上一條（content text）。
+    where: ['ModifierChange._check_on_hit', 'ModifierChange._check_on_hit_rune', 'ModifierChange._check_tags']
+    note: 同上一條（content text；HC-4b2 起 _check_on_hit、_check_tags 只剩「至少 1」的下限訊息）。
   - id: py-content-skills-problems-text-text
     class: text
     status: todo

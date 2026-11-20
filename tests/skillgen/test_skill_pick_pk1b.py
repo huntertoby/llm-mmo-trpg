@@ -10,7 +10,7 @@ import pytest
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.player_pool import player_skills
-from trpg.content.skill_pick import PickWeights, SkillPickRules
+from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skills import SkillDef, skill_elements
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.shared.types import Element
@@ -164,7 +164,7 @@ def _find(lib: ContentLibrary, request: ProposalRequest, test: object) -> PickCa
 
 def test_element_match_counts_held_skills_of_the_same_element() -> None:
     lib = _lib()
-    w = PickWeights()
+    w = _lib().skill_pick.weights
     cand = _find(lib, FAST, lambda s: Element.ICE in skill_elements(s))
     alone = dict(score_candidate(lib, cand, PickPlayer(), w).parts)
     assert alone["element"] == w.element_any
@@ -178,7 +178,7 @@ def test_element_match_counts_held_skills_of_the_same_element() -> None:
 
 def test_keyword_fit_tells_makers_from_users() -> None:
     lib = _lib()
-    w = PickWeights()
+    w = _lib().skill_pick.weights
     seen: dict[tuple[bool, bool], int] = {}
     for seed in SEEDS:
         for cand in candidate_pool(lib, KEYWORD, _ctx(KEYWORD), seed=seed).candidates:
@@ -196,7 +196,7 @@ def test_keyword_fit_tells_makers_from_users() -> None:
 
 def test_theme_counts_keywords_shared_with_held_skills() -> None:
     lib = _lib()
-    w = PickWeights()
+    w = _lib().skill_pick.weights
     cand = _find(lib, KEYWORD, lambda s: len(derive_keywords(s, lib.keywords).all()) >= 2)
     other = next(
         k
@@ -255,7 +255,7 @@ def test_odd_conditions_are_detected() -> None:
 
 def test_odd_conditions_cost_points() -> None:
     lib = _lib()
-    w = PickWeights()
+    w = _lib().skill_pick.weights
     rune = _find(lib, FAST, lambda s: _has(s, "inscribe")).skill
     clean = _gate(rune, "none", "first_round")
     gated = _gate(rune, "inscribe", "adjacent_ally")

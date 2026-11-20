@@ -30,6 +30,7 @@ from trpg.content.item_budget import ItemGenRules
 from trpg.content.loader import load_content_file
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules, SynergyTable
 from trpg.content.skill_triggers import SkillTriggerTable
@@ -134,6 +135,7 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "forms": FormTable,
     "equipment": EquipmentRules,
     "item_gen": ItemGenRules,
+    "skill_evolution": EvolutionTable,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
@@ -143,7 +145,8 @@ PK-1 起 ``pick``＝``skill_pick.yaml``（技能挑選模式的權重）；SK-5 
 （組合器的附帶配方機率）；HC-B 起 ``skill_conditions``＝``skill_conditions.yaml``（條件的預算
 倍率覆寫）、``skill_synergies``＝``skill_synergies.yaml``（協同係數）；HC-W2 起 ``forms``＝
 ``forms.yaml``（形態）、``equipment``＝``rules/equipment.yaml``（裝備的遞減與硬上限）、
-``item_gen``＝``item_gen.yaml``（物品產生器的係數）。這幾種都是「一個檔一個全體共用的表」）。"""
+``item_gen``＝``item_gen.yaml``（物品產生器的係數）；HC-4b2 起 ``skill_evolution``＝
+``skill_evolution.yaml``（召喚技分歧進化的幅度）。這幾種都是「一個檔一個全體共用的表」）。"""
 
 TABLE_KINDS: Final = (
     "ai",
@@ -158,6 +161,7 @@ TABLE_KINDS: Final = (
     "forms",
     "equipment",
     "item_gen",
+    "skill_evolution",
 )
 """一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
@@ -215,6 +219,7 @@ class TuningTarget(ContentModel):
         "forms",
         "equipment",
         "item_gen",
+        "skill_evolution",
     ]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)

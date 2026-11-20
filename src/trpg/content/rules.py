@@ -647,6 +647,20 @@ class CoreRules(ContentModel):
         return self
 
     @model_validator(mode="after")
+    def _check_modifier_displace(self) -> CoreRules:
+        """修正規則的推拉距離上限不能比 ``max_displace_distance`` 大（HC-4b2；HC-4b 裁定 3）。"""
+        top = self.max_displace_distance
+        limits = self.skill_limits.modifier_bounds
+        for name in ("push_distance_delta_max", "on_hit_max_displace"):
+            value = getattr(limits, name)
+            if value > top:
+                raise ValueError(
+                    f"skill_limits.modifier_bounds.{name}（{value}）不能大於 max_displace_distance"
+                    f"（{top}）：推擊與拉扯的距離最後會截斷在 {top} 格，兩格要一起改"
+                )
+        return self
+
+    @model_validator(mode="after")
     def _check_tier_budget(self) -> CoreRules:
         tiers = list(range(1, self.skill_limits.tiers + 1))  # HC-4b：階級數讀 skill_limits
         if sorted(self.tier_budget) != tiers:

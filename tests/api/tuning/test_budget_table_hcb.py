@@ -132,9 +132,8 @@ def test_every_number_in_the_budget_file_is_open_or_listed_as_structure(
     structure = (
         "max_rule_rewrite",
         "rarity.",
-        "min_character_tier.",
+        "min_character_tier.terrain_area[",  # HC-4b2：格數開了（在「階級與升階」組），階級欄不開
         "terrain_area_rarity[",
-        "retier_growth.",
         "allowance.self_status.fixed_duration.",
     )
     closed: list[str] = []

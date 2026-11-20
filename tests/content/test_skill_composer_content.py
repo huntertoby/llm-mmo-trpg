@@ -45,9 +45,6 @@ def _mutations() -> list[tuple[str, Any]]:
     def drop_rarity(d: dict[str, Any]) -> None:
         del d["rarity_weights"]["legendary"]
 
-    def bad_ap(d: dict[str, Any]) -> None:
-        d["ap_weights"] = {1: 1, 2: 1}
-
     def no_default(d: dict[str, Any]) -> None:
         del d["spell_share_permille"]["default"]
 
@@ -65,7 +62,6 @@ def _mutations() -> list[tuple[str, Any]]:
 
     return [
         ("rarity", drop_rarity),
-        ("ap", bad_ap),
         ("default", no_default),
         ("range", bad_range),
         ("permille", over_permille),
@@ -82,6 +78,45 @@ def test_invalid_composer_data_is_rejected(name: str, change: Any) -> None:
     change(data)
     with pytest.raises(ValidationError):
         ComposerRules.model_validate(data)
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        (lambda d: d.update(ap_weights={1: 1, 2: 1}), "ap_weights 必須剛好有 AP 1、2、3"),
+        (
+            lambda d: d["whiteboard"].update(ap_cost=4),
+            "whiteboard.ap_cost 必須是 1 到 3（core.yaml 的 skill_limits.max_ap_cost），收到 4",
+        ),
+        (
+            lambda d: d["whiteboard"].update(self_ap_cost=4),
+            "whiteboard.self_ap_cost 必須是 1 到 3",
+        ),
+        (
+            lambda d: d["llm_cost"]["steps"].append({"ap": 4}),
+            "llm_cost.steps[15].ap 必須是 1 到 3",
+        ),
+        (
+            lambda d: d["recipes"].update(summon_units=d["recipes"]["summon_units"][1:]),
+            "recipes.summon_units 要包含 skill_budget.yaml 的基本召喚物"
+            "（min_character_tier.basic_summon_units）：缺 summon_elemental_spirit",
+        ),
+    ],
+)
+def test_composer_rules_are_checked_against_the_ruleset(
+    tmp_path: Path, change: Any, message: str
+) -> None:
+    """HC-4b2：AP 1～3 改讀 ``core.yaml`` 的 ``skill_limits.max_ap_cost``，載入內容庫時檢查。"""
+    root = tmp_path / "content"
+    shutil.copytree(PROJECT_ROOT / "content", root)
+    data = _data()
+    change(data)
+    ComposerRules.model_validate(data)  # schema 本身不擋
+    text = yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
+    (root / "skill_composer.yaml").write_text(text, encoding="utf-8")
+    with pytest.raises(ContentError, match="技能組合器對不上核心規則") as error:
+        load_library(root)
+    assert message in str(error.value)
 
 
 def test_missing_composer_file_is_a_content_error(tmp_path: Path) -> None:

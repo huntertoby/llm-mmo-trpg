@@ -972,16 +972,12 @@ def _op_mod_relax(
 
 # BAL-10b：修正型被動的持續回合、計數上限、冷卻、代價減輕（6.34.4「修正幅度 +」的同類補充）
 
-MAX_SUMMON_DURATION_DELTA = 2
-"""``summon_duration_delta`` 的 schema 上限。"""
-MAX_COOLDOWN_DELTA = -2
-"""``cooldown_delta`` 的 schema 下限（命中後冷卻最多 −2）。"""
 MAX_EMPTY_SLOTS_CAP = 6
 """``empty_slots_cap`` 的 schema 上限。"""
 
 
 def _op_mod_duration(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """持續回合 +1：命中後效果帶的狀態、符文持續回合 +1，或召喚物持續輪數 +1（最多 +2）。每條規則
     各一份草稿，依序試。"""
@@ -997,7 +993,8 @@ def _op_mod_duration(
                     effect["duration"] += 1
             drafts.append((base, effects))
         delta = change.summon_duration_delta
-        if delta is not None and delta < MAX_SUMMON_DURATION_DELTA:
+        top = library.ruleset.core.skill_limits.modifier_bounds.summon_duration_delta_max  # HC-4b2
+        if delta is not None and delta < top:
             base, effects = base_draft(skill)
             base["modifiers"][index]["change"]["summon_duration_delta"] = delta + 1
             drafts.append((base, effects))
@@ -1023,7 +1020,7 @@ def _op_mod_stack(
 
 
 def _op_mod_cooldown(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """冷卻：命中後冷卻 −1 的規則加深成 −2。"""
     if skill.kind != "modifier":
@@ -1031,7 +1028,8 @@ def _op_mod_cooldown(
     drafts: list[Draft] = []
     for index, rule in enumerate(skill.modifiers):
         delta = rule.change.cooldown_delta
-        if delta is not None and delta > MAX_COOLDOWN_DELTA:
+        deepest = -library.ruleset.core.skill_limits.modifier_bounds.cooldown_delta_max  # HC-4b2
+        if delta is not None and delta > deepest:
             base, effects = base_draft(skill)
             base["modifiers"][index]["change"]["cooldown_delta"] = delta - 1
             drafts.append((base, effects))

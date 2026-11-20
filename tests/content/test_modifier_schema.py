@@ -94,7 +94,7 @@ def test_every_change_kind_has_a_valid_example() -> None:
         ([rule(ATTACKS, {"damage_permille": 1500})], {}, "less than or equal"),
         ([rule(ATTACKS, {"add_element": "physical"})], {}, "不可是物理"),
         ([rule(SKILLS, {"cooldown_delta": 1})], {}, "less than or equal"),
-        ([rule(SKILLS, {"add_tags": []})], {}, "1 到 3 個"),
+        ([rule(SKILLS, {"add_tags": []})], {}, "至少要有 1 個標籤"),
         ([rule({"actions": ["attack"]}, {"cooldown_delta": -1})], {}, "不能套用在 attack"),
         ([rule({"actions": ["shove"]}, {"damage_permille": 100})], {}, "不能套用在 shove"),
         ([rule({"actions": ["attack"]}, {"push_distance_delta": 1})], {}, "不能套用在 attack"),
@@ -115,11 +115,7 @@ def test_every_change_kind_has_a_valid_example() -> None:
             {},
             "不能當命中後效果",
         ),
-        (
-            [rule(ATTACKS, {"on_hit_effects": [{"type": "apply_status", "status": "slow"}] * 3})],
-            {},
-            "1 到 2 個效果",
-        ),
+        ([rule(ATTACKS, {"on_hit_effects": []})], {}, "至少要有 1 個效果"),
         (
             [rule(ATTACKS, {"on_hit_effects": [{"type": "damage", "dice": "1d4"}]})],
             {},
@@ -178,6 +174,66 @@ def test_modifier_rule_count_is_limited_by_the_ruleset() -> None:
     """HC-4b：修正規則數的上限在 ``core.yaml`` 的 ``skill_limits``（``Ruleset`` 層檢查）。"""
     skill = SkillDef.model_validate(data(*[VALID_CHANGES["hit_bonus"]] * 3))
     assert "修正技能的 modifiers 必須有 1 到 2 條，收到 3 條" in limit_problems(skill)
+
+
+SLOW = {"type": "apply_status", "status": "slow"}
+
+
+@pytest.mark.parametrize(
+    ("change", "message"),
+    [
+        ({"damage_permille": -501}, "modifiers[0].change.damage_permille：最小 -500，收到 -501"),
+        ({"heal_permille": -501}, "modifiers[0].change.heal_permille：最小 -500，收到 -501"),
+        ({"hit_bonus": 4}, "modifiers[0].change.hit_bonus：最小 -3、最大 3，收到 4"),
+        ({"hit_bonus": -4}, "modifiers[0].change.hit_bonus：最小 -3、最大 3，收到 -4"),
+        ({"cooldown_delta": -3}, "modifiers[0].change.cooldown_delta：最小 -2，收到 -3"),
+        ({"push_distance_delta": 3}, "modifiers[0].change.push_distance_delta：最大 2，收到 3"),
+        ({"range_delta": 3}, "modifiers[0].change.range_delta：最大 2，收到 3"),
+        (
+            {"summon_duration_delta": 3},
+            "modifiers[0].change.summon_duration_delta：最大 2，收到 3",
+        ),
+        (
+            {"add_tags": ["a", "b", "c", "d"]},
+            "modifiers[0].change.add_tags：必須有 1 到 3 個標籤，收到 4 個",
+        ),
+        (
+            {"on_hit_effects": [SLOW] * 3},
+            "modifiers[0].change.on_hit_effects：必須有 1 到 2 個效果，收到 3 個",
+        ),
+        (
+            {"on_hit_effects": [{"type": "push", "distance": 3}]},
+            "modifiers[0].change.on_hit_effects[0]：推擊與拉扯的距離必須是 1 到 2 格，收到 3",
+        ),
+    ],
+)
+def test_modifier_magnitudes_are_limited_by_the_ruleset(
+    change: dict[str, Any], message: str
+) -> None:
+    """HC-4b2：修正幅度的上下限在 ``core.yaml`` 的 ``skill_limits.modifier_bounds``（``Ruleset`` 層
+    檢查）；``ModifierChange`` 自己不再擋，邊界上的值通過。"""
+    skill = SkillDef.model_validate(data(rule(SKILLS, change)))
+    assert limit_problems(skill) == [message]
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"damage_permille": -500},
+        {"heal_permille": -500},
+        {"hit_bonus": 3},
+        {"hit_bonus": -3},
+        {"cooldown_delta": -2},
+        {"push_distance_delta": 2},
+        {"range_delta": 2},
+        {"summon_duration_delta": 2},
+        {"add_tags": ["a", "b", "c"]},
+        {"on_hit_effects": [SLOW, {"type": "push", "distance": 2}]},
+    ],
+)
+def test_modifier_magnitudes_on_the_edge_pass(change: dict[str, Any]) -> None:
+    skill = SkillDef.model_validate(data(rule(SKILLS, change)))
+    assert limit_problems(skill) == []
 
 
 def test_only_modifier_skills_may_have_modifiers() -> None:

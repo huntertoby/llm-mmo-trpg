@@ -10,13 +10,23 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field, model_validator
 
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import RARITY_ORDER, ConditionSpec, EffectSpec, ShapeSpec, VariantWhen
+from trpg.content.skills import (
+    RARITY_ORDER,
+    ConditionSpec,
+    EffectSpec,
+    SelfStatusCost,
+    ShapeSpec,
+    VariantWhen,
+)
 from trpg.shared.types import Element
+
+if TYPE_CHECKING:
+    from trpg.content.rules import CoreRules
 
 __all__ = [
     "WEAPON_ACTION_SUFFIXES",
@@ -47,6 +57,7 @@ __all__ = [
     "TuningRules",
     "WhiteboardRecipe",
     "WhiteboardRules",
+    "composer_rule_problems",
     "recipe_display_names",
     "whiteboard_name_problems",
 ]
@@ -119,7 +130,7 @@ class StructureRules(ContentModel):
     knob_weight_other: int = Field(ge=1)
     push_pull_distances: tuple[int, ...] = Field(min_length=1)
     """推拉距離旋鈕的階梯。"""
-    blow_distances: tuple[int, ...] = (2, 3)
+    blow_distances: tuple[int, ...] = Field(min_length=1)
     """吹送距離旋鈕的階梯（Phase 3-54a）。"""
     blow_surface_permille: int = Field(default=0, ge=0, le=1000)
     """範圍骨架加上吹送附帶效果的機率（Phase 3-54a；獨立的亂數串流，沒抽中的種子結果不變）。"""
@@ -133,7 +144,7 @@ class StructureRules(ContentModel):
     """核心可以是預支的骨架（光環）核心改成預支的機率（AP-2；獨立的亂數串流
     ``composer.borrow_core``，沒抽中的種子結果不變）。做出來的是基本款：0 AP、冷卻
     ``borrow_cooldown``、預支 1、只給自己。"""
-    borrow_cooldown: int = Field(default=2, ge=1, le=6)
+    borrow_cooldown: int = Field(ge=1, le=6)
     """組合器做的預支技能的冷卻（AP-2，06 6.3 基本款：冷卻 2）。"""
     absorb_secondary_permille: int = Field(default=0, ge=0, le=1000)
     """附帶可以是吸收表面的骨架（打擊、蓄力／終結）加上吸收表面（換層數、元素）的機率（SK-2b）。"""
@@ -224,15 +235,18 @@ class CostRules(ContentModel):
     self_status_permille: int = _PERMILLE
     """主動技能加入自身狀態代價（``cost.self_status``）的機率（Phase 2H-1）。"""
     self_status_duration: IntRange
-    """自身狀態代價的持續回合範圍（必須在 2–3 之內；持續時間固定的狀態，如暈眩，以
+    """自身狀態代價的持續回合範圍（必須在技能 ``cost.self_status.duration`` 允許的範圍內，
+    :class:`~trpg.content.skills.SelfStatusCost`；持續時間固定的狀態，如暈眩，以
     ``allowance.self_status.fixed_duration`` 為準）。"""
     overdraft_permille: int = 0
     """主動技能加入透支（``cost.overdraft``）的機率（Phase 3-50；3-50b 起可和自身狀態並用）。"""
 
     @model_validator(mode="after")
     def _check_self_status_duration(self) -> CostRules:
-        if self.self_status_duration.min < 2 or self.self_status_duration.max > 3:  # noqa: PLR2004
-            raise ValueError("self_status_duration 必須在 2–3 之內")
+        # HC-4b2：範圍照技能的自身狀態代價（SelfStatusCost.duration），不另外寫數字
+        low, high = _field_bounds(SelfStatusCost, "duration")
+        if self.self_status_duration.min < low or self.self_status_duration.max > high:
+            raise ValueError(f"self_status_duration 必須在 {low}–{high} 之內")
         return self
 
 
@@ -382,7 +396,7 @@ class RecipeSummonUnit(ContentModel):
     """召喚物範本 ID（``content/units/summons/``）。"""
     theme: Element = Element.PHYSICAL
     """組出來的技能的主題元素（名稱與標籤；照白板召喚配方）。"""
-    range: int = Field(default=4, ge=1)
+    range: int = Field(ge=1)
     """整招召喚的射程（形狀 ``ground_tile``）。"""
 
 
@@ -468,15 +482,15 @@ class LlmTopicRules(ContentModel):
     條件只開放一部分（輪替選單）。權重與數量都在這裡，不寫死在程式。
     """
 
-    secondary_count: int = Field(default=6, ge=0)
+    secondary_count: int = Field(ge=0)
     """輪替選單：附帶原語最多開放幾個（題目關鍵字要的必收，不計入）。"""
-    condition_count: int = Field(default=4, ge=0)
+    condition_count: int = Field(ge=0)
     """輪替選單：條件最多開放幾個（題目關鍵字要的與骨架必要的必收，不計入）。"""
     core_exclude: tuple[str, ...] = ("enter_form", "leave_form")
     """不能被抽成題目核心原語的原語（形態只由手寫內容提供）。"""
     core_weights: dict[str, int] = Field(default_factory=dict)
     """核心原語的基礎權重（沒列出的用 ``base_weight``）。"""
-    base_weight: int = Field(default=100, ge=1)
+    base_weight: int = Field(ge=1)
     quota_percent_per_use: int = Field(default=100, ge=0)
     """run 內配額：原語已出現在這一輪的候選 ``n`` 次時，權重 ＝ 基礎權重 × 100 ÷
     （100 ＋ ``n`` × 這個值）（整數除法，至少 1）。0 ＝ 不看配額。"""
@@ -491,8 +505,9 @@ class CostStep(ContentModel):
     「技能原本的值」與「這一階的值」中較大者，不會把已有的較高費用往下調（過弱階梯 ``weak_steps``
     的 ``ap`` 例外：取較小者，見 :class:`LlmCostRules`）。"""
 
-    ap: int | None = Field(default=None, ge=1, le=3)
-    """主動技能的 AP。"""
+    ap: int | None = Field(default=None, ge=1)
+    """主動技能的 AP（上限是 ``core.yaml`` 的 ``skill_limits.max_ap_cost``，載入時檢查，
+    :func:`composer_rule_problems`）。"""
     cooldown: int | None = Field(default=None, ge=1)
     """冷卻回合。"""
     mana: int | None = Field(default=None, ge=1)
@@ -508,7 +523,7 @@ class LlmCostRules(ContentModel):
     steps: tuple[CostStep, ...] = ()
     """費用階梯（空 ＝ 不開放），由輕到重（預算折抵與 AP 係數單調上升；
     ``tests/skillgen/test_proposal_l8b_cost.py`` 檢查）。"""
-    max_cooldown: int = Field(default=5, ge=1)
+    max_cooldown: int = Field(ge=1)
     """冷卻上限（06 6.5；比引擎的硬上限更保守）。"""
     weak_steps: tuple[CostStep, ...] = ()
     """過弱階梯（Phase 4-L10b，4-L9 建議 B1）：旋鈕（含巢狀效果）全部調完仍低於預算下限時依序試，
@@ -681,16 +696,16 @@ class WhiteboardRules(ContentModel):
     """升級與任務三選一的種類比例（‰；07 7.6：主動 70％、被動 20％、反應 10％），總和 1000。"""
     tier: int = Field(default=1, ge=1)
     """沒有指定階級時的階級（創角的起始技能一律 1 階，6.34.9 創角例外）。"""
-    ap_cost: int = Field(default=2, ge=1, le=3)
+    ap_cost: int = Field(ge=1)
     """主動白板的預設 AP（AP-2 起 1，06 6.34.1 ⚠ #168 題 5）。"""
-    fallback_ap_cost: int = Field(default=2, ge=1, le=3)
+    fallback_ap_cost: int = Field(ge=1)
     """預設 AP 調不進預算窗時退回的 AP（AP-2：照預算調退回 2 AP）；配方自己指定 AP 的不退。"""
     cooldown: IntRange
     """主動白板的冷卻範圍（含兩端）。"""
     passive_mana: IntRange
     reaction_mana: IntRange
     reaction_cooldown: IntRange
-    max_attempts: int = Field(default=60, ge=1)
+    max_attempts: int = Field(ge=1)
     """一個種子最多重抽幾次（配方、形狀、費用與強度調整）。"""
     generic_keyword: str = "generic"
     """沒有關鍵字的基礎白板（通用池，#55）配方使用的關鍵字代號。"""
@@ -700,11 +715,11 @@ class WhiteboardRules(ContentModel):
     """6F-4e（#129「第 1 招就該真的點燃」）：這些關鍵字的製造者白板可以是「傷害＋施加該關鍵字的狀態
     或造它的表面」（例：引火彈＝火焰傷害＋燃燒）。只放寬結構（兩個效果），不放寬預算，也不允許
     條件（和 ``exception_keywords`` 不同）。"""
-    summon_ap_cost: int = Field(default=1, ge=1, le=3)
+    summon_ap_cost: int = Field(ge=1)
     """召喚白板的 AP（召喚物的點數固定，AP 2 湊不到預算下限）。"""
-    summon_cooldown_max: int = Field(default=4, ge=0)
+    summon_cooldown_max: int = Field(ge=0)
     """召喚白板的冷卻上限（冷卻換來較高的可用預算，讓不同強度的召喚物都落在 70～100%）。"""
-    self_ap_cost: int = Field(default=1, ge=1, le=3)
+    self_ap_cost: int = Field(ge=1)
     """自身位移、互換與自身增益白板的 AP（單一效果的點數固定，AP 2 湊不到預算下限）。"""
     simple_shapes: tuple[str, ...] = ("self", "single", "ground_tile", "cross", "square3")
     """白板允許的形狀（3W-R2 從程式移到資料）：自身、單體、單格、十字與 3×3（小範圍）；BAL-19f 起
@@ -809,21 +824,19 @@ class ComposerRules(ContentModel):
     scaling: ScalingRules
     special: SpecialRules
     variant: VariantRules
-    llm_topic: LlmTopicRules = Field(default_factory=LlmTopicRules)
+    llm_topic: LlmTopicRules
     """LLM 提議題目的多樣性參數（Phase 4-L6）。"""
-    llm_cost: LlmCostRules = Field(default_factory=LlmCostRules)
+    llm_cost: LlmCostRules
     """LLM 提議的費用旋鈕（Phase 4-L8b）。"""
     whiteboard: WhiteboardRules
     """白板技能的產生規則（Phase 3W-4）。"""
-    recipes: RecipeRules = Field(default_factory=RecipeRules)
+    recipes: RecipeRules
     """組合器補配方（RC-1）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:
         if set(self.rarity_weights) != set(RARITY_ORDER):
             raise ValueError(f"rarity_weights 必須剛好有 {', '.join(RARITY_ORDER)}")
-        if sorted(self.ap_weights) != [1, 2, 3]:
-            raise ValueError("ap_weights 必須剛好有 AP 1、2、3")
         if any(w < 0 for w in (*self.rarity_weights.values(), *self.ap_weights.values())):
             raise ValueError("權重不可為負")
         if sum(self.rarity_weights.values()) <= 0 or sum(self.ap_weights.values()) <= 0:
@@ -840,3 +853,57 @@ class ComposerRules(ContentModel):
     def summary(self) -> str:
         weights = "／".join(str(w) for w in self.rarity_weights.values())
         return f"稀有度權重 {weights}"
+
+
+def _field_bounds(model: type[ContentModel], name: str) -> tuple[int, int]:
+    """``model`` 的整數欄位 ``name`` 的 ``ge``／``le``（HC-4b2：讓組合器的範圍照技能 schema，不另外
+    寫數字）。"""
+    low: int | None = None
+    high: int | None = None
+    for meta in model.model_fields[name].metadata:
+        low = getattr(meta, "ge", low)
+        high = getattr(meta, "le", high)
+    assert low is not None and high is not None, f"{model.__name__}.{name} 沒有上下限"
+    return low, high
+
+
+def composer_rule_problems(
+    composer: ComposerRules, core: CoreRules, basic_summon_units: Sequence[str]
+) -> list[str]:
+    """``skill_composer.yaml`` 對得上規則（HC-4b2：原本寫死在 schema 的「AP 1、2、3」改讀
+    ``rules/core.yaml``）：
+
+    - ``ap_weights`` 的鍵剛好是 1～``skill_limits.max_ap_cost``；
+    - 白板的 AP（``ap_cost``、``fallback_ap_cost``、``summon_ap_cost``、``self_ap_cost``）與 LLM
+      費用階梯（``llm_cost.steps``／``weak_steps``）的 ``ap`` 不超過 ``max_ap_cost``；
+    - ``skill_budget.yaml`` 的基本召喚物（``min_character_tier.basic_summon_units``）都在
+      ``recipes.summon_units``（1 階的整招召喚照這份取射程）。"""
+    problems: list[str] = []
+    top = core.skill_limits.max_ap_cost
+    if sorted(composer.ap_weights) != list(range(1, top + 1)):
+        aps = "、".join(str(ap) for ap in range(1, top + 1))
+        problems.append(f"ap_weights 必須剛好有 AP {aps}（core.yaml 的 skill_limits.max_ap_cost）")
+    board = composer.whiteboard
+    for name in ("ap_cost", "fallback_ap_cost", "summon_ap_cost", "self_ap_cost"):
+        value = getattr(board, name)
+        if value > top:
+            problems.append(
+                f"whiteboard.{name} 必須是 1 到 {top}（core.yaml 的 skill_limits.max_ap_cost），"
+                f"收到 {value}"
+            )
+    cost = composer.llm_cost
+    for group, steps in (("steps", cost.steps), ("weak_steps", cost.weak_steps)):
+        for index, step in enumerate(steps):
+            if step.ap is not None and step.ap > top:
+                problems.append(
+                    f"llm_cost.{group}[{index}].ap 必須是 1 到 {top}"
+                    f"（core.yaml 的 skill_limits.max_ap_cost），收到 {step.ap}"
+                )
+    listed = {u.unit for u in composer.recipes.summon_units}
+    missing = [u for u in basic_summon_units if u not in listed]
+    if missing:
+        problems.append(
+            "recipes.summon_units 要包含 skill_budget.yaml 的基本召喚物"
+            f"（min_character_tier.basic_summon_units）：缺 {'、'.join(missing)}"
+        )
+    return problems

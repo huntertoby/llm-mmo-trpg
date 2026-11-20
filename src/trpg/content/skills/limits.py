@@ -20,9 +20,39 @@ from trpg.content.schemas import ContentModel
 
 if TYPE_CHECKING:
     from trpg.content.skills.effects import EffectSpec
+    from trpg.content.skills.modifiers import ModifierSpec
     from trpg.content.skills.skill import SkillDef
 
-__all__ = ["SkillLimits", "skill_limit_problems"]
+__all__ = ["ModifierLimits", "SkillLimits", "skill_limit_problems"]
+
+
+class ModifierLimits(ContentModel):
+    """``skill_limits.modifier_bounds``：修正規則（``kind: modifier``）改變幅度的規則型上下限
+    （HC-4b2 從 ``skills/modifiers.py`` 的 ``ModifierChange`` 與 ``skills/constants.py`` 搬來，
+    值照搬；Phase 3C 4.1）。``ModifierChange`` 只留另一側的界線與純護欄。"""
+
+    damage_permille_min: int = Field(ge=-1000, le=-1)
+    """``damage_permille`` 的下限（‰；上限 +1000 是 ‰ 護欄，留在 schema）。"""
+    heal_permille_min: int = Field(ge=-1000, le=-1)
+    """``heal_permille`` 的下限（‰；上限 +1000 同上）。"""
+    hit_bonus_max: int = Field(ge=1, le=20)
+    """``hit_bonus`` 的絕對值上限（命中 −此值～＋此值）。"""
+    cooldown_delta_max: int = Field(ge=1, le=20)
+    """``cooldown_delta`` 一次最多縮短幾回合（−1～−此值）。"""
+    push_distance_delta_max: int = Field(ge=1, le=10)
+    """``push_distance_delta`` 的上限（格；結果另外截斷在 ``core.max_displace_distance``，
+    不能比它大）。"""
+    range_delta_max: int = Field(ge=1, le=10)
+    """``range_delta`` 的上限（格；下限 −1 留在 schema）。"""
+    summon_duration_delta_max: int = Field(ge=1, le=10)
+    """``summon_duration_delta`` 的上限（輪）。"""
+    max_add_tags: int = Field(ge=1, le=10)
+    """``add_tags`` 最多幾個標籤。"""
+    max_on_hit_effects: int = Field(ge=1, le=10)
+    """``on_hit_effects`` 最多幾個效果。"""
+    on_hit_max_displace: int = Field(ge=1, le=10)
+    """命中後效果的推擊、拉扯距離上限（格；不能比 ``core.max_displace_distance`` 大，
+    HC-4b 裁定 3）。"""
 
 
 class SkillLimits(ContentModel):
@@ -61,6 +91,8 @@ class SkillLimits(ContentModel):
     """專精（帶 ``exclusive_group`` 的修正技能）的規則數上限。"""
     max_variant_replacements: int = Field(ge=1, le=5)
     """一個戰場變奏最多填幾項替換內容。"""
+    modifier_bounds: ModifierLimits
+    """修正規則改變幅度的上下限（HC-4b2）。"""
 
 
 _NESTED = ("then", "win", "lose", "on_kill", "effects")
@@ -109,6 +141,8 @@ def _segment_problems(skill: SkillDef, limits: SkillLimits, *, count_effects: bo
     problems += _branch_problems(skill, limits)
     for at, effect in _all_effects(skill):
         problems += _effect_problems(at, effect, limits)
+    for index, rule in enumerate(skill.modifiers):
+        problems += _modifier_problems(f"modifiers[{index}]", rule, limits.modifier_bounds)
     for variant in skill.variants:
         count = len(variant.replacements)
         if count > limits.max_variant_replacements:
@@ -191,6 +225,53 @@ def _branch_problems(skill: SkillDef, limits: SkillLimits) -> list[str]:
         for where, branch in branches
         if len(branch) > limit
     ]
+
+
+def _modifier_problems(at: str, rule: ModifierSpec, limits: ModifierLimits) -> list[str]:
+    """一條修正規則的改變超出幅度（HC-4b2；訊息同原本 schema 的字句，數字從規則組字）。"""
+    change = rule.change
+    kind = change.kind
+    value = getattr(change, kind)
+    where = f"{at}.change.{kind}"
+    bounds: dict[str, tuple[int | None, int | None]] = {
+        "damage_permille": (limits.damage_permille_min, None),
+        "heal_permille": (limits.heal_permille_min, None),
+        "hit_bonus": (-limits.hit_bonus_max, limits.hit_bonus_max),
+        "cooldown_delta": (-limits.cooldown_delta_max, None),
+        "push_distance_delta": (None, limits.push_distance_delta_max),
+        "range_delta": (None, limits.range_delta_max),
+        "summon_duration_delta": (None, limits.summon_duration_delta_max),
+    }
+    problems: list[str] = []
+    if kind in bounds:
+        low, high = bounds[kind]
+        if (low is not None and value < low) or (high is not None and value > high):
+            shown_low = "" if low is None else f"最小 {low}"
+            shown_high = "" if high is None else f"最大 {high}"
+            span = "、".join(s for s in (shown_low, shown_high) if s)
+            problems.append(f"{where}：{span}，收到 {value}")
+    elif kind == "add_tags" and len(value) > limits.max_add_tags:
+        problems.append(f"{where}：必須有 1 到 {limits.max_add_tags} 個標籤，收到 {len(value)} 個")
+    elif kind == "on_hit_effects":
+        problems += _on_hit_problems(where, value, limits)
+    return problems
+
+
+def _on_hit_problems(
+    where: str, effects: tuple[EffectSpec, ...], limits: ModifierLimits
+) -> list[str]:
+    problems: list[str] = []
+    if len(effects) > limits.max_on_hit_effects:
+        problems.append(
+            f"{where}：必須有 1 到 {limits.max_on_hit_effects} 個效果，收到 {len(effects)} 個"
+        )
+    top = limits.on_hit_max_displace
+    for index, effect in enumerate(effects):
+        if effect.type in ("push", "pull") and (effect.distance or 0) > top:
+            problems.append(
+                f"{where}[{index}]：推擊與拉扯的距離必須是 1 到 {top} 格，收到 {effect.distance}"
+            )
+    return problems
 
 
 def _effect_problems(at: str, effect: EffectSpec, limits: SkillLimits) -> list[str]:
