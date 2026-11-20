@@ -169,19 +169,10 @@ def rarity_rank(rarity: str) -> int:
     return RARITY_ORDER.index(rarity)
 
 
-MAX_EFFECTS = 4
-"""一個技能（複合技能兩段合計）最多幾個效果原語；內容驗證、提議與預算檢查共用這個值。"""
-
-
 _MAX_DISPLACE = 2
-
-
-_MAX_COOLDOWN = 6
-
-
-MAX_AP_COST = 3
-"""主動技能 ``ap_cost`` 的上限（1～3）。"""
-_MAX_AP_COST = MAX_AP_COST
+"""修正規則（``modifiers.py``）的推擊、拉扯距離上限；技能本身的上限是原語表
+（``skill_primitives.yaml``）的參數範圍（HC-4b 起 ``SkillDef`` 不再另外擋）。``modifiers.py``
+在 HC-4b2 一起搬。"""
 
 
 _PERMILLE = 1000
@@ -273,10 +264,6 @@ SCALE_BY_VALUES: tuple[str, ...] = (
 )
 """依情況縮放（Phase 3D-7b，6.17 E、6.18 G）的依據：施放者每少 10% 最大 HP、與目標的距離（格）、
 目標相鄰的敵方數、施放者相鄰的敵方數。"""
-
-
-MIN_SKILL_CRIT_RANGE = 15
-"""技能 ``crit_range`` 的下限（Phase 3D-7b，6.17 B）。"""
 
 
 ON_MISS_MIN_RARITY = "rare"
@@ -424,11 +411,9 @@ REVEAL = "reveal"
 
 
 GRANT_SKILL = "grant_skill"
-
-
-MAX_GRANT_DURATION = 4
-"""Phase 3D-8c 的暫時獲得技能原語 ID（6.20）：目標的技能列暫時多出 ``skill``，``duration`` 輪後
-（在目標自己的回合結束時倒數）消失。持續輪數上限。"""
+"""Phase 3D-8c 的暫時獲得技能原語 ID（6.20）：目標的技能列暫時多出 ``skill``，
+``duration`` 輪後（在目標自己的回合結束時倒數）消失。持續輪數上限是 ``core.yaml`` 的
+``skill_limits.max_grant_duration``（HC-4b）。"""
 
 
 REVIVE = "revive"
@@ -452,13 +437,6 @@ ON_KILL_TYPES: tuple[str, ...] = (REFUND_AP, REFUND_COOLDOWN, "heal", "shield", 
 """技能內的擊殺時效果（``on_kill``，Phase 3D-8b，6.18 F）可用的效果類型：``refund_ap``（返還 AP）與
 ``refund_cooldown``（本技能冷卻歸零）是只能放在 ``on_kill`` 裡的專用效果（不是
 ``skill_primitives.yaml`` 的原語，也不屬於改寫規則型）；其餘依一般原語結算，對象一律是施放者。"""
-
-
-MAX_ON_KILL_EFFECTS = 2
-
-
-MAX_REFUND_AP = 2
-"""``on_kill`` 的效果個數上限，與 ``refund_ap`` 一次最多返還的 AP。"""
 
 
 SPLIT_SKELETONS: tuple[str, ...] = split_heal_skeletons()
@@ -537,8 +515,6 @@ HOOK = "hook"
 """SK-2（#166，06 6.38 第 8 點）的鉤原語 ID：直線上第一個單位拉到施放者相鄰格（推拉上限的例外）。"""
 
 
-MAX_SUMMON_COUNT = 2
-"""一次召喚的數量上限（Phase 3-33f2，數量型分歧進化：2 隻各 ``power_permille``）。"""
 """Phase 3D-4a 的召喚原語 ID（6.16 B）：在 ``ground_tile`` 選的空格召喚 ``unit`` 範本。"""
 
 
@@ -616,13 +592,7 @@ BACKLASH_TYPES: tuple[str, ...] = ("damage", "apply_status")
 """失手反噬（``cost.on_miss``）可用的效果類型。"""
 
 
-_MAX_BRANCH_EFFECTS = 2
-
-
 _GAMBLE_ONLY_FIELDS = ("chance_permille", "win", "lose")
-
-
-_MAX_ZONE_EFFECTS = 2
 
 
 SELF_MOVES: tuple[str, ...] = (DASH, LEAP, SWAP, CHARGE_THROUGH, SHADOWSTEP, "teleport")
@@ -747,10 +717,6 @@ ON_KILL_SECOND_SHAPES: tuple[str, ...] = shape_role("on_kill_second")
 """``on_kill`` 第二段的形狀：動作段的形狀，加上跳躍、傳送用的指定格。"""
 
 
-_MAX_COOLDOWN_RESTORE = 2
-"""``restore_resource`` 的 ``resource: cooldown`` 一次最多縮短的回合（Phase 3D-1）。"""
-
-
 HURL_OBJECT = "hurl_object"
 
 
@@ -866,20 +832,6 @@ PER_TURN_LIMIT_CHANGES: frozenset[str] = frozenset(
 """可以帶 ``per_turn_limit`` 的 ``change`` 種類（Phase 3-31；YAML 的 ``per_turn_limit``）。"""
 
 
-_MAX_MODIFIERS = 2
-
-
-_MAX_MASTERY_MODIFIERS = 4
-"""專精（帶 ``exclusive_group`` 的修正型被動，3-33f1）可以有的規則數：效果與代價各幾條。"""
-
-
-MAX_MODIFIERS = _MAX_MODIFIERS
-"""修正技能的修正規則條數上限（Phase 3F-1 公開給技能工坊的選項推導）。"""
-
-
-_MAX_CONSUME_THEN = 2
-
-
 _MAX_ON_HIT_EFFECTS = 2
 
 
@@ -904,9 +856,6 @@ VARIANT_CONDITIONS: tuple[str, ...] = (
 
 VARIANT_TARGET_CONDITIONS: tuple[str, ...] = ("caster_high_ground", "target_surface")
 """依賴目標點的條件：同一招對不同的目標點可能選出不同的型態（PM 決定 #4）。"""
-
-
-_MAX_VARIANT_REPLACEMENTS = 2
 
 
 _VARIANT_REPLACEMENTS = ("shape", "range_delta", "element", "add_effect", "replace_effect")

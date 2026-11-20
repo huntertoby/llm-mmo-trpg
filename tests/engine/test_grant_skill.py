@@ -26,6 +26,7 @@ from tests.engine.helpers import (
     spawn,
 )
 from tests.engine.skill_helpers import FLAT7, U1, U3, of
+from tests.skillgen.helpers import limit_problems
 from trpg.cli.battle import cmd_replay
 from trpg.cli.main import main
 from trpg.content.library import load_library
@@ -189,8 +190,8 @@ def test_grant_skill_needs_skill_and_duration_and_an_active_skill() -> None:
     with pytest.raises(ValueError, match="skill"):
         SkillDef.model_validate({**base, "effects": [bad_effect]})
     over = {"type": "grant_skill", "skill": FLIGHT, "duration": 9, "affects": "self"}
-    with pytest.raises(ValueError, match="最多"):
-        SkillDef.model_validate({**base, "effects": [over]})
+    too_long = SkillDef.model_validate({**base, "effects": [over]})  # HC-4b：Ruleset 層
+    assert "grant_skill 的 duration 最多 4，收到 9" in limit_problems(too_long)
     passive = {**base, "kind": "passive", "ap_cost": None, "trigger": {"event": "on_turn_end"}}
     with pytest.raises(ValueError, match="只能用在主動技能"):
         SkillDef.model_validate(passive)

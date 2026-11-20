@@ -19,7 +19,6 @@ from trpg.content.skills import (
     CONSUME_THEN_TYPES,
     DAMAGE_MULTIPLIER,
     GAMBLE_BRANCH_TYPES,
-    MAX_REFUND_AP,
     ON_KILL_TYPES,
     REFUND_AP,
     REFUND_COOLDOWN,
@@ -70,7 +69,7 @@ NESTED_PARAMS: dict[tuple[str, str], _Rule] = {
 }
 """(原語, 參數) 對應子效果規則；類型清單來自 skills.py 的各 *_TYPES 常數。"""
 
-_SPECIAL: dict[str, tuple[str, str, str, str, int, int]] = {
+_SPECIAL: dict[str, tuple[str, str, str, str, int, int | None]] = {
     DAMAGE_MULTIPLIER: (
         "傷害倍率",
         "這一次施放的所有傷害乘上倍率（×2＝加倍）。",
@@ -89,14 +88,15 @@ _SPECIAL: dict[str, tuple[str, str, str, str, int, int]] = {
     ),
     REFUND_AP: (
         "返還 AP",
-        f"讓你立刻拿回 1～{MAX_REFUND_AP} 點 AP。",
+        "讓你立刻拿回 1～{high} 點 AP。",
         "amount",
         "返還點數",
         1,
-        MAX_REFUND_AP,
+        None,
     ),
 }
-"""不是原語、只能出現在巢狀裡的專用效果：``(名稱, 說明, 欄位, 欄位名, 最小, 最大)``。"""
+"""不是原語、只能出現在巢狀裡的專用效果：``(名稱, 說明, 欄位, 欄位名, 最小, 最大)``。最大是 ``None``
+的讀 ``core.yaml`` 的 ``skill_limits.max_refund_ap``（HC-4b），說明裡的 ``{high}`` 換成它。"""
 
 
 _DISPLAY: dict[str, Literal["multiplier", "percent"]] = {
@@ -106,8 +106,10 @@ _DISPLAY: dict[str, Literal["multiplier", "percent"]] = {
 """玩家看到的數值格式（倍率 ×2、百分比），內部仍存千分比。"""
 
 
-def _special_choice(effect_type: str) -> Choice:
-    name, desc, field, field_zh, low, high = _SPECIAL[effect_type]
+def _special_choice(effect_type: str, library: ContentLibrary) -> Choice:
+    name, desc, field, field_zh, low, top = _SPECIAL[effect_type]
+    high = library.ruleset.core.skill_limits.max_refund_ap if top is None else top
+    desc = desc.replace("{high}", str(high))
     return Choice(
         value=effect_type,
         name_zh=name,
@@ -193,7 +195,7 @@ def nested_field(
         if effect_type == REFUND_COOLDOWN:
             choices.append(_refund_cooldown())
         elif effect_type in _SPECIAL:
-            choices.append(_special_choice(effect_type))
+            choices.append(_special_choice(effect_type, library))
         elif effect_type in by_id:
             choices.append(_sub_choice(by_id[effect_type], sub_ctx, rule))
     return field.model_copy(

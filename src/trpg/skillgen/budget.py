@@ -302,7 +302,8 @@ def _variance_factor(
         factor *= ratio
         notes.append(f"吸血 {effect.lifesteal_permille / 10:g}% ×{_fmt(ratio)}")
     if effect.spread is not None:  # 元素擴散 2 格較貴（3-54b）
-        permille = library.budget.wind_spread_permille[effect.spread - 1]
+        table = library.budget.wind_spread_permille  # 第 n 項＝擴散 n 格；超過項數用最後一項
+        permille = table[min(effect.spread, len(table)) - 1]
         if permille != _PERMILLE:
             factor *= Fraction(permille, _PERMILLE)
             notes.append(f"擴散 {effect.spread} 格 ×{permille / _PERMILLE:g}")
@@ -414,7 +415,8 @@ def _plain_base_points(  # noqa: PLR0911
         average = _dice_average(effect.dice) + flat  # BAL-12b：固定值加成
         dice = f"{effect.dice}＋{effect.flat_bonus}" if effect.flat_bonus else str(effect.dice)
         if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
-            permille = library.budget.shield_duration_permille[min(max(effect.duration, 2), 3) - 2]
+            table = library.budget.shield_duration_permille  # 第 1 項＝2 回合；超過項數用最後一項
+            permille = table[min(max(effect.duration, 2) - 2, len(table) - 1)]
             return (
                 average * Fraction(permille, _PERMILLE) + extra,
                 f"{dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
@@ -538,7 +540,8 @@ def _obstacle_points(
     base = rules.primitive_points[effect.type]
     if effect.duration is None:
         return Fraction(base), "固定（永久）"
-    permille = rules.obstacle_duration_permille[min(effect.duration, 10) - 1]
+    table = rules.obstacle_duration_permille  # 第 n 項＝n 回合；超過項數用最後一項（HC-4b）
+    permille = table[min(effect.duration, len(table)) - 1]
     return (
         Fraction(base * permille, _PERMILLE),
         f"{base} × {effect.duration} 回合 {permille}‰",
@@ -552,7 +555,8 @@ def _inscribe_points(
     rules = library.budget
     base = rules.primitive_points[effect.type]
     rounds = effect.duration or library.ruleset.core.rune_default_rounds
-    permille = rules.inscribe_duration_permille[min(rounds, 5) - 1]
+    table = rules.inscribe_duration_permille  # 項數＝core.rune_max_rounds（載入時檢查）
+    permille = table[min(rounds, len(table)) - 1]
     return (
         Fraction(base * permille, _PERMILLE),
         f"{base} × {rounds} 輪 {permille}‰",

@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.skillgen.helpers import lib, rules_of, skill, violations
+from tests.skillgen.helpers import lib, limit_problems, rules_of, skill, violations
 from trpg.content.skills import SkillDef
 from trpg.content.stacks import OverloadSpec, StackDef, StackTable
 from trpg.engine.preview import dice_distribution
@@ -106,8 +106,13 @@ def test_explode_and_scaling_are_not_allowed_inside_branches_or_then() -> None:
 
 @pytest.mark.parametrize("value", [14, 20])
 def test_the_skill_crit_range_is_between_fifteen_and_nineteen(value: int) -> None:
-    with pytest.raises(ValidationError):
-        skill(crit_range=value)
+    if value > 19:  # 19 是 schema 的護欄
+        with pytest.raises(ValidationError):
+            skill(crit_range=value)
+        return
+    # HC-4b：下限 15 在 core.yaml 的 skill_limits.min_crit_range（Ruleset 層）
+    assert limit_problems(skill(crit_range=value)) == [f"crit_range：最小是 15，收到 {value}"]
+    assert limit_problems(skill(crit_range=15)) == []
 
 
 def test_crit_range_and_the_discount_need_an_active_skill_with_damage() -> None:

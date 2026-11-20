@@ -49,6 +49,7 @@ from trpg.content.library.skill_checks import (
     pool_region_problems,
 )
 from trpg.content.library.tables import (
+    _check_budget_rules,
     _check_evolution,
     _check_modifier_changes,
     _check_price_tables,
@@ -133,6 +134,7 @@ def _load_base_tables(
     budget = load("skill_budget.yaml", BudgetRules)
     modifier_changes = load(MODIFIER_CHANGES_FILE, ModifierChangeTable)
     _check_modifier_changes(root, modifier_changes, budget)
+    _check_budget_rules(root, core, budget)
     _check_primitive_points(root, primitives, budget)
     _check_price_tables(root, (statuses, surfaces, shapes), budget)
     composer = load("skill_composer.yaml", ComposerRules)

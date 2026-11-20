@@ -417,7 +417,7 @@ def test_zones_survive_serialization() -> None:
         ({"type": "cross", "range": 3}, {"anchor": "caster"}, "形狀必須是 self"),
         ({"type": "cross", "range": 3}, {"speed": 1}, "只有 anchor: moving 使用 speed"),
         ({"type": "cross", "range": 3}, {"affects": "self"}, "affects 必須明寫"),
-        ({"type": "cross", "range": 3}, {"effects": []}, "1 到 2 個效果"),
+        ({"type": "cross", "range": 3}, {"effects": []}, "至少 1 個效果"),
         ({"type": "cross", "range": 3}, {"effects": [{"type": "push", "distance": 1}]}, "只能使用"),
         (
             {"type": "cross", "range": 3},

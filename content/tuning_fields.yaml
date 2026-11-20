@@ -215,6 +215,14 @@ targets:
       - {path: summon_traits.sturdy.budget_points, label_zh: 召喚物小特性「堅韌」的點數, kind: int, hint_min: 0, hint_max: 4, note_zh: 召喚技加深進化多給的小特性「堅韌」（護甲 +10）在召喚技預算裡算多少點（一次性）。越大，帶這個特性的召喚技其他效果越弱。只能 0～10。}
       - {path: summon_traits.swift.budget_points, label_zh: 召喚物小特性「迅捷」的點數, kind: int, hint_min: 0, hint_max: 4, note_zh: 召喚技加深進化多給的小特性「迅捷」（移動 +1）在召喚技預算裡算多少點（一次性）。越大，帶這個特性的召喚技其他效果越弱。只能 0～10。}
       - {path: summon_traits.keen.budget_points, label_zh: 召喚物小特性「銳利」的點數, kind: int, hint_min: 0, hint_max: 4, note_zh: 召喚技加深進化多給的小特性「銳利」（暴擊範圍擴大 1（自然 19 起暴擊））在召喚技預算裡算多少點（一次性）。越大，帶這個特性的召喚技其他效果越弱。只能 0～10。}
+      # HC-4b：技能結構的規則數值（core.yaml 的 skill_limits，從 skills/constants.py 搬來）。只開規則數值；
+      # 階級數、AP 上限、效果數、巢狀效果數、修正規則數、召喚數量、變奏替換項數是結構（產生器、LLM 提議、
+      # 技能工坊的選項都照它），不開。
+      - {path: skill_limits.max_cooldown, label_zh: 技能冷卻上限（回合）, kind: int, hint_min: 3, hint_max: 12, note_zh: 技能的冷卻（cost.cooldown）最多幾回合（內容、組合器、LLM、工坊都照這個擋）。調低後，現有冷卻超過的技能會在驗證時列出，要先改那些技能。只能 1～20。}
+      - {path: skill_limits.min_crit_range, label_zh: 技能擴大暴擊的極限（自然骰）, kind: int, hint_min: 13, hint_max: 19, note_zh: 技能的擴大暴擊範圍（crit_range）最寬只能到自然骰這個數字起就暴擊（15＝15～20 都暴擊）。越小，擴大暴擊的技能能做得越強。調高後，現有比它寬的技能會在驗證時列出。只能 2～20。}
+      - {path: skill_limits.max_grant_duration, label_zh: 暫時獲得技能的最長輪數, kind: int, hint_min: 2, hint_max: 8, note_zh: 暫時獲得技能（grant_skill）給的技能最多留幾輪。越大，給技能的招能持續越久。調低後，現有超過的技能會在驗證時列出。只能 1～20。}
+      - {path: skill_limits.max_refund_ap, label_zh: 擊殺返還 AP 的上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 擊殺時效果「返還 AP」（refund_ap）一次最多還幾點 AP（工坊的選項範圍也照這個）。越大，擊殺後連動越強。調低後，現有超過的技能會在驗證時列出。只能 1～10。}
+      - {path: skill_limits.max_cooldown_restore, label_zh: 回復資源縮短冷卻的上限（回合）, kind: int, hint_min: 1, hint_max: 4, note_zh: 回復資源（restore_resource）縮短冷卻時，一次最多縮短幾回合。越大，縮冷卻的招越強。調低後，現有超過的技能會在驗證時列出。只能 1～10。}
   # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
   - kind: budget
     label_zh: 技能預算表

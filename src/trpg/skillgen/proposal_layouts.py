@@ -25,7 +25,6 @@ from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import (
-    MAX_EFFECTS,
     SHAPE_REQUIRED_PRIMITIVES,
     CompositionRule,
     PrimitiveDef,
@@ -146,6 +145,7 @@ def plan_layouts(
 
     ``primitives``、``shapes`` 依 YAML 順序處理（呼叫端給的順序不影響結果）。"""
     rules = _rules(library)
+    max_effects = library.ruleset.core.skill_limits.max_effects
     wanted_p, wanted_s = set(primitives), set(shapes)
     ids = [p.id for p in library.ruleset.primitives.primitives if p.id in wanted_p]
     shape_ids = [s.id for s in library.ruleset.shapes.shapes if s.id in wanted_s]
@@ -158,7 +158,14 @@ def plan_layouts(
     if general and std_shapes:
         layouts.append(
             LayoutPlan(
-                STANDARD_LAYOUT, (), std_shapes, tuple(general), (), tuple(kinds), MAX_EFFECTS, True
+                STANDARD_LAYOUT,
+                (),
+                std_shapes,
+                tuple(general),
+                (),
+                tuple(kinds),
+                max_effects,
+                True,
             )
         )
     for fid, leads in _groups(special, rules).items():
@@ -182,6 +189,7 @@ def plan_layouts(
                 selfish=[i for i in general if _self_ok(defs[i])],
                 special=special,
                 rules=rules,
+                max_effects=max_effects,
             )
         )
     return tuple(layouts), tuple(excluded)
@@ -197,6 +205,7 @@ def _special_plan(
     selfish: Sequence[str],
     special: Sequence[str],
     rules: Mapping[str, CompositionRule],
+    max_effects: int,
 ) -> LayoutPlan:
     rule = rules[leads[0]]
     effects: list[str] = list(leads)
@@ -212,7 +221,7 @@ def _special_plan(
         effects=tuple(effects),
         self_effects=tuple(self_effects),
         kinds=tuple(kinds),
-        max_effects=1 if rule.sole_effect else MAX_EFFECTS,
+        max_effects=1 if rule.sole_effect else max_effects,
         variants=False,
     )
 

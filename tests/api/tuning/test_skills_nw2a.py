@@ -273,8 +273,8 @@ def test_group_limits_and_determinism(read_service: TuningService) -> None:
 @pytest.mark.parametrize(
     "case",
     [
-        (FIRE, "ap_cost", 1, 0, "1 到 3"),
-        (FIRE, "cost.cooldown", None, 7, "不能大於 6"),
+        (FIRE, "ap_cost", 1, 0, "至少 1"),  # HC-4b：上限 3 改在 Ruleset 層（skill_limits）
+        (FIRE, "cost.cooldown", None, 7, "冷卻最多 6 回合"),  # HC-4b：core.yaml skill_limits
         (BOLT, "effects[0].dice", "1d8", "2x6", "NdM"),
         (FIRE, "effects[0].multiplier_permille", 800, 0, "1–10000"),
         (BOLT, "shape.range", 5, 99, "range"),

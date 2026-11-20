@@ -19,6 +19,7 @@ from tests.engine.helpers import (
     spawn,
 )
 from tests.engine.skill_helpers import FLAT7, SID, U1, U2, U3, battle, cast, hit_with, of
+from tests.skillgen.helpers import limit_problems
 from trpg.content.battle import StatusDef
 from trpg.content.skills import (
     ConditionSpec,
@@ -69,7 +70,7 @@ def _problems(skill: SkillDef) -> list[str]:
         status_ids={s.id for s in rules.statuses.statuses},
         object_ids={o.id for o in rules.objects.objects},
         conditions=rules.conditions.by_id(),
-    )
+    ) + limit_problems(skill)  # HC-4b：規則型上限在 Ruleset 層
 
 
 def _gated(condition: dict[str, Any]) -> SkillDef:

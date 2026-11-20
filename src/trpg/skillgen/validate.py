@@ -46,7 +46,6 @@ from trpg.content.skills import (
     COMPOSITE_MOVES,
     GATHER_SHAPES,
     HOOK,
-    MAX_EFFECTS,
     ON_MISS_MIN_RARITY,
     REVIVE,
     SPLIT_SKELETONS,
@@ -58,6 +57,7 @@ from trpg.content.skills import (
     rarity_rank,
     skill_elements,
 )
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.shared.fmt import ratio_pct
 from trpg.shared.types import Attribute
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget, zone_cell_count
@@ -108,8 +108,14 @@ class Violation:
 def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """檢查 ``skill``，回傳全部違規；空串列表示通過。"""
     reference = _reference_violations(skill, library)
-    if reference:
-        return reference
+    # HC-4b：技能結構的規則型上限（core.yaml 的 skill_limits；原本在 SkillDef schema，所以和引用
+    # 一樣先擋：階級、AP 超出時預算查表會失敗）。效果原語數照舊由 cap.effects 報。
+    limits = [
+        Violation(skill.id, "cap.limits", p)
+        for p in skill_limit_problems(skill, library.ruleset.core.skill_limits, count_effects=False)
+    ]
+    if reference or limits:
+        return [*reference, *limits]
     resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
     out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
     # 最低花費（3-48c；例外：花源力、裝備動作、預支，06 6.10）——內建技能也照查（2026-10-24 補齊）
@@ -423,8 +429,9 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
         out.append(Violation(skill.id, rule, message))
 
     count = effect_count(skill)
-    if not 1 <= count <= MAX_EFFECTS:
-        add("cap.effects", f"效果原語必須有 1 到 {MAX_EFFECTS} 個，收到 {count} 個")
+    top = library.ruleset.core.skill_limits.max_effects
+    if not 1 <= count <= top:
+        add("cap.effects", f"效果原語必須有 1 到 {top} 個，收到 {count} 個")
     allowed = _WEAPON_REQ[skill.category]
     if skill.weapon_req not in allowed:
         add(

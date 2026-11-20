@@ -43,40 +43,13 @@ from trpg.content.skills.constants import (
     _GROUP_NAMES as _GROUP_NAMES,
 )
 from trpg.content.skills.constants import (
-    _MAX_AP_COST as _MAX_AP_COST,
-)
-from trpg.content.skills.constants import (
-    _MAX_BRANCH_EFFECTS as _MAX_BRANCH_EFFECTS,
-)
-from trpg.content.skills.constants import (
-    _MAX_CONSUME_THEN as _MAX_CONSUME_THEN,
-)
-from trpg.content.skills.constants import (
-    _MAX_COOLDOWN as _MAX_COOLDOWN,
-)
-from trpg.content.skills.constants import (
-    _MAX_COOLDOWN_RESTORE as _MAX_COOLDOWN_RESTORE,
-)
-from trpg.content.skills.constants import (
     _MAX_DISPLACE as _MAX_DISPLACE,
-)
-from trpg.content.skills.constants import (
-    _MAX_MASTERY_MODIFIERS as _MAX_MASTERY_MODIFIERS,
-)
-from trpg.content.skills.constants import (
-    _MAX_MODIFIERS as _MAX_MODIFIERS,
 )
 from trpg.content.skills.constants import (
     _MAX_MULTIPLIER_PERMILLE as _MAX_MULTIPLIER_PERMILLE,
 )
 from trpg.content.skills.constants import (
     _MAX_ON_HIT_EFFECTS as _MAX_ON_HIT_EFFECTS,
-)
-from trpg.content.skills.constants import (
-    _MAX_VARIANT_REPLACEMENTS as _MAX_VARIANT_REPLACEMENTS,
-)
-from trpg.content.skills.constants import (
-    _MAX_ZONE_EFFECTS as _MAX_ZONE_EFFECTS,
 )
 from trpg.content.skills.constants import (
     _PERMILLE as _PERMILLE,
@@ -145,12 +118,7 @@ from trpg.content.skills.constants import (
     LEAP,
     LEAVE_FORM,
     LEGACY_REACTION_EVENTS,
-    MAX_EFFECTS,
-    MAX_GRANT_DURATION,
-    MAX_MODIFIERS,
-    MAX_SUMMON_COUNT,
     MAX_VARIANTS,
-    MIN_SKILL_CRIT_RANGE,
     MODIFIER_CHANGES,
     NONZERO_CHANGES,
     ON_HIT_PRIMITIVES,
@@ -218,12 +186,6 @@ from trpg.content.skills.constants import (
 )
 from trpg.content.skills.constants import (
     FORM_CATEGORY_TEXT as FORM_CATEGORY_TEXT,
-)
-from trpg.content.skills.constants import (
-    MAX_ON_KILL_EFFECTS as MAX_ON_KILL_EFFECTS,
-)
-from trpg.content.skills.constants import (
-    MAX_REFUND_AP as MAX_REFUND_AP,
 )
 from trpg.content.skills.constants import (
     ON_AP_SPENT_ALL as ON_AP_SPENT_ALL,
@@ -589,12 +551,7 @@ __all__ = [
     "LEAP",
     "LEAVE_FORM",
     "LEGACY_REACTION_EVENTS",
-    "MAX_EFFECTS",
-    "MAX_GRANT_DURATION",
-    "MAX_MODIFIERS",
-    "MAX_SUMMON_COUNT",
     "MAX_VARIANTS",
-    "MIN_SKILL_CRIT_RANGE",
     "MODIFIER_CHANGES",
     "NESTED_PARENTS",
     "NONZERO_CHANGES",

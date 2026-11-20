@@ -19,12 +19,14 @@ from trpg.content.modifier_changes import (
 )
 from trpg.content.races import OriginTable, RaceTable, race_reference_problems
 from trpg.content.regions import RegionTable
+from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_rules import (
     BudgetRules,
     SkeletonDef,
+    budget_rule_problems,
     price_table_problems,
     primitive_points_problems,
     shape_budget_problems,
@@ -43,6 +45,14 @@ def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: Budg
     if problems:
         lines = "\n".join(f"  - {p}" for p in problems)
         raise ContentError(root / MODIFIER_CHANGES_FILE, f"修正規則的改變種類對不上：\n{lines}")
+
+
+def _check_budget_rules(root: Path, core: CoreRules, budget: BudgetRules) -> None:
+    """``skill_budget.yaml`` 依 AP、刻印輪數分項的表對得上 ``rules/core.yaml``（HC-4b）。"""
+    problems = budget_rule_problems(budget, core)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"技能預算表對不上核心規則：\n{lines}")
 
 
 def _check_primitive_points(root: Path, primitives: PrimitiveTable, budget: BudgetRules) -> None:

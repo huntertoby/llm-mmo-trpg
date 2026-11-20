@@ -10,7 +10,6 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
-    _MAX_COOLDOWN,
     _PERMILLE,
     ON_AP_SPENT_ALL,
     ON_CAST_TAG,
@@ -46,7 +45,9 @@ class SkillCost(ContentModel):
     stamina: int = Field(default=0, ge=0)
     """耐力代價（Phase 3H-2，06 6.10）：武器技花耐力、法術技花法力（依類別，``skill_budget.yaml`` 的
     ``cost_resource``；內容庫與產生器檢查）。"""
-    cooldown: int | None = Field(default=None, ge=1, le=_MAX_COOLDOWN)
+    cooldown: int | None = Field(default=None, ge=1)
+    """冷卻回合；上限是 ``core.yaml`` 的 ``skill_limits.max_cooldown``（HC-4b，``Ruleset`` 層
+    檢查）。"""
     uses_per_battle: int | None = Field(default=None, ge=1)
     hp_percent: int | None = Field(default=None, ge=1, le=_PERMILLE - 1)
     stacks: int | None = Field(default=None, ge=1)

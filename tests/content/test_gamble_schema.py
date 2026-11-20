@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.skillgen.helpers import lib, rules_of, skill, violations
+from tests.skillgen.helpers import lib, limit_problems, rules_of, skill, violations
 from trpg.content.skills import SkillDef
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.random_composer import compose_random_skill
@@ -93,8 +93,9 @@ def test_the_gamble_needs_a_chance_and_at_least_one_branch() -> None:
 
 def test_each_branch_has_at_most_two_effects_of_the_allowed_types() -> None:
     heal = {"type": "heal", "dice": "1d4", "affects": "self"}
-    with pytest.raises(ValidationError, match="1 到 2 個"):
-        gambler(DAMAGE, gamble(win=[DOUBLE, HALF_BACK, heal]))
+    # HC-4b：上限（core.yaml skill_limits.max_branch_effects）在 Ruleset 層檢查
+    too_many = gambler(DAMAGE, gamble(win=[DOUBLE, HALF_BACK, heal]))
+    assert any("win：必須有 1 到 2 個效果" in p for p in limit_problems(too_many))
     with pytest.raises(ValidationError, match="只能使用"):
         gambler(DAMAGE, gamble(win=[{"type": "push", "distance": 1}]))
     with pytest.raises(ValidationError, match="不可自帶 condition"):
@@ -182,8 +183,8 @@ def test_the_unsafe_status_set_is_derived_from_the_status_table() -> None:
 
 def test_miss_backlash_is_limited_to_two_effects_on_the_caster() -> None:
     prone = {"type": "apply_status", "status": "prone"}
-    with pytest.raises(ValidationError, match="1 到 2 個"):
-        skill(cost={"mana": 0, "on_miss": [prone, prone, prone]})
+    too_many = skill(cost={"mana": 0, "on_miss": [prone, prone, prone]})  # HC-4b：Ruleset 層
+    assert "cost.on_miss：必須有 1 到 2 個效果，收到 3" in limit_problems(too_many)
     with pytest.raises(ValidationError, match="只能是施放者"):
         skill(cost={"mana": 0, "on_miss": [{**prone, "affects": "enemies"}]})
     with pytest.raises(ValidationError, match="只能使用"):
