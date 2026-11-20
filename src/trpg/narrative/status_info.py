@@ -13,6 +13,7 @@ from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
+from trpg.shared.range_text import dice_note, range_text, span
 from trpg.shared.types import Attribute
 
 __all__ = [
@@ -29,8 +30,9 @@ CONTROL_GROUP_TEXT = {"movement": "移動類", "mental": "心智類", "hard": "�
 """控制類別（``control_group``）的中文名。"""
 
 
-def _dice(count: int, sides: int) -> str:
-    return f"{count}d{sides}"
+def _dice(count: int, sides: int, scale: int) -> str:
+    """量類骰子寫成範圍（X10-3d，同 X10-3b 卡片）：骰面 × ``scale``（1d4 →「10–40」）。"""
+    return range_text(*span(count, sides, scale))
 
 
 def _armor_break_line(library: ContentLibrary) -> str:
@@ -136,13 +138,15 @@ def status_rules(status: StatusDef, library: ContentLibrary) -> tuple[str, ...]:
     core = library.ruleset.core
     lines: list[str] = _modifier_lines(status, library)
     dot = status.on_turn_start_damage
+    scale = core.quantity_scale
     if dot is not None:
-        lines.append(
-            f"回合開始時受到 {_dice(dot.dice.count, dot.dice.sides)} {dot.element.display_name}傷害"
-        )
+        amount = _dice(dot.dice.count, dot.dice.sides, scale)
+        lines.append(f"回合開始時受到 {amount} {dot.element.display_name}傷害")
+        lines.append(dice_note(dot.dice.count, dot.dice.sides, scale))
     heal = status.on_turn_start_heal
     if heal is not None:
-        lines.append(f"回合開始時恢復 {_dice(heal.dice.count, heal.dice.sides)} HP")
+        lines.append(f"回合開始時恢復 {_dice(heal.dice.count, heal.dice.sides, scale)} HP")
+        lines.append(dice_note(heal.dice.count, heal.dice.sides, scale))
     if status.removed_by_element:
         names = "、".join(e.display_name for e in status.removed_by_element)
         lines.append(f"受到{names}傷害時立即解除")
@@ -266,13 +270,14 @@ def stack_rules(stack: StackDef, library: ContentLibrary) -> tuple[str, ...]:
     overload = stack.overload
     if overload is not None:
         tag = library.ruleset.skill_tags.name(overload.tag)
+        scale = library.ruleset.core.quantity_scale
         backlash: list[str] = []
+        notes: list[str] = []
         for sub in overload.backlash:
             if sub.type == "damage" and sub.dice is not None and sub.element is not None:
-                backlash.append(
-                    f"受到 {_dice(sub.dice.count, sub.dice.sides)} {sub.element.display_name}傷害"
-                    "（不致命）"
-                )
+                amount = _dice(sub.dice.count, sub.dice.sides, scale)
+                backlash.append(f"受到 {amount} {sub.element.display_name}傷害（不致命）")
+                notes.append(dice_note(sub.dice.count, sub.dice.sides, scale))
             elif sub.status is not None:
                 backlash.append(f"獲得「{library.ruleset.status_def(sub.status).name_zh}」")
         per = overload.per_stack_damage_permille / 10
@@ -280,4 +285,5 @@ def stack_rules(stack: StackDef, library: ContentLibrary) -> tuple[str, ...]:
             f"超載：每{unit}讓你帶「{tag}」標籤的技能傷害 +{per:g}%；"
             f"累積到 {overload.threshold} {unit}時你{'、'.join(backlash)}並清空{unit}數"
         )
+        lines.extend(notes)  # 反噬傷害的骰子（X10-3d：範圍下面多一行「擲 NdM，每點 ×10」）
     return tuple(lines)

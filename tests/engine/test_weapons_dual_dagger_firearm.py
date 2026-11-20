@@ -106,7 +106,7 @@ def test_trait_and_rule_lines_follow_the_data() -> None:
     core = library().ruleset.core
     dd = weapon("dual_dagger")
     assert dd.trait_lines_zh()[0].startswith("連擊：普攻與單體武器技都打 2 下")
-    assert dd.rule_lines_zh(core)[1].startswith("成對：算一件武器、占用雙手")
+    assert dd.rule_lines_zh(core)[2].startswith("成對：算一件武器、占用雙手")
     assert any("背刺" in line for line in dd.rule_lines_zh(core))  # 近戰共用的背刺
     assert (
         weapon("dual_dagger", strikes=3)
@@ -120,10 +120,10 @@ def test_trait_and_rule_lines_follow_the_data() -> None:
     assert "4 格：傷害 −75%" in lines
     assert any(line.startswith("彈匣 1 發") for line in lines)
     assert any(line.startswith("彈匣 2 發") for line in weapon("pistol").trait_lines_zh())
-    assert weapon("pistol").rule_lines_zh(core)[1].startswith("單手")
+    assert weapon("pistol").rule_lines_zh(core)[2].startswith("單手")
     dp = weapon("dual_pistol")
     assert any(line.startswith("彈匣 4 發") for line in dp.trait_lines_zh())
-    assert dp.rule_lines_zh(core)[1].startswith("成對")
+    assert dp.rule_lines_zh(core)[2].startswith("成對")
     assert not any("背刺" in line for line in dp.rule_lines_zh(core))
 
 

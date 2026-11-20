@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 
-from trpg.content.battle import StatusTable, TerrainDef
+from trpg.content.battle import Dice, StatusTable, TerrainDef
 from trpg.content.environment import (
     InteractionOutcome,
     InteractionRule,
@@ -19,6 +19,7 @@ from trpg.content.environment import (
     SurfaceDef,
 )
 from trpg.content.library import ContentLibrary, Ruleset
+from trpg.shared.range_text import dice_note, range_text, span
 from trpg.shared.types import Surface
 
 __all__ = [
@@ -74,6 +75,7 @@ class _Names:
         self.terrain = {t.id: t.name_zh for t in rules.terrain.terrain}
         self.status = {s.id: s.name_zh for s in rules.statuses.statuses}
         self.element = {e.id.value: e.name_zh for e in library.elements.elements}
+        self.scale = rules.core.quantity_scale  # 量類骰子的倍率（X10-3d：說明只寫範圍）
 
     def of(self, table: Mapping[str, str], key: str | None) -> str:
         if key is None:
@@ -82,6 +84,17 @@ class _Names:
 
 
 _UNIT_TAG_TEXT: Mapping[str, str] = {"undead": "不死系"}
+
+
+def _dice_range(dice: Dice, scale: int, flat: int = 0) -> str:
+    """量類骰子寫成範圍（X10-3d，同 X10-3b 卡片）：骰面 × ``scale`` 再加 ``flat``
+    （1d6 →「10–60」）。"""
+    return range_text(*span(dice.count, dice.sides, scale, flat))
+
+
+def _dice_note(dice: Dice, scale: int) -> str:
+    """範圍下面多的一行：「擲 1d6，每點 ×10」。"""
+    return dice_note(dice.count, dice.sides, scale)
 
 
 def _set_surface(o: InteractionOutcome, n: _Names) -> str:
@@ -210,9 +223,12 @@ def _surface_effect_lines(s: SurfaceDef, names: _Names) -> list[str]:
             tag = t.damage.only_tag
             who = "" if tag is None else f"（只傷害{_UNIT_TAG_TEXT.get(tag, tag)}）"
             elem = names.of(names.element, t.damage.element.value)
-            lines.append(f"回合開始時站在上面的單位受 {t.damage.dice} {elem}傷害{who}")
+            amount = _dice_range(t.damage.dice, names.scale)
+            lines.append(f"回合開始時站在上面的單位受 {amount} {elem}傷害{who}")
+            lines.append(_dice_note(t.damage.dice, names.scale))
         if t.heal is not None:
-            lines.append(f"回合開始時治療站在上面的友方 {t.heal.dice}")
+            lines.append(f"回合開始時治療站在上面的友方 {_dice_range(t.heal.dice, names.scale)}")
+            lines.append(_dice_note(t.heal.dice, names.scale))
         if t.apply_status is not None:
             lines.append(f"回合開始時獲得{names.of(names.status, t.apply_status)}")
     return lines
@@ -265,8 +281,9 @@ def object_rules(obj: ObjectDef, library: ContentLibrary) -> tuple[str, ...]:
         e = obj.explosion
         side = 2 * e.radius + 1
         elem = names.of(names.element, e.element.value)
-        flat = f"+{e.flat}" if e.flat else ""
-        lines.append(f"爆炸範圍 {side}×{side}，{e.dice}{flat} {elem}傷害")
+        amount = _dice_range(e.dice, names.scale, e.flat)  # 固定傷害疊進範圍（X10-3d）
+        lines.append(f"爆炸範圍 {side}×{side}，{amount} {elem}傷害")
+        lines.append(_dice_note(e.dice, names.scale))
     if obj.spill is not None:
         spill = names.of(names.surface, obj.spill.surface.value)
         if obj.spill.radius is None:

@@ -17,6 +17,7 @@ from trpg.content.schemas import ContentModel
 from trpg.content.slots import Slot
 from trpg.shared.bonus_text import bonus_text
 from trpg.shared.fmt import signed_zh
+from trpg.shared.range_text import dice_note, range_text, span
 from trpg.shared.types import Attribute, Element, ResistGroup, Surface
 
 if TYPE_CHECKING:
@@ -428,12 +429,15 @@ class WeaponDef(ContentModel):
     def attack_formula_zh(
         self, core: CoreRules, get: Callable[[Attribute], int] | None = None
     ) -> str:
-        """普攻的傷害算法（3-41c，08 8.11）：「普攻：1d8＋力量 × 0.3」；``get`` 有值時附目前加成
+        """普攻的傷害算法（3-41c，08 8.11）：「普攻：10–80＋力量 × 0.3」；``get`` 有值時附目前加成
         「（目前 +4）」。倍率取自 ``rules/core.yaml``，加成用 :meth:`scaling_value`（和引擎同一個
-        算法：骰值＋固定傷害＋屬性值 × 倍率，之後才乘各種倍率並無條件捨去）。"""
+        算法：骰值＋固定傷害＋屬性值 × 倍率，之後才乘各種倍率並無條件捨去）。
+
+        骰子只寫範圍（X10-3d，同 X10-3b 卡片）：骰面 × ``quantity_scale``，固定傷害疊進範圍；
+        「擲 1d8，每點 ×10」另起一行（:meth:`rule_lines_zh`）。屬性加成照舊另寫，不疊進範圍。"""
         permille = core.basic_attack_attr_multiplier_permille
-        dice = f"{self.dice}＋{self.flat}" if self.flat else str(self.dice)
-        text = f"普攻：{dice}＋{self.scaling_names_zh()} × {permille / 1000:g}"
+        low, high = span(self.dice.count, self.dice.sides, core.quantity_scale, self.flat)
+        text = f"普攻：{range_text(low, high)}＋{self.scaling_names_zh()} × {permille / 1000:g}"
         if get is not None:
             text += f"（{bonus_text(self.scaling_value(get), permille)}）"
         return text
@@ -443,9 +447,10 @@ class WeaponDef(ContentModel):
     ) -> tuple[str, ...]:
         """武器卡的共用規則（Phase 3-41b，清單 7.2、7.3）：握法（單手／雙手）與近戰武器共用的背刺。
         數字取自 ``rules/core.yaml``，改規則說明跟著變。第一行是普攻的傷害算法（3-41c；``get`` 見
-        :meth:`attack_formula_zh`）。"""
+        :meth:`attack_formula_zh`），第二行是它的骰子「擲 1d8，每點 ×10」（X10-3d）。"""
         lines = [
             self.attack_formula_zh(core, get),
+            dice_note(self.dice.count, self.dice.sides, core.quantity_scale),
             "雙手：占用副手欄位，不能再裝備盾或副手物品"
             if self.two_handed
             else "成對：算一件武器、占用雙手，不能再裝備盾或副手物品"
