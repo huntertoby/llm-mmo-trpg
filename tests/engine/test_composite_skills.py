@@ -94,7 +94,7 @@ def combo_data(
         "shape": shape,
         "effects": [effect],
         "followup": {"skeleton": skeleton, "shape": follow_shape, "effects": list(effects)},
-        "cost": {"stamina": 1},
+        "cost": {"stamina": 10},
     }
 
 

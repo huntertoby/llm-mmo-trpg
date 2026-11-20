@@ -169,7 +169,11 @@ def _known_rules_only(skill: SkillDef, library: ContentLibrary, codes: list[str]
         if not codes:
             return True
     if library.budget.min_cost_problem(
-        skill.kind, skill.category, skill.cost, borrows=skill.borrows_ap
+        skill.kind,
+        skill.category,
+        skill.cost,
+        scale=library.ruleset.core.quantity_scale,
+        borrows=skill.borrows_ap,
     ):
         allowed.add("rules/cap.min_cost")
     if skill.id in library.budget.known_budget_exceptions:

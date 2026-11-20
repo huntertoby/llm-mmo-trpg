@@ -441,7 +441,7 @@ def test_a_keywordless_skill_passes_the_validator() -> None:
     lib = library()
     plain = _skill(
         id="skill_t_plain",
-        cost={"mana": 6},
+        cost={"mana": 60},
         effects=[{"type": "damage", "dice": "2d6", "element": "physical"}],
     )
     assert not derive_keywords(plain, lib.keywords)

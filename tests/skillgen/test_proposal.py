@@ -324,7 +324,9 @@ def test_every_expressible_builtin_skill_round_trips() -> None:
         result = _structure_round_trip(skill)
         if result.skill is None:
             allowed = {("proposal", c) for c in _EXCLUDED_CODES}
-            if _lib().budget.min_cost_problem(skill.kind, skill.category, skill.cost):
+            if _lib().budget.min_cost_problem(
+                skill.kind, skill.category, skill.cost, scale=_lib().ruleset.core.quantity_scale
+            ):
                 allowed.add(("rules", "cap.min_cost"))  # 內建技能不達最低花費（3-48c，列在報告）
             # 手寫技能用到自己階級還沒開放的內容（最低角色階級，3W-9）
             allowed |= {
