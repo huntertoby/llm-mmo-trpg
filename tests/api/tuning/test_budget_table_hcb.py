@@ -208,3 +208,18 @@ def test_condition_and_synergy_tables_are_open(read_service: TuningService) -> N
     rules = read_data(CONTENT / "skill_synergies.yaml")["synergies"]
     assert [f.value for f in synergies.fields] == [r["coefficient_permille"] for r in rules]
     assert synergies.fields[0].label_zh.startswith("協同「")
+
+
+def test_the_budget_table_is_grouped(read_service: TuningService) -> None:
+    """HC-B 第 3 項：每個欄位都有分組，至少有規格列的六組，同組的欄位排在一起。"""
+    detail = object_detail(CONTENT, read_service.table, "budget", "skill_budget")
+    groups = [f.group_zh for f in detail.fields]
+    assert None not in groups
+    order = list(dict.fromkeys(groups))
+    assert {"原語點數", "狀態", "表面", "形狀", "係數", "召喚"} <= set(order)
+    assert groups == sorted(groups, key=order.index)  # 同組連在一起
+    by_path = {f.path: f.group_zh for f in detail.fields}
+    assert by_path["primitive_points.raise_terrain"] == "原語點數"
+    assert by_path["status_points.burning"] == "狀態"
+    assert by_path["shape_budget.line.per_unit_permille"] == "形狀"
+    assert by_path["ap_coefficient_permille.2"] == "係數"

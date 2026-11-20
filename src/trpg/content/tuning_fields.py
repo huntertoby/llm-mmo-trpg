@@ -169,6 +169,9 @@ class TuningField(ContentModel):
     """點號分段；HC-B 起對照表的鍵可以是數字（例 ``ap_coefficient_permille.2``：YAML 裡的鍵是
     整數 2），和清單索引 ``[2]`` 不同。"""
     label_zh: str = Field(min_length=1)
+    group_zh: str | None = Field(default=None, min_length=1)
+    """表單上的分組標題（HC-B：技能預算表欄位多，依「原語點數」「狀態」「形狀」「係數」…分組，前端畫成
+    可收合的區塊）；``None``＝不分組（頭目部位另由部位分組）。"""
     kind: FieldKind
     """``int``／``permille``：整數；``dice``：``NdM`` 字串；``range``：整數射程（現值是 ``weapon``
     時唯讀）；``skill_ids``：技能 ID 清單（NW-2 T2）。"""

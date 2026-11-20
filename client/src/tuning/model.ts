@@ -453,6 +453,15 @@ export interface FieldBlock {
  * 表單分段（PB-1n 待決 2）：帶 `group_zh` 的欄位（頭目部位）按組集中，組依第一次出現排序、組內照原順序，
  * 放在該組第一個欄位的位置；其他欄位照原順序。後端的欄位順序不變（是「欄位為主」）。
  */
+/** HC-B：分組超過這麼多時（技能預算表），分組預設收合；頭目部位這類少量分組照舊展開。 */
+export const OPEN_GROUPS_MAX = 4;
+
+/** 分組預設展開嗎（HC-B）：分組少就全展開；分組多時只展開有改動或有錯誤的組。 */
+export function groupOpen(block: FieldBlock, groupCount: number, edits: Edits, file: string, errors: ReadonlyMap<string, readonly string[]>): boolean {
+  if (block.title === null || groupCount <= OPEN_GROUPS_MAX) return true;
+  return block.fields.some((f) => edits[editKey(file, f.path)] !== undefined || (errors.get(f.path)?.length ?? 0) > 0);
+}
+
 export function fieldBlocks(fields: readonly TuningFieldView[]): FieldBlock[] {
   const out: FieldBlock[] = [];
   const groups = new Map<string, FieldBlock>();

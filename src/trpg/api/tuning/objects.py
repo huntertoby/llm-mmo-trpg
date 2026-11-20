@@ -868,7 +868,7 @@ def object_detail(
                 readonly_zh=_readonly(field, value),
                 note_zh=field.note_zh,
                 notice_zh=_field_notice(data, concrete, walls),
-                group_zh=_part_group(data, concrete),
+                group_zh=field.group_zh or _part_group(data, concrete),
             )
         )
     if kind == "skill":
