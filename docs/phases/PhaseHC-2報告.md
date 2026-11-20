@@ -204,3 +204,14 @@
 ## 8. 平衡疑慮
 
 - 沒有。只換寫法，78 場戰鬥結果逐字相同。
+
+## 開發 PM 裁定（2026-11-21）
+
+合併：`Merge HC-2`（--no-ff）。78 場比對 different=0，parity、CLI 快照都沒變。
+
+待決 5 件：
+1. 屬性上限 999 歸 `guard`（護欄），不改值。
+2. 確認：`DEFAULT_DEFENSE_BREAK` 和 `SkillDef.stance_upkeep` 改判 config todo，由 HC-4 處理。
+3. 排進 HC-3（前端段）：營火夾具的技能卡和裝備詞條要用新單位重抓，`flashChoice.json` 的主角跟著改。
+4. 接受。schema 上限照最大倍率算，不跟內容實際的倍率走。
+5. 不放寬斷言。另開小段 QF-2 查原因：hypothesis 抽到油庫、種子 13502，預告和環境回合對不上。
