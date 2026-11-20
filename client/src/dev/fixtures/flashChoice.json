@@ -124,7 +124,7 @@
   "offhand_traits_zh": [],
   "skills": [
    {
-    "id": "skill_rand_75",
+    "id": "skill_rand_107",
     "name_zh": "點燃斬",
     "skeleton": "control",
     "tier": 1,
@@ -138,7 +138,7 @@
     "ap_cost": 2,
     "cost": [
      "AP 2",
-     "耐力 2",
+     "耐力 20",
      "冷卻 2 回合"
     ],
     "source_cost": null,
@@ -254,9 +254,9 @@
       {
        "index": 1,
        "kind": "stamina",
-       "value": 2,
+       "value": 20,
        "unit": "耐力",
-       "label": "2"
+       "label": "20"
       },
       {
        "index": 2,
@@ -274,6 +274,7 @@
        "label": "5",
        "unit": "回合",
        "dice": null,
+       "dice_note": null,
        "multiplier_permille": null,
        "weapon": false,
        "amount": 5,
@@ -1157,7 +1158,7 @@
  },
  "sets": {
   "base": {
-   "skill_id": "skill_rand_75",
+   "skill_id": "skill_rand_107",
    "nth": 1,
    "slot": null,
    "category": null,
@@ -1173,7 +1174,7 @@
      "summary_zh": "距離 +1（傷害依預算調整）",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_190f4a1b77",
+      "id": "skill_rand_107_fl_190f4a1b77",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -1187,7 +1188,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -1303,9 +1304,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -1323,6 +1324,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -1374,7 +1376,7 @@
      "summary_zh": "蓄力：冷卻 +2（最多 5 回合），威力提高",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_8981551c5a",
+      "id": "skill_rand_107_fl_8981551c5a",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -1388,7 +1390,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 4 回合"
       ],
       "source_cost": null,
@@ -1504,9 +1506,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -1524,6 +1526,7 @@
          "label": "6",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 6,
@@ -1592,7 +1595,7 @@
      "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_9e044b13de",
+      "id": "skill_rand_107_fl_9e044b13de",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -1606,7 +1609,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -1738,9 +1741,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -1758,6 +1761,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -1773,6 +1777,7 @@
          "label": null,
          "unit": null,
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -1824,7 +1829,7 @@
      "summary_zh": "加第二個關鍵字：目標帶有該關鍵字時加碼",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_88fa011382",
+      "id": "skill_rand_107_fl_88fa011382",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -1838,7 +1843,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -1954,7 +1959,7 @@
       "summons": [],
       "skeleton_zh": "控場",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -1976,9 +1981,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -1996,6 +2001,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -2011,6 +2017,7 @@
          "label": "×0.3",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 300,
          "weapon": true,
          "amount": null,
@@ -2067,7 +2074,7 @@
     },
     {
      "name_zh": "耐力",
-     "value_zh": "2",
+     "value_zh": "20",
      "term": "stamina",
      "icon": {
       "kind": "part",
@@ -2109,7 +2116,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -2181,7 +2188,7 @@
     },
     "weapon_damage:300": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +30。"
     }
    },
    "weaker_foot_zh": null
@@ -2217,7 +2224,7 @@
       "ap_cost": 1,
       "cost": [
        "AP 1",
-       "耐力 8",
+       "耐力 80",
        "冷卻 1 回合"
       ],
       "source_cost": null,
@@ -2323,7 +2330,7 @@
       "summons": [],
       "skeleton_zh": "連段",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -2345,9 +2352,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 8,
+         "value": 80,
          "unit": "耐力",
-         "label": "8"
+         "label": "80"
         },
         {
          "index": 2,
@@ -2365,6 +2372,7 @@
          "label": "×0.7",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 700,
          "weapon": true,
          "amount": null,
@@ -2380,6 +2388,7 @@
          "label": "×0.4",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 400,
          "weapon": true,
          "amount": null,
@@ -2496,7 +2505,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 8",
+       "耐力 80",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -2610,7 +2619,7 @@
       "summons": [],
       "skeleton_zh": "連段",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -2632,9 +2641,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 8,
+         "value": 80,
          "unit": "耐力",
-         "label": "8"
+         "label": "80"
         },
         {
          "index": 2,
@@ -2652,6 +2661,7 @@
          "label": "×0.7",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 700,
          "weapon": true,
          "amount": null,
@@ -2667,6 +2677,7 @@
          "label": "×1.1",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 1100,
          "weapon": true,
          "amount": null,
@@ -2682,6 +2693,7 @@
          "label": "×0.4",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 400,
          "weapon": true,
          "amount": null,
@@ -2781,7 +2793,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 8",
+       "耐力 80",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -2887,7 +2899,7 @@
       "summons": [],
       "skeleton_zh": "連段",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -2909,9 +2921,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 8,
+         "value": 80,
          "unit": "耐力",
-         "label": "8"
+         "label": "80"
         },
         {
          "index": 2,
@@ -2929,6 +2941,7 @@
          "label": "×1.2",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 1200,
          "weapon": true,
          "amount": null,
@@ -2944,6 +2957,7 @@
          "label": "×0.3",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 300,
          "weapon": true,
          "amount": null,
@@ -3043,7 +3057,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 8",
+       "耐力 80",
        "冷卻 4 回合"
       ],
       "source_cost": null,
@@ -3149,7 +3163,7 @@
       "summons": [],
       "skeleton_zh": "連段",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -3171,9 +3185,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 8,
+         "value": 80,
          "unit": "耐力",
-         "label": "8"
+         "label": "80"
         },
         {
          "index": 2,
@@ -3191,6 +3205,7 @@
          "label": "×1",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 1000,
          "weapon": true,
          "amount": null,
@@ -3206,6 +3221,7 @@
          "label": "×1.6",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 1600,
          "weapon": true,
          "amount": null,
@@ -3296,7 +3312,7 @@
     },
     {
      "name_zh": "耐力",
-     "value_zh": "8",
+     "value_zh": "80",
      "term": "stamina",
      "icon": {
       "kind": "part",
@@ -3318,7 +3334,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -3370,41 +3386,41 @@
     },
     "weapon_damage:1000": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1。屬性加成目前 +30。"
     },
     "weapon_damage:1100": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.1。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.1。屬性加成目前 +30。"
     },
     "weapon_damage:1150": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.15。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.15。屬性加成目前 +30。"
     },
     "weapon_damage:1200": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.2。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.2。屬性加成目前 +30。"
     },
     "weapon_damage:1600": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.6。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 1.6。屬性加成目前 +30。"
     },
     "weapon_damage:300": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +30。"
     },
     "weapon_damage:400": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.4。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.4。屬性加成目前 +30。"
     },
     "weapon_damage:700": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.7。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.7。屬性加成目前 +30。"
     }
    },
    "weaker_foot_zh": null
   },
   "transform": {
-   "skill_id": "skill_rand_75",
+   "skill_id": "skill_rand_107",
    "nth": 3,
    "slot": null,
    "category": null,
@@ -3420,7 +3436,7 @@
      "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_c5a9d9d65f",
+      "id": "skill_rand_107_fl_c5a9d9d65f",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -3434,7 +3450,7 @@
       "ap_cost": 1,
       "cost": [
        "AP 1",
-       "耐力 2",
+       "耐力 20",
        "冷卻 1 回合"
       ],
       "source_cost": null,
@@ -3550,9 +3566,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -3570,6 +3586,7 @@
          "label": "2",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 2,
@@ -3655,7 +3672,7 @@
      "summary_zh": "距離 +1（傷害依預算調整）",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_190f4a1b77",
+      "id": "skill_rand_107_fl_190f4a1b77",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -3669,7 +3686,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -3785,9 +3802,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -3805,6 +3822,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -3856,7 +3874,7 @@
      "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_9e044b13de",
+      "id": "skill_rand_107_fl_9e044b13de",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -3870,7 +3888,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -4002,9 +4020,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -4022,6 +4040,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -4037,6 +4056,7 @@
          "label": null,
          "unit": null,
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -4088,7 +4108,7 @@
      "summary_zh": "轉成反應：被近戰攻擊時，對攻擊者施放縮小版的這招",
      "transform": true,
      "card": {
-      "id": "skill_rand_75_fl_341121053e",
+      "id": "skill_rand_107_fl_341121053e",
       "name_zh": "反擊・點燃斬",
       "skeleton": "reaction",
       "tier": 1,
@@ -4221,6 +4241,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -4297,12 +4318,12 @@
        "field": "cost.stamina",
        "label_zh": "耐力",
        "effect_index": null,
-       "before": "2",
+       "before": "20",
        "after": null,
        "direction": "cost",
        "name_zh": "耐力",
        "term": "stamina",
-       "before_zh": "2",
+       "before_zh": "20",
        "after_zh": null,
        "icon": {
         "kind": "part",
@@ -4349,7 +4370,7 @@
     },
     {
      "name_zh": "耐力",
-     "value_zh": "2",
+     "value_zh": "20",
      "term": "stamina",
      "icon": {
       "kind": "part",
@@ -4391,7 +4412,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -4461,7 +4482,7 @@
    "weaker_foot_zh": null
   },
   "stance": {
-   "skill_id": "skill_rand_75",
+   "skill_id": "skill_rand_107",
    "nth": 3,
    "slot": null,
    "category": null,
@@ -4477,7 +4498,7 @@
      "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_c5a9d9d65f",
+      "id": "skill_rand_107_fl_c5a9d9d65f",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -4491,7 +4512,7 @@
       "ap_cost": 1,
       "cost": [
        "AP 1",
-       "耐力 2",
+       "耐力 20",
        "冷卻 1 回合"
       ],
       "source_cost": null,
@@ -4607,9 +4628,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -4627,6 +4648,7 @@
          "label": "2",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 2,
@@ -4712,7 +4734,7 @@
      "summary_zh": "距離 +1（傷害依預算調整）",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_190f4a1b77",
+      "id": "skill_rand_107_fl_190f4a1b77",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -4726,7 +4748,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -4842,9 +4864,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -4862,6 +4884,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -4913,7 +4936,7 @@
      "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_9e044b13de",
+      "id": "skill_rand_107_fl_9e044b13de",
       "name_zh": "點燃斬",
       "skeleton": "control",
       "tier": 1,
@@ -4927,7 +4950,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 2 回合"
       ],
       "source_cost": null,
@@ -5059,9 +5082,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -5079,6 +5102,7 @@
          "label": "5",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 5,
@@ -5094,6 +5118,7 @@
          "label": null,
          "unit": null,
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -5145,7 +5170,7 @@
      "summary_zh": "轉成姿態：進入一個持續到取消的姿態（原招有傷害給同元素的元素姿態、沒有傷害給防守向）",
      "transform": true,
      "card": {
-      "id": "skill_rand_75_fl_b69c4fef17",
+      "id": "skill_rand_107_fl_b69c4fef17",
       "name_zh": "架式・點燃斬",
       "skeleton": "stance",
       "tier": 1,
@@ -5259,6 +5284,7 @@
          "label": null,
          "unit": null,
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -5333,12 +5359,12 @@
        "field": "cost.stamina",
        "label_zh": "耐力",
        "effect_index": null,
-       "before": "2",
+       "before": "20",
        "after": null,
        "direction": "cost",
        "name_zh": "耐力",
        "term": "stamina",
-       "before_zh": "2",
+       "before_zh": "20",
        "after_zh": null,
        "icon": {
         "kind": "part",
@@ -5419,7 +5445,7 @@
     },
     {
      "name_zh": "耐力",
-     "value_zh": "2",
+     "value_zh": "20",
      "term": "stamina",
      "icon": {
       "kind": "part",
@@ -5461,7 +5487,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -5535,7 +5561,7 @@
    "weaker_foot_zh": null
   },
   "llm": {
-   "skill_id": "skill_rand_75",
+   "skill_id": "skill_rand_107",
    "nth": 3,
    "slot": null,
    "category": null,
@@ -5551,7 +5577,7 @@
      "summary_zh": "橋接潮濕：目標帶有潮濕時加碼",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_40652f2faf",
+      "id": "skill_rand_107_fl_40652f2faf",
       "name_zh": "雲嶺燎原",
       "skeleton": "control",
       "tier": 2,
@@ -5565,7 +5591,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 4 回合"
       ],
       "source_cost": null,
@@ -5681,7 +5707,7 @@
       "summons": [],
       "skeleton_zh": "控場",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -5703,9 +5729,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -5723,6 +5749,7 @@
          "label": "6",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 6,
@@ -5738,6 +5765,7 @@
          "label": "×0.3",
          "unit": null,
          "dice": null,
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": 300,
          "weapon": true,
          "amount": null,
@@ -5789,7 +5817,7 @@
      "summary_zh": "加深點燃：這招製造的點燃多持續 1 回合，或補上製造點燃的效果",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_f1306d4352",
+      "id": "skill_rand_107_fl_f1306d4352",
       "name_zh": "竹影焚心",
       "skeleton": "control",
       "tier": 2,
@@ -5803,7 +5831,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 4 回合"
       ],
       "source_cost": null,
@@ -5919,9 +5947,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -5939,6 +5967,7 @@
          "label": "7",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 7,
@@ -5990,7 +6019,7 @@
      "summary_zh": "橋接帶電：目標帶有帶電時加碼",
      "transform": false,
      "card": {
-      "id": "skill_rand_75_fl_e570d758a2",
+      "id": "skill_rand_107_fl_e570d758a2",
       "name_zh": "雷鳴・點燃斬",
       "skeleton": "control",
       "tier": 2,
@@ -6004,7 +6033,7 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "耐力 2",
+       "耐力 20",
        "冷卻 4 回合"
       ],
       "source_cost": null,
@@ -6012,7 +6041,7 @@
       "condition": null,
       "effects": [
        "狀態「燃燒」 6 回合，強度 110%（每回合傷害 ×110%）（敵方）",
-       "武器傷害 ×0.3（敵方），若本回合已施放過帶「雷電」標籤的技能"
+       "武器傷害 ×0.4（敵方），若本回合已施放過帶「雷電」標籤的技能"
       ],
       "modifiers": [],
       "activation": null,
@@ -6120,7 +6149,7 @@
       "summons": [],
       "skeleton_zh": "控場",
       "formula_lines": [
-       "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+       "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
       ],
       "stacks": [],
       "stats": {
@@ -6142,9 +6171,9 @@
         {
          "index": 1,
          "kind": "stamina",
-         "value": 2,
+         "value": 20,
          "unit": "耐力",
-         "label": "2"
+         "label": "20"
         },
         {
          "index": 2,
@@ -6162,6 +6191,7 @@
          "label": "6",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 6,
@@ -6174,10 +6204,11 @@
          "index": 1,
          "type": "damage",
          "category": "damage",
-         "label": "×0.3",
+         "label": "×0.4",
          "unit": null,
          "dice": null,
-         "multiplier_permille": 300,
+         "dice_note": "擲 1d8，每點 ×10",
+         "multiplier_permille": 400,
          "weapon": true,
          "amount": null,
          "element": null,
@@ -6199,12 +6230,12 @@
        "label_zh": "傷害",
        "effect_index": 1,
        "before": null,
-       "after": "×0.3",
+       "after": "×0.4",
        "direction": "new",
        "name_zh": "額外傷害",
        "term": null,
        "before_zh": null,
-       "after_zh": "3 成[[weapon_damage:300|武器傷害]]（本回合已施放過帶「雷電」標籤的技能時才有）",
+       "after_zh": "4 成[[weapon_damage:400|武器傷害]]（本回合已施放過帶「雷電」標籤的技能時才有）",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -6213,7 +6244,7 @@
       }
      ],
      "headline_zh": "這回合放過雷電技能，這招多傷一截",
-     "say_zh": "多了額外傷害：3 成[[weapon_damage:300|武器傷害]]（本回合已施放過帶「雷電」標籤的技能時才有）。",
+     "say_zh": "多了額外傷害：4 成[[weapon_damage:400|武器傷害]]（本回合已施放過帶「雷電」標籤的技能時才有）。",
      "tag_term": null,
      "note_zh": "雲氣匯聚，帶電的敵人挨這一斬格外吃痛。",
      "name_source": "template",
@@ -6224,28 +6255,33 @@
      "source": "transform",
      "category": "transform",
      "category_zh": "轉型",
-     "template": "to_stance",
-     "summary_zh": "轉成姿態：進入一個持續到取消的姿態（原招有傷害給同元素的元素姿態、沒有傷害給防守向）",
+     "template": "to_summon",
+     "summary_zh": "轉成召喚：召喚一隻幫你出手的召喚物（依這招的元素）",
      "transform": true,
      "card": {
-      "id": "skill_rand_75_fl_ee49562d46",
+      "id": "skill_rand_107_fl_5448d53a12",
       "name_zh": "赤焰立姿",
-      "skeleton": "stance",
+      "skeleton": "summon",
       "tier": 2,
       "rank": 1,
       "rarity": "稀有",
-      "kind": "姿態",
+      "kind": "主動",
       "category": "法術技",
       "weapon_req": "任何武器",
       "weapon_only": null,
-      "scaling": "智力",
-      "ap_cost": null,
-      "cost": [],
+      "scaling": "意志",
+      "ap_cost": 1,
+      "cost": [
+       "AP 1",
+       "法力 10",
+       "HP 9.5%",
+       "冷卻 4 回合"
+      ],
       "source_cost": null,
-      "shape": "自身",
+      "shape": "指定格（射程 5）",
       "condition": null,
       "effects": [
-       "狀態「鐵壁姿態」（持續到取消）（自己）"
+       "在目標空格召喚火靈（HP 140），持續 3 輪（緊接在你之後行動，由 AI 控制）；自帶：普攻命中時施加「燃燒」2 回合；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）"
       ],
       "modifiers": [],
       "activation": null,
@@ -6254,28 +6290,28 @@
       "tags": [
        "fire",
        "spell",
-       "stance"
+       "summon"
       ],
       "element": "火焰",
       "element_id": "fire",
-      "concept": "讓目標身上燒起來（轉型：轉成姿態：進入一個持續到取消的姿態（原招有傷害給同元素的元素姿態、沒有傷害給防守向））",
+      "concept": "讓目標身上燒起來（轉型：轉成召喚：召喚一隻幫你出手的召喚物（依這招的元素））",
       "cast_flavor": "一點火星落在衣角，轉眼就燒成一片",
       "rarity_id": "rare",
-      "kind_id": "stance",
+      "kind_id": "active",
       "category_id": "spell",
       "weapon_req_id": "any",
       "scaling_attrs": [
-       "int"
+       "wil"
       ],
       "mastery_id": null,
       "timing": null,
       "effect_ids": [
-       "apply_status"
+       "summon"
       ],
       "followup": null,
       "followup_when": null,
       "icon": {
-       "kind": "stance",
+       "kind": "active",
        "rarity": "rare",
        "elements": [
         "fire"
@@ -6283,15 +6319,15 @@
        "weapon_req": "any",
        "segments": [
         {
-         "skeleton": "stance",
-         "shape_id": "self",
-         "range": null,
+         "skeleton": "summon",
+         "shape_id": "ground_tile",
+         "range": 5,
          "arm": null,
          "elements": [],
          "effects": [
           {
-           "type": "apply_status",
-           "status": "stance_ironwall",
+           "type": "summon",
+           "status": null,
            "surface": null,
            "condition": null
           }
@@ -6308,51 +6344,120 @@
        "trap_trigger": null,
        "zone_element": null,
        "art": {
-        "prop": "el:fire",
-        "motion": "aura",
-        "act": "buff",
-        "tint": null,
+        "prop": "summon:spirit",
+        "motion": "place",
+        "act": "summon",
+        "tint": "fire",
         "spark": null
        }
       },
       "keywords": {
-       "makes": [],
+       "makes": [
+        {
+         "id": "ignite",
+         "name_zh": "點燃",
+         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        },
+        {
+         "id": "summon",
+         "name_zh": "召喚物",
+         "description_zh": "召喚與圖騰讓場上多出幫手；你可以獻祭自己的召喚物，在它所在的位置爆炸或治療。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        }
+       ],
        "uses": [],
-       "basic": true
+       "basic": false
       },
       "variants": [],
-      "summons": [],
-      "skeleton_zh": "姿態",
+      "summons": [
+       {
+        "id": "summon_fire_spirit",
+        "name_zh": "火靈",
+        "count": 1,
+        "hp": 140,
+        "hp_note": "施放者 1 級、意志修正 0 時；施放者每升 1 級 +20、意志修正每 +1 再 +10，再乘定位係數 ×1",
+        "hp_infusion_zh": "選「召喚物」灌注時 HP +20%",
+        "move": "5 格",
+        "defense": "護甲 +0，元素抗性 25%",
+        "attack": "火焰法杖：10–60 火焰傷害（射程 5）",
+        "innate": [
+         "普攻命中時施加「燃燒」2 回合"
+        ],
+        "behavior": [
+         "預設模式「跟隨」（可在召喚物面板切換）",
+         "行動方式「弓手」：和敵人保持距離，找高處與視線好的位置遠遠射擊。"
+        ],
+        "infusion": "灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）",
+        "basis": "base",
+        "basis_zh": "基準值（1 級）"
+       }
+      ],
+      "skeleton_zh": "召喚",
       "formula_lines": [],
       "stacks": [],
       "stats": {
-       "ap": null,
-       "cooldown": null,
-       "range": null,
+       "ap": 1,
+       "cooldown": 4,
+       "range": 5,
        "range_weapon": false,
        "radius": null,
        "size": null,
        "timing": null,
-       "costs": [],
+       "costs": [
+        {
+         "index": 0,
+         "kind": "ap",
+         "value": 1,
+         "unit": "AP",
+         "label": "1"
+        },
+        {
+         "index": 1,
+         "kind": "mana",
+         "value": 10,
+         "unit": "法力",
+         "label": "10"
+        },
+        {
+         "index": 2,
+         "kind": "hp_percent",
+         "value": 95,
+         "unit": "‰",
+         "label": "9.5%"
+        },
+        {
+         "index": 3,
+         "kind": "cooldown",
+         "value": 4,
+         "unit": "回合",
+         "label": "4"
+        }
+       ],
        "effects": [
         {
          "index": 0,
-         "type": "apply_status",
-         "category": "status",
-         "label": null,
-         "unit": null,
+         "type": "summon",
+         "category": "summon",
+         "label": "3",
+         "unit": "輪",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
-         "amount": null,
+         "amount": 3,
          "element": null,
          "element_zh": null,
-         "name_zh": "鐵壁姿態",
-         "affects": "self"
+         "name_zh": null,
+         "affects": null
         }
        ],
        "scaling_attrs": [
-        "int"
+        "wil"
        ]
       }
      },
@@ -6360,50 +6465,16 @@
      "unequip_slot": null,
      "changes": [
       {
-       "field": "kind",
-       "label_zh": "種類",
-       "effect_index": null,
-       "before": "主動",
-       "after": "姿態",
-       "direction": "better",
-       "name_zh": "種類",
-       "term": null,
-       "before_zh": "主動",
-       "after_zh": "姿態",
-       "icon": {
-        "kind": "part",
-        "cat": "skeleton",
-        "id": "stance"
-       }
-      },
-      {
-       "field": "range",
-       "label_zh": "射程",
-       "effect_index": null,
-       "before": "5",
-       "after": null,
-       "direction": "worse",
-       "name_zh": "射程",
-       "term": "range",
-       "before_zh": "5 格",
-       "after_zh": null,
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "range"
-       }
-      },
-      {
        "field": "cost.ap",
        "label_zh": "AP",
        "effect_index": null,
        "before": "2",
-       "after": null,
-       "direction": "cost",
+       "after": "1",
+       "direction": "better",
        "name_zh": "AP",
        "term": "ap",
        "before_zh": "2",
-       "after_zh": null,
+       "after_zh": "1",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -6414,12 +6485,12 @@
        "field": "cost.stamina",
        "label_zh": "耐力",
        "effect_index": null,
-       "before": "2",
+       "before": "20",
        "after": null,
        "direction": "cost",
        "name_zh": "耐力",
        "term": "stamina",
-       "before_zh": "2",
+       "before_zh": "20",
        "after_zh": null,
        "icon": {
         "kind": "part",
@@ -6428,20 +6499,37 @@
        }
       },
       {
-       "field": "cost.cooldown",
-       "label_zh": "冷卻",
+       "field": "cost.mana",
+       "label_zh": "法力",
        "effect_index": null,
-       "before": "4",
-       "after": null,
+       "before": null,
+       "after": "10",
        "direction": "cost",
-       "name_zh": "冷卻",
-       "term": "cooldown",
-       "before_zh": "4 回合",
-       "after_zh": null,
+       "name_zh": "法力",
+       "term": null,
+       "before_zh": null,
+       "after_zh": "10",
        "icon": {
         "kind": "part",
         "cat": "card",
-        "id": "cooldown"
+        "id": "mana"
+       }
+      },
+      {
+       "field": "cost.hp_percent",
+       "label_zh": "HP 代價",
+       "effect_index": null,
+       "before": null,
+       "after": "9.5%",
+       "direction": "cost",
+       "name_zh": "HP 代價",
+       "term": null,
+       "before_zh": null,
+       "after_zh": "9.5%",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "hp"
        }
       },
       {
@@ -6463,24 +6551,24 @@
       },
       {
        "field": "effects[0]",
-       "label_zh": "鐵壁姿態",
+       "label_zh": "召喚",
        "effect_index": 0,
        "before": null,
-       "after": "鐵壁姿態",
+       "after": "3",
        "direction": "new",
        "name_zh": "效果",
        "term": null,
        "before_zh": null,
-       "after_zh": "[[status:stance_ironwall|鐵壁姿態]]",
+       "after_zh": "3",
        "icon": {
-        "kind": "status",
-        "cat": null,
-        "id": "stance_ironwall"
+        "kind": "part",
+        "cat": "card",
+        "id": "summon"
        }
       }
      ],
-     "headline_zh": "變成姿態：進入後一直生效，直到你取消",
-     "say_zh": "這招變成姿態：進入後一直生效，每回合付維持費，直到你取消。",
+     "headline_zh": "變成召喚：召出一隻替你用這招的幫手",
+     "say_zh": "這招變成召喚：召出一隻幫手，每回合替你用這招的元素出手。",
      "tag_term": null,
      "note_zh": "以長劍為引，將火焰凝於自身，進入燃燒的架勢。",
      "name_source": "llm",
@@ -6500,7 +6588,7 @@
     },
     {
      "name_zh": "耐力",
-     "value_zh": "2",
+     "value_zh": "20",
      "term": "stamina",
      "icon": {
       "kind": "part",
@@ -6542,7 +6630,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -6592,17 +6680,17 @@
      "title_zh": "燃燒",
      "text_zh": "身上著火，每回合開始時受到火焰傷害；重複施加時刷新持續時間。"
     },
-    "status:stance_ironwall": {
-     "title_zh": "鐵壁姿態",
-     "text_zh": "受到的骰值傷害大幅降低，但回合開始時的移動點數減少；持續到取消。"
-    },
     "uses": {
      "title_zh": "對它加碼（關鍵字）",
      "text_zh": "目標身上有這個關鍵字時，這招會變強。"
     },
     "weapon_damage:300": {
      "title_zh": "武器傷害怎麼算",
-     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +3。"
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.3。屬性加成目前 +30。"
+    },
+    "weapon_damage:400": {
+     "title_zh": "武器傷害怎麼算",
+     "text_zh": "（武器骰 1d8 ＋ 力量加成）× 0.4。屬性加成目前 +30。"
     }
    },
    "weaker_foot_zh": null
@@ -6637,14 +6725,14 @@
       "scaling": "智力",
       "ap_cost": null,
       "cost": [
-       "法力 1"
+       "法力 10"
       ],
       "source_cost": null,
       "shape": "自身",
       "condition": null,
       "effects": [
-       "1d4＋智力加成的火焰傷害（敵方）",
-       "1d6＋智力加成的冰霜傷害（敵方）"
+       "10–40＋智力加成的火焰傷害（敵方）",
+       "10–60＋智力加成的冰霜傷害（敵方）"
       ],
       "modifiers": [],
       "activation": null,
@@ -6751,7 +6839,7 @@
       "summons": [],
       "skeleton_zh": "被動",
       "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
       ],
       "stacks": [],
       "stats": {
@@ -6766,9 +6854,9 @@
         {
          "index": 0,
          "kind": "mana",
-         "value": 1,
+         "value": 10,
          "unit": "法力",
-         "label": "1"
+         "label": "10"
         }
        ],
        "effects": [
@@ -6776,9 +6864,10 @@
          "index": 0,
          "type": "damage",
          "category": "damage",
-         "label": "1d4",
+         "label": "100–130",
          "unit": null,
          "dice": "1d4",
+         "dice_note": "擲 1d4，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -6791,9 +6880,10 @@
          "index": 1,
          "type": "damage",
          "category": "damage",
-         "label": "1d6",
+         "label": "100–150",
          "unit": null,
          "dice": "1d6",
+         "dice_note": "擲 1d6，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -6820,8 +6910,8 @@
        "direction": "worse",
        "name_zh": "傷害",
        "term": null,
-       "before_zh": "1d12",
-       "after_zh": "1d4",
+       "before_zh": "10–120",
+       "after_zh": "10–40",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -6833,12 +6923,12 @@
        "label_zh": "傷害",
        "effect_index": 1,
        "before": null,
-       "after": "1d6",
+       "after": "10–60",
        "direction": "new",
        "name_zh": "第二元素",
        "term": null,
        "before_zh": null,
-       "after_zh": "1d6 冰霜傷害",
+       "after_zh": "10–60 冰霜傷害",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -6847,7 +6937,7 @@
       }
      ],
      "headline_zh": "多帶一段冰霜傷害",
-     "say_zh": "傷害從 1d12 變成 1d4，多了第二元素：1d6 冰霜傷害。",
+     "say_zh": "傷害從 10–120 變成 10–40，多了第二元素：10–60 冰霜傷害。",
      "tag_term": null,
      "note_zh": null,
      "name_source": "template",
@@ -6875,13 +6965,13 @@
       "scaling": "智力",
       "ap_cost": null,
       "cost": [
-       "法力 1"
+       "法力 10"
       ],
       "source_cost": null,
       "shape": "自身",
       "condition": null,
       "effects": [
-       "1d12＋智力加成的火焰傷害（敵方）"
+       "10–120＋智力加成的火焰傷害（敵方）"
       ],
       "modifiers": [],
       "activation": null,
@@ -6971,7 +7061,7 @@
       "summons": [],
       "skeleton_zh": "被動",
       "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
       ],
       "stacks": [],
       "stats": {
@@ -6986,9 +7076,9 @@
         {
          "index": 0,
          "kind": "mana",
-         "value": 1,
+         "value": 10,
          "unit": "法力",
-         "label": "1"
+         "label": "10"
         }
        ],
        "effects": [
@@ -6996,9 +7086,10 @@
          "index": 0,
          "type": "damage",
          "category": "damage",
-         "label": "1d12",
+         "label": "100–210",
          "unit": null,
          "dice": "1d12",
+         "dice_note": "擲 1d12，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -7045,14 +7136,14 @@
       "scaling": "智力",
       "ap_cost": null,
       "cost": [
-       "法力 1"
+       "法力 10"
       ],
       "source_cost": null,
       "shape": "自身",
       "condition": null,
       "effects": [
-       "1d4＋智力加成的火焰傷害（敵方）",
-       "1d6＋智力加成的雷電傷害（敵方）"
+       "10–40＋智力加成的火焰傷害（敵方）",
+       "10–60＋智力加成的雷電傷害（敵方）"
       ],
       "modifiers": [],
       "activation": null,
@@ -7159,7 +7250,7 @@
       "summons": [],
       "skeleton_zh": "被動",
       "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
       ],
       "stacks": [],
       "stats": {
@@ -7174,9 +7265,9 @@
         {
          "index": 0,
          "kind": "mana",
-         "value": 1,
+         "value": 10,
          "unit": "法力",
-         "label": "1"
+         "label": "10"
         }
        ],
        "effects": [
@@ -7184,9 +7275,10 @@
          "index": 0,
          "type": "damage",
          "category": "damage",
-         "label": "1d4",
+         "label": "100–130",
          "unit": null,
          "dice": "1d4",
+         "dice_note": "擲 1d4，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -7199,9 +7291,10 @@
          "index": 1,
          "type": "damage",
          "category": "damage",
-         "label": "1d6",
+         "label": "100–150",
          "unit": null,
          "dice": "1d6",
+         "dice_note": "擲 1d6，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -7228,8 +7321,8 @@
        "direction": "worse",
        "name_zh": "傷害",
        "term": null,
-       "before_zh": "1d12",
-       "after_zh": "1d4",
+       "before_zh": "10–120",
+       "after_zh": "10–40",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -7241,12 +7334,12 @@
        "label_zh": "傷害",
        "effect_index": 1,
        "before": null,
-       "after": "1d6",
+       "after": "10–60",
        "direction": "new",
        "name_zh": "第二元素",
        "term": null,
        "before_zh": null,
-       "after_zh": "1d6 雷電傷害",
+       "after_zh": "10–60 雷電傷害",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -7255,7 +7348,7 @@
       }
      ],
      "headline_zh": "多帶一段雷電傷害",
-     "say_zh": "傷害從 1d12 變成 1d4，多了第二元素：1d6 雷電傷害。",
+     "say_zh": "傷害從 10–120 變成 10–40，多了第二元素：10–60 雷電傷害。",
      "tag_term": null,
      "note_zh": null,
      "name_source": "template",
@@ -7283,13 +7376,13 @@
       "scaling": "智力",
       "ap_cost": null,
       "cost": [
-       "法力 1"
+       "法力 10"
       ],
       "source_cost": null,
       "shape": "自身",
       "condition": null,
       "effects": [
-       "1d8＋智力加成的火焰傷害（敵方）"
+       "10–80＋智力加成的火焰傷害（敵方）"
       ],
       "modifiers": [],
       "activation": null,
@@ -7379,7 +7472,7 @@
       "summons": [],
       "skeleton_zh": "被動",
       "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
       ],
       "stacks": [],
       "stats": {
@@ -7394,9 +7487,9 @@
         {
          "index": 0,
          "kind": "mana",
-         "value": 1,
+         "value": 10,
          "unit": "法力",
-         "label": "1"
+         "label": "10"
         }
        ],
        "effects": [
@@ -7404,9 +7497,10 @@
          "index": 0,
          "type": "damage",
          "category": "damage",
-         "label": "1d8",
+         "label": "100–170",
          "unit": null,
          "dice": "1d8",
+         "dice_note": "擲 1d8，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -7433,8 +7527,8 @@
        "direction": "worse",
        "name_zh": "傷害",
        "term": null,
-       "before_zh": "1d12",
-       "after_zh": "1d8",
+       "before_zh": "10–120",
+       "after_zh": "10–80",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -7443,7 +7537,7 @@
       }
      ],
      "headline_zh": "每回合多觸發 1 次",
-     "say_zh": "傷害從 1d12 變成 1d8。",
+     "say_zh": "傷害從 10–120 變成 10–80。",
      "tag_term": null,
      "note_zh": null,
      "name_source": "template",
@@ -7453,7 +7547,7 @@
    "base_stats": [
     {
      "name_zh": "法力",
-     "value_zh": "1",
+     "value_zh": "10",
      "term": null,
      "icon": {
       "kind": "part",
@@ -7465,7 +7559,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -7520,962 +7614,10 @@
      "category": "bridge",
      "category_zh": "橋接",
      "template": "major_bridge_exploit",
-     "summary_zh": "橋接標記：目標帶有標記時加碼",
-     "transform": false,
-     "card": {
-      "id": "skill_rand_2413146607_fl_e4bd90cac4",
-      "name_zh": "印記・燃燒爆",
-      "skeleton": "area",
-      "tier": 2,
-      "rank": 1,
-      "rarity": "稀有",
-      "kind": "主動",
-      "category": "法術技",
-      "weapon_req": "法器",
-      "weapon_only": null,
-      "scaling": "智力",
-      "ap_cost": 2,
-      "cost": [
-       "AP 2",
-       "法力 3",
-       "冷卻 5 回合"
-      ],
-      "source_cost": null,
-      "shape": "十字（射程 5）",
-      "condition": null,
-      "effects": [
-       "1d12＋智力加成的火焰傷害（敵方）",
-       "狀態「燃燒」 2 回合（敵方）",
-       "生成「水」表面（影響的格子）",
-       "1d4＋智力加成的火焰傷害（敵方），若目標帶有狀態「被標記」"
-      ],
-      "modifiers": [],
-      "activation": null,
-      "activation_id": null,
-      "mastery": null,
-      "tags": [
-       "fire",
-       "area",
-       "damage",
-       "dot"
-      ],
-      "element": "火焰",
-      "element_id": "fire",
-      "concept": "在一小片區域炸開火焰，讓範圍內的人燒起來",
-      "cast_flavor": "火光一閃，四周的人身上都冒起了火苗",
-      "rarity_id": "rare",
-      "kind_id": "active",
-      "category_id": "spell",
-      "weapon_req_id": "focus",
-      "scaling_attrs": [
-       "int"
-      ],
-      "mastery_id": null,
-      "timing": null,
-      "effect_ids": [
-       "damage",
-       "apply_status",
-       "create_surface",
-       "damage"
-      ],
-      "followup": null,
-      "followup_when": null,
-      "icon": {
-       "kind": "active",
-       "rarity": "rare",
-       "elements": [
-        "fire"
-       ],
-       "weapon_req": "focus",
-       "segments": [
-        {
-         "skeleton": "area",
-         "shape_id": "cross",
-         "range": 5,
-         "arm": null,
-         "elements": [
-          "fire"
-         ],
-         "effects": [
-          {
-           "type": "damage",
-           "status": null,
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "apply_status",
-           "status": "burning",
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "create_surface",
-           "status": null,
-           "surface": "water",
-           "condition": null
-          },
-          {
-           "type": "damage",
-           "status": null,
-           "surface": null,
-           "condition": "target_has_status"
-          }
-         ]
-        }
-       ],
-       "link": null,
-       "condition": {
-        "id": "target_has_status",
-        "status": "marked"
-       },
-       "costs": [],
-       "cost_values": {},
-       "trigger": null,
-       "modifier": null,
-       "partial": false,
-       "trap_trigger": null,
-       "zone_element": null,
-       "art": {
-        "prop": "el:fire",
-        "motion": "area",
-        "act": "dot",
-        "tint": "fire",
-        "spark": null
-       }
-      },
-      "keywords": {
-       "makes": [
-        {
-         "id": "ignite",
-         "name_zh": "點燃",
-         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        },
-        {
-         "id": "wet",
-         "name_zh": "潮濕",
-         "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        }
-       ],
-       "uses": [
-        {
-         "id": "marked",
-         "name_zh": "標記",
-         "description_zh": "咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        }
-       ],
-       "basic": false
-      },
-      "variants": [],
-      "summons": [],
-      "skeleton_zh": "範圍",
-      "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
-      ],
-      "stacks": [],
-      "stats": {
-       "ap": 2,
-       "cooldown": 5,
-       "range": 5,
-       "range_weapon": false,
-       "radius": null,
-       "size": null,
-       "timing": null,
-       "costs": [
-        {
-         "index": 0,
-         "kind": "ap",
-         "value": 2,
-         "unit": "AP",
-         "label": "2"
-        },
-        {
-         "index": 1,
-         "kind": "mana",
-         "value": 3,
-         "unit": "法力",
-         "label": "3"
-        },
-        {
-         "index": 2,
-         "kind": "cooldown",
-         "value": 5,
-         "unit": "回合",
-         "label": "5"
-        }
-       ],
-       "effects": [
-        {
-         "index": 0,
-         "type": "damage",
-         "category": "damage",
-         "label": "1d12",
-         "unit": null,
-         "dice": "1d12",
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": "fire",
-         "element_zh": "火焰",
-         "name_zh": null,
-         "affects": null
-        },
-        {
-         "index": 1,
-         "type": "apply_status",
-         "category": "status",
-         "label": "2",
-         "unit": "回合",
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": 2,
-         "element": null,
-         "element_zh": null,
-         "name_zh": "燃燒",
-         "affects": null
-        },
-        {
-         "index": 2,
-         "type": "create_surface",
-         "category": "surface",
-         "label": null,
-         "unit": null,
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": null,
-         "element_zh": null,
-         "name_zh": "水",
-         "affects": null
-        },
-        {
-         "index": 3,
-         "type": "damage",
-         "category": "damage",
-         "label": "1d4",
-         "unit": null,
-         "dice": "1d4",
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": "fire",
-         "element_zh": "火焰",
-         "name_zh": null,
-         "affects": null
-        }
-       ],
-       "scaling_attrs": [
-        "int"
-       ]
-      }
-     },
-     "unequip_candidates": [],
-     "unequip_slot": null,
-     "changes": [
-      {
-       "field": "cost.cooldown",
-       "label_zh": "冷卻",
-       "effect_index": null,
-       "before": "4",
-       "after": "5",
-       "direction": "cost",
-       "name_zh": "冷卻",
-       "term": "cooldown",
-       "before_zh": "4 回合",
-       "after_zh": "5 回合",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "cooldown"
-       }
-      },
-      {
-       "field": "effects[0].dice",
-       "label_zh": "傷害骰子",
-       "effect_index": 0,
-       "before": "2d6",
-       "after": "1d12",
-       "direction": "worse",
-       "name_zh": "傷害",
-       "term": null,
-       "before_zh": "2d6",
-       "after_zh": "1d12",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "damage"
-       }
-      },
-      {
-       "field": "effects[1].amount",
-       "label_zh": "燃燒回合",
-       "effect_index": 1,
-       "before": "3",
-       "after": "2",
-       "direction": "worse",
-       "name_zh": "燃燒",
-       "term": "status:burning",
-       "before_zh": "3 回合",
-       "after_zh": "2 回合",
-       "icon": {
-        "kind": "status",
-        "cat": null,
-        "id": "burning"
-       }
-      },
-      {
-       "field": "effects[3]",
-       "label_zh": "傷害",
-       "effect_index": 3,
-       "before": null,
-       "after": "1d4",
-       "direction": "new",
-       "name_zh": "額外傷害",
-       "term": null,
-       "before_zh": null,
-       "after_zh": "1d4 火焰傷害（目標帶有狀態「被標記」時才有）",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "damage"
-       }
-      }
-     ],
-     "headline_zh": "敵人被標記時，這招多傷一截",
-     "say_zh": "用過之後要等 5 回合才能再用（原本 4），傷害從 2d6 變成 1d12，燃燒少 1 回合，多了額外傷害：1d4 火焰傷害（目標帶有狀態「被標記」時才有）。",
-     "tag_term": null,
-     "note_zh": null,
-     "name_source": "template",
-     "weaker_tag_zh": null
-    },
-    {
-     "index": 1,
-     "source": "transform",
-     "category": "transform",
-     "category_zh": "轉型",
-     "template": "to_trap",
-     "summary_zh": "轉成陷阱：在地上布下陷阱，敵人踩上去時才發動這招的效果",
-     "transform": true,
-     "card": {
-      "id": "skill_rand_2413146607_fl_24ee0f8ec0",
-      "name_zh": "伏設・燃燒爆",
-      "skeleton": "trap",
-      "tier": 2,
-      "rank": 1,
-      "rarity": "稀有",
-      "kind": "主動",
-      "category": "法術技",
-      "weapon_req": "任何武器",
-      "weapon_only": null,
-      "scaling": "智力",
-      "ap_cost": 2,
-      "cost": [
-       "AP 2",
-       "法力 5",
-       "冷卻 4 回合"
-      ],
-      "source_cost": null,
-      "shape": "指定格（射程 4）",
-      "condition": null,
-      "effects": [
-       "放置隱藏陷阱（3 輪後消失）：敵人踩到時，以該格為中心，4d4＋智力加成的火焰傷害（敵方）、狀態「燃燒」 2 回合（敵方）、生成「水」表面（影響的格子）",
-       "4d4＋智力加成的火焰傷害（敵方）",
-       "狀態「燃燒」 2 回合（敵方）",
-       "生成「水」表面（影響的格子）"
-      ],
-      "modifiers": [],
-      "activation": null,
-      "activation_id": null,
-      "mastery": null,
-      "tags": [
-       "fire",
-       "spell",
-       "trap"
-      ],
-      "element": "火焰",
-      "element_id": "fire",
-      "concept": "在一小片區域炸開火焰，讓範圍內的人燒起來（轉型：轉成陷阱：在地上布下陷阱，敵人踩上去時才發動這招的效果）",
-      "cast_flavor": "火光一閃，四周的人身上都冒起了火苗",
-      "rarity_id": "rare",
-      "kind_id": "active",
-      "category_id": "spell",
-      "weapon_req_id": "any",
-      "scaling_attrs": [
-       "int"
-      ],
-      "mastery_id": null,
-      "timing": null,
-      "effect_ids": [
-       "place_trap",
-       "damage",
-       "apply_status",
-       "create_surface"
-      ],
-      "followup": null,
-      "followup_when": null,
-      "icon": {
-       "kind": "active",
-       "rarity": "rare",
-       "elements": [
-        "fire"
-       ],
-       "weapon_req": "any",
-       "segments": [
-        {
-         "skeleton": "trap",
-         "shape_id": "ground_tile",
-         "range": 4,
-         "arm": null,
-         "elements": [
-          "fire"
-         ],
-         "effects": [
-          {
-           "type": "place_trap",
-           "status": null,
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "damage",
-           "status": null,
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "apply_status",
-           "status": "burning",
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "create_surface",
-           "status": null,
-           "surface": "water",
-           "condition": null
-          }
-         ]
-        }
-       ],
-       "link": null,
-       "condition": null,
-       "costs": [],
-       "cost_values": {},
-       "trigger": null,
-       "modifier": null,
-       "partial": false,
-       "trap_trigger": "enter",
-       "zone_element": null,
-       "art": {
-        "prop": "el:fire",
-        "motion": "place",
-        "act": "trap",
-        "tint": null,
-        "spark": null
-       }
-      },
-      "keywords": {
-       "makes": [
-        {
-         "id": "ignite",
-         "name_zh": "點燃",
-         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        },
-        {
-         "id": "wet",
-         "name_zh": "潮濕",
-         "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        }
-       ],
-       "uses": [],
-       "basic": false
-      },
-      "variants": [],
-      "summons": [],
-      "skeleton_zh": "陷阱",
-      "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
-      ],
-      "stacks": [],
-      "stats": {
-       "ap": 2,
-       "cooldown": 4,
-       "range": 4,
-       "range_weapon": false,
-       "radius": null,
-       "size": null,
-       "timing": null,
-       "costs": [
-        {
-         "index": 0,
-         "kind": "ap",
-         "value": 2,
-         "unit": "AP",
-         "label": "2"
-        },
-        {
-         "index": 1,
-         "kind": "mana",
-         "value": 5,
-         "unit": "法力",
-         "label": "5"
-        },
-        {
-         "index": 2,
-         "kind": "cooldown",
-         "value": 4,
-         "unit": "回合",
-         "label": "4"
-        }
-       ],
-       "effects": [
-        {
-         "index": 0,
-         "type": "place_trap",
-         "category": "other",
-         "label": null,
-         "unit": null,
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": null,
-         "element_zh": null,
-         "name_zh": null,
-         "affects": null
-        },
-        {
-         "index": 1,
-         "type": "damage",
-         "category": "damage",
-         "label": "4d4",
-         "unit": null,
-         "dice": "4d4",
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": "fire",
-         "element_zh": "火焰",
-         "name_zh": null,
-         "affects": "enemies"
-        },
-        {
-         "index": 2,
-         "type": "apply_status",
-         "category": "status",
-         "label": "2",
-         "unit": "回合",
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": 2,
-         "element": null,
-         "element_zh": null,
-         "name_zh": "燃燒",
-         "affects": "enemies"
-        },
-        {
-         "index": 3,
-         "type": "create_surface",
-         "category": "surface",
-         "label": null,
-         "unit": null,
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": null,
-         "element_zh": null,
-         "name_zh": "水",
-         "affects": null
-        }
-       ],
-       "scaling_attrs": [
-        "int"
-       ]
-      }
-     },
-     "unequip_candidates": [],
-     "unequip_slot": null,
-     "changes": [
-      {
-       "field": "range",
-       "label_zh": "射程",
-       "effect_index": null,
-       "before": "5",
-       "after": "4",
-       "direction": "worse",
-       "name_zh": "射程",
-       "term": "range",
-       "before_zh": "5 格",
-       "after_zh": "4 格",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "range"
-       }
-      },
-      {
-       "field": "cost.mana",
-       "label_zh": "法力",
-       "effect_index": null,
-       "before": "3",
-       "after": "5",
-       "direction": "cost",
-       "name_zh": "法力",
-       "term": null,
-       "before_zh": "3",
-       "after_zh": "5",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "mana"
-       }
-      },
-      {
-       "field": "effects[0]",
-       "label_zh": "傷害",
-       "effect_index": 0,
-       "before": "2d6",
-       "after": null,
-       "direction": "worse",
-       "name_zh": "額外傷害（第 1 段）",
-       "term": null,
-       "before_zh": "2d6 火焰傷害",
-       "after_zh": null,
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "damage"
-       }
-      },
-      {
-       "field": "effects[0]",
-       "label_zh": "效果",
-       "effect_index": 0,
-       "before": null,
-       "after": "效果",
-       "direction": "new",
-       "name_zh": "效果",
-       "term": null,
-       "before_zh": null,
-       "after_zh": "效果",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "status"
-       }
-      },
-      {
-       "field": "effects[1]",
-       "label_zh": "傷害",
-       "effect_index": 1,
-       "before": null,
-       "after": "4d4",
-       "direction": "new",
-       "name_zh": "額外傷害（第 2 段）",
-       "term": null,
-       "before_zh": null,
-       "after_zh": "4d4 火焰傷害",
-       "icon": {
-        "kind": "part",
-        "cat": "card",
-        "id": "damage"
-       }
-      },
-      {
-       "field": "effects[2].amount",
-       "label_zh": "燃燒回合",
-       "effect_index": 2,
-       "before": "3",
-       "after": "2",
-       "direction": "worse",
-       "name_zh": "燃燒",
-       "term": "status:burning",
-       "before_zh": "3 回合",
-       "after_zh": "2 回合",
-       "icon": {
-        "kind": "status",
-        "cat": null,
-        "id": "burning"
-       }
-      }
-     ],
-     "headline_zh": "變成陷阱：敵人踩上去才發動",
-     "say_zh": "這招變成陷阱：先布在地上，敵人踩上去時才發動。",
-     "tag_term": null,
-     "note_zh": null,
-     "name_source": "template",
-     "weaker_tag_zh": null
-    },
-    {
-     "index": 2,
-     "source": "major",
-     "category": "deepen",
-     "category_zh": "加深",
-     "template": "major_intensify",
-     "summary_zh": "加深點燃：這招製造的點燃多持續 1 回合，或補上製造點燃的效果",
-     "transform": false,
-     "card": {
-      "id": "skill_rand_2413146607_fl_80b2c63a0e",
-      "name_zh": "灼燃・燃燒爆",
-      "skeleton": "area",
-      "tier": 2,
-      "rank": 1,
-      "rarity": "稀有",
-      "kind": "主動",
-      "category": "法術技",
-      "weapon_req": "法器",
-      "weapon_only": null,
-      "scaling": "智力",
-      "ap_cost": 2,
-      "cost": [
-       "AP 2",
-       "法力 3",
-       "冷卻 4 回合"
-      ],
-      "source_cost": null,
-      "shape": "十字（射程 5）",
-      "condition": null,
-      "effects": [
-       "2d6＋智力加成的火焰傷害（敵方）",
-       "狀態「燃燒」 3 回合（敵方）",
-       "生成「水」表面（影響的格子）"
-      ],
-      "modifiers": [],
-      "activation": null,
-      "activation_id": null,
-      "mastery": null,
-      "tags": [
-       "fire",
-       "area",
-       "damage",
-       "dot"
-      ],
-      "element": "火焰",
-      "element_id": "fire",
-      "concept": "在一小片區域炸開火焰，讓範圍內的人燒起來",
-      "cast_flavor": "火光一閃，四周的人身上都冒起了火苗",
-      "rarity_id": "rare",
-      "kind_id": "active",
-      "category_id": "spell",
-      "weapon_req_id": "focus",
-      "scaling_attrs": [
-       "int"
-      ],
-      "mastery_id": null,
-      "timing": null,
-      "effect_ids": [
-       "damage",
-       "apply_status",
-       "create_surface"
-      ],
-      "followup": null,
-      "followup_when": null,
-      "icon": {
-       "kind": "active",
-       "rarity": "rare",
-       "elements": [
-        "fire"
-       ],
-       "weapon_req": "focus",
-       "segments": [
-        {
-         "skeleton": "area",
-         "shape_id": "cross",
-         "range": 5,
-         "arm": null,
-         "elements": [
-          "fire"
-         ],
-         "effects": [
-          {
-           "type": "damage",
-           "status": null,
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "apply_status",
-           "status": "burning",
-           "surface": null,
-           "condition": null
-          },
-          {
-           "type": "create_surface",
-           "status": null,
-           "surface": "water",
-           "condition": null
-          }
-         ]
-        }
-       ],
-       "link": null,
-       "condition": null,
-       "costs": [],
-       "cost_values": {},
-       "trigger": null,
-       "modifier": null,
-       "partial": false,
-       "trap_trigger": null,
-       "zone_element": null,
-       "art": {
-        "prop": "el:fire",
-        "motion": "area",
-        "act": "dot",
-        "tint": "fire",
-        "spark": null
-       }
-      },
-      "keywords": {
-       "makes": [
-        {
-         "id": "ignite",
-         "name_zh": "點燃",
-         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        },
-        {
-         "id": "wet",
-         "name_zh": "潮濕",
-         "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
-         "variant": false,
-         "general": false,
-         "reason_zh": null
-        }
-       ],
-       "uses": [],
-       "basic": false
-      },
-      "variants": [],
-      "summons": [],
-      "skeleton_zh": "範圍",
-      "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
-      ],
-      "stacks": [],
-      "stats": {
-       "ap": 2,
-       "cooldown": 4,
-       "range": 5,
-       "range_weapon": false,
-       "radius": null,
-       "size": null,
-       "timing": null,
-       "costs": [
-        {
-         "index": 0,
-         "kind": "ap",
-         "value": 2,
-         "unit": "AP",
-         "label": "2"
-        },
-        {
-         "index": 1,
-         "kind": "mana",
-         "value": 3,
-         "unit": "法力",
-         "label": "3"
-        },
-        {
-         "index": 2,
-         "kind": "cooldown",
-         "value": 4,
-         "unit": "回合",
-         "label": "4"
-        }
-       ],
-       "effects": [
-        {
-         "index": 0,
-         "type": "damage",
-         "category": "damage",
-         "label": "2d6",
-         "unit": null,
-         "dice": "2d6",
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": "fire",
-         "element_zh": "火焰",
-         "name_zh": null,
-         "affects": null
-        },
-        {
-         "index": 1,
-         "type": "apply_status",
-         "category": "status",
-         "label": "3",
-         "unit": "回合",
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": 3,
-         "element": null,
-         "element_zh": null,
-         "name_zh": "燃燒",
-         "affects": null
-        },
-        {
-         "index": 2,
-         "type": "create_surface",
-         "category": "surface",
-         "label": null,
-         "unit": null,
-         "dice": null,
-         "multiplier_permille": null,
-         "weapon": false,
-         "amount": null,
-         "element": null,
-         "element_zh": null,
-         "name_zh": "水",
-         "affects": null
-        }
-       ],
-       "scaling_attrs": [
-        "int"
-       ]
-      }
-     },
-     "unequip_candidates": [],
-     "unequip_slot": null,
-     "changes": [],
-     "headline_zh": "專精點燃：造成的點燃更持久",
-     "say_zh": "",
-     "tag_term": null,
-     "note_zh": null,
-     "name_source": "template",
-     "weaker_tag_zh": null
-    },
-    {
-     "index": 3,
-     "source": "major",
-     "category": "bridge",
-     "category_zh": "橋接",
-     "template": "major_bridge_exploit",
      "summary_zh": "橋接冰凍：目標帶有冰凍時加碼",
      "transform": false,
      "card": {
-      "id": "skill_rand_2413146607_fl_6cf004903b",
+      "id": "skill_rand_2413146607_fl_18beeca950",
       "name_zh": "霜結・燃燒爆",
       "skeleton": "area",
       "tier": 2,
@@ -8489,17 +7631,17 @@
       "ap_cost": 2,
       "cost": [
        "AP 2",
-       "法力 3",
-       "冷卻 4 回合"
+       "法力 64",
+       "冷卻 2 回合"
       ],
       "source_cost": null,
       "shape": "十字（射程 5）",
       "condition": null,
       "effects": [
-       "1d4＋智力加成的火焰傷害（敵方）",
+       "10–40＋智力加成的火焰傷害（敵方）",
        "狀態「燃燒」 2 回合（敵方）",
        "生成「水」表面（影響的格子）",
-       "3d4＋智力加成的火焰傷害（敵方），若目標帶有狀態「冰凍」"
+       "10–120＋智力加成的火焰傷害（敵方），若目標帶有狀態「冰凍」"
       ],
       "modifiers": [],
       "activation": null,
@@ -8631,12 +7773,12 @@
       "summons": [],
       "skeleton_zh": "範圍",
       "formula_lines": [
-       "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
       ],
       "stacks": [],
       "stats": {
        "ap": 2,
-       "cooldown": 4,
+       "cooldown": 2,
        "range": 5,
        "range_weapon": false,
        "radius": null,
@@ -8653,16 +7795,16 @@
         {
          "index": 1,
          "kind": "mana",
-         "value": 3,
+         "value": 64,
          "unit": "法力",
-         "label": "3"
+         "label": "64"
         },
         {
          "index": 2,
          "kind": "cooldown",
-         "value": 4,
+         "value": 2,
          "unit": "回合",
-         "label": "4"
+         "label": "2"
         }
        ],
        "effects": [
@@ -8670,9 +7812,10 @@
          "index": 0,
          "type": "damage",
          "category": "damage",
-         "label": "1d4",
+         "label": "100–130",
          "unit": null,
          "dice": "1d4",
+         "dice_note": "擲 1d4，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -8688,6 +7831,7 @@
          "label": "2",
          "unit": "回合",
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": 2,
@@ -8703,6 +7847,7 @@
          "label": null,
          "unit": null,
          "dice": null,
+         "dice_note": null,
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -8715,9 +7860,10 @@
          "index": 3,
          "type": "damage",
          "category": "damage",
-         "label": "3d4",
+         "label": "100–210",
          "unit": null,
-         "dice": "3d4",
+         "dice": "1d12",
+         "dice_note": "擲 1d12，每點 ×10",
          "multiplier_permille": null,
          "weapon": false,
          "amount": null,
@@ -8739,13 +7885,13 @@
        "field": "effects[0].dice",
        "label_zh": "傷害骰子",
        "effect_index": 0,
-       "before": "2d6",
+       "before": "1d12",
        "after": "1d4",
        "direction": "worse",
        "name_zh": "傷害",
        "term": null,
-       "before_zh": "2d6",
-       "after_zh": "1d4",
+       "before_zh": "10–120",
+       "after_zh": "10–40",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -8774,12 +7920,12 @@
        "label_zh": "傷害",
        "effect_index": 3,
        "before": null,
-       "after": "3d4",
+       "after": "10–120",
        "direction": "new",
        "name_zh": "額外傷害",
        "term": null,
        "before_zh": null,
-       "after_zh": "3d4 火焰傷害（目標帶有狀態「冰凍」時才有）",
+       "after_zh": "10–120 火焰傷害（目標帶有狀態「冰凍」時才有）",
        "icon": {
         "kind": "part",
         "cat": "card",
@@ -8788,7 +7934,970 @@
       }
      ],
      "headline_zh": "敵人被凍住時，這招多傷一截",
-     "say_zh": "傷害從 2d6 變成 1d4，燃燒少 1 回合，多了額外傷害：3d4 火焰傷害（目標帶有狀態「冰凍」時才有）。",
+     "say_zh": "傷害從 10–120 變成 10–40，燃燒少 1 回合，多了額外傷害：10–120 火焰傷害（目標帶有狀態「冰凍」時才有）。",
+     "tag_term": null,
+     "note_zh": null,
+     "name_source": "template",
+     "weaker_tag_zh": null
+    },
+    {
+     "index": 1,
+     "source": "transform",
+     "category": "transform",
+     "category_zh": "轉型",
+     "template": "to_trap",
+     "summary_zh": "轉成陷阱：在地上布下陷阱，敵人踩上去時才發動這招的效果",
+     "transform": true,
+     "card": {
+      "id": "skill_rand_2413146607_fl_bd54250165",
+      "name_zh": "伏設・燃燒爆",
+      "skeleton": "trap",
+      "tier": 2,
+      "rank": 1,
+      "rarity": "稀有",
+      "kind": "主動",
+      "category": "法術技",
+      "weapon_req": "任何武器",
+      "weapon_only": null,
+      "scaling": "智力",
+      "ap_cost": 2,
+      "cost": [
+       "AP 2",
+       "法力 48",
+       "冷卻 4 回合"
+      ],
+      "source_cost": null,
+      "shape": "指定格（射程 4）",
+      "condition": null,
+      "effects": [
+       "放置隱藏陷阱（3 輪後消失）：敵人踩到時，以該格為中心，40–160＋智力加成的火焰傷害（敵方）、狀態「燃燒」 2 回合（敵方）、生成「水」表面（影響的格子）",
+       "40–160＋智力加成的火焰傷害（敵方）",
+       "狀態「燃燒」 2 回合（敵方）",
+       "生成「水」表面（影響的格子）"
+      ],
+      "modifiers": [],
+      "activation": null,
+      "activation_id": null,
+      "mastery": null,
+      "tags": [
+       "fire",
+       "spell",
+       "trap"
+      ],
+      "element": "火焰",
+      "element_id": "fire",
+      "concept": "在一小片區域炸開火焰，讓範圍內的人燒起來（轉型：轉成陷阱：在地上布下陷阱，敵人踩上去時才發動這招的效果）",
+      "cast_flavor": "火光一閃，四周的人身上都冒起了火苗",
+      "rarity_id": "rare",
+      "kind_id": "active",
+      "category_id": "spell",
+      "weapon_req_id": "any",
+      "scaling_attrs": [
+       "int"
+      ],
+      "mastery_id": null,
+      "timing": null,
+      "effect_ids": [
+       "place_trap",
+       "damage",
+       "apply_status",
+       "create_surface"
+      ],
+      "followup": null,
+      "followup_when": null,
+      "icon": {
+       "kind": "active",
+       "rarity": "rare",
+       "elements": [
+        "fire"
+       ],
+       "weapon_req": "any",
+       "segments": [
+        {
+         "skeleton": "trap",
+         "shape_id": "ground_tile",
+         "range": 4,
+         "arm": null,
+         "elements": [
+          "fire"
+         ],
+         "effects": [
+          {
+           "type": "place_trap",
+           "status": null,
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "damage",
+           "status": null,
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "apply_status",
+           "status": "burning",
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "create_surface",
+           "status": null,
+           "surface": "water",
+           "condition": null
+          }
+         ]
+        }
+       ],
+       "link": null,
+       "condition": null,
+       "costs": [],
+       "cost_values": {},
+       "trigger": null,
+       "modifier": null,
+       "partial": false,
+       "trap_trigger": "enter",
+       "zone_element": null,
+       "art": {
+        "prop": "el:fire",
+        "motion": "place",
+        "act": "trap",
+        "tint": null,
+        "spark": null
+       }
+      },
+      "keywords": {
+       "makes": [
+        {
+         "id": "ignite",
+         "name_zh": "點燃",
+         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        },
+        {
+         "id": "wet",
+         "name_zh": "潮濕",
+         "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        }
+       ],
+       "uses": [],
+       "basic": false
+      },
+      "variants": [],
+      "summons": [],
+      "skeleton_zh": "陷阱",
+      "formula_lines": [
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
+      ],
+      "stacks": [],
+      "stats": {
+       "ap": 2,
+       "cooldown": 4,
+       "range": 4,
+       "range_weapon": false,
+       "radius": null,
+       "size": null,
+       "timing": null,
+       "costs": [
+        {
+         "index": 0,
+         "kind": "ap",
+         "value": 2,
+         "unit": "AP",
+         "label": "2"
+        },
+        {
+         "index": 1,
+         "kind": "mana",
+         "value": 48,
+         "unit": "法力",
+         "label": "48"
+        },
+        {
+         "index": 2,
+         "kind": "cooldown",
+         "value": 4,
+         "unit": "回合",
+         "label": "4"
+        }
+       ],
+       "effects": [
+        {
+         "index": 0,
+         "type": "place_trap",
+         "category": "other",
+         "label": null,
+         "unit": null,
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": null,
+         "element_zh": null,
+         "name_zh": null,
+         "affects": null
+        },
+        {
+         "index": 1,
+         "type": "damage",
+         "category": "damage",
+         "label": "130–250",
+         "unit": null,
+         "dice": "4d4",
+         "dice_note": "擲 4d4，每點 ×10",
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": "fire",
+         "element_zh": "火焰",
+         "name_zh": null,
+         "affects": "enemies"
+        },
+        {
+         "index": 2,
+         "type": "apply_status",
+         "category": "status",
+         "label": "2",
+         "unit": "回合",
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": 2,
+         "element": null,
+         "element_zh": null,
+         "name_zh": "燃燒",
+         "affects": "enemies"
+        },
+        {
+         "index": 3,
+         "type": "create_surface",
+         "category": "surface",
+         "label": null,
+         "unit": null,
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": null,
+         "element_zh": null,
+         "name_zh": "水",
+         "affects": null
+        }
+       ],
+       "scaling_attrs": [
+        "int"
+       ]
+      }
+     },
+     "unequip_candidates": [],
+     "unequip_slot": null,
+     "changes": [
+      {
+       "field": "range",
+       "label_zh": "射程",
+       "effect_index": null,
+       "before": "5",
+       "after": "4",
+       "direction": "worse",
+       "name_zh": "射程",
+       "term": "range",
+       "before_zh": "5 格",
+       "after_zh": "4 格",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "range"
+       }
+      },
+      {
+       "field": "cost.mana",
+       "label_zh": "法力",
+       "effect_index": null,
+       "before": "64",
+       "after": "48",
+       "direction": "better",
+       "name_zh": "法力",
+       "term": null,
+       "before_zh": "64",
+       "after_zh": "48",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "mana"
+       }
+      },
+      {
+       "field": "cost.cooldown",
+       "label_zh": "冷卻",
+       "effect_index": null,
+       "before": "2",
+       "after": "4",
+       "direction": "cost",
+       "name_zh": "冷卻",
+       "term": "cooldown",
+       "before_zh": "2 回合",
+       "after_zh": "4 回合",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "cooldown"
+       }
+      },
+      {
+       "field": "effects[0]",
+       "label_zh": "傷害",
+       "effect_index": 0,
+       "before": "10–120",
+       "after": null,
+       "direction": "worse",
+       "name_zh": "額外傷害（第 1 段）",
+       "term": null,
+       "before_zh": "10–120 火焰傷害",
+       "after_zh": null,
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "damage"
+       }
+      },
+      {
+       "field": "effects[0]",
+       "label_zh": "效果",
+       "effect_index": 0,
+       "before": null,
+       "after": "效果",
+       "direction": "new",
+       "name_zh": "效果",
+       "term": null,
+       "before_zh": null,
+       "after_zh": "效果",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "status"
+       }
+      },
+      {
+       "field": "effects[1]",
+       "label_zh": "傷害",
+       "effect_index": 1,
+       "before": null,
+       "after": "40–160",
+       "direction": "new",
+       "name_zh": "額外傷害（第 2 段）",
+       "term": null,
+       "before_zh": null,
+       "after_zh": "40–160 火焰傷害",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "damage"
+       }
+      },
+      {
+       "field": "effects[2].amount",
+       "label_zh": "燃燒回合",
+       "effect_index": 2,
+       "before": "3",
+       "after": "2",
+       "direction": "worse",
+       "name_zh": "燃燒",
+       "term": "status:burning",
+       "before_zh": "3 回合",
+       "after_zh": "2 回合",
+       "icon": {
+        "kind": "status",
+        "cat": null,
+        "id": "burning"
+       }
+      }
+     ],
+     "headline_zh": "變成陷阱：敵人踩上去才發動",
+     "say_zh": "這招變成陷阱：先布在地上，敵人踩上去時才發動。",
+     "tag_term": null,
+     "note_zh": null,
+     "name_source": "template",
+     "weaker_tag_zh": null
+    },
+    {
+     "index": 2,
+     "source": "major",
+     "category": "deepen",
+     "category_zh": "加深",
+     "template": "major_intensify",
+     "summary_zh": "加深點燃：這招製造的點燃多持續 1 回合，或補上製造點燃的效果",
+     "transform": false,
+     "card": {
+      "id": "skill_rand_2413146607_fl_335292b1a9",
+      "name_zh": "灼燃・燃燒爆",
+      "skeleton": "area",
+      "tier": 2,
+      "rank": 1,
+      "rarity": "稀有",
+      "kind": "主動",
+      "category": "法術技",
+      "weapon_req": "法器",
+      "weapon_only": null,
+      "scaling": "智力",
+      "ap_cost": 2,
+      "cost": [
+       "AP 2",
+       "法力 64",
+       "冷卻 2 回合"
+      ],
+      "source_cost": null,
+      "shape": "十字（射程 5）",
+      "condition": null,
+      "effects": [
+       "10–120＋智力加成的火焰傷害（敵方）",
+       "狀態「燃燒」 3 回合（敵方）",
+       "生成「水」表面（影響的格子）"
+      ],
+      "modifiers": [],
+      "activation": null,
+      "activation_id": null,
+      "mastery": null,
+      "tags": [
+       "fire",
+       "area",
+       "damage",
+       "dot"
+      ],
+      "element": "火焰",
+      "element_id": "fire",
+      "concept": "在一小片區域炸開火焰，讓範圍內的人燒起來",
+      "cast_flavor": "火光一閃，四周的人身上都冒起了火苗",
+      "rarity_id": "rare",
+      "kind_id": "active",
+      "category_id": "spell",
+      "weapon_req_id": "focus",
+      "scaling_attrs": [
+       "int"
+      ],
+      "mastery_id": null,
+      "timing": null,
+      "effect_ids": [
+       "damage",
+       "apply_status",
+       "create_surface"
+      ],
+      "followup": null,
+      "followup_when": null,
+      "icon": {
+       "kind": "active",
+       "rarity": "rare",
+       "elements": [
+        "fire"
+       ],
+       "weapon_req": "focus",
+       "segments": [
+        {
+         "skeleton": "area",
+         "shape_id": "cross",
+         "range": 5,
+         "arm": null,
+         "elements": [
+          "fire"
+         ],
+         "effects": [
+          {
+           "type": "damage",
+           "status": null,
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "apply_status",
+           "status": "burning",
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "create_surface",
+           "status": null,
+           "surface": "water",
+           "condition": null
+          }
+         ]
+        }
+       ],
+       "link": null,
+       "condition": null,
+       "costs": [],
+       "cost_values": {},
+       "trigger": null,
+       "modifier": null,
+       "partial": false,
+       "trap_trigger": null,
+       "zone_element": null,
+       "art": {
+        "prop": "el:fire",
+        "motion": "area",
+        "act": "dot",
+        "tint": "fire",
+        "spark": null
+       }
+      },
+      "keywords": {
+       "makes": [
+        {
+         "id": "ignite",
+         "name_zh": "點燃",
+         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        },
+        {
+         "id": "wet",
+         "name_zh": "潮濕",
+         "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        }
+       ],
+       "uses": [],
+       "basic": false
+      },
+      "variants": [],
+      "summons": [],
+      "skeleton_zh": "範圍",
+      "formula_lines": [
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
+      ],
+      "stacks": [],
+      "stats": {
+       "ap": 2,
+       "cooldown": 2,
+       "range": 5,
+       "range_weapon": false,
+       "radius": null,
+       "size": null,
+       "timing": null,
+       "costs": [
+        {
+         "index": 0,
+         "kind": "ap",
+         "value": 2,
+         "unit": "AP",
+         "label": "2"
+        },
+        {
+         "index": 1,
+         "kind": "mana",
+         "value": 64,
+         "unit": "法力",
+         "label": "64"
+        },
+        {
+         "index": 2,
+         "kind": "cooldown",
+         "value": 2,
+         "unit": "回合",
+         "label": "2"
+        }
+       ],
+       "effects": [
+        {
+         "index": 0,
+         "type": "damage",
+         "category": "damage",
+         "label": "100–210",
+         "unit": null,
+         "dice": "1d12",
+         "dice_note": "擲 1d12，每點 ×10",
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": "fire",
+         "element_zh": "火焰",
+         "name_zh": null,
+         "affects": null
+        },
+        {
+         "index": 1,
+         "type": "apply_status",
+         "category": "status",
+         "label": "3",
+         "unit": "回合",
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": 3,
+         "element": null,
+         "element_zh": null,
+         "name_zh": "燃燒",
+         "affects": null
+        },
+        {
+         "index": 2,
+         "type": "create_surface",
+         "category": "surface",
+         "label": null,
+         "unit": null,
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": null,
+         "element_zh": null,
+         "name_zh": "水",
+         "affects": null
+        }
+       ],
+       "scaling_attrs": [
+        "int"
+       ]
+      }
+     },
+     "unequip_candidates": [],
+     "unequip_slot": null,
+     "changes": [],
+     "headline_zh": "專精點燃：造成的點燃更持久",
+     "say_zh": "",
+     "tag_term": null,
+     "note_zh": null,
+     "name_source": "template",
+     "weaker_tag_zh": null
+    },
+    {
+     "index": 3,
+     "source": "major",
+     "category": "bridge",
+     "category_zh": "橋接",
+     "template": "major_bridge_exploit",
+     "summary_zh": "橋接標記：目標帶有標記時加碼",
+     "transform": false,
+     "card": {
+      "id": "skill_rand_2413146607_fl_6dc8336d72",
+      "name_zh": "印記・燃燒爆",
+      "skeleton": "area",
+      "tier": 2,
+      "rank": 1,
+      "rarity": "稀有",
+      "kind": "主動",
+      "category": "法術技",
+      "weapon_req": "法器",
+      "weapon_only": null,
+      "scaling": "智力",
+      "ap_cost": 2,
+      "cost": [
+       "AP 2",
+       "法力 64",
+       "冷卻 3 回合"
+      ],
+      "source_cost": null,
+      "shape": "十字（射程 5）",
+      "condition": null,
+      "effects": [
+       "10–120＋智力加成的火焰傷害（敵方）",
+       "狀態「燃燒」 2 回合（敵方）",
+       "生成「水」表面（影響的格子）",
+       "10–40＋智力加成的火焰傷害（敵方），若目標帶有狀態「被標記」"
+      ],
+      "modifiers": [],
+      "activation": null,
+      "activation_id": null,
+      "mastery": null,
+      "tags": [
+       "fire",
+       "area",
+       "damage",
+       "dot"
+      ],
+      "element": "火焰",
+      "element_id": "fire",
+      "concept": "在一小片區域炸開火焰，讓範圍內的人燒起來",
+      "cast_flavor": "火光一閃，四周的人身上都冒起了火苗",
+      "rarity_id": "rare",
+      "kind_id": "active",
+      "category_id": "spell",
+      "weapon_req_id": "focus",
+      "scaling_attrs": [
+       "int"
+      ],
+      "mastery_id": null,
+      "timing": null,
+      "effect_ids": [
+       "damage",
+       "apply_status",
+       "create_surface",
+       "damage"
+      ],
+      "followup": null,
+      "followup_when": null,
+      "icon": {
+       "kind": "active",
+       "rarity": "rare",
+       "elements": [
+        "fire"
+       ],
+       "weapon_req": "focus",
+       "segments": [
+        {
+         "skeleton": "area",
+         "shape_id": "cross",
+         "range": 5,
+         "arm": null,
+         "elements": [
+          "fire"
+         ],
+         "effects": [
+          {
+           "type": "damage",
+           "status": null,
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "apply_status",
+           "status": "burning",
+           "surface": null,
+           "condition": null
+          },
+          {
+           "type": "create_surface",
+           "status": null,
+           "surface": "water",
+           "condition": null
+          },
+          {
+           "type": "damage",
+           "status": null,
+           "surface": null,
+           "condition": "target_has_status"
+          }
+         ]
+        }
+       ],
+       "link": null,
+       "condition": {
+        "id": "target_has_status",
+        "status": "marked"
+       },
+       "costs": [],
+       "cost_values": {},
+       "trigger": null,
+       "modifier": null,
+       "partial": false,
+       "trap_trigger": null,
+       "zone_element": null,
+       "art": {
+        "prop": "el:fire",
+        "motion": "area",
+        "act": "dot",
+        "tint": "fire",
+        "spark": null
+       }
+      },
+      "keywords": {
+       "makes": [
+        {
+         "id": "ignite",
+         "name_zh": "點燃",
+         "description_zh": "火焰讓目標燃燒；燃燒中的目標會受到更重的傷害，或被引爆。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        },
+        {
+         "id": "wet",
+         "name_zh": "潮濕",
+         "description_zh": "水讓地面積水；站在水上的單位會被雷電傳導、被冰霜凍結。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        }
+       ],
+       "uses": [
+        {
+         "id": "marked",
+         "name_zh": "標記",
+         "description_zh": "咒印與揭露標記目標；標記可以被引爆，被標記者會被追擊。",
+         "variant": false,
+         "general": false,
+         "reason_zh": null
+        }
+       ],
+       "basic": false
+      },
+      "variants": [],
+      "summons": [],
+      "skeleton_zh": "範圍",
+      "formula_lines": [
+       "傷害算法：骰值＋智力 × 0.5（目前 +90）"
+      ],
+      "stacks": [],
+      "stats": {
+       "ap": 2,
+       "cooldown": 3,
+       "range": 5,
+       "range_weapon": false,
+       "radius": null,
+       "size": null,
+       "timing": null,
+       "costs": [
+        {
+         "index": 0,
+         "kind": "ap",
+         "value": 2,
+         "unit": "AP",
+         "label": "2"
+        },
+        {
+         "index": 1,
+         "kind": "mana",
+         "value": 64,
+         "unit": "法力",
+         "label": "64"
+        },
+        {
+         "index": 2,
+         "kind": "cooldown",
+         "value": 3,
+         "unit": "回合",
+         "label": "3"
+        }
+       ],
+       "effects": [
+        {
+         "index": 0,
+         "type": "damage",
+         "category": "damage",
+         "label": "100–210",
+         "unit": null,
+         "dice": "1d12",
+         "dice_note": "擲 1d12，每點 ×10",
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": "fire",
+         "element_zh": "火焰",
+         "name_zh": null,
+         "affects": null
+        },
+        {
+         "index": 1,
+         "type": "apply_status",
+         "category": "status",
+         "label": "2",
+         "unit": "回合",
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": 2,
+         "element": null,
+         "element_zh": null,
+         "name_zh": "燃燒",
+         "affects": null
+        },
+        {
+         "index": 2,
+         "type": "create_surface",
+         "category": "surface",
+         "label": null,
+         "unit": null,
+         "dice": null,
+         "dice_note": null,
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": null,
+         "element_zh": null,
+         "name_zh": "水",
+         "affects": null
+        },
+        {
+         "index": 3,
+         "type": "damage",
+         "category": "damage",
+         "label": "100–130",
+         "unit": null,
+         "dice": "1d4",
+         "dice_note": "擲 1d4，每點 ×10",
+         "multiplier_permille": null,
+         "weapon": false,
+         "amount": null,
+         "element": "fire",
+         "element_zh": "火焰",
+         "name_zh": null,
+         "affects": null
+        }
+       ],
+       "scaling_attrs": [
+        "int"
+       ]
+      }
+     },
+     "unequip_candidates": [],
+     "unequip_slot": null,
+     "changes": [
+      {
+       "field": "cost.cooldown",
+       "label_zh": "冷卻",
+       "effect_index": null,
+       "before": "2",
+       "after": "3",
+       "direction": "cost",
+       "name_zh": "冷卻",
+       "term": "cooldown",
+       "before_zh": "2 回合",
+       "after_zh": "3 回合",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "cooldown"
+       }
+      },
+      {
+       "field": "effects[1].amount",
+       "label_zh": "燃燒回合",
+       "effect_index": 1,
+       "before": "3",
+       "after": "2",
+       "direction": "worse",
+       "name_zh": "燃燒",
+       "term": "status:burning",
+       "before_zh": "3 回合",
+       "after_zh": "2 回合",
+       "icon": {
+        "kind": "status",
+        "cat": null,
+        "id": "burning"
+       }
+      },
+      {
+       "field": "effects[3]",
+       "label_zh": "傷害",
+       "effect_index": 3,
+       "before": null,
+       "after": "10–40",
+       "direction": "new",
+       "name_zh": "額外傷害",
+       "term": null,
+       "before_zh": null,
+       "after_zh": "10–40 火焰傷害（目標帶有狀態「被標記」時才有）",
+       "icon": {
+        "kind": "part",
+        "cat": "card",
+        "id": "damage"
+       }
+      }
+     ],
+     "headline_zh": "敵人被標記時，這招多傷一截",
+     "say_zh": "用過之後要等 3 回合才能再用（原本 2），燃燒少 1 回合，多了額外傷害：10–40 火焰傷害（目標帶有狀態「被標記」時才有）。",
      "tag_term": null,
      "note_zh": null,
      "name_source": "template",
@@ -8808,7 +8917,7 @@
     },
     {
      "name_zh": "法力",
-     "value_zh": "3",
+     "value_zh": "64",
      "term": null,
      "icon": {
       "kind": "part",
@@ -8818,7 +8927,7 @@
     },
     {
      "name_zh": "冷卻",
-     "value_zh": "4",
+     "value_zh": "2",
      "term": "cooldown",
      "icon": {
       "kind": "part",
@@ -8850,7 +8959,7 @@
    "terms": {
     "ap": {
      "title_zh": "AP（行動點）",
-     "text_zh": "每回合 3 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
+     "text_zh": "每回合 4 點，用技能、攻擊、道具、互動都要花；移動不花 AP。最多留 1 點到下回合。"
     },
     "assembly": {
      "title_zh": "組成",
@@ -8916,7 +9025,7 @@
    "ap_cost": 2,
    "cost": [
     "AP 2",
-    "耐力 8",
+    "耐力 80",
     "冷卻 2 回合"
    ],
    "source_cost": null,
@@ -9022,7 +9131,7 @@
    "summons": [],
    "skeleton_zh": "連段",
    "formula_lines": [
-    "傷害算法：武器骰 1d8＋力量 × 0.3（目前 +3）"
+    "傷害算法：武器骰 10–80＋力量 × 0.3（目前 +30）"
    ],
    "stacks": [],
    "stats": {
@@ -9044,9 +9153,9 @@
      {
       "index": 1,
       "kind": "stamina",
-      "value": 8,
+      "value": 80,
       "unit": "耐力",
-      "label": "8"
+      "label": "80"
      },
      {
       "index": 2,
@@ -9064,6 +9173,7 @@
       "label": "×1.15",
       "unit": null,
       "dice": null,
+      "dice_note": "擲 1d8，每點 ×10",
       "multiplier_permille": 1150,
       "weapon": true,
       "amount": null,
@@ -9079,6 +9189,7 @@
       "label": "×1",
       "unit": null,
       "dice": null,
+      "dice_note": "擲 1d8，每點 ×10",
       "multiplier_permille": 1000,
       "weapon": true,
       "amount": null,
@@ -9107,13 +9218,13 @@
    "scaling": "智力",
    "ap_cost": null,
    "cost": [
-    "法力 1"
+    "法力 10"
    ],
    "source_cost": null,
    "shape": "自身",
    "condition": null,
    "effects": [
-    "1d12＋智力加成的火焰傷害（敵方）"
+    "10–120＋智力加成的火焰傷害（敵方）"
    ],
    "modifiers": [],
    "activation": null,
@@ -9203,7 +9314,7 @@
    "summons": [],
    "skeleton_zh": "被動",
    "formula_lines": [
-    "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+    "傷害算法：骰值＋智力 × 0.5（目前 +90）"
    ],
    "stacks": [],
    "stats": {
@@ -9218,9 +9329,9 @@
      {
       "index": 0,
       "kind": "mana",
-      "value": 1,
+      "value": 10,
       "unit": "法力",
-      "label": "1"
+      "label": "10"
      }
     ],
     "effects": [
@@ -9228,9 +9339,10 @@
       "index": 0,
       "type": "damage",
       "category": "damage",
-      "label": "1d12",
+      "label": "100–210",
       "unit": null,
       "dice": "1d12",
+      "dice_note": "擲 1d12，每點 ×10",
       "multiplier_permille": null,
       "weapon": false,
       "amount": null,
@@ -9260,14 +9372,14 @@
    "ap_cost": 2,
    "cost": [
     "AP 2",
-    "法力 3",
-    "冷卻 4 回合"
+    "法力 64",
+    "冷卻 2 回合"
    ],
    "source_cost": null,
    "shape": "十字（射程 5）",
    "condition": null,
    "effects": [
-    "2d6＋智力加成的火焰傷害（敵方）",
+    "10–120＋智力加成的火焰傷害（敵方）",
     "狀態「燃燒」 3 回合（敵方）",
     "生成「水」表面（影響的格子）"
    ],
@@ -9382,12 +9494,12 @@
    "summons": [],
    "skeleton_zh": "範圍",
    "formula_lines": [
-    "傷害算法：骰值＋智力 × 0.5（目前 +9）"
+    "傷害算法：骰值＋智力 × 0.5（目前 +90）"
    ],
    "stacks": [],
    "stats": {
     "ap": 2,
-    "cooldown": 4,
+    "cooldown": 2,
     "range": 5,
     "range_weapon": false,
     "radius": null,
@@ -9404,16 +9516,16 @@
      {
       "index": 1,
       "kind": "mana",
-      "value": 3,
+      "value": 64,
       "unit": "法力",
-      "label": "3"
+      "label": "64"
      },
      {
       "index": 2,
       "kind": "cooldown",
-      "value": 4,
+      "value": 2,
       "unit": "回合",
-      "label": "4"
+      "label": "2"
      }
     ],
     "effects": [
@@ -9421,9 +9533,10 @@
       "index": 0,
       "type": "damage",
       "category": "damage",
-      "label": "2d6",
+      "label": "100–210",
       "unit": null,
-      "dice": "2d6",
+      "dice": "1d12",
+      "dice_note": "擲 1d12，每點 ×10",
       "multiplier_permille": null,
       "weapon": false,
       "amount": null,
@@ -9439,6 +9552,7 @@
       "label": "3",
       "unit": "回合",
       "dice": null,
+      "dice_note": null,
       "multiplier_permille": null,
       "weapon": false,
       "amount": 3,
@@ -9454,6 +9568,7 @@
       "label": null,
       "unit": null,
       "dice": null,
+      "dice_note": null,
       "multiplier_permille": null,
       "weapon": false,
       "amount": null,
