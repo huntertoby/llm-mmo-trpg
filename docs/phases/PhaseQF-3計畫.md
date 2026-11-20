@@ -63,3 +63,4 @@
    - 到 22:39，`pytest -q -n 8` 的 8 個 worker 都還在，但其中一個是 22:19 才建立的，前 7 個都是 22:01:5x。也就是說 22:19 有一個 worker 死了，xdist 補了一個新的，之後整組不再前進。
    - hook 對完整檢查的上限是 1800 秒，應該在 22:31 逾時，卻沒有生效：hook 自己的程序（check.py 的父程序）已經不在了，但 `uv run python scripts/check.py` 底下整棵程序樹還活著，沒人收。要查清楚 hook 逾時或被中斷時，為什麼只結束了自己、沒結束子程序樹。修法要讓逾時和中斷都會結束整棵樹。hook 本身在 plugin 裡（不在這個 repo）的話，先在 `scripts/check.py` 這一層自己做看門狗和收樹，hook 那邊的修法寫進報告，由 PM 轉達。
    - 這次是 PM 在使用者同意後用 PID 停掉整棵樹的。
+   - **更新（2026-11-21）**：hook 逾時沒生效的部分，專案 PM 已在 plugin 的 `hooks/pm_hooks.py` `run_checks` 修好（使用者同意，原話「好，改」）。改法是逾時用 `taskkill /T` 結束整棵樹，輸出也改成邊跑邊寫進紀錄檔。QF-3a 不用再改 hook，看門狗和查 worker 死因照舊要做。
