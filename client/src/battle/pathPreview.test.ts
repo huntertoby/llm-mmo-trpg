@@ -5,7 +5,7 @@ import type { MoveAction } from "../api/types";
 import { dashRuns, outerEdges, polylineLength, roundedPieces } from "./pathGeometry";
 import { PathPreviewFetcher, PathPreviewScope, PATH_PREVIEW_THROTTLE_MS } from "./pathFetch";
 import { readFile, SRC_DIR } from "../test/sourceScan";
-import { statusName, surfaceName } from "./glossary";
+import { reactionName, statusName, surfaceName } from "./glossary";
 import {
   damageText,
   hoverPathQuery,
@@ -251,8 +251,11 @@ describe("AR-X10：走路預覽的用字（不加負號、「可能」是前綴�
   it("只有骰子不利才受傷：「陷阱：最多 140 傷害・定身」", () => {
     expect(tagOf(trap(true, null, 140, true), { trap: true })).toBe("陷阱：最多 140 傷害・定身");
   });
-  it("陷阱本身不確定：整張「可能觸發陷阱：60–140 傷害・定身」", () => {
-    expect(tagOf(trap(false, 60, 140, false), { trap: true })).toBe("可能觸發陷阱：60–140 傷害・定身");
+  it("陷阱本身不確定、觸發後狀態還要另外擲：「可能觸發陷阱：60–140 傷害・可能定身」", () => {
+    expect(tagOf(trap(false, 60, 140, false), { trap: true })).toBe("可能觸發陷阱：60–140 傷害・可能定身");
+  });
+  it("陷阱本身不確定、觸發就一定附上狀態：「可能觸發陷阱：60–140 傷害・定身」", () => {
+    expect(tagOf(trap(false, 60, 140, true), { trap: true })).toBe("可能觸發陷阱：60–140 傷害・定身");
   });
   it("多個狀態用「・」連接；沒有傷害、沒有狀態只寫「陷阱」", () => {
     const ev2 = [ev("trap", { other_id: "e1" }), ev("status", { status_id: "root" }), ev("status", { status_id: "slowed", certain: false })];
@@ -261,9 +264,20 @@ describe("AR-X10：走路預覽的用字（不加負號、「可能」是前綴�
   });
   it("火：「可能點燃」；墜落與其他傷害照傷害的寫法、不再有負號", () => {
     expect(tagOf([ev("surface", { surface: "fire" }), ev("status", { status_id: "burning", certain: false })], { surface: "fire" })).toBe("可能點燃");
-    expect(tagOf([ev("fell", { certain: false }), ev("damage", { amount_min: 30, amount_max: 30, certain: false })])).toBe("可能墜落・可能 30 傷害");
+    expect(tagOf([ev("fell", { certain: false }), ev("damage", { amount_min: 30, amount_max: 30, certain: false })])).toBe("可能墜落・可能受 30 傷害");
+    expect(tagOf([ev("damage", { amount_min: 6, amount_max: 9, certain: false })])).toBe("可能受 6–9 傷害");
     expect(tagOf([ev("damage", { amount_min: null, amount_max: 50 })])).toBe("最多 50 傷害");
     expect(tagOf([ev("downed", { certain: false })])).toBe("可能倒下");
+  });
+  it("反應也寫成「名稱：效果」：「可能藉機攻擊：最多 50 傷害」；沒有傷害只寫名稱", () => {
+    const aoo = (certain: boolean, withDamage: boolean): PathEvent[] => [
+      ev("reaction", { other_id: "e2", detail: "opportunity_attack", certain }),
+      ...(withDamage ? [ev("damage", { other_id: "e2", amount_min: null, amount_max: 50, certain: false })] : []),
+    ];
+    const name = reactionName("opportunity_attack");
+    expect(tagOf(aoo(false, true))).toBe(`可能${name}：最多 50 傷害`);
+    expect(tagOf(aoo(true, true))).toBe(`${name}：最多 50 傷害`);
+    expect(tagOf(aoo(false, false))).toBe(`可能${name}`);
   });
   it("整個小牌都沒有負號與「（可能）」", () => {
     const texts = [trap(true, 60, 140, false), trap(false, null, 140, true)].map((e) => tagOf(e, { trap: true }) ?? "");
