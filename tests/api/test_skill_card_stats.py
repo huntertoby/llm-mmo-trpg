@@ -127,6 +127,19 @@ def test_no_card_label_writes_dice() -> None:
             assert e.label is None or "d" not in e.label, (skill.id, e.label)
 
 
+def test_dice_note_for_the_long_description() -> None:
+    """X10-3b：長說明多一行「擲 3d6，每點 ×10」；武器傷害知道持有者的武器時寫武器骰。"""
+    lib = library()
+    spell = card_stats(lib, lib.skills["skill_ash_harvest"])
+    assert spell.effects[0].dice_note == "擲 3d6，每點 ×10"
+    kick = lib.skills["skill_gale_kick"]
+    assert card_stats(lib, kick).effects[0].dice_note is None
+    assert card_stats(lib, kick).effects[1].dice_note is None  # 推開沒有骰子
+    sword = lib.weapons["one_handed_sword"]
+    owned = card_stats(lib, kick, owner=narrative.CardOwner(weapon=sword))
+    assert owned.effects[0].dice_note == f"擲 {sword.dice}，每點 ×10"
+
+
 def test_no_card_text_writes_dice() -> None:
     """X10-3b：卡片上的句子（效果、算法、召喚物資訊、形態）都寫範圍，只有結構化的 ``dice`` 欄位
     保留資料原樣。"""

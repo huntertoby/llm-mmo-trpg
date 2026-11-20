@@ -4200,6 +4200,8 @@ export interface components {
             unit: string | null;
             /** Dice */
             dice?: string | null;
+            /** Dice Note */
+            dice_note?: string | null;
             /** Multiplier Permille */
             multiplier_permille?: number | null;
             /**

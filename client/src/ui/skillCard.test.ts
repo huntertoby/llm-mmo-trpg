@@ -72,6 +72,24 @@ describe("第 3 行：效果數字＋元素／縮放", () => {
   });
 });
 
+describe("X10-3b：長說明多一行「擲 NdM，每點 ×10」", () => {
+  it("滑過數字：效果句下面一行骰子", () => {
+    const c = card("skill_ash_harvest");
+    const hint = effectLine(c).items[0]!.hint.split("\n");
+    expect(hint[0]).toBe(c.effects[0]);
+    expect(hint[1]).toBe("擲 3d6，每點 ×10");
+  });
+  it("展開「詳細」：效果句下面同一行；數字只寫範圍", () => {
+    const html = renderToStaticMarkup(createElement(SkillCardView, { card: card("skill_ash_harvest"), detailOpen: true } as never));
+    expect(html).toContain('data-testid="skill-dice-note">擲 3d6，每點 ×10<');
+    expect(html).toContain("30–180");
+    expect(html).not.toMatch(/>\s*3d6/);
+  });
+  it("沒有骰子的效果沒有這一行", () => {
+    expect(effectLine(card("skill_gale_kick")).items.map((e) => e.hint).join("\n")).not.toContain("每點 ×");
+  });
+});
+
 describe("SkillCardView：常駐 3 行、其餘收進「詳細」", () => {
   const html = (props: Record<string, unknown>) => renderToStaticMarkup(createElement(SkillCardView, props as never));
   const resident = (markup: string) => markup.split("<details")[0]!;

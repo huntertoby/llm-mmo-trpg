@@ -18,7 +18,7 @@ import { VariantList } from "./VariantList";
 import { AssemblyFormula, SkillIconView } from "./SkillIconView";
 import { SKILL_CARD_ICON_LEVEL } from "../render/skillIcon";
 import { AttrGlyph, ChipGlyph, EffectGlyph, PinGlyph } from "./SkillCardGlyphs";
-import { chipLine, effectLine } from "./skillCardLines";
+import { cardStats, chipLine, diceNote, effectLine } from "./skillCardLines";
 
 /** 源力上限（`content/rules/core.yaml` 的 `source_max`）；HUD 與卡片都用 3 格圖示。 */
 const SOURCE_MAX = 3;
@@ -100,6 +100,11 @@ function EffectRow({ card, offEffects }: { card: SkillCard; offEffects?: readonl
 /** 「詳細」：原本卡片上的全部資訊（6A-1 以前的內容，順序不變）。 */
 function Detail({ card, compact, activeVariantId, hideConcept }: Required<Pick<Props, "compact" | "hideConcept">> & Pick<Props, "card" | "activeVariantId">) {
   const source = sourceCostText(card, SOURCE_MAX);
+  const diceNotes = new Map<number, string>();
+  for (const e of cardStats(card)?.effects ?? []) {
+    const note = diceNote(e);
+    if (note !== null) diceNotes.set(e.index, note);
+  }
   return (
     <>
       <div className="small muted skill-card-kind">
@@ -125,9 +130,19 @@ function Detail({ card, compact, activeVariantId, hideConcept }: Required<Pick<P
       {(card.timing ?? null) !== null && <div className="small">{card.timing}</div>}
       {(card.activation ?? null) !== null && <div className="small">啟動：{card.activation}（啟動前不生效）</div>}
       <ul className="skill-card-effects">
-        {card.effects.map((e, i) => (
-          <li key={`${i}:${e}`}>{e}</li>
-        ))}
+        {card.effects.map((e, i) => {
+          const note = e.endsWith("同上") ? undefined : diceNotes.get(i); // 連打的「同上」不重複寫
+          return (
+            <li key={`${i}:${e}`}>
+              {e}
+              {note !== undefined && (
+                <div className="small muted skill-card-dice" data-testid="skill-dice-note">
+                  {note}
+                </div>
+              )}
+            </li>
+          );
+        })}
         {card.modifiers.map((m, i) => (
           <li key={`modifier:${i}:${m}`}>修正：{m}</li>
         ))}

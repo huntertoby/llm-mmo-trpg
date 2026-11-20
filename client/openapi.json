@@ -10556,6 +10556,17 @@
             ],
             "title": "Dice"
           },
+          "dice_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dice Note"
+          },
           "multiplier_permille": {
             "anyOf": [
               {

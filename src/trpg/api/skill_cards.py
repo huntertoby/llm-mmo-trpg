@@ -15,11 +15,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.content.battle import Dice
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.narrative import skills as narrative
 from trpg.narrative.skills import CardOwner, skill_ap
-from trpg.shared.range_text import range_text, span
+from trpg.shared.range_text import dice_note, range_text, span
 
 __all__ = [
     "CostStat",
@@ -82,6 +83,9 @@ class EffectStat(BaseModel):
     """``label`` 的單位（「格」「回合」「輪」「層」）；範圍與倍率為 ``None``。"""
     dice: str | None = None
     """效果自己的骰子（「2d8」，資料原樣；卡片上不顯示）。"""
+    dice_note: str | None = None
+    """長說明（滑過、展開）多的一行：「擲 2d8，每點 ×10」（X10-3b）。武器傷害在知道持有者的武器時寫
+    武器骰；其他沒有骰子的效果為 ``None``。"""
     multiplier_permille: int | None = None
     """武器傷害的倍率（‰，已乘技能的 ``damage_permille``）；法術傷害打折時也填。"""
     weapon: bool = False
@@ -252,6 +256,12 @@ def _dice_code(spec: EffectSpec) -> str | None:
     return None if spec.dice is None else str(spec.dice)
 
 
+def _dice_note(library: ContentLibrary, dice: Dice | None) -> str | None:
+    if dice is None:
+        return None
+    return dice_note(dice.count, dice.sides, library.ruleset.core.quantity_scale)
+
+
 def _damage_stat(
     library: ContentLibrary,
     skill: SkillDef,
@@ -263,11 +273,14 @@ def _damage_stat(
     element = spec.element
     dice = _dice_code(spec)
     shown = _dice_label(library, spec, _attr_bonus(library, skill, spec, owner))
+    note = _dice_note(library, spec.dice)
     if shown is not None:
         label, multiplier = shown, None if skill.damage_permille is None else discount
     else:  # 武器傷害（武器技的 damage 沒有骰子：骰子來自手上的武器）
         multiplier = (spec.multiplier_permille or 1000) * discount // 1000
         label = f"×{multiplier / 1000:g}"
+        if owner is not None and owner.weapon is not None:
+            note = _dice_note(library, owner.weapon.dice)
     return EffectStat(
         index=index,
         type=spec.type,
@@ -275,6 +288,7 @@ def _damage_stat(
         label=label,
         unit=None,
         dice=dice,
+        dice_note=note,
         multiplier_permille=multiplier,
         weapon=dice is None,
         element=None if element is None else element.value,
@@ -346,6 +360,7 @@ def effect_stat(
             label=_dice_label(library, spec, _attr_bonus(library, skill, spec, owner)),
             unit=None,
             dice=_dice_code(spec),
+            dice_note=_dice_note(library, spec.dice),
             affects=spec.affects,
         )
     return _plain(library, index, spec)
