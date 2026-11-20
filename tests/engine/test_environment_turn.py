@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 from typing import Any
+from unittest import mock
 
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, example, given, settings
 from hypothesis import strategies as st
 
 from tests.engine.helpers import (
@@ -27,6 +29,8 @@ from trpg.engine import (
     resume,
     telegraph,
 )
+from trpg.engine.context import Ctx
+from trpg.engine.environment import run_environment
 from trpg.engine.events import (
     EnvironmentEnded,
     EnvironmentStarted,
@@ -286,16 +290,35 @@ def test_explosion_during_environment_is_telegraphed() -> None:
     assert any(isinstance(e, ObjectDestroyed) for e in events)
 
 
+@contextmanager
+def _forecast_at_environment_start(forecasts: list[list[EventBase]]) -> Iterator[None]:
+    """每一次實際的環境回合開始前，對當下的戰鬥狀態取一次預告，依序存進 ``forecasts``。
+
+    環境回合的亂數由種子與輪數衍生（``environment_rng``），不受結算中途的亂數影響，
+    所以這時取得的預告必須與接著發生的環境回合逐筆相同（QF-2）。
+    """
+
+    def wrapped(ctx: Ctx) -> None:
+        forecasts.append(list(telegraph(ctx.state).events))
+        run_environment(ctx)
+
+    with mock.patch("trpg.engine.turns.run_environment", wrapped):
+        yield
+
+
 @settings(max_examples=12, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(seed=st.integers(min_value=0, max_value=2**32), map_index=st.integers(0, 3))
+@example(seed=13502, map_index=1)  # QF-2：油庫唯一一次環境回合前有單位在回合開始時被燒死
 def test_property_telegraph_matches_every_environment_turn_on_demo_maps(
     seed: int, map_index: int
 ) -> None:
-    """四張示範地圖的整場對戰：每一次環境回合，都與「本輪最後一個 EndTurn 之前」的預告完全相同。
+    """四張示範地圖的整場對戰，兩種預告都要與實際的環境回合完全相同。
 
-    （預告是在本輪最後一個動作之前取得；之後狀態不再改變時，預告必須與實際一致。
-    若這個 EndTurn 之後、環境回合之前還有改變戰場的事件——例如下一位單位回合開始時被燃燒燒死、
-    接著直接進入環境回合——預告的前提不成立，該次不比較。）
+    1. 「本輪最後一個 EndTurn 之前」的預告（玩家看到的）：之後狀態不再改變時必須一致。
+       若這個 EndTurn 之後、環境回合之前還有改變戰場的事件——例如下一位單位回合開始時被燃燒燒死、
+       接著直接進入環境回合——這種預告的前提不成立，該次不比較。
+    2. 「環境回合開始當下」的預告：**每一次**實際發生的環境回合都要比到，沒有例外；
+       比較次數必須等於實際環境回合次數，且至少 1 次（除非整場停在第 1 輪）。
     """
     lib = library()
     map_id = ("bridge_chasm", "oil_depot", "swamp", "ruined_fort")[map_index]
@@ -304,16 +327,24 @@ def test_property_telegraph_matches_every_environment_turn_on_demo_maps(
     setup = build_setup(lib, map_id, encounter.allies, encounter.enemies, max_rounds=8)
     run = run_battle(setup, seed)
     state = begin_battle(setup, seed).state
-    environment_turns = 0
+    actual_turns = 0
+    late_compared = 0
     for step in run.actions:
         forecast = telegraph(state) if isinstance(step, EndTurn) else None
-        result = resume(state, step) if isinstance(step, Decision) else resolve(state, step)
-        if forecast is not None and any(isinstance(e, EnvironmentStarted) for e in result.events):
-            start = next(
-                i for i, e in enumerate(result.events) if isinstance(e, EnvironmentStarted)
-            )
+        late: list[list[EventBase]] = []
+        with _forecast_at_environment_start(late):
+            result = resume(state, step) if isinstance(step, Decision) else resolve(state, step)
+        starts = [i for i, e in enumerate(result.events) if isinstance(e, EnvironmentStarted)]
+        ends = [i for i, e in enumerate(result.events) if isinstance(e, EnvironmentEnded)]
+        actual_turns += len(starts)
+        assert len(late) == len(starts) == len(ends)
+        for start, end, late_forecast in zip(starts, ends, late, strict=True):
+            assert _strip(result.events[start : end + 1]) == _strip(late_forecast)
+            late_compared += 1
+        if forecast is not None and starts:
+            start = starts[0]
             if all(getattr(e, "type", "") in _NON_BOARD_EVENTS for e in result.events[:start]):
-                environment_turns += 1
                 assert _strip(_env_events(result.events)) == _strip(forecast.events)
         state = result.state
-    assert environment_turns >= 1 or state.round == 1
+    assert late_compared == actual_turns
+    assert late_compared >= 1 or state.round == 1
