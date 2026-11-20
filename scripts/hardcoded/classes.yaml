@@ -328,16 +328,16 @@ rules:
     note: 同詞條重複的判斷。HC-3：「重複」＝同 id 不只一條（> 1；非數值類只有第一條生效是引擎 diminish 的結構，不是門檻數字；0 筆）。
   - id: ts-walk-max
     class: config
-    status: todo
+    status: done
     files: client/src/world/fieldModel.ts
     owner: WALK_MAX
-    note: 一次 walk 最多幾格的後備（伺服器 walk_max_steps）。
+    note: 一次 walk 最多幾格的後備。HC-3：拿掉 WALK_MAX，`chunkPath` 一律用伺服器的 `walk_max_steps`（0 筆）。
   - id: ts-bag-size
-    class: config
-    status: todo
+    class: layout
+    status: done
     files: client/src/world/bagGrid.ts
     owner: [BAG_COLS, BAG_ROWS]
-    note: 保守：背包格數 6×5 的後備（伺服器 slots_max）。
+    note: 背包格數。HC-3：拿掉 6×5 的備用值（BAG_ROWS），上限一律照伺服器 `slots_max`；剩下的 BAG_COLS 是每列畫幾格（hud.png C 案的排版），改判 layout。
   - id: ts-crystal-tier
     class: config
     status: todo
@@ -353,6 +353,14 @@ rules:
     value: ['11', '18', '21', '24']
     context: '\bh\b'
     note: 保守：早／午／晚／夜的鐘點分界（11、18、21 點）。
+  - id: ts-tuning-server-limits
+    class: config
+    status: done
+    kind: number
+    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
+            client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx]
+    context: 'SMALL_SAMPLE|MAX_MAPS|MAX_GROUP|ratio_default_seeds \?\?|n > 250|\[10, 50, 250\]'
+    note: 工坊的預設種子數與上限（樣本小 30、比值種子 50／250、地圖 3 張、分組 100 招、小規模 3 種子／24 場）。HC-3：改讀 `/api/tuning/sim/options` 與 `/api/tuning/status`（對齊 `api/tuning/schemas.py`；0 筆）。
   - id: ts-tuning-presets
     class: config
     status: todo
@@ -360,8 +368,8 @@ rules:
     files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
             client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx,
             client/src/ui/workshop/ToolPanels.tsx]
-    context: 'seeds|battles|SMALL_SAMPLE|MAX_MAPS|BUDGET_SCALE_MAX|MAX_GROUP|250|\[1, 2, 3'
-    note: 數值工坊的預設種子數、場數、上限、階級與 AP 選項（工坊設定；部分是伺服器上限的副本）。
+    context: 'seeds|battles|SIM_MEDIUM_SEEDS|MAP_MEDIUM_BATTLES|RATIO_QUICK_SEEDS|BUDGET_SCALE_MAX|\[1, 2, 3'
+    note: 保守：數值工坊畫面自己的選項——「中」規模（10 種子、80 場）與比值快捷 10 種子、篩選與隨機的階級／AP 選項、預算比例條刻度 150%、預估「改前改後各一次」的 ×2；後端沒有對應的規則（HC-3 留下，見報告待決）。
 
   # ======================================================================== 前端：常數
   - id: ts-http-status

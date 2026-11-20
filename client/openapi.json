@@ -30334,8 +30334,19 @@
           },
           "ratio_default_seeds": {
             "type": "integer",
-            "title": "Ratio Default Seeds",
-            "default": 50
+            "title": "Ratio Default Seeds"
+          },
+          "ratio_max_seeds": {
+            "type": "integer",
+            "title": "Ratio Max Seeds"
+          },
+          "max_maps": {
+            "type": "integer",
+            "title": "Max Maps"
+          },
+          "small_sample": {
+            "type": "integer",
+            "title": "Small Sample"
           },
           "ratio_max_work": {
             "type": "integer",
@@ -30356,7 +30367,11 @@
           "default_seeds",
           "max_battles",
           "workers",
-          "seconds_per_battle"
+          "seconds_per_battle",
+          "ratio_default_seeds",
+          "ratio_max_seeds",
+          "max_maps",
+          "small_sample"
         ],
         "title": "TuningSimOptions"
       },
@@ -30900,6 +30915,10 @@
               }
             ],
             "title": "Sim Running"
+          },
+          "max_group": {
+            "type": "integer",
+            "title": "Max Group"
           }
         },
         "additionalProperties": false,
@@ -30908,7 +30927,8 @@
           "can_write",
           "restart_needed",
           "restart_note_zh",
-          "drafts"
+          "drafts",
+          "max_group"
         ],
         "title": "TuningStatus"
       },

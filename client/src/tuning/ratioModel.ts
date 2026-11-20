@@ -45,24 +45,25 @@ export function ratioSkillsOf(form: RatioForm, edited: readonly string[]): strin
   return [...(form.skills ?? edited)];
 }
 
-/** 種子數的問題（1～250 的整數）；沒問題回 `null`。 */
-export function ratioSeedsProblem(text: string): string | null {
+/** 種子數的問題（1～上限的整數；上限照伺服器的 `ratio_max_seeds`，HC-3 起不寫死）；沒問題回 `null`。 */
+export function ratioSeedsProblem(text: string, maxSeeds: number): string | null {
   const t = text.trim();
-  if (!/^\d+$/.test(t)) return "種子數要填 1～250 的整數";
+  const problem = `種子數要填 1～${maxSeeds} 的整數`;
+  if (!/^\d+$/.test(t)) return problem;
   const n = Number(t);
-  return n < 1 || n > 250 ? "種子數要填 1～250 的整數" : null;
+  return n < 1 || n > maxSeeds ? problem : null;
 }
 
 /**
  * 比值情境的「N 組 × M 種子、預估 X 秒」或問題（規格 T11）。`plan` 是後端算的組數（招 × 可用武器 × 情境數）；
  * 改前沒有快取、草稿又改了內容時改前改後各跑一次。
  */
-export function ratioEstimate(plan: TuningRatioPlan | null, form: RatioForm, edited: readonly string[]): { problem: string | null; text: string } {
+export function ratioEstimate(plan: TuningRatioPlan | null, form: RatioForm, edited: readonly string[], maxSeeds: number): { problem: string | null; text: string } {
   if (ratioSkillsOf(form, edited).length === 0) {
     const problem = "至少要有一招（草稿改到的技能，或自己加）";
     return { problem, text: problem };
   }
-  const seeds = ratioSeedsProblem(form.seedsText);
+  const seeds = ratioSeedsProblem(form.seedsText, maxSeeds);
   if (seeds !== null) return { problem: seeds, text: seeds };
   if (plan === null) return { problem: "正在算規模……", text: "正在算規模……" };
   if (plan.problem_zh != null) return { problem: plan.problem_zh, text: plan.problem_zh };

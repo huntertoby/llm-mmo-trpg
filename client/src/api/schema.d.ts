@@ -12099,11 +12099,14 @@ export interface components {
              * @default 0.8
              */
             map_seconds_per_battle: number;
-            /**
-             * Ratio Default Seeds
-             * @default 50
-             */
+            /** Ratio Default Seeds */
             ratio_default_seeds: number;
+            /** Ratio Max Seeds */
+            ratio_max_seeds: number;
+            /** Max Maps */
+            max_maps: number;
+            /** Small Sample */
+            small_sample: number;
             /**
              * Ratio Max Work
              * @default 40000
@@ -12309,6 +12312,8 @@ export interface components {
             drafts: string[];
             /** Sim Running */
             sim_running?: string | null;
+            /** Max Group */
+            max_group: number;
         };
         /**
          * TuningUnitSkills

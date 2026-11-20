@@ -207,7 +207,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
               seedsText: String(opts.default_seeds),
               scenario: "boss",
               map: { ...DEFAULT_MAP_FORM, maps: firstMap === undefined ? [] : [firstMap], seedsText: String(opts.map_default_seeds) },
-              ratio: { ...DEFAULT_RATIO_FORM, seedsText: String(opts.ratio_default_seeds ?? 50) },
+              ratio: { ...DEFAULT_RATIO_FORM, seedsText: String(opts.ratio_default_seeds) },
             });
           },
           (e: unknown) => !cancelled && setSimError(`讀不到模擬選項：${errorText(e)}`),
@@ -333,7 +333,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
   // NW-2c：比值情境的規模（組數、預估秒數）；停止輸入 0.3 秒後問後端。
   const simEdited = useMemo(() => (edited.length > 0 ? edited : skillId !== null ? [skillId] : []), [edited, skillId]);
   const ratioForm = simForm.ratio ?? DEFAULT_RATIO_FORM;
-  const ratioKey = simForm.scenario === "ratio" && ratioSeedsProblem(ratioForm.seedsText) === null ? JSON.stringify([ratioSkillsOf(ratioForm, simEdited), Number(ratioForm.seedsText.trim())]) : null;
+  const ratioKey = simForm.scenario === "ratio" && simOptions !== null && ratioSeedsProblem(ratioForm.seedsText, simOptions.ratio_max_seeds) === null ? JSON.stringify([ratioSkillsOf(ratioForm, simEdited), Number(ratioForm.seedsText.trim())]) : null;
   useEffect(() => {
     if (ratioKey === null || entry.kind !== "open") return undefined;
     const [skills, seeds] = JSON.parse(ratioKey) as [string[], number];
@@ -599,6 +599,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         preview={groupPreview}
         error={groupError}
         busy={busy}
+        maxGroup={status?.max_group ?? null}
         onForm={(f) => {
           setGroupForm(f);
           setGroupPreview(null);
@@ -660,6 +661,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
             preset,
             checked,
             edits,
+            maxGroup: status?.max_group ?? null,
             onQuery: setSkillQuery,
             onFilter: (f, p) => {
               setSkillFilter(f);

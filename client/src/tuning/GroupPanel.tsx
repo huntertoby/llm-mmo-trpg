@@ -4,7 +4,7 @@
 // （`validate_skill`，NW-2b 待決 5；違規的招放進草稿後整包驗證也會擋）。
 import type { TuningGroupIn, TuningGroupOp, TuningGroupPreview, TuningGroupTarget } from "../api/types";
 import { valueText } from "./model";
-import { filterEmpty, GROUP_OPS, GROUP_TARGETS, groupProblem, MAX_GROUP, ratioText, verdictClass, verdictText, type SkillFilter } from "./skillModel";
+import { filterEmpty, GROUP_OPS, GROUP_TARGETS, groupProblem, ratioText, verdictClass, verdictText, type SkillFilter } from "./skillModel";
 
 export interface GroupForm {
   /** true ＝ 用左欄的篩選；false ＝ 用手動勾選。 */
@@ -31,20 +31,22 @@ interface Props {
   preview: TuningGroupPreview | null;
   error: string | null;
   busy: boolean;
+  /** 一次最多幾招（伺服器 `status.max_group`；還沒讀到狀態時 `null`）。 */
+  maxGroup: number | null;
   onForm(next: GroupForm): void;
   onPreview(): void;
   onAdd(): void;
 }
 
-export function GroupPanel({ form, filter, filterLabel, filterCount, manual, preview, error, busy, onForm, onPreview, onAdd }: Props) {
-  const problem = groupProblem(form.useFilter, filter, manual, filterCount, form.valueText);
+export function GroupPanel({ form, filter, filterLabel, filterCount, manual, preview, error, busy, maxGroup, onForm, onPreview, onAdd }: Props) {
+  const problem = groupProblem(form.useFilter, filter, manual, filterCount, form.valueText, maxGroup);
   const opHint = GROUP_OPS.find((o) => o.key === form.op)?.hint ?? "";
   const usable = preview?.rows.filter((r) => r.verdict !== "skipped").length ?? 0;
   return (
     <section className="panel tn-form tn-group-panel" aria-label="分組改" data-testid="group-panel">
       <div className="tn-form-head">
         <h2>分組改</h2>
-        <span className="muted small">一次對一組技能套同一個改動（最多 {MAX_GROUP} 招；不提供「全部技能」，也沒有全域倍率）。</span>
+        <span className="muted small">一次對一組技能套同一個改動（最多 {maxGroup ?? "—"} 招；不提供「全部技能」，也沒有全域倍率）。</span>
       </div>
       <fieldset className="tn-group-pick">
         <legend>1. 選招</legend>

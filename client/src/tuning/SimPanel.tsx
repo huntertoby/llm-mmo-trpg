@@ -5,10 +5,10 @@
 // NW-2c：情境「比值」（1 階武器技的每 AP 傷害 ÷ 普攻每 AP；改前改後並排、參考線、匯入基準）。
 import { useState } from "react";
 import type { TuningMapSimResult, TuningRatioPlan, TuningSimInject, TuningSimJob, TuningSimOptions, TuningSimResult } from "../api/types";
-import { battleCount, estimateText, flipsText, scaleProblem, secondsText, SIM_SCALES, simRows, type SimCell, type SimRow } from "./model";
+import { battleCount, estimateText, flipsText, scaleProblem, secondsText, simScales, simRows, type SimCell, type SimRow } from "./model";
 import { DEFAULT_RATIO_FORM, ratioEstimate, type RatioForm } from "./ratioModel";
 import { RatioResultTable, RatioSimForm } from "./RatioView";
-import { MAP_SCALES, mapScaleProblem, mapSeedsFor, mapSimRows, MAX_MAPS, unusedProbes } from "./skillModel";
+import { mapScales, mapScaleProblem, mapSeedsFor, mapSimRows, unusedProbes } from "./skillModel";
 
 export type SimScenario = "boss" | "map" | "ratio";
 
@@ -71,12 +71,12 @@ function Cell({ cell }: { cell: SimCell }) {
   );
 }
 
-export function SimResultTable({ result, skillName, buildName }: { result: TuningSimResult; skillName(id: string): string; buildName(id: string): string }) {
-  return <ResultTable rows={simRows(result, skillName, buildName)} flips={flipsText(result)} cached={result.before_cached} />;
+export function SimResultTable({ result, skillName, buildName, smallSample }: { result: TuningSimResult; skillName(id: string): string; buildName(id: string): string; smallSample: number }) {
+  return <ResultTable rows={simRows(result, skillName, buildName, smallSample)} flips={flipsText(result)} cached={result.before_cached} />;
 }
 
 /** 地圖戰的結果表（含單招施放率）；受測招在改前改後都沒人用時提示「裝到 build」。 */
-export function MapResultTable({ result, probes, skillName, mapName }: { result: TuningMapSimResult; probes: readonly string[]; skillName(id: string): string; mapName(id: string): string }) {
+export function MapResultTable({ result, probes, skillName, mapName, smallSample }: { result: TuningMapSimResult; probes: readonly string[]; skillName(id: string): string; mapName(id: string): string; smallSample: number }) {
   const unused = unusedProbes(result, probes);
   const flips = flipsText(result);
   return (
@@ -86,7 +86,7 @@ export function MapResultTable({ result, probes, skillName, mapName }: { result:
           {unused.map(skillName).join("、")}：改前改後都沒有人用（裝了的單位行動 0 回合）。這招多半只在 build 上，請用「裝到 build」再跑一次。
         </div>
       )}
-      <ResultTable rows={mapSimRows(result, skillName, mapName)} flips={flips} cached={result.before_cached} testid="tuning-map-result" />
+      <ResultTable rows={mapSimRows(result, skillName, mapName, smallSample)} flips={flips} cached={result.before_cached} testid="tuning-map-result" />
     </>
   );
 }
@@ -174,7 +174,7 @@ function BossForm({ options, form, running, onForm }: { options: TuningSimOption
       </label>
       <div className="tn-scale" role="group" aria-label="規模">
         <span>規模</span>
-        {SIM_SCALES.map((s) => (
+        {simScales(options).map((s) => (
           <button
             key={s.key}
             type="button"
@@ -241,18 +241,18 @@ function MapSimForm({ options, map, running, edited, skillChoices, skillName, on
     <div className="tn-sim-form">
       <fieldset className="tn-builds" disabled={running}>
         <legend>
-          地圖（{map.maps.length}/{MAX_MAPS}，用地圖的預設遭遇）
+          地圖（{map.maps.length}/{options.max_maps}，用地圖的預設遭遇）
         </legend>
         {maps.map((m) => (
           <label key={m.id} className="tn-build">
-            <input type="checkbox" checked={map.maps.includes(m.id)} disabled={!map.maps.includes(m.id) && map.maps.length >= MAX_MAPS} onChange={() => toggleMap(m.id)} />
+            <input type="checkbox" checked={map.maps.includes(m.id)} disabled={!map.maps.includes(m.id) && map.maps.length >= options.max_maps} onChange={() => toggleMap(m.id)} />
             {m.name_zh}
           </label>
         ))}
       </fieldset>
       <div className="tn-scale" role="group" aria-label="地圖戰規模">
         <span>規模</span>
-        {MAP_SCALES.map((s) => {
+        {mapScales(options).map((s) => {
           const per = mapSeedsFor(s.battles, map.maps.length);
           return (
             <button key={s.key} type="button" disabled={running} className={seeds === per ? "active" : ""} aria-pressed={seeds === per} onClick={() => onMap({ ...map, seedsText: String(per) })}>
@@ -328,7 +328,7 @@ function MapSimForm({ options, map, running, edited, skillChoices, skillName, on
         )}
       </fieldset>
       <div className="muted small">
-        場數＝地圖張數 × 每張圖種子數，一次最多 {options.max_battles} 場、{MAX_MAPS} 張圖。
+        場數＝地圖張數 × 每張圖種子數，一次最多 {options.max_battles} 場、{options.max_maps} 張圖。
       </div>
     </div>
   );
@@ -363,7 +363,7 @@ function InjectAdder({ builds, probes, skillName, onAdd }: { builds: TuningSimOp
 
 /** 目前情境的「N 場、預估」或規模問題。 */
 export function simEstimate(options: TuningSimOptions, form: SimForm, edited: readonly string[], ratioPlan: TuningRatioPlan | null = null): { problem: string | null; text: string } {
-  if (form.scenario === "ratio") return ratioEstimate(ratioPlan, form.ratio ?? DEFAULT_RATIO_FORM, edited);
+  if (form.scenario === "ratio") return ratioEstimate(ratioPlan, form.ratio ?? DEFAULT_RATIO_FORM, edited, options.ratio_max_seeds);
   if ((form.scenario ?? "boss") === "map") {
     const map = form.map ?? DEFAULT_MAP_FORM;
     const seeds = seedsOf(map.seedsText);
@@ -413,6 +413,8 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
           skillChoices={skillChoices}
           skillName={skillName}
           baselineNote={baselineNote}
+          defaultSeeds={options.ratio_default_seeds}
+          maxSeeds={options.ratio_max_seeds}
           onForm={(r) => onForm({ ...form, ratio: r })}
           onImport={(t) => onImport?.(t)}
         />
@@ -438,8 +440,8 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
       )}
       {job !== null && job.state === "cancelled" && <div className="muted">模擬已取消。</div>}
       {job !== null && job.state === "failed" && <div className="tn-error">模擬失敗：{job.error_zh ?? "原因不明"}</div>}
-      {job !== null && job.state === "done" && job.result != null && <SimResultTable result={job.result} skillName={skillName} buildName={buildName} />}
-      {job !== null && job.state === "done" && job.map_result != null && <MapResultTable result={job.map_result} probes={probesOf(map, edited)} skillName={skillName} mapName={mapName} />}
+      {job !== null && job.state === "done" && job.result != null && <SimResultTable result={job.result} skillName={skillName} buildName={buildName} smallSample={options.small_sample} />}
+      {job !== null && job.state === "done" && job.map_result != null && <MapResultTable result={job.map_result} probes={probesOf(map, edited)} skillName={skillName} mapName={mapName} smallSample={options.small_sample} />}
       {job !== null && job.state === "done" && job.ratio_result != null && <RatioResultTable result={job.ratio_result} skillName={skillName} />}
     </section>
   );

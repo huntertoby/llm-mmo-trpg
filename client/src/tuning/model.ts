@@ -287,11 +287,16 @@ export interface SimScale {
   seeds: number;
 }
 
-/** 預設「小」（0.0 第 5 點：約 24 場）；「中」約 80 場。種子數也可以自己填。 */
-export const SIM_SCALES: readonly SimScale[] = [
-  { key: "small", label: "小", seeds: 3 },
-  { key: "medium", label: "中", seeds: 10 },
-];
+/** 「中」的每個 build 種子數（約 80 場；工坊畫面的快捷鈕，後端沒有對應的規則）。 */
+export const SIM_MEDIUM_SEEDS = 10;
+
+/** 預設「小」照伺服器的 `default_seeds`（0.0 第 5 點：約 24 場；HC-3 起不寫死）；「中」約 80 場。種子數也可以自己填。 */
+export function simScales(options: Pick<TuningSimOptions, "default_seeds">): readonly SimScale[] {
+  return [
+    { key: "small", label: "小", seeds: options.default_seeds },
+    { key: "medium", label: "中", seeds: SIM_MEDIUM_SEEDS },
+  ];
+}
 
 export const battleCount = (builds: number, seeds: number): number => builds * seeds;
 
@@ -323,9 +328,6 @@ export function secondsText(s: number): string {
   return t < 60 ? `${t} 秒` : `${Math.floor(t / 60)} 分 ${t % 60} 秒`;
 }
 
-/** 分母小於這個數時標「樣本小」（後端 `SMALL_SAMPLE`，規格 5.4）。 */
-export const SMALL_SAMPLE = 30;
-
 /** 一格：比例或平均，附分子分母。 */
 export interface SimCell {
   /** 比例（0～1）或平均；分母 0 時 `null`。 */
@@ -338,11 +340,12 @@ export interface SimCell {
 
 export type SimMetric = "rate" | "avg";
 
-export function simCell(num: number, den: number, metric: SimMetric, small?: boolean): SimCell {
+/** `smallSample`：分母小於這個數時標「樣本小」（伺服器 `small_sample`＝後端 `SMALL_SAMPLE`，規格 5.4；HC-3 起不寫死）。 */
+export function simCell(num: number, den: number, metric: SimMetric, small: boolean | undefined, smallSample: number): SimCell {
   const value = den > 0 ? num / den : null;
   let text = "—";
   if (value !== null) text = metric === "rate" ? `${trimNumber(Math.round(value * 1000) / 10)}%` : trimNumber(Math.round(value * 10) / 10);
-  return { value, text, frac: `${num}/${den}`, small: small ?? den < SMALL_SAMPLE };
+  return { value, text, frac: `${num}/${den}`, small: small ?? den < smallSample };
 }
 
 /** 差值：比例用「百分點」，平均用原單位；分母 0 → 「—」。 */
@@ -363,11 +366,13 @@ export interface SimRow {
   delta: string;
 }
 
-export function row(group: string, label: string, metric: SimMetric, b: [number, number, boolean?], a: [number, number, boolean?]): SimRow {
-  const before = simCell(b[0], b[1], metric, b[2]);
-  const after = simCell(a[0], a[1], metric, a[2]);
+export function row(group: string, label: string, metric: SimMetric, b: [number, number, boolean?], a: [number, number, boolean?], smallSample: number): SimRow {
+  const before = simCell(b[0], b[1], metric, b[2], smallSample);
+  const after = simCell(a[0], a[1], metric, a[2], smallSample);
   return { group, label, metric, before, after, delta: deltaText(before, after, metric) };
 }
+
+const rowOf = row;
 
 function phaseOf(side: TuningSimSide, phase: number): TuningSimPhase | undefined {
   return side.phases.find((p) => p.phase === phase);
@@ -377,8 +382,9 @@ function phaseOf(side: TuningSimSide, phase: number): TuningSimPhase | undefined
  * 結果表（改前／改後／差值）：總覽（勝率、平均輪數、我方倒下率）→ 每個階段（到達場數、該階段每招每回合施放率）→ 每個 build 的勝場。
  * 階段與招式取改前改後的聯集（某邊沒有就是 0／0）；順序：階段編號、招式 ID。
  */
-export function simRows(result: TuningSimResult, skillName: (id: string) => string, buildName: (id: string) => string): SimRow[] {
+export function simRows(result: TuningSimResult, skillName: (id: string) => string, buildName: (id: string) => string, smallSample: number): SimRow[] {
   const { before: b, after: a } = result;
+  const row = (group: string, label: string, metric: SimMetric, bs: [number, number, boolean?], as: [number, number, boolean?]) => rowOf(group, label, metric, bs, as, smallSample);
   const rows: SimRow[] = [
     row("總覽", "我方勝率", "rate", [b.wins, b.n, b.small], [a.wins, a.n, a.small]),
     row("總覽", "平均輪數", "avg", [b.rounds, b.n, b.small], [a.rounds, a.n, a.small]),

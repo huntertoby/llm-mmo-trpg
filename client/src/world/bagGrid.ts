@@ -1,14 +1,13 @@
 // 背包格子（UI-E3；docs/art/全遊戲一致性巡檢.md #7、偷懶自查 G2、hud.png C 案）：只整理顯示，規則都在後端。
-// - 物品格：6 欄 × 5 列（上限 30 格）。背包裡的每一筆（裝備每件、物品每種）佔一格，照伺服器的順序；
+// - 物品格：每列 6 欄，上限照伺服器的 `slots_max`（`world_economy` 的 `bag_slots`；HC-3 起前端不留 6×5 的備用值）。
+//   背包裡的每一筆（裝備每件、物品每種）佔一格，照伺服器的順序；
 //   剩下的空格＝上限 − 已用格數（一種物品超過疊數時伺服器算多格，畫面上仍只畫一格，空格照伺服器的格數少畫）。
 // - 腰包：照 `pouch_max` 畫一排格子。
 // - 點一格＝選取，詳情（裝備卡＋換上、物品說明＋使用）畫在格子下方；預設選第一格有東西的。
 import type { WorldBagItem, WorldInventory } from "../api/types";
 
-/** 物品格的欄數（hud.png C 案；任務：6×5）。 */
+/** 物品格的欄數（hud.png C 案的排版；格數上限照伺服器）。 */
 export const BAG_COLS = 6;
-/** 伺服器沒有上限時畫的列數。 */
-export const BAG_ROWS = 5;
 
 export type BagCell = { kind: "thing"; key: string; row: WorldBagItem; where: "bag" | "pouch" } | { kind: "empty"; key: string };
 
@@ -20,7 +19,7 @@ export function cellKey(where: "bag" | "pouch", item: string): string {
 /** 物品格：背包每一筆一格，後面補空格到上限（至少補滿目前這一列，格子不會缺角）。 */
 export function bagCells(inventory: WorldInventory): BagCell[] {
   const things: BagCell[] = inventory.bag.map((row) => ({ kind: "thing", key: cellKey("bag", row.item), row, where: "bag" }));
-  const max = inventory.slots_max > 0 ? inventory.slots_max : BAG_COLS * BAG_ROWS;
+  const max = inventory.slots_max;
   const free = Math.max(0, max - inventory.slots_used);
   const total = things.length + free;
   const padded = Math.ceil(Math.max(total, 1) / BAG_COLS) * BAG_COLS;

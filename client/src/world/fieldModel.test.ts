@@ -176,15 +176,16 @@ describe("BFS 路徑", () => {
 
   it("超過 30 格切成好幾段", () => {
     const path = Array.from({ length: 65 }, (_, i) => ({ x: i, y: 0 }));
-    expect(chunkPath(path).map((c) => c.length)).toEqual([30, 30, 5]);
-    expect(chunkPath([])).toEqual([]);
+    expect(chunkPath(path, 30).map((c) => c.length)).toEqual([30, 30, 5]);
+    expect(chunkPath([], 30)).toEqual([]);
   });
 
   it("照伺服器給的上限切段（6P-2：規則 walk_max_steps）", () => {
     const path = Array.from({ length: 65 }, (_, i) => ({ x: i, y: 0 }));
     expect(chunkPath(path, 45).map((c) => c.length)).toEqual([45, 20]);
     expect(chunkPath(path, 10).map((c) => c.length)).toEqual([10, 10, 10, 10, 10, 10, 5]);
-    expect(chunkPath(path, 0).map((c) => c.length)).toEqual([30, 30, 5]); // 不合法的值退回預設
+    // HC-3：前端不留備用值；不合法的值（不該發生）一格一段，伺服器一定收
+    expect(chunkPath(path, 0)).toHaveLength(65);
   });
 });
 
