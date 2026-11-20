@@ -23,6 +23,7 @@ from itertools import pairwise
 import pytest
 
 from tests.engine.helpers import (
+    card_dice,
     caster_template,
     give_turn,
     library,
@@ -286,7 +287,8 @@ def test_card_numbers_equal_the_engine_at_every_tier() -> None:
     for skill in _ladder("fire_bolt", 1, "focus"):
         dice = skill.effects[0].dice
         assert dice is not None
-        assert any(str(dice) in line for line in skill_card(LIB, skill).effects)
+        flat = skill.effects[0].flat_bonus or 0
+        assert any(card_dice(dice, flat) in line for line in skill_card(LIB, skill).effects)
         rules = LIB.ruleset.with_skills([skill])
         assert rules.skills.by_id()[skill.id] == skill
         m = make_map("\n".join(["000000"] * 6), ally=[(0, 0)], enemy=[(3, 0)])

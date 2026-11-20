@@ -71,7 +71,7 @@ def test_the_burst_releases_the_form_with_the_usual_cooldown_then_hits_for_the_c
     con = effective_attribute(lib.ruleset, me, Attribute.CON)
     assert hit.multiplier_permille == 1000
     assert hit.amount == (30 * 1000 + con * 500) // 1000  # 卡片：3d6＋體質加成
-    assert "3d6" in "".join(skill_card(lib, skill).effects)
+    assert "30–180" in "".join(skill_card(lib, skill).effects)
     # 之後不在形態中，不能再施放
     me.ap = 8
     assert skill_problem(after, me, skill) is not None

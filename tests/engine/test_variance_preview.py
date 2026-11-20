@@ -122,7 +122,7 @@ def test_the_overload_card_explains_the_bonus_and_the_backlash() -> None:
     card = skill_card(lib, lib.skills["skill_overcurrent"])
     text = card.effects[1]
     assert "累積 1 層「過載電流」" in text
-    assert "每層傷害 +20%" in text and "累積到 5 層時" in text and "2d6" in text
+    assert "每層傷害 +20%" in text and "累積到 5 層時" in text and "20–120" in text
     assert "不致命" in text and "並清空層數" in text
 
 

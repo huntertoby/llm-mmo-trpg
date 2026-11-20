@@ -476,7 +476,7 @@ def test_unit_view_shows_the_form_the_hand_weapon_and_form_cooldowns() -> None:
     view = next(u for u in project_for(entered, Team.ALLY).units if u.id == U1)
     assert view.form is not None
     assert (view.form.form_id, view.form.name_zh, view.form.look) == ("bear", "熊", "form_bear")
-    assert view.form.natural_weapon_zh.startswith("熊爪 1d8 近戰")
+    assert view.form.natural_weapon_zh.startswith("熊爪 10–80 近戰")
     assert "目前 +" in view.form.natural_weapon_zh
     assert view.form.effects_zh == ("最大 HP +15%", "防禦 +10%", "移動 −1")
     assert view.form.upkeep_zh.startswith("每回合開始 −80 耐力")

@@ -45,7 +45,7 @@ describe("第 3 行：效果數字＋元素／縮放", () => {
     const c = card("skill_ash_harvest");
     const line = effectLine(c);
     expect(line.items).toHaveLength(1);
-    expect(line.items[0]).toMatchObject({ icon: "damage", label: "3d6", element: "fire" });
+    expect(line.items[0]).toMatchObject({ icon: "damage", label: "30–180", element: "fire" });
     expect(line.items[0]!.hint).toContain(c.effects[0]!);
     expect(line.items[0]!.hint).toContain("傷害算法");
     expect(line.scaling.map((a) => a.label)).toEqual(["智力"]);
@@ -69,6 +69,24 @@ describe("第 3 行：效果數字＋元素／縮放", () => {
     const line = effectLine(c);
     expect(line.items).toEqual([]);
     expect(line.fallback).toBe(c.effects[0]);
+  });
+});
+
+describe("X10-3b：長說明多一行「擲 NdM，每點 ×10」", () => {
+  it("滑過數字：效果句下面一行骰子", () => {
+    const c = card("skill_ash_harvest");
+    const hint = effectLine(c).items[0]!.hint.split("\n");
+    expect(hint[0]).toBe(c.effects[0]);
+    expect(hint[1]).toBe("擲 3d6，每點 ×10");
+  });
+  it("展開「詳細」：效果句下面同一行；數字只寫範圍", () => {
+    const html = renderToStaticMarkup(createElement(SkillCardView, { card: card("skill_ash_harvest"), detailOpen: true } as never));
+    expect(html).toContain('data-testid="skill-dice-note">擲 3d6，每點 ×10<');
+    expect(html).toContain("30–180");
+    expect(html).not.toMatch(/>\s*3d6/);
+  });
+  it("沒有骰子的效果沒有這一行", () => {
+    expect(effectLine(card("skill_gale_kick")).items.map((e) => e.hint).join("\n")).not.toContain("每點 ×");
   });
 });
 

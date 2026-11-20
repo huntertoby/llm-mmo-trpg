@@ -12,11 +12,11 @@ LIB = default_library()
 def test_the_bear_card_sentence_comes_from_the_form_data() -> None:
     card = skill_card(LIB, LIB.ruleset.skill_def("skill_form_bear"))
     assert card.effects == (
-        "化身為熊（物理形態，持續到取消）：普攻改用熊爪 1d8 近戰（力量／體質取較高 × 0.3）；"
+        "化身為熊（物理形態，持續到取消）：普攻改用熊爪 10–80 近戰（力量／體質取較高 × 0.3）；"
         "形態中：最大 HP +15%、防禦 +10%、移動 −1；進入時：護盾＝最大 HP 的 10%（2 回合）；"
         "每回合開始 −80 耐力（不夠就自動解除）；離開後這個形態冷卻 2 回合",
     )
-    assert card.formula_lines[-1] == "天生武器（普攻）：熊爪 1d8 近戰（力量／體質取較高 × 0.3）"
+    assert card.formula_lines[-1] == "天生武器（普攻）：熊爪 10–80 近戰（力量／體質取較高 × 0.3）"
 
 
 def test_every_form_skill_card_follows_its_form() -> None:

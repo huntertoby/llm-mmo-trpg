@@ -103,7 +103,7 @@ def test_tags_and_runes_use_chinese_names(skill_id: str, expected: str) -> None:
 def test_target_suffix_sits_on_the_damage_sentence() -> None:
     """清單 3.5：對象後綴接在傷害句後面；獻祭、放逐、陷阱不加後綴。"""
     [harvest] = _card("skill_ash_harvest").effects
-    assert re.match(r"^3d6＋智力加成的火焰傷害（敵方），若這一招讓敵人倒下", harvest)
+    assert re.match(r"^30–180＋智力加成的火焰傷害（敵方），若這一招讓敵人倒下", harvest)
     assert not _card("skill_glacier_offering").effects[0].endswith("（友方）")
     assert not _card("skill_banish").effects[0].endswith("（自己）")
     assert not _card("skill_bear_trap").effects[0].endswith("（自己）")
@@ -112,7 +112,7 @@ def test_target_suffix_sits_on_the_damage_sentence() -> None:
 def test_shield_cleanse_and_default_durations() -> None:
     """清單 3.6、3.7：護盾寫吸收量；淨化寫移除什麼；沒寫回合數的狀態用預設。"""
     shield = _card("skill_charged_cleave").effects[0]
-    assert shield.startswith("護盾（吸收量 1d4＋力量加成，持續 2 回合")
+    assert shield.startswith("護盾（吸收量 10–40＋力量加成，持續 2 回合")
     purify = _card("skill_purify").effects
     assert purify[0].startswith("淨化：移除身上所有負面狀態")
     assert purify[1] == "狀態「守護」（到帶有者的下回合開始）（友方）"
@@ -446,7 +446,13 @@ def test_skill_card_formula_lines_without_owner_have_no_current_value() -> None:
         lib.skills["skill_cleave"],
         owner=CardOwner(weapon=weapon, attr_get=lambda a: 14),
     )
-    assert any("目前 +" in line and str(weapon.dice) in line for line in owned.formula_lines)
+    scale = lib.ruleset.core.quantity_scale  # X10-3b：武器骰寫成範圍，固定傷害疊在範圍裡
+    low = weapon.dice.count * scale + weapon.flat
+    high = weapon.dice.count * weapon.dice.sides * scale + weapon.flat
+    assert any(
+        "目前 +" in line and f"武器骰 {low}–{high}＋" in line for line in owned.formula_lines
+    )
+    assert all(str(weapon.dice) not in line for line in owned.formula_lines)
 
 
 def test_weapon_formula_follows_core_multiplier() -> None:

@@ -8,13 +8,14 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef
 from trpg.content.skills import SkillDef, SkillTable
 from trpg.engine import BattleSetup, BattleState, ResolveResult, UnitSpawn, resume, start_battle
 from trpg.engine.runner import accept_all
 from trpg.engine.state import SpawnTemplate
+from trpg.shared.range_text import range_text, span
 from trpg.shared.rng import Rng, RngState
 from trpg.shared.types import Attribute, Team, UnitId
 from trpg.skillgen.random_composer import default_library
@@ -28,6 +29,13 @@ DEMO_ENEMIES = ("bandit", "bandit_archer", "bandit_boss")
 def library() -> ContentLibrary:
     """正式內容（與根固件 ``content_library``、``default_library()`` 同一份；CODE-2）。"""
     return default_library()
+
+
+def card_dice(dice: Dice | None, flat: int = 0, lib: ContentLibrary | None = None) -> str:
+    """卡片上的骰子寫法（X10-3b）：骰面 × ``quantity_scale`` 再疊固定值（2d6 →「20–120」）。"""
+    assert dice is not None
+    scale = (lib or library()).ruleset.core.quantity_scale
+    return range_text(*span(dice.count, dice.sides, scale, flat))
 
 
 @cache

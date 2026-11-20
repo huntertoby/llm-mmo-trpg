@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from tests.engine.helpers import (
+    card_dice,
     caster_template,
     give_turn,
     library,
@@ -246,7 +247,7 @@ def test_card_numbers_match_the_skill_data(name: str) -> None:
     text = "\n".join(skill_card(lib, skill).effects)
     for spec in skill.effects:
         if spec.dice is not None:
-            assert str(spec.dice) in text, (name, spec.dice)
+            assert card_dice(spec.dice, spec.flat_bonus or 0) in text, (name, spec.dice)
         if spec.distance is not None:
             assert f"{spec.distance} 格" in text, (name, spec.distance)
         if spec.duration is not None and spec.type == "create_surface":

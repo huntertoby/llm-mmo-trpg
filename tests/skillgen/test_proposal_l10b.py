@@ -12,6 +12,7 @@ import pytest
 
 from tests.engine.helpers import (
     answered,
+    card_dice,
     caster_template,
     give_turn,
     make_map,
@@ -240,7 +241,9 @@ def test_lifted_skill_card_numbers_match_the_battle(
     for effect in skill.effects:  # 巢狀效果補上的骰子也寫在卡片上
         for sub in effect.then or ():
             if sub.dice is not None:
-                assert any(str(sub.dice) in line for line in card.effects)
+                assert any(
+                    card_dice(sub.dice, sub.flat_bonus or 0) in line for line in card.effects
+                )
     state = _battle(skill)
     actions = [a for a in legal_actions(state) if isinstance(a, UseSkill) and a.skill_id == SID]
     assert actions, f"{name}：找不到可施放的動作"

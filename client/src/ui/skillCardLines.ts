@@ -126,8 +126,13 @@ const FORMULA_PREFIX: Readonly<Partial<Record<EffectStat["category"], string>>> 
   shield: "護盾算法",
 };
 
+/** X10-3b：長說明多的一行「擲 2d8，每點 ×10」（伺服器給的 `dice_note`；舊夾具沒有時為 `null`）。 */
+export function diceNote(e: EffectStat): string | null {
+  return e.dice_note ?? null;
+}
+
 function effectHint(card: SkillCard, e: EffectStat): string {
-  const lines = [card.effects[e.index] ?? ""];
+  const lines = [card.effects[e.index] ?? "", diceNote(e) ?? ""];
   const prefix = FORMULA_PREFIX[e.category];
   if (prefix !== undefined) lines.push(...(card.formula_lines ?? []).filter((l) => l.startsWith(prefix)));
   return lines.filter((l) => l !== "").join("\n");

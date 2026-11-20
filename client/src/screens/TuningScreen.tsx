@@ -45,6 +45,7 @@ import {
 } from "../tuning/model";
 import { DEFAULT_RATIO_FORM, ratioSeedsProblem, ratioSkillsOf } from "../tuning/ratioModel";
 import { DEFAULT_MAP_FORM, probesOf, seedsOf, SimPanel, type SimForm } from "../tuning/SimPanel";
+import { ScaleNotice } from "../tuning/ScaleNotice";
 import { SkillForm } from "../tuning/SkillForm";
 import { ObjectPanel, type ObjectTab } from "../tuning/SkillList";
 import { applyConfirm, confirmBlock, editedSkills, filterSkills, mergeGroupRows, type SkillFilter } from "../tuning/skillModel";
@@ -630,6 +631,7 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
     <div className="tuning-screen">
       {header}
       <ErrorBanner message={error} onClose={() => setError(null)} />
+      <ScaleNotice />
       {status?.restart_needed === true && (
         <div className="tn-restart-banner" role="status">
           {status.restart_note_zh}

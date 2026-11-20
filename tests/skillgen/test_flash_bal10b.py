@@ -13,6 +13,7 @@ import pytest
 
 from tests.engine.helpers import (
     answered,
+    card_dice,
     caster_template,
     give_turn,
     library,
@@ -262,7 +263,10 @@ def test_flashed_followup_card_shows_the_engine_numbers() -> None:
     damage = next(e for e in skill.followup.effects if e.type == "damage")
     assert damage.dice is not None
     card = skill_card(lib, skill)
-    assert card.followup is not None and f"{damage.dice.count}d{damage.dice.sides}" in card.followup
+    assert (
+        card.followup is not None
+        and card_dice(damage.dice, damage.flat_bonus or 0) in card.followup
+    )
     m = make_map("\n".join(["00000"] * 5), ally=[(0, 2)], enemy=[(1, 2)])
     spawns = [
         spawn(Team.ALLY, (0, 2), caster_template([skill])),

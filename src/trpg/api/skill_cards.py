@@ -15,10 +15,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.content.battle import Dice
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef
 from trpg.narrative import skills as narrative
 from trpg.narrative.skills import CardOwner, skill_ap
+from trpg.shared.range_text import dice_note, range_text, span
 
 __all__ = [
     "CostStat",
@@ -74,11 +76,16 @@ class EffectStat(BaseModel):
     """效果原語的代碼（同 ``effect_ids``）。"""
     category: EffectCategory
     label: str | None
-    """圖示旁的數字：傷害、治療、護盾寫骰子（「3d6」「2d4＋2」），武器傷害寫倍率（「×1.15」），
-    位移寫格數，狀態、表面寫回合，層數寫層；沒有適合的數字為 ``None``。"""
+    """圖示旁的數字：傷害、治療、護盾寫範圍（X10-3b：「20–160」，骰面 × ``quantity_scale``
+    再疊固定值；有持有者時法術傷害、治療、護盾再疊屬性加成），武器傷害寫倍率（「×1.15」），位移寫格數，狀態、
+    表面寫回合，層數寫層；沒有適合的數字為 ``None``。"""
     unit: str | None
-    """``label`` 的單位（「格」「回合」「輪」「層」）；骰子與倍率為 ``None``。"""
+    """``label`` 的單位（「格」「回合」「輪」「層」）；範圍與倍率為 ``None``。"""
     dice: str | None = None
+    """效果自己的骰子（「2d8」，資料原樣；卡片上不顯示）。"""
+    dice_note: str | None = None
+    """長說明（滑過、展開）多的一行：「擲 2d8，每點 ×10」（X10-3b）。武器傷害在知道持有者的武器時寫
+    武器骰；其他沒有骰子的效果為 ``None``。"""
     multiplier_permille: int | None = None
     """武器傷害的倍率（‰，已乘技能的 ``damage_permille``）；法術傷害打折時也填。"""
     weapon: bool = False
@@ -132,7 +139,7 @@ def skill_card(
     card = narrative.skill_card(
         library, skill, mastery_active=mastery_active, owner=owner, ally=ally
     )
-    stats = card_stats(library, skill, scaling_attrs=card.scaling_attrs, ally=ally)
+    stats = card_stats(library, skill, scaling_attrs=card.scaling_attrs, ally=ally, owner=owner)
     return SkillCard(**dict(card), stats=stats)
 
 
@@ -216,22 +223,64 @@ _MOVE_TYPES = frozenset(
 )
 
 
-def _dice_label(spec: EffectSpec) -> str | None:
+_ATTR_SCALED = frozenset({"damage", "heal", "shield"})
+"""範圍疊屬性加成的效果（和卡片「傷害／治療／護盾算法」同一組，X10-3b）。"""
+
+
+def _attr_bonus(
+    library: ContentLibrary, skill: SkillDef, spec: EffectSpec, owner: CardOwner | None
+) -> int:
+    """持有者目前的屬性加成（整數，和引擎一樣在合計後捨去：骰值與固定值是整數，所以等於加成本身捨去）。
+    沒有持有者、不是法術傷害／治療／護盾時為 0。"""
+    if owner is None or owner.attr_get is None or spec.type not in _ATTR_SCALED:
+        return 0
+    if spec.type == "damage" and skill.category != "spell":
+        return 0
+    core = library.ruleset.core
+    permille = core.spell_attr_multiplier_permille
+    if spec.type == "damage" and spec.attr_permille is not None:
+        permille = spec.attr_permille
+    return skill.scaling_value(owner.attr_get, owner.weapon) * permille // 1000
+
+
+def _dice_label(library: ContentLibrary, spec: EffectSpec, bonus: int = 0) -> str | None:
+    """效果骰子的範圍（X10-3b）：骰面 × ``quantity_scale``，再疊固定值與 ``bonus``（屬性加成）。"""
     if spec.dice is None:
         return None
-    flat = f"＋{spec.flat_bonus}" if spec.flat_bonus else ""
-    return f"{spec.dice.count}d{spec.dice.sides}{flat}"
+    scale = library.ruleset.core.quantity_scale
+    extra = (spec.flat_bonus or 0) + bonus
+    return range_text(*span(spec.dice.count, spec.dice.sides, scale, extra))
 
 
-def _damage_stat(skill: SkillDef, index: int, spec: EffectSpec) -> EffectStat:
+def _dice_code(spec: EffectSpec) -> str | None:
+    return None if spec.dice is None else str(spec.dice)
+
+
+def _dice_note(library: ContentLibrary, dice: Dice | None) -> str | None:
+    if dice is None:
+        return None
+    return dice_note(dice.count, dice.sides, library.ruleset.core.quantity_scale)
+
+
+def _damage_stat(
+    library: ContentLibrary,
+    skill: SkillDef,
+    index: int,
+    spec: EffectSpec,
+    owner: CardOwner | None,
+) -> EffectStat:
     discount = skill.damage_permille or 1000
     element = spec.element
-    dice = _dice_label(spec)
-    if dice is not None:
-        label, multiplier = dice, None if skill.damage_permille is None else discount
+    dice = _dice_code(spec)
+    shown = _dice_label(library, spec, _attr_bonus(library, skill, spec, owner))
+    note = _dice_note(library, spec.dice)
+    if shown is not None:
+        label, multiplier = shown, None if skill.damage_permille is None else discount
     else:  # 武器傷害（武器技的 damage 沒有骰子：骰子來自手上的武器）
         multiplier = (spec.multiplier_permille or 1000) * discount // 1000
         label = f"×{multiplier / 1000:g}"
+        if owner is not None and owner.weapon is not None:
+            note = _dice_note(library, owner.weapon.dice)
     return EffectStat(
         index=index,
         type=spec.type,
@@ -239,6 +288,7 @@ def _damage_stat(skill: SkillDef, index: int, spec: EffectSpec) -> EffectStat:
         label=label,
         unit=None,
         dice=dice,
+        dice_note=note,
         multiplier_permille=multiplier,
         weapon=dice is None,
         element=None if element is None else element.value,
@@ -292,21 +342,25 @@ def _plain(library: ContentLibrary, index: int, spec: EffectSpec) -> EffectStat:
 
 
 def effect_stat(
-    library: ContentLibrary, skill: SkillDef, index: int, spec: EffectSpec
+    library: ContentLibrary,
+    skill: SkillDef,
+    index: int,
+    spec: EffectSpec,
+    owner: CardOwner | None = None,
 ) -> EffectStat:
-    """一個效果的「數字＋單位＋類別」。"""
+    """一個效果的「數字＋單位＋類別」；``owner`` 見 :class:`CardOwner`（範圍疊上屬性加成）。"""
     kind = spec.type
     if kind in _DAMAGE_TYPES:
-        return _damage_stat(skill, index, spec)
+        return _damage_stat(library, skill, index, spec, owner)
     if kind in ("heal", "shield"):
-        dice = _dice_label(spec)
         return EffectStat(
             index=index,
             type=kind,
             category="heal" if kind == "heal" else "shield",
-            label=dice,
+            label=_dice_label(library, spec, _attr_bonus(library, skill, spec, owner)),
             unit=None,
-            dice=dice,
+            dice=_dice_code(spec),
+            dice_note=_dice_note(library, spec.dice),
             affects=spec.affects,
         )
     return _plain(library, index, spec)
@@ -332,6 +386,7 @@ def card_stats(
     *,
     scaling_attrs: tuple[str, ...] = (),
     ally: bool = True,
+    owner: CardOwner | None = None,
 ) -> SkillCardStats:
     """``skill`` 卡片的結構化數字（:class:`SkillCardStats`）。"""
     shape = skill.shape
@@ -345,6 +400,8 @@ def card_stats(
         size=shape.size,
         timing=_timing(skill),
         costs=cost_stats(library, skill, ally=ally),
-        effects=tuple(effect_stat(library, skill, i, e) for i, e in enumerate(skill.effects)),
+        effects=tuple(
+            effect_stat(library, skill, i, e, owner) for i, e in enumerate(skill.effects)
+        ),
         scaling_attrs=scaling_attrs,
     )

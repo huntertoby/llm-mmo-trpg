@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.engine.helpers import answered, library
+from tests.engine.helpers import answered, card_dice, library
 from tests.skillgen.test_flash_major import _battle, _dice_count
 from trpg.content.skills import SkillDef
 from trpg.engine import resolve
@@ -66,7 +66,7 @@ def test_physical_weapon_skill_transforms_with_physical_damage(base_id: str, tem
     assert damage and all(e.element == Element.PHYSICAL for e in damage)
     card = skill_card(lib, skill)  # 卡片上的骰子＝技能資料的骰子
     for effect in damage:
-        assert str(effect.dice) in " ".join(card.effects)
+        assert card_dice(effect.dice, effect.flat_bonus or 0) in " ".join(card.effects)
 
 
 def test_physical_passive_transform_hits_with_the_card_dice() -> None:

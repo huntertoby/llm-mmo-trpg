@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+import re
 from typing import Any
 
 import pytest
@@ -21,8 +23,8 @@ def _effects(skill_id: str) -> list[tuple[Any, ...]]:
 @pytest.mark.parametrize(
     ("skill_id", "expected"),
     [
-        # 法術傷害：骰子＋元素
-        ("skill_ash_harvest", [("damage", "3d6", None, "fire", None)]),
+        # 法術傷害：範圍（X10-3b：3d6 × 10）＋元素
+        ("skill_ash_harvest", [("damage", "30–180", None, "fire", None)]),
         # 武器傷害：倍率；推開：格數
         (
             "skill_gale_kick",
@@ -33,8 +35,8 @@ def _effects(skill_id: str) -> list[tuple[Any, ...]]:
             "skill_downpour",
             [("surface", None, None, None, "水"), ("status", "1", "回合", None, "緩速")],
         ),
-        # 護盾：骰子
-        ("skill_reflex_ward", [("shield", "2d6", None, None, None)]),
+        # 護盾：範圍（2d6 × 10）
+        ("skill_reflex_ward", [("shield", "20–120", None, None, None)]),
         # 層數
         (
             "skill_sunder_strike",
@@ -98,5 +100,51 @@ def test_every_skill_lines_up_with_the_sentences() -> None:
 def test_skill_endpoint_returns_stats(client: TestClient) -> None:
     body = client.get("/api/skills/skill_ash_harvest").json()
     assert body["cost"]  # 舊句子欄位還在
-    assert body["stats"]["effects"][0]["label"] == "3d6"
+    assert body["stats"]["effects"][0]["label"] == "30–180"
+    assert body["stats"]["effects"][0]["dice"] == "3d6"
     assert body["stats"]["effects"][0]["element"] == "fire"
+
+
+def test_range_stacks_the_owner_attribute_bonus() -> None:
+    """X10-3b：有持有者時，法術傷害的範圍疊上目前的屬性加成（和「傷害算法」的目前值同一個算法）；
+    武器傷害照舊寫倍率。"""
+    lib = library()
+    owner = narrative.CardOwner(attr_get=lambda _a: 140)
+    bonus = 140 * lib.ruleset.core.spell_attr_multiplier_permille // 1000
+    spell = card_stats(lib, lib.skills["skill_ash_harvest"], owner=owner)
+    assert spell.effects[0].label == f"{30 + bonus}–{180 + bonus}"
+    shield = card_stats(lib, lib.skills["skill_reflex_ward"], owner=owner)
+    assert shield.effects[0].label == f"{20 + bonus}–{120 + bonus}"
+    weapon = card_stats(lib, lib.skills["skill_gale_kick"], owner=owner)
+    assert weapon.effects[0].label == "×0.4"
+
+
+def test_no_card_label_writes_dice() -> None:
+    """X10-3b：卡片的效果數字一律不寫「NdM」。"""
+    lib = library()
+    for skill in lib.skills.values():
+        for e in card_stats(lib, skill).effects:
+            assert e.label is None or "d" not in e.label, (skill.id, e.label)
+
+
+def test_dice_note_for_the_long_description() -> None:
+    """X10-3b：長說明多一行「擲 3d6，每點 ×10」；武器傷害知道持有者的武器時寫武器骰。"""
+    lib = library()
+    spell = card_stats(lib, lib.skills["skill_ash_harvest"])
+    assert spell.effects[0].dice_note == "擲 3d6，每點 ×10"
+    kick = lib.skills["skill_gale_kick"]
+    assert card_stats(lib, kick).effects[0].dice_note is None
+    assert card_stats(lib, kick).effects[1].dice_note is None  # 推開沒有骰子
+    sword = lib.weapons["one_handed_sword"]
+    owned = card_stats(lib, kick, owner=narrative.CardOwner(weapon=sword))
+    assert owned.effects[0].dice_note == f"擲 {sword.dice}，每點 ×10"
+
+
+def test_no_card_text_writes_dice() -> None:
+    """X10-3b：卡片上的句子（效果、算法、召喚物資訊、形態）都寫範圍，只有結構化的 ``dice`` 欄位
+    保留資料原樣。"""
+    lib = library()
+    pattern = re.compile(r"\d+d\d+")
+    for skill in lib.skills.values():
+        card = skill_card(lib, skill).model_dump(exclude={"stats", "icon"})
+        assert not pattern.search(json.dumps(card, ensure_ascii=False)), skill.id
