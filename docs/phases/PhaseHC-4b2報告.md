@@ -167,3 +167,14 @@ parity、CLI 快照：見第 6 節，沒重產。OpenAPI 重產後沒有差異�
 ## 9. 平衡疑慮（無）
 
 沒有。只換數字放的地方，434 招預算、78 場戰鬥、組合器、許願、挑選模式的出題都逐項相同。
+
+## 開發 PM 裁定（2026-11-21）
+
+合併進 main（`--no-ff`）。合併後在 main 上重跑 ruff、format、mypy、lint-imports、`classify.py --check`，結束碼都是 0；新增和改動的 4 個測試檔 100 passed。全量檢查由 push hook 跑。
+
+待 PM 決定的 5 件：
+1. **願望標籤上限**：照做。數字只寫在 `skill_pick.yaml` 一處，不另加對照，也不開進工坊。
+2. **`skill_evolution.yaml` 改成必備檔**：照做。專案只有一份內容，缺檔就載入失敗比默默用預設好。
+3. **`terrain_area[*].tier` 不開**：照做。工坊不開 `tier` 欄位的規則不變。
+4. **新增工坊表 `skill_evolution`**：保留。召喚技進化的幅度不是預算計價，獨立一張表比塞進預算表清楚。
+5. **範圍外的小改動**：接受，輸出都不變。`skillgen/skill_pick.py` 的 `thin_reasons` 預設值併進 HC-5（skillgen 常數）。
