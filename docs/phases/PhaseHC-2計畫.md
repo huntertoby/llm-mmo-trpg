@@ -17,6 +17,8 @@
    - 生成器寫死的法力代價改乘 scale：`skillgen/flash_major.py`、`composer_recipes.py`。如果 X10-2b 已經改成 `scaled_cost`，就確認一下，再把歸類標成 done。
    - 零星位置：`engine/gear/core.py` 的 `_MAX_ATTR`、`engine/rules/statuses.py` 的 `DEFAULT_DEFENSE_BREAK`、`world/situation_coverage.py`、前端 `AttributeAllocator` 的 `?? 10`。
 
+4. 前端夾具 `run_campfire.json` 的主角數值還是舊單位，改成新單位（X10-3d 待決 2）。
+
 每處改完，把 `classes.yaml` 對應的項目從 todo 改成 done。
 
 ## 驗收
