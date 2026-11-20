@@ -12,6 +12,7 @@ import pytest
 
 from tests.pytest_trace import pytest_runtest_protocol  # noqa: F401  QF-3a 留證
 from tests.world.helpers import with_rules, with_test_fields, without_fields
+from tests.xdist_loadgroup import pytest_xdist_make_scheduler  # noqa: F401  QF-3a 補排修正
 from trpg.content.library import ContentLibrary
 from trpg.skillgen.random_composer import default_library
 
