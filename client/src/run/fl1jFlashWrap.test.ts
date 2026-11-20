@@ -48,6 +48,8 @@ describe("FL-1j (2) 數字和單位不拆開（通用規則）", () => {
     expect(kept("只要 1 AP（原本 2），用過之後要等 5 回合")).toEqual(["要 1 AP", "本 2", "等 5 回合"]);
     expect(kept("從 1.15 倍")).toEqual(["從 1.15 倍"]);
     expect(kept("（2d6）")).toEqual([]);
+    // X10-3d：範圍「10–120」整個算一個數字，中間不斷行
+    expect(kept("傷害從 10–120 變成 10–40，")).toEqual(["傷害", "從 10–120 變成", "10–40"]);
     expect(numberUnitRuns("沒有數字")).toEqual([{ text: "沒有數字", keep: false }]);
     expect(numberUnitRuns("")).toEqual([]);
   });
@@ -66,13 +68,14 @@ describe("FL-1j (2) 數字和單位不拆開（通用規則）", () => {
     }
   });
 
-  it("1600 斷錯的兩張重閃大變化卡：「燃燒少 1 回合」「Nd4 火焰」「傷害」都包成 .fc-nobr", () => {
+  it("1600 斷錯的兩張重閃大變化卡：「燃燒少 1 回合」「範圍 火焰」「傷害」都包成 .fc-nobr", () => {
     const p = FIXTURE.sets.reflash_major;
     if (p === undefined) throw new Error("夾具缺 reflash_major");
     const plain = p.options.filter((o) => !o.transform && o.say_zh !== "");
     expect(plain.length).toBe(2);
     // AR-SK4 重產：WC-2 之後第 2 張的額外傷害是 3d4（原本 1d4），照夾具逐張寫死
-    const fire = ["1d4 火焰", "3d4 火焰"];
+    // X10-3d 重產：骰子改寫範圍（1d12 →「10–120」、1d4 →「10–40」）
+    const fire = ["10–120 火焰", "10–40 火焰"];
     plain.forEach((o, i) => {
       const html = renderToStaticMarkup(createElement(TermText, { text: sayText(o), terms: p.terms ?? {}, nobr: true }));
       expect(html).toContain('<span class="fc-nobr">少 1 回合</span>');

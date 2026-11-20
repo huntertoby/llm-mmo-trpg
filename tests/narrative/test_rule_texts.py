@@ -18,6 +18,7 @@ import re
 import pytest
 
 from tests.engine.helpers import (
+    card_dice,
     caster_template,
     give_turn,
     library,
@@ -133,7 +134,9 @@ def test_status_rules_come_from_the_status_table() -> None:
     stun = status_rules(rules.status_def("stun"), lib)
     assert stun[-1] == "對頭目：改為施加「緩速」（持續時間不變）"
     burning = rules.status_def("burning")
-    assert status_rules(burning, lib)[0] == "回合開始時受到 1d6 火焰傷害"
+    burn = status_rules(burning, lib)
+    assert burn[0] == "回合開始時受到 10–60 火焰傷害"  # X10-3d：只寫範圍
+    assert burn[1] == "擲 1d6，每點 ×10"
     assert not re.search(r"\d", burning.description_zh)
     assert status_rules(rules.status_def("armor_broken"), lib) == (
         "防禦值降低的幅度依武器：斧 10%（1 回合）",
@@ -381,7 +384,7 @@ def test_basic_attack_formula_matches_engine_bonus(weapon_id: str, attrs: dict[s
     permille = now * core.basic_attack_attr_multiplier_permille
     assert plain_text(line).endswith(f"（目前 +{permille // 1000}）"), line
     assert ("實際" in line) == (permille % 1000 != 0), line  # 帶小數才有說明標記
-    assert line.startswith(f"普攻：{weapon.dice}")
+    assert line.startswith(f"普攻：{card_dice(weapon.dice, weapon.flat)}＋")  # X10-3d：範圍
     assert weapon.scaling_names_zh() in line
     # 引擎：實際普攻的傷害事件記錄的骰外加成（只供顯示的欄位）與卡片寫的一致
     foe_id = next(u.id for u in state.units.values() if u.team is Team.ENEMY)

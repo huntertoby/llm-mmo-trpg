@@ -4,7 +4,7 @@
 
     uv run python scripts/export_flash_choice_fixture.py
 
-點燃斬（白板 ``kindle``，使用者截圖那組：AP 2、耐力 2、冷卻 2、射程 4、燃燒 5 回合）第 1 次閃現
+點燃斬（白板 ``kindle``，使用者截圖那組：AP 2、耐力 20、冷卻 2、射程 4、燃燒 5 回合）第 1 次閃現
 的幾組選項，
 ``changes``、``headline_zh``、``say_zh``、``terms`` 都是伺服器同一套函式算的（不是手寫）：
 
@@ -73,7 +73,12 @@ ROOT = Path(__file__).resolve().parents[1]
 HERO = ROOT / "client" / "src" / "run" / "fixtures" / "run_campfire.json"
 OUT = ROOT / "client" / "src" / "dev" / "fixtures" / "flashChoice.json"
 SEED = 12345
-ATTR = 10
+WHITEBOARD_SEED = 107
+"""點燃斬白板的種子。X10-3d：原本的 75 在 ×10 之後組出「耐力 40、冷卻 1」、預算已滿，連最小的
+3 成武器傷害都加不進去（``keyword_exploit`` 套用不了，``FlashStepError``）；107 組出和使用者截圖
+同一組數字（AP 2、耐力 20、冷卻 2、射程 4、燃燒 5 回合），四組選項都套得上。"""
+ATTR = 100
+"""卡片的屬性值（新單位，X10-2b：屬性 ×10；原本 10）。"""
 
 SETS: dict[str, list[tuple[str, str, str, str | None]]] = {
     "base": [
@@ -279,7 +284,9 @@ def _reflash_sets(library: ContentLibrary) -> tuple[dict[str, Any], dict[str, An
 
 def main() -> int:
     library = load_library()
-    base = compose_whiteboard(75, recipe_id="kindle", weapon_class="melee", tier=1, library=library)
+    base = compose_whiteboard(
+        WHITEBOARD_SEED, recipe_id="kindle", weapon_class="melee", tier=1, library=library
+    )
     hero = json.loads(HERO.read_text(encoding="utf-8"))["hero"]
     hero["skills"] = [_card(library, base), *hero["skills"][1:]]
     hero["insight"] = 3

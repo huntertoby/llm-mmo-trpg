@@ -45,7 +45,7 @@ class BagItemView(_ApiModel):
     use_zh: str | None = None
     """野外使用的效果（例「HP +30%」）；不能用為 ``None``。"""
     battle_zh: str | None = None
-    """放進腰包時戰鬥中的用法（例「戰鬥中 1 AP：回 2d6 HP」）；不是消耗品為 ``None``。"""
+    """放進腰包時戰鬥中的用法（例「戰鬥中 1 AP：回 20–120 HP」）；不是消耗品為 ``None``。"""
     gear: bool = False
     """背包裡的裝備（Phase 5D-2；``item`` 是這件裝備的 ID，``count`` 固定 1）。"""
     can_equip: bool = False

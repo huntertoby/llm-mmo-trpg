@@ -30,6 +30,7 @@ from trpg.api.skill_cards import CostStat, EffectStat, card_stats, effect_stat
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef, condition_text
+from trpg.shared.range_text import range_text, span
 from trpg.shared.types import Element, Surface
 
 __all__ = [
@@ -165,6 +166,15 @@ def _dice_mean(spec: EffectSpec) -> Fraction:
     if spec.dice is None:
         return Fraction(0)
     return Fraction(spec.dice.count * (spec.dice.sides + 1), 2) + (spec.flat_bonus or 0)
+
+
+def _dice_zh(library: ContentLibrary, spec: EffectSpec | None) -> str | None:
+    """骰子的顯示字（X10-3d，同 X10-3b 卡片沒有持有者時）：只寫範圍，骰面 × ``quantity_scale``
+    再疊固定值（2d6 →「20–120」）。資料欄位 ``before``／``after`` 照舊是「2d6」。"""
+    if spec is None or spec.dice is None:
+        return None
+    scale = library.ruleset.core.quantity_scale
+    return range_text(*span(spec.dice.count, spec.dice.sides, scale, spec.flat_bonus or 0))
 
 
 def _same_effect(a: EffectSpec, b: EffectSpec) -> bool:
@@ -727,6 +737,11 @@ class _View:
             update["icon"] = _icon(spec)
             return update
         update = _plain(row, row.label_zh.removesuffix("骰子") or row.label_zh, None, None)
+        if attr == "dice":  # X10-3d：前後都只寫範圍
+            update.update(
+                before_zh=_dice_zh(self.library, old_spec),
+                after_zh=_dice_zh(self.library, new_spec),
+            )
         update["icon"] = _card(_card_icon(spec))  # 骰子
         return update
 
@@ -834,7 +849,7 @@ class _View:
             times = _times(stat.multiplier_permille or _PERMILLE)
             text = _ratio(times, weapon=True, element=spec.element) or ""
         else:
-            text = f"{stat.dice or ''} {stat.element_zh or ''}傷害".strip()
+            text = f"{_dice_zh(self.library, spec) or ''} {stat.element_zh or ''}傷害".strip()
         if spec.condition is not None:
             text += f"（{self._condition(spec)}）"
         return text

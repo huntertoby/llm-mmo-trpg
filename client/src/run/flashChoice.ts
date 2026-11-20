@@ -189,8 +189,8 @@ export function plainTerms(text: string): string {
  * 數字和單位另由 `numberUnitRuns`、「」括起來的名字另由 `quotedSpans` 通用處理，不列在這裡。 */
 export const FLASH_NO_BREAK_WORDS: readonly string[] = ["雙手槍", "強度", "傷害", "轉型", "回合", "點燃"];
 
-/** 數字（含小數、骰子「1d4」、正負號、百分比）。 */
-const NUM_UNIT_RE = /[+\-−]?\d+(?:\.\d+)?(?:d\d+)?[%‰]?/gu;
+/** 數字（含小數、骰子「1d4」、範圍「10–120」（X10-3d：範圍中間不斷行）、正負號、百分比）。 */
+const NUM_UNIT_RE = /[+\-−]?\d+(?:\.\d+)?(?:d\d+)?(?:–\d+)?[%‰]?/gu;
 /** 數字後面的單位：中文字或英文字母（「回合」「格」「成」「AP」）。 */
 const UNIT_HEAD_RE = /^[\p{Script=Han}A-Za-z]+/u;
 /** 單位最多黏幾個字（太長的不黏，免得整段不能斷行）。 */
@@ -254,7 +254,8 @@ function numberUnitSpans(text: string, words: readonly Span[] = []): Span[] {
     if (insideWord(words, from) !== undefined) from = start;
     const cut = insideWord(words, to);
     if (cut !== undefined) to = cut[0] > end + gap.length ? cut[0] : end;
-    if (from === start && to === end) continue;
+    // 前後都沒黏字的數字不包；範圍「10–40」照樣包（瀏覽器可以在「–」後面斷行）
+    if (from === start && to === end && !m[0].includes("–")) continue;
     out.push([from, to]);
     at = to;
   }

@@ -12,7 +12,7 @@ items:
   - id: item_hp_potion_small
     name_zh: 小回復藥
     kind: consumable
-    description_zh: 戰鬥中回 20–120 HP；野外喝一瓶回 20% HP。
+    description_zh: 戰鬥中回 20–120 HP，另加體質加成；野外喝一瓶回 20% HP。
     price: 20
     field_hp_permille: 200
     skill:
@@ -41,7 +41,7 @@ items:
   - id: item_hp_potion_medium
     name_zh: 中回復藥
     kind: consumable
-    description_zh: 戰鬥中回 40–240 HP；野外喝一瓶回 35% HP。柳掌櫃好感度中立以上才賣。
+    description_zh: 戰鬥中回 40–240 HP，另加體質加成；野外喝一瓶回 35% HP。柳掌櫃好感度中立以上才賣。
     price: 45
     field_hp_permille: 350
     skill:
