@@ -163,7 +163,9 @@ from trpg.world.state import (
 )
 
 __all__ = [
+    "CHAR_SCALE_KEY",
     "LEGACY_WLOG_FORMATS",
+    "OLD_UNIT_CHAR_NOTICE",
     "READABLE_WLOG_FORMATS",
     "STALE_LOG_ZH",
     "WLOG_FORMAT",
@@ -172,11 +174,13 @@ __all__ = [
     "append_log_line",
     "content_digest",
     "dumps_char",
+    "dumps_char_save",
     "dumps_log",
     "dumps_log_entry",
     "dumps_log_header",
     "dumps_world",
     "loads_char",
+    "loads_char_save",
     "loads_log",
     "loads_world",
     "log_lines",
@@ -417,7 +421,36 @@ def dumps_char(char: CharacterState) -> str:
 
 
 def loads_char(text: str) -> CharacterState:
-    return _validate(CharacterState, _parse_object(text, CHAR_FORMAT, LEGACY_CHAR_FORMATS))
+    """解析角色（不檢查量類倍率；存檔檔案裡的 :data:`CHAR_SCALE_KEY` 略過）。讀玩家的角色存檔用
+    :func:`loads_char_save`。"""
+    raw = _parse_object(text, CHAR_FORMAT, LEGACY_CHAR_FORMATS)
+    raw.pop(CHAR_SCALE_KEY, None)
+    return _validate(CharacterState, raw)
+
+
+CHAR_SCALE_KEY: Final = "quantity_scale"
+"""角色存檔檔案裡記量類倍率的鍵（X10-3a）。只在存檔檔案裡，不是 :class:`CharacterState` 的欄位
+（重播、比對用的 :func:`dumps_char` 不帶它）。"""
+OLD_UNIT_CHAR_NOTICE: Final = "這是數值改版前的角色存檔，已經不能使用，請建立新角色。"
+"""角色存檔的量類倍率沒有記、或和目前的內容不同時的錯誤訊息（X10-3a）。"""
+
+
+def dumps_char_save(char: CharacterState, *, quantity_scale: int) -> str:
+    """角色存檔檔案的內容：:func:`dumps_char` 加上目前內容的量類倍率（:data:`CHAR_SCALE_KEY`，
+    X10-3a）。新存檔一律用這個寫。"""
+    data = char.model_dump(mode="json")
+    data[CHAR_SCALE_KEY] = quantity_scale
+    return json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+
+
+def loads_char_save(text: str, *, quantity_scale: int) -> CharacterState:
+    """讀角色存檔檔案：量類倍率沒有記、或和 ``quantity_scale``（目前內容的
+    ``core.quantity_scale``）不同時，視為數值改版前的存檔，拋出 :class:`WorldSaveFormatError`
+    （:data:`OLD_UNIT_CHAR_NOTICE`，X10-3a），不讀成很弱的角色。"""
+    raw = _parse_object(text, CHAR_FORMAT, LEGACY_CHAR_FORMATS)
+    if raw.pop(CHAR_SCALE_KEY, None) != quantity_scale:
+        raise WorldSaveFormatError(OLD_UNIT_CHAR_NOTICE)
+    return _validate(CharacterState, raw)
 
 
 def dumps_log_entry(entry: WorldLogEntry) -> str:

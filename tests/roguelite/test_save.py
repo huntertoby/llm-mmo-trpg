@@ -119,7 +119,15 @@ def test_save_json_has_format_and_engine_version(tmp_path: Path) -> None:
     lib = library()
     run, battle = auto_play(lib, new_run(lib, *VICTORY), stop=_mid_battle(1, 3))
     assert battle is not None
-    path = write_save(tmp_path / "saves", RunSave(run_id="abc", run=run, battle=battle.to_saved()))
+    path = write_save(
+        tmp_path / "saves",
+        RunSave(
+            run_id="abc",
+            run=run,
+            battle=battle.to_saved(),
+            quantity_scale=lib.ruleset.core.quantity_scale,
+        ),
+    )
     assert path == save_path(tmp_path / "saves", "abc")
     assert path.name == "run-abc.json"
     raw = json.loads(path.read_text(encoding="utf-8"))

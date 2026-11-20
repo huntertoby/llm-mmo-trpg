@@ -15,7 +15,7 @@ from trpg.roguelite import offers
 from trpg.roguelite.offers import using_offer_cache
 from trpg.roguelite.state import SkillOffer
 from trpg.world.actions import EventSolveAction
-from trpg.world.save import dumps_char
+from trpg.world.save import dumps_char_save
 from trpg.world.state import CharacterState, EventTrigger, OpeningState, QuestState
 from trpg.world.step import new_character, world_step
 
@@ -108,7 +108,8 @@ def test_store_prefetches_and_serves(
     char = _at_altar(library, "c1")
     chars = tmp_path / "chars"
     chars.mkdir(parents=True, exist_ok=True)
-    (chars / "c1.json").write_text(dumps_char(char), encoding="utf-8", newline="\n")
+    text = dumps_char_save(char, quantity_scale=library.ruleset.core.quantity_scale)  # X10-3a
+    (chars / "c1.json").write_text(text, encoding="utf-8", newline="\n")
     plain = world_step(library, store.world(), char, EventSolveAction(solution=OPPORTUNITY), NOON)
     try:
         store.character("c1")

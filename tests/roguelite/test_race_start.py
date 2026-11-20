@@ -41,5 +41,7 @@ def test_the_race_is_saved_and_reaches_the_battle() -> None:
 def test_write_save_roundtrip_keeps_race(tmp_path) -> None:  # type: ignore[no-untyped-def]
     lib = library()
     run = with_race(lib, new_run(lib, "build_push", 3), "seafolk")
-    path = write_save(tmp_path, RunSave(run_id="abcd", run=run))
+    path = write_save(
+        tmp_path, RunSave(run_id="abcd", run=run, quantity_scale=lib.ruleset.core.quantity_scale)
+    )
     assert '"race": "seafolk"' in path.read_text(encoding="utf-8")

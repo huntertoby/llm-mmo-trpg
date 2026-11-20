@@ -23,7 +23,7 @@ from trpg.content.library import ContentLibrary
 from trpg.world.field import field_grid, field_map, placed
 from trpg.world.field_actions import EventMarkedEvent, SneakStartedEvent
 from trpg.world.layout import char_path
-from trpg.world.save import dumps_char, write_atomic
+from trpg.world.save import dumps_char_save, write_atomic
 from trpg.world.state import CharacterState, LocationRef
 from trpg.world.step import new_character
 
@@ -122,7 +122,8 @@ def test_store_builds_social_from_other_saves(
         visited_locations=(LocationRef(region="cloud_ridge", location="ferry_steps"),),
     )
     for c in (me, bob):
-        write_atomic(char_path(tmp_path, c.character_id), dumps_char(c))
+        scale = field_library.ruleset.core.quantity_scale  # X10-3a：存檔記量類倍率
+        write_atomic(char_path(tmp_path, c.character_id), dumps_char_save(c, quantity_scale=scale))
     store.notes.add(bob, "小心石階上的盜賊", NOON)
     social = store.field_social("alice")
     assert [v.character_id for v in social.visitors_at("cloud_ridge", "ferry_steps")] == ["bob"]
