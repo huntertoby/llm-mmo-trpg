@@ -236,7 +236,9 @@ LIB_48F = library()
 
 def _harmful() -> str:
     return next(
-        s.id for s in LIB_48F.ruleset.statuses.statuses if not s.beneficial and s.budget_points
+        s.id
+        for s in LIB_48F.ruleset.statuses.statuses
+        if not s.beneficial and LIB_48F.budget.status_point(s.id)
     )
 
 
@@ -281,7 +283,7 @@ def test_on_kill_beneficial_status_is_not_flagged() -> None:
     good = next(
         s.id
         for s in LIB_48F.ruleset.statuses.statuses
-        if s.beneficial and s.budget_points and not s.stance
+        if s.beneficial and LIB_48F.budget.status_point(s.id) and not s.stance
     )
     result = check_draft(_weapon_draft(_on_kill_effects(good)), LIB_48F)
     assert not any("擊殺時效果" in p.message_zh for p in result.problems)

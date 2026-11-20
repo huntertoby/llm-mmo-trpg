@@ -60,16 +60,17 @@ class ShapeBudget(ContentModel):
     """形狀倍率（‰，``docs/phases/Phase2B計畫.md`` 4.2）。
 
     倍率 ＝ ``by_value_permille[參數值]``（有表格時），否則 ``base_permille ＋ per_unit_permille ×
-    參數值``（``param`` 為 ``None`` 時只有 ``base_permille``）。
+    參數值``（``param`` 為 ``None`` 時只有 ``base_permille``）。HC-B 起 ``base_permille``、
+    ``per_unit_permille`` 在 ``skill_budget.yaml`` 的 ``shape_budget.<形狀 id>``（開放數值工坊，由
+    ``BudgetRules.shape_permille`` 傳進來）；
+    查表（``by_value_permille`` 等，鍵是參數值）留在這裡。
 
     ``non_power_by_value_permille``（BAL-13d，06 6.5「BAL-13c 定」）：形狀會衰減威力時（連鎖每跳
     −25%），不在 ``power_primitives`` 的效果（狀態、推擊、表面等照常施加的非數值效果）改查這張表
     （連鎖維持衰減前的倍率）；``power_primitives`` 是威力會跟著衰減的原語（傷害、治療、護盾……）。
     """
 
-    base_permille: int = Field(default=1000, ge=1)
     param: str | None = None
-    per_unit_permille: int = Field(default=0, ge=0)
     by_value_permille: dict[int, int] | None = None
     non_power_by_value_permille: dict[int, int] | None = None
     power_primitives: tuple[str, ...] = ()
@@ -77,19 +78,27 @@ class ShapeBudget(ContentModel):
     @model_validator(mode="after")
     def _check(self) -> ShapeBudget:
         tables = (self.by_value_permille, self.non_power_by_value_permille)
-        if self.param is None and (self.per_unit_permille or any(tables)):
-            raise ValueError("設定 per_unit_permille 或 by_value_permille 時必須指定 param")
+        if self.param is None and any(tables):
+            raise ValueError("設定 by_value_permille 時必須指定 param")
         if any(table is not None and not table for table in tables):
             raise ValueError("by_value_permille 不可為空")
         if self.non_power_by_value_permille is not None and not self.power_primitives:
             raise ValueError("設定 non_power_by_value_permille 時必須列出 power_primitives")
         return self
 
-    def permille_for(self, values: dict[str, int | str], primitive: str | None = None) -> int:
+    def permille_for(
+        self,
+        values: dict[str, int | str],
+        primitive: str | None = None,
+        *,
+        base_permille: int,
+        per_unit_permille: int = 0,
+    ) -> int:
         """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。給了
-        ``primitive`` 且它不是威力原語時，有 ``non_power_by_value_permille`` 就查那張表。"""
+        ``primitive`` 且它不是威力原語時，有 ``non_power_by_value_permille`` 就查那張表。
+        ``base_permille``／``per_unit_permille`` 是 ``skill_budget.yaml`` 的 ``shape_budget``。"""
         if self.param is None:
-            return self.base_permille
+            return base_permille
         raw = values.get(self.param)
         value = raw if isinstance(raw, int) else 0
         table = self.by_value_permille
@@ -100,8 +109,8 @@ class ShapeBudget(ContentModel):
         ):
             table = self.non_power_by_value_permille
         if table is not None:
-            return table.get(value, self.base_permille)
-        return self.base_permille + self.per_unit_permille * value
+            return table.get(value, base_permille)
+        return base_permille + per_unit_permille * value
 
 
 class ShapeCells(ContentModel):

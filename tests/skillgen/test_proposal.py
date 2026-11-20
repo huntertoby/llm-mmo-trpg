@@ -183,7 +183,7 @@ def test_enumerations_come_from_content() -> None:
     schema = _models().json_schema()
     status = schema["$defs"]["Effect_apply_status"]["properties"]["status"]
     # 4-L5c：只列技能能施加的狀態（有預算點數）
-    statuses = {s.id for s in _lib().ruleset.statuses.statuses if s.budget_points is not None}
+    statuses = set(_lib().budget.status_points)
     assert set(status["enum"]) == statuses
     cleanse = schema["$defs"]["Effect_cleanse"]["properties"]["affects"]["anyOf"][0]
     assert "enemies" not in cleanse["enum"]  # forbid_affects

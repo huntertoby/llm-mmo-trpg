@@ -28,7 +28,7 @@ def penalty_choices(library: ContentLibrary, rarity: SkillRarity | None = None) 
         s
         for s in rule.allowed
         if s in statuses
-        and statuses[s].budget_points is not None
+        and library.budget.status_point(s) is not None
         and (rarity is None or rarity_rank(statuses[s].min_rarity) <= rarity_rank(rarity))
     )
     return tuple(found)

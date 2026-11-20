@@ -126,7 +126,7 @@ def _status_enums(schema: dict[str, Any]) -> dict[str, list[str]]:
 
 def test_apply_status_lists_only_statuses_with_budget_points() -> None:
     lib = _lib()
-    without = {s.id for s in lib.ruleset.statuses.statuses if s.budget_points is None}
+    without = {s.id for s in lib.ruleset.statuses.statuses if lib.budget.status_point(s.id) is None}
     assert "charging" in without  # 蓄力：沒有預算點數
     expected = set(budget_statuses(lib))
     assert expected.isdisjoint(without) and expected

@@ -155,10 +155,12 @@ class PrimitiveDef(ContentModel):
       ``caster``（只對施放者；``affects`` 一律為 ``self``）。
     - ``allowed_shapes``：只能搭配這些形狀（``None`` 為不限）。
     - ``forbid_affects``：不可搭配的 ``affects``（淨化不能對敵方使用）。
-    - ``budget_basis``／``base_points``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）：
-      ``fixed`` 固定 ``base_points``、``per_distance`` ``base_points × distance``、
-      ``per_amount`` ``base_points × amount``（2E-3 的 ``add_stack``）、
-      ``obstacle`` ``base_points`` × ``obstacle_duration_permille``（依 ``duration``；省略＝永久，
+    - ``budget_basis``：預算點數的算法（``docs/phases/Phase2B計畫.md`` 4.2）；以下的「基礎點數」
+      是 ``skill_budget.yaml`` 的 ``primitive_points.<原語 id>``（HC-B 從這裡的 ``base_points``
+      搬去）：
+      ``fixed`` 固定基礎點數、``per_distance`` 基礎點數 × ``distance``、
+      ``per_amount`` 基礎點數 × ``amount``（2E-3 的 ``add_stack``）、
+      ``obstacle`` 基礎點數 × ``obstacle_duration_permille``（依 ``duration``；省略＝永久，
       Phase 3-11）、
       ``consume_status`` ``then`` 的點數 × 期望倍率 × 濺射 × 「需要先有狀態」折扣（3C-3b）、
       ``consume_stack`` 同技能傷害點數 × 期望消耗層數 × ``per_stack_permille``（2E-3）、
@@ -170,10 +172,11 @@ class PrimitiveDef(ContentModel):
       ``revive`` 基礎點數 ＋ 回復比例 × 係數（3D-8b）、
       ``delayed_damage`` 骰子平均 × 預期波及人數（3D-8b）、
       ``grant_skill`` 被給技能的總點數 × 預期使用次數（3D-8c）、
-      ``inscribe`` ``base_points`` × ``inscribe_duration_permille``（依 ``duration``，3-23）、
+      ``inscribe`` 基礎點數 × ``inscribe_duration_permille``（依 ``duration``，3-23）、
       ``detonate_runes`` 骰子平均 × ``detonate_runes_permille``（需要先刻印的折扣，3-23）、
       ``dice_average`` 骰子平均值、``damage`` 法術為骰子平均值而武器為倍率 × 基準武器傷害、
-      ``status``／``surface`` 為該狀態或表面的 ``budget_points`` × 持續 ÷ 預設持續、
+      ``status``／``surface`` 為該狀態或表面的點數 × 持續 ÷ 預設持續
+      （點數在 ``status_points``／``surface_points``）、
       ``hook``／``contagion`` 固定 ``skill_budget.yaml`` 的 ``hook_points``／``contagion_points``、
       ``absorb_surface`` ``absorb_surface_points`` ＋ 收益（SK-3b：這三個點數搬到預算表，
       開放數值工坊）、``reroll`` 階級預算 × 反應技係數 × ``reroll_budget_permille``（SK-3b）、
@@ -255,13 +258,9 @@ class PrimitiveDef(ContentModel):
         ]
         | None
     ) = None
-    base_points: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _check_budget(self) -> PrimitiveDef:
-        needs_points = ("fixed", "per_distance", "per_amount", "obstacle", "inscribe")
-        if self.budget_basis in needs_points and self.base_points is None:
-            raise ValueError(f"原語 {self.id}：budget_basis {self.budget_basis} 必須填 base_points")
         for name, spec in self.params.items():
             unknown = sorted(set(spec.allowed_skeletons or ()) - set(SKELETON_IDS))
             if unknown:

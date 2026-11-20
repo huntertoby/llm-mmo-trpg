@@ -49,7 +49,6 @@ _FROST_NOVA = """
     category: numeric
     harmful: true
     budget_basis: fixed
-    base_points: 3
 """
 
 
@@ -62,7 +61,6 @@ def _fake(primitive_id: str, basis: str | None = "fixed") -> PrimitiveDef:
             "category": "numeric",
             "harmful": True,
             "budget_basis": basis,
-            "base_points": 1,
         }
     )
 
@@ -115,6 +113,10 @@ def test_load_checked_library_raises_content_error(tmp_path: Path) -> None:
     shutil.copytree(PROJECT_ROOT / "content", content)
     yaml_path = content / "skill_primitives.yaml"
     yaml_path.write_text(yaml_path.read_text(encoding="utf-8") + _FROST_NOVA, encoding="utf-8")
+    budget = content / "skill_budget.yaml"  # HC-B：固定點數在預算表
+    text = budget.read_text(encoding="utf-8")
+    points = text.replace("primitive_points:\n", "primitive_points:\n  frost_nova: 3\n")
+    budget.write_text(points, encoding="utf-8")
     load_library(content)  # 內容本身合法
     with pytest.raises(ContentError) as caught:
         load_checked_library(content)
@@ -215,7 +217,6 @@ def _knobbed(knob: object = None, basis: str = "per_amount") -> PrimitiveDef:
             "category": "numeric",
             "harmful": True,
             "budget_basis": basis,
-            "base_points": 1,
             "params": {"amount": param},
         }
     )

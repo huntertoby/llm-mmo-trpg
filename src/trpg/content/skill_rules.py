@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any, Literal
+from typing import Any, Final, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, NonNegativeInt, model_validator
 
-from trpg.content.battle import ID_PATTERN
+from trpg.content.battle import ID_PATTERN, StatusTable
+from trpg.content.environment import SurfaceTable
 from trpg.content.rules import ResourceKind
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
@@ -27,6 +28,9 @@ from trpg.content.skills import (
     RARITY_ORDER,
     SKELETON_IDS,
     Affects,
+    PrimitiveTable,
+    ShapeDef,
+    ShapeTable,
     SkillCategory,
     SkillCost,
     SkillKind,
@@ -37,6 +41,7 @@ from trpg.shared.types import Element
 
 __all__ = [
     "MODIFIER_USE_KEYS",
+    "POINTS_BASES",
     "BudgetRules",
     "CharacterTierRules",
     "CostAllowance",
@@ -48,11 +53,15 @@ __all__ = [
     "RarityLimit",
     "SecondaryRules",
     "ShapePattern",
+    "ShapePrice",
     "SkeletonCore",
     "SkeletonDef",
     "SkillMatch",
     "SynergyRule",
     "SynergyTable",
+    "price_table_problems",
+    "primitive_points_problems",
+    "shape_budget_problems",
 ]
 
 _PERMILLE_MAX = 10_000
@@ -66,7 +75,7 @@ _PERMILLE_MAX = 10_000
 class SelfStatusAllowance(ContentModel):
     """自身狀態代價的折抵（Phase 2H-1；初值，未經模擬）。
 
-    折抵（‰）＝ 狀態的 ``budget_points`` × 有效回合（``duration − 1``）× ``per_point_permille``，
+    折抵（‰）＝ 狀態的點數 × 有效回合（``duration − 1``）× ``per_point_permille``，
     先以 ``cap`` 截斷，再和其他折抵一起截斷在 ``total_cap``。
     """
 
@@ -152,7 +161,7 @@ class ModifierPoints(ContentModel):
 
     ``damage_permille`` 與 ``push_distance_delta`` 沒有列在這裡：前者以基準武器傷害
     （``core.yaml`` 的 ``budget_reference_weapon_damage``）× ‰ 計算，後者沿用 ``push`` 原語的
-    ``base_points``（每格）；``on_hit_effects`` 以效果本身的預算點數計算。
+    點數（``primitive_points.push``，每格）；``on_hit_effects`` 以效果本身的預算點數計算。
     """
 
     hit_bonus: int = Field(ge=0)
@@ -370,6 +379,15 @@ class CharacterTierRules(ContentModel):
         return max(values, default=1)
 
 
+class ShapePrice(ContentModel):
+    """一種形狀的倍率（‰；HC-B 從 ``skill_shapes.yaml`` 的 ``budget`` 搬來，值不變）：
+    ``base_permille`` 基礎、``per_unit_permille`` 每單位參數加成（形狀要有 ``budget.param``）。
+    依參數值查表的形狀（錐形、環形、十字、連鎖）以表為準，``base_permille`` 只在參數沒填時用。"""
+
+    base_permille: int = Field(ge=1)
+    per_unit_permille: int = Field(default=0, ge=0)
+
+
 class BudgetRules(ContentModel):
     """``content/skill_budget.yaml``。"""
 
@@ -417,9 +435,9 @@ class BudgetRules(ContentModel):
     加總後乘持續輪數與 ``summon_round_value_permille``。這個係數：灌注的額外傷害（雷靈的雷電）
     骰子平均 × 此值。"""
     summon_trait_status_permille: int = Field(default=100, ge=0, le=5000)
-    """普攻命中附帶狀態（點燃、冰凍、標記、揭露…）：狀態的 ``budget_points`` × 此值。"""
+    """普攻命中附帶狀態（點燃、冰凍、標記、揭露…）：狀態的點數 × 此值。"""
     summon_trait_surface_permille: int = Field(default=100, ge=0, le=5000)
-    """造表面（命中造水、脈動造水）：表面的 ``budget_points`` × 此值。"""
+    """造表面（命中造水、脈動造水）：表面的點數 × 此值。"""
     summon_trait_chain_permille: int = Field(default=400, ge=0, le=5000)
     """水面連鎖（雷靈）：連鎖傷害（武器骰平均 × 連鎖人數 × 連鎖倍率）× 此值（要站在水裡才生效）。"""
     summon_trait_heal_permille: int = Field(default=600, ge=0, le=5000)
@@ -427,9 +445,9 @@ class BudgetRules(ContentModel):
     summon_trait_backstab_permille: int = Field(default=250, ge=0, le=5000)
     """背刺多出的傷害骰（影魅）：多出的骰子平均 × 此值（要繞到背後才生效）。"""
     summon_trait_trip_permille: int = Field(default=300, ge=0, le=5000)
-    """絆倒（倒地關鍵字、骷髏、戰狼）：擊倒原語的 ``base_points`` × 此值（對抗判定、每輪 1 次）。"""
+    """絆倒（倒地關鍵字、骷髏、戰狼）：擊倒原語的點數 × 此值（對抗判定、每輪 1 次）。"""
     summon_trait_knockback_permille: int = Field(default=200, ge=0, le=5000)
-    """震退（撞擊關鍵字、石像）：推擊原語的 ``base_points`` × 震退格數 × 此值。"""
+    """震退（撞擊關鍵字、石像）：推擊原語的點數 × 震退格數 × 此值。"""
     summon_trait_height_permille: int = Field(default=300, ge=0, le=5000)
     """高處加傷（鷹隼的利爪）：武器每輪傷害 × 加傷比例 × 此值（要站得比目標高才生效）。"""
     summon_trait_conceal_points: int = Field(default=1, ge=0, le=10)
@@ -454,7 +472,7 @@ class BudgetRules(ContentModel):
     """召喚技能的 ``max_hp_permille``（加深進化，Phase 3-33f2）：召喚物每輪價值 ×（1 ＋ 多出的
     HP 比例 × 此值）；HP 的價值只佔每輪價值的這個比例（‰，初值，未經模擬）。"""
     totem_expected_allies_permille: int = Field(default=1000, ge=0, le=5000)
-    """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的 ``budget_points`` × 預期受惠的友方數（‰）× 持續輪數
+    """圖騰（Phase 3D-4b）的點數 ＝ 光環狀態的點數 × 預期受惠的友方數（‰）× 持續輪數
     × ``summon_round_value_permille``（初值，未經模擬）。"""
     legendary_battle_budget_permille: int = Field(default=600, ge=100, le=1000)
     """常駐類傳說 ``activation: battle``（整場）的可用預算倍率（‰；Phase 3D-6，使用者決定
@@ -476,6 +494,22 @@ class BudgetRules(ContentModel):
     """``dispel`` 驅散 1 個增益的預算點數（Phase 3D-8a；初值，未經模擬）。"""
     dispel_all_points: int = Field(default=6, ge=0)
     """``dispel`` 驅散全部增益的預算點數（Phase 3D-8a；初值）。"""
+    primitive_points: dict[str, NonNegativeInt] = Field(default_factory=dict)
+    """原語的基礎預算點數（HC-B：從 ``skill_primitives.yaml`` 的 ``base_points`` 搬來，值不變，開放
+    數值工坊）：``budget_basis`` 為 ``fixed``（固定）、``per_distance``（× 格數）、``per_amount``
+    （× 數量）、``obstacle``、``inscribe``（× 持續時間係數）的原語必須有一項（載入時檢查，
+    :func:`primitive_points_problems`）；其他算法的原語不能有。召喚物特性（絆倒、震退、拉扯、
+    高台、被推倒壓人）、擲物與衝撞附帶的擊倒、吸收表面的層數收益也讀這張表。"""
+    shape_budget: dict[str, ShapePrice] = Field(default_factory=dict)
+    """形狀倍率（HC-B：從 ``skill_shapes.yaml`` 搬來；每種形狀一項，載入時檢查，
+    :func:`shape_budget_problems`）。"""
+    status_points: dict[str, NonNegativeInt] = Field(default_factory=dict)
+    """技能施加狀態（預設持續時間）的預算點數（HC-B：從 ``statuses.yaml`` 的 ``budget_points``
+    搬來，值不變，開放數值工坊）。沒有那一項的狀態不能由技能施加；只給敵人、只由機制施加的狀態
+    不能有（載入時檢查，:func:`price_table_problems`）。"""
+    surface_points: dict[str, NonNegativeInt] = Field(default_factory=dict)
+    """技能產生表面（預設持續時間）的預算點數（HC-B：從 ``surfaces.yaml`` 的 ``budget_points``
+    搬來，值不變）。沒有那一項的表面不能由技能產生。"""
     hook_points: int = Field(default=6, ge=0)
     """``hook``（鉤，SK-2）的固定預算點數（形狀倍率另算；SK-3b 從 ``skill_primitives.yaml`` 的
     ``base_points`` 搬來，開放數值工坊；初值）。"""
@@ -682,8 +716,88 @@ class BudgetRules(ContentModel):
         out = {k: v for k, v in cost.items() if k != "mana"}
         return {**out, "stamina": self.stamina_for_mana(int(cost["mana"]))}
 
+    def shape_permille(
+        self, shape: ShapeDef, values: dict[str, int | str], primitive: str | None = None
+    ) -> int:
+        """``shape`` 在參數 ``values`` 下的形狀倍率（‰；HC-B）：基礎與每單位加成讀
+        ``shape_budget``，查表讀形狀自己的 ``budget``（:meth:`ShapeBudget.permille_for`）。"""
+        price = self.shape_budget[shape.id]
+        return shape.budget.permille_for(
+            values,
+            primitive,
+            base_permille=price.base_permille,
+            per_unit_permille=price.per_unit_permille,
+        )
+
+    def status_point(self, status_id: str) -> int | None:
+        """技能施加 ``status_id`` 的預算點數；``None``＝不能由技能施加（HC-B，原本的
+        ``StatusDef.budget_points``）。"""
+        return self.status_points.get(status_id)
+
+    def surface_point(self, surface_id: str) -> int | None:
+        """技能產生 ``surface_id`` 的預算點數；``None``＝不能由技能產生（HC-B）。"""
+        return self.surface_points.get(surface_id)
+
     def summary(self) -> str:
         return f"合格區間 {self.min_ratio_permille / 10:g}%–{self.max_ratio_permille / 10:g}%"
+
+
+POINTS_BASES: Final = frozenset({"fixed", "per_distance", "per_amount", "obstacle", "inscribe"})
+"""要在 ``primitive_points`` 有一項的原語預算算法（HC-B；原本是 ``PrimitiveDef`` 的
+「必須填 ``base_points``」檢查）。"""
+
+
+def primitive_points_problems(primitives: PrimitiveTable, budget: BudgetRules) -> list[str]:
+    """``skill_budget.yaml`` 的 ``primitive_points`` 與 ``skill_primitives.yaml`` 對得上（HC-B）：
+    用固定點數計價的原語都有一項，表裡沒有未知或用不到的原語。"""
+    known = {p.id: p.budget_basis for p in primitives.primitives}
+    problems = [
+        f"原語 {pid}：budget_basis {basis} 必須在 primitive_points 有一項"
+        for pid, basis in known.items()
+        if basis in POINTS_BASES and pid not in budget.primitive_points
+    ]
+    for pid in sorted(budget.primitive_points):
+        if pid not in known:
+            problems.append(f"primitive_points.{pid}：沒有這個原語")
+        elif known[pid] not in POINTS_BASES:
+            basis = known[pid]
+            problems.append(f"primitive_points.{pid}：budget_basis {basis} 的原語不用這個點數")
+    return problems
+
+
+def shape_budget_problems(shapes: ShapeTable, budget: BudgetRules) -> list[str]:
+    """``shape_budget`` 與形狀表對得上（HC-B）：每種形狀一項、沒有未知的形狀、有每單位加成的
+    形狀要有參數（原本 ``ShapeBudget`` 的檢查）。"""
+    by_id = {s.id: s for s in shapes.shapes}
+    missing = [sid for sid in by_id if sid not in budget.shape_budget]
+    problems = [f"形狀 {sid}：shape_budget 少了這一項" for sid in missing]
+    for sid in sorted(budget.shape_budget):
+        shape = by_id.get(sid)
+        if shape is None:
+            problems.append(f"shape_budget.{sid}：沒有這個形狀")
+        elif budget.shape_budget[sid].per_unit_permille and shape.budget.param is None:
+            problems.append(f"shape_budget.{sid}：形狀沒有 budget.param，不能設 per_unit_permille")
+    return problems
+
+
+def price_table_problems(
+    statuses: StatusTable, surfaces: SurfaceTable, budget: BudgetRules
+) -> list[str]:
+    """``status_points``／``surface_points`` 對得上狀態表與表面表（HC-B）：沒有未知的 ID，
+    只給敵人、只由機制施加的狀態不在表裡（原本 ``StatusDef`` 的「不能有 ``budget_points``」）。"""
+    by_status = {s.id: s for s in statuses.statuses}
+    problems: list[str] = []
+    for sid in sorted(budget.status_points):
+        status = by_status.get(sid)
+        if status is None:
+            problems.append(f"status_points.{sid}：沒有這個狀態")
+        elif status.skill_pool_excluded:
+            problems.append(f"status_points.{sid}：enemy_only、mechanic_only 的狀態不能有預算點數")
+    known = {s.id.value for s in surfaces.surfaces}
+    for sid in sorted(budget.surface_points):
+        if sid not in known:
+            problems.append(f"surface_points.{sid}：沒有這個表面")
+    return problems
 
 
 # ---------------------------------------------------------------------------

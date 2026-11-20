@@ -407,7 +407,7 @@ def _special_core(ctx: Ctx) -> list[str] | None:
 def _has_status(ctx: Ctx, beneficial: bool) -> bool:
     """這個稀有度有沒有可由技能施加的（有益或有害）狀態。"""
     return any(
-        s.budget_points is not None
+        ctx.library.budget.status_point(s.id) is not None
         and s.beneficial == beneficial
         and rarity_rank(s.min_rarity) <= ctx.rank
         and not s.stance
@@ -479,7 +479,8 @@ def _status_candidates(ctx: Ctx, beneficial: bool) -> list[StatusDef]:
     out: list[StatusDef] = []
     used = {e.get("status") for e in ctx.effects}
     for status in ctx.library.ruleset.statuses.statuses:
-        if status.budget_points is None or status.beneficial != beneficial or status.id in used:
+        points = ctx.library.budget.status_point(status.id)
+        if points is None or status.beneficial != beneficial or status.id in used:
             continue
         if rarity_rank(status.min_rarity) > ctx.rank or status.stance:
             continue  # 姿態狀態只有姿態技能（build_stance_effects）會施加
@@ -530,7 +531,8 @@ def _surface_effect(ctx: Ctx, *, beneficial_only: bool) -> None:
     surfaces = [
         s
         for s in sorted(ctx.library.ruleset.surfaces.surfaces, key=lambda s: s.id.value)
-        if s.budget_points is not None and (s.beneficial or not beneficial_only)
+        if ctx.library.budget.surface_point(s.id.value) is not None
+        and (s.beneficial or not beneficial_only)
     ]
     if not surfaces:
         raise Retry
@@ -1197,7 +1199,7 @@ def _self_status_cost(ctx: Ctx) -> dict[str, Any] | None:
         status_id
         for status_id in allowance.allowed
         if (status := statuses.get(status_id)) is not None
-        and status.budget_points is not None
+        and ctx.library.budget.status_point(status_id) is not None
         and rarity_rank(status.min_rarity) <= ctx.rank
         and (status_id not in allowance.spell_only or ctx.category == "spell")  # 沉默：限法術技
     )
@@ -1459,7 +1461,7 @@ def build_stance_effects(ctx: Ctx) -> None:
             s
             for s in ctx.library.ruleset.statuses.statuses
             if s.stance
-            and s.budget_points is not None
+            and ctx.library.budget.status_point(s.id) is not None
             and rarity_rank(s.min_rarity) <= ctx.rank
             and s.id not in reserved
             and s.element_dealt is None  # 3W-2b：元素姿態階梯只給轉型與費用類小變化

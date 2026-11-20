@@ -853,7 +853,9 @@ class StatusDef(ContentModel):
 
     Phase 2B-2 的預算欄位：
 
-    - ``budget_points``：技能施加此狀態（預設持續時間）的預算點數；``None`` 表示不能由技能施加。
+    - 技能施加此狀態（預設持續時間）的預算點數在 ``skill_budget.yaml`` 的
+      ``status_points.<狀態 id>``（HC-B 從這裡的 ``budget_points`` 搬去）；
+      沒有那一項表示不能由技能施加。
     - ``min_rarity``：技能使用此狀態的最低稀有度。
     - ``beneficial``（2B-3）：對帶有者有益（防禦、隱蔽）。光環骨架的核心狀態必須有益；
       隨機組合器不會對友方施加無益的狀態。
@@ -975,7 +977,6 @@ class StatusDef(ContentModel):
     healing_received_permille: int = Field(default=1000, ge=0, le=10000)
     save_attr: Attribute | None = None
     control_group: Literal["movement", "mental", "hard"] | None = None
-    budget_points: int | None = Field(default=None, ge=0)
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
     beneficial: bool = False
     polarity: Literal["buff", "debuff", "neutral"]
@@ -997,11 +998,11 @@ class StatusDef(ContentModel):
     enemy_only: bool = False
     """（Phase 5F-5c，玩法 PM 2026-11-03 代決）只給敵人：只能由敵方單位範本的 ``opening_statuses``
     掛上，不能給玩家、影子、傭兵，也不能進技能池（技能引用它＝引用錯誤，生成器、候選、閃現、
-    工坊、LLM 可選清單都排除）。必須沒有 ``budget_points``。"""
+    工坊、LLM 可選清單都排除）。``skill_budget.yaml`` 的 ``status_points`` 不能有它。"""
     mechanic_only: bool = False
     """（AP-2）只由機制施加的狀態（預支 ``borrow_ap`` 的扣回 ``borrowed_ap``）：敵我都可能帶，但
-    同 ``enemy_only`` 不進技能池（技能引用它＝引用錯誤，組合器、工坊、LLM 可選清單都排除）。必須沒有
-    ``budget_points``。"""
+    同 ``enemy_only`` 不進技能池（技能引用它＝引用錯誤，組合器、工坊、LLM 可選清單都排除）。
+    ``skill_budget.yaml`` 的 ``status_points`` 不能有它。"""
 
     @property
     def skill_pool_excluded(self) -> bool:
@@ -1010,10 +1011,6 @@ class StatusDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
-        if self.skill_pool_excluded and self.budget_points is not None:
-            raise ValueError(
-                f"狀態 {self.id}：enemy_only、mechanic_only 的狀態不能有 budget_points"
-            )
         if self.ap_penalty_per_amount and self.ap_penalty:
             raise ValueError(f"狀態 {self.id}：ap_penalty 與 ap_penalty_per_amount 只能擇一")
         for name, spec in (

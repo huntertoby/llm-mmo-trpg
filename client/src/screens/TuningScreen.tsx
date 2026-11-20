@@ -167,7 +167,8 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         // NW-3：格子物件表（objects.yaml，物件的最大 HP）也放這裡。
         // PK-1：技能挑選模式的權重（skill_pick.yaml）也是全體共用的表，放這裡。
         // SK-5：被動觸發時機的預算係數（skill_triggers.yaml）與組合器的附帶配方機率（skill_composer.yaml）也放這裡。
-        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer] = await Promise.all([
+        // HC-B：條件的預算倍率覆寫（skill_conditions.yaml）與協同係數（skill_synergies.yaml）也放這裡。
+        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies] = await Promise.all([
           tapi.tuningStatus(),
           tapi.tuningObjects("unit"),
           tapi.tuningObjects("ai").catch(() => []),
@@ -177,8 +178,10 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
           tapi.tuningObjects("pick").catch(() => []),
           tapi.tuningObjects("skill_triggers").catch(() => []),
           tapi.tuningObjects("skill_composer").catch(() => []),
+          tapi.tuningObjects("skill_conditions").catch(() => []),
+          tapi.tuningObjects("skill_synergies").catch(() => []),
         ]);
-        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer];
+        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);

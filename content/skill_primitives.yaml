@@ -2,10 +2,11 @@
 #
 # category：numeric 數值型／structural 結構型／rule_rewrite 改寫規則型（2A 沒有）
 # min_rarity：使用此原語的最低稀有度（2B-2 起由驗證器檢查：數值型 common、結構型 rare）
-# budget_basis／base_points：預算點數的算法（docs/phases/Phase2B計畫.md 4.2）
-#   fixed 固定 base_points／per_distance base_points × 距離／dice_average 骰子平均值／
+# budget_basis：預算點數的算法（docs/phases/Phase2B計畫.md 4.2）。基礎點數在 skill_budget.yaml 的
+#   primitive_points（HC-B 從這裡的 base_points 搬去，值不變，開放數值工坊）。
+#   fixed 固定基礎點數／per_distance 基礎點數 × 距離／dice_average 骰子平均值／
 #   damage 法術為骰子平均值、武器為倍率 × core.yaml 的 budget_reference_weapon_damage／
-#   status、surface 為該狀態或表面的 budget_points × 持續 ÷ 預設持續
+#   status、surface 為該狀態或表面的點數（skill_budget.yaml 的 status_points／surface_points）× 持續 ÷ 預設持續
 # harmful：有害。省略 affects 時的預設：地形類 tiles、施放者專屬 self、有害 enemies、有益 allies
 # acts_on：unit（對單位）／tile（對格子；affects 為單位類別時作用在這些單位腳下的格子）／caster
 # allowed_shapes：只能搭配這些形狀
@@ -120,7 +121,6 @@ primitives:
     category: numeric
     harmful: false
     budget_basis: fixed
-    base_points: 3
     forbid_affects: [enemies, all]
     params:
       count: {llm_hint: "移除 1 個減益，或全部（省略＝全部）。", type: count, min: 1, max: 1, description_zh: 只移除 1 個減益（控制類優先）或 all（全部，同省略）}
@@ -133,7 +133,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: per_distance
-    base_points: 2
     params:
       distance: {llm_hint: "推開的格數。", type: int, required: true, min: 1, max: 2, knob: {ladder: push_pull_distances, weight: 1}}
       collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points, knob: none}
@@ -146,7 +145,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: per_distance
-    base_points: 2
     params:
       distance: {llm_hint: "拉近的格數。", type: int, required: true, min: 1, max: 2, knob: {ladder: push_pull_distances, weight: 1}}
       collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points, knob: none}
@@ -159,7 +157,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: fixed
-    base_points: 3
   - id: shockwave
     name_zh: 震波
     llm_hint: "讓直線上的單位直接倒地，會飛的不受影響（須用大地元素 earth）。"
@@ -171,7 +168,6 @@ primitives:
     active_only: true
     allowed_shapes: [line]
     budget_basis: fixed
-    base_points: 4
   - id: teleport
     name_zh: 傳送
     llm_hint: "讓施放者瞬間移動到選定的位置。"
@@ -181,7 +177,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 4
     acts_on: caster
     allowed_shapes: [ground_tile]
   # --- Phase 3D-2：自身位移（docs/design/06-技能.md 6.16 A；點數為初值，未經模擬）---
@@ -196,7 +191,6 @@ primitives:
     position: first
     active_only: true
     budget_basis: fixed
-    base_points: 3
     acts_on: caster
     allowed_shapes: [single]
   # --- Phase 3J-4c：解除形態（06 6.30 解形爆發）---
@@ -213,7 +207,6 @@ primitives:
     max_per_skill: 1
     active_only: true
     budget_basis: fixed
-    base_points: 0
   - id: charge_through
     name_zh: 直線衝撞
     llm_hint: "施放者向前衝過路徑，路上的敵人受到傷害與附帶效果。"
@@ -243,7 +236,6 @@ primitives:
     position: first
     active_only: true
     budget_basis: fixed
-    base_points: 3   # BAL-13d：4 → 3（瞬步背刺每 AP 傷害 ≥ 普攻 1.2 倍；scripts/bal13d_backstab.py）
     acts_on: caster
     allowed_shapes: [single, unit_then_tile]
     params:
@@ -258,7 +250,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: fixed
-    base_points: 3
     acts_on: caster
     allowed_shapes: [ground_tile]
   - id: swap
@@ -271,7 +262,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: fixed
-    base_points: 4
     forbid_affects: [self, all, tiles]
     allowed_shapes: [single]
   # --- Phase 3D-2b：位移他人（docs/design/06-技能.md 6.19；點數為初值，未經模擬）---
@@ -286,7 +276,6 @@ primitives:
     sole_effect: true
     active_only: true
     budget_basis: fixed
-    base_points: 11
     acts_on: caster
     allowed_shapes: [unit_then_tile]
   - id: swap_any
@@ -300,7 +289,6 @@ primitives:
     sole_effect: true
     active_only: true
     budget_basis: fixed
-    base_points: 12
     acts_on: caster
     allowed_shapes: [unit_pair]
   - id: apply_status
@@ -338,7 +326,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 2
     acts_on: tile
   - id: create_obstacle
     name_zh: 產生障礙
@@ -349,7 +336,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: obstacle
-    base_points: 3
     acts_on: tile
     params:
       object: {llm_hint: "要放置的物件種類。", type: object, required: true}
@@ -363,7 +349,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 7
     acts_on: tile
     params:
       amount: {llm_hint: "抬高的層數。", type: int, min: 1, max: 1}
@@ -376,7 +361,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 7
     acts_on: tile
     params:
       amount: {llm_hint: "降低的層數。", type: int, min: 1, max: 1}
@@ -389,7 +373,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 4
     acts_on: caster
     allowed_shapes: [self]
   # --- Phase 2E-3：層數與陷阱（點數為初值，未經模擬）---
@@ -402,7 +385,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: per_amount
-    base_points: 2
     params:
       stack: {llm_hint: "要累積的層數種類。", type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
       amount: {llm_hint: "一次增加的層數。", type: int, required: true, min: 1, max: 3, description_zh: 累積的層數, knob: {ladder: stack_amount, weight: other}}
@@ -444,7 +426,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 2
     acts_on: caster
     allowed_shapes: [ground_tile]
   # --- Phase 3C-4a：改寫規則型原語（docs/design/06-技能.md 6.3、6.6；點數為初值，未經模擬）---
@@ -459,7 +440,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: per_amount
-    base_points: 4
     forbid_affects: [enemies, all]
     params:
       amount: {llm_hint: "獲得的 AP 點數。", type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP, knob: {ladder: param_range, weight: other}}
@@ -472,7 +452,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: fixed
-    base_points: 7
     forbid_affects: [enemies, all, self]
     params:
       which: {llm_hint: "重置全部技能，還是只重置帶指定標籤的技能。", type: which, required: true, description_zh: 重置全部技能，或只重置帶指定標籤的技能}
@@ -487,7 +466,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: fixed
-    base_points: 8
     forbid_affects: [enemies, all]
     params:
       duration: {llm_hint: "效果持續的回合數。", type: int, min: 1, max: 2, description_zh: 免死的持續回合}
@@ -502,7 +480,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: fixed
-    base_points: 7
     forbid_affects: [enemies, all, self]
     params:
       permille: {llm_hint: "轉移的傷害比例。", type: int, required: true, min: 100, max: 500, description_zh: 轉移給施放者的傷害千分比}
@@ -519,7 +496,6 @@ primitives:
     sole_effect: true
     active_only: true
     budget_basis: fixed
-    base_points: 9
     acts_on: caster
     allowed_shapes: [self]
   - id: extra_reaction
@@ -531,7 +507,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: per_amount
-    base_points: 7
     forbid_affects: [enemies, all]
     params:
       amount: {llm_hint: "增加的反應次數。", type: int, required: true, min: 1, max: 1, description_zh: 額外的反應次數, knob: none}
@@ -561,7 +536,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: fixed
-    base_points: 6
     acts_on: tile
     allowed_shapes: [single]
   # --- Phase 3D-1：資源互動（docs/design/06-技能.md 6.16 H；點數為初值，未經模擬）---
@@ -587,7 +561,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: fixed
-    base_points: 4
     forbid_affects: [allies, all, self]
 
   - id: dispel
@@ -790,7 +763,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: inscribe
-    base_points: 5
     acts_on: tile
     forbid_affects: [self, enemies, allies, all]   # 刻印只作用在格子（3-48c）；要刻在腳下用「自身」形狀
     params:
@@ -843,7 +815,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: per_distance
-    base_points: 1
     acts_on: tile
     forbid_affects: [self, enemies, allies, all]   # 吹送只作用在格子
     params:
@@ -860,7 +831,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: fixed
-    base_points: 3
     acts_on: tile
     params:
       surface: {llm_hint: "表面種類；省略＝煙霧與毒。", type: surface, description_zh: 要清除的表面種類；省略時清除煙霧與毒}
@@ -879,7 +849,6 @@ primitives:
     sole_effect: true
     max_per_skill: 1
     budget_basis: fixed
-    base_points: 11
     params:
       form: {llm_hint: "要化身的形態。", type: form, required: true, description_zh: 形態 ID（content/forms.yaml）}
       magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度, knob: none}

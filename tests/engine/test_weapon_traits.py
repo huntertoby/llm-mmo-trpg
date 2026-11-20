@@ -182,7 +182,7 @@ def test_axe_miss_applies_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_armor_broken_is_a_one_turn_debuff_that_counts_down_at_the_targets_turn_end() -> None:
     status = axe_state().ruleset.status_def("armor_broken")
     assert status.expires == "turn_end" and status.duration == 1 and status.defense_break
-    assert status.polarity == "debuff" and status.budget_points is None  # 技能不能施加
+    assert status.polarity == "debuff" and library().budget.status_point(status.id) is None
 
 
 def test_changing_the_armor_break_parameters_changes_the_behavior(

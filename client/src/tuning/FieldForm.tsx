@@ -2,9 +2,10 @@
 // 的 `fields` 產生（不寫死）。每欄：中文名（滑過看說明，共用 `<Hint>` 浮動卡）、現值、輸入框、建議範圍（技能另有允許範圍）、
 // 「改過」標記與單欄還原；錯誤紅字在欄位下。骰子欄位另有「−1 級／＋1 級」；唯讀欄位（武器射程）只顯示原因；
 // 招式組欄位用 `SkillIdsEditor`。PB-1n 待決 2：頭目部位的欄位按部位分組（後端給 `group_zh`，`fieldBlocks`）。
+// HC-B：分組改成可收合的 `<details>`；分組多（技能預算表）時預設收合，只展開有改動或錯誤的組（`groupOpen`）。
 import type { TuningCheckResult, TuningFieldView, TuningObjectDetail, TuningObjectSummary } from "../api/types";
 import { Hint } from "../ui/Hint";
-import { editKey, fieldBlocks, fieldErrorsOf, listOf, localError, normalizeDice, parseValue, rangeText, rangeWarning, valueText, type Edit, type Edits } from "./model";
+import { editKey, fieldBlocks, fieldErrorsOf, groupOpen, listOf, localError, normalizeDice, parseValue, rangeText, rangeWarning, valueText, type Edit, type Edits } from "./model";
 import { diceStep, diceStepProblem } from "./skillModel";
 import { SkillIdsEditor } from "./SkillIdsEditor";
 
@@ -251,6 +252,8 @@ export function inheritedLists(fields: readonly TuningFieldView[], edits: Edits,
 export function FieldForm({ detail, edits, check, onEdit, onDrop, ladder, skills, onList }: FormProps) {
   const errors = fieldErrorsOf(check, detail.file);
   const inherit = inheritedLists(detail.fields, edits, detail.file);
+  const blocks = fieldBlocks(detail.fields);
+  const groupCount = blocks.filter((b) => b.title !== null).length;
   return (
     <section className="panel tn-form" aria-label={`${detail.name_zh}的數值`} data-object={detail.id}>
       <div className="tn-form-head">
@@ -265,7 +268,7 @@ export function FieldForm({ detail, edits, check, onEdit, onDrop, ladder, skills
         </div>
       ))}
       <div className="muted small">直接在「改成」欄填新數字；空白＝不改。滑過欄位名看說明。</div>
-      {fieldBlocks(detail.fields).map((block, i) => {
+      {blocks.map((block, i) => {
         const rows = (
           <div className="tn-fields">
             {block.fields.map((f) => (
@@ -288,10 +291,13 @@ export function FieldForm({ detail, edits, check, onEdit, onDrop, ladder, skills
         return block.title === null ? (
           <div key={`plain-${i}`}>{rows}</div>
         ) : (
-          <div key={block.title} className="tn-part-group" data-group={block.title}>
-            <div className="section-title tn-section-title">{block.title}</div>
+          <details key={block.title} className="tn-part-group" data-group={block.title} open={groupOpen(block, groupCount, edits, detail.file, errors)}>
+            <summary className="section-title tn-section-title">
+              {block.title}
+              <span className="muted small tn-group-count">（{block.fields.length}）</span>
+            </summary>
             {rows}
-          </div>
+          </details>
         );
       })}
     </section>

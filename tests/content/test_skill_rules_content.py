@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.content.library import load_library
 from trpg.content.rules import CoreRules
-from trpg.content.skill_rules import BudgetRules, SkeletonDef
+from trpg.content.skill_rules import BudgetRules, SkeletonDef, shape_budget_problems
 from trpg.content.skills import SKELETON_IDS, ShapeDef
 from trpg.shared.errors import ContentError
 
@@ -289,7 +289,27 @@ def test_shape_budget_validation() -> None:
             {**data, "budget": {"param": "size", "by_value_permille": {2: 1300}}}
         )
     with pytest.raises(ValidationError, match="不是這個形狀的參數"):
-        ShapeDef.model_validate({**data, "budget": {"param": "radius", "per_unit_permille": 100}})
+        ShapeDef.model_validate({**data, "budget": {"param": "radius"}})
+    with pytest.raises(ValidationError, match="必須指定 param"):
+        ShapeDef.model_validate({**data, "budget": {"by_value_permille": {2: 1300}}})
+
+
+def test_shape_budget_lives_in_the_budget_table() -> None:
+    """HC-B：形狀的基礎倍率與每單位加成在 skill_budget.yaml（每種形狀一項）。"""
+    lib = library()
+    shapes = lib.ruleset.shapes
+    assert list(lib.budget.shape_budget) == [s.id for s in shapes.shapes]
+    assert shape_budget_problems(shapes, lib.budget) == []
+    prices = dict(lib.budget.shape_budget)
+    del prices["line"]
+    prices["nope"] = prices["self"]
+    prices["self"] = prices["self"].model_copy(update={"per_unit_permille": 100})
+    broken = lib.budget.model_copy(update={"shape_budget": prices})
+    assert shape_budget_problems(shapes, broken) == [
+        "形狀 line：shape_budget 少了這一項",
+        "shape_budget.nope：沒有這個形狀",
+        "shape_budget.self：形狀沒有 budget.param，不能設 per_unit_permille",
+    ]
 
 
 def test_min_rarity_tables_match_the_spec() -> None:
@@ -335,7 +355,7 @@ def test_min_rarity_tables_match_the_spec() -> None:
         "stoneskin",  # 3-54d：拿掉最低稀有（和護衛一致）
     }
     for status in rules.statuses.statuses:
-        if status.budget_points is not None:
+        if library().budget.status_point(status.id) is not None:
             expected = "common" if status.id in common_statuses else "rare"
             assert status.min_rarity == expected, status.id
     assert {c.min_rarity for c in rules.conditions.conditions} == {"rare"}

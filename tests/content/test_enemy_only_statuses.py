@@ -28,7 +28,7 @@ def test_the_burst_statuses_are_enemy_only(library: ContentLibrary) -> None:
     rules = library.ruleset
     assert sorted(rules.enemy_only_statuses()) == list(ENEMY_ONLY)
     for sid in ENEMY_ONLY:
-        assert rules.status_def(sid).budget_points is None
+        assert library.budget.status_point(sid) is None
 
 
 def test_enemy_only_statuses_never_reach_a_skill_list(library: ContentLibrary) -> None:

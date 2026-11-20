@@ -170,4 +170,4 @@ def test_apply_status_menu_excludes_statuses_without_budget_points() -> None:
     status = next(p for p in apply.params if p.field == "status")
     by_id = lib.ruleset.statuses.by_id()
     assert status.choices
-    assert all(by_id[str(c.value)].budget_points is not None for c in status.choices)
+    assert all(lib.budget.status_point(by_id[str(c.value)].id) is not None for c in status.choices)

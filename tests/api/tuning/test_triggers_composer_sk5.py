@@ -60,8 +60,8 @@ def _trigger_path(trigger_id: str) -> str:
 
 
 def test_both_tables_are_listed(read_service: TuningService) -> None:
-    assert TABLE_KINDS[-2:] == ("skill_triggers", "skill_composer")
-    found = {o.kind: o for o in read_service.objects() if o.kind in TABLE_KINDS[-2:]}
+    assert {"skill_triggers", "skill_composer"} <= set(TABLE_KINDS)
+    found = {o.kind: o for o in read_service.objects() if o.kind in TABLE_KINDS}
     assert (found["skill_triggers"].id, found["skill_triggers"].file) == (
         "skill_triggers",
         TRIGGERS,
@@ -76,12 +76,16 @@ def test_both_tables_are_listed(read_service: TuningService) -> None:
     assert read_service.objects("skill_composer") == [found["skill_composer"]]
 
 
-def test_trigger_coefficients_are_open_except_the_n_table(read_service: TuningService) -> None:
+def test_trigger_coefficients_and_the_n_table_are_open(read_service: TuningService) -> None:
     detail = object_detail(CONTENT, read_service.table, "skill_triggers", "skill_triggers")
     rows = read_data(CONTENT / TRIGGERS)["triggers"]
     with_coef = [r["id"] for r in rows if "budget_coefficient_permille" in r]
     assert EVERY_N_HITS not in with_coef
-    assert [f.path for f in detail.fields] == [_trigger_path(i) for i in with_coef]
+    # HC-B：「每命中 n 次」依 n 查的係數也開（數字鍵），排在一般係數後面
+    index = next(i for i, r in enumerate(rows) if r["id"] == EVERY_N_HITS)
+    by_n = [f"triggers[{index}].budget_by_n_permille.{n}" for n in (2, 3)]
+    assert [f.path for f in detail.fields] == [_trigger_path(i) for i in with_coef] + by_n
+    assert [f.value for f in detail.fields[-2:]] == [_now(TRIGGERS, p) for p in by_n]
     exploited = next(f for f in detail.fields if f.path == _trigger_path(EXPLOITED))
     assert exploited.value == _now(TRIGGERS, exploited.path)
     assert "你造的關鍵字被利用時" in exploited.label_zh

@@ -1181,7 +1181,7 @@ def _self_status_choice(status_id: str, draft: Draft, library: ContentLibrary) -
             f"{status.name_zh}只能放在法術技：沒有法術的人不能白拿折扣。"
             "回到「基本設定」把類別改成法術，或改選別的狀態"
         )
-    points = status.budget_points or 0
+    points = library.budget.status_point(status.id) or 0
     description = f"每個有效回合折抵 {points * rule.per_point_permille / 10:g}%"
     if fixed is not None:
         description += (

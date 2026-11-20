@@ -262,7 +262,7 @@ def test_shape_multiplier_table() -> None:
     shapes = lib().ruleset.shapes.by_id()
 
     def mult(shape_id: str, **params: int) -> F:
-        return F(shapes[shape_id].budget.permille_for(dict(params)), 1000)
+        return F(lib().budget.shape_permille(shapes[shape_id], dict(params)), 1000)
 
     assert mult("self") == mult("single") == mult("ground_tile") == 1
     assert mult("line", size=3) == F(14, 10) and mult("line", size=2) == F(12, 10)
@@ -279,7 +279,7 @@ ELEMENTS_9 = ("physical", "fire", "ice", "lightning", "poison", "wind", "earth",
 
 def test_status_and_surface_points_match_the_spec() -> None:
     rules = lib().ruleset
-    statuses = {s.id: s.budget_points for s in rules.statuses.statuses}
+    statuses = {s.id: lib().budget.status_point(s.id) for s in rules.statuses.statuses}
     assert statuses == {
         "defending": 2,  # 2D-1：技能可以施加防禦
         "infused_fire": 6,  # 3I-6：臨時附魔
@@ -367,7 +367,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
         "race_adapt": None,  # 3R-2：只能由人類種族技施加
         "race_stonewall": None,  # 3R-2：只能由矮人種族技施加
     }
-    surfaces = {s.id.value: s.budget_points for s in rules.surfaces.surfaces}
+    surfaces = {s.id.value: lib().budget.surface_point(s.id.value) for s in rules.surfaces.surfaces}
     assert surfaces == {
         "fire": 3,
         "poison": 3,

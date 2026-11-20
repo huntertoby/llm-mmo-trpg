@@ -6,9 +6,10 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from trpg.content.battle import DollLook, SummonLook, UnitTemplate, WeaponDef
+from trpg.content.battle import DollLook, StatusTable, SummonLook, UnitTemplate, WeaponDef
 from trpg.content.dev_starters import DevStarterTable
 from trpg.content.enemy_looks import look_range_problems
+from trpg.content.environment import SurfaceTable
 from trpg.content.flash_templates import FlashTable
 from trpg.content.library.base import _load_dir
 from trpg.content.modifier_changes import (
@@ -21,10 +22,16 @@ from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_keywords import KeywordTable
-from trpg.content.skill_rules import BudgetRules, SkeletonDef
+from trpg.content.skill_rules import (
+    BudgetRules,
+    SkeletonDef,
+    price_table_problems,
+    primitive_points_problems,
+    shape_budget_problems,
+)
 from trpg.content.skill_scaling import SkillScalingRules, scaling_problems
 from trpg.content.skill_triggers import SkillTriggerTable
-from trpg.content.skills import ModifierChange, SkillDef
+from trpg.content.skills import ModifierChange, PrimitiveTable, ShapeTable, SkillDef
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.shared.errors import ContentError
 
@@ -36,6 +43,28 @@ def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: Budg
     if problems:
         lines = "\n".join(f"  - {p}" for p in problems)
         raise ContentError(root / MODIFIER_CHANGES_FILE, f"修正規則的改變種類對不上：\n{lines}")
+
+
+def _check_primitive_points(root: Path, primitives: PrimitiveTable, budget: BudgetRules) -> None:
+    """``skill_budget.yaml`` 的 ``primitive_points`` 與原語表對得上（HC-B）。"""
+    problems = primitive_points_problems(primitives, budget)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"原語點數對不上：\n{lines}")
+
+
+def _check_price_tables(
+    root: Path,
+    tables: tuple[StatusTable, SurfaceTable, ShapeTable],
+    budget: BudgetRules,
+) -> None:
+    """``skill_budget.yaml`` 的狀態、表面點數與形狀倍率對得上狀態表、表面表、形狀表（HC-B）。"""
+    statuses, surfaces, shapes = tables
+    problems = price_table_problems(statuses, surfaces, budget)
+    problems += shape_budget_problems(shapes, budget)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"狀態、表面、形狀的計價對不上：\n{lines}")
 
 
 def _check_unit_races(

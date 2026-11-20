@@ -19,7 +19,8 @@
 #                              control_dr_rounds 輪內對同類別的抵抗判定守方屬性 ×150%；
 #                              hard 類別的狀態施加在 boss 標籤的單位上時依 boss_control_conversion 轉換
 # 2B-2 的預算欄位：
-#   budget_points  技能施加此狀態（預設持續時間）的預算點數；省略表示不能由技能施加（defending）
+#   技能施加此狀態（預設持續時間）的預算點數：HC-B 起在 skill_budget.yaml 的 status_points（原本是這裡的 budget_points）；
+#                  沒列在那裡的狀態不能由技能施加
 #   min_rarity     技能使用此狀態的最低稀有度（省略為 common）
 # 2B-3：
 #   beneficial     對帶有者有益（省略為 false）；光環骨架的核心狀態必須有益
@@ -31,7 +32,7 @@
 #   forces_target       嘲諷：帶有者對「狀態來源以外」的單位發動攻擊時有劣勢；來源倒下或離場時此狀態立即移除。
 #                       刷新時來源改為最新的施放者
 #   absorbs_damage      護盾：狀態帶有吸收量（StatusInstance.amount，由 shield 原語施加），骰值傷害在所有倍率之後、
-#                       扣 HP 之前先扣護盾；吸收量歸零時移除（原因 depleted）。不能由 apply_status 施加（無 budget_points）
+#                       扣 HP 之前先扣護盾；吸收量歸零時移除（原因 depleted）。不能由 apply_status 施加（不在 status_points）
 # 2D-2（負面狀態；數值全是初值，未經模擬，平衡階段再調）：
 #   fear_source              恐懼：帶有者主動移動時，每一步都不能讓自己與狀態來源的曼哈頓距離變小（強制位移照常）；
 #                            攻擊（任何目標）有劣勢；來源倒下或離場時此狀態立即移除。刷新時來源改為最新的施放者
@@ -42,30 +43,30 @@
 # 2E-2（姿態；數值全是初值，未經模擬，平衡階段再調）：
 #   stance   姿態：持續到取消（expires: never、不設 duration），帶有者同時最多一個姿態狀態，施加新的會先移除舊的
 #            （StatusRemoved 原因 replaced）；倒下或撤離時移除；淨化（cleanse）不移除；EndStance 免費取消。
-#            姿態技能（kind: stance）進入時花 core.yaml 的 stance_ap_cost。budget_points 是姿態技能的點數（可用預算 ＝
+#            姿態技能（kind: stance）進入時花 core.yaml 的 stance_ap_cost。status_points 是姿態技能的點數（可用預算 ＝
 #            tier_budget × skill_budget.yaml 的 stance_coefficient_permille）
 # 2H-1（冰凍；數值全是初值，未經模擬，平衡階段再調）：
 #   removed_by_element  元素清單：帶有者受到這些元素的傷害（數值 > 0）時立即移除此狀態
 #                       （StatusRemoved 原因 thawed）。冰凍用 [fire]。引擎不寫死狀態 ID，全由此欄位驅動
 # 3C-4a（改寫規則型原語；初值，未經模擬）：
 #   prevents_death  免死：帶有者受到傷害、HP 會降到 0 時改為 1，並移除此狀態（StatusRemoved 原因 spent，
-#                   事件 death_cheated）。墜落與致命地形照樣生效。只能由 cheat_death 原語施加（無 budget_points）
+#                   事件 death_cheated）。墜落與致命地形照樣生效。只能由 cheat_death 原語施加（不在 status_points）
 # 3C-4b（redirect_damage；初值，未經模擬）：
 #   redirects_damage  靈魂連結：帶有者受到的傷害有 StatusInstance.amount‰ 轉給狀態來源（施放者，直接扣 HP），
-#                     來源倒下或離場時立即移除。只能由 redirect_damage 原語施加（無 budget_points）
+#                     來源倒下或離場時立即移除。只能由 redirect_damage 原語施加（不在 status_points）
 # 3D-1（資源互動）：
 #   polarity  分類：buff 增益（steal_buff 可奪取、dispel 可驅散）／debuff 減益／neutral 中性（姿態、隱蔽、免死、
 #             靈魂連結等帶有來源或唯一性語意的狀態，不能被奪取或驅散）。每個狀態都必須填；buff 必須 beneficial: true、
 #             debuff 不可 beneficial。
 # 3D-8a（揭露）：
 #   prevents_concealment  被揭露：帶有者不算隱蔽（連黑暗表面、草叢也不算），也不能獲得 concealed 狀態。只能由 reveal 原語施加
-#                         （無 budget_points）
+#                         （不在 status_points）
 # 3D-8c（監視射擊）：
 #   overwatch  監視：持續到持有者下回合開始（expires: own_turn_start）；reactions.yaml 的內建反應 overwatch_shot
 #              （requires_status: overwatch）在敵人於射程與視線內完成一步移動時自動普攻一次，之後移除此狀態
 # 3-24a1（武器擴充）：
 #   attack_bonus   戰意（3-33e1）：帶有者的攻擊值加這麼多（戰意；戰意圖騰的光環狀態）
-#   defense_break  破甲：帶有者的防禦值降低 StatusInstance.amount ‰（斧的普攻命中帶入；沒有 budget_points，只能由武器施加）
+#   defense_break  破甲：帶有者的防禦值降低 StatusInstance.amount ‰（斧的普攻命中帶入；不在 status_points，只能由武器施加）
 # 3I-6（臨時附魔，玩法決定 #52；初值，未經模擬）：
 #   attack_element  攻擊元素：帶有者的普攻與沒有自己元素的武器技，物理傷害改成這個元素（優先順序見
 #                   trpg.engine.attack_element：附魔 ＞ 普攻附加詞條 ＞ 武器元素詞條 ＞ 武器本身元素 ＞ 物理）。
@@ -85,14 +86,12 @@ statuses:
     expires: own_turn_start
     stacking: refresh
     beneficial: true
-    budget_points: 2
   - id: prone
     polarity: debuff
     name_zh: 倒地
     description_zh: 移動前要先站起來（消耗部分移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
     expires: never
     stacking: refresh
-    budget_points: 3
     min_rarity: rare
   - id: burning
     polarity: debuff
@@ -101,7 +100,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 3
     on_turn_start_damage:
       dice: 1d6
       element: fire
@@ -112,7 +110,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 3
     min_rarity: rare
     beneficial: true
   - id: revealed
@@ -130,7 +127,6 @@ statuses:
     expires: own_turn_start
     stacking: refresh
     beneficial: true
-    budget_points: 6
     min_rarity: rare
   - id: time_bomb
     polarity: debuff
@@ -247,7 +243,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 3
     move_permille: 500
     save_attr: dex
     control_group: movement
@@ -258,7 +253,6 @@ statuses:
     duration: 1
     expires: turn_end
     stacking: refresh
-    budget_points: 4
     min_rarity: rare
     prevents_move: true
     save_attr: str
@@ -270,7 +264,6 @@ statuses:
     duration: 1
     expires: turn_end
     stacking: refresh
-    budget_points: 8
     min_rarity: rare
     skip_turn: true
     save_attr: con
@@ -282,7 +275,6 @@ statuses:
     duration: 1
     expires: turn_end
     stacking: refresh
-    budget_points: 8
     min_rarity: rare
     skip_turn: true
     save_attr: con
@@ -295,7 +287,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 4
     damage_dealt_permille: 750
     save_attr: con
   - id: vulnerable
@@ -305,7 +296,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 4
     damage_taken_permille: 1250
     save_attr: int
   - id: armor_broken
@@ -316,7 +306,7 @@ statuses:
     expires: turn_end
     stacking: refresh
     defense_break: true
-  # Phase 3I-1：鞭的纏繞（08 8.11）。不擲抵抗、不算控制類別、不能由技能施加（沒有 budget_points）。
+  # Phase 3I-1：鞭的纏繞（08 8.11）。不擲抵抗、不算控制類別、不能由技能施加（不在 status_points）。
   # 由帶有者自己的回合施加時（例如反應攻擊）持續 2，確保作用在「下一個」回合。
   - id: entangled
     polarity: debuff
@@ -334,12 +324,11 @@ statuses:
     duration: 3
     expires: turn_end
     stacking: refresh
-    budget_points: 3
     on_turn_start_damage:
       dice: 1d4
       element: physical
   # Phase 3-50（06 6.5 透支）：技能的代價，施放者自己下一個回合少 1 AP。只能由 cost.overdraft 施加
-  # （沒有 budget_points）；施放當回合結束 −1，剩下的 1 在下一個回合開始時生效、該回合結束移除。
+  # （不在 status_points）；施放當回合結束 −1，剩下的 1 在下一個回合開始時生效、該回合結束移除。
   - id: overdrawn
     polarity: debuff
     name_zh: 透支
@@ -356,7 +345,6 @@ statuses:
     duration: 3
     expires: turn_end
     stacking: refresh
-    budget_points: 3
     healing_received_permille: 500
     on_turn_start_damage:
       dice: 1d4
@@ -369,7 +357,6 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
-    budget_points: 4
     damage_taken_permille: 700
   # Phase 3-54b（06 6.33 大地，#58）：受到的物理骰值傷害 −30%，回合開始時的移動點數 −1（最低 0）。數值放這裡。
   - id: stoneskin
@@ -380,7 +367,6 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
-    budget_points: 3
     physical_taken_permille: 700
     move_delta: -1
   - id: empowered
@@ -391,7 +377,6 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
-    budget_points: 4
     attr_bonus: {str: 20, dex: 20, con: 20, int: 20, wis: 20, wil: 20}
   - id: rallied
     polarity: buff
@@ -401,7 +386,6 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
-    budget_points: 4
     min_rarity: rare
     attack_bonus: 10
   - id: hasted
@@ -412,7 +396,6 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
-    budget_points: 3
     move_permille: 1500
   - id: regenerating
     polarity: buff
@@ -422,7 +405,6 @@ statuses:
     expires: turn_end
     stacking: refresh
     beneficial: true
-    budget_points: 4
     on_turn_start_heal:
       dice: 1d4
   - id: shielded
@@ -459,7 +441,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 3   # 玩法 PM 2026-10-23：加 mental 後由 4 降 3，控制遞減就是代價、不再用預算加價
     save_attr: wil
     control_group: mental   # 玩法 PM 2026-10-23：適用控制遞減，防止嘲諷無限連鎖鎖住 Boss
     forces_target: true
@@ -470,7 +451,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 5
     min_rarity: rare
     save_attr: wis
     control_group: mental
@@ -482,7 +462,6 @@ statuses:
     duration: 1
     expires: turn_end
     stacking: refresh
-    budget_points: 5
     min_rarity: rare
     save_attr: wil
     control_group: mental
@@ -494,7 +473,6 @@ statuses:
     duration: 1
     expires: turn_end
     stacking: refresh
-    budget_points: 4
     min_rarity: rare
     save_attr: wis
     attack_range_cap: 2
@@ -505,7 +483,6 @@ statuses:
     duration: 2
     expires: turn_end
     stacking: refresh
-    budget_points: 4
     save_attr: wis
     grants_advantage_against: true
   - id: stance_fury
@@ -515,7 +492,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 11
     min_rarity: rare
     stance: true
     attr_bonus: {str: 20}
@@ -527,12 +503,11 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 11
     min_rarity: rare
     stance: true
     damage_taken_permille: 750
     move_permille: 500
-  # --- 3W-4b｜白板姿態（06 6.34.1、6.34.9：2 階起）。姿態沒有可調的旋鈕，所以每一階一個狀態，budget_points 對上該階的
+  # --- 3W-4b｜白板姿態（06 6.34.1、6.34.9：2 階起）。姿態沒有可調的旋鈕，所以每一階一個狀態，status_points 對上該階的
   # 預算（姿態技的可用預算 ＝ tier_budget × 1.0：2 階 18、3 階 23；70～100% ＝ 12.6～18 / 16.1～23）。數值為初值，未經模擬。---
   - id: stance_guard
     polarity: neutral
@@ -541,7 +516,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 14
     min_rarity: rare
     stance: true
     damage_taken_permille: 700
@@ -553,7 +527,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 18
     min_rarity: rare
     stance: true
     damage_taken_permille: 600
@@ -565,7 +538,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 14
     min_rarity: rare
     stance: true
     attack_element: fire
@@ -577,7 +549,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 18
     min_rarity: rare
     stance: true
     attack_element: fire
@@ -589,7 +560,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 14
     min_rarity: rare
     stance: true
     attack_element: ice
@@ -601,7 +571,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 18
     min_rarity: rare
     stance: true
     attack_element: ice
@@ -615,7 +584,6 @@ statuses:
     stacking: refresh
     beneficial: true
     min_rarity: rare
-    budget_points: 6
     attack_element: fire
   - id: infused_holy
     polarity: buff
@@ -626,7 +594,6 @@ statuses:
     stacking: refresh
     beneficial: true
     min_rarity: rare
-    budget_points: 6
     attack_element: holy
   # --- BAL-19f 追加（玩法 PM 2026-11-02）：號令型武器技白板的「號令」；數值為初值，未經模擬 ---
   # summon_damage_dealt_permille：帶有者的召喚物造成的攻擊傷害（cause: attack）倍率；持續到帶有者下回合開始（召喚物緊接在召喚者之後行動）
@@ -637,10 +604,9 @@ statuses:
     expires: own_turn_start
     stacking: refresh
     beneficial: true
-    budget_points: 3
     min_rarity: rare
     summon_damage_dealt_permille: 1250
-  # --- 種族技（Phase 3R-2，content/races.yaml；只能由種族技施加，沒有 budget_points；polarity 用 neutral，不能被奪取或驅散）---
+  # --- 種族技（Phase 3R-2，content/races.yaml；只能由種族技施加，不在 status_points；polarity 用 neutral，不能被奪取或驅散）---
   - id: race_adapt
     polarity: neutral
     name_zh: 應變
@@ -666,7 +632,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: physical
@@ -679,7 +644,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: physical
@@ -692,7 +656,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: physical
@@ -705,7 +668,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: physical
@@ -718,7 +680,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: physical
@@ -731,7 +692,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: fire
@@ -744,7 +704,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: fire
@@ -757,7 +716,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: fire
@@ -770,7 +728,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: fire
@@ -783,7 +740,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: fire
@@ -796,7 +752,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: ice
@@ -809,7 +764,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: ice
@@ -822,7 +776,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: ice
@@ -835,7 +788,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: ice
@@ -848,7 +800,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: ice
@@ -861,7 +812,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: lightning
@@ -874,7 +824,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: lightning
@@ -887,7 +836,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: lightning
@@ -900,7 +848,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: lightning
@@ -913,7 +860,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: lightning
@@ -926,7 +872,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: poison
@@ -939,7 +884,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: poison
@@ -952,7 +896,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: poison
@@ -965,7 +908,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: poison
@@ -978,7 +920,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: poison
@@ -991,7 +932,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: wind
@@ -1004,7 +944,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: wind
@@ -1017,7 +956,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: wind
@@ -1030,7 +968,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: wind
@@ -1043,7 +980,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: wind
@@ -1056,7 +992,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: earth
@@ -1069,7 +1004,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: earth
@@ -1082,7 +1016,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: earth
@@ -1095,7 +1028,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: earth
@@ -1108,7 +1040,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: earth
@@ -1121,7 +1052,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: holy
@@ -1134,7 +1064,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: holy
@@ -1147,7 +1076,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: holy
@@ -1160,7 +1088,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: holy
@@ -1173,7 +1100,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: holy
@@ -1186,7 +1112,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 15
     min_rarity: rare
     stance: true
     element_dealt: shadow
@@ -1199,7 +1124,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 17
     min_rarity: rare
     stance: true
     element_dealt: shadow
@@ -1212,7 +1136,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 19
     min_rarity: rare
     stance: true
     element_dealt: shadow
@@ -1225,7 +1148,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 22
     min_rarity: rare
     stance: true
     element_dealt: shadow
@@ -1238,7 +1160,6 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 28
     min_rarity: rare
     stance: true
     element_dealt: shadow
@@ -1252,13 +1173,12 @@ statuses:
     expires: never
     stacking: refresh
     beneficial: true
-    budget_points: 21
     min_rarity: rare
     stance: true
     damage_taken_permille: 550
     move_permille: 500
   # --- 3W-2b｜護盾類大變化（06 6.34.5）：帶附帶效果的護盾是另一個吸收傷害的狀態（shield 效果的 status 參數指定）。
-  # budget_points 是附帶效果的價值（加在護盾效果的點數上）；數值為初值，未經模擬。---
+  # status_points 的點數是附帶效果的價值（加在護盾效果的點數上）；數值為初值，未經模擬。---
   - id: shielded_thorns
     polarity: buff
     min_rarity: rare
@@ -1270,7 +1190,6 @@ statuses:
     beneficial: true
     absorbs_damage: true
     shield_reflect: 20
-    budget_points: 2
   - id: shielded_mending
     polarity: buff
     min_rarity: rare
@@ -1282,7 +1201,6 @@ statuses:
     beneficial: true
     absorbs_damage: true
     shield_end_heal: 30
-    budget_points: 2
   - id: shielded_wet
     polarity: buff
     min_rarity: rare
@@ -1294,7 +1212,6 @@ statuses:
     beneficial: true
     absorbs_damage: true
     shield_break_surface: water
-    budget_points: 1
   - id: shielded_charged
     polarity: buff
     min_rarity: rare
@@ -1306,7 +1223,6 @@ statuses:
     beneficial: true
     absorbs_damage: true
     shield_break_lightning: 30
-    budget_points: 2
   - id: shielded_marking
     polarity: buff
     min_rarity: rare
@@ -1318,9 +1234,8 @@ statuses:
     beneficial: true
     absorbs_damage: true
     shield_break_status: marked
-    budget_points: 2
   # 5C-3 誓約（06 6.26、#27；docs/phases/Phase5計畫.md 24.5，數值初值、開發 PM 定）：加成依難度 3 檔，
-  # 開戰時由引擎掛上、整場不倒數、不能被驅散或奪取；違反時移除並改掛「破誓」2 回合。只由誓約施加（無 budget_points）。
+  # 開戰時由引擎掛上、整場不倒數、不能被驅散或奪取；違反時移除並改掛「破誓」2 回合。只由誓約施加（不在 status_points）。
   - id: oath_bonus_easy
     polarity: neutral
     beneficial: true
@@ -1417,7 +1332,7 @@ statuses:
     stacking: refresh
     beneficial: true
     damage_taken_permille: 500
-  # AP-2（#168，06 6.3「新原語『預支』」）：預支（borrow_ap）的下回合扣回。只能由 borrow_ap 施加（沒有 budget_points）；
+  # AP-2（#168，06 6.3「新原語『預支』」）：預支（borrow_ap）的下回合扣回。只能由 borrow_ap 施加（不在 status_points）；
   # 同透支：施放當回合結束 −1，剩下的 1 在下一個回合開始時扣 amount AP、該回合結束移除。同一回合預支兩次時 amount 相加。
   - id: borrowed_ap
     polarity: debuff
