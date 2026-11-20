@@ -111,7 +111,7 @@
 - **前端**：Node 26 沒有 corepack，一律 `pnpm -C client <build|test|typecheck|gen:api>`；程式裡找 pnpm 的邏輯在 `pnpm_command()`（`src/trpg/cli/frontend.py`，corepack 缺席時退到 pnpm／npx）。
 - **埠**：預覽伺服器不用 8000（使用者的 `trpg serve`）與 8001（本機 LLM）；自己開的 `uv run trpg serve --port <空埠>` 只用它的 PID 關，不用 `pkill`／`killall`（守則 13）。
 - **本機 LLM**：LM Studio（MLX 引擎）＋ `gemma-4-12b-it` 在 `127.0.0.1:1234`；設定 `config/llm.local.toml`（gitignored），跑的時候帶 `TRPG_LLM_CONFIG=config/llm.local.toml`；MLX 不支援 schema `oneOf`，`oneof_as_anyof` 預設開（MAC-2），`uv run trpg llm ping` 會印伺服器接受的 schema 寫法；真模型測試 `uv run pytest -q tests/llm -m llm`。**模型載著時不要跑全量 pytest**（記憶體只剩約 30%）。
-- **全量**：`uv run python scripts/check.py`（`--full` 含 slow 與前端完整組合）；平行數 `TRPG_PYTEST_WORKERS`（預設 8；全量 12～14，全量期間不跑模擬）。2026-11-06 全量：pytest 15217、vitest 3045。兩個 vitest 雜湊快照（`creaturePose.test.ts`、`inkDollSnapshot.test.ts`）在 MAC-1 改成固定 6 位小數，**回 Windows x64 要再跑一次**。
+- **全量**：`uv run python scripts/check.py`（`--full` 含 slow 與前端完整組合）；平行數 `TRPG_PYTEST_WORKERS`（QF-3a 起預設 12；全量期間不跑模擬；pytest 步驟走看門狗 `scripts/run_pytest.py`）。2026-11-06 全量：pytest 15217、vitest 3045。兩個 vitest 雜湊快照（`creaturePose.test.ts`、`inkDollSnapshot.test.ts`）在 MAC-1 改成固定 6 位小數，**回 Windows x64 要再跑一次**。
 - **GitHub Actions CI 只手動觸發**（2026-10-19 使用者決定，額度曾用完）：驗收一律以本機 `check.py` 為準。
 - 專案設定 `.claude/settings.json`（已進 git）：常用指令免確認、檔案編輯自動接受、`PYTHONUTF8=1`。**背景 agent 卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
 - 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第二點派收尾 agent。
@@ -158,7 +158,7 @@
 1. 讀 `CLAUDE.md`（特別是守則 11 節省 token、守則 12 複雜度）。
 2. 讀 `docs/phases/PhaseX計畫.md`——這是你的規格。
 3. 讀規格指定的前一階段報告與 `docs/design/` 主題檔（只讀指定的）。
-4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
+4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`，**一律經看門狗跑：`uv run python scripts/run_pytest.py -q <路徑> -n 8`，不直接 `uv run pytest`**（QF-3a，說明見 `docs/dev/上手-測試.md`；worker 掛掉時回報保留的 `.claude/pm-logs/pytest/` 資料夾）。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
 5. 不要 push。
 6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶 Co-Authored-By 一行（依你的系統提示）。
 7. 撰寫並 commit `docs/phases/PhaseX報告.md`；若新增了複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915），在報告中逐一列出理由。
