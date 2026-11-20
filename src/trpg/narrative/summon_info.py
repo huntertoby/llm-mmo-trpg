@@ -23,6 +23,7 @@ from trpg.content.summons import SummonDef, summon_scaled_hp, summon_spec_hp
 from trpg.engine.ids import BLOCKS_SIGHT_TAG, CONCEALED, IMMOVABLE, PRONE
 from trpg.engine.summons.core import SummonStats
 from trpg.engine.weapon_traits import TRIP_ATTR
+from trpg.shared.range_text import range_text, span
 
 _PERMILLE = 1000
 
@@ -50,9 +51,9 @@ _HIT_WHEN = {
 }
 
 
-def _dice(dice: Dice, flat: int = 0) -> str:
-    text = f"{dice.count}d{dice.sides}"
-    return f"{text}＋{flat}" if flat else text
+def _dice(lib: ContentLibrary, dice: Dice, flat: int = 0) -> str:
+    """量類骰子寫成範圍（X10-3b）：骰面 × ``quantity_scale``，固定值疊在範圍裡。"""
+    return range_text(*span(dice.count, dice.sides, lib.ruleset.core.quantity_scale, flat))
 
 
 def _status(lib: ContentLibrary, status_id: str) -> str:
@@ -111,7 +112,7 @@ def _attack_phrases(lib: ContentLibrary, infusion: SummonInfusion) -> list[str]:
         parts.append(f"普攻命中時在目標格生成「{surface}」表面")
     if infusion.extra_damage is not None:
         element = infusion.extra_element.display_name
-        parts.append(f"普攻命中時另加 {_dice(infusion.extra_damage)} {element}傷害")
+        parts.append(f"普攻命中時另加 {_dice(lib, infusion.extra_damage)} {element}傷害")
     if infusion.trip:
         parts.append(
             f"普攻命中時絆倒目標使其「{_status(lib, PRONE)}」"
@@ -143,12 +144,14 @@ def _pulse_lines(lib: ContentLibrary, template: UnitTemplate) -> list[str]:
         parts.append(f"在腳下生成「{lib.ruleset.surface_def(pulse.surface).name_zh}」表面")
     if pulse.heal_dice is not None or pulse.heal_flat:
         amount = (
-            _dice(pulse.heal_dice, pulse.heal_flat) if pulse.heal_dice else str(pulse.heal_flat)
+            _dice(lib, pulse.heal_dice, pulse.heal_flat)
+            if pulse.heal_dice
+            else str(pulse.heal_flat)
         )
         parts.append(f"治療 {pulse.heal_radius} 格內每個受傷的友方 {amount} HP（不含自己）")
     if pulse.shield_dice is not None or pulse.shield_flat:
         amount = (
-            _dice(pulse.shield_dice, pulse.shield_flat)
+            _dice(lib, pulse.shield_dice, pulse.shield_flat)
             if pulse.shield_dice
             else str(pulse.shield_flat)
         )
@@ -182,7 +185,8 @@ def summon_innate_lines(lib: ContentLibrary, summon: SummonDef) -> tuple[str, ..
             else f"，爆心周圍留下「{rules.surface_def(boom.surface).name_zh}」表面"
         )
         lines.append(
-            f"和敵人相鄰或被打倒時自爆：{boom.radius} 格內的敵人受 {_dice(boom.dice, boom.flat)} "
+            f"和敵人相鄰或被打倒時自爆：{boom.radius} 格內的敵人受"
+            f" {_dice(lib, boom.dice, boom.flat)} "
             f"{boom.element.display_name}傷害{surface}，自己消失"
         )
     if template.platform is not None:
@@ -222,7 +226,11 @@ def summon_behavior_lines(lib: ContentLibrary, summon: SummonDef) -> tuple[str, 
 
 
 def summon_attack_text(
-    summon: SummonDef, stats: SummonStats | None = None, *, power_permille: int | None = None
+    lib: ContentLibrary,
+    summon: SummonDef,
+    stats: SummonStats | None = None,
+    *,
+    power_permille: int | None = None,
 ) -> str:
     """召喚物的普攻（武器名、傷害骰、元素、射程）；不攻擊的為「不攻擊」。``stats`` 是施放者的實際
     值（含多的傷害骰、成長的固定傷害與傷害加成）。"""
@@ -230,7 +238,8 @@ def summon_attack_text(
         return "不攻擊"
     weapon = summon.weapon if stats is None else stats.weapon
     text = (
-        f"{weapon.name_zh}：{_dice(weapon.dice, weapon.flat)} {weapon.element.display_name}傷害"
+        f"{weapon.name_zh}：{_dice(lib, weapon.dice, weapon.flat)}"
+        f" {weapon.element.display_name}傷害"
         f"（射程 {weapon.range}）"
     )
     bonus = 0 if stats is None else stats.bonus_permille
@@ -385,7 +394,7 @@ def summon_info(
         hp_infusion_zh=hp_infusion_text(lib),
         move="不移動" if not acts or speed == 0 else f"{speed} 格",
         defense=summon_defense_text(summon, stats),
-        attack=summon_attack_text(summon, stats, power_permille=spec.power_permille),
+        attack=summon_attack_text(lib, summon, stats, power_permille=spec.power_permille),
         innate=summon_innate_lines(lib, summon),
         behavior=summon_behavior_lines(lib, summon),
         infusion=infusion_hint(lib, acts=acts),

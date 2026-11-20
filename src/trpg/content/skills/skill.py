@@ -108,6 +108,7 @@ from trpg.content.skills.shapes import ShapeDef
 from trpg.content.skills.specs import FollowupSpec, NarrativeDef, Provenance, SkillCost, TriggerSpec
 from trpg.content.skills.variants import VariantSpec, walk_effect
 from trpg.shared.bonus_text import bonus_text
+from trpg.shared.range_text import range_text, span
 from trpg.shared.types import Attribute, Element
 
 if TYPE_CHECKING:
@@ -1433,8 +1434,10 @@ class SkillDef(ContentModel):
                 out.append(line("傷害", "骰值", core.spell_attr_multiplier_permille))
             else:
                 base = "武器骰"
-                if weapon is not None:
-                    base += f" {weapon.dice}" + (f"＋{weapon.flat}" if weapon.flat else "")
+                if weapon is not None:  # X10-3b：武器骰寫成範圍（固定傷害疊在範圍裡）
+                    dice = weapon.dice
+                    low, high = span(dice.count, dice.sides, core.quantity_scale, weapon.flat)
+                    base += f" {range_text(low, high)}"
                 out.append(line("傷害", base, core.basic_attack_attr_multiplier_permille))
                 if weapon is None and weapon_examples:  # 3-55：沒有主角時列例子
                     out.append(f"武器屬性看手上的武器：{weapon_examples}")

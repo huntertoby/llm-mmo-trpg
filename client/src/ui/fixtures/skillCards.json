@@ -21,7 +21,7 @@
   "shape": "單體（射程 5）",
   "condition": null,
   "effects": [
-   "3d6＋智力加成的火焰傷害（敵方），若這一招讓敵人倒下：返還 1 AP、本技能冷卻歸零"
+   "30–180＋智力加成的火焰傷害（敵方），若這一招讓敵人倒下：返還 1 AP、本技能冷卻歸零"
   ],
   "modifiers": [],
   "activation": null,
@@ -150,7 +150,7 @@
      "index": 0,
      "type": "damage",
      "category": "damage",
-     "label": "3d6",
+     "label": "30–180",
      "unit": null,
      "dice": "3d6",
      "multiplier_permille": null,
@@ -379,7 +379,7 @@
   "shape": "單體（射程 6）",
   "condition": null,
   "effects": [
-   "2d6＋意志加成的暗影傷害（敵方）"
+   "20–120＋意志加成的暗影傷害（敵方）"
   ],
   "modifiers": [],
   "activation": null,
@@ -502,7 +502,7 @@
      "index": 0,
      "type": "damage",
      "category": "damage",
-     "label": "2d6",
+     "label": "20–120",
      "unit": null,
      "dice": "2d6",
      "multiplier_permille": null,

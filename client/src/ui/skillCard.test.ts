@@ -45,7 +45,7 @@ describe("第 3 行：效果數字＋元素／縮放", () => {
     const c = card("skill_ash_harvest");
     const line = effectLine(c);
     expect(line.items).toHaveLength(1);
-    expect(line.items[0]).toMatchObject({ icon: "damage", label: "3d6", element: "fire" });
+    expect(line.items[0]).toMatchObject({ icon: "damage", label: "30–180", element: "fire" });
     expect(line.items[0]!.hint).toContain(c.effects[0]!);
     expect(line.items[0]!.hint).toContain("傷害算法");
     expect(line.scaling.map((a) => a.label)).toEqual(["智力"]);

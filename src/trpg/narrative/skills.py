@@ -56,6 +56,7 @@ from trpg.narrative.summon_info import (
     summon_info,
     summon_innate_lines,
 )
+from trpg.shared.range_text import range_text, span
 from trpg.shared.types import Attribute, Element, Surface, rune_name
 from trpg.skillgen.budget import self_status_allowance_permille
 from trpg.skillgen.keywords import (
@@ -126,15 +127,15 @@ KIND_TEXT = {
 _ACTION_TEXT = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
 
-def _dice(dice: Dice) -> str:
-    return f"{dice.count}d{dice.sides}"
+def _dice(lib: ContentLibrary, dice: Dice, flat: int = 0) -> str:
+    """量類骰子寫成範圍（X10-3b）：骰面 × ``quantity_scale`` 再加 ``flat``（2d8 →「20–160」）。"""
+    return range_text(*span(dice.count, dice.sides, lib.ruleset.core.quantity_scale, flat))
 
 
-def _dice_flat(spec: EffectSpec) -> str:
-    """骰子，帶固定值加成時接「＋n」（BAL-12b）。"""
+def _dice_flat(lib: ContentLibrary, spec: EffectSpec) -> str:
+    """效果的骰子範圍，固定值加成（BAL-12b）疊在範圍裡。"""
     assert spec.dice is not None
-    flat = f"＋{spec.flat_bonus}" if spec.flat_bonus else ""
-    return f"{_dice(spec.dice)}{flat}"
+    return _dice(lib, spec.dice, spec.flat_bonus or 0)
 
 
 def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
@@ -349,7 +350,7 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
     if skill.category == "spell":
         assert spec.dice is not None and spec.element is not None
         attr, element = scaling_label(skill, lib), spec.element.display_name
-        text = f"{_dice_flat(spec)}＋{attr}加成的{element}傷害"
+        text = f"{_dice_flat(lib, spec)}＋{attr}加成的{element}傷害"
         if skill.damage_permille is not None:
             text += f"（基礎傷害 ×{discount / 1000:g}）"
     else:
@@ -390,7 +391,7 @@ def _on_kill_text(lib: ContentLibrary, skill: SkillDef, sub: EffectSpec) -> str:
 
 def _heal(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
-    text = f"治療 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
+    text = f"治療 {_dice_flat(lib, spec)}＋{scaling_label(skill, lib)}加成"
     if spec.form_bonus_permille is not None:
         text += f"（{_form_bonus_text(spec)}）"
     return text
@@ -406,7 +407,7 @@ def _push_pull(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     text = f"{'推開' if spec.type == 'push' else '拉近'} {spec.distance} 格"
     notes: list[str] = []
     if spec.collision_dice is not None:
-        notes.append(f"撞擊傷害 {_dice(spec.collision_dice)}")
+        notes.append(f"撞擊傷害 {_dice(lib, spec.collision_dice)}")
     if spec.type == "push" and is_wind_skill(skill):
         notes.append(wind_collision_text(lib))
     if notes:
@@ -593,11 +594,12 @@ def miss_text(lib: ContentLibrary, skill: SkillDef) -> str | None:
 
 
 def _charge_through(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
+    assert spec.dice is not None  # 參數表要求 dice（3D-2c）
     after = (
         f"擊倒（{contest_label(skill, lib)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
     )
     return (
-        f"沿直線衝向目標格：沿途每個敵人各擲命中，命中受 {spec.dice} 物理傷害並{after}"
+        f"沿直線衝向目標格：沿途每個敵人各擲命中，命中受 {_dice(lib, spec.dice)} 物理傷害並{after}"
         "（隊友讓路；不觸發藉機攻擊；目標格的敵人背後被擋住時另受一次撞擊）"
     )
 
@@ -668,7 +670,7 @@ def _strength_text(lib: ContentLibrary, status: StatusDef, magnitude: int) -> st
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
     status = lib.ruleset.status_def(SHIELD_STATUS)
-    amount = "" if spec.dice is None else f"{_dice_flat(spec)}＋"
+    amount = "" if spec.dice is None else f"{_dice_flat(lib, spec)}＋"
     rounds = spec.duration or status.duration
     return (
         f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {rounds} 回合；"
@@ -759,9 +761,9 @@ def _absorb_surface(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
         stack = lib.ruleset.stack_def(spec.stack)
         gain = f"累積 {spec.amount} {stack.unit_zh}「{stack.name_zh}」"
     elif spec.gain == "heal":
-        gain = f"治療自己 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
+        gain = f"治療自己 {_dice_flat(lib, spec)}＋{scaling_label(skill, lib)}加成"
     else:
-        gain = f"護盾 {_dice_flat(spec)}＋{scaling_label(skill, lib)}加成"
+        gain = f"護盾 {_dice_flat(lib, spec)}＋{scaling_label(skill, lib)}加成"
     return f"吸走{where}{what}，換成{gain}；沒有可吸的表面時沒有收益"
 
 
@@ -786,11 +788,12 @@ def _sacrifice_summon(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) ->
     if spec.element is not None:
         return (
             f"獻祭你的一個召喚物，在它的位置爆炸：{scope}的敵人自動命中，受到"
-            f" {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的{spec.element.display_name}傷害"
+            f" {_dice(lib, spec.dice)}＋{scaling_label(skill, lib)}加成的"
+            f"{spec.element.display_name}傷害"
         )
     return (
         f"獻祭你的一個召喚物，在它的位置化為治療：{scope}的友方回復"
-        f" {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的 HP"
+        f" {_dice(lib, spec.dice)}＋{scaling_label(skill, lib)}加成的 HP"
     )
 
 
@@ -800,11 +803,12 @@ def _detonate_runes(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
     if spec.scope == "target_cell":
         return (
             f"引爆被命中目標所在格上你自己的符文（只引爆那 1 格）：移除符文，並對站在上面的單位"
-            f"自動命中，造成 {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的{element}傷害"
+            f"自動命中，造成 {_dice(lib, spec.dice)}＋{scaling_label(skill, lib)}加成的"
+            f"{element}傷害"
         )
     return (
         f"引爆影響範圍內你自己的符文：每格移除符文，並對站在上面的單位自動命中，造成"
-        f" {_dice(spec.dice)}＋{scaling_label(skill, lib)}加成的{element}傷害"
+        f" {_dice(lib, spec.dice)}＋{scaling_label(skill, lib)}加成的{element}傷害"
     )
 
 
@@ -820,7 +824,7 @@ def _overload_text(lib: ContentLibrary, stack: StackDef) -> str:
     for sub in overload.backlash:
         if sub.type == "damage":
             assert sub.dice is not None and sub.element is not None
-            backlash.append(f"受到 {_dice(sub.dice)} {sub.element.display_name}傷害（不致命）")
+            backlash.append(f"受到 {_dice(lib, sub.dice)} {sub.element.display_name}傷害（不致命）")
         else:
             assert sub.status is not None
             backlash.append(f"獲得「{lib.ruleset.status_def(sub.status).name_zh}」")
@@ -996,7 +1000,7 @@ def _delayed_damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
     where = "，只波及目標自己" if not spec.radius else f"，波及半徑 {spec.radius} 格內的所有單位"
     return (
         f"在目標身上綁定時炸彈（{lib.ruleset.status_def('time_bomb').name_zh}）：{spec.rounds} 次"
-        f"環境回合後在目標當下的位置爆炸{where}（敵我不分），{_dice(spec.dice)}＋"
+        f"環境回合後在目標當下的位置爆炸{where}（敵我不分），{_dice(lib, spec.dice)}＋"
         f"{scaling_label(skill, lib)}加成的{spec.element.display_name}傷害；目標倒下時立即爆炸；"
         "可被淨化移除"
     )
@@ -1004,7 +1008,7 @@ def _delayed_damage(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> s
 
 def _hurl_object(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
-    text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(spec.dice)} 物理傷害"
+    text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(lib, spec.dice)} 物理傷害"
     if spec.knock_prone:
         text += f"並擊倒（{contest_label(skill, lib)}對抗）"
     return text + "；油桶落地爆炸、可破壞的物件碎掉"
@@ -1014,7 +1018,7 @@ def _topple(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     core = lib.ruleset.core
     return (
         f"推倒石柱或枯樹，往遠離自己的方向壓住 {core.topple_length} 格"
-        f"（{_dice(core.topple_damage_dice)} 物理傷害並倒地）"
+        f"（{_dice(lib, core.topple_damage_dice)} 物理傷害並倒地）"
     )
 
 

@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from tests.engine.helpers import library
+from tests.engine.helpers import card_dice, library
 from trpg.content.flash_templates import FlashTemplate
 from trpg.content.skills import SkillDef
 from trpg.narrative.skills import effect_summary
@@ -251,7 +251,9 @@ def test_flat_bonus_counts_in_budget_and_card_text() -> None:
     data["effects"][0]["flat_bonus"] = 1
     plus = SkillDef.model_validate(data)
     assert skill_budget(plus, lib).total > skill_budget(skill, lib).total
-    assert "＋1＋" in effect_summary(lib, plus, plus.effects[0])
+    base = effect_summary(lib, skill, skill.effects[0])
+    text = effect_summary(lib, plus, plus.effects[0])  # X10-3b：固定值疊在範圍裡（兩端各 +1）
+    assert text != base and text.startswith(card_dice(plus.effects[0].dice, 1))
 
 
 def test_flat_bonus_is_spell_only() -> None:

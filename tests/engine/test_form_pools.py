@@ -160,7 +160,7 @@ def test_the_pounce_dashes_and_the_form_adds_exactly_thirty_percent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     always(monkeypatch, d20=15, die=1)
-    (line,) = [x for x in _card_lines(POUNCE) if "3d4" in x]
+    (line,) = [x for x in _card_lines(POUNCE) if "30–120" in x]
     assert "若你在形態中，整體 +30%" in line and len(_card_lines(POUNCE)) == 2  # 衝鋒＋一筆傷害
     bonus = effective_attribute(library().ruleset, arena([POUNCE]).units[U1], Attribute.STR)
     foes = ((6, 3),)

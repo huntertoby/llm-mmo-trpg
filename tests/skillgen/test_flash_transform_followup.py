@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.engine.helpers import answered, give_turn, library
+from tests.engine.helpers import answered, card_dice, give_turn, library
 from tests.skillgen.test_flash_major import _battle, _dice_count
 from trpg.content.skills import SkillDef
 from trpg.engine import resolve
@@ -72,7 +72,7 @@ def test_followup_damage_becomes_the_transformed_damage(base_id: str, template: 
     card = skill_card(lib, skill)  # 卡片上的骰子＝技能資料的骰子
     for effect in damage:
         assert effect.dice is not None
-        assert str(effect.dice) in " ".join(card.effects)
+        assert card_dice(effect.dice, effect.flat_bonus or 0) in " ".join(card.effects)
 
 
 def test_charged_cleave_stance_uses_the_offense_ladder() -> None:

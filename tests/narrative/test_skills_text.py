@@ -51,7 +51,7 @@ def test_repeated_hits_are_not_listed_twice() -> None:
     skill = base.model_copy(update={"effects": (half, half, *base.effects[1:])})
     card = skill_card(lib, skill)
     assert len(card.effects) == len(skill.effects) == len(card.effect_ids)
-    assert card.effects[0].startswith("第 1 擊：1d8") and card.effects[1] == "第 2 擊：同上"
+    assert card.effects[0].startswith("第 1 擊：10–80") and card.effects[1] == "第 2 擊：同上"
     assert len(set(card.effects)) == len(card.effects)
 
 

@@ -63,7 +63,7 @@ def test_skills_show_prints_the_full_content_and_an_effect_summary(
     assert out.splitlines()[0] == "灰燼誓約（skill_ashen_oath）"
     assert "骨架 area" in out and "縮放屬性 智力" in out
     assert "形狀 錐形（大小 3）" in out
-    assert "2d6＋智力加成的火焰傷害（敵方）" in out
+    assert "20–120＋智力加成的火焰傷害（敵方）" in out
     assert "生成「火焰」表面 2 回合（影響的格子）" in out
     assert f"代價 AP 2，法力 {_ashen_mana()}，冷卻 2 回合" in out
 

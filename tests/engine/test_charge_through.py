@@ -636,7 +636,7 @@ def test_the_skill_text_explains_both_on_hit_effects() -> None:
     sk_prone, sk_aside = skill(PRONE_HIT), skill(ASIDE_HIT)
     prone = effect_summary(lib, sk_prone, sk_prone.effects[0])
     aside = effect_summary(lib, sk_aside, sk_aside.effects[0])
-    assert "擊倒" in prone and "沿途每個敵人各擲命中" in prone and "2d6" in prone
+    assert "擊倒" in prone and "沿途每個敵人各擲命中" in prone and "20–120" in prone
     assert "推到路徑旁" in aside
 
 

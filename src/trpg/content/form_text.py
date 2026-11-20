@@ -9,6 +9,7 @@ from trpg.content.forms import CHOSEN, FormDef, FormEntry, FormTable
 from trpg.content.rules import CoreRules
 from trpg.shared.bonus_text import bonus_text
 from trpg.shared.fmt import signed_zh
+from trpg.shared.range_text import range_text, span
 from trpg.shared.types import Attribute, Element
 
 __all__ = [
@@ -79,7 +80,13 @@ def natural_weapon_text(
     extra = f"，{element}傷害" if element else ""
     bonus = f"，天生武器傷害 {_percent(weapon.damage_permille)}" if weapon.damage_permille else ""
     traits = "".join(f"，{line}" for line in natural_trait_lines(form))
-    return f"{weapon.name_zh} {weapon.dice} {reach}（{scale}）{extra}{bonus}{traits}"
+    dice = _dice_range(weapon.dice.count, weapon.dice.sides, core.quantity_scale)  # X10-3b
+    return f"{weapon.name_zh} {dice} {reach}（{scale}）{extra}{bonus}{traits}"
+
+
+def _dice_range(count: int, sides: int, scale: int) -> str:
+    """量類骰子寫成範圍（X10-3b）：「熊爪 10–80」。"""
+    return range_text(*span(count, sides, scale))
 
 
 def natural_trait_lines(form: FormDef) -> list[str]:
@@ -124,10 +131,15 @@ def form_effect_lines(form: FormDef, *, chosen: Element | None = None) -> list[s
 
 
 def form_entry_lines(
-    entry: FormEntry, *, chosen: Element | None = None, dice_permille: int = _PERMILLE
+    entry: FormEntry,
+    *,
+    chosen: Element | None = None,
+    dice_permille: int = _PERMILLE,
+    scale: int = 1,
 ) -> list[str]:
     """進入獎勵（資料順序固定）。``dice_permille``：形態幅度（BAL-2c）給骰子類（範圍傷害、相鄰治療）
-    的倍率，不是 1000 時附「×N%」（和引擎同一個倍率）。"""
+    的倍率，不是 1000 時附「×N%」（和引擎同一個倍率）。``scale``：量類倍率（``quantity_scale``），
+    骰子寫成範圍（X10-3b）。"""
     times = "" if dice_permille == _PERMILLE else f" ×{dice_permille / 10:g}%"
     lines: list[str] = []
     if entry.shield_max_hp_permille is not None:
@@ -147,14 +159,15 @@ def form_entry_lines(
     if entry.burst is not None:
         b = entry.burst
         element = _element_text(b.element, chosen)
-        lines.append(f"{b.radius} 格內的敵人受 {b.dice} {element}傷害{times}")
+        dice = _dice_range(b.dice.count, b.dice.sides, scale)
+        lines.append(f"{b.radius} 格內的敵人受 {dice} {element}傷害{times}")
     if entry.collision_permille:
         lines.append(f"本回合你造成的撞擊傷害 {_percent(entry.collision_permille)}")
     if entry.heal_adjacent is not None:
         h = entry.heal_adjacent
-        lines.append(
-            f"治療相鄰友方 {h.dice}＋{h.attr.display_name} × {h.attr_permille / _PERMILLE:g}{times}"
-        )
+        dice = _dice_range(h.dice.count, h.dice.sides, scale)
+        attr = f"{h.attr.display_name} × {h.attr_permille / _PERMILLE:g}"
+        lines.append(f"治療相鄰友方 {dice}＋{attr}{times}")
     return lines
 
 
@@ -184,7 +197,7 @@ def form_sentence(
     effects = form_effect_lines(form)
     if effects:
         parts.append("形態中：" + "、".join(effects))
-    entry = form_entry_lines(form.entry, dice_permille=magnitude)
+    entry = form_entry_lines(form.entry, dice_permille=magnitude, scale=core.quantity_scale)
     if entry:
         parts.append("進入時：" + "、".join(entry))
     parts.append(upkeep_text(table, form))

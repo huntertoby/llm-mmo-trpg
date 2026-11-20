@@ -11,6 +11,7 @@ import pytest
 
 from tests.engine.helpers import (
     answered,
+    card_dice,
     caster_template,
     give_turn,
     library,
@@ -194,7 +195,7 @@ def test_every_transform_is_valid_and_within_the_budget_window(template: str) ->
     assert lib.ruleset.with_skills([skill]).skills.by_id()[skill.id] == skill
     for effect in skill.effects:  # 卡片上的骰子＝技能資料的骰子
         if effect.dice is not None:
-            assert str(effect.dice) in " ".join(card.effects)
+            assert card_dice(effect.dice, effect.flat_bonus or 0) in " ".join(card.effects)
 
 
 def _dice_count(skill: SkillDef) -> int:

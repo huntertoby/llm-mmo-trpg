@@ -307,7 +307,7 @@ def _seed_battle(skill: SkillDef, foes: list[tuple[int, int]], **kw: Any) -> Any
 def test_quake_wave_card_matches_the_fight(monkeypatch: pytest.MonkeyPatch) -> None:
     skill = LIB.skills["skill_quake_wave"]
     lines = [effect_summary(LIB, skill, e) for e in skill.effects]
-    assert "1d8" in lines[0] and "大地" in lines[0]
+    assert "10–80" in lines[0] and "大地" in lines[0]
     assert "震波" in lines[1] and "先命中" in lines[1]
     skill = skill.model_copy(update={"id": SID})
     state = _seed_battle(skill, [(4, 3), (5, 3), (3, 6)])
