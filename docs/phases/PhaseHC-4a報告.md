@@ -178,3 +178,16 @@ boss_phases:                  # 開場階段＋1～3 次轉換
 ## 7. 平衡疑慮（無）
 
 沒有。只換數字放的地方，78 場戰鬥逐字相同。
+
+## 開發 PM 裁定（2026-11-21）
+
+通過，已用 --no-ff 合併。和 HC-3 只有 `寫死數值-清單.md` 衝突，用 `classify.py --md` 重產解決；main 上 `--check` 是 0，`tests/test_hardcoded_scan.py` 和 `tests/api/tuning` 也是 0。
+
+待決五件：
+1. **「有某欄才用到」的欄位改成用到時必填**：同意，比在 18 處寫用不到的值好。`ruleset_hash` 因此改變，可以接受。
+2. **6 筆改判 const**：同意，命中表的數學和說明範例都不是可調的數值。
+3. **`_check_tier_budget` 的 1～5**：併進 HC-4b，和 `SkillDef.tier` 一起搬。
+4. **工坊只開 1 欄**：同意。`forms.yaml`、`rules/equipment.yaml`、`item_gen.yaml` 開進工坊另排一段，接在 HC-B 之後。
+5. **舊戰鬥紀錄相容**：接受。舊存檔已在 11-20 換季時清掉並備份。
+
+另外，`classes.yaml` 戰鬥核心 6 條逐檔 done 規則：HC-4b 把這 6 條刪掉，讓之後新寫的預設值會被掃描抓到，不要被當成 done 放過。
