@@ -1099,47 +1099,6 @@ rules:
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
-  - id: py-content-battle-config-number
-    class: config
-    status: done
-    files: src/trpg/content/battle.py
-    kind: number
-    where:
-      - '<module>.GIANT_FOOTPRINTS'
-      - '<module>.PHASES_MAX'
-      - '<module>.PHASES_MIN'
-      - '<module>._MAX_DICE_COUNT'
-      - '<module>._MAX_DURATION_BONUS'
-      - 'ArmorBreak'
-      - 'BlockBonus'
-      - 'BossPhase'
-      - 'CreatureLook'
-      - 'DeathSurfaceSpec'
-      - 'DollLook'
-      - 'Entangle'
-      - 'FormationSpec'
-      - 'HpBelowTrigger'
-      - 'OffhandDef'
-      - 'OpeningStatus'
-      - 'PhaseGrowSurface'
-      - 'PhaseSpawn'
-      - 'PhaseTile'
-      - 'RangeMod'
-      - 'RoundTrigger'
-      - 'ShareDamageSpec'
-      - 'StatusDef'
-      - 'Steady'
-      - 'SummonDetonate'
-      - 'SummonHitRule'
-      - 'SummonPulse'
-      - 'SummonSnare'
-      - 'TagDownTrigger'
-      - 'TotemSpec'
-      - 'UnitTemplate'
-      - 'WardSpec'
-      - 'WeaponDef'
-      - 'weapon_attr_examples_zh'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-composer-rules-config-number
     class: config
     status: todo
@@ -1191,23 +1150,6 @@ rules:
       - 'WeatherDef._mods'
       - 'ZoneAiRules'
     note: 同上一條（content config）。
-  - id: py-content-equipment-config-number
-    class: config
-    status: done
-    files: src/trpg/content/equipment.py
-    kind: number
-    where:
-      - '<module>.MIN_COMBO_N'
-      - 'AttackAffix'
-      - 'ChargeAffix'
-      - 'CostAffix'
-      - 'EquipmentCaps'
-      - 'EquipmentRules'
-      - 'ItemDef'
-      - 'ReactionAffix'
-      - 'TriggerAffix'
-      - 'WeaponTraitAffix'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-fields-config-number
     class: config
     status: todo
@@ -1236,32 +1178,6 @@ rules:
       - 'PriceRule'
       - 'TransformTemplate'
     note: 同上一條（content config）。
-  - id: py-content-forms-config-number
-    class: config
-    status: done
-    files: src/trpg/content/forms.py
-    kind: number
-    where:
-      - '<module>.MAX_MAGNITUDE'
-      - '<module>._MAX_ATTRS'
-      - '<module>._MAX_MELEE_RANGE'
-      - 'EntryBurst'
-      - 'EntryHealAdjacent'
-      - 'FormEffects'
-      - 'FormEntry'
-      - 'FormTable'
-      - 'NaturalCharge'
-      - 'NaturalTraits'
-      - 'NaturalWeapon'
-      - 'TakenMod'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-item-budget-config-number
-    class: config
-    status: done
-    files: src/trpg/content/item_budget.py
-    kind: number
-    where: ['ItemGenRules', 'RarityRule']
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-loader-config-number
     class: config
     status: todo
@@ -1276,18 +1192,6 @@ rules:
     kind: number
     where: ['<module>.MAX_HEIGHT', '<module>._MAX_SIZE', 'TileChange']
     note: 同上一條（content config）。
-  - id: py-content-parts-config-number
-    class: config
-    status: done
-    files: src/trpg/content/parts.py
-    kind: number
-    where:
-      - '<module>.PARTS_MAX'
-      - '<module>.PARTS_MIN'
-      - '<module>.PART_HP_TOTAL_MAX'
-      - 'BossPart'
-      - 'ControlBreak'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-races-config-number
     class: config
     status: todo
@@ -1326,24 +1230,6 @@ rules:
     where: CoreRules._check_tier_budget
     note: 保守：tier_budget 的鍵要剛好是階級 1～5＝「技能 5 個階級」的規則（同 SkillDef.tier ≤ 5）；HC-4b 和
       SkillDef.tier 一起搬到 core.yaml 的 skill_limits.tiers（0 筆）。
-  - id: py-content-rules-config-number
-    class: config
-    status: done
-    files: src/trpg/content/rules.py
-    kind: number
-    where:
-      - '<module>._DECIMAL_PRECISION'
-      - '<module>._ROLE_HP_RANGE'
-      - 'AttributePerks'
-      - 'CoreRules'
-      - 'CoreRules._check_tier_budget'
-      - 'ResourceRules'
-      - 'SummonGrowth'
-      - 'SummonInfusion'
-      - 'SummonTrait'
-      - 'WindRules'
-      - 'compute_hit_thresholds'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
   - id: py-content-skill-evolution-config-number
     class: config
     status: todo
