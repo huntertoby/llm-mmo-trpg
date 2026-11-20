@@ -130,3 +130,30 @@
 3. **掛掉的測試直接記失敗、不重跑**：同意。偶發問題要讓人看到，不要被重跑蓋掉。
 4. **看門狗門檻**：維持 10 分鐘。最慢的單一測試上限是 300 秒，10 分鐘留了足夠的餘裕。
 5. **worker 掛掉的原因**：下次掛掉時，照報告 3.2 節讀 `.stacks`／`.trace`。
+
+## 追加：合併後 push hook 擋下（2026-11-21，commit `aa1e001a3`）
+
+開發 PM 回報：合併後推送前檢查（12 workers）`test_loadgroup_finishes_after_a_worker_crash` 90 秒沒跑完；在 main 單獨跑 3 次，`test_loadgroup_survives_two_workers_crashing_together` 3 次都失敗（2 次 INTERNALERROR、1 次 `['second'] == ['first', 'second']`）。
+
+**原因（三個）**
+
+1. **修正本身還有一個時序漏洞（第四個 xdist 問題）**：兩個 worker 幾乎同時掛掉時，master 處理第一個 node down、補排工作時，把工作送給另一個「已經死了、但 master 還沒收到它的 node down」的 worker，管線已關，`send_runtest_some` 丟 `OSError`（Errno 22／`cannot send (already closed?)`），master INTERNALERROR。PM 的留證 `20261121-011328-26636`、`-011436-5276` 就是這個。xdist 自己的 `shutdown()` 有接 `OSError`，送工作那條沒接。
+2. **示範檔的紀錄方式有競態**：兩個 worker 同時用附加模式寫同一個 `crash_runs.txt`，Windows 上兩邊都寫在檔頭、互相蓋掉，所以只剩 `second`（`-011452-50788`）。不是排程的問題。
+3. **90 秒沒跑完**：子程序輸出接 PIPE 用 `communicate()`，要等所有拿著管線的程序都關掉才返回；若有殘留的 worker 拿著管線，即使 master 已結束也會等滿。那次的暫存資料夾已被 pytest 清掉，沒能確認是這個還是第 1 點的 INTERNALERROR 之後沒收尾；兩者都已處理。
+
+**修法**
+
+- `tests/xdist_loadgroup.py`：覆寫 `_assign_work_unit`，送不出去時把那個工作單位收回、放回佇列最前面，把該 worker 記成送不到、之後不再排給它；它的 node down 照常處理（掛掉時在跑的測試照樣記失敗）。
+- 示範檔每次掛掉前各寫一個 `crash_runs/<名稱>.<pid>`。
+- 測試輸出改寫到檔案、`proc.wait()` 等 master 本身；上限 90 → 240 秒（測試本身 `timeout(290)`，子程序逾時時由測試用 PID 收樹，失敗訊息附到那時為止的輸出）。沒有改標 slow，也沒拿掉測試。
+
+**驗證**
+
+| 項目 | 結果 |
+|---|---|
+| 壓力：同時 12 份小測試組（兩種 crash 示範輪流）× 3 輪，**舊修正** | 36 次中 2 次 INTERNALERROR（都是兩個 worker 同時掛掉那種），重現了 |
+| 同上，**新修正** | 36 次 0 失敗 |
+| 同時 16 份 × 6 輪，新修正 | 96 次 0 失敗 |
+| `run_pytest.py -q tests/infra/test_xdist_loadgroup.py` 單獨連跑 10 次 | 10 次都 3 passed（每次約 15 秒） |
+| `scripts/check.py`（12 workers，在 `aa1e001a3`） | 0；17687 passed, 8 skipped，pytest 691 秒；ruff、format、mypy、lint-imports、前端都 0 |
+| `run_pytest.py -q -n 12 tests/infra tests/api` 連跑 2 次 | 2 次都 0（1377 passed, 1 skipped，各約 115 秒） |
