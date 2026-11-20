@@ -566,6 +566,7 @@ groups:
       - status_points.*                           # HC-B：狀態的預算點數（從 statuses.yaml 搬來）
       - surface_points.*                          # HC-B：表面的預算點數（從 surfaces.yaml 搬來）
       - shape_budget.*.*                          # HC-B：形狀倍率（‰，從 skill_shapes.yaml 搬來）
+      - shape_budget.*.*.*                        # HC-W2：形狀倍率查表 by_value、non_power_by_value（‰，鍵＝參數值）
       - range_baseline
       - range_step_permille
       - rarity.*.max_effects

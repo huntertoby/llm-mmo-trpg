@@ -1,7 +1,7 @@
 # 技能預算的規則數值（docs/phases/Phase2B計畫.md 4.2–4.3、4.6）。‰＝千分比（1000 = ×1）。
 # 階級預算 tier_budget 與武器基準傷害 budget_reference_weapon_damage 在 rules/core.yaml；
 # HC-B 起原語的基礎點數（primitive_points）、狀態與表面的點數（status_points、surface_points）、形狀倍率（shape_budget）
-# 都在這個檔（開放數值工坊）；依參數值查表的形狀倍率在 skill_shapes.yaml、協同係數在 skill_synergies.yaml。
+# 都在這個檔（開放數值工坊；HC-W2 起依參數值查表的形狀倍率 by_value 也在這裡）；協同係數在 skill_synergies.yaml。
 #
 #   可用預算 ＝ tier_budget[階級] × AP 係數 × (1000 ＋ 代價折抵) ÷ 1000
 #   合格     ＝ min_ratio ≤ total ÷ 可用預算 ≤ max_ratio
@@ -131,18 +131,24 @@ primitive_points:
   enter_form: 11       # 進入形態（固定）
 # HC-B：形狀倍率（‰），從 skill_shapes.yaml 的 budget 搬來（值不變；開放數值工坊）。順序同形狀表。
 #   倍率 ＝ base_permille ＋ per_unit_permille × 參數值（參數見 skill_shapes.yaml 的 budget.param）；
-#   錐形、十字、環形、連鎖依參數值查表（表留在 skill_shapes.yaml），base_permille 只在參數沒填時用。
+#   錐形、十字、環形、連鎖依參數值查表 by_value（HC-W2 從 skill_shapes.yaml 的 by_value_permille 搬來，值不變；
+#   鍵是參數值：錐形 size、十字 arm、環形 radius、連鎖 jumps，必須涵蓋參數的整個範圍），base_permille 只在
+#   參數沒填時用（例：陷阱的十字範圍）。連鎖的 non_power_by_value（BAL-13d）：不在 power_primitives（形狀表）
+#   的效果（狀態、推擊、表面……照常施加、不衰減）改查這張表。
 #   只套用在對象為 enemies／allies／all／tiles 的效果（affects: self 與 teleport 一律 1.0）。
 shape_budget:
   self:             {base_permille: 1000}   # 自身
   single:           {base_permille: 1000}   # 單體
   line:             {base_permille: 800, per_unit_permille: 200}   # 直線
-  cone:             {base_permille: 1000}   # 錐形（查表）
-  cross:            {base_permille: 1800}   # 十字（查表）
+  cone:             {base_permille: 1000, by_value: {2: 1300, 3: 1600, 4: 2000}}   # 錐形（依長度 size 查表）
+  cross:            {base_permille: 1800, by_value: {1: 1800, 2: 2000}}   # 十字（依臂長 arm 查表；臂長 2 的初值見 skill_shapes.yaml）
   square3:          {base_permille: 2000}   # 方陣
-  ring:             {base_permille: 1000}   # 環形（查表）
+  ring:             {base_permille: 1000, by_value: {1: 1800, 2: 2200}}   # 環形（依半徑 radius 查表）
   ground_tile:      {base_permille: 1000}   # 指定格
-  chain:            {base_permille: 1000}   # 連鎖（查表）
+  chain:   # 連鎖（依跳數 jumps 查表；BAL-13c 威力衰減、BAL-13d 非威力效果的說明見 skill_shapes.yaml）
+    base_permille: 1000
+    by_value: {1: 1188, 2: 1313, 3: 1375}
+    non_power_by_value: {1: 1250, 2: 1500, 3: 1750}
   allies_in_radius: {base_permille: 1000, per_unit_permille: 400}   # 範圍光環
   object_then_tile: {base_permille: 1000}   # 物件與落點
   unit_then_tile:   {base_permille: 1000}   # 單位與落點

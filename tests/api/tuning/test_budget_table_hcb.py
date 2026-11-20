@@ -136,10 +136,6 @@ def test_every_number_in_the_budget_file_is_open_or_listed_as_structure(
         "terrain_area_rarity[",
         "retier_growth.",
         "allowance.self_status.fixed_duration.",
-        "shape_budget.cone.",
-        "shape_budget.cross.",
-        "shape_budget.ring.",
-        "shape_budget.chain.",
     )
     closed: list[str] = []
 
