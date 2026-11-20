@@ -140,10 +140,13 @@ TABLE_NAMES_ZH: Final = {
     "skill_composer": "技能組合器的附帶配方（全體共用）",
     "skill_conditions": "技能條件的預算倍率（全體共用）",
     "skill_synergies": "技能協同係數（全體共用）",
+    "forms": "形態（全體共用）",
+    "equipment": "裝備規則（全體共用）",
+    "item_gen": "物品生成（全體共用）",
 }
 """全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
 ``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``；HC-B 加
-``skill_conditions``、``skill_synergies``）。"""
+``skill_conditions``、``skill_synergies``；HC-W2 加 ``forms``、``equipment``、``item_gen``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -193,6 +196,22 @@ TABLE_NOTES_ZH: Final = {
         "這份是技能協同係數表（skill_synergies.yaml）：技能同時帶有一條規則的全部機制標籤時，"
         "總點數乘上該係數（符合多條時全部相乘）。",
         "越大，帶這組機制的招算得越貴、其他效果越弱（HC-B）。標籤組合是結構，不開。",
+    ),
+    "forms": (
+        "這份是全體共用的形態表（forms.yaml）：改一個值，敵我所有會變身的單位一起變。",
+        "開放維持費、冷卻，以及每個形態的天生武器、形態中的效果與進入時的獎勵（HC-W2）；"
+        "只展開已經寫的數值，沒寫的機制不能從這裡加。形態技能的預算不看這些數字。",
+    ),
+    "equipment": (
+        "這份是全體共用的裝備規則（rules/equipment.yaml）：同名詞條的遞減與全身的硬上限，"
+        "所有角色的裝備一起套用。",
+        "總減傷上限要和核心戰鬥規則的元素修正下限一致，這裡不開（HC-W2）。",
+    ),
+    "item_gen": (
+        "這份是物品產生器的係數（item_gen.yaml）：稀有度、預算、詞條單價與代價型的計價。"
+        "改了只影響之後產生的物品（掉落、傭兵、重骰、打造），已經在背包裡的不變。",
+        "條件詞條的成立率分類、可用類別、必選詞條、獨特與暫緩的詞條清單是結構，不開；"
+        "產生器的重試次數也不開（HC-W2）。",
     ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""
@@ -285,9 +304,29 @@ _ENTRY_WORDS: Final[dict[str, str]] = {
     "triggers": "觸發時機",
     "conditions": "條件",
     "synergies": "協同",
+    "forms": "形態",
+    "total_budget": "全身預算",
 }
-"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件；SK-5：觸發時機表的時機）在標籤前的
-稱呼。"""
+"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件；SK-5：觸發時機表的時機；HC-W2：
+形態表的形態、物品生成的全身預算表）在標籤前的稱呼。"""
+
+_COLON_ENTRIES: Final = frozenset({"profiles", "forms", "total_budget"})
+"""標籤前綴後面加「：」的清單（欄位名不是接在名字後面讀的）。"""
+
+_ELEMENT_ZH: Final = {
+    "physical": "物理",
+    "fire": "火焰",
+    "ice": "冰霜",
+    "lightning": "雷電",
+    "poison": "毒素",
+    "wind": "風",
+    "earth": "大地",
+    "holy": "神聖",
+    "shadow": "暗影",
+    "chosen": "所選元素",
+}
+"""標籤裡的 ``{element}`` 換成的中文（HC-W2：形態的「受到某元素傷害的倍率」；``chosen``＝進入
+形態時選的元素）。"""
 
 
 _MECHANIC_ZH: Final = {
@@ -312,18 +351,38 @@ def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
     title = entry.get("name_zh") or entry.get("id")
     if title is None and entry.get("tags"):  # HC-B：協同規則沒有名字，用機制標籤
         title = "＋".join(_MECHANIC_ZH.get(str(t), str(t)) for t in entry["tags"])
+    if title is None and "level" in entry:  # HC-W2：全身預算表依物品等級
+        title = f"等級 {entry['level']}"
     name = f"{_ENTRY_WORDS[str(parts[0])]}「{title}」"
-    return f"{name}：" if parts[0] == "profiles" else name
+    return f"{name}：" if parts[0] in _COLON_ENTRIES else name
+
+
+def _with_element(label: str, data: Any, parts: Sequence[PathPart]) -> str:
+    """標籤裡的 ``{element}`` 換成路徑上最深、有 ``element`` 的那一層的元素中文（HC-W2）。"""
+    if "{element}" not in label:
+        return label
+    element = ""
+    for end in range(len(parts) - 1, 0, -1):
+        try:
+            node = lookup(data, parts[:end])
+        except PatchError:
+            break
+        if isinstance(node, dict) and "element" in node:
+            element = _ELEMENT_ZH.get(str(node["element"]), str(node["element"]))
+            break
+    return label.replace("{element}", element)
 
 
 def _part_group(data: Any, path: str) -> str | None:
-    """部位欄位的分組標題（PB-1n 待決 2：表單按部位分組），例「部位 1「拂塵」」；
-    其他欄位 ``None``。"""
+    """部位欄位的分組標題（PB-1n 待決 2：表單按部位分組），例「部位 1「拂塵」」；HC-W2 起形態表
+    依形態分組，例「形態「熊」」；其他欄位 ``None``。"""
     parts = parse_path(path)
-    if parts[:1] != ("parts",) or len(parts) < 2 or not isinstance(parts[1], int):  # noqa: PLR2004
+    index = parts[1] if parts[1:] else None
+    if not isinstance(index, int) or parts[0] not in ("forms", "parts"):
         return None
-    part = (data.get("parts") or [])[parts[1]]
-    return f"部位 {parts[1] + 1}「{part.get('name_zh') or part.get('id')}」"
+    entry = (data.get(str(parts[0])) or [])[index]
+    title = entry.get("name_zh") or entry.get("id")
+    return f"形態「{title}」" if parts[0] == "forms" else f"部位 {index + 1}「{title}」"
 
 
 def _part_label(data: Any, parts: Sequence[PathPart], field: TuningField) -> str:
@@ -468,7 +527,8 @@ def concrete_fields(
                 label = f"{_entry_label(data, parts)}{field.label_zh}"
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
-            out.append((field, format_path(parts), _numbered(label, parts)))
+            label = _with_element(_numbered(label, parts), data, parts)
+            out.append((field, format_path(parts), label))
     return out
 
 

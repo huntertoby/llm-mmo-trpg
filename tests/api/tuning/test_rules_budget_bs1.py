@@ -82,6 +82,9 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "skill_composer",
         "skill_conditions",  # HC-B：條件的預算倍率覆寫、協同係數
         "skill_synergies",
+        "forms",  # HC-W2：形態、裝備規則、物品生成
+        "equipment",
+        "item_gen",
     )
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (

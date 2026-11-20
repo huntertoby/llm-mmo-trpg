@@ -865,12 +865,17 @@ groups:
       - targets[kind=unit].fields[path=attributes.str|attributes.dex|attributes.con|attributes.int|attributes.wis|attributes.wil].hint_*
       - targets[kind=skill].fields[path=cost.mana|cost.stamina].hint_*
       - targets[kind=object].fields[path="objects[*].max_hp"].hint_*
+      - targets[kind=forms].fields[path=upkeep_stamina|upkeep_mana|stance_upkeep_stamina|stance_upkeep_mana].hint_*   # HC-W2：forms.yaml 的維持費是量類
+      - targets[kind=item_gen].fields[path=stat_prices.attribute.per|stat_prices.max_hp.per|cost_prices.turn_start_hp_loss.per].hint_*   # HC-W2：item_gen.yaml 的量類單位
     keep:
       - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起不變（X10-1 裁定 2）
       - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
       - targets[kind=unit].fields[kind=permille].hint_*
       - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*
       - targets[kind=rules|budget|pick|skill_composer|skill_triggers|skill_conditions|skill_synergies].fields[].hint_*
+      - targets[kind=forms].fields[path!=upkeep_stamina|upkeep_mana|stance_upkeep_stamina|stance_upkeep_mana].hint_*   # HC-W2：冷卻、格數、‰、回合
+      - targets[kind=equipment].fields[].hint_*   # HC-W2：‰、條數、AP、冷卻、暴擊、移動
+      - targets[kind=item_gen].fields[path!=stat_prices.attribute.per|stat_prices.max_hp.per|cost_prices.turn_start_hp_loss.per].hint_*   # HC-W2：點數、‰、權重、條數
 
   # ------------------------------------------------------------------ 大世界
   - files: world/rules.yaml

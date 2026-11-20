@@ -637,3 +637,144 @@ targets:
     glob: skill_synergies.yaml
     fields:
       - {path: "synergies[*].coefficient_permille", label_zh: 的係數（‰）, kind: permille, hint_min: 1000, hint_max: 1500, note_zh: 技能同時帶有這組機制標籤時，總點數乘這個千分比（符合多條時全部相乘）。越大，帶這組機制的招算得越貴、其他效果越弱；1000＝不加價。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
+  # HC-W2：形態（forms.yaml）。只開數值：共通的維持費與冷卻；每個形態的天生武器、形態中的效果、進入時的獎勵
+  # （都只展開已寫的：沒寫＝這個形態沒有那個機制，加上去屬結構）。ID、名稱、外觀、屬性、元素、類別不開。
+  - kind: forms
+    label_zh: 形態
+    glob: forms.yaml
+    fields:
+      - {path: upkeep_stamina, label_zh: 物理形態每回合維持費（耐力）, group_zh: 共通, kind: int, hint_min: 40, hint_max: 160, note_zh: 物理形態（熊、貓、狼人、惡魔、巨人）每回合開始扣這麼多耐力，不夠付就自動解除形態。越大，物理形態越難久撐；越小越能一直維持。}
+      - {path: upkeep_mana, label_zh: 心智形態每回合維持費（法力）, group_zh: 共通, kind: int, hint_min: 15, hint_max: 60, note_zh: 心智形態（巨鵰、元素化身、暗影形態、樹人、龍）每回合開始扣這麼多法力，不夠付就自動解除形態。越大，心智形態越難久撐；越小越能一直維持。}
+      - {path: stance_upkeep_stamina, label_zh: 姿態每點維持費（耐力）, group_zh: 共通, kind: int, hint_min: 10, hint_max: 40, note_zh: 一般姿態（武器技）的維持費每 1 點，每回合開始扣這麼多耐力；付不起就自動解除姿態。越大，帶維持費的武器姿態越貴。}
+      - {path: stance_upkeep_mana, label_zh: 姿態每點維持費（法力）, group_zh: 共通, kind: int, hint_min: 5, hint_max: 20, note_zh: 一般姿態（法術技）的維持費每 1 點，每回合開始扣這麼多法力；付不起就自動解除姿態。越大，帶維持費的法術姿態越貴。}
+      - {path: cooldown, label_zh: 離開形態後的冷卻（回合）, group_zh: 共通, kind: int, hint_min: 1, hint_max: 4, note_zh: 離開一個形態（自己取消、被迫解除、切換）後，「那個形態」要等這麼多回合才能再進入；別的形態不受影響。越大，越不能頻繁切換同一個形態。只能 1～5。}
+      - {path: "forms[*].natural_weapon.dice", label_zh: 天生武器的傷害骰, kind: dice, note_zh: 形態中普攻用的天生武器擲這個骰（再加屬性加成）。骰子越大，形態的普攻越痛。}
+      - {path: "forms[*].natural_weapon.range", label_zh: 天生武器的射程（格）, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 天生武器最遠打幾格（近戰的觸及另見「觸及」；龍的吐息用這個列出「朝某個敵人」的快捷動作）。越大越能在遠處出手。只能 1～8。}
+      - {path: "forms[*].natural_weapon.damage_permille", label_zh: 天生武器的傷害加成（‰）, kind: permille, hint_min: 0, hint_max: 300, existing_only: true, note_zh: 天生武器的傷害再多這麼多千分比（100＝+10%）。越大普攻越痛。只能 0～1000。}
+      - {path: "forms[*].natural_weapon.traits.strikes", label_zh: 天生武器一次打幾下, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 普攻一次打幾下（每下各擲命中）。越多傷害越高。只能 1～3。}
+      - {path: "forms[*].natural_weapon.traits.knockback", label_zh: 天生武器的推擊（格）, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 普攻命中把目標推開幾格。越大越能把人推進危險地形或拉開距離。只能 0～3。}
+      - {path: "forms[*].natural_weapon.traits.reach", label_zh: 天生武器的觸及（格）, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 近戰普攻能打到幾格外。越大越安全。只能 1 到近戰上限。}
+      - {path: "forms[*].natural_weapon.traits.bleed", label_zh: 天生武器的流血（回合）, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 普攻命中讓目標流血這麼多回合。越大持續傷害越多。只能 0～3。}
+      - {path: "forms[*].natural_weapon.traits.backstab_crit", label_zh: 天生武器的背刺暴擊範圍, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 從背後普攻時，暴擊範圍再擴大這麼多（1＝自然 19 起就暴擊）。越大越常暴擊。只能 0～3。}
+      - {path: "forms[*].natural_weapon.charge.size", label_zh: 蓄力吐息的錐形長度, kind: int, hint_min: 2, hint_max: 4, existing_only: true, note_zh: 蓄力普攻（龍的吐息）下一回合釋放時的錐形長度（向前幾排）。越大打到越多格。只能 2～4。}
+      - {path: "forms[*].effects.max_hp_permille", label_zh: 形態中最大 HP（‰）, kind: permille, hint_min: -200, hint_max: 300, existing_only: true, note_zh: 形態中最大 HP 多（負值＝少）這麼多千分比（150＝+15%）。越大越耐打。只能 −500～500。}
+      - {path: "forms[*].effects.defense_permille", label_zh: 形態中防禦（‰）, kind: permille, hint_min: -200, hint_max: 200, existing_only: true, note_zh: 形態中防禦值多（負值＝少）這麼多千分比（100＝+10%）。越大越不容易被打中。只能 −500～500。}
+      - {path: "forms[*].effects.move", label_zh: 形態中移動（格）, kind: int, hint_min: -2, hint_max: 2, existing_only: true, note_zh: 形態中每回合移動多（負值＝少）幾格。越大越靈活。只能 −3～3。}
+      - {path: "forms[*].effects.heal_permille", label_zh: 形態中受到的治療（‰）, kind: permille, hint_min: 100, hint_max: 400, existing_only: true, note_zh: 形態中受到的治療多這麼多千分比（200＝+20%）。越大越好補。只能 0～1000。}
+      - {path: "forms[*].effects.flat_height", label_zh: 形態中的高度（格）, kind: int, hint_min: 1, hint_max: 2, existing_only: true, note_zh: 形態中視為站高幾格（飛行；高處的命中與視野加成照高度算）。越大越佔優勢。只能 0～2。}
+      - {path: "forms[*].effects.damage_taken[*].permille", label_zh: "形態中受到{element}傷害的倍率（‰）", kind: permille, hint_min: 500, hint_max: 1500, note_zh: 形態中受到這種元素的傷害乘這個千分比（500＝只受一半、1500＝多受 50%；「所選元素」＝進入形態時選的元素）。越小越耐這種元素；越大越怕。只能 0～3000。}
+      - {path: "forms[*].entry.shield_max_hp_permille", label_zh: 進入時的護盾（最大 HP 的 ‰）, kind: permille, hint_min: 50, hint_max: 200, existing_only: true, note_zh: 進入形態時得到最大 HP 這麼多千分比的護盾（100＝10%）。越大進入時越安全。只能 1～1000。}
+      - {path: "forms[*].entry.shield_duration", label_zh: 進入時護盾的持續（回合）, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 進入形態時的護盾維持幾回合。越大越久。只能 1～3。}
+      - {path: "forms[*].entry.heal_max_hp_permille", label_zh: 進入時回復（最大 HP 的 ‰）, kind: permille, hint_min: 50, hint_max: 200, existing_only: true, note_zh: 進入形態時回復最大 HP 這麼多千分比（100＝10%）。越大越好用來救急。只能 1～1000。}
+      - {path: "forms[*].entry.next_attack_hit", label_zh: 進入後下一次攻擊的命中加值, kind: int, hint_min: 1, hint_max: 4, existing_only: true, note_zh: 進入形態後下一次攻擊的命中再加這麼多。越大越容易打中。只能 0～5。}
+      - {path: "forms[*].entry.next_attack_crit", label_zh: 進入後下一次攻擊的暴擊範圍, kind: int, hint_min: 1, hint_max: 4, existing_only: true, note_zh: 進入形態後下一次攻擊的暴擊範圍擴大這麼多（2＝自然 18 起就暴擊）。越大越容易暴擊。只能 0～5。}
+      - {path: "forms[*].entry.move", label_zh: 進入時的額外移動（格）, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 進入形態的那一回合多移動幾格。越大越好用來突進或脫身。只能 0～3。}
+      - {path: "forms[*].entry.conceal", label_zh: 進入時的隱蔽（回合）, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 進入形態時隱蔽幾回合。越大越久不被看見。只能 1～3。}
+      - {path: "forms[*].entry.collision_permille", label_zh: 進入後的撞擊加成（‰）, kind: permille, hint_min: 250, hint_max: 1000, existing_only: true, note_zh: 形態中把人推去撞牆、撞人時，撞擊傷害多這麼多千分比（500＝+50%）。越大推擊越痛。只能 0～2000。}
+      - {path: "forms[*].entry.burst.radius", label_zh: 進入時爆發的範圍（格）, kind: int, hint_min: 1, hint_max: 2, existing_only: true, note_zh: 進入形態時對周圍幾格內的敵人造成一次爆發傷害。越大打到越多人。只能 1～3。}
+      - {path: "forms[*].entry.burst.dice", label_zh: 進入時爆發的傷害骰, kind: dice, existing_only: true, note_zh: 進入形態時爆發傷害擲這個骰。骰子越大越痛。}
+      - {path: "forms[*].entry.heal_adjacent.dice", label_zh: 進入時治療相鄰友方的骰, kind: dice, existing_only: true, note_zh: 進入形態時治療相鄰友方擲這個骰（再加屬性加成）。骰子越大補越多。}
+      - {path: "forms[*].entry.heal_adjacent.attr_permille", label_zh: 進入時治療相鄰友方的屬性加成（‰）, kind: permille, hint_min: 250, hint_max: 1000, existing_only: true, note_zh: 進入形態時治療相鄰友方，再加屬性這麼多千分比（500＝屬性的一半）。越大補越多。只能 0～1000。}
+  # HC-W2：裝備規則（rules/equipment.yaml）。遞減權重與硬上限都開；總減傷上限（caps.damage_reduction_permille）
+  # 必須等於 1000 − rules/core.yaml 的 element_mod_floor_permille（載入時檢查；那一欄沒開，所以這裡也不開）。
+  - kind: equipment
+    label_zh: 裝備規則
+    glob: rules/equipment.yaml
+    fields:
+      - {path: "diminishing_permille[*]", label_zh: "同名詞條第 {n} 條的效果（‰）", group_zh: 同名詞條的遞減, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 全身同一種數值詞條依數值大到小排，第幾條只生效這麼多千分比（第 1 條必須是 1000，後面不能比前面大；列表之後的一律 0）。越大，疊同一種詞條越划算；越小越鼓勵混搭。}
+      - {path: max_affixes_per_item, label_zh: 每件物品最多幾條詞條, group_zh: 硬上限, kind: int, hint_min: 2, hint_max: 6, note_zh: 一件裝備最多帶幾條詞條（產生器、打造、驗證都看這個）。越大單件裝備能越強。只能 1～8。}
+      - {path: caps.damage_bonus_permille, label_zh: 全身傷害加成上限（‰）, group_zh: 硬上限, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 裝備來源的傷害加成合計最多這麼多千分比（500＝+50%）；超出的部分不算。越大，堆傷害的裝備越強。}
+      - {path: caps.element_resist_permille, label_zh: 單一元素抗性上限（‰）, group_zh: 硬上限, kind: permille, hint_min: 250, hint_max: 750, note_zh: 裝備給的單一元素抗性最多這麼多千分比（500＝50%）；超出的部分不算。越大，越能把某種元素疊到幾乎免疫。}
+      - {path: caps.ap_gain_per_round, label_zh: 每回合 AP 回復加成上限, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 所有來源合計，每回合最多多回這麼多 AP。越大，多動作的 build 越強。}
+      - {path: caps.cooldown_min, label_zh: 冷卻最低（回合）, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 裝備縮短冷卻時，有冷卻的技能最低只能縮到這麼多回合（本來就沒有冷卻的不受影響）。越小，縮冷卻的裝備越強。}
+      - {path: caps.crit_range_min, label_zh: 暴擊範圍最低（自然骰）, group_zh: 硬上限, kind: int, hint_min: 16, hint_max: 19, note_zh: 裝備擴大暴擊範圍時，最多擴大到自然骰這個數字起就暴擊（18＝18、19、20 都暴擊）。越小，堆暴擊的裝備越強。只能 2～20。}
+      - {path: caps.move_bonus, label_zh: 全身移動加成上限（格）, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 裝備的移動加成合計最多幾格。越大，堆移動的裝備越強。}
+      - {path: caps.cost_affixes, label_zh: 全身代價型詞條上限, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 全身最多穿幾條代價型詞條（超過時穿戴驗證失敗）。越大，越能用代價換強度。}
+      - {path: caps.rule_affixes, label_zh: 全身改變規則類詞條上限, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 全身最多幾條改變規則類詞條同時生效（超過時穿戴驗證失敗）。越大，越能疊改變規則的效果。}
+  # HC-W2：物品生成（item_gen.yaml）。只開計價與規則數值；稀有度條件的分類（conditional_rates）、類別清單、
+  # 必選詞條、獨特與暫緩詞條清單是結構，不開；max_attempts、offer_attempts 是程式的重試次數，不開。
+  - kind: item_gen
+    label_zh: 物品生成
+    glob: item_gen.yaml
+    fields:
+      - {path: rarity_weights.common, label_zh: 稀有度權重：普通, group_zh: 稀有度, kind: int, hint_min: 20, hint_max: 80, note_zh: 產生物品時抽稀有度的權重（各稀有度的權重相比，例：普通 40／合計 100＝40%）。越大，越常掉這個稀有度。}
+      - {path: rarity_weights.uncommon, label_zh: 稀有度權重：優良, group_zh: 稀有度, kind: int, hint_min: 12, hint_max: 50, note_zh: 產生物品時抽稀有度的權重（各稀有度的權重相比）。越大，越常掉這個稀有度。}
+      - {path: rarity_weights.rare, label_zh: 稀有度權重：稀有, group_zh: 稀有度, kind: int, hint_min: 10, hint_max: 40, note_zh: 產生物品時抽稀有度的權重（各稀有度的權重相比）。越大，越常掉這個稀有度。}
+      - {path: rarity_weights.epic, label_zh: 稀有度權重：史詩, group_zh: 稀有度, kind: int, hint_min: 6, hint_max: 26, note_zh: 產生物品時抽稀有度的權重（各稀有度的權重相比）。越大，越常掉這個稀有度。}
+      - {path: rarity_weights.legendary, label_zh: 稀有度權重：傳說, group_zh: 稀有度, kind: int, hint_min: 0, hint_max: 4, note_zh: 產生物品時抽稀有度的權重（各稀有度的權重相比；傳說從現有的傳說物品挑同部位的，沒有就降為史詩）。越大，越常掉傳說。}
+      - {path: rarities.common.min_affixes, label_zh: 普通：最少詞條數, group_zh: 稀有度, kind: int, hint_min: 0, hint_max: 1, note_zh: 普通物品至少幾條詞條。越大，普通物品越強。不能大於最多詞條數。}
+      - {path: rarities.common.max_affixes, label_zh: 普通：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 0, hint_max: 2, note_zh: 普通物品最多幾條詞條。越大，普通物品越強。只能 0～8。}
+      - {path: rarities.uncommon.min_affixes, label_zh: 優良：最少詞條數, group_zh: 稀有度, kind: int, hint_min: 0, hint_max: 2, note_zh: 優良物品至少幾條詞條。越大，優良物品越強。不能大於最多詞條數。}
+      - {path: rarities.uncommon.max_affixes, label_zh: 優良：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 1, hint_max: 3, note_zh: 優良物品最多幾條詞條。越大，優良物品越強。只能 0～8。}
+      - {path: rarities.rare.min_affixes, label_zh: 稀有：最少詞條數, group_zh: 稀有度, kind: int, hint_min: 1, hint_max: 3, note_zh: 稀有物品至少幾條詞條（含 1 條 build 詞條）。越大，稀有物品越強。不能大於最多詞條數。}
+      - {path: rarities.rare.max_affixes, label_zh: 稀有：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 2, hint_max: 4, note_zh: 稀有物品最多幾條詞條。越大，稀有物品越強。只能 0～8。}
+      - {path: rarities.epic.min_affixes, label_zh: 史詩：最少詞條數, group_zh: 稀有度, kind: int, hint_min: 2, hint_max: 4, note_zh: 史詩物品至少幾條詞條（含 1 條 build 詞條）。越大，史詩物品越強。不能大於最多詞條數。}
+      - {path: rarities.epic.max_affixes, label_zh: 史詩：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 2, hint_max: 4, note_zh: 史詩物品最多幾條詞條。越大，史詩物品越強。只能 0～8。}
+      - {path: "total_budget[*].total", label_zh: 總點數, group_zh: 預算, kind: int, hint_min: 50, hint_max: 700, note_zh: 這個物品等級的全身裝備預算（點）；表列等級之間線性內插，最後一段之後沿用最後一段的斜率。越大，同等級的裝備越強。後面的等級不能比前面少。}
+      - {path: min_fill_permille, label_zh: 詞條點數至少用到預算的（‰）, group_zh: 預算, kind: permille, hint_min: 350, hint_max: 1000, note_zh: 產生的詞條點數至少要到詞條預算的這麼多千分比（700＝70%）。越大，產出越接近滿預算（強度更平均）；越小，弱裝備越多。只能 0～1000。}
+      - {path: min_affix_points, label_zh: 每條詞條至少幾點, group_zh: 預算, kind: int, hint_min: 1, hint_max: 4, note_zh: 每條詞條至少要分到這麼多點。越大，低等級的裝備越難塞多條詞條。}
+      - {path: base_strength.fallback_level, label_zh: 沒有等級的物品當作幾級, group_zh: 預算, kind: int, hint_min: 1, hint_max: 3, note_zh: 初始裝備、基礎武器這類沒有物品等級的物品，算「預算分數」時當作這個等級（只用在比較，不進預算檢查）。越大，這些物品在比較時算得越強。}
+      - {path: slot_permille.weapon, label_zh: 部位預算：主手（‰）, group_zh: 部位比例, kind: permille, hint_min: 150, hint_max: 600, note_zh: 全身預算分給這個部位的千分比（戒指是每枚）。越大，這個部位的裝備越強。}
+      - {path: slot_permille.body, label_zh: 部位預算：身體（‰）, group_zh: 部位比例, kind: permille, hint_min: 100, hint_max: 400, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}
+      - {path: slot_permille.offhand, label_zh: 部位預算：副手（‰）, group_zh: 部位比例, kind: permille, hint_min: 50, hint_max: 200, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}
+      - {path: slot_permille.head, label_zh: 部位預算：頭（‰）, group_zh: 部位比例, kind: permille, hint_min: 40, hint_max: 160, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}
+      - {path: slot_permille.hands, label_zh: 部位預算：手（‰）, group_zh: 部位比例, kind: permille, hint_min: 40, hint_max: 160, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}
+      - {path: slot_permille.feet, label_zh: 部位預算：腳（‰）, group_zh: 部位比例, kind: permille, hint_min: 40, hint_max: 160, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}
+      - {path: slot_permille.neck, label_zh: 部位預算：項鍊（‰）, group_zh: 部位比例, kind: permille, hint_min: 40, hint_max: 160, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}
+      - {path: slot_permille.ring, label_zh: 部位預算：戒指（每枚，‰）, group_zh: 部位比例, kind: permille, hint_min: 20, hint_max: 80, note_zh: 全身預算分給每一枚戒指的千分比。越大，戒指越強。}
+      - {path: affix_permille.weapon, label_zh: 詞條佔比：主手（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 200, hint_max: 800, note_zh: 這個部位的預算有多少千分比給詞條（其餘是底材的基礎數值）。越大，這個部位的詞條越多越強、基礎越弱。}
+      - {path: affix_permille.body, label_zh: 詞條佔比：身體（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 200, hint_max: 800, note_zh: 這個部位的預算有多少千分比給詞條（其餘是底材的基礎數值）。越大，詞條越強、基礎越弱。}
+      - {path: affix_permille.offhand, label_zh: 詞條佔比：副手（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 200, hint_max: 800, note_zh: 這個部位的預算有多少千分比給詞條（其餘是底材的基礎數值）。越大，詞條越強、基礎越弱。}
+      - {path: affix_permille.head, label_zh: 詞條佔比：頭（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 這個部位的預算有多少千分比給詞條（其餘是底材的基礎數值）。越大，詞條越強、基礎越弱。}
+      - {path: affix_permille.hands, label_zh: 詞條佔比：手（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 這個部位的預算有多少千分比給詞條（其餘是底材的基礎數值）。越大，詞條越強、基礎越弱。}
+      - {path: affix_permille.feet, label_zh: 詞條佔比：腳（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 這個部位的預算有多少千分比給詞條（其餘是底材的基礎數值）。越大，詞條越強、基礎越弱。}
+      - {path: affix_permille.neck, label_zh: 詞條佔比：項鍊（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 500, hint_max: 1000, note_zh: 這個部位的預算有多少千分比給詞條（項鍊沒有底材差異，1000＝全部給詞條）。越小，詞條越弱。}
+      - {path: affix_permille.ring, label_zh: 詞條佔比：戒指（‰）, group_zh: 詞條佔比, kind: permille, hint_min: 500, hint_max: 1000, note_zh: 這個部位的預算有多少千分比給詞條（戒指沒有底材差異，1000＝全部給詞條）。越小，詞條越弱。}
+      - {path: stat_prices.attribute.points, label_zh: 數值詞條：屬性的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 2, hint_max: 6, note_zh: 屬性詞條每「一個單位」（下一格）花這麼多點。越大，屬性詞條越貴（同預算給的屬性越少）。}
+      - {path: stat_prices.attribute.per, label_zh: 數值詞條：屬性的一個單位, group_zh: 數值詞條的單價, kind: int, hint_min: 5, hint_max: 20, note_zh: 屬性詞條一個單位是多少屬性（點數看上一格）。越大，同點數給的屬性越多（越便宜）。}
+      - {path: stat_prices.max_hp.points, label_zh: 數值詞條：最大 HP 的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 2, hint_max: 6, note_zh: 最大 HP 詞條每一個單位花這麼多點。越大，HP 詞條越貴。}
+      - {path: stat_prices.max_hp.per, label_zh: 數值詞條：最大 HP 的一個單位, group_zh: 數值詞條的單價, kind: int, hint_min: 20, hint_max: 80, note_zh: 最大 HP 詞條一個單位是多少 HP。越大，同點數給的 HP 越多（越便宜）。}
+      - {path: stat_prices.element_resist.points, label_zh: 數值詞條：元素抗性的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 2, hint_max: 6, note_zh: 單一元素抗性詞條每一個單位花這麼多點。越大，抗性詞條越貴。}
+      - {path: stat_prices.element_resist.per, label_zh: 數值詞條：元素抗性的一個單位（‰）, group_zh: 數值詞條的單價, kind: permille, hint_min: 25, hint_max: 100, note_zh: 元素抗性詞條一個單位是多少千分比的抗性（50＝5%）。越大，同點數給的抗性越多（越便宜）。}
+      - {path: stat_prices.defense.points, label_zh: 數值詞條：防禦的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 2, hint_max: 6, note_zh: 防禦值詞條每一個單位花這麼多點。越大，防禦詞條越貴。}
+      - {path: stat_prices.defense.per, label_zh: 數值詞條：防禦的一個單位（‰）, group_zh: 數值詞條的單價, kind: permille, hint_min: 10, hint_max: 40, note_zh: 防禦值詞條一個單位是多少千分比的防禦（20＝2%）。越大，同點數給的防禦越多（越便宜）。}
+      - {path: stat_prices.move.points, label_zh: 數值詞條：移動的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 6, hint_max: 24, note_zh: 移動詞條每一個單位花這麼多點。越大，移動詞條越貴、越少見。}
+      - {path: stat_prices.move.per, label_zh: 數值詞條：移動的一個單位（格）, group_zh: 數值詞條的單價, kind: int, hint_min: 1, hint_max: 2, note_zh: 移動詞條一個單位是幾格。越大，同點數給的移動越多（越便宜）。}
+      - {path: conditional_prices.hit.points, label_zh: 條件詞條：命中的點數, group_zh: 條件詞條, kind: int, hint_min: 4, hint_max: 16, note_zh: 條件成立時才生效的命中詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}
+      - {path: conditional_prices.hit.per, label_zh: 條件詞條：命中的一個單位, group_zh: 條件詞條, kind: int, hint_min: 1, hint_max: 2, note_zh: 條件命中詞條一個單位是多少命中。越大，同點數給的命中越多（越便宜）。}
+      - {path: conditional_prices.defense.points, label_zh: 條件詞條：防禦的點數, group_zh: 條件詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 條件成立時才生效的防禦詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}
+      - {path: conditional_prices.defense.per, label_zh: 條件詞條：防禦的一個單位（‰）, group_zh: 條件詞條, kind: permille, hint_min: 10, hint_max: 40, note_zh: 條件防禦詞條一個單位是多少千分比的防禦。越大，同點數給的防禦越多（越便宜）。}
+      - {path: conditional_prices.damage.points, label_zh: 條件詞條：傷害的點數, group_zh: 條件詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 條件成立時才生效的傷害詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}
+      - {path: conditional_prices.damage.per, label_zh: 條件詞條：傷害的一個單位（‰）, group_zh: 條件詞條, kind: permille, hint_min: 10, hint_max: 40, note_zh: 條件傷害詞條一個單位是多少千分比的傷害。越大，同點數給的傷害越多（越便宜）。}
+      - {path: condition_rates_permille.common, label_zh: 條件成立率：常見（‰）, group_zh: 條件詞條, kind: permille, hint_min: 300, hint_max: 1000, note_zh: 「常見」的條件（例：本回合沒有移動）以這個成立率計價（600＝60%）。越大，這類條件詞條越貴。}
+      - {path: condition_rates_permille.occasional, label_zh: 條件成立率：偶爾（‰）, group_zh: 條件詞條, kind: permille, hint_min: 175, hint_max: 700, note_zh: 「偶爾」的條件（例：站在高處）以這個成立率計價。越大，這類條件詞條越貴。}
+      - {path: condition_rates_permille.rare, label_zh: 條件成立率：少見（‰）, group_zh: 條件詞條, kind: permille, hint_min: 100, hint_max: 400, note_zh: 「少見」的條件（例：HP 低於一半）以這個成立率計價。越大，這類條件詞條越貴。}
+      - {path: category_points.keyword, label_zh: 詞條點數：技能強化, group_zh: 其他類別的點數, kind: int, hint_min: 4, hint_max: 16, note_zh: 一條技能強化（關鍵字）詞條花這麼多點。越大，這類詞條越貴、帶它的裝備其他詞條越少。}
+      - {path: category_points.attack, label_zh: 詞條點數：普攻附加, group_zh: 其他類別的點數, kind: int, hint_min: 5, hint_max: 20, note_zh: 一條普攻附加詞條花這麼多點。越大，這類詞條越貴。}
+      - {path: category_points.weapon_trait, label_zh: 詞條點數：武器特性, group_zh: 其他類別的點數, kind: int, hint_min: 4, hint_max: 16, note_zh: 一條武器特性詞條花這麼多點。越大，這類詞條越貴。}
+      - {path: category_points.trigger, label_zh: 詞條點數：觸發, group_zh: 其他類別的點數, kind: int, hint_min: 6, hint_max: 24, note_zh: 一條觸發詞條花這麼多點（有每回合上限的再乘下面的折扣）。越大，這類詞條越貴。}
+      - {path: category_points.charge, label_zh: 詞條點數：充能, group_zh: 其他類別的點數, kind: int, hint_min: 6, hint_max: 24, note_zh: 一條充能詞條花這麼多點。越大，這類詞條越貴。}
+      - {path: category_points.action, label_zh: 詞條點數：動作, group_zh: 其他類別的點數, kind: int, hint_min: 10, hint_max: 40, note_zh: 一條動作詞條花這麼多點。越大，這類詞條越貴。}
+      - {path: category_points.reaction, label_zh: 詞條點數：反應, group_zh: 其他類別的點數, kind: int, hint_min: 8, hint_max: 30, note_zh: 一條反應詞條花這麼多點。越大，這類詞條越貴。}
+      - {path: category_points.rule, label_zh: 詞條點數：改變規則, group_zh: 其他類別的點數, kind: int, hint_min: 20, hint_max: 80, note_zh: 一條改變規則詞條花這麼多點。越大，這類詞條越貴。}
+      - {path: weapon_element_points, label_zh: 詞條點數：武器元素, group_zh: 其他類別的點數, kind: int, hint_min: 8, hint_max: 30, note_zh: 一條武器元素詞條（武器改成某元素）花這麼多點。越大越貴。}
+      - {path: trigger_limit_permille, label_zh: 有次數上限的觸發打折（‰）, group_zh: 其他類別的點數, kind: permille, hint_min: 350, hint_max: 1000, note_zh: 觸發詞條有每回合或每輪上限時，點數乘這個千分比（700＝打 7 折）。越小，有上限的觸發越便宜。只能 0～1000。}
+      - {path: weapon_attribute_preference_permille, label_zh: 武器屬性詞條偏向縮放屬性（‰）, group_zh: 其他類別的點數, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 武器、副手抽到屬性詞條時，這把武器的縮放屬性合計佔這麼多千分比的機率（雙屬性平分），其他屬性平分剩下的。越大越常抽到對口的屬性。只能 0～1000。}
+      - {path: cost_prices.damage_permille.points, label_zh: 代價型：傷害的點數, group_zh: 代價型詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 代價型詞條的傷害增減，每一個單位算這麼多點（正面加、負面扣）。越大，傷害這一項的份量越重。}
+      - {path: cost_prices.damage_permille.per, label_zh: 代價型：傷害的一個單位（‰）, group_zh: 代價型詞條, kind: permille, hint_min: 10, hint_max: 40, note_zh: 代價型詞條的傷害一個單位是多少千分比。越大，同點數的傷害增減越多。}
+      - {path: cost_prices.damage_taken_permille.points, label_zh: 代價型：受到傷害的點數, group_zh: 代價型詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 代價型詞條的受到傷害增減，每一個單位算這麼多點。越大，這一項的份量越重。}
+      - {path: cost_prices.damage_taken_permille.per, label_zh: 代價型：受到傷害的一個單位（‰）, group_zh: 代價型詞條, kind: permille, hint_min: 10, hint_max: 40, note_zh: 代價型詞條的受到傷害一個單位是多少千分比。越大，同點數的增減越多。}
+      - {path: cost_prices.defense_permille.points, label_zh: 代價型：防禦的點數, group_zh: 代價型詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 代價型詞條的防禦增減，每一個單位算這麼多點。越大，這一項的份量越重。}
+      - {path: cost_prices.defense_permille.per, label_zh: 代價型：防禦的一個單位（‰）, group_zh: 代價型詞條, kind: permille, hint_min: 10, hint_max: 40, note_zh: 代價型詞條的防禦一個單位是多少千分比。越大，同點數的增減越多。}
+      - {path: cost_prices.move.points, label_zh: 代價型：移動的點數, group_zh: 代價型詞條, kind: int, hint_min: 6, hint_max: 24, note_zh: 代價型詞條的移動增減，每一個單位算這麼多點。越大，這一項的份量越重。}
+      - {path: cost_prices.move.per, label_zh: 代價型：移動的一個單位（格）, group_zh: 代價型詞條, kind: int, hint_min: 1, hint_max: 2, note_zh: 代價型詞條的移動一個單位是幾格。越大，同點數的增減越多。}
+      - {path: cost_prices.hit.points, label_zh: 代價型：命中的點數, group_zh: 代價型詞條, kind: int, hint_min: 4, hint_max: 16, note_zh: 代價型詞條的命中增減，每一個單位算這麼多點。越大，這一項的份量越重。}
+      - {path: cost_prices.hit.per, label_zh: 代價型：命中的一個單位, group_zh: 代價型詞條, kind: int, hint_min: 1, hint_max: 2, note_zh: 代價型詞條的命中一個單位是多少。越大，同點數的增減越多。}
+      - {path: cost_prices.cooldown_delta.points, label_zh: 代價型：冷卻的點數, group_zh: 代價型詞條, kind: int, hint_min: 4, hint_max: 16, note_zh: 代價型詞條的冷卻增減，每一個單位算這麼多點。越大，這一項的份量越重。}
+      - {path: cost_prices.cooldown_delta.per, label_zh: 代價型：冷卻的一個單位（回合）, group_zh: 代價型詞條, kind: int, hint_min: 1, hint_max: 2, note_zh: 代價型詞條的冷卻一個單位是幾回合。越大，同點數的增減越多。}
+      - {path: cost_prices.turn_start_hp_loss.points, label_zh: 代價型：回合開始失去 HP 的點數, group_zh: 代價型詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 代價型詞條「回合開始失去 HP」每一個單位算這麼多點（扣在負面）。越大，這個代價能換到越多正面。}
+      - {path: cost_prices.turn_start_hp_loss.per, label_zh: 代價型：回合開始失去 HP 的一個單位, group_zh: 代價型詞條, kind: int, hint_min: 5, hint_max: 20, note_zh: 「回合開始失去 HP」一個單位是多少 HP。越大，同點數的 HP 損失越多。}
+      - {path: cost_min_points, label_zh: 代價型：淨值至少幾點, group_zh: 代價型詞條, kind: int, hint_min: 2, hint_max: 8, note_zh: 代價型詞條的「正面點數 − 負面點數」至少要這麼多點。越大，代價型詞條越划算。}
+      - {path: base_bonus.points, label_zh: 普通基礎加成：每幾點, group_zh: 基礎加成, kind: int, hint_min: 2, hint_max: 6, note_zh: 普通物品沒有詞條時，詞條預算改成基礎加成：每這麼多點換下一格的千分比（武器是傷害、其他部位是防禦）。越小，基礎加成越多。}
+      - {path: base_bonus.permille, label_zh: 普通基礎加成：換多少（‰）, group_zh: 基礎加成, kind: permille, hint_min: 10, hint_max: 40, note_zh: 上一格的點數換成這麼多千分比的加成（20＝+2%）。越大，沒詞條的普通物品越強。}
+      - {path: offer_size, label_zh: 戰後裝備幾選一, group_zh: 戰後掉落, kind: int, hint_min: 2, hint_max: 4, note_zh: 戰鬥結束後給幾件候選裝備讓玩家挑一件（部位不重複）。越大越容易拿到想要的。只能 1～6。}

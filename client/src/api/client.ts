@@ -248,7 +248,10 @@ export const api = {
       | "skill_triggers"
       | "skill_composer"
       | "skill_conditions"
-      | "skill_synergies" = "unit",
+      | "skill_synergies"
+      | "forms"
+      | "equipment"
+      | "item_gen" = "unit",
   ) => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
   tuningObject: (kind: string, id: string) =>
     request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),
