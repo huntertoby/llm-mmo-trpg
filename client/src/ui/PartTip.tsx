@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { TipLine } from "../gear/affixStatus";
 import { FloatCard, useFloatCard } from "./useFloatCard";
 import { keepWords } from "./keepWords";
+import type { TipPart } from "./tipParts";
 
 interface Props {
   /** 部件類別（骨架、形狀、效果、狀態……）。 */
@@ -19,9 +20,11 @@ interface Props {
   className?: string;
   /** AR-SK2：名稱後面的小標籤（例：狀態帶「會擴散」）。 */
   tags?: readonly string[];
+  /** AR-X10：分段說明（狀態的骰子行另起一行、次要字色）；有這個就不顯示 `tip`。 */
+  parts?: readonly TipPart[];
 }
 
-export function PartTip({ cat, label, tip, lines, children, pin = true, className, tags }: Props) {
+export function PartTip({ cat, label, tip, lines, children, pin = true, className, tags, parts }: Props) {
   const f = useFloatCard({ pinOn: pin ? "always" : "touch" });
   const { onKeyDown: triggerKeyDown, ...trigger } = f.triggerProps;
   return (
@@ -53,7 +56,13 @@ export function PartTip({ cat, label, tip, lines, children, pin = true, classNam
               </span>
             ))}
           </div>
-          {lines === undefined
+          {parts !== undefined
+            ? parts.map((p, i) => (
+                <div key={i} className={`part-tip-text${p.secondary ? " part-tip-secondary" : ""}`}>
+                  {keepWords(p.text)}
+                </div>
+              ))
+            : lines === undefined
             ? tip !== "" && <div className="part-tip-text">{keepWords(tip)}</div>
             : lines.map((l, i) => (
                 <div key={i} className={`part-tip-text part-tip-line${l.note === null ? "" : " inactive"}`}>

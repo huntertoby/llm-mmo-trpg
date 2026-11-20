@@ -3,6 +3,7 @@
 // 狀態、層數、表面用 `PartTip`（點一下釘住）。畫法移植自 docs/art/sample/textless.html 的 symbol。
 import { useEffect, useRef } from "react";
 import type { SkillCard, StatusView } from "../api/types";
+import { glossaryEntry } from "../battle/glossary";
 import { SOURCE_PIP_PX, sourcePipId, STAT_ICON_ID } from "../render/hudIcon";
 import { statusIconTile, surfaceTile } from "../render/skillIcon";
 import { CARD_PAD, spreadMarkCardCanvas } from "../render/spreadMark";
@@ -14,6 +15,7 @@ import { DelayTrail } from "./MotionBits";
 import { PartTip } from "./PartTip";
 import { TileCanvas } from "./SkillIconView";
 import { StackTip } from "./StackTip";
+import { tipParts, type TipPart } from "./tipParts";
 import { barFill, statusCorner, type ApPip, type ApRow, type BarData, type StatChip, type StatIcon } from "./statusCard";
 
 /** 條：三條一樣粗，條上寫「HP 41 / 50」；HP 條上疊淺藍的護盾段。 */
@@ -107,15 +109,23 @@ export function StatusBadge({ status, text }: { status: StatusView; text: string
   const tile = statusIconTile(status.status_id);
   const corner = statusCorner(status);
   const spread = status.contagious === true;
-  const tip = spread ? (tile.tip === "" ? SPREAD_NOTE : `${tile.tip}
-${SPREAD_NOTE}`) : tile.tip;
+  const parts = statusTipParts(status.status_id, spread);
   return (
-    <PartTip cat="狀態" label={text} tip={tip} className="stat-badge status-badge" {...(spread ? { tags: [SPREAD_TAG] } : {})}>
+    <PartTip cat="狀態" label={text} tip={tile.tip} parts={parts} className="stat-badge status-badge" {...(spread ? { tags: [SPREAD_TAG] } : {})}>
       <TileCanvas tile={tile} px={20} />
       {spread && <SpreadMark px={20} />}
       {corner !== "" && <b className="stat-corner">{corner}</b>}
     </PartTip>
   );
+}
+
+/** 狀態說明卡的各段（AR-X10）：說明＋規則句，骰子行「擲 NdM，每點 ×10」另起一行、次要字色；帶「會擴散」時最後多一行。
+ * 對照表沒有這個狀態時寫「狀態」（同 `statusTile`）。 */
+export function statusTipParts(id: string, spread: boolean): TipPart[] {
+  const entry = glossaryEntry("statuses", id);
+  const found = tipParts([entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])]);
+  const parts = found.length === 0 ? [{ text: "狀態", secondary: false }] : found;
+  return spread ? [...parts, { text: SPREAD_NOTE, secondary: false }] : parts;
 }
 
 /** AR-SK2：狀態卡 20 的「會擴散」記號：圖示四周各多 `CARD_PAD`，疊在圖示上、不裁切（往上凸出約 7 px）。 */
