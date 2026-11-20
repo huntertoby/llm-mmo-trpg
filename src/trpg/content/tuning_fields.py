@@ -24,6 +24,9 @@ from pydantic import BaseModel, Field
 from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.environment import AiProfileTable, ObjectTable
+from trpg.content.equipment import EquipmentRules
+from trpg.content.forms import FormTable
+from trpg.content.item_budget import ItemGenRules
 from trpg.content.loader import load_content_file
 from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
@@ -128,6 +131,9 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "skill_composer": ComposerRules,
     "skill_conditions": ConditionTable,
     "skill_synergies": SynergyTable,
+    "forms": FormTable,
+    "equipment": EquipmentRules,
+    "item_gen": ItemGenRules,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
@@ -135,8 +141,9 @@ BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、`
 PK-1 起 ``pick``＝``skill_pick.yaml``（技能挑選模式的權重）；SK-5 起 ``skill_triggers``＝
 ``skill_triggers.yaml``（被動觸發時機的預算係數）、``skill_composer``＝``skill_composer.yaml``
 （組合器的附帶配方機率）；HC-B 起 ``skill_conditions``＝``skill_conditions.yaml``（條件的預算
-倍率覆寫）、``skill_synergies``＝``skill_synergies.yaml``（協同係數）。這幾種都是「一個檔一個全體
-共用的表」）。"""
+倍率覆寫）、``skill_synergies``＝``skill_synergies.yaml``（協同係數）；HC-W2 起 ``forms``＝
+``forms.yaml``（形態）、``equipment``＝``rules/equipment.yaml``（裝備的遞減與硬上限）、
+``item_gen``＝``item_gen.yaml``（物品產生器的係數）。這幾種都是「一個檔一個全體共用的表」）。"""
 
 TABLE_KINDS: Final = (
     "ai",
@@ -148,6 +155,9 @@ TABLE_KINDS: Final = (
     "skill_composer",
     "skill_conditions",
     "skill_synergies",
+    "forms",
+    "equipment",
+    "item_gen",
 )
 """一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
@@ -202,6 +212,9 @@ class TuningTarget(ContentModel):
         "skill_composer",
         "skill_conditions",
         "skill_synergies",
+        "forms",
+        "equipment",
+        "item_gen",
     ]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
@@ -330,6 +343,8 @@ def _step(candidates: list[Any], part: PathPart) -> list[Any]:
 
 
 def _key_ok(key_type: Any, key: str) -> bool:
+    if isinstance(key_type, TypeAliasType):  # HC-W2：item_gen.yaml 的鍵是 type 別名（SlotType 等）
+        return _key_ok(key_type.__value__, key)
     if key_type is str:
         return True
     if get_origin(key_type) is Literal:  # SK-1：condition_permille 的鍵是 Literal
@@ -343,6 +358,22 @@ def _key_ok(key_type: Any, key: str) -> bool:
 
 def _is_id_tuple(tp: Any) -> bool:
     return get_origin(tp) in (tuple, list) and _unwrap(get_args(tp)[0]) == [str]
+
+
+def _map_key_positions(model: type[BaseModel], parts: Sequence[PathPart]) -> set[int]:
+    """路徑上哪幾段是對照表（``dict``）的鍵、不是欄位名（HC-W2：``item_gen.yaml`` 的
+    ``slot_permille.weapon`` 的 ``weapon`` 是部位，不是禁止的 ``weapon`` 欄位）。"""
+    out: set[int] = set()
+    candidates: list[Any] = [model]
+    for i, part in enumerate(parts):
+        if any(get_origin(tp) is dict for tp in candidates) and not any(
+            isinstance(tp, type) and issubclass(tp, BaseModel) for tp in candidates
+        ):
+            out.add(i)
+        candidates = _step(candidates, part)
+        if not candidates:
+            break
+    return out
 
 
 def _leaf_ok(model: type[BaseModel], parts: Sequence[PathPart], kind: str = "int") -> bool:
@@ -421,7 +452,8 @@ def _field_problems(
 ) -> list[str]:
     problems: list[str] = []
     parts = parse_path(item.path)
-    names = [p for p in parts if isinstance(p, str) and p != "*"]
+    keys = _map_key_positions(model, parts)
+    names = [p for i, p in enumerate(parts) if isinstance(p, str) and p != "*" and i not in keys]
     if any(n in FORBIDDEN_SEGMENTS or n.endswith("_zh") for n in names):
         problems.append(f"欄位 {item.path} 不開（ID、文字、外觀或技能結構）")
     elif not _leaf_ok(model, parts, item.kind):

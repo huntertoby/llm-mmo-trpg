@@ -382,10 +382,15 @@ class CharacterTierRules(ContentModel):
 class ShapePrice(ContentModel):
     """一種形狀的倍率（‰；HC-B 從 ``skill_shapes.yaml`` 的 ``budget`` 搬來，值不變）：
     ``base_permille`` 基礎、``per_unit_permille`` 每單位參數加成（形狀要有 ``budget.param``）。
-    依參數值查表的形狀（錐形、環形、十字、連鎖）以表為準，``base_permille`` 只在參數沒填時用。"""
+    依參數值查表的形狀（錐形、環形、十字、連鎖）以表 ``by_value`` 為準（HC-W2 從形狀表的
+    ``by_value_permille`` 搬來，鍵是參數值），``base_permille`` 只在參數沒填時用；連鎖的
+    ``non_power_by_value``（原 ``non_power_by_value_permille``）給不在 ``power_primitives`` 的效果。
+    查表要涵蓋參數的整個範圍（載入時檢查，:func:`shape_budget_problems`）。"""
 
     base_permille: int = Field(ge=1)
     per_unit_permille: int = Field(default=0, ge=0)
+    by_value: dict[int, int] | None = None
+    non_power_by_value: dict[int, int] | None = None
 
 
 class BudgetRules(ContentModel):
@@ -720,13 +725,16 @@ class BudgetRules(ContentModel):
         self, shape: ShapeDef, values: dict[str, int | str], primitive: str | None = None
     ) -> int:
         """``shape`` 在參數 ``values`` 下的形狀倍率（‰；HC-B）：基礎與每單位加成讀
-        ``shape_budget``，查表讀形狀自己的 ``budget``（:meth:`ShapeBudget.permille_for`）。"""
+        ``shape_budget``（HC-W2 起查表也是），看哪個參數、哪些是威力原語讀形狀自己的 ``budget``
+        （:meth:`ShapeBudget.permille_for`）。"""
         price = self.shape_budget[shape.id]
         return shape.budget.permille_for(
             values,
             primitive,
             base_permille=price.base_permille,
             per_unit_permille=price.per_unit_permille,
+            by_value=price.by_value,
+            non_power_by_value=price.non_power_by_value,
         )
 
     def status_point(self, status_id: str) -> int | None:
@@ -767,7 +775,7 @@ def primitive_points_problems(primitives: PrimitiveTable, budget: BudgetRules) -
 
 def shape_budget_problems(shapes: ShapeTable, budget: BudgetRules) -> list[str]:
     """``shape_budget`` 與形狀表對得上（HC-B）：每種形狀一項、沒有未知的形狀、有每單位加成的
-    形狀要有參數（原本 ``ShapeBudget`` 的檢查）。"""
+    形狀要有參數（原本 ``ShapeBudget`` 的檢查）；查表的檢查見 :func:`_shape_table_problems`。"""
     by_id = {s.id: s for s in shapes.shapes}
     missing = [sid for sid in by_id if sid not in budget.shape_budget]
     problems = [f"形狀 {sid}：shape_budget 少了這一項" for sid in missing]
@@ -775,8 +783,37 @@ def shape_budget_problems(shapes: ShapeTable, budget: BudgetRules) -> list[str]:
         shape = by_id.get(sid)
         if shape is None:
             problems.append(f"shape_budget.{sid}：沒有這個形狀")
-        elif budget.shape_budget[sid].per_unit_permille and shape.budget.param is None:
+            continue
+        price = budget.shape_budget[sid]
+        if price.per_unit_permille and shape.budget.param is None:
             problems.append(f"shape_budget.{sid}：形狀沒有 budget.param，不能設 per_unit_permille")
+        problems += _shape_table_problems(shape, price)
+    return problems
+
+
+def _shape_table_problems(shape: ShapeDef, price: ShapePrice) -> list[str]:
+    """查表 ``by_value``／``non_power_by_value``（HC-W2，原本 ``ShapeBudget``／``ShapeDef`` 的
+    檢查）：形狀要有 ``budget.param``、表不可為空、涵蓋參數的整個範圍；``non_power_by_value`` 要
+    形狀列出 ``power_primitives``。"""
+    problems: list[str] = []
+    wanted = shape.budget_param_values()
+    tables = (("by_value", price.by_value), ("non_power_by_value", price.non_power_by_value))
+    for name, table in tables:
+        if table is None:
+            continue
+        where = f"shape_budget.{shape.id}.{name}"
+        if shape.budget.param is None:
+            problems.append(f"{where}：形狀沒有 budget.param，不能查表")
+        elif not table:
+            problems.append(f"{where}：不可為空")
+        else:
+            missing = [v for v in wanted if v not in table]
+            if missing:
+                problems.append(f"{where}：缺少參數 {shape.budget.param} 的值 {missing}")
+    if price.non_power_by_value is not None and not shape.budget.power_primitives:
+        problems.append(
+            f"shape_budget.{shape.id}.non_power_by_value：形狀沒有列出 budget.power_primitives"
+        )
     return problems
 
 

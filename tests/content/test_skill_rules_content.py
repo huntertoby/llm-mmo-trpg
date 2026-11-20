@@ -284,14 +284,31 @@ def test_an_exclusion_referencing_an_unknown_status_is_rejected(tmp_path: Path) 
 def test_shape_budget_validation() -> None:
     cone = yaml.safe_load((PROJECT_ROOT / "content/skill_shapes.yaml").read_text("utf-8"))
     (data,) = [s for s in cone["shapes"] if s["id"] == "cone"]
-    with pytest.raises(ValidationError, match="by_value_permille 缺少"):
-        ShapeDef.model_validate(
-            {**data, "budget": {"param": "size", "by_value_permille": {2: 1300}}}
-        )
     with pytest.raises(ValidationError, match="不是這個形狀的參數"):
         ShapeDef.model_validate({**data, "budget": {"param": "radius"}})
-    with pytest.raises(ValidationError, match="必須指定 param"):
-        ShapeDef.model_validate({**data, "budget": {"by_value_permille": {2: 1300}}})
+
+
+def test_shape_lookup_tables_are_checked_against_the_shapes() -> None:
+    """HC-W2：查表搬到 skill_budget.yaml 的 shape_budget.<id>.by_value（鍵是參數值），載入時檢查
+    涵蓋參數範圍、形狀有 param、連鎖的 non_power_by_value 要有 power_primitives。"""
+    lib = library()
+    shapes = lib.ruleset.shapes
+    prices = dict(lib.budget.shape_budget)
+    for sid in ("cone", "cross", "ring", "chain"):
+        assert prices[sid].by_value, sid
+        assert set(prices[sid].by_value or {}) == set(shapes.by_id()[sid].budget_param_values())
+    prices["cone"] = prices["cone"].model_copy(update={"by_value": {2: 1300}})
+    prices["single"] = prices["single"].model_copy(update={"by_value": {1: 1000}})
+    prices["ring"] = prices["ring"].model_copy(update={"non_power_by_value": {}})
+    prices["cross"] = prices["cross"].model_copy(update={"non_power_by_value": {1: 1, 2: 2}})
+    broken = lib.budget.model_copy(update={"shape_budget": prices})
+    assert shape_budget_problems(shapes, broken) == [
+        "shape_budget.cone.by_value：缺少參數 size 的值 [3, 4]",
+        "shape_budget.cross.non_power_by_value：形狀沒有列出 budget.power_primitives",
+        "shape_budget.ring.non_power_by_value：不可為空",
+        "shape_budget.ring.non_power_by_value：形狀沒有列出 budget.power_primitives",
+        "shape_budget.single.by_value：形狀沒有 budget.param，不能查表",
+    ]
 
 
 def test_shape_budget_lives_in_the_budget_table() -> None:

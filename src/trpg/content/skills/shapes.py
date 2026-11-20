@@ -57,34 +57,22 @@ class ParamDef(ContentModel):
 
 
 class ShapeBudget(ContentModel):
-    """形狀倍率（‰，``docs/phases/Phase2B計畫.md`` 4.2）。
+    """形狀倍率的結構（‰，``docs/phases/Phase2B計畫.md`` 4.2）。
 
-    倍率 ＝ ``by_value_permille[參數值]``（有表格時），否則 ``base_permille ＋ per_unit_permille ×
-    參數值``（``param`` 為 ``None`` 時只有 ``base_permille``）。HC-B 起 ``base_permille``、
-    ``per_unit_permille`` 在 ``skill_budget.yaml`` 的 ``shape_budget.<形狀 id>``（開放數值工坊，由
-    ``BudgetRules.shape_permille`` 傳進來）；
-    查表（``by_value_permille`` 等，鍵是參數值）留在這裡。
+    倍率 ＝ ``by_value[參數值]``（有表格時），否則 ``base_permille ＋ per_unit_permille × 參數值``
+    （``param`` 為 ``None`` 時只有 ``base_permille``）。數字（``base_permille``、
+    ``per_unit_permille``，HC-B；查表 ``by_value``、``non_power_by_value``，HC-W2，鍵是參數值）都在
+    ``skill_budget.yaml`` 的 ``shape_budget.<形狀 id>``（開放數值工坊，由
+    ``BudgetRules.shape_permille`` 傳進來）；這裡只留結構：``param``（看哪個參數）與
+    ``power_primitives``。
 
-    ``non_power_by_value_permille``（BAL-13d，06 6.5「BAL-13c 定」）：形狀會衰減威力時（連鎖每跳
-    −25%），不在 ``power_primitives`` 的效果（狀態、推擊、表面等照常施加的非數值效果）改查這張表
-    （連鎖維持衰減前的倍率）；``power_primitives`` 是威力會跟著衰減的原語（傷害、治療、護盾……）。
+    ``non_power_by_value``（BAL-13d，06 6.5「BAL-13c 定」）：形狀會衰減威力時（連鎖每跳 −25%），
+    不在 ``power_primitives`` 的效果（狀態、推擊、表面等照常施加的非數值效果）改查這張表（連鎖維持
+    衰減前的倍率）；``power_primitives`` 是威力會跟著衰減的原語（傷害、治療、護盾……）。
     """
 
     param: str | None = None
-    by_value_permille: dict[int, int] | None = None
-    non_power_by_value_permille: dict[int, int] | None = None
     power_primitives: tuple[str, ...] = ()
-
-    @model_validator(mode="after")
-    def _check(self) -> ShapeBudget:
-        tables = (self.by_value_permille, self.non_power_by_value_permille)
-        if self.param is None and any(tables):
-            raise ValueError("設定 by_value_permille 時必須指定 param")
-        if any(table is not None and not table for table in tables):
-            raise ValueError("by_value_permille 不可為空")
-        if self.non_power_by_value_permille is not None and not self.power_primitives:
-            raise ValueError("設定 non_power_by_value_permille 時必須列出 power_primitives")
-        return self
 
     def permille_for(
         self,
@@ -93,21 +81,23 @@ class ShapeBudget(ContentModel):
         *,
         base_permille: int,
         per_unit_permille: int = 0,
+        by_value: dict[int, int] | None = None,
+        non_power_by_value: dict[int, int] | None = None,
     ) -> int:
         """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。給了
-        ``primitive`` 且它不是威力原語時，有 ``non_power_by_value_permille`` 就查那張表。
-        ``base_permille``／``per_unit_permille`` 是 ``skill_budget.yaml`` 的 ``shape_budget``。"""
+        ``primitive`` 且它不是威力原語時，有 ``non_power_by_value`` 就查那張表。數字都是
+        ``skill_budget.yaml`` 的 ``shape_budget``。"""
         if self.param is None:
             return base_permille
         raw = values.get(self.param)
         value = raw if isinstance(raw, int) else 0
-        table = self.by_value_permille
+        table = by_value
         if (
-            self.non_power_by_value_permille is not None
+            non_power_by_value is not None
             and primitive is not None
             and primitive not in self.power_primitives
         ):
-            table = self.non_power_by_value_permille
+            table = non_power_by_value
         if table is not None:
             return table.get(value, base_permille)
         return base_permille + per_unit_permille * value
@@ -220,15 +210,18 @@ class ShapeDef(ContentModel):
         param = self.budget.param
         if param is None:
             return self
-        spec = self.all_params().get(param)
-        if spec is None:
+        if self.all_params().get(param) is None:
             raise ValueError(f"形狀 {self.id}：budget.param {param!r} 不是這個形狀的參數")
-        for table in (self.budget.by_value_permille, self.budget.non_power_by_value_permille):
-            if table is not None:
-                missing = [v for v in range(spec.min, spec.top(builtin=True) + 1) if v not in table]
-                if missing:
-                    raise ValueError(f"形狀 {self.id}：by_value_permille 缺少參數值 {missing}")
         return self
+
+    def budget_param_values(self) -> tuple[int, ...]:
+        """預算查表必須涵蓋的參數值（``budget.param`` 的 ``min``～內建上限；沒有 ``param`` 時空；
+        HC-W2：查表搬到 ``skill_budget.yaml`` 後由 ``shape_budget_problems`` 檢查）。"""
+        param = self.budget.param
+        spec = self.all_params().get(param) if param is not None else None
+        if spec is None:
+            return ()
+        return tuple(range(spec.min, spec.top(builtin=True) + 1))
 
     def summary(self) -> str:
         return self.name_zh
