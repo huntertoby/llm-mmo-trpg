@@ -89,6 +89,8 @@ export type WorkshopWeapon = Schemas["WorkshopWeapon"];
 export type SkillRarity = Schemas["SkillRarity"];
 export type Glossary = Schemas["Glossary"];
 export type GlossaryEntry = Schemas["GlossaryEntry"];
+/** 畫面要用的全域規則數字（HC-3：源力上限、技能欄上限；`/api/glossary` 的 `rules`）。 */
+export type GameRules = Schemas["GameRulesOut"];
 export type StatusLook = Schemas["StatusLook"];
 export type WeaponLookEntry = Schemas["WeaponLookEntry"];
 export type WeaponRangeEntry = Schemas["WeaponRangeEntry"];

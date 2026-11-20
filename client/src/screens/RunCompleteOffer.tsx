@@ -1,8 +1,8 @@
 // 完整技能三選一（Phase 3W-6 正式畫面；06 6.34.6）：一輪中段（第 3 場後）與 Boss 前（第 5 場後）各一次，排在營火之前。
-// 完整技能是整招設計好的技能，強度視為已閃 3 次（預算 +120‰，畫面上寫 +12%），不能再閃現，但可以在營火重閃它的調整欄。
+// 完整技能是整招設計好的技能，強度視為已閃 3 次（預算加成照伺服器的 `/api/glossary` 規則，畫面上寫成百分比），不能再閃現，但可以在營火重閃它的調整欄。
 import { useState } from "react";
 import type { RunChoice, RunResponse } from "../api/types";
-import { COMPLETE_BADGE, COMPLETE_INTRO, completeSkipText } from "../run/flash";
+import { COMPLETE_BADGE, completeIntro, completeSkipText } from "../run/flash";
 import { offerGroupKey, pickChoice, pickReady, type RunView } from "../run/flow";
 import { OfferPicker } from "../run/OfferPicker";
 
@@ -27,7 +27,7 @@ export function RunCompleteOffer({ run, view, busy, onChoose }: Props) {
     <div className="panel run-complete-offer" data-testid="run-complete-offer">
       <h2>完整技能三選一（第 {view.afterBattle} 場後）</h2>
       <ul className="complete-intro small" data-testid="complete-intro">
-        {COMPLETE_INTRO.map((line) => (
+        {completeIntro().map((line) => (
           <li key={line}>{line}</li>
         ))}
       </ul>

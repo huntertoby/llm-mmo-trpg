@@ -8,6 +8,7 @@ import { canStart, keepAvailable, keywordAvailable, startBody, toggleKeyword, ty
 import { Hint } from "../ui/Hint";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { KeywordIcon } from "../ui/CreateIcons";
+import { gameRules } from "../battle/glossary";
 
 const CLASS_LABELS: Record<string, string> = { melee: "近戰", ranged: "遠程", focus: "法器" };
 
@@ -92,7 +93,8 @@ export function useStartPicker(seed: number | null, dev: boolean, useDevPack = f
     };
   }, [weapon, seed, selectedKey]);
 
-  const count = options?.keyword_count ?? 2;
+  // 開局選幾個關鍵字照伺服器（`keyword_count`；選項還沒載入時用 `/api/glossary` 的同一個規則；HC-3 起不寫死）。
+  const count = options?.keyword_count ?? gameRules().start_keywords;
   const previewOptions = preview !== null && preview.weapon === weapon ? preview.options : [];
   const weaponDef = options?.weapons.find((w) => w.id === weapon);
   const skills = selected
@@ -184,7 +186,8 @@ export function StartPickerView({ picker, disabled = false }: ViewProps) {
           );
         })}
       </div>
-      {selected.length >= count && chosen.length >= 2 && (
+      {/* 觸發關係是兩招之間的事：選滿而且至少兩招有技能才寫 */}
+      {selected.length >= count && chosen.length > 1 && (
         <div className={`small run-start-links${picker.links.length === 0 ? " muted" : ""}`} data-testid="start-links">
           {startLinksText(picker.links)}
         </div>

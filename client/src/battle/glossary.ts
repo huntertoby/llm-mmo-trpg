@@ -2,7 +2,7 @@
 // 中文名與旗標（可燃、致命、不可通行……）不手寫：啟動時讀 /api/glossary（由 content 產生）。
 // 內容新增種類時找不到的鍵會退回預設值（顯示 ID），不會壞掉。
 
-import type { Glossary, GlossaryEntry, StatusLook, Surface, WeaponLookEntry, WeaponRangeEntry } from "../api/types";
+import type { GameRules, Glossary, GlossaryEntry, StatusLook, Surface, WeaponLookEntry, WeaponRangeEntry } from "../api/types";
 import { SURFACE_GROUND_COLOR } from "../render/palette";
 
 // ---- 名詞對照（由 /api/glossary 提供；啟動時載入）-------------------------------------------
@@ -47,6 +47,22 @@ export function setGlossary(g: Glossary): void {
   for (const w of g.weapon_looks ?? []) weaponLooks.set(w.id, w);
   weaponRanges.clear();
   for (const w of g.weapon_ranges ?? []) weaponRanges.set(w.id, w);
+  if (g.rules !== undefined) setGameRules(g.rules);
+}
+
+// ---- 全域規則數字（HC-3：`/api/glossary` 的 `rules`，由 content 產生）-------------------------
+
+let gameRulesValue: GameRules | null = null;
+
+/** 只設定規則數字（開發頁不載入整份對照表時用）。 */
+export function setGameRules(r: GameRules): void {
+  gameRulesValue = r;
+}
+
+/** 源力上限、技能欄上限（`core.yaml`）。App 先載入對照表才畫畫面；還沒載入就取用是程式錯誤，直接丟錯。 */
+export function gameRules(): GameRules {
+  if (gameRulesValue === null) throw new Error("規則數字還沒載入（/api/glossary 的 rules）");
+  return gameRulesValue;
 }
 
 /** 武器預設外觀（`/api/glossary` 的 `weapon_looks`；`weapons.yaml` 的 `look`）。 */

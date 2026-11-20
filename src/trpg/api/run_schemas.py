@@ -653,7 +653,8 @@ class HeroOut(_ApiModel):
     """出身的區域 ID（QK-2b：主角 Q 版頭像的框色）；沒有出身為 ``None``。"""
     insight: int = 0
     """還沒花的靈感點（Phase 3W-5）。"""
-    flash_rules: FlashRulesOut | None = None
+    flash_rules: FlashRulesOut
+    """閃現規則（HC-3 起必有：前端不留備用值）。"""
     flash: tuple[SkillFlashOut, ...] = ()
     """學會的每招技能（裝備中依技能列順序，再來是備用）的閃現狀態（Phase 3W-5）。"""
     bench: tuple[SkillCard, ...] = ()

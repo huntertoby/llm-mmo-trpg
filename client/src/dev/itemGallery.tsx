@@ -30,6 +30,12 @@ import { LootChoicePanel } from "../world/LootChoicePanel";
 import { MailPanel } from "../world/MailPanel";
 import { SmithyPanel } from "../world/SmithyPanel";
 import "../styles/index.css";
+import glossaryFixture from "../battle/fixtures/glossary.json";
+import { setGameRules } from "../battle/glossary";
+import type { GameRules } from "../api/types";
+
+// HC-3：源力上限、技能欄上限照伺服器（`/api/glossary` 的 `rules`）；開發頁沒有伺服器，用匯出的對照表快照。
+setGameRules((glossaryFixture as unknown as { rules: GameRules }).rules);
 
 const q = new URLSearchParams(location.search);
 const list = (k: string, d: string): string[] => (q.get(k) ?? d).split(",").filter((s) => s !== "");

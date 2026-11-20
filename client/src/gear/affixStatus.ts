@@ -89,9 +89,10 @@ export function compareItem(catalog: GearCatalog, selection: Selection, slotId: 
   // 被換下的物品：它讓別處重複的詞條恢復生效
   for (const h of before.filter((x) => x.slot === slotId)) {
     if (!isNonNumeric(catalog, h.affixId)) continue;
-    const stillTwice = count(others, h.affixId) + item.affixes.filter((a) => a.affix_id === h.affixId).length;
-    const wasDuplicated = count(before, h.affixId) >= 2;
-    if (!wasDuplicated || stillTwice >= 2) continue;
+    // 「重複」＝同 id 不只一條（非數值類只有第一條生效，`engine/gear/core.py` 的 `diminish`；HC-3 起不寫門檻數字）
+    const stillDuplicated = count(others, h.affixId) + item.affixes.filter((a) => a.affix_id === h.affixId).length > 1;
+    const wasDuplicated = count(before, h.affixId) > 1;
+    if (!wasDuplicated || stillDuplicated) continue;
     const other = others.find((o) => o.affixId === h.affixId);
     if (other !== undefined) lines.push({ text: other.text, kind: "restore", note: `${other.slotName}的這條原本和${slotName}的重複，換下後恢復生效` });
   }

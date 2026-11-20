@@ -277,23 +277,23 @@ rules:
   # ======================================================================== 前端：玩法數值（要搬）
   - id: ts-flash-fallback
     class: config
-    status: todo
+    status: done
     files: client/src/run/flash.ts
     context: 'FALLBACK|COMPLETE_BONUS_PERMILLE'
     kind: number
-    note: 閃現規則的前端後備值與完整技能加成（伺服器沒給時用；後端 content 已有）。
+    note: 閃現規則的前端後備值與完整技能加成。HC-3：`flash_rules` 改必有、拿掉 FALLBACK；完整技能加成讀 `/api/glossary` 的 `rules.complete_budget_permille`（0 筆）。
   - id: ts-slot-limits
     class: config
-    status: todo
+    status: done
     files: client/src/run/flow.ts
     context: 'SLOT_LIMITS'
-    note: 技能欄上限（後端規則已有，前端重寫一份）。
+    note: 技能欄上限。HC-3：改讀 `/api/glossary` 的 `rules.skill_slots`（`slotLimits()`；0 筆）。
   - id: ts-source-max
     class: config
-    status: todo
+    status: done
     files: client/src/ui/SkillCardView.tsx
     owner: SOURCE_MAX
-    note: 源力上限 3（core.yaml source_max 的前端副本）。
+    note: 源力上限。HC-3：改讀 `/api/glossary` 的 `rules.source_max`（0 筆）。
   - id: ts-attr-base
     class: scale
     status: done
@@ -316,16 +316,16 @@ rules:
     note: 木樁、試招的回合上限後備 ?? 30。
   - id: ts-start-keywords
     class: config
-    status: todo
+    status: done
     files: client/src/run/StartPicker.tsx
     kind: number
-    note: 開局關鍵字數的後備 ?? 2 與「至少 2 個」判斷。
+    note: 開局關鍵字數。HC-3：選項還沒載入時改讀 `/api/glossary` 的 `rules.start_keywords`；觸發關係改寫「至少兩招」（> 1；0 筆）。
   - id: ts-affix-duplicate
     class: config
-    status: todo
+    status: done
     files: client/src/gear/affixStatus.ts
     kind: number
-    note: 同詞條重複的判斷（2 條）；後端 item_budget 規則的前端副本。
+    note: 同詞條重複的判斷。HC-3：「重複」＝同 id 不只一條（> 1；非數值類只有第一條生效是引擎 diminish 的結構，不是門檻數字；0 筆）。
   - id: ts-walk-max
     class: config
     status: todo

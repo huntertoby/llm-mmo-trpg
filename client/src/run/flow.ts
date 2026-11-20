@@ -1,6 +1,6 @@
 // roguelite 一輪的流程狀態（Phase 3-5c-1；純函式）：由 `RunResponse` 決定要顯示哪個畫面、有哪些按鈕，
 // 以及升級畫面的配點、候選排列、欄位上限判斷。
-import { END_REASONS } from "../battle/glossary";
+import { END_REASONS, gameRules } from "../battle/glossary";
 import { objectiveBadge, objectiveLine, type ObjectiveKind, type ObjectiveLike } from "../battle/objective";
 import type { AttributeId, GearCandidate, RunChoice, RunHero, RunOffer, RunResponse, SkillCard } from "../api/types";
 
@@ -46,9 +46,14 @@ export function attributeLabel(id: string): string {
   return ATTRIBUTES.find((a) => a.id === id)?.label ?? id;
 }
 
-/** 技能欄位上限（`content/rules/core.yaml` 的 `skill_slots`）。 */
-export const SLOT_LIMITS = { active: 6, passive: 3, reaction: 1, stance: 1 } as const;
-export type SlotKind = keyof typeof SLOT_LIMITS;
+export type SlotKind = "active" | "passive" | "reaction" | "stance";
+/** 技能欄的種類（畫面上「主動 4/6・被動…」的順序）。 */
+export const SLOT_KINDS: readonly SlotKind[] = ["active", "passive", "reaction", "stance"];
+
+/** 技能欄位上限（伺服器 `/api/glossary` 的 `rules.skill_slots`＝`core.yaml` 的 `skill_slots`；HC-3 起不寫死）。 */
+export function slotLimits(): Readonly<Record<SlotKind, number>> {
+  return gameRules().skill_slots;
+}
 export const SLOT_LABELS: Readonly<Record<SlotKind, string>> = {
   active: "主動",
   passive: "被動（含修正）",
@@ -247,7 +252,7 @@ export function slotUsage(skills: readonly Pick<SkillCard, "kind_id">[]): Record
 /** 裝上 `card` 會超過欄位上限嗎？（規則改變型傳說的限制前端不知道，由後端 422 補上。） */
 export function needsReplacement(skills: readonly SkillCard[], card: SkillCard): boolean {
   const kind = slotOf(card);
-  return slotUsage(skills)[kind] >= SLOT_LIMITS[kind];
+  return slotUsage(skills)[kind] >= slotLimits()[kind];
 }
 
 /** 可以被換掉的技能：預設只列同種欄位；後端拒絕後（`any`）列出全部。 */

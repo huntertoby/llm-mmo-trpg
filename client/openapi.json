@@ -13725,6 +13725,35 @@
         "title": "GambleOut",
         "description": "賭注技能的預覽（Phase 3D-7a）：成功率與兩個分支（依序 ``win``、``lose``）。玩家是在知情下\n下注：網頁依它列出「60%：傷害 ×2｜40%：你受 15 傷害」。"
       },
+      "GameRulesOut": {
+        "properties": {
+          "source_max": {
+            "type": "integer",
+            "title": "Source Max"
+          },
+          "skill_slots": {
+            "$ref": "#/components/schemas/SkillSlotsOut"
+          },
+          "start_keywords": {
+            "type": "integer",
+            "title": "Start Keywords"
+          },
+          "complete_budget_permille": {
+            "type": "integer",
+            "title": "Complete Budget Permille"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source_max",
+          "skill_slots",
+          "start_keywords",
+          "complete_budget_permille"
+        ],
+        "title": "GameRulesOut",
+        "description": "畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。"
+      },
       "GearAffixInfo": {
         "properties": {
           "id": {
@@ -14820,6 +14849,9 @@
             "type": "array",
             "title": "Weapon Ranges",
             "default": []
+          },
+          "rules": {
+            "$ref": "#/components/schemas/GameRulesOut"
           }
         },
         "additionalProperties": false,
@@ -14832,7 +14864,8 @@
           "stacks",
           "reactions",
           "elements",
-          "attributes"
+          "attributes",
+          "rules"
         ],
         "title": "Glossary",
         "description": "名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。\n\n``effects``／``conditions``／``triggers``（Phase 3E-2e）：技能效果原語、條件、觸發與反應時機的\n中文名與給玩家看的說明（原語的 ``player_description``）；``weapon_looks``：武器預設外觀。"
@@ -15479,14 +15512,7 @@
             "default": 0
           },
           "flash_rules": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FlashRulesOut"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "$ref": "#/components/schemas/FlashRulesOut"
           },
           "flash": {
             "items": {
@@ -15539,7 +15565,8 @@
           "source",
           "source_max",
           "weapon",
-          "skills"
+          "skills",
+          "flash_rules"
         ],
         "title": "HeroOut"
       },
@@ -26251,6 +26278,36 @@
         ],
         "title": "SkillReasons",
         "description": "主角灰掉的技能 → 引擎的拒絕理由（繁體中文）；可以用的技能不在表內（Phase 3-5c-2）。"
+      },
+      "SkillSlotsOut": {
+        "properties": {
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "passive": {
+            "type": "integer",
+            "title": "Passive"
+          },
+          "reaction": {
+            "type": "integer",
+            "title": "Reaction"
+          },
+          "stance": {
+            "type": "integer",
+            "title": "Stance"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "active",
+          "passive",
+          "reaction",
+          "stance"
+        ],
+        "title": "SkillSlotsOut",
+        "description": "技能欄上限（``core.yaml`` 的 ``skill_slots``，依技能 ``kind``）。"
       },
       "SkillStackRef": {
         "properties": {

@@ -52,6 +52,7 @@ __all__ = [
     "CreateBattleRequest",
     "DamageOut",
     "DecisionRequest",
+    "GameRulesOut",
     "Glossary",
     "GlossaryEntry",
     "GrantPreviewOut",
@@ -72,6 +73,7 @@ __all__ = [
     "RunOptionOut",
     "SkillOffOut",
     "SkillReasons",
+    "SkillSlotsOut",
     "StatusChanceOut",
     "StepOut",
     "TargetOut",
@@ -212,6 +214,29 @@ class WeaponRangeEntry(_ApiModel):
     range: int
 
 
+class SkillSlotsOut(_ApiModel):
+    """技能欄上限（``core.yaml`` 的 ``skill_slots``，依技能 ``kind``）。"""
+
+    active: int
+    passive: int
+    """含修正技能。"""
+    reaction: int
+    stance: int
+
+
+class GameRulesOut(_ApiModel):
+    """畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。"""
+
+    source_max: int
+    """源力上限（``core.yaml`` 的 ``source_max``；技能卡的源力圓點）。"""
+    skill_slots: SkillSlotsOut
+    """技能欄上限（換裝、升級換招、英雄面板的「主動 4/6」）。"""
+    start_keywords: int
+    """開局選幾個關鍵字（``roguelite.yaml`` 的 ``start.keywords``）。"""
+    complete_budget_permille: int
+    """完整技能的預算加成（‰，``flash_templates.yaml`` 的 ``complete.budget_permille``）。"""
+
+
 class Glossary(_ApiModel):
     """名詞對照表（由內容庫產生）：ID → 中文名與簡短說明。
 
@@ -238,6 +263,8 @@ class Glossary(_ApiModel):
     weapon_looks: tuple[WeaponLookEntry, ...] = ()
     weapon_ranges: tuple[WeaponRangeEntry, ...] = ()
     """全部武器的射程（CB-3c，``weapons.yaml`` 的 ``range``）；只供畫面挑動畫片段，不做規則判斷。"""
+    rules: GameRulesOut
+    """全域規則數字（HC-3：源力上限、技能欄上限、開局關鍵字數、完整技能加成）。"""
 
 
 # ---------------------------------------------------------------------------

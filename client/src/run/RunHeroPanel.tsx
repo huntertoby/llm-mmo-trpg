@@ -16,10 +16,10 @@ import {
   conHpBonus,
   hpDeltaText,
   perkText,
+  SLOT_KINDS,
   SLOT_LABELS,
-  SLOT_LIMITS,
+  slotLimits,
   slotUsage,
-  type SlotKind,
 } from "./flow";
 
 /** 有效屬性（含裝備；常駐數值的階數依它算）。舊回應沒有時退回基礎屬性。 */
@@ -51,7 +51,8 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
   const usage = slotUsage(hero.skills);
   const raceLine = raceOriginText(hero.race_name_zh, hero.origin_name_zh);
   const traits: readonly string[] = (hero as { weapon_traits_zh?: readonly string[] }).weapon_traits_zh ?? [];
-  const kinds = Object.keys(SLOT_LIMITS) as SlotKind[];
+  const kinds = SLOT_KINDS;
+  const limits = slotLimits();
   // 主手沒換過時是主角原本的基礎武器（id 以 base_ 開頭；武器已在上面顯示），不算穿戴的裝備
   const worn = wornGear(hero);
   return (
@@ -154,7 +155,7 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
       <div className="section-title">
         技能
         <span className="muted small lead-gap" data-testid="run-skill-slots">
-          {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}
+          {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${limits[k]}`).join("・")}
         </span>
       </div>
       {(hero.insight ?? 0) > 0 && (

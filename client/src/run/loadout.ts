@@ -3,7 +3,7 @@ import type { RunChoice, RunHero, SkillCard } from "../api/types";
 
 /** 換裝只用到裝備與備用技能（一輪的主角、大世界角色都適用；5A-5）。 */
 export type LoadoutHero = Pick<RunHero, "skills" | "bench">;
-import { SLOT_LIMITS, slotOf, slotUsage, type SlotKind } from "./flow";
+import { slotLimits, slotOf, slotUsage, type SlotKind } from "./flow";
 
 // ---- 營火換裝 ----------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ export function canEquip(hero: LoadoutHero, ids: readonly string[], id: string):
   const card = ownedCards(hero).get(id);
   if (card === undefined || ids.includes(id)) return false;
   const kind = slotOf(card);
-  return loadoutUsage(hero, ids)[kind] < SLOT_LIMITS[kind];
+  return loadoutUsage(hero, ids)[kind] < slotLimits()[kind];
 }
 
 export function loadoutChanged(hero: LoadoutHero, ids: readonly string[]): boolean {

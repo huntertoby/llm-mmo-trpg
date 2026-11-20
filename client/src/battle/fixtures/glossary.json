@@ -4898,5 +4898,16 @@
    "weapon_class": "melee",
    "range": 2
   }
- ]
+ ],
+ "rules": {
+  "source_max": 3,
+  "skill_slots": {
+   "active": 6,
+   "passive": 3,
+   "reaction": 1,
+   "stance": 1
+  },
+  "start_keywords": 2,
+  "complete_budget_permille": 120
+ }
 }

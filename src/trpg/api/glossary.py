@@ -8,8 +8,10 @@
 from __future__ import annotations
 
 from trpg.api.schemas import (
+    GameRulesOut,
     Glossary,
     GlossaryEntry,
+    SkillSlotsOut,
     StatusLook,
     WeaponLookEntry,
     WeaponRangeEntry,
@@ -159,6 +161,24 @@ def build_glossary(library: ContentLibrary) -> Glossary:
             WeaponRangeEntry(id=w.id, weapon_class=w.weapon_class, range=w.range)
             for w in sorted(library.weapons.values(), key=lambda w: w.id)
         ),
+        rules=_game_rules(library),
+    )
+
+
+def _game_rules(library: ContentLibrary) -> GameRulesOut:
+    """畫面要用的全域規則數字（HC-3）。"""
+    core = library.ruleset.core
+    slots = core.skill_slots
+    return GameRulesOut(
+        source_max=core.source_max,
+        skill_slots=SkillSlotsOut(
+            active=slots.active,
+            passive=slots.passive,
+            reaction=slots.reaction,
+            stance=slots.stance,
+        ),
+        start_keywords=library.roguelite.start.keywords,
+        complete_budget_permille=library.flash.rules.complete.budget_permille,
     )
 
 

@@ -33,6 +33,12 @@ import { DEV_BOARD, DEV_BOARD_VIEW } from "./boardFixture";
 import { QuestLog } from "../world/QuestLog";
 import { DEV_QUEST_VIEW } from "./questFixture";
 import "../styles/index.css";
+import glossaryFixture from "../battle/fixtures/glossary.json";
+import { setGameRules } from "../battle/glossary";
+import type { GameRules } from "../api/types";
+
+// HC-3：源力上限、技能欄上限照伺服器（`/api/glossary` 的 `rules`）；開發頁沒有伺服器，用匯出的對照表快照。
+setGameRules((glossaryFixture as unknown as { rules: GameRules }).rules);
 
 /** 公告板五頁（樣張 `N_TABS`；字照改字表 #37～#42）。 */
 const BOARD_TABS: PanelTabDef[] = [

@@ -1,7 +1,7 @@
 // 營火換裝（Phase 3-26a）：卸下的技能進備用（等級保留），備用技能可以換回來（欄位上限同升級）。
 // UI-E3：每一列名字前面加 24px 技能圖示（同技能列的組裝式圖示）。
 import { useState } from "react";
-import { SLOT_LABELS, SLOT_LIMITS, type SlotKind } from "./flow";
+import { SLOT_KINDS, SLOT_LABELS, slotLimits } from "./flow";
 import { canEquip, loadoutChanged, loadoutUsage, ownedCards, type LoadoutHero } from "./loadout";
 import { Hint } from "../ui/Hint";
 import { SkillIconView } from "../ui/SkillIconView";
@@ -18,13 +18,14 @@ export function LoadoutEditor({ hero, disabled = false, onApply }: Props) {
   const cards = ownedCards(hero);
   const benched = [...cards.keys()].filter((id) => !ids.includes(id));
   const usage = loadoutUsage(hero, ids);
-  const kinds = Object.keys(SLOT_LIMITS) as SlotKind[];
+  const kinds = SLOT_KINDS;
+  const limits = slotLimits();
   return (
     <div className="loadout-editor" data-testid="loadout-editor">
       <div className="section-title">
         換裝{"　"}
         <span className="muted small">
-          {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${SLOT_LIMITS[k]}`).join("・")}　卸下的技能閃現狀態會保留
+          {kinds.map((k) => `${SLOT_LABELS[k]} ${usage[k]}/${limits[k]}`).join("・")}　卸下的技能閃現狀態會保留
         </span>
       </div>
       <ul className="loadout-list">

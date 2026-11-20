@@ -6,7 +6,7 @@ import { Hint } from "../ui/Hint";
 import { HudBare, InfoTip } from "../ui/PanelKit";
 import { SkillCardView } from "../ui/SkillCardView";
 import { FlashChooser, type FlashPreviewLoader } from "./FlashChooser";
-import { ownedSkills, rulesOf, showCanFlash, flashCountText, noFlashOptions, CAN_FLASH_TEXT, NO_FLASH_OPTIONS_TEXT } from "./flash";
+import { ownedSkills, showCanFlash, flashCountText, noFlashOptions, CAN_FLASH_TEXT, NO_FLASH_OPTIONS_TEXT } from "./flash";
 
 interface Props {
   runId: string;
@@ -24,15 +24,14 @@ export const FLASH_RULE_TIP_ZH = "出題就會扣點，一定要選一個。要�
 
 /** 一招能不能閃現、不能時的原因（閃現鈕的停用與說明卡；大世界面板與一輪共用）。 */
 export function flashRowState(flash: SkillFlash | undefined, insight: number, rules: RunHero["flash_rules"], lockedReason: string | null): { can: boolean; reason: string | undefined } {
-  const cost = rulesOf(rules).open_cost;
+  const cost = rules.open_cost;
   const can = showCanFlash(flash) && insight >= cost && lockedReason === null;
   const reason = lockedReason ?? (flash?.complete ? "完整技能不能再閃現" : (flash?.flash_problem_zh ?? (insight < cost ? "靈感點不足" : undefined)));
   return { can, reason };
 }
 
 /** 規則籌碼三格（#19 新字）：「1 點　4 個變化選 1」「+1 點　指定類別、該類 3 選 1」「每招最多閃 5 次」＋(i)。數字照伺服器的 `flash_rules`。 */
-export function flashRuleChips(rules: RunHero["flash_rules"]): { key: string; icon: "bulb" | "book"; strong: string; text: string; after?: string }[] {
-  const r = rulesOf(rules);
+export function flashRuleChips(r: RunHero["flash_rules"]): { key: string; icon: "bulb" | "book"; strong: string; text: string; after?: string }[] {
   return [
     { key: "open", icon: "bulb", strong: `${r.open_cost} 點`, text: `${r.open_options} 個變化選 1` },
     { key: "focused", icon: "bulb", strong: `+${r.focused_cost - r.open_cost} 點`, text: `指定類別、該類 ${r.focused_options} 選 1` },

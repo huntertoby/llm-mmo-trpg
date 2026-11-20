@@ -5499,6 +5499,19 @@ export interface components {
             ];
         };
         /**
+         * GameRulesOut
+         * @description 畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。
+         */
+        GameRulesOut: {
+            /** Source Max */
+            source_max: number;
+            skill_slots: components["schemas"]["SkillSlotsOut"];
+            /** Start Keywords */
+            start_keywords: number;
+            /** Complete Budget Permille */
+            complete_budget_permille: number;
+        };
+        /**
          * GearAffixInfo
          * @description 白名單的一條詞條。``name_zh`` 含 ``{n}``（數值）；沒有 ``value_min`` 的是固定效果。
          */
@@ -5953,6 +5966,7 @@ export interface components {
              * @default []
              */
             weapon_ranges: components["schemas"]["WeaponRangeEntry"][];
+            rules: components["schemas"]["GameRulesOut"];
         };
         /** GlossaryEntry */
         GlossaryEntry: {
@@ -6237,7 +6251,7 @@ export interface components {
              * @default 0
              */
             insight: number;
-            flash_rules?: components["schemas"]["FlashRulesOut"] | null;
+            flash_rules: components["schemas"]["FlashRulesOut"];
             /**
              * Flash
              * @default []
@@ -10619,6 +10633,20 @@ export interface components {
             reasons: {
                 [key: string]: string;
             };
+        };
+        /**
+         * SkillSlotsOut
+         * @description 技能欄上限（``core.yaml`` 的 ``skill_slots``，依技能 ``kind``）。
+         */
+        SkillSlotsOut: {
+            /** Active */
+            active: number;
+            /** Passive */
+            passive: number;
+            /** Reaction */
+            reaction: number;
+            /** Stance */
+            stance: number;
         };
         /**
          * SkillStackRef
