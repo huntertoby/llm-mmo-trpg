@@ -41,7 +41,7 @@ def test_tier_budget_comes_from_core_yaml() -> None:
 def test_hand_case_1_weapon_skill() -> None:
     """武器技：傷害 ×1.8 ＝ 1.8 × 7 ＝ 12.6；單體 ×1；AP 2 ×1；折抵 冷卻 2（+100）＋耐力 80（+20）
     ＝ +120‰；可用 ＝ 14 × 1 × 1.12 ＝ 15.68；比例 ＝ 12.6 ÷ 15.68 ＝ 45/56。"""
-    report = skill_budget(skill(cost={"stamina": 80, "cooldown": 2}), lib())  # X10-2b：耐力 8 → 80
+    report = skill_budget(skill(), lib())  # 基準技能預設耐力 80（X10-3a）
     assert [e.points for e in report.effects] == [F(63, 5)]
     assert report.raw == report.total == F(63, 5)
     assert report.allowance_permille == 120
@@ -381,7 +381,7 @@ def test_status_and_surface_points_match_the_spec() -> None:
 
 
 def test_the_budget_is_exact_not_floating_point() -> None:
-    report = skill_budget(skill(cost={"stamina": 80, "cooldown": 2}), lib())  # X10-2b：耐力 8 → 80
+    report = skill_budget(skill(), lib())  # 基準技能預設耐力 80（X10-3a）
     for value in (report.raw, report.total, report.usable, report.ratio):
         assert isinstance(value, F)
 

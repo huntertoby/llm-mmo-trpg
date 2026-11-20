@@ -70,7 +70,7 @@ def test_every_demo_skill_passes_validation(skill_id: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-# X10-2b：基準技能（helpers.skill）預設的耐力 8 是舊單位；預算案例改用 ×10 後的 80（折抵 +20‰ 不變）
+# 基準技能（helpers.skill）預設的耐力已是新單位 80（X10-3a）；預算案例照寫明（折抵 +20‰）
 COST = {"stamina": 80, "cooldown": 2}
 
 
