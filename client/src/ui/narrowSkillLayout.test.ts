@@ -7,7 +7,7 @@ import { FADE_BLOCKS, FADE_SELECTORS } from "../battle/hudFade";
 import { percent } from "../battle/previewText";
 import { fitScale, HUD_COLUMNS, hudSideInsets } from "../battle/stageLayout";
 import { EFFECT_LAYER_ORDER, effectLayerOf } from "../render/effectLayer";
-import { COMPLETE_BONUS_PERMILLE, COMPLETE_INTRO } from "../run/flash";
+import { completeIntro } from "../run/flash";
 import { HudBarIcon, SNEAK_MOON, HUD_BACKING, HUD_BACKING_EDGE, HUD_BACKING_R, HUD_BAR_ORDER, type HudBarKey } from "../world/HudBarIcons";
 import { BAR_ICON_ID } from "../render/hudIcon";
 import { setQCanvasFactory } from "../render/qIcon/core";
@@ -237,9 +237,10 @@ describe("小修 8：給玩家看的千分比改成百分比（內部照舊千�
     expect(percent(1000)).toBe("100%");
   });
   it("完整技能三選一的說明寫「+12%」", () => {
-    expect(COMPLETE_BONUS_PERMILLE).toBe(120);
-    expect(COMPLETE_INTRO[0]).toContain("預算 +12%");
-    expect(COMPLETE_INTRO.join("")).not.toContain("‰");
+    // HC-3：加成照伺服器（`/api/glossary` 的 `rules.complete_budget_permille`；vitest 載入的對照表快照是 120‰）
+    const intro = completeIntro();
+    expect(intro[0]).toContain("預算 +12%");
+    expect(intro.join("")).not.toContain("‰");
   });
   it("技能工坊的複合加成公式不再寫 ‰", () => {
     const src = read("src/ui/workshop/CheckPanel.tsx");

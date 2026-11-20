@@ -17,8 +17,6 @@ import { buildingDoorCells, fieldScenery } from "./fieldScenery";
 
 /** 主角在實地地圖上的單位 ID（動畫用）。 */
 export const FIELD_HERO = "field_hero";
-/** 一次 `walk` 最多幾格的預設值（6P-2 起照伺服器 `FieldView.walk_max_steps`；這裡只在沒給時用）。 */
-export const WALK_MAX = 30;
 /** 走一格的動畫時間（同 6A-4d，約 0.12 秒）。 */
 export const STEP_MS = 120;
 /** 換地圖時地名停留的時間。 */
@@ -151,9 +149,12 @@ function unwind(prev: Map<string, Pos | null>, end: Pos): Pos[] {
   return path.reverse();
 }
 
-/** 超過 `max` 格（伺服器的 `walk_max_steps`）的路徑切成好幾段（每段一次 `walk`）。 */
-export function chunkPath(path: readonly Pos[], max = WALK_MAX): Pos[][] {
-  if (!Number.isInteger(max) || max < 1) max = WALK_MAX;
+/**
+ * 超過 `max` 格（伺服器的 `walk_max_steps`，`FieldView` 一定有；HC-3 起前端不留備用值）的路徑切成好幾段（每段一次 `walk`）。
+ * `max` 不是正整數（不該發生）時一格一段，伺服器一定收。
+ */
+export function chunkPath(path: readonly Pos[], max: number): Pos[][] {
+  if (!Number.isInteger(max) || max < 1) max = 1;
   const out: Pos[][] = [];
   for (let i = 0; i < path.length; i += max) out.push(path.slice(i, i + max));
   return out;

@@ -10,6 +10,7 @@ import { RARITY_HINT } from "../run/flash";
 import { Hint } from "./Hint";
 import { SkillFlashInfo } from "./SkillFlashInfo";
 import { categoryLabel, kindLabel, skeletonLabel, sourceCostText } from "../battle/source";
+import { gameRules } from "../battle/glossary";
 import { KeywordLine } from "./KeywordLine";
 import { RuleText } from "./ruleText";
 import { StackTip } from "./StackTip";
@@ -19,9 +20,6 @@ import { AssemblyFormula, SkillIconView } from "./SkillIconView";
 import { SKILL_CARD_ICON_LEVEL } from "../render/skillIcon";
 import { AttrGlyph, ChipGlyph, EffectGlyph, PinGlyph } from "./SkillCardGlyphs";
 import { cardStats, chipLine, diceNote, effectLine } from "./skillCardLines";
-
-/** 源力上限（`content/rules/core.yaml` 的 `source_max`）；HUD 與卡片都用 3 格圖示。 */
-const SOURCE_MAX = 3;
 
 /** 浮動卡的固定控制（技能列傳入）：圖釘按鈕＋「Shift 固定」提示。 */
 export interface CardPin {
@@ -99,7 +97,8 @@ function EffectRow({ card, offEffects }: { card: SkillCard; offEffects?: readonl
 
 /** 「詳細」：原本卡片上的全部資訊（6A-1 以前的內容，順序不變）。 */
 function Detail({ card, compact, activeVariantId, hideConcept }: Required<Pick<Props, "compact" | "hideConcept">> & Pick<Props, "card" | "activeVariantId">) {
-  const source = sourceCostText(card, SOURCE_MAX);
+  // 源力上限照伺服器（`core.yaml` 的 `source_max`；HC-3），HUD 與卡片用同樣格數的圖示。
+  const source = sourceCostText(card, gameRules().source_max);
   const diceNotes = new Map<number, string>();
   for (const e of cardStats(card)?.effects ?? []) {
     const note = diceNote(e);

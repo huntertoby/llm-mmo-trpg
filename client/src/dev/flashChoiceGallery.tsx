@@ -17,6 +17,12 @@ import { useRegionTheme } from "../ui/regionTheme";
 import { hudLayout, isNarrow, popupBox } from "../world/hud";
 import data from "./fixtures/flashChoice.json";
 import "../styles/index.css";
+import glossaryFixture from "../battle/fixtures/glossary.json";
+import { setGameRules } from "../battle/glossary";
+import type { GameRules } from "../api/types";
+
+// HC-3：源力上限、技能欄上限照伺服器（`/api/glossary` 的 `rules`）；開發頁沒有伺服器，用匯出的對照表快照。
+setGameRules((glossaryFixture as unknown as { rules: GameRules }).rules);
 
 type Fixture = { hero: RunHero; sets: Record<string, PendingFlash>; bases?: Record<string, SkillCard> };
 const FIXTURE = data as unknown as Fixture;

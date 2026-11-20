@@ -73,13 +73,29 @@ def test_backend_spot_checks(result: Any, file: str, owner: str, expected: str) 
 @pytest.mark.parametrize(
     ("file", "needle", "expected"),
     [
-        ("client/src/run/flow.ts", "SLOT_LIMITS", "config"),
-        ("client/src/run/flash.ts", "const FALLBACK", "config"),
+        ("client/src/battle/impact.ts", "TIER_PERMILLE: readonly", "config"),
+        ("client/src/screens/GearScreen.tsx", "max_rounds", "config"),
     ],
 )
 def test_frontend_spot_checks(result: Any, file: str, needle: str, expected: str) -> None:
     found = _class_of(result, file, lambda hit: needle in hit.context and hit.kind == "number")
     assert found == {expected}, (file, needle, found)
+
+
+@pytest.mark.parametrize(
+    "file",
+    [
+        "client/src/run/flash.ts",
+        "client/src/run/flow.ts",
+        "client/src/ui/SkillCardView.tsx",
+        "client/src/gear/affixStatus.ts",
+        "client/src/run/StartPicker.tsx",
+    ],
+)
+def test_frontend_rule_copies_removed(result: Any, file: str) -> None:
+    """HC-3：閃現、技能欄、源力、詞條重複、開局關鍵字改讀 API，這些檔不再有 config 類的數字。"""
+    found = _class_of(result, file, lambda hit: hit.kind == "number")
+    assert "config" not in found, (file, found)
 
 
 # ---------------------------------------------------------------------- 掃描器

@@ -3,7 +3,7 @@
 import type { TuningGroupPreset, TuningObjectSummary } from "../api/types";
 import { editCounts, ObjectList } from "./FieldForm";
 import type { Edits } from "./model";
-import { FILTER_ROWS, filterEmpty, filterSkills, MAX_GROUP, ratioText, type SkillFilter } from "./skillModel";
+import { FILTER_ROWS, filterEmpty, filterSkills, ratioText, type SkillFilter } from "./skillModel";
 
 export type ObjectTab = "unit" | "skill";
 
@@ -17,6 +17,8 @@ interface SkillListProps {
   preset: string;
   checked: readonly string[];
   edits: Edits;
+  /** 分組改一次最多幾招（伺服器 `status.max_group`；還沒讀到狀態時 `null`，不標超過）。 */
+  maxGroup: number | null;
   onQuery(q: string): void;
   onFilter(f: SkillFilter, preset: string): void;
   onSelect(id: string): void;
@@ -26,7 +28,7 @@ interface SkillListProps {
 /** 清單最多畫幾列（401 招全畫太長；請用篩選或搜尋縮小）。 */
 export const LIST_LIMIT = 150;
 
-export function SkillList({ skills, presets, selected, query, filter, preset, checked, edits, onQuery, onFilter, onSelect, onCheck }: SkillListProps) {
+export function SkillList({ skills, presets, selected, query, filter, preset, checked, edits, maxGroup, onQuery, onFilter, onSelect, onCheck }: SkillListProps) {
   const shown = filterSkills(skills, query, filter);
   const counts = editCounts(edits);
   const toggle = (id: string) => onCheck(checked.includes(id) ? checked.filter((x) => x !== id) : [...checked, id].sort());
@@ -74,7 +76,7 @@ export function SkillList({ skills, presets, selected, query, filter, preset, ch
       <div className="section-title">
         技能（{shown.length}）
         {checked.length > 0 && (
-          <span className={`tn-checked-count${checked.length > MAX_GROUP ? " over" : ""}`}>
+          <span className={`tn-checked-count${maxGroup !== null && checked.length > maxGroup ? " over" : ""}`}>
             已勾 {checked.length}
             <button type="button" className="small-button" onClick={() => onCheck([])}>
               清除勾選

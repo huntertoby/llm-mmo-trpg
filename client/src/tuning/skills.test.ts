@@ -94,7 +94,7 @@ const BUDGET = (verdict: TuningBudgetResult["verdict"], ratio: number, extra: Pa
   ...extra,
 });
 
-const STATUS: TuningStatus = { can_write: true, reason_zh: null, restart_needed: false, restart_note_zh: "", draft_default: "current", drafts: [], sim_running: null };
+const STATUS: TuningStatus = { can_write: true, reason_zh: null, restart_needed: false, restart_note_zh: "", draft_default: "current", drafts: [], sim_running: null, max_group: 100 };
 const OK: TuningCheckResult = { ok: true, superseded: false, seconds: 1, field_errors: [], page_errors: [] };
 
 const skillForm = (edits: Edits, budget: TuningBudgetResult | null = BUDGET("ok", 788), confirmed = false) =>
@@ -270,13 +270,13 @@ describe("T-B3 分組面板：上限 100、沒條件不能預覽、跳過原因�
   });
 
   it("不能預覽的原因：沒條件、超過 100 招、N 不是整數", () => {
-    expect(groupProblem(true, {}, [], 0, "1")).toContain("不提供「全部技能」");
-    expect(groupProblem(false, { tier: [1] }, [], 0, "1")).toContain("至少選一個");
-    expect(groupProblem(true, { tier: [1] }, [], 122, "1")).toContain("一次最多 100 招（現在 122 招）");
-    expect(groupProblem(false, {}, Array.from({ length: 101 }, (_, i) => `skill_${i}`), 0, "1")).toContain("101 招");
-    expect(groupProblem(true, { tier: [1] }, [], 77, "1.5")).toContain("整數");
-    expect(groupProblem(true, { tier: [1] }, [], 77, "-1")).toBeNull();
-    const m = html(createElement(GroupPanel, { form: DEFAULT_GROUP_FORM, filter: {}, filterLabel: "", filterCount: 0, manual: [], preview: null, error: null, busy: false, onForm: () => {}, onPreview: () => {}, onAdd: () => {} }));
+    expect(groupProblem(true, {}, [], 0, "1", 100)).toContain("不提供「全部技能」");
+    expect(groupProblem(false, { tier: [1] }, [], 0, "1", 100)).toContain("至少選一個");
+    expect(groupProblem(true, { tier: [1] }, [], 122, "1", 100)).toContain("一次最多 100 招（現在 122 招）");
+    expect(groupProblem(false, {}, Array.from({ length: 101 }, (_, i) => `skill_${i}`), 0, "1", 100)).toContain("101 招");
+    expect(groupProblem(true, { tier: [1] }, [], 77, "1.5", 100)).toContain("整數");
+    expect(groupProblem(true, { tier: [1] }, [], 77, "-1", 100)).toBeNull();
+    const m = html(createElement(GroupPanel, { form: DEFAULT_GROUP_FORM, filter: {}, filterLabel: "", filterCount: 0, manual: [], preview: null, error: null, busy: false, maxGroup: 100, onForm: () => {}, onPreview: () => {}, onAdd: () => {} }));
     expect(m).toMatch(/<button[^>]*disabled=""[^>]*data-testid="group-preview"/);
     expect(m).toContain("不提供「全部技能」");
     expect(m).not.toContain("全域倍率</");
@@ -459,11 +459,14 @@ const OPTIONS: TuningSimOptions = {
   ratio_default_seeds: 50,
   ratio_max_work: 40000,
   ratio_battles_per_second: 450,
+  ratio_max_seeds: 250,
+  max_maps: 3,
+  small_sample: 30,
 };
 
 describe("T-B5 地圖戰的單招施放率（分子分母、樣本小）；寫回確認視窗列附帶改動", () => {
   it("施放率列：我方／敵方分開、分子＝施放次數、分母＝裝了這招的單位的行動回合；每場平均次數", () => {
-    const rows = mapSimRows(MAP_RESULT, (id) => (id === "skill_fire_arrow" ? "火焰箭矢" : id), (id) => `M:${id}`);
+    const rows = mapSimRows(MAP_RESULT, (id) => (id === "skill_fire_arrow" ? "火焰箭矢" : id), (id) => `M:${id}`, 30);
     const ally = rows.find((r) => r.group === "「火焰箭矢」（我方）" && r.label.startsWith("每回合施放率"))!;
     expect([ally.before.frac, ally.after.frac]).toEqual(["62/100", "76/95"]);
     expect([ally.before.text, ally.after.text]).toEqual(["62%", "80%"]);
@@ -476,7 +479,7 @@ describe("T-B5 地圖戰的單招施放率（分子分母、樣本小）；寫�
   });
 
   it("結果表與「沒人用」提示；估時用地圖戰的每場秒數", () => {
-    const m = html(createElement(MapResultTable, { result: MAP_RESULT, probes: ["skill_fire_arrow", "skill_nobody"], skillName: (id: string) => id, mapName: (id: string) => id }));
+    const m = html(createElement(MapResultTable, { result: MAP_RESULT, probes: ["skill_fire_arrow", "skill_nobody"], skillName: (id: string) => id, mapName: (id: string) => id, smallSample: 30 }));
     expect(m).toContain("（62/100）");
     expect(m).toContain("改前贏→改後輸 2 場、改前輸→改後贏 3 場");
     expect(m).toContain("skill_nobody：改前改後都沒有人用");

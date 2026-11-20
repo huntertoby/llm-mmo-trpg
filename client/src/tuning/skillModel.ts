@@ -15,7 +15,7 @@ import type {
   TuningSimOptions,
   TuningSkillFacets,
 } from "../api/types";
-import { editKey, kindOfValues, row, type Edit, type Edits, type SimRow } from "./model";
+import { editKey, kindOfValues, row as rowOf, type Edit, type Edits, type SimMetric, type SimRow } from "./model";
 
 // ---- 技能表單：依區塊分組 ----------------------------------------------------
 
@@ -218,7 +218,6 @@ export const FILTER_ROWS: readonly { label: string; choices: readonly FilterChoi
 
 // ---- 分組改 ------------------------------------------------------------------
 
-export const MAX_GROUP = 100;
 
 export const GROUP_TARGETS: readonly { key: TuningGroupTarget; label: string }[] = [
   { key: "damage_base", label: "基礎傷害（沒有條件的傷害效果）" },
@@ -239,11 +238,12 @@ export const GROUP_OPS: readonly { key: TuningGroupOp["kind"]; label: string; hi
 ];
 
 /** 分組預覽不能按的原因（`null` ＝ 可以）。`filterCount`＝目前篩選選到幾招（清單算的；後端預覽會再算一次）。 */
-export function groupProblem(useFilter: boolean, f: SkillFilter, manual: readonly string[], filterCount: number, valueText: string): string | null {
+export function groupProblem(useFilter: boolean, f: SkillFilter, manual: readonly string[], filterCount: number, valueText: string, maxGroup: number | null): string | null {
   if (useFilter ? filterEmpty(f) : manual.length === 0) return "至少選一個篩選條件或手動勾選技能（不提供「全部技能」）";
   const n = useFilter ? filterCount : manual.length;
   if (n === 0) return "沒有選到任何技能";
-  if (n > MAX_GROUP) return `一次最多 ${MAX_GROUP} 招（現在 ${n} 招），請加篩選條件`;
+  // 上限照伺服器（`status.max_group`＝後端 `MAX_GROUP`；HC-3）；還沒讀到狀態時交給後端預覽擋
+  if (maxGroup !== null && n > maxGroup) return `一次最多 ${maxGroup} 招（現在 ${n} 招），請加篩選條件`;
   if (!/^-?\d+$/.test(valueText.trim())) return "N 要填整數";
   return null;
 }
@@ -293,13 +293,16 @@ export function applyConfirm(check: TuningCheckResult | null): TuningApplyIn {
 
 // ---- 地圖戰（規格 5.6、B6） --------------------------------------------------
 
-/** 規模：小＝24 場、中＝80 場（每張圖的種子數＝場數 ÷ 張數，無條件捨去）。 */
-export const MAP_SCALES: readonly { key: "small" | "medium"; label: string; battles: number }[] = [
-  { key: "small", label: "小", battles: 24 },
-  { key: "medium", label: "中", battles: 80 },
-];
+/** 「中」約幾場（工坊畫面的快捷鈕，後端沒有對應的規則）。 */
+export const MAP_MEDIUM_BATTLES = 80;
 
-export const MAX_MAPS = 3;
+/** 規模：小＝伺服器的 `map_default_seeds`（約 24 場；HC-3 起不寫死）、中＝80 場（每張圖的種子數＝場數 ÷ 張數，無條件捨去）。 */
+export function mapScales(options: Pick<TuningSimOptions, "map_default_seeds">): readonly { key: "small" | "medium"; label: string; battles: number }[] {
+  return [
+    { key: "small", label: "小", battles: options.map_default_seeds },
+    { key: "medium", label: "中", battles: MAP_MEDIUM_BATTLES },
+  ];
+}
 
 export function mapSeedsFor(battles: number, maps: number): number {
   return Math.max(1, Math.floor(battles / Math.max(1, maps)));
@@ -308,7 +311,7 @@ export function mapSeedsFor(battles: number, maps: number): number {
 /** 地圖戰的規模問題：沒選地圖、超過 3 張、種子數不對、超過上限。 */
 export function mapScaleProblem(options: TuningSimOptions, maps: number, seeds: number): string | null {
   if (maps === 0) return "至少選一張地圖";
-  if (maps > MAX_MAPS) return `一次最多 ${MAX_MAPS} 張地圖`;
+  if (maps > options.max_maps) return `一次最多 ${options.max_maps} 張地圖`;
   if (!Number.isInteger(seeds) || seeds < 1) return "種子數要填 1 以上的整數";
   const n = maps * seeds;
   if (n > options.max_battles) return `一次最多 ${options.max_battles} 場（現在 ${n} 場），請少選地圖或減少種子數`;
@@ -321,8 +324,9 @@ const TEAM_ZH = { ally: "我方", enemy: "敵方" } as const;
  * 地圖戰結果表：總覽（勝率、平均輪數、我方倒下率）→ 受測招每一招（我方／敵方分開）：每回合施放率（分子＝施放次數、
  * 分母＝裝了這招的單位的行動回合數）與每場平均次數 → 各地圖勝率。招式取改前改後聯集，依（招、陣營）排序。
  */
-export function mapSimRows(result: TuningMapSimResult, skillName: (id: string) => string, mapName: (id: string) => string): SimRow[] {
+export function mapSimRows(result: TuningMapSimResult, skillName: (id: string) => string, mapName: (id: string) => string, smallSample: number): SimRow[] {
   const { before: b, after: a } = result;
+  const row = (group: string, label: string, metric: SimMetric, bs: [number, number, boolean?], as: [number, number, boolean?]) => rowOf(group, label, metric, bs, as, smallSample);
   const rows: SimRow[] = [
     row("總覽", "我方勝率", "rate", [b.wins, b.n, b.small], [a.wins, a.n, a.small]),
     row("總覽", "平均輪數", "avg", [b.rounds, b.n, b.small], [a.rounds, a.n, a.small]),
@@ -335,7 +339,7 @@ export function mapSimRows(result: TuningMapSimResult, skillName: (id: string) =
     const sa = a.skills.find((s) => s.skill === skill && s.team === team);
     const group = `「${skillName(skill)}」（${TEAM_ZH[team]}）`;
     rows.push(row(group, "每回合施放率（施放次數／裝了這招的單位的行動回合）", "rate", [sb?.casts ?? 0, sb?.turns ?? 0], [sa?.casts ?? 0, sa?.turns ?? 0]));
-    rows.push(row(group, "每場平均次數", "avg", [sb?.casts ?? 0, sb?.battles ?? 0, (sb?.turns ?? 0) < 30], [sa?.casts ?? 0, sa?.battles ?? 0, (sa?.turns ?? 0) < 30]));
+    rows.push(row(group, "每場平均次數", "avg", [sb?.casts ?? 0, sb?.battles ?? 0, (sb?.turns ?? 0) < smallSample], [sa?.casts ?? 0, sa?.battles ?? 0, (sa?.turns ?? 0) < smallSample]));
   }
   const maps = [...new Set([...b.maps, ...a.maps].map((m) => m.build))];
   for (const id of maps) {

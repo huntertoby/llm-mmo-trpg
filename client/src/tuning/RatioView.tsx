@@ -3,6 +3,8 @@
 import type { ChangeEvent } from "react";
 import type { TuningRatioSimResult, TuningRatioSummary, TuningSkillRatio } from "../api/types";
 import { cellChanged, lineClass, lineText, RATIO_CELLS, ratioResultNotes, ratioSkillsOf, type RatioForm } from "./ratioModel";
+/** 比值規模的快捷鈕「每組 10 種子」（工坊畫面的快捷鈕，後端沒有對應的規則）；另外兩顆照伺服器的預設與上限。 */
+const RATIO_QUICK_SEEDS = 10;
 
 function Lines({ summary }: { summary: TuningRatioSummary }) {
   if (summary.lines.length === 0) return <div className="muted small">{summary.category_zh}：不套參考線（只看單體傷害招）。</div>;
@@ -81,12 +83,15 @@ interface FormProps {
   skillChoices: readonly { id: string; name_zh: string }[];
   skillName(id: string): string;
   baselineNote: string | null;
+  /** 每組預設種子數與上限（伺服器 `ratio_default_seeds`、`ratio_max_seeds`；HC-3 起不寫死）。 */
+  defaultSeeds: number;
+  maxSeeds: number;
   onForm(next: RatioForm): void;
   onImport(text: string): void;
 }
 
 /** 模擬面板的「比值」情境：受測招、種子數、匯入基準。 */
-export function RatioSimForm({ form, running, edited, skillChoices, skillName, baselineNote, onForm, onImport }: FormProps) {
+export function RatioSimForm({ form, running, edited, skillChoices, skillName, baselineNote, defaultSeeds, maxSeeds, onForm, onImport }: FormProps) {
   const skills = ratioSkillsOf(form, edited);
   const pickFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -124,9 +129,9 @@ export function RatioSimForm({ form, running, edited, skillChoices, skillName, b
       </fieldset>
       <div className="tn-scale" role="group" aria-label="比值規模">
         <span>規模</span>
-        {[10, 50, 250].map((n) => (
+        {[RATIO_QUICK_SEEDS, defaultSeeds, maxSeeds].map((n) => (
           <button key={n} type="button" disabled={running} className={form.seedsText.trim() === String(n) ? "active" : ""} aria-pressed={form.seedsText.trim() === String(n)} onClick={() => onForm({ ...form, seedsText: String(n) })}>
-            每組 {n} 種子{n === 50 ? "（預設）" : n === 250 ? "（BAL-21e）" : ""}
+            每組 {n} 種子{n === defaultSeeds ? "（預設）" : n === maxSeeds ? "（BAL-21e）" : ""}
           </button>
         ))}
         <label className="tn-seeds">

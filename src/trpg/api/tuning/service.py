@@ -49,6 +49,8 @@ from trpg.api.tuning.ratios import (
     run_data,
 )
 from trpg.api.tuning.schemas import (
+    MAX_RATIO_SEEDS,
+    SMALL_SAMPLE,
     TuningApplyResult,
     TuningBudgetResult,
     TuningChangeIn,
@@ -79,6 +81,7 @@ from trpg.api.tuning.schemas import (
 from trpg.api.tuning.sim_jobs import MAX_BATTLES, SimJobs, SimRequestError
 from trpg.api.tuning.skills import (
     GROUP_PRESETS,
+    MAX_GROUP,
     add_budget_side_changes,
     budget_result,
     group_preview,
@@ -198,6 +201,7 @@ class TuningService:
             restart_note_zh=RESTART_NOTE_ZH if self.writes else _NOT_RESTARTED_ZH,
             drafts=self.drafts.names(),
             sim_running=self.sims.running,
+            max_group=MAX_GROUP,
         )
 
     def objects(self, kind: str | None = None) -> list[TuningObjectSummary]:
@@ -489,6 +493,9 @@ class TuningService:
             map_default_seeds=DEFAULT_MAP_SEEDS,
             map_seconds_per_battle=self.sims.map_seconds_per_battle,
             ratio_default_seeds=RATIO_DEFAULT_SEEDS,
+            max_maps=MAX_SIM_MAPS,
+            ratio_max_seeds=MAX_RATIO_SEEDS,
+            small_sample=SMALL_SAMPLE,
             ratio_max_work=MAX_WORK,
             ratio_battles_per_second=self.sims.ratio_battles_per_second,
         )

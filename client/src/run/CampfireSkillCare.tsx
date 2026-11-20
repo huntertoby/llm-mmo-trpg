@@ -20,7 +20,6 @@ import {
   recordLine,
   reflashable,
   reflashSlots,
-  rulesOf,
   toggleCarry,
   TRANSFORM_HINT,
 } from "./flash";
@@ -60,7 +59,7 @@ export function reflashEmptyText(bare: boolean): string {
 
 /** 重閃說明（字照原句；PNL-4 起經 `KeepNum`，「點出 4 個」這類數字不和前面的詞分開）。 */
 export function reflashNoteText(flashRules: RunHero["flash_rules"]): string {
-  const r = rulesOf(flashRules);
+  const r = flashRules;
   return `把一招以前某一次的變化換掉，價格和閃現相同（${r.open_cost} 點出 ${r.open_options} 個；指定類別 ${r.focused_cost} 點出 ${r.focused_options} 個）。不需要先上場用過，也不增加閃現次數；新選項整招不會比現在弱（轉型除外）；標 ▼ 的是換掉後變小的地方。`;
 }
 
@@ -109,7 +108,7 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                   key={s.slot}
                   type="button"
                   className={target?.id === card.id && target.slot === s.slot ? "primary" : ""}
-                  disabled={busy || s.none || (hero.insight ?? 0) < rulesOf(hero.flash_rules).open_cost}
+                  disabled={busy || s.none || (hero.insight ?? 0) < hero.flash_rules.open_cost}
                   data-testid={`reflash-${card.id}-${s.slot}`}
                   data-reflash-none={s.none ? 1 : undefined}
                   data-reflash-weaker={weakerSlot(flash, s.slot) !== null ? 1 : undefined}

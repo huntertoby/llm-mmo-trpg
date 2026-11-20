@@ -46,6 +46,9 @@ const OPTIONS: TuningSimOptions = {
   ratio_default_seeds: 50,
   ratio_max_work: 40000,
   ratio_battles_per_second: 450,
+  ratio_max_seeds: 250,
+  max_maps: 3,
+  small_sample: 30,
 };
 
 describe("C3 技能表單的比值區：目前值、參考線、上次量測", () => {
@@ -82,21 +85,21 @@ describe("C2 比值情境：規模估時（T11）與結果並排", () => {
   it("要量的招：沒選＝草稿改到的；種子 1～250", () => {
     expect(ratioSkillsOf(DEFAULT_RATIO_FORM, ["skill_a"])).toEqual(["skill_a"]);
     expect(ratioSkillsOf({ skills: ["skill_b"], seedsText: "5" }, ["skill_a"])).toEqual(["skill_b"]);
-    expect(ratioSeedsProblem("0")).not.toBeNull();
-    expect(ratioSeedsProblem("251")).not.toBeNull();
-    expect(ratioSeedsProblem("x")).not.toBeNull();
-    expect(ratioSeedsProblem(" 250 ")).toBeNull();
+    expect(ratioSeedsProblem("0", 250)).not.toBeNull();
+    expect(ratioSeedsProblem("251", 250)).not.toBeNull();
+    expect(ratioSeedsProblem("x", 250)).not.toBeNull();
+    expect(ratioSeedsProblem(" 250 ", 250)).toBeNull();
   });
 
   it("「N 組 × M 種子、預估 X 秒」；後端的上限問題原樣顯示；沒有招不能開始", () => {
-    const ok = ratioEstimate(PLAN, DEFAULT_RATIO_FORM, ["skill_fire_arrow"]);
+    const ok = ratioEstimate(PLAN, DEFAULT_RATIO_FORM, ["skill_fire_arrow"], 250);
     expect(ok.problem).toBeNull();
     expect(ok.text).toContain("6 組 × 50 種子");
     expect(ok.text).toContain("預估約 1 秒～1 秒");
-    const big = ratioEstimate({ ...PLAN, problem_zh: "一次最多 40,000 組×種子" }, DEFAULT_RATIO_FORM, ["skill_fire_arrow"]);
+    const big = ratioEstimate({ ...PLAN, problem_zh: "一次最多 40,000 組×種子" }, DEFAULT_RATIO_FORM, ["skill_fire_arrow"], 250);
     expect(big.problem).toContain("40,000");
-    expect(ratioEstimate(PLAN, DEFAULT_RATIO_FORM, []).problem).toContain("至少要有一招");
-    expect(ratioEstimate(null, DEFAULT_RATIO_FORM, ["skill_fire_arrow"]).problem).toContain("正在算規模");
+    expect(ratioEstimate(PLAN, DEFAULT_RATIO_FORM, [], 250).problem).toContain("至少要有一招");
+    expect(ratioEstimate(null, DEFAULT_RATIO_FORM, ["skill_fire_arrow"], 250).problem).toContain("正在算規模");
     expect(simEstimate(OPTIONS, { boss: "", builds: [], seedsText: "3", scenario: "ratio", ratio: DEFAULT_RATIO_FORM }, ["skill_fire_arrow"], PLAN).text).toContain("6 組 × 50 種子");
   });
 

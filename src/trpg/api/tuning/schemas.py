@@ -310,6 +310,8 @@ class TuningStatus(_Model):
     drafts: list[str]
     sim_running: str | None = None
     """跑中的模擬工作 ID。"""
+    max_group: int
+    """分組改一次最多幾招（``skills.MAX_GROUP``；HC-3 前端不寫死）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -341,8 +343,14 @@ class TuningSimOptions(_Model):
     map_default_seeds: int = 24
     map_seconds_per_battle: float = 0.8
     """地圖戰的每場秒數（另記，不和頭目戰共用）。"""
-    ratio_default_seeds: int = 50
-    """比值情境（NW-2c T11）：每組預設種子數。"""
+    ratio_default_seeds: int
+    """比值情境（NW-2c T11）：每組預設種子數（``ratios.DEFAULT_SEEDS``）。"""
+    ratio_max_seeds: int
+    """比值情境：每組種子數的上限（``MAX_RATIO_SEEDS``；HC-3 前端不寫死）。"""
+    max_maps: int
+    """地圖戰一次最多幾張圖（``service.MAX_SIM_MAPS``；HC-3）。"""
+    small_sample: int
+    """分母小於這個數時標「樣本小」（``SMALL_SAMPLE``；HC-3）。"""
     ratio_max_work: int = 40000
     """比值情境：「組數 × 種子」的上限（組＝武器 × 招 × 情境）。"""
     ratio_battles_per_second: float = 450.0

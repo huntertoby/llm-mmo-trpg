@@ -64,6 +64,7 @@ const STATUS: TuningStatus = {
   draft_default: "current",
   drafts: [],
   sim_running: null,
+  max_group: 100,
 };
 
 const field = (path: string) => DETAIL.fields.find((f) => f.path === path)!;
@@ -358,10 +359,10 @@ const RESULT: TuningSimResult = {
 
 describe("T-B3 模擬結果表：改前／改後／差值、分子分母、樣本小、翻轉場數", () => {
   it("格子與差值", () => {
-    expect(simCell(19, 24, "rate")).toMatchObject({ text: "79.2%", frac: "19/24", small: true });
-    expect(simCell(0, 0, "rate")).toMatchObject({ text: "—", value: null });
-    expect(simCell(15, 60, "rate").small).toBe(false);
-    const rows = simRows(RESULT, (id) => (id === "ash_breath" ? "灰燼吐息" : id), (id) => `B:${id}`);
+    expect(simCell(19, 24, "rate", undefined, 30)).toMatchObject({ text: "79.2%", frac: "19/24", small: true });
+    expect(simCell(0, 0, "rate", undefined, 30)).toMatchObject({ text: "—", value: null });
+    expect(simCell(15, 60, "rate", undefined, 30).small).toBe(false);
+    const rows = simRows(RESULT, (id) => (id === "ash_breath" ? "灰燼吐息" : id), (id) => `B:${id}`, 30);
     const win = rows.find((r) => r.label === "我方勝率")!;
     expect(win.delta).toBe("+4.2 個百分點");
     expect(rows.find((r) => r.label === "平均輪數")!.delta).toBe("±0");
@@ -375,7 +376,7 @@ describe("T-B3 模擬結果表：改前／改後／差值、分子分母、樣�
   });
 
   it("畫出來：三欄表頭、分子分母、樣本小、翻轉句", () => {
-    const m = html(createElement(SimResultTable, { result: RESULT, skillName: (id: string) => id, buildName: (id: string) => id }));
+    const m = html(createElement(SimResultTable, { result: RESULT, skillName: (id: string) => id, buildName: (id: string) => id, smallSample: 30 }));
     for (const h of ["改前", "改後", "差值"]) expect(m).toContain(`<th>${h}</th>`);
     expect(m).toContain("79.2%");
     expect(m).toContain("（19/24）");
@@ -396,6 +397,9 @@ describe("T-B3 模擬結果表：改前／改後／差值、分子分母、樣�
       ratio_default_seeds: 50,
       ratio_max_work: 40000,
       ratio_battles_per_second: 450,
+      ratio_max_seeds: 250,
+      max_maps: 3,
+      small_sample: 30,
     };
     expect(estimateSeconds(opts, 24, true)).toBe(11);
     expect(estimateSeconds(opts, 24, false)).toBe(21);

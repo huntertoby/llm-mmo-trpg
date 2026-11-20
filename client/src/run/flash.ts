@@ -5,6 +5,7 @@ import type { FlashOption, FlashPreview, RunChoice, RunHero, SkillCard, SkillFla
 import { autoUnequip } from "./flashChoice";
 import { ownedCards } from "./loadout";
 import { percent } from "../battle/previewText";
+import { gameRules } from "../battle/glossary";
 
 /** 技能卡上的稀有度提示（玩法 PM 3W-4b 定案；稀有度只是標記，不是門檻）。 */
 export const RARITY_HINT = "稀有度表示這招長得多複雜，不代表強度。強度看角色階級與閃現次數。";
@@ -14,14 +15,8 @@ export const CAN_FLASH_TEXT = "可以閃現了";
 export const TRANSFORM_HINT = "可以重閃第 3 格轉型";
 export const TRANSFORM_HINT_TIP = "角色升階後，新的轉型選擇變多了；在營火重閃第 3 次的變化，可能出現轉型。";
 
+/** 閃現規則（後端 `flash_rules`，`flash_templates.yaml`；HC-3 起回應一定有，前端不留備用值）。 */
 type Rules = RunHero["flash_rules"];
-
-/** 後端沒給規則時的備用（舊回應）；數值與 `flash_templates.yaml` 初值相同。 */
-const FALLBACK = { open_cost: 1, open_options: 4, focused_cost: 2, focused_options: 3, max_flashes: 5, major_flash: 3, max_carry: 2 };
-
-export function rulesOf(rules: Rules | undefined) {
-  return { ...FALLBACK, ...(rules ?? {}) };
-}
 
 /** 一招技能的閃現狀態（依目前 ID；備用技能也找得到）。 */
 export function flashOf(hero: RunHero, skillId: string): SkillFlash | undefined {
@@ -42,11 +37,11 @@ export function ownedSkills(hero: RunHero): OwnedSkill[] {
 
 // ---- 技能卡上的文字 ----------------------------------------------------------------------
 
-/** 「已閃 N／5 次」；完整技能寫「完整技能」。 */
-export function flashCountText(f: SkillFlash | undefined, rules: Rules | undefined): string {
+/** 「已閃 N／5 次」；完整技能寫「完整技能」。沒拿到規則（只給閃現狀態的卡）時只寫次數。 */
+export function flashCountText(f: SkillFlash | undefined, rules: Rules | null | undefined): string {
   if (f === undefined) return "";
   if (f.complete) return "完整技能・不能再閃現";
-  return `已閃 ${f.flashes}／${rulesOf(rules).max_flashes} 次`;
+  return rules == null ? `已閃 ${f.flashes} 次` : `已閃 ${f.flashes}／${rules.max_flashes} 次`;
 }
 
 /** 「可以閃現了」只在真的能閃（先上場用過、沒閃滿）時顯示。 */
@@ -78,13 +73,11 @@ export interface FlashMode {
   options: number;
 }
 
-export function openMode(rules: Rules | undefined): FlashMode {
-  const r = rulesOf(rules);
+export function openMode(r: Rules): FlashMode {
   return { category: null, cost: r.open_cost, options: r.open_options };
 }
 
-export function focusedMode(rules: Rules | undefined, category: string): FlashMode {
-  const r = rulesOf(rules);
+export function focusedMode(r: Rules, category: string): FlashMode {
   return { category, cost: r.focused_cost, options: r.focused_options };
 }
 
@@ -186,8 +179,8 @@ export function inheritProblem(f: SkillFlash | undefined): string | undefined {
 }
 
 /** 最多帶走幾個小變化（後端 `flash_rules.max_carry`）。 */
-export function maxCarry(rules: Rules | undefined): number {
-  return rulesOf(rules).max_carry;
+export function maxCarry(rules: Rules): number {
+  return rules.max_carry;
 }
 
 export function toggleCarry(picked: readonly number[], nth: number, limit: number): number[] {
@@ -239,14 +232,17 @@ export function previewProblem(p: FlashPreview | null): string | null {
 // ---- 完整技能三選一 ----------------------------------------------------------------------
 
 export const COMPLETE_BADGE = "完整技能";
-/** 完整技能的預算加成（‰；06 6.34.6）。6F-7：畫面上顯示成百分比（+12%），內部照舊千分比。 */
-export const COMPLETE_BONUS_PERMILLE = 120;
-/** 完整技能三選一畫面的說明（06 6.34.6）。 */
-export const COMPLETE_INTRO: readonly string[] = [
-  `完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +${percent(COMPLETE_BONUS_PERMILLE)}）。`,
-  "完整技能不能再閃現；之後可以在營火重閃它的「調整欄」，換一個小變化。",
-  "三張都不想要可以都不拿，技能不變。",
-];
+/**
+ * 完整技能三選一畫面的說明（06 6.34.6）。預算加成照伺服器（`/api/glossary` 的 `rules.complete_budget_permille`，‰；HC-3）；
+ * 6F-7：畫面上顯示成百分比（+12%），內部照舊千分比。
+ */
+export function completeIntro(budgetPermille: number = gameRules().complete_budget_permille): readonly string[] {
+  return [
+    `完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +${percent(budgetPermille)}）。`,
+    "完整技能不能再閃現；之後可以在營火重閃它的「調整欄」，換一個小變化。",
+    "三張都不想要可以都不拿，技能不變。",
+  ];
+}
 
 export function completeSkipText(): string {
   return "目前：都不拿（技能不變）。";

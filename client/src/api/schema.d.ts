@@ -5499,6 +5499,19 @@ export interface components {
             ];
         };
         /**
+         * GameRulesOut
+         * @description 畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。
+         */
+        GameRulesOut: {
+            /** Source Max */
+            source_max: number;
+            skill_slots: components["schemas"]["SkillSlotsOut"];
+            /** Start Keywords */
+            start_keywords: number;
+            /** Complete Budget Permille */
+            complete_budget_permille: number;
+        };
+        /**
          * GearAffixInfo
          * @description 白名單的一條詞條。``name_zh`` 含 ``{n}``（數值）；沒有 ``value_min`` 的是固定效果。
          */
@@ -5953,6 +5966,7 @@ export interface components {
              * @default []
              */
             weapon_ranges: components["schemas"]["WeaponRangeEntry"][];
+            rules: components["schemas"]["GameRulesOut"];
         };
         /** GlossaryEntry */
         GlossaryEntry: {
@@ -6237,7 +6251,7 @@ export interface components {
              * @default 0
              */
             insight: number;
-            flash_rules?: components["schemas"]["FlashRulesOut"] | null;
+            flash_rules: components["schemas"]["FlashRulesOut"];
             /**
              * Flash
              * @default []
@@ -10621,6 +10635,20 @@ export interface components {
             };
         };
         /**
+         * SkillSlotsOut
+         * @description 技能欄上限（``core.yaml`` 的 ``skill_slots``，依技能 ``kind``）。
+         */
+        SkillSlotsOut: {
+            /** Active */
+            active: number;
+            /** Passive */
+            passive: number;
+            /** Reaction */
+            reaction: number;
+            /** Stance */
+            stance: number;
+        };
+        /**
          * SkillStackRef
          * @description 技能卡上的一個層數（3-41c）：製造（``add_stack``）或消耗（``consume_stack``、``scale:
          *     stacks``）。
@@ -12071,11 +12099,14 @@ export interface components {
              * @default 0.8
              */
             map_seconds_per_battle: number;
-            /**
-             * Ratio Default Seeds
-             * @default 50
-             */
+            /** Ratio Default Seeds */
             ratio_default_seeds: number;
+            /** Ratio Max Seeds */
+            ratio_max_seeds: number;
+            /** Max Maps */
+            max_maps: number;
+            /** Small Sample */
+            small_sample: number;
             /**
              * Ratio Max Work
              * @default 40000
@@ -12281,6 +12312,8 @@ export interface components {
             drafts: string[];
             /** Sim Running */
             sim_running?: string | null;
+            /** Max Group */
+            max_group: number;
         };
         /**
          * TuningUnitSkills
