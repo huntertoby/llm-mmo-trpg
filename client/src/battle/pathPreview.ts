@@ -136,7 +136,7 @@ function frameOf(step: PathStep): FrameKind | null {
 
 const maybe = (certain: boolean): string => (certain ? "" : "（可能）");
 
-/** 傷害的數字：「−8」「−6～8」；只在骰子不利時才受傷的寫最大值。 */
+/** 傷害的數字：「−8」「−6–8」（X10-3d：連接號和戰鬥預覽 previewText 的 damageText 一樣用「–」）；只在骰子不利時才受傷的寫最大值。 */
 export function damageText(events: readonly PathEvent[]): string {
   let min = 0;
   let max = 0;
@@ -148,7 +148,7 @@ export function damageText(events: readonly PathEvent[]): string {
   }
   if (max <= 0) return "";
   if (unsure) return `−${max}`;
-  return min === max ? `−${max}` : `−${min}～${max}`;
+  return min === max ? `−${max}` : `−${min}–${max}`;
 }
 
 /** 狀態的短名（「點燃」「定身」；其餘用對照表的名稱）。 */

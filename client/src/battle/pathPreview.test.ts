@@ -228,7 +228,7 @@ describe("結果小牌", () => {
 
   it("傷害數字：確定、範圍、只在骰子不利時", () => {
     expect(damageText([ev("damage", { amount_min: 8, amount_max: 8 })])).toBe("−8");
-    expect(damageText([ev("damage", { amount_min: 6, amount_max: 9 })])).toBe("−6～9");
+    expect(damageText([ev("damage", { amount_min: 6, amount_max: 9 })])).toBe("−6–9");
     expect(damageText([ev("damage", { amount_min: null, amount_max: 5 })])).toBe("−5");
     expect(damageText([])).toBe("");
   });
@@ -543,7 +543,7 @@ describe("畫法", () => {
   });
 });
 
-// 6A-4f：兩格冰（整段滑倒 80%）→ 後方陷阱 −6～14・定身
+// 6A-4f：兩格冰（整段滑倒 80%）→ 後方陷阱 −6–14・定身
 const iceRun = preview(
   [
     step(0, 0, 0),
@@ -623,9 +623,9 @@ describe("連續冰面合成一張小牌（6A-4f）", () => {
     expect(pathDraw(pv).tags.map((t) => t.text)).toEqual(["冰 1 格・滑倒 45%・失敗滑到 ◆ 倒地"]);
   });
 
-  it("冰後面的陷阱：「陷阱 −6～14・定身」", () => {
+  it("冰後面的陷阱：「陷阱 −6–14・定身」", () => {
     const trap = pathDraw(iceRun).tags.find((t) => t.icon === "trap");
-    expect(trap).toEqual({ pos: { x: 3, y: 0 }, icon: "trap", text: "陷阱 −6～14・定身" });
+    expect(trap).toEqual({ pos: { x: 3, y: 0 }, icon: "trap", text: "陷阱 −6–14・定身" });
   });
 
   it("冰後面的陷阱段改紅色虛線；沒有冰時陷阱段是實線", () => {
