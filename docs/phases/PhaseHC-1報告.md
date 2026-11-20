@@ -186,3 +186,24 @@ uv run python scripts/hardcoded/scan_py.py | scan_ts.py  [--count]   # 只看掃
 
 ## 7. 平衡疑慮
 無。這段沒有改任何數值或行為。
+
+## 開發 PM 裁定（2026-11-21）
+
+合併：`Merge HC-1`（--no-ff）。
+
+1. 接受保守歸類。四個子項的裁定：
+   - `content/` 的上下限：拆開處理，見第 2 點。
+   - AI 權重：歸 config，搬進 `ai_profiles.yaml`。
+   - LLM 呼叫設定：維持 const。`config/` 是使用者的設定，開發不動。
+   - `ts-vfx-damage-tiers`：改判 layout，屬於特效分級，不是規則。
+2. content schema 的數字拆成兩種：
+   - **執行時會用到的預設值**（內容沒寫、靠預設值生效的）：歸 config，搬進 content。
+   - **純驗證用的上下限**（擋不合理輸入的護欄）：新增一類 `guard`，留在 schema，不搬。
+   - 例外：上下限本身就是遊戲規則的（例如「最多 2 個元素」「主動技 AP 1～3」），歸 config。
+   - HC-4 開工前先照這個通則重新分類。
+3. 要另做專查：量類欄位（名稱含 hp、mana、stamina、damage、heal、shield、armor、attr 等）的預設值是 1 的，列進 scale。排進 HC-2 的第 1 項。
+4. 接受。docstring 留 const；text 只追蹤玩家看得到的字。
+5、6、7、8、10：接受。
+9：接受。之後清理時再考慮讓過時規則也讓測試失敗。
+
+分段照建議：HC-2 → HC-3 → HC-4（先重新分類）→ HC-5 → HC-6 → HC-7。
