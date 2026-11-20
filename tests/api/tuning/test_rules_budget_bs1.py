@@ -51,6 +51,14 @@ CORE_PATHS = (
     "skill_limits.max_grant_duration",
     "skill_limits.max_refund_ap",
     "skill_limits.max_cooldown_restore",
+    "skill_limits.modifier_bounds.damage_permille_min",  # HC-4b2：修正規則的幅度
+    "skill_limits.modifier_bounds.heal_permille_min",
+    "skill_limits.modifier_bounds.hit_bonus_max",
+    "skill_limits.modifier_bounds.cooldown_delta_max",
+    "skill_limits.modifier_bounds.push_distance_delta_max",
+    "skill_limits.modifier_bounds.range_delta_max",
+    "skill_limits.modifier_bounds.summon_duration_delta_max",
+    "skill_limits.modifier_bounds.on_hit_max_displace",
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
@@ -91,6 +99,7 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "forms",  # HC-W2：形態、裝備規則、物品生成
         "equipment",
         "item_gen",
+        "skill_evolution",  # HC-4b2：召喚技分歧進化的幅度
     )
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (

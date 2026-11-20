@@ -132,17 +132,20 @@ def test_templates_that_do_not_fit_never_appear() -> None:
             for option in evolution_options(lib, EvolutionRequest(skill, SINGLE_TARGET, {}, 1)):
                 assert option.template != "delayed_burst"
     # 沒有任何模板合格時沒有選項（例：只有 1 個不合格的模板）
-    bad = EvolutionTable(
-        templates=(
-            EvolutionTemplate(
-                id="kill_chain",
-                branch="deepen",
-                op="on_kill",
-                prefix_zh="收割",
-                summary_zh="x",
-                on_kill=next(t for t in lib.evolution.templates if t.op == "on_kill").on_kill,
+    bad = lib.evolution.model_copy(
+        update={
+            "grafts": {},
+            "templates": (
+                EvolutionTemplate(
+                    id="kill_chain",
+                    branch="deepen",
+                    op="on_kill",
+                    prefix_zh="收割",
+                    summary_zh="x",
+                    on_kill=next(t for t in lib.evolution.templates if t.op == "on_kill").on_kill,
+                ),
             ),
-        )
+        }
     )
     no_damage = lib.skills["skill_war_hymn"]
     assert (
@@ -168,7 +171,9 @@ def test_evolution_content_schema_rejects_bad_templates() -> None:
         EvolutionTemplate(id="x", branch="deepen", op="reshape", prefix_zh="x", summary_zh="x")
     with pytest.raises(ValidationError, match="重複"):
         template = EvolutionTemplate(id="x", branch="deepen", op="intensify", summary_zh="x")
-        EvolutionTable(templates=(template, template))
+        EvolutionTable.model_validate(
+            {**library().evolution.model_dump(), "templates": [template, template]}
+        )
     lib = library()
     assert {t.branch for t in lib.evolution.templates} == {"deepen", "bridge"}
     # 3-53b：每個關鍵字都有嫁接（中毒也有橋接）

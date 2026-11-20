@@ -43,13 +43,7 @@ from trpg.content.skills.constants import (
     _GROUP_NAMES as _GROUP_NAMES,
 )
 from trpg.content.skills.constants import (
-    _MAX_DISPLACE as _MAX_DISPLACE,
-)
-from trpg.content.skills.constants import (
     _MAX_MULTIPLIER_PERMILLE as _MAX_MULTIPLIER_PERMILLE,
-)
-from trpg.content.skills.constants import (
-    _MAX_ON_HIT_EFFECTS as _MAX_ON_HIT_EFFECTS,
 )
 from trpg.content.skills.constants import (
     _PERMILLE as _PERMILLE,

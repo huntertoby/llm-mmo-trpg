@@ -11,8 +11,6 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
-    _MAX_DISPLACE,
-    _MAX_ON_HIT_EFFECTS,
     CHANGE_TARGETS,
     DETONATE_RUNES,
     INSCRIBE,
@@ -127,12 +125,12 @@ class ModifierChange(ContentModel):
       修正技能，或由主動技能以 ``grant_skill`` 暫時給（:mod:`trpg.content.silent_strike`）。
     """
 
-    damage_permille: int | None = Field(default=None, ge=-500, le=1000)
-    hit_bonus: int | None = Field(default=None, ge=-3, le=3)
-    cooldown_delta: int | None = Field(default=None, ge=-2, le=-1)
-    push_distance_delta: int | None = Field(default=None, ge=1, le=2)
+    damage_permille: int | None = Field(default=None, le=1000)
+    hit_bonus: int | None = None
+    cooldown_delta: int | None = Field(default=None, le=-1)
+    push_distance_delta: int | None = Field(default=None, ge=1)
     ap_delta: int | None = Field(default=None, ge=-1, le=1)
-    range_delta: int | None = Field(default=None, ge=-1, le=2)
+    range_delta: int | None = Field(default=None, ge=-1)
     add_element: Element | None = None
     add_tags: tuple[str, ...] | None = None
     on_hit_effects: tuple[EffectSpec, ...] | None = None
@@ -140,11 +138,11 @@ class ModifierChange(ContentModel):
     area_delta: int | None = Field(default=None, ge=1, le=1)
     shape_to: Literal["line", "chain", "cone"] | None = None
     allow_self_target: bool | None = None
-    heal_permille: int | None = Field(default=None, ge=-500, le=1000)
+    heal_permille: int | None = Field(default=None, le=1000)
     summon_hp_permille: int | None = Field(default=None, ge=1, le=1000)
     summon_attack_dice: int | None = Field(default=None, ge=1, le=1)
     summon_limit_delta: int | None = Field(default=None, ge=-1, le=1)
-    summon_duration_delta: int | None = Field(default=None, ge=1, le=2)
+    summon_duration_delta: int | None = Field(default=None, ge=1)
     summon_damage_permille: int | None = Field(default=None, ge=1, le=1000)
     form_upkeep_permille: int | None = Field(default=None, ge=-1000, le=-1)
     form_entry_permille: int | None = Field(default=None, ge=1, le=1000)
@@ -173,8 +171,8 @@ class ModifierChange(ContentModel):
 
     @staticmethod
     def _check_tags(tags: tuple[str, ...]) -> None:
-        if not 1 <= len(tags) <= 3:  # noqa: PLR2004 - 規格的 1～3 個
-            raise ValueError(f"change.add_tags 必須有 1 到 3 個標籤，收到 {len(tags)} 個")
+        if not tags:
+            raise ValueError("change.add_tags 至少要有 1 個標籤")
         bad = [t for t in tags if re.match(ID_PATTERN, t) is None]
         if bad:
             raise ValueError(f"change.add_tags 必須是小寫 snake_case：{', '.join(bad)}")
@@ -183,23 +181,18 @@ class ModifierChange(ContentModel):
 
     @staticmethod
     def _check_on_hit(effects: tuple[EffectSpec, ...]) -> None:
-        if not 1 <= len(effects) <= _MAX_ON_HIT_EFFECTS:
-            raise ValueError(
-                f"change.on_hit_effects 必須有 1 到 {_MAX_ON_HIT_EFFECTS} 個效果，"
-                f"收到 {len(effects)} 個"
-            )
+        if not effects:
+            raise ValueError("change.on_hit_effects 至少要有 1 個效果")
         for index, effect in enumerate(effects):
             if effect.type not in ON_HIT_PRIMITIVES:
                 raise ValueError(
                     f"change.on_hit_effects[{index}]：{effect.type} 不能當命中後效果"
                     f"（可用：{'、'.join(ON_HIT_PRIMITIVES)}）"
                 )
-            if effect.type in ("push", "pull") and (
-                effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
-            ):
+            if effect.type in ("push", "pull") and (effect.distance is None or effect.distance < 1):
                 raise ValueError(
-                    f"change.on_hit_effects[{index}]：推擊與拉扯的距離必須是 1 到 "
-                    f"{_MAX_DISPLACE} 格，收到 {effect.distance}"
+                    f"change.on_hit_effects[{index}]：推擊與拉扯的距離至少 1 格，"
+                    f"收到 {effect.distance}"
                 )
             ModifierChange._check_on_hit_rune(index, effect)
         types = {e.type for e in effects}

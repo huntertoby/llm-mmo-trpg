@@ -225,6 +225,16 @@ targets:
       - {path: skill_limits.max_grant_duration, label_zh: 暫時獲得技能的最長輪數, kind: int, hint_min: 2, hint_max: 8, note_zh: 暫時獲得技能（grant_skill）給的技能最多留幾輪。越大，給技能的招能持續越久。調低後，現有超過的技能會在驗證時列出。只能 1～20。}
       - {path: skill_limits.max_refund_ap, label_zh: 擊殺返還 AP 的上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 擊殺時效果「返還 AP」（refund_ap）一次最多還幾點 AP（工坊的選項範圍也照這個）。越大，擊殺後連動越強。調低後，現有超過的技能會在驗證時列出。只能 1～10。}
       - {path: skill_limits.max_cooldown_restore, label_zh: 回復資源縮短冷卻的上限（回合）, kind: int, hint_min: 1, hint_max: 4, note_zh: 回復資源（restore_resource）縮短冷卻時，一次最多縮短幾回合。越大，縮冷卻的招越強。調低後，現有超過的技能會在驗證時列出。只能 1～10。}
+      # HC-4b2：修正規則（kind: modifier）改變幅度的上下限（core.yaml 的 skill_limits.modifier_bounds，從 skills/modifiers.py 搬來）。
+      # 只開幅度；「獲得標籤最多幾個」「命中後附加效果最多幾個」是結構，不開。
+      - {path: skill_limits.modifier_bounds.damage_permille_min, label_zh: 修正規則：傷害減少的下限（‰）, kind: permille, hint_min: -1000, hint_max: -250, note_zh: 修正技能「傷害 ±‰」最低能填到這個值（−500＝傷害最多減半；上限 +1000 固定）。調低（更負）：帶代價的修正技能可以把傷害壓得更低、換更多預算；調高（接近 0）：減傷當代價的空間變小，現有超過的技能會在驗證時列出。只能 −1000～−1。}
+      - {path: skill_limits.modifier_bounds.heal_permille_min, label_zh: 修正規則：治療量減少的下限（‰）, kind: permille, hint_min: -1000, hint_max: -250, note_zh: 修正技能「治療量 ±‰」最低能填到這個值（−500＝治療量最多減半；上限 +1000 固定）。調低：減治療當代價的空間變大；調高：變小，現有超過的技能會在驗證時列出。只能 −1000～−1。}
+      - {path: skill_limits.modifier_bounds.hit_bonus_max, label_zh: 修正規則：命中加減的上限, kind: int, hint_min: 1, hint_max: 6, note_zh: 修正技能「命中 ±」最多 ±這麼多。調高：命中類修正可以給更大的加值（或更重的命中代價），組合器仍只出 +1～+3；調低：命中類修正變弱，組合器抽到超過的值會重抽，現有超過的技能會在驗證時列出。只能 1～20。}
+      - {path: skill_limits.modifier_bounds.cooldown_delta_max, label_zh: 修正規則：命中後冷卻最多縮短幾回合, kind: int, hint_min: 1, hint_max: 4, note_zh: 修正技能「命中後冷卻 −n」最多縮短這麼多回合；閃現「冷卻」也最多加深到這裡。調高：縮冷卻的修正更強；調低：變弱，現有超過的技能會在驗證時列出。只能 1～20。}
+      - {path: skill_limits.modifier_bounds.push_distance_delta_max, label_zh: 修正規則：推拉距離加成的上限（格）, kind: int, hint_min: 1, hint_max: 2, note_zh: 修正技能「推擊與拉扯距離 +n」最多加這麼多格（推拉結果本來就截斷在推拉距離上限 max_displace_distance，目前 2 格）。調高：推拉類修正可以推更遠，但不能大於推拉距離上限，兩格要一起改；調低：推拉類修正變弱，現有超過的技能會在驗證時列出。只能 1～10。}
+      - {path: skill_limits.modifier_bounds.range_delta_max, label_zh: 修正規則：射程加成的上限（格）, kind: int, hint_min: 1, hint_max: 4, note_zh: 修正技能「射程 +n」最多加這麼多格（下限 −1 固定）。調高：射程類修正可以更遠；調低：變弱，現有超過的技能會在驗證時列出。只能 1～10。}
+      - {path: skill_limits.modifier_bounds.summon_duration_delta_max, label_zh: 修正規則：召喚物持續加成的上限（輪）, kind: int, hint_min: 1, hint_max: 4, note_zh: 修正技能「召喚物持續輪數 +n」最多加這麼多輪；閃現「綿延」也最多加到這裡。調高：召喚物可以待更久；調低：變弱，現有超過的技能會在驗證時列出。只能 1～10。}
+      - {path: skill_limits.modifier_bounds.on_hit_max_displace, label_zh: 修正規則：命中後推拉的最遠距離（格）, kind: int, hint_min: 1, hint_max: 2, note_zh: 修正技能「命中後附加效果」裡的推擊、拉扯最遠能推這麼多格。調高：命中後可以推更遠，但不能大於推拉距離上限 max_displace_distance（目前 2 格），兩格要一起改；調低：命中後推拉的修正變弱，現有超過的技能會在驗證時列出。只能 1～10。}
   # BS-1：無聲的預算成本（被動常駐、主動給的回合數各一）。
   - kind: budget
     label_zh: 技能預算表
@@ -634,6 +644,14 @@ targets:
       # SK-4：吸血配方
       - {path: structure.lifesteal_permille, label_zh: 傷害附吸血的機率（‰）, kind: permille, hint_min: 0, hint_max: 500, note_zh: 打擊、範圍骨架的對敵傷害（沒有聖光雙效）附上吸血的機率。越大越常出吸血招；許願同時有「傷害＋治療」時另有專門補抽，不靠這個機率。只能 0～1000。}
       - {path: structure.lifesteal_amount_permille, label_zh: 附上的吸血比例（‰）, kind: permille, hint_min: 100, hint_max: 500, note_zh: 組合器附上的吸血是造成傷害的這麼多千分比（300＝回復傷害的 30%）。預算照吸血的價值計價，比例越高，同一招的傷害會被重調得越低。只能 1～500（原語上限）。}
+      # HC-4b2：從程式搬進 skill_composer.yaml 的規則數值（白板的 AP 與召喚冷卻、預支冷卻、LLM 費用的冷卻上限、整招召喚的射程）。
+      # 一次重抽幾次（max_attempts）、LLM 題目選單的數量是程式的參數，不開。
+      - {path: whiteboard.summon_ap_cost, label_zh: 召喚白板的 AP, kind: int, hint_min: 1, hint_max: 3, note_zh: 三選一與創角給的召喚白板花幾 AP。調高：召喚白板的可用預算變高（召喚物點數固定，可能超過上限而調不出來）；調低：預算變低。不能超過技能 AP 上限（3）。}
+      - {path: whiteboard.self_ap_cost, label_zh: 自身位移／增益白板的 AP, kind: int, hint_min: 1, hint_max: 3, note_zh: 自身位移、互換、自身增益與單格升降地形白板花幾 AP。調高：這些白板的可用預算變高（效果點數固定，可能湊不到下限）；調低：預算變低。不能超過技能 AP 上限（3）。}
+      - {path: whiteboard.summon_cooldown_max, label_zh: 召喚白板的冷卻上限, kind: int, hint_min: 0, hint_max: 6, note_zh: 召喚白板最多加到這麼多回合冷卻（冷卻換來較高的可用預算，讓不同強度的召喚物都落在 70～100%）。調高：強的召喚物比較調得進預算；調低：冷卻短，但強的召喚物可能調不出來。}
+      - {path: structure.borrow_cooldown, label_zh: 組合器做的預支技能的冷卻, kind: int, hint_min: 1, hint_max: 6, note_zh: 組合器把光環骨架改成「預支」時，基本款技能的冷卻（06 6.3 基本款：冷卻 2）。調高：預支更少用、預算較高；調低：更常用。只能 1～6。}
+      - {path: llm_cost.max_cooldown, label_zh: LLM 提議的冷卻上限, kind: int, hint_min: 3, hint_max: 6, note_zh: 補值器替 LLM 提議的技能補費用時，冷卻最多加到這麼多回合（比技能冷卻上限保守）。不能小於費用階梯裡的冷卻（目前最高 5）。調高：允許更長的冷卻；調低：只能和費用階梯一起改。}
+      - {path: "recipes.summon_units[*].range", label_zh: 整招召喚的射程, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 組合器做整招召喚（含 1 階的基本召喚物）時，召喚這隻召喚物的射程（格）。調高：可以召得更遠、預算點數跟著變；調低：只能召在身邊。}
   # HC-B：條件的預算倍率覆寫（skill_conditions.yaml，全體共用）。平常照嚴苛度查 skill_budget.yaml 的
   # condition_permille；這裡只展開已經寫了 budget_permille 的條件（沒寫的不給插入：插入會改掉那個條件的計價方式）。
   - kind: skill_conditions
@@ -789,3 +807,11 @@ targets:
       - {path: base_bonus.points, label_zh: 普通基礎加成：每幾點, group_zh: 基礎加成, kind: int, hint_min: 2, hint_max: 6, note_zh: 普通物品沒有詞條時，詞條預算改成基礎加成：每這麼多點換下一格的千分比（武器是傷害、其他部位是防禦）。越小，基礎加成越多。}
       - {path: base_bonus.permille, label_zh: 普通基礎加成：換多少（‰）, group_zh: 基礎加成, kind: permille, hint_min: 10, hint_max: 40, note_zh: 上一格的點數換成這麼多千分比的加成（20＝+2%）。越大，沒詞條的普通物品越強。}
       - {path: offer_size, label_zh: 戰後裝備幾選一, group_zh: 戰後掉落, kind: int, hint_min: 2, hint_max: 4, note_zh: 戰鬥結束後給幾件候選裝備讓玩家挑一件（部位不重複）。越大越容易拿到想要的。只能 1～6。}
+  # HC-4b2：召喚技的三支分歧進化（skill_evolution.yaml 的 summon）。只開計價的幅度；數量型一次幾隻（等於 core.yaml 的
+  # skill_limits.max_summon_count）、縮短持續的下限、模板與嫁接是結構，不開。
+  - kind: skill_evolution
+    label_zh: 技能分歧進化
+    glob: skill_evolution.yaml
+    fields:
+      - {path: summon.deepen_hp_permille, label_zh: 召喚技加深：最大 HP 多幾‰, kind: permille, hint_min: 100, hint_max: 600, note_zh: 召喚技選「加深」進化後，召喚物最大 HP 多這麼多千分比（300＝+30%），另外多一個小特性。調高：加深更強，但更容易超出預算而被縮短持續或加冷卻；調低：較弱。只能 1～1000。}
+      - {path: summon.count_power_permille, label_zh: 召喚技數量型：每隻的強度（‰）, kind: permille, hint_min: 300, hint_max: 900, note_zh: 召喚技選「數量型」進化後一次召喚 2 隻，每隻的最大 HP 與傷害是一般的這麼多千分比（600＝60%）。調高：兩隻都更強，更容易超出預算而被縮短持續或加冷卻；調低：較弱。只能 100～999。}

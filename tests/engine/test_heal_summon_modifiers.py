@@ -149,7 +149,9 @@ def test_heal_permille_never_goes_below_zero_and_validates_its_range() -> None:
     with pytest.raises(ValidationError):
         ModifierChange.model_validate({"heal_permille": 0})
     with pytest.raises(ValidationError):
-        ModifierChange.model_validate({"heal_permille": -501})
+        ModifierChange.model_validate({"heal_permille": 1001})
+    # HC-4b2：下限 −500 在 core.yaml 的 skill_limits.modifier_bounds（Ruleset 層檢查，
+    # tests/content/test_modifier_schema.py）；schema 只擋 0 與 +1000 以上
     assert ModifierChange.model_validate({"heal_permille": -500}).kind == "heal_permille"
 
 

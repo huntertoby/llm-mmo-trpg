@@ -126,15 +126,17 @@ class SummonEvolution(ContentModel):
     """
 
     deepen_prefix_zh: str = "強化"
-    deepen_hp_permille: int = Field(default=300, ge=1, le=1000)
+    deepen_hp_permille: int = Field(ge=1, le=1000)
     deepen_summary_zh: str = "加深：單隻更強（最大 HP +{hp}%），並多一個小特性「{trait}」"
     traits: dict[str, str] = Field(
         default_factory=lambda: {"static": "sturdy", "melee": "swift", "ranged": "keen"}
     )
     bridge_summary_zh: str = "橋接{keyword}：召喚物多帶一個{keyword}灌注"
     count_prefix_zh: str = "雙生"
-    count_number: int = Field(default=2, ge=2, le=2)
-    count_power_permille: int = Field(default=600, ge=100, le=999)
+    count_number: int
+    """數量型一次召喚幾隻：要等於 ``core.yaml`` 的 ``skill_limits.max_summon_count``（一次召喚的
+    數量只能是 1 或它；HC-4b2 起載入時檢查）。"""
+    count_power_permille: int = Field(ge=100, le=999)
     count_summary_zh: str = "數量型：一次召喚 {count} 隻較弱的（各 {power}% 的最大 HP 與傷害）"
     min_duration: int = Field(default=1, ge=1, le=4)
     """為了符合預算而縮短持續輪數時的下限。"""
@@ -143,15 +145,15 @@ class SummonEvolution(ContentModel):
 class EvolutionTable(ContentModel):
     """``content/skill_evolution.yaml``。"""
 
-    far_distance: int = Field(default=3, ge=1)
+    far_distance: int = Field(ge=1)
     """平均施放距離 ≥ 它時，``reshape`` 先試 ``far`` 的形狀，否則先試 ``near``。"""
-    spread_targets_permille: int = Field(default=1500, ge=1000)
+    spread_targets_permille: int = Field(ge=1000)
     """平均目標數（‰）低於它時，視為「單體用法」：加深的模板優先換形狀。"""
-    bridge_keyword_tries: int = Field(default=3, ge=1)
+    bridge_keyword_tries: int = Field(ge=1)
     """橋接最多嘗試幾個關鍵字（依統計排序）。"""
     templates: tuple[EvolutionTemplate, ...] = ()
     grafts: dict[str, KeywordGraft] = Field(default_factory=dict)
-    summon: SummonEvolution = Field(default_factory=SummonEvolution)
+    summon: SummonEvolution
     """召喚技能的三支分歧進化（Phase 3-33f2）。"""
 
     @model_validator(mode="after")

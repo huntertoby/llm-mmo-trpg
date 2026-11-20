@@ -219,13 +219,14 @@ def beside_keywords(library: ContentLibrary, tier: int) -> tuple[str, ...]:
 
 
 def _tier_units(library: ContentLibrary, tier: int) -> tuple[RecipeSummonUnit, ...]:
-    """這一階可抽的召喚物：1 階只有基本召喚物（BAL-19c），2 階起是 ``recipes.summon_units``。"""
+    """這一階可抽的召喚物：1 階只有基本召喚物（BAL-19c），2 階起是 ``recipes.summon_units``。
+    基本召喚物一定在 ``recipes.summon_units``（HC-4b2 起載入時檢查，射程照那一項）。"""
     units = library.composer.recipes.summon_units
     if tier >= library.budget.min_character_tier.primitives.get("summon", 1):
         return units
     basic = library.budget.min_character_tier.basic_summon_units
     known = {u.unit: u for u in units}
-    return tuple(known.get(b, RecipeSummonUnit(unit=b)) for b in basic)
+    return tuple(known[b] for b in basic)
 
 
 def summon_choices(

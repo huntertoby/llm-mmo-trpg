@@ -143,10 +143,12 @@ TABLE_NAMES_ZH: Final = {
     "forms": "形態（全體共用）",
     "equipment": "裝備規則（全體共用）",
     "item_gen": "物品生成（全體共用）",
+    "skill_evolution": "技能分歧進化（全體共用）",
 }
 """全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
 ``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``；HC-B 加
-``skill_conditions``、``skill_synergies``；HC-W2 加 ``forms``、``equipment``、``item_gen``）。"""
+``skill_conditions``、``skill_synergies``；HC-W2 加 ``forms``、``equipment``、``item_gen``；
+HC-4b2 加 ``skill_evolution``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -212,6 +214,11 @@ TABLE_NOTES_ZH: Final = {
         "改了只影響之後產生的物品（掉落、傭兵、重骰、打造），已經在背包裡的不變。",
         "條件詞條的成立率分類、可用類別、必選詞條、獨特與暫緩的詞條清單是結構，不開；"
         "產生器的重試次數也不開（HC-W2）。",
+    ),
+    "skill_evolution": (
+        "這份是全體共用的技能分歧進化表（skill_evolution.yaml）：改了之後所有召喚技的加深、數量型"
+        "進化一起變（已經學會的進化技能不變）。",
+        "目前只開召喚技進化的兩個幅度（HC-4b2）；一般進化的模板、關鍵字嫁接、數量型一次幾隻是結構，不開。",
     ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from trpg.content.battle import DollLook, StatusTable, SummonLook, UnitTemplate, WeaponDef
+from trpg.content.composer_rules import ComposerRules, composer_rule_problems
 from trpg.content.dev_starters import DevStarterTable
 from trpg.content.enemy_looks import look_range_problems
 from trpg.content.environment import SurfaceTable
@@ -53,6 +54,18 @@ def _check_budget_rules(root: Path, core: CoreRules, budget: BudgetRules) -> Non
     if problems:
         lines = "\n".join(f"  - {p}" for p in problems)
         raise ContentError(root / "skill_budget.yaml", f"技能預算表對不上核心規則：\n{lines}")
+
+
+def _check_composer_rules(
+    root: Path, composer: ComposerRules, core: CoreRules, budget: BudgetRules
+) -> None:
+    """``skill_composer.yaml`` 的 AP 與基本召喚物對得上 ``rules/core.yaml``、``skill_budget.yaml``
+    （HC-4b2）。"""
+    basic = budget.min_character_tier.basic_summon_units
+    problems = composer_rule_problems(composer, core, basic)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_composer.yaml", f"技能組合器對不上核心規則：\n{lines}")
 
 
 def _check_primitive_points(root: Path, primitives: PrimitiveTable, budget: BudgetRules) -> None:
@@ -146,8 +159,10 @@ def _check_evolution(
     table: EvolutionTable,
     keywords: KeywordTable,
     skeletons: Mapping[str, SkeletonDef],
+    core: CoreRules,
 ) -> None:
-    """進化模板的跨檔案檢查（Phase 3-26b）：嫁接的關鍵字與改試的骨架必須存在。"""
+    """進化模板的跨檔案檢查（Phase 3-26b）：嫁接的關鍵字與改試的骨架必須存在；召喚數量型分歧的
+    隻數要等於 ``core.yaml`` 的 ``skill_limits.max_summon_count``（HC-4b2：原本寫死在 schema）。"""
     known = set(keywords.ids())
     problems = [f"未知的關鍵字 {k}" for k in sorted(table.grafts) if k not in known]
     problems += [
@@ -156,6 +171,12 @@ def _check_evolution(
         for s in t.skeletons
         if s not in skeletons
     ]
+    count = table.summon.count_number
+    if count != core.skill_limits.max_summon_count:
+        problems.append(
+            f"summon.count_number 必須等於 core.yaml 的 skill_limits.max_summon_count"
+            f"（{core.skill_limits.max_summon_count}），收到 {count}"
+        )
     if problems:
         raise ContentError(root / "skill_evolution.yaml", "；".join(problems))
 
