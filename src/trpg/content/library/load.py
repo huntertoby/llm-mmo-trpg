@@ -222,6 +222,7 @@ def _build_ruleset(root: Path, t: _BaseTables, races: RaceTable | None) -> Rules
                 **{w.id: w.name_zh for w in t.weapons.weapons},
                 **{o.id: o.name_zh for o in t.offhands.offhands},
             },
+            ai=t.ai_profiles.heuristics,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc

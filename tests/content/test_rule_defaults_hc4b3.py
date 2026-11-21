@@ -75,20 +75,12 @@ def _transform(template_id: str) -> dict[str, Any]:
     return dict(found[0])
 
 
-@pytest.mark.parametrize(
-    ("template_id", "field"),
-    [
-        ("to_passive_on_hit", "scale_permille"),
-        ("to_reaction_melee", "scale_permille"),
-        ("to_summon", "summon_duration"),
-    ],
-)
-def test_transform_numbers_are_required_where_used(template_id: str, field: str) -> None:
-    """「有某欄才用到」：敵對原招轉被動／反應才用縮小起點、轉召喚才用召喚輪數；用到時必填。"""
-    data = _transform(template_id)
+def test_transform_numbers_are_required_where_used() -> None:
+    """「有某欄才用到」：轉召喚才用召喚輪數，用到時必填（HC-4c 刪掉沒人讀的縮小起點）。"""
+    data = _transform("to_summon")
     TransformTemplate.model_validate(data)
-    del data[field]
-    with pytest.raises(ValidationError, match=f"必須填 {field}"):
+    del data["summon_duration"]
+    with pytest.raises(ValidationError, match="必須填 summon_duration"):
         TransformTemplate.model_validate(data)
 
 
@@ -96,9 +88,9 @@ def test_transform_numbers_are_required_where_used(template_id: str, field: str)
 def test_transform_numbers_may_be_omitted_where_unused(template_id: str) -> None:
     """其他轉型可以不寫（召喚技、輔助技的被動與反應另由技能預算表的 ``flash_transform`` 定）。"""
     data = _transform(template_id)
-    assert "scale_permille" not in data and "summon_duration" not in data
+    assert "summon_duration" not in data
     template = TransformTemplate.model_validate(data)
-    assert (template.scale_permille, template.summon_duration) == (None, None)
+    assert template.summon_duration is None
 
 
 def test_the_flash_file_is_required(tmp_path: Path) -> None:

@@ -63,10 +63,11 @@ type EntryCostField = Literal["ap_cost", "cooldown", "mana", "stamina"]
 
 
 class CostCut(ContentModel):
-    """完整技能沒有可加的數值時，依序減的一項代價（3W-5b）：``field`` 減 ``step``。"""
+    """完整技能沒有可加的數值時，依序減的一項代價（3W-5b）：``field`` 減 ``step``。
+    HC-4c 起 ``step`` 必填（法力、耐力是量類，內容檔寫 10）。"""
 
     field: CostCutField
-    step: int = Field(default=1, ge=1, le=10)
+    step: int = Field(ge=1, le=10)
 
 
 def _ladder(values: tuple[int, ...], name: str) -> tuple[int, ...]:
@@ -110,13 +111,8 @@ class CompleteSkillRules(ContentModel):
     status_magnitude_steps: tuple[int, ...]
     """數值型狀態與表面的強度（BAL-12e，#76；``magnitude_permille``，乘在原本的強度上）。在效果參數
     那一組（持續回合等）一起加，比持續 +1 回合細。"""
-    cost_cuts: tuple[CostCut, ...] = (
-        CostCut(field="stance_upkeep"),
-        CostCut(field="cooldown"),
-        CostCut(field="mana"),
-        CostCut(field="stamina"),
-        CostCut(field="ap_cost"),
-    )
+    cost_cuts: tuple[CostCut, ...]
+    """減代價的順序與步距（HC-4c 起必填，寫在 ``flash_templates.yaml`` 的 ``rules.complete``）。"""
 
     @model_validator(mode="after")
     def _check_ladders(self) -> CompleteSkillRules:
@@ -142,8 +138,8 @@ class FlashRules(ContentModel):
     """重閃不需要先上場用過。"""
     dissolve_refund_permille: int = Field(ge=0, le=1000)
     """溶掉一招時退回「花在它身上的靈感點」的比例（‰，無條件捨去；#71：一半）。"""
-    insight_per_win: int = Field(default=1, ge=0)
-    """roguelite 原型每打贏一場給的靈感點（3W-5 接）。"""
+    insight_per_win: int = Field(ge=0)
+    """roguelite 原型每打贏一場給的靈感點（3W-5 接；HC-4c 起必填）。"""
     insight_start: int = Field(default=0, ge=0)
     """開局給的靈感點（BAL-1 經濟旋鈕；預設 0＝現行行為）。"""
     insight_preboss: int = Field(default=0, ge=0)
@@ -185,7 +181,7 @@ class FlashRules(ContentModel):
     """「延長」也加陷阱持續回合（``trap.rounds`` ＋1，BAL-12b 定）。"""
     modifier_drawback_step: int = Field(ge=1, le=500)
     """``mod_cost``（代價減輕）：負的傷害、治療幅度（‰）往 0 減輕多少（BAL-10b）。"""
-    form_magnitudes: tuple[int, ...] = tuple(range(1000, 2001, 50))
+    form_magnitudes: tuple[int, ...]
     """變身姿態（BAL-2c）修正類小變化與升階重配可換到的形態幅度（‰，``enter_form.magnitude_permille``；
     最後一格不能超過該參數的上限，載入內容庫時對照 ``skill_primitives.yaml``）。比
     ``stance_magnitudes`` 細：升階重配把形態拉到接近原本的比例（例如 99%）之後，一次閃現的 +40‰
@@ -199,7 +195,7 @@ class FlashRules(ContentModel):
     """收束的用法分數（BAL-10d2，原型 AI 權重）：這招放過、平均命中目標數（‰）低於
     ``converge_targets_permille`` 時，兩種收束各加這麼多分（換形狀在同樣條件下是 2 分，3 分讓
     常打單體的範圍技優先看到收束）。"""
-    tighten_permille: int = Field(default=100, ge=0, le=1000)
+    tighten_permille: int = Field(ge=0, le=1000)
     """專注的條件收緊一級（BAL-10e2，06 6.34.4「BAL-10e 定」）：預算器不幫條件計價，收緊一級固定
     視為拿掉這麼多‰（佔同階可用預算），和這次閃現的 ``budget_step_permille`` 一起換觸發效果或
     修正幅度。"""
@@ -234,8 +230,8 @@ class PriceRule(ContentModel):
     """花幾點靈感。"""
     options: int = Field(ge=1, le=6)
     """出幾個選項（不含指定類別時另列的轉型）。"""
-    min_categories: int = Field(default=1, ge=1)
-    """選項至少涵蓋幾類（做得到時）。"""
+    min_categories: int = Field(ge=1)
+    """選項至少涵蓋幾類（做得到時；HC-4c 起必填）。"""
 
 
 class FlashPricing(ContentModel):
@@ -373,15 +369,14 @@ class TransformTemplate(ContentModel):
       （``trap``）；``stance`` 進入姿態（``stances``）；``modifier`` 修正型被動（持續改變你的
       同元素技能）。
     - ``min_tier``：最低角色階級（#73：1 階被動、反應；2 階起召喚、陷阱、姿態；3 階起修正型被動）。
-    - 強度不寫在這裡：轉型後照新種類的預算由預算器重調（``scale_permille`` 只是起點的提示，
-      被動／反應的數值最後仍以預算為準）。
+    - 強度不寫在這裡：轉型後照新種類的預算由預算器重調。
     - ``source``（TF-1，#159）：適用的原招。``hostile``（預設）＝帶得走敵對效果的招；``summon``
       ＝召喚技（伴生、護主：效果是召喚到身邊，縮小幅度在 ``skill_budget.yaml`` 的
       ``flash_transform``）；``support`` ＝輔助技（沒有傷害的治療、護盾、增益：庇佑、援手）。
     - ``heal_reaction``（TF-1 援手）：原招只有治療（沒有護盾、增益）時改用的反應（受擊後補血）；
       其他輔助技用 ``reaction``（被瞄準時、命中判定之前）。
-    - HC-4b3：``scale_permille`` 只有敵對原招轉被動／反應時用到、``summon_duration`` 只有轉召喚時
-      用到；用到時必填，其他可省略（原本的程式預設值 500‰、2 輪都已寫在內容檔的那幾個模板）。
+    - HC-4b3：``summon_duration`` 只有轉召喚時用到；用到時必填，其他可省略。HC-4c 刪掉沒有程式讀的
+      ``scale_permille``（縮小起點的提示）。
     """
 
     id: str = Field(pattern=ID_PATTERN)
@@ -403,8 +398,6 @@ class TransformTemplate(ContentModel):
     trigger: TriggerSpec | None = None
     reaction: ReactionSpec | None = None
     heal_reaction: ReactionSpec | None = Field(default=None, exclude_if=lambda v: v is None)
-    scale_permille: int | None = Field(default=None, ge=100, le=1000)
-    """``passive``／``reaction``（``source: hostile``）：效果縮小的起點提示（‰）。"""
     units: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """``summon``：技能元素（``any`` ＝ 沒有元素或沒列到時）→ 候選召喚物（依序試）。"""
     summon_duration: int | None = Field(default=None, ge=1, le=6)
@@ -436,9 +429,6 @@ class TransformTemplate(ContentModel):
             raise ValueError(f"轉型 {self.id}：source: {self.source} 只能轉成被動或反應")
         if self.heal_reaction is not None and (self.source != "support" or self.to != "reaction"):
             raise ValueError(f"轉型 {self.id}：heal_reaction 只給輔助技轉反應（援手）用")
-        scaled = self.source == "hostile" and self.to in ("passive", "reaction")
-        if scaled and self.scale_permille is None:
-            raise ValueError(f"轉型 {self.id}：敵對原招轉成 {self.to} 時必須填 scale_permille")
         if self.to == "summon" and self.summon_duration is None:
             raise ValueError(f"轉型 {self.id}：轉成 summon 時必須填 summon_duration")
         return self

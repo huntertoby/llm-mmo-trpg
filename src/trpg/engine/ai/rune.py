@@ -28,8 +28,6 @@ from trpg.engine.state import BattleState, UnitState
 __all__ = ["has_rune_reader", "is_inscribe_skill", "read_gains", "rune_estimate", "rune_gains"]
 
 _PERMILLE = 1000
-_CELL_SCORES = {0: 3, 1: 2, 2: 1}
-"""格子離最近的敵人的距離 → 分數（敵人腳下 3、相鄰 2、距離 2 為 1；更遠 0）。"""
 
 
 def is_inscribe_skill(skill: SkillDef) -> bool:
@@ -78,8 +76,11 @@ def _enemy_distance(state: BattleState, unit: UnitState, xy: XY) -> int | None:
     return min(distances) if distances else None
 
 
-def _cell_score(distance: int | None) -> int:
-    return 0 if distance is None else _CELL_SCORES.get(distance, 0)
+def _cell_score(state: BattleState, distance: int | None) -> int:
+    """格子離最近的敵人的距離 → 分數（``heuristics.estimate.rune_cell_points`` 依距離取，
+    更遠 0）。"""
+    points = state.ruleset.ai.estimate.rune_cell_points
+    return 0 if distance is None or distance >= len(points) else points[distance]
 
 
 def rune_estimate(
@@ -93,7 +94,7 @@ def rune_estimate(
     for xy in tiles:
         if own_runes_at(state, unit.id, xy):
             continue
-        score += _cell_score(_enemy_distance(state, unit, xy))
+        score += _cell_score(state, _enemy_distance(state, unit, xy))
     if score <= 0:
         return None
     return Fraction(score) - Fraction(dist_to(unit, origin), _PERMILLE)

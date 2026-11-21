@@ -18,8 +18,6 @@ from trpg.shared.types import Team
 
 __all__ = ["hold_guard_bonus", "objective_cost"]
 
-_THREAT_RADIUS = 6
-
 
 def _nearest(unit: UnitState, tiles: tuple[tuple[int, int], ...]) -> int:
     return min(dist_to(unit, t) for t in tiles)
@@ -49,8 +47,9 @@ def hold_guard_bonus(state: BattleState, unit: UnitState, w: AiWeights) -> int:
         return 0
     if _nearest(unit, objective.tiles) > w.hold_radius:
         return 0
+    radius = state.ruleset.ai.scoring.hold_threat_radius
     threatened = any(
-        unit_dist(unit, e) <= _THREAT_RADIUS
+        unit_dist(unit, e) <= radius
         for e in state.living_units()
         if e.team is not Team.ALLY and not e.is_summon  # 敵方＋第三方（5B-M3）
     )

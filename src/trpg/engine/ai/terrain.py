@@ -34,11 +34,9 @@ _RAISE = "raise_terrain"
 _LOWER = "lower_terrain"
 _PUSHES = frozenset({"push", "pull"})
 
-_ENEMY_VALUE = 3
-_ALLY_VALUE = 2
-_PIT_VALUE = 2
 _PERCH_VALUE = 1
-"""候選估計的分數（只用來排序，不是收益）。"""
+"""候選估計：自己站的格子升高的分數（只用來排序，不是收益）；敵人、友方、坑的分數在
+``ai_profiles.yaml`` 的 ``heuristics.estimate``。"""
 
 
 def is_terrain_only(skill: SkillDef) -> bool:
@@ -86,6 +84,7 @@ def terrain_estimate(
     kinds = {e.type for e in skill.effects}
     lowering, raising = _LOWER in kinds, _RAISE in kinds
     pit = lowering and not raising and _can_push(state, unit)
+    est = state.ruleset.ai.estimate
     score = Fraction(0)
     for xy in area.tiles:
         height = state.tile(*xy).height
@@ -94,13 +93,13 @@ def terrain_estimate(
         other = state.unit_at(*xy)
         if other is None or not other.alive:
             if pit and can_lower:
-                score += _PIT_VALUE * len(_pit_victims(state, unit, xy, height - 1))
+                score += est.terrain_pit_points * len(_pit_victims(state, unit, xy, height - 1))
         elif other.id == unit.id:
             score += _PERCH_VALUE if can_raise and height_weight > 0 else 0
         elif other.team is not unit.team:
-            score += _ENEMY_VALUE if can_lower else 0
+            score += est.terrain_lower_points if can_lower else 0
         else:
-            score += _ALLY_VALUE if can_raise else 0
+            score += est.terrain_raise_points if can_raise else 0
     if score <= 0:
         return None
     return score - Fraction(dist_to(unit, area.origin), 1000)

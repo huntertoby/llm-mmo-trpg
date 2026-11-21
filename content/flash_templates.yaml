@@ -89,6 +89,7 @@ pricing:
   focused:                    # 指定類別：花 2 點，從該類出 3 個（類別內依用法統計排序）
     cost: 2
     options: 3
+    min_categories: 1
   reflash_same_price: true
   allow_focus: true
   transform_guaranteed: true  # 第 3 次（或重閃第 3 次）有合法轉型時一定是選項之一；指定加深／橋接時另列第 4 個
@@ -801,7 +802,6 @@ transforms:
     headline_zh: "變成被動：你打中敵人時自動補上這招"
     say_zh: "這招變成被動、不用再按：你的攻擊打中敵人時，自動對它補上縮小版的這招。"
     trigger: {event: on_hit, target: other}
-    scale_permille: 500
   - id: to_reaction_melee
     to: reaction
     prefix_zh: 反擊
@@ -809,7 +809,6 @@ transforms:
     headline_zh: "變成反應：被近戰攻擊時自動回敬這招"
     say_zh: "這招變成反應：敵人近戰攻擊你時，自動對它施放縮小版的這招。"
     reaction: {event: hit_by_melee}
-    scale_permille: 600
   - id: to_summon
     to: summon
     min_tier: 2

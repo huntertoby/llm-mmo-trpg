@@ -129,18 +129,19 @@ def skill_estimate(  # noqa: PLR0917
     if not isinstance(special, _Unhandled):
         return special
     effects = resolve_effects(state, skill)
+    est = state.ruleset.ai.estimate
     score = Fraction(0)
     useful = False
     for uid in area.units:
         other = state.units[uid]
         if other.team is not unit.team:
-            score += 3
+            score += est.enemy_points
             useful = True
         elif _supports(state, unit, skill, effects, other):
-            score += 2
+            score += est.support_points
             useful = True
         elif other.id != unit.id:
-            score -= 3
+            score -= est.ally_penalty
     for xy in area.tiles:
         obj = state.object_at(*xy)
         if obj is not None and obj.hp is not None:
@@ -299,7 +300,8 @@ def _trap_estimate(
     near = [d for d in distances if d <= rules.near]
     if not near:
         return None
-    return Fraction(len(near) * 4 - min(near)) - Fraction(dist_to(unit, center), 1000)
+    points = state.ruleset.ai.estimate.trap_enemy_points
+    return Fraction(len(near) * points - min(near)) - Fraction(dist_to(unit, center), 1000)
 
 
 def _supports(
@@ -415,7 +417,7 @@ def _field_value(state: BattleState, unit: UnitState, tiles: tuple[XY, ...], sce
     if not threats:
         return 0
     covered = set(tiles)
-    value = 2 if unit.xy in covered else 0
+    value = state.ruleset.ai.estimate.field_cover_points if unit.xy in covered else 0
     for enemy in threats:
         if any(xy in covered for xy in bresenham(enemy.xy, unit.xy)[1:-1]):
             value += 1

@@ -78,10 +78,7 @@ from trpg.engine.state import BattleState, UnitState
 from trpg.engine.weapon_traits import pierce_line_targets
 from trpg.shared.types import ObjectId, Surface, UnitId
 
-_KEEP_DISTANCE = 2
 _PERMILLE_AI = 1000
-_FORMATION_STEP = 100
-"""陣法站位：倍率每 100‰ 算 1 單位的 ``formation`` 權重（Phase 5A-M2）。"""
 _DOWNED_PENALTY = 1000
 _ESCAPED_BONUS = 1000
 
@@ -329,7 +326,7 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
     if w.keep_distance:
         # 隱蔽的敵人必須走到 2 格內才打得到（concealed_ranged_max_distance），所以遠程單位為了
         # 攻擊而進入 2 格內不扣分；否則兩名隱蔽的弓手會互相等待到平手（dark_forest 種子 7）
-        keep = _keep_radius(unit)
+        keep = _keep_radius(state, unit)
         close = sum(1 for e in enemies if dist_to(e, xy) <= keep and not is_concealed(state, e))
         value -= w.keep_distance * close
     if w.cover:
@@ -347,13 +344,15 @@ def _enemy_terms(state: BattleState, unit: UnitState, w: AiWeights, scene: _Scen
     return value + _facing_terms(state, unit, w, enemies) + _weapon_terms(state, unit, w, enemies)
 
 
-def _keep_radius(unit: UnitState) -> int:
-    """保持距離的半徑：一般 2 格；近距離武器（BAL-5 B19，霰彈槍）只避開比最佳距離更近的敵人。"""
+def _keep_radius(state: BattleState, unit: UnitState) -> int:
+    """保持距離的半徑：一般 ``keep_distance_radius`` 格；近距離武器（BAL-5 B19，霰彈槍）只避開比
+    最佳距離更近的敵人。"""
+    keep = state.ruleset.ai.scoring.keep_distance_radius
     weapon = unit.weapon
-    if not is_close_range(weapon, _KEEP_DISTANCE):
-        return _KEEP_DISTANCE
+    if not is_close_range(weapon, keep):
+        return keep
     best = best_distance(weapon)
-    return _KEEP_DISTANCE if best is None else best - 1
+    return keep if best is None else best - 1
 
 
 def _close_range_term(
@@ -363,9 +362,10 @@ def _close_range_term(
     ÷ 1000。"""
     weapon = unit.weapon
     weight = 0
-    if w.close_range and is_close_range(weapon, _KEEP_DISTANCE):
+    keep = state.ruleset.ai.scoring.keep_distance_radius
+    if w.close_range and is_close_range(weapon, keep):
         weight = w.close_range
-    elif w.far_range and is_far_range(weapon, _KEEP_DISTANCE):
+    elif w.far_range and is_far_range(weapon, keep):
         weight = w.far_range  # 遠距加成武器（BAL-8 火槍）：同樣的算式，偏好遠距
     if not weight:
         return 0
@@ -473,7 +473,8 @@ def _unit_position_value(
     if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
         value -= w.hazard  # 有害表面，或敵方會傷害自己的持續區域（Phase 3D-5）
     if w.formation:  # 陣法（Phase 5A-M2）：待在同門範圍內，落單扣分
-        value += w.formation * (formation_permille(state, unit) - _PERMILLE_AI) // _FORMATION_STEP
+        step = state.ruleset.ai.scoring.formation_step  # 倍率每這麼多‰ 算一份權重
+        value += w.formation * (formation_permille(state, unit) - _PERMILLE_AI) // step
     return Fraction(value)
 
 

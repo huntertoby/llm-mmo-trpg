@@ -13,7 +13,6 @@ from tests.engine.helpers import (
     no_reactions,
     spawn,
 )
-from trpg.content.environment import AiWeights
 from trpg.engine.ai.utility import _charge_estimate, _scene
 from trpg.engine.skills.targeting import SkillArea
 from trpg.shared.types import Team, UnitId
@@ -22,9 +21,11 @@ U1 = UnitId("unit_0001")
 FLAT = "\n".join(["0000000"] * 7)
 
 
-def test_the_defaults_keep_the_old_constants() -> None:
-    w = AiWeights()
-    assert (w.charge_per_enemy, w.shadowstep, w.shadowstep_behind) == (3, 3, 2)
+def test_the_content_keeps_the_old_constants() -> None:
+    """HC-4c：三個固定加分不再有程式預設值，由 ``skill_ai`` 填入每個行為模式（值照舊）。"""
+    shared = library().ai_profiles.skill_ai
+    keys = ("charge_per_enemy", "shadowstep", "shadowstep_behind")
+    assert tuple(shared[k] for k in keys) == (3, 3, 2)
 
 
 def test_no_shipped_profile_overrides_the_new_weights() -> None:
@@ -46,7 +47,7 @@ def test_the_charge_estimate_uses_the_weight_per_enemy() -> None:
     area = SkillArea(
         tiles=(), units=(UnitId("unit_0002"), UnitId("unit_0003")), origin=(5, 3), direction=None
     )
-    base = AiWeights()
+    base = library().ai_profiles.by_id()["brute"].weights
     heavier = base.model_copy(update={"charge_per_enemy": 10})
     zero = Fraction(0)
     low = _charge_estimate(state, unit, area, scene, base, zero)

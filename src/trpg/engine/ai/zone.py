@@ -96,22 +96,26 @@ def zone_estimate(
     direction: XY | None,
     origin: XY,
 ) -> Fraction | None:
-    """區域選取的便宜估計：格內對象 × 3 ＋ 路徑上的對象 × 2；沒有對象時 ``None``。"""
+    """區域選取的便宜估計：格內對象與路徑上的對象各乘 ``heuristics.estimate`` 的分數；沒有對象時
+    ``None``。"""
     spec = next(e for e in skill.effects if e.type == ZONE)
     path = _zone_geometry(state, spec, tiles, direction)
     inside, along = _counts(state, unit, spec, tiles, path)
-    score = 3 * inside + 2 * along
+    est = state.ruleset.ai.estimate
+    score = est.zone_inside_points * inside + est.zone_path_points * along
     if score <= 0:
         return None
     return Fraction(score) - Fraction(dist_to(unit, origin), _PERMILLE)
 
 
 def _status_value(state: BattleState, status_id: str, profile: AiProfile) -> Fraction:
-    """區域施加一次狀態的價值：增益用 ``ally_status_values`` × ``support``（沒列出的用 3），
-    減益用 ``status_values`` × ``damage``（沒列出的用 ``status`` 權重）。"""
+    """區域施加一次狀態的價值：增益用 ``ally_status_values`` × ``support``（沒列出的用
+    ``heuristics.scoring.unlisted_status_value``），減益用 ``status_values`` × ``damage``
+    （沒列出的用 ``status`` 權重）。"""
     w = profile.weights
     if state.ruleset.status_def(status_id).beneficial:
-        return Fraction(w.support * profile.ally_status_values.get(status_id, 3))
+        unlisted = state.ruleset.ai.scoring.unlisted_status_value
+        return Fraction(w.support * profile.ally_status_values.get(status_id, unlisted))
     points = profile.status_values.get(status_id)
     return Fraction(w.status) if points is None else Fraction(w.damage * points)
 

@@ -285,13 +285,15 @@ def test_the_ai_trap_numbers_live_in_the_content_with_their_original_values() ->
 
 
 def test_an_unknown_trap_shape_uses_the_default_factor_instead_of_raising() -> None:
-    rules = TrapAiRules(shape_factor_permille={"single": 1000}, default_factor_permille=1250)
+    rules = TrapAiRules(
+        max_active=2, near=3, shape_factor_permille={"single": 1000}, default_factor_permille=1250
+    )
     assert rules.shape_factor("never_heard_of_it") == Fraction(5, 4)
     # AI 端：把所有形狀係數都清空，十字陷阱走預設係數，rank 不可 KeyError。
     data = library().ai_profiles.model_dump()
     for profile in data["profiles"]:
         del profile["trap"]
-    data["trap"] = {"shape_factor_permille": {}}
+    data["trap"] = {**data["trap"], "shape_factor_permille": {}}  # HC-4c：其他格照內容檔
     ai = UtilityAI(AiProfileTable.model_validate(data))
     state = scene()
     state.units[U2].pos = Pos(x=5, y=3)
@@ -304,7 +306,7 @@ def test_changing_the_content_trap_limit_changes_the_ai_candidates() -> None:
     data = library().ai_profiles.model_dump()
     for profile in data["profiles"]:
         del profile["trap"]
-    data["trap"] = {"near": 1}
+    data["trap"] = {**data["trap"], "near": 1}  # HC-4c：其他格照內容檔
     ai = UtilityAI(AiProfileTable.model_validate(data))
     state = scene()
     state.units[U2].pos = Pos(x=5, y=3)

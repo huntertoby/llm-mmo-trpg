@@ -175,6 +175,43 @@ targets:
       - {path: "profiles[*].weights.prefer_far_from_leader", label_zh: 追離頭目遠的人, kind: int, hint_min: 0, hint_max: 10, existing_only: true, note_zh: 只展開已寫這個權重的行為模式（目前只有殼縫餘燼蜥用的「殼縫蟲群」）。打到的敵人離頭目最近佔格的距離（取最遠的一名）× 這個值加在動作分數上；移動時另加「從這格打得到的敵人裡離頭目最遠的距離」× 這個值。軟偏好、不強制。0＝不特別追。}
       # BS-2（BS-1 待決 2；06 6.21.1「AI：持有無聲時留在目標背後」）：只開無聲的留背分，背刺、背對扣分照 NW-3。
       - {path: facing.silent_behind, label_zh: 無聲留背的加分, kind: int, hint_min: 0, hint_max: 10, note_zh: 持有「無聲」（手持匕首類）的近戰單位站在相鄰敵人的背後格時，每名敵人再加的站位分（疊在背刺的 4 分上）。敵我同一套。越大越黏在目標背後、不走開；太大可能不去打更值得打的目標。0＝和沒有無聲一樣只看背刺分。}
+      # HC-4c：AI 與環境的程式預設值搬進這份檔之後，開代表性的規則數值（照用途分組）；全部是原本的初值、
+      # 未經模擬。沒開的（便宜估計 heuristics.estimate、搜尋寬度 move_candidates／skill_candidates 等）見 PhaseHC-4c報告.md。
+      - {path: rewrite.ap_points, label_zh: 給 AP 的價值, group_zh: 改寫與源力, kind: int, hint_min: 0, hint_max: 12, note_zh: 技能給自己（或隊友）1 點 AP 值多少分（等值傷害點數 × 行為模式的傷害權重；給隊友再乘下一格的比例）。調高 AI 更愛用加速、額外行動類技能；調低就少用。}
+      - {path: rewrite.ally_ap_permille, label_zh: 給隊友 AP 的比例（‰）, group_zh: 改寫與源力, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 給隊友的 AP 相對給自己的價值（600＝六成）。調高 AI 更願意把 AP 分給隊友；調低就偏好留給自己。只能 0～1000。}
+      - {path: rewrite.source_points, label_zh: 源力的機會成本, group_zh: 改寫與源力, kind: int, hint_min: 0, hint_max: 10, note_zh: 每花 1 點源力扣這麼多分。調高 AI 更省著用源力、傳說招放得少；調低就放得兇。}
+      - {path: rewrite.undying_points, label_zh: 免死的價值, group_zh: 改寫與源力, kind: int, hint_min: 0, hint_max: 80, note_zh: 免死 × 目標已損失 HP 的比例（滿血 0）。調高 AI 越早替快倒的人上免死；調低就拖到很危險才用或不用。}
+      - {path: rewrite.revive_points, label_zh: 復活的價值, group_zh: 改寫與源力, kind: int, hint_min: 0, hint_max: 60, note_zh: 每復活 1 名倒下的友方值多少分。調高 AI 更優先復活隊友；調低就先打人。}
+      - {path: rewrite.priority_kill_points, label_zh: 先打補師的加分, group_zh: 改寫與源力, kind: int, hint_min: 0, hint_max: 30, note_zh: 擊倒帶「同門相護」的敵人額外加的分數。調高 AI 越集中先處理護人的敵人；調低就照一般傷害挑目標。}
+      - {path: rewrite.interrupt_points, label_zh: 打斷蓄力的加分, group_zh: 改寫與源力, kind: int, hint_min: 0, hint_max: 30, note_zh: 擊倒或讓正在蓄力的敵人跳過回合時額外加的分數。調高 AI 越會搶在強招放出前打斷；調低就不特別理會蓄力。}
+      - {path: summon.hit_permille, label_zh: 召喚物傷害的折合（‰）, group_zh: 召喚, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚物預估傷害乘的命中與走位折合（500＝打五折）。調高 AI 更愛召喚會打人的召喚物；調低就少召喚。只能 0～1000。}
+      - {path: summon.totem_ally_points, label_zh: 圖騰光環的價值, group_zh: 召喚, kind: int, hint_min: 0, hint_max: 10, note_zh: 圖騰光環每罩到一名友方、每輪的價值（狀態沒列在增益價值表時用這個值）。調高 AI 更愛放圖騰；調低就少放。}
+      - {path: summon.infuse_value_permille, label_zh: 灌注的價值（‰）, group_zh: 召喚, kind: permille, hint_min: 0, hint_max: 2000, note_zh: 把技能灌注給召喚物時，召喚物施放的預覽分數乘這個千分比（0＝AI 不灌注）。調高 AI 越常灌注；調低就自己放。只能 0～2000。}
+      - {path: summon.infuse_threat_damage, label_zh: 灌注時估的威脅, group_zh: 召喚, kind: int, hint_min: 0, hint_max: 10, note_zh: 估召喚物活多久時，每名打得到牠的敵人算這麼多點傷害。調高 AI 覺得召喚物容易死、少灌注；調低就多灌注。}
+      - {path: trap_likelihood_permille, label_zh: 陷阱踩中機率（‰）, group_zh: 區域、陷阱、刻印與地形, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 放陷阱時估計真的會被踩中或波及敵人的機率。調高 AI 更愛放陷阱；調低就少放。只能 0～1000。}
+      - {path: trap.max_active, label_zh: 同時最多幾個陷阱, group_zh: 區域、陷阱、刻印與地形, kind: int, hint_min: 1, hint_max: 5, note_zh: 同陣營同時最多放幾個陷阱。調高 AI 會鋪更多陷阱；調低就放得少。至少 1。}
+      - {path: zone.likelihood_permille, label_zh: 區域之後觸發的比例（‰）, group_zh: 區域、陷阱、刻印與地形, kind: permille, hint_min: 100, hint_max: 1000, note_zh: 建立持續區域時，估計之後每輪真的有對象觸發一次的比例。調高 AI 更愛放持續區域；調低就少放。只能 0～1000。}
+      - {path: rune.inscribe_points, label_zh: 刻印的價值, group_zh: 區域、陷阱、刻印與地形, kind: int, hint_min: 0, hint_max: 12, note_zh: 有讀取技能時，在敵人腳下刻一個符文的價值（相鄰、兩格的比例另計）。調高 AI 更愛刻符文；調低就少刻。}
+      - {path: terrain.height_points, label_zh: 改變高度的價值, group_zh: 區域、陷阱、刻印與地形, kind: int, hint_min: 0, hint_max: 10, note_zh: 純地形技能讓敵人變低或友方變高時，每一層的價值。調高 AI 更愛用隆起、下陷；調低就少用。}
+      - {path: stance.cancel_hp_below_permille, label_zh: 取消危險姿態的 HP 門檻（‰）, group_zh: 姿態、形態與代價, kind: permille, hint_min: 100, hint_max: 800, note_zh: 有代價的姿態（例：狂怒）在 HP 低於這個千分比、附近有敵人時，回合一開始就取消。調高 AI 越早取消；調低就撐到更危險才取消。只能 0～1000。}
+      - {path: form.enter_value, label_zh: 進入形態的價值, group_zh: 姿態、形態與代價, kind: int, hint_min: 0, hint_max: 16, note_zh: 進入形態的價值（× 行為模式的支援權重；進入獎勵另計）。調高 AI 更早變身；調低就少變身。}
+      - {path: self_cost.stun_hp_below_permille, label_zh: 自暈技能的 HP 門檻（‰）, group_zh: 姿態、形態與代價, kind: permille, hint_min: 100, hint_max: 900, note_zh: 會讓自己跳過回合的技能，只在 HP 低於這個千分比、附近有敵人時才用。調高 AI 越容易用；調低就只在快死時用。只能 0～1000。}
+      - {path: gamble.hp_floor_permille, label_zh: 賭博技能的 HP 下限（‰）, group_zh: 姿態、形態與代價, kind: permille, hint_min: 0, hint_max: 600, note_zh: HP 低於這個千分比時，可能反噬自己的賭博技能分數大幅降低。調高 AI 越早不賭；調低就快死也照賭。只能 0～1000。}
+      - {path: orders.focus_permille, label_zh: 集火的收益倍率（‰）, group_zh: 戰術指令, kind: permille, hint_min: 1000, hint_max: 3000, note_zh: 集火指令下，對目標的收益乘這個倍率（1500＝多五成）。調高隊友越死咬目標；調低就照常挑人。至少 1000。}
+      - {path: orders.hold_weight, label_zh: 守位每格的扣分, group_zh: 戰術指令, kind: int, hint_min: 0, hint_max: 40, note_zh: 守位指令下，每超出半徑一格的站位扣分。調高隊友越不離開守位；調低就容易走出去打人。}
+      - {path: orders.environment_permille, label_zh: 利用環境的收益倍率（‰）, group_zh: 戰術指令, kind: permille, hint_min: 1000, hint_max: 4000, note_zh: 利用環境指令下，環境傷害、推擊、表面等收益乘這個倍率。調高隊友越常推人下崖、點火；調低就照常。至少 1000。}
+      - {path: run.pursue_points, label_zh: 跑步追擊的分數, group_zh: 跑步與基本動作, kind: int, hint_min: 0, hint_max: 12, note_zh: 走不到攻擊距離、跑步後才打得到時，跑步的分數。調高 AI 更常跑步追人；調低就少跑。}
+      - {path: run.retreat_hp_permille, label_zh: 跑步撤離的 HP 門檻（‰）, group_zh: 跑步與基本動作, kind: permille, hint_min: 100, hint_max: 700, note_zh: HP 低於這個千分比、敵人在附近時才考慮跑步撤離。調高 AI 越早逃；調低就撐到很危險才逃。只能 0～1000。}
+      - {path: basic.guard_points, label_zh: 守護隊友的加分, group_zh: 跑步與基本動作, kind: int, hint_min: 0, hint_max: 10, note_zh: 相鄰隊友血少、附近有敵人時，守護隊友比守護自己多的分數。調高 AI 更常替隊友擋；調低就少擋。}
+      - {path: basic.swap_points, label_zh: 換位的分數, group_zh: 跑步與基本動作, kind: int, hint_min: 0, hint_max: 12, note_zh: 把血少的隊友換離前線、或把坦克換上前時的分數。調高 AI 更常換位；調低就少換。}
+      - {path: basic.aim_hit_permille, label_zh: 瞄準的命中率門檻（‰）, group_zh: 跑步與基本動作, kind: permille, hint_min: 300, hint_max: 900, note_zh: 接下來那一擊的命中率低於這個千分比時才先瞄準。調高 AI 更常瞄準；調低就只在很難打中時瞄準。只能 0～1000。}
+      - {path: heuristics.race.conceal_near, label_zh: 林隱：敵人多近才用, group_zh: 種族技, kind: int, hint_min: 2, hint_max: 10, note_zh: 最近的敵人在這麼多格內才用林隱（還要留得下行動的 AP）。調高 AI 越早隱身；調低就等敵人很近才用。}
+      - {path: heuristics.race.leap_rise_points, label_zh: 獸躍：每升一層的分數, group_zh: 種族技, kind: int, hint_min: 1, hint_max: 20, note_zh: 獸躍跳上高處時每高一層的分數（再加落地後打得到的敵人數）。調高 AI 越偏好跳最高的格子；調低就更看重打得到幾個人。}
+      - {path: heuristics.race.restore_min_deficit, label_zh: 過充：缺口多少才用, group_zh: 種族技, kind: int, hint_min: 1, hint_max: 15, note_zh: 耐力或法力偏低、而且缺口（換算前的點數）至少這麼多才用過充。調高 AI 越晚用；調低就越早用。}
+      - {path: heuristics.scoring.unlisted_status_value, label_zh: 沒列出的狀態價值, group_zh: 共用評分, kind: int, hint_min: 0, hint_max: 8, note_zh: 增益價值表與淨化沒有列出的狀態，每個算多少分。調高 AI 更愛上沒列出的增益、淨化沒列出的減益；調低就少用。}
+      - {path: heuristics.scoring.defend_radius, label_zh: 防禦看幾格內的敵人, group_zh: 共用評分, kind: int, hint_min: 2, hint_max: 10, note_zh: 防禦動作的分數＝防禦權重 × 這麼多格內的敵人數。調高 AI 更早開始防禦；調低就等敵人貼近才防禦。}
+      - {path: heuristics.scoring.surface_friend_harm, label_zh: 害隊友踩有害表面的扣分, group_zh: 共用評分, kind: int, hint_min: 0, hint_max: 16, note_zh: 技能讓友方站上有害的新表面（火、毒）時，每名友方相當於這麼多點傷害（再乘誤傷權重）。調高 AI 越不敢在隊友腳下放火；調低就比較不在意。}
+      - {path: heuristics.scoring.hurt_hp_permille, label_zh: 快倒下的門檻（‰）, group_zh: 共用評分, kind: permille, hint_min: 200, hint_max: 600, note_zh: 傳送、換位他人時，HP 不高於這個千分比的隊友算「快倒下」，會優先把他移離敵人。調高 AI 越早救人；調低就只救很危險的。只能 0～1000。}
   # BS-1（玩法決定 #157，06 6.21.1「數值工坊開放的欄位」）：背刺與潛行偷襲的加成（全體共用，敵我都吃）。
   - kind: rules
     label_zh: 核心戰鬥規則

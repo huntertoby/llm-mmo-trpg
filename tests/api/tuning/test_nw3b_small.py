@@ -121,10 +121,11 @@ def test_other_forms_have_no_notice(read_service: TuningService) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_schema_refuses_a_negative_weight() -> None:
-    assert AiWeights(prefer_far_from_leader=0).prefer_far_from_leader == 0
+def test_schema_refuses_a_negative_weight(content_library: ContentLibrary) -> None:
+    base = content_library.ai_profiles.by_id()["brute"].weights.model_dump()
+    assert AiWeights(**{**base, "prefer_far_from_leader": 0}).prefer_far_from_leader == 0
     with pytest.raises(ValidationError):
-        AiWeights(prefer_far_from_leader=-1)
+        AiWeights(**{**base, "prefer_far_from_leader": -1})
 
 
 def test_existing_weights_still_load(content_library: ContentLibrary) -> None:
