@@ -40,6 +40,9 @@ import {
   type HudLayout,
   type LiveToast,
 } from "./hud";
+
+/** 伺服器給的早午晚夜鐘點（`world/rules.yaml` 的 `day_parts`；HC-4d）。 */
+const PARTS = { morning: 6, noon: 11, evening: 18, night: 21 };
 import { BAR_ICON_ID } from "../render/hudIcon";
 import { ICON as HUD_Q_ICON } from "../render/qIcon/hud";
 import { HUD_BAR_ORDER, HudBarIcon, type HudBarKey } from "./HudBarIcons";
@@ -123,7 +126,7 @@ function view({ atService = true, reports = 0, insight = 2, quests = 2, pending 
     here: { location: "mist_ferry", name_zh: "霧渡鎮", kind_zh: "城鎮", camp_problem_zh: atService ? null : "附近有敵人", can_rest: atService },
     encounter: null,
     battle_id: null,
-    clock: { time_zh: "13:20", day_phase: "day", day_phase_zh: "白天", weather_zh: "濃霧" },
+    clock: { time_zh: "13:20", day_phase: "day", day_phase_zh: "白天", weather_zh: "濃霧", day_parts: PARTS },
     growth: { at_service: atService, insight, skill_tier: 2 },
     pending_flash: pending ? { skill_id: "a", nth: 1, slot: null } : null,
     pending_offer: null,
@@ -388,21 +391,44 @@ describe("浮動提示淡出", () => {
 });
 
 describe("時間、天氣、限制、任務追蹤、隊友", () => {
+  const at = (time_zh: string, day_phase: "day" | "night") => ({ time_zh, day_phase, day_parts: PARTS });
+
   it("時刻換算早午晚夜", () => {
-    expect(dayPart({ time_zh: "06:00", day_phase: "day" })).toEqual({ char: "早", icon: "sun" });
-    expect(dayPart({ time_zh: "13:20", day_phase: "day" })).toEqual({ char: "午", icon: "sun" });
-    expect(dayPart({ time_zh: "18:05", day_phase: "night" })).toEqual({ char: "晚", icon: "moon" });
-    expect(dayPart({ time_zh: "23:59", day_phase: "night" })).toEqual({ char: "夜", icon: "moon" });
-    expect(dayPart({ time_zh: "04:59", day_phase: "night" }).char).toBe("夜");
-    expect(dayPart({ time_zh: "??", day_phase: "day" }).char).toBe("午");
-    expect(dayPart({ time_zh: "??", day_phase: "night" }).char).toBe("夜");
+    expect(dayPart(at("06:00", "day"))).toEqual({ char: "早", icon: "sun" });
+    expect(dayPart(at("13:20", "day"))).toEqual({ char: "午", icon: "sun" });
+    expect(dayPart(at("18:05", "night"))).toEqual({ char: "晚", icon: "moon" });
+    expect(dayPart(at("23:59", "night"))).toEqual({ char: "夜", icon: "moon" });
+    expect(dayPart(at("04:59", "night")).char).toBe("夜");
+    expect(dayPart(at("??", "day")).char).toBe("午");
+    expect(dayPart(at("??", "night")).char).toBe("夜");
   });
 
   it("白天／夜晚照伺服器的 day_phase，不自己用時刻判斷（6F-1：HUD「晚」對遇敵卡「白天」）", () => {
-    expect(dayPart({ time_zh: "17:40", day_phase: "day" })).toEqual({ char: "午", icon: "sun" });
-    expect(dayPart({ time_zh: "18:00", day_phase: "night" })).toEqual({ char: "晚", icon: "moon" });
-    expect(dayPart({ time_zh: "05:30", day_phase: "night" })).toEqual({ char: "夜", icon: "moon" });
-    expect(dayPart({ time_zh: "05:12", day_phase: "night" }).char).not.toBe("早"); // 巡檢 bug 4
+    expect(dayPart(at("17:40", "day"))).toEqual({ char: "午", icon: "sun" });
+    expect(dayPart(at("18:00", "night"))).toEqual({ char: "晚", icon: "moon" });
+    expect(dayPart(at("05:30", "night"))).toEqual({ char: "夜", icon: "moon" });
+    expect(dayPart(at("05:12", "night")).char).not.toBe("早"); // 巡檢 bug 4
+  });
+
+  it("HC-4d：鐘點改讀伺服器的 day_parts，每個鐘點（含讀不懂的時刻）的字和圖示都和以前寫死的一樣", () => {
+    // 以前寫死在 hud.ts 的判斷（11、18、21 點），只留在這裡對照
+    const before = (time_zh: string, phase: "day" | "night") => {
+      const m = /^(\d{1,2}):(\d{2})/.exec(time_zh);
+      const h = m === null ? null : Number(m[1]) % 24;
+      if (phase === "day") return { char: h !== null && h < 11 ? "早" : "午", icon: "sun" };
+      return { char: h !== null && h >= 18 && h < 21 ? "晚" : "夜", icon: "moon" };
+    };
+    const times = [...Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:30`), "24:00", "??", ""];
+    for (const time of times) {
+      for (const phase of ["day", "night"] as const) expect(dayPart(at(time, phase))).toEqual(before(time, phase));
+    }
+  });
+
+  it("HC-4d：鐘點照 day_parts，不是寫死的值", () => {
+    const late = { ...PARTS, noon: 12, evening: 19, night: 22 };
+    expect(dayPart({ time_zh: "11:30", day_phase: "day", day_parts: late }).char).toBe("早");
+    expect(dayPart({ time_zh: "21:30", day_phase: "night", day_parts: late }).char).toBe("晚");
+    expect(dayPart({ time_zh: "18:30", day_phase: "night", day_parts: late }).char).toBe("夜");
   });
 
   it("「夜晚」天氣不和時段重複（巡檢 bug 4：天氣欄「夜」、遇敵卡「夜晚・夜晚」）", () => {

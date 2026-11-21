@@ -306,13 +306,14 @@ rules:
 
     note: 保守：狀態 id → 層級的對照（應由狀態資料帶）。
   - id: ts-day-phase-hours
-    class: config
-    status: todo
+    class: const
+    status: done
     files: client/src/world/hud.ts
     kind: number
-    value: ['11', '18', '21', '24']
+    value: ['24']
     context: '\bh\b'
-    note: 保守：早／午／晚／夜的鐘點分界（11、18、21 點）。
+    note: HC-4d：早／午／晚／夜的鐘點分界（11、18、21 點）改讀伺服器的 clock.day_parts（content/world/rules.yaml 的
+      day_parts）；剩下的 % 24 是一天 24 小時（時刻字串的防呆），不是玩法數值。
   - id: ts-tuning-presets
     class: config
     status: todo

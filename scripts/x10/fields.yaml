@@ -910,6 +910,7 @@ groups:
       - wish.*
       - xp.*
       - xp.shares_permille.*
+      - day_parts.*                               # HC-4d：早午晚夜的起始鐘點
       - field_maps.layout_sizes.*.*[]             # HC-4d：實地地圖的建議大小（格）
       - field_maps.stones_per_region[]            # HC-4d：每區傳送石數
   - files: regions.yaml

@@ -228,15 +228,20 @@ export interface DayPart {
   icon: "sun" | "moon";
 }
 
+/** 早、午、晚、夜的起始鐘點（伺服器 `clock.day_parts`，內容檔 `world/rules.yaml` 的 `day_parts`；HC-4d 起不寫死）。 */
+export type DayPartHours = Pick<WorldView["clock"]["day_parts"], "noon" | "evening" | "night">;
+
 /**
  * 白天／夜晚一律照伺服器的 `day_phase`（6F-1：和遇敵卡、事件同一個來源；伺服器 06:00～18:00 是白天），
- * 時刻只決定同一個時段裡的字：白天＝早（11 點前）、午；夜晚＝晚（21 點前）、夜。讀不懂時刻時白天「午」、夜晚「夜」。
+ * 時刻只決定同一個時段裡的字：白天＝早（`noon` 點前）、午；夜晚＝晚（`evening`～`night` 點前）、夜；
+ * 鐘點照伺服器給的 `day_parts`。讀不懂時刻時白天「午」、夜晚「夜」。
  */
-export function dayPart(clock: { time_zh: string; day_phase: "day" | "night" }): DayPart {
+export function dayPart(clock: { time_zh: string; day_phase: "day" | "night"; day_parts: DayPartHours }): DayPart {
   const m = /^(\d{1,2}):(\d{2})/.exec(clock.time_zh);
   const h = m === null ? null : Number(m[1]) % 24;
-  if (clock.day_phase === "day") return { char: h !== null && h < 11 ? "早" : "午", icon: "sun" };
-  return { char: h !== null && h >= 18 && h < 21 ? "晚" : "夜", icon: "moon" };
+  const t = clock.day_parts;
+  if (clock.day_phase === "day") return { char: h !== null && h < t.noon ? "早" : "午", icon: "sun" };
+  return { char: h !== null && h >= t.evening && h < t.night ? "晚" : "夜", icon: "moon" };
 }
 
 export interface WeatherMark {

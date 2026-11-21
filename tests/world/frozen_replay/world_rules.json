@@ -15,6 +15,12 @@
   "utc_offset_minutes": 480
  },
  "camp_cost": 1,
+ "day_parts": {
+  "evening": 18,
+  "morning": 6,
+  "night": 21,
+  "noon": 11
+ },
  "default_weather": {
   "day": {
    "clear": 1

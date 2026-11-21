@@ -56,6 +56,7 @@ _CASES: list[tuple[str, type[BaseModel], tuple[str | int, ...]]] = [
     ("world/rules.yaml", WorldRules, ("field", "gap_third")),
     ("world/rules.yaml", WorldRules, ("field_maps", "layout_sizes")),
     ("world/rules.yaml", WorldRules, ("field_maps", "stones_per_region")),
+    ("world/rules.yaml", WorldRules, ("day_parts", "noon")),
     ("world/season.yaml", SeasonContent, ("daily_goals", "count")),
     ("world/season.yaml", SeasonContent, ("world_events", 0, "base_players")),
     ("world/season.yaml", SeasonContent, ("league", "batch_size")),

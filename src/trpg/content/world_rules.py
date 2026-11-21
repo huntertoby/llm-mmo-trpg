@@ -33,6 +33,7 @@ __all__ = [
     "WALK_PATH_FORMAT_MAX",
     "BattleRules",
     "CalendarRules",
+    "DayPartHours",
     "EncounterRates",
     "EnemyGrowthRules",
     "FieldRules",
@@ -292,6 +293,31 @@ class CalendarRules(ContentModel):
     """每日刷新的當地時刻（懸賞、今日目標、每天一次的判定）。"""
 
 
+class DayPartHours(ContentModel):
+    """``world/rules.yaml`` 的 ``day_parts``：早、午、晚、夜的起始鐘點（遊戲內時刻；HC-4d 從前端
+    ``client/src/world/hud.ts`` 搬來，值照前端原本用的）。
+
+    白天／夜晚照伺服器的 ``day_phase``（:func:`trpg.world.clock.day_phase`：遊戲日前半是白天），
+    這張表只決定同一個時段裡的字：白天＝早（``noon`` 點前）、午；夜晚＝晚（``evening``～``night``
+    點前）、夜。``morning``、``evening`` 要和世界時鐘的白天開始、夜晚開始一致
+    （``tests/world/test_rule_defaults_hc4d.py`` 對照）。"""
+
+    morning: int = Field(ge=0, le=23)
+    """早的起始鐘點（＝遊戲日開頭、白天開始）。"""
+    noon: int = Field(ge=0, le=23)
+    """午的起始鐘點。"""
+    evening: int = Field(ge=0, le=23)
+    """晚的起始鐘點（＝夜晚開始）。"""
+    night: int = Field(ge=0, le=23)
+    """夜的起始鐘點（到隔天 ``morning`` 為止）。"""
+
+    @model_validator(mode="after")
+    def _ordered(self) -> DayPartHours:
+        if not self.morning < self.noon < self.evening < self.night:
+            raise ValueError("day_parts 的鐘點必須是 morning < noon < evening < night")
+        return self
+
+
 class FieldRules(ContentModel):
     """實地地圖的規則數值（Phase 6C-R2；原本是 ``trpg.world`` 的常數，值不變）。"""
 
@@ -360,6 +386,8 @@ class WorldRules(ContentModel):
     field: FieldRules
     """實地地圖的規則數值（Phase 6C-R2）。"""
     field_maps: FieldMapRules
+    day_parts: DayPartHours
+    """早、午、晚、夜的起始鐘點（HC-4d；經 API 的 ``WorldClockView.day_parts`` 給前端）。"""
     """實地地圖的大小建議與每區傳送石數（HC-4d，原本是 ``trpg.content.fields`` 的常數）。"""
 
     @model_validator(mode="after")

@@ -124,6 +124,14 @@ field:
   gap_fallback: 1     # 兩種都放不下時再試；也放不下才退回模板
   gap_third: 2        # 三方混戰的第三方離我方至少隔幾格（6E-3b）；6E-3c：退到隔 1 格時也一樣
   walk_max_steps: 30
+# 早、午、晚、夜的起始鐘點（遊戲內時刻；HC-4d 從前端 client/src/world/hud.ts 搬來，值不變）。白天／夜晚照伺服器的時段
+# （遊戲日前半 06:00～18:00 是白天，trpg.world.clock），這張表只決定同一個時段裡的字：白天＝早（noon 點前）、午；
+# 夜晚＝晚（evening～night 點前）、夜。morning、evening 要和世界時鐘的白天開始、夜晚開始一致（測試對照）。
+day_parts:
+  morning: 6
+  noon: 11
+  evening: 18
+  night: 21
 # 實地地圖的大小建議與每區傳送石數（HC-4d，原本是 src/trpg/content/fields.py 的常數，值不變）。
 # - layout_sizes：21.3 的尺寸範圍（數值類：超出只警告）；長邊、短邊各「下限、上限」（格）。橫放、直放都可以；
 #   21.3 寫「約」，前後各放寬幾格。地圖種類：path 路徑類、site 營地／遺跡／祭壇／村落、lair 精英巢穴／秘境、
