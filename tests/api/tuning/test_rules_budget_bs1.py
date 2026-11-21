@@ -136,7 +136,8 @@ def test_changes_validate_and_bad_values_are_refused(read_service: TuningService
     hit, silent = _now(CORE, "backstab_hit_bonus"), _now(BUDGET, BUDGET_PATHS[0])
     changes = (
         Change(file=CORE, path="backstab_hit_bonus", old=hit, new=hit + 1),
-        Change(file=BUDGET, path=BUDGET_PATHS[0], old=silent, new=silent + 40),
+        # 2026-11-21 使用者改值：無聲 420 已貼著無聲步的預算上限，加價會超支，改成降價
+        Change(file=BUDGET, path=BUDGET_PATHS[0], old=silent, new=silent - 40),
     )
     read_service.drafts.put(Draft(name="bs1", changes=changes))
     result = read_service.check("bs1")
