@@ -190,3 +190,18 @@
    - 凍結複本 `tests/world/frozen_replay/encounters.json` 補 `elite_cap: 1`（只新增鍵，凍結重播照舊通過）；
    - 前面列的測試因取值方式改變而改寫。
 10. **規格沒列的 config 2 筆**：`narrative/storyteller.py` 的重試次數、`roguelite/state.py` 的傳承上限，a、b 兩段都沒寫到。建議併進 b 段（和 llm 的重試設定、a.2 待決 4 的傳承上限一起）。
+
+## 開發 PM 裁定 a 段（2026-11-22）
+
+驗收通過，fast-forward 進 main 並 push（7e954fe98）。check.py 0（pytest 18222、vitest 4841），slow parity＋cli 995，build 0；442 招、78 場、census 204 格 different=0。
+
+1. 暴擊骰數 ×2 改判 const：接受（暴擊的定義）。
+2. `UnitState.ap_per_turn = 3` 改判 const：接受（只給舊狀態相容）。
+3. 遊戲日 30 分鐘、06:00 改判 const：接受；要搬再另排（記佇列）。
+4. `InheritAction.records` 上限：併進 b 段，改讀 `max_carry` 或放寬成格式上限。
+5. 留 text 的 3 筆：把檢查移到 Ruleset 層只改錯誤出現的位置、不改規則值（同 HC-4d 裁定 4 的前例），併進 b 段。
+6. 新欄位只開 3 格：接受，使用者要調再開。
+7. 舊戰鬥紀錄錯誤訊息：b.4。
+8. 前端「1 天內」：b 段改由 API 帶冷卻秒數，前端照同一規則組字。
+9. 範圍外小改動：接受。
+10. storyteller 重試次數、roguelite 傳承上限：併進 b 段。
