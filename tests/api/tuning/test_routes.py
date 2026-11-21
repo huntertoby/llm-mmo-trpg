@@ -98,7 +98,7 @@ def test_objects_and_fields(client: TestClient) -> None:
     assert not any(r["id"].startswith("sim_") for r in rows)
     detail = client.get("/api/tuning/objects/unit/ashen_heart").json()
     fields = {f["path"]: f for f in detail["fields"]}
-    assert fields["max_hp"]["value"] == 1600 and fields["max_hp"]["label_zh"] == "最大 HP"
+    assert fields["max_hp"]["value"] == 1360 and fields["max_hp"]["label_zh"] == "最大 HP"
     assert fields["speed"]["value"] == 0
     assert fields["max_mana"]["value"] is None and "依武器大類" in fields["max_mana"]["default_zh"]
     assert fields["phases[1].trigger.permille"]["value"] == 600
@@ -113,15 +113,15 @@ def test_objects_and_fields(client: TestClient) -> None:
 
 
 def test_draft_round_trip_check_and_diff(client: TestClient) -> None:
-    body = {"changes": [{"file": HEART, "path": "max_hp", "old": 1600, "new": "1500"}]}
+    body = {"changes": [{"file": HEART, "path": "max_hp", "old": 1360, "new": "1260"}]}
     put = client.put("/api/tuning/drafts/current", json=body)
     assert put.status_code == 200, put.text
     assert put.json()["changes"] == [
         {
             "file": HEART,
             "path": "max_hp",
-            "old": 1600,
-            "new": 1500,
+            "old": 1360,
+            "new": 1260,
             "object_id": "ashen_heart",
             "label_zh": "最大 HP",
         }
@@ -130,7 +130,7 @@ def test_draft_round_trip_check_and_diff(client: TestClient) -> None:
     assert client.get("/api/tuning/status").json()["drafts"] == ["current"]
     diff = client.get("/api/tuning/drafts/current/diff").json()
     assert diff["rows"][0]["object_name_zh"] == "灰燼之心"
-    assert "-max_hp: 1600\n+max_hp: 1500\n" in diff["text"]
+    assert "-max_hp: 1360\n+max_hp: 1260\n" in diff["text"]
     checked = client.post("/api/tuning/drafts/current/check").json()
     assert checked["ok"] is True, checked
     bad = {"changes": [{"file": HEART, "path": "attributes.str", "old": 12, "new": "abc"}]}
@@ -148,7 +148,7 @@ def test_draft_round_trip_check_and_diff(client: TestClient) -> None:
 
 
 def test_apply_without_git_is_refused(client: TestClient) -> None:
-    body = {"changes": [{"file": HEART, "path": "max_hp", "old": 1600, "new": 1500}]}
+    body = {"changes": [{"file": HEART, "path": "max_hp", "old": 1360, "new": 1260}]}
     client.put("/api/tuning/drafts/current", json=body)
     status = client.get("/api/tuning/status").json()
     assert status["can_write"] is False and "只能模擬" in status["reason_zh"]
@@ -162,7 +162,7 @@ def test_apply_and_revert_through_the_api(
 ) -> None:
     client.app.state.tuning = repo_service  # type: ignore[attr-defined]
     original = (repo / "content" / HEART).read_bytes()
-    body = {"changes": [{"file": HEART, "path": "max_hp", "old": 1600, "new": 1500}]}
+    body = {"changes": [{"file": HEART, "path": "max_hp", "old": 1360, "new": 1260}]}
     client.put("/api/tuning/drafts/current", json=body)
     applied = client.post("/api/tuning/drafts/current/apply")
     assert applied.status_code == 200, applied.text
@@ -173,7 +173,7 @@ def test_apply_and_revert_through_the_api(
     assert client.get("/api/tuning/history").json()[0]["commit"] == commit
     reverted = client.post(f"/api/tuning/drafts/current/revert/{commit}").json()
     rows = [(c["path"], c["old"], c["new"]) for c in reverted["changes"]]
-    assert rows == [("max_hp", 1500, 1600)]
+    assert rows == [("max_hp", 1260, 1360)]
     assert client.post("/api/tuning/drafts/current/apply").status_code == 200
     assert (repo / "content" / HEART).read_bytes() == original
     assert client.post("/api/tuning/drafts/current/revert/zzz").status_code == 422
@@ -206,7 +206,7 @@ def test_sim_endpoints(client: TestClient, tmp_path: Path) -> None:
     too_big = client.post("/api/tuning/sims", json={"boss": "ashen", "seeds": 40})
     assert too_big.status_code == 422 and "一次最多" in too_big.json()["detail"]
     assert client.post("/api/tuning/sims", json={"boss": "x"}).status_code == 422
-    bad = {"changes": [{"file": HEART, "path": "max_hp", "old": 1600, "new": 0}]}
+    bad = {"changes": [{"file": HEART, "path": "max_hp", "old": 1360, "new": 0}]}
     client.put("/api/tuning/drafts/current", json=bad)
     refused = client.post("/api/tuning/sims", json={"boss": "ashen", "seeds": 1})
     assert refused.status_code == 422 and "草稿有錯" in refused.json()["detail"]

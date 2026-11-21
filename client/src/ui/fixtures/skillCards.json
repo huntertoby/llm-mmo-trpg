@@ -545,7 +545,7 @@
   "shape": "單體（射程 武器射程）",
   "condition": null,
   "effects": [
-   "武器傷害 ×1.35（敵方）",
+   "武器傷害 ×1.32（敵方）",
    "狀態「中毒」 3 回合（敵方），若每一下都命中同一個目標（雙匕首兩下都中）"
   ],
   "modifiers": [],
@@ -684,11 +684,11 @@
      "index": 0,
      "type": "damage",
      "category": "damage",
-     "label": "×1.35",
+     "label": "×1.32",
      "unit": null,
      "dice": null,
      "dice_note": null,
-     "multiplier_permille": 1350,
+     "multiplier_permille": 1320,
      "weapon": true,
      "amount": null,
      "element": null,

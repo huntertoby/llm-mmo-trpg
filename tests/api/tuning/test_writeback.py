@@ -42,7 +42,7 @@ def test_apply_commits_only_the_changed_file(repo: Path, repo_service: TuningSer
     before = _heart(repo_service)
     _draft(
         repo_service,
-        Change(file=HEART, path="max_hp", old=1600, new=1500),
+        Change(file=HEART, path="max_hp", old=1360, new=1260),
         Change(file=HEART, path="phases[1].trigger.permille", old=600, new=550),
     )
     (repo / "content" / "README.md").write_text("沒 commit 的別的改動\n", encoding="utf-8")
@@ -52,7 +52,7 @@ def test_apply_commits_only_the_changed_file(repo: Path, repo_service: TuningSer
     assert done.files == [HEART] and done.commit == git(repo, "rev-parse", "HEAD").strip()
     shown = git(repo, "show", "--name-only", "--format=%B", "HEAD")
     subject = shown.splitlines()[0]
-    assert subject == "tune(ashen_heart): max_hp 1600→1500 等 2 項"
+    assert subject == "tune(ashen_heart): max_hp 1360→1260 等 2 項"
     assert "- units/ashen_heart.yaml phases[1].trigger.permille: 600 → 550" in shown
     assert TUNED_BY in shown and "Co-Authored-By" not in shown
     assert shown.rstrip().splitlines()[-1] == HEART_REPO  # 只有這個檔
@@ -62,7 +62,7 @@ def test_apply_commits_only_the_changed_file(repo: Path, repo_service: TuningSer
         (a, b) for a, b in zip(before.splitlines(), after.splitlines(), strict=True) if a != b
     ]
     assert changed == [
-        (b"max_hp: 1600", b"max_hp: 1500"),
+        (b"max_hp: 1360", b"max_hp: 1260"),
         (
             b"    trigger: {kind: hp_below, permille: 600}",
             b"    trigger: {kind: hp_below, permille: 550}",
@@ -81,7 +81,7 @@ def test_busy_repo_refuses_and_leaves_files(
 ) -> None:
     (repo / ".git" / marker).touch()
     before = _heart(repo_service)
-    _draft(repo_service, Change(file=HEART, path="max_hp", old=1600, new=1500))
+    _draft(repo_service, Change(file=HEART, path="max_hp", old=1360, new=1260))
     with pytest.raises(WritebackError, match=BUSY_ZH):
         repo_service.apply("current")
     assert _heart(repo_service) == before and _commits(repo) == 1
@@ -90,7 +90,7 @@ def test_busy_repo_refuses_and_leaves_files(
 
 def test_not_on_main_refuses(repo: Path, repo_service: TuningService) -> None:
     git(repo, "checkout", "-q", "-b", "feature")
-    _draft(repo_service, Change(file=HEART, path="max_hp", old=1600, new=1500))
+    _draft(repo_service, Change(file=HEART, path="max_hp", old=1360, new=1260))
     with pytest.raises(WritebackError, match="目前分支是 feature"):
         repo_service.apply("current")
     assert _commits(repo) == 1
@@ -100,7 +100,7 @@ def test_uncommitted_change_in_the_file_refuses(repo: Path, repo_service: Tuning
     path = repo / HEART_REPO
     path.write_bytes(path.read_bytes() + b"# local note\n")
     before = _heart(repo_service)
-    _draft(repo_service, Change(file=HEART, path="max_hp", old=1600, new=1500))
+    _draft(repo_service, Change(file=HEART, path="max_hp", old=1360, new=1260))
     with pytest.raises(WritebackError, match="還沒 commit 的改動"):
         repo_service.apply("current")
     assert _heart(repo_service) == before and _commits(repo) == 1
@@ -108,14 +108,14 @@ def test_uncommitted_change_in_the_file_refuses(repo: Path, repo_service: Tuning
 
 def test_stale_old_value_refuses(repo: Path, repo_service: TuningService) -> None:
     before = _heart(repo_service)
-    _draft(repo_service, Change(file=HEART, path="max_hp", old=1700, new=1500))
-    with pytest.raises(WritebackError, match="已經被改過（現在是 1600）"):
+    _draft(repo_service, Change(file=HEART, path="max_hp", old=1700, new=1260))
+    with pytest.raises(WritebackError, match="已經被改過（現在是 1360）"):
         repo_service.apply("current")
     assert _heart(repo_service) == before and _commits(repo) == 1
 
 
 def test_invalid_value_refuses(repo: Path, repo_service: TuningService) -> None:
-    _draft(repo_service, Change(file=HEART, path="max_hp", old=1600, new=0))
+    _draft(repo_service, Change(file=HEART, path="max_hp", old=1360, new=0))
     with pytest.raises(WritebackError, match="不能小於 1"):
         repo_service.apply("current")
     assert _commits(repo) == 1
@@ -133,7 +133,7 @@ def test_commit_failure_restores_from_backup(
         return real(self, *args, stdin=stdin)
 
     monkeypatch.setattr(Git, "run", failing)
-    _draft(repo_service, Change(file=HEART, path="max_hp", old=1600, new=1500))
+    _draft(repo_service, Change(file=HEART, path="max_hp", old=1360, new=1260))
     with pytest.raises(WritebackError, match="已從備份還原"):
         repo_service.apply("current")
     assert _heart(repo_service) == before and _commits(repo) == 1
@@ -146,7 +146,7 @@ def test_failed_live_check_restores_from_backup(repo: Path, repo_service: Tuning
     prepared = prepare(
         repo_service.content_dir,
         repo_service.table,
-        [Change(file=HEART, path="max_hp", old=1600, new=1500)],
+        [Change(file=HEART, path="max_hp", old=1360, new=1260)],
     )
     rows = diff_rows(repo_service.content_dir, repo_service.table, prepared.changes)
     with pytest.raises(WritebackError, match="整包檢查沒過"):
@@ -166,14 +166,14 @@ def test_apply_then_revert_is_byte_identical(repo: Path, repo_service: TuningSer
     before = _heart(repo_service)
     _draft(
         repo_service,
-        Change(file=HEART, path="max_hp", old=1600, new=1500),
+        Change(file=HEART, path="max_hp", old=1360, new=1260),
         Change(file=HEART, path="element_mods.wind", old=None, new=250),  # 原本沒寫：插入
     )
     first = repo_service.apply("current")
     assert _heart(repo_service) != before
     view = repo_service.revert("current", first.commit)
     assert {(c.path, c.old, c.new) for c in view.changes} == {
-        ("max_hp", 1500, 1600),
+        ("max_hp", 1260, 1360),
         ("element_mods.wind", 250, None),
     }
     second = repo_service.apply("current")
