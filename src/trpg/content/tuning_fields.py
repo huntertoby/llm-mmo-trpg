@@ -38,6 +38,10 @@ from trpg.content.skill_triggers import SkillTriggerTable
 from trpg.content.skills import ConditionTable, SkillDef
 from trpg.content.skills.constants import ON_KILL_TYPES
 from trpg.content.skills.primitives import PrimitiveTable
+from trpg.content.world_economy import EconomyRules
+from trpg.content.world_rules import WorldRules
+from trpg.content.world_season import SeasonContent
+from trpg.content.world_trade import TradeRules
 from trpg.shared.errors import ContentError
 
 __all__ = [
@@ -138,6 +142,10 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "item_gen": ItemGenRules,
     "skill_evolution": EvolutionTable,
     "flash": FlashTable,
+    "world_rules": WorldRules,
+    "world_economy": EconomyRules,
+    "world_trade": TradeRules,
+    "world_season": SeasonContent,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
@@ -166,8 +174,12 @@ TABLE_KINDS: Final = (
     "item_gen",
     "skill_evolution",
     "flash",
+    "world_rules",
+    "world_economy",
+    "world_trade",
+    "world_season",
 )
-"""一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
+"""一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類（HC-4d 加大世界的四張表）。"""
 
 SKILL_KINDS: Final = ("active", "reaction", "passive", "stance", "modifier")
 """``TuningField.kinds`` 可填的技能種類（``SkillKind``）。"""
@@ -225,6 +237,10 @@ class TuningTarget(ContentModel):
         "item_gen",
         "skill_evolution",
         "flash",
+        "world_rules",
+        "world_economy",
+        "world_trade",
+        "world_season",
     ]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)
