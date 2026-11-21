@@ -68,10 +68,11 @@ class ConditionSpec(ContentModel):
     ``owner: self``）。沒填不輸出，既有技能的序列化不變。"""
     count: int | None = Field(default=None, exclude_if=lambda v: v is None)
     """``self_stack_at_least`` 專用（KW-1）：至少幾層（1～該層數的上限）。沒填不輸出。"""
-    any_of: tuple[ConditionSpec, ...] | None = Field(default=None, min_length=1, max_length=2)
+    any_of: tuple[ConditionSpec, ...] | None = Field(default=None, min_length=1)
     """真正的「或」（Phase 3W-2b）：``type`` 的條件成立，**或** ``any_of`` 裡任何一個成立（最多再
     2 個，不可再巢狀）。預算用其中最寬鬆的倍率，最低稀有度取最高的那個；只有技能與修正規則的條件
-    可以用（裝備詞條的條件不行）。"""
+    可以用（裝備詞條的條件不行）。最多幾個是 ``core.yaml`` 的 ``skill_limits.max_any_of``（HC-4d，
+    ``Ruleset`` 層檢查）。"""
 
     @model_validator(mode="after")
     def _check_any_of(self) -> ConditionSpec:

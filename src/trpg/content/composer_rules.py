@@ -19,7 +19,6 @@ from trpg.content.skills import (
     RARITY_ORDER,
     ConditionSpec,
     EffectSpec,
-    SelfStatusCost,
     ShapeSpec,
     VariantWhen,
 )
@@ -240,14 +239,6 @@ class CostRules(ContentModel):
     ``allowance.self_status.fixed_duration`` 為準）。"""
     overdraft_permille: int = 0
     """主動技能加入透支（``cost.overdraft``）的機率（Phase 3-50；3-50b 起可和自身狀態並用）。"""
-
-    @model_validator(mode="after")
-    def _check_self_status_duration(self) -> CostRules:
-        # HC-4b2：範圍照技能的自身狀態代價（SelfStatusCost.duration），不另外寫數字
-        low, high = _field_bounds(SelfStatusCost, "duration")
-        if self.self_status_duration.min < low or self.self_status_duration.max > high:
-            raise ValueError(f"self_status_duration 必須在 {low}–{high} 之內")
-        return self
 
 
 class TuningRules(ContentModel):
@@ -879,6 +870,14 @@ def composer_rule_problems(
     - ``skill_budget.yaml`` 的基本召喚物（``min_character_tier.basic_summon_units``）都在
       ``recipes.summon_units``（1 階的整招召喚照這份取射程）。"""
     problems: list[str] = []
+    limits = core.skill_limits
+    low, high = limits.min_self_status_duration, limits.max_self_status_duration
+    span = composer.cost.self_status_duration
+    # HC-4d：範圍照 skill_limits（原本照 SelfStatusCost 的 schema）
+    if span.min < low or span.max > high:
+        problems.append(
+            f"cost.self_status_duration 必須在 {low}–{high} 之內（core.yaml 的 skill_limits）"
+        )
     top = core.skill_limits.max_ap_cost
     if sorted(composer.ap_weights) != list(range(1, top + 1)):
         aps = "、".join(str(ap) for ap in range(1, top + 1))

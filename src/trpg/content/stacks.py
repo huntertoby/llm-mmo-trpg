@@ -58,8 +58,6 @@ type GainOn = Literal[
 
 type BoostKind = Literal["damage", "heal", "shield"]
 
-_MAX_BACKLASH = 2
-
 
 class OverloadSpec(ContentModel):
     """超載（Phase 3D-7b，6.17 D）：層數越疊越強，到門檻時對自己觸發懲罰並清空。
@@ -77,10 +75,8 @@ class OverloadSpec(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> OverloadSpec:
-        if not 1 <= len(self.backlash) <= _MAX_BACKLASH:
-            raise ValueError(
-                f"backlash 必須有 1 到 {_MAX_BACKLASH} 個效果，收到 {len(self.backlash)}"
-            )
+        if not self.backlash:  # 上限是 core.yaml 的 skill_limits.max_overload_backlash（HC-4d）
+            raise ValueError("backlash 必須至少有 1 個效果")
         for sub in self.backlash:
             if sub.type not in ("damage", "apply_status"):
                 raise ValueError(f"backlash 只能使用 damage、apply_status，收到 {sub.type}")

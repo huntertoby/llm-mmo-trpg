@@ -12,20 +12,17 @@ from typing import Final
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.library import ContentLibrary
+from trpg.content.world_enemies import MoveMinimums
 
 __all__ = [
-    "BOSS",
-    "ELITE",
     "EXEMPT",
-    "MOB",
     "REGIONS",
     "first_season_units",
+    "min_moves",
     "move_shortfalls",
     "phase_counts",
 ]
 
-MOB, ELITE, BOSS = 2, 3, 3
-"""一般 2 招、精英 3 招、頭目每階段 3 招。"""
 REGIONS: Final = ("cloud_ridge", "ashen_waste")
 EXEMPT: Final = frozenset(
     {
@@ -89,14 +86,25 @@ def phase_counts(unit: UnitTemplate) -> list[tuple[str, int]]:
     return counts
 
 
+def min_moves(library: ContentLibrary) -> MoveMinimums:
+    """招式數的下限（``world/enemies.yaml`` 的 ``min_moves``：一般、精英、頭目每階段；HC-4d 起
+    不寫死）。"""
+    enemies = library.world_enemies
+    assert enemies is not None, "缺少 world/enemies.yaml"
+    return enemies.min_moves
+
+
 def move_shortfalls(library: ContentLibrary) -> list[str]:
     """低於下限的：頭目 ``<單位>/<階段>=<招數>``、其他 ``<單位>=<招數>``（依單位 ID 排序）。"""
     problems: list[str] = []
+    floor = min_moves(library)
     for unit in first_season_units(library):
         if "boss" in unit.tags:
-            problems += [f"{unit.id}/{p}={n}" for p, n in phase_counts(unit) if n < BOSS]
+            problems += [
+                f"{unit.id}/{p}={n}" for p, n in phase_counts(unit) if n < floor.boss_phase
+            ]
         else:
-            need = ELITE if "elite" in unit.tags else MOB
+            need = floor.elite if "elite" in unit.tags else floor.mob
             if len(unit.skills) < need:
                 problems.append(f"{unit.id}={len(unit.skills)}")
     return problems

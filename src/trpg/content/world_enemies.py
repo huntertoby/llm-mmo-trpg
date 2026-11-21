@@ -134,9 +134,24 @@ class EliteAffixDef(ContentModel):
         return self
 
 
+class MoveMinimums(ContentModel):
+    """第一季敵人招式數的下限（#149，18.2；HC-4d 從 ``trpg.content.enemy_moves`` 的常數搬來）：
+    技能欄每筆算 1 招（含被動、反應；不含普攻）。**不是載入檢查**：只由測試與數值工坊用
+    （:func:`trpg.content.enemy_moves.move_shortfalls`）。"""
+
+    mob: int = Field(ge=0, le=10)
+    """一般敵人至少幾招。"""
+    elite: int = Field(ge=0, le=10)
+    """精英至少幾招。"""
+    boss_phase: int = Field(ge=0, le=10)
+    """頭目每個階段至少幾招。"""
+
+
 class WorldEnemies(ContentModel):
     """``content/world/enemies.yaml``：變體與精英詞綴。"""
 
+    min_moves: MoveMinimums
+    """第一季敵人招式數的下限（#149；HC-4d）。"""
     variants: tuple[EnemyVariantDef, ...] = ()
     affixes: tuple[EliteAffixDef, ...] = ()
 

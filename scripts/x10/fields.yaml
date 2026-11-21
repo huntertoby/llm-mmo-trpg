@@ -686,6 +686,7 @@ groups:
       - boss_phases.*                             # HC-4a：階段數
       - skill_limits.*                            # HC-4b：技能結構的上限（階級、AP、效果數、回合、暴擊範圍）
       - skill_limits.modifier_bounds.*            # HC-4b2：修正規則的幅度（‰、命中、回合、格數、個數）
+      - skill_limits.every_n_hits[]               # HC-4d：每 N 次命中的 N
       - shove_distance
       - source_max
       - source_min_at_start

@@ -95,7 +95,7 @@ from trpg.api.tuning.writeback import (
     reverse_of_commit,
     writeback_problem,
 )
-from trpg.content.enemy_moves import BOSS, ELITE, MOB, move_shortfalls
+from trpg.content.enemy_moves import min_moves, move_shortfalls
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import parse_yaml
 from trpg.content.skills import SkillDef
@@ -280,6 +280,7 @@ class TuningService:
         for item in fresh:
             by_unit.setdefault(re.split(r"[/=]", item, maxsplit=1)[0], []).append(item)
         flags: list[TuningMinMovesFlag] = []
+        floor = min_moves(draft)
         for unit_id in sorted(by_unit):
             unit = draft.units.get(unit_id)
             name = unit.name_zh if unit is not None else unit_id
@@ -290,7 +291,8 @@ class TuningService:
                     shortfalls=by_unit[unit_id],
                     message_zh=(
                         f"{name}（{unit_id}）低於 #149 的招數下限"
-                        f"（一般 {MOB} 招、精英 {ELITE} 招、頭目每階段 {BOSS} 招）："
+                        f"（一般 {floor.mob} 招、精英 {floor.elite} 招、"
+                        f"頭目每階段 {floor.boss_phase} 招）："
                         f"{'、'.join(by_unit[unit_id])}；要寫回請勾「我確定」"
                     ),
                 )

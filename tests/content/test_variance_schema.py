@@ -224,10 +224,11 @@ def test_the_backlash_is_one_or_two_caster_effects_of_known_types() -> None:
         base = overload()["overload"]
         return {**base, **fields}
 
-    with pytest.raises(ValidationError, match="1 到 2"):
+    with pytest.raises(ValidationError, match="至少有 1 個效果"):
         OverloadSpec.model_validate(spec(backlash=[]))
-    with pytest.raises(ValidationError, match="1 到 2"):
-        OverloadSpec.model_validate(spec(backlash=[BACKLASH, BACKLASH, BACKLASH]))
+    # HC-4d：上限 2 是 core.yaml 的 skill_limits.max_overload_backlash（Ruleset 層檢查）
+    OverloadSpec.model_validate(spec(backlash=[BACKLASH, BACKLASH, BACKLASH]))
+    assert lib().ruleset.core.skill_limits.max_overload_backlash == 2
     with pytest.raises(ValidationError, match="只能使用 damage"):
         OverloadSpec.model_validate(spec(backlash=[{"type": "heal", "dice": "1d4"}]))
     with pytest.raises(ValidationError, match="dice 與 element"):

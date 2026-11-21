@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from tests.engine.helpers import library
 from trpg.content.skills import SkillDef, skill_problems
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.validate import validate_skill
 
@@ -71,10 +72,14 @@ def test_a_non_legendary_with_source_cost_is_rejected(rarity: str) -> None:
         SkillDef.model_validate(_data(rarity=rarity))
 
 
-@pytest.mark.parametrize("source", [0, 3])
-def test_source_cost_is_one_or_two(source: int) -> None:
+def test_source_cost_is_one_or_two() -> None:
+    """0 是 schema 擋；上限 2 是 ``core.yaml`` 的 ``skill_limits.max_source_cost``（HC-4d，
+    Ruleset 層）。"""
     with pytest.raises(ValidationError):
-        SkillDef.model_validate(_data(cost={"cooldown": 2, "source": source}))
+        SkillDef.model_validate(_data(cost={"cooldown": 2, "source": 0}))
+    three = SkillDef.model_validate(_data(cost={"cooldown": 2, "source": 3}))
+    limits = library().ruleset.core.skill_limits
+    assert "cost.source：源力最多 2，收到 3" in skill_limit_problems(three, limits)
 
 
 def test_a_legendary_without_a_rule_rewrite_or_modifier_is_rejected() -> None:

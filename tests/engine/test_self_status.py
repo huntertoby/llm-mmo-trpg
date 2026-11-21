@@ -82,10 +82,14 @@ def test_the_ai_charges_the_self_status_as_a_cost() -> None:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("duration", [0, 1, 4])
-def test_duration_must_be_two_or_three(duration: int) -> None:
+def test_duration_must_be_two_or_three() -> None:
+    """0 是 schema 擋；2～3 是 ``core.yaml`` 的 ``skill_limits``（HC-4d，驗證器的
+    ``cap.limits``）。"""
     with pytest.raises(ValidationError, match="duration"):
-        skill(cost={"mana": 4, "self_status": {"status": "slow", "duration": duration}})
+        skill(cost={"mana": 4, "self_status": {"status": "slow", "duration": 0}})
+    for duration in (1, 4):
+        s = skill(cost={"mana": 4, "self_status": {"status": "slow", "duration": duration}})
+        assert any(v.rule == "cap.limits" for v in violations(s)), duration
 
 
 @pytest.mark.parametrize("kind", ["passive", "reaction", "stance"])

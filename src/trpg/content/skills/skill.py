@@ -113,10 +113,6 @@ _VARIANT_CACHE: dict[tuple[int, str], tuple[Any, Any]] = {}
 （值保留原物件，避免 ``id`` 重用時取錯）。"""
 
 
-_MIN_BESIDE_POWER = 100
-"""召喚到身邊（TF-1）縮小版的最低強度（‰）。"""
-
-
 class SkillDef(ContentModel):
     """一個技能（``content/skills/<id>.yaml``）。"""
 
@@ -127,7 +123,8 @@ class SkillDef(ContentModel):
     tier: int = Field(ge=1)
     """技能（＝角色）階級；上限是 ``core.yaml`` 的 ``skill_limits.tiers``（HC-4b，``Ruleset`` 層
     檢查）。"""
-    rank: int = Field(default=1, ge=1, le=5)
+    rank: int = Field(default=1, ge=1)
+    """等階；上限是 ``core.yaml`` 的 ``skill_limits.max_rank``（HC-4d，``Ruleset`` 層檢查）。"""
     rarity: SkillRarity
     kind: SkillKind = "active"
     skeleton: str
@@ -218,10 +215,11 @@ class SkillDef(ContentModel):
     只有 ``content/skills/`` 的手寫技能可以填，LLM 提議、白板、工坊草稿的輸入會先丟掉這個欄位
     （:func:`drop_icon_prop`）。``None`` 時不輸出，沒填的技能序列化與雜湊不變。"""
 
-    stance_upkeep: int = Field(default=0, ge=0, le=2)
+    stance_upkeep: int = Field(default=0, ge=0)
     """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
     這麼多點（武器技扣耐力、法術技扣法力，每點數量見 ``forms.yaml``）；付不起就自動解除姿態。
-    維持費換到預算折抵（``allowance.stance_upkeep_per_point``）；0＝免費。"""
+    維持費換到預算折抵（``allowance.stance_upkeep_per_point``）；0＝免費。上限是 ``core.yaml`` 的
+    ``skill_limits.max_stance_upkeep``（HC-4d，``Ruleset`` 層檢查）。"""
 
     @field_validator("skeleton")
     @classmethod
@@ -706,11 +704,9 @@ class SkillDef(ContentModel):
             )
         if spec.unit is None or spec.duration is None:
             raise ValueError("summon_beside 必須填 unit 與 duration")
-        if (
-            spec.power_permille is not None
-            and not _MIN_BESIDE_POWER <= spec.power_permille <= _PERMILLE
-        ):
-            raise ValueError("summon_beside 的 power_permille 必須在 100～1000（縮小版召喚物）")
+        if spec.power_permille is not None and not 1 <= spec.power_permille <= _PERMILLE:
+            # 下限是 core.yaml 的 skill_limits.min_beside_power_permille（HC-4d，Ruleset 層檢查）
+            raise ValueError("summon_beside 的 power_permille 必須在 1～1000（縮小版召喚物）")
         if spec.strike_other and (self.kind != "reaction" or self.shape.type != "single"):
             raise ValueError("summon_beside 的 strike_other 只能用在形狀 single 的反應技")
 

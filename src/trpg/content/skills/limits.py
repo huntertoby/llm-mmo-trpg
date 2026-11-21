@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 from pydantic import Field
 
 from trpg.content.schemas import ContentModel
+from trpg.content.skills.conditions import ConditionSpec
 
 if TYPE_CHECKING:
     from trpg.content.skills.effects import EffectSpec
@@ -91,6 +92,26 @@ class SkillLimits(ContentModel):
     """專精（帶 ``exclusive_group`` 的修正技能）的規則數上限。"""
     max_variant_replacements: int = Field(ge=1, le=5)
     """一個戰場變奏最多填幾項替換內容。"""
+    max_rank: int = Field(ge=1, le=10)
+    """``SkillDef.rank`` 的上限（HC-4d，原本是 schema 的 ``le=5``）。"""
+    min_self_status_duration: int = Field(ge=1, le=10)
+    max_self_status_duration: int = Field(ge=1, le=10)
+    """自身狀態代價（``cost.self_status``）的回合範圍（Phase 2H-1：2～3，1 等於沒有效果；
+    HC-4d）。"""
+    max_source_cost: int = Field(ge=1, le=10)
+    """傳說技能 ``cost.source`` 的上限（Phase 3C-4a：1 或 2；HC-4d）。"""
+    max_stance_upkeep: int = Field(ge=0, le=10)
+    """姿態維持費（``stance_upkeep``）的點數上限（6.34.4；HC-4d）。"""
+    max_any_of: int = Field(ge=1, le=10)
+    """條件的 ``any_of`` 最多再幾個（Phase 3W-2b；HC-4d）。"""
+    every_n_hits: tuple[int, ...] = Field(min_length=1)
+    """``every_n_hits`` 的 ``n`` 只能是這些值（HC-4d）；``skill_triggers.yaml`` 的
+    ``budget_by_n_permille`` 要剛好有這些鍵（``Ruleset`` 層檢查）。"""
+    min_beside_power_permille: int = Field(ge=1, le=1000)
+    """召喚到身邊（TF-1）縮小版的最低強度（‰；上限 1000 是 ‰ 護欄；HC-4d）。"""
+    max_overload_backlash: int = Field(ge=1, le=10)
+    """層數超載（``stacks.yaml`` 的 ``overload.backlash``）最多幾個反噬效果（Phase 3D-7b；HC-4d，
+    ``Ruleset`` 層檢查）。"""
     modifier_bounds: ModifierLimits
     """修正規則改變幅度的上下限（HC-4b2）。"""
 
@@ -184,7 +205,50 @@ def _top_problems(skill: SkillDef, limits: SkillLimits, *, count_effects: bool) 
         problems.append(f"cost.cooldown：冷卻最多 {limits.max_cooldown} 回合，收到 {cooldown}")
     if skill.crit_range is not None and skill.crit_range < limits.min_crit_range:
         problems.append(f"crit_range：最小是 {limits.min_crit_range}，收到 {skill.crit_range}")
-    return problems + _primitive_problems(skill, limits)
+    return problems + _cost_problems(skill, limits) + _primitive_problems(skill, limits)
+
+
+def _cost_problems(skill: SkillDef, limits: SkillLimits) -> list[str]:
+    """等階、自身狀態代價、源力、姿態維持費、條件「或」與每 N 次命中（HC-4d，原本是 schema 的
+    上下限；訊息的數字從規則組字）。"""
+    problems: list[str] = []
+    if skill.rank > limits.max_rank:
+        problems.append(f"rank：最大是 {limits.max_rank}，收到 {skill.rank}")
+    self_status = skill.cost.self_status
+    low, high = limits.min_self_status_duration, limits.max_self_status_duration
+    if self_status is not None and not low <= self_status.duration <= high:
+        problems.append(
+            f"cost.self_status.duration：必須是 {low}～{high}，收到 {self_status.duration}"
+        )
+    source = skill.cost.source
+    if source is not None and source > limits.max_source_cost:
+        problems.append(f"cost.source：源力最多 {limits.max_source_cost}，收到 {source}")
+    if skill.stance_upkeep > limits.max_stance_upkeep:
+        top = limits.max_stance_upkeep
+        problems.append(f"stance_upkeep：維持費最多 {top} 點，收到 {skill.stance_upkeep}")
+    for at, condition in _conditions(skill):
+        count = len(condition.any_of or ())
+        if count > limits.max_any_of:
+            problems.append(f"{at}.any_of：最多 {limits.max_any_of} 個條件，收到 {count}")
+    trigger = skill.trigger
+    if trigger is not None and trigger.event == "every_n_hits":
+        allowed = limits.every_n_hits
+        if trigger.n not in allowed:
+            shown = " 或 ".join(str(n) for n in allowed)
+            problems.append(f"trigger.n：every_n_hits 的 n 必須是 {shown}，收到 {trigger.n}")
+    return problems
+
+
+def _conditions(skill: SkillDef) -> Iterator[tuple[str, ConditionSpec]]:
+    """技能本身、修正規則與每個效果（含巢狀）的條件（第二段與變奏型態另外當成一段檢查）。"""
+    if skill.condition is not None:
+        yield "condition", skill.condition
+    for index, rule in enumerate(skill.modifiers):
+        if rule.condition is not None:
+            yield f"modifiers[{index}].condition", rule.condition
+    for at, effect in _all_effects(skill):
+        if effect.condition is not None:
+            yield f"{at}.condition", effect.condition
 
 
 def _primitive_problems(skill: SkillDef, limits: SkillLimits) -> list[str]:
@@ -287,4 +351,10 @@ def _effect_problems(at: str, effect: EffectSpec, limits: SkillLimits) -> list[s
     restores_cooldown = effect.type == "restore_resource" and effect.resource == "cooldown"
     if restores_cooldown and (effect.amount or 1) > limits.max_cooldown_restore:
         problems.append(f"{where}：冷卻最多縮短 {limits.max_cooldown_restore} 回合")
+    power = effect.power_permille
+    low = limits.min_beside_power_permille
+    if effect.type == "summon_beside" and power is not None and power < low:
+        problems.append(
+            f"{where}：summon_beside 的 power_permille 必須在 {low}～1000（縮小版召喚物）"
+        )
     return problems

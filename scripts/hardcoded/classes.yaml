@@ -694,6 +694,14 @@ rules:
     where: SkillDef
     owner: stance_upkeep
     note: 保守：姿態維持費的「點數」上限 2（每點的數量是 forms.yaml 的量類）；不是量類，HC-2 從 scale 改判 config。
+  - id: py-content-skill-limits-guard-hc4d
+    class: guard
+    status: done
+    files: src/trpg/content/skills/limits.py
+    where: SkillLimits
+    owner: max_stance_upkeep
+    note: HC-4d：skill_limits.max_stance_upkeep 的 schema 護欄 le=10（維持費的「點數」上限，不是量類；同
+      py-skill-stance-upkeep-points 的判斷）。
   - id: py-scale-names
     class: scale
     status: todo
@@ -990,8 +998,11 @@ rules:
     lang: py
     kind: number
     files: [src/trpg/content/world_encounters.py, src/trpg/content/world_narration.py,
-            src/trpg/content/world_quests.py, src/trpg/content/world_situations.py]
+            src/trpg/content/world_quests.py, src/trpg/content/world_situations.py,
+            src/trpg/content/maps.py, src/trpg/content/rule_changes.py]
     where:
+      - '<module>.MAX_HEIGHT'
+      - '<module>._MAX_DURATION'
       - '<module>.MAX_GROUP_SIZE'
       - '<module>.MAX_THIRD_SIZE'
       - '<module>.STORY_SENTENCES_MAX'
@@ -1005,7 +1016,9 @@ rules:
       輸出的格式護欄（同 TEXT_MAX_CHARS 等字數上限）；任務等級 ≤ 10 是 xp_level／level_to 的護欄（等級上限在
       world/rules.yaml 的 hero_growth.level_cap）；難度調整 ±2、用心清單 +2 是 9.6.4 使用者定的天花板，實際值在
       situation_rules.yaml 的 check.dc_shift_max／care_max（資料只能更嚴，同 RACE_BONUS_LIMIT）；危險度 1～3
-      是刻度格式（DangerDef.level、模板 danger 的 le=3 同一件事）。
+      是刻度格式（DangerDef.level、模板 danger 的 le=3 同一件事）。地圖高度 0～3（MAX_HEIGHT）是地圖格式
+      （heights 一格一個數字）與引擎、AI、畫面的層數上限，引擎 heights.py 夾住、AI 拿它當哨兵；規則改變的
+      持續 ≤ 3（_MAX_DURATION）只擋手寫的離譜回合數（HC-4a：回合類上限＝guard）。
   - id: py-content-structure-constants-hc4d
     class: const
     status: done
@@ -2373,8 +2386,9 @@ rules:
     class: text
     status: todo
     kind: text
-    files: [src/trpg/content/fields.py, src/trpg/content/races.py]
-    where: ['FieldMapRules._check', 'RacePassive.permille_problems']
+    files: [src/trpg/content/fields.py, src/trpg/content/races.py, src/trpg/content/skills/limits.py,
+            src/trpg/content/stacks.py]
+    where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check']
     note: HC-4d 新的驗證訊息（實地地圖規則、種族被動上限搬進內容檔後的字句）；同上一條（content text）。
   - id: py-content-world-economy-text-text
     class: text
