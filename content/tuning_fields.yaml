@@ -593,7 +593,7 @@ targets:
       - {path: flash_transform.companion_power_permille, label_zh: 伴生：開場召喚物的強度（‰）, group_zh: 閃現, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「伴生」後，每場開打時身邊跟著的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比（500＝一半）。這是起點：做出來的被動不在預算範圍時，會每 100‰ 往上下找最接近、合格的強度。}
       - {path: flash_transform.companion_duration, label_zh: 伴生：開場召喚物待幾輪, group_zh: 閃現, kind: int, hint_min: 1, hint_max: 4, note_zh: 伴生召出的召喚物存在幾輪（同一般召喚：在你第這麼多次回合結束時消失）。}
       - {path: flash_transform.guardian_power_permille, label_zh: 護主：反咬召喚物的強度（‰）, group_zh: 閃現, kind: permille, hint_min: 200, hint_max: 1000, note_zh: 召喚技閃成「護主」後，被近戰攻擊時冒出來反咬的那隻召喚物的最大 HP 與傷害是一般的這麼多千分比。這是起點：不在預算範圍時會每 100‰ 往上下找最接近、合格的強度。}
-      - {path: flash_transform.guardian_duration, label_zh: 護主：反咬召喚物待幾輪, group_zh: 閃現, kind: int, hint_min: 1, hint_max: 4, note_zh: 護主召出的召喚物存在幾輪（設計是 1 回合）。}
+      - {path: flash_transform.guardian_duration, label_zh: 護主：反咬召喚物待幾輪, group_zh: 閃現, kind: int, hint_min: 1, hint_max: 4, note_zh: 護主召出的召喚物反咬一次後留場幾輪（同一般召喚：在你第這麼多次回合結束時消失；設計 06 6.34.5 是 3 輪）。調高：護主的召喚物留得更久、價值更高；調低：反咬完很快消失。}
       # HC-4b2（HC-4b 裁定 4）：升階重配（retier_growth）與技能內容的最低角色階級（min_character_tier）。
       # 升降地形格數表的「階級」欄（terrain_area[*].tier）路徑上有 tier，工坊一律不開；召喚物、原語等的清單是結構。
       - {path: retier_growth.stretch.apply_status.duration, label_zh: 升階：狀態持續最多放大到幾回合, group_zh: 階級與升階, kind: int, hint_min: 3, hint_max: 8, note_zh: 點數固定的狀態技能升階重配時，狀態持續回合最多放大到這麼多（原本就超過的不縮短；控制類狀態不放大）。調高：升階後狀態技能撐更久、比較容易回到原本的預算比例；調低：更早改加強度或補不到比例。}
