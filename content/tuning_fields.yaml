@@ -855,15 +855,15 @@ targets:
     label_zh: 閃現規則與計價
     glob: flash_templates.yaml
     fields:
-      - {path: pricing.open.cost, label_zh: 不指定類別：花幾點靈感, group_zh: 出題價格, kind: int, hint_min: 0, hint_max: 3, note_zh: 閃現或重閃時不指定類別，花這麼多點靈感出一組混合的變化（#70）。調高：閃現變貴、一輪能閃的次數變少；調低：變便宜。0＝免費。}
+      - {path: pricing.open.cost, label_zh: 不指定類別：花幾點靈感, group_zh: 出題價格, kind: int, hint_min: 0, hint_max: 3, note_zh: 閃現或重閃時不指定類別，花這麼多點靈感出一組混合的變化。調高：閃現變貴、一輪能閃的次數變少；調低：變便宜。0＝免費。}
       - {path: pricing.open.options, label_zh: 不指定類別：出幾個選項, group_zh: 出題價格, kind: int, hint_min: 2, hint_max: 6, note_zh: 不指定類別時一次出幾個變化給玩家挑（第 3 次大變化有合法轉型時，轉型佔其中一個）。調高：選擇更多、比較容易挑到想要的；調低：選擇變少。只能 1～6。}
       - {path: pricing.open.min_categories, label_zh: 不指定類別：至少涵蓋幾類, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 3, note_zh: 不指定類別時，選項至少來自這麼多個不同類別（做得到時）。調高：選項方向更分散；調低：可能整組都是同一類。不能大於「不指定類別：出幾個選項」。}
-      - {path: pricing.focused.cost, label_zh: 指定類別：花幾點靈感, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 4, note_zh: 先選方向（類別）再閃，花這麼多點靈感（#70：比不指定多 1 點）。調高：指定方向更貴；調低：更便宜，低於不指定時玩家會一律指定。}
+      - {path: pricing.focused.cost, label_zh: 指定類別：花幾點靈感, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 4, note_zh: 先選方向（類別）再閃，花這麼多點靈感（現在比不指定多 1 點）。調高：指定方向更貴；調低：更便宜，低於不指定時玩家會一律指定。}
       - {path: pricing.focused.options, label_zh: 指定類別：出幾個選項, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 6, note_zh: 指定類別時從該類出幾個變化（不夠時少出，不拿別類補；指定加深或橋接時合法轉型另列一個）。調高：選擇更多；調低：選擇變少。只能 1～6。}
       - {path: rules.max_flashes, label_zh: 每招最多閃幾次, group_zh: 次數與預算, kind: int, hint_min: 3, hint_max: 9, note_zh: 一招技能最多閃現這麼多次（6.34.2）。調高：每招可以長得更多、預算上限也跟著多加；調低：每招比較早定型。不能小於「第幾次是大變化」，兩格要一起改。只能 1～9。}
       - {path: rules.major_flash, label_zh: 第幾次是大變化, group_zh: 次數與預算, kind: int, hint_min: 1, hint_max: 5, note_zh: 第這麼多次閃現是大變化（加深、橋接、轉型），其他次是小變化。調高：大變化來得晚；調低：來得早。不能大於「每招最多閃幾次」，兩格要一起改。}
       - {path: rules.budget_step_permille, label_zh: 每閃一次預算上限多幾‰, group_zh: 次數與預算, kind: permille, hint_min: 0, hint_max: 100, note_zh: 每次閃現讓這招的預算上限多這麼多千分比（佔同階預算；40＝+4%，5 次共 +20%）。調高：閃過的技能變更強；調低：閃現主要只換方向、不太加強度。只能 0～200。}
-      - {path: rules.dissolve_refund_permille, label_zh: 溶掉技能退回幾‰靈感點, group_zh: 次數與預算, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 溶掉一招時退回「花在它身上的靈感點」的這麼多千分比，無條件捨去（#71：500＝一半）。調高：換技能的代價變小；調低：溶掉比較虧。只能 0～1000。}
+      - {path: rules.dissolve_refund_permille, label_zh: 溶掉技能退回幾‰靈感點, group_zh: 次數與預算, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 溶掉一招時退回「花在它身上的靈感點」的這麼多千分比，無條件捨去（500＝一半）。調高：換技能的代價變小；調低：溶掉比較虧。只能 0～1000。}
       - {path: rules.usage_min_uses, label_zh: 用法統計至少放出幾次, group_zh: 次數與預算, kind: int, hint_min: 0, hint_max: 10, note_zh: 這招放出的次數少於這個數時，用法統計不算數，先出通用變化（範圍、距離之類）。調高：要用更多次才會出貼合打法的變化；調低：用法統計更早生效，但次數少時比較不準。}
       - {path: rules.complete.flashes, label_zh: 完整技能視為已閃幾次, group_zh: 完整技能, kind: int, hint_min: 0, hint_max: 5, note_zh: 完整技能（6.34.6）視為已經閃過這麼多次（不能再閃、可以重閃）。調高：完整技能算作閃過更多次；調低：算作閃過更少次。預算加成不看這格，看「完整技能預算上限多幾‰」。只能 0～9。}
       - {path: rules.complete.budget_permille, label_zh: 完整技能預算上限多幾‰, group_zh: 完整技能, kind: permille, hint_min: 0, hint_max: 300, note_zh: 完整技能的預算上限比一般同階技能多這麼多千分比（120＝+12%），強度照這個重調。調高：完整技能更強；調低：較弱。只能 0～1000。}
