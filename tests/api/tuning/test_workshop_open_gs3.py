@@ -45,7 +45,7 @@ def test_the_budget_fields_are_open_with_chinese_labels(
     assert field.group_zh
     assert _explains_both_directions(field.note_zh)
     assert field.hint_min is not None and field.hint_max is not None
-    assert field.hint_min <= field.value <= field.hint_max  # type: ignore[operator]
+    assert field.hint_min <= field.value <= field.hint_max
 
 
 def test_the_cooldown_floor_is_open_on_the_core_rules(read_service: TuningService) -> None:
