@@ -1,0 +1,126 @@
+"""讀 harness 的 calls_*.jsonl：延遲（p50/p90/最大）、finish、HTTP 錯誤、JSON 可解析率、簡體字與大陸用語。
+用法：uv run python analyze.py <out.json> calls_a.jsonl [calls_b.jsonl ...]"""
+
+import json
+import re
+import statistics
+import sys
+from collections import Counter, defaultdict
+
+from trpg.llm.simplified import SIMPLIFIED_CHARS
+
+# 表外補充：繁體幾乎不單獨用的簡體字（simplified.py 為避免誤判沒收的不算；這裡只補明確的）
+EXTRA_SIMPLIFIED = set("们这个说为会发过还进么现点开长东车门问间题见马鸟鱼龙风飞电语话让认识请读谁许论设证试该诗词计记议讯训谈译护敌剑枪弹杀灭毁坏气热冻闪烧炼灵疗体释环缠线网级纹织结给绝继续红绿蓝黄银铁钢锋锐链锁镜钟针钉陈阵际阳阴队阶随险隐坚块坛尘岁岛岭帅师带帮广庆应强归当彻忆忧怀态总恶惊惧惯愿扰枢栏档欧歼汉泼洁浑渐渔湿溃滞灾炽烁烂焕状狱狞疯盏盐睁矿砖碍礼秽窥笼签类纠纷纸绘绪绩缝聪肃胆胜艰荡莲萧袭观规觅订讨讲访诀诅诉诞误诱课调谋谜谢谦谱贤赎赵轴辆辞迈逻遥郑鉴铸铭锻闹阁陆陨雳韩颂颅飘饭饿驰验骄伤击战术质员动态头")
+SIMPLIFIED = set(SIMPLIFIED_CHARS) | EXTRA_SIMPLIFIED
+
+# 大陸用語（繁體字形）→ 台灣慣用；遊戲文字裡常見的
+MAINLAND = {
+    "信息": "資訊", "質量": "品質", "默認": "預設", "視頻": "影片", "軟件": "軟體", "硬件": "硬體",
+    "網絡": "網路", "數據": "資料", "屏幕": "螢幕", "支持": "支援", "優化": "最佳化", "激活": "啟用",
+    "運行": "執行", "內存": "記憶體", "鏈接": "連結", "交互": "互動", "反饋": "回饋", "智能": "智慧",
+    "用戶": "使用者", "創建": "建立", "加載": "載入", "獲取": "取得", "實時": "即時", "登錄": "登入",
+    "暴擊": "爆擊", "眩暈": "暈眩", "搞定": "完成", "給力": "", "靠譜": "", "牛逼": "", "小伙伴": "",
+    "貌似": "好像", "立馬": "立刻", "咋": "怎麼", "啥": "什麼", "倆": "兩個", "整明白": "", "老鐵": "",
+    "回血": "回復", "大招": "", "奶媽": "", "攻速": "", "技能點": "", "土豆": "馬鈴薯", "西紅柿": "番茄",
+    "出租車": "計程車", "公交": "公車", "幹活": "做事", "活兒": "", "嘛呢": "", "賊": "", "倍兒": "",
+    "這塊兒": "", "那會兒": "", "一會兒": "", "哪兒": "哪裡", "這兒": "這裡", "那兒": "那裡", "玩意兒": "",
+    "唄": "", "甭": "", "忒": "", "整個人": "", "水平": "水準", "視野": "", "渠道": "管道", "高端": "",
+    "打造": "", "顏值": "", "點贊": "",
+}
+SKIP_MAINLAND_CHECK = {"賊", "整個人", "視野", "打造", "高端"}  # 台灣也常用，只計不算
+
+def strings(obj):
+    if isinstance(obj, str):
+        yield obj
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            yield from strings(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from strings(v)
+
+
+def cjk_text(content):
+    if content is None:
+        return ""
+    try:
+        data = json.loads(content)
+        parts = [s for s in strings(data) if re.search(r"[一-鿿]", s)]
+        return "\n".join(parts)
+    except (ValueError, TypeError):
+        return content
+
+
+def pct(values, p):
+    if not values:
+        return None
+    s = sorted(values)
+    k = max(0, min(len(s) - 1, int(round(p / 100 * len(s) + 0.5)) - 1))
+    return s[k]
+
+
+def main():
+    out_path, *paths = sys.argv[1:]
+    report = {}
+    for path in paths:
+        calls = [json.loads(line) for line in open(path, encoding="utf-8")]
+        by_tag = defaultdict(list)
+        for c in calls:
+            by_tag[c["tag"]].append(c)
+        for tag, cs in by_tag.items():
+            secs = [c["seconds"] for c in cs if "seconds" in c]
+            finish = Counter(c.get("finish", "error" if "error" in c else "?") for c in cs)
+            errors = Counter((c.get("error") or "")[:60] for c in cs if "error" in c)
+            json_ok = 0
+            json_total = 0
+            simp_hits = []
+            main_hits = []
+            with_cjk = 0
+            tps = []
+            for i, c in enumerate(cs):
+                content = c.get("content")
+                if c.get("mode"):
+                    json_total += 1
+                    try:
+                        json.loads(content)
+                        json_ok += 1
+                    except (ValueError, TypeError):
+                        pass
+                text = cjk_text(content)
+                if not text:
+                    continue
+                with_cjk += 1
+                sc = sorted({ch for ch in text if ch in SIMPLIFIED})
+                if sc:
+                    idx = text.find(sc[0])
+                    simp_hits.append({"i": i, "chars": "".join(sc), "context": text[max(0, idx - 15): idx + 15]})
+                mh = sorted({w for w in MAINLAND if w in text})
+                if mh:
+                    w = mh[0]
+                    idx = text.find(w)
+                    main_hits.append({"i": i, "words": mh, "context": text[max(0, idx - 15): idx + 15]})
+                st = c.get("stats") or {}
+                if st.get("tokens_per_second"):
+                    tps.append(st["tokens_per_second"])
+            real_main = [h for h in main_hits if any(w not in SKIP_MAINLAND_CHECK for w in h["words"])]
+            report[tag] = {
+                "calls": len(cs),
+                "p50": pct(secs, 50), "p90": pct(secs, 90), "max": max(secs) if secs else None,
+                "mean": round(statistics.mean(secs), 2) if secs else None,
+                "finish": dict(finish), "http_errors": dict(errors),
+                "json_ok": json_ok, "json_total": json_total,
+                "with_cjk": with_cjk,
+                "simplified_calls": len(simp_hits), "simplified_examples": simp_hits[:30],
+                "mainland_calls": len(real_main), "mainland_all": len(main_hits),
+                "mainland_examples": main_hits[:40],
+                "mainland_counter": dict(Counter(w for h in main_hits for w in h["words"])),
+                "tps_median": statistics.median(tps) if tps else None,
+            }
+    with open(out_path, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+    for tag, r in report.items():
+        print(tag, {k: v for k, v in r.items() if not k.endswith("examples")})
+
+
+if __name__ == "__main__":
+    main()
