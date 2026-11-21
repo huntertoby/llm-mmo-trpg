@@ -123,7 +123,7 @@ triggers:
     llm_hint: "戰鬥開始時自動發動一次。"
     description_zh: 戰鬥開始、先攻順序排好之後，第一位行動之前（每場一次）。沒有另一方，效果作用在持有者。
     has_other: false
-    budget_coefficient_permille: 300   # 每場只有一次（回合開始時是每回合，500）
+    budget_coefficient_permille: 200   # 每場只有一次（回合開始時是每回合，500）
     min_rarity: epic
     random_composer: false
   # --- SK-3（#166，06 6.38 第 10 點）：你造的關鍵字被利用時（雙向協同）。給被動與裝備詞條用。

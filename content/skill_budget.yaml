@@ -338,7 +338,7 @@ flash_transform:
   companion_power_permille: 500
   companion_duration: 2
   guardian_power_permille: 500
-  guardian_duration: 1
+  guardian_duration: 3
 # 3-54b 風元素傷害的元素擴散格數（spread）：擴散 n 格時（n ＝ 1、2；省略 ＝ 1），傷害效果的點數 × 第 n 項（‰）。初值，未經模擬。
 wind_spread_permille: [1000, 1150]
 # 3-24c 獻祭召喚物（初值，未經模擬）：點數 ＝ 骰子平均 × sacrifice_summon_permille ÷ 1000（需要先有召喚物、且召喚物會消失的折扣）。
@@ -482,7 +482,7 @@ modifier:
     summon_damage_per_100: 300   # 召喚物傷害加成每 +10%（3-33f1；反推值）
     form_upkeep_per_100: 200     # 形態維持費每減少 10%（3J-3 化形專精；與下一項、武器技 −20% 一起反推：化形專精落在預算 70～100%；初值，未經模擬）
     form_entry_per_100: 200      # 形態進入獎勵的數值每 +10%（3J-3；反推值）
-    silent_strike: 360           # BS-1（#157）無聲：每次近戰攻擊不讓目標轉身的價值（× all_attacks 10 次 ≈ 3.6 點；占位，數值工坊調）
+    silent_strike: 500           # BS-1（#157）無聲：每次近戰攻擊不讓目標轉身的價值（× all_attacks 10 次 ≈ 3.6 點；占位，數值工坊調）
     # heal_permille（3-24b1）不在這裡：基準武器傷害 × ‰（同 damage_permille，初值，未經模擬）
     # shape_to（3D-3）不在這裡：基準傷害 × 轉換前後的形狀倍率差（skill_shapes.yaml），單體→直線 ≈ 2.8、單體→連鎖 ≈ 1.75、直線→錐形 ≈ 1.4
 

@@ -43,7 +43,7 @@ conditional_rates:
   affix_cond_lone_defense: common           # 獨狼（LW-1；獨行時整場成立，保守取 common＝最貴）
 
 # 其他類別每條固定點數（8.22.1 第 4 點）。
-category_points: {keyword: 8, attack: 10, weapon_trait: 8, trigger: 12, charge: 12, action: 20, reaction: 15, rule: 40}
+category_points: {keyword: 8, attack: 10, weapon_trait: 6, trigger: 12, charge: 12, action: 20, reaction: 15, rule: 40}
 weapon_element_points: 15    # 武器元素詞條（8.21.2.4 #52）
 trigger_limit_permille: 700  # 觸發有每回合／每輪上限的打 0.7 折（目前所有裝備觸發都有上限）
 
