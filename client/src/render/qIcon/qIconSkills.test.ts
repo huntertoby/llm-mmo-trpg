@@ -33,7 +33,7 @@ const OPTS: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
 
 describe("T-B1 後端代碼前端都畫得出來", () => {
   it("fixture 的 433 招（BAL-21b 加 skill_lava_splash、BAL-21c 加 skill_rift_flicker、LW-1 加 3 招獨狼示範、BS-1 加無聲步與影纏、RG-1 加 3 招瞄準預告、RG-2 加狂怒劈砍、KW-2 加 16 招層數示範；SK-3b 加 4 招新觸發與重擲示範，共 433）、隨機 50、工坊示範每一步都帶 art（QI-2c：不再有暫時資料可退）", () => {
-    expect(IDS.length).toBe(438); // AP-2 加基本款預支（搶拍）；GS-2 加 4 招高階形態技
+    expect(IDS.length).toBe(442); // AP-2 加基本款預支（搶拍）；GS-2 加 4 招高階形態技；GS-3 加 4 招高階化身
     for (const id of IDS) expect(FIX.skills[id]?.art, id).toBeTruthy();
     for (const [n, i] of [...FIX.random, ...WORKSHOP].entries()) expect(i.art, `extra#${n}`).toBeTruthy();
   });
