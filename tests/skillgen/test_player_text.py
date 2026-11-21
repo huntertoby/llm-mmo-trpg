@@ -6,6 +6,8 @@ import copy
 import re
 from typing import Any
 
+import pytest
+
 from tests.engine.helpers import library
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.options import draft_options
@@ -93,6 +95,7 @@ def _mutations(base: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+@pytest.mark.timeout(600)  # 暫時放寬（2026-11-21 使用者「先放寬再加速（建議）」）；QF-4 加速後拿掉
 def test_player_check_texts_have_no_english_identifiers() -> None:
     found: dict[str, str] = {}
     for seed in range(60):
