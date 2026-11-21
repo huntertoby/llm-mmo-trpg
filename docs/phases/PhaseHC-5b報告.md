@@ -185,3 +185,19 @@
 
 ## 12. 平衡疑慮（無）
 沒有。只換數字放的地方；所有比對 different=0。
+
+## 開發 PM 裁定（2026-11-21）
+
+已用 `--no-ff` 合併進 main（60cc26891），PM 在 main 上跑 `uv run python scripts/check.py`：結束碼 0。slow 的 parity 與 `tests/cli` 也通過（979 passed），parity 和 CLI 快照都不必重產，和預測一致。已推上 GitHub。同一次推送也帶上 PM 修的 `test_trap_traces_rg2`（半徑 0＝看不到，b8ffbd6e2）。
+
+待 PM 決定的 10 件，都照做：
+1. `search` 區塊不開進工坊，比照 HC-5a 的 `rules.search`。
+2. 進化常數放 `skill_evolution.yaml`。
+3. 9 類改讀既有規則：值相同，以後那幾格一改，這裡會跟著變；這是有意的。
+4. `wish_cards` 不開進工坊：畫面和提示詞寫死「3 張」，要開得先改那兩處，交給 HC-6 文字段一起處理。
+5. 6 筆判成 const：等級代碼和 `up_to_two` 是結構，照做。
+6. `exploit_surface_permille` 另開一格：照做。
+7. 關鍵字個數改在 `select_subset` 檢查：照做。
+8. `wish_candidates` 改成載入時檢查；`hp_per_permille` 為 0 時回傳 `hp_cap`：照做，現有內容裡沒有 0。
+9. 升階的兩組檔數開進工坊：照做，這是既有測試要求每個整數都要開。
+10. 範圍外的小改動：接受。
