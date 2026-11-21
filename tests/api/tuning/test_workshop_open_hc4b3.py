@@ -52,7 +52,7 @@ def test_the_flash_table_is_listed(read_service: TuningService) -> None:
 def test_flash_numbers_are_open_with_chinese_notes(read_service: TuningService) -> None:
     detail = object_detail(CONTENT, read_service.table, "flash", "flash_templates")
     by_path = {f.path: f for f in detail.fields}
-    assert sorted(by_path) == sorted(OPENED)
+    assert set(OPENED) <= set(by_path)  # HC-5a 起另開的欄位見 test_workshop_open_hc5a.py
     for path in OPENED:
         field = by_path[path]
         assert field.value == _now(path), path
