@@ -809,6 +809,12 @@ groups:
       - run.*_points
       - rune.*_points
       - skill_ai.multi_target
+      - skill_ai.charge_per_enemy                 # HC-4c：衝撞、瞬步的固定加分（原本是程式預設值）
+      - skill_ai.shadowstep
+      - skill_ai.shadowstep_behind
+      - skill_candidates                          # HC-4c：每種技能跑完整預覽的候選數（不是量類）
+      - heuristics.*.*                            # HC-4c：種族技條件、便宜估計、共用評分（點數、格數、‰，不是量類）
+      - heuristics.estimate.rune_cell_points[]
       - summon.*_points
       - terrain.*_points
       - weapon_ai.*
