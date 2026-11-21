@@ -34,10 +34,13 @@ from tests.xdist_loadgroup import pytest_xdist_make_scheduler  # noqa: F401
 INI = "[pytest]\ntimeout = 300\ntimeout_method = thread\n"
 CASE_LIMIT_SECONDS = 240
 TEST_TIMEOUT_SECONDS = 290  # 比 CASE_LIMIT_SECONDS 長，讓子程序逾時時由本測試收樹、印輸出
+TWO_CRASH_LIMIT_SECONDS = 540
+"""兩個 worker 一起掛掉的那一題要補開兩個 worker，負載重時 240 秒不夠（QF-4b 放寬）。"""
+TWO_CRASH_TIMEOUT_SECONDS = 600  # 比 TWO_CRASH_LIMIT_SECONDS 長，理由同上
 
 
-def _run_case(tmp_path: Path, case: str) -> tuple[int, str, Path]:
-    """把示範檔複製成 ``test_<case>`` 跑 ``-n 2 --dist loadgroup``。
+def _run_case(tmp_path: Path, case: str, limit: int = CASE_LIMIT_SECONDS) -> tuple[int, str, Path]:
+    """把示範檔複製成 ``test_<case>`` 跑 ``-n 2 --dist loadgroup``（最多 ``limit`` 秒）。
 
     回傳（結束碼、輸出、留證資料夾）。"""
     shutil.copy(SUITE / case, tmp_path / f"test_{case}")
@@ -66,11 +69,11 @@ def _run_case(tmp_path: Path, case: str) -> tuple[int, str, Path]:
             start_new_session=sys.platform != "win32",
         )
         try:
-            proc.wait(timeout=CASE_LIMIT_SECONDS)
+            proc.wait(timeout=limit)
         except subprocess.TimeoutExpired:
             run_pytest.kill_tree(proc)
             partial = output_path.read_text(encoding="utf-8", errors="replace")
-            pytest.fail(f"{case}：{CASE_LIMIT_SECONDS} 秒內沒跑完。輸出：\n{partial}")
+            pytest.fail(f"{case}：{limit} 秒內沒跑完。輸出：\n{partial}")
     return proc.returncode, output_path.read_text(encoding="utf-8", errors="replace"), trace_dir
 
 
@@ -92,9 +95,11 @@ def test_loadgroup_finishes_after_a_worker_crash(tmp_path: Path) -> None:
     assert [t.nodeid for t in summary.running] == ["test_crash_case.py::test_crash_once"]
 
 
-@pytest.mark.timeout(TEST_TIMEOUT_SECONDS)
+@pytest.mark.timeout(TWO_CRASH_TIMEOUT_SECONDS)
 def test_loadgroup_survives_two_workers_crashing_together(tmp_path: Path) -> None:
-    returncode, text, trace_dir = _run_case(tmp_path, "crash_twice_case.py")
+    returncode, text, trace_dir = _run_case(
+        tmp_path, "crash_twice_case.py", TWO_CRASH_LIMIT_SECONDS
+    )
     assert "INTERNALERROR" not in text, text
     assert "2 failed, 3 passed" in text, text
     assert returncode == 1, text

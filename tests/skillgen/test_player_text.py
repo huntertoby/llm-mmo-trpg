@@ -48,7 +48,7 @@ def _field_texts(field: Any) -> list[str]:
 def _player_texts(draft: dict[str, Any]) -> list[str]:
     lib = library()
     options = draft_options(draft, lib)
-    check = check_draft(draft, lib)
+    check = check_draft(draft, lib, options=options)  # QF-4b：草稿選項只算一次
     texts = list(options.problems)
     for step in options.steps:
         texts += [step.name_zh, step.description_zh, *step.notes_zh]

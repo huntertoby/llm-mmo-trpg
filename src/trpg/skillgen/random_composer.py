@@ -55,6 +55,7 @@ from trpg.skillgen.composer_parts import (
 from trpg.skillgen.composer_recipes import (
     SPELL_ELEMENTS,
     Draft,
+    is_guardian,
     passive_drafts,
     passive_recipes,
     pick_recipe,
@@ -67,7 +68,7 @@ from trpg.skillgen.composer_recipes import (
 )
 from trpg.skillgen.composer_rider import SUMMON_KEYWORD, add_rider, rider_keywords
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
-from trpg.skillgen.composer_tuning import tune
+from trpg.skillgen.composer_tuning import RatioMemo, tune
 from trpg.skillgen.keywords import has_keyword
 from trpg.skillgen.mechanics import mechanic_tags
 from trpg.skillgen.memo import by_id, draft_key, library_memo
@@ -617,11 +618,18 @@ def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) 
 
 
 def _tune_drafts(
-    rng: Rng, lib: ContentLibrary, seed: int, ctx: Ctx, drafts: list[Draft]
+    rng: Rng,
+    lib: ContentLibrary,
+    seed: int,
+    ctx: Ctx,
+    drafts: list[Draft],
+    *,
+    memo: RatioMemo | None = None,
 ) -> SkillDef:
-    """RC-1 配方的草稿依序調整強度，第一個進得了預算窗的完成（旋鈕在 ``ctx.knobs``）。"""
+    """RC-1 配方的草稿依序調整強度，第一個進得了預算窗的完成（旋鈕在 ``ctx.knobs``）。
+    ``memo``：預算比例的快取表（QF-4b，見 :func:`tune`），不影響結果與亂數。"""
     for base, effects in drafts:
-        if tune(rng, lib, base, effects, ctx.knobs):
+        if tune(rng, lib, base, effects, ctx.knobs, memo=memo):
             ctx.effects = effects
             return _finish(lib, seed, base, ctx)
     raise Retry
@@ -855,7 +863,11 @@ def _compose_reaction_recipe(
     category: str | None,
     keyword: str | None,
 ) -> ComposeResult | None:
-    """反應技新配方（RC-1）：同 :func:`_compose_passive_recipe`。"""
+    """反應技新配方（RC-1）：同 :func:`_compose_passive_recipe`。
+
+    護主（QF-4b）：3 階起每份草稿在最弱強度就進不了預算窗，每次嘗試卻都重算約 40 份（召喚物、
+    屬性、強度、代價的組合有限，只差種子）；預算比例改由內容庫上的快取表記住，亂數與結果不變。
+    """
     rules = lib.composer.recipes
     recipe = pick_recipe(
         seed, "reaction", reaction_recipes(lib, tier), rules.reaction_permille, keyword
@@ -864,13 +876,16 @@ def _compose_reaction_recipe(
         return None
     rng = Rng(seed).fork("composer.reaction.recipe.build")
     chosen = category or _choose_category(rng, lib.skeletons["reaction"], None, lib.composer)
+    memo: RatioMemo | None = (
+        library_memo(lib, "composer.guardian.ratio") if is_guardian(recipe) else None
+    )
 
     def build() -> SkillDef:
         ctx, drafts = reaction_drafts(
             rng, lib, seed, tier=tier, rarity=rarity, category=chosen, recipe=recipe,
             keyword=keyword,
         )  # fmt: skip
-        return _tune_drafts(rng, lib, seed, ctx, drafts)
+        return _tune_drafts(rng, lib, seed, ctx, drafts, memo=memo)
 
     return _first_valid(lib, build)
 

@@ -28,7 +28,7 @@ from trpg.skillgen.budget import (
 )
 from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_followup import followup_visible
-from trpg.skillgen.option_models import STEP_IDS, StepId
+from trpg.skillgen.option_models import STEP_IDS, DraftOptions, StepId
 from trpg.skillgen.option_variant import variants_visible
 from trpg.skillgen.options import draft_options, minimum_rarity
 from trpg.skillgen.player_text import plain_name, plainify
@@ -288,9 +288,15 @@ def _complete_check(skill: SkillDef, library: ContentLibrary) -> DraftCheck:
     )
 
 
-def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
-    """檢查草稿（純函式）。"""
-    options = draft_options(draft, library)
+def check_draft(
+    draft: Draft, library: ContentLibrary, *, options: DraftOptions | None = None
+) -> DraftCheck:
+    """檢查草稿（純函式）。
+
+    ``options``（QF-4b，選填）：呼叫者已經算好的 ``draft_options(draft, library)``（同一份草稿、
+    同一個內容庫、不帶 ``weapon``），省得再算一次；不傳時照舊自己算，結果相同。"""
+    if options is None:
+        options = draft_options(draft, library)
     if options.next_step is not None:
         missing = tuple(
             s

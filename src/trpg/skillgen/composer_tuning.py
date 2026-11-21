@@ -3,6 +3,10 @@
 所有旋鈕（骰子、武器倍率、狀態與表面的持續、推拉距離）從最弱開始，隨機挑一個往上調（核心效果的
 旋鈕權重較高），直到預算比例達到事先抽好的目標（落在合格區間內）；調一格就超過上限的旋鈕被封鎖。
 比例用 :class:`fractions.Fraction` 計算，結果完全確定。
+
+``memo``（QF-4b）：呼叫者可以給一張快取表（:func:`trpg.skillgen.memo.library_memo`），同樣的
+草稿（:func:`~trpg.skillgen.memo.draft_key`：不看 ``id`` 與敘事文字）只算一次預算比例與占比違規數。
+只記算出來的值，亂數的取用次數與順序不變，結果與不給時逐位元組相同。
 """
 
 from __future__ import annotations
@@ -18,9 +22,13 @@ from trpg.content.skills import SkillDef
 from trpg.shared.rng import Rng
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import Knob, set_knob_value
+from trpg.skillgen.memo import draft_key
 from trpg.skillgen.validate import share_violations
 
-__all__ = ["base_ratio", "tune", "tuning_bounds"]
+__all__ = ["RatioMemo", "base_ratio", "tune", "tuning_bounds"]
+
+type RatioMemo = dict[str, tuple[Fraction | None, int | None]]
+"""草稿鍵 → （預算比例, 占比違規數）；結構不合法時是 ``(None, None)``（違規數照舊不更新）。"""
 
 
 def tuning_bounds(library: ContentLibrary) -> tuple[Fraction, Fraction]:
@@ -37,8 +45,10 @@ class _Evaluator:
         base: dict[str, Any],
         effects: list[dict[str, Any]],
         extra: Sequence[dict[str, Any]] = (),
+        memo: RatioMemo | None = None,
     ) -> None:
         self.library = library
+        self.memo = memo
         self.high = tuning_bounds(library)[1]
         self.jump_share = Fraction(library.composer.tuning.jump_share_permille, 1000)
         self.base = base
@@ -51,10 +61,25 @@ class _Evaluator:
         """目前旋鈕下的預算比例；結構不合法時為 ``None``。
 
         骨架的占比限制（核心占比、個別原語的占比）被違反的數量記在 :attr:`shares`；
-        調整時不允許讓它變多。
+        調整時不允許讓它變多。有 :attr:`memo` 時同樣的草稿只算一次（QF-4b）。
         """
+        data = {**self.base, "effects": self.effects}
+        key = None if self.memo is None else draft_key(data)
+        if key is not None and self.memo is not None:
+            found = self.memo.get(key)
+            if found is not None:
+                ratio, shares = found
+                if shares is not None:
+                    self.shares = shares
+                return ratio
+        ratio = self._compute(data)
+        if key is not None and self.memo is not None:
+            self.memo[key] = (ratio, None if ratio is None else self.shares)
+        return ratio
+
+    def _compute(self, data: dict[str, Any]) -> Fraction | None:
         try:
-            skill = SkillDef.model_validate({**self.base, "effects": self.effects})
+            skill = SkillDef.model_validate(data)
             report = skill_budget(skill, self.library)
         except (ValidationError, BudgetError):
             return None
@@ -136,6 +161,7 @@ def tune(
     extra: Sequence[dict[str, Any]] = (),
     min_ratio: Fraction | None = None,
     target_ratio: Fraction | None = None,
+    memo: RatioMemo | None = None,
 ) -> bool:
     """調整旋鈕使比例落在 ``[low, high]``；成功時 ``effects`` 已是最終數值。
 
@@ -149,10 +175,12 @@ def tune(
 
     ``target_ratio``（Phase 3W-9b，升階重配維持原本的比例）：目標比例改用它、不再抽；合格區間放寬到
     驗證器的窗（0.70–1.00）。
+
+    ``memo``（QF-4b）：預算比例的快取表（見模組說明）；不影響結果與亂數。
     """
     rules = library.composer.tuning
     low, high = tuning_bounds(library)
-    ev = _Evaluator(library, base, effects, extra)
+    ev = _Evaluator(library, base, effects, extra, memo)
     margin = Fraction(rules.target_margin_permille, 1000)
     if min_ratio is not None or target_ratio is not None:
         high = ev.high = Fraction(1)  # 有下限或指定目標時上限放到驗證器的上限（1.00）

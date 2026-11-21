@@ -111,7 +111,6 @@ def test_test_equipment_replaces_the_template_equipment() -> None:
     assert [e.slot for e in hero.equipment.items] == ["body"]
 
 
-@pytest.mark.timeout(600)  # 暫時放寬（2026-11-21 使用者「先放寬再加速（建議）」）；QF-4 加速後拿掉
 def test_run_with_equipment_plays_to_the_end_and_replays_the_same() -> None:
     run = _run(test_mode=True, test_equipment=GEAR)
     first, _ = auto_play(library(), run)
