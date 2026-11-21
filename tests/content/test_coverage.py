@@ -140,6 +140,12 @@ _POOL_ONLY = frozenset(
         "skill_tidal_draw",
         "skill_fate_deflect",
         "skill_lucky_whisper",
+        # GS-2（#172）：高階形態技（06 6.30 形態池名單最後一點；只從形態池給出，builds.yaml 是回歸範本，
+        # 不為示範改動）
+        "skill_form_guardian",
+        "skill_form_primal_return",
+        "skill_form_quake",
+        "skill_form_wild_flurry",
         # 3-24c：關鍵字池的真實利用者與不限武器的 1 階技能（由池給出）
         "skill_bone_pursuit",
         "skill_shock_follow",
