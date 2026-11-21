@@ -140,8 +140,8 @@ _POOL_ONLY = frozenset(
         "skill_tidal_draw",
         "skill_fate_deflect",
         "skill_lucky_whisper",
-        # GS-2（#172）：高階形態技（06 6.30 形態池名單最後一點；只從形態池給出，builds.yaml 是回歸範本，
-        # 不為示範改動）
+        # GS-2（#172）：高階形態技（06 6.30 形態池名單最後一點；只從形態池給出，
+        # builds.yaml 是回歸範本，不為示範改動）
         "skill_form_guardian",
         "skill_form_primal_return",
         "skill_form_quake",
