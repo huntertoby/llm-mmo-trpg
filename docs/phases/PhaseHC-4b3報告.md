@@ -180,3 +180,22 @@
 ## 8. 平衡疑慮（無）
 
 沒有。只換數字放的地方。434 招預算、78 場戰鬥、閃現出題、完整技能、計價都逐項相同。
+
+## 開發 PM 裁定（2026-11-21）
+
+已用 `--no-ff` 合併進 main。合併後在 main 重跑 ruff、format、mypy、lint-imports、`classify.py --check`、`trpg content check`，結束碼都是 0。全量檢查交給 push hook 跑。
+
+待 PM 決定的 6 件：
+1. **`flash_templates.yaml` 改成必備檔**：照做，和 HC-4b2 的 `skill_evolution.yaml` 一致。
+2. **工坊另開 `flash` 表**：保留。工坊一個對象對一個檔，這樣分是對的。
+3. **`summon_duration` 不開、`scale_permille` 沒人讀**：
+   - `summon_duration` 不開，照做。
+   - `scale_permille` 沒有程式讀，併進 HC-4c 刪掉。刪掉前要先 grep 前端與 `content/` 確認沒有用處。
+4. **同檔還沒動的幾格**：併進 HC-4c 一起改成必填，值以內容檔為準，結果不變。
+   - `tighten_permille`：改歸 config。
+   - `form_magnitudes`：range 的預設值。
+   - `insight_per_win`：程式寫 1、內容檔寫 2，以內容檔為準。
+   - `cost_cuts`：步距。
+   - `PriceRule.min_categories`
+5. **其他段留下的 0 筆規則**：11 條 0 筆的 done 規則，併進 HC-4c 刪掉。7 條 0 筆的 todo 規則留著，等對應的段做到時再處理。
+6. **範圍外的小改動**：接受，輸出不變。
