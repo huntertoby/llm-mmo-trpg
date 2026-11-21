@@ -1118,13 +1118,6 @@ rules:
       - '<module>._MAX_SIZE'
       - '<module>._MIN_SIZE'
     note: 同上一條（content config）。
-  - id: py-content-flash-templates-config-number
-    class: config
-    status: done
-    files: src/trpg/content/flash_templates.py
-    kind: number
-    where: ['CompleteSkillRules', 'FlashPricing', 'FlashRules', 'TransformTemplate']
-    note: HC-4b3 分清楚：54 筆都是 config（閃現次數、預算加成、完整技能、計價、階梯、轉型的起點與召喚輪數的預設值）；_MAX_FORM_MAGNITUDE、CostCut、ExtraMajorTemplate、FlashTemplate、PriceRule 的數字已由 guard／const 規則先比對到，從 where 拿掉。搬完（0 筆）：預設值改必填、轉型的兩格改成用到時必填。
   - id: py-content-loader-config-number
     class: config
     status: todo
