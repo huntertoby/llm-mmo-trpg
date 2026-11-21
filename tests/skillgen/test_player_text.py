@@ -118,7 +118,6 @@ def _unique_drafts() -> tuple[str, ...]:
     return tuple(out.values())
 
 
-@pytest.mark.timeout(600)  # 暫時放寬（2026-11-21 使用者「先放寬再加速（建議）」）；QF-4 加速後拿掉
 @pytest.mark.parametrize("part", range(_PARTS))
 def test_player_check_texts_have_no_english_identifiers(part: int) -> None:
     """每份檢查去重後草稿的第 ``part``、``part + 8``……份（八份合起來＝全部）。"""
