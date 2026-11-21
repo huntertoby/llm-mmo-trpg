@@ -50,7 +50,6 @@ from trpg.skillgen.proposal_topup import keyword_way_texts
 
 __all__ = [
     "DEFAULT_SUBSET_TOKEN_BUDGET",
-    "MAX_KEYWORDS",
     "ProposalRequest",
     "ProposalSubset",
     "SubsetError",
@@ -64,7 +63,6 @@ __all__ = [
     "subset_tokens",
 ]
 
-MAX_KEYWORDS = 2
 SCHEMA_CHAR_LIMIT = 125_000
 """JSON schema 字元數的健全性上限（Phase 4-L5c；schema 只用於約束解碼、不佔 prompt token，所以不算
 進 token 估算，但太大的 schema 仍會拖慢解碼）。數值 ＝ 現況最大值 × 2，見 4-L5c 報告。"""
@@ -122,8 +120,8 @@ class ProposalRequest:
             raise ValueError(
                 f"技能種類 {self.kind!r} 不開放提議（可用：{'、'.join(PROPOSAL_KINDS)}）"
             )
-        if len(self.keywords) > MAX_KEYWORDS or len(set(self.keywords)) != len(self.keywords):
-            raise ValueError(f"關鍵字最多 {MAX_KEYWORDS} 個且不可重複，收到 {list(self.keywords)}")
+        if len(set(self.keywords)) != len(self.keywords):  # 個數上限在 select_subset 檢查（HC-5b）
+            raise ValueError(f"關鍵字不可重複，收到 {list(self.keywords)}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -656,9 +654,13 @@ def select_subset(
     → 補足（依 YAML 順序補其他合法原語與條件，直到 ``available`` 的估算達
     ``token_budget``；先砍條件、再砍附帶原語，優先收的最後砍，核心原語永不砍）。
 
-    未知的骨架或關鍵字 ID 丟 ``ValueError``；沒有任何合法骨架或核心原語、或連核心結構都放不進
-    ``token_budget`` 時丟 :class:`SubsetError`。
+    未知的骨架或關鍵字 ID、關鍵字超過 ``skill_composer.yaml`` 的 ``llm_topic.max_keywords`` 個
+    丟 ``ValueError``；沒有任何合法骨架或核心原語、或連核心結構都放不進 ``token_budget`` 時丟
+    :class:`SubsetError`。
     """
+    most = library.composer.llm_topic.max_keywords  # HC-5b：原本在 ProposalRequest 寫死 2
+    if len(request.keywords) > most:
+        raise ValueError(f"關鍵字最多 {most} 個且不可重複，收到 {list(request.keywords)}")
     sel = _Selector(library, request)
     kind = sel.resolve_kind()
     sel.kind = kind

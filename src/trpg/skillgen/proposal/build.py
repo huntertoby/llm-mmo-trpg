@@ -32,13 +32,10 @@ from trpg.content.skills import (
     SkillRarity,
     rarity_rank,
 )
-from trpg.content.skills.constants import SHADOWSTEP_SHAPES
+from trpg.content.skills.constants import MAX_VARIANTS, SHADOWSTEP_SHAPES
 from trpg.skillgen.proposal.builder import _Builder, _reaction_model, _surface_ids, _variant_model
 from trpg.skillgen.proposal.models import (
     _GENERAL_TAG,
-    _MAX_NESTED,
-    _MAX_TAGS,
-    _MAX_VARIANTS,
     CLOSED_SKELETONS,
     PROPOSAL_KINDS,
     ProposalModels,
@@ -436,12 +433,12 @@ def _layout_model(
     )
     fields["tags"] = (
         list[Annotated[str, Field(pattern=ID_PATTERN)]],
-        Field(default_factory=list, max_length=_MAX_TAGS),
+        Field(default_factory=list, max_length=builder.library.composer.llm_topic.max_tags),
     )
     if plan.variants and shared.variant is not None and not reaction:
         fields["variants"] = (
             _list_of(shared.variant),
-            Field(default_factory=list, max_length=_MAX_VARIANTS),
+            Field(default_factory=list, max_length=MAX_VARIANTS),  # SkillDef 的變奏上限
         )
     if builder.condition is not None:
         fields["condition"] = (Union[builder.condition, None], None)  # noqa: UP007
@@ -498,7 +495,7 @@ def _common_fields(
             _list_of(builder.backlash_union()),
             COST_DOCS["cost_on_miss"],
             min_length=1,
-            max_length=_MAX_NESTED,
+            max_length=library.composer.llm_topic.max_nested_effects,
         )
     return common
 

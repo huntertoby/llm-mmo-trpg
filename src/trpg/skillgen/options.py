@@ -223,11 +223,19 @@ def _trigger_field(library: ContentLibrary) -> FieldSpec:
     fields = TriggerSpec.model_fields
     low, high = model_range(fields["max_per_round"])
     events: list[Choice] = []
+    every = library.ruleset.core.skill_limits.every_n_hits  # HC-5b：原本寫死 2～3
     for timing in library.ruleset.skill_triggers.triggers:
         params: list[FieldSpec] = []
         if timing.id == "every_n_hits":
             params.append(
-                FieldSpec(field="n", name_zh="每幾次", type="int", required=True, min=2, max=3)
+                FieldSpec(
+                    field="n",
+                    name_zh="每幾次",
+                    type="int",
+                    required=True,
+                    min=min(every),
+                    max=max(every),
+                )
             )
         if timing.id == "on_cast_tag":
             params.append(FieldSpec(field="tag", name_zh="技能標籤", type="text", required=True))
@@ -1212,7 +1220,12 @@ def _self_status_choice(status_id: str, draft: Draft, library: ContentLibrary) -
     rule = library.budget.allowance.self_status
     status = library.ruleset.statuses.by_id()[status_id]
     fixed = rule.fixed_duration.get(status_id)
-    low, high = (fixed, fixed) if fixed is not None else (2, 3)
+    limits = library.ruleset.core.skill_limits  # HC-5b：原本寫死 2～3
+    low, high = (
+        (fixed, fixed)
+        if fixed is not None
+        else (limits.min_self_status_duration, limits.max_self_status_duration)
+    )
     info: dict[str, Any] = {"cap_permille": rule.cap_of(status_id)}
     if status_id in rule.spell_only and draft.get("category") not in (None, "spell"):
         info["unavailable_zh"] = (

@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from tests.api.tuning.test_workshop_open_hc5b import COMPOSER_OPENED
 from trpg.api.tuning.drafts import Change, Draft
 from trpg.api.tuning.objects import TABLE_NAMES_ZH, object_detail, read_data
 from trpg.api.tuning.schemas import TuningChangeIn
@@ -105,7 +106,7 @@ def test_composer_opens_only_the_listed_values(read_service: TuningService) -> N
     detail = object_detail(CONTENT, read_service.table, "skill_composer", "skill_composer")
     units = len(read_data(CONTENT / COMPOSER)["recipes"]["summon_units"])
     ranges = tuple(f"recipes.summon_units[{i}].range" for i in range(units))  # HC-4b2
-    every = (*COMPOSER_PATHS, *MOVED_PATHS, *ranges)
+    every = (*COMPOSER_PATHS, *MOVED_PATHS, *ranges, *COMPOSER_OPENED)  # HC-5b 接在後面
     assert [f.path for f in detail.fields] == list(every)
     assert [f.value for f in detail.fields] == [_now(COMPOSER, p) for p in every]
     limits = {f.path: (f.limit_min, f.limit_max) for f in detail.fields}

@@ -31,7 +31,6 @@ from trpg.content.skills import (
 )
 from trpg.shared.types import Element
 from trpg.skillgen.proposal.models import (
-    _MAX_NESTED,
     NESTED_EFFECT_TYPES,
     _alias,
     _get,
@@ -221,7 +220,8 @@ class _Builder:
             if spec.type == "effects":
                 if nested is None or nested[name] is None:
                     continue
-                limits = {"min_length": 1, "max_length": _MAX_NESTED}
+                most = self.library.composer.llm_topic.max_nested_effects
+                limits = {"min_length": 1, "max_length": most}
                 fields[name] = _field(nested[name], limits, required=spec.required, doc=doc)
                 continue
             if fixed is not None and name in fixed:

@@ -11,6 +11,13 @@
 far_distance: 3                 # 平均施放距離 ≥ 3：換形狀先試遠距離的形狀
 spread_targets_permille: 1500   # 平均目標數 < 1.5：視為單體用法，加深優先換形狀
 bridge_keyword_tries: 3         # 橋接最多試 3 個關鍵字（依統計排序）
+# HC-5b：原本寫死在 skillgen/evolution.py（值照搬）
+low_multiplier_floor: 300       # 武器倍率階梯往下延伸到 300‰（原本倍率比組合器階梯低的技能也能調回原本的強度）
+low_multiplier_step: 100        # 往下延伸的間距（‰）
+first_knob_weight: 2            # 強度旋鈕裡第一個效果的權重（其餘 1）
+extra_cooldown_steps: 2         # 大變化的代價折抵：超出預算時再試冷卻 +1、+2
+min_cooldown: 2                 # 代價折抵試的冷卻範圍（回合；沒有冷卻的從 2 起）
+max_cooldown: 5
 
 templates:
   # ---- 加深 ----

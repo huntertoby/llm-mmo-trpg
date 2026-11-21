@@ -119,6 +119,9 @@ class CandidateSettings(ContentModel):
     """LLM 題目帶主題詞（例如「自然」，``content/llm/world_*.yaml`` 的 ``themes``）的機率（‰）。"""
     llm_reaction_permille: int = Field(default=100, ge=0, le=1000)
     """LLM 題目出反應技（而非主動技能）的機率（‰；Phase 4-L8b）。出不了反應題就改出主動技能題。"""
+    bridge_variant_cap: int = Field(ge=0)
+    """橋接多關鍵字搜尋的組合器種子變體數上限（PERF-3，玩法 PM 2026-11-03：照「最壞約 3 秒」定）；
+    0 ＝ 不設上限。HC-5b 從 ``candidates.BRIDGE_VARIANT_CAP`` 搬來。"""
     whiteboard: bool = True
     """升級與任務三選一一律是白板（Phase 3W-4，06 6.34.1，
     ``trpg.skillgen.whiteboard_candidates``）：單一效果、1 階、種類比例 70／20／10。

@@ -67,7 +67,8 @@ def rider_effect(library: ContentLibrary, keyword: str, rng: Rng) -> dict[str, A
     affects = "self" if stack.owner == "self" else "enemies"
     if rng.chance_permille(library.composer.builder.builder_permille):
         return {"type": _ADD, "stack": stack.id, "affects": affects, "amount": 1}
-    return {"type": _CONSUME, "stack": stack.id, "affects": affects, "per_stack_permille": 50}
+    weakest = library.composer.builder.per_stack.start  # HC-5b：消耗層數旋鈕階梯的最弱一格
+    return {"type": _CONSUME, "stack": stack.id, "affects": affects, "per_stack_permille": weakest}
 
 
 def refresh_tags(library: ContentLibrary, skill: SkillDef) -> SkillDef:

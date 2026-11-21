@@ -11,13 +11,11 @@ from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
 from trpg.skillgen import candidates
 from trpg.skillgen.candidates import (
-    BRIDGE_VARIANT_CAP,
     CandidateRequest,
     CandidateRules,
     generate_candidates,
 )
 from trpg.skillgen.random_composer import (
-    KEYWORD_TRIES,
     KeywordExhaustedError,
     compose_random_skill,
     compose_with_stats,
@@ -63,7 +61,7 @@ def test_keyword_composition_never_legendary() -> None:
 def test_keyword_variants_reported_and_limited() -> None:
     lib = library()
     found = compose_with_stats(5, tier=2, library=lib, keyword="ignite")
-    assert 1 <= found.variants <= KEYWORD_TRIES
+    assert 1 <= found.variants <= lib.composer.search.keyword_tries
     # 第一個變體沒有該關鍵字的種子：只准試 1 個變體時做不出來，例外帶著用掉的變體數
     seed = next(
         s
@@ -118,7 +116,8 @@ def test_bridge_cap_deterministic() -> None:
 
 
 def test_default_cap() -> None:
-    assert CandidateRules().bridge_variant_cap == BRIDGE_VARIANT_CAP > 0
+    lib = library()  # HC-5b：沒給時照 roguelite.yaml 的 candidates（原本是程式預設 400）
+    assert CandidateRules().bridge_cap(lib) == lib.roguelite.candidates.bridge_variant_cap == 400
 
 
 def test_no_cap_means_unlimited(monkeypatch: pytest.MonkeyPatch) -> None:

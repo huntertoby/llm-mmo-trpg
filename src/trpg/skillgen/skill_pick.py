@@ -352,14 +352,15 @@ def _hollow(effect: object) -> bool:
     return kind == "apply_status" and getattr(effect, "status", None) in _HOLLOW_STATUSES
 
 
-def thin_reasons(skill: SkillDef, *, epic_min_effects: int = 2) -> tuple[str, ...]:
+def thin_reasons(skill: SkillDef, *, epic_min_effects: int) -> tuple[str, ...]:
     """PK-2「這招有沒有料」（只給挑選打分扣分，不是規則；不改組合器與驗證器的合法判定）：
 
     - :data:`THIN_HOLLOW`：技能（第一層效果）有作用的效果一個都沒有——只刻符文、只上「被標記」、
       只揭露（PK-1b 的 Q5、Q16、Q20）。
     - :data:`THIN_CONDITIONAL`：沒有傷害，而且每個有作用的效果都要條件成立才生效（技能層級的條件
       或效果自己的條件；PK-1b 的 Q8「推開 2 格，若居高臨下」）。
-    - :data:`THIN_FEW`：史詩以上，有作用的效果少於 ``epic_min_effects`` 個（PK-1b 的 Q12 史詩被動
+    - :data:`THIN_FEW`：史詩以上，有作用的效果少於 ``epic_min_effects`` 個（``skill_pick.yaml`` 的
+      ``weights.thin_epic_min_effects``；HC-5b 拿掉程式預設 2）（PK-1b 的 Q12 史詩被動
       只有標記 3 回合）。
 
     沒有效果的技能（修正型被動）不算。依上面的順序回傳。"""

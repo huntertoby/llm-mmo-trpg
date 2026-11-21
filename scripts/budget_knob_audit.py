@@ -209,7 +209,7 @@ def _install_cooldown_offset() -> None:
             probe = SkillDef.model_validate({**attempt, "effects": effects})
         except ValueError:
             return None
-        for index, cost in enumerate(evolution.cost_attempts(probe)[1:], start=1):
+        for index, cost in enumerate(evolution.cost_attempts(probe, library)[1:], start=1):
             trial = [dict(e) for e in effects]
             done = real({**attempt, "cost": cost}, trial, rng.fork(f"cd{index}"), library, **kw)
             if done is not None:

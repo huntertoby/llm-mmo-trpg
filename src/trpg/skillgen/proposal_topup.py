@@ -44,10 +44,7 @@ if TYPE_CHECKING:
 __all__ = [
     "FILLER_EFFECTS",
     "FILLER_PREFERENCE",
-    "FILLER_STATUS_MAX",
     "TOPUP_CODES",
-    "TOPUP_GROUP_MAX",
-    "TOPUP_MAX",
     "TOPUP_PREFIX",
     "filler_order",
     "keyword_effect_rules",
@@ -61,10 +58,6 @@ TOPUP_CODES = frozenset({"budget.weak", "keyword.required"})
 """補強處理的錯誤代碼：數值修補之後只剩這些（規則層）才試補強。"""
 TOPUP_PREFIX = "topup."
 """補強修好的代碼在 ``RepairedEvaluation.repaired`` 的前綴（報表與數值修補分開計）。"""
-TOPUP_MAX = 24
-"""每份提議最多試幾個候選（每個候選要跑一次完整驗證）。"""
-TOPUP_GROUP_MAX = 10
-"""每一組候選（關鍵字、附帶效果、關鍵字＋附帶效果）最多幾個，讓三組都有機會被試到。"""
 FILLER_EFFECTS: tuple[str, ...] = ("damage", "heal", "shield", "apply_status")
 """過弱時補的附帶效果（試的順序由 :func:`filler_order` 決定）：數值由預算器補；對象依效果性質
 （傷害與有害狀態只打敵方、治療與護盾只給友方），不合骨架的由驗證擋下。"""
@@ -85,8 +78,6 @@ FILLER_PREFERENCE: dict[str, tuple[str, ...]] = {
 }
 """骨架偏好的附帶效果（6S-2c，原型值）。表外的骨架依核心效果的對象：對友方／自己的先試治療與
 護盾，其他先試傷害與有害狀態。偏好只決定試的先後，每個候選照樣走完整驗證。"""
-FILLER_STATUS_MAX = 3
-"""附帶效果 ``apply_status`` 每份提議最多試幾種有害狀態（依雜湊輪替起點選）。"""
 _AFFECTS_ORDER: tuple[str, ...] = ("enemies", "allies", "self")
 _SKIP_PARAMS = frozenset({"infusion", "unit", "on_hit", "rule", "skill"})
 """推導規則裡這些參數對應的是手寫內容（附魔召喚、指定召喚物、規則改寫、授予指定技能），
@@ -378,12 +369,13 @@ def filler_order(data: Mapping[str, Any], *, seed: int = 0) -> tuple[str, ...]:
 
 def _hostile_statuses(library: ContentLibrary, rarity: SkillRarity | None, key: int) -> list[str]:
     """附帶效果可試的有害狀態：非有益、有預算點數、（有給稀有度時）稀有度夠——與提議模型的
-    ``apply_status`` 狀態選單條件相同；依 ``key`` 輪替起點取 :data:`FILLER_STATUS_MAX` 個。"""
+    ``apply_status`` 狀態選單條件相同；依 ``key`` 輪替起點取
+    ``search.proposal.filler_status_max`` 個。"""
     usable = set(budget_statuses(library))
     if rarity is not None:
         usable &= set(rarity_statuses(library, rarity))
     pool = [s.id for s in library.ruleset.statuses.statuses if not s.beneficial and s.id in usable]
-    return _rotated(pool, key >> 32)[:FILLER_STATUS_MAX]
+    return _rotated(pool, key >> 32)[: library.composer.search.proposal.filler_status_max]
 
 
 def _filler_candidates(
@@ -419,7 +411,7 @@ def topup_candidates(
     seed: int = 0,
     rarity: SkillRarity | None = None,
 ) -> list[dict[str, Any]]:
-    """依序要試的補強提議（最多 :data:`TOPUP_MAX` 個，去重；``data`` 不變）。
+    """依序要試的補強提議（最多 ``search.proposal.topup_max`` 個，去重；``data`` 不變）。
 
     1. 題目關鍵字沒帶到：先補參數、再加該關鍵字的專屬效果（只補第一個缺的關鍵字）；
     2. ``weak``：加一個 :data:`FILLER_EFFECTS` 附帶效果（順序見 :func:`filler_order`，依 ``seed``
@@ -427,7 +419,7 @@ def topup_candidates(
     3. 兩者都有：關鍵字效果 ＋ 附帶效果。
 
     ``primitives``：題目選單（提議模型）開放的原語；給了就只加選單內的效果。每組最多
-    :data:`TOPUP_GROUP_MAX` 個。``data`` 沒有 ``effects`` 清單時為空。"""
+    ``search.proposal.topup_group_max`` 個。``data`` 沒有 ``effects`` 清單時為空。"""
     if not isinstance(data.get("effects"), list) or not data["effects"]:
         return []
     allowed = None if primitives is None else frozenset(primitives)
@@ -460,8 +452,8 @@ def topup_candidates(
             seen.add(key)
             out.append(candidate)
             taken += 1
-            if len(out) >= TOPUP_MAX:
+            if len(out) >= library.composer.search.proposal.topup_max:
                 return out
-            if taken >= TOPUP_GROUP_MAX:
+            if taken >= library.composer.search.proposal.topup_group_max:
                 break
     return out

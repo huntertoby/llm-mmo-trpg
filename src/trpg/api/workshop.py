@@ -19,7 +19,7 @@ from trpg.content.skills import SkillDef, skill_slot_problems, weapon_problem
 from trpg.engine.setup import BattleSetup
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
-from trpg.skillgen.draft import DraftError, build_skill
+from trpg.skillgen.draft import DraftError, build_skill, fill_trap_rounds
 from trpg.skillgen.validate import validate_skill
 
 __all__ = ["WorkshopRequestError", "custom_skill_defs", "equip_custom_skills"]
@@ -37,7 +37,7 @@ def custom_skill_defs(library: ContentLibrary, raw: Sequence[Mapping[str, Any]])
     for index, data in enumerate(raw):
         label = f"自訂技能 {index + 1}「{data.get('name_zh') or data.get('id') or '未命名'}」"
         try:
-            skill = build_skill(data)
+            skill = build_skill(fill_trap_rounds(data, library))  # HC-5b：沒寫陷阱輪數時補
         except DraftError as exc:
             problems.append(f"{label}：{'；'.join(exc.messages)}")
             continue

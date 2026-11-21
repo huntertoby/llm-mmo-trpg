@@ -177,8 +177,6 @@ def make_topic(
     return _make_topic_of_kind(library, topic, None)
 
 
-CORE_RETRIES = 4
-"""指定的核心原語讓題目關鍵字帶不到時（Phase 6S-2），最多再抽幾次別的核心；都不行就不指定核心。"""
 WITNESS_SEED = 0
 """可行解檢查（6E-W）送給結構補強的種子：固定值，不消耗出題的亂數串流（通過檢查的題目與 6E-W
 之前抽出的完全相同）。"""
@@ -196,9 +194,10 @@ def _with_reachable_core(
     """依權重抽核心原語（第一次用 ``core`` 串流，與 6S-2 之前相同）；指定後得不出子集、選單帶不到
     題目關鍵字（:func:`~trpg.skillgen.proposal_topup.keywords_reachable`），或找不到任何一份通過
     完整驗證的寫法（6E-W，:func:`~trpg.skillgen.proposal_witness.has_witness`）就去掉它再抽，最多
-    :data:`CORE_RETRIES` 次。沒有可用的核心回傳 ``None``（題目不指定核心）。"""
+    ``skill_composer.yaml`` 的 ``search.proposal.core_retries`` 次。沒有可用的核心回傳 ``None``
+    （題目不指定核心）。"""
     remaining = list(legal)
-    for attempt in range(CORE_RETRIES + 1):
+    for attempt in range(library.composer.search.proposal.core_retries + 1):
         stream = rng.fork("core") if attempt == 0 else rng.fork(f"core.retry.{attempt}")
         core = pick_core_primitive(library, remaining, uses, stream)
         if core is None:
@@ -209,22 +208,20 @@ def _with_reachable_core(
         except SubsetError:
             return None  # 與 6S-2 之前相同：得不出子集就不指定核心
         if keywords_reachable(library, subset, core=core) and (
-            not _needs_witness(with_core) or has_witness(library, with_core, ctx, seed=WITNESS_SEED)
+            not _needs_witness(library, with_core)
+            or has_witness(library, with_core, ctx, seed=WITNESS_SEED)
         ):
             return with_core
         remaining.remove(core)
     return None
 
 
-WITNESS_MIN_KEYWORDS = 2
-"""題目帶到這麼多關鍵字、又指定武器大類時才做 witness 檢查。"""
-
-
-def _needs_witness(request: ProposalRequest) -> bool:
+def _needs_witness(library: ContentLibrary, request: ProposalRequest) -> bool:
     """6E-W 的 witness 檢查只用在「兩個以上關鍵字＋指定武器大類」的題目（6E-W 報告第 6 節：無解的
     題幾乎都是這一類；其他題照 6S-2 逐個關鍵字的檢查就夠，省下每張白板數秒的建構成本，也保住
     核心原語的多樣性；專案 PM 2026-11-04 決定）。"""
-    return len(request.keywords) >= WITNESS_MIN_KEYWORDS and request.weapon_class is not None
+    most = library.composer.llm_topic.witness_min_keywords
+    return len(request.keywords) >= most and request.weapon_class is not None
 
 
 def _make_topic_of_kind(
@@ -261,7 +258,7 @@ def _make_topic_of_kind(
         )
         found = _with_reachable_core(library, request, legal, topic.uses, rng, ctx=ctx)
         if found is None:
-            if _needs_witness(request) and not has_witness(
+            if _needs_witness(library, request) and not has_witness(
                 library, request, ctx, seed=WITNESS_SEED
             ):
                 continue  # 6E-W：不指定核心也找不到合法寫法，換下一個稀有度

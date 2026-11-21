@@ -23,8 +23,9 @@ def _scalar(field: FieldSpec) -> object:
     if field.type in ("int", "count"):
         return field.min if field.min is not None else 1
     if field.type == "dice":
-        sides = field.dice_sides[0] if field.dice_sides else 6
-        return f"{field.min or 1}d{sides}"
+        # 骰子欄位一律帶組合器的骰面（option_params.dice_field；HC-5b：原本的「沒有就 6」是死碼）
+        assert field.dice_sides, field.field
+        return f"{field.min or 1}d{field.dice_sides[0]}"
     if field.type == "bool":
         return True
     if field.type == "tags":

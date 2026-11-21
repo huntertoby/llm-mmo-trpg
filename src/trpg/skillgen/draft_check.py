@@ -26,7 +26,7 @@ from trpg.skillgen.budget import (
     VariantBudget,
     skill_budget,
 )
-from trpg.skillgen.draft import Draft, DraftError, build_skill
+from trpg.skillgen.draft import Draft, DraftError, build_skill, fill_trap_rounds
 from trpg.skillgen.option_followup import followup_visible
 from trpg.skillgen.option_models import STEP_IDS, DraftOptions, StepId
 from trpg.skillgen.option_variant import variants_visible
@@ -295,6 +295,7 @@ def check_draft(
 
     ``options``（QF-4b，選填）：呼叫者已經算好的 ``draft_options(draft, library)``（同一份草稿、
     同一個內容庫、不帶 ``weapon``），省得再算一次；不傳時照舊自己算，結果相同。"""
+    draft = fill_trap_rounds(draft, library)  # HC-5b：沒寫陷阱輪數時補（同 HC-5a 之前）
     if options is None:
         options = draft_options(draft, library)
     if options.next_step is not None:

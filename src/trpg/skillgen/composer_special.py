@@ -17,6 +17,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from trpg.content.composer_rules import SpecialLadders
 from trpg.content.library import ContentLibrary
 from trpg.content.player_pool import player_skills
 from trpg.content.skills import SHAPE_TO_VALUES, SkillDef
@@ -31,21 +32,19 @@ __all__ = ["compose_legendary", "compose_modifier"]
 
 _ELEMENTS = tuple(e.value for e in sorted(Element, key=lambda e: e.value) if e.value != "physical")
 
-_LADDERS: dict[str, tuple[Any, ...]] = {
-    "damage_permille": tuple(range(100, 701, 50)),
-    "hit_bonus": (1, 2, 3),
-    "cooldown_delta": (-1, -2),
-    "push_distance_delta": (1, 2),
-    "ap_delta": (-1,),
-    "range_delta": (1, 2),
-    "area_delta": (1,),
+_FIXED_LADDERS: dict[str, tuple[Any, ...]] = {
     "grant_pierce": (True,),
     "allow_self_target": (True,),
     "shape_to": SHAPE_TO_VALUES,
 }
-"""修正規則各種改變的值階梯（由弱到強）。``add_element``、``add_tags`` 另外處理。"""
+"""修正規則不是數值的改變的值（數值的階梯在 ``skill_composer.yaml`` 的 ``special.ladders``，
+HC-5b）。``add_element``、``add_tags`` 另外處理。"""
 
-_CHANGE_KINDS = (*sorted(_LADDERS), "add_element", "add_tags")
+_CHANGE_KINDS = (
+    *sorted((*SpecialLadders.model_fields, *_FIXED_LADDERS)),
+    "add_element",
+    "add_tags",
+)
 _ACTIONS = ("attack", "shove", "trip")
 _CONDITION_STATUSES = ("burning", "bleed", "poison", "frozen", "prone")
 _REWRITE = ("grant_ap", "reset_cooldown", "cheat_death", "redirect_damage", "extra_reaction")
@@ -155,13 +154,15 @@ def _applies_to(rng: Rng, library: ContentLibrary) -> dict[str, Any]:
     return {kind: True}
 
 
-def _changes(rng: Rng, kind: str) -> list[dict[str, Any]]:
+def _changes(rng: Rng, library: ContentLibrary, kind: str) -> list[dict[str, Any]]:
     """某種改變的候選值（由弱到強）。"""
     if kind == "add_element":
         return [{"add_element": rng.choice(_ELEMENTS)}]
     if kind == "add_tags":
         return [{"add_tags": [rng.choice(_ELEMENTS)]}]
-    return [{kind: v} for v in _LADDERS[kind]]
+    fixed = _FIXED_LADDERS.get(kind)
+    values = fixed if fixed is not None else getattr(library.composer.special.ladders, kind)
+    return [{kind: v} for v in values]
 
 
 def _rule(rng: Rng, library: ContentLibrary) -> list[dict[str, Any]]:
@@ -169,11 +170,11 @@ def _rule(rng: Rng, library: ContentLibrary) -> list[dict[str, Any]]:
     kind = rng.choice(_CHANGE_KINDS)
     applies = _applies_to(rng, library)
     condition: dict[str, Any] | None = None
-    if rng.chance_permille(300):
+    if rng.chance_permille(library.composer.special.condition_permille):
         condition = {"type": "target_has_status", "status": rng.choice(_CONDITION_STATUSES)}
     return [
         {"applies_to": applies, "change": change, **({"condition": condition} if condition else {})}
-        for change in _changes(rng, kind)
+        for change in _changes(rng, library, kind)
     ]
 
 
@@ -206,7 +207,7 @@ def _modifier_candidates(
             if not legendary:
                 out.append(_data(seed, "修正", "epic", theme, {**base, "cost": {}}))
                 continue
-            for source in (1, 2):
+            for source in library.composer.special.source_points:
                 for activation in ("timed", "battle"):
                     extra = {**base, "activation": activation, "cost": {"source": source}}
                     out.append(_data(seed, "傳說修正", "legendary", theme, extra))
@@ -218,22 +219,28 @@ def _modifier_candidates(
 # ---------------------------------------------------------------------------
 
 
-def _rewrite_effect(rng: Rng, primitive: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    """改寫規則型原語的效果與形狀。"""
+def _rewrite_effect(
+    rng: Rng, library: ContentLibrary, primitive: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """改寫規則型原語的效果與形狀（候選值在 ``skill_composer.yaml`` 的 ``special``，HC-5b）。"""
+    rules = library.composer.special
     if primitive == "grant_ap":
-        return {"type": "grant_ap", "amount": rng.choice((1, 2)), "affects": "self"}, {
-            "type": "self"
-        }
-    shape = {"type": "single", "range": rng.choice((3, 4))}
+        return {
+            "type": "grant_ap",
+            "amount": rng.choice(rules.grant_ap_amounts),
+            "affects": "self",
+        }, {"type": "self"}
+    shape = {"type": "single", "range": rng.choice(rules.rewrite_ranges)}
     if primitive == "reset_cooldown":
         return {"type": "reset_cooldown", "which": "all", "affects": "allies"}, shape
     if primitive == "cheat_death":
-        return {"type": "cheat_death", "duration": rng.choice((1, 2)), "affects": "allies"}, shape
+        duration = rng.choice(rules.cheat_death_durations)
+        return {"type": "cheat_death", "duration": duration, "affects": "allies"}, shape
     if primitive == "redirect_damage":
         effect = {
             "type": "redirect_damage",
-            "permille": rng.choice((200, 300, 400, 500)),
-            "duration": rng.choice((2, 3)),
+            "permille": rng.choice(rules.redirect_permille),
+            "duration": rng.choice(rules.redirect_durations),
             "affects": "allies",
         }
         return effect, shape
@@ -256,13 +263,15 @@ def _lasting_candidates(
         }
         shape: dict[str, Any] = {"type": "self"}
     else:
-        effect, shape = _rewrite_effect(rng, rng.choice(_REWRITE))
+        effect, shape = _rewrite_effect(rng, library, rng.choice(_REWRITE))
     out: list[dict[str, Any]] = []
     scale = library.ruleset.core.quantity_scale  # 法力是量類：候選 × 倍率（X10-3c）
+    special = library.composer.special
+    cooldowns: tuple[int | None, ...] = (None,) if rule_change else special.lasting_cooldowns
     for tier in tiers:
-        for source in (1, 2):
-            for mana in (1 * scale, 4 * scale, 8 * scale, 12 * scale):  # 至少一格法力（06 6.10）
-                for cooldown in (None,) if rule_change else (2, 3, 4, 5, 6):
+        for source in special.source_points:
+            for mana in (m * scale for m in special.lasting_mana):  # 至少一格法力（06 6.10）
+                for cooldown in cooldowns:
                     cost: dict[str, Any] = {"mana": mana, "source": source}
                     if cooldown is not None:
                         cost["cooldown"] = cooldown
@@ -287,9 +296,6 @@ def _lasting_candidates(
 # 進入點
 # ---------------------------------------------------------------------------
 
-_ATTEMPTS = 60  # 3-24b1：關鍵字檢查會多淘汰一些候選，重抽次數從 20 提高
-_CORE_TRIES = 16
-
 
 def compose_modifier(
     seed: int, library: ContentLibrary, *, tier: int | None = None
@@ -297,7 +303,7 @@ def compose_modifier(
     """史詩的修正技能（``kind: modifier``）；做不出合格的回傳 ``None``。"""
     rng = Rng(seed).fork("composer.modifier.build")
     tiers = (tier,) if tier is not None else tuple(sorted(library.ruleset.core.tier_budget))
-    for _ in range(_ATTEMPTS):
+    for _ in range(library.composer.search.special_attempts):
         candidates = _modifier_candidates(rng, library, seed, tiers=tiers, legendary=False)
         found = _pick(rng, library, candidates)
         if found is not None:
@@ -317,9 +323,10 @@ def compose_legendary(
     rng = Rng(seed).fork("composer.legendary.build")
     tiers = (tier,) if tier is not None else tuple(sorted(library.ruleset.core.tier_budget))
     cores = cores or ("modifier", "rule_change", "rule_rewrite")
-    start = rng.randint(0, len(cores) - 1)  # 抽到的核心連續失敗 _CORE_TRIES 次才換下一種
-    for index in range(len(cores) * _CORE_TRIES):
-        core = cores[(start + index // _CORE_TRIES) % len(cores)]
+    tries = library.composer.search.special_core_tries
+    start = rng.randint(0, len(cores) - 1)  # 抽到的核心連續失敗 tries 次才換下一種
+    for index in range(len(cores) * tries):
+        core = cores[(start + index // tries) % len(cores)]
         if core == "modifier":
             candidates = _modifier_candidates(rng, library, seed, tiers=tiers, legendary=True)
         else:

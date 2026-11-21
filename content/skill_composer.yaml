@@ -72,6 +72,13 @@ structure:
   # 造牆（create_obstacle）的物件從 blocks_move 且非 explosive 的物件抽，再拿掉這裡列的（NW-3c，玩法PM交接 4.1.15）：
   # 冷卻井打破就造 3×3 水，不當隨處可造的牆。數值工坊的造牆 HP 提示照同一份候選。
   obstacle_exclude: [cooling_well]
+  # HC-5b：原本寫死在 skillgen/composer_parts.py、composer_dual.py 的抽選範圍（值照搬）
+  delayed_damage_rounds: {min: 1, max: 3}     # 定時炸彈的引爆輪數
+  delayed_damage_radius: {min: 0, max: 2}     # 定時炸彈的爆炸半徑（格）
+  gamble_win_permille: [1500, 2000, 2500, 3000]   # 賭注成功時的傷害倍率候選（‰）
+  gamble_backlash_permille: [250, 500, 750]       # 賭注失敗時反噬本次傷害的比例候選（‰）
+  gamble_backlash_chance_permille: 700        # 賭注失敗時有反噬的機率（其餘失敗時沒有效果）
+  second_element_multiplier_permille: 300     # 第二元素（WC-2b）新加的武器傷害段起始倍率（之後由旋鈕調）
 
 # 條件
 condition:
@@ -89,6 +96,7 @@ condition:
   # 至少 2 的招、遠距只給固定射程達到遠距門檻的招（composer_parts._with_distance_condition）。機率是初值。
   distance_conditions: [point_blank, long_range]
   distance_permille: 60
+  point_blank_min_reach: 2            # HC-5b：貼身條件要求的最大射程（射程 1 一定貼身）；組合器、驗證器、閃現距離加碼共用
   # 武器親和（3I-5，初值）：給了主角手上的裝備時，組好的技能的附帶效果上的常見條件有這個機率換成「手持
   # 某種武器時」（預算不變；獨立於組合的亂數串流，沒給手上裝備時結果完全相同）
   affinity_permille: 400
@@ -167,6 +175,7 @@ rune:
 sacrifice:
   skeleton_permille: 30
   heal_permille: 350                  # 治療版（沒有 element）的機率，其餘為爆炸
+  radius: {min: 0, max: 2}            # HC-5b：爆炸（或治療）半徑（格）
 
 # 強度調整：比例收在 [low, high]，目標均勻分佈在 [low, high − margin]
 tuning:
@@ -188,6 +197,25 @@ scaling:
 # 傳說（rarity_weights.legendary）一律走 composer_special：核心三擇一（修正規則、規則改變、改寫規則型原語）＋ 1–2 點源力。
 special:
   modifier_permille: 100
+  # HC-5b：原本寫死在 skillgen/composer_special.py 的候選（值照搬）。修正規則各種數值改變的值階梯（由弱到強；
+  # 候選＝同一個套用對象與改變種類、不同的值，再挑預算比例在 tuning 區間內的）
+  ladders:
+    damage_permille: [100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600, 650, 700]
+    hit_bonus: [1, 2, 3]
+    cooldown_delta: [-1, -2]
+    push_distance_delta: [1, 2]
+    ap_delta: [-1]
+    range_delta: [1, 2]
+    area_delta: [1]
+  condition_permille: 300             # 修正規則帶「目標有某狀態時」條件的機率
+  source_points: [1, 2]               # 傳說的源力代價候選（06 6.10）
+  grant_ap_amounts: [1, 2]            # 改寫規則型原語：給 AP 的數量
+  rewrite_ranges: [3, 4]              # 改寫規則型原語（給友方的）施放距離（格）
+  cheat_death_durations: [1, 2]       # 免死的持續回合
+  redirect_permille: [200, 300, 400, 500]   # 轉移傷害轉走的比例（‰）
+  redirect_durations: [2, 3]          # 轉移傷害的持續回合
+  lasting_mana: [1, 4, 8, 12]         # 規則改變與改寫規則型原語的法力（換算前的單位，× quantity_scale；至少一格法力）
+  lasting_cooldowns: [2, 3, 4, 5, 6]  # 改寫規則型原語的冷卻（規則改變沒有冷卻）
 
 # 戰場變奏（Phase 3-25b，docs/design/06-技能.md 6.24；初值，未經模擬）：稀有度 rare 以上的主動技能組好之後，
 # 以 permille 的機率（獨立的亂數串流；沒有抽中的種子結果不變）再加一個變奏。候選＝條件 × 替換內容的所有組合
@@ -209,6 +237,7 @@ variant:
     - {id: lightning, name_zh: 雷電, element: lightning}
     - {id: ice, name_zh: 寒霜, element: ice}
     - {id: prone, name_zh: 擊倒, add_effect: {type: knock_prone}}
+  range_delta: {min: -3, max: 3}      # HC-5b：技能工坊「戰場變奏」表單的「射程 ±」可填範圍（格）
 
 # LLM 提議題目的多樣性（Phase 4-L6，docs/phases/Phase4計畫.md 3C 節；trpg.skillgen.proposal_topic）：結構的多樣性由引擎
 # 決定，不交給模型的偏好。核心原語由種子加權抽出；run 內配額＝原語已出現在這一輪的候選 n 次時，權重 ＝ 基礎 × 100 ÷ (100 ＋ n × 係數)。
@@ -220,6 +249,11 @@ llm_topic:
   base_weight: 100
   quota_percent_per_use: 100
   core_weights: {}                          # 個別原語的基礎權重（沒列出的用 base_weight）
+  # HC-5b：原本寫死在 skillgen/proposal_subset.py、proposal_topic.py、proposal/models.py（值照搬）
+  max_keywords: 2                           # 一個題目最多指定幾個關鍵字
+  witness_min_keywords: 2                   # 題目帶到這麼多關鍵字、又指定武器大類時才做可行解檢查（6E-W）
+  max_nested_effects: 2                     # 提議模型的巢狀效果清單（then、win、lose、on_kill、區域效果）最多幾個
+  max_tags: 8                               # 提議模型的 tags 最多幾個
 
 # LLM 提議的費用旋鈕（Phase 4-L8b，4-L3 待決 #2、4-L8 待決 #6）：結構在最低費用（AP 2、1 點資源、沒有冷卻）下仍超出預算上限時，
 # 補值器依序往上試 steps（由輕到重；每階各自獨立，欄位取「原本的值」與「這一階」中較大者），取第一個讓預算比例回到上限以內的，
@@ -227,6 +261,7 @@ llm_topic:
 # max_cooldown：冷卻上限 5（06 6.5；比引擎硬上限 6 保守）。mana：法力，武器技依 stamina_per_mana 換成耐力。初值，未經模擬。
 llm_cost:
   max_cooldown: 5
+  default_ap: 2                       # HC-5b：補值器替主動技能補的 AP（預算器不調 AP；多數手寫主動技能的值；原 proposal_numbers.DEFAULT_ACTIVE_AP）
   steps:
     - {cooldown: 1}
     - {cooldown: 2}
@@ -545,3 +580,37 @@ recipes:
     - {keyword: prone, condition: {type: target_has_status, status: prone}}
     - {keyword: marked, condition: {type: target_has_status, status: marked}}
     - {keyword: wet, condition: {type: target_on_surface, surface: water}}
+  # HC-5b：原本寫死在 skillgen/composer_recipes.py（值照搬）
+  param_permille: 500       # 「狀態被施加時」「踏入表面時」「關鍵字被利用時」指定狀態或表面的機率（其餘為任何）
+  high_ground_permille: 500 # 利用高處時取「目標比你低」（其餘「自己在高處」）的機率
+  exploit_surface_permille: 500 # 「關鍵字被利用時」指定了對象時，指定表面（其餘指定狀態）的機率（SK-3b「各半」）
+
+# HC-5b（照 HC-5a 閃現 rules.search 的前例新開）：生成器的搜尋參數——重抽、重試、候選上限與試組用的假設值。
+# 不是玩法數值，但改了會改變做得出來的招，所以放在資料；數值工坊不開。值照搬原本寫死在 skillgen/ 的常數。
+search:
+  composer_attempts: 100      # 組合器每個種子最多重抽幾次（random_composer.MAX_ATTEMPTS）
+  variant_attempts: 25        # 帶戰場變奏的重抽次數（前 25 次才帶；3-25b）
+  keyword_tries: 300          # 指定關鍵字時最多試幾個種子變體（3-24b1）
+  special_attempts: 60        # 修正技能最多重抽幾次結構（composer_special；3-24b1 從 20 提高）
+  special_core_tries: 16      # 傳說抽到的核心連續失敗幾次才換下一種
+  retier_attempts: 3          # 升階重配同一份草稿最多試幾次不同的調整亂數（skill_tier）
+  evolution_variant_drafts: 8 # 進化模板「戰場變奏」最多試幾個候選（evolution）
+  complete_max_steps: 40      # 完整技能強度補足最多加幾步（防止資料寫錯時無窮迴圈；complete）
+  probe_cooldown: 9           # 技能工坊探測效果規則時，草稿還沒選冷卻就假設的冷卻（option_effect_rules）
+  proposal:                   # LLM 提議的修補、補強、保底與可行解檢查（proposal_*.py）
+    repair_tunes: 4           # 數值修補最多重調幾次
+    composer_tries: 8         # 保底的組合器換種子重試次數
+    workshop_max_shapes: 4    # 保底的工坊推導每個骨架最多試幾個形狀
+    workshop_max_effects: 6   # 每個形狀最多試幾個核心效果
+    core_retries: 4           # 指定的核心讓題目關鍵字帶不到時最多再抽幾次（6S-2）
+    topup_max: 24             # 補強每份提議最多試幾個候選
+    topup_group_max: 10       # 補強每一組候選最多幾個
+    filler_status_max: 3      # 補強的附帶 apply_status 最多試幾種有害狀態
+    witness_max: 24           # 可行解檢查每個題目最多驗證幾份（6E-W 報告：48→24，專案 PM 決定）
+    witness_templates_per_primitive: 4
+    witness_keyword_ways: 4
+    witness_shapes: 4
+    witness_cores: 3
+    witness_events: 2
+    witness_pair_keywords: 2
+    witness_shape_size: 3     # 可行解檢查建構形狀的大小參數（再收進形狀參數的上下限）

@@ -31,6 +31,7 @@ __all__ = [
     "WEAPON_ACTION_SUFFIXES",
     "AttrWeights",
     "ComposerRules",
+    "ComposerSearch",
     "ConditionRules",
     "CostRules",
     "CostStep",
@@ -44,12 +45,14 @@ __all__ = [
     "LlmCostRules",
     "LlmTopicRules",
     "PassiveRules",
+    "ProposalSearch",
     "ReactionRules",
     "RecipeExploit",
     "RecipeRules",
     "RecipeStackEvent",
     "RecipeSummonUnit",
     "ScalingRules",
+    "SpecialLadders",
     "SpecialRules",
     "StanceRules",
     "StructureRules",
@@ -188,6 +191,20 @@ class StructureRules(ContentModel):
     """不當造牆候選的物件 ID（NW-3c，玩法 PM 交接 4.1.15）：``create_obstacle`` 只從
     ``blocks_move`` 且非 ``explosive`` 的物件抽，再拿掉這裡列的（例：冷卻井，打破就造水）。
     ID 必須是 ``objects.yaml`` 的物件（載入時檢查）。"""
+    delayed_damage_rounds: IntRange
+    """定時炸彈（``delayed_damage``）的引爆輪數（3C-6b；HC-5b 從 ``composer_parts`` 搬來）。"""
+    delayed_damage_radius: IntRange
+    """定時炸彈的爆炸半徑（格）。"""
+    gamble_win_permille: tuple[int, ...] = Field(min_length=1)
+    """賭注成功時的傷害倍率候選（‰；3D-7a、3C-6b；HC-5b 從 ``composer_parts._GAMBLE_WIN``
+    搬來）。"""
+    gamble_backlash_permille: tuple[int, ...] = Field(min_length=1)
+    """賭注失敗時反噬施放者「本次傷害」的比例候選（‰；``_GAMBLE_BACKLASH``）。"""
+    gamble_backlash_chance_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """賭注失敗時有反噬的機率（‰；其餘失敗時沒有效果）。"""
+    second_element_multiplier_permille: int = Field(ge=1)
+    """第二元素（WC-2b，``composer_dual``）新加的武器傷害段起始倍率（‰；之後由旋鈕調；
+    HC-5b 從 ``composer_dual._FIRST_MULTIPLIER`` 搬來）。"""
 
 
 class ConditionRules(ContentModel):
@@ -207,6 +224,10 @@ class ConditionRules(ContentModel):
     完全相同的技能）。只給射程用得上的招：貼身要固定射程至少 2（射程 1 的招一定貼身，等於白拿
     折扣）、遠距要固定射程至少 ``CoreRules.far_distance``（打不到那麼遠就永遠不成立）。"""
     distance_permille: int = 0
+    point_blank_min_reach: int = Field(ge=1)
+    """貼身條件要求的最大射程（格；SK-1、SK-2b：射程 1 的招一定貼身，條件等於白拿預算折扣）。
+    組合器、驗證器、閃現「距離加碼」共用（HC-5b 從 ``validate.POINT_BLANK_MIN_REACH`` 與
+    ``composer_parts._POINT_BLANK_MIN_RANGE`` 搬來）。"""
     affinity_permille: int = 0
     """武器親和（Phase 3I-5）：給了主角手上的裝備時，附帶效果上的常見條件換成「手持某種武器時」的
     機率（‰；:func:`trpg.skillgen.affinity.grant_affinity`，用技能 ID 決定的確定性抽籤）。"""
@@ -358,6 +379,8 @@ class SacrificeRules(ContentModel):
     """稀有度 rare 以上、未指定骨架時，改組獻祭技能的機率（獨立的亂數串流；低權重）。"""
     heal_permille: int = _PERMILLE
     """獻祭技能是治療（沒有 element）而非爆炸的機率。"""
+    radius: IntRange
+    """獻祭的爆炸（或治療）半徑（格；HC-5b 從 ``composer_parts._sacrifice_effect`` 搬來）。"""
 
 
 class ScalingRules(ContentModel):
@@ -373,11 +396,47 @@ class ScalingRules(ContentModel):
     mastery_permille: int = _PERMILLE
 
 
+class SpecialLadders(ContentModel):
+    """修正規則數值改變的值階梯（``special.ladders``；鍵是 ``modifiers[].change`` 的欄位）。
+    ``grant_pierce``、``allow_self_target``、``shape_to``、``add_element``、``add_tags`` 不是數值，
+    留在程式。"""
+
+    damage_permille: tuple[int, ...] = Field(min_length=1)
+    hit_bonus: tuple[int, ...] = Field(min_length=1)
+    cooldown_delta: tuple[int, ...] = Field(min_length=1)
+    push_distance_delta: tuple[int, ...] = Field(min_length=1)
+    ap_delta: tuple[int, ...] = Field(min_length=1)
+    range_delta: tuple[int, ...] = Field(min_length=1)
+    area_delta: tuple[int, ...] = Field(min_length=1)
+
+
 class SpecialRules(ContentModel):
     """修正技能與傳說（Phase 3C-6b；:mod:`trpg.skillgen.composer_special`）。"""
 
     modifier_permille: int = _PERMILLE
     """稀有度史詩以上、未指定骨架時改組修正技能（``kind: modifier``）的機率（獨立的亂數串流）。"""
+    ladders: SpecialLadders
+    """修正規則各種數值改變的值階梯（由弱到強；HC-5b 從 ``composer_special._LADDERS`` 搬來）。"""
+    condition_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """修正規則帶「目標有某狀態時」條件的機率（‰）。"""
+    source_points: tuple[int, ...] = Field(min_length=1)
+    """傳說的源力代價候選（06 6.10「1–2 點源力」）；上限照 ``skill_limits.max_source_cost``
+    （驗證器擋）。"""
+    grant_ap_amounts: tuple[int, ...] = Field(min_length=1)
+    """改寫規則型原語「給 AP」（``grant_ap``）的 AP 數候選。"""
+    rewrite_ranges: tuple[int, ...] = Field(min_length=1)
+    """給友方的改寫規則型原語（重置冷卻、免死、轉移傷害、額外反應）的施放距離候選（格）。"""
+    cheat_death_durations: tuple[int, ...] = Field(min_length=1)
+    """「免死」（``cheat_death``）的持續回合候選。"""
+    redirect_permille: tuple[int, ...] = Field(min_length=1)
+    """「轉移傷害」（``redirect_damage``）轉走的比例候選（‰）。"""
+    redirect_durations: tuple[int, ...] = Field(min_length=1)
+    """「轉移傷害」的持續回合候選。"""
+    lasting_mana: tuple[int, ...] = Field(min_length=1)
+    """規則改變與改寫規則型原語的法力候選（換算前的單位，程式 × ``quantity_scale``；至少一格法力，
+    06 6.10）。"""
+    lasting_cooldowns: tuple[int, ...] = Field(min_length=1)
+    """改寫規則型原語的冷卻候選（回合；規則改變沒有冷卻）。"""
 
 
 class RecipeSummonUnit(ContentModel):
@@ -424,6 +483,14 @@ class RecipeRules(ContentModel):
     stack_counts: dict[str, int] = Field(default_factory=dict)
     """層數 ID → 利用時條件 ``self_stack_at_least`` 的 N。"""
     exploit_conditions: tuple[RecipeExploit, ...] = ()
+    param_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """「狀態被施加時」指定狀態、「踏入表面時」指定表面、「關鍵字被利用時」指定狀態或表面的機率
+    （‰；其餘為任何；HC-5b 從 ``composer_recipes._PARAM_PERMILLE`` 搬來）。"""
+    high_ground_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """利用高處時二選一（目標比你低 ``height_advantage``／自己在高處 ``self_on_high_ground``）取前者
+    的機率（‰；``composer_recipes._HALF``）。"""
+    exploit_surface_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """「關鍵字被利用時」指定了對象時，指定表面（其餘指定狀態）的機率（‰；SK-3b「各半」）。"""
 
 
 class VariantCondition(ContentModel):
@@ -464,6 +531,8 @@ class VariantRules(ContentModel):
     conditions: tuple[VariantCondition, ...] = Field(min_length=1)
     changes: tuple[VariantChange, ...] = Field(min_length=1)
     """候選＝條件 × 替換內容的所有組合；依亂數順序逐一試，第一個通過驗證的採用。"""
+    range_delta: IntRange
+    """技能工坊「戰場變奏」表單的「射程 ±」可填範圍（格；HC-5b 從 ``option_variant`` 搬來）。"""
 
 
 class LlmTopicRules(ContentModel):
@@ -485,6 +554,15 @@ class LlmTopicRules(ContentModel):
     quota_percent_per_use: int = Field(default=100, ge=0)
     """run 內配額：原語已出現在這一輪的候選 ``n`` 次時，權重 ＝ 基礎權重 × 100 ÷
     （100 ＋ ``n`` × 這個值）（整數除法，至少 1）。0 ＝ 不看配額。"""
+    max_keywords: int = Field(ge=1)
+    """一個題目最多指定幾個關鍵字（HC-5b 從 ``proposal_subset.MAX_KEYWORDS`` 搬來）。"""
+    witness_min_keywords: int = Field(ge=1)
+    """題目帶到這麼多關鍵字、又指定武器大類時，才做可行解（witness）檢查（6E-W）。"""
+    max_nested_effects: int = Field(ge=1)
+    """提議模型裡巢狀效果清單（``then``、``win``、``lose``、``on_kill``、區域的 ``effects``）最多
+    幾個效果（約束解碼的 schema；技能本身的上限另在 ``skill_limits``）。"""
+    max_tags: int = Field(ge=0)
+    """提議模型的 ``tags`` 最多幾個。"""
 
     def weight_of(self, primitive: str, uses: int) -> int:
         base = self.core_weights.get(primitive, self.base_weight)
@@ -520,6 +598,10 @@ class LlmCostRules(ContentModel):
     """過弱階梯（Phase 4-L10b，4-L9 建議 B1）：旋鈕（含巢狀效果）全部調完仍低於預算下限時依序試，
     取第一個讓比例落進驗證器窗的。``ap`` 往下取（原本與這一階的較小者），``cooldown``／``mana``
     往上取（較大者）。空 ＝ 不開放。"""
+    default_ap: int = Field(ge=1)
+    """補值器替主動技能補的 AP（預算器不調整 AP；多數手寫主動技能的值；上限照
+    ``skill_limits.max_ap_cost``，載入時檢查）。HC-5b 從 ``proposal_numbers.DEFAULT_ACTIVE_AP``
+    搬來；工坊推導的保底提議也用它。"""
 
     @model_validator(mode="after")
     def _check(self) -> LlmCostRules:
@@ -781,6 +863,66 @@ class WhiteboardRules(ContentModel):
         return frozenset(r.keyword for r in (*self.active, *self.passive, *self.reaction))
 
 
+class ProposalSearch(ContentModel):
+    """LLM 提議的修補、補強、保底與可行解檢查的搜尋參數（``search.proposal``；HC-5b 從
+    ``proposal_*.py`` 搬來）。都是「最多試幾個」，不是玩法數值，但改了會改變做得出來的招。"""
+
+    repair_tunes: int = Field(ge=1)
+    """數值修補最多重調幾次（每次換一條亂數串流，核心優先與全部旋鈕交替；``proposal_budget``）。"""
+    composer_tries: int = Field(ge=0)
+    """保底的組合器換種子重試的次數（``proposal_fallback``）。"""
+    workshop_max_shapes: int = Field(ge=1)
+    workshop_max_effects: int = Field(ge=1)
+    """保底的工坊推導每個骨架最多試幾個形狀 × 幾個核心效果（避免組合爆炸）。"""
+    core_retries: int = Field(ge=0)
+    """指定的核心原語讓題目關鍵字帶不到時，最多再抽幾次別的核心（``proposal_topic``，6S-2）。"""
+    topup_max: int = Field(ge=1)
+    """補強每份提議最多試幾個候選（每個候選跑一次完整驗證；``proposal_topup``）。"""
+    topup_group_max: int = Field(ge=1)
+    """補強每一組候選（關鍵字、附帶效果、關鍵字＋附帶效果）最多幾個。"""
+    filler_status_max: int = Field(ge=1)
+    """補強的附帶效果 ``apply_status`` 每份提議最多試幾種有害狀態。"""
+    witness_max: int = Field(ge=1)
+    """可行解檢查每個題目最多驗證幾份建構的提議（6E-W；``proposal_witness``）。"""
+    witness_templates_per_primitive: int = Field(ge=1)
+    witness_keyword_ways: int = Field(ge=1)
+    witness_shapes: int = Field(ge=1)
+    witness_cores: int = Field(ge=1)
+    witness_events: int = Field(ge=1)
+    witness_pair_keywords: int = Field(ge=1)
+    """可行解檢查建構提議時各層最多取幾個（推導模板、關鍵字寫法、形狀、核心、觸發事件、兩個關鍵字的
+    配對）。"""
+    witness_shape_size: int = Field(ge=1)
+    """可行解檢查建構形狀時的大小參數（再收進形狀參數的上下限）。"""
+
+
+class ComposerSearch(ContentModel):
+    """生成器的搜尋參數（``skill_composer.yaml`` 的 ``search``；HC-5b 照 HC-5a 閃現
+    ``rules.search`` 的前例新開）：重抽、重試、候選上限與試組用的假設值。不是玩法數值，但改了會改變
+    做得出來的招，所以放在資料；工坊不開。"""
+
+    composer_attempts: int = Field(ge=1)
+    """組合器每個種子最多重抽幾次（``random_composer.MAX_ATTEMPTS``）。"""
+    variant_attempts: int = Field(ge=0)
+    """帶戰場變奏的重抽次數（前幾次才帶；Phase 3-25b）。"""
+    keyword_tries: int = Field(ge=1)
+    """指定關鍵字時最多試幾個種子變體（Phase 3-24b1）。"""
+    special_attempts: int = Field(ge=1)
+    """修正技能最多重抽幾次結構（``composer_special``，3-24b1）。"""
+    special_core_tries: int = Field(ge=1)
+    """傳說抽到的核心連續失敗幾次才換下一種核心。"""
+    retier_attempts: int = Field(ge=1)
+    """升階重配同一份草稿最多試幾次不同的調整亂數（``skill_tier``）。"""
+    evolution_variant_drafts: int = Field(ge=1)
+    """進化模板「戰場變奏」最多試幾個候選（每個都要重新調整強度；``evolution``）。"""
+    complete_max_steps: int = Field(ge=1)
+    """完整技能強度補足最多加幾步（每一步一格；防止資料寫錯時無窮迴圈；``complete``）。"""
+    probe_cooldown: int = Field(ge=1)
+    """技能工坊探測效果規則時，草稿還沒選冷卻就假設的冷卻（回合；假設之後會給足夠的冷卻；
+    ``option_effect_rules``）。"""
+    proposal: ProposalSearch
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -823,6 +965,8 @@ class ComposerRules(ContentModel):
     """白板技能的產生規則（Phase 3W-4）。"""
     recipes: RecipeRules
     """組合器補配方（RC-1）。"""
+    search: ComposerSearch
+    """生成器的搜尋參數（HC-5b）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:
@@ -891,6 +1035,11 @@ def composer_rule_problems(
                 f"收到 {value}"
             )
     cost = composer.llm_cost
+    if cost.default_ap > top:  # HC-5b：補值器補的 AP
+        problems.append(
+            f"llm_cost.default_ap 必須是 1 到 {top}（core.yaml 的 skill_limits.max_ap_cost），"
+            f"收到 {cost.default_ap}"
+        )
     for group, steps in (("steps", cost.steps), ("weak_steps", cost.weak_steps)):
         for index, step in enumerate(steps):
             if step.ap is not None and step.ap > top:

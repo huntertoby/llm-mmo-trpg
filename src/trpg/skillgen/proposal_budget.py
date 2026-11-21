@@ -86,8 +86,6 @@ REPAIR_COOLDOWN = 1
 ``skill_budget.yaml``）。"""
 EXCLUSION_PREFIX = "exclusion."
 FOLLOWUP_PREFIX = "followup."
-REPAIR_TUNES = 4
-"""修補時最多重調幾次（每次換一條亂數串流，核心優先與全部旋鈕交替）。"""
 _PROBE_ID = "skill_llm_probe"
 _PROBE_NAME = "試算"
 _CORE_FIRST = frozenset({"skeleton.core_share", "skeleton.secondary_share"})
@@ -327,7 +325,9 @@ def _tune(
         _tune_once(library, data, root, core_only=False)
         return
     core_first = bool(_CORE_FIRST & repairs)
-    for attempt in range(REPAIR_TUNES):
+    for attempt in range(
+        library.composer.search.proposal.repair_tunes
+    ):  # 每次換一條亂數串流，核心優先與全部旋鈕交替
         core_only = (attempt % 2 == 0) == core_first
         if _tune_once(library, data, root.fork(f"repair.{attempt}"), core_only=core_only):
             return

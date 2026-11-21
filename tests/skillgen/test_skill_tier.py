@@ -272,7 +272,14 @@ def test_terrain_skills_pass_the_budget_floor_at_higher_tiers(tier: int) -> None
 
 
 _EMPTY_GROWTH = RetierGrowthRules(
-    magnitude_step=25, magnitude_max=2000, max_cooldown=6, target_tolerance_permille=50
+    magnitude_step=25,
+    magnitude_max=2000,
+    max_cooldown=6,
+    target_tolerance_permille=50,
+    weak_floor_exempt_min_tier=2,  # HC-5b 新格（值同內容檔）
+    summon_hp_steps=(0, 100, 200, 300, 450, 600, 800, 1000),
+    cost_scales_permille=(1000, 500, 0),
+    rock_multiplier_permille=300,
 )
 """清空放大旋鈕（stretch、形狀、多加冷卻與 AP）的升階規則；數值欄位照內容檔（HC-4b 起必填）。"""
 

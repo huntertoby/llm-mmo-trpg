@@ -19,13 +19,13 @@ from __future__ import annotations
 from typing import Any
 
 from trpg.content.library import ContentLibrary
-from trpg.content.skills import ON_MISS_MIN_RARITY, SkillRarity, rarity_rank
+from trpg.content.skills import ON_MISS_MIN_RARITY, SkillCost, SkillRarity, rarity_rank
+from trpg.skillgen.option_params import model_range
 from trpg.skillgen.self_penalty import penalty_choices
 
 __all__ = [
     "COST_DOCS",
     "COST_FLAG_FIELDS",
-    "DEFAULT_HP_PERMILLE",
     "ONCE_PER_BATTLE",
     "apply_cost_choices",
     "cost_choices_of",
@@ -36,8 +36,6 @@ __all__ = [
 
 ONCE_PER_BATTLE = 1
 """:data:`cost_once_per_battle` 換成的 ``cost.uses_per_battle``。"""
-DEFAULT_HP_PERMILLE = 200
-"""沒有內容庫時 ``cost_hp`` 換成的 ``cost.hp_percent``（‰；與內建 ``hp_cap`` 200 相同）。"""
 COST_FLAG_FIELDS: tuple[str, ...] = ("cost_once_per_battle", "cost_hp", "cost_on_miss")
 """4-L8 新增的提議欄位（``cost_penalty``／``cost_overdraft`` 另見 3-50）。"""
 COST_DOCS: dict[str, str] = {
@@ -80,17 +78,19 @@ def cost_entries(library: ContentLibrary, rarity: SkillRarity | None) -> list[di
     return out
 
 
-def hp_cost_permille(library: ContentLibrary | None) -> int:
-    """``cost_hp: true`` 的 HP 代價（最大 HP 的 ‰）：剛好用滿 ``allowance.hp_cap`` 的量。"""
-    if library is None:
-        return DEFAULT_HP_PERMILLE
+def hp_cost_permille(library: ContentLibrary) -> int:
+    """``cost_hp: true`` 的 HP 代價（最大 HP 的 ‰）：剛好用滿 ``allowance.hp_cap`` 的量，收進
+    ``SkillCost.hp_percent`` 的 schema 範圍。``hp_per_permille`` 是 0（HP 代價不計點數）時取
+    ``hp_cap`` 本身（HC-5b：原本寫死 200，同內容檔的 ``hp_cap``；沒有內容庫的分支拿掉）。"""
+    low, high = model_range(SkillCost.model_fields["hp_percent"])
+    assert low is not None and high is not None
     allowance = library.budget.allowance
     if allowance.hp_per_permille <= 0:
-        return DEFAULT_HP_PERMILLE
-    return max(1, min(999, allowance.hp_cap // allowance.hp_per_permille))
+        return max(low, min(high, allowance.hp_cap))
+    return max(low, min(high, allowance.hp_cap // allowance.hp_per_permille))
 
 
-def apply_cost_choices(data: dict[str, Any], library: ContentLibrary | None) -> None:
+def apply_cost_choices(data: dict[str, Any], library: ContentLibrary) -> None:
     """就地把提議的代價欄位換成 ``cost``（:data:`COST_FLAG_FIELDS`）。"""
     cost: dict[str, Any] = dict(data.get("cost") or {})
     if data.pop("cost_once_per_battle", None):

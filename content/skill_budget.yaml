@@ -267,6 +267,7 @@ obstacle_duration_permille: [400, 500, 600, 700, 750, 800, 850, 900, 950, 1000]
 inscribe_duration_permille: [600, 800, 1000, 1200, 1400]
 # 3-50b 護盾持續時間：shield 的點數 ＝ 骰子平均 × 第 n 項（‰；n ＝ duration 2、3 回合，省略 ＝ 2 回合 ＝ 1000‰）。初值，未經模擬。
 shield_duration_permille: [1000, 1300]
+shield_duration_start: 2   # HC-5b：上面第 1 項對應的回合（更短的持續也算第 1 項）
 detonate_runes_permille: 700
 # 3-54b 大範圍越貴越稀有（06 6.33，#58）：升降地形（raise_terrain、lower_terrain）的影響格數（形狀 cell_count）≥ min_cells 時，
 # 技能的稀有度至少要 rarity（依 min_cells 由小到大，取符合的最高一項）：4～6 格最低稀有、7 格以上最低史詩。
@@ -325,6 +326,11 @@ retier_growth:
   max_extra_ap: 1
   terrain_effects: [raise_terrain, lower_terrain]                   # 3W-R2：升降地形的原語（放大格數、補落石）
   area_effects: [raise_terrain, lower_terrain, create_surface]      # 點數固定、升階時放大格數的原語
+  # HC-5b：原本寫死在 skillgen/budget.py、skill_tier.py（值照搬）
+  weak_floor_exempt_min_tier: 2            # 升階後豁免預算窗下限（BAL-12f）的最低階級
+  summon_hp_steps: [0, 100, 200, 300, 450, 600, 800, 1000]   # 升階重配召喚物依序試的最大 HP +N‰（0 ＝ 不加）
+  cost_scales_permille: [1000, 500, 0]     # 升階重配減輕法力、耐力時依序試的比例（‰）
+  rock_multiplier_permille: 300            # 補「落石」時武器技的起始倍率（‰；之後由旋鈕調）
 # FL-1a（06 6.34「費用方向」第 4 點）：閃現蓄力、輕巧每一級調多少（占位，數值工坊調；規則本身在
 # trpg.skillgen.flash_cost：蓄力至少一項嚴格變強、輕巧至少一項嚴格變弱，順序傷害 → 狀態強度 → 狀態回合）。
 #   damage_rungs    蓄力在預算重調後沒有變強時，傷害（再來治療、護盾）的骰子或倍率一次往上調幾格
@@ -464,6 +470,7 @@ modifier:
   per_turn_limit_uses: 8        # 3-31：帶 per_turn_limit 的規則，每場預估使用次數（每個自己的回合最多 1 次；初值，未經模擬）
   empty_slots_permille: 800     # 3-32a：依空欄位數加傷的規則（普攻精通）以滿格估算再 × 此值（技能欄空著本身就是代價；初值，未經模擬；3-32c 精通 80‰→60‰ 後由 500 調到 700；3-32d 精通 60‰→50‰ 再調到 800，維持預算 ≥ 70%）
   on_hit_rune_permille: 270     # 3-31：命中後的 inscribe／detonate_runes 點數 × 此值（符文單獨沒效果、要搭配讀取者；初值，未經模擬）
+  shape_to_reference_size: 3    # HC-5b：shape_to 計價時，保留自原形狀的大小參數（size、radius）取的代表值（原 budget._REFERENCE_PARAM）
   points_milli:
     hit_bonus: 350        # 命中 +1 ≈ 命中率 +5% × 基準傷害 7
     cooldown_delta: 1200  # 冷卻 −1

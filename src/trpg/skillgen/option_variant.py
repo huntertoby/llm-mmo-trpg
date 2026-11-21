@@ -160,8 +160,8 @@ def variant_fields(
             name_zh="射程 ±",
             description_zh="結果至少 1；+1 格約加基礎點數 5%",
             type="int",
-            min=-3,
-            max=3,
+            min=library.composer.variant.range_delta.min,
+            max=library.composer.variant.range_delta.max,
         ),
         _element_field(),
     ]

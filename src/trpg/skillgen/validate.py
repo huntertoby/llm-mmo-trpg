@@ -566,11 +566,6 @@ def _contagion_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     return out
 
 
-POINT_BLANK_MIN_REACH = 2
-"""貼身條件要求的最大射程（射程 1 的招一定貼身，條件等於白拿預算折扣；SK-2b，玩法交接 4.1.29
-第 1 點；和組合器、閃現「距離加碼」同一個門檻）。"""
-
-
 def skill_reach(skill: SkillDef) -> int | None:
     """主動技的最大射程：形狀的固定射程（``range`` 是整數）；直線、錐形沒有 ``range`` 時看
     ``size``。
@@ -594,7 +589,8 @@ def _condition_types(condition: ConditionSpec | None) -> set[str]:
 
 def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """一定成立的距離條件（SK-2b，玩法交接 4.1.29 第 1 點，06 6.16）：條件讓預算打折，前提是它可能
-    不成立——貼身要最大射程至少 :data:`POINT_BLANK_MIN_REACH`，遠距要最大射程至少
+    不成立——貼身要最大射程至少 ``skill_composer.yaml`` 的 ``condition.point_blank_min_reach``
+    （和組合器、閃現「距離加碼」同一個門檻；HC-5b），遠距要最大射程至少
     ``core.far_distance``（工坊可調）。只看主動技能、射程可以確定的形狀（:func:`skill_reach`）。"""
     reach = skill_reach(skill) if skill.kind == "active" else None
     if reach is None:
@@ -602,7 +598,10 @@ def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> 
     types = _condition_types(skill.condition)
     for effect in skill.effects:
         types |= _condition_types(effect.condition)
-    need = {"point_blank": POINT_BLANK_MIN_REACH, "long_range": library.ruleset.core.far_distance}
+    need = {
+        "point_blank": library.composer.condition.point_blank_min_reach,
+        "long_range": library.ruleset.core.far_distance,
+    }
     return [
         Violation(
             skill.id,

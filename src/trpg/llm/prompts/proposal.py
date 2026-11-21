@@ -275,11 +275,16 @@ def _models_and_schema(
     ``weapon_req`` 固定（:func:`fixed_category`）。"""
     limit = variant_limit(library, request, subset)
     category = fixed_category(library, subset)
+    swaps = library.ruleset.core.skill_limits.max_variant_replacements
     models = build_subset_models(library, subset, split_category=True)
-    schema = shape_schema(models.json_schema(), variant_limit=limit, category=category)
+    schema = shape_schema(
+        models.json_schema(), variant_limit=limit, swap_max=swaps, category=category
+    )
     if json_chars(schema) > SCHEMA_CHAR_LIMIT:
         models = build_subset_models(library, subset)
-        schema = shape_schema(models.json_schema(), variant_limit=limit, category=category)
+        schema = shape_schema(
+            models.json_schema(), variant_limit=limit, swap_max=swaps, category=category
+        )
     return models, schema
 
 

@@ -72,7 +72,6 @@ from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.evolution import evolution_template, multiplier_ladder, template_drafts
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.usage import SkillUsage
-from trpg.skillgen.validate import POINT_BLANK_MIN_REACH
 
 __all__ = [
     "FIXED_FIRST_OPS",
@@ -1560,7 +1559,8 @@ def _op_distance_bonus(
     reach = skill.shape.range
     if kind not in _DISTANCE_CONDITIONS or not isinstance(reach, int):
         return []
-    need = POINT_BLANK_MIN_REACH if kind == "point_blank" else library.ruleset.core.far_distance
+    point_blank = library.composer.condition.point_blank_min_reach
+    need = point_blank if kind == "point_blank" else library.ruleset.core.far_distance
     if reach < need:
         return []
     return _conditional_bonus(skill, {"type": kind}, library)

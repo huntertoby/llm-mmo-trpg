@@ -31,7 +31,6 @@ from typing import Any
 
 __all__ = [
     "VARIANT_SWAP_FIELDS",
-    "VARIANT_SWAP_MAX",
     "drop_descriptions",
     "fix_category",
     "limit_variants",
@@ -48,9 +47,8 @@ VARIANT_SWAP_FIELDS: tuple[str, ...] = (
     "replace_effect",
 )
 """變奏的替換內容欄位（提議模型有的；LB-2b 起含 ``range_delta``，只開 +1～+2）。5 項取 1 或 2
-＝ 15 個分支。"""
-VARIANT_SWAP_MAX = 2
-"""每個變奏最多幾項替換內容（``SkillDef`` 的變奏驗證器：1～2 項）。"""
+＝ 15 個分支（每個變奏最多幾項替換內容照 ``core.yaml`` 的
+``skill_limits.max_variant_replacements``，呼叫端傳 ``swap_max``；HC-5b 拿掉寫死的 2）。"""
 _VARIANT_KEYS = frozenset({"id", "name_zh", "when"})
 
 
@@ -74,13 +72,13 @@ def _non_null(prop: Mapping[str, Any]) -> dict[str, Any]:
     return dict(prop)
 
 
-def _variant_branches(node: Mapping[str, Any]) -> dict[str, Any]:
+def _variant_branches(node: Mapping[str, Any], swap_max: int) -> dict[str, Any]:
     props: Mapping[str, Any] = node["properties"]
     swaps = [f for f in VARIANT_SWAP_FIELDS if f in props]
     base = {k: v for k, v in props.items() if k not in VARIANT_SWAP_FIELDS}
     required = [k for k in node.get("required", []) if k in base]
     branches: list[dict[str, Any]] = []
-    for size in range(1, VARIANT_SWAP_MAX + 1):
+    for size in range(1, swap_max + 1):
         for chosen in combinations(swaps, size):
             branch_props = {**base, **{f: _non_null(props[f]) for f in chosen}}
             branches.append(
@@ -97,15 +95,15 @@ def _variant_branches(node: Mapping[str, Any]) -> dict[str, Any]:
     return out
 
 
-def split_variants(schema: Mapping[str, Any]) -> dict[str, Any]:
-    """把 ``$defs`` 裡的變奏模型改成「恰好 1～2 項替換內容」的分支（回傳新 schema）。"""
+def split_variants(schema: Mapping[str, Any], *, swap_max: int) -> dict[str, Any]:
+    """把 ``$defs`` 裡的變奏模型改成「恰好 1～``swap_max`` 項替換內容」的分支（回傳新 schema）。"""
     out = copy.deepcopy(dict(schema))
     defs = out.get("$defs")
     if not isinstance(defs, dict):
         return out
     for name, node in list(defs.items()):
         if isinstance(node, dict) and _is_variant(node):
-            defs[name] = _variant_branches(node)
+            defs[name] = _variant_branches(node, swap_max)
     return out
 
 
@@ -253,12 +251,13 @@ def shape_schema(
     schema: Mapping[str, Any],
     *,
     variant_limit: int,
+    swap_max: int,
     category: tuple[str, str] | None = None,
 ) -> dict[str, Any]:
     """送給約束解碼的 schema：:func:`limit_variants` → :func:`split_variants` →
     （``category`` 有給時）:func:`fix_category` → :func:`drop_descriptions` → :func:`prune_defs`。
     ``category`` 是（``category``, ``weapon_req``）。"""
-    shaped = split_variants(limit_variants(schema, variant_limit))
+    shaped = split_variants(limit_variants(schema, variant_limit), swap_max=swap_max)
     if category is not None:
         shaped = fix_category(shaped, *category)
     return prune_defs(drop_descriptions(shaped))
