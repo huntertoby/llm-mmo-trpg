@@ -147,8 +147,9 @@ class EffectSpec(ContentModel):
     只能用在姿態技能（``kind: stance``）。``enter_form`` 也可以填（BAL-2c，形態幅度）：形態對自己
     有利的部分放大（:func:`trpg.content.forms.scaled_form_def`），維持費不變。"""
     max_hp_permille: int | None = None
-    """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
-    修正規則之後相乘）。"""
+    """``summon``（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
+    修正規則之後相乘）。``shield``（GS-3，#173）：每個目標的護盾＝施放者目前最大 HP × ‰（不擲骰、
+    不加屬性；不能和 ``dice`` 一起填）。"""
     trait: str | None = Field(default=None, pattern=ID_PATTERN)
     """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的小特性（``core.yaml`` 的
     ``summon_traits``）。"""

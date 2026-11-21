@@ -568,6 +568,7 @@ groups:
       - flash_cost.*
       - flash_transform.*
       - form_coefficient_permille
+      - shield_max_hp_points                      # GS-3：看最大 HP 的護盾，每 100‰ 的預算點數（點數不放大）
       - gamble_*
       - grant_skill_expected_uses_per_round_permille
       - hook_*

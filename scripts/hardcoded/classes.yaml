@@ -1699,6 +1699,13 @@ rules:
     kind: text
     where: ['skill_slot_problems']
     note: 規則改變型傳說每人最多裝 1 個（3D-6 使用者決定）：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
+  - id: py-gs3-max-hp-shield-unit
+    class: const
+    status: done
+    files: src/trpg/skillgen/budget.py
+    where: <module>._MAX_HP_SHIELD_UNIT
+    note: GS-3（#173）：skill_budget.yaml 的 shield_max_hp_points 是「每 100‰」的點數，100 是那個單位的定義
+      （換算常數；數值本身在預算表、開放工坊）。
   - id: py-gs3-form-entry-structure
     class: const
     status: done

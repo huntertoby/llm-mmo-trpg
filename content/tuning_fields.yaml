@@ -148,7 +148,8 @@ targets:
       - {path: rounds, label_zh: 倒數輪數, kind: int, existing_only: true, effect_types: [delayed_damage], note_zh: 定時炸彈的倒數（1～3）。}
       - {path: radius, label_zh: 爆炸半徑, kind: int, existing_only: true, effect_types: [delayed_damage, sacrifice_summon], note_zh: 範圍依原語（0～2）。}
       - {path: power_permille, label_zh: 召喚物強度（‰）, kind: permille, existing_only: true, effect_types: [summon], note_zh: 召喚物最大 HP 與傷害的千分比。}
-      - {path: max_hp_permille, label_zh: 召喚物 HP 加成（‰）, kind: permille, existing_only: true, effect_types: [summon], note_zh: 召喚物最大 HP 多出的千分比。}
+      # GS-3（#173）：護盾也有 max_hp_permille（看施放者最大 HP 的護盾；同一個路徑只能列一行，所以併在召喚這行）。
+      - {path: max_hp_permille, label_zh: 最大 HP 比例（‰）, kind: permille, existing_only: true, effect_types: [summon, shield], note_zh: 召喚：召喚物最大 HP 多出的千分比。護盾（例：化形守護 150‰）：每個目標得到的護盾＝施放者目前（變身後）最大 HP × 這個千分比，不擲骰、不加屬性；調高護盾更厚、預算比例跟著變高（每 100‰ 的點數見預算表「看最大 HP 的護盾」），調低更薄。只能 1～1000。}
       - {path: speed, label_zh: 移動速度, kind: int, existing_only: true, effect_types: [zone], note_zh: 移動區域每次環境回合前進的格數（1～2）。}
       - {path: chance_permille, label_zh: 成功機率（‰）, kind: permille, existing_only: true, effect_types: [gamble], note_zh: 賭注成功的機率（50～950）。}
       - {path: damage_multiplier_permille, label_zh: 傷害倍率（‰）, kind: permille, existing_only: true, effect_types: [damage_multiplier], note_zh: 賭注分支的傷害倍率（1500～3000）。}
@@ -532,6 +533,8 @@ targets:
       - {path: "obstacle_duration_permille[*]", label_zh: "限時障礙：持續 {n} 回合（‰）", group_zh: 特殊效果的算法, kind: permille, hint_min: 200, hint_max: 800, note_zh: 產生障礙持續這麼多回合時，點數＝產生障礙的點數 × 這個千分比（永久＝1000）。越大，限時障礙越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: "inscribe_duration_permille[*]", label_zh: "刻印：持續 {n} 輪（‰）", group_zh: 特殊效果的算法, kind: permille, hint_min: 300, hint_max: 1200, note_zh: 刻印持續這麼多輪時，點數＝刻印的點數 × 這個千分比。越大越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: "shield_duration_permille[*]", label_zh: "護盾持續時間：第 {n} 項（‰）", group_zh: 特殊效果的算法, kind: permille, hint_min: 500, hint_max: 2000, note_zh: 第 1 項＝持續 2 回合（預設）、第 2 項＝3 回合：護盾點數＝骰子平均 × 這個千分比。越大越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
+      # GS-3（#173）：看最大 HP 的護盾（shield 的 max_hp_permille，例：化形守護）的計價。
+      - {path: shield_max_hp_points, label_zh: 看最大 HP 的護盾：每 10% 最大 HP 的點數, group_zh: 特殊效果的算法, kind: int, hint_min: 10, hint_max: 42, note_zh: 護盾量看施放者最大 HP 的招（例：化形守護 150‰），每 100‰（最大 HP 的 10%）算幾點預算，代替骰子平均（再乘護盾持續、形狀倍率）。越大，這種護盾越貴、帶它的招其他效果越弱（預算比例變高）；越小越便宜。初值 21 讓化形守護維持原本的比例（約 77%）。只能 0 以上。}
       - {path: shield_duration_start, label_zh: 護盾持續時間：第 1 項對應幾回合, group_zh: 特殊效果的算法, kind: int, hint_min: 1, hint_max: 3, note_zh: HC-5b：上一格第 1 項對應的護盾持續回合（更短的也算第 1 項，之後每項多 1 回合）。調高：同樣的回合查到較前面的項，持續久的護盾變便宜；調低：查到較後面的項，持續久的護盾變貴。}
       - {path: "wind_spread_permille[*]", label_zh: "風元素擴散 {n} 格（‰）", group_zh: 特殊效果的算法, kind: permille, hint_min: 500, hint_max: 2000, note_zh: 風元素傷害擴散這麼多格時，傷害點數 × 這個千分比（1 格＝1000）。越大越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: lifesteal_value_permille, label_zh: 吸血的價值（‰）, group_zh: 特殊效果的算法, kind: permille, hint_min: 400, hint_max: 1600, note_zh: 吸血回復的 HP 折合傷害點數的比例：傷害點數 ×（1 ＋ 吸血‰ × 這個值）。越大，吸血的招越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}

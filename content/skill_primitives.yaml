@@ -109,7 +109,11 @@ primitives:
     harmful: false
     budget_basis: dice_average
     params:
-      dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
+      dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, required_when: {unless_filled: max_hp_permille}, knob: {ladder: dice, weight: caller}}
+      # GS-3（#173，06 6.30 化形守護）：每個目標的護盾＝施放者目前（變身後）最大 HP × n‰，不擲骰、不加屬性，
+      # 不能和 dice、flat_bonus、status 一起填；預算用 skill_budget.yaml 的 shield_max_hp_points（每 100‰ 的點數）
+      # 代替骰子平均。knob: none：組合器與 LLM 的預算器不填它。說明文字（description_zh）留給玩法 PM 連同工坊的玩家版一起寫。
+      max_hp_permille: {llm_hint: "護盾量改看施放者最大生命的比例（一般不用填）。", type: int, min: 1, max: 1000, knob: none}
       flat_bonus: {llm_hint: "護盾量在骰值之外多加的固定值。", type: int, min: 1, max: 100, description_zh: "固定值加成（BAL-12b 定）：只有技能自己的護盾效果可以填；護盾量 ＝ 骰值 ＋ n ＋ 屬性加成；預算：骰子平均 ＋ n（再乘持續係數）", knob: none}
       duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合, knob: none}
       status: {llm_hint: "帶附帶效果的護盾狀態（省略＝一般護盾）。", type: status, description_zh: 帶附帶效果的護盾狀態（反傷、結束回復、破盾造水或標記）, knob: none}

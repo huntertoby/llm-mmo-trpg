@@ -42,6 +42,7 @@ def test_shipped_required_when_is_exactly_the_old_hardcoded_pair() -> None:
     assert found == {
         ("damage", "dice"): RequiredWhen(category="spell"),
         ("inscribe", "element"): RequiredWhen(unless_filled="tag"),
+        ("shield", "dice"): RequiredWhen(unless_filled="max_hp_permille"),  # GS-3（#173）
     }
 
 

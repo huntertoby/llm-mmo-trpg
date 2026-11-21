@@ -27,6 +27,9 @@ stance_coefficient_permille: 1000
 # 取代姿態係數。enter_form 的點數是下面 primitive_points 的 enter_form（固定，11）。3J-4 由 1000 改 800：1 階 14×0.8＝11.2（98%）、
 # 2 階 18×0.8＝14.4（76%），十種形態才都落在合格區間 70～100%（係數 1000 時 2 階形態只有 61%）。初值，未經模擬。
 form_coefficient_permille: 800
+# 看最大 HP 的護盾（GS-3，#173，shield 的 max_hp_permille）：每 100‰（最大 HP 的 10%）算幾點，代替骰子平均。
+# 初值照「化形守護維持 GS-2 的比例（76.7%）」反推：GS-2 的 7d8 平均 31.5 點 ＝ 150‰ × 21 ÷ 100。未經模擬，開放數值工坊。
+shield_max_hp_points: 21
 # 被動技能（Phase 2E-1）：可用預算 ＝ tier_budget × 觸發時機的係數（skill_triggers.yaml）× (1000 ＋ 代價折抵) ÷ 1000；
 # trigger.max_per_round 每多 1 次，可用預算再 × 這個值（次數越多，每次能分到的預算越少）。初值，未經模擬。
 passive_extra_trigger_permille: 800

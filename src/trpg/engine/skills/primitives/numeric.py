@@ -137,8 +137,22 @@ def heal(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBas
 
 
 def shield(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-    scaled = cast.spell_scaled()
+    """護盾：骰值 ＋ 固定值 ＋ 縮放屬性加成；``max_hp_permille``（GS-3，#173）時改成施放者目前
+    （變身後）最大 HP × ‰，不擲骰、不加屬性（倍率照舊：消耗層數加成、連鎖衰減）。"""
     multiplier = cast.shield_multiplier()
+    if spec.max_hp_permille is not None:
+        flat = cast.caster.max_hp * spec.max_hp_permille // PERMILLE
+        return [
+            ShieldEffect(
+                target_id=unit.id,
+                source_id=cast.caster.id,
+                flat=flat,
+                multiplier_permille=multiplier * cast.chain_permille(unit) // PERMILLE,
+                duration=spec.duration,
+            )
+            for unit in cast.targets(effect.affects, spec.condition)
+        ]
+    scaled = cast.spell_scaled()
     return [
         ShieldEffect(
             target_id=unit.id,

@@ -1242,6 +1242,22 @@ class SkillDef(ContentModel):
             raise ValueError(f"{where}：flat_bonus（固定值加成）的傷害只限法術技")
 
     @staticmethod
+    def _check_max_hp_shield(where: str, effect: EffectSpec, *, top: bool) -> None:
+        """看最大 HP 的護盾（GS-3，#173，``shield`` 的 ``max_hp_permille``）：只有技能自己的護盾，
+        不擲骰、不加固定值、不帶附帶效果狀態；沒填時照舊要有 ``dice``。召喚的 ``max_hp_permille``
+        是另一個意思，不在這裡。"""
+        if effect.type != "shield":
+            return
+        if effect.max_hp_permille is None:
+            if effect.dice is None:
+                raise ValueError(f"{where}：護盾要填 dice 或 max_hp_permille")
+            return
+        if not top:
+            raise ValueError(f"{where}：max_hp_permille 只能用在技能自己的護盾效果")
+        if effect.dice is not None or effect.flat_bonus is not None or effect.status is not None:
+            raise ValueError(f"{where}：max_hp_permille 的護盾不能再填 dice、flat_bonus、status")
+
+    @staticmethod
     def _check_form_bonus(where: str, effect: EffectSpec, *, top: bool) -> None:
         """``form_bonus_permille``（在形態中的倍率）：只有技能自己的傷害、治療可以用。"""
         if effect.form_bonus_permille is None:
@@ -1310,6 +1326,7 @@ class SkillDef(ContentModel):
             )
         self._check_form_bonus(where, effect, top=top)
         self._check_flat_bonus(where, effect, top=top)
+        self._check_max_hp_shield(where, effect, top=top)
         _check_absorb_surface(where, effect)
         if effect.type != "damage":
             return

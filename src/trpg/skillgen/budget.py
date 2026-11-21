@@ -408,21 +408,7 @@ def _plain_base_points(  # noqa: PLR0911
     if special is not None:
         return special(skill, effect, library)
     if basis == "dice_average" or (basis == "damage" and skill.category == "spell"):
-        if effect.dice is None:
-            raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
-        extra, extra_note = _shield_rider_points(primitive.id, effect, library)
-        flat = Fraction(effect.flat_bonus or 0, _scale(library))  # X10-2a：固定值 ÷ 量類倍率
-        average = _dice_average(effect.dice) + flat  # BAL-12b：固定值加成
-        dice = f"{effect.dice}＋{effect.flat_bonus}" if effect.flat_bonus else str(effect.dice)
-        if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
-            table = library.budget.shield_duration_permille  # 超過項數用最後一項
-            start = library.budget.shield_duration_start  # 第 1 項的回合（HC-5b）
-            permille = table[min(max(effect.duration, start) - start, len(table) - 1)]
-            return (
-                average * Fraction(permille, _PERMILLE) + extra,
-                f"{dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
-            )
-        return average + extra, f"{dice} 平均{extra_note}"
+        return _dice_points(effect, primitive, library)
     if basis == "damage":
         permille = effect.multiplier_permille or _PERMILLE
         reference = rules.core.budget_reference_weapon_damage
@@ -432,6 +418,52 @@ def _plain_base_points(  # noqa: PLR0911
     if basis == "surface":
         return _surface_points(effect, library)
     raise BudgetError(f"原語 {primitive.id} 的預算算法 {basis} 沒有實作")
+
+
+def _dice_points(
+    effect: EffectSpec, primitive: PrimitiveDef, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    """骰子平均（法術傷害、治療、護盾…）；看最大 HP 的護盾（GS-3）改用
+    :func:`_max_hp_shield_points`。"""
+    if primitive.id == "shield" and effect.max_hp_permille is not None:
+        return _max_hp_shield_points(effect, library)
+    if effect.dice is None:
+        raise BudgetError(f"效果 {primitive.id} 缺少 dice，無法計算點數")
+    extra, extra_note = _shield_rider_points(primitive.id, effect, library)
+    flat = Fraction(effect.flat_bonus or 0, _scale(library))  # X10-2a：固定值 ÷ 量類倍率
+    average = _dice_average(effect.dice) + flat  # BAL-12b：固定值加成
+    dice = f"{effect.dice}＋{effect.flat_bonus}" if effect.flat_bonus else str(effect.dice)
+    if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
+        table = library.budget.shield_duration_permille  # 超過項數用最後一項
+        start = library.budget.shield_duration_start  # 第 1 項的回合（HC-5b）
+        permille = table[min(max(effect.duration, start) - start, len(table) - 1)]
+        return (
+            average * Fraction(permille, _PERMILLE) + extra,
+            f"{dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
+        )
+    return average + extra, f"{dice} 平均{extra_note}"
+
+
+_MAX_HP_SHIELD_UNIT = 100
+"""看最大 HP 的護盾：``shield_max_hp_points`` 是每 100‰ 的點數（GS-3，單位換算）。"""
+
+
+def _max_hp_shield_points(effect: EffectSpec, library: ContentLibrary) -> tuple[Fraction, str]:
+    """看最大 HP 的護盾（GS-3，#173）：‰ × ``shield_max_hp_points`` ÷ 100，再乘護盾持續係數
+    （同骰子護盾）。"""
+    assert effect.max_hp_permille is not None
+    per = library.budget.shield_max_hp_points
+    points = Fraction(effect.max_hp_permille * per, _MAX_HP_SHIELD_UNIT)
+    label = f"最大 HP {effect.max_hp_permille}‰ × {per} 點／{_MAX_HP_SHIELD_UNIT}‰"
+    if effect.duration is None:
+        return points, label
+    table = library.budget.shield_duration_permille
+    start = library.budget.shield_duration_start
+    permille = table[min(max(effect.duration, start) - start, len(table) - 1)]
+    return (
+        points * Fraction(permille, _PERMILLE),
+        f"{label} × 持續 {effect.duration} 回合 {permille}‰",
+    )
 
 
 def _shield_rider_points(

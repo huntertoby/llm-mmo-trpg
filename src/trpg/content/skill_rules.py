@@ -424,6 +424,9 @@ class BudgetRules(ContentModel):
     """姿態技能的預算係數（‰；2E-2）：可用預算 ＝ tier_budget × 係數 ×（1000 ＋ 折抵）÷ 1000。"""
     form_coefficient_permille: int = Field(default=1000, ge=1)
     """形態技能（``enter_form``，Phase 3J-1a，6.30「照姿態計」）的預算係數（‰）：取代姿態係數。"""
+    shield_max_hp_points: int = Field(ge=0)
+    """看最大 HP 的護盾（GS-3，#173，``shield`` 的 ``max_hp_permille``）：每 100‰ 最大 HP 的點數
+    （代替骰子平均；點數 ＝ ‰ × 這個值 ÷ 100，再乘持續係數）。"""
     passive_extra_trigger_permille: int = Field(ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
     known_budget_exceptions: tuple[str, ...] = ()

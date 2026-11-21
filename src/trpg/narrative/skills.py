@@ -678,8 +678,13 @@ def _strength_text(lib: ContentLibrary, status: StatusDef, magnitude: int) -> st
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
     status = lib.ruleset.status_def(SHIELD_STATUS)
-    amount = "" if spec.dice is None else f"{_dice_flat(lib, spec)}＋"
     rounds = spec.duration or status.duration
+    if spec.max_hp_permille is not None:  # GS-3：看施放者目前的最大 HP
+        return (
+            f"護盾（吸收量＝你目前最大 HP 的 {_percent(spec.max_hp_permille)}%，"
+            f"持續 {rounds} 回合；已有護盾時取較大值）"
+        )
+    amount = "" if spec.dice is None else f"{_dice_flat(lib, spec)}＋"
     return (
         f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {rounds} 回合；"
         "已有護盾時取較大值）"

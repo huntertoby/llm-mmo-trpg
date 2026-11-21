@@ -352,6 +352,17 @@ def effect_stat(
     kind = spec.type
     if kind in _DAMAGE_TYPES:
         return _damage_stat(library, skill, index, spec, owner)
+    if kind == "shield" and spec.max_hp_permille is not None:  # GS-3：看最大 HP 的護盾
+        return EffectStat(
+            index=index,
+            type=kind,
+            category="shield",
+            label=f"最大 HP {spec.max_hp_permille / 10:g}%",
+            unit=None,
+            dice=None,
+            dice_note=None,
+            affects=spec.affects,
+        )
     if kind in ("heal", "shield"):
         return EffectStat(
             index=index,
