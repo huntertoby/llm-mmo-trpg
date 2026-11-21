@@ -279,32 +279,6 @@ rules:
     note: 純呈現的檔（特效、色票、動畫、版面、相機、圖示、浮動卡位置）。
 
   # ======================================================================== 前端：玩法數值（要搬）
-  - id: ts-flash-fallback
-    class: config
-    status: done
-    files: client/src/run/flash.ts
-    context: 'FALLBACK|COMPLETE_BONUS_PERMILLE'
-    kind: number
-    note: 閃現規則的前端後備值與完整技能加成。HC-3：`flash_rules` 改必有、拿掉 FALLBACK；完整技能加成讀 `/api/glossary` 的 `rules.complete_budget_permille`（0 筆）。
-  - id: ts-slot-limits
-    class: config
-    status: done
-    files: client/src/run/flow.ts
-    context: 'SLOT_LIMITS'
-    note: 技能欄上限。HC-3：改讀 `/api/glossary` 的 `rules.skill_slots`（`slotLimits()`；0 筆）。
-  - id: ts-source-max
-    class: config
-    status: done
-    files: client/src/ui/SkillCardView.tsx
-    owner: SOURCE_MAX
-    note: 源力上限。HC-3：改讀 `/api/glossary` 的 `rules.source_max`（0 筆）。
-  - id: ts-attr-base
-    class: scale
-    status: done
-    files: client/src/run/AttributeAllocator.tsx
-    kind: number
-    value: '10'
-    note: 屬性基礎值的後備 ?? 10（量類）。HC-2：呼叫端一律帶齊六項屬性，後備改成「—」（0 筆）。
   - id: ts-vfx-damage-tiers
     class: config
     status: todo
@@ -318,24 +292,6 @@ rules:
     kind: number
     context: 'max_rounds'
     note: 木樁、試招的回合上限後備 ?? 30。
-  - id: ts-start-keywords
-    class: config
-    status: done
-    files: client/src/run/StartPicker.tsx
-    kind: number
-    note: 開局關鍵字數。HC-3：選項還沒載入時改讀 `/api/glossary` 的 `rules.start_keywords`；觸發關係改寫「至少兩招」（> 1；0 筆）。
-  - id: ts-affix-duplicate
-    class: config
-    status: done
-    files: client/src/gear/affixStatus.ts
-    kind: number
-    note: 同詞條重複的判斷。HC-3：「重複」＝同 id 不只一條（> 1；非數值類只有第一條生效是引擎 diminish 的結構，不是門檻數字；0 筆）。
-  - id: ts-walk-max
-    class: config
-    status: done
-    files: client/src/world/fieldModel.ts
-    owner: WALK_MAX
-    note: 一次 walk 最多幾格的後備。HC-3：拿掉 WALK_MAX，`chunkPath` 一律用伺服器的 `walk_max_steps`（0 筆）。
   - id: ts-bag-size
     class: layout
     status: done
@@ -357,14 +313,6 @@ rules:
     value: ['11', '18', '21', '24']
     context: '\bh\b'
     note: 保守：早／午／晚／夜的鐘點分界（11、18、21 點）。
-  - id: ts-tuning-server-limits
-    class: config
-    status: done
-    kind: number
-    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
-            client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx]
-    context: 'SMALL_SAMPLE|MAX_MAPS|MAX_GROUP|ratio_default_seeds \?\?|n > 250|\[10, 50, 250\]'
-    note: 工坊的預設種子數與上限（樣本小 30、比值種子 50／250、地圖 3 張、分組 100 招、小規模 3 種子／24 場）。HC-3：改讀 `/api/tuning/sim/options` 與 `/api/tuning/status`（對齊 `api/tuning/schemas.py`；0 筆）。
   - id: ts-tuning-presets
     class: config
     status: todo
@@ -779,32 +727,14 @@ rules:
   # HC-2 第 1 項專查（HC-1 開發 PM 裁定 3）：掃描器不列 0、1、-1，量類的「預設 1」要另外查。
   # 查法：把掃描器的略過集合拿掉 1，篩欄位、參數、所在敘述含 hp、mana、stamina、damage、heal、shield、armor、
   # attr、flat、upkeep、bonus 的數字 1（93 筆＋依原文再篩一輪），逐筆判斷。是量類的 6 筆列在下面兩條；
-  # 掃描器照舊不列 1，所以這兩條在清單裡是 0 筆，只作紀錄（判斷與理由見 docs/phases/PhaseHC-2報告.md）。
+  # 掃描器照舊不列 1，所以這兩條在清單裡是 0 筆，只作紀錄（判斷與理由見 docs/phases/PhaseHC-2報告.md）；
+  # HC-4c 照 HC-4b3 裁定 5 刪掉這兩條 0 筆的 done 規則，下面的清單只留作紀錄。
   #   content：forms.py FormTable.stance_upkeep_mana 預設 1、rules.py SummonGrowth.hp_per_attr_mod 預設 1、
   #            roguelite.py _default_heroes 法器主角 armor_bonus=1、environment.py InteractionOutcome.min_damage 預設 1。
   #   零星：engine/skills/primitives/rule_rewrites.py restore_resource 的法力 amount 後備 1、
   #         skillgen/budget.py _restore_resource_points 的法力 amount 後備 1。
   # 不是量類（不列）：ge=1 的正數護欄（HP、法力、屬性下限）、max(1, …) 的「活著／最大 HP 至少 1」（X10-2b 已裁定不改）、
   #   SkillDef.stance_upkeep 與 _STANCE_UPKEEPS（維持費的「點數」，每點數量在 forms.yaml）、熟練、層數、格數、等級 − 1。
-  - id: py-scale-one-defaults-content
-    class: scale
-    status: done
-    lang: py
-    kind: number
-    value: '1'
-    files: [src/trpg/content/forms.py, src/trpg/content/rules.py, src/trpg/content/roguelite.py,
-            src/trpg/content/environment.py]
-    owner: [stance_upkeep_mana, hp_per_attr_mod, armor_bonus, min_damage]
-    note: 專查（HC-2）：content 的量類預設 1（掃描器不列 1，0 筆，只作紀錄）。已改：拿掉預設、改必填；min_damage 改 None＝1 × quantity_scale。
-  - id: py-scale-one-defaults-misc
-    class: scale
-    status: done
-    lang: py
-    kind: number
-    value: '1'
-    files: [src/trpg/engine/skills/primitives/rule_rewrites.py, src/trpg/skillgen/budget.py]
-    scope: [restore_resource, _restore_resource_points]
-    note: 專查（HC-2）：restore_resource 法力 amount 的後備 1（掃描器不列 1，0 筆，只作紀錄）。已改成 1 × quantity_scale。
 
   # ---------------------------------------------------- 後端 api：config
   # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
@@ -1002,14 +932,6 @@ rules:
     where: [SolutionDef, MethodDef]
     owner: [threads, attributes]
     note: 同上一條：情境解法的線索數、方法的屬性數上限。
-  - id: py-content-rule-bounds-boss-parts
-    class: config
-    status: done
-    kind: number
-    files: src/trpg/content/parts.py
-    where: BossPart
-    owner: on_break
-    note: 規則型上下限：每個部位最多 2 種破壞效果（05 5.12.2 第 7 點）；HC-4a 搬到 core.yaml 的 boss_parts（0 筆）。
   - id: py-content-guard-bounds
     class: guard
     status: done
