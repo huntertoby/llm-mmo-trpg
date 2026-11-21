@@ -1000,34 +1000,6 @@ rules:
     kind: number
     where: ['<module>.']
     note: 同上一條（content config）。
-  - id: py-content-environment-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/environment.py
-    kind: number
-    where:
-      - 'AiProfile'
-      - 'AiProfileTable'
-      - 'AiWeights'
-      - 'BasicActionAiRules'
-      - 'ExplosionDef'
-      - 'FormAiRules'
-      - 'GambleAiRules'
-      - 'OrderBonuses'
-      - 'ReactionDef'
-      - 'RewriteAiRules'
-      - 'RunAiRules'
-      - 'RuneAiRules'
-      - 'SelfCostAiRules'
-      - 'SpillDef'
-      - 'StanceAiRules'
-      - 'SummonAiRules'
-      - 'SurfaceCheck'
-      - 'TerrainAiRules'
-      - 'TrapAiRules'
-      - 'WeatherDef._mods'
-      - 'ZoneAiRules'
-    note: 同上一條（content config）。
   - id: py-content-fields-config-number
     class: config
     status: todo
@@ -1413,146 +1385,38 @@ rules:
     where: ['<module>._MIN_CRIT']
     note: 同上一條（engine config）。
 
-  # ---------------------------------------------------- 後端 engine/ai：config
-  # 保守：AI 評分權重、半徑與門檻（PM 初稿 A 類）。
-  - id: py-engine-ai-charge-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/charge.py
-    kind: number
-    where: ['<module>._DEFAULT_BUFF_VALUE']
-    note: 保守：AI 評分權重、半徑與門檻（PM 初稿 A 類）。
-  - id: py-engine-ai-composite-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/composite.py
-    kind: number
-    where: ['composite_estimate']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-displace-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/displace.py
-    kind: number
-    where:
-      - '<module>._DEADLY_HARM'
-      - '<module>._EXPOSURE_RADIUS'
-      - '<module>._LOW_HP_PERMILLE'
-      - '<module>._SURFACE_HARM'
-      - '<module>._TRAP_HARM'
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-objective-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/objective.py
-    kind: number
-    where: ['<module>._THREAT_RADIUS']
-    note: 同上一條（engine/ai config）。
+  # ---------------------------------------------------- 後端 engine/ai：搬完剩下的結構常數與護欄
+  # HC-4c：AI 評分權重、半徑與門檻（PM 初稿 A 類）搬到 content/ai_profiles.yaml 的 heuristics:（引擎從
+  # state.ruleset.ai 讀）與 rewrite.redirect_min_hp_permille；搬完 0 筆的 config 規則照 HC-4b 裁定 1 刪掉。
+  # 下面四條是剩下的結構常數與護欄（逐筆判斷，理由寫在 note）。
   - id: py-engine-ai-orders-config-number
-    class: config
-    status: todo
+    class: guard
+    status: done
     files: src/trpg/engine/ai/orders.py
     kind: number
     where: ['HoldPosition']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-priority-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/priority.py
-    kind: number
-    where: ['<module>._POSSIBLE_DIVISOR']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-race-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/race.py
-    kind: number
-    where:
-      - '<module>.RACE_EFFECT_SCORERS'
-      - '<module>._LEAP_RISE_POINTS'
-      - '<module>._MIN_AP_AFTER'
-      - '<module>._MIN_CLUSTER'
-      - '<module>._RESTORE_MIN_DEFICIT'
-      - '_adapt_score'
-      - '_pull_score'
-      - '_push_score'
-      - '_restore_score'
-      - '_surface_score'
-    note: 同上一條（engine/ai config）。
+    note: HC-4c 改判 guard：守位指令半徑的 schema 護欄 le=3（指令輸入的格式上限）；召喚物的 follow_radius／guard_radius 用同一個指令、schema 也是 le=3，三處一致。
   - id: py-engine-ai-rune-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/ai/rune.py
     kind: number
-    where: ['<module>._CELL_SCORES', 'rune_gains']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-scene-objects-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/scene_objects.py
-    kind: number
-    where: ['<module>._ENEMY_VALUE', '<module>._FRIEND_PENALTY']
-    note: 同上一條（engine/ai config）。
+    where: ['rune_gains']
+    note: HC-4c 改判 const：rune_gains 的距離鍵 0／1／2 對應腳下、相鄰、近（比例在 ai_profiles.yaml 的 rune:），99 是「沒有敵人」查不到的哨兵值。估計分數 _CELL_SCORES 已搬到 heuristics.estimate.rune_cell_points。
   - id: py-engine-ai-summon-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/ai/summon.py
     kind: number
-    where: ['<module>._ESTIMATE_BASE', '_value', 'sacrifice_estimate']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-terrain-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/terrain.py
-    kind: number
-    where: ['<module>._ALLY_VALUE', '<module>._ENEMY_VALUE', '<module>._PIT_VALUE']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-gains-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/gains.py
-    kind: number
-    where:
-      - '<module>._DEFEND_RADIUS'
-      - '<module>._POSSIBLE_KILL_DIVISOR'
-      - '<module>._SURFACE_HARM'
-      - '_buff_gains'
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-moves-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/moves.py
-    kind: number
-    where: ['<module>._OBJECT_NEAR_ENEMY']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-position-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/position.py
-    kind: number
-    where: ['<module>._FORMATION_STEP', '<module>._KEEP_DISTANCE']
-    note: 同上一條（engine/ai config）。
+    where: ['_value']
+    note: HC-4c 改判 const：圖騰光環估值的 min(rounds, 99) 是輪數的上限護欄（剩餘輪數由召喚物到期輪算出，不會到 99），不是玩法數值。估計分數已搬到 heuristics.estimate。
   - id: py-engine-ai-utility-scoring-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/ai/utility/scoring.py
     kind: number
-    where: ['_rewrite_event_points', 'extra_targets']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-skill-estimate-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/skill_estimate.py
-    kind: number
-    where: ['_field_value', '_trap_estimate', 'skill_estimate']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-zone-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/zone.py
-    kind: number
-    where: ['_status_value', 'zone_estimate']
-    note: 同上一條（engine/ai config）。
+    where: ['extra_targets']
+    note: HC-4c 改判 const：多目標加分的「至少 2 名敵人」是多目標的定義（1 名就不是範圍技多打到人）。靈魂連結的 HP 門檻已搬到 rewrite.redirect_min_hp_permille。
 
   # ---------------------------------------------------- 後端 llm：config
   # 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。

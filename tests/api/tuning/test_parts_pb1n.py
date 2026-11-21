@@ -111,7 +111,7 @@ def test_part_and_ai_fields_are_whitelisted_with_hints_and_notes() -> None:
     assert "600‰" in hp.note_zh
     amount = unit.field_for(SWORD_AMOUNT)
     assert amount is not None and "750" in amount.note_zh and amount.existing_only
-    assert [f.path for f in ai.fields] == list(AI_PATTERNS)
+    assert [f.path for f in ai.fields if f.group_zh is None] == list(AI_PATTERNS)  # HC-4c 另有分組
     assert all(f.note_zh and f.hint_max is not None for f in ai.fields)
     assert TARGET_MODELS["ai"].__name__ == "AiProfileTable"
     assert [p.name for p in target_files(CONTENT, ai)] == [AI]
@@ -159,7 +159,7 @@ def test_detail_shows_defaults_limits_and_ai_object(read_service: TuningService)
         ("ai_profiles", "ai", AI_NAME_ZH, AI)
     ]
     ai = object_detail(CONTENT, read_service.table, "ai", "ai_profiles")
-    shared = [f for f in ai.fields if f.pattern != FAR]
+    shared = [f for f in ai.fields if f.pattern != FAR and f.group_zh is None]  # HC-4c 另有分組
     assert [f.path for f in shared] == list(AI_PATHS)
     assert [f.value for f in shared] == [_now(AI, p) for p in AI_PATHS]
     near = next(f for f in ai.fields if f.path == "parts.near_break_permille")

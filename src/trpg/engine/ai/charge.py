@@ -16,9 +16,6 @@ from trpg.engine.state import BattleState
 
 __all__ = ["charge_score"]
 
-_DEFAULT_BUFF_VALUE = 3
-"""``ally_status_values`` 沒列出的增益的估值（同淨化的預設）。"""
-
 
 def charge_score(
     state: BattleState,
@@ -33,7 +30,9 @@ def charge_score(
     if affix is not None and affix.effect_target == "self":
         for spec in affix.effects:
             if spec.type == "apply_status" and spec.status is not None:
-                value = profile.ally_status_values.get(spec.status, _DEFAULT_BUFF_VALUE)
+                value = profile.ally_status_values.get(
+                    spec.status, state.ruleset.ai.scoring.unlisted_status_value
+                )
                 score += profile.weights.support * value * (spec.duration or 1)
     if score <= 0:
         return score

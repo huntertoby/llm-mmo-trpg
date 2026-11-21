@@ -70,11 +70,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Surface, UnitId
 
-_DEFEND_RADIUS = 6
-_POSSIBLE_KILL_DIVISOR = 4
 _ATTACK_CAUSES = ("attack",)
-_SURFACE_HARM = 8
-"""讓友方站上有害的新表面的扣分：相當於這麼多點傷害（乘上 ``friendly_fire``）。"""
 
 
 def _last_cause(events: tuple[EventBase, ...]) -> dict[UnitId, str]:
@@ -208,7 +204,8 @@ def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiPro
         elif isinstance(e, StatusRemoved) and e.reason == "cleansed":
             target = state.units.get(e.target_id)
             if target is not None and target.team is actor.team:
-                gains += w.support * profile.status_values.get(e.status_id, 3)
+                unlisted = state.ruleset.ai.scoring.unlisted_status_value
+                gains += w.support * profile.status_values.get(e.status_id, unlisted)
         elif isinstance(e, FormEntered) and e.unit_id == actor.id:  # 進入形態（3J-1a）
             rotating = state.units[actor.id].form is not None  # 形態輪替（3J-1b）
             gains += w.support * (
@@ -356,8 +353,9 @@ def _kill_gains(f: _GainFrame) -> Fraction:
     certain_down = {e.unit_id for e in p.min_events if isinstance(e, UnitDowned)}
     possible_down = {e.unit_id for e in p.max_events if isinstance(e, UnitDowned)} - certain_down
     causes = _last_cause(p.max_events) | _last_cause(p.min_events)
+    divisor = f.state.ruleset.ai.scoring.possible_kill_divisor
     for uid, factor in [(u, f.hit) for u in sorted(certain_down)] + [
-        (u, f.hit / _POSSIBLE_KILL_DIVISOR) for u in sorted(possible_down)
+        (u, f.hit / divisor) for u in sorted(possible_down)
     ]:
         if f.only is not None and uid != f.only:
             continue
@@ -409,7 +407,7 @@ def _surface_gains(f: _GainFrame) -> Fraction:
     if isinstance(f.p.action, UseSkill) and f.only is None:  # 讓友方站上有害的新表面（火、毒……）
         gains -= (
             f.w.friendly_fire
-            * _SURFACE_HARM
+            * state.ruleset.ai.scoring.surface_friend_harm
             * (_harmed_allies(after, actor) - _harmed_allies(state, actor))
         )
     return gains
@@ -445,7 +443,8 @@ def _tile_value(f: _GainFrame, state: BattleState, uid: UnitId, xy: XY) -> Fract
     w = f.w
     if is_deadly(state, xy):
         weight = w.kill + w.env_kill if f.is_enemy(uid) else w.kill
-        return Fraction(weight * (_POSSIBLE_KILL_DIVISOR - 1), _POSSIBLE_KILL_DIVISOR)
+        divisor = state.ruleset.ai.scoring.possible_kill_divisor
+        return Fraction(weight * (divisor - 1), divisor)
     return Fraction(w.surface) if _harmful(state, xy) else Fraction(0)
 
 
@@ -468,7 +467,9 @@ def _displace_gains(f: _GainFrame) -> Fraction:
         )
         gains += delta if f.is_enemy(uid) else -delta
         mover, landed = state.units[uid], after.units[uid]
-        if not f.is_enemy(uid) and is_hurt(mover):  # 快倒下的隊友離開敵人（兩格內的敵人數變少）
+        if not f.is_enemy(uid) and is_hurt(
+            state, mover
+        ):  # 快倒下的隊友離開敵人（兩格內的敵人數變少）
             gains += f.w.kill * (
                 exposure(state, mover, mover.xy) - exposure(after, landed, landed.xy)
             )
@@ -479,7 +480,8 @@ def _defend_gains(f: _GainFrame) -> Fraction:
     """防禦動作：每名 6 格內的敵人。"""
     if not isinstance(f.p.action, Defend) or f.only is not None:
         return Fraction(0)
-    near = sum(1 for e in _enemies(f.state, f.actor) if unit_dist(f.actor, e) <= _DEFEND_RADIUS)
+    radius = f.state.ruleset.ai.scoring.defend_radius
+    near = sum(1 for e in _enemies(f.state, f.actor) if unit_dist(f.actor, e) <= radius)
     return Fraction(f.w.defend * near)
 
 

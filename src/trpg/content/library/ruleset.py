@@ -9,6 +9,7 @@ from pydantic import Field, PrivateAttr, model_validator
 
 from trpg.content.battle import StatusDef, StatusTable, TerrainDef, TerrainTable, UnitTemplate
 from trpg.content.environment import (
+    AiHeuristics,
     InteractionTable,
     ObjectDef,
     ObjectTable,
@@ -130,6 +131,10 @@ class Ruleset(ContentModel):
     gear_names: dict[str, str] = Field(default_factory=dict)
     """武器與副手的中文名（ID → 名稱；Phase 3I-5）：引擎的限定武器與「手持某種武器」條件訊息用。
     嵌入規則包，重播不依賴資料檔。"""
+    ai: AiHeuristics
+    """不分行為模式的 AI 數值（HC-4c，``content/ai_profiles.yaml`` 的 ``heuristics:``）：
+    種族技條件、便宜估計、共用評分數值。``engine/ai`` 從 ``state.ruleset.ai`` 讀；嵌入規則包，
+    重播不依賴資料檔。"""
 
     _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)

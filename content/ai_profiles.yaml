@@ -47,8 +47,8 @@
 #                  必須大於 approach，才會在還有移動點數時停在 2 格而不是貼上去）
 #   knock_angle    （3-24a1）帶震退的武器（錘）：緊貼著、推開後會撞到東西或掉進致命地形的每個敵人加分（低權重，偏好能撞擊的角度）
 #   line_up        （3-24a2）帶穿透的武器（弩）：站位能讓一條直線穿過多名敵人時，每多穿透一名敵人加分（低權重）
-#   charge_per_enemy  （3E-1）直線衝撞每個會被穿過的敵人的固定加分（預設 3，不是 0）
-#   shadowstep     （3E-1）瞬步的固定加分（預設 3，不是 0）；shadowstep_behind：落在目標背後再加（預設 2）
+#   charge_per_enemy  （3E-1）直線衝撞每個會被穿過的敵人的固定加分（表格層級 skill_ai 填入每個模式）
+#   shadowstep     （3E-1）瞬步的固定加分；shadowstep_behind：落在目標背後再加（同上，skill_ai 填入）
 #   screen         （RG-1，#162）盾兵（shield_guard 標籤）每替一名相鄰的遠程同伴擋住至少一名打得到他的遠程敵人加分；其他單位 0
 #   exposed        能打到自己、自己卻打不到的敵人數（射程更長，或自己被遮住；扣分）。互相打得到的對射
 #                  不算，所以不會讓弓手不敢進入射擊位置；煙幕、隱蔽讓敵人打不到自己時降低
@@ -57,6 +57,8 @@
 # 移動（可能被藉機攻擊、踩上有進入效果的表面、墜落、撤離、倒地站起）才跑完整 preview，其餘的分數
 # 直接由位置價值算出（與完整 preview 的分數相同）。攻擊、推擊等其他動作一律跑完整 preview。
 move_candidates: 6
+# skill_candidates：每種技能最多保留幾個選取跑完整 preview（先以 heuristics.estimate 的便宜估計排序；HC-4c 寫進來，值照程式原本的 3）。
+skill_candidates: 3
 # status_values（Phase 2B-1）：對敵人施加各狀態的價值，單位是「等值的傷害點數」。
 # 收益 = 行為模式的 damage 權重 × 價值 × 命中率 × 施加成功率（有 save_attr 的狀態要乘上抵抗判定的失敗率）。
 # 沒列出的狀態（倒地……）維持原本的規則：每個施加的狀態固定加 status 權重。
@@ -99,7 +101,7 @@ trap:
 #   undying_points    免死 × 目標已損失 HP 的比例（滿血為 0，所以只在 HP 低時才值得）
 #   source_points     每花一點源力的扣分
 # Phase 3C-4b（初值，未經模擬）：
-#   redirect_points   靈魂連結 × 目標已損失 HP 的比例（施放者 HP 不到一半不連結）
+#   redirect_points   靈魂連結 × 目標已損失 HP 的比例（施放者 HP 低於 redirect_min_hp_permille‰ 不連結）
 #   reaction_points   每個額外反應次數（目標有反應規則才有價值）
 # Phase 3D-1（初值，未經模擬）：
 #   mana_points       友方每回復 10 點法力（1 × quantity_scale）（restore_resource；冷卻縮短沿用 cooldown_points）
@@ -140,6 +142,14 @@ rewrite:
   delayed_enemy_points: 5          # 3F-4b：延遲段預計範圍內每個敵人的價值（友方扣同樣的分數）
   delayed_attacked_permille: 600   # 3F-4b：被攻擊才釋放的延遲段再乘這個千分比（可能沒人來打）
   lock_on_permille: 700            # RG-1（#162）：瞄準預告的強力一擊，AI 估「現在就射出」的收益再乘這個千分比（對手可能躲開；初值，未經模擬）
+  # HC-4c：以下原本是程式預設值（environment.py 的 RewriteAiRules），值照搬
+  redirect_min_hp_permille: 500    # 3C-4b：施放者 HP 不到最大 HP 的這個千分比時，靈魂連結不計價值（原本寫死「一半」）
+  delayed_heal_points: 5           # 5A-M1：治療型延遲段（九轉回天）預計範圍內每個受傷的友方的價值
+  priority_kill_points: 10         # 5A-M1：擊倒帶「同門相護」的敵人額外的價值（先打補師）
+  interrupt_points: 12             # 5A-M1：擊倒或使其跳過回合的蓄力中敵人額外的價值
+  formation_break_points: 10       # 5A-M2：對方陣法倍率總和每下降 1000‰ 的價值
+  ward_kill_points: 12             # 5A-M2b：擊倒帶護陣的敵人（陣眼石靈）額外的價值
+  share_discount_permille: 500     # 5A-M2：打在分傷持有者身上、被分給同門的傷害打這個折扣
 # summon 的模式欄位（Phase 3-33c，初值）：follow_radius 跟隨時待在召喚者幾格內（軟性）、guard_radius 守護我時只走到召喚者幾格內、
 #   guard_threat_range 守護我時敵人「威脅施放者」的距離寬限（敵人射程＋速度＋此值 ≥ 與施放者的距離）、auto_guard_hp_permille 我方 AI 施放者
 #   HP 低於此千分比時召喚物改守護我（0＝不切換）、auto_focus_boss 場上有 Boss 時改集火 Boss、infusion_points 估值時帶灌注的召喚物每輪加幾點。
@@ -219,7 +229,9 @@ weapon_ai: {close_range: 40, boss_approach: 10}
 # skill_ai（BAL-5 B1；AI／原型數值初值，待玩法 PM 確認）：技能選用的權重，敵我同一套，填入每個行為模式的 weights。
 #   multi_target  範圍技每多打到一名敵人（預期，乘命中率；只要命中判定的敵人算命中率、不用判定的算 1）的加分；
 #                 只打到 1 名時 0。目的：有 ≥ 2 名敵人可打時優先用範圍技（3-32d 的選用率 40% → ≥ 70%）
-skill_ai: {multi_target: 24}
+#   charge_per_enemy／shadowstep／shadowstep_behind（3E-1）：直線衝撞每穿過一名敵人、瞬步、瞬步落在背後的固定加分（便宜估計；
+#                 HC-4c 從程式預設值搬來；模式自己列出的優先，例 assassin）
+skill_ai: {multi_target: 24, charge_per_enemy: 3, shadowstep: 3, shadowstep_behind: 2}
 # formation_ai（Phase 5A-M2；初值未經模擬）：陣法站位的位置權重，敵我同一套，填入每個行為模式的 weights。
 #   formation  帶陣法狀態（statuses.yaml 的 formation，劍陣）的單位：位置價值 ＋ 這個值 ×（站在該格時的陣法倍率 − 1000）÷ 100；
 #              沒有陣法狀態的單位不受影響
@@ -322,3 +334,56 @@ run: {pursue_points: 6, retreat_points: 6, retreat_hp_permille: 350, retreat_ene
 #   variant_position_bonus 戰場變奏（3-25a）：移動的目的地能讓某招現在可用的技能的變奏成立（站的表面、相鄰牆壁、居高；現在的位置不成立）→ 移動分數加這個（初值保守）
 #   aim_points            瞄準：AP 剛好夠「瞄準 + 一個 AP ≥ aim_min_attack_ap 的攻擊」，該攻擊命中率 < aim_hit_permille‰ 且有收益 → 該攻擊的分數 + 這個分數
 basic: {guard_points: 3, guard_ally_hp_permille: 500, guard_self_hp_permille: 500, guard_threat_radius: 6, swap_points: 6, swap_rescue_hp_permille: 350, swap_tank_ratio_permille: 1500, swap_self_hp_permille: 500, swap_threat_radius: 3, aim_points: 2, aim_hit_permille: 700, aim_min_attack_ap: 2, vault_points: 4, vault_min_saving: 4, reload_points: 20, charge_permille: 400, variant_position_bonus: 3, ice_slip_points: 8}
+
+# heuristics（HC-4c；從 engine/ai/* 的模組常數搬來，值照搬，數值都是原本的初值）：不分行為模式、敵我共用的 AI 數值，
+# 嵌入戰鬥規則包（重播不依賴這份檔）。意義見 src/trpg/content/environment.py 的 RaceAiRules、EstimateAiRules、ScoringAiRules。
+heuristics:
+  # race：種族技的使用條件（條件式路徑，3R-2）。應變多走幾格直接讀種族技效果的 amount。
+  race:
+    min_ap_after: 2            # 回合開始 AP 至少這麼多才用需要「接著行動」的種族技（種族技 1 AP ＋ 一般動作 1 AP）
+    conceal_near: 7            # 林隱：最近的敵人在這麼多格內才用
+    immovable_near: 3          # 穩若磐石：同上
+    surface_near: 2            # 炎印（自身表面）：同上
+    push_enemy_points: 2       # 龍息震退：錐形內每名敵人
+    push_deadly_points: 3      # 龍息震退：推進岩漿或深淵再加
+    pull_low_hp_permille: 500  # 拋錨：被拉的遠程敵人 HP 不高於這個千分比時……
+    pull_low_hp_points: 2      # ……再加這麼多分
+    leap_rise_points: 10       # 獸躍：每往上一層的分數（遠大於打得到的敵人數）
+    restore_low_permille: 500  # 過充：耐力或法力不高於這個千分比……
+    restore_min_deficit: 6     # ……且缺口至少這麼多點（換算前）才用
+    min_cluster: 2             # 潮息：方陣內至少罩到幾個敵人
+  # estimate：便宜估計（只決定誰值得跑完整 preview 與候選排序，見 skill_candidates）
+  estimate:
+    enemy_points: 3            # 一般技能：範圍內每名敵人
+    support_points: 2          # 一般技能：每名用得上支援效果的友方
+    ally_penalty: 3            # 一般技能：其他友方（扣分）
+    field_cover_points: 2      # 場地型技能（煙幕、石牆）涵蓋自己所在的格子
+    trap_enemy_points: 4       # 陷阱：near 格內每名敵人
+    composite_enemy_points: 3  # 複合技能：範圍內每名敵人
+    composite_ally_penalty: 3  # 複合技能：每名友方（扣分）
+    zone_inside_points: 3      # 持續區域：格內對象
+    zone_path_points: 2        # 持續區域：移動路徑上的對象
+    scene_enemy_points: 3      # 投擲物件、推倒：每名波及的敵人
+    scene_friend_penalty: 3    # 投擲物件、推倒：每名波及的友方（扣分）
+    terrain_lower_points: 3    # 純地形：降低一名敵人
+    terrain_raise_points: 2    # 純地形：抬高一名友方
+    terrain_pit_points: 2      # 純地形：下陷坑旁每名可推下去的敵人
+    displace_deadly_points: 10 # 位移他人：致命地形的危險度
+    displace_surface_points: 4 # 位移他人：有害表面的危險度
+    displace_trap_points: 3    # 位移他人：陷阱的危險度
+    summon_base_points: 20     # 召喚：這個分數減去召喚位置與最近敵人的距離
+    sacrifice_enemy_points: 3  # 獻祭召喚物（爆炸）：半徑內每名敵人
+    sacrifice_ally_points: 2   # 獻祭召喚物（治療）：半徑內每名受傷的友方
+    rune_cell_points: [3, 2, 1]  # 刻印：格子離最近敵人 0、1、2 格的分數（更遠 0）
+    object_near_enemy: 2       # 攻擊一般物件：這麼多格（切比雪夫）內有敵人才跑完整 preview
+  # scoring：評分裡不分行為模式的共用數值
+  scoring:
+    unlisted_status_value: 3   # ally_status_values 與淨化用的 status_values 沒列出的狀態的價值
+    possible_kill_divisor: 4   # 只在最多後果裡發生的擊倒 × 命中率 ÷ 這個數
+    defend_radius: 6           # 防禦動作：計算幾格內的敵人
+    hold_threat_radius: 6      # 守點戰：hold_guard 的「敵人逼近」格數
+    surface_friend_harm: 8     # 讓友方站上有害的新表面：每名友方相當於這麼多點傷害（× friendly_fire）
+    keep_distance_radius: 2    # keep_distance 計算幾格內的敵人；也是「近距離武器」的最佳距離門檻
+    formation_step: 100        # 陣法站位：倍率每多 100‰ 算一份 formation 權重
+    hurt_hp_permille: 400      # 位移他人：HP 不高於這個千分比算「快倒下」
+    exposure_radius: 2         # 位移他人：格子周圍幾格（切比雪夫）內的敵人

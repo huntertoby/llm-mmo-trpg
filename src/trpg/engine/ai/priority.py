@@ -44,9 +44,6 @@ __all__ = [
     "share_discount",
 ]
 
-_POSSIBLE_DIVISOR = 4
-"""只在最多結果裡發生的擊倒 ÷ 這個數（同 ``utility._POSSIBLE_KILL_DIVISOR``）。"""
-
 
 def is_kin_warden(state: BattleState, unit: UnitState) -> bool:
     """``unit`` 有一條沒關掉的「同門相護」（``shield_ally``）反應規則。"""
@@ -85,8 +82,9 @@ def priority_points(  # noqa: PLR0917
     certain = {e.unit_id for e in min_events if isinstance(e, UnitDowned)}
     possible = {e.unit_id for e in max_events if isinstance(e, UnitDowned)} - certain
     points = Fraction(0)
+    divisor = state.ruleset.ai.scoring.possible_kill_divisor  # 只在最多結果裡發生的擊倒
     for uid, factor in [(u, hit) for u in sorted(certain)] + [
-        (u, hit / _POSSIBLE_DIVISOR) for u in sorted(possible)
+        (u, hit / divisor) for u in sorted(possible)
     ]:
         unit = state.units.get(uid)
         if unit is None or unit.team is actor.team or (only is not None and uid != only):
