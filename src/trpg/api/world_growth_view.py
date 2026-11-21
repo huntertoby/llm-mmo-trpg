@@ -71,7 +71,14 @@ SERVICE_ZH: Final = "閃現、重閃、溶掉、傳承、重配屬性、立誓�
 STARTER_RESPEC_ZH: Final = "入門期可以自己配點，正式選定時會照新武器重配一次。"
 """入門期接在 :data:`SERVICE_ZH` 那一行後面（OB-6，玩法 PM「OB-5b 後補定」；前半句照現在的字）。"""
 UNAVAILABLE_ZH: Final = "尚未開放"
-SLOT_ZH: Final = "誓約佔 1 格被動欄位（立誓後被動技能最多裝 2 招）"
+
+
+def slot_zh(library: ContentLibrary) -> str:
+    """誓約佔的欄位（HC-6b：照 ``OATH_PASSIVE_SLOTS`` 與 ``core.skill_slots.passive`` 組字）。"""
+    left = library.ruleset.core.skill_slots.passive - OATH_PASSIVE_SLOTS
+    return f"誓約佔 {OATH_PASSIVE_SLOTS} 格被動欄位（立誓後被動技能最多裝 {left} 招）"
+
+
 JUDGE_IN_BATTLE_ZH: Final = "戰鬥中判定：違反時立刻移除加成"
 JUDGE_AT_END_ZH: Final = "戰鬥結束時判定（沒達到：破誓帶到下一場開場）"
 PERMILLE_ONE: Final = 1000
@@ -293,7 +300,7 @@ def oath_view(
         can_release=char.oath is not None and not in_battle and char.pending_flash is None,
         templates=() if table is None else _templates(library, table),
         penalty_zh=_penalty_zh(library, table),
-        slot_zh=SLOT_ZH if table is not None else "",
+        slot_zh=slot_zh(library) if table is not None else "",
     )
 
 
@@ -527,9 +534,10 @@ def _oath_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str]
         return f"解除誓約「{oath_name(event.template)}」：現實 1 天內不能再立誓。"
     if isinstance(event, OathBrokenEvent):
         if event.at_end:
+            rounds = "" if table is None else f" {table.penalty_rounds} 回合"
             return (
                 f"戰鬥結束：沒有守住誓約「{oath_name(event.template)}」，"
-                "破誓 2 回合帶到下一場開場（下一場的誓約加成照常）。"
+                f"破誓{rounds}帶到下一場開場（下一場的誓約加成照常）。"
             )
         return f"違反誓約「{oath_name(event.template)}」：加成移除、陷入破誓；下一場恢復。"
     if isinstance(event, OathKeptEvent):

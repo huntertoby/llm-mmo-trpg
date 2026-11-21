@@ -824,6 +824,10 @@ rules:
     kind: number
     where:
       - '<module>.GROUP_PRESETS'
+      - '<module>._ARROWS'
+      - '<module>._CONDITIONAL'
+      - '<module>._MELEE_T1'
+      - '<module>._RANGED_T1'
       - '<module>.MAX_GROUP'
       - '<module>._SCALAR_LIMITS'
       - '_matches'
@@ -1474,82 +1478,54 @@ rules:
 
   # ---------------------------------------------------- 後端 api：text
   # API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
-  - id: py-api-gear-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/gear.py
-    kind: text
-    where: ['_build_custom']
-    note: API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
-  - id: py-api-league-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/league_view.py
-    kind: text
-    where: ['_rules_zh']
-    note: 同上一條（api text）。
-  - id: py-api-season-boss-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/season_boss_view.py
-    kind: text
-    where: ['season_boss_event_line']
-    note: 同上一條（api text）。
-  - id: py-api-season-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/season_view.py
-    kind: text
-    where: ['_season_info']
-    note: 同上一條（api text）。
-  - id: py-api-tuning-check-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/tuning/check.py
-    kind: text
-    where: ['<module>._INT_ZH', '_to_dice']
-    note: 同上一條（api text）。
+  # HC-6b：api 的說明文字。有資料的改組字（工坊預設值照 schema 預設、升階區間照 skill_budget.yaml、
+  # 快捷分組的標籤照篩選值、誓約欄位照 skill_slots、破誓回合照 oaths.yaml、腰包 AP 照道具技能）；
+  # 剩下的分兩種：沒有資料可帶的（留 text）與語法用字（改判 const）。
   - id: py-api-tuning-objects-text-text
     class: text
     status: todo
     files: src/trpg/api/tuning/objects.py
     kind: text
-    where:
-      - '<module>.AI_NOTES_ZH'
-      - '<module>.RETIER_NOTE_ZH'
-      - '<module>.TABLE_NOTES_ZH'
-      - '<module>._DEFAULTS_ZH'
-      - '<module>._STAT_ZH'
-      - 'retier_notes'
-    note: 同上一條（api text）。
-  - id: py-api-tuning-skills-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/tuning/skills.py
-    kind: text
-    where: ['<module>.GROUP_PRESETS', '<module>._BORROW_SAME_ZH']
-    note: 同上一條（api text）。
-  - id: py-api-world-economy-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/world_economy_view.py
-    kind: text
-    where: ['_battle_zh']
-    note: 同上一條（api text）。
+    where: ['<module>._DEFAULTS_ZH']
+    text: '沒寫＝\d'
+    note: 移動力、表面生長排數的「沒寫＝5」「沒寫＝4」：HC-4a 起 schema 已經沒有預設值（YAML 一定要寫），沒有資料可帶，字也已經過時（HC-6b 留 text，見報告待決）。
   - id: py-api-world-growth-view-text-text
     class: text
     status: todo
     files: src/trpg/api/world_growth_view.py
     kind: text
-    where: ['<module>.SLOT_ZH', '_oath_line', '_swear_problem', 'next_battle_lines', 'opening_lines']
-    note: 同上一條（api text）。
-  - id: py-api-world-story-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/world_story_view.py
+    where: ['_oath_line', '_swear_problem']
+    text: '1 天內'
+    note: 解除誓約後「1 天內」：冷卻是 oaths.yaml 的 cooldown_seconds（秒），HC-6a 裁定 3 排進 HC-7 從秒數組字（HC-6b 留 text）。
+  - id: py-api-const-text
+    class: const
+    status: done
+    files:
+      - src/trpg/api/gear.py
+      - src/trpg/api/league_view.py
+      - src/trpg/api/season_boss_view.py
+      - src/trpg/api/season_view.py
+      - src/trpg/api/tuning/check.py
+      - src/trpg/api/tuning/objects.py
+      - src/trpg/api/world_growth_view.py
+      - src/trpg/api/world_story_view.py
     kind: text
-    where: ['_left_zh', '_remaining_zh']
-    note: 同上一條（api text）。
+    where:
+      - '_build_custom'
+      - '_rules_zh'
+      - 'season_boss_event_line'
+      - '_season_info'
+      - '<module>._INT_ZH'
+      - '_to_dice'
+      - '<module>._STAT_ZH'
+      - 'retier_notes'
+      - 'retier_note_zh'
+      - '_swear_problem'
+      - 'next_battle_lines'
+      - 'opening_lines'
+      - '_left_zh'
+      - '_remaining_zh'
+    note: HC-6b 改判：自訂物品「至少 1 條詞條」是非空檢查；循環賽「1 對 1」是對戰形式的名字；「得到 1 把封印鑰匙」是一筆事件一把（SealKeyGainedEvent 的結構）；刷新時刻的「:00」是時刻格式；「例：120」「例：2d6」「750＝−25%」是舉例；升階提示的「2 階以上」「只在 1 階有效」「改 1 階」是基準階級（手寫技能的 1 階）；「同時只能有 1 個誓約」是單一欄位（char.oath）；「增援 1 名」是一筆增援抽一名（reinforce_lineup 的結構）；「第 1 輪」「第 2 輪起」是序號；「不到 1 小時」是時間單位的分界（_HOUR）。
 
   # ---------------------------------------------------- 後端 content：text
   # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。HC-6a：有常數的改組字；剩下的分兩種——
