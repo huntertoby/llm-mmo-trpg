@@ -284,3 +284,19 @@
 
 ## 10. 平衡疑慮（無）
 沒有。只換數字放的地方；434 招預算、78 場戰鬥、閃現出題、世界推進、roguelite 開局逐項相同。
+
+## 開發 PM 裁定（2026-11-21）
+
+已用 `--no-ff` 合併進 main。合併後在 main 重跑 ruff、format、mypy、lint-imports、`classify.py --check`、`trpg content check`，結束碼都是 0。全量檢查由 push hook 跑。
+
+待 PM 決定的 10 件：
+1. **`TrapSpec.rounds`**：併進 HC-5，和 `skillgen` 組陷阱的地方一起改。
+2. **沒有世界規則時的備用值**：留給 HC-7（`world/*`、`api/*`）。
+3. **有實地地圖就一定要有 `world/rules.yaml`**：照做。現有內容都有這個檔。
+4. **技能上限改在 Ruleset 層擋**：照做，和 HC-4b2 的 `modifier_bounds` 做法一致。
+5. **15 個結構常數改判 guard／const**：照做。
+6. **誓約 `hp_permille` 只在用到的種類必填**：照做。舊紀錄照讀，重播結果相同。
+7. **工坊只開 21 格**：照做。沒開的欄位列在報告第 5 節，使用者要調再開。
+8. **`MainHandMix` 不寫進內容檔**：照做。寫進去等於打開這個功能，這是規則類，要問了才開。
+9. **範圍外的小改動**：接受，輸出不變。
+10. **貼著 300 秒的三個慢測試**：照 QF-3 的規則，不准先改標 slow。先看 push hook 的全量（12 worker、沒有別的 agent）會不會逾時；會的話轉專案 PM 決定要標 slow 還是放寬逾時。
