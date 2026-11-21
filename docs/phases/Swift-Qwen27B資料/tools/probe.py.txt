@@ -1,0 +1,18 @@
+import json, time, urllib.request
+M = "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs"
+
+
+def call(extra):
+    body = {"model": M, "messages": [{"role": "user", "content": "用繁體中文一句話介紹火球術。"}], "max_tokens": 300, "temperature": 0.7}
+    body.update(extra)
+    req = urllib.request.Request("http://localhost:8001/v1/chat/completions", data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    t = time.time()
+    r = json.load(urllib.request.urlopen(req, timeout=240))
+    dt = time.time() - t
+    m = r["choices"][0]["message"]
+    rc = m.get("reasoning_content") or m.get("reasoning") or ""
+    print(json.dumps(extra, ensure_ascii=False), f"{dt:.1f}s", r.get("usage"), "reasoning_len:", len(rc), "content:", repr(m.get("content"))[:200])
+
+
+for e in [{}, {"chat_template_kwargs": {"enable_thinking": False}}, {"reasoning_effort": "none"}, {"chat_template_kwargs": {"enable_thinking": False}, "reasoning_effort": "none"}]:
+    call(e)

@@ -1,0 +1,23 @@
+暖機：5.8 秒（llm）
+速度：{'completion_tokens': 500, 'reasoning_tokens': 0, 'ttft_s': 2.39, 'generation_s': 5.81, 'generation_tps': 86.1}｜VRAM：NVIDIA GeForce RTX 5090, 20492 MiB, 32607 MiB
+  1. 1 階／epic／不限骨架／combo_point｜llm｜嘗試 1｜7.3 秒｜灼熱連斬
+  2. 1 階／rare／不限骨架／fury｜llm｜嘗試 1｜6.0 秒｜餘燼之觸
+  3. 1 階／epic／不限骨架／marked｜llm｜嘗試 3｜9.4 秒｜標記烈焰
+  4. 1 階／rare／不限骨架／frozen｜llm｜嘗試 1｜5.5 秒｜凝滯寒芒
+  5. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.9 秒｜泥痕標記
+  6. 1 階／epic／不限骨架／無關鍵字｜llm｜嘗試 1｜4.8 秒｜引火之印
+  7. 1 階／common／area／無關鍵字｜llm｜嘗試 1｜3.4 秒｜裂地重錘
+  8. 1 階／rare／不限骨架／high_ground｜composer｜嘗試 3｜8.3 秒｜物理・打擊
+  9. 1 階／epic／builder_finisher／無關鍵字｜llm｜嘗試 1｜4.5 秒｜燃芯聚焰
+ 10. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.7 秒｜風刻殘章
+ 11. 1 階／rare／strike／無關鍵字｜llm｜嘗試 1｜4.3 秒｜赤焰凝珠
+ 12. 1 階／epic／passive／high_ground｜composer｜嘗試 3｜5.9 秒｜暗影・被動
+ 13. 1 階／common／不限骨架／charged｜llm｜嘗試 1｜3.3 秒｜電擊標記
+ 14. 1 階／rare／combo／無關鍵字｜llm｜嘗試 2｜6.0 秒｜點火痕跡
+ 15. 1 階／epic／不限骨架／marked｜llm｜嘗試 1｜3.8 秒｜深淵印
+ 16. 1 階／common／control／無關鍵字｜llm｜嘗試 1｜3.8 秒｜泥濘拖曳
+ 17. 1 階／epic／不限骨架／focus｜llm｜嘗試 1｜4.7 秒｜蓄雷終焉
+ 18. 1 階／epic／不限骨架／combo_point｜composer｜嘗試 3｜7.8 秒｜雷電・光環
+ 19. 1 階／rare／不限骨架／ki｜composer｜嘗試 3｜6.9 秒｜暗影・蓄力與終結
+ 20. 1 階／rare／rune／無關鍵字｜llm｜嘗試 1｜3.3 秒｜岩脈印
+中位數 4.75 秒、最慢 9.42 秒、一次通過 14/20、退回 4/20 → docs\phases\Swift-Qwen27B資料\lb_compare_swift_iq4_t07_r1.json

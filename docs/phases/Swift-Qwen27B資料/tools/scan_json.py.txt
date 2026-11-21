@@ -1,0 +1,33 @@
+"""掃一份量測 JSON 裡所有含中文的字串：簡體字、大陸用語（同 analyze.py 的表）。
+用法：uv run python scan_json.py <file.json> [...]"""
+
+import json
+import re
+import sys
+
+sys.path.insert(0, __import__("os").path.dirname(__file__))
+from analyze import MAINLAND, SIMPLIFIED, SKIP_MAINLAND_CHECK, strings  # noqa: E402
+
+for path in sys.argv[1:]:
+    data = json.load(open(path, encoding="utf-8"))
+    texts = []
+    for s in strings(data):
+        if not re.search(r"[一-鿿]", s):
+            continue
+        # 內含 JSON 的原始輸出也拆開
+        try:
+            inner = json.loads(s)
+            texts.extend(t for t in strings(inner) if re.search(r"[一-鿿]", t))
+        except (ValueError, TypeError):
+            texts.append(s)
+    uniq = list(dict.fromkeys(texts))
+    simp = [(t, "".join(sorted({c for c in t if c in SIMPLIFIED}))) for t in uniq if any(c in SIMPLIFIED for c in t)]
+    main = [(t, [w for w in MAINLAND if w in t and w not in SKIP_MAINLAND_CHECK]) for t in uniq]
+    main = [m for m in main if m[1]]
+    print(f"{path}: 中文字串 {len(uniq)}，含簡體 {len(simp)}，含大陸用語 {len(main)}")
+    for t, c in simp[:10]:
+        i = t.find(c[0])
+        print("  簡", c, "｜", t[max(0, i - 15): i + 15].replace("\n", " "))
+    for t, w in main[:10]:
+        i = t.find(w[0])
+        print("  陸", w, "｜", t[max(0, i - 15): i + 15].replace("\n", " "))
