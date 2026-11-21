@@ -166,8 +166,8 @@
 | 相關測試（第 1 項：`tests/skillgen tests/llm tests/roguelite tests/api/tuning` 等，-n 8） | 0（5785 passed；預算表 2 個失敗在同一個 commit 裡開欄位後修好，再跑 53 passed） |
 | 第 2～5 項的相關測試 | 都是 0 |
 | 78 場戰鬥比對 | different=0 |
-| `scripts/check.py` | （PLACEHOLDER_CHECK） |
-| `-m slow tests/skillgen/test_refactor_parity.py tests/cli` | （PLACEHOLDER_SLOW） |
+| `scripts/check.py` | check.py 由 PM 在 main 跑（PM 指示：main 已有別的 commit，這裡的通過戳記用不上） |
+| `-m slow tests/skillgen/test_refactor_parity.py tests/cli` | 由 PM 合併後在 main 跑 |
 
 - 沒有新增 `# noqa`（`trap_dump.py` 等 scratch 腳本不進 repo）。
 
