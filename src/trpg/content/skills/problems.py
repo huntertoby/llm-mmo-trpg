@@ -211,12 +211,15 @@ def _effect_problems(
         problems.append(f"{where}.affects：{primitive.id} 是對單位的效果，不能用 tiles")
     if affects in primitive.forbid_affects:
         problems.append(_forbidden_affects_message(where, primitive.id, affects))
+    shapes_ok = primitive.allowed_shapes
+    if shapes_ok is not None and skill.form_entry_effect is not None:
+        shapes_ok = (*shapes_ok, *primitive.companion_shapes)  # GS-3：帶進入時效果的化身技
     if (
-        primitive.allowed_shapes is not None
-        and skill.shape.type not in primitive.allowed_shapes
+        shapes_ok is not None
+        and skill.shape.type not in shapes_ok
         and not on_hit  # 命中後效果只作用在目標那 1 格，不看載體技能的形狀
     ):
-        allowed = "、".join(primitive.allowed_shapes)
+        allowed = "、".join(shapes_ok)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
     problems += _stack_effect_problems(skill, where, effect, affects, refs)
     problems += _consume_status_problems(skill, index, effect, refs)

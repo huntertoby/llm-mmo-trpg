@@ -83,6 +83,8 @@ from trpg.content.skills.effects import (
     SkillRuleError,
     _check_absorb_surface,
     _check_composition,
+    companion_effect,
+    composition_rules,
     composition_shapes,
     error_path_of,
     true_only_params,
@@ -1028,10 +1030,7 @@ class SkillDef(ContentModel):
         types = [e.type for e in self.effects]
         if self.kind in ("reaction", "stance") and "teleport" in types:
             raise ValueError("反應技與姿態不能有 teleport（沒有可選的目標格）")
-        if self.kind == "stance" and self.shape.type != "self":
-            raise ValueError(f"姿態的形狀只能是 self，收到 {self.shape.type}")
-        if ENTER_FORM in types and (self.kind != "stance" or len(types) != 1):
-            raise ValueError("enter_form（進入形態）只能是姿態（kind: stance）唯一的效果")
+        self._check_form_skill(types)
         if self.kind == "reaction":
             assert self.reaction is not None
             if self.shape.type not in ("self", "single"):
@@ -1049,6 +1048,40 @@ class SkillDef(ContentModel):
         elif INTERCEPT in types:
             raise ValueError("intercept 只能用在反應技")
         self._check_reroll(types)
+
+    def _check_form_skill(self, types: list[str]) -> None:
+        """姿態的形狀與 ``enter_form`` 的位置；帶進入時效果（GS-3）的細節見
+        :meth:`_check_form_entry`。"""
+        entry = self.form_entry_effect
+        if self.kind == "stance" and self.shape.type != "self" and entry is None:
+            raise ValueError(f"姿態的形狀只能是 self，收到 {self.shape.type}")
+        if ENTER_FORM in types and (self.kind != "stance" or (len(types) != 1 and entry is None)):
+            raise ValueError(
+                "enter_form（進入形態）只能是姿態（kind: stance）唯一的效果"
+                "（高階化身排第一個時，後面可以再跟 1 個進入時效果）"
+            )
+        if entry is not None:
+            self._check_form_entry(entry)
+
+    def _check_form_entry(self, entry: EffectSpec) -> None:
+        """化身技的進入時效果（GS-3，#173，06 6.30「高階化身的進入時效果」）：姿態、形狀只能是自己
+        或實心環形（「周圍 N 格」）；形狀是自己時效果只能給自己；不能帶幅度（形態幅度與化形專精都
+        不乘它）。階級下限與冷卻下限是規則數值（``core.yaml`` 的 ``skill_limits``，
+        :func:`~trpg.content.skills.limits.skill_limit_problems`）。"""
+        if self.kind != "stance":
+            raise ValueError("進入時效果只有化身技（姿態）可以帶")
+        rule = composition_rules()[ENTER_FORM]
+        allowed = (*(rule.allowed_shapes or ()), *rule.companion_shapes)
+        if self.shape.type not in allowed:
+            raise ValueError(
+                f"帶進入時效果的化身技形狀只能是 {'、'.join(allowed)}，收到 {self.shape.type}"
+            )
+        if self.shape.type != "self" and not self.shape.solid:
+            raise ValueError("帶進入時效果的化身技用環形時要寫 solid: true（周圍 N 格）")
+        if self.shape.type == "self" and entry.affects != "self":
+            raise ValueError("形狀是自己時，進入時效果只能給自己（要寫 affects: self）")
+        if entry.magnitude_permille is not None:
+            raise ValueError("進入時效果不能填 magnitude_permille（形態幅度不乘在它上面）")
 
     def _check_reroll(self, types: list[str]) -> None:
         """重擲（SK-3，#166 6.38-12）：只能是反應技唯一的效果，事件只能是 :data:`REROLL_EVENTS`；
@@ -1428,6 +1461,14 @@ class SkillDef(ContentModel):
             if effect.type == ENTER_FORM:
                 return effect.form
         return None
+
+    @property
+    def form_entry_effect(self) -> EffectSpec | None:
+        """化身技的進入時效果（GS-3，#173）：``enter_form`` 之後的那 1 個效果；沒有時為
+        ``None``。"""
+        if not self.effects or self.effects[0].type != ENTER_FORM:
+            return None
+        return companion_effect(self.effects)
 
     @property
     def form_magnitude(self) -> int:

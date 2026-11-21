@@ -309,6 +309,10 @@ class CompositionRule:
     others_affect: Literal["self"] | None = None
     max_per_skill: int | None = None
     active_only: bool = False
+    companions: tuple[str, ...] = ()
+    """``sole_effect`` 的例外：排第一個時後面最多再跟 1 個這些原語（GS-3）。"""
+    companion_shapes: tuple[str, ...] = ()
+    """帶了 ``companions`` 的效果時，技能形狀可以多用這些（GS-3）。"""
 
     @classmethod
     def of(cls, primitive: PrimitiveDef) -> CompositionRule:
@@ -320,6 +324,8 @@ class CompositionRule:
             others_affect=primitive.others_affect,
             max_per_skill=primitive.max_per_skill,
             active_only=primitive.active_only,
+            companions=primitive.companions,
+            companion_shapes=primitive.companion_shapes,
         )
 
     @property
@@ -454,6 +460,30 @@ def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:
         _check_rule(rule, effects, types)
 
 
+_LEAD_AND_COMPANION = 2
+"""帶進入時效果的技能剛好 2 個效果：唯一效果原語＋1 個 ``companions``（GS-3，結構常數）。"""
+
+
+def _companion_ok(rule: CompositionRule, types: list[str]) -> bool:
+    """``sole_effect`` 的例外（GS-3）：這個原語排第一個，後面只有 1 個 ``companions`` 裡的原語。"""
+    return (
+        len(types) == _LEAD_AND_COMPANION
+        and types[0] == rule.primitive
+        and types[1] in rule.companions
+    )
+
+
+def companion_effect(effects: tuple[EffectSpec, ...]) -> EffectSpec | None:
+    """技能的「進入時效果」（GS-3，#173）：第一個效果是帶 ``companions`` 的唯一效果原語（
+    ``enter_form``）、後面跟著的那 1 個效果；沒有時為 ``None``。"""
+    if len(effects) != _LEAD_AND_COMPANION:
+        return None
+    rule = composition_rules().get(effects[0].type)
+    if rule is None or not rule.companions or effects[1].type not in rule.companions:
+        return None
+    return effects[1]
+
+
 def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: list[str]) -> None:
     name = rule.primitive
     where = [i for i, t in enumerate(types) if t == name]
@@ -464,9 +494,13 @@ def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: l
             path=f"effects[{where[rule.max_per_skill]}]",
             code="combo.max_per_skill",
         )
-    if rule.sole_effect and len(types) != 1:
+    if rule.sole_effect and len(types) != 1 and not _companion_ok(rule, types):
+        extra = ""
+        if rule.companions:
+            allowed = "、".join(rule.companions)
+            extra = f"（排第一個時，後面最多再跟 1 個 {allowed}）"
         raise SkillRuleError(
-            f"{name} 必須是技能唯一的效果", path="effects", code="combo.sole_effect"
+            f"{name} 必須是技能唯一的效果{extra}", path="effects", code="combo.sole_effect"
         )
     if rule.position == "first" and types[0] != name:
         raise SkillRuleError(

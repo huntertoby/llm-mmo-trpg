@@ -114,6 +114,10 @@ class SkillLimits(ContentModel):
     ``Ruleset`` 層檢查）。"""
     modifier_bounds: ModifierLimits
     """修正規則改變幅度的上下限（HC-4b2）。"""
+    min_form_entry_tier: int = Field(ge=1, le=10)
+    """化身技帶進入時效果（GS-3，#173，06 6.30）的最低階級（3：1～2 階的化身照舊只有變身）。"""
+    min_form_entry_cooldown: int = Field(ge=1, le=20)
+    """帶進入時效果的化身技最少要有幾回合冷卻（GS-3，#173：至少 2，避免輪替形態每回合都發一次）。"""
 
 
 _NESTED = ("then", "win", "lose", "on_kill", "effects")
@@ -205,7 +209,27 @@ def _top_problems(skill: SkillDef, limits: SkillLimits, *, count_effects: bool) 
         problems.append(f"cost.cooldown：冷卻最多 {limits.max_cooldown} 回合，收到 {cooldown}")
     if skill.crit_range is not None and skill.crit_range < limits.min_crit_range:
         problems.append(f"crit_range：最小是 {limits.min_crit_range}，收到 {skill.crit_range}")
+    problems += _form_entry_problems(skill, limits)
     return problems + _cost_problems(skill, limits) + _primitive_problems(skill, limits)
+
+
+def _form_entry_problems(skill: SkillDef, limits: SkillLimits) -> list[str]:
+    """帶進入時效果的化身技（GS-3）：階級與冷卻的下限（``skill_limits``）。"""
+    if skill.form_entry_effect is None:
+        return []
+    problems: list[str] = []
+    if skill.tier < limits.min_form_entry_tier:
+        problems.append(
+            f"effects[1]：化身技要 {limits.min_form_entry_tier} 階以上才能帶進入時效果，"
+            f"收到 {skill.tier} 階"
+        )
+    cooldown = skill.cost.cooldown or 0
+    if cooldown < limits.min_form_entry_cooldown:
+        problems.append(
+            f"cost.cooldown：帶進入時效果的化身技冷卻至少 {limits.min_form_entry_cooldown} 回合，"
+            f"收到 {cooldown}"
+        )
+    return problems
 
 
 def _cost_problems(skill: SkillDef, limits: SkillLimits) -> list[str]:

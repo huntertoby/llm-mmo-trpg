@@ -1699,6 +1699,15 @@ rules:
     kind: text
     where: ['skill_slot_problems']
     note: 規則改變型傳說每人最多裝 1 個（3D-6 使用者決定）：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
+  - id: py-gs3-form-entry-structure
+    class: const
+    status: done
+    files: [src/trpg/content/skills/effects.py, src/trpg/content/skills/skill.py,
+      src/trpg/content/skills/limits.py]
+    where: ['<module>._LEAD_AND_COMPANION', '_check_rule', 'SkillDef._check_form_skill',
+      '_form_entry_problems']
+    note: GS-3（#173，06 6.30）：帶進入時效果的化身技＝enter_form＋「1 個」進入時效果（設計寫「最多 1 個」，
+      結構定義）；訊息裡的 effects[1] 是那個效果的位置。階級與冷卻下限已從 skill_limits 帶入。
   - id: py-content-skills-limits-text-text
     class: const
     status: done

@@ -257,6 +257,8 @@ targets:
       # HC-4b：技能結構的規則數值（core.yaml 的 skill_limits，從 skills/constants.py 搬來）。只開規則數值；
       # 階級數、AP 上限、效果數、巢狀效果數、修正規則數、召喚數量、變奏替換項數是結構（產生器、LLM 提議、
       # 技能工坊的選項都照它），不開。
+      # GS-3（#173，06 6.30）：帶進入時效果的化身技的冷卻下限（最低階級 min_form_entry_tier 是結構，不開）。
+      - {path: skill_limits.min_form_entry_cooldown, label_zh: 帶進入時效果的化身技最短冷卻（回合）, kind: int, hint_min: 2, hint_max: 5, note_zh: 3 階以上的化身技帶「進入時效果」（例：熊王怒吼變身時讓周圍的敵人虛弱）時，冷卻（cost.cooldown）至少要這麼多回合。調高：這類化身技更難在不同形態之間輪替、每回合都發一次進入時效果；調低：可以更常發。調高後，現有冷卻比它短的化身技會在驗證時列出，要先改那些技能（目前手寫的 4 招都是 3）。設計下限是 2。只能 1～20。}
       - {path: skill_limits.max_cooldown, label_zh: 技能冷卻上限（回合）, kind: int, hint_min: 3, hint_max: 12, note_zh: 技能的冷卻（cost.cooldown）最多幾回合（內容、組合器、LLM、工坊都照這個擋）。調低後，現有冷卻超過的技能會在驗證時列出，要先改那些技能。只能 1～20。}
       - {path: skill_limits.min_crit_range, label_zh: 技能擴大暴擊的極限（自然骰）, kind: int, hint_min: 13, hint_max: 19, note_zh: 技能的擴大暴擊範圍（crit_range）最寬只能到自然骰這個數字起就暴擊（15＝15～20 都暴擊）。越小，擴大暴擊的技能能做得越強。調高後，現有比它寬的技能會在驗證時列出。只能 2～20。}
       - {path: skill_limits.max_grant_duration, label_zh: 暫時獲得技能的最長輪數, kind: int, hint_min: 2, hint_max: 8, note_zh: 暫時獲得技能（grant_skill）給的技能最多留幾輪。越大，給技能的招能持續越久。調低後，現有超過的技能會在驗證時列出。只能 1～20。}

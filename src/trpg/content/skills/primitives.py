@@ -203,6 +203,12 @@ class PrimitiveDef(ContentModel):
     """組合規則（Phase 4-L5b）：必須是技能的第一個（``first``）或最後一個（``last``）效果。"""
     sole_effect: bool = False
     """組合規則：必須是技能唯一的效果。"""
+    companions: tuple[str, ...] = ()
+    """``sole_effect`` 的例外（GS-3，#173：高階化身的「進入時效果」）：這個原語排第一個時，後面最多
+    可以再跟 1 個這些原語。其他條件（階級、形狀、冷卻）另由 ``SkillDef`` 與 ``skill_limits`` 檢查。
+    產生器與 LLM 提議照舊把 ``sole_effect`` 當唯一效果，不主動加這個效果。"""
+    companion_shapes: tuple[str, ...] = ()
+    """帶了 ``companions`` 的效果時，技能形狀可以多用這些（GS-3：環形，要寫實心）。"""
     others_affect: Literal["self"] | None = None
     """組合規則：同一技能的其他效果必須明寫這個 ``affects``（``self``：只作用在施放者）。"""
     nested_core: bool = False
@@ -316,6 +322,13 @@ class PrimitiveTable(ContentModel):
         clash = sorted({p.id for p in self.primitives} & {n.id for n in self.nested_only_effects})
         if clash:
             raise ValueError(f"只能巢狀的效果不可與原語同名：{', '.join(clash)}")
+        ids = {p.id for p in self.primitives}
+        for p in self.primitives:  # GS-3：進入時效果的例外只給唯一效果原語
+            if (p.companions or p.companion_shapes) and not (p.sole_effect and p.companions):
+                raise ValueError(f"原語 {p.id}：companions 只能寫在 sole_effect 的原語上（且要有）")
+            unknown = sorted(set(p.companions) - ids)
+            if unknown:
+                raise ValueError(f"原語 {p.id}：companions 有未知的原語 {', '.join(unknown)}")
         return self
 
     def status_refs(self) -> set[str]:

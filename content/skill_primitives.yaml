@@ -847,6 +847,10 @@ primitives:
     acts_on: caster
     allowed_shapes: [self]
     sole_effect: true
+    # GS-3（#173，06 6.30「高階化身的進入時效果」）：3 階以上的化身技排第一個時，後面最多再跟 1 個施加狀態或推擊
+    # （形狀自己或實心環形；階級與冷卻下限在 rules/core.yaml 的 skill_limits）。組合器與 LLM 照舊不加。
+    companions: [apply_status, push]
+    companion_shapes: [ring]
     max_per_skill: 1
     budget_basis: fixed
     params:

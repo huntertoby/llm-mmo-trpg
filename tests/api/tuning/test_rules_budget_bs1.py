@@ -46,6 +46,7 @@ CORE_PATHS = (
     "summon_traits.swift.budget_points",
     "summon_traits.keen.budget_points",
     "element_mod_floor_permille",  # HC-4b：和裝備規則的總減傷上限一起開
+    "skill_limits.min_form_entry_cooldown",  # GS-3：帶進入時效果的化身技最短冷卻
     "skill_limits.max_cooldown",  # HC-4b：技能結構的規則數值（從 skills/constants.py 搬來）
     "skill_limits.min_crit_range",
     "skill_limits.max_grant_duration",

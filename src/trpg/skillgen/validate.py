@@ -746,11 +746,15 @@ def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
                     f"{where}：姿態狀態只能由姿態技能（kind: stance）施加",
                 )
             )
-        elif skill.kind == "stance" and not is_stance:
+        elif skill.kind == "stance" and not is_stance and skill.form_id is None:
             out.append(
                 Violation(
                     skill.id, "stance.status", f"{where}：姿態技能施加的狀態必須是 stance: true"
                 )
+            )
+        if is_stance and skill.form_id is not None:  # GS-3：施加姿態會解除剛進入的形態
+            out.append(
+                Violation(skill.id, "stance.status", f"{where}：化身技的進入時效果不能施加姿態狀態")
             )
         if is_stance and effect.duration is not None:
             out.append(

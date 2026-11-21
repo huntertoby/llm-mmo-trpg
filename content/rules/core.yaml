@@ -190,6 +190,9 @@ skill_limits:
     max_add_tags: 3                 # 獲得標籤 1～3 個
     max_on_hit_effects: 2           # 命中後附加效果 1～2 個
     on_hit_max_displace: 2          # 命中後效果的推擊、拉扯距離 1～2 格（不能大於 max_displace_distance）
+  # GS-3（#173，06 6.30「高階化身的進入時效果」）：化身技帶進入時效果的階級與冷卻下限
+  min_form_entry_tier: 3        # 3 階以上的化身技才能帶（1～2 階照舊只有變身）
+  min_form_entry_cooldown: 2    # 帶進入時效果的化身技冷卻至少 2 回合（手寫的初值 3；開放數值工坊）
 
 # --- 效果佇列 ---
 max_chain_depth: 3            # 連鎖深度上限

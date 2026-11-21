@@ -20,6 +20,7 @@ from trpg.content.skills import (
     DAMAGE_MULTIPLIER,
     DASH,
     DETONATE_RUNES,
+    ENTER_FORM,
     GAMBLE,
     GRANT_AP,
     REFUND_AP,
@@ -600,6 +601,9 @@ class Cast:
             return
         if not self.react_to_targeting():
             return
+        lead = self._form_entry_lead()
+        if lead is not None:  # GS-3：先變身（含形態的進入獎勵），進入時效果才擲命中、結算
+            self.resolve_effect(lead)
         self.roll_hits()
         self.announce_pierce()
         self.consume_stacks()
@@ -609,7 +613,7 @@ class Cast:
         exploited, start = self.skill_exploits(), len(self.ctx.events)  # SK-3b：技能條件的利用
         by_rules = self.rule_exploits()  # SK-3c：修正規則條件的利用
         for effect in self.effects:
-            if not self.after_all_strikes(effect):
+            if effect is not lead and not self.after_all_strikes(effect):
                 self.resolve_effect(effect)
         self.extra_strikes()
         seen = self.exploits_seen
@@ -619,6 +623,14 @@ class Cast:
         self.backlash_on_miss()
         self.react_to_hits()
         self.shorten_cooldown()
+
+    def _form_entry_lead(self) -> ResolvedEffect | None:
+        """帶進入時效果的化身技（GS-3，#173，06 6.30）的 ``enter_form``：要在命中判定之前結算
+        （變身 → 形態的進入獎勵 → 進入時效果），所以進入時效果吃得到形態的加成。其他技能為
+        ``None``（結算順序不變）。"""
+        if self.skill.form_entry_effect is None:
+            return None
+        return next((e for e in self.effects if e.spec_index == 0 and e.type == ENTER_FORM), None)
 
     def resolve_effect(self, effect: ResolvedEffect, *, extra: bool = False) -> None:
         """結算一個效果（含傷害效果之後的元素觸及、風的擴散、吸血與擊殺時效果）。``extra``：連擊
