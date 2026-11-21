@@ -938,7 +938,8 @@ def _modifier_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
                 f"骨架 {skeleton.id}：只適用 {'、'.join(skeleton.kinds)} 技能，收到 {skill.kind}",
             )
         )
-    if skill.shape.type not in skeleton.shapes:
+    # 帶進入時效果的化身技（GS-3）：形狀（自己或實心環形）由 SkillDef 的進入時效果規則檢查
+    if skill.shape.type not in skeleton.shapes and skill.form_entry_effect is None:
         out.append(
             Violation(
                 skill.id,
@@ -991,7 +992,7 @@ def _skeleton_violations(
 
     if skill.kind not in skeleton.kinds:
         add("kind", f"只適用 {'、'.join(skeleton.kinds)} 技能，收到 {skill.kind}")
-    if skill.shape.type not in skeleton.shapes:
+    if skill.shape.type not in skeleton.shapes and skill.form_entry_effect is None:  # GS-3
         add("shape", f"形狀只能是 {'、'.join(skeleton.shapes)}，收到 {skill.shape.type}")
     radius = skill.shape.radius
     if skeleton.max_radius is not None and radius is not None and radius > skeleton.max_radius:

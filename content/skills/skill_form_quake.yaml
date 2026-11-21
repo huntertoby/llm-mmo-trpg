@@ -12,7 +12,7 @@ category: spell
 weapon_req: any
 ap_cost: 2
 scaling_attr: con
-shape: {type: ring, radius: 2}
+shape: {type: ring, radius: 2, solid: true}   # GS-3（#173）：實心＝周圍 2 格（距離 1～2，含貼身相鄰）
 effects:
   - {type: damage, dice: 1d10, element: physical, form_bonus_permille: 300}
   - {type: knock_prone, condition: {type: in_form}}

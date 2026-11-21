@@ -1,5 +1,6 @@
 # 野性連擊（GS-2，#172，06 6.30「形態池名單」高階形態技；數值為初值，未經模擬）：只能在形態中施放；
-# 對相鄰單體造成 2 次傷害，各擲命中（連段骨架的兩個傷害效果）。
+# 對相鄰單體造成 2 次傷害，各擲命中（連段骨架的兩個傷害效果）。GS-3（#173）：命中與傷害都用目前形態天生武器的
+# 屬性（scaling_source: natural_weapon；兩個屬性的取較高）；scaling_attr 只當不在形態中時的顯示。
 id: skill_form_wild_flurry
 schema_version: 1
 name_zh: 野性連擊
@@ -12,6 +13,7 @@ category: spell
 weapon_req: any
 ap_cost: 2
 scaling_attr: str
+scaling_source: natural_weapon
 shape: {type: single, range: 1}
 effects:
   - {type: damage, dice: 4d8, element: physical}

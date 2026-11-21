@@ -146,6 +146,11 @@ _POOL_ONLY = frozenset(
         "skill_form_primal_return",
         "skill_form_quake",
         "skill_form_wild_flurry",
+        # GS-3（#173）：高階化身（帶進入時效果；同上，只從形態池給出）
+        "skill_form_bear_king",
+        "skill_form_dragon_dread",
+        "skill_form_giant_stomp",
+        "skill_form_shadow_cat",
         # 3-24c：關鍵字池的真實利用者與不限武器的 1 階技能（由池給出）
         "skill_bone_pursuit",
         "skill_shock_follow",

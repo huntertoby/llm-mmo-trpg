@@ -28,7 +28,12 @@ POTENCY = Variation(source="minor", template="stance_potency", category="modifie
 
 
 def _form_skills() -> list[str]:
-    return sorted(s.id for s in library().skills.values() if s.form_id is not None)
+    # GS-3 的高階化身（帶進入時效果）不在這份對照：這裡鎖的是 10 種形態各 1 招的形態幅度
+    return sorted(
+        s.id
+        for s in library().skills.values()
+        if s.form_id is not None and s.form_entry_effect is None
+    )
 
 
 def test_there_are_ten_form_stances() -> None:

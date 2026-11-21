@@ -195,6 +195,15 @@ def test_the_ten_form_skills_are_spells_with_any_weapon_and_silence_follows_the_
     lib = library()
     form_skills = {s.id: s for s in lib.skills.values() if s.id.startswith("skill_form_")}
     entering = {k: v for k, v in form_skills.items() if v.form_id is not None}
+    # GS-3 的 4 招高階化身（帶進入時效果）另由 test_form_high_gs3.py 檢查；這裡只看 10 種形態各 1 招
+    high = {k: v for k, v in entering.items() if v.form_entry_effect is not None}
+    assert len(high) == 4
+    for skill_id, skill in high.items():
+        assert skill.category == "spell" and skill.weapon_req == "any", skill_id
+        assert skill.form_id is not None
+        category = lib.ruleset.form_def(skill.form_id).category
+        assert is_spell_for_silence(lib.ruleset, skill) is (category == "mental"), skill_id
+    entering = {k: v for k, v in entering.items() if k not in high}
     assert len(entering) == 10 and MASTERY in form_skills
     for skill_id, skill in entering.items():
         assert skill.category == "spell" and skill.weapon_req == "any", skill_id

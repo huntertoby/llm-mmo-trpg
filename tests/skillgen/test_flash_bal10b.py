@@ -532,7 +532,12 @@ def test_mod_cost_keeps_at_least_one_step_of_a_multi_step_drawback() -> None:
 
 
 def _forms() -> list[str]:
-    return sorted(s.id for s in library().skills.values() if s.form_id is not None)
+    # GS-3 的高階化身（帶進入時效果）不在這份對照（閃現的變身姿態規則是 10 種形態各 1 招時定的）
+    return sorted(
+        s.id
+        for s in library().skills.values()
+        if s.form_id is not None and s.form_entry_effect is None
+    )
 
 
 @pytest.mark.parametrize("skill_id", _forms())

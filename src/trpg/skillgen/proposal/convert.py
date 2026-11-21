@@ -181,6 +181,8 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     """手寫技能 → 提議 JSON（few-shot 範例與結構往返測試用；數值欄位已移除）。用到提議模型沒有的
     欄位時丟 ``ValueError``。要連同數值一起取得時用
     :func:`~trpg.skillgen.proposal_numbers.split_numbers`。"""
+    if skill.form_entry_effect is not None:  # GS-3：進入時效果只給手寫內容，提議格式不開放
+        raise ValueError(f"{skill.id} 帶化身技的進入時效果，提議格式沒有")
     full = skill.model_dump(mode="json", exclude_defaults=True)
     data, _ = split_numbers(full, library)
     data.update(cost_choices_of(full.get("cost") or {}, data))  # 4-L8 的代價欄位

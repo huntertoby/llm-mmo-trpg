@@ -1,5 +1,6 @@
 # 化形守護（GS-2，#172，06 6.30「形態池名單」高階形態技；數值為初值，未經模擬）：只能在形態中施放；
-# 自己與身邊 1 格的友方得到護盾。提案的「護盾量看最大 HP」現有護盾原語做不到，先用骰值＋感知（見 GS-2 報告）。
+# 自己與身邊 1 格的友方得到護盾。GS-3（#173）：護盾量＝施放者目前（變身後）最大 HP × 150‰，持續 2 回合（預設），
+# 不加屬性；150‰ 是初值（預算點數 shield_max_hp_points 照 GS-2 的比例反推），由使用者在工坊調。
 id: skill_form_guardian
 schema_version: 1
 name_zh: 化形守護
@@ -14,7 +15,7 @@ ap_cost: 2
 scaling_attr: wis
 shape: {type: allies_in_radius, radius: 1}
 effects:
-  - {type: shield, dice: 7d8, affects: allies}
+  - {type: shield, max_hp_permille: 150, affects: allies}
 condition: {type: in_form}
 cost: {mana: 80, cooldown: 3}
 tags: [nature, spell, shield]

@@ -31,9 +31,10 @@ def test_skill_target_covers_every_skill_file_except_gear(table: TuningFields) -
     files = target_files(CONTENT, skill)
     ids = {p.stem for p in files}
     assert (
-        len(files) == 435
+        len(files) == 439
     )  # LW-1 加 3 招獨狼示範；BS-1 加 2 招（無聲步、影纏）；RG-1 加 3 招瞄準預告；RG-2 加狂怒劈砍
     # KW-2 加 16 招；SK-3b 加 4 招示範；AP-2 加搶拍（預支）；GS-2 加 4 招高階形態技
+    # GS-3 加 4 招高階化身
     assert not any(i.startswith("skill_gear_") for i in ids)
     assert all(p.parent.name == "skills" for p in files)
     for path in files:  # 每個檔都合 schema、每個展開的路徑都找得到白名單欄位

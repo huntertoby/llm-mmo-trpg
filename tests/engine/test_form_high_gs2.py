@@ -4,8 +4,8 @@
 - 三選一指定「形態」時，3 階、4 階都有招可以出（含史詩）；
 - 「只能在形態中施放」與「在形態中才倒地」照實戰。
 
-4 招高階化身（熊王怒吼、影貓潛襲、巨人踐地、龍威降臨）沒做：``enter_form`` 必須是姿態唯一的效果，
-現有原語做不出「進入時多一個效果」（見 ``docs/phases/PhaseGS-2報告.md``）。
+4 招高階化身（熊王怒吼、影貓潛襲、巨人踐地、龍威降臨）與 4 招的改動（實心環形、看最大 HP 的護盾、
+天生武器屬性）在 GS-3（#173）補上，見 ``tests/engine/test_form_high_gs3.py``。
 """
 
 from __future__ import annotations
@@ -108,9 +108,9 @@ def test_the_quake_hits_the_ring_and_knocks_down_only_inside_a_form(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     always(monkeypatch, d20=15, die=1)
-    foes = ((5, 3), (4, 3))  # 第一個在 2 格的環上，第二個在 1 格（環形只算恰好 2 格）
+    foes = ((5, 3), (4, 3))  # 第一個在 2 格外，第二個貼身（GS-3 起是實心環形：周圍 2 格都打）
     plain = use(arena([QUAKE, BEAR], foes=foes), QUAKE)
-    assert {h.target_id for h in of(plain, DamageDealt)} == {U2}  # type: ignore[arg-type]
+    assert {h.target_id for h in of(plain, DamageDealt)} == {U2, U3}  # type: ignore[arg-type]
     assert {h.multiplier_permille for h in of(plain, DamageDealt)} == {1000}  # type: ignore[arg-type]
     assert _prone(plain) == []
     state = into_bear(arena([QUAKE, BEAR], foes=foes))
@@ -119,8 +119,9 @@ def test_the_quake_hits_the_ring_and_knocks_down_only_inside_a_form(
     attrs[key] = 400  # 對抗穩贏
     inside = use(state, QUAKE)
     hits = of(inside, DamageDealt)  # type: ignore[arg-type]
-    assert {h.target_id for h in hits} == {U2} and {h.multiplier_permille for h in hits} == {1300}
-    assert _prone(inside) == [U2] and U3 not in _prone(inside)
+    assert {h.target_id for h in hits} == {U2, U3}
+    assert {h.multiplier_permille for h in hits} == {1300}
+    assert sorted(_prone(inside)) == [U2, U3]
 
 
 def test_primal_return_releases_the_form_then_hits_the_ring(

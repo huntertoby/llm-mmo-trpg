@@ -340,9 +340,9 @@ def test_every_skill_matches_the_reference_implementation() -> None:
     ref, lib = _ref(), library()
     raws = _raw()
     assert (
-        len(raws) == len(lib.skills) == 438
+        len(raws) == len(lib.skills) == 442
     )  # BAL-21b lava_splash、BAL-21c rift_flicker、LW-1 三招、RG-1 三招瞄準預告、RG-2 狂怒劈砍
-    # KW-2 十六招；SK-3b 四招示範；AP-2 搶拍；GS-2 四招高階形態技
+    # KW-2 十六招；SK-3b 四招示範；AP-2 搶拍；GS-2 四招高階形態技；GS-3 四招高階化身
     diffs: list[str] = []
     filled = 0
     for skill_id, raw in raws.items():

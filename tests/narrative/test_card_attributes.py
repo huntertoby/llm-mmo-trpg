@@ -156,6 +156,9 @@ def test_spell_cards_name_their_attribute(skill_id: str) -> None:
     lib = library()
     skill = lib.skills[skill_id]
     line = skill_card(lib, skill).formula_lines[0]
+    if skill.scaling_source == "natural_weapon":  # GS-3：看目前形態天生武器的屬性
+        assert "天生武器的屬性" in line
+        return
     assert skill.scaling_attr.display_name in line
     if skill.secondary_scaling_attr is not None:
         assert f"{skill.secondary_scaling_attr.display_name}（取平均）" in line
