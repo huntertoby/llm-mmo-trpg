@@ -54,6 +54,7 @@ __all__ = [
     "Draft",
     "Recipe",
     "beside_keywords",
+    "is_guardian",
     "passive_drafts",
     "passive_recipes",
     "pick_recipe",
@@ -188,6 +189,11 @@ class Recipe:
     name: str
     param: str | None
     keywords: tuple[str, ...]
+
+
+def is_guardian(recipe: Recipe) -> bool:
+    """是不是護主配方（QF-4b：它的草稿只差召喚物、屬性、強度與代價，組合器快取預算比例）。"""
+    return recipe.name == _GUARDIAN
 
 
 def unit_keywords(library: ContentLibrary, unit: str, effect: str = "summon") -> tuple[str, ...]:
