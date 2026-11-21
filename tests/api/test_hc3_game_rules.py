@@ -14,7 +14,7 @@ def test_glossary_rules_come_from_content() -> None:
     rules = build_glossary(lib).rules
     core = lib.ruleset.core
     assert rules.source_max == core.source_max
-    assert rules.skill_slots.model_dump() == core.skill_slots.model_dump()
+    assert rules.skill_slots.model_dump() == core.skill_slots.model_dump(exclude={"rule_change"})
     assert rules.start_keywords == lib.roguelite.start.keywords
     assert rules.complete_budget_permille == lib.flash.rules.complete.budget_permille
 

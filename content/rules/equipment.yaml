@@ -7,6 +7,7 @@
 diminishing_permille: [1000, 500, 250]
 
 max_affixes_per_item: 4          # 每件物品最多幾條詞條
+max_weapon_element_affixes: 1    # 同一件最多幾條武器元素詞條（3K-1，08 8.21.2.4 #52；HC-7 從程式搬來）
 
 caps:
   damage_bonus_permille: 500     # 全身傷害加成（裝備來源合計）上限 +50%

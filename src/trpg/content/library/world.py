@@ -424,8 +424,8 @@ def _range_problems(arena: RangeContent, refs: _RangeRefs) -> list[str]:
             if skill is None:
                 problems.append(f"range.demos.{cls} 的 {skill_id} 不存在")
                 continue
-            if skill.kind != "active" or skill.tier != 1:
-                problems.append(f"range.demos.{cls} 的 {skill_id} 要是 1 階主動技")
+            if skill.kind != "active" or skill.tier != arena.demo_tier:
+                problems.append(f"range.demos.{cls} 的 {skill_id} 要是 {arena.demo_tier} 階主動技")
             problems += [
                 f"range.demos.{cls} 的 {skill_id}：{problem}"
                 for w in class_weapons

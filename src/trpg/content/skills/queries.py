@@ -168,8 +168,9 @@ def skill_slot_problems(skills: Iterable[SkillDef], slots: SkillSlots) -> list[s
                 f"{'、'.join(sorted(groups[group]))}"
             )
     changes = sorted(s.name_zh for s in skills if s.rule_change_id is not None)
-    if len(changes) > 1:  # 改變規則型傳說每人最多裝 1 個（Phase 3D-6，使用者決定）
+    if len(changes) > slots.rule_change:  # 改變規則型傳說每人的上限（Phase 3D-6，使用者決定）
         problems.append(
-            f"規則改變型傳說每人最多裝 1 個，收到 {len(changes)} 個：{'、'.join(changes)}"
+            f"規則改變型傳說每人最多裝 {slots.rule_change} 個，"
+            f"收到 {len(changes)} 個：{'、'.join(changes)}"
         )
     return problems

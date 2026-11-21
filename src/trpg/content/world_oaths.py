@@ -226,6 +226,18 @@ class OathTemplateDef(ContentModel):
         )
 
 
+_HOUR: Final = 60 * 60
+_DAY: Final = 24 * _HOUR
+
+
+def cooldown_zh(seconds: int) -> str:
+    """解除誓約後的冷卻寫成「N 天」（整天）或「N 小時」（不整天，四捨五入；HC-7，HC-6a 裁定 3；
+    同前端 ``aboutDurationText`` 的換算）。"""
+    if seconds % _DAY == 0:
+        return f"{seconds // _DAY} 天"
+    return f"{(seconds + _HOUR // 2) // _HOUR} 小時"
+
+
 class OathTable(ContentModel):
     """``content/world/oaths.yaml``。"""
 

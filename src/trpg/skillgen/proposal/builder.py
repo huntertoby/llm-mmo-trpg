@@ -400,6 +400,11 @@ def _when_model(surfaces: Sequence[str]) -> Any:
     return _alias("VariantWhen", Annotated[Union[tuple(branches)], Discriminator(pick)])  # noqa: UP007
 
 
+RangeDelta = Literal[1, 2]
+"""變奏的射程加值能填的值（組合器 ``composer_special`` 的 ``range_delta`` 階梯；提議提示詞的說明照
+這裡組字，HC-7）。"""
+
+
 def _variant_model(
     effect: Any | None, shape: Any, surfaces: Sequence[str] = (), *, swap_max: int
 ) -> Any:
@@ -415,7 +420,7 @@ def _variant_model(
         "name_zh": (str, Field(min_length=1, max_length=12)),
         "when": (_when_model(surfaces), ...),
         "shape": (shape | None, None),
-        "range_delta": (Literal[1, 2] | None, None),
+        "range_delta": (RangeDelta | None, None),
         "element": (Element | None, None),
     }
     if effect is not None:

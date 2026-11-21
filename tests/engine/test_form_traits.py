@@ -69,7 +69,7 @@ BEAR, CAT, ROC, WEREWOLF = (
     "skill_form_werewolf",
 )
 ALL = (BEAR, CAT, ROC, WEREWOLF, DEMON, GIANT, SHADOW, TREANT, DRAGON)
-SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2)
+SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2, rule_change=1)
 
 
 def scene(

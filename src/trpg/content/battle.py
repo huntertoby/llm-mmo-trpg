@@ -687,7 +687,7 @@ class OffhandDef(ContentModel):
         if self.ranged_cover:
             lines.append(
                 f"遠程掩護：遠程攻擊打你時命中 −{core.half_cover_hit_penalty}（同半掩護；"
-                "攻擊者站得比你高 2 層以上時無視）"
+                f"攻擊者站得比你高 {core.tower_shield_cover_height + 1} 層以上時無視）"
             )
         if self.move_penalty:
             lines.append(f"笨重：你的移動 −{self.move_penalty}")

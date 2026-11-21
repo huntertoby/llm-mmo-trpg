@@ -142,6 +142,8 @@ class RangeContent(ContentModel):
     留著只為了舊內容檔讀得進來。"""
     demos_per_class: int = Field(ge=1, le=6)
     trial_keywords_max: int = Field(ge=1)
+    demo_tier: int = Field(ge=1)
+    """示範招要是幾階的主動技（#148；HC-7 從 ``library/world.py`` 的載入檢查搬來，值 1）。"""
     """看示範時最多選幾個不同的關鍵字（#134「武器與 2 個關鍵字」；HC-7 從
     ``trpg.world.opening.MAX_TRIAL_KEYWORDS`` 搬來，值 2）。"""
     """每大類的示範招數（21.5「該大類 2 招」；HC-4d 從模組常數搬來）：``demos`` 每類要剛好

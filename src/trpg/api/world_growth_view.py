@@ -18,7 +18,7 @@ from trpg.api.world_schemas import (
     OathView,
 )
 from trpg.content.library import ContentLibrary
-from trpg.content.world_oaths import OathTable, OathTemplateDef
+from trpg.content.world_oaths import OathTable, OathTemplateDef, cooldown_zh
 from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
     AttributesAllocatedEvent,
@@ -247,14 +247,16 @@ def _swear_problem(
     library: ContentLibrary, char: CharacterState, now: int, *, in_battle: bool
 ) -> str | None:
     """不能立誓的原因（照 ``trpg.world.growth`` 的檢查順序）；可以時 ``None``。"""
+    table = library.world_oaths
+    cooldown = "" if table is None else cooldown_zh(table.cooldown_seconds)
     checks: tuple[tuple[bool, str], ...] = (
-        (library.world_oaths is None, UNAVAILABLE_ZH),
+        (table is None, UNAVAILABLE_ZH),
         (in_battle, "戰鬥進行中"),
         (char.pending_flash is not None, "先選完閃現的變化"),
         (char.pending_encounter is not None, "先處理眼前的遭遇"),
         (not at_service(library, char), "只有城鎮與營火能立誓"),
         (char.oath is not None, "同時只能有 1 個誓約，請先解除目前的誓約"),
-        (now < char.oath_cooldown_until, "解除誓約後 1 天內不能再立誓"),
+        (now < char.oath_cooldown_until, f"解除誓約後 {cooldown}內不能再立誓"),
         (
             passive_count(library, char) + OATH_PASSIVE_SLOTS
             > library.ruleset.core.skill_slots.passive,
@@ -531,7 +533,13 @@ def _oath_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str]
         level = DIFFICULTY_ZH[event.oath.difficulty]
         return f"立誓：「{oath_name(event.oath.template)}」（難度 {level}）。"
     if isinstance(event, OathReleasedEvent):
-        return f"解除誓約「{oath_name(event.template)}」：現實 1 天內不能再立誓。"
+        seconds = (
+            OathTable.model_fields["cooldown_seconds"].default
+            if table is None
+            else table.cooldown_seconds
+        )
+        name = oath_name(event.template)
+        return f"解除誓約「{name}」：現實 {cooldown_zh(seconds)}內不能再立誓。"
     if isinstance(event, OathBrokenEvent):
         if event.at_end:
             rounds = "" if table is None else f" {table.penalty_rounds} 回合"

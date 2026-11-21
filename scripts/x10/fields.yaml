@@ -689,6 +689,7 @@ groups:
       - far_distance
       - guard_transfers_per_round
       - opening_status_max_duration  # HC-7：開場狀態的回合上限
+      - tower_shield_cover_height    # HC-7：塔盾掩護視為幾層高
       - hit_mod_cap
       - hit_slope
       - hit_target
@@ -793,6 +794,8 @@ groups:
       - cost_min_points
       - max_attempts
       - min_affix_points
+      - extra_build_affixes_max   # HC-7：詞條條數上限
+      - trigger_affixes_max       # HC-7
       - min_fill_permille
       - offer_attempts
       - offer_size
@@ -956,6 +959,7 @@ groups:
     keep:
       - camp_elite_permille
       - ranged_cap
+      - elite_cap                 # HC-7：每場精英上限
       - locations[].ranged_cap
       - locations[].groups[].weight
       - locations[].unit_min_levels[].min_level

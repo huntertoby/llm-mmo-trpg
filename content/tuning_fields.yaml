@@ -815,6 +815,8 @@ targets:
     fields:
       - {path: "diminishing_permille[*]", label_zh: "同名詞條第 {n} 條的效果（‰）", group_zh: 同名詞條的遞減, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 全身同一種數值詞條依數值大到小排，第幾條只生效這麼多千分比（第 1 條必須是 1000，後面不能比前面大；列表之後的一律 0）。越大，疊同一種詞條越划算；越小越鼓勵混搭。}
       - {path: max_affixes_per_item, label_zh: 每件物品最多幾條詞條, group_zh: 硬上限, kind: int, hint_min: 2, hint_max: 6, note_zh: 一件裝備最多帶幾條詞條（產生器、打造、驗證都看這個）。越大單件裝備能越強。只能 1～8。}
+      # HC-7：武器元素詞條的條數上限（從 content/equipment.py 的檢查搬來）
+      - {path: max_weapon_element_affixes, label_zh: 每件最多幾條武器元素詞條, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 2, note_zh: 同一件裝備最多帶幾條「普攻改成某元素」的武器元素詞條（手寫物品與裝備驗證都看這個）。越大越能在一件上疊武器元素詞條（普攻只會用其中一種元素）；越小越不能疊，設 0＝不能帶。}
       - {path: caps.damage_bonus_permille, label_zh: 全身傷害加成上限（‰）, group_zh: 硬上限, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 裝備來源的傷害加成合計最多這麼多千分比（500＝+50%）；超出的部分不算。越大，堆傷害的裝備越強。}
       - {path: caps.damage_reduction_permille, label_zh: 總減傷上限（‰）, group_zh: 硬上限, kind: permille, hint_min: 500, hint_max: 875, note_zh: 抗性與元素修正合計最多減傷這麼多千分比（750＝最多減 75%）。越大，堆抗性越接近免疫。兩格要一起改：總減傷上限（rules/equipment.yaml 的 caps.damage_reduction_permille）必須等於 1000 − 元素修正下限（rules/core.yaml 的 element_mod_floor_permille），只改一格會驗證失敗，兩格都會標出錯誤。只能 0～1000。}
       - {path: caps.element_resist_permille, label_zh: 單一元素抗性上限（‰）, group_zh: 硬上限, kind: permille, hint_min: 250, hint_max: 750, note_zh: 裝備給的單一元素抗性最多這麼多千分比（500＝50%）；超出的部分不算。越大，越能把某種元素疊到幾乎免疫。}
@@ -846,6 +848,9 @@ targets:
       - {path: "total_budget[*].total", label_zh: 總點數, group_zh: 預算, kind: int, hint_min: 50, hint_max: 700, note_zh: 這個物品等級的全身裝備預算（點）；表列等級之間線性內插，最後一段之後沿用最後一段的斜率。越大，同等級的裝備越強。後面的等級不能比前面少。}
       - {path: min_fill_permille, label_zh: 詞條點數至少用到預算的（‰）, group_zh: 預算, kind: permille, hint_min: 350, hint_max: 1000, note_zh: 產生的詞條點數至少要到詞條預算的這麼多千分比（700＝70%）。越大，產出越接近滿預算（強度更平均）；越小，弱裝備越多。只能 0～1000。}
       - {path: min_affix_points, label_zh: 每條詞條至少幾點, group_zh: 預算, kind: int, hint_min: 1, hint_max: 4, note_zh: 每條詞條至少要分到這麼多點。越大，低等級的裝備越難塞多條詞條。}
+      # HC-7：詞條條數上限（從 content/item_budget.py 的檢查搬來）
+      - {path: extra_build_affixes_max, label_zh: 每件最多幾條稀有度以外的詞條, group_zh: 預算, kind: int, hint_min: 0, hint_max: 2, note_zh: 稀有度規定的類別以外，一件裝備最多再帶幾條 build 詞條（例如部位必選的那條）。越大，各稀有度的裝備越能混搭別的類別；越小越照稀有度表。}
+      - {path: trigger_affixes_max, label_zh: 每件最多幾條觸發詞條, group_zh: 預算, kind: int, hint_min: 0, hint_max: 2, note_zh: 一件裝備最多帶幾條觸發詞條（命中時、受傷時……）。越大單件裝備的觸發效果越多、越強；越小越少，設 0＝不能帶。}
       - {path: base_strength.fallback_level, label_zh: 沒有等級的物品當作幾級, group_zh: 預算, kind: int, hint_min: 1, hint_max: 3, note_zh: 初始裝備、基礎武器這類沒有物品等級的物品，算「預算分數」時當作這個等級（只用在比較，不進預算檢查）。越大，這些物品在比較時算得越強。}
       - {path: slot_permille.weapon, label_zh: 部位預算：主手（‰）, group_zh: 部位比例, kind: permille, hint_min: 150, hint_max: 600, note_zh: 全身預算分給這個部位的千分比（戒指是每枚）。越大，這個部位的裝備越強。}
       - {path: slot_permille.body, label_zh: 部位預算：身體（‰）, group_zh: 部位比例, kind: permille, hint_min: 100, hint_max: 400, note_zh: 全身預算分給這個部位的千分比。越大，這個部位的裝備越強。}

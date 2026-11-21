@@ -78,7 +78,6 @@ def _schema_default_zh(model: type[ContentModel], name: str) -> str:
 
 
 _DEFAULTS_ZH: Final = {
-    "speed": "沒寫＝5",
     "armor_bonus": _schema_default_zh(UnitTemplate, "armor_bonus"),
     "level": _schema_default_zh(UnitTemplate, "level"),
     "max_mana": "沒寫＝依武器大類",
@@ -88,7 +87,6 @@ _DEFAULTS_ZH: Final = {
     "cost.cooldown": "沒寫＝沒有冷卻",
     "stance_upkeep": _schema_default_zh(SkillDef, "stance_upkeep"),
     "phases[*].skills": "沒寫＝沿用上一階段",
-    "phases[*].grow_surface.max_rows": "沒寫＝4",
     "parts[*].on_break[*].rounds": "沒寫＝永久封住",
 }
 

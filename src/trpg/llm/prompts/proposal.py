@@ -9,7 +9,7 @@ prompt token（4-L5c），另以字元數上限 :data:`SCHEMA_CHAR_LIMIT` 做健
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, get_args
 
 from trpg.content.library import ContentLibrary
 from trpg.llm.client import ChatMessage
@@ -17,6 +17,7 @@ from trpg.llm.prompts.builder import build_skill_proposal_messages
 from trpg.llm.prompts.world import WorldStyle, load_world_style
 from trpg.shared.tokens import PROMPT_TOKEN_BUDGET, estimate_tokens
 from trpg.skillgen.proposal import WEAPON_REQ_DOC, ProposalModels
+from trpg.skillgen.proposal.builder import RangeDelta
 from trpg.skillgen.proposal.schema_shape import shape_schema
 from trpg.skillgen.proposal_subset import (
     SCHEMA_CHAR_LIMIT,
@@ -79,7 +80,7 @@ VARIANTS_NOTE_ZH = (
     "選填，最多 {limit} 個；不填最容易通過。每個變奏＝id、name_zh、when（觸發條件）"
     "＋ shape、range_delta、element、add_effect、replace_effect 其中 1～{swaps} 項"
     "（不能 {too_many} 項以上）。"
-    "range_delta 是射程加值，只能填 1 或 2（射程變遠），而且技能的形狀（或變奏換上的 shape）"
+    "range_delta 是射程加值，只能填 {deltas}（射程變遠），而且技能的形狀（或變奏換上的 shape）"
     "要有數字射程。{ranged}"
     "replace_effect 的 index 是要換掉的 effects 位置（從 0 起算），"
     "不能指向主傷害（第一個 damage 效果）；要加強傷害請用 add_effect。"
@@ -178,6 +179,7 @@ def field_notes(
             ranged=_ranged_shapes_note(library, subset),
             swaps=swaps,
             too_many=swaps + 1,
+            deltas=" 或 ".join(str(v) for v in get_args(RangeDelta)),
         )
     return notes
 

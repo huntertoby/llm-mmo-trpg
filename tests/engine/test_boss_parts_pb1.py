@@ -467,7 +467,7 @@ def test_interrupt_covers_an_anchored_charge() -> None:
 
 
 DRAGON = "skill_form_dragon"
-SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2)
+SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2, rule_change=1)
 
 
 def test_interrupt_covers_a_directed_charge() -> None:

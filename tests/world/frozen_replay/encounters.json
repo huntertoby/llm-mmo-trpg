@@ -6,6 +6,7 @@
   "berserk"
  ],
  "camp_elite_permille": 100,
+ "elite_cap": 1,
  "groups": [
   {
    "id": "bandit_raiders",

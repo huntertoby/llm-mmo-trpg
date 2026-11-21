@@ -59,7 +59,7 @@ from trpg.shared.types import Element, Pos, Team, UnitId
 
 DRAGON = "skill_form_dragon"
 U1, U2, U3, U4 = (UnitId(f"unit_000{i}") for i in range(1, 5))
-SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2)
+SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2, rule_change=1)
 FLAT = "\n".join(["0000000000"] * 10)
 
 

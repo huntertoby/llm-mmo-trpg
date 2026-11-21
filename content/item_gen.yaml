@@ -19,6 +19,8 @@ affix_permille: {weapon: 400, body: 400, offhand: 400, head: 500, hands: 500, fe
 
 min_fill_permille: 700       # 詞條點數至少是詞條預算的 70%（8.22.1 第 6 點）
 min_affix_points: 2          # 每條至少 2 點（8.22.1 第 4 點）
+extra_build_affixes_max: 1   # 稀有度類別以外的 build 詞條每件最多幾條（HC-7 從程式搬來）
+trigger_affixes_max: 1       # 觸發詞條每件最多幾條（HC-7 從程式搬來）
 
 # 數值類的單位價（8.21.2 表、8.22.1 第 4 點）：每 per 單位 points 點（‰ 的數值 per 也是 ‰）。
 stat_prices:

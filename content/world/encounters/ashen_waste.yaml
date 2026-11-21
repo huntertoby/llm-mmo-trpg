@@ -12,6 +12,7 @@
 #   每攔下 1 批碎片 −10（主線第 2 步攔截成功的劇情旗標、荒原骨架 13 的線頭；合計 −30～+10，19.4、代決 5F5a-5）。
 region: ashen_waste
 ranged_cap: 2
+elite_cap: 1   # 每場精英上限（HC-7 從程式搬來）
 camp_elite_permille: 100
 affixes: [regenerating, berserk, blazing, hard_shelled]
 

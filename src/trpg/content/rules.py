@@ -222,6 +222,10 @@ class SkillSlots(ContentModel):
     passive: int = Field(ge=0)
     reaction: int = Field(ge=0)
     stance: int = Field(ge=0)
+    rule_change: int = Field(ge=0)
+    """規則改變型傳說（``rule_change_id``）每人最多裝幾個（Phase 3D-6，使用者決定；HC-7 從
+    :func:`~trpg.content.skills.queries.skill_slot_problems` 搬來，值 1）。不是一種欄位：這些技能照
+    ``kind`` 佔欄位，這裡另外限數量。"""
 
 
 class SummonGrowth(ContentModel):
@@ -516,6 +520,9 @@ class CoreRules(ContentModel):
 
     # 掩護（1C）
     half_cover_hit_penalty: int = Field(ge=0)
+    tower_shield_cover_height: int = Field(ge=0)
+    """塔盾的自身半掩護（Phase 3I-2）視為幾層高（RG-5b，玩法PM交接 4.1.7）：攻擊者站得比目標高超過
+    這麼多層時無視（HC-7 從 ``engine/rules/combat.py`` 搬來，值 1）。"""
     shield_guard_hit_penalty: int = Field(ge=0)
     """盾兵掩護（RG-1，#162，09 9.6.6）：帶 ``shield_guard`` 的單位替相鄰的遠程同伴擋遠程攻擊時的
     命中懲罰（0＝不擋）。和半掩護、塔盾不疊加。"""

@@ -456,13 +456,15 @@ def _shield_cover(
     state: BattleState, attacker_xy: XY, target: UnitState, target_xy: XY, penalty: int
 ) -> Cover | None:
     """塔盾的自身半掩護（Phase 3I-2，08 8.11）：目標副手有 ``ranged_cover`` 時，遠程攻擊（呼叫端已
-    排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高，攻擊者站得比目標高 2 層以上時
+    排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高（``tower_shield_cover_height``），
+    攻擊者站得比目標高 2 層以上時
     無視（RG-5b，玩法PM交接 4.1.7；以前是高 1 層就無視）。場上的掩護物已經成立時不會走到這裡（兩者
     不疊加）。"""
     offhand = target.gear.offhand
     if offhand is None or not offhand.ranged_cover:
         return None
-    if state.tile(*attacker_xy).height > state.tile(*target_xy).height + 1:
+    height = state.ruleset.core.tower_shield_cover_height
+    if state.tile(*attacker_xy).height > state.tile(*target_xy).height + height:
         return None
     return Cover(
         penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target_xy

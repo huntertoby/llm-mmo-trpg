@@ -693,7 +693,7 @@ class SkillDef(ContentModel):
         power = summons[0].power_permille
         if count > 1 and (power is None or power >= _PERMILLE):
             raise ValueError(
-                "summon 的 count: 2 必須填小於 1000 的 power_permille（數量型分歧進化）"
+                f"summon 的 count: {count} 必須填小於 1000 的 power_permille（數量型分歧進化）"
             )
         if count == 1 and power is not None and power < _PERMILLE:
             raise ValueError(

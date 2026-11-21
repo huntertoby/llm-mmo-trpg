@@ -155,6 +155,10 @@ class ItemGenRules(ContentModel):
     affix_permille: dict[SlotType, int]
     min_fill_permille: int = Field(ge=0, le=_PERMILLE)
     min_affix_points: int = Field(ge=1)
+    extra_build_affixes_max: int = Field(ge=0)
+    """稀有度類別以外的 build 詞條每件最多幾條（HC-7 從 ``_rarity_problems`` 搬來，值 1）。"""
+    trigger_affixes_max: int = Field(ge=0)
+    """觸發詞條每件最多幾條（HC-7 從 ``item_budget_problems`` 搬來，值 1）。"""
     stat_prices: dict[StatKind, Price]
     conditional_prices: dict[Literal["hit", "damage", "defense"], Price]
     condition_rates_permille: dict[ConditionTier, int]
@@ -370,9 +374,10 @@ def _rarity_problems(
         )
     pick = rules.required_picks.get(item.slot_type)
     extra = [a for a in defs if a.category not in rule.categories]
-    if len(extra) > 1:
+    if len(extra) > rules.extra_build_affixes_max:
         ids = "、".join(a.id for a in extra)
-        problems.append(f"{where}：稀有度類別以外的 build 詞條每件最多 1 條（{ids}）")
+        most = rules.extra_build_affixes_max
+        problems.append(f"{where}：稀有度類別以外的 build 詞條每件最多 {most} 條（{ids}）")
     for affix in extra:
         allowed = rule.required and pick is not None and pick.allows(affix)
         if not allowed:
@@ -415,8 +420,8 @@ def item_budget_problems(
                 f"{where}：詞條 {affix.id} 只有 {_fmt(each)} 點"
                 f"（每條至少 {rules.min_affix_points} 點）"
             )
-    if sum(1 for a in defs if isinstance(a, TriggerAffix)) > 1:
-        problems.append(f"{where}：觸發詞條每件最多 1 條")
+    if sum(1 for a in defs if isinstance(a, TriggerAffix)) > rules.trigger_affixes_max:
+        problems.append(f"{where}：觸發詞條每件最多 {rules.trigger_affixes_max} 條")
     return problems
 
 

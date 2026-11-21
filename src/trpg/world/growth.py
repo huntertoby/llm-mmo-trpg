@@ -33,7 +33,7 @@ from typing import Final
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.world_oaths import OathTable, oath_problems
+from trpg.content.world_oaths import OathTable, cooldown_zh, oath_problems
 from trpg.roguelite.attributes import allocate_attributes, respec_attributes
 from trpg.roguelite.errors import RunError
 from trpg.roguelite.flashes import (
@@ -631,7 +631,7 @@ def _oath(
     if char.oath is not None:
         raise WorldActionError("同時只能有 1 個誓約，請先解除目前的誓約")
     if now < char.oath_cooldown_until:
-        raise WorldActionError("解除誓約後 1 天內不能再立誓")
+        raise WorldActionError(f"解除誓約後 {cooldown_zh(table.cooldown_seconds)}內不能再立誓")
     problems = oath_problems(table, action.proposal)
     if problems:
         raise WorldActionError("；".join(problems))

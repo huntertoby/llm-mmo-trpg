@@ -1355,22 +1355,6 @@ rules:
   # HC-6b：api 的說明文字。有資料的改組字（工坊預設值照 schema 預設、升階區間照 skill_budget.yaml、
   # 快捷分組的標籤照篩選值、誓約欄位照 skill_slots、破誓回合照 oaths.yaml、腰包 AP 照道具技能）；
   # 剩下的分兩種：沒有資料可帶的（留 text）與語法用字（改判 const）。
-  - id: py-api-tuning-objects-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/tuning/objects.py
-    kind: text
-    where: ['<module>._DEFAULTS_ZH']
-    text: '沒寫＝\d'
-    note: 移動力、表面生長排數的「沒寫＝5」「沒寫＝4」：HC-4a 起 schema 已經沒有預設值（YAML 一定要寫），沒有資料可帶，字也已經過時（HC-6b 留 text，見報告待決）。
-  - id: py-api-world-growth-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/world_growth_view.py
-    kind: text
-    where: ['_oath_line', '_swear_problem']
-    text: '1 天內'
-    note: 解除誓約後「1 天內」：冷卻是 oaths.yaml 的 cooldown_seconds（秒），HC-6a 裁定 3 排進 HC-7 從秒數組字（HC-6b 留 text）。
   - id: py-api-const-text
     class: const
     status: done
@@ -1404,13 +1388,6 @@ rules:
   # ---------------------------------------------------- 後端 content：text
   # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。HC-6a：有常數的改組字；剩下的分兩種——
   # 還是規則數字、但程式裡沒有可帶的資料（留 text，先要搬進 content 才能組字），以及結構用字（改判 const）。
-  - id: py-content-battle-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/battle.py
-    kind: text
-    where: ['OffhandDef.trait_lines_zh']
-    note: 塔盾的遠程掩護「攻擊者高 2 層以上時無視」：引擎 rules/combat.py 寫死「塔盾視為 1 層高」，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-battle-const-text
     class: const
     status: done
@@ -1438,13 +1415,6 @@ rules:
     kind: text
     where: ['WeatherDef._mods']
     note: HC-6a 改判：元素修正不低於 -1000‰ 是 ‰ 換算（減傷到 0 為止）。
-  - id: py-content-equipment-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/equipment.py
-    kind: text
-    where: ['weapon_element_problems']
-    note: 武器元素詞條「同一件最多 1 條」：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-equipment-const-text
     class: const
     status: done
@@ -1471,14 +1441,6 @@ rules:
     kind: text
     where: ['FlashTemplate._check', '_ladder']
     note: HC-6a 改判：階梯從 1000 開始是 ‰ 換算（×1）；「非 0 的 delta」是非零檢查。
-  - id: py-content-item-budget-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/item_budget.py
-    kind: text
-    where: ['_rarity_problems', 'item_budget_problems']
-    text: '每件最多 1 條'
-    note: 每件裝備的 build 詞條、觸發詞條「最多 1 條」：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-item-budget-const-text
     class: const
     status: done
@@ -1493,13 +1455,6 @@ rules:
     kind: text
     where: ['Ruleset._check']
     note: HC-6a 改判：「1000 − 元素修正下限」是 ‰ 換算（兩格的值本身已帶入）。
-  - id: py-content-library-world-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/library/world.py
-    kind: text
-    where: ['_range_problems']
-    note: 靶場示範技要是「1 階」主動技：檢查本身寫死 tier != 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-library-world-const-text
     class: const
     status: done
@@ -1542,13 +1497,6 @@ rules:
     kind: text
     where: ['_legendary_problems']
     note: HC-6a 改判：傳說技能「恰好 1 個核心」是三擇一的結構。
-  - id: py-content-skills-queries-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skills/queries.py
-    kind: text
-    where: ['skill_slot_problems']
-    note: 規則改變型傳說每人最多裝 1 個（3D-6 使用者決定）：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-gs3-max-hp-shield-unit
     class: const
     status: done
@@ -1573,13 +1521,16 @@ rules:
     where: ['_primitive_problems']
     note: HC-6a 改判：「1 或 {max_summon_count}」的 1 是只召喚一隻（上限已從規則包帶入）。
   - id: py-content-skills-skill-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/skill.py
     kind: text
     where: ['SkillDef._check_legendary', 'SkillDef._check_summon']
     text: '花 1 或 2 點源力|count: 2'
-    note: 源力 1 或 2 點（上限 skill_limits.max_source_cost）、數量型分歧的 count 2（max_summon_count）都在 Ruleset 層，SkillDef 的驗證拿不到（HC-6a 留 text）。
+    note: >-
+      HC-7 改判 const（舉例）：「花 1 或 2 點源力」「必須搭配 count: 2」是 SkillDef 驗證（拿不到規則包）裡
+      舉的現值例子；上限本身在 core.yaml 的 skill_limits.max_source_cost、max_summon_count，由 Ruleset 層
+      的 skill_limit_problems 檢查並組字。count 大於 1 那一句改照收到的 count 組字（HC-7）。
   - id: py-content-skills-skill-const-text
     class: const
     status: done
@@ -1598,7 +1549,10 @@ rules:
     files: src/trpg/content/skills/specs.py
     kind: text
     where: ['TriggerSpec._check', 'TriggerSpec._check_exploited']
-    note: 兩種觸發每輪最多 1 次（AP-2）：檢查本身寫死 max_per_round != 1，沒有資料可帶（HC-6a 留 text）。
+    note: >-
+      兩種觸發每輪最多 1 次（AP-2、SK-3）：檢查在 TriggerSpec 驗證裡（拿不到規則包），要把數字搬進
+      core.yaml 得先把這條檢查移到 Ruleset 層（錯誤改在載入內容庫時才出現，同 HC-4d 待決 4），屬規則類，
+      HC-7 沒動，見報告待決。
   - id: py-content-skills-variants-text-text
     class: const
     status: done
@@ -1621,7 +1575,9 @@ rules:
     kind: text
     where: ['WorldItemDef._check']
     text: '1 AP'
-    note: 道具技能必須 1 AP（08 8.17）：檢查本身寫死 ap_cost != 1，沒有資料可帶（HC-6a 留 text）。
+    note: >-
+      道具技能必須 1 AP（08 8.17）：檢查在 WorldItemDef 驗證裡，拿不到 world/economy.yaml；要搬得改成
+      跨檔案檢查（錯誤出現的地方會變），HC-7 沒動，見報告待決。
   - id: py-content-world-economy-const-text
     class: const
     status: done
@@ -1629,13 +1585,6 @@ rules:
     kind: text
     where: ['EconomyRules._check', 'WorldItemDef._check']
     note: HC-6a 改判：堆疊上限不小於 1 是正數檢查；道具「每個用一次」（uses_per_battle 1）是消耗品的定義。
-  - id: py-content-world-encounters-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_encounters.py
-    kind: text
-    where: ['_lineup_problems']
-    note: 一場最多 1 名精英：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-world-loot-text-text
     class: const
     status: done
@@ -1664,12 +1613,15 @@ rules:
   # ---------------------------------------------------- 後端 engine：text
   # 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
   - id: py-engine-activations-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/activations.py
     kind: text
     where: ['activation_problem']
-    note: 每個單位同時最多 1 個生效中的規則改變：引擎寫死，沒有資料可帶（HC-6a 留 text）。
+    note: >-
+      HC-7 改判 const（結構）：引擎一個單位同時只放一個生效中的規則改變（active_rule_change 回傳單一個，
+      結算照它的那一個改寫規則），「同時最多 1 個」是這個結構；改成多個要改引擎。裝幾個的上限另在
+      core.yaml 的 skill_slots.rule_change。
   - id: py-engine-battle-text-text
     class: const
     status: done
@@ -1701,13 +1653,6 @@ rules:
 
   # ---------------------------------------------------- 後端 llm：text
   # LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
-  - id: py-llm-prompts-proposal-text-text
-    class: text
-    status: todo
-    files: src/trpg/llm/prompts/proposal.py
-    kind: text
-    where: ['<module>.BUDGET_NOTE_ZH', '<module>.VARIANTS_NOTE_ZH']
-    note: 變奏 range_delta「只能填 1 或 2」：提議模型的 Literal[1, 2]（skillgen/proposal/builder.py，config）寫死，沒有資料可帶（HC-6a 留 text）。
   - id: py-llm-prompts-proposal-const-text
     class: const
     status: done
@@ -1715,6 +1660,15 @@ rules:
     kind: text
     where: ['<module>.EFFECTS_NOTE_ZH']
     note: HC-6a 改判：「例：上限 1 個時」是舉例。
+  - id: py-llm-prompts-proposal-variants-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/proposal.py
+    kind: text
+    where: ['<module>.VARIANTS_NOTE_ZH']
+    note: >-
+      HC-7：range_delta 能填的值改照提議模型（skillgen/proposal/builder.py 的 RangeDelta）組字；剩下的
+      「1～{swaps} 項」的 1 是至少一項、「從 0 起算」是索引說法（結構）。
   - id: py-llm-wish-pick-text-text
     class: const
     status: done
@@ -1734,19 +1688,24 @@ rules:
     text: '每少走 1 格'
     note: HC-6a 改判：推擊撞擊「每少走 1 格」受一次傷害是逐格計算的說法。
   - id: py-narrative-action-info-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/action_info.py
     kind: text
     where: ['_maneuvers', '_move_and_attack']
-    note: 跑步每回合 1 次（引擎 ran_this_turn）、推動與撥開物件 1 格：引擎寫死，沒有資料可帶（HC-6a 留 text）。
+    note: >-
+      HC-7 改判 const（結構）：跑步每回合 1 次是引擎的布林旗標 ran_this_turn（改成次數要改戰鬥狀態與紀錄
+      格式）；推動、撥開物件 1 格是一步（interact_direction 回單位向量，object_move_problem 只看下一格）。
+      引擎的 0／1 本來就不進數字掃描。
   - id: py-narrative-events-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/events.py
     kind: text
     where: ['_summon_pulled']
-    note: 圖騰把敵人拉近 1 格：引擎（summons/core.py）寫死，沒有資料可帶（HC-6a 留 text）。
+    note: >-
+      HC-7 改判 const（結構）：圖騰拉人是一步（engine/summons/core.py 的 _pull_step 找下一格、
+      distance=1），同推動物件。
   - id: py-narrative-skills-text-text
     class: const
     status: done
@@ -1772,12 +1731,14 @@ rules:
     where: ['_entangle_line', '_modifier_lines']
     note: HC-6a 改判：移動點數最低 0 是下限（不會變負）。
   - id: py-narrative-summon-info-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/summon_info.py
     kind: text
     where: ['_attack_phrases', '_pulse_lines', 'summon_innate_lines']
-    note: 召喚物絆倒、纏住每輪 1 次（引擎 snare_round 等）、圖騰拉近 1 格：引擎寫死，沒有資料可帶（HC-6a 留 text）。
+    note: >-
+      HC-7 改判 const（結構）：召喚物絆倒、纏住每輪 1 次是引擎記「上次觸發的輪數」（UnitState 的
+      trip_round、snare_round，同一輪就不再觸發；改成次數要改戰鬥狀態與紀錄格式）；圖騰拉近 1 格是一步（_pull_step）。
   - id: py-narrative-summon-info-const-text
     class: const
     status: done
@@ -1873,14 +1834,6 @@ rules:
     kind: text
     where: ['_recipe_from_fields']
     note: HC-6a 改判：「要指定 1 條詞條」是單一欄位（action.affix）的結構。
-  - id: py-world-growth-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/growth.py
-    kind: text
-    where: ['_oath']
-    text: '1 天內'
-    note: 解除誓約後「1 天內」：冷卻是 oaths.yaml 的 cooldown_seconds（秒），換成天數的寫法要 PM 定（HC-6a 留 text）。
   - id: py-world-growth-const-text
     class: const
     status: done

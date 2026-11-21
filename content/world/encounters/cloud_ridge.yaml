@@ -13,6 +13,7 @@
 # 冬湖獵手維持同陣營。敵方至少 2 名，所以冬湖石背熊、雷羽鷹巢補 1 名同地點的修士；強度之後再量。
 region: cloud_ridge
 ranged_cap: 2
+elite_cap: 1   # 每場精英上限（HC-7 從程式搬來）
 camp_elite_permille: 100
 affixes: [regenerating, mist_veiled, heart_linked, berserk]
 

@@ -42,7 +42,7 @@ from trpg.skillgen.keywords import is_starter_skill, keyword_pools
 POUNCE, ROAR, RENEWAL = "skill_form_pounce", "skill_wild_roar", "skill_form_renewal"
 BEAR = "skill_form_bear"
 DRAGON = "skill_form_dragon"
-SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2)
+SLOTS = SkillSlots(active=12, passive=2, reaction=1, stance=2, rule_change=1)
 
 # 06 6.30「形態池名單」：1 階 熊、貓、巨鵰、狼人；2 階 惡魔、巨人、元素化身、暗影形態、樹人、龍
 TIERS = {
