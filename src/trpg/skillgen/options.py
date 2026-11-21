@@ -54,7 +54,12 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
-from trpg.skillgen.option_effect_rules import cooldown_requirement, effect_fixes, with_param_blocks
+from trpg.skillgen.option_effect_rules import (
+    cooldown_requirement,
+    effect_fixes,
+    probe_trap,
+    with_param_blocks,
+)
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
     FOLLOWUP_SKELETON,
@@ -750,7 +755,10 @@ def _arrangements(
 
 
 def _probe_builds(
-    base: dict[str, Any], choice: Choice, contexts: list[list[dict[str, Any]]]
+    base: dict[str, Any],
+    choice: Choice,
+    contexts: list[list[dict[str, Any]]],
+    trap: Mapping[str, Any],
 ) -> bool | None:
     """以最小填法試組（單獨、接在已填的效果或一個核心效果之後或之前，一般或傳說），有一種能通過
     schema 就是 ``True``；無法自動填時為 ``None``。"""
@@ -761,7 +769,7 @@ def _probe_builds(
         for effects in _arrangements(fill, contexts):
             extra: dict[str, Any] = {"effects": effects}
             if any(e["type"] == "place_trap" for e in effects):
-                extra["trap"] = {"trigger": "enter"}
+                extra["trap"] = dict(trap)
             for rarity in _PROBE_RARITIES:
                 if _probe(base, {**extra, **rarity}) is not None:
                     return True
@@ -769,17 +777,22 @@ def _probe_builds(
 
 
 def _schema_accepts(
-    base: dict[str, Any], choice: Choice, contexts: list[list[dict[str, Any]]]
+    base: dict[str, Any],
+    choice: Choice,
+    contexts: list[list[dict[str, Any]]],
+    trap: Mapping[str, Any],
 ) -> bool:
     """試組通過，或試不出來：無法自動填、帶巢狀效果參數（``then``、``win``／``lose``……）的原語
     最小填法不準，仍列出（由檢查負責）。"""
-    built = _probe_builds(base, choice, contexts)
+    built = _probe_builds(base, choice, contexts, trap)
     return built is not False or any(p.type == "effects" for p in choice.params)
 
 
-def _base_accepts_something(base: dict[str, Any], candidates: list[Choice]) -> bool:
+def _base_accepts_something(
+    base: dict[str, Any], candidates: list[Choice], trap: Mapping[str, Any]
+) -> bool:
     """前面步驟的內容至少能和一個候選效果組成技能（否則試組沒有意義）。"""
-    return any(_probe_builds(base, c, []) for c in candidates)
+    return any(_probe_builds(base, c, [], trap) for c in candidates)
 
 
 def _core_example(choices: list[Choice]) -> dict[str, Any] | None:
@@ -804,7 +817,8 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
         if choice is not None:
             candidates.append(choice)
     base = _probe_base(draft)
-    if not _base_accepts_something(base, candidates):
+    trap = probe_trap(library)
+    if not _base_accepts_something(base, candidates, trap):
         return candidates  # 前面的步驟本身就組不起來（見檢查結果的問題清單），不再試組
     existing = [dict(_mapping(e)) for e in draft.get("effects") or ()]
     out: list[Choice] = []
@@ -813,7 +827,7 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
         core = _core_example([c for c in candidates if c is not choice])
         if core is not None:
             contexts.append([core])
-        if _schema_accepts(base, choice, contexts):
+        if _schema_accepts(base, choice, contexts, trap):
             out.append(choice)
     return out
 
@@ -851,7 +865,14 @@ def _trap_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
                     Choice(value="delay", name_zh="延遲", description_zh="rounds 輪後觸發"),
                 ),
             ),
-            FieldSpec(field="rounds", name_zh="輪數", type="int", min=low, max=high, default=2),
+            FieldSpec(
+                field="rounds",
+                name_zh="輪數",
+                type="int",
+                min=low,
+                max=high,
+                default=probe_trap(library)["rounds"],
+            ),
             FieldSpec(
                 field="shape",
                 name_zh="觸發範圍",

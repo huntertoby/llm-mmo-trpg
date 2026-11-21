@@ -52,7 +52,8 @@ class TrapSpec(ContentModel):
     """陷阱技能的設定（``docs/phases/Phase2E計畫.md`` 5.2；技能必須有 ``place_trap`` 原語）。
 
     - ``trigger``：``enter`` 為敵人進入陷阱格時觸發、``rounds`` 輪（放置者的回合開始時倒數）後
-      未觸發就消失；``delay`` 為 ``rounds`` 輪後（放置者回合開始時）觸發。
+      未觸發就消失；``delay`` 為 ``rounds`` 輪後（放置者回合開始時）觸發。兩種都用到 ``rounds``，
+      HC-5a 起必填（原本程式預設 2；內容檔的陷阱技都有寫）。
     - ``shape``：觸發時以陷阱格為中心的影響範圍；形狀 ID（``single``、``cross``、``square3``）須
       存在於 ``content/skill_shapes.yaml``（跨檔案檢查，見 :func:`skill_problems`；Phase 2F-1
       3.2——取代原本的 ``Literal``，讓引擎的形狀展開能涵蓋資料檔新增的形狀而不必改程式）。
@@ -60,5 +61,5 @@ class TrapSpec(ContentModel):
     """
 
     trigger: Literal["enter", "delay"]
-    rounds: int = Field(default=2, ge=1, le=6)
+    rounds: int = Field(ge=1, le=6)
     shape: str = Field(default="single", pattern=ID_PATTERN)
