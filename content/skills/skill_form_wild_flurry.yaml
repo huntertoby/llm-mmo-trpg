@@ -1,0 +1,25 @@
+# 野性連擊（GS-2，#172，06 6.30「形態池名單」高階形態技；數值為初值，未經模擬）：只能在形態中施放；
+# 對相鄰單體造成 2 次傷害，各擲命中（連段骨架的兩個傷害效果）。
+id: skill_form_wild_flurry
+schema_version: 1
+name_zh: 野性連擊
+tier: 3
+rank: 1
+rarity: rare
+kind: active
+skeleton: combo
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: str
+shape: {type: single, range: 1}
+effects:
+  - {type: damage, dice: 4d8, element: physical}
+  - {type: damage, dice: 4d8, element: physical}
+condition: {type: in_form}
+cost: {mana: 60, cooldown: 2}
+tags: [physical, melee, combo]
+narrative:
+  concept: 變了身才放得出的野獸連撲，一口氣撕咬兩下
+  cast_flavor: 你撲上前去，爪牙一左一右接連撕向眼前的敵人
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

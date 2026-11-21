@@ -30,7 +30,7 @@ def test_every_shipped_skill_is_inside_its_tier_window() -> None:
     （校準當時、技能尚未調整時的結果是 T1 ＝ 14、T2 ＝ 15，見 Phase2B-2報告。）"""
     script = _load()
     windows = script.implied_windows(lib())
-    assert sorted(windows) == [1, 2]  # 只有階級 1、2 有示範技能
+    assert sorted(windows) == [1, 2, 3, 4]  # GS-2 起 3、4 階有手寫技能（高階形態技）
     core = lib().ruleset.core.tier_budget
     for tier, all_entries in windows.items():
         # 裝備授予的技能（3G-G3b，標籤 gear）的預算算在詞條上，不參與階級預算校準

@@ -1,0 +1,25 @@
+# 化形震地（GS-2，#172，06 6.30「形態池名單」高階形態技；數值為初值，未經模擬）：自己周圍 2 格的敵人受傷害；
+# 在形態中傷害精確 +30%（form_bonus_permille），而且命中的敵人倒地（knock_prone 的效果條件 in_form）。
+id: skill_form_quake
+schema_version: 1
+name_zh: 化形震地
+tier: 3
+rank: 1
+rarity: epic
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: con
+shape: {type: ring, radius: 2}
+effects:
+  - {type: damage, dice: 1d10, element: physical, form_bonus_permille: 300}
+  - {type: knock_prone, condition: {type: in_form}}
+condition: null
+cost: {mana: 80, cooldown: 3}
+tags: [physical, area, aoe]
+narrative:
+  concept: 重重一踏震裂地面，變了身的時候連周圍的敵人都站不穩
+  cast_flavor: 你抬腳狠狠踩下，裂紋向四周炸開，震得一圈敵人東倒西歪
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}
