@@ -71,9 +71,7 @@ from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.usage import SkillUsage
 
 __all__ = [
-    "STRICT_MARGIN",
     "TRANSFORM_OPS",
-    "TUNE_ATTEMPTS",
     "FlashError",
     "FlashHistoryError",
     "FlashStepError",
@@ -95,10 +93,6 @@ __all__ = [
 ]
 
 type _Draft = tuple[dict[str, Any], list[dict[str, Any]]]
-TUNE_ATTEMPTS = 3
-"""同一份草稿最多試幾次不同的調整亂數（強度下限讓一次調整失敗的機會變大）。"""
-STRICT_MARGIN = Fraction(1, 100)
-"""結構不變、只靠重調變強的變化（``STRICT_OPS``）：預算分數至少要比變化前多這麼多點。"""
 type TransformOp = Callable[[SkillDef, Variation, ContentLibrary], list[_Draft]]
 
 
@@ -227,7 +221,7 @@ def power_floor(
 ) -> Fraction | None:
     """這一次變化後，預算分數（:func:`~trpg.skillgen.evolution.budget_power`）至少要有多少
     （玩法 PM：閃現後不低於閃現前；重閃不低於換掉之前）。``replaced`` 是重閃時被換掉那一筆的分數；
-    結構不變、只靠重調變強的變化（``STRICT_OPS``）再多 :data:`STRICT_MARGIN` 點。轉型是把效果
+    結構不變、只靠重調變強的變化（``STRICT_OPS``）再多 ``rules.search`` 的嚴格差距。轉型是把效果
     縮小掛到別的觸發上（6.34.5），不設下限（3W-3 決定）。"""
     if variation.source == "transform":
         return None
@@ -236,7 +230,7 @@ def power_floor(
         floor = max(floor, replaced)
     template = library.flash.minor_template(variation.template)
     if variation.source == "minor" and template is not None and template.op in STRICT_OPS:
-        floor += STRICT_MARGIN
+        floor += library.flash.rules.search.strict_margin
     return floor
 
 
@@ -253,11 +247,11 @@ def _retuned(  # noqa: PLR0917 - 同 retune 的參數，只在本模組內部呼
     effect_knobs: Sequence[Knob] = (),
     accept: Accept | None = None,
 ) -> SkillDef | None:
-    """同一份草稿重調 ``TUNE_ATTEMPTS`` 次（子亂數 ``tag``、``tag.r1``…）。
+    """同一份草稿重調 ``rules.search.tune_attempts`` 次（子亂數 ``tag``、``tag.r1``…）。
 
     回傳第一個合格且帶上變化的（給了 ``accept`` 還要通過它；FL-1a 蓄力、輕巧）；都不合格時
     ``None``。"""
-    for attempt in range(TUNE_ATTEMPTS):
+    for attempt in range(library.flash.rules.search.tune_attempts):
         # 第一次的子亂數與 3W-1 相同；強度下限讓調整更容易失敗，所以同一份草稿多試幾次
         fork = tag if attempt == 0 else f"{tag}.r{attempt}"
         done = retune(
@@ -300,7 +294,7 @@ def _apply_cost(  # noqa: PLR0917 - 同 _retuned 的參數，只在本模組內�
     trade = TRADES.get(op)
     if trade is not None:  # 收回家族（BAL-10d）：拿掉的預算 ＋ 這次的 +40‰ 換成核心數值
         return apply_trade(library, current, drafts, trade, rng, floor=floor)
-    accept = accept_for(op, current)
+    accept = accept_for(op, current, library)
     light_on_one_ap = op == "light" and (current.ap_cost or 1) <= 1
     for index, (base, effects) in enumerate(drafts):
         if not light_on_one_ap:

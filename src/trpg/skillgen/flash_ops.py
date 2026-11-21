@@ -72,13 +72,13 @@ from trpg.skillgen.composer_parts import Knob, dice_ladder
 from trpg.skillgen.evolution import evolution_template, multiplier_ladder, template_drafts
 from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.usage import SkillUsage
+from trpg.skillgen.validate import POINT_BLANK_MIN_REACH
 
 __all__ = [
     "FIXED_FIRST_OPS",
     "FLASH_OPS",
     "RECLAIM_MOD_OP",
     "STRICT_OPS",
-    "SUMMON_HP_STEPS",
     "Draft",
     "FlashOp",
     "base_draft",
@@ -89,18 +89,10 @@ __all__ = [
 type Draft = tuple[dict[str, Any], list[dict[str, Any]]]
 type FlashOp = Callable[[SkillDef, FlashTemplate, Variation, ContentLibrary], list[Draft]]
 
-MAX_CHARGE_COOLDOWN = 5
-"""蓄力把冷卻加到最多幾回合（6.34.4）。"""
-CHARGE_COOLDOWN_STEP = 2
 MAX_LIGHT_COOLDOWN = 1
 """輕巧把冷卻壓到最多幾回合（6.34.4：0～1）。"""
-MAX_TRIGGERS_PER_ROUND = 3
-"""被動每回合觸發次數的上限（``TriggerSpec.max_per_round`` 的 schema 上限）。"""
 MODIFIER_LADDER = tuple(range(50, 1001, 25))
 """修正幅度（‰）的旋鈕階梯。"""
-RELAX_PERMILLE = 150
-"""條件放寬一級：血量門檻（‰）放寬多少。"""
-MAX_RELAX_PERMILLE = 900
 
 STRICT_OPS = frozenset({"potency", "mod_potency", "stance_potency", "followup_potency"})
 """結構不變、只靠重調變強的改法：強度下限要嚴格大於變化前（否則可能「閃了沒變化」）。"""
@@ -141,7 +133,9 @@ def _hits(skill: SkillDef) -> bool:
     return skill.kind in ("active", "passive", "reaction") and skill.trap is None
 
 
-def _new_damage(skill: SkillDef, source: dict[str, Any], element: str | None) -> dict[str, Any]:
+def _new_damage(
+    library: ContentLibrary, skill: SkillDef, source: dict[str, Any], element: str | None
+) -> dict[str, Any]:
     """新增的傷害效果（數值之後由旋鈕調）：法術技用骰子、武器技用倍率。"""
     effect: dict[str, Any] = {"type": "damage"}
     if element is not None:
@@ -151,7 +145,7 @@ def _new_damage(skill: SkillDef, source: dict[str, Any], element: str | None) ->
     if skill.category == "spell" or "dice" in source:
         effect["dice"] = "1d4"
     else:
-        effect["multiplier_permille"] = 300
+        effect["multiplier_permille"] = library.flash.rules.new_damage_multiplier_permille
     return effect
 
 
@@ -284,7 +278,7 @@ def _op_terrain_area(
             if rocks:
                 if len(effects) >= library.ruleset.core.skill_limits.max_effects:
                     continue
-                effects.append(_new_damage(skill, {}, "earth"))
+                effects.append(_new_damage(library, skill, {}, "earth"))
             drafts.append((base, effects))
     return drafts
 
@@ -315,7 +309,7 @@ def _op_multi_hit(
     if not _hits(skill) or skill.followup is not None or index is None or full:
         return []
     source = effects[index]
-    extra = _new_damage(skill, source, source.get("element"))
+    extra = _new_damage(library, skill, source, source.get("element"))
     effects.insert(index + 1, extra)
     return [(base, effects)]
 
@@ -325,7 +319,7 @@ _FOLLOWUP_SKELETONS = ("strike", "combo", "area")
 
 
 def _op_followup(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """接續段：命中後接一小段傷害（``when: on_hit``，自動對命中的同一個目標；6.23）。複合技、陷阱、
     變奏、常駐類傳說與有失手反噬的技能不加。"""
@@ -344,7 +338,9 @@ def _op_followup(
         return []
     source = skill.effects[index].model_dump(mode="json", exclude_none=True)
     element = source.get("element")
-    second = _new_damage(skill, {k: v for k, v in source.items() if k != "affects"}, element)
+    second = _new_damage(
+        library, skill, {k: v for k, v in source.items() if k != "affects"}, element
+    )
     drafts: list[Draft] = []
     for skeleton in dict.fromkeys((skill.skeleton, *_FOLLOWUP_SKELETONS)):
         base, effects = base_draft(skill)
@@ -390,10 +386,6 @@ def _followup_tunable(skill: SkillDef) -> bool:
     )
 
 
-_FOLLOWUP_POTENCY_STEPS = 10
-"""接續段強化依序試「第一段接續傷害往上 1～n 格」的草稿數。"""
-
-
 def _op_followup_potency(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
@@ -405,7 +397,7 @@ def _op_followup_potency(
     if not _has_followup(skill) or not _followup_tunable(skill):
         return []
     drafts: list[Draft] = []
-    for step in range(1, _FOLLOWUP_POTENCY_STEPS + 1):
+    for step in range(1, library.flash.rules.followup_potency_tries + 1):
         for index, effect in enumerate(skill.followup.effects if skill.followup else ()):
             if effect.type not in _FOLLOWUP_TUNED:
                 continue
@@ -427,17 +419,14 @@ def _followup_knob(effect: dict[str, Any], library: ContentLibrary) -> tuple[str
     return "multiplier_permille", _followup_multipliers(library)
 
 
-_FINE_MULTIPLIER_TOP = 3000
-"""接續段細階梯只細到這裡（‰；以上照原階梯）。"""
-
-
 def _followup_multipliers(library: ContentLibrary) -> tuple[int, ...]:
     """接續段強化類的武器倍率階梯：原階梯＋``rules.followup_multiplier_step`` 的細格（BAL-11b）。"""
     ladder = multiplier_ladder(library)
     step = library.flash.rules.followup_multiplier_step
     if step is None:
         return ladder
-    return tuple(sorted({*ladder, *range(ladder[0], _FINE_MULTIPLIER_TOP, step)}))
+    top = library.flash.rules.followup_fine_top_permille  # 細階梯只細到這裡，以上照原階梯
+    return tuple(sorted({*ladder, *range(ladder[0], top, step)}))
 
 
 def _op_followup_area(
@@ -495,12 +484,8 @@ def _op_followup_element(
         or any(e.get("element") == element for e in (*second, *effects))
     ):
         return []
-    second.insert(index + 1, _new_damage(skill, second[index], element))
+    second.insert(index + 1, _new_damage(library, skill, second[index], element))
     return _followup_eased((base, effects), library)
-
-
-_FOLLOWUP_EASE_STEPS = 4
-"""接續段範圍、距離、第二元素：原本的接續段傷害最多往下讓幾格。"""
 
 
 def _followup_eased(draft: Draft, library: ContentLibrary) -> list[Draft]:
@@ -517,7 +502,7 @@ def _followup_eased(draft: Draft, library: ContentLibrary) -> list[Draft]:
         return [draft]
     position = ladder.index(current)
     drafts = [draft]
-    for step in range(1, min(_FOLLOWUP_EASE_STEPS, position) + 1):
+    for step in range(1, min(library.flash.rules.followup_ease_steps, position) + 1):
         eased = copy.deepcopy(base)
         eased["followup"]["effects"][index][field] = ladder[position - step]
         drafts.append((eased, [dict(e) for e in effects]))
@@ -546,7 +531,7 @@ def _op_element(
         or any(e.get("element") == element for e in effects)
     ):
         return []
-    effects.insert(index + 1, _new_damage(skill, effects[index], element))
+    effects.insert(index + 1, _new_damage(library, skill, effects[index], element))
     return [(base, effects)]
 
 
@@ -652,13 +637,8 @@ def _extend_wider(skill: SkillDef, library: ContentLibrary) -> list[Draft]:
     return [(base, effects)] if changed else []
 
 
-SUMMON_HP_STEPS = (100, 200, 300, 450, 600, 800, 1000)
-"""召喚物最大 HP 加成（‰）的階梯：強度固定的召喚技能沒有旋鈕，依序試，第一個過預算窗與下限
-的是結果。"""
-
-
 def _op_summon_toughen(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """強壯（召喚技能，3W-2b）：召喚物的最大 HP 再多一截（``max_hp_permille``，往上一階）。召喚
     技能的點數是固定的，沒有骰子旋鈕可調，所以補這個讓召喚白板也有小變化可選。"""
@@ -667,7 +647,7 @@ def _op_summon_toughen(
         return []
     current = skill.effects[index].max_hp_permille or 0
     drafts: list[Draft] = []
-    for step in SUMMON_HP_STEPS:
+    for step in library.flash.rules.summon_hp_steps:  # 強度固定、沒有旋鈕：依序試
         if step <= current:
             continue
         base, effects = base_draft(skill)
@@ -694,14 +674,15 @@ def _op_kill_refund(
 
 
 def _op_charge(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """蓄力：冷卻 +2（最多 5 回合），威力由預算器依冷卻折抵提高；至少一項一定要嚴格變強
     （FL-1a，:mod:`trpg.skillgen.flash_cost`）。"""
     if skill.kind != "active":
         return []
     cooldown = skill.cost.cooldown or 0
-    value = min(cooldown + CHARGE_COOLDOWN_STEP, MAX_CHARGE_COOLDOWN)
+    rules = library.flash.rules
+    value = min(cooldown + rules.charge_cooldown_step, rules.max_charge_cooldown)
     if value <= cooldown:
         return []
     base, effects = base_draft(skill)
@@ -722,7 +703,8 @@ def _op_light(
     if (skill.ap_cost or 1) <= 1:
         return _light_cost_drafts(skill, template.cost_fields, library)
     base, effects = base_draft(skill)
-    base["ap_cost"] = (skill.ap_cost or 2) - 1
+    assert skill.ap_cost is not None  # AP 是 None 或 1 時上面已經改走減資源
+    base["ap_cost"] = skill.ap_cost - 1
     cooldown = skill.cost.cooldown
     if cooldown is not None and cooldown > MAX_LIGHT_COOLDOWN:
         base["cost"] = {**base["cost"], "cooldown": MAX_LIGHT_COOLDOWN}
@@ -839,14 +821,14 @@ def _op_dual_scaling(
 
 
 def _op_trigger_cap(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """每回合觸發次數上限 +1（被動；最多 3，再由驗證器的 6.6 硬上限擋）。"""
     trigger = skill.trigger
     if (
         skill.kind != "passive"
         or trigger is None
-        or trigger.max_per_round >= MAX_TRIGGERS_PER_ROUND
+        or trigger.max_per_round >= library.flash.rules.max_triggers_per_round
     ):
         return []
     base, effects = base_draft(skill)
@@ -876,19 +858,21 @@ def _op_mod_potency(
 
 
 def _op_mod_range(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """作用範圍 +1（3W-2b：照光環半徑）：多一條「範圍 +1」（``area_delta``，範圍型形狀與光環的半徑
     +1）的規則；射程 +1 的規則升成 +2；都不行時多一條「射程 +1」。"""
     if skill.kind != "modifier":
         return []
+    limits = library.ruleset.core.skill_limits
+    bounds = limits.modifier_bounds
     drafts: list[Draft] = []
     for index, rule in enumerate(skill.modifiers):
-        if rule.change.range_delta == 1:
+        if rule.change.range_delta == 1:  # 射程 +1 升成上限（+2）
             base, effects = base_draft(skill)
-            base["modifiers"][index]["change"]["range_delta"] = 2
+            base["modifiers"][index]["change"]["range_delta"] = bounds.range_delta_max
             drafts.append((base, effects))
-    if len(skill.modifiers) < 2:  # noqa: PLR2004 - 修正規則最多 2 條
+    if len(skill.modifiers) < limits.max_modifiers:
         applies = skill.modifiers[0].applies_to.model_dump(mode="json")
         has_area = any(m.change.area_delta is not None for m in skill.modifiers)
         for change in ({"area_delta": 1}, {"range_delta": 1}):
@@ -934,28 +918,29 @@ def _op_mod_keyword(
     return drafts[:1]
 
 
-_RELAX_ALTERNATIVES = (
-    {"type": "target_hp_below", "permille": 500},
-    {"type": "self_hp_below", "permille": 500},
-)
-"""條件放寬時多加的「或」分支（依序試；只改自己的規則只能用 self_hp_below）。"""
+_RELAX_ALTERNATIVES = ("target_hp_below", "self_hp_below")
+"""條件放寬時多加的「或」分支（依序試，門檻 ``rules.added_hp_condition_permille``；只改自己的規則
+只能用 self_hp_below）。"""
 
 
 def _op_mod_relax(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """條件放寬一級（3W-2b）：血量門檻放寬 150‰（最多 900‰）；其他條件加一個「或」分支（目標血量低於
     50%；選目標前就決定的規則改用自身血量低於 50%），例：居高臨下 → 居高臨下，或目標血量低於 50%。
     預算照 ``any_of`` 的最寬鬆倍率算，幅度由預算器重調。"""
     if skill.kind != "modifier":
         return []
+    rules = library.flash.rules
     drafts: list[Draft] = []
     for index, rule in enumerate(skill.modifiers):
         condition = rule.condition
         if condition is None or condition.any_of is not None:
             continue
         if condition.permille is not None:
-            widened = min(condition.permille + RELAX_PERMILLE, MAX_RELAX_PERMILLE)
+            widened = min(
+                condition.permille + rules.hp_relax_step_permille, rules.hp_relax_max_permille
+            )
             if widened == condition.permille:
                 continue
             base, effects = base_draft(skill)
@@ -964,16 +949,14 @@ def _op_mod_relax(
             continue
         for alternative in _RELAX_ALTERNATIVES:
             base, effects = base_draft(skill)
-            base["modifiers"][index]["condition"]["any_of"] = [dict(alternative)]
+            added = {"type": alternative, "permille": rules.added_hp_condition_permille}
+            base["modifiers"][index]["condition"]["any_of"] = [added]
             drafts.append((base, effects))
         break
     return drafts[:3]
 
 
 # BAL-10b：修正型被動的持續回合、計數上限、冷卻、代價減輕（6.34.4「修正幅度 +」的同類補充）
-
-MAX_EMPTY_SLOTS_CAP = 6
-"""``empty_slots_cap`` 的 schema 上限。"""
 
 
 def _op_mod_duration(
@@ -1008,7 +991,7 @@ def _op_mod_stack(
     欄數）。"""
     if skill.kind != "modifier":
         return []
-    slots = min(MAX_EMPTY_SLOTS_CAP, library.ruleset.core.skill_slots.active)
+    slots = min(library.flash.rules.max_empty_slots_cap, library.ruleset.core.skill_slots.active)
     drafts: list[Draft] = []
     for index, rule in enumerate(skill.modifiers):
         cap = rule.empty_slots_cap
@@ -1067,9 +1050,6 @@ def _op_mod_cost(
 # ---------------------------------------------------------------------------
 # 姿態（元素姿態階梯上的換級；維持費在 SkillDef.stance_upkeep）
 # ---------------------------------------------------------------------------
-
-MAX_STANCE_UPKEEP = 2
-"""姿態維持費的上限（``SkillDef.stance_upkeep`` 的 schema 上限）。"""
 
 
 def _is_stance_effect(effect: EffectSpec, library: ContentLibrary) -> bool:
@@ -1131,7 +1111,7 @@ def _entry_cost(
     if field == "cooldown":
         current = skill.cost.cooldown or 0
         value = current + step
-        if value < 0 or value > MAX_CHARGE_COOLDOWN:
+        if value < 0 or value > library.flash.rules.max_charge_cooldown:
             return None
         cost["cooldown"] = value or None
         return cost
@@ -1189,10 +1169,11 @@ def _op_stance_heavy(
     family = _stance_family(skill, library)
     if family == "form":
         return _form_cost_drafts(skill, template, library, down=False)
-    if family == "status" and skill.stance_upkeep < MAX_STANCE_UPKEEP:
+    top = library.ruleset.core.skill_limits.max_stance_upkeep  # 維持費上限（HC-4d）
+    if family == "status" and skill.stance_upkeep < top:
         return _magnitude_drafts(skill, library, skill.stance_upkeep + 1, down=False)
     rung = _stance_rung(skill, library)
-    if rung is None or skill.stance_upkeep >= MAX_STANCE_UPKEEP:
+    if rung is None or skill.stance_upkeep >= top:
         return []
     ladder, position, index = rung
     return _stance_drafts(skill, ladder[position + 1 :], skill.stance_upkeep + 1, ladder, index)
@@ -1455,16 +1436,12 @@ def _op_trigger_swap(
     return [(base, effects)]
 
 
-_BLOOD_BONUS_PERMILLE = 50
-"""以血支付：生命代價比省下的法力／耐力折抵多這麼多 ‰（「威力略升」的初值）。"""
-
-
 def _op_blood_price(
     skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """側變「以血支付」：法力、耐力只留 1 點 × ``quantity_scale``（驗證器規定主動技至少花 1 點
     資源），其餘改付最大 HP 的千分比（``cost.hp_percent``）。生命代價的折抵＝省下的法力／耐力折抵 ＋
-    :data:`_BLOOD_BONUS_PERMILLE`（不超過預算表的 ``hp_cap``），多出來的由預算器換成威力
+    ``rules.blood_bonus_permille``（不超過預算表的 ``hp_cap``），多出來的由預算器換成威力
     （「略升」）。"""
     cost = skill.cost
     if skill.kind != "active" or cost.hp_percent is not None:
@@ -1477,7 +1454,8 @@ def _op_blood_price(
     ) * allowance.mana_per_point // (allowance.stamina_per_mana * scale)
     if saved <= 0:
         return []
-    hp = min(saved + _BLOOD_BONUS_PERMILLE, allowance.hp_cap) // allowance.hp_per_permille
+    bonus = library.flash.rules.blood_bonus_permille
+    hp = min(saved + bonus, allowance.hp_cap) // allowance.hp_per_permille
     if hp < 1:
         return []
     base, effects = base_draft(skill)
@@ -1542,7 +1520,9 @@ def _op_active_rider(
     return [(base, [*effects, extra])]
 
 
-def _conditional_bonus(skill: SkillDef, condition: dict[str, Any]) -> list[Draft]:
+def _conditional_bonus(
+    skill: SkillDef, condition: dict[str, Any], library: ContentLibrary
+) -> list[Draft]:
     """加一段有條件的傷害（同「借勢」的寫法：目標符合條件時加碼）；數值由預算器補。"""
     if skill.kind != "active" or skill.trap is not None or _graft_blocked(skill):
         return []
@@ -1552,19 +1532,19 @@ def _conditional_bonus(skill: SkillDef, condition: dict[str, Any]) -> list[Draft
     base, effects = base_draft(skill)
     if any(e.get("condition") == condition for e in effects):
         return []
-    extra = _new_damage(skill, effects[index], _damage_element(skill))
+    extra = _new_damage(library, skill, effects[index], _damage_element(skill))
     extra["condition"] = condition
     return [(base, [*effects, extra])]
 
 
 def _op_surface_exploit(
-    skill: SkillDef, template: FlashTemplate, variation: Variation, _lib: ContentLibrary
+    skill: SkillDef, template: FlashTemplate, variation: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """利用地面：目標站在 ``variation.keyword``（表面 ID，模板的 ``surfaces``）上時多一段傷害。"""
     surface = variation.keyword
     if surface is None or surface not in template.surfaces:
         return []
-    return _conditional_bonus(skill, {"type": "target_on_surface", "surface": surface})
+    return _conditional_bonus(skill, {"type": "target_on_surface", "surface": surface}, library)
 
 
 _DISTANCE_CONDITIONS = ("point_blank", "long_range")
@@ -1580,10 +1560,10 @@ def _op_distance_bonus(
     reach = skill.shape.range
     if kind not in _DISTANCE_CONDITIONS or not isinstance(reach, int):
         return []
-    need = 2 if kind == "point_blank" else library.ruleset.core.far_distance
+    need = POINT_BLANK_MIN_REACH if kind == "point_blank" else library.ruleset.core.far_distance
     if reach < need:
         return []
-    return _conditional_bonus(skill, {"type": kind})
+    return _conditional_bonus(skill, {"type": kind}, library)
 
 
 # ---------------------------------------------------------------------------

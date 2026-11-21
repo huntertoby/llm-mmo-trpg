@@ -58,6 +58,13 @@ def _mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def probe_trap(library: ContentLibrary) -> dict[str, Any]:
+    """試組帶「放置陷阱」的草稿時補的最小陷阱設定（草稿還沒填 ``trap``）：踩到時觸發，輪數取組合器
+    ``enter`` 陷阱最短的輪數（``skill_composer.yaml`` 的 ``trap.enter_rounds.min``；HC-5a 前靠
+    ``TrapSpec.rounds`` 的程式預設 2，同值）。"""
+    return {"trigger": "enter", "rounds": library.composer.trap.enter_rounds.min}
+
+
 def _assumed_cooldown() -> int:
     return model_range(SkillCost.model_fields["cooldown"])[1] or 9
 
@@ -79,7 +86,7 @@ class EffectProbe:
         if "cooldown" not in cost:  # 冷卻在後面的「代價」步驟才選：假設之後會給足夠的冷卻
             overrides["cost"] = {**cost, "cooldown": _assumed_cooldown()}
         if any(e.get("type") == "place_trap" for e in effects) and draft.get("trap") is None:
-            overrides["trap"] = {"trigger": "enter"}
+            overrides["trap"] = probe_trap(self.library)
         try:
             return build_skill(draft, overrides)
         except DraftError:

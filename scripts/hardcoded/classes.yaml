@@ -1044,13 +1044,6 @@ rules:
     kind: number
     where: ['EffectSpec']
     note: 同上一條（content config）。
-  - id: py-content-skills-reactions-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/reactions.py
-    kind: number
-    where: ['TrapSpec']
-    note: 同上一條（content config）。
   - id: py-content-ui-wait-config-number
     class: config
     status: todo
@@ -1432,101 +1425,17 @@ rules:
       - '<module>._LOW_MULTIPLIER_STEP'
       - '_knobs'
     note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-cost-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_cost.py
-    kind: number
-    where: ['<module>.CHARGE_DURATION_CAP', '<module>._SHIELD_DEFAULT_DURATION']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-derive-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_derive.py
-    kind: number
-    where: ['<module>.STRICT_MARGIN', '<module>.TUNE_ATTEMPTS']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-major-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_major.py
-    kind: number
-    where:
-      - '<module>._GUARDIAN_COSTS'
-      - '<module>._MAX_CARRIED'
-      - '<module>._MAX_TRAP_EFFECTS'
-      - '<module>._MIN_POWER'
-      - '<module>._POWER_STEP'
-      - '<module>._STANCE_UPKEEPS'
-      - '<module>._STRICT_MARGIN'
-      - '<module>._SUMMON_COSTS'
-      - '_apply_borrow'
-      - '_to_aid'
-      - '_to_blessing'
-      - '_to_guardian'
-      - '_to_passive'
-      - '_to_reaction'
-      - '_to_summon'
-      - '_to_trap'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-offer-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_offer.py
-    kind: number
-    where:
-      - '<module>._FREQUENT_USES'
-      - '<module>._KEYWORD_CAP'
-      - '<module>._MULTI_TARGETS_PERMILLE'
-      - '_usage_score'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-ops-config-number
-    class: config
-    status: todo
+  - id: py-skillgen-flash-ops-structure-hc5a
+    class: const
+    status: done
     files: src/trpg/skillgen/flash_ops.py
     kind: number
-    where:
-      - '<module>.CHARGE_COOLDOWN_STEP'
-      - '<module>.MAX_CHARGE_COOLDOWN'
-      - '<module>.MAX_EMPTY_SLOTS_CAP'
-      - '<module>.MAX_RELAX_PERMILLE'
-      - '<module>.MAX_STANCE_UPKEEP'
-      - '<module>.MAX_TRIGGERS_PER_ROUND'
-      - '<module>.RELAX_PERMILLE'
-      - '<module>.SUMMON_HP_STEPS'
-      - '<module>._BLOOD_BONUS_PERMILLE'
-      - '<module>._FINE_MULTIPLIER_TOP'
-      - '<module>._FOLLOWUP_EASE_STEPS'
-      - '<module>._FOLLOWUP_POTENCY_STEPS'
-      - '<module>._RELAX_ALTERNATIVES'
-      - '_new_damage'
-      - '_op_distance_bonus'
-      - '_op_light'
-      - '_op_mod_cost'
-      - '_op_mod_range'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-reclaim-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_reclaim.py
-    kind: number
-    where:
-      - '<module>.MIN_TIGHTEN_PERMILLE'
-      - '<module>.TIGHTEN_PERMILLE'
-      - '<module>._SELF_CONDITION'
-      - '<module>._TARGET_CONDITION'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-trade-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_trade.py
-    kind: number
-    where:
-      - '<module>._CAP_SHRINK_PERMILLE'
-      - '<module>._CAP_SHRINK_STEPS'
-      - '<module>._MAX_COST_CUTS'
-      - '<module>._TUNE_ATTEMPTS'
-    note: 同上一條（skillgen config）。
+    scope: _op_mod_cost
+    slot: 'cmp:len(skill.modifiers)'
+    value: '2'
+    note: >-
+      HC-5a：代價減輕「至少留一條規則」——要有 2 條以上的修正規則才能減其中一條的代價，2 是「至少 1 條
+      ＋要減的那 1 條」的結構數，不是規則上限（上限另讀 core.skill_limits.max_modifiers）。
   - id: py-skillgen-option-effect-rules-config-number
     class: config
     status: todo
