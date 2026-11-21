@@ -314,15 +314,39 @@ rules:
     context: '\bh\b'
     note: HC-4d：早／午／晚／夜的鐘點分界（11、18、21 點）改讀伺服器的 clock.day_parts（content/world/rules.yaml 的
       day_parts）；剩下的 % 24 是一天 24 小時（時刻字串的防呆），不是玩法數值。
+  # HC-6b（HC-3 裁定 3「工坊選項 15 筆」）：快捷鈕、刻度、預估倍數改判 layout／const；階級與 AP 選項留 todo。
+  - id: ts-tuning-quick-buttons
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/RatioView.tsx]
+    where: ['<module>.SIM_MEDIUM_SEEDS', '<module>.MAP_MEDIUM_BATTLES', '<module>.RATIO_QUICK_SEEDS']
+    note: HC-6b 改判（HC-3 裁定 3）：模擬規模的快捷鈕——「中」10 種子、80 場與比值快捷「每組 10 種子」是工坊畫面自己的按鈕，不是規則（「小」與上限已照伺服器）。
+  - id: ts-tuning-budget-scale
+    class: layout
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/tuning/skillModel.ts]
+    where: ['<module>.BUDGET_SCALE_MAX', 'budgetGeometry']
+    note: HC-6b 改判（HC-3 裁定 3）：預算比例條的刻度 0～150%（畫到哪裡停在右端）與換成條上的 %，是畫法。
+  - id: ts-tuning-estimate-factor
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/tuning/ratioModel.ts]
+    slot: 'op:*'
+    value: '2'
+    note: HC-6b 改判（HC-3 裁定 3）：比值的預估秒數上界「× 2」是改前、改後各跑一次（次數的換算）。
   - id: ts-tuning-presets
     class: config
     status: todo
     kind: number
-    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
-            client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx,
-            client/src/ui/workshop/ToolPanels.tsx]
-    context: 'seeds|battles|SIM_MEDIUM_SEEDS|MAP_MEDIUM_BATTLES|RATIO_QUICK_SEEDS|BUDGET_SCALE_MAX|\[1, 2, 3'
-    note: 保守：數值工坊畫面自己的選項——「中」規模（10 種子、80 場）與比值快捷 10 種子、篩選與隨機的階級／AP 選項、預算比例條刻度 150%、預估「改前改後各一次」的 ×2；後端沒有對應的規則（HC-3 留下，見報告待決）。
+    files: [client/src/tuning/skillModel.ts, client/src/screens/TuningScreen.tsx, client/src/ui/workshop/ToolPanels.tsx]
+    context: '\[1, 2, 3'
+    note: 保守：數值工坊篩選列的階級（1～3）與 AP（1～3）選項、技能工坊「隨機一個」的階級（1～5）選項；HC-3 裁定 3 要改由 API 帶（AP 上限是 core.yaml 的 skill_limits.max_ap_cost，階級另定），HC-6b 只改判快捷鈕與刻度，這幾筆還沒接。
 
   # ======================================================================== 前端：常數
   - id: ts-http-status
