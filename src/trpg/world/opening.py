@@ -157,7 +157,7 @@ _ARMOR_SLOT_TYPES: Final[frozenset[SlotType]] = frozenset({"head", "body", "hand
 _MAIN_HAND_ZH: Final = "入門期不能換主手，找葛蘭選定武器後就能換"
 _ARMOR_ONLY_ZH: Final = "入門期的打造、強化、重骰、指定詞條只限防具"
 _CHOSEN_ZH: Final = "已經正式選定武器與關鍵字了"
-_BEFORE_LEVEL_4_ZH: Final = "4 級前不能溶掉技能或傳承"
+_BEFORE_LEVEL_4_ZH: Final = f"{OPENING_END_LEVEL} 級前不能溶掉技能或傳承"
 _LIMIT_ACTIONS: Final[Mapping[str, type]] = {
     "race": ChangeRaceAction,
     "flash": FlashAction,

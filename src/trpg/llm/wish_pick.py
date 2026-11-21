@@ -135,7 +135,8 @@ class _Loop:
         try:
             answer = _Answer.model_validate(json.loads(clean_response(raw)))
         except (json.JSONDecodeError, ValidationError):
-            errors = [NameCheck("response.invalid", "回應必須是只含 cards（3 張）的 JSON。")]
+            count = self.library.skill_pick.pool.wish_cards
+            errors = [NameCheck("response.invalid", f"回應必須是只含 cards（{count} 張）的 JSON。")]
         else:
             errors = self._take(answer.cards, final=number >= limit)
         self.codes.extend(e.code for e in errors)
@@ -174,7 +175,8 @@ class _Loop:
         if not 0 <= text.pick < len(ranked):
             return [NameCheck("pick.out_of_range", f"pick 要是 0～{len(ranked) - 1}。")]
         if text.pick in others:
-            return [NameCheck("pick.duplicate", "3 張的 pick 不可重複。")]
+            count = self.library.skill_pick.pool.wish_cards
+            return [NameCheck("pick.duplicate", f"{count} 張的 pick 不可重複。")]
         skill = ranked[text.pick].skill
         naming = text.naming()
         facts = strict_facts(self.library, skill)
@@ -293,6 +295,7 @@ def make_wish_picker(
                 previous=previous,
                 errors=errors,
                 world=style,
+                card_count=library.skill_pick.pool.wish_cards,
             )
 
         loop = _Loop(
@@ -300,7 +303,9 @@ def make_wish_picker(
             library,
             ask,
             messages,
-            wish_pick_schema(len(ask.slate.ranked), style),
+            wish_pick_schema(
+                len(ask.slate.ranked), style, cards=library.skill_pick.pool.wish_cards
+            ),
             style,
             vocab,
             used,

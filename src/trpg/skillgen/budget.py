@@ -53,6 +53,7 @@ from trpg.content.skills import (
     on_hit_carrier,
 )
 from trpg.content.summons import SummonDef, summon_dpr
+from trpg.engine.ids import OVERDRAWN
 from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
 from trpg.skillgen.memo import by_id
@@ -1367,8 +1368,9 @@ def _allowance_parts(
         )
     if cost.self_status is not None:
         parts.append(_self_status_allowance(cost.self_status, budget, statuses))
-    if cost.overdraft is not None:  # 透支（3-50）：固定折抵
-        parts.append(("透支（下回合少 1 AP）", allowance.overdraft_permille))
+    if cost.overdraft is not None:  # 透支（3-50）：固定折抵；少幾 AP 照透支狀態（HC-6a）
+        penalty = statuses[OVERDRAWN].ap_penalty
+        parts.append((f"透支（下回合少 {penalty} AP）", allowance.overdraft_permille))
     if any(effect.type == LEAVE_FORM for effect in skill.effects):  # 解除形態（3J-4c）：算代價
         parts.append(("解除形態（先離開目前的形態）", allowance.leave_form_permille))
     if skill.stance_upkeep:  # 姿態維持費（3W-2b）
@@ -1419,7 +1421,8 @@ def _passive_coefficient(skill: SkillDef, library: ContentLibrary) -> tuple[Frac
         definition.budget_by_n_permille is not None
         and trigger.n not in definition.budget_by_n_permille
     ):
-        raise BudgetError(f"觸發時機 {trigger.event} 的 n 必須是 2 或 3，收到 {trigger.n}")
+        allowed = " 或 ".join(str(n) for n in sorted(definition.budget_by_n_permille))
+        raise BudgetError(f"觸發時機 {trigger.event} 的 n 必須是 {allowed}，收到 {trigger.n}")
     coefficient = Fraction(definition.coefficient_permille(trigger.n), _PERMILLE)
     extra = Fraction(library.budget.passive_extra_trigger_permille, _PERMILLE)
     coefficient *= extra ** (trigger.max_per_round - 1)
@@ -1437,7 +1440,7 @@ def _modifier_uses(rule: ModifierSpec, budget: ModifierBudget) -> tuple[int, str
     """一條修正規則每場的預估使用次數（``applies_to`` 各項加總，上限 ``uses_cap``）與說明。"""
     target, uses = rule.applies_to, budget.uses
     if rule.per_turn_limit is not None:  # 每回合 1 次（3-31）：以自己的回合數估，不看 uses 表
-        return min(budget.per_turn_limit_uses, budget.uses_cap), "每回合 1 次"
+        return min(budget.per_turn_limit_uses, budget.uses_cap), f"每回合 {rule.per_turn_limit} 次"
     total = 0
     parts: list[str] = []
     if target.all_attacks:

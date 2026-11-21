@@ -1097,7 +1097,9 @@ class StatusDef(ContentModel):
         if self.element_dealt_wet_permille != _NEUTRAL_PERMILLE and self.element_dealt is None:
             raise ValueError(f"狀態 {self.id}：element_dealt_wet_permille 需要 element_dealt")
         if any(not 1 <= n <= _MAX_DURATION_BONUS for n in self.status_duration_bonus.values()):
-            raise ValueError(f"狀態 {self.id}：status_duration_bonus 每項必須是 1 或 2")
+            raise ValueError(
+                f"狀態 {self.id}：status_duration_bonus 每項必須是 1 或 {_MAX_DURATION_BONUS}"
+            )
 
 
 class StatusTable(ContentModel):
@@ -1842,7 +1844,8 @@ class UnitTemplate(ContentModel):
     @model_validator(mode="after")
     def _check_footprint(self) -> UnitTemplate:
         if self.footprint not in GIANT_FOOTPRINTS:
-            raise ValueError(f"單位 {self.id}：footprint 只能是 1 或 3，收到 {self.footprint}")
+            allowed = " 或 ".join(str(n) for n in GIANT_FOOTPRINTS)
+            raise ValueError(f"單位 {self.id}：footprint 只能是 {allowed}，收到 {self.footprint}")
         if self.footprint > 1 and (BOSS_TAG not in self.tags or self.summon):
             raise ValueError(
                 f"單位 {self.id}：只有帶 boss 標籤、不是召喚物的範本能佔多格（footprint）"

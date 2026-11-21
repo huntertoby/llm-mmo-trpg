@@ -1569,55 +1569,68 @@ rules:
     note: 同上一條（bot text）。
 
   # ---------------------------------------------------- 後端 content：text
-  # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。
+  # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。HC-6a：有常數的改組字；剩下的分兩種——
+  # 還是規則數字、但程式裡沒有可帶的資料（留 text，先要搬進 content 才能組字），以及結構用字（改判 const）。
   - id: py-content-battle-text-text
     class: text
     status: todo
     files: src/trpg/content/battle.py
     kind: text
+    where: ['OffhandDef.trait_lines_zh']
+    note: 塔盾的遠程掩護「攻擊者高 2 層以上時無視」：引擎 rules/combat.py 寫死「塔盾視為 1 層高」，沒有資料可帶（HC-6a 留 text）。
+  - id: py-content-battle-const-text
+    class: const
+    status: done
+    files: src/trpg/content/battle.py
+    kind: text
     where:
       - 'Dice._parse_text'
-      - 'OffhandDef.trait_lines_zh'
       - 'StatusDef._check_elemental_stance'
-      - 'UnitTemplate._check_footprint'
       - 'UnitTemplate._check_totem'
       - 'UnitTemplate._element_mod_range'
       - 'UnitTemplate._resist_range'
       - 'check_phases'
-    note: content 驗證訊息裡的上下限數字（應從 schema 常數帶）。
+    note: HC-6a 改判：骰子寫法的例子（2d6）；「1 或 {上限}」的下限 1；「第 1 項」是序號；圖騰 speed 為 0 是定義；-1000～1000‰ 是 ‰ 換算（±100%）。
+  - id: py-content-composer-rules-const-text
+    class: const
+    status: done
+    files: src/trpg/content/composer_rules.py
+    kind: text
+    where: ['ComposerRules._check', 'WhiteboardRules._check']
+    note: HC-6a 改判：千分比的總和 1000、0～1000 是 ‰ 換算（100%）。
   - id: py-content-composer-rules-text-text
     class: text
     status: todo
     files: src/trpg/content/composer_rules.py
     kind: text
     where:
-      - 'ComposerRules._check'
       - 'CostRules._check_self_status_duration'
       - 'DiceRules._check'
-      - 'WhiteboardRules._check'
     note: 同上一條（content text）。
   - id: py-content-environment-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/environment.py
     kind: text
     where: ['WeatherDef._mods']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：元素修正不低於 -1000‰ 是 ‰ 換算（減傷到 0 為止）。
   - id: py-content-equipment-text-text
     class: text
     status: todo
     files: src/trpg/content/equipment.py
     kind: text
-    where:
-      - 'AttackAffix._check_strike'
-      - 'EquipmentRules._check'
-      - 'TriggerAffix._check_summon_downed'
-      - 'ValueRange._check'
-      - 'weapon_element_problems'
-    note: 同上一條（content text）。
+    where: ['weapon_element_problems']
+    note: 武器元素詞條「同一件最多 1 條」：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
+  - id: py-content-equipment-const-text
+    class: const
+    status: done
+    files: src/trpg/content/equipment.py
+    kind: text
+    where: ['EquipmentRules._check', 'TriggerAffix._check_summon_downed', 'ValueRange._check']
+    note: HC-6a 改判：遞減權重從 1000 開始是 ‰ 換算；「恰好 1 個 sacrifice_summon」是觸發的結構；「不能是 0」是非零檢查。
   - id: py-content-fields-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/fields.py
     kind: text
     where:
@@ -1626,21 +1639,29 @@ rules:
       - 'FieldMapDef._kind_problems'
       - '_map_stone_checks'
       - '_npc_problems'
-    note: 同上一條（content text）。
+    note: HC-6a 改判：size 至少 1×1、至少 1 個出口是非空檢查；主城／城鎮恰好 1 個傳送石是地圖結構的唯一性；「草稿待確認 2」是待決編號。
   - id: py-content-flash-templates-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/flash_templates.py
     kind: text
     where: ['FlashTemplate._check', '_ladder']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：階梯從 1000 開始是 ‰ 換算（×1）；「非 0 的 delta」是非零檢查。
   - id: py-content-item-budget-text-text
     class: text
     status: todo
     files: src/trpg/content/item_budget.py
     kind: text
     where: ['_rarity_problems', 'item_budget_problems']
-    note: 同上一條（content text）。
+    text: '每件最多 1 條'
+    note: 每件裝備的 build 詞條、觸發詞條「最多 1 條」：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
+  - id: py-content-item-budget-const-text
+    class: const
+    status: done
+    files: src/trpg/content/item_budget.py
+    kind: text
+    where: ['item_budget_problems']
+    note: HC-6a 改判：預算區間的上界 100% 是「不超過預算本身」（下界已從 min_fill_permille 帶入）。
   - id: py-content-library-giant-checks-text-text
     class: text
     status: todo
@@ -1649,40 +1670,47 @@ rules:
     where: ['_lineup_problems']
     note: 同上一條（content text）。
   - id: py-content-library-ruleset-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/library/ruleset.py
     kind: text
     where: ['Ruleset._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：「1000 − 元素修正下限」是 ‰ 換算（兩格的值本身已帶入）。
   - id: py-content-library-world-text-text
     class: text
     status: todo
     files: src/trpg/content/library/world.py
     kind: text
-    where: ['_check_post_facilities', '_range_problems']
-    note: 同上一條（content text）。
+    where: ['_range_problems']
+    note: 靶場示範技要是「1 階」主動技：檢查本身寫死 tier != 1，沒有資料可帶（HC-6a 留 text）。
+  - id: py-content-library-world-const-text
+    class: const
+    status: done
+    files: src/trpg/content/library/world.py
+    kind: text
+    where: ['_check_post_facilities']
+    note: HC-6a 改判：郵差在地圖上恰好 1 個站位是唯一性。
   - id: py-content-parts-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/parts.py
     kind: text
     where: ['BossPart._check', 'StatDownBreak._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：-1000～1000‰、小於 1000 是 ‰ 換算（倍率 ×1、±100%）。
   - id: py-content-races-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/races.py
     kind: text
     where: ['RacePassive._permille_problems', 'RaceTable.summary', 'forbidden_key_problems']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：「防最佳解原則 1」是原則編號；「各 1 招種族技＋1 項環境被動」是種族的組成（摘要用）。
   - id: py-content-roguelite-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/roguelite.py
     kind: text
     where: ['EncounterStep._non_empty']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：遭遇選項至少 1 名敵人是非空檢查。
   - id: py-content-rules-text-text
     class: text
     status: todo
@@ -1698,106 +1726,121 @@ rules:
     where: ['BudgetRules._check']
     note: 同上一條（content text）。
   - id: py-content-skills-modifiers-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/modifiers.py
     kind: text
     where: ['ModifierChange._check_on_hit', 'ModifierChange._check_on_hit_rune', 'ModifierChange._check_tags']
-    note: 同上一條（content text；HC-4b2 起 _check_on_hit、_check_tags 只剩「至少 1」的下限訊息）。
+    note: HC-6a 改判：「至少 1 個標籤／效果」、距離至少 1 格是非空與正數檢查；「只引爆目標那 1 格」是 scope 的定義。
   - id: py-content-skills-problems-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/problems.py
     kind: text
     where: ['_legendary_problems']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：傳說技能「恰好 1 個核心」是三擇一的結構。
   - id: py-content-skills-queries-text-text
     class: text
     status: todo
     files: src/trpg/content/skills/queries.py
     kind: text
     where: ['skill_slot_problems']
-    note: 同上一條（content text）。
+    note: 規則改變型傳說每人最多裝 1 個（3D-6 使用者決定）：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-skills-limits-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/limits.py
     kind: text
     where: ['_primitive_problems']
-    note: 同上一條（content text；HC-4b 從 SkillDef._check_summon 搬來的訊息，「1 或 N」的 1）。
+    note: HC-6a 改判：「1 或 {max_summon_count}」的 1 是只召喚一隻（上限已從規則包帶入）。
   - id: py-content-skills-skill-text-text
     class: text
     status: todo
     files: src/trpg/content/skills/skill.py
     kind: text
+    where: ['SkillDef._check_legendary', 'SkillDef._check_summon']
+    text: '花 1 或 2 點源力|count: 2'
+    note: 源力 1 或 2 點（上限 skill_limits.max_source_cost）、數量型分歧的 count 2（max_summon_count）都在 Ruleset 層，SkillDef 的驗證拿不到（HC-6a 留 text）。
+  - id: py-content-skills-skill-const-text
+    class: const
+    status: done
+    files: src/trpg/content/skills/skill.py
+    kind: text
     where:
       - 'SkillDef._check_branch_fields'
-      - 'SkillDef._check_legendary'
       - 'SkillDef._check_pierce'
       - 'SkillDef._check_stance_upkeep'
       - 'SkillDef._check_summon'
       - 'SkillDef._check_summon_beside'
-    note: 同上一條（content text）。
+    note: HC-6a 改判：1000 是 ‰ 換算（×1、100%）；1～1000 的 1 是正數下限（伴生的規則下限在 Ruleset 層另查）；單體射程大於 1＝不是近戰。
   - id: py-content-skills-specs-text-text
     class: text
     status: todo
     files: src/trpg/content/skills/specs.py
     kind: text
     where: ['TriggerSpec._check', 'TriggerSpec._check_exploited']
-    note: 同上一條（content text）。
+    note: 兩種觸發每輪最多 1 次（AP-2）：檢查本身寫死 max_per_round != 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-skills-variants-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/variants.py
     kind: text
     where: ['VariantSpec._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：替換內容至少 1 項是非空檢查（上限在 Ruleset 層）。
   - id: py-content-hc4d-text
-    class: text
-    status: todo
+    class: const
+    status: done
     kind: text
     files: [src/trpg/content/fields.py, src/trpg/content/races.py, src/trpg/content/skills/limits.py,
             src/trpg/content/stacks.py]
     where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check']
-    note: HC-4d 新的驗證訊息（實地地圖規則、種族被動上限搬進內容檔後的字句）；同上一條（content text）。
+    note: HC-6a 改判（HC-4d 的驗證訊息）：下限 ≥ 0、至少 1 個效果是非負與非空檢查；−1 是「只能減傷」的上界（負數）；1000 是 ‰ 換算。
   - id: py-content-world-economy-text-text
     class: text
     status: todo
     files: src/trpg/content/world_economy.py
     kind: text
+    where: ['WorldItemDef._check']
+    text: '1 AP'
+    note: 道具技能必須 1 AP（08 8.17）：檢查本身寫死 ap_cost != 1，沒有資料可帶（HC-6a 留 text）。
+  - id: py-content-world-economy-const-text
+    class: const
+    status: done
+    files: src/trpg/content/world_economy.py
+    kind: text
     where: ['EconomyRules._check', 'WorldItemDef._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：堆疊上限不小於 1 是正數檢查；道具「每個用一次」（uses_per_battle 1）是消耗品的定義。
   - id: py-content-world-encounters-text-text
     class: text
     status: todo
     files: src/trpg/content/world_encounters.py
     kind: text
     where: ['_lineup_problems']
-    note: 同上一條（content text）。
+    note: 一場最多 1 名精英：檢查本身寫死 > 1，沒有資料可帶（HC-6a 留 text）。
   - id: py-content-world-loot-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/world_loot.py
     kind: text
     where: ['_weights_ok']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：「8.22.1 第 7 點」是設計文件的條目編號。
   - id: py-content-world-map-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/world_map.py
     kind: text
     where:
       - 'LocationDef._battle_map_problems'
       - 'LocationMapDef._count_problems'
       - 'LocationMapDef._town_problems'
-    note: 同上一條（content text）。
+    note: HC-6a 改判：至少 1 張戰鬥地圖是非空檢查；樞紐只有 1 個地點、每區恰好 1 個小鎮是地圖結構的唯一性。
   - id: py-content-world-season-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/world_season.py
     kind: text
     where: ['_check_range']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：天數從 1 起算是編號。
   - id: py-content-world-situations-text-text
     class: text
     status: todo
@@ -1814,35 +1857,35 @@ rules:
     files: src/trpg/engine/activations.py
     kind: text
     where: ['activation_problem']
-    note: 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
+    note: 每個單位同時最多 1 個生效中的規則改變：引擎寫死，沒有資料可帶（HC-6a 留 text）。
   - id: py-engine-battle-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/battle.py
     kind: text
     where: ['run_problem', 'shove_problem']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：速度為 0、推擊距離減半後為 0 格是「不能動」的定義。
   - id: py-engine-oath-tracking-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/oath_tracking.py
     kind: text
     where: ['<module>.BREACH_TEXT']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：「第 1 個回合」是序號。
   - id: py-engine-parts-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/parts.py
     kind: text
     where: ['<module>.PART_REASON_ZH']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：「高 1 層以上」＝站得比目標高（引擎 >= 1）；格數已從 FAR_BEYOND 帶入。
   - id: py-engine-preview-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/preview.py
     kind: text
     where: ['_miss_notes']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：反噬不讓 HP 低於 1 是「不會致命」的定義。
 
   # ---------------------------------------------------- 後端 llm：text
   # LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
@@ -1851,8 +1894,15 @@ rules:
     status: todo
     files: src/trpg/llm/prompts/proposal.py
     kind: text
-    where: ['<module>.BUDGET_NOTE_ZH', '<module>.EFFECTS_NOTE_ZH', '<module>.VARIANTS_NOTE_ZH']
-    note: LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
+    where: ['<module>.BUDGET_NOTE_ZH', '<module>.VARIANTS_NOTE_ZH']
+    note: 變奏 range_delta「只能填 1 或 2」：提議模型的 Literal[1, 2]（skillgen/proposal/builder.py，config）寫死，沒有資料可帶（HC-6a 留 text）。
+  - id: py-llm-prompts-proposal-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/proposal.py
+    kind: text
+    where: ['<module>.EFFECTS_NOTE_ZH']
+    note: HC-6a 改判：「例：上限 1 個時」是舉例。
   - id: py-llm-prompts-storyteller-text-text
     class: text
     status: todo
@@ -1861,32 +1911,40 @@ rules:
     where: ['<module>.STORY_STYLE', '<module>.STORY_TASKS']
     note: 同上一條（llm text）。
   - id: py-llm-wish-pick-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/llm/wish_pick.py
     kind: text
     where: ['_Loop._card']
-    note: 同上一條（llm text）。
+    note: HC-6a 改判：pick 要是 0～{候選數 − 1}：從 0 起算的索引範圍（張數已從 wish_cards 帶入）。
 
   # ---------------------------------------------------- 後端 narrative：text
   # 敘事文字裡寫死的規則數字（每回合 1 次、格數、暴擊範圍）。
+  - id: py-narrative-action-info-const-text
+    class: const
+    status: done
+    files: src/trpg/narrative/action_info.py
+    kind: text
+    where: ['_maneuvers']
+    text: '每少走 1 格'
+    note: HC-6a 改判：推擊撞擊「每少走 1 格」受一次傷害是逐格計算的說法。
   - id: py-narrative-action-info-text-text
     class: text
     status: todo
     files: src/trpg/narrative/action_info.py
     kind: text
     where: ['_maneuvers', '_move_and_attack']
-    note: 敘事文字裡寫死的規則數字（每回合 1 次、格數、暴擊範圍）。
+    note: 跑步每回合 1 次（引擎 ran_this_turn）、推動與撥開物件 1 格：引擎寫死，沒有資料可帶（HC-6a 留 text）。
   - id: py-narrative-events-text-text
     class: text
     status: todo
     files: src/trpg/narrative/events.py
     kind: text
     where: ['_summon_pulled']
-    note: 同上一條（narrative text）。
+    note: 圖騰把敵人拉近 1 格：引擎（summons/core.py）寫死，沒有資料可帶（HC-6a 留 text）。
   - id: py-narrative-skills-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/skills.py
     kind: text
     where:
@@ -1900,34 +1958,34 @@ rules:
       - 'mark_repeats'
       - 'mastery_text'
       - 'variant_condition_text'
-    note: 同上一條（narrative text）。
+    note: HC-6a 改判：縮放依據「每少 10%／每距 1 格／每有 1 名」是縮放單位的名字（missing_hp_10pct 等）；暴擊範圍上界 20 是 d20；「只引爆那 1 格」「每空 1 格」是逐格說法；3×3 是形狀名；「第 1 擊」是序號；高至少 1 層＝站得比目標高；冷卻最少 0、AP 最少 1、召喚物上限最少 1 隻是下限（引擎 max(0／1, …)）。
   - id: py-narrative-status-info-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/status_info.py
     kind: text
     where: ['_entangle_line', '_modifier_lines']
-    note: 同上一條（narrative text）。
+    note: HC-6a 改判：移動點數最低 0 是下限（不會變負）。
   - id: py-narrative-summon-info-text-text
     class: text
     status: todo
     files: src/trpg/narrative/summon_info.py
     kind: text
-    where:
-      - 'SummonInfoCard'
-      - '_actual_note'
-      - '_attack_phrases'
-      - '_baseline_note'
-      - '_pulse_lines'
-      - 'summon_info'
-      - 'summon_innate_lines'
-    note: 同上一條（narrative text）。
+    where: ['_attack_phrases', '_pulse_lines', 'summon_innate_lines']
+    note: 召喚物絆倒、纏住每輪 1 次（引擎 snare_round 等）、圖騰拉近 1 格：引擎寫死，沒有資料可帶（HC-6a 留 text）。
+  - id: py-narrative-summon-info-const-text
+    class: const
+    status: done
+    files: src/trpg/narrative/summon_info.py
+    kind: text
+    where: ['SummonInfoCard', '_actual_note', '_baseline_note', 'summon_info']
+    note: HC-6a 改判：「基準值（1 級）」「施放者 1 級、修正 0 時」是基準點的定義（等級從 1 起、修正 0）；「每升 1 級」「每 +1」是成長單位。
 
   # ---------------------------------------------------- 後端 skillgen：text
   # 技能工坊、閃現說明裡寫死的規則數字。
   - id: py-skillgen-budget-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/budget.py
     kind: text
     where:
@@ -1936,14 +1994,14 @@ rules:
       - '_modifier_uses'
       - '_passive_coefficient'
       - '_variance_factor'
-    note: 技能工坊、閃現說明裡寫死的規則數字。
+    note: HC-6a 改判：暴擊範圍上界 20 是 d20；「驅散 1 個增益」是 count 不是 all 的那一類（點數照 dispel_one_points）。
   - id: py-skillgen-option-conform-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_conform.py
     kind: text
     where: ['_scalar_problems']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：骰子寫法的例子（2d6）。
   - id: py-skillgen-option-followup-text-text
     class: text
     status: todo
@@ -1952,19 +2010,19 @@ rules:
     where: ['_effects_field', 'followup_notes']
     note: 同上一條（skillgen text）。
   - id: py-skillgen-option-nested-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_nested.py
     kind: text
     where: ['<module>._SPECIAL']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「×2＝加倍」是舉例；「HP 至少留 1」是「不會致命」的定義。
   - id: py-skillgen-option-params-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_params.py
     kind: text
     where: ['<module>._LITERAL_CHOICES', '<module>._SCALE_BY_TEXT']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「目標那 1 格」是 scope 的定義；縮放依據「每少 10%／每距 1 格」是縮放單位的名字。
   - id: py-skillgen-option-scaling-text-text
     class: text
     status: todo
@@ -1973,19 +2031,19 @@ rules:
     where: ['<module>._MASTERY_TEXT']
     note: 同上一條（skillgen text）。
   - id: py-skillgen-option-variant-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_variant.py
     kind: text
     where: ['_when_field', 'variant_fields', 'variant_notes']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：射程「每 +1 格」「−1 則少算」是逐格說法；「結果至少 1」是射程的正數下限；高至少 1 層＝站得比目標高。
   - id: py-skillgen-options-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/options.py
     kind: text
     where: ['_basics_step', '_cost_step', '_self_status_field', '_tier_notes']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：3×3 是形狀名；自身狀態代價「一招最多 1 個」是單一欄位的結構；耐力折合「法力 1 點」是換算單位；「最低角色階級：1 階」是最低階。
   - id: py-skillgen-proposal-builder-text-text
     class: text
     status: todo
@@ -1994,19 +2052,19 @@ rules:
     where: ['_variant_model']
     note: 同上一條（skillgen text）。
   - id: py-skillgen-proposal-evaluate-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/proposal/evaluate.py
     kind: text
     where: ['<module>.MAIN_DAMAGE_ADVICE']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「從 0 起算」是索引的說法。
   - id: py-skillgen-proposal-budget-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/proposal_budget.py
     kind: text
     where: ['<module>.WEAK_ADVICE']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「AP 降到 1」是 AP 的最低值（主動技最少 1 AP）。
   - id: py-skillgen-proposal-costs-text-text
     class: text
     status: todo
@@ -2022,19 +2080,19 @@ rules:
     where: ['<module>.FOLLOWUP_DOC']
     note: 同上一條（skillgen text）。
   - id: py-skillgen-validate-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/validate.py
     kind: text
     where: ['_summon_limit_cost_violations']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「上限 −1」是 summon_limit_delta 的負號那一邊（schema 只收 ±1）。
   - id: py-skillgen-whiteboard-check-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/whiteboard_check.py
     kind: text
     where: ['_structure_problems']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：白板「只能有 1 條修正規則／1 個核心效果」是白板的結構定義。
 
   # ---------------------------------------------------- 後端 world：text
   # 大世界錯誤訊息與說明裡寫死的規則數字。
@@ -2046,19 +2104,27 @@ rules:
     where: ['<module>.FALLBACK_ZH']
     note: 大世界錯誤訊息與說明裡寫死的規則數字。
   - id: py-world-crafting-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/world/crafting.py
     kind: text
     where: ['_recipe_from_fields']
-    note: 同上一條（world text）。
+    note: HC-6a 改判：「要指定 1 條詞條」是單一欄位（action.affix）的結構。
   - id: py-world-growth-text-text
     class: text
     status: todo
     files: src/trpg/world/growth.py
     kind: text
     where: ['_oath']
-    note: 同上一條（world text）。
+    text: '1 天內'
+    note: 解除誓約後「1 天內」：冷卻是 oaths.yaml 的 cooldown_seconds（秒），換成天數的寫法要 PM 定（HC-6a 留 text）。
+  - id: py-world-growth-const-text
+    class: const
+    status: done
+    files: src/trpg/world/growth.py
+    kind: text
+    where: ['_oath']
+    note: HC-6a 改判：「同時只能有 1 個誓約」是單一欄位（char.oath）的結構。
   - id: py-world-opening-text-text
     class: text
     status: todo

@@ -658,6 +658,8 @@ targets:
       - {path: pool.relax_until, label_zh: 三選一每格至少湊幾個候選才停止放寬, kind: int, hint_min: 1, hint_max: 8, note_zh: PK-3：每一格先只收全部關鍵字都對、路線也對的候選；不到這麼多個時，依序放寬（橋接這類多關鍵字的格子先收只帶部分關鍵字的，再收不跟主路線的「偏離」候選）補上，放寬的另外扣分、排在後面。越大越常放寬。}
       - {path: pool.flash_top_k, label_zh: 閃現每格給模型幾個候選, kind: int, hint_min: 1, hint_max: 8, note_zh: PK-3：閃現與重閃的每一個選項格（類別由程式決定），依用法統計排序後給本機模型這麼多個候選挑一個並取名；第一個就是原本會出的那一個。越多 prompt 越長、越慢。}
       - {path: pool.wish_candidates, label_zh: 許願池：候選量, kind: int, hint_min: 3, hint_max: 30, note_zh: PK-4（07 7.6「許願池：願望驅動」第 2 點，初值一般每格 4～6 個、許願 15～20 個）：照願望標籤用組合器做幾個不同設計，打分後全部交給本機模型挑 3 張。越多越可能找到合願望的招，但出題越慢（帶關鍵字時每個種子約 0.05～0.2 秒；召喚之類難做的關鍵字最多約 4 秒）、prompt 越長。}
+      # HC-6a（HC-5b 裁定 4）：許願張數。提示詞、LLM 回應檢查與 schema 的張數改成照這格組字後開放。
+      - {path: pool.wish_cards, label_zh: 許願池：給幾張, kind: int, hint_min: 2, hint_max: 5, note_zh: 許願一次給玩家幾張卡（本機模型從候選裡挑這麼多張並命名、回應願望；模型沒挑滿的照分數補）。調高：玩家可選的變多，但模型一次要挑、命名更多張，較慢也較常失敗；調低：可選的變少。只能 1 以上，而且不能大於「許願池：候選量」。}
       - {path: pool.max_off_route, label_zh: 三選一最多幾張偏離路線, kind: int, hint_min: 0, hint_max: 3, note_zh: HC-5b：本機模型挑了「不跟主路線」的候選時，一份三選一最多留這麼多張偏離（06 6.27.4 定 2 張），超過的從後面的格子起改回分數第一名。調高：本機模型挑的偏離候選更常保留；調低：三選一更貼主路線。}
       - {path: weights.synergy_per_link, label_zh: 協同：每條連線的分數, kind: int, hint_min: 0, hint_max: 1000, note_zh: 候選製造的關鍵字有一招手上的技能利用（或候選利用、手上的技能製造），每一條連線（手上技能 × 關鍵字 × 方向）加這麼多分。}
       - {path: weights.synergy_max_links, label_zh: 協同：最多算幾條連線, kind: int, hint_min: 0, hint_max: 6, note_zh: 協同分數最多算這麼多條連線（避免手上技能多的關鍵字永遠壓過其他候選）。}

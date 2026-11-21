@@ -46,15 +46,15 @@ USER_RESERVE_TOKENS = 5_000
 
 
 BUDGET_NOTE_ZH = (
-    "數值由遊戲補，但效果總強度必須到這一階預算的 70%～100%。"
+    "數值由遊戲補，但效果總強度必須到這一階預算的 {low}%～{high}%。"
     "只有一個沒有數值的核心效果（位移、淨化、地形、傳送等）一定過弱："
     "骨架允許附帶效果時請再加一個，依技能主題選，不一定是傷害"
     "（例：pull＋施加狀態、pull＋damage、cleanse＋heal、cleanse＋shield 都可；只有 pull 不可）。"
     "冷卻由遊戲依形狀自動補（大範圍形狀會加冷卻），不用填。"
     "選填欄位（代價、變奏、條件）越少越好，但效果數量不在此限。"
 )
-"""題目區的預算說明（Phase 6S-2：升級候選退回的第一大原因是單一核心效果過弱 ``budget.weak``；
-6S-2c：例子改成中性，不暗示附帶效果固定是傷害）。"""
+"""題目區的預算說明的模板（占位見 :func:`budget_note`）。Phase 6S-2：升級候選退回的第一大
+原因是單一核心效果過弱 ``budget.weak``；6S-2c：例子改成中性，不暗示附帶效果固定是傷害。"""
 KEYWORD_NOTE_ZH = (
     "技能必須帶到 keywords 的每一個：照 available.keywords 的 ways 選一種寫法"
     "（例：ways 有 apply_status（status＝commanding）就加一個施加 commanding 給友方的效果）。"
@@ -77,7 +77,8 @@ EFFECTS_NOTE_ZH = (
 """``effects`` 的說明（LB-2：``skeleton.secondary_count``）。"""
 VARIANTS_NOTE_ZH = (
     "選填，最多 {limit} 個；不填最容易通過。每個變奏＝id、name_zh、when（觸發條件）"
-    "＋ shape、range_delta、element、add_effect、replace_effect 其中 1～2 項（不能 3 項以上）。"
+    "＋ shape、range_delta、element、add_effect、replace_effect 其中 1～{swaps} 項"
+    "（不能 {too_many} 項以上）。"
     "range_delta 是射程加值，只能填 1 或 2（射程變遠），而且技能的形狀（或變奏換上的 shape）"
     "要有數字射程。{ranged}"
     "replace_effect 的 index 是要換掉的 effects 位置（從 0 起算），"
@@ -171,8 +172,12 @@ def field_notes(
         notes["trigger"] = PASSIVE_NOTE_ZH
     limit = variant_limit(library, request, subset)
     if limit:  # LB-2c：變奏說明只在 schema 有 variants 欄位時出現
+        swaps = library.ruleset.core.skill_limits.max_variant_replacements
         notes["variants"] = VARIANTS_NOTE_ZH.format(
-            limit=limit, ranged=_ranged_shapes_note(library, subset)
+            limit=limit,
+            ranged=_ranged_shapes_note(library, subset),
+            swaps=swaps,
+            too_many=swaps + 1,
         )
     return notes
 
@@ -221,19 +226,30 @@ def _ranged_shapes_note(library: ContentLibrary, subset: ProposalSubset) -> str:
     return RANGED_SHAPES_ZH.format(ranged="、".join(ranged), plain="、".join(plain))
 
 
+def budget_note(library: ContentLibrary) -> str:
+    """題目區的預算說明：合格區間照 ``skill_budget.yaml`` 的 ``min_ratio_permille``～
+    ``max_ratio_permille``（HC-6a）。"""
+    budget = library.budget
+    return BUDGET_NOTE_ZH.format(
+        low=f"{budget.min_ratio_permille / 10:g}", high=f"{budget.max_ratio_permille / 10:g}"
+    )
+
+
 def _request_payload(
     request: ProposalRequest,
     subset: ProposalSubset,
     names: dict[str, str],
     world: WorldStyle | None = None,
     fields: dict[str, str] | None = None,
+    *,
+    budget_text: str,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "tier": request.tier,
         "rarity": request.rarity,
         "kind": subset.kind,
         "keywords": [{"id": k, "name_zh": names[k]} for k in request.keywords],
-        "budget_note_zh": BUDGET_NOTE_ZH,
+        "budget_note_zh": budget_text,
     }
     if fields:
         payload["fields_note_zh"] = fields
@@ -313,7 +329,14 @@ def build_proposal_prompt(
     subset = select_subset(library, request, token_budget=budget)
     names = {k.id: k.name_zh for k in library.ruleset.keywords.keywords}
     messages = build_skill_proposal_messages(
-        _request_payload(request, subset, names, style, field_notes(library, request, subset)),
+        _request_payload(
+            request,
+            subset,
+            names,
+            style,
+            field_notes(library, request, subset),
+            budget_text=budget_note(library),
+        ),
         available=available_payload(library, subset),
         previous_proposal=previous_proposal,
         errors=errors,

@@ -155,7 +155,9 @@ def test_picker_takes_three_named_cards_with_replies() -> None:
     assert "想把敵人凍住" not in system["content"]
     assert user["content"].endswith("<player_input>想把敵人凍住</player_input>")
     schema = client.schemas[0]
-    assert schema == wish_pick_schema(len(_ask().slate.ranked))
+    assert schema == wish_pick_schema(
+        len(_ask().slate.ranked), cards=_lib().skill_pick.pool.wish_cards
+    )
 
 
 def test_reply_must_only_mention_the_card_effects() -> None:

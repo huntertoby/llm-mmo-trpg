@@ -90,7 +90,7 @@ PART_REASON_ZH: dict[str, str] = {
     "broken": "已經破了",
     "not_exposed": "這個階段還沒露出",
     "need_behind": "要從背後近戰才打得到",
-    "need_high_or_far": "要從高處（高 1 層以上）或 4 格外才打得到",
+    "need_high_or_far": f"要從高處（高 1 層以上）或 {FAR_BEYOND + 1} 格外才打得到",
     "need_disabled": "要趁頭目倒地、暈眩或冰凍時才打得到",
     "melee_cannot_reach": "只有遠程才打得到",
     "not_adjacent_to_tile": "要貼著那一格才打得到",

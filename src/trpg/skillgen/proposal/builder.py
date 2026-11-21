@@ -400,9 +400,12 @@ def _when_model(surfaces: Sequence[str]) -> Any:
     return _alias("VariantWhen", Annotated[Union[tuple(branches)], Discriminator(pick)])  # noqa: UP007
 
 
-def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ()) -> Any:
+def _variant_model(
+    effect: Any | None, shape: Any, surfaces: Sequence[str] = (), *, swap_max: int
+) -> Any:
     """戰場變奏；``effect`` 是變奏能加入或替換的效果（不含 ``lookup_by_skill_id`` 原語），
-    ``None`` 時不開放 ``add_effect``／``replace_effect``。
+    ``None`` 時不開放 ``add_effect``／``replace_effect``。``swap_max`` 是替換內容最多幾項
+    （``core.skill_limits.max_variant_replacements``；HC-6a 寫進說明）。
 
     ``range_delta``（LB-2b，玩法 PM 4.1.17 第 2 點；06 6.24「射程 ±」）：只開加值 +1～+2，範圍照
     組合器（``composer_special`` 的 ``range_delta`` 階梯 1、2）；射程變短的變奏不開放。預算與驗證器
@@ -427,7 +430,7 @@ def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ())
     return create_model(
         "Variant",
         __base__=_Proposal,
-        __doc__="戰場變奏：when 條件成立時套用 1～2 項替換（shape、range_delta、element、"
+        __doc__=f"戰場變奏：when 條件成立時套用 1～{swap_max} 項替換（shape、range_delta、element、"
         "add_effect、replace_effect）。",
         **fields,
     )

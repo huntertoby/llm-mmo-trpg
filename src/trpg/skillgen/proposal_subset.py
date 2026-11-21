@@ -38,7 +38,7 @@ from trpg.skillgen.proposal import (
 )
 from trpg.skillgen.proposal_costs import cost_entries
 from trpg.skillgen.proposal_followup import (
-    FOLLOWUP_DOC,
+    followup_doc,
     followup_shape_ids,
     followup_when_entries,
     release_entries,
@@ -325,7 +325,7 @@ def _extra_entries(library: ContentLibrary, subset: ProposalSubset) -> dict[str,
         shapes = library.ruleset.shapes.by_id()
         primitives = library.ruleset.primitives.by_id()
         out["followup"] = {
-            "hint": FOLLOWUP_DOC,
+            "hint": followup_doc(library),
             "when": followup_when_entries(),
             "release": release_entries(),
             "skeletons": list(subset.followup_skeletons),

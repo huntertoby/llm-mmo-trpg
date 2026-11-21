@@ -146,7 +146,9 @@ class BotService:
         if event.username is not None:
             name = normalize_username(event.username)
             if USERNAME_RE.fullmatch(name) is None:
-                raise AccountError("帳號名稱要 3～20 字的英文字母、數字或底線")
+                raise AccountError(
+                    f"帳號名稱要 {USERNAME_MIN}～{USERNAME_MAX} 字的英文字母、數字或底線"
+                )
             if self.store.find(name) is not None:
                 raise AccountError(f"帳號名稱 {name} 已經有人用了，請換一個")
             return name

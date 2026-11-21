@@ -461,7 +461,9 @@ class AttackAffix(_AffixBase):
         if self.strike == "combo" and (
             self.value_unit != "flat" or self.value is None or self.value.min < MIN_COMBO_N
         ):
-            raise ValueError(f"詞條 {self.id}：combo 的 N 至少 2，value_unit 必須是 flat")
+            raise ValueError(
+                f"詞條 {self.id}：combo 的 N 至少 {MIN_COMBO_N}，value_unit 必須是 flat"
+            )
 
     def _check_rune(self) -> None:
         if self.rune is None:

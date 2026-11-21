@@ -44,6 +44,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.rules.statuses import scaled_status_def
+from trpg.engine.skills.scaling import MASTERY_BONUS
 from trpg.engine.summons.core import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_icon_art import icon_art_rules
@@ -273,7 +274,11 @@ def mastery_text(
 ) -> str:
     """專精加成的說明；``active`` 為 ``None`` 表示不知道單位（只顯示加成內容）。武器技（3H-6）
     看手上武器的屬性。"""
-    effect = "施放距離 +1" if skill.mastery == "range" else "施加的狀態持續 +1 回合"
+    effect = (
+        f"施放距離 +{MASTERY_BONUS}"
+        if skill.mastery == "range"
+        else f"施加的狀態持續 +{MASTERY_BONUS} 回合"
+    )
     attr = (
         scaling_detail(skill, weapon)
         if skill.category == "weapon"
@@ -718,10 +723,11 @@ def _clear_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> s
     return f"清除範圍內的表面（{names}），不帶元素、不引發其他反應"
 
 
-def _hook(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+def _hook(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     """鉤（SK-2，06 6.38 第 8 點）。"""
+    cap = lib.ruleset.core.max_displace_distance
     return (
-        "鉤住直線上第一個敵人，拉到你身邊（不受推拉 2 格的上限；不會拉進深淵或岩漿，"
+        f"鉤住直線上第一個敵人，拉到你身邊（不受推拉 {cap} 格的上限；不會拉進深淵或岩漿，"
         "推不動的目標改受一次撞擊）"
     )
 
@@ -1309,7 +1315,7 @@ _SIMPLE_CHANGE_TEXT = {
     "area_delta": "範圍型形狀的大小 +{value}（直線與錐形的長度、環形與光環的半徑，有上限）",
     "allow_self_target": "治療、護盾、增益類技能的影響範圍也包含自己",
     "summon_attack_dice": "召喚物的攻擊傷害骰 +{value} 顆",
-    "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 3 隻）",
+    "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 {hard_cap} 隻）",
     "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
     "silent_strike": "無聲：手持匕首或雙匕首時，你的近戰攻擊不會讓目標轉身（可以留在背後連續背刺）",
 }
@@ -1355,7 +1361,10 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
     kind = change.kind
     simple = _SIMPLE_CHANGE_TEXT.get(kind)
     if simple is not None:
-        return simple.format(value=getattr(change, kind))
+        # 召喚物的硬上限照 core.summon_hard_cap（HC-6a；其他句子沒有 hard_cap 占位）
+        return simple.format(
+            value=getattr(change, kind), hard_cap=library.ruleset.core.summon_hard_cap
+        )
     if change.damage_permille is not None:
         return _damage_text(rule)
     if change.heal_permille is not None:

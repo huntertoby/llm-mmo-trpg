@@ -203,7 +203,8 @@ class SituationRules(ContentModel):
         ]
         levels = sorted(d.level for d in self.dangers)
         if tuple(levels) != _DANGER_LEVELS:
-            problems.append("危險度必須 1～3 各一筆")
+            low, high = _DANGER_LEVELS[0], _DANGER_LEVELS[-1]
+            problems.append(f"危險度必須 {low}～{high} 各一筆")
         if problems:
             raise ValueError("；".join(problems))
         return self

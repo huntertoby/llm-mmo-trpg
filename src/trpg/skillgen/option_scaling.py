@@ -16,6 +16,7 @@ from typing import Any
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import RARITY_ORDER, SkillDef, rarity_rank
+from trpg.engine.skills.scaling import MASTERY_BONUS
 from trpg.shared.types import Attribute
 from trpg.skillgen.draft import Draft, DraftError, build_skill
 from trpg.skillgen.option_models import Choice, FieldSpec
@@ -24,8 +25,8 @@ from trpg.skillgen.player_text import plainify
 __all__ = ["scaling_extra_fields"]
 
 _MASTERY_TEXT: dict[str, tuple[str, str]] = {
-    "range": ("射程專精", "施放距離 +1"),
-    "duration": ("持續專精", "此技能施加的狀態持續 +1 回合"),
+    "range": ("射程專精", f"施放距離 +{MASTERY_BONUS}"),
+    "duration": ("持續專精", f"此技能施加的狀態持續 +{MASTERY_BONUS} 回合"),
 }
 
 

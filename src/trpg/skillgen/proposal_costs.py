@@ -20,15 +20,16 @@ from typing import Any
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import ON_MISS_MIN_RARITY, SkillCost, SkillRarity, rarity_rank
+from trpg.engine.ids import OVERDRAWN
 from trpg.skillgen.option_params import model_range
 from trpg.skillgen.self_penalty import penalty_choices
 
 __all__ = [
-    "COST_DOCS",
     "COST_FLAG_FIELDS",
     "ONCE_PER_BATTLE",
     "apply_cost_choices",
     "cost_choices_of",
+    "cost_docs",
     "cost_entries",
     "hp_cost_permille",
     "on_miss_allowed",
@@ -38,22 +39,35 @@ ONCE_PER_BATTLE = 1
 """:data:`cost_once_per_battle` 換成的 ``cost.uses_per_battle``。"""
 COST_FLAG_FIELDS: tuple[str, ...] = ("cost_once_per_battle", "cost_hp", "cost_on_miss")
 """4-L8 新增的提議欄位（``cost_penalty``／``cost_overdraft`` 另見 3-50）。"""
-COST_DOCS: dict[str, str] = {
+_COST_DOCS: dict[str, str] = {
     "cost_penalty": (
         "可省略。用自己的代價換更強的效果：填一個自身負面狀態（施放後自己獲得；stun 暈眩＝自己跳過"
         "下一個回合、silenced 沉默＝只能用在法術技、bleed 流血等）；一招最多一個，數值由遊戲決定"
     ),
     "cost_overdraft": (
-        "可省略。填 true＝施放後自己下一個回合少 1 AP（透支）；可以和 cost_penalty 同時使用"
+        "可省略。填 true＝施放後自己下一個回合少 {overdraft_ap} AP（透支）；"
+        "可以和 cost_penalty 同時使用"
     ),
     "cost_once_per_battle": "可省略。填 true＝每場戰鬥只能用一次（換更強的效果）",
     "cost_hp": "可省略。填 true＝施放時付出自己的一部分最大 HP（數值由遊戲決定）",
     "cost_on_miss": (
-        "可省略，只有主動技能可用。失手反噬：攻擊沒命中時施放者自己承受的 1～2 個效果（傷害或"
-        "負面狀態），換更強的效果；數值由遊戲決定"
+        "可省略，只有主動技能可用。失手反噬：攻擊沒命中時施放者自己承受的 1～{on_miss_max} 個效果"
+        "（傷害或負面狀態），換更強的效果；數值由遊戲決定"
     ),
 }
-"""提議的代價欄位說明（JSON schema 的 ``description`` 與 prompt ``available`` 的 ``costs``）。"""
+"""代價欄位說明的模板（占位由 :func:`cost_docs` 照內容庫帶入）。"""
+
+
+def cost_docs(library: ContentLibrary) -> dict[str, str]:
+    """提議的代價欄位說明（JSON schema 的 ``description`` 與 prompt ``available`` 的 ``costs``）。
+
+    HC-6a：透支少幾 AP 照透支狀態的 ``ap_penalty``；失手反噬最多幾個效果照提議模型的巢狀效果上限
+    （``llm_topic.max_nested_effects``，同 ``cost_on_miss`` 的 ``max_length``）。"""
+    values = {
+        "overdraft_ap": library.ruleset.status_def(OVERDRAWN).ap_penalty,
+        "on_miss_max": library.composer.llm_topic.max_nested_effects,
+    }
+    return {key: text.format(**values) for key, text in _COST_DOCS.items()}
 
 
 def on_miss_allowed(rarity: SkillRarity | None) -> bool:
@@ -64,17 +78,18 @@ def on_miss_allowed(rarity: SkillRarity | None) -> bool:
 def cost_entries(library: ContentLibrary, rarity: SkillRarity | None) -> list[dict[str, Any]]:
     """prompt ``available`` 的 ``costs``（Phase 4-L8）：主動技能可以挑的代價欄位與說明；
     ``cost_penalty`` 另列這個稀有度能挑的狀態。全部可省略，數值由遊戲決定。"""
+    docs = cost_docs(library)
     out: list[dict[str, Any]] = [
         {
             "id": "cost_penalty",
-            "hint": COST_DOCS["cost_penalty"],
+            "hint": docs["cost_penalty"],
             "choices": list(penalty_choices(library, rarity)),
         }
     ]
     for field in ("cost_overdraft", "cost_once_per_battle", "cost_hp"):
-        out.append({"id": field, "hint": COST_DOCS[field]})
+        out.append({"id": field, "hint": docs[field]})
     if on_miss_allowed(rarity):
-        out.append({"id": "cost_on_miss", "hint": COST_DOCS["cost_on_miss"]})
+        out.append({"id": "cost_on_miss", "hint": docs["cost_on_miss"]})
     return out
 
 

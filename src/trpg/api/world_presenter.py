@@ -130,7 +130,7 @@ from trpg.world.actions import (
 )
 from trpg.world.atlas import can_teleport_to, cross_gate, region_name
 from trpg.world.battle import PreparedBattle, prepare_battle
-from trpg.world.battlefield import FALLBACK_ZH
+from trpg.world.battlefield import fallback_zh
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import capital_name, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
@@ -529,7 +529,7 @@ def _encounter_view(
         ),
         battlefield=_battlefield_view(prepared.field_cut),
         battlefield_fallback_zh=(
-            None if prepared.cut_fallback is None else FALLBACK_ZH[prepared.cut_fallback]
+            None if prepared.cut_fallback is None else fallback_zh(library, prepared.cut_fallback)
         ),
         duel=encounter.duel,
         duel_zh=duel_line(encounter.duel, views[0].name_zh if views else ""),

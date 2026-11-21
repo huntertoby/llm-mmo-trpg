@@ -99,7 +99,7 @@ class DiceRules(ContentModel):
     @model_validator(mode="after")
     def _check(self) -> DiceRules:
         if len(set(self.sides)) != len(self.sides) or any(s < _MIN_SIDES for s in self.sides):
-            raise ValueError("sides 必須是不重複且 ≥ 2 的整數")
+            raise ValueError(f"sides 必須是不重複且 ≥ {_MIN_SIDES} 的整數")
         return self
 
 

@@ -126,7 +126,7 @@ _LITERAL_CHOICES: dict[str, tuple[tuple[str, str, str], ...]] = {
     ),
     "resource": (
         ("mana", "法力", "回復 amount 點法力"),
-        ("cooldown", "冷卻", "所有技能的冷卻 −amount 回合（最多 2）"),
+        ("cooldown", "冷卻", "所有技能的冷卻 −amount 回合（最多 {cooldown_restore_max}）"),
     ),
     "on_hit": (
         ("knock_prone", "擊倒", "被撞到的敵人對抗判定失敗就倒地"),
@@ -299,9 +299,11 @@ def _obstacle_choices(library: ContentLibrary) -> tuple[Choice, ...]:
 
 
 def _ref_choices(kind: str, library: ContentLibrary) -> tuple[Choice, ...]:
-    if kind in _LITERAL_CHOICES:
+    if kind in _LITERAL_CHOICES:  # 說明裡的規則上限照內容庫帶入（HC-6a）
+        limits = {"cooldown_restore_max": library.ruleset.core.skill_limits.max_cooldown_restore}
         return tuple(
-            Choice(value=v, name_zh=n, description_zh=d) for v, n, d in _LITERAL_CHOICES[kind]
+            Choice(value=v, name_zh=n, description_zh=d.format(**limits))
+            for v, n, d in _LITERAL_CHOICES[kind]
         )
     rules = library.ruleset
     builders: dict[str, Callable[[], tuple[Choice, ...]]] = {

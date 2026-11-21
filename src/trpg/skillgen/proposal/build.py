@@ -48,11 +48,11 @@ from trpg.skillgen.proposal.models import (
 )
 from trpg.skillgen.proposal.params import rarity_statuses
 from trpg.skillgen.proposal_costs import (
-    COST_DOCS,
+    cost_docs,
     on_miss_allowed,
 )
 from trpg.skillgen.proposal_followup import (
-    FOLLOWUP_DOC,
+    followup_doc,
     followup_effect_ids,
     followup_shape_ids,
 )
@@ -126,7 +126,12 @@ def _shared_types(
             "VariantEffect", _union_or_none([builder.effects[i] for i in variant_ids])
         )
     shape = _alias("StandardShape", builder.shape_union(standard.shapes))
-    variant = _variant_model(variant_effect, shape, _surface_ids(library))
+    variant = _variant_model(
+        variant_effect,
+        shape,
+        _surface_ids(library),
+        swap_max=library.ruleset.core.skill_limits.max_variant_replacements,
+    )
     return _Shared(frozenset(general_ids), general, self_general, shape, variant, variant_ids)
 
 
@@ -212,7 +217,7 @@ def _followup_model(
     }
     if builder.condition is not None:
         fields["condition"] = (Union[builder.condition, None], None)  # noqa: UP007
-    return create_model("Followup", __base__=_Proposal, __doc__=FOLLOWUP_DOC, **fields)
+    return create_model("Followup", __base__=_Proposal, __doc__=followup_doc(library), **fields)
 
 
 def composite_allowed(rarity: SkillRarity | None) -> bool:
@@ -467,6 +472,7 @@ def _common_fields(
 ) -> dict[str, Any]:
     """各分支共用的欄位（種類、類別、武器需求、反應另依分支）。"""
     sk = SkillDef.model_fields
+    docs = cost_docs(library)
     common: dict[str, Any] = {
         # 名稱不在提議裡（4-L8，PM 追加）：由命名步驟（4-L7）產生，沒有命名時用組合式名稱
         "description_zh": (str | None, None),
@@ -479,21 +485,19 @@ def _common_fields(
         "cost_penalty": _optional_alias(
             "CostPenalty",
             _literal(penalty_choices(library, rarity)),
-            COST_DOCS["cost_penalty"],
+            docs["cost_penalty"],
         ),
-        "cost_overdraft": _optional_alias(
-            "CostOverdraft", Literal[True], COST_DOCS["cost_overdraft"]
-        ),
+        "cost_overdraft": _optional_alias("CostOverdraft", Literal[True], docs["cost_overdraft"]),
         "cost_once_per_battle": _optional_alias(
-            "CostOncePerBattle", Literal[True], COST_DOCS["cost_once_per_battle"]
+            "CostOncePerBattle", Literal[True], docs["cost_once_per_battle"]
         ),
-        "cost_hp": _optional_alias("CostHp", Literal[True], COST_DOCS["cost_hp"]),
+        "cost_hp": _optional_alias("CostHp", Literal[True], docs["cost_hp"]),
     }
     if on_miss_allowed(rarity):
         common["cost_on_miss"] = _optional_alias(
             "CostOnMiss",
             _list_of(builder.backlash_union()),
-            COST_DOCS["cost_on_miss"],
+            docs["cost_on_miss"],
             min_length=1,
             max_length=library.composer.llm_topic.max_nested_effects,
         )
