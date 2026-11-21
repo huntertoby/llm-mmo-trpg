@@ -22,6 +22,10 @@ pytest 經看門狗 ``scripts/run_pytest.py`` 執行（QF-3a）：超過 10 分�
 的 ``install --frozen-lockfile``、``typecheck``、``test``）在找不到 pnpm 時同樣略過
 （尋找順序 ``corepack`` → ``pnpm`` → ``npx``，見 ``trpg.cli.frontend.pnpm_command``；MAC-1）。
 
+全部步驟通過（沒有失敗、也沒有略過）且追蹤中的檔案沒有未 commit 的修改時，在
+``<git common dir>/pm-check-pass/<HEAD 的 tree hash>`` 寫一個戳記（QF-5）。push hook 看到要推的
+內容已有戳記，就不再重跑本腳本；合併後內容有任何不同（tree hash 變了）就照常重跑。
+
 工具的尋找順序：目前 Python 環境的模組（``sys.executable -m <tool>``）→
 與 ``sys.executable`` 同一資料夾的執行檔 → ``PATH`` 上的執行檔（``shutil.which``）。
 """
@@ -177,6 +181,34 @@ def run_step(step: Step) -> str:
     return "警告" if step.warn_only else "失敗"
 
 
+STAMP_DIR = "pm-check-pass"
+
+
+def _git(*args: str) -> str | None:
+    try:
+        done = subprocess.run(
+            ["git", *args], cwd=PROJECT_ROOT, capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return None
+    return done.stdout.strip() if done.returncode == 0 else None
+
+
+def write_pass_stamp() -> Path | None:
+    """追蹤中的檔案都已 commit 時，為 HEAD 的 tree 寫通過戳記；回傳戳記路徑（沒寫則 None）。"""
+    if _git("status", "--porcelain", "--untracked-files=no") != "":
+        return None
+    tree = _git("rev-parse", "HEAD^{tree}")
+    commit = _git("rev-parse", "HEAD")
+    common = _git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    if not (tree and commit and common):
+        return None
+    stamp = Path(common) / STAMP_DIR / tree
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    stamp.write_text(f"{commit}\n", encoding="utf-8")
+    return stamp
+
+
 def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
@@ -201,6 +233,8 @@ def main(argv: list[str] | None = None) -> int:
         print(red(f"\n失敗：{len(failed)} 個步驟（{'、'.join(failed)}）"))
         return 1
     print(green("\n全部檢查通過。"))
+    if all(result in ("通過", "警告") for _, result in results) and (stamp := write_pass_stamp()):
+        print(f"已寫入通過戳記：{stamp}（push 時同內容不再重跑）")
     return 0
 
 
