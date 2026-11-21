@@ -47,6 +47,7 @@ from trpg.skillgen.candidates import (
     LlmTrace,
     composer_kinds,
     skill_has_keywords,
+    topic_kinds,
 )
 from trpg.skillgen.composer_dual import add_second_element, second_element_tier
 from trpg.skillgen.composer_lifesteal import add_lifesteal, lifesteal_ready
@@ -464,6 +465,8 @@ def _draw(  # noqa: PLR0917 — 一次抽樣的參數
         else:
             kinds = composer_kinds(library, request.seed, f"wish/{fork}/{turn}")
         keyword = keywords[turn % len(keywords)] if keywords else None
+        if tags is None or not tags.kinds:  # #172：擲到的種類不出形態（玩家指定的種類照舊）
+            kinds = topic_kinds(library, kinds, () if keyword is None else (keyword,))
         skill = _compose(library, request, seed, keyword, kinds, skeleton)
         if skill is None or not check.ok(skill, tags) or (need is not None and not need(skill)):
             continue

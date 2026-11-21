@@ -1,0 +1,125 @@
+{
+ "format": "recipe-census/1",
+ "params": {
+  "seeds": 200,
+  "thin": 12,
+  "kinds": [
+   "passive"
+  ],
+  "tiers": [
+   1
+  ],
+  "rarities": [
+   "epic"
+  ],
+  "diag_seeds": 50
+ },
+ "tier_weights_permille": {
+  "1": 316,
+  "2": 366,
+  "3": 316,
+  "4": 47
+ },
+ "cells": [
+  {
+   "keyword": "charged",
+   "kind": "passive",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 15,
+   "structures": 155,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     86
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "ring",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     54
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "apply_status:bleed",
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "passive",
+      "passive",
+      "self",
+      [
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 29.6,
+    "ms_median": 19.8,
+    "ms_max": 144.4,
+    "total_s": 5.93
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1264000
+  }
+ ]
+}

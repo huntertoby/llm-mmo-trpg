@@ -55,6 +55,7 @@ from trpg.skillgen.composer_parts import (
 from trpg.skillgen.composer_recipes import (
     SPELL_ELEMENTS,
     Draft,
+    Recipe,
     is_companion,
     is_guardian,
     passive_drafts,
@@ -103,6 +104,11 @@ type Kinds = Collection[str] | None
 """呼叫端要的技能種類（RC-1b，玩法 PM 交接 4.1.20 第 4 點；``SkillKind`` 的值）：``None`` ＝
 不指定、組合器自由抽（原行為）；有值時結果的 ``kind`` 一定在其中
 （見 :func:`compose_with_stats`）。"""
+
+type Guardian = bool | None
+"""這一題要不要用護主（GS-1，#171；:func:`guardian_gate`）：``None`` ＝ 照舊（護主和其他反應技配方
+一起抽）；``True`` ＝ 這題擲中，反應技先試護主，做不出來再走一般做法（不含護主）；``False`` ＝ 這題
+所有的嘗試都不用護主。"""
 
 
 class ComposeError(TrpgError):
@@ -863,6 +869,18 @@ def _compose_passive_recipe(
     return _first_valid(lib, build)
 
 
+def guardian_gate(
+    seed: int, keyword: str | None, lib: ContentLibrary, skeleton: str | None
+) -> Guardian:
+    """護主不獨佔（GS-1，#171）：題目指定了關鍵字、不是召喚、而且是反應題（骨架 ``reaction``）時，
+    **每題只擲一次**要不要用護主——用題目的種子、獨立串流 ``composer.guardian``，機率
+    ``recipes.reaction_permille``；不動主串流與各變體的串流。其他題回傳 ``None``（照舊）。"""
+    if keyword is None or keyword == SUMMON_KEYWORD or skeleton != "reaction":
+        return None
+    permille = lib.composer.recipes.reaction_permille
+    return permille > 0 and Rng(seed).fork("composer.guardian").chance_permille(permille)
+
+
 def _compose_reaction_recipe(
     seed: int,
     lib: ContentLibrary,
@@ -871,18 +889,51 @@ def _compose_reaction_recipe(
     rarity: SkillRarity,
     category: str | None,
     keyword: str | None,
+    guardian: Guardian = None,
 ) -> ComposeResult | None:
     """反應技新配方（RC-1）：同 :func:`_compose_passive_recipe`。
+
+    ``guardian``（GS-1，#171）：``None`` 照舊；``True`` 先試護主（做不出來再照一般做法，抽配方時
+    不含護主）；``False`` 抽配方時不含護主。
+    """
+    recipes = reaction_recipes(lib, tier)
+    if guardian is not None:
+        first = next(
+            (r for r in recipes if is_guardian(r) and keyword in r.keywords), None
+        ) if guardian else None  # fmt: skip
+        found = (
+            None
+            if first is None
+            else _build_reaction_recipe(
+                seed, lib, first, tier=tier, rarity=rarity, category=category, keyword=keyword
+            )
+        )
+        if found is not None:
+            return found
+        recipes = tuple(r for r in recipes if not is_guardian(r))
+    recipe = pick_recipe(seed, "reaction", recipes, lib.composer.recipes.reaction_permille, keyword)
+    if recipe is None:
+        return None
+    return _build_reaction_recipe(
+        seed, lib, recipe, tier=tier, rarity=rarity, category=category, keyword=keyword
+    )
+
+
+def _build_reaction_recipe(
+    seed: int,
+    lib: ContentLibrary,
+    recipe: Recipe,
+    *,
+    tier: int,
+    rarity: SkillRarity,
+    category: str | None,
+    keyword: str | None,
+) -> ComposeResult | None:
+    """用 ``recipe`` 組反應技（獨立串流 ``composer.reaction.recipe.build``）。
 
     護主（QF-4b）：3 階起每份草稿在最弱強度就進不了預算窗，每次嘗試卻都重算約 40 份（召喚物、
     屬性、強度、代價的組合有限，只差種子）；預算比例改由內容庫上的快取表記住，亂數與結果不變。
     """
-    rules = lib.composer.recipes
-    recipe = pick_recipe(
-        seed, "reaction", reaction_recipes(lib, tier), rules.reaction_permille, keyword
-    )
-    if recipe is None:
-        return None
     rng = Rng(seed).fork("composer.reaction.recipe.build")
     chosen = category or _choose_category(rng, lib.skeletons["reaction"], None, lib.composer)
     memo: RatioMemo | None = (
@@ -909,9 +960,11 @@ def _compose_special(
     category: str | None,
     ap_cost: int | None = None,
     keyword: str | None = None,
+    guardian: Guardian = None,
 ) -> ComposeResult | None:
     """反應技、姿態、蓄力與終結、陷阱、整招召喚：用獨立的亂數串流重抽；做不出合格技能回傳 ``None``。
-    ``keyword``（RC-1）：整招召喚優先抽固有關鍵字相符的召喚物；反應技的新配方只考慮帶得到它的。"""
+    ``keyword``（RC-1）：整招召喚優先抽固有關鍵字相符的召喚物；反應技的新配方只考慮帶得到它的。
+    ``guardian``（GS-1）：見 :data:`Guardian`。"""
     if kind == _SUMMON:
         return _compose_summon(seed, lib, tier=tier, rarity=rarity, keyword=keyword)
     if kind == "reaction":
@@ -921,8 +974,9 @@ def _compose_special(
             if reroll
             else None
         ) or _compose_reaction_recipe(
-            seed, lib, tier=tier, rarity=rarity, category=category, keyword=keyword
-        )
+            seed, lib, tier=tier, rarity=rarity, category=category, keyword=keyword,
+            guardian=guardian,
+        )  # fmt: skip
         if found is not None:
             return found
     rng = Rng(seed).fork(f"composer.{kind}.build")
@@ -1090,6 +1144,7 @@ def _compose_with_keyword(
     most = lib.composer.search.keyword_tries
     limit = most if tries is None else min(tries, most)
     plain = {"rarity": rarity, "no_legendary": skip_legendary and rarity is None, **original}
+    guardian = guardian_gate(seed, keyword, lib, kwargs.get("skeleton"))  # GS-1：每題只擲一次
     for index in range(limit):
         variant = seed + index * _VARIANT_STEP
         rider = _compose_rider(variant, keyword, lib, plain)  # WC-2：沒抽中＝None，照原本
@@ -1101,6 +1156,7 @@ def _compose_with_keyword(
                     rarity=rarity,
                     no_legendary=skip_legendary and rarity is None,
                     keyword=keyword,
+                    guardian=guardian,
                     **kwargs,
                 ),
                 None,
@@ -1242,6 +1298,7 @@ def _special_result(
     explicit: bool,
     fixed: tuple[int, SkillRarity, str | None, int | None],
     keyword: str | None,
+    guardian: Guardian = None,
 ) -> ComposeResult | None:
     """反應技、姿態等特殊組法；``explicit``（明確指定骨架）時組不出來就拋出 :class:`ComposeError`，
     否則回傳 ``None`` 讓呼叫端退回一般主動技能。"""
@@ -1259,6 +1316,7 @@ def _special_result(
         category=category,
         ap_cost=ap_cost,
         keyword=keyword,
+        guardian=guardian,
     )
     if found is None and explicit:
         raise ComposeError(
@@ -1280,6 +1338,7 @@ def _compose_plain(
     no_legendary: bool = False,
     keyword: str | None = None,
     kinds: Kinds = None,
+    guardian: Guardian = None,
 ) -> ComposeResult:
     rng = Rng(seed)
     tier_value = tier if tier is not None else rng.randint(1, lib.ruleset.core.skill_limits.tiers)
@@ -1306,6 +1365,7 @@ def _compose_plain(
             explicit=skeleton is not None,
             fixed=(tier_value, rarity_value, category, ap_cost),
             keyword=keyword,
+            guardian=guardian,
         )
         if found is not None:
             return found

@@ -664,6 +664,9 @@ def select_subset(
     sel = _Selector(library, request)
     kind = sel.resolve_kind()
     sel.kind = kind
+    blocked = [k for k in request.keywords if not library.keywords.topic_allows(k, kind)]
+    if blocked:  # GS-1（#172）：形態只出在主動題
+        raise SubsetError(f"關鍵字 {'、'.join(blocked)} 只出在主動題，{kind} 題不出")
     wants = sel.keyword_wants()
     skeletons = [s for s in sel.candidate_skeletons(kind) if sel.viable(s, kind)]
     if not skeletons:

@@ -491,6 +491,8 @@ def _ensure_passive(
         want: AttrWant = "other" if candidate.kind == "new" else "same"
         rng = Rng(maker.request.seed).fork(f"passive/{index}")
         for keyword in _passive_keywords(candidate, held, unheld, used):
+            if not maker.library.keywords.topic_allows(keyword, "passive"):
+                continue  # #172：被動題不抽形態
             made = maker.make_kind(rng, keyword, want, "passive")
             if made is None:
                 continue
