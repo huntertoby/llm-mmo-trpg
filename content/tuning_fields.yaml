@@ -658,6 +658,7 @@ targets:
       - {path: pool.relax_until, label_zh: 三選一每格至少湊幾個候選才停止放寬, kind: int, hint_min: 1, hint_max: 8, note_zh: PK-3：每一格先只收全部關鍵字都對、路線也對的候選；不到這麼多個時，依序放寬（橋接這類多關鍵字的格子先收只帶部分關鍵字的，再收不跟主路線的「偏離」候選）補上，放寬的另外扣分、排在後面。越大越常放寬。}
       - {path: pool.flash_top_k, label_zh: 閃現每格給模型幾個候選, kind: int, hint_min: 1, hint_max: 8, note_zh: PK-3：閃現與重閃的每一個選項格（類別由程式決定），依用法統計排序後給本機模型這麼多個候選挑一個並取名；第一個就是原本會出的那一個。越多 prompt 越長、越慢。}
       - {path: pool.wish_candidates, label_zh: 許願池：候選量, kind: int, hint_min: 3, hint_max: 30, note_zh: PK-4（07 7.6「許願池：願望驅動」第 2 點，初值一般每格 4～6 個、許願 15～20 個）：照願望標籤用組合器做幾個不同設計，打分後全部交給本機模型挑 3 張。越多越可能找到合願望的招，但出題越慢（帶關鍵字時每個種子約 0.05～0.2 秒；召喚之類難做的關鍵字最多約 4 秒）、prompt 越長。}
+      - {path: pool.max_off_route, label_zh: 三選一最多幾張偏離路線, kind: int, hint_min: 0, hint_max: 3, note_zh: HC-5b：本機模型挑了「不跟主路線」的候選時，一份三選一最多留這麼多張偏離（06 6.27.4 定 2 張），超過的從後面的格子起改回分數第一名。調高：本機模型挑的偏離候選更常保留；調低：三選一更貼主路線。}
       - {path: weights.synergy_per_link, label_zh: 協同：每條連線的分數, kind: int, hint_min: 0, hint_max: 1000, note_zh: 候選製造的關鍵字有一招手上的技能利用（或候選利用、手上的技能製造），每一條連線（手上技能 × 關鍵字 × 方向）加這麼多分。}
       - {path: weights.synergy_max_links, label_zh: 協同：最多算幾條連線, kind: int, hint_min: 0, hint_max: 6, note_zh: 協同分數最多算這麼多條連線（避免手上技能多的關鍵字永遠壓過其他候選）。}
       - {path: weights.keyword_make, label_zh: 關鍵字貼合：製造題目關鍵字, kind: int, hint_min: 0, hint_max: 500, note_zh: PK-1b：題目要的關鍵字由候選「製造」（例：題目要冰凍、候選會冰凍敵人），每個加這麼多分。}
@@ -728,6 +729,23 @@ targets:
       - {path: structure.borrow_cooldown, label_zh: 組合器做的預支技能的冷卻, kind: int, hint_min: 1, hint_max: 6, note_zh: 組合器把光環骨架改成「預支」時，基本款技能的冷卻（06 6.3 基本款：冷卻 2）。調高：預支更少用、預算較高；調低：更常用。只能 1～6。}
       - {path: llm_cost.max_cooldown, label_zh: LLM 提議的冷卻上限, kind: int, hint_min: 3, hint_max: 6, note_zh: 補值器替 LLM 提議的技能補費用時，冷卻最多加到這麼多回合（比技能冷卻上限保守）。不能小於費用階梯裡的冷卻（目前最高 5）。調高：允許更長的冷卻；調低：只能和費用階梯一起改。}
       - {path: "recipes.summon_units[*].range", label_zh: 整招召喚的射程, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 組合器做整招召喚（含 1 階的基本召喚物）時，召喚這隻召喚物的射程（格）。調高：可以召得更遠、預算點數跟著變；調低：只能召在身邊。}
+      # HC-5b：從 skillgen/ 搬進 skill_composer.yaml 的抽選範圍與規則數值（組合器的特殊效果、傳說、配方、條件）。
+      # 值階梯（修正規則的值、傳說的候選清單、賭注倍率）與 search 的重抽次數不開。
+      - {path: structure.gamble_backlash_chance_permille, label_zh: 賭注失敗時有反噬的機率（‰）, group_zh: 組合器的特殊效果, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 組合器做賭注時，失敗分支帶「反噬施放者這次傷害的一部分」的機率（其餘失敗時沒有效果）。調高：組合器的賭注更常有反噬，代價折抵更多、成功時的強度可以更高；調低：反噬變少。只能 0～1000。}
+      - {path: structure.second_element_multiplier_permille, label_zh: 第二元素新傷害段的起始倍率（‰）, group_zh: 組合器的特殊效果, kind: permille, hint_min: 100, hint_max: 1000, note_zh: 武器技加上第二元素（許願池、元素補抽）時，新加的那段元素傷害從這個武器倍率開始，再由強度旋鈕往上調進預算。調高：起點較強，旋鈕可能直接越過預算上限而做不出來；調低：從較弱開始往上找，比較容易調進預算。}
+      - {path: structure.delayed_damage_rounds.min, label_zh: 定時炸彈的引爆輪數（最少）, group_zh: 組合器的特殊效果, kind: int, hint_min: 1, hint_max: 3, note_zh: 組合器做定時炸彈時，引爆輪數在「最少～最多」之間抽。調高：炸彈都要等更久才爆（較好躲、預算計價較低）；調低：可以更快引爆。不能大於「最多」。}
+      - {path: structure.delayed_damage_rounds.max, label_zh: 定時炸彈的引爆輪數（最多）, group_zh: 組合器的特殊效果, kind: int, hint_min: 1, hint_max: 5, note_zh: 同上的上限。調高：會出現等很久才爆的炸彈；調低：引爆輪數集中在較短的範圍。不能小於「最少」。}
+      - {path: structure.delayed_damage_radius.min, label_zh: 定時炸彈的爆炸半徑（最少）, group_zh: 組合器的特殊效果, kind: int, hint_min: 0, hint_max: 2, note_zh: 定時炸彈的爆炸半徑在「最少～最多」之間抽（0＝只炸那一格）。調高：炸彈範圍較大、單發傷害要讓出預算；調低：出現較多單格炸彈。不能大於「最多」。}
+      - {path: structure.delayed_damage_radius.max, label_zh: 定時炸彈的爆炸半徑（最多）, group_zh: 組合器的特殊效果, kind: int, hint_min: 0, hint_max: 3, note_zh: 同上的上限。調高：會出現大範圍的炸彈；調低：炸彈範圍都比較小。不能小於「最少」。}
+      - {path: sacrifice.radius.min, label_zh: 獻祭的半徑（最少）, group_zh: 組合器的特殊效果, kind: int, hint_min: 0, hint_max: 2, note_zh: 組合器做獻祭召喚物時，爆炸（或治療）半徑在「最少～最多」之間抽。調高：獻祭都有較大的範圍、數值要讓出預算；調低：出現較多只影響身邊一格的獻祭。不能大於「最多」。}
+      - {path: sacrifice.radius.max, label_zh: 獻祭的半徑（最多）, group_zh: 組合器的特殊效果, kind: int, hint_min: 0, hint_max: 3, note_zh: 同上的上限。調高：會出現大範圍的獻祭；調低：獻祭範圍都比較小。不能小於「最少」。}
+      - {path: special.condition_permille, label_zh: 修正規則帶條件的機率（‰）, group_zh: 修正技能與傳說, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 組合器做修正技能（史詩）或傳說修正時，修正規則帶「目標有某狀態時」條件的機率。調高：更多修正規則要條件成立才生效（預算打折，數值可以更高）；調低：多半無條件生效。只能 0～1000。}
+      - {path: recipes.param_permille, label_zh: 被動觸發指定狀態或表面的機率（‰）, group_zh: 組合器的配方, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 組合器的被動觸發是「狀態被施加時」「踏入表面時」「關鍵字被利用時」時，指定某一種狀態或表面的機率（其餘為任何）。調高：觸發條件更窄、更有主題；調低：多半是「任何狀態／表面」，觸發得更頻繁。只能 0～1000。}
+      - {path: recipes.high_ground_permille, label_zh: 利用高處取「目標比你低」的機率（‰）, group_zh: 組合器的配方, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 組合器做利用高處的被動或反應時，條件取「目標比你低」（其餘「自己在高處」）的機率。調高：多半要比目標高；調低：多半只要自己站在高處。只能 0～1000。}
+      - {path: recipes.exploit_surface_permille, label_zh: 「被利用時」指定表面的機率（‰）, group_zh: 組合器的配方, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 被動觸發「你造的關鍵字被利用時」指定了對象時，指定表面（其餘指定狀態）的機率。調高：多半看表面被利用；調低：多半看狀態被利用。只能 0～1000。}
+      - {path: condition.point_blank_min_reach, label_zh: 貼身條件要求的射程, group_zh: 組合器的配方, kind: int, hint_min: 2, hint_max: 4, note_zh: 有「貼身」條件的招，固定射程至少要這麼多格（射程 1 的招一定貼身，條件等於白拿預算折扣）。組合器、驗證器、閃現的距離加碼共用。調高：更少招能帶貼身條件（射程短的招被驗證器擋下，含手寫技能）；調低：射程短的招也能拿貼身折扣。}
+      - {path: llm_cost.default_ap, label_zh: LLM 提議補的 AP, group_zh: 組合器的配方, kind: int, hint_min: 1, hint_max: 3, note_zh: 補值器替 LLM 提議（與工坊推導的保底）的主動技能補幾 AP（預算器不調 AP）。調高：提議的主動技能預算變高、數值可以更大；調低：預算變低。不能超過技能 AP 上限（3）。}
+      - {path: llm_topic.max_keywords, label_zh: LLM 題目最多幾個關鍵字, group_zh: 組合器的配方, kind: int, hint_min: 1, hint_max: 3, note_zh: 一個 LLM 提議題目最多指定幾個關鍵字。調高：可以出同時帶更多關鍵字的題目（越多越難做出合法技能）；調低：題目比較單純。}
   # HC-B：條件的預算倍率覆寫（skill_conditions.yaml，全體共用）。平常照嚴苛度查 skill_budget.yaml 的
   # condition_permille；這裡只展開已經寫了 budget_permille 的條件（沒寫的不給插入：插入會改掉那個條件的計價方式）。
   - kind: skill_conditions
@@ -891,6 +909,13 @@ targets:
     fields:
       - {path: summon.deepen_hp_permille, label_zh: 召喚技加深：最大 HP 多幾‰, kind: permille, hint_min: 100, hint_max: 600, note_zh: 召喚技選「加深」進化後，召喚物最大 HP 多這麼多千分比（300＝+30%），另外多一個小特性。調高：加深更強，但更容易超出預算而被縮短持續或加冷卻；調低：較弱。只能 1～1000。}
       - {path: summon.count_power_permille, label_zh: 召喚技數量型：每隻的強度（‰）, kind: permille, hint_min: 300, hint_max: 900, note_zh: 召喚技選「數量型」進化後一次召喚 2 隻，每隻的最大 HP 與傷害是一般的這麼多千分比（600＝60%）。調高：兩隻都更強，更容易超出預算而被縮短持續或加冷卻；調低：較弱。只能 100～999。}
+      # HC-5b：從 skillgen/evolution.py 搬進 skill_evolution.yaml 的強度與代價規則。
+      - {path: low_multiplier_floor, label_zh: 武器倍率往下延伸到（‰）, group_zh: 進化的強度與代價, kind: permille, hint_min: 100, hint_max: 500, note_zh: 進化重調武器技的倍率時，階梯往下延伸到這個值（組合器的階梯從 500‰ 起），讓原本倍率比較低的技能也能調回原本的強度。調高：低倍率的技能較難調回原強度；調低：可以調得更弱。}
+      - {path: low_multiplier_step, label_zh: 往下延伸的間距（‰）, group_zh: 進化的強度與代價, kind: permille, hint_min: 25, hint_max: 200, note_zh: 同上往下延伸時每一格的間距。調高：格子較粗、較難剛好調回原強度；調低：格子較細、找得較準但較慢。}
+      - {path: first_knob_weight, label_zh: 第一個效果的旋鈕權重, group_zh: 進化的強度與代價, kind: int, hint_min: 1, hint_max: 4, note_zh: 進化重調強度時，第一個（核心）效果的旋鈕被選到的權重（其餘 1）。調高：重調多半動核心效果；調低：各效果平均。}
+      - {path: extra_cooldown_steps, label_zh: 代價折抵最多加幾回合冷卻, group_zh: 進化的強度與代價, kind: int, hint_min: 0, hint_max: 4, note_zh: 進化後超出預算時，依序試冷卻 +1～+這麼多回合（以代價換預算，不加強度）。調高：更多進化做得出來，但冷卻可能變長；調低：做不出來的進化較多。}
+      - {path: min_cooldown, label_zh: 代價折抵的冷卻下限, group_zh: 進化的強度與代價, kind: int, hint_min: 1, hint_max: 4, note_zh: 代價折抵試的冷卻至少這麼多回合（沒有冷卻的招從這裡起）。調高：折抵一次就比較重；調低：可以只加很短的冷卻。不能大於「冷卻上限」。}
+      - {path: max_cooldown, label_zh: 代價折抵的冷卻上限, group_zh: 進化的強度與代價, kind: int, hint_min: 3, hint_max: 6, note_zh: 代價折抵試的冷卻最多這麼多回合。調高：更多進化做得出來，但冷卻可能很長；調低：冷卻不會變太長，做不出來的較多。不能超過技能冷卻上限（6）。}
   # HC-4b3：閃現的計價與規則數值（flash_templates.yaml）。預算表（skill_budget.yaml）的「閃現」組是另一個檔，
   # 工坊一個對象對一個檔，所以另開一張表。只開 HC-4b3 拿掉程式預設值的數字；階梯（姿態、形態、完整技能的倍率）、
   # 模板、類別、轉型的起點與召喚輪數是結構，不開。
