@@ -5,6 +5,7 @@ import type { WorldView } from "../api/types";
 import type { TabBadgeSpec } from "../ui/panelTabRules";
 import { limitOf } from "./limits";
 import { spendLock } from "./growth";
+import { gameRules } from "../battle/glossary";
 
 export type GrowthTabId = "flash" | "attr" | "care" | "look";
 /** 分頁順序（玩家最常來做的事；3.3）。 */
@@ -24,8 +25,11 @@ export const GROWTH_TAB_ZH: Readonly<Record<GrowthTabId, { label: string; short:
 export const NOT_NOW_ZH = "現在不行";
 
 /** 入門期的鎖標籤（#15、#20、#23；新字）。說明卡仍是伺服器的原句（`limits`）。 */
-export const FLASH_LOCK_ZH = { head: "閃現", tail: "4 級起" } as const;
-export const LEVEL4_TAG_ZH = "4 級起";
+export const FLASH_LOCK_ZH = { head: "閃現" } as const;
+/** 「4 級起」：入門期到幾級結束照伺服器 `rules.opening_end_level`（`world/growth.py`；HC-6b）。 */
+export function openingLevelTag(level: number = gameRules().opening_end_level): string {
+  return `${level} 級起`;
+}
 export const CHOSEN_TAG_ZH = "正式選定後";
 
 /** 屬性點分頁（#18）。 */
@@ -57,7 +61,7 @@ export const RACE_LOCK_ZH = "正式選定後才能換";
 /** 靈感閃現分頁的記號（#42、#43）：入門期整頁鎖住＝金鎖（「閃現 4 級起」，鎖住時不掛數字）；
  *  4 級以上、現在能花點、有靈感點＝金底數字（「可以閃現：靈感點 3」）；其他不掛。 */
 export function flashBadge(view: WorldView): TabBadgeSpec | null {
-  if (limitOf(view, "flash") !== null) return { kind: "lock", hint: `${FLASH_LOCK_ZH.head} ${FLASH_LOCK_ZH.tail}` };
+  if (limitOf(view, "flash") !== null) return { kind: "lock", hint: `${FLASH_LOCK_ZH.head} ${openingLevelTag()}` };
   const insight = view.growth.insight;
   if (insight > 0 && spendLock(view) === null) return { kind: "n", value: insight, hint: `可以閃現：靈感點 ${insight}` };
   return null;

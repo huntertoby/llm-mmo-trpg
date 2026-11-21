@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from trpg.api import world_economy_view, world_growth_view
+from trpg.api.glossary import build_glossary
 from trpg.api.tuning import objects
 from trpg.api.tuning.objects import ai_notes, retier_note_zh, table_notes
 from trpg.api.tuning.skills import _BORROW_SAME_ZH, GROUP_PRESETS
@@ -80,3 +81,27 @@ def test_pouch_item_line_reads_the_item_skill(content_library: ContentLibrary) -
         assert world_economy_view._battle_zh(item) == (
             "放進腰包：戰鬥中花 1 AP 使用，每個用一次（不佔技能欄位）"
         )
+
+
+def test_glossary_rules_carry_text_numbers(content_library: ContentLibrary) -> None:
+    """HC-6b：前端說明文字要組字的規則數字由 ``/api/glossary`` 的 ``rules`` 帶（值照內容庫）。"""
+    rules = build_glossary(content_library).rules
+    run = content_library.roguelite
+    assert (rules.roguelite_battles, rules.roguelite_companions) == (
+        run.battles,
+        len(run.companions),
+    )
+    assert rules.campfire_source == run.source.campfire
+    assert rules.budget_min_ratio_permille == content_library.budget.min_ratio_permille
+    assert rules.major_flash == content_library.flash.rules.major_flash
+    assert rules.flash_max_carry == rules.major_flash - 1
+    assert rules.wish_cards == content_library.skill_pick.pool.wish_cards
+    events = content_library.world_event_content.rules
+    assert events is not None and rules.thread_expire_seconds == events.threads.expire_seconds
+    enemies = content_library.world_enemies
+    assert enemies is not None and rules.min_moves_elite == enemies.min_moves.elite
+    # 目前的值（前端用這些值組出來的字和改前逐字相同）
+    shown = rules.model_dump(
+        include={"roguelite_battles", "pregen_wait_seconds", "opening_end_level"}
+    )
+    assert shown == {"roguelite_battles": 5, "pregen_wait_seconds": 10, "opening_end_level": 4}

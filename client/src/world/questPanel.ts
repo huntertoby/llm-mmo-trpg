@@ -1,6 +1,8 @@
 // 「任務與線頭」面板的純函式（PNL-3；docs/art/資訊面板-移植需求.md 3.3「任務與線頭」、4.1 #24～#28、#40、#42）：分頁記號、步驟兩欄、新字。
 import type { WorldQuestLog, WorldView } from "../api/types";
 import type { TabBadgeSpec } from "../ui/panelTabRules";
+import { gameRules } from "../battle/glossary";
+import { aboutDurationText } from "../ui/rulesText";
 
 /** 面板標題（字不變）。 */
 export const QUEST_PANEL_TITLE_ZH = "任務與線頭";
@@ -8,9 +10,16 @@ export const QUEST_PANEL_TITLE_ZH = "任務與線頭";
 export const QUEST_TAB_ZH = { quests: "任務日誌", questsShort: "任務", threads: "線頭", threadsShort: "線頭" } as const;
 /** 兩個空狀態（字不變）。 */
 export const NO_QUEST_ZH = "還沒有接任務。到小鎮找人說話，看看「可以接的任務」。";
-export const NO_THREAD_ZH = "還沒有線頭。事件的結果會留下線頭（每人約 5 條，約 3 天到期）。";
-/** 線頭規則句（#28：有線頭時放分頁第一行右邊的 (i)，字不變）；第一行的 L2 短句照樣張。 */
-export const THREAD_RULE_ZH = "事件的結果會留下線頭（每人約 5 條，約 3 天到期）。";
+export function noThreadText(): string {
+  return `還沒有線頭。${threadRuleText()}`;
+}
+/**
+ * 線頭規則句（#28：有線頭時放分頁第一行右邊的 (i)，字不變）；第一行的 L2 短句照樣張。
+ * HC-6b：每人幾條、幾天到期照伺服器 `rules.thread_limit`、`thread_expire_seconds`（`world/event_rules.yaml`）。
+ */
+export function threadRuleText(limit: number = gameRules().thread_limit, expireSeconds: number = gameRules().thread_expire_seconds): string {
+  return `事件的結果會留下線頭（每人約 ${limit} 條，${aboutDurationText(expireSeconds)}到期）。`;
+}
 export const THREAD_LINE_ZH = "事件的結果會留下線頭";
 /** 完成的任務：PNL-4 起收進任務日誌最後的摺疊「已完成（N）」（PNL-3 美術驗收可修 2），卡上不再掛標籤。 */
 export const QUEST_DONE_ZH = "已完成";

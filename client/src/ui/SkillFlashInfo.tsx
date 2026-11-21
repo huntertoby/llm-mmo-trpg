@@ -1,6 +1,6 @@
 // 技能卡上的閃現資訊（Phase 3W-6）：「已閃 N／5 次」、可以閃現時的「可以閃現了」、升階後的轉型提示、變化歷程。
 import type { SkillFlash } from "../api/types";
-import { CAN_FLASH_TEXT, flashCountText, recordLine, showCanFlash, TRANSFORM_HINT, TRANSFORM_HINT_TIP } from "../run/flash";
+import { CAN_FLASH_TEXT, flashCountText, recordLine, showCanFlash, transformHint, transformHintTip } from "../run/flash";
 import { NoBreakText } from "../run/FlashChoiceParts";
 import { Hint } from "./Hint";
 
@@ -25,9 +25,9 @@ export function SkillFlashInfo({ flash, rules, brief = false }: Props) {
         </span>
       )}
       {flash.reflash_transform_hint && (
-        <Hint text={TRANSFORM_HINT_TIP}>
+        <Hint text={transformHintTip()}>
           <span className="skill-flash-transform" data-testid="skill-flash-transform" tabIndex={0}>
-            <NoBreakText text={TRANSFORM_HINT} />
+            <NoBreakText text={transformHint()} />
           </span>
         </Hint>
       )}

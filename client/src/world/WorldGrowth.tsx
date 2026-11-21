@@ -35,7 +35,7 @@ import {
   GROWTH_TITLE_ZH,
   growthTabBadge,
   growthWarning,
-  LEVEL4_TAG_ZH,
+  openingLevelTag,
   NO_REFLASH_TIP_ZH,
   NO_REFLASH_ZH,
   NOT_NOW_ZH,
@@ -119,7 +119,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
     <div className="world-flash-pane" data-testid="run-flash">
       {limit !== null && (
         <Callout tone="lock" testId="world-limit-note">
-          <b>{FLASH_LOCK_ZH.head}</b>：<KeepNum text={FLASH_LOCK_ZH.tail} />
+          <b>{FLASH_LOCK_ZH.head}</b>：<KeepNum text={openingLevelTag()} />
         </Callout>
       )}
       <FlashRuleChips rules={hero.flash_rules} />
@@ -166,7 +166,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
                 </summary>
                 <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} wish={view.character?.skill_wishes?.[card.id]} />
               </details>
-              <span className="pnl-skill-tag">{limit !== null && <LockTag text={LEVEL4_TAG_ZH} reason={limit} />}</span>
+              <span className="pnl-skill-tag">{limit !== null && <LockTag text={openingLevelTag()} reason={limit} />}</span>
               <Hint text={can ? undefined : reason}>
                 <span className="pnl-skill-btn">
                   <button
@@ -238,7 +238,7 @@ function careFoldEnd(view: WorldView, fold: CareFold): ReactNode {
   }
   if (fold === "dissolve") {
     const reason = limitOf(view, "dissolve");
-    return reason === null ? null : <LockTag text={LEVEL4_TAG_ZH} reason={reason} testId="world-care-dissolve-tag" />;
+    return reason === null ? null : <LockTag text={openingLevelTag()} reason={reason} testId="world-care-dissolve-tag" />;
   }
   const reason = limitOf(view, "oath");
   return reason === null ? null : <LockTag text={CHOSEN_TAG_ZH} reason={reason} testId="world-care-oath-tag" />;

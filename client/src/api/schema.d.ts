@@ -5522,6 +5522,111 @@ export interface components {
             start_keywords: number;
             /** Complete Budget Permille */
             complete_budget_permille: number;
+            /**
+             * Roguelite Battles
+             * @default 5
+             */
+            roguelite_battles: number;
+            /**
+             * Roguelite Companions
+             * @default 2
+             */
+            roguelite_companions: number;
+            /**
+             * Campfire Source
+             * @default 1
+             */
+            campfire_source: number;
+            /**
+             * Budget Min Ratio Permille
+             * @default 700
+             */
+            budget_min_ratio_permille: number;
+            /**
+             * Budget Max Ratio Permille
+             * @default 1000
+             */
+            budget_max_ratio_permille: number;
+            /**
+             * Contagion Radius
+             * @default 1
+             */
+            contagion_radius: number;
+            /**
+             * Major Flash
+             * @default 3
+             */
+            major_flash: number;
+            /**
+             * Complete Flashes
+             * @default 3
+             */
+            complete_flashes: number;
+            /**
+             * Flash Max Carry
+             * @default 2
+             */
+            flash_max_carry: number;
+            /**
+             * Flash Open Cost
+             * @default 1
+             */
+            flash_open_cost: number;
+            /**
+             * Flash Open Options
+             * @default 4
+             */
+            flash_open_options: number;
+            /**
+             * Flash Open Min Categories
+             * @default 2
+             */
+            flash_open_min_categories: number;
+            /**
+             * Pregen Wait Seconds
+             * @default 10
+             */
+            pregen_wait_seconds: number;
+            /**
+             * Wish Cards
+             * @default 3
+             */
+            wish_cards: number;
+            /**
+             * Thread Limit
+             * @default 5
+             */
+            thread_limit: number;
+            /**
+             * Thread Expire Seconds
+             * @default 259200
+             */
+            thread_expire_seconds: number;
+            /**
+             * Opening End Level
+             * @default 4
+             */
+            opening_end_level: number;
+            /**
+             * League Signup Close Day
+             * @default 13
+             */
+            league_signup_close_day: number;
+            /**
+             * Min Moves Mob
+             * @default 2
+             */
+            min_moves_mob: number;
+            /**
+             * Min Moves Elite
+             * @default 3
+             */
+            min_moves_elite: number;
+            /**
+             * Min Moves Boss Phase
+             * @default 3
+             */
+            min_moves_boss_phase: number;
         };
         /**
          * GearAffixInfo
@@ -12326,6 +12431,11 @@ export interface components {
             sim_running?: string | null;
             /** Max Group */
             max_group: number;
+            /**
+             * Draft Name Max
+             * @default 40
+             */
+            draft_name_max: number;
         };
         /**
          * TuningUnitSkills

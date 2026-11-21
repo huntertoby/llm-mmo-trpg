@@ -2,7 +2,7 @@
 // 與改前改後並排的結果表。比值和預算比例是兩把尺（實戰木樁傷害 ÷ 普攻 vs 點數模型），畫面各自標來源。
 import type { ChangeEvent } from "react";
 import type { TuningRatioSimResult, TuningRatioSummary, TuningSkillRatio } from "../api/types";
-import { cellChanged, lineClass, lineText, RATIO_CELLS, ratioResultNotes, ratioSkillsOf, type RatioForm } from "./ratioModel";
+import { cellChanged, lineClass, lineText, RATIO_CELLS, ratioResultNotes, ratioSkillsOf, ratioWorkNote, type RatioForm } from "./ratioModel";
 /** 比值規模的快捷鈕「每組 10 種子」（工坊畫面的快捷鈕，後端沒有對應的規則）；另外兩顆照伺服器的預設與上限。 */
 const RATIO_QUICK_SEEDS = 10;
 
@@ -86,12 +86,14 @@ interface FormProps {
   /** 每組預設種子數與上限（伺服器 `ratio_default_seeds`、`ratio_max_seeds`；HC-3 起不寫死）。 */
   defaultSeeds: number;
   maxSeeds: number;
+  /** 「組數 × 種子」的上限（伺服器 `ratio_max_work`；HC-6b 說明句照這個數）。 */
+  maxWork: number;
   onForm(next: RatioForm): void;
   onImport(text: string): void;
 }
 
 /** 模擬面板的「比值」情境：受測招、種子數、匯入基準。 */
-export function RatioSimForm({ form, running, edited, skillChoices, skillName, baselineNote, defaultSeeds, maxSeeds, onForm, onImport }: FormProps) {
+export function RatioSimForm({ form, running, edited, skillChoices, skillName, baselineNote, defaultSeeds, maxSeeds, maxWork, onForm, onImport }: FormProps) {
   const skills = ratioSkillsOf(form, edited);
   const pickFile = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,7 +150,7 @@ export function RatioSimForm({ form, running, edited, skillChoices, skillName, b
           </div>
         )}
       </fieldset>
-      <div className="muted small">組＝招 × 可用武器 × 情境（無條件 1 個；有條件「成立／不成立」2 個；每個變奏多 1 個）。一次最多 40,000 組×種子。</div>
+      <div className="muted small">{ratioWorkNote(maxWork)}</div>
     </div>
   );
 }

@@ -27,7 +27,7 @@ from trpg.api.tuning.check import (
     to_changes,
 )
 from trpg.api.tuning.diff import change_views, diff_rows, make_diff
-from trpg.api.tuning.drafts import Change, Draft, DraftStore, merge
+from trpg.api.tuning.drafts import DRAFT_NAME_MAX, Change, Draft, DraftStore, merge
 from trpg.api.tuning.git_guard import Git, GitError
 from trpg.api.tuning.objects import (
     ObjectNotFoundError,
@@ -202,6 +202,7 @@ class TuningService:
             drafts=self.drafts.names(),
             sim_running=self.sims.running,
             max_group=MAX_GROUP,
+            draft_name_max=DRAFT_NAME_MAX,
         )
 
     def objects(self, kind: str | None = None) -> list[TuningObjectSummary]:

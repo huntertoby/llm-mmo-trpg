@@ -3,6 +3,7 @@
 // 規則一律由伺服器裁決（能不能許看 `available`／`blocked_zh`），前端只決定「送出鈕現在按不按得下去」（有沒有寫願望、挑了幾個關鍵字）。
 // 這裡的字都是暫定字（玩法 PM 定稿後只換字），完整清單在 `docs/phases/PhaseWP-3報告.md`。
 import type { StatChange, WorldAction, WorldPendingOffer, WorldView } from "../api/types";
+import { gameRules } from "../battle/glossary";
 
 export type WishData = NonNullable<WorldView["wish"]>;
 
@@ -28,9 +29,10 @@ export const WISH_ZH = {
   gain: "技能三選一",
   notEnough: "不夠",
   noneLeft: "用完了",
-  timeout: "池子這次沒來得及回應（等了 10 秒），改從選單挑關鍵字吧（沒有扣任務幣）。",
+  /** 逾時與等待的秒數照伺服器 `rules.pregen_wait_seconds`（HC-6b）。 */
+  timeout: (seconds: number = gameRules().pregen_wait_seconds) => `池子這次沒來得及回應（等了 ${seconds} 秒），改從選單挑關鍵字吧（沒有扣任務幣）。`,
   waitText: "池水泛起漣漪，正在聽你的願望……",
-  waitNote: "最多等 10 秒；來不及就改從選單挑關鍵字（不扣任務幣）。",
+  waitNote: (seconds: number = gameRules().pregen_wait_seconds) => `最多等 ${seconds} 秒；來不及就改從選單挑關鍵字（不扣任務幣）。`,
   pickNth: (n: number) => `第 ${n} 個`,
   /** 下固定區「名字：說明」中間的冒號（WP-3b）。 */
   pickedSep: "：",
@@ -47,7 +49,7 @@ export const WISH_ZH = {
   /** AR-SK4：元素類有物理時（定案字：1 階「最多 1 個（可另加物理）」、2 階起「最多 2 個（可另加物理）」）。 */
   tagMaxPhysical: (n: number) => `最多 ${n} 個（可另加物理）`,
   needTag: "先點選 1 個標籤",
-  tagTimeout: "池子這次沒來得及回應（等了 10 秒），改從清單點選標籤吧（沒有扣任務幣）。",
+  tagTimeout: (seconds: number = gameRules().pregen_wait_seconds) => `池子這次沒來得及回應（等了 ${seconds} 秒），改從清單點選標籤吧（沒有扣任務幣）。`,
   tagPicked: "已選：",
   yourWish: "你的願望",
   heardTags: "池子聽到的",

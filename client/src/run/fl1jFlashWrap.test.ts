@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import type { PendingFlash, RunHero, SkillCard } from "../api/types";
 import data from "../dev/fixtures/flashChoice.json";
 import { readFile, SRC_DIR } from "../test/sourceScan";
-import { TRANSFORM_HINT } from "./flash";
+import { transformHint } from "./flash";
 import { FLASH_NO_BREAK_WORDS, noBreakRuns, numberUnitRuns, sayText, unitAfterNumber } from "./flashChoice";
 import { NoBreakText, TermText } from "./FlashChoiceParts";
 
@@ -86,21 +86,21 @@ describe("FL-1j (2) 數字和單位不拆開（通用規則）", () => {
 
 describe("FL-1j (3) 成長面板／營火的藍字「可以重閃第 3 格轉型」", () => {
   it("切成「可以重閃」＋「第 3 格」＋「轉型」，後兩段不斷行", () => {
-    expect(noBreakRuns(TRANSFORM_HINT)).toEqual([
+    expect(noBreakRuns(transformHint())).toEqual([
       { text: "可以重閃", keep: false },
       { text: "第 3 格", keep: true },
       { text: "轉型", keep: true },
     ]);
-    expect(renderToStaticMarkup(createElement(NoBreakText, { text: TRANSFORM_HINT }))).toBe(
+    expect(renderToStaticMarkup(createElement(NoBreakText, { text: transformHint() }))).toBe(
       '可以重閃<span class="fc-nobr">第 3 格</span><span class="fc-nobr">轉型</span>',
     );
   });
   it("營火重閃鈕與技能卡的閃現資訊都經過 NoBreakText", () => {
     const care = readFile(SRC_DIR, "run/CampfireSkillCare.tsx");
-    expect(care).toContain("<NoBreakText text={TRANSFORM_HINT} />");
+    expect(care).toContain("<NoBreakText text={transformHint()} />");
     // 重閃鈕裡的藍字整段不換行（放不下就整段換到下一行），全形空白在 span 外面
     expect(care).toMatch(/\{"　"\}\s*<span className="skill-flash-transform small fc-nobr"/u);
-    expect(readFile(SRC_DIR, "ui/SkillFlashInfo.tsx")).toContain("<NoBreakText text={TRANSFORM_HINT} />");
+    expect(readFile(SRC_DIR, "ui/SkillFlashInfo.tsx")).toContain("<NoBreakText text={transformHint()} />");
     // .fc-nobr 在 flash-choice.css，index.css 全域載入，成長面板也吃得到
     expect(readFile(SRC_DIR, "styles/index.css")).toContain("flash-choice.css");
   });

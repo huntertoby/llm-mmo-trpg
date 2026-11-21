@@ -19,6 +19,7 @@ import { ErrorBanner } from "../ui/ErrorBanner";
 import { EntryPanel, EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { Hint } from "../ui/Hint";
 import { parseSeed, randomSeed } from "./StartScreen";
+import { runCompanionsText, runNewSubText, runTotalText } from "../run/runRulesText";
 
 interface Props {
   onCreated(run: RunResponse): void;
@@ -92,7 +93,7 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
 
   return (
     <EntryShell className="run-new">
-      <EntryPlaque heading="開新一輪" sub="roguelite：5 場戰鬥加頭目，一路帶著同一個主角" />
+      <EntryPlaque heading="開新一輪" sub={runNewSubText()} />
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <EntryPanel className="entry-steps run-new-form">
       <form className="start-form" onSubmit={submit}>
@@ -158,9 +159,9 @@ export function RunNewScreen({ onCreated, onHome }: Props) {
           </button>
         </div>
         <div className="muted small">
-          共 5 場戰鬥加頭目；
+          {runTotalText()}
           {testMode ? "測試模式：每場戰鬥結束後 HP、法力、耐力自動回滿。" : "HP、法力、耐力不會在戰鬥之間回復，只有營火（中段與頭目前）會回滿。"}
-          隊友為 2 名標準隊友。
+          {runCompanionsText()}
         </div>
       </form>
       </EntryPanel>

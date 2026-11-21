@@ -1,10 +1,12 @@
 // 數值工坊（NW-1b B3、B5、B6；NW-2b B7）：草稿列（存、換、丟掉）、改動清單與驗證狀態、差異（含附帶改動）、
 // 寫回（確認視窗：列附帶改動、預算例外與 #149 例外的「我確定」）、寫回紀錄與還原。
 import { useState, type ReactNode } from "react";
-import type { TuningApplyResult, TuningCheckResult, TuningDiff, TuningHistoryEntry, TuningSideChange, TuningStatus } from "../api/types";
+import type { GameRules, TuningApplyResult, TuningCheckResult, TuningDiff, TuningHistoryEntry, TuningSideChange, TuningStatus } from "../api/types";
 import { DialogFrame } from "../ui/DialogFrame";
 import { DRAFT_NAME_RE, newText, valueText, type Edit } from "./model";
 import { confirmBlock } from "./skillModel";
+import { gameRules } from "../battle/glossary";
+import { budgetWindowText } from "../ui/rulesText";
 
 interface DraftBarProps {
   status: TuningStatus;
@@ -73,7 +75,7 @@ export function DraftBar({ status, name, edits, unsaved, busy, onSave, onSwitch,
           開新草稿
         </button>
       </div>
-      {newName !== "" && !nameOk && <div className="tn-error">名稱只能用英文小寫、數字、底線、減號（最多 40 字）</div>}
+      {newName !== "" && !nameOk && <div className="tn-error">{draftNameRuleText(status.draft_name_max)}</div>}
       <div className="muted small">換草稿前會先把目前這份存起來。草稿存在伺服器的存檔資料夾，不會進 git。</div>
       <ChangeList edits={edits} onOpen={onOpen} />
     </section>
@@ -246,6 +248,21 @@ interface DialogProps {
 
 const NONE: ReadonlySet<string> = new Set();
 
+/** 草稿名稱的規則（最多幾字照伺服器 `draft_name_max`；HC-6b）。 */
+export function draftNameRuleText(max: number): string {
+  return `名稱只能用英文小寫、數字、底線、減號（最多 ${max} 字）`;
+}
+
+/** 預算例外的標題（合格區間照伺服器 `rules.budget_*_ratio_permille`；HC-6b）。 */
+export function budgetExceptionTitle(): string {
+  return `預算例外（超出合格區間 ${budgetWindowText("～")}；寫回時自動登記進例外清單）`;
+}
+
+/** #149 例外的標題（招數下限照伺服器 `rules.min_moves_*`，`world/enemies.yaml`；HC-6b）。 */
+export function movesExceptionTitle(rules: Pick<GameRules, "min_moves_mob" | "min_moves_elite" | "min_moves_boss_phase"> = gameRules()): string {
+  return `#149 例外（招數低於下限：一般 ${rules.min_moves_mob} 招、精英 ${rules.min_moves_elite} 招、頭目每階段 ${rules.min_moves_boss_phase} 招；commit 內文會記「#149 例外」）`;
+}
+
 /** 要勾「我確定」的例外（預算超出合格區間、招式組低於 #149 下限）。 */
 export function ExceptionChecks({ check, budgetOk, movesOk, onBudget, onMoves }: Required<Pick<DialogProps, "budgetOk" | "movesOk">> & Pick<DialogProps, "check" | "onBudget" | "onMoves">) {
   const budget = check?.needs_confirm_budget ?? [];
@@ -255,7 +272,7 @@ export function ExceptionChecks({ check, budgetOk, movesOk, onBudget, onMoves }:
     <div className="tn-exceptions" data-testid="apply-exceptions">
       {budget.length > 0 && (
         <>
-          <div className="section-title">預算例外（超出合格區間 70～100%；寫回時自動登記進例外清單）</div>
+          <div className="section-title">{budgetExceptionTitle()}</div>
           {budget.map((f) => (
             <label key={f.skill_id} className="tn-confirm-check">
               <input type="checkbox" checked={budgetOk.has(f.skill_id)} onChange={(e) => onBudget?.(f.skill_id, e.target.checked)} />
@@ -266,7 +283,7 @@ export function ExceptionChecks({ check, budgetOk, movesOk, onBudget, onMoves }:
       )}
       {moves.length > 0 && (
         <>
-          <div className="section-title">#149 例外（招數低於下限：一般 2 招、精英 3 招、頭目每階段 3 招；commit 內文會記「#149 例外」）</div>
+          <div className="section-title">{movesExceptionTitle()}</div>
           {moves.map((f) => (
             <label key={f.unit_id} className="tn-confirm-check">
               <input type="checkbox" checked={movesOk.has(f.unit_id)} onChange={(e) => onMoves?.(f.unit_id, e.target.checked)} />

@@ -301,6 +301,11 @@ export function simScales(options: Pick<TuningSimOptions, "default_seeds">): rea
 export const battleCount = (builds: number, seeds: number): number => builds * seeds;
 
 /** 規模檢查：沒選 build、種子不是正整數、超過上限 → 中文原因。 */
+/** 模擬結果表下的說明；「樣本小」的分母門檻照伺服器 `small_sample`（HC-6b）。 */
+export function smallSampleNote(smallSample: number): string {
+  return `括號是分子／分母（場數或回合數）；分母小於 ${smallSample} 標「樣本小」，數字容易跳，想確定請改用「中」或加種子數再跑。`;
+}
+
 export function scaleProblem(options: TuningSimOptions, builds: number, seeds: number): string | null {
   if (builds === 0) return "至少勾一個 build";
   if (!Number.isInteger(seeds) || seeds < 1) return "種子數要填 1 以上的整數";

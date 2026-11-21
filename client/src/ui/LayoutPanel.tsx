@@ -5,9 +5,14 @@
 // 6H-1：聲音區下面加「減少動態」（跟系統／開／關）。
 import { useState } from "react";
 import { ZOOM_MAX, ZOOM_MIN, zoomPercent, type LayoutPrefs } from "../battle/layoutPrefs";
-import { resetOpHints } from "../battle/opHints";
+import { OP_HINT_LIMIT, resetOpHints } from "../battle/opHints";
 import { AudioSettingsPanel } from "../audio/AudioSettingsPanel";
 import { MotionSettingsSection } from "./MotionSettingsSection";
+
+/** 重設操作說明後的提示（會再顯示幾次照 `OP_HINT_LIMIT`；HC-6b）。 */
+export function opHintResetText(limit: number = OP_HINT_LIMIT): string {
+  return `已重設，之後選取時會再顯示 ${limit} 次`;
+}
 
 /** 設定：操作說明句（前 3 次之後收進「?」）全部重新顯示。 */
 export function OpHintReset({ onReset = resetOpHints }: { onReset?: () => void }) {
@@ -23,7 +28,7 @@ export function OpHintReset({ onReset = resetOpHints }: { onReset?: () => void }
       >
         重新顯示操作說明
       </button>
-      {done && <span className="small muted">已重設，之後選取時會再顯示 3 次</span>}
+      {done && <span className="small muted">{opHintResetText()}</span>}
     </div>
   );
 }

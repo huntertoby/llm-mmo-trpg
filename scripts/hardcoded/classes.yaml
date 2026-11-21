@@ -395,6 +395,13 @@ rules:
     note: 程式邏輯（排序權重、正規表示式群組、單位換算、雜湊、重試次數、顯示用的位數與字數）。
 
   # ======================================================================== 前端：排版（其餘 UI 檔）
+  - id: ts-rules-text-units
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/ui/rulesText.ts]
+    note: HC-6b：說明文字的寫法——秒、小時、天的換算（3600、24）與中文數字「兩」的 2。
   - id: ts-ui-layout-files
     class: layout
     status: done
@@ -458,66 +465,76 @@ rules:
     text: '^(\$\{[^}]*\})?(買|使用|少寄|多寄|少|多) 1 個|至少 1 個（要拿掉|例 ?[12]d6|例：1d6|^[−＋]1 級$'
 
     note: 一次加減一個的按鈕文字、骰子寫法範例（2d6）。
+  # HC-6b：前端說明文字。有資料的改成照伺服器組字（`/api/glossary` 的 `rules`、工坊的狀態與模擬選項、
+  # 卡片與面板已有的欄位、前端自己的常數）；下面幾條是語法用字（改判 const，各寫理由），剩下的留 ts-ui-text。
+  - id: ts-hc6b-ordinal-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/composite.ts, client/src/battle/skillTray.ts, client/src/battle/targeting.ts,
+            client/src/run/StartPicker.tsx, client/src/world/range.ts]
+    text: '^第 [12] 段|第 2 段的目標|^每個關鍵字(的技能池給你|給) 1 招'
+    note: HC-6b 改判：複合、投擲技能的「第 1 段」「第 2 段」是序號；「每個關鍵字給 1 招起始技能」是一個關鍵字一招（起始池的結構），「第 2 招」「第 1 個關鍵字」是序號。
+  - id: ts-hc6b-single-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/objective.ts, client/src/gear/gearDraft.ts, client/src/run/RaceOriginPicker.tsx,
+            client/src/run/flash.ts, client/src/run/FlashSection.tsx, client/src/screens/RunGearOffer.tsx,
+            client/src/world/OpeningDialog.tsx, client/src/world/growthPanel.ts, client/src/world/WorldPanel.tsx,
+            client/src/world/wish.ts]
+    text: '最後 1 輪|至少要掛 1 條|^種族給 1 招種族技|選 1( 個| 件|$)|同時 1 個，到城鎮|每個帳號 1 個角色|^先挑 1 個|^先點選 1 個'
+    note: HC-6b 改判：「最後 1 輪」是剩一輪的說法；「至少 1 條詞條」「先挑 1 個」是非空檢查；「N 選 1」「選 1 件」「一定要選 1 個」是挑一個的說法；種族「1 招種族技、1 項環境被動」、誓約「同時 1 個」、循環賽「每個帳號 1 個角色」是單一欄位與唯一性（同 HC-6a 的結構類）。
+  - id: ts-hc6b-zero-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/skillTray.ts, client/src/ui/SummonPanel.tsx, client/src/tuning/SimPanel.tsx]
+    text: '（0 AP）|行動 0 回合|施放率會是 0'
+    note: HC-6b 改判：召喚物切換模式、集火「0 AP」是免費（core.yaml 註明切換模式免費，沒有欄位）；模擬「行動 0 回合」「施放率會是 0」是零。
+  - id: ts-hc6b-format-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/race.ts, client/src/screens/StartScreen.tsx, client/src/tuning/model.ts,
+            client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts, client/src/tuning/ScaleNotice.tsx,
+            client/src/ui/gear/CustomItemForm.tsx, client/src/world/bagView.ts]
+    text: '3×3|\?dev=1|TRPG_TUNING=1|填 1 以上的整數|填 1～\$\{|× N ÷ 1000|100 ＝ 10%|放大 10 倍（2026-11-20）|10 碼|無條件 1 個'
+    note: HC-6b 改判：「3×3」是形狀名；「?dev=1」「TRPG_TUNING=1」是網址參數與環境變數的值；「1 以上」「1～上限」是結構性下限（上限已照伺服器）；「× N ÷ 1000」「100 ＝ 10%」是 ‰ 換算；「放大 10 倍（2026-11-20）」是那一天的歷史公告；配方碼「10 碼」是代碼格式（十六進位 10 碼），不是玩法數值；比值的「無條件 1 個、成立／不成立 2 個、每個變奏多 1 個」是情境組法的結構（上限 40,000 已照伺服器）。
+  - id: ts-hc6b-tier1-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/tuning/GroupPanel.tsx, client/src/tuning/ratioModel.ts, client/src/tuning/RatioView.tsx,
+            client/src/tuning/SimPanel.tsx, client/src/tuning/SkillIdsEditor.tsx]
+    text: '1 階(比值|預算|主動武器技)|（1 階）'
+    note: HC-6b 改判：數值工坊的「1 階比值」「1 階預算」「只量 1 階主動武器技」是量法的名字（BAL-21e：比值一律在 1 階量，手寫技能的基準階級），同後端 HC-6a 的「基準點」。
   - id: ts-ui-text
     class: text
     status: todo
     lang: ts
     kind: text
-    note: 玩家（或工坊使用者）看得到的說明、提示、錯誤訊息裡寫死的規則數字（技能欄、AP、次數、上限、秒數、場數）。
+    note: 玩家（或工坊使用者）看得到的說明、提示裡寫死的規則數字。HC-6b 後剩的都是程式裡沒有可帶的資料：引擎寫死（源泉 +1、戰前佈置每場 1 個、召喚物守護 2 格、指揮與灌注每輪 1 次、開火 1 發）、內容檢查寫死（道具技能 1 AP、鍛造指定 1 條、特色材料每種 1 個）、單場戰鬥補隊友到 3 人、大世界隊友 0～2 名、重選 2 個關鍵字、配點範例、屬性每級 +2（資料是 20，顯示換算要先定）、線索每筆 +1、誓約冷卻 1 天內（HC-7）。
     files:
-      - client/src/battle/composite.ts
       - client/src/battle/legend.ts
-      - client/src/battle/objective.ts
       - client/src/battle/prep.ts
-      - client/src/battle/race.ts
-      - client/src/battle/skillTray.ts
       - client/src/battle/summonControl.ts
-      - client/src/battle/targeting.ts
-      - client/src/gear/gearDraft.ts
-      - client/src/run/CampfireSkillCare.tsx
-      - client/src/run/FlashChooser.tsx
-      - client/src/run/FlashSection.tsx
-      - client/src/run/RaceOriginPicker.tsx
-      - client/src/run/StartPicker.tsx
-      - client/src/run/flash.ts
-      - client/src/screens/RunCampfire.tsx
-      - client/src/screens/RunGearOffer.tsx
-      - client/src/screens/RunNewScreen.tsx
-      - client/src/screens/RunScreen.tsx
       - client/src/screens/StartScreen.tsx
-      - client/src/tuning/DraftPanel.tsx
-      - client/src/tuning/FieldForm.tsx
-      - client/src/tuning/GroupPanel.tsx
-      - client/src/tuning/RatioView.tsx
-      - client/src/tuning/ScaleNotice.tsx
-      - client/src/tuning/SimPanel.tsx
-      - client/src/tuning/SkillForm.tsx
-      - client/src/tuning/SkillIdsEditor.tsx
-      - client/src/tuning/model.ts
-      - client/src/tuning/ratioModel.ts
-      - client/src/tuning/skillModel.ts
-      - client/src/ui/LayoutPanel.tsx
-      - client/src/ui/StatusCardParts.tsx
       - client/src/ui/SummonPanel.tsx
-      - client/src/ui/gear/CustomItemForm.tsx
-      - client/src/ui/skillCost.ts
       - client/src/ui/statusCard.ts
-      - client/src/ui/workshop/CheckPanel.tsx
-      - client/src/ui/workshop/FieldEditor.tsx
-      - client/src/ui/workshop/TryoutPanel.tsx
       - client/src/world/BagScreen.tsx
-      - client/src/world/BoardPanes.tsx
       - client/src/world/EconomyPanel.tsx
       - client/src/world/EventCard.tsx
-      - client/src/world/MailPanel.tsx
       - client/src/world/OpeningDialog.tsx
       - client/src/world/SmithyPanel.tsx
       - client/src/world/WorldGrowth.tsx
       - client/src/world/WorldPanel.tsx
-      - client/src/world/bagView.ts
       - client/src/world/growthPanel.ts
-      - client/src/world/pregen.ts
-      - client/src/world/questPanel.ts
       - client/src/world/range.ts
       - client/src/world/wish.ts
 
@@ -760,6 +777,13 @@ rules:
     kind: number
     where: ['<module>.DEFAULT_ALERT_PERMILLE', '<module>.DEFAULT_PROBE_TIMEOUT_S']
     note: 同上一條（api config）。
+  - id: py-api-text-rules-defaults
+    class: config
+    status: todo
+    files: [src/trpg/api/schemas.py, src/trpg/api/tuning/schemas.py, src/trpg/api/tuning/drafts.py]
+    kind: number
+    where: ['GameRulesOut', 'TuningStatus', '<module>.DRAFT_NAME_MAX']
+    note: 保守：HC-6b 給說明文字組字的新欄位（GameRulesOut 的一輪場數、預算區間、閃現、線頭、#149 下限等，TuningStatus 的草稿名字數）的預設值，只給舊回應相容用，伺服器一律由內容庫或常數填；值和內容檔相同。DRAFT_NAME_MAX 是草稿名稱上限（工坊設定）。PM 可把預設值改判 const。
   - id: py-api-schemas-config-number
     class: config
     status: todo

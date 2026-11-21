@@ -13,7 +13,7 @@ import { readFile, readStyleFiles, SRC_DIR, stripCssComments, stripTsComments } 
 import { glueNumbers, KeepNum, wordBeforeNumber } from "../ui/PanelKit";
 import { pickTab } from "../ui/panelTabRules";
 import { QuestCard, QuestLog, questTabs, StepTimeline, ThreadsPane } from "./QuestLog";
-import { NO_QUEST_ZH, NO_THREAD_ZH, questsBadge, stepParts, stepState, THREAD_RULE_ZH, threadLeftText, threadsBadge } from "./questPanel";
+import { NO_QUEST_ZH, noThreadText, questsBadge, stepParts, stepState, threadRuleText, threadLeftText, threadsBadge } from "./questPanel";
 
 const html = (el: Parameters<typeof renderToStaticMarkup>[0]) => renderToStaticMarkup(el);
 const css = readStyleFiles()
@@ -148,13 +148,13 @@ describe("線頭列（#26、#28）", () => {
     expect(out).toMatch(/<span class="pnl-tag"><canvas[^>]*data-icon="card:cooldown"[^>]*><\/canvas>剩 2 天 23 小時<\/span>/);
     expect(out).toContain('<span class="pnl-tag">渡婆婆</span>');
     expect(out).toContain('<span class="pnl-tag">指向渡口石階</span>');
-    expect(out).toContain(`aria-label="${THREAD_RULE_ZH}"`);
+    expect(out).toContain(`aria-label="${threadRuleText()}"`);
     expect(out).not.toContain("後到期");
   });
 
   it("沒有線頭：虛線空狀態（字不變），不畫第一行 (i)", () => {
     const out = html(createElement(ThreadsPane, { threads: [] }));
-    expect(out).toBe(`<div class="pnl-empty" data-testid="world-thread-empty">${NO_THREAD_ZH}</div>`);
+    expect(out).toBe(`<div class="pnl-empty" data-testid="world-thread-empty">${noThreadText()}</div>`);
   });
 
   it("舊伺服器沒有 left_zh 時用原字", () => {
