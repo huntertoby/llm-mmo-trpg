@@ -23,6 +23,7 @@ __all__ = [
     "WISH_PICK_PROMPT_VERSION",
     "WISH_REPLY_MAX_CHARS",
     "build_wish_pick_messages",
+    "count_zh",
     "wish_pick_schema",
 ]
 
@@ -71,7 +72,8 @@ _ZH_DIGITS = "零一二三四五六七八九十"
 """張數的中文寫法（JSON 範例裡的「三張」；超過十張改寫阿拉伯數字）。"""
 
 
-def _count_zh(n: int) -> str:
+def count_zh(n: int) -> str:
+    """張數的中文寫法（0～10 寫中文數字，超過寫阿拉伯數字；HC-6b 起數值工坊的說明也用）。"""
     return _ZH_DIGITS[n] if 0 <= n < len(_ZH_DIGITS) else str(n)
 
 
@@ -107,7 +109,7 @@ def _system_prompt(world: WorldStyle, cards: int) -> str:
     terms = rules.world_terms
     task = WISH_PICK_TASK.format(
         cards=cards,
-        cards_zh=_count_zh(cards),
+        cards_zh=count_zh(cards),
         name_max=rules.name_max_chars,
         concept_max=rules.concept_max_chars,
         flavor_max=rules.flavor_max_chars,

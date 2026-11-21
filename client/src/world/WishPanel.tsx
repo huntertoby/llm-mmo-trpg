@@ -121,7 +121,7 @@ function RefundNote({ refund }: { refund: number }) {
 function TextPane({ wish: w, text, off, onText }: { wish: WishData; text: string; off: boolean; onText(t: string): void }) {
   return (
     <div className="wish-pane" data-testid="wish-text-pane">
-      <p className="pnl-l2 wish-lead">{tagMode(w) ? WISH_ZH.tagTextLead : WISH_ZH.textLead}</p>
+      <p className="pnl-l2 wish-lead">{tagMode(w) ? WISH_ZH.tagTextLead() : WISH_ZH.textLead(w.max_keywords)}</p>
       <textarea
         className="wish-input"
         rows={3}
@@ -149,7 +149,7 @@ function MenuPane({ wish: w, picked, off, note, onPick }: { wish: WishData; pick
           {note}
         </Callout>
       )}
-      <p className="pnl-l2 wish-lead">{WISH_ZH.menuLead}</p>
+      <p className="pnl-l2 wish-lead">{WISH_ZH.menuLead(w.max_keywords)}</p>
       <ul className="wish-menu" role="group" aria-label={WISH_ZH.tabMenu} data-testid="wish-menu">
         {w.menu.map((k) => {
           const at = picked.indexOf(k.id);
@@ -220,7 +220,7 @@ function TagPane({ wish: w, picked, tags, off, note, onKeyword, onTag }: { wish:
           {note}
         </Callout>
       )}
-      <p className="pnl-l2 wish-lead">{WISH_ZH.tagMenuLead}</p>
+      <p className="pnl-l2 wish-lead">{WISH_ZH.tagMenuLead()}</p>
       {(w.tag_groups ?? []).map((g) => {
         const chosen = g.id === "keywords" ? picked : (tags[g.id] ?? []);
         // AR-SK4（WC-2b）：元素類的物理不佔名額，物理以外到上限就當場擋（不等送出被伺服器擋）

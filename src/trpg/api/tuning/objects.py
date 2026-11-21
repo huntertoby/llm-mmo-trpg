@@ -25,6 +25,7 @@ from trpg.content.equipment import loadout_held
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import load_content_file, parse_yaml
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.content.skills.primitives import PrimitiveTable
@@ -40,6 +41,7 @@ from trpg.content.tuning_fields import (
     parse_path,
     target_files,
 )
+from trpg.llm.prompts.wish_pick import count_zh
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import obstacle_candidates
 
@@ -832,6 +834,20 @@ def _tables(content_dir: Path) -> tuple[PrimitiveTable | None, ShapeTable | None
     )
 
 
+_WISH_CARDS_TOKENS: Final = ("{wish_cards}", "{wish_cards_zh}")
+
+
+def note_text(note: str, content_dir: Path) -> str:
+    """欄位說明裡的 ``{wish_cards}``（「挑 3 張」）、``{wish_cards_zh}``（「三選一」）換成這份內容的
+    ``skill_pick.yaml`` ``pool.wish_cards``（HC-6a 裁定 1、HC-6b：工坊改了張數，相鄰兩格的說明
+    跟著變）。
+    中文數字的寫法同許願提示詞（:func:`~trpg.llm.prompts.wish_pick.count_zh`）。"""
+    if not any(token in note for token in _WISH_CARDS_TOKENS):
+        return note
+    cards = load_content_file(content_dir / "skill_pick.yaml", SkillPickRules).pool.wish_cards
+    return note.replace("{wish_cards}", str(cards)).replace("{wish_cards_zh}", count_zh(cards))
+
+
 def _default_zh(field: TuningField) -> str | None:
     if field.path in _DEFAULTS_ZH:
         return _DEFAULTS_ZH[field.path]
@@ -1019,7 +1035,7 @@ def object_detail(
                 limit_min=low,
                 limit_max=high,
                 readonly_zh=_readonly(field, value),
-                note_zh=field.note_zh,
+                note_zh=note_text(field.note_zh, content_dir),
                 notice_zh=_field_notice(data, concrete, walls),
                 group_zh=field.group_zh or _part_group(data, concrete),
             )

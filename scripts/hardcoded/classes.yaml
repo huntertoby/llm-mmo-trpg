@@ -497,9 +497,9 @@ rules:
     lang: ts
     kind: text
     files: [client/src/battle/composite.ts, client/src/battle/skillTray.ts, client/src/battle/targeting.ts,
-            client/src/run/StartPicker.tsx, client/src/world/range.ts]
-    text: '^第 [12] 段|第 2 段的目標|^每個關鍵字(的技能池給你|給) 1 招'
-    note: HC-6b 改判：複合、投擲技能的「第 1 段」「第 2 段」是序號；「每個關鍵字給 1 招起始技能」是一個關鍵字一招（起始池的結構），「第 2 招」「第 1 個關鍵字」是序號。
+            client/src/run/StartPicker.tsx, client/src/world/range.ts, client/src/world/wish.ts]
+    text: '^第 [12] 段|第 2 段的目標|^每個關鍵字(的技能池給你|給) 1 招|1～\$\{maxKeywords\} 個關鍵字'
+    note: HC-6b 改判：複合、投擲技能的「第 1 段」「第 2 段」是序號；許願的「1～上限個關鍵字」是結構性下限（上限照伺服器 max_keywords），「帶第 1 個、第 2 個」是序號；「每個關鍵字給 1 招起始技能」是一個關鍵字一招（起始池的結構），「第 2 招」「第 1 個關鍵字」是序號。
   - id: ts-hc6b-single-text
     class: const
     status: done
