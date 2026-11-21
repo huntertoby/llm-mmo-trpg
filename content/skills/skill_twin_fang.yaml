@@ -18,7 +18,7 @@ shape:
   range: weapon
 effects:
 - type: damage
-  multiplier_permille: 1150
+  multiplier_permille: 1320
 - type: apply_status
   status: poison
   duration: 3

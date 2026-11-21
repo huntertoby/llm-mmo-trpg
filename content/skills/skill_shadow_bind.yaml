@@ -16,7 +16,7 @@ ap_cost: 2
 scaling_attr: str
 shape: {type: single, range: weapon}
 effects:
-  - {type: damage, multiplier_permille: 1300}
+  - {type: damage, multiplier_permille: 1350}
   - type: grant_skill
     skill: skill_silent_step
     duration: 3
