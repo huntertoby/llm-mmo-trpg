@@ -21,7 +21,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
     },
     "condition": {
-        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）",
         "point_blank": "SK-1（#166）：組合器、LLM、工坊、閃現「距離加碼」用，沒有手寫示範",
         "long_range": "SK-1（#166）：組合器、LLM、工坊、閃現「距離加碼」用，沒有手寫示範",
     },

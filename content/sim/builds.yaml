@@ -836,3 +836,21 @@ builds:
       resist: {physical: 50}
       tags: [hero, sim]
       skills: [skill_form_bear, skill_form_werewolf, skill_form_pounce, skill_wild_roar, skill_form_renewal, skill_form_release_burst]
+
+  # GS-2（#172）：高階形態技（06 6.30「形態池名單」最後一點）的對照組（不列入矩陣與隨機抽選）：熊、龍輪替，
+  # 在形態中用野性連擊、化形震地、化形守護，最後用原形歸一解形爆發。
+  - id: build_form_high
+    name_zh: 高階形態
+    reference: true
+    theme_zh: GS-2 高階形態技（06 6.30）：熊與龍輪替，在形態中用野性連擊、化形震地（倒地）、化形守護（護盾），再用原形歸一解除形態爆發。
+    hero:
+      id: build_form_high
+      name_zh: 高階形態
+      attributes: {str: 140, dex: 120, con: 140, int: 120, wis: 120, wil: 100}
+      max_hp: 440
+      speed: 5
+      armor_bonus: 10
+      weapon: one_handed_sword
+      resist: {physical: 50}
+      tags: [hero, sim]
+      skills: [skill_form_bear, skill_form_dragon, skill_form_wild_flurry, skill_form_quake, skill_form_guardian, skill_form_primal_return]
