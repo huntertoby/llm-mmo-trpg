@@ -171,7 +171,8 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         // HC-W2：形態（forms.yaml）、裝備規則（rules/equipment.yaml）、物品生成（item_gen.yaml）也放這裡。
         // HC-4b2：技能分歧進化（skill_evolution.yaml，召喚技進化的幅度）也放這裡。
         // HC-4b3：閃現規則與計價（flash_templates.yaml）也放這裡。
-        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution, flash] = await Promise.all([
+        // HC-4d：大世界的規則、經濟、交易、賽季（world/rules.yaml、economy.yaml、trade.yaml、season.yaml）也放這裡。
+        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution, flash, worldRules, worldEconomy, worldTrade, worldSeason] = await Promise.all([
           tapi.tuningStatus(),
           tapi.tuningObjects("unit"),
           tapi.tuningObjects("ai").catch(() => []),
@@ -188,8 +189,12 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
           tapi.tuningObjects("item_gen").catch(() => []),
           tapi.tuningObjects("skill_evolution").catch(() => []),
           tapi.tuningObjects("flash").catch(() => []),
+          tapi.tuningObjects("world_rules").catch(() => []),
+          tapi.tuningObjects("world_economy").catch(() => []),
+          tapi.tuningObjects("world_trade").catch(() => []),
+          tapi.tuningObjects("world_season").catch(() => []),
         ]);
-        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution, ...flash];
+        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution, ...flash, ...worldRules, ...worldEconomy, ...worldTrade, ...worldSeason];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);

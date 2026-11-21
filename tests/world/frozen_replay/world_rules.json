@@ -15,6 +15,12 @@
   "utc_offset_minutes": 480
  },
  "camp_cost": 1,
+ "day_parts": {
+  "evening": 18,
+  "morning": 6,
+  "night": 21,
+  "noon": 11
+ },
  "default_weather": {
   "day": {
    "clear": 1
@@ -45,12 +51,94 @@
  },
  "field": {
   "cut_size": 12,
+  "gap_ally_first": 2,
+  "gap_fallback": 1,
+  "gap_other": 3,
+  "gap_third": 2,
   "min_ally_cells": 3,
   "min_enemy_cells": 4,
   "perceive_range": 3,
   "sight_range": 4,
   "sneak_sight_divisor": 2,
   "walk_max_steps": 30
+ },
+ "field_maps": {
+  "layout_sizes": {
+   "boss": {
+    "long": [
+     10,
+     14
+    ],
+    "short": [
+     6,
+     10
+    ]
+   },
+   "capital": {
+    "long": [
+     28,
+     36
+    ],
+    "short": [
+     20,
+     28
+    ]
+   },
+   "interior": {
+    "long": [
+     8,
+     12
+    ],
+    "short": [
+     6,
+     10
+    ]
+   },
+   "lair": {
+    "long": [
+     12,
+     20
+    ],
+    "short": [
+     10,
+     18
+    ]
+   },
+   "path": {
+    "long": [
+     16,
+     24
+    ],
+    "short": [
+     8,
+     14
+    ]
+   },
+   "site": {
+    "long": [
+     20,
+     28
+    ],
+    "short": [
+     14,
+     22
+    ]
+   },
+   "town": {
+    "long": [
+     20,
+     28
+    ],
+    "short": [
+     14,
+     22
+    ]
+   }
+  },
+  "stones_per_region": [
+   2,
+   3
+  ]
  },
  "hasten": {
   "cost": 1,
@@ -166,6 +254,14 @@
   }
  ],
  "week_days": 7,
+ "wish": {
+  "cost_quest_coins": 4,
+  "llm_cards": 1,
+  "max_keywords": 2,
+  "per_week": 2,
+  "refund_permille": 500,
+  "text_max_chars": 60
+ },
  "xp": {
   "base": 100,
   "level_permille": 100,

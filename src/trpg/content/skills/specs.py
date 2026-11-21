@@ -35,7 +35,9 @@ class SelfStatusCost(ContentModel):
     """
 
     status: str = Field(pattern=ID_PATTERN)
-    duration: int = Field(ge=2, le=3)
+    duration: int = Field(ge=1)
+    """範圍是 ``core.yaml`` 的 ``skill_limits.min_self_status_duration``～
+    ``max_self_status_duration``（HC-4d，``Ruleset`` 層檢查）。"""
 
 
 class SkillCost(ContentModel):
@@ -58,8 +60,9 @@ class SkillCost(ContentModel):
     overdraft: int | None = Field(default=None, ge=1, le=1)
     """透支（Phase 3-50，06 6.5）：施放後自己下一個回合少這麼多 AP（目前一招最多 1 AP，固定折抵見
     ``skill_budget.yaml`` 的 ``allowance.overdraft_permille``）；只有主動技能可以使用。"""
-    source: int | None = Field(default=None, ge=1, le=2)
-    """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。"""
+    source: int | None = Field(default=None, ge=1)
+    """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。上限是
+    ``core.yaml`` 的 ``skill_limits.max_source_cost``（HC-4d，``Ruleset`` 層檢查）。"""
     on_miss: tuple[EffectSpec, ...] = ()
     """失手反噬（Phase 3D-7a，6.17 C）：攻擊沒命中（含自然 1）時對施放者結算的效果（至多 2 個，
     類型見 :data:`BACKLASH_TYPES`，對象只能是施放者自己）；命中則不結算。"""
@@ -150,8 +153,8 @@ class TriggerSpec(ContentModel):
     @model_validator(mode="after")
     def _check(self) -> TriggerSpec:
         if self.event == "every_n_hits":
-            if self.n not in (2, 3):
-                raise ValueError(f"every_n_hits 的 n 必須是 2 或 3，收到 {self.n}")
+            if self.n is None:  # 能填哪些值看 core.yaml 的 skill_limits.every_n_hits（HC-4d）
+                raise ValueError("every_n_hits 必須填 n")
         elif self.n is not None:
             raise ValueError(f"只有 every_n_hits 使用 n，{self.event} 不可填 n")
         if self.max_distance is not None and self.target == "self":

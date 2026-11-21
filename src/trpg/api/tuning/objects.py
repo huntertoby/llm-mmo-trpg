@@ -145,11 +145,16 @@ TABLE_NAMES_ZH: Final = {
     "item_gen": "物品生成（全體共用）",
     "skill_evolution": "技能分歧進化（全體共用）",
     "flash": "閃現規則與計價（全體共用）",
+    "world_rules": "大世界規則：戰鬥、成長、許願池、實地地圖（全體共用）",
+    "world_economy": "大世界經濟（全體共用）",
+    "world_trade": "大世界交易與郵寄（全體共用）",
+    "world_season": "賽季：今日目標、頭目、循環賽（全體共用）",
 }
 """全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
 ``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``；HC-B 加
 ``skill_conditions``、``skill_synergies``；HC-W2 加 ``forms``、``equipment``、``item_gen``；
-HC-4b2 加 ``skill_evolution``；HC-4b3 加 ``flash``）。"""
+HC-4b2 加 ``skill_evolution``；HC-4b3 加 ``flash``；HC-4d 加大世界的 ``world_rules``、
+``world_economy``、``world_trade``、``world_season``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -226,6 +231,27 @@ TABLE_NOTES_ZH: Final = {
         "一起變（價格、選項數、次數、預算加成）。",
         "只開出題價格與規則數值（HC-4b3）；幅度階梯、模板、類別、轉型是結構，不開。"
         "閃現的蓄力、輕巧、伴生、護主幅度在技能預算表的「閃現」組。",
+    ),
+    "world_rules": (
+        "這份是全體共用的大世界規則（world/rules.yaml）：改了之後所有角色的大世界戰鬥回寫、成長、"
+        "許願池與實地地圖一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；遇敵機率、天氣、時段表、地圖大小建議等"
+        "其他數值之後再開。",
+    ),
+    "world_economy": (
+        "這份是全體共用的大世界經濟（world/economy.yaml）：改了之後所有角色的背包、賣價與戰鬥金幣"
+        "一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；商店價格、疊放上限、任務幣等之後再開。",
+    ),
+    "world_trade": (
+        "這份是全體共用的交易與郵寄規則（world/trade.yaml）：改了之後所有角色的寄信、領信與稽核"
+        "報表一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；稅率、可交易種類、郵差等之後再開。",
+    ),
+    "world_season": (
+        "這份是全體共用的賽季設定（world/season.yaml）：改了之後今日目標、賽季頭目與影子循環賽一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；日程、世界事件、懸賞、各季覆寫是結構"
+        "或內容，不開。",
     ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""

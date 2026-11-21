@@ -19,6 +19,7 @@ from typing import Any
 
 import pytest
 
+from tests.content.field_rules import field_map_rules
 from trpg.content.fields import FieldMapDef, field_map_report
 from trpg.content.library import ContentLibrary
 from trpg.content.maps import MapDef, check_map, passable_grid, reachable_from
@@ -144,6 +145,7 @@ def test_all_eighteen_maps_are_drawn_and_pass(library: ContentLibrary) -> None:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
         npcs={
             r: {n.id: n.location for n in t.npcs}
             for r, t in library.world_event_content.npcs.items()

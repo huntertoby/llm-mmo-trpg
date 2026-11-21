@@ -219,6 +219,7 @@ def test_has_and_template(library: ContentLibrary) -> None:
 
 def _enemies(**changes: Any) -> dict[str, Any]:
     data: dict[str, Any] = {
+        "min_moves": {"mob": 2, "elite": 3, "boss_phase": 3},
         "variants": [
             {
                 "id": "v1",

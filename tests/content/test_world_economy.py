@@ -152,7 +152,9 @@ def test_item_rules(library: ContentLibrary) -> None:
     with pytest.raises(ValidationError, match="未知的任務種類"):
         EconomyRules.model_validate({"quest_coins": {"by_kind": {"boss": 1}}})
     assert not library.world_economy.rules.sellable("material")  # type: ignore[union-attr]
-    assert EconomyRules().sell_price(5) == 2 and EconomyRules().sell_price(1) == 1
+    rules = library.world_economy.rules
+    assert rules is not None
+    assert rules.sell_price(5) == 2 and rules.sell_price(1) == 1
 
 
 def test_item_region_must_exist(library: ContentLibrary, tmp_path: Path) -> None:

@@ -50,6 +50,7 @@ def fake_rules() -> SituationRules:
             ],
             "race_methods": {"human": "lore", "elf": "notice", "orc": "force"},
             "check": {"dc_shift_max": 2, "partial_margin": 5, "care_max": 2, "race_bonus": 1},
+            "template_limits": {"methods_max": 3, "attributes_min": 2, "attributes_max": 3},
             "budget": {
                 "xp_battle_permille": 500,
                 "supplies_max": 2,

@@ -22,7 +22,6 @@ from trpg.content.world_events import NpcPortrait
 
 __all__ = [
     "MERCENARY_ROLES",
-    "MIN_PER_ROLE",
     "CompanionDef",
     "EscortDef",
     "MercenaryDef",
@@ -41,9 +40,6 @@ MERCENARY_ROLES: Final[dict[str, str]] = {
     "control": "控制",
 }
 """定位 → 中文（依 9.6.8 的順序）。"""
-
-MIN_PER_ROLE: Final = 2
-"""每種定位至少幾名（9.6.8「各至少 2 種固定 build」）。"""
 
 
 class MercenaryDef(ContentModel):
@@ -110,15 +106,17 @@ class CompanionDef(ContentModel):
 class MercenaryTable(ContentModel):
     """``content/world/mercenaries.yaml``。"""
 
-    max_hired: int = Field(default=2, ge=1, le=2)
+    max_hired: int = Field(ge=1, le=2)
     """一次最多帶幾名（#97：主角＋最多 2 名隊友）。"""
+    min_per_role: int = Field(ge=1, le=10)
+    """每種定位至少幾名（9.6.8「各至少 2 種固定 build」；HC-4d 從模組常數搬來）。"""
     mercenaries: tuple[MercenaryDef, ...] = Field(min_length=1)
     ai_choices: tuple[str, ...] = ()
     """在城鎮替傭兵與影子選的 AI 打法（``ai_profiles.yaml`` 的 ID；5C-2，玩法 PM 定 ④）。空＝只能用
     預設。"""
-    shadow_daily_coins: int = Field(default=1, ge=0)
+    shadow_daily_coins: int = Field(ge=0)
     """影子每天第一次被借用給主人的任務幣（5C-2，#102；初值）。"""
-    shadow_reports_kept: int = Field(default=20, ge=1)
+    shadow_reports_kept: int = Field(ge=1)
     """影子紀錄保留的戰報則數（5C-2）。"""
     default_party: tuple[str, ...] = ()
     """新角色一開始帶的傭兵（依出場順序；5C-3；#154 起只帶賽倫）。空＝獨行。"""
@@ -133,9 +131,10 @@ class MercenaryTable(ContentModel):
         if dup:
             raise ValueError(f"傭兵 ID 重複：{', '.join(dup)}")
         counts: Counter[str] = Counter(m.role for m in self.mercenaries)
-        short = [MERCENARY_ROLES[r] for r in MERCENARY_ROLES if counts[r] < MIN_PER_ROLE]
+        need = self.min_per_role
+        short = [MERCENARY_ROLES[r] for r in MERCENARY_ROLES if counts[r] < need]
         if short:
-            raise ValueError(f"每種定位至少 {MIN_PER_ROLE} 名（9.6.8），不足：{'、'.join(short)}")
+            raise ValueError(f"每種定位至少 {need} 名（9.6.8），不足：{'、'.join(short)}")
         if len(set(self.ai_choices)) != len(self.ai_choices):
             raise ValueError("ai_choices 不能重複")
         self._check_defaults()

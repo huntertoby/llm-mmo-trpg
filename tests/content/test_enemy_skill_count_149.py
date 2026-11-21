@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from trpg.content.enemy_moves import ELITE, EXEMPT, REGIONS
+from trpg.content.enemy_moves import EXEMPT, REGIONS, min_moves
 from trpg.content.enemy_moves import first_season_units as _first_season
 from trpg.content.enemy_moves import move_shortfalls as _shortfalls
 from trpg.content.enemy_moves import phase_counts as _phase_counts
@@ -57,7 +57,7 @@ def test_random_elites_reach_three_moves(library: ContentLibrary) -> None:
     short = [
         (name, affix)
         for name, affix in pairs
-        if len(catalog.with_affix(catalog.template(name), affix).skills) < ELITE
+        if len(catalog.with_affix(catalog.template(name), affix).skills) < min_moves(library).elite
     ]
     assert short == []
 
@@ -75,7 +75,7 @@ def test_fixed_elites_reach_three_moves(library: ContentLibrary) -> None:
         template = catalog.template(elite.unit)
         if elite.affix is not None:
             template = catalog.with_affix(template, elite.affix)
-        assert len(template.skills) >= ELITE, elite
+        assert len(template.skills) >= min_moves(library).elite, elite
 
 
 def test_affixes_carry_the_designated_moves(library: ContentLibrary) -> None:

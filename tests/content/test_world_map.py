@@ -16,8 +16,6 @@ from pydantic import ValidationError
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import load_content_file
 from trpg.content.world_map import (
-    MAX_LOCATIONS,
-    MIN_LOCATIONS,
     LocationDef,
     LocationMapDef,
     world_map_problems,
@@ -27,6 +25,8 @@ from trpg.shared.errors import ContentError
 _COMMON = {"open_plain", "corridor", "ruined_heights", "bridge_chasm"}
 _ELEMENTAL = {"forest", "swamp", "frozen_lake", "oil_depot"}
 _REGION_IDS = ("cloud_ridge", "crystal_crown", "arcane_hub", "ashen_waste", "frost_tide")
+MIN_LOCATIONS, MAX_LOCATIONS = 15, 25
+"""每區地點數（9.6.2；HC-4d 起在 ``regions.yaml`` 的 ``locations_per_region``，下面的測試對照）。"""
 
 
 @pytest.fixture(scope="module")
@@ -171,9 +171,17 @@ def test_small_map_is_valid() -> None:
     LocationMapDef.model_validate(_small_map(MAX_LOCATIONS))
 
 
+def test_location_count_rule_is_content(library: ContentLibrary) -> None:
+    assert library.regions is not None
+    assert library.regions.locations_per_region == (MIN_LOCATIONS, MAX_LOCATIONS)
+
+
 @pytest.mark.parametrize("count", [MIN_LOCATIONS - 1, MAX_LOCATIONS + 1])
-def test_location_count(count: int) -> None:
-    _bad(_small_map(count), "地點數")
+def test_location_count(library: ContentLibrary, count: int) -> None:
+    """HC-4d：地點數的範圍是 regions.yaml 的規則，跨檔案檢查（不是單檔 schema）時擋。"""
+    m = LocationMapDef.model_validate(_small_map(count))
+    found = world_map_problems(m, regions=library.regions, maps=library.maps)
+    assert any("地點數" in p for p in found), found
 
 
 def test_duplicate_location_id() -> None:

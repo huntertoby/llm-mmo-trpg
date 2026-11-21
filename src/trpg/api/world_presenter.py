@@ -71,6 +71,7 @@ from trpg.api.world_range import range_view, workshop_view
 from trpg.api.world_region_view import region_marks
 from trpg.api.world_schemas import (
     BattlefieldRectView,
+    DayPartHoursView,
     EncounterEnemyView,
     EncounterView,
     EnemyRank,
@@ -550,11 +551,15 @@ def _clock_view(
     hour, minute = game_clock(now)
     phase = day_phase(now)
     weather = weather_at(library, world, region, now)
+    parts = rules_of(library).day_parts
     return WorldClockView(
         time_zh=f"{hour:02d}:{minute:02d}",
         day_phase=phase,
         day_phase_zh=PHASE_ZH[phase],
         weather_zh=library.weather_def(weather).name_zh,
+        day_parts=DayPartHoursView(
+            morning=parts.morning, noon=parts.noon, evening=parts.evening, night=parts.night
+        ),
     )
 
 

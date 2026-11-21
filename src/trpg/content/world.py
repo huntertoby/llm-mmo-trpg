@@ -62,7 +62,7 @@ class WorldTermRules(ContentModel):
 
     terms: tuple[str, ...] = ()
     name_prefix_chars: tuple[str, ...] = ()
-    name_prefix_len: int = Field(default=2, ge=1)
+    name_prefix_len: int = Field(ge=1)
     name_max: int = Field(default=1, ge=0)
     text_max: int = Field(default=1, ge=0)
 
@@ -84,11 +84,11 @@ class NamingRules(ContentModel):
     """技能命名與敘事的文字規則（Phase 4-L7）：長度上限與禁字。禁字是指令字樣、標籤與程式碼片段；
     英文字母與數字另由字元集檢查擋下（名稱只能是全形中文）。"""
 
-    name_max_chars: int = 12
-    concept_max_chars: int = 80
-    flavor_max_chars: int = 80
+    name_max_chars: int
+    concept_max_chars: int
+    flavor_max_chars: int
     forbidden_terms: tuple[str, ...] = ()
-    world_terms: WorldTermRules = WorldTermRules()
+    world_terms: WorldTermRules
     archaic: ArchaicRules = ArchaicRules()
 
 
@@ -114,7 +114,7 @@ class WorldStyle(ContentModel):
     realms: tuple[Realm, ...]
     glossary: tuple[GlossaryEntry, ...]
     themes: tuple[Theme, ...] = ()
-    naming: NamingRules = NamingRules()
+    naming: NamingRules
     neutral_style_zh: str = "中性奇幻"
     """沒有區域（創角、許願池、測試原型）時的技能風格（#126）。"""
     skill_styles: tuple[SkillStyle, ...] = ()
@@ -171,7 +171,7 @@ class StyleEvalRules(ContentModel):
     honorifics: tuple[str, ...] = ("施主",)
     formal_speakers: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     """區域 → 可以用 ``honorifics`` 的 NPC（雲嶺：青霧觀修士，#127、18 18.5）。"""
-    dot_share_max_permille: int = Field(default=500, ge=0, le=1000)
+    dot_share_max_permille: int = Field(ge=0, le=1000)
     """「X・Y」句式的上限（‰）。"""
 
 

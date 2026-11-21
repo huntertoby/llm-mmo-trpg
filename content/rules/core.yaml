@@ -168,6 +168,16 @@ skill_limits:
   max_modifiers: 2            # 修正技能最多幾條修正規則
   max_mastery_modifiers: 4    # 專精（帶 exclusive_group 的修正技能）最多幾條修正規則
   max_variant_replacements: 2 # 一個戰場變奏最多填幾項替換內容
+  # HC-4d：技能 schema 剩下的規則型上下限（值不變）
+  max_rank: 5                 # 技能等階（rank）最大 5
+  min_self_status_duration: 2 # 自身狀態代價（cost.self_status）的回合 2～3（1 等於沒有效果，Phase 2H-1）
+  max_self_status_duration: 3
+  max_source_cost: 2          # 傳說技能花的源力 1 或 2（Phase 3C-4a）
+  max_stance_upkeep: 2        # 姿態維持費最多 2 點（6.34.4；每點的量在 forms.yaml）
+  max_any_of: 2               # 條件的「或」（any_of）最多再 2 個（Phase 3W-2b）
+  every_n_hits: [2, 3]        # 每 N 次命中觸發的 N（skill_triggers.yaml 的 budget_by_n_permille 鍵要剛好是這些）
+  min_beside_power_permille: 100   # 召喚到身邊（TF-1）縮小版的最低強度（‰）
+  max_overload_backlash: 2    # 層數超載的反噬最多 2 個效果（stacks.yaml，Phase 3D-7b）
   # HC-4b2：修正規則（kind: modifier）改變幅度的上下限（Phase 3C 4.1；從 skills/modifiers.py、skills/constants.py 搬來，值不變）
   modifier_bounds:
     damage_permille_min: -500       # 傷害 ±‰ 的下限（上限 +1000）

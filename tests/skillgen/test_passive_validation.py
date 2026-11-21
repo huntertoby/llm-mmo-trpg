@@ -54,8 +54,8 @@ def test_target_other_needs_a_trigger_with_another_party() -> None:
 def test_every_n_hits_needs_n_two_or_three() -> None:
     ok = passive(trigger=_trigger(event="every_n_hits", n=2))
     assert not any("trigger" in v.message for v in violations(ok))
-    with pytest.raises(ValidationError):
-        passive(trigger=_trigger(event="every_n_hits", n=5))
+    # HC-4d：n 只能是 core.yaml 的 skill_limits.every_n_hits，改由驗證器（cap.limits）擋
+    assert "cap.limits" in rules_of(passive(trigger=_trigger(event="every_n_hits", n=5)))
     with pytest.raises(ValidationError):
         passive(trigger=_trigger(event="every_n_hits"))
 

@@ -3893,6 +3893,21 @@ export interface components {
             expected_if_hit_milli: number;
         };
         /**
+         * DayPartHoursView
+         * @description 早、午、晚、夜的起始鐘點（``world/rules.yaml`` 的 ``day_parts``，HC-4d）：前端 HUD 的時段字
+         *     （白天＝早〔``noon`` 點前〕、午；夜晚＝晚〔``evening``～``night`` 點前〕、夜）照這張表。
+         */
+        DayPartHoursView: {
+            /** Morning */
+            morning: number;
+            /** Noon */
+            noon: number;
+            /** Evening */
+            evening: number;
+            /** Night */
+            night: number;
+        };
+        /**
          * Decision
          * @description 對暫停中的結算的回答：``unit_id`` 為被詢問者。
          *
@@ -5050,10 +5065,7 @@ export interface components {
              * @default 1
              */
             max_climb: number;
-            /**
-             * Walk Max Steps
-             * @default 30
-             */
+            /** Walk Max Steps */
             walk_max_steps: number;
             hero?: components["schemas"]["FieldHeroView"] | null;
             /**
@@ -13279,6 +13291,7 @@ export interface components {
             day_phase_zh: string;
             /** Weather Zh */
             weather_zh: string;
+            day_parts: components["schemas"]["DayPartHoursView"];
         };
         /**
          * WorldDevBattleResponse

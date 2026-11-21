@@ -306,13 +306,14 @@ rules:
 
     note: 保守：狀態 id → 層級的對照（應由狀態資料帶）。
   - id: ts-day-phase-hours
-    class: config
-    status: todo
+    class: const
+    status: done
     files: client/src/world/hud.ts
     kind: number
-    value: ['11', '18', '21', '24']
+    value: ['24']
     context: '\bh\b'
-    note: 保守：早／午／晚／夜的鐘點分界（11、18、21 點）。
+    note: HC-4d：早／午／晚／夜的鐘點分界（11、18、21 點）改讀伺服器的 clock.day_parts（content/world/rules.yaml 的
+      day_parts）；剩下的 % 24 是一天 24 小時（時刻字串的防呆），不是玩法數值。
   - id: ts-tuning-presets
     class: config
     status: todo
@@ -686,13 +687,14 @@ rules:
     files: src/trpg/engine/rules/statuses.py
     owner: DEFAULT_DEFENSE_BREAK
     note: 保守：破甲狀態沒帶數值時的防禦降幅 100‰；是千分比不是量類，HC-2 從 scale 改判 config（執行時會用到的預設值）。
-  - id: py-skill-stance-upkeep-points
-    class: config
-    status: todo
-    files: src/trpg/content/skills/skill.py
-    where: SkillDef
-    owner: stance_upkeep
-    note: 保守：姿態維持費的「點數」上限 2（每點的數量是 forms.yaml 的量類）；不是量類，HC-2 從 scale 改判 config。
+  - id: py-content-skill-limits-guard-hc4d
+    class: guard
+    status: done
+    files: src/trpg/content/skills/limits.py
+    where: SkillLimits
+    owner: max_stance_upkeep
+    note: HC-4d：skill_limits.max_stance_upkeep 的 schema 護欄 le=10（維持費的「點數」上限，不是量類；同
+      py-skill-stance-upkeep-points 的判斷）。
   - id: py-scale-names
     class: scale
     status: todo
@@ -913,25 +915,16 @@ rules:
   # 代價持續、願望關鍵字……）＝規則；只擋手寫或工坊填出離譜值的（射程、半徑、回合、‰ 上限、清單長度、
   # 字數、地圖尺寸）＝guard。拿不準時歸 config（保守），留給 HC-4b～d 逐檔再看。
   # 先寫規則型的例外（config todo），再寫 guard 的寬規則；順序不能換（第一條符合的勝出）。
-  - id: py-content-rule-bounds-skills
-    class: config
-    status: todo
-    kind: number
-    files: [src/trpg/content/skills/conditions.py, src/trpg/content/skills/skill.py,
-            src/trpg/content/skills/specs.py]
-    where: [ConditionSpec, SkillDef, SelfStatusCost, SkillCost]
-    owner: [any_of, rank, duration, source]
-    note: 同上一條：技能的條件數、等階數、自身狀態代價的回合、源力代價（階級 tier 的上限 HC-4b 搬到 core.yaml 的
-      skill_limits.tiers；修正幅度與群召數量 HC-4b2 搬到 skill_limits.modifier_bounds、對照 max_summon_count；修正的
-      形態維持費下限 −1000 改判 guard：減免 100% 是數學下限）。
   - id: py-content-rule-bounds-world
-    class: config
-    status: todo
+    class: guard
+    status: done
     kind: number
     files: [src/trpg/content/world_events.py, src/trpg/content/world_situations.py]
     where: [SolutionDef, MethodDef]
     owner: [threads, attributes]
-    note: 同上一條：情境解法的線索數、方法的屬性數上限。
+    note: HC-4d 改判 guard：骨架解法的線頭數 ≤ 2 是 9.6.7（#6）「0～2 條」的格式上限，實際上限在
+      situation_rules.yaml 的 budget.threads_max（它的 le=2 也是 guard）；方法的「常見屬性」最多 2 個是
+      分類資料的格式（9.6.11、#115），不是玩法數值。
   - id: py-content-guard-bounds
     class: guard
     status: done
@@ -981,6 +974,43 @@ rules:
     note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、錯誤列印數）。形態幅度的上限 HC-4b3 改成載入時對照 enter_form 原語。
       HC-4b 加 MAX_VARIANTS：一招最多 2 個變奏是護欄，實際上限依稀有度（core.yaml 的 variant_max_by_rarity，
       Ruleset 層檢查）。HC-4b2 加 _MIN_SIDES：骰子至少 2 面是護欄（組合器的骰面階梯在 skill_composer.yaml）。
+  - id: py-content-guard-constants-hc4d
+    class: guard
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/world_encounters.py, src/trpg/content/world_narration.py,
+            src/trpg/content/world_quests.py, src/trpg/content/world_situations.py,
+            src/trpg/content/maps.py, src/trpg/content/rule_changes.py]
+    where:
+      - '<module>.MAX_HEIGHT'
+      - '<module>._MAX_DURATION'
+      - '<module>.MAX_GROUP_SIZE'
+      - '<module>.MAX_THIRD_SIZE'
+      - '<module>.STORY_SENTENCES_MAX'
+      - '<module>.STORY_REFS_MAX'
+      - '<module>._MAX_LEVEL'
+      - '<module>.DC_SHIFT_LIMIT'
+      - '<module>.CARE_LIMIT'
+      - '<module>._DANGER_LEVELS'
+    note: HC-4d 改判 guard。一場敵人最多 4 名、第三方最多 3 名＝戰場地圖敵方／第三方起始區的格數（戰鬥地圖模板
+      4 格、就地切戰場 world/rules.yaml 的 field.min_enemy_cells），是格式上限；旁白最多 3 句、每種引用最多 4 個＝LLM
+      輸出的格式護欄（同 TEXT_MAX_CHARS 等字數上限）；任務等級 ≤ 10 是 xp_level／level_to 的護欄（等級上限在
+      world/rules.yaml 的 hero_growth.level_cap）；難度調整 ±2、用心清單 +2 是 9.6.4 使用者定的天花板，實際值在
+      situation_rules.yaml 的 check.dc_shift_max／care_max（資料只能更嚴，同 RACE_BONUS_LIMIT）；危險度 1～3
+      是刻度格式（DangerDef.level、模板 danger 的 le=3 同一件事）。地圖高度 0～3（MAX_HEIGHT）是地圖格式
+      （heights 一格一個數字）與引擎、AI、畫面的層數上限，引擎 heights.py 夾住、AI 拿它當哨兵；規則改變的
+      持續 ≤ 3（_MAX_DURATION）只擋手寫的離譜回合數（HC-4a：回合類上限＝guard）。
+  - id: py-content-structure-constants-hc4d
+    class: const
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/world_quests.py, src/trpg/content/fields.py]
+    where: ['<module>.OFFER_SIZE', '<module>.DECOR_FIXED_SIZE']
+    note: HC-4d 改判 const。OFFER_SIZE＝三選一的張數（結構，deepen＋bridge＋new 的合計）；DECOR_FIXED_SIZE 的
+      曬衣繩 3×1 格＝裝飾圖的固定尺寸，跟美術素材綁在一起（前端 client/src/test/capitalField.ts 照同一張表），
+      不是玩法數值。
   - id: py-content-math-constants
     class: const
     status: done
@@ -993,82 +1023,12 @@ rules:
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
-  - id: py-content-enemy-moves-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/enemy_moves.py
-    kind: number
-    where: ['<module>.']
-    note: 同上一條（content config）。
-  - id: py-content-fields-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/fields.py
-    kind: number
-    where:
-      - '<module>.DECOR_FIXED_SIZE'
-      - '<module>.LAYOUT_SIZES'
-      - '<module>.STONES_PER_REGION'
-      - '<module>._MAX_SIZE'
-      - '<module>._MIN_SIZE'
-    note: 同上一條（content config）。
   - id: py-content-loader-config-number
     class: config
     status: todo
     files: src/trpg/content/loader.py
     kind: number
     where: ['<module>._MAX_REPORTED_ERRORS']
-    note: 同上一條（content config）。
-  - id: py-content-maps-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/maps.py
-    kind: number
-    where: ['<module>.MAX_HEIGHT', '<module>._MAX_SIZE', 'TileChange']
-    note: 同上一條（content config）。
-  - id: py-content-races-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/races.py
-    kind: number
-    where:
-      - '<module>.MAX_RACE_EFFECTS'
-      - '<module>.MAX_RACE_USES'
-      - '<module>.MAX_RESIST_PERMILLE'
-      - '<module>.MAX_SIGHT_REDUCTION_PERMILLE'
-      - '<module>.ORIGIN_TAGLINE_MAX'
-      - '<module>.RACE_BLURB_MAX'
-      - '<module>._AMOUNT_MAX'
-      - 'RaceEffect'
-      - 'RacePassive'
-    note: 同上一條（content config）。
-  - id: py-content-roguelite-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/roguelite.py
-    kind: number
-    where: ['CandidateSettings', 'StartHero', 'StartRules', '_default_heroes']
-    note: 同上一條（content config）。
-  - id: py-content-rule-changes-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/rule_changes.py
-    kind: number
-    where: ['<module>._MAX_DURATION']
-    note: 同上一條（content config）。
-  - id: py-content-skill-scaling-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_scaling.py
-    kind: number
-    where: ['SkillScalingRules', 'ThemeCombo']
-    note: 同上一條（content config）。
-  - id: py-content-skill-triggers-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_triggers.py
-    kind: number
-    where: ['SkillTriggerDef._check']
     note: 同上一條（content config）。
   - id: py-content-skills-conditions-config-number
     class: config
@@ -1091,27 +1051,6 @@ rules:
     kind: number
     where: ['TrapSpec']
     note: 同上一條（content config）。
-  - id: py-content-skills-skill-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/skill.py
-    kind: number
-    where: ['<module>._MIN_BESIDE_POWER', 'SkillDef']
-    note: 同上一條（content config）。
-  - id: py-content-skills-specs-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/specs.py
-    kind: number
-    where: ['SelfStatusCost', 'SkillCost', 'TriggerSpec', 'TriggerSpec._check']
-    note: 同上一條（content config）。
-  - id: py-content-stacks-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/stacks.py
-    kind: number
-    where: ['<module>._MAX_BACKLASH', 'GainSpec', 'OverloadSpec', 'StackDef']
-    note: 同上一條（content config）。
   - id: py-content-ui-wait-config-number
     class: config
     status: todo
@@ -1126,176 +1065,12 @@ rules:
     kind: number
     where: ['WorkshopRules']
     note: 同上一條（content config）。
-  - id: py-content-world-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world.py
-    kind: number
-    where: ['NamingRules', 'StyleEvalRules', 'WorldTermRules']
-    note: 同上一條（content config）。
-  - id: py-content-world-crafting-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_crafting.py
-    kind: number
-    where: ['CraftRules', 'EnhanceRules', 'HiddenRecipe', 'ResonanceRules']
-    note: 同上一條（content config）。
-  - id: py-content-world-economy-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_economy.py
-    kind: number
-    where:
-      - '<module>._STACKS'
-      - 'BattleGold'
-      - 'EconomyRules'
-      - 'ShopAffinity'
-      - 'WeeklyStock'
-      - 'WorldItemDef'
-    note: 同上一條（content config）。
-  - id: py-content-world-encounters-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_encounters.py
-    kind: number
-    where: ['<module>.MAX_GROUP_SIZE', '<module>.MAX_THIRD_SIZE', 'ArmorMod', 'ArmorMods']
-    note: 同上一條（content config）。
   - id: py-content-world-enemies-config-number
     class: config
     status: todo
     files: src/trpg/content/world_enemies.py
     kind: number
     where: ['EliteAffixDef']
-    note: 同上一條（content config）。
-  - id: py-content-world-events-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_events.py
-    kind: number
-    where: ['<module>._MAX_SITUATION_ATTRIBUTES', 'NpcPortrait', 'SolutionDef']
-    note: 同上一條（content config）。
-  - id: py-content-world-loot-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_loot.py
-    kind: number
-    where: ['MainHandMix']
-    note: 同上一條（content config）。
-  - id: py-content-world-map-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_map.py
-    kind: number
-    where: ['<module>.MAX_LOCATIONS', '<module>.MIN_LOCATIONS', 'MapPos']
-    note: 同上一條（content config）。
-  - id: py-content-world-mercenaries-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_mercenaries.py
-    kind: number
-    where: ['<module>.MIN_PER_ROLE', 'CompanionDef', 'MercenaryTable']
-    note: 同上一條（content config）。
-  - id: py-content-world-narration-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_narration.py
-    kind: number
-    where:
-      - '<module>.ACTOR_MAX_CHARS'
-      - '<module>.MORE_MAX_CHARS'
-      - '<module>.MOTIVE_MAX_CHARS'
-      - '<module>.STORY_REFS_MAX'
-      - '<module>.STORY_SENTENCES_MAX'
-      - '<module>.TEXT_MAX_CHARS'
-    note: 同上一條（content config）。
-  - id: py-content-world-newcomer-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_newcomer.py
-    kind: number
-    where: ['<module>.DEMOS_PER_CLASS', 'NewcomerContent', 'RangeContent']
-    note: 同上一條（content config）。
-  - id: py-content-world-oaths-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_oaths.py
-    kind: number
-    where: ['<module>.OATH_TEXT_LIMIT', 'OathCheck', 'OathTable']
-    note: 同上一條（content config）。
-  - id: py-content-world-quests-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_quests.py
-    kind: number
-    where:
-      - '<module>.OFFER_SIZE'
-      - '<module>._MAX_DELTA'
-      - '<module>._MAX_LEVEL'
-      - 'AffinityRules'
-      - 'AnyOf'
-      - 'OfferMix'
-      - 'StepReward'
-    note: 同上一條（content config）。
-  - id: py-content-world-rules-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_rules.py
-    kind: number
-    where:
-      - '<module>.DEFAULT_SHARES'
-      - '<module>.DEFAULT_WEEK_DAYS'
-      - 'BattleRules'
-      - 'CalendarRules'
-      - 'EnemyGrowthRules'
-      - 'FieldRules'
-      - 'HeroGrowthRules'
-      - 'OpportunityRules'
-      - 'WishRules'
-      - 'XpRules'
-    note: 同上一條（content config）。
-  - id: py-content-world-season-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_season.py
-    kind: number
-    where:
-      - 'BossScore'
-      - 'BossUnlock'
-      - 'DailyGoalRules'
-      - 'LeagueRules'
-      - 'SeasonBossDef'
-      - 'ShopPriceEffect'
-      - 'WorldEventDef'
-    note: 同上一條（content config）。
-  - id: py-content-world-situations-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_situations.py
-    kind: number
-    where:
-      - '<module>.ALIAS_MAX_CHARS'
-      - '<module>.ALIAS_MIN_CHARS'
-      - '<module>.CARE_LIMIT'
-      - '<module>.DC_SHIFT_LIMIT'
-      - '<module>.FACT_MAX_CHARS'
-      - '<module>.MAX_CARE_CLAIMS'
-      - '<module>.PLAYER_TEXT_LIMIT'
-      - '<module>._DANGER_LEVELS'
-      - '<module>._MAX_ATTRIBUTES'
-      - '<module>._MAX_METHODS'
-      - '<module>._MIN_ATTRIBUTES'
-      - 'CheckRules'
-      - 'DangerDef'
-      - 'MethodDef'
-      - 'SituationBudget'
-      - 'SituationTemplateDef'
-    note: 同上一條（content config）。
-  - id: py-content-world-trade-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_trade.py
-    kind: number
-    where: ['MailRules', 'TradeAudit', 'TradeCommon']
     note: 同上一條（content config）。
 
   # ---------------------------------------------------- 後端 engine：config
@@ -1941,6 +1716,15 @@ rules:
 
   # ---------------------------------------------------- 後端 world：config
   # 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
+  - id: py-world-no-rules-fallbacks
+    class: config
+    status: todo
+    files: [src/trpg/world/calendar.py, src/trpg/world/season.py, src/trpg/api/world_field_view.py]
+    kind: number
+    where: ['<module>.NO_RULES_CALENDAR', '<module>.NO_RULES_WEEK_DAYS', '<module>.NO_RULES_WALK_MAX_STEPS']
+    note: HC-4d：沒有 world/rules.yaml（只有測試的精簡內容庫）時的備用值。CalendarRules、week_days、FieldRules 的程式
+      預設值拿掉後搬到呼叫的地方，值和內容檔相同（tests/world/test_rule_defaults_hc4d.py 對照）；留給 HC-7 決定
+      要不要改成沒有世界規則就報錯。
   - id: py-world-actions-config-number
     class: config
     status: todo
@@ -2263,13 +2047,6 @@ rules:
     kind: text
     where: ['BudgetRules._check']
     note: 同上一條（content text）。
-  - id: py-content-skill-triggers-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skill_triggers.py
-    kind: text
-    where: ['SkillTriggerDef._check']
-    note: 同上一條（content text）。
   - id: py-content-skills-modifiers-text-text
     class: text
     status: todo
@@ -2325,6 +2102,14 @@ rules:
     kind: text
     where: ['VariantSpec._check']
     note: 同上一條（content text）。
+  - id: py-content-hc4d-text
+    class: text
+    status: todo
+    kind: text
+    files: [src/trpg/content/fields.py, src/trpg/content/races.py, src/trpg/content/skills/limits.py,
+            src/trpg/content/stacks.py]
+    where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check']
+    note: HC-4d 新的驗證訊息（實地地圖規則、種族被動上限搬進內容檔後的字句）；同上一條（content text）。
   - id: py-content-world-economy-text-text
     class: text
     status: todo
@@ -2338,13 +2123,6 @@ rules:
     files: src/trpg/content/world_encounters.py
     kind: text
     where: ['_lineup_problems']
-    note: 同上一條（content text）。
-  - id: py-content-world-events-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_events.py
-    kind: text
-    where: ['SolutionDef._check']
     note: 同上一條（content text）。
   - id: py-content-world-loot-text-text
     class: text

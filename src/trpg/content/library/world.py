@@ -329,6 +329,7 @@ def _load_world_field_maps(
         t,
         files,
         world_maps=battle.world_maps,
+        world_rules=battle.world_rules,
         npcs=_region_npcs(events),
         # 沒有任何任務檔（測試用的精簡內容）＝不檢查出口 gate，和 npcs 缺區不檢查一致
         quest_steps={
@@ -727,15 +728,20 @@ def _load_world_fields(
     files: list[tuple[Path, ContentModel]],
     *,
     world_maps: Mapping[str, LocationMapDef],
+    world_rules: WorldRules | None,
     npcs: Mapping[str, Mapping[str, str]],
     quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None,
 ) -> tuple[dict[str, FieldMapDef], FieldMapReport]:
     """載入 ``world/fields/``（資料夾不存在＝空）並做跨檔案檢查；錯誤丟 :class:`ContentError`。
 
     檔名：室外圖＝``location``、室內圖＝``id``；上一層資料夾＝``region``。地圖 ID 全部不重複。
+    大小建議與每區傳送石數讀 ``world/rules.yaml`` 的 ``field_maps``（HC-4d），所以有實地地圖就要有
+    世界規則。
     """
     if not directory.is_dir():
         return {}, FieldMapReport()
+    if world_rules is None:
+        raise ContentError(directory, "有實地地圖時必須有 world/rules.yaml（field_maps）")
     result: dict[str, FieldMapDef] = {}
     paths = sorted(directory.glob("*/*.yaml")) + sorted(directory.glob("*/interiors/*.yaml"))
     for path in paths:
@@ -758,6 +764,7 @@ def _load_world_fields(
         terrain=t.terrain.by_id(),
         objects=t.objects.by_id(),
         core=t.core,
+        rules=world_rules.field_maps,
         npcs=npcs,
         quest_steps=quest_steps,
     )

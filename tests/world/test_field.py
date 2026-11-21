@@ -15,10 +15,10 @@ from pydantic import ValidationError
 
 from tests.world.helpers import NOON, hero, make_world, with_rules
 from trpg.api.world_field_schemas import FieldView
-from trpg.api.world_field_view import _walk_max_steps, field_view
+from trpg.api.world_field_view import NO_RULES_WALK_MAX_STEPS, _walk_max_steps, field_view
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.content.world_rules import WALK_PATH_FORMAT_MAX, FieldRules
+from trpg.content.world_rules import WALK_PATH_FORMAT_MAX
 from trpg.world.actions import (
     EncounterCheckEvent,
     RetreatAction,
@@ -265,11 +265,17 @@ def test_walk_limit_follows_rules(calm_field: ContentLibrary) -> None:
     assert base is not None and base.walk_max_steps == 30
 
 
-def test_walk_limit_default_has_one_source(calm_field: ContentLibrary) -> None:
-    """6R-P：沒有世界規則時的預設值與 ``FieldView`` 的預設值都取 ``FieldRules()``。"""
-    default = FieldRules().walk_max_steps
-    assert FieldView.model_fields["walk_max_steps"].default == default
-    assert _walk_max_steps(dataclasses.replace(calm_field, world_rules=None)) == default
+def test_walk_limit_default_has_one_source(
+    library: ContentLibrary, calm_field: ContentLibrary
+) -> None:
+    """6R-P／HC-4d：``FieldView`` 沒有預設值（一定由世界規則帶入）；沒有世界規則時的備用值
+    和內容檔相同。"""
+    assert FieldView.model_fields["walk_max_steps"].is_required()
+    assert library.world_rules is not None
+    assert library.world_rules.field.walk_max_steps == NO_RULES_WALK_MAX_STEPS
+    assert _walk_max_steps(dataclasses.replace(calm_field, world_rules=None)) == (
+        NO_RULES_WALK_MAX_STEPS
+    )
 
 
 def test_walk_request_format_cap(calm_field: ContentLibrary) -> None:

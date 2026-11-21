@@ -37,6 +37,7 @@ MakeChar = Callable[..., CharacterState]
 
 SAMPLE = OathTable.model_validate(
     {
+        "penalty_rounds": 2,
         "templates": [
             {"id": "no_items", "name_zh": "不使用道具", "difficulty": "easy"},
             {
@@ -51,7 +52,7 @@ SAMPLE = OathTable.model_validate(
                 "difficulty": "hard",
                 "params": [{"id": "element", "kind": "choice", "choices": ["fire", "ice"]}],
             },
-        ]
+        ],
     }
 )
 

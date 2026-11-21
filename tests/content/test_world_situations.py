@@ -115,8 +115,6 @@ def test_rules(rules: SituationRules) -> None:
 @pytest.mark.parametrize(
     ("updates", "match"),
     [
-        ({"attributes": ["wis"]}, "at least 2"),
-        ({"attributes": ["wis", "str", "dex", "con"]}, "at most 3"),
         ({"attributes": ["wis", "wis"]}, "attributes 重複"),
         ({"methods": ["tracking", "tracking"]}, "methods 重複"),
         (

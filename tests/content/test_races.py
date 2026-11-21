@@ -16,7 +16,6 @@ from trpg.cli.main import main
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.races import (
-    MAX_RACE_EFFECTS,
     PASSIVE_RULE_SPECS,
     RACE_EFFECT_SPECS,
     OriginTable,
@@ -76,7 +75,7 @@ def test_each_race_has_one_skill_and_one_passive_with_rules(library: ContentLibr
         assert skill.ap_cost == 1, race.id
         assert 1 <= skill.uses_per_battle <= 2, race.id
         assert skill.occupies_skill_slot is False, race.id
-        assert 1 <= len(skill.effects) <= MAX_RACE_EFFECTS, race.id
+        assert 1 <= len(skill.effects) <= library.races.limits.max_effects, race.id
         assert race.passive.rule in PASSIVE_RULE_SPECS, race.id
         assert all(e.type in RACE_EFFECT_SPECS for e in skill.effects), race.id
 
@@ -208,7 +207,9 @@ def test_skill_budget_rules(tmp_path: Path, field: str, value: object, reason: s
 def test_too_many_effects_are_rejected(tmp_path: Path) -> None:
     data = _raw_races()
     effect = {"type": "bonus_move", "amount": 1}
-    _first(data)["skill"]["effects"] = [dict(effect) for _ in range(MAX_RACE_EFFECTS + 1)]
+    _first(data)["skill"]["effects"] = [
+        dict(effect) for _ in range(data["limits"]["max_effects"] + 1)
+    ]
     assert "最多 3 個效果" in _load_bad(tmp_path, data)
 
 

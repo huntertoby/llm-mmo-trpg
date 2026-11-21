@@ -86,8 +86,13 @@ def _copy(tmp_path: Path, library: ContentLibrary) -> Path:
 
 
 def test_missing_rules_file_is_none(tmp_path: Path, library: ContentLibrary) -> None:
+    """沒有 ``world/rules.yaml``＝``None``；HC-4d 起實地地圖的大小建議與傳送石數在規則檔，所以
+    有實地地圖時規則檔必填。"""
     content = _copy(tmp_path, library)
     (content / "world" / "rules.yaml").unlink()
+    with pytest.raises(ContentError, match=r"必須有 world/rules\.yaml"):
+        load_library(content)
+    shutil.rmtree(content / "world" / "fields")
     assert load_library(content).world_rules is None
 
 
@@ -110,11 +115,13 @@ def test_field_rules_loaded_with_old_defaults(library: ContentLibrary) -> None:
     assert field.walk_max_steps == 30
 
 
-def test_field_rules_default_when_block_missing(library: ContentLibrary) -> None:
-    """沒寫 ``field:`` 的舊 content 照常載入，用同樣的預設值；不合法的數值擋下。"""
+def test_field_rules_required(library: ContentLibrary) -> None:
+    """HC-4d：``field:`` 沒有程式預設值，少寫就驗證失敗；不合法的數值擋下。"""
     assert library.world_rules is not None
     data = _rules_dict(library)
-    data.pop("field")
-    assert WorldRules.model_validate(data).field == library.world_rules.field
+    field = library.world_rules.field.model_dump()
+    del data["field"]
     with pytest.raises(ValidationError):
-        WorldRules.model_validate({**data, "field": {"sneak_sight_divisor": 0}})
+        WorldRules.model_validate(data)
+    with pytest.raises(ValidationError):
+        WorldRules.model_validate({**data, "field": {**field, "sneak_sight_divisor": 0}})

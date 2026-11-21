@@ -9741,6 +9741,36 @@
         ],
         "title": "DamageOut"
       },
+      "DayPartHoursView": {
+        "properties": {
+          "morning": {
+            "type": "integer",
+            "title": "Morning"
+          },
+          "noon": {
+            "type": "integer",
+            "title": "Noon"
+          },
+          "evening": {
+            "type": "integer",
+            "title": "Evening"
+          },
+          "night": {
+            "type": "integer",
+            "title": "Night"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "morning",
+          "noon",
+          "evening",
+          "night"
+        ],
+        "title": "DayPartHoursView",
+        "description": "早、午、晚、夜的起始鐘點（``world/rules.yaml`` 的 ``day_parts``，HC-4d）：前端 HUD 的時段字\n（白天＝早〔``noon`` 點前〕、午；夜晚＝晚〔``evening``～``night`` 點前〕、夜）照這張表。"
+      },
       "Decision": {
         "properties": {
           "type": {
@@ -12671,8 +12701,7 @@
           },
           "walk_max_steps": {
             "type": "integer",
-            "title": "Walk Max Steps",
-            "default": 30
+            "title": "Walk Max Steps"
           },
           "hero": {
             "anyOf": [
@@ -12810,7 +12839,8 @@
           "stones",
           "npcs",
           "facilities",
-          "me"
+          "me",
+          "walk_max_steps"
         ],
         "title": "FieldView"
       },
@@ -33549,6 +33579,9 @@
           "weather_zh": {
             "type": "string",
             "title": "Weather Zh"
+          },
+          "day_parts": {
+            "$ref": "#/components/schemas/DayPartHoursView"
           }
         },
         "additionalProperties": false,
@@ -33557,7 +33590,8 @@
           "time_zh",
           "day_phase",
           "day_phase_zh",
-          "weather_zh"
+          "weather_zh",
+          "day_parts"
         ],
         "title": "WorldClockView"
       },

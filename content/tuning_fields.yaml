@@ -888,6 +888,44 @@ targets:
   # HC-4b3：閃現的計價與規則數值（flash_templates.yaml）。預算表（skill_budget.yaml）的「閃現」組是另一個檔，
   # 工坊一個對象對一個檔，所以另開一張表。只開 HC-4b3 拿掉程式預設值的數字；階梯（姿態、形態、完整技能的倍率）、
   # 模板、類別、轉型的起點與召喚輪數是結構，不開。
+  # HC-4d：大世界的數值搬進 content 後開的代表性欄位（初值、未經模擬；其餘列在 docs/phases/PhaseHC-4d報告.md）。
+  - kind: world_rules
+    label_zh: 大世界規則
+    glob: world/rules.yaml
+    fields:
+      - {path: battle.fatigue_hp_permille, label_zh: 疲憊時的開場 HP（‰）, group_zh: 戰鬥回寫, kind: permille, hint_min: 300, hint_max: 1000, note_zh: 全滅後下一場「疲憊」開場時 HP 上限是最大 HP 的這麼多千分比（800＝80%）。調高：全滅的懲罰變輕；調低：變重。只能 1～1000。}
+      - {path: battle.respawn_seconds, label_zh: 已清空到重生的秒數, group_zh: 戰鬥回寫, kind: int, hint_min: 600, hint_max: 7200, note_zh: 打贏後寫「已清空」的地點過這麼多現實秒數重生（1800＝遊戲內 1 天）。調高：清過的地方安靜更久；調低：敵人更快回來。}
+      - {path: xp.base, label_zh: 一份經驗, group_zh: 成長, kind: int, hint_min: 50, hint_max: 200, note_zh: 1 份經驗的基礎值（再依地點建議等級加成；各來源給幾份另外設定）。調高：升級變快；調低：變慢。}
+      - {path: hero_growth.insight_per_level, label_zh: 每升 1 級給的靈感點, group_zh: 成長, kind: int, hint_min: 0, hint_max: 5, note_zh: 主角每升 1 級拿到的靈感點（閃現用）。調高：能閃現的次數變多；調低：變少。}
+      - {path: wish.cost_quest_coins, label_zh: 許願花的任務幣, group_zh: 許願池, kind: int, hint_min: 1, hint_max: 10, note_zh: 在主城許願池許一次願花的任務幣。調高：許願變貴；調低：變便宜。}
+      - {path: wish.refund_permille, label_zh: 都不拿時退回（‰）, group_zh: 許願池, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 許願的三選一都不拿時，退還任務幣的這麼多千分比（捨去；500＝一半）。調高：不滿意的代價變小；調低：變大。只能 0～1000。}
+      - {path: field.sight_range, label_zh: 敵人視野（格）, group_zh: 實地地圖, kind: int, hint_min: 2, hint_max: 8, note_zh: 實地地圖上敵人往前看得到幾格（前方扇形、直走橫走的步數）。調高：比較難繞過敵人、更常被先發現；調低：比較容易偷偷經過。}
+      - {path: field.perceive_range, label_zh: 隱藏入口的感知距離（格）, group_zh: 實地地圖, kind: int, hint_min: 1, hint_max: 6, note_zh: 走到隱藏入口這麼多格內自動感知。調高：隱藏地點比較容易找到；調低：要貼得更近才發現。}
+  - kind: world_economy
+    label_zh: 大世界經濟
+    glob: world/economy.yaml
+    fields:
+      - {path: battle_gold.battle, label_zh: 一般戰鬥的金幣, group_zh: 戰鬥收入, kind: int, hint_min: 5, hint_max: 40, note_zh: 打贏一場一般戰鬥拿到的金幣（再依地點建議等級加成）。調高：錢賺得快、藥水相對便宜；調低：錢更緊。}
+      - {path: battle_gold.elite, label_zh: 精英戰鬥的金幣, group_zh: 戰鬥收入, kind: int, hint_min: 15, hint_max: 120, note_zh: 陣容有精英時打贏拿到的金幣（取代一般戰鬥的數字）。調高：更值得去打精英；調低：精英的收入和一般戰鬥差不多。}
+      - {path: sell_permille, label_zh: 賣給商店的價格（‰）, group_zh: 買賣與背包, kind: permille, hint_min: 200, hint_max: 800, note_zh: 東西賣給商店時拿回買價的這麼多千分比（500＝半價）。調高：賣東西回收比較多；調低：比較少。只能 0～1000。}
+      - {path: bag_slots, label_zh: 背包格數, group_zh: 買賣與背包, kind: int, hint_min: 10, hint_max: 60, note_zh: 背包一共幾格（每格疊放的上限另外設定）。調高：可以帶更多東西、比較少要回城整理；調低：更常要取捨。只能 1～200。}
+  - kind: world_trade
+    label_zh: 大世界交易與郵寄
+    glob: world/trade.yaml
+    fields:
+      - {path: trade.min_level, label_zh: 幾級起能交易, group_zh: 交易門檻, kind: int, hint_min: 1, hint_max: 10, note_zh: 角色到這個等級才能寄信、收信交易。調高：新角色要玩更久才能交易（較能擋小號洗物品）；調低：更早能交易。}
+      - {path: mail.mailbox_max, label_zh: 信箱上限, group_zh: 郵寄, kind: int, hint_min: 5, hint_max: 50, note_zh: 寄給一個角色、還沒領也還沒過期的信最多幾封；滿了就寄不進去。調高：信可以放更久不領；調低：要更常去領。}
+      - {path: mail.return_days, label_zh: 幾天沒領就退回, group_zh: 郵寄, kind: int, hint_min: 1, hint_max: 7, note_zh: 信寄出後現實這麼多天沒領就退回寄件人（金幣的稅不退）。調高：收件人有更多時間領；調低：東西更快回到寄件人手上。}
+      - {path: audit.big_value, label_zh: 稽核：大額的估值, group_zh: 稽核報表, kind: int, hint_min: 100, hint_max: 2000, note_zh: 一封信的估值到這麼多以上，稽核報表標成「大額」（只出報表，不擋寄信）。調高：報表上標的信變少；調低：變多。}
+  - kind: world_season
+    label_zh: 賽季
+    glob: world/season.yaml
+    fields:
+      - {path: daily_goals.newbie_days, label_zh: 新手期天數, group_zh: 今日目標, kind: int, hint_min: 0, hint_max: 5, note_zh: 賽季第 1 天到第這麼多天的今日目標固定用教學那一組，之後每天從目標清單抽。調高：教學目標用得更久；調低：更早換成一般目標。0＝不用教學那一組。}
+      - {path: daily_goals.coins, label_zh: 完成一條給的任務幣, group_zh: 今日目標, kind: int, hint_min: 0, hint_max: 5, note_zh: 完成一條今日目標給的任務幣。調高：每天的任務幣收入變多（許願、商店更寬裕）；調低：變少。0＝不給。}
+      - {path: season_boss.daily_attempts, label_zh: 賽季頭目每天挑戰次數, group_zh: 賽季頭目, kind: int, hint_min: 1, hint_max: 5, note_zh: 每個帳號每天能挑戰賽季頭目幾次（按下挑戰就扣、撤退不退）。調高：首殺來得更快；調低：每次挑戰更珍貴。}
+      - {path: season_boss.score.per_round, label_zh: 頭目評分：每輪扣幾分, group_zh: 賽季頭目, kind: int, hint_min: 0, hint_max: 50, note_zh: 通關評分＝基礎分減掉這個值 × 輪數（不低於 0），再加存活與沒人倒下的加分。調高：打得快的隊伍分數拉得更開；調低：輪數影響變小。}
+      - {path: league.seeds, label_zh: 循環賽每組種子數, group_zh: 影子循環賽, kind: int, hint_min: 1, hint_max: 4, note_zh: 影子循環賽每對組合在每張地圖打幾個種子（每個種子交換先後手各打 1 場）。調高：結果更穩定、但要打的場數變多；調低：場數少、運氣成分大。只能 1～8。}
   - kind: flash
     label_zh: 閃現規則與計價
     glob: flash_templates.yaml

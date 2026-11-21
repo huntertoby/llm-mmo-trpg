@@ -223,6 +223,7 @@ class Ruleset(ContentModel):
             raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
         self._check_rule_changes(ids)
         self._check_overloads(ids)
+        self._check_every_n_hits()
         floor = self.core.element_mod_floor_permille
         reduction = 1000 - floor
         cap = self.equipment.caps.damage_reduction_permille
@@ -233,12 +234,31 @@ class Ruleset(ContentModel):
             )
         return self
 
+    def _check_every_n_hits(self) -> None:
+        """``every_n_hits`` 的係數表要剛好有 ``core.yaml`` 的 ``skill_limits.every_n_hits``
+        （HC-4d）。"""
+        allowed = sorted(self.core.skill_limits.every_n_hits)
+        for trigger in self.skill_triggers.triggers:
+            table = trigger.budget_by_n_permille
+            if trigger.id == "every_n_hits" and table is not None and sorted(table) != allowed:
+                shown = "、".join(str(n) for n in allowed)
+                raise ValueError(
+                    f"skill_triggers.yaml 的 every_n_hits 必須以 budget_by_n_permille 給 "
+                    f"n={shown} 的係數（core.yaml 的 skill_limits.every_n_hits）"
+                )
+
     def _check_overloads(self, status_ids: set[str]) -> None:
         """超載（3D-7b）的反噬：狀態存在、不能是硬控、跳過回合或持續傷害（不讓持有者跳過回合）。"""
         unsafe = self.unsafe_backlash_statuses()
+        top = self.core.skill_limits.max_overload_backlash  # HC-4d
         for stack in self.stacks.stacks:
             if stack.overload is None:
                 continue
+            count = len(stack.overload.backlash)
+            if count > top:
+                raise ValueError(
+                    f"stacks.yaml 的 {stack.id}：backlash 必須有 1 到 {top} 個效果，收到 {count}"
+                )
             for sub in stack.overload.backlash:
                 if sub.type != "apply_status":
                     continue

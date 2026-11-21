@@ -202,17 +202,18 @@ def test_bad_affinity_rules() -> None:
         {"id": "friendly", "name_zh": "友善", "min": 20},
         {"id": "trusted", "name_zh": "信賴", "min": 60},
     ]
-    AffinityRules.model_validate({"ranks": ranks})
+    base = {"min_value": -100, "max_value": 100, "rumors_per_week": 3}
+    AffinityRules.model_validate({**base, "ranks": ranks})
     with pytest.raises(ValidationError, match="依序"):
-        AffinityRules.model_validate({"ranks": ranks[::-1]})
+        AffinityRules.model_validate({**base, "ranks": ranks[::-1]})
     bad = [dict(r) for r in ranks]
     bad[3]["min"] = -20
     with pytest.raises(ValidationError, match="遞增"):
-        AffinityRules.model_validate({"ranks": bad})
+        AffinityRules.model_validate({**base, "ranks": bad})
     first = [dict(r) for r in ranks]
     first[0]["min"] = -90
     with pytest.raises(ValidationError, match="min_value"):
-        AffinityRules.model_validate({"ranks": first})
+        AffinityRules.model_validate({**base, "ranks": first})
 
 
 # ---------------------------------------------------------------------------

@@ -102,8 +102,9 @@ def test_without_any_of_nothing_changes() -> None:
 def test_schema_limits() -> None:
     with pytest.raises(ValidationError):  # 不可巢狀
         _spec(BURNING, {**LOW_HP, "any_of": [HEIGHT]})
-    with pytest.raises(ValidationError):  # 最多再 2 個
-        _spec(BURNING, LOW_HP, WET_SURFACE, HEIGHT)
+    # 最多再 2 個：HC-4d 起是 core.yaml 的 skill_limits.max_any_of（Ruleset 層，見
+    # tests/content/test_rule_defaults_hc4d.py），schema 不擋
+    assert len(_spec(BURNING, LOW_HP, WET_SURFACE, HEIGHT).any_of or ()) == 3
     with pytest.raises(ValidationError):  # 不可是空的
         ConditionSpec.model_validate({**BURNING, "any_of": []})
     assert _spec(BURNING).any_of is None

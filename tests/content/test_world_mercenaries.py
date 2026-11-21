@@ -66,6 +66,9 @@ def test_ai_choices_exist(library: ContentLibrary) -> None:
 def _table(**updates: Any) -> dict[str, Any]:
     data: dict[str, Any] = {
         "max_hired": 2,
+        "min_per_role": 2,
+        "shadow_daily_coins": 1,
+        "shadow_reports_kept": 20,
         "mercenaries": [
             {"id": k, "name_zh": n, "title_zh": "x", "role": r, "build": b}
             for k, (n, r, b) in ROSTER.items()

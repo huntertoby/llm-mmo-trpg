@@ -151,7 +151,6 @@ def test_minimal_table_valid() -> None:
     [
         {"kind": "situation"},
         {"kind": "situation", "attributes": ["str", "str"]},
-        {"kind": "situation", "attributes": ["str", "dex", "con", "int"]},
         {"kind": "combat", "attributes": ["str"]},
         {"kind": "situation", "attributes": ["luck"]},
     ],

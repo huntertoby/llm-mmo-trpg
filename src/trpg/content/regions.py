@@ -51,6 +51,9 @@ class RegionTable(ContentModel):
     default_region: str = Field(pattern=ID_PATTERN)
     regions: tuple[RegionDef, ...] = Field(min_length=1)
     look_keys: tuple[LookKeyDef, ...] = ()
+    locations_per_region: tuple[int, int]
+    """大世界每區的地點數「下限、上限」（9.6.2「每區 15～25 個地點」；HC-4d 從
+    ``trpg.content.world_map`` 的常數搬來）：地點圖（``world/maps/``，主城以外）載入時檢查。"""
 
     @model_validator(mode="after")
     def _check(self) -> RegionTable:
@@ -59,6 +62,9 @@ class RegionTable(ContentModel):
             raise ValueError("區域 ID 重複")
         if self.default_region not in ids:
             raise ValueError(f"default_region {self.default_region} 不在 regions 內")
+        low, high = self.locations_per_region
+        if not 1 <= low <= high:
+            raise ValueError("locations_per_region 必須是「下限、上限」（下限 ≥ 1）")
         keys = [k.key for k in self.look_keys]
         if len(set(keys)) != len(keys):
             raise ValueError("look 鍵重複")

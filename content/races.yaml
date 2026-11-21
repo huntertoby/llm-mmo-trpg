@@ -10,6 +10,14 @@
 # ＋該族預設眼色。種族固定特徵（耳、角、尾、獠牙、紋路、鱗、義體半臉、矮人體型）不能改。預設外觀 look 的值必須在清單內。
 # 人類的預設髮色 #6a3d1e 不在美術色票裡，補在人類清單第一個。髮型：short 短髮、long 長髮、bob 齊肩、ponytail 馬尾、
 # twin 雙馬尾、spiky 刺蝟、bun 髮髻、none 光頭；鬍子：none 無、stubble 鬍渣、mustache 八字鬍、goatee 山羊鬍、full 大鬍子。
+# 種族技與環境被動的規則型上限（7.7；HC-4d 從 src/trpg/content/races.py 的常數搬來，值不變；載入時檢查）：
+# max_uses 種族技每場限用 1～2 次、max_effects 效果最多 3 個（強度小於半個技能欄）、
+# max_sight_reduction_permille 視線懲罰減免最多減半、max_resist_permille 元素傷害減免最多 25%（龍裔 −20%）。
+limits:
+  max_uses: 2
+  max_effects: 3
+  max_sight_reduction_permille: 500
+  max_resist_permille: 250
 look_eyes: ["#1d1a22", "#3a5aa8", "#2a7a4a", "#8a4a22", "#7a3aa8", "#a83a3a"]
 races:
   - id: human
