@@ -729,7 +729,6 @@ def test_reaction_heal_high_ground_rare_tier2_falls_back(library: ContentLibrary
     assert again == skill  # 確定性
 
 
-@pytest.mark.timeout(600)  # 暫時放寬（2026-11-21 使用者「先放寬再加速（建議）」）；QF-4 加速後拿掉
 @pytest.mark.parametrize("keyword", ["wet", "high_ground", "summon"])
 def test_reaction_keywords_the_composer_cannot_carry(library: ContentLibrary, keyword: str) -> None:
     """修補前所有階級的稀有／史詩反應技配這三個關鍵字都會丟 FallbackError（掃描 18 組）。
