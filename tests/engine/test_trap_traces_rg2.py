@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from hypothesis import given, settings
+from hypothesis import example, given, settings
 from hypothesis import strategies as st
 
 from tests.engine.helpers import (
@@ -260,6 +260,7 @@ def test_traced_by_is_not_serialized_when_empty() -> None:
     radius=st.integers(min_value=0, max_value=4),
     enemy_side=st.booleans(),
 )
+@example(x=4, y=3, radius=0, enemy_side=False)  # 11-21 hypothesis 找到：半徑 0 不記
 def test_trace_iff_player_side_and_within_radius(
     x: int, y: int, radius: int, enemy_side: bool
 ) -> None:
@@ -282,7 +283,7 @@ def test_trace_iff_player_side_and_within_radius(
     first, second = run(), run()
     assert first == second
     distance = abs(x - TRAP[0]) + abs(y - TRAP[1])
-    expected = (not enemy_side) and distance <= radius
+    expected = (not enemy_side) and radius > 0 and distance <= radius  # 半徑 0＝看不到（core.yaml）
     traced = json.loads(first[1])["traps"][0].get("traced_by", [])
     assert traced == (["ally"] if expected else [])
     assert ('"trap_traced"' in first[0]) is expected
