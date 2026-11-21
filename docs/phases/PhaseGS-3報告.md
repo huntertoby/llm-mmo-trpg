@@ -120,7 +120,14 @@
 
 ## 9. 交件前的完整檢查
 
-照派工：全部 commit 後問開發 PM，依回覆決定（結果補在下方）。
+照派工：全部 commit 後問開發 PM。PM 回覆「可以跑」，先 `git merge --no-edit main`（main `54c11334b`，合併 commit `318448756`，沒有衝突），再跑：
+
+| 檢查 | 結束碼 |
+|---|---|
+| `uv run python scripts/check.py`（ruff、format、mypy、lint-imports、看門狗跑全部非 slow 測試 18194 passed／8 skipped、vitest 4822 passed） | 0 |
+| `scripts/run_pytest.py -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+
+補這一節（只改本報告）之後照 `docs/dev/上手-測試.md` 再跑一次 `check.py`，讓通過戳記對到最後的 tree。
 
 ## 10. 待 PM 決定
 
