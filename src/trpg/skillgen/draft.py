@@ -32,6 +32,7 @@ __all__ = [
     "build_skill",
     "draft_id",
     "draft_skeleton",
+    "fill_trap_rounds",
     "step_complete",
     "validation_messages",
 ]
@@ -99,6 +100,22 @@ def build_skill(draft: Draft, overrides: Mapping[str, Any] | None = None) -> Ski
         return SkillDef.model_validate(data)
     except ValidationError as exc:
         raise DraftError(validation_messages(exc)) from exc
+
+
+def fill_trap_rounds(data: Draft, library: ContentLibrary) -> Draft:
+    """輸入層補陷阱輪數（HC-5b，HC-5a 裁定 5）：``trap`` 有填、但沒寫 ``rounds`` 時補組合器
+    ``enter`` 陷阱最短的輪數（``skill_composer.yaml`` 的 ``trap.enter_rounds.min``，2）——HC-5a 之前
+    ``TrapSpec.rounds`` 的程式預設也是 2。內容檔的 ``TrapSpec.rounds`` 照舊必填；這裡只給工坊草稿、
+    自訂技能與 LLM 提議在驗證前用。``data`` 不變；不用補時原樣回傳。
+
+    沒有 ``id`` 的草稿先照「補值前」的內容算好 ID（:func:`draft_id`），和 HC-5a 之前相同（當時
+    輪數是在 schema 驗證時才補，不進 ID 的雜湊）。"""
+    trap = data.get("trap")
+    if not isinstance(trap, Mapping) or "rounds" in trap:
+        return data
+    filled = {**data, "trap": {**trap, "rounds": library.composer.trap.enter_rounds.min}}
+    filled["id"] = data.get("id") or draft_id(data)
+    return filled
 
 
 def draft_skeleton(draft: Draft, library: ContentLibrary) -> SkeletonDef | None:

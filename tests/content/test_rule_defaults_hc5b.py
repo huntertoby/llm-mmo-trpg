@@ -1,4 +1,5 @@
-"""HC-5b：組合器、候選、挑選、預算與進化的常數（原本寫死在 ``skillgen/``）搬進 content 之後的規則對照。"""
+"""HC-5b：組合器、候選、挑選、預算與進化的常數（原本寫死在 ``skillgen/``）搬進 content 之後的
+規則對照。"""
 
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ import yaml
 from pydantic import BaseModel, ValidationError
 
 from tests.engine.helpers import PROJECT_ROOT, library
-from trpg.content.composer_rules import ComposerRules, ProposalSearch
+from trpg.content.composer_rules import ComposerRules, ProposalSearch, composer_rule_problems
 from trpg.content.roguelite import RunRules
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_pick import SkillPickRules
@@ -146,8 +147,6 @@ def test_values_are_the_old_constants() -> None:
 
 def test_default_ap_cannot_exceed_the_ap_cap() -> None:
     """補值器補的 AP 不能超過 ``skill_limits.max_ap_cost``（載入檢查，同白板 AP）。"""
-    from trpg.content.composer_rules import composer_rule_problems
-
     lib = library()
     top = lib.ruleset.core.skill_limits.max_ap_cost
     cost = lib.composer.llm_cost.model_copy(update={"default_ap": top + 1})

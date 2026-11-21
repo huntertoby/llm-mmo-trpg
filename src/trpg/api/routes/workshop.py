@@ -37,7 +37,7 @@ from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
 from trpg.narrative.skill_icon_art import icon_art_rules
 from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords
-from trpg.skillgen.draft import build_skill
+from trpg.skillgen.draft import build_skill, fill_trap_rounds
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import DraftOptions
 from trpg.skillgen.options import draft_options
@@ -153,7 +153,7 @@ def post_export(body: WorkshopExportRequest, request: Request) -> WorkshopExport
     ``problems`` 標示問題。"""
     reject_dev_fields(request, body.dev_fields())  # 6S-1：allow_illegal 開發模式才能用
     library = store_of(request).library
-    skill = build_skill(body.skill)
+    skill = build_skill(fill_trap_rounds(body.skill, library))  # HC-5b：沒寫陷阱輪數時補
     provenance = skill.provenance.model_copy(update={"origin": "workshop"})
     skill = skill.model_copy(update={"provenance": provenance})
     result = check_draft(skill.model_dump(mode="json", exclude_none=True), library)

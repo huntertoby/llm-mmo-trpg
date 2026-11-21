@@ -21,6 +21,7 @@ from trpg.content.skills import (
     SkillDef,
     skill_elements,
 )
+from trpg.skillgen.draft import fill_trap_rounds
 from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal.models import CALLER_FIELDS, LLM_ID_PREFIX, ProposalContext
 from trpg.skillgen.proposal_costs import (
@@ -78,7 +79,8 @@ def _skill_data(
     data = fill(data)
     data["name_zh"] = _combined_name(data, library)
     data["id"] = _skill_id(data)
-    return data
+    # HC-5b：沒寫陷阱輪數時補（ID 照補值前的內容，同 HC-5a 之前在驗證時才補）
+    return {**fill_trap_rounds(data, library), "id": data["id"]}
 
 
 PLACEHOLDER_NAME = "提議技能"
