@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from trpg.content.flash_templates import FlashPricing, FlashRules
+from tests.engine.helpers import library
 from trpg.skillgen.flash_state import (
     COMPLETE_SLOT,
     SkillFlash,
@@ -25,7 +25,8 @@ from trpg.skillgen.flash_state import (
     with_reflash,
 )
 
-RULES = FlashRules()
+RULES = library().flash.rules
+"""內容檔的規則（HC-4b3 起 schema 沒有預設值）。"""
 V1 = Variation(source="minor", template="area_plus", category="area")
 V2 = Variation(source="minor", template="range_plus", category="area")
 
@@ -71,7 +72,7 @@ def test_flash_needs_use_and_stops_at_five(state: SkillFlash, ok: bool) -> None:
 
 
 def test_needs_use_can_be_switched_off_in_content() -> None:
-    rules = FlashRules(needs_use=False)
+    rules = RULES.model_copy(update={"needs_use": False})
     assert flash_problem(rules, acquire("skill_x")) is None
 
 
@@ -131,7 +132,7 @@ def test_seed_tags() -> None:
 
 
 def test_pricing_follows_decision_70() -> None:
-    pricing = FlashPricing()
+    pricing = library().flash.pricing
     assert (price(pricing, focused=False).cost, price(pricing, focused=False).options) == (1, 4)
     assert price(pricing, focused=False).min_categories == 2
     assert (price(pricing, focused=True).cost, price(pricing, focused=True).options) == (2, 3)

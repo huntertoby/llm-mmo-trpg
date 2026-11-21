@@ -848,3 +848,28 @@ targets:
     fields:
       - {path: summon.deepen_hp_permille, label_zh: 召喚技加深：最大 HP 多幾‰, kind: permille, hint_min: 100, hint_max: 600, note_zh: 召喚技選「加深」進化後，召喚物最大 HP 多這麼多千分比（300＝+30%），另外多一個小特性。調高：加深更強，但更容易超出預算而被縮短持續或加冷卻；調低：較弱。只能 1～1000。}
       - {path: summon.count_power_permille, label_zh: 召喚技數量型：每隻的強度（‰）, kind: permille, hint_min: 300, hint_max: 900, note_zh: 召喚技選「數量型」進化後一次召喚 2 隻，每隻的最大 HP 與傷害是一般的這麼多千分比（600＝60%）。調高：兩隻都更強，更容易超出預算而被縮短持續或加冷卻；調低：較弱。只能 100～999。}
+  # HC-4b3：閃現的計價與規則數值（flash_templates.yaml）。預算表（skill_budget.yaml）的「閃現」組是另一個檔，
+  # 工坊一個對象對一個檔，所以另開一張表。只開 HC-4b3 拿掉程式預設值的數字；階梯（姿態、形態、完整技能的倍率）、
+  # 模板、類別、轉型的起點與召喚輪數是結構，不開。
+  - kind: flash
+    label_zh: 閃現規則與計價
+    glob: flash_templates.yaml
+    fields:
+      - {path: pricing.open.cost, label_zh: 不指定類別：花幾點靈感, group_zh: 出題價格, kind: int, hint_min: 0, hint_max: 3, note_zh: 閃現或重閃時不指定類別，花這麼多點靈感出一組混合的變化。調高：閃現變貴、一輪能閃的次數變少；調低：變便宜。0＝免費。}
+      - {path: pricing.open.options, label_zh: 不指定類別：出幾個選項, group_zh: 出題價格, kind: int, hint_min: 2, hint_max: 6, note_zh: 不指定類別時一次出幾個變化給玩家挑（第 3 次大變化有合法轉型時，轉型佔其中一個）。調高：選擇更多、比較容易挑到想要的；調低：選擇變少。只能 1～6。}
+      - {path: pricing.open.min_categories, label_zh: 不指定類別：至少涵蓋幾類, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 3, note_zh: 不指定類別時，選項至少來自這麼多個不同類別（做得到時）。調高：選項方向更分散；調低：可能整組都是同一類。不能大於「不指定類別：出幾個選項」。}
+      - {path: pricing.focused.cost, label_zh: 指定類別：花幾點靈感, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 4, note_zh: 先選方向（類別）再閃，花這麼多點靈感（現在比不指定多 1 點）。調高：指定方向更貴；調低：更便宜，低於不指定時玩家會一律指定。}
+      - {path: pricing.focused.options, label_zh: 指定類別：出幾個選項, group_zh: 出題價格, kind: int, hint_min: 1, hint_max: 6, note_zh: 指定類別時從該類出幾個變化（不夠時少出，不拿別類補；指定加深或橋接時合法轉型另列一個）。調高：選擇更多；調低：選擇變少。只能 1～6。}
+      - {path: rules.max_flashes, label_zh: 每招最多閃幾次, group_zh: 次數與預算, kind: int, hint_min: 3, hint_max: 9, note_zh: 一招技能最多閃現這麼多次（6.34.2）。調高：每招可以長得更多、預算上限也跟著多加；調低：每招比較早定型。不能小於「第幾次是大變化」，兩格要一起改。只能 1～9。}
+      - {path: rules.major_flash, label_zh: 第幾次是大變化, group_zh: 次數與預算, kind: int, hint_min: 1, hint_max: 5, note_zh: 第這麼多次閃現是大變化（加深、橋接、轉型），其他次是小變化。調高：大變化來得晚；調低：來得早。不能大於「每招最多閃幾次」，兩格要一起改。}
+      - {path: rules.budget_step_permille, label_zh: 每閃一次預算上限多幾‰, group_zh: 次數與預算, kind: permille, hint_min: 0, hint_max: 100, note_zh: 每次閃現讓這招的預算上限多這麼多千分比（佔同階預算；40＝+4%，5 次共 +20%）。調高：閃過的技能變更強；調低：閃現主要只換方向、不太加強度。只能 0～200。}
+      - {path: rules.dissolve_refund_permille, label_zh: 溶掉技能退回幾‰靈感點, group_zh: 次數與預算, kind: permille, hint_min: 0, hint_max: 1000, note_zh: 溶掉一招時退回「花在它身上的靈感點」的這麼多千分比，無條件捨去（500＝一半）。調高：換技能的代價變小；調低：溶掉比較虧。只能 0～1000。}
+      - {path: rules.usage_min_uses, label_zh: 用法統計至少放出幾次, group_zh: 次數與預算, kind: int, hint_min: 0, hint_max: 10, note_zh: 這招放出的次數少於這個數時，用法統計不算數，先出通用變化（範圍、距離之類）。調高：要用更多次才會出貼合打法的變化；調低：用法統計更早生效，但次數少時比較不準。}
+      - {path: rules.complete.flashes, label_zh: 完整技能視為已閃幾次, group_zh: 完整技能, kind: int, hint_min: 0, hint_max: 5, note_zh: 完整技能（6.34.6）視為已經閃過這麼多次（不能再閃、可以重閃）。調高：完整技能算作閃過更多次；調低：算作閃過更少次。預算加成不看這格，看「完整技能預算上限多幾‰」。只能 0～9。}
+      - {path: rules.complete.budget_permille, label_zh: 完整技能預算上限多幾‰, group_zh: 完整技能, kind: permille, hint_min: 0, hint_max: 300, note_zh: 完整技能的預算上限比一般同階技能多這麼多千分比（120＝+12%），強度照這個重調。調高：完整技能更強；調低：較弱。只能 0～1000。}
+      - {path: rules.complete.cap_permille, label_zh: 完整技能實際加成的上限（‰）, group_zh: 完整技能, kind: permille, hint_min: 0, hint_max: 400, note_zh: 重調時一步會超過時先用較細的旋鈕補，最多加到這麼多千分比（150＝+15%）。應不小於「完整技能預算上限多幾‰」。調高：容許加得比目標多；調低：更貼近目標，可能停在目標以下。只能 0～1000。}
+      - {path: rules.modifier_fine_step, label_zh: 修正模板重調幅度的間距（‰）, group_zh: 修正與收束, kind: permille, hint_min: 1, hint_max: 50, note_zh: 修正型被動（BAL-10b 的修正模板）重調傷害、治療幅度時，從這個數到 1000 每這麼多千分比一格。調高：一格跳得多、比較常超出或不到預算；調低：調得更細、更貼近預算。只能 1～50。}
+      - {path: rules.modifier_drawback_step, label_zh: 代價減輕每次減幾‰, group_zh: 修正與收束, kind: permille, hint_min: 25, hint_max: 300, note_zh: 閃現「代價減輕」把修正技能的負面幅度（降低傷害、治療的千分比）往 0 減輕這麼多。調高：一次減得多；調低：一次減得少。只能 1～500。}
+      - {path: rules.single_hit_cap_permille, label_zh: 收束後單發上限（‰）, group_zh: 修正與收束, kind: permille, hint_min: 1000, hint_max: 5000, note_zh: 範圍技收成單體（收束）後，一次施放對單一目標的期望傷害（治療、護盾同理）最多是同階、同 AP 單體技能預算的這麼多千分比（3000＝3 倍）；超過的預算改成減費用，減不動就不出這個選項。調高：收束後的單發可以更痛；調低：更常改成減費用或不出。只能 1000～10000。}
+      - {path: rules.converge_targets_permille, label_zh: 收束：平均命中目標數低於多少（‰）, group_zh: 修正與收束, kind: permille, hint_min: 1000, hint_max: 3000, note_zh: 這招放過、平均每次命中的目標數（千分比，1500＝1.5 個）低於這個數時，收束選項加「收束的用法分數」。調高：更多範圍技會優先看到收束；調低：只有很常打單體的範圍技才會。只能 1000～10000。}
+      - {path: rules.converge_usage_score, label_zh: 收束的用法分數, group_zh: 修正與收束, kind: int, hint_min: 0, hint_max: 5, note_zh: 符合上一格條件時兩種收束各加這麼多用法分（換形狀在同樣條件下是 2 分）。調高：收束排得更前面；調低：排得更後面，0＝不加分。只能 0～5。}

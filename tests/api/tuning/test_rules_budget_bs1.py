@@ -100,6 +100,7 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "equipment",
         "item_gen",
         "skill_evolution",  # HC-4b2：召喚技分歧進化的幅度
+        "flash",  # HC-4b3：閃現的計價與規則數值
     )
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (

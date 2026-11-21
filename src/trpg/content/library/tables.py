@@ -187,10 +187,8 @@ def _load_flash(
     evolution: EvolutionTable,
     triggers: SkillTriggerTable,
 ) -> FlashTable:
-    """閃現設定（Phase 3W-1；檔案可以不存在）與跨檔案檢查：大變化引用的進化模板存在且分支相符、
-    轉型的觸發時機存在。"""
-    if not (root / "flash_templates.yaml").exists():
-        return FlashTable()
+    """閃現設定（Phase 3W-1；HC-4b3 起必備，數字都寫在檔裡）與跨檔案檢查：大變化引用的進化模板
+    存在且分支相符、轉型的觸發時機存在。"""
     table: FlashTable = load("flash_templates.yaml", FlashTable)
     branches = {t.id: t.branch for t in evolution.templates}
     problems: list[str] = []
@@ -212,6 +210,21 @@ def _load_flash(
     if problems:
         raise ContentError(root / "flash_templates.yaml", "；".join(problems))
     return table
+
+
+def _check_flash_forms(root: Path, table: FlashTable, primitives: PrimitiveTable) -> None:
+    """閃現與升階重配的形態幅度（``rules.form_magnitudes``）最後一格不能超過 ``enter_form`` 原語
+    ``magnitude_permille`` 參數的上限（HC-4b3：原本寫死在 schema 的 2000‰；兩邊是同一個上限）。"""
+    enter_form = primitives.by_id().get("enter_form")
+    param = None if enter_form is None else enter_form.params.get("magnitude_permille")
+    top = None if param is None else param.max
+    last = table.rules.form_magnitudes[-1]
+    if top is not None and last > top:
+        raise ContentError(
+            root / "flash_templates.yaml",
+            f"rules.form_magnitudes 最多 {top}‰（skill_primitives.yaml 的 enter_form."
+            f"magnitude_permille 上限；兩格要一起改），收到 {last}",
+        )
 
 
 def _dev_starter_problems(
