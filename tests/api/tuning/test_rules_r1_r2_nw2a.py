@@ -56,6 +56,7 @@ def test_skill_form_shows_the_retier_note(read_service: TuningService) -> None:
     assert detail.notes_zh[0] == (
         "這招在 2 階以上會依預算比例重算（夾在 70～100%），超出的部分只在 1 階有效"
     )
+    assert read_service.library is not None
     assert detail.notes_zh[0] == retier_note_zh(read_service.library.budget)
     assert "碎晶之主（rift_shard_lord，3 階）" in detail.notes_zh[1]
     lord = next(u for u in detail.used_by if u.id == "rift_shard_lord")
