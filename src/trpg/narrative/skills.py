@@ -22,6 +22,7 @@ from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     DAMAGE_MULTIPLIER,
+    NATURAL_WEAPON_ATTR_LABEL,
     ON_KEYWORD_EXPLOITED,
     REDIRECT_STATUS,
     SELF_DAMAGE_OF_HIT,
@@ -230,7 +231,9 @@ def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
     """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。武器技看手上武器
     （3H-6）：給了 ``lib`` 時寫實際的屬性名——所需武器大類的主屬性（例「力量」），帶心智第二屬性
     時接在後面（「力量／智力」，3I-3；玩法 PM 2026-10-24：武器技所有數值都看手上武器，不加例外）；
-    沒有 ``lib`` 時寫「武器屬性」。"""
+    沒有 ``lib`` 時寫「武器屬性」。看天生武器的技能（GS-3）寫「天生武器的屬性」。"""
+    if skill.scaling_source == "natural_weapon":
+        return NATURAL_WEAPON_ATTR_LABEL
     if skill.category == "weapon":
         held = _CARD_WEAPON.get()
         if held is not None:  # 3-55：有持有者就寫那把武器實際的屬性（已含第二屬性與取平均）

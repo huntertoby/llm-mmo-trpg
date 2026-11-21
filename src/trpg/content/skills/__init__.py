@@ -468,6 +468,7 @@ from trpg.content.skills.skill import (
 )
 from trpg.content.skills.skill import (
     ICON_PROP_KEY,
+    NATURAL_WEAPON_ATTR_LABEL,
     SkillDef,
     SkillTable,
     drop_icon_prop,
@@ -548,6 +549,7 @@ __all__ = [
     "LEGACY_REACTION_EVENTS",
     "MAX_VARIANTS",
     "MODIFIER_CHANGES",
+    "NATURAL_WEAPON_ATTR_LABEL",
     "NESTED_PARENTS",
     "NONZERO_CHANGES",
     "ON_HIT_PRIMITIVES",

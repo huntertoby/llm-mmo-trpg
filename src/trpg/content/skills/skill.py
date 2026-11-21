@@ -115,6 +115,10 @@ _VARIANT_CACHE: dict[tuple[int, str], tuple[Any, Any]] = {}
 （值保留原物件，避免 ``id`` 重用時取錯）。"""
 
 
+NATURAL_WEAPON_ATTR_LABEL = "天生武器的屬性"
+"""看天生武器的技能（GS-3，``scaling_source: natural_weapon``）在算法句與卡片上的屬性名。"""
+
+
 class SkillDef(ContentModel):
     """一個技能（``content/skills/<id>.yaml``）。"""
 
@@ -141,6 +145,13 @@ class SkillDef(ContentModel):
     secondary_scaling_attr: Attribute | None = None
     """第二縮放屬性（Phase 2H-2）：與 ``scaling_attr`` 各占 50%（取平均，無條件捨去）。
     最低稀有度由 ``core.yaml`` 的 ``dual_scaling_min_rarity`` 決定（跨檔案檢查）。"""
+    scaling_source: Literal["natural_weapon"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    """縮放屬性改看「天生武器」（GS-3，#173，06 6.30 野性連擊）：命中與傷害（含對抗）都用施放者
+    目前形態天生武器的屬性（兩個屬性照 08 8.11 取較高）。只有技能層級條件是「在形態中」
+    （``in_form``）、不是武器技、沒有第二縮放屬性的技能可以填；``scaling_attr`` 只當不在形態中時
+    （工坊、三選一的泛稱）的顯示提示。沒填時不輸出，舊技能的序列化不變。"""
     mastery: Mastery | None = None
     """專精加成（Phase 2H-2）：施放者的 ``scaling_attr`` 基礎屬性是自己所有屬性中最高（含並列）
     時生效——``range`` 施放距離 +1、``duration`` 此技能施加的狀態持續 +1。雙屬性技能不可設定。"""
@@ -1140,10 +1151,27 @@ class SkillDef(ContentModel):
         if len(set(self.weapon_only)) != len(self.weapon_only):
             raise ValueError("weapon_only 不可重複")
 
+    def _check_scaling_source(self) -> None:
+        """看天生武器的縮放（GS-3，#173）：技能層級條件要是「在形態中」，不能是武器技、不能有第二
+        縮放屬性或專精（天生武器已有自己的雙屬性取法）。"""
+        if self.scaling_source is None:
+            return
+        if self.condition is None or self.condition.type != "in_form":
+            raise ValueError(
+                "scaling_source: natural_weapon 只能用在條件是「在形態中」（in_form）的技能"
+            )
+        if self.category == "weapon":
+            raise ValueError("scaling_source: natural_weapon 不能用在武器技（武器技看手上武器）")
+        if self.secondary_scaling_attr is not None or self.mastery is not None:
+            raise ValueError(
+                "scaling_source: natural_weapon 不能和 secondary_scaling_attr、mastery 並用"
+            )
+
     def _check_scaling_and_mastery(self) -> None:
         """雙屬性縮放與專精加成的結構（2H-2；稀有度門檻是跨檔案檢查）。"""
         if self.secondary_scaling_attr == self.scaling_attr:
             raise ValueError("secondary_scaling_attr 不可和 scaling_attr 相同")
+        self._check_scaling_source()
         if self.mastery is None:
             return
         if self.secondary_scaling_attr is not None:
@@ -1379,7 +1407,10 @@ class SkillDef(ContentModel):
         return next((e.rule for e in self.effects if e.type == RULE_CHANGE), None)
 
     def scaling_value(
-        self, get: Callable[[Attribute], int], weapon: WeaponDef | None = None
+        self,
+        get: Callable[[Attribute], int],
+        weapon: WeaponDef | None = None,
+        natural: WeaponDef | None = None,
     ) -> int:
         """技能縮放屬性的值（Phase 2H-2）：雙屬性為兩個屬性的平均（無條件捨去），否則為主屬性。
         ``get`` 讀屬性值（引擎傳有效屬性，卡片傳面板屬性）；引擎的 ``skill_scaling_value`` 與卡片的
@@ -1387,7 +1418,11 @@ class SkillDef(ContentModel):
 
         **武器技看手上武器的屬性**（Phase 3H-6，玩法決定 #45）：``category: weapon`` 且給了
         ``weapon`` 時改用 :meth:`WeaponDef.scaling_value`（雙屬性照取較高／取平均），技能自己的
-        ``scaling_attr`` 只當顯示提示。沒有武器時（工坊、三選一的泛稱）退回技能自己的。"""
+        ``scaling_attr`` 只當顯示提示。沒有武器時（工坊、三選一的泛稱）退回技能自己的。
+        ``natural``：施放者在形態中時的天生武器；``scaling_source: natural_weapon`` 的技能用它
+        （GS-3，#173）。"""
+        if self.scaling_source == "natural_weapon" and natural is not None:
+            return natural.scaling_value(get)  # GS-3：天生武器的屬性（雙屬性取較高）
         if self.category == "weapon" and weapon is not None:
             # 魔劍士方案 A（3I-3，#46）：武器技可帶一個心智第二屬性，和武器的縮放值取平均
             base = weapon.scaling_value(get)
@@ -1408,9 +1443,14 @@ class SkillDef(ContentModel):
             return weapon.scaling_value(get)
         return get(self.scaling_attr)
 
-    def contest_attr(self, weapon: WeaponDef | None = None) -> Attribute:
-        """對抗判定（擊倒、位移、狀態抵抗）守方被比的單一屬性；武器技為手上武器的主屬性。攻方的值是
-        :meth:`scaling_value`（雙屬性為平均，3I-3b）。"""
+    def contest_attr(
+        self, weapon: WeaponDef | None = None, natural: WeaponDef | None = None
+    ) -> Attribute:
+        """對抗判定（擊倒、位移、狀態抵抗）守方被比的單一屬性；武器技為手上武器的主屬性；看天生武器
+        的技能（GS-3）為天生武器的主屬性。攻方的值是 :meth:`scaling_value`（雙屬性為平均，
+        3I-3b）。"""
+        if self.scaling_source == "natural_weapon" and natural is not None:
+            return natural.scaling_attr
         if self.category == "weapon" and weapon is not None:
             return weapon.scaling_attr
         return self.scaling_attr
@@ -1420,6 +1460,8 @@ class SkillDef(ContentModel):
         ／取平均；3I-3 的心智第二屬性再取平均），沒有武器寫「武器屬性」（卡片另列由武器資料產生的
         例子）；其他技能寫自己的縮放屬性。"""
         second = self.secondary_scaling_attr
+        if self.scaling_source == "natural_weapon":  # GS-3
+            return NATURAL_WEAPON_ATTR_LABEL
         if self.category != "weapon":
             names = self.scaling_attr.display_name
             return names if second is None else f"{names}／{second.display_name}（取平均）"
