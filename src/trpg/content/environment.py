@@ -1325,6 +1325,17 @@ class ScoringAiRules(ContentModel):
     exposure_radius: int = Field(ge=0)
 
 
+class InfusedPickRules(ContentModel):
+    """灌注的施放：召喚物替施放者放技能時選哪一個選取（``ai_profiles.yaml`` 的
+    ``heuristics.infused_pick``；HC-7 從 ``engine/skill_infusion.py`` 的模組常數搬來，值照搬）。
+    有害的技能每罩到一名敵人 ``enemy_points``、每波及一名友方（不含召喚物自己）扣
+    ``ally_hit_penalty``；分數相同時再比目標缺的 HP。這是戰鬥結算的一部分（重播照它選），不是施放者
+    AI 的估值。"""
+
+    enemy_points: int = Field(ge=0)
+    ally_hit_penalty: int = Field(ge=0)
+
+
 class AiHeuristics(ContentModel):
     """不分行為模式、敵我共用的 AI 數值（HC-4c；``ai_profiles.yaml`` 的 ``heuristics:``）。
     嵌入規則包（:attr:`trpg.content.library.Ruleset.ai`），引擎從 ``state.ruleset.ai`` 讀，
@@ -1333,6 +1344,7 @@ class AiHeuristics(ContentModel):
     race: RaceAiRules
     estimate: EstimateAiRules
     scoring: ScoringAiRules
+    infused_pick: InfusedPickRules
 
 
 class AiProfileTable(ContentModel):

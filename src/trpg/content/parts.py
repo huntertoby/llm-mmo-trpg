@@ -64,6 +64,9 @@ class BossPartRules(ContentModel):
     """同一隻頭目的部位 ``hp_permille`` 加總上限（‰；第 3 點，數值工坊可調）。"""
     break_effects_max: int = Field(ge=1)
     """每個部位最多幾種破壞效果（``on_break``；第 7 點）。"""
+    high_or_far_distance: int = Field(ge=1)
+    """「要從高處或遠處才打得到」的部位（``reach: high_or_far``，R7）：攻擊者和頭目的距離至少這麼多
+    格才算遠（HC-7 從 ``engine/parts.py`` 的 ``FAR_BEYOND + 1`` 搬來，值 4）。"""
 
     @model_validator(mode="after")
     def _check(self) -> BossPartRules:

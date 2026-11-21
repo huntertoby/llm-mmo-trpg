@@ -287,7 +287,10 @@ def skill_profile(state: BattleState, caster: UnitState, skill: SkillDef) -> Att
             weapon = held_weapon(caster)
             profile = replace(
                 profile,
-                crit_range=max(2, weapon.crit_range - crit_range_cut(caster)),
+                crit_range=max(
+                    state.ruleset.core.crit_range_floor,
+                    weapon.crit_range - crit_range_cut(caster),
+                ),
                 defense_cut_permille=weapon.armor_pierce_permille,
                 weapon_attack=True,
                 ignore_cover=weapon.ignore_cover,

@@ -33,6 +33,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
+from trpg.content.library import Ruleset
 from trpg.content.parts import BossPart
 from trpg.content.skills import SkillDef
 from trpg.engine import modifiers
@@ -49,17 +50,14 @@ from trpg.engine.variants import target_point, varied_skill
 
 __all__ = [
     "DISABLED_STATUSES",
-    "FAR_BEYOND",
     "PART_REASON_ZH",
     "PartReason",
     "PartTarget",
     "check_target_part",
     "current_phase_id",
+    "part_reason_zh",
     "part_targets",
 ]
-
-FAR_BEYOND = 3
-"""``high_or_far`` 的距離條件：曼哈頓距離 > 3（4 格起；R7）。"""
 
 DISABLED_STATUSES: tuple[str, ...] = ("frozen", "prone", "stun")
 """``disabled`` 的條件：頭目身上有其中一個狀態（05 5.12.2 第 8 點「倒地、暈眩或冰凍」）。"""
@@ -90,14 +88,20 @@ PART_REASON_ZH: dict[str, str] = {
     "broken": "已經破了",
     "not_exposed": "這個階段還沒露出",
     "need_behind": "要從背後近戰才打得到",
-    "need_high_or_far": f"要從高處（高 1 層以上）或 {FAR_BEYOND + 1} 格外才打得到",
+    "need_high_or_far": "要從高處（高 1 層以上）或 {far} 格外才打得到",
     "need_disabled": "要趁頭目倒地、暈眩或冰凍時才打得到",
     "melee_cannot_reach": "只有遠程才打得到",
     "not_adjacent_to_tile": "要貼著那一格才打得到",
     "out_of_range_to_tile": "那一格超出射程",
     "no_sight_to_tile": "看不到那一格",
 }
-"""原因代碼的中文（``IllegalActionError`` 與介面共用）。"""
+"""原因代碼的中文（``IllegalActionError`` 與介面共用）；``{far}`` 由 :func:`part_reason_zh` 填
+``core.boss_parts.high_or_far_distance``。"""
+
+
+def part_reason_zh(rules: Ruleset, reason: str) -> str:
+    """原因代碼的中文（``{far}`` 填入「遠處」的格數）。"""
+    return PART_REASON_ZH[reason].format(far=rules.core.boss_parts.high_or_far_distance)
 
 
 @dataclass(frozen=True, slots=True)
@@ -162,7 +166,7 @@ def check_target_part(state: BattleState, action: Action) -> str | None:
     if found is None:
         return f"目標沒有部位「{part_id}」"
     if found.reason is not None:
-        return f"不能打「{found.name_zh}」：{PART_REASON_ZH[found.reason]}"
+        return f"不能打「{found.name_zh}」：{part_reason_zh(state.ruleset, found.reason)}"
     return None
 
 
@@ -286,4 +290,5 @@ def _tile_reason(
 
 def _high_or_far(state: BattleState, attacker: UnitState, target: UnitState) -> bool:
     higher = state.tile(*attacker.xy).height - state.tile(*target.xy).height >= 1
-    return higher or unit_dist(attacker, target) > FAR_BEYOND
+    far = state.ruleset.core.boss_parts.high_or_far_distance
+    return higher or unit_dist(attacker, target) >= far

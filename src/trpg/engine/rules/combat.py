@@ -159,7 +159,9 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
         attack_value=attack_value(attacker, state.ruleset),
         melee=weapon.is_melee,
         height_limited=weapon.range <= state.ruleset.core.melee_height_limit_max_range,
-        crit_range=max(2, weapon.crit_range - crit_range_cut(attacker)),  # 站定狙擊（3-24a2）
+        crit_range=max(  # 站定狙擊（3-24a2）
+            state.ruleset.core.crit_range_floor, weapon.crit_range - crit_range_cut(attacker)
+        ),
         pierce=weapon.ignore_cover,
         defense_cut_permille=weapon.armor_pierce_permille,
         weapon_attack=True,
@@ -647,7 +649,7 @@ def positional_bonus(
     crit_range = profile.crit_range - (
         core.backstab_crit_range_bonus + profile.backstab_crit if behind else 0
     )
-    return PositionalBonus(backstab, ambush, max(crit_range, 2))
+    return PositionalBonus(backstab, ambush, max(crit_range, core.crit_range_floor))
 
 
 type ForcedOutcome = Literal["miss", "hit", "crit"]
@@ -700,7 +702,7 @@ def roll_attack(  # noqa: PLR0917
     bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）
     if attacker.part_mods:  # 部位破壞的命中下降（PB-1a）
         bonus -= attacker.part_mods.get("hit", 0)
-    crit_range = max(2, positional.crit_range - attacker.next_attack_crit)
+    crit_range = max(rules.core.crit_range_floor, positional.crit_range - attacker.next_attack_crit)
     if forced is not None:
         natural = _forced_natural(
             forced,

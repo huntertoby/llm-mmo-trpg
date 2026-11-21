@@ -714,12 +714,6 @@ rules:
     files: src/trpg/content/battle.py
     owner: MAX_ATTRIBUTE
     note: 屬性值的護欄 999（範本驗證與裝備加成共用，HC-2 合併成一個常數）；HC-2 開發 PM 裁定 1：歸 guard，不改值。
-  - id: py-defense-break-default
-    class: config
-    status: todo
-    files: src/trpg/engine/rules/statuses.py
-    owner: DEFAULT_DEFENSE_BREAK
-    note: 保守：破甲狀態沒帶數值時的防禦降幅 100‰；是千分比不是量類，HC-2 從 scale 改判 config（執行時會用到的預設值）。
   - id: py-content-skill-limits-guard-hc4d
     class: guard
     status: done
@@ -1039,92 +1033,33 @@ rules:
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
 
-  # ---------------------------------------------------- 後端 engine：config
-  # 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
-  - id: py-engine-battle-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/battle.py
-    kind: number
-    where: ['<module>.OPENING_STATUS_MAX_DURATION']
-    note: 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
+  # ---------------------------------------------------- 後端 engine：搬完剩下的結構常數
+  # HC-7：暴擊範圍下限、開場狀態回合上限、破甲預設降幅搬到 core.yaml（crit_range_floor、
+  # opening_status_max_duration、defense_break_default_permille），部位「遠處」的格數搬到
+  # core.yaml 的 boss_parts.high_or_far_distance，灌注施放的選取分數搬到 ai_profiles.yaml 的
+  # heuristics.infused_pick，符文持續輪數改成詞條必填，誓約破誓回合改成呼叫端必帶，ChangeTileEffect 的
+  # 高度上限改讀 content/maps.py 的 MAX_HEIGHT；搬完 0 筆的 config 規則刪掉。下面是剩下的（逐筆判斷）。
   - id: py-engine-effects-handlers-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/effects/handlers.py
     kind: number
     where: ['_damage_rolls']
-    note: 同上一條（engine config）。
-  - id: py-engine-effects-models-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/effects/models.py
-    kind: number
-    where: ['ChangeTileEffect']
-    note: 同上一條（engine config）。
-  - id: py-engine-gear-triggers-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/gear/triggers.py
-    kind: number
-    where: ['<module>.DEFAULT_RUNE_ROUNDS']
-    note: 同上一條（engine config）。
-  - id: py-engine-oath-tracking-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/oath_tracking.py
-    kind: number
-    where: ['OathSetup']
-    note: 同上一條（engine config）。
-  - id: py-engine-parts-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/parts.py
-    kind: number
-    where: ['<module>.FAR_BEYOND']
-    note: 同上一條（engine config）。
+    note: HC-7 改判 const：暴擊的定義是「骰子顆數加倍」（DamageEffect 的說明「顆數加倍」、技能說明「暴擊不加倍」的固定值都以加倍為準），×2 是加倍本身，不是可調的倍率（保守的另一種做法是搬進 core.yaml，見 HC-7 報告待決）。
   - id: py-engine-preview-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/preview.py
     kind: number
     where: ['_attack_numbers', '_damage_expectation']
-    note: 同上一條（engine config）。
-  - id: py-engine-rules-combat-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/rules/combat.py
-    kind: number
-    where: ['positional_bonus', 'roll_attack', 'weapon_profile']
-    note: 同上一條（engine config）。
-  - id: py-engine-skill-infusion-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/skill_infusion.py
-    kind: number
-    where: ['<module>._ALLY_HIT_POINTS', '<module>._ENEMY_POINTS']
-    note: 同上一條（engine config）。
-  - id: py-engine-skills-targeting-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/skills/targeting.py
-    kind: number
-    where: ['skill_profile']
-    note: 同上一條（engine config）。
+    note: HC-7 改判 const：預覽算暴擊傷害分佈的「骰數 × 2」，和結算（effects/handlers.py 的 _damage_rolls）同一個定義。
   - id: py-engine-state-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/state.py
     kind: number
     where: ['UnitState']
-    note: 同上一條（engine config）。
-  - id: py-engine-summons-variants-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/summons/variants.py
-    kind: number
-    where: ['<module>._MIN_CRIT']
-    note: 同上一條（engine config）。
+    note: HC-7 改判 const：UnitState.ap_per_turn 的預設 3 只給 AP-1（/134）以前存下的戰鬥狀態 JSON 相容用——當時每回合一律 3 AP；新單位一律由 lifecycle.make_unit 照 core.template_ap_per_turn 帶入，不是現行可調的值。
 
   # ---------------------------------------------------- 後端 engine/ai：搬完剩下的結構常數與護欄
   # HC-4c：AI 評分權重、半徑與門檻（PM 初稿 A 類）搬到 content/ai_profiles.yaml 的 heuristics:（引擎從

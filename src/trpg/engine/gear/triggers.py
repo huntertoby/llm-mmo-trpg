@@ -45,9 +45,6 @@ from trpg.engine.stacks import add_stacks
 from trpg.engine.state import UnitState
 from trpg.shared.types import Attribute, Element
 
-DEFAULT_RUNE_ROUNDS = 2
-"""普攻刻下的符文預設持續輪數（6.25 普攻與符文）。"""
-
 __all__ = ["gear_carrier", "resolve_gear_fired"]
 
 _DEAD_TARGET_TIMINGS = ("on_kill", ON_SUMMON_DOWNED)
@@ -110,10 +107,11 @@ def _rune_effect(affix: AttackAffix) -> EffectSpec:
     """普攻符文詞條的效果：``detonate`` 只引爆目標那 1 格、``inscribe`` 在目標格刻下符文。"""
     if affix.rune == "detonate":
         return EffectSpec(type=DETONATE_RUNES, dice=affix.dice, scope="target_cell")
+    assert affix.rune_rounds is not None  # inscribe 必填（AttackAffix 驗證）
     return EffectSpec(
         type=INSCRIBE,
         element=affix.rune_element or Element.LIGHTNING,
-        duration=affix.rune_rounds or DEFAULT_RUNE_ROUNDS,
+        duration=affix.rune_rounds,
     )
 
 

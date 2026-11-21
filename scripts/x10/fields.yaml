@@ -682,11 +682,13 @@ groups:
       - consume_status_max_scale
       - contagion_radius
       - control_dr_rounds
+      - crit_range_floor          # HC-7：暴擊範圍下限（d20 面值）
       - elite_ap_per_turn
       - explode_max
       - fall_damage_min_drop
       - far_distance
       - guard_transfers_per_round
+      - opening_status_max_duration  # HC-7：開場狀態的回合上限
       - hit_mod_cap
       - hit_slope
       - hit_target

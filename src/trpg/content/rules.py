@@ -484,6 +484,15 @@ class CoreRules(ContentModel):
     far_distance: int = Field(ge=2, le=20)
     """條件「遠距」（``long_range``，SK-1，06 6.38 第 1 點）的門檻：施放者和目標的距離（曼哈頓，
     巨型單位照佔地）至少這麼多格。初值 5，數值工坊可調。"""
+    crit_range_floor: int = Field(ge=1, le=20)
+    """暴擊範圍的下限（HC-7 從引擎搬來，值 2）：背刺、站定狙擊、形態、召喚物小特性等擴大暴擊範圍時，
+    最寬到自然骰這個值起暴擊（2＝自然 1 永遠不暴擊）。"""
+    opening_status_max_duration: int = Field(ge=1)
+    """開場狀態（單位範本的 ``opening_statuses``、``UnitSpawn.opening_statuses``）的持續回合上限
+    （Phase 5A-6b；HC-7 從 ``engine/battle.py`` 搬來，值 2）；不倒數的狀態維持原樣。"""
+    defense_break_default_permille: int = Field(ge=0, le=1000)
+    """破甲（``defense_break`` 狀態）沒有帶數值時的防禦降幅（‰；HC-7 從
+    ``engine/rules/statuses.py`` 搬來，值 100）。"""
     revive_landing_radius: int = Field(ge=0, le=6)
     """復活（``revive``，Phase 3D-8b）：原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；
     範圍內沒有空格就不能施放。舊紀錄沒有此欄位。"""

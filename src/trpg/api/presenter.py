@@ -56,7 +56,7 @@ from trpg.engine.copying import copy_selections
 from trpg.engine.event_filter import filter_events
 from trpg.engine.events import BattleStarted, EffectFizzled, EventBase, TurnStarted
 from trpg.engine.lock_on import LOCK_BLOCKED, LOCK_CONCEALED, LOCK_LOST, lock_blocker
-from trpg.engine.parts import PART_REASON_ZH, PartTarget, part_targets
+from trpg.engine.parts import PartTarget, part_reason_zh, part_targets
 from trpg.engine.prep import prep_options
 from trpg.engine.preview import Preview
 from trpg.engine.results import Pending
@@ -184,7 +184,7 @@ def part_options_out(
                         part_id=t.part_id,
                         name_zh=t.name_zh,
                         ok=t.ok,
-                        reason_zh=_part_reason_zh(boss, t),
+                        reason_zh=_part_reason_zh(state, boss, t),
                     )
                     for t in targets
                 ),
@@ -193,7 +193,7 @@ def part_options_out(
     return tuple(out) if out else None
 
 
-def _part_reason_zh(boss: UnitState, target: PartTarget) -> str | None:
+def _part_reason_zh(state: BattleState, boss: UnitState, target: PartTarget) -> str | None:
     """部位打不到的原因中文。巨型頭目的部位還沒露出時寫露出的階段名（GB-4a；美術移植需求第 7 節
     第 5 條：「呼吸階段才露出」），拿不到階段名時退回引擎通用字。一格的頭目照舊（PB-1 不變）。"""
     if target.reason is None:
@@ -202,7 +202,7 @@ def _part_reason_zh(boss: UnitState, target: PartTarget) -> str | None:
         phase = _exposed_phase_zh(boss, target.part_id)
         if phase is not None:
             return f"{phase}階段才露出"
-    return PART_REASON_ZH[target.reason]
+    return part_reason_zh(state.ruleset, target.reason)
 
 
 def _exposed_phase_zh(boss: UnitState, part_id: str) -> str | None:

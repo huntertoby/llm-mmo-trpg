@@ -1518,7 +1518,7 @@ class OpeningStatus(ContentModel):
     """範本開場就帶著的狀態（Phase 5A-M1：霧隱的開場隱蔽 1 回合、碎晶傀儡的死後碎片）。
 
     ``duration`` 省略＝狀態定義的預設；有限的持續回合在開戰時最多 2（5A-6b，
-    ``OPENING_STATUS_MAX_DURATION``）。"""
+    ``core.opening_status_max_duration``）。"""
 
     status: str = Field(pattern=ID_PATTERN)
     duration: int | None = Field(default=None, ge=1, le=2)

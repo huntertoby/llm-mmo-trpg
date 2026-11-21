@@ -390,7 +390,7 @@ class AttackAffix(_AffixBase):
     - ``read``：普攻打到站在自己符文上的敵人時，傷害 +``value``‰（計入全身 +50% 上限）；
     - ``detonate``：普攻命中時引爆目標那 1 格上自己的符文，造成一次 ``dice`` 的傷害；
     - ``inscribe``：普攻命中時在目標格刻下 ``rune_element``（預設雷紋）的符文，持續
-      ``rune_rounds`` 輪（預設 2）。
+      ``rune_rounds`` 輪（``inscribe`` 必填；HC-7 拿掉引擎的預設 2，內容檔寫明）。
 
     ``summon_inherit``（Phase 3-33f2，6.29.6；與其他恰好填一個）：你的召喚物繼承你身上 1 條普攻
     附加詞條（元素、命中附帶狀態、連擊、分裂；符文不繼承；依詞條 ID 取第一條），本身沒有其他效果。
@@ -478,6 +478,8 @@ class AttackAffix(_AffixBase):
             raise ValueError(f"詞條 {self.id}：dice 只在 rune: detonate 時填寫（且必填）")
         if self.rune != "inscribe" and (self.rune_element is not None or self.rune_rounds):
             raise ValueError(f"詞條 {self.id}：rune_element、rune_rounds 只能搭配 rune: inscribe")
+        if self.rune == "inscribe" and self.rune_rounds is None:
+            raise ValueError(f"詞條 {self.id}：rune: inscribe 要寫 rune_rounds（持續輪數）")
         if self.rune_element is Element.PHYSICAL:
             raise ValueError(f"詞條 {self.id}：rune_element 不可是物理")
 

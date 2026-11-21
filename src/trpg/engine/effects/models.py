@@ -14,6 +14,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 from trpg.content.battle import Dice
+from trpg.content.maps import MAX_HEIGHT
 from trpg.engine.events import DamageCause, MoveMode, ObjectDestroyCause
 from trpg.shared.types import Attribute, Element, ObjectId, Pos, Surface, Team, UnitId
 
@@ -552,7 +553,7 @@ class ChangeTileEffect(_AtPos):
     """地圖事件：改變一格的高度、地形或表面（省略的欄位不變）。"""
 
     kind: Literal["change_tile"] = "change_tile"
-    height: int | None = Field(default=None, ge=0, le=3)
+    height: int | None = Field(default=None, ge=0, le=MAX_HEIGHT)
     terrain: str | None = None
     surface: Surface | None = None
 

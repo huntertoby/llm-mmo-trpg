@@ -54,8 +54,6 @@ __all__ = [
 ]
 
 PERMILLE = 1000
-DEFAULT_DEFENSE_BREAK = 100
-"""破甲狀態沒有帶數值時的防禦降幅（‰）。"""
 
 
 def boss_converted_status(rules: Ruleset, unit: UnitState, status_id: str) -> str:
@@ -332,7 +330,10 @@ def defense_break_permille(rules: Ruleset, unit: UnitState) -> int:
     best = 0
     for status in unit.statuses:
         if rules.status_def(status.status_id).defense_break:
-            best = max(best, status.amount if status.amount is not None else DEFAULT_DEFENSE_BREAK)
+            amount = status.amount
+            best = max(
+                best, rules.core.defense_break_default_permille if amount is None else amount
+            )
     return best
 
 

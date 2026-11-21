@@ -20,6 +20,7 @@ def _state(check: OathCheck | None) -> BattleState:
             check=check,
             bonus_status="oath_bonus_medium",
             penalty_status="oath_broken",
+            penalty_rounds=2,
             label_zh="每回合都要攻擊",
         )
         setup = setup.model_copy(update={"oath": oath})

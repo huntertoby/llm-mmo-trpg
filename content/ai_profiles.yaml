@@ -376,6 +376,11 @@ heuristics:
     sacrifice_ally_points: 2   # 獻祭召喚物（治療）：半徑內每名受傷的友方
     rune_cell_points: [3, 2, 1]  # 刻印：格子離最近敵人 0、1、2 格的分數（更遠 0）
     object_near_enemy: 2       # 攻擊一般物件：這麼多格（切比雪夫）內有敵人才跑完整 preview
+  # infused_pick（HC-7；從 engine/skill_infusion.py 搬來，值照搬）：召喚物施放灌注技能時選哪個選取——有害的技能
+  # 每罩到一名敵人 enemy_points，每波及一名友方扣 ally_hit_penalty（戰鬥結算的一部分，重播照它選）
+  infused_pick:
+    enemy_points: 10
+    ally_hit_penalty: 15
   # scoring：評分裡不分行為模式的共用數值
   scoring:
     unlisted_status_value: 3   # ally_status_values 與淨化用的 status_values 沒列出的狀態的價值

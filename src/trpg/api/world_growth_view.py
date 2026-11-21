@@ -19,7 +19,6 @@ from trpg.api.world_schemas import (
 )
 from trpg.content.library import ContentLibrary
 from trpg.content.world_oaths import OathTable, OathTemplateDef
-from trpg.engine.battle import OPENING_STATUS_MAX_DURATION
 from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
     AttributesAllocatedEvent,
@@ -311,7 +310,8 @@ def oath_view(
 
 def _opening_rounds(library: ContentLibrary, status: str) -> int | None:
     default = library.ruleset.status_def(status).duration
-    return None if default is None else min(default, OPENING_STATUS_MAX_DURATION)
+    cap = library.ruleset.core.opening_status_max_duration
+    return None if default is None else min(default, cap)
 
 
 def _rounds_zh(rounds: int | None) -> str:
