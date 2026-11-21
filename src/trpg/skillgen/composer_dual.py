@@ -29,7 +29,6 @@ __all__ = ["add_second_element", "second_element_tier"]
 
 _KINDS = frozenset({"active", "passive", "reaction"})
 _FIRST_DICE = "1d4"
-_FIRST_MULTIPLIER = 300
 
 
 def second_element_tier(library: ContentLibrary) -> int:
@@ -37,15 +36,20 @@ def second_element_tier(library: ContentLibrary) -> int:
     return library.budget.min_character_tier.second_element
 
 
-def _new_damage(skill: SkillDef, source: dict[str, Any], element: str) -> dict[str, Any]:
-    """新增的傷害效果（數值之後由旋鈕調，從最弱開始）。"""
+def _new_damage(
+    library: ContentLibrary, skill: SkillDef, source: dict[str, Any], element: str
+) -> dict[str, Any]:
+    """新增的傷害效果（數值之後由旋鈕調，從最弱開始；武器倍率是 ``skill_composer.yaml`` 的
+    ``structure.second_element_multiplier_permille``，HC-5b）。"""
     effect: dict[str, Any] = {"type": "damage", "element": element}
     if "affects" in source:
         effect["affects"] = source["affects"]
     if skill.category == "spell" or "dice" in source:
         effect["dice"] = _FIRST_DICE
     else:
-        effect["multiplier_permille"] = _FIRST_MULTIPLIER
+        effect["multiplier_permille"] = (
+            library.composer.structure.second_element_multiplier_permille
+        )
     return effect
 
 
@@ -72,7 +76,7 @@ def add_second_element(
     index = next((i for i, e in enumerate(effects) if e["type"] == "damage"), None)
     if index is None:
         return None
-    effects.insert(index + 1, _new_damage(skill, effects[index], element))
+    effects.insert(index + 1, _new_damage(library, skill, effects[index], element))
     knobs = effect_strength_knobs(skill.category, effects, library)
     try:
         if not tune(rng, library, base, effects, knobs):

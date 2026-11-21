@@ -329,7 +329,7 @@ def _first(
 
 
 def generate_whiteboard_candidates(
-    library: ContentLibrary, request: CandidateRequest, tries: int = 8
+    library: ContentLibrary, request: CandidateRequest, tries: int | None = None
 ) -> tuple[Candidate, ...]:
     """加深、橋接、新方向白板（依序；張數照 ``request.mix``，預設各一張；找不到的略過），再照
     ``request.min_passive`` 補被動（Phase 5B-4b）。見模組說明。"""
@@ -340,6 +340,8 @@ def generate_whiteboard_candidates(
     behavior = behavior_weights(library, request.behavior)
     held = _ranked_held(request.keyword_counts, order, behavior)
     unheld = new_direction_keywords(library, held)
+    if tries is None:  # HC-5b：原本是程式預設 8，同 roguelite.yaml 的 candidates.composer_tries
+        tries = library.roguelite.candidates.composer_tries
     maker = _Maker(library, request, tries)
     deepen_count, bridge_count, new_count = request.mix
     found: list[Candidate | None] = []

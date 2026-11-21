@@ -71,7 +71,6 @@ __all__ = [
 ]
 
 _PERMILLE = 1000
-_EXEMPT_MIN_TIER = 2
 _SHAPED_AFFECTS = frozenset({"enemies", "allies", "all", "tiles"})
 _ACTION_NAMES = {"attack": "普攻", "shove": "推擊", "trip": "絆倒", "interact": "互動"}
 
@@ -415,8 +414,9 @@ def _plain_base_points(  # noqa: PLR0911
         average = _dice_average(effect.dice) + flat  # BAL-12b：固定值加成
         dice = f"{effect.dice}＋{effect.flat_bonus}" if effect.flat_bonus else str(effect.dice)
         if primitive.id == "shield" and effect.duration is not None:  # 護盾持續時間係數（3-50b）
-            table = library.budget.shield_duration_permille  # 第 1 項＝2 回合；超過項數用最後一項
-            permille = table[min(max(effect.duration, 2) - 2, len(table) - 1)]
+            table = library.budget.shield_duration_permille  # 超過項數用最後一項
+            start = library.budget.shield_duration_start  # 第 1 項的回合（HC-5b）
+            permille = table[min(max(effect.duration, start) - start, len(table) - 1)]
             return (
                 average * Fraction(permille, _PERMILLE) + extra,
                 f"{dice} 平均 × 持續 {effect.duration} 回合 {permille}‰{extra_note}",
@@ -1554,13 +1554,11 @@ def _modifier_value(
     return value, what
 
 
-_REFERENCE_PARAM = 3
-"""``shape_to`` 預算計算時，保留自原形狀的大小參數（``keep``）取的代表值。"""
-
-
 def _shape_to_value(library: ContentLibrary, target: str) -> tuple[Fraction, str]:
     """``shape_to`` 每次使用的價值（3D-3）：基準武器傷害 ×（轉換後的形狀倍率 − 轉換前的形狀倍率），
-    倍率取自 ``skill_shapes.yaml``（6.5）；保留自原形狀的大小參數以 :data:`_REFERENCE_PARAM` 計。"""
+    倍率取自 ``skill_shapes.yaml``（6.5）；保留自原形狀的大小參數以
+    ``skill_budget.yaml`` 的 ``modifier.shape_to_reference_size`` 計。"""
+    reference = library.budget.modifier.shape_to_reference_size
     shapes = library.ruleset.shapes
     shape_defs = by_id(shapes)
     gains: list[tuple[Fraction, str]] = []
@@ -1568,7 +1566,7 @@ def _shape_to_value(library: ContentLibrary, target: str) -> tuple[Fraction, str
         if conv.to != target:
             continue
         before_params: dict[str, int | str] = {
-            name: _REFERENCE_PARAM for name in conv.keep if name in ("size", "radius")
+            name: reference for name in conv.keep if name in ("size", "radius")
         }
         after_params: dict[str, int | str] = {**conv.params, **before_params}
         before = library.budget.shape_permille(shape_defs[conv.from_shape], before_params)
@@ -1784,7 +1782,8 @@ def weak_floor_exempt(skill: SkillDef, library: ContentLibrary) -> bool:
     （冰、水、油、煙霧、黑暗），也就是沒有任何可放大的數值——持續到上限 6 回合就不再加（#76
     接受），掉出下限不補償、不標過弱。有任何一項數值（傷害、治療、護盾、位移、數值型狀態或表面、
     召喚、形態、接續段）就不豁免。"""
-    if skill.tier < _EXEMPT_MIN_TIER or skill.followup is not None or not skill.effects:
+    exempt_from = library.budget.retier_growth.weak_floor_exempt_min_tier
+    if skill.tier < exempt_from or skill.followup is not None or not skill.effects:
         return False
     rules = library.ruleset
     statuses = by_id(rules.statuses)

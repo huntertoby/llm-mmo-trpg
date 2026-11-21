@@ -52,8 +52,6 @@ __all__ = ["complete_gain_permille", "complete_power", "complete_strength"]
 _PERMILLE = 1000
 _MODIFIER_MAGNITUDES = frozenset({"damage_permille", "heal_permille"})
 """修正規則 ``change`` 上的修正幅度（細階梯 ``complete.modifier_step`` 的對象）。"""
-_MAX_STEPS = 40
-"""最多加幾步（每一步一格；防止資料寫錯時無窮迴圈）。"""
 
 type _Draft = tuple[dict[str, Any], list[dict[str, Any]]]
 type _Trial = tuple[SkillDef, Fraction]
@@ -104,7 +102,7 @@ def _climb(
     cap: Fraction | None,
 ) -> _Trial:
     power = complete_power(current, library)
-    for _ in range(_MAX_STEPS):
+    for _ in range(library.composer.search.complete_max_steps):  # 防止資料寫錯時無窮迴圈
         if power >= target:
             break
         step = _next_step(library, rules, current, target, cap)

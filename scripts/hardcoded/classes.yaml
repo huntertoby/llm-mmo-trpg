@@ -1328,6 +1328,36 @@ rules:
     where: ['<module>.BOARD_NOTES', '<module>.FOOTPRINT_MAX', '<module>.NOTE_MAX_LEN']
     note: 同上一條（server config）。
 
+  # ---------------------------------------------------- 後端 skillgen：HC-5b 判成結構常數
+  - id: py-skillgen-grade-codes-hc5b
+    class: const
+    status: done
+    files:
+      - src/trpg/skillgen/candidates.py
+      - src/trpg/skillgen/pick_offer.py
+      - src/trpg/skillgen/whiteboard_candidates.py
+    kind: number
+    where:
+      - '<module>.ROUTE_OFF'
+      - '_Search._grade'
+      - '<module>.LEVEL_OFF'
+      - '<module>.LEVEL_OFF_RELAXED'
+      - '<module>._SPARE'
+    note: >-
+      HC-5b：好壞等級的代碼（0＝符合、1＝雙屬性／部分關鍵字、2＝偏離或備選、3＝部分關鍵字＋偏離），只拿來
+      彼此比大小與當清單索引，像列舉值；改數字不會改玩法，只會打亂排序。
+  - id: py-skillgen-composer-core-count-hc5b
+    class: const
+    status: done
+    files: src/trpg/skillgen/composer_parts.py
+    kind: number
+    scope: _core_count
+    slot: 'min(#1)'
+    value: '2'
+    note: >-
+      HC-5b：骨架的核心數模式 ``up_to_two``（content/skeletons/ 的 ``composer.core_count``）字面上就是「最多 2 個」，
+      2 是這個模式的定義；要別的上限是新增一種模式，不是調數字。
+
   # ---------------------------------------------------- 後端 skillgen：config
   # 保守：技能生成與閃現的權重、步階、上限、預設代價、重試次數。
   - id: py-skillgen-budget-config-number

@@ -401,6 +401,7 @@ groups:
       - duration.*
       - infuse_permille
       - llm_cost.max_cooldown
+      - llm_cost.default_ap                       # HC-5b
       - llm_cost.steps[].ap
       - llm_cost.steps[].cooldown
       - llm_cost.weak_steps[].ap
@@ -420,18 +421,25 @@ groups:
       - recipes.summon_units[].range
       - rune.*
       - sacrifice.*
+      - sacrifice.radius.*                        # HC-5b：格數
       - scaling.*
+      - search.*                                  # HC-5b：重抽、重試次數與試組用的假設冷卻
+      - search.proposal.*
       - special.*
+      - special.*[]                               # HC-5b：源力、AP、格數、回合、‰ 候選；lasting_mana 是換算前的法力（程式 × quantity_scale）
+      - special.ladders.*[]                       # HC-5b：修正規則的值階梯（‰、命中、冷卻、格數、AP）
       - spell_any_weapon_permille
       - spell_attr_weights.*
       - spell_share_permille.*
       - stance.*_permille
       - structure.*
       - structure.*[]
+      - structure.delayed_damage_*.*              # HC-5b：輪數、格數
       - trap.*
       - trap.*.*
       - tuning.*
       - variant.*
+      - variant.range_delta.*                     # HC-5b：格數
       - variant.changes[].*
       - variant.changes[].shape.*
       - whiteboard.*
@@ -594,6 +602,7 @@ groups:
       - reroll_budget_permille
       - restore_cooldown_points
       - retier_growth.*
+      - retier_growth.*[]                         # HC-5b：召喚物 HP ‰、費用比例 ‰
       - retier_growth.stretch.*.duration
       - reveal_*_points
       - revive_base_points
@@ -601,6 +610,7 @@ groups:
       - sacrifice_summon_permille
       - scale_expected_steps_milli.*
       - shield_duration_permille[]
+      - shield_duration_start                     # HC-5b：回合
       - silent_strike_round_milli
       - stance_coefficient_permille
       - summon_detonate_*

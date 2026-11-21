@@ -88,7 +88,7 @@ def _fit(
     for duration in range(original, floor - 1, -1):
         trial = [dict(e) for e in effects]
         trial[index]["duration"] = duration
-        for cost in cost_attempts(skill):
+        for cost in cost_attempts(skill, library):
             try:
                 evolved = SkillDef.model_validate({**base, "cost": cost, "effects": trial})
                 evolved = fit_scaling(evolved, library)  # 3H-7

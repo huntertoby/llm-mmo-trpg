@@ -72,11 +72,7 @@ SPELL_ELEMENTS: tuple[Element, ...] = tuple(
     e for e in sorted(Element, key=lambda e: e.value) if e is not Element.PHYSICAL
 )
 
-_PARAM_PERMILLE = 500
-"""``on_status_applied`` 指定狀態、``on_enter_surface`` 指定表面的機率（其餘為任何狀態或表面）。"""
 _SURFACES = ("darkness", "fire", "holy", "ice", "oil", "poison", "water")
-_HALF = 500
-"""高處二選一（``height_advantage`` 或 ``self_on_high_ground``）的機率。"""
 _NO_TARGET_EVENTS = frozenset({"on_kill"})
 """另一方已經倒下的觸發：對它的效果無效，不配利用型條件。"""
 _WET_REACTION_EVENTS = ("hit_by_attack", "hit_by_melee")
@@ -139,23 +135,24 @@ def weapon_and_attr(rng: Rng, category: str, rules: ComposerRules) -> tuple[str,
 
 def trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, Any]:
     """新觸發時機（Phase 3C-6b）的參數：``on_cast_tag`` 必填 ``tag``（元素標籤）；
-    ``on_status_applied`` 與 ``on_enter_surface`` 以一半的機率指定狀態或表面。其他時機沒有參數
-    （不消耗亂數）。"""
+    ``on_status_applied`` 與 ``on_enter_surface`` 以 ``recipes.param_permille`` 的機率指定狀態或
+    表面。其他時機沒有參數（不消耗亂數）。"""
+    recipes = library.composer.recipes
     if event == "on_cast_tag":
         return {"tag": rng.choice([e.value for e in SPELL_ELEMENTS])}
-    if event == "on_status_applied" and rng.chance_permille(_PARAM_PERMILLE):
+    if event == "on_status_applied" and rng.chance_permille(recipes.param_permille):
         statuses = sorted(
             s.id
             for s in library.ruleset.statuses.statuses
             if not s.beneficial and not s.stance and not s.skill_pool_excluded  # 5F-5c、AP-2
         )
         return {"status": rng.choice(statuses)}
-    if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):
+    if event == "on_enter_surface" and rng.chance_permille(recipes.param_permille):
         return {"surface": rng.choice(_SURFACES)}
-    if event == ON_KEYWORD_EXPLOITED and rng.chance_permille(_PARAM_PERMILLE):
+    if event == ON_KEYWORD_EXPLOITED and rng.chance_permille(recipes.param_permille):
         # SK-3b：一半機率縮小成某種狀態或表面（各半）；只由 composer.exploit 的獨立串流走到
         statuses, surfaces = _exploitable(library)
-        if rng.chance_permille(_PARAM_PERMILLE):
+        if rng.chance_permille(recipes.exploit_surface_permille):
             return {"surface": rng.choice(surfaces)}
         return {"status": rng.choice(statuses)}
     return {}
@@ -463,7 +460,11 @@ def _passive_plan(ctx: Ctx, recipe: Recipe) -> _Passive:
         return _Passive(timing, _pick_target(ctx, timing), condition)
     if recipe.name == _HIGH_GROUND:
         timing = rng.choice(list(timings.values()))
-        if timing.has_other and timing.id not in _NO_TARGET_EVENTS and rng.chance_permille(_HALF):
+        if (
+            timing.has_other
+            and timing.id not in _NO_TARGET_EVENTS
+            and rng.chance_permille(rules.high_ground_permille)
+        ):
             return _Passive(timing, "other", {"type": "height_advantage"})
         return _Passive(timing, _pick_target(ctx, timing), {"type": "self_on_high_ground"})
     if recipe.name == _EXPLOIT:
@@ -495,7 +496,11 @@ def passive_drafts(
     if recipe.name == _COMPANION:
         return ctx, _companion_drafts(ctx, seed, scaling, keyword)
     plan = _passive_plan(ctx, recipe)
-    n = rng.choice((2, 3)) if plan.timing.id == EVERY_N_HITS else None
+    n = (
+        rng.choice(library.ruleset.core.skill_limits.every_n_hits)
+        if plan.timing.id == EVERY_N_HITS
+        else None
+    )
     build_passive_effects(ctx, plan.target, second=plan.second)
     if recipe.name == _STACK_MAKE:
         ctx.add({"type": "add_stack", "stack": recipe.param, "amount": 1, "affects": "self"}, ())
@@ -564,7 +569,9 @@ def reaction_drafts(
         count = rules.recipes.stack_counts[str(recipe.param)]
         condition = {"type": "self_stack_at_least", "stack": recipe.param, "count": count}
     elif recipe.name == _HIGH_GROUND:
-        if rng.chance_permille(_HALF):  # 攻擊者比你低時才觸發：比的是形狀 single 的觸發者
+        if rng.chance_permille(
+            rules.recipes.high_ground_permille
+        ):  # 攻擊者比你低時才觸發：比的是形狀 single 的觸發者
             build_reaction_effects(ctx, event, branch="other")
             condition = {"type": "height_advantage"}
         else:

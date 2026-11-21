@@ -19,7 +19,6 @@ from trpg.roguelite.state import OfferTag, SkillOffer
 from trpg.shared.types import top_attribute
 from trpg.skillgen.candidates import CandidateRules, LlmTrace, follows_attr, skill_has_keywords
 from trpg.skillgen.pick_offer import (
-    MAX_OFF_ROUTE,
     OfferPicker,
     PickedSlot,
     SlotChoice,
@@ -68,7 +67,7 @@ def _check_slots(lib: ContentLibrary, run: RunState, reason: str, offer: SkillOf
     assert [(t.kind, t.keywords, t.fallback) for t in offer.tags] == [
         (t.kind, t.keywords, t.fallback) for t in plain.tags
     ]
-    assert len(offer.off_route) <= MAX_OFF_ROUTE
+    assert len(offer.off_route) <= lib.skill_pick.pool.max_off_route
     for skill, base, tag in zip(offer.candidates, plain.candidates, offer.tags, strict=True):
         assert _family(skill.kind, whiteboard) == _family(base.kind, whiteboard)
         if tag.keywords:

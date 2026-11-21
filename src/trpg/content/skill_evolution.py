@@ -151,6 +151,17 @@ class EvolutionTable(ContentModel):
     """平均目標數（‰）低於它時，視為「單體用法」：加深的模板優先換形狀。"""
     bridge_keyword_tries: int = Field(ge=1)
     """橋接最多嘗試幾個關鍵字（依統計排序）。"""
+    low_multiplier_floor: int = Field(ge=1)
+    low_multiplier_step: int = Field(ge=1)
+    """武器倍率階梯往下延伸到這個值、每這麼多一格（‰）：讓原本倍率比組合器階梯低的技能也能調回
+    原本的強度（HC-5b 從 ``evolution._LOW_MULTIPLIER_*`` 搬來）。"""
+    first_knob_weight: int = Field(ge=1)
+    """強度旋鈕裡第一個（核心）效果的權重（其餘 1；``evolution._knobs``）。"""
+    extra_cooldown_steps: int = Field(ge=0)
+    """大變化的代價折抵：超出預算時最多再試冷卻 +1～+這麼多回合（``evolution.cost_attempts``）。"""
+    min_cooldown: int = Field(ge=1)
+    max_cooldown: int = Field(ge=1)
+    """代價折抵試的冷卻只取這個範圍（回合；沒有冷卻的從 ``min_cooldown`` 起）。"""
     templates: tuple[EvolutionTemplate, ...] = ()
     grafts: dict[str, KeywordGraft] = Field(default_factory=dict)
     summon: SummonEvolution

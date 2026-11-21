@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from tests.engine.helpers import library
+from trpg.content.composer_rules import SpecialLadders
 from trpg.content.skills import MODIFIER_CHANGES, SkillDef
 from trpg.skillgen import composer_special, flash_major, flash_ops
 from trpg.skillgen.draft_check import check_draft
@@ -81,7 +82,7 @@ def test_plus_one_and_derived_skills_are_not_blocked() -> None:
 
 def test_composer_modifier_ladders_never_offer_summon_changes() -> None:
     assert not any(name.startswith("summon_") for name in composer_special._CHANGE_KINDS)
-    assert "summon_limit_delta" not in composer_special._LADDERS
+    assert "summon_limit_delta" not in SpecialLadders.model_fields  # HC-5b：階梯搬進內容檔
 
 
 def test_composed_modifier_and_legendary_skills_never_carry_the_drawback() -> None:
@@ -159,7 +160,7 @@ def test_cost_attempts_only_change_the_cooldown() -> None:
     lib = library()
     for skill in lib.skills.values():
         base = skill.cost.model_dump(mode="json")
-        for attempt in cost_attempts(skill):
+        for attempt in cost_attempts(skill, lib):
             changed = {k for k in attempt if attempt.get(k) != base.get(k)}
             assert changed <= {"cooldown"}, (skill.id, changed)
 

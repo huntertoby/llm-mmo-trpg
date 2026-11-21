@@ -230,6 +230,9 @@ class ModifierBudget(ContentModel):
     """依空欄位數加傷的規則（``empty_slots_cap``，Phase 3-32a 普攻精通）以「滿格」估算的點數再乘上
     的比例：技能欄空著本身就是代價（少帶技能），所以打折（初值，未經模擬）。"""
     points_milli: ModifierPoints
+    shape_to_reference_size: int = Field(ge=1)
+    """``shape_to``（3D-3）計價時，保留自原形狀的大小參數（``size``、``radius``）取的代表值
+    （HC-5b 從 ``budget._REFERENCE_PARAM`` 搬來）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ModifierBudget:
@@ -295,6 +298,17 @@ class RetierGrowthRules(ContentModel):
     """升降地形的原語（3W-R2 從程式移到資料）：放大格數、補「落石」只看這些。"""
     area_effects: tuple[str, ...] = ("raise_terrain", "lower_terrain", "create_surface")
     """點數固定、升階時放大格數的原語（升降地形與表面）。"""
+    weak_floor_exempt_min_tier: int = Field(ge=1)
+    """升階後豁免預算窗下限（BAL-12f，``budget.weak_floor_exempt``）的最低階級（HC-5b 從
+    ``budget._EXEMPT_MIN_TIER`` 搬來）。"""
+    summon_hp_steps: tuple[int, ...] = Field(min_length=1)
+    """升階重配召喚物時依序試的「最大 HP +N‰」（0 ＝ 不加；HC-5b 從 ``skill_tier._SUMMON_HP_STEPS``
+    搬來）。"""
+    cost_scales_permille: tuple[int, ...] = Field(min_length=1)
+    """升階重配減輕法力、耐力時依序試的比例（‰；1000 ＝ 原本的；``skill_tier._cost_variants``）。"""
+    rock_multiplier_permille: int = Field(ge=1)
+    """放大到上限仍不到 70% 的升降地形補的「落石」（大地傷害）武器技起始倍率（‰；之後由旋鈕調；
+    ``skill_tier._rock_drafts``）。"""
 
 
 class FlashCostRules(ContentModel):
@@ -543,6 +557,9 @@ class BudgetRules(ContentModel):
     """``shield``（Phase 3-50b）：``duration`` 為 2 或 3 回合時，點數 ＝ 骰子平均 × 第 n 項（‰；
     省略 ＝ 2 回合 ＝ 1000‰ ＝ 現狀；初值，未經模擬）。第 1 項是 2 回合，之後每項多 1 回合，更長的
     回合用最後一項（HC-4b：項數由內容檔決定）。"""
+    shield_duration_start: int = Field(ge=1)
+    """``shield_duration_permille`` 第 1 項對應的回合（2；更短的持續也算這一項。HC-5b 從
+    ``budget._plain_base_points`` 搬來）。"""
     terrain_area_rarity: tuple[TerrainAreaRarity, ...] = ()
     """升降地形（``raise_terrain``、``lower_terrain``）的影響格數對應的最低稀有度（Phase 3-54b，
     06 6.33，#58）：形狀影響格數 ≥ ``min_cells`` 的最高一項生效（依 ``min_cells`` 由小到大）。"""

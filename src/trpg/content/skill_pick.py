@@ -67,15 +67,31 @@ class PickPoolRules(ContentModel):
     flash_top_k: int = Field(ge=1, le=8)
     """PK-3 閃現挑選模式：每個選項格給本機模型幾個候選（格子的類別由程式決定，候選依用法統計排序；
     第一個就是原本出題的那一個）。越多 prompt 越長。"""
-    wish_candidates: int = Field(ge=3, le=30)
+    wish_candidates: int = Field(ge=1, le=30)  # 下限照 wish_cards（_check；HC-5b）
     """PK-4 許願池「候選量」（07 7.6「許願池：願望驅動」第 2 點，初值：一般每格 4～6 個，許願 15～20
     個）：照願望標籤用組合器做這麼多個不同設計，打分後全部交給本機模型挑 3 張。越多越慢（每個種子約
     0.05～0.2 秒）。"""
+    max_off_route: int = Field(ge=0)
+    """一份三選一最多幾張偏離路線（06 6.27.4 #110「最多 2 張」；PK-3 起 LLM 挑了偏離的候選時檢查。
+    HC-5b 從 ``pick_offer.MAX_OFF_ROUTE`` 搬來）。"""
+    slot_keyword_tries: int = Field(ge=1)
+    """完整技能每一格另外抽的候選：每個種子指定關鍵字最多試幾個變體（組合器本身是
+    ``skill_composer.yaml`` 的 ``search.keyword_tries``；這裡只是多找幾張候選，做不出來就換下一個
+    種子。``pick_offer.SLOT_KEYWORD_TRIES``；許願池同一個值）。"""
+    wish_cards: int = Field(ge=1)
+    """許願給幾張（07 7.6「LLM 挑 3 張」；``wish_pick.WISH_CARDS``）。"""
+    wish_seed_permille: int = Field(ge=1000)
+    """許願池最多抽「候選量 × 這個千分比」個種子（湊不到候選量就停在這裡；
+    ``WISH_SEED_PERMILLE``）。"""
+    wish_tag_extra: int = Field(ge=0)
+    """許願池標籤補抽、雙元素每次最多補幾個設計（``WISH_TAG_EXTRA``）。"""
 
     @model_validator(mode="after")
     def _check(self) -> PickPoolRules:
         if self.min_for_llm > self.top_k:
             raise ValueError("min_for_llm 不能大於 top_k")
+        if self.wish_candidates < self.wish_cards:  # HC-5b：原本寫死在 schema 的 ge=3
+            raise ValueError("wish_candidates 不能小於 wish_cards")
         return self
 
 

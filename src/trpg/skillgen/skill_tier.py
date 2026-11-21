@@ -51,16 +51,12 @@ from trpg.skillgen.knobs import has_strength_knobs, param_knobs
 from trpg.skillgen.validate import structural_rarity, tier_requirements, validate_skill
 
 __all__ = [
-    "RETIER_ATTEMPTS",
     "RetierReport",
     "character_tier",
     "retier",
     "retier_report",
 ]
 
-RETIER_ATTEMPTS = 3
-"""同一份草稿最多試幾次不同的調整亂數。"""
-_SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
 _PERMILLE = 1000
 _CACHE_LIMIT = 4096
 """內容庫上重配快取（``ContentLibrary.retier_cache``）的上限：滿了就清空。"""
@@ -171,7 +167,7 @@ def _knob_candidates(
     else:
         params = param_knobs(effects, skill.category, job.library)
     for more in ((), params) if params else ((),):
-        for attempt in range(RETIER_ATTEMPTS):
+        for attempt in range(job.library.composer.search.retier_attempts):
             done = retune(
                 base,
                 effects,
@@ -314,12 +310,14 @@ def _form_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int, d
     return [{0: {"magnitude_permille": None if v == _PERMILLE else v}} for v in order]
 
 
-def _summon_variants(moved: SkillDef) -> list[dict[int, dict[str, Any]]]:
-    """召喚：召喚物的最大 HP 加成（‰）由小到大（0 ＝ 拿掉加成）。"""
+def _summon_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int, dict[str, Any]]]:
+    """召喚：召喚物的最大 HP 加成（‰）由小到大（0 ＝ 拿掉加成；
+    ``retier_growth.summon_hp_steps``）。"""
     index = next((i for i, e in enumerate(moved.effects) if e.type == "summon"), None)
     if index is None:
         return []
-    return [{index: {"max_hp_permille": step or None}} for step in _SUMMON_HP_STEPS]
+    steps = library.budget.retier_growth.summon_hp_steps
+    return [{index: {"max_hp_permille": step or None}} for step in steps]
 
 
 def _cost_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[str, Any]]:
@@ -335,7 +333,7 @@ def _cost_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[str, A
         cooldowns += [c or None for c in range(cost.cooldown - 1, -1, -1)]
     out: list[dict[str, Any]] = []
     for cooldown in cooldowns:
-        for scale in (1000, 500, 0):
+        for scale in library.budget.retier_growth.cost_scales_permille:
             changed: dict[str, Any] = {"cooldown": cooldown}
             for field in ("mana", "stamina"):
                 value = getattr(cost, field)
@@ -359,7 +357,7 @@ def _strength_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft
     structures = (
         _stance_variants(moved, library)
         or _form_variants(moved, library)
-        or _summon_variants(moved)
+        or _summon_variants(moved, library)
         or [{}]
     )
     for structure in structures:
@@ -393,7 +391,7 @@ def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
         if moved.category == "spell":
             rock["dice"] = "1d4"
         else:
-            rock["multiplier_permille"] = 300
+            rock["multiplier_permille"] = job.library.budget.retier_growth.rock_multiplier_permille
         effects.append(rock)
         yield base, effects
 

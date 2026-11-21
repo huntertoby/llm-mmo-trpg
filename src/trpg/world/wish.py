@@ -48,7 +48,7 @@ from trpg.roguelite.state import RunState, SkillOffer
 from trpg.roguelite.wish_offer import make_wish_offer, wish_offer_tags
 from trpg.skillgen.skill_pick import design_key
 from trpg.skillgen.skill_tier import character_tier
-from trpg.skillgen.wish_pick import WISH_CARDS, wish_tags_problem
+from trpg.skillgen.wish_pick import wish_tags_problem
 from trpg.world.actions import WishAction, WishMadeEvent, WorldEvent
 from trpg.world.common import rules_of
 from trpg.world.errors import WorldActionError
@@ -217,7 +217,7 @@ def wish_tags_offer_ok(
     一一對應）、剛好 3 張、設計不重複；每張「做不到」的那一行由引擎照標籤重算（不信任傳進來的
     字）。"""
     checked = checked_offer(offer, tier)
-    if checked is None or len(checked.candidates) != WISH_CARDS:
+    if checked is None or len(checked.candidates) != library.skill_pick.pool.wish_cards:
         return None
     if len({design_key(s) for s in checked.candidates}) != len(checked.candidates):
         return None

@@ -53,15 +53,6 @@ NESTED_EFFECT_TYPES: dict[str, tuple[str, ...]] = {
 ``nested_only_effects``，父結構以 YAML 的 ``parents`` 為準）。"""
 
 
-_MAX_NESTED = 2
-
-
-_MAX_VARIANTS = 2
-
-
-_MAX_TAGS = 8
-
-
 # 提議中「由呼叫端或引擎決定、LLM 不能填」的 SkillDef 欄位（文件化用；模型本來就沒有這些欄位）。
 CALLER_FIELDS: tuple[str, ...] = ("id", "tier", "rank", "rarity", "provenance", "schema_version")
 

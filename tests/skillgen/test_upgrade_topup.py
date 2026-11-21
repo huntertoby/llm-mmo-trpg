@@ -70,7 +70,6 @@ from trpg.skillgen.proposal_topup import (
     FILLER_EFFECTS,
     FILLER_PREFERENCE,
     TOPUP_CODES,
-    TOPUP_MAX,
     filler_order,
     keyword_way_texts,
     keywords_reachable,
@@ -282,7 +281,7 @@ def test_topup_is_deterministic_and_pure(library: ContentLibrary, models: Propos
     assert data == frozen  # 輸入不被修改
     candidates = topup_candidates(library, data, keywords=("marked",), weak=True)
     assert candidates == topup_candidates(library, data, keywords=("marked",), weak=True)
-    assert 0 < len(candidates) <= TOPUP_MAX
+    assert 0 < len(candidates) <= library.composer.search.proposal.topup_max
     assert data == frozen
 
 

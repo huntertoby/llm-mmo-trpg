@@ -568,7 +568,8 @@ def _sacrifice_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
     """獻祭召喚物（3-24c）：只能是法術技；半徑隨機，爆炸取主題元素（少數為治療）。"""
     if ctx.category != "spell":
         raise Retry
-    spec["radius"] = ctx.rng.randint(0, 2)
+    radius = ctx.rules.sacrifice.radius
+    spec["radius"] = ctx.rng.randint(radius.min, radius.max)
     if not ctx.chance(ctx.rules.sacrifice.heal_permille):
         spec["element"] = ctx.theme.value
     ctx.add_knobbed(spec)
@@ -618,8 +619,12 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
         if ctx.category != "spell":
             raise Retry
         spec["element"] = ctx.theme.value
-        spec["rounds"] = ctx.rng.randint(1, 3)
-        spec["radius"] = ctx.rng.randint(0, 2)
+        rounds, radius = (
+            ctx.rules.structure.delayed_damage_rounds,
+            ctx.rules.structure.delayed_damage_radius,
+        )
+        spec["rounds"] = ctx.rng.randint(rounds.min, rounds.max)
+        spec["radius"] = ctx.rng.randint(radius.min, radius.max)
         ctx.add_knobbed(spec)
         return
     elif primitive_id == "gamble":
@@ -628,26 +633,26 @@ def _fixed_effect(ctx: Ctx, primitive_id: str) -> None:
     ctx.add(spec, ())
 
 
-_GAMBLE_WIN = (1500, 2000, 2500, 3000)
-_GAMBLE_BACKLASH = (250, 500, 750)
-
-
 def _gamble_effect(ctx: Ctx, spec: dict[str, Any]) -> None:
     """賭注（Phase 3D-7a，3C-6b 組合器也能產生）：必須有傷害效果；成功時傷害加倍之類、失敗時反噬
     施放者本次傷害的一部分（或沒有反噬）；成功率是強度旋鈕（越高越強）。"""
     if not any(e["type"] == "damage" for e in ctx.effects):
         raise Retry
+    rules = ctx.rules.structure
     spec["win"] = [
-        {"type": "damage_multiplier", "damage_multiplier_permille": ctx.rng.choice(_GAMBLE_WIN)}
+        {
+            "type": "damage_multiplier",
+            "damage_multiplier_permille": ctx.rng.choice(rules.gamble_win_permille),
+        }
     ]
     spec["lose"] = (
         [
             {
                 "type": "self_damage_of_hit",
-                "self_damage_permille_of_hit": ctx.rng.choice(_GAMBLE_BACKLASH),
+                "self_damage_permille_of_hit": ctx.rng.choice(rules.gamble_backlash_permille),
             }
         ]
-        if ctx.chance(700)
+        if ctx.chance(rules.gamble_backlash_chance_permille)
         else []
     )
     ctx.add_knobbed(spec)
@@ -1049,7 +1054,7 @@ def _with_distance_condition(ctx: Ctx, kind: str) -> str:
         return kind
     far = ctx.library.ruleset.core.far_distance
     available = _available(ctx)
-    fits = {"point_blank": reach >= _POINT_BLANK_MIN_RANGE, "long_range": reach >= far}
+    fits = {"point_blank": reach >= rules.point_blank_min_reach, "long_range": reach >= far}
     kinds = [k for k in rules.distance_conditions if k in available and fits.get(k, True)]
     if not kinds:
         return kind
@@ -1057,10 +1062,6 @@ def _with_distance_condition(ctx: Ctx, kind: str) -> str:
     if not distance_rng.chance_permille(rules.distance_permille):
         return kind
     return distance_rng.choice(kinds)
-
-
-_POINT_BLANK_MIN_RANGE = 2
-"""貼身只給固定射程至少 2 的招（射程 1 一定貼身，條件等於白拿預算折扣；SK-1）。"""
 
 
 def _available(ctx: Ctx) -> set[str]:

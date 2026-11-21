@@ -346,7 +346,11 @@ class Runner:
             "skill": shown,
             "desc_mismatch": _desc_checks(lib, shown, outcome.skill),
             "strict_mismatch": _desc_checks(lib, shown, outcome.skill, strict=True),
-            "thin": list(thin_reasons(outcome.skill)),
+            "thin": list(
+                thin_reasons(
+                    outcome.skill, epic_min_effects=lib.skill_pick.weights.thin_epic_min_effects
+                )
+            ),
             "held_in_slate": sum(
                 1
                 for c in slate.ranked

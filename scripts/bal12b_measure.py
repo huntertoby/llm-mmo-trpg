@@ -138,7 +138,7 @@ def _walk(
     current = with_budget_bonus(skill, rules.budget_permille)
     power = complete.complete_power(current, library)
     steps: list[Step] = []
-    for _ in range(complete._MAX_STEPS):
+    for _ in range(library.composer.search.complete_max_steps):
         if power >= target:
             break
         found = complete._next_step(library, rules, current, target, cap)

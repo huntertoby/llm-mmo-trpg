@@ -60,7 +60,7 @@ def _skill_data(
     proposal: BaseModel,
     ctx: ProposalContext,
     fill: NumberFiller,
-    library: ContentLibrary | None = None,
+    library: ContentLibrary,
 ) -> dict[str, Any]:
     data = proposal.model_dump(mode="json", exclude_none=True)
     data.pop("layout", None)
@@ -70,8 +70,8 @@ def _skill_data(
     if data.pop("cost_overdraft", None):  # 透支（3-50b）：不算自身狀態，可以並用
         data["cost"] = {**data.get("cost", {}), "overdraft": 1}
     apply_cost_choices(data, library)  # 每場一次、HP 代價、失手反噬（4-L8）
-    if library is not None:  # 層數的對象由層數決定（3-52），LLM 只挑層數
-        data["effects"] = [_stack_target(e, library) for e in data.get("effects", [])]
+    # 層數的對象由層數決定（3-52），LLM 只挑層數
+    data["effects"] = [_stack_target(e, library) for e in data.get("effects", [])]
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
@@ -108,19 +108,18 @@ def to_skill_def(
     proposal: BaseModel,
     ctx: ProposalContext,
     fill: NumberFiller,
-    library: ContentLibrary | None = None,
+    library: ContentLibrary,
 ) -> SkillDef:
     """已驗證的提議（只有結構）→ :class:`SkillDef`：``fill`` 補上數值（骰子、倍率、持續、AP、法力、
     冷卻等；見 :mod:`trpg.skillgen.proposal_numbers`）。ID 由補完數值後的內容雜湊而來；同一份
     提議加同一份數值永遠得到相同 ID。``ctx.hero_attributes`` 有值（且給了 ``library``）時縮放屬性
-    改取主角最高的允許屬性（見 :class:`ProposalContext`）。
+    改取主角最高的允許屬性（見 :class:`ProposalContext`）。HC-5b：``library`` 改成必填（唯一的呼叫端
+    一直有傳；代價的預設值改讀內容檔）。
 
     schema 層級的錯誤丟 :class:`pydantic.ValidationError`（:func:`evaluate_proposal` 轉成
     ``stage="skill"`` 的錯誤）。"""
     data = _skill_data(proposal, ctx, fill, library)
     skill = SkillDef.model_validate(data)
-    if library is None:
-        return skill
     # 武器技一律看武器大類的主屬性（3H-6，不看主角屬性）；其他技能跟主角最高屬性（3H-3）；
     # 沒有主角屬性時收進允許範圍（3H-7：在範圍內不動，否則取範圍裡第一個）
     fitted = (

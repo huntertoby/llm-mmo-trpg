@@ -48,7 +48,6 @@ from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.pick_player import PickPlayer
 from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.wish_pick import (
-    WISH_CARDS,
     WishCard,
     WishPick,
     WishPicker,
@@ -156,8 +155,9 @@ class _Loop:
 
     def _take(self, answers: Sequence[WishCardText], *, final: bool) -> list[NameCheck]:
         errors: list[NameCheck] = []
-        if len(answers) != WISH_CARDS:
-            errors.append(NameCheck("cards.count", f"cards 要剛好 {WISH_CARDS} 張。"))
+        count = self.library.skill_pick.pool.wish_cards
+        if len(answers) != count:
+            errors.append(NameCheck("cards.count", f"cards 要剛好 {count} 張。"))
         for i, (card, text) in enumerate(zip(self.cards, answers, strict=False)):
             if card.settled:
                 continue
@@ -304,7 +304,7 @@ def make_wish_picker(
             style,
             vocab,
             used,
-            [_Card() for _ in range(WISH_CARDS)],
+            [_Card() for _ in range(library.skill_pick.pool.wish_cards)],
         )
         start = clock()
         for number in range(1, max_attempts + 1):
