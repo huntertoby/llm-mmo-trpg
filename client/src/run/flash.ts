@@ -11,9 +11,13 @@ import { gameRules } from "../battle/glossary";
 export const RARITY_HINT = "稀有度表示這招長得多複雜，不代表強度。強度看角色階級與閃現次數。";
 /** 可以閃現時的提示。 */
 export const CAN_FLASH_TEXT = "可以閃現了";
-/** 升階後第 3 格（大變化）還不是轉型時的提示（3W-5 旗標 `reflash_transform_hint`）。 */
-export const TRANSFORM_HINT = "可以重閃第 3 格轉型";
-export const TRANSFORM_HINT_TIP = "角色升階後，新的轉型選擇變多了；在營火重閃第 3 次的變化，可能出現轉型。";
+/** 升階後第 N 格（大變化，N＝`rules.major_flash`；HC-6b）還不是轉型時的提示（3W-5 旗標 `reflash_transform_hint`）。 */
+export function transformHint(major: number = gameRules().major_flash): string {
+  return `可以重閃第 ${major} 格轉型`;
+}
+export function transformHintTip(major: number = gameRules().major_flash): string {
+  return `角色升階後，新的轉型選擇變多了；在營火重閃第 ${major} 次的變化，可能出現轉型。`;
+}
 
 /** 閃現規則（後端 `flash_rules`，`flash_templates.yaml`；HC-3 起回應一定有，前端不留備用值）。 */
 type Rules = RunHero["flash_rules"];
@@ -192,8 +196,26 @@ export function inheritChoice(skill: string, source: string, records: readonly n
   return { kind: "inherit", skill, source, records: [...records].sort((a, b) => a - b) };
 }
 
-export const INHERIT_RULE_TEXT =
-  "傳承：把另一招的小變化（最多 2 個）帶給這招，算已閃次數；舊技能會消失，花掉的靈感點不退。完整技能不能接受傳承。";
+/** 閃現選擇畫面「不指定」那格的說明（至少涵蓋幾類照伺服器 `rules.flash_open_min_categories`；HC-6b）。 */
+export function openMixText(minCategories: number = gameRules().flash_open_min_categories): string {
+  return `混合各類變化，至少涵蓋 ${minCategories} 類`;
+}
+
+/** 閃現選擇畫面：這次是大變化時的說明（第幾次照 `rules.major_flash`；HC-6b）。 */
+export function majorNoteText(major: number = gameRules().major_flash): string {
+  return `第 ${major} 次是大變化；指定類別時，轉型保底會另外列在最後並標「轉型」。`;
+}
+
+/** 傳承的規則句；最多帶走幾個照伺服器（`flash_rules.max_carry`；HC-6b）。 */
+export function inheritRuleText(limit: number): string {
+  return `傳承：把另一招的小變化（最多 ${limit} 個）帶給這招，算已閃次數；舊技能會消失，花掉的靈感點不退。完整技能不能接受傳承。`;
+}
+
+/** 傳承表單第 1 步：帶走的小變化依序成為新技能的第 1、2…次（列到上限；HC-6b）。 */
+export function inheritStepText(limit: number): string {
+  const order = Array.from({ length: limit }, (_, i) => i + 1).join("、");
+  return `1. 帶走哪些小變化（最多 ${limit} 個，依序成為新技能的第 ${order} 次）`;
+}
 
 // ---- 閃現選項 ----------------------------------------------------------------------------
 
@@ -236,9 +258,12 @@ export const COMPLETE_BADGE = "完整技能";
  * 完整技能三選一畫面的說明（06 6.34.6）。預算加成照伺服器（`/api/glossary` 的 `rules.complete_budget_permille`，‰；HC-3）；
  * 6F-7：畫面上顯示成百分比（+12%），內部照舊千分比。
  */
-export function completeIntro(budgetPermille: number = gameRules().complete_budget_permille): readonly string[] {
+export function completeIntro(
+  budgetPermille: number = gameRules().complete_budget_permille,
+  flashes: number = gameRules().complete_flashes,
+): readonly string[] {
   return [
-    `完整技能是整招設計好的技能，強度視為已經閃現 3 次（預算 +${percent(budgetPermille)}）。`,
+    `完整技能是整招設計好的技能，強度視為已經閃現 ${flashes} 次（預算 +${percent(budgetPermille)}）。`,
     "完整技能不能再閃現；之後可以在營火重閃它的「調整欄」，換一個小變化。",
     "三張都不想要可以都不拿，技能不變。",
   ];

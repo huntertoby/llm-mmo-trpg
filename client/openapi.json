@@ -13771,6 +13771,111 @@
           "complete_budget_permille": {
             "type": "integer",
             "title": "Complete Budget Permille"
+          },
+          "roguelite_battles": {
+            "type": "integer",
+            "title": "Roguelite Battles",
+            "default": 5
+          },
+          "roguelite_companions": {
+            "type": "integer",
+            "title": "Roguelite Companions",
+            "default": 2
+          },
+          "campfire_source": {
+            "type": "integer",
+            "title": "Campfire Source",
+            "default": 1
+          },
+          "budget_min_ratio_permille": {
+            "type": "integer",
+            "title": "Budget Min Ratio Permille",
+            "default": 700
+          },
+          "budget_max_ratio_permille": {
+            "type": "integer",
+            "title": "Budget Max Ratio Permille",
+            "default": 1000
+          },
+          "contagion_radius": {
+            "type": "integer",
+            "title": "Contagion Radius",
+            "default": 1
+          },
+          "major_flash": {
+            "type": "integer",
+            "title": "Major Flash",
+            "default": 3
+          },
+          "complete_flashes": {
+            "type": "integer",
+            "title": "Complete Flashes",
+            "default": 3
+          },
+          "flash_max_carry": {
+            "type": "integer",
+            "title": "Flash Max Carry",
+            "default": 2
+          },
+          "flash_open_cost": {
+            "type": "integer",
+            "title": "Flash Open Cost",
+            "default": 1
+          },
+          "flash_open_options": {
+            "type": "integer",
+            "title": "Flash Open Options",
+            "default": 4
+          },
+          "flash_open_min_categories": {
+            "type": "integer",
+            "title": "Flash Open Min Categories",
+            "default": 2
+          },
+          "pregen_wait_seconds": {
+            "type": "integer",
+            "title": "Pregen Wait Seconds",
+            "default": 10
+          },
+          "wish_cards": {
+            "type": "integer",
+            "title": "Wish Cards",
+            "default": 3
+          },
+          "thread_limit": {
+            "type": "integer",
+            "title": "Thread Limit",
+            "default": 5
+          },
+          "thread_expire_seconds": {
+            "type": "integer",
+            "title": "Thread Expire Seconds",
+            "default": 259200
+          },
+          "opening_end_level": {
+            "type": "integer",
+            "title": "Opening End Level",
+            "default": 4
+          },
+          "league_signup_close_day": {
+            "type": "integer",
+            "title": "League Signup Close Day",
+            "default": 13
+          },
+          "min_moves_mob": {
+            "type": "integer",
+            "title": "Min Moves Mob",
+            "default": 2
+          },
+          "min_moves_elite": {
+            "type": "integer",
+            "title": "Min Moves Elite",
+            "default": 3
+          },
+          "min_moves_boss_phase": {
+            "type": "integer",
+            "title": "Min Moves Boss Phase",
+            "default": 3
           }
         },
         "additionalProperties": false,
@@ -30949,6 +31054,11 @@
           "max_group": {
             "type": "integer",
             "title": "Max Group"
+          },
+          "draft_name_max": {
+            "type": "integer",
+            "title": "Draft Name Max",
+            "default": 40
           }
         },
         "additionalProperties": false,

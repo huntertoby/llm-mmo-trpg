@@ -94,7 +94,8 @@ def _use_zh(item: WorldItemDef) -> str | None:
 def _battle_zh(item: WorldItemDef) -> str | None:
     if item.skill is None:
         return None
-    return "放進腰包：戰鬥中花 1 AP 使用，每個用一次（不佔技能欄位）"
+    # HC-6b：AP 照道具技能本身（載入時已檢查是 1 AP，08 8.17）
+    return f"放進腰包：戰鬥中花 {item.skill.ap_cost} AP 使用，每個用一次（不佔技能欄位）"
 
 
 def _bag_item(library: ContentLibrary, item_id: str, count: int) -> BagItemView:

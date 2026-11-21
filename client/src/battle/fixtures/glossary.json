@@ -4908,6 +4908,27 @@
    "stance": 1
   },
   "start_keywords": 2,
-  "complete_budget_permille": 120
+  "complete_budget_permille": 120,
+  "roguelite_battles": 5,
+  "roguelite_companions": 2,
+  "campfire_source": 1,
+  "budget_min_ratio_permille": 700,
+  "budget_max_ratio_permille": 1000,
+  "contagion_radius": 1,
+  "major_flash": 3,
+  "complete_flashes": 3,
+  "flash_max_carry": 2,
+  "flash_open_cost": 1,
+  "flash_open_options": 4,
+  "flash_open_min_categories": 2,
+  "pregen_wait_seconds": 10,
+  "wish_cards": 3,
+  "thread_limit": 5,
+  "thread_expire_seconds": 259200,
+  "opening_end_level": 4,
+  "league_signup_close_day": 13,
+  "min_moves_mob": 2,
+  "min_moves_elite": 3,
+  "min_moves_boss_phase": 3
  }
 }

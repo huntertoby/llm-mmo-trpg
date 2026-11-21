@@ -143,7 +143,7 @@ describe("WP-3b 可修 1～6", () => {
     const html = render(wishData({ coins: 2, available: false, blocked_zh: "任務幣不足" }));
     expect(html).toContain('class="wish-foot off"');
     // 「得到」固定是最後一列（CSS 用最後 5 格選它）
-    expect(html.lastIndexOf(WISH_ZH.gain)).toBeGreaterThan(html.lastIndexOf(WISH_ZH.notEnough));
+    expect(html.lastIndexOf(WISH_ZH.gain())).toBeGreaterThan(html.lastIndexOf(WISH_ZH.notEnough));
   });
 });
 

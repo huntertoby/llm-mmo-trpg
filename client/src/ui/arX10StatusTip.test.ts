@@ -1,6 +1,6 @@
 // AR-X10 小修 1（美術 PM `docs/art/X10-3d驗收.md`）：狀態提示的骰子行「擲 NdM，每點 ×10」自己一行、次要字色。
 import { describe, expect, it } from "vitest";
-import { SPREAD_NOTE, statusTipParts } from "./StatusCardParts";
+import { spreadNote, statusTipParts } from "./StatusCardParts";
 import { tipParts } from "./tipParts";
 
 // 沒有 @types/node：同 statusCard.test.ts，用變數名載入 node:fs。
@@ -22,7 +22,7 @@ describe("AR-X10：狀態提示的骰子行", () => {
     ]);
   });
   it("沒有骰子行的狀態照舊一段；帶「會擴散」時最後多一行；對照表沒有的寫「狀態」", () => {
-    expect(statusTipParts("burning", true).at(-1)).toEqual({ text: SPREAD_NOTE, secondary: false });
+    expect(statusTipParts("burning", true).at(-1)).toEqual({ text: spreadNote(), secondary: false });
     expect(statusTipParts("no_such_status", false)).toEqual([{ text: "狀態", secondary: false }]);
     expect(tipParts(["只有說明", ""])).toEqual([{ text: "只有說明", secondary: false }]);
   });

@@ -46,6 +46,11 @@ export function ratioSkillsOf(form: RatioForm, edited: readonly string[]): strin
 }
 
 /** 種子數的問題（1～上限的整數；上限照伺服器的 `ratio_max_seeds`，HC-3 起不寫死）；沒問題回 `null`。 */
+/** 比值表單下的組數說明；一次最多幾組×種子照伺服器 `ratio_max_work`（HC-6b，千分位照現行「40,000」）。 */
+export function ratioWorkNote(maxWork: number): string {
+  return `組＝招 × 可用武器 × 情境（無條件 1 個；有條件「成立／不成立」2 個；每個變奏多 1 個）。一次最多 ${maxWork.toLocaleString("en-US")} 組×種子。`;
+}
+
 export function ratioSeedsProblem(text: string, maxSeeds: number): string | null {
   const t = text.trim();
   const problem = `種子數要填 1～${maxSeeds} 的整數`;

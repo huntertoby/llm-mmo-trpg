@@ -3,6 +3,8 @@
 // 規則一律由伺服器裁決（能不能許看 `available`／`blocked_zh`），前端只決定「送出鈕現在按不按得下去」（有沒有寫願望、挑了幾個關鍵字）。
 // 這裡的字都是暫定字（玩法 PM 定稿後只換字），完整清單在 `docs/phases/PhaseWP-3報告.md`。
 import type { StatChange, WorldAction, WorldPendingOffer, WorldView } from "../api/types";
+import { gameRules } from "../battle/glossary";
+import { countZh } from "../ui/rulesText";
 
 export type WishData = NonNullable<WorldView["wish"]>;
 
@@ -16,38 +18,48 @@ export const WISH_ZH = {
   tabMenuShort: "選單",
   coins: "任務幣",
   left: "本週還能許",
-  textLead: "用一句話說出想要的力量；池子會從裡面聽出 1～2 個關鍵字，給你三招挑一招。",
+  /**
+   * HC-6b：關鍵字上限照伺服器 `WishView.max_keywords`，給幾招照 `rules.wish_cards`（HC-6a 裁定 1）；
+   * 中文數字的寫法見 `countZh`（後面接「招」時 2 寫「兩」）。
+   */
+  textLead: (maxKeywords: number, cards: number = gameRules().wish_cards) =>
+    `用一句話說出想要的力量；池子會從裡面聽出 1～${maxKeywords} 個關鍵字，給你${countZh(cards, true)}招挑一招。`,
   textPlaceholder: "例：想把敵人凍住，再一錘敲碎",
-  menuLead: "挑 1～2 個關鍵字：三招都會帶第 1 個，第 2 個會盡量出現在其中一招。",
+  menuLead: (maxKeywords: number, cards: number = gameRules().wish_cards) =>
+    `挑 1～${maxKeywords} 個關鍵字：${countZh(cards, true)}招都會帶第 1 個，第 2 個會盡量出現在其中一招。`,
   submit: "許願",
   needText: "先寫下你的願望",
   needKeyword: "先挑 1 個關鍵字",
   rowCoins: "任務幣",
   rowLeft: "本週次數",
   rowGain: "得到",
-  gain: "技能三選一",
+  /** 「技能三選一」（「N 選一」固定說法，2 寫「二選一」）。 */
+  gain: (cards: number = gameRules().wish_cards) => `技能${countZh(cards)}選一`,
   notEnough: "不夠",
   noneLeft: "用完了",
-  timeout: "池子這次沒來得及回應（等了 10 秒），改從選單挑關鍵字吧（沒有扣任務幣）。",
+  /** 逾時與等待的秒數照伺服器 `rules.pregen_wait_seconds`（HC-6b）。 */
+  timeout: (seconds: number = gameRules().pregen_wait_seconds) => `池子這次沒來得及回應（等了 ${seconds} 秒），改從選單挑關鍵字吧（沒有扣任務幣）。`,
   waitText: "池水泛起漣漪，正在聽你的願望……",
-  waitNote: "最多等 10 秒；來不及就改從選單挑關鍵字（不扣任務幣）。",
+  waitNote: (seconds: number = gameRules().pregen_wait_seconds) => `最多等 ${seconds} 秒；來不及就改從選單挑關鍵字（不扣任務幣）。`,
   pickNth: (n: number) => `第 ${n} 個`,
   /** 下固定區「名字：說明」中間的冒號（WP-3b）。 */
   pickedSep: "：",
   leftTimes: (n: number) => `剩 ${n} 次`,
-  refundNote: (refund: number) => `三招都不拿也算一次，退回 ${refund} 任務幣。`,
+  refundNote: (refund: number, cards: number = gameRules().wish_cards) => `${countZh(cards, true)}招都不拿也算一次，退回 ${refund} 任務幣。`,
   skip: "都不拿",
   skipRefund: (refund: number) => `都不拿（退回 ${refund} 任務幣）`,
   // ---- PK-4 願望驅動（07 7.6「許願池：願望驅動」；`WishView.tag_groups` 有值時用）----
-  tagTextLead: "用一句話說出想要的招式；池子會聽出你要的標籤（關鍵字、元素、效果…），照標籤找三招給你挑。",
-  tagMenuLead: "點選想要的標籤（每一類有上限、都可以不選，至少選一個）：池子照標籤找三招給你挑。",
+  tagTextLead: (cards: number = gameRules().wish_cards) =>
+    `用一句話說出想要的招式；池子會聽出你要的標籤（關鍵字、元素、效果…），照標籤找${countZh(cards, true)}招給你挑。`,
+  tagMenuLead: (cards: number = gameRules().wish_cards) =>
+    `點選想要的標籤（每一類有上限、都可以不選，至少選一個）：池子照標籤找${countZh(cards, true)}招給你挑。`,
   tagMenuShort: "標籤",
   tabTags: "從清單點選",
   tagMax: (n: number) => `最多 ${n} 個`,
   /** AR-SK4：元素類有物理時（定案字：1 階「最多 1 個（可另加物理）」、2 階起「最多 2 個（可另加物理）」）。 */
   tagMaxPhysical: (n: number) => `最多 ${n} 個（可另加物理）`,
   needTag: "先點選 1 個標籤",
-  tagTimeout: "池子這次沒來得及回應（等了 10 秒），改從清單點選標籤吧（沒有扣任務幣）。",
+  tagTimeout: (seconds: number = gameRules().pregen_wait_seconds) => `池子這次沒來得及回應（等了 ${seconds} 秒），改從清單點選標籤吧（沒有扣任務幣）。`,
   tagPicked: "已選：",
   yourWish: "你的願望",
   heardTags: "池子聽到的",
@@ -179,7 +191,7 @@ export function wishDiffs(w: Pick<WishData, "coins" | "cost" | "left">): StatCha
   return [
     row("quest_coins", WISH_ZH.rowCoins, String(w.coins), coinsAfter, "cost"),
     row("wish_left", WISH_ZH.rowLeft, WISH_ZH.leftTimes(w.left), leftAfter, "cost"),
-    row("offer", WISH_ZH.rowGain, null, WISH_ZH.gain, "new"),
+    row("offer", WISH_ZH.rowGain, null, WISH_ZH.gain(), "new"),
   ];
 }
 

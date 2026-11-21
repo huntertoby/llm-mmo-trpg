@@ -235,6 +235,49 @@ class GameRulesOut(_ApiModel):
     """開局選幾個關鍵字（``roguelite.yaml`` 的 ``start.keywords``）。"""
     complete_budget_permille: int
     """完整技能的預算加成（‰，``flash_templates.yaml`` 的 ``complete.budget_permille``）。"""
+    # ---- HC-6b：說明文字組字用（舊回應沒有這些欄位時照現值讀；伺服器一律由內容庫填）----
+    roguelite_battles: int = 5
+    """一輪的一般戰鬥場數（``roguelite.yaml`` 的 ``battles``；之後 1 場頭目）。"""
+    roguelite_companions: int = 2
+    """一輪的標準隊友人數（``roguelite.yaml`` 的 ``companions``）。"""
+    campfire_source: int = 1
+    """營火加的源力（``roguelite.yaml`` 的 ``source.campfire``）。"""
+    budget_min_ratio_permille: int = 700
+    """技能預算的合格區間下限（‰，``skill_budget.yaml``）。"""
+    budget_max_ratio_permille: int = 1000
+    """技能預算的合格區間上限（‰）。"""
+    contagion_radius: int = 1
+    """疾病擴散傳給幾格內的同伴（``core.yaml`` 的 ``contagion_radius``）。"""
+    major_flash: int = 3
+    """第幾次閃現是大變化（``flash_templates.yaml`` 的 ``major_flash``）。"""
+    complete_flashes: int = 3
+    """完整技能視為已閃幾次（``complete.flashes``）。"""
+    flash_max_carry: int = 2
+    """傳承最多帶走幾個小變化（``major_flash`` − 1）。"""
+    flash_open_cost: int = 1
+    """不指定類別閃現花幾點靈感（``pricing.open.cost``）。"""
+    flash_open_options: int = 4
+    """不指定類別出幾個變化（``pricing.open.options``）。"""
+    flash_open_min_categories: int = 2
+    """不指定類別時至少涵蓋幾類（``pricing.open.min_categories``）。"""
+    pregen_wait_seconds: int = 10
+    """預先生成（含許願）最多等幾秒（``world_pregen.WAIT_SECONDS``）。"""
+    wish_cards: int = 3
+    """許願一次給幾張（``skill_pick.yaml`` 的 ``pool.wish_cards``，HC-6a 裁定 1）。"""
+    thread_limit: int = 5
+    """每人線頭上限（``world/event_rules.yaml`` 的 ``threads.personal_limit``）。"""
+    thread_expire_seconds: int = 259200
+    """線頭到期秒數（``threads.expire_seconds``）。"""
+    opening_end_level: int = 4
+    """入門期到幾級結束、閃現開放（``world.growth.OPENING_END_LEVEL``）。"""
+    league_signup_close_day: int = 13
+    """影子循環賽第幾天截止報名（``world/season.yaml`` 的 ``league.signup_close_day``）。"""
+    min_moves_mob: int = 2
+    """#149 招數下限：一般敵人（``world/enemies.yaml`` 的 ``min_moves``；數值工坊的例外說明）。"""
+    min_moves_elite: int = 3
+    """#149 招數下限：精英。"""
+    min_moves_boss_phase: int = 3
+    """#149 招數下限：頭目每階段。"""
 
 
 class Glossary(_ApiModel):

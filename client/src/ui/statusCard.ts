@@ -111,8 +111,9 @@ const AP_MARK_LIMIT = 2;
 export const AP_PIP_TEXT = {
   kept: "上回合保留的 AP",
   borrowed: (n: number) => `預支來的 AP（下回合 −${n}）`,
-  overdraftNext: "透支：下回合少 1 AP",
-  borrowNext: "預支：下回合少 1 AP",
+  /** 下回合只少 1 格時寫來源（HC-6b：格數照實際要少的數，不寫死）。 */
+  overdraftNext: (n: number) => `透支：下回合少 ${n} AP`,
+  borrowNext: (n: number) => `預支：下回合少 ${n} AP`,
   nextMany: (n: number) => `下回合少 ${n} AP`,
   /** 回合開始時已經扣掉的那格：只有透支、只有預支、兩者疊加（不寫原因）。 */
   lostNow: (n: number) => `透支：這回合少 ${n} AP`,
@@ -129,7 +130,7 @@ function lostNowText(lost: number, borrowed: number): string {
 /** 下回合會少那格的說明：合計 2 格以上寫合計，1 格寫來源（預支或透支）。 */
 function nextText(next: number, borrowed: number): string {
   if (next >= 2) return AP_PIP_TEXT.nextMany(next);
-  return borrowed > 0 ? AP_PIP_TEXT.borrowNext : AP_PIP_TEXT.overdraftNext;
+  return borrowed > 0 ? AP_PIP_TEXT.borrowNext(next) : AP_PIP_TEXT.overdraftNext(next);
 }
 
 /**

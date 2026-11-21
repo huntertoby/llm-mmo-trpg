@@ -3,6 +3,7 @@
 // 才顯示等待提示（共用彈窗 `DialogFrame`），可以取消；取消＝不送那個動作（沒有扣點）。
 import type { PregenWaitRequest, WorldAction } from "../api/types";
 import { WISH_ZH } from "./wish";
+import { gameRules } from "../battle/glossary";
 
 /** 等多久才顯示等待提示（毫秒）：已經好了的通常一下就回來，不閃一下彈窗。 */
 export const PREGEN_HINT_DELAY_MS = 400;
@@ -18,11 +19,13 @@ export function pregenWaitBody(action: WorldAction): PregenWaitRequest | null {
   return null;
 }
 
-/** 等待提示下面那一行：閃現、機遇逾時改給一般的版本；許願逾時不送、改開選單（WP-3）。 */
-export const PREGEN_WAIT_NOTE = "最多等 10 秒；來不及就改用一般的版本。";
+/** 等待提示下面那一行：閃現、機遇逾時改給一般的版本；許願逾時不送、改開選單（WP-3）。秒數照伺服器 `rules.pregen_wait_seconds`（HC-6b）。 */
+export function pregenDefaultNote(seconds: number = gameRules().pregen_wait_seconds): string {
+  return `最多等 ${seconds} 秒；來不及就改用一般的版本。`;
+}
 
 export function pregenWaitNote(body: PregenWaitRequest): string {
-  return body.kind === "wish" ? WISH_ZH.waitNote : PREGEN_WAIT_NOTE;
+  return body.kind === "wish" ? WISH_ZH.waitNote() : pregenDefaultNote();
 }
 
 /** 等待提示的文字。 */

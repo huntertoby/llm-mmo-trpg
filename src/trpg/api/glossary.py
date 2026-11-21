@@ -16,12 +16,16 @@ from trpg.api.schemas import (
     WeaponLookEntry,
     WeaponRangeEntry,
 )
+from trpg.api.world_pregen import WAIT_SECONDS
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.narrative.action_info import action_texts, objective_texts
 from trpg.narrative.status_info import stack_rules, status_rules
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
+from trpg.roguelite.flashes import max_carry
 from trpg.shared.types import Attribute
+from trpg.world.growth import OPENING_END_LEVEL
+from trpg.world.league import league_rules
 
 __all__ = ["build_glossary"]
 
@@ -169,7 +173,9 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
     """畫面要用的全域規則數字（HC-3）。"""
     core = library.ruleset.core
     slots = core.skill_slots
-    return GameRulesOut(
+    flash = library.flash
+    run = library.roguelite
+    rules = GameRulesOut(
         source_max=core.source_max,
         skill_slots=SkillSlotsOut(
             active=slots.active,
@@ -178,8 +184,43 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
             stance=slots.stance,
         ),
         start_keywords=library.roguelite.start.keywords,
-        complete_budget_permille=library.flash.rules.complete.budget_permille,
+        complete_budget_permille=flash.rules.complete.budget_permille,
+        # HC-6b：畫面說明文字要組字的規則數字
+        roguelite_battles=run.battles,
+        roguelite_companions=len(run.companions),
+        campfire_source=run.source.campfire,
+        budget_min_ratio_permille=library.budget.min_ratio_permille,
+        budget_max_ratio_permille=library.budget.max_ratio_permille,
+        contagion_radius=core.contagion_radius,
+        major_flash=flash.rules.major_flash,
+        complete_flashes=flash.rules.complete.flashes,
+        flash_max_carry=max_carry(library),
+        flash_open_cost=flash.pricing.open.cost,
+        flash_open_options=flash.pricing.open.options,
+        flash_open_min_categories=flash.pricing.open.min_categories,
+        pregen_wait_seconds=round(WAIT_SECONDS),
+        wish_cards=library.skill_pick.pool.wish_cards,
+        opening_end_level=OPENING_END_LEVEL,
     )
+    return rules.model_copy(update=_world_text_rules(library))
+
+
+def _world_text_rules(library: ContentLibrary) -> dict[str, int]:
+    """線頭、循環賽、#149 招數下限的規則數字（HC-6b）；沒有這些資料檔的精簡內容庫照欄位預設值。"""
+    update: dict[str, int] = {}
+    events = library.world_event_content.rules
+    if events is not None:
+        update["thread_limit"] = events.threads.personal_limit
+        update["thread_expire_seconds"] = events.threads.expire_seconds
+    league = league_rules(library)
+    if league is not None:
+        update["league_signup_close_day"] = league.signup_close_day
+    if library.world_enemies is not None:
+        floor = library.world_enemies.min_moves
+        update["min_moves_mob"] = floor.mob
+        update["min_moves_elite"] = floor.elite
+        update["min_moves_boss_phase"] = floor.boss_phase
+    return update
 
 
 def _triggers(library: ContentLibrary) -> tuple[GlossaryEntry, ...]:

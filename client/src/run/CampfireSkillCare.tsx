@@ -11,7 +11,8 @@ import {
   carryable,
   dissolveChoice,
   dissolveConfirm,
-  INHERIT_RULE_TEXT,
+  inheritRuleText,
+  inheritStepText,
   inheritChoice,
   inheritProblem,
   inheritTargets,
@@ -21,7 +22,7 @@ import {
   reflashable,
   reflashSlots,
   toggleCarry,
-  TRANSFORM_HINT,
+  transformHint,
 } from "./flash";
 import { weakerSlot } from "./reflashWeaker";
 
@@ -121,7 +122,7 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                     <>
                       {"　"}
                       <span className="skill-flash-transform small fc-nobr" data-testid={`reflash-transform-${card.id}-${s.slot}`}>
-                        <NoBreakText text={TRANSFORM_HINT} />
+                        <NoBreakText text={transformHint()} />
                       </span>
                     </>
                   )}
@@ -290,8 +291,8 @@ function InheritForm({ hero, sourceId, busy, onCancel, onChoose }: { hero: RunHe
   return (
     <div className="panel inherit-form" data-testid="inherit-form">
       <div className="section-title">傳承</div>
-      <p className="small muted">{INHERIT_RULE_TEXT}</p>
-      <div className="small">1. 帶走哪些小變化（最多 {limit} 個，依序成為新技能的第 1、2 次）</div>
+      <p className="small muted">{inheritRuleText(limit)}</p>
+      <div className="small">{inheritStepText(limit)}</div>
       <ul className="inherit-records">
         {carry.map((r) => (
           <li key={r.nth}>

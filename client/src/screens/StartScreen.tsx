@@ -10,6 +10,7 @@ import { TestModeBadge } from "../ui/TestModeBadge";
 import { EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { GAME_INFO } from "../ui/gameInfo";
 import { TuningEntry } from "../tuning/TuningEntry";
+import { runStartBlurb } from "../run/runRulesText";
 
 interface Props {
   onStart(response: BattleResponse): void;
@@ -119,7 +120,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun,
       <ErrorBanner message={error ?? picker.error} onClose={() => setError(null)} />
       <div className="panel start-run">
         <div className="section-title">roguelite 一輪</div>
-        <div className="muted small">5 場戰鬥加頭目：打贏升級、營火回滿，一路帶著同一個主角。</div>
+        <div className="muted small">{runStartBlurb()}</div>
         <button type="button" className="primary" onClick={onNewRun}>
           開新一輪
         </button>

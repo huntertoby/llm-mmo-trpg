@@ -12,7 +12,7 @@ import { ClockGlyph, EmptyNote, EventBare, Fold, FoldGroup, HudBare, InfoTip, Ke
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
 import {
   NO_QUEST_ZH,
-  NO_THREAD_ZH,
+  noThreadText,
   QUEST_DONE_FOLD,
   QUEST_PANEL_TITLE_ZH,
   questDoneFoldText,
@@ -21,7 +21,7 @@ import {
   stepParts,
   stepState,
   THREAD_LINE_ZH,
-  THREAD_RULE_ZH,
+  threadRuleText,
   threadLeftText,
   threadPlaceText,
   threadsBadge,
@@ -118,10 +118,10 @@ export function QuestsPane({ quests }: { quests: readonly WorldQuestLog[] }) {
 }
 
 export function ThreadsPane({ threads }: { threads: readonly WorldThread[] }) {
-  if (threads.length === 0) return <EmptyNote testId="world-thread-empty">{NO_THREAD_ZH}</EmptyNote>;
+  if (threads.length === 0) return <EmptyNote testId="world-thread-empty">{noThreadText()}</EmptyNote>;
   return (
     <>
-      <TabLine end={<InfoTip text={THREAD_RULE_ZH} />}>
+      <TabLine end={<InfoTip text={threadRuleText()} />}>
         <span className="pnl-l2">{THREAD_LINE_ZH}</span>
       </TabLine>
       <ul className="pnl-rows pnl-threads" data-testid="world-threads">

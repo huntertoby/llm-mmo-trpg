@@ -312,6 +312,8 @@ class TuningStatus(_Model):
     """跑中的模擬工作 ID。"""
     max_group: int
     """分組改一次最多幾招（``skills.MAX_GROUP``；HC-3 前端不寫死）。"""
+    draft_name_max: int = 40
+    """草稿名稱最多幾個字（``drafts.DRAFT_NAME_MAX``；HC-6b 說明文字組字用）。"""
 
 
 # ---------------------------------------------------------------------------

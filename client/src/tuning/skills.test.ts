@@ -94,7 +94,7 @@ const BUDGET = (verdict: TuningBudgetResult["verdict"], ratio: number, extra: Pa
   ...extra,
 });
 
-const STATUS: TuningStatus = { can_write: true, reason_zh: null, restart_needed: false, restart_note_zh: "", draft_default: "current", drafts: [], sim_running: null, max_group: 100 };
+const STATUS: TuningStatus = { can_write: true, reason_zh: null, restart_needed: false, restart_note_zh: "", draft_default: "current", drafts: [], sim_running: null, max_group: 100, draft_name_max: 40 };
 const OK: TuningCheckResult = { ok: true, superseded: false, seconds: 1, field_errors: [], page_errors: [] };
 
 const skillForm = (edits: Edits, budget: TuningBudgetResult | null = BUDGET("ok", 788), confirmed = false) =>

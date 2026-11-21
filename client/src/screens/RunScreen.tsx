@@ -19,6 +19,7 @@ import { RunEnded } from "./RunEnded";
 import { RunFlashPending } from "./RunFlashPending";
 import { RunGearOffer } from "./RunGearOffer";
 import { RunLevelUp } from "./RunLevelUp";
+import { runCompanionsLine } from "../run/runRulesText";
 
 interface Props {
   initial: RunResponse;
@@ -190,7 +191,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
                   {OBJECTIVE_ICONS[view.goalKind]} {view.goalLine}
                 </div>
                 <div className="muted small">敵人：{view.enemies.join("、")}</div>
-                <div className="muted small">隊友：標準隊友 2 名（滿狀態）；{run.resource_rule_zh}</div>
+                <div className="muted small">{runCompanionsLine()}{run.resource_rule_zh}</div>
                 <div className="run-actions">
                   <button type="button" className="primary" disabled={busy} onClick={() => void enterBattle()}>
                     {busy ? "載入中……" : view.buttonLabel}

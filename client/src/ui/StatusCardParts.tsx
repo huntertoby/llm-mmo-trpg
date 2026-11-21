@@ -3,7 +3,7 @@
 // 狀態、層數、表面用 `PartTip`（點一下釘住）。畫法移植自 docs/art/sample/textless.html 的 symbol。
 import { useEffect, useRef } from "react";
 import type { SkillCard, StatusView } from "../api/types";
-import { glossaryEntry } from "../battle/glossary";
+import { gameRules, glossaryEntry } from "../battle/glossary";
 import { SOURCE_PIP_PX, sourcePipId, STAT_ICON_ID } from "../render/hudIcon";
 import { statusIconTile, surfaceTile } from "../render/skillIcon";
 import { CARD_PAD, spreadMarkCardCanvas } from "../render/spreadMark";
@@ -102,7 +102,10 @@ export function StatChipView({ chip }: { chip: StatChip }) {
 
 /** AR-SK2：狀態帶「會擴散」時，狀態卡的標籤與多一行的說明（玩法 PM 定案，交接 4.1.28 第 6 點）。 */
 export const SPREAD_TAG = "會擴散";
-export const SPREAD_NOTE = "會擴散：帶著這個狀態倒下時，以剩下的回合傳給身邊 1 格內的一名同伴；身上有好幾種時只傳一種，傳過去的仍會擴散。";
+/** 「會擴散」的說明行；幾格內照伺服器 `rules.contagion_radius`（`core.yaml`；HC-6b）。 */
+export function spreadNote(radius: number = gameRules().contagion_radius): string {
+  return `會擴散：帶著這個狀態倒下時，以剩下的回合傳給身邊 ${radius} 格內的一名同伴；身上有好幾種時只傳一種，傳過去的仍會擴散。`;
+}
 
 /** 狀態圖示，右下角寫回合數或數值；滑過看「狀態句＋說明」。帶「會擴散」時框頂上方疊記號、說明多一行。 */
 export function StatusBadge({ status, text }: { status: StatusView; text: string }) {
@@ -125,7 +128,7 @@ export function statusTipParts(id: string, spread: boolean): TipPart[] {
   const entry = glossaryEntry("statuses", id);
   const found = tipParts([entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])]);
   const parts = found.length === 0 ? [{ text: "狀態", secondary: false }] : found;
-  return spread ? [...parts, { text: SPREAD_NOTE, secondary: false }] : parts;
+  return spread ? [...parts, { text: spreadNote(), secondary: false }] : parts;
 }
 
 /** AR-SK2：狀態卡 20 的「會擴散」記號：圖示四周各多 `CARD_PAD`，疊在圖示上、不裁切（往上凸出約 7 px）。 */

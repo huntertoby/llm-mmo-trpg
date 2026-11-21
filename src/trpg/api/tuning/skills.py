@@ -78,45 +78,58 @@ _DAMAGE_SITES: Final = ("effects", "followup")
 
 type Verdict = Literal["ok", "over", "weak"]
 
+
+def _preset_tier_ap(flt: TuningGroupFilter) -> tuple[int, int | None]:
+    """快捷分組的篩選值（階級、AP）：標籤照這兩個值組字（HC-6b），篩選和標籤不會分岔。"""
+    return flt.tier[0], flt.ap_cost[0] if flt.ap_cost else None
+
+
+_RANGED_T1: Final = TuningGroupFilter(
+    tier=[1], category=["weapon"], weapon_req=["ranged"], kind=["active"], enemy_only=False
+)
+_MELEE_T1: Final = TuningGroupFilter(
+    tier=[1], category=["weapon"], weapon_req=["melee"], kind=["active"], enemy_only=False
+)
+_ARROWS: Final = TuningGroupFilter(
+    tier=[1],
+    category=["weapon"],
+    weapon_req=["ranged"],
+    ap_cost=[1],
+    kind=["active"],
+    enemy_only=False,
+    single_damage=True,
+)
+_CONDITIONAL: Final = TuningGroupFilter(
+    tier=[1],
+    category=["weapon"],
+    ap_cost=[2],
+    kind=["active"],
+    enemy_only=False,
+    has_condition=True,
+)
+_ARROWS_TIER, _ARROWS_AP = _preset_tier_ap(_ARROWS)
+_COND_TIER, _COND_AP = _preset_tier_ap(_CONDITIONAL)
+
 GROUP_PRESETS: Final = (
     TuningGroupPreset(
         key="t1_ranged_weapon",
-        label_zh="1 階遠程武器技",
-        filter=TuningGroupFilter(
-            tier=[1], category=["weapon"], weapon_req=["ranged"], kind=["active"], enemy_only=False
-        ),
+        label_zh=f"{_preset_tier_ap(_RANGED_T1)[0]} 階遠程武器技",
+        filter=_RANGED_T1,
     ),
     TuningGroupPreset(
         key="t1_melee_weapon",
-        label_zh="1 階近戰武器技",
-        filter=TuningGroupFilter(
-            tier=[1], category=["weapon"], weapon_req=["melee"], kind=["active"], enemy_only=False
-        ),
+        label_zh=f"{_preset_tier_ap(_MELEE_T1)[0]} 階近戰武器技",
+        filter=_MELEE_T1,
     ),
     TuningGroupPreset(
         key="t1_arrows_1ap",
-        label_zh="1 AP 箭類（1 階、遠程、AP 1、單體傷害）",
-        filter=TuningGroupFilter(
-            tier=[1],
-            category=["weapon"],
-            weapon_req=["ranged"],
-            ap_cost=[1],
-            kind=["active"],
-            enemy_only=False,
-            single_damage=True,
-        ),
+        label_zh=f"{_ARROWS_AP} AP 箭類（{_ARROWS_TIER} 階、遠程、AP {_ARROWS_AP}、單體傷害）",
+        filter=_ARROWS,
     ),
     TuningGroupPreset(
         key="t1_conditional_2ap",
-        label_zh="2 AP 條件型（1 階武器技，帶條件段）",
-        filter=TuningGroupFilter(
-            tier=[1],
-            category=["weapon"],
-            ap_cost=[2],
-            kind=["active"],
-            enemy_only=False,
-            has_condition=True,
-        ),
+        label_zh=f"{_COND_AP} AP 條件型（{_COND_TIER} 階武器技，帶條件段）",
+        filter=_CONDITIONAL,
     ),
 )
 """常用預設組（規格 5.4）。"""
@@ -362,7 +375,7 @@ _BORROW_AP_LIMITS: Final = (0, 0)
 """帶預支（``borrow_ap``，AP-2）的技能的 ``ap_cost``：只能是 0（``SkillDef`` 的硬規則；QF-1）。"""
 _ZERO_DEFAULT: Final = frozenset({"cost.stamina", "cost.mana"})
 _SAME_ZH: Final = "改完和原值相同（或已到邊界）"
-_BORROW_SAME_ZH: Final = "預支技能的 AP 固定是 0，不能改"
+_BORROW_SAME_ZH: Final = f"預支技能的 AP 固定是 {_BORROW_AP_LIMITS[0]}，不能改"
 
 
 def _borrows_ap(data: Any) -> bool:

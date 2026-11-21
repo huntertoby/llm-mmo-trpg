@@ -17,6 +17,7 @@ import { DialogFrame } from "../ui/DialogFrame";
 import { Hint } from "../ui/Hint";
 import { ATTR_ZH } from "./narration";
 import { OPENING_SEEN } from "./battleHints";
+import { gameRules } from "../battle/glossary";
 
 /** 這個角色現在要不要跳開場：伺服器有給開場、角色的提示紀錄裡還沒有 `opening`。 */
 export function shouldShowOpening(guide: WorldGuide | null | undefined, seen: ReadonlySet<string> | boolean): guide is WorldGuide {
@@ -62,7 +63,7 @@ export function LessonDialog({ lesson, lead, onOpen, onSkip }: LessonProps) {
         )}
         <p className="muted small">
           {lesson.kind === "flash"
-            ? "在成長面板（G）選一招、花 1 點靈感，看 4 個變化選 1 個。略過也沒關係，之後在城鎮或營火隨時能閃。"
+            ? flashLessonText()
             : "在成長面板（G）的招式卡上選「重閃」。略過也沒關係，之後在城鎮或營火隨時能做。"}
         </p>
       </div>
@@ -76,6 +77,11 @@ export function LessonDialog({ lesson, lead, onOpen, onSkip }: LessonProps) {
       </div>
     </DialogFrame>
   );
+}
+
+/** 閃現教學的說明；價格與選項數照伺服器 `rules.flash_open_cost`、`flash_open_options`（`flash_templates.yaml`；HC-6b）。 */
+export function flashLessonText(cost: number = gameRules().flash_open_cost, options: number = gameRules().flash_open_options): string {
+  return `在成長面板（G）選一招、花 ${cost} 點靈感，看 ${options} 個變化選 1 個。略過也沒關係，之後在城鎮或營火隨時能閃。`;
 }
 
 const ATTR_ORDER = ["str", "dex", "con", "int", "wis", "wil"] as const;

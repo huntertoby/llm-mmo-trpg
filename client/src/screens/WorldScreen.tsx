@@ -501,7 +501,7 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
       if (waited === "cancel") return;
       if (waited === "timeout" && mode === "text") {
         // PK-4：願望驅動時退回「從清單點選」（同一個分頁）
-        const note = view?.wish != null && tagMode(view.wish) ? WISH_ZH.tagTimeout : WISH_ZH.timeout;
+        const note = view?.wish != null && tagMode(view.wish) ? WISH_ZH.tagTimeout() : WISH_ZH.timeout();
         setWishFallback((cur) => ({ seq: (cur?.seq ?? 0) + 1, text: note }));
         return;
       }
