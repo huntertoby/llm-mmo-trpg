@@ -87,12 +87,6 @@ type CoreFn = Callable[[SkillDef, ContentLibrary], dict[str, Fraction]]
 type KnobFn = Callable[[list[dict[str, Any]], ContentLibrary], list[Knob]]
 
 _PERMILLE = 1000
-_TUNE_ATTEMPTS = 3
-"""同一份草稿最多試幾次不同的調整亂數（同 :data:`trpg.skillgen.flash_derive.TUNE_ATTEMPTS`）。"""
-_CAP_SHRINK_STEPS = 6
-_CAP_SHRINK_PERMILLE = 30
-"""壓回單發上限時，目標比例每次再往下退多少‰（離散的骰子階梯可能一次跳過上限）。"""
-_MAX_COST_CUTS = 12
 
 POWER_GROUPS: dict[str, str] = {
     "damage": "damage",
@@ -203,7 +197,7 @@ def _tuned(
 ) -> SkillDef | None:
     base, effects = draft
     extra, knobs = trade.gain(base, effects, library)
-    for attempt in range(_TUNE_ATTEMPTS):
+    for attempt in range(library.flash.rules.search.tune_attempts):
         done = retune(
             base,
             effects,
@@ -282,7 +276,7 @@ def _cost_cuts(base: dict[str, Any], library: ContentLibrary) -> Iterator[dict[s
     made = 0
     for cut in library.flash.rules.complete.cost_cuts:
         holder = current if cut.field in ("stance_upkeep", "ap_cost") else current.get("cost")
-        while isinstance(holder, dict) and made < _MAX_COST_CUTS:
+        while isinstance(holder, dict) and made < library.flash.rules.search.max_cost_cuts:
             value = holder.get(cut.field)
             if not value or value - cut.step < library.ruleset.core.cost_floor(cut.field):
                 break
@@ -311,8 +305,9 @@ def _cost_cut(
         if report is None:
             continue
         aim = min(cap_total / report.usable, report.max_ratio)
-        for shrink in range(_CAP_SHRINK_STEPS):
-            ratio = aim * Fraction(_PERMILLE - shrink * _CAP_SHRINK_PERMILLE, _PERMILLE)
+        search = library.flash.rules.search
+        for shrink in range(search.cap_shrink_steps):
+            ratio = aim * Fraction(_PERMILLE - shrink * search.cap_shrink_permille, _PERMILLE)
             if ratio < max(floor_ratio, report.min_ratio):
                 break
             skill = _tuned(

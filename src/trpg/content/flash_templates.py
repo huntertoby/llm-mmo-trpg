@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 from collections import Counter
+from fractions import Fraction
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -34,7 +35,9 @@ from trpg.content.skills import EffectSpec, ReactionSpec, ShapeSpec, TrapSpec, T
 from trpg.content.skills.modifiers import ModifierChange
 
 __all__ = [
+    "DRAFT_COST_FIELDS",
     "FLASH_KINDS",
+    "USAGE_SCORE_OPS",
     "BattleVariantText",
     "CompleteSkillRules",
     "ExtraMajorTemplate",
@@ -43,6 +46,7 @@ __all__ = [
     "FlashKind",
     "FlashPricing",
     "FlashRules",
+    "FlashSearch",
     "FlashTable",
     "FlashTemplate",
     "FlashTerm",
@@ -50,6 +54,7 @@ __all__ = [
     "PriceRule",
     "TransformTarget",
     "TransformTemplate",
+    "UsageScoreOp",
     "VariantPlace",
 ]
 
@@ -122,9 +127,77 @@ class CompleteSkillRules(ContentModel):
         return self
 
 
+type UsageScoreOp = Literal[
+    "area",
+    "range",
+    "reshape",
+    "multi_hit",
+    "followup",
+    "followup_potency",
+    "kill_refund",
+    "extend",
+    "charge",
+    "light",
+    "keyword_exploit",
+    "keyword_imbue",
+    "mod_keyword",
+]
+"""有用法分數的小變化 ``op``（:func:`trpg.skillgen.flash_offer._usage_score`；收束另看
+``converge_usage_score``）。"""
+USAGE_SCORE_OPS: tuple[UsageScoreOp, ...] = (
+    "area",
+    "range",
+    "reshape",
+    "multi_hit",
+    "followup",
+    "followup_potency",
+    "kill_refund",
+    "extend",
+    "charge",
+    "light",
+    "keyword_exploit",
+    "keyword_imbue",
+    "mod_keyword",
+)
+
+DRAFT_COST_FIELDS: tuple[str, ...] = ("mana", "stamina", "cooldown")
+"""轉型草稿依序試的代價可以寫的欄位（法力、耐力是換算前的單位，程式經 ``CoreRules.scaled_cost``
+乘 ``quantity_scale``）。"""
+
+
+class FlashSearch(ContentModel):
+    """閃現生成器的搜尋參數（HC-5a 從 ``skillgen/flash_derive.py``、``flash_major.py``、
+    ``flash_trade.py`` 搬來，值不變）。不是玩法數值，但會改變做得出來的招，所以寫在資料裡；不開進
+    工坊。"""
+
+    tune_attempts: int = Field(ge=1, le=10)
+    """同一份草稿最多試幾次不同的調整亂數（強度下限讓一次調整失敗的機會變大）。"""
+    strict_margin_millipoints: int = Field(ge=0, le=1000)
+    """結構不變、只靠重調變強的變化（``STRICT_OPS``、護盾量提高）：預算分數至少要比變化前多
+    這麼多「千分之一點」（10 ＝ 0.01 點）。"""
+    cap_shrink_steps: int = Field(ge=1, le=20)
+    """壓回單發上限時，目標比例最多往下退幾次。"""
+    cap_shrink_permille: int = Field(ge=0, le=1000)
+    """壓回單發上限時，目標比例每次再往下退多少‰（離散的骰子階梯可能一次跳過上限）。"""
+    max_cost_cuts: int = Field(ge=0, le=50)
+    """超過單發上限、改成減費用時，最多累計減幾格代價。"""
+
+    @property
+    def strict_margin(self) -> Fraction:
+        return Fraction(self.strict_margin_millipoints, 1000)
+
+
+def _steps_up(values: tuple[int, ...], name: str) -> tuple[int, ...]:
+    if not values or values[0] < 1 or list(values) != sorted(set(values)):
+        raise ValueError(f"{name} 必須非空、從正數開始嚴格遞增")
+    return values
+
+
 class FlashRules(ContentModel):
     """閃現的規則數值（6.34.2、6.34.3）。HC-4b3 起數字都必填（``content/flash_templates.yaml``
-    的 ``rules`` 每格都有寫）；形態幅度的上限對照 ``enter_form`` 原語在載入內容庫時檢查。"""
+    的 ``rules`` 每格都有寫）；形態幅度的上限對照 ``enter_form`` 原語在載入內容庫時檢查。
+    HC-5a 起小變化、轉型、出題的步階與上限也寫在這裡（原本是 ``skillgen/flash_*.py`` 的
+    模組常數）。"""
 
     max_flashes: int = Field(ge=1, le=9)
     major_flash: int = Field(ge=1, le=9)
@@ -201,6 +274,59 @@ class FlashRules(ContentModel):
     修正幅度。"""
     max_side_per_offer: int = Field(default=1, ge=0, le=4)
     """每次閃現（或重閃）最多出幾張側變（SK-1，06 6.38 第 3 點：最多 1 張）。"""
+    # --- HC-5a：小變化（skillgen/flash_ops.py、flash_cost.py、flash_reclaim.py） ---
+    charge_cooldown_step: int = Field(ge=1, le=6)
+    """蓄力（主動技）每次把冷卻加幾回合（6.34.4）。"""
+    max_charge_cooldown: int = Field(ge=0, le=6)
+    """蓄力把冷卻加到最多幾回合（6.34.4）；姿態的「費用」小變化加冷卻也不超過這個數。"""
+    charge_duration_cap: int = Field(ge=0, le=6)
+    """蓄力累計最多比原招多幾回合（06 6.34 費用方向第 1 點）。"""
+    max_triggers_per_round: int = Field(ge=1, le=9)
+    """「每回合觸發次數上限 +1」最多加到幾次（再由驗證器的 6.6 硬上限擋）。"""
+    hp_relax_step_permille: int = Field(ge=0, le=1000)
+    """條件放寬一級：血量門檻（‰）放寬多少。"""
+    hp_relax_max_permille: int = Field(ge=0, le=1000)
+    """條件放寬後的血量門檻最多到這個值（‰）。"""
+    hp_tighten_step_permille: int = Field(ge=0, le=1000)
+    """專注的條件收緊一級：血量門檻（‰）收緊多少（同條件放寬的一級）。"""
+    hp_tighten_min_permille: int = Field(ge=0, le=1000)
+    """收緊後的血量門檻不低於這個值（‰）。"""
+    added_hp_condition_permille: int = Field(ge=0, le=1000)
+    """條件放寬多加的「或」分支、專注在沒有條件時加的條件：目標（或自身）血量低於這個值（‰）。"""
+    max_empty_slots_cap: int = Field(ge=1, le=6)
+    """「計數上限 +1」最多加到幾格（也不超過主動技能欄數；不能超過 ``empty_slots_cap`` 的
+    schema 上限 6）。"""
+    blood_bonus_permille: int = Field(ge=0, le=1000)
+    """側變「以血支付」：生命代價的折抵比省下的法力／耐力折抵多這麼多 ‰（「威力略升」）。"""
+    summon_hp_steps: tuple[int, ...]
+    """召喚物最大 HP 加成（‰）的階梯：強壯（``summon_toughen``）與合體依序試，第一個過預算窗與
+    下限的是結果。"""
+    new_damage_multiplier_permille: int = Field(ge=1, le=10000)
+    """小變化新增傷害效果時，武器技的起始倍率（‰；之後由旋鈕重調；法術技用骰子）。"""
+    followup_potency_tries: int = Field(ge=0, le=50)
+    """接續段強化依序試「第一段接續傷害往上 1～n 格」的草稿數。"""
+    followup_ease_steps: int = Field(ge=0, le=20)
+    """接續段範圍、距離、第二元素：原本的接續段傷害最多往下讓幾格。"""
+    followup_fine_top_permille: int = Field(ge=0, le=10000)
+    """接續段細階梯（``followup_multiplier_step``）只細到這裡（‰；以上照原階梯）。"""
+    # --- HC-5a：出題（skillgen/flash_offer.py） ---
+    usage_scores: dict[UsageScoreOp, int]
+    """用法分數（原型 AI 權重；越高越優先）：小變化 ``op`` → 用法條件成立時加幾分（每個 op 的條件
+    寫在程式）。"""
+    usage_multi_targets_permille: int = Field(ge=0, le=10000)
+    """平均目標數達到這個數（‰）視為「常打到多個目標」。"""
+    usage_frequent_uses: int = Field(ge=0, le=100)
+    """放出次數達到這個數視為常用（輕巧優先）。"""
+    second_keyword_cap: int = Field(ge=1, le=20)
+    """每個「第二個關鍵字」模板最多列幾個關鍵字。"""
+    # --- HC-5a：大變化與轉型（skillgen/flash_major.py） ---
+    transform_carry_max: int = Field(ge=1, le=4)
+    """轉型帶得走的核心效果（敵對的傷害、狀態，或輔助技的友方效果）最多幾個。"""
+    beside_power_step_permille: int = Field(ge=1, le=1000)
+    """伴生、護主的縮小版召喚物：強度不在預算窗內時，每這麼多‰ 一格往上下試（最低是
+    ``core.skill_limits.min_beside_power_permille``，最高 1000）。"""
+    search: FlashSearch
+    """生成器的搜尋參數（不是玩法數值）。"""
 
     @model_validator(mode="after")
     def _check(self) -> FlashRules:
@@ -213,6 +339,10 @@ class FlashRules(ContentModel):
             raise ValueError("major_flash 不可大於 max_flashes")
         _ladder(self.stance_magnitudes, "stance_magnitudes")
         _ladder(self.form_magnitudes, "form_magnitudes")
+        _steps_up(self.summon_hp_steps, "summon_hp_steps")
+        missing = [op for op in USAGE_SCORE_OPS if op not in self.usage_scores]
+        if missing:
+            raise ValueError(f"usage_scores 缺少：{', '.join(missing)}")
         return self
 
     def budget_bonus_permille(self, flashes: int) -> int:
@@ -411,6 +541,19 @@ class TransformTemplate(ContentModel):
     個落在預算窗內的）。原招有傷害時先試 :attr:`FlashTable.stance_ladders` 的同元素元素姿態。"""
     damage_permille_steps: tuple[int, ...] = ()
     """``modifier``：「傷害 +n‰」候選（由大到小，第一個落在預算窗內的）。"""
+    draft_costs: tuple[dict[str, int], ...] = ()
+    """新種類依序試的代價（HC-5a 從 ``skillgen/flash_major.py`` 搬來）：被動、反應、召喚、陷阱與
+    TF-1 的四種轉型必填；姿態、修正型被動不填。法力、耐力是換算前的單位（程式乘
+    ``quantity_scale``）。``{}`` ＝ 不花代價。"""
+    draft_range: int | None = Field(default=None, ge=1, le=8)
+    """新種類的射程（反應的單體目標、召喚與陷阱的指定格）；轉成反應、召喚、陷阱時必填，其他不填。"""
+    draft_ap_cost: int | None = Field(default=None, ge=1, le=3)
+    """新種類（主動技）的 AP；轉成召喚、陷阱時必填，其他不填。"""
+    max_trap_effects: int | None = Field(default=None, ge=1, le=4)
+    """轉成陷阱時，陷阱觸發的效果最多帶幾個（不含放置陷阱本身）；轉成陷阱時必填。"""
+    stance_upkeeps: tuple[int, ...] = ()
+    """轉成元素姿態時依序試的維持費（點數；先 1 點：隨階級變強的階梯在維持費 1 時對上預算窗）；
+    轉成姿態時必填。"""
 
     @model_validator(mode="after")
     def _check(self) -> TransformTemplate:
@@ -431,7 +574,29 @@ class TransformTemplate(ContentModel):
             raise ValueError(f"轉型 {self.id}：heal_reaction 只給輔助技轉反應（援手）用")
         if self.to == "summon" and self.summon_duration is None:
             raise ValueError(f"轉型 {self.id}：轉成 summon 時必須填 summon_duration")
+        self._check_drafts()
         return self
+
+    def _check_drafts(self) -> None:
+        """HC-5a 的草稿欄位：用到時必填、用不到時不填。"""
+        uses = {
+            "draft_costs": (self.to not in ("stance", "modifier"), bool(self.draft_costs)),
+            "draft_range": (
+                self.to in ("reaction", "summon", "trap"),
+                self.draft_range is not None,
+            ),
+            "draft_ap_cost": (self.to in ("summon", "trap"), self.draft_ap_cost is not None),
+            "max_trap_effects": (self.to == "trap", self.max_trap_effects is not None),
+            "stance_upkeeps": (self.to == "stance", bool(self.stance_upkeeps)),
+        }
+        bad = sorted({k for cost in self.draft_costs for k in cost} - set(DRAFT_COST_FIELDS))
+        if bad:
+            raise ValueError(f"轉型 {self.id}：draft_costs 只能寫 {'、'.join(DRAFT_COST_FIELDS)}")
+        for field, (needed, present) in uses.items():
+            if needed and not present:
+                raise ValueError(f"轉型 {self.id}：轉成 {self.to} 時必須填 {field}")
+            if present and not needed:
+                raise ValueError(f"轉型 {self.id}：轉成 {self.to} 時不用填 {field}")
 
 
 class ExtraMajorTemplate(ContentModel):
@@ -466,6 +631,12 @@ class ExtraMajorTemplate(ContentModel):
     say_zh: str | None = None
     """選中時下固定區的一句話（FL-1b 9.3）；可帶 ``{shape}``、``{cells}``、``{range}``、
     ``{n}`` 與術語標記 ``[[術語|字]]``。省略時由差異清單照句型組。"""
+
+    @model_validator(mode="after")
+    def _check(self) -> ExtraMajorTemplate:
+        if self.only == "borrow" and (self.amount is None or self.uses is None):
+            raise ValueError(f"大變化補充模板 {self.id}：only: borrow 必須填 amount 與 uses")
+        return self
 
 
 class FlashHeadline(ContentModel):

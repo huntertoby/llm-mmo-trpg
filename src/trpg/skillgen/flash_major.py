@@ -103,8 +103,6 @@ _RESET: dict[str, Any] = {
 _HOSTILE = (None, "enemies")
 _CORE_TYPES = ("damage", "apply_status")
 """被動、反應、陷阱帶得走的敵對效果（其餘原語在轉型時省略）。"""
-_MAX_CARRIED = 2
-_MAX_TRAP_EFFECTS = 3
 
 
 # ---------------------------------------------------------------------------
@@ -139,9 +137,9 @@ def skill_element_id(skill: SkillDef) -> str | None:
     return found[0] if found else None
 
 
-def _hostile_core(skill: SkillDef) -> list[dict[str, Any]]:
+def _hostile_core(skill: SkillDef, library: ContentLibrary) -> list[dict[str, Any]]:
     """整招（含接續段）敵對的核心效果（傷害優先、再來狀態；同類主段在前），最多
-    :data:`_MAX_CARRIED` 個；去掉骰子與倍率（新種類由預算器重調）。"""
+    ``rules.transform_carry_max`` 個；去掉骰子與倍率（新種類由預算器重調）。"""
     out: list[dict[str, Any]] = []
     for effect in sorted(_whole_effects(skill), key=lambda e: e.type != "damage"):
         if effect.type not in _CORE_TYPES or effect.affects not in _HOSTILE:
@@ -159,7 +157,7 @@ def _hostile_core(skill: SkillDef) -> list[dict[str, Any]]:
                 item["duration"] = effect.duration
         if item not in out:
             out.append(item)
-    return out[:_MAX_CARRIED]
+    return out[: library.flash.rules.transform_carry_max]
 
 
 def _retag(skill: SkillDef, *extra: str) -> list[str]:
@@ -189,12 +187,12 @@ def _concept(skill: SkillDef, template: TransformTemplate) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def _to_passive(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> list[_Draft]:
-    effects = _hostile_core(skill)
+def _to_passive(skill: SkillDef, t: TransformTemplate, library: ContentLibrary) -> list[_Draft]:
+    effects = _hostile_core(skill, library)
     if not effects or t.trigger is None:
         return []
     drafts: list[_Draft] = []
-    for cost in ({"mana": 2}, {"mana": 2, "cooldown": 2}, {}):
+    for cost in t.draft_costs:
         base = _new_base(
             skill,
             kind="passive",
@@ -202,7 +200,7 @@ def _to_passive(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> 
             ap_cost=None,
             shape={"type": "self"},
             trigger=t.trigger.model_dump(mode="json", exclude_none=True),
-            cost=_lib.ruleset.core.scaled_cost(cost),
+            cost=library.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "passive"),
             narrative=_concept(skill, t),
         )
@@ -210,20 +208,20 @@ def _to_passive(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> 
     return drafts
 
 
-def _to_reaction(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> list[_Draft]:
-    effects = _hostile_core(skill)
+def _to_reaction(skill: SkillDef, t: TransformTemplate, library: ContentLibrary) -> list[_Draft]:
+    effects = _hostile_core(skill, library)
     if not effects or t.reaction is None:
         return []
     drafts: list[_Draft] = []
-    for cost in ({"cooldown": 1}, {"mana": 2, "cooldown": 1}, {"cooldown": 2}):
+    for cost in t.draft_costs:
         base = _new_base(
             skill,
             kind="reaction",
             skeleton="reaction",
             ap_cost=None,
-            shape={"type": "single", "range": 2},
+            shape={"type": "single", "range": t.draft_range},
             reaction=t.reaction.model_dump(mode="json", exclude_none=True),
-            cost=_lib.ruleset.core.scaled_cost(cost),
+            cost=library.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "reaction"),
             narrative=_concept(skill, t),
         )
@@ -231,14 +229,7 @@ def _to_reaction(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) ->
     return drafts
 
 
-_SUMMON_COSTS: tuple[dict[str, Any], ...] = (
-    {"mana": 10, "cooldown": 4},
-    {"mana": 8, "cooldown": 3},
-    {"mana": 12, "cooldown": 5},
-)
-
-
-def _to_summon(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> list[_Draft]:
+def _to_summon(skill: SkillDef, t: TransformTemplate, library: ContentLibrary) -> list[_Draft]:
     if is_summon_skill(skill):
         return []
     assert t.summon_duration is not None  # 轉成召喚時必填（TransformTemplate._check）
@@ -247,14 +238,14 @@ def _to_summon(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> l
     drafts: list[_Draft] = []
     for boost in ({}, *t.summon_boosts):
         for unit in dict.fromkeys(units):
-            for cost in _SUMMON_COSTS:
+            for cost in t.draft_costs:
                 base = _new_base(
                     skill,
                     kind="active",
                     skeleton="summon",
-                    ap_cost=1,
-                    shape={"type": "ground_tile", "range": 4},
-                    cost=_lib.ruleset.core.scaled_cost(cost),
+                    ap_cost=t.draft_ap_cost,
+                    shape={"type": "ground_tile", "range": t.draft_range},
+                    cost=library.ruleset.core.scaled_cost(cost),
                     tags=_retag(skill, "summon"),
                     narrative=_concept(skill, t),
                 )
@@ -263,30 +254,27 @@ def _to_summon(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> l
     return drafts
 
 
-def _to_trap(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> list[_Draft]:
-    effects = _hostile_core(skill)
+def _to_trap(skill: SkillDef, t: TransformTemplate, library: ContentLibrary) -> list[_Draft]:
+    effects = _hostile_core(skill, library)
     if not effects or t.trap is None or skill.trap is not None:
         return []
+    assert t.max_trap_effects is not None  # 轉成陷阱時必填（TransformTemplate._check_drafts）
     drafts: list[_Draft] = []
-    for cost in ({"mana": 6, "cooldown": 2}, {"mana": 6, "cooldown": 3}, {"mana": 4}):
+    for cost in t.draft_costs:
         base = _new_base(
             skill,
             kind="active",
             skeleton="trap",
-            ap_cost=2,
-            shape={"type": "ground_tile", "range": 4},
+            ap_cost=t.draft_ap_cost,
+            shape={"type": "ground_tile", "range": t.draft_range},
             trap=t.trap.model_dump(mode="json", exclude_none=True),
-            cost=_lib.ruleset.core.scaled_cost(cost),
+            cost=library.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "trap"),
             narrative=_concept(skill, t),
         )
         placed = [{"type": "place_trap"}, *(dict(e) for e in effects)]
-        drafts.append((base, placed[: _MAX_TRAP_EFFECTS + 1]))
+        drafts.append((base, placed[: t.max_trap_effects + 1]))
     return drafts
-
-
-_STANCE_UPKEEPS = (1, 2, 0)
-"""元素姿態轉型依序試的維持費（先 1 點：隨階級變強的階梯在維持費 1 時對上預算窗）。"""
 
 
 def _stance_candidates(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
@@ -297,7 +285,7 @@ def _stance_candidates(skill: SkillDef, t: TransformTemplate, lib: ContentLibrar
     out: list[tuple[str, int]] = []
     if offense:
         ladder = lib.flash.stance_ladders.get(skill_element_id(skill) or "physical", ())
-        out += [(s, u) for u in _STANCE_UPKEEPS for s in ladder]
+        out += [(s, u) for u in t.stance_upkeeps for s in ladder]
     out += [(s, 0) for s in t.stances.get("offense" if offense else "defense", ())]
     return [
         ({"upkeep": u}, [{"type": "apply_status", "status": s, "affects": "self"}])
@@ -324,10 +312,12 @@ def _to_stance(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> li
     return drafts
 
 
-def _modifier_changes(skill: SkillDef, t: TransformTemplate) -> list[dict[str, Any]]:
+def _modifier_changes(
+    skill: SkillDef, t: TransformTemplate, library: ContentLibrary
+) -> list[dict[str, Any]]:
     """修正規則的候選改變（依序試）：先帶上原招的敵對狀態，再來傷害提高（由大到小）。"""
     changes: list[dict[str, Any]] = []
-    status = next((e for e in _hostile_core(skill) if e["type"] == "apply_status"), None)
+    status = next((e for e in _hostile_core(skill, library) if e["type"] == "apply_status"), None)
     if status is not None:
         carried = {k: v for k, v in status.items() if k != "duration"}
         changes.append({"on_hit_effects": [{**carried, "duration": 1}]})
@@ -335,13 +325,13 @@ def _modifier_changes(skill: SkillDef, t: TransformTemplate) -> list[dict[str, A
     return changes
 
 
-def _to_modifier(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> list[_Draft]:
+def _to_modifier(skill: SkillDef, t: TransformTemplate, library: ContentLibrary) -> list[_Draft]:
     if not t.damage_permille_steps or skill.kind != "active" or is_summon_skill(skill):
         return []
     element = skill_element_id(skill)
     target = {"skill_tags": [element]} if element is not None else {"all_attacks": True}
     drafts: list[_Draft] = []
-    for change in _modifier_changes(skill, t):
+    for change in _modifier_changes(skill, t, library):
         base = _new_base(
             skill,
             kind="modifier",
@@ -382,15 +372,16 @@ def _beside(unit: str, duration: int, power: int, *, strike: bool = False) -> di
     return effect
 
 
-_POWER_STEP = 100
-_MIN_POWER = 100
-
-
-def _power_tries(start: int, costs: Sequence[dict[str, Any]]) -> list[tuple[int, dict[str, Any]]]:
+def _power_tries(
+    start: int, costs: Sequence[dict[str, Any]], library: ContentLibrary
+) -> list[tuple[int, dict[str, Any]]]:
     """縮小版召喚物依序試的（強度‰, 代價）：先試數值工坊的設定值（每種代價），不在預算窗內時再
-    依離設定值的遠近、每 100‰ 一格往上下試（100～1000，同距離先往上）。召喚到身邊沒有可調的
+    依離設定值的遠近、每 ``rules.beside_power_step_permille`` 一格往上下試（最低
+    ``skill_limits.min_beside_power_permille``，最高 1000，同距離先往上）。召喚到身邊沒有可調的
     骰子，強度由這裡找進預算窗。"""
-    powers = {start, *range(_MIN_POWER, _NORMAL_POWER + 1, _POWER_STEP)}
+    low = library.ruleset.core.skill_limits.min_beside_power_permille
+    step = library.flash.rules.beside_power_step_permille
+    powers = {start, *range(low, _NORMAL_POWER + 1, step)}
     ordered = sorted(powers, key=lambda p: (abs(p - start), -p))
     return [(p, dict(c)) for p in ordered for c in costs]
 
@@ -402,7 +393,7 @@ def _to_companion(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) ->
         return []
     rules = lib.budget.flash_transform
     drafts: list[_Draft] = []
-    for power, cost in _power_tries(rules.companion_power_permille, ({}, {"mana": 2}, {"mana": 4})):
+    for power, cost in _power_tries(rules.companion_power_permille, t.draft_costs, lib):
         effect = _beside(unit, rules.companion_duration, power)
         base = _new_base(
             skill,
@@ -419,14 +410,6 @@ def _to_companion(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) ->
     return drafts
 
 
-_GUARDIAN_COSTS: tuple[dict[str, Any], ...] = (
-    {"cooldown": 1},
-    {"mana": 2, "cooldown": 1},
-    {"cooldown": 2},
-    {"mana": 4, "cooldown": 2},
-)
-
-
 def _to_guardian(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
     """護主：被近戰攻擊時在身邊召出縮小版召喚物，立刻反咬攻擊者一次。"""
     unit = _summon_unit(skill)
@@ -434,14 +417,14 @@ def _to_guardian(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> 
         return []
     rules = lib.budget.flash_transform
     drafts: list[_Draft] = []
-    for power, cost in _power_tries(rules.guardian_power_permille, _GUARDIAN_COSTS):
+    for power, cost in _power_tries(rules.guardian_power_permille, t.draft_costs, lib):
         effect = _beside(unit, rules.guardian_duration, power, strike=True)
         base = _new_base(
             skill,
             kind="reaction",
             skeleton="reaction",
             ap_cost=None,
-            shape={"type": "single", "range": 2},
+            shape={"type": "single", "range": t.draft_range},
             reaction=t.reaction.model_dump(mode="json", exclude_none=True),
             cost=lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "reaction", "summon"),
@@ -452,7 +435,8 @@ def _to_guardian(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> 
 
 
 def _support_core(skill: SkillDef, lib: ContentLibrary) -> list[dict[str, Any]]:
-    """輔助技帶得走的友方效果（治療、護盾、有益狀態；主段在前），最多 :data:`_MAX_CARRIED` 個；
+    """輔助技帶得走的友方效果（治療、護盾、有益狀態；主段在前），最多 ``rules.transform_carry_max``
+    個；
     一律改成作用在友方（庇佑、援手的對象是另一名友方），去掉骰子（新種類由預算器重調）。"""
     known = lib.ruleset.statuses.by_id()
     out: list[dict[str, Any]] = []
@@ -471,7 +455,7 @@ def _support_core(skill: SkillDef, lib: ContentLibrary) -> list[dict[str, Any]]:
                 item["duration"] = effect.duration
         if item not in out:
             out.append(item)
-    return out[:_MAX_CARRIED]
+    return out[: lib.flash.rules.transform_carry_max]
 
 
 def _to_blessing(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
@@ -480,7 +464,7 @@ def _to_blessing(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> 
     if not effects or t.trigger is None:
         return []
     drafts: list[_Draft] = []
-    for cost in ({"mana": 2}, {"mana": 2, "cooldown": 2}, {}):
+    for cost in t.draft_costs:
         base = _new_base(
             skill,
             kind="passive",
@@ -505,13 +489,13 @@ def _to_aid(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[
     if not effects or reaction is None:
         return []
     drafts: list[_Draft] = []
-    for cost in ({"cooldown": 1}, {"mana": 2, "cooldown": 1}, {"cooldown": 2}):
+    for cost in t.draft_costs:
         base = _new_base(
             skill,
             kind="reaction",
             skeleton="reaction",
             ap_cost=None,
-            shape={"type": "single", "range": 1},
+            shape={"type": "single", "range": t.draft_range},
             reaction=reaction.model_dump(mode="json", exclude_none=True),
             cost=lib.ruleset.core.scaled_cost(cost),
             tags=_retag(skill, "reaction"),
@@ -554,7 +538,7 @@ def _fits(template: TransformTemplate, skill: SkillDef, library: ContentLibrary)
             and bool(_support_core(skill, library))
         )
     if template.to in ("passive", "reaction"):
-        return bool(_hostile_core(skill))
+        return bool(_hostile_core(skill, library))
     return True
 
 
@@ -833,9 +817,6 @@ def extra_summary(library: ContentLibrary, variation: Variation) -> str:
     return template.summary_zh.replace("{keyword}", name)
 
 
-_STRICT_MARGIN = Fraction(1, 100)
-"""護盾量提高要比原本的預算分數嚴格多出來的點數（同 ``flash_derive.STRICT_MARGIN``）。"""
-
 _PREFER = 1_000
 """指定橋接關鍵字時給的「持有數」（遠大於實際值，讓它排第一）。"""
 
@@ -902,7 +883,8 @@ def _apply_shield(
     potency = template.op == "shield_potency"
     if not potency:
         effects[index]["status"] = template.status
-    floor = budget_power(skill, library) + (_STRICT_MARGIN if potency else Fraction(0))
+    margin = library.flash.rules.search.strict_margin  # 護盾量提高：分數要嚴格變大
+    floor = budget_power(skill, library) + (margin if potency else Fraction(0))
     done = retune(base, effects, rng, library, floor=floor)
     if done is None or not meets_floor(skill, done, library):
         return None
@@ -938,13 +920,14 @@ def _apply_borrow(
     if template.op != "borrow_deep" or not skill.borrows_ap:
         return None
     base, effects = _base(skill)
-    amount = template.amount or 2
+    assert template.amount is not None and template.uses is not None  # borrow 必填（模板驗證）
+    amount = template.amount
     for effect in effects:
         if effect["type"] == "borrow_ap":
             if int(effect.get("amount") or 1) >= amount:
                 return None  # 已經預支這麼多：沒有變化
             effect["amount"] = amount
-    base["cost"] = {**base["cost"], "uses_per_battle": template.uses or 1}
+    base["cost"] = {**base["cost"], "uses_per_battle": template.uses}
     return fixed_strength(base, effects, library)
 
 

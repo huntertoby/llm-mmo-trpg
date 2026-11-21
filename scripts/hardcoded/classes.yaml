@@ -1480,6 +1480,17 @@ rules:
       - '<module>._MULTI_TARGETS_PERMILLE'
       - '_usage_score'
     note: 同上一條（skillgen config）。
+  - id: py-skillgen-flash-ops-structure-hc5a
+    class: const
+    status: done
+    files: src/trpg/skillgen/flash_ops.py
+    kind: number
+    scope: _op_mod_cost
+    slot: 'cmp:len(skill.modifiers)'
+    value: '2'
+    note: >-
+      HC-5a：代價減輕「至少留一條規則」——要有 2 條以上的修正規則才能減其中一條的代價，2 是「至少 1 條
+      ＋要減的那 1 條」的結構數，不是規則上限（上限另讀 core.skill_limits.max_modifiers）。
   - id: py-skillgen-flash-ops-config-number
     class: config
     status: todo

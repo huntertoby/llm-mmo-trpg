@@ -27,13 +27,13 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.engine.ids import SHIELDED
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
 from trpg.skillgen.evolution import multiplier_ladder
 from trpg.skillgen.flash_major import fixed_strength
 
 __all__ = [
-    "CHARGE_DURATION_CAP",
     "CHARGE_DURATION_STEP",
     "COST_OPS",
     "LIGHT_UNPRICED_STEP",
@@ -55,8 +55,6 @@ COST_OPS = frozenset({"charge", "light"})
 """照這個模組的規則出題的小變化 ``op``（主動技的蓄力、輕巧；姿態的維持費 ±1 不在這裡）。"""
 CHARGE_DURATION_STEP = 1
 """蓄力每次最多加幾回合（06 6.34 費用方向第 1 點）。"""
-CHARGE_DURATION_CAP = 2
-"""蓄力累計最多比原招多幾回合（同上）。"""
 MIN_DURATION = 1
 """輕巧降回合時最少留幾回合（同上第 2 點）。"""
 LIGHT_UNPRICED_STEP = 1
@@ -84,8 +82,6 @@ _MAGNITUDE_TYPES = frozenset({"apply_status", "create_surface"})
 _BUFF_DURATION_TYPES = frozenset({"grant_skill", "shield", "cheat_death", "redirect_damage"})
 """回合算「狀態回合」的增益原語（06 6.34「費用方向」第 6 點）：FL-1c 的暫時給技能；FL-1d 補定的
 護盾、不死、轉移傷害的回合。給 AP、額外反應的 **數量** 不算（一次 +1 跳太大，玩法 PM 定）。"""
-_SHIELD_DEFAULT_DURATION = 2
-"""護盾省略 ``duration`` 時的回合（``skill_primitives.yaml`` 的 shield：2–3，省略＝2）。"""
 _ALLY_ZONE = "allies"
 """只對友方結算的持續區域（例：戰歌）：區域回合算增益的狀態回合（FL-1c），區域裡巢狀的狀態也照直接
 施加的狀態算強度與回合（FL-1d）；對敵方或全體的區域不算。"""
@@ -139,10 +135,10 @@ def _walk(
                 yield index, sub, inner
 
 
-def strength_table(skill: SkillDef) -> dict[str, Fraction]:
+def strength_table(skill: SkillDef, library: ContentLibrary) -> dict[str, Fraction]:
     """技能各效果（含接續段、只對友方的區域裡巢狀的狀態）的強度欄位：
     ``<group>[i]:<原語>:<狀態>.<欄位>``（巢狀 ``<group>[i].effects[j]:…``）→ 數值。狀態與表面沒寫
-    強度時算 1000（中性）；護盾沒寫回合時算 2。"""
+    強度時算 1000（中性）；護盾沒寫回合時算護盾狀態的預設回合（:func:`_shield_duration`）。"""
     out: dict[str, Fraction] = {}
     for group, effects in _groups(skill):
         for index, sub, effect in _walk(effects):
@@ -153,14 +149,14 @@ def strength_table(skill: SkillDef) -> dict[str, Fraction]:
                 elif field == "magnitude_permille" and effect["type"] in _MAGNITUDE_TYPES:
                     out[f"{key}.{field}"] = Fraction(_NEUTRAL_MAGNITUDE)
                 elif field == "duration" and effect["type"] == "shield":
-                    out[f"{key}.{field}"] = Fraction(_SHIELD_DEFAULT_DURATION)
+                    out[f"{key}.{field}"] = Fraction(_shield_duration(library, effect))
     return out
 
 
-def strength_moves(before: SkillDef, after: SkillDef) -> tuple[bool, bool]:
+def strength_moves(before: SkillDef, after: SkillDef, library: ContentLibrary) -> tuple[bool, bool]:
     """（有沒有任何一項嚴格變強，有沒有任何一項嚴格變弱）。只比兩邊都有的欄位（同一個位置、同一種
     原語與狀態）；結構改變的部分不算。"""
-    old, new = strength_table(before), strength_table(after)
+    old, new = strength_table(before, library), strength_table(after, library)
     common = sorted(set(old) & set(new))
     return (
         any(new[k] > old[k] for k in common),
@@ -225,13 +221,22 @@ def _has_rounds(effect: dict[str, Any]) -> bool:
     return kind == "zone" and effect.get("affects") == _ALLY_ZONE
 
 
+def _shield_duration(library: ContentLibrary, effect: dict[str, Any]) -> int:
+    """護盾省略 ``duration`` 時的回合：護盾狀態（``status``，省略＝``shielded``）的預設回合，同引擎
+    結算（``statuses.yaml`` 的 ``shielded*`` 都是 2）。"""
+    status = library.ruleset.statuses.by_id()[str(effect.get("status") or SHIELDED)]
+    assert status.duration is not None  # 護盾狀態都有預設回合
+    return int(status.duration)
+
+
 def _duration_now(library: ContentLibrary, effect: dict[str, Any]) -> int | None:
-    """目前的回合。護盾沒寫＝2；不死、轉移傷害沒寫（用狀態預設）時不調（``None``）。"""
+    """目前的回合。護盾沒寫＝護盾狀態的預設回合；不死、轉移傷害沒寫（用狀態預設）時不調
+    （``None``）。"""
     if effect.get("duration") is not None:
         return int(effect["duration"])
     kind = effect["type"]
     if kind == "shield":
-        return _SHIELD_DEFAULT_DURATION
+        return _shield_duration(library, effect)
     if kind != "apply_status":
         return None
     status = _status(library, effect)
@@ -261,9 +266,11 @@ def _power_steps(
 
 
 def _duration_cap(library: ContentLibrary, origin: int | None, now: int) -> int:
-    """蓄力的回合上限：原招 +2，不超過組合器的持續上限（原招本來就超過的不再加）。"""
+    """蓄力的回合上限：原招 + ``rules.charge_duration_cap``，不超過組合器的持續上限（原招本來就
+    超過的不再加）。"""
     start = now if origin is None else origin
-    return min(start + CHARGE_DURATION_CAP, max(library.composer.duration.cap, start))
+    cap = library.flash.rules.charge_duration_cap
+    return min(start + cap, max(library.composer.duration.cap, start))
 
 
 def _duration_step(
@@ -426,7 +433,7 @@ def charge_adjusted(
             if measured[0] < low:
                 continue
             done = fixed_strength(*trial, library, floor=floor)
-            if done is not None and strength_moves(current, done)[0]:
+            if done is not None and strength_moves(current, done, library)[0]:
                 return done
             break
     return None
@@ -460,7 +467,7 @@ def light_adjusted(
             if measured[0] > high:
                 continue
             done = fixed_strength(*trial, library, floor=replaced)
-            if done is None or not light_ok(current, done):
+            if done is None or not light_ok(current, done, library):
                 break
             found = done
             if cost_power(done, library) <= ceiling:
@@ -470,24 +477,24 @@ def light_adjusted(
     return None
 
 
-def light_ok(current: SkillDef, done: SkillDef) -> bool:
+def light_ok(current: SkillDef, done: SkillDef, library: ContentLibrary) -> bool:
     """輕巧的結果合格：沒有任何一項變強、至少一項變弱（少付多少由預算器的合格區間與
     :func:`light_adjusted` 決定）。"""
-    up, down = strength_moves(current, done)
+    up, down = strength_moves(current, done, library)
     return down and not up
 
 
-def charge_ok(current: SkillDef, done: SkillDef) -> bool:
+def charge_ok(current: SkillDef, done: SkillDef, library: ContentLibrary) -> bool:
     """蓄力的結果合格：至少一項嚴格變強（可以同時有別項變弱，例如重新分配到接續段）。"""
-    return strength_moves(current, done)[0]
+    return strength_moves(current, done, library)[0]
 
 
 type Accept = Callable[[SkillDef], bool]
 """預算重調結果的額外檢查（:func:`trpg.skillgen.flash_derive.apply_variation` 用）。"""
 
 
-def accept_for(op: str, current: SkillDef) -> Accept:
+def accept_for(op: str, current: SkillDef, library: ContentLibrary) -> Accept:
     """``op``（蓄力／輕巧）的預算重調結果要通過的檢查。"""
     if op == "charge":
-        return lambda done: charge_ok(current, done)
-    return lambda done: light_ok(current, done)
+        return lambda done: charge_ok(current, done, library)
+    return lambda done: light_ok(current, done, library)

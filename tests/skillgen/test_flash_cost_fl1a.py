@@ -8,7 +8,6 @@ import pytest
 from tests.engine.helpers import library, with_whiteboard_ap
 from trpg.content.skills import SkillDef
 from trpg.skillgen.flash_cost import (
-    CHARGE_DURATION_CAP,
     charge_adjusted,
     strength_moves,
 )
@@ -73,7 +72,7 @@ def test_kindle_charge_burns_one_round_longer() -> None:
     charged = _flash(base, CHARGE)
     assert charged.cost.cooldown == 4
     assert _burning(charged) == 6
-    assert strength_moves(base, charged) == (True, False)
+    assert strength_moves(base, charged, LIB) == (True, False)
 
 
 def test_second_charge_turns_to_strength_when_rounds_are_capped() -> None:
@@ -95,7 +94,7 @@ def test_charge_rounds_never_exceed_the_original_plus_two() -> None:
     draft[0]["cost"] = {**draft[0]["cost"], "cooldown": 4}
     done = charge_adjusted(LIB, current, draft, floor=None, origin=origin)
     assert done is not None
-    assert _burning(done) == 3 + CHARGE_DURATION_CAP == 5
+    assert _burning(done) == 3 + LIB.flash.rules.charge_duration_cap == 5
     assert done.effects[0].magnitude_permille is not None  # 改加強度
 
 
@@ -114,7 +113,7 @@ def test_light_on_one_ap_never_gets_stronger(name: str) -> None:
         light = _flash(base, LIGHT)
     except FlashError:
         return  # 沒有東西可以降：不出輕巧（也合格）
-    up, down = strength_moves(base, light)
+    up, down = strength_moves(base, light, LIB)
     assert down and not up
 
 
@@ -126,7 +125,7 @@ def test_frost_touch_light_is_offered_again() -> None:
     assert base.cost.mana == 30  # X10-2b：法力 ×10
     light = _flash(base, LIGHT)
     assert light.cost.mana == 20
-    assert strength_moves(base, light) == (False, True)
+    assert strength_moves(base, light, LIB) == (False, True)
 
 
 @pytest.mark.parametrize("name", ["喚起骷髏", "召喚石像", "隱匿"])
@@ -142,7 +141,7 @@ def test_kindle_light_lowers_the_burn() -> None:
     light = _flash(base, LIGHT)
     assert light.ap_cost == 1
     assert (_burning(light) or 0) < 5
-    assert strength_moves(base, light) == (False, True)
+    assert strength_moves(base, light, LIB) == (False, True)
 
 
 def test_light_keeps_at_least_one_round() -> None:
@@ -163,7 +162,7 @@ def test_scan_every_tier_one_active_skill() -> None:
                 after = _flash(base, variation)
             except FlashError:
                 continue
-            up, down = strength_moves(base, after)
+            up, down = strength_moves(base, after, LIB)
             if variation is CHARGE:
                 assert up, base.id
             else:

@@ -75,7 +75,7 @@ def test_light_is_offered_now_that_the_paid_mana_changes(skill_id: str) -> None:
     assert (mana, core.mana_cost(mana), core.mana_cost(mana - step)) == (30, 24, 16)
     light = _flash(base, LIGHT)
     assert light.cost.mana == mana - step
-    assert strength_moves(base, light) == (False, True)
+    assert strength_moves(base, light, LIB) == (False, True)
 
 
 def test_unchanged_paid_mana_stops_instead_of_trying_the_next_field() -> None:
@@ -107,7 +107,7 @@ def test_war_hymn_charge_lengthens_the_aura() -> None:
     assert base.effects[0].duration == 3
     assert charged.effects[0].duration == 4
     assert charged.cost.cooldown == 5
-    assert strength_moves(base, charged) == (True, False)
+    assert strength_moves(base, charged, LIB) == (True, False)
 
 
 @pytest.mark.parametrize("skill_id", ["skill_wing_spread", "skill_wing_gift"])
@@ -117,7 +117,7 @@ def test_wing_light_shortens_the_granted_flight(skill_id: str) -> None:
     assert light.ap_cost == 1
     assert (light.effects[0].duration or 0) < (base.effects[0].duration or 0)
     assert light.effects[0].duration is not None and light.effects[0].duration >= 1
-    assert strength_moves(base, light) == (False, True)
+    assert strength_moves(base, light, LIB) == (False, True)
 
 
 def test_enemy_zone_rounds_are_not_a_buff() -> None:

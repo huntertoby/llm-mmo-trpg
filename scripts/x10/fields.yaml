@@ -499,6 +499,23 @@ groups:
       - transforms[].summon_boosts[].*
       - transforms[].trap.rounds
       - transforms[].trigger.max_distance
+      # HC-5a：小變化、出題、轉型的步階與上限（回合、次數、‰、分數、格數）
+      - rules.charge_*
+      - rules.hp_*_permille
+      - rules.added_hp_condition_permille
+      - rules.blood_bonus_permille                # 預算折抵 ‰，不是量
+      - rules.summon_hp_steps[]                   # 召喚物最大 HP 加成 ‰
+      - rules.new_damage_multiplier_permille
+      - rules.followup_*
+      - rules.usage_scores.*
+      - rules.usage_*
+      - rules.second_keyword_cap
+      - rules.transform_carry_max
+      - rules.beside_power_step_permille
+      - rules.search.*
+      - transforms[].stance_upkeeps[]             # 維持費點數（每點的量在 forms.yaml）
+      # 轉型草稿的代價：法力、耐力是換算前的單位，程式經 CoreRules.scaled_cost 乘 quantity_scale（照舊）
+      - transforms[].draft_costs[].*
 
   # ------------------------------------------------------------------ 預算
   - files: skill_budget.yaml

@@ -65,7 +65,7 @@ def test_soul_bond_light_link_three_to_two() -> None:
     light = _flash(base)
     assert base.effects[0].duration == 3
     assert light.effects[0].duration == 2
-    assert strength_moves(base, light) == (False, True)
+    assert strength_moves(base, light, LIB) == (False, True)
 
 
 def test_kindle_light_still_drops_the_burn_to_two() -> None:
@@ -86,7 +86,7 @@ def test_tier_one_light_unpriced_rounds_drop_at_most_one() -> None:
             after = _flash(base)
         except FlashError:
             continue
-        old, new = strength_table(base), strength_table(after)
+        old, new = strength_table(base, LIB), strength_table(after, LIB)
         for key in sorted(old):
             if key.endswith(".duration") and any(f":{t}:" in key for t in UNPRICED):
                 assert old[key] - new.get(key, old[key]) <= LIGHT_UNPRICED_STEP, (base.id, key)
