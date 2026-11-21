@@ -109,6 +109,7 @@ __all__ = [
     "region_first",
     "route_rank",
     "skill_has_keywords",
+    "topic_kinds",
 ]
 
 type AttrWant = Literal["same", "other"]
@@ -337,6 +338,16 @@ def composer_kinds(library: ContentLibrary, seed: int, slot: str) -> tuple[str, 
     return _ACTIVE_FAMILY  # pragma: no cover - roll 一定在 [1, 總和]
 
 
+def topic_kinds(
+    library: ContentLibrary, kinds: tuple[str, ...], keywords: Sequence[str]
+) -> tuple[str, ...]:
+    """題目的關鍵字有只出在主動題的（#172，``active_only``：形態）時，被動、反應改出主動那一族；
+    其他照 ``kinds``（不消耗亂數）。"""
+    if all(library.keywords.topic_allows(k, kind) for k in keywords for kind in kinds):
+        return kinds
+    return _ACTIVE_FAMILY
+
+
 # ---------------------------------------------------------------------------
 # 來源
 # ---------------------------------------------------------------------------
@@ -486,7 +497,9 @@ class _Search:
         attrs = self.request.hero_attributes or None
         avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
         capped = self.capped(keywords)
-        kinds = composer_kinds(self.library, self.request.seed, self.kind)
+        kinds = topic_kinds(
+            self.library, composer_kinds(self.library, self.request.seed, self.kind), keywords
+        )
         for _ in range(self.rules.tries(self.library)):
             if self.exhausted(keywords):  # PERF-3：橋接上限用完
                 break

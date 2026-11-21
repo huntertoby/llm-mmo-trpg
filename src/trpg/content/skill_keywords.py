@@ -132,6 +132,10 @@ class KeywordRule(ContentModel):
         return found
 
 
+TOPIC_NON_ACTIVE_KINDS: frozenset[str] = frozenset({"passive", "reaction"})
+"""不是自己施放的題目種類（#172：``active_only`` 的關鍵字不出在這些題）。"""
+
+
 class KeywordDef(ContentModel):
     """一個關鍵字：ID、顯示名稱與說明，以及「製造」與「利用」的推導規則。"""
 
@@ -150,6 +154,9 @@ class KeywordDef(ContentModel):
     """池子補齊前暫時不主動提供（Phase 3-53b：中毒池在 3-54c 補齊前先隱藏；KW-1：連擊、怒氣、專注、
     氣在 KW-2 補齊前）：開局選單、``run auto`` 的抽樣、許願池選單與三選一的「新方向」都不出現；
     已持有這種關鍵字的技能時，加深、橋接照常；工坊、關鍵字推導都照常。"""
+    active_only: bool = False
+    """只出在主動題（含姿態；GS-1，#172）：被動、反應題抽關鍵字時不抽它（形態）。這是出題的做法，
+    不改規則：手寫的被動、反應技照樣可以帶它，關鍵字推導照常。"""
 
 
 class KeywordTable(ContentModel):
@@ -177,6 +184,14 @@ class KeywordTable(ContentModel):
 
     def by_id(self) -> dict[str, KeywordDef]:
         return {k.id: k for k in self.keywords}
+
+    def topic_allows(self, keyword: str, kind: str | None) -> bool:
+        """種類 ``kind`` 的題目能不能指定 ``keyword``（#172：``active_only`` 的關鍵字不出在被動、
+        反應題）。未知的關鍵字回傳 ``True``（由呼叫端原本的檢查處理）。"""
+        if kind not in TOPIC_NON_ACTIVE_KINDS:
+            return True
+        found = self.by_id().get(keyword)
+        return found is None or not found.active_only
 
     def summary(self) -> str:
         return f"{len(self.keywords)} 個關鍵字"
