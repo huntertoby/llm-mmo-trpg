@@ -728,37 +728,8 @@ rules:
     owner: max_stance_upkeep
     note: HC-4d：skill_limits.max_stance_upkeep 的 schema 護欄 le=10（維持費的「點數」上限，不是量類；同
       py-skill-stance-upkeep-points 的判斷）。
-  - id: py-scale-names
-    class: scale
-    status: todo
-    lang: py
-    kind: number
-    owner: ['max_hp', 'hp', '*_hp', 'hp_*', '*mana*', '*stamina*', 'armor_bonus', 'attack_bonus', 'flat',
-            'flat_*', '*_flat', '*flat_bonus', 'min_damage*', 'shield_break_lightning', 'shield_end_heal',
-            'shield_reflect', '*upkeep*', 'ability_mod_base', 'ability_mod_divisor', 'base_attribute',
-            'attribute_points_per_level', 'points_per_level', 'start_free_points', 'initiative_attr_*',
-            '*_heal', 'heal_flat', '_MAX_ATTR', 'DEFAULT_DEFENSE_BREAK', 'hp_per_*', 'hp_con_base',
-            'self_stamina_below']
-    not: {owner: ['*permille*', '*_per_point', '*_per_mana', 'flat_height']}
 
     note: 量類欄位（HP、法力、耐力、護盾、固定加值、屬性）的預設值與上下限；X10 之後要跟 quantity_scale 走。
-  - id: py-scale-dict-keys
-    class: scale
-    status: todo
-    lang: py
-    kind: number
-    slot: ['{mana}', '{stamina}', '{hp}', '{max_hp}', '{flat}', '{flat_bonus}', '{shield_flat}', '{heal_flat}',
-           '*(mana)', '*(stamina)', '*(max_mana)', '*(max_hp)', '*(armor_bonus)', '*(stamina_regen)',
-           'ResourcePool(per_point)']
-    not: {context: '\bscale\b'}
-    note: 寫在程式裡的量類值（技能代價的法力、耐力；起始英雄、武器大類的 HP、法力、耐力、防禦）。
-  - id: py-scale-resource-base
-    class: scale
-    status: todo
-    files: src/trpg/content/rules.py
-    where: ResourceRules
-    owner: base
-    note: 法力／耐力上限的基礎值（量類）。
   # HC-2 第 1 項專查（HC-1 開發 PM 裁定 3）：掃描器不列 0、1、-1，量類的「預設 1」要另外查。
   # 查法：把掃描器的略過集合拿掉 1，篩欄位、參數、所在敘述含 hp、mana、stamina、damage、heal、shield、armor、
   # attr、flat、upkeep、bonus 的數字 1（93 筆＋依原文再篩一輪），逐筆判斷。是量類的 6 筆列在下面兩條；
@@ -1067,48 +1038,6 @@ rules:
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
-  - id: py-content-loader-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/loader.py
-    kind: number
-    where: ['<module>._MAX_REPORTED_ERRORS']
-    note: 同上一條（content config）。
-  - id: py-content-skills-conditions-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/conditions.py
-    kind: number
-    where: ['ConditionSpec']
-    note: 同上一條（content config）。
-  - id: py-content-skills-effects-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/effects.py
-    kind: number
-    where: ['EffectSpec']
-    note: 同上一條（content config）。
-  - id: py-content-ui-wait-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/ui_wait.py
-    kind: number
-    where: ['<module>.Line', 'WaitNarration', 'WaitSceneLines']
-    note: 同上一條（content config）。
-  - id: py-content-workshop-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/workshop.py
-    kind: number
-    where: ['WorkshopRules']
-    note: 同上一條（content config）。
-  - id: py-content-world-enemies-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_enemies.py
-    kind: number
-    where: ['EliteAffixDef']
-    note: 同上一條（content config）。
 
   # ---------------------------------------------------- 後端 engine：config
   # 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
