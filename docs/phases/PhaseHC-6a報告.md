@@ -126,3 +126,18 @@
 6. **原本就沒用到的 9 條規則沒刪**（`py-scale-names`、`py-scale-dict-keys`、`py-scale-resource-base`、`py-content-loader-config-number` 等 config／scale）：基準時就是 0 筆，不是這段造成的，規格只說刪「搬完變成 0 筆的」，所以留著。
 7. **`py-content-rules-text-text`、`py-content-skill-rules-text-text`** 基準時已是 0 筆（text 類），這段一起刪了。
 8. **API 呼叫點小改**：`api/world_presenter.py` 只把 `FALLBACK_ZH[...]` 改成 `fallback_zh(library, ...)`（字在 `world/battlefield.py`），沒動 API 的文字。
+
+## 開發 PM 裁定（2026-11-22）
+
+驗收通過，已 push（1cbc62d85 之前的 3940021d3）。check.py 第二次 0（pytest 18105、vitest 4822），slow parity＋cli 987 passed。
+
+1. 前端與工坊說明裡寫死的「三選一」「挑 3 張」：排進 HC-6b（前端文字），改成讀 `wish_cards`。
+2. `wish_cards` 建議範圍 2～5：照做。
+3. 誓約冷卻「1 天內」：排進 HC-7，從秒數組字（整天就寫「N 天內」，不整除就寫小時）。
+4. 非召喚關鍵字 census 的差異只出在本來就有召喚設計的格子，正是這段要修的效果，算通過。
+5. 留下的 26 筆 text：排進 HC-7 搬進 content；真的是語法用字的，HC-7 照 classes.yaml 改判 const。
+6. 基準時就是 0 筆的 9 條 config／scale 規則：HC-6b 收尾一起刪。
+7. 照做。
+8. 照做（只改呼叫點，HC-6b 處理 api 的字）。
+
+另記：`tests/api/test_wish_pregen.py::test_text_wish_is_logged_and_replayed_without_llm` 在全量平行時因 10 秒等待偶發失敗，單跑通過；列入佇列，下次碰許願預生成時把等待改成不靠牆鐘或放寬。
