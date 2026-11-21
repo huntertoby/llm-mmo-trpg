@@ -1,0 +1,2140 @@
+{
+  "meta": {
+    "format": "wish-compare/1",
+    "mock": false,
+    "model": "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs",
+    "temperature": 0.7,
+    "max_retries": 3,
+    "started_utc": "2026-11-21T18:27:17+00:00",
+    "speed": {
+      "completion_tokens": 500,
+      "reasoning_tokens": 0,
+      "ttft_s": 2.53,
+      "generation_s": 6.76,
+      "generation_tps": 74.0
+    },
+    "finished_utc": "2026-11-21T18:33:15+00:00"
+  },
+  "rows": [
+    {
+      "label": "W1",
+      "kind": "元素組合",
+      "wish": "想把敵人凍在火裡",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "冰凍",
+          "點燃"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 12.55,
+        "cards": [
+          {
+            "id": "skill_rand_1139083515",
+            "name_zh": "火焰・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "狀態「護衛」 4 回合，強度 108.1%：受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×67.6%（自己）",
+              "生成「冰」表面 6 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wis_frost_bloom_prayer_cp",
+            "name_zh": "霜華祝禱",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 4）",
+            "effects": [
+              "20–80＋感知加成的神聖傷害（敵方）",
+              "生成「冰」表面 2 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2084660776",
+            "name_zh": "火焰・位移",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 5）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "10–60＋智力加成的火焰傷害（敵方）",
+              "生成「冰」表面 4 回合（影響的格子）"
+            ],
+            "keywords": [
+              "點燃",
+              "冰凍",
+              "撞擊"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "冰凍",
+          "火焰"
+        ],
+        "attempts": 1,
+        "codes": [
+          "wish.dropped.elements"
+        ],
+        "seconds": 17.74,
+        "cards": [
+          {
+            "id": "skill_rand_1056019397",
+            "name_zh": "冰底焰",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "30–120＋智力加成的火焰傷害（敵方）",
+              "摧毀可破壞的物件（影響的格子）"
+            ],
+            "keywords": [
+              "點燃",
+              "冰凍"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要把敵人凍在火裡——這招讓火焰在冰面上綻放，同時摧毀周遭的一切阻礙。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "灼寒引",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "20–160＋智力加成的火焰傷害（敵方）",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "撞擊",
+              "冰凍"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要把敵人凍在火裡——這招以火焰灼燒冰面之敵並將其拉近，代價是自身的短暫失神。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_3905338229",
+            "name_zh": "奪益環",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "生成「冰」表面 4 回合（影響的格子）",
+              "奪取目標身上一個增益（剩餘回合最長者），以相同的剩餘回合施加到自己身上（敵方）",
+              "20–80＋智力加成的火焰傷害（敵方），若目標身邊沒有友方"
+            ],
+            "keywords": [
+              "點燃",
+              "冰凍"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要把敵人凍在火裡——這招鋪設冰面並奪取增益，若敵人孤立無援，火焰將燒向他們。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          2,
+          2,
+          2
+        ],
+        "tag_count": 2
+      }
+    },
+    {
+      "label": "W2",
+      "kind": "控制＋撞擊",
+      "wish": "想把敵人凍住，再一錘敲碎",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "冰凍",
+          "撞擊"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 11.2,
+        "cards": [
+          {
+            "id": "skill_rand_1139083515",
+            "name_zh": "火焰・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "狀態「護衛」 4 回合，強度 108.1%：受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×67.6%（自己）",
+              "生成「冰」表面 6 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wis_frost_bloom_prayer_cp",
+            "name_zh": "霜華祝禱",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 4）",
+            "effects": [
+              "20–80＋感知加成的神聖傷害（敵方）",
+              "生成「冰」表面 2 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "冰霜・位移",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 5）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "10–60＋智力加成的冰霜傷害（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "撞擊"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "冰凍",
+          "冰霜",
+          "物理",
+          "控制",
+          "傷害"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 16.21,
+        "cards": [
+          {
+            "id": "skill_rand_3674821192",
+            "name_zh": "寒鑒",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "30–300＋智力加成的冰霜傷害（敵方）",
+              "消耗全部「過載電流」，每層使本技能傷害 +5%（自己）",
+              "狀態「暈眩」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "冰凍"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要把人釘住——這招讓敵人暈眩，無法逃脫。",
+            "miss_zh": "最接近你願望的一招：有冰凍、冰霜、控制、傷害；物理這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "碎冰錘",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "錐形（大小 2）",
+            "effects": [
+              "20–80＋智力加成的冰霜傷害（敵方）",
+              "10–80＋智力加成的冰霜傷害（敵方），若自身血量低於 39%",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "倒地"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要敲碎——這招把敵人擊倒，像打碎冰塊一樣。",
+            "miss_zh": "最接近你願望的一招：有冰凍、冰霜、控制、傷害；物理這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2348704471",
+            "name_zh": "環霜擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "10–40＋智力加成的冰霜傷害（敵方），吸血：你回復造成傷害的 30%",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "倒地"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要凍住再打——這招讓一圈人倒地，你還能回血。",
+            "miss_zh": "最接近你願望的一招：有冰凍、冰霜、控制、傷害；物理這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          4,
+          4,
+          4
+        ],
+        "tag_count": 5
+      }
+    },
+    {
+      "label": "W3",
+      "kind": "元素＋範圍",
+      "wish": "讓一整片敵人都燒起來的火焰",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "點燃"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 11.32,
+        "cards": [
+          {
+            "id": "skill_llm_cdce24aa98",
+            "name_zh": "灼熱環繞",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "範圍光環（半徑 3）",
+            "effects": [
+              "治療 20–200＋感知加成（自己）",
+              "狀態「火焰附魔」 1 回合（友方）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_ember_resonance_cp",
+            "name_zh": "餘燼共鳴",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "護盾（吸收量 10–40＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）",
+              "累積 1 層「專注」（上限 3）（自己）"
+            ],
+            "keywords": [
+              "法器",
+              "點燃"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1430485565",
+            "name_zh": "大地・位移",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 3）",
+            "effects": [
+              "擊倒（智力對抗）（敵方）",
+              "狀態「燃燒」 2 回合，強度 131.2%（每回合傷害 ×131.2%）（敵方）",
+              "狀態「嘲諷」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "倒地"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "點燃",
+          "火焰",
+          "傷害",
+          "範圍",
+          "主動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 13.59,
+        "cards": [
+          {
+            "id": "skill_rand_4033336274",
+            "name_zh": "聖火燎原",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 0）",
+            "effects": [
+              "10–60＋智力加成的火焰傷害（敵方）",
+              "生成「火焰」表面 1 回合，強度 141.8%（表面每回合的傷害、治療與施加的狀態 ×141.8%）（影響的格子）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要整片敵人燒起來——這招在聖光上展開十字火焰，讓範圍內的敵人都著火。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_1931076827",
+            "name_zh": "炎息迴響",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 3）",
+            "effects": [
+              "10–120＋智力加成的火焰傷害（敵方），吸血：你回復造成傷害的 30%",
+              "推開 1 格（敵方）",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "倒地",
+              "撞擊"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要整片敵人燒起來——這招從遠處射出十字火焰，讓範圍內的敵人都受到灼傷並被擊倒",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_2148048814",
+            "name_zh": "烈焰長線",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 3）",
+            "effects": [
+              "30–120＋智力加成的火焰傷害（敵方）",
+              "狀態「燃燒」 1 回合，強度 172.2%（每回合傷害 ×172.2%）（敵方）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要整片敵人燒起來——這招沿直線噴射火焰，讓一排敵人都陷入燃燒狀態",
+            "miss_zh": "最接近你願望的一招：有點燃、火焰、傷害、主動；範圍這次做不到。",
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          5,
+          5,
+          4
+        ],
+        "tag_count": 5
+      }
+    },
+    {
+      "label": "W4",
+      "kind": "位移",
+      "wish": "能一下子閃到敵人背後的招式",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "隱蔽"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 7.36,
+        "cards": [
+          {
+            "id": "skill_llm_1d659da2d9",
+            "name_zh": "幽光護體",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "治療 50–200＋感知加成（友方）",
+              "狀態「隱蔽」 2 回合（友方）"
+            ],
+            "keywords": [
+              "隱蔽"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_mark_prey_cp",
+            "name_zh": "烙印獵物",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "狀態「被標記」 2 回合（敵方）",
+              "10–40＋感知加成的暗影傷害（敵方）"
+            ],
+            "keywords": [
+              "標記",
+              "隱蔽"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wil_void_pull_cp",
+            "name_zh": "虛空牽引",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "10–60＋意志加成的暗影傷害（敵方）",
+              "拉近 2 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "隱蔽"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "物理",
+          "位移",
+          "主動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 14.82,
+        "cards": [
+          {
+            "id": "skill_rand_863065966",
+            "name_zh": "霜裂直擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 4）",
+            "effects": [
+              "推開 2 格（敵方）",
+              "10–60＋智力加成的冰霜傷害（敵方）",
+              "生成「煙霧」表面 1 回合（影響的格子）"
+            ],
+            "keywords": [
+              "冰凍",
+              "撞擊",
+              "隱蔽"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要一下子閃到敵人背後——這招以位移推開敵人並製造煙霧，讓你在混亂中調整位置。",
+            "miss_zh": "最接近你願望的一招：有位移、主動；物理這次做不到。",
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "concept.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_3000310151",
+            "name_zh": "聖輝引近",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 3）",
+            "effects": [
+              "拉近 2 格（敵方）",
+              "10–60＋感知加成的神聖傷害（敵方）"
+            ],
+            "keywords": [
+              "撞擊"
+            ],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要一下子閃到敵人背後——這招將敵人拉近身側並造成傷害，讓你迅速貼身發動攻擊。",
+            "miss_zh": "最接近你願望的一招：有位移、主動；物理這次做不到。",
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "concept.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "幽寒噬影",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "20–160＋意志加成的暗影傷害（敵方）",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "隱蔽",
+              "冰凍"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要一下子閃到敵人背後——這招在冰面上拉近敵人並造成傷害，讓你迅速貼身發動攻擊",
+            "miss_zh": "最接近你願望的一招：有位移、主動；物理這次做不到。",
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "concept.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          2,
+          2,
+          2
+        ],
+        "tag_count": 3
+      }
+    },
+    {
+      "label": "W5",
+      "kind": "推擊＋高處",
+      "wish": "把敵人從高台上推下去",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "高處",
+          "倒地"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 13.65,
+        "cards": [
+          {
+            "id": "skill_llm_1466886870",
+            "name_zh": "高處迴光",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 30–300＋感知加成（友方），若居高臨下"
+            ],
+            "keywords": [
+              "高處"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3354441285",
+            "name_zh": "風・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "10–60＋感知加成的風傷害（敵方），風會讓範圍內的火焰、冰、毒表面、以及火焰、冰霜、毒素、雷電區域往風向擴大 1 格，若居高臨下"
+            ],
+            "keywords": [
+              "標記",
+              "高處"
+            ],
+            "elements": [
+              "風"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2186855562",
+            "name_zh": "毒素・連段",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "10–100＋智力加成的毒素傷害（敵方）",
+              "擊倒（智力對抗）（敵方）"
+            ],
+            "keywords": [
+              "倒地",
+              "高處"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "高處",
+          "撞擊",
+          "位移"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 11.05,
+        "cards": [
+          {
+            "id": "skill_rand_2148048814",
+            "name_zh": "墜石擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 4）",
+            "effects": [
+              "10–80＋智力加成的大地傷害（敵方）",
+              "10–60＋智力加成的大地傷害（敵方），若居高臨下",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要從高處推人——這招能把敵人拉近並造成傷害。",
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_945423744",
+            "name_zh": "臨崖寒光",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "10–100＋智力加成的冰霜傷害（敵方）",
+              "狀態「流血」 1 回合，強度 126.2%（每回合傷害 ×126.2%）（敵方）"
+            ],
+            "keywords": [
+              "冰凍",
+              "高處"
+            ],
+            "elements": [
+              "冰霜"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要利用高處——這招在你處於高地受擊時反凍敵人。",
+            "miss_zh": "最接近你願望的一招：有高處；撞擊、位移這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "裂風推",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "推開 2 格（風壓：撞擊傷害 +50%）（敵方）",
+              "擊倒（智力對抗）（敵方）",
+              "60–240＋智力加成的風傷害（敵方），風會讓範圍內的火焰、冰、毒表面、以及火焰、冰霜、毒素、雷電區域往風向擴大 1 格",
+              "狀態「流血」 6 回合，強度 126.2%（每回合傷害 ×126.2%）（敵方）"
+            ],
+            "keywords": [
+              "倒地",
+              "撞擊"
+            ],
+            "elements": [
+              "風"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要撞擊與位移——這招在首輪將敵人強力推開並擊倒。",
+            "miss_zh": "最接近你願望的一招：有撞擊、位移；高處這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          3,
+          1,
+          2
+        ],
+        "tag_count": 3
+      }
+    },
+    {
+      "label": "W6",
+      "kind": "召喚",
+      "wish": "召喚一隻狼替我擋刀",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "召喚"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 10.97,
+        "cards": [
+          {
+            "id": "skill_llm_b46884e6dc",
+            "name_zh": "微光號令",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 30–180＋感知加成（友方）",
+              "狀態「號令」（到帶有者的下回合開始）（友方）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": [
+              "combo.passive_or_reaction"
+            ]
+          },
+          {
+            "id": "skill_rand_3984556505",
+            "name_zh": "大地・光環",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 4）",
+            "effects": [
+              "淨化：移除身上所有負面狀態（增益、姿態與其他中性狀態不受影響）（友方）",
+              "生成「聖光」表面 1 回合，強度 172.2%（表面每回合的傷害、治療與施加的狀態 ×172.2%）（友方）",
+              "狀態「號令」（到帶有者的下回合開始）（自己）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_fsum_ember_herald_cp",
+            "name_zh": "燼火喚靈",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 169），持續 3 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×121.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）",
+              "狀態「火焰附魔」 3 回合（自己）"
+            ],
+            "keywords": [
+              "點燃",
+              "召喚"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "召喚物",
+          "召喚",
+          "護盾",
+          "主動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 11.79,
+        "cards": [
+          {
+            "id": "skill_rand_3513057505",
+            "name_zh": "靈狼",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 169），持續 2 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×121.4%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）",
+              "狀態「號令」（到帶有者的下回合開始）（自己）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要一隻狼擋刀——這招能召喚出元素之靈，它會站在你身前承受攻擊。",
+            "miss_zh": "最接近你願望的一招：有召喚物、召喚、主動；護盾這次做不到。",
+            "llm_codes": [
+              "name_zh.world_prefix",
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "岩壁護體",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "護盾（吸收量 10–120＋感知加成，持續 2 回合；已有護盾時取較大值）（友方）",
+              "狀態「號令」（到帶有者的下回合開始）（自己）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要有人替擋——這招在你身上生成護盾，能吸收一定數量的傷害。",
+            "miss_zh": "最接近你願望的一招：有召喚物、護盾、主動；召喚這次做不到。",
+            "llm_codes": [
+              "name_zh.world_prefix",
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_4033336274",
+            "name_zh": "雷幕",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 8）",
+            "effects": [
+              "護盾（吸收量 80–320＋感知加成，持續 2 回合；已有護盾時取較大值）（友方），若本回合移動過",
+              "狀態「號令」（到帶有者的下回合開始）（自己）"
+            ],
+            "keywords": [
+              "召喚"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要防禦——這招為友方施加護盾，若他們本回合有移動則效果更強。",
+            "miss_zh": "最接近你願望的一招：有召喚物、護盾、主動；召喚這次做不到。",
+            "llm_codes": [
+              "name_zh.world_prefix",
+              "cast_flavor.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          3,
+          3,
+          3
+        ],
+        "tag_count": 4
+      }
+    },
+    {
+      "label": "W7",
+      "kind": "高處",
+      "wish": "從高處跳下來重重砸在地上",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "高處"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 27.4,
+        "cards": [
+          {
+            "id": "skill_llm_8589d4524b",
+            "name_zh": "高處迴光",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "範圍光環（半徑 1）",
+            "effects": [
+              "治療 50–200＋感知加成（友方），若你站在高處"
+            ],
+            "keywords": [
+              "高處"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_3354441285",
+            "name_zh": "風・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "10–60＋感知加成的風傷害（敵方），風會讓範圍內的火焰、冰、毒表面、以及火焰、冰霜、毒素、雷電區域往風向擴大 1 格，若居高臨下"
+            ],
+            "keywords": [
+              "標記",
+              "高處"
+            ],
+            "elements": [
+              "風"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "火焰・打擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "50–400＋智力加成的火焰傷害（敵方），若居高臨下",
+              "拉近 2 格（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "高處",
+          "位移",
+          "傷害",
+          "主動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 27.32,
+        "cards": [
+          {
+            "id": "skill_rand_2148048814",
+            "name_zh": "墜石連擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 4）",
+            "effects": [
+              "10–80＋智力加成的大地傷害（敵方）",
+              "10–60＋智力加成的大地傷害（敵方），若居高臨下",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要從高處跳下來重重砸在地上——這招在居高臨下時傷害加倍，還能把敵人拉到你腳邊",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "name_zh.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "凌空一擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "10–120＋智力加成的大地傷害（敵方）",
+              "拉近 1 格（敵方）"
+            ],
+            "keywords": [
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要從高處跳下來重重砸在地上——這招是單體打擊，居高臨下時能造成大地傷害並拉近",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "name_zh.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_2434517382",
+            "name_zh": "毒霧十字",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 2）",
+            "effects": [
+              "30–120＋智力加成的毒素傷害（敵方）",
+              "推開 1 格（敵方）",
+              "生成「油」表面（影響的格子）"
+            ],
+            "keywords": [
+              "點燃",
+              "撞擊",
+              "高處"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要從高處跳下來重重砸在地上——這招在居高臨下時對十字範圍造成傷害並推開敵人",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "name_zh.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          4,
+          4,
+          4
+        ],
+        "tag_count": 4
+      }
+    },
+    {
+      "label": "W8",
+      "kind": "護盾",
+      "wish": "幫隊友擋下傷害的護盾",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "怒氣"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 7.92,
+        "cards": [
+          {
+            "id": "skill_llm_9ff5d2822a",
+            "name_zh": "凜冽迴響",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "範圍光環（半徑 1）",
+            "effects": [
+              "治療 30–120＋感知加成（友方）",
+              "累積 2 層「怒氣」（上限 4）（自己）"
+            ],
+            "keywords": [
+              "怒氣"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1234645722",
+            "name_zh": "毒素・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "生成「黑暗」表面 2 回合（影響的格子）",
+              "累積 1 層「怒氣」（上限 4）（自己）"
+            ],
+            "keywords": [
+              "標記",
+              "隱蔽",
+              "怒氣"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "火焰・蓄力與終結",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "30–120＋智力加成的火焰傷害（敵方）",
+              "消耗全部「怒氣」，每層使本技能傷害、護盾 +25%（至少 1 層才能施放）（自己）",
+              "狀態「定身」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "怒氣"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "護盾"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 11.97,
+        "cards": [
+          {
+            "id": "skill_rand_1420552567",
+            "name_zh": "聖光承載",
+            "description_zh": null,
+            "kind": "反應",
+            "shape": "自身",
+            "effects": [
+              "替隊友擋攻擊（自己）",
+              "護盾（吸收量 10–60＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要幫隊友擋下傷害——這招在他們被擊中時替其承載攻擊，並為你自身疊加護盾。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_2291237708",
+            "name_zh": "祈願微光",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 10–80＋感知加成（自己）",
+              "護盾（吸收量 10–60＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要護盾——這招為你自身生成持續兩回合的護盾，並同時恢復生命。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_2434517382",
+            "name_zh": "磐石守護",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "狀態「護衛」 5 回合，強度 108.1%：受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×67.6%（自己）",
+              "10–60＋感知加成的大地傷害（敵方）"
+            ],
+            "keywords": [],
+            "elements": [
+              "大地"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要護盾——這招使你進入五回合的護衛狀態，並以大地之力打擊敵人。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          1,
+          1,
+          1
+        ],
+        "tag_count": 1
+      }
+    },
+    {
+      "label": "W9",
+      "kind": "反應",
+      "wish": "被打的時候自動反擊回去",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "怒氣"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 7.49,
+        "cards": [
+          {
+            "id": "skill_llm_4ab207fea5",
+            "name_zh": "寒息迴盪",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 30–300＋感知加成（友方），若自身「怒氣」達 1 層"
+            ],
+            "keywords": [
+              "怒氣"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1234645722",
+            "name_zh": "毒素・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "生成「黑暗」表面 2 回合（影響的格子）",
+              "累積 1 層「怒氣」（上限 4）（自己）"
+            ],
+            "keywords": [
+              "標記",
+              "隱蔽",
+              "怒氣"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4148927669",
+            "name_zh": "火焰・蓄力與終結",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 5）",
+            "effects": [
+              "30–120＋智力加成的火焰傷害（敵方）",
+              "消耗全部「怒氣」，每層使本技能傷害、護盾 +25%（至少 1 層才能施放）（自己）",
+              "狀態「定身」 1 回合（敵方）"
+            ],
+            "keywords": [
+              "點燃",
+              "怒氣"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "傷害",
+          "單體",
+          "反應"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 10.33,
+        "cards": [
+          {
+            "id": "skill_rand_3905338229",
+            "name_zh": "影蝕反擲",
+            "description_zh": null,
+            "kind": "反應",
+            "shape": "單體（射程 9）",
+            "effects": [
+              "10–60＋意志加成的暗影傷害（敵方）",
+              "狀態「易傷」 1 回合，強度 136.4%：受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×134.1%（敵方）"
+            ],
+            "keywords": [
+              "隱蔽"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要被打時自動反擊——這招在你受擊時觸發暗影傷害並施加易傷狀態。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "concept.simplified"
+            ]
+          },
+          {
+            "id": "skill_rand_4022362",
+            "name_zh": "暗潮回響",
+            "description_zh": null,
+            "kind": "反應",
+            "shape": "單體（射程 3）",
+            "effects": [
+              "20–160＋意志加成的暗影傷害（敵方）"
+            ],
+            "keywords": [
+              "隱蔽"
+            ],
+            "elements": [
+              "暗影"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要被打時自動反擊——這招在你受擊時對近處敵人造成強大的暗影傷害。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "concept.simplified"
+            ]
+          },
+          {
+            "id": "skill_rand_83094330",
+            "name_zh": "離火灼痕",
+            "description_zh": null,
+            "kind": "反應",
+            "shape": "單體（射程 9）",
+            "effects": [
+              "10–120＋智力加成的火焰傷害（敵方）"
+            ],
+            "keywords": [
+              "點燃"
+            ],
+            "elements": [
+              "火焰"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要被打時自動反擊——這招在敵人離開相鄰位置時觸發火焰傷害，形成一種被動的反制",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "concept.simplified"
+            ]
+          }
+        ],
+        "hits": [
+          3,
+          3,
+          3
+        ],
+        "tag_count": 3
+      }
+    },
+    {
+      "label": "W10",
+      "kind": "被動",
+      "wish": "一直帶在身上、讓我越打越強的被動",
+      "old": {
+        "source": "llm",
+        "keywords": [
+          "法器"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 10.54,
+        "cards": [
+          {
+            "id": "skill_llm_96234ac0b6",
+            "name_zh": "微光層疊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 20–200＋感知加成（自己）",
+              "累積 1 層「專注」（上限 3）（自己）"
+            ],
+            "keywords": [
+              "法器"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "llm",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_1234645722",
+            "name_zh": "毒素・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "單體（射程 6）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "生成「黑暗」表面 2 回合（影響的格子）",
+              "累積 1 層「專注」（上限 3）（自己）"
+            ],
+            "keywords": [
+              "標記",
+              "隱蔽",
+              "法器"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_451193298",
+            "name_zh": "物理・召喚",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 4）",
+            "effects": [
+              "在目標空格召喚元素之靈（HP 163），持續 2 輪（緊接在你之後行動，由 AI 控制）；召喚物的 HP 與傷害 ×116.8%；灌注：施放時從你持有的關鍵字選一個帶上（例：點燃→普攻命中時施加「燃燒」2 回合）",
+              "累積 1 層「專注」（上限 3）（自己）"
+            ],
+            "keywords": [
+              "召喚",
+              "法器"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "增益",
+          "被動"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 6.99,
+        "cards": [
+          {
+            "id": "skill_rand_2434517382",
+            "name_zh": "逆風蓄怒",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "治療 10–40＋感知加成（自己）",
+              "累積 1 層「怒氣」（上限 4）（自己）"
+            ],
+            "keywords": [
+              "怒氣"
+            ],
+            "elements": [
+              "風"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要越打越強——這招在受傷時累積怒氣，讓你愈戰愈勇。",
+            "miss_zh": "最接近你願望的一招：有被動；增益這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_29995634",
+            "name_zh": "聖輝護體",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "狀態「護衛」 2 回合，強度 121.4%：受到的骰值傷害（不含墜落、致命地形等百分比傷害） ×63.6%（自己）",
+              "治療 10–40＋感知加成（自己）"
+            ],
+            "keywords": [],
+            "elements": [
+              "神聖"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要持續增益——這招在命中後提供護衛與治療，讓你的戰鬥更穩固。",
+            "miss_zh": "最接近你願望的一招：有被動；增益這次做不到。",
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4033336274",
+            "name_zh": "雷隱護盾",
+            "description_zh": null,
+            "kind": "被動",
+            "shape": "自身",
+            "effects": [
+              "護盾（吸收量 10–40＋感知加成，持續 2 回合；已有護盾時取較大值）（自己）",
+              "狀態「隱蔽」 1 回合（自己）"
+            ],
+            "keywords": [
+              "隱蔽",
+              "撞擊"
+            ],
+            "elements": [
+              "雷電"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要被動保護——這招在撞擊後生成護盾並隱蔽自身，讓你在戰場上更難被鎖定。",
+            "miss_zh": "最接近你願望的一招：有被動；增益這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          1,
+          1,
+          1
+        ],
+        "tag_count": 2
+      }
+    },
+    {
+      "label": "W11",
+      "kind": "地形＋毒",
+      "wish": "讓毒霧籠罩整個戰場",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "中毒"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 26.46,
+        "cards": [
+          {
+            "id": "skill_wis_miasma_sight_cp",
+            "name_zh": "瘴氣探路",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 4）",
+            "effects": [
+              "揭露範圍內的敵人：移除隱蔽，3 回合內不能再隱蔽；範圍內的敵方陷阱對你的陣營顯示（不擲命中）（敵方）",
+              "生成「毒」表面 3 回合（影響的格子）"
+            ],
+            "keywords": [
+              "標記",
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_thorn_wall_cp",
+            "name_zh": "荊棘牆術",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "生成「荊棘叢」，2 回合後消失（影響的格子）",
+              "生成「毒」表面 2 回合，強度 121.4%（表面每回合的傷害、治療與施加的狀態 ×121.4%）（影響的格子）"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_rand_4253514495",
+            "name_zh": "毒素・控場",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 4）",
+            "effects": [
+              "生成「毒」表面 5 回合（影響的格子）",
+              "奪取目標身上一個增益（剩餘回合最長者），以相同的剩餘回合施加到自己身上（敵方）"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "中毒",
+          "毒素",
+          "地形",
+          "範圍"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 12.84,
+        "cards": [
+          {
+            "id": "skill_rand_1056019397",
+            "name_zh": "聖光毒潮",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "十字（射程 3）",
+            "effects": [
+              "10–100＋智力加成的毒素傷害（敵方）",
+              "推開 1 格（敵方）",
+              "生成「毒」表面 2 回合，強度 104%（表面每回合的傷害、治療與施加的狀態 ×104%）（影響的格子）"
+            ],
+            "keywords": [
+              "撞擊",
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要毒霧籠罩戰場——這招能在特定範圍內生成持續的毒表面。",
+            "miss_zh": null,
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "wish_zh.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_1931076827",
+            "name_zh": "絞毒鉤",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "直線（大小 2）",
+            "effects": [
+              "鉤住直線上第一個敵人，拉到你身邊（不受推拉 2 格的上限；不會拉進深淵或岩漿，推不動的目標改受一次撞擊）",
+              "生成「毒」表面 6 回合，強度 121.4%（表面每回合的傷害、治療與施加的狀態 ×121.4%）（影響的格子）",
+              "狀態「定身」 2 回合（敵方）"
+            ],
+            "keywords": [
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要戰場佈滿毒素——這招能拉動敵人並在路徑上留下五回合的毒面。",
+            "miss_zh": "最接近你願望的一招：有中毒、毒素、地形；範圍這次做不到。",
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "wish_zh.effect_mismatch"
+            ]
+          },
+          {
+            "id": "skill_rand_1065064926",
+            "name_zh": "蝕地擊",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "指定格（射程 3）",
+            "effects": [
+              "推開 1 格（敵方）",
+              "狀態「倒地」（直到被移除）（敵方）",
+              "生成「毒」表面 3 回合（影響的格子）"
+            ],
+            "keywords": [
+              "倒地",
+              "撞擊",
+              "中毒"
+            ],
+            "elements": [
+              "毒素"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要毒素覆蓋戰場——這招能讓單個格子變為持續兩回合的毒表面。",
+            "miss_zh": "最接近你願望的一招：有中毒、毒素、地形；範圍這次做不到。",
+            "llm_codes": [
+              "cast_flavor.effect_mismatch",
+              "wish_zh.effect_mismatch"
+            ]
+          }
+        ],
+        "hits": [
+          4,
+          3,
+          3
+        ],
+        "tag_count": 4
+      }
+    },
+    {
+      "label": "W12",
+      "kind": "做不到",
+      "wish": "我想要一條會飛的龍載我去月亮",
+      "old": {
+        "source": "partial",
+        "keywords": [
+          "形態"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 2.77,
+        "cards": [
+          {
+            "id": "skill_form_renewal_cp",
+            "name_zh": "化形回春",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 10–100＋感知加成（若你在形態中，整體 +30%）（友方）"
+            ],
+            "keywords": [
+              "形態"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          },
+          {
+            "id": "skill_wild_roar_cp",
+            "name_zh": "野性怒吼",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 1）",
+            "effects": [
+              "10–100＋體質加成的物理傷害（敵方），若你在形態中，整體 +30%",
+              "狀態「虛弱」 1 回合，強度 121.4%：自己造成的攻擊傷害 ×69.7%（敵方）"
+            ],
+            "keywords": [
+              "形態"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "pool",
+            "pick": null,
+            "reply_zh": null,
+            "miss_zh": null,
+            "llm_codes": []
+          }
+        ]
+      },
+      "new": {
+        "source": "llm",
+        "tags": [
+          "形態",
+          "位移",
+          "召喚"
+        ],
+        "attempts": 1,
+        "codes": [],
+        "seconds": 12.87,
+        "cards": [
+          {
+            "id": "skill_form_renewal_cp",
+            "name_zh": "月影迴環",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "自身",
+            "effects": [
+              "治療 10–100＋感知加成（若你在形態中，整體 +30%）（友方）"
+            ],
+            "keywords": [
+              "形態"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要飛向月亮——這招雖不帶你離地，卻能在長途跋涉中守護你的生命。",
+            "miss_zh": "最接近你願望的一招：有形態；位移、召喚這次做不到。",
+            "llm_codes": [
+              "name_zh.effect_mismatch",
+              "concept.effect_mismatch",
+              "cast_flavor.effect_mismatch",
+              "concept.forbidden",
+              "cast_flavor.simplified"
+            ]
+          },
+          {
+            "id": "skill_form_quake_t1_cp",
+            "name_zh": "環形壓制",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "10–60＋體質加成的物理傷害（敵方），若你在形態中，整體 +30%",
+              "擊倒（體質對抗）（敵方），若你在形態中"
+            ],
+            "keywords": [
+              "倒地",
+              "形態"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": "llm",
+            "reply_zh": "你想要乘龍遠行——這招以環狀力量壓制周圍敵人，為你的移動爭取空間與時間。",
+            "miss_zh": "最接近你願望的一招：有形態；位移、召喚這次做不到。",
+            "llm_codes": [
+              "name_zh.effect_mismatch",
+              "concept.effect_mismatch",
+              "cast_flavor.effect_mismatch",
+              "concept.forbidden",
+              "cast_flavor.simplified"
+            ]
+          },
+          {
+            "id": "skill_form_primal_return_t1_cp",
+            "name_zh": "原形歸一",
+            "description_zh": null,
+            "kind": "主動",
+            "shape": "環形（半徑 2，只打距離 2 的一圈，不含相鄰）",
+            "effects": [
+              "只能在形態中施放：先解除你目前的形態（照常進入冷卻），再結算以下效果",
+              "20–120＋體質加成的物理傷害（敵方）"
+            ],
+            "keywords": [
+              "形態"
+            ],
+            "elements": [
+              "物理"
+            ],
+            "source": "composer",
+            "pick": "top",
+            "reply_zh": null,
+            "miss_zh": "最接近你願望的一招：有形態；位移、召喚這次做不到。",
+            "llm_codes": []
+          }
+        ],
+        "hits": [
+          1,
+          1,
+          1
+        ],
+        "tag_count": 3
+      }
+    }
+  ]
+}

@@ -65,8 +65,9 @@ def test_mock_can_raise_errors() -> None:
 def test_default_config_file_loads() -> None:
     cfg = load_llm_config(DEFAULT_CONFIG_PATH, env={})
     assert cfg.base_url == "http://localhost:8001/v1"
-    assert cfg.model == "google/gemma-4-26b-a4b-qat"  # LB-CF：預設改用 Gemma
-    assert cfg.reasoning_effort == "none"  # LB-CF：Gemma 在 LM Studio 上不設就會思考
+    # 2026-11-22 使用者改用 swift-qwen3.8-27b
+    assert cfg.model == "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs"
+    assert cfg.reasoning_effort == "none"  # LB-CF：Gemma、swift-qwen 在 LM Studio 上不設就會思考
     assert cfg.temperature == 0.7
     assert cfg.api_key == "local"
     assert cfg.max_retries == 3
@@ -283,7 +284,8 @@ def test_ping_success() -> None:
         out, err, transport=httpx.MockTransport(lambda r: httpx.Response(200, json=ok_body()))
     )
     assert code == 0
-    assert "模型：google/gemma-4-26b-a4b-qat" in out.getvalue()  # LB-CF：預設模型改 Gemma
+    # 2026-11-22 預設模型改 swift-qwen3.8-27b
+    assert "模型：swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs" in out.getvalue()
     assert "回應時間" in out.getvalue()
     assert err.getvalue() == ""
 

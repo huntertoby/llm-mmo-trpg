@@ -1,0 +1,16 @@
+已載入：['swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs']
+速度：{'completion_tokens': 500, 'reasoning_tokens': 0, 'ttft_s': 2.53, 'generation_s': 7.07, 'generation_tps': 70.8}
+W1 想把敵人凍在火裡
+W2 想把敵人凍住，再一錘敲碎
+W3 讓一整片敵人都燒起來的火焰
+W4 能一下子閃到敵人背後的招式
+W5 把敵人從高台上推下去
+W6 召喚一隻狼替我擋刀
+W7 從高處跳下來重重砸在地上
+W8 幫隊友擋下傷害的護盾
+W9 被打的時候自動反擊回去
+W10 一直帶在身上、讓我越打越強的被動
+W11 讓毒霧籠罩整個戰場
+W12 我想要一條會飛的龍載我去月亮
+→ F:\PythonProject\LLM-MMO-TRPG\.claude\worktrees\agent-a03ab3d3c73e41992\docs\phases\PK-4資料\wish_compare.json
+[harness] exit=0

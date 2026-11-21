@@ -1,0 +1,388 @@
+{
+  "dialogue": {
+    "calls": 53,
+    "p50": 1.029,
+    "p90": 1.66,
+    "max": 3.936,
+    "mean": 1.11,
+    "finish": {
+      "stop": 53
+    },
+    "http_errors": {},
+    "json_ok": 53,
+    "json_total": 53,
+    "with_cjk": 44,
+    "simplified_calls": 2,
+    "simplified_examples": [
+      {
+        "i": 0,
+        "chars": "东两么别声头对没腾见说雾静风",
+        "context": "近夜里水声不对，像是底下有什么东西在翻腾，但白天又风平浪静。"
+      },
+      {
+        "i": 14,
+        "chars": "儿",
+        "context": "霧渡的霧重，船身總髒髒的；那活儿不輕，但能換飯吃。"
+      }
+    ],
+    "mainland_calls": 2,
+    "mainland_all": 3,
+    "mainland_examples": [
+      {
+        "i": 10,
+        "words": [
+          "啥"
+        ],
+        "context": "著乾肉，瞥了你一眼。「霧渡鎮沒啥大活。」他指了指遠處，「去 "
+      },
+      {
+        "i": 11,
+        "words": [
+          "啥"
+        ],
+        "context": "阿岳瞥了你一眼。「霧渡鎮沒啥大活。」他指了指遠處，「去 "
+      },
+      {
+        "i": 40,
+        "words": [
+          "視野"
+        ],
+        "context": "維持體力。\n雨霧漫過梯田階層，視野所及盡是灰白。腳邊停著一隻"
+      }
+    ],
+    "mainland_counter": {
+      "啥": 2,
+      "視野": 1
+    },
+    "tps_median": null
+  },
+  "dialogue2": {
+    "calls": 54,
+    "p50": 0.934,
+    "p90": 1.641,
+    "max": 3.527,
+    "mean": 1.02,
+    "finish": {
+      "stop": 54
+    },
+    "http_errors": {},
+    "json_ok": 54,
+    "json_total": 54,
+    "with_cjk": 45,
+    "simplified_calls": 4,
+    "simplified_examples": [
+      {
+        "i": 4,
+        "chars": "点",
+        "context": "旅人，你問到点子上了呢。\n前兩天霧渡鎮外頭"
+      },
+      {
+        "i": 19,
+        "chars": "帮断桥节过问雾",
+        "context": "指节敲了敲桌沿。\n「怪事？断崖帮的船过不了雾渡的桥。」\n「再"
+      },
+      {
+        "i": 21,
+        "chars": "头码货",
+        "context": "斷崖幫正缺人手，去码头扛货，或者替我盯着柳掌柜的铺"
+      },
+      {
+        "i": 36,
+        "chars": "担",
+        "context": "一名腿上帶傷、肩挑貨担的行商\n他想在霧氣更濃前趕回"
+      }
+    ],
+    "mainland_calls": 1,
+    "mainland_all": 1,
+    "mainland_examples": [
+      {
+        "i": 11,
+        "words": [
+          "幹活"
+        ],
+        "context": "阿岳抹了把臉上的灰。\n「想幹活？霧渡鎮的渡口缺人搬貨。」"
+      }
+    ],
+    "mainland_counter": {
+      "幹活": 1
+    },
+    "tps_median": null
+  },
+  "flash2": {
+    "calls": 27,
+    "p50": 1.482,
+    "p90": 2.411,
+    "max": 4.203,
+    "mean": 1.61,
+    "finish": {
+      "stop": 27
+    },
+    "http_errors": {},
+    "json_ok": 27,
+    "json_total": 27,
+    "with_cjk": 27,
+    "simplified_calls": 0,
+    "simplified_examples": [],
+    "mainland_calls": 2,
+    "mainland_all": 2,
+    "mainland_examples": [
+      {
+        "i": 13,
+        "words": [
+          "暴擊"
+        ],
+        "context": "水面並持續燃燒。\n觸發時機改為暴擊或受傷時點燃。"
+      },
+      {
+        "i": 24,
+        "words": [
+          "質量"
+        ],
+        "context": "理傷害，讓每次攻擊都帶有沉重的質量感。\n空氣凝滯，出招時伴隨"
+      }
+    ],
+    "mainland_counter": {
+      "暴擊": 1,
+      "質量": 1
+    },
+    "tps_median": null
+  },
+  "flash3": {
+    "calls": 25,
+    "p50": 1.772,
+    "p90": 2.498,
+    "max": 4.274,
+    "mean": 1.78,
+    "finish": {
+      "stop": 25
+    },
+    "http_errors": {},
+    "json_ok": 25,
+    "json_total": 25,
+    "with_cjk": 25,
+    "simplified_calls": 0,
+    "simplified_examples": [],
+    "mainland_calls": 1,
+    "mainland_all": 1,
+    "mainland_examples": [
+      {
+        "i": 13,
+        "words": [
+          "暴擊"
+        ],
+        "context": "\n命中時附加水屬性表面。\n改在暴擊時觸發燃燒。"
+      }
+    ],
+    "mainland_counter": {
+      "暴擊": 1
+    },
+    "tps_median": null
+  },
+  "flashpick": {
+    "calls": 27,
+    "p50": 1.784,
+    "p90": 2.632,
+    "max": 4.567,
+    "mean": 1.85,
+    "finish": {
+      "stop": 27
+    },
+    "http_errors": {},
+    "json_ok": 27,
+    "json_total": 27,
+    "with_cjk": 27,
+    "simplified_calls": 0,
+    "simplified_examples": [],
+    "mainland_calls": 1,
+    "mainland_all": 1,
+    "mainland_examples": [
+      {
+        "i": 13,
+        "words": [
+          "暴擊"
+        ],
+        "context": "時保留燃燒效果。\n觸發時機改為暴擊時，點燃效果依預算調整。"
+      }
+    ],
+    "mainland_counter": {
+      "暴擊": 1
+    },
+    "tps_median": null
+  },
+  "pick": {
+    "calls": 110,
+    "p50": 1.29,
+    "p90": 3.301,
+    "max": 4.381,
+    "mean": 1.62,
+    "finish": {
+      "stop": 108,
+      "error": 2
+    },
+    "http_errors": {
+      "_SchemaRejectedError: HTTP 400": 2
+    },
+    "json_ok": 108,
+    "json_total": 110,
+    "with_cjk": 73,
+    "simplified_calls": 7,
+    "simplified_examples": [
+      {
+        "i": 0,
+        "chars": "额",
+        "context": "化為貫穿敵人的火焰直線，造成高额傷害並引發流血。\n你凝聚掌心"
+      },
+      {
+        "i": 9,
+        "chars": "发",
+        "context": "一道尖銳的火柱，隨時間推移而愈发猛烈。\n你低頭凝視掌心，熱氣"
+      },
+      {
+        "i": 10,
+        "chars": "发",
+        "context": "道尖銳的火柱，隨著時間推移而愈发猛烈。\n你低頭凝視掌心，熱氣"
+      },
+      {
+        "i": 11,
+        "chars": "发",
+        "context": "道尖銳的火柱，隨著時間推移而愈发猛烈。\n你低頭凝視掌心，熱氣"
+      },
+      {
+        "i": 23,
+        "chars": "凭",
+        "context": "\n雙手結印，一道熾熱的十字烙印凭空顯現，浸透周遭空氣。"
+      },
+      {
+        "i": 51,
+        "chars": "体内",
+        "context": "沉重的打擊將大地的力量注入敵人体内，使其陷入虛弱的狀態。\n武"
+      },
+      {
+        "i": 106,
+        "chars": "伤",
+        "context": "帶起無形的濕氣，綠色的斑紋沿著伤口迅速擴散。"
+      }
+    ],
+    "mainland_calls": 0,
+    "mainland_all": 1,
+    "mainland_examples": [
+      {
+        "i": 61,
+        "words": [
+          "視野"
+        ],
+        "context": "指尖劃過空氣，一道細長電弧撕開視野前緣，將目標緊鎖在閃爍的光"
+      }
+    ],
+    "mainland_counter": {
+      "視野": 1
+    },
+    "tps_median": null
+  },
+  "pick2": {
+    "calls": 104,
+    "p50": 1.182,
+    "p90": 2.763,
+    "max": 4.962,
+    "mean": 1.45,
+    "finish": {
+      "stop": 104
+    },
+    "http_errors": {},
+    "json_ok": 104,
+    "json_total": 104,
+    "with_cjk": 70,
+    "simplified_calls": 1,
+    "simplified_examples": [
+      {
+        "i": 96,
+        "chars": "体",
+        "context": "意岩層\n隨憤怒累積，大地之力在体表結晶化，形成堅韌的石質護層"
+      }
+    ],
+    "mainland_calls": 0,
+    "mainland_all": 0,
+    "mainland_examples": [],
+    "mainland_counter": {},
+    "tps_median": null
+  },
+  "skills": {
+    "calls": 244,
+    "p50": 1.398,
+    "p90": 4.249,
+    "max": 7.33,
+    "mean": 2.52,
+    "finish": {
+      "stop": 244
+    },
+    "http_errors": {},
+    "json_ok": 244,
+    "json_total": 244,
+    "with_cjk": 50,
+    "simplified_calls": 3,
+    "simplified_examples": [
+      {
+        "i": 15,
+        "chars": "强",
+        "context": "以法器震動源晶頻率，將單體目標强行拉近并留下殘頻層數。\n法器"
+      },
+      {
+        "i": 48,
+        "chars": "标",
+        "context": "暗影汲納\n透過法器汲取目标的增益狀態，轉化為自身可累積"
+      },
+      {
+        "i": 92,
+        "chars": "内围",
+        "context": "開一圈柔和的光暈，持續滋養范围内的同伴。\n低聲吟誦間，溫熱的"
+      }
+    ],
+    "mainland_calls": 0,
+    "mainland_all": 0,
+    "mainland_examples": [],
+    "mainland_counter": {},
+    "tps_median": null
+  },
+  "wish": {
+    "calls": 79,
+    "p50": 2.628,
+    "p90": 4.346,
+    "max": 6.914,
+    "mean": 2.71,
+    "finish": {
+      "stop": 79
+    },
+    "http_errors": {},
+    "json_ok": 79,
+    "json_total": 79,
+    "with_cjk": 37,
+    "simplified_calls": 2,
+    "simplified_examples": [
+      {
+        "i": 59,
+        "chars": "额",
+        "context": "短距離的暗影衝擊，對敵人造成高额傷害。\n痛感傳來的刹那，冰霜"
+      },
+      {
+        "i": 76,
+        "chars": "层",
+        "context": "光芒，緊接著命中同一敵人，寒意层层堆疊。\n你想要迅捷的旅程—"
+      }
+    ],
+    "mainland_calls": 1,
+    "mainland_all": 1,
+    "mainland_examples": [
+      {
+        "i": 12,
+        "words": [
+          "回血"
+        ],
+        "context": "打——這招讓一圈人倒地，你還能回血。"
+      }
+    ],
+    "mainland_counter": {
+      "回血": 1
+    },
+    "tps_median": null
+  }
+}
