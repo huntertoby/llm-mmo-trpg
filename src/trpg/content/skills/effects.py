@@ -46,6 +46,17 @@ class ShapeSpec(ContentModel):
     arm: int | None = Field(default=None, exclude_if=lambda v: v is None)
     """十字的臂長（Phase 5F-2b；``skill_shapes.yaml`` 的 ``content_params``，只有內建內容可寫，
     省略＝預設 1）。沒填時不輸出，舊技能的序列化（快照、雜湊）不變。"""
+    solid: bool | None = Field(default=None, exclude_if=lambda v: v is None)
+    """實心環形（GS-3，#173，06 6.3 形狀清單）：``true`` 時環形影響切比雪夫距離 1～``radius`` 的
+    格子（不含施放者自己；「周圍 N 格」），省略＝只打距離恰為 ``radius`` 的一圈（行為不變）。只有
+    ``skill_shapes.yaml`` 標 ``solid_option`` 的形狀（環形）可以填，只能填 ``true``；只有內建內容
+    （``content_only_ok``）能寫，組合器與 LLM 不提供。沒填時不輸出，舊技能的序列化不變。"""
+
+    @model_validator(mode="after")
+    def _check_solid(self) -> ShapeSpec:
+        if self.solid is False:
+            raise ValueError("shape.solid 只能填 true（省略＝不是實心）")
+        return self
 
     def param_values(self) -> dict[str, int | str]:
         """已填寫的參數（依名稱排序）。"""

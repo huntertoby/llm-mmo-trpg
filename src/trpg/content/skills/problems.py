@@ -227,6 +227,20 @@ def _effect_problems(
     return problems
 
 
+def _solid_problems(skill: SkillDef, shape: ShapeDef) -> list[str]:
+    """實心環形（GS-3，#173）：只有 ``solid_option`` 的形狀、只有內建內容能寫 ``solid: true``；
+    持續區域照形狀展開格子、不看實心，所以不能和 ``zone`` 一起用。"""
+    if not skill.shape.solid:
+        return []
+    if not shape.solid_option:
+        return [f"shape.solid：形狀 {shape.id} 沒有實心選項"]
+    if not skill.content_only_ok:
+        return ["shape.solid：實心環形只有內建內容能寫"]
+    if any(e.type == "zone" for e in skill.effects):
+        return ["shape.solid：持續區域（zone）不能用實心環形"]
+    return []
+
+
 def _on_kill_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
     """``on_kill`` 的跨檔案檢查（Phase 3D-8b）：一般原語（治療、護盾、施加狀態）當成同一技能的
     效果檢查（參數、引用）；``refund_ap``、``refund_cooldown`` 不是原語，已由 schema 檢查。"""
@@ -529,6 +543,7 @@ def skill_problems(
     else:
         values = skill.shape.param_values()
         problems += _int_param_problems("shape", values, shape, builtin=skill.content_only_ok)
+        problems += _solid_problems(skill, shape)
     if skill.trap is not None and skill.trap.shape not in shapes:
         known = ", ".join(sorted(shapes))
         problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")

@@ -158,7 +158,10 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     if shape.type == "chain" and falloff:  # 連鎖衰減（BAL-13d，06 6.5「BAL-13c 定」）
         parts.append(f"每跳 −{_percent(falloff)}%")
     radius = shape.param_values().get("radius")
-    if shape.type == "ring" and isinstance(radius, int) and radius >= 2:  # noqa: PLR2004
+    if shape.type == "ring" and shape.solid and isinstance(radius, int):
+        # GS-3（#173）：實心環形＝「周圍 N 格」，距離 1～N 都打（含相鄰），不含自己
+        parts.append(f"周圍 {radius} 格內都打，含相鄰，不含自己")
+    elif shape.type == "ring" and isinstance(radius, int) and radius >= 2:  # noqa: PLR2004
         # 6F-3（12B 對照 #8）：環形只打切比雪夫距離恰為半徑的一圈，相鄰的打不到；卡片寫清楚
         parts.append(f"只打距離 {radius} 的一圈，不含相鄰")
     return f"{name}（{'，'.join(parts)}）" if parts else name

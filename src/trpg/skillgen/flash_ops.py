@@ -288,7 +288,8 @@ def cell_count(shape: Any, library: ContentLibrary) -> int | None:
     if definition is None or definition.cell_count is None:
         return None
     try:
-        return definition.cell_count.count_for(definition.with_defaults(shape.param_values()))
+        values = definition.with_defaults(shape.param_values())
+        return definition.cell_count.count_for(values, solid=bool(getattr(shape, "solid", None)))
     except ValueError:
         return None
 

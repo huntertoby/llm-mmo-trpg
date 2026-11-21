@@ -83,15 +83,17 @@ class ShapeBudget(ContentModel):
         per_unit_permille: int = 0,
         by_value: dict[int, int] | None = None,
         non_power_by_value: dict[int, int] | None = None,
+        solid_by_value: dict[int, int] | None = None,
     ) -> int:
         """``values`` 是技能形狀已填的參數；表格缺少該值時回傳 ``base_permille``。給了
         ``primitive`` 且它不是威力原語時，有 ``non_power_by_value`` 就查那張表。數字都是
-        ``skill_budget.yaml`` 的 ``shape_budget``。"""
+        ``skill_budget.yaml`` 的 ``shape_budget``。``solid_by_value``（GS-3）：實心環形的表，
+        呼叫端只在技能形狀寫了 ``solid: true`` 時傳入，取代 ``by_value``。"""
         if self.param is None:
             return base_permille
         raw = values.get(self.param)
         value = raw if isinstance(raw, int) else 0
-        table = by_value
+        table = by_value if solid_by_value is None else solid_by_value
         if (
             non_power_by_value is not None
             and primitive is not None
@@ -114,6 +116,8 @@ class ShapeCells(ContentModel):
     base: int = Field(default=1, ge=1)
     param: str | None = None
     by_value: dict[int, int] | None = None
+    solid_by_value: dict[int, int] | None = None
+    """實心時的格數（GS-3，#173；只有 ``solid_option`` 的形狀寫，鍵同 ``by_value``）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ShapeCells:
@@ -121,16 +125,22 @@ class ShapeCells(ContentModel):
             raise ValueError("cell_count 的 param 與 by_value 必須一起指定")
         if self.by_value is not None and any(v < 1 for v in self.by_value.values()):
             raise ValueError("cell_count 的 by_value 格數必須 ≥ 1")
+        if self.solid_by_value is not None and (
+            self.by_value is None or set(self.solid_by_value) != set(self.by_value)
+        ):
+            raise ValueError("cell_count 的 solid_by_value 鍵要和 by_value 相同")
         return self
 
-    def count_for(self, values: dict[str, int | str]) -> int:
-        """``values`` 是技能形狀已填的參數；參數缺少或表格沒有該值時拋出 :class:`ValueError`。"""
+    def count_for(self, values: dict[str, int | str], *, solid: bool = False) -> int:
+        """``values`` 是技能形狀已填的參數；參數缺少或表格沒有該值時拋出 :class:`ValueError`。
+        ``solid``：實心環形（GS-3）查 ``solid_by_value``。"""
         if self.param is None or self.by_value is None:
             return self.base
         raw = values.get(self.param)
-        if not isinstance(raw, int) or raw not in self.by_value:
+        table = self.solid_by_value if solid and self.solid_by_value is not None else self.by_value
+        if not isinstance(raw, int) or raw not in table:
             raise ValueError(f"cell_count 沒有參數 {self.param} = {raw!r} 的格數")
-        return self.by_value[raw]
+        return table[raw]
 
 
 class ShapeDef(ContentModel):
@@ -157,6 +167,10 @@ class ShapeDef(ContentModel):
     budget: ShapeBudget = Field(default_factory=ShapeBudget)
     cell_count: ShapeCells | None = None
     """影響的格子數（沒有固定格數的形狀，例如連鎖，為 ``None``）。"""
+    solid_option: bool = False
+    """技能可以寫 ``shape.solid: true``（實心，GS-3，#173：環形的「周圍 N 格」＝距離 1～N，不含
+    自己）。只有內建內容能寫；預算查 ``skill_budget.yaml`` 的 ``shape_budget.<id>.solid_by_value``，
+    格數查 ``cell_count.solid_by_value``。"""
 
     @model_validator(mode="after")
     def _check_content_params(self) -> ShapeDef:
@@ -203,6 +217,15 @@ class ShapeDef(ContentModel):
         ]
         if missing:
             raise ValueError(f"形狀 {self.id}：cell_count.by_value 缺少參數值 {missing}")
+        return self
+
+    @model_validator(mode="after")
+    def _check_solid_option(self) -> ShapeDef:
+        cells = self.cell_count
+        if self.solid_option and (cells is None or cells.solid_by_value is None):
+            raise ValueError(f"形狀 {self.id}：solid_option 要寫 cell_count.solid_by_value")
+        if not self.solid_option and cells is not None and cells.solid_by_value is not None:
+            raise ValueError(f"形狀 {self.id}：沒有 solid_option 不能寫 cell_count.solid_by_value")
         return self
 
     @model_validator(mode="after")

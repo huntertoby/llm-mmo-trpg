@@ -980,7 +980,8 @@ def zone_cell_count(skill: SkillDef, library: ContentLibrary) -> int:
     if shape.cell_count is None:
         raise BudgetError(f"形狀 {shape_id} 沒有 cell_count，無法計算區域格數")
     try:
-        return shape.cell_count.count_for(shape.with_defaults(skill.shape.param_values()))
+        values = shape.with_defaults(skill.shape.param_values())
+        return shape.cell_count.count_for(values, solid=bool(skill.shape.solid))
     except ValueError as error:
         raise BudgetError(str(error)) from None
 
@@ -1235,7 +1236,12 @@ def _shape_parts(
     shape = by_id(rules.shapes)[skill.shape.type]
     # 連鎖的非威力效果（狀態等）不衰減，維持衰減前的倍率（BAL-13d，06 6.5「BAL-13c 定」）
     values = shape.with_defaults(skill.shape.param_values())
-    permille = library.budget.shape_permille(shape, values, primitive.id)
+    permille = library.budget.shape_permille(
+        shape,
+        values,
+        primitive.id,
+        solid=bool(skill.shape.solid),  # 實心環形（GS-3）
+    )
     return Fraction(permille, _PERMILLE), range_coefficient(skill.shape, library.budget)[1]
 
 

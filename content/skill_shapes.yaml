@@ -83,8 +83,10 @@ shapes:
     description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
     targeting: none
     min_rarity: common
-    budget: {param: radius}   # 倍率依 radius 查表（skill_budget.yaml 的 shape_budget.ring.by_value）
-    cell_count: {param: radius, by_value: {1: 8, 2: 16}}
+    budget: {param: radius}   # 倍率依 radius 查表（skill_budget.yaml 的 shape_budget.ring.by_value；實心查 solid_by_value）
+    # GS-3（#173，06 6.3）：實心＝「周圍 N 格」（切比雪夫距離 1～N，不含自己）；只有內建內容能寫 solid: true。
+    solid_option: true
+    cell_count: {param: radius, by_value: {1: 8, 2: 16}, solid_by_value: {1: 8, 2: 24}}
     params:
       radius: {llm_hint: "圈的半徑。", min: 1, max: 2}
   - id: ground_tile

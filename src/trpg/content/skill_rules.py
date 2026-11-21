@@ -406,6 +406,9 @@ class ShapePrice(ContentModel):
     per_unit_permille: int = Field(default=0, ge=0)
     by_value: dict[int, int] | None = None
     non_power_by_value: dict[int, int] | None = None
+    solid_by_value: dict[int, int] | None = None
+    """實心環形（GS-3，#173：``shape.solid: true``，距離 1～參數值）的倍率表，鍵同 ``by_value``；
+    只有 ``solid_option`` 的形狀可以寫（:func:`shape_budget_problems`）。"""
 
 
 class BudgetRules(ContentModel):
@@ -731,7 +734,12 @@ class BudgetRules(ContentModel):
         return {**out, "stamina": self.stamina_for_mana(int(cost["mana"]))}
 
     def shape_permille(
-        self, shape: ShapeDef, values: dict[str, int | str], primitive: str | None = None
+        self,
+        shape: ShapeDef,
+        values: dict[str, int | str],
+        primitive: str | None = None,
+        *,
+        solid: bool = False,
     ) -> int:
         """``shape`` 在參數 ``values`` 下的形狀倍率（‰；HC-B）：基礎與每單位加成讀
         ``shape_budget``（HC-W2 起查表也是），看哪個參數、哪些是威力原語讀形狀自己的 ``budget``
@@ -744,6 +752,7 @@ class BudgetRules(ContentModel):
             per_unit_permille=price.per_unit_permille,
             by_value=price.by_value,
             non_power_by_value=price.non_power_by_value,
+            solid_by_value=price.solid_by_value if solid else None,
         )
 
     def status_point(self, status_id: str) -> int | None:
@@ -827,7 +836,11 @@ def _shape_table_problems(shape: ShapeDef, price: ShapePrice) -> list[str]:
     形狀列出 ``power_primitives``。"""
     problems: list[str] = []
     wanted = shape.budget_param_values()
-    tables = (("by_value", price.by_value), ("non_power_by_value", price.non_power_by_value))
+    tables = (
+        ("by_value", price.by_value),
+        ("non_power_by_value", price.non_power_by_value),
+        ("solid_by_value", price.solid_by_value),
+    )
     for name, table in tables:
         if table is None:
             continue
@@ -840,6 +853,11 @@ def _shape_table_problems(shape: ShapeDef, price: ShapePrice) -> list[str]:
             missing = [v for v in wanted if v not in table]
             if missing:
                 problems.append(f"{where}：缺少參數 {shape.budget.param} 的值 {missing}")
+    if shape.solid_option != (price.solid_by_value is not None):  # GS-3：實心環形
+        problems.append(
+            f"shape_budget.{shape.id}.solid_by_value：形狀{'有' if shape.solid_option else '沒有'}"
+            " solid_option，" + ("要寫這張表" if shape.solid_option else "不能寫這張表")
+        )
     if price.non_power_by_value is not None and not shape.budget.power_primitives:
         problems.append(
             f"shape_budget.{shape.id}.non_power_by_value：形狀沒有列出 budget.power_primitives"

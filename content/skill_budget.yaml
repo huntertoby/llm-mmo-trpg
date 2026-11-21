@@ -143,7 +143,9 @@ shape_budget:
   cone:             {base_permille: 1000, by_value: {2: 1300, 3: 1600, 4: 2000}}   # 錐形（依長度 size 查表）
   cross:            {base_permille: 1800, by_value: {1: 1800, 2: 2000}}   # 十字（依臂長 arm 查表；臂長 2 的初值見 skill_shapes.yaml）
   square3:          {base_permille: 2000}   # 方陣
-  ring:             {base_permille: 1000, by_value: {1: 1800, 2: 2200}}   # 環形（依半徑 radius 查表）
+  ring:             {base_permille: 1000, by_value: {1: 1800, 2: 2200}, solid_by_value: {1: 1800, 2: 2600}}   # 環形（依半徑 radius 查表）
+  # GS-3（#173）：實心環形 solid_by_value 照涵蓋的格數：半徑 1 同樣 8 格（＝1800）；半徑 2 共 24 格，照環形
+  # 每多 8 格 +400 外推（8 格 1800、16 格 2200 → 24 格 2600），取較貴的保守初值，未經模擬，開放數值工坊。
   ground_tile:      {base_permille: 1000}   # 指定格
   chain:   # 連鎖（依跳數 jumps 查表；BAL-13c 威力衰減、BAL-13d 非威力效果的說明見 skill_shapes.yaml）
     base_permille: 1000

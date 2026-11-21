@@ -1015,7 +1015,7 @@ def _self_area(
         return (caster.xy,)
     assert spec.radius is not None
     # 以自己為中心：巨型單位把整個佔格當中心（GB-1b，R2；一格時就是原本的環形與範圍光環）
-    return shapes.around_tiles(state, caster, spec.type, spec.radius)
+    return shapes.around_tiles(state, caster, spec.type, spec.radius, solid=bool(spec.solid))
 
 
 _AREA_TARGETING = frozenset({"direction", "tile", "none"})
@@ -1170,7 +1170,7 @@ def anchored_area(state: BattleState, caster: UnitState, skill: SkillDef, center
         tiles = center_tiles(state, spec.type, center, arm=_arm(state, skill))
     else:
         assert spec.type == "ring" and spec.radius is not None  # DELAYED_SHAPES 只有環形不選格
-        tiles = shapes.ring_tiles(state, center, spec.radius)
+        tiles = shapes.ring_tiles(state, center, spec.radius, solid=bool(spec.solid))
     if not tiles:
         raise IllegalActionError("影響範圍為空：沒有任何格子會受到影響")
     problem = skill_condition_problem(state, caster, skill, tiles)
@@ -1188,7 +1188,7 @@ def around_area(state: BattleState, owner: UnitState, skill: SkillDef) -> SkillA
     裡站著的單位都算；原點是持有者所在格（推擊、拉扯往外）。沒有射程、視線與選取。"""
     spec = skill.shape
     assert spec.radius is not None
-    tiles = shapes.around_tiles(state, owner, spec.type, spec.radius)
+    tiles = shapes.around_tiles(state, owner, spec.type, spec.radius, solid=bool(spec.solid))
     units = _tiles_to_units(state, tiles, None)
     return SkillArea(
         tiles=tiles,
