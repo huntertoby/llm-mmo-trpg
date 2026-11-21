@@ -121,3 +121,16 @@
 2. **兩個測試保留 `timeout(600)`**：`test_upgrade_topup.py` 第 732 行、`test_test_mode.py` 第 114 行，註解沒改。驗收時 summon 在 `-n 8` 下跑了 422.6 秒，600 秒的餘裕不大。負載再重時可能還是會被收掉。
 3. **player_text 是把時間攤開，總量只少約 30%**：單一測試不會再逼近上限，總 CPU 時間仍有 2～4 分鐘。要再省，可以讓 `check_draft` 接受已經算好的 `draft_options`（每份草稿現在算兩次，約占一半時間）；這要改 `src`，沒做。
 4. **範圍外的發現**：`test_test_mode.py::test_test_mode_refills_to_the_gear_inclusive_maximum` 在驗收的 `-n 8` 下跑了 159 秒，熱點應該是同一個護主配方（同一輪），修第 1 項後會一起變快。
+
+## 開發 PM 裁定（2026-11-21）
+
+已用 `--no-ff` 合併進 main。`player_text` 已降到 120 秒以下，600 秒的放寬已拿掉。另外兩個的熱點在 `src`，600 秒的放寬先留著。
+
+待 PM 決定的 4 件：
+1. **修 src 的護主配方**：要做，排一小段 QF-4b，在 HC-5b 之前做。兩段都會改 `skillgen/composer_*`，所以不平行。
+   - **原則**：只加速，輸出逐位元組不變。組合器、recipe census、`wish_coverage` 小樣本、78 場戰鬥、434 招，都要 different=0。
+   - **目標**：summon 和裝備重播單獨跑時，各 120 秒以下；達標後拿掉 `timeout(600)`。
+   - 這個修正也會讓正式遊戲產生候選變快。
+2. **兩個測試先保留 600 秒**：照做，等 QF-4b 拿掉。
+3. **`check_draft` 接受算好的 `draft_options`**：併進 QF-4b，可做可不做；做的話輸出也要不變。
+4. **`test_test_mode_refills_to_the_gear_inclusive_maximum`**：併進 QF-4b 一起量。
