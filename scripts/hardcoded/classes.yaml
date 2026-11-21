@@ -925,13 +925,15 @@ rules:
       skill_limits.tiers；修正幅度與群召數量 HC-4b2 搬到 skill_limits.modifier_bounds、對照 max_summon_count；修正的
       形態維持費下限 −1000 改判 guard：減免 100% 是數學下限）。
   - id: py-content-rule-bounds-world
-    class: config
-    status: todo
+    class: guard
+    status: done
     kind: number
     files: [src/trpg/content/world_events.py, src/trpg/content/world_situations.py]
     where: [SolutionDef, MethodDef]
     owner: [threads, attributes]
-    note: 同上一條：情境解法的線索數、方法的屬性數上限。
+    note: HC-4d 改判 guard：骨架解法的線頭數 ≤ 2 是 9.6.7（#6）「0～2 條」的格式上限，實際上限在
+      situation_rules.yaml 的 budget.threads_max（它的 le=2 也是 guard）；方法的「常見屬性」最多 2 個是
+      分類資料的格式（9.6.11、#115），不是玩法數值。
   - id: py-content-guard-bounds
     class: guard
     status: done
@@ -981,6 +983,38 @@ rules:
     note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、錯誤列印數）。形態幅度的上限 HC-4b3 改成載入時對照 enter_form 原語。
       HC-4b 加 MAX_VARIANTS：一招最多 2 個變奏是護欄，實際上限依稀有度（core.yaml 的 variant_max_by_rarity，
       Ruleset 層檢查）。HC-4b2 加 _MIN_SIDES：骰子至少 2 面是護欄（組合器的骰面階梯在 skill_composer.yaml）。
+  - id: py-content-guard-constants-hc4d
+    class: guard
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/world_encounters.py, src/trpg/content/world_narration.py,
+            src/trpg/content/world_quests.py, src/trpg/content/world_situations.py]
+    where:
+      - '<module>.MAX_GROUP_SIZE'
+      - '<module>.MAX_THIRD_SIZE'
+      - '<module>.STORY_SENTENCES_MAX'
+      - '<module>.STORY_REFS_MAX'
+      - '<module>._MAX_LEVEL'
+      - '<module>.DC_SHIFT_LIMIT'
+      - '<module>.CARE_LIMIT'
+      - '<module>._DANGER_LEVELS'
+    note: HC-4d 改判 guard。一場敵人最多 4 名、第三方最多 3 名＝戰場地圖敵方／第三方起始區的格數（戰鬥地圖模板
+      4 格、就地切戰場 world/rules.yaml 的 field.min_enemy_cells），是格式上限；旁白最多 3 句、每種引用最多 4 個＝LLM
+      輸出的格式護欄（同 TEXT_MAX_CHARS 等字數上限）；任務等級 ≤ 10 是 xp_level／level_to 的護欄（等級上限在
+      world/rules.yaml 的 hero_growth.level_cap）；難度調整 ±2、用心清單 +2 是 9.6.4 使用者定的天花板，實際值在
+      situation_rules.yaml 的 check.dc_shift_max／care_max（資料只能更嚴，同 RACE_BONUS_LIMIT）；危險度 1～3
+      是刻度格式（DangerDef.level、模板 danger 的 le=3 同一件事）。
+  - id: py-content-structure-constants-hc4d
+    class: const
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/world_quests.py, src/trpg/content/fields.py]
+    where: ['<module>.OFFER_SIZE', '<module>.DECOR_FIXED_SIZE']
+    note: HC-4d 改判 const。OFFER_SIZE＝三選一的張數（結構，deepen＋bridge＋new 的合計）；DECOR_FIXED_SIZE 的
+      曬衣繩 3×1 格＝裝飾圖的固定尺寸，跟美術素材綁在一起（前端 client/src/test/capitalField.ts 照同一張表），
+      不是玩法數值。
   - id: py-content-math-constants
     class: const
     status: done
@@ -1941,6 +1975,15 @@ rules:
 
   # ---------------------------------------------------- 後端 world：config
   # 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
+  - id: py-world-no-rules-fallbacks
+    class: config
+    status: todo
+    files: [src/trpg/world/calendar.py, src/trpg/world/season.py, src/trpg/api/world_field_view.py]
+    kind: number
+    where: ['<module>.NO_RULES_CALENDAR', '<module>.NO_RULES_WEEK_DAYS', '<module>.NO_RULES_WALK_MAX_STEPS']
+    note: HC-4d：沒有 world/rules.yaml（只有測試的精簡內容庫）時的備用值。CalendarRules、week_days、FieldRules 的程式
+      預設值拿掉後搬到呼叫的地方，值和內容檔相同（tests/world/test_rule_defaults_hc4d.py 對照）；留給 HC-7 決定
+      要不要改成沒有世界規則就報錯。
   - id: py-world-actions-config-number
     class: config
     status: todo
@@ -2325,6 +2368,13 @@ rules:
     kind: text
     where: ['VariantSpec._check']
     note: 同上一條（content text）。
+  - id: py-content-hc4d-text
+    class: text
+    status: todo
+    kind: text
+    files: [src/trpg/content/fields.py, src/trpg/content/races.py]
+    where: ['FieldMapRules._check', 'RacePassive.permille_problems']
+    note: HC-4d 新的驗證訊息（實地地圖規則、種族被動上限搬進內容檔後的字句）；同上一條（content text）。
   - id: py-content-world-economy-text-text
     class: text
     status: todo

@@ -117,6 +117,7 @@ world_events:
     days: [7, 10]
     goal: {kind: seal_key, count: 12}
     base_players: 8
+    min_target_permille: 250
     on_success: {flags: [seal_resonance_full]}
 
 # 封印鑰匙（19.6.2；Phase 5F-3）：個人每個來源第一次達成給 1 把，同時算進全服鑰匙；個人至少 required 把才能挑戰賽季 Boss。

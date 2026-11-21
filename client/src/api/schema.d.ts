@@ -5050,10 +5050,7 @@ export interface components {
              * @default 1
              */
             max_climb: number;
-            /**
-             * Walk Max Steps
-             * @default 30
-             */
+            /** Walk Max Steps */
             walk_max_steps: number;
             hero?: components["schemas"]["FieldHeroView"] | null;
             /**

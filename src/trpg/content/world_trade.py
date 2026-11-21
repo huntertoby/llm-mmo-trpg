@@ -62,9 +62,9 @@ MAIL_LINE_KINDS: Final[tuple[MailLineKind, ...]] = (
 class TradeCommon(ContentModel):
     """各種交易方式共用的門檻（08 8.16）。"""
 
-    min_level: int = Field(default=3, ge=1)
+    min_level: int = Field(ge=1)
     """角色幾級起能交易。"""
-    item_level_margin: int = Field(default=2, ge=0)
+    item_level_margin: int = Field(ge=0)
     """收到的裝備，物品等級不能高於自己等級 ＋ 這個數。"""
     tradable_kinds: tuple[ItemKind, ...] = ("consumable", "material")
     """背包裡能交易的物品種類（材料、消耗品；8.16 沒列的染料不行）。"""
@@ -141,15 +141,15 @@ class MailTexts(ContentModel):
 class MailRules(ContentModel):
     """郵寄（08 8.16 第一步；玩法 PM 3.5 代決）。"""
 
-    mailbox_max: int = Field(default=20, ge=1)
+    mailbox_max: int = Field(ge=1)
     """信箱上限（寄給你的、還沒領也還沒過期的信）。"""
-    return_days: int = Field(default=3, ge=1)
+    return_days: int = Field(ge=1)
     """現實幾天沒領就退回寄件人（金幣的稅不退）。"""
-    season_warning_days: int = Field(default=3, ge=0)
+    season_warning_days: int = Field(ge=0)
     """季末前幾天寄件時提示「季末沒領的信會清掉」。"""
-    max_attachments: int = Field(default=3, ge=1)
+    max_attachments: int = Field(ge=1)
     """一封信最多幾格附件（一種物品或一件裝備算一格；金幣另算）。"""
-    note_max: int = Field(default=40, ge=0)
+    note_max: int = Field(ge=0)
     texts: MailTexts = Field(default_factory=MailTexts)
     """面板的固定說明句（6T-1b）。"""
     postmen: tuple[Postman, ...] = Field(min_length=1)
@@ -179,22 +179,22 @@ class MailRules(ContentModel):
 class TradeAudit(ContentModel):
     """稽核報表的門檻（08 8.16「短時間大量、估值懸殊」；只出報表，#101）。"""
 
-    burst_count: int = Field(default=5, ge=2)
+    burst_count: int = Field(ge=2)
     """同一個帳號在 ``burst_seconds`` 內寄出這麼多封以上＝短時間大量。"""
-    burst_seconds: int = Field(default=3600, ge=1)
-    big_value: int = Field(default=500, ge=1)
+    burst_seconds: int = Field(ge=1)
+    big_value: int = Field(ge=1)
     """一封信的估值這麼多以上＝大額。"""
-    pair_value: int = Field(default=800, ge=1)
+    pair_value: int = Field(ge=1)
     """同一對帳號、單向累計估值這麼多以上，而反方向不到它的 ``lopsided_permille``＝估值懸殊。"""
-    lopsided_permille: int = Field(default=200, ge=0, le=1000)
+    lopsided_permille: int = Field(ge=0, le=1000)
 
 
 class TradeRules(ContentModel):
     """``content/world/trade.yaml``。"""
 
-    trade: TradeCommon = Field(default_factory=TradeCommon)
+    trade: TradeCommon
     mail: MailRules
-    audit: TradeAudit = Field(default_factory=TradeAudit)
+    audit: TradeAudit
 
     def summary(self) -> str:
         names = "、".join(p.card.name_zh for p in self.mail.postmen)

@@ -25,6 +25,7 @@ from itertools import pairwise
 
 import pytest
 
+from tests.content.field_rules import field_map_rules
 from tests.content.test_cloud_fields import CUT, _inward, _route, _window_origin, cut_battlefield
 from trpg.content.fields import FieldMapDef, field_map_report
 from trpg.content.library import ContentLibrary
@@ -185,6 +186,7 @@ def test_all_18_maps_are_drawn_and_pass(library: ContentLibrary) -> None:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
         npcs={
             r: {n.id: n.location for n in t.npcs}
             for r, t in library.world_event_content.npcs.items()

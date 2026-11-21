@@ -127,10 +127,10 @@ class AffinityRankDef(ContentModel):
 class AffinityRules(ContentModel):
     """好感度的範圍與級距（9.6.11 #116），酒館每週傳聞數（開發 PM 定）。"""
 
-    min_value: int = -100
-    max_value: int = 100
+    min_value: int
+    max_value: int
     ranks: tuple[AffinityRankDef, ...]
-    rumors_per_week: int = Field(default=3, ge=1)
+    rumors_per_week: int = Field(ge=1)
     """酒館每週的傳聞數（一週幾天在世界規則的 ``week_days``，5D-R1）。"""
     quest_step_delta: int = Field(default=0, ge=0, le=_MAX_DELTA)
     """完成和該 NPC 有關的任務步驟（``QuestStepDef.npcs``）的好感度（5B-4b，18.7.6：+15）。"""

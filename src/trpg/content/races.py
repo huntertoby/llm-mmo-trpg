@@ -36,13 +36,12 @@ from trpg.shared.types import Element, Surface
 
 __all__ = [
     "BEAST_EARS_DEFAULT",
-    "MAX_RACE_EFFECTS",
-    "MAX_RACE_USES",
     "PASSIVE_RULE_SPECS",
     "RACE_EFFECT_SPECS",
     "OriginDef",
     "OriginTable",
     "RaceDef",
+    "RaceLimits",
     "RaceLook",
     "RaceLookOptions",
     "RacePassive",
@@ -55,16 +54,23 @@ __all__ = [
     "race_reference_problems",
 ]
 
-MAX_RACE_USES = 2
-"""種族技每場次數上限（7.7：每場限用 1～2 次）。"""
-MAX_RACE_EFFECTS = 3
-"""種族技的效果個數上限（強度小於半個技能欄）。"""
 RACE_SKILL_AP = 1
 """種族技固定花費的 AP。"""
-MAX_SIGHT_REDUCTION_PERMILLE = 500
-"""視線懲罰減免上限（‰；最多減半）。"""
-MAX_RESIST_PERMILLE = 250
-"""環境被動的元素傷害減免上限（‰；龍裔 −20% 為 200）。"""
+
+
+class RaceLimits(ContentModel):
+    """``races.yaml`` 的 ``limits``：種族技與環境被動的規則型上限（7.7；HC-4d 從模組常數搬來，
+    值照搬）。在 :class:`RaceTable` 載入時檢查。"""
+
+    max_uses: int = Field(ge=1, le=10)
+    """種族技每場次數上限（7.7：每場限用 1～2 次）。"""
+    max_effects: int = Field(ge=1, le=10)
+    """種族技的效果個數上限（強度小於半個技能欄）。"""
+    max_sight_reduction_permille: int = Field(ge=1, le=1000)
+    """視線懲罰減免上限（‰；最多減半）。"""
+    max_resist_permille: int = Field(ge=1, le=1000)
+    """環境被動的元素傷害減免上限（‰；龍裔 −20% 為 200）。"""
+
 
 # ---------------------------------------------------------------------------
 # 原則 1：禁用欄位
@@ -374,12 +380,8 @@ class RaceSkill(_GuardedModel):
         problems: list[str] = []
         if self.ap_cost != RACE_SKILL_AP:
             problems.append(f"種族技必須固定花 {RACE_SKILL_AP} AP，收到 {self.ap_cost}")
-        if not 1 <= self.uses_per_battle <= MAX_RACE_USES:
-            problems.append(f"種族技每場限用 1～{MAX_RACE_USES} 次，收到 {self.uses_per_battle}")
         if self.occupies_skill_slot:
             problems.append("種族技不佔技能欄（occupies_skill_slot 必須為 false）")
-        if len(self.effects) > MAX_RACE_EFFECTS:
-            problems.append(f"種族技最多 {MAX_RACE_EFFECTS} 個效果（強度小於半個技能欄）")
         if problems:
             raise ValueError(f"種族技 {self.id}：" + "；".join(problems))
         return self
@@ -458,21 +460,20 @@ class RacePassive(_GuardedModel):
                 problems.append(f"缺少必填參數 {name}")
             elif value is not None and name not in rule.required:
                 problems.append(f"不可使用參數 {name}")
-        problems += self._permille_problems()
         if problems:
             raise ValueError(f"環境被動 {self.id}：" + "；".join(problems))
         return self
 
-    def _permille_problems(self) -> list[str]:
+    def permille_problems(self, limits: RaceLimits) -> list[str]:
+        """``permille`` 超出 ``limits`` 的地方（HC-4d：上限在 ``races.yaml`` 的 ``limits``）。"""
         if self.permille is None:
             return []
-        if (
-            self.rule == "sight_penalty_reduction"
-            and not 0 < self.permille <= MAX_SIGHT_REDUCTION_PERMILLE
-        ):
-            return ["permille 必須在 1～500（視線懲罰最多減半）"]
-        if self.rule == "damage_taken_permille" and not -MAX_RESIST_PERMILLE <= self.permille < 0:
-            return [f"permille 必須為 −{MAX_RESIST_PERMILLE}～−1（只能減傷，幅度有上限）"]
+        top = limits.max_sight_reduction_permille
+        if self.rule == "sight_penalty_reduction" and not 0 < self.permille <= top:
+            return [f"permille 必須在 1～{top}（視線懲罰最多減半）"]
+        resist = limits.max_resist_permille
+        if self.rule == "damage_taken_permille" and not -resist <= self.permille < 0:
+            return [f"permille 必須為 −{resist}～−1（只能減傷，幅度有上限）"]
         return []
 
 
@@ -531,10 +532,12 @@ class RaceTable(ContentModel):
     races: tuple[RaceDef, ...] = Field(min_length=1)
     look_eyes: tuple[Annotated[str, Field(pattern=_COLOR)], ...] = ()
     """各族共用的眼色色票（#137）；種族預設眼色另外也能選。"""
+    limits: RaceLimits
+    """種族技與環境被動的規則型上限（HC-4d）。"""
 
     @model_validator(mode="after")
     def _check(self) -> RaceTable:
-        problems: list[str] = []
+        problems = [p for race in self.races for p in self._limit_problems(race)]
         for label, ids in (
             ("種族", [r.id for r in self.races]),
             ("種族技", [r.skill.id for r in self.races]),
@@ -546,6 +549,22 @@ class RaceTable(ContentModel):
         if problems:
             raise ValueError("；".join(problems))
         return self
+
+    def _limit_problems(self, race: RaceDef) -> list[str]:
+        """種族技次數、效果數與環境被動 ‰ 超出 ``limits``（訊息同原本 schema 的字句）。"""
+        limits, skill, passive = self.limits, race.skill, race.passive
+        out: list[str] = []
+        if not 1 <= skill.uses_per_battle <= limits.max_uses:
+            out.append(
+                f"種族技 {skill.id}：種族技每場限用 1～{limits.max_uses} 次，"
+                f"收到 {skill.uses_per_battle}"
+            )
+        if len(skill.effects) > limits.max_effects:
+            out.append(
+                f"種族技 {skill.id}：種族技最多 {limits.max_effects} 個效果（強度小於半個技能欄）"
+            )
+        out += [f"環境被動 {passive.id}：{p}" for p in passive.permille_problems(limits)]
+        return out
 
     def by_id(self) -> dict[str, RaceDef]:
         return {r.id: r for r in self.races}

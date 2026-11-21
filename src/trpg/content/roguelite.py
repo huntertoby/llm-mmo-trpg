@@ -72,7 +72,7 @@ class StartHero(ContentModel):
 
     name_zh: str = Field(min_length=1)
     max_hp: int = Field(ge=1)
-    speed: int = Field(default=5, ge=0)
+    speed: int = Field(ge=0)
     armor_bonus: int = 0
     max_mana: int = Field(default=0, ge=0)
     stamina: int | None = Field(default=None, ge=0)
@@ -85,8 +85,8 @@ class StartRules(ContentModel):
     """新開局（Phase 3-24b2，06 6.27.3）：自選武器 ＋ 選 ``keywords`` 個關鍵字，各給 1 招
     起始技能。"""
 
-    keywords: int = Field(default=2, ge=1, le=4)
-    composer_tries: int = Field(default=16, ge=0)
+    keywords: int = Field(ge=1, le=4)
+    composer_tries: int = Field(ge=0)
     """池裡沒有與武器相容的起始技能時，隨機組合器（指定關鍵字）最多試幾個種子。"""
     whiteboard: bool = True
     """2 招起始技能是主動白板（Phase 3W-4，06 6.34.1）：單一效果、1 階，由組合器的單一效果模式
@@ -107,13 +107,13 @@ class StartRules(ContentModel):
 class CandidateSettings(ContentModel):
     """共用候選產生器的參數（Phase 3-24b2，06 6.27.4；``trpg.skillgen.candidates``）。"""
 
-    composer_share_permille: int = Field(default=500, ge=0, le=1000)
+    composer_share_permille: int = Field(ge=0, le=1000)
     """每個候選先從隨機組合器找的機率（‰）；其餘先從技能池找。找不到時換另一個來源。"""
-    composer_tries: int = Field(default=8, ge=0)
+    composer_tries: int = Field(ge=0)
     """組合器每個候選最多試幾個種子。"""
     general_share_permille: int = Field(default=100, ge=0, le=1000)
     """「新方向」那一格從通用池（基礎技能，沒有專屬關鍵字；玩法決定 #55）抽的機率（‰）。"""
-    llm_share_permille: int = Field(default=800, ge=0, le=1000)
+    llm_share_permille: int = Field(ge=0, le=1000)
     """LLM 生成開關打開時，每個候選先請 LLM 提議的機率（‰；Phase 4-L6）。關閉時不使用。"""
     llm_theme_permille: int = Field(default=100, ge=0, le=1000)
     """LLM 題目帶主題詞（例如「自然」，``content/llm/world_*.yaml`` 的 ``themes``）的機率（‰）。"""
@@ -171,7 +171,7 @@ class RunRules(ContentModel):
     source: RunSourceRules
     start: StartRules
     """新開局（Phase 3-24b2）。"""
-    candidates: CandidateSettings = Field(default_factory=CandidateSettings)
+    candidates: CandidateSettings
     """升級與完整技能三選一的候選產生器（Phase 3-24b2）。"""
 
     @model_validator(mode="after")

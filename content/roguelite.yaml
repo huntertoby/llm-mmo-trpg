@@ -78,9 +78,9 @@ start:
   keywords: 2
   composer_tries: 16
   heroes:
-    melee:  {name_zh: 冒險者, max_hp: 600, armor_bonus: 40, max_mana: 200, stamina: 400, resist: {physical: 100}}
-    ranged: {name_zh: 冒險者, max_hp: 500, armor_bonus: 20, max_mana: 200, stamina: 300, resist: {physical: 50}}
-    focus:  {name_zh: 冒險者, max_hp: 400, armor_bonus: 10, max_mana: 400, stamina: 200, resist: {elemental: 150}}
+    melee:  {name_zh: 冒險者, max_hp: 600, speed: 5, armor_bonus: 40, max_mana: 200, stamina: 400, resist: {physical: 100}}
+    ranged: {name_zh: 冒險者, max_hp: 500, speed: 5, armor_bonus: 20, max_mana: 200, stamina: 300, resist: {physical: 50}}
+    focus:  {name_zh: 冒險者, max_hp: 400, speed: 5, armor_bonus: 10, max_mana: 400, stamina: 200, resist: {elemental: 150}}
 
 # 共用候選產生器（Phase 3-24b2，06 6.27.4；trpg.skillgen.candidates）：升級與營火三選一＝加深、橋接、新方向。
 # 每個候選先以 composer_share_permille 的機率決定先從隨機組合器（指定關鍵字）或技能池找，找不到再換另一個來源；

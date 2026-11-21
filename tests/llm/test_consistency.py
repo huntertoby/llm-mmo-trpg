@@ -206,7 +206,8 @@ def test_world_term_limits(name: str | None, texts: dict[str, str], code: str) -
 
 def test_world_term_limits_allow_one_term_away_from_the_head() -> None:
     assert check_world_terms("護環源晶", {"concept": "源晶碎片凝成護盾。"}, RULES.world_terms) == []
-    assert check_world_terms("源晶", {}, WorldTermRules()) == []  # 沒設定＝不檢查
+    empty = WorldTermRules(name_prefix_len=2)
+    assert check_world_terms("源晶", {}, empty) == []  # 沒設定＝不檢查
 
 
 def test_check_naming_reports_world_terms() -> None:

@@ -37,10 +37,12 @@ def test_hero_tier_follows_07_7_6(library: ContentLibrary) -> None:
     assert hero_tier(library, 12) == 3
 
 
-def test_hero_growth_rules_validated() -> None:
+def test_hero_growth_rules_validated(library: ContentLibrary) -> None:
+    assert library.world_rules is not None
+    rules = library.world_rules.hero_growth
     with pytest.raises(ValidationError, match="不遞減"):
-        HeroGrowthRules(skill_tier_by_level=(2, 1))
-    assert HeroGrowthRules().level_cap == 10
+        HeroGrowthRules.model_validate({**rules.model_dump(), "skill_tier_by_level": (2, 1)})
+    assert rules.level_cap == 10
 
 
 def test_world_library_keeps_prototype_table(library: ContentLibrary) -> None:

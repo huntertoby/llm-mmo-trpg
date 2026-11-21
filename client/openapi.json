@@ -12671,8 +12671,7 @@
           },
           "walk_max_steps": {
             "type": "integer",
-            "title": "Walk Max Steps",
-            "default": 30
+            "title": "Walk Max Steps"
           },
           "hero": {
             "anyOf": [
@@ -12810,7 +12809,8 @@
           "stones",
           "npcs",
           "facilities",
-          "me"
+          "me",
+          "walk_max_steps"
         ],
         "title": "FieldView"
       },

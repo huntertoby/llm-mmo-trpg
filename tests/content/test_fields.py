@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from tests.content.field_rules import field_map_rules
 from trpg.content.fields import (
     FieldMapDef,
     FieldMapReport,
@@ -49,6 +50,7 @@ def _report(library: ContentLibrary, raw: Raw) -> FieldMapReport:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
         npcs={
             r: {n.id: n.location for n in t.npcs}
             for r, t in library.world_event_content.npcs.items()
@@ -592,6 +594,7 @@ def test_exit_gate_must_name_a_quest_step_of_the_same_region(
         "terrain": library.ruleset.terrain.by_id(),
         "objects": library.ruleset.objects.by_id(),
         "core": library.ruleset.core,
+        "rules": field_map_rules(library),
         "quest_steps": _quest_steps(library),
     }
     assert not any("gate" in e for e in field_map_report(fields, **kwargs).errors)
@@ -621,6 +624,7 @@ def test_exit_gate_quest_of_another_region_is_an_error(library: ContentLibrary) 
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
         quest_steps=moved,
     ).errors
     assert any("gate.quest main_mist_rift 不是 cloud_ridge 的任務" in e for e in errors), errors
@@ -636,6 +640,7 @@ def test_field_map_problems_is_the_error_list(library: ContentLibrary) -> None:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
     )
     assert problems == list(_report(library, raw).errors)
 

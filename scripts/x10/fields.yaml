@@ -98,6 +98,7 @@ groups:
       - source.*                                  # 源力
       - start.composer_tries
       - start.keywords
+      - start.heroes.*.speed                      # HC-4d：原本是程式預設 5（格數）
 
   # ------------------------------------------------------------------ 武器、狀態、物件、表面
   - files: weapons.yaml
@@ -212,6 +213,7 @@ groups:
       - races[].skill.effects[].distance
       - races[].skill.shape.*
       - races[].skill.uses_per_battle
+      - limits.*                                  # HC-4d：種族技次數、效果數、‰ 上限
 
   - files: offhands.yaml
     keep:
@@ -908,6 +910,11 @@ groups:
       - wish.*
       - xp.*
       - xp.shares_permille.*
+      - field_maps.layout_sizes.*.*[]             # HC-4d：實地地圖的建議大小（格）
+      - field_maps.stones_per_region[]            # HC-4d：每區傳送石數
+  - files: regions.yaml
+    keep:
+      - locations_per_region[]                    # HC-4d：每區地點數
   - files: world/encounters/*.yaml
     scale:
       - locations[].armor_mods.mods[].amount      # 護甲加減（盤點沒列；schema 上限也要放寬）

@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import Final
 
 from trpg.content.library import ContentLibrary
-from trpg.content.world_rules import DEFAULT_WEEK_DAYS
 from trpg.world.calendar import day_of
 from trpg.world.state import WorldState
 
@@ -23,10 +22,16 @@ FIRST_SEASON_ID: Final = "s1"
 （首殺）都在這一季寫下（Phase 5D-R2）。"""
 
 
+NO_RULES_WEEK_DAYS: Final = 7
+"""沒有世界規則（只有測試的精簡內容庫）時一週的天數。HC-4d 起 ``WorldRules.week_days`` 沒有程式
+預設值，這個值要和 ``world/rules.yaml`` 的 ``week_days`` 相同
+（``tests/world/test_rule_defaults_hc4d.py`` 對照）。"""
+
+
 def week_days(library: ContentLibrary) -> int:
-    """一週幾天；內容庫沒有世界規則時用預設值。"""
+    """一週幾天；內容庫沒有世界規則時用 :data:`NO_RULES_WEEK_DAYS`。"""
     rules = library.world_rules
-    return DEFAULT_WEEK_DAYS if rules is None else rules.week_days
+    return NO_RULES_WEEK_DAYS if rules is None else rules.week_days
 
 
 def week_of(library: ContentLibrary, world: WorldState, now: int) -> int:

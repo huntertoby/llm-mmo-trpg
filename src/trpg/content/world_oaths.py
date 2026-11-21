@@ -76,7 +76,7 @@ type OathCheckField = Literal["category", "element", "status", "count"]
 OATH_CHECK_FIELDS: Final[dict[str, tuple[str, ...]]] = {
     "forbid_skill_tag": ("tags",),
     "forbid_skill_category": ("category",),
-    "forbid_skill_tag_until_hp": ("tags",),
+    "forbid_skill_tag_until_hp": ("tags", "hp_permille"),
     "damage_element_only": ("element",),
     "min_melee_kills": ("count",),
     "min_status_applied": ("status", "count"),
@@ -99,8 +99,10 @@ class OathCheck(ContentModel):
     """要施加的狀態（``min_status_applied``）。"""
     count: int = Field(default=0, ge=0)
     """次數門檻（``min_melee_kills``、``min_status_applied``）。"""
-    hp_permille: int = Field(default=500, ge=1, le=1000)
-    """``forbid_skill_tag_until_hp``：HP 低於最大 HP 的這個千分比之前不能用（18.6「低於一半」）。"""
+    hp_permille: int | None = Field(default=None, ge=1, le=1000, exclude_if=lambda v: v is None)
+    """``forbid_skill_tag_until_hp``：HP 低於最大 HP 的這個千分比之前不能用（18.6「低於一半」）。
+    HC-4d：只有這個種類用到，沒有程式預設值（用到時必填，:meth:`missing` 檢查）；其他種類不填、
+    不輸出。"""
 
     @property
     def at_end(self) -> bool:
@@ -234,7 +236,7 @@ class OathTable(ContentModel):
     """難度 → 加成狀態（``statuses.yaml``；06 6.26「持續加成，依條件難度分 3 檔」）。"""
     penalty_status: str | None = Field(default=None, pattern=ID_PATTERN)
     """違反時施加的 debuff（#27「本場加成移除＋debuff 2 回合」）。"""
-    penalty_rounds: int = Field(default=2, ge=1, le=2)
+    penalty_rounds: int = Field(ge=1, le=2)
     """debuff 的回合數（#27：2 回合）。"""
 
     @model_validator(mode="after")

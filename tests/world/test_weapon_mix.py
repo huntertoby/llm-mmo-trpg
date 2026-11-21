@@ -20,7 +20,7 @@ from trpg.world.weapon_mix import main_hand_class, other_class_odds, with_weapon
 
 MakeChar = Callable[..., CharacterState]
 DAY = 86_400
-RULES = MainHandMix()
+RULES = MainHandMix(same_permille=500, elite_same_permille=750, min_sample=3)
 
 
 def _share(kind: str, mix: WeaponMix | None, n: int = 4000) -> Counter[str]:
@@ -85,7 +85,9 @@ def _trade(n: int, at: int, sender: str, recipient: str, value: int) -> TradeRec
 
 
 def test_audit_report() -> None:
-    rules = TradeAudit(burst_count=3, burst_seconds=600, big_value=500, pair_value=400)
+    rules = TradeAudit(
+        burst_count=3, burst_seconds=600, big_value=500, pair_value=400, lopsided_permille=200
+    )
     trades = [
         _trade(1, NOON, "a", "b", 100),
         _trade(2, NOON + 60, "a", "b", 150),

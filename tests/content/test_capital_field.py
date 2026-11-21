@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 
+from tests.content.field_rules import field_map_rules
 from trpg.content.fields import (
     CAPITAL_LOCATION,
     CAPITAL_REGION,
@@ -259,6 +260,7 @@ def _report(library: ContentLibrary, raw: Raw) -> FieldMapReport:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
         npcs={
             r: {n.id: n.location for n in t.npcs}
             for r, t in library.world_event_content.npcs.items()

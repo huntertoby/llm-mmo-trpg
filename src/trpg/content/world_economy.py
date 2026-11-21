@@ -65,7 +65,6 @@ ITEM_KINDS: Final[dict[str, str]] = {
 """物品種類 → 中文。"""
 
 _ITEM_ID = r"^item_[a-z0-9_]+$"
-_STACKS: Final[dict[ItemKind, int]] = {"consumable": 10, "material": 20, "dye": 10, "supply": 1}
 _COLOR = r"^#[0-9A-Fa-f]{6}$"
 
 
@@ -73,9 +72,9 @@ class BattleGold(ContentModel):
     """打贏一場的金幣（8.15「戰鬥」）：陣容含精英用 ``elite``；每高 1 級
     +``level_step_permille``‰。"""
 
-    battle: int = Field(default=15, ge=0)
-    elite: int = Field(default=45, ge=0)
-    level_step_permille: int = Field(default=100, ge=0, le=1000)
+    battle: int = Field(ge=0)
+    elite: int = Field(ge=0)
+    level_step_permille: int = Field(ge=0, le=1000)
 
     def gold_for(self, *, elite: bool, level: int) -> int:
         base = self.elite if elite else self.battle
@@ -104,19 +103,19 @@ class QuestCoins(ContentModel):
 class EconomyRules(ContentModel):
     """``content/world/economy.yaml``（26.2 第 1 點）。"""
 
-    bag_slots: int = Field(default=30, ge=1, le=200)
-    pouch_slots: int = Field(default=3, ge=0, le=10)
-    stack_max: dict[ItemKind, int] = Field(default_factory=lambda: dict(_STACKS))
-    sell_permille: int = Field(default=500, ge=0, le=1000)
+    bag_slots: int = Field(ge=1, le=200)
+    pouch_slots: int = Field(ge=0, le=10)
+    stack_max: dict[ItemKind, int]
+    sell_permille: int = Field(ge=0, le=1000)
     unsellable_kinds: tuple[ItemKind, ...] = ()
     """不能賣的種類（20.1「材料不能賣」）。"""
     start_gold: int = Field(default=0, ge=0)
-    battle_gold: BattleGold = Field(default_factory=BattleGold)
+    battle_gold: BattleGold
     quest_coins: QuestCoins = Field(default_factory=QuestCoins)
 
     @model_validator(mode="after")
     def _check(self) -> EconomyRules:
-        missing = [k for k in _STACKS if self.stack_max.get(k, 0) < 1]
+        missing = [k for k in ITEM_KINDS if self.stack_max.get(k, 0) < 1]  # type: ignore[call-overload]
         if missing:
             raise ValueError(f"stack_max 缺少或小於 1：{missing}")
         return self
