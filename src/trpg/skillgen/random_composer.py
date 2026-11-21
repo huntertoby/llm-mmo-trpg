@@ -55,6 +55,7 @@ from trpg.skillgen.composer_parts import (
 from trpg.skillgen.composer_recipes import (
     SPELL_ELEMENTS,
     Draft,
+    is_companion,
     is_guardian,
     passive_drafts,
     passive_recipes,
@@ -849,12 +850,15 @@ def _compose_passive_recipe(
     if recipe is None:
         return None
     rng = Rng(seed).fork("composer.passive.recipe.build")
+    memo: RatioMemo | None = (  # HC-5b（QF-4b 裁定 2）：伴生照護主快取預算比例，亂數與結果不變
+        library_memo(lib, "composer.companion.ratio") if is_companion(recipe) else None
+    )
 
     def build() -> SkillDef:
         ctx, drafts = passive_drafts(
             rng, lib, seed, tier=tier, rarity=rarity, recipe=recipe, keyword=keyword
         )
-        return _tune_drafts(rng, lib, seed, ctx, drafts)
+        return _tune_drafts(rng, lib, seed, ctx, drafts, memo=memo)
 
     return _first_valid(lib, build)
 

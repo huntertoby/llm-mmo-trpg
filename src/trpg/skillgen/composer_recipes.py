@@ -61,6 +61,7 @@ __all__ = [
     "Draft",
     "Recipe",
     "beside_keywords",
+    "is_companion",
     "is_guardian",
     "passive_drafts",
     "passive_recipes",
@@ -180,6 +181,12 @@ class Recipe:
     name: str
     param: str | None
     keywords: tuple[str, ...]
+
+
+def is_companion(recipe: Recipe) -> bool:
+    """是不是伴生配方（HC-5b，QF-4b 裁定 2：草稿結構和護主一樣只差召喚物、屬性、強度與代價，
+    組合器快取預算比例）。"""
+    return recipe.name == _COMPANION
 
 
 def is_guardian(recipe: Recipe) -> bool:
