@@ -1551,23 +1551,6 @@ rules:
     where: ['_left_zh', '_remaining_zh']
     note: 同上一條（api text）。
 
-  # ---------------------------------------------------- 後端 bot：text
-  # Bot 指令說明裡的帳號規則數字。
-  - id: py-bot-commands-text-text
-    class: text
-    status: todo
-    files: src/trpg/bot/commands.py
-    kind: text
-    where: ['<module>.SLASH_COMMANDS']
-    note: Bot 指令說明裡的帳號規則數字。
-  - id: py-bot-service-text-text
-    class: text
-    status: todo
-    files: src/trpg/bot/service.py
-    kind: text
-    where: ['BotService._pick_username']
-    note: 同上一條（bot text）。
-
   # ---------------------------------------------------- 後端 content：text
   # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。HC-6a：有常數的改組字；剩下的分兩種——
   # 還是規則數字、但程式裡沒有可帶的資料（留 text，先要搬進 content 才能組字），以及結構用字（改判 const）。
@@ -1598,15 +1581,6 @@ rules:
     kind: text
     where: ['ComposerRules._check', 'WhiteboardRules._check']
     note: HC-6a 改判：千分比的總和 1000、0～1000 是 ‰ 換算（100%）。
-  - id: py-content-composer-rules-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/composer_rules.py
-    kind: text
-    where:
-      - 'CostRules._check_self_status_duration'
-      - 'DiceRules._check'
-    note: 同上一條（content text）。
   - id: py-content-environment-text-text
     class: const
     status: done
@@ -1662,13 +1636,6 @@ rules:
     kind: text
     where: ['item_budget_problems']
     note: HC-6a 改判：預算區間的上界 100% 是「不超過預算本身」（下界已從 min_fill_permille 帶入）。
-  - id: py-content-library-giant-checks-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/library/giant_checks.py
-    kind: text
-    where: ['_lineup_problems']
-    note: 同上一條（content text）。
   - id: py-content-library-ruleset-text-text
     class: const
     status: done
@@ -1711,20 +1678,6 @@ rules:
     kind: text
     where: ['EncounterStep._non_empty']
     note: HC-6a 改判：遭遇選項至少 1 名敵人是非空檢查。
-  - id: py-content-rules-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/rules.py
-    kind: text
-    where: ['CoreRules._check_tier_budget']
-    note: 同上一條（content text）。
-  - id: py-content-skill-rules-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skill_rules.py
-    kind: text
-    where: ['BudgetRules._check']
-    note: 同上一條（content text）。
   - id: py-content-skills-modifiers-text-text
     class: const
     status: done
@@ -1841,13 +1794,6 @@ rules:
     kind: text
     where: ['_check_range']
     note: HC-6a 改判：天數從 1 起算是編號。
-  - id: py-content-world-situations-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_situations.py
-    kind: text
-    where: ['SituationRules._check']
-    note: 同上一條（content text）。
 
   # ---------------------------------------------------- 後端 engine：text
   # 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
@@ -1903,13 +1849,6 @@ rules:
     kind: text
     where: ['<module>.EFFECTS_NOTE_ZH']
     note: HC-6a 改判：「例：上限 1 個時」是舉例。
-  - id: py-llm-prompts-storyteller-text-text
-    class: text
-    status: todo
-    files: src/trpg/llm/prompts/storyteller.py
-    kind: text
-    where: ['<module>.STORY_STYLE', '<module>.STORY_TASKS']
-    note: 同上一條（llm text）。
   - id: py-llm-wish-pick-text-text
     class: const
     status: done
@@ -2002,13 +1941,6 @@ rules:
     kind: text
     where: ['_scalar_problems']
     note: HC-6a 改判：骰子寫法的例子（2d6）。
-  - id: py-skillgen-option-followup-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/option_followup.py
-    kind: text
-    where: ['_effects_field', 'followup_notes']
-    note: 同上一條（skillgen text）。
   - id: py-skillgen-option-nested-text-text
     class: const
     status: done
@@ -2023,13 +1955,6 @@ rules:
     kind: text
     where: ['<module>._LITERAL_CHOICES', '<module>._SCALE_BY_TEXT']
     note: HC-6a 改判：「目標那 1 格」是 scope 的定義；縮放依據「每少 10%／每距 1 格」是縮放單位的名字。
-  - id: py-skillgen-option-scaling-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/option_scaling.py
-    kind: text
-    where: ['<module>._MASTERY_TEXT']
-    note: 同上一條（skillgen text）。
   - id: py-skillgen-option-variant-text-text
     class: const
     status: done
@@ -2044,13 +1969,6 @@ rules:
     kind: text
     where: ['_basics_step', '_cost_step', '_self_status_field', '_tier_notes']
     note: HC-6a 改判：3×3 是形狀名；自身狀態代價「一招最多 1 個」是單一欄位的結構；耐力折合「法力 1 點」是換算單位；「最低角色階級：1 階」是最低階。
-  - id: py-skillgen-proposal-builder-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/proposal/builder.py
-    kind: text
-    where: ['_variant_model']
-    note: 同上一條（skillgen text）。
   - id: py-skillgen-proposal-evaluate-text-text
     class: const
     status: done
@@ -2065,20 +1983,6 @@ rules:
     kind: text
     where: ['<module>.WEAK_ADVICE']
     note: HC-6a 改判：「AP 降到 1」是 AP 的最低值（主動技最少 1 AP）。
-  - id: py-skillgen-proposal-costs-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/proposal_costs.py
-    kind: text
-    where: ['<module>.COST_DOCS']
-    note: 同上一條（skillgen text）。
-  - id: py-skillgen-proposal-followup-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/proposal_followup.py
-    kind: text
-    where: ['<module>.FOLLOWUP_DOC']
-    note: 同上一條（skillgen text）。
   - id: py-skillgen-validate-text-text
     class: const
     status: done
@@ -2096,13 +2000,6 @@ rules:
 
   # ---------------------------------------------------- 後端 world：text
   # 大世界錯誤訊息與說明裡寫死的規則數字。
-  - id: py-world-battlefield-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/battlefield.py
-    kind: text
-    where: ['<module>.FALLBACK_ZH']
-    note: 大世界錯誤訊息與說明裡寫死的規則數字。
   - id: py-world-crafting-text-text
     class: const
     status: done
@@ -2125,20 +2022,6 @@ rules:
     kind: text
     where: ['_oath']
     note: HC-6a 改判：「同時只能有 1 個誓約」是單一欄位（char.oath）的結構。
-  - id: py-world-opening-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/opening.py
-    kind: text
-    where: ['<module>._BEFORE_LEVEL_4_ZH']
-    note: 同上一條（world text）。
-  - id: py-world-season-boss-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/season_boss.py
-    kind: text
-    where: ['challenge_problem']
-    note: 同上一條（world text）。
 
   # ---------------------------------------------------- 後端 api：const
   # API 的錯誤碼、分頁、快取、開發頁、工坊內部的檔案與 git 設定。
@@ -2764,13 +2647,6 @@ rules:
     files: src/trpg/llm/skill_eval.py
     kind: text
     where: ['free_table', 'suite_summary']
-    note: 同上一條（text-dev const）。
-  - id: py-llm-wish-pick-const-text
-    class: const
-    status: done
-    files: src/trpg/llm/wish_pick.py
-    kind: text
-    where: ['_Loop._card', '_Loop.attempt']
     note: 同上一條（text-dev const）。
   - id: py-narrative-events-const-text
     class: const
