@@ -189,7 +189,18 @@
 | `vitest run`（全部，第 2 項後） | 0（4836 passed） |
 | `vitest run src/world`（第 4 項後） | 0（833 passed） |
 | 相關 pytest（經看門狗）：<br>・`tests/api/tuning`、`test_text_from_data_hc6b.py`、`test_oath_warning.py`、`test_world_growth_api.py`、`test_hardcoded_scan.py`；<br>・`test_openapi_snapshot.py`、`test_views_glossary.py`、`test_glossary_names.py`；<br>・`test_workshop_open_hc6a.py`、`tests/llm/test_prompts.py`、`tests/content/test_tuning_fields.py` | 全部 0（328、335、53 passed） |
-| build、`scripts/check.py`、slow（parity、`tests/cli`） | 全部 commit 後問開發 PM 再跑（補記在下面） |
+| build、`scripts/check.py`、slow（parity、`tests/cli`） | 見下面「交件前全量」 |
+
+**交件前全量**（開發 PM 回「可以跑」後，先 `git merge --no-edit main`，main 是 `fd37e78e8`，只多 `.md`）：
+
+- 第一次 `check.py`：mypy、pytest 各 1 個失敗，都是既有的測試，`ac1791cd2` 已修。
+  - `test_hc3_game_rules.py` 寫死 `rules` 只有 HC-3 的四個鍵，改成只檢查這四個鍵還在。
+  - `test_rules_r1_r2_nw2a.py` 直接用了可能是 None 的 `library`，先加一行斷言。
+- 第二次 `check.py` 結束碼 0，已寫下通過戳記。
+  - pytest：18202 passed、8 skipped。
+  - vitest：4841 passed。
+- `pnpm -C client build`：0。
+- slow（`tests/skillgen/test_refactor_parity.py`、`tests/cli`）：0，995 passed。
 
 ## 8. 截圖（`docs/art/shots/hc-6b/`）
 
