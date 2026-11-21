@@ -45,6 +45,7 @@ from trpg.content.skills import EffectSpec, SkillDef, rarity_rank, skill_element
 from trpg.engine.shape_growth import grow_shape
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
+from trpg.skillgen.beside_power import NORMAL_POWER, beside_power_tries
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.evolution import EvolutionRequest, budget_power, retune
 from trpg.skillgen.evolution import rarity_of as _rarity_of
@@ -354,7 +355,7 @@ def _to_modifier(skill: SkillDef, t: TransformTemplate, library: ContentLibrary)
 _SUMMON_BESIDE = "summon_beside"
 _SUPPORT_TYPES = ("heal", "shield", "apply_status")
 _FRIENDLY = (None, "allies", "self")
-_NORMAL_POWER = 1000
+_NORMAL_POWER = NORMAL_POWER
 
 
 def _summon_unit(skill: SkillDef) -> str | None:
@@ -372,20 +373,6 @@ def _beside(unit: str, duration: int, power: int, *, strike: bool = False) -> di
     return effect
 
 
-def _power_tries(
-    start: int, costs: Sequence[dict[str, Any]], library: ContentLibrary
-) -> list[tuple[int, dict[str, Any]]]:
-    """縮小版召喚物依序試的（強度‰, 代價）：先試數值工坊的設定值（每種代價），不在預算窗內時再
-    依離設定值的遠近、每 ``rules.beside_power_step_permille`` 一格往上下試（最低
-    ``skill_limits.min_beside_power_permille``，最高 1000，同距離先往上）。召喚到身邊沒有可調的
-    骰子，強度由這裡找進預算窗。"""
-    low = library.ruleset.core.skill_limits.min_beside_power_permille
-    step = library.flash.rules.beside_power_step_permille
-    powers = {start, *range(low, _NORMAL_POWER + 1, step)}
-    ordered = sorted(powers, key=lambda p: (abs(p - start), -p))
-    return [(p, dict(c)) for p in ordered for c in costs]
-
-
 def _to_companion(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> list[_Draft]:
     """伴生：戰鬥開始時在身邊召出縮小版召喚物（每場一次）。"""
     unit = _summon_unit(skill)
@@ -393,7 +380,7 @@ def _to_companion(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) ->
         return []
     rules = lib.budget.flash_transform
     drafts: list[_Draft] = []
-    for power, cost in _power_tries(rules.companion_power_permille, t.draft_costs, lib):
+    for power, cost in beside_power_tries(rules.companion_power_permille, t.draft_costs, lib):
         effect = _beside(unit, rules.companion_duration, power)
         base = _new_base(
             skill,
@@ -417,7 +404,7 @@ def _to_guardian(skill: SkillDef, t: TransformTemplate, lib: ContentLibrary) -> 
         return []
     rules = lib.budget.flash_transform
     drafts: list[_Draft] = []
-    for power, cost in _power_tries(rules.guardian_power_permille, t.draft_costs, lib):
+    for power, cost in beside_power_tries(rules.guardian_power_permille, t.draft_costs, lib):
         effect = _beside(unit, rules.guardian_duration, power, strike=True)
         base = _new_base(
             skill,

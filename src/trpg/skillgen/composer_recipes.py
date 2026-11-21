@@ -38,6 +38,13 @@ from trpg.content.skills import (
 )
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
+from trpg.skillgen.beside_power import (
+    COMPANION_TEMPLATE,
+    GUARDIAN_TEMPLATE,
+    NORMAL_POWER,
+    beside_power_tries,
+    beside_template,
+)
 from trpg.skillgen.composer_parts import (
     NON_INTERCEPT_EVENTS,
     Ctx,
@@ -78,19 +85,6 @@ _NO_TARGET_EVENTS = frozenset({"on_kill"})
 _WET_REACTION_EVENTS = ("hit_by_attack", "hit_by_melee")
 """潮濕反應「被攻擊後，在攻擊者腳下造水」（06 6.34.1 3W-4b）。"""
 _GUARDIAN_EVENT = "hit_by_melee"
-_GUARDIAN_RANGE = 2
-_GUARDIAN_COSTS: tuple[dict[str, Any], ...] = (
-    {"cooldown": 1},
-    {"mana": 2, "cooldown": 1},
-    {"cooldown": 2},
-    {"mana": 4, "cooldown": 2},
-)
-"""護主的代價（同 TF-1 轉型 ``flash_major._GUARDIAN_COSTS``）。"""
-_COMPANION_COSTS: tuple[dict[str, Any], ...] = ({}, {"mana": 2}, {"mana": 4})
-"""伴生的代價（同 TF-1 轉型 ``flash_major._to_companion``）。"""
-_POWER_STEP = 100
-_MIN_POWER = 100
-_NORMAL_POWER = 1000
 _WATER = "water"
 _STACK_MAKE = "stack_make"
 _STACK_USE = "stack_use"
@@ -378,16 +372,9 @@ def summon_drafts(
     return ctx, [(_merge_cost(base, p), deepcopy(ctx.effects)) for p in patches]
 
 
-def _power_tries(start: int, costs: Sequence[dict[str, Any]]) -> list[tuple[int, dict[str, Any]]]:
-    """縮小版召喚物依序試的（強度‰, 代價）：同 TF-1 轉型（``flash_major._power_tries``）。"""
-    powers = {start, *range(_MIN_POWER, _NORMAL_POWER + 1, _POWER_STEP)}
-    ordered = sorted(powers, key=lambda p: (abs(p - start), -p))
-    return [(p, dict(c)) for p in ordered for c in costs]
-
-
 def _beside(unit: str, duration: int, power: int, *, strike: bool = False) -> dict[str, Any]:
     effect: dict[str, Any] = {"type": "summon_beside", "unit": unit, "duration": duration}
-    if power < _NORMAL_POWER:
+    if power < NORMAL_POWER:
         effect["power_permille"] = power
     if strike:
         effect["strike_other"] = True
@@ -524,9 +511,10 @@ def _companion_drafts(ctx: Ctx, seed: int, scaling: str, keyword: str | None) ->
     library = ctx.library
     unit = _beside_unit(ctx.rng, library, ctx.tier, keyword)
     rules = library.budget.flash_transform
+    costs = beside_template(library, COMPANION_TEMPLATE).draft_costs  # HC-5b：同閃現轉型一份
     trigger = {"event": "on_battle_start", "target": "self", "max_per_round": 1}
     drafts: list[Draft] = []
-    for power, cost in _power_tries(rules.companion_power_permille, _COMPANION_COSTS):
+    for power, cost in beside_power_tries(rules.companion_power_permille, costs, library):
         base = _skill_base(
             seed, ctx.tier, ctx.rarity, ctx,
             kind="passive", category="spell", weapon_req="any", ap_cost=None,
@@ -606,10 +594,14 @@ def _guardian_drafts(
     ctx = Ctx(
         library, rng, library.skeletons["reaction"], rarity, tier, "spell", 1, Element.PHYSICAL
     )
-    ctx.shape, ctx.shape_params = "single", {"range": _GUARDIAN_RANGE}
+    template = beside_template(library, GUARDIAN_TEMPLATE)  # HC-5b：代價、射程同閃現轉型一份
+    assert template.draft_range is not None  # 轉成反應的模板一定有射程（載入時檢查）
+    ctx.shape, ctx.shape_params = "single", {"range": template.draft_range}
     rules = library.budget.flash_transform
     drafts: list[Draft] = []
-    for power, cost in _power_tries(rules.guardian_power_permille, _GUARDIAN_COSTS):
+    for power, cost in beside_power_tries(
+        rules.guardian_power_permille, template.draft_costs, library
+    ):
         base = _skill_base(
             seed, tier, rarity, ctx,
             kind="reaction", category="spell", weapon_req="any", scaling_attr=scaling,
