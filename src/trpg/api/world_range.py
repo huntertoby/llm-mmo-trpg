@@ -40,7 +40,6 @@ from trpg.content.world_newcomer import NewcomerContent, OpeningLine, RangeConte
 from trpg.roguelite.start import start_weapons
 from trpg.world.common import capital_name, in_capital
 from trpg.world.errors import WorldActionError
-from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening import (
     RangeTrial,
     mentor_town,
@@ -51,6 +50,7 @@ from trpg.world.opening import (
     recommended_keywords,
 )
 from trpg.world.opening_choice import choice_problem, place_problem
+from trpg.world.opening_limits import opening_end_level
 from trpg.world.opening_reselect import (
     reselect_losses,
     reselect_problem,
@@ -234,13 +234,13 @@ def _reselect_view(
         available=problem is None,
         blocked_zh=problem,
         used=opening.reselect_used,
-        before_level=OPENING_END_LEVEL,
+        before_level=opening_end_level(library),
         weapon=opening.weapon,
         keywords=opening.keywords,
         returned_zh=returned,
         weapon_returned=starter_weapon_held(library, char),
         lost_zh=reselect_losses(library, char),
-        window_open=reselect_window_problem(char) is None,
+        window_open=reselect_window_problem(library, char) is None,
         place_zh=place_problem(library, "重選"),
         in_capital=capital,
         here_zh=f"{capital_name(library)}工坊靶場" if capital else arena.choose_place_zh,

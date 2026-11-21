@@ -5,7 +5,8 @@
 - ``pick_class``：舊的一次選定（:func:`trpg.world.opening.apply_opening_confirm`；OB-5 前端換掉之前
   照收）。
 - ``starter``：**正式選定**（:func:`apply_formal_choice`）。條件（:func:`choice_problem`）：新手任務
-  打完前 :data:`STARTER_STEPS` 步、人在葛蘭所在的城鎮或主城、沒有待處理的遭遇。
+  打完前 :func:`~trpg.world.opening_limits.starter_steps` 步、人在葛蘭所在的城鎮或主城、沒有待處理
+  的遭遇。
 - ``chosen``：開局閘門擋掉（4 級前的免費重選是 OB-3 的另一個動作）。
 
 正式選定的順序（每一步的理由見 ``docs/phases/PhaseOB-2報告.md``）：
@@ -53,12 +54,11 @@ from trpg.world.growth import as_run, from_run, sync_tier
 from trpg.world.inventory import room_problem
 from trpg.world.opening import apply_opening_confirm as _apply_first_choice
 from trpg.world.opening import mentor_town, starter_skill_ids
-from trpg.world.opening_limits import STARTER_STEPS
+from trpg.world.opening_limits import starter_steps
 from trpg.world.quests import issue_deferred_offers, quest_table
 from trpg.world.state import CharacterState, WorldState
 
 __all__ = [
-    "STARTER_STEPS",
     "apply_formal_choice",
     "apply_opening_confirm",
     "choice_problem",
@@ -79,8 +79,9 @@ _OFF_HAND: Final = "off_hand"
 
 
 def _steps_left(library: ContentLibrary, char: CharacterState) -> bool:
-    """新手區的新手任務（``kind: starter``）還沒打完前 :data:`STARTER_STEPS` 步（沒接也算沒打完）。
-    內容沒有新手任務時不擋。"""
+    """新手區的新手任務（``kind: starter``）還沒打完前
+    :func:`~trpg.world.opening_limits.starter_steps` 步（沒接也算沒打完）。內容沒有新手任務時
+    不擋。"""
     newcomer = library.world_newcomer
     table = None if newcomer is None else quest_table(library, newcomer.start_region)
     if table is None:
@@ -90,13 +91,13 @@ def _steps_left(library: ContentLibrary, char: CharacterState) -> bool:
             continue
         state = char.quest_state(quest.id)
         done = 0 if state is None else state.steps_done
-        if done < min(STARTER_STEPS, len(quest.steps)):
+        if done < min(starter_steps(library), len(quest.steps)):
             return True
     return False
 
 
 def starter_steps_done(library: ContentLibrary, char: CharacterState) -> bool:
-    """新手任務前 :data:`STARTER_STEPS` 步都打完了（畫面的指引用）。"""
+    """新手任務前 :func:`~trpg.world.opening_limits.starter_steps` 步都打完了（畫面的指引用）。"""
     return not _steps_left(library, char)
 
 

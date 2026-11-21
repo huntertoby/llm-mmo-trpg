@@ -35,6 +35,7 @@ from trpg.content.fields import FieldBuilding, FieldFacility, FieldFigure, Field
 from trpg.content.library import ContentLibrary
 from trpg.world.actions import WorldEvent
 from trpg.world.atlas import free_first_stone
+from trpg.world.common import rules_of
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import (
     FieldGrid,
@@ -459,14 +460,6 @@ def _decor(found: FieldMapDef) -> tuple[FieldDecorView, ...]:
     )
 
 
-NO_RULES_WALK_MAX_STEPS: Final = 30
-"""沒有世界規則（只有測試的精簡內容庫）時一次 ``walk`` 最多幾格。HC-4d 起 ``FieldRules`` 沒有程式
-預設值，這個值要和 ``world/rules.yaml`` 的 ``field.walk_max_steps`` 相同
-（``tests/world/test_rule_defaults_hc4d.py`` 對照）。"""
-
-
 def _walk_max_steps(library: ContentLibrary) -> int:
-    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；沒有世界規則時用
-    :data:`NO_RULES_WALK_MAX_STEPS`）。"""
-    rules = library.world_rules
-    return NO_RULES_WALK_MAX_STEPS if rules is None else rules.field.walk_max_steps
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；HC-7 起沒有世界規則就報錯）。"""
+    return rules_of(library).field.walk_max_steps

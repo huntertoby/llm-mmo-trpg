@@ -348,7 +348,7 @@ def _flash_lesson(
     ready = newcomer.flash_lesson and char.insight >= 1
     if not ready or not _starter_step_done(library, char, newcomer.start_region):
         return None
-    if flash_blocked_zh(char) is not None:
+    if flash_blocked_zh(library, char) is not None:
         # OB-3（#150 第 6 點）：開局還沒結束的角色 4 級前不能閃現——第 3 步打完（升到 4 級）回
         # 霧渡鎮才引導；已完成開局的舊角色照舊在第 1 步之後
         return None
@@ -421,15 +421,15 @@ def _allocate_view(
         ),
         respec=respec,
         reminder=reminder,
-        reselect_reminder=_reselect_reminder(newcomer, char) if respec else (),
+        reselect_reminder=_reselect_reminder(library, newcomer, char) if respec else (),
     )
 
 
 def _reselect_reminder(
-    newcomer: NewcomerContent, char: CharacterState
+    library: ContentLibrary, newcomer: NewcomerContent, char: CharacterState
 ) -> tuple[OpeningLineView, ...]:
     """OB-6 Q2：正式選定後配點教學收尾彈窗的第二段（葛蘭提醒 4 級前可重選）；沒有資格時空。"""
-    if newcomer.range is None or reselect_window_problem(char) is not None:
+    if newcomer.range is None or reselect_window_problem(library, char) is not None:
         return ()
     return _lines(newcomer.range.reselect_reminder)
 

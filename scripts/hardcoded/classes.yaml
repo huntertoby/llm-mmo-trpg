@@ -1280,113 +1280,75 @@ rules:
       HC-5a：代價減輕「至少留一條規則」——要有 2 條以上的修正規則才能減其中一條的代價，2 是「至少 1 條
       ＋要減的那 1 條」的結構數，不是規則上限（上限另讀 core.skill_limits.max_modifiers）。
 
-  # ---------------------------------------------------- 後端 world：config
-  # 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
-  - id: py-world-no-rules-fallbacks
+  # ---------------------------------------------------- 後端 world：搬完剩下的
+  # HC-7：開局結束等級、新手任務步數、看示範的關鍵字數搬到 world/newcomer.yaml（opening_end_level、
+  # starter_steps、range.trial_keywords_max），機遇升階的階級上限改讀 core.skill_limits.tiers；日曆、
+  # 一週天數、walk 步數改成一定要有世界規則（rules_of，沒有就報錯），傭兵表（max_hired、影子戰報數）
+  # 同樣一定要有；沒有 world/affinity.yaml 時的好感度規則與沒給日曆時的日曆各留一份在 content 載入層
+  # （下一條）。搬完 0 筆的 config 規則刪掉。
+  - id: py-content-no-file-fallbacks
     class: config
-    status: todo
-    files: [src/trpg/world/calendar.py, src/trpg/world/season.py, src/trpg/api/world_field_view.py]
+    status: done
+    files: [src/trpg/content/world_rules.py, src/trpg/content/world_quests.py]
     kind: number
-    where: ['<module>.NO_RULES_CALENDAR', '<module>.NO_RULES_WEEK_DAYS', '<module>.NO_RULES_WALK_MAX_STEPS']
-    note: HC-4d：沒有 world/rules.yaml（只有測試的精簡內容庫）時的備用值。CalendarRules、week_days、FieldRules 的程式
-      預設值拿掉後搬到呼叫的地方，值和內容檔相同（tests/world/test_rule_defaults_hc4d.py 對照）；留給 HC-7 決定
-      要不要改成沒有世界規則就報錯。
-  - id: py-world-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/actions.py
-    kind: number
-    where:
-      - 'HireAction'
-      - 'InheritAction'
-      - 'OpeningConfirmAction'
-      - 'OpeningReselectAction'
-      - 'WishAction'
-    note: 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
-  - id: py-world-affinity-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/affinity.py
-    kind: number
-    where: ['<module>.DEFAULT_AFFINITY_RULES']
-    note: 同上一條（world config）。
+    where: ['<module>.FALLBACK_CALENDAR', '<module>.NO_FILE_AFFINITY_RULES']
+    note: >-
+      HC-7（HC-4d 裁定 2）：真的需要備用值的兩處，只寫一份、放在 content 載入層，值和內容檔相同
+      （tests/world/test_rule_defaults_hc7.py 對照）。FALLBACK_CALENDAR＝呼叫 trpg.world.clock 沒給日曆時
+      （伺服器公告沒有內容庫的舊路徑、測試）的台北 6 點，取代原本 clock.py 的 UTC_OFFSET_SECONDS、
+      REFRESH_HOUR 與 calendar.py 的 NO_RULES_CALENDAR 兩份；NO_FILE_AFFINITY_RULES＝內容庫沒有
+      world/affinity.yaml（只有測試的精簡內容庫）時的好感度級距，取代 world/affinity.py 的
+      DEFAULT_AFFINITY_RULES。
   - id: py-world-clock-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/world/clock.py
     kind: number
-    where: ['<module>.GAME_DAY_SECONDS', '<module>.REFRESH_HOUR', '<module>._GAME_DAY_START_MINUTE']
-    note: 同上一條（world config）。
-  - id: py-world-companions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/companions.py
+    where: ['<module>.GAME_DAY_SECONDS', '<module>._GAME_DAY_START_MINUTE']
+    note: >-
+      HC-7 改判 const：遊戲日的長度（現實 30 分鐘，3.1）與遊戲日從 06:00 開始是世界時間軸的格式——
+      天氣週期、白天黑夜、遊戲日序都是 now // GAME_DAY_SECONDS 直接從 UTC 秒數算（day_phase(now) 拿不到
+      內容庫），改了舊世界的日序與天氣全部重排；CalendarRules 的說明也寫明「遊戲日長度與天氣週期是使用者
+      定的常數，不在這裡」。遊戲日開頭和 world/rules.yaml 的 day_parts.morning 一致由
+      tests/world/test_rule_defaults_hc4d.py 對照。
+  - id: py-world-action-request-guards
+    class: guard
+    status: done
+    files:
+      - src/trpg/world/actions.py
+      - src/trpg/world/crafting_actions.py
+      - src/trpg/world/economy_actions.py
+      - src/trpg/world/trade_actions.py
     kind: number
-    where: ['_max_hired']
-    note: 同上一條（world config）。
-  - id: py-world-crafting-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/crafting_actions.py
-    kind: number
-    where: ['CraftAction', 'ImbueAction', 'RerollAction']
-    note: 同上一條（world config）。
-  - id: py-world-economy-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/economy_actions.py
-    kind: number
-    where: ['BuyAction', 'LootChooseAction', 'PouchAction', 'SellAction']
-    note: 同上一條（world config）。
-  - id: py-world-growth-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/growth.py
-    kind: number
-    where: ['<module>.OPENING_END_LEVEL']
-    note: 同上一條（world config）。
-  - id: py-world-opening-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/opening.py
-    kind: number
-    where: ['<module>.MAX_TRIAL_KEYWORDS']
-    note: 同上一條（world config）。
-  - id: py-world-opening-limits-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/opening_limits.py
-    kind: number
-    where: ['<module>.STARTER_STEPS']
-    note: 同上一條（world config）。
-  - id: py-world-shadows-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/shadows.py
-    kind: number
-    where: ['record_lent']
-    note: 同上一條（world config）。
-  - id: py-world-solutions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/solutions.py
-    kind: number
-    where: ['<module>.MAX_SKILL_TIER']
-    note: 同上一條（world config）。
-  - id: py-world-state-config-number
-    class: config
-    status: todo
+    where:
+      - 'BuyAction'
+      - 'CraftAction'
+      - 'HireAction'
+      - 'ImbueAction'
+      - 'InheritAction'
+      - 'LootChooseAction'
+      - 'MailSendAction'
+      - 'OpeningConfirmAction'
+      - 'OpeningReselectAction'
+      - 'PouchAction'
+      - 'RerollAction'
+      - 'SellAction'
+      - 'WishAction'
+    note: >-
+      HC-7 改判 guard：大世界動作請求的格式護欄（擋過大的請求），真正的規則上限在內容檔、由規則檢查——
+      雇傭 8（max_hired 2）、許願關鍵字 4（wish.max_keywords 2）、開局與重選關鍵字 4（正式選定要 2 個，
+      opening_choice 檢查）、傳承 2（flash 的 max_carry，同值；工坊把 max_carry 調到 3 以上時這裡也要放寬，
+      見 HC-7 報告待決）、打造材料 5（crafting.flavor_max 3）、打造等級 99、詞條位置 0～7、買 10／賣 99、
+      腰包 10 種（pouch_slots 3）、戰後丟棄 40、郵件附件 10（mail.max_attachments 3）、郵寄金幣 1000 萬。
+  - id: py-world-state-format-guards
+    class: guard
+    status: done
     files: src/trpg/world/state.py
     kind: number
     where: ['CraftRecipe', 'GearMod', 'RecipeStep']
-    note: 同上一條（world config）。
-  - id: py-world-trade-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/trade_actions.py
-    kind: number
-    where: ['MailSendAction']
-    note: 同上一條（world config）。
+    note: >-
+      HC-7 改判 guard：角色存檔的格式護欄——配方的物品等級 1～99、詞條位置 0～7、強化 0～10（實際上限
+      crafting.yaml 的 enhance.max_level 3，由強化動作檢查）。
 
   # ---------------------------------------------------- 後端 api：text
   # API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
@@ -2604,13 +2566,6 @@ rules:
 
   # ---------------------------------------------------- 後端 world：const
   # 大世界的雜湊、存檔格式、路線幾何、工具報表。
-  - id: py-world-clock-const-number
-    class: const
-    status: done
-    files: src/trpg/world/clock.py
-    kind: number
-    where: ['<module>.UTC_OFFSET_SECONDS']
-    note: 大世界的雜湊、存檔格式、路線幾何、工具報表。
   - id: py-world-field-enemies-const-number
     class: const
     status: done

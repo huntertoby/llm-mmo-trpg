@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_quests import (
+    NO_FILE_AFFINITY_RULES,
     AffinityRules,
     QuestDef,
     QuestTable,
@@ -363,4 +364,4 @@ def test_without_quest_files(tmp_path: Path, library: ContentLibrary) -> None:
     lib = load_library(content)
     assert lib.world_quests.quests == {}
     assert lib.world_quests.social == {}
-    assert lib.world_quests.affinity is None
+    assert lib.world_quests.affinity == NO_FILE_AFFINITY_RULES  # HC-7：備用值在載入層

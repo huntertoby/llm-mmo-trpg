@@ -316,7 +316,7 @@ def flash_wait_request(
     戰鬥結束、那招可以閃了就開始，走回城鎮的路上也在生成（出題的輸入不含地點，鍵相同）。"""
     busy = char.pending_flash is not None or char.pending_encounter is not None
     # OB-3（#150 第 6 點）：開局還沒結束的角色 4 級前不能閃現，預先生成也跳過（不白打 LLM）
-    if busy or flash_blocked_zh(char) is not None:
+    if busy or flash_blocked_zh(library, char) is not None:
         return None
     if not anywhere and not at_service(library, char):
         return None

@@ -141,6 +141,9 @@ class RangeContent(ContentModel):
     """舊的試打輪數上限。PR-2a 起靶場一律是 #147 測試模式（沒有輪數上限），**測試模式不用**；
     留著只為了舊內容檔讀得進來。"""
     demos_per_class: int = Field(ge=1, le=6)
+    trial_keywords_max: int = Field(ge=1)
+    """看示範時最多選幾個不同的關鍵字（#134「武器與 2 個關鍵字」；HC-7 從
+    ``trpg.world.opening.MAX_TRIAL_KEYWORDS`` 搬來，值 2）。"""
     """每大類的示範招數（21.5「該大類 2 招」；HC-4d 從模組常數搬來）：``demos`` 每類要剛好
     這麼多。"""
     demos: dict[RangeClass, tuple[_Id, ...]]
@@ -236,6 +239,13 @@ class NewcomerContent(ContentModel):
     reflash_lesson: tuple[OpeningLine, ...] = ()
     """升到 ``reflash_level`` 級、閃現過之後，導師改教重閃（#132）。"""
     reflash_level: int = Field(ge=2)
+    opening_end_level: int = Field(ge=2)
+    """開局在這一級結束（21.5 #150 第 5、6、9 點「4 級前」）：正式選定過的角色到這一級，免費重選
+    過期、可以閃現、可以溶掉與傳承（HC-7 從 ``trpg.world.growth.OPENING_END_LEVEL`` 搬來，
+    值 4）。"""
+    starter_steps: int = Field(ge=1)
+    """入門期的新手任務步數（21.5 第 2、3、7 點「用入門配備打新手第 1、2 步」；HC-7 從
+    ``trpg.world.opening_limits.STARTER_STEPS`` 搬來，值 2）。"""
     # ---- 配點教學與升級畫面（6F-4，#133、C2；18 18.5 葛蘭、07 7.2） ----
     mentor_npc: _Id | None = None
     """新手區的駐堂導師（人設卡 ID，例 ``gran``）：配點教學只在他所在的城鎮出；``None``＝任何

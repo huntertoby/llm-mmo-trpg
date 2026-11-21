@@ -23,7 +23,6 @@ from trpg.api.world_presenter import world_view
 from trpg.api.world_range import range_view
 from trpg.content.library import ContentLibrary
 from trpg.world import opening_choice
-from trpg.world import opening_limits as limits_module
 from trpg.world.actions import ChangeRaceAction, FlashAction, HireAction, LoadoutAction
 from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
@@ -68,16 +67,16 @@ def _refused(library: ContentLibrary, char: CharacterState, action: object) -> s
 
 
 # ---------------------------------------------------------------------------
-# 收尾：STARTER_STEPS 只有一份
+# 收尾：新手任務步數只有一份
 # ---------------------------------------------------------------------------
 
 
 def test_starter_steps_has_a_single_definition() -> None:
-    """``opening_choice`` 從 ``opening_limits`` 匯入（不各寫一份）。"""
+    """``opening_choice`` 從 ``opening_limits`` 匯入（不各寫一份）；HC-7 起數字在
+    ``world/newcomer.yaml``，程式裡沒有常數。"""
     source = Path(opening_choice.__file__).read_text(encoding="utf-8")
-    assert "from trpg.world.opening_limits import STARTER_STEPS" in source
-    assert "STARTER_STEPS: Final" not in source
-    assert opening_choice.STARTER_STEPS == limits_module.STARTER_STEPS
+    assert "from trpg.world.opening_limits import starter_steps" in source
+    assert "STARTER_STEPS" not in source
 
 
 # ---------------------------------------------------------------------------
@@ -235,22 +234,22 @@ def test_bamboo_hints_get_a_note_in_the_starter_period(
 
 
 def test_limits_by_stage(library: ContentLibrary, make_char: MakeChar) -> None:
-    assert opening_limits(make_char()) == {}  # 舊角色
-    assert opening_limits(_pending(library, make_char)) == {}  # 選大類中：整頁是靶場
+    assert opening_limits(library, make_char()) == {}  # 舊角色
+    assert opening_limits(library, _pending(library, make_char)) == {}  # 選大類中：整頁是靶場
     starter = _starter(library, make_char)
-    assert set(opening_limits(starter)) == LIMIT_KEYS
+    assert set(opening_limits(library, starter)) == LIMIT_KEYS
     chosen = world_step(
         library, make_world(), _fast_played(library, make_char, "ranged"), _confirm("ranged"), NOON
     ).char
-    assert set(opening_limits(chosen)) == {"flash", "dissolve"}
-    assert opening_limits(chosen.model_copy(update={"level": 4})).keys() == {"dissolve"}
+    assert set(opening_limits(library, chosen)) == {"flash", "dissolve"}
+    assert opening_limits(library, chosen.model_copy(update={"level": 4})).keys() == {"dissolve"}
 
 
 def test_limit_reasons_match_the_gate(library: ContentLibrary, make_char: MakeChar) -> None:
     """畫面標的原因＝送出動作被拒的原因（同一張表）；定稿的三句逐字相同。"""
     sword = _item(library, "weapon")
     starter = _starter(library, make_char, gear=(sword,))
-    limits = opening_limits(starter)
+    limits = opening_limits(library, starter)
     assert limits["main_hand"] == "入門期不能換主手，找葛蘭選定武器後就能換"
     assert limits["flash"] == "到 4 級才能閃現"
     assert limits["race"] == "正式選定武器與關鍵字之前不能換種族"
@@ -269,7 +268,7 @@ def test_panels_are_marked_unavailable_in_the_starter_period(
         update={"location": "mist_ferry"}
     )
     world = make_world()
-    limits = opening_limits(starter)
+    limits = opening_limits(library, starter)
     view = world_view(library, world, starter, NOON)
     assert view.limits == limits
     # 背包：武器不能換上（原因＝換主手那一句）；防具照常

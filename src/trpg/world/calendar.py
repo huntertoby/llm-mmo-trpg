@@ -11,11 +11,12 @@
 from __future__ import annotations
 
 import datetime as dt
-from typing import Final, Literal
+from typing import Literal
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import CalendarRules
 from trpg.world.clock import day_start_at, next_refresh_at, refresh_day
+from trpg.world.common import rules_of
 from trpg.world.state import WorldState
 
 __all__ = [
@@ -36,16 +37,10 @@ type SeasonStatus = Literal["upcoming", "running", "ended"]
 _EPOCH = dt.date(1970, 1, 1)
 
 
-NO_RULES_CALENDAR: Final = CalendarRules(utc_offset_minutes=480, refresh_hour=6)
-"""沒有世界規則（只有測試的精簡內容庫）時的日曆：台北 6 點。HC-4d 起 ``CalendarRules`` 沒有程式
-預設值，這組要和 ``world/rules.yaml`` 的 ``calendar`` 相同
-（``tests/world/test_rule_defaults_hc4d.py`` 對照）。"""
-
-
 def calendar_of(library: ContentLibrary) -> CalendarRules:
-    """世界規則的日曆；沒有世界規則時用 :data:`NO_RULES_CALENDAR`（台北 6 點）。"""
-    rules = library.world_rules
-    return NO_RULES_CALENDAR if rules is None else rules.calendar
+    """世界規則的日曆（``world/rules.yaml`` 的 ``calendar``）；HC-7 起沒有世界規則就報錯
+    （:func:`trpg.world.common.rules_of`）。"""
+    return rules_of(library).calendar
 
 
 def day_of(library: ContentLibrary, now: int) -> int:

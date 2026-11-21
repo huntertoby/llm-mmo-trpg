@@ -31,7 +31,7 @@ from trpg.api.world_story_view import event_view
 from trpg.content.library import ContentLibrary
 from trpg.content.world_oaths import OathProposal
 from trpg.content.world_quests import AnyOf
-from trpg.world import opening_choice, opening_limits
+from trpg.world import opening_limits
 from trpg.world.actions import (
     AcceptQuestAction,
     BattleEndedEvent,
@@ -194,8 +194,9 @@ def _contact(result: StepResult) -> int | None:
 # ---------------------------------------------------------------------------
 
 
-def test_starter_steps_match_formal_choice() -> None:
-    assert opening_limits.STARTER_STEPS == opening_choice.STARTER_STEPS == 2
+def test_starter_steps_match_formal_choice(library: ContentLibrary) -> None:
+    """HC-7：步數讀 ``world/newcomer.yaml``，入門期的限制與正式選定的條件用同一個函式。"""
+    assert opening_limits.starter_steps(library) == 2
 
 
 def test_starter_period_definition(library: ContentLibrary, make_char: MakeChar) -> None:

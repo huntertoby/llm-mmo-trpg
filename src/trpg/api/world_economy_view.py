@@ -215,7 +215,7 @@ def inventory_view(
                 total[item_id] = total.get(item_id, 0) + count
     gear_problem = "戰鬥中" if in_battle else equip_problem(library, char)
     # OB-5（#150 第 7 點）：入門期不能換主手——背包裡的武器先標成不能換上（原因同動作被拒的那一句）
-    main_hand = opening_limits(char).get("main_hand")
+    main_hand = opening_limits(library, char).get("main_hand")
     gear = tuple(
         _gear_item(
             library, g, (main_hand if g.slot_type == "weapon" else None) or gear_problem, char

@@ -312,7 +312,9 @@ def party_view(
 ) -> PartyView:
     """隊伍面板與雇用清單（見模組說明）。``titles``：影子主人的帳號稱號（5F-3c 玩家名片）。"""
     problem = "戰鬥中" if in_battle else hire_problem(library, char)
-    if "hire" in opening_limits(char):  # OB-5／OB-6：入門期不開放雇傭兵（面板與被拒同一句）
+    if "hire" in opening_limits(
+        library, char
+    ):  # OB-5／OB-6：入門期不開放雇傭兵（面板與被拒同一句）
         problem = HIRE_PANEL_ZH
     table = library.world_mercenaries
     roster = () if table is None else table.mercenaries
@@ -375,7 +377,7 @@ def my_shadow_view(
     """自己的影子：等級、存的地點、預設打法、累計任務幣、被借用的戰報（新的在前）。"""
     record = world.shadow_of(char.character_id)
     can_set = not in_battle and hire_problem(library, char) is None
-    can_set = can_set and "hire" not in opening_limits(char)  # OB-5：入門期不能改影子打法
+    can_set = can_set and "hire" not in opening_limits(library, char)  # OB-5：入門期不能改影子打法
     ai_zh = _ai_zh(library, char.shadow_ai, char.hero.ai_profile)
     if record is None:
         return MyShadowView(saved=False, ai=char.shadow_ai, ai_zh=ai_zh, can_set_ai=can_set)

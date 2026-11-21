@@ -2,7 +2,7 @@
 
 世界動作 ``opening_reselect {weapon, keywords}``（:func:`apply_reselect`）。條件
 （:func:`reselect_problem`）：已經正式選定（``opening.stage == "chosen"``）、``char.level`` 低於
-:data:`~trpg.world.growth.OPENING_END_LEVEL`、沒用過、人在葛蘭所在的城鎮或主城、沒有待處理的遭遇。
+:func:`~trpg.world.opening_limits.opening_end_level`、沒用過、人在葛蘭所在的城鎮或主城、沒有待處理的遭遇。
 
 重選的順序（每一步的理由見 ``docs/phases/PhaseOB-3報告.md``）：
 
@@ -21,8 +21,8 @@
 9. 重新出延後的三選一的第 1 組（選完一組才出下一組，同正式選定）。
 
 **開局結束**（:func:`close_opening`，第 9 點「4 級前：一律看等級」）：正式選定過的角色升到
-:data:`~trpg.world.growth.OPENING_END_LEVEL` 級，``opening`` 清成 ``None``——重選過期，溶掉與傳承
-解鎖。延後的三選一還沒選完時等選完才清（後面那組要靠 ``opening`` 出題）。
+:func:`~trpg.world.opening_limits.opening_end_level` 級，``opening`` 清成 ``None``——重選過期，
+溶掉與傳承解鎖。延後的三選一還沒選完時等選完才清（後面那組要靠 ``opening`` 出題）。
 
 純函式、確定性：不讀時間、不用全域亂數。
 """
@@ -42,7 +42,7 @@ from trpg.world.actions import OpeningReselectAction, OpeningReselectedEvent, Wo
 from trpg.world.common import max_hp, max_mana
 from trpg.world.errors import WorldActionError
 from trpg.world.gear import gear_run, item_loadout
-from trpg.world.growth import OPENING_END_LEVEL, as_run, from_run
+from trpg.world.growth import as_run, from_run
 from trpg.world.inventory import room_problem
 from trpg.world.opening_choice import (
     chosen_hero,
@@ -52,6 +52,7 @@ from trpg.world.opening_choice import (
     with_starting_skills,
     without_skills,
 )
+from trpg.world.opening_limits import opening_end_level
 from trpg.world.quests import deferred_index, deferred_pending, issue_deferred_offers
 from trpg.world.state import CharacterState, WorldState
 
@@ -73,17 +74,18 @@ _OVER_ZH: Final = "開局已經結束，不能重選起始武器與關鍵字（�
 _USED_ZH: Final = "免費重選只有一次，已經用過了"
 
 
-def reselect_window_problem(char: CharacterState) -> str | None:
+def reselect_window_problem(library: ContentLibrary, char: CharacterState) -> str | None:
     """還有沒有重選的資格（不看地點、遭遇、閃現；OB-6 任務欄小牌用）：已經正式選定、等級低於
-    :data:`~trpg.world.growth.OPENING_END_LEVEL`、沒用過。沒有資格時回原因（和
+    :func:`~trpg.world.opening_limits.opening_end_level`、沒用過。沒有資格時回原因（和
     :func:`reselect_problem` 同一句、同一個順序），有資格時 ``None``。"""
     opening = char.opening
     if opening is None:
         return _OVER_ZH
     if opening.stage != "chosen" or opening.weapon is None:
         return _NOT_CHOSEN_ZH
+    end = opening_end_level(library)
     checks = (
-        (char.level >= OPENING_END_LEVEL, f"已到 {OPENING_END_LEVEL} 級，免費重選已結束"),
+        (char.level >= end, f"已到 {end} 級，免費重選已結束"),
         (opening.reselect_used, _USED_ZH),
     )
     return next((reason for failed, reason in checks if failed), None)
@@ -92,7 +94,7 @@ def reselect_window_problem(char: CharacterState) -> str | None:
 def reselect_problem(library: ContentLibrary, char: CharacterState) -> str | None:
     """現在不能免費重選的原因（中文）；可以時 ``None``。先查資格
     （:func:`reselect_window_problem`），再查地點、遭遇、閃現（順序和 OB-3 相同）。"""
-    window = reselect_window_problem(char)
+    window = reselect_window_problem(library, char)
     if window is not None:
         return window
     checks = (
@@ -290,10 +292,11 @@ def _check_loadout(library: ContentLibrary, char: CharacterState, weapon: Weapon
 
 
 def close_opening(library: ContentLibrary, char: CharacterState) -> CharacterState:
-    """開局結束（21.5 第 9 點）：正式選定過的角色到 :data:`OPENING_END_LEVEL` 級，``opening`` 清成
-    ``None``。延後的三選一還沒選完時先不清；還在入門期（沒正式選定）的不清（還要選定）。"""
+    """開局結束（21.5 第 9 點）：正式選定過的角色到
+    :func:`~trpg.world.opening_limits.opening_end_level` 級，``opening`` 清成 ``None``。延後的
+    三選一還沒選完時先不清；還在入門期（沒正式選定）的不清（還要選定）。"""
     opening = char.opening
-    if opening is None or opening.stage != "chosen" or char.level < OPENING_END_LEVEL:
+    if opening is None or opening.stage != "chosen" or char.level < opening_end_level(library):
         return char
     if deferred_pending(library, char):
         return char

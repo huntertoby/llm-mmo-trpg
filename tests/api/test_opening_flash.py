@@ -13,6 +13,7 @@ from collections.abc import Callable
 import pytest
 
 from tests.world.helpers import NOON, hero, make_world
+from tests.world.opening_rules import OPENING_END_LEVEL
 from tests.world.test_opening_reselect import _chosen
 from tests.world.test_opening_stages import _starter
 from trpg.api.llm_source import MockLlmProvider
@@ -37,7 +38,7 @@ from trpg.skillgen.flash_offer import FlashRequest
 from trpg.skillgen.flash_state import acquire
 from trpg.world.actions import FlashAction, FlashOfferedEvent
 from trpg.world.errors import WorldActionError
-from trpg.world.growth import OPENING_END_LEVEL, flash_blocked_zh
+from trpg.world.growth import flash_blocked_zh
 from trpg.world.state import CharacterState
 from trpg.world.step import new_character, world_step
 
@@ -107,7 +108,7 @@ def test_flash_blocked_before_level_4(library: ContentLibrary, make_char: MakeCh
     """正式選定後、4 級前：閃現被擋（靈感不扣）；到 4 級就可以。"""
     chosen = _used(_chosen(library, make_char))
     assert chosen.level == 3 and chosen.opening is not None
-    assert BLOCKED in (flash_blocked_zh(chosen) or "")
+    assert BLOCKED in (flash_blocked_zh(library, chosen) or "")
     with pytest.raises(WorldActionError, match=BLOCKED):
         _flash(library, chosen)
     view = growth_view(library, chosen, in_battle=False)
@@ -115,7 +116,7 @@ def test_flash_blocked_before_level_4(library: ContentLibrary, make_char: MakeCh
     assert BLOCKED in (view.flash_blocked_zh or "") and view.blocked_zh is None
     assert view.insight == chosen.insight == 3  # 靈感照常留著
     grown = chosen.model_copy(update={"level": OPENING_END_LEVEL})
-    assert flash_blocked_zh(grown) is None
+    assert flash_blocked_zh(library, grown) is None
     flashed = _flash(library, grown)
     assert flashed.pending_flash is not None and flashed.insight < grown.insight
     view = growth_view(library, grown, in_battle=False)
@@ -134,7 +135,7 @@ def test_starter_stage_shows_the_same_reason(library: ContentLibrary, make_char:
 def test_old_characters_flash_as_before(library: ContentLibrary, make_char: MakeChar) -> None:
     """已完成開局的舊角色不受影響：1 級在城鎮就能閃；野外的原因照舊是地點。"""
     old = _used(make_char())
-    assert old.opening is None and old.level == 1 and flash_blocked_zh(old) is None
+    assert old.opening is None and old.level == 1 and flash_blocked_zh(library, old) is None
     view = growth_view(library, old, in_battle=False)
     assert view.can_flash and view.flash_blocked_zh is None
     assert _flash(library, old).pending_flash is not None

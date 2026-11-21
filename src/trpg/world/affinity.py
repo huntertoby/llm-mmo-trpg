@@ -15,7 +15,6 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world_quests import (
     AFFINITY_RANKS,
     AffinityRank,
-    AffinityRankDef,
     AffinityRules,
     SocialTable,
     TalkEntry,
@@ -24,7 +23,6 @@ from trpg.world.actions import AffinityChangedEvent
 from trpg.world.state import CharacterState
 
 __all__ = [
-    "DEFAULT_AFFINITY_RULES",
     "affinity_of",
     "affinity_rules",
     "change_affinity",
@@ -35,26 +33,10 @@ __all__ = [
     "trusted_npcs",
 ]
 
-DEFAULT_AFFINITY_RULES = AffinityRules(
-    min_value=-100,
-    max_value=100,
-    rumors_per_week=3,
-    ranks=(
-        AffinityRankDef(id="hostile", name_zh="敵視", min=-100),
-        AffinityRankDef(id="cold", name_zh="冷淡", min=-49),
-        AffinityRankDef(id="neutral", name_zh="中立", min=-9),
-        AffinityRankDef(id="friendly", name_zh="友善", min=20),
-        AffinityRankDef(id="trusted", name_zh="信賴", min=60),
-    ),
-)
-"""沒有 ``world/affinity.yaml`` 時的級距（9.6.11 #116）。HC-4d 起 ``AffinityRules`` 的範圍與
-每週傳聞數沒有程式預設值，這裡照 ``world/affinity.yaml`` 寫明
-（``tests/world/test_rule_defaults_hc4d.py`` 對照）。"""
-
 
 def affinity_rules(library: ContentLibrary) -> AffinityRules:
-    rules = library.world_quests.affinity
-    return DEFAULT_AFFINITY_RULES if rules is None else rules
+    """好感度規則（沒有 ``world/affinity.yaml`` 時由載入層給備用值，HC-7）。"""
+    return library.world_quests.affinity
 
 
 def affinity_of(char: CharacterState, npc: str) -> int:

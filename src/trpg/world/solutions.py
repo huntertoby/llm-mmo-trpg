@@ -174,10 +174,6 @@ def solve_event(
     return _combat(library, world, char, action, trigger, solution, now)
 
 
-MAX_SKILL_TIER = 5
-"""技能階級上限（``SkillDef.tier``）。"""
-
-
 def opportunity_tier_bonus(
     library: ContentLibrary, world: WorldState, char: CharacterState, skeleton: str
 ) -> int:
@@ -187,7 +183,7 @@ def opportunity_tier_bonus(
     rules = rules_of(library).opportunity
     if char.opportunity_tier_ups >= rules.tier_up_per_season:
         return 0
-    if hero_tier(library, char.level) + 1 > MAX_SKILL_TIER:
+    if hero_tier(library, char.level) + 1 > library.ruleset.core.skill_limits.tiers:
         return 0
     rng = Rng(fnv1a64(f"{skill_seed(world, char)}:opportunity:{skeleton}".encode()))
     return 1 if rng.randint(0, 999) < rules.tier_up_permille else 0

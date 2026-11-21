@@ -176,6 +176,24 @@ class AffinityRules(ContentModel):
 # ---------------------------------------------------------------------------
 
 
+NO_FILE_AFFINITY_RULES: Final = AffinityRules(
+    min_value=-100,
+    max_value=100,
+    rumors_per_week=3,
+    ranks=(
+        AffinityRankDef(id="hostile", name_zh="敵視", min=-100),
+        AffinityRankDef(id="cold", name_zh="冷淡", min=-49),
+        AffinityRankDef(id="neutral", name_zh="中立", min=-9),
+        AffinityRankDef(id="friendly", name_zh="友善", min=20),
+        AffinityRankDef(id="trusted", name_zh="信賴", min=60),
+    ),
+)
+"""內容庫沒有 ``world/affinity.yaml`` 時（只有測試的精簡內容庫）的好感度規則：沒有聊天內容照樣能聊、
+算中立。HC-7 從 ``trpg.world.affinity.DEFAULT_AFFINITY_RULES`` 搬到載入層，只寫這一份；值和
+``world/affinity.yaml`` 相同（``tests/world/test_rule_defaults_hc7.py`` 對照；任務、聊天的好感度
+加值沒寫＝0）。"""
+
+
 class AtLocation(ContentModel):
     """狀態：角色在 ``location``。"""
 
@@ -757,7 +775,8 @@ class WorldQuestContent:
 
     quests: dict[str, QuestTable] = field(default_factory=dict)
     social: dict[str, SocialTable] = field(default_factory=dict)
-    affinity: AffinityRules | None = None
+    affinity: AffinityRules = field(default_factory=lambda: NO_FILE_AFFINITY_RULES)
+    """好感度規則（``world/affinity.yaml``）；沒有這個檔時是 :data:`NO_FILE_AFFINITY_RULES`。"""
 
     def quest(self, region: str, quest_id: str) -> QuestDef | None:
         table = self.quests.get(region)
@@ -853,7 +872,7 @@ def load_world_quest_content(
             raise ContentError(path, "；".join(problems))
         files.append((path, s_table))
     affinity_path = root / AFFINITY_FILE
-    affinity: AffinityRules | None = None
+    affinity = NO_FILE_AFFINITY_RULES
     if affinity_path.is_file():
         affinity = load_content_file(affinity_path, AffinityRules)
         files.append((affinity_path, affinity))

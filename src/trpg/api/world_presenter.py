@@ -286,7 +286,7 @@ def _race_change(
     return {
         "free_race_change": True,
         # OB-5（#150 第 7 點）：正式選定前不能換種族——先標原因（同動作被拒的那一句）
-        "free_race_change_zh": opening_limits(char).get("race")
+        "free_race_change_zh": opening_limits(library, char).get("race")
         or race_change_problem(library, world, char, None),
     }
 
@@ -439,7 +439,7 @@ def _here_view(
         can_rest=free and loc.kind == "town",
         can_loadout=free
         and (loc.kind == "town" or camped)
-        and "loadout" not in opening_limits(char),  # OB-5：入門期不能換技能
+        and "loadout" not in opening_limits(library, char),  # OB-5：入門期不能換技能
         camp_problem_zh=_camp_problem(char, problem, in_battle=in_battle),
         camped=camped,
         teleports=tuple(
@@ -737,7 +737,7 @@ def world_view(
     取）。``wish_llm``：許願池能不能用願望文字（世界的 LLM 開著、健康檢查沒說不可用；WP-2）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
-    limits = opening_limits(char)  # OB-5（#150 第 7、9 點）
+    limits = opening_limits(library, char)  # OB-5（#150 第 7、9 點）
     if "flash" in limits:
         # 開局還沒結束、4 級前不能閃現：每一招的閃現鈕都先標成不可用（原因同動作被拒的那一句）
         blocked = {"can_flash": False, "flash_problem_zh": limits["flash"]}

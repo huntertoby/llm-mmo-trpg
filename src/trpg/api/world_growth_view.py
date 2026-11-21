@@ -125,7 +125,7 @@ def growth_view(library: ContentLibrary, char: CharacterState, *, in_battle: boo
     elif not service:
         blocked = "這裡不是城鎮或營火"
     free = not in_battle and not pending and char.pending_encounter is None
-    flash_blocked = flash_blocked_zh(char)  # OB-3（#150 第 6 點）
+    flash_blocked = flash_blocked_zh(library, char)  # OB-3（#150 第 6 點）
     return GrowthView(
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
@@ -287,7 +287,7 @@ def oath_view(
         )
     cooling = now < char.oath_cooldown_until
     problem = _swear_problem(library, char, now, in_battle=in_battle)
-    problem = opening_limits(char).get("oath") or problem  # OB-5：入門期不開放誓約
+    problem = opening_limits(library, char).get("oath") or problem  # OB-5：入門期不開放誓約
     return OathView(
         available=table is not None,
         unavailable_zh=UNAVAILABLE_ZH if table is None else None,

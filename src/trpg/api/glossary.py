@@ -24,8 +24,8 @@ from trpg.narrative.status_info import stack_rules, status_rules
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.roguelite.flashes import max_carry
 from trpg.shared.types import Attribute
-from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.league import league_rules
+from trpg.world.opening_limits import opening_end_level
 
 __all__ = ["build_glossary"]
 
@@ -200,7 +200,7 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
         flash_open_min_categories=flash.pricing.open.min_categories,
         pregen_wait_seconds=round(WAIT_SECONDS),
         wish_cards=library.skill_pick.pool.wish_cards,
-        opening_end_level=OPENING_END_LEVEL,
+        opening_end_level=opening_end_level(library),
     )
     return rules.model_copy(update=_world_text_rules(library))
 

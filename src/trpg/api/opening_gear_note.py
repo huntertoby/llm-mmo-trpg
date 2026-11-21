@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Final
 
 from trpg.content.library import ContentLibrary
-from trpg.world.growth import OPENING_END_LEVEL
+from trpg.world.opening_limits import opening_end_level
 from trpg.world.opening_reselect import reselect_window_problem, starter_item_id, weapon_item_id
 from trpg.world.state import CharacterState
 
@@ -24,9 +24,9 @@ __all__ = ["STARTER_WEAPON_ZH", "opening_gear_note", "reselect_weapon_zh"]
 STARTER_WEAPON_ZH: Final = "入門配備是借的，正式選定時會換成你自己的。不能賣、寄、分解。"
 
 
-def reselect_weapon_zh() -> str:
-    """起始武器卡片那一行（還能重選時才顯示；等級讀規則常數）。"""
-    return f"{OPENING_END_LEVEL} 級前重選的話，這把會被收回。"
+def reselect_weapon_zh(library: ContentLibrary) -> str:
+    """起始武器卡片那一行（還能重選時才顯示；等級讀 ``world/newcomer.yaml``）。"""
+    return f"{opening_end_level(library)} 級前重選的話，這把會被收回。"
 
 
 def opening_gear_note(library: ContentLibrary, char: CharacterState, item_id: str) -> str | None:
@@ -43,6 +43,6 @@ def opening_gear_note(library: ContentLibrary, char: CharacterState, item_id: st
         if starter is None or item_id != weapon_item_id(library, char, starter):
             return None
         return STARTER_WEAPON_ZH
-    if opening.stage != "chosen" or reselect_window_problem(char) is not None:
+    if opening.stage != "chosen" or reselect_window_problem(library, char) is not None:
         return None
-    return reselect_weapon_zh() if item_id == starter_item_id(library, char) else None
+    return reselect_weapon_zh(library) if item_id == starter_item_id(library, char) else None

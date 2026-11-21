@@ -13,6 +13,7 @@ from collections.abc import Callable
 import pytest
 
 from tests.world.helpers import NOON, PARTY, make_world, with_rules
+from tests.world.opening_rules import OPENING_END_LEVEL
 from tests.world.test_opening_choice import (
     MAX_FIGHT_SEEDS,
     _confirm,
@@ -41,7 +42,6 @@ from trpg.world.actions import (
 from trpg.world.battle import auto_steps
 from trpg.world.common import rules_of
 from trpg.world.errors import WorldActionError
-from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening_reselect import reselect_problem
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, dumps_world, loads_log

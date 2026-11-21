@@ -293,6 +293,14 @@ class CalendarRules(ContentModel):
     """每日刷新的當地時刻（懸賞、今日目標、每天一次的判定）。"""
 
 
+FALLBACK_CALENDAR: Final = CalendarRules(utc_offset_minutes=480, refresh_hour=6)
+"""呼叫 :mod:`trpg.world.clock` 沒有給日曆時用的日曆（台北 6 點）：只有伺服器公告沒有內容庫的舊路徑
+與測試會用到；有內容庫的地方一律走 :func:`trpg.world.calendar.calendar_of`（``world/rules.yaml`` 的
+``calendar``）。HC-7 把原本 ``clock.py`` 的 ``UTC_OFFSET_SECONDS``、``REFRESH_HOUR`` 與
+``calendar.py`` 的 ``NO_RULES_CALENDAR`` 兩份合成這一份，值和內容檔相同
+（``tests/world/test_rule_defaults_hc7.py`` 對照）。"""
+
+
 class DayPartHours(ContentModel):
     """``world/rules.yaml`` 的 ``day_parts``：早、午、晚、夜的起始鐘點（遊戲內時刻；HC-4d 從前端
     ``client/src/world/hud.ts`` 搬來，值照前端原本用的）。

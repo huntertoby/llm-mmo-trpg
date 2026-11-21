@@ -4,7 +4,7 @@
 :func:`in_starter_period`）。已完成開局的舊角色（``opening is None``）、已正式選定的角色都不受這裡
 任何判斷影響。
 
-- **敵人**：新手任務（``kind: starter``）前 :data:`STARTER_STEPS` 步的固定戰以外，實地地圖上的隊伍
+- **敵人**：新手任務（``kind: starter``）前 :func:`starter_steps` 步的固定戰以外，實地地圖上的隊伍
   「不顯示、不接觸」（:func:`spawn_hidden`；畫面清單與接觸判定共用
   :func:`trpg.world.field_enemies._shown`，所以一定一致）；節點移動的遇敵機率歸 0
   （:func:`trpg.world.step._travel_to`，擲骰照擲、亂數消耗不變）。
@@ -14,7 +14,7 @@
   保底留到正式選定之後。
 - **情境物件**：``use: encounter`` 的物件（Boss 門）擋下（:func:`spot_problem`）。
 - **任務**：可以接；給招的步驟（三選一、劇情技能）先不結算，等正式選定（:func:`holds_step`；新手任務
-  前 :data:`STARTER_STEPS` 步的三選一照 OB-2 延後，不在此列）。
+  前 :func:`starter_steps` 步的三選一照 OB-2 延後，不在此列）。
 
 被擋的原因文字集中在這個模組（OB-5／6 會再調）。本模組只依賴內容與狀態，不匯入其他世界邏輯
 （``quests``、``solutions``、``field_things`` 都要用它）。
@@ -27,6 +27,7 @@ from typing import Final
 from trpg.content.fields import FieldSpawn, SpotUse
 from trpg.content.library import ContentLibrary
 from trpg.content.world_events import SolutionKind
+from trpg.content.world_newcomer import NewcomerContent
 from trpg.content.world_quests import (
     EVENT_CONDITION_KINDS,
     AnyOf,
@@ -35,6 +36,7 @@ from trpg.content.world_quests import (
     StepReward,
     WinBattle,
 )
+from trpg.world.errors import WorldError
 from trpg.world.state import CharacterState, EncounterResult
 
 __all__ = [
@@ -42,21 +44,36 @@ __all__ = [
     "FLASH_ZH",
     "OBJECT_ZH",
     "SOLUTION_ZH",
-    "STARTER_STEPS",
     "fight_problem",
     "holds_step",
     "in_starter_period",
+    "opening_end_level",
     "solution_problem",
     "spawn_hidden",
     "spot_problem",
     "starter_spawn",
+    "starter_steps",
     "stuck_conditions",
 ]
 
-STARTER_STEPS: Final = 2
-"""入門期的新手任務步數（21.5 第 2、3、7 點「用入門配備打新手第 1、2 步」「戰鬥只開放新手第 1、2
-步」）。只有這一份：:mod:`trpg.world.opening_choice` 從這裡匯入（那邊匯入 ``quests``、
-``quests`` 要用這個模組，所以不能反過來）。"""
+
+def _newcomer(library: ContentLibrary) -> NewcomerContent:
+    if library.world_newcomer is None:
+        raise WorldError("內容庫沒有 world/newcomer.yaml")
+    return library.world_newcomer
+
+
+def starter_steps(library: ContentLibrary) -> int:
+    """入門期的新手任務步數（``world/newcomer.yaml`` 的 ``starter_steps``；21.5 第 2、3、7 點
+    「用入門配備打新手第 1、2 步」「戰鬥只開放新手第 1、2 步」）。"""
+    return _newcomer(library).starter_steps
+
+
+def opening_end_level(library: ContentLibrary) -> int:
+    """開局在這一級結束（``world/newcomer.yaml`` 的 ``opening_end_level``；21.5 #150
+    「4 級前」）。"""
+    return _newcomer(library).opening_end_level
+
 
 FIGHT_ZH: Final = "先完成新手任務，再找葛蘭選定武器與關鍵字，才能打這場"
 """入門期不能打的戰鬥（玩法 PM 定稿「限制：其他戰鬥」）。"""
@@ -75,20 +92,20 @@ def in_starter_period(char: CharacterState) -> bool:
     return char.opening is not None and char.opening.stage != "chosen"
 
 
-def _starter_steps(quest: QuestDef | None) -> tuple[str, ...]:
-    """新手任務前 :data:`STARTER_STEPS` 步的步驟 ID；不是新手任務＝空。"""
+def _starter_steps(library: ContentLibrary, quest: QuestDef | None) -> tuple[str, ...]:
+    """新手任務前 :func:`starter_steps` 步的步驟 ID；不是新手任務＝空。"""
     if quest is None or quest.kind != "starter":
         return ()
-    return tuple(step.id for step in quest.steps[:STARTER_STEPS])
+    return tuple(step.id for step in quest.steps[: starter_steps(library)])
 
 
 def starter_spawn(library: ContentLibrary, region: str, spawn: FieldSpawn) -> bool:
-    """這一隊是新手任務前 :data:`STARTER_STEPS` 步的固定戰（``until_quest`` 指到新手任務、
+    """這一隊是新手任務前 :func:`starter_steps` 步的固定戰（``until_quest`` 指到新手任務、
     ``until_step`` 是前幾步）。"""
     if spawn.until_quest is None or spawn.until_step is None:
         return False
     quest = library.world_quests.quest(region, spawn.until_quest)
-    return spawn.until_step in _starter_steps(quest)
+    return spawn.until_step in _starter_steps(library, quest)
 
 
 def spawn_hidden(
@@ -99,13 +116,13 @@ def spawn_hidden(
 
 
 def _starter_fights(library: ContentLibrary, region: str) -> frozenset[tuple[str | None, str]]:
-    """新手任務前 :data:`STARTER_STEPS` 步要打贏的（地點, 陣容）（步驟的 ``win_battle`` 條件）。"""
+    """新手任務前 :func:`starter_steps` 步要打贏的（地點, 陣容）（步驟的 ``win_battle`` 條件）。"""
     table = library.world_quests.quests.get(region)
     out: set[tuple[str | None, str]] = set()
     for quest in () if table is None else table.quests:
         if quest.kind != "starter":
             continue
-        for step in quest.steps[:STARTER_STEPS]:
+        for step in quest.steps[: starter_steps(library)]:
             for condition in step.when:
                 leaves = condition.conditions if isinstance(condition, AnyOf) else (condition,)
                 out |= {
@@ -145,15 +162,17 @@ def spot_problem(char: CharacterState, use: SpotUse) -> str | None:
     return OBJECT_ZH if use == "encounter" and in_starter_period(char) else None
 
 
-def holds_step(char: CharacterState, quest: QuestDef, index: int, reward: StepReward) -> bool:
+def holds_step(
+    library: ContentLibrary, char: CharacterState, quest: QuestDef, index: int, reward: StepReward
+) -> bool:
     """入門期先不結算的任務步驟（21.5 第 9 點「給招的獎勵要等正式選定」）：獎勵有三選一或劇情技能的
-    步驟。新手任務前 :data:`STARTER_STEPS` 步不算（三選一照 OB-2 延後）。``index``＝步驟在任務裡的
+    步驟。新手任務前 :func:`starter_steps` 步不算（三選一照 OB-2 延後）。``index``＝步驟在任務裡的
     索引（從 0）。"""
     if not in_starter_period(char):
         return False
     if reward.offer is None and reward.story_skill is None:
         return False
-    return not (quest.kind == "starter" and index < STARTER_STEPS)
+    return not (quest.kind == "starter" and index < starter_steps(library))
 
 
 def stuck_conditions(step: QuestStepDef) -> tuple[int, ...]:
