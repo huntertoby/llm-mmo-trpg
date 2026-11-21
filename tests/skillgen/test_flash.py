@@ -147,7 +147,7 @@ def test_every_minor_op_in_the_data_is_implemented() -> None:
             },
             "delta",
         ),
-        ({"rules": {"max_flashes": 2, "major_flash": 3}}, "major_flash"),
+        ({"rules": {"max_flashes": 2, "major_flash": 3}}, "major_flash 不可大於"),
         (
             {"transforms": [{"id": "t", "to": "passive", "prefix_zh": "x", "summary_zh": "y"}]},
             "trigger",
@@ -155,8 +155,15 @@ def test_every_minor_op_in_the_data_is_implemented() -> None:
     ],
 )
 def test_schema_rejects_bad_tables(data: dict[str, Any], message: str) -> None:
+    # HC-4b3：rules、pricing 必填，先放內容檔的值，只換要測的那一塊（缺欄位的錯誤會讓測試白過）
+    content = library().flash.model_dump(mode="json")
+    base = {"rules": content["rules"], "pricing": content["pricing"]}
+    over = {**data}
+    if "rules" in over:
+        over["rules"] = {**content["rules"], **over["rules"]}
+    FlashTable.model_validate(base)
     with pytest.raises(ValidationError, match=message):
-        FlashTable.model_validate(data)
+        FlashTable.model_validate({**base, **over})
 
 
 def test_library_checks_major_templates_against_the_evolution_table() -> None:

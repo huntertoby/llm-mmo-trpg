@@ -115,7 +115,12 @@ def test_form_upkeep_can_never_be_a_flash_knob() -> None:
     """#67：形態維持費固定（化形專精減半），不能當修正模板的旋鈕。"""
     assert "form_upkeep_permille" not in library().flash.rules.modifier_knobs
     with pytest.raises(ValueError, match="form_upkeep_permille"):
-        FlashRules.model_validate({"modifier_knobs": {"form_upkeep_permille": [-100, -200]}})
+        FlashRules.model_validate(
+            {
+                **library().flash.rules.model_dump(mode="json"),
+                "modifier_knobs": {"form_upkeep_permille": [-100, -200]},
+            }
+        )
 
 
 # ---------------------------------------------------------------------------

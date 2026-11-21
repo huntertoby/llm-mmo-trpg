@@ -252,7 +252,8 @@ export const api = {
       | "forms"
       | "equipment"
       | "item_gen"
-      | "skill_evolution" = "unit",
+      | "skill_evolution"
+      | "flash" = "unit",
   ) => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
   tuningObject: (kind: string, id: string) =>
     request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),

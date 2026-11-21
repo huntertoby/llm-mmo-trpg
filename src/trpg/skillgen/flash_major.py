@@ -241,6 +241,7 @@ _SUMMON_COSTS: tuple[dict[str, Any], ...] = (
 def _to_summon(skill: SkillDef, t: TransformTemplate, _lib: ContentLibrary) -> list[_Draft]:
     if is_summon_skill(skill):
         return []
+    assert t.summon_duration is not None  # 轉成召喚時必填（TransformTemplate._check）
     element = skill_element_id(skill)
     units = [*t.units.get(element or "", ()), *t.units.get("any", ())]
     drafts: list[_Draft] = []

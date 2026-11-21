@@ -86,6 +86,9 @@ class ContentLibrary:
     skill_pick: SkillPickRules
     """技能生成挑選模式的打分權重與候選池大小（``skill_pick.yaml``，Phase PK-1）；不嵌入規則包。
     HC-4b2 起必填（數字都寫在檔裡）。"""
+    flash: FlashTable
+    """閃現（靈光一閃）的規則與模板（``flash_templates.yaml``，Phase 3W-1）；不嵌入規則包。
+    HC-4b3 起必填（數字都寫在檔裡）。"""
     affixes: dict[str, AffixDef] = field(default_factory=dict)
     """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
     offhands: dict[str, OffhandDef] = field(default_factory=dict)
@@ -98,8 +101,6 @@ class ContentLibrary:
     """物品產生器與物品預算的係數（``item_gen.yaml``，Phase 3K-1）。"""
     dev_starters: DevStarterTable = field(default_factory=DevStarterTable)
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
-    flash: FlashTable = field(default_factory=FlashTable)
-    """閃現（靈光一閃）的規則與模板（``flash_templates.yaml``，Phase 3W-1）；不嵌入規則包。"""
     workshop_text: WorkshopTextTable = field(default_factory=WorkshopTextTable)
     """工坊說明的玩家語氣對照表（``workshop_text.yaml``，Phase 3-48f）；不屬於規則。"""
     regions: RegionTable | None = None

@@ -1031,7 +1031,6 @@ rules:
       - '<module>.GIANT_FOOTPRINTS'
       - '<module>.MIN_COMBO_N'
       - '<module>.MAX_MAGNITUDE'
-      - '<module>._MAX_FORM_MAGNITUDE'
       - '<module>._MAX_ATTRS'
       - '<module>._MAX_MELEE_RANGE'
       - '<module>._ROLE_HP_RANGE'
@@ -1057,7 +1056,7 @@ rules:
       - '<module>.MAX_VARIANTS'
       - '<module>._MIN_SIDES'
       - 'WeatherDef._mods'
-    note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、形態幅度、錯誤列印數）。
+    note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、錯誤列印數）。形態幅度的上限 HC-4b3 改成載入時對照 enter_form 原語。
       HC-4b 加 MAX_VARIANTS：一招最多 2 個變奏是護欄，實際上限依稀有度（core.yaml 的 variant_max_by_rarity，
       Ruleset 層檢查）。HC-4b2 加 _MIN_SIDES：骰子至少 2 面是護欄（組合器的骰面階梯在 skill_composer.yaml）。
   - id: py-content-math-constants
@@ -1121,11 +1120,11 @@ rules:
     note: 同上一條（content config）。
   - id: py-content-flash-templates-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/content/flash_templates.py
     kind: number
     where: ['CompleteSkillRules', 'FlashPricing', 'FlashRules', 'TransformTemplate']
-    note: HC-4b3 分清楚：54 筆都是 config（閃現次數、預算加成、完整技能、計價、階梯、轉型的起點與召喚輪數的預設值）；_MAX_FORM_MAGNITUDE、CostCut、ExtraMajorTemplate、FlashTemplate、PriceRule 的數字已由 guard／const 規則先比對到，從 where 拿掉。
+    note: HC-4b3 分清楚：54 筆都是 config（閃現次數、預算加成、完整技能、計價、階梯、轉型的起點與召喚輪數的預設值）；_MAX_FORM_MAGNITUDE、CostCut、ExtraMajorTemplate、FlashTemplate、PriceRule 的數字已由 guard／const 規則先比對到，從 where 拿掉。搬完（0 筆）：預設值改必填、轉型的兩格改成用到時必填。
   - id: py-content-loader-config-number
     class: config
     status: todo

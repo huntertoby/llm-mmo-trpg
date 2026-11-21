@@ -170,7 +170,8 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         // HC-B：條件的預算倍率覆寫（skill_conditions.yaml）與協同係數（skill_synergies.yaml）也放這裡。
         // HC-W2：形態（forms.yaml）、裝備規則（rules/equipment.yaml）、物品生成（item_gen.yaml）也放這裡。
         // HC-4b2：技能分歧進化（skill_evolution.yaml，召喚技進化的幅度）也放這裡。
-        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution] = await Promise.all([
+        // HC-4b3：閃現規則與計價（flash_templates.yaml）也放這裡。
+        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution, flash] = await Promise.all([
           tapi.tuningStatus(),
           tapi.tuningObjects("unit"),
           tapi.tuningObjects("ai").catch(() => []),
@@ -186,8 +187,9 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
           tapi.tuningObjects("equipment").catch(() => []),
           tapi.tuningObjects("item_gen").catch(() => []),
           tapi.tuningObjects("skill_evolution").catch(() => []),
+          tapi.tuningObjects("flash").catch(() => []),
         ]);
-        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution];
+        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution, ...flash];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);

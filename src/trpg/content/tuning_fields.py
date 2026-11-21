@@ -25,6 +25,7 @@ from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.composer_rules import ComposerRules
 from trpg.content.environment import AiProfileTable, ObjectTable
 from trpg.content.equipment import EquipmentRules
+from trpg.content.flash_templates import FlashTable
 from trpg.content.forms import FormTable
 from trpg.content.item_budget import ItemGenRules
 from trpg.content.loader import load_content_file
@@ -136,6 +137,7 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "equipment": EquipmentRules,
     "item_gen": ItemGenRules,
     "skill_evolution": EvolutionTable,
+    "flash": FlashTable,
 }
 """對象種類 → 單一檔案的 schema（``ai``＝``ai_profiles.yaml``；PB-1n 先開部位的 ``parts:``；
 BS-1 起 ``rules``＝``rules/core.yaml``（背刺與潛行偷襲的加成）、``budget``＝``skill_budget.yaml``
@@ -146,7 +148,8 @@ PK-1 起 ``pick``＝``skill_pick.yaml``（技能挑選模式的權重）；SK-5 
 倍率覆寫）、``skill_synergies``＝``skill_synergies.yaml``（協同係數）；HC-W2 起 ``forms``＝
 ``forms.yaml``（形態）、``equipment``＝``rules/equipment.yaml``（裝備的遞減與硬上限）、
 ``item_gen``＝``item_gen.yaml``（物品產生器的係數）；HC-4b2 起 ``skill_evolution``＝
-``skill_evolution.yaml``（召喚技分歧進化的幅度）。這幾種都是「一個檔一個全體共用的表」）。"""
+``skill_evolution.yaml``（召喚技分歧進化的幅度）；HC-4b3 起 ``flash``＝``flash_templates.yaml``
+（閃現的計價與規則數值）。這幾種都是「一個檔一個全體共用的表」）。"""
 
 TABLE_KINDS: Final = (
     "ai",
@@ -162,6 +165,7 @@ TABLE_KINDS: Final = (
     "equipment",
     "item_gen",
     "skill_evolution",
+    "flash",
 )
 """一個檔就是一張全體共用的表（不是一隻單位或一招）的對象種類。"""
 
@@ -220,6 +224,7 @@ class TuningTarget(ContentModel):
         "equipment",
         "item_gen",
         "skill_evolution",
+        "flash",
     ]
     label_zh: str = Field(min_length=1)
     glob: str = Field(min_length=1)

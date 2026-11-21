@@ -52,6 +52,7 @@ from trpg.content.library.tables import (
     _check_budget_rules,
     _check_composer_rules,
     _check_evolution,
+    _check_flash_forms,
     _check_modifier_changes,
     _check_price_tables,
     _check_primitive_points,
@@ -366,6 +367,7 @@ def _load_run_extras(
     evolution = load("skill_evolution.yaml", EvolutionTable)  # HC-4b2：必備（數字都寫在檔裡）
     _check_evolution(root, evolution, t.keywords, t.skeletons, t.core)
     flash = _load_flash(root, load, evolution, t.skill_triggers)
+    _check_flash_forms(root, flash, t.primitives)
     skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
     _check_scaling(root, skill_scaling, t.skills, weapon_map)
     return {
