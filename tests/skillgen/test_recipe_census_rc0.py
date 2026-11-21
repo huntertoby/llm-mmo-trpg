@@ -58,3 +58,22 @@ def test_thin_threshold_and_design_floor(census: ModuleType) -> None:
     [none] = census.run_census([blocked], 2, 12, 1, diag_seeds=0)
     assert none.blocked_by_design
     assert census.classify(none, thin=12) == "n/a"
+
+
+def test_design_key_tells_summon_units_apart(census: ModuleType) -> None:
+    """HC-6a：召喚不同的召喚物算不同設計；沒有召喚物的效果鍵照舊（只有類型與狀態 ID）。"""
+    lib = load_library()
+    summons = sorted(
+        (s for s in lib.skills.values() if any(e.type == "summon" for e in s.effects)),
+        key=lambda s: s.id,
+    )
+    base = summons[0]
+    effects = list(base.effects)
+    index = next(i for i, e in enumerate(effects) if e.type == "summon")
+    units = {e.unit for s in summons for e in s.effects if e.unit}
+    other = sorted(units - {effects[index].unit})[0]
+    effects[index] = effects[index].model_copy(update={"unit": other})
+    swapped = base.model_copy(update={"effects": tuple(effects)})
+    assert census.design_key(base) != census.design_key(swapped)
+    plain = next(s for s in lib.skills.values() if all(e.unit is None for e in s.effects))
+    assert all("@" not in key for key in census.design_key(plain)[3])

@@ -4,7 +4,9 @@
 ``validate_skill`` 無違規、``_fits``（種類、骨架、題目的全部關鍵字，只看專屬規則）。參數也照它：
 種類非主動時骨架＝種類（被動、反應各有同名骨架），關鍵字照題目；RC-1b 起種類也傳給組合器
 （``kinds``）。
-設計鍵＝骨架＋種類＋形狀類型＋效果類型（含狀態 ID）＋元素標籤（數值不同算同一個設計）。
+設計鍵＝骨架＋種類＋形狀類型＋效果類型（含狀態 ID、召喚物種類）＋元素標籤（數值不同算同一個設計）。
+HC-6a 起召喚與身邊召喚的效果帶召喚物種類（``unit``）：召喚 2～3 階的不同召喚物不再算成同一個設計
+（以前會誤報成薄格）；沒有召喚物的效果鍵和以前相同。
 
 只讀：不改 ``content/``，不跑戰鬥。輸出 JSON 與 Markdown 摘要；計時以外的欄位只由內容與參數決定，
 平行與否結果相同（RC-1 補配方時用同一支腳本做改前改後對照）。
@@ -30,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from trpg.content.library import ContentLibrary, load_library
-from trpg.content.skills import SkillDef, rarity_rank
+from trpg.content.skills import EffectSpec, SkillDef, rarity_rank
 from trpg.content.skills.constants import SkillRarity
 from trpg.content.world_rules import WorldRules
 from trpg.shared.types import Element
@@ -119,11 +121,17 @@ def _library() -> ContentLibrary:
     return _LIBRARY
 
 
+def _effect_key(effect: EffectSpec) -> str:
+    """效果類型：狀態 ID；有召喚物的（``summon``、``summon_beside``）再接 ``@召喚物種類``
+    （HC-6a）。"""
+    key = effect.type + ":" + str(getattr(effect, "status", "") or "")
+    unit = getattr(effect, "unit", None)
+    return key if not unit else f"{key}@{unit}"
+
+
 def design_key(skill: SkillDef) -> tuple[Any, ...]:
-    """骨架＋種類＋形狀類型＋效果類型（含狀態 ID）＋元素標籤。"""
-    effects = tuple(
-        sorted(e.type + ":" + str(getattr(e, "status", "") or "") for e in skill.effects)
-    )
+    """骨架＋種類＋形狀類型＋效果類型（含狀態 ID、召喚物種類）＋元素標籤。"""
+    effects = tuple(sorted(_effect_key(e) for e in skill.effects))
     elements = tuple(t for t in skill.tags if t in _ELEMENTS)
     return (skill.skeleton, skill.kind, skill.shape.type, effects, elements)
 
