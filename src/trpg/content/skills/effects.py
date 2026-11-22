@@ -201,8 +201,8 @@ class EffectSpec(ContentModel):
     2 格的預算較貴（``wind_spread_permille``）。"""
     flat_bonus: int | None = Field(default=None, ge=1, le=_MAX_FLAT_BONUS)
     """``damage``、``heal``、``shield`` 專用（BAL-12b 定，06 6.34.4）：骰值之外的固定值加成
-    （骰值 ＋ n）。被動、反應的閃現「效果 +」在骰子一階跳過預算窗時用的細旋鈕；暴擊不加倍。只有技能
-    自己的效果可以用，傷害只限法術技；預算照骰子平均 ＋ n 計。"""
+    （骰值 ＋ n）。被動、反應的閃現「效果 +」在骰子一階跳過預算窗時用的細旋鈕；暴擊只放大骰子
+    （固定值不放大）。只有技能自己的效果可以用，傷害只限法術技；預算照骰子平均 ＋ n 計。"""
     strike_other: bool | None = Field(default=None, exclude_if=lambda v: v is None)
     """``summon_beside`` 專用（TF-1，#159 護主）：召出後立刻對反應的觸發者（形狀 ``single`` 的
     對象，必須是敵人）普攻一次（打得到才打）。只能填 ``true``。"""

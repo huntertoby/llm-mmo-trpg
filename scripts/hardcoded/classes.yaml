@@ -1543,6 +1543,7 @@ rules:
       - '_modifier_uses'
       - '_passive_coefficient'
       - '_variance_factor'
+      - '_crit_factor'  # CR-1：從 _variance_factor 拆出
     note: HC-6a 改判：暴擊範圍上界 20 是 d20；「驅散 1 個增益」是 count 不是 all 的那一類（點數照 dispel_one_points）。
   - id: py-skillgen-option-conform-text-text
     class: const

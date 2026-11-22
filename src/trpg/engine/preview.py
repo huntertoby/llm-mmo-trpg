@@ -110,6 +110,7 @@ from trpg.engine.rules.combat import (
     advantage_state,
     attack_reach,
     crit_extra_total,
+    crit_text_zh,
     half_cover,
     hit_modifier,
     is_hit,
@@ -1570,6 +1571,30 @@ def _no_turn_info(
     return targets, reason, notes
 
 
+def _crit_notes(state: BattleState, actor: UnitState, action: Action) -> tuple[str, ...]:
+    """暴擊傷害倍率不是 200% 時的說明（CR-1，05 5.4.2 第 8 點），例「暴擊 19–20・250%」；200% 時
+    不顯示（和改版前一樣）。範圍不含背刺（背刺另有說明）；修正規則的條件看第一個目標。"""
+    skill: SkillDef | None = None
+    if isinstance(action, Attack) and action.target_id is not None:
+        crit_range = weapon_profile(state, actor).crit_range
+        use = modifiers.ATTACK
+    elif isinstance(action, UseSkill) and action.target_id is not None:
+        skill = _preview_skill(state, actor, action)
+        crit_range = skill_profile(state, actor, skill).crit_range
+        use = modifiers.skill_use(skill)
+    else:
+        return ()
+    target = state.units.get(action.target_id)
+    if target is None:
+        return ()
+    permille = crit_damage_permille(
+        state, actor, use=use, subject=Subject(target, target.xy), skill=skill
+    )
+    if permille == CRIT_PERMILLE_DOUBLE:
+        return ()
+    return (crit_text_zh(crit_range, permille),)
+
+
 def _positional_notes(
     state: BattleState, actor: UnitState, events: list[EventBase], backstab: tuple[UnitId, ...]
 ) -> tuple[str, ...]:
@@ -1734,7 +1759,12 @@ def _build(
         min_state=low.state,
         max_state=high.state,
         cover=cover,
-        notes=(*notes, *no_turn_notes, *_reroll_notes(state, rerolls)),
+        notes=(
+            *notes,
+            *_crit_notes(state, actor, action),
+            *no_turn_notes,
+            *_reroll_notes(state, rerolls),
+        ),
         targets=targets,
         healed=healed,
         ap_cost=ap_cost,
