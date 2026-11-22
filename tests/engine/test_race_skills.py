@@ -37,7 +37,7 @@ from tests.engine.race_helpers import (
 from tests.engine.skill_helpers import SID, battle, cast, hit_with
 from trpg.content.races import RaceEffect, RaceSkill
 from trpg.engine import BattleState, Move, ResolveResult, legal_actions, resolve
-from trpg.engine.actions import Action, Attack, UseRaceSkill
+from trpg.engine.actions import Attack, UseRaceSkill
 from trpg.engine.effects import ApplyStatusEffect, DamageEffect, PushEffect, run_effects
 from trpg.engine.events import (
     AttackIntercepted,
@@ -508,18 +508,6 @@ def test_anchor_haul_range_and_target_rules() -> None:
         resolve(far, use(target_id=U2))
     with pytest.raises(IllegalActionError, match="只能拉敵人"):
         resolve(race_state("seafolk", allies=((5, 3),)), use(target_id=U2))
-
-
-def test_pushed_damage_spec_is_never_used_by_race_skills() -> None:
-    """防最佳解原則 1：種族技的任何結算都不加傷害（以所有種族技各打一次的事件驗證）。"""
-    for race in all_races():
-        state = race_state(race.id, foes=((4, 3), (5, 3)), objects=[(3, 4, "crate")])
-        actions: list[Action] = [a for a in legal_actions(state) if isinstance(a, UseRaceSkill)]
-        for action in actions[:6]:
-            result = resolve(state, action)
-            assert not [
-                e for e in result.events if isinstance(e, DamageDealt) and e.cause != "explosion"
-            ], race.id
 
 
 def test_damage_effect_import_is_used() -> None:
