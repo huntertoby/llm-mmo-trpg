@@ -39,7 +39,8 @@
 | 5 修正技重複：數字遞減後再套上限，非數字各自發動 | `e010827e8` |
 | 6 顯示（OpenAPI、前端型別、技能列小圖示、截圖） | `bb887158e` |
 | 7 AI 與重播（測試；AI 不必改程式） | `290bb0b43` |
-| 報告 | 最後一個 commit |
+| 修正（docstring 行長、合併後全量檢查抓到的 `/135` 字面值、x10 欄位清單、技能池走訪規則） | `4dd961210`、`35a8809d8` |
+| 報告 | `d20a7cb13`（草稿）、最後一個 commit |
 
 ## 3. 各項做法
 
@@ -80,7 +81,20 @@
 
 ## 4. 驗收
 
-（全部 commit 之後填，見下方。）
+基準 `871ca53df`（`git archive` 的 `src`、`content`，執行時確認載入的 `trpg` 來自基準那份）；腳本放在暫存區，沒進 repo。
+
+| 檢查 | 結果 |
+|---|---|
+| 逐招預算 442 招（`BudgetReport` repr＋`validate_skill` 違規） | 檔案逐位相同，`same=442 different=0` |
+| 78 場戰鬥（`compare78.py`，同 a 段那組；去掉 `ruleset_hash`、內嵌規則包，**另外去掉 `format`**（`/135`→`/136`，開發 PM 同意），加文字輸出） | 合併前、合併 main 並修正後（`35a8809d8`）各跑一次，都是 `battles=78 events=26206 different=0`；內嵌規則包 0 差異 |
+| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看 `timing`） | `cells=204 different=0` |
+| `trpg content check` | 0 |
+| `scripts/hardcoded/classify.py --check` | 0（後端 config 28、text 0；前端 config 0；沒歸類 0） |
+| ruff、format、mypy、lint-imports | 0 |
+| tsc、vitest、build | 0 |
+| `uv run python scripts/check.py`（合併 main `e6a5f93c1` 之後） | 第一次 1：7 個測試（4 個測試寫死 `"/135"`、`test_architecture` 不准直接走訪 `library.skills`、x10 欄位清單沒列 `gear_skill_tier` 兩項）→ 修正 `35a8809d8` 後重跑 0（pytest 18287 passed、vitest 4890） |
+| `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli` | 0（995 passed）；CLI 快照沒變 |
+| 前端 build（合併後） | 0 |
 
 ## 5. 待 PM 決定
 
