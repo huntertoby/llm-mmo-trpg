@@ -129,15 +129,15 @@
 
 | 檢查 | 結果 |
 |---|---|
-| 442 招逐招預算（`BudgetReport` repr＋`validate_skill` 違規） | `cmp` 0，逐位相同（442 筆） |
-| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時） | `cells=204 different=0`（整份相同） |
-| 78 場戰鬥（`compare78.py`，同 a 段那組；去掉 `ruleset_hash`、內嵌規則包，`format` 也比） | 第 2、3、4 項各跑一次，都是 `battles=78 events=26741 different=0`。內嵌規則包只差 `skill_triggers.triggers` 的長度（17 → 18 → 19，新加的兩個時機） |
+| 442 招逐招預算（`BudgetReport` repr＋`validate_skill` 違規） | 對 `c9acff0d7`、對合併後的 main（`a3b5c78e9`，程式與 E3 合併點 `967569588` 相同，之後只多文件）都是 `cmp` 0，逐位相同（442 筆） |
+| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時） | 對兩個基準都是 `cells=204 different=0`（整份相同） |
+| 78 場戰鬥（`compare78.py`，同 a 段那組；去掉 `ruleset_hash`、內嵌規則包，`format` 也比） | 第 2、3、4 項各跑一次，都是 `battles=78 events=26741 different=0`。內嵌規則包只差 `skill_triggers.triggers` 的長度（17 → 18 → 19，新加的兩個時機）。合併 main 後對合併後的 main 再跑一次：`battles=78 events=26741 different=0`（`format` 兩邊都是 `/138`），規則包只差同一處 |
 | `trpg content check` | 0 |
 | `scripts/hardcoded/classify.py --check` | 0（沒歸類 0） |
 | ruff、format、mypy、lint-imports | 0 |
-| tsc、vitest、build | tsc 0；build 0；vitest 0（4909 passed） |
-| `uv run python scripts/check.py` | FULL_RESULT |
-| `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli` | SLOW_RESULT |
+| tsc、vitest、build | tsc 0；vitest 0（合併前 4909、合併後 4912 passed）；build 合併前、合併後都是 0 |
+| `uv run python scripts/check.py --all`（合併 main 之後，`903de58bb`） | 0（pytest 18586 passed、8 skipped；vitest 4912；已寫通過戳記）。之後只改了這份報告（`.md`） |
+| `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli` | 0（995 passed）；CLI 快照沒變 |
 
 `LOG_FORMAT` 不升版（合併 E3 後是 `/138`，E4 沒有改紀錄格式）：沒有新事件、動作、狀態欄位。`Ctx.attack_info`、`Ctx.dealt_elements`、`Fired.element` 都不在戰鬥狀態裡。
 
