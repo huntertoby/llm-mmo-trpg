@@ -274,16 +274,18 @@ export function unitChips(unit: UnitView): StatChip[] {
 export const ELEMENT_STANCE_RE = /^stance_(physical|fire|ice|lightning|poison|wind|earth|holy|shadow)_([1-5])$/;
 
 /**
- * 晶能湧動／晶能狂湧的階（QI-3b，D3）：前端名單（比照 `CREATURE_CHARGE_SKILLS`；後端不帶欄位）。
- * 兩個 ID 在名詞表快照裡（`ui/qi3bStatusCorner.test.ts` 擋改名）。
+ * 晶能湧動／晶能狂湧的階（QI-3b，D3）：照 ID 的樣式（同元素架勢）：`crystal_surge`＝第一階，`crystal_surge_<階>`
+ * 是之後的階（HC-7 b：原本是前端寫死的對照表）。兩個 ID 在名詞表快照裡（`ui/qi3bStatusCorner.test.ts` 擋改名）。
  */
-export const CRYSTAL_SURGE_TIER: Readonly<Record<string, number | undefined>> = { crystal_surge: 1, crystal_surge_2: 2 };
+export const CRYSTAL_SURGE_RE = /^crystal_surge(?:_([2-9]))?$/;
 
 /** 狀態本身的級數（元素架勢 1～5、晶能湧動／狂湧 1／2）；沒有回 null。 */
 export function statusTier(id: string): number | null {
   const m = ELEMENT_STANCE_RE.exec(id);
   if (m !== null) return Number(m[2]);
-  return CRYSTAL_SURGE_TIER[id] ?? null;
+  const surge = CRYSTAL_SURGE_RE.exec(id);
+  if (surge === null) return null;
+  return surge[1] === undefined ? 1 : Number(surge[1]);
 }
 
 /**

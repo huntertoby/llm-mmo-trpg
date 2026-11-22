@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { StatusView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { entry as qStatusEntry } from "../render/qIcon/status";
-import { CRYSTAL_SURGE_TIER, ELEMENT_STANCE_RE, statusCorner, statusTier } from "./statusCard";
+import { CRYSTAL_SURGE_RE, ELEMENT_STANCE_RE, statusCorner, statusTier } from "./statusCard";
 
 const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id);
 const st = (status_id: string, remaining: number | null, amount: number | null): StatusView => ({ status_id, remaining, amount, source_id: null, charge_tiles: [], cost_status: false }) as unknown as StatusView;
@@ -27,7 +27,7 @@ describe("T-B5 角落級數", () => {
   it("crystal_surge → 1、crystal_surge_2 → 2；兩個 ID 都在名詞表快照（改名會擋）", () => {
     expect(IDS).toContain("crystal_surge");
     expect(IDS).toContain("crystal_surge_2");
-    expect(Object.keys(CRYSTAL_SURGE_TIER).sort()).toEqual(["crystal_surge", "crystal_surge_2"]);
+    expect(IDS.filter((id) => CRYSTAL_SURGE_RE.test(id)).sort()).toEqual(["crystal_surge", "crystal_surge_2"]);
     expect(statusCorner(st("crystal_surge", null, null))).toBe("1");
     expect(statusCorner(st("crystal_surge_2", null, null))).toBe("2");
     expect(statusCorner(st("crystal_surge", 2, 5))).toBe("1");

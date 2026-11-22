@@ -280,31 +280,17 @@ rules:
 
   # ======================================================================== 前端：玩法數值（要搬）
   - id: ts-vfx-damage-tiers
-    class: config
-    status: todo
+    class: layout
+    status: done
     files: [client/src/battle/impact.ts, client/src/battle/vfx.ts]
     owner: [TIER_PERMILLE, HEAVY_HIT_PERMILLE]
-    note: 保守：受擊頓格、重擊特效的失血門檻（‰）；是呈現用的門檻，PM 可改判 layout。
-  - id: ts-arena-defaults
-    class: config
-    status: todo
-    files: [client/src/screens/GearScreen.tsx, client/src/workshop/tryout.ts]
-    kind: number
-    context: 'max_rounds'
-    note: 木樁、試招的回合上限後備 ?? 30。
+    note: HC-7 b 改判 layout（原 note「是呈現用的門檻，PM 可改判 layout」）：受擊頓格、重擊特效的失血門檻（‰），只決定動畫停多久、震不震，不影響結算。
   - id: ts-bag-size
     class: layout
     status: done
     files: client/src/world/bagGrid.ts
     owner: [BAG_COLS, BAG_ROWS]
     note: 背包格數。HC-3：拿掉 6×5 的備用值（BAG_ROWS），上限一律照伺服器 `slots_max`；剩下的 BAG_COLS 是每列畫幾格（hud.png C 案的排版），改判 layout。
-  - id: ts-crystal-tier
-    class: config
-    status: todo
-    files: client/src/ui/statusCard.ts
-    context: 'const CRYSTAL_SURGE_TIER'
-
-    note: 保守：狀態 id → 層級的對照（應由狀態資料帶）。
   - id: ts-day-phase-hours
     class: const
     status: done
@@ -998,15 +984,15 @@ rules:
     where: ['<module>.MAX_SCHEMA_BRANCHES', '<module>.WISH_REPLY_MAX_CHARS', 'mock_wish_pick_client', 'mock_wish_picker']
     note: HC-7 b 改判 const（同 skillgen/flash_text 的字數上限前例）：MAX_SCHEMA_BRANCHES 是 JSON schema 分支太多時退回扁平列舉的門檻（語法約束的效能，不影響規則）；WISH_REPLY_MAX_CHARS 是 LLM 回應願望那一句的輸出格式上限（提示詞與 schema 共用）；Mock 挑選器的 picks (0, 1, 2) 是測試用的固定挑選序。
 
-  # ---------------------------------------------------- 後端 server：config
-  # 保守：社群功能（留言板、腳印、循環賽人數）的上限。
-  - id: py-server-league-config-number
-    class: config
-    status: todo
+  # ---------------------------------------------------- 後端 server（HC-7 b）
+  # 留言字數與留言板、足跡的顯示筆數搬進 world/rules.yaml 的 notes、display（API 帶進 trpg.server.notes）。
+  - id: py-server-league-const-number
+    class: const
+    status: done
     files: src/trpg/server/league.py
     kind: number
     where: ['<module>.MIN_ENTRIES']
-    note: 保守：社群功能（留言板、腳印、循環賽人數）的上限。
+    note: HC-7 b 改判 const：循環賽至少要 2 位參賽者才有對手可以打（循環賽的定義），不是可調的規則數字。
 
   # ---------------------------------------------------- 後端 skillgen：HC-5b 判成結構常數
   - id: py-skillgen-grade-codes-hc5b

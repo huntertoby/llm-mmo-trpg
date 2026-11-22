@@ -40,7 +40,7 @@ export function buildTryoutRequest(
     seed: choice.seed,
     ...choice.start,
     ally_builds: [],
-    max_rounds: arena?.max_rounds ?? 30,
+    max_rounds: arena?.max_rounds, // HC-7 b：沒有靶場設定時不送，伺服器照 workshop.yaml
     custom_skills: [skill],
     replace_skills: choice.replaceId === "" ? [] : [choice.replaceId],
   };
