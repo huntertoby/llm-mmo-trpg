@@ -554,8 +554,8 @@ class UnitView(_ViewModel):
     """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
     skill_notes_zh: dict[str, tuple[str, ...]] | None = None
     """主動技能說明卡最後的灰字（E5 美術小修；鍵是 ``skills`` 裡的技能鍵）：沒有套用到這招的裝備
-    變形——被預算閘門擋下的（「彈射不會套用到這招」）。只有自己陣營、有這種技能時才有，否則
-    ``None``。"""
+    變形——被預算閘門擋下的（「彈射不會套用到這招」）、已有其他變形的（「已有其他變形，〇〇的△△
+    不會套用」）。只有自己陣營、有這種技能時才有，否則 ``None``。"""
     charges: tuple[ChargeView, ...] = ()
     """裝備的充能詞條（Phase 3G-G3a，唯讀；依詞條 ID，沒有時為空）：層數與啟動需求。"""
     form: FormView | None = None
@@ -920,20 +920,29 @@ def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillVie
 GATE_SKIPPED_ZH = "{modifier}不會套用到這招"
 """裝備變形被預算閘門擋下的那招，說明卡最後的灰字（E5 美術小修；用字待玩法 PM 定）。"""
 
+SHAPE_TAKEN_ZH = "已有其他變形，{item}的{modifier}不會套用"
+"""一招只套一種變形（08 8.29 E5 第 7 點）：沒有生效的那個裝備變形，說明卡最後的灰字（用字待玩法 PM
+定）。"""
+
 
 def _skill_notes(state: BattleState, unit: UnitState) -> dict[str, tuple[str, ...]] | None:
     """主動技能說明卡最後的灰字（:attr:`UnitView.skill_notes_zh`）；都沒有時 ``None``。"""
     if not unit.gear_skills:
         return None
+    slots = {key: gear.slot for key, gear in _gear_skill_grants(unit)}
+    items = {item.slot: item.name_zh for item in unit.gear.items}
     notes: dict[str, tuple[str, ...]] = {}
     for key in sorted(unit.all_skills):
-        lines = tuple(
-            GATE_SKIPPED_ZH.format(modifier=state.ruleset.skill_def(mod).name_zh)
-            for mod, blocked in modifiers.gear_reshapes_left_out(state, unit, key)
-            if blocked and _partly_blocked(state, unit, mod)
-        )
+        lines: list[str] = []
+        for mod, blocked in modifiers.gear_reshapes_left_out(state, unit, key):
+            name = state.ruleset.skill_def(mod).name_zh
+            if not blocked:  # 一招只套一種變形（08 8.29 E5 第 7 點）
+                item = items.get(slots.get(mod, ""), "")
+                lines.append(SHAPE_TAKEN_ZH.format(item=item, modifier=name))
+            elif _partly_blocked(state, unit, mod):
+                lines.append(GATE_SKIPPED_ZH.format(modifier=name))
         if lines:
-            notes[key] = lines
+            notes[key] = tuple(lines)
     return notes or None
 
 
