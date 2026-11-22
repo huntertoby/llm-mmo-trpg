@@ -33,7 +33,7 @@ from trpg.content.skills import (
     FOLLOWUP_WHEN_VALUES,
     GATHER_SHAPES,
     ON_KILL_SECOND_SHAPES,
-    SKELETON_IDS,
+    skeleton_ids,
 )
 from trpg.skillgen.draft import Draft
 from trpg.skillgen.option_models import Choice, FieldSpec
@@ -190,7 +190,7 @@ def _release_field() -> FieldSpec:
 
 def _skeleton_choices(library: ContentLibrary, when: str) -> tuple[Choice, ...]:
     out: list[Choice] = []
-    for skeleton_id in SKELETON_IDS:
+    for skeleton_id in skeleton_ids():
         skeleton = library.skeletons.get(skeleton_id)
         if skeleton is None or not skeleton.enabled or "active" not in skeleton.kinds:
             continue

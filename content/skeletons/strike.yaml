@@ -3,7 +3,10 @@
 # secondary：附帶效果（不是核心的效果）——primitives 允許的原語（省略＝不限）、harmful_only、max_count、
 #            max_share_permille（個別原語占全部效果點數的上限）
 # forbid_affects：不得有對這些對象的效果；requires_condition：技能或效果必須有條件
+# order：骨架的排列順序（工坊、CLI 選單由小到大；不可重複）。骨架清單就是這個資料夾的檔案（WL-1），
+#        加一種骨架只要加一個檔
 id: strike
+order: 10
 name_zh: 打擊
 description_zh: 單體傷害，搭配 0–1 個附帶效果（例如擊倒、流血）。
 kinds: [active]

@@ -10,7 +10,6 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.constants import (
-    SKELETON_IDS,
     Affects,
     KnobLadder,
     KnobWeight,
@@ -18,6 +17,7 @@ from trpg.content.skills.constants import (
     _unique,
 )
 from trpg.content.skills.shapes import RequiredWhen
+from trpg.content.yaml_sources import skeleton_ids
 
 
 class PrimitiveKnob(ContentModel):
@@ -268,7 +268,7 @@ class PrimitiveDef(ContentModel):
     @model_validator(mode="after")
     def _check_budget(self) -> PrimitiveDef:
         for name, spec in self.params.items():
-            unknown = sorted(set(spec.allowed_skeletons or ()) - set(SKELETON_IDS))
+            unknown = sorted(set(spec.allowed_skeletons or ()) - set(skeleton_ids()))
             if unknown:
                 raise ValueError(
                     f"原語 {self.id}.{name}：allowed_skeletons 有未知的骨架：{', '.join(unknown)}"

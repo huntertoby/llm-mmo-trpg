@@ -284,7 +284,7 @@ def _load_units(
     weapon_map = t.weapons.by_id()
     skills = t.skills
     _check_skills(root, skills, ruleset, t.budget, weapons=weapon_map, offhands=t.offhands.by_id())
-    _check_skill_rules(root, ruleset, t.exclusions, t.skeletons)
+    _check_skill_rules(root, ruleset, t.exclusions, t.skeletons, skills)
     _check_keywords(root, t.keywords, ruleset, skills)
     unknown_values = sorted(set(t.ai_profiles.status_values) - {s.id for s in t.statuses.statuses})
     if unknown_values:

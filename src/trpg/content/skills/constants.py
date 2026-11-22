@@ -18,29 +18,6 @@ from trpg.shared.types import Element
 SKILL_ID_PATTERN = r"^skill_[a-z0-9_]+$"
 
 
-SKELETON_IDS: tuple[str, ...] = (
-    "strike",
-    "area",
-    "control",
-    "displace",
-    "builder_finisher",
-    "combo",
-    "trap",
-    "aura",
-    "summon",
-    "reaction",
-    "stance",
-    "passive",
-    "modifier",
-    "consume_status",
-    "rune",
-    "sacrifice",
-)
-"""``docs/design/06-技能.md`` 6.9 的 12 種骨架，加上 Phase 3C-2 的 ``modifier``（修正規則：改造型與
-修正型被動，6.14.1）、3C-3b 的 ``consume_status``（6.14.2 管道 1）與 3-23 的 ``rune``（6.25 刻印）。
-結構驗證見 ``skillgen``。"""
-
-
 WEAPON_CLASSES: tuple[str, ...] = ("melee", "ranged", "focus")
 
 

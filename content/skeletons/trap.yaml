@@ -1,5 +1,6 @@
 # 陷阱（Phase 2E-3）：放置對敵方隱藏的地面陷阱，敵人踩上或延遲回合數到了就觸發。
 id: trap
+order: 70
 name_zh: 陷阱
 description_zh: 在地面放置隱藏的陷阱，觸發時以陷阱格為中心結算技能的其餘效果。
 kinds: [active]

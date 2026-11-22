@@ -7,6 +7,7 @@
 #       可用預算 ＝ tier_budget × modifier.coefficient_permille（skill_budget.yaml）。
 # min_rarity: epic（6.14.1：改造型最低史詩）。隨機組合器不產生修正技能。
 id: modifier
+order: 130
 name_zh: 修正
 description_zh: 改變持有者自己的其他技能或基本動作（改造型），或持續改變攻擊的數值（修正型被動）。
 kinds: [modifier]

@@ -1,4 +1,5 @@
 id: displace
+order: 40
 name_zh: 位移
 description_zh: 以位移為核心（推、拉、傳送、擊倒），傷害與其他附帶效果為輔。
 kinds: [active]

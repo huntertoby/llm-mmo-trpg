@@ -62,7 +62,7 @@ from trpg.content.fields import field_progress
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import default_content_dir
 from trpg.content.registry import load_all_content
-from trpg.content.skills import SKELETON_IDS
+from trpg.content.skills import skeleton_ids
 from trpg.shared.errors import ContentError
 from trpg.shared.rng import MASK64, Rng
 from trpg.sim.commanders import COMMANDER_IDS
@@ -179,7 +179,7 @@ def _add_skills_parser(commands: argparse._SubParsersAction[argparse.ArgumentPar
     skills_random.add_argument(
         "--rarity", choices=("common", "rare", "epic", "legendary"), help="稀有度"
     )
-    skills_random.add_argument("--skeleton", choices=SKELETON_IDS, help="骨架")
+    skills_random.add_argument("--skeleton", choices=skeleton_ids(), help="骨架")
     skills_show.set_defaults(func=_run_skills_show)
     skills_budget.set_defaults(func=_run_skills_budget)
     skills_random.set_defaults(func=_run_skills_random)
@@ -517,7 +517,9 @@ def _add_llm_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser
         default=None,
         help="稀有度（預設依種子輪替 common／rare／epic）",
     )
-    propose.add_argument("--skeleton", choices=SKELETON_IDS, default=None, help="骨架（預設輪替）")
+    propose.add_argument(
+        "--skeleton", choices=skeleton_ids(), default=None, help="骨架（預設輪替）"
+    )
     propose.add_argument(
         "--keyword", action="append", default=None, help="題目關鍵字（可重複，最多 2 個）"
     )

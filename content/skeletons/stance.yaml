@@ -3,6 +3,7 @@
 # 預算：tier_budget × stance_coefficient_permille（skill_budget.yaml，初值 1000）× (1000 ＋ 代價折抵) ÷ 1000。
 # min_rarity: rare（Phase 2E 決定 H）。
 id: stance
+order: 110
 name_zh: 姿態
 description_zh: 切換狀態，持續到取消。
 kinds: [stance]

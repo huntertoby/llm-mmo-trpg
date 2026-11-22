@@ -1,4 +1,5 @@
 id: area
+order: 20
 name_zh: 範圍
 description_zh: 形狀傷害，搭配表面或狀態等附帶效果。
 kinds: [active]

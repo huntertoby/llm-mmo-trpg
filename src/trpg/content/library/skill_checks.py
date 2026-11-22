@@ -13,7 +13,7 @@ from trpg.content.silent_strike import silent_strike_problems
 from trpg.content.skill_icon_props import IconPropTable, icon_prop_problem
 from trpg.content.skill_keywords import KeywordRule, KeywordTable
 from trpg.content.skill_rules import BudgetRules, ExclusionTable, SkeletonDef, SkillMatch
-from trpg.content.skills import MODIFIER_CHANGES, SKELETON_IDS, SkillDef
+from trpg.content.skills import MODIFIER_CHANGES, SkillDef
 from trpg.content.skills.limits import skill_limit_problems
 from trpg.shared.errors import ContentError
 
@@ -164,8 +164,10 @@ def _check_skill_rules(
     ruleset: Ruleset,
     exclusions: ExclusionTable,
     skeletons: dict[str, SkeletonDef],
+    skills: Mapping[str, SkillDef],
 ) -> None:
-    """互斥規則與骨架引用的形狀、狀態、原語都存在；12 種骨架各一個資料檔。"""
+    """互斥規則與骨架引用的形狀、狀態、原語都存在；骨架的 ``order`` 不重複；技能（含複合技能的
+    第二段）用到的骨架都有資料檔。"""
     path = root / "skill_exclusions.yaml"
     for rule in exclusions.rules:
         found = [
@@ -175,9 +177,7 @@ def _check_skill_rules(
         ]
         if found:
             raise ContentError(path, f"互斥規則 {rule.id}：" + "；".join(found))
-    missing = [i for i in SKELETON_IDS if i not in skeletons]
-    if missing:
-        raise ContentError(root / "skeletons", f"缺少骨架資料檔：{', '.join(missing)}")
+    _check_skeleton_index(root, skeletons, skills)
     shape_ids, primitive_ids = set(ruleset.shapes.by_id()), set(ruleset.primitives.by_id())
     for skeleton_id, skeleton in skeletons.items():
         where = root / "skeletons" / f"{skeleton_id}.yaml"
@@ -190,6 +190,29 @@ def _check_skill_rules(
         unknown = [p for p in used if p not in primitive_ids]
         if unknown:
             raise ContentError(where, f"未知的原語：{', '.join(unknown)}")
+
+
+def _check_skeleton_index(
+    root: Path, skeletons: Mapping[str, SkeletonDef], skills: Mapping[str, SkillDef]
+) -> None:
+    """骨架清單就是 ``skeletons/`` 的檔案（WL-1）：``order`` 不重複；技能（含複合技能的第二段）
+    用到的骨架都有資料檔。"""
+    orders: dict[int, list[str]] = {}
+    for skeleton_id in sorted(skeletons):
+        orders.setdefault(skeletons[skeleton_id].order, []).append(skeleton_id)
+    clashes = ["、".join(ids) for _, ids in sorted(orders.items()) if len(ids) > 1]
+    if clashes:
+        raise ContentError(root / "skeletons", f"骨架的 order 重複：{'；'.join(clashes)}")
+    users: dict[str, list[str]] = {}
+    for skill_id in sorted(skills):
+        skill = skills[skill_id]
+        names = (skill.skeleton, *(() if skill.followup is None else (skill.followup.skeleton,)))
+        for name in dict.fromkeys(names):
+            if name not in skeletons:
+                users.setdefault(name, []).append(skill_id)
+    if users:
+        missing = "；".join(f"{n}（{'、'.join(ids)} 用到）" for n, ids in sorted(users.items()))
+        raise ContentError(root / "skeletons", f"缺少骨架資料檔：{missing}")
 
 
 def pool_region_problems(skills: Mapping[str, SkillDef], regions: RegionTable | None) -> list[str]:

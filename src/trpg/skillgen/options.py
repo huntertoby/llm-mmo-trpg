@@ -40,7 +40,6 @@ from trpg.content.skills import (
     REROLL_EVENTS,
     SELF_CONDITIONS,
     SELF_ONLY_CHANGES,
-    SKELETON_IDS,
     SKILL_REACTION_EVENTS,
     ModifierChange,
     PrimitiveDef,
@@ -50,6 +49,7 @@ from trpg.content.skills import (
     TriggerSpec,
     legendary_cores,
     rarity_rank,
+    skeleton_ids,
 )
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
@@ -201,7 +201,7 @@ def _skeleton_choice(skeleton: SkeletonDef) -> Choice:
 
 
 def _skeleton_step(draft: Draft, library: ContentLibrary) -> StepOptions:
-    skeletons = [library.skeletons[s] for s in SKELETON_IDS if s in library.skeletons]
+    skeletons = [library.skeletons[s] for s in skeleton_ids() if s in library.skeletons]
     choices = tuple(_skeleton_choice(s) for s in skeletons if s.enabled)
     field = FieldSpec(
         field="skeleton",

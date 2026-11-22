@@ -5,6 +5,7 @@
 # min_rarity: rare（Phase 2E 決定 H）。
 # heal／shield 只用於自身增益分支（形狀 self），2F-2 後使用者決定加入（2026-10-19）。
 id: reaction
+order: 100
 name_zh: 反應技
 description_zh: 以反應而非 AP 觸發。
 kinds: [reaction]

@@ -1,4 +1,5 @@
 id: combo
+order: 60
 name_zh: 連段
 description_zh: 以條件觸發的傷害（本回合或目標狀態等）；技能或效果必須有條件。
 kinds: [active]

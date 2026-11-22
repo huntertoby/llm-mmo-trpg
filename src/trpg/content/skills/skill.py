@@ -58,7 +58,6 @@ from trpg.content.skills.constants import (
     SELF_MOVES,
     SHADOWSTEP,
     SHADOWSTEP_SHAPES,
-    SKELETON_IDS,
     SKILL_ID_PATTERN,
     SPLIT_SKELETONS,
     SUMMON,
@@ -95,6 +94,7 @@ from trpg.content.skills.reactions import ReactionSpec, TrapSpec
 from trpg.content.skills.shapes import ShapeDef
 from trpg.content.skills.specs import FollowupSpec, NarrativeDef, Provenance, SkillCost, TriggerSpec
 from trpg.content.skills.variants import VariantSpec, walk_effect
+from trpg.content.yaml_sources import skeleton_ids
 from trpg.shared.bonus_text import bonus_text
 from trpg.shared.range_text import range_text, span
 from trpg.shared.types import Attribute, Element
@@ -237,8 +237,8 @@ class SkillDef(ContentModel):
     @field_validator("skeleton")
     @classmethod
     def _skeleton(cls, value: str) -> str:
-        if value not in SKELETON_IDS:
-            raise ValueError(f"未知的骨架 {value!r}（可用：{', '.join(SKELETON_IDS)}）")
+        if value not in skeleton_ids():
+            raise ValueError(f"未知的骨架 {value!r}（可用：{', '.join(skeleton_ids())}）")
         return value
 
     @field_validator("tags")

@@ -19,7 +19,7 @@ from trpg.content.skill_rules import (
     budget_rule_problems,
     shape_budget_problems,
 )
-from trpg.content.skills import SKELETON_IDS, ShapeDef
+from trpg.content.skills import ShapeDef, skeleton_ids
 from trpg.shared.errors import ContentError
 
 ENABLED = {
@@ -63,9 +63,9 @@ def test_all_sixteen_skeletons_have_a_data_file() -> None:
     # 6.9 的 12 種骨架 ＋ Phase 3C-2 的 modifier（修正技能）＋ Phase 3C-3b 的 consume_status
     # ＋ Phase 3-23 的 rune ＋ Phase 3-24c 的 sacrifice
     lib = library()
-    assert set(lib.skeletons) == set(SKELETON_IDS) and len(lib.skeletons) == 16
+    assert set(lib.skeletons) == set(skeleton_ids()) and len(lib.skeletons) == 16
     assert {i for i, s in lib.skeletons.items() if s.enabled} == ENABLED
-    for skeleton_id in SKELETON_IDS:
+    for skeleton_id in skeleton_ids():
         assert (PROJECT_ROOT / "content" / "skeletons" / f"{skeleton_id}.yaml").is_file()
 
 

@@ -142,7 +142,6 @@ from trpg.content.skills.constants import (
     SELF_STACK_AT_LEAST,
     SHADOWSTEP,
     SHAPE_REQUIRED_PRIMITIVES,
-    SKELETON_IDS,
     SKILL_ID_PATTERN,
     SKILL_REACTION_EVENTS,
     SPLIT_SKELETONS,
@@ -492,6 +491,7 @@ from trpg.content.skills.variants import (
     VariantWhen,
     walk_effect,
 )
+from trpg.content.yaml_sources import skeleton_ids
 
 __all__ = [
     "ABSORB_SURFACE",
@@ -580,7 +580,6 @@ __all__ = [
     "SHADOWSTEP",
     "SHAPE_REQUIRED_PRIMITIVES",
     "SILENT_STRIKE",
-    "SKELETON_IDS",
     "SKILL_ID_PATTERN",
     "SKILL_REACTION_EVENTS",
     "SPLIT_SKELETONS",
@@ -658,6 +657,7 @@ __all__ = [
     "param_required_for",
     "rarity_rank",
     "silent_rounds_shown",
+    "skeleton_ids",
     "skill_elements",
     "skill_problems",
     "skill_slot_problems",

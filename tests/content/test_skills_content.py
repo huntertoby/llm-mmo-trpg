@@ -16,9 +16,9 @@ from trpg.content.library import load_library, skill_reference_problems
 from trpg.content.skills import (
     REQUIRED_CONDITIONS,
     REQUIRED_SHAPES,
-    SKELETON_IDS,
     SkillDef,
     default_affects,
+    skeleton_ids,
 )
 from trpg.shared.errors import ContentError
 
@@ -78,7 +78,7 @@ def test_all_demo_skills_load_and_cover_shapes_and_primitives() -> None:
         "contagion",  # SK-2：同上
         "hook",  # SK-2：同上
     }
-    assert all(s.skeleton in SKELETON_IDS for s in skills)
+    assert all(s.skeleton in skeleton_ids() for s in skills)
     assert lib.ruleset.skill_def("skill_ashen_oath").name_zh == "灰燼誓約"
 
 

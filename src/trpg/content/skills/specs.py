@@ -15,13 +15,13 @@ from trpg.content.skills.constants import (
     ON_ENTER_SURFACE,
     ON_KEYWORD_EXPLOITED,
     ON_STATUS_APPLIED,
-    SKELETON_IDS,
     DelayedAnchor,
     DelayedRelease,
     FollowupWhen,
     Origin,
 )
 from trpg.content.skills.effects import EffectSpec, ShapeSpec
+from trpg.content.yaml_sources import skeleton_ids
 from trpg.shared.types import Surface
 
 
@@ -98,8 +98,8 @@ class FollowupSpec(ContentModel):
     @field_validator("skeleton")
     @classmethod
     def _skeleton(cls, value: str) -> str:
-        if value not in SKELETON_IDS:
-            raise ValueError(f"未知的骨架 {value!r}（可用：{', '.join(SKELETON_IDS)}）")
+        if value not in skeleton_ids():
+            raise ValueError(f"未知的骨架 {value!r}（可用：{', '.join(skeleton_ids())}）")
         return value
 
 

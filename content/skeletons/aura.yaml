@@ -1,4 +1,5 @@
 id: aura
+order: 80
 name_zh: 光環
 description_zh: 單一友方（含自己）或範圍內友方獲得治療、護盾、增益、淨化或有益表面；不得有對敵方的效果。
 kinds: [active]

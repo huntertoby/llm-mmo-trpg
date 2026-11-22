@@ -6,8 +6,8 @@
   稀有度上限）。階級預算 ``tier_budget`` 與武器基準傷害在 ``rules/core.yaml``。
 - ``content/skill_synergies.yaml``：:class:`SynergyTable`（機制標籤 → 協同係數）。
 - ``content/skill_exclusions.yaml``：:class:`ExclusionTable`（互斥規則，以資料表達）。
-- ``content/skeletons/<id>.yaml``：:class:`SkeletonDef`（12 種骨架的結構，加上 3C-2 的
-  ``modifier``）。
+- ``content/skeletons/<id>.yaml``：:class:`SkeletonDef`（一個檔一種骨架；骨架清單就是這個資料夾，
+  WL-1）。
 
 這裡只定義 **資料 schema**；預算計算與驗證邏輯在 ``trpg.skillgen``（``trpg.content`` 不得匯入它）。
 """
@@ -26,7 +26,6 @@ from trpg.content.schemas import ContentModel
 from trpg.content.skills import (
     AFFECTS_VALUES,
     RARITY_ORDER,
-    SKELETON_IDS,
     Affects,
     PrimitiveTable,
     ShapeDef,
@@ -1121,6 +1120,9 @@ class SkeletonDef(ContentModel):
     """
 
     id: str = Field(pattern=ID_PATTERN)
+    order: int = Field(ge=0)
+    """排列順序（WL-1）：工坊、CLI 的骨架選單照這個由小到大
+    （:func:`~trpg.content.skills.skeleton_ids`）；同一個內容資料夾裡不可重複（``_check_skill_rules``）。"""
     name_zh: str = Field(min_length=1)
     description_zh: str = Field(min_length=1)
     kinds: tuple[SkillKind, ...] = Field(min_length=1)
@@ -1146,8 +1148,6 @@ class SkeletonDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> SkeletonDef:
-        if self.id not in SKELETON_IDS:
-            raise ValueError(f"未知的骨架 {self.id!r}（可用：{', '.join(SKELETON_IDS)}）")
         if self.enabled and not self.core.primitives and self.kinds != ("modifier",):
             raise ValueError(f"骨架 {self.id}：啟用的骨架必須有核心原語（修正技能的骨架除外）")
         return self

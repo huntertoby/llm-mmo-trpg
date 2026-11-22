@@ -3,6 +3,7 @@
 # 預算：consume_status 的點數見 skill_budget.yaml（then 點數 × 期望倍率 × 濺射 × 需先有狀態折扣）。
 # 隨機組合器不產生（random_composer.py 的 _HAND_WRITTEN_ONLY），只有手寫技能使用。
 id: consume_status
+order: 140
 name_zh: 消耗狀態
 description_zh: 消耗目標身上的狀態，換取更強的效果。
 kinds: [active]

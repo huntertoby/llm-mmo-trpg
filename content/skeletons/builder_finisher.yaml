@@ -1,5 +1,6 @@
 # 蓄力與終結（Phase 2E-3）：一個技能累積層數（add_stack），另一個消耗層數（consume_stack）換成傷害加成。
 id: builder_finisher
+order: 50
 name_zh: 蓄力與終結
 description_zh: 一個技能累積層數，另一個消耗層數換成更高的傷害。
 kinds: [active]

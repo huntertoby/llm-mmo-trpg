@@ -3,6 +3,7 @@
 # 預算：tier_budget × 觸發時機的係數 × (1000 ＋ 代價折抵) ÷ 1000（見 skill_budget.yaml 的 passive_extra_trigger_permille）。
 # min_rarity: epic（Phase 2E 決定 H，6.12「史詩：觸發」）。
 id: passive
+order: 120
 name_zh: 被動
 description_zh: 觸發時機加效果。
 kinds: [passive]

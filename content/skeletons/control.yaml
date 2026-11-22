@@ -1,4 +1,5 @@
 id: control
+order: 30
 name_zh: 控場
 description_zh: 狀態、表面、障礙或地形為主，傷害為輔。
 kinds: [active]
