@@ -1293,16 +1293,6 @@ rules:
       - 'SkillDef._check_summon'
       - 'SkillDef._check_summon_beside'
     note: HC-6a 改判：1000 是 ‰ 換算（×1、100%）；1～1000 的 1 是正數下限（伴生的規則下限在 Ruleset 層另查）；單體射程大於 1＝不是近戰。
-  - id: py-content-skills-specs-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skills/specs.py
-    kind: text
-    where: ['TriggerSpec._check', 'TriggerSpec._check_exploited']
-    note: >-
-      兩種觸發每輪最多 1 次（AP-2、SK-3）：檢查在 TriggerSpec 驗證裡（拿不到規則包），要把數字搬進
-      core.yaml 得先把這條檢查移到 Ruleset 層（錯誤改在載入內容庫時才出現，同 HC-4d 待決 4），屬規則類，
-      HC-7 沒動，見報告待決。
   - id: py-content-skills-variants-text-text
     class: const
     status: done
@@ -1318,16 +1308,6 @@ rules:
             src/trpg/content/stacks.py]
     where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check']
     note: HC-6a 改判（HC-4d 的驗證訊息）：下限 ≥ 0、至少 1 個效果是非負與非空檢查；−1 是「只能減傷」的上界（負數）；1000 是 ‰ 換算。
-  - id: py-content-world-economy-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_economy.py
-    kind: text
-    where: ['WorldItemDef._check']
-    text: '1 AP'
-    note: >-
-      道具技能必須 1 AP（08 8.17）：檢查在 WorldItemDef 驗證裡，拿不到 world/economy.yaml；要搬得改成
-      跨檔案檢查（錯誤出現的地方會變），HC-7 沒動，見報告待決。
   - id: py-content-world-economy-const-text
     class: const
     status: done

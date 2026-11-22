@@ -11,7 +11,6 @@ from trpg.content.schemas import ContentModel
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
     _PERMILLE,
-    ON_AP_SPENT_ALL,
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
     ON_KEYWORD_EXPLOITED,
@@ -137,7 +136,8 @@ class TriggerSpec(ContentModel):
     - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
     - ``surface``：只有 ``on_enter_surface`` 使用，可省略（省略＝任何表面；Phase 3C-3b）。
     - ``on_keyword_exploited``（SK-3）：``status``／``surface`` 擇一（可都省略），``max_per_round``
-      只能是 1（06 6.38 第 10 點「每回合最多觸發 1 次」）。SK-3b 起引擎不看每輪次數，改以「任何
+      只能是 ``skill_triggers.yaml`` 寫的次數（06 6.38 第 10 點「每回合最多觸發 1 次」；
+      HC-7 b 起由 Ruleset 層檢查）。SK-3b 起引擎不看每輪次數，改以「任何
       單位的每回合 1 次」計數（``UnitState.exploit_turn_counts``，被動與詞條同一套）。
     """
 
@@ -173,15 +173,15 @@ class TriggerSpec(ContentModel):
         if self.surface is Surface.NONE:
             raise ValueError("trigger.surface 不可為 none")
         self._check_exploited()
-        if self.event == ON_AP_SPENT_ALL and self.max_per_round != 1:  # AP-2：每回合一次
-            raise ValueError("on_ap_spent_all 每輪最多觸發 1 次（max_per_round 只能是 1）")
+        # AP-2 的 on_ap_spent_all、SK-3 的 on_keyword_exploited 每輪最多幾次：HC-7 b（a 段
+        # 裁定 5）起寫在 skill_triggers.yaml 的 max_per_round，由 Ruleset 層的 _trigger_problems
+        # 檢查並說明。
         return self
 
     def _check_exploited(self) -> None:
-        """``on_keyword_exploited``（SK-3，#166 6.38-10）：狀態與表面擇一，每輪最多 1 次。"""
+        """``on_keyword_exploited``（SK-3，#166 6.38-10）：狀態與表面擇一（每輪幾次見
+        ``skill_triggers.yaml`` 的 ``max_per_round``）。"""
         if self.event != ON_KEYWORD_EXPLOITED:
             return
         if self.status is not None and self.surface is not None:
             raise ValueError("on_keyword_exploited 的 status 與 surface 只能擇一")
-        if self.max_per_round != 1:
-            raise ValueError("on_keyword_exploited 每輪最多觸發 1 次（max_per_round 只能是 1）")

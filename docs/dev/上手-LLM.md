@@ -11,7 +11,7 @@
 | 檔案 | 職責 |
 |---|---|
 | `llm/client.py` | `LLMClient`（Protocol：`complete(messages, json_schema=)`）、`MockLLMClient`（依序回應；回應是例外就拋）、`OpenAICompatClient`（本機 OpenAI 相容端點） |
-| `llm/config.py` | `LLMConfig`、`load_llm_config(path)`：`config/llm.toml`＋環境變數（`TRPG_LLM_CONFIG` 指另一份、`TRPG_LLM_REASONING_EFFORT`、`TRPG_LLM_GENERATE`…） |
+| `llm/config.py` | `LLMConfig`、`load_llm_config(path)`：`config/llm.toml`＋環境變數（`TRPG_LLM_CONFIG` 指另一份、`TRPG_LLM_REASONING_EFFORT`、`TRPG_LLM_GENERATE`…）。HC-7 b：程式裡要預設值（重試次數、退回率提醒、連線檢查逾時）一律讀 `LLM_DEFAULTS`（schema 預設，只留這一份）；新鍵 `probe_timeout_s`（3.0）、`situation_attempts`（2）、`story_attempts`（2）只在 schema，`config/llm.toml` 沒加；情境判定與說書人照 client 帶的設定（`client_config(client)`，Mock 用預設） |
 | `llm/errors.py` | `LLMUnavailable`（立刻停、退回）、`LLMTimeout`／`LLMBadResponse`（算一次嘗試） |
 | `llm/response.py` | `clean_response`：去 `<think>`、程式碼框 |
 | `llm/propose.py`、`candidate_source.py` | 完整技能提議（4-L5～L8）：重試迴圈、`make_proposer`、`mock_proposer`、`mock_naming_client` |
@@ -23,7 +23,7 @@
 | `llm/consistency.py` | 敘事與效果一致（`skill_facts`、`check_mentions`、`check_added`）、世界觀詞用量 |
 | `llm/flash_eval.py`、`skill_eval.py`、`style_eval.py` | 真模型評估工具（`trpg llm …`） |
 | `api/llm_source.py` | `LlmProvider`：`LocalLlmProvider`（讀設定、ping）、`MockLlmProvider`（測試；`flash_naming=True` 開 Mock 命名） |
-| `api/world_pregen.py` | 大世界預先生成：單一背景佇列（WP-2 起許願插隊排最前面）、只放記憶體、等最多 10 秒（`WAIT_SECONDS`） |
+| `api/world_pregen.py` | 大世界預先生成：單一背景佇列（WP-2 起許願插隊排最前面）、只放記憶體、等最多 10 秒（HC-7 b 起等待秒數與每人上限在 `content/skill_pick.yaml` 的 `pregen`；挑選模式的時間預算在 `budget_seconds`） |
 | `world/generated.py` | 世界引擎拿生成內容的介面：請求（`FlashGenRequest`…）、`supply`、`recorded`（重播） |
 | `roguelite/llm_hook.py` | 一輪的掛接點（`use_proposer`、`use_flash_source`；`trpg.roguelite` 不能匯入 `trpg.llm`） |
 | `skillgen/flash_text.py` | **LF-1**：`VariationText`、`clean_text`／`clean_name`／`clean_note`（引擎端的最後一道文字檢查） |

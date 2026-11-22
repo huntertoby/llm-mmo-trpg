@@ -78,6 +78,9 @@ class SkillTriggerDef(ContentModel):
     budget_by_n_permille: dict[int, int] | None = None
     min_rarity: SkillRarity = "epic"
     random_composer: bool = True
+    max_per_round: int | None = Field(default=None, ge=1)
+    """這個時機的被動每輪只能觸發幾次（技能的 ``trigger.max_per_round`` 必須剛好是這個數；HC-7 b
+    從 ``TriggerSpec`` 搬來，由 Ruleset 層檢查）。沒寫＝照技能自己的 ``max_per_round``。"""
 
     @model_validator(mode="after")
     def _check(self) -> SkillTriggerDef:

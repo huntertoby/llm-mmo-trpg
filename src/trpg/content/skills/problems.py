@@ -454,6 +454,9 @@ def _trigger_problems(
         ]
     if spec.status is not None and spec.status not in status_ids:
         return [f"trigger.status：未知的狀態 {spec.status!r}"]
+    cap = definition.max_per_round
+    if cap is not None and spec.max_per_round != cap:  # HC-7 b（a 段裁定 5）：原本在 TriggerSpec
+        return [f"{spec.event} 每輪最多觸發 {cap} 次（max_per_round 只能是 {cap}）"]
     return []
 
 

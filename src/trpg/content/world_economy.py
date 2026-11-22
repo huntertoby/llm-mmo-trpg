@@ -172,8 +172,6 @@ class WorldItemDef(ContentModel):
             problems = []
             if ITEM_SKILL_TAG not in skill.tags:
                 problems.append(f"道具技能要帶標籤 {ITEM_SKILL_TAG}")
-            if skill.kind != "active" or skill.ap_cost != 1:
-                problems.append("道具技能必須是主動、1 AP（8.17）")
             if skill.cost.uses_per_battle != 1:
                 problems.append("道具技能的 cost.uses_per_battle 必須是 1（每個用一次）")
             if problems:
@@ -184,6 +182,9 @@ class WorldItemDef(ContentModel):
 class WorldItemTable(ContentModel):
     """``content/world/items.yaml``。"""
 
+    item_skill_ap_cost: int = Field(ge=1)
+    """道具技能（消耗品戰鬥中的用法）的 AP（08 8.17「1 AP」；HC-7 b 從 :class:`WorldItemDef` 的檢查
+    搬來，由這張表檢查每個道具技能）。"""
     items: tuple[WorldItemDef, ...] = ()
 
     @model_validator(mode="after")
@@ -194,6 +195,11 @@ class WorldItemTable(ContentModel):
         dup = duplicates(i.skill.id for i in self.items if i.skill is not None)
         if dup:
             raise ValueError(f"道具技能 ID 重複：{dup}")
+        ap = self.item_skill_ap_cost
+        for item in self.items:
+            skill = item.skill
+            if skill is not None and (skill.kind != "active" or skill.ap_cost != ap):
+                raise ValueError(f"物品 {item.id}：道具技能必須是主動、{ap} AP（8.17）")
         return self
 
     def item_by_id(self) -> dict[str, WorldItemDef]:
