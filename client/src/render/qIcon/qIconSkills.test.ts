@@ -66,10 +66,10 @@ describe("T-B1 後端代碼前端都畫得出來", () => {
 });
 
 describe("T-B2 部件代碼齊全", () => {
-  it("數量照需求 1.1：骨架 16、效果 56 圖（59 碼，TF-1 加召喚到身邊暫代、SK-2 加吸收表面、疾病擴散、鉤（AR-SK2 從暫代換成專屬圖樣：圖 +3、暫代 −3）、SK-3 加重擲（AR-SK3 從暫代換成專屬圖樣：圖 +1、暫代 −1）、AP-2 加預支（AR-AP2 從暫代換成專屬圖樣：圖 +1、暫代 −1））、表面 8、條件 24（LW-1 加 2 個、DD-3 加 1 個、KW-1、KW-2 各加 1 個暫代、AR-SK3 加貼身、遠距 2 個）、代價 6、觸發 26（＋7 暫代，TF-1 加 2 個；SK-3 的 3 個 AR-SK3 從暫代換成專屬圖樣：圖 +3、暫代 −3；AP-2 的用完所有 AP 時 AR-AP2 從暫代換成專屬圖樣：圖 +1、暫代 −1）、接續 6、形狀 13、修正 22（BS-1 加 1 個）、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
+  it("數量照需求 1.1：骨架 16、效果 56 圖（59 碼，TF-1 加召喚到身邊暫代、SK-2 加吸收表面、疾病擴散、鉤（AR-SK2 從暫代換成專屬圖樣：圖 +3、暫代 −3）、SK-3 加重擲（AR-SK3 從暫代換成專屬圖樣：圖 +1、暫代 −1）、AP-2 加預支（AR-AP2 從暫代換成專屬圖樣：圖 +1、暫代 −1））、表面 8、條件 24（LW-1 加 2 個、DD-3 加 1 個、KW-1、KW-2 各加 1 個暫代、AR-SK3 加貼身、遠距 2 個）、代價 6、觸發 28（＋7 暫代，TF-1 加 2 個；SK-3 的 3 個 AR-SK3 從暫代換成專屬圖樣：圖 +3、暫代 −3；AP-2 的用完所有 AP 時 AR-AP2 從暫代換成專屬圖樣：圖 +1、暫代 −1；E4 的格擋時、你讓別人位移時 E4b 從暫代換成專屬圖樣：圖 +2、暫代 −2）、接續 6、形狀 13、修正 22（BS-1 加 1 個）、元素 9、狀態 32、卡片 22；改造對象 13（QI-2d，第④批紀錄 13.1）", () => {
     const n = (t: object): number => Object.keys(t).length;
     expect([n(QP.SKELETON), n(QP.EFFECT), n(QP.EFFECT) + n(QP.EFFECT_ALIAS), n(QP.SURFACE), n(QP.COND), n(QP.COST), n(QP.TRIG), n(QP.TRIG_ALIAS), n(QP.LINK), n(QP.SHAPE), n(QP.CHANGE), n(QP.ELEMENT), n(QP.STATUS), n(QP.CARD), n(QP.TARGET)])
-      .toEqual([16, 56, 59, 8, 24, 6, 26, 9, 6, 13, 22, 9, 32, 22, 13]); // E4：你讓別人位移時、格擋時（觸發）各加 1 個暫代；AP-2：預支（效果）、用完所有 AP 時（觸發）各加 1 個暫代，AR-AP2 兩個都換成專屬圖樣；條件 17＋LW-1 的 2 個＋DD-3 的 1 個＋KW-1、KW-2 各 1 個（暫代）；修正 21＋BS-1 無聲（BS-2 都換正式圖）
+      .toEqual([16, 56, 59, 8, 24, 6, 28, 7, 6, 13, 22, 9, 32, 22, 13]); // E4：你讓別人位移時、格擋時（觸發）各加 1 個暫代，E4b 兩個都換成專屬圖樣；AP-2：預支（效果）、用完所有 AP 時（觸發）各加 1 個暫代，AR-AP2 兩個都換成專屬圖樣；條件 17＋LW-1 的 2 個＋DD-3 的 1 個＋KW-1、KW-2 各 1 個（暫代）；修正 21＋BS-1 無聲（BS-2 都換正式圖）
   });
   it("名詞表的狀態、表面、觸發、條件、效果原語與 KNOWN_PARTS 都有 Q 版圖樣或明確退回", () => {
     const known = (cat: string, id: string): void => { const e = QP.entry(cat, id); expect(e.unknown, `${cat}:${id}`).toBeUndefined(); };
@@ -85,7 +85,7 @@ describe("T-B2 部件代碼齊全", () => {
     for (const id of KNOWN_PARTS.links) known("link", id);
     for (const id of KNOWN_PARTS.costs) known("cost", id);
     // 觸發的 7 個暫代（TF-1 加 2 個；AP-2 加的「用完所有 AP 時」AR-AP2 已換成專屬圖樣）：名詞表有、目前沒有招用到（需求 4.4 第 21 點）
-    expect(Object.keys(QP.TRIG_ALIAS)).toHaveLength(9); // E4：你讓別人位移時、格擋時
+    expect(Object.keys(QP.TRIG_ALIAS)).toHaveLength(7); // E4 的你讓別人位移時、格擋時 E4b 已換成專屬圖樣
     const used = new Set(ALL_ICONS.map((i) => i.trigger));
     for (const id of Object.keys(QP.TRIG_ALIAS)) expect(used.has(id), id).toBe(false);
   });

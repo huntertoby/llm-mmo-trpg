@@ -73,7 +73,7 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
 /** 基準錄好之後內容改過、主圖跟著變的招（DD-3：雙牙拿掉第二段傷害、改成兩下都中才上中毒；GB-2b：熔心吸氣由環形 2 改成範圍光環 4）。 */
 const CONTENT_CHANGED: readonly string[] = ["skill_twin_fang", "skill_heart_inhale"];
 /** 基準錄好之後才加的部件（LW-1 兩個條件、DD-3 與 BS-1 各一個、KW-1 一個條件、AR-SK2 三個效果；沒有開工前的雜湊）。 */
-const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike", "condition:self_stack_at_least", "condition:self_on_high_ground", "effect:absorb_surface", "effect:contagion", "effect:hook", "effect:reroll", "trigger:on_keyword_exploited", "trigger:ally_missed_roll", "trigger:enemy_hit_roll", "condition:point_blank", "condition:long_range", "effect:borrow_ap", "trigger:on_ap_spent_all"]; // AR-SK3 加一個效果、三個觸發、兩個條件；AR-AP2 加預支（效果）、用完所有 AP 時（觸發）
+const ADDED_PARTS = ["condition:lone_wolf", "condition:self_lacks_status", "condition:all_strikes_hit", "change:silent_strike", "condition:self_stack_at_least", "condition:self_on_high_ground", "effect:absorb_surface", "effect:contagion", "effect:hook", "effect:reroll", "trigger:on_keyword_exploited", "trigger:ally_missed_roll", "trigger:enemy_hit_roll", "condition:point_blank", "condition:long_range", "effect:borrow_ap", "trigger:on_ap_spent_all", "trigger:on_block", "trigger:on_displace"]; // AR-SK3 加一個效果、三個觸發、兩個條件；AR-AP2 加預支（效果）、用完所有 AP 時（觸發）；E4b 加格擋時、你讓別人位移時（觸發）
 /** 本段改過的部件（其餘部件的呼叫紀錄必須和開工前相同）。 */
 const CHANGED_PARTS = ["effect:redirect_damage", "change:form_upkeep_permille"];
 const MODIFIERS = IDS.filter((id) => FIX.skills[id]?.modifier && !ADDED_AFTER_BASELINE.includes(id)); // 基準之後才加的修正技（BS-1 無聲步）沒有開工前的紀錄

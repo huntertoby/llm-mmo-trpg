@@ -50,7 +50,7 @@ describe("1. 狀態「預支」borrowed_ap", () => {
   it("3. 觸發「這回合用完所有 AP 時」on_ap_spent_all：TRIG 有專屬圖（灰閃電＋金火花），TRIG_ALIAS 拿掉暫借的回合結束時", () => {
     expect(QP.TRIG_ALIAS.on_ap_spent_all).toBeUndefined();
     expect(QP.TRIG.on_ap_spent_all?.zh).toBe("這回合用完所有 AP 時");
-    expect(Object.keys(QP.TRIG).at(-1)).toBe("on_ap_spent_all");
+    expect(Object.keys(QP.TRIG).slice(-3)).toEqual(["on_ap_spent_all", "on_block", "on_displace"]); /* 加在表最後；E4b 的兩個接在它後面 */
     const big = calls((c) => QP.entry("trigger", "on_ap_spent_all").d(c, opts(19.7))).join(";");
     for (const col of ["#a9a6bc", "#6e6a84", "#dcdae6", "#ffd23f", "#ffffff"]) expect(big).toContain(col);
     const tiny = calls((c) => QP.entry("trigger", "on_ap_spent_all").d(c, opts(11.8))).join(";");
