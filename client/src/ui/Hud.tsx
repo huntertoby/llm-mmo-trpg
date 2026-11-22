@@ -18,7 +18,7 @@ import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
 import { HeroCard } from "./HeroCard";
 import { unitHeroInput } from "./heroFace";
-import { passiveLine, raceHudText } from "../battle/race";
+import { overrideNote, passiveLine, raceHudText } from "../battle/race";
 import { barData, heroChips, hudStacks, surfaceAt } from "./statusCard";
 import { StackPips } from "./StackPips";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
@@ -159,6 +159,7 @@ export function heroDetails(view: BattleView, hero: UnitView): ReactNode[] {
           {" "}
           ・{hero.race.skill_name_zh}剩 {hero.race.skill_uses_left}／{hero.race.skill_uses_max} 次・被動「{hero.race.passive_name_zh}」
           {hero.race.passive_active ? "（目前有作用）" : ""}
+          {overrideNote(hero.race)}
         </span>
       </div>,
     );

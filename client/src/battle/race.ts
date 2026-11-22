@@ -84,5 +84,5 @@ export function raceDetailText(race: RaceView): string {
 export function raceHudText(hero: UnitView): string | null {
   const race = hero.race ?? null;
   if (race === null) return null;
-  return `種族：${race.name_zh}｜${race.skill_name_zh} 剩 ${race.skill_uses_left}／${race.skill_uses_max} 次｜被動：${race.passive_name_zh}${race.passive_active ? "（目前有作用）" : ""}`;
+  return `種族：${race.name_zh}｜${race.skill_name_zh} 剩 ${race.skill_uses_left}／${race.skill_uses_max} 次｜被動：${race.passive_name_zh}${race.passive_active ? "（目前有作用）" : ""}${overrideNote(race)}`;
 }

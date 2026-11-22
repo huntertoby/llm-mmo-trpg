@@ -147,5 +147,7 @@ describe("race passive overridden by gear (E3)", () => {
     const r = race({ passive_overridden_zh: "被腳的「下雨時移動 +2」蓋過" });
     expect(raceDetailText(r)).toBe("海民（種族技：拋錨；被動：雨中海步（被腳的「下雨時移動 +2」蓋過））");
     expect(passiveLine(r)).toBe("被動・雨中海步：下雨天氣時，移動 +1。（被腳的「下雨時移動 +2」蓋過）");
+    const hero = { ...unit(H, "ally", 1, 1), race: r };
+    expect(raceHudText(hero)).toBe("種族：海民｜拋錨 剩 1／1 次｜被動：雨中海步（被腳的「下雨時移動 +2」蓋過）");
   });
 });
