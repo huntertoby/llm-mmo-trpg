@@ -17,22 +17,22 @@ texts:
   source: 完整姿態技能：姿態狀態對自己有利的倍率離中性值的距離放大的比例（‰）；數值型狀態（非控制、非姿態）的強度（BAL-12e，#76，目前只有升階重配與完整技能會填）：每回合傷害、治療、倍率與加值乘上它
   player: 強度。姿態：放大對你有利的效果，例如 120% 時「傷害 +15%」變成「傷害 +18%」，代價（例如移動減半）不變。中毒、燃燒、再生、虛弱這類有數字的狀態：每回合的傷害、治療或數值增減乘上強度，小數捨去；升階時會自動提高。控制類狀態，以及標記、隱蔽這類沒有數字的狀態不能填。
 - id: 原語.blow_surface
-  source: 把影響格上可吹送的表面（rules/core.yaml 的 wind.blow_surfaces：火、毒、冰、水、油、煙霧）整片往風向平移 distance 格（2～3），保留剩餘回合與建立者。風向：方向型形狀為形狀的方向；中心格型為「施放者 → 中心格」的主要軸向；以施放者為中心的形狀為「施放者 → 該格」的主要軸向（往外吹）。表面一格一格前進，遇到地圖外、牆壁、blocks_move 物件、比目前高的格子就停在前一格；單位不阻擋；推進致命地形（深淵、岩漿；上面不能有表面）的表面走到那一格就消失。原格的表面移除；落點先查互動表（同產生表面，例如水熄滅火），帶元素的表面落在物件上照常觸及。多片落在同一格時，風向最前面的先放。只能用在主動技能、只作用在格子。預算：base_points × 距離。
+  source: 把影響格上可吹送的表面（rules/core.yaml 的 wind.blow_surfaces：火、毒、冰、水、油、煙霧）整片往風向平移 distance 格（2～3），保留剩餘回合與建立者。風向：方向型形狀為形狀的方向；中心格型為「施放者 → 中心格」的主要軸向；以施放者為中心的形狀為「施放者 → 該格」的主要軸向（往外吹）。表面一格一格前進，遇到地圖外、牆壁、blocks_move 物件、比目前高的格子就停在前一格；單位不阻擋；推進致命地形（深淵、岩漿；上面不能有表面）的表面走到那一格就消失。原格的表面移除；落點先查互動表（同產生表面，例如水熄滅火），帶元素的表面落在物件上照常觸及。多片落在同一格時，風向最前面的先放。只能用在主動技能、只作用在格子。預算：primitive_points.blow_surface（skill_budget.yaml）× 距離。
   player: 把範圍內的地面效果（火、毒、冰、水、油、煙霧）整片往風向推幾格，蓋到哪裡就在哪裡生效。牆、擋路物件和比較高的地形會擋住；推進深淵或岩漿的部分會消失。
 - id: 原語.clear_surface
-  source: 移除影響格上指定種類（surface）的表面；省略 surface 時移除 rules/core.yaml 的 clear_surfaces（煙霧、毒）。affects 為 allies 時只清有友方站著的格子，tiles 時清整個範圍。不帶元素、不查互動表、不觸及物件、不觸發風的擴散。只作用在格子、只能用在主動技能。預算：base_points 3（形狀與對象倍率照一般效果）。
+  source: 移除影響格上指定種類（surface）的表面；省略 surface 時移除 rules/core.yaml 的 clear_surfaces（煙霧、毒）。affects 為 allies 時只清有友方站著的格子，tiles 時清整個範圍。不帶元素、不查互動表、不觸及物件、不觸發風的擴散。只作用在格子、只能用在主動技能。預算：primitive_points.clear_surface（skill_budget.yaml；形狀與對象倍率照一般效果）。
   player: 清掉範圍內某一種地面效果（火、毒、冰、水、油、煙霧等），不選種類就同時清掉煙霧和毒。對象選『友方』時只清友方站的格子，選『格子』就清整個範圍。只是把地面清乾淨：不帶元素、不會引發任何反應（例如不會讓毒擴散），也不影響物件。只能用在主動技能。
 - id: 原語.enter_form
-  source: 進入 form（content/forms.yaml）的形態。形態是姿態的擴充——只能是姿態（kind 為 stance）唯一的效果、形狀 self；花 stance_ap_cost（1）AP，同時只能有一個姿態或形態（進入形態會取代姿態、施加姿態會解除形態），自己回合用 end_stance 取消（免費），倒下、撤離或戰鬥結束時解除；佔一個主動技能欄位。形態中普攻改用天生武器（屬性 × 0.3；手上武器的普攻特性與主手的普攻詞條不生效，武器技仍看手上武器），套用形態效果（防禦、移動、最大 HP、受傷修正、治療加成、高度差當平地），每次進入觸發進入獎勵。每回合開始付維持費（物理形態扣耐力、心智形態扣法力，forms.yaml），不夠付就自動解除。離開（取消、被迫解除、切換）後該形態冷卻 forms.yaml 的 cooldown 回合，其他形態不受影響；已在該形態中或該形態冷卻中不能使用。元素可選的形態用 use_skill 的 form_element 選（省略＝清單第一個）。預算：base_points 11（照姿態計，skill_budget.yaml 的 form_coefficient_permille）。
+  source: 進入 form（content/forms.yaml）的形態。形態是姿態的擴充——只能是姿態（kind 為 stance）唯一的效果、形狀 self；花 stance_ap_cost（1）AP，同時只能有一個姿態或形態（進入形態會取代姿態、施加姿態會解除形態），自己回合用 end_stance 取消（免費），倒下、撤離或戰鬥結束時解除；佔一個主動技能欄位。形態中普攻改用天生武器（屬性 × 0.3；手上武器的普攻特性與主手的普攻詞條不生效，武器技仍看手上武器），套用形態效果（防禦、移動、最大 HP、受傷修正、治療加成、高度差當平地），每次進入觸發進入獎勵。每回合開始付維持費（物理形態扣耐力、心智形態扣法力，forms.yaml），不夠付就自動解除。離開（取消、被迫解除、切換）後該形態冷卻 forms.yaml 的 cooldown 回合，其他形態不受影響；已在該形態中或該形態冷卻中不能使用。元素可選的形態用 use_skill 的 form_element 選（省略＝清單第一個）。預算：primitive_points.enter_form（照姿態計，skill_budget.yaml 的 form_coefficient_permille）。
   player: 化身成一種形態（算姿態，佔一個主動技能欄位，花 1 AP）。形態中普攻改用形態的天生武器，並獲得形態效果；每次進入時另得一次進入獎勵。同時只能有一個姿態或形態，自己的回合可以免費取消；倒下或戰鬥結束時解除。每回合開始付維持費（物理形態扣耐力、心智形態扣法力），付不起就自動解除。離開後這個形態要冷卻 2 回合，換成別的形態不受影響，所以可以輪流變身。武器技照樣用手上的武器。
 - id: 原語.enter_form.form
   source: 形態 ID（content/forms.yaml）
   player: 要化身成哪一種形態（熊、貓、巨鵰、龍……）；天生武器、形態效果和進入獎勵各不相同。
 - id: 原語.enter_form.magnitude_permille
-  source: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度
+  source: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 primitive_points.enter_form × 幅度
   player: 只有變身技能能填。把形態對你有利的效果放大，包括加成、減傷、天生武器的傷害和進入時的護盾，例如填 120% 時，「防禦 +10%」變成「防禦 +12%」。小數四捨五入，所以幅度小時，「移動 +1」這類小數字可能不變。形態的代價（例如移動 −1、受火傷害 +50%）和維持費不會跟著放大。
 - id: 原語.leave_form
-  source: 施放者先解除目前的形態（離開原因 released；照常換回手上的武器與裝備、最大 HP 減回、該形態冷卻 forms.yaml 的 cooldown 回合、取消龍的蓄力），其餘效果再照順序結算。必須是主動技能的第一個效果、一個技能最多一個、affects 一律為 self；施放者不在形態中不能施放（skill_problem）。不另計點數（base_points 0），但算代價：預算用 skill_budget.yaml 的 allowance.leave_form_permille 折抵（照 6.5 代價折抵，和其他代價加總後套整體上限）。
+  source: 施放者先解除目前的形態（離開原因 released；照常換回手上的武器與裝備、最大 HP 減回、該形態冷卻 forms.yaml 的 cooldown 回合、取消龍的蓄力），其餘效果再照順序結算。必須是主動技能的第一個效果、一個技能最多一個、affects 一律為 self；施放者不在形態中不能施放（skill_problem）。不另計點數（skill_budget.yaml 的 primitive_points.leave_form），但算代價：預算用 skill_budget.yaml 的 allowance.leave_form_permille 折抵（照 6.5 代價折抵，和其他代價加總後套整體上限）。
   player: 先解除你目前的形態（這個形態照常冷卻 2 回合），再結算這招的其他效果。只能在形態中施放，必須放在第一個效果。適合做成『變回原形時爆發』的技能。
 - id: 原語.charge_through
   source: 選一個目標格（形狀 ground_tile；與施放者同一列或同一行、距離不超過形狀射程；可以是站著敵人的格子、牆前或地圖邊的任何格）；施放者沿直線衝過去，被牆、不可走地形或 blocks_move 物件擋住時停在擋住前最後一個能站的空格（第一格就過不去才不能施放）。目標格上的敵人若背後走不過去（牆、地圖邊、擋路物件），命中後另受一次撞擊傷害（collided，接上撞擊關鍵字與 target_collided）。沿途經過的每個敵人依路徑順序各擲一次命中；命中受 dice 物理傷害（不加屬性，暴擊與格擋照常），再依 on_hit 擊倒（對抗判定）或推到路徑旁一格（push_aside：先左後右選可站的一側，兩側都不行就往左撞，照常觸發撞擊）。隊友讓路、敵人不阻擋，一律被穿過。不觸發藉機攻擊；沿途與終點的陷阱、表面照常結算，被定身或倒地就停下。算「本回合移動過」，也觸發 on_move 被動。定身或倒地時不能施放。必須是技能的第一個效果，其餘效果只能作用在施放者自己。
@@ -135,13 +135,13 @@ texts:
   source: 舉起 range 格內看得到的一個 pushable 物件，丟到落點格（形狀 object_then_tile；飛行路徑不檢查阻擋，落點要在視線內）。命中判定照技能，落點被命中的單位受 dice 物理傷害（不加屬性），knock_prone 為 true 時再以對抗判定擊倒。物件落地後依標籤結算：explosive 在落點爆炸、breakable 碎掉（摧毀）、其他放在落點；落點有單位或物件時放在 hurl_scatter_radius（rules/core.yaml）內最近的空格（同距離依 (y, x)），沒有空格或落點是致命地形就摧毀。預算為骰子平均 × 「需要附近有物件」折扣（skill_budget.yaml 的 hurl_object_discount_permille），擊倒另加 knock_prone 的點數。
   player: 舉起射程內看得到的一個可推動物件，丟到落點：落點的單位被命中就受到骰值物理傷害（可設定再以對抗判定擊倒）。物件落地後：會爆的爆炸、易碎的碎掉、其他的放在落點附近；落點是致命地形就消失。附近要有物件才能用。
 - id: 原語.inscribe
-  source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+  source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：primitive_points.inscribe × inscribe_duration_permille（skill_budget.yaml；依 duration；省略＝預設 3 輪）。
   player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 {rune_max_rounds}）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
 - id: 原語.intercept
   source: 只能出現在 event 為 ally_hit_adjacent 的反應技。相鄰友方被單體攻擊命中後、傷害與其他效果結算之前，這次攻擊的所有效果改為作用在持有者身上（不重擲命中；位移方向重新計算；範圍技能不攔截）。守護者的護盾、減傷、抗性照常結算。點數為初值，未經模擬。
   player: 替隊友擋下：相鄰的友方被單體攻擊命中時，這次攻擊改由你承受（不重擲命中；範圍技能不能攔）。你的護盾、減傷、抗性照常有效。只能用在「相鄰友方被打」的反應技。
 - id: 原語.shockwave
-  source: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中，友方不擲命中）。只有大地元素的技能能用（互斥規則 terrain_needs_earth，3-54d）。只能用在主動技能。預算：固定 base_points（形狀倍率另算；初值，未經模擬）。
+  source: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中，友方不擲命中）。只有大地元素的技能能用（互斥規則 terrain_needs_earth，3-54d）。只能用在主動技能。預算：固定點數 primitive_points.shockwave（skill_budget.yaml；形狀倍率另算；初值，未經模擬）。
   player: 讓直線上的單位倒地，不用對抗判定（對敵人仍要先命中）。已經倒地的和會飛的單位不受影響。只有大地元素的技能能用。對象可以選敵方、友方或雙方，只能用在主動技能。
 - id: 原語.knock_prone
   source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
@@ -350,7 +350,7 @@ texts:
   source: 暫時給出的技能 ID（content/skills/）
   player: 要暫時給的技能。
 - id: 工坊.effects.effects=inscribe
-  source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+  source: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：primitive_points.inscribe × inscribe_duration_permille（skill_budget.yaml；依 duration；省略＝預設 3 輪）。
   player: 在範圍內可站立的格子刻下你專屬的符文（一種元素，或一個標籤），持續幾輪（最多 {rune_max_rounds}）。符文本身沒有效果，敵我都看得到，只有你自己的技能能讀取或引爆它。同一格再刻一次會更新；你的符文超過上限時最舊的消失；你倒下時符文仍保留到時效結束。
 - id: 工坊.effects.effects=knock_prone
   source: 對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。
@@ -530,7 +530,7 @@ texts:
   source: '在形態中的加成（Phase 3J-4b）：施放者在形態中時，這個效果的傷害（或治療）整體 ×（1000 ＋ n）‰（骰值、屬性加成與其他倍率一起乘，屬性加成只算一次；不在形態中不變）；只有技能自己的效果可以用；預算：點數 × (1 ＋ n‰ × 在形態中條件倍率)'
   player: 在形態中的加成：你在形態中施放時，這個效果的傷害（或治療）整體多出這個千分比（300 就是 +30%）；不在形態中沒有加成。只有技能自己的傷害或治療能用，同一招的其他數值會被預算壓低一點。
 - id: 原語.absorb_surface
-  source: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（帶元素的表面：火、冰、毒、聖光、黑暗；吸到水時元素不變，改成這一招之後的傷害命中時在目標格造水，帶潮濕；油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：skill_budget.yaml 的 absorb_surface_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝absorb_surface_points）。
+  source: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（帶元素的表面：火、冰、毒、聖光、黑暗；吸到水時元素不變，改成這一招之後的傷害命中時在目標格造水，帶潮濕；油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：skill_budget.yaml 的 absorb_surface_points ＋ 收益點數（層數＝primitive_points.add_stack × amount；治療、護盾＝骰子平均；元素＝absorb_surface_points）。
   player: 吸走一格的地面表面（你腳下，或這招選中的那一格），換成一種收益給你自己：層數、治療、護盾，或讓這一招接下來的傷害改成那種表面的元素（火、冰、毒、聖光、黑暗；吸到水時改成帶潮濕：打中時在目標格造水；油、煙霧不行）。可以指定只吸某一種表面。那一格沒有可吸的表面時這個效果沒作用，其他效果照常。必須是這招的第一個效果、只能用在主動技能。
 - id: 原語.absorb_surface.amount
   source: gain 為 stack 時必填
