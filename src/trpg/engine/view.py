@@ -43,6 +43,7 @@ from trpg.engine.rules.footprint import is_giant, tiles_of
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import effective_attribute, next_turn_ap_penalty
+from trpg.engine.rules.unit_rules import TerrainNote, terrain_notes
 from trpg.engine.skills.revive import revivable
 from trpg.engine.skills.targeting import skill_mana_cost
 from trpg.engine.state import (
@@ -249,7 +250,11 @@ class AffixLineView(_ViewModel):
     數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。
 
     ``duplicate_of``（Phase 3-32a）：這條 **沒有生效** 的重複詞條，是和哪一條重複（生效的那條的
-    「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。"""
+    「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。E2 起第 12 類
+    地形規則和種族被動重複時是「種族被動「炎膚」」。
+
+    ``overlap_zh``（E2）：地形規則和前面的來源部分重疊時的說明（例「冰的部分和種族重複」；這條仍
+    生效，重疊的部分只算一份）；沒有時 ``None``。"""
 
     affix_id: str
     category: str
@@ -258,6 +263,7 @@ class AffixLineView(_ViewModel):
     active: bool
     weight_permille: int
     duplicate_of: str | None = None
+    overlap_zh: str | None = None
 
 
 class AppearanceView(_ViewModel):
@@ -770,11 +776,32 @@ def _duplicate_of(gear: GearState, entry: GearAffix) -> str | None:
     return f"{SLOT_ZH[winner.slot]}的{affix_text(winner.affix, winner.value)}"
 
 
-def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
+def _affix_line(
+    gear: GearState, a: GearAffix, notes: dict[tuple[str, str], TerrainNote]
+) -> AffixLineView:
+    """一條詞條的顯示；地形規則和種族或前面的裝備重複時標灰（E2，``terrain_notes``）。"""
+    note = notes.get((a.slot, a.affix.id))
+    duplicate = note.duplicate_of if note is not None else None
+    return AffixLineView(
+        affix_id=a.affix.id,
+        category=a.affix.category,
+        category_zh=AFFIX_CATEGORY_ZH[a.affix.category],
+        text_zh=affix_text(a.affix, a.value),
+        active=a.active and duplicate is None,
+        weight_permille=a.weight_permille if duplicate is None else 0,
+        duplicate_of=duplicate if duplicate is not None else _duplicate_of(gear, a),
+        overlap_zh=None if note is None else note.overlap_zh,
+    )
+
+
+def _equipment_view(state: BattleState, unit: UnitState) -> tuple[EquipmentSlotView, ...]:
     """裝備摘要：每個欄位的物品與詞條（詞條依類別、id 排序）。"""
     gear = unit.gear
     if not gear.items:
         return ()
+    weather = state.weather
+    names = {} if weather is None else {weather.id: weather.name_zh}
+    notes = terrain_notes(state.ruleset, unit, names) if gear.active_affixes("terrain") else {}
     views: list[EquipmentSlotView] = []
     for item in gear.items:
         lines = sorted(
@@ -796,18 +823,7 @@ def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
                     rarity=item.rarity or "common",
                     keywords=item.keywords,
                 ),
-                affixes=tuple(
-                    AffixLineView(
-                        affix_id=a.affix.id,
-                        category=a.affix.category,
-                        category_zh=AFFIX_CATEGORY_ZH[a.affix.category],
-                        text_zh=affix_text(a.affix, a.value),
-                        active=a.active,
-                        weight_permille=a.weight_permille,
-                        duplicate_of=_duplicate_of(gear, a),
-                    )
-                    for a in lines
-                ),
+                affixes=tuple(_affix_line(gear, a, notes) for a in lines),
             )
         )
     return tuple(views)
@@ -1072,7 +1088,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
-        equipment=_equipment_view(unit),
+        equipment=_equipment_view(state, unit),
         gear_totals=_gear_totals(state, unit),
         charges=_charge_views(state, unit),
         form=_form_view(state, unit),
