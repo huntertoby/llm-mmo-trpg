@@ -456,6 +456,26 @@
   border-top-right-radius: 0;
 }
 
+/* E5 美術小修 2（E1 小修 2 的延伸）：金框、虛線框、卡片由上往下接成一張——每一條都不留縫、和下一條
+   的上緣重疊成一條線（上面那條的框線壓在上面），同寬；只有最上面那條留上方的圓角。 */
+.skill-card-float .skill-card-reason {
+  position: relative;
+  z-index: 1;
+  margin-bottom: -1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.skill-card-float .skill-card-reason:first-child {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.skill-card-float .skill-card-reason + .skill-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* Phase 3-26a：技能點、技能等級、營火換裝 */
 
 /* Phase 3-25b：戰場變奏（技能卡的型態列表、技能列按鈕發亮、預覽的型態） */
