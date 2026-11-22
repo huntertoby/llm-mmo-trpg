@@ -166,7 +166,12 @@ def _tick_surfaces(ctx: Ctx, tiles: list[XY]) -> None:
         if remaining > 0:
             state.set_tile(*xy, replace(tile, surface_remaining=remaining))
             continue
-        after = ctx.rules.surface_def(tile.surface).expires_to
+        # 地形規則留下的表面（霜行，E3）到期直接消失，不變成 expires_to（08 8.29 E3 第 3 點）
+        after = (
+            Surface.NONE
+            if tile.surface_trail is not None
+            else ctx.rules.surface_def(tile.surface).expires_to
+        )
         set_surface(ctx, xy, after, cause="expired")
     # 到期後變成的表面若有進入效果，站在上面的單位立即觸發（Phase 1C 決定 #6）
     execute(ctx, [])

@@ -66,13 +66,14 @@ from trpg.engine.events import (
     UnitSlid,
     UnitStoodUp,
 )
-from trpg.engine.ice_slide import slide_check_def
+from trpg.engine.ice_slide import run_start, slide_check_def
 from trpg.engine.ids import PRONE
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.movement import find_path, is_flying
 from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.trail import own_trail
 from trpg.engine.traps import strip_hidden_traps
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, Surface, UnitId
@@ -579,21 +580,23 @@ def _slip_check(step: PathStep) -> PathEvent | None:
     return next((e for e in step.events if e.kind == "slip_check" and e.chance is not None), None)
 
 
-def _run_start(state: BattleState, path: tuple[Pos, ...], index: int) -> bool:
-    """第 ``index`` 格是不是一段冰的第一格（會滑行的表面，前一格不是同一種表面）。"""
+def _run_start(state: BattleState, unit: UnitState, path: tuple[Pos, ...], index: int) -> bool:
+    """第 ``index`` 格是不是一段冰的第一格（會滑行的表面，前一格不是同一種表面；E3：從自己霜行
+    留下的冰走到別人的冰也算，見 :func:`~trpg.engine.ice_slide.run_start`）。"""
     if index == 0:
         return False
     here, before = (path[index].x, path[index].y), (path[index - 1].x, path[index - 1].y)
     if slide_check_def(state, here) is None:
         return False
-    return state.tile(*before).surface is not state.tile(*here).surface
+    return run_start(state, unit, before, here)
 
 
 def _slip_runs(
     state: BattleState, move: Move, steps: tuple[PathStep, ...], fails: _SlideFailures
 ) -> tuple[SlipRun, ...]:
     """每段冰一筆：擲滑行檢定的段（最少後果的模擬裡依序出現）另跑一次失敗的模擬取停點；不會滑倒的
-    單位（矮人、鱗族）走得到的段標 ``immune``。走不到的格子不算在內。"""
+    單位（矮人、鱗族）走得到的段標 ``immune``；自己霜行留下的冰（E3）也標 ``immune``。走不到的
+    格子不算在內。"""
     runs: list[SlipRun] = []
     unit = state.units[move.unit_id]
     immune = not is_flying(unit) and any(
@@ -601,14 +604,17 @@ def _slip_runs(
     )
     nth = 0
     for step in steps:
-        if step.index >= len(move.path) or not _run_start(state, move.path, step.index):
+        if step.index >= len(move.path) or not _run_start(state, unit, move.path, step.index):
             continue
         check = _slip_check(step)
         if check is not None:
             failed = fails.get(nth)
             runs.append(_slip_run(state, move, steps, start=step.index, failed=failed, check=check))
             nth += 1
-        elif immune and step.reach in ("certain", "possible"):
+        elif (immune or _own_trail_step(state, unit, move, step)) and step.reach in (
+            "certain",
+            "possible",
+        ):
             runs.append(_immune_run(steps, len(move.path), step.index))
     return tuple(runs)
 
@@ -618,6 +624,11 @@ def _run_end(steps: tuple[PathStep, ...], legal: int, start: int) -> int:
     while end + 1 < legal and steps[end + 1].surface is steps[start].surface:
         end += 1
     return end
+
+
+def _own_trail_step(state: BattleState, unit: UnitState, move: Move, step: PathStep) -> bool:
+    here = move.path[step.index]
+    return not is_flying(unit) and own_trail(state, unit, (here.x, here.y))
 
 
 def _immune_run(steps: tuple[PathStep, ...], legal: int, start: int) -> SlipRun:

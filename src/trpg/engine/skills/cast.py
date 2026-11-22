@@ -129,6 +129,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.stacks import consume_stacks
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.trail import leave_trail
 from trpg.engine.wind import spread_wind
 from trpg.shared.types import Element, Pos, Surface, UnitId
 
@@ -936,6 +937,8 @@ class Cast:
             before = caster.xy
             move = MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=step, mode="dash")
             execute(ctx, [move])
+            if caster.xy != before:
+                leave_trail(ctx, caster, before)  # 霜行（E3）：衝刺的每一步也算
             enemy_enters_adjacent_reactions(ctx, caster, before)
             enemy_moves_in_range_reactions(ctx, caster)
             if not self.dash_continues(step):
