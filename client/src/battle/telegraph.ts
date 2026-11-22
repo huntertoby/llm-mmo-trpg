@@ -172,6 +172,21 @@ export function telegraphEntries(t: TelegraphOut, view: BattleView): TelegraphEn
   ];
 }
 
+/**
+ * E3b（美術 E3 驗收「請開發確認」）：滑過格子時，那一格的預告說明（`marksTextAt`）和側欄裡的項目是同一件事
+ * （同一筆變化的同一句字），原本另外在最上面金色列一次，看起來像兩件事。改成：側欄裡已有的項目直接標金色（`hot`，
+ * 項目的索引），側欄沒有的（持續區域的說明等）才另外列在最上面（`extra`）。
+ */
+export function splitHoverTexts(entries: readonly TelegraphEntry[], hoverTexts: readonly string[]): { hot: Set<number>; extra: string[] } {
+  const wanted = new Set(hoverTexts);
+  const hot = new Set<number>();
+  entries.forEach((e, i) => {
+    if (wanted.has(e.text)) hot.add(i);
+  });
+  const listed = new Set(entries.map((e) => e.text));
+  return { hot, extra: hoverTexts.filter((t) => !listed.has(t)) };
+}
+
 export function telegraphIsEmpty(t: TelegraphOut): boolean {
   return (
     t.changes.length === 0 &&
