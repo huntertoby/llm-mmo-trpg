@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 
 import pytest
 
@@ -29,7 +30,8 @@ from trpg.content.equipment import (
     ItemDef,
     Loadout,
 )
-from trpg.content.library import _affix_reference_problems
+from trpg.content.library import ContentLibrary, _affix_reference_problems
+from trpg.content.skill_rules import budget_rule_problems
 from trpg.engine import BattleState, Move, UseSkill, legal_actions, resolve
 from trpg.engine.events import ReactionTriggered
 from trpg.engine.modifiers import empty_active_slots
@@ -38,6 +40,8 @@ from trpg.engine.state import UnitState, state_from_json, state_to_json
 from trpg.engine.view import project_for
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, Team, UnitId
+from trpg.skillgen.budget import skill_budget
+from trpg.skillgen.library_check import gear_grant_violations
 
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
@@ -263,3 +267,38 @@ def test_views_name_the_item_for_skills_and_reactions() -> None:
     rule = next(r for r in view.reaction_rules if r.reaction == REACTION)
     assert rule.gear_source_zh == f"{by_key[REACTION].slot_zh}：測試main_hand"
     assert all(r.gear_source_zh == "" for r in view.reaction_rules if r.reaction != REACTION)
+
+
+# ---------------------------------------------------------------------------
+# 第 4 項：授予技能的預算窗（一律照 gear_skill_tier 那一階）
+# ---------------------------------------------------------------------------
+
+
+def _granting_library(skill_id: str, tier: int | None = None) -> ContentLibrary:
+    lib = library()
+    affixes = dict(lib.affixes)
+    affixes["affix_t_grant"] = grant(skill_id).affix
+    budget = lib.budget if tier is None else lib.budget.model_copy(update={"gear_skill_tier": tier})
+    return replace(lib, affixes=affixes, budget=budget)
+
+
+def test_the_gear_tier_defaults_to_one_and_is_bounded_by_the_tier_count() -> None:
+    lib = library()
+    assert lib.budget.gear_skill_tier == 1
+    tiers = lib.ruleset.core.skill_limits.tiers
+    too_high = lib.budget.model_copy(update={"gear_skill_tier": tiers + 1})
+    assert any("gear_skill_tier" in p for p in budget_rule_problems(too_high, lib.ruleset.core))
+    assert budget_rule_problems(lib.budget, lib.ruleset.core) == []
+
+
+def test_current_content_has_no_gear_tier_violations() -> None:
+    assert gear_grant_violations(library()) == []
+
+
+def test_a_higher_tier_skill_granted_by_gear_is_checked_in_the_tier_one_window() -> None:
+    skill = library().skills["skill_arcane_blade"]  # 2 階
+    assert skill.tier == 2 and skill_budget(skill, library()).ok
+    found = gear_grant_violations(_granting_library(skill.id))
+    assert [(v.skill_id, v.rule) for v in found] == [(skill.id, "budget.gear_tier")]
+    assert "1 階" in found[0].message
+    assert gear_grant_violations(_granting_library(skill.id, tier=2)) == []

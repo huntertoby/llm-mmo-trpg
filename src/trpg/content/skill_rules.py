@@ -428,6 +428,10 @@ class BudgetRules(ContentModel):
     （代替骰子平均；點數 ＝ ‰ × 這個值 ÷ 100，再乘持續係數）。"""
     passive_extra_trigger_permille: int = Field(ge=1, le=1000)
     """被動技能的 ``trigger.max_per_round`` 每多 1 次，可用預算 × 這個值（‰）。"""
+    gear_skill_tier: int = Field(default=1, ge=1)
+    """裝備授予的技能（第 9 類詞條，E1，08 8.28）一律照這一階的預算窗檢查（``trpg content check``，
+    :func:`trpg.skillgen.library_check.gear_grant_violations`），不看技能本身標的階級。不超過
+    ``core.skill_limits.tiers``（:func:`budget_rule_problems`）。"""
     known_budget_exceptions: tuple[str, ...] = ()
     """已知超出預算範圍（70～100%）的內建技能 ID（Phase 3-49：射程係數上線後，依規格不改技能數值，
     先標記，交玩法 PM 決定）。``trpg content check`` 不把它們的 ``budget.over``／``budget.weak``
@@ -780,6 +784,11 @@ def budget_rule_problems(budget: BudgetRules, core: CoreRules) -> list[str]:
         aps = "、".join(str(ap) for ap in range(1, top + 1))
         problems.append(
             f"ap_coefficient_permille 必須剛好有 AP {aps}（core.yaml 的 skill_limits.max_ap_cost）"
+        )
+    if budget.gear_skill_tier > core.skill_limits.tiers:
+        problems.append(
+            f"gear_skill_tier（{budget.gear_skill_tier}）不能大於階級數"
+            f"（core.yaml 的 skill_limits.tiers：{core.skill_limits.tiers}）"
         )
     rounds = core.rune_max_rounds
     if len(budget.inscribe_duration_permille) != rounds:
