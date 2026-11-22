@@ -328,7 +328,7 @@ def field_as_battle_map(library: ContentLibrary, field_map: FieldMapDef) -> MapD
     data: dict[str, object] = {
         "id": f"field_{field_map.id}",
         "name_zh": field_map.name_zh,
-        "archetype": "test",
+        "archetype": library.map_archetypes.role_ids("test")[0],  # WL-2：測試圖的類型
         "size": [field_map.width, field_map.height],
         "heights": "\n".join(field_map.height_rows()),
         "terrain": "\n".join(field_map.terrain_rows()),

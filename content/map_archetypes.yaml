@@ -1,0 +1,29 @@
+# 地圖類型（Phase WL-2；原本寫在 src/trpg/content/maps.py 的 Archetype／ARCHETYPES）。
+# 地圖檔（content/maps/<id>.yaml）的 archetype、區域表（regions.yaml）的 map_pool 只能填這裡的 id；
+# 不認得的類型由載入器（trpg content check）擋下。
+# 順序就是清單順序（例如 trpg sim matrix 的類型欄）；加一種類型只要多一列，不用改程式。
+# 前 8 種是 docs/design/05-戰鬥.md 5.1 的地圖類型；test 是測試地圖、training 是技能工坊的靶場（Phase 3F-1）、
+# boss 是 Boss 戰專屬地圖（Phase 3-5b）。
+# - in_random_pool（預設 true）：false＝不進一般抽選——不能進區域（regions.yaml）與 roguelite 的地圖池，
+#   也不進 trpg sim 的預設地圖與循環賽（world/season.yaml 的 league）。
+# - role（選填）：特殊用途，程式依用途找類型、不寫死 id。test＝測試地圖；training＝技能工坊的靶場
+#   （workshop.yaml 的地圖要是這種、網頁地圖列表預設不列）；boss＝Boss 戰專屬地圖（巨型頭目、賽季 Boss、
+#   大世界 boss 地點只能用它，網頁地圖列表預設不列）。沒寫＝一般地圖，所有依用途的分支都走預設。
+archetypes:
+  - id: bridge_chasm
+  - id: oil_depot
+  - id: swamp
+  - id: ruined_heights
+  - id: forest
+  - id: corridor
+  - id: open_plain
+  - id: frozen_lake
+  - id: test
+    in_random_pool: false
+    role: test
+  - id: training
+    in_random_pool: false
+    role: training
+  - id: boss
+    in_random_pool: false
+    role: boss

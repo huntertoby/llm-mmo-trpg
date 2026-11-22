@@ -110,7 +110,12 @@ def test_cloud_ridge_locations_follow_18_3(cloud: LocationMapDef) -> None:
 
 
 def test_cloud_ridge_cross_file(library: ContentLibrary, cloud: LocationMapDef) -> None:
-    assert world_map_problems(cloud, regions=library.regions, maps=library.maps) == []
+    assert (
+        world_map_problems(
+            cloud, regions=library.regions, maps=library.maps, archetypes=library.map_archetypes
+        )
+        == []
+    )
     assert library.regions is not None
     pool = set(library.regions.region_by_id()["cloud_ridge"].map_pool)
     archetypes = {library.maps[m].archetype for loc in cloud.locations for m in loc.battle_maps}
@@ -154,12 +159,26 @@ def test_region_map_pools(library: ContentLibrary) -> None:
         assert len(pool & _ELEMENTAL) == 3
 
 
-@pytest.mark.parametrize("bad", [["swamp", "swamp"], ["test"], ["training"], ["boss"]])
-def test_region_map_pool_validation(bad: list[str]) -> None:
+def test_region_map_pool_validation() -> None:
     from trpg.content.regions import RegionDef  # noqa: PLC0415
 
     with pytest.raises(ValidationError):
-        RegionDef.model_validate({"id": "x", "name_zh": "x", "map_pool": bad})
+        RegionDef.model_validate({"id": "x", "name_zh": "x", "map_pool": ["swamp", "swamp"]})
+
+
+@pytest.mark.parametrize("bad", ["test", "training", "boss"])
+def test_region_map_pool_rejects_archetypes_outside_the_random_pool(
+    library: ContentLibrary, bad: str
+) -> None:
+    """WL-2：不進抽選（``in_random_pool: false``）由載入器查，不再寫死在 ``RegionDef``。"""
+    from trpg.content.library.load import _region_pool_problems  # noqa: PLC0415
+
+    assert library.regions is not None
+    first, *rest = library.regions.regions
+    bad_region = first.model_copy(update={"map_pool": (bad,)})
+    table = library.regions.model_copy(update={"regions": (bad_region, *rest)})
+    problems = _region_pool_problems(table, library.map_archetypes)
+    assert problems == [f"區域 {first.id} 的 map_pool 不可含 {bad}"]
 
 
 # ---- 單檔驗證 ----
@@ -180,7 +199,9 @@ def test_location_count_rule_is_content(library: ContentLibrary) -> None:
 def test_location_count(library: ContentLibrary, count: int) -> None:
     """HC-4d：地點數的範圍是 regions.yaml 的規則，跨檔案檢查（不是單檔 schema）時擋。"""
     m = LocationMapDef.model_validate(_small_map(count))
-    found = world_map_problems(m, regions=library.regions, maps=library.maps)
+    found = world_map_problems(
+        m, regions=library.regions, maps=library.maps, archetypes=library.map_archetypes
+    )
     assert any("地點數" in p for p in found), found
 
 
@@ -300,7 +321,9 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
         data, 14, kind="gate", level_min=None, battle_maps=[], gate_to="no_region"
     )
     m = LocationMapDef.model_validate(data)
-    problems = world_map_problems(m, regions=library.regions, maps=library.maps)
+    problems = world_map_problems(
+        m, regions=library.regions, maps=library.maps, archetypes=library.map_archetypes
+    )
     assert problems == sorted(problems)
     text = "\n".join(problems)
     assert "未知的戰鬥地圖 nowhere_map" in text
@@ -308,15 +331,30 @@ def test_cross_file_problems(library: ContentLibrary) -> None:
     assert "Boss 地圖 bandit_lair" in text
     assert "未知的區域 no_region" in text
     unknown_region = LocationMapDef.model_validate({**_small_map(), "region": "nowhere"})
-    found = world_map_problems(unknown_region, regions=library.regions, maps=library.maps)
+    found = world_map_problems(
+        unknown_region,
+        regions=library.regions,
+        maps=library.maps,
+        archetypes=library.map_archetypes,
+    )
     assert any("未知的區域 nowhere" in p for p in found)
-    assert world_map_problems(LocationMapDef.model_validate(_small_map()), regions=None, maps={})
+    assert world_map_problems(
+        LocationMapDef.model_validate(_small_map()),
+        regions=None,
+        maps={},
+        archetypes=library.map_archetypes,
+    )
 
 
 def test_boss_map_allowed_on_boss_location(library: ContentLibrary) -> None:
     data = _with_location(_small_map(), 14, kind="boss", battle_maps=["bandit_lair"])
     m = LocationMapDef.model_validate(data)
-    assert world_map_problems(m, regions=library.regions, maps=library.maps) == []
+    assert (
+        world_map_problems(
+            m, regions=library.regions, maps=library.maps, archetypes=library.map_archetypes
+        )
+        == []
+    )
 
 
 def _copy_content(tmp_path: Path, library: ContentLibrary) -> Path:

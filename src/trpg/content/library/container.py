@@ -18,7 +18,7 @@ from trpg.content.flash_templates import FlashTable
 from trpg.content.item_budget import ItemGenRules
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.library.world import _enemy_catalog
-from trpg.content.maps import MapDef
+from trpg.content.maps import MapArchetypeTable, MapDef
 from trpg.content.modifier_changes import ModifierChangeTable, bundled_modifier_changes
 from trpg.content.races import OriginTable, RaceTable
 from trpg.content.regions import RegionTable
@@ -89,6 +89,8 @@ class ContentLibrary:
     flash: FlashTable
     """閃現（靈光一閃）的規則與模板（``flash_templates.yaml``，Phase 3W-1）；不嵌入規則包。
     HC-4b3 起必填（數字都寫在檔裡）。"""
+    map_archetypes: MapArchetypeTable
+    """地圖類型清單（``map_archetypes.yaml``，Phase WL-2；順序＝資料檔的順序）。"""
     affixes: dict[str, AffixDef] = field(default_factory=dict)
     """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
     offhands: dict[str, OffhandDef] = field(default_factory=dict)

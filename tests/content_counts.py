@@ -35,6 +35,7 @@ def _skill_files(library: ContentLibrary) -> int:
 COUNTERS: dict[str, Callable[[ContentLibrary], int]] = {
     "affixes": lambda lib: len(lib.affixes),
     "keywords": lambda lib: len(lib.keywords.ids()),
+    "map_archetypes": lambda lib: len(lib.map_archetypes.archetypes),
     "skeletons": lambda lib: len(lib.skeletons),
     "skill_files_without_gear": _skill_files,
     "skill_triggers": lambda lib: len(lib.ruleset.skill_triggers.triggers),

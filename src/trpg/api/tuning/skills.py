@@ -40,6 +40,7 @@ from trpg.api.tuning.schemas import (
     TuningSideChange,
     TuningViolation,
 )
+from trpg.api.tuning.tool_config import TUNING_TOOL
 from trpg.api.tuning.yaml_patch import (
     EXCEPTIONS_KEY,
     MISSING,
@@ -72,7 +73,8 @@ __all__ = [
 ]
 
 BUDGET_FILE: Final = "skill_budget.yaml"
-MAX_GROUP: Final = 100
+MAX_GROUP: Final = TUNING_TOOL.max_group
+"""分組改一次最多幾招（HC-8 起值在 ``config/tuning.toml`` 的 ``[skills] max_group``）。"""
 _PERMILLE: Final = 1000
 _DAMAGE_SITES: Final = ("effects", "followup")
 

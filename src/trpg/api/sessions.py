@@ -26,7 +26,6 @@ from trpg.api.gear import equip_gear
 from trpg.api.schemas import Awaiting, CreateBattleRequest
 from trpg.api.workshop import custom_skill_defs, equip_custom_skills
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import BOSS_ARCHETYPE, TRAINING_ARCHETYPE
 from trpg.engine.actions import (
     ACTION_ADAPTER,
     Action,
@@ -410,14 +409,16 @@ def playable_maps(
     library: ContentLibrary, *, include_training: bool = False, include_boss: bool = False
 ) -> list[str]:
     """可以在網頁上開戰的地圖：有預設遭遇（``encounter``）的地圖，依 ID 排序。技能工坊的靶場（地圖
-    類型 ``training``，Phase 3F-1）只有 ``include_training`` 時才列入、Boss 地圖（``boss``，
-    Phase 3-5b）只有 ``include_boss`` 時才列入（一般地圖列表都不列）。"""
+    類型的 ``role: training``，Phase 3F-1）只有 ``include_training`` 時才列入、Boss 地圖
+    （``role: boss``，Phase 3-5b）只有 ``include_boss`` 時才列入（一般地圖列表都不列；WL-2 起看
+    ``map_archetypes.yaml`` 的 ``role``）。"""
+    archetypes = library.map_archetypes
     return sorted(
         m
         for m, d in library.maps.items()
         if d.encounter is not None
-        and (include_boss or d.archetype != BOSS_ARCHETYPE)
-        and (include_training or d.archetype != TRAINING_ARCHETYPE)
+        and (include_boss or not archetypes.has_role(d.archetype, "boss"))
+        and (include_training or not archetypes.has_role(d.archetype, "training"))
     )
 
 
@@ -505,7 +506,8 @@ class SessionStore:
     def _enemies(self, request: CreateBattleRequest) -> list[str]:
         """地圖的預設敵人；靶場改用 ``workshop.yaml`` 的對手（Phase 3F-1）。"""
         _default_allies, enemies = default_lineup(self.library, request.map_id)
-        if self.library.map(request.map_id).archetype != TRAINING_ARCHETYPE:
+        archetype = self.library.map(request.map_id).archetype
+        if not self.library.map_archetypes.has_role(archetype, "training"):
             if request.opponents is not None:
                 raise InvalidRequestError("只有靶場可以選對手（opponents）")
             return enemies

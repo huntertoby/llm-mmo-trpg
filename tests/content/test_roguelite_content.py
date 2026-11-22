@@ -25,7 +25,12 @@ def test_shipped_rules_load_and_pass_cross_checks() -> None:
     assert rules.off_route_per_offer == 1
     assert rules.attribute_points_per_level == 20  # X10-2b：屬性 ×10
     assert rules.start_free_points == 40
-    assert roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget) == []
+    assert (
+        roguelite_problems(
+            rules, lib.maps, lib.units, lib.ruleset.core.tier_budget, lib.map_archetypes
+        )
+        == []
+    )
 
 
 def test_offer_tier_uses_the_last_entry_beyond_the_table() -> None:
@@ -52,7 +57,9 @@ def test_schema_rejects_bad_values(over: dict[str, Any], message: str) -> None:
 def test_cross_checks_report_unknown_units_and_too_few_archetypes() -> None:
     lib = library()
     rules = RunRules.model_validate(_data(map_pool=["open_plain", "swamp"], companions=["nobody"]))
-    problems = roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget)
+    problems = roguelite_problems(
+        rules, lib.maps, lib.units, lib.ruleset.core.tier_budget, lib.map_archetypes
+    )
     assert any("未知的單位範本：nobody" in p for p in problems)
     assert any("地圖類型" in p for p in problems)
 
@@ -60,5 +67,7 @@ def test_cross_checks_report_unknown_units_and_too_few_archetypes() -> None:
 def test_cross_checks_report_crowded_start_zones() -> None:
     lib = library()
     rules = RunRules.model_validate(_data(boss={"map": "bandit_lair", "enemies": ["bandit"] * 6}))
-    problems = roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget)
+    problems = roguelite_problems(
+        rules, lib.maps, lib.units, lib.ruleset.core.tier_budget, lib.map_archetypes
+    )
     assert any("起始區放不下" in p for p in problems)

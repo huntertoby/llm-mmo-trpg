@@ -22,6 +22,7 @@ from trpg.content.equipment import AffixTable, EquipmentRules, ItemTable
 from trpg.content.forms import FormTable
 from trpg.content.item_budget import ItemGenRules
 from trpg.content.loader import load_content_file
+from trpg.content.maps import MapArchetypeTable
 from trpg.content.modifier_changes import ModifierChangeTable
 from trpg.content.regions import RegionTable
 from trpg.content.roguelite import RunRules
@@ -104,6 +105,7 @@ class _BaseTables:
     item_table: ItemTable
     appearance: AppearanceTable
     item_gen: ItemGenRules
+    map_archetypes: MapArchetypeTable
     regions: RegionTable | None
 
 

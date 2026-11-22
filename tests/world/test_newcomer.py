@@ -378,7 +378,7 @@ def test_allocate_lesson_before_flash(library: ContentLibrary, make_char: MakeCh
     lesson = lesson_view(library, char)
     assert lesson is not None and lesson.kind == "allocate"
     assert [line.speaker_zh for line in lesson.lines] == ["葛蘭", "葛蘭"]
-    assert lesson.lines[0].text_zh == "升級了？身上多了兩點力氣。來，我示範怎麼分。"
+    assert lesson.lines[0].text_zh == "升級了？身上又多了些力氣。來，我示範怎麼分。"
     assert lesson.points == 2
     assert lesson.start_points == library.roguelite.start_free_points  # 6F-4b：從規則讀
     assert sum(lesson.recommended.values()) == 2

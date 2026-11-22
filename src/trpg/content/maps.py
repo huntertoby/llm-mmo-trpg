@@ -20,19 +20,17 @@ from trpg.content.schemas import ContentModel
 from trpg.shared.types import Surface, Team
 
 __all__ = [
-    "ARCHETYPES",
-    "BOSS_ARCHETYPE",
     "MAX_HEIGHT",
-    "TEST_ARCHETYPE",
-    "TRAINING_ARCHETYPE",
     "AltObjective",
     "AltObjectives",
-    "Archetype",
     "Encounter",
     "GiantFacing",
+    "MapArchetypeDef",
+    "MapArchetypeTable",
     "MapDef",
     "MapEvent",
     "MapObjectPlacement",
+    "MapRole",
     "MapSurfacePlacement",
     "Objective",
     "SpawnPlacement",
@@ -62,40 +60,66 @@ type XY = tuple[int, int]
 type GiantFacing = Literal["north", "east", "south", "west"]
 """巨型頭目的朝向（同引擎的 ``Facing``；北＝y − 1）。"""
 
-type Archetype = Literal[
-    "bridge_chasm",
-    "oil_depot",
-    "swamp",
-    "ruined_heights",
-    "forest",
-    "corridor",
-    "open_plain",
-    "frozen_lake",
-    "test",
-    "training",
-    "boss",
-]
-"""地圖類型（``docs/design/05-戰鬥.md`` 5.1 的 8 種類型，另加測試地圖用的 ``test`` 與技能工坊
-靶場用的 ``training``，Phase 3F-1）。"""
 
-ARCHETYPES: tuple[str, ...] = (
-    "bridge_chasm",
-    "oil_depot",
-    "swamp",
-    "ruined_heights",
-    "forest",
-    "corridor",
-    "open_plain",
-    "frozen_lake",
-    "test",
-    "training",
-    "boss",
-)
-TEST_ARCHETYPE = "test"
-TRAINING_ARCHETYPE = "training"
-"""技能工坊靶場的地圖類型（Phase 3F-1）：不進 roguelite 抽選、模擬的預設地圖與一般地圖列表。"""
-BOSS_ARCHETYPE = "boss"
-"""Boss 戰專屬地圖的類型（Phase 3-5b）：同樣不進一般抽選、模擬的預設地圖與一般地圖列表。"""
+type MapRole = Literal["test", "training", "boss"]
+"""有特殊用途的地圖類型（Phase WL-2）：``test`` 測試地圖、``training`` 技能工坊的靶場
+（Phase 3F-1）、``boss`` Boss 戰專屬地圖（Phase 3-5b）。程式依用途找類型，不寫死類型 ID。"""
+
+
+class MapArchetypeDef(ContentModel):
+    """一種地圖類型（``content/map_archetypes.yaml`` 的一列，Phase WL-2）。"""
+
+    id: str = Field(pattern=ID_PATTERN)
+    in_random_pool: bool = True
+    """會不會進一般抽選：``false`` 的類型不能進區域與 roguelite 的地圖池，也不進模擬的預設地圖與
+    循環賽。"""
+    role: MapRole | None = None
+    """特殊用途（見 :data:`MapRole`）；``None``＝一般地圖，所有依用途的分支都走預設。"""
+
+
+class MapArchetypeTable(ContentModel):
+    """地圖類型清單（``content/map_archetypes.yaml``，Phase WL-2）：地圖檔的 ``archetype``、區域的
+    ``map_pool`` 只能填這裡的 ID。列的順序就是清單順序（例如模擬矩陣的類型欄）。"""
+
+    archetypes: tuple[MapArchetypeDef, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _check(self) -> MapArchetypeTable:
+        ids = [a.id for a in self.archetypes]
+        dup = sorted({a for a in ids if ids.count(a) > 1})
+        if dup:
+            raise ValueError(f"地圖類型重複：{'、'.join(dup)}")
+        return self
+
+    def ids(self) -> tuple[str, ...]:
+        """全部類型 ID（照資料檔的順序）。"""
+        return tuple(a.id for a in self.archetypes)
+
+    def get(self, archetype: str) -> MapArchetypeDef | None:
+        return next((a for a in self.archetypes if a.id == archetype), None)
+
+    def in_random_pool(self, archetype: str) -> bool:
+        """這種類型會不會進一般抽選（不認得的類型＝不會）。"""
+        found = self.get(archetype)
+        return found is not None and found.in_random_pool
+
+    def has_role(self, archetype: str, role: MapRole) -> bool:
+        found = self.get(archetype)
+        return found is not None and found.role == role
+
+    def role_ids(self, role: MapRole) -> tuple[str, ...]:
+        """用途是 ``role`` 的類型（照資料檔的順序）。"""
+        return tuple(a.id for a in self.archetypes if a.role == role)
+
+    def role_label(self, role: MapRole) -> str:
+        """錯誤訊息用：用途是 ``role`` 的類型 ID（以「、」連接）；沒有時寫 ``role: <role>``。"""
+        return "、".join(self.role_ids(role)) or f"role: {role}"
+
+    def unknown_problem(self, archetype: str) -> str | None:
+        """``archetype`` 不在清單裡時的錯誤訊息（中文）；認得就回傳 ``None``。"""
+        if self.get(archetype) is not None:
+            return None
+        return f"未知的地圖類型 {archetype!r}（可用：{'、'.join(self.ids())}）"
 
 
 class MapObjectPlacement(ContentModel):
@@ -279,7 +303,8 @@ class MapDef(ContentModel):
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
-    archetype: Archetype
+    archetype: str = Field(pattern=ID_PATTERN)
+    """地圖類型（``content/map_archetypes.yaml`` 的 ID；載入器檢查，Phase WL-2）。"""
     size: tuple[int, int]
     heights: str
     terrain: str

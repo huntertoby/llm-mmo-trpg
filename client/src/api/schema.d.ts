@@ -5583,6 +5583,21 @@ export interface components {
             item_skill_ap_cost: number;
             /** Situation Care Max */
             situation_care_max: number;
+            /**
+             * Attribute Points Per Level
+             * @default 20
+             */
+            attribute_points_per_level: number;
+            /**
+             * Base Attribute
+             * @default 100
+             */
+            base_attribute: number;
+            /**
+             * Start Free Points
+             * @default 40
+             */
+            start_free_points: number;
         };
         /**
          * GearAffixInfo
