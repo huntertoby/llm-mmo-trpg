@@ -17,7 +17,8 @@ BUDGET_RANGE_RULES = frozenset({"budget.over", "budget.weak"})
 
 
 def library_violations(library: ContentLibrary) -> list[Violation]:
-    """全部技能的違規（依技能 ID 排序），再加裝備授予技能的預算窗（:func:`gear_grant_violations`）。"""
+    """全部技能的違規（依技能 ID 排序），再加裝備授予技能的預算窗
+    （:func:`gear_grant_violations`）。"""
     out: list[Violation] = []
     for skill_id in sorted(library.skills):
         found = validate_skill(library.skills[skill_id], library)
