@@ -432,6 +432,22 @@
   line-height: 1.5;
 }
 
+/* E1 美術小修 2：說明卡上方的金框貼在卡片上，成為卡片的頂端——拿掉縫，金框下緣和卡片上緣重疊成一條線
+   （金線壓在上面），同寬；接縫處不圓角、金框不另外投影（卡片自己有影子）。 */
+.skill-card-float .gear-source-note {
+  position: relative;
+  z-index: 1;
+  margin-bottom: -1px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
+}
+
+.skill-card-float .gear-source-note + .skill-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* Phase 3-26a：技能點、技能等級、營火換裝 */
 
 /* Phase 3-25b：戰場變奏（技能卡的型態列表、技能列按鈕發亮、預覽的型態） */
