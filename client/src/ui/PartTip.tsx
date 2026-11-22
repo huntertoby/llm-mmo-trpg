@@ -5,6 +5,7 @@ import type { TipLine } from "../gear/affixStatus";
 import { FloatCard, useFloatCard } from "./useFloatCard";
 import { keepWords } from "./keepWords";
 import type { TipPart } from "./tipParts";
+import { BULLET_CLASS, bulletLines } from "./bulletText";
 
 interface Props {
   /** 部件類別（骨架、形狀、效果、狀態……）。 */
@@ -22,6 +23,17 @@ interface Props {
   tags?: readonly string[];
   /** AR-X10：分段說明（狀態的骰子行另起一行、次要字色）；有這個就不顯示 `tip`。 */
   parts?: readonly TipPart[];
+}
+
+/** E3b：`tip` 有「・」分點時每行一塊、分點懸掛縮排（`BULLET_CLASS`）；沒有分點時照舊一塊。 */
+function tipBody(tip: string): ReactNode {
+  const lines = bulletLines(tip);
+  if (lines === null) return <div className="part-tip-text">{keepWords(tip)}</div>;
+  return lines.map((l, i) => (
+    <div key={i} className={`part-tip-text${l.bullet ? ` ${BULLET_CLASS}` : ""}`}>
+      {keepWords(l.text)}
+    </div>
+  ));
 }
 
 export function PartTip({ cat, label, tip, lines, children, pin = true, className, tags, parts }: Props) {
@@ -63,7 +75,7 @@ export function PartTip({ cat, label, tip, lines, children, pin = true, classNam
                 </div>
               ))
             : lines === undefined
-            ? tip !== "" && <div className="part-tip-text">{keepWords(tip)}</div>
+            ? tip !== "" && tipBody(tip)
             : lines.map((l, i) => (
                 <div key={i} className={`part-tip-text part-tip-line${l.note === null ? "" : " inactive"}`}>
                   {l.text}
