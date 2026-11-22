@@ -730,6 +730,13 @@ rules:
   # HC-7 b：規則數字搬進 content（roguelite.yaml route_hint_tier、skill_pick.yaml 的 budget_seconds／pregen、
   # world/rules.yaml 的 display／notes、workshop.yaml max_rounds、core.skill_limits），回應的預設值改必填。
   # 剩下的是數值工坊的工具設定（只留 api/tuning/schemas.py、drafts.py 一份）、請求格式護欄與結構常數。
+  - id: py-api-tuning-tool-config-defaults
+    class: config
+    status: done
+    files: src/trpg/api/tuning/tool_config.py
+    kind: number
+    where: ['TuningToolSettings']
+    note: HC-8（規格第 2 項，同 py-llm-config-config-number 的前例）：數值工坊這個開發工具自己的 10 項設定搬到 config/tuning.toml（使用者可用 config/tuning.local.toml 覆寫）；這裡是寫進 schema 的預設值，唯一一份，等於搬家前程式裡的值，config/tuning.toml 也寫同樣的值（tests/api/tuning/test_tool_config_hc8.py 對照）。api/tuning/schemas.py、drafts.py、skills.py 的常數改讀 TUNING_TOOL。不是遊戲規則，不進 content。
   - id: py-api-game-rules-hc8-defaults
     class: config
     status: done
