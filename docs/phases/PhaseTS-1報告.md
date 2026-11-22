@@ -13,7 +13,7 @@
 | 2 通過戳記（分流跑另放位置，記範圍與基準） | 完成 | `08081d223` |
 | 3 crash_case 240 秒逾時：查原因、放寬、留證 | 完成（原因只查到一半，見第 3 節） | `e1fefb52d` |
 | 4 文件：`docs/dev/上手-測試.md` 一之一、一之二節，第五節補時限 | 完成 | `be816db3f` |
-| 報告 | 本檔 | （本 commit） |
+| 報告 | 本檔 | `21387b564`（草稿）、本次更新 |
 
 ### 1. 分流規則表
 
@@ -74,15 +74,33 @@
 
 （如果 PM 採用待 PM 決定 2 的「交件前加 `--all`」，把「跑一次 `uv run python scripts/check.py`」改成「跑一次 `uv run python scripts/check.py --all`」，並刪掉最後那句粗體。）
 
+### 5. 實跑三次與全量
+
+先 `git merge --no-edit main`，合併後是 `b7577cff8`，沒有衝突。三次都加 `TRPG_CHECK_BASE=HEAD`，只比對那一個暫時改動，跑完用 `git checkout --` 還原，`git status` 是乾淨的。三次都因為工作區有暫時改動，所以沒有寫戳記，這是預期的行為。
+
+| 實跑 | 暫時改動 | 開頭那一行 | 跑的步驟 | 總時間 |
+|---|---|---|---|---|
+| 只改 client | `client/src/battle/vfx.ts` 末尾加一行註解 | 分流：只跑前端 | client install（1.3 秒）、typecheck、test（vitest 4905 passed，67 秒）、build（0.9 秒）、讀 client 的 pytest（229 passed，34 秒） | 148 秒 |
+| 只改後端 | `src/trpg/shared/rng.py` 模組說明第一行加字 | 分流：只跑後端 | ruff、format、mypy、lint-imports、pytest（18472 passed，992 秒）、situation coverage；略過前端三步 | 1004 秒 |
+| 改 content | `content/ai_profiles.yaml` 末尾加一行註解 | 分流：全跑（動到 content/ai_profiles.yaml） | 全部九步：pytest 18472 passed，719 秒；vitest 60 秒 | 806 秒 |
+
+- 只改後端那次第一跑的結束碼是 1：我在 `rng.py` 檔尾加的註解沒照 ruff format 的空行規則，被 `ruff format --check` 擋下來（748 秒，其他步驟都過）。換成改模組說明的寫法後重跑通過。這是我的暫時改動造成的，不是 check.py 的問題。
+- 只改後端的 pytest 比改 content 那次慢（992 秒對 719 秒），兩次跑的測試一樣。差別應該是機器當時的負載，跟分流無關。
+- `--full`（888 秒）：只有 pytest 失敗，2 個失敗，其他步驟都通過。兩個失敗單獨重跑也一樣失敗。我的改動對 main 只有 `scripts/check.py`、`tests/infra/`、`docs/`，所以失敗跟 TS-1 無關。兩個都是標了 slow 的既有測試，平常的 check.py 不跑；KD-1、HC-8、WL-2 只跑 parity＋cli，沒跑 `--full`。
+  1. `tests/api/tuning/test_sim_real.py::test_real_pool_is_deterministic`：測試裡的草稿寫 `units/ashen_heart.yaml` 的 `max_hp` old=160，但 x10 放大（`f3a405238`）之後內容是 1360，草稿驗證不過，丟出 `SimRequestError`。
+  2. `tests/skillgen/test_random_composer.py::test_one_thousand_seeds_are_all_valid_and_spread_out`：種子 238 組出 2 階 rare 的「預支」光環，效果只有 `borrow_ap`。AP-2 把 `borrow_ap_points` 定成 0，所以預算比是 0，低於測試要求的下限 0.75。
+  - 規格寫「不改其他測試的內容」，這兩個我沒修，已經回報開發 PM（見待 PM 決定 8）。
+- slow parity＋cli：995 passed，56 秒。
+
 ## 驗收條件
 | 條件 | 結果 | 證據（測試名、截圖路徑） |
 |---|---|---|
 | 分流規則的測試：每種改動路徑各一個 | 通過，42 passed | `tests/infra/test_check_split.py` |
-| 實跑：只改 `client/` 一個檔 | 還沒跑（等開發 PM 排隊通知） | — |
-| 實跑：只改後端一個檔 | 還沒跑（等開發 PM 排隊通知） | — |
-| 實跑：改 `content/` 一個檔 | 還沒跑（等開發 PM 排隊通知） | — |
+| 實跑：只改 `client/` 一個檔 | 通過，148 秒，只跑前端 | 第 5 節 |
+| 實跑：只改後端一個檔 | 通過，1004 秒，只跑後端 | 第 5 節 |
+| 實跑：改 `content/` 一個檔 | 通過，806 秒，全跑 | 第 5 節 |
 | 靜態檢查 | 通過 | 見下表 |
-| 全量 `--full`＋slow parity、cli | 還沒跑（等開發 PM 排隊通知） | — |
+| 全量 `--full`＋slow parity、cli | `--full` 2 個既有的 slow 測試失敗，跟 TS-1 無關（第 5 節）；parity＋cli 通過 | 第 5 節 |
 | 每項一個 commit | 通過 | 見交付項目 |
 
 ## 檢查指令結果
@@ -94,6 +112,11 @@
 | `uv run lint-imports` | 0 |
 | `uv run pytest -q tests/infra/test_check_split.py` | 0（42 passed） |
 | `uv run pytest -q tests/infra -n 4` | 0（51 passed） |
+| `TRPG_CHECK_BASE=HEAD uv run python scripts/check.py`（暫時只改 client） | 0 |
+| 同上（暫時只改後端） | 0（第一次是 1，暫時改動沒排版，見第 5 節） |
+| 同上（暫時改 content） | 0 |
+| `uv run python scripts/check.py --full`（合併 main `b7577cff8` 後） | 1：2 failed、19526 passed、8 skipped、4 xfailed |
+| `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
 
 ## 待 PM 決定（規格沒寫到、我先採保守做法的地方）
 | 事項 | 我的做法 | 其他選項 |
@@ -105,6 +128,7 @@
 | 5 `docs/` 底下非 `.md` 的檔（圖、`.py`、csv） | 全跑：前端 dev 頁會讀 `docs/art`，後端有測試讀 `docs/art/sample/tools` | 歸到前端或後端 |
 | 6 新增 `--all`、`TRPG_CHECK_BASE` | 規格要求文件寫「怎麼強制全跑」，所以加了 `--all`；驗收要只比對暫時改動，所以加了 `TRPG_CHECK_BASE` | 拿掉，只留 `--full` |
 | 7 只動 client 時跑的 client build | 加在 check.py 裡；push 時 hook 也會再跑一次 build | 拿掉 check.py 那一步，只靠 hook |
+| 8 `--full` 的 2 個既有 slow 失敗（`test_sim_real` 寫死 old=160、組合器種子 238 的預支預算比 0） | 沒修（規格不改其他測試），回報開發 PM | 在這段修；或另排一段 |
 
 ## PM 裁定
 （由開發 PM 填）
