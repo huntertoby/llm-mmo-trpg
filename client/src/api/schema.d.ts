@@ -8571,6 +8571,7 @@ export interface components {
             move_cost: number;
             /** Slip Runs */
             slip_runs: components["schemas"]["SlipRunOut"][];
+            trail?: components["schemas"]["TrailOut"] | null;
         };
         /**
          * PathPreviewRequest
@@ -11519,6 +11520,18 @@ export interface components {
             trades: number;
             /** Flags */
             flags?: components["schemas"]["AuditFlag"][];
+        };
+        /**
+         * TrailOut
+         * @description 這次移動沿路會留下的表面（地形規則「霜行」，E3b）：畫面在這些格子畫框線（不畫成冰），
+         *     預覽牌加一行「沿路留下冰 N 格（M 回合後消失）」。
+         */
+        TrailOut: {
+            /** Tiles */
+            tiles: components["schemas"]["XY"][];
+            surface: components["schemas"]["Surface"];
+            /** Duration */
+            duration: number;
         };
         /** TrapView */
         TrapView: {

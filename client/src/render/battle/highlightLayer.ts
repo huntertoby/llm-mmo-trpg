@@ -496,7 +496,7 @@ export abstract class HighlightLayer extends TerrainLayer {
     drawPathLine(g, path, geo);
     this.marks.addChild(g);
     const bangs = new Graphics();
-    drawPathMarks(bangs, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號、滑倒停點 ◆ 畫在線與小牌之上（最後加入）
+    drawPathMarks(bangs, { ...path, frames: [], trail: [], missEnd: null }, geo); // 驚嘆號、滑倒停點 ◆ 畫在線與小牌之上（最後加入）
     const nodes = path.tags.map((tag) => pathTagNode(tag));
     for (const n of nodes) this.marks.addChild(n);
     const miss = path.missEnd === null ? null : { node: missTagNode(this.origin(path.missEnd)), pos: path.missEnd };

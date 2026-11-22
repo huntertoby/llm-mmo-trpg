@@ -12,6 +12,8 @@ import {
   FRAME_COLORS,
   PATH_COLORS,
   TAG_COLORS,
+  TRAIL_COLORS,
+  TRAIL_DEFAULT_COLOR,
   type PathDraw,
   type PathTag,
   type TagIcon,
@@ -188,8 +190,19 @@ export function drawPathMarks(g: Pen, draw: PathDraw, geo: TileGeo): void {
     for (const run of dashRuns(roundRectPoints(o.x + 5, o.y + 5, T - 10, T - 10, 9), 5, 4)) polyline(g, run);
     g.stroke({ width: 2, color: 0xffffff, alpha: 0.75 });
   }
+  for (const c of draw.trail) drawTrailCell(g, geo.origin(c.pos), c.surface);
   for (const p of draw.bangs) drawBang(g, geo.center(p));
   for (const s of draw.slipStops) drawSlipStop(g, geo.center(s.pos));
+}
+
+/** E3b：沿路留表面的格子框線（框內縮、短虛線、不填色）：和地圖上已有的冰（實線外框＋淡填色）分得開。 */
+export const TRAIL_INSET = 8;
+
+/** E3b：這次會留下表面的一格（霜行）：內縮的虛線圓角框，顏色依表面；不畫成冰的樣子（美術 E3 驗收待決第 5 點）。 */
+function drawTrailCell(g: Pen, o: Pt, surface: string): void {
+  const i = TRAIL_INSET;
+  for (const run of dashRuns(roundRectPoints(o.x + i, o.y + i, T - 2 * i, T - 2 * i, 6), 4, 3)) polyline(g, run);
+  g.stroke({ width: 2, color: TRAIL_COLORS[surface] ?? TRAIL_DEFAULT_COLOR, alpha: 0.95 });
 }
 
 const SLIP_STOP_R = 9;
