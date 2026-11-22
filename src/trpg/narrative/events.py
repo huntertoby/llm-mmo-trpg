@@ -501,6 +501,8 @@ def _unit_charged(e: UnitCharged, v: _View) -> str:
 
 @_handles(UnitStoodUp)
 def _stood_up(e: UnitStoodUp, v: _View) -> str:
+    if e.helper_id is not None:  # 扶起（KD-1）
+        return f"  {v.name[e.helper_id]} 扶起了 {v.name[e.unit_id]}（不花他的移動）"
     return f"  {v.name[e.unit_id]} 站了起來（消耗 {e.cost} 移動）"
 
 
@@ -885,7 +887,7 @@ def _shield_ended(e: ShieldEnded, v: _View) -> str:
 
 @_handles(StatusRemoved)
 def _status_removed(e: StatusRemoved, v: _View) -> str | None:
-    if e.reason == "stood_up":
+    if e.reason in ("stood_up", "helped_up"):
         return None
     why = _REMOVE_REASONS.get(e.reason)
     text = f"  {v.name[e.target_id]} 的「{v.statuses[e.status_id]}」"

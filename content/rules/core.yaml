@@ -70,6 +70,7 @@ prone_ap_loss: 1                       # 倒地後第一個自己回合少 1 AP�
 
 # --- 技巧動作與互動（Phase 1B）---
 maneuver_ap_cost: 1           # 推擊（Shove）、絆倒（Trip）
+help_up_ap_cost: 1            # 扶起（HelpUp）：相鄰倒地的我方單位立刻站起（KD-1，#176，05 5.13 第 2 點；初值）
 interact_ap_cost: 1           # 互動（推動物件）
 interact_height_limit: 1      # 互動：行動者與物件所在格的高度差上限（Phase 1C）
 shove_distance: 1             # 推擊距離

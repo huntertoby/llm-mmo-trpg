@@ -2076,7 +2076,7 @@ export interface components {
             /** Titles */
             titles?: string[];
         };
-        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
+        Action: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["HelpUp"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
         /**
          * ActivateCharge
          * @description 啟動裝備的充能詞條（Phase 3G-G3a，第 7 類）：花 ``cost_stacks`` 層與 ``cost_ap`` AP，結算詞條
@@ -6168,6 +6168,22 @@ export interface components {
             minimum: number;
             /** Maximum */
             maximum: number;
+        };
+        /**
+         * HelpUp
+         * @description 扶起（KD-1，#176，05 5.13 第 2 點）：花 ``help_up_ap_cost`` AP，讓一名相鄰、高度差在近戰
+         *     範圍內、倒地中的我方單位（含召喚物）立刻站起；不花他的移動點數，也不觸發藉機攻擊。
+         */
+        HelpUp: {
+            /** Unit Id */
+            unit_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "help_up";
+            /** Target Id */
+            target_id: string;
         };
         /** HereView */
         HereView: {
@@ -11092,7 +11108,7 @@ export interface components {
             /** Contagious */
             contagious?: boolean | null;
         };
-        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"] | components["schemas"]["Decision"];
+        Step: components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Output"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["HelpUp"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"] | components["schemas"]["Decision"];
         /** @enum {string} */
         StepId: "skeleton" | "basics" | "shape" | "effects" | "followup" | "condition" | "cost" | "rarity" | "variants";
         /**
@@ -13837,7 +13853,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["HelpUp"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
             };
         };
         responses: {
@@ -13942,7 +13958,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
+                "application/json": components["schemas"]["Move"] | components["schemas"]["Attack"] | components["schemas"]["UseSkill-Input"] | components["schemas"]["UseRaceSkill"] | components["schemas"]["Defend"] | components["schemas"]["Run"] | components["schemas"]["Swap"] | components["schemas"]["Aim"] | components["schemas"]["Vault"] | components["schemas"]["Shove"] | components["schemas"]["Trip"] | components["schemas"]["HelpUp"] | components["schemas"]["Interact"] | components["schemas"]["Reload"] | components["schemas"]["ActivateCharge"] | components["schemas"]["EndStance"] | components["schemas"]["SetReactionMode"] | components["schemas"]["SetSummonMode"] | components["schemas"]["CommandSummon"] | components["schemas"]["InfuseSkill"] | components["schemas"]["EndTurn"] | components["schemas"]["Prepare"];
             };
         };
         responses: {

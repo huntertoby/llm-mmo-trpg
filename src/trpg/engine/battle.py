@@ -49,9 +49,11 @@ from trpg.engine.basics import (
     aim_problem,
     do_aim,
     do_defend,
+    do_help_up,
     do_reload,
     do_swap,
     guard_problem,
+    help_up_actions,
     reload_problem,
     swap_problem,
     vault_action,
@@ -1318,6 +1320,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "run": _do_run,
     "shove": _do_shove,
     "trip": _do_trip,
+    "help_up": do_help_up,
     "interact": _do_interact,
     "use_skill": _do_use_skill,
     "use_race_skill": _do_race_skill,
@@ -1569,6 +1572,7 @@ def _legal_actions(
             actions.extend(
                 Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
             )
+    actions.extend(help_up_actions(state, unit))  # 扶起（KD-1）
     actions.extend(_skill_actions(state, unit, areas, expand_copy=expand_copy))
     actions.extend(race_skill_actions(state, unit))  # 種族技（Phase 3R-2；不佔技能欄）
     actions.extend(interact_actions(state, unit))
@@ -1678,6 +1682,7 @@ def _has_basic_action(state: BattleState, unit: UnitState) -> bool:
         or reload_problem(state, unit) is None
         or any(swap_problem(state, unit, a.id) is None for a in adjacent_allies(state, unit))
         or bool(vault_destinations(state, unit))
+        or bool(help_up_actions(state, unit))
     )
 
 

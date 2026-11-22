@@ -61,6 +61,7 @@ export type ModeKind =
   | "attack"
   | "shove"
   | "trip"
+  | "help_up"
   | "interact"
   | "shove_aside"
   | "defend"
@@ -155,6 +156,7 @@ function addTarget(t: TargetSet, action: Action): void {
     }
     case "shove":
     case "trip":
+    case "help_up":
     case "swap":
       setOnce(t.units, action.target_id, action);
       return;
@@ -286,6 +288,7 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
   { kind: "defend", label: "守護" },
   { kind: "run", label: "跑步" },
   { kind: "swap", label: "換位" },
+  { kind: "help_up", label: "扶起" },
   { kind: "aim", label: "瞄準" },
   { kind: "vault", label: "攀跳" },
   { kind: "reload", label: "裝填" },
@@ -310,6 +313,11 @@ export const BASIC_ACTION_KINDS: readonly string[] = [
   "vault",
 ];
 export const BASIC_ACTION_LIMIT = 10;
+/**
+ * 協助動作（KD-1「扶起」）：放在「更多動作」，不算進基本動作的上限（同伺服器的 `AID_ACTION_TYPES`；
+ * 改成算進上限時把 "help_up" 移進 `BASIC_ACTION_KINDS`）。
+ */
+export const AID_ACTION_KINDS: readonly string[] = ["help_up"];
 /** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（火槍空膛時才出現在「更多動作」）。 */
 export const WEAPON_ACTION_KINDS: readonly string[] = ["reload"];
 
@@ -319,7 +327,7 @@ export const CHARGE_KIND: ModeKind = "charge";
 /** 常駐按鈕（移動除外，移動是點格子）：普攻、跑步、守護；結束回合另外放。 */
 export const RESIDENT_KINDS: readonly ModeKind[] = ["attack", "run", "defend"];
 /** 「更多動作」選單的順序。 */
-export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "aim", "vault", "reload"];
+export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "help_up", "aim", "vault", "reload"];
 /** 留在技能列的基本動作（姿態與起身這類管理動作，只在合法時出現）。 */
 export const TRAY_KINDS: readonly ModeKind[] = ["end_stance", "stand"];
 
@@ -328,6 +336,7 @@ function modeKindOf(a: Action): ModeKind | null {
     case "attack":
     case "shove":
     case "trip":
+    case "help_up":
     case "run":
     case "end_stance":
       return a.type;

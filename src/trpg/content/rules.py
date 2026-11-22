@@ -434,6 +434,8 @@ class CoreRules(ContentModel):
 
     # 技巧動作與互動（1B）
     maneuver_ap_cost: int = Field(ge=0)
+    help_up_ap_cost: int = Field(ge=1, le=3)
+    """扶起（KD-1，#176，05 5.13 第 2 點）花的 AP。"""
     interact_ap_cost: int = Field(ge=0)
     interact_height_limit: int = Field(ge=0)
     shove_distance: int = Field(ge=0)

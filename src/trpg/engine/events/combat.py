@@ -280,6 +280,7 @@ class StatusRemoved(EventBase):
         "expired",
         "removed",
         "stood_up",
+        "helped_up",
         "depleted",
         "cleansed",
         "source_lost",

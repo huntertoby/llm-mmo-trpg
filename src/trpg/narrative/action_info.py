@@ -107,7 +107,7 @@ def _move_and_attack(core: CoreRules) -> list[InfoText]:
 
 
 def _maneuvers(core: CoreRules) -> list[InfoText]:
-    """推擊、絆倒、推動與撥開物件、換位。"""
+    """推擊、絆倒、推動與撥開物件、換位、扶起。"""
     dice = core.collision_damage_dice
     return [
         InfoText(
@@ -164,6 +164,17 @@ def _maneuvers(core: CoreRules) -> list[InfoText]:
             (
                 f"{_ap(core.swap_ap_cost)}，與相鄰的我方單位（含召喚物）互換位置",
                 "朝向不變，不會觸發藉機攻擊",
+            ),
+        ),
+        InfoText(
+            "help_up",
+            "扶起",
+            f"{_ap(core.help_up_ap_cost)}，讓相鄰、倒地的我方單位立刻站起",
+            (
+                f"{_ap(core.help_up_ap_cost)}，對相鄰、高度差不超過 {core.melee_height_limit} 層、"
+                "倒地中的我方單位（含召喚物）使出",
+                "他立刻站起，不花他的移動點數，也不會觸發藉機攻擊",
+                "自己倒地、被定身或不能行動時不能扶人；敵人也會互相扶起",
             ),
         ),
     ]

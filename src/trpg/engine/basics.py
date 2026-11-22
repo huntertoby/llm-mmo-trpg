@@ -3,7 +3,9 @@
 - **守護**（``Defend``）：沿用防禦（防禦值 +25%、到自己下回合開始），可選相鄰隊友；轉移承受的結算
   在 :func:`trpg.engine.reactions.try_intercept`，這裡只放合法性與設定；
 - **換位**（``Swap``）：與相鄰我方單位互換位置（沿用 ``swap_units``；不觸發藉機攻擊，朝向不變）；
-- **瞄準**（``Aim``）：下一次需要擲命中的攻擊命中加值，用掉或回合結束時失效。
+- **瞄準**（``Aim``）：下一次需要擲命中的攻擊命中加值，用掉或回合結束時失效；
+- **扶起**（``HelpUp``，KD-1，#176，05 5.13 第 2 點）：讓相鄰、倒地的我方單位立刻站起，不花他的
+  移動、不觸發藉機攻擊。
 
 所有數值在 ``core.yaml``。
 """
@@ -13,11 +15,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from trpg.engine.actions import Action, Aim, Defend, Reload, Swap, Vault
+from trpg.engine.actions import Action, Aim, Defend, HelpUp, Reload, Swap, Vault
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
-from trpg.engine.effects.models import ApplyStatusEffect, SwapUnitsEffect
-from trpg.engine.events import GuardSet, UnitAimed, WeaponReloaded
+from trpg.engine.effects.models import ApplyStatusEffect, RemoveStatusEffect, SwapUnitsEffect
+from trpg.engine.events import GuardSet, UnitAimed, UnitStoodUp, WeaponReloaded
 from trpg.engine.ids import DEFENDING, PRONE
 from trpg.engine.rules.footprint import adjacent
 from trpg.engine.rules.geometry import XY
@@ -35,9 +37,12 @@ __all__ = [
     "aim_problem",
     "do_aim",
     "do_defend",
+    "do_help_up",
     "do_reload",
     "do_swap",
     "guard_problem",
+    "help_up_actions",
+    "help_up_problem",
     "reload_problem",
     "swap_problem",
     "vault_action",
@@ -67,6 +72,68 @@ def _ally_problem(state: BattleState, unit: UnitState, ally_id: UnitId | None) -
     if not adjacent(ally, unit):
         return f"{ally.name_zh} 不在相鄰格"
     return None
+
+
+def help_up_problem(state: BattleState, unit: UnitState, ally_id: UnitId) -> str | None:
+    """扶起不合法的原因（KD-1，05 5.13 第 2 點）：AP、自己倒地、被定身或不能行動、對象（相鄰的
+    我方單位、高度差在近戰範圍內、倒地中）。"""
+    cost = state.ruleset.core.help_up_ap_cost
+    if unit.ap < cost:
+        return f"AP 不足：需要 {cost}，剩餘 {unit.ap}"
+    problem = _helper_problem(state, unit)
+    if problem is not None:
+        return problem
+    return _helped_problem(state, unit, ally_id)
+
+
+def _helper_problem(state: BattleState, unit: UnitState) -> str | None:
+    """扶的人自己倒地、被定身或不能行動（暈眩）時不能扶人（05 5.13 第 2 點，代決）。"""
+    if unit.has_status(PRONE):
+        return "自己倒地中，不能扶人"
+    if is_rooted(state.ruleset, unit):
+        return "被定身，不能扶人"
+    if skip_turn_status(state.ruleset, unit) is not None:
+        return "不能行動，不能扶人"
+    return None
+
+
+def _helped_problem(state: BattleState, unit: UnitState, ally_id: UnitId) -> str | None:
+    """被扶的人：相鄰的我方單位（含召喚物）、高度差在近戰範圍內、倒地中。"""
+    ally = state.units.get(ally_id)
+    if ally is not None and ally.id == unit.id:
+        return "不能扶自己"
+    problem = _ally_problem(state, unit, ally_id)
+    if problem is not None or ally is None:
+        return problem
+    limit = state.ruleset.core.melee_height_limit
+    diff = abs(state.tile(*unit.xy).height - state.tile(*ally.xy).height)
+    if diff > limit:
+        return f"高度差過大：相差 {diff} 層（上限 {limit} 層）"
+    if not ally.has_status(PRONE):
+        return f"{ally.name_zh} 沒有倒地"
+    return None
+
+
+def help_up_actions(state: BattleState, unit: UnitState) -> list[Action]:
+    """現在能扶起的對象（依單位 ID）。"""
+    if unit.ap < state.ruleset.core.help_up_ap_cost:
+        return []
+    return [
+        HelpUp(unit_id=unit.id, target_id=a.id)
+        for a in adjacent_allies(state, unit)
+        if help_up_problem(state, unit, a.id) is None
+    ]
+
+
+def do_help_up(ctx: Ctx, unit: UnitState, action: Action) -> None:
+    assert isinstance(action, HelpUp)
+    problem = help_up_problem(ctx.state, unit, action.target_id)
+    if problem is not None:
+        raise IllegalActionError(problem)
+    unit.ap -= ctx.core.help_up_ap_cost
+    ally = ctx.state.units[action.target_id]
+    execute(ctx, [RemoveStatusEffect(target_id=ally.id, status_id=PRONE, reason="helped_up")])
+    ctx.emit(UnitStoodUp, unit_id=ally.id, cost=0, helper_id=unit.id)
 
 
 def guard_problem(state: BattleState, unit: UnitState, ally_id: UnitId | None) -> str | None:

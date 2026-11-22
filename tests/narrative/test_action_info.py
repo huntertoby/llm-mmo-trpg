@@ -20,6 +20,7 @@ ALL_ACTIONS = {
     "interact",
     "shove_aside",
     "swap",
+    "help_up",
     "aim",
     "vault",
     "reload",
