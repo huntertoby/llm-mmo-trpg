@@ -18,7 +18,7 @@ import {
   infuseBlocked,
   infuseRows,
   infusionPreviewText,
-  MODE_HINTS,
+  modeHints,
   MODE_LABELS,
   MODE_ORDER,
   modeButtons,
@@ -66,11 +66,15 @@ interface Props {
   cards?: Readonly<Record<string, SkillCard | undefined>>;
 }
 
-const MODES_TIP = MODE_ORDER.map((m) => `${MODE_LABELS[m]}：${MODE_HINTS[m]}`).join("\n");
-
-const TIP_TEXT = `${MODES_TIP}
-切換模式不花 AP、可以隨時換；指揮要花 1 AP，讓這隻召喚物立刻走到你指定的格子（用牠自己的移動力）並攻擊，不佔牠自己的回合；每隻每輪最多指揮 1 次。
-灌注要花 1 AP：${INFUSE_HINT}`;
+/** 「操控 ⓘ」的說明：四個模式＋指揮、灌注。AP 照戰鬥畫面的 `summon_command_ap_cost`／`summon_infuse_ap_cost`、
+ * 守護幾格照 `rules.summon_guard_radius`（HC-6c）。 */
+export function summonTipText(view: Pick<BattleView, "summon_command_ap_cost" | "summon_infuse_ap_cost">, guardRadius?: number): string {
+  const hints = modeHints(guardRadius);
+  const modes = MODE_ORDER.map((m) => `${MODE_LABELS[m]}：${hints[m]}`).join("\n");
+  return `${modes}
+切換模式不花 AP、可以隨時換；指揮要花 ${view.summon_command_ap_cost} AP，讓這隻召喚物立刻走到你指定的格子（用牠自己的移動力）並攻擊，不佔牠自己的回合；每隻每輪最多指揮 1 次。
+灌注要花 ${view.summon_infuse_ap_cost} AP：${INFUSE_HINT}`;
+}
 
 function ModeRow({ summon, view, names, enabled, onSetMode }: Pick<Props, "view" | "names" | "enabled" | "onSetMode"> & { summon: UnitView }) {
   const [picking, setPicking] = useState(false);
@@ -289,7 +293,7 @@ export function SummonPanel(props: Props) {
   return (
     <div className="panel summon-panel" aria-label="召喚物操控">
       <div className="section-title">
-        <PartTip cat="召喚物" label="操控" tip={practiceWording(TIP_TEXT, view.practice)}>
+        <PartTip cat="召喚物" label="操控" tip={practiceWording(summonTipText(view), view.practice)}>
           召喚物操控 ⓘ
         </PartTip>
       </div>

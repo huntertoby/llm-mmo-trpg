@@ -22,7 +22,7 @@ import { EnemyThumb } from "./enemyThumb";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
 import { walletLine } from "./economy";
-import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
+import { HireEditor, hireHintText, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { LookChangeLine } from "./LookChange";
 import { RaceChangeLine } from "./RaceChange";
 import { questBadge } from "./story";
@@ -210,8 +210,8 @@ export function HerePanel({
             {editing ? "收起換技能" : "換技能"}
           </button>
         )}
-        {hiring.can && (
-          <Hint text="免費帶 0～2 名隊友：系統傭兵或朋友的影子（出城前選好，野外不能換；不帶＝獨行）">
+        {hiring.can && view.party != null && (
+          <Hint text={hireHintText(view.party.max_hired)}>
             <button type="button" aria-expanded={hiring.open} disabled={busy} onClick={hiring.toggle} data-testid="world-hire-toggle">
               {hiring.open ? "收起雇用隊友" : "雇用隊友"}
             </button>

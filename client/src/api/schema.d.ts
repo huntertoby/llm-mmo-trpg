@@ -5565,6 +5565,16 @@ export interface components {
             skill_tiers: number;
             /** Max Ap Cost */
             max_ap_cost: number;
+            /** Source Min At Start */
+            source_min_at_start: number;
+            /** Summon Guard Radius */
+            summon_guard_radius: number;
+            /** Battle Team Size */
+            battle_team_size: number;
+            /** Item Skill Ap Cost */
+            item_skill_ap_cost: number;
+            /** Situation Care Max */
+            situation_care_max: number;
         };
         /**
          * GearAffixInfo

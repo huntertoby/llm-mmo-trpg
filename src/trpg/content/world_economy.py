@@ -283,6 +283,9 @@ class WorldEconomy:
     rules: EconomyRules | None = None
     items: dict[str, WorldItemDef] = field(default_factory=dict)
     shops: dict[str, ShopTable] = field(default_factory=dict)
+    item_skill_ap_cost: int | None = None
+    """``world/items.yaml`` 的 ``item_skill_ap_cost``（道具技能的 AP；HC-6c：畫面
+    「戰鬥中 N AP 使用」）；沒有物品表時 ``None``。"""
 
     def item_skills(self) -> dict[str, WorldItemDef]:
         """道具技能 ID → 物品。"""
@@ -338,6 +341,7 @@ def load_world_economy(
         files.append((rules_path, rules))
     items_path = root / ITEMS_FILE
     items: dict[str, WorldItemDef] = {}
+    item_ap: int | None = None
     if items_path.is_file():
         table = load_content_file(items_path, WorldItemTable)
         problems = [
@@ -353,6 +357,7 @@ def load_world_economy(
             raise ContentError(items_path, "；".join(problems))
         files.append((items_path, table))
         items = table.item_by_id()
+        item_ap = table.item_skill_ap_cost
     shops: dict[str, ShopTable] = {}
     directory = root / SHOPS_DIR
     for path in sorted(directory.glob("*.yaml")) if directory.is_dir() else ():
@@ -376,4 +381,4 @@ def load_world_economy(
                 path = directory / f"{region}.yaml"
                 raise ContentError(path, f"店 {shop.id} 和 {owners[shop.id]}.yaml 重複")
             owners[shop.id] = region
-    return WorldEconomy(rules=rules, items=items, shops=shops)
+    return WorldEconomy(rules=rules, items=items, shops=shops, item_skill_ap_cost=item_ap)

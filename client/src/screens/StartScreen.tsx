@@ -11,6 +11,7 @@ import { EntryPlaque, EntryShell } from "../ui/EntryShell";
 import { GAME_INFO } from "../ui/gameInfo";
 import { TuningEntry } from "../tuning/TuningEntry";
 import { runStartBlurb } from "../run/runRulesText";
+import { gameRules } from "../battle/glossary";
 
 interface Props {
   onStart(response: BattleResponse): void;
@@ -40,6 +41,11 @@ export function parseSeed(text: string): number | null {
   if (!/^\d+$/.test(t)) return null;
   const n = Number(t);
   return Number.isSafeInteger(n) ? n : null;
+}
+
+/** 單場戰鬥的隊友說明；補到幾人照伺服器 `rules.battle_team_size`（`trpg.sim.lineup.TEAM_SIZE`；HC-6c）。 */
+export function battleAlliesText(teamSize: number = gameRules().battle_team_size): string {
+  return `隊友由 AI 控制（標準隊友補到 ${teamSize} 人）；你操控主角。`;
 }
 
 export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun, onTuning, notice = null, onCloseNotice }: Props) {
@@ -181,7 +187,7 @@ export function StartScreen({ onStart, onWorkshop, onNewRun, onWorld, onLoadRun,
         <button type="submit" className="primary" disabled={!ready}>
           {busy ? "建立中……" : "開始戰鬥"}
         </button>
-        <div className="muted small">隊友由 AI 控制（標準隊友補到 3 人）；你操控主角。</div>
+        <div className="muted small">{battleAlliesText()}</div>
       </form>
       <DevPackSelect picker={picker} disabled={busy || mapId === "" || seed === null} onGo={() => void start(startBody({ devPack: picker.packId }))} />
       <div className="panel start-workshop">

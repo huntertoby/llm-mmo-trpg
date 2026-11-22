@@ -5322,6 +5322,11 @@
   "min_moves_elite": 3,
   "min_moves_boss_phase": 3,
   "skill_tiers": 5,
-  "max_ap_cost": 3
+  "max_ap_cost": 3,
+  "source_min_at_start": 1,
+  "summon_guard_radius": 2,
+  "battle_team_size": 3,
+  "item_skill_ap_cost": 1,
+  "situation_care_max": 2
  }
 }

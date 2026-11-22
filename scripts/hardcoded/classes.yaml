@@ -516,29 +516,33 @@ rules:
             client/src/tuning/SimPanel.tsx, client/src/tuning/SkillIdsEditor.tsx]
     text: '1 階(比值|預算|主動武器技)|（1 階）'
     note: HC-6b 改判：數值工坊的「1 階比值」「1 階預算」「只量 1 階主動武器技」是量法的名字（BAL-21e：比值一律在 1 階量，手寫技能的基準階級），同後端 HC-6a 的「基準點」。
+  - id: ts-hc6c-engine-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/legend.ts, client/src/battle/prep.ts, client/src/battle/summonControl.ts,
+            client/src/ui/statusCard.ts, client/src/ui/SummonPanel.tsx]
+    text: '走上去源力 \+1|「源」格 \+1|免費放 1 個|每場 1 個|每隻每輪(最多指揮)? 1 次|用掉 1 發'
+    note: HC-6c 改判：引擎寫死、沒有資料欄位的結構——源泉格一格 +1 源力（`engine/source.py` 的 `take_source_well`，取走就消失）；戰前佈置是一次的窗口（`engine/prep.py`，放了或跳過就關窗，每場 1 個）；召喚物的指揮、灌注是每輪一個旗標（`commanded_round`、`infused`，每隻每輪 1 次）；開火一次用一發（彈匣的單位）。守護幾格、指揮與灌注的 AP、每場至少幾點源力已改讀資料（`rules.summon_guard_radius`、`summon_*_ap_cost`、`rules.source_min_at_start`）。
+  - id: ts-hc6c-structure-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/world/EventCard.tsx, client/src/world/PartyPanel.tsx, client/src/world/SmithyPanel.tsx,
+            client/src/world/WorldGrowth.tsx]
+    text: '核對得到才 \+1|＋1 條詞條|每種用 1 個|同時 1 個，一直有效|免費帶 0～'
+    note: HC-6c 改判：情境判定的用心清單一筆算一點（`trpg.world.situations`：`min(care_max, 筆數)`，上限已改讀 `rules.situation_care_max`）；鍛造「指定部位＋1 條詞條」是挑一條的欄位、特色材料「每種用 1 個」是每種一份（`flavor_max` 是種數，已照伺服器）；誓約「同時 1 個」是單一欄位（`OathView.current`，同 HC-6b 的 `ts-hc6b-single-text`）；雇用隊友「0～上限」的 0 是不帶（獨行），上限已改讀 `max_hired`。
   - id: ts-ui-text
     class: text
     status: todo
     lang: ts
     kind: text
-    note: 玩家（或工坊使用者）看得到的說明、提示裡寫死的規則數字。HC-6b 後剩的都是程式裡沒有可帶的資料：引擎寫死（源泉 +1、戰前佈置每場 1 個、召喚物守護 2 格、指揮與灌注每輪 1 次、開火 1 發）、內容檢查寫死（道具技能 1 AP、鍛造指定 1 條、特色材料每種 1 個）、單場戰鬥補隊友到 3 人、大世界隊友 0～2 名、重選 2 個關鍵字、配點範例、屬性每級 +2（資料是 20，顯示換算要先定）、線索每筆 +1、誓約冷卻 1 天內（HC-7）。
+    note: 玩家看得到的說明裡寫死的規則數字。HC-6c 後剩 2 筆，都在等「屬性點的顯示換算」：資料是 `attribute_points_per_level` 20（×10 量尺），畫面寫「每級 +2」與配點範例（開局 4 點、智力 12……）；要照哪個量尺顯示還沒定（HC-6b 待決、HC-6c 待決）。
     files:
-      - client/src/battle/legend.ts
-      - client/src/battle/prep.ts
-      - client/src/battle/summonControl.ts
-      - client/src/screens/StartScreen.tsx
-      - client/src/ui/SummonPanel.tsx
-      - client/src/ui/statusCard.ts
-      - client/src/world/BagScreen.tsx
-      - client/src/world/EconomyPanel.tsx
-      - client/src/world/EventCard.tsx
       - client/src/world/OpeningDialog.tsx
-      - client/src/world/SmithyPanel.tsx
-      - client/src/world/WorldGrowth.tsx
-      - client/src/world/WorldPanel.tsx
       - client/src/world/growthPanel.ts
-      - client/src/world/range.ts
-      - client/src/world/wish.ts
 
   # ======================================================================== 後端：整個資料夾或檔案
   - id: py-shared-rng

@@ -6,6 +6,7 @@ import { actionCardText } from "../battle/actionInfo";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { HIDDEN_INFO_HINT, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import { sourcePips } from "../battle/source";
+import { gameRules } from "../battle/glossary";
 import { stackSkillNames } from "../battle/stackInfo";
 import { GAUGE_MAX, hasGauge } from "../render/qIcon/stackGauge";
 
@@ -210,6 +211,11 @@ export function reactionChip(unit: UnitView): StatChip {
   };
 }
 
+/** 源力的規則句；每場至少幾點照伺服器 `rules.source_min_at_start`（`core.yaml`；HC-6c）。源泉格 +1 是引擎寫死的（`engine/source.py`）。 */
+export function sourceRuleText(minAtStart: number = gameRules().source_min_at_start): string {
+  return `傳說技能的代價（跨戰鬥保留，每場至少 ${minAtStart} 點；走上地圖上的「源」格 +1）`;
+}
+
 export function sourceChip(unit: UnitView): StatChip {
   return {
     key: "source",
@@ -217,7 +223,7 @@ export function sourceChip(unit: UnitView): StatChip {
     label: "",
     pips: sourcePips(unit.source, unit.source_max),
     dim: unit.source <= 0,
-    hint: lines(`源力 ${unit.source}/${unit.source_max}`, "傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）"),
+    hint: lines(`源力 ${unit.source}/${unit.source_max}`, sourceRuleText()),
   };
 }
 

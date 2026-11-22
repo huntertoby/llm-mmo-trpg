@@ -262,7 +262,7 @@ describe("D5 指揮召喚物面板：測試模式「敵人」→「木樁」，�
 
   it("接線：面板說明、模式說明、集火清單的字都經過 practiceWording(…, view.practice)", () => {
     const src = readFile(SRC_DIR, "ui/SummonPanel.tsx");
-    expect(src).toContain("tip={practiceWording(TIP_TEXT, view.practice)}");
+    expect(src).toContain("tip={practiceWording(summonTipText(view), view.practice)}");
     expect(src).toContain("tip={practiceWording(b.hint, view.practice)}");
     expect(src).toContain('practiceWording("選一個敵人集火（0 AP）：", view.practice)');
     expect(src).toContain("practice={view.practice}");

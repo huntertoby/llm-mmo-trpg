@@ -25,6 +25,7 @@ from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.roguelite.flashes import max_carry
 from trpg.shared.range_text import DiceNote
 from trpg.shared.types import Attribute
+from trpg.sim.lineup import TEAM_SIZE
 from trpg.world.league import league_rules
 from trpg.world.opening_limits import opening_end_level
 
@@ -215,30 +216,39 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
         opening_end_level=opening_end_level(library),
         skill_tiers=core.skill_limits.tiers,
         max_ap_cost=core.skill_limits.max_ap_cost,
+        source_min_at_start=core.source_min_at_start,
+        summon_guard_radius=library.ai_profiles.summon.guard_radius,
+        battle_team_size=TEAM_SIZE,
         **_world_text_rules(library),
     )
     return rules
 
 
 def _world_text_rules(library: ContentLibrary) -> dict[str, int]:
-    """線頭、循環賽、#149 招數下限的規則數字（HC-6b）。HC-7 b 起欄位必填：缺這些資料檔時報錯
-    （原本照欄位預設值）。"""
+    """線頭、循環賽、#149 招數下限（HC-6b），道具技能 AP、用心加值上限（HC-6c）的規則數字。
+    HC-7 b 起欄位必填：缺這些資料檔時報錯（原本照欄位預設值）。"""
     events = library.world_event_content.rules
     league = league_rules(library)
     enemies = library.world_enemies
-    if events is None or league is None or enemies is None:
+    item_ap = library.world_economy.item_skill_ap_cost
+    situations = library.world_event_content.situations.rules
+    if events is None or league is None or enemies is None or item_ap is None or situations is None:
         missing = [
             name
             for name, found in (
                 ("world/event_rules.yaml", events),
                 ("world/season.yaml 的 league", league),
                 ("world/enemies.yaml", enemies),
+                ("world/items.yaml", item_ap),
+                ("world/situation_rules.yaml", situations),
             )
             if found is None
         ]
         raise ValueError(f"名詞對照表要的規則數字缺資料：{'、'.join(missing)}")
     floor = enemies.min_moves
     return {
+        "item_skill_ap_cost": item_ap,
+        "situation_care_max": situations.check.care_max,
         "thread_limit": events.threads.personal_limit,
         "thread_expire_seconds": events.threads.expire_seconds,
         "league_signup_close_day": league.signup_close_day,

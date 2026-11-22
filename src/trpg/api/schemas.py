@@ -297,6 +297,19 @@ class GameRulesOut(_ApiModel):
     階級選項）。"""
     max_ap_cost: int
     """主動技最多幾 AP（``skill_limits.max_ap_cost``；HC-7 b：數值工坊篩選列的 AP 選項）。"""
+    # ---- HC-6c：前端剩下的說明文字組字用（必填，伺服器一律由內容庫填）----
+    source_min_at_start: int
+    """我方每場開場至少幾點源力（``core.yaml`` 的 ``source_min_at_start``；主角卡源力的說明）。"""
+    summon_guard_radius: int
+    """召喚物「守護我」時待在召喚者幾格內（``ai_profiles.yaml`` 的 ``summon.guard_radius``）。"""
+    battle_team_size: int
+    """單場戰鬥我方補到幾人（``trpg.sim.lineup.TEAM_SIZE``；開始畫面的說明）。"""
+    item_skill_ap_cost: int
+    """道具技能（腰包裡的消耗品）戰鬥中花幾 AP（``world/items.yaml`` 的
+    ``item_skill_ap_cost``）。"""
+    situation_care_max: int
+    """情境判定的用心加值最多幾點（``world/situation_rules.yaml`` 的 ``check.care_max``；
+    引用線索的說明）。"""
 
 
 class Glossary(_ApiModel):

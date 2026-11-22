@@ -1,6 +1,12 @@
 // 背包畫面與鐵匠畫面的純函式（Phase 5D-4；docs/phases/Phase5計畫.md 33.2）。
 // 規則都在後端（能不能換上、比較、能不能打造都由後端算好）；這裡只整理顯示與送出的動作。
 import type { GearCandidate, WorldAction, WorldBagItem, WorldInventory } from "../api/types";
+import { gameRules } from "../battle/glossary";
+
+/** 腰包旁的「戰鬥中 N AP 使用」；AP 照伺服器 `rules.item_skill_ap_cost`（`world/items.yaml`；HC-6c）。 */
+export function pouchUseText(ap: number = gameRules().item_skill_ap_cost): string {
+  return `戰鬥中 ${ap} AP 使用`;
+}
 
 /** 背包裡某件裝備能不能換上與原因（後端的 `can_equip`／`equip_problem_zh`）。 */
 export function equipState(inventory: WorldInventory, itemId: string): { ok: boolean; reason: string } {

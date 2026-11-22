@@ -13869,6 +13869,26 @@
           "max_ap_cost": {
             "type": "integer",
             "title": "Max Ap Cost"
+          },
+          "source_min_at_start": {
+            "type": "integer",
+            "title": "Source Min At Start"
+          },
+          "summon_guard_radius": {
+            "type": "integer",
+            "title": "Summon Guard Radius"
+          },
+          "battle_team_size": {
+            "type": "integer",
+            "title": "Battle Team Size"
+          },
+          "item_skill_ap_cost": {
+            "type": "integer",
+            "title": "Item Skill Ap Cost"
+          },
+          "situation_care_max": {
+            "type": "integer",
+            "title": "Situation Care Max"
           }
         },
         "additionalProperties": false,
@@ -13900,7 +13920,12 @@
           "min_moves_elite",
           "min_moves_boss_phase",
           "skill_tiers",
-          "max_ap_cost"
+          "max_ap_cost",
+          "source_min_at_start",
+          "summon_guard_radius",
+          "battle_team_size",
+          "item_skill_ap_cost",
+          "situation_care_max"
         ],
         "title": "GameRulesOut",
         "description": "畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。"
