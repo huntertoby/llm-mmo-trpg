@@ -128,4 +128,16 @@
 
 ## 7. 全量檢查
 
-（待開發 PM 回覆「準備跑 check.py」後補上）
+開發 PM 回覆「可以跑」後，先 `git merge --no-edit main`（main `81f9cbb49`，含 KD-1），合併 commit `a2494e983`。
+
+- 衝突只有產生檔 `docs/phases/寫死數值-清單.md`：合併後重產（`classify.py --md`）解決。
+- `classes.yaml` 自動合併，兩邊的規則都在：`classify.py --check` 沒歸類 0，`--unused` 沒有輸出。
+- 重產 `openapi.json`、前端型別、client 夾具，和合併結果相同，沒有差異。
+
+| 檢查 | 結束碼 |
+|---|---|
+| `uv run python scripts/check.py` | 0（全部通過，寫下通過戳記） |
+| `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli` | 0（995 passed） |
+| `pnpm -C client build` | 0（只有 chunk 大小的既有警告） |
+
+都一次通過，沒有要修的。
