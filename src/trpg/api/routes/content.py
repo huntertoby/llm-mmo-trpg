@@ -46,7 +46,7 @@ def list_builds(request: Request) -> list[BuildSummary]:
             weapon=b.hero.weapon,
             weapon_name_zh=library.weapons[b.hero.weapon].name_zh,
             weapon_traits_zh=(
-                *library.weapons[b.hero.weapon].trait_lines_zh(),
+                *library.weapons[b.hero.weapon].trait_lines_zh(library.ruleset.core),
                 *library.weapons[b.hero.weapon].rule_lines_zh(library.ruleset.core),
             ),
         )

@@ -514,7 +514,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         weapon_class=weapon.weapon_class if weapon is not None else "",
         weapon_traits_zh=(
             (
-                *weapon.trait_lines_zh(),
+                *weapon.trait_lines_zh(library.ruleset.core),
                 *weapon.rule_lines_zh(library.ruleset.core, effective.__getitem__),
             )
             if weapon is not None

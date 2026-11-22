@@ -149,7 +149,7 @@ def get_start_options(request: Request) -> StartOptions:
                 id=weapon.id,
                 name_zh=weapon.name_zh,
                 weapon_class=weapon.weapon_class,
-                traits_zh=(*weapon.trait_lines_zh(), *weapon.rule_lines_zh(core)),
+                traits_zh=(*weapon.trait_lines_zh(core), *weapon.rule_lines_zh(core)),
                 hp=hp,
                 mana=hero.max_mana,
             )

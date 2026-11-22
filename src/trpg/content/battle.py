@@ -472,9 +472,15 @@ class WeaponDef(ContentModel):
             )
         return tuple(lines)
 
-    def trait_lines_zh(self, *, on_hit_only: bool = False) -> tuple[str, ...]:
+    def trait_lines_zh(
+        self, core: CoreRules | None = None, *, on_hit_only: bool = False
+    ) -> tuple[str, ...]:
         """武器小特性的說明（每個特性一行；資料欄位的數值直接帶入，改參數說明跟著變）。
-        ``on_hit_only``：只列普攻命中時發動的特性（預覽用：破甲、震退、祝禱）。"""
+        ``on_hit_only``：只列普攻命中時發動的特性（預覽用：破甲、震退、祝禱）。
+
+        祝禱的骰子寫成範圍（HC-6c，X10-3d 裁定 6；同普攻：骰面 × ``core.quantity_scale``，固定值疊進
+        範圍），長說明（非 ``on_hit_only``）下一行多「擲 1d6，每點 ×10」。祝禱有骰子時一定要給
+        ``core``（沒有骰子的祝禱、其他特性不用）。"""
         lines: list[str] = []
         if self.armor_break is not None:
             pct = -self.armor_break.defense_permille / 10
@@ -484,10 +490,7 @@ class WeaponDef(ContentModel):
         if self.reach > 1 and not on_hit_only:
             lines.append(f"觸及 {self.reach} 格：{self.reach} 格內的藉機攻擊")
         if self.blessing is not None:
-            amount = f"{self.blessing.dice}" if self.blessing.dice is not None else ""
-            if self.blessing.flat:
-                amount += f"{'+' if amount else ''}{self.blessing.flat}"
-            lines.append(f"祝禱：普攻命中時，最近的隊友回復 {amount} HP")
+            lines += _blessing_lines(self.blessing, core, note=not on_hit_only)
         if self.entangle is not None:
             penalty = self.entangle.move_penalty
             lines.append(f"纏繞：普攻命中後，目標下回合移動 −{penalty}（不疊加、不擲抵抗）")
@@ -504,6 +507,21 @@ class WeaponDef(ContentModel):
         if self.backstab_dice:
             lines.append(f"背刺強化：從背後攻擊時，傷害骰 +{self.backstab_dice} 顆")
         return tuple(lines)
+
+
+def _blessing_lines(blessing: Blessing, core: CoreRules | None, *, note: bool) -> list[str]:
+    """祝禱的說明：「祝禱：普攻命中時，最近的隊友回復 10–60 HP」（HC-6c：骰子寫範圍，同 X10-3d 的
+    普攻）；``note`` 時骰子另起一行「擲 1d6，每點 ×10」。只有固定值時照舊寫「回復 30 HP」。"""
+    dice = blessing.dice
+    if dice is None:
+        return [f"祝禱：普攻命中時，最近的隊友回復 {blessing.flat} HP"]
+    if core is None:
+        raise ValueError("祝禱有骰子時要給 core 才能換算範圍（quantity_scale）")
+    low, high = span(dice.count, dice.sides, core.quantity_scale, blessing.flat)
+    lines = [f"祝禱：普攻命中時，最近的隊友回復 {range_text(low, high)} HP"]
+    if note:
+        lines.append(dice_note(dice.count, dice.sides, core.quantity_scale))
+    return lines
 
 
 def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:

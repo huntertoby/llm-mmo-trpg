@@ -1668,7 +1668,7 @@ def _build(
     checks: tuple[DisplaceCheck, ...] = ()
     notes = _cover_notes(cover)
     if isinstance(action, Attack) and action.target_id is not None:  # 武器命中特性（3-24a1）
-        notes += actor.weapon.trait_lines_zh(on_hit_only=True)
+        notes += actor.weapon.trait_lines_zh(state.ruleset.core, on_hit_only=True)
     backstab = _backstab_targets(actor, max_events)
     notes += _positional_notes(state, actor, max_events, backstab)
     no_turn, no_turn_reason, no_turn_notes = _no_turn_info(state, actor, max_events, backstab)
