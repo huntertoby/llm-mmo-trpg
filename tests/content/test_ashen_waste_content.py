@@ -75,6 +75,7 @@ def _season_problems(library: ContentLibrary, data: dict[str, Any]) -> list[str]
     return season_problems(
         SeasonContent.model_validate(data),
         world_maps=library.world_maps,
+        archetypes=library.map_archetypes,
         encounters=library.world_encounters,
         catalog=library.enemy_catalog(),
         weather_ids=set(library.weather),

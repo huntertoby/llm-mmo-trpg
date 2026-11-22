@@ -39,7 +39,7 @@ from typing import Any, Final
 
 from trpg.content.fields import FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import BOSS_ARCHETYPE, MapDef, check_map, passable_grid, reachable_from
+from trpg.content.maps import MapDef, check_map, passable_grid, reachable_from
 from trpg.shared.types import Team
 from trpg.world.actions import BattlefieldCut, CutFallback
 from trpg.world.common import rules_of
@@ -372,7 +372,7 @@ def _contact_fallback(
         return "no_field"
     if contact.enemy_at is None:
         return "no_enemy_at"
-    if template.archetype == BOSS_ARCHETYPE:
+    if library.map_archetypes.has_role(template.archetype, "boss"):  # WL-2：看 role，不看 id
         return "boss"
     if encounter.objective is not None and template.supports_objective(encounter.objective):
         return "objective"

@@ -18,7 +18,7 @@ from typing import Final, Literal
 from pydantic import Field, ValidationError, model_validator
 
 from trpg.content.battle import ID_PATTERN
-from trpg.content.maps import MapDef
+from trpg.content.maps import MapArchetypeTable, MapDef
 from trpg.content.schemas import ContentModel
 from trpg.content.world_encounters import MAX_GROUP_SIZE, EncounterTable, FixedElite
 from trpg.content.world_enemies import EnemyCatalog
@@ -252,10 +252,6 @@ class WorldEventDef(ContentModel):
         if not players:
             return self.goal.count
         return max(self.min_target(), self.goal.count * players // self.base_players)
-
-
-LEAGUE_EXCLUDED_ARCHETYPES: Final = frozenset({"boss", "training", "test"})
-"""循環賽不能用的地圖類型（Boss 專屬、靶場、測試圖；Phase 5F-4）。"""
 
 
 class LeagueRules(ContentModel):
@@ -678,6 +674,7 @@ def _boss_problems(
     units: Collection[str],
     maps: Mapping[str, MapDef] | None,
     catalog: EnemyCatalog,
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
     problems = [
         f"封印鑰匙來源 {s.id}：未知的單位 {s.unit}"
@@ -692,8 +689,9 @@ def _boss_problems(
     map_def = maps.get(boss.battle_map)
     if map_def is None:
         problems.append(f"{where}：未知的地圖 {boss.battle_map}")
-    elif map_def.archetype != "boss":
-        problems.append(f"{where}：地圖 {boss.battle_map} 不是 Boss 地圖（archetype: boss）")
+    elif not archetypes.has_role(map_def.archetype, "boss"):
+        label = archetypes.role_label("boss")
+        problems.append(f"{where}：地圖 {boss.battle_map} 不是 Boss 地圖（archetype: {label}）")
     return problems
 
 
@@ -706,6 +704,7 @@ def season_problems(
     weather_ids: Collection[str],
     region_ids: Collection[str],
     location_kinds: Collection[str],
+    archetypes: MapArchetypeTable,
     battle_maps: Mapping[str, str] | None = None,
     units: Collection[str] = (),
     maps: Mapping[str, MapDef] | None = None,
@@ -715,10 +714,13 @@ def season_problems(
     加成可以指向還沒有地點圖的區域，例如灰燼荒原）。``battle_maps`` 是戰鬥地圖 ID → 地圖類型
     （循環賽的地圖檢查，5F-4；``None``＝不檢查）。``units``／``maps``（Phase 5F-3）：賽季 Boss 的
     陣容與 Boss 地圖、封印鑰匙來源的單位。``status_ids`` 是狀態 ID（循環賽的開場狀態，5F-4b；
-    ``None``＝不檢查）。"""
-    problems: list[str] = _boss_problems(season, units=units, maps=maps, catalog=catalog)
+    ``None``＝不檢查）。``archetypes`` 是地圖類型清單（Boss 地圖＝``role: boss``；循環賽不能用
+    ``in_random_pool: false`` 的類型；Phase WL-2）。"""
+    problems: list[str] = _boss_problems(
+        season, units=units, maps=maps, catalog=catalog, archetypes=archetypes
+    )
     if season.league is not None and battle_maps is not None:
-        problems += _league_problems(season.league, battle_maps)
+        problems += _league_problems(season.league, battle_maps, archetypes)
     if season.league is not None and status_ids is not None:
         problems += [
             f"循環賽的開場狀態 {s} 不在 statuses.yaml（或只給敵人，enemy_only）"
@@ -769,12 +771,16 @@ def shop_price_problems(season: SeasonContent, shop_ids: Collection[str]) -> lis
     )
 
 
-def _league_problems(league: LeagueRules, battle_maps: Mapping[str, str]) -> list[str]:
+def _league_problems(
+    league: LeagueRules, battle_maps: Mapping[str, str], archetypes: MapArchetypeTable
+) -> list[str]:
+    """循環賽的地圖要存在，而且不能是不進抽選（``in_random_pool: false``：Boss 專屬、靶場、測試圖；
+    Phase 5F-4、WL-2）的類型。"""
     problems: list[str] = []
     for map_id in league.maps:
         archetype = battle_maps.get(map_id)
         if archetype is None:
             problems.append(f"循環賽的地圖 {map_id} 不存在")
-        elif archetype in LEAGUE_EXCLUDED_ARCHETYPES:
+        elif not archetypes.in_random_pool(archetype):
             problems.append(f"循環賽的地圖 {map_id} 是 {archetype} 類地圖，不能用")
     return problems

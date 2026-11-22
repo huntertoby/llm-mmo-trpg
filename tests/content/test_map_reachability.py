@@ -9,14 +9,17 @@ from __future__ import annotations
 import pytest
 
 from tests.engine.helpers import library
-from trpg.content.maps import TEST_ARCHETYPE, MapDef, passable_grid, reachable_from
+from trpg.content.maps import MapDef, passable_grid, reachable_from
 
 KNOWN_EXCEPTIONS: dict[str, set[tuple[int, int]]] = {}
 """已知、尚未修的封閉格（地圖 id → 格子）；目前沒有。"""
 
 
 def _formal_maps() -> list[str]:
-    return sorted(k for k, v in library().maps.items() if v.archetype != TEST_ARCHETYPE)
+    lib = library()
+    return sorted(
+        k for k, v in lib.maps.items() if not lib.map_archetypes.has_role(v.archetype, "test")
+    )
 
 
 def _unreachable(map_def: MapDef) -> set[tuple[int, int]]:

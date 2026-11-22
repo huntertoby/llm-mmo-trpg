@@ -7,13 +7,7 @@ import pytest
 from tests.content_counts import COUNTS
 from tests.engine.helpers import library
 from trpg.cli.main import main
-from trpg.content.maps import (
-    BOSS_ARCHETYPE,
-    TEST_ARCHETYPE,
-    TRAINING_ARCHETYPE,
-    MapDef,
-    check_map,
-)
+from trpg.content.maps import MapDef, check_map
 from trpg.shared.types import Team
 from trpg.sim.batch import map_spec, run_batches
 
@@ -30,11 +24,9 @@ EXPECTED_TYPES = {
 
 
 def _real_maps() -> dict[str, MapDef]:
-    return {
-        k: v
-        for k, v in library().maps.items()
-        if v.archetype not in (TEST_ARCHETYPE, TRAINING_ARCHETYPE, BOSS_ARCHETYPE)
-    }
+    """一般地圖：類型會進抽選（``in_random_pool``；不是測試圖、靶場、Boss 地圖）。"""
+    lib = library()
+    return {k: v for k, v in lib.maps.items() if lib.map_archetypes.in_random_pool(v.archetype)}
 
 
 def test_archetype_is_required() -> None:
@@ -51,17 +43,17 @@ def test_archetype_is_required() -> None:
 
 
 def test_test_maps_are_tagged_test_and_everything_else_is_not() -> None:
-    maps = library().maps
-    assert {k for k, v in maps.items() if v.archetype == TEST_ARCHETYPE} == {
+    lib = library()
+    maps = lib.maps
+    assert {k for k, v in maps.items() if lib.map_archetypes.has_role(v.archetype, "test")} == {
         k for k in maps if k.startswith("test_")
     }
-    archetypes = library().map_archetypes.ids()
-    assert len(archetypes) == COUNTS["map_archetypes"]
-    assert set(archetypes) == EXPECTED_TYPES | {
-        TEST_ARCHETYPE,
-        TRAINING_ARCHETYPE,
-        BOSS_ARCHETYPE,
-    }
+    table = lib.map_archetypes
+    assert len(table.ids()) == COUNTS["map_archetypes"]
+    assert {a for a in table.ids() if table.in_random_pool(a)} == EXPECTED_TYPES
+    special = {a.role: a.id for a in table.archetypes if a.role is not None}
+    assert special == {"test": "test", "training": "training", "boss": "boss"}
+    assert not any(table.in_random_pool(a) for a in special.values())
 
 
 def test_there_are_ten_real_maps_covering_all_eight_archetypes() -> None:

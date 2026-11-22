@@ -171,7 +171,9 @@ def encounter_map(library: ContentLibrary, encounter: EncounterResult) -> MapDef
     if encounter.battle_map is not None:
         map_def = library.map(encounter.battle_map)
     else:
-        pool = set(_region_def(library, encounter.region).map_pool) - {"boss"}
+        region_pool = _region_def(library, encounter.region).map_pool
+        # WL-2：不進抽選的類型（Boss 等）不抽；區域地圖池本來就不能有它們（載入時檢查）
+        pool = {a for a in region_pool if library.map_archetypes.in_random_pool(a)}
         options = sorted(m for m, d in library.maps.items() if d.archetype in pool)
         if encounter.objective is not None:  # 戰鬥解法的勝利條件（5B-4c）：優先挑支援它的地圖
             kind = encounter.objective

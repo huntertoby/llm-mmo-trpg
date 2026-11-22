@@ -18,7 +18,7 @@ from collections.abc import Mapping, Sequence
 
 from trpg.content.battle import TerrainDef, UnitTemplate
 from trpg.content.environment import ObjectDef
-from trpg.content.maps import MapDef, SpawnUnitsEvent, passable_grid
+from trpg.content.maps import MapArchetypeTable, MapDef, SpawnUnitsEvent, passable_grid
 from trpg.content.roguelite import RunRules
 from trpg.content.world_encounters import EncounterTable
 from trpg.content.world_map import LocationMapDef
@@ -27,8 +27,6 @@ from trpg.shared.types import Team
 __all__ = ["giant_problems"]
 
 type XY = tuple[int, int]
-
-BOSS_ARCHETYPE = "boss"
 
 
 def _giants(units: Mapping[str, UnitTemplate]) -> frozenset[str]:
@@ -122,7 +120,11 @@ def _lineup_problems(
 
 
 def _map_problems(
-    map_def: MapDef, board: _Board, giants: frozenset[str], units: Mapping[str, UnitTemplate]
+    map_def: MapDef,
+    board: _Board,
+    giants: frozenset[str],
+    units: Mapping[str, UnitTemplate],
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
     where = f"地圖 {map_def.id}"
     problems = [
@@ -144,7 +146,7 @@ def _map_problems(
     found = sorted({t for members in lineup.values() for t in members if t in giants})
     if not found:
         return problems
-    if map_def.archetype != BOSS_ARCHETYPE:
+    if not archetypes.has_role(map_def.archetype, "boss"):
         return [*problems, f"{where} 不是頭目地圖，預設陣容不能有巨型單位：{', '.join(found)}"]
     return problems + _lineup_problems(f"{where} 的預設陣容", board, lineup, units)
 
@@ -154,6 +156,7 @@ def _run_problems(
     boards: Mapping[str, _Board],
     giants: frozenset[str],
     units: Mapping[str, UnitTemplate],
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
     problems: list[str] = []
     random = sorted({t for step in rules.encounters for o in step.options for t in o} & giants)
@@ -165,7 +168,7 @@ def _run_problems(
     boss = sorted(set(rules.boss.enemies) & giants)
     board = boards.get(rules.boss.map)
     if boss and board is not None:
-        if board.map.archetype != BOSS_ARCHETYPE:
+        if not archetypes.has_role(board.map.archetype, "boss"):
             problems.append(f"一輪的頭目戰地圖 {rules.boss.map} 不是頭目地圖，不能有巨型單位")
         else:
             lineup = {Team.ENEMY: rules.boss.enemies}
@@ -189,6 +192,8 @@ def _world_problems(
     boards: Mapping[str, _Board],
     giants: frozenset[str],
     units: Mapping[str, UnitTemplate],
+    *,
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
     """大世界遭遇表：有巨型單位的陣容只能用在戰鬥地圖全是頭目地圖的地點（同時檢查放得下）；
     固定精英、加人、等級替換都不能是巨型單位。"""
@@ -220,7 +225,9 @@ def _world_problems(
                 node = nodes.get(loc.location)
                 maps = () if node is None else node.battle_maps
                 bad = [
-                    m for m in maps if m not in boards or boards[m].map.archetype != BOSS_ARCHETYPE
+                    m
+                    for m in maps
+                    if m not in boards or not archetypes.has_role(boards[m].map.archetype, "boss")
                 ]
                 if not maps or bad:
                     problems.append(f"{here}：陣容 {name} 有巨型單位，戰鬥地圖必須全是頭目地圖")
@@ -247,10 +254,12 @@ def giant_problems(
     terrain: Mapping[str, TerrainDef],
     objects: Mapping[str, ObjectDef],
     roguelite: RunRules,
+    archetypes: MapArchetypeTable,
     world_maps: Mapping[str, LocationMapDef],
     world_encounters: Mapping[str, EncounterTable],
 ) -> list[str]:
-    """巨型單位的跨檔案問題（空清單＝通過）。沒有任何巨型單位時只檢查 ``giant_facing`` 的範本。"""
+    """巨型單位的跨檔案問題（空清單＝通過）。頭目地圖＝``role: boss`` 的類型（Phase WL-2）。
+    沒有任何巨型單位時只檢查 ``giant_facing`` 的範本。"""
     giants = _giants(units)
     if not giants:
         return [
@@ -262,8 +271,10 @@ def giant_problems(
     boards = {mid: _Board(m, terrain, objects) for mid, m in sorted(maps.items())}
     problems: list[str] = []
     for map_id, map_def in sorted(maps.items()):
-        problems += _map_problems(map_def, boards[map_id], giants, units)
-    problems += _run_problems(roguelite, boards, giants, units)
+        problems += _map_problems(map_def, boards[map_id], giants, units, archetypes)
+    problems += _run_problems(roguelite, boards, giants, units, archetypes)
     problems += _phase_spawn_problems(units, giants)
-    problems += _world_problems(world_maps, world_encounters, boards, giants, units)
+    problems += _world_problems(
+        world_maps, world_encounters, boards, giants, units, archetypes=archetypes
+    )
     return problems

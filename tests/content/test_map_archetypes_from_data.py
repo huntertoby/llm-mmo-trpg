@@ -11,7 +11,9 @@ import yaml
 
 from tests.engine.helpers import library
 from trpg.content.library import load_library
+from trpg.content.library.load import _region_pool_problems
 from trpg.content.maps import MapArchetypeTable
+from trpg.content.roguelite import roguelite_problems
 from trpg.shared.errors import ContentError
 
 CONTENT = Path(__file__).resolve().parents[2] / "content"
@@ -74,3 +76,43 @@ def test_an_unknown_region_pool_archetype_is_rejected_in_chinese(tmp_path: Path)
     message = "區域 cloud_ridge 的 map_pool：未知的地圖類型 'volcano'"
     with pytest.raises(ContentError, match=message):
         load_library(root)
+
+
+# ---------------------------------------------------------------------------
+# 第 2 項：特殊用途改用資料欄位（in_random_pool、role）
+# ---------------------------------------------------------------------------
+
+
+def test_special_archetypes_are_marked_by_data_fields() -> None:
+    table = library().map_archetypes
+    assert table.role_ids("test") == ("test",)
+    assert table.role_ids("training") == ("training",)
+    assert table.role_ids("boss") == ("boss",)
+    assert [a for a in table.ids() if not table.in_random_pool(a)] == ["test", "training", "boss"]
+    assert table.role_label("boss") == "boss"
+    bare = MapArchetypeTable.model_validate({"archetypes": [{"id": "x"}]})
+    assert bare.role_label("boss") == "role: boss"
+
+
+def test_a_region_pool_cannot_hold_an_archetype_outside_the_random_pool() -> None:
+    lib = library()
+    assert lib.regions is not None
+    region = lib.regions.regions[0]
+    bad = region.model_copy(update={"map_pool": (*region.map_pool, "boss", "test")})
+    regions = lib.regions.model_copy(update={"regions": (bad, *lib.regions.regions[1:])})
+    assert _region_pool_problems(lib.regions, lib.map_archetypes) == []
+    assert _region_pool_problems(regions, lib.map_archetypes) == [
+        f"區域 {region.id} 的 map_pool 不可含 boss, test"
+    ]
+
+
+def test_the_roguelite_pool_cannot_hold_a_map_outside_the_random_pool() -> None:
+    lib = library()
+    rules = lib.roguelite.model_copy(
+        update={"map_pool": (*lib.roguelite.map_pool, "test_flat_6x6", "training_range")}
+    )
+    problems = roguelite_problems(
+        rules, lib.maps, lib.units, lib.ruleset.core.tier_budget, lib.map_archetypes
+    )
+    assert "技能工坊的靶場不能進地圖池：training_range" in problems
+    assert "不進抽選的地圖類型（in_random_pool: false）不能進地圖池：test_flat_6x6" in problems
