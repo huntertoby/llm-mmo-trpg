@@ -57,9 +57,13 @@ class UnitCharged(EventBase):
 
 
 class UnitStoodUp(EventBase):
+    """倒地者站起：自己站（``cost`` 是花掉的移動點數），或被隊友扶起（KD-1「扶起」：``helper_id``
+    是扶的人，``cost`` 0；沒被扶時不輸出）。"""
+
     type: Literal["unit_stood_up"] = "unit_stood_up"
     unit_id: UnitId
     cost: int
+    helper_id: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class UnitRan(EventBase):

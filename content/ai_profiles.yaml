@@ -69,7 +69,9 @@ skill_candidates: 3
 # 法術技時價值為 0；3-50：自己沉默時價值取同一個值）、blinded（致盲，攻擊劣勢加射程縮短）、marked（被標記，友方對它的命中提高）。初值未經模擬。
 # BAL-20（#149，玩法 PM 2026-11-12）：加上 burning: 3（燃燒 1d6、2 回合起，budget_points 3；與流血、中毒同類的持續傷害）。
 # 沒列時莽夫、側擊、刺客（status 權重 0）給燃燒 0 分，T1 餘燼啃咬永遠比同目標普攻少技能代價 6 分。
-status_values: {stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, burning: 3, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4, overdrawn: 3}  # BAL-8b 原型專用：overdrawn 8 → 3（只有自己承受代價用到）
+# KD-1（#176，05 5.13）：倒地變重（不能反應、下個自己回合少 1 AP、站起花一半移動），加上 prone: 3（初值，
+# 和燃燒、透支同一級（以前是各行為模式的 status 權重，莽夫等是 0）；6 會讓 AI 絆倒比普攻多，保守取 3；未經模擬）。技能附帶的擊倒、絆倒、震波都用這個值。
+status_values: {prone: 3, stun: 12, frozen: 12, root: 6, slow: 4, weaken: 5, vulnerable: 6, bleed: 6, poison: 6, burning: 3, taunted: 5, feared: 6, silenced: 5, blinded: 5, marked: 4, overdrawn: 3}  # BAL-8b 原型專用：overdrawn 8 → 3（只有自己承受代價用到）
 # self_status_values（BAL-8b）：自己承受的狀態代價的估值，優先於 status_values，只用在技能的機會成本；
 # 對敵人施加暈眩的收益仍用 status_values.stun（12）。BAL-8b 原型專用：自暈代價 12 → 5。
 # BAL-13d（AI 數值）：自身易傷 6 → 1（捨身突刺）。6 是「對敵人施加易傷」的價值；自己付的易傷有效 1 回合，BAL-13b 量到 gambler 英雄每輪受到約 13 點傷害，

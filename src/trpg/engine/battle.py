@@ -49,10 +49,13 @@ from trpg.engine.basics import (
     aim_problem,
     do_aim,
     do_defend,
+    do_help_up,
     do_reload,
     do_swap,
     guard_problem,
+    help_up_actions,
     reload_problem,
+    stand_steady,
     swap_problem,
     vault_action,
     vault_destinations,
@@ -933,6 +936,7 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         unit.move_points -= plan.stand_up
         execute(ctx, [RemoveStatusEffect(target_id=unit.id, status_id=PRONE, reason="stood_up")])
         ctx.emit(UnitStoodUp, unit_id=unit.id, cost=plan.stand_up)
+        stand_steady(ctx, unit)
     walked: list[XY] = [unit.xy]
     touched: set[UnitId] = set()  # 規則改變 pass_through_apply 這次移動碰過的敵人（3D-6）
     for dest, cost in plan.steps:
@@ -1167,7 +1171,7 @@ def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
         raise IllegalActionError(f"目標已經倒地：{target.name_zh}")
     unit.ap -= cost
     exploits = _maneuver_exploits(ctx, unit, modifiers.TRIP, target)
-    if contest(ctx, "trip", unit, target, Attribute.DEX):
+    if contest(ctx, "trip", unit, target, Attribute.DEX, knockdown=True):
         start = len(ctx.events)
         execute(ctx, [ApplyStatusEffect(target_id=target.id, status_id=PRONE, source_id=unit.id)])
         report_exploits(ctx, unit.id, exploits, start, set())
@@ -1318,6 +1322,7 @@ ACTION_HANDLERS: dict[str, ActionHandler] = {
     "run": _do_run,
     "shove": _do_shove,
     "trip": _do_trip,
+    "help_up": do_help_up,
     "interact": _do_interact,
     "use_skill": _do_use_skill,
     "use_race_skill": _do_race_skill,
@@ -1569,6 +1574,7 @@ def _legal_actions(
             actions.extend(
                 Trip(unit_id=unit.id, target_id=t.id) for t in foes if not t.has_status(PRONE)
             )
+    actions.extend(help_up_actions(state, unit))  # 扶起（KD-1）
     actions.extend(_skill_actions(state, unit, areas, expand_copy=expand_copy))
     actions.extend(race_skill_actions(state, unit))  # 種族技（Phase 3R-2；不佔技能欄）
     actions.extend(interact_actions(state, unit))
@@ -1678,6 +1684,7 @@ def _has_basic_action(state: BattleState, unit: UnitState) -> bool:
         or reload_problem(state, unit) is None
         or any(swap_problem(state, unit, a.id) is None for a in adjacent_allies(state, unit))
         or bool(vault_destinations(state, unit))
+        or bool(help_up_actions(state, unit))
     )
 
 

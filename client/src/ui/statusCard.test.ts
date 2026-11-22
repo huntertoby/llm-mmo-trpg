@@ -120,6 +120,10 @@ describe("主角狀態卡：三條一樣粗、條上寫字", () => {
     expect(reactionChip(hero).dim).toBe(false);
     expect(reactionChip({ ...hero, reaction_available: false })).toMatchObject({ dim: true, hint: "反應 已用\n本輪還能反應嗎" });
   });
+  it("倒地中：反應寫伺服器給的原因（KD-1）", () => {
+    const prone = { ...hero, reaction_available: false, reaction_blocked_zh: "倒地中，不能反應" };
+    expect(reactionChip(prone)).toMatchObject({ dim: true, hint: "倒地中，不能反應\n本輪還能反應嗎" });
+  });
   it("窄螢幕也是條＋圖示（不再是一行字）", () => {
     const compact = renderToStaticMarkup(createElement(Hud, { view: view(), hero, skills: {}, compact: true }));
     expect(bars(compact)).toHaveLength(3);

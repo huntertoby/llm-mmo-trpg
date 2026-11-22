@@ -323,6 +323,9 @@
                     "$ref": "#/components/schemas/Trip"
                   },
                   {
+                    "$ref": "#/components/schemas/HelpUp"
+                  },
+                  {
                     "$ref": "#/components/schemas/Interact"
                   },
                   {
@@ -367,6 +370,7 @@
                     "vault": "#/components/schemas/Vault",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
+                    "help_up": "#/components/schemas/HelpUp",
                     "interact": "#/components/schemas/Interact",
                     "reload": "#/components/schemas/Reload",
                     "activate_charge": "#/components/schemas/ActivateCharge",
@@ -571,6 +575,9 @@
                     "$ref": "#/components/schemas/Trip"
                   },
                   {
+                    "$ref": "#/components/schemas/HelpUp"
+                  },
+                  {
                     "$ref": "#/components/schemas/Interact"
                   },
                   {
@@ -615,6 +622,7 @@
                     "vault": "#/components/schemas/Vault",
                     "shove": "#/components/schemas/Shove",
                     "trip": "#/components/schemas/Trip",
+                    "help_up": "#/components/schemas/HelpUp",
                     "interact": "#/components/schemas/Interact",
                     "reload": "#/components/schemas/Reload",
                     "activate_charge": "#/components/schemas/ActivateCharge",
@@ -5098,6 +5106,9 @@
             "$ref": "#/components/schemas/Trip"
           },
           {
+            "$ref": "#/components/schemas/HelpUp"
+          },
+          {
             "$ref": "#/components/schemas/Interact"
           },
           {
@@ -5138,6 +5149,7 @@
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
             "end_turn": "#/components/schemas/EndTurn",
+            "help_up": "#/components/schemas/HelpUp",
             "infuse_skill": "#/components/schemas/InfuseSkill",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
@@ -15393,6 +15405,32 @@
           "maximum"
         ],
         "title": "HealOut"
+      },
+      "HelpUp": {
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "title": "Unit Id"
+          },
+          "type": {
+            "type": "string",
+            "const": "help_up",
+            "title": "Type",
+            "default": "help_up"
+          },
+          "target_id": {
+            "type": "string",
+            "title": "Target Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit_id",
+          "target_id"
+        ],
+        "title": "HelpUp",
+        "description": "扶起（KD-1，#176，05 5.13 第 2 點）：花 ``help_up_ap_cost`` AP，讓一名相鄰、高度差在近戰\n範圍內、倒地中的我方單位（含召喚物）立刻站起；不花他的移動點數，也不觸發藉機攻擊。"
       },
       "HereView": {
         "properties": {
@@ -27502,6 +27540,9 @@
             "$ref": "#/components/schemas/Trip"
           },
           {
+            "$ref": "#/components/schemas/HelpUp"
+          },
+          {
             "$ref": "#/components/schemas/Interact"
           },
           {
@@ -27546,6 +27587,7 @@
             "defend": "#/components/schemas/Defend",
             "end_stance": "#/components/schemas/EndStance",
             "end_turn": "#/components/schemas/EndTurn",
+            "help_up": "#/components/schemas/HelpUp",
             "infuse_skill": "#/components/schemas/InfuseSkill",
             "interact": "#/components/schemas/Interact",
             "move": "#/components/schemas/Move",
@@ -31501,6 +31543,17 @@
             "type": "boolean",
             "title": "Reaction Available"
           },
+          "reaction_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reaction Blocked Zh"
+          },
           "reaction_rules": {
             "items": {
               "$ref": "#/components/schemas/ReactionRuleView"
@@ -31748,6 +31801,23 @@
             "type": "array",
             "title": "Gear Skills",
             "default": []
+          },
+          "skill_notes_zh": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Notes Zh"
           },
           "charges": {
             "items": {

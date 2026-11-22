@@ -88,6 +88,12 @@ def summon_card_hp(
     )
 
 
+def _knock_bonus(lib: ContentLibrary) -> str:
+    """擊倒對抗守方的加值（KD-1）：「，對方 +3」；0 時空字串。"""
+    bonus = lib.ruleset.core.prone_contest_bonus
+    return f"，對方 +{bonus}" if bonus else ""
+
+
 def infusion_phrases(
     lib: ContentLibrary, infusion: SummonInfusion, *, attacks: bool = True
 ) -> list[str]:
@@ -116,7 +122,7 @@ def _attack_phrases(lib: ContentLibrary, infusion: SummonInfusion) -> list[str]:
     if infusion.trip:
         parts.append(
             f"普攻命中時絆倒目標使其「{_status(lib, PRONE)}」"
-            f"（{TRIP_ATTR.display_name}對抗，每隻每輪 1 次）"
+            f"（{TRIP_ATTR.display_name}對抗{_knock_bonus(lib)}，每隻每輪 1 次）"
         )
     if infusion.height_permille:
         parts.append(f"站得比目標高時普攻傷害 +{infusion.height_permille / 10:g}%")
@@ -173,7 +179,8 @@ def summon_innate_lines(lib: ContentLibrary, summon: SummonDef) -> tuple[str, ..
     lines += [_hit_rule_text(lib, rule) for rule in template.hit_rules]
     if template.snare is not None:
         snare = template.snare
-        prone = f"並「{_status(lib, PRONE)}」" if snare.prone else ""
+        knock = f"，另擲擊倒對抗（召喚者那一招的屬性{_knock_bonus(lib)}）"
+        prone = f"{knock}，成功才「{_status(lib, PRONE)}」" if snare.prone else ""
         lines.append(
             f"敵人進入相鄰格時纏住：施加「{_status(lib, snare.status)}」{snare.duration} 回合"
             f"{prone}（每輪 1 次）"

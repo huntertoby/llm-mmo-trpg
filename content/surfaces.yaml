@@ -33,7 +33,7 @@ surfaces:
     expires_to: water
     element: ice
     on_enter:
-      check: {attr: dex, dc: 12, fail_status: prone, slide_max: 3}  # 滑倒並滑行（#123）
+      check: {attr: dex, dc: 10, fail_status: prone, slide_max: 3}  # 滑倒並滑行（#123）；DC 12 → 10（KD-1，#176，05 5.13 第 6 點；被推拉進來、衝鋒與跳躍落點同一個 DC）
   - id: poison
     name_zh: 毒
     glyph: p

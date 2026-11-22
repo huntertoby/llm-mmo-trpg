@@ -13,7 +13,9 @@ import * as QT from "./status";
 import FIT from "./statusFit.json";
 
 const real = glossary as unknown as Glossary;
-const IDS = real.statuses.map((s) => s.id);
+/** KD-1：等美術出圖的狀態（`AWAITING_ART_STATUSES`，走退回畫法）不算進下面的計數。 */
+const PENDING_ART = QT.AWAITING_ART_STATUSES;
+const IDS = real.statuses.map((s) => s.id).filter((id) => !PENDING_ART.includes(id));
 const FIT_TABLE = (FIT as { fit: Record<string, number> }).fit;
 const OPTS: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
 /** 名詞表的控制類別（不手寫：從快照讀）。 */
@@ -45,6 +47,15 @@ function sig(fn: (ctx: CanvasRenderingContext2D) => void): string {
 const card = (id: string | null | undefined, res: number, opt: QT.PaintOpt = {}) => (c: CanvasRenderingContext2D): void => QT.paint(c, id, 50, 50, 84, 20 / 100, res, opt);
 const head = (id: string | null | undefined, res: number, opt: QT.PaintOpt = {}) => (c: CanvasRenderingContext2D): void => QT.paint(c, id, 11 / 2, 11 / 2, 11 - 2, 1, res, opt);
 const CARD_FRAME = 84 * (20 / 100), HEAD_FRAME = (11 - 2) * 1;
+
+describe("KD-1 等美術出圖的狀態", () => {
+  it("在名詞表裡、還沒有 Q 版圖樣（entry 是 null＝畫名稱第一個字）", () => {
+    for (const id of PENDING_ART) {
+      expect(real.statuses.some((s) => s.id === id), id).toBe(true);
+      expect(QT.entry(id), id).toBeNull();
+    }
+  });
+});
 
 describe("T-A1 名詞表 118 個都有 Q 版圖樣", () => {
   it("每個 entry(id) 都不是 null；來源：沿用 40（STATUS 32＋聖輝／暗影貳～伍 8）、借用 4、新畫 74（手畫 39＋紋章 35）", () => {

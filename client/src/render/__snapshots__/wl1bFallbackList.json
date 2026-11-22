@@ -1,5 +1,7 @@
 {
- "statuses": [],
+ "statuses": [
+  "steady"
+ ],
  "skeletons": [],
  "parts": {}
 }

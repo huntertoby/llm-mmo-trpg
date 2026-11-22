@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
+from trpg.content.rules import CoreRules
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import CONCEALED, DEFENDING, PRONE
 from trpg.shared.range_text import dice_note, range_text, span
@@ -126,9 +127,25 @@ def _modifier_lines(status: StatusDef, library: ContentLibrary) -> list[str]:
     if status.id == DEFENDING:
         lines.append(f"防禦值 +{core.defend_defense_bonus_permille / 10:g}%")
     if status.id == PRONE:
-        lines.append(f"站起來要消耗 {core.prone_stand_up_move_permille / 10:g}% 的移動點數（進位）")
+        lines += _prone_lines(core)
     if status.id == CONCEALED:
         lines.append(f"超過 {core.concealed_ranged_max_distance} 格的遠程攻擊無法選為目標")
+    return lines
+
+
+def _prone_lines(core: CoreRules) -> list[str]:
+    """倒地的規則句（KD-1，05 5.13）：站起消耗、隊友扶起、不能反應、少 AP、站穩。"""
+    lines = [
+        f"站起來要消耗 {core.prone_stand_up_move_permille / 10:g}% 的移動點數（進位）；"
+        f"相鄰的隊友也可以花 {core.help_up_ap_cost} AP 扶起（不花移動）",
+        "倒地期間不能用任何反應（格擋、藉機攻擊、監視射擊、反擊、反應技）",
+    ]
+    if core.prone_ap_loss:
+        lines.append(
+            f"倒地後的第一個自己回合少 {core.prone_ap_loss} AP（只扣一次，被扶起也照扣；頭目不扣）"
+        )
+    if core.steady_rounds:
+        lines.append("站起來或被扶起後「站穩」，到自己下一個回合結束前不會再倒地")
     return lines
 
 

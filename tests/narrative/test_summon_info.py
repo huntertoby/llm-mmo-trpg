@@ -86,7 +86,10 @@ def test_skeleton_shows_its_shield_bash_and_role_scaled_hp() -> None:
     template = lib.ruleset.summon_def("summon_skeleton_warrior").template
     role = lib.ruleset.core.summon_role_hp_permille["melee"]
     assert info.hp == lib.ruleset.core.template_max_hp(template) * role // 1000
-    assert info.innate == ("普攻命中時絆倒目標使其「倒地」（敏捷對抗，每隻每輪 1 次）",)
+    bonus = library().ruleset.core.prone_contest_bonus  # KD-1：擊倒對抗對方的加值
+    assert info.innate == (
+        f"普攻命中時絆倒目標使其「倒地」（敏捷對抗，對方 +{bonus}，每隻每輪 1 次）",
+    )
     assert info.attack.startswith("單手劍：") and info.move == "4 格"
 
 

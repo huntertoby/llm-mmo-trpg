@@ -89,6 +89,8 @@ export function actionLabel(
       return `推擊：${names.label(action.target_id)}`;
     case "trip":
       return `絆倒：${names.label(action.target_id)}`;
+    case "help_up":
+      return `扶起：${names.label(action.target_id)}`;
     case "interact":
       if (action.mode === "shove_aside")
         return `撥開：${objectLabel(view, action.object_id)}（往${action.side === "right" ? "右" : "左"}）`;

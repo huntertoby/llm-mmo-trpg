@@ -240,6 +240,13 @@ targets:
       - {path: ap_carry_max, label_zh: 可保留的 AP, kind: int, hint_min: 0, hint_max: 3, note_zh: 回合結束時沒用完的 AP 最多留這麼多到下回合（初值 1）；本回合上限也跟著是每回合 AP＋這個值。}
       - {path: miss_refund_ap, label_zh: 失手返還的 AP, kind: int, hint_min: 0, hint_max: 2, note_zh: 技能所有目標都沒命中（被豁免擋下也算）時返還的 AP（初值 1）；敵我都適用，每個單位每回合最多返還 1 次。0＝不返還。}
       - {path: miss_refund_min_cost, label_zh: 失手返還的最低耗費, kind: int, hint_min: 1, hint_max: 3, note_zh: 實際花了至少這麼多 AP 的技能才會失手返還（初值 2；1 AP 的技能不返還）。}
+      # KD-1（#176，05 5.13 第 8 點）：倒地改版的數字，全部是初值。
+      - {path: prone_ap_loss, label_zh: 倒地少的 AP, group_zh: 倒地, kind: int, hint_min: 0, hint_max: 2, note_zh: 倒地後的第一個自己回合少給這麼多 AP（初值 1；只扣一次，被扶起或自己站起也照扣；單格頭目不扣，巨型頭目本來就不會倒）。調高：倒地更痛、擊倒類技能更值錢；調低：倒地只剩站起消耗、近戰優勢與不能反應；0＝不扣。只能 0～3。}
+      - {path: prone_stand_up_move_permille, label_zh: 站起消耗的移動（‰）, group_zh: 倒地, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 倒地的人自己站起來要花速度的這麼多千分比的移動點數（初值 500＝一半，無條件進位）。調高：自己站起來更貴，更值得讓隊友扶；調低：站起來幾乎不花移動。只能 0～1000。}
+      - {path: help_up_ap_cost, label_zh: 扶起的 AP, group_zh: 倒地, kind: int, hint_min: 1, hint_max: 2, note_zh: 基本動作「扶起」花的 AP（初值 1）：讓相鄰、倒地的我方單位立刻站起，不花他的移動。調高：扶人更貴，比較少人扶；調低不能低於 1。只能 1～3。}
+      - {path: steady_rounds, label_zh: 站穩的輪數, group_zh: 倒地, kind: int, hint_min: 0, hint_max: 2, note_zh: 站起來或被扶起後的「站穩」持續到自己第幾個回合結束（初值 1＝下一個自己回合結束；在自己回合中站起時這個回合不算）。站穩期間任何來源都不會讓他倒地，冰面照滑但不倒。調高：越不容易被連續擊倒；調低：連鎖擊倒更容易；0＝沒有站穩。只能 0～3。}
+      - {path: prone_contest_bonus, label_zh: 擊倒對抗的守方加值, group_zh: 倒地, kind: int, hint_min: 0, hint_max: 6, note_zh: 絆倒、技能擊倒、衝鋒與擲物擊倒、召喚物絆倒、「每第 N 次命中：倒地」、震波、壓到、藤蔓纏住的對抗，被擊倒的一方加這麼多（初值 3，約少 15 個百分點的成功率）；另外平手算守方贏。調高：更難擊倒；調低：更容易擊倒，0＝只剩平手算守方贏。只能 0～20。}
+      - {path: topple_damage_dice, label_zh: 壓到的傷害骰, group_zh: 倒地, kind: dice, note_zh: 推倒物件或牆壓到人時，每個被壓到的人受這個骰的物理傷害（初值 2d6，骰面照數值倍率放大），被壓到的 breakable 物件也受同樣傷害；倒不倒地另外擲擊倒對抗。調高（骰子加大）：壓人、壓物件更痛；調低：推倒物件主要只剩擊倒。}
       # HC-4a（05 5.12.2 第 3 點「數值工坊可調」）：頭目部位血量加總的上限，從 parts.py 的常數搬到 core.yaml 的 boss_parts。
       # 部位數（2～4）、破壞效果數（最多 2）、階段數（2～4）是結構，不開。
       - {path: boss_parts.hp_total_max_permille, label_zh: 部位血量加總上限（‰）, kind: permille, hint_min: 400, hint_max: 800, note_zh: 同一隻頭目所有部位的血量（部位血量‰）加總不能超過這個千分比（初值 600＝頭目最大 HP 的 60%）。調低後，現有頭目的部位加總超過的話會擋下，要先調低各部位血量。只能 1～1000。}
@@ -975,6 +982,12 @@ targets:
       - {path: season_boss.daily_attempts, label_zh: 賽季頭目每天挑戰次數, group_zh: 賽季頭目, kind: int, hint_min: 1, hint_max: 5, note_zh: 每個帳號每天能挑戰賽季頭目幾次（按下挑戰就扣、撤退不退）。調高：首殺來得更快；調低：每次挑戰更珍貴。}
       - {path: season_boss.score.per_round, label_zh: 頭目評分：每輪扣幾分, group_zh: 賽季頭目, kind: int, hint_min: 0, hint_max: 50, note_zh: 通關評分＝基礎分減掉這個值 × 輪數（不低於 0），再加存活與沒人倒下的加分。調高：打得快的隊伍分數拉得更開；調低：輪數影響變小。}
       - {path: league.seeds, label_zh: 循環賽每組種子數, group_zh: 影子循環賽, kind: int, hint_min: 1, hint_max: 4, note_zh: 影子循環賽每對組合在每張地圖打幾個種子（每個種子交換先後手各打 1 場）。調高：結果更穩定、但要打的場數變多；調低：場數少、運氣成分大。只能 1～8。}
+  # KD-1（#176，05 5.13 第 6、8 點）：冰面滑倒的 DC（走進冰面、被推拉進去、衝鋒與跳躍落點同一個）。
+  - kind: surface
+    label_zh: 地面表面
+    glob: surfaces.yaml
+    fields:
+      - {path: "surfaces[*].on_enter.check.dc", label_zh: 滑倒檢定的 DC（冰面）, kind: int, hint_min: 6, hint_max: 16, existing_only: true, note_zh: 走進這種表面（目前只有冰面）的敏捷檢定要擲到這麼多才不滑倒（初值 10，KD-1 從 12 降下來）；被推、拉進來，或衝鋒、跳躍落在上面也用同一個 DC。調高：更容易滑倒倒地；調低：更穩。矮人、鱗族、會飛的單位不擲。}
   - kind: flash
     label_zh: 閃現規則與計價
     glob: flash_templates.yaml

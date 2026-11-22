@@ -7,7 +7,7 @@ import { unitTiles, unitsOnTile } from "./footprint";
 import { posKey, samePos } from "./geometry";
 import { pickCountText, splitCompositeKeys, tileCount, unitCount } from "./pickCount";
 import { activeReason } from "./activations";
-import { gearSkillNote, gearSkillOff, gearSkillSource } from "./gearSkills";
+import { gearSkillItem, gearSkillNote, gearSkillOff, gearSkillSource } from "./gearSkills";
 import { grantedRemaining } from "./granted";
 import { objectStyle } from "./glossary";
 
@@ -61,6 +61,7 @@ export type ModeKind =
   | "attack"
   | "shove"
   | "trip"
+  | "help_up"
   | "interact"
   | "shove_aside"
   | "defend"
@@ -155,6 +156,7 @@ function addTarget(t: TargetSet, action: Action): void {
     }
     case "shove":
     case "trip":
+    case "help_up":
     case "swap":
       setOnce(t.units, action.target_id, action);
       return;
@@ -213,8 +215,12 @@ export interface SkillButton {
   grantedRemaining?: number | null;
   /** 裝備授予的技能（Phase 3G-G3b）：「來自裝備」的說明（物品名）；不是裝備來的為 `null`。 */
   gearSource?: string | null;
+  /** 裝備授予的技能：技能列按鈕副標題的裝備名（E1 小修 1）；不是裝備來的為 `null`。 */
+  gearItem?: string | null;
   /** 裝備授予的技能沒有效果的原因（E5，例「這把武器不能套用」）：標灰＋原因；有效時 `null`。 */
   gearOff?: string | null;
+  /** 沒有套用到這招的裝備變形（E5 美術小修，`UnitView.skill_notes_zh`）：說明卡內文最後的灰字；沒有時省略。 */
+  reshapeNotes?: readonly string[];
   /** 裝備授予的技能只對一部分招式沒有效果時的說明（E5，例「這招不能套用：火球」）；不標灰。 */
   gearNote?: string | null;
   /** 效果原語的代碼（Phase 3D-8d；分辨一般瞬步與傳送他人）；卡片還沒取得時為空。 */
@@ -264,8 +270,10 @@ export function skillButtons(
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
       gearSource: gearSkillSource(hero, skillId),
+      gearItem: gearSkillItem(hero, skillId),
       gearOff: gearSkillOff(hero, skillId),
       gearNote: gearSkillNote(hero, skillId),
+      reshapeNotes: hero.skill_notes_zh?.[skillId] ?? [],
       effectIds: card?.effect_ids ?? [],
       // 只有「位移 → 動作」用兩段選取（Phase 3F-3b）；其他種類（3F-4a／4b）照第一段選取，
       // 第二段在結算時暫停詢問或自動結算（延遲段：之後才釋放）
@@ -286,6 +294,7 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
   { kind: "defend", label: "守護" },
   { kind: "run", label: "跑步" },
   { kind: "swap", label: "換位" },
+  { kind: "help_up", label: "扶起" },
   { kind: "aim", label: "瞄準" },
   { kind: "vault", label: "攀跳" },
   { kind: "reload", label: "裝填" },
@@ -294,8 +303,8 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
 ];
 
 /**
- * 基本動作的種類（Phase 3-21b；`docs/design/05-戰鬥.md` 5.2.2：不含結束回合與管理動作，上限 10 個）：
- * 移動（點格子）＋ 普攻、跑步、守護、推擊、絆倒、互動（推動、撥開）、換位、瞄準、攀跳。
+ * 基本動作的種類（Phase 3-21b；`docs/design/05-戰鬥.md` 5.2.2：不含結束回合與管理動作，上限 11 個，#177）：
+ * 移動（點格子）＋ 普攻、跑步、守護、推擊、絆倒、扶起、互動（推動、撥開）、換位、瞄準、攀跳。
  */
 export const BASIC_ACTION_KINDS: readonly string[] = [
   "move",
@@ -304,12 +313,14 @@ export const BASIC_ACTION_KINDS: readonly string[] = [
   "defend",
   "shove",
   "trip",
+  "help_up",
   "interact",
   "swap",
   "aim",
   "vault",
 ];
-export const BASIC_ACTION_LIMIT = 10;
+/** 基本動作總數上限（05 5.2.2；#177 起 11，含扶起；同伺服器 `trpg.engine.actions.BASIC_ACTION_LIMIT`）。 */
+export const BASIC_ACTION_LIMIT = 11;
 /** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（火槍空膛時才出現在「更多動作」）。 */
 export const WEAPON_ACTION_KINDS: readonly string[] = ["reload"];
 
@@ -319,7 +330,7 @@ export const CHARGE_KIND: ModeKind = "charge";
 /** 常駐按鈕（移動除外，移動是點格子）：普攻、跑步、守護；結束回合另外放。 */
 export const RESIDENT_KINDS: readonly ModeKind[] = ["attack", "run", "defend"];
 /** 「更多動作」選單的順序。 */
-export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "aim", "vault", "reload"];
+export const MORE_KINDS: readonly ModeKind[] = ["shove", "trip", "interact", "shove_aside", "swap", "help_up", "aim", "vault", "reload"];
 /** 留在技能列的基本動作（姿態與起身這類管理動作，只在合法時出現）。 */
 export const TRAY_KINDS: readonly ModeKind[] = ["end_stance", "stand"];
 
@@ -328,6 +339,7 @@ function modeKindOf(a: Action): ModeKind | null {
     case "attack":
     case "shove":
     case "trip":
+    case "help_up":
     case "run":
     case "end_stance":
       return a.type;

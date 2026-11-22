@@ -37,12 +37,13 @@ from trpg.engine.events import (
     WallToppled,
 )
 from trpg.engine.ids import ELITE_TAG, PRONE
+from trpg.engine.maneuvers import contest
 from trpg.engine.practice import is_practice_protected
 from trpg.engine.rules.forms import form_collision_permille
 from trpg.engine.rules.landing import nearest_free
 from trpg.engine.rules.perks import attribute_perk
 from trpg.engine.state import UnitState
-from trpg.shared.types import ObjectId, UnitId
+from trpg.shared.types import Attribute, ObjectId, UnitId
 
 __all__ = ["ELITE_TAG", "TriggerFn", "effects_for", "register_trigger"]
 
@@ -185,6 +186,23 @@ def _collision_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase
     return effects
 
 
+def _crushed_prone(
+    ctx: Ctx, source_id: UnitId | None, victim_id: UnitId, depth: int
+) -> list[EffectBase]:
+    """推倒物件或牆壓到人（KD-1，05 5.13 第 5 點）：照舊受傷，另外每個人各擲一次擊倒對抗（推倒者的
+    力量 vs 目標力量；守方 +加值、平手算守方贏），成功才倒地。找不到推倒者（沒有來源）時不倒地；
+    已經倒地的不擲。"""
+    pusher = None if source_id is None else ctx.state.units.get(source_id)
+    victim = ctx.state.units.get(victim_id)
+    if pusher is None or victim is None or not victim.alive or victim.has_status(PRONE):
+        return []
+    if not contest(ctx, "topple", pusher, victim, Attribute.STR, primary=False, knockdown=True):
+        return []
+    return [
+        ApplyStatusEffect(depth=depth, source_id=source_id, target_id=victim_id, status_id=PRONE)
+    ]
+
+
 @register_trigger("object_toppled")
 def _topple_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
     assert isinstance(event, ObjectToppled)
@@ -200,11 +218,7 @@ def _topple_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
                 dice=dice,
             )
         )
-        effects.append(
-            ApplyStatusEffect(
-                depth=depth, source_id=event.source_id, target_id=victim, status_id=PRONE
-            )
-        )
+        effects += _crushed_prone(ctx, event.source_id, victim, depth)
     effects.extend(
         DamageObjectEffect(
             depth=depth, source_id=event.source_id, object_id=oid, dice=dice, cause="topple"
@@ -231,11 +245,7 @@ def _wall_topple_damage(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBa
                 dice=dice,
             )
         )
-        effects.append(
-            ApplyStatusEffect(
-                depth=depth, source_id=event.source_id, target_id=victim, status_id=PRONE
-            )
-        )
+        effects += _crushed_prone(ctx, event.source_id, victim, depth)
     effects.extend(
         DamageObjectEffect(
             depth=depth, source_id=event.source_id, object_id=oid, dice=dice, cause="topple"

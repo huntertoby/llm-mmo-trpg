@@ -88,7 +88,7 @@ def _campfire_session(client: TestClient, library: ContentLibrary) -> str:
     skilled = full_library()
     run, _ = auto_play(
         skilled,
-        new_run(skilled, "build_fire", 3),  # CB-1 門檻 8 後種子 1 打不到營火，1 → 3
+        new_run(skilled, "build_fire", 4),  # CB-1 門檻 8 後種子 1 打不到營火，1 → 3；KD-1 3 → 4
         stop=lambda r, b: isinstance(r.node, CampfireNode),
     )
     runs = client.app.state.runs  # type: ignore[attr-defined]

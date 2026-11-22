@@ -53,7 +53,8 @@ function fakeCtx(): { ctx: CanvasRenderingContext2D; calls: string[]; props: Rec
   return { ctx, calls, props };
 }
 
-const STATUS_IDS = real.statuses.map((s) => s.id);
+// KD-1：等美術出圖的狀態（AWAITING_ART_STATUSES）走退回畫法，不進基準
+const STATUS_IDS = real.statuses.map((s) => s.id).filter((id) => !QT.AWAITING_ART_STATUSES.includes(id));
 
 describe("118 個狀態", () => {
   it("每個狀態都有 status_look、Q 版圖樣（舊 GLYPH 也還在，給部件圓片），且畫得出來、圖樣貼進框裡", () => {

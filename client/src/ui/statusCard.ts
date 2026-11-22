@@ -201,13 +201,14 @@ export function moveChip(unit: UnitView): StatChip {
 
 export function reactionChip(unit: UnitView): StatChip {
   const on = unit.reaction_available;
+  const blocked = unit.reaction_blocked_zh ?? null; // KD-1：倒地中，不能反應
   return {
     key: "reaction",
     icon: "reaction",
     label: "",
     pips: null,
     dim: !on,
-    hint: lines(`反應 ${on ? "可用" : "已用"}`, "本輪還能反應嗎"),
+    hint: lines(blocked ?? `反應 ${on ? "可用" : "已用"}`, "本輪還能反應嗎"),
   };
 }
 

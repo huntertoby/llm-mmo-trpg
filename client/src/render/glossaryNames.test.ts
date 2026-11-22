@@ -15,7 +15,7 @@ describe("部件名稱讀 glossary", () => {
     expect(effectPart({ type: "damage" }).description).toContain("傷害");
     expect(conditionPart("height_advantage")?.label).toBe("居高臨下");
     expect(triggerPart("on_kill", false)?.label).toBe("擊倒時");
-    expect(triggerPart("hit_by_melee", true)?.label).toBe("被近戰擊中時");
+    expect(triggerPart("hit_by_melee", true)?.label).toBe("被近戰命中時");
     expect(partTip(effectPart({ type: "heal" }))).toMatch(/^效果原語：/);
   });
 
