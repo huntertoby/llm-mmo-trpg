@@ -205,3 +205,217 @@
 8. 前端「1 天內」：b 段改由 API 帶冷卻秒數，前端照同一規則組字。
 9. 範圍外小改動：接受。
 10. storyteller 重試次數、roguelite 傳承上限：併進 b 段。
+
+## b. api、llm、server、前端剩下的 config（併 a 段裁定 4、5、7、8、10，HC-6b 裁定 3、6）
+
+基準：main `88fed5af7`（a 段裁定）。分支 `worktree-agent-a5633a104c78e179f`，沒 push。
+數值一律照現值搬，沒試數值、沒跑模擬、沒呼叫真的 LLM。沒動 `docs/design/`、`CLAUDE.md`、計畫檔、`config/`。
+
+### b.0 交付與 commit
+
+| 項目 | commit | 內容 |
+|---|---|---|
+| b.1 api（含 api/tuning、server 的留言） | `acef1c102` | 規則數字搬進 content；回應欄位的預設值改必填；工坊工具設定只留一份；請求格式上限、結構數字改判 guard／const |
+| a 段裁定 4、10 | `4c143b6b3` | 世界 `InheritAction`、roguelite `InheritChoice` 的 `records` 改成格式上限，帶幾個照規則 `max_carry` |
+| b.2 llm（含 narrative 說書人） | `0ea838541` | 重試、提醒線、連線逾時讀 `LLMConfig` 的 schema 預設；挑選模式的時間預算搬進 content |
+| b.3 server、前端 | `0fa58b2d1` | 前端的 `?? 30`、晶能對照表拿掉；受擊門檻改判 layout；循環賽人數改判 const |
+| a 段裁定 8 | `a2433e825` | `OathView.cooldown_seconds`；前端誓約的「1 天內」照秒數組字 |
+| b.4（HC-4c 裁定 1） | `753ff2e09` | 重播、賽程封存讀到驗證失敗的紀錄給中文說明 |
+| b.5（HC-6b 裁定 6） | `2c69058d8` | 工坊的階級、AP 選項改由 API 帶（`GameRulesOut.skill_tiers`、`max_ap_cost`） |
+| a 段裁定 5＋收尾 | ``6e00b5cb1`` | 留 text 的 3 筆搬進 content、檢查移到上一層；刪 0 筆規則；上手文件 |
+| 清單重產 | ``006665703`` | `--md` 重產 `寫死數值-清單.md` |
+| check.py 修正 | `cae3d12b6` | `scripts/x10/fields.yaml` 補新欄位；兩個觸發時機測試改查 Ruleset 層 |
+| 報告 | 本 commit | |
+
+每個 commit 前跑過 ruff check、ruff format --check、mypy、lint-imports、`classify.py --check` 與相關測試（經看門狗）；有前端改動的另跑 tsc 與相關 vitest。
+
+### b.1 api（config 80 → 10，全部 done）
+
+**搬進 content**（新欄位都必填，內容檔寫明現值）：
+
+| 原本 | 搬到 | 值 |
+|---|---|---|
+| `api/attribute_text.py` 的 `_EARLY_TIER` | `roguelite.yaml` 的 `route_hint_tier` | 2 |
+| `api/flash_changes.py` 的 `_SHIELD_DEFAULT_DURATION` | 改讀狀態表的預設回合（同引擎 `_shield`：`spec.status` 或 `shielded` 的 `duration`） | 2 |
+| `api/world_pregen.py` 的 `WAIT_SECONDS`、`STORY_WAIT_SECONDS`、`FLASH_LIMIT`、`STORY_LIMIT` | `skill_pick.yaml` 的 `pregen`（`WorldPregen.wait_seconds` 等改成 `None`＝照這一筆的內容庫，測試仍可覆寫） | 10、2、3、2 |
+| `api/world_field_people.py` 的 `TOWN_FRIENDS_MAX`；`world_field_things.py` 的 `FOOTPRINT_FRIENDS_MAX`、`PRINTS_MAX` | `world/rules.yaml` 的 `display`（`town_friends`、`footprint_friends`、`footprint_prints`） | 8、3、8 |
+| `server/notes.py` 的 `NOTE_MAX_LEN`、`BOARD_NOTES`、`FOOTPRINT_MAX` | `world/rules.yaml` 的 `notes.max_chars`、`display.note_board`、`display.note_footprints`（API 帶進 `trpg.server.notes`） | 50、20、10 |
+| `api/world_party_view.py` 的 `REPORTS_SHOWN` | 改讀 `world/mercenaries.yaml` 的 `shadow_reports_kept`（同值，見待決 5） | 20 |
+| `api/world_story_schemas.py` 的 `CARE_CITE_MAX` | 改讀 `content/world_situations.py` 的 `MAX_CARE_CLAIMS`（用心清單項數） | 4 |
+| `CreateBattleRequest.max_rounds` 的預設 30 | 省略＝`workshop.yaml` 的 `max_rounds`（見待決 6） | 30 |
+| `WorkshopRandomRequest.tier` 的 `le=5` | 端點照 `core.skill_limits.tiers` 檢查（422 中文說明） | 5 |
+| 工坊分組改的 `_SCALAR_LIMITS`（AP 1～3、冷卻 1～6） | `core.skill_limits.max_ap_cost`、`max_cooldown` | 3、6 |
+| 工坊欄位範圍 `max_rows` 1～9、吸血 1～500 | 讀 `PhaseGrowSurface`、`StructureRules` 的 schema 上下限（`field_bounds` 移到 `content/schemas.py` 共用） | 9、500 |
+| 工坊欄位範圍 部位抗性 ±1000、`damage_dealt` 1～999 | `±_PERMILLE`、`_PERMILLE − 1`（同 `PartDef`、`StatDownBreak` 的驗證） | — |
+
+- 世界畫面、留言板的 `rules_of(library)` 一律有 `world/rules.yaml`（新加 `display`、`notes`）；凍結複本 `tests/world/frozen_replay/world_rules.json` 只補這兩個鍵（凍結重播照舊通過）。
+- **HC-6b 裁定 3（新欄位的預設值）**：`GameRulesOut` 的 HC-6b 欄位、`TuningStatus.draft_name_max`、`TuningSimOptions` 的 `map_default_seeds`／`map_seconds_per_battle`／`ratio_max_work`／`ratio_battles_per_second`、`PartyView.free_slots`、`LocationBoard.max_len` 拿掉預設、改必填（伺服器本來就一律填）。`_world_text_rules` 缺 `world/event_rules.yaml`、循環賽、`world/enemies.yaml` 時改成報錯（原本照欄位預設）；跑過 api 全部測試沒有碰到。
+- **工坊工具設定只留一份**（規格 b.1）：預設種子、模擬場數與工作量上限、樣本小門檻、地圖數上限集中在 `api/tuning/schemas.py`（`SIM_DEFAULT_SEEDS`、`MAP_DEFAULT_SEEDS`、`MAX_SIM_MAPS`、`MAX_SIM_BATTLES`、`RATIO_DEFAULT_SEEDS`、`RATIO_MAX_WORK`、`SMALL_SAMPLE`、`MAX_RATIO_SEEDS`），`service.py`、`ratios.py`、`sim_jobs.py` 的舊名字改成指向它（照舊匯出）；`DRAFT_NAME_MAX`、`MAX_GROUP` 本來就只有一份。規則 `py-api-tuning-tool-settings`（config done）：工具本身的設定，不是遊戲規則，不進 content（見待決 3）。
+- **改判 guard**（`py-api-request-format-guards`、`py-api-world-pregen-queue-guard`）：手動組物品的詞條 8（＝`EquipmentRules.max_affixes_per_item` 的 le；規則值 4）、單場戰鬥輪數 200、工坊請求的清單長度、全服預先生成暫存區 12。靶場看示範的關鍵字請求 2 → 4（同開局選關鍵字的格式上限，規則 `range.trial_keywords_max` 2 照舊由試打檢查；見待決 7）。
+- **改判 const**（`py-api-structure-const-number`）：等待的輪詢間隔 0.05 秒、工坊欄位路徑段數、「2 AP 條件型」預設組本身、四捨五入的 ×2、「2 級＝第一次升級」。工坊的「遠程」（射程 2 格以上）清單與分組改共用 `skill_ranged` 一份。
+
+### a 段裁定 4、10（傳承上限）
+
+- `InheritAction.records`、`InheritChoice.records` 的 `max_length=2` 改成 `INHERIT_RECORDS_FORMAT_MAX`（`content/flash_templates.py`：`major_flash` 的 schema 上限 9 − 1 ＝ 8）。帶幾個照規則 `max_carry`（`major_flash − 1`，現值 2），由 `roguelite.flashes` 的傳承檢查擋下並說明「最多帶走 2 個小變化」。
+- 工坊把 `major_flash` 調高時，請求不會先被 pydantic 擋下。`openapi.json` 兩處 `maxItems` 2 → 8。
+- 新測試 `tests/roguelite/test_inherit_records_hc7b.py`。
+
+### b.2 llm（config 35 → 8，全部 done；narrative 1 → 0）
+
+- **部署設定讀 `LLMConfig` 的 schema 預設**：`llm/config.py` 加 `LLM_DEFAULTS = LLMConfig()`（唯一一份預設）。
+  - 重試次數 3：`DEFAULT_FLASH_ATTEMPTS`、`DEFAULT_PICK_ATTEMPTS`、`DEFAULT_MAX_ATTEMPTS`、`DEFAULT_STORY_ATTEMPTS`（劇情技能）、`DEFAULT_WISH_ATTEMPTS` 與各函式的 `max_attempts=3` → `LLM_DEFAULTS.max_retries`。伺服器、命令列本來就傳 `config.max_retries`。
+  - 退回率提醒 200‰（`llm_source`、`flash_eval`、`flash_propose`、`propose`）→ `LLM_DEFAULTS.fallback_alert_permille`。
+- **`LLMConfig` 新加的鍵**（`config/llm.toml` 沒加、既有值沒改；預設等於原本程式裡的值）：
+
+| 鍵 | 預設 | 原本 | 怎麼生效 |
+|---|---|---|---|
+| `probe_timeout_s` | 3.0 | `api/llm_source.DEFAULT_PROBE_TIMEOUT_S` | `LocalLlmProvider` 建構時沒給逾時就讀設定檔的值 |
+| `situation_attempts` | 2 | `llm/situation.DEFAULT_SITUATION_ATTEMPTS` | `propose_situation` 沒給 `attempts` 時讀 client 帶的設定（`client_config`；Mock 用預設） |
+| `story_attempts` | 2 | `narrative/storyteller.DEFAULT_STORY_ATTEMPTS`（a 段待決 10） | `tell_story` 同上 |
+
+- **遊戲規則搬進 content**：挑選模式等本機模型的時間預算 `skill_pick.yaml` 的 `budget_seconds`（`flash`、`offer`、`wish` 各 10 秒；原本 `FLASH_PICK_BUDGET_S`、`OFFER_BUDGET_S`、`WISH_PICK_BUDGET_S`）。`budget_s` 省略＝讀內容。
+- 許願對關鍵字的上限 `max_keywords=2` 預設改讀 `world/rules.yaml` 的 `wish.max_keywords`（`wish_max_keywords`）。
+- 提示詞的名稱、描述字數改用 `skillgen/flash_text.py` 那一份（同值 12、40；兩邊原本各寫一份）。`MAX_SCHEMA_BRANCHES`、`WISH_REPLY_MAX_CHARS`、Mock 的挑選序 `(0, 1, 2)` 改判 const（同 `flash_text` 的前例，`py-llm-format-const-number`）。
+- 規則 `py-llm-config-config-number` 改成 config done（`config/llm.toml` 的 schema 預設）。
+- 新測試 `tests/llm/test_llm_defaults_hc7b.py`。
+
+### b.3 server、前端（server config 4 → 0；前端 config 15 → 0）
+
+- server：留言 3 筆見 b.1；`league.MIN_ENTRIES`（2）改判 const（循環賽至少要 2 人才有對手，`py-server-league-const-number`）。
+- 前端：
+  - `GearScreen.tsx`、`workshop/tryout.ts` 的 `max_rounds: arena?.max_rounds ?? 30` → 沒有靶場設定時不送，伺服器照 `workshop.yaml`（b.1）。
+  - `ui/statusCard.ts` 的 `CRYSTAL_SURGE_TIER` 對照表 → `CRYSTAL_SURGE_RE` 照 ID 樣式（`crystal_surge`＝1、`crystal_surge_<階>`；同元素架勢的做法）。
+  - `battle/impact.ts` 的 `TIER_PERMILLE`、`battle/vfx.ts` 的 `HEAVY_HIT_PERMILLE` 改判 layout（原規則 note「呈現用的門檻，PM 可改判 layout」；只決定頓格與震動）。
+  - 工坊的階級、AP 8 筆見 b.5。
+
+### a 段裁定 8（前端的「1 天內」）
+
+- `OathView` 多 `cooldown_seconds`（`world/oaths.yaml` 的 `cooldown_seconds`；沒有誓約表時用 `OathTable` 的預設，同誓約紀錄的說明）。
+- `WorldGrowth.tsx` 兩處改成 `durationText(oath.cooldown_seconds)`（`ui/rulesText.ts` 新函式，整天「N 天」、不整天「N 小時」四捨五入，同後端 `cooldown_zh`；`aboutDurationText` 改成「約 」＋它）。**目前 86400 秒組出來和改前逐字相同**（`ui/hc7bDurationText.test.ts`）。
+
+### b.4 重播與賽程封存的驗證錯誤（HC-4c 裁定 1、a 段裁定 7）
+
+- `engine/runner.py` 新函式 `log_invalid_problem(error)`：「紀錄的內容和目前的資料格式對不上（N 處）：紀錄被修改過，或規則資料的結構在紀錄之後改變，無法確定重播結果一致」——和「雜湊不符」同一類，不帶驗證錯誤原文。
+- 用在三處：`trpg battle replay`、循環賽的 `LeagueStore.log`（重播端點，409）、賽季封存檢查 `_replay_problems`。
+- 測試 `tests/server/test_log_invalid_hc7b.py`：用一份「舊格式」紀錄（紀錄版號相同，內嵌規則包少了 a 段新增的必填 `core.crit_range_floor`），三處都給中文說明、不含 `Field required` 等原文。
+
+### b.5 工坊的階級與 AP 選項（HC-6b 裁定 6）
+
+- `GameRulesOut` 多 `skill_tiers`（`core.skill_limits.tiers`，5）、`max_ap_cost`（`skill_limits.max_ap_cost`，3）。
+- 數值工坊篩選列 `tuning/skillModel.ts` 的 `FILTER_ROWS` 改成 `filterRows(rules = gameRules())`：階級 1～`skill_tiers`、AP 1～`max_ap_cost`。技能工坊「隨機一個」的階級選單 1～`skill_tiers`（`ToolPanels.tsx`）。
+- **階級讀哪個上限**：照裁定讀 `skill_limits.tiers`。隨機一個本來就是 1～5，字不變；**數值工坊的篩選列原本只有 1～3 階，現在多了「4 階」「5 階」兩顆**（見待決 1）。AP 1～3 不變。
+- 截圖（建置後的前端＋`trpg serve --port 8123`，存檔放 scratch、`TRPG_TUNING=1`）：`C:\Users\tobby\AppData\Local\Temp\claude\9f1b79de9b6f77a5\9d8cd6cd-f0cd-4696-a663-73ef271d469e\scratchpad\hc7b_tuning_filter.jpg`（篩選列階級 1～5、AP 1～3）。
+
+### a 段裁定 5（留 text 的 3 筆，text 3 → 0）
+
+照 HC-4d 裁定 4 的前例：規則值不變，只改錯誤出現的地方。
+
+| 原本 | 搬到 | 檢查移到 |
+|---|---|---|
+| `TriggerSpec` 的 `on_ap_spent_all`、`on_keyword_exploited`「max_per_round 只能是 1」 | `skill_triggers.yaml` 兩個時機的 `max_per_round: 1`（`SkillTriggerDef.max_per_round`，沒寫＝不限） | Ruleset 層的 `_trigger_problems`（技能檢查，載入內容庫或 `validate_skill` 時） |
+| `WorldItemDef` 的「道具技能必須是主動、1 AP（8.17）」 | `world/items.yaml` 的 `item_skill_ap_cost: 1` | 物品表 `WorldItemTable`（整張表的驗證） |
+
+- 說明照內容組字，現值組出來和改前逐字相同。物品那一句不再和同一件物品的其他問題（標籤、使用次數）併成一句。
+- 閃現的「每回合觸發次數 +1」（`_op_trigger_cap`）碰到這兩個時機：原本在建草稿時被擋、現在由 `validate_skill` 擋，兩者都讓那個變化不出現（逐招預算、閃現 parity 不變）。
+- 新測試 `tests/content/test_text_rules_hc7b.py`。
+
+### b.6 API 新欄位與夾具
+
+| 型別 | 欄位 | 變動 |
+|---|---|---|
+| `GameRulesOut` | `skill_tiers`、`max_ap_cost` | 新增 |
+| `GameRulesOut` | HC-6b 的 21 個欄位 | 拿掉預設、必填 |
+| `OathView` | `cooldown_seconds` | 新增 |
+| `LocationBoard` | `max_len` | 拿掉預設 50、必填 |
+| `PartyView` | `free_slots` | 拿掉預設 2、必填 |
+| `TuningStatus` | `draft_name_max` | 拿掉預設、必填 |
+| `TuningSimOptions` | `map_default_seeds`、`map_seconds_per_battle`、`ratio_max_work`、`ratio_battles_per_second` | 拿掉預設、必填 |
+| `CreateBattleRequest` | `max_rounds` | `int`（預設 30）→ `int \| null`（省略＝`workshop.yaml`） |
+| `WorkshopRandomRequest` | `tier` | 拿掉 `maximum: 5`（端點檢查） |
+| `RangeTrialRequest` | `keywords` | `maxItems` 2 → 4 |
+| `InheritAction`、`InheritChoice` | `records` | `maxItems` 2 → 8 |
+
+- 前端夾具只有 `client/src/battle/fixtures/glossary.json` 的 `rules` 多兩鍵：`skill_tiers: 5`、`max_ap_cost: 3`。其餘夾具（`unitDolls`、`raceLooks`、`skillCards`）重產後不變。
+- `openapi.json`、`schema.d.ts` 照上表重產。前端測試裡手寫的 `OathView` 物件補 `cooldown_seconds: 86400`（`growth.test.ts`、`pnl2Growth.test.ts`、`fl1cFlashNone.test.ts`、開發頁 `dev/panelGallery.tsx`）。
+
+### b.7 玩家（與開發者）看到的字
+
+| 位置 | 改前 | 改後 |
+|---|---|---|
+| 數值工坊篩選列「階級」 | 1 階、2 階、3 階 | 1 階～5 階（多 4、5 階；b.5，待決 1） |
+| `trpg battle replay` 讀到驗證失敗的紀錄 | 「不是有效的戰鬥紀錄：」＋換行＋pydantic 原文 | 「不是有效的戰鬥紀錄：紀錄的內容和目前的資料格式對不上（N 處）：…無法確定重播結果一致」 |
+| 循環賽重播讀到驗證失敗的紀錄 | 未攔截的驗證錯誤（500） | 409「這一場不能重播：紀錄的內容和目前的資料格式對不上（N 處）：…」 |
+| 賽季封存檢查 | 「戰鬥紀錄的內容不合法：N 個錯誤」 | 同上一句的說明 |
+| 技能工坊「隨機一個」送 6 階以上 | pydantic 422 | 422「技能階級只有 1～5（這次 N）」 |
+| 靶場看示範送 3～4 個關鍵字 | pydantic 422 | 試打檢查「看示範最多 2 個不同的關鍵字」 |
+| 傳承送 3～8 個變化 | pydantic 422 | 傳承檢查「最多帶走 2 個小變化」 |
+| 誓約「解除後現實 1 天內…」兩處 | 前端寫死 | 照 `cooldown_seconds` 組字，現值逐字相同 |
+| 內容檢查：觸發時機每輪次數、道具技能 AP | 讀檔時的 ValidationError | 字相同；觸發時機改在內容庫的技能檢查報、道具 AP 改在物品表報 |
+
+其餘畫面文字不變：CLI 快照、parity、前端夾具（除上面兩鍵）照原樣通過。
+
+### b.8 LOG_FORMAT／PROMPT_VERSION 判斷
+
+- **LOG_FORMAT 不升**（`docs/phases/戰鬥紀錄格式變更.md` 1.2）：事件、動作、狀態的欄位沒有增減，結算不變（51 場 different=0）。規則包多了 `skill_triggers[*].max_per_round`，`ruleset_hash` 會變，舊紀錄照 1.2 被拒；讀不進的舊紀錄現在給 b.4 的中文說明。
+- **PROMPT_VERSION 不升**：提示詞的文字與 schema 沒變（字數上限改讀 `flash_text` 同值；`tests/llm/test_prompts.py` 雜湊快照通過）。
+- `WORLD_RULES_VERSION` 不升：`world/rules.yaml` 多的 `display`、`notes` 只管畫面筆數與留言字數，世界推進的規則沒變（內容 digest 本來就會變）。
+
+### b.9 比對（基準 `git archive 88fed5af7 src content scripts tests config`）
+
+腳本放在 scratch，沒進 repo：`hc7b_dump.py`（逐招 `BudgetReport` repr＋`validate_skill` 違規；每張有預設陣容的地圖 × 種子 1～3 的戰鬥，事件 JSON＋最終狀態）、`hc7b_cmp.py`。基準執行時確認載入的 `trpg` 來自基準那份。
+
+| 比對 | 結果 |
+|---|---|
+| 逐招預算 442 招 | `same=442 different=0` |
+| 戰鬥（17 張地圖 × 3 種子） | `battles=51 different=0` |
+| 組合器 census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | `cells=204 same=204 different=0`（不看耗時欄位 `timing`） |
+| 閃現出題、完整技能、升階 | slow parity（`test_refactor_parity.py`）照原夾具通過，見 b.11 |
+| 提示詞 | `tests/llm/test_prompts.py` 雜湊快照通過 |
+| 說明文字 | 名詞表 `rules` 除新兩鍵外相同（夾具對照）；誓約冷卻、線頭到期組字相同（vitest）；CLI 快照不變 |
+
+### b.10 筆數（`classify.py`）
+
+| | config | 其中 todo | scale | const | text | layout | guard |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 後端 b 段開工 | 131 | 121 | 18 | 9223 | 3 | 0 | 475 |
+| 後端 b 段交件 | 28 | **0** | 18 | 9280 | **0** | 0 | 486 |
+| 前端 b 段開工 | 15 | 15 | 0 | 5490 | 23 | 54759 | 0 |
+| 前端 b 段交件 | **0** | 0 | 0 | 5491 | 22 | 54763 | 0 |
+
+- 後端剩下的 config 都是 done：content 載入層的兩份備用值 10（a 段）、`LLMConfig` 的 schema 預設 8、數值工坊工具設定 10。
+- 前端 text 23 → 22：`WorldGrowth.tsx` 確認解除那句改成組字後沒有數字了；說明那句的「1 天」也改成組字，但還有「同時 1 個」（誓約欄位數，不在這段範圍），照舊留 text（見待決 11）。
+- 沒歸類 0；`--unused` 沒有輸出。
+- 規則：刪掉 43 條（搬完或改判後 0 筆：api 21、llm 13、narrative 1、roguelite 1、server 2、text 2、前端 3）；新加 6 條改判用的（`py-api-tuning-tool-settings`、`py-api-request-format-guards`、`py-api-world-pregen-queue-guard`、`py-api-structure-const-number`、`py-llm-format-const-number`、`py-server-league-const-number`）。
+
+### b.11 檢查
+
+`git merge --no-edit main`：Already up to date（main 還在 `88fed5af7`）。
+
+| 檢查 | 結束碼 |
+|---|---|
+| `scripts/check.py`（第一次） | 1：4 個失敗——`test_x10_fields`、`test_x10_rescale`（`scripts/x10/fields.yaml` 沒列新欄位）、`test_ap_content_ap2`、`test_keyword_exploited_sk3`（還在等 `TriggerSpec` 的 ValidationError）。修正在 `cae3d12b6`（清單補 `route_hint_tier`、`triggers[].max_per_round`、`display.*`、`notes.*`、`item_skill_ap_cost` 為 keep；兩個測試改查 Ruleset 層的訊息） |
+| `scripts/check.py`（修正後重跑） | 0（pytest 18234 passed、8 skipped；vitest 4845 passed；ruff、format、mypy、lint-imports、前端 install／typecheck、situation coverage 都通過）；已寫下通過戳記 |
+| `pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+| `corepack pnpm -C client build` | 0 |
+| `trpg content check` | 0（704 檔、442 技能） |
+| `classify.py --check` | 0（沒歸類 0；`--unused` 沒有輸出） |
+
+跑完之後沒有改程式；本報告是唯一之後加的檔（只有 `.md`）。截圖用的 `trpg serve --port 8123`、瀏覽器分頁都已關掉。
+
+### b.12 複雜度與 noqa
+
+沒有新加 `# noqa`（拿掉兩個 `PLR2004`：工坊的「遠程」判斷合成一處）。
+
+### b.13 待 PM 決定（都照最保守的做了）
+
+1. **數值工坊篩選列多了 4、5 階**（b.5）：照 HC-6b 裁定 6 讀 `skill_limits.tiers`（5）。原本只有 1～3 階；要維持 3 階得另加一個「工坊篩選顯示到幾階」的鍵。
+2. **情境判定、說書人的重試次數只對真的本機模型生效**（b.2）：`situation_attempts`、`story_attempts` 經 client 帶的設定讀（`OpenAICompatClient.config`）。`config/llm.toml` 沒加這兩鍵，寫了才會改。
+3. **數值工坊的工具設定留在 `api/tuning/schemas.py`**（b.1）：預設種子、場數上限等判成工具設定（config done），沒進 content。
+4. **畫面筆數放進 `world/rules.yaml` 的 `display`**（b.1）：城鎮站幾位朋友、腳印、留言板幾則、足跡幾筆。也可以判成 layout 留在程式。
+5. **影子戰報顯示幾則改讀 `shadow_reports_kept`**（b.1）：同值 20；調高留存則數時顯示也跟著多。
+6. **單場戰鬥省略輪數時讀 `workshop.yaml` 的 `max_rounds`**（b.1）：同值 30，也套到開發用的 `hero_build` 單場。
+7. **請求格式放寬後，錯誤由規則說明**（b.1、裁定 4）：靶場看示範 2 → 4、傳承 2 → 8；超過規則的請求改成中文的規則錯誤（原本是 pydantic 422）。
+8. **留言存檔不再擋字數**（b.1）：`LocationNote.text` 拿掉 `max_length`，寫入時照 `notes.max_chars` 檢查；規則調低時舊留言照讀。
+9. **錯誤出現的地方改了**（裁定 5）：觸發時機每輪次數改在內容庫的技能檢查報；道具技能 AP 改在物品表報，不再和同件物品的其他問題併成一句。
+10. **commit 的切法**：server 的留言和 API 共用參數，放在 b.1；b.3 之後 `tests/test_hardcoded_scan.py` 的前端抽查（受擊門檻改 layout、木樁 `?? 30` 拿掉）到 b.5 的 commit 才跟上，b.3 單獨跑那兩個抽查會失敗。
+11. **前端留 text 的 22 筆**：規格沒列（HC-6c 另排的介面項目之外）；例如誓約說明的「同時 1 個」可改讀 `slot_zh`，這段沒動。
