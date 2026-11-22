@@ -17,6 +17,33 @@ from trpg.content.skills import MODIFIER_CHANGES, SkillDef
 from trpg.content.skills.limits import skill_limit_problems
 from trpg.shared.errors import ContentError
 
+# WL-1 b（a 段裁定 4）：程式依骨架 id 寫死、骨架被刪時會出錯的地方。其他骨架只靠資料，不放這裡。
+# 只列「找不到就丟例外」的用法；只做等值比較（找不到就走預設）、
+# 或組出草稿再驗證（不合法就丟掉）的不列。
+# 改到下面的程式時同步這份
+# （``tests/content/test_code_required_skeletons.py`` 掃 ``library.skeletons["…"]``）。
+CODE_REQUIRED_SKELETONS: Mapping[str, str] = {
+    "area": "形態的吐息技（content/form_breath.py 直接建 SkillDef）",
+    "passive": "組合器的被動技配方（skillgen/composer_recipes.py 的 library.skeletons[…]）",
+    "reaction": "組合器的反應技與護主配方（skillgen/composer_recipes.py 的 library.skeletons[…]）",
+    "stance": "隨機組合器的姿態技（skillgen/random_composer.py 的 library.skeletons[…]）",
+    "summon": "組合器的整招召喚配方（skillgen/composer_recipes.py 的 library.skeletons[…]）",
+}
+"""程式需要的骨架：id → 用到它的地方（錯誤訊息用）。"""
+
+
+def check_code_required_skeletons(root: Path) -> None:
+    """程式需要的骨架（:data:`CODE_REQUIRED_SKELETONS`）都要有資料檔（WL-1 b）。
+
+    讀任何表之前先看 ``skeletons/`` 的檔名：原語的 ``allowed_skeletons``、技能檔也會引用被刪的骨架，
+    先報這一條（說明程式哪裡要它）。"""
+    files = {p.stem for p in (root / "skeletons").glob("*.yaml")}
+    needed = [
+        f"{n}（{why}）" for n, why in sorted(CODE_REQUIRED_SKELETONS.items()) if n not in files
+    ]
+    if needed:
+        raise ContentError(root / "skeletons", f"缺少程式需要的骨架：{'；'.join(needed)}")
+
 
 def gear_reference_problems(
     skill: SkillDef, weapons: Mapping[str, WeaponDef], offhands: Mapping[str, OffhandDef]

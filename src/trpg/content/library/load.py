@@ -45,6 +45,7 @@ from trpg.content.library.skill_checks import (
     _check_keywords,
     _check_skill_rules,
     _check_skills,
+    check_code_required_skeletons,
     icon_prop_problems,
     pool_region_problems,
 )
@@ -115,6 +116,7 @@ def _load_base_tables(
     root: Path, load: _Loader, files: list[tuple[Path, ContentModel]]
 ) -> _BaseTables:
     """依固定順序讀第一批表（順序＝``files`` 的順序與第一個報錯的檔）。"""
+    check_code_required_skeletons(root)  # WL-1 b：先於引用骨架的表，報程式哪裡要它
     elements = load("elements.yaml", ElementTable)
     core = load("rules/core.yaml", CoreRules)
     hit_table = load("rules/hit_table.yaml", HitTable)
