@@ -35,7 +35,7 @@ from trpg.shared.types import Attribute, Team, UnitId
 
 FURY, BULWARK = "skill_fury_stance", "skill_bulwark_stance"
 # 內容裡的姿態欄位只有 1 個；測試取代與「不重進」時放寬到 2
-TWO_STANCES = SkillSlots(active=6, passive=2, reaction=1, stance=2)
+TWO_STANCES = SkillSlots(active=6, passive=2, reaction=1, stance=2, rule_change=1)
 
 
 def scene(extra: list[str] | None = None, *, hp: int = 999) -> BattleState:

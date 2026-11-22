@@ -33,6 +33,12 @@ race_methods:
   fiend: uncanny
   scalefolk: stealth
   seafolk: endurance
+# - template_limits：情境模板的方法數上限與允許的屬性數「2～3 種」（9.6.4）；事件骨架的情境判定解法也最多 attributes_max 種
+#   （HC-4d 從程式常數搬來，值不變；載入時跨檔案檢查）。
+template_limits:
+  methods_max: 3
+  attributes_min: 2
+  attributes_max: 3
 check:
   dc_shift_max: 2
   partial_margin: 5

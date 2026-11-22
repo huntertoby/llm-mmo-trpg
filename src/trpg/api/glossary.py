@@ -11,6 +11,7 @@ from trpg.api.schemas import (
     GameRulesOut,
     Glossary,
     GlossaryEntry,
+    RuleDiceOut,
     SkillSlotsOut,
     StatusLook,
     WeaponLookEntry,
@@ -21,7 +22,12 @@ from trpg.content.library import ContentLibrary
 from trpg.narrative.action_info import action_texts, objective_texts
 from trpg.narrative.status_info import stack_rules, status_rules
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
+from trpg.roguelite.flashes import max_carry
+from trpg.shared.range_text import DiceNote
 from trpg.shared.types import Attribute
+from trpg.sim.lineup import TEAM_SIZE
+from trpg.world.league import league_rules
+from trpg.world.opening_limits import opening_end_level
 
 __all__ = ["build_glossary"]
 
@@ -41,7 +47,18 @@ def _entry(
         description_zh=description_zh,
         tags=tags,
         rules_zh=rules_zh,
+        rules_dice=_rules_dice(rules_zh),
         status_look=status_look,
+    )
+
+
+def _rules_dice(lines: tuple[str, ...]) -> tuple[RuleDiceOut, ...]:
+    """規則句裡的骰子行（:func:`~trpg.shared.range_text.dice_note` 產生的 :class:`DiceNote`；
+    HC-6c）。"""
+    return tuple(
+        RuleDiceOut(line=i, count=line.dice_count, sides=line.dice_sides, scale=line.dice_scale)
+        for i, line in enumerate(lines)
+        if isinstance(line, DiceNote)
     )
 
 
@@ -169,7 +186,9 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
     """畫面要用的全域規則數字（HC-3）。"""
     core = library.ruleset.core
     slots = core.skill_slots
-    return GameRulesOut(
+    flash = library.flash
+    run = library.roguelite
+    rules = GameRulesOut(
         source_max=core.source_max,
         skill_slots=SkillSlotsOut(
             active=slots.active,
@@ -178,8 +197,65 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
             stance=slots.stance,
         ),
         start_keywords=library.roguelite.start.keywords,
-        complete_budget_permille=library.flash.rules.complete.budget_permille,
+        complete_budget_permille=flash.rules.complete.budget_permille,
+        # HC-6b：畫面說明文字要組字的規則數字
+        roguelite_battles=run.battles,
+        roguelite_companions=len(run.companions),
+        campfire_source=run.source.campfire,
+        budget_min_ratio_permille=library.budget.min_ratio_permille,
+        budget_max_ratio_permille=library.budget.max_ratio_permille,
+        contagion_radius=core.contagion_radius,
+        major_flash=flash.rules.major_flash,
+        complete_flashes=flash.rules.complete.flashes,
+        flash_max_carry=max_carry(library),
+        flash_open_cost=flash.pricing.open.cost,
+        flash_open_options=flash.pricing.open.options,
+        flash_open_min_categories=flash.pricing.open.min_categories,
+        pregen_wait_seconds=round(library.skill_pick.pregen.wait_seconds),
+        wish_cards=library.skill_pick.pool.wish_cards,
+        opening_end_level=opening_end_level(library),
+        skill_tiers=core.skill_limits.tiers,
+        max_ap_cost=core.skill_limits.max_ap_cost,
+        source_min_at_start=core.source_min_at_start,
+        summon_guard_radius=library.ai_profiles.summon.guard_radius,
+        battle_team_size=TEAM_SIZE,
+        **_world_text_rules(library),
     )
+    return rules
+
+
+def _world_text_rules(library: ContentLibrary) -> dict[str, int]:
+    """線頭、循環賽、#149 招數下限（HC-6b），道具技能 AP、用心加值上限（HC-6c）的規則數字。
+    HC-7 b 起欄位必填：缺這些資料檔時報錯（原本照欄位預設值）。"""
+    events = library.world_event_content.rules
+    league = league_rules(library)
+    enemies = library.world_enemies
+    item_ap = library.world_economy.item_skill_ap_cost
+    situations = library.world_event_content.situations.rules
+    if events is None or league is None or enemies is None or item_ap is None or situations is None:
+        missing = [
+            name
+            for name, found in (
+                ("world/event_rules.yaml", events),
+                ("world/season.yaml 的 league", league),
+                ("world/enemies.yaml", enemies),
+                ("world/items.yaml", item_ap),
+                ("world/situation_rules.yaml", situations),
+            )
+            if found is None
+        ]
+        raise ValueError(f"名詞對照表要的規則數字缺資料：{'、'.join(missing)}")
+    floor = enemies.min_moves
+    return {
+        "item_skill_ap_cost": item_ap,
+        "situation_care_max": situations.check.care_max,
+        "thread_limit": events.threads.personal_limit,
+        "thread_expire_seconds": events.threads.expire_seconds,
+        "league_signup_close_day": league.signup_close_day,
+        "min_moves_mob": floor.mob,
+        "min_moves_elite": floor.elite,
+        "min_moves_boss_phase": floor.boss_phase,
+    }
 
 
 def _triggers(library: ContentLibrary) -> tuple[GlossaryEntry, ...]:

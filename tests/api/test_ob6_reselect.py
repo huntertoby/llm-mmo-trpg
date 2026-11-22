@@ -15,12 +15,12 @@ from fastapi.testclient import TestClient
 
 from tests.api.conftest import ClientFactory
 from tests.world.helpers import NOON, hero, make_encounter, with_rules, without_fields
+from tests.world.opening_rules import OPENING_END_LEVEL
 from tests.world.test_gear import _item
 from tests.world.test_opening_choice import _played
 from trpg.api.opening_gear_note import STARTER_WEAPON_ZH, reselect_weapon_zh
 from trpg.api.world import WorldStore
 from trpg.content.library import ContentLibrary
-from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening import HIRE_PANEL_ZH, SHADOW_AI_ZH, opening_limits, range_content
 from trpg.world.opening_choice import place_problem
 from trpg.world.opening_reselect import starter_item_id
@@ -203,7 +203,9 @@ def test_full_bag_after_swapping_main_hand_is_refused(client: TestClient) -> Non
     _ok(client.post(_url(cid), json={"kind": "equip", "item": own.id}))
     base_id = starter_item_id(store.library, store.character(cid))
     rows = {r["item"]: r for r in _view(client, cid)["inventory"]["bag"] if r["gear"]}
-    assert rows[base_id]["opening_note_zh"] == reselect_weapon_zh()  # 背包裡的起始武器卡
+    assert rows[base_id]["opening_note_zh"] == reselect_weapon_zh(
+        _store(client).library
+    )  # 背包裡的起始武器卡
     _patch(client, cid, gear=(), bag={"item_coarse_material": 20 * rules.bag_slots})
     reselect = _view(client, cid)["opening"]["reselect"]
     assert reselect["available"]  # 畫面資料不預先判斷背包（OB-3）；送出時才拒絕
@@ -267,7 +269,7 @@ def test_what_changes_and_what_stays(client: TestClient) -> None:
 def test_hire_and_shadow_reasons_in_starter_period(client: TestClient) -> None:
     cid = _starter_played(client)
     view = _view(client, cid)
-    limits = opening_limits(_store(client).character(cid))
+    limits = opening_limits(_store(client).library, _store(client).character(cid))
     hire = client.post(_url(cid), json={"kind": "hire", "mercenaries": []})
     assert hire.status_code == 422
     assert hire.json()["detail"] == HIRE_PANEL_ZH == limits["hire"] == view["limits"]["hire"]
@@ -308,8 +310,12 @@ def test_starter_weapon_card_and_every_cannot_is_refused(client: TestClient) -> 
 
 def test_chosen_weapon_card_note_only_while_reselect_is_open(client: TestClient) -> None:
     cid = _chosen(client)
-    assert _main_hand(_view(client, cid))["opening_note_zh"] == reselect_weapon_zh()
-    assert reselect_weapon_zh() == "4 級前重選的話，這把會被收回。"  # 定稿（before_level＝4）
+    assert _main_hand(_view(client, cid))["opening_note_zh"] == reselect_weapon_zh(
+        _store(client).library
+    )
+    assert (
+        reselect_weapon_zh(_store(client).library) == "4 級前重選的話，這把會被收回。"
+    )  # 定稿（before_level＝4）
     _ok(client.post(_url(cid), json=RESELECT))
     assert _main_hand(_view(client, cid))["opening_note_zh"] is None
 

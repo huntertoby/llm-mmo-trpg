@@ -25,7 +25,7 @@ import yaml
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 from trpg.content.loader import parse_yaml
-from trpg.content.tuning_fields import PathPart, format_path
+from trpg.content.tuning_fields import PathPart, format_path, map_key
 
 __all__ = [
     "DICE_TEXT",
@@ -68,9 +68,10 @@ def lookup(data: Any, parts: Sequence[PathPart]) -> Any:
                 raise PatchError(f"{format_path(parts)}：清單沒有第 {part} 項")
             node = node[part]
         elif isinstance(node, dict):
-            if part not in node:
+            key = map_key(node, part)
+            if key not in node:
                 return MISSING
-            node = node[part]
+            node = node[key]
         elif node is None:
             return MISSING
         else:
@@ -99,10 +100,13 @@ def _expected(data: Any, parts: Sequence[PathPart], value: PatchValue) -> Any:
         if isinstance(part, int):
             node = node[part]
         else:
-            if node.get(part) is None:
-                node[part] = {}
-            node = node[part]
+            key = map_key(node, part)
+            if node.get(key) is None:
+                node[key] = {}
+            node = node[key]
     last = parts[-1]
+    if isinstance(last, str):
+        last = map_key(node, last)
     if value is None:
         node.pop(last, None)
     else:

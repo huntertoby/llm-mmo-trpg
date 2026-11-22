@@ -46,6 +46,17 @@ class ShapeSpec(ContentModel):
     arm: int | None = Field(default=None, exclude_if=lambda v: v is None)
     """十字的臂長（Phase 5F-2b；``skill_shapes.yaml`` 的 ``content_params``，只有內建內容可寫，
     省略＝預設 1）。沒填時不輸出，舊技能的序列化（快照、雜湊）不變。"""
+    solid: bool | None = Field(default=None, exclude_if=lambda v: v is None)
+    """實心環形（GS-3，#173，06 6.3 形狀清單）：``true`` 時環形影響切比雪夫距離 1～``radius`` 的
+    格子（不含施放者自己；「周圍 N 格」），省略＝只打距離恰為 ``radius`` 的一圈（行為不變）。只有
+    ``skill_shapes.yaml`` 標 ``solid_option`` 的形狀（環形）可以填，只能填 ``true``；只有內建內容
+    （``content_only_ok``）能寫，組合器與 LLM 不提供。沒填時不輸出，舊技能的序列化不變。"""
+
+    @model_validator(mode="after")
+    def _check_solid(self) -> ShapeSpec:
+        if self.solid is False:
+            raise ValueError("shape.solid 只能填 true（省略＝不是實心）")
+        return self
 
     def param_values(self) -> dict[str, int | str]:
         """已填寫的參數（依名稱排序）。"""
@@ -136,8 +147,9 @@ class EffectSpec(ContentModel):
     只能用在姿態技能（``kind: stance``）。``enter_form`` 也可以填（BAL-2c，形態幅度）：形態對自己
     有利的部分放大（:func:`trpg.content.forms.scaled_form_def`），維持費不變。"""
     max_hp_permille: int | None = None
-    """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
-    修正規則之後相乘）。"""
+    """``summon``（Phase 3-33f2，加深分歧進化）：召喚物的最大 HP 多 ‰（召喚時結算，在成長與
+    修正規則之後相乘）。``shield``（GS-3，#173）：每個目標的護盾＝施放者目前最大 HP × ‰（不擲骰、
+    不加屬性；不能和 ``dice`` 一起填）。"""
     trait: str | None = Field(default=None, pattern=ID_PATTERN)
     """``summon`` 專用（Phase 3-33f2，加深分歧進化）：召喚物的小特性（``core.yaml`` 的
     ``summon_traits``）。"""
@@ -298,6 +310,10 @@ class CompositionRule:
     others_affect: Literal["self"] | None = None
     max_per_skill: int | None = None
     active_only: bool = False
+    companions: tuple[str, ...] = ()
+    """``sole_effect`` 的例外：排第一個時後面最多再跟 1 個這些原語（GS-3）。"""
+    companion_shapes: tuple[str, ...] = ()
+    """帶了 ``companions`` 的效果時，技能形狀可以多用這些（GS-3）。"""
 
     @classmethod
     def of(cls, primitive: PrimitiveDef) -> CompositionRule:
@@ -309,6 +325,8 @@ class CompositionRule:
             others_affect=primitive.others_affect,
             max_per_skill=primitive.max_per_skill,
             active_only=primitive.active_only,
+            companions=primitive.companions,
+            companion_shapes=primitive.companion_shapes,
         )
 
     @property
@@ -443,6 +461,30 @@ def _check_composition(kind: str, effects: tuple[EffectSpec, ...]) -> None:
         _check_rule(rule, effects, types)
 
 
+_LEAD_AND_COMPANION = 2
+"""帶進入時效果的技能剛好 2 個效果：唯一效果原語＋1 個 ``companions``（GS-3，結構常數）。"""
+
+
+def _companion_ok(rule: CompositionRule, types: list[str]) -> bool:
+    """``sole_effect`` 的例外（GS-3）：這個原語排第一個，後面只有 1 個 ``companions`` 裡的原語。"""
+    return (
+        len(types) == _LEAD_AND_COMPANION
+        and types[0] == rule.primitive
+        and types[1] in rule.companions
+    )
+
+
+def companion_effect(effects: tuple[EffectSpec, ...]) -> EffectSpec | None:
+    """技能的「進入時效果」（GS-3，#173）：第一個效果是帶 ``companions`` 的唯一效果原語（
+    ``enter_form``）、後面跟著的那 1 個效果；沒有時為 ``None``。"""
+    if len(effects) != _LEAD_AND_COMPANION:
+        return None
+    rule = composition_rules().get(effects[0].type)
+    if rule is None or not rule.companions or effects[1].type not in rule.companions:
+        return None
+    return effects[1]
+
+
 def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: list[str]) -> None:
     name = rule.primitive
     where = [i for i, t in enumerate(types) if t == name]
@@ -453,9 +495,13 @@ def _check_rule(rule: CompositionRule, effects: tuple[EffectSpec, ...], types: l
             path=f"effects[{where[rule.max_per_skill]}]",
             code="combo.max_per_skill",
         )
-    if rule.sole_effect and len(types) != 1:
+    if rule.sole_effect and len(types) != 1 and not _companion_ok(rule, types):
+        extra = ""
+        if rule.companions:
+            allowed = "、".join(rule.companions)
+            extra = f"（排第一個時，後面最多再跟 1 個 {allowed}）"
         raise SkillRuleError(
-            f"{name} 必須是技能唯一的效果", path="effects", code="combo.sole_effect"
+            f"{name} 必須是技能唯一的效果{extra}", path="effects", code="combo.sole_effect"
         )
     if rule.position == "first" and types[0] != name:
         raise SkillRuleError(

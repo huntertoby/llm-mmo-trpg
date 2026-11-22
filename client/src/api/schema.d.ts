@@ -3765,11 +3765,8 @@ export interface components {
             dev_pack?: string | null;
             /** Ally Builds */
             ally_builds?: string[] | null;
-            /**
-             * Max Rounds
-             * @default 30
-             */
-            max_rounds: number;
+            /** Max Rounds */
+            max_rounds?: number | null;
             /**
              * Custom Skills
              * @default []
@@ -3891,6 +3888,21 @@ export interface components {
             expected_milli: number;
             /** Expected If Hit Milli */
             expected_if_hit_milli: number;
+        };
+        /**
+         * DayPartHoursView
+         * @description 早、午、晚、夜的起始鐘點（``world/rules.yaml`` 的 ``day_parts``，HC-4d）：前端 HUD 的時段字
+         *     （白天＝早〔``noon`` 點前〕、午；夜晚＝晚〔``evening``～``night`` 點前〕、夜）照這張表。
+         */
+        DayPartHoursView: {
+            /** Morning */
+            morning: number;
+            /** Noon */
+            noon: number;
+            /** Evening */
+            evening: number;
+            /** Night */
+            night: number;
         };
         /**
          * Decision
@@ -5050,10 +5062,7 @@ export interface components {
              * @default 1
              */
             max_climb: number;
-            /**
-             * Walk Max Steps
-             * @default 30
-             */
+            /** Walk Max Steps */
             walk_max_steps: number;
             hero?: components["schemas"]["FieldHeroView"] | null;
             /**
@@ -5510,6 +5519,62 @@ export interface components {
             start_keywords: number;
             /** Complete Budget Permille */
             complete_budget_permille: number;
+            /** Roguelite Battles */
+            roguelite_battles: number;
+            /** Roguelite Companions */
+            roguelite_companions: number;
+            /** Campfire Source */
+            campfire_source: number;
+            /** Budget Min Ratio Permille */
+            budget_min_ratio_permille: number;
+            /** Budget Max Ratio Permille */
+            budget_max_ratio_permille: number;
+            /** Contagion Radius */
+            contagion_radius: number;
+            /** Major Flash */
+            major_flash: number;
+            /** Complete Flashes */
+            complete_flashes: number;
+            /** Flash Max Carry */
+            flash_max_carry: number;
+            /** Flash Open Cost */
+            flash_open_cost: number;
+            /** Flash Open Options */
+            flash_open_options: number;
+            /** Flash Open Min Categories */
+            flash_open_min_categories: number;
+            /** Pregen Wait Seconds */
+            pregen_wait_seconds: number;
+            /** Wish Cards */
+            wish_cards: number;
+            /** Thread Limit */
+            thread_limit: number;
+            /** Thread Expire Seconds */
+            thread_expire_seconds: number;
+            /** Opening End Level */
+            opening_end_level: number;
+            /** League Signup Close Day */
+            league_signup_close_day: number;
+            /** Min Moves Mob */
+            min_moves_mob: number;
+            /** Min Moves Elite */
+            min_moves_elite: number;
+            /** Min Moves Boss Phase */
+            min_moves_boss_phase: number;
+            /** Skill Tiers */
+            skill_tiers: number;
+            /** Max Ap Cost */
+            max_ap_cost: number;
+            /** Source Min At Start */
+            source_min_at_start: number;
+            /** Summon Guard Radius */
+            summon_guard_radius: number;
+            /** Battle Team Size */
+            battle_team_size: number;
+            /** Item Skill Ap Cost */
+            item_skill_ap_cost: number;
+            /** Situation Care Max */
+            situation_care_max: number;
         };
         /**
          * GearAffixInfo
@@ -5987,6 +6052,11 @@ export interface components {
              * @default []
              */
             rules_zh: string[];
+            /**
+             * Rules Dice
+             * @default []
+             */
+            rules_dice: components["schemas"]["RuleDiceOut"][];
         };
         /**
          * GrantPreviewOut
@@ -7277,10 +7347,7 @@ export interface components {
             notes: components["schemas"]["NoteView"][];
             /** Footprints */
             footprints: components["schemas"]["FootprintView"][];
-            /**
-             * Max Len
-             * @default 50
-             */
+            /** Max Len */
             max_len: number;
             /**
              * Admin
@@ -7979,6 +8046,8 @@ export interface components {
             cooldown_until: number;
             /** Cooldown Zh */
             cooldown_zh: string | null;
+            /** Cooldown Seconds */
+            cooldown_seconds: number;
             /** Can Swear */
             can_swear: boolean;
             /** Swear Problem Zh */
@@ -8386,10 +8455,7 @@ export interface components {
             season_boss_ok: boolean;
             /** Season Boss Zh */
             season_boss_zh?: string | null;
-            /**
-             * Free Slots
-             * @default 2
-             */
+            /** Free Slots */
             free_slots: number;
             /** Companion Zh */
             companion_zh?: string | null;
@@ -8416,6 +8482,11 @@ export interface components {
             chance_permille: number | null;
             /** Detail */
             detail: string | null;
+            /**
+             * Save Roll
+             * @default false
+             */
+            save_roll: boolean;
         };
         /** PathPreviewOut */
         PathPreviewOut: {
@@ -9645,6 +9716,21 @@ export interface components {
             fits: components["schemas"]["Attribute"][];
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * RuleDiceOut
+         * @description 規則句裡的一行骰子行（HC-6c，AR-X10 待決 5）：``rules_zh[line]`` 是「擲 NdM，每點 ×K」，
+         *     補充它上一句的範圍。前端照這個把骰子行另起一行、用次要字色，不再比對句型。
+         */
+        RuleDiceOut: {
+            /** Line */
+            line: number;
+            /** Count */
+            count: number;
+            /** Sides */
+            sides: number;
+            /** Scale */
+            scale: number;
         };
         /**
          * Run
@@ -12089,15 +12175,9 @@ export interface components {
             seconds_per_battle: number;
             /** Maps */
             maps?: components["schemas"]["TuningSimMap"][];
-            /**
-             * Map Default Seeds
-             * @default 24
-             */
+            /** Map Default Seeds */
             map_default_seeds: number;
-            /**
-             * Map Seconds Per Battle
-             * @default 0.8
-             */
+            /** Map Seconds Per Battle */
             map_seconds_per_battle: number;
             /** Ratio Default Seeds */
             ratio_default_seeds: number;
@@ -12107,15 +12187,9 @@ export interface components {
             max_maps: number;
             /** Small Sample */
             small_sample: number;
-            /**
-             * Ratio Max Work
-             * @default 40000
-             */
+            /** Ratio Max Work */
             ratio_max_work: number;
-            /**
-             * Ratio Battles Per Second
-             * @default 450
-             */
+            /** Ratio Battles Per Second */
             ratio_battles_per_second: number;
         };
         /** TuningSimPhase */
@@ -12314,6 +12388,8 @@ export interface components {
             sim_running?: string | null;
             /** Max Group */
             max_group: number;
+            /** Draft Name Max */
+            draft_name_max: number;
         };
         /**
          * TuningUnitSkills
@@ -13279,6 +13355,7 @@ export interface components {
             day_phase_zh: string;
             /** Weather Zh */
             weather_zh: string;
+            day_parts: components["schemas"]["DayPartHoursView"];
         };
         /**
          * WorldDevBattleResponse

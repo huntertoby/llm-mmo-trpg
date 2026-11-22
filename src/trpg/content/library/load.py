@@ -49,8 +49,13 @@ from trpg.content.library.skill_checks import (
     pool_region_problems,
 )
 from trpg.content.library.tables import (
+    _check_budget_rules,
+    _check_composer_rules,
     _check_evolution,
+    _check_flash_forms,
     _check_modifier_changes,
+    _check_price_tables,
+    _check_primitive_points,
     _check_scaling,
     _dev_starter_problems,
     _load_flash,
@@ -131,7 +136,11 @@ def _load_base_tables(
     budget = load("skill_budget.yaml", BudgetRules)
     modifier_changes = load(MODIFIER_CHANGES_FILE, ModifierChangeTable)
     _check_modifier_changes(root, modifier_changes, budget)
+    _check_budget_rules(root, core, budget)
+    _check_primitive_points(root, primitives, budget)
+    _check_price_tables(root, (statuses, surfaces, shapes), budget)
     composer = load("skill_composer.yaml", ComposerRules)
+    _check_composer_rules(root, composer, core, budget)
     builds = load("sim/builds.yaml", BuildTable)
     synergies = load("skill_synergies.yaml", SynergyTable)
     keywords = load("skill_keywords.yaml", KeywordTable)
@@ -213,6 +222,7 @@ def _build_ruleset(root: Path, t: _BaseTables, races: RaceTable | None) -> Rules
                 **{w.id: w.name_zh for w in t.weapons.weapons},
                 **{o.id: o.name_zh for o in t.offhands.offhands},
             },
+            ai=t.ai_profiles.heuristics,
         )
     except ValueError as exc:
         raise ContentError(root / "rules", str(exc)) from exc
@@ -355,10 +365,10 @@ def _load_run_extras(
         problems = _dev_starter_problems(dev_starters, weapon_map, t.keywords, t.skills)
         if problems:
             raise ContentError(root / "dev_starters.yaml", "；".join(problems))
-    has_evolution = (root / "skill_evolution.yaml").exists()
-    evolution = load("skill_evolution.yaml", EvolutionTable) if has_evolution else EvolutionTable()
-    _check_evolution(root, evolution, t.keywords, t.skeletons)
+    evolution = load("skill_evolution.yaml", EvolutionTable)  # HC-4b2：必備（數字都寫在檔裡）
+    _check_evolution(root, evolution, t.keywords, t.skeletons, t.core)
     flash = _load_flash(root, load, evolution, t.skill_triggers)
+    _check_flash_forms(root, flash, t.primitives)
     skill_scaling = load("skill_scaling.yaml", SkillScalingRules)
     _check_scaling(root, skill_scaling, t.skills, weapon_map)
     return {

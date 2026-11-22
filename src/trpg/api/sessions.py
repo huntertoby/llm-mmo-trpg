@@ -460,7 +460,14 @@ class SessionStore:
             library, allies = build_allies(self.library, builds, fill=fill)
         except UnknownBuildError as exc:
             raise InvalidRequestError(str(exc)) from exc
-        return build_setup(library, request.map_id, allies, enemies, max_rounds=request.max_rounds)
+        return build_setup(
+            library, request.map_id, allies, enemies, max_rounds=self._max_rounds(request)
+        )
+
+    def _max_rounds(self, request: CreateBattleRequest) -> int:
+        """請求沒給輪數上限時照 ``workshop.yaml``（HC-7 b）。"""
+        given = request.max_rounds
+        return self.library.workshop.max_rounds if given is None else given
 
     def _start_setup(self, request: CreateBattleRequest, enemies: list[str]) -> BattleSetup:
         """單場戰鬥的新開局（Phase 3-28）：主角用一輪的開局（武器＋關鍵字或開發者起始包）、
@@ -479,7 +486,7 @@ class SessionStore:
             raise InvalidRequestError(str(exc)) from exc
         companions = self.library.builds.companions[: TEAM_SIZE - 1]
         base = build_setup(
-            self.library, request.map_id, companions, enemies, max_rounds=request.max_rounds
+            self.library, request.map_id, companions, enemies, max_rounds=self._max_rounds(request)
         )
         ruleset = self.library.ruleset.with_skills(run.generated_skills)
         units = (hero_spawn(self.library, run), *base.units)

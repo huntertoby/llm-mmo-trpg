@@ -1,0 +1,25 @@
+# 化形守護（GS-2，#172，06 6.30「形態池名單」高階形態技；數值為初值，未經模擬）：只能在形態中施放；
+# 自己與身邊 1 格的友方得到護盾。GS-3（#173）：護盾量＝施放者目前（變身後）最大 HP × 150‰，持續 2 回合（預設），
+# 不加屬性；150‰ 是初值（預算點數 shield_max_hp_points 照 GS-2 的比例反推），由使用者在工坊調。
+id: skill_form_guardian
+schema_version: 1
+name_zh: 化形守護
+tier: 4
+rank: 1
+rarity: epic
+kind: active
+skeleton: aura
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: wis
+shape: {type: allies_in_radius, radius: 1}
+effects:
+  - {type: shield, max_hp_permille: 150, affects: allies}
+condition: {type: in_form}
+cost: {mana: 80, cooldown: 3}
+tags: [nature, spell, shield]
+narrative:
+  concept: 讓獸身的厚實分給身邊的同伴，一起扛下這一波
+  cast_flavor: 你張開雙臂低吼一聲，一層帶著獸毛紋路的光殼罩住你和身旁的夥伴
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

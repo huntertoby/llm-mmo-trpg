@@ -1,0 +1,58 @@
+"""量測用外殼：包住 OpenAICompatClient._post，把每次 HTTP 呼叫的延遲、內容、usage 記到 JSONL，
+再用 runpy 跑指定腳本。用法：uv run python harness.py <log.jsonl> <tag> <script.py> [args...]"""
+
+import json
+import runpy
+import sys
+import time
+
+import trpg.llm.client as C
+
+log_path, tag, script, *rest = sys.argv[1:]
+_orig = C.OpenAICompatClient._post
+
+
+def _system_head(messages):
+    for m in messages:
+        if m["role"] == "system":
+            return m["content"][:80]
+    return ""
+
+
+def _post(self, messages, mode, schema):
+    t = time.perf_counter()
+    rec = {"tag": tag, "mode": mode, "sys": _system_head(messages)}
+    try:
+        resp = _orig(self, messages, mode, schema)
+    except Exception as exc:  # noqa: BLE001
+        rec.update(seconds=round(time.perf_counter() - t, 3), error=f"{type(exc).__name__}: {exc}"[:300],
+                   body=str(getattr(exc, "text", ""))[:500])
+        with open(log_path, "a", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        raise
+    rec["seconds"] = round(time.perf_counter() - t, 3)
+    rec["status"] = resp.status_code
+    try:
+        payload = resp.json()
+        ch = payload["choices"][0]
+        rec["finish"] = ch.get("finish_reason")
+        rec["content"] = ch["message"].get("content")
+        rec["usage"] = payload.get("usage")
+        st = payload.get("stats")
+        if st:
+            rec["stats"] = st
+    except Exception as exc:  # noqa: BLE001
+        rec["parse_error"] = str(exc)[:200]
+    with open(log_path, "a", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    return resp
+
+
+C.OpenAICompatClient._post = _post
+sys.argv = [script, *rest]
+sys.path.insert(0, __import__("os").path.dirname(script))
+try:
+    runpy.run_path(script, run_name="__main__")
+except SystemExit as e:
+    print(f"[harness] exit={e.code}", flush=True)
+    raise

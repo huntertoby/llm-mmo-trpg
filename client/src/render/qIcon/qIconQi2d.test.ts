@@ -41,6 +41,14 @@ const ADDED_AFTER_BASELINE: readonly string[] = [
   "skill_ember_resonance", // SK-3b：新觸發與重擲的示範 4 招
   "skill_fate_deflect",
   "skill_flowing_cut",
+  "skill_form_bear_king", // GS-3：高階化身 4 招
+  "skill_form_dragon_dread",
+  "skill_form_giant_stomp",
+  "skill_form_guardian", // GS-2：高階形態技 4 招
+  "skill_form_primal_return",
+  "skill_form_quake",
+  "skill_form_shadow_cat",
+  "skill_form_wild_flurry",
   "skill_fury_slam",
   "skill_grit_teeth",
   "skill_heart_piercer",

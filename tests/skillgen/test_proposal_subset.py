@@ -181,8 +181,10 @@ def test_request_validation_messages_are_chinese() -> None:
         ProposalRequest(tier=0, rarity="rare")
     with pytest.raises(ValueError, match="技能種類"):
         ProposalRequest(tier=1, rarity="rare", kind="modifier")  # 反應技 4-L8 起開放
-    with pytest.raises(ValueError, match="關鍵字"):
-        ProposalRequest(tier=1, rarity="rare", keywords=("ignite", "wet", "charged"))
+    with pytest.raises(ValueError, match="關鍵字"):  # HC-5b：個數上限改在 select_subset 檢查
+        select_subset(
+            _lib(), ProposalRequest(tier=1, rarity="rare", keywords=("ignite", "wet", "charged"))
+        )
     with pytest.raises(ValueError, match="關鍵字"):
         ProposalRequest(tier=1, rarity="rare", keywords=("ignite", "ignite"))
 

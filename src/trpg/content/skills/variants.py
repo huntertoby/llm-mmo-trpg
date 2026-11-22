@@ -11,7 +11,6 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.constants import (
-    _MAX_VARIANT_REPLACEMENTS,
     _VARIANT_REPLACEMENTS,
     VARIANT_CONDITIONS,
     VARIANT_TARGET_CONDITIONS,
@@ -113,9 +112,9 @@ class VariantSpec(ContentModel):
     @model_validator(mode="after")
     def _check(self) -> VariantSpec:
         count = len(self.replacements)
-        if not 1 <= count <= _MAX_VARIANT_REPLACEMENTS:
+        if not count:  # 上限：skill_limits.max_variant_replacements（Ruleset 層，HC-4b）
             raise ValueError(
-                f"變奏 {self.id} 的替換內容必須填 1～2 項"
+                f"變奏 {self.id} 的替換內容至少要填 1 項"
                 f"（{'、'.join(_VARIANT_REPLACEMENTS)}），收到 {count} 項"
             )
         if self.range_delta == 0:

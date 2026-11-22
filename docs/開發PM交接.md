@@ -46,7 +46,23 @@
 **2. 最後一次全量**：2026-11-14 e2bab3fe1 全過並 push（pytest 17682、vitest 4676、build 0），含 NW-3d（LLM 提議與技能工坊造牆物件改用組合器候選、1600 黑煙壓到 HUD 下）。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量；有 agent 在跑測試時全量常在 99% 卡死，盡量等 agent 都回來再跑。**
 
 **3. 執行中的 agent（分支）**：
-- **2026-11-20 現況（優先於本行以前的現況）**：已 push 到 main `bf39399f1`：AP-1、AP-2、AP-2b、AR-AP2、QF-1、X10-1、X10-2a、X10-2b（量類 ×10 已生效，`core.yaml` `quantity_scale: 10`；LOG_FORMAT /135、PROMPT_VERSION skill-proposal/24）。舊存檔已照使用者「清掉重來」做季末重置（s1→s2，開賽日 2026-11-20），備份在 `saves_backup/`（已 gitignore）。段要拆小：每段 2～3 件、同一塊。agent 交件前要跑所有目錄的非 slow 測試（X10-2b 曾只跑 slow cli 漏掉 7 個）。下一段：X10-3（前端位數、骰子顯示要先問玩法／美術 PM、工坊換算紀錄、掃說明文字的量類數字、讀到舊單位存檔就拒絕並提示）；之後 #169 招牌效果、傳說、獨特裝備（`docs/design/08` 8.27）。佇列：`tests/skillgen/helpers.py` 預設耐力 8 改新單位；給精英、頭目裝預支；`every_n_hits` 工坊鍵；SK-5 數字鍵係數表上工坊；SK-3b 新觸發裝備詞條；`test_flash_economy` 種子 5 一輪 138 秒；重抽提示詞模式；has_keyword；LB-2c `_topup_advice`；PK-4 等使用者通知 Gemma；SK-3d 絆倒不做。
+- **2026-11-22 現況（優先於以下各行）**：已 push：HC-6a（3940021d3＋裁定 4cb00d459）、Swift 27B 量測與 config 改預設（54c11334b，報告 `docs/phases/Swift-Qwen27B品質評估.md`，待使用者決定：說書人簡體檢查、許願超過 10 秒、三選一退回 10%）、GS-3（21ca8f2cc＋裁定 f6fae5385；數值待決 1、2 轉使用者）、HC-6b 計畫（add305d93）。進行中：HC-6b。之後 HC-7（含 HC-6a 留下 26 筆 text、誓約冷卻「1 天內」從秒數組字、world fallback、重播／季存檔驗證失敗的中文訊息）→ 計數／白名單 → E1～E5 → E6。佇列新增（玩法 PM 定，06 6.30「GS-3 後補」32f6c3325）：(a) 化形守護護盾 ‰ 加只給升階重配用的旋鈕（照 6.34.9 維持原比例；組合器、LLM 不用），併進下一個碰技能的小段；(b) 進入時效果擲命中不用掉形態「下一次攻擊」獎勵，下次碰形態順手改；(c) 高階化身閃現照現行，不做專屬。另：`test_wish_pregen.py` 全量平行時 10 秒等待偶發失敗，下次碰許願預生成時處理。
+- **2026-11-21 晚 現況（優先於以下各行）**：
+  - **已 push 到 main `0be842398`**：
+    - HC 系列：HC-B、HC-W2、QF-3a、HC-4a～4d、HC-5a、HC-5b。config todo 後端 164 筆；`src/trpg/content/`、`skillgen/` 都是 0。
+    - QF-4、QF-4b：護主配方加快取，慢測試 600 秒放寬已拿掉。
+    - 使用者直接改的 10 格平衡數值：雙牙 1320、影縛 1350、silent_strike 420，這 3 格取最接近又合格的值；梯田盜賊跟著改成 180。
+    - GS-1：#171 護主不獨佔、#172 形態只出主動題。
+    - 配方盤點：`docs/phases/盤點-2026-11-21/`。
+  - **進行中**：GS-2，形態補 8 招手寫技能，計畫 `PhaseGS-2計畫.md`。
+  - **之後**：HC-6 文字（含 HC-5b 裁定 4 的 `wish_cards`「3 張」）→ HC-7（含 HC-4c 裁定 1：重播與賽程封存驗證失敗時改給中文說明；HC-4d 裁定 2 的世界備用值）→ 計數／白名單 → E1～E5 → E6。
+  - **順手項**（排進任一段）：`recipe_census` 的設計鍵要算進召喚物種類，否則召喚 2～3 階會誤報成薄格（專案 PM 轉玩法 PM，272b92cc9）。
+  - **流程**：
+    - agent 交件前全部 commit 之後，先問 PM 才跑 `check.py`。PM 只在 main 沒動過時回「可以跑」；main 動過就回「不用跑」，由 PM 合併後在 main 上跑。
+    - commit 和 push 分成兩個指令下。
+    - 用 Python 寫檔要 `newline=""`。
+- **2026-11-21 現況（優先於本行以前的現況）**：已 push 到 main `4d53775e5`：X10 全系列、AR-X10、HC-1、HC-2、QF-2、HC-3、HC-4a。寫死數值集中化照使用者「全部集中化先做完」進行：用 `scripts/hardcoded/classify.py`（分類 config／scale／const／text／layout／guard）加 `tests/test_hardcoded_scan.py` 管，清單在 `docs/phases/寫死數值-清單.md`，合併衝突時用 `--md` 重產。進行中：HC-B（專案 PM 轉使用者：工坊改不到原語預算，例如升起地形；計畫 `PhaseHC-B計畫.md`，做完回專案 PM 一行）。之後：形態、裝備規則、物品生成開進工坊 → HC-4b（技能規則，含 `_check_tier_budget` 1～5、刪 classes.yaml 戰鬥核心 6 條 done 規則）→ HC-4c AI 與環境 → HC-4d 世界（含 content 時段表，前端 hud 鐘點改讀）→ HC-5 skillgen 常數 → HC-6 文字（含工坊 15 筆分類、祝禱骰子字、地面 tooltip、組裝列說明、名詞表骰子欄位、路徑預覽的「要多擲」狀態）→ HC-7 → 計數／白名單 → E1～E5 → E6 → 50 條內容（`內容擴充評估.md`）。分類守則：結構性的數字在 classes.yaml 寫 const 規則附理由，不改寫語法躲掃描。佇列另加：營火「重閃」按鈕統一懸掛縮排（`docs/art/HC-3看圖.md`）。其餘佇列同下一行。
+- **2026-11-20 現況（優先於本行以前的現況）**：已 push 到 main `bf39399f1`：AP-1、AP-2、AP-2b、AR-AP2、QF-1、X10-1、X10-2a、X10-2b（量類 ×10 已生效，`core.yaml` `quantity_scale: 10`；LOG_FORMAT /135、PROMPT_VERSION skill-proposal/24）。舊存檔已照使用者「清掉重來」做季末重置（s1→s2，開賽日 2026-11-20），備份在 `saves_backup/`（已 gitignore）。段要拆小：每段 2～3 件、同一塊。agent 交件前要跑全部非 slow 測試（X10-2b 曾只跑 slow cli 漏掉 7 個）；2026-11-21 起改成全部 commit 後，在 worktree 跑一次 `scripts/check.py`（使用者：「改成一次跑完」「拿掉第二次重複的測試」）。下一段：X10-3（前端位數、骰子顯示要先問玩法／美術 PM、工坊換算紀錄、掃說明文字的量類數字、讀到舊單位存檔就拒絕並提示）；之後 #169 招牌效果、傳說、獨特裝備（`docs/design/08` 8.27）。佇列：`tests/skillgen/helpers.py` 預設耐力 8 改新單位；給精英、頭目裝預支；`every_n_hits` 工坊鍵；SK-5 數字鍵係數表上工坊；SK-3b 新觸發裝備詞條；`test_flash_economy` 種子 5 一輪 138 秒；重抽提示詞模式；has_keyword；LB-2c `_topup_advice`；PK-4 等使用者通知 Gemma；SK-3d 絆倒不做。
 - BM-1（前端：800 頭目狀態列、延遲預告字、flushSync）、NW-3、GB-4c、NW-3b 都已 push。NW-3c、GB-4d、NW-3d 也已 push。LB-1／LB-1b（本機模型比較、Gemma 重測）已 push（報告 PhaseLB-1報告.md；重要發現：llm.toml 的 enable_thinking 在 LM Studio 無效，要 reasoning_effort=none）。LB-2（LLM 失敗診斷：記錄、schema 相容、溫度、prompt）已 push（d96b5a974，全量 pytest 17698、vitest 4676；改後重測因 GPU 沒載滿未跑）。LB-2b（Q12 被動引導、變奏開放 range_delta、改後重測、上手筆記的換模型規則）已 push（全量 pytest 17709、vitest 4676）；待決 2～3 轉玩法（3.0001），4～6 等玩法答覆後排 LB-2c。LB-CF（config 預設 Gemma＋reasoning_effort=none，實機確認完整技能格有 LLM 候選）、LB-2c（不要求就不給變奏、開放 self_on_high_ground、被動 schema 固定、Gemma 重測 15/18/2）已 push（全量 pytest 17721、vitest 4676）；LB-2c 待決 1（_topup_advice 沒套被動過濾）與 schema 上限餘裕等挑選模式提案結論；挑選模式提案：使用者第 6 節 5 題「都建議A 但是做出來後 來你來去做裁判 看紙面數據 哪個看起來比較好 比較有趣跟全面」→ PK-1（挑選核心＋比較腳本；沒接出題流程，現行不變）已 push，比較文件 docs/phases/PhasePK-1比較.md 交專案 PM 當裁判 → 裁判結論挑選模式勝，使用者「先修」：PK-1b（手寫不進候選、元素相合、打分細化、濫用詞、怪條件扣分）已 push（全量 pytest 17819、vitest 4676）；裁判挑選模式勝，使用者「先把挑選模式接到「升級三選一」和「完整技能」這兩處，用開關控制，預設打開 好」「我打算全面採用這個方式了」→ **挑選模式佇列**：PK-2（接升級三選一含白板格、完整技能；開關 skill_pick.yaml enabled 預設開；有沒有料；名稱詞組加嚴）已 push（全量 pytest 17851、vitest 4676）→ PK-3（閃現、重閃＋玩法 4.1.23 組合器不產兩種怪條件＋4.1.24 跟主路線改扣分、單薄擠掉、閃現命名只擋多字老套詞）已 push（單張格 50%→19%、請 LLM 49%→81%）；PK-4（許願池願望驅動＋4.1.25 閃現跨類借候選、描述擋多字老套詞）已 push（全量 pytest 17917、vitest 371 檔、build 0）。**2026-11-16 使用者「做完許願池就先停」（每週額度 94%）：目前停工，不派新段、不開審查、不跑模擬。****2026-11-19 復工**（使用者「已經重設額度了」，專案 PM 轉）：TL-1、TL-2、PK-4b、WC-1、SK-2 已合併（本機 main，未 push；WC-1 已回專案 PM）；SK-1、SK-3（計畫 PhaseSK-3計畫.md）在跑；SK-1 合併後全量檢查再 push（含專案 PM 的 6fdbf46ad 等）。**SK-2b 待排**（SK-1 合併後）：新原語接進出題（組合器排除表、llm_topic.core_exclude、LLM schema）＋工坊白名單＋玩法答覆（已答，玩法交接 4.1.28、26b489f65：水→目標格造水帶潮濕，油煙不換元素；推不動照字面；擴散一次只傳剩餘回合最多的一種〔同回合燃燒＞流血＞中毒〕、可連鎖；AI 不加分；接出題：鉤＝位移骨架核心直線 1 階可出，吸收＝打擊、蓄力／終結附帶＋光環核心只吸腳下，擴散只附在燃燒／流血／中毒效果上、組合器已帶才加，稀有度照 6.12）；SK-2 美術樣張已過審並併進 main（0115c2742）：**AR-SK2 待排**（SK-3 交件後派，免得前端戰鬥演出檔撞）照 docs/art/SK-2原語-移植需求.md 6 項（部件圖樣、三種演出、鎖鏈最小粗細、會擴散記號；浮字「擴散」、狀態卡標籤「會擴散」），截圖交美術 PM 驗收。SK-2b 已派（計畫 PhaseSK-2b計畫.md）。WC-1 待決 1、2、5 經專案 PM 轉玩法。PK-4 真模型量測卡住（LM Studio 載的是 Qwen 不是 Gemma，已請專案 PM 轉使用者換）；PK-4 待決玩法已答（玩法交接 4.1.27、0c7bc4d5c，雙關鍵字是使用者「A 至少一個（建議）」，其餘是玩法 PM 照做法定、使用者還沒看過，51285bda9）：2、3、4 不改；**WC-1 待排（TL 任一段交件就派，排在 PK-4b 前）**：使用者「哪些願望做不到、缺的是配方還是骨架 這個不能先出嗎?」→ 許願池每個標籤與每對標籤，用組合器跑各階級、稀有度的成功率；做不到的分成 (a) 缺配方、(b) 規則禁止、(c) 沒有原語；輸出 docs/phases/許願覆蓋表.md；只量不改程式，不用 LM Studio；完成回專案 PM 一行。寫新腳本算實作，用 Opus。**PK-4b 待排**（有空的 agent 名額就派，小段）：許願池三選一不顯示「偏離路線」；挑選模式（pick: llm，含許願、閃現、升級）也顯示「源晶推演」小標，說明句「這張技能的名字和描述由本機模型取；效果和數值都照規則出題。」，自由設計（source: llm）說明照舊。恢復後（週三額度重設後）佇列最前面，使用者「做」：TL-1 截圖比對腳本（新舊截圖逐張像素差異，列有變化的圖與比例，門檻做參數，以 docs/art/、docs/dev/ 現有截圖流程為準）與 TL-2「誰在等誰」掃描腳本（掃 docs/*PM交接.md 的「等…」「待…」「等使用者」，附檔案、行號、小節標題），各 1 個 agent 可平行、不改同一批檔案；接著：PK-4 真模型量測（LM Studio 當時沒載入模型；載好 Gemma 後跑 scripts/wish_compare.py run 再 report，注意許願可能逼近 10 秒門檻）；PK-4 待決 2～6 一次轉玩法；再接 #166 佇列；剩 19% 單張格要補配方，和完整盤點一起排。**#166 骨架擴充佇列**（使用者「8 B 其他都照建議」，06 6.38，玩法交接 4.1.26）：PK-4 之後 → SK-1（第 1 組：距離條件、移動過折扣接工坊、閃現側變與 10 種小變化〔補 PK-3 單張格〕、新方向打分優先製造卡、變奏讀本回合施放過 X）→ SK-2（第 2 組：吸收表面、鉤、推不動算撞擊、疾病擴散；以引擎為主，可和 SK-1 平行但不碰組合器／挑選／閃現檔）→ SK-3（第 3 組：你造的關鍵字被利用時、戰前佈置、重擲；接在 SK-2 後，同碰引擎觸發）；之後：下一招修飾、行動順序條件→ PK-4（許願池願望驅動，照 07 7.6、#165；完成後再決定自由設計程式刪不刪）；第 2～4 段等裁判結果；使用者「先補這個」：RC-0 組合器配方盤點已 push（cbc8380f6；真正的洞 82 空＋14 薄）；RC-1 補配方（會出題的空格 102→32、薄 14→4；Q12 1～4 階 200/200；Q4 照使用者「A」只修評估題）已 push；RC-1b（伴生／護主帶召喚物關鍵字、知道種類的呼叫端傳種類、潮濕被動測試放行經使用者「A」）已 push（7b8f61288，全量 pytest 17771、vitest 4676）。佇列新增：組合器 has_keyword 把戰場變奏算進去、三選一與退回路徑不算，不一致（只浪費嘗試），下次碰組合器順手統一；完整盤點下次碰組合器時用 scripts/recipe_census.py 重跑；模型與 config 等使用者選；下一個大段等專案 PM 問使用者（建議 05 5.12.8 段 3 碎晶之主部位）。GB-2～4a 已 push（a7dc58ca0）；PB-1f 已合併（PB-1e 美術結案，開發 PM 自看截圖）。其餘已 push（47043706a）。
 
 **4. 待排（依序，注意檔案衝突）**：
@@ -70,7 +86,7 @@
 - 規格內的規則類待決一律經專案 PM 問使用者並附原話；agent 的保守解讀屬設計細節時交玩法 PM 確認（例 DD-1 八項、OB-7 三項）。
 - agent 判斷「版號是否已 push」前要先 `git fetch`（DD-1b 曾因沒 fetch 誤判 /116 未 push）。
 - 兩段都重產 `client/openapi.json`／`schema.d.ts` 時合併會衝突：用合併後的後端 `uv run python scripts/export_openapi.py`＋`corepack pnpm -C client gen:api` 重產，跑 `tests/api/test_openapi_snapshot.py` 與 typecheck 確認。
-- 全量在 99% 附近偶發 xdist worker「node down: Not properly terminated」後卡死（11-13 兩次，log 停止寫入超過 10 分鐘就是卡住）：TaskStop 自己的全量再重跑。11-13 第三、四次（10 與 8 worker）都發生在三個 agent 同時跑測試和瀏覽器時；沒有 agent 時用 `--max-worker-restart=0` 單跑 pytest 全過、沒掛，推測是機器資源不夠而不是某個測試。全量盡量在沒有 agent 跑測試時跑，用 8 worker。
+- 全量在 99% 附近偶發 xdist worker「node down: Not properly terminated」後卡死（11-13 兩次，log 停止寫入超過 10 分鐘就是卡住）：TaskStop 自己的全量再重跑。11-13 第三、四次（10 與 8 worker）都發生在三個 agent 同時跑測試和瀏覽器時；沒有 agent 時用 `--max-worker-restart=0` 單跑 pytest 全過、沒掛，推測是機器資源不夠而不是某個測試。全量盡量在沒有 agent 跑測試時跑；QF-3a 起 `scripts/check.py` 預設 12 worker，看門狗會自動收樹重跑。
 - 不要在前景 Bash 用 `&` 丟背景（拿不到完成通知）；全量一律 `run_in_background`。
 - 各段報告末節「開發 PM 裁定」記錄技術待決的決定。
 - **寫「等某人」之前先查**（11-14 專案 PM，第三次清單過時造成白等／白做）：待排條目寫「等美術／玩法」前，先 grep 對方交接檔與 `docs/art/`（或 `docs/玩法PM交接.md`）確認真的還沒交；派工前先 grep `docs/phases/` 報告確認沒做過。每次 push 後順手掃一遍待排，把已交、已做的改成實際狀態。
@@ -103,14 +119,14 @@
 
 ## 6. 工作流程（照做即可）
 
-### 6.1 環境（2026-11-06 起在使用者的 Mac mini 上執行）
+### 6.1 環境（2026-11-21 起在使用者的 Windows 機器上執行）
 
-- **機器**：Mac mini（arm64、16 GB、zsh）。PM 與實作 agent 都在這台的 Claude Code 執行，專案資料夾 `/Users/toby/PycharmProjects/llm_rpg`（origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）；完成後直接 `git push`（何時 push 由專案 PM 統一說）。先確認 `git status` 正常、`uv run python --version` 是 3.12。
-- **uv** 在 `~/.local/bin`：每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Python 一律 `uv run python`。不跑 brew、不重裝（`uv sync`、`pnpm install` 已做好）。
+- **機器**：Windows 11（16 核，Git Bash）。PM 與實作 agent 都在這台的 Claude Code 執行，專案資料夾 `F:\PythonProject\LLM-MMO-TRPG`（Git Bash 寫 `/f/PythonProject/LLM-MMO-TRPG`；origin 指向 GitHub `huntertoby/llm-mmo-trpg`，私人）；每段合併後開發 PM 自己 `git push`。先確認 `git status` 正常、`uv run python --version` 是 3.12。
+- **Python**：Git Bash 的 `python` 是 Windows Store 空殼（結束碼 49），一律 `uv run python`；`/tmp` 從 python 用不了，暫存檔放 scratchpad。不重裝（`uv sync`、`pnpm install` 已做好）。Mac 時期的說明見 `docs/archive/交接歷史-開發PM.md`。
 - **前端**：Node 26 沒有 corepack，一律 `pnpm -C client <build|test|typecheck|gen:api>`；程式裡找 pnpm 的邏輯在 `pnpm_command()`（`src/trpg/cli/frontend.py`，corepack 缺席時退到 pnpm／npx）。
 - **埠**：預覽伺服器不用 8000（使用者的 `trpg serve`）與 8001（本機 LLM）；自己開的 `uv run trpg serve --port <空埠>` 只用它的 PID 關，不用 `pkill`／`killall`（守則 13）。
 - **本機 LLM**：LM Studio（MLX 引擎）＋ `gemma-4-12b-it` 在 `127.0.0.1:1234`；設定 `config/llm.local.toml`（gitignored），跑的時候帶 `TRPG_LLM_CONFIG=config/llm.local.toml`；MLX 不支援 schema `oneOf`，`oneof_as_anyof` 預設開（MAC-2），`uv run trpg llm ping` 會印伺服器接受的 schema 寫法；真模型測試 `uv run pytest -q tests/llm -m llm`。**模型載著時不要跑全量 pytest**（記憶體只剩約 30%）。
-- **全量**：`uv run python scripts/check.py`（`--full` 含 slow 與前端完整組合）；平行數 `TRPG_PYTEST_WORKERS`（預設 8；全量 12～14，全量期間不跑模擬）。2026-11-06 全量：pytest 15217、vitest 3045。兩個 vitest 雜湊快照（`creaturePose.test.ts`、`inkDollSnapshot.test.ts`）在 MAC-1 改成固定 6 位小數，**回 Windows x64 要再跑一次**。
+- **全量**：一般全量由 push hook 跑（`.claude/pm-workflow.json`；只改 `*.md` 的 push 略過檢查），PM 不另外手動跑；階段結束審查前跑一次 `uv run python scripts/check.py --full`。平行數 `TRPG_PYTEST_WORKERS`（QF-3a 起預設 12；全量期間不跑模擬；pytest 步驟走看門狗 `scripts/run_pytest.py`）。2026-11-06 全量：pytest 15217、vitest 3045。兩個 vitest 雜湊快照（`creaturePose.test.ts`、`inkDollSnapshot.test.ts`）在 MAC-1 改成固定 6 位小數，**回 Windows x64 要再跑一次**。
 - **GitHub Actions CI 只手動觸發**（2026-10-19 使用者決定，額度曾用完）：驗收一律以本機 `check.py` 為準。
 - 專案設定 `.claude/settings.json`（已進 git）：常用指令免確認、檔案編輯自動接受、`PYTHONUTF8=1`。**背景 agent 卡在確認提示，表示它用了清單外的指令**：把該指令加進清單，或在規格裡改用清單內的寫法。
 - 使用者電腦要保持開機、不睡眠，Claude app 要開著；中途斷掉時進度在 commit 裡，照 6.6 第二點派收尾 agent。
@@ -125,14 +141,14 @@
 0. **決策影響盤點（2026-10-24 使用者同意流程改善 A）**：每個玩法／美術決定寫入後、寫規格前，開發 PM 先做一次只讀盤點「現行程式哪裡受影響」（引擎、內容資料、工坊、隨機組合器、LLM 提議、介面、存檔、測試），結果寫進規格的「受影響的既有功能」段。起因：#45 寫入後只做新功能，工坊與驗證器沒跟著改，造成武器技屬性漏洞與工坊違規技能（`docs/archive/phases/工坊盤點-2026-10-24.md`）。
 1. **寫規格** `docs/phases/PhaseX計畫.md`：目標、範圍外、工作環境、交付項目、驗收條件（每條可驗證）、報告格式。**必填兩段（2026-10-24，流程改善 A、B）**：① **受影響的既有功能**（第 0 步盤點結果，每項寫要改或不改的理由）；② **行為一致測試**——凡是規則句（看什麼屬性、花什麼資源、誰能抵抗、說明文字寫的數字），一律要求「實際跑引擎」的表格測試，不只測資料與驗證器（範例：3-41c 的傷害算法與引擎 `damage_dealt` 逐一比對）。上一階段報告的「待 PM 決定」放在新規格開頭的「PM 決定」表。**規格要小**：一個 agent 的工作量控制在約 30 分鐘、25 萬 token 以內，範圍以「一套規則 ＋ 其測試」為上限。
 2. **commit 並 push 規格**。
-3. **派實作 agent**：`Agent` 工具，`subagent_type: general-purpose`、`run_in_background: true`，模型依 6.3 選。prompt 範本見 6.4。
+3. **派實作 agent**：`Agent` 工具，`subagent_type: pm-workflow:implementer`、`model: opus`、`isolation: worktree`、`run_in_background: true`（模型見 6.3）。prompt 範本見 6.4。
 4. **等通知**，不要輪詢。使用者問進度時用 `git log --format='%cd %h %s' --date=format:%H:%M <base>..HEAD` 回報。
 5. **功能驗收**（自己做，不只看報告）。**檢查分級（2026-10-23 使用者同意，專案 PM 傳達「好」）**：
    - **排版煙霧檢查（2026-10-24，流程改善 D；3-47 起有工具）**：凡是動到前端的段，合併後在內建瀏覽器跑 `window.__layoutSmoke`（`client/src/dev/layoutSmoke.ts`，純函式 `evaluate` 有 vitest；不需安裝任何套件）。步驟：① `pnpm -C client build`，背景啟動 `uv run trpg serve --port <空的埠>`（只關自己的）；② 每個情況先 `resize_window`，先 `javascript_tool` 執行 `localStorage.clear()`（有舊的一輪存檔時頁面會接回去、全部量不到），再 `navigate` 到 `/?dev=1&anim=0.1`（6F-1 起正式首頁只剩「開始」，煙霧檢查要在開發模式跑），再 `javascript_tool` 執行 `await window.__layoutSmoke.runCase("標題")` 取得 PASS／FAIL 表；三個情況：1600×900、1040×624、800×600（6A-4g 起拿掉 `shortBottom` 與拖曳線：戰鬥改成 HUD 疊在鋪滿的戰場上，改量 HUD 各塊不重疊、不出畫面）；③ 結束 `resize_window` preset `desktop`。量：結束回合寬度 ≥ 右欄 90%、播放列與按鈕在畫面內且一行、格子資訊卡提示列在底色內、「更多動作」選單開著時沒有說明卡、沒有 `.hint-tip` 外框。固定種子與起始武器（弓），結果可重現；全 PASS 才算過。新增版面元件時把它的量測加進 `layoutSmoke.ts`。`?anim=0.1` 可放慢動畫逐格截圖。
    - **一次出事就全面掃描（流程改善 E）**：同類錯誤第一次出現時，就全專案掃描同樣寫法並寫成常駐規則，不要只修那一處（反例：說明卡包一層造成的排版錯誤先後出了三次）。
    - **每段合併只跑快速檢查**：`ruff check`、`ruff format --check`、`mypy`、這段改到的 pytest 檔與相關前端測試、一場 `--log-json` ＋ `replay`；有改前端才跑 `pnpm build`。
-   - **全量 `check.py` 每 2～3 段合併跑一次**，以及 Phase 結束審查前一次（3-34 之後用 `scripts/check.py --full` 含 slow）。
-   - **同時進行的 agent 最多 4 個、不可改同一批檔案**（2026-11-04 使用者「同意，改第 11 條」；全量每 1～2 段合併跑一次）。**開發 PM 自己最多 3 個**，留 1 個給美術 PM 派畫圖與審查 agent（2026-11-04 晚，使用者：「感覺美術也要像開發PM那樣」，專案 PM 轉）。改到存檔欄位或技能池的段，相關測試要包含 `tests/test_architecture.py`；pytest 不用 `-n auto`。3-34 起：`scripts/check.py`（快速版，約 3 分鐘，不含 slow）、`scripts/check.py --full`（含 slow 與前端完整組合 `TRPG_FULL=1`，約 10 分鐘）；平行數 `TRPG_PYTEST_WORKERS`（預設 8，可設 `auto`）。長指令要加 timeout（Bash 預設 2 分鐘會中斷）或背景執行。3E-2c 起：pytest-timeout（一般 300 秒、slow 1800 秒）；agent 在自己的 worktree 跑測試，加 `UV_NO_SYNC=1`（或 `uv run --frozen`）避免測試中途重裝套件。
+   - **全量交給 push hook**（2026-11-21 使用者選「拿掉 PM 手動那次」，CLAUDE.md 第 11 條）：PM 不再手動跑一般全量；Phase 結束審查前照舊跑一次 `scripts/check.py --full`。
+   - **同時進行的 agent 最多 4 個、不可改同一批檔案**（2026-11-04 使用者「同意，改第 11 條」）。**開發 PM 自己最多 3 個**，留 1 個給美術 PM 派畫圖與審查 agent（2026-11-04 晚，使用者：「感覺美術也要像開發PM那樣」，專案 PM 轉）。改到存檔欄位或技能池的段，相關測試要包含 `tests/test_architecture.py`；pytest 不用 `-n auto`。3-34 起：`scripts/check.py`（快速版，約 3 分鐘，不含 slow）、`scripts/check.py --full`（含 slow 與前端完整組合 `TRPG_FULL=1`，約 10 分鐘）；平行數 `TRPG_PYTEST_WORKERS`（QF-3a 起預設 12，可設 `auto`）。長指令要加 timeout（Bash 預設 2 分鐘會中斷）或背景執行。3E-2c 起：pytest-timeout（一般 300 秒、slow 1800 秒）；agent 在自己的 worktree 跑測試，加 `UV_NO_SYNC=1`（或 `uv run --frozen`）避免測試中途重裝套件。
    - 原寫法：`uv run python scripts/check.py`；挑一張地圖換一個種子跑 `trpg battle ... --log-json` 再 `trpg battle replay`；抽查一兩個關鍵設計（例如引擎內沒有浮點 log、沒有 `random`）。大型模擬（completion、matrix）由 PM 在驗收時於背景跑，不放進實作子階段。
 6. **大階段結束時（例如 2E、Phase 3 結束）派審查 agent**（6.5），把結論中要處理的項目排進下一份規格。
 7. **push**。
@@ -140,11 +156,17 @@
 
 ### 6.3 模型選擇
 
-| 工作 | 模型 |
-|---|---|
-| 規格清楚、照做的實作（新增模板、狀態、內容、CLI、測試） | `sonnet` |
-| 新架構或難以事後修改的設計（Phase 3 伺服器與前端骨架、存檔格式、Phase 4 LLM 流程與 prompt）、Sonnet 連續兩次做不好的子階段 | `opus` |
-| 審查（6.5） | `opus` |
+照 `CLAUDE.md`「角色分工」的模型規定：實作、修 bug、審查一律 `opus`；只有固定步驟、可核對的工作（`pm-workflow:finder` 找資料、跑檢查、截圖、量測、重產夾具、搬檔）可用 Haiku。
+
+- **全部測試同一時間只跑一份**（2026-11-21 使用者：「好，請開發 PM 錯開跑」）：
+  - 範圍：agent 交件前的 `check.py`、push hook 的檢查。
+  - 平行的兩個 agent 由 PM 排先後，hook 推送時不能有 agent 在跑全部測試。
+  - 有負載時，`tests/api/test_wish_api_wp2.py::test_text_wish_wait_then_act` 這類等待牆鐘的測試會逾時失敗。
+- **合併與推送的順序（tree 戳記）**：
+  - agent 的 `check.py` 戳記綁 tree。main 沒動過時，用 `--no-ff` 合併後 tree 和 agent 分支相同。
+  - 合併後**先 push**，hook 會略過完整檢查。
+  - 裁定是只改 `.md` 的 commit，再 push 一次（`skip_checks_if_only` 會略過）。
+  - main 已經有別的改動、tree 本來就不同時，就把裁定一起寫好再推，只跑一次全量。
 
 ### 6.4 派實作 agent 的 prompt 範本
 
@@ -157,7 +179,7 @@
 1. 讀 `CLAUDE.md`（特別是守則 11 節省 token、守則 12 複雜度）。
 2. 讀 `docs/phases/PhaseX計畫.md`——這是你的規格。
 3. 讀規格指定的前一階段報告與 `docs/design/` 主題檔（只讀指定的）。
-4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；**不要跑完整的 `scripts/check.py`**（PM 合併後統一跑）；pytest 平行最多 `-n 8`。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
+4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；開發中不跑完整的 `scripts/check.py`；pytest 平行最多 `-n 8`，**一律經看門狗跑：`uv run python scripts/run_pytest.py -q <路徑> -n 8`，不直接 `uv run pytest`**（QF-3a，說明見 `docs/dev/上手-測試.md`；worker 掛掉時回報保留的 `.claude/pm-logs/pytest/` 資料夾）。**交件前全部 commit 之後**，在自己的 worktree 跑一次 `uv run python scripts/check.py`。它跑全部非 slow 測試，經看門狗；通過會寫下 tree 戳記，PM 合併後 tree 沒變，push hook 就略過完整檢查（2026-11-21 使用者：「拿掉第二次重複的測試」）。跑完不要再改檔。再加規格指定的 slow 測試。同一時間只跑一份全部測試（使用者：「好，請開發 PM 錯開跑」）。**派工時 PM 二選一寫進 prompt**（2026-11-22，GS-3、HC-6b 兩次問完沒等回覆就交件，多一輪來回）：① 那段期間確定沒有別的全量：prompt 直接寫「全部 commit 後先 `git merge --no-edit main`，直接跑 check.py 和 slow，不用先問」；② 有別的 agent 也可能跑全量：prompt 寫「commit 完先 merge main，用 SendMessage 問 PM 能不能跑，**收到回覆前不要交件、也不要結束這一輪**（呼叫 SendMessage 後用完成通知等）」。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
 5. 不要 push。
 6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶 Co-Authored-By 一行（依你的系統提示）。
 7. 撰寫並 commit `docs/phases/PhaseX報告.md`；若新增了複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915），在報告中逐一列出理由。
@@ -235,6 +257,6 @@ PM 看完結論，決定哪些排進下一份規格（或獨立一個小的整�
 
 ## 7. 節省 token 的原則
 
-- PM 對話本身是最大的隱藏成本（每一步都會重新處理整段對話）。**對話變長時（例如完成一個大階段後），更新本檔並請使用者開新對話。**
-- 實作 agent 依 6.3 選模型（預設 Sonnet）；規格要小；agent 開發中只跑相關測試（CLAUDE.md 守則 11）。
+- PM 對話本身是最大的隱藏成本（每一步都會重新處理整段對話）。**對話變長時，先更新本檔現況並 commit，再壓縮；不換對話。**
+- 實作 agent 一律 Opus（6.3）；規格要小；agent 開發中只跑相關測試（CLAUDE.md 守則 11）。
 - PM 讀文件只讀需要的：總覽 ＋ 對應的 `docs/design/` 主題檔 ＋ 最新一份報告。不要讀整份舊報告或舊對話。

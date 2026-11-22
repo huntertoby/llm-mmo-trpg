@@ -209,7 +209,7 @@ def test_shockwave_card_matches_what_happens() -> None:
     skill = _shockwave()
     line = effect_summary(LIB, skill, skill.effects[0])
     assert "震波" in line and "會飛" in line
-    assert LIB.ruleset.primitives.by_id()["shockwave"].base_points == 4
+    assert LIB.budget.primitive_points["shockwave"] == 4
 
 
 # ---------------------------------------------------------------------------
@@ -442,8 +442,8 @@ def _cast(skill_id: str, state: Any, **fields: Any) -> Any:
 
 
 def test_raise_and_lower_terrain_cost_seven_points() -> None:
-    prims = LIB_54E.ruleset.primitives.by_id()
-    assert (prims["raise_terrain"].base_points, prims["lower_terrain"].base_points) == (7, 7)
+    points = LIB_54E.budget.primitive_points  # HC-B：原語點數搬到 skill_budget.yaml
+    assert (points["raise_terrain"], points["lower_terrain"]) == (7, 7)
 
 
 def test_the_reworked_terrain_skills_are_back_inside_the_budget() -> None:

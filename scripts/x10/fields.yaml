@@ -93,11 +93,13 @@ groups:
       - objective_rotation.*
       - off_route_per_offer
       - offer_max_attempts
+      - route_hint_tier           # HC-7 b：開局路線提示的角色階級上限
       - offer_size
       - offer_tier_by_level[]
       - source.*                                  # 源力
       - start.composer_tries
       - start.keywords
+      - start.heroes.*.speed                      # HC-4d：原本是程式預設 5（格數）
 
   # ------------------------------------------------------------------ 武器、狀態、物件、表面
   - files: weapons.yaml
@@ -135,7 +137,6 @@ groups:
     keep:
       - statuses[].ap_penalty
       - statuses[].attack_range_cap
-      - statuses[].budget_points
       - statuses[].duration
       - statuses[].*_permille
       - statuses[].formation.*
@@ -155,7 +156,6 @@ groups:
 
   - files: surfaces.yaml
     keep:
-      - surfaces[].budget_points
       - surfaces[].duration
       - surfaces[].on_enter.check.dc
       - surfaces[].on_enter.check.slide_max
@@ -214,6 +214,7 @@ groups:
       - races[].skill.effects[].distance
       - races[].skill.shape.*
       - races[].skill.uses_per_battle
+      - limits.*                                  # HC-4d：種族技次數、效果數、‰ 上限
 
   - files: offhands.yaml
     keep:
@@ -311,7 +312,6 @@ groups:
     keep:
       - primitives[].params.flat_bonus.min        # 下限 1 在新單位仍合法
       - primitives[id=restore_resource].params.amount.min
-      - primitives[].base_points
       - primitives[].max_per_skill
       - primitives[].params.amount.knob[].max     # restore_resource 冷卻的上限 2
       - primitives[id!=restore_resource].params.amount.*
@@ -355,6 +355,7 @@ groups:
     keep:
       - triggers[].budget_by_n_permille.*
       - triggers[].budget_coefficient_permille
+      - triggers[].max_per_round  # HC-7 b：時機的每輪次數
       - triggers[].params.n.*
 
   - files: skill_evolution.yaml
@@ -402,6 +403,7 @@ groups:
       - duration.*
       - infuse_permille
       - llm_cost.max_cooldown
+      - llm_cost.default_ap                       # HC-5b
       - llm_cost.steps[].ap
       - llm_cost.steps[].cooldown
       - llm_cost.weak_steps[].ap
@@ -421,18 +423,25 @@ groups:
       - recipes.summon_units[].range
       - rune.*
       - sacrifice.*
+      - sacrifice.radius.*                        # HC-5b：格數
       - scaling.*
+      - search.*                                  # HC-5b：重抽、重試次數與試組用的假設冷卻
+      - search.proposal.*
       - special.*
+      - special.*[]                               # HC-5b：源力、AP、格數、回合、‰ 候選；lasting_mana 是換算前的法力（程式 × quantity_scale）
+      - special.ladders.*[]                       # HC-5b：修正規則的值階梯（‰、命中、冷卻、格數、AP）
       - spell_any_weapon_permille
       - spell_attr_weights.*
       - spell_share_permille.*
       - stance.*_permille
       - structure.*
       - structure.*[]
+      - structure.delayed_damage_*.*              # HC-5b：輪數、格數
       - trap.*
       - trap.*.*
       - tuning.*
       - variant.*
+      - variant.range_delta.*                     # HC-5b：格數
       - variant.changes[].*
       - variant.changes[].shape.*
       - whiteboard.*
@@ -500,6 +509,23 @@ groups:
       - transforms[].summon_boosts[].*
       - transforms[].trap.rounds
       - transforms[].trigger.max_distance
+      # HC-5a：小變化、出題、轉型的步階與上限（回合、次數、‰、分數、格數）
+      - rules.charge_*
+      - rules.hp_*_permille
+      - rules.added_hp_condition_permille
+      - rules.blood_bonus_permille                # 預算折抵 ‰，不是量
+      - rules.summon_hp_steps[]                   # 召喚物最大 HP 加成 ‰
+      - rules.new_damage_multiplier_permille
+      - rules.followup_*
+      - rules.usage_scores.*
+      - rules.usage_*
+      - rules.second_keyword_cap
+      - rules.transform_carry_max
+      - rules.beside_power_step_permille
+      - rules.search.*
+      - transforms[].stance_upkeeps[]             # 維持費點數（每點的量在 forms.yaml）
+      # 轉型草稿的代價：法力、耐力是換算前的單位，程式經 CoreRules.scaled_cost 乘 quantity_scale（照舊）
+      - transforms[].draft_costs[].*
 
   # ------------------------------------------------------------------ 預算
   - files: skill_budget.yaml
@@ -544,6 +570,7 @@ groups:
       - flash_cost.*
       - flash_transform.*
       - form_coefficient_permille
+      - shield_max_hp_points                      # GS-3：看最大 HP 的護盾，每 100‰ 的預算點數（點數不放大）
       - gamble_*
       - grant_skill_expected_uses_per_round_permille
       - hook_*
@@ -565,6 +592,11 @@ groups:
       - overload_expected_permille
       - passive_extra_trigger_permille
       - pierce_bonus_permille
+      - primitive_points.*                        # HC-B：原語的基礎預算點數（從 skill_primitives.yaml 搬來）
+      - status_points.*                           # HC-B：狀態的預算點數（從 statuses.yaml 搬來）
+      - surface_points.*                          # HC-B：表面的預算點數（從 surfaces.yaml 搬來）
+      - shape_budget.*.*                          # HC-B：形狀倍率（‰，從 skill_shapes.yaml 搬來）
+      - shape_budget.*.*.*                        # HC-W2：形狀倍率查表 by_value、non_power_by_value（‰，鍵＝參數值）
       - range_baseline
       - range_step_permille
       - rarity.*.max_effects
@@ -573,6 +605,7 @@ groups:
       - reroll_budget_permille
       - restore_cooldown_points
       - retier_growth.*
+      - retier_growth.*[]                         # HC-5b：召喚物 HP ‰、費用比例 ‰
       - retier_growth.stretch.*.duration
       - reveal_*_points
       - revive_base_points
@@ -580,6 +613,7 @@ groups:
       - sacrifice_summon_permille
       - scale_expected_steps_milli.*
       - shield_duration_permille[]
+      - shield_duration_start                     # HC-5b：回合
       - silent_strike_round_milli
       - stance_coefficient_permille
       - summon_detonate_*
@@ -650,11 +684,14 @@ groups:
       - consume_status_max_scale
       - contagion_radius
       - control_dr_rounds
+      - crit_range_floor          # HC-7：暴擊範圍下限（d20 面值）
       - elite_ap_per_turn
       - explode_max
       - fall_damage_min_drop
       - far_distance
       - guard_transfers_per_round
+      - opening_status_max_duration  # HC-7：開場狀態的回合上限
+      - tower_shield_cover_height    # HC-7：塔盾掩護視為幾層高
       - hit_mod_cap
       - hit_slope
       - hit_target
@@ -680,6 +717,9 @@ groups:
       - rune_max_rounds
       - boss_parts.*                              # HC-4a：部位數、‰、效果數
       - boss_phases.*                             # HC-4a：階段數
+      - skill_limits.*                            # HC-4b：技能結構的上限（階級、AP、效果數、回合、暴擊範圍）
+      - skill_limits.modifier_bounds.*            # HC-4b2：修正規則的幅度（‰、命中、回合、格數、個數）
+      - skill_limits.every_n_hits[]               # HC-4d：每 N 次命中的 N
       - shove_distance
       - source_max
       - source_min_at_start
@@ -756,6 +796,8 @@ groups:
       - cost_min_points
       - max_attempts
       - min_affix_points
+      - extra_build_affixes_max   # HC-7：詞條條數上限
+      - trigger_affixes_max       # HC-7
       - min_fill_permille
       - offer_attempts
       - offer_size
@@ -805,6 +847,12 @@ groups:
       - run.*_points
       - rune.*_points
       - skill_ai.multi_target
+      - skill_ai.charge_per_enemy                 # HC-4c：衝撞、瞬步的固定加分（原本是程式預設值）
+      - skill_ai.shadowstep
+      - skill_ai.shadowstep_behind
+      - skill_candidates                          # HC-4c：每種技能跑完整預覽的候選數（不是量類）
+      - heuristics.*.*                            # HC-4c：種族技條件、便宜估計、共用評分（點數、格數、‰，不是量類）
+      - heuristics.estimate.rune_cell_points[]
       - summon.*_points
       - terrain.*_points
       - weapon_ai.*
@@ -863,12 +911,18 @@ groups:
       - targets[kind=unit].fields[path=attributes.str|attributes.dex|attributes.con|attributes.int|attributes.wis|attributes.wil].hint_*
       - targets[kind=skill].fields[path=cost.mana|cost.stamina].hint_*
       - targets[kind=object].fields[path="objects[*].max_hp"].hint_*
+      - targets[kind=forms].fields[path=upkeep_stamina|upkeep_mana|stance_upkeep_stamina|stance_upkeep_mana].hint_*   # HC-W2：forms.yaml 的維持費是量類
+      - targets[kind=item_gen].fields[path=stat_prices.attribute.per|stat_prices.max_hp.per|cost_prices.turn_start_hp_loss.per].hint_*   # HC-W2：item_gen.yaml 的量類單位
     keep:
       - targets[kind=ai].fields[].hint_*          # 跟 ai_profiles.yaml 的點數一起不變（X10-1 裁定 2）
       - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
       - targets[kind=unit].fields[kind=permille].hint_*
       - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*
-      - targets[kind=rules|budget|pick|skill_composer|skill_triggers].fields[].hint_*
+      - targets[kind=rules|budget|pick|skill_composer|skill_triggers|skill_conditions|skill_synergies|skill_evolution|flash].fields[].hint_*
+      - targets[kind=world_rules|world_economy|world_trade|world_season].fields[].hint_*   # HC-4d：金幣、經驗、格數、天數、‰（大世界檔整組不 ×10）
+      - targets[kind=forms].fields[path!=upkeep_stamina|upkeep_mana|stance_upkeep_stamina|stance_upkeep_mana].hint_*   # HC-W2：冷卻、格數、‰、回合
+      - targets[kind=equipment].fields[].hint_*   # HC-W2：‰、條數、AP、冷卻、暴擊、移動
+      - targets[kind=item_gen].fields[path!=stat_prices.attribute.per|stat_prices.max_hp.per|cost_prices.turn_start_hp_loss.per].hint_*   # HC-W2：點數、‰、權重、條數
 
   # ------------------------------------------------------------------ 大世界
   - files: world/rules.yaml
@@ -893,6 +947,14 @@ groups:
       - wish.*
       - xp.*
       - xp.shares_permille.*
+      - day_parts.*                               # HC-4d：早午晚夜的起始鐘點
+      - field_maps.layout_sizes.*.*[]             # HC-4d：實地地圖的建議大小（格）
+      - field_maps.stones_per_region[]            # HC-4d：每區傳送石數
+      - display.*                                 # HC-7 b：畫面列幾筆
+      - notes.*                                   # HC-7 b：留言字數
+  - files: regions.yaml
+    keep:
+      - locations_per_region[]                    # HC-4d：每區地點數
   - files: world/encounters/*.yaml
     scale:
       - locations[].armor_mods.mods[].amount      # 護甲加減（盤點沒列；schema 上限也要放寬）
@@ -901,6 +963,7 @@ groups:
     keep:
       - camp_elite_permille
       - ranged_cap
+      - elite_cap                 # HC-7：每場精英上限
       - locations[].ranged_cap
       - locations[].groups[].weight
       - locations[].unit_min_levels[].min_level
@@ -914,6 +977,7 @@ groups:
       - items[].price
       - items[].supplies
       - items[].skill.ap_cost
+      - item_skill_ap_cost        # HC-7 b：道具技能的 AP
       - items[].skill.cost.uses_per_battle
       - items[].skill.effects[].duration
       - items[].skill.rank

@@ -55,7 +55,7 @@ def test_soul_bond_light_shortens_the_link() -> None:
     light = _flash(base, LIGHT)
     assert base.effects[0].duration == 3
     assert light.effects[0].duration is not None and light.effects[0].duration < 3
-    assert strength_moves(base, light) == (False, True)
+    assert strength_moves(base, light, LIB) == (False, True)
     rows = _rows(base, light)
     assert rows["effects[0].amount"][2:] == ("worse", "轉移傷害回合")
 
@@ -66,24 +66,24 @@ def test_shield_without_duration_counts_as_two_rounds() -> None:
         for s in sorted(LIB.skills.values(), key=lambda s: s.id)
         if s.effects and s.effects[0].type == "shield" and s.effects[0].duration is None
     )
-    key = next(k for k in strength_table(shield) if k.endswith(".duration"))
-    assert strength_table(shield)[key] == 2
+    key = next(k for k in strength_table(shield, LIB) if k.endswith(".duration"))
+    assert strength_table(shield, LIB)[key] == 2
     longer = _edited(shield, duration=3)
-    assert strength_moves(shield, longer) == (True, False)
+    assert strength_moves(shield, longer, LIB) == (True, False)
     assert _rows(shield, longer)["effects[0].amount"] == ("2", "3", "better", "護盾回合")
 
 
 def test_undying_rounds_show_in_changes() -> None:
     base = LIB.skills["skill_undying_oath"]
     shorter = _edited(base, duration=1)
-    assert strength_moves(base, shorter) == (False, True)
+    assert strength_moves(base, shorter, LIB) == (False, True)
     assert _rows(base, shorter)["effects[0].amount"] == ("2", "1", "worse", "不死回合")
 
 
 def test_nested_status_in_an_ally_zone_is_a_status() -> None:
     """戰歌區域裡的激昂：強度表、退路的回合步驟、差異清單都看得到。"""
     base = LIB.skills["skill_war_hymn"]
-    table = strength_table(base)
+    table = strength_table(base, LIB)
     assert "effects[0].effects[0]:apply_status:empowered.duration" in table
     base_dict, effects = base_draft(base)
     steps = _steps(LIB, base_dict, effects, {}, up=True)
@@ -92,10 +92,10 @@ def test_nested_status_in_an_ally_zone_is_a_status() -> None:
     trial_base, trial_effects = _with_value(base_dict, effects, nested[0], 2)
     assert trial_effects[0]["effects"][0]["duration"] == 2
     longer = SkillDef.model_validate({**trial_base, "effects": trial_effects})
-    assert strength_moves(base, longer) == (True, False)
+    assert strength_moves(base, longer, LIB) == (True, False)
     assert _rows(base, longer)["effects[0].effects[0].amount"] == ("1", "2", "better", "激昂回合")
 
 
 def test_enemy_zone_nested_effects_are_not_listed() -> None:
     fire_wall = LIB.skills["skill_fire_wall"]
-    assert not any(".effects[" in k for k in strength_table(fire_wall))
+    assert not any(".effects[" in k for k in strength_table(fire_wall, LIB))

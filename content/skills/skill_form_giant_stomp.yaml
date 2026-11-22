@@ -1,0 +1,27 @@
+# 巨人踐地（GS-3，#173，06 6.30「形態池名單」高階化身；數值為初值，未經模擬）：進入巨人形態，再把周圍 1 格
+# （實心環形）的敵人推開 1 格（進入時效果）；撞到東西照撞擊規則算，吃得到巨人進入獎勵「本回合撞擊 +50%」。
+# 撞擊骰不寫時預算 67.2%（低於合格下限 70%）；推開格數照設計 1 格，撞擊骰明寫成和核心規則預設相同的 1d6
+# （實戰傷害不變，預算每顆撞擊骰另計 1 點 → 75.5%），見 docs/phases/PhaseGS-3報告.md「待 PM 決定」。
+id: skill_form_giant_stomp
+schema_version: 1
+name_zh: 巨人踐地
+tier: 4
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: ring, radius: 1, solid: true}
+effects:
+  - {type: enter_form, form: giant, affects: self}
+  - {type: push, distance: 1, collision_dice: 1d6, affects: enemies}
+condition: null
+cost: {cooldown: 3}
+tags: [stance]
+narrative:
+  concept: 化身巨人時一腳踏下，地面掀起的震浪把貼身的敵人全都掃開
+  cast_flavor: 你的身軀拔高成巨人，抬起的腳重重踏落，四周的敵人被震得向外翻滾
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

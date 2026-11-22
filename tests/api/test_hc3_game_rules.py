@@ -14,7 +14,7 @@ def test_glossary_rules_come_from_content() -> None:
     rules = build_glossary(lib).rules
     core = lib.ruleset.core
     assert rules.source_max == core.source_max
-    assert rules.skill_slots.model_dump() == core.skill_slots.model_dump()
+    assert rules.skill_slots.model_dump() == core.skill_slots.model_dump(exclude={"rule_change"})
     assert rules.start_keywords == lib.roguelite.start.keywords
     assert rules.complete_budget_permille == lib.flash.rules.complete.budget_permille
 
@@ -23,7 +23,8 @@ def test_glossary_endpoint_has_rules(client: TestClient) -> None:
     reply = client.get("/api/glossary")
     assert reply.status_code == 200
     rules = reply.json()["rules"]
-    assert set(rules) == {"source_max", "skill_slots", "start_keywords", "complete_budget_permille"}
+    # HC-6b 加了說明文字組字用的欄位；HC-3 的四個照舊在
+    assert {"source_max", "skill_slots", "start_keywords", "complete_budget_permille"} <= set(rules)
     assert set(rules["skill_slots"]) == {"active", "passive", "reaction", "stance"}
 
 

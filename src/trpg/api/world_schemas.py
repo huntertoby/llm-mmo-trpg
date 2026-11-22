@@ -108,6 +108,7 @@ __all__ = [
     "AtlasView",
     "AttributeNoteView",
     "CreateWorldCharacterRequest",
+    "DayPartHoursView",
     "EncounterEnemyView",
     "EncounterView",
     "GrowthView",
@@ -485,12 +486,24 @@ class EncounterView(_ApiModel):
     """單挑的說明句（例「狂暴的霧狼要求一對一：接受＝只有你和牠，拒絕＝照原本全隊打；兩邊獎勵一樣」）。"""
 
 
+class DayPartHoursView(_ApiModel):
+    """早、午、晚、夜的起始鐘點（``world/rules.yaml`` 的 ``day_parts``，HC-4d）：前端 HUD 的時段字
+    （白天＝早〔``noon`` 點前〕、午；夜晚＝晚〔``evening``～``night`` 點前〕、夜）照這張表。"""
+
+    morning: int
+    noon: int
+    evening: int
+    night: int
+
+
 class WorldClockView(_ApiModel):
     time_zh: str
     """遊戲內時刻 ``HH:MM``。"""
     day_phase: Literal["day", "night"]
     day_phase_zh: str
     weather_zh: str
+    day_parts: DayPartHoursView
+    """早、午、晚、夜的起始鐘點（HC-4d：前端不再寫死）。"""
 
 
 class GrowthView(_ApiModel):
@@ -569,6 +582,9 @@ class OathView(_ApiModel):
     cooldown_until: int
     cooldown_zh: str | None
     """解除後還要多久才能再立；沒有冷卻時為 ``None``。"""
+    cooldown_seconds: int
+    """解除誓約後多久不能再立（秒，``world/oaths.yaml`` 的 ``cooldown_seconds``；HC-7 a 裁定 8：
+    前端照這個數組「N 天內」或「N 小時內」）。"""
     can_swear: bool
     swear_problem_zh: str | None
     can_release: bool

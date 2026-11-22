@@ -991,7 +991,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         weapon_id=hand.id,
         weapon_class=hand.weapon_class,
         weapon_traits_zh=(
-            *hand.trait_lines_zh(),
+            *hand.trait_lines_zh(state.ruleset.core),
             *hand.rule_lines_zh(
                 state.ruleset.core,
                 lambda attr: effective_attribute(state.ruleset, unit, attr),

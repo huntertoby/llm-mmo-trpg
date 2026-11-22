@@ -45,7 +45,9 @@ def _companions(library: ContentLibrary) -> dict[str, CompanionDef]:
 
 def _max_hired(library: ContentLibrary) -> int:
     table = library.world_mercenaries
-    return 2 if table is None else table.max_hired
+    if table is None:
+        raise WorldError("內容庫沒有 world/mercenaries.yaml")
+    return table.max_hired
 
 
 def _quest_defs(library: ContentLibrary) -> dict[str, QuestDef]:

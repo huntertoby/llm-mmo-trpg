@@ -169,7 +169,8 @@ def _trap_checks(p: PathPreview) -> None:
     damage = next(e for e in step.events if e.kind == "damage")
     assert damage.certain and damage.amount_min is not None and damage.amount_max is not None
     assert damage.amount_min < damage.amount_max
-    assert any(e.kind == "status" and e.status_id == "root" for e in step.events)
+    root = next(e for e in step.events if e.kind == "status" and e.status_id == "root")
+    assert root.save_roll  # HC-6c：定身要另外擲抵抗（root 有 save_attr）
     assert p.steps[3].reach in ("possible", "interrupted")
 
 
@@ -692,3 +693,15 @@ def test_merge_keeps_non_damage_events_and_stopped_reasons() -> None:
         ("stopped", False, "prone"),
         ("status", True, None),
     ]
+
+
+def test_merge_keeps_save_roll_from_any_branch() -> None:
+    """HC-6c：狀態要不要另外擲抵抗，任一分支擲過就是真；只在一個分支出現的照樣帶著。"""
+    rolled = PathEvent("status", True, status_id="root", save_roll=True)
+    plain = PathEvent("status", True, status_id="root")
+    (merged,) = _merge_all([[plain], [rolled]])
+    assert merged.certain and merged.save_roll
+    (only_max,) = _merge_all([[], [rolled]])
+    assert not only_max.certain and only_max.save_roll
+    (no_save,) = _merge_all([[], [plain]])
+    assert not no_save.certain and not no_save.save_roll

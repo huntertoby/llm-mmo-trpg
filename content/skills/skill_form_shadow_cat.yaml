@@ -1,0 +1,26 @@
+# 影貓潛襲（GS-3，#173，06 6.30「形態池名單」高階化身；數值為初值，未經模擬）：進入貓形態（貓的進入獎勵照有），
+# 再讓自己隱蔽（進入時效果，形狀是自己）。設計寫隱蔽 1 回合，但 1 回合時預算只有 66%（低於合格下限 70%）；
+# 照「預算 70～100%、取最保守的初值」先寫 2 回合（73.9%），見 docs/phases/PhaseGS-3報告.md「待 PM 決定」。
+id: skill_form_shadow_cat
+schema_version: 1
+name_zh: 影貓潛襲
+tier: 3
+rank: 1
+rarity: rare
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: dex
+shape: {type: self}
+effects:
+  - {type: enter_form, form: cat, affects: self}
+  - {type: apply_status, status: concealed, duration: 2, affects: self}
+condition: null
+cost: {cooldown: 3}
+tags: [stance]
+narrative:
+  concept: 化作黑貓的瞬間便沒入陰影，等敵人回過神來已經找不到你
+  cast_flavor: 你伏低身子化作一隻黑貓，尾巴一甩，身影就融進了地上的影子裡
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

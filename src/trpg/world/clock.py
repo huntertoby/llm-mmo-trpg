@@ -14,11 +14,11 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
+from trpg.content.world_rules import FALLBACK_CALENDAR
+
 __all__ = [
     "GAME_DAY_SECONDS",
     "REAL_DAY_SECONDS",
-    "REFRESH_HOUR",
-    "UTC_OFFSET_SECONDS",
     "WEATHER_PERIOD_SECONDS",
     "DayPhase",
     "day_phase",
@@ -36,10 +36,6 @@ GAME_DAY_SECONDS: Final = 30 * 60
 """遊戲內一天的現實秒數（3.1「遊戲內一天＝現實 30 分鐘」）。"""
 WEATHER_PERIOD_SECONDS: Final = GAME_DAY_SECONDS // 2
 """天氣更換週期（#104「遊戲內每半天（現實 15 分鐘）換一次」）。"""
-UTC_OFFSET_SECONDS: Final = 8 * 3600
-"""Asia/Taipei 的固定位移（沒有日光節約時間）。"""
-REFRESH_HOUR: Final = 6
-"""每日刷新的當地時刻（3.1「每天早上 6 點」）。"""
 REAL_DAY_SECONDS: Final = 24 * 3600
 
 _GAME_DAY_START_MINUTE: Final = 6 * 60
@@ -80,29 +76,38 @@ def game_clock(now: int) -> tuple[int, int]:
 
 
 def _offset(utc_offset_minutes: int | None) -> int:
-    return UTC_OFFSET_SECONDS if utc_offset_minutes is None else utc_offset_minutes * 60
+    """當地時間和 UTC 的差（秒）；沒給時照 :data:`FALLBACK_CALENDAR`（台北）。"""
+    minutes = (
+        FALLBACK_CALENDAR.utc_offset_minutes if utc_offset_minutes is None else utc_offset_minutes
+    )
+    return minutes * 60
+
+
+def _hour(refresh_hour: int | None) -> int:
+    """每日刷新的當地時刻；沒給時照 :data:`FALLBACK_CALENDAR`（6 點）。"""
+    return FALLBACK_CALENDAR.refresh_hour if refresh_hour is None else refresh_hour
 
 
 def refresh_day(
-    now: int, *, utc_offset_minutes: int | None = None, refresh_hour: int = REFRESH_HOUR
+    now: int, *, utc_offset_minutes: int | None = None, refresh_hour: int | None = None
 ) -> int:
     """以當地早上 6 點為界的「第幾天」（每日一次的判定、懸賞、今日目標用）。
 
     時區與刷新時刻預設是台北 6 點；世界規則的 ``calendar`` 可以換（Phase 5F-1，
     :mod:`trpg.world.calendar`）。"""
-    shifted = _check(now) + _offset(utc_offset_minutes) - refresh_hour * 3600
+    shifted = _check(now) + _offset(utc_offset_minutes) - _hour(refresh_hour) * 3600
     return shifted // REAL_DAY_SECONDS
 
 
 def day_start_at(
-    day: int, *, utc_offset_minutes: int | None = None, refresh_hour: int = REFRESH_HOUR
+    day: int, *, utc_offset_minutes: int | None = None, refresh_hour: int | None = None
 ) -> int:
     """刷新日 ``day`` 開始（當地刷新時刻）的 UTC 秒數。"""
-    return day * REAL_DAY_SECONDS - _offset(utc_offset_minutes) + refresh_hour * 3600
+    return day * REAL_DAY_SECONDS - _offset(utc_offset_minutes) + _hour(refresh_hour) * 3600
 
 
 def next_refresh_at(
-    now: int, *, utc_offset_minutes: int | None = None, refresh_hour: int = REFRESH_HOUR
+    now: int, *, utc_offset_minutes: int | None = None, refresh_hour: int | None = None
 ) -> int:
     """下一次每日刷新的 UTC 秒數（嚴格大於 ``now``）。"""
     day = refresh_day(now, utc_offset_minutes=utc_offset_minutes, refresh_hour=refresh_hour)

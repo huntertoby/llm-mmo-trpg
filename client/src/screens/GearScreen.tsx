@@ -154,7 +154,7 @@ export function GearScreen({ onHome, onSkills, onStartBattle }: Props) {
         seed,
         ...(picker.body ?? { keywords: [] }),
         ally_builds: [],
-        max_rounds: arena?.max_rounds ?? 30,
+        max_rounds: arena?.max_rounds, // HC-7 b：沒有靶場設定時不送，伺服器照 workshop.yaml
         equipment,
         ...(opponents !== "" ? { opponents } : {}),
       });

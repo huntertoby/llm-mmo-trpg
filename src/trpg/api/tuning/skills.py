@@ -23,7 +23,7 @@ from typing import Any, Final, Literal
 from pydantic import ValidationError
 
 from trpg.api.tuning.check import Prepared, convert
-from trpg.api.tuning.objects import concrete_fields, read_data
+from trpg.api.tuning.objects import concrete_fields, read_data, skill_ranged
 from trpg.api.tuning.schemas import (
     TuningBudgetFlag,
     TuningBudgetResult,
@@ -78,45 +78,58 @@ _DAMAGE_SITES: Final = ("effects", "followup")
 
 type Verdict = Literal["ok", "over", "weak"]
 
+
+def _preset_tier_ap(flt: TuningGroupFilter) -> tuple[int, int | None]:
+    """快捷分組的篩選值（階級、AP）：標籤照這兩個值組字（HC-6b），篩選和標籤不會分岔。"""
+    return flt.tier[0], flt.ap_cost[0] if flt.ap_cost else None
+
+
+_RANGED_T1: Final = TuningGroupFilter(
+    tier=[1], category=["weapon"], weapon_req=["ranged"], kind=["active"], enemy_only=False
+)
+_MELEE_T1: Final = TuningGroupFilter(
+    tier=[1], category=["weapon"], weapon_req=["melee"], kind=["active"], enemy_only=False
+)
+_ARROWS: Final = TuningGroupFilter(
+    tier=[1],
+    category=["weapon"],
+    weapon_req=["ranged"],
+    ap_cost=[1],
+    kind=["active"],
+    enemy_only=False,
+    single_damage=True,
+)
+_CONDITIONAL: Final = TuningGroupFilter(
+    tier=[1],
+    category=["weapon"],
+    ap_cost=[2],
+    kind=["active"],
+    enemy_only=False,
+    has_condition=True,
+)
+_ARROWS_TIER, _ARROWS_AP = _preset_tier_ap(_ARROWS)
+_COND_TIER, _COND_AP = _preset_tier_ap(_CONDITIONAL)
+
 GROUP_PRESETS: Final = (
     TuningGroupPreset(
         key="t1_ranged_weapon",
-        label_zh="1 階遠程武器技",
-        filter=TuningGroupFilter(
-            tier=[1], category=["weapon"], weapon_req=["ranged"], kind=["active"], enemy_only=False
-        ),
+        label_zh=f"{_preset_tier_ap(_RANGED_T1)[0]} 階遠程武器技",
+        filter=_RANGED_T1,
     ),
     TuningGroupPreset(
         key="t1_melee_weapon",
-        label_zh="1 階近戰武器技",
-        filter=TuningGroupFilter(
-            tier=[1], category=["weapon"], weapon_req=["melee"], kind=["active"], enemy_only=False
-        ),
+        label_zh=f"{_preset_tier_ap(_MELEE_T1)[0]} 階近戰武器技",
+        filter=_MELEE_T1,
     ),
     TuningGroupPreset(
         key="t1_arrows_1ap",
-        label_zh="1 AP 箭類（1 階、遠程、AP 1、單體傷害）",
-        filter=TuningGroupFilter(
-            tier=[1],
-            category=["weapon"],
-            weapon_req=["ranged"],
-            ap_cost=[1],
-            kind=["active"],
-            enemy_only=False,
-            single_damage=True,
-        ),
+        label_zh=f"{_ARROWS_AP} AP 箭類（{_ARROWS_TIER} 階、遠程、AP {_ARROWS_AP}、單體傷害）",
+        filter=_ARROWS,
     ),
     TuningGroupPreset(
         key="t1_conditional_2ap",
-        label_zh="2 AP 條件型（1 階武器技，帶條件段）",
-        filter=TuningGroupFilter(
-            tier=[1],
-            category=["weapon"],
-            ap_cost=[2],
-            kind=["active"],
-            enemy_only=False,
-            has_condition=True,
-        ),
+        label_zh=f"{_COND_AP} AP 條件型（{_COND_TIER} 階武器技，帶條件段）",
+        filter=_CONDITIONAL,
     ),
 )
 """常用預設組（規格 5.4）。"""
@@ -312,9 +325,7 @@ def _matches(skill: SkillDef, f: TuningGroupFilter) -> bool:
     has_condition = skill.condition is not None or any(e.condition for e in skill.effects)
     if f.has_condition is not None and has_condition != f.has_condition:
         return False
-    shape_range = skill.shape.range
-    ranged = skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range >= 2)  # noqa: PLR2004
-    if f.ranged is not None and ranged != f.ranged:
+    if f.ranged is not None and skill_ranged(skill) != f.ranged:
         return False
     return f.single_damage is None or _has_damage_single(skill) == f.single_damage
 
@@ -352,17 +363,23 @@ def _round_div(num: int, den: int) -> int:
     return sign * ((abs(num) * 2 + den) // (den * 2))
 
 
-_SCALAR_LIMITS: Final[dict[str, tuple[int | None, int | None]]] = {
-    "ap_cost": (1, 3),
-    "cost.stamina": (0, None),
-    "cost.mana": (0, None),
-    "cost.cooldown": (1, 6),
-}
+def _scalar_limits(library: ContentLibrary) -> dict[str, tuple[int | None, int | None]]:
+    """分組改的純量欄位範圍：AP、冷卻上限照 ``rules/core.yaml`` 的 ``skill_limits``（HC-7 b：
+    原本寫死 3、6，只留內容一份）。"""
+    limits = library.ruleset.core.skill_limits
+    return {
+        "ap_cost": (1, limits.max_ap_cost),
+        "cost.stamina": (0, None),
+        "cost.mana": (0, None),
+        "cost.cooldown": (1, limits.max_cooldown),
+    }
+
+
 _BORROW_AP_LIMITS: Final = (0, 0)
 """帶預支（``borrow_ap``，AP-2）的技能的 ``ap_cost``：只能是 0（``SkillDef`` 的硬規則；QF-1）。"""
 _ZERO_DEFAULT: Final = frozenset({"cost.stamina", "cost.mana"})
 _SAME_ZH: Final = "改完和原值相同（或已到邊界）"
-_BORROW_SAME_ZH: Final = "預支技能的 AP 固定是 0，不能改"
+_BORROW_SAME_ZH: Final = f"預支技能的 AP 固定是 {_BORROW_AP_LIMITS[0]}，不能改"
 
 
 def _borrows_ap(data: Any) -> bool:
@@ -459,6 +476,7 @@ def _scalar_edit(
     data: Any,
     target: TuningTarget,
     request: TuningGroupIn,
+    library: ContentLibrary,
     limits: Callable[[str], tuple[int | None, int | None]],
 ) -> tuple[list[_Edit], str | None]:
     path = request.target
@@ -476,7 +494,8 @@ def _scalar_edit(
         return [], "這招沒有寫這個值（例如沒有冷卻），只能用「設定」"
     raw = _apply_int(int(base or 0), request.op.kind, request.op.value)
     borrow = path == "ap_cost" and _borrows_ap(data)
-    low, high = _BORROW_AP_LIMITS if borrow else (_SCALAR_LIMITS.get(path) or limits(path))
+    fixed = _scalar_limits(library).get(path)
+    low, high = _BORROW_AP_LIMITS if borrow else (fixed or limits(path))
     new = None if raw is None else _clamp(raw, low, high)
     if new is None or new == current or (current is None and new == base):
         return [], _BORROW_SAME_ZH if borrow else _SAME_ZH
@@ -550,7 +569,7 @@ def group_preview(
         if request.target.startswith("damage_"):
             edits, reason = _damage_edits(data, target, request, library, bound)
         else:
-            edits, reason = _scalar_edit(data, target, request, bound)
+            edits, reason = _scalar_edit(data, target, request, library, bound)
         if not edits:
             rows.append(
                 TuningGroupRow(

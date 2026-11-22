@@ -11,7 +11,7 @@ from tests.world.helpers import NOON, make_world
 from tests.world.test_narration import narrate, story
 from tests.world.test_situations import act, at_event, sure
 from trpg.content.library import ContentLibrary
-from trpg.content.world_quests import WorldQuestContent
+from trpg.content.world_quests import NO_FILE_AFFINITY_RULES, WorldQuestContent
 from trpg.shared.types import Attribute
 from trpg.world.actions import (
     AffinityChangedEvent,
@@ -21,7 +21,6 @@ from trpg.world.actions import (
     TavernAction,
 )
 from trpg.world.affinity import (
-    DEFAULT_AFFINITY_RULES,
     affinity_of,
     change_affinity,
     rank_of,
@@ -59,7 +58,7 @@ def test_rank_thresholds_116(
     library: ContentLibrary, make_char: MakeChar, value: int, rank: str
 ) -> None:
     assert rank_of(library, make_char(affinity={"granny_du": value}), "granny_du") == rank
-    assert DEFAULT_AFFINITY_RULES.rank_of(value) == rank
+    assert NO_FILE_AFFINITY_RULES.rank_of(value) == rank
 
 
 def test_change_clamps_and_reports(library: ContentLibrary, make_char: MakeChar) -> None:

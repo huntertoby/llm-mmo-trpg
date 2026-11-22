@@ -272,6 +272,11 @@ export function HireEditor({ party, busy, onAct }: HireProps) {
 }
 
 /** 小鎮選單的「雇用隊友」按鈕＋展開的清單（`aria-expanded`，6.5.1）。 */
+/** 「雇用隊友」鈕的說明；最多幾名照隊伍的 `max_hired`（`world/mercenaries.yaml`；HC-6c）。0＝不帶（獨行）。 */
+export function hireHintText(maxHired: number): string {
+  return `免費帶 0～${maxHired} 名隊友：系統傭兵或朋友的影子（出城前選好，野外不能換；不帶＝獨行）`;
+}
+
 export function useHireToggle(party: WorldPartyView | null | undefined) {
   const [open, setOpen] = useState(false);
   const can = party != null && party.can_hire && (party.mercenaries ?? []).length > 0;

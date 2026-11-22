@@ -16,8 +16,8 @@ OLD_HP = {
     "bandit_guard": 350,
     "bandit_archer": 310,  # BAL-4b（26→31）
     "bandit_archer_guard": 310,
-    "bandit_rookie": 230,  # 6F-4 C1 新手第 1 場（17 ＋ 體質 12 的 6）
-    "bandit_rookie_terrace": 210,  # CB-2d 梯田固定戰（15 ＋ 體質 12 的 6）
+    "bandit_rookie": 270,  # 6F-4 C1 新手第 1 場；2026-11-21 使用者改值（基礎 210 ＋ 體質 60）
+    "bandit_rookie_terrace": 240,  # CB-2d 梯田固定戰；11-21 跟著新手盜賊改（180 ＋ 體質 60）
     "bandit_archer_rookie": 190,  # 6F-4 C1
     "bandit_boss": 800,
     "bandit_captain": 570,  # BAL-6 新增（45 加體質 14 的 12 點）
@@ -131,7 +131,7 @@ OLD_HP = {
     "molten_lord": 880,
     "frost_ember_lizard": 200,
     "molten_wraith": 220,
-    "ashen_heart": 1780,
+    "ashen_heart": 1540,  # 2026-11-21 使用者改值（基礎 1360 ＋ 體質 180）
     "summon_ember_whelp": 80,
 }
 

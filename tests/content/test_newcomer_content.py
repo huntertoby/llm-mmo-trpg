@@ -39,6 +39,9 @@ BASE: dict[str, Any] = {
     "guide_capital_how_zh": "站上傳送陣",
     "guide_town_zh": "找渡婆婆",
     "main_advice_zh": "建議先完成{quest}",
+    "reflash_level": 3,
+    "opening_end_level": 4,
+    "starter_steps": 2,
 }
 
 

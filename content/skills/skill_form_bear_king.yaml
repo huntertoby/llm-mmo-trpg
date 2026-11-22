@@ -1,0 +1,26 @@
+# 熊王怒吼（GS-3，#173，06 6.30「形態池名單」高階化身；數值為初值，未經模擬）：進入熊形態（熊的進入獎勵照有），
+# 再讓周圍 1 格（實心環形，切比雪夫距離 1）的敵人虛弱 2 回合（進入時效果，照狀態平常的對抗與頭目控制遞減）。
+# 化形專精 ×1.5 與形態幅度都不乘在進入時效果上；帶進入時效果要有冷卻（下限 skill_limits.min_form_entry_cooldown）。
+id: skill_form_bear_king
+schema_version: 1
+name_zh: 熊王怒吼
+tier: 3
+rank: 1
+rarity: epic
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: str
+shape: {type: ring, radius: 1, solid: true}
+effects:
+  - {type: enter_form, form: bear, affects: self}
+  - {type: apply_status, status: weaken, duration: 2, affects: enemies}
+condition: null
+cost: {cooldown: 3}
+tags: [stance]
+narrative:
+  concept: 化作巨熊的那一刻仰天一吼，貼在身邊的敵人都被震得手腳發軟
+  cast_flavor: 你的身形猛然膨脹成巨熊，一聲咆哮炸開，身旁的敵人握著兵器的手不住發抖
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

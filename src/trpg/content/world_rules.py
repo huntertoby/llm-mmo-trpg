@@ -6,12 +6,15 @@
 「數值類」）；改數值只改資料、不改程式（守則 4）。規則本身在 ``trpg.world``。
 
 Phase 5A-4 加上 ``battle``（遇敵戰鬥的回寫：經驗、疲憊、已清空與重生）與 ``enemy_growth``（敵人依
-地點建議等級成長）；兩者都有預設值，舊的精簡 content 照常載入。
+地點建議等級成長）。
 
-Phase 5A-6 加上 ``hero_growth``（主角的技能階級表、每級靈感點、精英首殺靈感、等級上限）；有預設值。
+Phase 5A-6 加上 ``hero_growth``（主角的技能階級表、每級靈感點、精英首殺靈感、等級上限）。
 
 Phase 6C-R2 加上 ``field``（實地地圖的規則數值：敵人視野、潛行、隱藏入口感知距離、就地切戰場、
-一次走幾格；原本寫死在 ``trpg.world`` 的常數）；有預設值，預設值和原本的常數相同。
+一次走幾格；原本寫死在 ``trpg.world`` 的常數）。
+
+HC-4d：數字欄位都沒有程式預設值，一律寫在 ``world/rules.yaml``（值照搬原本的預設）；
+``field_maps`` 是實地地圖的大小建議與每區傳送石數（原本是 ``trpg.content.fields`` 的常數）。
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from typing import Final, Literal
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.fields import FieldMapRules
 from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 
@@ -29,11 +33,14 @@ __all__ = [
     "WALK_PATH_FORMAT_MAX",
     "BattleRules",
     "CalendarRules",
+    "DayPartHours",
+    "DisplayLimits",
     "EncounterRates",
     "EnemyGrowthRules",
     "FieldRules",
     "HastenRules",
     "HeroGrowthRules",
+    "NoteRules",
     "OpportunityRules",
     "PerceptionRules",
     "RegionWeather",
@@ -127,12 +134,12 @@ ClearKind = Literal[
 class BattleRules(ContentModel):
     """遇敵戰鬥與勝負回寫（5A-4；``docs/phases/Phase5計畫.md`` 9.4）。"""
 
-    max_rounds: int = Field(default=30, ge=1)
-    fatigue_hp_permille: int = Field(default=800, ge=1, le=1000)
+    max_rounds: int = Field(ge=1)
+    fatigue_hp_permille: int = Field(ge=1, le=1000)
     """疲憊：全滅後下一場開場 HP 上限（最大 HP 的 ‰；9.6.9 #98）。"""
     clear_kinds: tuple[ClearKind, ...] = ("camp",)
     """打贏後寫「已清空」的地點種類（9.6.7 #15）。"""
-    respawn_seconds: int = Field(default=1800, ge=0)
+    respawn_seconds: int = Field(ge=0)
     """已清空到重生的秒數（遊戲內 1 天＝1800 秒）。"""
 
     @model_validator(mode="after")
@@ -149,9 +156,7 @@ class EnemyGrowthRules(ContentModel):
     ``world/rules.yaml``。"""
 
     attribute_points_per_level: int = Field(ge=0)
-    skill_tier_by_level: tuple[int, ...] = Field(
-        default=(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), min_length=1
-    )
+    skill_tier_by_level: tuple[int, ...] = Field(min_length=1)
     """等級 → 技能階級（07 7.6：1～3 級 1 階、4～7 級 2 階、8～10 級 3 階）；
     超出表的等級用最後一格。"""
 
@@ -167,18 +172,17 @@ class EnemyGrowthRules(ContentModel):
         return table[min(max(level, 1), len(table)) - 1]
 
 
-DEFAULT_SHARES = {
-    "battle": 1000,
-    "elite": 3000,
-    "situation_success": 500,
-    "situation_partial": 250,
-    "quest_chain_step": 3000,
-    "main_step": 5000,
-    "bounty": 4000,
-    "hidden_location": 2000,
-}
-XP_SOURCES = tuple(DEFAULT_SHARES)
-"""經驗來源（``xp.shares_permille`` 的鍵）。"""
+XP_SOURCES: Final = (
+    "battle",
+    "elite",
+    "situation_success",
+    "situation_partial",
+    "quest_chain_step",
+    "main_step",
+    "bounty",
+    "hidden_location",
+)
+"""經驗來源（``xp.shares_permille`` 的鍵；各來源的份數寫在 ``world/rules.yaml``，HC-4d）。"""
 
 
 class XpRules(ContentModel):
@@ -188,9 +192,9 @@ class XpRules(ContentModel):
     ``shares_permille``（1000‰＝1 份）。任務鏈、主線、懸賞、隱藏地點的份數先寫在這裡，等那些功能做好
     時接上。"""
 
-    base: int = Field(default=100, ge=0)
-    level_permille: int = Field(default=100, ge=0)
-    shares_permille: dict[str, int] = Field(default_factory=lambda: dict(DEFAULT_SHARES))
+    base: int = Field(ge=0)
+    level_permille: int = Field(ge=0)
+    shares_permille: dict[str, int]
 
     @model_validator(mode="after")
     def _shares(self) -> XpRules:
@@ -215,21 +219,17 @@ class XpRules(ContentModel):
 class HeroGrowthRules(ContentModel):
     """主角在大世界的成長（5A-6；07 7.6、7.8，06 6.34.2）。"""
 
-    level_thresholds: tuple[int, ...] = Field(
-        default=(950, 3800, 8600, 14350, 20200, 26050, 31950, 37800, 43650), min_length=1
-    )
+    level_thresholds: tuple[int, ...] = Field(min_length=1)
     """升到第 2、3、… 級需要的 **累計** 經驗（嚴格遞增；5A-SIM2 方案 B）。"""
 
-    skill_tier_by_level: tuple[int, ...] = Field(
-        default=(1, 1, 1, 2, 2, 2, 2, 3, 3, 3), min_length=1
-    )
+    skill_tier_by_level: tuple[int, ...] = Field(min_length=1)
     """角色等級 → 角色階級（07 7.6：1～3 級 1 階、4～7 級 2 階、8～10 級 3 階；玩法 PM 定）；
     超出表的等級用最後一格。原型的 ``offer_tier_by_level`` 只留給 roguelite。"""
-    insight_per_level: int = Field(default=2, ge=0)
+    insight_per_level: int = Field(ge=0)
     """每升 1 級給的靈感點（06 6.34.2 大世界）。"""
-    insight_per_elite_kind: int = Field(default=1, ge=0)
+    insight_per_elite_kind: int = Field(ge=0)
     """每種精英首殺給的靈感點（06 6.34.2）。"""
-    level_cap: int = Field(default=10, ge=1)
+    level_cap: int = Field(ge=1)
     """等級上限（07 7.8、09 9.7 第一季 10 級）；到頂後經驗照累積、不換算（換算比例待定）。"""
 
     @model_validator(mode="after")
@@ -250,11 +250,11 @@ class OpportunityRules(ContentModel):
     """機遇給的技能三選一（Phase 5B-4c；07 7.6「通常同階，15% 機率高 1 階，每人每季最多
     1 次」）。"""
 
-    tier_up_permille: int = Field(default=150, ge=0, le=1000)
+    tier_up_permille: int = Field(ge=0, le=1000)
     """這組候選高 1 階的機率 ‰（確定性種子擲）。"""
-    tier_up_per_season: int = Field(default=1, ge=0)
+    tier_up_per_season: int = Field(ge=0)
     """每個角色（一季一份）最多幾次高 1 階。"""
-    guarantee_from_day: int = Field(default=0, ge=0)
+    guarantee_from_day: int = Field(ge=0)
     """機遇保底（Phase 5B-4d，07 7.6「第 7 天前保底 1 次」）：賽季第幾天起，還沒遇過機遇的角色
     走到機遇骨架的地點就一定觸發（不看天氣、時段與機率）；0 ＝ 不保底。"""
     guarantee_waives_keyword: bool = False
@@ -266,22 +266,19 @@ class WishRules(ContentModel):
     。
     數字是 WP-1 的初值（``docs/phases/PhaseWP計畫.md`` 第 6 節待決 2、3、6），之後只改這裡。"""
 
-    per_week: int = Field(default=2, ge=0)
+    per_week: int = Field(ge=0)
     """每個角色每週能許幾次（09 9.6 上限表）。"""
-    cost_quest_coins: int = Field(default=4, ge=0)
+    cost_quest_coins: int = Field(ge=0)
     """每次許願的任務幣（設計沒寫數字，初值）。"""
-    refund_permille: int = Field(default=500, ge=0, le=1000)
+    refund_permille: int = Field(ge=0, le=1000)
     """三選一都不拿時退還的比例（‰，捨去；#88 2b「任務幣退一半」）。"""
-    text_max_chars: int = Field(default=60, ge=1, le=500)
+    text_max_chars: int = Field(ge=1, le=500)
     """願望文字最多幾個字（設計「一句話」；prompt 的玩家文字上限是 500）。"""
-    max_keywords: int = Field(default=2, ge=1)
+    max_keywords: int = Field(ge=1)
     """一次許願最多對到幾個關鍵字（07 7.6「1～2 個關鍵字」）。"""
-    llm_cards: int = Field(default=1, ge=0, le=3)
+    llm_cards: int = Field(ge=0, le=3)
     """一份三選一最多請 LLM 幾張（其餘組合器與技能池補滿；同機遇 6L-2b 的保守值）。"""
 
-
-DEFAULT_WEEK_DAYS: Final = 7
-"""一週的預設天數（沒有世界規則時也用這個）。"""
 
 WALK_PATH_FORMAT_MAX: Final = 1000
 """``walk`` 請求格式的寬上限（6P-2：只防過大的請求）；一次最多幾格以規則
@@ -292,33 +289,66 @@ class CalendarRules(ContentModel):
     """賽季日曆（Phase 5F-1）：每日刷新的時區與當地時刻（``docs/專案計畫.md`` 3.1：06:00
     Asia/Taipei）。遊戲日長度（30 分鐘）與天氣週期是使用者定的常數，不在這裡。"""
 
-    utc_offset_minutes: int = Field(default=480, ge=-720, le=840)
+    utc_offset_minutes: int = Field(ge=-720, le=840)
     """當地時間和 UTC 的差（分鐘；台北 +480，沒有日光節約時間）。"""
-    refresh_hour: int = Field(default=6, ge=0, le=23)
+    refresh_hour: int = Field(ge=0, le=23)
     """每日刷新的當地時刻（懸賞、今日目標、每天一次的判定）。"""
 
 
-class FieldRules(ContentModel):
-    """實地地圖的規則數值（Phase 6C-R2；原本是 ``trpg.world`` 的常數，預設值不變）。"""
+FALLBACK_CALENDAR: Final = CalendarRules(utc_offset_minutes=480, refresh_hour=6)
+"""呼叫 :mod:`trpg.world.clock` 沒有給日曆時用的日曆（台北 6 點）：只有伺服器公告沒有內容庫的舊路徑
+與測試會用到；有內容庫的地方一律走 :func:`trpg.world.calendar.calendar_of`（``world/rules.yaml`` 的
+``calendar``）。HC-7 把原本 ``clock.py`` 的 ``UTC_OFFSET_SECONDS``、``REFRESH_HOUR`` 與
+``calendar.py`` 的 ``NO_RULES_CALENDAR`` 兩份合成這一份，值和內容檔相同
+（``tests/world/test_rule_defaults_hc7.py`` 對照）。"""
 
-    sight_range: int = Field(default=4, ge=0)
+
+class DayPartHours(ContentModel):
+    """``world/rules.yaml`` 的 ``day_parts``：早、午、晚、夜的起始鐘點（遊戲內時刻；HC-4d 從前端
+    ``client/src/world/hud.ts`` 搬來，值照前端原本用的）。
+
+    白天／夜晚照伺服器的 ``day_phase``（:func:`trpg.world.clock.day_phase`：遊戲日前半是白天），
+    這張表只決定同一個時段裡的字：白天＝早（``noon`` 點前）、午；夜晚＝晚（``evening``～``night``
+    點前）、夜。``morning``、``evening`` 要和世界時鐘的白天開始、夜晚開始一致
+    （``tests/world/test_rule_defaults_hc4d.py`` 對照）。"""
+
+    morning: int = Field(ge=0, le=23)
+    """早的起始鐘點（＝遊戲日開頭、白天開始）。"""
+    noon: int = Field(ge=0, le=23)
+    """午的起始鐘點。"""
+    evening: int = Field(ge=0, le=23)
+    """晚的起始鐘點（＝夜晚開始）。"""
+    night: int = Field(ge=0, le=23)
+    """夜的起始鐘點（到隔天 ``morning`` 為止）。"""
+
+    @model_validator(mode="after")
+    def _ordered(self) -> DayPartHours:
+        if not self.morning < self.noon < self.evening < self.night:
+            raise ValueError("day_parts 的鐘點必須是 morning < noon < evening < night")
+        return self
+
+
+class FieldRules(ContentModel):
+    """實地地圖的規則數值（Phase 6C-R2；原本是 ``trpg.world`` 的常數，值不變）。"""
+
+    sight_range: int = Field(ge=0)
     """敵人的視野距離（前方扇形、曼哈頓距離；21.10 第 3、12 條）。"""
-    sneak_sight_divisor: int = Field(default=2, ge=1)
+    sneak_sight_divisor: int = Field(ge=1)
     """潛行中敵人視野＝``sight_range // sneak_sight_divisor``（捨去小數；21.10 第 6 條）。"""
-    perceive_range: int = Field(default=3, ge=0)
+    perceive_range: int = Field(ge=0)
     """走到隱藏入口幾格內自動感知（曼哈頓距離；21.6、21.10 第 17 條）。"""
-    cut_size: int = Field(default=12, ge=1)
+    cut_size: int = Field(ge=1)
     """就地開打的戰場邊長（21.4）。"""
-    min_enemy_cells: int = Field(default=4, ge=1)
-    min_ally_cells: int = Field(default=3, ge=1)
+    min_enemy_cells: int = Field(ge=1)
+    min_ally_cells: int = Field(ge=1)
     """就地開打的起始區至少幾格（6C-3 驗收：敵方 4 格、我方 3 格）。"""
-    gap_ally_first: int = Field(default=2, ge=1)
-    gap_other: int = Field(default=3, ge=1)
+    gap_ally_first: int = Field(ge=1)
+    gap_other: int = Field(ge=1)
     """就地開打的距離（#124，21.10 第 26 條）：雙方最近兩單位之間的空格數（曼哈頓距離＝格數＋1，
     不看高低差）；我方先手 ``gap_ally_first``，敵方先手或沒有先手 ``gap_other``。"""
-    gap_fallback: int = Field(default=1, ge=1)
+    gap_fallback: int = Field(ge=1)
     """兩種距離都放不下時再試的距離；也放不下才退回模板。"""
-    gap_third: int = Field(default=2, ge=1)
+    gap_third: int = Field(ge=1)
     """三方混戰的第三方離我方起始區每一格至少隔幾格（6E-3b，21.10 第 26 條細節）；6E-3c：永遠
     套用，雙方退到 ``gap_fallback`` 時也一樣。"""
 
@@ -331,7 +361,7 @@ class FieldRules(ContentModel):
         )
         return tuple(dict.fromkeys((first, other, self.gap_fallback)))
 
-    walk_max_steps: int = Field(default=30, ge=1, le=WALK_PATH_FORMAT_MAX)
+    walk_max_steps: int = Field(ge=1, le=WALK_PATH_FORMAT_MAX)
     """一次 ``walk`` 最多幾格（6B-2 第 3.2 節；6P-2 起由這裡決定，世界畫面的
     ``FieldView.walk_max_steps`` 告訴前端分段送）；不得超過請求格式的寬上限
     :data:`WALK_PATH_FORMAT_MAX`。"""
@@ -341,12 +371,35 @@ class FieldRules(ContentModel):
         return self.sight_range // self.sneak_sight_divisor
 
 
+class DisplayLimits(ContentModel):
+    """畫面最多列幾筆（HC-7 b：原本寫死在 ``trpg.api``、``trpg.server`` 的常數）。只決定畫面上列出
+    幾筆，不影響規則。"""
+
+    town_friends: int = Field(ge=0)
+    """一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）。"""
+    footprint_friends: int = Field(ge=0)
+    """一張圖最多畫幾位朋友的腳印。"""
+    footprint_prints: int = Field(ge=0)
+    """一位朋友最多畫幾個腳印。"""
+    note_board: int = Field(ge=1)
+    """地點留言板顯示最新幾則（代決 5E3-5）。"""
+    note_footprints: int = Field(ge=0)
+    """地點的足跡最多列幾筆。"""
+
+
+class NoteRules(ContentModel):
+    """地點留言（Phase 5E-3，#105；HC-7 b 從 ``trpg.server.notes`` 搬來）。"""
+
+    max_chars: int = Field(ge=1)
+    """一則留言最多幾個字（#105：50 字）。"""
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
-    week_days: int = Field(default=DEFAULT_WEEK_DAYS, ge=1)
+    week_days: int = Field(ge=1)
     """一週幾天（以早上 6 點刷新的日子算；酒館傳聞、商店每週限量，5D-R1）。"""
-    calendar: CalendarRules = CalendarRules()
+    calendar: CalendarRules
     """每日刷新的時區與時刻（Phase 5F-1）。"""
     supplies: SupplyRules
     camp_cost: int = Field(ge=0)
@@ -356,15 +409,23 @@ class WorldRules(ContentModel):
     default_weather: WeatherWeights = WeatherWeights(day={"clear": 1}, night={"night": 1})
     """沒有列在 ``weather`` 的區域用這組。"""
     weather: tuple[RegionWeather, ...] = ()
-    battle: BattleRules = BattleRules()
+    battle: BattleRules
     enemy_growth: EnemyGrowthRules
-    hero_growth: HeroGrowthRules = HeroGrowthRules()
-    xp: XpRules = XpRules()
-    opportunity: OpportunityRules = OpportunityRules()
-    wish: WishRules = WishRules()
+    hero_growth: HeroGrowthRules
+    xp: XpRules
+    opportunity: OpportunityRules
+    wish: WishRules
     """許願池（Phase WP-1）。"""
-    field: FieldRules = FieldRules()
+    field: FieldRules
     """實地地圖的規則數值（Phase 6C-R2）。"""
+    field_maps: FieldMapRules
+    day_parts: DayPartHours
+    """早、午、晚、夜的起始鐘點（HC-4d；經 API 的 ``WorldClockView.day_parts`` 給前端）。"""
+    display: DisplayLimits
+    """畫面最多列幾筆（HC-7 b）。"""
+    notes: NoteRules
+    """地點留言（HC-7 b）。"""
+    """實地地圖的大小建議與每區傳送石數（HC-4d，原本是 ``trpg.content.fields`` 的常數）。"""
 
     @model_validator(mode="after")
     def _unique_regions(self) -> WorldRules:

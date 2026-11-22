@@ -9,6 +9,7 @@ from pydantic import Field, PrivateAttr, model_validator
 
 from trpg.content.battle import StatusDef, StatusTable, TerrainDef, TerrainTable, UnitTemplate
 from trpg.content.environment import (
+    AiHeuristics,
     InteractionTable,
     ObjectDef,
     ObjectTable,
@@ -130,6 +131,10 @@ class Ruleset(ContentModel):
     gear_names: dict[str, str] = Field(default_factory=dict)
     """武器與副手的中文名（ID → 名稱；Phase 3I-5）：引擎的限定武器與「手持某種武器」條件訊息用。
     嵌入規則包，重播不依賴資料檔。"""
+    ai: AiHeuristics
+    """不分行為模式的 AI 數值（HC-4c，``content/ai_profiles.yaml`` 的 ``heuristics:``）：
+    種族技條件、便宜估計、共用評分數值。``engine/ai`` 從 ``state.ruleset.ai`` 讀；嵌入規則包，
+    重播不依賴資料檔。"""
 
     _keyword_cache: dict[object, SkillKeywords] = PrivateAttr(default_factory=_CacheDict)
     _rule_change_index: dict[str, RuleChangeDef] = PrivateAttr(default_factory=dict)
@@ -218,20 +223,42 @@ class Ruleset(ContentModel):
             raise ValueError(f"core.yaml 的 topple_rubble_object 引用了未知的物件：{rubble}")
         self._check_rule_changes(ids)
         self._check_overloads(ids)
-        reduction = 1000 - self.core.element_mod_floor_permille
-        if self.equipment.caps.damage_reduction_permille != reduction:
+        self._check_every_n_hits()
+        floor = self.core.element_mod_floor_permille
+        reduction = 1000 - floor
+        cap = self.equipment.caps.damage_reduction_permille
+        if cap != reduction:  # HC-4b：兩格一起開進工坊，訊息寫兩邊的值、兩格都標
             raise ValueError(
-                "rules/equipment.yaml 的 caps.damage_reduction_permille 必須等於 1000 − "
-                f"core.yaml 的 element_mod_floor_permille（{reduction}）"
+                f"rules/equipment.yaml 的 caps.damage_reduction_permille（{cap}）必須等於 1000 − "
+                f"core.yaml 的 element_mod_floor_permille（{floor}）＝ {reduction}；兩格要一起改"
             )
         return self
+
+    def _check_every_n_hits(self) -> None:
+        """``every_n_hits`` 的係數表要剛好有 ``core.yaml`` 的 ``skill_limits.every_n_hits``
+        （HC-4d）。"""
+        allowed = sorted(self.core.skill_limits.every_n_hits)
+        for trigger in self.skill_triggers.triggers:
+            table = trigger.budget_by_n_permille
+            if trigger.id == "every_n_hits" and table is not None and sorted(table) != allowed:
+                shown = "、".join(str(n) for n in allowed)
+                raise ValueError(
+                    f"skill_triggers.yaml 的 every_n_hits 必須以 budget_by_n_permille 給 "
+                    f"n={shown} 的係數（core.yaml 的 skill_limits.every_n_hits）"
+                )
 
     def _check_overloads(self, status_ids: set[str]) -> None:
         """超載（3D-7b）的反噬：狀態存在、不能是硬控、跳過回合或持續傷害（不讓持有者跳過回合）。"""
         unsafe = self.unsafe_backlash_statuses()
+        top = self.core.skill_limits.max_overload_backlash  # HC-4d
         for stack in self.stacks.stacks:
             if stack.overload is None:
                 continue
+            count = len(stack.overload.backlash)
+            if count > top:
+                raise ValueError(
+                    f"stacks.yaml 的 {stack.id}：backlash 必須有 1 到 {top} 個效果，收到 {count}"
+                )
             for sub in stack.overload.backlash:
                 if sub.type != "apply_status":
                     continue

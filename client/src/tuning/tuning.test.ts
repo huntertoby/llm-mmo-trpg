@@ -65,6 +65,7 @@ const STATUS: TuningStatus = {
   drafts: [],
   sim_running: null,
   max_group: 100,
+  draft_name_max: 40,
 };
 
 const field = (path: string) => DETAIL.fields.find((f) => f.path === path)!;

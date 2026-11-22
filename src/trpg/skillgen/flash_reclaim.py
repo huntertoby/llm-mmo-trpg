@@ -25,13 +25,12 @@ import copy
 from collections.abc import Iterator
 from typing import Any
 
-from trpg.content.flash_templates import FlashTemplate
+from trpg.content.flash_templates import FlashRules, FlashTemplate
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import ConditionSpec, EffectSpec, ShapeSpec, SkillDef
 from trpg.skillgen.composer_parts import Knob
 from trpg.skillgen.flash_ops import (
     RECLAIM_MOD_OP,
-    SUMMON_HP_STEPS,
     Draft,
     base_draft,
     tuning_extras,
@@ -56,14 +55,11 @@ _KEYWORD_MAKERS = frozenset({"apply_status", "create_surface", "knock_prone"})
 """精煉可拿掉的「附帶狀態」與「第二關鍵字（製造）」原語（推拉是位移骨架的本體，不算附帶）。"""
 _TIGHTER_EVENTS = {"hit_by_attack": "hit_by_melee"}
 """反應的觸發條件收緊一級（6.34.4 例：被攻擊時 → 被近戰攻擊時）。"""
-TIGHTEN_PERMILLE = 150
-"""血量門檻收緊一級（‰；同條件放寬 ``RELAX_PERMILLE`` 的一級）。"""
-MIN_TIGHTEN_PERMILLE = 100
-"""收緊後的血量門檻不低於這個值（‰）。"""
-_TARGET_CONDITION = {"type": "target_hp_below", "permille": 500}
-_SELF_CONDITION = {"type": "self_hp_below", "permille": 500}
-"""沒有條件時加的條件（同條件放寬加的「或」分支）：有「目標」（被動的另一方、反應的單體目標、修正
-規則）時先試目標血量，再試自身血量；只作用在自己身上時只用自身血量（目標條件會落到自己身上）。"""
+_TARGET_CONDITION = "target_hp_below"
+_SELF_CONDITION = "self_hp_below"
+"""沒有條件時加的條件（同條件放寬加的「或」分支；門檻 ``rules.added_hp_condition_permille``）：有
+「目標」（被動的另一方、反應的單體目標、修正規則）時先試目標血量，再試自身血量；只作用在自己身上時
+只用自身血量（目標條件會落到自己身上）。"""
 _SHRINKABLE = ("size", "radius")
 _TWO = 2
 
@@ -103,18 +99,21 @@ def _element(effect: EffectSpec) -> str | None:
     return None if effect.element is None else effect.element.value
 
 
-def _tightened(condition: dict[str, Any] | None, *, targeted: bool) -> list[dict[str, Any]]:
+def _tightened(
+    condition: dict[str, Any] | None, rules: FlashRules, *, targeted: bool
+) -> list[dict[str, Any]]:
     """條件收緊一級的候選：沒有條件 → 加一個條件（``targeted``：有另一方目標）；有「或」→ 拿掉
-    「或」那一支；血量門檻 → 收緊 :data:`TIGHTEN_PERMILLE`（不低於 :data:`MIN_TIGHTEN_PERMILLE`）；
-    其他（狀態、表面……）已經是最緊的，不出。"""
+    「或」那一支；血量門檻 → 收緊 ``rules.hp_tighten_step_permille``（不低於
+    ``rules.hp_tighten_min_permille``）；其他（狀態、表面……）已經是最緊的，不出。"""
     if condition is None:
         added = (_TARGET_CONDITION, _SELF_CONDITION) if targeted else (_SELF_CONDITION,)
-        return [dict(c) for c in added]
+        return [{"type": kind, "permille": rules.added_hp_condition_permille} for kind in added]
     if condition.get("any_of"):
         return [{k: v for k, v in condition.items() if k != "any_of"}]
     permille = condition.get("permille")
-    if isinstance(permille, int) and permille - TIGHTEN_PERMILLE >= MIN_TIGHTEN_PERMILLE:
-        return [{**condition, "permille": permille - TIGHTEN_PERMILLE}]
+    step = rules.hp_tighten_step_permille
+    if isinstance(permille, int) and permille - step >= rules.hp_tighten_min_permille:
+        return [{**condition, "permille": permille - step}]
     return []
 
 
@@ -234,14 +233,15 @@ def op_fuse(skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibr
     return [(base, effects)]
 
 
-def fuse_knobs(effects: list[dict[str, Any]], _library: ContentLibrary) -> list[Knob]:
+def fuse_knobs(effects: list[dict[str, Any]], library: ContentLibrary) -> list[Knob]:
     """合體換到的強度：召喚物最大 HP 加成（照強壯 ``summon_toughen`` 的階梯，從目前的值起）。"""
     index = _summon_index(effects)
     if index is None:
         return []
     current = effects[index].get("max_hp_permille") or 0
     # 沒有加成時從「不加」（None）起；schema 不收 0
-    values = (current or None, *(step for step in SUMMON_HP_STEPS if step > current))
+    steps = library.flash.rules.summon_hp_steps
+    values = (current or None, *(step for step in steps if step > current))
     return [Knob(index, "max_hp_permille", values)]
 
 
@@ -272,7 +272,7 @@ def op_focus_range(
 
 
 def op_focus_condition(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """觸發條件收緊一級：反應「被攻擊時 → 被近戰攻擊時」；技能條件照 :func:`_tightened`。"""
     if skill.kind not in ("passive", "reaction"):
@@ -284,7 +284,7 @@ def op_focus_condition(
         base["reaction"] = {**base["reaction"], "event": tighter}
         drafts.append((base, effects))
     current = _dumped(skill.condition)
-    for condition in _tightened(current, targeted=_has_target(skill)):
+    for condition in _tightened(current, library.flash.rules, targeted=_has_target(skill)):
         base, effects = base_draft(skill)
         base["condition"] = condition
         drafts.append((base, effects))
@@ -302,9 +302,9 @@ def _has_target(skill: SkillDef) -> bool:
     return skill.trigger is not None and skill.trigger.target == "other"
 
 
-def _rule_conditions(skill: SkillDef) -> Iterator[tuple[int, dict[str, Any]]]:
+def _rule_conditions(skill: SkillDef, rules: FlashRules) -> Iterator[tuple[int, dict[str, Any]]]:
     for index, rule in enumerate(skill.modifiers):
-        for condition in _tightened(_dumped(rule.condition), targeted=True):
+        for condition in _tightened(_dumped(rule.condition), rules, targeted=True):
             yield index, condition
 
 
@@ -333,13 +333,13 @@ def op_focus_mod_range(
 
 
 def op_focus_mod_condition(
-    skill: SkillDef, _t: FlashTemplate, _v: Variation, _lib: ContentLibrary
+    skill: SkillDef, _t: FlashTemplate, _v: Variation, library: ContentLibrary
 ) -> list[Draft]:
     """規則的條件收緊一級（照 :func:`_tightened`；依規則順序，最多 3 份草稿，同條件放寬）。"""
     if skill.kind != "modifier":
         return []
     drafts: list[Draft] = []
-    for index, condition in _rule_conditions(skill):
+    for index, condition in _rule_conditions(skill, library.flash.rules):
         base, effects = base_draft(skill)
         base["modifiers"][index]["condition"] = condition
         drafts.append((base, effects))

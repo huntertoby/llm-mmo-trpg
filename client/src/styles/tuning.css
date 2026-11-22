@@ -887,3 +887,14 @@
   padding-left: 8px;
   margin-top: 6px;
 }
+
+/* HC-B：可收合的分組（技能預算表分組多時預設收合） */
+.tn-part-group > summary {
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.tn-part-group .tn-group-count {
+  margin-left: 4px;
+  font-weight: normal;
+}

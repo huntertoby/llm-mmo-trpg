@@ -29,8 +29,6 @@ from trpg.skillgen.validate import minimum_tier
 __all__ = ["attribute_affects", "attribute_suggestion", "keyword_supply", "route_hint"]
 
 _MIND = (Attribute.INT, Attribute.WIS, Attribute.WIL)
-_EARLY_TIER = 2
-"""前兩次升級用到的角色階級上限（候選池的「早期」範圍）。"""
 
 _MAX_LISTED = 6
 
@@ -102,8 +100,8 @@ def keyword_supply(
     library: ContentLibrary, weapon: WeaponDef, keywords: Sequence[str]
 ) -> tuple[SkillDef, ...]:
     """選的關鍵字前期拿得到的技能（BAL-19g）：手寫技能裡 1 階、非傳說、不是形態技、角色
-    :data:`_EARLY_TIER` 階以內可用、這把武器能用、（專屬規則）帶任一個選的關鍵字；依 ID 排序、
-    不重複。"""
+    ``roguelite.yaml`` 的 ``route_hint_tier`` 階以內可用、這把武器能用、（專屬規則）帶任一個
+    選的關鍵字；依 ID 排序、不重複。"""
     wanted = set(keywords)
     held = {weapon.id: weapon.name_zh}
     found: list[SkillDef] = []
@@ -114,7 +112,7 @@ def keyword_supply(
             continue
         if not wanted & set(derive_keywords(skill, library.keywords, exclusive_only=True).all()):
             continue
-        if minimum_tier(skill, library) <= _EARLY_TIER:
+        if minimum_tier(skill, library) <= library.roguelite.route_hint_tier:
             found.append(skill)
     return tuple(found)
 

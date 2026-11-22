@@ -119,13 +119,13 @@ def test_armor_mods_unit_must_be_in_a_group(library: ContentLibrary) -> None:
 def test_5f5b_balance_values(library: ContentLibrary) -> None:
     """5F-5b 的平衡值（模擬見 docs/archive/phases/Phase5F-5b報告.md）：荒原熔岩獸群的
     熔核攻擊傷害 ×2.25；灰燼之心戰另用殼縫餘燼蜥（×1.5）；灰燼之心 HP 1600、火抗 −75% 不動
-    （X10-2b：HP ×10）。"""
+    （X10-2b：HP ×10）。HP 於 2026-11-21 使用者改值為 1360。"""
     statuses = library.ruleset.statuses.by_id()
     assert statuses["molten_burst"].damage_dealt_permille == 2250
     assert statuses["frost_ember_burst"].damage_dealt_permille == 2250
     assert statuses["heart_ember_burst"].damage_dealt_permille == 1500
     heart = library.unit("ashen_heart")
-    assert heart.max_hp == 1600 and heart.element_mods[Element.FIRE] == -750
+    assert heart.max_hp == 1360 and heart.element_mods[Element.FIRE] == -750
     spawns = [s.template for p in heart.phases for s in p.spawns]
     assert spawns == ["heart_ember_lizard", "heart_ember_lizard"]  # GB-2：殼縫東西兩側各 1 隻
     lizard, court = library.unit("ember_lizard"), library.unit("heart_ember_lizard")

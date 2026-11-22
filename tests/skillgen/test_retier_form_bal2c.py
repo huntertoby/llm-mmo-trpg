@@ -16,7 +16,10 @@ from trpg.skillgen.flash_derive import at_role_tier
 from trpg.skillgen.skill_tier import retier
 from trpg.skillgen.validate import validate_skill
 
-FORMS = sorted(s.id for s in library().skills.values() if s.form_id is not None)
+# GS-3 的高階化身（帶進入時效果，3 階起）不在這份對照，升階另見 test_form_high_gs3.py
+FORMS = sorted(
+    s.id for s in library().skills.values() if s.form_id is not None and s.form_entry_effect is None
+)
 
 
 def _check(skill: SkillDef) -> None:

@@ -13,6 +13,7 @@ import type { SkillIconData } from "../api/types";
 import { glossaryEntry, statusName, surfaceName } from "../battle/glossary";
 import { SHAPE_NAMES } from "../battle/vfx";
 import { paintStatusIcon } from "./statusIcon";
+import { entryTipParts, type TipPart } from "../ui/tipParts";
 import { blank, ctxOf, ICON_RES } from "./qIcon/core";
 import * as QS from "./qIcon/skills";
 import * as QP from "./qIcon/parts";
@@ -391,6 +392,8 @@ export interface AssemblyTile {
   label: string;
   /** 部件的說明（說明框的內文）。 */
   tip: string;
+  /** 分段說明（HC-6c，AR-X10 待決 5：狀態、表面的骰子行另起一行、次要字色）；有這個時說明框照它畫，`tip` 留給標題字串。 */
+  parts?: TipPart[];
   /** 畫法的唯一鍵（快取用：同一個部件共用一張小圖）。 */
   id: string;
   /**
@@ -503,6 +506,7 @@ export function statusTile(id: string): AssemblyTile {
     cat: "狀態",
     label: statusName(id),
     tip: tip === "" ? "狀態" : tip,
+    parts: entryTipParts(entry, "狀態"),
     id: `status|${id}`,
     draw: qChip("status", id, 42, FAINT_RING),
   };
@@ -528,6 +532,7 @@ export function surfaceTile(id: string): AssemblyTile {
     cat: "表面",
     label: surfaceName(id),
     tip: tip === "" ? "地面上的表面" : tip,
+    parts: entryTipParts(entry, "地面上的表面"),
     id: `surface|${id}`,
     // QI-2c：Q 版 8 種表面（油是 oilPool）；不認得的畫「?」
     draw: qChip("surface", id, 42, FAINT_RING),

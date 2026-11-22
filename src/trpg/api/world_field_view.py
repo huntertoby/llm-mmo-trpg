@@ -33,9 +33,9 @@ from trpg.api.world_field_schemas import (
 from trpg.api.world_field_things import FieldSocial, things_update
 from trpg.content.fields import FieldBuilding, FieldFacility, FieldFigure, FieldMapDef
 from trpg.content.library import ContentLibrary
-from trpg.content.world_rules import FieldRules
 from trpg.world.actions import WorldEvent
 from trpg.world.atlas import free_first_stone
+from trpg.world.common import rules_of
 from trpg.world.encounters import EncounterLineup, LineupMember, elite_kinds
 from trpg.world.field import (
     FieldGrid,
@@ -461,7 +461,5 @@ def _decor(found: FieldMapDef) -> tuple[FieldDecorView, ...]:
 
 
 def _walk_max_steps(library: ContentLibrary) -> int:
-    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；沒有世界規則時用 :class:`FieldRules`
-    的預設值）。"""
-    rules = library.world_rules
-    return (FieldRules() if rules is None else rules.field).walk_max_steps
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；HC-7 起沒有世界規則就報錯）。"""
+    return rules_of(library).field.walk_max_steps

@@ -5,7 +5,7 @@
 // NW-2c：情境「比值」（1 階武器技的每 AP 傷害 ÷ 普攻每 AP；改前改後並排、參考線、匯入基準）。
 import { useState } from "react";
 import type { TuningMapSimResult, TuningRatioPlan, TuningSimInject, TuningSimJob, TuningSimOptions, TuningSimResult } from "../api/types";
-import { battleCount, estimateText, flipsText, scaleProblem, secondsText, simScales, simRows, type SimCell, type SimRow } from "./model";
+import { battleCount, estimateText, flipsText, scaleProblem, secondsText, simScales, simRows, smallSampleNote, type SimCell, type SimRow } from "./model";
 import { DEFAULT_RATIO_FORM, ratioEstimate, type RatioForm } from "./ratioModel";
 import { RatioResultTable, RatioSimForm } from "./RatioView";
 import { mapScales, mapScaleProblem, mapSeedsFor, mapSimRows, unusedProbes } from "./skillModel";
@@ -72,7 +72,7 @@ function Cell({ cell }: { cell: SimCell }) {
 }
 
 export function SimResultTable({ result, skillName, buildName, smallSample }: { result: TuningSimResult; skillName(id: string): string; buildName(id: string): string; smallSample: number }) {
-  return <ResultTable rows={simRows(result, skillName, buildName, smallSample)} flips={flipsText(result)} cached={result.before_cached} />;
+  return <ResultTable rows={simRows(result, skillName, buildName, smallSample)} flips={flipsText(result)} cached={result.before_cached} smallSample={smallSample} />;
 }
 
 /** 地圖戰的結果表（含單招施放率）；受測招在改前改後都沒人用時提示「裝到 build」。 */
@@ -86,12 +86,12 @@ export function MapResultTable({ result, probes, skillName, mapName, smallSample
           {unused.map(skillName).join("、")}：改前改後都沒有人用（裝了的單位行動 0 回合）。這招多半只在 build 上，請用「裝到 build」再跑一次。
         </div>
       )}
-      <ResultTable rows={mapSimRows(result, skillName, mapName, smallSample)} flips={flips} cached={result.before_cached} testid="tuning-map-result" />
+      <ResultTable rows={mapSimRows(result, skillName, mapName, smallSample)} flips={flips} cached={result.before_cached} smallSample={smallSample} testid="tuning-map-result" />
     </>
   );
 }
 
-function ResultTable({ rows, flips, cached, testid = "tuning-sim-result" }: { rows: readonly SimRow[]; flips: string; cached: boolean; testid?: string }) {
+function ResultTable({ rows, flips, cached, smallSample, testid = "tuning-sim-result" }: { rows: readonly SimRow[]; flips: string; cached: boolean; smallSample: number; testid?: string }) {
   let lastGroup = "";
   return (
     <div className="tn-sim-result" data-testid={testid}>
@@ -131,7 +131,7 @@ function ResultTable({ rows, flips, cached, testid = "tuning-sim-result" }: { ro
           </tbody>
         </table>
       </div>
-      <div className="muted small">括號是分子／分母（場數或回合數）；分母小於 30 標「樣本小」，數字容易跳，想確定請改用「中」或加種子數再跑。</div>
+      <div className="muted small">{smallSampleNote(smallSample)}</div>
     </div>
   );
 }
@@ -415,6 +415,7 @@ export function SimPanel({ options, form, job, blocked, error, skillName, onForm
           baselineNote={baselineNote}
           defaultSeeds={options.ratio_default_seeds}
           maxSeeds={options.ratio_max_seeds}
+          maxWork={options.ratio_max_work}
           onForm={(r) => onForm({ ...form, ratio: r })}
           onImport={(t) => onImport?.(t)}
         />

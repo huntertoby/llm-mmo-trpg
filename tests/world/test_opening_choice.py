@@ -13,6 +13,7 @@ from collections.abc import Callable
 import pytest
 
 from tests.world.helpers import NOON, PARTY, make_encounter, make_world
+from tests.world.opening_rules import STARTER_STEPS
 from tests.world.test_gear import _item
 from tests.world.test_opening_stages import _pending, _starter
 from tests.world.test_quests import STARTER_FIXED, _with_quest, _won
@@ -59,7 +60,7 @@ from trpg.world.opening import (
     recommended_keywords,
     starter_skill_ids,
 )
-from trpg.world.opening_choice import STARTER_STEPS, choice_problem, full_allocation
+from trpg.world.opening_choice import choice_problem, full_allocation
 from trpg.world.quests import advance_quests, issue_deferred_offers, quest_home
 from trpg.world.replay import WorldLogEntry, replay
 from trpg.world.save import dumps_char, dumps_log, dumps_world, loads_log

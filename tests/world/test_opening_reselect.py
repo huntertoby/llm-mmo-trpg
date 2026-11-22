@@ -13,6 +13,7 @@ from collections.abc import Callable
 import pytest
 
 from tests.world.helpers import make_encounter, make_world
+from tests.world.opening_rules import OPENING_END_LEVEL
 from tests.world.test_gear import _item
 from tests.world.test_opening_choice import (
     CHOICES,
@@ -40,7 +41,6 @@ from trpg.world.actions import (
 from trpg.world.common import max_hp, max_mana
 from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
-from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.opening_choice import full_allocation
 from trpg.world.opening_reselect import (
     reselect_losses,

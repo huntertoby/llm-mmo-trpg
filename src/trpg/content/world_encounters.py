@@ -203,6 +203,8 @@ class EncounterTable(ContentModel):
     region: str = Field(pattern=ID_PATTERN)
     ranged_cap: int = Field(ge=0)
     """每場遠程敵人上限（9.6.6；雲嶺 2，18.2.1）。"""
+    elite_cap: int = Field(ge=0)
+    """每場精英上限（HC-7 從 ``_lineup_problems`` 搬來，值 1）。"""
     camp_elite_permille: int = Field(ge=0, le=1000)
     """一般營地（``camp``）混進 1 名精英的機率（9.6.6；初值）。"""
     affixes: tuple[str, ...] = ()
@@ -315,8 +317,8 @@ def _lineup_problems(
     if ranged > table.ranged_cap:
         problems.append(f"{where}：遠程 {ranged} 名，超過上限 {table.ranged_cap}")
     elites = sum(1 for t in templates if catalog.is_elite(t))
-    if elites > 1:
-        problems.append(f"{where}：精英 {elites} 名（一場最多 1 名）")
+    if elites > table.elite_cap:
+        problems.append(f"{where}：精英 {elites} 名（一場最多 {table.elite_cap} 名）")
     return problems
 
 

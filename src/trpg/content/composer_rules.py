@@ -10,18 +10,28 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import Field, model_validator
 
 from trpg.content.schemas import ContentModel
-from trpg.content.skills import RARITY_ORDER, ConditionSpec, EffectSpec, ShapeSpec, VariantWhen
+from trpg.content.skills import (
+    RARITY_ORDER,
+    ConditionSpec,
+    EffectSpec,
+    ShapeSpec,
+    VariantWhen,
+)
 from trpg.shared.types import Element
+
+if TYPE_CHECKING:
+    from trpg.content.rules import CoreRules
 
 __all__ = [
     "WEAPON_ACTION_SUFFIXES",
     "AttrWeights",
     "ComposerRules",
+    "ComposerSearch",
     "ConditionRules",
     "CostRules",
     "CostStep",
@@ -35,18 +45,21 @@ __all__ = [
     "LlmCostRules",
     "LlmTopicRules",
     "PassiveRules",
+    "ProposalSearch",
     "ReactionRules",
     "RecipeExploit",
     "RecipeRules",
     "RecipeStackEvent",
     "RecipeSummonUnit",
     "ScalingRules",
+    "SpecialLadders",
     "SpecialRules",
     "StanceRules",
     "StructureRules",
     "TuningRules",
     "WhiteboardRecipe",
     "WhiteboardRules",
+    "composer_rule_problems",
     "recipe_display_names",
     "whiteboard_name_problems",
 ]
@@ -86,7 +99,7 @@ class DiceRules(ContentModel):
     @model_validator(mode="after")
     def _check(self) -> DiceRules:
         if len(set(self.sides)) != len(self.sides) or any(s < _MIN_SIDES for s in self.sides):
-            raise ValueError("sides 必須是不重複且 ≥ 2 的整數")
+            raise ValueError(f"sides 必須是不重複且 ≥ {_MIN_SIDES} 的整數")
         return self
 
 
@@ -119,7 +132,7 @@ class StructureRules(ContentModel):
     knob_weight_other: int = Field(ge=1)
     push_pull_distances: tuple[int, ...] = Field(min_length=1)
     """推拉距離旋鈕的階梯。"""
-    blow_distances: tuple[int, ...] = (2, 3)
+    blow_distances: tuple[int, ...] = Field(min_length=1)
     """吹送距離旋鈕的階梯（Phase 3-54a）。"""
     blow_surface_permille: int = Field(default=0, ge=0, le=1000)
     """範圍骨架加上吹送附帶效果的機率（Phase 3-54a；獨立的亂數串流，沒抽中的種子結果不變）。"""
@@ -133,7 +146,7 @@ class StructureRules(ContentModel):
     """核心可以是預支的骨架（光環）核心改成預支的機率（AP-2；獨立的亂數串流
     ``composer.borrow_core``，沒抽中的種子結果不變）。做出來的是基本款：0 AP、冷卻
     ``borrow_cooldown``、預支 1、只給自己。"""
-    borrow_cooldown: int = Field(default=2, ge=1, le=6)
+    borrow_cooldown: int = Field(ge=1, le=6)
     """組合器做的預支技能的冷卻（AP-2，06 6.3 基本款：冷卻 2）。"""
     absorb_secondary_permille: int = Field(default=0, ge=0, le=1000)
     """附帶可以是吸收表面的骨架（打擊、蓄力／終結）加上吸收表面（換層數、元素）的機率（SK-2b）。"""
@@ -178,6 +191,20 @@ class StructureRules(ContentModel):
     """不當造牆候選的物件 ID（NW-3c，玩法 PM 交接 4.1.15）：``create_obstacle`` 只從
     ``blocks_move`` 且非 ``explosive`` 的物件抽，再拿掉這裡列的（例：冷卻井，打破就造水）。
     ID 必須是 ``objects.yaml`` 的物件（載入時檢查）。"""
+    delayed_damage_rounds: IntRange
+    """定時炸彈（``delayed_damage``）的引爆輪數（3C-6b；HC-5b 從 ``composer_parts`` 搬來）。"""
+    delayed_damage_radius: IntRange
+    """定時炸彈的爆炸半徑（格）。"""
+    gamble_win_permille: tuple[int, ...] = Field(min_length=1)
+    """賭注成功時的傷害倍率候選（‰；3D-7a、3C-6b；HC-5b 從 ``composer_parts._GAMBLE_WIN``
+    搬來）。"""
+    gamble_backlash_permille: tuple[int, ...] = Field(min_length=1)
+    """賭注失敗時反噬施放者「本次傷害」的比例候選（‰；``_GAMBLE_BACKLASH``）。"""
+    gamble_backlash_chance_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """賭注失敗時有反噬的機率（‰；其餘失敗時沒有效果）。"""
+    second_element_multiplier_permille: int = Field(ge=1)
+    """第二元素（WC-2b，``composer_dual``）新加的武器傷害段起始倍率（‰；之後由旋鈕調；
+    HC-5b 從 ``composer_dual._FIRST_MULTIPLIER`` 搬來）。"""
 
 
 class ConditionRules(ContentModel):
@@ -197,6 +224,10 @@ class ConditionRules(ContentModel):
     完全相同的技能）。只給射程用得上的招：貼身要固定射程至少 2（射程 1 的招一定貼身，等於白拿
     折扣）、遠距要固定射程至少 ``CoreRules.far_distance``（打不到那麼遠就永遠不成立）。"""
     distance_permille: int = 0
+    point_blank_min_reach: int = Field(ge=1)
+    """貼身條件要求的最大射程（格；SK-1、SK-2b：射程 1 的招一定貼身，條件等於白拿預算折扣）。
+    組合器、驗證器、閃現「距離加碼」共用（HC-5b 從 ``validate.POINT_BLANK_MIN_REACH`` 與
+    ``composer_parts._POINT_BLANK_MIN_RANGE`` 搬來）。"""
     affinity_permille: int = 0
     """武器親和（Phase 3I-5）：給了主角手上的裝備時，附帶效果上的常見條件換成「手持某種武器時」的
     機率（‰；:func:`trpg.skillgen.affinity.grant_affinity`，用技能 ID 決定的確定性抽籤）。"""
@@ -224,16 +255,11 @@ class CostRules(ContentModel):
     self_status_permille: int = _PERMILLE
     """主動技能加入自身狀態代價（``cost.self_status``）的機率（Phase 2H-1）。"""
     self_status_duration: IntRange
-    """自身狀態代價的持續回合範圍（必須在 2–3 之內；持續時間固定的狀態，如暈眩，以
+    """自身狀態代價的持續回合範圍（必須在技能 ``cost.self_status.duration`` 允許的範圍內，
+    :class:`~trpg.content.skills.SelfStatusCost`；持續時間固定的狀態，如暈眩，以
     ``allowance.self_status.fixed_duration`` 為準）。"""
     overdraft_permille: int = 0
     """主動技能加入透支（``cost.overdraft``）的機率（Phase 3-50；3-50b 起可和自身狀態並用）。"""
-
-    @model_validator(mode="after")
-    def _check_self_status_duration(self) -> CostRules:
-        if self.self_status_duration.min < 2 or self.self_status_duration.max > 3:  # noqa: PLR2004
-            raise ValueError("self_status_duration 必須在 2–3 之內")
-        return self
 
 
 class TuningRules(ContentModel):
@@ -353,6 +379,8 @@ class SacrificeRules(ContentModel):
     """稀有度 rare 以上、未指定骨架時，改組獻祭技能的機率（獨立的亂數串流；低權重）。"""
     heal_permille: int = _PERMILLE
     """獻祭技能是治療（沒有 element）而非爆炸的機率。"""
+    radius: IntRange
+    """獻祭的爆炸（或治療）半徑（格；HC-5b 從 ``composer_parts._sacrifice_effect`` 搬來）。"""
 
 
 class ScalingRules(ContentModel):
@@ -368,11 +396,47 @@ class ScalingRules(ContentModel):
     mastery_permille: int = _PERMILLE
 
 
+class SpecialLadders(ContentModel):
+    """修正規則數值改變的值階梯（``special.ladders``；鍵是 ``modifiers[].change`` 的欄位）。
+    ``grant_pierce``、``allow_self_target``、``shape_to``、``add_element``、``add_tags`` 不是數值，
+    留在程式。"""
+
+    damage_permille: tuple[int, ...] = Field(min_length=1)
+    hit_bonus: tuple[int, ...] = Field(min_length=1)
+    cooldown_delta: tuple[int, ...] = Field(min_length=1)
+    push_distance_delta: tuple[int, ...] = Field(min_length=1)
+    ap_delta: tuple[int, ...] = Field(min_length=1)
+    range_delta: tuple[int, ...] = Field(min_length=1)
+    area_delta: tuple[int, ...] = Field(min_length=1)
+
+
 class SpecialRules(ContentModel):
     """修正技能與傳說（Phase 3C-6b；:mod:`trpg.skillgen.composer_special`）。"""
 
     modifier_permille: int = _PERMILLE
     """稀有度史詩以上、未指定骨架時改組修正技能（``kind: modifier``）的機率（獨立的亂數串流）。"""
+    ladders: SpecialLadders
+    """修正規則各種數值改變的值階梯（由弱到強；HC-5b 從 ``composer_special._LADDERS`` 搬來）。"""
+    condition_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """修正規則帶「目標有某狀態時」條件的機率（‰）。"""
+    source_points: tuple[int, ...] = Field(min_length=1)
+    """傳說的源力代價候選（06 6.10「1–2 點源力」）；上限照 ``skill_limits.max_source_cost``
+    （驗證器擋）。"""
+    grant_ap_amounts: tuple[int, ...] = Field(min_length=1)
+    """改寫規則型原語「給 AP」（``grant_ap``）的 AP 數候選。"""
+    rewrite_ranges: tuple[int, ...] = Field(min_length=1)
+    """給友方的改寫規則型原語（重置冷卻、免死、轉移傷害、額外反應）的施放距離候選（格）。"""
+    cheat_death_durations: tuple[int, ...] = Field(min_length=1)
+    """「免死」（``cheat_death``）的持續回合候選。"""
+    redirect_permille: tuple[int, ...] = Field(min_length=1)
+    """「轉移傷害」（``redirect_damage``）轉走的比例候選（‰）。"""
+    redirect_durations: tuple[int, ...] = Field(min_length=1)
+    """「轉移傷害」的持續回合候選。"""
+    lasting_mana: tuple[int, ...] = Field(min_length=1)
+    """規則改變與改寫規則型原語的法力候選（換算前的單位，程式 × ``quantity_scale``；至少一格法力，
+    06 6.10）。"""
+    lasting_cooldowns: tuple[int, ...] = Field(min_length=1)
+    """改寫規則型原語的冷卻候選（回合；規則改變沒有冷卻）。"""
 
 
 class RecipeSummonUnit(ContentModel):
@@ -382,7 +446,7 @@ class RecipeSummonUnit(ContentModel):
     """召喚物範本 ID（``content/units/summons/``）。"""
     theme: Element = Element.PHYSICAL
     """組出來的技能的主題元素（名稱與標籤；照白板召喚配方）。"""
-    range: int = Field(default=4, ge=1)
+    range: int = Field(ge=1)
     """整招召喚的射程（形狀 ``ground_tile``）。"""
 
 
@@ -419,6 +483,14 @@ class RecipeRules(ContentModel):
     stack_counts: dict[str, int] = Field(default_factory=dict)
     """層數 ID → 利用時條件 ``self_stack_at_least`` 的 N。"""
     exploit_conditions: tuple[RecipeExploit, ...] = ()
+    param_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """「狀態被施加時」指定狀態、「踏入表面時」指定表面、「關鍵字被利用時」指定狀態或表面的機率
+    （‰；其餘為任何；HC-5b 從 ``composer_recipes._PARAM_PERMILLE`` 搬來）。"""
+    high_ground_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """利用高處時二選一（目標比你低 ``height_advantage``／自己在高處 ``self_on_high_ground``）取前者
+    的機率（‰；``composer_recipes._HALF``）。"""
+    exploit_surface_permille: int = Field(ge=0, le=_PERMILLE_MAX)
+    """「關鍵字被利用時」指定了對象時，指定表面（其餘指定狀態）的機率（‰；SK-3b「各半」）。"""
 
 
 class VariantCondition(ContentModel):
@@ -459,6 +531,8 @@ class VariantRules(ContentModel):
     conditions: tuple[VariantCondition, ...] = Field(min_length=1)
     changes: tuple[VariantChange, ...] = Field(min_length=1)
     """候選＝條件 × 替換內容的所有組合；依亂數順序逐一試，第一個通過驗證的採用。"""
+    range_delta: IntRange
+    """技能工坊「戰場變奏」表單的「射程 ±」可填範圍（格；HC-5b 從 ``option_variant`` 搬來）。"""
 
 
 class LlmTopicRules(ContentModel):
@@ -468,18 +542,27 @@ class LlmTopicRules(ContentModel):
     條件只開放一部分（輪替選單）。權重與數量都在這裡，不寫死在程式。
     """
 
-    secondary_count: int = Field(default=6, ge=0)
+    secondary_count: int = Field(ge=0)
     """輪替選單：附帶原語最多開放幾個（題目關鍵字要的必收，不計入）。"""
-    condition_count: int = Field(default=4, ge=0)
+    condition_count: int = Field(ge=0)
     """輪替選單：條件最多開放幾個（題目關鍵字要的與骨架必要的必收，不計入）。"""
     core_exclude: tuple[str, ...] = ("enter_form", "leave_form")
     """不能被抽成題目核心原語的原語（形態只由手寫內容提供）。"""
     core_weights: dict[str, int] = Field(default_factory=dict)
     """核心原語的基礎權重（沒列出的用 ``base_weight``）。"""
-    base_weight: int = Field(default=100, ge=1)
+    base_weight: int = Field(ge=1)
     quota_percent_per_use: int = Field(default=100, ge=0)
     """run 內配額：原語已出現在這一輪的候選 ``n`` 次時，權重 ＝ 基礎權重 × 100 ÷
     （100 ＋ ``n`` × 這個值）（整數除法，至少 1）。0 ＝ 不看配額。"""
+    max_keywords: int = Field(ge=1)
+    """一個題目最多指定幾個關鍵字（HC-5b 從 ``proposal_subset.MAX_KEYWORDS`` 搬來）。"""
+    witness_min_keywords: int = Field(ge=1)
+    """題目帶到這麼多關鍵字、又指定武器大類時，才做可行解（witness）檢查（6E-W）。"""
+    max_nested_effects: int = Field(ge=1)
+    """提議模型裡巢狀效果清單（``then``、``win``、``lose``、``on_kill``、區域的 ``effects``）最多
+    幾個效果（約束解碼的 schema；技能本身的上限另在 ``skill_limits``）。"""
+    max_tags: int = Field(ge=0)
+    """提議模型的 ``tags`` 最多幾個。"""
 
     def weight_of(self, primitive: str, uses: int) -> int:
         base = self.core_weights.get(primitive, self.base_weight)
@@ -491,8 +574,9 @@ class CostStep(ContentModel):
     「技能原本的值」與「這一階的值」中較大者，不會把已有的較高費用往下調（過弱階梯 ``weak_steps``
     的 ``ap`` 例外：取較小者，見 :class:`LlmCostRules`）。"""
 
-    ap: int | None = Field(default=None, ge=1, le=3)
-    """主動技能的 AP。"""
+    ap: int | None = Field(default=None, ge=1)
+    """主動技能的 AP（上限是 ``core.yaml`` 的 ``skill_limits.max_ap_cost``，載入時檢查，
+    :func:`composer_rule_problems`）。"""
     cooldown: int | None = Field(default=None, ge=1)
     """冷卻回合。"""
     mana: int | None = Field(default=None, ge=1)
@@ -508,12 +592,16 @@ class LlmCostRules(ContentModel):
     steps: tuple[CostStep, ...] = ()
     """費用階梯（空 ＝ 不開放），由輕到重（預算折抵與 AP 係數單調上升；
     ``tests/skillgen/test_proposal_l8b_cost.py`` 檢查）。"""
-    max_cooldown: int = Field(default=5, ge=1)
+    max_cooldown: int = Field(ge=1)
     """冷卻上限（06 6.5；比引擎的硬上限更保守）。"""
     weak_steps: tuple[CostStep, ...] = ()
     """過弱階梯（Phase 4-L10b，4-L9 建議 B1）：旋鈕（含巢狀效果）全部調完仍低於預算下限時依序試，
     取第一個讓比例落進驗證器窗的。``ap`` 往下取（原本與這一階的較小者），``cooldown``／``mana``
     往上取（較大者）。空 ＝ 不開放。"""
+    default_ap: int = Field(ge=1)
+    """補值器替主動技能補的 AP（預算器不調整 AP；多數手寫主動技能的值；上限照
+    ``skill_limits.max_ap_cost``，載入時檢查）。HC-5b 從 ``proposal_numbers.DEFAULT_ACTIVE_AP``
+    搬來；工坊推導的保底提議也用它。"""
 
     @model_validator(mode="after")
     def _check(self) -> LlmCostRules:
@@ -681,16 +769,16 @@ class WhiteboardRules(ContentModel):
     """升級與任務三選一的種類比例（‰；07 7.6：主動 70％、被動 20％、反應 10％），總和 1000。"""
     tier: int = Field(default=1, ge=1)
     """沒有指定階級時的階級（創角的起始技能一律 1 階，6.34.9 創角例外）。"""
-    ap_cost: int = Field(default=2, ge=1, le=3)
+    ap_cost: int = Field(ge=1)
     """主動白板的預設 AP（AP-2 起 1，06 6.34.1 ⚠ #168 題 5）。"""
-    fallback_ap_cost: int = Field(default=2, ge=1, le=3)
+    fallback_ap_cost: int = Field(ge=1)
     """預設 AP 調不進預算窗時退回的 AP（AP-2：照預算調退回 2 AP）；配方自己指定 AP 的不退。"""
     cooldown: IntRange
     """主動白板的冷卻範圍（含兩端）。"""
     passive_mana: IntRange
     reaction_mana: IntRange
     reaction_cooldown: IntRange
-    max_attempts: int = Field(default=60, ge=1)
+    max_attempts: int = Field(ge=1)
     """一個種子最多重抽幾次（配方、形狀、費用與強度調整）。"""
     generic_keyword: str = "generic"
     """沒有關鍵字的基礎白板（通用池，#55）配方使用的關鍵字代號。"""
@@ -700,11 +788,11 @@ class WhiteboardRules(ContentModel):
     """6F-4e（#129「第 1 招就該真的點燃」）：這些關鍵字的製造者白板可以是「傷害＋施加該關鍵字的狀態
     或造它的表面」（例：引火彈＝火焰傷害＋燃燒）。只放寬結構（兩個效果），不放寬預算，也不允許
     條件（和 ``exception_keywords`` 不同）。"""
-    summon_ap_cost: int = Field(default=1, ge=1, le=3)
+    summon_ap_cost: int = Field(ge=1)
     """召喚白板的 AP（召喚物的點數固定，AP 2 湊不到預算下限）。"""
-    summon_cooldown_max: int = Field(default=4, ge=0)
+    summon_cooldown_max: int = Field(ge=0)
     """召喚白板的冷卻上限（冷卻換來較高的可用預算，讓不同強度的召喚物都落在 70～100%）。"""
-    self_ap_cost: int = Field(default=1, ge=1, le=3)
+    self_ap_cost: int = Field(ge=1)
     """自身位移、互換與自身增益白板的 AP（單一效果的點數固定，AP 2 湊不到預算下限）。"""
     simple_shapes: tuple[str, ...] = ("self", "single", "ground_tile", "cross", "square3")
     """白板允許的形狀（3W-R2 從程式移到資料）：自身、單體、單格、十字與 3×3（小範圍）；BAL-19f 起
@@ -775,6 +863,66 @@ class WhiteboardRules(ContentModel):
         return frozenset(r.keyword for r in (*self.active, *self.passive, *self.reaction))
 
 
+class ProposalSearch(ContentModel):
+    """LLM 提議的修補、補強、保底與可行解檢查的搜尋參數（``search.proposal``；HC-5b 從
+    ``proposal_*.py`` 搬來）。都是「最多試幾個」，不是玩法數值，但改了會改變做得出來的招。"""
+
+    repair_tunes: int = Field(ge=1)
+    """數值修補最多重調幾次（每次換一條亂數串流，核心優先與全部旋鈕交替；``proposal_budget``）。"""
+    composer_tries: int = Field(ge=0)
+    """保底的組合器換種子重試的次數（``proposal_fallback``）。"""
+    workshop_max_shapes: int = Field(ge=1)
+    workshop_max_effects: int = Field(ge=1)
+    """保底的工坊推導每個骨架最多試幾個形狀 × 幾個核心效果（避免組合爆炸）。"""
+    core_retries: int = Field(ge=0)
+    """指定的核心原語讓題目關鍵字帶不到時，最多再抽幾次別的核心（``proposal_topic``，6S-2）。"""
+    topup_max: int = Field(ge=1)
+    """補強每份提議最多試幾個候選（每個候選跑一次完整驗證；``proposal_topup``）。"""
+    topup_group_max: int = Field(ge=1)
+    """補強每一組候選（關鍵字、附帶效果、關鍵字＋附帶效果）最多幾個。"""
+    filler_status_max: int = Field(ge=1)
+    """補強的附帶效果 ``apply_status`` 每份提議最多試幾種有害狀態。"""
+    witness_max: int = Field(ge=1)
+    """可行解檢查每個題目最多驗證幾份建構的提議（6E-W；``proposal_witness``）。"""
+    witness_templates_per_primitive: int = Field(ge=1)
+    witness_keyword_ways: int = Field(ge=1)
+    witness_shapes: int = Field(ge=1)
+    witness_cores: int = Field(ge=1)
+    witness_events: int = Field(ge=1)
+    witness_pair_keywords: int = Field(ge=1)
+    """可行解檢查建構提議時各層最多取幾個（推導模板、關鍵字寫法、形狀、核心、觸發事件、兩個關鍵字的
+    配對）。"""
+    witness_shape_size: int = Field(ge=1)
+    """可行解檢查建構形狀時的大小參數（再收進形狀參數的上下限）。"""
+
+
+class ComposerSearch(ContentModel):
+    """生成器的搜尋參數（``skill_composer.yaml`` 的 ``search``；HC-5b 照 HC-5a 閃現
+    ``rules.search`` 的前例新開）：重抽、重試、候選上限與試組用的假設值。不是玩法數值，但改了會改變
+    做得出來的招，所以放在資料；工坊不開。"""
+
+    composer_attempts: int = Field(ge=1)
+    """組合器每個種子最多重抽幾次（``random_composer.MAX_ATTEMPTS``）。"""
+    variant_attempts: int = Field(ge=0)
+    """帶戰場變奏的重抽次數（前幾次才帶；Phase 3-25b）。"""
+    keyword_tries: int = Field(ge=1)
+    """指定關鍵字時最多試幾個種子變體（Phase 3-24b1）。"""
+    special_attempts: int = Field(ge=1)
+    """修正技能最多重抽幾次結構（``composer_special``，3-24b1）。"""
+    special_core_tries: int = Field(ge=1)
+    """傳說抽到的核心連續失敗幾次才換下一種核心。"""
+    retier_attempts: int = Field(ge=1)
+    """升階重配同一份草稿最多試幾次不同的調整亂數（``skill_tier``）。"""
+    evolution_variant_drafts: int = Field(ge=1)
+    """進化模板「戰場變奏」最多試幾個候選（每個都要重新調整強度；``evolution``）。"""
+    complete_max_steps: int = Field(ge=1)
+    """完整技能強度補足最多加幾步（每一步一格；防止資料寫錯時無窮迴圈；``complete``）。"""
+    probe_cooldown: int = Field(ge=1)
+    """技能工坊探測效果規則時，草稿還沒選冷卻就假設的冷卻（回合；假設之後會給足夠的冷卻；
+    ``option_effect_rules``）。"""
+    proposal: ProposalSearch
+
+
 class ComposerRules(ContentModel):
     """``content/skill_composer.yaml``。"""
 
@@ -809,21 +957,21 @@ class ComposerRules(ContentModel):
     scaling: ScalingRules
     special: SpecialRules
     variant: VariantRules
-    llm_topic: LlmTopicRules = Field(default_factory=LlmTopicRules)
+    llm_topic: LlmTopicRules
     """LLM 提議題目的多樣性參數（Phase 4-L6）。"""
-    llm_cost: LlmCostRules = Field(default_factory=LlmCostRules)
+    llm_cost: LlmCostRules
     """LLM 提議的費用旋鈕（Phase 4-L8b）。"""
     whiteboard: WhiteboardRules
     """白板技能的產生規則（Phase 3W-4）。"""
-    recipes: RecipeRules = Field(default_factory=RecipeRules)
+    recipes: RecipeRules
     """組合器補配方（RC-1）。"""
+    search: ComposerSearch
+    """生成器的搜尋參數（HC-5b）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ComposerRules:
         if set(self.rarity_weights) != set(RARITY_ORDER):
             raise ValueError(f"rarity_weights 必須剛好有 {', '.join(RARITY_ORDER)}")
-        if sorted(self.ap_weights) != [1, 2, 3]:
-            raise ValueError("ap_weights 必須剛好有 AP 1、2、3")
         if any(w < 0 for w in (*self.rarity_weights.values(), *self.ap_weights.values())):
             raise ValueError("權重不可為負")
         if sum(self.rarity_weights.values()) <= 0 or sum(self.ap_weights.values()) <= 0:
@@ -840,3 +988,58 @@ class ComposerRules(ContentModel):
     def summary(self) -> str:
         weights = "／".join(str(w) for w in self.rarity_weights.values())
         return f"稀有度權重 {weights}"
+
+
+def composer_rule_problems(
+    composer: ComposerRules, core: CoreRules, basic_summon_units: Sequence[str]
+) -> list[str]:
+    """``skill_composer.yaml`` 對得上規則（HC-4b2：原本寫死在 schema 的「AP 1、2、3」改讀
+    ``rules/core.yaml``）：
+
+    - ``ap_weights`` 的鍵剛好是 1～``skill_limits.max_ap_cost``；
+    - 白板的 AP（``ap_cost``、``fallback_ap_cost``、``summon_ap_cost``、``self_ap_cost``）與 LLM
+      費用階梯（``llm_cost.steps``／``weak_steps``）的 ``ap`` 不超過 ``max_ap_cost``；
+    - ``skill_budget.yaml`` 的基本召喚物（``min_character_tier.basic_summon_units``）都在
+      ``recipes.summon_units``（1 階的整招召喚照這份取射程）。"""
+    problems: list[str] = []
+    limits = core.skill_limits
+    low, high = limits.min_self_status_duration, limits.max_self_status_duration
+    span = composer.cost.self_status_duration
+    # HC-4d：範圍照 skill_limits（原本照 SelfStatusCost 的 schema）
+    if span.min < low or span.max > high:
+        problems.append(
+            f"cost.self_status_duration 必須在 {low}–{high} 之內（core.yaml 的 skill_limits）"
+        )
+    top = core.skill_limits.max_ap_cost
+    if sorted(composer.ap_weights) != list(range(1, top + 1)):
+        aps = "、".join(str(ap) for ap in range(1, top + 1))
+        problems.append(f"ap_weights 必須剛好有 AP {aps}（core.yaml 的 skill_limits.max_ap_cost）")
+    board = composer.whiteboard
+    for name in ("ap_cost", "fallback_ap_cost", "summon_ap_cost", "self_ap_cost"):
+        value = getattr(board, name)
+        if value > top:
+            problems.append(
+                f"whiteboard.{name} 必須是 1 到 {top}（core.yaml 的 skill_limits.max_ap_cost），"
+                f"收到 {value}"
+            )
+    cost = composer.llm_cost
+    if cost.default_ap > top:  # HC-5b：補值器補的 AP
+        problems.append(
+            f"llm_cost.default_ap 必須是 1 到 {top}（core.yaml 的 skill_limits.max_ap_cost），"
+            f"收到 {cost.default_ap}"
+        )
+    for group, steps in (("steps", cost.steps), ("weak_steps", cost.weak_steps)):
+        for index, step in enumerate(steps):
+            if step.ap is not None and step.ap > top:
+                problems.append(
+                    f"llm_cost.{group}[{index}].ap 必須是 1 到 {top}"
+                    f"（core.yaml 的 skill_limits.max_ap_cost），收到 {step.ap}"
+                )
+    listed = {u.unit for u in composer.recipes.summon_units}
+    missing = [u for u in basic_summon_units if u not in listed]
+    if missing:
+        problems.append(
+            "recipes.summon_units 要包含 skill_budget.yaml 的基本召喚物"
+            f"（min_character_tier.basic_summon_units）：缺 {'、'.join(missing)}"
+        )
+    return problems

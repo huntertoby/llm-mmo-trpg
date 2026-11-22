@@ -22,9 +22,10 @@ from trpg.api.llm_health import UNAVAILABLE_NOTICE, LlmHealth
 from trpg.api.llm_source import LLM_OFF_NOTICE, LlmProvider
 from trpg.api.world import WorldOutcome, WorldStore
 from trpg.api.world_story import chat_story, event_story, outcome_story, situation_story
-from trpg.api.world_story_schemas import CARE_CITE_MAX, WorldLlmView
+from trpg.api.world_story_schemas import WorldLlmView
 from trpg.content.world_address import address_for
 from trpg.content.world_situations import (
+    MAX_CARE_CLAIMS,
     CareClaim,
     SituationFact,
     SituationProposal,
@@ -182,7 +183,7 @@ def _with_cites(
     claims = [CareClaim(item=facts[c].item, fact=c) for c in dict.fromkeys(cite)]
     cited = {c.fact for c in claims}
     claims += [c for c in proposal.care if c.fact not in cited]
-    return proposal.model_copy(update={"care": tuple(claims[:CARE_CITE_MAX])})
+    return proposal.model_copy(update={"care": tuple(claims[:MAX_CARE_CLAIMS])})
 
 
 def answer_situation(

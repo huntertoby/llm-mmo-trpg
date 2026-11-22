@@ -61,9 +61,13 @@ def _class_of(result: Any, file: str, predicate: Any) -> set[str]:
         ("src/trpg/content/forms.py", "upkeep_mana", "scale"),
         ("src/trpg/content/battle.py", "MAX_ATTRIBUTE", "guard"),
         ("src/trpg/content/battle.py", "_MAX_DICE_COUNT", "guard"),
-        ("src/trpg/content/skill_pick.py", "max_elements_dual", "config"),
-        ("src/trpg/content/composer_rules.py", "ap_cost", "config"),
-        ("src/trpg/skillgen/flash_ops.py", "RELAX_PERMILLE", "config"),
+        # HC-4d：自身狀態代價的回合 2～3 搬進 core.yaml 的 skill_limits，schema 只剩護欄
+        ("src/trpg/content/skills/limits.py", "max_self_status_duration", "guard"),
+        # HC-4b2：AP 1～3、修正幅度的上限搬進 core.yaml，schema 只剩護欄
+        ("src/trpg/content/skills/limits.py", "max_ap_cost", "guard"),
+        ("src/trpg/content/skills/limits.py", "hit_bonus_max", "guard"),
+        # HC-5a：閃現的步階與上限搬進 flash_templates.yaml，schema 只剩護欄
+        ("src/trpg/content/flash_templates.py", "charge_cooldown_step", "guard"),
         ("src/trpg/content/rules.py", "_PERMILLE", "const"),
     ],
 )
@@ -75,8 +79,9 @@ def test_backend_spot_checks(result: Any, file: str, owner: str, expected: str) 
 @pytest.mark.parametrize(
     ("file", "needle", "expected"),
     [
-        ("client/src/battle/impact.ts", "TIER_PERMILLE: readonly", "config"),
-        ("client/src/screens/GearScreen.tsx", "max_rounds", "config"),
+        # HC-7 b：受擊頓格的門檻改判 layout；木樁的回合上限後備 ?? 30 拿掉（伺服器照 workshop.yaml）
+        ("client/src/battle/impact.ts", "TIER_PERMILLE: readonly", "layout"),
+        ("client/src/battle/vfx.ts", "export const HEAVY_HIT_PERMILLE", "layout"),
     ],
 )
 def test_frontend_spot_checks(result: Any, file: str, needle: str, expected: str) -> None:

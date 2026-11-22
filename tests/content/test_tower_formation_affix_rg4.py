@@ -112,13 +112,14 @@ def test_with_affix_adds_the_formation_within_the_budget(rarity: str, level: int
 
 
 def test_with_affix_keeps_the_formation_when_the_budget_is_too_small() -> None:
-    """低物品等級（雲嶺 3～4 級）的副手詞條預算放不下護陣：照樣帶（其他詞條拿光；待 PM 決定）。"""
+    """低物品等級的副手詞條預算放不下護陣：照樣帶（其他詞條拿光；待 PM 決定）。
+    2026-11-21 使用者改值（weapon_trait 8→6）後 3 級的預算 6 剛好放得下，改用 2 級（預算 4）。"""
     lib = library()
     rules = lib.item_gen
     assert rules is not None
-    budget = affix_budget(rules, 3, "offhand")
+    budget = affix_budget(rules, 2, "offhand")
     assert budget < affix_points(rules, lib.affixes[FORMATION], None)
-    out = with_affix(lib, _tower("rare", 3), FORMATION)
+    out = with_affix(lib, _tower("rare", 2), FORMATION)
     assert [r.affix for r in out.affixes] == [FORMATION]
     assert out.base_bonus_permille == 0
 

@@ -21,7 +21,6 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"
     },
     "condition": {
-        "in_form": "3J-4b 起利用者改用 form_bonus_permille；解形爆發用 leave_form（3J-4c）",
         "point_blank": "SK-1（#166）：組合器、LLM、工坊、閃現「距離加碼」用，沒有手寫示範",
         "long_range": "SK-1（#166）：組合器、LLM、工坊、閃現「距離加碼」用，沒有手寫示範",
     },
@@ -141,6 +140,17 @@ _POOL_ONLY = frozenset(
         "skill_tidal_draw",
         "skill_fate_deflect",
         "skill_lucky_whisper",
+        # GS-2（#172）：高階形態技（06 6.30 形態池名單最後一點；只從形態池給出，
+        # builds.yaml 是回歸範本，不為示範改動）
+        "skill_form_guardian",
+        "skill_form_primal_return",
+        "skill_form_quake",
+        "skill_form_wild_flurry",
+        # GS-3（#173）：高階化身（帶進入時效果；同上，只從形態池給出）
+        "skill_form_bear_king",
+        "skill_form_dragon_dread",
+        "skill_form_giant_stomp",
+        "skill_form_shadow_cat",
         # 3-24c：關鍵字池的真實利用者與不限武器的 1 階技能（由池給出）
         "skill_bone_pursuit",
         "skill_shock_follow",

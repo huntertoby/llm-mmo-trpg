@@ -12,7 +12,8 @@
 做法：由引擎自己 **建構** 幾份最簡單的提議（核心效果 ＋ 每個題目關鍵字一個專屬效果；效果寫法取自
 手寫技能與關鍵字推導表），交給和 LLM 提議完全相同的 :func:`~trpg.skillgen.proposal_budget.
 evaluate_with_repair`（數值修補、結構補強、``validate_skill``、題目要求）。任何一份合格 ＝ 題目
-可行。這是充分條件：找到的寫法真的合法；找不到時（最多 :data:`WITNESS_MAX` 份）視為不可行、換題。
+可行。這是充分條件：找到的寫法真的合法；找不到時（最多 ``search.proposal.witness_max`` 份）
+視為不可行、換題。
 **不放寬任何驗證或預算**——只決定要不要出這個題目。
 
 6F-4b：一般的建構都不合格時，再試幾份 **條件傷害**（06 6.34.1 的利用者寫法，
@@ -51,24 +52,15 @@ from trpg.skillgen.proposal_subset import (
 from trpg.skillgen.proposal_topup import keyword_effect_rules
 
 __all__ = [
-    "WITNESS_MAX",
     "condition_proposals",
     "exploit_proposals",
     "has_witness",
     "witness_proposals",
 ]
 
-WITNESS_MAX = 24  # 6E-W 報告：48→24 檢出率 93%→86%，每張白板的建構成本約減半（專案 PM 決定）
-"""每個題目最多驗證幾份建構的提議（原型值；每份平均約 5～15 毫秒）。"""
 _AFFECTS: tuple[str | None, ...] = ("enemies", "allies", "self", None)
 """核心效果的對象（``None`` ＝ 不填：擊倒、地形這類不吃 ``affects`` 的原語）。"""
-_TEMPLATES_PER_PRIMITIVE = 4
-_KEYWORD_WAYS = 4
-_SHAPES = 4
-_CORES = 3
-_EVENTS = 2
 _FIRST_SHAPES = ("single", "self")
-_PAIR_KEYWORDS = 2
 _CATEGORIES: dict[str, tuple[tuple[str, str, str], ...]] = {
     "melee": (("weapon", "melee", "str"), ("spell", "any", "int")),
     "ranged": (("weapon", "ranged", "dex"), ("spell", "any", "int")),
@@ -125,7 +117,7 @@ def _keyword_ways(
             if all(template.get(k) == v for k, v in params.items()):
                 ways.setdefault(_key(template), dict(template))
                 break
-    return list(ways.values())[:_KEYWORD_WAYS]
+    return list(ways.values())[: library.composer.search.proposal.witness_keyword_ways]
 
 
 def _with_affects(library: ContentLibrary, effect: Mapping[str, Any]) -> dict[str, Any]:
@@ -193,12 +185,13 @@ def _core_options(
                 way = {"type": core, **dict(sorted(rule.params().items()))}
                 options.setdefault(_key(way), way)
     usable = [t for t in _templates(library).get(core, ()) if _allowed(t, enums)]
-    for template in usable[:_TEMPLATES_PER_PRIMITIVE]:
+    per = library.composer.search.proposal.witness_templates_per_primitive
+    for template in usable[:per]:
         options.setdefault(_key(template), dict(template))
     if enums:
         fields = sorted(enums)
-        lists = [enums[f][:_TEMPLATES_PER_PRIMITIVE] for f in fields]
-        for combo in itertools.islice(itertools.product(*lists), _TEMPLATES_PER_PRIMITIVE):
+        lists = [enums[f][:per] for f in fields]
+        for combo in itertools.islice(itertools.product(*lists), per):
             way = {"type": core, **dict(zip(fields, combo, strict=True))}
             options.setdefault(_key(way), way)
     if not enums:
@@ -222,20 +215,26 @@ def _skill_elements(library: ContentLibrary, core: str) -> tuple[str | None, ...
 def _shape(library: ContentLibrary, shape_id: str) -> dict[str, Any]:
     out: dict[str, Any] = {"type": shape_id}
     for name, spec in sorted(library.ruleset.shapes.by_id()[shape_id].params.items()):
-        out[name] = max(spec.min, min(spec.max, 3))
+        out[name] = max(
+            spec.min, min(spec.max, library.composer.search.proposal.witness_shape_size)
+        )
     return out
 
 
 def _shapes(library: ContentLibrary, subset: ProposalSubset, skeleton: str) -> list[str]:
     allowed = library.skeletons[skeleton].shapes
     found = [s for s in subset.shapes if s in allowed]
-    return sorted(found, key=lambda s: (s not in _FIRST_SHAPES, s))[:_SHAPES]
+    return sorted(found, key=lambda s: (s not in _FIRST_SHAPES, s))[
+        : library.composer.search.proposal.witness_shapes
+    ]
 
 
 def _cores(library: ContentLibrary, request: ProposalRequest) -> list[str]:
     if request.core_primitive is not None:
         return [request.core_primitive]
-    return list(legal_core_primitives(library, request))[:_CORES]
+    return list(legal_core_primitives(library, request))[
+        : library.composer.search.proposal.witness_cores
+    ]
 
 
 def _extras(
@@ -258,7 +257,9 @@ def _skeleton_proposals(
     defs: Mapping[str, Any],
 ) -> Iterator[dict[str, Any]]:
     categories = _CATEGORIES.get(request.weapon_class or "focus", _CATEGORIES["focus"])
-    events = [e for e, _ in reaction_events(library)][:_EVENTS]
+    events = [e for e, _ in reaction_events(library)][
+        : library.composer.search.proposal.witness_events
+    ]
     extras = _extras(library, request, subset)
     core_ok = library.skeletons[skeleton].core.primitives
     for core in (c for c in _cores(library, request) if c in core_ok):
@@ -398,7 +399,7 @@ def condition_proposals(
     if (
         subset.kind != "active"
         or request.core_primitive not in (None, "damage")
-        or len(request.keywords) != _PAIR_KEYWORDS
+        or len(request.keywords) != library.composer.search.proposal.witness_pair_keywords
     ):
         return
     categories = _CATEGORIES.get(request.weapon_class or "focus", _CATEGORIES["focus"])
@@ -433,10 +434,13 @@ def has_witness(
     ctx: ProposalContext,
     *,
     seed: int,
-    limit: int = WITNESS_MAX,
+    limit: int | None = None,
 ) -> bool:
     """題目至少有一份建構的提議通過完整驗證（含題目要求與武器相容）。``ctx`` 是送給提議迴圈的
-    上下文；題目的關鍵字、核心、武器大類由 ``request`` 補上（與 ``propose_skill`` 相同）。"""
+    上下文；題目的關鍵字、核心、武器大類由 ``request`` 補上（與 ``propose_skill`` 相同）。
+    ``limit``：每種建構最多驗證幾份（``None`` ＝ ``search.proposal.witness_max``）。"""
+    if limit is None:
+        limit = library.composer.search.proposal.witness_max
     try:
         subset = select_subset(library, request)
     except SubsetError:

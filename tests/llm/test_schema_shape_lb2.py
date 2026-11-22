@@ -70,7 +70,7 @@ def _defs(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_split_variants_one_or_two_swaps_exactly() -> None:
-    branches = _defs(split_variants(SKILL))["Variant"]["anyOf"]
+    branches = _defs(split_variants(SKILL, swap_max=2))["Variant"]["anyOf"]  # skill_limits 的值
     chosen = [sorted(set(b["required"]) - {"id", "name_zh", "when"}) for b in branches]
     assert len(branches) == 5 + 10  # 1 項 5 種 ＋ 2 項 10 種（LB-2b 起含 range_delta）
     assert all(1 <= len(c) <= 2 for c in chosen)

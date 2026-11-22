@@ -159,7 +159,9 @@ def weapon_profile(state: BattleState, attacker: UnitState) -> AttackProfile:
         attack_value=attack_value(attacker, state.ruleset),
         melee=weapon.is_melee,
         height_limited=weapon.range <= state.ruleset.core.melee_height_limit_max_range,
-        crit_range=max(2, weapon.crit_range - crit_range_cut(attacker)),  # 站定狙擊（3-24a2）
+        crit_range=max(  # 站定狙擊（3-24a2）
+            state.ruleset.core.crit_range_floor, weapon.crit_range - crit_range_cut(attacker)
+        ),
         pierce=weapon.ignore_cover,
         defense_cut_permille=weapon.armor_pierce_permille,
         weapon_attack=True,
@@ -454,13 +456,15 @@ def _shield_cover(
     state: BattleState, attacker_xy: XY, target: UnitState, target_xy: XY, penalty: int
 ) -> Cover | None:
     """塔盾的自身半掩護（Phase 3I-2，08 8.11）：目標副手有 ``ranged_cover`` 時，遠程攻擊（呼叫端已
-    排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高，攻擊者站得比目標高 2 層以上時
+    排除近戰與穿透）命中同半掩護；高度也同半掩護：塔盾視為 1 層高（``tower_shield_cover_height``），
+    攻擊者站得比目標高 2 層以上時
     無視（RG-5b，玩法PM交接 4.1.7；以前是高 1 層就無視）。場上的掩護物已經成立時不會走到這裡（兩者
     不疊加）。"""
     offhand = target.gear.offhand
     if offhand is None or not offhand.ranged_cover:
         return None
-    if state.tile(*attacker_xy).height > state.tile(*target_xy).height + 1:
+    height = state.ruleset.core.tower_shield_cover_height
+    if state.tile(*attacker_xy).height > state.tile(*target_xy).height + height:
         return None
     return Cover(
         penalty=penalty, object_id=None, kind=offhand.id, name_zh=offhand.name_zh, pos=target_xy
@@ -647,7 +651,7 @@ def positional_bonus(
     crit_range = profile.crit_range - (
         core.backstab_crit_range_bonus + profile.backstab_crit if behind else 0
     )
-    return PositionalBonus(backstab, ambush, max(crit_range, 2))
+    return PositionalBonus(backstab, ambush, max(crit_range, core.crit_range_floor))
 
 
 type ForcedOutcome = Literal["miss", "hit", "crit"]
@@ -700,7 +704,7 @@ def roll_attack(  # noqa: PLR0917
     bonus += positional.hit + attacker.next_attack_hit  # 形態的進入獎勵（3J-1a；呼叫端用掉）
     if attacker.part_mods:  # 部位破壞的命中下降（PB-1a）
         bonus -= attacker.part_mods.get("hit", 0)
-    crit_range = max(2, positional.crit_range - attacker.next_attack_crit)
+    crit_range = max(rules.core.crit_range_floor, positional.crit_range - attacker.next_attack_crit)
     if forced is not None:
         natural = _forced_natural(
             forced,

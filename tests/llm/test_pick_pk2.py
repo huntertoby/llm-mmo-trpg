@@ -42,20 +42,32 @@ HIGH = {"type": "height_advantage"}
 
 
 def test_thin_reasons_cases() -> None:
-    assert thin_reasons(_skill(effects=[MARK])) == (THIN_HOLLOW,)  # Q16：只有標記
-    assert thin_reasons(_skill(effects=[{"type": "reveal", "radius": 2}])) == (THIN_HOLLOW,)
-    assert thin_reasons(_skill(effects=[DAMAGE, MARK])) == ()
+    few = _lib().skill_pick.weights.thin_epic_min_effects  # HC-5b：拿掉程式預設 2
+    assert few == 2
+    assert thin_reasons(_skill(effects=[MARK]), epic_min_effects=few) == (
+        THIN_HOLLOW,
+    )  # Q16：只有標記
+    assert thin_reasons(
+        _skill(effects=[{"type": "reveal", "radius": 2}]), epic_min_effects=few
+    ) == (THIN_HOLLOW,)
+    assert thin_reasons(_skill(effects=[DAMAGE, MARK]), epic_min_effects=few) == ()
     # Q8：只有條件式的推開
-    assert thin_reasons(_skill(effects=[{**PUSH, "condition": HIGH}])) == (THIN_CONDITIONAL,)
-    assert thin_reasons(_skill(effects=[PUSH], condition=HIGH)) == (THIN_CONDITIONAL,)
-    assert thin_reasons(_skill(effects=[PUSH])) == ()
+    assert thin_reasons(_skill(effects=[{**PUSH, "condition": HIGH}]), epic_min_effects=few) == (
+        THIN_CONDITIONAL,
+    )
+    assert thin_reasons(_skill(effects=[PUSH], condition=HIGH), epic_min_effects=few) == (
+        THIN_CONDITIONAL,
+    )
+    assert thin_reasons(_skill(effects=[PUSH]), epic_min_effects=few) == ()
     # 條件式的傷害不算單薄（利用者白板）
-    assert thin_reasons(_skill(effects=[{**DAMAGE, "condition": HIGH}])) == ()
+    assert thin_reasons(_skill(effects=[{**DAMAGE, "condition": HIGH}]), epic_min_effects=few) == ()
     # Q12：史詩只有一個有作用的效果（標記不算）
     epic = _skill(rarity="epic", effects=[MARK])
-    assert thin_reasons(epic) == (THIN_HOLLOW, THIN_FEW)
-    assert thin_reasons(_skill(rarity="epic", effects=[DAMAGE, MARK])) == (THIN_FEW,)
-    assert thin_reasons(_skill(rarity="epic", effects=[DAMAGE, PUSH])) == ()
+    assert thin_reasons(epic, epic_min_effects=few) == (THIN_HOLLOW, THIN_FEW)
+    assert thin_reasons(_skill(rarity="epic", effects=[DAMAGE, MARK]), epic_min_effects=few) == (
+        THIN_FEW,
+    )
+    assert thin_reasons(_skill(rarity="epic", effects=[DAMAGE, PUSH]), epic_min_effects=few) == ()
     assert thin_reasons(_skill(rarity="epic", effects=[DAMAGE]), epic_min_effects=1) == ()
 
 

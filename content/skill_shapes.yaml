@@ -12,8 +12,10 @@
 # cell_count：形狀影響的格子數（純幾何；區域 zone 的預算用，3E-1）。base 為固定格數；param ＋ by_value 為依參數值查表
 #   （必須涵蓋參數的整個範圍）。沒有固定格數的形狀（連鎖）不寫，用在 zone 會報錯。數字由 tests/engine/test_shape_cell_counts.py
 #   對照引擎的形狀幾何。
-# budget：預算的形狀倍率（‰）。base_permille 為基礎值；param ＋ per_unit_permille 為每單位參數加成；
-#   by_value_permille 為依參數值查表（優先於前兩者，必須涵蓋參數的整個範圍）。
+# budget：預算的形狀倍率（‰）。HC-B 起基礎值 base_permille 與每單位參數加成 per_unit_permille、HC-W2 起
+#   依參數值查表的 by_value（原 by_value_permille）與連鎖的 non_power_by_value 都在 skill_budget.yaml 的
+#   shape_budget（開放數值工坊）；這裡只留 param（加成或查表看哪個參數）與連鎖的 power_primitives。
+#   沒有 param 的形狀不寫 budget。
 #   只套用在對象為 enemies／allies／all／tiles 的效果（affects: self 與 teleport 一律 1.0）。
 shapes:
   - id: self
@@ -22,7 +24,6 @@ shapes:
     description_zh: 只影響施放者所在的格子。
     targeting: self
     min_rarity: common
-    budget: {base_permille: 1000}
     cell_count: {base: 1}
   - id: single
     name_zh: 單體
@@ -30,7 +31,6 @@ shapes:
     description_zh: 選取射程內看得到的一個單位或可被攻擊的物件。
     targeting: unit
     min_rarity: common
-    budget: {base_permille: 1000}
     cell_count: {base: 1}
     params:
       range: {llm_hint: "最遠可以選幾格外的目標。", min: 1, max: 10, allow_weapon: true}
@@ -40,7 +40,7 @@ shapes:
     description_zh: 選一個方向，影響正前方 size 格；遇到牆壁停在它之前，遇到阻擋視線的物件則包含該格後停止。
     targeting: direction
     min_rarity: common
-    budget: {base_permille: 800, param: size, per_unit_permille: 200}
+    budget: {param: size}
     cell_count: {param: size, by_value: {2: 2, 3: 3, 4: 4, 5: 5, 6: 6}}
     params:
       size: {llm_hint: "直線的長度。", min: 2, max: 6}
@@ -50,7 +50,7 @@ shapes:
     description_zh: 選一個方向，第 k 排為正前方第 k 格及其左右各 k−1 格，只含施放者看得到的格子。
     targeting: direction
     min_rarity: common
-    budget: {param: size, by_value_permille: {2: 1300, 3: 1600, 4: 2000}}
+    budget: {param: size}   # 倍率依 size 查表（skill_budget.yaml 的 shape_budget.cone.by_value）
     cell_count: {param: size, by_value: {2: 4, 3: 9, 4: 16}}
     params:
       size: {llm_hint: "扇形向外延伸的深度。", min: 2, max: 4}
@@ -62,7 +62,7 @@ shapes:
     min_rarity: rare
     # Phase 5F-2b：臂長 arm（content_params：只有內建內容能寫，生成器與 LLM 不提供；省略＝1，行為不變）。
     # 臂長 2＝9 格；預算倍率 2000‰ 是初值（同方陣 9 格；2200‰ 會讓霧鎖千山頂到預算上限，代決 5F2b-2）。
-    budget: {base_permille: 1800, param: arm, by_value_permille: {1: 1800, 2: 2000}}
+    budget: {param: arm}   # 倍率依 arm 查表（skill_budget.yaml 的 shape_budget.cross.by_value）
     cell_count: {base: 5, param: arm, by_value: {1: 5, 2: 9}}
     params:
       range: {llm_hint: "中心格最遠可以選幾格外。", min: 0, max: 6}
@@ -74,7 +74,6 @@ shapes:
     description_zh: 選射程內的一個中心格，影響以中心為準的 3×3。
     targeting: tile
     min_rarity: rare
-    budget: {base_permille: 2000}
     cell_count: {base: 9}
     params:
       range: {llm_hint: "中心格最遠可以選幾格外。", min: 0, max: 6}
@@ -84,8 +83,10 @@ shapes:
     description_zh: 影響與施放者切比雪夫距離恰為 radius 的格子，不需要選取。
     targeting: none
     min_rarity: common
-    budget: {param: radius, by_value_permille: {1: 1800, 2: 2200}}
-    cell_count: {param: radius, by_value: {1: 8, 2: 16}}
+    budget: {param: radius}   # 倍率依 radius 查表（skill_budget.yaml 的 shape_budget.ring.by_value；實心查 solid_by_value）
+    # GS-3（#173，06 6.3）：實心＝「周圍 N 格」（切比雪夫距離 1～N，不含自己）；只有內建內容能寫 solid: true。
+    solid_option: true
+    cell_count: {param: radius, by_value: {1: 8, 2: 16}, solid_by_value: {1: 8, 2: 24}}
     params:
       radius: {llm_hint: "圈的半徑。", min: 1, max: 2}
   - id: ground_tile
@@ -94,7 +95,6 @@ shapes:
     description_zh: 選射程內的一格，只影響該格。
     targeting: tile
     min_rarity: rare
-    budget: {base_permille: 1000}
     cell_count: {base: 1}
     params:
       range: {llm_hint: "最遠可以選幾格外。", min: 1, max: 6}
@@ -111,10 +111,7 @@ shapes:
     # 的點數維持舊倍率（每跳 +250‰：1250／1500／1750）。power_primitives ＝ 引擎會乘連鎖衰減的原語（傷害、治療、護盾、
     # 投擲物件與衝撞的傷害）與加在傷害上的消耗層數。
     budget:
-      base_permille: 1000
-      param: jumps
-      by_value_permille: {1: 1188, 2: 1313, 3: 1375}
-      non_power_by_value_permille: {1: 1250, 2: 1500, 3: 1750}
+      param: jumps   # 兩張表在 skill_budget.yaml 的 shape_budget.chain（by_value、non_power_by_value）
       power_primitives: [damage, heal, shield, hurl_object, charge_through, consume_stack]
     params:
       range: {llm_hint: "第一個目標最遠可以選幾格外。", min: 1, max: 6}
@@ -127,7 +124,7 @@ shapes:
     targeting: none
     min_rarity: common
     # GB-2b：content_max 4 只有內建技能能寫（灰燼之心的吸氣「4 格內」，19.2.3 R7）；生成器、LLM 只看 max 3。
-    budget: {base_permille: 1000, param: radius, per_unit_permille: 400}
+    budget: {param: radius}
     cell_count: {param: radius, by_value: {1: 5, 2: 13, 3: 25, 4: 41}}
     params:
       radius: {llm_hint: "影響的半徑。", min: 1, max: 3, content_max: 4}
@@ -139,7 +136,6 @@ shapes:
     description_zh: 先選射程內看得到的一個可推動物件，再選射程內看得到的落點格（不能是牆壁或物件原本的格子）；只影響落點。
     targeting: object_tile
     min_rarity: rare
-    budget: {base_permille: 1000}
     cell_count: {base: 1}
     params:
       range: {llm_hint: "物件與落點最遠可以選幾格外。", min: 1, max: 6}
@@ -151,7 +147,6 @@ shapes:
     description_zh: 先選射程內看得到的一個單位（不能是自己），再選射程內看得到的落點格；影響原位置與落點兩格。
     targeting: unit_tile
     min_rarity: rare
-    budget: {base_permille: 1000}
     cell_count: {base: 2}
     params:
       range: {llm_hint: "單位與落點最遠可以選幾格外。", min: 1, max: 6}
@@ -162,7 +157,6 @@ shapes:
     description_zh: 選射程內看得到的兩個不同單位（敵我皆可，不必包含自己）；影響這兩格。
     targeting: unit_pair
     min_rarity: rare
-    budget: {base_permille: 1000}
     cell_count: {base: 2}
     params:
       range: {llm_hint: "單位最遠可以選幾格外。", min: 1, max: 6}

@@ -13,7 +13,6 @@ from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
 from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.random_composer import (
-    MAX_ATTEMPTS,
     ComposeError,
     compose_random_skill,
     compose_with_stats,
@@ -219,7 +218,7 @@ def test_no_harmful_status_or_surface_is_aimed_at_allies() -> None:
 
 def test_average_retries_are_small_and_bounded() -> None:
     attempts = [compose_with_stats(seed).attempts for seed in FAST_SEEDS]
-    assert max(attempts) <= MAX_ATTEMPTS
+    assert max(attempts) <= lib().composer.search.composer_attempts
     assert sum(attempts) / len(attempts) < 3
 
 

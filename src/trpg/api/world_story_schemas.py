@@ -15,10 +15,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.api.run_schemas import OfferOut
 from trpg.content.battle import ID_PATTERN
 from trpg.content.world_events import NpcPortrait
-from trpg.content.world_situations import PLAYER_TEXT_LIMIT, Outcome
+from trpg.content.world_situations import MAX_CARE_CLAIMS, PLAYER_TEXT_LIMIT, Outcome
 
 __all__ = [
-    "CARE_CITE_MAX",
     "CareLineView",
     "ChatRequest",
     "CiteFactView",
@@ -39,9 +38,6 @@ __all__ = [
     "WorldLlmRequest",
     "WorldLlmView",
 ]
-
-CARE_CITE_MAX = 4
-"""一次最多引用幾筆事實（同提議的用心清單上限）。"""
 
 
 class _ApiModel(BaseModel):
@@ -72,7 +68,8 @@ class SituationAnswerRequest(_ApiModel):
 
     template: str = Field(pattern=ID_PATTERN)
     text: str = Field(default="", max_length=PLAYER_TEXT_LIMIT)
-    cite: tuple[str, ...] = Field(default=(), max_length=CARE_CITE_MAX)
+    cite: tuple[str, ...] = Field(default=(), max_length=MAX_CARE_CLAIMS)
+    """一次最多引用幾筆事實（同提議的用心清單上限 ``MAX_CARE_CLAIMS``；HC-7 b 起只留那一份）。"""
 
 
 class ChatRequest(_ApiModel):

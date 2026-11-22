@@ -13,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.shared.types import ELEMENT_RESIST_GROUP, Element, ResistGroup
 
-__all__ = ["ContentModel", "ElementEntry", "ElementTable", "duplicates"]
+__all__ = ["ContentModel", "ElementEntry", "ElementTable", "duplicates", "field_bounds"]
 
 
 def duplicates(values: Iterable[str]) -> list[str]:
@@ -35,6 +35,18 @@ class ContentModel(BaseModel):
     def summary(self) -> str:
         """``trpg content check`` 顯示的一行摘要（子類別可覆寫）。"""
         return "通過驗證"
+
+
+def field_bounds(model: type[ContentModel], name: str) -> tuple[int, int]:
+    """``model`` 的整數欄位 ``name`` 的 ``ge``／``le``（HC-4b2：讓組合器的範圍照技能 schema，不另外
+    寫數字；HC-7 b 起數值工坊的欄位範圍也讀它）。"""
+    low: int | None = None
+    high: int | None = None
+    for meta in model.model_fields[name].metadata:
+        low = getattr(meta, "ge", low)
+        high = getattr(meta, "le", high)
+    assert low is not None and high is not None, f"{model.__name__}.{name} 沒有上下限"
+    return low, high
 
 
 class ElementEntry(ContentModel):

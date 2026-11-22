@@ -80,6 +80,15 @@ class ContentLibrary:
     skill_scaling: SkillScalingRules
     """技能縮放屬性的允許範圍（``skill_scaling.yaml``，Phase 3H-1；武器技看武器、法術技依主題）。
     必填（Phase 3T-2）：沒有縮放規則的內容庫無法驗證技能。"""
+    evolution: EvolutionTable
+    """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）；HC-4b2 起必填（數字都寫在
+    檔裡）。"""
+    skill_pick: SkillPickRules
+    """技能生成挑選模式的打分權重與候選池大小（``skill_pick.yaml``，Phase PK-1）；不嵌入規則包。
+    HC-4b2 起必填（數字都寫在檔裡）。"""
+    flash: FlashTable
+    """閃現（靈光一閃）的規則與模板（``flash_templates.yaml``，Phase 3W-1）；不嵌入規則包。
+    HC-4b3 起必填（數字都寫在檔裡）。"""
     affixes: dict[str, AffixDef] = field(default_factory=dict)
     """詞條白名單（``affixes.yaml``，Phase 3G-G1）。"""
     offhands: dict[str, OffhandDef] = field(default_factory=dict)
@@ -92,10 +101,6 @@ class ContentLibrary:
     """物品產生器與物品預算的係數（``item_gen.yaml``，Phase 3K-1）。"""
     dev_starters: DevStarterTable = field(default_factory=DevStarterTable)
     """開發者起始包（``dev_starters.yaml``，Phase 3-24b2；不是設計規則，玩家介面不顯示）。"""
-    evolution: EvolutionTable = field(default_factory=EvolutionTable)
-    """3 級分歧進化的模板（``skill_evolution.yaml``，Phase 3-26b）。"""
-    flash: FlashTable = field(default_factory=FlashTable)
-    """閃現（靈光一閃）的規則與模板（``flash_templates.yaml``，Phase 3W-1）；不嵌入規則包。"""
     workshop_text: WorkshopTextTable = field(default_factory=WorkshopTextTable)
     """工坊說明的玩家語氣對照表（``workshop_text.yaml``，Phase 3-48f）；不屬於規則。"""
     regions: RegionTable | None = None
@@ -164,9 +169,6 @@ class ContentLibrary:
     icon_art: IconArtTable | None = None
     """Q 版技能圖示的推導表（``skill_icon_art.yaml``，Phase QI-2a）；只影響圖示，不嵌入規則包。
     ``None`` 時圖示推導讀預設內容資料夾的表（``trpg.narrative.skill_icon_art.icon_art_rules``）。"""
-    skill_pick: SkillPickRules = field(default_factory=SkillPickRules)
-    """技能生成挑選模式的打分權重與候選池大小（``skill_pick.yaml``，Phase PK-1）；不嵌入規則包。
-    沒有檔案時用 schema 的預設值。"""
     files: list[tuple[Path, ContentModel]] = field(default_factory=list)
     retier_cache: dict[str, SkillDef] = field(
         default_factory=dict, init=False, repr=False, compare=False

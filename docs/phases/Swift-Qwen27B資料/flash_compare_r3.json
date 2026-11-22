@@ -1,0 +1,1418 @@
+{
+  "meta": {
+    "format": "flash-pick-compare/1",
+    "mock": false,
+    "model": "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs",
+    "temperature": 0.7,
+    "reasoning_effort": "none",
+    "max_retries": 3,
+    "started_utc": "2026-11-21T18:59:38+00:00",
+    "finished_utc": "2026-11-21T19:00:43+00:00"
+  },
+  "rows": [
+    {
+      "label": "F1",
+      "skill": "skill_fire_bolt",
+      "skill_zh": "火焰箭",
+      "nth": 1,
+      "category": null,
+      "slot": null,
+      "lf2": {
+        "seconds": 4.69,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/surface_exploit/water/-/-",
+            "summary_zh": "利用地面：目標站在某種表面上時加碼",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "命中潮濕目標時，火焰與水氣交纏，造成額外蒸發傷害。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/reshape_skeleton/-/{\"type\":\"line\",\"size\":3}/-",
+            "summary_zh": "換形狀並換骨架：單體打擊改成直線 3、錐形 2 或十字的範圍招（傷害依預算調整）",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "將單點爆發化為直線灼燒，掃過前方的敵群。",
+            "weaker": false
+          },
+          {
+            "category": "combo",
+            "source": "minor",
+            "key": "minor/multi_hit/-/-/-",
+            "summary_zh": "多打一下：同一個目標多一段命中（每段傷害依預算調整）",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "同一目標承受兩段火焰打擊，燃燒狀態疊加更強。",
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_light/-/-/-",
+            "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "縮短冷卻時間，讓這招能更頻繁地點燃敵人。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 1.93,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_exploit/marked/-/-",
+            "summary_zh": "加第二個關鍵字：目標帶有該關鍵字時加碼",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_light/-/-/-",
+            "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "消耗降低，出招更快，但威力稍減。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_exploit/wet/-/-",
+            "summary_zh": "加第二個關鍵字：目標帶有該關鍵字時加碼",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_exploit/collision/-/-",
+            "summary_zh": "加第二個關鍵字：目標帶有該關鍵字時加碼",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "針對特定狀態的目標進行加碼打擊。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            [
+              "flash.note_dropped.effect_mismatch",
+              "flash.note_dropped.missing_added"
+            ]
+          ],
+          "names": [],
+          "picks": [
+            2,
+            0,
+            0,
+            2
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          4,
+          4,
+          4,
+          4
+        ]
+      }
+    },
+    {
+      "label": "F2",
+      "skill": "skill_cleave",
+      "skill_zh": "橫掃劈砍",
+      "nth": 2,
+      "category": null,
+      "slot": null,
+      "lf2": {
+        "seconds": 2.69,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_imbue/ignite/-/-",
+            "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "命中時附加火勢，讓這招的閃光帶上灼熱。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/converge_single/-/-/-",
+            "summary_zh": "收成單體：範圍收成一個目標，省下的預算全部換成威力（以自己為中心的改成射程 1）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "範圍收成單體，將碎界之力凝於一點爆發。",
+            "weaker": false
+          },
+          {
+            "category": "combo",
+            "source": "minor",
+            "key": "minor/multi_hit/-/-/-",
+            "summary_zh": "多打一下：同一個目標多一段命中（每段傷害依預算調整）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "同一目標多段命中，如殘響般連環震動。",
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_light/-/-/-",
+            "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "輕巧出招縮短冷卻，適合頻繁使用的靈光一閃。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 1.75,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_light/-/-/-",
+            "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_imbue/collision/-/-",
+            "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "命中時額外製造擊退效果，將敵人震退開來。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/area_plus/-/-/-",
+            "summary_zh": "範圍 +1（傷害依預算調整）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "攻擊範圍擴大一格，傷害依預算調整。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_imbue/charged/-/-",
+            "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "命中時附加雷電傷害，帶來閃電效果。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            [
+              "flash.note_dropped.english"
+            ]
+          ],
+          "names": [],
+          "picks": [
+            1,
+            2,
+            0,
+            2
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          4,
+          4,
+          4,
+          4
+        ]
+      }
+    },
+    {
+      "label": "F3",
+      "skill": "skill_fire_bolt",
+      "skill_zh": "火焰箭",
+      "nth": 3,
+      "category": null,
+      "slot": null,
+      "lf2": {
+        "seconds": 3.83,
+        "major": true,
+        "weaker": false,
+        "options": [
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_reshape/-/-/-",
+            "summary_zh": "換形狀：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "燎原火環",
+            "name_zh": "燎原火環",
+            "note_zh": "將單體火焰擴散為區域，讓燃燒狀態覆蓋更多目標。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_exploit/wet/-/-",
+            "summary_zh": "橋接潮濕：目標帶有潮濕時加碼",
+            "skill_name": "蒸騰灼痛",
+            "name_zh": "蒸騰灼痛",
+            "note_zh": "命中潮濕目標時，火焰與水汽交織造成額外傷害。",
+            "weaker": false
+          },
+          {
+            "category": "transform",
+            "source": "transform",
+            "key": "transform/to_passive_on_hit/-/-/-",
+            "summary_zh": "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招",
+            "skill_name": "燼滅餘溫",
+            "name_zh": "燼滅餘溫",
+            "note_zh": "體內殘留的熱度轉化為持續的火焰傷害，讓敵人在接觸後陷入燃燒狀態。",
+            "weaker": false
+          },
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_intensify/ignite/-/-",
+            "summary_zh": "加深點燃：這招製造的點燃多持續 1 回合，或補上製造點燃的效果",
+            "skill_name": "長燃烈焰",
+            "name_zh": "長燃烈焰",
+            "note_zh": "加深點燃效果，使燃燒狀態持續更久。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [
+            {
+              "template": "major_reshape",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_bridge_exploit",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "to_passive_on_hit",
+              "source": "llm",
+              "attempts": 1,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_intensify",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            }
+          ],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 2.26,
+        "major": true,
+        "weaker": false,
+        "options": [
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_extend/-/-/-",
+            "summary_zh": "延長：這招的狀態、表面與區域都多持續 1 回合（效果依預算調整）",
+            "skill_name": "餘燼長明",
+            "name_zh": "餘燼長明",
+            "note_zh": "延長效果，讓燃燒的餘溫多持續一回合。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_exploit/wet/-/-",
+            "summary_zh": "橋接潮濕：目標帶有潮濕時加碼",
+            "skill_name": "濕焰交織",
+            "name_zh": "濕焰交織",
+            "note_zh": "當目標帶有潮濕時，火焰傷害加碼。",
+            "weaker": false
+          },
+          {
+            "category": "transform",
+            "source": "transform",
+            "key": "transform/to_passive_on_hit/-/-/-",
+            "summary_zh": "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招",
+            "skill_name": "自燃迴響",
+            "name_zh": "自燃迴響",
+            "note_zh": "轉為被動，攻擊命中時自動補上縮小版的火傷與燃燒。",
+            "weaker": false
+          },
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_delayed_burst/-/-/-",
+            "summary_zh": "延遲大範圍：貼上目標，下一輪在周圍爆開",
+            "skill_name": "遲滯爆裂",
+            "name_zh": "遲滯爆裂",
+            "note_zh": "貼上目標後延遲爆開，造成範圍火焰傷害與燃燒。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [
+            1,
+            0,
+            0,
+            1
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          3,
+          4,
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "label": "F4",
+      "skill": "skill_cleave",
+      "skill_zh": "橫掃劈砍",
+      "nth": 1,
+      "category": "area",
+      "slot": null,
+      "lf2": {
+        "seconds": 1.47,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/area_plus/-/-/-",
+            "summary_zh": "範圍 +1（傷害依預算調整）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "範圍擴大一點，讓近身突擊的覆蓋更穩。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/reshape_shape/-/{\"type\":\"cross\",\"range\":3}/-",
+            "summary_zh": "換形狀（直線 3、錐形 2、十字）：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "改成十字形，一次掃過多個方向的目標。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/converge_single/-/-/-",
+            "summary_zh": "收成單體：範圍收成一個目標，省下的預算全部換成威力（以自己為中心的改成射程 1）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "收成單體，省下的預算全換成更高威力。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 3,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 2.35,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/converge_single/-/-/-",
+            "summary_zh": "收成單體：範圍收成一個目標，省下的預算全部換成威力（以自己為中心的改成射程 1）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "收成單體，省下的預算全部換成威力。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/reshape_shape/-/{\"type\":\"line\",\"size\":3}/-",
+            "summary_zh": "換形狀（直線 3、錐形 2、十字）：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "調整形狀以擴大覆蓋範圍，一次打到更多目標。",
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/reshape_shape/-/{\"type\":\"cross\",\"range\":3}/-",
+            "summary_zh": "換形狀（直線 3、錐形 2、十字）：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "橫掃劈砍",
+            "name_zh": null,
+            "note_zh": "改變攻擊形態增加命中數量，傷害依預算調整。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 3,
+          "attempts": 2,
+          "codes": [
+            [
+              "note_zh.strict_word",
+              "flash.note_dropped.strict_word"
+            ],
+            []
+          ],
+          "names": [],
+          "picks": [
+            1,
+            0,
+            0
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          2,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "label": "F5",
+      "skill": "skill_radiant_mend",
+      "skill_zh": "聖光撫慰",
+      "nth": 1,
+      "category": null,
+      "slot": null,
+      "lf2": {
+        "seconds": 2.08,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "support",
+            "source": "minor",
+            "key": "minor/support_potency/-/-/-",
+            "summary_zh": "效果 +（治療、護盾、增益依預算提高）",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/range_reclaim/-/-/-",
+            "summary_zh": "收回射程：距離 −2，省下的預算全部換成威力",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": "收回射程換取威力，近身爆發更集中。",
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_charge/-/-/-",
+            "summary_zh": "蓄力：冷卻 +2（最多 5 回合），威力提高",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "support",
+            "source": "minor",
+            "key": "minor/support_haste/-/-/-",
+            "summary_zh": "附加速：治療後目標加速 1 回合（治療量依預算調整）",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": "治療後附加加速，幫助目標快速脫離險境。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            [
+              "flash.note_dropped.effect_mismatch",
+              "flash.note_dropped.world_terms"
+            ]
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 1.65,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/range_plus/-/-/-",
+            "summary_zh": "距離 +1（傷害依預算調整）",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": "施法範圍向遠方延伸一步。",
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_light/-/-/-",
+            "summary_zh": "輕巧：AP −1（最少 1）、冷卻縮短，威力降低；AP 已是 1 時改成冷卻 −1 或法力、耐力 −10（冷卻最少留 1，法力、耐力最少留 10）",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": "耗費減輕，冷卻縮短，威力略降。",
+            "weaker": false
+          },
+          {
+            "category": "support",
+            "source": "minor",
+            "key": "minor/support_potency/-/-/-",
+            "summary_zh": "效果 +（治療、護盾、增益依預算提高）",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "area",
+            "source": "minor",
+            "key": "minor/range_reclaim/-/-/-",
+            "summary_zh": "收回射程：距離 −2，省下的預算全部換成威力",
+            "skill_name": "聖光撫慰",
+            "name_zh": null,
+            "note_zh": "射程收短，省下的資源全轉為威力。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            [
+              "flash.note_dropped.effect_mismatch"
+            ]
+          ],
+          "names": [],
+          "picks": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          1,
+          4,
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "label": "F6",
+      "skill": "skill_ember_brand",
+      "skill_zh": "餘燼烙印",
+      "nth": 1,
+      "category": null,
+      "slot": null,
+      "lf2": {
+        "seconds": 1.76,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_imbue/wet/-/-",
+            "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
+            "skill_name": "餘燼烙印",
+            "name_zh": null,
+            "note_zh": "命中時附加濕潤，讓燃燒在潮氣中延燒。",
+            "weaker": false
+          },
+          {
+            "category": "trigger",
+            "source": "minor",
+            "key": "minor/trigger_cap/-/-/-",
+            "summary_zh": "每回合觸發次數上限 +1（效果依預算調整，不超過 6.6）",
+            "skill_name": "餘燼烙印",
+            "name_zh": null,
+            "note_zh": "提升每回合觸發次數，使點燃效果更頻繁。",
+            "weaker": false
+          },
+          {
+            "category": "trigger",
+            "source": "minor",
+            "key": "minor/trigger_swap/on_damaged/-/-",
+            "summary_zh": "換觸發時機：例「命中時」改成「暴擊時」換更強，或改成「受傷時」換方向（效果依預算重算）",
+            "skill_name": "餘燼烙印",
+            "name_zh": null,
+            "note_zh": "改在受傷時觸發，讓受擊成為點燃的契機。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 3,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 1.22,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "trigger",
+            "source": "minor",
+            "key": "minor/trigger_cap/-/-/-",
+            "summary_zh": "每回合觸發次數上限 +1（效果依預算調整，不超過 6.6）",
+            "skill_name": "餘燼烙印",
+            "name_zh": null,
+            "note_zh": "每回合觸發上限增加，燃燒更頻繁。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_imbue/wet/-/-",
+            "summary_zh": "加第二個關鍵字：命中時額外製造該關鍵字",
+            "skill_name": "餘燼烙印",
+            "name_zh": null,
+            "note_zh": "命中時附加水屬性表面。",
+            "weaker": false
+          },
+          {
+            "category": "trigger",
+            "source": "minor",
+            "key": "minor/trigger_swap/on_damaged/-/-",
+            "summary_zh": "換觸發時機：例「命中時」改成「暴擊時」換更強，或改成「受傷時」換方向（效果依預算重算）",
+            "skill_name": "餘燼烙印",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 3,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [
+            0,
+            0,
+            0
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "label": "F7",
+      "skill": "skill_cleave",
+      "skill_zh": "橫掃劈砍",
+      "nth": 3,
+      "category": null,
+      "slot": null,
+      "lf2": {
+        "seconds": 3.92,
+        "major": true,
+        "weaker": false,
+        "options": [
+          {
+            "category": "transform",
+            "source": "transform",
+            "key": "transform/to_passive_on_hit/-/-/-",
+            "summary_zh": "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招",
+            "skill_name": "銳骨貫擊",
+            "name_zh": "銳骨貫擊",
+            "note_zh": "被動效果，讓攻擊攜帶物理傷害的餘韻。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_imbue/wet/-/-",
+            "summary_zh": "橋接潮濕：命中時製造潮濕",
+            "skill_name": "潮息一閃",
+            "name_zh": "潮息一閃",
+            "note_zh": "命中時讓敵人沾濕，潮水滲入裂縫。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_exploit/wet/-/-",
+            "summary_zh": "橋接潮濕：目標帶有潮濕時加碼",
+            "skill_name": "滄浪錐擊",
+            "name_zh": "滄浪錐擊",
+            "note_zh": "對沾濕的敵人加碼，潮水助長裂傷。",
+            "weaker": false
+          },
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_reshape/-/-/-",
+            "summary_zh": "換形狀：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "廣域裂光",
+            "name_zh": "廣域裂光",
+            "note_zh": "改變形狀以覆蓋更多目標，擴大戰場影響。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [
+            {
+              "template": "to_passive_on_hit",
+              "source": "llm",
+              "attempts": 1,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_bridge_imbue",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_bridge_exploit",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_reshape",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            }
+          ],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 2.03,
+        "major": true,
+        "weaker": false,
+        "options": [
+          {
+            "category": "transform",
+            "source": "transform",
+            "key": "transform/to_passive_on_hit/-/-/-",
+            "summary_zh": "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招",
+            "skill_name": "殘響",
+            "name_zh": "殘響",
+            "note_zh": "攻擊命中時，自動補上縮小版的這招。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_imbue/wet/-/-",
+            "summary_zh": "橋接潮濕：命中時製造潮濕",
+            "skill_name": "滄瀾",
+            "name_zh": "滄瀾",
+            "note_zh": "命中時製造潮水，留下濕的表面。",
+            "weaker": false
+          },
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_reshape/-/-/-",
+            "summary_zh": "換形狀：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "廣域裂擊",
+            "name_zh": "廣域裂擊",
+            "note_zh": "形狀擴散，一次打到更多目標。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_imbue/ignite/-/-",
+            "summary_zh": "橋接點燃：命中時製造點燃",
+            "skill_name": "燃擊",
+            "name_zh": "燃擊",
+            "note_zh": "命中時施加燃燒狀態。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [
+            0,
+            2,
+            0,
+            1
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          1,
+          3,
+          2,
+          3
+        ]
+      }
+    },
+    {
+      "label": "F8",
+      "skill": "skill_fire_bolt",
+      "skill_zh": "火焰箭",
+      "nth": 2,
+      "category": "element",
+      "slot": null,
+      "lf2": {
+        "seconds": 2.44,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/refine/-/-/-",
+            "summary_zh": "精煉：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字或接續段），省下的預算全部換成主要效果的威力",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "拿掉燃燒狀態，所有預算集中於火焰傷害，一擊更重。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/element_swap/-/-/ice",
+            "summary_zh": "換元素：這招的傷害改成別種元素，關鍵字跟著換（強度依預算重算）",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 3,
+          "attempts": 1,
+          "codes": [
+            [
+              "flash.note_dropped.effect_mismatch"
+            ]
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 1.12,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/element_swap/-/-/ice",
+            "summary_zh": "換元素：這招的傷害改成別種元素，關鍵字跟著換（強度依預算重算）",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/refine/-/-/-",
+            "summary_zh": "精煉：拿掉一個附帶效果（附帶狀態、第二元素、第二關鍵字或接續段），省下的預算全部換成主要效果的威力",
+            "skill_name": "火焰箭",
+            "name_zh": null,
+            "note_zh": "去除附加效果，集中提升火焰傷害。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 2,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [
+            0,
+            0
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "label": "F9",
+      "skill": "skill_fire_bolt",
+      "skill_zh": "火焰箭",
+      "nth": 1,
+      "category": null,
+      "slot": 1,
+      "lf2": {
+        "seconds": 3.48,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/surface_exploit/water/-/-",
+            "summary_zh": "利用地面：目標站在某種表面上時加碼",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": "目標沾濕時潮水引發劇烈蒸發，火焰傷害隨之提升。",
+            "weaker": false
+          },
+          {
+            "category": "combo",
+            "source": "minor",
+            "key": "minor/multi_hit/-/-/-",
+            "summary_zh": "多打一下：同一個目標多一段命中（每段傷害依預算調整）",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": "同一目標承受兩段火焰衝擊，點燃效果更難抵擋。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_exploit/wet/-/-",
+            "summary_zh": "加第二個關鍵字：目標帶有該關鍵字時加碼",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": "命中潮濕目標時，水氣助長火勢，傷害顯著增加。",
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_charge/-/-/-",
+            "summary_zh": "蓄力：冷卻 +2（最多 5 回合），威力提高",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 2.15,
+        "major": false,
+        "weaker": false,
+        "options": [
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/surface_exploit/water/-/-",
+            "summary_zh": "利用地面：目標站在某種表面上時加碼",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": "目標踏在水面上時，這記火傷會燒得更深。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/surface_exploit/oil/-/-",
+            "summary_zh": "利用地面：目標站在某種表面上時加碼",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": "地面佈滿火焰時，這招的傷害隨之攀升。",
+            "weaker": false
+          },
+          {
+            "category": "element",
+            "source": "minor",
+            "key": "minor/keyword_exploit/wet/-/-",
+            "summary_zh": "加第二個關鍵字：目標帶有該關鍵字時加碼",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": "目標身處潮濕環境中時，火傷的效力會增強。",
+            "weaker": false
+          },
+          {
+            "category": "cost",
+            "source": "minor",
+            "key": "minor/cost_once/-/-/-",
+            "summary_zh": "每場一次：每場只能用 1 次，換大幅威力",
+            "skill_name": "灼燃・火焰箭",
+            "name_zh": null,
+            "note_zh": null,
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            [],
+            [
+              "pick.mix_kept"
+            ]
+          ],
+          "names": [],
+          "picks": [
+            2,
+            2,
+            0,
+            0
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          4,
+          4,
+          4,
+          4
+        ]
+      }
+    },
+    {
+      "label": "F10",
+      "skill": "skill_cleave",
+      "skill_zh": "橫掃劈砍",
+      "nth": 3,
+      "category": null,
+      "slot": 3,
+      "lf2": {
+        "seconds": 4.25,
+        "major": true,
+        "weaker": false,
+        "options": [
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_reshape/-/-/-",
+            "summary_zh": "換形狀：一次打到更多目標（傷害依預算調整）",
+            "skill_name": "環裂",
+            "name_zh": "環裂",
+            "note_zh": "錐形改為環狀，讓碎界中的敵人都被波及。",
+            "weaker": false
+          },
+          {
+            "category": "transform",
+            "source": "transform",
+            "key": "transform/to_passive_on_hit/-/-/-",
+            "summary_zh": "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招",
+            "skill_name": "銳骨餘震",
+            "name_zh": "銳骨餘震",
+            "note_zh": "將身體承受的衝擊轉化為向外的鋒利波動，對周圍造成持續的物理侵蝕。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_exploit/ignite/-/-",
+            "summary_zh": "橋接點燃：目標帶有點燃時加碼",
+            "skill_name": "焚痕",
+            "name_zh": "焚痕",
+            "note_zh": "命中點燃的敵人時，傷害隨熾熱程度加碼。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_imbue/wet/-/-",
+            "summary_zh": "橋接潮濕：命中時製造潮濕",
+            "skill_name": "濕刃",
+            "name_zh": "濕刃",
+            "note_zh": "擊中後讓敵人沾上潮水，易受後續傷害。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-variation/6",
+          "wanted": 4,
+          "attempts": 1,
+          "codes": [
+            []
+          ],
+          "names": [
+            {
+              "template": "major_reshape",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "to_passive_on_hit",
+              "source": "llm",
+              "attempts": 1,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_bridge_exploit",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            },
+            {
+              "template": "major_bridge_imbue",
+              "source": "llm",
+              "attempts": 0,
+              "codes": [],
+              "naming_prompt_version": "skill-naming/5",
+              "consistency_retries": 0
+            }
+          ],
+          "picks": [],
+          "reason": null
+        }
+      },
+      "pick": {
+        "seconds": 3.87,
+        "major": true,
+        "weaker": false,
+        "options": [
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_imbue/wet/-/-",
+            "summary_zh": "橋接潮濕：命中時製造潮濕",
+            "skill_name": "潮水錐擊",
+            "name_zh": "潮水錐擊",
+            "note_zh": "命中時在戰場留下濕漉的水痕。",
+            "weaker": false
+          },
+          {
+            "category": "transform",
+            "source": "transform",
+            "key": "transform/to_passive_on_hit/-/-/-",
+            "summary_zh": "轉成被動：你的攻擊命中時，自動對被打中的敵人補上縮小版的這招",
+            "skill_name": "餘波",
+            "name_zh": "餘波",
+            "note_zh": "轉為被動，攻擊命中時自動補上縮小版傷害。",
+            "weaker": false
+          },
+          {
+            "category": "bridge",
+            "source": "major",
+            "key": "major/major_bridge_imbue/ignite/-/-",
+            "summary_zh": "橋接點燃：命中時製造點燃",
+            "skill_name": "引燃一閃",
+            "name_zh": "引燃一閃",
+            "note_zh": "命中時施加燃燒狀態，讓敵人持續受灼。",
+            "weaker": false
+          },
+          {
+            "category": "deepen",
+            "source": "major",
+            "key": "major/major_battle_variant/-/-/-",
+            "summary_zh": "戰場變奏：在特定地形下自動換成另一種型態（強度依預算調整）",
+            "skill_name": "變奏之擊",
+            "name_zh": "變奏之擊",
+            "note_zh": "依戰場條件自動切換型態，保持傷害輸出。",
+            "weaker": false
+          }
+        ],
+        "record": {
+          "source": "llm",
+          "prompt_version": "flash-pick/2",
+          "wanted": 4,
+          "attempts": 2,
+          "codes": [
+            [
+              "note_zh.strict_word",
+              "flash.note_dropped.strict_word"
+            ],
+            []
+          ],
+          "names": [],
+          "picks": [
+            1,
+            0,
+            3,
+            0
+          ],
+          "reason": null
+        },
+        "slot_sizes": [
+          2,
+          1,
+          4,
+          2
+        ]
+      }
+    }
+  ]
+}

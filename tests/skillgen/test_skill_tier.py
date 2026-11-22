@@ -271,10 +271,23 @@ def test_terrain_skills_pass_the_budget_floor_at_higher_tiers(tier: int) -> None
         assert any(e.type in ("raise_terrain", "lower_terrain") for e in done.effects)
 
 
+_EMPTY_GROWTH = RetierGrowthRules(
+    magnitude_step=25,
+    magnitude_max=2000,
+    max_cooldown=6,
+    target_tolerance_permille=50,
+    weak_floor_exempt_min_tier=2,  # HC-5b 新格（值同內容檔）
+    summon_hp_steps=(0, 100, 200, 300, 450, 600, 800, 1000),
+    cost_scales_permille=(1000, 500, 0),
+    rock_multiplier_permille=300,
+)
+"""清空放大旋鈕（stretch、形狀、多加冷卻與 AP）的升階規則；數值欄位照內容檔（HC-4b 起必填）。"""
+
+
 def test_retier_report_flags_structures_that_cannot_keep_up() -> None:
     """沒有放大旋鈕時（3W-9b 的 ``retier_growth`` 清空），純狀態的白板（淬毒）點數追不上 3 階：數值
     推到最大，標成不在窗內，分數仍不低於升階前。"""
-    lib = replace(LIB, budget=LIB.budget.model_copy(update={"retier_growth": RetierGrowthRules()}))
+    lib = replace(LIB, budget=LIB.budget.model_copy(update={"retier_growth": _EMPTY_GROWTH}))
     lib = with_whiteboard_ap(lib, 2)  # AP-2 之前的 2 AP 樣本：1 AP 的淬毒點數少，追得上
     venom = compose_whiteboard(0, recipe_id="venom", tier=1, library=lib)
     done = retier(lib, venom, 3)

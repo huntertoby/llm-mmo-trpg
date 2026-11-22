@@ -1,6 +1,6 @@
 // AR-X10 小修 1（美術 PM `docs/art/X10-3d驗收.md`）：狀態提示的骰子行「擲 NdM，每點 ×10」自己一行、次要字色。
 import { describe, expect, it } from "vitest";
-import { SPREAD_NOTE, statusTipParts } from "./StatusCardParts";
+import { spreadNote, statusTipParts } from "./StatusCardParts";
 import { tipParts } from "./tipParts";
 
 // 沒有 @types/node：同 statusCard.test.ts，用變數名載入 node:fs。
@@ -15,19 +15,20 @@ describe("AR-X10：狀態提示的骰子行", () => {
     ]);
   });
   it("骰子行排在它補充的那句下面；後面還有規則句時另起一段", () => {
-    expect(tipParts(["說明", "受到 20–120 雷電傷害", "擲 2d6，每點 ×10", "上限 5 層"])).toEqual([
+    expect(tipParts(["說明", "受到 20–120 雷電傷害", "擲 2d6，每點 ×10", "上限 5 層"], new Set([2]))).toEqual([
       { text: "說明 受到 20–120 雷電傷害", secondary: false },
       { text: "擲 2d6，每點 ×10", secondary: true },
       { text: "上限 5 層", secondary: false },
     ]);
   });
   it("沒有骰子行的狀態照舊一段；帶「會擴散」時最後多一行；對照表沒有的寫「狀態」", () => {
-    expect(statusTipParts("burning", true).at(-1)).toEqual({ text: SPREAD_NOTE, secondary: false });
+    expect(statusTipParts("burning", true).at(-1)).toEqual({ text: spreadNote(), secondary: false });
     expect(statusTipParts("no_such_status", false)).toEqual([{ text: "狀態", secondary: false }]);
     expect(tipParts(["只有說明", ""])).toEqual([{ text: "只有說明", secondary: false }]);
   });
-  it("「擲」開頭但不是骰子行的句子不算", () => {
+  it("沒標成骰子行的句子不算（HC-6c：照名詞表 rules_dice，不比對句型）", () => {
     expect(tipParts(["擲 d1000 決定"]).every((p) => !p.secondary)).toBe(true);
+    expect(tipParts(["擲 1d6，每點 ×10"]).every((p) => !p.secondary)).toBe(true);
   });
   it("說明卡畫出次要字色的一行（part-tip-secondary：--muted，緊貼上一句）", () => {
     const src = readFileSync("src/ui/PartTip.tsx", "utf8");

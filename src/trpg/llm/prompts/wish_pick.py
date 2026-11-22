@@ -23,6 +23,7 @@ __all__ = [
     "WISH_PICK_PROMPT_VERSION",
     "WISH_REPLY_MAX_CHARS",
     "build_wish_pick_messages",
+    "count_zh",
     "wish_pick_schema",
 ]
 
@@ -35,11 +36,11 @@ WISH_REPLY_MAX_CHARS = 40
 WISH_PICK_TASK = """任務：玩家在主城的許願池許了願（<player_input>）。
 資料區 <candidates> 是遊戲照願望
 做好、全部合法的技能候選（每張有編號 index，已經依「和願望相合」排過，index 越小越相合）。
-從裡面挑 3 張不同的給玩家選，並為每張取名、寫兩段短文字和一句回應願望的話。
-只輸出符合給定 JSON schema 的 JSON：{{"cards": [三張]}}，不要輸出任何其他文字。
-- pick：你挑的候選的 index（整數），3 張不可重複。只能挑，不能修改候選的任何效果、數值或結構。
+從裡面挑 {cards} 張不同的給玩家選，並為每張取名、寫兩段短文字和一句回應願望的話。
+只輸出符合給定 JSON schema 的 JSON：{{"cards": [{cards_zh}張]}}，不要輸出任何其他文字。
+- pick：你挑的候選的 index（整數），{cards} 張不可重複。只能挑，不能修改候選的任何效果、數值或結構。
 - 挑選時看 <request> 的 wish_tags（願望翻成的需求標籤）與玩家的願望：優先挑命中最多標籤、
-  最像玩家想要的；3 張之間要有差異（不同形狀、效果或打法）。候選的 hits 是它做到的標籤、
+  最像玩家想要的；{cards} 張之間要有差異（不同形狀、效果或打法）。候選的 hits 是它做到的標籤、
   misses 是做不到的。
 - name_zh：最多 {name_max} 個字，只能用全形中文字（可用「・」與全形括號），不可有英文、數字、
   空白或符號。句式多樣：兩字、三字、四字、『X之Y』混用，不要都用『X・Y』。
@@ -52,7 +53,7 @@ WISH_PICK_TASK = """任務：玩家在主城的許願池許了願（<player_inpu
 名稱與文字只描述那張卡片 effects 裡有的效果；不要在文字中提到數值、代號、欄位名稱或標籤代碼。
 許願池在主城：用中性奇幻的語氣，不用武俠、仙俠、文言詞。<request> 的 weapon 是持有者手上的武器：
 提到出招時照它寫；法術不靠武器，不要寫成揮砍兵器。
-<taken_names> 是已被使用的名稱，name_zh 不可重複，3 張的名稱也不可相同。
+<taken_names> 是已被使用的名稱，name_zh 不可重複，{cards} 張的名稱也不可相同。
 世界觀詞（{world_terms}）要少用：name_zh 不可以用它們開頭，
 前 {prefix_len} 個字也不可以有{prefix_chars}，name_zh 最多 {name_terms} 個；
 其他每段最多 {text_terms} 個。
@@ -67,9 +68,19 @@ WISH_PICK_TASK = """任務：玩家在主城的許願池許了願（<player_inpu
    請依錯誤修正 <previous_pick> 後重新輸出完整 JSON。"""
 
 
-def wish_pick_schema(count: int, world: WorldStyle | None = None) -> dict[str, Any]:
-    """輸出的 JSON schema：``cards`` 剛好 3 張；``pick`` 是 ``0..count-1`` 的列舉；文字欄位上限同
-    命名 schema，``wish_zh`` 最多 :data:`WISH_REPLY_MAX_CHARS` 個字。"""
+_ZH_DIGITS = "零一二三四五六七八九十"
+"""張數的中文寫法（JSON 範例裡的「三張」；超過十張改寫阿拉伯數字）。"""
+
+
+def count_zh(n: int) -> str:
+    """張數的中文寫法（0～10 寫中文數字，超過寫阿拉伯數字；HC-6b 起數值工坊的說明也用）。"""
+    return _ZH_DIGITS[n] if 0 <= n < len(_ZH_DIGITS) else str(n)
+
+
+def wish_pick_schema(count: int, world: WorldStyle | None = None, *, cards: int) -> dict[str, Any]:
+    """輸出的 JSON schema：``cards`` 剛好 ``cards`` 張（``skill_pick.pool.wish_cards``，HC-6a）；
+    ``pick`` 是 ``0..count-1`` 的列舉；文字欄位上限同命名 schema，``wish_zh`` 最多
+    :data:`WISH_REPLY_MAX_CHARS` 個字。"""
     rules = (world if world is not None else load_world_style()).naming
     card = {
         "type": "object",
@@ -87,14 +98,18 @@ def wish_pick_schema(count: int, world: WorldStyle | None = None) -> dict[str, A
         "type": "object",
         "additionalProperties": False,
         "required": ["cards"],
-        "properties": {"cards": {"type": "array", "items": card, "minItems": 3, "maxItems": 3}},
+        "properties": {
+            "cards": {"type": "array", "items": card, "minItems": cards, "maxItems": cards}
+        },
     }
 
 
-def _system_prompt(world: WorldStyle) -> str:
+def _system_prompt(world: WorldStyle, cards: int) -> str:
     rules = world.naming
     terms = rules.world_terms
     task = WISH_PICK_TASK.format(
+        cards=cards,
+        cards_zh=count_zh(cards),
         name_max=rules.name_max_chars,
         concept_max=rules.concept_max_chars,
         flavor_max=rules.flavor_max_chars,
@@ -126,9 +141,11 @@ def build_wish_pick_messages(
     errors: str | None = None,
     world: WorldStyle | None = None,
     player_text_max_chars: int = PLAYER_TEXT_MAX_CHARS,
+    card_count: int,
 ) -> list[ChatMessage]:
     """``[system, user]``：``request``、``player``、``cards`` 是呼叫端算好的中文描述；``wish`` 只進
-    ``<player_input>``（放最後）。"""
+    ``<player_input>``（放最後）。``card_count`` 是要挑幾張（``skill_pick.pool.wish_cards``；HC-6a
+    起提示詞裡的張數照它寫）。"""
     style = world if world is not None else load_world_style()
     blocks = [
         _block("request", dict(request)),
@@ -142,6 +159,6 @@ def build_wish_pick_messages(
         blocks.append(_block("errors", errors))
     blocks.append(wrap_player_input(wish, max_chars=player_text_max_chars))
     return [
-        ChatMessage(role="system", content=_system_prompt(style)),
+        ChatMessage(role="system", content=_system_prompt(style, card_count)),
         ChatMessage(role="user", content="\n".join(blocks)),
     ]

@@ -32,7 +32,6 @@ from trpg.content.skills import (
     CHANGE_TARGETS,
     GATHER_SHAPES,
     INTERCEPT,
-    MAX_MODIFIERS,
     MODIFIER_CHANGES,
     ON_HIT_PRIMITIVES,
     PLACE_TRAP,
@@ -55,7 +54,12 @@ from trpg.content.skills import (
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
-from trpg.skillgen.option_effect_rules import cooldown_requirement, effect_fixes, with_param_blocks
+from trpg.skillgen.option_effect_rules import (
+    cooldown_requirement,
+    effect_fixes,
+    probe_trap,
+    with_param_blocks,
+)
 from trpg.skillgen.option_fill import variants
 from trpg.skillgen.option_followup import (
     FOLLOWUP_SKELETON,
@@ -219,11 +223,19 @@ def _trigger_field(library: ContentLibrary) -> FieldSpec:
     fields = TriggerSpec.model_fields
     low, high = model_range(fields["max_per_round"])
     events: list[Choice] = []
+    every = library.ruleset.core.skill_limits.every_n_hits  # HC-5b：原本寫死 2～3
     for timing in library.ruleset.skill_triggers.triggers:
         params: list[FieldSpec] = []
         if timing.id == "every_n_hits":
             params.append(
-                FieldSpec(field="n", name_zh="每幾次", type="int", required=True, min=2, max=3)
+                FieldSpec(
+                    field="n",
+                    name_zh="每幾次",
+                    type="int",
+                    required=True,
+                    min=min(every),
+                    max=max(every),
+                )
             )
         if timing.id == "on_cast_tag":
             params.append(FieldSpec(field="tag", name_zh="技能標籤", type="text", required=True))
@@ -751,7 +763,10 @@ def _arrangements(
 
 
 def _probe_builds(
-    base: dict[str, Any], choice: Choice, contexts: list[list[dict[str, Any]]]
+    base: dict[str, Any],
+    choice: Choice,
+    contexts: list[list[dict[str, Any]]],
+    trap: Mapping[str, Any],
 ) -> bool | None:
     """以最小填法試組（單獨、接在已填的效果或一個核心效果之後或之前，一般或傳說），有一種能通過
     schema 就是 ``True``；無法自動填時為 ``None``。"""
@@ -762,7 +777,7 @@ def _probe_builds(
         for effects in _arrangements(fill, contexts):
             extra: dict[str, Any] = {"effects": effects}
             if any(e["type"] == "place_trap" for e in effects):
-                extra["trap"] = {"trigger": "enter"}
+                extra["trap"] = dict(trap)
             for rarity in _PROBE_RARITIES:
                 if _probe(base, {**extra, **rarity}) is not None:
                     return True
@@ -770,17 +785,22 @@ def _probe_builds(
 
 
 def _schema_accepts(
-    base: dict[str, Any], choice: Choice, contexts: list[list[dict[str, Any]]]
+    base: dict[str, Any],
+    choice: Choice,
+    contexts: list[list[dict[str, Any]]],
+    trap: Mapping[str, Any],
 ) -> bool:
     """試組通過，或試不出來：無法自動填、帶巢狀效果參數（``then``、``win``／``lose``……）的原語
     最小填法不準，仍列出（由檢查負責）。"""
-    built = _probe_builds(base, choice, contexts)
+    built = _probe_builds(base, choice, contexts, trap)
     return built is not False or any(p.type == "effects" for p in choice.params)
 
 
-def _base_accepts_something(base: dict[str, Any], candidates: list[Choice]) -> bool:
+def _base_accepts_something(
+    base: dict[str, Any], candidates: list[Choice], trap: Mapping[str, Any]
+) -> bool:
     """前面步驟的內容至少能和一個候選效果組成技能（否則試組沒有意義）。"""
-    return any(_probe_builds(base, c, []) for c in candidates)
+    return any(_probe_builds(base, c, [], trap) for c in candidates)
 
 
 def _core_example(choices: list[Choice]) -> dict[str, Any] | None:
@@ -805,7 +825,8 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
         if choice is not None:
             candidates.append(choice)
     base = _probe_base(draft)
-    if not _base_accepts_something(base, candidates):
+    trap = probe_trap(library)
+    if not _base_accepts_something(base, candidates, trap):
         return candidates  # 前面的步驟本身就組不起來（見檢查結果的問題清單），不再試組
     existing = [dict(_mapping(e)) for e in draft.get("effects") or ()]
     out: list[Choice] = []
@@ -814,7 +835,7 @@ def _effect_choices(draft: Draft, library: ContentLibrary, skeleton: SkeletonDef
         core = _core_example([c for c in candidates if c is not choice])
         if core is not None:
             contexts.append([core])
-        if _schema_accepts(base, choice, contexts):
+        if _schema_accepts(base, choice, contexts, trap):
             out.append(choice)
     return out
 
@@ -852,7 +873,14 @@ def _trap_field(draft: Draft, library: ContentLibrary) -> FieldSpec:
                     Choice(value="delay", name_zh="延遲", description_zh="rounds 輪後觸發"),
                 ),
             ),
-            FieldSpec(field="rounds", name_zh="輪數", type="int", min=low, max=high, default=2),
+            FieldSpec(
+                field="rounds",
+                name_zh="輪數",
+                type="int",
+                min=low,
+                max=high,
+                default=probe_trap(library)["rounds"],
+            ),
             FieldSpec(
                 field="shape",
                 name_zh="觸發範圍",
@@ -988,9 +1016,26 @@ _APPLIES_TO_ZH: dict[str, str] = {
 """修正規則「套用對象」的玩家用語（玩法 PM 2026-10-24）。"""
 
 
+def _change_bounds(name: str, library: ContentLibrary) -> tuple[int | None, int | None]:
+    """修正改變的數值範圍：schema 留下的一側，加上 ``core.yaml`` 的
+    ``skill_limits.modifier_bounds``（規則上下限，HC-4b2 從 schema 搬走的那一側）。"""
+    low, high = model_range(ModifierChange.model_fields[name])
+    rules = library.ruleset.core.skill_limits.modifier_bounds
+    moved: dict[str, tuple[int | None, int | None]] = {
+        "damage_permille": (rules.damage_permille_min, None),
+        "heal_permille": (rules.heal_permille_min, None),
+        "hit_bonus": (-rules.hit_bonus_max, rules.hit_bonus_max),
+        "cooldown_delta": (-rules.cooldown_delta_max, None),
+        "push_distance_delta": (None, rules.push_distance_delta_max),
+        "range_delta": (None, rules.range_delta_max),
+        "summon_duration_delta": (None, rules.summon_duration_delta_max),
+    }
+    rule_low, rule_high = moved.get(name, (None, None))
+    return (low if rule_low is None else rule_low), (high if rule_high is None else rule_high)
+
+
 def _change_field(name: str, library: ContentLibrary, category: str | None) -> FieldSpec:
-    info = ModifierChange.model_fields[name]
-    low, high = model_range(info)
+    low, high = _change_bounds(name, library)
     targets = sorted(CHANGE_TARGETS[name])
     when = "；選目標之前就決定，條件只能是自身血量" if name in SELF_ONLY_CHANGES else ""
     player = "可以套用在：" + "、".join(_APPLIES_TO_ZH.get(t, t) for t in targets) + "。"
@@ -1019,7 +1064,8 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
             ),
         )
     elif name == "add_tags":
-        value = FieldSpec(**base, type="tags", min_count=1, max_count=3)
+        max_tags = library.ruleset.core.skill_limits.modifier_bounds.max_add_tags
+        value = FieldSpec(**base, type="tags", min_count=1, max_count=max_tags)
     elif name == "on_hit_effects":
         primitives = library.ruleset.primitives.by_id()
         ctx = ParamContext(library, category=category)
@@ -1027,7 +1073,7 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
             **base,
             type="effects",
             min_count=1,
-            max_count=2,
+            max_count=library.ruleset.core.skill_limits.modifier_bounds.max_on_hit_effects,
             choices=tuple(
                 Choice(
                     value=p,
@@ -1056,7 +1102,7 @@ def _modifier_step(draft: Draft, library: ContentLibrary) -> StepOptions:
         type="modifiers",
         required=True,
         min_count=1,
-        max_count=MAX_MODIFIERS,
+        max_count=library.ruleset.core.skill_limits.max_modifiers,
         fields=(
             FieldSpec(
                 field="applies_to",
@@ -1174,14 +1220,19 @@ def _self_status_choice(status_id: str, draft: Draft, library: ContentLibrary) -
     rule = library.budget.allowance.self_status
     status = library.ruleset.statuses.by_id()[status_id]
     fixed = rule.fixed_duration.get(status_id)
-    low, high = (fixed, fixed) if fixed is not None else (2, 3)
+    limits = library.ruleset.core.skill_limits  # HC-5b：原本寫死 2～3
+    low, high = (
+        (fixed, fixed)
+        if fixed is not None
+        else (limits.min_self_status_duration, limits.max_self_status_duration)
+    )
     info: dict[str, Any] = {"cap_permille": rule.cap_of(status_id)}
     if status_id in rule.spell_only and draft.get("category") not in (None, "spell"):
         info["unavailable_zh"] = (
             f"{status.name_zh}只能放在法術技：沒有法術的人不能白拿折扣。"
             "回到「基本設定」把類別改成法術，或改選別的狀態"
         )
-    points = status.budget_points or 0
+    points = library.budget.status_point(status.id) or 0
     description = f"每個有效回合折抵 {points * rule.per_point_permille / 10:g}%"
     if fixed is not None:
         description += (

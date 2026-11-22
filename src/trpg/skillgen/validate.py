@@ -46,7 +46,6 @@ from trpg.content.skills import (
     COMPOSITE_MOVES,
     GATHER_SHAPES,
     HOOK,
-    MAX_EFFECTS,
     ON_MISS_MIN_RARITY,
     REVIVE,
     SPLIT_SKELETONS,
@@ -58,6 +57,7 @@ from trpg.content.skills import (
     rarity_rank,
     skill_elements,
 )
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.shared.fmt import ratio_pct
 from trpg.shared.types import Attribute
 from trpg.skillgen.budget import BudgetError, BudgetReport, skill_budget, zone_cell_count
@@ -108,8 +108,14 @@ class Violation:
 def validate_skill(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """檢查 ``skill``，回傳全部違規；空串列表示通過。"""
     reference = _reference_violations(skill, library)
-    if reference:
-        return reference
+    # HC-4b：技能結構的規則型上限（core.yaml 的 skill_limits；原本在 SkillDef schema，所以和引用
+    # 一樣先擋：階級、AP 超出時預算查表會失敗）。效果原語數照舊由 cap.effects 報。
+    limits = [
+        Violation(skill.id, "cap.limits", p)
+        for p in skill_limit_problems(skill, library.ruleset.core.skill_limits, count_effects=False)
+    ]
+    if reference or limits:
+        return [*reference, *limits]
     resource = library.budget.cost_problem(skill.category, skill.cost)  # 3H-2，06 6.10
     out = [] if resource is None else [Violation(skill.id, "cap.resource", resource)]
     # 最低花費（3-48c；例外：花源力、裝備動作、預支，06 6.10）——內建技能也照查（2026-10-24 補齊）
@@ -423,8 +429,9 @@ def _cap_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]
         out.append(Violation(skill.id, rule, message))
 
     count = effect_count(skill)
-    if not 1 <= count <= MAX_EFFECTS:
-        add("cap.effects", f"效果原語必須有 1 到 {MAX_EFFECTS} 個，收到 {count} 個")
+    top = library.ruleset.core.skill_limits.max_effects
+    if not 1 <= count <= top:
+        add("cap.effects", f"效果原語必須有 1 到 {top} 個，收到 {count} 個")
     allowed = _WEAPON_REQ[skill.category]
     if skill.weapon_req not in allowed:
         add(
@@ -559,11 +566,6 @@ def _contagion_violations(skill: SkillDef, library: ContentLibrary) -> list[Viol
     return out
 
 
-POINT_BLANK_MIN_REACH = 2
-"""貼身條件要求的最大射程（射程 1 的招一定貼身，條件等於白拿預算折扣；SK-2b，玩法交接 4.1.29
-第 1 點；和組合器、閃現「距離加碼」同一個門檻）。"""
-
-
 def skill_reach(skill: SkillDef) -> int | None:
     """主動技的最大射程：形狀的固定射程（``range`` 是整數）；直線、錐形沒有 ``range`` 時看
     ``size``。
@@ -587,7 +589,8 @@ def _condition_types(condition: ConditionSpec | None) -> set[str]:
 
 def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> list[Violation]:
     """一定成立的距離條件（SK-2b，玩法交接 4.1.29 第 1 點，06 6.16）：條件讓預算打折，前提是它可能
-    不成立——貼身要最大射程至少 :data:`POINT_BLANK_MIN_REACH`，遠距要最大射程至少
+    不成立——貼身要最大射程至少 ``skill_composer.yaml`` 的 ``condition.point_blank_min_reach``
+    （和組合器、閃現「距離加碼」同一個門檻；HC-5b），遠距要最大射程至少
     ``core.far_distance``（工坊可調）。只看主動技能、射程可以確定的形狀（:func:`skill_reach`）。"""
     reach = skill_reach(skill) if skill.kind == "active" else None
     if reach is None:
@@ -595,7 +598,10 @@ def _distance_condition_violations(skill: SkillDef, library: ContentLibrary) -> 
     types = _condition_types(skill.condition)
     for effect in skill.effects:
         types |= _condition_types(effect.condition)
-    need = {"point_blank": POINT_BLANK_MIN_REACH, "long_range": library.ruleset.core.far_distance}
+    need = {
+        "point_blank": library.composer.condition.point_blank_min_reach,
+        "long_range": library.ruleset.core.far_distance,
+    }
     return [
         Violation(
             skill.id,
@@ -740,11 +746,15 @@ def _stance_violations(skill: SkillDef, library: ContentLibrary) -> list[Violati
                     f"{where}：姿態狀態只能由姿態技能（kind: stance）施加",
                 )
             )
-        elif skill.kind == "stance" and not is_stance:
+        elif skill.kind == "stance" and not is_stance and skill.form_id is None:
             out.append(
                 Violation(
                     skill.id, "stance.status", f"{where}：姿態技能施加的狀態必須是 stance: true"
                 )
+            )
+        if is_stance and skill.form_id is not None:  # GS-3：施加姿態會解除剛進入的形態
+            out.append(
+                Violation(skill.id, "stance.status", f"{where}：化身技的進入時效果不能施加姿態狀態")
             )
         if is_stance and effect.duration is not None:
             out.append(
@@ -928,7 +938,8 @@ def _modifier_violations(skill: SkillDef, library: ContentLibrary) -> list[Viola
                 f"骨架 {skeleton.id}：只適用 {'、'.join(skeleton.kinds)} 技能，收到 {skill.kind}",
             )
         )
-    if skill.shape.type not in skeleton.shapes:
+    # 帶進入時效果的化身技（GS-3）：形狀（自己或實心環形）由 SkillDef 的進入時效果規則檢查
+    if skill.shape.type not in skeleton.shapes and skill.form_entry_effect is None:
         out.append(
             Violation(
                 skill.id,
@@ -981,7 +992,7 @@ def _skeleton_violations(
 
     if skill.kind not in skeleton.kinds:
         add("kind", f"只適用 {'、'.join(skeleton.kinds)} 技能，收到 {skill.kind}")
-    if skill.shape.type not in skeleton.shapes:
+    if skill.shape.type not in skeleton.shapes and skill.form_entry_effect is None:  # GS-3
         add("shape", f"形狀只能是 {'、'.join(skeleton.shapes)}，收到 {skill.shape.type}")
     radius = skill.shape.radius
     if skeleton.max_radius is not None and radius is not None and radius > skeleton.max_radius:

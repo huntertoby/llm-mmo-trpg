@@ -1,0 +1,12813 @@
+{
+ "format": "recipe-census/1",
+ "params": {
+  "seeds": 200,
+  "thin": 12,
+  "kinds": [
+   "reaction"
+  ],
+  "tiers": [
+   1,
+   2,
+   3,
+   4
+  ],
+  "rarities": [
+   "rare",
+   "epic"
+  ],
+  "diag_seeds": 50
+ },
+ "tier_weights_permille": {
+  "1": 316,
+  "2": 366,
+  "3": 316,
+  "4": 47
+ },
+ "cells": [
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 89,
+   "structures": 189,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1.5,
+    "ms_median": 1.4,
+    "ms_max": 3.7,
+    "total_s": 0.3
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 89,
+   "structures": 189,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1.5,
+    "ms_median": 1.5,
+    "ms_max": 3.1,
+    "total_s": 0.3
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 80,
+   "structures": 191,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1.6,
+    "ms_median": 1.6,
+    "ms_max": 3.6,
+    "total_s": 0.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 80,
+   "structures": 191,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1.7,
+    "ms_median": 1.6,
+    "ms_max": 4.0,
+    "total_s": 0.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 71,
+   "structures": 191,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1.9,
+    "ms_median": 1.9,
+    "ms_max": 5.5,
+    "total_s": 0.39
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 71,
+   "structures": 191,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2.0,
+    "ms_median": 1.9,
+    "ms_max": 6.1,
+    "total_s": 0.39
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 68,
+   "structures": 191,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2.1,
+    "ms_median": 1.9,
+    "ms_max": 5.9,
+    "total_s": 0.41
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "-",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 68,
+   "structures": 191,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "reroll:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "intercept:",
+       "shield:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 2,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2.1,
+    "ms_median": 2.1,
+    "ms_max": 6.1,
+    "total_s": 0.42
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 54,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     59
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:burning"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:burning",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 31.2,
+    "ms_median": 22.3,
+    "ms_max": 150.9,
+    "total_s": 6.23
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 54,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     59
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:burning"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:burning",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 31.1,
+    "ms_median": 21.6,
+    "ms_max": 145.1,
+    "total_s": 6.22
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 47,
+   "structures": 139,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     52
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 31.1,
+    "ms_median": 16.0,
+    "ms_max": 211.0,
+    "total_s": 6.21
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 47,
+   "structures": 139,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     52
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 31.0,
+    "ms_median": 15.0,
+    "ms_max": 207.9,
+    "total_s": 6.2
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 42,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     53
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 34.5,
+    "ms_median": 15.7,
+    "ms_max": 219.9,
+    "total_s": 6.9
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 42,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     53
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:infused_fire"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 34.5,
+    "ms_median": 16.6,
+    "ms_max": 219.9,
+    "total_s": 6.89
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 34,
+   "structures": 189,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     121
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:burning",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1301.3,
+    "ms_median": 98.0,
+    "ms_max": 23273.3,
+    "total_s": 260.27
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "ignite",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 34,
+   "structures": 189,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     121
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:burning",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 1305.0,
+    "ms_median": 100.6,
+    "ms_max": 23510.2,
+    "total_s": 261.01
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 70,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     39
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.2,
+    "ms_median": 5.1,
+    "ms_max": 27.7,
+    "total_s": 1.24
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 70,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     39
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.3,
+    "ms_median": 5.2,
+    "ms_max": 27.3,
+    "total_s": 1.25
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 58,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     27
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.1,
+    "ms_median": 4.3,
+    "ms_max": 34.9,
+    "total_s": 1.22
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 58,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     27
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.2,
+    "ms_median": 4.5,
+    "ms_max": 37.1,
+    "total_s": 1.24
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 45,
+   "structures": 141,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     33
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.7,
+    "ms_median": 5.0,
+    "ms_max": 34.0,
+    "total_s": 1.34
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 45,
+   "structures": 141,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     33
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.7,
+    "ms_median": 4.9,
+    "ms_max": 35.1,
+    "total_s": 1.34
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 32,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     48
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     18
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     16
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 115.5,
+    "ms_median": 10.1,
+    "ms_max": 1425.4,
+    "total_s": 23.1
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "wet",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 32,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     48
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     18
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     17
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "create_surface:",
+       "damage:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     16
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 114.7,
+    "ms_median": 10.2,
+    "ms_max": 1430.2,
+    "total_s": 22.94
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 189,
+   "designs": 10,
+   "structures": 180,
+   "reasons": {
+    "keyword_exhausted": 11
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     129
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     19
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     19
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:silenced",
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     2
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 87.2,
+    "ms_median": 60.1,
+    "ms_max": 349.0,
+    "total_s": 17.44
+   },
+   "status": "thin",
+   "cause": "缺配方：規則允許，但組合器這個種類從不帶這個關鍵字",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 189,
+   "designs": 10,
+   "structures": 180,
+   "reasons": {
+    "keyword_exhausted": 11
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     129
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     19
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     19
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:silenced",
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     2
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 87.1,
+    "ms_median": 57.0,
+    "ms_max": 360.5,
+    "total_s": 17.42
+   },
+   "status": "thin",
+   "cause": "缺配方：規則允許，但組合器這個種類從不帶這個關鍵字",
+   "frequency": 632000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 192,
+   "designs": 13,
+   "structures": 131,
+   "reasons": {
+    "keyword_exhausted": 8
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     89
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 74.7,
+    "ms_median": 36.1,
+    "ms_max": 411.8,
+    "total_s": 14.94
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 192,
+   "designs": 13,
+   "structures": 131,
+   "reasons": {
+    "keyword_exhausted": 8
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     89
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 75.5,
+    "ms_median": 34.6,
+    "ms_max": 417.9,
+    "total_s": 15.1
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 196,
+   "designs": 13,
+   "structures": 137,
+   "reasons": {
+    "keyword_exhausted": 4
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     95
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 71.1,
+    "ms_median": 33.9,
+    "ms_max": 427.7,
+    "total_s": 14.22
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 196,
+   "designs": 13,
+   "structures": 137,
+   "reasons": {
+    "keyword_exhausted": 4
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     95
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 71.6,
+    "ms_median": 33.7,
+    "ms_max": 438.9,
+    "total_s": 14.31
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 195,
+   "designs": 12,
+   "structures": 135,
+   "reasons": {
+    "keyword_exhausted": 5
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     90
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     11
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 75.7,
+    "ms_median": 35.9,
+    "ms_max": 451.6,
+    "total_s": 15.14
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "charged",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 195,
+   "designs": 12,
+   "structures": 135,
+   "reasons": {
+    "keyword_exhausted": 5
+   },
+   "samples": {
+    "keyword_exhausted": "seed 14: 種子 14：300 次嘗試都做不出帶有關鍵字 charged 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     90
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     11
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 75.7,
+    "ms_median": 36.4,
+    "ms_max": 472.4,
+    "total_s": 15.13
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 198,
+   "designs": 28,
+   "structures": 181,
+   "reasons": {
+    "keyword_exhausted": 2
+   },
+   "samples": {
+    "keyword_exhausted": "seed 55: 種子 55：300 次嘗試都做不出帶有關鍵字 frozen 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     96
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:frozen"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     28
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:frozen"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 53.0,
+    "ms_median": 39.3,
+    "ms_max": 310.8,
+    "total_s": 10.59
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 198,
+   "designs": 28,
+   "structures": 181,
+   "reasons": {
+    "keyword_exhausted": 2
+   },
+   "samples": {
+    "keyword_exhausted": "seed 55: 種子 55：300 次嘗試都做不出帶有關鍵字 frozen 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     96
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:frozen"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     28
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:frozen"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 53.9,
+    "ms_median": 38.2,
+    "ms_max": 317.3,
+    "total_s": 10.79
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 46,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     59
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 38.2,
+    "ms_median": 20.9,
+    "ms_max": 283.0,
+    "total_s": 7.63
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 46,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     59
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 38.5,
+    "ms_median": 20.5,
+    "ms_max": 279.0,
+    "total_s": 7.7
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 33,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     78
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 52.6,
+    "ms_median": 29.3,
+    "ms_max": 382.8,
+    "total_s": 10.52
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 33,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     78
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 52.6,
+    "ms_median": 28.1,
+    "ms_max": 350.2,
+    "total_s": 10.53
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 27,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     86
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 56.2,
+    "ms_median": 33.4,
+    "ms_max": 405.1,
+    "total_s": 11.24
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "frozen",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 27,
+   "structures": 140,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     86
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 56.4,
+    "ms_median": 33.9,
+    "ms_max": 379.0,
+    "total_s": 11.28
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 52,
+   "structures": 137,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 14.6,
+    "ms_median": 7.4,
+    "ms_max": 80.8,
+    "total_s": 2.92
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 52,
+   "structures": 137,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 14.5,
+    "ms_median": 7.0,
+    "ms_max": 75.6,
+    "total_s": 2.9
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 62,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     23
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 31.0,
+    "ms_median": 15.1,
+    "ms_max": 312.3,
+    "total_s": 6.19
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 62,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     23
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 31.4,
+    "ms_median": 15.8,
+    "ms_max": 333.2,
+    "total_s": 6.27
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 45,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     34
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 46.1,
+    "ms_median": 22.4,
+    "ms_max": 398.6,
+    "total_s": 9.23
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 45,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     34
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 46.2,
+    "ms_median": 21.4,
+    "ms_max": 404.5,
+    "total_s": 9.24
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 31,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     39
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     10
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 54.4,
+    "ms_median": 33.0,
+    "ms_max": 396.1,
+    "total_s": 10.87
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "prone",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 31,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     39
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     10
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 54.6,
+    "ms_median": 31.2,
+    "ms_max": 433.1,
+    "total_s": 10.92
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 100,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 10.3,
+    "ms_median": 6.7,
+    "ms_max": 56.6,
+    "total_s": 2.07
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 100,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "knock_prone:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 10.4,
+    "ms_median": 6.7,
+    "ms_max": 62.8,
+    "total_s": 2.08
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 97,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:feared",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 11.7,
+    "ms_median": 6.8,
+    "ms_max": 86.8,
+    "total_s": 2.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 97,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:feared",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 11.6,
+    "ms_median": 6.4,
+    "ms_max": 82.6,
+    "total_s": 2.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 81,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:feared",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 16.2,
+    "ms_median": 8.3,
+    "ms_max": 102.4,
+    "total_s": 3.23
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 81,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     5
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:feared",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     4
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 16.1,
+    "ms_median": 8.2,
+    "ms_max": 88.2,
+    "total_s": 3.22
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 69,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:blinded",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 21.6,
+    "ms_median": 10.3,
+    "ms_max": 194.5,
+    "total_s": 4.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "collision",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 69,
+   "structures": 143,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:blinded",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 21.9,
+    "ms_median": 9.9,
+    "ms_max": 196.7,
+    "total_s": 4.37
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 195,
+   "designs": 53,
+   "structures": 186,
+   "reasons": {
+    "keyword_exhausted": 5
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     38
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 78.7,
+    "ms_median": 57.1,
+    "ms_max": 312.0,
+    "total_s": 15.75
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 195,
+   "designs": 53,
+   "structures": 186,
+   "reasons": {
+    "keyword_exhausted": 5
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     38
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 79.4,
+    "ms_median": 59.4,
+    "ms_max": 322.6,
+    "total_s": 15.87
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 199,
+   "designs": 45,
+   "structures": 139,
+   "reasons": {
+    "keyword_exhausted": 1
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     31
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 62.6,
+    "ms_median": 34.8,
+    "ms_max": 387.4,
+    "total_s": 12.51
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 199,
+   "designs": 45,
+   "structures": 139,
+   "reasons": {
+    "keyword_exhausted": 1
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     31
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 63.5,
+    "ms_median": 34.6,
+    "ms_max": 417.1,
+    "total_s": 12.69
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 194,
+   "designs": 62,
+   "structures": 193,
+   "reasons": {
+    "keyword_exhausted": 6
+   },
+   "samples": {
+    "keyword_exhausted": "seed 27: 種子 27：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     18
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2772.4,
+    "ms_median": 176.9,
+    "ms_max": 29978.7,
+    "total_s": 554.48
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 194,
+   "designs": 62,
+   "structures": 193,
+   "reasons": {
+    "keyword_exhausted": 6
+   },
+   "samples": {
+    "keyword_exhausted": "seed 27: 種子 27：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     18
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked"
+      ],
+      [
+       "lightning"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2802.6,
+    "ms_median": 177.1,
+    "ms_max": 30408.2,
+    "total_s": 560.52
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 174,
+   "designs": 56,
+   "structures": 170,
+   "reasons": {
+    "keyword_exhausted": 26
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 3971.8,
+    "ms_median": 292.9,
+    "ms_max": 31368.7,
+    "total_s": 794.37
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "marked",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 174,
+   "designs": 56,
+   "structures": 170,
+   "reasons": {
+    "keyword_exhausted": 26
+   },
+   "samples": {
+    "keyword_exhausted": "seed 12: 種子 12：300 次嘗試都做不出帶有關鍵字 marked 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "push:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 4013.4,
+    "ms_median": 290.5,
+    "ms_max": 31684.6,
+    "total_s": 802.68
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 111,
+   "structures": 199,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.0,
+    "ms_median": 4.8,
+    "ms_max": 28.5,
+    "total_s": 1.21
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 111,
+   "structures": 199,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.3,
+    "ms_median": 5.2,
+    "ms_max": 28.7,
+    "total_s": 1.26
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 85,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.5,
+    "ms_median": 4.7,
+    "ms_max": 36.3,
+    "total_s": 1.31
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 85,
+   "structures": 142,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.6,
+    "ms_median": 4.9,
+    "ms_max": 35.9,
+    "total_s": 1.33
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 89,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     22
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 122.9,
+    "ms_median": 9.7,
+    "ms_max": 1743.9,
+    "total_s": 24.58
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 89,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     22
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 125.0,
+    "ms_median": 9.7,
+    "ms_max": 1760.2,
+    "total_s": 25.01
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 199,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     23
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 124.2,
+    "ms_median": 10.0,
+    "ms_max": 1573.3,
+    "total_s": 24.83
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "high_ground",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 199,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     23
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 123.3,
+    "ms_median": 10.4,
+    "ms_max": 1678.1,
+    "total_s": 24.67
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 20,
+   "structures": 187,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     104
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:concealed"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:concealed"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:concealed"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 62.4,
+    "ms_median": 45.3,
+    "ms_max": 272.0,
+    "total_s": 12.48
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 20,
+   "structures": 187,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     104
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:concealed"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     26
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:concealed"
+      ],
+      [
+       "poison"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "apply_status:concealed"
+      ],
+      [
+       "fire"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 62.2,
+    "ms_median": 44.5,
+    "ms_max": 266.5,
+    "total_s": 12.44
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 198,
+   "designs": 14,
+   "structures": 133,
+   "reasons": {
+    "keyword_exhausted": 2
+   },
+   "samples": {
+    "keyword_exhausted": "seed 85: 種子 85：300 次嘗試都做不出帶有關鍵字 concealed 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     107
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 74.6,
+    "ms_median": 42.1,
+    "ms_max": 522.2,
+    "total_s": 14.92
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 198,
+   "designs": 14,
+   "structures": 133,
+   "reasons": {
+    "keyword_exhausted": 2
+   },
+   "samples": {
+    "keyword_exhausted": "seed 85: 種子 85：300 次嘗試都做不出帶有關鍵字 concealed 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     107
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 74.0,
+    "ms_median": 43.6,
+    "ms_max": 454.2,
+    "total_s": 14.79
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 199,
+   "designs": 16,
+   "structures": 137,
+   "reasons": {
+    "keyword_exhausted": 1
+   },
+   "samples": {
+    "keyword_exhausted": "seed 92: 種子 92：300 次嘗試都做不出帶有關鍵字 concealed 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     102
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 67.8,
+    "ms_median": 39.2,
+    "ms_max": 447.2,
+    "total_s": 13.55
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 199,
+   "designs": 16,
+   "structures": 137,
+   "reasons": {
+    "keyword_exhausted": 1
+   },
+   "samples": {
+    "keyword_exhausted": "seed 92: 種子 92：300 次嘗試都做不出帶有關鍵字 concealed 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     102
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     58
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 58,
+   "diag": {},
+   "timing": {
+    "ms_mean": 67.4,
+    "ms_median": 35.9,
+    "ms_max": 447.6,
+    "total_s": 13.49
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 195,
+   "designs": 16,
+   "structures": 189,
+   "reasons": {
+    "keyword_exhausted": 5
+   },
+   "samples": {
+    "keyword_exhausted": "seed 33: 種子 33：300 次嘗試都做不出帶有關鍵字 concealed 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     139
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:slow",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     3
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2346.6,
+    "ms_median": 131.8,
+    "ms_max": 29742.8,
+    "total_s": 469.31
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "concealed",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 195,
+   "designs": 16,
+   "structures": 189,
+   "reasons": {
+    "keyword_exhausted": 5
+   },
+   "samples": {
+    "keyword_exhausted": "seed 33: 種子 33：300 次嘗試都做不出帶有關鍵字 concealed 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     139
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "push:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     14
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "knock_prone:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "damage:",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:slow",
+       "damage:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     3
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 2377.2,
+    "ms_median": 123.4,
+    "ms_max": 30229.2,
+    "total_s": 475.43
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 2,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 11,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 5.5,
+    "ms_median": 4.5,
+    "ms_max": 30.3,
+    "total_s": 1.1
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 2,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 11,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 5.6,
+    "ms_median": 4.5,
+    "ms_max": 31.5,
+    "total_s": 1.11
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 632000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 12,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 12,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 7.8,
+    "ms_median": 6.0,
+    "ms_max": 68.7,
+    "total_s": 1.56
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 12,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 12,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 8.1,
+    "ms_median": 6.3,
+    "ms_max": 67.4,
+    "total_s": 1.61
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 732000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 9,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 12,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 9.5,
+    "ms_median": 7.2,
+    "ms_max": 70.9,
+    "total_s": 1.89
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 9,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 12,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 9.5,
+    "ms_median": 7.6,
+    "ms_max": 70.5,
+    "total_s": 1.9
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 632000
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 4,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 13,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 11.4,
+    "ms_median": 9.1,
+    "ms_max": 99.0,
+    "total_s": 2.29
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 164500
+  },
+  {
+   "keyword": "summon",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 1,
+   "structures": 4,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "summon_beside:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     200
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 200,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 13,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 11.6,
+    "ms_median": 9.3,
+    "ms_max": 89.9,
+    "total_s": 2.32
+   },
+   "status": "thin",
+   "cause": "只帶到通用規則：組合器認、退回路徑不收",
+   "frequency": 94000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 192,
+   "designs": 69,
+   "structures": 190,
+   "reasons": {
+    "keyword_exhausted": 8
+   },
+   "samples": {
+    "keyword_exhausted": "seed 5: 種子 5：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 116.9,
+    "ms_median": 81.3,
+    "ms_max": 392.8,
+    "total_s": 23.37
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 192,
+   "designs": 69,
+   "structures": 190,
+   "reasons": {
+    "keyword_exhausted": 8
+   },
+   "samples": {
+    "keyword_exhausted": "seed 5: 種子 5：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     12
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison"
+      ],
+      [
+       "holy"
+      ]
+     ],
+     8
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 116.6,
+    "ms_median": 80.6,
+    "ms_max": 372.4,
+    "total_s": 23.31
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 184,
+   "designs": 69,
+   "structures": 180,
+   "reasons": {
+    "keyword_exhausted": 16
+   },
+   "samples": {
+    "keyword_exhausted": "seed 18: 種子 18：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 171.9,
+    "ms_median": 128.7,
+    "ms_max": 528.2,
+    "total_s": 34.38
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 184,
+   "designs": 69,
+   "structures": 180,
+   "reasons": {
+    "keyword_exhausted": 16
+   },
+   "samples": {
+    "keyword_exhausted": "seed 18: 種子 18：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "push:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     15
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 171.4,
+    "ms_median": 129.5,
+    "ms_max": 461.1,
+    "total_s": 34.27
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 134,
+   "designs": 60,
+   "structures": 133,
+   "reasons": {
+    "keyword_exhausted": 66
+   },
+   "samples": {
+    "keyword_exhausted": "seed 2: 種子 2：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:frozen",
+       "apply_status:poison"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 271.3,
+    "ms_median": 261.8,
+    "ms_max": 515.9,
+    "total_s": 54.25
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 134,
+   "designs": 60,
+   "structures": 133,
+   "reasons": {
+    "keyword_exhausted": 66
+   },
+   "samples": {
+    "keyword_exhausted": "seed 2: 種子 2：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     13
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "pull:"
+      ],
+      [
+       "shadow"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:frozen",
+       "apply_status:poison"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 272.7,
+    "ms_median": 260.3,
+    "ms_max": 534.4,
+    "total_s": 54.54
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 93,
+   "designs": 40,
+   "structures": 92,
+   "reasons": {
+    "keyword_exhausted": 107
+   },
+   "samples": {
+    "keyword_exhausted": "seed 2: 種子 2：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "apply_status:poison"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "apply_status:silenced"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 356.0,
+    "ms_median": 464.1,
+    "ms_max": 551.0,
+    "total_s": 71.21
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "poisoned",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 93,
+   "designs": 40,
+   "structures": 92,
+   "reasons": {
+    "keyword_exhausted": 107
+   },
+   "samples": {
+    "keyword_exhausted": "seed 2: 種子 2：300 次嘗試都做不出帶有關鍵字 poisoned 的技能"
+   },
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     16
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "ice"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:marked",
+       "apply_status:poison"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "damage:"
+      ],
+      [
+       "earth"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "apply_status:poison",
+       "apply_status:silenced"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     5
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 356.0,
+    "ms_median": 466.4,
+    "ms_max": 566.3,
+    "total_s": 71.21
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.0,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.1,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 632000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.0,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.0,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 732000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.0,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.0,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 632000
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.0,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 164500
+  },
+  {
+   "keyword": "form",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 0,
+   "designs": 0,
+   "structures": 0,
+   "reasons": {
+    "keyword_not_composable": 200
+   },
+   "samples": {
+    "keyword_not_composable": "seed 0: 組合器做不出關鍵字 form 的技能（該關鍵字需要手寫技能）"
+   },
+   "top_designs": [],
+   "blocked_by_design": false,
+   "reachable": false,
+   "guardian": 0,
+   "diag": {
+    "keyword_exclusive": 0,
+    "keyword_hit": 0,
+    "plain_ok": 50
+   },
+   "timing": {
+    "ms_mean": 0.0,
+    "ms_median": 0.0,
+    "ms_max": 0.1,
+    "total_s": 0.0
+   },
+   "status": "empty",
+   "cause": "內容標記組合器不做（composable: false）",
+   "frequency": 94000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 5.9,
+    "ms_median": 4.9,
+    "ms_max": 25.9,
+    "total_s": 1.17
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.0,
+    "ms_median": 5.1,
+    "ms_max": 29.9,
+    "total_s": 1.2
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.4,
+    "ms_median": 6.0,
+    "ms_max": 37.0,
+    "total_s": 1.48
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.8,
+    "ms_median": 6.2,
+    "ms_max": 40.9,
+    "total_s": 1.56
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.7,
+    "ms_median": 6.2,
+    "ms_max": 52.3,
+    "total_s": 1.55
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.7,
+    "ms_median": 6.3,
+    "ms_max": 34.9,
+    "total_s": 1.53
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.1,
+    "ms_median": 6.7,
+    "ms_max": 50.9,
+    "total_s": 1.63
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "combo_point",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.2,
+    "ms_median": 6.7,
+    "ms_max": 41.3,
+    "total_s": 1.64
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.0,
+    "ms_median": 4.7,
+    "ms_max": 23.0,
+    "total_s": 1.2
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 5.9,
+    "ms_median": 4.8,
+    "ms_max": 29.4,
+    "total_s": 1.18
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.0,
+    "ms_median": 5.8,
+    "ms_max": 36.8,
+    "total_s": 1.39
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.0,
+    "ms_median": 5.4,
+    "ms_max": 35.4,
+    "total_s": 1.4
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.8,
+    "ms_median": 6.3,
+    "ms_max": 35.1,
+    "total_s": 1.55
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.7,
+    "ms_median": 6.2,
+    "ms_max": 38.4,
+    "total_s": 1.55
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.1,
+    "ms_median": 6.5,
+    "ms_max": 35.8,
+    "total_s": 1.63
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "fury",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.1,
+    "ms_median": 6.5,
+    "ms_max": 43.4,
+    "total_s": 1.62
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.2,
+    "ms_median": 5.2,
+    "ms_max": 28.1,
+    "total_s": 1.24
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.4,
+    "ms_median": 5.4,
+    "ms_max": 30.5,
+    "total_s": 1.29
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.1,
+    "ms_median": 5.8,
+    "ms_max": 43.2,
+    "total_s": 1.41
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.2,
+    "ms_median": 5.6,
+    "ms_max": 35.2,
+    "total_s": 1.45
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.9,
+    "ms_median": 6.3,
+    "ms_max": 42.6,
+    "total_s": 1.57
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.8,
+    "ms_median": 6.2,
+    "ms_max": 41.7,
+    "total_s": 1.56
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.2,
+    "ms_median": 6.6,
+    "ms_max": 46.0,
+    "total_s": 1.65
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "focus",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.4,
+    "ms_median": 6.8,
+    "ms_max": 42.7,
+    "total_s": 1.68
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.1,
+    "ms_median": 5.0,
+    "ms_max": 31.4,
+    "total_s": 1.22
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 1,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 117,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "wind"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 6.0,
+    "ms_median": 4.9,
+    "ms_max": 32.4,
+    "total_s": 1.2
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.0,
+    "ms_median": 5.8,
+    "ms_max": 36.2,
+    "total_s": 1.39
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1281000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 2,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 112,
+   "structures": 196,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     6
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.0,
+    "ms_median": 5.6,
+    "ms_max": 30.8,
+    "total_s": 1.4
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 732000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.8,
+    "ms_median": 6.0,
+    "ms_max": 38.6,
+    "total_s": 1.56
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 1106000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 3,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 90,
+   "structures": 198,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     8
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     7
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 7.8,
+    "ms_median": 6.5,
+    "ms_max": 39.2,
+    "total_s": 1.56
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 632000
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "rare",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.3,
+    "ms_median": 6.4,
+    "ms_max": 41.0,
+    "total_s": 1.66
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 164500
+  },
+  {
+   "keyword": "ki",
+   "kind": "reaction",
+   "tier": 4,
+   "rarity": "epic",
+   "seeds": 200,
+   "legal": 200,
+   "designs": 72,
+   "structures": 197,
+   "reasons": {},
+   "samples": {},
+   "top_designs": [
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     11
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "single",
+      [
+       "add_stack:",
+       "damage:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     10
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "heal:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ],
+    [
+     [
+      "reaction",
+      "reaction",
+      "self",
+      [
+       "add_stack:",
+       "shield:"
+      ],
+      [
+       "physical"
+      ]
+     ],
+     9
+    ]
+   ],
+   "blocked_by_design": false,
+   "reachable": true,
+   "guardian": 0,
+   "diag": {},
+   "timing": {
+    "ms_mean": 8.4,
+    "ms_median": 6.7,
+    "ms_max": 41.1,
+    "total_s": 1.68
+   },
+   "status": "ok",
+   "cause": "",
+   "frequency": 94000
+  }
+ ]
+}

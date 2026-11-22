@@ -16,7 +16,7 @@
 id: ashen_heart
 name_zh: 灰燼之心
 attributes: {str: 120, dex: 60, con: 160, int: 140, wis: 120, wil: 140}
-max_hp: 1600
+max_hp: 1360
 speed: 0
 armor_bonus: 50
 weapon: fire_staff

@@ -261,6 +261,7 @@ keywords:
     name_zh: 形態
     description_zh: 變身成熊、貓、龍等形態，換用天生武器並獲得形態專屬的效果；有些技能只在形態中才生效或變強。
     composable: false
+    active_only: true   # GS-1（#172）：形態只出在主動題（含姿態），被動、反應題不抽
     makes:
       - {effect: enter_form}
     uses:

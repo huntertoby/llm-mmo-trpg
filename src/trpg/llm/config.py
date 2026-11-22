@@ -6,7 +6,7 @@ import os
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
@@ -48,6 +48,14 @@ class LLMConfig(BaseModel):
     max_tokens: int = Field(default=1024, ge=1)
     json_schema_mode: Literal["auto", "response_format", "guided_json", "none"] = "auto"
     fallback_alert_permille: int = Field(default=200, ge=0, le=1000)
+    probe_timeout_s: float = Field(default=3.0, gt=0)
+    """伺服器檢查本機模型連不連得上（``GET {base_url}/models``）最多等幾秒（HC-7 b 從
+    ``trpg.api.llm_source`` 的常數搬來，預設同原值）。"""
+    situation_attempts: int = Field(default=2, ge=1)
+    """情境判定提議每題最多嘗試幾次（HC-7 b 從 ``trpg.llm.situation`` 搬來，預設同原值）。"""
+    story_attempts: int = Field(default=2, ge=1)
+    """大世界說書人每次最多嘗試幾次（HC-7 b 從 ``trpg.narrative.storyteller`` 搬來，預設同
+    原值）。"""
     generate: bool = False
     """LLM 生成開關（Phase 4-L6）：打開時 ``trpg run`` 的候選請本機模型提議技能；預設關
     （沒有本機模型時照舊）。命令列 ``--llm`` 也能打開；環境變數 ``TRPG_LLM_GENERATE``
@@ -63,6 +71,18 @@ class LLMConfig(BaseModel):
     ``oneOf``（帶 ``oneOf`` 的 ``response_format`` 回 HTTP 400，退到 ``guided_json`` 又會被
     整個忽略，模型自由發揮）。專案的 schema 只用 ``oneOf`` 做判別式 union（各分支的 ``kind``
     互斥），改成 ``anyOf`` 語意相同；vLLM 的 xgrammar 本來就是這樣近似的。"""
+
+
+LLM_DEFAULTS: Final = LLMConfig()
+"""``config/llm.toml`` 沒寫時的值（schema 的預設）。程式裡要預設值的地方一律讀這裡，不另寫數字
+（HC-7 b）；伺服器與命令列照設定檔讀到的 :class:`LLMConfig` 帶。"""
+
+
+def client_config(client: object) -> LLMConfig:
+    """``client`` 帶的設定（:class:`~trpg.llm.client.OpenAICompatClient` 的 ``config``）；Mock 等
+    沒有設定的 client 用 :data:`LLM_DEFAULTS`。"""
+    config = getattr(client, "config", None)
+    return config if isinstance(config, LLMConfig) else LLM_DEFAULTS
 
 
 def load_llm_config(path: Path | None = None, env: Mapping[str, str] | None = None) -> LLMConfig:

@@ -84,8 +84,6 @@ __all__ = [
 
 _RULE_CATEGORIES = ("rule_rewrite", "rule_change")
 _SELF_MOVES = ("dash", "leap", "charge_through", "shadowstep")
-_ENEMY_POINTS = 10
-_ALLY_HIT_POINTS = 15
 _PERMILLE = 1000
 
 
@@ -316,7 +314,8 @@ def _score(
         harmed = 0
         if any(e.affects == "all" for e in effects):
             harmed = sum(1 for u in allies if u.id != summon.id)
-        points = len(enemies) * _ENEMY_POINTS - harmed * _ALLY_HIT_POINTS
+        weights = state.ruleset.ai.infused_pick
+        points = len(enemies) * weights.enemy_points - harmed * weights.ally_hit_penalty
         return points, sum(_missing_permille(u) for u in enemies)
     if not allies:
         return None

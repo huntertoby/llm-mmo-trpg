@@ -365,7 +365,7 @@ def _advance_one(
             return char, out  # 事件型條件同一個動作只認一次
         if not _all_hold(library, world, char, step.when, events=events, now=now):
             return char, out
-        if holds_step(char, quest, state.steps_done, step.reward):
+        if holds_step(library, char, quest, state.steps_done, step.reward):
             return char, out  # OB-4（#150）：入門期給招的步驟等正式選定才結算
         used_event = used_event or step.has_event_condition()
         char, done = _complete_step(library, world, char, quest, step=step, state=state, now=now)

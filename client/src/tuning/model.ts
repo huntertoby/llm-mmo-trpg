@@ -301,6 +301,11 @@ export function simScales(options: Pick<TuningSimOptions, "default_seeds">): rea
 export const battleCount = (builds: number, seeds: number): number => builds * seeds;
 
 /** 規模檢查：沒選 build、種子不是正整數、超過上限 → 中文原因。 */
+/** 模擬結果表下的說明；「樣本小」的分母門檻照伺服器 `small_sample`（HC-6b）。 */
+export function smallSampleNote(smallSample: number): string {
+  return `括號是分子／分母（場數或回合數）；分母小於 ${smallSample} 標「樣本小」，數字容易跳，想確定請改用「中」或加種子數再跑。`;
+}
+
 export function scaleProblem(options: TuningSimOptions, builds: number, seeds: number): string | null {
   if (builds === 0) return "至少勾一個 build";
   if (!Number.isInteger(seeds) || seeds < 1) return "種子數要填 1 以上的整數";
@@ -453,6 +458,15 @@ export interface FieldBlock {
  * 表單分段（PB-1n 待決 2）：帶 `group_zh` 的欄位（頭目部位）按組集中，組依第一次出現排序、組內照原順序，
  * 放在該組第一個欄位的位置；其他欄位照原順序。後端的欄位順序不變（是「欄位為主」）。
  */
+/** HC-B：分組超過這麼多時（技能預算表），分組預設收合；頭目部位這類少量分組照舊展開。 */
+export const OPEN_GROUPS_MAX = 4;
+
+/** 分組預設展開嗎（HC-B）：分組少就全展開；分組多時只展開有改動或有錯誤的組。 */
+export function groupOpen(block: FieldBlock, groupCount: number, edits: Edits, file: string, errors: ReadonlyMap<string, readonly string[]>): boolean {
+  if (block.title === null || groupCount <= OPEN_GROUPS_MAX) return true;
+  return block.fields.some((f) => edits[editKey(file, f.path)] !== undefined || (errors.get(f.path)?.length ?? 0) > 0);
+}
+
 export function fieldBlocks(fields: readonly TuningFieldView[]): FieldBlock[] {
   const out: FieldBlock[] = [];
   const groups = new Map<string, FieldBlock>();

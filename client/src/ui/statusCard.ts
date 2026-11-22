@@ -6,6 +6,7 @@ import { actionCardText } from "../battle/actionInfo";
 import { ammoPips, ammoText, hasMagazine } from "../battle/ammo";
 import { HIDDEN_INFO_HINT, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import { sourcePips } from "../battle/source";
+import { gameRules } from "../battle/glossary";
 import { stackSkillNames } from "../battle/stackInfo";
 import { GAUGE_MAX, hasGauge } from "../render/qIcon/stackGauge";
 
@@ -111,8 +112,9 @@ const AP_MARK_LIMIT = 2;
 export const AP_PIP_TEXT = {
   kept: "上回合保留的 AP",
   borrowed: (n: number) => `預支來的 AP（下回合 −${n}）`,
-  overdraftNext: "透支：下回合少 1 AP",
-  borrowNext: "預支：下回合少 1 AP",
+  /** 下回合只少 1 格時寫來源（HC-6b：格數照實際要少的數，不寫死）。 */
+  overdraftNext: (n: number) => `透支：下回合少 ${n} AP`,
+  borrowNext: (n: number) => `預支：下回合少 ${n} AP`,
   nextMany: (n: number) => `下回合少 ${n} AP`,
   /** 回合開始時已經扣掉的那格：只有透支、只有預支、兩者疊加（不寫原因）。 */
   lostNow: (n: number) => `透支：這回合少 ${n} AP`,
@@ -129,7 +131,7 @@ function lostNowText(lost: number, borrowed: number): string {
 /** 下回合會少那格的說明：合計 2 格以上寫合計，1 格寫來源（預支或透支）。 */
 function nextText(next: number, borrowed: number): string {
   if (next >= 2) return AP_PIP_TEXT.nextMany(next);
-  return borrowed > 0 ? AP_PIP_TEXT.borrowNext : AP_PIP_TEXT.overdraftNext;
+  return borrowed > 0 ? AP_PIP_TEXT.borrowNext(next) : AP_PIP_TEXT.overdraftNext(next);
 }
 
 /**
@@ -209,6 +211,11 @@ export function reactionChip(unit: UnitView): StatChip {
   };
 }
 
+/** 源力的規則句；每場至少幾點照伺服器 `rules.source_min_at_start`（`core.yaml`；HC-6c）。源泉格 +1 是引擎寫死的（`engine/source.py`）。 */
+export function sourceRuleText(minAtStart: number = gameRules().source_min_at_start): string {
+  return `傳說技能的代價（跨戰鬥保留，每場至少 ${minAtStart} 點；走上地圖上的「源」格 +1）`;
+}
+
 export function sourceChip(unit: UnitView): StatChip {
   return {
     key: "source",
@@ -216,7 +223,7 @@ export function sourceChip(unit: UnitView): StatChip {
     label: "",
     pips: sourcePips(unit.source, unit.source_max),
     dim: unit.source <= 0,
-    hint: lines(`源力 ${unit.source}/${unit.source_max}`, "傳說技能的代價（跨戰鬥保留，每場至少 1 點；走上地圖上的「源」格 +1）"),
+    hint: lines(`源力 ${unit.source}/${unit.source_max}`, sourceRuleText()),
   };
 }
 
@@ -273,16 +280,18 @@ export function unitChips(unit: UnitView): StatChip[] {
 export const ELEMENT_STANCE_RE = /^stance_(physical|fire|ice|lightning|poison|wind|earth|holy|shadow)_([1-5])$/;
 
 /**
- * 晶能湧動／晶能狂湧的階（QI-3b，D3）：前端名單（比照 `CREATURE_CHARGE_SKILLS`；後端不帶欄位）。
- * 兩個 ID 在名詞表快照裡（`ui/qi3bStatusCorner.test.ts` 擋改名）。
+ * 晶能湧動／晶能狂湧的階（QI-3b，D3）：照 ID 的樣式（同元素架勢）：`crystal_surge`＝第一階，`crystal_surge_<階>`
+ * 是之後的階（HC-7 b：原本是前端寫死的對照表）。兩個 ID 在名詞表快照裡（`ui/qi3bStatusCorner.test.ts` 擋改名）。
  */
-export const CRYSTAL_SURGE_TIER: Readonly<Record<string, number | undefined>> = { crystal_surge: 1, crystal_surge_2: 2 };
+export const CRYSTAL_SURGE_RE = /^crystal_surge(?:_([2-9]))?$/;
 
 /** 狀態本身的級數（元素架勢 1～5、晶能湧動／狂湧 1／2）；沒有回 null。 */
 export function statusTier(id: string): number | null {
   const m = ELEMENT_STANCE_RE.exec(id);
   if (m !== null) return Number(m[2]);
-  return CRYSTAL_SURGE_TIER[id] ?? null;
+  const surge = CRYSTAL_SURGE_RE.exec(id);
+  if (surge === null) return null;
+  return surge[1] === undefined ? 1 : Number(surge[1]);
 }
 
 /**

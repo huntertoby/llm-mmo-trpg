@@ -17,6 +17,7 @@ import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Hint } from "../ui/Hint";
 import { Callout, Chip, EmptyNote, Fold, FoldGroup, HudBare, InfoTip, KeepNum, LockGlyph, PanelHead, PartBare, TabLine, Tag, EventBare } from "../ui/PanelKit";
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
+import { durationText } from "../ui/rulesText";
 import { SkillCardView } from "../ui/SkillCardView";
 import { SkillIconView } from "../ui/SkillIconView";
 import { LookChangeRow, RaceChangeRow } from "./GrowthLookRows";
@@ -35,7 +36,7 @@ import {
   GROWTH_TITLE_ZH,
   growthTabBadge,
   growthWarning,
-  LEVEL4_TAG_ZH,
+  openingLevelTag,
   NO_REFLASH_TIP_ZH,
   NO_REFLASH_ZH,
   NOT_NOW_ZH,
@@ -119,7 +120,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
     <div className="world-flash-pane" data-testid="run-flash">
       {limit !== null && (
         <Callout tone="lock" testId="world-limit-note">
-          <b>{FLASH_LOCK_ZH.head}</b>：<KeepNum text={FLASH_LOCK_ZH.tail} />
+          <b>{FLASH_LOCK_ZH.head}</b>：<KeepNum text={openingLevelTag()} />
         </Callout>
       )}
       <FlashRuleChips rules={hero.flash_rules} />
@@ -166,7 +167,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
                 </summary>
                 <SkillCardView card={card} flash={flash} flashRules={hero.flash_rules} wish={view.character?.skill_wishes?.[card.id]} />
               </details>
-              <span className="pnl-skill-tag">{limit !== null && <LockTag text={LEVEL4_TAG_ZH} reason={limit} />}</span>
+              <span className="pnl-skill-tag">{limit !== null && <LockTag text={openingLevelTag()} reason={limit} />}</span>
               <Hint text={can ? undefined : reason}>
                 <span className="pnl-skill-btn">
                   <button
@@ -238,7 +239,7 @@ function careFoldEnd(view: WorldView, fold: CareFold): ReactNode {
   }
   if (fold === "dissolve") {
     const reason = limitOf(view, "dissolve");
-    return reason === null ? null : <LockTag text={LEVEL4_TAG_ZH} reason={reason} testId="world-care-dissolve-tag" />;
+    return reason === null ? null : <LockTag text={openingLevelTag()} reason={reason} testId="world-care-dissolve-tag" />;
   }
   const reason = limitOf(view, "oath");
   return reason === null ? null : <LockTag text={CHOSEN_TAG_ZH} reason={reason} testId="world-care-oath-tag" />;
@@ -344,7 +345,7 @@ function OathSection({ view, busy, onAct, bare = false }: Pick<Props, "view" | "
   return (
     <div className={bare ? "world-oath" : "panel world-oath"} data-testid="world-oath">
       {!bare && <div className="section-title">誓約</div>}
-      <p className="small muted">在城鎮或營火立誓，同時 1 個，一直有效到自己解除；解除後現實 1 天內不能再立。</p>
+      <p className="small muted">在城鎮或營火立誓，同時 1 個，一直有效到自己解除；解除後現實 {durationText(oath.cooldown_seconds)}內不能再立。</p>
       {oath.available && (
         <p className="small muted" data-testid="world-oath-rules">
           {[oath.slot_zh, oath.penalty_zh].filter((s) => s !== undefined && s !== "").join("。")}
@@ -363,7 +364,7 @@ function OathSection({ view, busy, onAct, bare = false }: Pick<Props, "view" | "
               </button>
             ) : (
               <>
-                <span className="small">解除後現實 1 天內不能再立誓，確定？</span>
+                <span className="small">解除後現實 {durationText(oath.cooldown_seconds)}內不能再立誓，確定？</span>
                 <button
                   type="button"
                   className="danger primary"

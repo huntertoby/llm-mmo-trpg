@@ -225,7 +225,10 @@ def test_replay_with_growth(library: ContentLibrary, make_char: MakeChar) -> Non
     lib = dataclasses.replace(
         with_rules(library, encounter={"base_permille": 1000, "max_permille": 1000}),
         world_oaths=OathTable.model_validate(
-            {"templates": [{"id": "no_items", "name_zh": "不使用道具", "difficulty": "easy"}]}
+            {
+                "penalty_rounds": 2,
+                "templates": [{"id": "no_items", "name_zh": "不使用道具", "difficulty": "easy"}],
+            }
         ),
     )
     skill = "skill_frost_shackle"  # FL-1a：戰歌已沒有閃現選項

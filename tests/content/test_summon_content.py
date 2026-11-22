@@ -11,6 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from tests.engine.helpers import PROJECT_ROOT, library, make_skill
+from tests.skillgen.helpers import limit_problems
 from trpg.content.library import load_library
 from trpg.content.skills import SkillDef, skill_problems
 from trpg.content.summons import summon_dpr
@@ -119,7 +120,6 @@ def test_invalid_summon_effects_are_reported(
 @pytest.mark.parametrize(
     ("effects", "kind", "message"),
     [
-        ([{**SUMMON, "count": 3, "power_permille": 600}], "active", "count 只能是 1 或 2"),
         ([{**SUMMON, "count": 2}], "active", "count: 2 必須填小於 1000 的 power_permille"),
         ([{**SUMMON, "count": 2, "power_permille": 1100}], "active", "小於 1000 的 power_permille"),
         ([{**SUMMON, "power_permille": 600}], "active", "只召喚一隻時 power_permille 不能小於"),
@@ -139,6 +139,15 @@ def test_summon_skill_schema_rules(effects: list[dict[str, Any]], kind: str, mes
         data["ap_cost"] = None
     with pytest.raises(ValidationError, match=message):
         SkillDef.model_validate(data)
+
+
+def test_summon_count_is_limited_by_the_ruleset() -> None:
+    """HC-4b：一次召喚的數量（1 或 ``skill_limits.max_summon_count``）在 ``Ruleset`` 層檢查。"""
+    data = make_skill("skill_t_sum", TILE, [SUMMON]).model_dump(mode="json")
+    data.update(effects=[{**SUMMON, "count": 3, "power_permille": 600}])
+    assert limit_problems(SkillDef.model_validate(data)) == [
+        "summon 的 count 只能是 1 或 2，收到 3"
+    ]
 
 
 def test_a_self_effect_next_to_the_summon_is_allowed() -> None:

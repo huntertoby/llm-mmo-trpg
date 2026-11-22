@@ -27,7 +27,7 @@ from trpg.api.tuning.check import (
     to_changes,
 )
 from trpg.api.tuning.diff import change_views, diff_rows, make_diff
-from trpg.api.tuning.drafts import Change, Draft, DraftStore, merge
+from trpg.api.tuning.drafts import DRAFT_NAME_MAX, Change, Draft, DraftStore, merge
 from trpg.api.tuning.git_guard import Git, GitError
 from trpg.api.tuning.objects import (
     ObjectNotFoundError,
@@ -37,10 +37,6 @@ from trpg.api.tuning.objects import (
     object_file,
 )
 from trpg.api.tuning.ratios import (
-    DEFAULT_SEEDS as RATIO_DEFAULT_SEEDS,
-)
-from trpg.api.tuning.ratios import (
-    MAX_WORK,
     BaselineError,
     RatioStore,
     plan_ratio,
@@ -49,7 +45,12 @@ from trpg.api.tuning.ratios import (
     run_data,
 )
 from trpg.api.tuning.schemas import (
+    MAP_DEFAULT_SEEDS,
     MAX_RATIO_SEEDS,
+    MAX_SIM_MAPS,
+    RATIO_DEFAULT_SEEDS,
+    RATIO_MAX_WORK,
+    SIM_DEFAULT_SEEDS,
     SMALL_SAMPLE,
     TuningApplyResult,
     TuningBudgetResult,
@@ -95,7 +96,7 @@ from trpg.api.tuning.writeback import (
     reverse_of_commit,
     writeback_problem,
 )
-from trpg.content.enemy_moves import BOSS, ELITE, MOB, move_shortfalls
+from trpg.content.enemy_moves import min_moves, move_shortfalls
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.loader import parse_yaml
 from trpg.content.skills import SkillDef
@@ -115,11 +116,10 @@ __all__ = [
 ]
 
 TUNING_ENV: Final = "TRPG_TUNING"
-DEFAULT_SIM_SEEDS: Final = 3
-"""預設「小」：1 個頭目 × 8 build × 3 種子＝24 場（第 0.0 節第 5 點）。"""
-DEFAULT_MAP_SEEDS: Final = 24
-"""地圖戰預設：1 張圖 × 24 種子（NW-2 5.6）。"""
-MAX_SIM_MAPS: Final = 3
+DEFAULT_SIM_SEEDS: Final = SIM_DEFAULT_SEEDS
+"""頭目戰預設種子數（``schemas.SIM_DEFAULT_SEEDS``，HC-7 b 起只留那一份）。"""
+DEFAULT_MAP_SEEDS: Final = MAP_DEFAULT_SEEDS
+"""地圖戰預設種子數（``schemas.MAP_DEFAULT_SEEDS``）。"""
 _NOT_RESTARTED_ZH: Final = "這次開伺服器以來沒有寫回；遊戲用的是目前的數值。"
 
 
@@ -202,6 +202,7 @@ class TuningService:
             drafts=self.drafts.names(),
             sim_running=self.sims.running,
             max_group=MAX_GROUP,
+            draft_name_max=DRAFT_NAME_MAX,
         )
 
     def objects(self, kind: str | None = None) -> list[TuningObjectSummary]:
@@ -280,6 +281,7 @@ class TuningService:
         for item in fresh:
             by_unit.setdefault(re.split(r"[/=]", item, maxsplit=1)[0], []).append(item)
         flags: list[TuningMinMovesFlag] = []
+        floor = min_moves(draft)
         for unit_id in sorted(by_unit):
             unit = draft.units.get(unit_id)
             name = unit.name_zh if unit is not None else unit_id
@@ -290,7 +292,8 @@ class TuningService:
                     shortfalls=by_unit[unit_id],
                     message_zh=(
                         f"{name}（{unit_id}）低於 #149 的招數下限"
-                        f"（一般 {MOB} 招、精英 {ELITE} 招、頭目每階段 {BOSS} 招）："
+                        f"（一般 {floor.mob} 招、精英 {floor.elite} 招、"
+                        f"頭目每階段 {floor.boss_phase} 招）："
                         f"{'、'.join(by_unit[unit_id])}；要寫回請勾「我確定」"
                     ),
                 )
@@ -496,7 +499,7 @@ class TuningService:
             max_maps=MAX_SIM_MAPS,
             ratio_max_seeds=MAX_RATIO_SEEDS,
             small_sample=SMALL_SAMPLE,
-            ratio_max_work=MAX_WORK,
+            ratio_max_work=RATIO_MAX_WORK,
             ratio_battles_per_second=self.sims.ratio_battles_per_second,
         )
 

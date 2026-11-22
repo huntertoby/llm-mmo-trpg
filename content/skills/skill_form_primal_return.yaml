@@ -1,0 +1,26 @@
+# 原形歸一（GS-2，#172，06 6.30「形態池名單」高階形態技，解形爆發的高階版；數值為初值，未經模擬）：
+# 只能在形態中施放；先解除目前的形態（leave_form：照常冷卻），再對自己周圍 2 格的敵人造成高傷害。
+# 解除形態算代價（allowance.leave_form_permille）。
+id: skill_form_primal_return
+schema_version: 1
+name_zh: 原形歸一
+tier: 4
+rank: 1
+rarity: epic
+kind: active
+skeleton: area
+category: spell
+weapon_req: any
+ap_cost: 2
+scaling_attr: con
+shape: {type: ring, radius: 2, solid: true}   # GS-3（#173）：實心＝周圍 2 格（距離 1～2，含貼身相鄰）
+effects:
+  - {type: leave_form, affects: self}
+  - {type: damage, dice: 3d8, element: physical}
+condition: null
+cost: {mana: 100, cooldown: 3}
+tags: [physical, area, aoe]
+narrative:
+  concept: 把整副獸身的力量一次還給天地，化成橫掃一圈的爆發
+  cast_flavor: 你的獸形寸寸崩散，積蓄的野性化作一道巨浪向四周轟出
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

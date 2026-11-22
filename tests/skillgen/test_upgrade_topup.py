@@ -70,7 +70,6 @@ from trpg.skillgen.proposal_topup import (
     FILLER_EFFECTS,
     FILLER_PREFERENCE,
     TOPUP_CODES,
-    TOPUP_MAX,
     filler_order,
     keyword_way_texts,
     keywords_reachable,
@@ -282,7 +281,7 @@ def test_topup_is_deterministic_and_pure(library: ContentLibrary, models: Propos
     assert data == frozen  # 輸入不被修改
     candidates = topup_candidates(library, data, keywords=("marked",), weak=True)
     assert candidates == topup_candidates(library, data, keywords=("marked",), weak=True)
-    assert 0 < len(candidates) <= TOPUP_MAX
+    assert 0 < len(candidates) <= library.composer.search.proposal.topup_max
     assert data == frozen
 
 
@@ -732,14 +731,13 @@ def test_reaction_heal_high_ground_rare_tier2_falls_back(library: ContentLibrary
 @pytest.mark.parametrize("keyword", ["wet", "high_ground", "summon"])
 def test_reaction_keywords_the_composer_cannot_carry(library: ContentLibrary, keyword: str) -> None:
     """修補前所有階級的稀有／史詩反應技配這三個關鍵字都會丟 FallbackError（掃描 18 組）。
-    RC-1 起潮濕、高處由組合器做。召喚物的護主 RC-1b 補上推導規則後 1、2 階由組合器做，3 階起縮小版
-    召喚物到全強度（1000‰）仍進不了預算窗（TF-1 已知），照舊由工坊做（見
+    RC-1 起潮濕、高處由組合器做。召喚物的護主 RC-1b 補上推導規則後 1、2 階由組合器做；2026-11-21
+    使用者改值（護主 1→3 輪）後 3 階也進得了預算窗，改由組合器做（見
     :func:`test_guardian_reaction_comes_from_the_composer`）。工坊這條退路用 RC-1 前的組合器測。"""
     request = ProposalRequest(3, "epic", kind="reaction", keywords=(keyword,))
     assert _legal(library, request)
     assert _check(_without_recipes(library), request, seed=0) == "workshop"
-    expected = "workshop" if keyword == "summon" else "composer"
-    assert _check(library, request, seed=0) == expected
+    assert _check(library, request, seed=0) == "composer"
 
 
 def test_guardian_reaction_comes_from_the_composer(library: ContentLibrary) -> None:

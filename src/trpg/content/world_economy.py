@@ -65,7 +65,6 @@ ITEM_KINDS: Final[dict[str, str]] = {
 """物品種類 → 中文。"""
 
 _ITEM_ID = r"^item_[a-z0-9_]+$"
-_STACKS: Final[dict[ItemKind, int]] = {"consumable": 10, "material": 20, "dye": 10, "supply": 1}
 _COLOR = r"^#[0-9A-Fa-f]{6}$"
 
 
@@ -73,9 +72,9 @@ class BattleGold(ContentModel):
     """打贏一場的金幣（8.15「戰鬥」）：陣容含精英用 ``elite``；每高 1 級
     +``level_step_permille``‰。"""
 
-    battle: int = Field(default=15, ge=0)
-    elite: int = Field(default=45, ge=0)
-    level_step_permille: int = Field(default=100, ge=0, le=1000)
+    battle: int = Field(ge=0)
+    elite: int = Field(ge=0)
+    level_step_permille: int = Field(ge=0, le=1000)
 
     def gold_for(self, *, elite: bool, level: int) -> int:
         base = self.elite if elite else self.battle
@@ -104,19 +103,19 @@ class QuestCoins(ContentModel):
 class EconomyRules(ContentModel):
     """``content/world/economy.yaml``（26.2 第 1 點）。"""
 
-    bag_slots: int = Field(default=30, ge=1, le=200)
-    pouch_slots: int = Field(default=3, ge=0, le=10)
-    stack_max: dict[ItemKind, int] = Field(default_factory=lambda: dict(_STACKS))
-    sell_permille: int = Field(default=500, ge=0, le=1000)
+    bag_slots: int = Field(ge=1, le=200)
+    pouch_slots: int = Field(ge=0, le=10)
+    stack_max: dict[ItemKind, int]
+    sell_permille: int = Field(ge=0, le=1000)
     unsellable_kinds: tuple[ItemKind, ...] = ()
     """不能賣的種類（20.1「材料不能賣」）。"""
     start_gold: int = Field(default=0, ge=0)
-    battle_gold: BattleGold = Field(default_factory=BattleGold)
+    battle_gold: BattleGold
     quest_coins: QuestCoins = Field(default_factory=QuestCoins)
 
     @model_validator(mode="after")
     def _check(self) -> EconomyRules:
-        missing = [k for k in _STACKS if self.stack_max.get(k, 0) < 1]
+        missing = [k for k in ITEM_KINDS if self.stack_max.get(k, 0) < 1]  # type: ignore[call-overload]
         if missing:
             raise ValueError(f"stack_max 缺少或小於 1：{missing}")
         return self
@@ -173,8 +172,6 @@ class WorldItemDef(ContentModel):
             problems = []
             if ITEM_SKILL_TAG not in skill.tags:
                 problems.append(f"道具技能要帶標籤 {ITEM_SKILL_TAG}")
-            if skill.kind != "active" or skill.ap_cost != 1:
-                problems.append("道具技能必須是主動、1 AP（8.17）")
             if skill.cost.uses_per_battle != 1:
                 problems.append("道具技能的 cost.uses_per_battle 必須是 1（每個用一次）")
             if problems:
@@ -185,6 +182,9 @@ class WorldItemDef(ContentModel):
 class WorldItemTable(ContentModel):
     """``content/world/items.yaml``。"""
 
+    item_skill_ap_cost: int = Field(ge=1)
+    """道具技能（消耗品戰鬥中的用法）的 AP（08 8.17「1 AP」；HC-7 b 從 :class:`WorldItemDef` 的檢查
+    搬來，由這張表檢查每個道具技能）。"""
     items: tuple[WorldItemDef, ...] = ()
 
     @model_validator(mode="after")
@@ -195,6 +195,11 @@ class WorldItemTable(ContentModel):
         dup = duplicates(i.skill.id for i in self.items if i.skill is not None)
         if dup:
             raise ValueError(f"道具技能 ID 重複：{dup}")
+        ap = self.item_skill_ap_cost
+        for item in self.items:
+            skill = item.skill
+            if skill is not None and (skill.kind != "active" or skill.ap_cost != ap):
+                raise ValueError(f"物品 {item.id}：道具技能必須是主動、{ap} AP（8.17）")
         return self
 
     def item_by_id(self) -> dict[str, WorldItemDef]:
@@ -278,6 +283,9 @@ class WorldEconomy:
     rules: EconomyRules | None = None
     items: dict[str, WorldItemDef] = field(default_factory=dict)
     shops: dict[str, ShopTable] = field(default_factory=dict)
+    item_skill_ap_cost: int | None = None
+    """``world/items.yaml`` 的 ``item_skill_ap_cost``（道具技能的 AP；HC-6c：畫面
+    「戰鬥中 N AP 使用」）；沒有物品表時 ``None``。"""
 
     def item_skills(self) -> dict[str, WorldItemDef]:
         """道具技能 ID → 物品。"""
@@ -333,6 +341,7 @@ def load_world_economy(
         files.append((rules_path, rules))
     items_path = root / ITEMS_FILE
     items: dict[str, WorldItemDef] = {}
+    item_ap: int | None = None
     if items_path.is_file():
         table = load_content_file(items_path, WorldItemTable)
         problems = [
@@ -348,6 +357,7 @@ def load_world_economy(
             raise ContentError(items_path, "；".join(problems))
         files.append((items_path, table))
         items = table.item_by_id()
+        item_ap = table.item_skill_ap_cost
     shops: dict[str, ShopTable] = {}
     directory = root / SHOPS_DIR
     for path in sorted(directory.glob("*.yaml")) if directory.is_dir() else ():
@@ -371,4 +381,4 @@ def load_world_economy(
                 path = directory / f"{region}.yaml"
                 raise ContentError(path, f"店 {shop.id} 和 {owners[shop.id]}.yaml 重複")
             owners[shop.id] = region
-    return WorldEconomy(rules=rules, items=items, shops=shops)
+    return WorldEconomy(rules=rules, items=items, shops=shops, item_skill_ap_cost=item_ap)

@@ -19,14 +19,20 @@ from trpg.api.tuning.schemas import (
     TuningSkillUser,
     TuningUnitSkills,
 )
+from trpg.api.tuning.shape_usage import unused_base_note
 from trpg.api.tuning.yaml_patch import MISSING, PatchError, lookup
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import PhaseGrowSurface, UnitTemplate
+from trpg.content.composer_rules import StructureRules
 from trpg.content.equipment import loadout_held
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import load_content_file, parse_yaml
+from trpg.content.schemas import ContentModel, field_bounds
+from trpg.content.skill_pick import SkillPickRules
+from trpg.content.skill_rules import BudgetRules
 from trpg.content.skills import SkillDef, weapon_problem
 from trpg.content.skills.primitives import PrimitiveTable
 from trpg.content.skills.shapes import ShapeTable
+from trpg.content.skills.specs import SkillCost
 from trpg.content.tuning_fields import (
     TABLE_KINDS,
     PathPart,
@@ -37,17 +43,20 @@ from trpg.content.tuning_fields import (
     parse_path,
     target_files,
 )
+from trpg.llm.prompts.wish_pick import count_zh
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import obstacle_candidates
+
+_PERMILLE: Final = 1000
 
 __all__ = [
     "AI_NAME_ZH",
     "AI_NOTES_ZH",
     "OBSTACLE_NOTICE_ZH",
-    "RETIER_NOTE_ZH",
     "TABLE_NAMES_ZH",
     "TABLE_NOTES_ZH",
     "ObjectNotFoundError",
+    "ai_notes",
     "concrete_fields",
     "field_limits",
     "field_value",
@@ -57,25 +66,32 @@ __all__ = [
     "obstacle_objects",
     "primitive_names",
     "read_data",
+    "retier_note_zh",
     "retier_notes",
     "skill_facets",
+    "skill_ranged",
     "skill_users",
+    "table_notes",
     "unit_levels",
     "unit_skill_picker",
 ]
 
+
+def _schema_default_zh(model: type[ContentModel], name: str) -> str:
+    """「沒寫＝<schema 預設值>」（HC-6b：照 pydantic 欄位的預設值組字，不另外寫一份）。"""
+    return f"沒寫＝{model.model_fields[name].default}"
+
+
 _DEFAULTS_ZH: Final = {
-    "speed": "沒寫＝5",
-    "armor_bonus": "沒寫＝0",
-    "level": "沒寫＝1",
+    "armor_bonus": _schema_default_zh(UnitTemplate, "armor_bonus"),
+    "level": _schema_default_zh(UnitTemplate, "level"),
     "max_mana": "沒寫＝依武器大類",
     "stamina": "沒寫＝依武器大類",
-    "cost.stamina": "沒寫＝0",
-    "cost.mana": "沒寫＝0",
+    "cost.stamina": _schema_default_zh(SkillCost, "stamina"),
+    "cost.mana": _schema_default_zh(SkillCost, "mana"),
     "cost.cooldown": "沒寫＝沒有冷卻",
-    "stance_upkeep": "沒寫＝0",
+    "stance_upkeep": _schema_default_zh(SkillDef, "stance_upkeep"),
     "phases[*].skills": "沒寫＝沿用上一階段",
-    "phases[*].grow_surface.max_rows": "沒寫＝4",
     "parts[*].on_break[*].rounds": "沒寫＝永久封住",
 }
 
@@ -138,9 +154,23 @@ TABLE_NAMES_ZH: Final = {
     "pick": "技能挑選模式的權重（全體共用）",
     "skill_triggers": "被動觸發時機（全體共用）",
     "skill_composer": "技能組合器的附帶配方（全體共用）",
+    "skill_conditions": "技能條件的預算倍率（全體共用）",
+    "skill_synergies": "技能協同係數（全體共用）",
+    "forms": "形態（全體共用）",
+    "equipment": "裝備規則（全體共用）",
+    "item_gen": "物品生成（全體共用）",
+    "skill_evolution": "技能分歧進化（全體共用）",
+    "flash": "閃現規則與計價（全體共用）",
+    "world_rules": "大世界規則：戰鬥、成長、許願池、實地地圖（全體共用）",
+    "world_economy": "大世界經濟（全體共用）",
+    "world_trade": "大世界交易與郵寄（全體共用）",
+    "world_season": "賽季：今日目標、頭目、循環賽（全體共用）",
 }
 """全體共用的表（:data:`TABLE_KINDS`）在清單上的名字（BS-1 加 ``rules``、``budget``；NW-3 加
-``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``）。"""
+``object``；PK-1 加 ``pick``；SK-5 加 ``skill_triggers``、``skill_composer``；HC-B 加
+``skill_conditions``、``skill_synergies``；HC-W2 加 ``forms``、``equipment``、``item_gen``；
+HC-4b2 加 ``skill_evolution``；HC-4b3 加 ``flash``；HC-4d 加大世界的 ``world_rules``、
+``world_economy``、``world_trade``、``world_season``）。"""
 
 TABLE_NOTES_ZH: Final = {
     "rules": (
@@ -150,7 +180,11 @@ TABLE_NOTES_ZH: Final = {
     "budget": (
         "這份是全體共用的技能預算表（skill_budget.yaml）：改了會讓相關技能的預算比例跟著變，"
         "超出合格區間的技能會在驗證時列出。",
-        "目前只開放「無聲」的預算成本（BS-1）：被動常駐一份、主動技能給 1 回合一份。",
+        "HC-B 起計價全部在這裡，依分組收合：原語、狀態、表面的點數，形狀倍率，各種係數，"
+        "召喚、代價折抵、特殊效果、修正技能……",
+        "階級預算與武器基準傷害在「核心戰鬥規則」；條件的個別倍率、協同係數、被動觸發時機各有一張表。"
+        "依參數值查表的形狀倍率（錐形依長度、十字依臂長、環形依半徑、連鎖依跳數）"
+        "HC-W2 起也在「形狀」組。",
     ),
     "object": (
         "這份是全體共用的格子物件表（objects.yaml）：改一種物件的值，所有地圖上的這種物件一起變。",
@@ -168,7 +202,6 @@ TABLE_NOTES_ZH: Final = {
         "被動能有多強（係數越大，同階級的被動效果越強）。",
         "改了係數，所有用這個時機的被動技能（手寫、組合器、LLM、裝備詞條）的預算比例跟著變，"
         "超出合格區間的技能會在驗證時列出。",
-        "只開放係數（SK-5）；「每命中 n 次」依 n 查表，這裡沒開。",
     ),
     "skill_composer": (
         "這份是技能組合器的抽選機率（skill_composer.yaml）：決定隨機組合器多常加上某種附帶配方"
@@ -177,18 +210,107 @@ TABLE_NOTES_ZH: Final = {
         "已經發給玩家的技能不受影響。",
         "只開放這幾個機率與吸血的千分比（SK-5）；結構性的清單（例如吸血可用的骨架）不開。",
     ),
+    "skill_conditions": (
+        "這份是技能條件表（skill_conditions.yaml）：條件的預算倍率平常照嚴苛度（技能預算表的"
+        "「條件的預算倍率」），這裡是個別條件的覆寫。",
+        "只展開已經寫了覆寫的條件（HC-B）；沒寫的條件要改嚴苛度的倍率。",
+    ),
+    "skill_synergies": (
+        "這份是技能協同係數表（skill_synergies.yaml）：技能同時帶有一條規則的全部機制標籤時，"
+        "總點數乘上該係數（符合多條時全部相乘）。",
+        "越大，帶這組機制的招算得越貴、其他效果越弱（HC-B）。標籤組合是結構，不開。",
+    ),
+    "forms": (
+        "這份是全體共用的形態表（forms.yaml）：改一個值，敵我所有會變身的單位一起變。",
+        "開放維持費、冷卻，以及每個形態的天生武器、形態中的效果與進入時的獎勵（HC-W2）；"
+        "只展開已經寫的數值，沒寫的機制不能從這裡加。形態技能的預算不看這些數字。",
+    ),
+    "equipment": (
+        "這份是全體共用的裝備規則（rules/equipment.yaml）：同名詞條的遞減與全身的硬上限，"
+        "所有角色的裝備一起套用。",
+        "總減傷上限要和核心戰鬥規則的元素修正下限一致，這裡不開（HC-W2）。",
+    ),
+    "item_gen": (
+        "這份是物品產生器的係數（item_gen.yaml）：稀有度、預算、詞條單價與代價型的計價。"
+        "改了只影響之後產生的物品（掉落、傭兵、重骰、打造），已經在背包裡的不變。",
+        "條件詞條的成立率分類、可用類別、必選詞條、獨特與暫緩的詞條清單是結構，不開；"
+        "產生器的重試次數也不開（HC-W2）。",
+    ),
+    "skill_evolution": (
+        "這份是全體共用的技能分歧進化表（skill_evolution.yaml）：改了之後所有召喚技的加深、數量型"
+        "進化一起變（已經學會的進化技能不變）。",
+        "目前只開召喚技進化的兩個幅度（HC-4b2）；一般進化的模板、關鍵字嫁接、數量型一次幾隻是結構，不開。",
+    ),
+    "flash": (
+        "這份是全體共用的閃現規則（flash_templates.yaml）：改了之後所有技能的閃現、重閃、完整技能"
+        "一起變（價格、選項數、次數、預算加成）。",
+        "只開出題價格與規則數值（HC-4b3）；幅度階梯、模板、類別、轉型是結構，不開。"
+        "閃現的蓄力、輕巧、伴生、護主幅度在技能預算表的「閃現」組。",
+    ),
+    "world_rules": (
+        "這份是全體共用的大世界規則（world/rules.yaml）：改了之後所有角色的大世界戰鬥回寫、成長、"
+        "許願池與實地地圖一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；遇敵機率、天氣、時段表、地圖大小建議等"
+        "其他數值之後再開。",
+    ),
+    "world_economy": (
+        "這份是全體共用的大世界經濟（world/economy.yaml）：改了之後所有角色的背包、賣價與戰鬥金幣"
+        "一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；商店價格、疊放上限、任務幣等之後再開。",
+    ),
+    "world_trade": (
+        "這份是全體共用的交易與郵寄規則（world/trade.yaml）：改了之後所有角色的寄信、領信與稽核"
+        "報表一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；稅率、可交易種類、郵差等之後再開。",
+    ),
+    "world_season": (
+        "這份是全體共用的賽季設定（world/season.yaml）：改了之後今日目標、賽季頭目與影子循環賽一起變。",
+        "HC-4d 只開代表性的幾格（初值、未經模擬）；日程、世界事件、懸賞、各季覆寫是結構"
+        "或內容，不開。",
+    ),
 }
 """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 用 :data:`AI_NOTES_ZH`）。"""
 
+_N_HITS_PATH: Final = re.compile(r"\.budget_by_n_permille\.(\d+)$")
+
+
+def _n_hits_note(target: TuningTarget) -> str:
+    """被動觸發時機表的第 3 行：「每命中 n 次」開了哪幾個 n（HC-6b：照白名單的欄位組字）。"""
+    ns = [m.group(1) for f in target.all_fields() if (m := _N_HITS_PATH.search(f.path))]
+    listed = "、".join(ns)
+    return f"只開放係數（SK-5）；「每命中 n 次」依 n 查的係數 HC-B 起也開了（n＝{listed} 各一格）。"
+
+
+def ai_notes(target: TuningTarget) -> tuple[str, ...]:
+    """AI 估值表表單頂端的唯讀提示（PB-1n；HC-6b：部位的欄位數照白名單數）。"""
+    parts = sum(1 for f in target.all_fields() if f.path.startswith("parts."))
+    return (
+        AI_NOTES_ZH[0],
+        f"目前開放頭目部位（parts）的 {parts} 個值（含巨型頭目的護面與站位，GB-3）、「無聲留背」"
+        "（facing.silent_behind，BS-2）與殼縫蟲群的「追離頭目遠的人」（GB-3），全部是占位；"
+        "其他行為模式權重還沒開。",
+        *AI_NOTES_ZH[1:],
+    )
+
+
+def table_notes(kind: str, target: TuningTarget) -> list[str]:
+    """全體共用的表單頂端的唯讀提示（BS-1；``ai`` 見 :func:`ai_notes`）。"""
+    if kind == "ai":
+        return list(ai_notes(target))
+    notes = list(TABLE_NOTES_ZH[kind])
+    if kind == "skill_triggers":
+        notes.append(_n_hits_note(target))
+    return notes
+
+
 AI_NOTES_ZH: Final = (
     "這份是敵我全體共用的 AI 估值表：改一個值會影響所有戰鬥裡的 AI，不只一隻頭目。",
-    "目前開放頭目部位（parts）的 11 個值（含巨型頭目的護面與站位，GB-3）、「無聲留背」"
-    "（facing.silent_behind，BS-2）與殼縫蟲群的「追離頭目遠的人」（GB-3），全部是占位；"
-    "其他行為模式權重還沒開。",
+    "HC-4c 另開分組的 AI 規則數值（改寫與源力、召喚、區域與陷阱、姿態與代價、戰術指令、跑步與"
+    "基本動作、種族技、共用評分），都是原本的初值、未經模擬。",
     "「打部位」與「繞背」的值給玩家方隊友 AI 用（決定要不要瞄準部位、要不要站到頭目背後）；"
     "護背扣分與快破門檻給頭目用。",
 )
-"""AI 估值表表單頂端的唯讀提示（PB-1n）。"""
+"""AI 估值表表單頂端的唯讀提示裡固定的幾行（PB-1n；部位那行由 :func:`ai_notes` 組）。"""
 
 
 OBSTACLE_NOTICE_ZH: Final = (
@@ -262,9 +384,49 @@ def _phase_label(data: Any, index: int) -> str:
     return f"第 {index + 1} 階段「{phase.get('name_zh') or phase.get('id')}」"
 
 
-_ENTRY_WORDS: Final = {"profiles": "行為模式", "objects": "物件", "triggers": "觸發時機"}
-"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件；SK-5：觸發時機表的時機）在標籤前的
-稱呼。"""
+_ENTRY_WORDS: Final[dict[str, str]] = {
+    "profiles": "行為模式",
+    "objects": "物件",
+    "triggers": "觸發時機",
+    "conditions": "條件",
+    "synergies": "協同",
+    "forms": "形態",
+    "total_budget": "全身預算",
+}
+"""全體共用表裡的清單項目（NW-3：AI 的行為模式、物件表的物件；SK-5：觸發時機表的時機；HC-W2：
+形態表的形態、物品生成的全身預算表）在標籤前的稱呼。"""
+
+_COLON_ENTRIES: Final = frozenset({"profiles", "forms", "total_budget"})
+"""標籤前綴後面加「：」的清單（欄位名不是接在名字後面讀的）。"""
+
+_ELEMENT_ZH: Final = {
+    "physical": "物理",
+    "fire": "火焰",
+    "ice": "冰霜",
+    "lightning": "雷電",
+    "poison": "毒素",
+    "wind": "風",
+    "earth": "大地",
+    "holy": "神聖",
+    "shadow": "暗影",
+    "chosen": "所選元素",
+}
+"""標籤裡的 ``{element}`` 換成的中文（HC-W2：形態的「受到某元素傷害的倍率」；``chosen``＝進入
+形態時選的元素）。"""
+
+
+_MECHANIC_ZH: Final = {
+    "damage": "傷害",
+    "heal": "治療",
+    "area": "範圍",
+    "displace": "位移",
+    "control": "控制",
+    "debuff": "削弱",
+    "dot": "持續傷害",
+    "surface": "表面",
+    "terrain": "地形",
+}
+"""協同規則的機制標籤（``skill_synergies.yaml``）在標籤裡的中文（HC-B）。"""
 
 
 def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
@@ -272,18 +434,41 @@ def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
     index = parts[1]
     assert isinstance(index, int)
     entry = (data.get(str(parts[0])) or [])[index]
-    name = f"{_ENTRY_WORDS[str(parts[0])]}「{entry.get('name_zh') or entry.get('id')}」"
-    return f"{name}：" if parts[0] == "profiles" else name
+    title = entry.get("name_zh") or entry.get("id")
+    if title is None and entry.get("tags"):  # HC-B：協同規則沒有名字，用機制標籤
+        title = "＋".join(_MECHANIC_ZH.get(str(t), str(t)) for t in entry["tags"])
+    if title is None and "level" in entry:  # HC-W2：全身預算表依物品等級
+        title = f"等級 {entry['level']}"
+    name = f"{_ENTRY_WORDS[str(parts[0])]}「{title}」"
+    return f"{name}：" if parts[0] in _COLON_ENTRIES else name
+
+
+def _with_element(label: str, data: Any, parts: Sequence[PathPart]) -> str:
+    """標籤裡的 ``{element}`` 換成路徑上最深、有 ``element`` 的那一層的元素中文（HC-W2）。"""
+    if "{element}" not in label:
+        return label
+    element = ""
+    for end in range(len(parts) - 1, 0, -1):
+        try:
+            node = lookup(data, parts[:end])
+        except PatchError:
+            break
+        if isinstance(node, dict) and "element" in node:
+            element = _ELEMENT_ZH.get(str(node["element"]), str(node["element"]))
+            break
+    return label.replace("{element}", element)
 
 
 def _part_group(data: Any, path: str) -> str | None:
-    """部位欄位的分組標題（PB-1n 待決 2：表單按部位分組），例「部位 1「拂塵」」；
-    其他欄位 ``None``。"""
+    """部位欄位的分組標題（PB-1n 待決 2：表單按部位分組），例「部位 1「拂塵」」；HC-W2 起形態表
+    依形態分組，例「形態「熊」」；其他欄位 ``None``。"""
     parts = parse_path(path)
-    if parts[:1] != ("parts",) or len(parts) < 2 or not isinstance(parts[1], int):  # noqa: PLR2004
+    index = parts[1] if parts[1:] else None
+    if not isinstance(index, int) or parts[0] not in ("forms", "parts"):
         return None
-    part = (data.get("parts") or [])[parts[1]]
-    return f"部位 {parts[1] + 1}「{part.get('name_zh') or part.get('id')}」"
+    entry = (data.get(str(parts[0])) or [])[index]
+    title = entry.get("name_zh") or entry.get("id")
+    return f"形態「{title}」" if parts[0] == "forms" else f"部位 {index + 1}「{title}」"
 
 
 def _part_label(data: Any, parts: Sequence[PathPart], field: TuningField) -> str:
@@ -424,12 +609,21 @@ def concrete_fields(
                 label = f"{_phase_label(data, parts[1])}{field.label_zh}"
             elif parts[:1] == ("parts",) and len(parts) > 1 and isinstance(parts[1], int):
                 label = _part_label(data, parts, field)
-            elif parts[:1] in (("profiles",), ("objects",), ("triggers",)) and len(parts) > 1:
+            elif parts[:1] in tuple((w,) for w in _ENTRY_WORDS) and len(parts) > 1:
                 label = f"{_entry_label(data, parts)}{field.label_zh}"
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
+            label = _with_element(_numbered(label, parts), data, parts)
             out.append((field, format_path(parts), label))
     return out
+
+
+def _numbered(label: str, parts: Sequence[PathPart]) -> str:
+    """標籤裡的 ``{n}`` 換成最後一個清單索引 ＋ 1（HC-B：純數字清單，例「持續 {n} 回合」）。"""
+    if "{n}" not in label:
+        return label
+    index = next((p for p in reversed(parts) if isinstance(p, int)), None)
+    return label.replace("{n}", "?" if index is None else str(index + 1))
 
 
 def field_value(data: Any, path: str) -> Value:
@@ -456,13 +650,19 @@ def _has_condition(skill: SkillDef) -> bool:
     return skill.condition is not None or any(e.condition is not None for e in skill.effects)
 
 
+def skill_ranged(skill: SkillDef) -> bool:
+    """工坊篩選的「遠程」：要遠程武器，或形狀射程 2 格以上（貼身 1 格以外）；清單與分組改共用
+    這一份。"""
+    shape_range = skill.shape.range
+    return skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range > 1)
+
+
 def _single_damage(skill: SkillDef) -> bool:
     return skill.shape.type == "single" and any(e.type == "damage" for e in skill.effects)
 
 
 def skill_facets(skill: SkillDef, library: ContentLibrary | None) -> TuningSkillFacets:
     """清單篩選用的分類；``library`` 有時另算 1 階預算比例。"""
-    shape_range = skill.shape.range
     ratio: int | None = None
     if library is not None:
         ratio = _ratio_permille(skill, library)
@@ -475,7 +675,7 @@ def skill_facets(skill: SkillDef, library: ContentLibrary | None) -> TuningSkill
         enemy_only=skill.enemy_only,
         has_condition=_has_condition(skill),
         shape=skill.shape.type,
-        ranged=skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range >= 2),  # noqa: PLR2004
+        ranged=skill_ranged(skill),
         tags=list(skill.tags),
         single_damage=skill.shape.type == "single"
         and any(e.type == "damage" for e in skill.effects),
@@ -643,6 +843,30 @@ def _tables(content_dir: Path) -> tuple[PrimitiveTable | None, ShapeTable | None
     )
 
 
+_WISH_CARDS_TOKENS: Final = ("{wish_cards}", "{wish_cards_zh}")
+
+
+def note_text(note: str, content_dir: Path) -> str:
+    """欄位說明裡的 ``{wish_cards}``（「挑 3 張」）、``{wish_cards_zh}``（「三選一」）換成這份內容的
+    ``skill_pick.yaml`` ``pool.wish_cards``（HC-6a 裁定 1、HC-6b：工坊改了張數，相鄰兩格的說明
+    跟著變）。
+    中文數字的寫法同許願提示詞（:func:`~trpg.llm.prompts.wish_pick.count_zh`）。"""
+    if not any(token in note for token in _WISH_CARDS_TOKENS):
+        return note
+    cards = load_content_file(content_dir / "skill_pick.yaml", SkillPickRules).pool.wish_cards
+    return note.replace("{wish_cards}", str(cards)).replace("{wish_cards_zh}", count_zh(cards))
+
+
+def _note_zh(
+    field: TuningField, path: str, content_dir: Path, library: ContentLibrary | None
+) -> str:
+    """欄位說明（:func:`note_text`）；形狀「沒填參數時」的基礎倍率沒有招用到時，接一句「目前沒有招用到，
+    改了暫時沒效果。」（HC-W2 裁定 1，由資料算：:mod:`trpg.api.tuning.shape_usage`）。"""
+    note = note_text(field.note_zh, content_dir)
+    extra = unused_base_note(path, library)
+    return note if extra is None else f"{note}{extra}"
+
+
 def _default_zh(field: TuningField) -> str | None:
     if field.path in _DEFAULTS_ZH:
         return _DEFAULTS_ZH[field.path]
@@ -656,11 +880,11 @@ def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int 
     leaf = parts[-1]
     if leaf == "hp_permille":
         return 1, 1000
-    if parts[2:3] == ("resist",):
-        return -1000, 1000
-    if leaf == "amount":
+    if parts[2:3] == ("resist",):  # PartDef 的驗證：-1000～1000‰
+        return -_PERMILLE, _PERMILLE
+    if leaf == "amount":  # StatDownBreak 的驗證：damage_dealt 是倍率‰，要小於 1000
         effect = lookup(data, parts[:4])
-        return (1, 999) if effect.get("stat") == "damage_dealt" else (1, None)
+        return (1, _PERMILLE - 1) if effect.get("stat") == "damage_dealt" else (1, None)
     if leaf == "rounds":  # GB-2：SealSkillBreak.rounds（ge=1）
         return 1, None
     return None, None
@@ -669,7 +893,7 @@ def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int 
 def _schema_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] | None:
     """schema 寫死的範圍（不靠原語、形狀表）；不是這幾種欄位 ``None``。"""
     if parts[-2:] == ("grow_surface", "max_rows"):  # GB-2：PhaseGrowSurface.max_rows
-        return 1, 9
+        return field_bounds(PhaseGrowSurface, "max_rows")
     if parts[:1] == ("objects",) and parts[-1] == "max_hp":  # NW-3：ObjectDef.max_hp（ge=1）
         return 1, None
     if parts[:1] == ("profiles",) and parts[-1] == "prefer_far_from_leader":  # NW-3b：ge=0
@@ -681,8 +905,8 @@ def _sk5_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] | No
     """SK-5 的兩張表：觸發時機的係數（``ge=1``）、組合器的機率（0～1000）與吸血比例（1～500）。"""
     if parts[:1] == ("triggers",) and parts[-1] == "budget_coefficient_permille":
         return 1, None
-    if parts[-1] == "lifesteal_amount_permille":  # StructureRules（原語上限 500）
-        return 1, 500
+    if parts[-1] == "lifesteal_amount_permille":  # StructureRules（原語上限）
+        return field_bounds(StructureRules, "lifesteal_amount_permille")
     if parts[:1] in (("structure",), ("passive",)) and str(parts[-1]).endswith("_permille"):
         return 0, 1000  # StructureRules／PassiveRules
     return None
@@ -718,13 +942,24 @@ def field_limits(
     return None, None
 
 
-RETIER_NOTE_ZH: Final = "這招在 2 階以上會依預算比例重算（夾在 70～100%），超出的部分只在 1 階有效"
-"""R2（使用者 2026-11-12「照建議」）：維持現行升階規則（``retier``），只在表單頂端提示。"""
+def retier_note_zh(budget: BudgetRules) -> str:
+    """R2（使用者 2026-11-12「照建議」）：維持現行升階規則（``retier``），只在表單頂端提示；
+    夾的區間照 ``skill_budget.yaml`` 的合格區間（HC-6b）。"""
+    low = f"{budget.min_ratio_permille / 10:g}"
+    high = f"{budget.max_ratio_permille / 10:g}"
+    return f"這招在 2 階以上會依預算比例重算（夾在 {low}～{high}%），超出的部分只在 1 階有效"
 
 
-def retier_notes(skill: SkillDef, users: Sequence[TuningSkillUser]) -> list[str]:
+@cache
+def _budget_rules(content_dir: Path) -> BudgetRules:
+    return load_content_file(content_dir / "skill_budget.yaml", BudgetRules)
+
+
+def retier_notes(
+    skill: SkillDef, users: Sequence[TuningSkillUser], budget: BudgetRules
+) -> list[str]:
     """技能表單頂端的唯讀提示：升階重算（R2）＋實戰會用升階版的單位（等級→階級）。"""
-    notes = [RETIER_NOTE_ZH]
+    notes = [retier_note_zh(budget)]
     upgraded = [u for u in users if u.kind == "unit" and u.tier is not None and u.tier > skill.tier]
     if upgraded:
         names = "、".join(f"{u.name_zh}（{u.id}，{u.tier} 階）" for u in upgraded)
@@ -819,9 +1054,9 @@ def object_detail(
                 limit_min=low,
                 limit_max=high,
                 readonly_zh=_readonly(field, value),
-                note_zh=field.note_zh,
+                note_zh=_note_zh(field, concrete, content_dir, library),
                 notice_zh=_field_notice(data, concrete, walls),
-                group_zh=_part_group(data, concrete),
+                group_zh=field.group_zh or _part_group(data, concrete),
             )
         )
     if kind == "skill":
@@ -834,7 +1069,9 @@ def object_detail(
             category="skill",
             file=path.relative_to(content_dir).as_posix(),
             fields=fields,
-            notes_zh=retier_notes(skill, users),
+            notes_zh=retier_notes(
+                skill, users, _budget_rules(content_dir) if library is None else library.budget
+            ),
             skill=skill_facets(skill, library),
             used_by=users,
         )
@@ -846,7 +1083,7 @@ def object_detail(
             category=_category(data, kind),
             file=path.relative_to(content_dir).as_posix(),
             fields=fields,
-            notes_zh=list(AI_NOTES_ZH if kind == "ai" else TABLE_NOTES_ZH[kind]),
+            notes_zh=table_notes(kind, target),
         )
     template = UnitTemplate.model_validate(data)
     notes = ["大世界的敵人另依遭遇等級成長（grow_enemy），這裡改的是單位檔的基礎值。"]

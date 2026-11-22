@@ -123,7 +123,7 @@ triggers:
     llm_hint: "戰鬥開始時自動發動一次。"
     description_zh: 戰鬥開始、先攻順序排好之後，第一位行動之前（每場一次）。沒有另一方，效果作用在持有者。
     has_other: false
-    budget_coefficient_permille: 300   # 每場只有一次（回合開始時是每回合，500）
+    budget_coefficient_permille: 200   # 每場只有一次（回合開始時是每回合，500）
     min_rarity: epic
     random_composer: false
   # --- SK-3（#166，06 6.38 第 10 點）：你造的關鍵字被利用時（雙向協同）。給被動與裝備詞條用。
@@ -143,6 +143,7 @@ triggers:
     budget_coefficient_permille: 300
     min_rarity: epic
     random_composer: false
+    max_per_round: 1   # 每回合最多 1 次（6.38 第 10 點；HC-7 b 從 TriggerSpec 的檢查搬來）
   # --- AP-2（#168，05 5.2「會給 AP 的內容」）：這回合用完所有 AP 時。給被動與裝備詞條用。係數為初值，未經模擬（工坊可調）。
   # random_composer: false（一般抽選不抽，既有種子不變）；組合器只以獨立串流產生（AP-2 第 4 項）。
   - id: on_ap_spent_all
@@ -153,3 +154,4 @@ triggers:
     budget_coefficient_permille: 400
     min_rarity: epic
     random_composer: false
+    max_per_round: 1   # 每回合最多 1 次（AP-2；HC-7 b 從 TriggerSpec 的檢查搬來）

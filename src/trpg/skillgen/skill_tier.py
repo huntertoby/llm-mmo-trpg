@@ -40,7 +40,6 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.skills.constants import MAX_AP_COST, MAX_EFFECTS
 from trpg.shared.rng import Rng
 from trpg.shared.types import Surface
 from trpg.skillgen.budget import BudgetError, skill_budget, weak_floor_exempt
@@ -52,16 +51,12 @@ from trpg.skillgen.knobs import has_strength_knobs, param_knobs
 from trpg.skillgen.validate import structural_rarity, tier_requirements, validate_skill
 
 __all__ = [
-    "RETIER_ATTEMPTS",
     "RetierReport",
     "character_tier",
     "retier",
     "retier_report",
 ]
 
-RETIER_ATTEMPTS = 3
-"""同一份草稿最多試幾次不同的調整亂數。"""
-_SUMMON_HP_STEPS = (0, 100, 200, 300, 450, 600, 800, 1000)
 _PERMILLE = 1000
 _CACHE_LIMIT = 4096
 """內容庫上重配快取（``ContentLibrary.retier_cache``）的上限：滿了就清空。"""
@@ -172,7 +167,7 @@ def _knob_candidates(
     else:
         params = param_knobs(effects, skill.category, job.library)
     for more in ((), params) if params else ((),):
-        for attempt in range(RETIER_ATTEMPTS):
+        for attempt in range(job.library.composer.search.retier_attempts):
             done = retune(
                 base,
                 effects,
@@ -248,11 +243,11 @@ def _reshaped(moved: SkillDef, shape_id: str, library: ContentLibrary) -> SkillD
 
 def _growth_drafts(skill: SkillDef, library: ContentLibrary) -> Iterator[Draft]:
     """換成較大形狀時試的費用：原本的，再往上加冷卻（``max_extra_cooldown``），最後才加 AP
-    （``max_extra_ap``，不超過 3）。"""
+    （``max_extra_ap``，不超過 ``skill_limits.max_ap_cost``）。"""
     rules = library.budget.retier_growth
     start = skill.cost.cooldown or 0
     ap_cost = skill.ap_cost or 0  # 只有主動技能會換形狀（_bigger_shapes），一定有 AP
-    top = min(ap_cost + rules.max_extra_ap, MAX_AP_COST)
+    top = min(ap_cost + rules.max_extra_ap, library.ruleset.core.skill_limits.max_ap_cost)
     for ap in range(ap_cost, max(top, ap_cost) + 1):
         last = max(start, min(start + rules.max_extra_cooldown, rules.max_cooldown))
         for cooldown in range(start, last + 1):
@@ -315,12 +310,14 @@ def _form_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int, d
     return [{0: {"magnitude_permille": None if v == _PERMILLE else v}} for v in order]
 
 
-def _summon_variants(moved: SkillDef) -> list[dict[int, dict[str, Any]]]:
-    """召喚：召喚物的最大 HP 加成（‰）由小到大（0 ＝ 拿掉加成）。"""
+def _summon_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[int, dict[str, Any]]]:
+    """召喚：召喚物的最大 HP 加成（‰）由小到大（0 ＝ 拿掉加成；
+    ``retier_growth.summon_hp_steps``）。"""
     index = next((i for i, e in enumerate(moved.effects) if e.type == "summon"), None)
     if index is None:
         return []
-    return [{index: {"max_hp_permille": step or None}} for step in _SUMMON_HP_STEPS]
+    steps = library.budget.retier_growth.summon_hp_steps
+    return [{index: {"max_hp_permille": step or None}} for step in steps]
 
 
 def _cost_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[str, Any]]:
@@ -336,7 +333,7 @@ def _cost_variants(moved: SkillDef, library: ContentLibrary) -> list[dict[str, A
         cooldowns += [c or None for c in range(cost.cooldown - 1, -1, -1)]
     out: list[dict[str, Any]] = []
     for cooldown in cooldowns:
-        for scale in (1000, 500, 0):
+        for scale in library.budget.retier_growth.cost_scales_permille:
             changed: dict[str, Any] = {"cooldown": cooldown}
             for field in ("mana", "stamina"):
                 value = getattr(cost, field)
@@ -360,7 +357,7 @@ def _strength_drafts(moved: SkillDef, library: ContentLibrary) -> Iterator[Draft
     structures = (
         _stance_variants(moved, library)
         or _form_variants(moved, library)
-        or _summon_variants(moved)
+        or _summon_variants(moved, library)
         or [{}]
     )
     for structure in structures:
@@ -380,7 +377,8 @@ def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
     """升降地形：「地形＋落石」（多一個大地傷害效果，數值由預算器調；3W-2b 地形變化模板的做法）。
     ``grown``：用放大過格數的形狀（由大到小，費用照 :func:`_growth_drafts`）；否則用原本的形狀。"""
     moved = job.moved
-    if not _terrain(moved, job.library) or len(moved.effects) >= MAX_EFFECTS:
+    limits = job.library.ruleset.core.skill_limits
+    if not _terrain(moved, job.library) or len(moved.effects) >= limits.max_effects:
         return
     if grown:
         drafts: Iterable[Draft] = (
@@ -393,7 +391,7 @@ def _rock_drafts(job: _Job, *, grown: bool) -> Iterator[Draft]:
         if moved.category == "spell":
             rock["dice"] = "1d4"
         else:
-            rock["multiplier_permille"] = 300
+            rock["multiplier_permille"] = job.library.budget.retier_growth.rock_multiplier_permille
         effects.append(rock)
         yield base, effects
 

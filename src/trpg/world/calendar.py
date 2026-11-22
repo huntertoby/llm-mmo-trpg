@@ -16,6 +16,7 @@ from typing import Literal
 from trpg.content.library import ContentLibrary
 from trpg.content.world_rules import CalendarRules
 from trpg.world.clock import day_start_at, next_refresh_at, refresh_day
+from trpg.world.common import rules_of
 from trpg.world.state import WorldState
 
 __all__ = [
@@ -37,9 +38,9 @@ _EPOCH = dt.date(1970, 1, 1)
 
 
 def calendar_of(library: ContentLibrary) -> CalendarRules:
-    """世界規則的日曆；沒有世界規則時用預設（台北 6 點）。"""
-    rules = library.world_rules
-    return CalendarRules() if rules is None else rules.calendar
+    """世界規則的日曆（``world/rules.yaml`` 的 ``calendar``）；HC-7 起沒有世界規則就報錯
+    （:func:`trpg.world.common.rules_of`）。"""
+    return rules_of(library).calendar
 
 
 def day_of(library: ContentLibrary, now: int) -> int:

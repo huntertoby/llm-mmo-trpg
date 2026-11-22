@@ -252,8 +252,9 @@ class SurfaceDef(ContentModel):
     - ``element``：表面本身帶的元素（例如 fire 表面 = 火焰）；產生此表面時，格上物件會被該元素觸及。
     - ``flammable``：環境回合火表面會蔓延到這種表面（例如 oil）。
     - ``blocks_sight``：視線穿越時被阻擋（兩端除外）；``conceal``：站在上面的單位獲得隱蔽。
-    - ``budget_points``：技能產生此表面（預設持續時間）的預算點數（2B-2）；
-      ``None`` 表示不能由技能產生。
+    - 技能產生此表面（預設持續時間）的預算點數（2B-2）在 ``skill_budget.yaml`` 的
+      ``surface_points.<表面 id>``（HC-B 從這裡的 ``budget_points`` 搬去）；
+      沒有那一項表示不能由技能產生。
     - ``beneficial``（2B-3）：對站在上面的友方有益（聖光）。光環骨架的核心表面必須有益。
     """
 
@@ -268,7 +269,6 @@ class SurfaceDef(ContentModel):
     conceal: bool = False
     on_enter: SurfaceEnter | None = None
     on_turn_start: SurfaceTurnStart | None = None
-    budget_points: int | None = Field(default=None, ge=0)
     beneficial: bool = False
 
     @field_validator("glyph")
@@ -658,7 +658,8 @@ def check_rule(
 
 
 class AiWeights(ContentModel):
-    """效用 AI 的權重（意義見 ``content/ai_profiles.yaml``）。未列出的權重為 0。"""
+    """效用 AI 的權重（意義見 ``content/ai_profiles.yaml``）。未列出的權重為 0；衝撞、瞬步的三個固定
+    加分與 ``hold_radius`` 必填（HC-4c，由表格層級的 ``skill_ai``、``objective_ai`` 填入）。"""
 
     damage: int = 0
     env_damage: int = 0
@@ -725,12 +726,12 @@ class AiWeights(ContentModel):
     （位置價值；低權重）。"""
     """（Phase 3-24a1）帶震退的武器（錘）：緊貼著、而且推開後會撞到東西（單位、障礙、牆、邊緣）
     或掉進致命地形的每個敵人加分（位置價值；低權重，偏好能撞擊的角度）。"""
-    charge_per_enemy: int = 3
-    """（Phase 3E-1）直線衝撞（``charge_through``）每個會被穿過的敵人的固定加分；預設 3，不是 0。"""
-    shadowstep: int = 3
-    """（Phase 3E-1）瞬步（``shadowstep``）的固定加分；預設 3，不是 0。"""
-    shadowstep_behind: int = 2
-    """（Phase 3E-1）瞬步落在目標背後時再加的分數；預設 2，不是 0。"""
+    charge_per_enemy: int
+    """（Phase 3E-1）直線衝撞（``charge_through``）每個會被穿過的敵人的固定加分。"""
+    shadowstep: int
+    """（Phase 3E-1）瞬步（``shadowstep``）的固定加分。"""
+    shadowstep_behind: int
+    """（Phase 3E-1）瞬步落在目標背後時再加的分數。"""
     contest: int = 0
     """（Phase 3-22）守點戰中，**敵方** 與最近守點格的距離（位置價值每格扣分；搶點）。表格層級的
     ``objective_ai`` 填入每個行為模式。"""
@@ -742,7 +743,7 @@ class AiWeights(ContentModel):
     hold_point: int = 0
     """（Phase 3-22）守點戰中，**我方** 離守點格超過 ``hold_radius`` 的每一格位置價值扣分（守在點
     附近）。"""
-    hold_radius: int = Field(default=2, ge=0)
+    hold_radius: int = Field(ge=0)
     """（Phase 3-22）``hold_point`` 與 ``hold_guard`` 的半徑（曼哈頓格數）。"""
     hold_guard: int = 0
     """（Phase 3-22）守點戰中，**我方** 單位在守點 ``hold_radius`` 格內且有敵人逼近（6 格內）時，
@@ -785,12 +786,10 @@ class TrapAiRules(ContentModel):
     - ``default_factor_permille``：沒有列出的形狀使用的係數（‰）。
     """
 
-    max_active: int = Field(default=2, ge=1)
-    near: int = Field(default=3, ge=1)
-    shape_factor_permille: dict[str, int] = Field(
-        default_factory=lambda: {"single": 1000, "cross": 1500, "square3": 2000}
-    )
-    default_factor_permille: int = Field(default=1000, ge=0)
+    max_active: int = Field(ge=1)
+    near: int = Field(ge=1)
+    shape_factor_permille: dict[str, int]
+    default_factor_permille: int = Field(ge=0)
 
     def shape_factor(self, shape: str) -> Fraction:
         """形狀的預期波及敵人數（相對單體）；沒有設定的形狀用預設係數。"""
@@ -807,8 +806,9 @@ class RewriteAiRules(ContentModel):
     - ``cooldown_points``：被重置的每一回合冷卻。
     - ``undying_points``：免死的價值 × 目標已損失 HP 的比例（滿血 0，HP 越低越值得）。
     - ``source_points``：每花一點源力的機會成本（扣分）。
-    - ``redirect_points``：靈魂連結的價值 × 目標已損失 HP 的比例（施放者 HP 不到一半時為 0）
-      （Phase 3C-4b）。
+    - ``redirect_points``：靈魂連結的價值 × 目標已損失 HP 的比例（施放者 HP 低於最大 HP 的
+      ``redirect_min_hp_permille``‰ 時為 0；Phase 3C-4b）。門檻 HC-4c 從 ``utility/scoring.py``
+      搬來（原本寫死「一半」）。
     - ``reaction_points``：每個額外反應次數（目標有反應規則時才有價值）。
     - ``mana_points``：友方每回復 1 × ``quantity_scale``（10）點法力（``restore_resource``，
       Phase 3D-1）。
@@ -844,37 +844,38 @@ class RewriteAiRules(ContentModel):
       傷害打這個折扣（‰，扣在傷害收益上）——集火持有者的效益下降。
     """
 
-    ap_points: int = Field(default=6, ge=0)
-    ally_ap_permille: int = Field(default=600, ge=0, le=1000)
-    cooldown_points: int = Field(default=4, ge=0)
-    undying_points: int = Field(default=40, ge=0)
-    source_points: int = Field(default=3, ge=0)
-    redirect_points: int = Field(default=24, ge=0)
-    reaction_points: int = Field(default=8, ge=0)
-    mana_points: int = Field(default=1, ge=0)
-    steal_points: int = Field(default=8, ge=0)
-    dispel_points: int = Field(default=6, ge=0)
-    reveal_points: int = Field(default=6, ge=0)
-    revive_points: int = Field(default=30, ge=0)
-    refund_ap_points: int = Field(default=6, ge=0)
-    bomb_points_permille: int = Field(default=700, ge=0, le=2000)
-    overwatch_points: int = Field(default=5, ge=0)
-    overwatch_max_enemies: int = Field(default=2, ge=1)
-    grant_skill_points: int = Field(default=8, ge=0)
-    grant_skill_uses_permille: int = Field(default=800, ge=0, le=3000)
-    activation_round_points: int = Field(default=4, ge=0)
-    activation_battle_rounds: int = Field(default=4, ge=1)
-    delayed_enemy_points: int = Field(default=5, ge=0)
-    delayed_attacked_permille: int = Field(default=600, ge=0, le=1000)
-    lock_on_permille: int = Field(default=700, ge=0, le=1000)
+    ap_points: int = Field(ge=0)
+    ally_ap_permille: int = Field(ge=0, le=1000)
+    cooldown_points: int = Field(ge=0)
+    undying_points: int = Field(ge=0)
+    source_points: int = Field(ge=0)
+    redirect_points: int = Field(ge=0)
+    redirect_min_hp_permille: int = Field(ge=0, le=1000)
+    reaction_points: int = Field(ge=0)
+    mana_points: int = Field(ge=0)
+    steal_points: int = Field(ge=0)
+    dispel_points: int = Field(ge=0)
+    reveal_points: int = Field(ge=0)
+    revive_points: int = Field(ge=0)
+    refund_ap_points: int = Field(ge=0)
+    bomb_points_permille: int = Field(ge=0, le=2000)
+    overwatch_points: int = Field(ge=0)
+    overwatch_max_enemies: int = Field(ge=1)
+    grant_skill_points: int = Field(ge=0)
+    grant_skill_uses_permille: int = Field(ge=0, le=3000)
+    activation_round_points: int = Field(ge=0)
+    activation_battle_rounds: int = Field(ge=1)
+    delayed_enemy_points: int = Field(ge=0)
+    delayed_attacked_permille: int = Field(ge=0, le=1000)
+    lock_on_permille: int = Field(ge=0, le=1000)
     """（RG-1，#162）瞄準預告的強力一擊：AI 估「現在就射出」的收益再乘這個千分比（對手可能躲開、
     擋住或打斷；:attr:`trpg.engine.preview.Preview.lock_fire`）。"""
-    delayed_heal_points: int = Field(default=5, ge=0)
-    priority_kill_points: int = Field(default=10, ge=0)
-    interrupt_points: int = Field(default=12, ge=0)
-    formation_break_points: int = Field(default=10, ge=0)
-    ward_kill_points: int = Field(default=12, ge=0)
-    share_discount_permille: int = Field(default=500, ge=0, le=1000)
+    delayed_heal_points: int = Field(ge=0)
+    priority_kill_points: int = Field(ge=0)
+    interrupt_points: int = Field(ge=0)
+    formation_break_points: int = Field(ge=0)
+    ward_kill_points: int = Field(ge=0)
+    share_discount_permille: int = Field(ge=0, le=1000)
 
 
 class GambleAiRules(ContentModel):
@@ -886,8 +887,8 @@ class GambleAiRules(ContentModel):
     - ``low_hp_permille``：上述情形下，技能的正分乘上這個千分比（大幅降低）；負分不變。
     """
 
-    hp_floor_permille: int = Field(default=300, ge=0, le=1000)
-    low_hp_permille: int = Field(default=100, ge=0, le=1000)
+    hp_floor_permille: int = Field(ge=0, le=1000)
+    low_hp_permille: int = Field(ge=0, le=1000)
 
 
 class SelfCostAiRules(ContentModel):
@@ -899,9 +900,9 @@ class SelfCostAiRules(ContentModel):
     - ``overdraft_min_targets``：透支只在這一擊能擊殺敵人、或波及至少這麼多敵人時使用。
     """
 
-    stun_hp_below_permille: int = Field(default=500, ge=0, le=1000)
-    stun_enemy_radius: int = Field(default=6, ge=1)
-    overdraft_min_targets: int = Field(default=2, ge=1)
+    stun_hp_below_permille: int = Field(ge=0, le=1000)
+    stun_enemy_radius: int = Field(ge=1)
+    overdraft_min_targets: int = Field(ge=1)
 
 
 class StanceAiRules(ContentModel):
@@ -918,9 +919,9 @@ class StanceAiRules(ContentModel):
     """
 
     risky_statuses: tuple[str, ...] = ()
-    enter_enemy_turns: int = Field(default=2, ge=1)
-    cancel_hp_below_permille: int = Field(default=400, ge=0, le=1000)
-    cancel_enemy_radius: int = Field(default=6, ge=1)
+    enter_enemy_turns: int = Field(ge=1)
+    cancel_hp_below_permille: int = Field(ge=0, le=1000)
+    cancel_enemy_radius: int = Field(ge=1)
 
 
 class FormAiRules(ContentModel):
@@ -933,8 +934,8 @@ class FormAiRules(ContentModel):
       另外照一般事件計分）的價值，比 ``enter_value`` 低，所以只有進入獎勵夠好時才輪替。
     """
 
-    enter_value: int = Field(default=8, ge=0)
-    rotate_value: int = Field(default=4, ge=0)
+    enter_value: int = Field(ge=0)
+    rotate_value: int = Field(ge=0)
 
 
 class SummonAiRules(ContentModel):
@@ -963,28 +964,28 @@ class SummonAiRules(ContentModel):
       為 0 時 AI 不灌注。
     """
 
-    hit_permille: int = Field(default=500, ge=0, le=1000)
-    distance_cost_permille: int = Field(default=100, ge=0)
-    totem_ally_points: int = Field(default=3, ge=0)
-    follow_radius: int = Field(default=3, ge=0, le=3)
-    guard_radius: int = Field(default=2, ge=0, le=3)
-    guard_threat_range: int = Field(default=1, ge=0, le=4)
-    auto_guard_hp_permille: int = Field(default=0, ge=0, le=1000)
-    auto_focus_boss: bool = False
-    infusion_points: int = Field(default=0, ge=0)
-    detonate_targets_permille: int = Field(default=1000, ge=0, le=5000)
-    inert_round_points: int = Field(default=2, ge=0)
-    infuse_value_permille: int = Field(default=0, ge=0, le=2000)
-    infuse_threat_damage: int = Field(default=4, ge=0)
-    shield_round_permille: int = Field(default=0, ge=0, le=2000)
+    hit_permille: int = Field(ge=0, le=1000)
+    distance_cost_permille: int = Field(ge=0)
+    totem_ally_points: int = Field(ge=0)
+    follow_radius: int = Field(ge=0, le=3)
+    guard_radius: int = Field(ge=0, le=3)
+    guard_threat_range: int = Field(ge=0, le=4)
+    auto_guard_hp_permille: int = Field(ge=0, le=1000)
+    auto_focus_boss: bool
+    infusion_points: int = Field(ge=0)
+    detonate_targets_permille: int = Field(ge=0, le=5000)
+    inert_round_points: int = Field(ge=0)
+    infuse_value_permille: int = Field(ge=0, le=2000)
+    infuse_threat_damage: int = Field(ge=0)
+    shield_round_permille: int = Field(ge=0, le=2000)
     """（BAL-5 B5）護盾脈動（守護靈）：每輪護盾量平均 × ``shield`` 權重 × 這個千分比 × 持續輪數。"""
-    pull_round_points: int = Field(default=0, ge=0)
+    pull_round_points: int = Field(ge=0)
     """（BAL-5 B5）拉扯脈動（吸引圖騰）：每輪的等值傷害點數（× ``damage`` 權重 × 持續輪數）。"""
-    snare_likelihood_permille: int = Field(default=0, ge=0, le=1000)
+    snare_likelihood_permille: int = Field(ge=0, le=1000)
     """（BAL-5 B5）纏繞（藤蔓）：每輪觸發的機率；價值 ＝ 狀態在 ``status_values`` 的價值 × 機率
     × 持續輪數
     （× ``damage`` 權重）。"""
-    platform_points: int = Field(default=0, ge=0)
+    platform_points: int = Field(ge=0)
     """（BAL-5 B5）高台（高台圖騰）：每名遠程友方（非召喚物）的一次性等值傷害點數（不乘輪數；
     模擬顯示乘輪數會讓 AI 反覆召喚圖騰、拖長戰鬥而不提高勝率）。"""
 
@@ -998,8 +999,8 @@ class ZoneAiRules(ContentModel):
     - ``path_permille``：移動型區域路徑上（還沒被覆蓋）的對象，相對於格內對象的權重（‰）。
     """
 
-    likelihood_permille: int = Field(default=400, ge=0, le=1000)
-    path_permille: int = Field(default=500, ge=0, le=1000)
+    likelihood_permille: int = Field(ge=0, le=1000)
+    path_permille: int = Field(ge=0, le=1000)
 
 
 class RuneAiRules(ContentModel):
@@ -1014,10 +1015,10 @@ class RuneAiRules(ContentModel):
       時的額外價值（每個目標；單位同上）。
     """
 
-    inscribe_points: int = Field(default=6, ge=0)
-    adjacent_permille: int = Field(default=600, ge=0, le=1000)
-    near_permille: int = Field(default=300, ge=0, le=1000)
-    read_points: int = Field(default=6, ge=0)
+    inscribe_points: int = Field(ge=0)
+    adjacent_permille: int = Field(ge=0, le=1000)
+    near_permille: int = Field(ge=0, le=1000)
+    read_points: int = Field(ge=0)
 
 
 class TerrainAiRules(ContentModel):
@@ -1031,8 +1032,8 @@ class TerrainAiRules(ContentModel):
       把敵人推進坑才會墜落）。
     """
 
-    height_points: int = Field(default=4, ge=0)
-    pit_points: int = Field(default=6, ge=0)
+    height_points: int = Field(ge=0)
+    pit_points: int = Field(ge=0)
 
 
 class AiProfile(ContentModel):
@@ -1052,26 +1053,26 @@ class AiProfile(ContentModel):
     self_status_values: dict[str, int] = Field(default_factory=dict)
     """技能「自己承受的狀態代價」的估值（BAL-8b）：優先於 ``status_values``，只用在
     ``skill_cost`` 的自身狀態代價與透支；對敵人施加同一狀態的收益仍用 ``status_values``。"""
-    trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
+    trap_likelihood_permille: int = Field(ge=0, le=1000)
     """放置陷阱時，估計陷阱真的會被踩中或波及敵人的機率（‰，Phase 2E-3）；由 :class:`AiProfileTable`
     的同名欄位填入。"""
-    trap: TrapAiRules = Field(default_factory=TrapAiRules)
+    trap: TrapAiRules
     """放置陷阱的 AI 數值（Phase 2F-2）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
+    rewrite: RewriteAiRules
     """改寫規則型原語與源力的 AI 數值（Phase 3C-4a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    summon: SummonAiRules = Field(default_factory=SummonAiRules)
+    summon: SummonAiRules
     """召喚的 AI 數值（Phase 3D-4b）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
+    zone: ZoneAiRules
     """持續區域的 AI 數值（Phase 3D-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    gamble: GambleAiRules = Field(default_factory=GambleAiRules)
+    gamble: GambleAiRules
     """賭博型技能的 AI 數值（Phase 3D-7a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    rune: RuneAiRules = Field(default_factory=RuneAiRules)
+    rune: RuneAiRules
     """刻印的 AI 數值（Phase 3-23）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
-    stance: StanceAiRules = Field(default_factory=StanceAiRules)
-    terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
+    self_cost: SelfCostAiRules
+    stance: StanceAiRules
+    terrain: TerrainAiRules
     """純地形技能的 AI 數值（Phase 3T-5）；由 :class:`AiProfileTable` 的同名欄位填入。"""
-    form: FormAiRules = Field(default_factory=FormAiRules)
+    form: FormAiRules
     """形態的 AI 數值（Phase 3J-1a）；由 :class:`AiProfileTable` 的同名欄位填入。"""
     """自己付的代價的 AI 使用條件（Phase 3-50）；由 :class:`AiProfileTable` 的同名欄位填入。"""
 
@@ -1088,11 +1089,11 @@ class OrderBonuses(ContentModel):
     - ``environment_permille``：利用環境——環境傷害、環境擊倒、推擊、表面、離開掩護的收益倍率（‰）。
     """
 
-    focus_permille: int = Field(default=1500, ge=1000)
-    hold_weight: int = Field(default=20, ge=0)
-    retreat_weight: int = Field(default=15, ge=0)
-    protect_min: int = Field(default=12, ge=0)
-    environment_permille: int = Field(default=2000, ge=1000)
+    focus_permille: int = Field(ge=1000)
+    hold_weight: int = Field(ge=0)
+    retreat_weight: int = Field(ge=0)
+    protect_min: int = Field(ge=0)
+    environment_permille: int = Field(ge=1000)
 
 
 def _with_facing(weights: Any, facing: Any) -> Any:
@@ -1166,10 +1167,10 @@ class RunAiRules(ContentModel):
     攻擊與走位的收益小。
     """
 
-    pursue_points: int = Field(default=6, ge=0)
-    retreat_points: int = Field(default=6, ge=0)
-    retreat_hp_permille: int = Field(default=350, ge=0, le=1000)
-    retreat_enemy_radius: int = Field(default=4, ge=1)
+    pursue_points: int = Field(ge=0)
+    retreat_points: int = Field(ge=0)
+    retreat_hp_permille: int = Field(ge=0, le=1000)
+    retreat_enemy_radius: int = Field(ge=1)
 
 
 class BasicActionAiRules(ContentModel):
@@ -1189,31 +1190,161 @@ class BasicActionAiRules(ContentModel):
       到、攀跳後走得到也算）→ ``vault_points``（低權重：只在明顯縮短路徑時用）。
     """
 
-    guard_points: int = Field(default=3, ge=0)
-    guard_ally_hp_permille: int = Field(default=500, ge=0, le=1000)
-    guard_self_hp_permille: int = Field(default=500, ge=0, le=1000)
-    guard_threat_radius: int = Field(default=6, ge=1)
-    swap_points: int = Field(default=6, ge=0)
-    swap_rescue_hp_permille: int = Field(default=350, ge=0, le=1000)
-    swap_tank_ratio_permille: int = Field(default=1500, ge=1000)
-    swap_self_hp_permille: int = Field(default=500, ge=0, le=1000)
-    swap_threat_radius: int = Field(default=3, ge=1)
-    aim_points: int = Field(default=2, ge=0)
-    aim_hit_permille: int = Field(default=500, ge=0, le=1000)
-    aim_min_attack_ap: int = Field(default=2, ge=1)
-    vault_points: int = Field(default=4, ge=0)
-    vault_min_saving: int = Field(default=4, ge=1)
-    variant_position_bonus: int = Field(default=3, ge=0)
+    guard_points: int = Field(ge=0)
+    guard_ally_hp_permille: int = Field(ge=0, le=1000)
+    guard_self_hp_permille: int = Field(ge=0, le=1000)
+    guard_threat_radius: int = Field(ge=1)
+    swap_points: int = Field(ge=0)
+    swap_rescue_hp_permille: int = Field(ge=0, le=1000)
+    swap_tank_ratio_permille: int = Field(ge=1000)
+    swap_self_hp_permille: int = Field(ge=0, le=1000)
+    swap_threat_radius: int = Field(ge=1)
+    aim_points: int = Field(ge=0)
+    aim_hit_permille: int = Field(ge=0, le=1000)
+    aim_min_attack_ap: int = Field(ge=1)
+    vault_points: int = Field(ge=0)
+    vault_min_saving: int = Field(ge=1)
+    variant_position_bonus: int = Field(ge=0)
     """戰場變奏（Phase 3-25a）：移動的目的地能讓某招現在可用的技能的變奏成立（現在的位置不成立）
     時，移動分數加這麼多（初值保守，未經模擬）。"""
-    reload_points: int = Field(default=20, ge=0)
+    reload_points: int = Field(ge=0)
     """裝填（3-24a2，武器動作）：彈匣空時的固定分數（要大於一般走位，所以空膛就先裝填）。"""
-    charge_permille: int = Field(default=400, ge=0, le=1000)
+    charge_permille: int = Field(ge=0, le=1000)
     """裝備充能的啟動（3G-G3a）：預覽收益（加上自我增益的價值）× 這個比例（低權重：AI 會啟動，
     但通常排在一般攻擊與技能之後）。"""
-    ice_slip_points: int = Field(default=8, ge=0)
+    ice_slip_points: int = Field(ge=0)
     """冰面滑倒（#123，Phase 6E-2）：移動路徑上每次滑行檢定的代價 ＝ 走到那裡的機率 × 失敗率 ×
     （這個值〔倒地、剩下的移動作廢〕＋ 終點與滑行停點的位置價值差〔下限 0〕）；初值保守。"""
+
+
+class RaceAiRules(ContentModel):
+    """種族技的 AI 使用條件（Phase 3R-2；``ai_profiles.yaml`` 的 ``heuristics.race``；HC-4c 從
+    :mod:`trpg.engine.ai.race` 的模組常數搬來，值照搬）。條件式路徑，分數 > 0 才用：
+
+    - ``min_ap_after``：用完後還要能行動——回合開始 AP 至少這麼多才用需要「接著行動」的種族技；
+    - ``conceal_near``／``immovable_near``／``surface_near``：林隱、穩若磐石、炎印（自身表面）
+      在最近的敵人這麼多格內才用；
+    - ``push_enemy_points``／``push_deadly_points``：龍息震退每推到一名敵人的分數，推進岩漿
+      或深淵再加的分數；
+    - ``pull_low_hp_permille``／``pull_low_hp_points``：拋錨拉的遠程敵人 HP 不高於這個千分比
+      時再加的分數；
+    - ``leap_rise_points``：獸躍每往上一層的分數（遠大於「打得到的敵人數」，先挑高的）；
+    - ``restore_low_permille``／``restore_min_deficit``：過充只在耐力或法力不高於這個千分比、且缺口
+      （換算前的點數）至少這麼多時用；
+    - ``min_cluster``：潮息（方陣表面）至少要罩到幾個敵人。
+
+    應變（``bonus_move``）的「多走幾格」直接讀種族技效果的 ``amount``，不另外寫。
+    """
+
+    min_ap_after: int = Field(ge=1)
+    conceal_near: int = Field(ge=0)
+    immovable_near: int = Field(ge=0)
+    surface_near: int = Field(ge=0)
+    push_enemy_points: int = Field(ge=0)
+    push_deadly_points: int = Field(ge=0)
+    pull_low_hp_permille: int = Field(ge=0, le=1000)
+    pull_low_hp_points: int = Field(ge=0)
+    leap_rise_points: int = Field(ge=0)
+    restore_low_permille: int = Field(ge=0, le=1000)
+    restore_min_deficit: int = Field(ge=0)
+    min_cluster: int = Field(ge=1)
+
+
+class EstimateAiRules(ContentModel):
+    """技能與物件攻擊的便宜估計（``ai_profiles.yaml`` 的 ``heuristics.estimate``；HC-4c 從
+    ``engine/ai/*`` 的模組常數與寫死的倍數搬來，值照搬）。估計只決定「誰值得跑完整預覽」與候選的
+    排序（每種技能保留 ``skill_candidates`` 個），不直接決定 AI 選哪個動作；單位是排序用的分數。
+
+    - 一般技能：範圍內每名敵人 ``enemy_points``、每名用得上支援效果的友方 ``support_points``、其他
+      友方扣 ``ally_penalty``；場地型技能涵蓋自己所在的格子 ``field_cover_points``；
+    - 陷阱：最近敵人 ``near`` 格內每名敵人 ``trap_enemy_points``（再扣最近敵人的距離）；
+    - 複合技能：範圍內每名敵人 ``composite_enemy_points``、每名友方扣 ``composite_ally_penalty``；
+    - 持續區域：格內對象 ``zone_inside_points``、移動路徑上的對象 ``zone_path_points``；
+    - 投擲物件、推倒：每名被波及的敵人 ``scene_enemy_points``、友方扣 ``scene_friend_penalty``；
+    - 純地形：降低敵人 ``terrain_lower_points``、抬高友方 ``terrain_raise_points``、下陷坑旁
+      每名可推下去的敵人 ``terrain_pit_points``；
+    - 位移他人（傳送、換位）：格子的危險度——致命地形 ``displace_deadly_points``、有害表面
+      ``displace_surface_points``、陷阱 ``displace_trap_points``；
+    - 召喚：``summon_base_points`` 減去召喚位置與最近敵人的距離；獻祭召喚物：半徑內每名敵人
+      ``sacrifice_enemy_points``（爆炸）或每名受傷的友方 ``sacrifice_ally_points``（治療）；
+    - 刻印：``rune_cell_points`` 依格子離最近敵人的距離取分（第一格＝敵人腳下、第二格＝相鄰……，
+      更遠 0）；
+    - 攻擊物件：一般物件只在 ``object_near_enemy`` 格（切比雪夫距離）內有敵人時才跑完整預覽。
+    """
+
+    enemy_points: int = Field(ge=0)
+    support_points: int = Field(ge=0)
+    ally_penalty: int = Field(ge=0)
+    field_cover_points: int = Field(ge=0)
+    trap_enemy_points: int = Field(ge=0)
+    composite_enemy_points: int = Field(ge=0)
+    composite_ally_penalty: int = Field(ge=0)
+    zone_inside_points: int = Field(ge=0)
+    zone_path_points: int = Field(ge=0)
+    scene_enemy_points: int = Field(ge=0)
+    scene_friend_penalty: int = Field(ge=0)
+    terrain_lower_points: int = Field(ge=0)
+    terrain_raise_points: int = Field(ge=0)
+    terrain_pit_points: int = Field(ge=0)
+    displace_deadly_points: int = Field(ge=0)
+    displace_surface_points: int = Field(ge=0)
+    displace_trap_points: int = Field(ge=0)
+    summon_base_points: int = Field(ge=0)
+    sacrifice_enemy_points: int = Field(ge=0)
+    sacrifice_ally_points: int = Field(ge=0)
+    rune_cell_points: tuple[int, ...] = Field(min_length=1)
+    object_near_enemy: int = Field(ge=0)
+
+
+class ScoringAiRules(ContentModel):
+    """效用 AI 評分裡沒有放在行為模式的共用數值（``ai_profiles.yaml`` 的
+    ``heuristics.scoring``；HC-4c 從 ``engine/ai/*`` 的模組常數搬來，值照搬）：
+
+    - ``unlisted_status_value``：``ally_status_values``（增益）與淨化用的 ``status_values`` 沒列出的
+      狀態的價值（等值傷害點數）；
+    - ``possible_kill_divisor``：只在最多後果裡發生的擊倒 × 命中率 ÷ 這個數（優先處理的點數同）；
+    - ``defend_radius``：防禦動作計算幾格內的敵人；``hold_threat_radius``：守點戰「敵人
+      逼近」的格數；
+    - ``surface_friend_harm``：讓友方站上有害的新表面，每名友方相當於這麼多點傷害
+      （× ``friendly_fire``）；
+    - ``keep_distance_radius``：保持距離計算幾格內的敵人，也是「近距離武器」（最佳距離不超過
+      這個值）的門檻；
+    - ``formation_step``：陣法站位每多少‰ 的陣法倍率算一份 ``formation`` 權重；
+    - ``hurt_hp_permille``：位移他人時「快倒下」的門檻（HP 不高於最大 HP 的這個千分比）；
+    - ``exposure_radius``：位移他人時計算格子周圍幾格（切比雪夫距離）內的敵人。
+    """
+
+    unlisted_status_value: int = Field(ge=0)
+    possible_kill_divisor: int = Field(ge=1)
+    defend_radius: int = Field(ge=0)
+    hold_threat_radius: int = Field(ge=0)
+    surface_friend_harm: int = Field(ge=0)
+    keep_distance_radius: int = Field(ge=0)
+    formation_step: int = Field(ge=1)
+    hurt_hp_permille: int = Field(ge=0, le=1000)
+    exposure_radius: int = Field(ge=0)
+
+
+class InfusedPickRules(ContentModel):
+    """灌注的施放：召喚物替施放者放技能時選哪一個選取（``ai_profiles.yaml`` 的
+    ``heuristics.infused_pick``；HC-7 從 ``engine/skill_infusion.py`` 的模組常數搬來，值照搬）。
+    有害的技能每罩到一名敵人 ``enemy_points``、每波及一名友方（不含召喚物自己）扣
+    ``ally_hit_penalty``；分數相同時再比目標缺的 HP。這是戰鬥結算的一部分（重播照它選），不是施放者
+    AI 的估值。"""
+
+    enemy_points: int = Field(ge=0)
+    ally_hit_penalty: int = Field(ge=0)
+
+
+class AiHeuristics(ContentModel):
+    """不分行為模式、敵我共用的 AI 數值（HC-4c；``ai_profiles.yaml`` 的 ``heuristics:``）。
+    嵌入規則包（:attr:`trpg.content.library.Ruleset.ai`），引擎從 ``state.ruleset.ai`` 讀，
+    重播不依賴資料檔。"""
+
+    race: RaceAiRules
+    estimate: EstimateAiRules
+    scoring: ScoringAiRules
+    infused_pick: InfusedPickRules
 
 
 class AiProfileTable(ContentModel):
@@ -1234,28 +1365,28 @@ class AiProfileTable(ContentModel):
     """
 
     profiles: tuple[AiProfile, ...] = Field(min_length=1)
-    move_candidates: int = Field(default=8, ge=1)
-    skill_candidates: int = Field(default=3, ge=1)
+    move_candidates: int = Field(ge=1)
+    skill_candidates: int = Field(ge=1)
     status_values: dict[str, int] = Field(default_factory=dict)
     ally_status_values: dict[str, int] = Field(default_factory=dict)
     self_status_values: dict[str, int] = Field(default_factory=dict)
     """自己承受的狀態代價的估值（BAL-8b），填入每個行為模式（見 AiProfile）。"""
-    trap_likelihood_permille: int = Field(default=700, ge=0, le=1000)
+    trap_likelihood_permille: int = Field(ge=0, le=1000)
     """AI 放置陷阱的收益 ＝ 陷阱效果的價值 × 範圍波及的預期敵人數 × 這個機率（‰；初值未經模擬）。"""
-    trap: TrapAiRules = Field(default_factory=TrapAiRules)
-    rewrite: RewriteAiRules = Field(default_factory=RewriteAiRules)
-    summon: SummonAiRules = Field(default_factory=SummonAiRules)
-    zone: ZoneAiRules = Field(default_factory=ZoneAiRules)
-    gamble: GambleAiRules = Field(default_factory=GambleAiRules)
-    rune: RuneAiRules = Field(default_factory=RuneAiRules)
-    self_cost: SelfCostAiRules = Field(default_factory=SelfCostAiRules)
-    stance: StanceAiRules = Field(default_factory=StanceAiRules)
-    form: FormAiRules = Field(default_factory=FormAiRules)
-    terrain: TerrainAiRules = Field(default_factory=TerrainAiRules)
-    orders: OrderBonuses = Field(default_factory=OrderBonuses)
-    basic: BasicActionAiRules = Field(default_factory=BasicActionAiRules)
+    trap: TrapAiRules
+    rewrite: RewriteAiRules
+    summon: SummonAiRules
+    zone: ZoneAiRules
+    gamble: GambleAiRules
+    rune: RuneAiRules
+    self_cost: SelfCostAiRules
+    stance: StanceAiRules
+    form: FormAiRules
+    terrain: TerrainAiRules
+    orders: OrderBonuses
+    basic: BasicActionAiRules
     """守護隊友、換位、瞄準的 AI 數值（Phase 3-21a；敵我同一套，不分行為模式）。"""
-    run: RunAiRules = Field(default_factory=RunAiRules)
+    run: RunAiRules
     """跑步的 AI 數值（Phase 3-20；敵我同一套，不分行為模式）。"""
     objective_ai: dict[str, int] = Field(default_factory=dict)
     """勝利條件的 AI 權重（Phase 3-22；``contest``、``intercept``、``rush_exit``、``hold_point``、
@@ -1278,6 +1409,8 @@ class AiProfileTable(ContentModel):
     facing: dict[str, int] = Field(default_factory=dict)
     """朝向與背刺的位置權重（Phase 3D-8d；``backstab``、``back_exposed``）：敵我同一套，填入每個行為
     模式的 ``weights``（行為模式自己列出的優先）。"""
+    heuristics: AiHeuristics
+    """不分行為模式的 AI 數值（HC-4c）：種族技條件、便宜估計、共用評分數值；嵌入規則包。"""
 
     @model_validator(mode="before")
     @classmethod

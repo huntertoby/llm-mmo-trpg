@@ -20,7 +20,7 @@ COEFFICIENTS = {
     "on_cast_tag": 350,
     "on_status_applied": 400,
     "on_collision": 300,
-    "on_battle_start": 300,  # TF-1 伴生（每場一次；初值）
+    "on_battle_start": 200,  # TF-1 伴生（每場一次）；2026-11-21 使用者改值（300→200）
 }
 PASSIVES = ("skill_ember_brand", "skill_second_wind", "skill_thorn_skin", "skill_mark_detonation")
 

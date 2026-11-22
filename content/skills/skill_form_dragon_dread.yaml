@@ -1,0 +1,25 @@
+# 龍威降臨（GS-3，#173，06 6.30「形態池名單」高階化身；數值為初值，未經模擬）：進入龍形態（元素照進入時選），
+# 再讓周圍 2 格（實心環形，切比雪夫距離 1～2，含貼身相鄰）的敵人恐懼 1 回合（進入時效果，頭目照控制遞減）。
+id: skill_form_dragon_dread
+schema_version: 1
+name_zh: 龍威降臨
+tier: 4
+rank: 1
+rarity: epic
+kind: stance
+skeleton: stance
+category: spell
+weapon_req: any
+ap_cost: null
+scaling_attr: wil
+shape: {type: ring, radius: 2, solid: true}
+effects:
+  - {type: enter_form, form: dragon, affects: self}
+  - {type: apply_status, status: feared, duration: 1, affects: enemies}
+condition: null
+cost: {cooldown: 3}
+tags: [stance]
+narrative:
+  concept: 巨龍現身的威壓籠罩四周，靠近的敵人光是看一眼就想逃
+  cast_flavor: 你的背後展開龍翼，鱗片覆滿全身，一股古老的威壓向四周壓下，敵人的膝蓋不由得發軟
+provenance: {origin: builtin, owner_id: null, created_by: null, parents: [], bound: true, tradeable: false}

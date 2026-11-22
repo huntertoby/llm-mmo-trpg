@@ -95,7 +95,7 @@ describe("公告板與成長的說明段落套 KeepNum（需求 3.1 更正）", 
   });
   it("成長：警告、鎖住、入門配點、已閃次數、空狀態、種族次行、重閃說明", () => {
     const src = stripTsComments(readFile(SRC_DIR, "world/WorldGrowth.tsx"));
-    for (const t of ["<KeepNum text={warn} />", "<KeepNum text={FLASH_LOCK_ZH.tail} />", "<KeepNum text={starter} />", "<KeepNum text={flashCountText(flash, hero.flash_rules)} />", "<KeepNum text={ATTR_EMPTY_ZH} />"])
+    for (const t of ["<KeepNum text={warn} />", "<KeepNum text={openingLevelTag()} />", "<KeepNum text={starter} />", "<KeepNum text={flashCountText(flash, hero.flash_rules)} />", "<KeepNum text={ATTR_EMPTY_ZH} />"])
       expect(src).toContain(t);
     expect(stripTsComments(readFile(SRC_DIR, "world/GrowthLookRows.tsx"))).toContain("<KeepNum text={RACE_NOTE_ZH} />");
     expect(stripTsComments(readFile(SRC_DIR, "run/CampfireSkillCare.tsx"))).toContain("<KeepNum text={reflashNoteText(hero.flash_rules)} />");

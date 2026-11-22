@@ -80,9 +80,9 @@ class CraftRules(ContentModel):
     rarities: dict[CraftRarity, CraftRarityCost] = Field(min_length=1)
     grade_amount: dict[SlotType, int]
     """部位 → 通用料個數（8.13「材料用量依部位預算比例調整」）。"""
-    flavor_max: int = Field(default=3, ge=0, le=5)
+    flavor_max: int = Field(ge=0, le=5)
     """特色材料最多幾種（每種 1 個）。"""
-    leaning_weight: int = Field(default=4, ge=1, le=100)
+    leaning_weight: int = Field(ge=1, le=100)
     """材料傾向的詞條在抽詞條時的權重倍數（M2）。"""
     grade_cap: dict[MaterialGrade, int]
     """通用料的階 → 物品等級上限（8.26.2：粗 3、精 7、上 10）。"""
@@ -147,9 +147,9 @@ class EnhanceRules(ContentModel):
     """強化 +1～+3（8.14）：每級基礎加成 ``step_permille``；金幣 ``gold_per_level`` × 物品等級 ×
     目標等級；通用料（依物品等級的階）× 目標等級。"""
 
-    max_level: int = Field(default=3, ge=1, le=10)
-    step_permille: int = Field(default=20, ge=1, le=200)
-    gold_per_level: int = Field(default=10, ge=0)
+    max_level: int = Field(ge=1, le=10)
+    step_permille: int = Field(ge=1, le=200)
+    gold_per_level: int = Field(ge=0)
 
 
 class ModCost(ContentModel):
@@ -173,7 +173,7 @@ class CraftingRules(ContentModel):
     """精華的物品 ID（分解得到、重骰與指定花掉）。"""
     materials: dict[str, FlavorMaterial] = Field(default_factory=dict)
     hidden: tuple[HiddenRecipe, ...] = ()
-    enhance: EnhanceRules = Field(default_factory=EnhanceRules)
+    enhance: EnhanceRules
     reroll: ModCost
     imbue: ModCost
     salvage: dict[str, int] = Field(default_factory=dict)
@@ -231,7 +231,7 @@ class ResonanceDef(ContentModel):
 class ResonanceRules(ContentModel):
     """``content/world/resonance.yaml``（M3：第一季只有 2 件門檻）。"""
 
-    pieces: int = Field(default=2, ge=2, le=9)
+    pieces: int = Field(ge=2, le=9)
     resonances: tuple[ResonanceDef, ...] = ()
 
     @model_validator(mode="after")

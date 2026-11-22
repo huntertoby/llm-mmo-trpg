@@ -2,10 +2,11 @@
 #
 # category：numeric 數值型／structural 結構型／rule_rewrite 改寫規則型（2A 沒有）
 # min_rarity：使用此原語的最低稀有度（2B-2 起由驗證器檢查：數值型 common、結構型 rare）
-# budget_basis／base_points：預算點數的算法（docs/phases/Phase2B計畫.md 4.2）
-#   fixed 固定 base_points／per_distance base_points × 距離／dice_average 骰子平均值／
+# budget_basis：預算點數的算法（docs/phases/Phase2B計畫.md 4.2）。基礎點數在 skill_budget.yaml 的
+#   primitive_points（HC-B 從這裡的 base_points 搬去，值不變，開放數值工坊）。
+#   fixed 固定基礎點數／per_distance 基礎點數 × 距離／dice_average 骰子平均值／
 #   damage 法術為骰子平均值、武器為倍率 × core.yaml 的 budget_reference_weapon_damage／
-#   status、surface 為該狀態或表面的 budget_points × 持續 ÷ 預設持續
+#   status、surface 為該狀態或表面的點數（skill_budget.yaml 的 status_points／surface_points）× 持續 ÷ 預設持續
 # harmful：有害。省略 affects 時的預設：地形類 tiles、施放者專屬 self、有害 enemies、有益 allies
 # acts_on：unit（對單位）／tile（對格子；affects 為單位類別時作用在這些單位腳下的格子）／caster
 # allowed_shapes：只能搭配這些形狀
@@ -108,7 +109,11 @@ primitives:
     harmful: false
     budget_basis: dice_average
     params:
-      dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, knob: {ladder: dice, weight: caller}}
+      dice: {llm_hint: "護盾吸收量的骰子（幾顆幾面）。", type: dice, required: true, required_when: {unless_filled: max_hp_permille}, knob: {ladder: dice, weight: caller}}
+      # GS-3（#173，06 6.30 化形守護）：每個目標的護盾＝施放者目前（變身後）最大 HP × n‰，不擲骰、不加屬性，
+      # 不能和 dice、flat_bonus、status 一起填；預算用 skill_budget.yaml 的 shield_max_hp_points（每 100‰ 的點數）
+      # 代替骰子平均。knob: none：組合器與 LLM 的預算器不填它。說明文字（description_zh）留給玩法 PM 連同工坊的玩家版一起寫。
+      max_hp_permille: {llm_hint: "護盾量改看施放者最大生命的比例（一般不用填）。", type: int, min: 1, max: 1000, knob: none}
       flat_bonus: {llm_hint: "護盾量在骰值之外多加的固定值。", type: int, min: 1, max: 100, description_zh: "固定值加成（BAL-12b 定）：只有技能自己的護盾效果可以填；護盾量 ＝ 骰值 ＋ n ＋ 屬性加成；預算：骰子平均 ＋ n（再乘持續係數）", knob: none}
       duration: {llm_hint: "護盾持續的回合數（2–3；省略＝2）。", type: int, min: 2, max: 3, description_zh: 護盾持續回合, knob: none}
       status: {llm_hint: "帶附帶效果的護盾狀態（省略＝一般護盾）。", type: status, description_zh: 帶附帶效果的護盾狀態（反傷、結束回復、破盾造水或標記）, knob: none}
@@ -120,7 +125,6 @@ primitives:
     category: numeric
     harmful: false
     budget_basis: fixed
-    base_points: 3
     forbid_affects: [enemies, all]
     params:
       count: {llm_hint: "移除 1 個減益，或全部（省略＝全部）。", type: count, min: 1, max: 1, description_zh: 只移除 1 個減益（控制類優先）或 all（全部，同省略）}
@@ -133,7 +137,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: per_distance
-    base_points: 2
     params:
       distance: {llm_hint: "推開的格數。", type: int, required: true, min: 1, max: 2, knob: {ladder: push_pull_distances, weight: 1}}
       collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points, knob: none}
@@ -146,7 +149,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: per_distance
-    base_points: 2
     params:
       distance: {llm_hint: "拉近的格數。", type: int, required: true, min: 1, max: 2, knob: {ladder: push_pull_distances, weight: 1}}
       collision_dice: {llm_hint: "撞擊傷害的骰子。", type: dice, description_zh: 撞擊傷害骰（省略時用核心規則 collision_damage_dice，初值 1d6）；預算每顆骰加 collision_die_points, knob: none}
@@ -159,11 +161,10 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: fixed
-    base_points: 3
   - id: shockwave
     name_zh: 震波
     llm_hint: "讓直線上的單位直接倒地，會飛的不受影響（須用大地元素 earth）。"
-    description_zh: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中，友方不擲命中）。只有大地元素的技能能用（互斥規則 terrain_needs_earth，3-54d）。只能用在主動技能。預算：固定 base_points（形狀倍率另算；初值，未經模擬）。
+    description_zh: 影響格（只能是直線形狀）上的對象單位直接倒地：不擲對抗，已經倒地的略過；帶 flying 標籤（會飛）的單位不受影響。對象可選敵方、友方或雙方（敵方需命中，友方不擲命中）。只有大地元素的技能能用（互斥規則 terrain_needs_earth，3-54d）。只能用在主動技能。預算：固定點數 primitive_points.shockwave（skill_budget.yaml；形狀倍率另算；初值，未經模擬）。
     player_description: "讓直線範圍內的單位直接倒地，不用對抗；會飛的單位不受影響。"
     category: structural
     harmful: true
@@ -171,7 +172,6 @@ primitives:
     active_only: true
     allowed_shapes: [line]
     budget_basis: fixed
-    base_points: 4
   - id: teleport
     name_zh: 傳送
     llm_hint: "讓施放者瞬間移動到選定的位置。"
@@ -181,7 +181,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 4
     acts_on: caster
     allowed_shapes: [ground_tile]
   # --- Phase 3D-2：自身位移（docs/design/06-技能.md 6.16 A；點數為初值，未經模擬）---
@@ -196,14 +195,13 @@ primitives:
     position: first
     active_only: true
     budget_basis: fixed
-    base_points: 3
     acts_on: caster
     allowed_shapes: [single]
   # --- Phase 3J-4c：解除形態（06 6.30 解形爆發）---
   - id: leave_form
     name_zh: 解除形態
     llm_hint: "先解除自己目前的形態，再結算技能的其他效果。"
-    description_zh: 施放者先解除目前的形態（離開原因 released；照常換回手上的武器與裝備、最大 HP 減回、該形態冷卻 forms.yaml 的 cooldown 回合、取消龍的蓄力），其餘效果再照順序結算。必須是主動技能的第一個效果、一個技能最多一個、affects 一律為 self；施放者不在形態中不能施放（skill_problem）。不另計點數（base_points 0），但算代價：預算用 skill_budget.yaml 的 allowance.leave_form_permille 折抵（照 6.5 代價折抵，和其他代價加總後套整體上限）。
+    description_zh: 施放者先解除目前的形態（離開原因 released；照常換回手上的武器與裝備、最大 HP 減回、該形態冷卻 forms.yaml 的 cooldown 回合、取消龍的蓄力），其餘效果再照順序結算。必須是主動技能的第一個效果、一個技能最多一個、affects 一律為 self；施放者不在形態中不能施放（skill_problem）。不另計點數（skill_budget.yaml 的 primitive_points.leave_form），但算代價：預算用 skill_budget.yaml 的 allowance.leave_form_permille 折抵（照 6.5 代價折抵，和其他代價加總後套整體上限）。
     player_description: "施放時先解除自己目前的形態（照常進入冷卻），再造成技能的其餘效果；不在形態中不能使用。"
     category: structural
     harmful: false
@@ -213,7 +211,6 @@ primitives:
     max_per_skill: 1
     active_only: true
     budget_basis: fixed
-    base_points: 0
   - id: charge_through
     name_zh: 直線衝撞
     llm_hint: "施放者向前衝過路徑，路上的敵人受到傷害與附帶效果。"
@@ -243,7 +240,6 @@ primitives:
     position: first
     active_only: true
     budget_basis: fixed
-    base_points: 3   # BAL-13d：4 → 3（瞬步背刺每 AP 傷害 ≥ 普攻 1.2 倍；scripts/bal13d_backstab.py）
     acts_on: caster
     allowed_shapes: [single, unit_then_tile]
     params:
@@ -258,7 +254,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: fixed
-    base_points: 3
     acts_on: caster
     allowed_shapes: [ground_tile]
   - id: swap
@@ -271,7 +266,6 @@ primitives:
     min_rarity: rare
     active_only: true
     budget_basis: fixed
-    base_points: 4
     forbid_affects: [self, all, tiles]
     allowed_shapes: [single]
   # --- Phase 3D-2b：位移他人（docs/design/06-技能.md 6.19；點數為初值，未經模擬）---
@@ -286,7 +280,6 @@ primitives:
     sole_effect: true
     active_only: true
     budget_basis: fixed
-    base_points: 11
     acts_on: caster
     allowed_shapes: [unit_then_tile]
   - id: swap_any
@@ -300,7 +293,6 @@ primitives:
     sole_effect: true
     active_only: true
     budget_basis: fixed
-    base_points: 12
     acts_on: caster
     allowed_shapes: [unit_pair]
   - id: apply_status
@@ -338,7 +330,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 2
     acts_on: tile
   - id: create_obstacle
     name_zh: 產生障礙
@@ -349,7 +340,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: obstacle
-    base_points: 3
     acts_on: tile
     params:
       object: {llm_hint: "要放置的物件種類。", type: object, required: true}
@@ -363,7 +353,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 7
     acts_on: tile
     params:
       amount: {llm_hint: "抬高的層數。", type: int, min: 1, max: 1}
@@ -376,7 +365,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 7
     acts_on: tile
     params:
       amount: {llm_hint: "降低的層數。", type: int, min: 1, max: 1}
@@ -389,7 +377,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 4
     acts_on: caster
     allowed_shapes: [self]
   # --- Phase 2E-3：層數與陷阱（點數為初值，未經模擬）---
@@ -402,7 +389,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: per_amount
-    base_points: 2
     params:
       stack: {llm_hint: "要累積的層數種類。", type: stack, required: true, description_zh: 層數 ID（stacks.yaml）}
       amount: {llm_hint: "一次增加的層數。", type: int, required: true, min: 1, max: 3, description_zh: 累積的層數, knob: {ladder: stack_amount, weight: other}}
@@ -444,7 +430,6 @@ primitives:
     harmful: false
     min_rarity: rare
     budget_basis: fixed
-    base_points: 2
     acts_on: caster
     allowed_shapes: [ground_tile]
   # --- Phase 3C-4a：改寫規則型原語（docs/design/06-技能.md 6.3、6.6；點數為初值，未經模擬）---
@@ -459,7 +444,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: per_amount
-    base_points: 4
     forbid_affects: [enemies, all]
     params:
       amount: {llm_hint: "獲得的 AP 點數。", type: int, required: true, min: 1, max: 2, description_zh: 給予的 AP, knob: {ladder: param_range, weight: other}}
@@ -472,7 +456,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: fixed
-    base_points: 7
     forbid_affects: [enemies, all, self]
     params:
       which: {llm_hint: "重置全部技能，還是只重置帶指定標籤的技能。", type: which, required: true, description_zh: 重置全部技能，或只重置帶指定標籤的技能}
@@ -487,7 +470,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: fixed
-    base_points: 8
     forbid_affects: [enemies, all]
     params:
       duration: {llm_hint: "效果持續的回合數。", type: int, min: 1, max: 2, description_zh: 免死的持續回合}
@@ -502,7 +484,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: fixed
-    base_points: 7
     forbid_affects: [enemies, all, self]
     params:
       permille: {llm_hint: "轉移的傷害比例。", type: int, required: true, min: 100, max: 500, description_zh: 轉移給施放者的傷害千分比}
@@ -519,7 +500,6 @@ primitives:
     sole_effect: true
     active_only: true
     budget_basis: fixed
-    base_points: 9
     acts_on: caster
     allowed_shapes: [self]
   - id: extra_reaction
@@ -531,7 +511,6 @@ primitives:
     harmful: false
     min_rarity: epic
     budget_basis: per_amount
-    base_points: 7
     forbid_affects: [enemies, all]
     params:
       amount: {llm_hint: "增加的反應次數。", type: int, required: true, min: 1, max: 1, description_zh: 額外的反應次數, knob: none}
@@ -561,7 +540,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: fixed
-    base_points: 6
     acts_on: tile
     allowed_shapes: [single]
   # --- Phase 3D-1：資源互動（docs/design/06-技能.md 6.16 H；點數為初值，未經模擬）---
@@ -587,7 +565,6 @@ primitives:
     harmful: true
     min_rarity: rare
     budget_basis: fixed
-    base_points: 4
     forbid_affects: [allies, all, self]
 
   - id: dispel
@@ -783,14 +760,13 @@ primitives:
   - id: inscribe
     name_zh: 刻印
     llm_hint: "在格子上刻下符文，之後可以被引爆或被其他技能利用。"
-    description_zh: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：base_points × inscribe_duration_permille（依 duration；省略＝預設 3 輪）。
+    description_zh: 在影響格（可站立的格子）留下施放者專屬的符文：恰好帶一個 element（元素，例如雷紋、火紋）或 tag（標籤），持續 duration 個環境回合（省略為 core.yaml 的 rune_default_rounds，初值 3；上限 5）。符文本身沒有任何效果，敵我都看得到；只有刻下它的施放者讀得到（條件 on_own_rune、消耗型原語 detonate_runes）。同一施放者在同一格再刻一次是更新；同一施放者同時存在的符文格超過 rune_limit_per_owner（core.yaml，初值 6）時最舊的消失。施放者倒下時符文保留到時效結束。預算：primitive_points.inscribe × inscribe_duration_permille（skill_budget.yaml；依 duration；省略＝預設 3 輪）。
     player_description: "在地面刻下只有自己能引爆的符文，帶有元素或標籤。"
     category: structural
     harmful: false
     min_rarity: rare
     active_only: true
     budget_basis: inscribe
-    base_points: 5
     acts_on: tile
     forbid_affects: [self, enemies, allies, all]   # 刻印只作用在格子（3-48c）；要刻在腳下用「自身」形狀
     params:
@@ -836,14 +812,13 @@ primitives:
   - id: blow_surface
     name_zh: 吹送
     llm_hint: "用風把範圍內的地面表面（火、毒、冰、水、油、煙霧）整片往風向吹走幾格。"
-    description_zh: 把影響格上可吹送的表面（rules/core.yaml 的 wind.blow_surfaces：火、毒、冰、水、油、煙霧）整片往風向平移 distance 格（2～3），保留剩餘回合與建立者。風向：方向型形狀為形狀的方向；中心格型為「施放者 → 中心格」的主要軸向；以施放者為中心的形狀為「施放者 → 該格」的主要軸向（往外吹）。表面一格一格前進，遇到地圖外、牆壁、blocks_move 物件、比目前高的格子就停在前一格；單位不阻擋；推進致命地形（深淵、岩漿；上面不能有表面）的表面走到那一格就消失。原格的表面移除；落點先查互動表（同產生表面，例如水熄滅火），帶元素的表面落在物件上照常觸及。多片落在同一格時，風向最前面的先放。只能用在主動技能、只作用在格子。預算：base_points × 距離。
+    description_zh: 把影響格上可吹送的表面（rules/core.yaml 的 wind.blow_surfaces：火、毒、冰、水、油、煙霧）整片往風向平移 distance 格（2～3），保留剩餘回合與建立者。風向：方向型形狀為形狀的方向；中心格型為「施放者 → 中心格」的主要軸向；以施放者為中心的形狀為「施放者 → 該格」的主要軸向（往外吹）。表面一格一格前進，遇到地圖外、牆壁、blocks_move 物件、比目前高的格子就停在前一格；單位不阻擋；推進致命地形（深淵、岩漿；上面不能有表面）的表面走到那一格就消失。原格的表面移除；落點先查互動表（同產生表面，例如水熄滅火），帶元素的表面落在物件上照常觸及。多片落在同一格時，風向最前面的先放。只能用在主動技能、只作用在格子。預算：primitive_points.blow_surface（skill_budget.yaml）× 距離。
     player_description: "用風把範圍內的地面表面（火、毒、冰、水、油、煙霧）整片往風向吹走幾格；撞到牆或擋路的東西就停下。"
     category: structural
     harmful: false
     min_rarity: rare
     active_only: true
     budget_basis: per_distance
-    base_points: 1
     acts_on: tile
     forbid_affects: [self, enemies, allies, all]   # 吹送只作用在格子
     params:
@@ -853,14 +828,13 @@ primitives:
   - id: clear_surface
     name_zh: 清除表面
     llm_hint: "清掉範圍內的地面表面。"
-    description_zh: 移除影響格上指定種類（surface）的表面；省略 surface 時移除 rules/core.yaml 的 clear_surfaces（煙霧、毒）。affects 為 allies 時只清有友方站著的格子，tiles 時清整個範圍。不帶元素、不查互動表、不觸及物件、不觸發風的擴散。只作用在格子、只能用在主動技能。預算：base_points 3（形狀與對象倍率照一般效果）。
+    description_zh: 移除影響格上指定種類（surface）的表面；省略 surface 時移除 rules/core.yaml 的 clear_surfaces（煙霧、毒）。affects 為 allies 時只清有友方站著的格子，tiles 時清整個範圍。不帶元素、不查互動表、不觸及物件、不觸發風的擴散。只作用在格子、只能用在主動技能。預算：primitive_points.clear_surface（skill_budget.yaml；形狀與對象倍率照一般效果）。
     player_description: "把範圍內指定種類的地面效果直接清掉（不選＝清掉煙霧與毒）；可以只清友方腳下的。不帶元素，也不會引發其他反應。"
     category: structural
     harmful: false
     min_rarity: rare
     active_only: true
     budget_basis: fixed
-    base_points: 3
     acts_on: tile
     params:
       surface: {llm_hint: "表面種類；省略＝煙霧與毒。", type: surface, description_zh: 要清除的表面種類；省略時清除煙霧與毒}
@@ -869,7 +843,7 @@ primitives:
   - id: enter_form
     name_zh: 進入形態
     llm_hint: "化身為一種形態：普攻改用天生武器，持續到取消。"
-    description_zh: 進入 form（content/forms.yaml）的形態。形態是姿態的擴充——只能是姿態（kind 為 stance）唯一的效果、形狀 self；花 stance_ap_cost（1）AP，同時只能有一個姿態或形態（進入形態會取代姿態、施加姿態會解除形態），自己回合用 end_stance 取消（免費），倒下、撤離或戰鬥結束時解除；佔一個主動技能欄位。形態中普攻改用天生武器（屬性 × 0.3；手上武器的普攻特性與主手的普攻詞條不生效，武器技仍看手上武器），套用形態效果（防禦、移動、最大 HP、受傷修正、治療加成、高度差當平地），每次進入觸發進入獎勵。每回合開始付維持費（物理形態扣耐力、心智形態扣法力，forms.yaml），不夠付就自動解除。離開（取消、被迫解除、切換）後該形態冷卻 forms.yaml 的 cooldown 回合，其他形態不受影響；已在該形態中或該形態冷卻中不能使用。元素可選的形態用 use_skill 的 form_element 選（省略＝清單第一個）。預算：base_points 11（照姿態計，skill_budget.yaml 的 form_coefficient_permille）。
+    description_zh: 進入 form（content/forms.yaml）的形態。形態是姿態的擴充——只能是姿態（kind 為 stance）唯一的效果、形狀 self；花 stance_ap_cost（1）AP，同時只能有一個姿態或形態（進入形態會取代姿態、施加姿態會解除形態），自己回合用 end_stance 取消（免費），倒下、撤離或戰鬥結束時解除；佔一個主動技能欄位。形態中普攻改用天生武器（屬性 × 0.3；手上武器的普攻特性與主手的普攻詞條不生效，武器技仍看手上武器），套用形態效果（防禦、移動、最大 HP、受傷修正、治療加成、高度差當平地），每次進入觸發進入獎勵。每回合開始付維持費（物理形態扣耐力、心智形態扣法力，forms.yaml），不夠付就自動解除。離開（取消、被迫解除、切換）後該形態冷卻 forms.yaml 的 cooldown 回合，其他形態不受影響；已在該形態中或該形態冷卻中不能使用。元素可選的形態用 use_skill 的 form_element 選（省略＝清單第一個）。預算：primitive_points.enter_form（照姿態計，skill_budget.yaml 的 form_coefficient_permille）。
     player_description: "化身為一種形態：普攻改用天生武器，獲得形態效果與進入獎勵；每回合要付維持費，持續到取消。"
     category: structural
     harmful: false
@@ -877,12 +851,15 @@ primitives:
     acts_on: caster
     allowed_shapes: [self]
     sole_effect: true
+    # GS-3（#173，06 6.30「高階化身的進入時效果」）：3 階以上的化身技排第一個時，後面最多再跟 1 個施加狀態或推擊
+    # （形狀自己或實心環形；階級與冷卻下限在 rules/core.yaml 的 skill_limits）。組合器與 LLM 照舊不加。
+    companions: [apply_status, push]
+    companion_shapes: [ring]
     max_per_skill: 1
     budget_basis: fixed
-    base_points: 11
     params:
       form: {llm_hint: "要化身的形態。", type: form, required: true, description_zh: 形態 ID（content/forms.yaml）}
-      magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 base_points × 幅度, knob: none}
+      magnitude_permille: {llm_hint: "形態效果的強化比例。", type: int, min: 1000, max: 2000, description_zh: 形態幅度（BAL-2c）：形態對自己有利的部分（正的加成、減傷、天生武器傷害加成、進入獎勵）放大的比例（‰）；代價（負值、弱點）與維持費不變。預算 primitive_points.enter_form × 幅度, knob: none}
 
   # --- SK-2：#166 第 2 組的新原語（06 6.38 第 4、5、8 點；點數與格數為初值，接數值工坊，未經模擬）---
   # SK-2b（玩法交接 4.1.28 第 5 點）接進出題：鉤＝位移骨架核心；吸收表面＝打擊、蓄力／終結骨架的附帶（換層數、換元素）
@@ -891,7 +868,7 @@ primitives:
   - id: absorb_surface
     name_zh: 吸收表面
     llm_hint: "吸走腳下或目標格的一種表面，換成層數、治療、護盾，或讓這一招帶上它的元素（吸水＝帶潮濕）。"
-    description_zh: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（帶元素的表面：火、冰、毒、聖光、黑暗；吸到水時元素不變，改成這一招之後的傷害命中時在目標格造水，帶潮濕；油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：skill_budget.yaml 的 absorb_surface_points ＋ 收益點數（層數＝add_stack 的 base_points × amount；治療、護盾＝骰子平均；元素＝absorb_surface_points）。
+    description_zh: 移除一格的表面（affects 為 self 時是施放者腳下；tiles 時是形狀選中的那一格，形狀只能是 self、single、ground_tile），換成 gain 指定的一種收益（只給施放者）：stack 自己的層數 +amount（只能是累積在自己身上的層數）、heal 治療 dice、shield 護盾 dice、element 這一招之後的傷害改成那種表面的元素（帶元素的表面：火、冰、毒、聖光、黑暗；吸到水時元素不變，改成這一招之後的傷害命中時在目標格造水，帶潮濕；油、煙霧不能用 element）。填了 surface 時只吸那一種。格上沒有可吸的表面時這個效果落空（effect_fizzled no_surface），其他效果照常。巨型單位的佔格沒有表面。必須是技能的第一個效果、只能用在主動技能、一招最多一個。事件 surface_absorbed（之後是 surface_changed，原因 absorb）。預算：skill_budget.yaml 的 absorb_surface_points ＋ 收益點數（層數＝primitive_points.add_stack × amount；治療、護盾＝骰子平均；元素＝absorb_surface_points）。
     player_description: "吸走腳下或目標格的一種地面表面，換成層數、治療、護盾，或讓這一招帶上那種表面的元素；吸水會讓這招帶潮濕。"
     category: structural
     harmful: false

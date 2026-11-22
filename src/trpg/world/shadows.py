@@ -35,6 +35,7 @@ from trpg.world.calendar import day_of
 from trpg.world.common import here
 from trpg.world.economy_actions import EquipAction
 from trpg.world.encounters import EncounterLineup
+from trpg.world.errors import WorldError
 from trpg.world.gear import item_loadout, shadow_equipment
 from trpg.world.growth import GROWTH_ACTIONS, hero_tier
 from trpg.world.state import (
@@ -276,13 +277,15 @@ def record_lent(
     """帶著影子打完一場：每個影子的主人這一天第一次被借用時給任務幣、加一則戰報（代決 5C2-6）。"""
     table = library.world_mercenaries
     coins = 0 if table is None else table.shadow_daily_coins
-    kept = 20 if table is None else table.shadow_reports_kept
     day = day_of(library, now)
     events: list[WorldEvent] = []
     for snapshot in borrower.shadows:
         record = world.shadow_of(snapshot.owner)
         if record is None or record.reward_day == day:
             continue
+        if table is None:  # 借得到影子就一定有傭兵表（HC-7：拿掉沒有表時的備用 20 則）
+            raise WorldError("內容庫沒有 world/mercenaries.yaml")
+        kept = table.shadow_reports_kept
         report = ShadowReport(
             day=day,
             at=now,

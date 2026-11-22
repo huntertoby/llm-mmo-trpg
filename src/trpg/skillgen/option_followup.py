@@ -315,7 +315,7 @@ def _effects_field(  # noqa: PLR0917
     return FieldSpec(
         field="followup.effects",
         name_zh="第二段的效果",
-        description_zh="依序結算；兩段合計最多 4 個效果"
+        description_zh=f"依序結算；兩段合計最多 {_max_effects(library)} 個效果"
         + ("；只能是一個自身位移" if when == "after_action" else "；不能放召喚、區域、陷阱"),
         type="effects",
         required=True,
@@ -374,6 +374,11 @@ def followup_fields(
     return tuple(fields)
 
 
+def _max_effects(library: ContentLibrary) -> int:
+    """一個技能（複合技能兩段合計）最多幾個效果（``core.skill_limits.max_effects``；HC-6a）。"""
+    return library.ruleset.core.skill_limits.max_effects
+
+
 def followup_notes(library: ContentLibrary) -> tuple[str, ...]:
     budget = library.budget
     tax = budget.composite_tax_permille
@@ -385,5 +390,5 @@ def followup_notes(library: ContentLibrary) -> tuple[str, ...]:
         f"{budget.modifier.hit_rate_permille}‰）；延遲段 × {delayed}‰"
         "（敵人看得到、能反應）",
         "兩段之間自己造環境又引爆它（例如先造油再點火）時點數大幅加價",
-        "兩段的效果合計最多 4 個；最低稀有度至少稀有",
+        f"兩段的效果合計最多 {_max_effects(library)} 個；最低稀有度至少稀有",
     )

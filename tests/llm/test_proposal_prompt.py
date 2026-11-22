@@ -81,7 +81,10 @@ def test_prompt_structure() -> None:
     assert '"kind":"active"' in request_block
     # LB-2：送給約束解碼的 schema ＝ 模型的 schema 收緊（變奏數量與替換內容、去說明文字）；
     # 頂層依技能類別分支。LB-2c：題目沒要求變奏，schema 沒有 variants（上限 0）
-    assert prompt.json_schema == shape_schema(prompt.models.json_schema(), variant_limit=0)
+    swaps = _lib().ruleset.core.skill_limits.max_variant_replacements
+    assert prompt.json_schema == shape_schema(
+        prompt.models.json_schema(), variant_limit=0, swap_max=swaps
+    )
     assert {"SkillProposal_weapon", "SkillProposal_spell"} <= set(prompt.json_schema["$defs"])
     assert prompt.subset.skeletons == ("strike",)
     # LLM-1B：<available> 只放這題的子集（與 schema 一致），題目區沒有 allowed 清單

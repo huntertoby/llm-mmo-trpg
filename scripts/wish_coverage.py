@@ -5,8 +5,8 @@
 ``trpg.skillgen.wish_pick.wish_pool`` 的出題條件：
 
 - **桶子**＝（指定關鍵字或不指定, 種類, 階級, 稀有度）；每桶用種子 0～N-1 各呼叫一次組合器
-  （``compose_with_stats``，參數同 ``wish_pick._compose``：``keyword_tries=SLOT_KEYWORD_TRIES``、
-  ``skip_legendary``、``kinds``；另外指定稀有度——遊戲裡由組合器自己擲）。
+  （``compose_with_stats``，參數同 ``wish_pick._compose``：
+  ``keyword_tries=pool.slot_keyword_tries``、``skip_legendary``、``kinds``；另外指定稀有度——遊戲裡由組合器自己擲）。
 - **合法**＝組合器不丟 ``ComposeError``、``validate_skill`` 無違規、不是傳說、種類在要的那一族
   （主動＝主動＋姿態），同 ``wish_pick._Filter``（不看武器、不看手上的技能）。
 - 每個合法技能記下它的標籤（``wish_pick.skill_tag_ids``，關鍵字只看專屬規則）。
@@ -71,7 +71,6 @@ from trpg.skillgen.composer_dual import add_second_element, second_element_tier
 from trpg.skillgen.composer_lifesteal import add_lifesteal, lifesteal_ready
 from trpg.skillgen.composer_parts import _HAND_WRITTEN_PRIMITIVES
 from trpg.skillgen.composer_retheme import retheme
-from trpg.skillgen.pick_offer import SLOT_KEYWORD_TRIES
 from trpg.skillgen.random_composer import _STACK_SKELETON, ComposeError, compose_with_stats
 from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.wish_pick import (
@@ -206,7 +205,7 @@ def attempt(lib: ContentLibrary, bucket: Bucket, seed: int) -> tuple[str, str]:
             skeleton=bucket.hint or None,
             library=lib,
             keyword=None if bucket.keyword == NO_KEYWORD else bucket.keyword,
-            keyword_tries=SLOT_KEYWORD_TRIES,
+            keyword_tries=lib.skill_pick.pool.slot_keyword_tries,
             skip_legendary=True,
             kinds=family,
         ).skill

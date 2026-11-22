@@ -19,18 +19,19 @@ from trpg.content.skills import (
     CONSUME_THEN_TYPES,
     DAMAGE_MULTIPLIER,
     GAMBLE_BRANCH_TYPES,
-    MAX_REFUND_AP,
     ON_KILL_TYPES,
     REFUND_AP,
     REFUND_COOLDOWN,
     SELF_DAMAGE_OF_HIT,
     ZONE_EFFECT_TYPES,
+    EffectSpec,
     PrimitiveDef,
 )
 from trpg.skillgen.option_models import Choice, FieldSpec
 from trpg.skillgen.option_params import (
     AFFECTS_TEXT,
     ParamContext,
+    model_range,
     primitive_param_fields,
 )
 
@@ -55,29 +56,40 @@ _TOP_ONLY_PARAMS = frozenset(
 class _Rule:
     types: tuple[str, ...]
     min_count: int
-    max_count: int
+    limit: str
+    """子效果個數的上限：``core.yaml`` 的 ``skill_limits`` 的哪一格（HC-5b：原本寫死 2，同值）。"""
     own_affects: bool
     """子效果可以自選對象（賭注）；否則對象由外層決定（消耗狀態、區域）或一律是施放者（擊殺時）。"""
     beneficial_only: bool = False
 
 
 NESTED_PARAMS: dict[tuple[str, str], _Rule] = {
-    ("consume_status", "then"): _Rule(CONSUME_THEN_TYPES, 1, 2, own_affects=False),
-    ("zone", "effects"): _Rule(ZONE_EFFECT_TYPES, 1, 2, own_affects=False),
-    ("gamble", "win"): _Rule(GAMBLE_BRANCH_TYPES, 0, 2, own_affects=True),
-    ("gamble", "lose"): _Rule(GAMBLE_BRANCH_TYPES, 0, 2, own_affects=True),
-    ("damage", "on_kill"): _Rule(ON_KILL_TYPES, 1, 2, own_affects=False, beneficial_only=True),
+    ("consume_status", "then"): _Rule(CONSUME_THEN_TYPES, 1, "max_consume_then", own_affects=False),
+    ("zone", "effects"): _Rule(ZONE_EFFECT_TYPES, 1, "max_zone_effects", own_affects=False),
+    ("gamble", "win"): _Rule(GAMBLE_BRANCH_TYPES, 0, "max_branch_effects", own_affects=True),
+    ("gamble", "lose"): _Rule(GAMBLE_BRANCH_TYPES, 0, "max_branch_effects", own_affects=True),
+    ("damage", "on_kill"): _Rule(
+        ON_KILL_TYPES, 1, "max_on_kill_effects", own_affects=False, beneficial_only=True
+    ),
 }
 """(原語, 參數) 對應子效果規則；類型清單來自 skills.py 的各 *_TYPES 常數。"""
 
-_SPECIAL: dict[str, tuple[str, str, str, str, int, int]] = {
+
+def _schema_bounds(name: str) -> tuple[int, int]:
+    """``EffectSpec`` 整數欄位 ``name`` 的 schema 上下限（HC-5b：表單範圍照 schema，不另外寫
+    數字）。"""
+    low, high = model_range(EffectSpec.model_fields[name])
+    assert low is not None and high is not None, name
+    return low, high
+
+
+_SPECIAL: dict[str, tuple[str, str, str, str, int, int | None]] = {
     DAMAGE_MULTIPLIER: (
         "傷害倍率",
         "這一次施放的所有傷害乘上倍率（×2＝加倍）。",
         "damage_multiplier_permille",
         "倍率",
-        100,
-        10_000,
+        *_schema_bounds("damage_multiplier_permille"),
     ),
     SELF_DAMAGE_OF_HIT: (
         "反噬自傷",
@@ -89,14 +101,15 @@ _SPECIAL: dict[str, tuple[str, str, str, str, int, int]] = {
     ),
     REFUND_AP: (
         "返還 AP",
-        f"讓你立刻拿回 1～{MAX_REFUND_AP} 點 AP。",
+        "讓你立刻拿回 1～{high} 點 AP。",
         "amount",
         "返還點數",
         1,
-        MAX_REFUND_AP,
+        None,
     ),
 }
-"""不是原語、只能出現在巢狀裡的專用效果：``(名稱, 說明, 欄位, 欄位名, 最小, 最大)``。"""
+"""不是原語、只能出現在巢狀裡的專用效果：``(名稱, 說明, 欄位, 欄位名, 最小, 最大)``。最大是 ``None``
+的讀 ``core.yaml`` 的 ``skill_limits.max_refund_ap``（HC-4b），說明裡的 ``{high}`` 換成它。"""
 
 
 _DISPLAY: dict[str, Literal["multiplier", "percent"]] = {
@@ -106,8 +119,10 @@ _DISPLAY: dict[str, Literal["multiplier", "percent"]] = {
 """玩家看到的數值格式（倍率 ×2、百分比），內部仍存千分比。"""
 
 
-def _special_choice(effect_type: str) -> Choice:
-    name, desc, field, field_zh, low, high = _SPECIAL[effect_type]
+def _special_choice(effect_type: str, library: ContentLibrary) -> Choice:
+    name, desc, field, field_zh, low, top = _SPECIAL[effect_type]
+    high = library.ruleset.core.skill_limits.max_refund_ap if top is None else top
+    desc = desc.replace("{high}", str(high))
     return Choice(
         value=effect_type,
         name_zh=name,
@@ -193,9 +208,13 @@ def nested_field(
         if effect_type == REFUND_COOLDOWN:
             choices.append(_refund_cooldown())
         elif effect_type in _SPECIAL:
-            choices.append(_special_choice(effect_type))
+            choices.append(_special_choice(effect_type, library))
         elif effect_type in by_id:
             choices.append(_sub_choice(by_id[effect_type], sub_ctx, rule))
     return field.model_copy(
-        update={"choices": tuple(choices), "min_count": rule.min_count, "max_count": rule.max_count}
+        update={
+            "choices": tuple(choices),
+            "min_count": rule.min_count,
+            "max_count": getattr(library.ruleset.core.skill_limits, rule.limit),
+        }
     )

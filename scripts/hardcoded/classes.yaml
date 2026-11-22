@@ -279,102 +279,53 @@ rules:
     note: 純呈現的檔（特效、色票、動畫、版面、相機、圖示、浮動卡位置）。
 
   # ======================================================================== 前端：玩法數值（要搬）
-  - id: ts-flash-fallback
-    class: config
-    status: done
-    files: client/src/run/flash.ts
-    context: 'FALLBACK|COMPLETE_BONUS_PERMILLE'
-    kind: number
-    note: 閃現規則的前端後備值與完整技能加成。HC-3：`flash_rules` 改必有、拿掉 FALLBACK；完整技能加成讀 `/api/glossary` 的 `rules.complete_budget_permille`（0 筆）。
-  - id: ts-slot-limits
-    class: config
-    status: done
-    files: client/src/run/flow.ts
-    context: 'SLOT_LIMITS'
-    note: 技能欄上限。HC-3：改讀 `/api/glossary` 的 `rules.skill_slots`（`slotLimits()`；0 筆）。
-  - id: ts-source-max
-    class: config
-    status: done
-    files: client/src/ui/SkillCardView.tsx
-    owner: SOURCE_MAX
-    note: 源力上限。HC-3：改讀 `/api/glossary` 的 `rules.source_max`（0 筆）。
-  - id: ts-attr-base
-    class: scale
-    status: done
-    files: client/src/run/AttributeAllocator.tsx
-    kind: number
-    value: '10'
-    note: 屬性基礎值的後備 ?? 10（量類）。HC-2：呼叫端一律帶齊六項屬性，後備改成「—」（0 筆）。
   - id: ts-vfx-damage-tiers
-    class: config
-    status: todo
+    class: layout
+    status: done
     files: [client/src/battle/impact.ts, client/src/battle/vfx.ts]
     owner: [TIER_PERMILLE, HEAVY_HIT_PERMILLE]
-    note: 保守：受擊頓格、重擊特效的失血門檻（‰）；是呈現用的門檻，PM 可改判 layout。
-  - id: ts-arena-defaults
-    class: config
-    status: todo
-    files: [client/src/screens/GearScreen.tsx, client/src/workshop/tryout.ts]
-    kind: number
-    context: 'max_rounds'
-    note: 木樁、試招的回合上限後備 ?? 30。
-  - id: ts-start-keywords
-    class: config
-    status: done
-    files: client/src/run/StartPicker.tsx
-    kind: number
-    note: 開局關鍵字數。HC-3：選項還沒載入時改讀 `/api/glossary` 的 `rules.start_keywords`；觸發關係改寫「至少兩招」（> 1；0 筆）。
-  - id: ts-affix-duplicate
-    class: config
-    status: done
-    files: client/src/gear/affixStatus.ts
-    kind: number
-    note: 同詞條重複的判斷。HC-3：「重複」＝同 id 不只一條（> 1；非數值類只有第一條生效是引擎 diminish 的結構，不是門檻數字；0 筆）。
-  - id: ts-walk-max
-    class: config
-    status: done
-    files: client/src/world/fieldModel.ts
-    owner: WALK_MAX
-    note: 一次 walk 最多幾格的後備。HC-3：拿掉 WALK_MAX，`chunkPath` 一律用伺服器的 `walk_max_steps`（0 筆）。
+    note: HC-7 b 改判 layout（原 note「是呈現用的門檻，PM 可改判 layout」）：受擊頓格、重擊特效的失血門檻（‰），只決定動畫停多久、震不震，不影響結算。
   - id: ts-bag-size
     class: layout
     status: done
     files: client/src/world/bagGrid.ts
     owner: [BAG_COLS, BAG_ROWS]
     note: 背包格數。HC-3：拿掉 6×5 的備用值（BAG_ROWS），上限一律照伺服器 `slots_max`；剩下的 BAG_COLS 是每列畫幾格（hud.png C 案的排版），改判 layout。
-  - id: ts-crystal-tier
-    class: config
-    status: todo
-    files: client/src/ui/statusCard.ts
-    context: 'const CRYSTAL_SURGE_TIER'
-
-    note: 保守：狀態 id → 層級的對照（應由狀態資料帶）。
   - id: ts-day-phase-hours
-    class: config
-    status: todo
+    class: const
+    status: done
     files: client/src/world/hud.ts
     kind: number
-    value: ['11', '18', '21', '24']
+    value: ['24']
     context: '\bh\b'
-    note: 保守：早／午／晚／夜的鐘點分界（11、18、21 點）。
-  - id: ts-tuning-server-limits
-    class: config
+    note: HC-4d：早／午／晚／夜的鐘點分界（11、18、21 點）改讀伺服器的 clock.day_parts（content/world/rules.yaml 的
+      day_parts）；剩下的 % 24 是一天 24 小時（時刻字串的防呆），不是玩法數值。
+  # HC-6b（HC-3 裁定 3「工坊選項 15 筆」）：快捷鈕、刻度、預估倍數改判 layout／const；階級與 AP 選項留 todo。
+  - id: ts-tuning-quick-buttons
+    class: layout
     status: done
+    lang: ts
     kind: number
-    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
-            client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx]
-    context: 'SMALL_SAMPLE|MAX_MAPS|MAX_GROUP|ratio_default_seeds \?\?|n > 250|\[10, 50, 250\]'
-    note: 工坊的預設種子數與上限（樣本小 30、比值種子 50／250、地圖 3 張、分組 100 招、小規模 3 種子／24 場）。HC-3：改讀 `/api/tuning/sim/options` 與 `/api/tuning/status`（對齊 `api/tuning/schemas.py`；0 筆）。
-  - id: ts-tuning-presets
-    class: config
-    status: todo
+    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/RatioView.tsx]
+    where: ['<module>.SIM_MEDIUM_SEEDS', '<module>.MAP_MEDIUM_BATTLES', '<module>.RATIO_QUICK_SEEDS']
+    note: HC-6b 改判（HC-3 裁定 3）：模擬規模的快捷鈕——「中」10 種子、80 場與比值快捷「每組 10 種子」是工坊畫面自己的按鈕，不是規則（「小」與上限已照伺服器）。
+  - id: ts-tuning-budget-scale
+    class: layout
+    status: done
+    lang: ts
     kind: number
-    files: [client/src/tuning/model.ts, client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts,
-            client/src/tuning/RatioView.tsx, client/src/screens/TuningScreen.tsx,
-            client/src/ui/workshop/ToolPanels.tsx]
-    context: 'seeds|battles|SIM_MEDIUM_SEEDS|MAP_MEDIUM_BATTLES|RATIO_QUICK_SEEDS|BUDGET_SCALE_MAX|\[1, 2, 3'
-    note: 保守：數值工坊畫面自己的選項——「中」規模（10 種子、80 場）與比值快捷 10 種子、篩選與隨機的階級／AP 選項、預算比例條刻度 150%、預估「改前改後各一次」的 ×2；後端沒有對應的規則（HC-3 留下，見報告待決）。
-
+    files: [client/src/tuning/skillModel.ts]
+    where: ['<module>.BUDGET_SCALE_MAX', 'budgetGeometry']
+    note: HC-6b 改判（HC-3 裁定 3）：預算比例條的刻度 0～150%（畫到哪裡停在右端）與換成條上的 %，是畫法。
+  - id: ts-tuning-estimate-factor
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/tuning/ratioModel.ts]
+    slot: 'op:*'
+    value: '2'
+    note: HC-6b 改判（HC-3 裁定 3）：比值的預估秒數上界「× 2」是改前、改後各跑一次（次數的換算）。
   # ======================================================================== 前端：常數
   - id: ts-http-status
     class: const
@@ -446,6 +397,13 @@ rules:
     note: 程式邏輯（排序權重、正規表示式群組、單位換算、雜湊、重試次數、顯示用的位數與字數）。
 
   # ======================================================================== 前端：排版（其餘 UI 檔）
+  - id: ts-rules-text-units
+    class: const
+    status: done
+    lang: ts
+    kind: number
+    files: [client/src/ui/rulesText.ts]
+    note: HC-6b：說明文字的寫法——秒、小時、天的換算（3600、24）與中文數字「兩」的 2。
   - id: ts-ui-layout-files
     class: layout
     status: done
@@ -509,68 +467,82 @@ rules:
     text: '^(\$\{[^}]*\})?(買|使用|少寄|多寄|少|多) 1 個|至少 1 個（要拿掉|例 ?[12]d6|例：1d6|^[−＋]1 級$'
 
     note: 一次加減一個的按鈕文字、骰子寫法範例（2d6）。
+  # HC-6b：前端說明文字。有資料的改成照伺服器組字（`/api/glossary` 的 `rules`、工坊的狀態與模擬選項、
+  # 卡片與面板已有的欄位、前端自己的常數）；下面幾條是語法用字（改判 const，各寫理由），剩下的留 ts-ui-text。
+  - id: ts-hc6b-ordinal-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/composite.ts, client/src/battle/skillTray.ts, client/src/battle/targeting.ts,
+            client/src/run/StartPicker.tsx, client/src/world/range.ts, client/src/world/wish.ts]
+    text: '^第 [12] 段|第 2 段的目標|^每個關鍵字(的技能池給你|給) 1 招|1～\$\{maxKeywords\} 個關鍵字'
+    note: HC-6b 改判：複合、投擲技能的「第 1 段」「第 2 段」是序號；許願的「1～上限個關鍵字」是結構性下限（上限照伺服器 max_keywords），「帶第 1 個、第 2 個」是序號；「每個關鍵字給 1 招起始技能」是一個關鍵字一招（起始池的結構），「第 2 招」「第 1 個關鍵字」是序號。
+  - id: ts-hc6b-single-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/objective.ts, client/src/gear/gearDraft.ts, client/src/run/RaceOriginPicker.tsx,
+            client/src/run/flash.ts, client/src/run/FlashSection.tsx, client/src/screens/RunGearOffer.tsx,
+            client/src/world/OpeningDialog.tsx, client/src/world/growthPanel.ts, client/src/world/WorldPanel.tsx,
+            client/src/world/wish.ts]
+    text: '最後 1 輪|至少要掛 1 條|^種族給 1 招種族技|選 1( 個| 件|$)|同時 1 個，到城鎮|每個帳號 1 個角色|^先挑 1 個|^先點選 1 個'
+    note: HC-6b 改判：「最後 1 輪」是剩一輪的說法；「至少 1 條詞條」「先挑 1 個」是非空檢查；「N 選 1」「選 1 件」「一定要選 1 個」是挑一個的說法；種族「1 招種族技、1 項環境被動」、誓約「同時 1 個」、循環賽「每個帳號 1 個角色」是單一欄位與唯一性（同 HC-6a 的結構類）。
+  - id: ts-hc6b-zero-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/skillTray.ts, client/src/ui/SummonPanel.tsx, client/src/tuning/SimPanel.tsx]
+    text: '（0 AP）|行動 0 回合|施放率會是 0'
+    note: HC-6b 改判：召喚物切換模式、集火「0 AP」是免費（core.yaml 註明切換模式免費，沒有欄位）；模擬「行動 0 回合」「施放率會是 0」是零。
+  - id: ts-hc6b-format-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/race.ts, client/src/screens/StartScreen.tsx, client/src/tuning/model.ts,
+            client/src/tuning/skillModel.ts, client/src/tuning/ratioModel.ts, client/src/tuning/ScaleNotice.tsx,
+            client/src/ui/gear/CustomItemForm.tsx, client/src/world/bagView.ts]
+    text: '3×3|\?dev=1|TRPG_TUNING=1|填 1 以上的整數|填 1～\$\{|× N ÷ 1000|100 ＝ 10%|放大 10 倍（2026-11-20）|10 碼|無條件 1 個'
+    note: HC-6b 改判：「3×3」是形狀名；「?dev=1」「TRPG_TUNING=1」是網址參數與環境變數的值；「1 以上」「1～上限」是結構性下限（上限已照伺服器）；「× N ÷ 1000」「100 ＝ 10%」是 ‰ 換算；「放大 10 倍（2026-11-20）」是那一天的歷史公告；配方碼「10 碼」是代碼格式（十六進位 10 碼），不是玩法數值；比值的「無條件 1 個、成立／不成立 2 個、每個變奏多 1 個」是情境組法的結構（上限 40,000 已照伺服器）。
+  - id: ts-hc6b-tier1-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/tuning/GroupPanel.tsx, client/src/tuning/ratioModel.ts, client/src/tuning/RatioView.tsx,
+            client/src/tuning/SimPanel.tsx, client/src/tuning/SkillIdsEditor.tsx]
+    text: '1 階(比值|預算|主動武器技)|（1 階）'
+    note: HC-6b 改判：數值工坊的「1 階比值」「1 階預算」「只量 1 階主動武器技」是量法的名字（BAL-21e：比值一律在 1 階量，手寫技能的基準階級），同後端 HC-6a 的「基準點」。
+  - id: ts-hc6c-engine-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/battle/legend.ts, client/src/battle/prep.ts, client/src/battle/summonControl.ts,
+            client/src/ui/statusCard.ts, client/src/ui/SummonPanel.tsx]
+    text: '走上去源力 \+1|「源」格 \+1|免費放 1 個|每場 1 個|每隻每輪(最多指揮)? 1 次|用掉 1 發'
+    note: HC-6c 改判：引擎寫死、沒有資料欄位的結構——源泉格一格 +1 源力（`engine/source.py` 的 `take_source_well`，取走就消失）；戰前佈置是一次的窗口（`engine/prep.py`，放了或跳過就關窗，每場 1 個）；召喚物的指揮、灌注是每輪一個旗標（`commanded_round`、`infused`，每隻每輪 1 次）；開火一次用一發（彈匣的單位）。守護幾格、指揮與灌注的 AP、每場至少幾點源力已改讀資料（`rules.summon_guard_radius`、`summon_*_ap_cost`、`rules.source_min_at_start`）。
+  - id: ts-hc6c-structure-text
+    class: const
+    status: done
+    lang: ts
+    kind: text
+    files: [client/src/world/EventCard.tsx, client/src/world/PartyPanel.tsx, client/src/world/SmithyPanel.tsx,
+            client/src/world/WorldGrowth.tsx]
+    text: '核對得到才 \+1|＋1 條詞條|每種用 1 個|同時 1 個，一直有效|免費帶 0～'
+    note: HC-6c 改判：情境判定的用心清單一筆算一點（`trpg.world.situations`：`min(care_max, 筆數)`，上限已改讀 `rules.situation_care_max`）；鍛造「指定部位＋1 條詞條」是挑一條的欄位、特色材料「每種用 1 個」是每種一份（`flavor_max` 是種數，已照伺服器）；誓約「同時 1 個」是單一欄位（`OathView.current`，同 HC-6b 的 `ts-hc6b-single-text`）；雇用隊友「0～上限」的 0 是不帶（獨行），上限已改讀 `max_hired`。
   - id: ts-ui-text
     class: text
     status: todo
     lang: ts
     kind: text
-    note: 玩家（或工坊使用者）看得到的說明、提示、錯誤訊息裡寫死的規則數字（技能欄、AP、次數、上限、秒數、場數）。
+    note: 玩家看得到的說明裡寫死的規則數字。HC-6c 後剩 2 筆，都在等「屬性點的顯示換算」：資料是 `attribute_points_per_level` 20（×10 量尺），畫面寫「每級 +2」與配點範例（開局 4 點、智力 12……）；要照哪個量尺顯示還沒定（HC-6b 待決、HC-6c 待決）。
     files:
-      - client/src/battle/composite.ts
-      - client/src/battle/legend.ts
-      - client/src/battle/objective.ts
-      - client/src/battle/prep.ts
-      - client/src/battle/race.ts
-      - client/src/battle/skillTray.ts
-      - client/src/battle/summonControl.ts
-      - client/src/battle/targeting.ts
-      - client/src/gear/gearDraft.ts
-      - client/src/run/CampfireSkillCare.tsx
-      - client/src/run/FlashChooser.tsx
-      - client/src/run/FlashSection.tsx
-      - client/src/run/RaceOriginPicker.tsx
-      - client/src/run/StartPicker.tsx
-      - client/src/run/flash.ts
-      - client/src/screens/RunCampfire.tsx
-      - client/src/screens/RunGearOffer.tsx
-      - client/src/screens/RunNewScreen.tsx
-      - client/src/screens/RunScreen.tsx
-      - client/src/screens/StartScreen.tsx
-      - client/src/tuning/DraftPanel.tsx
-      - client/src/tuning/FieldForm.tsx
-      - client/src/tuning/GroupPanel.tsx
-      - client/src/tuning/RatioView.tsx
-      - client/src/tuning/ScaleNotice.tsx
-      - client/src/tuning/SimPanel.tsx
-      - client/src/tuning/SkillForm.tsx
-      - client/src/tuning/SkillIdsEditor.tsx
-      - client/src/tuning/model.ts
-      - client/src/tuning/ratioModel.ts
-      - client/src/tuning/skillModel.ts
-      - client/src/ui/LayoutPanel.tsx
-      - client/src/ui/StatusCardParts.tsx
-      - client/src/ui/SummonPanel.tsx
-      - client/src/ui/gear/CustomItemForm.tsx
-      - client/src/ui/skillCost.ts
-      - client/src/ui/statusCard.ts
-      - client/src/ui/workshop/CheckPanel.tsx
-      - client/src/ui/workshop/FieldEditor.tsx
-      - client/src/ui/workshop/TryoutPanel.tsx
-      - client/src/world/BagScreen.tsx
-      - client/src/world/BoardPanes.tsx
-      - client/src/world/EconomyPanel.tsx
-      - client/src/world/EventCard.tsx
-      - client/src/world/MailPanel.tsx
       - client/src/world/OpeningDialog.tsx
-      - client/src/world/SmithyPanel.tsx
-      - client/src/world/WorldGrowth.tsx
-      - client/src/world/WorldPanel.tsx
-      - client/src/world/bagView.ts
       - client/src/world/growthPanel.ts
-      - client/src/world/pregen.ts
-      - client/src/world/questPanel.ts
-      - client/src/world/range.ts
-      - client/src/world/wish.ts
 
   # ======================================================================== 後端：整個資料夾或檔案
   - id: py-shared-rng
@@ -718,264 +690,101 @@ rules:
     kind: number
     slot: 'quantity_cap(#0)'
     note: HC-2：量類欄位的 schema 上限寫成 quantity_cap(換算前的上限)＝× 最大倍率（content/quantity.py）。
-  - id: py-scale-generator-costs
-    class: scale
-    status: done
-    lang: py
-    kind: number
-    files: [src/trpg/skillgen/flash_major.py, src/trpg/skillgen/composer_recipes.py]
-    slot: ['{mana}']
-    note: 生成器寫死的候選法力（換算前的單位）；X10-2b 起呼叫點一律經 core.scaled_cost（× quantity_scale），HC-2 確認。
   - id: py-guard-max-attribute
     class: guard
     status: done
     files: src/trpg/content/battle.py
     owner: MAX_ATTRIBUTE
     note: 屬性值的護欄 999（範本驗證與裝備加成共用，HC-2 合併成一個常數）；HC-2 開發 PM 裁定 1：歸 guard，不改值。
-  - id: py-defense-break-default
-    class: config
-    status: todo
-    files: src/trpg/engine/rules/statuses.py
-    owner: DEFAULT_DEFENSE_BREAK
-    note: 保守：破甲狀態沒帶數值時的防禦降幅 100‰；是千分比不是量類，HC-2 從 scale 改判 config（執行時會用到的預設值）。
-  - id: py-skill-stance-upkeep-points
-    class: config
-    status: todo
-    files: src/trpg/content/skills/skill.py
-    where: SkillDef
-    owner: stance_upkeep
-    note: 保守：姿態維持費的「點數」上限 2（每點的數量是 forms.yaml 的量類）；不是量類，HC-2 從 scale 改判 config。
-  - id: py-scale-names
-    class: scale
-    status: todo
-    lang: py
-    kind: number
-    owner: ['max_hp', 'hp', '*_hp', 'hp_*', '*mana*', '*stamina*', 'armor_bonus', 'attack_bonus', 'flat',
-            'flat_*', '*_flat', '*flat_bonus', 'min_damage*', 'shield_break_lightning', 'shield_end_heal',
-            'shield_reflect', '*upkeep*', 'ability_mod_base', 'ability_mod_divisor', 'base_attribute',
-            'attribute_points_per_level', 'points_per_level', 'start_free_points', 'initiative_attr_*',
-            '*_heal', 'heal_flat', '_MAX_ATTR', 'DEFAULT_DEFENSE_BREAK', 'hp_per_*', 'hp_con_base',
-            'self_stamina_below']
-    not: {owner: ['*permille*', '*_per_point', '*_per_mana', 'flat_height']}
+  - id: py-content-skill-limits-guard-hc4d
+    class: guard
+    status: done
+    files: src/trpg/content/skills/limits.py
+    where: SkillLimits
+    owner: max_stance_upkeep
+    note: HC-4d：skill_limits.max_stance_upkeep 的 schema 護欄 le=10（維持費的「點數」上限，不是量類；同
+      py-skill-stance-upkeep-points 的判斷）。
 
     note: 量類欄位（HP、法力、耐力、護盾、固定加值、屬性）的預設值與上下限；X10 之後要跟 quantity_scale 走。
-  - id: py-scale-dict-keys
-    class: scale
-    status: todo
-    lang: py
-    kind: number
-    slot: ['{mana}', '{stamina}', '{hp}', '{max_hp}', '{flat}', '{flat_bonus}', '{shield_flat}', '{heal_flat}',
-           '*(mana)', '*(stamina)', '*(max_mana)', '*(max_hp)', '*(armor_bonus)', '*(stamina_regen)',
-           'ResourcePool(per_point)']
-    not: {context: '\bscale\b'}
-    note: 寫在程式裡的量類值（技能代價的法力、耐力；起始英雄、武器大類的 HP、法力、耐力、防禦）。
-  - id: py-scale-resource-base
-    class: scale
-    status: todo
-    files: src/trpg/content/rules.py
-    where: ResourceRules
-    owner: base
-    note: 法力／耐力上限的基礎值（量類）。
   # HC-2 第 1 項專查（HC-1 開發 PM 裁定 3）：掃描器不列 0、1、-1，量類的「預設 1」要另外查。
   # 查法：把掃描器的略過集合拿掉 1，篩欄位、參數、所在敘述含 hp、mana、stamina、damage、heal、shield、armor、
   # attr、flat、upkeep、bonus 的數字 1（93 筆＋依原文再篩一輪），逐筆判斷。是量類的 6 筆列在下面兩條；
-  # 掃描器照舊不列 1，所以這兩條在清單裡是 0 筆，只作紀錄（判斷與理由見 docs/phases/PhaseHC-2報告.md）。
+  # 掃描器照舊不列 1，所以這兩條在清單裡是 0 筆，只作紀錄（判斷與理由見 docs/phases/PhaseHC-2報告.md）；
+  # HC-4c 照 HC-4b3 裁定 5 刪掉這兩條 0 筆的 done 規則，下面的清單只留作紀錄。
   #   content：forms.py FormTable.stance_upkeep_mana 預設 1、rules.py SummonGrowth.hp_per_attr_mod 預設 1、
   #            roguelite.py _default_heroes 法器主角 armor_bonus=1、environment.py InteractionOutcome.min_damage 預設 1。
   #   零星：engine/skills/primitives/rule_rewrites.py restore_resource 的法力 amount 後備 1、
   #         skillgen/budget.py _restore_resource_points 的法力 amount 後備 1。
   # 不是量類（不列）：ge=1 的正數護欄（HP、法力、屬性下限）、max(1, …) 的「活著／最大 HP 至少 1」（X10-2b 已裁定不改）、
   #   SkillDef.stance_upkeep 與 _STANCE_UPKEEPS（維持費的「點數」，每點數量在 forms.yaml）、熟練、層數、格數、等級 − 1。
-  - id: py-scale-one-defaults-content
-    class: scale
-    status: done
-    lang: py
-    kind: number
-    value: '1'
-    files: [src/trpg/content/forms.py, src/trpg/content/rules.py, src/trpg/content/roguelite.py,
-            src/trpg/content/environment.py]
-    owner: [stance_upkeep_mana, hp_per_attr_mod, armor_bonus, min_damage]
-    note: 專查（HC-2）：content 的量類預設 1（掃描器不列 1，0 筆，只作紀錄）。已改：拿掉預設、改必填；min_damage 改 None＝1 × quantity_scale。
-  - id: py-scale-one-defaults-misc
-    class: scale
-    status: done
-    lang: py
-    kind: number
-    value: '1'
-    files: [src/trpg/engine/skills/primitives/rule_rewrites.py, src/trpg/skillgen/budget.py]
-    scope: [restore_resource, _restore_resource_points]
-    note: 專查（HC-2）：restore_resource 法力 amount 的後備 1（掃描器不列 1，0 筆，只作紀錄）。已改成 1 × quantity_scale。
 
-  # ---------------------------------------------------- 後端 api：config
-  # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
-  - id: py-api-attribute-text-config-number
+  # ---------------------------------------------------- 後端 api：config（HC-7 b 搬完；剩下的改判）
+  # HC-7 b：規則數字搬進 content（roguelite.yaml route_hint_tier、skill_pick.yaml 的 budget_seconds／pregen、
+  # world/rules.yaml 的 display／notes、workshop.yaml max_rounds、core.skill_limits），回應的預設值改必填。
+  # 剩下的是數值工坊的工具設定（只留 api/tuning/schemas.py、drafts.py 一份）、請求格式護欄與結構常數。
+  - id: py-api-tuning-tool-settings
     class: config
-    status: todo
-    files: src/trpg/api/attribute_text.py
-    kind: number
-    where: ['<module>._EARLY_TIER']
-    note: 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
-  - id: py-api-flash-changes-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/flash_changes.py
-    kind: number
-    where: ['<module>._SHIELD_DEFAULT_DURATION']
-    note: 同上一條（api config）。
-  - id: py-api-gear-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/gear_schemas.py
-    kind: number
-    where: ['GearCustomItem']
-    note: 同上一條（api config）。
-  - id: py-api-llm-source-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/llm_source.py
-    kind: number
-    where: ['<module>.DEFAULT_ALERT_PERMILLE', '<module>.DEFAULT_PROBE_TIMEOUT_S']
-    note: 同上一條（api config）。
-  - id: py-api-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/schemas.py
-    kind: number
-    where: ['CreateBattleRequest']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-objects-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/objects.py
+    status: done
+    files: [src/trpg/api/tuning/schemas.py, src/trpg/api/tuning/drafts.py, src/trpg/api/tuning/skills.py]
     kind: number
     where:
-      - '_part_label'
-      - '_part_limits'
-      - '_part_skipped'
-      - '_schema_limits'
-      - '_sk5_limits'
-      - 'field_limits'
-      - 'skill_facets'
-    note: 同上一條（api config）。
-  - id: py-api-tuning-ratios-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/ratios.py
-    kind: number
-    where: ['<module>.DEFAULT_SEEDS', '<module>.MAX_WORK']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/schemas.py
-    kind: number
-    where:
-      - '<module>.MAX_RATIO_SEEDS'
       - '<module>.SMALL_SAMPLE'
+      - '<module>.MAX_RATIO_SEEDS'
+      - '<module>.SIM_DEFAULT_SEEDS'
+      - '<module>.MAP_DEFAULT_SEEDS'
+      - '<module>.MAX_SIM_MAPS'
+      - '<module>.MAX_SIM_BATTLES'
+      - '<module>.RATIO_DEFAULT_SEEDS'
+      - '<module>.RATIO_MAX_WORK'
+      - '<module>.DRAFT_NAME_MAX'
+      - '<module>.MAX_GROUP'
+    note: HC-7 b（規格 b.1「工坊的上下限對齊 api/tuning/schemas.py，只留一份」）：數值工坊這個開發工具自己的設定（預設種子、模擬場數與工作量上限、樣本小門檻、草稿名字數、分組改上限）。只留這一份，請求與回應的預設值、service、ratios、sim_jobs 都讀它；回應欄位的預設值改必填。不是遊戲規則，不進 content。
+  - id: py-api-request-format-guards
+    class: guard
+    status: done
+    files:
+      - src/trpg/api/gear_schemas.py
+      - src/trpg/api/schemas.py
+      - src/trpg/api/tuning/schemas.py
+      - src/trpg/api/world_range_schemas.py
+    kind: number
+    slot: 'Field(*)'
+    where:
+      - 'GearCustomItem'
+      - 'CreateBattleRequest'
       - 'TuningApplyIn'
       - 'TuningBudgetIn'
       - 'TuningDraftIn'
       - 'TuningRatioPlanIn'
-      - 'TuningSimOptions'
       - 'TuningSimRequest'
-    note: 同上一條（api config）。
-  - id: py-api-tuning-service-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/service.py
-    kind: number
-    where: ['<module>.DEFAULT_MAP_SEEDS', '<module>.DEFAULT_SIM_SEEDS', '<module>.MAX_SIM_MAPS']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-sim-jobs-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/sim_jobs.py
-    kind: number
-    where: ['<module>.MAX_BATTLES']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-skills-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/skills.py
-    kind: number
-    where:
-      - '<module>.GROUP_PRESETS'
-      - '<module>.MAX_GROUP'
-      - '<module>._SCALAR_LIMITS'
-      - '_matches'
-      - '_round_div'
-      - 'permille'
-    note: 同上一條（api config）。
-  - id: py-api-workshop-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/workshop_schemas.py
-    kind: number
-    where: ['WorkshopRandomRequest']
-    note: 同上一條（api config）。
-  - id: py-api-world-field-people-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_field_people.py
-    kind: number
-    where: ['<module>.TOWN_FRIENDS_MAX']
-    note: 同上一條（api config）。
-  - id: py-api-world-field-things-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_field_things.py
-    kind: number
-    where: ['<module>.FOOTPRINT_FRIENDS_MAX', '<module>.PRINTS_MAX']
-    note: 同上一條（api config）。
-  - id: py-api-world-newcomer-view-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_newcomer_view.py
-    kind: number
-    where: ['_allocate_lesson']
-    note: 同上一條（api config）。
-  - id: py-api-world-party-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_party_schemas.py
-    kind: number
-    where: ['PartyView']
-    note: 同上一條（api config）。
-  - id: py-api-world-party-view-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_party_view.py
-    kind: number
-    where: ['<module>.REPORTS_SHOWN']
-    note: 同上一條（api config）。
-  - id: py-api-world-pregen-config-number
-    class: config
-    status: todo
+      - 'RangeTrialRequest'
+    note: HC-7 b：請求的格式上限（擋過大的請求）。真正的規則上限在內容，由規則檢查：手動組物品的詞條 8 ＝ EquipmentRules.max_affixes_per_item 的 le（規則值 4）；單場戰鬥輪數 200 ＝ WorkshopRules.max_rounds 的 le；靶場看示範關鍵字 4（同開局選關鍵字的請求，規則是 newcomer.yaml range.trial_keywords_max 2；原本寫死 2，規則調高時請求會先被擋）；工坊請求的清單長度。
+  - id: py-api-world-pregen-queue-guard
+    class: guard
+    status: done
     files: src/trpg/api/world_pregen.py
     kind: number
+    where: ['<module>.QUEUE_LIMIT']
+    note: HC-7 b：全服預先生成暫存區的記憶體護欄（超過丟掉最舊、還沒開始的）；不影響規則與結果（暫存區只是加速，沒趕上就照常給組合器、模板或內容版）。
+  - id: py-api-structure-const-number
+    class: const
+    status: done
+    files:
+      - src/trpg/api/world_pregen.py
+      - src/trpg/api/tuning/objects.py
+      - src/trpg/api/tuning/skills.py
+      - src/trpg/api/world_newcomer_view.py
+    kind: number
     where:
-      - '<module>.FLASH_LIMIT'
-      - '<module>.QUEUE_LIMIT'
-      - '<module>.STORY_LIMIT'
-      - '<module>.STORY_WAIT_SECONDS'
-      - '<module>.WAIT_SECONDS'
       - '<module>._POLL_SECONDS'
-    note: 同上一條（api config）。
-  - id: py-api-world-range-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_range_schemas.py
-    kind: number
-    where: ['RangeTrialRequest']
-    note: 同上一條（api config）。
-  - id: py-api-world-story-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_story_schemas.py
-    kind: number
-    where: ['<module>.CARE_CITE_MAX']
-    note: 同上一條（api config）。
-
+      - '_part_label'
+      - '_part_skipped'
+      - 'field_limits'
+      - '<module>._CONDITIONAL'
+      - '_round_div'
+      - 'permille'
+      - '_allocate_lesson'
+    note: HC-7 b 改判 const：_POLL_SECONDS 是等待時看背景結果的輪詢間隔（程式細節，不影響結果）；工坊欄位路徑的段數（parts[2]、parts[3] 是 on_break 的位置）是路徑格式；_CONDITIONAL 的 AP 2 是工坊「2 AP 條件型」這個常用預設組本身（規格 5.4 的選單，標籤照它組字）；四捨五入的 ×2 是整數運算；2 級＝第一次升級（角色從 1 級開始）。
   # ---------------------------------------------------- 後端 content：上下限重新歸類（HC-4a 第 1 項）
   # HC-1 開發 PM 裁定 2：純驗證用的上下限＝guard（留在 schema，done）；上下限本身就是遊戲規則的＝config；
   # 內容沒寫、靠預設值生效的預設值＝config（留在下面各檔的 py-content-*-config-number）。
@@ -983,59 +792,16 @@ rules:
   # 代價持續、願望關鍵字……）＝規則；只擋手寫或工坊填出離譜值的（射程、半徑、回合、‰ 上限、清單長度、
   # 字數、地圖尺寸）＝guard。拿不準時歸 config（保守），留給 HC-4b～d 逐檔再看。
   # 先寫規則型的例外（config todo），再寫 guard 的寬規則；順序不能換（第一條符合的勝出）。
-  - id: py-content-rule-bounds
-    class: config
-    status: todo
-    files: src/trpg/content/composer_rules.py
-    kind: number
-    where: [CostStep, WhiteboardRules]
-    owner: [ap, ap_cost, fallback_ap_cost, summon_ap_cost, self_ap_cost]
-    slot: ['Field(le)', 'Field(ge)']
-    note: 保守：上下限本身是遊戲規則（主動技 AP 1～3；HC-1 裁定 2 的例子），歸 config；HC-4b 搬。
-  - id: py-content-rule-bounds-wish
-    class: config
-    status: todo
-    files: src/trpg/content/skill_pick.py
-    kind: number
-    where: WishTagRules
-    owner: [max_keywords, max_elements_dual, max_effects]
-    note: 同上一條：願望的關鍵字數、元素數（「最多 2 個元素」）、效果數的上限。
-  - id: py-content-rule-bounds-budget-durations
-    class: config
-    status: todo
-    files: src/trpg/content/skill_rules.py
-    kind: number
-    where: BudgetRules
-    owner: [obstacle_duration_permille, inscribe_duration_permille, shield_duration_permille, wind_spread_permille]
-    slot: ['Field(min_length)', 'Field(max_length)']
-    note: 同上一條：依持續回合／格數查表的長度＝那個效果允許的最長回合或格數（例 inscribe 5＝rune_max_rounds）。
-  - id: py-content-rule-bounds-skills
-    class: config
-    status: todo
-    kind: number
-    files: [src/trpg/content/skills/conditions.py, src/trpg/content/skills/modifiers.py,
-            src/trpg/content/skills/skill.py, src/trpg/content/skills/specs.py,
-            src/trpg/content/skill_evolution.py]
-    where: [ConditionSpec, ModifierChange, SkillDef, SelfStatusCost, SkillCost, SummonEvolution]
-    owner: [any_of, damage_permille, hit_bonus, cooldown_delta, push_distance_delta, range_delta, heal_permille,
-            summon_duration_delta, form_upkeep_permille, tier, rank, duration, source, count_number]
-    note: 同上一條：技能的條件數、修正幅度、階級／等階數、自身狀態代價的回合、源力代價、群召數量。
   - id: py-content-rule-bounds-world
-    class: config
-    status: todo
+    class: guard
+    status: done
     kind: number
     files: [src/trpg/content/world_events.py, src/trpg/content/world_situations.py]
     where: [SolutionDef, MethodDef]
     owner: [threads, attributes]
-    note: 同上一條：情境解法的線索數、方法的屬性數上限。
-  - id: py-content-rule-bounds-boss-parts
-    class: config
-    status: done
-    kind: number
-    files: src/trpg/content/parts.py
-    where: BossPart
-    owner: on_break
-    note: 規則型上下限：每個部位最多 2 種破壞效果（05 5.12.2 第 7 點）；HC-4a 搬到 core.yaml 的 boss_parts（0 筆）。
+    note: HC-4d 改判 guard：骨架解法的線頭數 ≤ 2 是 9.6.7（#6）「0～2 條」的格式上限，實際上限在
+      situation_rules.yaml 的 budget.threads_max（它的 le=2 也是 guard）；方法的「常見屬性」最多 2 個是
+      分類資料的格式（9.6.11、#115），不是玩法數值。
   - id: py-content-guard-bounds
     class: guard
     status: done
@@ -1057,7 +823,6 @@ rules:
       - '<module>.GIANT_FOOTPRINTS'
       - '<module>.MIN_COMBO_N'
       - '<module>.MAX_MAGNITUDE'
-      - '<module>._MAX_FORM_MAGNITUDE'
       - '<module>._MAX_ATTRS'
       - '<module>._MAX_MELEE_RANGE'
       - '<module>._ROLE_HP_RANGE'
@@ -1080,8 +845,49 @@ rules:
       - '<module>.ALIAS_MIN_CHARS'
       - '<module>.ALIAS_MAX_CHARS'
       - '<module>._MAX_DELTA'
+      - '<module>.MAX_VARIANTS'
+      - '<module>._MIN_SIDES'
       - 'WeatherDef._mods'
-    note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、形態幅度、錯誤列印數）。
+    note: HC-4a：只拿來當護欄的模組常數（骰數、尺寸、字數、‰ 上限、引擎只支援的佔格、錯誤列印數）。形態幅度的上限 HC-4b3 改成載入時對照 enter_form 原語。
+      HC-4b 加 MAX_VARIANTS：一招最多 2 個變奏是護欄，實際上限依稀有度（core.yaml 的 variant_max_by_rarity，
+      Ruleset 層檢查）。HC-4b2 加 _MIN_SIDES：骰子至少 2 面是護欄（組合器的骰面階梯在 skill_composer.yaml）。
+  - id: py-content-guard-constants-hc4d
+    class: guard
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/world_encounters.py, src/trpg/content/world_narration.py,
+            src/trpg/content/world_quests.py, src/trpg/content/world_situations.py,
+            src/trpg/content/maps.py, src/trpg/content/rule_changes.py]
+    where:
+      - '<module>.MAX_HEIGHT'
+      - '<module>._MAX_DURATION'
+      - '<module>.MAX_GROUP_SIZE'
+      - '<module>.MAX_THIRD_SIZE'
+      - '<module>.STORY_SENTENCES_MAX'
+      - '<module>.STORY_REFS_MAX'
+      - '<module>._MAX_LEVEL'
+      - '<module>.DC_SHIFT_LIMIT'
+      - '<module>.CARE_LIMIT'
+      - '<module>._DANGER_LEVELS'
+    note: HC-4d 改判 guard。一場敵人最多 4 名、第三方最多 3 名＝戰場地圖敵方／第三方起始區的格數（戰鬥地圖模板
+      4 格、就地切戰場 world/rules.yaml 的 field.min_enemy_cells），是格式上限；旁白最多 3 句、每種引用最多 4 個＝LLM
+      輸出的格式護欄（同 TEXT_MAX_CHARS 等字數上限）；任務等級 ≤ 10 是 xp_level／level_to 的護欄（等級上限在
+      world/rules.yaml 的 hero_growth.level_cap）；難度調整 ±2、用心清單 +2 是 9.6.4 使用者定的天花板，實際值在
+      situation_rules.yaml 的 check.dc_shift_max／care_max（資料只能更嚴，同 RACE_BONUS_LIMIT）；危險度 1～3
+      是刻度格式（DangerDef.level、模板 danger 的 le=3 同一件事）。地圖高度 0～3（MAX_HEIGHT）是地圖格式
+      （heights 一格一個數字）與引擎、AI、畫面的層數上限，引擎 heights.py 夾住、AI 拿它當哨兵；規則改變的
+      持續 ≤ 3（_MAX_DURATION）只擋手寫的離譜回合數（HC-4a：回合類上限＝guard）。
+  - id: py-content-structure-constants-hc4d
+    class: const
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/world_quests.py, src/trpg/content/fields.py]
+    where: ['<module>.OFFER_SIZE', '<module>.DECOR_FIXED_SIZE']
+    note: HC-4d 改判 const。OFFER_SIZE＝三選一的張數（結構，deepen＋bridge＋new 的合計）；DECOR_FIXED_SIZE 的
+      曬衣繩 3×1 格＝裝飾圖的固定尺寸，跟美術素材綁在一起（前端 client/src/test/capitalField.ts 照同一張表），
+      不是玩法數值。
   - id: py-content-math-constants
     class: const
     status: done
@@ -1094,1555 +900,285 @@ rules:
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
-  - id: py-content-battle-config-number
-    class: config
-    status: done
-    files: src/trpg/content/battle.py
-    kind: number
-    where:
-      - '<module>.GIANT_FOOTPRINTS'
-      - '<module>.PHASES_MAX'
-      - '<module>.PHASES_MIN'
-      - '<module>._MAX_DICE_COUNT'
-      - '<module>._MAX_DURATION_BONUS'
-      - 'ArmorBreak'
-      - 'BlockBonus'
-      - 'BossPhase'
-      - 'CreatureLook'
-      - 'DeathSurfaceSpec'
-      - 'DollLook'
-      - 'Entangle'
-      - 'FormationSpec'
-      - 'HpBelowTrigger'
-      - 'OffhandDef'
-      - 'OpeningStatus'
-      - 'PhaseGrowSurface'
-      - 'PhaseSpawn'
-      - 'PhaseTile'
-      - 'RangeMod'
-      - 'RoundTrigger'
-      - 'ShareDamageSpec'
-      - 'StatusDef'
-      - 'Steady'
-      - 'SummonDetonate'
-      - 'SummonHitRule'
-      - 'SummonPulse'
-      - 'SummonSnare'
-      - 'TagDownTrigger'
-      - 'TotemSpec'
-      - 'UnitTemplate'
-      - 'WardSpec'
-      - 'WeaponDef'
-      - 'weapon_attr_examples_zh'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-composer-rules-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/composer_rules.py
-    kind: number
-    where:
-      - '<module>._MIN_SIDES'
-      - 'ComposerRules._check'
-      - 'CostRules._check_self_status_duration'
-      - 'CostStep'
-      - 'LlmCostRules'
-      - 'LlmTopicRules'
-      - 'RecipeSummonUnit'
-      - 'StructureRules'
-      - 'WhiteboardRules'
-    note: 同上一條（content config）。
-  - id: py-content-enemy-moves-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/enemy_moves.py
-    kind: number
-    where: ['<module>.']
-    note: 同上一條（content config）。
-  - id: py-content-environment-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/environment.py
-    kind: number
-    where:
-      - 'AiProfile'
-      - 'AiProfileTable'
-      - 'AiWeights'
-      - 'BasicActionAiRules'
-      - 'ExplosionDef'
-      - 'FormAiRules'
-      - 'GambleAiRules'
-      - 'OrderBonuses'
-      - 'ReactionDef'
-      - 'RewriteAiRules'
-      - 'RunAiRules'
-      - 'RuneAiRules'
-      - 'SelfCostAiRules'
-      - 'SpillDef'
-      - 'StanceAiRules'
-      - 'SummonAiRules'
-      - 'SurfaceCheck'
-      - 'TerrainAiRules'
-      - 'TrapAiRules'
-      - 'WeatherDef._mods'
-      - 'ZoneAiRules'
-    note: 同上一條（content config）。
-  - id: py-content-equipment-config-number
-    class: config
-    status: done
-    files: src/trpg/content/equipment.py
-    kind: number
-    where:
-      - '<module>.MIN_COMBO_N'
-      - 'AttackAffix'
-      - 'ChargeAffix'
-      - 'CostAffix'
-      - 'EquipmentCaps'
-      - 'EquipmentRules'
-      - 'ItemDef'
-      - 'ReactionAffix'
-      - 'TriggerAffix'
-      - 'WeaponTraitAffix'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-fields-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/fields.py
-    kind: number
-    where:
-      - '<module>.DECOR_FIXED_SIZE'
-      - '<module>.LAYOUT_SIZES'
-      - '<module>.STONES_PER_REGION'
-      - '<module>._MAX_SIZE'
-      - '<module>._MIN_SIZE'
-    note: 同上一條（content config）。
-  - id: py-content-flash-templates-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/flash_templates.py
-    kind: number
-    where:
-      - '<module>._MAX_FORM_MAGNITUDE'
-      - 'CompleteSkillRules'
-      - 'CostCut'
-      - 'ExtraMajorTemplate'
-      - 'FlashPricing'
-      - 'FlashRules'
-      - 'FlashTemplate'
-      - 'PriceRule'
-      - 'TransformTemplate'
-    note: 同上一條（content config）。
-  - id: py-content-forms-config-number
-    class: config
-    status: done
-    files: src/trpg/content/forms.py
-    kind: number
-    where:
-      - '<module>.MAX_MAGNITUDE'
-      - '<module>._MAX_ATTRS'
-      - '<module>._MAX_MELEE_RANGE'
-      - 'EntryBurst'
-      - 'EntryHealAdjacent'
-      - 'FormEffects'
-      - 'FormEntry'
-      - 'FormTable'
-      - 'NaturalCharge'
-      - 'NaturalTraits'
-      - 'NaturalWeapon'
-      - 'TakenMod'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-item-budget-config-number
-    class: config
-    status: done
-    files: src/trpg/content/item_budget.py
-    kind: number
-    where: ['ItemGenRules', 'RarityRule']
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-loader-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/loader.py
-    kind: number
-    where: ['<module>._MAX_REPORTED_ERRORS']
-    note: 同上一條（content config）。
-  - id: py-content-maps-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/maps.py
-    kind: number
-    where: ['<module>.MAX_HEIGHT', '<module>._MAX_SIZE', 'TileChange']
-    note: 同上一條（content config）。
-  - id: py-content-parts-config-number
-    class: config
-    status: done
-    files: src/trpg/content/parts.py
-    kind: number
-    where:
-      - '<module>.PARTS_MAX'
-      - '<module>.PARTS_MIN'
-      - '<module>.PART_HP_TOTAL_MAX'
-      - 'BossPart'
-      - 'ControlBreak'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-races-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/races.py
-    kind: number
-    where:
-      - '<module>.MAX_RACE_EFFECTS'
-      - '<module>.MAX_RACE_USES'
-      - '<module>.MAX_RESIST_PERMILLE'
-      - '<module>.MAX_SIGHT_REDUCTION_PERMILLE'
-      - '<module>.ORIGIN_TAGLINE_MAX'
-      - '<module>.RACE_BLURB_MAX'
-      - '<module>._AMOUNT_MAX'
-      - 'RaceEffect'
-      - 'RacePassive'
-    note: 同上一條（content config）。
-  - id: py-content-roguelite-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/roguelite.py
-    kind: number
-    where: ['CandidateSettings', 'StartHero', 'StartRules', '_default_heroes']
-    note: 同上一條（content config）。
-  - id: py-content-rule-changes-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/rule_changes.py
-    kind: number
-    where: ['<module>._MAX_DURATION']
-    note: 同上一條（content config）。
-  - id: py-content-rules-tier-count
-    class: config
-    status: todo
-    files: src/trpg/content/rules.py
-    kind: number
-    where: CoreRules._check_tier_budget
-    note: 保守：tier_budget 的鍵要剛好是階級 1～5＝「技能 5 個階級」的規則（同 SkillDef.tier ≤ 5）；HC-4a 沒搬，留給 HC-4b 和 SkillDef.tier 一起搬。
-  - id: py-content-rules-config-number
-    class: config
-    status: done
-    files: src/trpg/content/rules.py
-    kind: number
-    where:
-      - '<module>._DECIMAL_PRECISION'
-      - '<module>._ROLE_HP_RANGE'
-      - 'AttributePerks'
-      - 'CoreRules'
-      - 'CoreRules._check_tier_budget'
-      - 'ResourceRules'
-      - 'SummonGrowth'
-      - 'SummonInfusion'
-      - 'SummonTrait'
-      - 'WindRules'
-      - 'compute_hit_thresholds'
-    note: HC-4a 搬完（內容檔都有寫的預設值改必填、規則型上下限搬到 core.yaml）；之後這些類別新寫的預設值要再搬。
-  - id: py-content-skill-evolution-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_evolution.py
-    kind: number
-    where: ['EvolutionTable', 'EvolutionTemplate', 'SummonEvolution']
-    note: 同上一條（content config）。
-  - id: py-content-skill-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_pick.py
-    kind: number
-    where: ['PickPoolRules', 'PickWeights', 'WishTagRules']
-    note: 同上一條（content config）。
-  - id: py-content-skill-rules-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_rules.py
-    kind: number
-    where:
-      - '<module>._PERMILLE_MAX'
-      - 'BudgetRules'
-      - 'BudgetRules._check'
-      - 'CharacterTierRules'
-      - 'CostAllowance'
-      - 'FlashCostRules'
-      - 'FlashTransformRules'
-      - 'ModifierBudget'
-      - 'RarityLimit'
-      - 'RetierGrowthRules'
-      - 'SecondaryRules'
-      - 'SynergyRule'
-    note: 同上一條（content config）。
-  - id: py-content-skill-scaling-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_scaling.py
-    kind: number
-    where: ['SkillScalingRules', 'ThemeCombo']
-    note: 同上一條（content config）。
-  - id: py-content-skill-triggers-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skill_triggers.py
-    kind: number
-    where: ['SkillTriggerDef._check']
-    note: 同上一條（content config）。
-  - id: py-content-skills-conditions-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/conditions.py
-    kind: number
-    where: ['ConditionSpec']
-    note: 同上一條（content config）。
-  - id: py-content-skills-constants-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/constants.py
-    kind: number
-    where:
-      - '<module>.MAX_AP_COST'
-      - '<module>.MAX_EFFECTS'
-      - '<module>.MAX_GRANT_DURATION'
-      - '<module>.MAX_ON_KILL_EFFECTS'
-      - '<module>.MAX_REFUND_AP'
-      - '<module>.MAX_SUMMON_COUNT'
-      - '<module>.MAX_VARIANTS'
-      - '<module>.MIN_SKILL_CRIT_RANGE'
-      - '<module>._MAX_BRANCH_EFFECTS'
-      - '<module>._MAX_CONSUME_THEN'
-      - '<module>._MAX_COOLDOWN'
-      - '<module>._MAX_COOLDOWN_RESTORE'
-      - '<module>._MAX_DISPLACE'
-      - '<module>._MAX_FLAT_BONUS'
-      - '<module>._MAX_MASTERY_MODIFIERS'
-      - '<module>._MAX_MODIFIERS'
-      - '<module>._MAX_MULTIPLIER_PERMILLE'
-      - '<module>._MAX_ON_HIT_EFFECTS'
-      - '<module>._MAX_VARIANT_REPLACEMENTS'
-      - '<module>._MAX_ZONE_EFFECTS'
-    note: 同上一條（content config）。
-  - id: py-content-skills-effects-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/effects.py
-    kind: number
-    where: ['EffectSpec']
-    note: 同上一條（content config）。
-  - id: py-content-skills-modifiers-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/modifiers.py
-    kind: number
-    where: ['ModifierChange', 'ModifierChange._check_tags', 'ModifierSpec']
-    note: 同上一條（content config）。
-  - id: py-content-skills-reactions-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/reactions.py
-    kind: number
-    where: ['TrapSpec']
-    note: 同上一條（content config）。
-  - id: py-content-skills-skill-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/skill.py
-    kind: number
-    where: ['<module>._MIN_BESIDE_POWER', 'SkillDef']
-    note: 同上一條（content config）。
-  - id: py-content-skills-specs-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/skills/specs.py
-    kind: number
-    where: ['SelfStatusCost', 'SkillCost', 'TriggerSpec', 'TriggerSpec._check']
-    note: 同上一條（content config）。
-  - id: py-content-stacks-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/stacks.py
-    kind: number
-    where: ['<module>._MAX_BACKLASH', 'GainSpec', 'OverloadSpec', 'StackDef']
-    note: 同上一條（content config）。
-  - id: py-content-ui-wait-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/ui_wait.py
-    kind: number
-    where: ['<module>.Line', 'WaitNarration', 'WaitSceneLines']
-    note: 同上一條（content config）。
-  - id: py-content-workshop-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/workshop.py
-    kind: number
-    where: ['WorkshopRules']
-    note: 同上一條（content config）。
-  - id: py-content-world-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world.py
-    kind: number
-    where: ['NamingRules', 'StyleEvalRules', 'WorldTermRules']
-    note: 同上一條（content config）。
-  - id: py-content-world-crafting-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_crafting.py
-    kind: number
-    where: ['CraftRules', 'EnhanceRules', 'HiddenRecipe', 'ResonanceRules']
-    note: 同上一條（content config）。
-  - id: py-content-world-economy-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_economy.py
-    kind: number
-    where:
-      - '<module>._STACKS'
-      - 'BattleGold'
-      - 'EconomyRules'
-      - 'ShopAffinity'
-      - 'WeeklyStock'
-      - 'WorldItemDef'
-    note: 同上一條（content config）。
-  - id: py-content-world-encounters-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_encounters.py
-    kind: number
-    where: ['<module>.MAX_GROUP_SIZE', '<module>.MAX_THIRD_SIZE', 'ArmorMod', 'ArmorMods']
-    note: 同上一條（content config）。
-  - id: py-content-world-enemies-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_enemies.py
-    kind: number
-    where: ['EliteAffixDef']
-    note: 同上一條（content config）。
-  - id: py-content-world-events-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_events.py
-    kind: number
-    where: ['<module>._MAX_SITUATION_ATTRIBUTES', 'NpcPortrait', 'SolutionDef']
-    note: 同上一條（content config）。
-  - id: py-content-world-loot-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_loot.py
-    kind: number
-    where: ['MainHandMix']
-    note: 同上一條（content config）。
-  - id: py-content-world-map-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_map.py
-    kind: number
-    where: ['<module>.MAX_LOCATIONS', '<module>.MIN_LOCATIONS', 'MapPos']
-    note: 同上一條（content config）。
-  - id: py-content-world-mercenaries-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_mercenaries.py
-    kind: number
-    where: ['<module>.MIN_PER_ROLE', 'CompanionDef', 'MercenaryTable']
-    note: 同上一條（content config）。
-  - id: py-content-world-narration-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_narration.py
-    kind: number
-    where:
-      - '<module>.ACTOR_MAX_CHARS'
-      - '<module>.MORE_MAX_CHARS'
-      - '<module>.MOTIVE_MAX_CHARS'
-      - '<module>.STORY_REFS_MAX'
-      - '<module>.STORY_SENTENCES_MAX'
-      - '<module>.TEXT_MAX_CHARS'
-    note: 同上一條（content config）。
-  - id: py-content-world-newcomer-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_newcomer.py
-    kind: number
-    where: ['<module>.DEMOS_PER_CLASS', 'NewcomerContent', 'RangeContent']
-    note: 同上一條（content config）。
-  - id: py-content-world-oaths-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_oaths.py
-    kind: number
-    where: ['<module>.OATH_TEXT_LIMIT', 'OathCheck', 'OathTable']
-    note: 同上一條（content config）。
-  - id: py-content-world-quests-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_quests.py
-    kind: number
-    where:
-      - '<module>.OFFER_SIZE'
-      - '<module>._MAX_DELTA'
-      - '<module>._MAX_LEVEL'
-      - 'AffinityRules'
-      - 'AnyOf'
-      - 'OfferMix'
-      - 'StepReward'
-    note: 同上一條（content config）。
-  - id: py-content-world-rules-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_rules.py
-    kind: number
-    where:
-      - '<module>.DEFAULT_SHARES'
-      - '<module>.DEFAULT_WEEK_DAYS'
-      - 'BattleRules'
-      - 'CalendarRules'
-      - 'EnemyGrowthRules'
-      - 'FieldRules'
-      - 'HeroGrowthRules'
-      - 'OpportunityRules'
-      - 'WishRules'
-      - 'XpRules'
-    note: 同上一條（content config）。
-  - id: py-content-world-season-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_season.py
-    kind: number
-    where:
-      - 'BossScore'
-      - 'BossUnlock'
-      - 'DailyGoalRules'
-      - 'LeagueRules'
-      - 'SeasonBossDef'
-      - 'ShopPriceEffect'
-      - 'WorldEventDef'
-    note: 同上一條（content config）。
-  - id: py-content-world-situations-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_situations.py
-    kind: number
-    where:
-      - '<module>.ALIAS_MAX_CHARS'
-      - '<module>.ALIAS_MIN_CHARS'
-      - '<module>.CARE_LIMIT'
-      - '<module>.DC_SHIFT_LIMIT'
-      - '<module>.FACT_MAX_CHARS'
-      - '<module>.MAX_CARE_CLAIMS'
-      - '<module>.PLAYER_TEXT_LIMIT'
-      - '<module>._DANGER_LEVELS'
-      - '<module>._MAX_ATTRIBUTES'
-      - '<module>._MAX_METHODS'
-      - '<module>._MIN_ATTRIBUTES'
-      - 'CheckRules'
-      - 'DangerDef'
-      - 'MethodDef'
-      - 'SituationBudget'
-      - 'SituationTemplateDef'
-    note: 同上一條（content config）。
-  - id: py-content-world-trade-config-number
-    class: config
-    status: todo
-    files: src/trpg/content/world_trade.py
-    kind: number
-    where: ['MailRules', 'TradeAudit', 'TradeCommon']
-    note: 同上一條（content config）。
 
-  # ---------------------------------------------------- 後端 engine：config
-  # 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
-  - id: py-engine-battle-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/battle.py
-    kind: number
-    where: ['<module>.OPENING_STATUS_MAX_DURATION']
-    note: 保守：引擎規則裡寫死的玩法數字（暴擊下限、持續回合、AP、預設符文回合……）。
+  # ---------------------------------------------------- 後端 engine：搬完剩下的結構常數
+  # HC-7：暴擊範圍下限、開場狀態回合上限、破甲預設降幅搬到 core.yaml（crit_range_floor、
+  # opening_status_max_duration、defense_break_default_permille），部位「遠處」的格數搬到
+  # core.yaml 的 boss_parts.high_or_far_distance，灌注施放的選取分數搬到 ai_profiles.yaml 的
+  # heuristics.infused_pick，符文持續輪數改成詞條必填，誓約破誓回合改成呼叫端必帶，ChangeTileEffect 的
+  # 高度上限改讀 content/maps.py 的 MAX_HEIGHT；搬完 0 筆的 config 規則刪掉。下面是剩下的（逐筆判斷）。
   - id: py-engine-effects-handlers-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/effects/handlers.py
     kind: number
     where: ['_damage_rolls']
-    note: 同上一條（engine config）。
-  - id: py-engine-effects-models-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/effects/models.py
-    kind: number
-    where: ['ChangeTileEffect']
-    note: 同上一條（engine config）。
-  - id: py-engine-gear-triggers-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/gear/triggers.py
-    kind: number
-    where: ['<module>.DEFAULT_RUNE_ROUNDS']
-    note: 同上一條（engine config）。
-  - id: py-engine-oath-tracking-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/oath_tracking.py
-    kind: number
-    where: ['OathSetup']
-    note: 同上一條（engine config）。
-  - id: py-engine-parts-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/parts.py
-    kind: number
-    where: ['<module>.FAR_BEYOND']
-    note: 同上一條（engine config）。
+    note: HC-7 改判 const：暴擊的定義是「骰子顆數加倍」（DamageEffect 的說明「顆數加倍」、技能說明「暴擊不加倍」的固定值都以加倍為準），×2 是加倍本身，不是可調的倍率（保守的另一種做法是搬進 core.yaml，見 HC-7 報告待決）。
   - id: py-engine-preview-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/preview.py
     kind: number
     where: ['_attack_numbers', '_damage_expectation']
-    note: 同上一條（engine config）。
-  - id: py-engine-rules-combat-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/rules/combat.py
-    kind: number
-    where: ['positional_bonus', 'roll_attack', 'weapon_profile']
-    note: 同上一條（engine config）。
-  - id: py-engine-skill-infusion-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/skill_infusion.py
-    kind: number
-    where: ['<module>._ALLY_HIT_POINTS', '<module>._ENEMY_POINTS']
-    note: 同上一條（engine config）。
-  - id: py-engine-skills-targeting-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/skills/targeting.py
-    kind: number
-    where: ['skill_profile']
-    note: 同上一條（engine config）。
+    note: HC-7 改判 const：預覽算暴擊傷害分佈的「骰數 × 2」，和結算（effects/handlers.py 的 _damage_rolls）同一個定義。
   - id: py-engine-state-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/state.py
     kind: number
     where: ['UnitState']
-    note: 同上一條（engine config）。
-  - id: py-engine-summons-variants-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/summons/variants.py
-    kind: number
-    where: ['<module>._MIN_CRIT']
-    note: 同上一條（engine config）。
+    note: HC-7 改判 const：UnitState.ap_per_turn 的預設 3 只給 AP-1（/134）以前存下的戰鬥狀態 JSON 相容用——當時每回合一律 3 AP；新單位一律由 lifecycle.make_unit 照 core.template_ap_per_turn 帶入，不是現行可調的值。
 
-  # ---------------------------------------------------- 後端 engine/ai：config
-  # 保守：AI 評分權重、半徑與門檻（PM 初稿 A 類）。
-  - id: py-engine-ai-charge-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/charge.py
-    kind: number
-    where: ['<module>._DEFAULT_BUFF_VALUE']
-    note: 保守：AI 評分權重、半徑與門檻（PM 初稿 A 類）。
-  - id: py-engine-ai-composite-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/composite.py
-    kind: number
-    where: ['composite_estimate']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-displace-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/displace.py
-    kind: number
-    where:
-      - '<module>._DEADLY_HARM'
-      - '<module>._EXPOSURE_RADIUS'
-      - '<module>._LOW_HP_PERMILLE'
-      - '<module>._SURFACE_HARM'
-      - '<module>._TRAP_HARM'
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-objective-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/objective.py
-    kind: number
-    where: ['<module>._THREAT_RADIUS']
-    note: 同上一條（engine/ai config）。
+  # ---------------------------------------------------- 後端 engine/ai：搬完剩下的結構常數與護欄
+  # HC-4c：AI 評分權重、半徑與門檻（PM 初稿 A 類）搬到 content/ai_profiles.yaml 的 heuristics:（引擎從
+  # state.ruleset.ai 讀）與 rewrite.redirect_min_hp_permille；搬完 0 筆的 config 規則照 HC-4b 裁定 1 刪掉。
+  # 下面四條是剩下的結構常數與護欄（逐筆判斷，理由寫在 note）。
   - id: py-engine-ai-orders-config-number
-    class: config
-    status: todo
+    class: guard
+    status: done
     files: src/trpg/engine/ai/orders.py
     kind: number
     where: ['HoldPosition']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-priority-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/priority.py
-    kind: number
-    where: ['<module>._POSSIBLE_DIVISOR']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-race-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/race.py
-    kind: number
-    where:
-      - '<module>.RACE_EFFECT_SCORERS'
-      - '<module>._LEAP_RISE_POINTS'
-      - '<module>._MIN_AP_AFTER'
-      - '<module>._MIN_CLUSTER'
-      - '<module>._RESTORE_MIN_DEFICIT'
-      - '_adapt_score'
-      - '_pull_score'
-      - '_push_score'
-      - '_restore_score'
-      - '_surface_score'
-    note: 同上一條（engine/ai config）。
+    note: HC-4c 改判 guard：守位指令半徑的 schema 護欄 le=3（指令輸入的格式上限）；召喚物的 follow_radius／guard_radius 用同一個指令、schema 也是 le=3，三處一致。
   - id: py-engine-ai-rune-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/ai/rune.py
     kind: number
-    where: ['<module>._CELL_SCORES', 'rune_gains']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-scene-objects-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/scene_objects.py
-    kind: number
-    where: ['<module>._ENEMY_VALUE', '<module>._FRIEND_PENALTY']
-    note: 同上一條（engine/ai config）。
+    where: ['rune_gains']
+    note: HC-4c 改判 const：rune_gains 的距離鍵 0／1／2 對應腳下、相鄰、近（比例在 ai_profiles.yaml 的 rune:），99 是「沒有敵人」查不到的哨兵值。估計分數 _CELL_SCORES 已搬到 heuristics.estimate.rune_cell_points。
   - id: py-engine-ai-summon-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/ai/summon.py
     kind: number
-    where: ['<module>._ESTIMATE_BASE', '_value', 'sacrifice_estimate']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-terrain-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/terrain.py
-    kind: number
-    where: ['<module>._ALLY_VALUE', '<module>._ENEMY_VALUE', '<module>._PIT_VALUE']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-gains-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/gains.py
-    kind: number
-    where:
-      - '<module>._DEFEND_RADIUS'
-      - '<module>._POSSIBLE_KILL_DIVISOR'
-      - '<module>._SURFACE_HARM'
-      - '_buff_gains'
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-moves-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/moves.py
-    kind: number
-    where: ['<module>._OBJECT_NEAR_ENEMY']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-position-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/position.py
-    kind: number
-    where: ['<module>._FORMATION_STEP', '<module>._KEEP_DISTANCE']
-    note: 同上一條（engine/ai config）。
+    where: ['_value']
+    note: HC-4c 改判 const：圖騰光環估值的 min(rounds, 99) 是輪數的上限護欄（剩餘輪數由召喚物到期輪算出，不會到 99），不是玩法數值。估計分數已搬到 heuristics.estimate。
   - id: py-engine-ai-utility-scoring-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/ai/utility/scoring.py
     kind: number
-    where: ['_rewrite_event_points', 'extra_targets']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-utility-skill-estimate-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/utility/skill_estimate.py
-    kind: number
-    where: ['_field_value', '_trap_estimate', 'skill_estimate']
-    note: 同上一條（engine/ai config）。
-  - id: py-engine-ai-zone-config-number
-    class: config
-    status: todo
-    files: src/trpg/engine/ai/zone.py
-    kind: number
-    where: ['_status_value', 'zone_estimate']
-    note: 同上一條（engine/ai config）。
+    where: ['extra_targets']
+    note: HC-4c 改判 const：多目標加分的「至少 2 名敵人」是多目標的定義（1 名就不是範圍技多打到人）。靈魂連結的 HP 門檻已搬到 rewrite.redirect_min_hp_permille。
 
-  # ---------------------------------------------------- 後端 llm：config
-  # 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。
+  # ---------------------------------------------------- 後端 llm：config（HC-7 b 搬完）
+  # HC-7 b：重試次數、退回率提醒、連線檢查逾時都讀 LLMConfig 的 schema 預設（LLM_DEFAULTS，config/llm.toml 可改）；
+  # 挑選模式的時間預算搬進 skill_pick.yaml 的 budget_seconds（遊戲規則）；閃現名稱與描述字數讀 skillgen.flash_text 那一份。
   - id: py-llm-config-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/llm/config.py
     kind: number
     where: ['LLMConfig']
-    note: 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。
-  - id: py-llm-flash-eval-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/flash_eval.py
+    note: HC-7 b（規格 b.2「屬於部署設定的放 config/llm.toml；這段是寫進 schema 的預設」）：config/llm.toml 的 schema 預設值，唯一一份；其他模組經 LLM_DEFAULTS 讀。新加的鍵 probe_timeout_s 3.0、situation_attempts 2、story_attempts 2 的預設等於原本程式裡的值，config/llm.toml 沒有加鍵、既有值沒改。
+  - id: py-llm-format-const-number
+    class: const
+    status: done
+    files: [src/trpg/llm/prompts/flash.py, src/trpg/llm/prompts/wish_pick.py, src/trpg/llm/wish_pick.py]
     kind: number
-    where: ['evaluate_flash']
-    note: 同上一條（llm config）。
-  - id: py-llm-flash-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/flash_pick.py
-    kind: number
-    where: ['<module>.FLASH_PICK_BUDGET_S', 'mock_flash_pick_client', 'pick_variations']
-    note: 同上一條（llm config）。
-  - id: py-llm-flash-propose-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/flash_propose.py
-    kind: number
-    where: ['<module>.DEFAULT_FLASH_ATTEMPTS', 'FlashProposalStats', 'FlashProposalStats.of']
-    note: 同上一條（llm config）。
-  - id: py-llm-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/pick.py
-    kind: number
-    where: ['<module>.DEFAULT_PICK_ATTEMPTS', '<module>.OFFER_BUDGET_S']
-    note: 同上一條（llm config）。
-  - id: py-llm-prompts-flash-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/prompts/flash.py
-    kind: number
-    where: ['<module>.MAX_SCHEMA_BRANCHES', '<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
-    note: 同上一條（llm config）。
-  - id: py-llm-prompts-flash-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/prompts/flash_pick.py
-    kind: number
-    where: ['<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
-    note: 同上一條（llm config）。
-  - id: py-llm-prompts-wish-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/prompts/wish_pick.py
-    kind: number
-    where: ['<module>.WISH_REPLY_MAX_CHARS', 'wish_pick_schema']
-    note: 同上一條（llm config）。
-  - id: py-llm-propose-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/propose.py
-    kind: number
-    where: ['<module>.DEFAULT_MAX_ATTEMPTS', 'ProposalStats', 'ProposalStats.of']
-    note: 同上一條（llm config）。
-  - id: py-llm-situation-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/situation.py
-    kind: number
-    where: ['<module>.DEFAULT_SITUATION_ATTEMPTS']
-    note: 同上一條（llm config）。
-  - id: py-llm-story-skill-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/story_skill.py
-    kind: number
-    where: ['<module>.DEFAULT_STORY_ATTEMPTS']
-    note: 同上一條（llm config）。
-  - id: py-llm-wish-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/wish.py
-    kind: number
-    where: ['<module>.DEFAULT_WISH_ATTEMPTS', 'match_wish', 'mock_wish_client']
-    note: 同上一條（llm config）。
-  - id: py-llm-wish-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/wish_pick.py
-    kind: number
-    where:
-      - '<module>.WISH_PICK_BUDGET_S'
-      - 'make_wish_picker'
-      - 'mock_wish_pick_client'
-      - 'mock_wish_picker'
-    note: 同上一條（llm config）。
-  - id: py-llm-wish-tags-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/wish_tags.py
-    kind: number
-    where: ['match_wish_tags', 'mock_wish_tags_client']
-    note: 同上一條（llm config）。
+    where: ['<module>.MAX_SCHEMA_BRANCHES', '<module>.WISH_REPLY_MAX_CHARS', 'mock_wish_pick_client', 'mock_wish_picker']
+    note: HC-7 b 改判 const（同 skillgen/flash_text 的字數上限前例）：MAX_SCHEMA_BRANCHES 是 JSON schema 分支太多時退回扁平列舉的門檻（語法約束的效能，不影響規則）；WISH_REPLY_MAX_CHARS 是 LLM 回應願望那一句的輸出格式上限（提示詞與 schema 共用）；Mock 挑選器的 picks (0, 1, 2) 是測試用的固定挑選序。
 
-  # ---------------------------------------------------- 後端 narrative：config
-  # 保守：敘事生成的重試次數。
-  - id: py-narrative-storyteller-config-number
-    class: config
-    status: todo
-    files: src/trpg/narrative/storyteller.py
-    kind: number
-    where: ['<module>.DEFAULT_STORY_ATTEMPTS']
-    note: 保守：敘事生成的重試次數。
-
-  # ---------------------------------------------------- 後端 roguelite：config
-  # 保守：roguelite 傳承的上限。
-  - id: py-roguelite-state-config-number
-    class: config
-    status: todo
-    files: src/trpg/roguelite/state.py
-    kind: number
-    where: ['InheritChoice']
-    note: 保守：roguelite 傳承的上限。
-
-  # ---------------------------------------------------- 後端 server：config
-  # 保守：社群功能（留言板、腳印、循環賽人數）的上限。
-  - id: py-server-league-config-number
-    class: config
-    status: todo
+  # ---------------------------------------------------- 後端 server（HC-7 b）
+  # 留言字數與留言板、足跡的顯示筆數搬進 world/rules.yaml 的 notes、display（API 帶進 trpg.server.notes）。
+  - id: py-server-league-const-number
+    class: const
+    status: done
     files: src/trpg/server/league.py
     kind: number
     where: ['<module>.MIN_ENTRIES']
-    note: 保守：社群功能（留言板、腳印、循環賽人數）的上限。
-  - id: py-server-notes-config-number
-    class: config
-    status: todo
-    files: src/trpg/server/notes.py
+    note: HC-7 b 改判 const：循環賽至少要 2 位參賽者才有對手可以打（循環賽的定義），不是可調的規則數字。
+
+  # ---------------------------------------------------- 後端 skillgen：HC-5b 判成結構常數
+  - id: py-skillgen-grade-codes-hc5b
+    class: const
+    status: done
+    files:
+      - src/trpg/skillgen/candidates.py
+      - src/trpg/skillgen/pick_offer.py
+      - src/trpg/skillgen/whiteboard_candidates.py
     kind: number
-    where: ['<module>.BOARD_NOTES', '<module>.FOOTPRINT_MAX', '<module>.NOTE_MAX_LEN']
-    note: 同上一條（server config）。
+    where:
+      - '<module>.ROUTE_OFF'
+      - '_Search._grade'
+      - '<module>.LEVEL_OFF'
+      - '<module>.LEVEL_OFF_RELAXED'
+      - '<module>._SPARE'
+    note: >-
+      HC-5b：好壞等級的代碼（0＝符合、1＝雙屬性／部分關鍵字、2＝偏離或備選、3＝部分關鍵字＋偏離），只拿來
+      彼此比大小與當清單索引，像列舉值；改數字不會改玩法，只會打亂排序。
+  - id: py-skillgen-composer-core-count-hc5b
+    class: const
+    status: done
+    files: src/trpg/skillgen/composer_parts.py
+    kind: number
+    scope: _core_count
+    slot: 'min(#1)'
+    value: '2'
+    note: >-
+      HC-5b：骨架的核心數模式 ``up_to_two``（content/skeletons/ 的 ``composer.core_count``）字面上就是「最多 2 個」，
+      2 是這個模式的定義；要別的上限是新增一種模式，不是調數字。
 
   # ---------------------------------------------------- 後端 skillgen：config
   # 保守：技能生成與閃現的權重、步階、上限、預設代價、重試次數。
-  - id: py-skillgen-budget-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/budget.py
-    kind: number
-    where:
-      - '<module>._EXEMPT_MIN_TIER'
-      - '<module>._REFERENCE_PARAM'
-      - '_inscribe_points'
-      - '_plain_base_points'
-    note: 保守：技能生成與閃現的權重、步階、上限、預設代價、重試次數。
-  - id: py-skillgen-candidates-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/candidates.py
-    kind: number
-    where: ['<module>.BRIDGE_VARIANT_CAP', '<module>.ROUTE_OFF', 'CandidateRules', '_Search._grade']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-complete-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/complete.py
-    kind: number
-    where: ['<module>._MAX_STEPS']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-composer-dual-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/composer_dual.py
-    kind: number
-    where: ['<module>._FIRST_MULTIPLIER']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-composer-parts-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/composer_parts.py
-    kind: number
-    where:
-      - '<module>._GAMBLE_BACKLASH'
-      - '<module>._GAMBLE_WIN'
-      - '<module>._POINT_BLANK_MIN_RANGE'
-      - '_core_count'
-      - '_fixed_effect'
-      - '_gamble_effect'
-      - '_sacrifice_effect'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-composer-recipes-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/composer_recipes.py
-    kind: number
-    where:
-      - '<module>._GUARDIAN_COSTS'
-      - '<module>._GUARDIAN_RANGE'
-      - '<module>._HALF'
-      - '<module>._MIN_POWER'
-      - '<module>._PARAM_PERMILLE'
-      - '<module>._POWER_STEP'
-      - 'passive_drafts'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-composer-rider-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/composer_rider.py
-    kind: number
-    where: ['rider_effect']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-composer-special-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/composer_special.py
-    kind: number
-    where:
-      - '<module>._ATTEMPTS'
-      - '<module>._CORE_TRIES'
-      - '<module>._LADDERS'
-      - '_lasting_candidates'
-      - '_modifier_candidates'
-      - '_rewrite_effect'
-      - '_rule'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-evolution-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/evolution.py
-    kind: number
-    where:
-      - '<module>.EXTRA_COOLDOWN_STEPS'
-      - '<module>.MAX_EVOLVED_COOLDOWN'
-      - '<module>.MAX_VARIANT_DRAFTS'
-      - '<module>.MIN_COOLDOWN'
-      - '<module>._LOW_MULTIPLIER_FLOOR'
-      - '<module>._LOW_MULTIPLIER_STEP'
-      - '_knobs'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-cost-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_cost.py
-    kind: number
-    where: ['<module>.CHARGE_DURATION_CAP', '<module>._SHIELD_DEFAULT_DURATION']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-derive-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_derive.py
-    kind: number
-    where: ['<module>.STRICT_MARGIN', '<module>.TUNE_ATTEMPTS']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-major-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_major.py
-    kind: number
-    where:
-      - '<module>._GUARDIAN_COSTS'
-      - '<module>._MAX_CARRIED'
-      - '<module>._MAX_TRAP_EFFECTS'
-      - '<module>._MIN_POWER'
-      - '<module>._POWER_STEP'
-      - '<module>._STANCE_UPKEEPS'
-      - '<module>._STRICT_MARGIN'
-      - '<module>._SUMMON_COSTS'
-      - '_apply_borrow'
-      - '_to_aid'
-      - '_to_blessing'
-      - '_to_guardian'
-      - '_to_passive'
-      - '_to_reaction'
-      - '_to_summon'
-      - '_to_trap'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-offer-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_offer.py
-    kind: number
-    where:
-      - '<module>._FREQUENT_USES'
-      - '<module>._KEYWORD_CAP'
-      - '<module>._MULTI_TARGETS_PERMILLE'
-      - '_usage_score'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-ops-config-number
-    class: config
-    status: todo
+  - id: py-skillgen-flash-ops-structure-hc5a
+    class: const
+    status: done
     files: src/trpg/skillgen/flash_ops.py
     kind: number
-    where:
-      - '<module>.CHARGE_COOLDOWN_STEP'
-      - '<module>.MAX_CHARGE_COOLDOWN'
-      - '<module>.MAX_COOLDOWN_DELTA'
-      - '<module>.MAX_EMPTY_SLOTS_CAP'
-      - '<module>.MAX_RELAX_PERMILLE'
-      - '<module>.MAX_STANCE_UPKEEP'
-      - '<module>.MAX_SUMMON_DURATION_DELTA'
-      - '<module>.MAX_TRIGGERS_PER_ROUND'
-      - '<module>.RELAX_PERMILLE'
-      - '<module>.SUMMON_HP_STEPS'
-      - '<module>._BLOOD_BONUS_PERMILLE'
-      - '<module>._FINE_MULTIPLIER_TOP'
-      - '<module>._FOLLOWUP_EASE_STEPS'
-      - '<module>._FOLLOWUP_POTENCY_STEPS'
-      - '<module>._RELAX_ALTERNATIVES'
-      - '_new_damage'
-      - '_op_distance_bonus'
-      - '_op_light'
-      - '_op_mod_cost'
-      - '_op_mod_range'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-reclaim-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_reclaim.py
-    kind: number
-    where:
-      - '<module>.MIN_TIGHTEN_PERMILLE'
-      - '<module>.TIGHTEN_PERMILLE'
-      - '<module>._SELF_CONDITION'
-      - '<module>._TARGET_CONDITION'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-flash-trade-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/flash_trade.py
-    kind: number
-    where:
-      - '<module>._CAP_SHRINK_PERMILLE'
-      - '<module>._CAP_SHRINK_STEPS'
-      - '<module>._MAX_COST_CUTS'
-      - '<module>._TUNE_ATTEMPTS'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-option-effect-rules-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/option_effect_rules.py
-    kind: number
-    where: ['_assumed_cooldown']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-option-fill-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/option_fill.py
-    kind: number
-    where: ['_scalar']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-option-nested-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/option_nested.py
-    kind: number
-    where: ['<module>.NESTED_PARAMS', '<module>._SPECIAL']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-option-variant-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/option_variant.py
-    kind: number
-    where: ['variant_fields']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-options-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/options.py
-    kind: number
-    where: ['_change_field', '_self_status_choice', '_trap_field', '_trigger_field']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-pick-offer-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/pick_offer.py
-    kind: number
-    where:
-      - '<module>.LEVEL_OFF'
-      - '<module>.LEVEL_OFF_RELAXED'
-      - '<module>.MAX_OFF_ROUTE'
-      - '<module>.SLOT_KEYWORD_TRIES'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-models-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal/models.py
-    kind: number
-    where: ['<module>._MAX_NESTED', '<module>._MAX_TAGS', '<module>._MAX_VARIANTS']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-schema-shape-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal/schema_shape.py
-    kind: number
-    where: ['<module>.VARIANT_SWAP_MAX']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-budget-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_budget.py
-    kind: number
-    where: ['<module>.REPAIR_TUNES']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-costs-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_costs.py
-    kind: number
-    where: ['<module>.DEFAULT_HP_PERMILLE', 'hp_cost_permille']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-fallback-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_fallback.py
-    kind: number
-    where:
-      - '<module>.COMPOSER_TRIES'
-      - '<module>.WORKSHOP_MAX_EFFECTS'
-      - '<module>.WORKSHOP_MAX_SHAPES'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-numbers-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_numbers.py
-    kind: number
-    where: ['<module>.DEFAULT_ACTIVE_AP']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-subset-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_subset.py
-    kind: number
-    where: ['<module>.MAX_KEYWORDS']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-topic-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_topic.py
-    kind: number
-    where: ['<module>.CORE_RETRIES', '<module>.WITNESS_MIN_KEYWORDS']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-topup-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_topup.py
-    kind: number
-    where: ['<module>.FILLER_STATUS_MAX', '<module>.TOPUP_GROUP_MAX', '<module>.TOPUP_MAX']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-proposal-witness-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/proposal_witness.py
-    kind: number
-    where:
-      - '<module>.WITNESS_MAX'
-      - '<module>._CORES'
-      - '<module>._EVENTS'
-      - '<module>._KEYWORD_WAYS'
-      - '<module>._PAIR_KEYWORDS'
-      - '<module>._SHAPES'
-      - '<module>._TEMPLATES_PER_PRIMITIVE'
-      - '_shape'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-random-composer-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/random_composer.py
-    kind: number
-    where:
-      - '<module>.KEYWORD_TRIES'
-      - '<module>.MAX_ATTEMPTS'
-      - '<module>.VARIANT_ATTEMPTS'
-      - '_attempt_around_passive'
-      - '_attempt_passive'
-      - '_compose_plain'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-self-penalty-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/self_penalty.py
-    kind: number
-    where: ['<module>._MIN_DURATION']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-skill-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/skill_pick.py
-    kind: number
-    where: ['thin_reasons']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-skill-tier-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/skill_tier.py
-    kind: number
-    where:
-      - '<module>.RETIER_ATTEMPTS'
-      - '<module>._SUMMON_HP_STEPS'
-      - '_cost_variants'
-      - '_rock_drafts'
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-validate-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/validate.py
-    kind: number
-    where: ['<module>.POINT_BLANK_MIN_REACH']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-whiteboard-candidates-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/whiteboard_candidates.py
-    kind: number
-    where: ['<module>._SPARE', 'generate_whiteboard_candidates']
-    note: 同上一條（skillgen config）。
-  - id: py-skillgen-wish-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/skillgen/wish_pick.py
-    kind: number
-    where: ['<module>.WISH_CARDS', '<module>.WISH_SEED_PERMILLE', '<module>.WISH_TAG_EXTRA']
-    note: 同上一條（skillgen config）。
+    scope: _op_mod_cost
+    slot: 'cmp:len(skill.modifiers)'
+    value: '2'
+    note: >-
+      HC-5a：代價減輕「至少留一條規則」——要有 2 條以上的修正規則才能減其中一條的代價，2 是「至少 1 條
+      ＋要減的那 1 條」的結構數，不是規則上限（上限另讀 core.skill_limits.max_modifiers）。
 
-  # ---------------------------------------------------- 後端 world：config
-  # 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
-  - id: py-world-actions-config-number
+  # ---------------------------------------------------- 後端 world：搬完剩下的
+  # HC-7：開局結束等級、新手任務步數、看示範的關鍵字數搬到 world/newcomer.yaml（opening_end_level、
+  # starter_steps、range.trial_keywords_max），機遇升階的階級上限改讀 core.skill_limits.tiers；日曆、
+  # 一週天數、walk 步數改成一定要有世界規則（rules_of，沒有就報錯），傭兵表（max_hired、影子戰報數）
+  # 同樣一定要有；沒有 world/affinity.yaml 時的好感度規則與沒給日曆時的日曆各留一份在 content 載入層
+  # （下一條）。搬完 0 筆的 config 規則刪掉。
+  - id: py-content-no-file-fallbacks
     class: config
-    status: todo
-    files: src/trpg/world/actions.py
+    status: done
+    files: [src/trpg/content/world_rules.py, src/trpg/content/world_quests.py]
     kind: number
-    where:
-      - 'HireAction'
-      - 'InheritAction'
-      - 'OpeningConfirmAction'
-      - 'OpeningReselectAction'
-      - 'WishAction'
-    note: 保守：大世界規則的後備值與上限（好感門檻、時鐘、動作請求上限、開局限制）。
-  - id: py-world-affinity-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/affinity.py
-    kind: number
-    where: ['<module>.DEFAULT_AFFINITY_RULES']
-    note: 同上一條（world config）。
+    where: ['<module>.FALLBACK_CALENDAR', '<module>.NO_FILE_AFFINITY_RULES']
+    note: >-
+      HC-7（HC-4d 裁定 2）：真的需要備用值的兩處，只寫一份、放在 content 載入層，值和內容檔相同
+      （tests/world/test_rule_defaults_hc7.py 對照）。FALLBACK_CALENDAR＝呼叫 trpg.world.clock 沒給日曆時
+      （伺服器公告沒有內容庫的舊路徑、測試）的台北 6 點，取代原本 clock.py 的 UTC_OFFSET_SECONDS、
+      REFRESH_HOUR 與 calendar.py 的 NO_RULES_CALENDAR 兩份；NO_FILE_AFFINITY_RULES＝內容庫沒有
+      world/affinity.yaml（只有測試的精簡內容庫）時的好感度級距，取代 world/affinity.py 的
+      DEFAULT_AFFINITY_RULES。
   - id: py-world-clock-config-number
-    class: config
-    status: todo
+    class: const
+    status: done
     files: src/trpg/world/clock.py
     kind: number
-    where: ['<module>.GAME_DAY_SECONDS', '<module>.REFRESH_HOUR', '<module>._GAME_DAY_START_MINUTE']
-    note: 同上一條（world config）。
-  - id: py-world-companions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/companions.py
+    where: ['<module>.GAME_DAY_SECONDS', '<module>._GAME_DAY_START_MINUTE']
+    note: >-
+      HC-7 改判 const：遊戲日的長度（現實 30 分鐘，3.1）與遊戲日從 06:00 開始是世界時間軸的格式——
+      天氣週期、白天黑夜、遊戲日序都是 now // GAME_DAY_SECONDS 直接從 UTC 秒數算（day_phase(now) 拿不到
+      內容庫），改了舊世界的日序與天氣全部重排；CalendarRules 的說明也寫明「遊戲日長度與天氣週期是使用者
+      定的常數，不在這裡」。遊戲日開頭和 world/rules.yaml 的 day_parts.morning 一致由
+      tests/world/test_rule_defaults_hc4d.py 對照。
+  - id: py-world-action-request-guards
+    class: guard
+    status: done
+    files:
+      - src/trpg/world/actions.py
+      - src/trpg/world/crafting_actions.py
+      - src/trpg/world/economy_actions.py
+      - src/trpg/world/trade_actions.py
     kind: number
-    where: ['_max_hired']
-    note: 同上一條（world config）。
-  - id: py-world-crafting-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/crafting_actions.py
-    kind: number
-    where: ['CraftAction', 'ImbueAction', 'RerollAction']
-    note: 同上一條（world config）。
-  - id: py-world-economy-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/economy_actions.py
-    kind: number
-    where: ['BuyAction', 'LootChooseAction', 'PouchAction', 'SellAction']
-    note: 同上一條（world config）。
-  - id: py-world-growth-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/growth.py
-    kind: number
-    where: ['<module>.OPENING_END_LEVEL']
-    note: 同上一條（world config）。
-  - id: py-world-opening-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/opening.py
-    kind: number
-    where: ['<module>.MAX_TRIAL_KEYWORDS']
-    note: 同上一條（world config）。
-  - id: py-world-opening-limits-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/opening_limits.py
-    kind: number
-    where: ['<module>.STARTER_STEPS']
-    note: 同上一條（world config）。
-  - id: py-world-shadows-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/shadows.py
-    kind: number
-    where: ['record_lent']
-    note: 同上一條（world config）。
-  - id: py-world-solutions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/solutions.py
-    kind: number
-    where: ['<module>.MAX_SKILL_TIER']
-    note: 同上一條（world config）。
-  - id: py-world-state-config-number
-    class: config
-    status: todo
+    where:
+      - 'BuyAction'
+      - 'CraftAction'
+      - 'HireAction'
+      - 'ImbueAction'
+      - 'InheritAction'
+      - 'LootChooseAction'
+      - 'MailSendAction'
+      - 'OpeningConfirmAction'
+      - 'OpeningReselectAction'
+      - 'PouchAction'
+      - 'RerollAction'
+      - 'SellAction'
+      - 'WishAction'
+    note: >-
+      HC-7 改判 guard：大世界動作請求的格式護欄（擋過大的請求），真正的規則上限在內容檔、由規則檢查——
+      雇傭 8（max_hired 2）、許願關鍵字 4（wish.max_keywords 2）、開局與重選關鍵字 4（正式選定要 2 個，
+      opening_choice 檢查）、傳承 2（flash 的 max_carry，同值；工坊把 max_carry 調到 3 以上時這裡也要放寬，
+      見 HC-7 報告待決）、打造材料 5（crafting.flavor_max 3）、打造等級 99、詞條位置 0～7、買 10／賣 99、
+      腰包 10 種（pouch_slots 3）、戰後丟棄 40、郵件附件 10（mail.max_attachments 3）、郵寄金幣 1000 萬。
+  - id: py-world-state-format-guards
+    class: guard
+    status: done
     files: src/trpg/world/state.py
     kind: number
     where: ['CraftRecipe', 'GearMod', 'RecipeStep']
-    note: 同上一條（world config）。
-  - id: py-world-trade-actions-config-number
-    class: config
-    status: todo
-    files: src/trpg/world/trade_actions.py
-    kind: number
-    where: ['MailSendAction']
-    note: 同上一條（world config）。
+    note: >-
+      HC-7 改判 guard：角色存檔的格式護欄——配方的物品等級 1～99、詞條位置 0～7、強化 0～10（實際上限
+      crafting.yaml 的 enhance.max_level 3，由強化動作檢查）。
 
   # ---------------------------------------------------- 後端 api：text
   # API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
-  - id: py-api-gear-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/gear.py
-    kind: text
-    where: ['_build_custom']
-    note: API 回給畫面的說明、提示、錯誤訊息裡寫死的規則數字。
-  - id: py-api-league-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/league_view.py
-    kind: text
-    where: ['_rules_zh']
-    note: 同上一條（api text）。
-  - id: py-api-season-boss-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/season_boss_view.py
-    kind: text
-    where: ['season_boss_event_line']
-    note: 同上一條（api text）。
-  - id: py-api-season-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/season_view.py
-    kind: text
-    where: ['_season_info']
-    note: 同上一條（api text）。
-  - id: py-api-tuning-check-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/tuning/check.py
-    kind: text
-    where: ['<module>._INT_ZH', '_to_dice']
-    note: 同上一條（api text）。
-  - id: py-api-tuning-objects-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/tuning/objects.py
+  # HC-6b：api 的說明文字。有資料的改組字（工坊預設值照 schema 預設、升階區間照 skill_budget.yaml、
+  # 快捷分組的標籤照篩選值、誓約欄位照 skill_slots、破誓回合照 oaths.yaml、腰包 AP 照道具技能）；
+  # 剩下的分兩種：沒有資料可帶的（留 text）與語法用字（改判 const）。
+  - id: py-api-const-text
+    class: const
+    status: done
+    files:
+      - src/trpg/api/gear.py
+      - src/trpg/api/league_view.py
+      - src/trpg/api/season_boss_view.py
+      - src/trpg/api/season_view.py
+      - src/trpg/api/tuning/check.py
+      - src/trpg/api/tuning/objects.py
+      - src/trpg/api/world_growth_view.py
+      - src/trpg/api/world_story_view.py
     kind: text
     where:
-      - '<module>.AI_NOTES_ZH'
-      - '<module>.RETIER_NOTE_ZH'
-      - '<module>.TABLE_NOTES_ZH'
-      - '<module>._DEFAULTS_ZH'
+      - '_build_custom'
+      - '_rules_zh'
+      - 'season_boss_event_line'
+      - '_season_info'
+      - '<module>._INT_ZH'
+      - '_to_dice'
       - '<module>._STAT_ZH'
       - 'retier_notes'
-    note: 同上一條（api text）。
-  - id: py-api-tuning-skills-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/tuning/skills.py
-    kind: text
-    where: ['<module>.GROUP_PRESETS', '<module>._BORROW_SAME_ZH']
-    note: 同上一條（api text）。
-  - id: py-api-world-economy-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/world_economy_view.py
-    kind: text
-    where: ['_battle_zh']
-    note: 同上一條（api text）。
-  - id: py-api-world-growth-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/world_growth_view.py
-    kind: text
-    where: ['<module>.SLOT_ZH', '_oath_line', '_swear_problem', 'next_battle_lines', 'opening_lines']
-    note: 同上一條（api text）。
-  - id: py-api-world-story-view-text-text
-    class: text
-    status: todo
-    files: src/trpg/api/world_story_view.py
-    kind: text
-    where: ['_left_zh', '_remaining_zh']
-    note: 同上一條（api text）。
-
-  # ---------------------------------------------------- 後端 bot：text
-  # Bot 指令說明裡的帳號規則數字。
-  - id: py-bot-commands-text-text
-    class: text
-    status: todo
-    files: src/trpg/bot/commands.py
-    kind: text
-    where: ['<module>.SLASH_COMMANDS']
-    note: Bot 指令說明裡的帳號規則數字。
-  - id: py-bot-service-text-text
-    class: text
-    status: todo
-    files: src/trpg/bot/service.py
-    kind: text
-    where: ['BotService._pick_username']
-    note: 同上一條（bot text）。
+      - 'retier_note_zh'
+      - '_swear_problem'
+      - 'next_battle_lines'
+      - 'opening_lines'
+      - '_left_zh'
+      - '_remaining_zh'
+    note: HC-6b 改判：自訂物品「至少 1 條詞條」是非空檢查；循環賽「1 對 1」是對戰形式的名字；「得到 1 把封印鑰匙」是一筆事件一把（SealKeyGainedEvent 的結構）；刷新時刻的「:00」是時刻格式；「例：120」「例：2d6」「750＝−25%」是舉例；升階提示的「2 階以上」「只在 1 階有效」「改 1 階」是基準階級（手寫技能的 1 階）；「同時只能有 1 個誓約」是單一欄位（char.oath）；「增援 1 名」是一筆增援抽一名（reinforce_lineup 的結構）；「第 1 輪」「第 2 輪起」是序號；「不到 1 小時」是時間單位的分界（_HOUR）。
 
   # ---------------------------------------------------- 後端 content：text
-  # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。
-  - id: py-content-battle-text-text
-    class: text
-    status: todo
+  # content 驗證訊息裡的上下限數字（應從 schema 常數帶）。HC-6a：有常數的改組字；剩下的分兩種——
+  # 還是規則數字、但程式裡沒有可帶的資料（留 text，先要搬進 content 才能組字），以及結構用字（改判 const）。
+  - id: py-content-battle-const-text
+    class: const
+    status: done
     files: src/trpg/content/battle.py
     kind: text
     where:
       - 'Dice._parse_text'
-      - 'OffhandDef.trait_lines_zh'
       - 'StatusDef._check_elemental_stance'
-      - 'UnitTemplate._check_footprint'
       - 'UnitTemplate._check_totem'
       - 'UnitTemplate._element_mod_range'
       - 'UnitTemplate._resist_range'
       - 'check_phases'
-    note: content 驗證訊息裡的上下限數字（應從 schema 常數帶）。
-  - id: py-content-composer-rules-text-text
-    class: text
-    status: todo
+    note: HC-6a 改判：骰子寫法的例子（2d6）；「1 或 {上限}」的下限 1；「第 1 項」是序號；圖騰 speed 為 0 是定義；-1000～1000‰ 是 ‰ 換算（±100%）。
+  - id: py-content-composer-rules-const-text
+    class: const
+    status: done
     files: src/trpg/content/composer_rules.py
     kind: text
-    where:
-      - 'ComposerRules._check'
-      - 'CostRules._check_self_status_duration'
-      - 'DiceRules._check'
-      - 'WhiteboardRules._check'
-    note: 同上一條（content text）。
+    where: ['ComposerRules._check', 'WhiteboardRules._check']
+    note: HC-6a 改判：千分比的總和 1000、0～1000 是 ‰ 換算（100%）。
   - id: py-content-environment-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/environment.py
     kind: text
     where: ['WeatherDef._mods']
-    note: 同上一條（content text）。
-  - id: py-content-equipment-text-text
-    class: text
-    status: todo
+    note: HC-6a 改判：元素修正不低於 -1000‰ 是 ‰ 換算（減傷到 0 為止）。
+  - id: py-content-equipment-const-text
+    class: const
+    status: done
     files: src/trpg/content/equipment.py
     kind: text
-    where:
-      - 'AttackAffix._check_strike'
-      - 'EquipmentRules._check'
-      - 'TriggerAffix._check_summon_downed'
-      - 'ValueRange._check'
-      - 'weapon_element_problems'
-    note: 同上一條（content text）。
+    where: ['EquipmentRules._check', 'TriggerAffix._check_summon_downed', 'ValueRange._check']
+    note: HC-6a 改判：遞減權重從 1000 開始是 ‰ 換算；「恰好 1 個 sacrifice_summon」是觸發的結構；「不能是 0」是非零檢查。
   - id: py-content-fields-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/fields.py
     kind: text
     where:
@@ -2651,266 +1187,262 @@ rules:
       - 'FieldMapDef._kind_problems'
       - '_map_stone_checks'
       - '_npc_problems'
-    note: 同上一條（content text）。
+    note: HC-6a 改判：size 至少 1×1、至少 1 個出口是非空檢查；主城／城鎮恰好 1 個傳送石是地圖結構的唯一性；「草稿待確認 2」是待決編號。
   - id: py-content-flash-templates-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/flash_templates.py
     kind: text
     where: ['FlashTemplate._check', '_ladder']
-    note: 同上一條（content text）。
-  - id: py-content-item-budget-text-text
-    class: text
-    status: todo
+    note: HC-6a 改判：階梯從 1000 開始是 ‰ 換算（×1）；「非 0 的 delta」是非零檢查。
+  - id: py-content-item-budget-const-text
+    class: const
+    status: done
     files: src/trpg/content/item_budget.py
     kind: text
-    where: ['_rarity_problems', 'item_budget_problems']
-    note: 同上一條（content text）。
-  - id: py-content-library-giant-checks-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/library/giant_checks.py
-    kind: text
-    where: ['_lineup_problems']
-    note: 同上一條（content text）。
+    where: ['item_budget_problems']
+    note: HC-6a 改判：預算區間的上界 100% 是「不超過預算本身」（下界已從 min_fill_permille 帶入）。
   - id: py-content-library-ruleset-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/library/ruleset.py
     kind: text
     where: ['Ruleset._check']
-    note: 同上一條（content text）。
-  - id: py-content-library-world-text-text
-    class: text
-    status: todo
+    note: HC-6a 改判：「1000 − 元素修正下限」是 ‰ 換算（兩格的值本身已帶入）。
+  - id: py-content-library-world-const-text
+    class: const
+    status: done
     files: src/trpg/content/library/world.py
     kind: text
-    where: ['_check_post_facilities', '_range_problems']
-    note: 同上一條（content text）。
+    where: ['_check_post_facilities']
+    note: HC-6a 改判：郵差在地圖上恰好 1 個站位是唯一性。
   - id: py-content-parts-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/parts.py
     kind: text
     where: ['BossPart._check', 'StatDownBreak._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：-1000～1000‰、小於 1000 是 ‰ 換算（倍率 ×1、±100%）。
   - id: py-content-races-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/races.py
     kind: text
     where: ['RacePassive._permille_problems', 'RaceTable.summary', 'forbidden_key_problems']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：「防最佳解原則 1」是原則編號；「各 1 招種族技＋1 項環境被動」是種族的組成（摘要用）。
   - id: py-content-roguelite-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/roguelite.py
     kind: text
     where: ['EncounterStep._non_empty']
-    note: 同上一條（content text）。
-  - id: py-content-rules-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/rules.py
-    kind: text
-    where: ['CoreRules._check_tier_budget']
-    note: 同上一條（content text）。
-  - id: py-content-skill-rules-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skill_rules.py
-    kind: text
-    where: ['BudgetRules._check']
-    note: 同上一條（content text）。
-  - id: py-content-skill-triggers-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skill_triggers.py
-    kind: text
-    where: ['SkillTriggerDef._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：遭遇選項至少 1 名敵人是非空檢查。
   - id: py-content-skills-modifiers-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/modifiers.py
     kind: text
-    where: ['ModifierChange._check_on_hit_rune', 'ModifierChange._check_tags']
-    note: 同上一條（content text）。
+    where: ['ModifierChange._check_on_hit', 'ModifierChange._check_on_hit_rune', 'ModifierChange._check_tags']
+    note: HC-6a 改判：「至少 1 個標籤／效果」、距離至少 1 格是非空與正數檢查；「只引爆目標那 1 格」是 scope 的定義。
   - id: py-content-skills-problems-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/problems.py
     kind: text
     where: ['_legendary_problems']
-    note: 同上一條（content text）。
-  - id: py-content-skills-queries-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skills/queries.py
+    note: HC-6a 改判：傳說技能「恰好 1 個核心」是三擇一的結構。
+  - id: py-gs3-max-hp-shield-unit
+    class: const
+    status: done
+    files: src/trpg/skillgen/budget.py
+    where: <module>._MAX_HP_SHIELD_UNIT
+    note: GS-3（#173）：skill_budget.yaml 的 shield_max_hp_points 是「每 100‰」的點數，100 是那個單位的定義
+      （換算常數；數值本身在預算表、開放工坊）。
+  - id: py-gs3-form-entry-structure
+    class: const
+    status: done
+    files: [src/trpg/content/skills/effects.py, src/trpg/content/skills/skill.py,
+      src/trpg/content/skills/limits.py]
+    where: ['<module>._LEAD_AND_COMPANION', '_check_rule', 'SkillDef._check_form_skill',
+      '_form_entry_problems']
+    note: GS-3（#173，06 6.30）：帶進入時效果的化身技＝enter_form＋「1 個」進入時效果（設計寫「最多 1 個」，
+      結構定義）；訊息裡的 effects[1] 是那個效果的位置。階級與冷卻下限已從 skill_limits 帶入。
+  - id: py-content-skills-limits-text-text
+    class: const
+    status: done
+    files: src/trpg/content/skills/limits.py
     kind: text
-    where: ['skill_slot_problems']
-    note: 同上一條（content text）。
+    where: ['_primitive_problems']
+    note: HC-6a 改判：「1 或 {max_summon_count}」的 1 是只召喚一隻（上限已從規則包帶入）。
   - id: py-content-skills-skill-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
+    files: src/trpg/content/skills/skill.py
+    kind: text
+    where: ['SkillDef._check_legendary', 'SkillDef._check_summon']
+    text: '花 1 或 2 點源力|count: 2'
+    note: >-
+      HC-7 改判 const（舉例）：「花 1 或 2 點源力」「必須搭配 count: 2」是 SkillDef 驗證（拿不到規則包）裡
+      舉的現值例子；上限本身在 core.yaml 的 skill_limits.max_source_cost、max_summon_count，由 Ruleset 層
+      的 skill_limit_problems 檢查並組字。count 大於 1 那一句改照收到的 count 組字（HC-7）。
+  - id: py-content-skills-skill-const-text
+    class: const
+    status: done
     files: src/trpg/content/skills/skill.py
     kind: text
     where:
       - 'SkillDef._check_branch_fields'
-      - 'SkillDef._check_legendary'
       - 'SkillDef._check_pierce'
       - 'SkillDef._check_stance_upkeep'
       - 'SkillDef._check_summon'
       - 'SkillDef._check_summon_beside'
-    note: 同上一條（content text）。
-  - id: py-content-skills-specs-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/skills/specs.py
-    kind: text
-    where: ['TriggerSpec._check', 'TriggerSpec._check_exploited']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：1000 是 ‰ 換算（×1、100%）；1～1000 的 1 是正數下限（伴生的規則下限在 Ruleset 層另查）；單體射程大於 1＝不是近戰。
   - id: py-content-skills-variants-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/skills/variants.py
     kind: text
     where: ['VariantSpec._check']
-    note: 同上一條（content text）。
-  - id: py-content-world-economy-text-text
-    class: text
-    status: todo
+    note: HC-6a 改判：替換內容至少 1 項是非空檢查（上限在 Ruleset 層）。
+  - id: py-content-hc4d-text
+    class: const
+    status: done
+    kind: text
+    files: [src/trpg/content/fields.py, src/trpg/content/races.py, src/trpg/content/skills/limits.py,
+            src/trpg/content/stacks.py]
+    where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check']
+    note: HC-6a 改判（HC-4d 的驗證訊息）：下限 ≥ 0、至少 1 個效果是非負與非空檢查；−1 是「只能減傷」的上界（負數）；1000 是 ‰ 換算。
+  - id: py-content-world-economy-const-text
+    class: const
+    status: done
     files: src/trpg/content/world_economy.py
     kind: text
     where: ['EconomyRules._check', 'WorldItemDef._check']
-    note: 同上一條（content text）。
-  - id: py-content-world-encounters-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_encounters.py
-    kind: text
-    where: ['_lineup_problems']
-    note: 同上一條（content text）。
-  - id: py-content-world-events-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_events.py
-    kind: text
-    where: ['SolutionDef._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：堆疊上限不小於 1 是正數檢查；道具「每個用一次」（uses_per_battle 1）是消耗品的定義。
   - id: py-content-world-loot-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/world_loot.py
     kind: text
     where: ['_weights_ok']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：「8.22.1 第 7 點」是設計文件的條目編號。
   - id: py-content-world-map-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/world_map.py
     kind: text
     where:
       - 'LocationDef._battle_map_problems'
       - 'LocationMapDef._count_problems'
       - 'LocationMapDef._town_problems'
-    note: 同上一條（content text）。
+    note: HC-6a 改判：至少 1 張戰鬥地圖是非空檢查；樞紐只有 1 個地點、每區恰好 1 個小鎮是地圖結構的唯一性。
   - id: py-content-world-season-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/content/world_season.py
     kind: text
     where: ['_check_range']
-    note: 同上一條（content text）。
-  - id: py-content-world-situations-text-text
-    class: text
-    status: todo
-    files: src/trpg/content/world_situations.py
-    kind: text
-    where: ['SituationRules._check']
-    note: 同上一條（content text）。
+    note: HC-6a 改判：天數從 1 起算是編號。
 
   # ---------------------------------------------------- 後端 engine：text
   # 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
   - id: py-engine-activations-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/activations.py
     kind: text
     where: ['activation_problem']
-    note: 引擎回給畫面的說明（不能做的理由、預覽）裡寫死的規則數字。
+    note: >-
+      HC-7 改判 const（結構）：引擎一個單位同時只放一個生效中的規則改變（active_rule_change 回傳單一個，
+      結算照它的那一個改寫規則），「同時最多 1 個」是這個結構；改成多個要改引擎。裝幾個的上限另在
+      core.yaml 的 skill_slots.rule_change。
   - id: py-engine-battle-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/battle.py
     kind: text
     where: ['run_problem', 'shove_problem']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：速度為 0、推擊距離減半後為 0 格是「不能動」的定義。
   - id: py-engine-oath-tracking-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/oath_tracking.py
     kind: text
     where: ['<module>.BREACH_TEXT']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：「第 1 個回合」是序號。
   - id: py-engine-parts-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/parts.py
     kind: text
     where: ['<module>.PART_REASON_ZH']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：「高 1 層以上」＝站得比目標高（引擎 >= 1）；格數已從 FAR_BEYOND 帶入。
   - id: py-engine-preview-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/engine/preview.py
     kind: text
     where: ['_miss_notes']
-    note: 同上一條（engine text）。
+    note: HC-6a 改判：反噬不讓 HP 低於 1 是「不會致命」的定義。
 
   # ---------------------------------------------------- 後端 llm：text
   # LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
-  - id: py-llm-prompts-proposal-text-text
-    class: text
-    status: todo
+  - id: py-llm-prompts-proposal-const-text
+    class: const
+    status: done
     files: src/trpg/llm/prompts/proposal.py
     kind: text
-    where: ['<module>.BUDGET_NOTE_ZH', '<module>.EFFECTS_NOTE_ZH', '<module>.VARIANTS_NOTE_ZH']
-    note: LLM 提示詞裡寫死的規則數字（預算比例、張數、字數）。
-  - id: py-llm-prompts-storyteller-text-text
-    class: text
-    status: todo
-    files: src/trpg/llm/prompts/storyteller.py
+    where: ['<module>.EFFECTS_NOTE_ZH']
+    note: HC-6a 改判：「例：上限 1 個時」是舉例。
+  - id: py-llm-prompts-proposal-variants-const-text
+    class: const
+    status: done
+    files: src/trpg/llm/prompts/proposal.py
     kind: text
-    where: ['<module>.STORY_STYLE', '<module>.STORY_TASKS']
-    note: 同上一條（llm text）。
+    where: ['<module>.VARIANTS_NOTE_ZH']
+    note: >-
+      HC-7：range_delta 能填的值改照提議模型（skillgen/proposal/builder.py 的 RangeDelta）組字；剩下的
+      「1～{swaps} 項」的 1 是至少一項、「從 0 起算」是索引說法（結構）。
   - id: py-llm-wish-pick-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/llm/wish_pick.py
     kind: text
     where: ['_Loop._card']
-    note: 同上一條（llm text）。
+    note: HC-6a 改判：pick 要是 0～{候選數 − 1}：從 0 起算的索引範圍（張數已從 wish_cards 帶入）。
 
   # ---------------------------------------------------- 後端 narrative：text
   # 敘事文字裡寫死的規則數字（每回合 1 次、格數、暴擊範圍）。
+  - id: py-narrative-action-info-const-text
+    class: const
+    status: done
+    files: src/trpg/narrative/action_info.py
+    kind: text
+    where: ['_maneuvers']
+    text: '每少走 1 格'
+    note: HC-6a 改判：推擊撞擊「每少走 1 格」受一次傷害是逐格計算的說法。
   - id: py-narrative-action-info-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/action_info.py
     kind: text
     where: ['_maneuvers', '_move_and_attack']
-    note: 敘事文字裡寫死的規則數字（每回合 1 次、格數、暴擊範圍）。
+    note: >-
+      HC-7 改判 const（結構）：跑步每回合 1 次是引擎的布林旗標 ran_this_turn（改成次數要改戰鬥狀態與紀錄
+      格式）；推動、撥開物件 1 格是一步（interact_direction 回單位向量，object_move_problem 只看下一格）。
+      引擎的 0／1 本來就不進數字掃描。
   - id: py-narrative-events-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/events.py
     kind: text
     where: ['_summon_pulled']
-    note: 同上一條（narrative text）。
+    note: >-
+      HC-7 改判 const（結構）：圖騰拉人是一步（engine/summons/core.py 的 _pull_step 找下一格、
+      distance=1），同推動物件。
   - id: py-narrative-skills-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/skills.py
     kind: text
     where:
@@ -2924,34 +1456,36 @@ rules:
       - 'mark_repeats'
       - 'mastery_text'
       - 'variant_condition_text'
-    note: 同上一條（narrative text）。
+    note: HC-6a 改判：縮放依據「每少 10%／每距 1 格／每有 1 名」是縮放單位的名字（missing_hp_10pct 等）；暴擊範圍上界 20 是 d20；「只引爆那 1 格」「每空 1 格」是逐格說法；3×3 是形狀名；「第 1 擊」是序號；高至少 1 層＝站得比目標高；冷卻最少 0、AP 最少 1、召喚物上限最少 1 隻是下限（引擎 max(0／1, …)）。
   - id: py-narrative-status-info-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/status_info.py
     kind: text
     where: ['_entangle_line', '_modifier_lines']
-    note: 同上一條（narrative text）。
+    note: HC-6a 改判：移動點數最低 0 是下限（不會變負）。
   - id: py-narrative-summon-info-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/narrative/summon_info.py
     kind: text
-    where:
-      - 'SummonInfoCard'
-      - '_actual_note'
-      - '_attack_phrases'
-      - '_baseline_note'
-      - '_pulse_lines'
-      - 'summon_info'
-      - 'summon_innate_lines'
-    note: 同上一條（narrative text）。
+    where: ['_attack_phrases', '_pulse_lines', 'summon_innate_lines']
+    note: >-
+      HC-7 改判 const（結構）：召喚物絆倒、纏住每輪 1 次是引擎記「上次觸發的輪數」（UnitState 的
+      trip_round、snare_round，同一輪就不再觸發；改成次數要改戰鬥狀態與紀錄格式）；圖騰拉近 1 格是一步（_pull_step）。
+  - id: py-narrative-summon-info-const-text
+    class: const
+    status: done
+    files: src/trpg/narrative/summon_info.py
+    kind: text
+    where: ['SummonInfoCard', '_actual_note', '_baseline_note', 'summon_info']
+    note: HC-6a 改判：「基準值（1 級）」「施放者 1 級、修正 0 時」是基準點的定義（等級從 1 起、修正 0）；「每升 1 級」「每 +1」是成長單位。
 
   # ---------------------------------------------------- 後端 skillgen：text
   # 技能工坊、閃現說明裡寫死的規則數字。
   - id: py-skillgen-budget-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/budget.py
     kind: text
     where:
@@ -2960,143 +1494,87 @@ rules:
       - '_modifier_uses'
       - '_passive_coefficient'
       - '_variance_factor'
-    note: 技能工坊、閃現說明裡寫死的規則數字。
+    note: HC-6a 改判：暴擊範圍上界 20 是 d20；「驅散 1 個增益」是 count 不是 all 的那一類（點數照 dispel_one_points）。
   - id: py-skillgen-option-conform-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_conform.py
     kind: text
     where: ['_scalar_problems']
-    note: 同上一條（skillgen text）。
-  - id: py-skillgen-option-followup-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/option_followup.py
-    kind: text
-    where: ['_effects_field', 'followup_notes']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：骰子寫法的例子（2d6）。
   - id: py-skillgen-option-nested-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_nested.py
     kind: text
     where: ['<module>._SPECIAL']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「×2＝加倍」是舉例；「HP 至少留 1」是「不會致命」的定義。
   - id: py-skillgen-option-params-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_params.py
     kind: text
     where: ['<module>._LITERAL_CHOICES', '<module>._SCALE_BY_TEXT']
-    note: 同上一條（skillgen text）。
-  - id: py-skillgen-option-scaling-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/option_scaling.py
-    kind: text
-    where: ['<module>._MASTERY_TEXT']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「目標那 1 格」是 scope 的定義；縮放依據「每少 10%／每距 1 格」是縮放單位的名字。
   - id: py-skillgen-option-variant-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/option_variant.py
     kind: text
     where: ['_when_field', 'variant_fields', 'variant_notes']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：射程「每 +1 格」「−1 則少算」是逐格說法；「結果至少 1」是射程的正數下限；高至少 1 層＝站得比目標高。
   - id: py-skillgen-options-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/options.py
     kind: text
     where: ['_basics_step', '_cost_step', '_self_status_field', '_tier_notes']
-    note: 同上一條（skillgen text）。
-  - id: py-skillgen-proposal-builder-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/proposal/builder.py
-    kind: text
-    where: ['_variant_model']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：3×3 是形狀名；自身狀態代價「一招最多 1 個」是單一欄位的結構；耐力折合「法力 1 點」是換算單位；「最低角色階級：1 階」是最低階。
   - id: py-skillgen-proposal-evaluate-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/proposal/evaluate.py
     kind: text
     where: ['<module>.MAIN_DAMAGE_ADVICE']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「從 0 起算」是索引的說法。
   - id: py-skillgen-proposal-budget-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/proposal_budget.py
     kind: text
     where: ['<module>.WEAK_ADVICE']
-    note: 同上一條（skillgen text）。
-  - id: py-skillgen-proposal-costs-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/proposal_costs.py
-    kind: text
-    where: ['<module>.COST_DOCS']
-    note: 同上一條（skillgen text）。
-  - id: py-skillgen-proposal-followup-text-text
-    class: text
-    status: todo
-    files: src/trpg/skillgen/proposal_followup.py
-    kind: text
-    where: ['<module>.FOLLOWUP_DOC']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「AP 降到 1」是 AP 的最低值（主動技最少 1 AP）。
   - id: py-skillgen-validate-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/validate.py
     kind: text
     where: ['_summon_limit_cost_violations']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：「上限 −1」是 summon_limit_delta 的負號那一邊（schema 只收 ±1）。
   - id: py-skillgen-whiteboard-check-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/skillgen/whiteboard_check.py
     kind: text
     where: ['_structure_problems']
-    note: 同上一條（skillgen text）。
+    note: HC-6a 改判：白板「只能有 1 條修正規則／1 個核心效果」是白板的結構定義。
 
   # ---------------------------------------------------- 後端 world：text
   # 大世界錯誤訊息與說明裡寫死的規則數字。
-  - id: py-world-battlefield-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/battlefield.py
-    kind: text
-    where: ['<module>.FALLBACK_ZH']
-    note: 大世界錯誤訊息與說明裡寫死的規則數字。
   - id: py-world-crafting-text-text
-    class: text
-    status: todo
+    class: const
+    status: done
     files: src/trpg/world/crafting.py
     kind: text
     where: ['_recipe_from_fields']
-    note: 同上一條（world text）。
-  - id: py-world-growth-text-text
-    class: text
-    status: todo
+    note: HC-6a 改判：「要指定 1 條詞條」是單一欄位（action.affix）的結構。
+  - id: py-world-growth-const-text
+    class: const
+    status: done
     files: src/trpg/world/growth.py
     kind: text
     where: ['_oath']
-    note: 同上一條（world text）。
-  - id: py-world-opening-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/opening.py
-    kind: text
-    where: ['<module>._BEFORE_LEVEL_4_ZH']
-    note: 同上一條（world text）。
-  - id: py-world-season-boss-text-text
-    class: text
-    status: todo
-    files: src/trpg/world/season_boss.py
-    kind: text
-    where: ['challenge_problem']
-    note: 同上一條（world text）。
+    note: HC-6a 改判：「同時只能有 1 個誓約」是單一欄位（char.oath）的結構。
 
   # ---------------------------------------------------- 後端 api：const
   # API 的錯誤碼、分頁、快取、開發頁、工坊內部的檔案與 git 設定。
@@ -3723,13 +2201,6 @@ rules:
     kind: text
     where: ['free_table', 'suite_summary']
     note: 同上一條（text-dev const）。
-  - id: py-llm-wish-pick-const-text
-    class: const
-    status: done
-    files: src/trpg/llm/wish_pick.py
-    kind: text
-    where: ['_Loop._card', '_Loop.attempt']
-    note: 同上一條（text-dev const）。
   - id: py-narrative-events-const-text
     class: const
     status: done
@@ -3782,13 +2253,6 @@ rules:
 
   # ---------------------------------------------------- 後端 world：const
   # 大世界的雜湊、存檔格式、路線幾何、工具報表。
-  - id: py-world-clock-const-number
-    class: const
-    status: done
-    files: src/trpg/world/clock.py
-    kind: number
-    where: ['<module>.UTC_OFFSET_SECONDS']
-    note: 大世界的雜湊、存檔格式、路線幾何、工具報表。
   - id: py-world-field-enemies-const-number
     class: const
     status: done

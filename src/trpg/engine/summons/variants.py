@@ -23,7 +23,6 @@ __all__ = ["apply_summon_spec", "second_summon_site", "trait_adjusted"]
 _PERMILLE = 1000
 _SITE_ORDER: tuple[XY, ...] = ((1, 0), (-1, 0), (0, 1), (0, -1))
 """數量型第二隻的候選位置（相對第一隻）。"""
-_MIN_CRIT = 2
 
 
 def apply_summon_spec(state: BattleState, unit: UnitState, spec: EffectSpec | None) -> None:
@@ -50,7 +49,7 @@ def trait_adjusted(
     if trait is None:
         return speed, armor_bonus, weapon
     if trait.crit_range_delta:
-        crit = max(_MIN_CRIT, weapon.crit_range - trait.crit_range_delta)
+        crit = max(state.ruleset.core.crit_range_floor, weapon.crit_range - trait.crit_range_delta)
         weapon = weapon.model_copy(update={"crit_range": crit})
     return speed + trait.speed_bonus, armor_bonus + trait.armor_bonus, weapon
 

@@ -252,12 +252,6 @@ class DataOrderSource:
 
 _FAR_SHAPES = ("line", "square3")
 _NEAR_SHAPES = ("cone", "cross")
-_MULTI_TARGETS_PERMILLE = 1500
-"""平均目標數達到這個數（‰）視為「常打到多個目標」。"""
-_FREQUENT_USES = 6
-"""放出次數達到這個數視為常用（輕巧優先）。"""
-_KEYWORD_CAP = 6
-"""每個「第二個關鍵字」模板最多列幾個關鍵字。"""
 
 
 class UsageSource(DataOrderSource):
@@ -388,7 +382,7 @@ def _keyword_candidates(
             return graft.makes is not None
         return graft.uses is not None
 
-    return [k for k in (*signaled, *rest) if usable(k)][:_KEYWORD_CAP]
+    return [k for k in (*signaled, *rest) if usable(k)][: library.flash.rules.second_keyword_cap]
 
 
 def _usage_score(
@@ -401,25 +395,28 @@ def _usage_score(
     """用法分數（越高越優先）；見 :class:`UsageSource`。``skill``：收束只在這招收得了時加分
     （BAL-10d2；省略時收束不加分）。"""
     op = template.op
-    multi = usage.avg_targets_permille >= _MULTI_TARGETS_PERMILLE
+    rules = library.flash.rules
+    multi = usage.avg_targets_permille >= rules.usage_multi_targets_permille
     keyword = variation.keyword
     signal = 0 if keyword is None else _keyword_signal(usage, keyword)
-    scores: dict[str, bool | int] = {
-        "area": 2 * multi,
-        "range": 2 * (usage.avg_distance_permille >= library.evolution.far_distance * 1000),
-        "reshape": 2 * (not multi and usage.uses > 0),
-        "multi_hit": 2 * (not multi and usage.uses > 0),
-        "followup": int(usage.uses > 0),
-        "followup_potency": int(usage.uses > 0),
-        "kill_refund": 3 * (usage.kills > 0),
-        "extend": 2 * (sum(usage.target_keywords.values()) > 0),
-        "charge": int(multi),
-        "light": int(usage.uses >= _FREQUENT_USES),
-        "keyword_exploit": 3 * (signal > 0),
-        "keyword_imbue": int(signal == 0),
-        "mod_keyword": 2 * (signal > 0),
+    met: dict[str, bool] = {  # 用法條件；成立時加 rules.usage_scores 的分數
+        "area": multi,
+        "range": usage.avg_distance_permille >= library.evolution.far_distance * 1000,
+        "reshape": not multi and usage.uses > 0,
+        "multi_hit": not multi and usage.uses > 0,
+        "followup": usage.uses > 0,
+        "followup_potency": usage.uses > 0,
+        "kill_refund": usage.kills > 0,
+        "extend": sum(usage.target_keywords.values()) > 0,
+        "charge": multi,
+        "light": usage.uses >= rules.usage_frequent_uses,
+        "keyword_exploit": signal > 0,
+        "keyword_imbue": signal == 0,
+        "mod_keyword": signal > 0,
     }
-    rules = library.flash.rules
+    scores: dict[str, int] = {
+        name: weight * met[name] for name, weight in rules.usage_scores.items()
+    }
     if op in ("converge_single", "converge_step"):  # BAL-10d2：常打單體的範圍技 → 收束
         few = usage.uses > 0 and usage.avg_targets_permille < rules.converge_targets_permille
         few = few and skill is not None and convergible(skill, library)

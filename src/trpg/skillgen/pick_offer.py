@@ -89,9 +89,6 @@ NONDAMAGE_FORK = "pick.nondamage"
 
 _ACTIVE_FAMILY: tuple[str, ...] = ("active", "stance")
 _PAIR = 2
-SLOT_KEYWORD_TRIES = 30
-"""完整技能每一格另外抽的候選：每個種子指定關鍵字最多試幾個變體（原本的產生器是 300；這裡只是
-多找幾張候選，做不出來就換下一個種子，省 CPU 時間）。"""
 _TEXT_FIELDS = frozenset({"id", "name_zh", "narrative", "description_zh"})
 LEVEL_EXACT = 0
 """放寬層級：全部關鍵字＋路線符合這一格（PK-2 的條件）。"""
@@ -101,8 +98,6 @@ LEVEL_OFF = 2
 """放寬層級：全部關鍵字、但不符合這一格的路線（#110 ④ 最後才給、標偏離）。"""
 LEVEL_OFF_RELAXED = 3
 """放寬層級：部分關鍵字＋不符合路線。"""
-MAX_OFF_ROUTE = 2
-"""一份三選一最多幾張偏離（06 6.27.4 #110「最多 2 張」；PK-3 起 LLM 挑了偏離的候選時檢查）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -265,7 +260,7 @@ class _Maker:
             hero_attributes=self.attrs,
             avoid_attr=self._avoid(original),
             held=request.held or None,
-            keyword_tries=SLOT_KEYWORD_TRIES,
+            keyword_tries=self.library.skill_pick.pool.slot_keyword_tries,
             skip_legendary=True,
             kinds=kinds,
         )
@@ -299,7 +294,7 @@ def _originals(
     library: ContentLibrary, request: CandidateRequest, rules: CandidateRules, whiteboard: bool
 ) -> tuple[Candidate, ...]:
     if whiteboard:
-        return generate_whiteboard_candidates(library, request, rules.composer_tries)
+        return generate_whiteboard_candidates(library, request, rules.tries(library))
     return generate_candidates(library, request, replace(rules, llm_share_permille=0), llm=None)
 
 
@@ -595,15 +590,18 @@ def generate_pick_candidates(
     )
     by_slot = {ask.index: answer for ask, answer in zip(allowed, answers, strict=False)}
     found = [_result(slot, by_slot.get(i)) for i, slot in enumerate(slots)]
-    return tuple(_cap_off_route(found, slots, request))
+    return tuple(_cap_off_route(library, found, slots, request))
 
 
 def _cap_off_route(
-    found: list[Candidate], slots: Sequence[PickedSlot], request: CandidateRequest
+    library: ContentLibrary,
+    found: list[Candidate],
+    slots: Sequence[PickedSlot],
+    request: CandidateRequest,
 ) -> list[Candidate]:
     """PK-3：「跟主路線」改成扣分後，LLM 可能挑到偏離的候選；一份三選一的偏離超過
-    :data:`MAX_OFF_ROUTE` 張（06 6.27.4 #110「最多 2 張」）時，從後面的格子起把「LLM 挑了偏離、而
-    分數第一名不偏離」的格子改回第一名。"""
+    ``skill_pick.yaml`` 的 ``pool.max_off_route`` 張（06 6.27.4 #110「最多 2 張」）時，從後面的
+    格子起把「LLM 挑了偏離、而分數第一名不偏離」的格子改回第一名。"""
     if not request.hero_attributes:
         return found
     top = top_attribute(request.hero_attributes)
@@ -612,7 +610,7 @@ def _cap_off_route(
         return not follows_attr(skill, top, request.weapon_attrs)
 
     for i in reversed(range(len(found))):
-        if sum(off(c.skill) for c in found) <= MAX_OFF_ROUTE:
+        if sum(off(c.skill) for c in found) <= library.skill_pick.pool.max_off_route:
             break
         first = slots[i].slate.ranked[0]
         if found[i].pick == "llm" and off(found[i].skill) and not off(first.skill):

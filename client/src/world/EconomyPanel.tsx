@@ -7,7 +7,7 @@ import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldShop } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { ItemListIcon } from "../ui/ItemIcon";
-import { bagSummary } from "./bagView";
+import { bagSummary, pouchUseText } from "./bagView";
 import { draftCount, pouchAction, pouchDraft, samePouch, setDraft } from "./economy";
 
 interface ActProps {
@@ -259,7 +259,7 @@ export function InventoryPanel({
       )}
       {/* UI-E1 追加 8：字級與間距同「其他物品」（section-title、數字前一個全形空格、數字小字） */}
       <div className="section-title" data-testid="world-pouch-title">
-        腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
+        腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・{pouchUseText()}</span>
       </div>
       {inventory.pouch.length === 0 ? (
         <div className="muted small">沒帶東西。</div>

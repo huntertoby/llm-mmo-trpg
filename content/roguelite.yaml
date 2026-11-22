@@ -52,6 +52,7 @@ offer_size: 3
 off_route_per_offer: 1        # 其中 1 個「偏離路線」：縮放屬性與主角目前最高屬性不同（0.2 C）
 offer_tier_by_level: [1, 1, 2, 2, 3, 3]       # 主角等級 → 候選的階級
 offer_max_attempts: 200       # 湊齊候選最多試幾個組合器種子
+route_hint_tier: 2            # 開局路線提示（BAL-19g）：前兩次升級用到的角色階級上限（HC-7 b 從程式常數搬來）
 
 # 營火（0.11 G）：HP、法力、耐力（3H-2）回滿，源力 +campfire。中段（第 3 場後）與 Boss 前（第 5 場後）。
 # Phase 3W-5（06 6.34）：營火可以閃現、重閃、溶掉、傳承與換裝；舊的「重骰候選」取消。
@@ -78,9 +79,9 @@ start:
   keywords: 2
   composer_tries: 16
   heroes:
-    melee:  {name_zh: 冒險者, max_hp: 600, armor_bonus: 40, max_mana: 200, stamina: 400, resist: {physical: 100}}
-    ranged: {name_zh: 冒險者, max_hp: 500, armor_bonus: 20, max_mana: 200, stamina: 300, resist: {physical: 50}}
-    focus:  {name_zh: 冒險者, max_hp: 400, armor_bonus: 10, max_mana: 400, stamina: 200, resist: {elemental: 150}}
+    melee:  {name_zh: 冒險者, max_hp: 600, speed: 5, armor_bonus: 40, max_mana: 200, stamina: 400, resist: {physical: 100}}
+    ranged: {name_zh: 冒險者, max_hp: 500, speed: 5, armor_bonus: 20, max_mana: 200, stamina: 300, resist: {physical: 50}}
+    focus:  {name_zh: 冒險者, max_hp: 400, speed: 5, armor_bonus: 10, max_mana: 400, stamina: 200, resist: {elemental: 150}}
 
 # 共用候選產生器（Phase 3-24b2，06 6.27.4；trpg.skillgen.candidates）：升級與營火三選一＝加深、橋接、新方向。
 # 每個候選先以 composer_share_permille 的機率決定先從隨機組合器（指定關鍵字）或技能池找，找不到再換另一個來源；
@@ -96,6 +97,8 @@ candidates:
   llm_theme_permille: 100
 # 4-L8b：LLM 題目出反應技（kind: reaction，骨架與事件由子集決定）的機率（‰，初值）；出不了反應題（關鍵字、稀有度沒有可用的反應骨架）就改出主動技能題。
   llm_reaction_permille: 100
+# HC-5b（原 skillgen/candidates.py 的 BRIDGE_VARIANT_CAP）：橋接多關鍵字搜尋的組合器種子變體數上限（PERF-3，玩法 PM：「最壞約 3 秒」）；0 ＝ 不設上限。
+  bridge_variant_cap: 400
 # 白板（Phase 3W-4，06 6.34.1、玩法決定 #69）：升級與任務三選一一律是白板（單一效果、1 階；主動 70／被動 20／反應 10 在 skill_composer.yaml 的
 # whiteboard.kind_permille）。白板模式下 LLM 來源與通用池關閉；false ＝ 完整技能三選一（保留給之後的完整技能節點）。
   whiteboard: true

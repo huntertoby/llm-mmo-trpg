@@ -31,6 +31,7 @@ from trpg.content.skills import SkillDef, skill_elements
 from trpg.content.world import WorldStyle, load_world_style
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.consistency import NameCheck, skill_facts, strict_facts
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.naming import (
@@ -56,7 +57,6 @@ from trpg.skillgen.skill_pick import PickSlate, element_partners, pick_slate, sy
 
 __all__ = [
     "DEFAULT_PICK_ATTEMPTS",
-    "OFFER_BUDGET_S",
     "PickOutcome",
     "PickSource",
     "PickText",
@@ -69,7 +69,7 @@ __all__ = [
     "pick_skill",
 ]
 
-DEFAULT_PICK_ATTEMPTS = 3
+DEFAULT_PICK_ATTEMPTS = LLM_DEFAULTS.max_retries
 """最多呼叫幾次（提案 7.6：最多重試 2 次）。"""
 
 type PickSource = Literal["llm", "top", "pool", "workshop"]
@@ -533,10 +533,6 @@ def mock_pick_client(
 # PK-2：接上三選一（每格各挑一）
 # ---------------------------------------------------------------------------
 
-OFFER_BUDGET_S = 10.0
-"""一份三選一請 LLM 的時間上限（秒；06 6.34.7「超過 10 秒改給組合器或模板版」）：用完後剩下的格子
-不再呼叫，照分數第一名。"""
-
 
 def _slot_trace(slot: SlotPick, outcome: PickOutcome) -> LlmTrace:
     llm = outcome.source == "llm"
@@ -565,15 +561,16 @@ def make_offer_picker(
     library: ContentLibrary,
     *,
     max_attempts: int = DEFAULT_PICK_ATTEMPTS,
-    budget_s: float = OFFER_BUDGET_S,
+    budget_s: float | None = None,
     clock: Callable[[], float] = time.monotonic,
 ) -> OfferPicker:
     """挑選模式接上三選一的挑選器（PK-2，:data:`~trpg.skillgen.pick_offer.OfferPicker`）：依序每格
     呼叫 :func:`pick_skill`（排好的候選由 ``trpg.skillgen.pick_offer`` 給，這裡不再抽）。
 
     - 候選少於 ``pool.min_for_llm`` 個 → 這格不請 LLM（``None``，照第一名、保留原名）。
-    - 這份三選一已經用掉 ``budget_s`` 秒 → 剩下的格子不請 LLM（耗時只決定「請不請」，結果照樣記進
-      存檔；重播只讀存檔，不呼叫 LLM）。
+    - 這份三選一已經用掉 ``budget_s`` 秒（省略＝``skill_pick.yaml`` 的 ``budget_seconds.offer``，
+      06 6.34.7「超過 10 秒改給組合器或模板版」；HC-7 b）→ 剩下的格子不請 LLM（耗時只決定
+      「請不請」，結果照樣記進存檔；重播只讀存檔，不呼叫 LLM）。
     - LLM 失敗 → 第一名＋組合式名稱（``llm`` 為假，紀錄的 ``ok`` 為假）。
 
     同一份三選一的名稱不重複，也不和玩家手上技能的名稱重複。``client`` 可以是固定的 client，或
@@ -581,13 +578,14 @@ def make_offer_picker(
 
     def pick(slots: Sequence[SlotPick], player: PickPlayer) -> list[SlotChoice | None]:
         taken = {s.name_zh for s in player.held_skills}
+        limit = library.skill_pick.budget_seconds.offer if budget_s is None else budget_s
         start = clock()
         out: list[SlotChoice | None] = []
         for slot in slots:
             if len(slot.slate.ranked) < library.skill_pick.pool.min_for_llm:
                 out.append(None)
                 continue
-            if clock() - start >= budget_s:
+            if clock() - start >= limit:
                 out.append(None)
                 continue
             used = client if isinstance(client, LLMClient) else client(slot.slate, slot.seed)

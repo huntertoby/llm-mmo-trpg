@@ -36,6 +36,30 @@ CORE_PATHS = (
     "miss_refund_ap",
     "miss_refund_min_cost",
     "boss_parts.hp_total_max_permille",  # HC-4a：部位血量加總上限（從 parts.py 搬來）
+    "tier_budget.1",  # HC-B：階級預算（數字鍵）、武器基準傷害、召喚物小特性的點數
+    "tier_budget.2",
+    "tier_budget.3",
+    "tier_budget.4",
+    "tier_budget.5",
+    "budget_reference_weapon_damage",
+    "summon_traits.sturdy.budget_points",
+    "summon_traits.swift.budget_points",
+    "summon_traits.keen.budget_points",
+    "element_mod_floor_permille",  # HC-4b：和裝備規則的總減傷上限一起開
+    "skill_limits.min_form_entry_cooldown",  # GS-3：帶進入時效果的化身技最短冷卻
+    "skill_limits.max_cooldown",  # HC-4b：技能結構的規則數值（從 skills/constants.py 搬來）
+    "skill_limits.min_crit_range",
+    "skill_limits.max_grant_duration",
+    "skill_limits.max_refund_ap",
+    "skill_limits.max_cooldown_restore",
+    "skill_limits.modifier_bounds.damage_permille_min",  # HC-4b2：修正規則的幅度
+    "skill_limits.modifier_bounds.heal_permille_min",
+    "skill_limits.modifier_bounds.hit_bonus_max",
+    "skill_limits.modifier_bounds.cooldown_delta_max",
+    "skill_limits.modifier_bounds.push_distance_delta_max",
+    "skill_limits.modifier_bounds.range_delta_max",
+    "skill_limits.modifier_bounds.summon_duration_delta_max",
+    "skill_limits.modifier_bounds.on_hit_max_displace",
 )
 BUDGET_PATHS = (
     "modifier.points_milli.silent_strike",
@@ -71,6 +95,17 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "pick",
         "skill_triggers",
         "skill_composer",
+        "skill_conditions",  # HC-B：條件的預算倍率覆寫、協同係數
+        "skill_synergies",
+        "forms",  # HC-W2：形態、裝備規則、物品生成
+        "equipment",
+        "item_gen",
+        "skill_evolution",  # HC-4b2：召喚技分歧進化的幅度
+        "flash",  # HC-4b3：閃現的計價與規則數值
+        "world_rules",  # HC-4d：大世界規則、經濟、交易、賽季
+        "world_economy",
+        "world_trade",
+        "world_season",
     )
     found = {o.kind: o for o in read_service.objects() if o.kind in ("rules", "budget")}
     assert (found["rules"].id, found["rules"].file, found["rules"].category) == (
@@ -92,15 +127,18 @@ def test_the_detail_shows_the_current_values(read_service: TuningService) -> Non
     assert [f.value for f in core.fields] == [_now(CORE, p) for p in CORE_PATHS]
     assert any("全體共用" in n for n in core.notes_zh)
     budget = object_detail(CONTENT, read_service.table, "budget", "skill_budget")
-    assert [f.path for f in budget.fields] == list(BUDGET_PATHS)
-    assert [f.value for f in budget.fields] == [_now(BUDGET, p) for p in BUDGET_PATHS]
+    paths = [f.path for f in budget.fields]
+    # HC-B 起預算表全部開放並分組（原語點數、形狀、係數……），這裡只確認 BS-1 起逐段開的欄位都還在
+    assert set(BUDGET_PATHS) <= set(paths)
+    assert [f.value for f in budget.fields] == [_now(BUDGET, p) for p in paths]
 
 
 def test_changes_validate_and_bad_values_are_refused(read_service: TuningService) -> None:
     hit, silent = _now(CORE, "backstab_hit_bonus"), _now(BUDGET, BUDGET_PATHS[0])
     changes = (
         Change(file=CORE, path="backstab_hit_bonus", old=hit, new=hit + 1),
-        Change(file=BUDGET, path=BUDGET_PATHS[0], old=silent, new=silent + 40),
+        # 2026-11-21 使用者改值：無聲 420 已貼著無聲步的預算上限，加價會超支，改成降價
+        Change(file=BUDGET, path=BUDGET_PATHS[0], old=silent, new=silent - 40),
     )
     read_service.drafts.put(Draft(name="bs1", changes=changes))
     result = read_service.check("bs1")

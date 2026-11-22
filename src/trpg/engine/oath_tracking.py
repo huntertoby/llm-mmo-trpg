@@ -69,7 +69,9 @@ class OathSetup(BaseModel):
     """開場掛上的加成狀態（依難度查表）；``None``＝沒有加成。"""
     penalty_status: str | None = None
     """違反時施加的破誓狀態；``None``＝沒有懲罰狀態。"""
-    penalty_rounds: int = Field(default=2, ge=1)
+    penalty_rounds: int = Field(ge=1)
+    """破誓狀態的回合數（``world/oaths.yaml`` 的 ``penalty_rounds``；HC-7 拿掉程式預設 2，
+    一律由呼叫端帶入）。"""
     start_penalty_rounds: int = Field(default=0, ge=0)
     """開場就帶著的破誓回合數（5C-3b：上一場戰鬥結束才判出的違反，破誓帶到這一場開場；加成照常）。"""
     label_zh: str = ""
@@ -167,6 +169,7 @@ def _skill_breaks(ctx: Ctx, tracker: OathTracker, event: SkillUsed) -> bool:
     if check.kind == "forbid_skill_tag":
         return True
     unit = ctx.state.units[tracker.holder]
+    assert check.hp_permille is not None  # 載入時檢查過（OATH_CHECK_FIELDS）
     return unit.hp * 1000 >= unit.max_hp * check.hp_permille
 
 

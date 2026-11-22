@@ -10,9 +10,7 @@ from trpg.content.battle import ID_PATTERN
 from trpg.content.schemas import ContentModel
 from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
-    _MAX_COOLDOWN,
     _PERMILLE,
-    ON_AP_SPENT_ALL,
     ON_CAST_TAG,
     ON_ENTER_SURFACE,
     ON_KEYWORD_EXPLOITED,
@@ -36,7 +34,9 @@ class SelfStatusCost(ContentModel):
     """
 
     status: str = Field(pattern=ID_PATTERN)
-    duration: int = Field(ge=2, le=3)
+    duration: int = Field(ge=1)
+    """範圍是 ``core.yaml`` 的 ``skill_limits.min_self_status_duration``～
+    ``max_self_status_duration``（HC-4d，``Ruleset`` 層檢查）。"""
 
 
 class SkillCost(ContentModel):
@@ -46,7 +46,9 @@ class SkillCost(ContentModel):
     stamina: int = Field(default=0, ge=0)
     """耐力代價（Phase 3H-2，06 6.10）：武器技花耐力、法術技花法力（依類別，``skill_budget.yaml`` 的
     ``cost_resource``；內容庫與產生器檢查）。"""
-    cooldown: int | None = Field(default=None, ge=1, le=_MAX_COOLDOWN)
+    cooldown: int | None = Field(default=None, ge=1)
+    """冷卻回合；上限是 ``core.yaml`` 的 ``skill_limits.max_cooldown``（HC-4b，``Ruleset`` 層
+    檢查）。"""
     uses_per_battle: int | None = Field(default=None, ge=1)
     hp_percent: int | None = Field(default=None, ge=1, le=_PERMILLE - 1)
     stacks: int | None = Field(default=None, ge=1)
@@ -57,8 +59,9 @@ class SkillCost(ContentModel):
     overdraft: int | None = Field(default=None, ge=1, le=1)
     """透支（Phase 3-50，06 6.5）：施放後自己下一個回合少這麼多 AP（目前一招最多 1 AP，固定折抵見
     ``skill_budget.yaml`` 的 ``allowance.overdraft_permille``）；只有主動技能可以使用。"""
-    source: int | None = Field(default=None, ge=1, le=2)
-    """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。"""
+    source: int | None = Field(default=None, ge=1)
+    """花費的源力（Phase 3C-4a，1 或 2）：只有傳說技能可以、而且必須有；源力不足時不能施放。上限是
+    ``core.yaml`` 的 ``skill_limits.max_source_cost``（HC-4d，``Ruleset`` 層檢查）。"""
     on_miss: tuple[EffectSpec, ...] = ()
     """失手反噬（Phase 3D-7a，6.17 C）：攻擊沒命中（含自然 1）時對施放者結算的效果（至多 2 個，
     類型見 :data:`BACKLASH_TYPES`，對象只能是施放者自己）；命中則不結算。"""
@@ -133,7 +136,8 @@ class TriggerSpec(ContentModel):
     - ``status``：只有 ``on_status_applied`` 使用，可省略（省略＝任何狀態）。
     - ``surface``：只有 ``on_enter_surface`` 使用，可省略（省略＝任何表面；Phase 3C-3b）。
     - ``on_keyword_exploited``（SK-3）：``status``／``surface`` 擇一（可都省略），``max_per_round``
-      只能是 1（06 6.38 第 10 點「每回合最多觸發 1 次」）。SK-3b 起引擎不看每輪次數，改以「任何
+      只能是 ``skill_triggers.yaml`` 寫的次數（06 6.38 第 10 點「每回合最多觸發 1 次」；
+      HC-7 b 起由 Ruleset 層檢查）。SK-3b 起引擎不看每輪次數，改以「任何
       單位的每回合 1 次」計數（``UnitState.exploit_turn_counts``，被動與詞條同一套）。
     """
 
@@ -149,8 +153,8 @@ class TriggerSpec(ContentModel):
     @model_validator(mode="after")
     def _check(self) -> TriggerSpec:
         if self.event == "every_n_hits":
-            if self.n not in (2, 3):
-                raise ValueError(f"every_n_hits 的 n 必須是 2 或 3，收到 {self.n}")
+            if self.n is None:  # 能填哪些值看 core.yaml 的 skill_limits.every_n_hits（HC-4d）
+                raise ValueError("every_n_hits 必須填 n")
         elif self.n is not None:
             raise ValueError(f"只有 every_n_hits 使用 n，{self.event} 不可填 n")
         if self.max_distance is not None and self.target == "self":
@@ -169,15 +173,15 @@ class TriggerSpec(ContentModel):
         if self.surface is Surface.NONE:
             raise ValueError("trigger.surface 不可為 none")
         self._check_exploited()
-        if self.event == ON_AP_SPENT_ALL and self.max_per_round != 1:  # AP-2：每回合一次
-            raise ValueError("on_ap_spent_all 每輪最多觸發 1 次（max_per_round 只能是 1）")
+        # AP-2 的 on_ap_spent_all、SK-3 的 on_keyword_exploited 每輪最多幾次：HC-7 b（a 段
+        # 裁定 5）起寫在 skill_triggers.yaml 的 max_per_round，由 Ruleset 層的 _trigger_problems
+        # 檢查並說明。
         return self
 
     def _check_exploited(self) -> None:
-        """``on_keyword_exploited``（SK-3，#166 6.38-10）：狀態與表面擇一，每輪最多 1 次。"""
+        """``on_keyword_exploited``（SK-3，#166 6.38-10）：狀態與表面擇一（每輪幾次見
+        ``skill_triggers.yaml`` 的 ``max_per_round``）。"""
         if self.event != ON_KEYWORD_EXPLOITED:
             return
         if self.status is not None and self.surface is not None:
             raise ValueError("on_keyword_exploited 的 status 與 surface 只能擇一")
-        if self.max_per_round != 1:
-            raise ValueError("on_keyword_exploited 每輪最多觸發 1 次（max_per_round 只能是 1）")

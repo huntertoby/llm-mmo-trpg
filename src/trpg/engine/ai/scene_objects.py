@@ -27,9 +27,6 @@ __all__ = ["SCENE_PRIMITIVES", "has_fire_follow_up", "scene_estimate"]
 SCENE_PRIMITIVES = (HURL_OBJECT, TOPPLE)
 """需要 :func:`scene_estimate` 的效果原語。"""
 
-_ENEMY_VALUE = 3
-_FRIEND_PENALTY = 3
-
 
 def scene_estimate(
     state: BattleState, unit: UnitState, skill: SkillDef, action: UseSkill, area: SkillArea
@@ -53,8 +50,12 @@ def scene_estimate(
     return score - Fraction(dist_to(unit, area.origin), 1000)
 
 
-def _value(unit: UnitState, hit: list[UnitState]) -> int:
-    return sum(_ENEMY_VALUE if other.team is not unit.team else -_FRIEND_PENALTY for other in hit)
+def _value(state: BattleState, unit: UnitState, hit: list[UnitState]) -> int:
+    est = state.ruleset.ai.estimate
+    return sum(
+        est.scene_enemy_points if other.team is not unit.team else -est.scene_friend_penalty
+        for other in hit
+    )
 
 
 def has_fire_follow_up(state: BattleState, unit: UnitState) -> bool:
@@ -92,7 +93,7 @@ def _hurl_value(
             hit += [u for u in state.living_units() if u is not landing and dist_to(u, dest) <= 1]
     if not any(u.team is not unit.team for u in hit):
         return None
-    return Fraction(_value(unit, hit))
+    return Fraction(_value(state, unit, hit))
 
 
 def _topple_value(state: BattleState, unit: UnitState, action: UseSkill) -> Fraction | None:
@@ -104,4 +105,4 @@ def _topple_value(state: BattleState, unit: UnitState, action: UseSkill) -> Frac
     crushed = [state.units[uid] for uid in topple_line(state, obj, direction).units]
     if not any(u.team is not unit.team for u in crushed):
         return None
-    return Fraction(_value(unit, crushed))
+    return Fraction(_value(state, unit, crushed))

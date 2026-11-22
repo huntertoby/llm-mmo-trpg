@@ -32,6 +32,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world import WorldStyle, load_world_style
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.consistency import NameCheck, check_mentions, strict_facts
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.naming import NamingText, apply_naming, check_consistency, check_naming
@@ -48,7 +49,6 @@ from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.pick_player import PickPlayer
 from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.wish_pick import (
-    WISH_CARDS,
     WishCard,
     WishPick,
     WishPicker,
@@ -57,15 +57,12 @@ from trpg.skillgen.wish_pick import (
 )
 
 __all__ = [
-    "WISH_PICK_BUDGET_S",
     "WishCardText",
     "make_wish_picker",
     "mock_wish_pick_client",
     "mock_wish_picker",
 ]
 
-WISH_PICK_BUDGET_S = 10.0
-"""一次許願請 LLM 挑選的時間上限（秒；06 6.34.7「超過 10 秒改給組合器版」）：用完就不再重問。"""
 _REPLY_CHARS = re.compile(r"^[一-鿿　-〿＀-￯・—…‘-”、。，；：！？（）「」『』《》]+$")
 _ENGLISH = re.compile(r"[A-Za-z_0-9]")
 
@@ -136,7 +133,8 @@ class _Loop:
         try:
             answer = _Answer.model_validate(json.loads(clean_response(raw)))
         except (json.JSONDecodeError, ValidationError):
-            errors = [NameCheck("response.invalid", "回應必須是只含 cards（3 張）的 JSON。")]
+            count = self.library.skill_pick.pool.wish_cards
+            errors = [NameCheck("response.invalid", f"回應必須是只含 cards（{count} 張）的 JSON。")]
         else:
             errors = self._take(answer.cards, final=number >= limit)
         self.codes.extend(e.code for e in errors)
@@ -156,8 +154,9 @@ class _Loop:
 
     def _take(self, answers: Sequence[WishCardText], *, final: bool) -> list[NameCheck]:
         errors: list[NameCheck] = []
-        if len(answers) != WISH_CARDS:
-            errors.append(NameCheck("cards.count", f"cards 要剛好 {WISH_CARDS} 張。"))
+        count = self.library.skill_pick.pool.wish_cards
+        if len(answers) != count:
+            errors.append(NameCheck("cards.count", f"cards 要剛好 {count} 張。"))
         for i, (card, text) in enumerate(zip(self.cards, answers, strict=False)):
             if card.settled:
                 continue
@@ -174,7 +173,8 @@ class _Loop:
         if not 0 <= text.pick < len(ranked):
             return [NameCheck("pick.out_of_range", f"pick 要是 0～{len(ranked) - 1}。")]
         if text.pick in others:
-            return [NameCheck("pick.duplicate", "3 張的 pick 不可重複。")]
+            count = self.library.skill_pick.pool.wish_cards
+            return [NameCheck("pick.duplicate", f"{count} 張的 pick 不可重複。")]
         skill = ranked[text.pick].skill
         naming = text.naming()
         facts = strict_facts(self.library, skill)
@@ -265,14 +265,17 @@ def make_wish_picker(
     library: ContentLibrary,
     wish: str,
     *,
-    max_attempts: int = 3,
-    budget_s: float = WISH_PICK_BUDGET_S,
+    max_attempts: int = LLM_DEFAULTS.max_retries,
+    budget_s: float | None = None,
     clock: Callable[[], float] = time.monotonic,
     world: WorldStyle | None = None,
     words: EffectWords | None = None,
     taken: Collection[str] = (),
 ) -> WishPicker:
-    """願望 ``wish``（只進 ``<player_input>``）的挑選器（見模組說明）。"""
+    """願望 ``wish``（只進 ``<player_input>``）的挑選器（見模組說明）。``budget_s`` 省略＝
+    ``skill_pick.yaml`` 的 ``budget_seconds.wish``（06 6.34.7「超過 10 秒改給組合器版」；
+    HC-7 b）。"""
+    budget = library.skill_pick.budget_seconds.wish if budget_s is None else budget_s
     style = world if world is not None else load_world_style()
     vocab = words if words is not None else load_effect_words()
 
@@ -293,6 +296,7 @@ def make_wish_picker(
                 previous=previous,
                 errors=errors,
                 world=style,
+                card_count=library.skill_pick.pool.wish_cards,
             )
 
         loop = _Loop(
@@ -300,15 +304,17 @@ def make_wish_picker(
             library,
             ask,
             messages,
-            wish_pick_schema(len(ask.slate.ranked), style),
+            wish_pick_schema(
+                len(ask.slate.ranked), style, cards=library.skill_pick.pool.wish_cards
+            ),
             style,
             vocab,
             used,
-            [_Card() for _ in range(WISH_CARDS)],
+            [_Card() for _ in range(library.skill_pick.pool.wish_cards)],
         )
         start = clock()
         for number in range(1, max_attempts + 1):
-            if not loop.attempt(number, max_attempts) or clock() - start >= budget_s:
+            if not loop.attempt(number, max_attempts) or clock() - start >= budget:
                 break
         out: list[WishCard] = []
         for card in loop.cards:
@@ -330,7 +336,11 @@ def make_wish_picker(
 
 
 def mock_wish_pick_client(
-    library: ContentLibrary, ask: WishPick, *, picks: Sequence[int] = (0, 1, 2), attempts: int = 3
+    library: ContentLibrary,
+    ask: WishPick,
+    *,
+    picks: Sequence[int] = (0, 1, 2),
+    attempts: int = LLM_DEFAULTS.max_retries,
 ) -> MockLLMClient:
     """Mock 挑選（不需網路與金鑰）：挑 ``picks``（超出範圍照填，用來測退回），名稱與兩段文字照 Mock
     命名（依種子挑詞），不寫回應願望的那一句（同 Mock 不寫描述）。"""

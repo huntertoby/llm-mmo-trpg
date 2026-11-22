@@ -65,7 +65,7 @@ def _scene(stance: SkillDef, *extra: SkillDef, base: str = "hero_mage") -> Battl
         m,
         [spawn(Team.ALLY, (3, 3), owner), spawn(Team.ENEMY, (4, 3), foe)],
         skills=[stance, *extra],
-        skill_slots=SkillSlots(active=6, passive=3, reaction=1, stance=1),  # type: ignore[arg-type]
+        skill_slots=SkillSlots(active=6, passive=3, reaction=1, stance=1, rule_change=1),  # type: ignore[arg-type]
     )
     return give_turn(state, U1)
 

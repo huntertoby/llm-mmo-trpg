@@ -38,6 +38,13 @@ from trpg.content.skills import (
 )
 from trpg.shared.rng import Rng
 from trpg.shared.types import Element
+from trpg.skillgen.beside_power import (
+    COMPANION_TEMPLATE,
+    GUARDIAN_TEMPLATE,
+    NORMAL_POWER,
+    beside_power_tries,
+    beside_template,
+)
 from trpg.skillgen.composer_parts import (
     NON_INTERCEPT_EVENTS,
     Ctx,
@@ -54,6 +61,8 @@ __all__ = [
     "Draft",
     "Recipe",
     "beside_keywords",
+    "is_companion",
+    "is_guardian",
     "passive_drafts",
     "passive_recipes",
     "pick_recipe",
@@ -71,29 +80,12 @@ SPELL_ELEMENTS: tuple[Element, ...] = tuple(
     e for e in sorted(Element, key=lambda e: e.value) if e is not Element.PHYSICAL
 )
 
-_PARAM_PERMILLE = 500
-"""``on_status_applied`` 指定狀態、``on_enter_surface`` 指定表面的機率（其餘為任何狀態或表面）。"""
 _SURFACES = ("darkness", "fire", "holy", "ice", "oil", "poison", "water")
-_HALF = 500
-"""高處二選一（``height_advantage`` 或 ``self_on_high_ground``）的機率。"""
 _NO_TARGET_EVENTS = frozenset({"on_kill"})
 """另一方已經倒下的觸發：對它的效果無效，不配利用型條件。"""
 _WET_REACTION_EVENTS = ("hit_by_attack", "hit_by_melee")
 """潮濕反應「被攻擊後，在攻擊者腳下造水」（06 6.34.1 3W-4b）。"""
 _GUARDIAN_EVENT = "hit_by_melee"
-_GUARDIAN_RANGE = 2
-_GUARDIAN_COSTS: tuple[dict[str, Any], ...] = (
-    {"cooldown": 1},
-    {"mana": 2, "cooldown": 1},
-    {"cooldown": 2},
-    {"mana": 4, "cooldown": 2},
-)
-"""護主的代價（同 TF-1 轉型 ``flash_major._GUARDIAN_COSTS``）。"""
-_COMPANION_COSTS: tuple[dict[str, Any], ...] = ({}, {"mana": 2}, {"mana": 4})
-"""伴生的代價（同 TF-1 轉型 ``flash_major._to_companion``）。"""
-_POWER_STEP = 100
-_MIN_POWER = 100
-_NORMAL_POWER = 1000
 _WATER = "water"
 _STACK_MAKE = "stack_make"
 _STACK_USE = "stack_use"
@@ -138,23 +130,24 @@ def weapon_and_attr(rng: Rng, category: str, rules: ComposerRules) -> tuple[str,
 
 def trigger_params(rng: Rng, library: ContentLibrary, event: str) -> dict[str, Any]:
     """新觸發時機（Phase 3C-6b）的參數：``on_cast_tag`` 必填 ``tag``（元素標籤）；
-    ``on_status_applied`` 與 ``on_enter_surface`` 以一半的機率指定狀態或表面。其他時機沒有參數
-    （不消耗亂數）。"""
+    ``on_status_applied`` 與 ``on_enter_surface`` 以 ``recipes.param_permille`` 的機率指定狀態或
+    表面。其他時機沒有參數（不消耗亂數）。"""
+    recipes = library.composer.recipes
     if event == "on_cast_tag":
         return {"tag": rng.choice([e.value for e in SPELL_ELEMENTS])}
-    if event == "on_status_applied" and rng.chance_permille(_PARAM_PERMILLE):
+    if event == "on_status_applied" and rng.chance_permille(recipes.param_permille):
         statuses = sorted(
             s.id
             for s in library.ruleset.statuses.statuses
             if not s.beneficial and not s.stance and not s.skill_pool_excluded  # 5F-5c、AP-2
         )
         return {"status": rng.choice(statuses)}
-    if event == "on_enter_surface" and rng.chance_permille(_PARAM_PERMILLE):
+    if event == "on_enter_surface" and rng.chance_permille(recipes.param_permille):
         return {"surface": rng.choice(_SURFACES)}
-    if event == ON_KEYWORD_EXPLOITED and rng.chance_permille(_PARAM_PERMILLE):
+    if event == ON_KEYWORD_EXPLOITED and rng.chance_permille(recipes.param_permille):
         # SK-3b：一半機率縮小成某種狀態或表面（各半）；只由 composer.exploit 的獨立串流走到
         statuses, surfaces = _exploitable(library)
-        if rng.chance_permille(_PARAM_PERMILLE):
+        if rng.chance_permille(recipes.exploit_surface_permille):
             return {"surface": rng.choice(surfaces)}
         return {"status": rng.choice(statuses)}
     return {}
@@ -190,6 +183,17 @@ class Recipe:
     keywords: tuple[str, ...]
 
 
+def is_companion(recipe: Recipe) -> bool:
+    """是不是伴生配方（HC-5b，QF-4b 裁定 2：草稿結構和護主一樣只差召喚物、屬性、強度與代價，
+    組合器快取預算比例）。"""
+    return recipe.name == _COMPANION
+
+
+def is_guardian(recipe: Recipe) -> bool:
+    """是不是護主配方（QF-4b：它的草稿只差召喚物、屬性、強度與代價，組合器快取預算比例）。"""
+    return recipe.name == _GUARDIAN
+
+
 def unit_keywords(library: ContentLibrary, unit: str, effect: str = "summon") -> tuple[str, ...]:
     """召喚 ``unit`` 的效果（``effect``：``summon`` 或 ``summon_beside``）依專屬規則製造的關鍵字
     （``skill_keywords.yaml`` 的 ``makes``；沒寫 ``unit`` 的規則對每種召喚物都成立，灌注不算）。"""
@@ -219,13 +223,14 @@ def beside_keywords(library: ContentLibrary, tier: int) -> tuple[str, ...]:
 
 
 def _tier_units(library: ContentLibrary, tier: int) -> tuple[RecipeSummonUnit, ...]:
-    """這一階可抽的召喚物：1 階只有基本召喚物（BAL-19c），2 階起是 ``recipes.summon_units``。"""
+    """這一階可抽的召喚物：1 階只有基本召喚物（BAL-19c），2 階起是 ``recipes.summon_units``。
+    基本召喚物一定在 ``recipes.summon_units``（HC-4b2 起載入時檢查，射程照那一項）。"""
     units = library.composer.recipes.summon_units
     if tier >= library.budget.min_character_tier.primitives.get("summon", 1):
         return units
     basic = library.budget.min_character_tier.basic_summon_units
     known = {u.unit: u for u in units}
-    return tuple(known.get(b, RecipeSummonUnit(unit=b)) for b in basic)
+    return tuple(known[b] for b in basic)
 
 
 def summon_choices(
@@ -374,16 +379,9 @@ def summon_drafts(
     return ctx, [(_merge_cost(base, p), deepcopy(ctx.effects)) for p in patches]
 
 
-def _power_tries(start: int, costs: Sequence[dict[str, Any]]) -> list[tuple[int, dict[str, Any]]]:
-    """縮小版召喚物依序試的（強度‰, 代價）：同 TF-1 轉型（``flash_major._power_tries``）。"""
-    powers = {start, *range(_MIN_POWER, _NORMAL_POWER + 1, _POWER_STEP)}
-    ordered = sorted(powers, key=lambda p: (abs(p - start), -p))
-    return [(p, dict(c)) for p in ordered for c in costs]
-
-
 def _beside(unit: str, duration: int, power: int, *, strike: bool = False) -> dict[str, Any]:
     effect: dict[str, Any] = {"type": "summon_beside", "unit": unit, "duration": duration}
-    if power < _NORMAL_POWER:
+    if power < NORMAL_POWER:
         effect["power_permille"] = power
     if strike:
         effect["strike_other"] = True
@@ -456,7 +454,11 @@ def _passive_plan(ctx: Ctx, recipe: Recipe) -> _Passive:
         return _Passive(timing, _pick_target(ctx, timing), condition)
     if recipe.name == _HIGH_GROUND:
         timing = rng.choice(list(timings.values()))
-        if timing.has_other and timing.id not in _NO_TARGET_EVENTS and rng.chance_permille(_HALF):
+        if (
+            timing.has_other
+            and timing.id not in _NO_TARGET_EVENTS
+            and rng.chance_permille(rules.high_ground_permille)
+        ):
             return _Passive(timing, "other", {"type": "height_advantage"})
         return _Passive(timing, _pick_target(ctx, timing), {"type": "self_on_high_ground"})
     if recipe.name == _EXPLOIT:
@@ -488,7 +490,11 @@ def passive_drafts(
     if recipe.name == _COMPANION:
         return ctx, _companion_drafts(ctx, seed, scaling, keyword)
     plan = _passive_plan(ctx, recipe)
-    n = rng.choice((2, 3)) if plan.timing.id == EVERY_N_HITS else None
+    n = (
+        rng.choice(library.ruleset.core.skill_limits.every_n_hits)
+        if plan.timing.id == EVERY_N_HITS
+        else None
+    )
     build_passive_effects(ctx, plan.target, second=plan.second)
     if recipe.name == _STACK_MAKE:
         ctx.add({"type": "add_stack", "stack": recipe.param, "amount": 1, "affects": "self"}, ())
@@ -512,9 +518,10 @@ def _companion_drafts(ctx: Ctx, seed: int, scaling: str, keyword: str | None) ->
     library = ctx.library
     unit = _beside_unit(ctx.rng, library, ctx.tier, keyword)
     rules = library.budget.flash_transform
+    costs = beside_template(library, COMPANION_TEMPLATE).draft_costs  # HC-5b：同閃現轉型一份
     trigger = {"event": "on_battle_start", "target": "self", "max_per_round": 1}
     drafts: list[Draft] = []
-    for power, cost in _power_tries(rules.companion_power_permille, _COMPANION_COSTS):
+    for power, cost in beside_power_tries(rules.companion_power_permille, costs, library):
         base = _skill_base(
             seed, ctx.tier, ctx.rarity, ctx,
             kind="passive", category="spell", weapon_req="any", ap_cost=None,
@@ -557,7 +564,9 @@ def reaction_drafts(
         count = rules.recipes.stack_counts[str(recipe.param)]
         condition = {"type": "self_stack_at_least", "stack": recipe.param, "count": count}
     elif recipe.name == _HIGH_GROUND:
-        if rng.chance_permille(_HALF):  # 攻擊者比你低時才觸發：比的是形狀 single 的觸發者
+        if rng.chance_permille(
+            rules.recipes.high_ground_permille
+        ):  # 攻擊者比你低時才觸發：比的是形狀 single 的觸發者
             build_reaction_effects(ctx, event, branch="other")
             condition = {"type": "height_advantage"}
         else:
@@ -592,10 +601,14 @@ def _guardian_drafts(
     ctx = Ctx(
         library, rng, library.skeletons["reaction"], rarity, tier, "spell", 1, Element.PHYSICAL
     )
-    ctx.shape, ctx.shape_params = "single", {"range": _GUARDIAN_RANGE}
+    template = beside_template(library, GUARDIAN_TEMPLATE)  # HC-5b：代價、射程同閃現轉型一份
+    assert template.draft_range is not None  # 轉成反應的模板一定有射程（載入時檢查）
+    ctx.shape, ctx.shape_params = "single", {"range": template.draft_range}
     rules = library.budget.flash_transform
     drafts: list[Draft] = []
-    for power, cost in _power_tries(rules.guardian_power_permille, _GUARDIAN_COSTS):
+    for power, cost in beside_power_tries(
+        rules.guardian_power_permille, template.draft_costs, library
+    ):
         base = _skill_base(
             seed, tier, rarity, ctx,
             kind="reaction", category="spell", weapon_req="any", scaling_attr=scaling,

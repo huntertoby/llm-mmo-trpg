@@ -15,6 +15,7 @@ from typing import Any, get_args
 import pytest
 from pydantic import ValidationError
 
+from tests.content.field_rules import field_map_rules
 from trpg.content.fields import (
     BUILDING_KINDS,
     OBJECT_LOOKS,
@@ -110,6 +111,7 @@ def test_content_still_passes_report(library: ContentLibrary) -> None:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
     )
     assert report.errors == ()
     assert not [w for w in report.warnings if "建築外觀" in w]
@@ -192,6 +194,7 @@ def test_unknown_kind_is_warning(library: ContentLibrary) -> None:
         terrain=library.ruleset.terrain.by_id(),
         objects=library.ruleset.objects.by_id(),
         core=library.ruleset.core,
+        rules=field_map_rules(library),
     )
     assert report.errors == ()
     assert any("pagoda" in w for w in report.warnings)

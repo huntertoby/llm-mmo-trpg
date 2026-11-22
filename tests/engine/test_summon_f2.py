@@ -27,6 +27,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7, of
 from tests.engine.test_gear import Rolls, _item
+from tests.skillgen.helpers import limit_problems
 from trpg.content.equipment import Loadout
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_TYPE_OF
@@ -241,10 +242,12 @@ def test_count_second_summon_fizzles_when_there_is_no_room() -> None:
 
 def test_count_requires_power_and_vice_versa() -> None:
     base = summon_skill(SKELETON).model_dump(mode="json")
-    for bad in ({"count": 2}, {"power_permille": 600}, {"count": 3, "power_permille": 600}):
+    for bad in ({"count": 2}, {"power_permille": 600}):
         data = {**base, "effects": [{**base["effects"][0], **bad}]}
         with pytest.raises(ValueError):
             SkillDef.model_validate(data)
+    three = {**base, "effects": [{**base["effects"][0], "count": 3, "power_permille": 600}]}
+    assert limit_problems(SkillDef.model_validate(three))  # HC-4b：數量上限在 Ruleset 層
 
 
 # ---------------------------------------------------------------------------

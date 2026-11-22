@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
                 result = rc.compose_with_stats(seed, skeleton=skeleton, library=library)
             except rc.ComposeError:
                 failed += 1
-                rejected += rc.MAX_ATTEMPTS
+                rejected += library.composer.search.composer_attempts
                 continue
             ok += 1
             rejected += result.attempts - 1

@@ -23,6 +23,7 @@ from dataclasses import dataclass
 
 from trpg.content.library import ContentLibrary
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.wish import WISH_PROMPT_VERSION, build_wish_messages, wish_schema
 from trpg.llm.response import clean_response
@@ -38,7 +39,7 @@ __all__ = [
     "wish_menu_payload",
 ]
 
-DEFAULT_WISH_ATTEMPTS = 3
+DEFAULT_WISH_ATTEMPTS = LLM_DEFAULTS.max_retries
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,13 +109,22 @@ def _problems(data: object, menu: Sequence[str], limit: int) -> list[tuple[str, 
     return out
 
 
+def wish_max_keywords(library: ContentLibrary) -> int:
+    """許願最多對到幾個關鍵字（``world/rules.yaml`` 的 ``wish.max_keywords``；HC-7 b：原本預設寫死
+    2）。沒有世界規則的內容庫要明確給 ``max_keywords``。"""
+    rules = library.world_rules
+    if rules is None:
+        raise ValueError("沒有世界規則（world/rules.yaml），要明確給 max_keywords")
+    return rules.wish.max_keywords
+
+
 def match_wish(
     client: LLMClient,
     library: ContentLibrary,
     wish: str,
     menu: Sequence[str],
     *,
-    max_keywords: int = 2,
+    max_keywords: int | None = None,
     max_attempts: int = DEFAULT_WISH_ATTEMPTS,
     clock: Callable[[], float] = time.perf_counter,
 ) -> WishMatch:
@@ -122,6 +132,8 @@ def match_wish(
     ``LLMUnavailable`` 立刻停；
     ``LLMTimeout``／``LLMBadResponse`` 算一次嘗試。``clock`` 只用來計時（報表）。"""
     start = clock()
+    if max_keywords is None:
+        max_keywords = wish_max_keywords(library)
     request = {"menu": wish_menu_payload(library, menu), "max": max_keywords}
     schema = wish_schema(menu, max_keywords)
     codes: list[str] = []
@@ -169,13 +181,14 @@ def mock_wish_client(
     wish: str,
     menu: Sequence[str],
     *,
-    max_keywords: int = 2,
+    max_keywords: int | None = None,
     attempts: int = DEFAULT_WISH_ATTEMPTS,
 ) -> MockLLMClient:
     """Mock（不需網路與金鑰）：選單裡名稱有任一個字出現在願望中的關鍵字（例「凍」→ 冰凍），依選單
     順序取前 ``max_keywords`` 個；
     都沒有＝回空清單（驗證不過，測重試與退路）。確定性。"""
     by_id = {k.id: k.name_zh for k in library.keywords.keywords}
-    found = [k for k in menu if set(by_id.get(k, "")) & set(wish)][:max_keywords]
+    limit = wish_max_keywords(library) if max_keywords is None else max_keywords
+    found = [k for k in menu if set(by_id.get(k, "")) & set(wish)][:limit]
     text = json.dumps({"keywords": found}, ensure_ascii=False)
     return MockLLMClient([text] * attempts)

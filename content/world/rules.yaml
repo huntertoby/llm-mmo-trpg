@@ -124,3 +124,37 @@ field:
   gap_fallback: 1     # 兩種都放不下時再試；也放不下才退回模板
   gap_third: 2        # 三方混戰的第三方離我方至少隔幾格（6E-3b）；6E-3c：退到隔 1 格時也一樣
   walk_max_steps: 30
+# 早、午、晚、夜的起始鐘點（遊戲內時刻；HC-4d 從前端 client/src/world/hud.ts 搬來，值不變）。白天／夜晚照伺服器的時段
+# （遊戲日前半 06:00～18:00 是白天，trpg.world.clock），這張表只決定同一個時段裡的字：白天＝早（noon 點前）、午；
+# 夜晚＝晚（evening～night 點前）、夜。morning、evening 要和世界時鐘的白天開始、夜晚開始一致（測試對照）。
+day_parts:
+  morning: 6
+  noon: 11
+  evening: 18
+  night: 21
+# 實地地圖的大小建議與每區傳送石數（HC-4d，原本是 src/trpg/content/fields.py 的常數，值不變）。
+# - layout_sizes：21.3 的尺寸範圍（數值類：超出只警告）；長邊、短邊各「下限、上限」（格）。橫放、直放都可以；
+#   21.3 寫「約」，前後各放寬幾格。地圖種類：path 路徑類、site 營地／遺跡／祭壇／村落、lair 精英巢穴／秘境、
+#   boss Boss 地圖前的前廳（Boss 地圖本身照 20.6）、town 小鎮、capital 主城、interior 室內。
+# - stones_per_region：每區野外的傳送石數「下限、上限」（21.2「每區 2～3 個，城鎮各 1 個」：城鎮那顆不算在內）；
+#   不在範圍內是錯誤（6D-R1：那一區的地點還沒全部畫完時先記成待補）。
+field_maps:
+  layout_sizes:
+    path: {long: [16, 24], short: [8, 14]}       # 約 20×12，狹長
+    site: {long: [20, 28], short: [14, 22]}      # 約 24×18
+    lair: {long: [12, 20], short: [10, 18]}      # 約 16×14
+    boss: {long: [10, 14], short: [6, 10]}       # 約 12×8
+    town: {long: [20, 28], short: [14, 22]}      # 約 24×18
+    capital: {long: [28, 36], short: [20, 28]}   # 約 32×24
+    interior: {long: [8, 12], short: [6, 10]}    # 約 10×8
+  stones_per_region: [2, 3]
+# 畫面最多列幾筆（HC-7 b：原本寫死在 trpg.api、trpg.server 的常數，值不變）。只決定畫面上列出幾筆，不影響規則。
+display:
+  town_friends: 8        # 一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）
+  footprint_friends: 3   # 一張圖最多畫幾位朋友的腳印
+  footprint_prints: 8    # 一位朋友最多畫幾個腳印
+  note_board: 20         # 地點留言板顯示最新幾則（代決 5E3-5）
+  note_footprints: 10    # 地點的足跡最多列幾筆
+# 地點留言（Phase 5E-3，#105；HC-7 b 從 trpg.server.notes 搬來，值不變）。
+notes:
+  max_chars: 50          # 一則留言最多幾個字（#105）

@@ -167,7 +167,12 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         // NW-3：格子物件表（objects.yaml，物件的最大 HP）也放這裡。
         // PK-1：技能挑選模式的權重（skill_pick.yaml）也是全體共用的表，放這裡。
         // SK-5：被動觸發時機的預算係數（skill_triggers.yaml）與組合器的附帶配方機率（skill_composer.yaml）也放這裡。
-        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer] = await Promise.all([
+        // HC-B：條件的預算倍率覆寫（skill_conditions.yaml）與協同係數（skill_synergies.yaml）也放這裡。
+        // HC-W2：形態（forms.yaml）、裝備規則（rules/equipment.yaml）、物品生成（item_gen.yaml）也放這裡。
+        // HC-4b2：技能分歧進化（skill_evolution.yaml，召喚技進化的幅度）也放這裡。
+        // HC-4b3：閃現規則與計價（flash_templates.yaml）也放這裡。
+        // HC-4d：大世界的規則、經濟、交易、賽季（world/rules.yaml、economy.yaml、trade.yaml、season.yaml）也放這裡。
+        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution, flash, worldRules, worldEconomy, worldTrade, worldSeason] = await Promise.all([
           tapi.tuningStatus(),
           tapi.tuningObjects("unit"),
           tapi.tuningObjects("ai").catch(() => []),
@@ -177,8 +182,19 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
           tapi.tuningObjects("pick").catch(() => []),
           tapi.tuningObjects("skill_triggers").catch(() => []),
           tapi.tuningObjects("skill_composer").catch(() => []),
+          tapi.tuningObjects("skill_conditions").catch(() => []),
+          tapi.tuningObjects("skill_synergies").catch(() => []),
+          tapi.tuningObjects("forms").catch(() => []),
+          tapi.tuningObjects("equipment").catch(() => []),
+          tapi.tuningObjects("item_gen").catch(() => []),
+          tapi.tuningObjects("skill_evolution").catch(() => []),
+          tapi.tuningObjects("flash").catch(() => []),
+          tapi.tuningObjects("world_rules").catch(() => []),
+          tapi.tuningObjects("world_economy").catch(() => []),
+          tapi.tuningObjects("world_trade").catch(() => []),
+          tapi.tuningObjects("world_season").catch(() => []),
         ]);
-        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer];
+        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution, ...flash, ...worldRules, ...worldEconomy, ...worldTrade, ...worldSeason];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);

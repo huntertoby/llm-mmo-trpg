@@ -11,7 +11,8 @@ import yaml
 from pydantic import ValidationError
 
 from tests.engine.helpers import PROJECT_ROOT, library
-from trpg.content.library import load_library
+from tests.skillgen.helpers import limit_problems
+from trpg.content.library import load_library, skill_reference_problems
 from trpg.content.skills import (
     REQUIRED_CONDITIONS,
     REQUIRED_SHAPES,
@@ -110,14 +111,11 @@ def test_default_affects_follow_primitive_harmfulness() -> None:
     [
         ({"category": "weapon", "weapon_req": "focus"}, "weapon_req 只能是 melee、ranged"),
         ({"category": "spell", "weapon_req": "melee"}, "weapon_req 只能是 focus、any"),
-        ({"ap_cost": None}, "ap_cost 必須是 1 到 3"),
-        ({"ap_cost": 4}, "ap_cost 必須是 1 到 3"),
+        ({"ap_cost": None}, "ap_cost 至少 1"),
         ({"kind": "passive", "ap_cost": 2}, "ap_cost 必須為 null"),
         ({"skeleton": "blob"}, "未知的骨架"),
         ({"id": "ashen"}, "id"),
-        ({"cost": {"mana": 1, "cooldown": 7}}, "cooldown"),
-        ({"effects": []}, "效果原語必須有 1 到 4 個"),
-        ({"tier": 6}, "tier"),
+        ({"effects": []}, "效果原語至少 1 個"),
     ],
 )
 def test_schema_rejections_have_chinese_messages(overrides: dict[str, Any], fragment: str) -> None:
@@ -126,20 +124,42 @@ def test_schema_rejections_have_chinese_messages(overrides: dict[str, Any], frag
     assert fragment in str(info.value)
 
 
-def test_more_than_four_effects_rejected() -> None:
+@pytest.mark.parametrize(
+    ("overrides", "problem"),
+    [
+        ({"ap_cost": 4}, "主動技能的 ap_cost 必須是 1 到 3，收到 4"),
+        ({"cost": {"mana": 1, "cooldown": 7}}, "cost.cooldown：冷卻最多 6 回合，收到 7"),
+        ({"tier": 6}, "tier：技能階級只能是 1 到 5，收到 6"),
+    ],
+)
+def test_ruleset_limits_have_chinese_messages(overrides: dict[str, Any], problem: str) -> None:
+    """HC-4b：規則型上限在 ``core.yaml`` 的 ``skill_limits``，由 ``Ruleset`` 層檢查。"""
+    assert limit_problems(SkillDef.model_validate(_skill(**overrides))) == [problem]
+
+
+def test_more_than_four_effects_rejected(tmp_path: Path) -> None:
     effects = [{"type": "damage", "dice": "1d4", "element": "fire"}] * 5
-    with pytest.raises(ValidationError, match="效果原語必須有 1 到 4 個，收到 5 個"):
-        SkillDef.model_validate(_skill(effects=effects))
+    five = SkillDef.model_validate(_skill(effects=effects))
+    assert limit_problems(five) == ["效果原語必須有 1 到 4 個，收到 5 個"]
     four = SkillDef.model_validate(_skill(effects=effects[:4]))
-    assert len(four.effects) == 4
+    assert len(four.effects) == 4 and limit_problems(four) == []
+    _rejects(
+        tmp_path, "效果原語必須有 1 到 4 個，收到 5 個", _skill(id="skill_t_five", effects=effects)
+    )
 
 
 @pytest.mark.parametrize("distance", [0, 3])
 @pytest.mark.parametrize("kind", ["push", "pull"])
 def test_push_and_pull_distance_limited_to_two(kind: str, distance: int) -> None:
     effects = [{"type": kind, "distance": distance}]
-    with pytest.raises(ValidationError, match="推擊與拉扯的距離必須是 1 到 2 格"):
-        SkillDef.model_validate(_skill(effects=effects))
+    if distance < 1:
+        with pytest.raises(ValidationError, match="推擊與拉扯必須填 distance"):
+            SkillDef.model_validate(_skill(effects=effects))
+        return
+    # HC-4b：上限是原語表（skill_primitives.yaml）的參數範圍 1–2，載入內容庫時檢查
+    skill = SkillDef.model_validate(_skill(effects=effects))
+    problems = skill_reference_problems(skill, library().ruleset, library().skills)
+    assert any("distance" in p and "1–2" in p for p in problems), problems
 
 
 def test_spell_damage_requires_dice_and_element_and_weapon_damage_forbids_dice() -> None:

@@ -18,8 +18,7 @@ from trpg.api.world_schemas import (
     OathView,
 )
 from trpg.content.library import ContentLibrary
-from trpg.content.world_oaths import OathTable, OathTemplateDef
-from trpg.engine.battle import OPENING_STATUS_MAX_DURATION
+from trpg.content.world_oaths import OathTable, OathTemplateDef, cooldown_zh
 from trpg.shared.types import Attribute, Team
 from trpg.world.actions import (
     AttributesAllocatedEvent,
@@ -71,7 +70,14 @@ SERVICE_ZH: Final = "閃現、重閃、溶掉、傳承、重配屬性、立誓�
 STARTER_RESPEC_ZH: Final = "入門期可以自己配點，正式選定時會照新武器重配一次。"
 """入門期接在 :data:`SERVICE_ZH` 那一行後面（OB-6，玩法 PM「OB-5b 後補定」；前半句照現在的字）。"""
 UNAVAILABLE_ZH: Final = "尚未開放"
-SLOT_ZH: Final = "誓約佔 1 格被動欄位（立誓後被動技能最多裝 2 招）"
+
+
+def slot_zh(library: ContentLibrary) -> str:
+    """誓約佔的欄位（HC-6b：照 ``OATH_PASSIVE_SLOTS`` 與 ``core.skill_slots.passive`` 組字）。"""
+    left = library.ruleset.core.skill_slots.passive - OATH_PASSIVE_SLOTS
+    return f"誓約佔 {OATH_PASSIVE_SLOTS} 格被動欄位（立誓後被動技能最多裝 {left} 招）"
+
+
 JUDGE_IN_BATTLE_ZH: Final = "戰鬥中判定：違反時立刻移除加成"
 JUDGE_AT_END_ZH: Final = "戰鬥結束時判定（沒達到：破誓帶到下一場開場）"
 PERMILLE_ONE: Final = 1000
@@ -119,7 +125,7 @@ def growth_view(library: ContentLibrary, char: CharacterState, *, in_battle: boo
     elif not service:
         blocked = "這裡不是城鎮或營火"
     free = not in_battle and not pending and char.pending_encounter is None
-    flash_blocked = flash_blocked_zh(char)  # OB-3（#150 第 6 點）
+    flash_blocked = flash_blocked_zh(library, char)  # OB-3（#150 第 6 點）
     return GrowthView(
         insight=char.insight,
         skill_tier=char.skill_tier or hero_tier(library, char.level),
@@ -241,14 +247,16 @@ def _swear_problem(
     library: ContentLibrary, char: CharacterState, now: int, *, in_battle: bool
 ) -> str | None:
     """不能立誓的原因（照 ``trpg.world.growth`` 的檢查順序）；可以時 ``None``。"""
+    table = library.world_oaths
+    cooldown = "" if table is None else cooldown_zh(table.cooldown_seconds)
     checks: tuple[tuple[bool, str], ...] = (
-        (library.world_oaths is None, UNAVAILABLE_ZH),
+        (table is None, UNAVAILABLE_ZH),
         (in_battle, "戰鬥進行中"),
         (char.pending_flash is not None, "先選完閃現的變化"),
         (char.pending_encounter is not None, "先處理眼前的遭遇"),
         (not at_service(library, char), "只有城鎮與營火能立誓"),
         (char.oath is not None, "同時只能有 1 個誓約，請先解除目前的誓約"),
-        (now < char.oath_cooldown_until, "解除誓約後 1 天內不能再立誓"),
+        (now < char.oath_cooldown_until, f"解除誓約後 {cooldown}內不能再立誓"),
         (
             passive_count(library, char) + OATH_PASSIVE_SLOTS
             > library.ruleset.core.skill_slots.passive,
@@ -281,20 +289,29 @@ def oath_view(
         )
     cooling = now < char.oath_cooldown_until
     problem = _swear_problem(library, char, now, in_battle=in_battle)
-    problem = opening_limits(char).get("oath") or problem  # OB-5：入門期不開放誓約
+    problem = opening_limits(library, char).get("oath") or problem  # OB-5：入門期不開放誓約
     return OathView(
         available=table is not None,
         unavailable_zh=UNAVAILABLE_ZH if table is None else None,
         current=current,
         cooldown_until=char.oath_cooldown_until,
         cooldown_zh=_duration_zh(char.oath_cooldown_until - now) if cooling else None,
+        cooldown_seconds=_cooldown_seconds(table),
         can_swear=problem is None,
         swear_problem_zh=problem,
         can_release=char.oath is not None and not in_battle and char.pending_flash is None,
         templates=() if table is None else _templates(library, table),
         penalty_zh=_penalty_zh(library, table),
-        slot_zh=SLOT_ZH if table is not None else "",
+        slot_zh=slot_zh(library) if table is not None else "",
     )
+
+
+def _cooldown_seconds(table: OathTable | None) -> int:
+    """解除誓約後的冷卻秒數；沒有誓約表時用 :class:`OathTable` 的預設（同誓約紀錄的說明）。"""
+    if table is None:
+        default: int = OathTable.model_fields["cooldown_seconds"].default
+        return default
+    return table.cooldown_seconds
 
 
 # ---------------------------------------------------------------------------
@@ -304,7 +321,8 @@ def oath_view(
 
 def _opening_rounds(library: ContentLibrary, status: str) -> int | None:
     default = library.ruleset.status_def(status).duration
-    return None if default is None else min(default, OPENING_STATUS_MAX_DURATION)
+    cap = library.ruleset.core.opening_status_max_duration
+    return None if default is None else min(default, cap)
 
 
 def _rounds_zh(rounds: int | None) -> str:
@@ -524,12 +542,19 @@ def _oath_line(library: ContentLibrary, event: WorldEvent, names: dict[str, str]
         level = DIFFICULTY_ZH[event.oath.difficulty]
         return f"立誓：「{oath_name(event.oath.template)}」（難度 {level}）。"
     if isinstance(event, OathReleasedEvent):
-        return f"解除誓約「{oath_name(event.template)}」：現實 1 天內不能再立誓。"
+        seconds = (
+            OathTable.model_fields["cooldown_seconds"].default
+            if table is None
+            else table.cooldown_seconds
+        )
+        name = oath_name(event.template)
+        return f"解除誓約「{name}」：現實 {cooldown_zh(seconds)}內不能再立誓。"
     if isinstance(event, OathBrokenEvent):
         if event.at_end:
+            rounds = "" if table is None else f" {table.penalty_rounds} 回合"
             return (
                 f"戰鬥結束：沒有守住誓約「{oath_name(event.template)}」，"
-                "破誓 2 回合帶到下一場開場（下一場的誓約加成照常）。"
+                f"破誓{rounds}帶到下一場開場（下一場的誓約加成照常）。"
             )
         return f"違反誓約「{oath_name(event.template)}」：加成移除、陷入破誓；下一場恢復。"
     if isinstance(event, OathKeptEvent):

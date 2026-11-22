@@ -60,7 +60,7 @@ def test_every_element_has_a_five_level_ladder_in_the_data() -> None:
     for element in ("physical", *ELEMENT_SKILLS):
         ladder = ladders[element]
         assert len(ladder) == 5
-        points = [statuses[s].budget_points or 0 for s in ladder]
+        points = [lib.budget.status_point(statuses[s].id) or 0 for s in ladder]
         assert points == sorted(points) and len(set(points)) == 5
         permille = [statuses[s].element_dealt_permille for s in ladder]
         assert permille == sorted(permille) and len(set(permille)) == 5  # 隨級數變強

@@ -27,7 +27,6 @@ from trpg.server.account_config import AccountSettings
 from trpg.server.accounts import AccountStore
 from trpg.server.first_kills import FirstKill
 from trpg.server.notes import (
-    FOOTPRINT_MAX,
     LocationNoteStore,
     NoteError,
     clean_note_text,
@@ -77,11 +76,12 @@ def _note(client: TestClient, cid: str, text: str, headers: dict[str, str] | Non
 
 
 def test_clean_note_text_rules() -> None:
-    assert clean_note_text("  霧裡有狼  ") == "霧裡有狼"
-    assert clean_note_text("字" * 50) == "字" * 50
+    assert clean_note_text("  霧裡有狼  ", 50) == "霧裡有狼"
+    assert clean_note_text("字" * 50, 50) == "字" * 50
+    assert clean_note_text("字" * 6, 6) == "字" * 6  # HC-7 b：上限由呼叫者帶
     for bad in ("", "   ", "字" * 51, "第一行\n第二行", "tab\there"):
         with pytest.raises(NoteError):
-            clean_note_text(bad)
+            clean_note_text(bad, 50)
 
 
 def test_post_and_read_notes_at_current_location(dev: TestClient) -> None:
@@ -109,7 +109,7 @@ def test_notes_are_per_location_and_newest_first(dev: TestClient) -> None:
     board = dev.get(f"/api/world/characters/{cid}/notes").json()
     assert len(board["notes"]) == 20 and board["notes"][0]["text"] == "第 21 則"
     char = store.character(cid)
-    elsewhere = LocationNoteStore(store.root).at(char.region, "nowhere")
+    elsewhere = LocationNoteStore(store.root).at(char.region, "nowhere", 20)
     assert elsewhere == []
 
 
@@ -173,13 +173,21 @@ def test_footprints_function_orders_and_limits() -> None:
         location="x1",
         exclude="c03",
         region_of=lambda loc: "r1",
+        limit=10,
     )
-    assert len(found) == FOOTPRINT_MAX
+    assert len(found) == 10
     assert found[0].kind == "first_kill" and found[0].target_name_zh == "霧狼王"
     assert all(f.character_id != "c03" for f in found)
     assert [f.at for f in found] == sorted((f.at for f in found), reverse=True)
     other_region = footprints(
-        entries, {}, kills, region="r2", location="x1", exclude="", region_of=lambda loc: "r1"
+        entries,
+        {},
+        kills,
+        region="r2",
+        location="x1",
+        exclude="",
+        region_of=lambda loc: "r1",
+        limit=10,
     )
     assert other_region == []
 

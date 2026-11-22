@@ -30,7 +30,7 @@ import {
   editedSkills,
   filterEmpty,
   filterSkills,
-  FILTER_ROWS,
+  filterRows,
   groupProblem,
   mapSimRows,
   matchesFilter,
@@ -94,7 +94,7 @@ const BUDGET = (verdict: TuningBudgetResult["verdict"], ratio: number, extra: Pa
   ...extra,
 });
 
-const STATUS: TuningStatus = { can_write: true, reason_zh: null, restart_needed: false, restart_note_zh: "", draft_default: "current", drafts: [], sim_running: null, max_group: 100 };
+const STATUS: TuningStatus = { can_write: true, reason_zh: null, restart_needed: false, restart_note_zh: "", draft_default: "current", drafts: [], sim_running: null, max_group: 100, draft_name_max: 40 };
 const OK: TuningCheckResult = { ok: true, superseded: false, seconds: 1, field_errors: [], page_errors: [] };
 
 const skillForm = (edits: Edits, budget: TuningBudgetResult | null = BUDGET("ok", 788), confirmed = false) =>
@@ -265,7 +265,7 @@ describe("T-B3 分組面板：上限 100、沒條件不能預覽、跳過原因�
     expect(filterSkills(SKILLS, "吐息", {}).map((o) => o.id)).toEqual(["skill_ember_breath"]);
     expect(matchesFilter(SKILLS[3]!.skill!, { enemy_only: false })).toBe(false);
     expect(matchesFilter(SKILLS[4]!.skill!, { has_condition: true })).toBe(true);
-    const labels = FILTER_ROWS.flatMap((r) => r.choices.map((c) => c.label));
+    const labels = filterRows().flatMap((r) => r.choices.map((c) => c.label));
     for (const l of ["1 階", "武器技", "法術", "近戰", "遠程", "1 AP", "主動", "被動", "敵人專用", "有條件"]) expect(labels).toContain(l);
   });
 

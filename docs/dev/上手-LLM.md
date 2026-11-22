@@ -11,7 +11,7 @@
 | 檔案 | 職責 |
 |---|---|
 | `llm/client.py` | `LLMClient`（Protocol：`complete(messages, json_schema=)`）、`MockLLMClient`（依序回應；回應是例外就拋）、`OpenAICompatClient`（本機 OpenAI 相容端點） |
-| `llm/config.py` | `LLMConfig`、`load_llm_config(path)`：`config/llm.toml`＋環境變數（`TRPG_LLM_CONFIG` 指另一份、`TRPG_LLM_REASONING_EFFORT`、`TRPG_LLM_GENERATE`…） |
+| `llm/config.py` | `LLMConfig`、`load_llm_config(path)`：`config/llm.toml`＋環境變數（`TRPG_LLM_CONFIG` 指另一份、`TRPG_LLM_REASONING_EFFORT`、`TRPG_LLM_GENERATE`…）。HC-7 b：程式裡要預設值（重試次數、退回率提醒、連線檢查逾時）一律讀 `LLM_DEFAULTS`（schema 預設，只留這一份）；新鍵 `probe_timeout_s`（3.0）、`situation_attempts`（2）、`story_attempts`（2）只在 schema，`config/llm.toml` 沒加；情境判定與說書人照 client 帶的設定（`client_config(client)`，Mock 用預設） |
 | `llm/errors.py` | `LLMUnavailable`（立刻停、退回）、`LLMTimeout`／`LLMBadResponse`（算一次嘗試） |
 | `llm/response.py` | `clean_response`：去 `<think>`、程式碼框 |
 | `llm/propose.py`、`candidate_source.py` | 完整技能提議（4-L5～L8）：重試迴圈、`make_proposer`、`mock_proposer`、`mock_naming_client` |
@@ -23,7 +23,7 @@
 | `llm/consistency.py` | 敘事與效果一致（`skill_facts`、`check_mentions`、`check_added`）、世界觀詞用量 |
 | `llm/flash_eval.py`、`skill_eval.py`、`style_eval.py` | 真模型評估工具（`trpg llm …`） |
 | `api/llm_source.py` | `LlmProvider`：`LocalLlmProvider`（讀設定、ping）、`MockLlmProvider`（測試；`flash_naming=True` 開 Mock 命名） |
-| `api/world_pregen.py` | 大世界預先生成：單一背景佇列（WP-2 起許願插隊排最前面）、只放記憶體、等最多 10 秒（`WAIT_SECONDS`） |
+| `api/world_pregen.py` | 大世界預先生成：單一背景佇列（WP-2 起許願插隊排最前面）、只放記憶體、等最多 10 秒（HC-7 b 起等待秒數與每人上限在 `content/skill_pick.yaml` 的 `pregen`；挑選模式的時間預算在 `budget_seconds`） |
 | `world/generated.py` | 世界引擎拿生成內容的介面：請求（`FlashGenRequest`…）、`supply`、`recorded`（重播） |
 | `roguelite/llm_hook.py` | 一輪的掛接點（`use_proposer`、`use_flash_source`；`trpg.roguelite` 不能匯入 `trpg.llm`） |
 | `skillgen/flash_text.py` | **LF-1**：`VariationText`、`clean_text`／`clean_name`／`clean_note`（引擎端的最後一道文字檢查） |
@@ -64,7 +64,7 @@
 ## 四、常踩的坑
 
 1. **新 worktree 沒有 `.venv`**：先 `uv sync --frozen`，之後 `UV_NO_SYNC=1`。
-2. **本機模型**：`config/llm.toml` 預設 `localhost:8001` 上 LM Studio 的 `google/gemma-4-26b-a4b-qat`、溫度 0.7、`reasoning_effort = "none"`（LB-CF，2026-11-14 使用者「Gemma 溫度 0.7」）；另一份設定檔只有設了 `TRPG_LLM_CONFIG` 才會讀。Qwen、Gemma 都要 `reasoning_effort = "none"`，否則思考吃光 `max_tokens`、回應是空的（調查報告 B.1）；換回 vLLM 時要拿掉這行（vLLM 可能不接受 none）。模型名照 `GET /v1/models`。
+2. **本機模型**：`config/llm.toml` 預設 `localhost:8001` 上 LM Studio 的 `swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs`、溫度 0.7、`enable_thinking = false` 加 `reasoning_effort = "none"`（2026-11-22 使用者改用 Swift 27B，專案 PM 轉；只設 enable_thinking 它仍會思考，見 `docs/phases/Swift-Qwen27B品質評估.md`；舊預設是 Gemma，LB-CF）；另一份設定檔只有設了 `TRPG_LLM_CONFIG` 才會讀。Qwen、Gemma 都要 `reasoning_effort = "none"`，否則思考吃光 `max_tokens`、回應是空的（調查報告 B.1）；換回 vLLM 時要拿掉這行（vLLM 可能不接受 none）。模型名照 `GET /v1/models`。
 3. **Mock 命名撞名**：同一題多個選項用同一個種子時 Mock 給同一個名字，命名會 `name_zh.duplicate` 退回（LF-1 前 `name_offer` 就有這個問題，`name_texts` 已依選項分流種子）。
 4. **Mock 命名寫不到橋接加上的效果**（`narrative.missing_added`）：Mock 的 `concept` 只列效果摘要，橋接那一項常退回組合式名稱；測試不要假設每個大變化都命名成功。
 5. **描述的一致性檢查很嚴**（實測 `note_zh.missing_added` 常擋）：LF-2 起不合格只丟說明（`flash.note_dropped.*`）、變化照收；測資料流要說明留下來時，仍可用 `monkeypatch` 把 `flash_propose.note_checker` 換成一律通過（`tests/llm/test_flash_texts_lf1.py::lenient_notes`）。
@@ -74,7 +74,7 @@
    1. 換模型前先卸載全部：`C:\Users\tobby\.lmstudio\bin\lms.exe unload --all`（再用 `lms.exe load <model id>` 載入目標模型；只用環境變數 `TRPG_LLM_MODEL` 或腳本參數指定模型，不改 `config/llm*.toml`）。
    2. 量測前查 `GET http://localhost:8001/api/v0/models`，確認 `state=loaded` 的**只有目標模型一個**；不只一個就停下回報。
    3. 保留 60 t/s 門檻（`scripts/llm_model_compare.py` 的 `MIN_TPS`），沒達到就停下回報，不硬跑。
-   4. 全部跑完後把 `google/gemma-4-26b-a4b-qat` 載回來（`lms.exe load`），維持使用者原狀。
+   4. 全部跑完後把 `config/llm.toml` 的預設模型（目前是 `swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs`）載回來（`lms.exe load`），維持使用者原狀；使用者已自己載好時不載入、不切換。
    - LM Studio 一次只跑一個量測；不要啟動、關閉 LM Studio 本身，也不要改它的設定。
 
 ## 五、相關測試

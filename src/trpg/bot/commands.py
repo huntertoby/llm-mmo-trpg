@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Final, Protocol
 
 from trpg.bot.gateway import BotCommand, CommandEvent, MemberRemoveEvent, MemberUpdateEvent
+from trpg.bot.service import USERNAME_MAX, USERNAME_MIN
 
 __all__ = [
     "SLASH_COMMANDS",
@@ -53,7 +54,10 @@ SLASH_COMMANDS: Final = (
         options=(
             CommandOption(
                 name="username",
-                description_zh="帳號名稱（3～20 字的英文字母、數字或底線；不填就用 Discord 名稱）",
+                description_zh=(
+                    f"帳號名稱（{USERNAME_MIN}～{USERNAME_MAX} 字的英文字母、數字或底線；"
+                    "不填就用 Discord 名稱）"
+                ),
             ),
         ),
     ),

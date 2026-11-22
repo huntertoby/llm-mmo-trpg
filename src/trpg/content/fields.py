@@ -67,7 +67,6 @@ __all__ = [
     "CAPITAL_REGION",
     "CHASM_STYLES",
     "FACILITY_KINDS",
-    "LAYOUT_SIZES",
     "OBJECT_LOOKS",
     "ChasmStyle",
     "ExitGate",
@@ -80,6 +79,7 @@ __all__ = [
     "FieldLook",
     "FieldMapDef",
     "FieldMapReport",
+    "FieldMapRules",
     "FieldNpc",
     "FieldObjectPlacement",
     "FieldSpawn",
@@ -101,19 +101,44 @@ type FieldLayout = Literal["path", "site", "lair", "boss", "town", "capital", "i
 """地圖種類（21.3 的大小表）：路徑類、營地／遺跡／祭壇／村落、精英巢穴／秘境、Boss 前廳、小鎮、
 主城、室內。省略時依地點種類推定（:meth:`FieldMapDef.layout_for`）。"""
 
-LAYOUT_SIZES: dict[str, tuple[tuple[int, int], tuple[int, int]]] = {
-    # 種類: ((長邊下限, 長邊上限), (短邊下限, 短邊上限))；21.3 寫「約」，前後各放寬幾格
-    "path": ((16, 24), (8, 14)),  # 約 20×12，狹長
-    "site": ((20, 28), (14, 22)),  # 約 24×18
-    "lair": ((12, 20), (10, 18)),  # 約 16×14
-    "boss": ((10, 14), (6, 10)),  # Boss 地圖前的前廳，約 12×8（Boss 地圖本身照 20.6）
-    "town": ((20, 28), (14, 22)),  # 約 24×18
-    "capital": ((28, 36), (20, 28)),  # 約 32×24
-    "interior": ((8, 12), (6, 10)),  # 約 10×8
-}
-"""21.3 的尺寸範圍（數值類：超出只警告）。橫放、直放都可以，所以比的是長邊與短邊。"""
 
-_KIND_LAYOUT: dict[str, str] = {
+class SideRange(ContentModel):
+    """實地地圖一種地圖種類的建議大小（格；長邊、短邊各一個「下限、上限」）。"""
+
+    long: tuple[int, int]
+    short: tuple[int, int]
+
+    @model_validator(mode="after")
+    def _ordered(self) -> SideRange:
+        for name, (low, high) in (("long", self.long), ("short", self.short)):
+            if not _MIN_SIZE <= low <= high <= _MAX_SIZE:
+                raise ValueError(f"{name} 必須是 {_MIN_SIZE}～{_MAX_SIZE} 之間的「下限、上限」")
+        return self
+
+
+class FieldMapRules(ContentModel):
+    """``world/rules.yaml`` 的 ``field_maps``（HC-4d，原本是這個模組的常數，值照搬）。
+
+    - ``layout_sizes``：21.3 的尺寸範圍（數值類：超出只警告）；每種地圖種類都要有。橫放、直放
+      都可以，所以比的是長邊與短邊（21.3 寫「約」，前後各放寬幾格）。
+    - ``stones_per_region``：每區野外的傳送石數「下限、上限」（21.2「每區 2～3 個，城鎮各 1 個」：
+      城鎮那顆不算在內）；不在範圍內是錯誤（6D-R1；那一區的地點還沒全部畫完時先記成待補）。"""
+
+    layout_sizes: dict[FieldLayout, SideRange]
+    stones_per_region: tuple[int, int]
+
+    @model_validator(mode="after")
+    def _check(self) -> FieldMapRules:
+        missing = [k for k in get_args(FieldLayout.__value__) if k not in self.layout_sizes]
+        if missing:
+            raise ValueError(f"field_maps.layout_sizes 缺少地圖種類：{', '.join(missing)}")
+        low, high = self.stones_per_region
+        if not 0 <= low <= high:
+            raise ValueError("field_maps.stones_per_region 必須是「下限、上限」（下限 ≥ 0）")
+        return self
+
+
+_KIND_LAYOUT: dict[str, FieldLayout] = {
     "town": "town",
     "gate": "path",
     "secret": "lair",
@@ -145,10 +170,6 @@ CAPITAL_LOCATION = "capital"
 """主城室外圖的 ``location``（室內圖的 ``interior_of``）。"""
 CAPITAL_NAME_ZH = "主城"
 """``content check`` 進度列的名稱（主城的正式名稱待使用者決定，草稿待確認 1）。"""
-
-STONES_PER_REGION = (2, 3)
-"""每區野外的傳送石數（21.2「每區 2～3 個，城鎮各 1 個」：城鎮那顆不算在內）；不在範圍內是錯誤
-（6D-R1；那一區的地點還沒全部畫完時先記成待補，畫完才判）。"""
 
 
 class ExitGate(ContentModel):
@@ -597,7 +618,7 @@ class FieldMapDef(ContentModel):
                 return door
         return None
 
-    def layout_for(self, location: LocationDef | None) -> str:
+    def layout_for(self, location: LocationDef | None) -> FieldLayout:
         """尺寸檢查用的地圖種類：``layout`` 欄位優先，其次依地點種類推定。"""
         if self.layout is not None:
             return self.layout
@@ -847,6 +868,7 @@ def field_map_problems(
     terrain: dict[str, TerrainDef],
     objects: dict[str, ObjectDef],
     core: CoreRules,
+    rules: FieldMapRules,
     npcs: Mapping[str, Mapping[str, str]] | None = None,
     quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> list[str]:
@@ -857,6 +879,7 @@ def field_map_problems(
         terrain=terrain,
         objects=objects,
         core=core,
+        rules=rules,
         npcs=npcs,
         quest_steps=quest_steps,
     )
@@ -870,10 +893,12 @@ def field_map_report(
     terrain: dict[str, TerrainDef],
     objects: dict[str, ObjectDef],
     core: CoreRules,
+    rules: FieldMapRules,
     npcs: Mapping[str, Mapping[str, str]] | None = None,
     quest_steps: Mapping[str, Mapping[str, Sequence[str]]] | None = None,
 ) -> FieldMapReport:
-    """實地地圖的跨檔案檢查（Phase 6 計畫 2.3）。
+    """實地地圖的跨檔案檢查（Phase 6 計畫 2.3）。``rules`` 是 ``world/rules.yaml`` 的
+    ``field_maps``（大小建議與每區傳送石數，HC-4d）。
 
     ``fields`` 的鍵是地圖 ID；``npcs`` 是「區域 → NPC ID → 人設卡的地點」（``None``＝不檢查 NPC；
     沒有該區的鍵＝那一區不檢查）。``quest_steps`` 是「區域 → 任務 ID → 步驟 ID（依序）」
@@ -901,9 +926,9 @@ def field_map_report(
     for map_id in sorted(fields):
         if fields[map_id].is_capital:
             _safe_zone_problems(ctx, fields[map_id])
-    _size_warnings(ctx, fields)
+    _size_warnings(ctx, fields, rules)
     _building_warnings(ctx, fields)
-    _stone_checks(ctx)
+    _stone_checks(ctx, rules)
     return FieldMapReport(
         errors=tuple(sorted(ctx.errors)),
         warnings=tuple(sorted(ctx.warnings)),
@@ -1280,11 +1305,12 @@ def _building_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:
                 ctx.warnings.append(f"實地地圖 {map_id}：建築外觀 {b.kind} 不認得（畫成 house）")
 
 
-def _size_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:
+def _size_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef], rules: FieldMapRules) -> None:
     for map_id in sorted(fields):
         field = fields[map_id]
         layout = field.layout_for(ctx.loc(field.region, field.place))
-        (long_lo, long_hi), (short_lo, short_hi) = LAYOUT_SIZES[layout]
+        sizes = rules.layout_sizes[layout]
+        (long_lo, long_hi), (short_lo, short_hi) = sizes.long, sizes.short
         long_side, short_side = max(field.size), min(field.size)
         if long_lo <= long_side <= long_hi and short_lo <= short_side <= short_hi:
             continue
@@ -1294,7 +1320,7 @@ def _size_warnings(ctx: _Ctx, fields: Mapping[str, FieldMapDef]) -> None:
         )
 
 
-def _stone_checks(ctx: _Ctx) -> None:
+def _stone_checks(ctx: _Ctx, rules: FieldMapRules) -> None:
     by_region: dict[str, list[str]] = {}
     seen: dict[str, str] = {}
     fields = [ctx.outdoor[k] for k in sorted(ctx.outdoor)] + [
@@ -1311,7 +1337,7 @@ def _stone_checks(ctx: _Ctx) -> None:
             if loc is None or loc.kind != "town":  # 城鎮的 1 個另外算（_map_stone_checks）
                 by_region.setdefault(field.region, []).append(stone.id)
         _map_stone_checks(ctx, field)
-    lo, hi = STONES_PER_REGION
+    lo, hi = rules.stones_per_region
     for region in sorted({f.region for f in fields if not f.is_capital}):
         count = len(by_region.get(region, []))
         if lo <= count <= hi:

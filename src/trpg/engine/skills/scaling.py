@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+from trpg.content.battle import WeaponDef
 from trpg.content.library import Ruleset
 from trpg.content.skills import SkillDef
 from trpg.engine.rules.forms import held_weapon
@@ -24,6 +25,7 @@ __all__ = [
     "mastery_active",
     "mastery_duration_bonus",
     "mastery_reach_bonus",
+    "natural_weapon",
     "skill_scale_attr",
     "skill_scaling_attr",
     "skill_scaling_value",
@@ -40,17 +42,27 @@ def skill_scaling_value(rules: Ruleset, unit: UnitState, skill: SkillDef) -> int
     def get(attr: Attribute) -> int:
         return effective_attribute(rules, unit, attr)
 
-    return skill.scaling_value(get, held_weapon(unit))
+    return skill.scaling_value(get, held_weapon(unit), natural_weapon(unit))
 
 
 def skill_scaling_attr(unit: UnitState, skill: SkillDef) -> Attribute:
-    """對抗判定用的屬性（和目標同屬性比）：武器技為手上武器的主屬性，其他為 ``scaling_attr``。"""
-    return skill.contest_attr(held_weapon(unit))
+    """對抗判定用的屬性（和目標同屬性比）：武器技為手上武器的主屬性，看天生武器的技能為天生武器
+    的主屬性（GS-3），其他為 ``scaling_attr``。"""
+    return skill.contest_attr(held_weapon(unit), natural_weapon(unit))
+
+
+def natural_weapon(unit: UnitState) -> WeaponDef | None:
+    """形態中的天生武器（``unit.weapon``；GS-3，``scaling_source: natural_weapon``）；不在形態中為
+    ``None``。"""
+    return unit.weapon if unit.form is not None else None
 
 
 def skill_scale_attr(unit: UnitState, skill: SkillDef) -> Attribute | None:
     """傷害組成顯示用的縮放屬性：只有單一屬性時回傳它，雙屬性（平均或較高）為 ``None``。武器技看
     手上武器。"""
+    natural = natural_weapon(unit)
+    if skill.scaling_source == "natural_weapon" and natural is not None:
+        return natural.scaling_attr if natural.secondary_scaling_attr is None else None
     if skill.category == "weapon":
         weapon = held_weapon(unit)
         single = weapon.secondary_scaling_attr is None and skill.secondary_scaling_attr is None

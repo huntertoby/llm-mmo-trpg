@@ -237,7 +237,27 @@ export const api = {
   /** 數值工坊（Phase NW-1b；端點 NW-1a，前綴 /api/tuning）。沒開開關時端點不存在（404）。 */
   tuningStatus: () => request<TuningStatus>("GET", "/tuning/status", undefined, true),
   tuningObjects: (
-    kind: "unit" | "skill" | "ai" | "rules" | "budget" | "object" | "pick" | "skill_triggers" | "skill_composer" = "unit",
+    kind:
+      | "unit"
+      | "skill"
+      | "ai"
+      | "rules"
+      | "budget"
+      | "object"
+      | "pick"
+      | "skill_triggers"
+      | "skill_composer"
+      | "skill_conditions"
+      | "skill_synergies"
+      | "forms"
+      | "equipment"
+      | "item_gen"
+      | "skill_evolution"
+      | "flash"
+      | "world_rules"
+      | "world_economy"
+      | "world_trade"
+      | "world_season" = "unit",
   ) => request<TuningObjectSummary[]>("GET", `/tuning/objects?kind=${kind}`),
   tuningObject: (kind: string, id: string) =>
     request<TuningObjectDetail>("GET", `/tuning/objects/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`),

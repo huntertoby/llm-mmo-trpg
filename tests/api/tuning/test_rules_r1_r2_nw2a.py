@@ -12,7 +12,7 @@ import pytest
 
 from tests.api.tuning.conftest import git
 from trpg.api.tuning.drafts import Change, Draft
-from trpg.api.tuning.objects import RETIER_NOTE_ZH
+from trpg.api.tuning.objects import retier_note_zh
 from trpg.api.tuning.service import TuningService
 from trpg.api.tuning.writeback import WritebackError
 from trpg.content.enemy_moves import move_shortfalls
@@ -52,7 +52,12 @@ def test_below_the_floor_needs_confirmation(repo: Path, repo_service: TuningServ
 
 def test_skill_form_shows_the_retier_note(read_service: TuningService) -> None:
     detail = read_service.object("skill", "skill_rift_flicker")
-    assert detail.notes_zh[0] == RETIER_NOTE_ZH
+    # HC-6b：區間照 skill_budget.yaml 組字，現值組出來要和改前逐字相同
+    assert detail.notes_zh[0] == (
+        "這招在 2 階以上會依預算比例重算（夾在 70～100%），超出的部分只在 1 階有效"
+    )
+    assert read_service.library is not None
+    assert detail.notes_zh[0] == retier_note_zh(read_service.library.budget)
     assert "碎晶之主（rift_shard_lord，3 階）" in detail.notes_zh[1]
     lord = next(u for u in detail.used_by if u.id == "rift_shard_lord")
     assert lord.tier == 3 and lord.where_zh == ["第 3 階段"]

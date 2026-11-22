@@ -1,6 +1,8 @@
 // 工坊的輔助面板：隨機一個、匯出 YAML、進階直接編輯 YAML。
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { gameRules } from "../../battle/glossary";
+import { upTo } from "../../tuning/skillModel";
 import type { Choice, SkillRarity, WorkshopCheck, WorkshopExport } from "../../api/types";
 import { isEmptyDraft, type Json } from "../../workshop/draft";
 import { RARITY_NAMES } from "../../workshop/state";
@@ -81,7 +83,7 @@ export function RandomPanel({ skeletons, draft, onResult, dev = false }: RandomP
           階級
           <select value={tier} onChange={(e) => setTier(e.target.value)}>
             <option value="">不指定</option>
-            {[1, 2, 3, 4, 5].map((t) => (
+            {upTo(gameRules().skill_tiers).map((t) => (
               <option key={t} value={t}>
                 {t} 階
               </option>

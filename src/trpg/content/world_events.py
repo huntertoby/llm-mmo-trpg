@@ -95,8 +95,6 @@ ThreadScope = Literal[
     "world",  # 世界級線頭：出現在所有人的世界（「放走的頭目、鬆動的封印」）
 ]
 
-_MAX_SITUATION_ATTRIBUTES = 3
-
 _Id = Annotated[str, Field(pattern=ID_PATTERN)]
 
 
@@ -110,7 +108,8 @@ class SolutionDef(ContentModel):
 
     kind: SolutionKind
     attributes: tuple[Attribute, ...] = ()
-    """情境判定允許的屬性（只有 ``situation`` 可填，且必填 1～3 個）。"""
+    """情境判定允許的屬性（只有 ``situation`` 可填，且必填；最多幾個看 ``situation_rules.yaml`` 的
+    ``template_limits.attributes_max``，HC-4d 起由情境模板的跨檔案檢查擋）。"""
     note_zh: str = ""
     """18.4 括號裡的說明（例：「找安全路」「護送戰」「付錢」）；選項格的主字，玩家看得到，
     不放設計編號（TXT-1）。"""
@@ -144,8 +143,8 @@ class SolutionDef(ContentModel):
         if len(set(self.threads)) != len(self.threads):
             raise ValueError("解法的 threads 不可重複")
         if self.kind == "situation":
-            if not 1 <= len(self.attributes) <= _MAX_SITUATION_ATTRIBUTES:
-                raise ValueError("情境判定解法必須有 1～3 個允許的屬性")
+            if not self.attributes:
+                raise ValueError("情境判定解法必須有允許的屬性")
             if len(set(self.attributes)) != len(self.attributes):
                 raise ValueError("情境判定解法的屬性不可重複")
         elif self.attributes:

@@ -71,7 +71,7 @@ BEAR, CAT, ROC, ELEMENTAL, WEREWOLF = (
 )
 FORM_SKILLS = (BEAR, CAT, ROC, ELEMENTAL, WEREWOLF)
 FURY = "skill_fury_stance"
-SLOTS = SkillSlots(active=8, passive=2, reaction=1, stance=2)
+SLOTS = SkillSlots(active=8, passive=2, reaction=1, stance=2, rule_change=1)
 
 
 def scene(*, hp: int = 9990, foe_hp: int = 9990, foe_at: tuple[int, int] = (4, 3)) -> BattleState:
@@ -414,9 +414,11 @@ def test_weapon_skills_still_use_the_hand_weapon_in_a_form() -> None:
 def test_form_skills_take_an_active_slot() -> None:
     lib = library()
     defs = [lib.ruleset.skill_def(s) for s in (BEAR, CAT)]
-    slots = SkillSlots(active=1, passive=2, reaction=1, stance=2)
+    slots = SkillSlots(active=1, passive=2, reaction=1, stance=2, rule_change=1)
     assert any("主動" in p for p in skill_slot_problems(defs, slots))
-    assert not skill_slot_problems(defs, SkillSlots(active=2, passive=2, reaction=1, stance=0))
+    assert not skill_slot_problems(
+        defs, SkillSlots(active=2, passive=2, reaction=1, stance=0, rule_change=1)
+    )
 
 
 def test_state_in_a_form_round_trips_through_json() -> None:

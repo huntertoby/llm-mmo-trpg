@@ -243,7 +243,7 @@ class SkillScalingRules(ContentModel):
         Attribute.WIL,
     )
     """武器技的第二縮放屬性只能是心智屬性（3I-3，06 6.10 #46：武器屬性＋一個心智屬性，取平均）。"""
-    dual_max_gap: int = Field(default=4, ge=0)
+    dual_max_gap: int = Field(ge=0)
     """產生器只在主角第二高屬性與最高屬性的差不超過這個值時給第二屬性（3I-3，#46；機率在
     ``skill_composer.yaml`` 的 ``scaling.dual_permille``）。"""
     combos: tuple[ThemeCombo, ...] = ()

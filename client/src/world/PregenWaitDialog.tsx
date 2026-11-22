@@ -4,7 +4,7 @@ import { DialogFrame } from "../ui/DialogFrame";
 import { WaitScene } from "../ui/WaitScene";
 import type { WaitStatus } from "../render/waitArt";
 import { WAIT_SOUND_DELAY_MS } from "../audio/waitSounds";
-import { PREGEN_WAIT_NOTE } from "./pregen";
+import { pregenDefaultNote } from "./pregen";
 
 interface Props {
   /** 這次在等什麼（彈窗的無障礙標籤）。 */
@@ -18,7 +18,7 @@ interface Props {
   note?: string;
 }
 
-export function PregenWaitDialog({ text, requestId, status = "wait", waitedMs = 0, onCancel, note = PREGEN_WAIT_NOTE }: Props) {
+export function PregenWaitDialog({ text, requestId, status = "wait", waitedMs = 0, onCancel, note = pregenDefaultNote() }: Props) {
   return (
     <DialogFrame label={text} title="請稍候">
       <div className="pregen-wait-body" data-testid="world-pregen-wait" data-status={status}>

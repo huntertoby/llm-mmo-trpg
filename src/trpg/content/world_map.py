@@ -28,8 +28,6 @@ from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 
 __all__ = [
-    "MAX_LOCATIONS",
-    "MIN_LOCATIONS",
     "LocationDef",
     "LocationKind",
     "LocationMapDef",
@@ -37,10 +35,6 @@ __all__ = [
     "RevealMethod",
     "world_map_problems",
 ]
-
-MIN_LOCATIONS = 15
-MAX_LOCATIONS = 25
-"""每區地點數（9.6.2「每區 15～25 個地點」）。"""
 
 type LocationKind = Literal[
     "town",  # 區域小鎮（9.6.1）
@@ -213,8 +207,8 @@ class LocationMapDef(ContentModel):
                 out.append(f"樞紐（hub）只能有 1 個地點，目前 {count} 個")
             if self.edges:
                 out.append("樞紐（hub）不可有連線")
-        elif not MIN_LOCATIONS <= count <= MAX_LOCATIONS:
-            out.append(f"地點數 {count} 不在 {MIN_LOCATIONS}～{MAX_LOCATIONS} 之內")
+        # 每區地點數（9.6.2）的範圍在 regions.yaml 的 locations_per_region（HC-4d），由
+        # world_map_problems 檢查
         seen: set[str] = set()
         for loc in self.locations:
             if loc.id in seen:
@@ -344,6 +338,10 @@ def world_map_problems(
     if regions is None:
         problems.append(f"地點圖 {world_map.region}：缺少 regions.yaml，無法檢查區域")
     else:
+        low, high = regions.locations_per_region  # HC-4d：9.6.2 每區地點數
+        count = len(world_map.locations)
+        if not low <= count <= high:
+            problems.append(f"地點圖 {world_map.region}：地點數 {count} 不在 {low}～{high} 之內")
         by_id = regions.region_by_id()
         region = by_id.get(world_map.region)
         if region is None:

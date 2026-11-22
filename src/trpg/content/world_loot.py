@@ -63,9 +63,9 @@ class MainHandMix(ContentModel):
     算，:class:`~trpg.world.state.WeaponMix`），另外兩類合計不到 ``min_sample`` 人時平均分。區域
     Boss、懸賞一律同大類（打造、任務選擇式獎勵本來就同大類；roguelite 照 07 7.1 不變）。"""
 
-    same_permille: int = Field(default=500, ge=0, le=1000)
-    elite_same_permille: int = Field(default=750, ge=0, le=1000)
-    min_sample: int = Field(default=3, ge=1)
+    same_permille: int = Field(ge=0, le=1000)
+    elite_same_permille: int = Field(ge=0, le=1000)
+    min_sample: int = Field(ge=1)
 
 
 class GearDropRules(ContentModel):

@@ -17,7 +17,6 @@ from trpg.roguelite.offers import candidate_request, make_offer, pick_player
 from trpg.skillgen.candidates import CandidateRules, LlmTrace
 from trpg.skillgen.pick_offer import (
     LEVEL_EXACT,
-    MAX_OFF_ROUTE,
     OfferPicker,
     SlotChoice,
     SlotPick,
@@ -129,7 +128,7 @@ def test_off_route_cap_holds_even_if_llm_picks_the_last() -> None:
             offer = make_offer(lib, run, "level_up", pick=True)
         top = make_offer(lib, run.model_copy(update={"llm": False}), "level_up", pick=True)
         # 分數第一名本身就偏離的格子（做不出跟路線的）不算 LLM 造成的
-        assert len(offer.off_route) <= max(MAX_OFF_ROUTE, len(top.off_route))
+        assert len(offer.off_route) <= max(lib.skill_pick.pool.max_off_route, len(top.off_route))
 
 
 def test_thin_candidates_stay_out_unless_all_thin() -> None:
@@ -139,7 +138,9 @@ def test_thin_candidates_stay_out_unless_all_thin() -> None:
         s for s in lib.skills.values() if s.effects and all(e.type == "inscribe" for e in s.effects)
     )
     full = lib.skills["skill_fire_bolt"]
-    assert thin_reasons(hollow) and not thin_reasons(full)
+    epic = weights.thin_epic_min_effects
+    assert thin_reasons(hollow, epic_min_effects=epic)
+    assert not thin_reasons(full, epic_min_effects=epic)
     a = PickCandidate(hollow, "composer", 1, ("a", "", "", (), ()))
     b = PickCandidate(full, "composer", 2, ("b", "", "", (), ()))
     assert drop_thin([a, b], weights) == [b]

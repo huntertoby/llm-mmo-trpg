@@ -18,7 +18,7 @@ import re
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.world import NamingRules
+from trpg.content.world import load_world_style
 from trpg.roguelite.offers import as_complete, at_run_tier, skill_defs
 from trpg.roguelite.state import RunState, SkillOffer
 from trpg.skillgen.candidates import keyword_distribution
@@ -36,7 +36,6 @@ __all__ = [
 ]
 
 _ASCII = re.compile(r"[A-Za-z]")
-_TEXT_RULES = NamingRules()
 
 
 def story_base(library: ContentLibrary, char: CharacterState, base: SkillDef) -> SkillDef:
@@ -94,7 +93,9 @@ def themed_story_skill(
         if themed is None:
             return None
         skill = themed
-    rules = _TEXT_RULES
+    rules = (
+        load_world_style().naming
+    )  # HC-4d：字數上限讀 llm/world_shattered.yaml（原本是程式預設，同值）
     if not (
         _text_ok(gen.name_zh, rules.name_max_chars)
         and _text_ok(gen.concept, rules.concept_max_chars)

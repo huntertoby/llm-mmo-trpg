@@ -33,7 +33,7 @@ from typing import Final
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.world_oaths import OathTable, oath_problems
+from trpg.content.world_oaths import OathTable, cooldown_zh, oath_problems
 from trpg.roguelite.attributes import allocate_attributes, respec_attributes
 from trpg.roguelite.errors import RunError
 from trpg.roguelite.flashes import (
@@ -87,12 +87,11 @@ from trpg.world.actions import (
 from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError
 from trpg.world.generated import FlashGen, FlashGenRequest, flash_key, supply
-from trpg.world.opening_limits import FLASH_ZH
+from trpg.world.opening_limits import FLASH_ZH, opening_end_level
 from trpg.world.state import CharacterState, LocationRef, OathState, WorldState
 
 __all__ = [
     "GROWTH_ACTIONS",
-    "OPENING_END_LEVEL",
     "GrowthAction",
     "apply_growth",
     "as_run",
@@ -149,19 +148,14 @@ _views: dict[tuple[int, bool], tuple[ContentLibrary, ContentLibrary]] = {}
 # ---------------------------------------------------------------------------
 
 
-OPENING_END_LEVEL: Final = 4
-"""開局在這一級結束（21.5 #150 第 5、6、9 點「4 級前」：一律看等級）：正式選定過的角色到這一級，
-免費重選過期、可以閃現，``opening`` 清成 ``None``
-（:func:`trpg.world.opening_reselect.close_opening`）。"""
-
-
-def flash_blocked_zh(char: CharacterState) -> str | None:
+def flash_blocked_zh(library: ContentLibrary, char: CharacterState) -> str | None:
     """不能閃現的原因（#150 第 6 點）：開局還沒結束（``opening`` 非 ``None``）的角色
-    :data:`OPENING_END_LEVEL` 級前不能閃現（避免閃過的招被重選收回）；靈感照常累積。已完成開局的
-    舊角色不受影響（``None``）。"""
-    if char.opening is None or char.level >= OPENING_END_LEVEL:
+    :func:`~trpg.world.opening_limits.opening_end_level` 級前不能閃現（避免閃過的招被重選收回）；
+    靈感照常累積。已完成開局的舊角色不受影響（``None``）。"""
+    if char.opening is None:
         return None
-    return FLASH_ZH.format(level=OPENING_END_LEVEL)
+    level = opening_end_level(library)
+    return None if char.level >= level else FLASH_ZH.format(level=level)
 
 
 def world_library(library: ContentLibrary, *, oath: bool = False) -> ContentLibrary:
@@ -498,7 +492,7 @@ def _flash(
         picked = from_run(char, after)
         return with_skill_region(picked, new_skill, skill_region(char, pending.skill)), (event,)
     if isinstance(action, FlashAction):
-        blocked = flash_blocked_zh(char)  # OB-3（#150 第 6 點）
+        blocked = flash_blocked_zh(library, char)  # OB-3（#150 第 6 點）
         if blocked is not None:
             raise WorldActionError(blocked)
         _require_service(library, char, "閃現")
@@ -637,7 +631,7 @@ def _oath(
     if char.oath is not None:
         raise WorldActionError("同時只能有 1 個誓約，請先解除目前的誓約")
     if now < char.oath_cooldown_until:
-        raise WorldActionError("解除誓約後 1 天內不能再立誓")
+        raise WorldActionError(f"解除誓約後 {cooldown_zh(table.cooldown_seconds)}內不能再立誓")
     problems = oath_problems(table, action.proposal)
     if problems:
         raise WorldActionError("；".join(problems))

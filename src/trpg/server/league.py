@@ -32,12 +32,12 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from trpg.content.library import ContentLibrary
 from trpg.content.world_season import LeagueRules
 from trpg.engine.ruleset_hash import hash_ruleset
-from trpg.engine.runner import LOG_FORMAT, BattleLog
+from trpg.engine.runner import LOG_FORMAT, BattleLog, log_invalid_problem
 from trpg.engine.state import BattleState
 from trpg.server.chronicle import LeagueChronicleRank, LeagueChronicleSeason, LeagueChronicleStore
 from trpg.server.clock import unix_now
@@ -467,7 +467,10 @@ class LeagueStore:
         path = self._match_path(match_id)
         if match is None or match.status != "done" or not path.is_file():
             raise LeagueMatchNotFoundError(f"找不到循環賽的場次 {match_id}")
-        return BattleLog.model_validate_json(path.read_text(encoding="utf-8"))
+        try:
+            return BattleLog.model_validate_json(path.read_text(encoding="utf-8"))
+        except ValidationError as exc:  # HC-7 b：讀不進目前格式的舊紀錄（409，中文說明）
+            raise LeagueError(f"這一場不能重播：{log_invalid_problem(exc)}") from exc
 
     def log_text(self, match_id: str) -> str:
         self.log(match_id)  # 檢查存在

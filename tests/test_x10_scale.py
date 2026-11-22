@@ -279,12 +279,13 @@ def test_useful_damage_divides_by_scale() -> None:
 
 
 @pytest.mark.parametrize("scale", [1, 10])
-def test_infuse_survival_same_after_x10(scale: int) -> None:
+def test_infuse_survival_same_after_x10(library: ContentLibrary, scale: int) -> None:
     """``infuse_threat_damage`` 是換算前的單位：× scale 再和 HP 相加，存活率不變。"""
     state = _duel(scale)
     unit = state.units[U2]
     unit.hp = 7 * scale
-    rules = SummonAiRules(infuse_threat_damage=2)
+    rules = library.ai_profiles.summon.model_copy(update={"infuse_threat_damage": 2})
+    assert isinstance(rules, SummonAiRules)
     assert survival(state, unit, rules) == Fraction(7, 7 + 2)  # 相鄰的戰士 1 名
 
 

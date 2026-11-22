@@ -108,7 +108,7 @@ def _lineup_problems(
             cells = _square(center, size)
             used.update(cells)
             problems += [
-                f"{where}：巨型單位 {tid} 站在 {list(center)} 時佔的 9 格{p}"
+                f"{where}：巨型單位 {tid} 站在 {list(center)} 時佔的 {size * size} 格{p}"
                 for p in board.strict_problems(cells)
             ]
     for team, members in sorted(lineup.items()):

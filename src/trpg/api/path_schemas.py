@@ -69,6 +69,9 @@ class PathEventOut(_ApiModel):
     chance_permille: int | None
     """``slip_check`` 的失敗機率（‰，四捨五入）。"""
     detail: str | None
+    save_roll: bool = False
+    """``status``：得到前要另外擲抵抗（HC-6c）。陷阱不確定時，``false`` 的狀態是
+    「觸發就一定附上」。"""
 
 
 class PathStepOut(_ApiModel):
@@ -151,6 +154,7 @@ def _event_out(event: PathEvent) -> PathEventOut:
         amount_max=event.amount_max,
         chance_permille=permille(event.chance),
         detail=event.detail,
+        save_roll=event.save_roll,
     )
 
 

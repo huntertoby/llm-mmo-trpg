@@ -110,15 +110,25 @@ def square3_tiles(state: BattleState, center: XY) -> tuple[XY, ...]:
     return _sorted([c for c in cells if in_play(state, c)])
 
 
-def ring_tiles(state: BattleState, origin: XY, radius: int) -> tuple[XY, ...]:
-    """環形：與 ``origin`` 切比雪夫距離恰為 ``radius`` 的格子。"""
+def ring_tiles(
+    state: BattleState, origin: XY, radius: int, *, solid: bool = False
+) -> tuple[XY, ...]:
+    """環形：與 ``origin`` 切比雪夫距離恰為 ``radius`` 的格子；``solid``（實心，GS-3，#173）時為
+    距離 1～``radius``（不含 ``origin``）。"""
     cells = [
         (x, y)
         for y in range(origin[1] - radius, origin[1] + radius + 1)
         for x in range(origin[0] - radius, origin[0] + radius + 1)
-        if chebyshev(origin, (x, y)) == radius and in_play(state, (x, y))
+        if _ring_hit(chebyshev(origin, (x, y)), radius, solid=solid) and in_play(state, (x, y))
     ]
     return _sorted(cells)
+
+
+def _ring_hit(distance: int, radius: int, *, solid: bool) -> bool:
+    """環形含不含這個距離：一般只含恰為 ``radius``；實心含 1～``radius``（GS-3）。"""
+    if solid:
+        return 1 <= distance <= radius
+    return distance == radius
 
 
 def radius_tiles(state: BattleState, origin: XY, radius: int) -> tuple[XY, ...]:
@@ -193,15 +203,18 @@ def chain_units(
 # ---------------------------------------------------------------------------
 
 
-def around_tiles(state: BattleState, unit: UnitState, shape_type: str, size: int) -> tuple[XY, ...]:
+def around_tiles(
+    state: BattleState, unit: UnitState, shape_type: str, size: int, *, solid: bool = False
+) -> tuple[XY, ...]:
     """以 ``unit`` 自己為中心的形狀（R2）：一格的單位時就是原本以 ``unit.xy`` 為中心的形狀
     （``ring``、``square3``、``cross``，其餘當範圍光環 ``allies_in_radius``；``size`` 是半徑或臂長，
     方陣不看）。巨型單位把整個
-    佔格當中心向外量：環形＝到佔格的切比雪夫距離恰為 ``size``；範圍光環＝到最近佔格的曼哈頓距離
+    佔格當中心向外量：環形＝到佔格的切比雪夫距離恰為 ``size``（``solid`` 實心環形為 1～``size``，
+    GS-3）；範圍光環＝到最近佔格的曼哈頓距離
     ≤ ``size``；方陣＝切比雪夫距離 1；十字＝佔格的每一欄、每一列各往外延伸 ``size`` 格（遇牆或地圖
     邊緣停在它之前）。佔格本身一律不在範圍內。"""
     if unit.footprint == 1:
-        return _one_tile_around(state, unit.xy, shape_type, size)
+        return _one_tile_around(state, unit.xy, shape_type, size, solid=solid)
     if shape_type == "cross":
         return _giant_cross(state, unit, size)
     reach = 1 if shape_type == "square3" else size
@@ -215,15 +228,17 @@ def around_tiles(state: BattleState, unit: UnitState, shape_type: str, size: int
         if not unit.covers(cx, cy) and in_play(state, (cx, cy))
     ]
     if shape_type == "ring":
-        return _sorted([c for c in cells if chebyshev_to(unit, c) == reach])
+        return _sorted([c for c in cells if _ring_hit(chebyshev_to(unit, c), reach, solid=solid)])
     if shape_type == "square3":
         return _sorted([c for c in cells if chebyshev_to(unit, c) <= 1])
     return _sorted([c for c in cells if dist_to(unit, c) <= reach])  # 範圍光環
 
 
-def _one_tile_around(state: BattleState, xy: XY, shape_type: str, size: int) -> tuple[XY, ...]:
+def _one_tile_around(
+    state: BattleState, xy: XY, shape_type: str, size: int, *, solid: bool = False
+) -> tuple[XY, ...]:
     if shape_type == "ring":
-        return ring_tiles(state, xy, size)
+        return ring_tiles(state, xy, size, solid=solid)
     if shape_type == "cross":
         return cross_tiles(state, xy, size)
     if shape_type == "square3":

@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.skillgen.budget import (
     BudgetError,
     BudgetReport,
@@ -25,9 +26,9 @@ from trpg.skillgen.budget import (
     VariantBudget,
     skill_budget,
 )
-from trpg.skillgen.draft import Draft, DraftError, build_skill
+from trpg.skillgen.draft import Draft, DraftError, build_skill, fill_trap_rounds
 from trpg.skillgen.option_followup import followup_visible
-from trpg.skillgen.option_models import STEP_IDS, StepId
+from trpg.skillgen.option_models import STEP_IDS, DraftOptions, StepId
 from trpg.skillgen.option_variant import variants_visible
 from trpg.skillgen.options import draft_options, minimum_rarity
 from trpg.skillgen.player_text import plain_name, plainify
@@ -287,9 +288,16 @@ def _complete_check(skill: SkillDef, library: ContentLibrary) -> DraftCheck:
     )
 
 
-def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
-    """檢查草稿（純函式）。"""
-    options = draft_options(draft, library)
+def check_draft(
+    draft: Draft, library: ContentLibrary, *, options: DraftOptions | None = None
+) -> DraftCheck:
+    """檢查草稿（純函式）。
+
+    ``options``（QF-4b，選填）：呼叫者已經算好的 ``draft_options(draft, library)``（同一份草稿、
+    同一個內容庫、不帶 ``weapon``），省得再算一次；不傳時照舊自己算，結果相同。"""
+    draft = fill_trap_rounds(draft, library)  # HC-5b：沒寫陷阱輪數時補（同 HC-5a 之前）
+    if options is None:
+        options = draft_options(draft, library)
     if options.next_step is not None:
         missing = tuple(
             s
@@ -312,6 +320,11 @@ def check_draft(draft: Draft, library: ContentLibrary) -> DraftCheck:
         draft = {**draft, "provenance": {"origin": "workshop"}}
     try:
         skill = build_skill(draft)
+        # HC-4b：技能結構的規則型上限從 SkillDef schema 搬到 core.yaml 的 skill_limits；工坊照舊
+        # 當成 schema 錯誤（超出時不算預算：階級、AP 超出時查表會失敗）
+        limits = skill_limit_problems(skill, library.ruleset.core.skill_limits)
+        if limits:
+            raise DraftError(limits)
     except DraftError as exc:
         problems = tuple(
             Problem(rule="schema", message_zh=plainify(m, library)) for m in exc.messages

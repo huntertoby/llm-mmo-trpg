@@ -27,14 +27,12 @@ from trpg.skillgen.option_models import Choice, FieldSpec, StepOptions
 from trpg.skillgen.options import draft_options
 from trpg.skillgen.proposal import CLOSED_SKELETONS, ProposalContext
 from trpg.skillgen.proposal_budget import budget_filler, is_repairable
-from trpg.skillgen.proposal_numbers import DEFAULT_ACTIVE_AP
 from trpg.skillgen.proposal_subset import ProposalRequest
 from trpg.skillgen.random_composer import ComposeError, compose_random_skill
 from trpg.skillgen.scaling import fit_draft_scaling
 from trpg.skillgen.validate import validate_skill
 
 __all__ = [
-    "COMPOSER_TRIES",
     "FallbackError",
     "FallbackSource",
     "fallback_skill",
@@ -44,12 +42,6 @@ __all__ = [
 
 type FallbackSource = Literal["composer", "pool", "workshop"]
 type _Source = Callable[[ContentLibrary, ProposalRequest, ProposalContext, int], SkillDef | None]
-
-COMPOSER_TRIES = 8
-"""組合器換種子重試的次數（與候選產生器的 ``composer_tries`` 預設相同）。"""
-WORKSHOP_MAX_SHAPES = 4
-WORKSHOP_MAX_EFFECTS = 6
-"""工坊推導每個骨架最多試幾個形狀 × 幾個核心效果（保底用，避免組合爆炸）。"""
 
 
 class FallbackError(Exception):
@@ -90,7 +82,7 @@ def _from_composer(
         skeleton = kind  # 被動、姿態各有同名骨架
     rng = Rng(seed).fork("fallback.composer")
     keyword = request.keywords[0] if request.keywords else None
-    for _ in range(COMPOSER_TRIES):
+    for _ in range(library.composer.search.proposal.composer_tries):
         try:
             skill = compose_random_skill(
                 rng.next_u32(),
@@ -199,7 +191,7 @@ def _bases(
         attr = library.skill_scaling.weapon_class_attr(str(draft.get("weapon_req")))
         draft["scaling_attr"] = attr.value
     if kind == "active":
-        draft["ap_cost"] = DEFAULT_ACTIVE_AP
+        draft["ap_cost"] = library.composer.llm_cost.default_ap
     return [{**draft, **event} for event in _events(kind_choice, kind, rarity_rank(ctx.rarity))]
 
 
@@ -214,7 +206,8 @@ def _structures(
     library: ContentLibrary, base: dict[str, Any], rank: int
 ) -> Iterator[dict[str, Any]]:
     """依序產生「形狀 × 核心效果（× 第一個條件）」的草稿。"""
-    for shape_choice in _choices(_step(base, library), "shape", rank, WORKSHOP_MAX_SHAPES):
+    search = library.composer.search.proposal
+    for shape_choice in _choices(_step(base, library), "shape", rank, search.workshop_max_shapes):
         shape = fill_choice(shape_choice)
         if shape is None:
             continue
@@ -224,7 +217,7 @@ def _structures(
         if effects is None:
             continue
         cores = [c for c in effects.choices if c.info.get("core") and _usable(c, rank)]
-        for core in cores[:WORKSHOP_MAX_EFFECTS]:
+        for core in cores[: search.workshop_max_effects]:
             fills = variants(core)
             if not fills:
                 continue

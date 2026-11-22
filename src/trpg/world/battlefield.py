@@ -52,6 +52,7 @@ __all__ = [
     "contact_battlefield",
     "cut_battlefield",
     "cut_origin",
+    "fallback_zh",
 ]
 
 type XY = tuple[int, int]
@@ -61,11 +62,18 @@ FALLBACK_ZH: Final[dict[CutFallback, str]] = {
     "no_enemy_at": "舊存檔的遭遇沒有敵人位置",
     "boss": "頭目戰用專屬地圖",
     "objective": "這場的勝利條件只有原本的戰場有",
-    "too_small": "地圖不到 12×12",
-    "zones": "站位放不下（隔 3、2、1 格都試過）",
+    "too_small": "地圖不到 {cut}×{cut}",
+    "zones": "站位放不下（隔 {gaps} 格都試過）",
     "check_map": "切出來的戰場不合法",
 }
-"""退回模板的原因（畫面與報告用）。"""
+"""退回模板的原因（畫面與報告用）；占位由 :func:`fallback_zh` 照內容庫帶入。"""
+
+
+def fallback_zh(library: ContentLibrary, reason: CutFallback) -> str:
+    """退回模板的原因：戰場邊長照 ``field.cut_size``，試過的距離照三種開打距離由遠到近（HC-6a）。"""
+    rules = rules_of(library).field
+    gaps = sorted({rules.gap_other, rules.gap_ally_first, rules.gap_fallback}, reverse=True)
+    return FALLBACK_ZH[reason].format(cut=rules.cut_size, gaps="、".join(str(g) for g in gaps))
 
 
 @dataclass(frozen=True)

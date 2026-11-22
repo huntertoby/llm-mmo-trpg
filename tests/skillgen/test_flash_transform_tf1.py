@@ -208,7 +208,8 @@ def test_guardian_is_a_melee_reaction_that_bites_back() -> None:
     assert done.reaction is not None and done.reaction.event == "hit_by_melee"
     (effect,) = done.effects
     assert effect.type == "summon_beside" and effect.strike_other
-    assert effect.duration == lib.budget.flash_transform.guardian_duration == 1
+    # 2026-11-21 使用者改值（護主 1→3 輪）
+    assert effect.duration == lib.budget.flash_transform.guardian_duration == 3
 
 
 @pytest.mark.parametrize(

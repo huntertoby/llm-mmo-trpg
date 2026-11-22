@@ -3,7 +3,7 @@
 import type { TuningGroupPreset, TuningObjectSummary } from "../api/types";
 import { editCounts, ObjectList } from "./FieldForm";
 import type { Edits } from "./model";
-import { FILTER_ROWS, filterEmpty, filterSkills, ratioText, type SkillFilter } from "./skillModel";
+import { filterEmpty, filterRows, filterSkills, ratioText, type SkillFilter } from "./skillModel";
 
 export type ObjectTab = "unit" | "skill";
 
@@ -54,7 +54,7 @@ export function SkillList({ skills, presets, selected, query, filter, preset, ch
         </select>
       </label>
       <div className="tn-filters" role="group" aria-label="技能篩選">
-        {FILTER_ROWS.map((r) => (
+        {filterRows().map((r) => (
           <div key={r.label} className="tn-filter-row">
             <span className="muted small">{r.label}</span>
             {r.choices.map((c) => {

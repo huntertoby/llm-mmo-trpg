@@ -84,7 +84,6 @@ from trpg.shared.types import Attribute, top_attribute
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.proposal_topic import LlmProposer, TopicRequest, make_topic
 from trpg.skillgen.random_composer import (
-    KEYWORD_TRIES,
     ComposeError,
     KeywordExhaustedError,
     compose_with_stats,
@@ -92,7 +91,6 @@ from trpg.skillgen.random_composer import (
 from trpg.skillgen.validate import minimum_tier
 
 __all__ = [
-    "BRIDGE_VARIANT_CAP",
     "CANDIDATE_KINDS",
     "ROUTE_DUAL",
     "ROUTE_MAIN",
@@ -111,6 +109,7 @@ __all__ = [
     "region_first",
     "route_rank",
     "skill_has_keywords",
+    "topic_kinds",
 ]
 
 type AttrWant = Literal["same", "other"]
@@ -123,18 +122,17 @@ type _Graded = list[SkillDef | None]
 CANDIDATE_KINDS: tuple[CandidateKind, ...] = ("deepen", "bridge", "new")
 
 
-BRIDGE_VARIANT_CAP = 400
-"""橋接搜尋的種子變體數上限（PERF-3，玩法 PM 2026-11-03：照「最壞約 3 秒」定；見
-``docs/phases/PERF-3報告.md``）。橋接的多關鍵字選項（兩個持有的關鍵字、往外一步）共用這個上限；
-到上限還沒找到就照 06 6.27.4 ③ 放寬關鍵字（改試單一關鍵字），所以候選不會少。0 ＝ 不設上限。"""
-
-
 @dataclass(frozen=True, slots=True)
 class CandidateRules:
-    """產生器的參數（roguelite 取自 ``roguelite.yaml`` 的 ``candidates``）。"""
+    """產生器的參數（roguelite 取自 ``roguelite.yaml`` 的 ``candidates``）。
+    ``composer_share_permille``、``composer_tries``、``bridge_variant_cap`` 是 ``None`` 時照
+    ``roguelite.yaml`` 的 ``candidates``（HC-5b：原本是程式預設 500、8、400，同內容檔的值）；用
+    :meth:`share`、:meth:`tries`、:meth:`bridge_cap` 取值。"""
 
-    composer_share_permille: int = 500
-    composer_tries: int = 8
+    composer_share_permille: int | None = None
+    """每個候選先從隨機組合器找的機率（‰；其餘先從技能池找）。"""
+    composer_tries: int | None = None
+    """組合器每個候選最多試幾個種子。"""
     general_share_permille: int = 100
     """「新方向」那一格從通用池（基礎技能）抽的機率（‰；Phase 3-51，玩法決定 #55）。"""
     llm_share_permille: int = 0
@@ -143,11 +141,25 @@ class CandidateRules:
     """LLM 題目帶主題詞的機率（‰；Phase 4-L6）。"""
     llm_reaction_permille: int = 0
     """LLM 題目出反應技的機率（‰；Phase 4-L8b）；0 ＝ 一律主動技能。"""
-    bridge_variant_cap: int = BRIDGE_VARIANT_CAP
-    """橋接多關鍵字搜尋的組合器變體數上限（PERF-3，:data:`BRIDGE_VARIANT_CAP`）；0 ＝ 不設。"""
+    bridge_variant_cap: int | None = None
+    """橋接搜尋的種子變體數上限（PERF-3，玩法 PM 2026-11-03：照「最壞約 3 秒」定；見
+    ``docs/phases/PERF-3報告.md``）。橋接的多關鍵字選項（兩個持有的關鍵字、往外一步）共用這個上限；
+    到上限還沒找到就照 06 6.27.4 ③ 放寬關鍵字（改試單一關鍵字），所以候選不會少。0 ＝ 不設上限。"""
     llm_max_calls: int = 0
     """一份候選最多請 LLM 幾次（6L-2b：大世界機遇每份最多 1 張）；0 ＝ 不設（每種候選各一次，
     roguelite 照舊）。擲到請 LLM 的種類依「加深 → 橋接 → 新方向」的順序先到先用，其餘走組合器。"""
+
+    def share(self, library: ContentLibrary) -> int:
+        given = self.composer_share_permille
+        return library.roguelite.candidates.composer_share_permille if given is None else given
+
+    def tries(self, library: ContentLibrary) -> int:
+        given = self.composer_tries
+        return library.roguelite.candidates.composer_tries if given is None else given
+
+    def bridge_cap(self, library: ContentLibrary) -> int:
+        given = self.bridge_variant_cap
+        return library.roguelite.candidates.bridge_variant_cap if given is None else given
 
 
 @dataclass(frozen=True, slots=True)
@@ -326,6 +338,16 @@ def composer_kinds(library: ContentLibrary, seed: int, slot: str) -> tuple[str, 
     return _ACTIVE_FAMILY  # pragma: no cover - roll 一定在 [1, 總和]
 
 
+def topic_kinds(
+    library: ContentLibrary, kinds: tuple[str, ...], keywords: Sequence[str]
+) -> tuple[str, ...]:
+    """題目的關鍵字有只出在主動題的（#172，``active_only``：形態）時，被動、反應改出主動那一族；
+    其他照 ``kinds``（不消耗亂數）。"""
+    if all(library.keywords.topic_allows(k, kind) for k in keywords for kind in kinds):
+        return kinds
+    return _ACTIVE_FAMILY
+
+
 # ---------------------------------------------------------------------------
 # 來源
 # ---------------------------------------------------------------------------
@@ -352,7 +374,7 @@ class _Search:
     def capped(self, keywords: Sequence[str]) -> bool:
         """這次搜尋受變體上限管（PERF-3）：兩個以上的關鍵字、有設上限，而且是橋接（或指定關鍵字
         模式的新方向，5B-4d）。"""
-        if len(keywords) <= 1 or self.rules.bridge_variant_cap <= 0:
+        if len(keywords) <= 1 or self.rules.bridge_cap(self.library) <= 0:
             return False
         return self.kind == "bridge" or (
             self.kind == "new" and self.request.pinned_keyword is not None
@@ -369,7 +391,7 @@ class _Search:
 
     def exhausted(self, keywords: Sequence[str]) -> bool:
         """變體上限已用完（PERF-3）：剩下的多關鍵字選項跳過，照 6.27.4 ③ 放寬關鍵字。"""
-        return self.capped(keywords) and self.used() >= self.rules.bridge_variant_cap
+        return self.capped(keywords) and self.used() >= self.rules.bridge_cap(self.library)
 
     def from_llm(
         self, keywords: Sequence[str], want: AttrWant | None
@@ -475,12 +497,14 @@ class _Search:
         attrs = self.request.hero_attributes or None
         avoid = top_attribute(self.request.hero_attributes) if want == "other" else None
         capped = self.capped(keywords)
-        kinds = composer_kinds(self.library, self.request.seed, self.kind)
-        for _ in range(self.rules.composer_tries):
+        kinds = topic_kinds(
+            self.library, composer_kinds(self.library, self.request.seed, self.kind), keywords
+        )
+        for _ in range(self.rules.tries(self.library)):
             if self.exhausted(keywords):  # PERF-3：橋接上限用完
                 break
             seed = rng.next_u32()
-            left = self.rules.bridge_variant_cap - self.used() if capped else KEYWORD_TRIES
+            left = self.rules.bridge_cap(self.library) - self.used() if capped else None
             try:
                 found = compose_with_stats(
                     seed,
@@ -523,7 +547,7 @@ class _Search:
         from_llm = self.from_llm(keywords, want)
         if from_llm is not None:
             return from_llm[0], from_llm[1], True
-        composer_first = rng.chance_permille(self.rules.composer_share_permille)
+        composer_first = rng.chance_permille(self.rules.share(self.library))
         order: tuple[Literal["pool", "composer"], ...] = (
             ("composer", "pool") if composer_first else ("pool", "composer")
         )

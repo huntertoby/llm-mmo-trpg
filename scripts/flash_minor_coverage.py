@@ -28,7 +28,6 @@ from types import ModuleType
 
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
-from trpg.content.skills.constants import MAX_EFFECTS
 from trpg.sim.parallel import run_tasks
 from trpg.skillgen.flash_category import allowed_categories, template_kinds
 from trpg.skillgen.flash_offer import (
@@ -118,7 +117,7 @@ def _fmt(counts: dict[str, int]) -> str:
     return ",".join(f"{c}:{n}" for c, n in sorted(counts.items())) or "-"
 
 
-def _tags(skill: SkillDef) -> list[str]:
+def _tags(skill: SkillDef, max_effects: int) -> list[str]:
     """技能的結構特徵（判斷哪些模板套不上）。"""
     tags = [f"形狀:{skill.shape.type}", f"AP{skill.ap_cost or 1}"]
     if skill.followup is not None:
@@ -136,7 +135,7 @@ def _tags(skill: SkillDef) -> list[str]:
         tags.append("召喚")
     if "damage" not in types:
         tags.append("無傷害")
-    if len(skill.effects) >= MAX_EFFECTS:
+    if len(skill.effects) >= max_effects:
         tags.append("效果滿")
     return tags
 
@@ -273,7 +272,12 @@ def scan_chunk(library: ContentLibrary, task: tuple[list[tuple[str, SkillDef]], 
                     cats2_min=cats2,
                     reasons1="; ".join(k for k, _ in sorted(r1.items())),
                     reasons2="; ".join(k for k, _ in sorted(r2.items())),
-                    tags=",".join(_tags(audit.at_role_tier(library, skill, role_tier))),
+                    tags=",".join(
+                        _tags(
+                            audit.at_role_tier(library, skill, role_tier),
+                            library.ruleset.core.skill_limits.max_effects,
+                        )
+                    ),
                 )
             )
     return rows

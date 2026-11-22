@@ -5,8 +5,11 @@
     uv run python scripts/check.py          # 快速版（不跑標 slow 的測試、前端抽樣）
     uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1）
 
-pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（數字或 ``auto``）。
+pytest 平行數預設 12（QF-3a 從 8 調高），可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫
+（數字或 ``auto``）。
 單一測試預設逾時 300 秒（標 slow 的 1800 秒），見 ``pyproject.toml`` 的 ``timeout``。
+pytest 經看門狗 ``scripts/run_pytest.py`` 執行（QF-3a）：超過 10 分鐘沒有測試跑完就用 PID 結束
+自己開的整棵程序樹、重跑一次，再卡住判失敗並寫出卡在哪個測試（``TRPG_PYTEST_STALL_MINUTES`` 可改）。
 
 多個 agent 同時工作時：每個 agent 在自己的 worktree 執行本腳本（不要共用同一個 checkout），
 並設 ``UV_NO_SYNC=1``（或用 ``uv run --frozen``）避免 ``uv run`` 自動同步、重裝套件。
@@ -18,6 +21,10 @@ pytest 平行數預設 8，可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫（�
 （``tests/test_architecture.py`` 提供等效的依賴方向檢查）。前端檢查（``pnpm -C client``
 的 ``install --frozen-lockfile``、``typecheck``、``test``）在找不到 pnpm 時同樣略過
 （尋找順序 ``corepack`` → ``pnpm`` → ``npx``，見 ``trpg.cli.frontend.pnpm_command``；MAC-1）。
+
+全部步驟通過（沒有失敗、也沒有略過）且追蹤中的檔案沒有未 commit 的修改時，在
+``<git common dir>/pm-check-pass/<HEAD 的 tree hash>`` 寫一個戳記（QF-5）。push hook 看到要推的
+內容已有戳記，就不再重跑本腳本；合併後內容有任何不同（tree hash 變了）就照常重跑。
 
 工具的尋找順序：目前 Python 環境的模組（``sys.executable -m <tool>``）→
 與 ``sys.executable`` 同一資料夾的執行檔 → ``PATH`` 上的執行檔（``shutil.which``）。
@@ -37,6 +44,7 @@ from pathlib import Path
 from trpg.cli.frontend import pnpm_command
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WATCHDOG_SCRIPT = "scripts/run_pytest.py"
 
 
 @dataclass(frozen=True)
@@ -51,8 +59,8 @@ class Step:
 
 
 def pytest_workers() -> str:
-    """pytest 的平行數：環境變數 ``TRPG_PYTEST_WORKERS``（數字或 ``auto``），預設 8。"""
-    value = os.environ.get("TRPG_PYTEST_WORKERS", "").strip() or "8"
+    """pytest 的平行數：環境變數 ``TRPG_PYTEST_WORKERS``（數字或 ``auto``），預設 12。"""
+    value = os.environ.get("TRPG_PYTEST_WORKERS", "").strip() or "12"
     if value != "auto" and not (value.isdigit() and int(value) >= 0):
         raise SystemExit(f"TRPG_PYTEST_WORKERS 必須是非負整數或 auto，收到：{value!r}")
     return value
@@ -68,7 +76,8 @@ STEPS: tuple[Step, ...] = (
     Step("ruff format --check", "ruff", "ruff", ("format", "--check", ".")),
     Step("mypy", "mypy", "mypy", ()),
     Step("lint-imports", None, "lint-imports", (), optional=True),
-    Step("pytest", "pytest", "pytest", ("-q", "-n", pytest_workers())),
+    # QF-3a：經看門狗 scripts/run_pytest.py 跑（卡住時只結束自己的程序樹、重跑一次）。
+    Step("pytest", None, "pytest", ("-q", "-n", pytest_workers()), script=WATCHDOG_SCRIPT),
     # 前端（Phase 3-3）：找不到 pnpm（沒有安裝 Node）時印出警告並略過，不算失敗。
     _client_step("client install", "install", "--frozen-lockfile"),
     _client_step("client typecheck", "typecheck"),
@@ -162,10 +171,42 @@ def run_step(step: Step) -> str:
             return "略過"
         print(red(f"錯誤：找不到 {step.executable}，請先執行 `uv sync`。"), flush=True)
         return "失敗"
-    completed = subprocess.run([*command, *step.args], cwd=PROJECT_ROOT, check=False)
+    env = None
+    if step.script == WATCHDOG_SCRIPT:
+        # QF-3a：check.py 被單獨結束（例如 hook 逾時）時，看門狗會跟著收掉整棵 pytest 樹。
+        env = {**os.environ, "TRPG_WATCHDOG_PARENT_PID": str(os.getpid())}
+    completed = subprocess.run([*command, *step.args], cwd=PROJECT_ROOT, check=False, env=env)
     if completed.returncode == 0:
         return "通過"
     return "警告" if step.warn_only else "失敗"
+
+
+STAMP_DIR = "pm-check-pass"
+
+
+def _git(*args: str) -> str | None:
+    try:
+        done = subprocess.run(
+            ["git", *args], cwd=PROJECT_ROOT, capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return None
+    return done.stdout.strip() if done.returncode == 0 else None
+
+
+def write_pass_stamp() -> Path | None:
+    """追蹤中的檔案都已 commit 時，為 HEAD 的 tree 寫通過戳記；回傳戳記路徑（沒寫則 None）。"""
+    if _git("status", "--porcelain", "--untracked-files=no") != "":
+        return None
+    tree = _git("rev-parse", "HEAD^{tree}")
+    commit = _git("rev-parse", "HEAD")
+    common = _git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    if not (tree and commit and common):
+        return None
+    stamp = Path(common) / STAMP_DIR / tree
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    stamp.write_text(f"{commit}\n", encoding="utf-8")
+    return stamp
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -192,6 +233,8 @@ def main(argv: list[str] | None = None) -> int:
         print(red(f"\n失敗：{len(failed)} 個步驟（{'、'.join(failed)}）"))
         return 1
     print(green("\n全部檢查通過。"))
+    if all(result in ("通過", "警告") for _, result in results) and (stamp := write_pass_stamp()):
+        print(f"已寫入通過戳記：{stamp}（push 時同內容不再重跑）")
     return 0
 
 

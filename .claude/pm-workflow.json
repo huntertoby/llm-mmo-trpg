@@ -1,7 +1,19 @@
 {
   "checks": [
-    {"name": "完整檢查", "cmd": "uv run python scripts/check.py", "timeout": 1800},
-    {"name": "前端建置", "cmd": "corepack pnpm -C client build", "timeout": 900}
+    {
+      "name": "完整檢查",
+      "cmd": "uv run python scripts/check.py",
+      "timeout": 1800,
+      "skip_if_tree_stamped": "pm-check-pass"
+    },
+    {
+      "name": "前端建置",
+      "cmd": "corepack pnpm -C client build",
+      "timeout": 900
+    }
+  ],
+  "skip_checks_if_only": [
+    "*.md"
   ],
   "protect": [
     "docs/玩法決定紀錄.md",

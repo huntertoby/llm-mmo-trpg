@@ -79,9 +79,8 @@ from trpg.world.crafting import find_gear
 from trpg.world.crafting_actions import CraftAction, EnhanceAction, ImbueAction, RerollAction
 from trpg.world.economy_actions import EquipAction
 from trpg.world.errors import WorldActionError
-from trpg.world.growth import OPENING_END_LEVEL
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
-from trpg.world.opening_limits import FLASH_ZH, fight_problem
+from trpg.world.opening_limits import FLASH_ZH, fight_problem, opening_end_level
 from trpg.world.season_events import SeasonBossAction
 from trpg.world.state import CharacterState, OpeningStage, OpeningState, WorldState
 
@@ -143,7 +142,7 @@ _STARTER_BLOCKED: Final[tuple[tuple[tuple[type, ...], str], ...]] = (
     # ``opening_confirm``（正式選定，OB-2）不在這裡擋：條件由
     # :func:`trpg.world.opening_choice.choice_problem` 檢查
     ((ChangeRaceAction,), "正式選定武器與關鍵字之前不能換種族"),
-    ((FlashAction, FlashPickAction), FLASH_ZH.format(level=OPENING_END_LEVEL)),
+    ((FlashAction, FlashPickAction), FLASH_ZH),  # {level}：開局結束的等級（:func:`_reason`）
     ((LoadoutAction,), _closed("換技能")),
     ((HireAction,), HIRE_PANEL_ZH),
     ((ShadowAiAction,), SHADOW_AI_ZH),
@@ -151,13 +150,21 @@ _STARTER_BLOCKED: Final[tuple[tuple[tuple[type, ...], str], ...]] = (
     ((SeasonBossAction,), _closed("挑戰賽季 Boss")),
     ((SwearOathAction, ReleaseOathAction), _closed("立誓")),
 )
-"""``starter`` 階段（黑名單）依動作種類擋的（21.5 #150 第 7、9 點）。"""
+"""``starter`` 階段（黑名單）依動作種類擋的（21.5 #150 第 7、9 點）；字要經 :func:`_reason`。"""
 _ARMOR_SLOT_TYPES: Final[frozenset[SlotType]] = frozenset({"head", "body", "hands", "feet"})
 """入門期能打造、強化的部位（21.5 第 9 點「只限防具」；8.12 的防具欄位）。"""
 _MAIN_HAND_ZH: Final = "入門期不能換主手，找葛蘭選定武器後就能換"
 _ARMOR_ONLY_ZH: Final = "入門期的打造、強化、重骰、指定詞條只限防具"
 _CHOSEN_ZH: Final = "已經正式選定武器與關鍵字了"
-_BEFORE_LEVEL_4_ZH: Final = "4 級前不能溶掉技能或傳承"
+_BEFORE_END_ZH: Final = "{level} 級前不能溶掉技能或傳承"
+"""開局結束前不能溶掉與傳承（``{level}``＝開局結束的等級，:func:`_reason`）。"""
+
+
+def _reason(library: ContentLibrary, text: str) -> str:
+    """擋下的原因：``{level}`` 換成開局結束的等級（HC-7 起讀 ``world/newcomer.yaml``）。"""
+    return text.format(level=opening_end_level(library)) if "{level}" in text else text
+
+
 _LIMIT_ACTIONS: Final[Mapping[str, type]] = {
     "race": ChangeRaceAction,
     "flash": FlashAction,
@@ -194,11 +201,11 @@ def _pick_class_rule(
 
 
 def _starter_blocked_rule(
-    _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
+    library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
 ) -> str | None:
     for kinds, reason in _STARTER_BLOCKED:
         if isinstance(action, kinds):
-            return reason
+            return _reason(library, reason)
     return None
 
 
@@ -237,9 +244,9 @@ def _fight_rule(
 
 
 def _before_level_4_rule(
-    _library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
+    library: ContentLibrary, _world: WorldState, _char: CharacterState, action: WorldAction
 ) -> str | None:
-    return _BEFORE_LEVEL_4_ZH if isinstance(action, _NOT_BEFORE_LEVEL_4) else None
+    return _reason(library, _BEFORE_END_ZH) if isinstance(action, _NOT_BEFORE_LEVEL_4) else None
 
 
 def _chosen_rule(
@@ -278,7 +285,7 @@ def opening_gate(
             raise WorldActionError(problem)
 
 
-def opening_limits(char: CharacterState) -> dict[str, str]:
+def opening_limits(library: ContentLibrary, char: CharacterState) -> dict[str, str]:
     """畫面用（OB-5）：開局還沒結束的角色現在不開放的系統 → 原因。文字和 :func:`opening_gate` 擋
     動作時回的是同一份（同一張表），所以面板標的原因和送出動作被拒的原因一定相同。鍵：``race``
     換種族、``flash`` 閃現、``loadout`` 換技能、``hire`` 雇傭兵、``league`` 聯賽、``season_boss``
@@ -292,12 +299,12 @@ def opening_limits(char: CharacterState) -> dict[str, str]:
         for key, kind in _LIMIT_ACTIONS.items():
             for kinds, reason in _STARTER_BLOCKED:
                 if issubclass(kind, kinds):
-                    out[key] = reason
+                    out[key] = _reason(library, reason)
         out["main_hand"] = _MAIN_HAND_ZH
         out["smith"] = _ARMOR_ONLY_ZH
-    elif char.level < OPENING_END_LEVEL:
-        out["flash"] = FLASH_ZH.format(level=OPENING_END_LEVEL)
-    out["dissolve"] = _BEFORE_LEVEL_4_ZH
+    elif char.level < opening_end_level(library):
+        out["flash"] = _reason(library, FLASH_ZH)
+    out["dissolve"] = _reason(library, _BEFORE_END_ZH)
     return out
 
 
@@ -546,9 +553,6 @@ class RangeTrial:
     """``True``＝該大類的示範招；``False``＝關鍵字的起始技能（看示範）或自己的技能（靶場試玩）。"""
 
 
-MAX_TRIAL_KEYWORDS: Final = 2
-
-
 def trial_seed(opening_seed: int, weapon: str, keywords: Sequence[str]) -> int:
     """試打的戰鬥種子：開局種子＋武器＋關鍵字衍生（同一組選擇每次都一樣）。"""
     label = f"range|{opening_seed}|{weapon}|{','.join(keywords)}"
@@ -564,8 +568,9 @@ def _trial_skills(
         if not demos:
             raise WorldActionError(f"靶場沒有{weapon_class}的示範招")
         return tuple(library.skills[s] for s in demos), True
-    if len(keywords) > MAX_TRIAL_KEYWORDS or len(set(keywords)) != len(keywords):
-        raise WorldActionError(f"看示範最多 {MAX_TRIAL_KEYWORDS} 個不同的關鍵字")
+    limit = arena.trial_keywords_max
+    if len(keywords) > limit or len(set(keywords)) != len(keywords):
+        raise WorldActionError(f"看示範最多 {limit} 個不同的關鍵字")
     unknown = sorted(set(keywords) - set(library.keywords.ids()))
     if unknown:
         raise WorldActionError(f"未知的關鍵字：{', '.join(unknown)}")

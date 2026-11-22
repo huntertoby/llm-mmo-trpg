@@ -28,6 +28,7 @@ from trpg.content.battle import BOSS_TAG, SUMMON_ROLES, BossPhaseRules, Dice, Un
 from trpg.content.parts import BossPartRules
 from trpg.content.quantity import QuantityScale, quantity_cap
 from trpg.content.schemas import ContentModel
+from trpg.content.skills.limits import SkillLimits
 from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
@@ -221,6 +222,10 @@ class SkillSlots(ContentModel):
     passive: int = Field(ge=0)
     reaction: int = Field(ge=0)
     stance: int = Field(ge=0)
+    rule_change: int = Field(ge=0)
+    """規則改變型傳說（``rule_change_id``）每人最多裝幾個（Phase 3D-6，使用者決定；HC-7 從
+    :func:`~trpg.content.skills.queries.skill_slot_problems` 搬來，值 1）。不是一種欄位：這些技能照
+    ``kind`` 佔欄位，這裡另外限數量。"""
 
 
 class SummonGrowth(ContentModel):
@@ -483,6 +488,15 @@ class CoreRules(ContentModel):
     far_distance: int = Field(ge=2, le=20)
     """條件「遠距」（``long_range``，SK-1，06 6.38 第 1 點）的門檻：施放者和目標的距離（曼哈頓，
     巨型單位照佔地）至少這麼多格。初值 5，數值工坊可調。"""
+    crit_range_floor: int = Field(ge=1, le=20)
+    """暴擊範圍的下限（HC-7 從引擎搬來，值 2）：背刺、站定狙擊、形態、召喚物小特性等擴大暴擊範圍時，
+    最寬到自然骰這個值起暴擊（2＝自然 1 永遠不暴擊）。"""
+    opening_status_max_duration: int = Field(ge=1)
+    """開場狀態（單位範本的 ``opening_statuses``、``UnitSpawn.opening_statuses``）的持續回合上限
+    （Phase 5A-6b；HC-7 從 ``engine/battle.py`` 搬來，值 2）；不倒數的狀態維持原樣。"""
+    defense_break_default_permille: int = Field(ge=0, le=1000)
+    """破甲（``defense_break`` 狀態）沒有帶數值時的防禦降幅（‰；HC-7 從
+    ``engine/rules/statuses.py`` 搬來，值 100）。"""
     revive_landing_radius: int = Field(ge=0, le=6)
     """復活（``revive``，Phase 3D-8b）：原格被占用或不能站立時，站到這個距離（曼哈頓）內最近的空格；
     範圍內沒有空格就不能施放。舊紀錄沒有此欄位。"""
@@ -506,6 +520,9 @@ class CoreRules(ContentModel):
 
     # 掩護（1C）
     half_cover_hit_penalty: int = Field(ge=0)
+    tower_shield_cover_height: int = Field(ge=0)
+    """塔盾的自身半掩護（Phase 3I-2）視為幾層高（RG-5b，玩法PM交接 4.1.7）：攻擊者站得比目標高超過
+    這麼多層時無視（HC-7 從 ``engine/rules/combat.py`` 搬來，值 1）。"""
     shield_guard_hit_penalty: int = Field(ge=0)
     """盾兵掩護（RG-1，#162，09 9.6.6）：帶 ``shield_guard`` 的單位替相鄰的遠程同伴擋遠程攻擊時的
     命中懲罰（0＝不擋）。和半掩護、塔盾不疊加。"""
@@ -532,7 +549,11 @@ class CoreRules(ContentModel):
 
     # 技能預算（2B-2）
     tier_budget: dict[int, int]
-    """各階級（1–5）的基礎預算點數，必須嚴格遞增。"""
+    """各階級（1～``skill_limits.tiers``）的基礎預算點數，必須嚴格遞增。"""
+    skill_limits: SkillLimits
+    """技能結構的規則型上限（HC-4b 從 ``skills/constants.py`` 與 ``SkillDef.tier`` 搬來：階級數、
+    AP、效果數、冷卻、暴擊範圍下限、巢狀效果數……）；技能的檢查在 ``Ruleset`` 層
+    （:func:`trpg.content.skills.limits.skill_limit_problems`）。"""
     budget_reference_weapon_damage: int = Field(ge=1)
     """武器技的預算基準：倍率 100% ＝ 這麼多點。"""
 
@@ -642,10 +663,25 @@ class CoreRules(ContentModel):
         return self
 
     @model_validator(mode="after")
+    def _check_modifier_displace(self) -> CoreRules:
+        """修正規則的推拉距離上限不能比 ``max_displace_distance`` 大（HC-4b2；HC-4b 裁定 3）。"""
+        top = self.max_displace_distance
+        limits = self.skill_limits.modifier_bounds
+        for name in ("push_distance_delta_max", "on_hit_max_displace"):
+            value = getattr(limits, name)
+            if value > top:
+                raise ValueError(
+                    f"skill_limits.modifier_bounds.{name}（{value}）不能大於 max_displace_distance"
+                    f"（{top}）：推擊與拉扯的距離最後會截斷在 {top} 格，兩格要一起改"
+                )
+        return self
+
+    @model_validator(mode="after")
     def _check_tier_budget(self) -> CoreRules:
-        if sorted(self.tier_budget) != [1, 2, 3, 4, 5]:
-            raise ValueError("tier_budget 必須剛好有階級 1 到 5")
-        values = [self.tier_budget[t] for t in range(1, 6)]
+        tiers = list(range(1, self.skill_limits.tiers + 1))  # HC-4b：階級數讀 skill_limits
+        if sorted(self.tier_budget) != tiers:
+            raise ValueError(f"tier_budget 必須剛好有階級 1 到 {self.skill_limits.tiers}")
+        values = [self.tier_budget[t] for t in tiers]
         if any(a >= b for a, b in itertools.pairwise(values)) or values[0] < 1:
             raise ValueError(f"tier_budget 必須是隨階級嚴格遞增的正整數，收到 {values}")
         return self

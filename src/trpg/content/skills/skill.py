@@ -14,14 +14,6 @@ from trpg.content.skills.conditions import ConditionSpec
 from trpg.content.skills.constants import (
     _ELEMENT_VALUES,
     _GAMBLE_ONLY_FIELDS,
-    _MAX_AP_COST,
-    _MAX_BRANCH_EFFECTS,
-    _MAX_CONSUME_THEN,
-    _MAX_COOLDOWN_RESTORE,
-    _MAX_DISPLACE,
-    _MAX_MASTERY_MODIFIERS,
-    _MAX_MODIFIERS,
-    _MAX_ZONE_EFFECTS,
     _PERMILLE,
     _ZONE_ONLY_FIELDS,
     ADD_STACK,
@@ -46,13 +38,7 @@ from trpg.content.skills.constants import (
     HURL_OBJECT,
     INSCRIBE,
     INTERCEPT,
-    MAX_EFFECTS,
-    MAX_GRANT_DURATION,
-    MAX_ON_KILL_EFFECTS,
-    MAX_REFUND_AP,
-    MAX_SUMMON_COUNT,
     MAX_VARIANTS,
-    MIN_SKILL_CRIT_RANGE,
     ON_KILL_TYPES,
     PAIR_MOVES,
     PAIR_SHAPES,
@@ -97,6 +83,8 @@ from trpg.content.skills.effects import (
     SkillRuleError,
     _check_absorb_surface,
     _check_composition,
+    companion_effect,
+    composition_rules,
     composition_shapes,
     error_path_of,
     true_only_params,
@@ -127,8 +115,8 @@ _VARIANT_CACHE: dict[tuple[int, str], tuple[Any, Any]] = {}
 （值保留原物件，避免 ``id`` 重用時取錯）。"""
 
 
-_MIN_BESIDE_POWER = 100
-"""召喚到身邊（TF-1）縮小版的最低強度（‰）。"""
+NATURAL_WEAPON_ATTR_LABEL = "天生武器的屬性"
+"""看天生武器的技能（GS-3，``scaling_source: natural_weapon``）在算法句與卡片上的屬性名。"""
 
 
 class SkillDef(ContentModel):
@@ -138,8 +126,11 @@ class SkillDef(ContentModel):
     schema_version: Literal[1] = 1
     name_zh: str = Field(min_length=1)
     description_zh: str | None = None
-    tier: int = Field(ge=1, le=5)
-    rank: int = Field(default=1, ge=1, le=5)
+    tier: int = Field(ge=1)
+    """技能（＝角色）階級；上限是 ``core.yaml`` 的 ``skill_limits.tiers``（HC-4b，``Ruleset`` 層
+    檢查）。"""
+    rank: int = Field(default=1, ge=1)
+    """等階；上限是 ``core.yaml`` 的 ``skill_limits.max_rank``（HC-4d，``Ruleset`` 層檢查）。"""
     rarity: SkillRarity
     kind: SkillKind = "active"
     skeleton: str
@@ -154,6 +145,13 @@ class SkillDef(ContentModel):
     secondary_scaling_attr: Attribute | None = None
     """第二縮放屬性（Phase 2H-2）：與 ``scaling_attr`` 各占 50%（取平均，無條件捨去）。
     最低稀有度由 ``core.yaml`` 的 ``dual_scaling_min_rarity`` 決定（跨檔案檢查）。"""
+    scaling_source: Literal["natural_weapon"] | None = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    """縮放屬性改看「天生武器」（GS-3，#173，06 6.30 野性連擊）：命中與傷害（含對抗）都用施放者
+    目前形態天生武器的屬性（兩個屬性照 08 8.11 取較高）。只有技能層級條件是「在形態中」
+    （``in_form``）、不是武器技、沒有第二縮放屬性的技能可以填；``scaling_attr`` 只當不在形態中時
+    （工坊、三選一的泛稱）的顯示提示。沒填時不輸出，舊技能的序列化不變。"""
     mastery: Mastery | None = None
     """專精加成（Phase 2H-2）：施放者的 ``scaling_attr`` 基礎屬性是自己所有屬性中最高（含並列）
     時生效——``range`` 施放距離 +1、``duration`` 此技能施加的狀態持續 +1。雙屬性技能不可設定。"""
@@ -164,9 +162,10 @@ class SkillDef(ContentModel):
     reaction: ReactionSpec | None = None
     trap: TrapSpec | None = None
     cost: SkillCost = Field(default_factory=SkillCost)
-    crit_range: int | None = Field(default=None, ge=MIN_SKILL_CRIT_RANGE, le=19)
+    crit_range: int | None = Field(default=None, le=19)
     """擴大暴擊範圍（Phase 3D-7b，6.17 B）：自然骰不小於它就暴擊（17 ＝ 17–20）；取技能與武器
-    （法術技為 20）中較寬的。需要有傷害效果。"""
+    （法術技為 20）中較寬的。需要有傷害效果。下限是 ``core.yaml`` 的
+    ``skill_limits.min_crit_range``（HC-4b，``Ruleset`` 層檢查）。"""
     damage_permille: int | None = Field(default=None, ge=100, le=_PERMILLE - 1)
     """基礎傷害折扣（Phase 3D-7b，6.17 B）：技能的每個傷害效果再 × 它（‰；750 ＝ −25%），
     例如高變異技能用較低的基礎傷害換取暴擊與爆骰。需要有傷害效果。"""
@@ -229,10 +228,11 @@ class SkillDef(ContentModel):
     只有 ``content/skills/`` 的手寫技能可以填，LLM 提議、白板、工坊草稿的輸入會先丟掉這個欄位
     （:func:`drop_icon_prop`）。``None`` 時不輸出，沒填的技能序列化與雜湊不變。"""
 
-    stance_upkeep: int = Field(default=0, ge=0, le=2)
+    stance_upkeep: int = Field(default=0, ge=0)
     """姿態的維持費（Phase 3W-2b，6.34.4「費用」類）：每個自己的回合開始，一般姿態（不含形態）付
     這麼多點（武器技扣耐力、法術技扣法力，每點數量見 ``forms.yaml``）；付不起就自動解除姿態。
-    維持費換到預算折抵（``allowance.stance_upkeep_per_point``）；0＝免費。"""
+    維持費換到預算折抵（``allowance.stance_upkeep_per_point``）；0＝免費。上限是 ``core.yaml`` 的
+    ``skill_limits.max_stance_upkeep``（HC-4d，``Ruleset`` 層檢查）。"""
 
     @field_validator("skeleton")
     @classmethod
@@ -272,25 +272,24 @@ class SkillDef(ContentModel):
         return any(effect.type == BORROW_AP for effect in self.effects)
 
     def _check_ap_cost(self) -> None:
-        """主動技能的 AP：1～3；帶預支（AP-2，06 6.3「⚠ 0 AP 例外」）的必須是 0，也只有它可以 0。"""
+        """主動技能的 AP：至少 1（上限 ``skill_limits.max_ap_cost``，``Ruleset`` 層檢查）；帶預支
+        （AP-2，06 6.3「⚠ 0 AP 例外」）的必須是 0，也只有它可以 0。"""
         if self.borrows_ap:
             if self.ap_cost != 0:
                 raise ValueError(
                     f"帶預支（borrow_ap）的主動技能 ap_cost 必須是 0，收到 {self.ap_cost}"
                 )
             return
-        if self.ap_cost is None or not 1 <= self.ap_cost <= _MAX_AP_COST:
-            raise ValueError(f"主動技能的 ap_cost 必須是 1 到 {_MAX_AP_COST}，收到 {self.ap_cost}")
+        if self.ap_cost is None or self.ap_cost < 1:
+            raise ValueError(f"主動技能的 ap_cost 至少 1，收到 {self.ap_cost}")
 
     @model_validator(mode="after")
     def _check(self) -> SkillDef:
         if self.kind == "modifier":
             self._check_modifier()
         else:
-            if not 1 <= len(self.effects) <= MAX_EFFECTS:
-                raise ValueError(
-                    f"效果原語必須有 1 到 {MAX_EFFECTS} 個，收到 {len(self.effects)} 個"
-                )
+            if not self.effects:  # 上限：skill_limits.max_effects（Ruleset 層）
+                raise ValueError(f"效果原語至少 1 個，收到 {len(self.effects)} 個")
             if self.modifiers:
                 raise ValueError(
                     f"只有修正技能（kind: modifier）可以有 modifiers，收到 {self.kind}"
@@ -534,9 +533,6 @@ class SkillDef(ContentModel):
                 f"聚集段的形狀只能是 {'、'.join(GATHER_SHAPES)}，收到 {self.shape.type}"
             )
         _FOLLOWUP_CHECKS[follow.when](self.effects, self.shape, follow)
-        total = len(self.effects) + len(follow.effects)
-        if total > MAX_EFFECTS:
-            raise ValueError(f"複合技能兩段合計最多 {MAX_EFFECTS} 個效果，收到 {total} 個")
         try:
             self.followup_skill()
         except ValueError as exc:
@@ -691,13 +687,13 @@ class SkillDef(ContentModel):
         summons = [e for e in self.effects if e.type == SUMMON]
         if not summons:
             return
-        count = summons[0].count or 1
-        if count not in (1, MAX_SUMMON_COUNT):
-            raise ValueError(f"summon 的 count 只能是 1 或 {MAX_SUMMON_COUNT}，收到 {count}")
+        count = summons[0].count or 1  # 1 或 skill_limits.max_summon_count（Ruleset 層）
+        if count == "all":
+            raise ValueError("summon 的 count 不能是 all")
         power = summons[0].power_permille
         if count > 1 and (power is None or power >= _PERMILLE):
             raise ValueError(
-                "summon 的 count: 2 必須填小於 1000 的 power_permille（數量型分歧進化）"
+                f"summon 的 count: {count} 必須填小於 1000 的 power_permille（數量型分歧進化）"
             )
         if count == 1 and power is not None and power < _PERMILLE:
             raise ValueError(
@@ -721,11 +717,9 @@ class SkillDef(ContentModel):
             )
         if spec.unit is None or spec.duration is None:
             raise ValueError("summon_beside 必須填 unit 與 duration")
-        if (
-            spec.power_permille is not None
-            and not _MIN_BESIDE_POWER <= spec.power_permille <= _PERMILLE
-        ):
-            raise ValueError("summon_beside 的 power_permille 必須在 100～1000（縮小版召喚物）")
+        if spec.power_permille is not None and not 1 <= spec.power_permille <= _PERMILLE:
+            # 下限是 core.yaml 的 skill_limits.min_beside_power_permille（HC-4d，Ruleset 層檢查）
+            raise ValueError("summon_beside 的 power_permille 必須在 1～1000（縮小版召喚物）")
         if spec.strike_other and (self.kind != "reaction" or self.shape.type != "single"):
             raise ValueError("summon_beside 的 strike_other 只能用在形狀 single 的反應技")
 
@@ -754,10 +748,6 @@ class SkillDef(ContentModel):
             raise ValueError("grant_skill 必須填 skill 與 duration")
         if grant.skill == self.id:
             raise ValueError("grant_skill 不能給出自己")
-        if grant.duration > MAX_GRANT_DURATION:
-            raise ValueError(
-                f"grant_skill 的 duration 最多 {MAX_GRANT_DURATION}，收到 {grant.duration}"
-            )
 
     def _check_delayed_damage(self) -> None:
         """定時炸彈（Phase 3D-8b）：只能用在法術技；``dice``、``element``、``rounds``、
@@ -785,8 +775,8 @@ class SkillDef(ContentModel):
         if not top or self.kind != "active":
             raise ValueError(f"{where}：on_kill 只能用在主動技能自己的傷害效果")
         subs = effect.on_kill
-        if not 1 <= len(subs) <= MAX_ON_KILL_EFFECTS:
-            raise ValueError(f"{where}：on_kill 必須有 1 到 {MAX_ON_KILL_EFFECTS} 個效果")
+        if not subs:  # 上限：skill_limits.max_on_kill_effects（Ruleset 層）
+            raise ValueError(f"{where}：on_kill 至少 1 個效果")
         for i, sub in enumerate(subs):
             self._check_on_kill_sub(f"{at}.on_kill[{i}]", sub)
 
@@ -800,8 +790,8 @@ class SkillDef(ContentModel):
                 f"{at}：對象只能是施放者（省略 affects 或寫 self），不可自帶 condition"
             )
         if sub.type == REFUND_AP:
-            if sub.amount is None or not 1 <= sub.amount <= MAX_REFUND_AP:
-                raise ValueError(f"{at}：必須填 amount（1–{MAX_REFUND_AP}）")
+            if sub.amount is None or sub.amount < 1:  # 上限：skill_limits.max_refund_ap
+                raise ValueError(f"{at}：必須填 amount（至少 1）")
         elif sub.type == REFUND_COOLDOWN:
             if not self.cost.cooldown:
                 raise ValueError(f"{at}：技能沒有冷卻（cost.cooldown），沒有東西可以歸零")
@@ -869,8 +859,8 @@ class SkillDef(ContentModel):
             allowed = "、".join(ZONE_CASTER_SHAPES)
             raise ValueError(f"{where}：anchor: caster 的形狀必須是 {allowed}")
         subs = zone.effects or ()
-        if not 1 <= len(subs) <= _MAX_ZONE_EFFECTS:
-            raise ValueError(f"{where}：effects 必須有 1 到 {_MAX_ZONE_EFFECTS} 個效果")
+        if not subs:  # 上限：skill_limits.max_zone_effects（Ruleset 層）
+            raise ValueError(f"{where}：effects 至少 1 個效果")
         for sub_index, sub in enumerate(subs):
             if sub.type not in ZONE_EFFECT_TYPES:
                 allowed = "、".join(ZONE_EFFECT_TYPES)
@@ -939,10 +929,8 @@ class SkillDef(ContentModel):
         """賭注分支或失手反噬的效果列表：1–2 個、類型在 ``allowed`` 內、不自帶 ``condition``；
         反噬的對象只能是施放者自己；倍率與自傷各至多一個，而且技能要有傷害效果可以乘。
         ``path`` 是分支的完整路徑（省略＝``where``；4-L10a 讓巢狀錯誤帶完整路徑）。"""
-        if not 1 <= len(branch) <= _MAX_BRANCH_EFFECTS:
-            raise ValueError(
-                f"{where}：必須有 1 到 {_MAX_BRANCH_EFFECTS} 個效果，收到 {len(branch)}"
-            )
+        if not branch:  # 上限：skill_limits.max_branch_effects（Ruleset 層）
+            raise ValueError(f"{where}：至少 1 個效果，收到 {len(branch)}")
         has_damage = any(e.type == "damage" for e in self.effects)
         for i, sub in enumerate(branch):
             at = f"{where}[{i}]（{sub.type}）"
@@ -1053,10 +1041,7 @@ class SkillDef(ContentModel):
         types = [e.type for e in self.effects]
         if self.kind in ("reaction", "stance") and "teleport" in types:
             raise ValueError("反應技與姿態不能有 teleport（沒有可選的目標格）")
-        if self.kind == "stance" and self.shape.type != "self":
-            raise ValueError(f"姿態的形狀只能是 self，收到 {self.shape.type}")
-        if ENTER_FORM in types and (self.kind != "stance" or len(types) != 1):
-            raise ValueError("enter_form（進入形態）只能是姿態（kind: stance）唯一的效果")
+        self._check_form_skill(types)
         if self.kind == "reaction":
             assert self.reaction is not None
             if self.shape.type not in ("self", "single"):
@@ -1075,6 +1060,40 @@ class SkillDef(ContentModel):
             raise ValueError("intercept 只能用在反應技")
         self._check_reroll(types)
 
+    def _check_form_skill(self, types: list[str]) -> None:
+        """姿態的形狀與 ``enter_form`` 的位置；帶進入時效果（GS-3）的細節見
+        :meth:`_check_form_entry`。"""
+        entry = self.form_entry_effect
+        if self.kind == "stance" and self.shape.type != "self" and entry is None:
+            raise ValueError(f"姿態的形狀只能是 self，收到 {self.shape.type}")
+        if ENTER_FORM in types and (self.kind != "stance" or (len(types) != 1 and entry is None)):
+            raise ValueError(
+                "enter_form（進入形態）只能是姿態（kind: stance）唯一的效果"
+                "（高階化身排第一個時，後面可以再跟 1 個進入時效果）"
+            )
+        if entry is not None:
+            self._check_form_entry(entry)
+
+    def _check_form_entry(self, entry: EffectSpec) -> None:
+        """化身技的進入時效果（GS-3，#173，06 6.30「高階化身的進入時效果」）：姿態、形狀只能是自己
+        或實心環形（「周圍 N 格」）；形狀是自己時效果只能給自己；不能帶幅度（形態幅度與化形專精都
+        不乘它）。階級下限與冷卻下限是規則數值（``core.yaml`` 的 ``skill_limits``，
+        :func:`~trpg.content.skills.limits.skill_limit_problems`）。"""
+        if self.kind != "stance":
+            raise ValueError("進入時效果只有化身技（姿態）可以帶")
+        rule = composition_rules()[ENTER_FORM]
+        allowed = (*(rule.allowed_shapes or ()), *rule.companion_shapes)
+        if self.shape.type not in allowed:
+            raise ValueError(
+                f"帶進入時效果的化身技形狀只能是 {'、'.join(allowed)}，收到 {self.shape.type}"
+            )
+        if self.shape.type != "self" and not self.shape.solid:
+            raise ValueError("帶進入時效果的化身技用環形時要寫 solid: true（周圍 N 格）")
+        if self.shape.type == "self" and entry.affects != "self":
+            raise ValueError("形狀是自己時，進入時效果只能給自己（要寫 affects: self）")
+        if entry.magnitude_permille is not None:
+            raise ValueError("進入時效果不能填 magnitude_permille（形態幅度不乘在它上面）")
+
     def _check_reroll(self, types: list[str]) -> None:
         """重擲（SK-3，#166 6.38-12）：只能是反應技唯一的效果，事件只能是 :data:`REROLL_EVENTS`；
         這兩個事件也只能配重擲。"""
@@ -1087,10 +1106,8 @@ class SkillDef(ContentModel):
 
     def _check_modifier(self) -> None:
         """修正技能（3C-2）：裝在被動欄位、不花 AP、沒有觸發；效果都寫在 ``modifiers`` 裡。"""
-        limit = _MAX_MODIFIERS if self.exclusive_group is None else _MAX_MASTERY_MODIFIERS
-        if not 1 <= len(self.modifiers) <= limit:
-            count = len(self.modifiers)
-            raise ValueError(f"修正技能的 modifiers 必須有 1 到 {limit} 條，收到 {count} 條")
+        if not self.modifiers:  # 上限：skill_limits.max_modifiers／max_mastery_modifiers
+            raise ValueError(f"修正技能的 modifiers 至少 1 條，收到 {len(self.modifiers)} 條")
         if self.effects:
             raise ValueError("修正技能（kind: modifier）的 effects 必須為空（效果寫在 modifiers）")
         if self.shape.type != "self":
@@ -1134,10 +1151,27 @@ class SkillDef(ContentModel):
         if len(set(self.weapon_only)) != len(self.weapon_only):
             raise ValueError("weapon_only 不可重複")
 
+    def _check_scaling_source(self) -> None:
+        """看天生武器的縮放（GS-3，#173）：技能層級條件要是「在形態中」，不能是武器技、不能有第二
+        縮放屬性或專精（天生武器已有自己的雙屬性取法）。"""
+        if self.scaling_source is None:
+            return
+        if self.condition is None or self.condition.type != "in_form":
+            raise ValueError(
+                "scaling_source: natural_weapon 只能用在條件是「在形態中」（in_form）的技能"
+            )
+        if self.category == "weapon":
+            raise ValueError("scaling_source: natural_weapon 不能用在武器技（武器技看手上武器）")
+        if self.secondary_scaling_attr is not None or self.mastery is not None:
+            raise ValueError(
+                "scaling_source: natural_weapon 不能和 secondary_scaling_attr、mastery 並用"
+            )
+
     def _check_scaling_and_mastery(self) -> None:
         """雙屬性縮放與專精加成的結構（2H-2；稀有度門檻是跨檔案檢查）。"""
         if self.secondary_scaling_attr == self.scaling_attr:
             raise ValueError("secondary_scaling_attr 不可和 scaling_attr 相同")
+        self._check_scaling_source()
         if self.mastery is None:
             return
         if self.secondary_scaling_attr is not None:
@@ -1175,10 +1209,8 @@ class SkillDef(ContentModel):
                 raise ValueError(f"{where}：只有 consume_status 使用 then、scale、splash")
             return
         then = effect.then or ()
-        if not 1 <= len(then) <= _MAX_CONSUME_THEN:
-            raise ValueError(
-                f"{where}：then 必須有 1 到 {_MAX_CONSUME_THEN} 個效果，收到 {len(then)}"
-            )
+        if not then:  # 上限：skill_limits.max_consume_then（Ruleset 層）
+            raise ValueError(f"{where}：then 至少 1 個效果，收到 {len(then)}")
         if effect.scale == "stacks" and effect.stack is None:
             raise ValueError(f"{where}：scale: stacks 必須填 stack（目標型層數）")
         if effect.scale != "stacks" and effect.stack is not None:
@@ -1194,11 +1226,10 @@ class SkillDef(ContentModel):
             self._check_effect(f"{at}.then[{sub_index}]", sub)
 
     def _check_restore_resource(self, where: str, effect: EffectSpec) -> None:
-        """``restore_resource`` 的結構（3D-1）：必須填 ``resource``；冷卻最多 −2。"""
+        """``restore_resource`` 的結構（3D-1）：必須填 ``resource``（冷卻一次最多縮短幾回合是
+        ``skill_limits.max_cooldown_restore``，``Ruleset`` 層檢查）。"""
         if effect.resource is None:
             raise ValueError(f"{where}：restore_resource 必須填 resource（mana 或 cooldown）")
-        if effect.resource == "cooldown" and (effect.amount or 1) > _MAX_COOLDOWN_RESTORE:
-            raise ValueError(f"{where}：冷卻最多縮短 {_MAX_COOLDOWN_RESTORE} 回合")
 
     def _check_variable_damage(self, where: str, effect: EffectSpec, *, top: bool) -> None:
         """``explode``、``scaling``（Phase 3D-7b）與 ``lifesteal_permille``、``split_heal``
@@ -1237,6 +1268,22 @@ class SkillDef(ContentModel):
             raise ValueError(f"{where}：flat_bonus 只能用在技能自己的傷害、治療或護盾效果")
         if effect.type == "damage" and self.category != "spell":
             raise ValueError(f"{where}：flat_bonus（固定值加成）的傷害只限法術技")
+
+    @staticmethod
+    def _check_max_hp_shield(where: str, effect: EffectSpec, *, top: bool) -> None:
+        """看最大 HP 的護盾（GS-3，#173，``shield`` 的 ``max_hp_permille``）：只有技能自己的護盾，
+        不擲骰、不加固定值、不帶附帶效果狀態；沒填時照舊要有 ``dice``。召喚的 ``max_hp_permille``
+        是另一個意思，不在這裡。"""
+        if effect.type != "shield":
+            return
+        if effect.max_hp_permille is None:
+            if effect.dice is None:
+                raise ValueError(f"{where}：護盾要填 dice 或 max_hp_permille")
+            return
+        if not top:
+            raise ValueError(f"{where}：max_hp_permille 只能用在技能自己的護盾效果")
+        if effect.dice is not None or effect.flat_bonus is not None or effect.status is not None:
+            raise ValueError(f"{where}：max_hp_permille 的護盾不能再填 dice、flat_bonus、status")
 
     @staticmethod
     def _check_form_bonus(where: str, effect: EffectSpec, *, top: bool) -> None:
@@ -1300,14 +1347,14 @@ class SkillDef(ContentModel):
             self._check_restore_resource(where, effect)
         elif effect.resource is not None:
             raise ValueError(f"{where}：只有 restore_resource 使用 resource")
-        if effect.type in ("push", "pull") and (
-            effect.distance is None or not 1 <= effect.distance <= _MAX_DISPLACE
-        ):
+        if effect.type in ("push", "pull") and (effect.distance is None or effect.distance < 1):
+            # 上限：skill_primitives.yaml 的參數範圍（載入內容庫與驗證器的引用檢查；HC-4b）
             raise ValueError(
-                f"{where}：推擊與拉扯的距離必須是 1 到 {_MAX_DISPLACE} 格，收到 {effect.distance}"
+                f"{where}：推擊與拉扯必須填 distance，而且不可為 0 或負數，收到 {effect.distance}"
             )
         self._check_form_bonus(where, effect, top=top)
         self._check_flat_bonus(where, effect, top=top)
+        self._check_max_hp_shield(where, effect, top=top)
         _check_absorb_surface(where, effect)
         if effect.type != "damage":
             return
@@ -1360,7 +1407,10 @@ class SkillDef(ContentModel):
         return next((e.rule for e in self.effects if e.type == RULE_CHANGE), None)
 
     def scaling_value(
-        self, get: Callable[[Attribute], int], weapon: WeaponDef | None = None
+        self,
+        get: Callable[[Attribute], int],
+        weapon: WeaponDef | None = None,
+        natural: WeaponDef | None = None,
     ) -> int:
         """技能縮放屬性的值（Phase 2H-2）：雙屬性為兩個屬性的平均（無條件捨去），否則為主屬性。
         ``get`` 讀屬性值（引擎傳有效屬性，卡片傳面板屬性）；引擎的 ``skill_scaling_value`` 與卡片的
@@ -1368,7 +1418,11 @@ class SkillDef(ContentModel):
 
         **武器技看手上武器的屬性**（Phase 3H-6，玩法決定 #45）：``category: weapon`` 且給了
         ``weapon`` 時改用 :meth:`WeaponDef.scaling_value`（雙屬性照取較高／取平均），技能自己的
-        ``scaling_attr`` 只當顯示提示。沒有武器時（工坊、三選一的泛稱）退回技能自己的。"""
+        ``scaling_attr`` 只當顯示提示。沒有武器時（工坊、三選一的泛稱）退回技能自己的。
+        ``natural``：施放者在形態中時的天生武器；``scaling_source: natural_weapon`` 的技能用它
+        （GS-3，#173）。"""
+        if self.scaling_source == "natural_weapon" and natural is not None:
+            return natural.scaling_value(get)  # GS-3：天生武器的屬性（雙屬性取較高）
         if self.category == "weapon" and weapon is not None:
             # 魔劍士方案 A（3I-3，#46）：武器技可帶一個心智第二屬性，和武器的縮放值取平均
             base = weapon.scaling_value(get)
@@ -1389,9 +1443,14 @@ class SkillDef(ContentModel):
             return weapon.scaling_value(get)
         return get(self.scaling_attr)
 
-    def contest_attr(self, weapon: WeaponDef | None = None) -> Attribute:
-        """對抗判定（擊倒、位移、狀態抵抗）守方被比的單一屬性；武器技為手上武器的主屬性。攻方的值是
-        :meth:`scaling_value`（雙屬性為平均，3I-3b）。"""
+    def contest_attr(
+        self, weapon: WeaponDef | None = None, natural: WeaponDef | None = None
+    ) -> Attribute:
+        """對抗判定（擊倒、位移、狀態抵抗）守方被比的單一屬性；武器技為手上武器的主屬性；看天生武器
+        的技能（GS-3）為天生武器的主屬性。攻方的值是 :meth:`scaling_value`（雙屬性為平均，
+        3I-3b）。"""
+        if self.scaling_source == "natural_weapon" and natural is not None:
+            return natural.scaling_attr
         if self.category == "weapon" and weapon is not None:
             return weapon.scaling_attr
         return self.scaling_attr
@@ -1401,6 +1460,8 @@ class SkillDef(ContentModel):
         ／取平均；3I-3 的心智第二屬性再取平均），沒有武器寫「武器屬性」（卡片另列由武器資料產生的
         例子）；其他技能寫自己的縮放屬性。"""
         second = self.secondary_scaling_attr
+        if self.scaling_source == "natural_weapon":  # GS-3
+            return NATURAL_WEAPON_ATTR_LABEL
         if self.category != "weapon":
             names = self.scaling_attr.display_name
             return names if second is None else f"{names}／{second.display_name}（取平均）"
@@ -1459,6 +1520,14 @@ class SkillDef(ContentModel):
             if effect.type == ENTER_FORM:
                 return effect.form
         return None
+
+    @property
+    def form_entry_effect(self) -> EffectSpec | None:
+        """化身技的進入時效果（GS-3，#173）：``enter_form`` 之後的那 1 個效果；沒有時為
+        ``None``。"""
+        if not self.effects or self.effects[0].type != ENTER_FORM:
+            return None
+        return companion_effect(self.effects)
 
     @property
     def form_magnitude(self) -> int:

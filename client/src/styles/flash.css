@@ -79,6 +79,23 @@
   white-space: normal;
 }
 
+/* HC-6c（美術 HC-3 看圖）：重閃鈕懸掛縮排——「重閃」固定在左邊、不換行，內文在右邊換行並對齊 */
+.reflash-slots button:has(> .reflash-word) {
+  display: flex;
+  align-items: baseline;
+  gap: 1em;
+}
+
+.reflash-word {
+  flex: none;
+  white-space: nowrap;
+}
+
+.reflash-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .flash-warning {
   margin: 4px 0;
   color: #f0c060;

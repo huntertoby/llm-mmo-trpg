@@ -55,6 +55,7 @@ from trpg.engine.events import (
     EventBase,
     ReactionTriggered,
     StatusApplied,
+    StatusSaveRolled,
     SurfaceChanged,
     SurfaceEntered,
     TrapTriggered,
@@ -142,6 +143,9 @@ class PathEvent:
     chance: Fraction | None = None
     """``slip_check`` 的失敗機率（精確計算，不擲骰）。"""
     detail: str | None = None
+    save_roll: bool = False
+    """``status``：施加前移動者擲了抵抗（``status_save_rolled``），所以觸發了也不一定得到（HC-6c，AR-X10
+    補件：陷阱不確定時，畫面照這個分「觸發就一定附上」與「還要另外擲」）。任一分支擲過就是真。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -381,11 +385,18 @@ def _trace(result: ResolveResult, unit_id: UnitId, legal: int) -> _Trace:
     """一次模擬的事件依「目前所在的格子」分組（離開一格時的事件記在那一格）。"""
     by_step: dict[int, list[PathEvent]] = defaultdict(list)
     step = 0
+    saves: list[str] = []  # 移動者擲過抵抗、還沒對上施加的狀態（HC-6c）
     for event in result.events:
         if isinstance(event, UnitMoved) and event.unit_id == unit_id and event.mode == "walk":
             step += 1
             continue
+        if isinstance(event, StatusSaveRolled) and event.target_id == unit_id:
+            saves.append(event.status_id)
+            continue
         converted = _convert(event, unit_id)
+        if converted is not None and converted.kind == "status" and converted.status_id in saves:
+            saves.remove(converted.status_id)
+            converted = replace(converted, save_roll=True)
         if converted is not None:
             by_step[step].append(converted)
     final = result.state.units[unit_id]
@@ -515,12 +526,14 @@ def _combine(event: PathEvent, other: PathEvent) -> PathEvent:
     """兩邊都有的同一件事：傷害範圍取聯集（最小值為 ``None`` 時取對方的）；``stopped`` 的原因
     不同時算「可能」。"""
     certain = event.certain and event.detail == other.detail
+    save_roll = event.save_roll or other.save_roll
     if event.amount_max is None or other.amount_max is None:
-        return replace(event, certain=certain)
+        return replace(event, certain=certain, save_roll=save_roll)
     mins = [a for a in (event.amount_min, other.amount_min) if a is not None]
     return replace(
         event,
         certain=certain,
+        save_roll=save_roll,
         amount_min=min(mins) if mins else None,
         amount_max=max(event.amount_max, other.amount_max),
     )

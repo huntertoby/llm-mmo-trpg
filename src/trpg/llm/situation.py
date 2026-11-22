@@ -34,6 +34,7 @@ from trpg.content.world_situations import (
     proposal_problems,
 )
 from trpg.llm.client import ChatMessage, LLMClient
+from trpg.llm.config import LLM_DEFAULTS, client_config
 from trpg.llm.errors import LLMError
 from trpg.llm.prompts.escape import escape_text, player_block, wrap_player_input
 from trpg.llm.response import clean_response
@@ -53,7 +54,7 @@ SITUATION_PROMPT_VERSION: Final = "situation-check/4"
 ``situation-check/3``（6R-2，#137）：資料區加 ``<player>``（名字與稱謂）、稱謂中性的規則。
 ``situation-check/4``（6R-2b）：``<player>`` 的名字包進 ``<player_input>``、叫名字的稱謂寫
 ``{name}``；玩家的回答改稱「最後一段 <player_input>」。"""
-DEFAULT_SITUATION_ATTEMPTS: Final = 2
+DEFAULT_SITUATION_ATTEMPTS: Final = LLM_DEFAULTS.situation_attempts
 
 SITUATION_TASK = """你是「{world_name}」世界的說書人助手，負責 TRPG 式的情境判定。
 世界簡介：{summary}
@@ -217,10 +218,14 @@ def propose_situation(
     client: LLMClient,
     request: SituationRequest,
     *,
-    attempts: int = DEFAULT_SITUATION_ATTEMPTS,
+    attempts: int | None = None,
     world: WorldStyle | None = None,
 ) -> SituationProposalOutcome:
-    """請模型提議一次情境判定；不合法帶錯誤重試，用盡或連不上就降級（不拋 LLM 錯誤）。"""
+    """請模型提議一次情境判定；不合法帶錯誤重試，用盡或連不上就降級（不拋 LLM 錯誤）。
+    ``attempts`` 省略＝``client`` 的設定（``config/llm.toml`` 的 ``situation_attempts``；
+    HC-7 b）。"""
+    if attempts is None:
+        attempts = client_config(client).situation_attempts
     schema = situation_schema(request)
     previous: str | None = None
     feedback: list[str] = []

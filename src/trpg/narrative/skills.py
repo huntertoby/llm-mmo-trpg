@@ -22,6 +22,7 @@ from trpg.content.rule_changes import RuleChangeDef, rule_change_sentence
 from trpg.content.skills import (
     CHEAT_DEATH_STATUS,
     DAMAGE_MULTIPLIER,
+    NATURAL_WEAPON_ATTR_LABEL,
     ON_KEYWORD_EXPLOITED,
     REDIRECT_STATUS,
     SELF_DAMAGE_OF_HIT,
@@ -44,6 +45,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.rules.statuses import scaled_status_def
+from trpg.engine.skills.scaling import MASTERY_BONUS
 from trpg.engine.summons.core import SummonStats
 from trpg.narrative.skill_icon import SkillIcon, skill_icon
 from trpg.narrative.skill_icon_art import icon_art_rules
@@ -157,7 +159,10 @@ def shape_summary(library: ContentLibrary, shape: ShapeSpec) -> str:
     if shape.type == "chain" and falloff:  # 連鎖衰減（BAL-13d，06 6.5「BAL-13c 定」）
         parts.append(f"每跳 −{_percent(falloff)}%")
     radius = shape.param_values().get("radius")
-    if shape.type == "ring" and isinstance(radius, int) and radius >= 2:  # noqa: PLR2004
+    if shape.type == "ring" and shape.solid and isinstance(radius, int):
+        # GS-3（#173）：實心環形＝「周圍 N 格」，距離 1～N 都打（含相鄰），不含自己
+        parts.append(f"周圍 {radius} 格內都打，含相鄰，不含自己")
+    elif shape.type == "ring" and isinstance(radius, int) and radius >= 2:  # noqa: PLR2004
         # 6F-3（12B 對照 #8）：環形只打切比雪夫距離恰為半徑的一圈，相鄰的打不到；卡片寫清楚
         parts.append(f"只打距離 {radius} 的一圈，不含相鄰")
     return f"{name}（{'，'.join(parts)}）" if parts else name
@@ -226,7 +231,9 @@ def scaling_label(skill: SkillDef, lib: ContentLibrary | None = None) -> str:
     """縮放屬性的簡稱：單屬性為「智力」，雙屬性為「力量／智力」（Phase 2H-2）。武器技看手上武器
     （3H-6）：給了 ``lib`` 時寫實際的屬性名——所需武器大類的主屬性（例「力量」），帶心智第二屬性
     時接在後面（「力量／智力」，3I-3；玩法 PM 2026-10-24：武器技所有數值都看手上武器，不加例外）；
-    沒有 ``lib`` 時寫「武器屬性」。"""
+    沒有 ``lib`` 時寫「武器屬性」。看天生武器的技能（GS-3）寫「天生武器的屬性」。"""
+    if skill.scaling_source == "natural_weapon":
+        return NATURAL_WEAPON_ATTR_LABEL
     if skill.category == "weapon":
         held = _CARD_WEAPON.get()
         if held is not None:  # 3-55：有持有者就寫那把武器實際的屬性（已含第二屬性與取平均）
@@ -273,7 +280,11 @@ def mastery_text(
 ) -> str:
     """專精加成的說明；``active`` 為 ``None`` 表示不知道單位（只顯示加成內容）。武器技（3H-6）
     看手上武器的屬性。"""
-    effect = "施放距離 +1" if skill.mastery == "range" else "施加的狀態持續 +1 回合"
+    effect = (
+        f"施放距離 +{MASTERY_BONUS}"
+        if skill.mastery == "range"
+        else f"施加的狀態持續 +{MASTERY_BONUS} 回合"
+    )
     attr = (
         scaling_detail(skill, weapon)
         if skill.category == "weapon"
@@ -670,8 +681,13 @@ def _strength_text(lib: ContentLibrary, status: StatusDef, magnitude: int) -> st
 def _shield(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     """護盾（清單 3.6）：吸收量與持續時間（``shielded`` 狀態的預設回合）。"""
     status = lib.ruleset.status_def(SHIELD_STATUS)
-    amount = "" if spec.dice is None else f"{_dice_flat(lib, spec)}＋"
     rounds = spec.duration or status.duration
+    if spec.max_hp_permille is not None:  # GS-3：看施放者目前的最大 HP
+        return (
+            f"護盾（吸收量＝你目前最大 HP 的 {_percent(spec.max_hp_permille)}%，"
+            f"持續 {rounds} 回合；已有護盾時取較大值）"
+        )
+    amount = "" if spec.dice is None else f"{_dice_flat(lib, spec)}＋"
     return (
         f"護盾（吸收量 {amount}{scaling_label(skill, lib)}加成，持續 {rounds} 回合；"
         "已有護盾時取較大值）"
@@ -718,10 +734,11 @@ def _clear_surface(lib: ContentLibrary, _skill: SkillDef, spec: EffectSpec) -> s
     return f"清除範圍內的表面（{names}），不帶元素、不引發其他反應"
 
 
-def _hook(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
+def _hook(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     """鉤（SK-2，06 6.38 第 8 點）。"""
+    cap = lib.ruleset.core.max_displace_distance
     return (
-        "鉤住直線上第一個敵人，拉到你身邊（不受推拉 2 格的上限；不會拉進深淵或岩漿，"
+        f"鉤住直線上第一個敵人，拉到你身邊（不受推拉 {cap} 格的上限；不會拉進深淵或岩漿，"
         "推不動的目標改受一次撞擊）"
     )
 
@@ -1309,7 +1326,7 @@ _SIMPLE_CHANGE_TEXT = {
     "area_delta": "範圍型形狀的大小 +{value}（直線與錐形的長度、環形與光環的半徑，有上限）",
     "allow_self_target": "治療、護盾、增益類技能的影響範圍也包含自己",
     "summon_attack_dice": "召喚物的攻擊傷害骰 +{value} 顆",
-    "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 3 隻）",
+    "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 {hard_cap} 隻）",
     "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
     "silent_strike": "無聲：手持匕首或雙匕首時，你的近戰攻擊不會讓目標轉身（可以留在背後連續背刺）",
 }
@@ -1355,7 +1372,10 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
     kind = change.kind
     simple = _SIMPLE_CHANGE_TEXT.get(kind)
     if simple is not None:
-        return simple.format(value=getattr(change, kind))
+        # 召喚物的硬上限照 core.summon_hard_cap（HC-6a；其他句子沒有 hard_cap 占位）
+        return simple.format(
+            value=getattr(change, kind), hard_cap=library.ruleset.core.summon_hard_cap
+        )
     if change.damage_permille is not None:
         return _damage_text(rule)
     if change.heal_permille is not None:

@@ -42,6 +42,7 @@ def test_shipped_required_when_is_exactly_the_old_hardcoded_pair() -> None:
     assert found == {
         ("damage", "dice"): RequiredWhen(category="spell"),
         ("inscribe", "element"): RequiredWhen(unless_filled="tag"),
+        ("shield", "dice"): RequiredWhen(unless_filled="max_hp_permille"),  # GS-3（#173）
     }
 
 
@@ -134,6 +135,7 @@ def test_trigger_params_match_trigger_spec() -> None:
 def test_every_n_range_matches_trigger_spec() -> None:
     spec = next(t for t in library().ruleset.skill_triggers.triggers if t.id == "every_n_hits")
     n = spec.params["n"]
-    assert (n.min, n.max) == (2, 3)
+    allowed = library().ruleset.core.skill_limits.every_n_hits  # HC-4d：n 的值在 skill_limits
+    assert (n.min, n.max) == (min(allowed), max(allowed)) == (2, 3)
     assert _trigger_ok("every_n_hits", n=3)
-    assert not _trigger_ok("every_n_hits", n=4)
+    assert not _trigger_ok("every_n_hits")  # 沒填 n 照舊是 schema 擋

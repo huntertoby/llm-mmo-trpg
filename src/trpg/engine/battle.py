@@ -507,10 +507,6 @@ def _settle_giants(setup: BattleSetup, state: BattleState) -> None:
                 )
 
 
-OPENING_STATUS_MAX_DURATION = 2
-"""開場狀態（``opening_statuses``）的持續回合上限（Phase 5A-6b）。"""
-
-
 def _opening_of(spawn: UnitSpawn) -> tuple[tuple[str, int | None], ...]:
     """單位開場要掛的狀態與指定的持續回合（``None``＝狀態預設）：先範本的
     ``opening_statuses``（Phase 5A-M1：霧隱、死後碎片），再 ``UnitSpawn.opening_statuses``
@@ -526,12 +522,13 @@ def _apply_opening_statuses(
 ) -> None:
     """開場就掛上的狀態（Phase 5A-6，``UnitSpawn.opening_statuses``；Phase 5A-M1 範本的
     ``opening_statuses``）：依單位、清單順序施加，不擲抵抗；持續回合照指定值或狀態定義的預設，
-    但最多 ``OPENING_STATUS_MAX_DURATION``（2）回合（Phase 5A-6b；不倒數的狀態維持原樣）。"""
+    但最多 ``core.opening_status_max_duration`` 回合（Phase 5A-6b；不倒數的狀態維持原樣）。"""
+    cap = ctx.rules.core.opening_status_max_duration
     for uid, statuses in opening:
         for status_id, wanted in statuses:
             default = ctx.rules.status_def(status_id).duration
             base = wanted if wanted is not None else default
-            duration = None if base is None else min(base, OPENING_STATUS_MAX_DURATION)
+            duration = None if base is None else min(base, cap)
             execute(
                 ctx,
                 [

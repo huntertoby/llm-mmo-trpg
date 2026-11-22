@@ -240,7 +240,7 @@ def test_notes_cache_follows_writes_and_outside_edits(client: TestClient) -> Non
     cid = _create(client)
     store = _store(client)
     assert store.notes.all() == ()
-    note = store.notes.add(store.character(cid), "你好", NOON)
+    note = store.notes.add(store.character(cid), "你好", NOON, max_chars=50)
     assert store.notes.all() == (note,)
     store.notes.path.write_text(
         json.dumps({"format": "trpg-notes/1", "notes": []}), encoding="utf-8"

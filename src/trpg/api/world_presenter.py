@@ -71,6 +71,7 @@ from trpg.api.world_range import range_view, workshop_view
 from trpg.api.world_region_view import region_marks
 from trpg.api.world_schemas import (
     BattlefieldRectView,
+    DayPartHoursView,
     EncounterEnemyView,
     EncounterView,
     EnemyRank,
@@ -129,7 +130,7 @@ from trpg.world.actions import (
 )
 from trpg.world.atlas import can_teleport_to, cross_gate, region_name
 from trpg.world.battle import PreparedBattle, prepare_battle
-from trpg.world.battlefield import FALLBACK_ZH
+from trpg.world.battlefield import fallback_zh
 from trpg.world.clock import day_phase, game_clock
 from trpg.world.common import capital_name, max_hp, max_mana, rules_of, world_map_of
 from trpg.world.field_enemies import cleared_for, personal_left
@@ -285,7 +286,7 @@ def _race_change(
     return {
         "free_race_change": True,
         # OB-5（#150 第 7 點）：正式選定前不能換種族——先標原因（同動作被拒的那一句）
-        "free_race_change_zh": opening_limits(char).get("race")
+        "free_race_change_zh": opening_limits(library, char).get("race")
         or race_change_problem(library, world, char, None),
     }
 
@@ -438,7 +439,7 @@ def _here_view(
         can_rest=free and loc.kind == "town",
         can_loadout=free
         and (loc.kind == "town" or camped)
-        and "loadout" not in opening_limits(char),  # OB-5：入門期不能換技能
+        and "loadout" not in opening_limits(library, char),  # OB-5：入門期不能換技能
         camp_problem_zh=_camp_problem(char, problem, in_battle=in_battle),
         camped=camped,
         teleports=tuple(
@@ -528,7 +529,7 @@ def _encounter_view(
         ),
         battlefield=_battlefield_view(prepared.field_cut),
         battlefield_fallback_zh=(
-            None if prepared.cut_fallback is None else FALLBACK_ZH[prepared.cut_fallback]
+            None if prepared.cut_fallback is None else fallback_zh(library, prepared.cut_fallback)
         ),
         duel=encounter.duel,
         duel_zh=duel_line(encounter.duel, views[0].name_zh if views else ""),
@@ -550,11 +551,15 @@ def _clock_view(
     hour, minute = game_clock(now)
     phase = day_phase(now)
     weather = weather_at(library, world, region, now)
+    parts = rules_of(library).day_parts
     return WorldClockView(
         time_zh=f"{hour:02d}:{minute:02d}",
         day_phase=phase,
         day_phase_zh=PHASE_ZH[phase],
         weather_zh=library.weather_def(weather).name_zh,
+        day_parts=DayPartHoursView(
+            morning=parts.morning, noon=parts.noon, evening=parts.evening, night=parts.night
+        ),
     )
 
 
@@ -732,7 +737,7 @@ def world_view(
     取）。``wish_llm``：許願池能不能用願望文字（世界的 LLM 開著、健康檢查沒說不可用；WP-2）。"""
     in_battle = battle_id is not None
     hero, pending = hero_panel(library, world, char)
-    limits = opening_limits(char)  # OB-5（#150 第 7、9 點）
+    limits = opening_limits(library, char)  # OB-5（#150 第 7、9 點）
     if "flash" in limits:
         # 開局還沒結束、4 級前不能閃現：每一招的閃現鈕都先標成不可用（原因同動作被拒的那一句）
         blocked = {"can_flash": False, "flash_problem_zh": limits["flash"]}

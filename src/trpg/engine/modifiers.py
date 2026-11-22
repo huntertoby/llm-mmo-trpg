@@ -649,7 +649,7 @@ def _convert(
             return shape
         spec = params[name]
         values[name] = max(spec.min, min(spec.max, raw))
-    return ShapeSpec(type=target, **values)
+    return ShapeSpec.model_validate({"type": target, **values})
 
 
 def _grow(state: BattleState, shape: ShapeSpec, delta: int) -> ShapeSpec:

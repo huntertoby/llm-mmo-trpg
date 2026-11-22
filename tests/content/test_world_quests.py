@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.world_quests import (
+    NO_FILE_AFFINITY_RULES,
     AffinityRules,
     QuestDef,
     QuestTable,
@@ -202,17 +203,18 @@ def test_bad_affinity_rules() -> None:
         {"id": "friendly", "name_zh": "友善", "min": 20},
         {"id": "trusted", "name_zh": "信賴", "min": 60},
     ]
-    AffinityRules.model_validate({"ranks": ranks})
+    base = {"min_value": -100, "max_value": 100, "rumors_per_week": 3}
+    AffinityRules.model_validate({**base, "ranks": ranks})
     with pytest.raises(ValidationError, match="依序"):
-        AffinityRules.model_validate({"ranks": ranks[::-1]})
+        AffinityRules.model_validate({**base, "ranks": ranks[::-1]})
     bad = [dict(r) for r in ranks]
     bad[3]["min"] = -20
     with pytest.raises(ValidationError, match="遞增"):
-        AffinityRules.model_validate({"ranks": bad})
+        AffinityRules.model_validate({**base, "ranks": bad})
     first = [dict(r) for r in ranks]
     first[0]["min"] = -90
     with pytest.raises(ValidationError, match="min_value"):
-        AffinityRules.model_validate({"ranks": first})
+        AffinityRules.model_validate({**base, "ranks": first})
 
 
 # ---------------------------------------------------------------------------
@@ -362,4 +364,4 @@ def test_without_quest_files(tmp_path: Path, library: ContentLibrary) -> None:
     lib = load_library(content)
     assert lib.world_quests.quests == {}
     assert lib.world_quests.social == {}
-    assert lib.world_quests.affinity is None
+    assert lib.world_quests.affinity == NO_FILE_AFFINITY_RULES  # HC-7：備用值在載入層

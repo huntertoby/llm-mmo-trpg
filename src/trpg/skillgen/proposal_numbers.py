@@ -61,8 +61,6 @@ COST_NUMBER_FIELDS = (
 TRIGGER_NUMBER_FIELDS = ("max_per_round", "max_distance")
 VARIANT_NUMBER_FIELDS = ("range_delta",)
 NESTED_EFFECT_KEYS = ("then", "win", "lose", "on_kill", "effects")
-DEFAULT_ACTIVE_AP = 2
-"""預算器不調整 AP，所以預設補 2（多數手寫主動技能的值）。"""
 MIN_DICE = "1d4"
 DEFAULT_SCALING = {"per_step_permille": 10, "cap_permille": 100}
 LEGENDARY = "legendary"
@@ -255,7 +253,7 @@ def _fill_cost(out: dict[str, Any], library: ContentLibrary, category: str) -> N
             cost["cooldown"] = max(int(cost.get("cooldown") or 0), floor)
         out["cost"] = cost
     elif active and out.get("ap_cost") is None:
-        out["ap_cost"] = DEFAULT_ACTIVE_AP
+        out["ap_cost"] = library.composer.llm_cost.default_ap  # 預算器不調 AP（HC-5b 搬進資料）
     if out.get("rarity") == LEGENDARY:
         cost = dict(out.get("cost") or {})
         cost.setdefault("source", MIN_SOURCE)

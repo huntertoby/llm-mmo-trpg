@@ -65,7 +65,7 @@ export function TileCanvas({ tile, px }: { tile: AssemblyTile; px: number }) {
 /** 狀態、表面等單一部件的小圖＋名稱，滑過或點一下看說明（HUD 狀態列、單位資訊用）。 */
 export function TipGlyph({ tile, px = 18, text, pin = true }: { tile: AssemblyTile; px?: number; text?: string; pin?: boolean }) {
   return (
-    <PartTip cat={tile.cat} label={tile.label} tip={tile.tip} pin={pin} className="tip-glyph">
+    <PartTip cat={tile.cat} label={tile.label} tip={tile.tip} parts={tile.parts} pin={pin} className="tip-glyph">
       <TileCanvas tile={tile} px={px} />
       <span>{text ?? tile.label}</span>
     </PartTip>
@@ -74,7 +74,7 @@ export function TipGlyph({ tile, px = 18, text, pin = true }: { tile: AssemblyTi
 
 function TileView({ tile, px }: { tile: AssemblyTile; px: number }) {
   return (
-    <PartTip cat={tile.cat} label={tile.label} tip={tile.tip} className={`f-tile${tile.cat === "接續" ? " f-link" : ""}`}>
+    <PartTip cat={tile.cat} label={tile.label} tip={tile.tip} parts={tile.parts} className={`f-tile${tile.cat === "接續" ? " f-link" : ""}`}>
       <TileCanvas tile={tile} px={px} />
       <span className="f-label">{tile.label}</span>
     </PartTip>
@@ -110,7 +110,7 @@ export function AssemblyFormula({ icon }: { icon: SkillIconData | null | undefin
       {extras.length > 0 && (
         <div className="f-extras">
           {extras.map((t, i) => (
-            <PartTip key={`${i}:${t.id}`} cat={t.cat} label={t.label} tip={t.tip} className="f-extra">
+            <PartTip key={`${i}:${t.id}`} cat={t.cat} label={t.label} tip={t.tip} parts={t.parts} className="f-extra">
               <TileCanvas tile={t} px={18} />
               <span>
                 {t.cat}：{t.label}
@@ -128,7 +128,7 @@ export function OptionGlyph({ field, value, px = 26 }: { field: string; value: u
   const tile = optionTile(field, value);
   if (tile === null) return null;
   return (
-    <PartTip cat={tile.cat} label={tile.label} tip={tile.tip} pin={false} className="opt-glyph">
+    <PartTip cat={tile.cat} label={tile.label} tip={tile.tip} parts={tile.parts} pin={false} className="opt-glyph">
       <TileCanvas tile={tile} px={px} />
     </PartTip>
   );

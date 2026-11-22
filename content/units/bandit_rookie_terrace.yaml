@@ -3,7 +3,7 @@
 id: bandit_rookie_terrace
 name_zh: 盜賊
 attributes: {str: 120, dex: 140, con: 120, int: 80, wis: 100, wil: 80}
-max_hp: 150   # CB-2d：bandit_rookie 的 17 × 0.9（捨去），只用在梯田固定戰 terrace_clash；第 1 場渡口仍用 bandit_rookie
+max_hp: 180   # CB-2d：bandit_rookie 的 210 × 0.9（捨去到 10；2026-11-21 跟著 bandit_rookie 170→210 改），只用在梯田固定戰 terrace_clash；第 1 場渡口仍用 bandit_rookie
 speed: 5
 armor_bonus: 20
 weapon: dagger

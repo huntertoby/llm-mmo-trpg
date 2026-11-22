@@ -3,7 +3,7 @@
 ``compose_random_skill(seed, ...)`` 依資料表（骨架、原語、形狀、狀態、表面、條件）隨機組出一個
 通過 :func:`trpg.skillgen.validate.validate_skill` 的技能。流程：骨架 → 核心原語 → 形狀與參數 →
 效果與參數 → 條件 → 代價 → 調整強度（比例 0.75–0.95）→ 驗證。失敗則用同一個亂數串流重抽，
-每個種子最多 :data:`MAX_ATTEMPTS` 次。
+每個種子最多 ``skill_composer.yaml`` 的 ``search.composer_attempts`` 次。
 
 確定性：只用 :class:`trpg.shared.rng.Rng`；相同的種子與參數必得相同的技能。
 """
@@ -55,6 +55,9 @@ from trpg.skillgen.composer_parts import (
 from trpg.skillgen.composer_recipes import (
     SPELL_ELEMENTS,
     Draft,
+    Recipe,
+    is_companion,
+    is_guardian,
     passive_drafts,
     passive_recipes,
     pick_recipe,
@@ -67,7 +70,7 @@ from trpg.skillgen.composer_recipes import (
 )
 from trpg.skillgen.composer_rider import SUMMON_KEYWORD, add_rider, rider_keywords
 from trpg.skillgen.composer_special import compose_legendary, compose_modifier
-from trpg.skillgen.composer_tuning import tune
+from trpg.skillgen.composer_tuning import RatioMemo, tune
 from trpg.skillgen.keywords import has_keyword
 from trpg.skillgen.mechanics import mechanic_tags
 from trpg.skillgen.memo import by_id, draft_key, library_memo
@@ -76,8 +79,6 @@ from trpg.skillgen.validate import validate_skill
 from trpg.skillgen.variant_gen import variant_specs
 
 __all__ = [
-    "KEYWORD_TRIES",
-    "MAX_ATTEMPTS",
     "ComposeError",
     "ComposeResult",
     "KeywordExhaustedError",
@@ -86,11 +87,10 @@ __all__ = [
     "default_library",
 ]
 
-# 重抽上限。控場等骨架的核心原語若沒有旋鈕（地形、障礙、驅散…），高階時強度到不了預算窗，單次
-# 成功率只有約一成，50 次偶爾全軍覆沒（Phase 3-34b，種子 966）；只有原本失敗的種子會用到後半段。
-MAX_ATTEMPTS = 100
-# 帶變奏的重抽次數（維持 Phase 3-25b 的 25 次，已成功種子的結果不變）
-VARIANT_ATTEMPTS = 25
+# 重抽上限（``search.composer_attempts``，HC-5b 搬進資料）。控場等骨架的核心原語若沒有旋鈕（地形、
+# 障礙、驅散…），高階時強度到不了預算窗，單次成功率只有約一成，50 次偶爾全軍覆沒（Phase 3-34b，
+# 種子 966）；只有原本失敗的種子會用到後半段。帶變奏的重抽次數是 ``search.variant_attempts``
+# （維持 Phase 3-25b 的 25 次，已成功種子的結果不變）。
 
 _RARITIES: tuple[SkillRarity, ...] = ("common", "rare", "epic", "legendary")
 _SPELL_ELEMENTS = SPELL_ELEMENTS
@@ -105,9 +105,14 @@ type Kinds = Collection[str] | None
 不指定、組合器自由抽（原行為）；有值時結果的 ``kind`` 一定在其中
 （見 :func:`compose_with_stats`）。"""
 
+type Guardian = bool | None
+"""這一題要不要用護主（GS-1，#171；:func:`guardian_gate`）：``None`` ＝ 照舊（護主和其他反應技配方
+一起抽）；``True`` ＝ 這題擲中，反應技先試護主，做不出來再走一般做法（不含護主）；``False`` ＝ 這題
+所有的嘗試都不用護主。"""
+
 
 class ComposeError(TrpgError):
-    """參數無解，或 :data:`MAX_ATTEMPTS` 次重抽都做不出合格的技能。"""
+    """參數無解，或重抽上限（``search.composer_attempts``）次都做不出合格的技能。"""
 
 
 class KeywordExhaustedError(ComposeError):
@@ -485,7 +490,11 @@ def _attempt_passive(  # noqa: PLR0917
             if rarity_rank(t.min_rarity) <= rarity_rank(rarity) and t.random_composer
         ]
         timing = rng.choice(timings)
-    n = rng.choice((2, 3)) if timing.id == EVERY_N_HITS else None
+    n = (
+        rng.choice(library.ruleset.core.skill_limits.every_n_hits)
+        if timing.id == EVERY_N_HITS
+        else None
+    )
     target = (
         "other"
         if timing.has_other and rng.chance_permille(rules.passive.other_permille)
@@ -617,19 +626,26 @@ def _finish(library: ContentLibrary, seed: int, base: dict[str, Any], ctx: Ctx) 
 
 
 def _tune_drafts(
-    rng: Rng, lib: ContentLibrary, seed: int, ctx: Ctx, drafts: list[Draft]
+    rng: Rng,
+    lib: ContentLibrary,
+    seed: int,
+    ctx: Ctx,
+    drafts: list[Draft],
+    *,
+    memo: RatioMemo | None = None,
 ) -> SkillDef:
-    """RC-1 配方的草稿依序調整強度，第一個進得了預算窗的完成（旋鈕在 ``ctx.knobs``）。"""
+    """RC-1 配方的草稿依序調整強度，第一個進得了預算窗的完成（旋鈕在 ``ctx.knobs``）。
+    ``memo``：預算比例的快取表（QF-4b，見 :func:`tune`），不影響結果與亂數。"""
     for base, effects in drafts:
-        if tune(rng, lib, base, effects, ctx.knobs):
+        if tune(rng, lib, base, effects, ctx.knobs, memo=memo):
             ctx.effects = effects
             return _finish(lib, seed, base, ctx)
     raise Retry
 
 
 def _first_valid(lib: ContentLibrary, build: Callable[[], SkillDef]) -> ComposeResult | None:
-    """RC-1 配方：最多 :data:`MAX_ATTEMPTS` 次，第一個通過驗證的；都做不出來回傳 ``None``。"""
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    """RC-1 配方：最多重抽上限次，第一個通過驗證的；都做不出來回傳 ``None``。"""
+    for attempt in range(1, lib.composer.search.composer_attempts + 1):
         try:
             skill = build()
         except (Retry, ValidationError, BudgetError):
@@ -736,7 +752,11 @@ def _attempt_around_passive(
         if rarity_rank(t.min_rarity) <= rarity_rank(rarity) and t.random_composer
     ]
     timing = rng.choice(timings)
-    n = rng.choice((2, 3)) if timing.id == EVERY_N_HITS else None
+    n = (
+        rng.choice(library.ruleset.core.skill_limits.every_n_hits)
+        if timing.id == EVERY_N_HITS
+        else None
+    )
     w = rules.spell_attr_weights
     scaling = _weighted(rng, ("int", "wis", "wil"), (w.int_, w.wis, w.wil))
     theme = rng.choice(_SPELL_ELEMENTS)
@@ -836,14 +856,29 @@ def _compose_passive_recipe(
     if recipe is None:
         return None
     rng = Rng(seed).fork("composer.passive.recipe.build")
+    memo: RatioMemo | None = (  # HC-5b（QF-4b 裁定 2）：伴生照護主快取預算比例，亂數與結果不變
+        library_memo(lib, "composer.companion.ratio") if is_companion(recipe) else None
+    )
 
     def build() -> SkillDef:
         ctx, drafts = passive_drafts(
             rng, lib, seed, tier=tier, rarity=rarity, recipe=recipe, keyword=keyword
         )
-        return _tune_drafts(rng, lib, seed, ctx, drafts)
+        return _tune_drafts(rng, lib, seed, ctx, drafts, memo=memo)
 
     return _first_valid(lib, build)
+
+
+def guardian_gate(
+    seed: int, keyword: str | None, lib: ContentLibrary, skeleton: str | None
+) -> Guardian:
+    """護主不獨佔（GS-1，#171）：題目指定了關鍵字、不是召喚、而且是反應題（骨架 ``reaction``）時，
+    **每題只擲一次**要不要用護主——用題目的種子、獨立串流 ``composer.guardian``，機率
+    ``recipes.reaction_permille``；不動主串流與各變體的串流。其他題回傳 ``None``（照舊）。"""
+    if keyword is None or keyword == SUMMON_KEYWORD or skeleton != "reaction":
+        return None
+    permille = lib.composer.recipes.reaction_permille
+    return permille > 0 and Rng(seed).fork("composer.guardian").chance_permille(permille)
 
 
 def _compose_reaction_recipe(
@@ -854,23 +889,63 @@ def _compose_reaction_recipe(
     rarity: SkillRarity,
     category: str | None,
     keyword: str | None,
+    guardian: Guardian = None,
 ) -> ComposeResult | None:
-    """反應技新配方（RC-1）：同 :func:`_compose_passive_recipe`。"""
-    rules = lib.composer.recipes
-    recipe = pick_recipe(
-        seed, "reaction", reaction_recipes(lib, tier), rules.reaction_permille, keyword
-    )
+    """反應技新配方（RC-1）：同 :func:`_compose_passive_recipe`。
+
+    ``guardian``（GS-1，#171）：``None`` 照舊；``True`` 先試護主（做不出來再照一般做法，抽配方時
+    不含護主）；``False`` 抽配方時不含護主。
+    """
+    recipes = reaction_recipes(lib, tier)
+    if guardian is not None:
+        first = next(
+            (r for r in recipes if is_guardian(r) and keyword in r.keywords), None
+        ) if guardian else None  # fmt: skip
+        found = (
+            None
+            if first is None
+            else _build_reaction_recipe(
+                seed, lib, first, tier=tier, rarity=rarity, category=category, keyword=keyword
+            )
+        )
+        if found is not None:
+            return found
+        recipes = tuple(r for r in recipes if not is_guardian(r))
+    recipe = pick_recipe(seed, "reaction", recipes, lib.composer.recipes.reaction_permille, keyword)
     if recipe is None:
         return None
+    return _build_reaction_recipe(
+        seed, lib, recipe, tier=tier, rarity=rarity, category=category, keyword=keyword
+    )
+
+
+def _build_reaction_recipe(
+    seed: int,
+    lib: ContentLibrary,
+    recipe: Recipe,
+    *,
+    tier: int,
+    rarity: SkillRarity,
+    category: str | None,
+    keyword: str | None,
+) -> ComposeResult | None:
+    """用 ``recipe`` 組反應技（獨立串流 ``composer.reaction.recipe.build``）。
+
+    護主（QF-4b）：3 階起每份草稿在最弱強度就進不了預算窗，每次嘗試卻都重算約 40 份（召喚物、
+    屬性、強度、代價的組合有限，只差種子）；預算比例改由內容庫上的快取表記住，亂數與結果不變。
+    """
     rng = Rng(seed).fork("composer.reaction.recipe.build")
     chosen = category or _choose_category(rng, lib.skeletons["reaction"], None, lib.composer)
+    memo: RatioMemo | None = (
+        library_memo(lib, "composer.guardian.ratio") if is_guardian(recipe) else None
+    )
 
     def build() -> SkillDef:
         ctx, drafts = reaction_drafts(
             rng, lib, seed, tier=tier, rarity=rarity, category=chosen, recipe=recipe,
             keyword=keyword,
         )  # fmt: skip
-        return _tune_drafts(rng, lib, seed, ctx, drafts)
+        return _tune_drafts(rng, lib, seed, ctx, drafts, memo=memo)
 
     return _first_valid(lib, build)
 
@@ -885,9 +960,11 @@ def _compose_special(
     category: str | None,
     ap_cost: int | None = None,
     keyword: str | None = None,
+    guardian: Guardian = None,
 ) -> ComposeResult | None:
     """反應技、姿態、蓄力與終結、陷阱、整招召喚：用獨立的亂數串流重抽；做不出合格技能回傳 ``None``。
-    ``keyword``（RC-1）：整招召喚優先抽固有關鍵字相符的召喚物；反應技的新配方只考慮帶得到它的。"""
+    ``keyword``（RC-1）：整招召喚優先抽固有關鍵字相符的召喚物；反應技的新配方只考慮帶得到它的。
+    ``guardian``（GS-1）：見 :data:`Guardian`。"""
     if kind == _SUMMON:
         return _compose_summon(seed, lib, tier=tier, rarity=rarity, keyword=keyword)
     if kind == "reaction":
@@ -897,8 +974,9 @@ def _compose_special(
             if reroll
             else None
         ) or _compose_reaction_recipe(
-            seed, lib, tier=tier, rarity=rarity, category=category, keyword=keyword
-        )
+            seed, lib, tier=tier, rarity=rarity, category=category, keyword=keyword,
+            guardian=guardian,
+        )  # fmt: skip
         if found is not None:
             return found
     rng = Rng(seed).fork(f"composer.{kind}.build")
@@ -910,7 +988,7 @@ def _compose_special(
         chosen = _choose_category(rng, lib.skeletons[kind], None, lib.composer)
     if kind == "sacrifice":
         chosen = chosen or "spell"  # 獻祭是法術技
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    for attempt in range(1, lib.composer.search.composer_attempts + 1):
         try:
             if _explicit_only_active(lib, kind):  # 主動骨架：走一般的主動技能流程
                 fixed = (tier, rarity, lib.skeletons[kind], chosen or "spell")
@@ -953,8 +1031,6 @@ def _compose_legendary_result(
     return ComposeResult(skill, 1)
 
 
-KEYWORD_TRIES = 300
-"""指定關鍵字時最多嘗試的種子變體數（Phase 3-24b1）。"""
 _VARIANT_STEP = 1_000_003
 
 
@@ -1044,7 +1120,7 @@ def _compose_with_keyword(
     keyword: str,
     lib: ContentLibrary,
     *,
-    tries: int = KEYWORD_TRIES,
+    tries: int | None = None,
     skip_legendary: bool = False,
     rarity: SkillRarity | None,
     **kwargs: Any,
@@ -1053,7 +1129,8 @@ def _compose_with_keyword(
 
     PERF-3（玩法 PM 2026-11-03）：``skip_legendary`` 為真且沒有指定稀有度時，**抽到傳說的變體直接
     跳過**（不組；三選一的候選產生器用：傳說不當候選，而且多半做不出指定關鍵字），跳過的變體也
-    算一次嘗試。``tries``：最多試幾個變體（預設 :data:`KEYWORD_TRIES`；橋接搜尋用剩下的上限）。"""
+    算一次嘗試。``tries``：最多試幾個變體（``None`` ＝ ``search.keyword_tries``，也是上限；橋接搜尋
+    用剩下的上限）。"""
     if keyword not in lib.keywords.ids():
         raise ComposeError(f"未知的關鍵字 {keyword!r}（可用：{'、'.join(lib.keywords.ids())}）")
     if not lib.keywords.by_id()[keyword].composable:
@@ -1064,8 +1141,10 @@ def _compose_with_keyword(
         # KW-2（#161）：層數關鍵字只有蓄力骨架做得出來（累積或消耗層數），不指定骨架時固定用它；
         # 這四個關鍵字 KW-2 前組合器不做，所以既有關鍵字的結果不變
         kwargs = {**kwargs, "skeleton": _STACK_SKELETON}
-    limit = min(tries, KEYWORD_TRIES)
+    most = lib.composer.search.keyword_tries
+    limit = most if tries is None else min(tries, most)
     plain = {"rarity": rarity, "no_legendary": skip_legendary and rarity is None, **original}
+    guardian = guardian_gate(seed, keyword, lib, kwargs.get("skeleton"))  # GS-1：每題只擲一次
     for index in range(limit):
         variant = seed + index * _VARIANT_STEP
         rider = _compose_rider(variant, keyword, lib, plain)  # WC-2：沒抽中＝None，照原本
@@ -1077,6 +1156,7 @@ def _compose_with_keyword(
                     rarity=rarity,
                     no_legendary=skip_legendary and rarity is None,
                     keyword=keyword,
+                    guardian=guardian,
                     **kwargs,
                 ),
                 None,
@@ -1109,13 +1189,13 @@ def compose_with_stats(
     hero_attributes: Mapping[Attribute, int] | None = None,
     avoid_attr: Attribute | None = None,
     held: Mapping[str, str] | None = None,
-    keyword_tries: int = KEYWORD_TRIES,
+    keyword_tries: int | None = None,
     skip_legendary: bool = False,
     kinds: Kinds = None,
 ) -> ComposeResult:
     """:func:`compose_random_skill`，另外回傳重抽次數。PERF-3（三選一的候選產生器用）：
     ``keyword_tries`` ＝ 指定關鍵字時最多試幾個種子變體（橋接搜尋上限，最多
-    :data:`KEYWORD_TRIES`），
+    ``search.keyword_tries``；``None`` ＝ 上限），
     ``skip_legendary`` ＝ 指定關鍵字時抽到傳說的變體跳過。預設值＝原行為。
 
     ``kinds``（RC-1b，玩法 PM 交接 4.1.20 第 4 點）：呼叫端知道要哪一種技能時傳入（``SkillKind``
@@ -1218,6 +1298,7 @@ def _special_result(
     explicit: bool,
     fixed: tuple[int, SkillRarity, str | None, int | None],
     keyword: str | None,
+    guardian: Guardian = None,
 ) -> ComposeResult | None:
     """反應技、姿態等特殊組法；``explicit``（明確指定骨架）時組不出來就拋出 :class:`ComposeError`，
     否則回傳 ``None`` 讓呼叫端退回一般主動技能。"""
@@ -1235,10 +1316,12 @@ def _special_result(
         category=category,
         ap_cost=ap_cost,
         keyword=keyword,
+        guardian=guardian,
     )
     if found is None and explicit:
         raise ComposeError(
-            f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的{special}（階級 {tier}、{rarity}）"
+            f"種子 {seed}：{lib.composer.search.composer_attempts} 次重抽都做不出合格的{special}"
+            f"（階級 {tier}、{rarity}）"
         )
     return found
 
@@ -1255,9 +1338,10 @@ def _compose_plain(
     no_legendary: bool = False,
     keyword: str | None = None,
     kinds: Kinds = None,
+    guardian: Guardian = None,
 ) -> ComposeResult:
     rng = Rng(seed)
-    tier_value = tier if tier is not None else rng.randint(1, 5)
+    tier_value = tier if tier is not None else rng.randint(1, lib.ruleset.core.skill_limits.tiers)
     if tier_value not in lib.ruleset.core.tier_budget:
         raise ComposeError(f"沒有階級 {tier_value} 的預算")
     rarity_value, skeleton_def = _choose_rarity_and_skeleton(rng, rarity, skeleton, lib)
@@ -1281,6 +1365,7 @@ def _compose_plain(
             explicit=skeleton is not None,
             fixed=(tier_value, rarity_value, category, ap_cost),
             keyword=keyword,
+            guardian=guardian,
         )
         if found is not None:
             return found
@@ -1302,20 +1387,21 @@ def _compose_plain(
     )
     fixed = (tier_value, rarity_value, skeleton_def, category_value)
     wants_variant = not passive and _wants_variant(seed, rarity_value, lib)
-    for attempt in range(1, MAX_ATTEMPTS + 1):
+    search = lib.composer.search
+    for attempt in range(1, search.composer_attempts + 1):
         try:
             if passive:
                 skill = _attempt_passive(rng, lib, seed, tier_value, rarity_value)
             else:
                 # 前半的重抽帶變奏；都做不出來時退回不帶變奏，確保一定有結果
-                variant = wants_variant and attempt <= VARIANT_ATTEMPTS
+                variant = wants_variant and attempt <= search.variant_attempts
                 skill = _attempt(rng, lib, seed, fixed, ap_cost, variant=variant)
         except (Retry, ValidationError, BudgetError):
             continue
         if not validate_skill(skill, lib):
             return ComposeResult(skill, attempt)
     raise ComposeError(
-        f"種子 {seed}：{MAX_ATTEMPTS} 次重抽都做不出合格的技能"
+        f"種子 {seed}：{search.composer_attempts} 次重抽都做不出合格的技能"
         f"（階級 {tier_value}、{rarity_value}、{'passive' if passive else skeleton_def.id}、"
         f"{category_value}、AP {ap_cost}）"
     )

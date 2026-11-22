@@ -28,15 +28,14 @@ from trpg.engine.state import BattleState, UnitState, reaction_limit
 from trpg.shared.types import Pos, Surface, Team
 
 _ALWAYS_PREVIEW_TAGS = ("explosive", "conductive", "blocks_sight")
-_OBJECT_NEAR_ENEMY = 2
 
 
 def worth_previewing(state: BattleState, scene: _Scene, action: Attack) -> bool:
     """攻擊物件的便宜篩選：只有可能帶來收益的物件才跑完整 ``preview``。
 
     - 易爆（連鎖爆炸）、導電（雷電擴散）、阻擋視線（打掉後視線改變）的物件一律評估；
-    - 其他物件只在 2 格（切比雪夫距離）內有敵人時評估（橋上的敵人、掩護後的敵人、點燃後
-      波及的範圍）。
+    - 其他物件只在 ``heuristics.estimate.object_near_enemy`` 格（切比雪夫距離）內有敵人時評估
+      （橋上的敵人、掩護後的敵人、點燃後波及的範圍）。
 
     被略過的物件攻擊不會傷到敵人、不會改變行動者的位置價值，分數不會是正的，因此不影響選擇。
     攻擊單位一律評估。
@@ -47,7 +46,8 @@ def worth_previewing(state: BattleState, scene: _Scene, action: Attack) -> bool:
     tags = state.ruleset.object_def(obj.kind).tags
     if any(tag in tags for tag in _ALWAYS_PREVIEW_TAGS):
         return True
-    return any(chebyshev(obj.xy, e.xy) <= _OBJECT_NEAR_ENEMY for e in scene.enemies)
+    near = state.ruleset.ai.estimate.object_near_enemy
+    return any(chebyshev(obj.xy, e.xy) <= near for e in scene.enemies)
 
 
 def virtual_move_score(

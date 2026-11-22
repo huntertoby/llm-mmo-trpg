@@ -78,6 +78,9 @@ class SkillTriggerDef(ContentModel):
     budget_by_n_permille: dict[int, int] | None = None
     min_rarity: SkillRarity = "epic"
     random_composer: bool = True
+    max_per_round: int | None = Field(default=None, ge=1)
+    """這個時機的被動每輪只能觸發幾次（技能的 ``trigger.max_per_round`` 必須剛好是這個數；HC-7 b
+    從 ``TriggerSpec`` 搬來，由 Ruleset 層檢查）。沒寫＝照技能自己的 ``max_per_round``。"""
 
     @model_validator(mode="after")
     def _check(self) -> SkillTriggerDef:
@@ -86,8 +89,9 @@ class SkillTriggerDef(ContentModel):
             raise ValueError(f"觸發時機 {self.id} 有未知的參數：{', '.join(unknown)}")
         if self.id == EVERY_N_HITS:
             table = self.budget_by_n_permille
-            if table is None or sorted(table) != [2, 3] or any(v < 1 for v in table.values()):
-                raise ValueError("every_n_hits 必須以 budget_by_n_permille 給 n=2、3 的係數")
+            if table is None or not table or any(v < 1 for v in table.values()):
+                # 鍵要剛好是 core.yaml 的 skill_limits.every_n_hits（HC-4d，Ruleset 層檢查）
+                raise ValueError("every_n_hits 必須以 budget_by_n_permille 給每個 n 的係數")
             if self.budget_coefficient_permille is not None:
                 raise ValueError("every_n_hits 的係數依 n 查表，不可填 budget_coefficient_permille")
         else:

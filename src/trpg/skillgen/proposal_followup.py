@@ -34,9 +34,9 @@ from trpg.content.skills import (
 from trpg.content.skills.constants import ON_KILL_SECOND_SHAPES
 
 __all__ = [
-    "FOLLOWUP_DOC",
     "FOLLOWUP_WHEN_HINTS",
     "RELEASE_HINTS",
+    "followup_doc",
     "followup_effect_ids",
     "followup_shape_ids",
     "followup_when_entries",
@@ -57,10 +57,17 @@ RELEASE_HINTS: dict[str, str] = {
     "attacked": "施放者下回合開始前被敵人攻擊時釋放（沒被攻擊就失效）。",
 }
 """延遲段 ``release`` 的說明。"""
-FOLLOWUP_DOC = (
+_FOLLOWUP_DOC = (
     "可省略，只有主動技能可用。複合技能的第二段：自己的骨架、形狀與效果，when 決定何時施放；"
-    "兩段合計最多 4 個效果，複合技能不帶變奏。第二段不能有召喚、區域、陷阱等效果，也不能再接第二段"
+    "兩段合計最多 {max_effects} 個效果，複合技能不帶變奏。"
+    "第二段不能有召喚、區域、陷阱等效果，也不能再接第二段"
 )
+
+
+def followup_doc(library: ContentLibrary) -> str:
+    """``followup`` 的說明（schema 的 ``description``、prompt ``available`` 的 ``followup.hint``）；
+    兩段合計的效果上限照 ``core.skill_limits.max_effects``（HC-6a）。"""
+    return _FOLLOWUP_DOC.format(max_effects=library.ruleset.core.skill_limits.max_effects)
 
 
 def followup_when_entries() -> list[dict[str, str]]:

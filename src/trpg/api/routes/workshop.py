@@ -37,7 +37,7 @@ from trpg.narrative.keyword_hints import draft_keyword_hints
 from trpg.narrative.skill_icon import icon_of
 from trpg.narrative.skill_icon_art import icon_art_rules
 from trpg.narrative.skills import WEAPON_REQ_TEXT, CardOwner, draft_card_keywords
-from trpg.skillgen.draft import build_skill
+from trpg.skillgen.draft import build_skill, fill_trap_rounds
 from trpg.skillgen.draft_check import check_draft
 from trpg.skillgen.option_models import DraftOptions
 from trpg.skillgen.options import draft_options
@@ -139,6 +139,9 @@ def post_check(body: WorkshopCheckRequest, request: Request) -> WorkshopCheck:
 def post_random(body: WorkshopRandomRequest, request: Request) -> WorkshopRandom:
     """以隨機組合器產生一個技能（同種子同參數結果一致）；組不出來時 422。"""
     library = store_of(request).library
+    tiers = library.ruleset.core.skill_limits.tiers
+    if body.tier is not None and body.tier > tiers:
+        raise HTTPException(status_code=422, detail=f"技能階級只有 1～{tiers}（這次 {body.tier}）")
     skill = compose_random_skill(
         body.seed, tier=body.tier, rarity=body.rarity, skeleton=body.skeleton, library=library
     )
@@ -153,7 +156,7 @@ def post_export(body: WorkshopExportRequest, request: Request) -> WorkshopExport
     ``problems`` 標示問題。"""
     reject_dev_fields(request, body.dev_fields())  # 6S-1：allow_illegal 開發模式才能用
     library = store_of(request).library
-    skill = build_skill(body.skill)
+    skill = build_skill(fill_trap_rounds(body.skill, library))  # HC-5b：沒寫陷阱輪數時補
     provenance = skill.provenance.model_copy(update={"origin": "workshop"})
     skill = skill.model_copy(update={"provenance": provenance})
     result = check_draft(skill.model_dump(mode="json", exclude_none=True), library)

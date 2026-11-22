@@ -13,7 +13,12 @@ from pydantic import ValidationError
 from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.content.library import load_library
 from trpg.content.rules import CoreRules
-from trpg.content.skill_rules import BudgetRules, SkeletonDef
+from trpg.content.skill_rules import (
+    BudgetRules,
+    SkeletonDef,
+    budget_rule_problems,
+    shape_budget_problems,
+)
 from trpg.content.skills import SKELETON_IDS, ShapeDef
 from trpg.shared.errors import ContentError
 
@@ -234,8 +239,27 @@ def test_budget_rules_reject_inconsistent_data() -> None:
     data = yaml.safe_load((PROJECT_ROOT / "content/skill_budget.yaml").read_text("utf-8"))
     with pytest.raises(ValidationError, match="min_ratio_permille"):
         BudgetRules.model_validate({**data, "min_ratio_permille": 1000})
-    with pytest.raises(ValidationError, match="AP 1、2、3"):
-        BudgetRules.model_validate({**data, "ap_coefficient_permille": {1: 500, 2: 1000}})
+    # HC-4b：AP 的鍵、刻印的項數對照 core.yaml（skill_limits.max_ap_cost、rune_max_rounds），
+    # 載入內容庫時檢查
+    core = library().ruleset.core
+    two_ap = BudgetRules.model_validate({**data, "ap_coefficient_permille": {1: 500, 2: 1000}})
+    assert budget_rule_problems(two_ap, core) == [
+        "ap_coefficient_permille 必須剛好有 AP 1、2、3（core.yaml 的 skill_limits.max_ap_cost）"
+    ]
+    four = BudgetRules.model_validate(
+        {**data, "inscribe_duration_permille": [600, 800, 1000, 1200]}
+    )
+    assert budget_rule_problems(four, core) == [
+        "inscribe_duration_permille 必須剛好有 5 項（core.yaml 的 rune_max_rounds），收到 4 項"
+    ]
+    assert budget_rule_problems(library().budget, core) == []
+
+
+def test_budget_rule_mismatch_is_rejected_when_loading(tmp_path: Path) -> None:
+    root = _copy(tmp_path)
+    _edit(root / "skill_budget.yaml", lambda d: d["ap_coefficient_permille"].pop(3))
+    with pytest.raises(ContentError, match="AP 1、2、3"):
+        load_library(root)
 
 
 def test_synergy_and_exclusion_tables() -> None:
@@ -284,12 +308,49 @@ def test_an_exclusion_referencing_an_unknown_status_is_rejected(tmp_path: Path) 
 def test_shape_budget_validation() -> None:
     cone = yaml.safe_load((PROJECT_ROOT / "content/skill_shapes.yaml").read_text("utf-8"))
     (data,) = [s for s in cone["shapes"] if s["id"] == "cone"]
-    with pytest.raises(ValidationError, match="by_value_permille 缺少"):
-        ShapeDef.model_validate(
-            {**data, "budget": {"param": "size", "by_value_permille": {2: 1300}}}
-        )
     with pytest.raises(ValidationError, match="不是這個形狀的參數"):
-        ShapeDef.model_validate({**data, "budget": {"param": "radius", "per_unit_permille": 100}})
+        ShapeDef.model_validate({**data, "budget": {"param": "radius"}})
+
+
+def test_shape_lookup_tables_are_checked_against_the_shapes() -> None:
+    """HC-W2：查表搬到 skill_budget.yaml 的 shape_budget.<id>.by_value（鍵是參數值），載入時檢查
+    涵蓋參數範圍、形狀有 param、連鎖的 non_power_by_value 要有 power_primitives。"""
+    lib = library()
+    shapes = lib.ruleset.shapes
+    prices = dict(lib.budget.shape_budget)
+    for sid in ("cone", "cross", "ring", "chain"):
+        assert prices[sid].by_value, sid
+        assert set(prices[sid].by_value or {}) == set(shapes.by_id()[sid].budget_param_values())
+    prices["cone"] = prices["cone"].model_copy(update={"by_value": {2: 1300}})
+    prices["single"] = prices["single"].model_copy(update={"by_value": {1: 1000}})
+    prices["ring"] = prices["ring"].model_copy(update={"non_power_by_value": {}})
+    prices["cross"] = prices["cross"].model_copy(update={"non_power_by_value": {1: 1, 2: 2}})
+    broken = lib.budget.model_copy(update={"shape_budget": prices})
+    assert shape_budget_problems(shapes, broken) == [
+        "shape_budget.cone.by_value：缺少參數 size 的值 [3, 4]",
+        "shape_budget.cross.non_power_by_value：形狀沒有列出 budget.power_primitives",
+        "shape_budget.ring.non_power_by_value：不可為空",
+        "shape_budget.ring.non_power_by_value：形狀沒有列出 budget.power_primitives",
+        "shape_budget.single.by_value：形狀沒有 budget.param，不能查表",
+    ]
+
+
+def test_shape_budget_lives_in_the_budget_table() -> None:
+    """HC-B：形狀的基礎倍率與每單位加成在 skill_budget.yaml（每種形狀一項）。"""
+    lib = library()
+    shapes = lib.ruleset.shapes
+    assert list(lib.budget.shape_budget) == [s.id for s in shapes.shapes]
+    assert shape_budget_problems(shapes, lib.budget) == []
+    prices = dict(lib.budget.shape_budget)
+    del prices["line"]
+    prices["nope"] = prices["self"]
+    prices["self"] = prices["self"].model_copy(update={"per_unit_permille": 100})
+    broken = lib.budget.model_copy(update={"shape_budget": prices})
+    assert shape_budget_problems(shapes, broken) == [
+        "形狀 line：shape_budget 少了這一項",
+        "shape_budget.nope：沒有這個形狀",
+        "shape_budget.self：形狀沒有 budget.param，不能設 per_unit_permille",
+    ]
 
 
 def test_min_rarity_tables_match_the_spec() -> None:
@@ -335,7 +396,7 @@ def test_min_rarity_tables_match_the_spec() -> None:
         "stoneskin",  # 3-54d：拿掉最低稀有（和護衛一致）
     }
     for status in rules.statuses.statuses:
-        if status.budget_points is not None:
+        if library().budget.status_point(status.id) is not None:
             expected = "common" if status.id in common_statuses else "rare"
             assert status.min_rarity == expected, status.id
     assert {c.min_rarity for c in rules.conditions.conditions} == {"rare"}

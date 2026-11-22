@@ -99,7 +99,9 @@ class WorkshopRandomRequest(_ApiModel):
     """隨機組合器（``trpg skills random`` 同一個函式）：同種子同參數結果一致。"""
 
     seed: int = Field(ge=0, le=MASK64)
-    tier: int | None = Field(default=None, ge=1, le=5)
+    tier: int | None = Field(default=None, ge=1)
+    """技能階級；上限照 ``rules/core.yaml`` 的 ``skill_limits.tiers``，由端點檢查（HC-7 b：原本
+    寫死 5）。"""
     rarity: SkillRarity | None = None
     skeleton: str | None = None
 

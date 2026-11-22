@@ -76,7 +76,9 @@ def composite_estimate(
     enemies, allies = _sides(state, unit, area.units)
     if enemies == 0:
         return None
-    return Fraction(3 * enemies - 3 * allies) - Fraction(dist_to(unit, area.origin), 1000)
+    est = state.ruleset.ai.estimate
+    score = est.composite_enemy_points * enemies - est.composite_ally_penalty * allies
+    return Fraction(score) - Fraction(dist_to(unit, area.origin), 1000)
 
 
 def _distance_to_foes(state: BattleState, unit: UnitState, xy: XY) -> int:

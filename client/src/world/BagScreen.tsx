@@ -17,7 +17,7 @@ import { Hint } from "../ui/Hint";
 import { PartTip } from "../ui/PartTip";
 import { GearCardView } from "../ui/gear/GearCardView";
 import { WeaponSwapConfirm } from "../ui/gear/WeaponSwapConfirm";
-import { equipAction, equipState, otherRingSlot } from "./bagView";
+import { equipAction, equipState, otherRingSlot, pouchUseText } from "./bagView";
 import { itemHint, PouchEditor } from "./EconomyPanel";
 import { bagCells, BAG_COLS, cellHint, pickedCell, pouchCells, tileLines, type BagCell } from "./bagGrid";
 import { LootChoicePanel } from "./LootChoicePanel";
@@ -251,7 +251,7 @@ export function BagContents({ inventory, busy, onAct, canUse, initialPick = null
         </div>
         <BagGrid cells={cells} inventory={inventory} picked={current?.key ?? null} onPick={setPicked} testId="world-bag" cols={BAG_COLS} />
         <div className="section-title" data-testid="world-pouch-title">
-          腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・戰鬥中 1 AP 使用</span>
+          腰包　<span className="muted small">{inventory.pouch_count}／{inventory.pouch_max} 個・{pouchUseText()}</span>
         </div>
         <div className="world-pouch-row">
           <BagGrid cells={pouch} inventory={inventory} picked={current?.key ?? null} onPick={setPicked} testId="world-pouch" cols={Math.max(1, pouch.length)} />

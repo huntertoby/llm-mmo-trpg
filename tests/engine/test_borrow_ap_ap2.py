@@ -205,7 +205,7 @@ def test_borrow_is_deterministic() -> None:
 
 def test_only_skills_with_borrow_may_cost_zero_ap() -> None:
     assert borrow_skill().ap_cost == 0
-    with pytest.raises(ValidationError, match="ap_cost 必須是 1 到 3"):
+    with pytest.raises(ValidationError, match="ap_cost 至少 1"):  # HC-4b：上限 3 在 Ruleset 層
         SkillDef.model_validate(
             {
                 **borrow_skill().model_dump(exclude_none=True),

@@ -6,9 +6,11 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from trpg.content.battle import DollLook, SummonLook, UnitTemplate, WeaponDef
+from trpg.content.battle import DollLook, StatusTable, SummonLook, UnitTemplate, WeaponDef
+from trpg.content.composer_rules import ComposerRules, composer_rule_problems
 from trpg.content.dev_starters import DevStarterTable
 from trpg.content.enemy_looks import look_range_problems
+from trpg.content.environment import SurfaceTable
 from trpg.content.flash_templates import FlashTable
 from trpg.content.library.base import _load_dir
 from trpg.content.modifier_changes import (
@@ -18,13 +20,21 @@ from trpg.content.modifier_changes import (
 )
 from trpg.content.races import OriginTable, RaceTable, race_reference_problems
 from trpg.content.regions import RegionTable
+from trpg.content.rules import CoreRules
 from trpg.content.schemas import ContentModel
 from trpg.content.skill_evolution import EvolutionTable
 from trpg.content.skill_keywords import KeywordTable
-from trpg.content.skill_rules import BudgetRules, SkeletonDef
+from trpg.content.skill_rules import (
+    BudgetRules,
+    SkeletonDef,
+    budget_rule_problems,
+    price_table_problems,
+    primitive_points_problems,
+    shape_budget_problems,
+)
 from trpg.content.skill_scaling import SkillScalingRules, scaling_problems
 from trpg.content.skill_triggers import SkillTriggerTable
-from trpg.content.skills import ModifierChange, SkillDef
+from trpg.content.skills import ModifierChange, PrimitiveTable, ShapeTable, SkillDef
 from trpg.content.summons import SummonDef, SummonTable, load_summon_looks
 from trpg.shared.errors import ContentError
 
@@ -36,6 +46,48 @@ def _check_modifier_changes(root: Path, table: ModifierChangeTable, budget: Budg
     if problems:
         lines = "\n".join(f"  - {p}" for p in problems)
         raise ContentError(root / MODIFIER_CHANGES_FILE, f"修正規則的改變種類對不上：\n{lines}")
+
+
+def _check_budget_rules(root: Path, core: CoreRules, budget: BudgetRules) -> None:
+    """``skill_budget.yaml`` 依 AP、刻印輪數分項的表對得上 ``rules/core.yaml``（HC-4b）。"""
+    problems = budget_rule_problems(budget, core)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"技能預算表對不上核心規則：\n{lines}")
+
+
+def _check_composer_rules(
+    root: Path, composer: ComposerRules, core: CoreRules, budget: BudgetRules
+) -> None:
+    """``skill_composer.yaml`` 的 AP 與基本召喚物對得上 ``rules/core.yaml``、``skill_budget.yaml``
+    （HC-4b2）。"""
+    basic = budget.min_character_tier.basic_summon_units
+    problems = composer_rule_problems(composer, core, basic)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_composer.yaml", f"技能組合器對不上核心規則：\n{lines}")
+
+
+def _check_primitive_points(root: Path, primitives: PrimitiveTable, budget: BudgetRules) -> None:
+    """``skill_budget.yaml`` 的 ``primitive_points`` 與原語表對得上（HC-B）。"""
+    problems = primitive_points_problems(primitives, budget)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"原語點數對不上：\n{lines}")
+
+
+def _check_price_tables(
+    root: Path,
+    tables: tuple[StatusTable, SurfaceTable, ShapeTable],
+    budget: BudgetRules,
+) -> None:
+    """``skill_budget.yaml`` 的狀態、表面點數與形狀倍率對得上狀態表、表面表、形狀表（HC-B）。"""
+    statuses, surfaces, shapes = tables
+    problems = price_table_problems(statuses, surfaces, budget)
+    problems += shape_budget_problems(shapes, budget)
+    if problems:
+        lines = "\n".join(f"  - {p}" for p in problems)
+        raise ContentError(root / "skill_budget.yaml", f"狀態、表面、形狀的計價對不上：\n{lines}")
 
 
 def _check_unit_races(
@@ -107,8 +159,10 @@ def _check_evolution(
     table: EvolutionTable,
     keywords: KeywordTable,
     skeletons: Mapping[str, SkeletonDef],
+    core: CoreRules,
 ) -> None:
-    """進化模板的跨檔案檢查（Phase 3-26b）：嫁接的關鍵字與改試的骨架必須存在。"""
+    """進化模板的跨檔案檢查（Phase 3-26b）：嫁接的關鍵字與改試的骨架必須存在；召喚數量型分歧的
+    隻數要等於 ``core.yaml`` 的 ``skill_limits.max_summon_count``（HC-4b2：原本寫死在 schema）。"""
     known = set(keywords.ids())
     problems = [f"未知的關鍵字 {k}" for k in sorted(table.grafts) if k not in known]
     problems += [
@@ -117,6 +171,12 @@ def _check_evolution(
         for s in t.skeletons
         if s not in skeletons
     ]
+    count = table.summon.count_number
+    if count != core.skill_limits.max_summon_count:
+        problems.append(
+            f"summon.count_number 必須等於 core.yaml 的 skill_limits.max_summon_count"
+            f"（{core.skill_limits.max_summon_count}），收到 {count}"
+        )
     if problems:
         raise ContentError(root / "skill_evolution.yaml", "；".join(problems))
 
@@ -127,10 +187,8 @@ def _load_flash(
     evolution: EvolutionTable,
     triggers: SkillTriggerTable,
 ) -> FlashTable:
-    """閃現設定（Phase 3W-1；檔案可以不存在）與跨檔案檢查：大變化引用的進化模板存在且分支相符、
-    轉型的觸發時機存在。"""
-    if not (root / "flash_templates.yaml").exists():
-        return FlashTable()
+    """閃現設定（Phase 3W-1；HC-4b3 起必備，數字都寫在檔裡）與跨檔案檢查：大變化引用的進化模板
+    存在且分支相符、轉型的觸發時機存在。"""
     table: FlashTable = load("flash_templates.yaml", FlashTable)
     branches = {t.id: t.branch for t in evolution.templates}
     problems: list[str] = []
@@ -152,6 +210,21 @@ def _load_flash(
     if problems:
         raise ContentError(root / "flash_templates.yaml", "；".join(problems))
     return table
+
+
+def _check_flash_forms(root: Path, table: FlashTable, primitives: PrimitiveTable) -> None:
+    """閃現與升階重配的形態幅度（``rules.form_magnitudes``）最後一格不能超過 ``enter_form`` 原語
+    ``magnitude_permille`` 參數的上限（HC-4b3：原本寫死在 schema 的 2000‰；兩邊是同一個上限）。"""
+    enter_form = primitives.by_id().get("enter_form")
+    param = None if enter_form is None else enter_form.params.get("magnitude_permille")
+    top = None if param is None else param.max
+    last = table.rules.form_magnitudes[-1]
+    if top is not None and last > top:
+        raise ContentError(
+            root / "flash_templates.yaml",
+            f"rules.form_magnitudes 最多 {top}‰（skill_primitives.yaml 的 enter_form."
+            f"magnitude_permille 上限；兩格要一起改），收到 {last}",
+        )
 
 
 def _dev_starter_problems(

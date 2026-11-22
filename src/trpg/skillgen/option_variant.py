@@ -41,14 +41,18 @@ def variants_visible(draft: Draft, library: ContentLibrary) -> bool:
 
 
 def variant_notes(draft: Draft, library: ContentLibrary) -> tuple[str, ...]:
-    cap = library.ruleset.core.variant_max_by_rarity.get(str(draft.get("rarity")), 0)
+    caps = library.ruleset.core.variant_max_by_rarity
+    cap = caps.get(str(draft.get("rarity")), 0)
     rate = library.budget.variant_surcharge_permille
     step = library.budget.range_step_permille
+    swaps = library.ruleset.core.skill_limits.max_variant_replacements
+    rare, epic = caps.get("rare", 0), caps.get("epic", 0)
     return (
-        f"這個稀有度最多 {cap} 個變奏（稀有 1 個、史詩以上 2 個）",
+        f"這個稀有度最多 {cap} 個變奏（稀有 {rare} 個、史詩以上 {epic} 個）",
         f"基礎型態每多一個變奏預算多算 {rate / 10:g}%；每個型態各自都要落在預算窗內",
         f"變奏的射程每 +1 格，該型態的射程係數多算 {step / 10:g}%（−1 則少算）",
-        "替換內容填 1～2 項；不能改 AP、冷卻、代價；帶變奏的技能不能含區域、延遲傷害、複製技能",
+        f"替換內容填 1～{swaps} 項；不能改 AP、冷卻、代價；"
+        "帶變奏的技能不能含區域、延遲傷害、複製技能",
         "替換既有附帶效果請用進階 YAML",
     )
 
@@ -151,17 +155,22 @@ def variant_fields(
         FieldSpec(
             field="shape",
             name_zh="換形狀",
-            description_zh="整個換掉（替換內容 1～2 項擇一或兩項）",
+            description_zh=(
+                "整個換掉（替換內容 1～"
+                f"{library.ruleset.core.skill_limits.max_variant_replacements} 項擇一或兩項）"
+            ),
             type="choice",
             choices=shape_choices(draft, library, skeleton),
         ),
         FieldSpec(
             field="range_delta",
             name_zh="射程 ±",
-            description_zh="結果至少 1；+1 格約加基礎點數 5%",
+            description_zh=(
+                f"結果至少 1；+1 格約加基礎點數 {library.budget.range_step_permille / 10:g}%"
+            ),
             type="int",
-            min=-3,
-            max=3,
+            min=library.composer.variant.range_delta.min,
+            max=library.composer.variant.range_delta.max,
         ),
         _element_field(),
     ]

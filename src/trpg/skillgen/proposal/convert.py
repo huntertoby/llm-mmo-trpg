@@ -21,6 +21,7 @@ from trpg.content.skills import (
     SkillDef,
     skill_elements,
 )
+from trpg.skillgen.draft import fill_trap_rounds
 from trpg.skillgen.player_text import plain_name
 from trpg.skillgen.proposal.models import CALLER_FIELDS, LLM_ID_PREFIX, ProposalContext
 from trpg.skillgen.proposal_costs import (
@@ -60,7 +61,7 @@ def _skill_data(
     proposal: BaseModel,
     ctx: ProposalContext,
     fill: NumberFiller,
-    library: ContentLibrary | None = None,
+    library: ContentLibrary,
 ) -> dict[str, Any]:
     data = proposal.model_dump(mode="json", exclude_none=True)
     data.pop("layout", None)
@@ -70,15 +71,16 @@ def _skill_data(
     if data.pop("cost_overdraft", None):  # 透支（3-50b）：不算自身狀態，可以並用
         data["cost"] = {**data.get("cost", {}), "overdraft": 1}
     apply_cost_choices(data, library)  # 每場一次、HP 代價、失手反噬（4-L8）
-    if library is not None:  # 層數的對象由層數決定（3-52），LLM 只挑層數
-        data["effects"] = [_stack_target(e, library) for e in data.get("effects", [])]
+    # 層數的對象由層數決定（3-52），LLM 只挑層數
+    data["effects"] = [_stack_target(e, library) for e in data.get("effects", [])]
     data["narrative"] = {"concept": data.pop("concept"), "cast_flavor": data.pop("cast_flavor")}
     data.update(tier=ctx.tier, rarity=ctx.rarity, rank=ctx.rank)
     data["provenance"] = {"origin": ctx.origin, "created_by": "llm"}
     data = fill(data)
     data["name_zh"] = _combined_name(data, library)
     data["id"] = _skill_id(data)
-    return data
+    # HC-5b：沒寫陷阱輪數時補（ID 照補值前的內容，同 HC-5a 之前在驗證時才補）
+    return {**fill_trap_rounds(data, library), "id": data["id"]}
 
 
 PLACEHOLDER_NAME = "提議技能"
@@ -108,19 +110,18 @@ def to_skill_def(
     proposal: BaseModel,
     ctx: ProposalContext,
     fill: NumberFiller,
-    library: ContentLibrary | None = None,
+    library: ContentLibrary,
 ) -> SkillDef:
     """已驗證的提議（只有結構）→ :class:`SkillDef`：``fill`` 補上數值（骰子、倍率、持續、AP、法力、
     冷卻等；見 :mod:`trpg.skillgen.proposal_numbers`）。ID 由補完數值後的內容雜湊而來；同一份
     提議加同一份數值永遠得到相同 ID。``ctx.hero_attributes`` 有值（且給了 ``library``）時縮放屬性
-    改取主角最高的允許屬性（見 :class:`ProposalContext`）。
+    改取主角最高的允許屬性（見 :class:`ProposalContext`）。HC-5b：``library`` 改成必填（唯一的呼叫端
+    一直有傳；代價的預設值改讀內容檔）。
 
     schema 層級的錯誤丟 :class:`pydantic.ValidationError`（:func:`evaluate_proposal` 轉成
     ``stage="skill"`` 的錯誤）。"""
     data = _skill_data(proposal, ctx, fill, library)
     skill = SkillDef.model_validate(data)
-    if library is None:
-        return skill
     # 武器技一律看武器大類的主屬性（3H-6，不看主角屬性）；其他技能跟主角最高屬性（3H-3）；
     # 沒有主角屬性時收進允許範圍（3H-7：在範圍內不動，否則取範圍裡第一個）
     fitted = (
@@ -180,6 +181,8 @@ def proposal_from_skill(skill: SkillDef, library: ContentLibrary) -> dict[str, A
     """手寫技能 → 提議 JSON（few-shot 範例與結構往返測試用；數值欄位已移除）。用到提議模型沒有的
     欄位時丟 ``ValueError``。要連同數值一起取得時用
     :func:`~trpg.skillgen.proposal_numbers.split_numbers`。"""
+    if skill.form_entry_effect is not None:  # GS-3：進入時效果只給手寫內容，提議格式不開放
+        raise ValueError(f"{skill.id} 帶化身技的進入時效果，提議格式沒有")
     full = skill.model_dump(mode="json", exclude_defaults=True)
     data, _ = split_numbers(full, library)
     data.update(cost_choices_of(full.get("cost") or {}, data))  # 4-L8 的代價欄位

@@ -7,7 +7,10 @@
 # 請把它改成 8001 或改這裡的埠號）。
 base_url = "http://localhost:8001/v1"
 # LB-CF（2026-11-14 使用者「Gemma 溫度 0.7」）：預設改用 LM Studio 上的 Gemma。
-model = "google/gemma-4-26b-a4b-qat"
+# 2026-11-22 使用者：「其實我打算後面改這個 swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs
+# 這個其實滿快的 而且現在改只要選了 不用 生成 所以只是生成 選擇 和對話 其實速度可接受」。
+# 品質量測見 docs/phases/Swift-Qwen27B品質評估.md；舊值 google/gemma-4-26b-a4b-qat。
+model = "swift-1.5-qwen3.8-27b-uncensored-dynamic-mtp@iq4_xs"
 api_key = "local"          # 本機模型任意字串即可；真正的金鑰請用環境變數，不要寫進版控
 # LLM-1：120 → 240。真模型 p50 約 59 秒，120 會讓慢的那幾題提早逾時又重送全文（伺服器仍在算被放棄的
 # 那一次，重送排隊等於付兩次）。
@@ -29,6 +32,8 @@ generate = false
 enable_thinking = false
 # LM Studio 上的 Gemma 不認 chat_template_kwargs，不設 reasoning_effort = "none" 就會思考
 # （思考吃光 max_tokens、回應是空的），所以用 Gemma 時這行必要（LB-CF 起預設打開）。
+# 2026-11-22 實測 swift-qwen3.8-27b：只送 enable_thinking=false 仍會思考（reasoning_tokens 43～67），
+# 加這行才是 0，所以這顆也要這行。
 # 注意：vLLM 可能不接受 none；換回 vLLM 時要拿掉這行，或用環境變數 TRPG_LLM_REASONING_EFFORT
 # 覆寫成伺服器接受的值（環境變數設空字串不會清掉這行的值）。
 reasoning_effort = "none"

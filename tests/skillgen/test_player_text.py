@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
+from functools import cache
 from typing import Any
+
+import pytest
 
 from tests.engine.helpers import library
 from trpg.skillgen.draft_check import check_draft
@@ -44,7 +48,7 @@ def _field_texts(field: Any) -> list[str]:
 def _player_texts(draft: dict[str, Any]) -> list[str]:
     lib = library()
     options = draft_options(draft, lib)
-    check = check_draft(draft, lib)
+    check = check_draft(draft, lib, options=options)  # QF-4b：草稿選項只算一次
     texts = list(options.problems)
     for step in options.steps:
         texts += [step.name_zh, step.description_zh, *step.notes_zh]
@@ -93,16 +97,36 @@ def _mutations(base: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
-def test_player_check_texts_have_no_english_identifiers() -> None:
-    found: dict[str, str] = {}
-    for seed in range(60):
+_SEEDS = 60
+_PARTS = 8
+"""QF-4：草稿分成幾份平行跑（每份單獨跑約半分鐘；整組放在一個測試時約 3.5 分鐘，
+逼近單一測試 300 秒的上限）。"""
+
+
+@cache
+def _unique_drafts() -> tuple[str, ...]:
+    """種子 0～59 的隨機技能與各自的突變，去掉一字不差的重複（QF-4：突變後與原稿或另一個突變
+    相同的草稿約 13%，都在同一個種子內；檢查的文字一樣，只檢查一次）。組合本身很快（約 1 秒）。
+    存成 JSON 字串（不共用可變的字典；保留原本的鍵順序），用的時候再還原。"""
+    out: dict[str, str] = {}
+    for seed in range(_SEEDS):
         base = compose_random_skill(seed, library=library()).model_dump(
             mode="json", exclude_none=True
         )
         for draft in _mutations(base):
-            for text in _player_texts(draft):
-                for word in _leaks(text):
-                    found.setdefault(word, text)
+            out.setdefault(json.dumps(draft, sort_keys=True), json.dumps(draft))
+    return tuple(out.values())
+
+
+@pytest.mark.parametrize("part", range(_PARTS))
+def test_player_check_texts_have_no_english_identifiers(part: int) -> None:
+    """每份檢查去重後草稿的第 ``part``、``part + 8``……份（八份合起來＝全部）。"""
+    found: dict[str, str] = {}
+    for raw in _unique_drafts()[part::_PARTS]:
+        draft = json.loads(raw)
+        for text in _player_texts(draft):
+            for word in _leaks(text):
+                found.setdefault(word, text)
     assert found == {}, found
 
 

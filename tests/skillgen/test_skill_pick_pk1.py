@@ -6,10 +6,11 @@ from dataclasses import replace
 from functools import cache
 
 import pytest
+from pydantic import ValidationError
 
 from trpg.content.library import ContentLibrary, load_library
 from trpg.content.player_pool import player_skills
-from trpg.content.skill_pick import PickWeights, SkillPickRules, WishTagRules
+from trpg.content.skill_pick import PickPoolRules, PickWeights, WishTagRules
 from trpg.shared.types import Attribute
 from trpg.skillgen.keywords import derive_keywords
 from trpg.skillgen.pick_player import PickPlayer
@@ -42,10 +43,17 @@ def _ctx(request: ProposalRequest) -> ProposalContext:
     return ProposalContext(request.tier, request.rarity, keywords=request.keywords)
 
 
-def test_the_table_loads_with_the_defaults() -> None:
+def test_the_table_loads_and_every_number_is_written() -> None:
     rules = _lib().skill_pick
-    # PK-4：願望標籤清單（wish_tags）是內容資料、不是數值預設，比預設值時拿掉（清單另外驗）
-    assert rules.model_copy(update={"wish_tags": WishTagRules()}) == SkillPickRules()
+    # HC-4b2：程式不再有預設值，每個數字都寫在 skill_pick.yaml（少一欄就載入失敗）
+    for model, data in (
+        (PickPoolRules, rules.pool.model_dump()),
+        (PickWeights, rules.weights.model_dump()),
+        (WishTagRules, rules.wish_tags.model_dump()),
+    ):
+        for name in sorted(n for n, v in data.items() if isinstance(v, int)):
+            with pytest.raises(ValidationError, match=name):
+                model.model_validate({k: v for k, v in data.items() if k != name})
     assert rules.wish_tags.elements and rules.wish_tags.effects
     assert 4 <= rules.pool.top_k <= 6  # 提案第 6 節第 2 題 A：每格 4～6 個
     assert rules.pool.min_for_llm == 2  # 提案 7.6：少於 2 個就不呼叫 LLM
@@ -76,7 +84,10 @@ def test_pool_candidates_are_legal_distinct_and_fit_the_request() -> None:
 
 def test_pool_stops_at_the_design_cap() -> None:
     lib = _lib()
-    rules = SkillPickRules.model_validate({"pool": {"designs": 4, "top_k": 4}})
+    base = lib.skill_pick
+    rules = base.model_copy(
+        update={"pool": base.pool.model_copy(update={"designs": 4, "top_k": 4})}
+    )
     pool = candidate_pool(lib, FAST, _ctx(FAST), seed=3, rules=rules)
     composer = [c for c in pool.candidates if c.source == "composer"]
     assert len(composer) == 4
@@ -119,7 +130,7 @@ def _maker_and_user() -> tuple[str, PickCandidate, PickCandidate]:
 def test_synergy_counts_makes_uses_links() -> None:
     lib = _lib()
     _, maker, user = _maker_and_user()
-    weights = PickWeights()
+    weights = lib.skill_pick.weights
     alone = score_candidate(lib, maker, PickPlayer(), weights)
     linked = score_candidate(lib, maker, PickPlayer(held_skills=(user.skill,)), weights)
     assert dict(alone.parts)["synergy"] == 0
@@ -140,11 +151,11 @@ def test_behavior_and_route_add_points_but_not_power() -> None:
     )
     cand = PickCandidate(skill, "pool", None, design_key(skill))
     action = keyword_def.actions[0]
-    scored = score_candidate(lib, cand, PickPlayer(behavior={action: 3}), PickWeights())
+    scored = score_candidate(lib, cand, PickPlayer(behavior={action: 3}), lib.skill_pick.weights)
     assert dict(scored.parts)["behavior"] == min(400, 3 * 20)
     attrs = {a: 18 if a == skill.scaling_attr else 10 for a in Attribute}
-    routed = score_candidate(lib, cand, PickPlayer(hero_attributes=attrs), PickWeights())
-    assert dict(routed.parts)["route"] == PickWeights().route_main
+    routed = score_candidate(lib, cand, PickPlayer(hero_attributes=attrs), lib.skill_pick.weights)
+    assert dict(routed.parts)["route"] == lib.skill_pick.weights.route_main
     assert "budget" not in dict(routed.parts)  # 不比強弱
 
 
@@ -154,14 +165,16 @@ def test_rank_prefers_diverse_designs_and_breaks_ties_by_order() -> None:
     base = pool[0]
     clone = replace(base, skill=base.skill.model_copy(update={"id": "clone"}))
     other = next(c for c in pool if c.key[3] != base.key[3])
-    ranked = rank_candidates([base, clone, other], PickWeights(), 3)
+    ranked = rank_candidates([base, clone, other], lib.skill_pick.weights, 3)
     assert [c.skill.id for c in ranked] == [base.skill.id, other.skill.id, "clone"]
     assert dict(ranked[2].parts)["diversity"] < 0
-    no_penalty = PickWeights(
-        same_skeleton_penalty=0,
-        same_shape_penalty=0,
-        same_effects_penalty=0,
-        same_element_penalty=0,
+    no_penalty = lib.skill_pick.weights.model_copy(
+        update={
+            "same_skeleton_penalty": 0,
+            "same_shape_penalty": 0,
+            "same_effects_penalty": 0,
+            "same_element_penalty": 0,
+        }
     )
     plain = rank_candidates([base, clone, other], no_penalty, 3)
     assert [c.skill.id for c in plain] == [base.skill.id, "clone", other.skill.id]

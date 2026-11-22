@@ -12,8 +12,8 @@ from __future__ import annotations
 from typing import Final
 
 from trpg.content.library import ContentLibrary
-from trpg.content.world_rules import DEFAULT_WEEK_DAYS
 from trpg.world.calendar import day_of
+from trpg.world.common import rules_of
 from trpg.world.state import WorldState
 
 __all__ = ["FIRST_SEASON_ID", "week_days", "week_of"]
@@ -24,9 +24,8 @@ FIRST_SEASON_ID: Final = "s1"
 
 
 def week_days(library: ContentLibrary) -> int:
-    """一週幾天；內容庫沒有世界規則時用預設值。"""
-    rules = library.world_rules
-    return DEFAULT_WEEK_DAYS if rules is None else rules.week_days
+    """一週幾天（``world/rules.yaml`` 的 ``week_days``）；HC-7 起沒有世界規則就報錯。"""
+    return rules_of(library).week_days
 
 
 def week_of(library: ContentLibrary, world: WorldState, now: int) -> int:

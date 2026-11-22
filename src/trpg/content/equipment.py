@@ -390,7 +390,7 @@ class AttackAffix(_AffixBase):
     - ``read``：普攻打到站在自己符文上的敵人時，傷害 +``value``‰（計入全身 +50% 上限）；
     - ``detonate``：普攻命中時引爆目標那 1 格上自己的符文，造成一次 ``dice`` 的傷害；
     - ``inscribe``：普攻命中時在目標格刻下 ``rune_element``（預設雷紋）的符文，持續
-      ``rune_rounds`` 輪（預設 2）。
+      ``rune_rounds`` 輪（``inscribe`` 必填；HC-7 拿掉引擎的預設 2，內容檔寫明）。
 
     ``summon_inherit``（Phase 3-33f2，6.29.6；與其他恰好填一個）：你的召喚物繼承你身上 1 條普攻
     附加詞條（元素、命中附帶狀態、連擊、分裂；符文不繼承；依詞條 ID 取第一條），本身沒有其他效果。
@@ -461,7 +461,9 @@ class AttackAffix(_AffixBase):
         if self.strike == "combo" and (
             self.value_unit != "flat" or self.value is None or self.value.min < MIN_COMBO_N
         ):
-            raise ValueError(f"詞條 {self.id}：combo 的 N 至少 2，value_unit 必須是 flat")
+            raise ValueError(
+                f"詞條 {self.id}：combo 的 N 至少 {MIN_COMBO_N}，value_unit 必須是 flat"
+            )
 
     def _check_rune(self) -> None:
         if self.rune is None:
@@ -476,6 +478,8 @@ class AttackAffix(_AffixBase):
             raise ValueError(f"詞條 {self.id}：dice 只在 rune: detonate 時填寫（且必填）")
         if self.rune != "inscribe" and (self.rune_element is not None or self.rune_rounds):
             raise ValueError(f"詞條 {self.id}：rune_element、rune_rounds 只能搭配 rune: inscribe")
+        if self.rune == "inscribe" and self.rune_rounds is None:
+            raise ValueError(f"詞條 {self.id}：rune: inscribe 要寫 rune_rounds（持續輪數）")
         if self.rune_element is Element.PHYSICAL:
             raise ValueError(f"詞條 {self.id}：rune_element 不可是物理")
 
@@ -918,6 +922,9 @@ class EquipmentRules(ContentModel):
 
     diminishing_permille: tuple[int, ...] = Field(min_length=1)
     max_affixes_per_item: int = Field(ge=1, le=8)
+    max_weapon_element_affixes: int = Field(ge=0)
+    """同一件裝備最多幾條武器元素詞條（Phase 3K-1，08 8.21.2.4 #52；HC-7 從
+    :func:`weapon_element_problems` 搬來，值 1）。"""
     caps: EquipmentCaps
 
     @model_validator(mode="after")
@@ -1059,11 +1066,12 @@ def affix_slot_problems(
     return _affix_slot_problems(item, affix, weapon, weapons)
 
 
-def weapon_element_problems(name: str, affixes: Iterable[AffixDef]) -> list[str]:
-    """同一件裝備最多 1 條武器元素詞條（Phase 3K-1，08 8.21.2.4 #52）。"""
+def weapon_element_problems(name: str, affixes: Iterable[AffixDef], limit: int) -> list[str]:
+    """同一件裝備最多 ``limit`` 條武器元素詞條（``rules/equipment.yaml`` 的
+    ``max_weapon_element_affixes``；Phase 3K-1，08 8.21.2.4 #52）。"""
     count = sum(1 for a in affixes if isinstance(a, AttackAffix) and a.weapon_element is not None)
-    if count > 1:
-        return [f"{name}：武器元素詞條同一件最多 1 條（有 {count} 條）"]
+    if count > limit:
+        return [f"{name}：武器元素詞條同一件最多 {limit} 條（有 {count} 條）"]
     return []
 
 
@@ -1106,7 +1114,7 @@ def item_problems(
     return (
         problems
         + rune_pair_problems(f"物品 {item.id}", known)
-        + weapon_element_problems(f"物品 {item.id}", known)
+        + weapon_element_problems(f"物品 {item.id}", known, rules.max_weapon_element_affixes)
     )
 
 
@@ -1181,7 +1189,9 @@ def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules)
         if len(entry.affixes) > rules.max_affixes_per_item:
             problems.append(f"{item.name_zh}：詞條最多 {rules.max_affixes_per_item} 條")
         problems += rune_pair_problems(item.name_zh, (e.affix for e in entry.affixes))
-        problems += weapon_element_problems(item.name_zh, (e.affix for e in entry.affixes))
+        problems += weapon_element_problems(
+            item.name_zh, (e.affix for e in entry.affixes), rules.max_weapon_element_affixes
+        )
     main = by_slot.get("main_hand")
     if main is not None and main.item.weapon is not None and main.item.weapon != weapon.id:
         problems.append(

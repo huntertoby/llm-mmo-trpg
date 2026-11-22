@@ -14,7 +14,6 @@ from trpg.content.battle import DollLook
 from trpg.content.fields import ChasmStyle, DecorKind, DecorLayer, FieldFigure, ObjectPanel
 from trpg.content.races import RaceLook
 from trpg.content.world_events import NpcPortrait
-from trpg.content.world_rules import FieldRules
 from trpg.engine.view import AppearanceView
 
 __all__ = [
@@ -344,9 +343,10 @@ class FieldView(_ApiModel):
     """自己的位置與朝向。"""
     max_climb: int = 1
     """一步最多往上爬幾層（``core.max_climb_height``；6B-3 前端算路徑用）。"""
-    walk_max_steps: int = FieldRules().walk_max_steps
-    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；6P-2，前端照這個分段送）。預設值取
-    :class:`~trpg.content.world_rules.FieldRules` 的（單一來源，6R-P）。"""
+    walk_max_steps: int
+    """一次 ``walk`` 最多幾格（規則 ``field.walk_max_steps``；6P-2，前端照這個分段送）。
+    必填（HC-4d：規則沒有程式預設值，由 :func:`~trpg.api.world_field_view.field_view` 從世界規則
+    帶入）。"""
     hero: FieldHeroView | None = None
     """主角外觀（6B-3）。"""
     stone_targets: tuple[FieldStoneTargetView, ...] = ()

@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.tuning.drafts import DEFAULT_DRAFT, DRAFT_NAME_PATTERN
 
 __all__ = [
+    "MAP_DEFAULT_SEEDS",
+    "MAX_RATIO_SEEDS",
+    "MAX_SIM_BATTLES",
+    "MAX_SIM_MAPS",
+    "RATIO_DEFAULT_SEEDS",
+    "RATIO_MAX_WORK",
+    "SIM_DEFAULT_SEEDS",
     "SMALL_SAMPLE",
     "TuningApplyResult",
     "TuningChangeIn",
@@ -39,10 +46,24 @@ __all__ = [
     "TuningUnitSkills",
 ]
 
+# ---- 數值工坊的工具設定（HC-7 b：只留這一份）----
+# 請求與回應的預設值、service、ratios、sim_jobs 都讀這裡。
 SMALL_SAMPLE = 30
 """分母小於這個數時標「樣本小」（規格 5.4）。"""
 MAX_RATIO_SEEDS = 250
 """比值情境每組種子數的上限（NW-2c；BAL-21e 全表用 250）。"""
+SIM_DEFAULT_SEEDS: Final = 3
+"""頭目戰預設「小」：1 個頭目 × 8 build × 3 種子＝24 場（第 0.0 節第 5 點）。"""
+MAP_DEFAULT_SEEDS: Final = 24
+"""地圖戰預設：1 張圖 × 24 種子（NW-2 5.6）。"""
+MAX_SIM_MAPS: Final = 3
+"""地圖戰一次最多幾張圖。"""
+MAX_SIM_BATTLES: Final = 160
+"""單次模擬的場數上限（改後）。"""
+RATIO_DEFAULT_SEEDS: Final = 50
+"""比值情境每組預設種子數（T11；BAL-21e 是 250）。"""
+RATIO_MAX_WORK: Final = 40_000
+"""比值情境單次上限：組數 × 種子（T11）。"""
 
 
 class _Model(BaseModel):
@@ -150,8 +171,8 @@ class TuningFieldView(_Model):
     notice_zh: str | None = None
     """欄位下方一直顯示的提示行（NW-3b：會被造牆技能放出來的物件的最大 HP）；``None``＝沒有。"""
     group_zh: str | None = None
-    """表單分組標題（PB-1n 待決 2：頭目部位的欄位按部位分組，例「部位 1「拂塵」」）；
-    ``None``＝不分組。"""
+    """表單分組標題（PB-1n 待決 2：頭目部位的欄位按部位分組，例「部位 1「拂塵」」；HC-B：白名單的
+    ``group_zh``，例技能預算表的「原語點數」）；``None``＝不分組。"""
 
 
 class TuningObjectDetail(_Model):
@@ -312,6 +333,8 @@ class TuningStatus(_Model):
     """跑中的模擬工作 ID。"""
     max_group: int
     """分組改一次最多幾招（``skills.MAX_GROUP``；HC-3 前端不寫死）。"""
+    draft_name_max: int
+    """草稿名稱最多幾個字（``drafts.DRAFT_NAME_MAX``；HC-6b 說明文字組字用）。"""
 
 
 # ---------------------------------------------------------------------------
@@ -340,8 +363,8 @@ class TuningSimOptions(_Model):
     """上一次實測的每場秒數（沒跑過時是估計值）；預估秒數＝場數 × 這個 ÷ ``workers``。"""
     maps: list[TuningSimMap] = Field(default_factory=list)
     """地圖戰情境可選的地圖（NW-2a；有預設遭遇、不含 ``test_*``、``training_range``）。"""
-    map_default_seeds: int = 24
-    map_seconds_per_battle: float = 0.8
+    map_default_seeds: int
+    map_seconds_per_battle: float
     """地圖戰的每場秒數（另記，不和頭目戰共用）。"""
     ratio_default_seeds: int
     """比值情境（NW-2c T11）：每組預設種子數（``ratios.DEFAULT_SEEDS``）。"""
@@ -351,9 +374,9 @@ class TuningSimOptions(_Model):
     """地圖戰一次最多幾張圖（``service.MAX_SIM_MAPS``；HC-3）。"""
     small_sample: int
     """分母小於這個數時標「樣本小」（``SMALL_SAMPLE``；HC-3）。"""
-    ratio_max_work: int = 40000
+    ratio_max_work: int
     """比值情境：「組數 × 種子」的上限（組＝武器 × 招 × 情境）。"""
-    ratio_battles_per_second: float = 450.0
+    ratio_battles_per_second: float
     """比值情境：上一次實測的每秒場數（沒跑過時是 BAL-21e 的估計值）；
     預估秒數＝組數 × 種子 ÷ 這個。"""
 
@@ -378,7 +401,7 @@ class TuningSimRequest(_Model):
     """頭目戰必填。"""
     builds: list[str] | None = None
     """頭目戰：省略＝全部 8 個。"""
-    seeds: int = Field(default=3, ge=1, le=MAX_RATIO_SEEDS)
+    seeds: int = Field(default=SIM_DEFAULT_SEEDS, ge=1, le=MAX_RATIO_SEEDS)
     """頭目戰：每個 build 的種子數；地圖戰：每張圖的種子數（兩者另受場數上限 160 限制）；
     比值：每組的種子數（NW-2c，上限 250＝BAL-21e 的規模）。"""
     maps: list[str] | None = None
@@ -691,7 +714,7 @@ class TuningRatioSkip(_Model):
 
 class TuningRatioPlanIn(_Model):
     skills: list[str] = Field(default_factory=list, max_length=100)
-    seeds: int = Field(default=50, ge=1, le=MAX_RATIO_SEEDS)
+    seeds: int = Field(default=RATIO_DEFAULT_SEEDS, ge=1, le=MAX_RATIO_SEEDS)
 
 
 class TuningRatioPlan(_Model):

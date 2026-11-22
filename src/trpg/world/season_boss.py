@@ -25,7 +25,7 @@ from typing import Final, Literal
 from trpg.content.library import ContentLibrary
 from trpg.content.world_season import SeasonBossDef
 from trpg.world.actions import InsightGainedEvent, WorldEvent
-from trpg.world.calendar import day_of, day_start, local_time_zh, next_refresh
+from trpg.world.calendar import calendar_of, day_of, day_start, local_time_zh, next_refresh
 from trpg.world.clock import day_phase
 from trpg.world.common import world_map_of
 from trpg.world.errors import WorldActionError
@@ -255,7 +255,8 @@ def challenge_problem(
     if seal_keys_of(char) < required:
         return f"需要至少 {required} 把封印鑰匙才能進裂界門"
     if world.boss_attempts_of(day_of(library, now), actor) >= boss.daily_attempts:
-        return f"這個帳號今天的 {boss.daily_attempts} 次挑戰已經用完（每天 6 點刷新）"
+        hour = calendar_of(library).refresh_hour
+        return f"這個帳號今天的 {boss.daily_attempts} 次挑戰已經用完（每天 {hour} 點刷新）"
     return None
 
 

@@ -17,8 +17,6 @@ from trpg.content.skills import SkillRarity, rarity_rank
 
 __all__ = ["penalty_choices", "penalty_cost", "penalty_of_cost"]
 
-_MIN_DURATION = 2
-
 
 def penalty_choices(library: ContentLibrary, rarity: SkillRarity | None = None) -> tuple[str, ...]:
     """提議可以挑的自身狀態代價（排序；透支另外用 ``cost_overdraft``）。"""
@@ -28,16 +26,19 @@ def penalty_choices(library: ContentLibrary, rarity: SkillRarity | None = None) 
         s
         for s in rule.allowed
         if s in statuses
-        and statuses[s].budget_points is not None
+        and library.budget.status_point(s) is not None
         and (rarity is None or rarity_rank(statuses[s].min_rarity) <= rarity_rank(rarity))
     )
     return tuple(found)
 
 
-def penalty_cost(library: ContentLibrary | None, choice: str) -> dict[str, Any]:
-    """自身狀態選擇 → ``cost`` 裡要加的欄位。"""
-    fixed = {} if library is None else library.budget.allowance.self_status.fixed_duration
-    return {"self_status": {"status": choice, "duration": fixed.get(choice, _MIN_DURATION)}}
+def penalty_cost(library: ContentLibrary, choice: str) -> dict[str, Any]:
+    """自身狀態選擇 → ``cost`` 裡要加的欄位：持續固定的狀態照
+    ``allowance.self_status.fixed_duration``，其餘取最短
+    （``skill_limits.min_self_status_duration``；HC-5b：原本寫死 2）。"""
+    fixed = library.budget.allowance.self_status.fixed_duration
+    shortest = library.ruleset.core.skill_limits.min_self_status_duration
+    return {"self_status": {"status": choice, "duration": fixed.get(choice, shortest)}}
 
 
 def penalty_of_cost(cost: dict[str, Any]) -> tuple[str | None, bool]:

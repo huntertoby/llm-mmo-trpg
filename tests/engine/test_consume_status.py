@@ -20,6 +20,7 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7, U1, U2
 from tests.engine.test_passive_triggers import always
+from tests.skillgen.helpers import limit_problems
 from trpg.content.skills import SkillDef, skill_problems
 from trpg.engine import BattleState, UseSkill, preview, resolve
 from trpg.engine.events import (
@@ -248,7 +249,6 @@ def _consume_effect(**extra: Any) -> dict[str, Any]:
     "effect",
     [
         _consume_effect(then=[]),
-        _consume_effect(then=[_FIRE_1D4, _FIRE_1D4, _FIRE_1D4]),
         _consume_effect(then=[{"type": "push", "distance": 1}]),
         _consume_effect(then=[{**_FIRE_1D4, "affects": "allies"}]),
         _consume_effect(scale="stacks"),
@@ -261,6 +261,13 @@ def _consume_effect(**extra: Any) -> dict[str, Any]:
 def test_structural_errors_are_rejected(effect: dict[str, Any]) -> None:
     with pytest.raises(ValidationError):
         SkillDef.model_validate(_skill_with(effect))
+
+
+def test_then_count_is_limited_by_the_ruleset() -> None:
+    """HC-4b：then 的效果數上限（core.yaml skill_limits.max_consume_then）在 Ruleset 層檢查。"""
+    effect = _consume_effect(then=[_FIRE_1D4, _FIRE_1D4, _FIRE_1D4])
+    problems = limit_problems(SkillDef.model_validate(_skill_with(effect)))
+    assert any("then 必須有 1 到 2 個效果，收到 3" in p for p in problems), problems
 
 
 def _problems(effect: dict[str, Any]) -> list[str]:

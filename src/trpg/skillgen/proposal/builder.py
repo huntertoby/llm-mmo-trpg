@@ -31,7 +31,6 @@ from trpg.content.skills import (
 )
 from trpg.shared.types import Element
 from trpg.skillgen.proposal.models import (
-    _MAX_NESTED,
     NESTED_EFFECT_TYPES,
     _alias,
     _get,
@@ -221,7 +220,8 @@ class _Builder:
             if spec.type == "effects":
                 if nested is None or nested[name] is None:
                     continue
-                limits = {"min_length": 1, "max_length": _MAX_NESTED}
+                most = self.library.composer.llm_topic.max_nested_effects
+                limits = {"min_length": 1, "max_length": most}
                 fields[name] = _field(nested[name], limits, required=spec.required, doc=doc)
                 continue
             if fixed is not None and name in fixed:
@@ -254,7 +254,7 @@ class _Builder:
         self, primitive: PrimitiveDef, name: str, spec: PrimitiveParam, *, backlash: bool = False
     ) -> tuple[Any, dict[str, Any]]:
         """參數型別；稀有度檢查狀態的原語（``apply_status``）只列稀有度夠的狀態（Phase 4-L5b）；
-        以狀態點數計預算的原語（``budget_basis: status``）只列有 ``budget_points`` 的狀態
+        以狀態點數計預算的原語（``budget_basis: status``）只列 ``status_points`` 有的狀態
         （4-L5c）；失手反噬不列不能當反噬的狀態（硬控、跳過回合、持續傷害；4-L10a）。"""
         if spec.type == "status":
             ids = self._status_choices(primitive)
@@ -400,9 +400,17 @@ def _when_model(surfaces: Sequence[str]) -> Any:
     return _alias("VariantWhen", Annotated[Union[tuple(branches)], Discriminator(pick)])  # noqa: UP007
 
 
-def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ()) -> Any:
+RangeDelta = Literal[1, 2]
+"""變奏的射程加值能填的值（組合器 ``composer_special`` 的 ``range_delta`` 階梯；提議提示詞的說明照
+這裡組字，HC-7）。"""
+
+
+def _variant_model(
+    effect: Any | None, shape: Any, surfaces: Sequence[str] = (), *, swap_max: int
+) -> Any:
     """戰場變奏；``effect`` 是變奏能加入或替換的效果（不含 ``lookup_by_skill_id`` 原語），
-    ``None`` 時不開放 ``add_effect``／``replace_effect``。
+    ``None`` 時不開放 ``add_effect``／``replace_effect``。``swap_max`` 是替換內容最多幾項
+    （``core.skill_limits.max_variant_replacements``；HC-6a 寫進說明）。
 
     ``range_delta``（LB-2b，玩法 PM 4.1.17 第 2 點；06 6.24「射程 ±」）：只開加值 +1～+2，範圍照
     組合器（``composer_special`` 的 ``range_delta`` 階梯 1、2）；射程變短的變奏不開放。預算與驗證器
@@ -412,7 +420,7 @@ def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ())
         "name_zh": (str, Field(min_length=1, max_length=12)),
         "when": (_when_model(surfaces), ...),
         "shape": (shape | None, None),
-        "range_delta": (Literal[1, 2] | None, None),
+        "range_delta": (RangeDelta | None, None),
         "element": (Element | None, None),
     }
     if effect is not None:
@@ -427,7 +435,7 @@ def _variant_model(effect: Any | None, shape: Any, surfaces: Sequence[str] = ())
     return create_model(
         "Variant",
         __base__=_Proposal,
-        __doc__="戰場變奏：when 條件成立時套用 1～2 項替換（shape、range_delta、element、"
+        __doc__=f"戰場變奏：when 條件成立時套用 1～{swap_max} 項替換（shape、range_delta、element、"
         "add_effect、replace_effect）。",
         **fields,
     )

@@ -15,6 +15,7 @@ import type { WorldEventView, WorldSituationResult, WorldStory } from "../api/ty
 import { eventArtBg, eventArtScale, eventArtScene, eventArtUrl, SCENES } from "../render/eventArt";
 import { NARRATOR_PORTRAIT } from "../render/portrait";
 import { Hint } from "../ui/Hint";
+import { gameRules } from "../battle/glossary";
 import { PopupFrame, type PopupPlacement } from "../ui/PopupFrame";
 import { revealBottomInScroller, scrollerOf } from "../ui/scrollReveal";
 
@@ -143,11 +144,13 @@ function AttrRow({ text }: { text: string }) {
   );
 }
 
-/** 線索鈕的說明卡（字照現行）。 */
-export const clueHint = (n: number): string => `線索：你持有的線索與往來 ${n} 筆（點開來引用；回答裡要提到它，遊戲核對得到才 +1，最多 +2）`;
-/** 一筆線索的說明卡（字照現行）。 */
-export const citeHint = (f: { item_zh: string; insert_zh?: string | null; text_zh: string }): string =>
-  `${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +2）`;
+/** 線索鈕的說明卡（字照現行）。最多加幾點照伺服器 `rules.situation_care_max`（`world/situation_rules.yaml`；HC-6c）；
+ * 每筆 +1 是用心清單的算法（一筆算一點，`trpg.world.situations`）。 */
+export const clueHint = (n: number, careMax: number = gameRules().situation_care_max): string =>
+  `線索：你持有的線索與往來 ${n} 筆（點開來引用；回答裡要提到它，遊戲核對得到才 +1，最多 +${careMax}）`;
+/** 一筆線索的說明卡（字照現行；最多加幾點同上）。 */
+export const citeHint = (f: { item_zh: string; insert_zh?: string | null; text_zh: string }, careMax: number = gameRules().situation_care_max): string =>
+  `${f.item_zh}：引用時會把「${f.insert_zh ?? f.text_zh}」寫進回答；回答裡要提到它，遊戲核對得到才 +1（最多 +${careMax}）`;
 
 /** 打開判定後多久內跟著內容大小再捲（毫秒）。 */
 export const SETTLE_MS = 1200;

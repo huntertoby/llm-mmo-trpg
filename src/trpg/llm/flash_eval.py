@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from trpg.content.library import ContentLibrary
 from trpg.content.player_pool import player_skills
 from trpg.llm.client import LLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.flash_propose import (
     FlashProposalRecord,
     FlashProposalStats,
@@ -84,7 +85,7 @@ def evaluate_flash(
     *,
     seed: int = 0,
     naming: NamingFactory | None = None,
-    alert_permille: int = 200,
+    alert_permille: int = LLM_DEFAULTS.fallback_alert_permille,
 ) -> FlashEval:
     """對 ``skills`` 逐一出三種題目並累積統計。``source`` 的 ``sink`` 會被換成評估自己的收集器。"""
     stats = FlashProposalStats(alert_permille=alert_permille)

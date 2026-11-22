@@ -77,8 +77,6 @@ CARE_LIMIT: Final = 2
 """用心清單最多 +2（9.6.4 #85）。"""
 RACE_BONUS_LIMIT: Final = 1
 """種族加值 +1（9.6.4 #89）。"""
-MAX_CARE_CLAIMS: Final = 4
-"""用心清單只有 4 項（9.6.4 ①～④）；提議最多列 4 筆。"""
 PLAYER_TEXT_LIMIT: Final = 500
 """玩家回答的長度上限（字；同 ``trpg.llm.prompts.escape.PLAYER_TEXT_MAX_CHARS``）。"""
 FACT_MAX_CHARS: Final = 80
@@ -86,10 +84,9 @@ ALIAS_MIN_CHARS: Final = 2
 """用心清單關鍵詞別名的最短長度（5C-3d 代決：單字太容易被順口帶到，至少 2 字）。"""
 ALIAS_MAX_CHARS: Final = 20
 
-_MIN_ATTRIBUTES = 2
-_MAX_ATTRIBUTES = 3
-_MAX_METHODS = 3
 _DANGER_LEVELS = (1, 2, 3)
+"""危險度的刻度（9.6.4：1～3 各一筆）；和 ``DangerDef.level``、模板 ``danger`` 的 ``le=3`` 是
+同一個格式護欄（HC-4d 判 guard）。"""
 
 CareItem = Literal[
     "clue",  # ① 用到自己查到的線索（持有的有效線頭）
@@ -98,6 +95,8 @@ CareItem = Literal[
     "weakness",  # ④ 方法針對情境弱點
 ]
 CARE_ITEMS: Final[tuple[CareItem, ...]] = ("clue", "npc_bond", "exchange", "weakness")
+MAX_CARE_CLAIMS: Final = len(CARE_ITEMS)
+"""用心清單只有 4 項（9.6.4 ①～④）；提議最多列 4 筆（HC-4d：取清單項數，不另寫數字）。"""
 
 PenaltyKind = Literal["supplies", "debuff", "hurt", "reinforce"]
 """懲罰種類（9.6.4：輕的是失去補給、下一場戰鬥帶 debuff，最重到受傷或敵人增援）。"""
@@ -132,6 +131,24 @@ class CheckRules(ContentModel):
     race_bonus: int = Field(ge=0, le=RACE_BONUS_LIMIT)
 
 
+class TemplateLimits(ContentModel):
+    """``situation_rules.yaml`` 的 ``template_limits``：情境模板與骨架情境解法的規則型上下限
+    （9.6.4「允許的屬性 2～3 種」；HC-4d 從模組常數搬來，值照搬）。"""
+
+    methods_max: int = Field(ge=1, le=12)
+    """一個模板最多列幾個方法。"""
+    attributes_min: int = Field(ge=1, le=7)
+    """一個模板至少列幾種允許的屬性。"""
+    attributes_max: int = Field(ge=1, le=7)
+    """一個模板（與事件骨架的情境判定解法）最多列幾種允許的屬性。"""
+
+    @model_validator(mode="after")
+    def _order(self) -> TemplateLimits:
+        if self.attributes_min > self.attributes_max:
+            raise ValueError("template_limits.attributes_min 不可大於 attributes_max")
+        return self
+
+
 class SituationBudget(ContentModel):
     """獎勵預算（9.6.7 #6「獎勵照地點建議等級的預算表」；07 7.8 經驗來源比例）。"""
 
@@ -164,6 +181,8 @@ class SituationRules(ContentModel):
     race_methods: dict[str, str] = Field(default_factory=dict)
     """種族 → 該族 +1 的方法（9.6.11 #115）。"""
     check: CheckRules
+    template_limits: TemplateLimits
+    """情境模板的屬性數、方法數（HC-4d）。"""
     budget: SituationBudget
     dangers: tuple[DangerDef, ...]
     exchange_supplies: int = Field(ge=1)
@@ -184,7 +203,8 @@ class SituationRules(ContentModel):
         ]
         levels = sorted(d.level for d in self.dangers)
         if tuple(levels) != _DANGER_LEVELS:
-            problems.append("危險度必須 1～3 各一筆")
+            low, high = _DANGER_LEVELS[0], _DANGER_LEVELS[-1]
+            problems.append(f"危險度必須 {low}～{high} 各一筆")
         if problems:
             raise ValueError("；".join(problems))
         return self
@@ -277,11 +297,12 @@ class SituationTemplateDef(ContentModel):
     solution: int = Field(ge=0)
     """骨架 ``solutions`` 的索引（0 起），必須是 ``situation``。"""
     note_zh: str = Field(min_length=1)
-    methods: tuple[_Id, ...] = Field(min_length=1, max_length=_MAX_METHODS)
-    attributes: tuple[Attribute, ...] = Field(
-        min_length=_MIN_ATTRIBUTES, max_length=_MAX_ATTRIBUTES
-    )
-    """允許的屬性（9.6.4「2～3 種」）；開頭＝骨架解法列的屬性。"""
+    methods: tuple[_Id, ...] = Field(min_length=1)
+    """允許的方法；最多幾個看 ``situation_rules.yaml`` 的 ``template_limits.methods_max``（HC-4d，
+    跨檔案檢查）。"""
+    attributes: tuple[Attribute, ...] = Field(min_length=1)
+    """允許的屬性（9.6.4「2～3 種」，範圍是 ``template_limits.attributes_min``～``attributes_max``，
+    跨檔案檢查）；開頭＝骨架解法列的屬性。"""
     base_dc: int = Field(ge=5, le=30)
     danger: int = Field(ge=1, le=3)
     weaknesses: tuple[WeaknessDef, ...] = ()
@@ -415,7 +436,7 @@ def _template_shape_problems(
     template: SituationTemplateDef, rules: SituationRules, skeletons: EventSkeletonTable | None
 ) -> list[str]:
     label = f"情境模板 {template.id}"
-    out: list[str] = []
+    out = _template_limit_problems(template, rules.template_limits)
     methods = rules.method_by_id()
     unknown = [m for m in template.methods if m not in methods]
     out += [f"{label}：未知的方法 {m}" for m in unknown]
@@ -446,6 +467,31 @@ def _template_shape_problems(
             if t not in own_threads
         ]
     return out
+
+
+def _template_limit_problems(template: SituationTemplateDef, limits: TemplateLimits) -> list[str]:
+    """模板的方法數、屬性數超出 ``template_limits``（HC-4d，原本是 schema 的長度限制）。"""
+    label = f"情境模板 {template.id}"
+    out: list[str] = []
+    if len(template.methods) > limits.methods_max:
+        out.append(f"{label}：methods 最多 {limits.methods_max} 個，收到 {len(template.methods)}")
+    low, high = limits.attributes_min, limits.attributes_max
+    if not low <= len(template.attributes) <= high:
+        count = len(template.attributes)
+        out.append(f"{label}：attributes 必須有 {low}～{high} 種，收到 {count}")
+    return out
+
+
+def _skeleton_limit_problems(skeletons: EventSkeletonTable, limits: TemplateLimits) -> list[str]:
+    """事件骨架的情境判定解法最多幾種允許的屬性（HC-4d：原本是 ``world_events`` 的常數 3，
+    改讀 ``template_limits.attributes_max``）。"""
+    top = limits.attributes_max
+    return [
+        f"事件骨架 {skeleton.id} 的第 {index} 個解法：情境判定解法必須有 1～{top} 個允許的屬性"
+        for skeleton in skeletons.skeletons
+        for index, solution in enumerate(skeleton.solutions)
+        if solution.kind == "situation" and len(solution.attributes) > top
+    ]
 
 
 def _outcome_problems(
@@ -511,6 +557,8 @@ def situation_problems(
     problems: list[str] = []
     if events is None:
         problems.append(f"情境模板 {region}：沒有 {region} 的事件骨架")
+    else:
+        problems += _skeleton_limit_problems(events, rules.template_limits)
     for template in table.templates:
         problems += _template_shape_problems(template, rules, events)
         problems += _outcome_problems(template, rules, world_map, status_ids, enemy_only_ids)

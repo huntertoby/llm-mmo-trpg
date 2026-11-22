@@ -6,6 +6,7 @@
 // 從自己的位置施放；技能選單（含不能灌注的中文原因）由伺服器的 infuse-options 提供。
 import type { Action, BattleView, CommandOption, CommandOptions, InfuseOptions, InfusionPreview, Pos, UnitView } from "../api/types";
 import { unitTiles } from "./footprint";
+import { gameRules } from "./glossary";
 import { samePos } from "./geometry";
 import { isAlive, type UnitNames } from "./units";
 
@@ -34,12 +35,15 @@ export const MODE_LABELS: Readonly<Record<SummonMode, string>> = {
   hold: "待命",
 };
 
-export const MODE_HINTS: Readonly<Record<SummonMode, string>> = {
-  focus: "打你指定的敵人；目標倒下或離場後退回「跟隨」。",
-  guard: "待在你 2 格內，優先打威脅你的敵人。",
-  follow: "靠近你行動，但會主動攻擊附近的敵人。",
-  hold: "原地不動，只打相鄰的敵人。",
-};
+/** 四個模式的說明；「守護我」待在幾格內照伺服器 `rules.summon_guard_radius`（`ai_profiles.yaml` 的 `summon.guard_radius`；HC-6c）。 */
+export function modeHints(guardRadius: number = gameRules().summon_guard_radius): Readonly<Record<SummonMode, string>> {
+  return {
+    focus: "打你指定的敵人；目標倒下或離場後退回「跟隨」。",
+    guard: `待在你 ${guardRadius} 格內，優先打威脅你的敵人。`,
+    follow: "靠近你行動，但會主動攻擊附近的敵人。",
+    hold: "原地不動，只打相鄰的敵人。",
+  };
+}
 
 function byId(a: UnitView, b: UnitView): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
@@ -79,10 +83,11 @@ export interface ModeButton {
 /** 四個 0 AP 模式按鈕，`current` 標示目前模式。 */
 export function modeButtons(summon: UnitView, canAct: boolean, view: BattleView): ModeButton[] {
   const hasFoes = focusTargets(view).length > 0;
+  const hints = modeHints();
   return MODE_ORDER.map((mode) => ({
     mode,
     label: MODE_LABELS[mode],
-    hint: MODE_HINTS[mode],
+    hint: hints[mode],
     current: summon.summon_mode === mode,
     needsTarget: mode === "focus",
     disabled: !canAct || (mode === "focus" ? !hasFoes : summon.summon_mode === mode),

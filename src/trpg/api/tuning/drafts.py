@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "DEFAULT_DRAFT",
+    "DRAFT_NAME_MAX",
     "DRAFT_NAME_PATTERN",
     "Change",
     "Draft",
@@ -29,7 +30,9 @@ __all__ = [
 ]
 
 DEFAULT_DRAFT: Final = "current"
-DRAFT_NAME_PATTERN: Final = r"^[a-z0-9][a-z0-9_-]{0,39}$"
+DRAFT_NAME_MAX: Final = 40
+"""草稿名稱最多幾個字（HC-6b：樣式和畫面的說明都照這個數）。"""
+DRAFT_NAME_PATTERN: Final = rf"^[a-z0-9][a-z0-9_-]{{0,{DRAFT_NAME_MAX - 1}}}$"
 _FORMAT: Final = "trpg-tuning-draft/1"
 
 

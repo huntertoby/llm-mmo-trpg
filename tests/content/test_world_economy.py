@@ -148,11 +148,13 @@ def test_item_rules(library: ContentLibrary) -> None:
     with pytest.raises(ValidationError, match="uses_per_battle 必須是 1"):
         WorldItemDef.model_validate(_item(kind="consumable", skill=twice))
     with pytest.raises(ValidationError, match="物品 ID 重複"):
-        WorldItemTable.model_validate({"items": [_item(), _item()]})
+        WorldItemTable.model_validate({"item_skill_ap_cost": 1, "items": [_item(), _item()]})
     with pytest.raises(ValidationError, match="未知的任務種類"):
         EconomyRules.model_validate({"quest_coins": {"by_kind": {"boss": 1}}})
     assert not library.world_economy.rules.sellable("material")  # type: ignore[union-attr]
-    assert EconomyRules().sell_price(5) == 2 and EconomyRules().sell_price(1) == 1
+    rules = library.world_economy.rules
+    assert rules is not None
+    assert rules.sell_price(5) == 2 and rules.sell_price(1) == 1
 
 
 def test_item_region_must_exist(library: ContentLibrary, tmp_path: Path) -> None:

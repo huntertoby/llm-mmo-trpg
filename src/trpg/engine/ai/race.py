@@ -4,19 +4,22 @@
 開始（還有 AP 時）先問 :func:`race_ai_action`——有合法的種族技、且符合下面的使用條件就用，沒有才
 走一般評分。每種效果一個計分函式（分數 > 0 才用；同分取列舉順序在前的，所以是確定性的）：
 
-- ``bonus_move``（應變）：現在打不到任何敵人，多 2 點移動剛好夠走到射程內；
+- ``bonus_move``（應變）：現在打不到任何敵人，多走的格數（效果的 ``amount``）剛好夠走到射程內；
 - ``conceal_self``（林隱）、``immovable``（穩若磐石）、``create_surface`` 自身（炎印）：敵人逼近
-  （7／3／2 格內）且還留有行動 AP；
+  （各自的格數）且還留有行動 AP；
 - ``decoy``（舊狐族的狐火誘餌，#138 退役；效果與計分保留給舊紀錄與自訂種族）：敵人逼近、場上沒有
   自己的誘餌；放在離敵人最遠的合法格；
 - ``leap``（獸耳族的獸躍，#138）：跳上 **更高** 的格子、而且落地後打得到敵人才用（主動找高處）；
-  分數＝高度差 × 10 ＋ 落地後打得到的敵人數 ＋ 越近越好的小加分。平移、往下不走條件式路徑
-  （一般評分仍可能把它當成 1 AP 的位移選來用）；
+  分數＝高度差 × ``leap_rise_points`` ＋ 落地後打得到的敵人數 ＋ 越近越好的小加分。
+  平移、往下不走條件式路徑（一般評分仍可能把它當成 1 AP 的位移選來用）；
 - ``push``（龍息震退）：錐形內有敵人、沒有友方；把敵人推進岩漿或深淵的方向加分；
 - ``pull``（拋錨）：只拉遠程或法術的敵人（近戰敵人自己會走過來）；
-- ``restore_choice``（過充）：耐力或法力不到一半且缺口 ≥ 6，回復缺得最多的；
+- ``restore_choice``（過充）：耐力或法力偏低且缺口夠大時，回復缺得最多的；
 - ``hurl_object``（蠻力投擲）：只丟會爆炸的物件、落點已有火焰、爆炸範圍內有敵無友；
-- ``create_surface`` 方陣（潮息）：方陣內至少 2 個敵人、沒有友方。
+- ``create_surface`` 方陣（潮息）：方陣內敵人夠多、沒有友方。
+
+門檻與分數在 ``content/ai_profiles.yaml`` 的 ``heuristics.race``（HC-4c；引擎從
+``state.ruleset.ai`` 讀）。
 
 這些只是「合理的使用時機」，不追求最佳；種族勝率由平衡階段的模擬監看（7.7）。
 """
@@ -25,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from trpg.content.environment import RaceAiRules
 from trpg.engine.actions import UseRaceSkill
 from trpg.engine.ids import DECOY_TAG
 from trpg.engine.race.skills import race_skill_actions, race_skill_of
@@ -36,11 +40,6 @@ from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Surface
 
 __all__ = ["RACE_EFFECT_SCORERS", "RIDER_ONLY_EFFECTS", "race_ai_action"]
-
-_MIN_AP_AFTER = 2
-"""用完種族技後還要能行動（一般動作 1 AP）：回合開始 AP 至少這麼多才用需要「接著行動」的種族技。"""
-_RESTORE_MIN_DEFICIT = 6
-_MIN_CLUSTER = 2
 
 type _Scorer = Callable[[BattleState, UnitState, UseRaceSkill], int]
 
@@ -54,24 +53,34 @@ def _nearest(state: BattleState, unit: UnitState) -> int | None:
     return min(distances) if distances else None
 
 
-def _near_score(limit: int) -> _Scorer:
-    """敵人在 ``limit`` 格內、且用完後還能行動時 1 分。"""
+def _rules(state: BattleState) -> RaceAiRules:
+    return state.ruleset.ai.race
+
+
+def _near_score(limit: Callable[[RaceAiRules], int]) -> _Scorer:
+    """敵人在 ``limit(規則)`` 格內、且用完後還能行動時 1 分。"""
 
     def score(state: BattleState, unit: UnitState, _a: UseRaceSkill) -> int:
+        rules = _rules(state)
         nearest = _nearest(state, unit)
-        return int(nearest is not None and nearest <= limit and unit.ap >= _MIN_AP_AFTER)
+        return int(
+            nearest is not None and nearest <= limit(rules) and unit.ap >= rules.min_ap_after
+        )
 
     return score
 
 
 def _adapt_score(state: BattleState, unit: UnitState, _a: UseRaceSkill) -> int:
     enemies = _enemies(state, unit)
-    if not enemies or unit.ap < _MIN_AP_AFTER:
+    if not enemies or unit.ap < _rules(state).min_ap_after:
         return 0
     if any(attack_problem(state, unit, e) is None for e in enemies):
         return 0  # 現在就打得到，不必多走
+    skill = race_skill_of(state, unit)
+    assert skill is not None
+    extra = skill.effects[0].amount or 0  # 第一個效果是 bonus_move 才會到這裡；多走的格數
     gap = min(unit_dist(unit, e) for e in enemies) - attack_reach(state, unit)
-    return int(unit.move_points < gap <= unit.move_points + 2)
+    return int(unit.move_points < gap <= unit.move_points + extra)
 
 
 def _decoy_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
@@ -79,7 +88,8 @@ def _decoy_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> i
     assert skill is not None
     decoy = next(e for e in skill.effects if e.type == "decoy")  # 第一個效果是 decoy 才會到這裡
     nearest = _nearest(state, unit)
-    if nearest is None or nearest > (decoy.ai_trigger_range or 0) or unit.ap < _MIN_AP_AFTER:
+    too_far = nearest is None or nearest > (decoy.ai_trigger_range or 0)
+    if too_far or unit.ap < _rules(state).min_ap_after:
         return 0
     if any(u.owner_id == unit.id and u.has_tag(DECOY_TAG) for u in state.living_units()):
         return 0  # 已經有一個誘餌
@@ -94,16 +104,17 @@ def _push_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
     assert skill is not None and action.direction is not None
     cells = set(shapes.cone_tiles(state, unit.xy, action.direction, skill.shape.size or 0))
     dx, dy = shapes.DIRECTIONS[action.direction]
+    rules = _rules(state)
     score = 0
     for other in state.living_units():
         if other.id == unit.id or other.xy not in cells:
             continue
         if other.team is unit.team:
             return 0  # 不推到自己人
-        score += 2
+        score += rules.push_enemy_points
         behind = (other.xy[0] + dx, other.xy[1] + dy)  # 6R-1：地圖邊外不查（原本越界會出錯）
         if state.in_bounds(*behind) and is_deadly(state, behind):
-            score += 3  # 推進岩漿或深淵
+            score += rules.push_deadly_points  # 推進岩漿或深淵
     return score
 
 
@@ -112,15 +123,13 @@ def _pull_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
     target = state.units[action.target_id]
     if target.weapon.is_melee or target.is_summon:
         return 0
-    return 1 + (2 if target.hp * 2 <= target.max_hp else 0)
-
-
-_LEAP_RISE_POINTS = 10
-"""獸躍每往上一層的分數（遠大於「打得到的敵人數」，所以先挑高的，再挑打得到多的）。"""
+    rules = _rules(state)
+    low = target.hp * 1000 <= target.max_hp * rules.pull_low_hp_permille
+    return 1 + (rules.pull_low_hp_points if low else 0)
 
 
 def _leap_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
-    if unit.ap < _MIN_AP_AFTER:
+    if unit.ap < _rules(state).min_ap_after:
         return 0
     enemies = _enemies(state, unit)
     if not enemies:
@@ -138,7 +147,7 @@ def _leap_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> in
     skill = race_skill_of(state, unit)
     assert skill is not None
     reach = skill.shape.range if isinstance(skill.shape.range, int) else 0
-    return rise * _LEAP_RISE_POINTS + hits + (reach + 1 - dist_to(unit, dest))
+    return rise * _rules(state).leap_rise_points + hits + (reach + 1 - dist_to(unit, dest))
 
 
 def _restore_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
@@ -148,8 +157,9 @@ def _restore_score(state: BattleState, unit: UnitState, action: UseRaceSkill) ->
         else (unit.mana, unit.max_mana)
     )
     deficit = (maximum - current) // state.ruleset.core.quantity_scale  # X10-2a：換算前的單位
-    low = maximum > 0 and current * 2 <= maximum
-    return deficit if low and deficit >= _RESTORE_MIN_DEFICIT else 0
+    rules = _rules(state)
+    low = maximum > 0 and current * 1000 <= maximum * rules.restore_low_permille
+    return deficit if low and deficit >= rules.restore_min_deficit else 0
 
 
 def _hurl_score(state: BattleState, unit: UnitState, action: UseRaceSkill) -> int:
@@ -172,22 +182,22 @@ def _surface_score(state: BattleState, unit: UnitState, action: UseRaceSkill) ->
     if skill.shape.type == "self":
         if state.tile(*unit.xy).surface is not Surface.NONE:
             return 0
-        return _near_score(2)(state, unit, action)
+        return _near_score(lambda r: r.surface_near)(state, unit, action)
     assert action.target_pos is not None
     cells = set(shapes.square3_tiles(state, (action.target_pos.x, action.target_pos.y)))
     inside = [u for u in state.living_units() if u.xy in cells]
     if any(u.team is unit.team for u in inside):
         return 0
-    return len(inside) if len(inside) >= _MIN_CLUSTER else 0
+    return len(inside) if len(inside) >= _rules(state).min_cluster else 0
 
 
 RACE_EFFECT_SCORERS: dict[str, _Scorer] = {
     "bonus_move": _adapt_score,
-    "conceal_self": _near_score(7),
+    "conceal_self": _near_score(lambda r: r.conceal_near),
     "decoy": _decoy_score,
     "push": _push_score,
     "pull": _pull_score,
-    "immovable": _near_score(3),
+    "immovable": _near_score(lambda r: r.immovable_near),
     "restore_choice": _restore_score,
     "hurl_object": _hurl_score,
     "create_surface": _surface_score,

@@ -8,12 +8,14 @@ from typing import Any
 from tests.engine.helpers import library
 from trpg.content.library import ContentLibrary, Ruleset
 from trpg.content.skills import PrimitiveDef, PrimitiveTable, SkillDef
+from trpg.content.skills.limits import skill_limit_problems
 from trpg.skillgen.validate import Violation, validate_skill
 
 __all__ = [
     "general_effect_tags",
     "lib",
     "lib_with_rewrite_primitive",
+    "limit_problems",
     "rules_of",
     "skill",
     "skill_raw",
@@ -62,6 +64,13 @@ def _data(**overrides: Any) -> dict[str, Any]:
     return data
 
 
+def limit_problems(s: SkillDef, library_: ContentLibrary | None = None) -> list[str]:
+    """``s`` 超出 ``core.yaml`` 的 ``skill_limits`` 的地方（HC-4b：上限從 ``SkillDef`` 搬到
+    ``Ruleset`` 層，``SkillDef.model_validate`` 不再擋）。"""
+    core = (library_ or lib()).ruleset.core
+    return skill_limit_problems(s, core.skill_limits)
+
+
 def violations(s: SkillDef, library_: ContentLibrary | None = None) -> list[Violation]:
     return validate_skill(s, library_ or lib())
 
@@ -82,11 +91,12 @@ def lib_with_rewrite_primitive() -> ContentLibrary:
         harmful=False,
         acts_on="caster",
         budget_basis="fixed",
-        base_points=6,
     )
     fields = {name: getattr(base.ruleset, name) for name in Ruleset.model_fields}
     fields["primitives"] = PrimitiveTable(primitives=(*base.ruleset.primitives.primitives, fake))
-    return replace(base, ruleset=Ruleset(**fields))
+    points = {**base.budget.primitive_points, "fake_rewrite": 6}  # HC-B：點數在預算表
+    budget = base.budget.model_copy(update={"primitive_points": points})
+    return replace(base, ruleset=Ruleset(**fields), budget=budget)
 
 
 def standard_form(schema: dict[str, Any]) -> dict[str, Any]:

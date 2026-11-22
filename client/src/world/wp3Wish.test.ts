@@ -8,7 +8,7 @@ import type { WorldView } from "../api/types";
 import { nowStyle } from "../run/flashChoice";
 import { objectHud } from "./atlasModel";
 import { panelAvailable } from "./hud";
-import { PREGEN_WAIT_NOTE, pregenRequestId, pregenWaitBody, pregenWaitNote, pregenWaitText } from "./pregen";
+import { pregenDefaultNote, pregenRequestId, pregenWaitBody, pregenWaitNote, pregenWaitText } from "./pregen";
 import { WishPanel } from "./WishPanel";
 import {
   offerSkipLabel,
@@ -115,8 +115,8 @@ describe("WP-3 許願池：接線", () => {
     expect(body).toEqual({ kind: "wish", text: "想把敵人凍住" });
     expect(pregenWaitText(body!)).toBe(WISH_ZH.waitText);
     expect(pregenRequestId(body!)).toBe("wish:想把敵人凍住");
-    expect(pregenWaitNote(body!)).toBe(WISH_ZH.waitNote);
-    expect(pregenWaitNote({ kind: "flash", skill: "s" })).toBe(PREGEN_WAIT_NOTE);
+    expect(pregenWaitNote(body!)).toBe(WISH_ZH.waitNote());
+    expect(pregenWaitNote({ kind: "flash", skill: "s" })).toBe(pregenDefaultNote());
     expect(pregenWaitBody({ kind: "wish", keywords: ["frozen"] })).toBeNull();
   });
 
@@ -168,9 +168,9 @@ describe("WP-3 許願池：面板", () => {
   });
 
   it("逾時或被退回：開在選單分頁，第一行說明", () => {
-    const html = render(wishData(), { seq: 1, text: WISH_ZH.timeout });
+    const html = render(wishData(), { seq: 1, text: WISH_ZH.timeout() });
     expect(html).toContain('data-pane="menu"');
     expect(html).toContain('data-testid="wish-fallback"');
-    expect(html).toContain(WISH_ZH.timeout);
+    expect(html).toContain(WISH_ZH.timeout());
   });
 });

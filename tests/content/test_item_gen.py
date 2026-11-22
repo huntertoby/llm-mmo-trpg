@@ -123,7 +123,7 @@ def test_every_rarity_gets_the_same_budget(level: int, slot_type: SlotType) -> N
         ("affix_attack_lightning", None, Fraction(10)),
         ("affix_attack_shadow", None, Fraction(10)),
         ("affix_weapon_fire", None, Fraction(15)),
-        ("affix_trait_axe_sunder", None, Fraction(8)),
+        ("affix_trait_axe_sunder", None, Fraction(6)),  # 2026-11-21 使用者改值（weapon_trait 8→6）
         ("affix_trig_kill_ap", None, Fraction(12) * Fraction(7, 10)),
         ("affix_charge_static", None, Fraction(12)),
         ("affix_act_grapple", None, Fraction(20)),

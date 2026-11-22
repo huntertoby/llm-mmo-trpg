@@ -47,7 +47,7 @@ from trpg.engine.ai.priority import (
     delayed_heal_points,
 )
 from trpg.engine.ai.self_costs import self_cost_gate
-from trpg.engine.ai.utility.gains import _DEFEND_RADIUS, _gains
+from trpg.engine.ai.utility.gains import _gains
 from trpg.engine.ai.utility.position import (
     ActionScore,
     OrderContext,
@@ -397,7 +397,7 @@ def _rewrite_event_points(
                 if target.has_status(CHEAT_DEATH_STATUS)
                 else rules.undying_points * lost
             )
-        elif actor.hp * 2 >= actor.max_hp:
+        elif actor.hp * 1000 >= actor.max_hp * rules.redirect_min_hp_permille:
             points = rules.redirect_points * lost
     elif isinstance(e, ReactionsGranted) and state.units[e.unit_id].reactions:
         points = Fraction(rules.reaction_points * e.amount)
@@ -503,7 +503,8 @@ def skill_cost(
 def defend_score(state: BattleState, unit: UnitState, w: AiWeights) -> Fraction:
     """防禦的分數：``defend`` × 6 格內的敵人數（防禦只替自己加上狀態，位置不變；與完整
     ``preview`` 的分數相同）。"""
-    near = sum(1 for e in _enemies(state, unit) if unit_dist(unit, e) <= _DEFEND_RADIUS)
+    radius = state.ruleset.ai.scoring.defend_radius
+    near = sum(1 for e in _enemies(state, unit) if unit_dist(unit, e) <= radius)
     return Fraction(w.defend * near)
 
 

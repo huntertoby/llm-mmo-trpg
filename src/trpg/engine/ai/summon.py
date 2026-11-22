@@ -49,7 +49,6 @@ __all__ = [
     "summon_template",
 ]
 
-_ESTIMATE_BASE = 20
 _PERMILLE = 1000
 
 
@@ -70,10 +69,12 @@ def sacrifice_estimate(
     spec = next(e for e in skill.effects if e.type == SACRIFICE_SUMMON)
     radius = spec.radius or 0
     near = [u for u in state.living_units() if dist_to(u, target_xy) <= radius]
+    est = state.ruleset.ai.estimate
     if spec.element is not None:
-        score = 3 * sum(1 for u in near if u.team is not unit.team)
+        score = est.sacrifice_enemy_points * sum(1 for u in near if u.team is not unit.team)
     else:
-        score = 2 * sum(1 for u in near if u.team is unit.team and u.hp < u.max_hp)
+        hurt = sum(1 for u in near if u.team is unit.team and u.hp < u.max_hp)
+        score = est.sacrifice_ally_points * hurt
     if score == 0:
         return None
     return Fraction(score) - Fraction(dist_to(unit, target_xy), _PERMILLE)
@@ -111,7 +112,7 @@ def summon_estimate(
     nearest = _nearest_enemy(state, unit.team, xy)
     if nearest is None:
         return None
-    return Fraction(_ESTIMATE_BASE - nearest) - tie
+    return Fraction(state.ruleset.ai.estimate.summon_base_points - nearest) - tie
 
 
 def _ranged_allies(state: BattleState, team: object) -> int:

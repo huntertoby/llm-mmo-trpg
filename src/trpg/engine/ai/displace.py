@@ -29,38 +29,34 @@ __all__ = ["DISPLACE_PRIMITIVES", "displace_estimate", "exposure", "is_hurt", "t
 DISPLACE_PRIMITIVES = (TELEPORT_TARGET, SWAP_ANY)
 """需要 :func:`displace_estimate` 的效果原語。"""
 
-_DEADLY_HARM = 10
-_SURFACE_HARM = 4
-_TRAP_HARM = 3
-_LOW_HP_PERMILLE = 400
-_EXPOSURE_RADIUS = 2
-
 type Harmful = Callable[[BattleState, XY], bool]
 
 
 def tile_harm(state: BattleState, xy: XY, trap_team: Team, harmful: Harmful) -> int:
-    """格子對站在上面的單位有多危險（便宜的估計）：致命地形 10、有害表面 4、``trap_team`` 陣營
-    放的陷阱 3、其他 0。"""
+    """格子對站在上面的單位有多危險（便宜的估計）：致命地形、有害表面、``trap_team`` 陣營放的
+    陷阱各有分數（``ai_profiles.yaml`` 的 ``heuristics.estimate``），其他 0。"""
+    est = state.ruleset.ai.estimate
     if is_deadly(state, xy):
-        return _DEADLY_HARM
+        return est.displace_deadly_points
     if harmful(state, xy):
-        return _SURFACE_HARM
+        return est.displace_surface_points
     traps = own_traps(state, trap_team)
-    return _TRAP_HARM if any(t.xy == xy for t in traps) else 0
+    return est.displace_trap_points if any(t.xy == xy for t in traps) else 0
 
 
 def exposure(state: BattleState, unit: UnitState, xy: XY) -> int:
-    """``unit`` 站在 ``xy`` 時，兩格內有幾個敵人。"""
+    """``unit`` 站在 ``xy`` 時，``exposure_radius`` 格（切比雪夫）內有幾個敵人。"""
+    radius = state.ruleset.ai.scoring.exposure_radius
     return sum(
         1
         for other in state.living_units()
-        if other.team is not unit.team and chebyshev(xy, other.xy) <= _EXPOSURE_RADIUS
+        if other.team is not unit.team and chebyshev(xy, other.xy) <= radius
     )
 
 
-def is_hurt(unit: UnitState) -> bool:
-    """快倒下的單位（HP 不超過 40%）。"""
-    return unit.hp * 1000 <= unit.max_hp * _LOW_HP_PERMILLE
+def is_hurt(state: BattleState, unit: UnitState) -> bool:
+    """快倒下的單位（HP 不超過最大 HP 的 ``hurt_hp_permille``‰）。"""
+    return unit.hp * 1000 <= unit.max_hp * state.ruleset.ai.scoring.hurt_hp_permille
 
 
 def _moved_value(
@@ -77,7 +73,7 @@ def _moved_value(
     if unit.team is not caster.team:
         return there - here
     value = here - there
-    if is_hurt(unit):
+    if is_hurt(state, unit):
         value += exposure(state, unit, unit.xy) - exposure(state, unit, to)
     return value
 

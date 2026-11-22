@@ -2,6 +2,7 @@
 // 選到一半的草稿、畫面上的字。規則全部在伺服器（`trpg.world.opening`）：這裡只決定畫面怎麼排、送什麼。
 // 文字照玩法 PM 定稿（台詞-OB5與PR2定稿）；招名、武器名、地名一律從伺服器讀，這裡不寫死技能 ID、招名或地名。
 import type { RangeView, SkillCard, StartWeaponOption } from "../api/types";
+import { gameRules } from "../battle/glossary";
 
 export const CLASS_LABELS: Record<string, string> = { melee: "近戰", ranged: "遠程", focus: "法器" };
 /** 大類卡標題旁的一句定位（取自守印人的話「想貼身打、遠遠射，還是施法？」）。 */
@@ -61,10 +62,11 @@ export function trackerFoldDot(reselect: Reselect | null | undefined, collapsed:
   return collapsed ? reselectBadge(reselect) : null;
 }
 
-/** 小牌的說明卡：去哪裡重選（伺服器給的地點句）＋只有一次。 */
-export function reselectBadgeHint(reselect: Reselect): string {
+/** 小牌的說明卡：去哪裡重選（伺服器給的地點句）＋只有一次。關鍵字幾個照伺服器 `rules.start_keywords`（重選和開局同一套，
+ * `roguelite.yaml` 的 `start.keywords`；HC-6c）。 */
+export function reselectBadgeHint(reselect: Reselect, keywords: number = gameRules().start_keywords): string {
   const place = reselect.place_zh ?? "";
-  return `${place === "" ? "" : `${place}。`}可以換武器與 2 個關鍵字，但只有這一次。`;
+  return `${place === "" ? "" : `${place}。`}可以換武器與 ${keywords} 個關鍵字，但只有這一次。`;
 }
 
 /** 確認彈窗要列的項目：會收回的招、起始武器本體收不收、材料不退的改動（伺服器原句）、只有這一次。全部來自資料。 */

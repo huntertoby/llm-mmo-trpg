@@ -472,9 +472,15 @@ class WeaponDef(ContentModel):
             )
         return tuple(lines)
 
-    def trait_lines_zh(self, *, on_hit_only: bool = False) -> tuple[str, ...]:
+    def trait_lines_zh(
+        self, core: CoreRules | None = None, *, on_hit_only: bool = False
+    ) -> tuple[str, ...]:
         """武器小特性的說明（每個特性一行；資料欄位的數值直接帶入，改參數說明跟著變）。
-        ``on_hit_only``：只列普攻命中時發動的特性（預覽用：破甲、震退、祝禱）。"""
+        ``on_hit_only``：只列普攻命中時發動的特性（預覽用：破甲、震退、祝禱）。
+
+        祝禱的骰子寫成範圍（HC-6c，X10-3d 裁定 6；同普攻：骰面 × ``core.quantity_scale``，固定值疊進
+        範圍），長說明（非 ``on_hit_only``）下一行多「擲 1d6，每點 ×10」。祝禱有骰子時一定要給
+        ``core``（沒有骰子的祝禱、其他特性不用）。"""
         lines: list[str] = []
         if self.armor_break is not None:
             pct = -self.armor_break.defense_permille / 10
@@ -484,10 +490,7 @@ class WeaponDef(ContentModel):
         if self.reach > 1 and not on_hit_only:
             lines.append(f"觸及 {self.reach} 格：{self.reach} 格內的藉機攻擊")
         if self.blessing is not None:
-            amount = f"{self.blessing.dice}" if self.blessing.dice is not None else ""
-            if self.blessing.flat:
-                amount += f"{'+' if amount else ''}{self.blessing.flat}"
-            lines.append(f"祝禱：普攻命中時，最近的隊友回復 {amount} HP")
+            lines += _blessing_lines(self.blessing, core, note=not on_hit_only)
         if self.entangle is not None:
             penalty = self.entangle.move_penalty
             lines.append(f"纏繞：普攻命中後，目標下回合移動 −{penalty}（不疊加、不擲抵抗）")
@@ -504,6 +507,21 @@ class WeaponDef(ContentModel):
         if self.backstab_dice:
             lines.append(f"背刺強化：從背後攻擊時，傷害骰 +{self.backstab_dice} 顆")
         return tuple(lines)
+
+
+def _blessing_lines(blessing: Blessing, core: CoreRules | None, *, note: bool) -> list[str]:
+    """祝禱的說明：「祝禱：普攻命中時，最近的隊友回復 10–60 HP」（HC-6c：骰子寫範圍，同 X10-3d 的
+    普攻）；``note`` 時骰子另起一行「擲 1d6，每點 ×10」。只有固定值時照舊寫「回復 30 HP」。"""
+    dice = blessing.dice
+    if dice is None:
+        return [f"祝禱：普攻命中時，最近的隊友回復 {blessing.flat} HP"]
+    if core is None:
+        raise ValueError("祝禱有骰子時要給 core 才能換算範圍（quantity_scale）")
+    low, high = span(dice.count, dice.sides, core.quantity_scale, blessing.flat)
+    lines = [f"祝禱：普攻命中時，最近的隊友回復 {range_text(low, high)} HP"]
+    if note:
+        lines.append(dice_note(dice.count, dice.sides, core.quantity_scale))
+    return lines
 
 
 def _weapon_batch_two_lines(w: WeaponDef) -> list[str]:
@@ -687,7 +705,7 @@ class OffhandDef(ContentModel):
         if self.ranged_cover:
             lines.append(
                 f"遠程掩護：遠程攻擊打你時命中 −{core.half_cover_hit_penalty}（同半掩護；"
-                "攻擊者站得比你高 2 層以上時無視）"
+                f"攻擊者站得比你高 {core.tower_shield_cover_height + 1} 層以上時無視）"
             )
         if self.move_penalty:
             lines.append(f"笨重：你的移動 −{self.move_penalty}")
@@ -853,7 +871,9 @@ class StatusDef(ContentModel):
 
     Phase 2B-2 的預算欄位：
 
-    - ``budget_points``：技能施加此狀態（預設持續時間）的預算點數；``None`` 表示不能由技能施加。
+    - 技能施加此狀態（預設持續時間）的預算點數在 ``skill_budget.yaml`` 的
+      ``status_points.<狀態 id>``（HC-B 從這裡的 ``budget_points`` 搬去）；
+      沒有那一項表示不能由技能施加。
     - ``min_rarity``：技能使用此狀態的最低稀有度。
     - ``beneficial``（2B-3）：對帶有者有益（防禦、隱蔽）。光環骨架的核心狀態必須有益；
       隨機組合器不會對友方施加無益的狀態。
@@ -975,7 +995,6 @@ class StatusDef(ContentModel):
     healing_received_permille: int = Field(default=1000, ge=0, le=10000)
     save_attr: Attribute | None = None
     control_group: Literal["movement", "mental", "hard"] | None = None
-    budget_points: int | None = Field(default=None, ge=0)
     min_rarity: Literal["common", "rare", "epic", "legendary"] = "common"
     beneficial: bool = False
     polarity: Literal["buff", "debuff", "neutral"]
@@ -997,11 +1016,11 @@ class StatusDef(ContentModel):
     enemy_only: bool = False
     """（Phase 5F-5c，玩法 PM 2026-11-03 代決）只給敵人：只能由敵方單位範本的 ``opening_statuses``
     掛上，不能給玩家、影子、傭兵，也不能進技能池（技能引用它＝引用錯誤，生成器、候選、閃現、
-    工坊、LLM 可選清單都排除）。必須沒有 ``budget_points``。"""
+    工坊、LLM 可選清單都排除）。``skill_budget.yaml`` 的 ``status_points`` 不能有它。"""
     mechanic_only: bool = False
     """（AP-2）只由機制施加的狀態（預支 ``borrow_ap`` 的扣回 ``borrowed_ap``）：敵我都可能帶，但
-    同 ``enemy_only`` 不進技能池（技能引用它＝引用錯誤，組合器、工坊、LLM 可選清單都排除）。必須沒有
-    ``budget_points``。"""
+    同 ``enemy_only`` 不進技能池（技能引用它＝引用錯誤，組合器、工坊、LLM 可選清單都排除）。
+    ``skill_budget.yaml`` 的 ``status_points`` 不能有它。"""
 
     @property
     def skill_pool_excluded(self) -> bool:
@@ -1010,10 +1029,6 @@ class StatusDef(ContentModel):
 
     @model_validator(mode="after")
     def _check(self) -> StatusDef:
-        if self.skill_pool_excluded and self.budget_points is not None:
-            raise ValueError(
-                f"狀態 {self.id}：enemy_only、mechanic_only 的狀態不能有 budget_points"
-            )
         if self.ap_penalty_per_amount and self.ap_penalty:
             raise ValueError(f"狀態 {self.id}：ap_penalty 與 ap_penalty_per_amount 只能擇一")
         for name, spec in (
@@ -1100,7 +1115,9 @@ class StatusDef(ContentModel):
         if self.element_dealt_wet_permille != _NEUTRAL_PERMILLE and self.element_dealt is None:
             raise ValueError(f"狀態 {self.id}：element_dealt_wet_permille 需要 element_dealt")
         if any(not 1 <= n <= _MAX_DURATION_BONUS for n in self.status_duration_bonus.values()):
-            raise ValueError(f"狀態 {self.id}：status_duration_bonus 每項必須是 1 或 2")
+            raise ValueError(
+                f"狀態 {self.id}：status_duration_bonus 每項必須是 1 或 {_MAX_DURATION_BONUS}"
+            )
 
 
 class StatusTable(ContentModel):
@@ -1519,7 +1536,7 @@ class OpeningStatus(ContentModel):
     """範本開場就帶著的狀態（Phase 5A-M1：霧隱的開場隱蔽 1 回合、碎晶傀儡的死後碎片）。
 
     ``duration`` 省略＝狀態定義的預設；有限的持續回合在開戰時最多 2（5A-6b，
-    ``OPENING_STATUS_MAX_DURATION``）。"""
+    ``core.opening_status_max_duration``）。"""
 
     status: str = Field(pattern=ID_PATTERN)
     duration: int | None = Field(default=None, ge=1, le=2)
@@ -1845,7 +1862,8 @@ class UnitTemplate(ContentModel):
     @model_validator(mode="after")
     def _check_footprint(self) -> UnitTemplate:
         if self.footprint not in GIANT_FOOTPRINTS:
-            raise ValueError(f"單位 {self.id}：footprint 只能是 1 或 3，收到 {self.footprint}")
+            allowed = " 或 ".join(str(n) for n in GIANT_FOOTPRINTS)
+            raise ValueError(f"單位 {self.id}：footprint 只能是 {allowed}，收到 {self.footprint}")
         if self.footprint > 1 and (BOSS_TAG not in self.tags or self.summon):
             raise ValueError(
                 f"單位 {self.id}：只有帶 boss 標籤、不是召喚物的範本能佔多格（footprint）"

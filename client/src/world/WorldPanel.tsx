@@ -22,12 +22,13 @@ import { EnemyThumb } from "./enemyThumb";
 import { growthBadge, type LeftPane, type WantPane } from "./growth";
 import { InventorySummary } from "./EconomyPanel";
 import { walletLine } from "./economy";
-import { HireEditor, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
+import { HireEditor, hireHintText, MyShadowPanel, PartyPanel, useHireToggle } from "./PartyPanel";
 import { LookChangeLine } from "./LookChange";
 import { RaceChangeLine } from "./RaceChange";
 import { questBadge } from "./story";
 import { statusLine } from "./mapView";
 import { weatherPhaseText } from "./hud";
+import { gameRules } from "../battle/glossary";
 
 interface Props {
   view: WorldView;
@@ -149,6 +150,11 @@ export function duelEliteName(e: NonNullable<WorldView["encounter"]>): string {
   return (e.enemies.find((x) => x.elite) ?? e.enemies[0])?.name_zh ?? "";
 }
 
+/** 循環賽按鈕的說明卡；第幾天截止報名照伺服器 `rules.league_signup_close_day`（`world/season.yaml`；HC-6b）。 */
+export function leagueHintText(day: number = gameRules().league_signup_close_day): string {
+  return `影子循環賽：報名（每個帳號 1 個角色、第 ${day} 天截止）、勝場排行榜、看每一場的重播`;
+}
+
 export function HerePanel({
   view,
   busy,
@@ -204,8 +210,8 @@ export function HerePanel({
             {editing ? "收起換技能" : "換技能"}
           </button>
         )}
-        {hiring.can && (
-          <Hint text="免費帶 0～2 名隊友：系統傭兵或朋友的影子（出城前選好，野外不能換；不帶＝獨行）">
+        {hiring.can && view.party != null && (
+          <Hint text={hireHintText(view.party.max_hired)}>
             <button type="button" aria-expanded={hiring.open} disabled={busy} onClick={hiring.toggle} data-testid="world-hire-toggle">
               {hiring.open ? "收起雇用隊友" : "雇用隊友"}
             </button>
@@ -233,7 +239,7 @@ export function HerePanel({
           </Hint>
         )}
         {here.can_rest && onPane !== undefined && (
-          <Hint text="影子循環賽：報名（每個帳號 1 個角色、第 13 天截止）、勝場排行榜、看每一場的重播">
+          <Hint text={leagueHintText()}>
             <button type="button" aria-expanded={league} disabled={busy} onClick={() => onPane("league")} data-testid="world-league-toggle">
               {league ? "回到地點圖" : "循環賽"}
             </button>

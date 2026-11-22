@@ -300,10 +300,6 @@ def _graft(
     return [(base, [*effects, _with_element(_effect_dict(spec), skill)])]
 
 
-MAX_VARIANT_DRAFTS = 8
-"""戰場變奏模板最多試幾個候選（每個都要重新調整強度，太多會很慢）。"""
-
-
 def _variant(skill: SkillDef, library: ContentLibrary) -> list[_Draft]:
     """戰場變奏（Phase 3-25b）：資料順序中前幾個 schema 合法的候選各是一份草稿。"""
     if skill.kind != "active" or skill.trap is not None or skill.followup is not None:
@@ -316,7 +312,7 @@ def _variant(skill: SkillDef, library: ContentLibrary) -> list[_Draft]:
         base, effects = _base(skill)
         base["variants"] = [*base.get("variants", []), spec]
         drafts.append((base, effects))
-        if len(drafts) >= MAX_VARIANT_DRAFTS:
+        if len(drafts) >= library.composer.search.evolution_variant_drafts:
             break
     return drafts
 
@@ -346,14 +342,12 @@ def _drafts(
 # ---------------------------------------------------------------------------
 
 
-_LOW_MULTIPLIER_STEP = 100
-_LOW_MULTIPLIER_FLOOR = 300
-"""武器倍率階梯往下延伸的間距（‰）：讓原本倍率比組合器階梯低的技能也能調回原本的強度。"""
-
-
 def _multipliers(library: ContentLibrary) -> tuple[int, ...]:
+    """武器倍率階梯，往下延伸到 ``skill_evolution.yaml`` 的 ``low_multiplier_floor``（每
+    ``low_multiplier_step`` 一格）：讓原本倍率比組合器階梯低的技能也能調回原本的強度。"""
+    table = library.evolution
     ladder = [v for r in library.composer.multipliers for v in range(r.start, r.stop, r.step)]
-    low = list(range(_LOW_MULTIPLIER_FLOOR, ladder[0], _LOW_MULTIPLIER_STEP))
+    low = list(range(table.low_multiplier_floor, ladder[0], table.low_multiplier_step))
     return tuple(sorted({*low, *ladder}))
 
 
@@ -365,7 +359,7 @@ def _knobs(category: str, effects: list[dict[str, Any]], library: ContentLibrary
     knobs: list[Knob] = []
     for index, effect in enumerate(effects):
         kind = effect["type"]
-        weight = 2 if not knobs else 1
+        weight = library.evolution.first_knob_weight if not knobs else 1
         if kind in ("delayed_damage", "heal", "shield") and "dice" in effect:
             knobs.append(Knob(index, "dice", dice, weight))
         elif kind == "damage":
@@ -388,21 +382,17 @@ def _rarity(draft: dict[str, Any], effects: list[dict[str, Any]], library: Conte
     return structural_rarity(skill, library)
 
 
-def cost_attempts(skill: SkillDef) -> list[dict[str, Any]]:
-    """代價的嘗試順序：原本的代價；超出預算時再試冷卻 +1、+2（沒有冷卻的從 2 回合起）——以代價折抵
-    換取預算（6.5），不加強度。冷卻不超過 :data:`MAX_EVOLVED_COOLDOWN`。"""
+def cost_attempts(skill: SkillDef, library: ContentLibrary) -> list[dict[str, Any]]:
+    """代價的嘗試順序：原本的代價；超出預算時再試冷卻 +1～+``extra_cooldown_steps``（沒有冷卻的
+    當作 1 回合往上加，再只留 ``min_cooldown`` 以上的）——以代價折抵換取預算（6.5），不加強度。
+    冷卻不超過 ``max_cooldown``（``skill_evolution.yaml``，HC-5b）。"""
+    table = library.evolution
     cost = skill.cost.model_dump(mode="json")
     start = 1 if skill.cost.cooldown is None else skill.cost.cooldown
-    longer = [start + n for n in range(1, EXTRA_COOLDOWN_STEPS + 1)]
+    longer = [start + n for n in range(1, table.extra_cooldown_steps + 1)]
     return [cost] + [
-        {**cost, "cooldown": c} for c in longer if MIN_COOLDOWN <= c <= MAX_EVOLVED_COOLDOWN
+        {**cost, "cooldown": c} for c in longer if table.min_cooldown <= c <= table.max_cooldown
     ]
-
-
-EXTRA_COOLDOWN_STEPS = 2
-MIN_COOLDOWN = 2
-MAX_EVOLVED_COOLDOWN = 5
-"""進化時折抵用的冷卻上限（回合）。"""
 
 
 def budget_power(skill: SkillDef, library: ContentLibrary) -> Fraction:
@@ -499,7 +489,7 @@ def _finish(
     """依序試「原骨架 → 模板列出的骨架」×「原代價 → 冷卻 +1」，回傳第一個合格的版本。"""
     base, effects = draft
     for skeleton in dict.fromkeys((skill.skeleton, *template.skeletons)):
-        for index, cost in enumerate(cost_attempts(skill)):
+        for index, cost in enumerate(cost_attempts(skill, library)):
             attempt = {**base, "skeleton": skeleton, "cost": cost}
             evolved = _tuned(
                 attempt, effects, rng.fork(f"{skeleton}/{index}"), library, floor=floor

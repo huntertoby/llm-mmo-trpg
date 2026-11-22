@@ -151,6 +151,7 @@ from trpg.server.season_archive import ReplayCheck
 from trpg.server.season_reset import SeasonResetReport
 from trpg.world.actions import SwearOathAction
 from trpg.world.calendar import season_start_at
+from trpg.world.common import rules_of
 from trpg.world.errors import WorldActionError
 from trpg.world.generated import GenRequest
 
@@ -689,7 +690,9 @@ def post_note(character_id: str, body: NoteRequest, request: Request) -> Locatio
     store = world_of(request)
     with store.lock:
         char = store.character(character_id)
-        store.notes.add(char, body.text, store.clock())
+        store.notes.add(
+            char, body.text, store.clock(), max_chars=rules_of(store.library).notes.max_chars
+        )
         return location_board(store, char, admin=_is_admin(request))
 
 

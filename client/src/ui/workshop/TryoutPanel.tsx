@@ -9,6 +9,18 @@ import { DevPackSelect, StartPickerView, useStartPicker } from "../../run/StartP
 import { isDevMode } from "../../run/startFlow";
 import { ErrorBanner } from "../ErrorBanner";
 import { primeSkillCard } from "../useSkillCards";
+import { gameRules } from "../../battle/glossary";
+import { budgetWindowText } from "../rulesText";
+
+/** 「要換掉哪一個技能」的「不換」選項；主動技上限照伺服器 `rules.skill_slots.active`（HC-6b）。 */
+export function tryoutAddText(active: number = gameRules().skill_slots.active): string {
+  return `不換（加在空格；主動技最多 ${active} 個，滿了會被拒絕）`;
+}
+
+/** 還不能試玩時的說明；預算區間照伺服器（HC-6b）。 */
+export function tryoutNeedsText(): string {
+  return `技能要先組完整、而且檢查合法（預算 ${budgetWindowText("–")}、沒有違反規則）才能裝上試玩。`;
+}
 
 interface Props {
   check: WorkshopCheck | null;
@@ -92,7 +104,7 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart, dev = isD
         <label>
           要換掉哪一個技能
           <select value={replaceId} onChange={(e) => set({ replace: e.target.value })}>
-            <option value="">不換（加在空格；主動技最多 6 個，滿了會被拒絕）</option>
+            <option value="">{tryoutAddText()}</option>
             {heroSkills.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name_zh}
@@ -140,7 +152,7 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart, dev = isD
         {dev && seed === null && <div className="error-text">種子必須是非負整數</div>}
       </div>
       {note !== null && <div className="ws-note">{note}</div>}
-      {!playable && <div className="muted small">技能要先組完整、而且檢查合法（預算 70–100%、沒有違反規則）才能裝上試玩。</div>}
+      {!playable && <div className="muted small">{tryoutNeedsText()}</div>}
       {warning !== null && (
         <div className="ws-warning" role="alertdialog">
           <div>{warning.text}</div>

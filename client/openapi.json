@@ -9343,11 +9343,17 @@
             "title": "Ally Builds"
           },
           "max_rounds": {
-            "type": "integer",
-            "maximum": 200.0,
-            "minimum": 1.0,
-            "title": "Max Rounds",
-            "default": 30
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Rounds"
           },
           "custom_skills": {
             "items": {
@@ -9740,6 +9746,36 @@
           "expected_if_hit_milli"
         ],
         "title": "DamageOut"
+      },
+      "DayPartHoursView": {
+        "properties": {
+          "morning": {
+            "type": "integer",
+            "title": "Morning"
+          },
+          "noon": {
+            "type": "integer",
+            "title": "Noon"
+          },
+          "evening": {
+            "type": "integer",
+            "title": "Evening"
+          },
+          "night": {
+            "type": "integer",
+            "title": "Night"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "morning",
+          "noon",
+          "evening",
+          "night"
+        ],
+        "title": "DayPartHoursView",
+        "description": "早、午、晚、夜的起始鐘點（``world/rules.yaml`` 的 ``day_parts``，HC-4d）：前端 HUD 的時段字\n（白天＝早〔``noon`` 點前〕、午；夜晚＝晚〔``evening``～``night`` 點前〕、夜）照這張表。"
       },
       "Decision": {
         "properties": {
@@ -12671,8 +12707,7 @@
           },
           "walk_max_steps": {
             "type": "integer",
-            "title": "Walk Max Steps",
-            "default": 30
+            "title": "Walk Max Steps"
           },
           "hero": {
             "anyOf": [
@@ -12810,7 +12845,8 @@
           "stones",
           "npcs",
           "facilities",
-          "me"
+          "me",
+          "walk_max_steps"
         ],
         "title": "FieldView"
       },
@@ -13741,6 +13777,118 @@
           "complete_budget_permille": {
             "type": "integer",
             "title": "Complete Budget Permille"
+          },
+          "roguelite_battles": {
+            "type": "integer",
+            "title": "Roguelite Battles"
+          },
+          "roguelite_companions": {
+            "type": "integer",
+            "title": "Roguelite Companions"
+          },
+          "campfire_source": {
+            "type": "integer",
+            "title": "Campfire Source"
+          },
+          "budget_min_ratio_permille": {
+            "type": "integer",
+            "title": "Budget Min Ratio Permille"
+          },
+          "budget_max_ratio_permille": {
+            "type": "integer",
+            "title": "Budget Max Ratio Permille"
+          },
+          "contagion_radius": {
+            "type": "integer",
+            "title": "Contagion Radius"
+          },
+          "major_flash": {
+            "type": "integer",
+            "title": "Major Flash"
+          },
+          "complete_flashes": {
+            "type": "integer",
+            "title": "Complete Flashes"
+          },
+          "flash_max_carry": {
+            "type": "integer",
+            "title": "Flash Max Carry"
+          },
+          "flash_open_cost": {
+            "type": "integer",
+            "title": "Flash Open Cost"
+          },
+          "flash_open_options": {
+            "type": "integer",
+            "title": "Flash Open Options"
+          },
+          "flash_open_min_categories": {
+            "type": "integer",
+            "title": "Flash Open Min Categories"
+          },
+          "pregen_wait_seconds": {
+            "type": "integer",
+            "title": "Pregen Wait Seconds"
+          },
+          "wish_cards": {
+            "type": "integer",
+            "title": "Wish Cards"
+          },
+          "thread_limit": {
+            "type": "integer",
+            "title": "Thread Limit"
+          },
+          "thread_expire_seconds": {
+            "type": "integer",
+            "title": "Thread Expire Seconds"
+          },
+          "opening_end_level": {
+            "type": "integer",
+            "title": "Opening End Level"
+          },
+          "league_signup_close_day": {
+            "type": "integer",
+            "title": "League Signup Close Day"
+          },
+          "min_moves_mob": {
+            "type": "integer",
+            "title": "Min Moves Mob"
+          },
+          "min_moves_elite": {
+            "type": "integer",
+            "title": "Min Moves Elite"
+          },
+          "min_moves_boss_phase": {
+            "type": "integer",
+            "title": "Min Moves Boss Phase"
+          },
+          "skill_tiers": {
+            "type": "integer",
+            "title": "Skill Tiers"
+          },
+          "max_ap_cost": {
+            "type": "integer",
+            "title": "Max Ap Cost"
+          },
+          "source_min_at_start": {
+            "type": "integer",
+            "title": "Source Min At Start"
+          },
+          "summon_guard_radius": {
+            "type": "integer",
+            "title": "Summon Guard Radius"
+          },
+          "battle_team_size": {
+            "type": "integer",
+            "title": "Battle Team Size"
+          },
+          "item_skill_ap_cost": {
+            "type": "integer",
+            "title": "Item Skill Ap Cost"
+          },
+          "situation_care_max": {
+            "type": "integer",
+            "title": "Situation Care Max"
           }
         },
         "additionalProperties": false,
@@ -13749,7 +13897,35 @@
           "source_max",
           "skill_slots",
           "start_keywords",
-          "complete_budget_permille"
+          "complete_budget_permille",
+          "roguelite_battles",
+          "roguelite_companions",
+          "campfire_source",
+          "budget_min_ratio_permille",
+          "budget_max_ratio_permille",
+          "contagion_radius",
+          "major_flash",
+          "complete_flashes",
+          "flash_max_carry",
+          "flash_open_cost",
+          "flash_open_options",
+          "flash_open_min_categories",
+          "pregen_wait_seconds",
+          "wish_cards",
+          "thread_limit",
+          "thread_expire_seconds",
+          "opening_end_level",
+          "league_signup_close_day",
+          "min_moves_mob",
+          "min_moves_elite",
+          "min_moves_boss_phase",
+          "skill_tiers",
+          "max_ap_cost",
+          "source_min_at_start",
+          "summon_guard_radius",
+          "battle_team_size",
+          "item_skill_ap_cost",
+          "situation_care_max"
         ],
         "title": "GameRulesOut",
         "description": "畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。"
@@ -14915,6 +15091,14 @@
             },
             "type": "array",
             "title": "Rules Zh",
+            "default": []
+          },
+          "rules_dice": {
+            "items": {
+              "$ref": "#/components/schemas/RuleDiceOut"
+            },
+            "type": "array",
+            "title": "Rules Dice",
             "default": []
           }
         },
@@ -16380,7 +16564,7 @@
               "type": "integer"
             },
             "type": "array",
-            "maxItems": 2,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Records"
           }
@@ -16416,7 +16600,7 @@
               "type": "integer"
             },
             "type": "array",
-            "maxItems": 2,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Records"
           }
@@ -17837,8 +18021,7 @@
           },
           "max_len": {
             "type": "integer",
-            "title": "Max Len",
-            "default": 50
+            "title": "Max Len"
           },
           "admin": {
             "type": "boolean",
@@ -17853,7 +18036,8 @@
           "location",
           "location_name_zh",
           "notes",
-          "footprints"
+          "footprints",
+          "max_len"
         ],
         "title": "LocationBoard"
       },
@@ -19605,6 +19789,10 @@
             ],
             "title": "Cooldown Zh"
           },
+          "cooldown_seconds": {
+            "type": "integer",
+            "title": "Cooldown Seconds"
+          },
           "can_swear": {
             "type": "boolean",
             "title": "Can Swear"
@@ -19651,6 +19839,7 @@
           "current",
           "cooldown_until",
           "cooldown_zh",
+          "cooldown_seconds",
           "can_swear",
           "swear_problem_zh",
           "can_release"
@@ -20635,8 +20824,7 @@
           },
           "free_slots": {
             "type": "integer",
-            "title": "Free Slots",
-            "default": 2
+            "title": "Free Slots"
           },
           "companion_zh": {
             "anyOf": [
@@ -20666,7 +20854,8 @@
           "members",
           "max_hired",
           "can_hire",
-          "hire_problem_zh"
+          "hire_problem_zh",
+          "free_slots"
         ],
         "title": "PartyView",
         "description": "目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"
@@ -20784,6 +20973,11 @@
               }
             ],
             "title": "Detail"
+          },
+          "save_roll": {
+            "type": "boolean",
+            "title": "Save Roll",
+            "default": false
           }
         },
         "additionalProperties": false,
@@ -23152,7 +23346,7 @@
               "type": "string"
             },
             "type": "array",
-            "maxItems": 2,
+            "maxItems": 4,
             "title": "Keywords",
             "default": []
           }
@@ -23886,6 +24080,36 @@
         ],
         "title": "RouteHintOut",
         "description": "關鍵字與屬性不搭的提示（BAL-19g，06 6.27.3，#110）：配點後的最高屬性不在 ``fits`` 時，\n前端顯示 ``text_zh``（只提示、不擋）。``lean``：選的關鍵字前期的技能多半是法術（``spell``）或\n武器技（``weapon``）。"
+      },
+      "RuleDiceOut": {
+        "properties": {
+          "line": {
+            "type": "integer",
+            "title": "Line"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "sides": {
+            "type": "integer",
+            "title": "Sides"
+          },
+          "scale": {
+            "type": "integer",
+            "title": "Scale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "line",
+          "count",
+          "sides",
+          "scale"
+        ],
+        "title": "RuleDiceOut",
+        "description": "規則句裡的一行骰子行（HC-6c，AR-X10 待決 5）：``rules_zh[line]`` 是「擲 NdM，每點 ×K」，\n補充它上一句的範圍。前端照這個把骰子行另起一行、用次要字色，不再比對句型。"
       },
       "Run": {
         "properties": {
@@ -30324,13 +30548,11 @@
           },
           "map_default_seeds": {
             "type": "integer",
-            "title": "Map Default Seeds",
-            "default": 24
+            "title": "Map Default Seeds"
           },
           "map_seconds_per_battle": {
             "type": "number",
-            "title": "Map Seconds Per Battle",
-            "default": 0.8
+            "title": "Map Seconds Per Battle"
           },
           "ratio_default_seeds": {
             "type": "integer",
@@ -30350,13 +30572,11 @@
           },
           "ratio_max_work": {
             "type": "integer",
-            "title": "Ratio Max Work",
-            "default": 40000
+            "title": "Ratio Max Work"
           },
           "ratio_battles_per_second": {
             "type": "number",
-            "title": "Ratio Battles Per Second",
-            "default": 450.0
+            "title": "Ratio Battles Per Second"
           }
         },
         "additionalProperties": false,
@@ -30368,10 +30588,14 @@
           "max_battles",
           "workers",
           "seconds_per_battle",
+          "map_default_seeds",
+          "map_seconds_per_battle",
           "ratio_default_seeds",
           "ratio_max_seeds",
           "max_maps",
-          "small_sample"
+          "small_sample",
+          "ratio_max_work",
+          "ratio_battles_per_second"
         ],
         "title": "TuningSimOptions"
       },
@@ -30919,6 +31143,10 @@
           "max_group": {
             "type": "integer",
             "title": "Max Group"
+          },
+          "draft_name_max": {
+            "type": "integer",
+            "title": "Draft Name Max"
           }
         },
         "additionalProperties": false,
@@ -30928,7 +31156,8 @@
           "restart_needed",
           "restart_note_zh",
           "drafts",
-          "max_group"
+          "max_group",
+          "draft_name_max"
         ],
         "title": "TuningStatus"
       },
@@ -32869,7 +33098,6 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 5.0,
                 "minimum": 1.0
               },
               {
@@ -33549,6 +33777,9 @@
           "weather_zh": {
             "type": "string",
             "title": "Weather Zh"
+          },
+          "day_parts": {
+            "$ref": "#/components/schemas/DayPartHoursView"
           }
         },
         "additionalProperties": false,
@@ -33557,7 +33788,8 @@
           "time_zh",
           "day_phase",
           "day_phase_zh",
-          "weather_zh"
+          "weather_zh",
+          "day_parts"
         ],
         "title": "WorldClockView"
       },

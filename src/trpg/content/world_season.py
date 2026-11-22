@@ -143,9 +143,9 @@ class DailyGoalRules(ContentModel):
     """今日目標（#99）：每天 ``count`` 條、每條完成給 ``coins`` 任務幣；第 1～``newbie_days`` 天用
     固定的 ``newbie``，之後每天從 ``goals`` 確定性抽。"""
 
-    count: int = Field(default=3, ge=1)
-    coins: int = Field(default=1, ge=0)
-    newbie_days: int = Field(default=2, ge=0)
+    count: int = Field(ge=1)
+    coins: int = Field(ge=0)
+    newbie_days: int = Field(ge=0)
     newbie: tuple[str, ...] = ()
     goals: tuple[DailyGoalDef, ...] = ()
 
@@ -231,8 +231,8 @@ class WorldEventDef(ContentModel):
     text_zh: str = ""
     days: DayRange
     goal: GoalSpec
-    base_players: int = Field(default=8, ge=1)
-    min_target_permille: int = Field(default=250, ge=1, le=1000)
+    base_players: int = Field(ge=1)
+    min_target_permille: int = Field(ge=1, le=1000)
     """門檻下限：原門檻的千分比（250＝1/4，30 → 最少 8；無條件進位）。"""
     on_success: WorldEventEffect = WorldEventEffect()
     on_failure: WorldEventEffect = WorldEventEffect()
@@ -261,17 +261,17 @@ LEAGUE_EXCLUDED_ARCHETYPES: Final = frozenset({"boss", "training", "test"})
 class LeagueRules(ContentModel):
     """影子循環賽（Phase 5F-4；09 9.7「季末保底」、#101）。規則在 :mod:`trpg.world.league`。"""
 
-    signup_close_day: int = Field(default=13, ge=1)
+    signup_close_day: int = Field(ge=1)
     """最後可以報名的賽季日（含；#101 第 13 天截止）。"""
     maps: tuple[str, ...] = Field(min_length=1, max_length=8)
     """事先公布的地圖（9.7：3 張）。"""
-    seeds: int = Field(default=2, ge=1, le=8)
+    seeds: int = Field(ge=1, le=8)
     """每對組合 × 每張地圖的種子數；每個種子交換先後手各打 1 場。"""
-    max_rounds: int = Field(default=30, ge=1)
+    max_rounds: int = Field(ge=1)
     """到輪數上限＝和局。"""
-    batch_size: int = Field(default=10, ge=1)
+    batch_size: int = Field(ge=1)
     """背景每批幾場（批與批之間讓出執行緒）。"""
-    hp_permille: int = Field(default=1000, ge=1000, le=5000)
+    hp_permille: int = Field(ge=1000, le=5000)
     """（5F-4b）開場最大 HP 倍率（‰；2000＝×2）：只套在循環賽，HP 每場滿。"""
     opening_statuses: tuple[str, ...] = ()
     """（5F-4b）雙方開場就掛上的狀態（``statuses.yaml``；例：``league_truce``＝第 1 輪不能造成
@@ -333,10 +333,10 @@ class BossScore(ContentModel):
     """通關評分（#87：輪數、全隊存活、有沒有人倒下）：
     ``max(0, base − per_round × 輪數) + per_survivor × 存活人數 + no_down（沒人倒下）``。"""
 
-    base: int = Field(default=1000, ge=0)
-    per_round: int = Field(default=20, ge=0)
-    per_survivor: int = Field(default=100, ge=0)
-    no_down: int = Field(default=200, ge=0)
+    base: int = Field(ge=0)
+    per_round: int = Field(ge=0)
+    per_survivor: int = Field(ge=0)
+    no_down: int = Field(ge=0)
 
     def score(self, *, rounds: int, survivors: int, no_down: bool) -> int:
         kept = max(0, self.base - self.per_round * rounds)
@@ -353,12 +353,12 @@ class SeasonBossDef(ContentModel):
     """敵方陣容（第一個是本體；站位照地圖 ``start_zones.enemy`` 的順序）。"""
     level: int = Field(ge=1, le=99)
     unlock: BossUnlock
-    daily_attempts: int = Field(default=3, ge=1)
+    daily_attempts: int = Field(ge=1)
     """每帳號每天的挑戰次數（#100）。"""
     entry_kinds: tuple[str, ...] = ("town",)
     """能出發挑戰的地點種類。"""
     title_zh: str = Field(min_length=1)
-    score: BossScore = BossScore()
+    score: BossScore
 
 
 def _placeholders(text: str) -> set[str]:

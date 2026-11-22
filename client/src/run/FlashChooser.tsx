@@ -12,6 +12,8 @@ import {
   flashConfirmLabel,
   flashWarning,
   focusedMode,
+  majorNoteText,
+  openMixText,
   openMode,
   type FlashMode,
 } from "./flash";
@@ -120,7 +122,7 @@ export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, we
               <span className="small">
                 {open.cost} 點・{open.options} 選 1
               </span>
-              <span className="muted small">混合各類變化，至少涵蓋 2 類</span>
+              <span className="muted small">{openMixText()}</span>
             </button>
           </div>
           {allowFocus && (
@@ -151,7 +153,7 @@ export function FlashChooserView({ hero, skillId, skillName, slot, slotLabel, we
                 })}
               </div>
               {preview.major && (
-                <div className="muted small">第 3 次是大變化；指定類別時，轉型保底會另外列在最後並標「轉型」。</div>
+                <div className="muted small">{majorNoteText()}</div>
               )}
             </>
           )}

@@ -11,7 +11,8 @@ import {
   carryable,
   dissolveChoice,
   dissolveConfirm,
-  INHERIT_RULE_TEXT,
+  inheritRuleText,
+  inheritStepText,
   inheritChoice,
   inheritProblem,
   inheritTargets,
@@ -21,7 +22,7 @@ import {
   reflashable,
   reflashSlots,
   toggleCarry,
-  TRANSFORM_HINT,
+  transformHint,
 } from "./flash";
 import { weakerSlot } from "./reflashWeaker";
 
@@ -114,23 +115,27 @@ export function ReflashSection({ runId, hero, busy, onChoose, previewFlash, plac
                   data-reflash-weaker={weakerSlot(flash, s.slot) !== null ? 1 : undefined}
                   onClick={() => setTarget({ id: card.id, slot: s.slot })}
                 >
-                  重閃　{s.label}
-                  {/* FL-1j（美術 FL-1i 複驗可修 2）：藍字整段不換行（固定字、約 108px，一輪 376 的鈕也放得下），
-                      放不下就整段換到下一行；全形空白放在外面，換行時不會變成行首縮排 */}
-                  {s.transformHint && (
-                    <>
-                      {"　"}
-                      <span className="skill-flash-transform small fc-nobr" data-testid={`reflash-transform-${card.id}-${s.slot}`}>
-                        <NoBreakText text={TRANSFORM_HINT} />
+                  {/* HC-6c（美術 HC-3 看圖）：「重閃」固定在左邊、內文在它右邊換行並對齊（懸掛縮排），每個鈕排法一樣 */}
+                  <span className="reflash-word">重閃</span>
+                  <span className="reflash-body">
+                    {s.label}
+                    {/* FL-1j（美術 FL-1i 複驗可修 2）：藍字整段不換行（固定字、約 108px，一輪 376 的鈕也放得下），
+                        放不下就整段換到下一行；全形空白放在外面，換行時不會變成行首縮排 */}
+                    {s.transformHint && (
+                      <>
+                        {"　"}
+                        <span className="skill-flash-transform small fc-nobr" data-testid={`reflash-transform-${card.id}-${s.slot}`}>
+                          <NoBreakText text={transformHint()} />
+                        </span>
+                      </>
+                    )}
+                    <WeakerNote warn={weakerSlot(flash, s.slot)?.warn} testId={`reflash-weaker-${card.id}-${s.slot}`} />
+                    {s.problem !== null && (
+                      <span className="flash-none-note small" data-testid={`reflash-none-${card.id}-${s.slot}`}>
+                        {s.problem}
                       </span>
-                    </>
-                  )}
-                  <WeakerNote warn={weakerSlot(flash, s.slot)?.warn} testId={`reflash-weaker-${card.id}-${s.slot}`} />
-                  {s.problem !== null && (
-                    <span className="flash-none-note small" data-testid={`reflash-none-${card.id}-${s.slot}`}>
-                      {s.problem}
-                    </span>
-                  )}
+                    )}
+                  </span>
                 </button>
               ))}
             </div>
@@ -290,8 +295,8 @@ function InheritForm({ hero, sourceId, busy, onCancel, onChoose }: { hero: RunHe
   return (
     <div className="panel inherit-form" data-testid="inherit-form">
       <div className="section-title">傳承</div>
-      <p className="small muted">{INHERIT_RULE_TEXT}</p>
-      <div className="small">1. 帶走哪些小變化（最多 {limit} 個，依序成為新技能的第 1、2 次）</div>
+      <p className="small muted">{inheritRuleText(limit)}</p>
+      <div className="small">{inheritStepText(limit)}</div>
       <ul className="inherit-records">
         {carry.map((r) => (
           <li key={r.nth}>

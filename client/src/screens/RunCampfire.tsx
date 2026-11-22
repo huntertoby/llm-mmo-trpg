@@ -8,6 +8,7 @@ import { CampfireSkillCare } from "../run/CampfireSkillCare";
 import { FlashSection } from "../run/FlashSection";
 import { LoadoutEditor } from "../run/LoadoutEditor";
 import { loadoutChoice } from "../run/loadout";
+import { campfireRestText } from "../run/runRulesText";
 
 type Props = {
   run: RunResponse;
@@ -20,7 +21,7 @@ export function RunCampfire({ run, view, busy, onChoose }: Props) {
   return (
     <div className="panel run-campfire">
       <h2>營火（第 {view.afterBattle} 場後）</h2>
-      <p>HP、法力與耐力已回滿，源力 +1。</p>
+      <p>{campfireRestText()}</p>
       <FlashSection runId={run.run_id} hero={run.hero} busy={busy} onChoose={onChoose} />
       <CampfireSkillCare runId={run.run_id} hero={run.hero} busy={busy} onChoose={onChoose} />
       <div className="panel run-skill-points">

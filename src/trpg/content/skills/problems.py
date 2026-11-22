@@ -211,12 +211,15 @@ def _effect_problems(
         problems.append(f"{where}.affects：{primitive.id} 是對單位的效果，不能用 tiles")
     if affects in primitive.forbid_affects:
         problems.append(_forbidden_affects_message(where, primitive.id, affects))
+    shapes_ok = primitive.allowed_shapes
+    if shapes_ok is not None and skill.form_entry_effect is not None:
+        shapes_ok = (*shapes_ok, *primitive.companion_shapes)  # GS-3：帶進入時效果的化身技
     if (
-        primitive.allowed_shapes is not None
-        and skill.shape.type not in primitive.allowed_shapes
+        shapes_ok is not None
+        and skill.shape.type not in shapes_ok
         and not on_hit  # 命中後效果只作用在目標那 1 格，不看載體技能的形狀
     ):
-        allowed = "、".join(primitive.allowed_shapes)
+        allowed = "、".join(shapes_ok)
         problems.append(f"{where}：{primitive.id} 只能搭配形狀 {allowed}，收到 {skill.shape.type}")
     problems += _stack_effect_problems(skill, where, effect, affects, refs)
     problems += _consume_status_problems(skill, index, effect, refs)
@@ -225,6 +228,20 @@ def _effect_problems(
     problems += _on_kill_problems(skill, index, effect, refs)
     problems += _scaling_problems(where, effect, refs)
     return problems
+
+
+def _solid_problems(skill: SkillDef, shape: ShapeDef) -> list[str]:
+    """實心環形（GS-3，#173）：只有 ``solid_option`` 的形狀、只有內建內容能寫 ``solid: true``；
+    持續區域照形狀展開格子、不看實心，所以不能和 ``zone`` 一起用。"""
+    if not skill.shape.solid:
+        return []
+    if not shape.solid_option:
+        return [f"shape.solid：形狀 {shape.id} 沒有實心選項"]
+    if not skill.content_only_ok:
+        return ["shape.solid：實心環形只有內建內容能寫"]
+    if any(e.type == "zone" for e in skill.effects):
+        return ["shape.solid：持續區域（zone）不能用實心環形"]
+    return []
 
 
 def _on_kill_problems(skill: SkillDef, index: int, effect: EffectSpec, refs: _Refs) -> list[str]:
@@ -437,6 +454,9 @@ def _trigger_problems(
         ]
     if spec.status is not None and spec.status not in status_ids:
         return [f"trigger.status：未知的狀態 {spec.status!r}"]
+    cap = definition.max_per_round
+    if cap is not None and spec.max_per_round != cap:  # HC-7 b（a 段裁定 5）：原本在 TriggerSpec
+        return [f"{spec.event} 每輪最多觸發 {cap} 次（max_per_round 只能是 {cap}）"]
     return []
 
 
@@ -529,6 +549,7 @@ def skill_problems(
     else:
         values = skill.shape.param_values()
         problems += _int_param_problems("shape", values, shape, builtin=skill.content_only_ok)
+        problems += _solid_problems(skill, shape)
     if skill.trap is not None and skill.trap.shape not in shapes:
         known = ", ".join(sorted(shapes))
         problems.append(f"trap.shape：未知的形狀 {skill.trap.shape!r}（可用：{known}）")

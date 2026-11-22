@@ -16,8 +16,12 @@ from trpg.shared.types import Team, UnitId
 U1, U2 = UnitId("unit_0001"), UnitId("unit_0002")
 
 
+_REQUIRED = {"charge_per_enemy": 3, "shadowstep": 3, "shadowstep_behind": 2, "hold_radius": 2}
+"""HC-4c 起 ``AiWeights`` 必填的四格（值同 ``ai_profiles.yaml``）。"""
+
+
 def _weights(**over: int) -> AiWeights:
-    return AiWeights(objective=8, **over)
+    return AiWeights(**{**_REQUIRED, "objective": 8, **over})
 
 
 def _profiles(**weights: int) -> AiProfileTable:
@@ -55,7 +59,8 @@ def test_cost_is_zero_without_an_objective_or_weights() -> None:
     assert objective_cost(state, state.units[U1], _weights(rush_exit=6)) == 0
     escape = {"kind": "escape", "rounds": 5, "tiles": [[9, 0]]}
     state = _state(escape, (0, 0), (9, 2))
-    assert objective_cost(state, state.units[U2], AiWeights()) == 0  # 敵方且 intercept = 0
+    plain = AiWeights(**_REQUIRED)
+    assert objective_cost(state, state.units[U2], plain) == 0  # 敵方且 intercept = 0
 
 
 def test_escape_allies_head_for_the_exit_and_enemies_intercept_it() -> None:
