@@ -29,6 +29,7 @@ from trpg.sim.batch import (
     UtilityPolicyFactory,
     run_batches,
 )
+from trpg.skillgen.reshape_gate import gated_with_skills
 
 __all__ = ["KeywordSample", "SampleResult", "format_samples", "keyword_samples", "run_samples"]
 
@@ -77,7 +78,7 @@ def _sample(
     setup = base.model_copy(
         update={
             "units": (hero, *base.units),
-            "ruleset": library.ruleset.with_skills(run.generated_skills),
+            "ruleset": gated_with_skills(library, run.generated_skills),
         }
     )
     battle_seeds = tuple(

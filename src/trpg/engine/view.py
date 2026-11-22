@@ -29,7 +29,7 @@ from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.attack_element import effective_attack_element
-from trpg.engine.attack_shapes import skill_problem_zh
+from trpg.engine.attack_shapes import skill_note_zh, skill_problem_zh
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.boss_phases import next_phase
 from trpg.engine.delayed import charge_infos
@@ -244,7 +244,10 @@ class GearSkillView(_ViewModel):
     kind: str = "active"
     """技能種類（E1：``active``／``reaction``／``modifier``／``passive``）。"""
     off_zh: str | None = None
-    """這個技能在這名單位身上沒有效果的原因（E5：普攻變形「這把武器不能套用」）；有效時
+    """這個技能在這名單位身上沒有效果的原因（E5：普攻變形「這把武器不能套用」、預算閘門「這招
+    不能套用」）；有效時 ``None``。"""
+    note_zh: str | None = None
+    """只有一部分沒有效果時的說明（E5：「這招不能套用：火球」——預算閘門擋下其中幾招）；沒有時
     ``None``。"""
 
 
@@ -875,6 +878,7 @@ def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillVie
                 copy_of=affix.skill if key != affix.skill else None,
                 kind=skill.kind,
                 off_zh=skill_problem_zh(state, unit, key),
+                note_zh=skill_note_zh(state, unit, key),
             )
         )
     return tuple(views)

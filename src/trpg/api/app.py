@@ -58,6 +58,7 @@ from trpg.server.server_presence import ServerPresence
 from trpg.shared.errors import IllegalActionError
 from trpg.skillgen.draft import DraftError
 from trpg.skillgen.random_composer import ComposeError
+from trpg.skillgen.reshape_gate import gate_library
 from trpg.world.calendar import season_start_at
 from trpg.world.errors import WorldActionError, WorldError, WorldSaveFormatError
 from trpg.world.layout import world_dir_of
@@ -167,7 +168,7 @@ def create_app(
     所以 ``/api/*`` 優先）。
     """
     app = FastAPI(title="LLM-MMO-TRPG 本機 API", version=__version__)
-    lib = library if library is not None else load_library()
+    lib = gate_library(library if library is not None else load_library())  # E5 預算閘門表
     check_primitive_coverage(lib)
     app.state.store = SessionStore(
         lib, max_auto_steps=max_auto_steps, prep_placement=prep_placement

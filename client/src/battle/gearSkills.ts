@@ -20,6 +20,11 @@ export function gearSkillOff(u: UnitView, skillId: string): string | null {
   return gearSkillsOf(u).find((s) => s.skill_id === skillId)?.off_zh ?? null;
 }
 
+/** 只有一部分沒有效果時的說明（E5：「這招不能套用：火球」）；沒有時 `null`。 */
+export function gearSkillNote(u: UnitView, skillId: string): string | null {
+  return gearSkillsOf(u).find((s) => s.skill_id === skillId)?.note_zh ?? null;
+}
+
 /** 技能列上的標記文字：「來自裝備・副手：壁壘塔盾」。 */
 export function gearSkillBadge(source: string): string {
   return `來自裝備・${source}`;

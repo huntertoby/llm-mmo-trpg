@@ -27,6 +27,7 @@ from trpg.sim.batch import (
     run_outcomes,
 )
 from trpg.sim.metrics import BattleMetrics
+from trpg.skillgen.reshape_gate import gated_with_skills
 
 __all__ = [
     "BOSS_MAP",
@@ -92,7 +93,7 @@ def _spec(
     setup = base.model_copy(
         update={
             "units": (hero, *base.units),
-            "ruleset": library.ruleset.with_skills(run.generated_skills),
+            "ruleset": gated_with_skills(library, run.generated_skills),
         }
     )
     battle_seed = Rng(seed).fork(f"plan/summon_sim/{pack}/{map_id}").next_u32()

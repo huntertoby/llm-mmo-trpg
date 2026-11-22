@@ -232,6 +232,9 @@ class ModifierBudget(ContentModel):
     shape_to_reference_size: int = Field(ge=1)
     """``shape_to``（3D-3）計價時，保留自原形狀的大小參數（``size``、``radius``）取的代表值
     （HC-5b 從 ``budget._REFERENCE_PARAM`` 搬來）。"""
+    reshape_gate_min_permille: int = Field(ge=1, le=1000)
+    """裝備授予的行為改寫的預算閘門（E5，玩法交接 4.1.36 待決答覆 2）：變形後超出原技能總點數時，
+    傷害最低降到這個‰；降到這裡還超過就不對那招生效（:mod:`trpg.skillgen.reshape_gate`）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ModifierBudget:

@@ -67,6 +67,7 @@ from trpg.roguelite.state import (
     SkillOffer,
 )
 from trpg.shared.types import Attribute, Team, UnitId
+from trpg.skillgen.reshape_gate import gated_with_skills
 from trpg.skillgen.usage import SkillUsage, collect_usage, merge_usage
 
 __all__ = [
@@ -145,7 +146,7 @@ def battle_setup(library: ContentLibrary, run: RunState) -> BattleSetup:
         objective=library.map(plan.map_id).objective_for(plan.objective),
     )
     hero = hero_spawn(library, run)
-    ruleset = library.ruleset.with_skills(run.generated_skills)
+    ruleset = gated_with_skills(library, run.generated_skills)  # E5 預算閘門
     return base.model_copy(update={"units": (hero, *base.units), "ruleset": ruleset})
 
 

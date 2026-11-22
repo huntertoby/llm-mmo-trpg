@@ -22,10 +22,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from types import MappingProxyType
 
+from trpg.content.library import Ruleset
 from trpg.content.skill_copies import copy_rank
 from trpg.content.skills import (
     SHAPE_CHANGES,
@@ -54,6 +55,7 @@ from trpg.engine.gear.enhance import (
     gear_status_duration,
     spend_gear_rune_read,
 )
+from trpg.engine.reshape_gate import BLOCKED, gate_permille, gated_rules
 from trpg.engine.rules.forms import form_heal_permille, held_weapon, natural_damage_permille
 from trpg.engine.shape_growth import grow_shape
 from trpg.engine.skills.conditions import Subject, condition_met
@@ -84,6 +86,7 @@ __all__ = [
     "empty_active_slots",
     "form_entry_permille",
     "form_upkeep_permille",
+    "gate_blocked_skills",
     "grants_pierce",
     "heal_permille",
     "hit_bonus",
@@ -92,6 +95,8 @@ __all__ = [
     "on_hit_rules",
     "range_delta",
     "reap_permille",
+    "reshape_damage_permille",
+    "reshaped_skill",
     "rule_limit_key",
     "rule_limit_reached",
     "shaped_skill",
@@ -388,6 +393,8 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
         state.ruleset, gain + gear_gain + keyword + rune + summon + reap + book + natural
     )
     total = max(0, _PERMILLE + capped + loss + gear_loss)
+    if use.skill is not None and unit.gear_skills:  # E5：裝備授予的變形過預算閘門後降傷
+        total = total * reshape_damage_permille(state, unit, use.skill) // _PERMILLE
     # 數量型分歧進化（3-33f2）：每隻只有一般的 power_permille ‰ 傷害
     power = unit.summon_power_permille
     return total if power >= _PERMILLE else total * power // _PERMILLE
@@ -643,32 +650,82 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
 
     順序：先依技能 ID、規則索引依序套用 ``shape_to``（每條至多轉一次，可以接續轉，例如
     單體 → 直線 → 錐形），再把每條 ``area_delta`` 的 +1 加上去，最後看 ``allow_self_target``。
+
+    裝備授予的變形規則（E5）先過預算閘門（:func:`trpg.engine.reshape_gate.gated_rules`）：不能套用
+    的拿掉；降傷由 :func:`damage_permille` 乘上。
     """
     if skill.kind != "active" or not (state.ruleset.has_modifier(unit.skills) or unit.gear.affixes):
         return skill
     if skill.followup is not None:  # 複合技能（Phase 3F-3a）的兩段形狀不變形（保守做法）
         return skill
     rules = _shape_rules(state, unit, skill) if state.ruleset.has_modifier(unit.skills) else []
+    rules = gated_rules(state.ruleset, unit, skill.id, rules)[0]
     gear_area = gear_area_delta(state, unit, skill)  # 裝備的技能強化（3G-G2）
     if not rules and not gear_area:
         return skill
+    return reshaped_skill(state.ruleset, skill, rules, held_weapon(unit).range, gear_area)
+
+
+def reshaped_skill(
+    ruleset: Ruleset,
+    skill: SkillDef,
+    rules: Sequence[ActiveRule],
+    weapon_range: int,
+    extra_area: int = 0,
+) -> SkillDef:
+    """``skill`` 套用變形規則 ``rules`` 後的技能（純函式；:func:`shaped_skill` 與 skillgen 的預算
+    閘門共用）。``weapon_range``：形狀轉換要保留的射程寫「武器射程」時用的值；``extra_area``：裝備技能
+    強化的範圍加成。沒有變化時回傳原技能（同一個物件）。"""
     shape = skill.shape
     for active in rules:
         if active.rule.change.shape_to is not None:
-            shape = _convert(state, unit, skill, shape, active.rule.change.shape_to)
+            shape = _convert(ruleset, skill, shape, active.rule.change.shape_to, weapon_range)
     for active in rules:
         delta = active.rule.change.area_delta
         grow = 0 if delta is None else truncate_permille(active.amount(delta))  # E1：遞減
         if grow:
-            shape = _grow(state, shape, grow)
-    if gear_area:
-        shape = _grow(state, shape, gear_area)
+            shape = grow_shape(ruleset, shape, grow)
+    if extra_area:
+        shape = grow_shape(ruleset, shape, extra_area)
     include = skill.include_caster or (
-        any(a.rule.change.allow_self_target for a in rules) and _helps_allies(state, skill)
+        any(a.rule.change.allow_self_target for a in rules) and _helps_allies(ruleset, skill)
     )
     if shape == skill.shape and include == skill.include_caster:
         return skill
     return skill.model_copy(update={"shape": shape, "include_caster": include})
+
+
+def reshape_damage_permille(state: BattleState, unit: UnitState, skill: SkillDef) -> int:
+    """裝備授予的變形讓 ``skill`` 的傷害降到幾‰（E5 預算閘門；沒有降時 1000）。"""
+    if not unit.gear_skills or skill.kind != "active" or skill.followup is not None:
+        return _PERMILLE
+    if not state.ruleset.has_modifier(unit.skills):
+        return _PERMILLE
+    return gated_rules(state.ruleset, unit, skill.id, _shape_rules(state, unit, skill))[1]
+
+
+def gate_blocked_skills(
+    state: BattleState, unit: UnitState, modifier_key: str
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """裝備授予的修正技 ``modifier_key`` 在 ``unit`` 身上會讓哪些主動技能變形、其中哪些被預算閘門
+    擋下（E5；兩者都是技能鍵、依鍵排序）。不是裝備授予的、沒有技能變形規則的都是空的。"""
+    if modifier_key not in unit.gear_skills:
+        return (), ()
+    ruleset = state.ruleset
+    weapon_range = held_weapon(unit).range
+    affected: list[str] = []
+    blocked: list[str] = []
+    for key in sorted(unit.all_skills):
+        skill = ruleset.skill_def(key)
+        if skill.kind != "active" or skill.followup is not None:
+            continue
+        mine = [a for a in _shape_rules(state, unit, skill) if a.skill.id == modifier_key]
+        if not mine or reshaped_skill(ruleset, skill, mine, weapon_range) is skill:
+            continue
+        affected.append(key)
+        if gate_permille(ruleset, modifier_key, skill.id) == BLOCKED:
+            blocked.append(key)
+    return tuple(affected), tuple(blocked)
 
 
 def _shape_rules(state: BattleState, unit: UnitState, skill: SkillDef) -> list[ActiveRule]:
@@ -678,32 +735,32 @@ def _shape_rules(state: BattleState, unit: UnitState, skill: SkillDef) -> list[A
         active
         for active in unit_rules(state, unit)
         if active.rule.change.kind in SHAPE_CHANGES
+        and active.rule.change.attack_shape is None  # 普攻變形另在 attack_shapes（E5）
         and _matches(state, active.rule, use, tags)
         and _self_holds(state, unit, active.rule)
     ]
 
 
 def _convert(
-    state: BattleState, unit: UnitState, skill: SkillDef, shape: ShapeSpec, target: str
+    ruleset: Ruleset, skill: SkillDef, shape: ShapeSpec, target: str, weapon_range: int
 ) -> ShapeSpec:
     """``shape`` 轉成 ``target``：不在轉換表、效果原語不支援新形狀（或有陷阱）時維持原樣。"""
-    rules = state.ruleset
     conversion = next(
-        (c for c in rules.shapes.conversions if c.from_shape == shape.type and c.to == target),
+        (c for c in ruleset.shapes.conversions if c.from_shape == shape.type and c.to == target),
         None,
     )
     if conversion is None or skill.trap is not None:
         return shape
     for effect in skill.effects:
-        allowed = rules.primitive_def(effect.type).allowed_shapes
+        allowed = ruleset.primitive_def(effect.type).allowed_shapes
         if allowed is not None and target not in allowed:
             return shape
-    params = rules.shape_def(target).params
+    params = ruleset.shape_def(target).params
     values: dict[str, int] = dict(conversion.params)
     for name in conversion.keep:
         raw = getattr(shape, name)
         if raw == "weapon":
-            raw = held_weapon(unit).range
+            raw = weapon_range
         if not isinstance(raw, int):
             return shape
         spec = params[name]
@@ -711,16 +768,10 @@ def _convert(
     return ShapeSpec.model_validate({"type": target, **values})
 
 
-def _grow(state: BattleState, shape: ShapeSpec, delta: int) -> ShapeSpec:
-    """``shape`` 的第一個可增加的大小參數（``size``、``radius``）加 ``delta``（不超過最大值）。"""
-    return grow_shape(state.ruleset, shape, delta)
-
-
-def _helps_allies(state: BattleState, skill: SkillDef) -> bool:
+def _helps_allies(ruleset: Ruleset, skill: SkillDef) -> bool:
     """技能有對友方生效的效果（治療、護盾、增益），``allow_self_target`` 才有意義。"""
-    rules = state.ruleset
     return any(
-        (e.affects or default_affects(rules.primitive_def(e.type))) == "allies"
+        (e.affects or default_affects(ruleset.primitive_def(e.type))) == "allies"
         for e in skill.effects
     )
 

@@ -25,6 +25,7 @@ from trpg.engine.attack_shapes import (
 from trpg.engine.context import Ctx
 from trpg.engine.events import AttackRolled, DamageDealt, EventBase, GearTriggered
 from trpg.engine.reactions import perform_unit_attack
+from trpg.engine.reshape_gate import gate_key
 from trpg.engine.state import state_to_json
 from trpg.engine.view import project_for
 from trpg.shared.rng import Rng
@@ -185,7 +186,12 @@ def test_gear_view_greys_the_skill_with_a_ranged_weapon() -> None:
         hero = hero.model_copy(update={"equipment": loadout({"body": [LINE_SKILL]})})
         foe = spawn(Team.ENEMY, (1, 1), no_reactions("bandit", max_hp=999))
         m = make_map(ROW, ally=[(0, 1)], enemy=[(1, 1)])
-        state = start_battle(make_setup(m, [hero, foe], skills=[line_skill()]), 0)
+        setup = make_setup(m, [hero, foe], skills=[line_skill()])
+        gates = {gate_key(LINE_SKILL, "attack"): 800}  # 裝備授予的要過預算閘門（E5）
+        setup = setup.model_copy(
+            update={"ruleset": setup.ruleset.model_copy(update={"reshape_gates": gates})}
+        )
+        state = start_battle(setup, 0)
         view = project_for(state, Team.ALLY).units
         me = next(u for u in view if u.id == U1)
         assert [g.off_zh for g in me.gear_skills] == [off]

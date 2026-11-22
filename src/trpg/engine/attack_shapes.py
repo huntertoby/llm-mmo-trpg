@@ -22,6 +22,13 @@ from dataclasses import dataclass
 
 from trpg.content.battle import WeaponDef
 from trpg.engine import modifiers
+from trpg.engine.reshape_gate import (
+    ATTACK_TARGET,
+    BLOCKED,
+    GATE_PROBLEM_ZH,
+    gate_permille,
+    gated_rules,
+)
 from trpg.engine.rules.footprint import strike_tiles
 from trpg.engine.rules.geometry import XY, has_line_of_sight
 from trpg.engine.state import BattleState, UnitState
@@ -37,6 +44,7 @@ __all__ = [
     "attack_shape_state",
     "line_attack_permille",
     "problem_zh",
+    "skill_note_zh",
     "skill_problem_zh",
     "suits_line",
 ]
@@ -54,7 +62,7 @@ FULL_PERMILLE = 1000
 """沒有降傷時的倍率（‰）。"""
 _PERMILLE = FULL_PERMILLE
 
-PROBLEMS_ZH: dict[str, str] = {"weapon": WEAPON_PROBLEM_ZH}
+PROBLEMS_ZH: dict[str, str] = {"weapon": WEAPON_PROBLEM_ZH, "gate": GATE_PROBLEM_ZH}
 """沒有生效的原因 → 標灰的說明。"""
 
 
@@ -63,8 +71,8 @@ class AttackShapeState:
     """``unit`` 現在的普攻形狀。
 
     - ``shape``：生效中的形狀（``line``）；``None``＝照舊打單體。
-    - ``problem``：有成立的變形規則、但沒有生效的原因：``weapon``（這把武器不能套用）；沒有時
-      ``None``。
+    - ``problem``：有成立的變形規則、但沒有生效的原因：``weapon``（這把武器不能套用）、``gate``
+      （裝備授予的變形過不了預算閘門：這招不能套用，E5）；沒有時 ``None``。
     - ``damage_permille``：變形後每一下的傷害倍率（‰；預算閘門降傷，沒有降時 1000）。
     """
 
@@ -89,7 +97,10 @@ def attack_shape_state(state: BattleState, unit: UnitState) -> AttackShapeState:
         return _PLAIN
     if not suits_line(unit.weapon):
         return AttackShapeState(None, "weapon")
-    return AttackShapeState(LINE)
+    kept, permille = gated_rules(state.ruleset, unit, ATTACK_TARGET, rules)  # 裝備授予的過閘門
+    if not kept:
+        return AttackShapeState(None, "gate")
+    return AttackShapeState(LINE, None, permille)
 
 
 def problem_zh(problem: str | None) -> str | None:
@@ -139,9 +150,37 @@ def attack_line_extras(
 
 
 def skill_problem_zh(state: BattleState, unit: UnitState, skill_id: str) -> str | None:
-    """修正技 ``skill_id``（技能列的鍵）的普攻變形在 ``unit`` 身上沒有效果的原因（標灰用）：帶
-    ``attack_shape`` 規則、但手上的武器不能套用時是 :data:`WEAPON_PROBLEM_ZH`；其他 ``None``。"""
+    """修正技 ``skill_id``（技能列的鍵）在 ``unit`` 身上整個沒有效果的原因（標灰用）：
+
+    - 普攻變形：手上的武器不能套用（:data:`WEAPON_PROBLEM_ZH`）；裝備授予、普攻過不了預算閘門
+      （:data:`GATE_PROBLEM_ZH`）。
+    - 技能變形（裝備授予，E5）：會被它變形的主動技能全部被預算閘門擋下（:data:`GATE_PROBLEM_ZH`）。
+
+    只擋下一部分時見 :func:`skill_note_zh`。其他 ``None``。"""
     skill = state.ruleset.skill_def(skill_id)
-    if not any(rule.change.attack_shape is not None for rule in skill.modifiers):
+    if not skill.is_modifier:
         return None
-    return None if suits_line(unit.weapon) else WEAPON_PROBLEM_ZH
+    if any(rule.change.attack_shape is not None for rule in skill.modifiers):
+        if not suits_line(unit.weapon):
+            return WEAPON_PROBLEM_ZH
+        if (
+            skill_id in unit.gear_skills
+            and gate_permille(state.ruleset, skill_id, ATTACK_TARGET) == BLOCKED
+        ):
+            return GATE_PROBLEM_ZH
+    affected, blocked = modifiers.gate_blocked_skills(state, unit, skill_id)
+    if affected and blocked == affected:
+        return GATE_PROBLEM_ZH
+    return None
+
+
+def skill_note_zh(state: BattleState, unit: UnitState, skill_id: str) -> str | None:
+    """裝備授予的變形修正技只對一部分主動技能被預算閘門擋下時的說明（「這招不能套用：火球」）；
+    全部擋下（見 :func:`skill_problem_zh`）或都沒擋下時 ``None``。"""
+    if not state.ruleset.skill_def(skill_id).is_modifier:
+        return None
+    affected, blocked = modifiers.gate_blocked_skills(state, unit, skill_id)
+    if not blocked or blocked == affected:
+        return None
+    names = "、".join(state.ruleset.skill_def(k).name_zh for k in blocked)
+    return f"{GATE_PROBLEM_ZH}：{names}"

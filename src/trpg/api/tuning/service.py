@@ -103,6 +103,7 @@ from trpg.content.skills import SkillDef
 from trpg.content.tuning_fields import TuningFields, load_tuning_fields
 from trpg.sim.boss_probe import BOSS_NAMES, BOSSES, BUILDS
 from trpg.sim.skill_probe import map_jobs, probe_maps
+from trpg.skillgen.reshape_gate import gate_library
 
 __all__ = [
     "DEFAULT_MAP_SEEDS",
@@ -591,12 +592,12 @@ class TuningService:
             if was_cached and cached is not None:
                 before_data = cached
             else:
-                before_data = run_data(load_library(before_root), ids, seeds, before)
+                before_data = run_data(gate_library(load_library(before_root)), ids, seeds, before)
                 store.save(digest, ids, seeds, before_data)
             if same:
                 after_data = before_data
             else:
-                after_data = run_data(load_library(after_root), ids, seeds, after)
+                after_data = run_data(gate_library(load_library(after_root)), ids, seeds, after)
                 store.save(after_tree, ids, seeds, after_data)
             return ratio_result(
                 before_data,

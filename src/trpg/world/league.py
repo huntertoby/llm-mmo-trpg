@@ -32,6 +32,7 @@ from trpg.roguelite.offers import at_run_tier
 from trpg.roguelite.start import allocation_problems, default_allocation, primary_attribute
 from trpg.shared.rng import fnv1a64
 from trpg.shared.types import Attribute, Team
+from trpg.skillgen.reshape_gate import gated_with_skills
 from trpg.world.calendar import season_day
 from trpg.world.common import here, rules_of
 from trpg.world.errors import WorldActionError, WorldError
@@ -394,7 +395,7 @@ def match_setup(
     )
     setup = base.model_copy(
         update={
-            "ruleset": library.ruleset.with_skills(extra[k] for k in sorted(extra)),
+            "ruleset": gated_with_skills(library, (extra[k] for k in sorted(extra))),
             "units": (
                 league_unit(library, rules, ally, Team.ALLY, first=True),
                 league_unit(library, rules, enemy, Team.ENEMY, first=False),

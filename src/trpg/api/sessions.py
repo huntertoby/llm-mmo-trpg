@@ -61,6 +61,7 @@ from trpg.shared.errors import IllegalActionError, TrpgError
 from trpg.shared.types import Pos, Team, UnitId
 from trpg.sim.commanders import build_commanded_ai
 from trpg.sim.lineup import TEAM_SIZE, UnknownBuildError, build_allies, default_lineup
+from trpg.skillgen.reshape_gate import gated_with_skills
 
 __all__ = [
     "AutoAdvanceLimitError",
@@ -488,7 +489,7 @@ class SessionStore:
         base = build_setup(
             self.library, request.map_id, companions, enemies, max_rounds=self._max_rounds(request)
         )
-        ruleset = self.library.ruleset.with_skills(run.generated_skills)
+        ruleset = gated_with_skills(self.library, run.generated_skills)
         units = (hero_spawn(self.library, run), *base.units)
         return base.model_copy(update={"units": units, "ruleset": ruleset})
 
@@ -499,7 +500,7 @@ class SessionStore:
         if not request.custom_skills and not request.replace_skills:
             return setup
         custom = custom_skill_defs(self.library, request.custom_skills)
-        return equip_custom_skills(setup, custom, request.replace_skills)
+        return equip_custom_skills(setup, custom, request.replace_skills, self.library)
 
     def _enemies(self, request: CreateBattleRequest) -> list[str]:
         """地圖的預設敵人；靶場改用 ``workshop.yaml`` 的對手（Phase 3F-1）。"""

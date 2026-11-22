@@ -52,6 +52,7 @@ from trpg.narrative.skills import DESCRIBED_CHANGES, DESCRIBED_PRIMITIVES
 from trpg.shared.errors import ContentError
 from trpg.skillgen.budget import BUDGET_BASES, STRUCTURED_CHANGES
 from trpg.skillgen.composer_parts import KNOB_LADDERS
+from trpg.skillgen.reshape_gate import gate_library
 
 __all__ = [
     "change_coverage_problems",
@@ -243,7 +244,8 @@ def check_primitive_coverage(library: ContentLibrary) -> None:
 
 
 def load_checked_library(content_dir: Path | None = None) -> ContentLibrary:
-    """:func:`~trpg.content.library.load_library` 之後再做原語的對應檢查。"""
+    """:func:`~trpg.content.library.load_library` 之後再做原語的對應檢查，並填好裝備授予的行為改寫的
+    預算閘門表（E5，:func:`~trpg.skillgen.reshape_gate.gate_library`）。"""
     library = load_library(content_dir)
     check_primitive_coverage(library)
-    return library
+    return gate_library(library)

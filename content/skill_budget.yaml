@@ -479,6 +479,7 @@ modifier:
   empty_slots_permille: 800     # 3-32a：依空欄位數加傷的規則（普攻精通）以滿格估算再 × 此值（技能欄空著本身就是代價；初值，未經模擬；3-32c 精通 80‰→60‰ 後由 500 調到 700；3-32d 精通 60‰→50‰ 再調到 800，維持預算 ≥ 70%）
   on_hit_rune_permille: 270     # 3-31：命中後的 inscribe／detonate_runes 點數 × 此值（符文單獨沒效果、要搭配讀取者；初值，未經模擬）
   shape_to_reference_size: 3    # HC-5b：shape_to 計價時，保留自原形狀的大小參數（size、radius）取的代表值（原 budget._REFERENCE_PARAM）
+  reshape_gate_min_permille: 500  # E5（玩法交接 4.1.36 待決答覆 2）：裝備授予的行為改寫超出原技能預算時自動降傷，最低降到這個‰；再低還超過就「這招不能套用」（初值，提案「傷害減半」；未經模擬）
   points_milli:
     hit_bonus: 350        # 命中 +1 ≈ 命中率 +5% × 基準傷害 7
     cooldown_delta: 1200  # 冷卻 −1

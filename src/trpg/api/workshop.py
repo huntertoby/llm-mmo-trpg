@@ -20,6 +20,7 @@ from trpg.engine.setup import BattleSetup
 from trpg.shared.errors import TrpgError
 from trpg.shared.types import Team
 from trpg.skillgen.draft import DraftError, build_skill, fill_trap_rounds
+from trpg.skillgen.reshape_gate import gated_with_skills
 from trpg.skillgen.validate import validate_skill
 
 __all__ = ["WorkshopRequestError", "custom_skill_defs", "equip_custom_skills"]
@@ -70,10 +71,13 @@ def _hero_skills(
 
 
 def equip_custom_skills(
-    setup: BattleSetup, custom: Sequence[SkillDef], replace: Sequence[str]
+    setup: BattleSetup,
+    custom: Sequence[SkillDef],
+    replace: Sequence[str],
+    library: ContentLibrary,
 ) -> BattleSetup:
     """把自訂技能裝到主角（我方第一個單位）身上：先拿掉 ``replace`` 的技能，再檢查裝備上限與
-    武器。"""
+    武器。規則包加技能後重算裝備授予的行為改寫的預算閘門（E5）。"""
     hero_index = next(i for i, u in enumerate(setup.units) if u.team is Team.ALLY)
     hero = setup.units[hero_index]
     unknown = [s for s in replace if s not in hero.template.skills]
@@ -83,7 +87,7 @@ def equip_custom_skills(
             f"（目前：{'、'.join(hero.template.skills) or '無'}）"
         )
     try:
-        ruleset = setup.ruleset.with_skills(custom)
+        ruleset = gated_with_skills(library, custom, setup.ruleset)
     except ValueError as exc:
         raise WorkshopRequestError(f"自訂技能無法加入規則包：{exc}") from exc
     skills = _hero_skills(hero.template.skills, custom, replace)

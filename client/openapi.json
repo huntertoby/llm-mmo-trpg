@@ -14747,6 +14747,17 @@
               }
             ],
             "title": "Off Zh"
+          },
+          "note_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Zh"
           }
         },
         "additionalProperties": false,

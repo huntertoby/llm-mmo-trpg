@@ -59,6 +59,7 @@ from trpg.roguelite.progress import hero_unit_id
 from trpg.shared.errors import TrpgError
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.shared.types import Attribute, Team, UnitId
+from trpg.skillgen.reshape_gate import gated_with_skills
 from trpg.skillgen.usage import collect_usage, merge_usage
 from trpg.world.actions import (
     BattleEndedEvent,
@@ -647,7 +648,7 @@ def _battle_setup(
     setup = base.model_copy(
         update={
             "map": map_def,
-            "ruleset": library.ruleset.with_skills(extra[k] for k in sorted(extra)),
+            "ruleset": gated_with_skills(library, (extra[k] for k in sorted(extra))),
             "units": units,
             "first_team": first,
             "objective": battle_objective(map_def, encounter),

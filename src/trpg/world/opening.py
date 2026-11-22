@@ -51,6 +51,7 @@ from trpg.roguelite.start import (
 from trpg.shared.rng import MASK64, fnv1a64
 from trpg.shared.types import Team
 from trpg.skillgen.keywords import derive_keywords
+from trpg.skillgen.reshape_gate import gated_with_skills
 from trpg.world.actions import (
     UI_NOTE_ACTIONS,
     ChangeLookAction,
@@ -651,7 +652,7 @@ def _practice_setup(
     測試模式不用），我方先手。"""
     return BattleSetup(
         map=library.maps[arena.map],
-        ruleset=library.ruleset.with_skills(extra),
+        ruleset=gated_with_skills(library, extra),
         units=tuple(units),
         max_rounds=None,
         first_team=Team.ALLY,

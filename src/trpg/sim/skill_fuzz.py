@@ -43,6 +43,7 @@ from trpg.engine.state import StatusInstance, Tile, UnitState
 from trpg.shared.types import Pos, Surface, Team, UnitId
 from trpg.skillgen.budget import skill_budget
 from trpg.skillgen.random_composer import compose_with_stats
+from trpg.skillgen.reshape_gate import gated_with_skills
 from trpg.skillgen.skill_yaml import skill_to_yaml
 from trpg.skillgen.validate import validate_skill
 
@@ -153,7 +154,7 @@ def _unit_template(
 def _ruleset_with(library: ContentLibrary, skill: SkillDef) -> Ruleset:
     if skill.id in library.skills:  # 內容庫裡的技能（示範技能）已在規則包內
         return library.ruleset
-    return library.ruleset.with_skills([skill])
+    return gated_with_skills(library, [skill])
 
 
 def _spawn(

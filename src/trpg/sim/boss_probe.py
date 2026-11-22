@@ -34,6 +34,7 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.runner import run_battle
 from trpg.shared.types import Team
 from trpg.sim.parallel import run_tasks
+from trpg.skillgen.reshape_gate import gate_library
 from trpg.world.battle import grow_enemy, prepare_battle
 from trpg.world.clock import WEATHER_PERIOD_SECONDS, day_phase
 from trpg.world.state import CharacterState, EncounterResult
@@ -290,7 +291,7 @@ def library_for(root: str | None) -> ContentLibrary:
     cached = _LIBRARIES.get(root)
     if cached is not None:
         return cached
-    library = load_library(None if root is None else Path(root))
+    library = gate_library(load_library(None if root is None else Path(root)))  # E5 預算閘門
     while len(_LIBRARIES) >= _KEEP_LIBRARIES:
         del _LIBRARIES[next(iter(_LIBRARIES))]
     _LIBRARIES[root] = library

@@ -180,7 +180,7 @@ function SkillSlot({
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
           <GearSourceNote source={b.gearSource} />
-          <GearOffNote reason={b.gearOff} />
+          <GearOffNote reason={b.gearOff} note={b.gearNote} />
           <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
@@ -195,12 +195,16 @@ function gearOffClass(b: SkillButton): string {
   return b.gearOff != null && b.conditionOff == null ? " cond-off" : "";
 }
 
-/** 說明卡上方的「沒有效果：這把武器不能套用」（E5；樣式同「本場不成立」那條）。 */
-function GearOffNote({ reason }: { reason: string | null | undefined }) {
-  if (reason == null) return null;
+/**
+ * 說明卡上方的「沒有效果：這把武器不能套用」「沒有效果：這招不能套用」（E5；樣式同「本場不成立」那條）。
+ * 只有一部分招式被預算閘門擋下時（`note`，例「這招不能套用：火球」）只寫這一行、按鈕不標灰。
+ */
+function GearOffNote({ reason, note }: { reason: string | null | undefined; note?: string | null }) {
+  const text = reason != null ? `沒有效果：${reason}` : (note ?? null);
+  if (text === null) return null;
   return (
     <div className="skill-card-reason cond-off-note gear-off-note" data-testid="gear-off-note">
-      沒有效果：{reason}
+      {text}
     </div>
   );
 }
@@ -300,7 +304,7 @@ function MiniSlot({
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
           <GearSourceNote source={b.gearSource} />
-          <GearOffNote reason={b.gearOff} />
+          <GearOffNote reason={b.gearOff} note={b.gearNote} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>

@@ -5905,6 +5905,8 @@ export interface components {
             kind: string;
             /** Off Zh */
             off_zh?: string | null;
+            /** Note Zh */
+            note_zh?: string | null;
         };
         /** GearSlotInfo */
         GearSlotInfo: {

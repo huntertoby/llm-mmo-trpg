@@ -1,7 +1,7 @@
 // Phase 3G-G3b：裝備授予的技能與反應——技能列與反應設定的「來自裝備」。
 import { describe, expect, it } from "vitest";
 import type { Action, GearSkillView, ReactionRuleView } from "../api/types";
-import { gearSkillBadge, gearSkillOff, gearSkillSource, gearSkillsOf } from "./gearSkills";
+import { gearSkillBadge, gearSkillNote, gearSkillOff, gearSkillSource, gearSkillsOf } from "./gearSkills";
 import { gearSourceText } from "./reactions";
 import { skillButtons } from "./targeting";
 import { unit } from "./testFixtures";
@@ -80,5 +80,13 @@ describe("gear granted skills", () => {
     expect(gearSkillOff(archer, "skill_t_line")).toBe("這把武器不能套用");
     expect(gearSkillOff(archer, "skill_gear_grapple")).toBeNull();
     expect(skillButtons(archer, [], {}).map((b) => b.gearOff)).toEqual([null, "這把武器不能套用"]);
+  });
+
+  it("notes the moves a granted reshape cannot apply to without greying (E5)", () => {
+    const bounce: GearSkillView = { ...grapple, skill_id: "skill_t_bounce", name_zh: "彈射", kind: "modifier", note_zh: "這招不能套用：疾風踢" };
+    const hero2 = unit("unit_0001", "ally", 1, 1, { skills: ["skill_t_bounce"], gear_skills: [bounce] });
+    expect(gearSkillNote(hero2, "skill_t_bounce")).toBe("這招不能套用：疾風踢");
+    const [b] = skillButtons(hero2, [], {});
+    expect([b?.gearOff, b?.gearNote]).toEqual([null, "這招不能套用：疾風踢"]);
   });
 });
