@@ -356,7 +356,7 @@
 
 ### b.8 LOG_FORMAT／PROMPT_VERSION 判斷
 
-- **LOG_FORMAT 不升**（`docs/phases/戰鬥紀錄格式變更.md` 1.2）：事件、動作、狀態的欄位沒有增減，結算不變（51 場 different=0）。規則包多了 `skill_triggers[*].max_per_round`，`ruleset_hash` 會變，舊紀錄照 1.2 被拒；讀不進的舊紀錄現在給 b.4 的中文說明。
+- **LOG_FORMAT 不升**（`docs/phases/戰鬥紀錄格式變更.md` 1.2）：事件、動作、狀態的欄位沒有增減，結算不變（78 場、51 場都 different=0）。規則包多了 `skill_triggers[*].max_per_round`，`ruleset_hash` 會變，舊紀錄照 1.2 被拒；讀不進的舊紀錄現在給 b.4 的中文說明。
 - **PROMPT_VERSION 不升**：提示詞的文字與 schema 沒變（字數上限改讀 `flash_text` 同值；`tests/llm/test_prompts.py` 雜湊快照通過）。
 - `WORLD_RULES_VERSION` 不升：`world/rules.yaml` 多的 `display`、`notes` 只管畫面筆數與留言字數，世界推進的規則沒變（內容 digest 本來就會變）。
 
@@ -367,7 +367,8 @@
 | 比對 | 結果 |
 |---|---|
 | 逐招預算 442 招 | `same=442 different=0` |
-| 戰鬥（17 張地圖 × 3 種子） | `battles=51 different=0` |
+| 78 場戰鬥（a 段同一組：`compare78.py`，15 張圖 × 種子 1、7＋開闊平原 8 個 build＋4 張頭目圖 × 種子 3～12；去掉 `ruleset_hash` 與內嵌規則包，加文字輸出；開發 PM 驗收前補跑） | `battles=78 events=26206 different=0`；內嵌規則包只差新欄位 `skill_triggers[*].max_per_round`（兩個時機 1、其餘 `None`） |
+| 戰鬥（自己的組：17 張地圖 × 3 種子） | `battles=51 different=0` |
 | 組合器 census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | `cells=204 same=204 different=0`（不看耗時欄位 `timing`） |
 | 閃現出題、完整技能、升階 | slow parity（`test_refactor_parity.py`）照原夾具通過，見 b.11 |
 | 提示詞 | `tests/llm/test_prompts.py` 雜湊快照通過 |
