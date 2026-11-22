@@ -6348,6 +6348,10 @@ export interface components {
              * @default []
              */
             offhand_traits_zh: string[];
+            /** Crit Damage Permille */
+            crit_damage_permille?: number | null;
+            /** Crit Damage Detail Zh */
+            crit_damage_detail_zh?: string | null;
             /** Skills */
             skills: components["schemas"]["SkillCard"][];
             /**
