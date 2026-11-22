@@ -31,7 +31,7 @@ describe("E3b 霜行冰的說明", () => {
     const surface = tileSections(v, at, {}).find((s) => s.kind === "surface");
     const name = owner();
     const fire = glossaryName("surfaces", "fire");
-    expect(surface?.lines[0]).toBe(`${name}沿路留下的${fire}：剩 2 回合，到期直接消失，不會變成水。`);
+    expect(surface?.lines[0]).toBe(`${name}沿路留下的${fire}：剩 2 回合，到期直接消失。`); // 8.29 E3：不是冰不寫「不會變成水」
     expect(surface?.lines[0]).not.toContain("滑倒");
     const general = (glossaryEntry("surfaces", "fire")?.rules_zh ?? []).filter((r) => !r.startsWith("由技能產生時持續"));
     expect(general.length).toBeGreaterThan(0);
@@ -47,5 +47,7 @@ describe("E3b 霜行冰的說明", () => {
 
   it("持有者不在視圖裡時用單位 ID；沒有剩餘回合時不寫", () => {
     expect(trailSurfaceLine("unit_0009", "ice", null)).toBe("unit_0009沿路留下的冰：到期直接消失，不會變成水。unit_0009自己踩不會滑倒，其他人照一般冰檢定。");
+    const fire = glossaryName("surfaces", "fire");
+    expect(trailSurfaceLine("unit_0009", "fire", null)).toBe(`unit_0009沿路留下的${fire}：到期直接消失。`);
   });
 });

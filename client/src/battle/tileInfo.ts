@@ -68,14 +68,15 @@ function objectSection(view: BattleView, tile: TileView): TileSection | null {
 /**
  * E3b（08 8.29 E3 顯示）：霜行（`trail_surface`）沿路留下的表面的說明，第一句：
  * 「〇〇沿路留下的冰：剩 N 回合，到期直接消失，不會變成水。〇〇自己踩不會滑倒，其他人照一般冰檢定。」
- * 〇〇是留下的人（視圖裡找不到時用單位 ID）；表面不是冰時「滑倒」那句換成該表面原本的說明（下面照列的規則）。
+ * 〇〇是留下的人（視圖裡找不到時用單位 ID）；表面不是冰時拿掉「不會變成水」（只寫「到期直接消失」；8.29 E3，
+ * 玩法 PM a57d75120），「滑倒」那句換成該表面原本的說明（下面照列的規則）。
  * 一般的表面回傳 `null`（照舊）。
  */
 export function trailSurfaceLine(owner: string, surface: string, remaining: number | null): string {
   const name = glossaryName("surfaces", surface);
   const left = remaining === null ? "" : `剩 ${remaining} 回合，`;
-  const head = `${owner}沿路留下的${name}：${left}到期直接消失，不會變成水。`;
-  return surface === "ice" ? `${head}${owner}自己踩不會滑倒，其他人照一般冰檢定。` : head;
+  const head = `${owner}沿路留下的${name}：${left}到期直接消失`;
+  return surface === "ice" ? `${head}，不會變成水。${owner}自己踩不會滑倒，其他人照一般冰檢定。` : `${head}。`;
 }
 
 function trailSurfaceSection(view: BattleView, tile: TileView): TileSection | null {
