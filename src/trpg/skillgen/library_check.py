@@ -36,14 +36,15 @@ def gear_grant_violations(library: ContentLibrary) -> list[Violation]:
     技能本身的階級等於這一階時，結果和 :func:`validate_skill` 的預算檢查相同，所以不重複列。
     已知例外（``known_budget_exceptions``）不列。"""
     tier = library.budget.gear_skill_tier
-    granted = sorted(
-        {a.skill for a in library.affixes.values() if isinstance(a, ActionAffix)}
-        & set(library.skills)
-    )
+    granted = sorted({a.skill for a in library.affixes.values() if isinstance(a, ActionAffix)})
     out: list[Violation] = []
     for skill_id in granted:
-        skill = library.skills[skill_id]
-        if skill.tier == tier or skill_id in library.budget.known_budget_exceptions:
+        skill = library.skills.get(skill_id)  # 找不到的由詞條引用檢查回報
+        if (
+            skill is None
+            or skill.tier == tier
+            or skill_id in library.budget.known_budget_exceptions
+        ):
             continue
         try:
             report = skill_budget(skill.model_copy(update={"tier": tier}), library)
