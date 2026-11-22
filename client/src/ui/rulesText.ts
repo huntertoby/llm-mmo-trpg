@@ -25,10 +25,15 @@ export function countZh(n: number, measure = false): string {
   return zh ?? String(n);
 }
 
-/** 秒數寫成「約 N 天」（整天）或「約 N 小時」（不整天；HC-6b，線頭到期）。 */
-export function aboutDurationText(seconds: number): string {
+/** 秒數寫成「N 天」（整天）或「N 小時」（不整天，四捨五入；HC-7 a 裁定 8，同後端 `cooldown_zh`）。 */
+export function durationText(seconds: number): string {
   const hour = 3600;
   const day = 24 * hour;
-  if (seconds % day === 0) return `約 ${seconds / day} 天`;
-  return `約 ${Math.round(seconds / hour)} 小時`;
+  if (seconds % day === 0) return `${seconds / day} 天`;
+  return `${Math.round(seconds / hour)} 小時`;
+}
+
+/** 秒數寫成「約 N 天」（整天）或「約 N 小時」（不整天；HC-6b，線頭到期）。 */
+export function aboutDurationText(seconds: number): string {
+  return `約 ${durationText(seconds)}`;
 }

@@ -296,6 +296,7 @@ def oath_view(
         current=current,
         cooldown_until=char.oath_cooldown_until,
         cooldown_zh=_duration_zh(char.oath_cooldown_until - now) if cooling else None,
+        cooldown_seconds=_cooldown_seconds(table),
         can_swear=problem is None,
         swear_problem_zh=problem,
         can_release=char.oath is not None and not in_battle and char.pending_flash is None,
@@ -303,6 +304,14 @@ def oath_view(
         penalty_zh=_penalty_zh(library, table),
         slot_zh=slot_zh(library) if table is not None else "",
     )
+
+
+def _cooldown_seconds(table: OathTable | None) -> int:
+    """解除誓約後的冷卻秒數；沒有誓約表時用 :class:`OathTable` 的預設（同誓約紀錄的說明）。"""
+    if table is None:
+        default: int = OathTable.model_fields["cooldown_seconds"].default
+        return default
+    return table.cooldown_seconds
 
 
 # ---------------------------------------------------------------------------

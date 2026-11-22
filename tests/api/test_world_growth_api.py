@@ -246,6 +246,7 @@ def test_oath_unavailable_without_templates(no_oath_client: TestClient) -> None:
     assert oath["available"] is False
     assert oath["unavailable_zh"] == "尚未開放"
     assert oath["can_swear"] is False and oath["swear_problem_zh"] == "尚未開放"
+    assert oath["cooldown_seconds"] == 86400  # HC-7 a 裁定 8：沒有誓約表時照 OathTable 的預設
     reply = _post(
         calm_client, cid, kind="swear_oath", proposal={"template": "no_items", "params": {}}
     )
@@ -256,6 +257,7 @@ def test_oath_swear_release_and_cooldown(oath_client: TestClient) -> None:
     view = _create(oath_client)
     cid = view["character"]["character_id"]
     assert view["oath"]["available"] is True
+    assert view["oath"]["cooldown_seconds"] == 86400  # HC-7 a 裁定 8：前端照這個數組「1 天內」
     assert [t["id"] for t in view["oath"]["templates"]] == [
         "no_items",
         "melee_kills",

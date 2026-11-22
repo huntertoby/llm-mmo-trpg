@@ -17,6 +17,7 @@ import { fieldHeroInput, HeroFace } from "../ui/heroFace";
 import { Hint } from "../ui/Hint";
 import { Callout, Chip, EmptyNote, Fold, FoldGroup, HudBare, InfoTip, KeepNum, LockGlyph, PanelHead, PartBare, TabLine, Tag, EventBare } from "../ui/PanelKit";
 import { PanelTabs, type PanelTabDef } from "../ui/PanelTabs";
+import { durationText } from "../ui/rulesText";
 import { SkillCardView } from "../ui/SkillCardView";
 import { SkillIconView } from "../ui/SkillIconView";
 import { LookChangeRow, RaceChangeRow } from "./GrowthLookRows";
@@ -344,7 +345,7 @@ function OathSection({ view, busy, onAct, bare = false }: Pick<Props, "view" | "
   return (
     <div className={bare ? "world-oath" : "panel world-oath"} data-testid="world-oath">
       {!bare && <div className="section-title">誓約</div>}
-      <p className="small muted">在城鎮或營火立誓，同時 1 個，一直有效到自己解除；解除後現實 1 天內不能再立。</p>
+      <p className="small muted">在城鎮或營火立誓，同時 1 個，一直有效到自己解除；解除後現實 {durationText(oath.cooldown_seconds)}內不能再立。</p>
       {oath.available && (
         <p className="small muted" data-testid="world-oath-rules">
           {[oath.slot_zh, oath.penalty_zh].filter((s) => s !== undefined && s !== "").join("。")}
@@ -363,7 +364,7 @@ function OathSection({ view, busy, onAct, bare = false }: Pick<Props, "view" | "
               </button>
             ) : (
               <>
-                <span className="small">解除後現實 1 天內不能再立誓，確定？</span>
+                <span className="small">解除後現實 {durationText(oath.cooldown_seconds)}內不能再立誓，確定？</span>
                 <button
                   type="button"
                   className="danger primary"

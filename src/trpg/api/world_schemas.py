@@ -582,6 +582,9 @@ class OathView(_ApiModel):
     cooldown_until: int
     cooldown_zh: str | None
     """解除後還要多久才能再立；沒有冷卻時為 ``None``。"""
+    cooldown_seconds: int
+    """解除誓約後多久不能再立（秒，``world/oaths.yaml`` 的 ``cooldown_seconds``；HC-7 a 裁定 8：
+    前端照這個數組「N 天內」或「N 小時內」）。"""
     can_swear: bool
     swear_problem_zh: str | None
     can_release: bool

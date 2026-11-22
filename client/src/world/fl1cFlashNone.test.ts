@@ -36,7 +36,7 @@ function worldView(hero: RunHero): WorldView {
     hero,
     limits: {},
     growth: { insight: 3, skill_tier: 1, at_service: true, service_zh: "", can_allocate: false, can_spend: true, blocked_zh: null, pending: false, can_flash: true, flash_blocked_zh: null, starter_note_zh: null },
-    oath: { available: false, unavailable_zh: "尚未開放", current: null, cooldown_until: 0, cooldown_zh: null, can_swear: false, swear_problem_zh: "尚未開放", can_release: false, templates: [] },
+    oath: { available: false, unavailable_zh: "尚未開放", current: null, cooldown_until: 0, cooldown_zh: null, cooldown_seconds: 86400, can_swear: false, swear_problem_zh: "尚未開放", can_release: false, templates: [] },
   } as unknown as WorldView;
 }
 

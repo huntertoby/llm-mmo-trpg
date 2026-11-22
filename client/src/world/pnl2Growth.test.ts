@@ -74,6 +74,7 @@ function view(o: Over = {}): WorldView {
       current: null,
       cooldown_until: 0,
       cooldown_zh: null,
+      cooldown_seconds: 86400,
       can_swear: false,
       swear_problem_zh: "尚未開放",
       can_release: false,

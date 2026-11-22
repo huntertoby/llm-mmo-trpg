@@ -34,6 +34,7 @@ function view({ growth = {}, oath = {}, points = 0, pending = false }: Over = {}
       current: null,
       cooldown_until: 0,
       cooldown_zh: null,
+      cooldown_seconds: 86400,
       can_swear: false,
       swear_problem_zh: "尚未開放",
       can_release: false,

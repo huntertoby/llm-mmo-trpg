@@ -8027,6 +8027,8 @@ export interface components {
             cooldown_until: number;
             /** Cooldown Zh */
             cooldown_zh: string | null;
+            /** Cooldown Seconds */
+            cooldown_seconds: number;
             /** Can Swear */
             can_swear: boolean;
             /** Swear Problem Zh */

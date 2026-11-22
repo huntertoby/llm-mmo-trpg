@@ -19746,6 +19746,10 @@
             ],
             "title": "Cooldown Zh"
           },
+          "cooldown_seconds": {
+            "type": "integer",
+            "title": "Cooldown Seconds"
+          },
           "can_swear": {
             "type": "boolean",
             "title": "Can Swear"
@@ -19792,6 +19796,7 @@
           "current",
           "cooldown_until",
           "cooldown_zh",
+          "cooldown_seconds",
           "can_swear",
           "swear_problem_zh",
           "can_release"
