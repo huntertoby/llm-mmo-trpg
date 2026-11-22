@@ -541,7 +541,7 @@ rules:
     kind: text
     files: [client/src/world/OpeningDialog.tsx]
     text: '一樣高就給第 1 招的'
-    note: HC-8 改判：配點範例的「一樣高就給第 1 招」是序號（`recommended_level_up` 的平手規則：照起始招的順序取第一個）；範例裡的點數、屬性值已改讀 `rules.start_free_points`、`base_attribute`、`attribute_points_per_level`、`quantity_scale`。
+    note: HC-8 改判：配點範例的「一樣高就給第 1 招」是序號（`recommended_level_up` 的平手規則：照起始招的順序取第一個）；範例裡的點數、屬性值已改讀 `rules.start_free_points`、`base_attribute`、`attribute_points_per_level`（照原值顯示）。
 
   # ======================================================================== 後端：整個資料夾或檔案
   - id: py-shared-rng
@@ -734,8 +734,8 @@ rules:
     files: src/trpg/api/schemas.py
     kind: number
     where: ['GameRulesOut']
-    owner: ['quantity_scale', 'attribute_points_per_level', 'base_attribute', 'start_free_points']
-    note: HC-8（規格第 1 項「API 沒帶到的值就加欄位，新欄位要有預設值」）：屬性點兩句說明組字用的四個欄位。伺服器一律由內容庫填（core.yaml 的 quantity_scale、roguelite.yaml 的 attribute_points_per_level、base_attribute、start_free_points），預設值等於目前的內容（tests/api/test_game_rules_hc8.py 對照）。HC-7 b 起其他欄位必填、不給預設值，這四個照規格給；改內容時這裡不用跟著改（只在舊回應沒帶時生效）。
+    owner: ['attribute_points_per_level', 'base_attribute', 'start_free_points']
+    note: HC-8（規格第 1 項「API 沒帶到的值就加欄位，新欄位要有預設值」）：屬性點兩句說明組字用的三個欄位（畫面照 ×10 後的原值顯示，玩法 PM 定案）。伺服器一律由內容庫填（roguelite.yaml 的 attribute_points_per_level、base_attribute、start_free_points），預設值等於目前的內容（tests/api/test_game_rules_hc8.py 對照）。HC-7 b 起其他欄位必填、不給預設值，這三個照規格給；改內容時這裡不用跟著改（只在舊回應沒帶時生效）。
   - id: py-api-request-format-guards
     class: guard
     status: done

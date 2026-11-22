@@ -5584,11 +5584,6 @@ export interface components {
             /** Situation Care Max */
             situation_care_max: number;
             /**
-             * Quantity Scale
-             * @default 10
-             */
-            quantity_scale: number;
-            /**
              * Attribute Points Per Level
              * @default 20
              */

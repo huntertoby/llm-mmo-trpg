@@ -312,9 +312,7 @@ class GameRulesOut(_ApiModel):
     引用線索的說明）。"""
     # ---- HC-8：屬性點的兩句說明（成長面板「升級時每級 +N」、配點教學的範例）組字用 ----
     # 規格要求新欄位有預設值；伺服器一律由內容庫填，預設值等於目前的內容
-    # （tests/api/test_game_rules_hc8.py 對照）。
-    quantity_scale: int = 10
-    """量類的倍率（``core.yaml`` 的 ``quantity_scale``）：屬性點顯示時 ÷ 這個值。"""
+    # （tests/api/test_game_rules_hc8.py 對照）。畫面照 ×10 後的原值顯示（玩法 PM 定案，05 5.4.1）。
     attribute_points_per_level: int = 20
     """每升一級給幾點屬性點（``roguelite.yaml``，量類，×10 量尺）。"""
     base_attribute: int = 100

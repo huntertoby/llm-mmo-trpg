@@ -13912,11 +13912,6 @@
             "type": "integer",
             "title": "Situation Care Max"
           },
-          "quantity_scale": {
-            "type": "integer",
-            "title": "Quantity Scale",
-            "default": 10
-          },
           "attribute_points_per_level": {
             "type": "integer",
             "title": "Attribute Points Per Level",

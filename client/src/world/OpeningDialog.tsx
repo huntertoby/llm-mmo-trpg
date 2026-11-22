@@ -18,7 +18,6 @@ import { Hint } from "../ui/Hint";
 import { ATTR_ZH } from "./narration";
 import { OPENING_SEEN } from "./battleHints";
 import { gameRules } from "../battle/glossary";
-import { attributeShown } from "./growthPanel";
 
 /** 這個角色現在要不要跳開場：伺服器有給開場、角色的提示紀錄裡還沒有 `opening`。 */
 export function shouldShowOpening(guide: WorldGuide | null | undefined, seen: ReadonlySet<string> | boolean): guide is WorldGuide {
@@ -87,34 +86,33 @@ export function flashLessonText(cost: number = gameRules().flash_open_cost, opti
 
 const ATTR_ORDER = ["str", "dex", "con", "int", "wis", "wil"] as const;
 
-/** 配點範例的數字（量類，照伺服器 `rules`：`start_free_points`、`base_attribute`、`attribute_points_per_level`、`quantity_scale`；HC-8）。 */
+/** 配點範例的數字（照伺服器 `rules`：`start_free_points`、`base_attribute`、`attribute_points_per_level`；HC-8）。 */
 export interface AllocateExampleRules {
   start: number;
   base: number;
   perLevel: number;
-  scale: number;
 }
 
 function allocateExampleRules(): AllocateExampleRules {
   const r = gameRules();
-  return { start: r.start_free_points, base: r.base_attribute, perLevel: r.attribute_points_per_level, scale: r.quantity_scale };
+  return { start: r.start_free_points, base: r.base_attribute, perLevel: r.attribute_points_per_level };
 }
 
 /** 推薦配法的範例（07 7.2）：兩招看智力和力量時，開局點數兩招各半（奇數時多的給第 1 招，同 `recommended_allocation`），
- *  升級的點數給比較低的、一樣高給第 1 招（同 `recommended_level_up`）。數字照伺服器的規則、÷ `quantity_scale` 顯示（HC-8）。 */
+ *  升級的點數給比較低的、一樣高給第 1 招（同 `recommended_level_up`）。數字照伺服器的規則、照 ×10 後的原值顯示
+ *  （HC-8；玩法 PM 定案，05 5.4.1）。 */
 export function allocateExampleText(rules: AllocateExampleRules = allocateExampleRules()): string {
-  const { start, base, perLevel, scale } = rules;
-  const shown = (raw: number) => attributeShown(raw, scale);
+  const { start, base, perLevel } = rules;
   const second = Math.floor(start / 2);
   const first = start - second;
   const int = base + first;
   const str = base + second;
-  const split = first === second ? `各給 ${shown(first)} 點` : `給智力 ${shown(first)} 點、力量 ${shown(second)} 點`;
+  const split = first === second ? `各給 ${first} 點` : `給智力 ${first} 點、力量 ${second} 點`;
   // 升級：給比較低的，一樣高給第 1 招（智力）
   const [intAfter, strAfter] = str < int ? [int, str + perLevel] : [int + perLevel, str];
   return (
-    `例：兩招看智力和力量 → 開局 ${shown(start)} 點${split}（智力 ${shown(int)}、力量 ${shown(str)}）；` +
-    `升級的 ${shown(perLevel)} 點給比較低的那個，一樣高就給第 1 招的 → 智力 ${shown(intAfter)}、力量 ${shown(strAfter)}。`
+    `例：兩招看智力和力量 → 開局 ${start} 點${split}（智力 ${int}、力量 ${str}）；` +
+    `升級的 ${perLevel} 點給比較低的那個，一樣高就給第 1 招的 → 智力 ${intAfter}、力量 ${strAfter}。`
   );
 }
 

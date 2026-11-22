@@ -1,6 +1,6 @@
 // 開發用：HC-8 配點教學的範例句（開 `client/dev/hc8-gallery.html`；自己的 vite 後 /dev/hc8-gallery.html?mute=1）。不屬於正式 build。
 // 正式的 `AllocateLessonDialog`；規則數字用前端夾具 `battle/fixtures/glossary.json` 的 `rules`（和 /api/glossary 同一份輸出）。
-// 教學內容照伺服器的形狀（`world_newcomer_view._allocate_lesson`，點數是量類原值）。成長面板的「升級時每級 +2」看
+// 教學內容照伺服器的形狀（`world_newcomer_view._allocate_lesson`，點數是量類原值）。成長面板的「升級時每級 +20」看
 // /dev/panel-gallery.html?scene=growth&tab=attr。畫好後 `document.body.dataset.ready = "1"`。
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
