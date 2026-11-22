@@ -94,7 +94,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.gear.charge import find_charge
 from trpg.engine.ids import BOSS_TAG, SHIELD_FORMATION
-from trpg.engine.maneuvers import contest_chance
+from trpg.engine.maneuvers import contest_chance, knock_terms
 from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
 from trpg.engine.practice import is_practice_target
@@ -867,10 +867,11 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
     modifier = rules.hit_table.modifier(
         effective_attribute(rules, actor, attr), max(1, effective_attribute(rules, target, attr))
     )
+    extra, target_number = knock_terms(rules, knockdown=isinstance(action, Trip))  # KD-1
     hit, _ = _chances(
         _naturals("none"),
-        modifier + rules.core.proficiency,
-        rules.core.hit_target,
+        modifier + rules.core.proficiency - extra,
+        target_number,
         21,
         always=is_practice_target(state, target),
     )
@@ -1029,10 +1030,11 @@ def _knock_chance(
     modifier = rules.hit_table.modifier(
         skill_scaling_value(rules, actor, skill), max(1, effective_attribute(rules, target, attr))
     )
+    extra, target_number = knock_terms(rules, knockdown=True)  # 擊倒對抗（KD-1）
     hit, _ = _chances(
         _naturals("none"),
-        modifier + rules.core.proficiency,
-        rules.core.hit_target,
+        modifier + rules.core.proficiency - extra,
+        target_number,
         21,
         always=is_practice_target(state, target),
     )

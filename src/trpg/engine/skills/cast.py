@@ -1263,6 +1263,7 @@ class Cast:
             skill_id=self.skill.id,
             primary=False,
             attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
+            knockdown=True,
         ):
             return []
         return [ApplyStatusEffect(source_id=self.caster.id, target_id=unit.id, status_id=PRONE)]

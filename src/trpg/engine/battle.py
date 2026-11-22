@@ -1171,7 +1171,7 @@ def _do_trip(ctx: Ctx, unit: UnitState, action: Action) -> None:
         raise IllegalActionError(f"目標已經倒地：{target.name_zh}")
     unit.ap -= cost
     exploits = _maneuver_exploits(ctx, unit, modifiers.TRIP, target)
-    if contest(ctx, "trip", unit, target, Attribute.DEX):
+    if contest(ctx, "trip", unit, target, Attribute.DEX, knockdown=True):
         start = len(ctx.events)
         execute(ctx, [ApplyStatusEffect(target_id=target.id, status_id=PRONE, source_id=unit.id)])
         report_exploits(ctx, unit.id, exploits, start, set())

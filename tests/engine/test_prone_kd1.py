@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 import pytest
 
 from tests.engine.helpers import (
@@ -18,22 +20,35 @@ from tests.engine.helpers import (
     template,
     with_rolls,
 )
-from trpg.engine import BattleState, EndTurn, HelpUp, Move, Trip, legal_actions, resolve
+from trpg.engine import (
+    BattleState,
+    EndTurn,
+    HelpUp,
+    Move,
+    Trip,
+    legal_actions,
+    preview,
+    resolve,
+)
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.basics import help_up_problem
 from trpg.engine.context import Ctx
 from trpg.engine.effects import ApplyStatusEffect, RemoveStatusEffect, run_effects
 from trpg.engine.events import (
     EffectFizzled,
+    ManeuverRolled,
     ReactionTriggered,
     UnitMoved,
     UnitSlid,
     UnitStoodUp,
 )
+from trpg.engine.maneuvers import contest_chance
+from trpg.engine.rules.combat import is_hit
+from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.turns import start_turn
 from trpg.engine.view import project_for
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Pos, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Team, UnitId
 
 U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
 CORE = library().ruleset.core
@@ -277,3 +292,47 @@ def test_steady_on_ice_still_slides_but_does_not_fall() -> None:
     assert any(isinstance(e, UnitSlid) for e in result.events)
     assert result.state.units[U1].xy == (2, 0)
     assert not result.state.units[U1].has_status("prone")
+
+
+# ---------------------------------------------------------------------------
+# 第 4 點：擊倒對抗變難（守方 +prone_contest_bonus，平手算守方贏）
+# ---------------------------------------------------------------------------
+
+
+def _trip_bonus(state: BattleState) -> int:
+    rules = state.ruleset
+    a, t = state.units[U1], state.units[U2]
+    mod = rules.hit_table.modifier(
+        effective_attribute(rules, a, Attribute.DEX),
+        max(1, effective_attribute(rules, t, Attribute.DEX)),
+    )
+    return mod + rules.core.proficiency - CORE.prone_contest_bonus
+
+
+def _trip_roll(natural: int) -> ManeuverRolled:
+    state = give_turn(_pair(), U1)
+    result = resolve(with_rolls(state, [(20, natural)]), Trip(unit_id=U1, target_id=U2))
+    return next(e for e in result.events if isinstance(e, ManeuverRolled))
+
+
+def test_trip_adds_the_defender_bonus_and_ties_go_to_the_defender() -> None:
+    bonus = _trip_bonus(give_turn(_pair(), U1))
+    tie = CORE.hit_target - bonus  # 自然骰剛好讓總和等於門檻
+    assert 2 <= tie <= 18, "這組屬性要讓平手落在自然 2～18"
+    tied = _trip_roll(tie)
+    assert tied.total == CORE.hit_target and not tied.success
+    assert tied.resist_bonus == CORE.prone_contest_bonus
+    assert tied.target_number == CORE.hit_target + 1
+    assert _trip_roll(tie + 1).success
+
+
+def test_knock_chance_matches_the_rolls() -> None:
+    state = give_turn(_pair(), U1)
+    bonus = _trip_bonus(state)
+    expected = Fraction(sum(is_hit(n, n + bonus, CORE.hit_target + 1) for n in range(1, 21)), 20)
+    p = preview(state, Trip(unit_id=U1, target_id=U2))
+    assert p.hit_chance == expected
+    target = state.units[U2]
+    attack = effective_attribute(state.ruleset, state.units[U1], Attribute.DEX)
+    assert contest_chance(state, target, Attribute.DEX, attack, knockdown=True) == expected
+    assert contest_chance(state, target, Attribute.DEX, attack) > expected
