@@ -16521,7 +16521,7 @@
               "type": "integer"
             },
             "type": "array",
-            "maxItems": 2,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Records"
           }
@@ -16557,7 +16557,7 @@
               "type": "integer"
             },
             "type": "array",
-            "maxItems": 2,
+            "maxItems": 8,
             "minItems": 1,
             "title": "Records"
           }

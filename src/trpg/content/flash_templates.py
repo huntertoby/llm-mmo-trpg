@@ -24,19 +24,20 @@ from __future__ import annotations
 
 from collections import Counter
 from fractions import Fraction
-from typing import Literal
+from typing import Final, Literal
 
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
 from trpg.content.quantity import quantity_cap
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, field_bounds
 from trpg.content.skills import EffectSpec, ReactionSpec, ShapeSpec, TrapSpec, TriggerSpec
 from trpg.content.skills.modifiers import ModifierChange
 
 __all__ = [
     "DRAFT_COST_FIELDS",
     "FLASH_KINDS",
+    "INHERIT_RECORDS_FORMAT_MAX",
     "USAGE_SCORE_OPS",
     "BattleVariantText",
     "CompleteSkillRules",
@@ -351,6 +352,12 @@ class FlashRules(ContentModel):
 
     def is_major(self, nth: int) -> bool:
         return nth == self.major_flash
+
+
+INHERIT_RECORDS_FORMAT_MAX: Final = field_bounds(FlashRules, "major_flash")[1] - 1
+"""傳承請求 ``records`` 的格式上限（HC-7 a 裁定 4）：大變化最晚是 ``major_flash`` 的上限那一次，所以
+小變化最多比它少 1 個。真正的上限是規則的 ``major_flash − 1``（``max_carry``），由傳承檢查並
+說明。"""
 
 
 class PriceRule(ContentModel):

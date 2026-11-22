@@ -1102,16 +1102,6 @@ rules:
     where: ['<module>.DEFAULT_STORY_ATTEMPTS']
     note: 保守：敘事生成的重試次數。
 
-  # ---------------------------------------------------- 後端 roguelite：config
-  # 保守：roguelite 傳承的上限。
-  - id: py-roguelite-state-config-number
-    class: config
-    status: todo
-    files: src/trpg/roguelite/state.py
-    kind: number
-    where: ['InheritChoice']
-    note: 保守：roguelite 傳承的上限。
-
   # ---------------------------------------------------- 後端 server：config
   # 保守：社群功能（留言板、腳印、循環賽人數）的上限。
   - id: py-server-league-config-number

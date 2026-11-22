@@ -16,6 +16,7 @@ from typing import Annotated, Final, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, LookChoice
+from trpg.content.flash_templates import INHERIT_RECORDS_FORMAT_MAX
 from trpg.content.skill_pick import WishTags
 from trpg.content.world_events import ThreadScope
 from trpg.content.world_map import RevealMethod
@@ -365,7 +366,8 @@ class InheritAction(_Model):
     kind: Literal["inherit"] = "inherit"
     skill: str
     source: str
-    records: tuple[int, ...] = Field(min_length=1, max_length=2)
+    records: tuple[int, ...] = Field(min_length=1, max_length=INHERIT_RECORDS_FORMAT_MAX)
+    """格式上限（HC-7 a 裁定 4）；最多帶幾個照規則 ``max_carry``，由傳承檢查。"""
 
 
 class SwearOathAction(_Model):

@@ -32,6 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.content.battle import UnitTemplate
 from trpg.content.equipment import ItemDef
+from trpg.content.flash_templates import INHERIT_RECORDS_FORMAT_MAX
 from trpg.content.rules import CoreRules
 from trpg.content.skills import SkillDef
 from trpg.shared.types import Attribute
@@ -372,7 +373,9 @@ class InheritChoice(_Model):
     kind: Literal["inherit"] = "inherit"
     skill: str
     source: str
-    records: tuple[int, ...] = Field(min_length=1, max_length=2)
+    records: tuple[int, ...] = Field(min_length=1, max_length=INHERIT_RECORDS_FORMAT_MAX)
+    """格式上限（HC-7 a 裁定 4、10）；最多帶幾個照規則 ``max_carry``（``major_flash`` − 1），由
+    ``trpg.roguelite.flashes`` 的傳承檢查擋下並說明。"""
 
 
 class RespecAttributesChoice(_Model):
