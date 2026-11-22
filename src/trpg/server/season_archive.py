@@ -22,7 +22,13 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from trpg.engine.events import EVENT_LIST_ADAPTER
-from trpg.engine.runner import BattleLog, log_format_problem, log_replay_problem, replay
+from trpg.engine.runner import (
+    BattleLog,
+    log_format_problem,
+    log_invalid_problem,
+    log_replay_problem,
+    replay,
+)
 from trpg.engine.state import state_to_json
 from trpg.server.first_kills import FirstKill, load_first_kills
 from trpg.server.league import LeagueMatch, LeagueRecord
@@ -229,8 +235,8 @@ def _replay_problems(text: str) -> tuple[BattleLog | None, list[str]]:
         return None, [problem]
     try:
         log = BattleLog.model_validate_json(text)
-    except ValidationError as exc:
-        return None, [f"戰鬥紀錄的內容不合法：{exc.error_count()} 個錯誤"]
+    except ValidationError as exc:  # HC-7 b：和雜湊不符同一類的說明
+        return None, [log_invalid_problem(exc)]
     problem = log_replay_problem(log)
     if problem is not None:
         return log, [problem]

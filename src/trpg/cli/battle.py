@@ -38,6 +38,7 @@ from trpg.engine.results import ResolveResult
 from trpg.engine.runner import (
     BattleLog,
     log_format_problem,
+    log_invalid_problem,
     log_replay_problem,
     replay,
     run_battle,
@@ -280,8 +281,8 @@ def cmd_replay(path: Path, out: TextIO) -> int:
         return 1
     try:
         log = BattleLog.model_validate_json(text)
-    except ValidationError as exc:
-        print(f"錯誤：{path} 不是有效的戰鬥紀錄：\n{exc}", file=sys.stderr)
+    except ValidationError as exc:  # HC-7 b：給中文說明，不印驗證錯誤原文
+        print(f"錯誤：{path} 不是有效的戰鬥紀錄：{log_invalid_problem(exc)}", file=sys.stderr)
         return 1
     problem = log_replay_problem(log)
     if problem is not None:

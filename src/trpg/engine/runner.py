@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from typing import cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from trpg.engine.actions import Action, Decision, EndTurn, Step
 from trpg.engine.ai import Policy
@@ -36,6 +36,7 @@ __all__ = [
     "apply_step",
     "auto_step",
     "log_format_problem",
+    "log_invalid_problem",
     "log_replay_problem",
     "replay",
     "run_battle",
@@ -136,6 +137,16 @@ def log_format_problem(found: object) -> str | None:
         f"不支援的紀錄格式 {found!r}（目前的引擎是 {LOG_FORMAT!r}）：紀錄的結構或結算規則"
         "在版本之間改變過，舊格式的紀錄無法重播，請用目前的版本重新跑一場"
         "（變更歷程見 docs/phases/戰鬥紀錄格式變更.md）"
+    )
+
+
+def log_invalid_problem(error: ValidationError) -> str:
+    """紀錄讀不進目前的資料格式時的說明（HC-4c 裁定 1、HC-7 b）：和「雜湊不符」同一類，不把驗證錯誤
+    原文給玩家。常見原因是規則包在紀錄之後多了必填欄位（``docs/phases/戰鬥紀錄格式變更.md`` 1.2：
+    結構改變時不升 ``LOG_FORMAT``，舊紀錄不能重播）。"""
+    return (
+        f"紀錄的內容和目前的資料格式對不上（{error.error_count()} 處）："
+        "紀錄被修改過，或規則資料的結構在紀錄之後改變，無法確定重播結果一致"
     )
 
 
