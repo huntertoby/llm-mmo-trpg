@@ -29,7 +29,6 @@ import {
   normalizeArm,
   paintBackground,
   rarityColor,
-  SKELETON_NAME,
   skeletonGlyph,
   type Ctx,
   type MotifSpec,
@@ -420,7 +419,7 @@ function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
   return {
     cat: second ? "骨架（第二段）" : "骨架",
     // WL-1 b：前端表只用來覆寫；表外的骨架讀 /api/glossary 的中文名，都沒有時「未知骨架」（不顯示英文 id）
-    label: skeletonName(skeleton, SKELETON_NAME),
+    label: skeletonName(skeleton),
     tip: "技能的骨架：決定這一段怎麼出手",
     id: `skeleton|${skeleton}`,
     // QI-2c：照 `QP.chipCanvas("skeleton")`：深色圓底 (50,50) 半徑 40、沒有色環、圖樣 62 單位

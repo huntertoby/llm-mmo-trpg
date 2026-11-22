@@ -41,25 +41,6 @@ export const RARITY_COLOR: Readonly<Record<string, string>> = {
 };
 export const rarityColor = (rarity: string): string => RARITY_COLOR[rarity] ?? "#6a6f7a";
 
-export const SKELETON_NAME: Readonly<Record<string, string>> = {
-  strike: "打擊",
-  area: "範圍",
-  control: "控制",
-  aura: "增益",
-  summon: "召喚",
-  trap: "陷阱",
-  displace: "位移",
-  consume_status: "引爆狀態",
-  builder_finisher: "累積終結",
-  stance: "姿態",
-  reaction: "反應",
-  modifier: "改造",
-  passive: "被動",
-  combo: "連段",
-  rune: "刻印",
-  sacrifice: "獻祭",
-};
-
 // ---- 小工具 ----
 
 export function starPath(ctx: Ctx, cx: number, cy: number, n: number, ro: number, ri: number, rot = -Math.PI / 2): void {
