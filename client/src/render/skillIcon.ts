@@ -83,8 +83,9 @@ export function partsOf(icon: SkillIconData): IconParts {
   const first = icon.elements[0];
   // 草稿還沒有形狀或效果時，元素還沒決定（中性色）；其他情況沒有元素＝紫色預設
   const el: ElementSlot = first !== undefined ? first : icon.partial ? undefined : null;
+  // WL-1c（美術 PM `docs/art/WL-1b驗收.md` 裁定 2）：空字串的骨架當「沒有骨架」（同 null）：技能小圖不畫徽章、組裝列不放骨架格
   const segs: SegmentParts[] = icon.segments.map((s, i) => ({
-    motif: { shape_id: s.shape_id, skeleton: s.skeleton, ranged: isRanged(s.range, icon.weapon_req), arm: normalizeArm(s.arm) },
+    motif: { shape_id: s.shape_id, skeleton: s.skeleton === "" ? null : s.skeleton, ranged: isRanged(s.range, icon.weapon_req), arm: normalizeArm(s.arm) },
     el: i === 0 ? el : (s.elements?.[0] ?? el),
     effects: s.effects.map(effectPart),
   }));

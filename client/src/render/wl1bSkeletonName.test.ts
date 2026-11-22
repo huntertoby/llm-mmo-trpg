@@ -79,7 +79,7 @@ describe("WL-1 b：骨架名稱從資料讀", () => {
 
   it("兩邊都找不到、空字串、null、undefined 都顯示「未知骨架」，不出現英文 id", () => {
     expect(tileLabel("brand_new_skeleton")).toBe(UNKNOWN_SKELETON_NAME);
-    expect(tileLabel("")).toBe(UNKNOWN_SKELETON_NAME);
+    expect(tileLabel("")).toBeUndefined(); // WL-1c：空字串＝沒有骨架，組裝列不放骨架格
     expect(skeletonName(null)).toBe(UNKNOWN_SKELETON_NAME);
     expect(skeletonName(undefined)).toBe(UNKNOWN_SKELETON_NAME);
     expect(skeletonName("")).toBe(UNKNOWN_SKELETON_NAME);

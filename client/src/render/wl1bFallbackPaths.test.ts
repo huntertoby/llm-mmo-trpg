@@ -144,8 +144,8 @@ describe("WL-1 b：骨架徽章、部件圓片走 Q 版問號", () => {
     expect(() => drawn((ctx) => paintSkillIcon(ctx, icon(""), "full", 96, 1))).not.toThrow();
   });
 
-  it("組裝列的骨架格：不認得、空字串都畫問號、名稱不是英文 id", () => {
-    for (const skeleton of ["brand_new_skeleton", ""]) {
+  it("組裝列的骨架格：不認得的畫問號、名稱不是英文 id", () => {
+    for (const skeleton of ["brand_new_skeleton"]) {
       const tile = assemblyFormula(icon(skeleton)).rows[0]!.find((t) => t.cat === "骨架")!;
       expect(tile.label).toBe("未知骨架");
       const calls = drawn((ctx) => tile.draw(ctx, 0.3, 1));
@@ -158,5 +158,14 @@ describe("WL-1 b：骨架徽章、部件圓片走 Q 版問號", () => {
   it("沒有骨架（null）時組裝列不放骨架格，其他部件照畫", () => {
     const f = assemblyFormula(icon(null));
     expect(f.rows[0]!.map((t) => t.cat)).toEqual(["形狀", "效果（核心）"]);
+  });
+
+  it("WL-1c：空字串的骨架當「沒有骨架」：組裝列不放骨架格、技能小圖和 null 畫得一模一樣（不畫徽章）", () => {
+    expect(assemblyFormula(icon("")).rows[0]!.map((t) => t.cat)).toEqual(["形狀", "效果（核心）"]);
+    for (const rarity of ["common", "epic"]) {
+      for (const [level, size] of [["mid", 56], ["full", 96], ["main", 40]] as const) {
+        expect(drawn((ctx) => paintSkillIcon(ctx, icon("", rarity), level, size, 1)), `${rarity}/${level}`).toEqual(drawn((ctx) => paintSkillIcon(ctx, icon(null, rarity), level, size, 1)));
+      }
+    }
   });
 });

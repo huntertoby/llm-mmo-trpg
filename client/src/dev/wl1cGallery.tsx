@@ -4,6 +4,7 @@
 //   aura、control、reaction 用夾具的真技能卡；builder_finisher、consume_status、modifier 夾具沒有，借「灰燼收割」換骨架（種類行照名詞表）。
 // - `status`：名詞表沒有的狀態（`brand_new_status`）：狀態卡 `StatusBadge`（`#unk-badge`，點一下開說明框）、狀態的部件圓片 `statusTile`（`#unk-tile`，工坊狀態選項與組裝列同一套圓片；點一下開說明框）、
 //   技能卡組裝列的附加狀態格（借「驟雨」把緩速換成它）。
+// - `empty`：骨架是空字串（當作沒有骨架）：技能卡（詳細展開）的組裝列沒有骨架格、卡片小圖沒有徽章；旁邊是同一招 null 與原本「打擊」的對照。
 // 名詞表用前端夾具 `battle/fixtures/glossary.json`。畫好後 `document.body.dataset.ready = "1"`。
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
@@ -93,6 +94,12 @@ if (SET.includes("status")) {
     icon: { ...icon, segments: icon.segments.map((s) => ({ ...s, effects: s.effects.map((e) => (e.type === "apply_status" ? { ...e, status: UNK } : e)) })) },
   } as SkillCard;
   cardRow("技能卡：組裝列的狀態圓片（不認得的狀態）", [card]);
+}
+
+if (SET.includes("empty")) {
+  const nul = withSkeleton(BASE, "", "骨架 null");
+  const asNull = { ...nul, skeleton: null, icon: { ...(nul.icon as SkillIconData), segments: (nul.icon as SkillIconData).segments.map((s, i) => (i === 0 ? { ...s, skeleton: null } : s)) } } as unknown as SkillCard;
+  cardRow("骨架是空字串（當作沒有骨架）：組裝列不放骨架格、小圖不畫徽章｜對照：null、打擊", [withSkeleton(BASE, "", "骨架空字串"), asNull, { ...BASE, name_zh: `${BASE.name_zh}（打擊，對照）` }]);
 }
 
 document.body.dataset.ready = "1";
