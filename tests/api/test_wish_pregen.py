@@ -84,8 +84,18 @@ def test_generator_without_match_is_none(
     assert gen.attempts == 3
 
 
+def _frozen_clock() -> float:
+    """CR-1b（佇列 (x)）：時鐘不走，「最多等 10 秒」永遠不到；供應者照樣等背景那一筆的 ``Future``
+    做完（事件），不靠牆上時間。負載下 Mock 生成超過 10 秒時，原本會逾時拿到 ``None`` 而失敗。"""
+    return 0.0
+
+
 def _pregen() -> WorldPregen:
-    return WorldPregen(generators=provider_generators(MockLlmProvider()), enabled=lambda: True)
+    return WorldPregen(
+        generators=provider_generators(MockLlmProvider()),
+        enabled=lambda: True,
+        clock=_frozen_clock,
+    )
 
 
 def _live(

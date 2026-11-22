@@ -7,7 +7,8 @@
   召喚物未消失）、隱蔽中（:func:`trpg.engine.rules.combat.is_concealed`：``concealed`` 狀態、
   黑暗表面、草叢；被揭露 ``prevents_concealment`` 的不算），而且沒有和觀看者陣營任一在場單位
   （含召喚物）上下左右相鄰。
-- **單位**（:func:`mask_view`）：``hp``、``shield`` 為 ``None``，``statuses``、``stacks`` 為空，
+- **單位**（:func:`mask_view`）：``hp``、``shield``、暴擊傷害倍率（CR-1b）為 ``None``，
+  ``statuses``、``stacks`` 為空，
   ``hidden_info`` 為 ``True``（其他單位為 ``None``）；位置、外觀、名稱照常。頭目部位（PB-1c，
   PB-1a 待決 3 開發 PM 裁定）的 ``hp``、``max_hp`` 為 ``None``（名稱、破了沒、露出沒照常）。
 - **事件**（:func:`event_view`）：剩餘 HP、護盾、部位剩餘血量（``part_damaged``）的欄位改成
@@ -106,6 +107,9 @@ def _masked_unit(unit: UnitView) -> UnitView:
         "statuses": (),
         "stacks": {},
         "hidden_info": True,
+        # CR-1b：暴擊傷害倍率含看狀態的修正技條件，和狀態一起藏
+        "crit_damage_permille": None,
+        "crit_damage_detail_zh": None,
     }
     if unit.parts is not None:
         update["parts"] = tuple(_masked_part(p) for p in unit.parts)

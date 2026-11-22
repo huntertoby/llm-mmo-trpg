@@ -19,6 +19,7 @@ import { heightNote } from "../battle/elevation";
 import { remainingRounds, summonKind } from "../battle/summons";
 import { modeText } from "../battle/summonControl";
 import { RaceDetail } from "./RacePassive";
+import { critDamageDetail, critDamageText } from "../battle/critDamage";
 import { HIDDEN_INFO_HINT, isHiddenInfo, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
@@ -107,6 +108,7 @@ export function detailRows(unit: UnitView, names: UnitNames, view?: BattleView):
     ...phaseRows(unit),
     ["速度", String(unit.speed)],
     ...unit.weapon_traits_zh.map((line): [string, ReactNode] => ["武器特性", <RuleText key={line} text={line} />]),
+    ...(critDamageDetail(unit) === null ? [] : [["暴擊傷害", critDamageDetail(unit)] as [string, ReactNode]]),
     ...(hasMagazine(unit) ? [["彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, ReactNode]] : []),
     ...(unit.offhand_name_zh === "" ? [] : [["副手", unit.offhand_name_zh] as [string, ReactNode]]),
     ...unit.offhand_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
@@ -232,6 +234,7 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
   const surface = view === undefined ? null : surfaceAt(view, unit);
   const rows = detailRows(unit, names, view);
   const hidden = isHiddenInfo(unit); // HID-1：伺服器沒給狀態，寫「？」
+  const crit = critDamageText(unit); // CR-1b：數值區的暴擊傷害（來源在「▸ 詳細」）
   return (
     <>
       <div className="hud-icons">
@@ -239,6 +242,11 @@ function UnitCardMore({ unit, names, heroId, skills, cards, view }: Props & { un
           <StatChipView key={c.key} chip={c} />
         ))}
       </div>
+      {crit !== null && (
+        <div className="unit-line crit-damage-line small" data-testid="unit-crit-damage">
+          {crit}
+        </div>
+      )}
       {(hidden || unit.statuses.length > 0 || activeStacks(unit).length > 0 || surface !== null) && (
         <div className="hud-icons">
           {hidden && (

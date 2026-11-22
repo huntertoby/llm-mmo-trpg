@@ -1,5 +1,6 @@
-"""暴擊傷害倍率的顯示（CR-1，``docs/design/05-戰鬥.md`` 5.4.2 第 8 點）：寫成百分比，例
-「暴擊 19–20・250%」；200% 時預覽不另外顯示、技能卡照舊；「暴擊不加倍」改成「暴擊只放大骰子」。"""
+"""暴擊傷害倍率的顯示（CR-1、CR-1b，``docs/design/05-戰鬥.md`` 5.4.2 第 8 點）：預覽寫「擲出 19–20
+暴擊・暴擊傷害 250%」，200% 時預覽不另外顯示；技能卡寫「暴擊傷害 250%」；
+「暴擊不加倍」改成「暴擊只放大骰子」。"""
 
 from __future__ import annotations
 
@@ -7,16 +8,22 @@ from tests.engine.helpers import library, make_skill
 from tests.engine.skill_helpers import SID, U1, U2, battle
 from trpg.content.skills import SkillDef
 from trpg.engine import Attack, BattleState, UseSkill, preview
-from trpg.engine.rules.combat import crit_text_zh
+from trpg.engine.rules.combat import crit_damage_text_zh, crit_text_zh
 from trpg.narrative.skills import skill_card
 
 BLADE = "skill_wild_blade"
 
 
 def test_the_text_format() -> None:
-    assert crit_text_zh(19, 2500) == "暴擊 19–20・250%"
-    assert crit_text_zh(20, 1500) == "暴擊 20・150%"
-    assert crit_text_zh(17, 2250) == "暴擊 17–20・225%"
+    assert crit_text_zh(19, 2500) == "擲出 19–20 暴擊・暴擊傷害 250%"
+    assert crit_text_zh(20, 1500) == "擲出 20 暴擊・暴擊傷害 150%"
+    assert crit_text_zh(17, 2250) == "擲出 17–20 暴擊・暴擊傷害 225%"
+
+
+def test_two_hundred_percent_drops_the_multiplier_part() -> None:
+    assert crit_text_zh(19, 2000) == "擲出 19–20 暴擊"
+    assert crit_text_zh(20, 2000) == "擲出 20 暴擊"
+    assert crit_damage_text_zh(2000) == "暴擊傷害 200%"
 
 
 def test_the_skill_card_shows_the_skill_multiplier() -> None:
@@ -26,7 +33,10 @@ def test_the_skill_card_shows_the_skill_multiplier() -> None:
     assert "暴擊範圍 17–20" in text and "・" not in text  # 沒帶倍率：照舊
     wide = plain.model_copy(update={"crit_range": 19, "crit_permille": 2500})
     (text,) = skill_card(lib, wide).effects
-    assert "暴擊 19–20・250%" in text and "暴擊範圍" not in text
+    assert "暴擊範圍 19–20，暴擊傷害 250%" in text and "擲出" not in text
+    own = plain.model_copy(update={"crit_range": None, "crit_permille": 2500})  # 只帶倍率：不寫範圍
+    (text,) = skill_card(lib, own).effects
+    assert "暴擊傷害 250%" in text and "暴擊範圍" not in text
 
 
 def _spell() -> SkillDef:
@@ -47,7 +57,7 @@ def _state(weapon_permille: int | None, skill: SkillDef | None = None) -> Battle
 
 
 def _crit_notes(notes: tuple[str, ...]) -> list[str]:
-    return [n for n in notes if n.startswith("暴擊 ")]
+    return [n for n in notes if n.startswith("擲出 ")]
 
 
 def test_the_attack_preview_shows_a_non_default_multiplier() -> None:
@@ -67,7 +77,7 @@ def test_the_skill_preview_shows_the_skill_multiplier() -> None:
     skill = _spell().model_copy(update={"crit_permille": 2500, "crit_range": 19})
     state = _state(None, skill)
     notes = preview(state, UseSkill(unit_id=U1, skill_id=SID, target_id=U2)).notes
-    assert _crit_notes(notes) == ["暴擊 19–20・250%"]
+    assert _crit_notes(notes) == ["擲出 19–20 暴擊・暴擊傷害 250%"]
 
 
 def test_the_flat_bonus_wording() -> None:

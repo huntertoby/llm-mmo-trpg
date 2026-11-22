@@ -335,32 +335,69 @@ export function scaleTagNode(node: Container, k: number, res?: number): void {
   for (const c of node.children) if (c instanceof Text) c.resolution = Math.max(1, res);
 }
 
+/** CR-1b（美術 E3b 驗收小修 1）：一個單位在畫面上佔的範圍（世界座標）：格子頂面往上多算半格的頭，左右各縮一點。 */
+export function unitBox(o: Pt): { x: number; y: number; w: number; h: number } {
+  return { x: o.x + 4, y: o.y - T * 0.45, w: T - 8, h: T * 1.45 - 4 };
+}
+
+type Box = { x: number; y: number; w: number; h: number };
+
+function overlapArea(a: Box, b: Box): number {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
 /**
  * 各張小牌放在哪裡（世界座標的左上角），依序擺、不互相疊：依序試格子的右上、右下、左上、左下；
  * 都疊到時放右上再往上疊。`o` 是格子頂面的左上角，`w` 是小牌寬度，`h` 是小牌高度（AR-X10：放大後的高度）。
+ *
+ * CR-1b（美術 E3b 驗收小修 1、佇列 (w)）：`units` 是有單位的格子（頂面左上角）；有給時把它們當成不能放的區域
+ * （`unitBox`，含頭部），停點右邊會蓋到單位時依序改擺上方、左邊、下方；都會蓋到時選蓋到最少的那一邊。
+ * 沒給 `units` 時和改前一樣。
  */
-export function placeTags(items: ReadonlyArray<{ o: Pt; w: number }>, avoid: readonly Pt[] = [], h: number = TAG_HEIGHT): Pt[] {
+export function placeTags(
+  items: ReadonlyArray<{ o: Pt; w: number }>,
+  avoid: readonly Pt[] = [],
+  h: number = TAG_HEIGHT,
+  units: readonly Pt[] = [],
+): Pt[] {
   // `avoid`：驚嘆號泡泡的中心（不讓小牌蓋住）
-  const placed: Array<{ x: number; y: number; w: number; h: number }> = avoid.map((c) => ({
+  const placed: Box[] = avoid.map((c) => ({
     x: c.x - BANG_R,
     y: c.y - BANG_R,
     w: BANG_R * 2,
     h: BANG_R * 2 + 6,
   }));
+  const bodies = units.map(unitBox);
   const hits = (x: number, y: number, w: number) =>
     placed.some((r) => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y);
+  const covered = (x: number, y: number, w: number) => bodies.reduce((sum, b) => sum + overlapArea({ x, y, w, h }, b), 0);
   return items.map(({ o, w }) => {
     const above = o.y - h + 4;
     const below = o.y + T - 4;
     const right = o.x + T * 0.5;
     const left = o.x + T * 0.5 - w;
-    const tries: Pt[] = [
-      { x: right, y: above },
-      { x: right, y: below },
-      { x: left, y: above },
-      { x: left, y: below },
-    ];
-    let at = tries.find((p) => !hits(p.x, p.y, w));
+    const mid = o.x + T * 0.5 - w / 2;
+    const tries: Pt[] =
+      bodies.length === 0
+        ? [
+            { x: right, y: above },
+            { x: right, y: below },
+            { x: left, y: above },
+            { x: left, y: below },
+          ]
+        : [
+            { x: right, y: above }, // 停點右邊（原本的位置）
+            { x: mid, y: o.y - T * 0.45 - h }, // 上方（停點那一格的頭上）
+            { x: left, y: above }, // 左邊
+            { x: mid, y: below }, // 下方
+          ];
+    const free = tries.filter((p) => !hits(p.x, p.y, w));
+    let at = free.find((p) => covered(p.x, p.y, w) === 0);
+    if (at === undefined && free.length > 0 && bodies.length > 0) {
+      at = free.reduce((best, p) => (covered(p.x, p.y, w) < covered(best.x, best.y, w) ? p : best));
+    }
     if (at === undefined) {
       let y = above;
       while (hits(right, y, w)) y -= h + 2;

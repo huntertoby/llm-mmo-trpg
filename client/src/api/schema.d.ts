@@ -12678,6 +12678,10 @@ export interface components {
              * @default []
              */
             gear_totals: components["schemas"]["GearTotalView"][];
+            /** Crit Damage Permille */
+            crit_damage_permille?: number | null;
+            /** Crit Damage Detail Zh */
+            crit_damage_detail_zh?: string | null;
             /**
              * Gear Skills
              * @default []

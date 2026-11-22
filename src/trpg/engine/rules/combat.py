@@ -94,11 +94,19 @@ def crit_extra_total(extra_total: int, crit_permille: int | None) -> int:
     return extra_total * (crit_permille - PERMILLE) // PERMILLE
 
 
+def crit_damage_text_zh(crit_permille: int) -> str:
+    """暴擊傷害倍率的顯示（05 5.4.2 第 8 點），例「暴擊傷害 250%」。技能卡、角色面板共用。"""
+    return f"暴擊傷害 {crit_permille / 10:g}%"
+
+
 def crit_text_zh(crit_range: int, crit_permille: int) -> str:
-    """暴擊的顯示（CR-1，05 5.4.2 第 8 點），例「暴擊 19–20・250%」；只有自然 20 時
-    「暴擊 20・250%」。"""
+    """攻擊預覽的暴擊範圍與倍率（CR-1b，05 5.4.2 第 8 點），例「擲出 19–20 暴擊・暴擊傷害 250%」；
+    只有自然 20 時「擲出 20 暴擊・…」；200% 時不寫「・暴擊傷害」那段。"""
     span = "20" if crit_range >= NATURAL_HIT else f"{crit_range}–20"
-    return f"暴擊 {span}・{crit_permille / 10:g}%"
+    text = f"擲出 {span} 暴擊"
+    if crit_permille == CRIT_PERMILLE_DOUBLE:
+        return text
+    return f"{text}・{crit_damage_text_zh(crit_permille)}"
 
 
 def raw_damage_permille(roll_total: int, flat: int, scaled_permille: int) -> int:

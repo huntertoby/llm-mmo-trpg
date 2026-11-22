@@ -31890,6 +31890,28 @@
             "title": "Gear Totals",
             "default": []
           },
+          "crit_damage_permille": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crit Damage Permille"
+          },
+          "crit_damage_detail_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crit Damage Detail Zh"
+          },
           "gear_skills": {
             "items": {
               "$ref": "#/components/schemas/GearSkillView"

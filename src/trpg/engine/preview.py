@@ -1572,8 +1572,9 @@ def _no_turn_info(
 
 
 def _crit_notes(state: BattleState, actor: UnitState, action: Action) -> tuple[str, ...]:
-    """暴擊傷害倍率不是 200% 時的說明（CR-1，05 5.4.2 第 8 點），例「暴擊 19–20・250%」；200% 時
-    不顯示（和改版前一樣）。範圍不含背刺（背刺另有說明）；修正規則的條件看第一個目標。"""
+    """暴擊傷害倍率不是 200% 時的說明（CR-1，05 5.4.2 第 8 點），例「擲出 19–20 暴擊・暴擊傷害
+    250%」；200% 時不顯示（和改版前一樣）。範圍不含背刺（背刺另有說明）；修正規則的條件看
+    第一個目標。"""
     skill: SkillDef | None = None
     if isinstance(action, Attack) and action.target_id is not None:
         crit_range = weapon_profile(state, actor).crit_range

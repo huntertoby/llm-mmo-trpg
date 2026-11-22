@@ -226,6 +226,12 @@
   flex-shrink: 0;
 }
 
+/* CR-1b（佇列 (w)，`docs/art/CR-1驗收.md` 第 3 點）：怎麼擺都會蓋到預覽面板時，預覽面板放上層
+   （左欄 `.bhud-left` 是 13、舊版面的 `.mode-panel` 是 12），卡片被蓋住；點目標就能看到它的資料 */
+.unit-float.under-panel {
+  z-index: 11;
+}
+
 .unit-float.pinned {
   outline: 1px solid #ffe14d;
 }

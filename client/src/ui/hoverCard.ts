@@ -141,6 +141,45 @@ export interface ScreenRect {
   bottom: number;
 }
 
+const overlaps = (a: ScreenRect, b: ScreenRect, gap: number) =>
+  a.left < b.right + gap && b.left - gap < a.right && a.top < b.bottom + gap && b.top - gap < a.bottom;
+
+/**
+ * CR-1b（佇列 (w)，`docs/art/CR-1驗收.md`）：目標浮動卡避開預覽面板（左上的 `.mode-panel`），把面板當成和畫面邊緣
+ * 一樣不能放的區域。卡片（已夾進可見範圍 `vis`）沒碰到面板時照原位（1600 寬不變）；碰到時依序試：
+ * 1. 目標格的另一邊（原本在左邊就改右邊，反之亦然）；
+ * 2. 目標格上方、下方（水平置中對齊目標格，夾進可見範圍）。
+ * 試的位置要整個在可見範圍內、不碰面板。都放不下時照原位、`under: true`（預覽面板放上層，卡片被蓋住；點目標就能看到它的資料）。
+ * `tile` 是目標格的畫面矩形；`gap` 是卡片和格子、面板之間的間距。
+ */
+export function avoidPanel(
+  card: { left: number; top: number; w: number; h: number },
+  tile: ScreenRect,
+  vis: ScreenRect,
+  panel: ScreenRect | null,
+  gap: number,
+): { left: number; top: number; under: boolean } {
+  const { left, top, w, h } = card;
+  const box = (l: number, t: number): ScreenRect => ({ left: l, top: t, right: l + w, bottom: t + h });
+  if (panel === null || panel.right <= panel.left || panel.bottom <= panel.top || !overlaps(box(left, top), panel, 0)) {
+    return { left, top, under: false };
+  }
+  const onLeft = left + w / 2 < (tile.left + tile.right) / 2;
+  const sideLeft = onLeft ? tile.right + gap : tile.left - gap - w;
+  const midLeft = Math.max(vis.left, Math.min((tile.left + tile.right - w) / 2, vis.right - w));
+  const tries: [number, number][] = [
+    [sideLeft, top],
+    [midLeft, tile.top - gap - h],
+    [midLeft, tile.bottom + gap],
+  ];
+  for (const [l, t] of tries) {
+    const b = box(l, t);
+    const inside = b.left >= vis.left && b.right <= vis.right && b.top >= vis.top && b.bottom <= vis.bottom;
+    if (inside && !overlaps(b, panel, 0)) return { left: l, top: t, under: false };
+  }
+  return { left, top, under: true };
+}
+
 /**
  * 6F-19（美術 PM 6F-18 檢查小修：800 寬的單位浮動卡下緣蓋住縮放列「− 自動 65% +」）：卡片（左上角 `left`、`top`，
  * 寬 `w`、高 `h`）碰到 `ob`（縮放列）時避開，隔 `gap`：先往上推到它上面；上面放不下時改放在它左邊；

@@ -222,7 +222,7 @@ export function previewLines(
   if (form !== null) lines.push(form);
   const head: string[] = [];
   if (p.hit_permille != null) head.push(`命中 ${percent(p.hit_permille)}`);
-  if (p.crit_permille != null) head.push(`暴擊 ${percent(p.crit_permille)}`);
+  if (p.crit_permille != null) head.push(`暴擊率 ${percent(p.crit_permille)}`); // CR-1b（05 5.4.2 第 8 點）
   if (p.damage !== null) head.push(`傷害 ${damageText(p.damage)}`);
   if (head.length > 0) lines.push(head.join("　"));
   lines.push(...partPreviewLines(p)); // PB-1c：選了部位

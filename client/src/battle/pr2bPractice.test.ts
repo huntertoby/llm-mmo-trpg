@@ -134,8 +134,8 @@ describe("B4 狀態盒與上方中央", () => {
     expect(screen).toContain("const practice = shown.practice;");
   });
   it("預覽：測試模式三段各自不換行、多一行必中句；沒有命中率時不多那一行", () => {
-    const { rows, sure } = practicePreviewRows(["命中 100%　暴擊 5%　傷害 3–10", "確定：木樁 不會倒"]);
-    expect(rows[0]?.parts).toEqual(["命中 100%", "暴擊 5%", "傷害 3–10"]);
+    const { rows, sure } = practicePreviewRows(["命中 100%　暴擊率 5%　傷害 3–10", "確定：木樁 不會倒"]);
+    expect(rows[0]?.parts).toEqual(["命中 100%", "暴擊率 5%", "傷害 3–10"]);
     expect(rows[1]?.parts).toBeNull();
     expect(sure).toBe(true);
     expect(practicePreviewRows(["治療 主角 3–5"]).sure).toBe(false);
