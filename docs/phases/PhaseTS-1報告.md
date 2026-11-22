@@ -133,4 +133,14 @@
 | 8 `test_random_composer.py::test_one_thousand_seeds_are_all_valid_and_spread_out` 失敗：種子 238 組出 2 階 rare、效果只有 `borrow_ap` 的光環；`borrow_ap_points: 0`，所以預算比是 0，低於下限 0.75 | 沒動（開發 PM 裁定另排） | 組合器不讓預支當唯一的效果；或檢查規則對預支另訂下限 |
 
 ## PM 裁定
-（由開發 PM 填）
+
+開發 PM，2026-11-22。合併為 e932af411，已推上 main；push hook 的檢查通過。
+
+1. 只動 client 時，也跑讀 client 檔的 18 個 pytest：接受。
+2. 實作 agent 交件前一律跑 `check.py --all`，寫下 hook 認得的戳記，不用改 hook。CLAUDE.md 第 11 條照「加 `--all`」那個版本改，由專案 PM 轉使用者確認。另一種做法是讓 check.py 自己認同內容、同基準的分流戳記，這個先記進佇列。
+3. crash_case：維持放寬，並保留留證。下次再發生時，用 `master-hang.stacks` 查。
+4～7：接受。
+8. 組合器 seed 238 會組出只有預支的光環，預算比是 0：排進佇列，另開小段處理。
+
+slow 測試 `test_sim_real` 已修好（2ea5d2777）。
+
