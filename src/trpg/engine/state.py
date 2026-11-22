@@ -527,6 +527,11 @@ class UnitState:
     granted_skills: tuple[GrantedSkill, ...] = ()
     """暫時獲得的技能（``grant_skill``，Phase 3D-8c），依獲得順序；不佔技能欄位，不會與 ``skills``
     重複。"""
+    gear_skills: Annotated[tuple[str, ...], Field(exclude_if=_empty)] = ()
+    """裝備授予的常駐技能（E1，08 8.28，#174）：``skills`` 裡哪幾個鍵是裝備給的，依欄位固定順序。
+    它們不佔技能欄、不算普攻精通的空格（:func:`trpg.engine.modifiers.empty_active_slots`）；同一個
+    技能從兩處拿到時，第二份的鍵是 ``<技能 ID>~2``（:mod:`trpg.content.skill_copies`），冷卻與次數
+    分開算。空的時候不輸出。"""
     facing: Facing = "east"
     """朝向（Phase 3D-8d）：主動移動（步行、衝鋒、跳躍、直線衝撞、瞬步）後面向移動方向，攻擊或對
     單位施放技能後面向目標；強制位移、傳送、交換不改。只影響背刺（``from_behind``）的判斷。"""
@@ -730,6 +735,7 @@ class UnitState:
             activations=self.activations,
             revived=self.revived,
             granted_skills=self.granted_skills,
+            gear_skills=self.gear_skills,
             facing=self.facing,
             gear=self.gear,
             doll=self.doll,

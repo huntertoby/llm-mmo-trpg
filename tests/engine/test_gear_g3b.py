@@ -184,8 +184,8 @@ def test_library_rejects_bad_action_and_reaction_references() -> None:
     assert isinstance(grapple, ActionAffix)
     assert isinstance(ranged, ReactionAffix) and isinstance(guard, ReactionAffix)
     assert problems(grapple.model_copy(update={"skill": "skill_no_such"}))
-    passive = next(s.id for s in lib.ruleset.skills.skills if s.kind == "passive")
-    assert problems(grapple.model_copy(update={"skill": passive}))  # 被動技不是「動作」
+    stance = next(s.id for s in lib.ruleset.skills.skills if s.kind == "stance")
+    assert problems(grapple.model_copy(update={"skill": stance}))  # 姿態不能由裝備授予（E1）
     assert problems(ranged.model_copy(update={"event": "enemy_leaves_adjacent"}))
     assert problems(ranged.model_copy(update={"reaction": "no_such_reaction"}))
     assert problems(guard.model_copy(update={"range": None}))

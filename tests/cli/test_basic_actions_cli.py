@@ -36,7 +36,7 @@ def test_open_plain_battle_uses_guard_and_replays(
     data, out = _log(
         "open_plain", 44, tmp_path, capsys
     )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98；3H-1 常駐數值後 → 222；3H-2 武器技花耐力後 → 98
-    assert data["format"] == "trpg-battle-log/135"
+    assert data["format"] == "trpg-battle-log/136"
     assert any(a["type"] == "defend" and a.get("target_id") for a in data["actions"])
     assert any(e["type"] == "attack_intercepted" and e.get("guard") for e in data["events"])
     assert "守護" in out
@@ -49,7 +49,7 @@ def test_open_plain_battle_uses_swap_and_aim_and_replays(
     # CB-1：見上一個測試；BAL-20 AI 估值表補 burning（隊友法師的火焰箭軌跡變了）後 730 → 17
     # AP-1（玩家方 4 AP、失手返還）後 17 → 237（0～299 只有 237、247、258 同時換位又瞄準）
     data, out = _log("open_plain", 237, tmp_path, capsys)
-    assert data["format"] == "trpg-battle-log/135"
+    assert data["format"] == "trpg-battle-log/136"
     assert {"swap", "aim"} <= {a["type"] for a in data["actions"]}
     assert "瞄準" in out
     _replays(tmp_path, capsys)

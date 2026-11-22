@@ -260,9 +260,17 @@ def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -
 def empty_active_slots(state: BattleState, unit: UnitState) -> int:
     """主動技能欄的空格數（Phase 3-32a，普攻精通）：``core.skill_slots.active`` 減去單位裝備的
     主動技能數（裝備授予的常駐技能、暫時獲得的技能不算；下限 0）。結算當下由技能欄推算，不存
-    狀態。"""
+    狀態。
+
+    E1（08 8.28）：裝備授予的技能也在 ``unit.skills`` 裡，改前會被算成佔欄；現在照
+    ``unit.gear_skills`` 排除。"""
     rules = state.ruleset
-    used = sum(1 for skill_id in unit.skills if rules.skill_def(skill_id).slot_kind == "active")
+    gear = unit.gear_skills
+    used = sum(
+        1
+        for skill_id in unit.skills
+        if skill_id not in gear and rules.skill_def(skill_id).slot_kind == "active"
+    )
     return max(0, rules.core.skill_slots.active - used)
 
 

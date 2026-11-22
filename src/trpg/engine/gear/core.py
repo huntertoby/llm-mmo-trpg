@@ -92,6 +92,7 @@ __all__ = [
     "gear_damage_taken_permille",
     "gear_defense_permille",
     "gear_hit_bonus",
+    "gear_skill_keys",
     "gear_turn_start",
     "geared_template",
     "truncate_permille",
@@ -266,9 +267,15 @@ def gear_skill_ids(gear: GearState) -> tuple[str, ...]:
     return tuple(seen)
 
 
+def gear_skill_keys(skills: tuple[str, ...], gear: GearState) -> tuple[str, ...]:
+    """裝備授予、要接在 ``skills`` 後面的技能鍵（E1，08 8.28）：依欄位固定順序，``skills`` 已有的
+    不重複。"""
+    return tuple(s for s in gear_skill_ids(gear) if s not in skills)
+
+
 def granted_skills(skills: tuple[str, ...], gear: GearState) -> tuple[str, ...]:
-    """``skills`` 加上裝備授予、還沒有的技能。"""
-    extra = tuple(s for s in gear_skill_ids(gear) if s not in skills)
+    """``skills`` 加上裝備授予的技能（:func:`gear_skill_keys`）。"""
+    extra = gear_skill_keys(skills, gear)
     return (*skills, *extra) if extra else skills
 
 

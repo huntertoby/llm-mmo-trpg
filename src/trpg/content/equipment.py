@@ -680,7 +680,10 @@ class CostAffix(_AffixBase):
 
 
 class ActionAffix(_AffixBase):
-    """第 9 類 授予動作（8.21.2.9；結算在 G3）：裝備授予常駐技能 ``skill``（卸下即失去）。"""
+    """第 9 類 授予動作（8.21.2.9；結算在 G3）：裝備授予常駐技能 ``skill``（卸下即失去）。
+
+    E1（08 8.28，#174）起 ``skill`` 可以是主動、反應、修正或被動技（姿態不行，載入時檢查）；都不佔
+    技能欄。"""
 
     category: Literal["action"]
     skill: str = Field(pattern=r"^skill_[a-z0-9_]+$")
