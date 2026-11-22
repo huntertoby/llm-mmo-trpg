@@ -91,6 +91,7 @@ def start_turn(ctx: Ctx, unit_id: UnitId) -> None:
     unit = state.units[unit_id]
     state.active_unit = unit.id
     _refill_ap(ctx, unit)
+    unit.prone_ap_due = False  # 倒地的少 AP 只扣這一次（KD-1，05 5.13 第 1 點）
     unit.ap_carry = 0
     unit.moved_this_turn = False  # 連段條件的「本回合」紀錄（Phase 3D-1）
     unit.miss_refunded = False  # 失手返還每回合最多 1 次（AP-1）

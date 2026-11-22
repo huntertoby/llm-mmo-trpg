@@ -429,6 +429,8 @@ class CoreRules(ContentModel):
     fall_damage_cap_permille: int = Field(ge=0, le=1000)
     deadly_terrain_elite_permille: int = Field(ge=0, le=1000)
     prone_stand_up_move_permille: int = Field(ge=0, le=1000)
+    prone_ap_loss: int = Field(ge=0, le=3)
+    """倒地後第一個自己回合少給的 AP（KD-1，#176，05 5.13 第 1 點；只扣一次，單格頭目不扣）。"""
 
     # 技巧動作與互動（1B）
     maneuver_ap_cost: int = Field(ge=0)

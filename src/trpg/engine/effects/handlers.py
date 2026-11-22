@@ -957,10 +957,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         instance = _reapplied(existing, instance, redirects=definition.redirects_damage)
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
-    if (
-        definition.control_group is not None and not effect.self_paid
-    ):  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
-        unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
+    _mark_applied(ctx, unit, effect, status_id, fresh=existing is None)
     events.append(
         ctx.emit(
             StatusApplied,
@@ -972,6 +969,19 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         )
     )
     return events
+
+
+def _mark_applied(
+    ctx: Ctx, unit: UnitState, effect: ApplyStatusEffect, status_id: str, *, fresh: bool
+) -> None:
+    """施加成功後記在單位上的：控制遞減，以及倒地的少 AP（KD-1）。"""
+    definition = ctx.rules.status_def(status_id)
+    if (
+        definition.control_group is not None and not effect.self_paid
+    ):  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
+        unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
+    if status_id == PRONE and fresh and not unit.has_tag(BOSS_TAG):
+        unit.prone_ap_due = True  # 倒地後第一個自己回合少 AP（KD-1，05 5.13 第 1、7 點：頭目不扣）
 
 
 def _reapplied(

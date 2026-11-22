@@ -35,6 +35,7 @@ from trpg.engine.boss_phases import next_phase
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
+from trpg.engine.ids import PRONE
 from trpg.engine.infusion import infusion_options
 from trpg.engine.part_breaks import part_tiles
 from trpg.engine.parts import current_phase_id
@@ -466,7 +467,7 @@ class UnitView(_ViewModel):
     cooldowns: dict[str, int]
     """冷卻中的技能；其他陣營單位的陷阱技能冷卻不列出。"""
     reaction_available: bool
-    """還有反應次數，且身上有（未關閉的）反應規則。"""
+    """還有反應次數，且身上有（未關閉的）反應規則；倒地中一律 ``False``（KD-1）。"""
     reaction_rules: tuple[ReactionRuleView, ...]
     """反應規則與目前模式；只有自己陣營的單位會列出（其他陣營的單位為空）。"""
     ap_carry: int
@@ -1072,6 +1073,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),
         reaction_available=unit.alive
+        and not unit.has_status(PRONE)
         and any(r.mode != "off" for r in unit.reactions)
         and unit.reactions_used < reaction_limit(state.ruleset.core, unit),
         reaction_rules=(

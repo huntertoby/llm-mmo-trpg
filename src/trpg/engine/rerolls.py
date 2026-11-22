@@ -21,6 +21,7 @@ from typing import Literal
 
 from trpg.content.skills import REROLL
 from trpg.engine.gear.reactions import reaction_available
+from trpg.engine.ids import PRONE
 from trpg.engine.rules.combat import AttackRoll
 from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.statuses import skip_turn_status
@@ -76,6 +77,8 @@ def _reroll_skill(state: BattleState, unit: UnitState, event: str) -> tuple[str,
     """``unit`` 第一條事件為 ``event``、目前可用的重擲反應技（技能 ID, 是不是自動）；沒有就
     ``None``。只做不需要 ``Ctx`` 的檢查（深度上限在結算時才查）。"""
     if not unit.alive or skip_turn_status(state.ruleset, unit) is not None:
+        return None
+    if unit.has_status(PRONE):  # 倒地中不能反應（KD-1，05 5.13 第 1 點）
         return None
     for rule in unit.reactions:
         if rule.mode == "off" or rule.when.event != event or rule.reaction not in unit.skills:
