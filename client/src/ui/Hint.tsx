@@ -11,6 +11,7 @@
 import { Children, cloneElement, isValidElement, useLayoutEffect, type ReactElement, type ReactNode, type Ref } from "react";
 import type { Side } from "./floatCard";
 import { FloatCard, useFloatCard } from "./useFloatCard";
+import { BULLET_CLASS, bulletLines } from "./bulletText";
 
 interface Props {
   text: string | null | undefined;
@@ -36,6 +37,17 @@ const HANDLERS = [
   "onBlur",
   "onKeyDown",
 ] as const;
+
+/** E3b：說明文字；「・」分點的行各自一個區塊、懸掛縮排（`BULLET_CLASS`），沒有分點時照舊整段。 */
+export function hintBody(text: string): ReactNode {
+  const lines = bulletLines(text);
+  if (lines === null) return text;
+  return lines.map((l, i) => (
+    <div key={i} className={l.bullet ? BULLET_CLASS : undefined}>
+      {l.text}
+    </div>
+  ));
+}
 
 /** 子元素本身有動作（`<button>`）：觸控改成長按看說明、點一下只執行動作（6A-1，`pinOn: "hold"`）。 */
 export function hintPinMode(child: ReactElement<Record<string, unknown>> | null): "hold" | "touch" {
@@ -94,7 +106,7 @@ export function Hint({ text, children, rich, prefer }: Props) {
       {cloneElement(child, merged)}
       {!expanded && f.open && (
         <FloatCard float={f} className="part-tip-box hint-tip-box" align="center" prefer={prefer} role="tooltip">
-          {rich ?? <div className="hint-tip-text">{text}</div>}
+          {rich ?? <div className="hint-tip-text">{hintBody(text ?? "")}</div>}
         </FloatCard>
       )}
     </>

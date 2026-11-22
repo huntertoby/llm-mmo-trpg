@@ -35,6 +35,10 @@
 - 冰後陷阱（6A-4f 待決 1，Phase 6P-1）：「全部通過 × 最少後果」（即最少後果）與「全部通過 × 最多
   後果」兩個分支都走到陷阱，傷害取兩者的最小與最大（``amount_min``～``amount_max``），定身只在
   最多後果出現所以是「可能」。
+- 沿路留下的表面（E3b，08 8.29 E3 顯示）：移動者有地形規則 ``trail_surface``（霜行）時，
+  :attr:`PathPreview.trail` 列出這次會留下表面的格子（起點與途經，停點不留）。取最少後果那次模擬
+  （停點＝``stop``）裡 ``cause="trail"`` 的 ``surface_changed``，所以已有表面、有其他單位站著、
+  會飛、那一步倒下等不留的情況都和實走同一套判斷（:mod:`trpg.engine.trail`）。
 """
 
 from __future__ import annotations
@@ -73,7 +77,7 @@ from trpg.engine.rules.movement import find_path, is_flying
 from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.trail import own_trail
+from trpg.engine.trail import TRAIL_CAUSE, own_trail
 from trpg.engine.traps import strip_hidden_traps
 from trpg.shared.errors import IllegalActionError
 from trpg.shared.types import Pos, Surface, UnitId
@@ -85,6 +89,7 @@ __all__ = [
     "PathStep",
     "SlipRun",
     "StepReach",
+    "TrailPreview",
     "preview_path",
 ]
 
@@ -194,6 +199,17 @@ class SlipRun:
 
 
 @dataclass(frozen=True, slots=True)
+class TrailPreview:
+    """這次移動沿路會留下的表面（地形規則 ``trail_surface``，霜行；E3b）。"""
+
+    tiles: tuple[XY, ...]
+    """會留下表面的格子，依走過的順序（起點與途經；停點不留）。"""
+    surface: Surface
+    duration: int
+    """留下的表面持續幾個環境回合（到期直接消失）。"""
+
+
+@dataclass(frozen=True, slots=True)
 class PathPreview:
     unit_id: UnitId
     path: tuple[XY, ...]
@@ -220,6 +236,8 @@ class PathPreview:
     """所有模擬分支的停點（不重複；``stop`` 在前，再依分支順序；6E-2b）。路徑上有多段冰、或冰與
     陷阱並存時可能超過兩個（``stop``／``worst_stop`` 兩格放不下）；只有一個時停點是確定的。看不見
     的陷阱、以及多個互相獨立的非冰面分歧點（例如兩個陷阱各自抵抗）的組合不保證涵蓋。"""
+    trail: TrailPreview | None = None
+    """沿路會留下表面的格子（霜行，E3b）；不會留下任何一格時為 ``None``。"""
 
     @property
     def stop_certain(self) -> bool:
@@ -306,6 +324,7 @@ def preview_path(
         move_cost=cost,
         slip_runs=_slip_runs(seen, move, steps, fails),
         stops=stops,
+        trail=_trail(branches.results[0]),
     )
 
 
@@ -568,6 +587,19 @@ def _step(
         trap=xy in traps,
         reach=outcome[0],
         events=outcome[1],
+    )
+
+
+def _trail(result: ResolveResult) -> TrailPreview | None:
+    """最少後果那次模擬裡沿路留下的表面（``surface_changed``，``cause="trail"``；E3b）。"""
+    left = [e for e in result.events if isinstance(e, SurfaceChanged) and e.cause == TRAIL_CAUSE]
+    if not left:
+        return None
+    first = left[0]
+    return TrailPreview(
+        tiles=tuple((e.pos.x, e.pos.y) for e in left),
+        surface=first.after,
+        duration=first.remaining or 0,
     )
 
 

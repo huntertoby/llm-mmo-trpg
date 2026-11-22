@@ -66,6 +66,32 @@ function objectSection(view: BattleView, tile: TileView): TileSection | null {
 }
 
 /**
+ * E3b（08 8.29 E3 顯示）：霜行（`trail_surface`）沿路留下的表面的說明，第一句：
+ * 「〇〇沿路留下的冰：剩 N 回合，到期直接消失，不會變成水。〇〇自己踩不會滑倒，其他人照一般冰檢定。」
+ * 〇〇是留下的人（視圖裡找不到時用單位 ID）；表面不是冰時「滑倒」那句換成該表面原本的說明（下面照列的規則）。
+ * 一般的表面回傳 `null`（照舊）。
+ */
+export function trailSurfaceLine(owner: string, surface: string, remaining: number | null): string {
+  const name = glossaryName("surfaces", surface);
+  const left = remaining === null ? "" : `剩 ${remaining} 回合，`;
+  const head = `${owner}沿路留下的${name}：${left}到期直接消失，不會變成水。`;
+  return surface === "ice" ? `${head}${owner}自己踩不會滑倒，其他人照一般冰檢定。` : head;
+}
+
+function trailSurfaceSection(view: BattleView, tile: TileView): TileSection | null {
+  const ownerId = tile.surface_trail ?? null;
+  if (ownerId === null || tile.surface === "none") return null;
+  const owner = view.units.find((u) => u.id === ownerId)?.name_zh ?? ownerId;
+  // 「由技能產生時持續 N 回合，之後變成…」那一行不適用（到期直接消失），其餘照該表面原本的說明
+  const rest = rulesOf("surfaces", tile.surface).filter((r) => !DURATION_RULE.test(r));
+  return {
+    kind: "surface",
+    title: glossaryName("surfaces", tile.surface),
+    lines: [trailSurfaceLine(owner, tile.surface, tile.surface_remaining), ...rest],
+  };
+}
+
+/**
  * 格子資訊卡的各段；`extra` 是這一格涉及的持續區域與環境預告文字（已組好的句子）。
  * 視圖沒有這一格時回傳空陣列。
  */
@@ -81,7 +107,10 @@ export function tileSections(
   const out: TileSection[] = [
     section("terrain", `${glossaryName("terrain", tile.terrain)}・高度 ${tile.height}`, rulesOf("terrain", tile.terrain)),
   ];
-  if (tile.surface !== "none") {
+  const trail = trailSurfaceSection(view, tile);
+  if (trail !== null) {
+    out.push(trail);
+  } else if (tile.surface !== "none") {
     const left = tile.surface_remaining === null ? "" : `・剩 ${tile.surface_remaining} 回合`;
     const rules = rulesOf("surfaces", tile.surface).filter((r) => tile.surface_remaining !== null || !DURATION_RULE.test(r));
     out.push(section("surface", `${glossaryName("surfaces", tile.surface)}${left}`, rules));

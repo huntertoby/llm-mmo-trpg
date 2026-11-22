@@ -42,7 +42,7 @@ describe("E4：倒地的說明框", () => {
     expect(entryTipParts(burning, "狀態").some((p) => p.bullet === true)).toBe(false);
     expect(readFileSync("src/ui/PartTip.tsx", "utf8")).toContain("part-tip-bullet");
     const css = readFileSync("src/styles/float-card.css", "utf8");
-    expect(css).toMatch(/\.part-tip-text\.part-tip-bullet \{\s*padding-left: 1em;\s*text-indent: -1em;\s*\}/);
+    expect(css).toMatch(/\.part-tip-bullet \{\s*padding-left: 1em;\s*text-indent: -1em;\s*\}/);
   });
   it("部件圓片的 tip 也一條一行", () => {
     expect(statusTile("prone").tip).toBe(LINES.map((l) => `・${l}`).join("\n"));

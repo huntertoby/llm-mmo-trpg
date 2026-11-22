@@ -1,6 +1,6 @@
 // 環境預告側欄：下一次環境回合（本輪結束時）會發生的變化；滑過格子時顯示那一格的說明。
 import type { BattleView, Pos, TelegraphOut } from "../api/types";
-import { markStyle, telegraphEntries, telegraphIsEmpty, type TelegraphMark } from "../battle/telegraph";
+import { markStyle, splitHoverTexts, telegraphEntries, telegraphIsEmpty, type TelegraphMark } from "../battle/telegraph";
 
 interface Props {
   telegraph: TelegraphOut;
@@ -15,12 +15,14 @@ interface Props {
 
 export function TelegraphPanel({ telegraph, marks, hoverTexts, view, onHoverTiles }: Props) {
   const entries = telegraphEntries(telegraph, view);
+  // E3b：滑過格子的說明已在下面列著的，直接把那一項標金色；沒列的（持續區域等）才放最上面
+  const { hot, extra } = splitHoverTexts(entries, hoverTexts);
   return (
     <div className="panel telegraph-panel" aria-label="環境預告">
       <div className="section-title">環境預告（第 {telegraph.round} 輪結束時）</div>
-      {hoverTexts.length > 0 && (
+      {extra.length > 0 && (
         <ul className="telegraph-hover">
-          {hoverTexts.map((t, i) => (
+          {extra.map((t, i) => (
             <li key={`${i}:${t}`}>{t}</li>
           ))}
         </ul>
@@ -33,7 +35,7 @@ export function TelegraphPanel({ telegraph, marks, hoverTexts, view, onHoverTile
             <li
               key={`${i}:${e.text}`}
               tabIndex={e.tiles.length > 0 ? 0 : undefined}
-              className={e.tiles.length > 0 ? "telegraph-item" : undefined}
+              className={[e.tiles.length > 0 ? "telegraph-item" : "", hot.has(i) ? "telegraph-hot" : ""].filter((c) => c !== "").join(" ") || undefined}
               onMouseEnter={() => e.tiles.length > 0 && onHoverTiles(e.tiles)}
               onMouseLeave={() => onHoverTiles(null)}
               onFocus={() => e.tiles.length > 0 && onHoverTiles(e.tiles)}

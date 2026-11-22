@@ -21198,6 +21198,16 @@
             },
             "type": "array",
             "title": "Slip Runs"
+          },
+          "trail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrailOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -23069,6 +23079,17 @@
               }
             ],
             "title": "Passive Overridden Zh"
+          },
+          "passive_overridden_full": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passive Overridden Full"
           },
           "look": {
             "$ref": "#/components/schemas/RaceLook"
@@ -28550,6 +28571,17 @@
               }
             ],
             "title": "Surface Creator"
+          },
+          "surface_trail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface Trail"
           }
         },
         "additionalProperties": false,
@@ -28643,6 +28675,33 @@
         ],
         "title": "TradeAuditView",
         "description": "稽核報表（管理者；只出報表，不自動處理）。"
+      },
+      "TrailOut": {
+        "properties": {
+          "tiles": {
+            "items": {
+              "$ref": "#/components/schemas/XY"
+            },
+            "type": "array",
+            "title": "Tiles"
+          },
+          "surface": {
+            "$ref": "#/components/schemas/Surface"
+          },
+          "duration": {
+            "type": "integer",
+            "title": "Duration"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "tiles",
+          "surface",
+          "duration"
+        ],
+        "title": "TrailOut",
+        "description": "這次移動沿路會留下的表面（地形規則「霜行」，E3b）：畫面在這些格子畫框線（不畫成冰），\n預覽牌加一行「沿路留下冰 N 格（M 回合後消失）」。"
       },
       "TrapView": {
         "properties": {

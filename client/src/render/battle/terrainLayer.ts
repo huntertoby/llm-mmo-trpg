@@ -3,7 +3,7 @@
 import { Container, Graphics, Sprite } from "pixi.js";
 import type { DrawModel, ObjectDraw, TileDraw, TrapDraw } from "../../battle/drawModel";
 import { zoneBadgeCell, zoneCellSpecs } from "../../battle/zones";
-import { TILE_SIZE } from "../../battle/geometry";
+import { posKey, TILE_SIZE } from "../../battle/geometry";
 import { edgeMarks, heightAt, tileLift } from "../../battle/elevation";
 import { HIGHLIGHT, surfaceBlocksSight } from "../../battle/glossary";
 import type { Ctx } from "../artDraw";
@@ -320,6 +320,7 @@ export abstract class TerrainLayer extends RendererBase {
         num.y = HEIGHT_MARK_NUM.y + g.y;
       } : undefined);
       this.heightBadges.push(node);
+      this.heightBadgeAt.set(posKey(t), node);
       this.scaleMark(node);
       this.rows.row(t.y).badges.addChild(node);
       this.place(node, t, t.x * T, t.y * T);

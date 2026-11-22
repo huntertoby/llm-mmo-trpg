@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { TelegraphChange, TelegraphOut } from "../api/types";
 import { smallView } from "./testFixtures";
-import { marksTextAt, telegraphEntries, telegraphIsEmpty, telegraphLines, telegraphMarks } from "./telegraph";
+import { readFile, SRC_DIR } from "../test/sourceScan";
+import { marksTextAt, splitHoverTexts, telegraphEntries, telegraphIsEmpty, telegraphLines, telegraphMarks } from "./telegraph";
 
 function change(kind: string, text: string, over: Partial<TelegraphChange> = {}): TelegraphChange {
   return {
@@ -135,5 +136,31 @@ describe("time bomb marks (Phase 3D-8b)", () => {
     const marks = telegraphMarks(t, view);
     expect(marks.find((m) => m.pos.x === 1 && m.pos.y === 1)?.kind).toBe("bomb_exploded");
     expect(marks.find((m) => m.pos.x === 2 && m.pos.y === 1)?.kind).toBe("bomb");
+  });
+});
+
+describe("E3b：滑過格子的預告說明不另外再列一次", () => {
+  it("側欄已有的項目標金色（索引），側欄沒有的才放最上面", () => {
+    const t = telegraph([
+      change("surface", "表面變化 (1, 3)：冰 → 無", { pos: { x: 1, y: 3 } }),
+      change("surface", "表面變化 (0, 3)：冰 → 無", { pos: { x: 0, y: 3 } }),
+    ]);
+    const entries = telegraphEntries(t, view);
+    const hover = marksTextAt(telegraphMarks(t, view), { x: 1, y: 3 });
+    expect(hover).toEqual(["表面變化 (1, 3)：冰 → 無"]); // 同一筆變化的同一句字
+    const split = splitHoverTexts(entries, hover);
+    expect([...split.hot]).toEqual([0]);
+    expect(split.extra).toEqual([]);
+    const withZone = splitHoverTexts(entries, ["區域 毒雲（剩 2 輪）", ...hover]);
+    expect([...withZone.hot]).toEqual([0]);
+    expect(withZone.extra).toEqual(["區域 毒雲（剩 2 輪）"]);
+    expect(splitHoverTexts(entries, []).hot.size).toBe(0);
+  });
+
+  it("面板用 splitHoverTexts，金色項目的 class 有 CSS", () => {
+    const panel = readFile(SRC_DIR, "ui/TelegraphPanel.tsx");
+    expect(panel).toContain("splitHoverTexts(entries, hoverTexts)");
+    expect(panel).toContain("telegraph-hot");
+    expect(readFile(SRC_DIR, "styles/battle-panels.css")).toMatch(/\.telegraph-list \.telegraph-hot \{\s*color: var\(--accent\);/);
   });
 });

@@ -1,10 +1,10 @@
 // 高亮圖層（R1e 自 `BattleRenderer.ts` 拆出，純搬移）：移動格、範圍、預覽、目標框、方向、攀跳、環境預告、場景物件預覽、
 // 路徑提示、致命淡紅、滑過與焦點框、出口滑過、實地地圖的標記（腳印、「！」、眼睛）。
-import { Container, Graphics, Sprite, type Text, type Texture } from "pixi.js";
+import { Container, Graphics, RenderLayer, Sprite, type Text, type Texture } from "pixi.js";
 import { TELEGRAPH_BADGE_LABEL, TELEGRAPH_BADGE_R, TELEGRAPH_FONT, telegraphBadgeCenter, telegraphBadgeScale } from "../telegraphBadge";
 import type { Pos } from "../../api/types";
 import { occluded } from "../../battle/elevation";
-import { TILE_SIZE } from "../../battle/geometry";
+import { posKey, TILE_SIZE } from "../../battle/geometry";
 import { HIGHLIGHT } from "../../battle/glossary";
 import type { Overlay, OverlayKind } from "../../battle/scenePreview";
 import type { TelegraphMark } from "../../battle/telegraph";
@@ -18,7 +18,7 @@ import { clipHighlights } from "../mapClip";
 import { LETHAL_TINT_ALPHA, lethalTintCells } from "../lethalMarks";
 import { drawRegionBlobs, type RegionMark } from "../regionBlobs";
 import type { PathDraw, PathTag } from "../../battle/pathPreview";
-import { bangCenter, drawFaintGrid, drawPathLine, drawPathMarks, drawSoftCells, HIT_SOFT, missTagNode, MOVE_SOFT, pathTagNode, pathTagScale, placeMissTag, RANGE_SOFT, placeTags, scaleTagNode, TAG_HEIGHT, type TileGeo } from "../pathArt";
+import { bangCenter, drawFaintGrid, drawPathLine, drawPathMarks, pathLineCells, drawSoftCells, HIT_SOFT, missTagNode, MOVE_SOFT, pathTagNode, pathTagScale, placeMissTag, RANGE_SOFT, placeTags, scaleTagNode, TAG_HEIGHT, type TileGeo } from "../pathArt";
 import { poolInsets } from "../practiceRange";
 import { TerrainLayer } from "./terrainLayer";
 import { hoverCellFrame, isGiantDraw } from "../../battle/drawModel";
@@ -116,6 +116,12 @@ export abstract class HighlightLayer extends TerrainLayer {
   private telegraphBadges: Array<{ node: Container; glyph: Text; o: { x: number; y: number } }> = [];
   /** AR-X10：目前畫著的路徑小牌（節點、對應的小牌資料、驚嘆號中心、「到不了」）；縮放改變時重排（`pathTagRescale`）。 */
   private pathTags: PathTagsDrawn | null = null;
+  /**
+   * E3b（美術 E3 驗收小修 2）：路徑線經過的格子的高度標記「▲N」提到路徑線上面畫（Pixi `RenderLayer`，節點仍在原本那排、
+   * 位置與縮放照舊；線不改）。每次重設高亮時放在 `marks` 裡路徑線的後面、小牌的前面；不常駐，清 `marks` 前先拿出來。
+   */
+  private readonly pathBadgeTop = new RenderLayer();
+  private pathBadgeCells: Pos[] = [];
 
   /** AR-X10：路徑小牌照目前的地圖縮放放大（畫面字 ≥ `MIN_PATH_TAG_FONT_PX`）並重新擺位；字的解析度跟著倍率提高。 */
   protected pathTagRescale(): void {
@@ -226,6 +232,7 @@ export abstract class HighlightLayer extends TerrainLayer {
   setHighlights(all: Highlights): void {
     if (!this.ready) return;
     const h = this.model === null ? all : clipHighlights(this.model, all); // 6F-6：範圍預覽不畫到地圖外
+    this.dropPathBadges();
     clearLayer(this.marks);
     clearLayer(this.giantMarkTop);
     clearLayer(this.hover);
@@ -487,6 +494,22 @@ export abstract class HighlightLayer extends TerrainLayer {
     return { origin: (p) => this.origin(p), center: (p) => this.center(p) };
   }
 
+  /** E3b：路徑線經過的格子的「▲N」接到線上面那一層（重畫地形後也再接一次）。 */
+  protected liftPathBadges(): void {
+    if (this.pathBadgeTop.parent === null) return;
+    for (const p of this.pathBadgeCells) {
+      const node = this.heightBadgeAt.get(posKey(p));
+      if (node !== undefined && !node.destroyed && node.parentRenderLayer !== this.pathBadgeTop) this.pathBadgeTop.attach(node);
+    }
+  }
+
+  /** E3b：放回原本那排的順序（清 `marks` 前；`RenderLayer` 本身不銷毀）。 */
+  private dropPathBadges(): void {
+    this.pathBadgeTop.detachAll();
+    this.pathBadgeTop.removeFromParent();
+    this.pathBadgeCells = [];
+  }
+
   /** 選移動時的路徑提示（6A-4c）：外框與停點標記、路徑線與點、結果小牌，畫在其他高亮之上。 */
   private drawPath(path: PathDraw, geo: TileGeo): void {
     const hasAny = path.segments.length > 0 || path.frames.length > 0 || path.missEnd !== null || path.tags.length > 0;
@@ -495,8 +518,11 @@ export abstract class HighlightLayer extends TerrainLayer {
     drawPathMarks(g, { ...path, bangs: [], slipStops: [] }, geo);
     drawPathLine(g, path, geo);
     this.marks.addChild(g);
+    this.pathBadgeCells = pathLineCells(path);
+    this.marks.addChild(this.pathBadgeTop);
+    this.liftPathBadges();
     const bangs = new Graphics();
-    drawPathMarks(bangs, { ...path, frames: [], missEnd: null }, geo); // 驚嘆號、滑倒停點 ◆ 畫在線與小牌之上（最後加入）
+    drawPathMarks(bangs, { ...path, frames: [], trail: [], missEnd: null }, geo); // 驚嘆號、滑倒停點 ◆ 畫在線與小牌之上（最後加入）
     const nodes = path.tags.map((tag) => pathTagNode(tag));
     for (const n of nodes) this.marks.addChild(n);
     const miss = path.missEnd === null ? null : { node: missTagNode(this.origin(path.missEnd)), pos: path.missEnd };

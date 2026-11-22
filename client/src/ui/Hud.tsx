@@ -18,7 +18,8 @@ import { zoneLine, zoneNextText, zonesOf } from "../battle/zones";
 import { Hint } from "./Hint";
 import { HeroCard } from "./HeroCard";
 import { unitHeroInput } from "./heroFace";
-import { overrideNote, passiveLine, raceHudText } from "../battle/race";
+import { passiveLine, raceHudText } from "../battle/race";
+import { RacePassive } from "./RacePassive";
 import { barData, heroChips, hudStacks, surfaceAt } from "./statusCard";
 import { StackPips } from "./StackPips";
 import { StackBadge, StatBar, StatChipView, StatusBadge, SurfaceBadge } from "./StatusCardParts";
@@ -155,11 +156,12 @@ export function heroDetails(view: BattleView, hero: UnitView): ReactNode[] {
         <Hint text={passiveLine(hero.race)}>
           <span className="has-hint">{hero.race.name_zh}</span>
         </Hint>
-        <span className="muted small">
-          {" "}
-          ・{hero.race.skill_name_zh}剩 {hero.race.skill_uses_left}／{hero.race.skill_uses_max} 次・被動「{hero.race.passive_name_zh}」
-          {hero.race.passive_active ? "（目前有作用）" : ""}
-          {overrideNote(hero.race)}
+        <span className="small hud-race-text">
+          <span className="muted">
+            {" "}
+            ・{hero.race.skill_name_zh}剩 {hero.race.skill_uses_left}／{hero.race.skill_uses_max} 次・
+          </span>
+          <RacePassive race={hero.race} />
         </span>
       </div>,
     );
