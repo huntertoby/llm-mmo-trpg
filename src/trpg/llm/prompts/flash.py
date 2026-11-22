@@ -22,9 +22,12 @@ from trpg.llm.prompts.world import WorldStyle, load_world_style
 from trpg.skillgen.flash_catalog import CatalogEntry, FlashCatalog
 from trpg.skillgen.flash_offer import FlashRequest
 from trpg.skillgen.flash_state import Variation
+from trpg.skillgen.flash_text import NAME_MAX_CHARS, NOTE_MAX_CHARS
 
 __all__ = [
     "FLASH_PROMPT_VERSION",
+    "NAME_MAX_CHARS",
+    "NOTE_MAX_CHARS",
     "build_flash_messages",
     "flash_prompt_record",
     "flash_schema",
@@ -35,8 +38,6 @@ __all__ = [
 # 取 name_zh；schema 每個模板一個分支
 FLASH_PROMPT_VERSION = "flash-variation/6"
 
-NOTE_MAX_CHARS = 40
-NAME_MAX_CHARS = 12
 MAX_SCHEMA_BRANCHES = 40
 """模板超過這個數時 schema 退回扁平列舉（LF-2 第 4 點；分支太多時語法約束很慢）。"""
 

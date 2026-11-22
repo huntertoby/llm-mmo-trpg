@@ -15,9 +15,12 @@ from trpg.llm.client import ChatMessage
 from trpg.llm.prompts.escape import escape_text
 from trpg.llm.prompts.pick import AVOID_WORDS
 from trpg.llm.prompts.world import WorldStyle, load_world_style
+from trpg.skillgen.flash_text import NAME_MAX_CHARS, NOTE_MAX_CHARS
 
 __all__ = [
     "FLASH_PICK_PROMPT_VERSION",
+    "NAME_MAX_CHARS",
+    "NOTE_MAX_CHARS",
     "build_flash_pick_messages",
     "flash_pick_schema",
     "slot_key",
@@ -28,8 +31,6 @@ FLASH_PICK_PROMPT_VERSION = "flash-pick/2"
 """``flash-pick/2``（PK-4）：不指定類別時候選可能借自別的類別（卡片多 ``category``）；描述也要避開
 多字的老套詞。"""
 
-NOTE_MAX_CHARS = 40
-NAME_MAX_CHARS = 12
 
 FLASH_PICK_TASK = """你是「{world_name}」世界的技能設計助手。
 世界簡介：{summary}

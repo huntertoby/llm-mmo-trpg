@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from trpg.content.library import ContentLibrary
 from trpg.content.skill_pick import WISH_TAG_GROUPS, WishTags
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.wish_tags import (
     WISH_TAGS_PROMPT_VERSION,
@@ -106,7 +107,7 @@ def match_wish_tags(
     wish: str,
     menu: Sequence[str],
     *,
-    max_attempts: int = 3,
+    max_attempts: int = LLM_DEFAULTS.max_retries,
     tier: int = 1,
     clock: Callable[[], float] = time.perf_counter,
 ) -> WishTagMatch:
@@ -157,7 +158,12 @@ def match_wish_tags(
 
 
 def mock_wish_tags_client(
-    library: ContentLibrary, wish: str, menu: Sequence[str], *, attempts: int = 3, tier: int = 1
+    library: ContentLibrary,
+    wish: str,
+    menu: Sequence[str],
+    *,
+    attempts: int = LLM_DEFAULTS.max_retries,
+    tier: int = 1,
 ) -> MockLLMClient:
     """Mock（不需網路與金鑰）：每一類照清單順序，名稱有任一字出現在願望裡的就選（「凍」→ 冰凍、
     「火」→ 火焰、「召」→ 召喚），取到角色階級 ``tier`` 的上限為止；都沒有＝空陣列。確定性。"""

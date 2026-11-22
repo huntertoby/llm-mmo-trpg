@@ -41,6 +41,7 @@ from trpg.content.world_narration import (
 )
 from trpg.content.world_situations import Outcome, SituationTemplateDef
 from trpg.llm.client import ChatMessage, LLMClient
+from trpg.llm.config import LLM_DEFAULTS, client_config
 from trpg.llm.errors import LLMError
 from trpg.llm.prompts.escape import address_token, escape_text, player_block, wrap_player_input
 from trpg.llm.prompts.storyteller import STORY_PROMPT_VERSION, story_system
@@ -57,7 +58,7 @@ __all__ = [
     "tell_story",
 ]
 
-DEFAULT_STORY_ATTEMPTS: Final = 2
+DEFAULT_STORY_ATTEMPTS: Final = LLM_DEFAULTS.story_attempts
 """共試幾次（同情境判定提議，代決 5B3-7）。"""
 
 BUILTIN_TEMPLATES: Final = StoryTemplates(
@@ -395,10 +396,13 @@ def tell_story(
     request: StoryRequest,
     *,
     templates: StoryTemplates | None = None,
-    attempts: int = DEFAULT_STORY_ATTEMPTS,
+    attempts: int | None = None,
     world: WorldStyle | None = None,
 ) -> StoryOutcome:
-    """請說書人敘述；不合法帶錯誤重試，用盡、連不上或 ``client=None`` 就降級（不拋 LLM 錯誤）。"""
+    """請說書人敘述；不合法帶錯誤重試，用盡、連不上或 ``client=None`` 就降級（不拋 LLM 錯誤）。
+    ``attempts`` 省略＝``client`` 的設定（``config/llm.toml`` 的 ``story_attempts``；HC-7 b）。"""
+    if attempts is None:
+        attempts = client_config(client).story_attempts
     previous: str | None = None
     feedback: list[str] = []
     log: list[str] = []

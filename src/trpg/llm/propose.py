@@ -24,6 +24,7 @@ from typing import Literal
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.llm.client import LLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.prompts.proposal import build_proposal_prompt
 from trpg.llm.response import clean_response, drop_false_flags
@@ -46,7 +47,7 @@ __all__ = [
 type ProposalSource = Literal["llm", "composer", "pool", "workshop"]
 type Clock = Callable[[], float]
 
-DEFAULT_MAX_ATTEMPTS = 3
+DEFAULT_MAX_ATTEMPTS = LLM_DEFAULTS.max_retries
 """使用者決定 #5：每個候選最多 3 次（``config/llm.toml`` 的 ``max_retries``）。"""
 LLM_ERROR_CODES = {
     LLMUnavailable: "llm.unavailable",
@@ -250,7 +251,7 @@ class ProposalStats:
     平均耗時；退回率超過 ``alert_permille``（``config/llm.toml`` 的 ``fallback_alert_permille``）
     時 :attr:`alert` 為真。"""
 
-    alert_permille: int = 200
+    alert_permille: int = LLM_DEFAULTS.fallback_alert_permille
     total: int = 0
     first_pass: int = 0
     attempts: int = 0
@@ -260,7 +261,12 @@ class ProposalStats:
     repaired: Counter[str] = field(default_factory=Counter)
 
     @classmethod
-    def of(cls, outcomes: Iterable[ProposalOutcome], *, alert_permille: int = 200) -> ProposalStats:
+    def of(
+        cls,
+        outcomes: Iterable[ProposalOutcome],
+        *,
+        alert_permille: int = LLM_DEFAULTS.fallback_alert_permille,
+    ) -> ProposalStats:
         stats = cls(alert_permille=alert_permille)
         for outcome in outcomes:
             stats.add(outcome)

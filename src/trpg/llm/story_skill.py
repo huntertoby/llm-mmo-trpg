@@ -24,6 +24,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.naming import name_skill
 from trpg.llm.prompts.naming import NAMING_PROMPT_VERSION
@@ -42,7 +43,7 @@ __all__ = [
     "propose_story_skill",
 ]
 
-DEFAULT_STORY_ATTEMPTS = 3
+DEFAULT_STORY_ATTEMPTS = LLM_DEFAULTS.max_retries
 
 
 @dataclass(frozen=True, slots=True)

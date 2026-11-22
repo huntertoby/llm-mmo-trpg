@@ -740,13 +740,6 @@ rules:
   # HC-7 b：規則數字搬進 content（roguelite.yaml route_hint_tier、skill_pick.yaml 的 budget_seconds／pregen、
   # world/rules.yaml 的 display／notes、workshop.yaml max_rounds、core.skill_limits），回應的預設值改必填。
   # 剩下的是數值工坊的工具設定（只留 api/tuning/schemas.py、drafts.py 一份）、請求格式護欄與結構常數。
-  - id: py-api-llm-source-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/llm_source.py
-    kind: number
-    where: ['<module>.DEFAULT_ALERT_PERMILLE', '<module>.DEFAULT_PROBE_TIMEOUT_S']
-    note: 同上一條（api config）。
   - id: py-api-tuning-tool-settings
     class: config
     status: done
@@ -987,120 +980,23 @@ rules:
     where: ['extra_targets']
     note: HC-4c 改判 const：多目標加分的「至少 2 名敵人」是多目標的定義（1 名就不是範圍技多打到人）。靈魂連結的 HP 門檻已搬到 rewrite.redirect_min_hp_permille。
 
-  # ---------------------------------------------------- 後端 llm：config
-  # 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。
+  # ---------------------------------------------------- 後端 llm：config（HC-7 b 搬完）
+  # HC-7 b：重試次數、退回率提醒、連線檢查逾時都讀 LLMConfig 的 schema 預設（LLM_DEFAULTS，config/llm.toml 可改）；
+  # 挑選模式的時間預算搬進 skill_pick.yaml 的 budget_seconds（遊戲規則）；閃現名稱與描述字數讀 skillgen.flash_text 那一份。
   - id: py-llm-config-config-number
     class: config
-    status: todo
+    status: done
     files: src/trpg/llm/config.py
     kind: number
     where: ['LLMConfig']
-    note: 保守：LLM 呼叫設定（重試次數、等待秒數、退回率警示、名稱字數），不是戰鬥數值。
-  - id: py-llm-flash-eval-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/flash_eval.py
+    note: HC-7 b（規格 b.2「屬於部署設定的放 config/llm.toml；這段是寫進 schema 的預設」）：config/llm.toml 的 schema 預設值，唯一一份；其他模組經 LLM_DEFAULTS 讀。新加的鍵 probe_timeout_s 3.0、situation_attempts 2、story_attempts 2 的預設等於原本程式裡的值，config/llm.toml 沒有加鍵、既有值沒改。
+  - id: py-llm-format-const-number
+    class: const
+    status: done
+    files: [src/trpg/llm/prompts/flash.py, src/trpg/llm/prompts/wish_pick.py, src/trpg/llm/wish_pick.py]
     kind: number
-    where: ['evaluate_flash']
-    note: 同上一條（llm config）。
-  - id: py-llm-flash-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/flash_pick.py
-    kind: number
-    where: ['<module>.FLASH_PICK_BUDGET_S', 'mock_flash_pick_client', 'pick_variations']
-    note: 同上一條（llm config）。
-  - id: py-llm-flash-propose-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/flash_propose.py
-    kind: number
-    where: ['<module>.DEFAULT_FLASH_ATTEMPTS', 'FlashProposalStats', 'FlashProposalStats.of']
-    note: 同上一條（llm config）。
-  - id: py-llm-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/pick.py
-    kind: number
-    where: ['<module>.DEFAULT_PICK_ATTEMPTS', '<module>.OFFER_BUDGET_S']
-    note: 同上一條（llm config）。
-  - id: py-llm-prompts-flash-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/prompts/flash.py
-    kind: number
-    where: ['<module>.MAX_SCHEMA_BRANCHES', '<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
-    note: 同上一條（llm config）。
-  - id: py-llm-prompts-flash-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/prompts/flash_pick.py
-    kind: number
-    where: ['<module>.NAME_MAX_CHARS', '<module>.NOTE_MAX_CHARS']
-    note: 同上一條（llm config）。
-  - id: py-llm-prompts-wish-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/prompts/wish_pick.py
-    kind: number
-    where: ['<module>.WISH_REPLY_MAX_CHARS', 'wish_pick_schema']
-    note: 同上一條（llm config）。
-  - id: py-llm-propose-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/propose.py
-    kind: number
-    where: ['<module>.DEFAULT_MAX_ATTEMPTS', 'ProposalStats', 'ProposalStats.of']
-    note: 同上一條（llm config）。
-  - id: py-llm-situation-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/situation.py
-    kind: number
-    where: ['<module>.DEFAULT_SITUATION_ATTEMPTS']
-    note: 同上一條（llm config）。
-  - id: py-llm-story-skill-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/story_skill.py
-    kind: number
-    where: ['<module>.DEFAULT_STORY_ATTEMPTS']
-    note: 同上一條（llm config）。
-  - id: py-llm-wish-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/wish.py
-    kind: number
-    where: ['<module>.DEFAULT_WISH_ATTEMPTS', 'match_wish', 'mock_wish_client']
-    note: 同上一條（llm config）。
-  - id: py-llm-wish-pick-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/wish_pick.py
-    kind: number
-    where:
-      - '<module>.WISH_PICK_BUDGET_S'
-      - 'make_wish_picker'
-      - 'mock_wish_pick_client'
-      - 'mock_wish_picker'
-    note: 同上一條（llm config）。
-  - id: py-llm-wish-tags-config-number
-    class: config
-    status: todo
-    files: src/trpg/llm/wish_tags.py
-    kind: number
-    where: ['match_wish_tags', 'mock_wish_tags_client']
-    note: 同上一條（llm config）。
-
-  # ---------------------------------------------------- 後端 narrative：config
-  # 保守：敘事生成的重試次數。
-  - id: py-narrative-storyteller-config-number
-    class: config
-    status: todo
-    files: src/trpg/narrative/storyteller.py
-    kind: number
-    where: ['<module>.DEFAULT_STORY_ATTEMPTS']
-    note: 保守：敘事生成的重試次數。
+    where: ['<module>.MAX_SCHEMA_BRANCHES', '<module>.WISH_REPLY_MAX_CHARS', 'mock_wish_pick_client', 'mock_wish_picker']
+    note: HC-7 b 改判 const（同 skillgen/flash_text 的字數上限前例）：MAX_SCHEMA_BRANCHES 是 JSON schema 分支太多時退回扁平列舉的門檻（語法約束的效能，不影響規則）；WISH_REPLY_MAX_CHARS 是 LLM 回應願望那一句的輸出格式上限（提示詞與 schema 共用）；Mock 挑選器的 picks (0, 1, 2) 是測試用的固定挑選序。
 
   # ---------------------------------------------------- 後端 server：config
   # 保守：社群功能（留言板、腳印、循環賽人數）的上限。

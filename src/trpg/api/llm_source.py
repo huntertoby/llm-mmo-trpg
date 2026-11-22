@@ -27,6 +27,7 @@ from trpg.content.library import ContentLibrary
 from trpg.llm import LLMConfig, LLMConfigError, OpenAICompatClient, load_llm_config
 from trpg.llm.candidate_source import make_proposer, mock_proposer
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.flash_propose import LlmFlashSource, mock_flash_source
 from trpg.llm.pick import make_offer_picker, mock_offer_picker
 from trpg.llm.story_skill import StoryProposer, make_story_proposer, mock_story_proposer
@@ -46,8 +47,10 @@ __all__ = [
     "MockLlmProvider",
 ]
 
-DEFAULT_ALERT_PERMILLE = 200
-DEFAULT_PROBE_TIMEOUT_S = 3.0
+DEFAULT_ALERT_PERMILLE = LLM_DEFAULTS.fallback_alert_permille
+"""退回率提醒線的預設（``config/llm.toml`` 的 ``fallback_alert_permille`` 的 schema 預設）。"""
+DEFAULT_PROBE_TIMEOUT_S = LLM_DEFAULTS.probe_timeout_s
+"""連線檢查逾時的預設（``probe_timeout_s`` 的 schema 預設；HC-7 b 起設定檔可以改）。"""
 LLM_OFF_NOTICE = "連不到本機模型，這一輪改用一般技能生成。"
 """連不到本機模型時顯示的提示（這一輪自動當作關閉，照常開局）。"""
 _SERVER_ERROR_MIN = 500
@@ -93,13 +96,13 @@ class LlmProvider(Protocol):
 
 class LocalLlmProvider:
     """本機模型（``config/llm.toml``）。連線檢查：``GET {base_url}/models``，逾時
-    ``probe_timeout_s``。"""
+    ``probe_timeout_s``（建構時沒給＝設定檔的 ``probe_timeout_s``）。"""
 
     def __init__(
         self,
         *,
         config_path: Path | None = None,
-        probe_timeout_s: float = DEFAULT_PROBE_TIMEOUT_S,
+        probe_timeout_s: float | None = None,
         transport: httpx.BaseTransport | None = None,
     ) -> None:
         self._config_path = config_path
@@ -118,7 +121,8 @@ class LocalLlmProvider:
             return LLM_OFF_NOTICE
         url = config.base_url.rstrip("/") + "/models"
         try:
-            with httpx.Client(transport=self._transport, timeout=self._timeout) as http:
+            timeout = config.probe_timeout_s if self._timeout is None else self._timeout
+            with httpx.Client(transport=self._transport, timeout=timeout) as http:
                 response = http.get(url, headers={"Authorization": f"Bearer {config.api_key}"})
         except httpx.HTTPError:  # 含逾時、拒絕連線、DNS
             return LLM_OFF_NOTICE

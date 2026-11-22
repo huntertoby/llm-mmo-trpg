@@ -32,6 +32,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.world import WorldStyle, load_world_style
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.consistency import NameCheck, check_mentions, strict_facts
 from trpg.llm.errors import LLMBadResponse, LLMTimeout, LLMUnavailable
 from trpg.llm.naming import NamingText, apply_naming, check_consistency, check_naming
@@ -56,15 +57,12 @@ from trpg.skillgen.wish_pick import (
 )
 
 __all__ = [
-    "WISH_PICK_BUDGET_S",
     "WishCardText",
     "make_wish_picker",
     "mock_wish_pick_client",
     "mock_wish_picker",
 ]
 
-WISH_PICK_BUDGET_S = 10.0
-"""一次許願請 LLM 挑選的時間上限（秒；06 6.34.7「超過 10 秒改給組合器版」）：用完就不再重問。"""
 _REPLY_CHARS = re.compile(r"^[一-鿿　-〿＀-￯・—…‘-”、。，；：！？（）「」『』《》]+$")
 _ENGLISH = re.compile(r"[A-Za-z_0-9]")
 
@@ -267,14 +265,17 @@ def make_wish_picker(
     library: ContentLibrary,
     wish: str,
     *,
-    max_attempts: int = 3,
-    budget_s: float = WISH_PICK_BUDGET_S,
+    max_attempts: int = LLM_DEFAULTS.max_retries,
+    budget_s: float | None = None,
     clock: Callable[[], float] = time.monotonic,
     world: WorldStyle | None = None,
     words: EffectWords | None = None,
     taken: Collection[str] = (),
 ) -> WishPicker:
-    """願望 ``wish``（只進 ``<player_input>``）的挑選器（見模組說明）。"""
+    """願望 ``wish``（只進 ``<player_input>``）的挑選器（見模組說明）。``budget_s`` 省略＝
+    ``skill_pick.yaml`` 的 ``budget_seconds.wish``（06 6.34.7「超過 10 秒改給組合器版」；
+    HC-7 b）。"""
+    budget = library.skill_pick.budget_seconds.wish if budget_s is None else budget_s
     style = world if world is not None else load_world_style()
     vocab = words if words is not None else load_effect_words()
 
@@ -313,7 +314,7 @@ def make_wish_picker(
         )
         start = clock()
         for number in range(1, max_attempts + 1):
-            if not loop.attempt(number, max_attempts) or clock() - start >= budget_s:
+            if not loop.attempt(number, max_attempts) or clock() - start >= budget:
                 break
         out: list[WishCard] = []
         for card in loop.cards:
@@ -335,7 +336,11 @@ def make_wish_picker(
 
 
 def mock_wish_pick_client(
-    library: ContentLibrary, ask: WishPick, *, picks: Sequence[int] = (0, 1, 2), attempts: int = 3
+    library: ContentLibrary,
+    ask: WishPick,
+    *,
+    picks: Sequence[int] = (0, 1, 2),
+    attempts: int = LLM_DEFAULTS.max_retries,
 ) -> MockLLMClient:
     """Mock 挑選（不需網路與金鑰）：挑 ``picks``（超出範圍照填，用來測退回），名稱與兩段文字照 Mock
     命名（依種子挑詞），不寫回應願望的那一句（同 Mock 不寫描述）。"""

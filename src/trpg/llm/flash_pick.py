@@ -40,6 +40,7 @@ from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.world import load_world_style
 from trpg.llm.client import LLMClient, MockLLMClient
+from trpg.llm.config import LLM_DEFAULTS
 from trpg.llm.consistency import (
     NameCheck,
     added_word_choices,
@@ -67,7 +68,6 @@ from trpg.skillgen.flash_state import Variation
 from trpg.skillgen.flash_text import VariationText
 
 __all__ = [
-    "FLASH_PICK_BUDGET_S",
     "FlashPickResult",
     "SlotAnswer",
     "chosen_variations",
@@ -76,7 +76,6 @@ __all__ = [
     "pick_variations",
 ]
 
-FLASH_PICK_BUDGET_S = 10.0
 """一份閃現請 LLM 的時間上限（秒；06 6.34.7「超過 10 秒改給模板版」）：用完就不再重問。"""
 TRANSFORM_ZH = "轉型"
 STRICT_NOTE = "strict_word"
@@ -436,14 +435,17 @@ def pick_variations(
     before: SkillDef,
     *,
     major: bool,
-    max_attempts: int = 3,
+    max_attempts: int = LLM_DEFAULTS.max_retries,
     clock: Clock = time.perf_counter,
-    budget_s: float = FLASH_PICK_BUDGET_S,
+    budget_s: float | None = None,
     words: EffectWords | None = None,
 ) -> FlashPickResult:
-    """請 LLM 為每格挑一個候選並寫文字（見模組說明）。沒有格子時不呼叫。"""
+    """請 LLM 為每格挑一個候選並寫文字（見模組說明）。沒有格子時不呼叫。``budget_s`` 省略＝
+    ``skill_pick.yaml`` 的 ``budget_seconds.flash``（HC-7 b）。"""
     if not slots:
         return FlashPickResult((), (), 0, (), 0, None, 0.0)
+    if budget_s is None:
+        budget_s = library.skill_pick.budget_seconds.flash
     vocab = words if words is not None else load_effect_words()
     checker = _Checker(
         library,
@@ -509,7 +511,7 @@ def pick_variations(
 
 
 def mock_flash_pick_client(
-    slots: Sequence[FlashSlot], *, index: int = 0, attempts: int = 3
+    slots: Sequence[FlashSlot], *, index: int = 0, attempts: int = LLM_DEFAULTS.max_retries
 ) -> MockLLMClient:
     """Mock 挑選（不需網路與金鑰）：每格永遠挑 ``index``（超出範圍時照填，用來測退回；固定格照填），
     不寫描述與名稱（同 LF-2 的 Mock 不寫文字，名稱照「{前綴}・{原名}」）。"""

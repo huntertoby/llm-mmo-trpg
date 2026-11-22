@@ -47,7 +47,7 @@ from trpg.content.skills import SkillDef
 from trpg.content.world import load_world_style
 from trpg.llm.candidate_source import mock_naming_client
 from trpg.llm.client import LLMClient, MockLLMClient, OpenAICompatClient
-from trpg.llm.config import LLMConfig
+from trpg.llm.config import LLM_DEFAULTS, LLMConfig
 from trpg.llm.consistency import (
     NameCheck,
     added_word_choices,
@@ -112,8 +112,8 @@ __all__ = [
     "select_flash_source",
 ]
 
-DEFAULT_FLASH_ATTEMPTS = 3
-"""同 4-L5／使用者決定 #5：每個題目最多 3 次（``config/llm.toml`` 的 ``max_retries``）。"""
+DEFAULT_FLASH_ATTEMPTS = LLM_DEFAULTS.max_retries
+"""同 4-L5／使用者決定 #5：每個題目最多 3 次（``config/llm.toml`` 的 ``max_retries`` 的預設）。"""
 type Clock = Callable[[], float]
 type NoteCheck = Callable[[Variation, str], list[NameCheck]]
 """（變化, note_zh）→ 一致性與世界觀詞的錯誤（4-L11）。"""
@@ -1099,7 +1099,7 @@ class FlashProposalStats:
     （部分）、平均嘗試次數、各錯誤代碼、各類別與模板命中、名稱抽樣。退回率超過 ``alert_permille``
     （``fallback_alert_permille``）時 :attr:`alert` 為真。"""
 
-    alert_permille: int = 200
+    alert_permille: int = LLM_DEFAULTS.fallback_alert_permille
     total: int = 0
     first_pass: int = 0
     attempts: int = 0
@@ -1116,7 +1116,10 @@ class FlashProposalStats:
 
     @classmethod
     def of(
-        cls, records: Iterable[FlashProposalRecord], *, alert_permille: int = 200
+        cls,
+        records: Iterable[FlashProposalRecord],
+        *,
+        alert_permille: int = LLM_DEFAULTS.fallback_alert_permille,
     ) -> FlashProposalStats:
         stats = cls(alert_permille=alert_permille)
         for record in records:
