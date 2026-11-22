@@ -83,6 +83,7 @@ from trpg.engine.skill_triggers import (
     AttackInfo,
     attacking,
     check_trigger_depth,
+    collect_block,
     holding,
     redirect_fired,
     register_downed_handler,
@@ -381,6 +382,7 @@ def block_multiplier(
     definition = _react(ctx, target, events, attacker, effect="reduce_damage")
     if not isinstance(definition, ReactionDef):
         return PERMILLE
+    collect_block(ctx, target, attacker)  # E4 on_block：格擋真的結算了
     reduction = definition.damage_reduction_permille
     offhand = target.gear.offhand
     if definition.id == BLOCK_REACTION and offhand is not None:  # 圓盾的格擋強化（3I-2）

@@ -38,7 +38,13 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Literal
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
-from trpg.content.skills import ON_AP_SPENT_ALL, ON_DISPLACE, SkillDef, TriggerSpec
+from trpg.content.skills import (
+    ON_AP_SPENT_ALL,
+    ON_BLOCK,
+    ON_DISPLACE,
+    SkillDef,
+    TriggerSpec,
+)
 from trpg.engine import modifiers, stack_gain
 from trpg.engine.charge_queries import DELAYED_RELEASE, attacked_release
 from trpg.engine.events import (
@@ -84,6 +90,7 @@ __all__ = [
     "attack_info_of",
     "attacking",
     "check_trigger_depth",
+    "collect_block",
     "collect_cast",
     "collect_displace",
     "collect_exploit",
@@ -557,6 +564,22 @@ def collect_exploit(
         ctx, index, ON_KEYWORD_EXPLOITED, seq, maker_id, exploiter_id,
         status=status, surface=None if surface is None else surface.value,
     )  # fmt: skip
+
+
+def collect_block(ctx: Ctx, blocker: UnitState, attacker: UnitState) -> None:
+    """``on_block``（E4，08 8.29 E4 第 3 點）：``blocker`` 的格擋類反應（``reduce_damage``，含裝備讓
+    遠程也能格擋的）真的結算了。另一方是攻擊者；攻擊種類、來源篩選看被擋下的這次攻擊。替隊友擋、
+    替隊友承受、盾兵掩護不經過這裡。沒有持有者時直接返回。"""
+    index = _index(ctx)
+    owned = [(o, s) for o, s in index.owners(ON_BLOCK) if o == blocker.id]
+    gear_owned = [(o, g) for o, g in index.gear_owners(ON_BLOCK) if o == blocker.id]
+    if not owned and not gear_owned:
+        return
+    info = attack_info_of(ctx, attacker.id)
+    seq = ctx.state.next_event_seq - 1  # 剛發出的 reaction_triggered
+    for owner, skill in owned:
+        _fire(ctx, seq, owner, skill, attacker.id, info)
+    _fire_gear(ctx, index, ON_BLOCK, seq, blocker.id, attacker.id, info=info)
 
 
 def collect_displace(ctx: Ctx, source_id: UnitId | None, moved_id: UnitId) -> None:

@@ -4434,6 +4434,15 @@
    "rules_dice": []
   },
   {
+   "id": "on_block",
+   "name_zh": "格擋時",
+   "description_zh": "持有者的格擋類反應真的結算時（一般格擋、裝備讓遠程也能格擋的那種、在提示裡選擇格擋都算），不看之後實際受多少傷害；替隊友擋、替隊友承受、盾兵掩護都不算；倒地時不能反應，所以也不會觸發。另一方為攻擊者。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
    "id": "targeted_by_melee",
    "name_zh": "被近戰攻擊時",
    "description_zh": "被近戰攻擊命中之後、傷害結算之前。",

@@ -165,3 +165,13 @@ triggers:
     budget_coefficient_permille: 250
     min_rarity: epic
     random_composer: false
+  # --- E4（#175，08 8.29 E4 第 3 點）：格擋時。給被動與裝備詞條用。係數為保守的初值，未經模擬（工坊可調）。
+  # random_composer: false（一般抽選不抽，既有種子不變）。
+  - id: on_block
+    name_zh: 格擋時
+    llm_hint: "持有者的格擋真的發動時（擋下一次攻擊、減少傷害）發動。"
+    description_zh: 持有者的格擋類反應真的結算時（一般格擋、裝備讓遠程也能格擋的那種、在提示裡選擇格擋都算），不看之後實際受多少傷害；替隊友擋、替隊友承受、盾兵掩護都不算；倒地時不能反應，所以也不會觸發。另一方為攻擊者。
+    has_other: true
+    budget_coefficient_permille: 250
+    min_rarity: epic
+    random_composer: false
