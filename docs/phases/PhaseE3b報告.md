@@ -73,9 +73,9 @@
 | census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | `cells=204 different=0 whole_equal=True` |
 | 78 場（`compare78.py`，a 段那組，基準 `git archive d64dc3168`） | `battles=78 events=26741 different=0`；內嵌規則包差異 0 條（`format` 也比，沒有去掉） |
 | CLI 快照 | 這段只在視圖多兩個選填欄位（沒有值時不輸出）、API 多一個選填欄位，CLI 文字沒改；結果見 slow cli 那列 |
-| `uv run python scripts/check.py --all` | 還沒跑：開發 PM 回「TS-2 正在跑全量，還不能跑」，等「可以跑」 |
-| slow parity、cli（`-m slow tests/skillgen/test_refactor_parity.py tests/cli`） | 還沒跑（同上） |
-| 前端 build | 開發中 `pnpm -C client build` 0（合併 main 前；合併只有文件） |
+| `uv run python scripts/check.py --all` | 結束碼 0（開發 PM 回「可以跑」後，merge main 已是最新）：pytest 18689 passed、8 skipped；vitest 4934；ruff、format、mypy、lint-imports、client typecheck、situation coverage 通過；已寫通過戳記 |
+| slow parity、cli（`-m slow tests/skillgen/test_refactor_parity.py tests/cli`） | 結束碼 0（995 passed）；CLI 快照、parity 都沒變，不用重產 |
+| 前端 build | 結束碼 0（全量後重跑） |
 
 不寫死 `LOG_FORMAT` 版號：這段沒有改戰鬥紀錄格式，也沒有新增比對版號的測試。
 
