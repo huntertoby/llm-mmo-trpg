@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict
 from trpg.content.loader import default_content_dir, load_content_file
 from trpg.content.skill_icon_art import IconArtTable
 from trpg.content.skill_icon_props import IconPropTable
+from trpg.shared.types import Element
 
 if TYPE_CHECKING:
     from trpg.content.library import ContentLibrary
@@ -39,17 +40,8 @@ __all__ = [
     "icon_art_rules",
 ]
 
-_ELEMENT_IDS: tuple[str, ...] = (
-    "physical",
-    "fire",
-    "ice",
-    "lightning",
-    "poison",
-    "wind",
-    "earth",
-    "holy",
-    "shadow",
-)
+_ELEMENT_IDS: tuple[str, ...] = tuple(e.value for e in Element)
+"""元素代碼（:class:`~trpg.shared.types.Element` 的順序；WL-1 前是另抄一份）。"""
 
 
 class IconArt(BaseModel):

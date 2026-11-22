@@ -26,6 +26,7 @@ from trpg.narrative.skill_icon_art import (
     _text,
     derive_art,
 )
+from trpg.shared.types import Element
 
 __all__ = [
     "ELEMENT_IDS",
@@ -42,18 +43,9 @@ __all__ = [
     "skill_icon",
 ]
 
-ELEMENT_IDS: tuple[str, ...] = (
-    "physical",
-    "fire",
-    "ice",
-    "lightning",
-    "poison",
-    "wind",
-    "earth",
-    "holy",
-    "shadow",
-)
-"""元素代碼（``trpg.shared.types.Element``）；``tags`` 裡出現這些字就當成技能的元素。"""
+ELEMENT_IDS: tuple[str, ...] = tuple(e.value for e in Element)
+"""元素代碼（``trpg.shared.types.Element`` 的順序，WL-1 起不另抄）；``tags`` 裡出現這些字就當成
+技能的元素。"""
 
 type IconCost = Literal["source", "gamble", "self", "stacks", "once", "delay"]
 """特殊代價（法力與冷卻每招都有，不列）：源力、賭注、自傷、消耗層數、每場一次、延遲。"""
