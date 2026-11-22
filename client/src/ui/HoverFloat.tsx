@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { CARD_GAP } from "../battle/stageLayout";
 import { FLOAT_PIN_PX, floatPinCanvas } from "../render/hudIcon";
 import { IconCanvas } from "./HudGlyph";
-import { avoidRect, cardMaxHeight } from "./hoverCard";
+import { avoidPanel, avoidRect, cardMaxHeight } from "./hoverCard";
 import { ParentFloat } from "./useFloatCard";
 import type { TileCardApi } from "./useTileCard";
 
@@ -16,6 +16,8 @@ const EDGE = 4;
 
 interface Props {
   placement: CSSProperties;
+  /** 目標格相對於畫布左上角的方框（`tileBox`；CR-1b：避開預覽面板時改放目標右邊或上下用）。省略時不避開面板。 */
+  tile?: { left: number; top: number; width: number; height: number };
   card: TileCardApi;
   children: ReactNode;
 }
@@ -28,7 +30,7 @@ function PinIcon({ className, pinned }: { className: string; pinned: boolean }) 
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(v, Math.max(lo, hi)));
 
-export function HoverFloat({ placement, card, children }: Props) {
+export function HoverFloat({ placement, tile, card, children }: Props) {
   const own = useRef<HTMLDivElement | null>(null);
   const sentinel = useRef<HTMLSpanElement | null>(null);
   const { ctl } = card;
@@ -60,7 +62,17 @@ export function HoverFloat({ placement, card, children }: Props) {
       // 6F-19：避開右下的縮放列（`.zoom-controls`，畫在戰場上面）
       const zoom = document.querySelector(".zoom-controls")?.getBoundingClientRect() ?? null;
       const ob = zoom === null ? null : { left: zoom.left, top: zoom.top, right: zoom.right, bottom: zoom.bottom };
-      const at = avoidRect({ left: clamp(left, vis.left, vis.right - w), top: clamp(top, vis.top, vis.bottom - h), w, h }, vis, ob, EDGE);
+      // CR-1b（佇列 (w)）：預覽面板（`.mode-panel`）當成不能放的區域：改放目標另一邊、上方或下方；都放不下時面板放上層
+      const mp = tile === undefined ? null : (document.querySelector(".mode-panel")?.getBoundingClientRect() ?? null);
+      const panel = mp === null ? null : { left: mp.left, top: mp.top, right: mp.right, bottom: mp.bottom };
+      const tileRect =
+        tile === undefined
+          ? null
+          : { left: c.left + tile.left, top: c.top + tile.top, right: c.left + tile.left + tile.width, bottom: c.top + tile.top + tile.height };
+      const start = { left: clamp(left, vis.left, vis.right - w), top: clamp(top, vis.top, vis.bottom - h), w, h };
+      const free = tileRect === null ? { ...start, under: false } : avoidPanel(start, tileRect, vis, panel, BRIDGE);
+      el.classList.toggle("under-panel", free.under);
+      const at = avoidRect({ left: free.left, top: free.top, w, h }, vis, ob, EDGE);
       if (at.maxH !== undefined) el.style.maxHeight = `${at.maxH}px`;
       el.style.left = `${at.left}px`;
       el.style.top = `${at.top}px`;

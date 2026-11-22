@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BattleResponse, SkillCard } from "../api/types";
 import { withInfusion } from "../battle/infusion";
-import { cardPlacement } from "../battle/stageLayout";
+import { cardPlacement, tileBox } from "../battle/stageLayout";
 import { BattleBanner } from "../ui/BattleBanner";
 import { orderButton, withOrder } from "../battle/orders";
 import { togglePopup, type TopPopup } from "../battle/skillTray";
@@ -298,7 +298,7 @@ export function BattleScreen({ initial, onExit, exitLabel, runMode, openingNotes
             menuOpen={(response.part_options ?? null) === null ? undefined : partMenuBoss !== null}
           >
             {cardTile !== null && tiles.partMenu === null && (hoverUnit !== null || (tileCardSections.length > 0 && !pathShown)) && (
-              <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} card={tiles.tileCard}>
+              <HoverFloat placement={cardPlacement(cardTile, data.model, scale)} tile={tileBox(cardTile, data.model, scale)} card={tiles.tileCard}>
                 {hoverUnit !== null && (
                   <UnitInfo
                     unit={hoverUnit}
