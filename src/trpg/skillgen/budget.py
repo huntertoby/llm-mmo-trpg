@@ -265,6 +265,35 @@ def _explode_ratio(sides: int, rerolls: int) -> Fraction:
     return value / base
 
 
+_BASE_CRIT_RATE = Fraction(1, 20)
+"""基礎暴擊率 5%（只有自然 20；技能自帶倍率的加點用，CR-1，05 5.4.2 第 7 點）。"""
+
+
+def _crit_factor(
+    skill: SkillDef, base_permille: int, share: Fraction
+) -> tuple[Fraction, list[str]]:
+    """暴擊的期望值係數（CR-1，05 5.4.2 第 7 點）與說明：
+
+    - 擴大暴擊範圍：1 ＋ 額外暴擊率 ×（倍率 − 100%）× 骰子占比；倍率是技能自帶的，沒帶照基礎
+      （``core.crit_damage.base_permille``）。200% 時和改版前的「1 ＋ 額外暴擊率 × 骰子占比」相同。
+    - 技能自帶倍率另加：1 ＋ 基礎暴擊率 5% ×（自帶倍率 − 基礎倍率）× 骰子占比。
+    """
+    permille = base_permille if skill.crit_permille is None else skill.crit_permille
+    factor, notes = Fraction(1), []
+    if skill.crit_range is not None:
+        extra_crit = Fraction(20 - skill.crit_range, 20)
+        ratio = 1 + extra_crit * Fraction(permille - _PERMILLE, _PERMILLE) * share
+        factor *= ratio
+        shown = "" if skill.crit_permille is None else f"・{permille / 10:g}%"
+        notes.append(f"暴擊 {skill.crit_range}–20{shown} ×{_fmt(ratio)}")
+    if skill.crit_permille is not None:
+        own = Fraction(skill.crit_permille - base_permille, _PERMILLE)
+        ratio = 1 + _BASE_CRIT_RATE * own * share
+        factor *= ratio
+        notes.append(f"暴擊傷害 {skill.crit_permille / 10:g}% ×{_fmt(ratio)}")
+    return factor, notes
+
+
 def _variance_factor(
     skill: SkillDef, effect: EffectSpec, library: ContentLibrary
 ) -> tuple[Fraction, str]:
@@ -285,11 +314,9 @@ def _variance_factor(
         ratio = 1 + (_explode_ratio(sides, core.explode_max) - 1) * share
         factor *= ratio
         notes.append(f"爆骰 ×{_fmt(ratio)}")
-    if skill.crit_range is not None:
-        extra_crit = Fraction(20 - skill.crit_range, 20)
-        ratio = 1 + extra_crit * share
-        factor *= ratio
-        notes.append(f"暴擊 {skill.crit_range}–20 ×{_fmt(ratio)}")
+    crit_ratio, crit_notes = _crit_factor(skill, core.crit_damage.base_permille, share)
+    factor *= crit_ratio
+    notes += crit_notes
     if skill.damage_permille is not None:
         factor *= Fraction(skill.damage_permille, _PERMILLE)
         notes.append(f"基礎傷害 ×{skill.damage_permille / _PERMILLE:g}")

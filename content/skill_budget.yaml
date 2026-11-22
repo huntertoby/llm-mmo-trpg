@@ -530,7 +530,9 @@ gamble_on_miss_rate_permille: 300
 # 高變異、超載、依情況縮放（Phase 3D-7b；初值，未經模擬；都屬於「期望值」算法）：
 #   爆骰：每顆骰的平均 E_k ＝ (s+1)/2 ＋ E_(k−1)/s（k＝explode_max，s＝面數；武器技用 explode_weapon_sides），
 #         傷害點數 × (1 ＋ (E_k ÷ E_0 − 1) × variance_dice_share_permille‰)；
-#   暴擊範圍：額外暴擊率 ＝ (20 − crit_range) ÷ 20（以基礎暴擊 20 為準），傷害點數 × (1 ＋ 額外暴擊率 × variance_dice_share_permille‰)；
+#   暴擊範圍：額外暴擊率 ＝ (20 − crit_range) ÷ 20（以基礎暴擊 20 為準），傷害點數 × (1 ＋ 額外暴擊率 × (倍率 − 100%) × variance_dice_share_permille‰)；
+#     倍率＝技能自帶的 crit_permille，沒帶照 rules/core.yaml 的 crit_damage.base_permille（CR-1，#178；200% 時和改版前相同）；
+#   技能自帶暴擊傷害倍率（CR-1）：另 × (1 ＋ 基礎暴擊率 5% × (自帶倍率 − 基礎倍率) × variance_dice_share_permille‰)；
 #   damage_permille：傷害點數 × ‰；scaling：傷害點數 × (1 ＋ min(cap, 預估步數 × per_step)‰)，預估步數見 scale_expected_steps_milli；
 #   超載：帶標籤的傷害點數 × (1 ＋ 平均層數 × per_stack‰ × overload_expected_permille‰)。
 variance_dice_share_permille: 700
