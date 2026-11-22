@@ -46,7 +46,8 @@ describe("previewText", () => {
   });
 
   it("summarises hit, crit and damage on the first line", () => {
-    expect(previewLines(base, names, view)[0]).toBe("命中 87.5%　暴擊 5%　傷害 3–9（期望 5.3）");
+    // CR-1b（05 5.4.2 第 8 點）：機率那行寫「暴擊率」，和範圍與倍率那行（「擲出 19–20 暴擊…」）分開
+    expect(previewLines(base, names, view)[0]).toBe("命中 87.5%　暴擊率 5%　傷害 3–9（期望 5.3）");
   });
 
   it("lists per-target statuses and certain / possible outcomes in Chinese", () => {

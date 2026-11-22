@@ -264,8 +264,8 @@ export function revealScrollTop(scrollTop: number, view: { top: number; bottom: 
   return scrollTop + Math.max(0, Math.min(below, box.top - view.top));
 }
 
-/** 預覽的總覽行（`previewLines` 用「　」接起「命中」「暴擊」「傷害」三段）。 */
-const HEAD_PART = /^(命中|暴擊|傷害) /;
+/** 預覽的總覽行（`previewLines` 用「　」接起「命中」「暴擊率」「傷害」三段；CR-1b 改寫「暴擊率」）。 */
+const HEAD_PART = /^(命中|暴擊率|傷害) /;
 
 /**
  * PR-2b（#147 測試模式；樣張第 3 節第 3 項）：預覽的總覽行拆成各自不換行的段（「傷害 3–10」不拆開），
