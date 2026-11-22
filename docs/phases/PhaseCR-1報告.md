@@ -16,7 +16,8 @@
 | A6 顯示（預覽、技能卡）與「暴擊只放大骰子」 | `2b4d8747d` |
 | B4 `races.yaml` 開頭註解（`races.py` 模組說明在 B1 一起改了） | `feef4634a` |
 | 截圖、重產 `寫死數值-清單.md` | `354aaf88b` |
-| 合併 main | `1eaac15a1` 之後的合併 commit |
+| 合併 main（`1eaac15a1`，只有 E4b 的前端與文件） | 合併 commit |
+| 全量第 1 次的修正：`scripts/x10/fields.yaml` 列入新的 ‰ 欄位 | `4fe6c88b0` |
 | 報告 | 最後一個 commit |
 
 A3 與 A4 同一個 commit：疊加就是 `crit_damage_permille` 把各來源加起來的同一個函式，分開會變成半成品。B2、B3 也同一個（B3 的「清單擴充」就是 B2 加的 `stats`）。
@@ -103,7 +104,19 @@ A3 與 A4 同一個 commit：疊加就是 `crit_damage_permille` 把各來源加
 
 ### 3.3 檢查指令
 
-（全量結果填在下面）
+| 指令 | 結束碼 |
+|---|---|
+| `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy`、`uv run lint-imports`（每個 commit 前） | 0 |
+| `uv run trpg content check` | 0（705 個檔、442 招通過預算） |
+| `uv run python scripts/hardcoded/classify.py --check` | 0（沒歸類 0；新增 3 條規則＋`_crit_factor` 併進既有規則，`寫死數值-清單.md` 重產） |
+| `corepack pnpm -C client typecheck`（tsc） | 0 |
+| `uv run python scripts/check.py --all`（合併 main 後） | 第 1 次 1：`tests/test_x10_rescale.py`、`tests/test_x10_fields.py` 兩個失敗（新數字欄位沒列進 `scripts/x10/fields.yaml`）→ 補成 keep（`4fe6c88b0`）。第 2 次 **0**：pytest 18677 passed、8 skipped；vitest 410 檔 4916 passed；寫下通過戳記 |
+| `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed）；CLI 快照、parity 沒變，不用重產 |
+| `corepack pnpm -C client build` | 0 |
+
+合併 main 之後 `src`、`content`、`config` 和比對用的 `feef4634a` 完全相同（`git diff --stat` 空），3.1 的比對結果適用於交件版本。
+
+測試輸出（暫存區）：`check_all.log`、`check_all2.log`、`slow.log`、`build2.log`、`c78_a1.log`、`c78_final.log`、`census_new.log`、`budget_final.txt`。
 
 ### 3.4 截圖（交給美術 PM）
 
