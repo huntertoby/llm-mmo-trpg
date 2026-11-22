@@ -33,6 +33,8 @@ pytest 經看門狗 ``scripts/run_pytest.py`` 執行（QF-3a）：超過 10 分�
 全部步驟通過（沒有失敗、也沒有略過）且追蹤中的檔案沒有未 commit 的修改時，在
 ``<git common dir>/pm-check-pass/<HEAD 的 tree hash>`` 寫一個戳記（QF-5）。push hook 看到要推的
 內容已有戳記，就不再重跑本腳本；合併後內容有任何不同（tree hash 變了）就照常重跑。
+分流跑（有步驟被略過）改寫在 ``pm-check-pass-split/<tree hash>``（內容記 commit、範圍、基準），
+hook 不看這個位置，所以分流跑不會讓 hook 略過完整檢查（TS-1）。
 
 工具的尋找順序：目前 Python 環境的模組（``sys.executable -m <tool>``）→
 與 ``sys.executable`` 同一資料夾的執行檔 → ``PATH`` 上的執行檔（``shutil.which``）。
@@ -367,8 +369,15 @@ def _git(*args: str) -> str | None:
     return done.stdout.strip() if done.returncode == 0 else None
 
 
-def write_pass_stamp() -> Path | None:
-    """追蹤中的檔案都已 commit 時，為 HEAD 的 tree 寫通過戳記；回傳戳記路徑（沒寫則 None）。"""
+SPLIT_STAMP_DIR = "pm-check-pass-split"
+"""分流跑（略過了步驟）的戳記位置。push hook 只看 ``pm-check-pass``，所以分流戳記不會讓它放行。"""
+
+
+def write_pass_stamp(plan: Plan | None = None) -> Path | None:
+    """追蹤中的檔案都已 commit 時，為 HEAD 的 tree 寫通過戳記；回傳戳記路徑（沒寫則 None）。
+
+    全跑（``plan`` 是 None 或範圍 ``all``）寫 ``pm-check-pass/<tree>``（hook 看到就略過）；
+    分流跑寫在 ``pm-check-pass-split/<tree>``，hook 不看。內容：commit、範圍、比對基準。"""
     if _git("status", "--porcelain", "--untracked-files=no") != "":
         return None
     tree = _git("rev-parse", "HEAD^{tree}")
@@ -376,9 +385,12 @@ def write_pass_stamp() -> Path | None:
     common = _git("rev-parse", "--path-format=absolute", "--git-common-dir")
     if not (tree and commit and common):
         return None
-    stamp = Path(common) / STAMP_DIR / tree
+    scope = SCOPE_ALL if plan is None else plan.scope
+    base = plan.base if plan is not None and plan.base else "-"
+    folder = STAMP_DIR if scope == SCOPE_ALL else SPLIT_STAMP_DIR
+    stamp = Path(common) / folder / tree
     stamp.parent.mkdir(parents=True, exist_ok=True)
-    stamp.write_text(f"{commit}\n", encoding="utf-8")
+    stamp.write_text(f"{commit}\nscope: {scope}\nbase: {base}\n", encoding="utf-8", newline="")
     return stamp
 
 
@@ -417,10 +429,13 @@ def main(argv: list[str] | None = None) -> int:
         print(red(f"\n失敗：{len(failed)} 個步驟（{'、'.join(failed)}）"))
         return 1
     print(green("\n全部檢查通過。"))
-    # 分流跑（有步驟略過）先不寫戳記，免得 push hook 把它當成全部通過。
-    full_pass = all(result in ("通過", "警告") for _, result in results)
-    if plan.scope == SCOPE_ALL and full_pass and (stamp := write_pass_stamp()):
-        print(f"已寫入通過戳記：{stamp}（push 時同內容不再重跑）")
+    if all(result in ("通過", "警告") for _, result in results) and (
+        stamp := write_pass_stamp(plan)
+    ):
+        if plan.scope == SCOPE_ALL:
+            print(f"已寫入通過戳記：{stamp}（push 時同內容不再重跑）")
+        else:
+            print(f"已寫入分流戳記：{stamp}（只記錄；push hook 照常重跑）")
     return 0
 
 

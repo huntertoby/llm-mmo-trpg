@@ -227,6 +227,40 @@ def test_describe_says_what_runs_what_is_skipped_and_why() -> None:
 # --- 戳記與 main ----------------------------------------------------------------------------
 
 
+def _stamp_git(common: Path) -> object:
+    answers = {
+        "status": "",
+        "HEAD^{tree}": "tree123",
+        "HEAD": "commit456",
+        "--git-common-dir": str(common),
+    }
+
+    def fake(*args: str) -> str | None:
+        return answers[args[-1]] if args[-1] in answers else answers[args[0]]
+
+    return fake
+
+
+def test_full_scope_stamp_goes_where_the_hook_looks(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(check, "_git", _stamp_git(tmp_path))
+    stamp = check.write_pass_stamp(check.Plan(check.SCOPE_ALL, "x", BASE, 1))
+    assert stamp == tmp_path / "pm-check-pass" / "tree123"
+    assert stamp.read_text(encoding="utf-8") == f"commit456\nscope: all\nbase: {BASE}\n"
+
+
+@pytest.mark.parametrize("scope", ["client", "backend"])
+def test_split_stamp_goes_elsewhere(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, scope: str
+) -> None:
+    monkeypatch.setattr(check, "_git", _stamp_git(tmp_path))
+    stamp = check.write_pass_stamp(check.Plan(scope, "x", BASE, 1))
+    assert stamp == tmp_path / "pm-check-pass-split" / "tree123"
+    assert stamp.read_text(encoding="utf-8") == f"commit456\nscope: {scope}\nbase: {BASE}\n"
+    assert not (tmp_path / "pm-check-pass").exists()
+
+
 def _run_main(monkeypatch: pytest.MonkeyPatch, args: list[str], changed: object) -> list[str]:
     ran: list[str] = []
 
@@ -236,7 +270,7 @@ def _run_main(monkeypatch: pytest.MonkeyPatch, args: list[str], changed: object)
 
     monkeypatch.setattr(check, "run_step", fake_run)
     monkeypatch.setattr(check, "changed_paths", changed)
-    monkeypatch.setattr(check, "write_pass_stamp", lambda: None)
+    monkeypatch.setattr(check, "write_pass_stamp", lambda plan: None)
     monkeypatch.setattr(check, "client_reading_tests", lambda: [])
     assert check.main(args) == 0
     return ran
