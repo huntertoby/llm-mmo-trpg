@@ -297,8 +297,8 @@ export const BASIC_MODES: readonly { kind: Exclude<ModeKind, "skill">; label: st
 ];
 
 /**
- * 基本動作的種類（Phase 3-21b；`docs/design/05-戰鬥.md` 5.2.2：不含結束回合與管理動作，上限 10 個）：
- * 移動（點格子）＋ 普攻、跑步、守護、推擊、絆倒、互動（推動、撥開）、換位、瞄準、攀跳。
+ * 基本動作的種類（Phase 3-21b；`docs/design/05-戰鬥.md` 5.2.2：不含結束回合與管理動作，上限 11 個，#177）：
+ * 移動（點格子）＋ 普攻、跑步、守護、推擊、絆倒、扶起、互動（推動、撥開）、換位、瞄準、攀跳。
  */
 export const BASIC_ACTION_KINDS: readonly string[] = [
   "move",
@@ -307,17 +307,14 @@ export const BASIC_ACTION_KINDS: readonly string[] = [
   "defend",
   "shove",
   "trip",
+  "help_up",
   "interact",
   "swap",
   "aim",
   "vault",
 ];
-export const BASIC_ACTION_LIMIT = 10;
-/**
- * 協助動作（KD-1「扶起」）：放在「更多動作」，不算進基本動作的上限（同伺服器的 `AID_ACTION_TYPES`；
- * 改成算進上限時把 "help_up" 移進 `BASIC_ACTION_KINDS`）。
- */
-export const AID_ACTION_KINDS: readonly string[] = ["help_up"];
+/** 基本動作總數上限（05 5.2.2；#177 起 11，含扶起；同伺服器 `trpg.engine.actions.BASIC_ACTION_LIMIT`）。 */
+export const BASIC_ACTION_LIMIT = 11;
 /** 武器動作（Phase 3-24a2）：只有特定武器才有，不算進基本動作的上限；目前只有裝填（火槍空膛時才出現在「更多動作」）。 */
 export const WEAPON_ACTION_KINDS: readonly string[] = ["reload"];
 

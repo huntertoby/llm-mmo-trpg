@@ -18,7 +18,7 @@ from trpg.shared.types import Element, ObjectId, Pos, UnitId
 __all__ = [
     "ACTION_ADAPTER",
     "ACTION_LIST_ADAPTER",
-    "AID_ACTION_TYPES",
+    "BASIC_ACTION_LIMIT",
     "BASIC_ACTION_TYPES",
     "CHARGE_ACTION_TYPES",
     "MANAGEMENT_ACTION_TYPES",
@@ -430,17 +430,18 @@ BASIC_ACTION_TYPES: tuple[str, ...] = (
     "defend",
     "shove",
     "trip",
+    "help_up",
     "interact",
     "swap",
     "aim",
     "vault",
 )
-"""基本動作的種類（``docs/design/05-戰鬥.md`` 5.2.2：上限 10 個，不含結束回合與管理操作）。"""
+"""基本動作的種類（``docs/design/05-戰鬥.md`` 5.2.2：上限 :data:`BASIC_ACTION_LIMIT` 個，不含結束
+回合與管理操作）。"""
 
-AID_ACTION_TYPES: tuple[str, ...] = ("help_up",)
-"""協助動作（KD-1「扶起」）：介面放在「更多動作」，但**不算進**基本動作的上限（05 5.2.2 的 10 個；
-KD-1 待玩法 PM 定）。要改成算進上限時，把 ``"help_up"`` 移進 :data:`BASIC_ACTION_TYPES`、這裡留空，
-只改這一處。"""
+BASIC_ACTION_LIMIT: int = 11
+"""基本動作總數上限（05 5.2.2；#177 起 11 個，含「扶起」）。只有測試讀它（設計上的約束，引擎不依它
+做任何結算），所以不放 content；前端 ``client/src/battle/targeting.ts`` 的同名常數要一起改。"""
 
 WEAPON_ACTION_TYPES: tuple[str, ...] = ("reload",)
 """武器動作：只有特定武器才有（裝填）；不算進基本動作的上限。"""
