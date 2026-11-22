@@ -11,6 +11,7 @@ from trpg.api.schemas import (
     GameRulesOut,
     Glossary,
     GlossaryEntry,
+    RuleDiceOut,
     SkillSlotsOut,
     StatusLook,
     WeaponLookEntry,
@@ -22,6 +23,7 @@ from trpg.narrative.action_info import action_texts, objective_texts
 from trpg.narrative.status_info import stack_rules, status_rules
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.roguelite.flashes import max_carry
+from trpg.shared.range_text import DiceNote
 from trpg.shared.types import Attribute
 from trpg.world.league import league_rules
 from trpg.world.opening_limits import opening_end_level
@@ -44,7 +46,18 @@ def _entry(
         description_zh=description_zh,
         tags=tags,
         rules_zh=rules_zh,
+        rules_dice=_rules_dice(rules_zh),
         status_look=status_look,
+    )
+
+
+def _rules_dice(lines: tuple[str, ...]) -> tuple[RuleDiceOut, ...]:
+    """規則句裡的骰子行（:func:`~trpg.shared.range_text.dice_note` 產生的 :class:`DiceNote`；
+    HC-6c）。"""
+    return tuple(
+        RuleDiceOut(line=i, count=line.dice_count, sides=line.dice_sides, scale=line.dice_scale)
+        for i, line in enumerate(lines)
+        if isinstance(line, DiceNote)
     )
 
 

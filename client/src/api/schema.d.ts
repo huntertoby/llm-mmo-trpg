@@ -6042,6 +6042,11 @@ export interface components {
              * @default []
              */
             rules_zh: string[];
+            /**
+             * Rules Dice
+             * @default []
+             */
+            rules_dice: components["schemas"]["RuleDiceOut"][];
         };
         /**
          * GrantPreviewOut
@@ -9696,6 +9701,21 @@ export interface components {
             fits: components["schemas"]["Attribute"][];
             /** Text Zh */
             text_zh: string;
+        };
+        /**
+         * RuleDiceOut
+         * @description 規則句裡的一行骰子行（HC-6c，AR-X10 待決 5）：``rules_zh[line]`` 是「擲 NdM，每點 ×K」，
+         *     補充它上一句的範圍。前端照這個把骰子行另起一行、用次要字色，不再比對句型。
+         */
+        RuleDiceOut: {
+            /** Line */
+            line: number;
+            /** Count */
+            count: number;
+            /** Sides */
+            sides: number;
+            /** Scale */
+            scale: number;
         };
         /**
          * Run

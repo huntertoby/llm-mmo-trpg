@@ -15,7 +15,7 @@ describe("AR-X10：狀態提示的骰子行", () => {
     ]);
   });
   it("骰子行排在它補充的那句下面；後面還有規則句時另起一段", () => {
-    expect(tipParts(["說明", "受到 20–120 雷電傷害", "擲 2d6，每點 ×10", "上限 5 層"])).toEqual([
+    expect(tipParts(["說明", "受到 20–120 雷電傷害", "擲 2d6，每點 ×10", "上限 5 層"], new Set([2]))).toEqual([
       { text: "說明 受到 20–120 雷電傷害", secondary: false },
       { text: "擲 2d6，每點 ×10", secondary: true },
       { text: "上限 5 層", secondary: false },
@@ -26,8 +26,9 @@ describe("AR-X10：狀態提示的骰子行", () => {
     expect(statusTipParts("no_such_status", false)).toEqual([{ text: "狀態", secondary: false }]);
     expect(tipParts(["只有說明", ""])).toEqual([{ text: "只有說明", secondary: false }]);
   });
-  it("「擲」開頭但不是骰子行的句子不算", () => {
+  it("沒標成骰子行的句子不算（HC-6c：照名詞表 rules_dice，不比對句型）", () => {
     expect(tipParts(["擲 d1000 決定"]).every((p) => !p.secondary)).toBe(true);
+    expect(tipParts(["擲 1d6，每點 ×10"]).every((p) => !p.secondary)).toBe(true);
   });
   it("說明卡畫出次要字色的一行（part-tip-secondary：--muted，緊貼上一句）", () => {
     const src = readFileSync("src/ui/PartTip.tsx", "utf8");

@@ -155,7 +155,7 @@ describe("118 個狀態", () => {
 describe("不認得的狀態", () => {
   it("不認得的 ID、polarity、空字串、null 都畫得出來、不丟例外", () => {
     const withLook = (id: string, polarity: string): void => {
-      setGlossary({ ...real, statuses: [...real.statuses, { id, name_zh: "新奇狀態", description_zh: null, tags: [], rules_zh: [], status_look: { polarity, control_group: null, dot_element: null, skip_turn: false, removed_by_element: [], absorbs_damage: false, prevents_move: false } }] });
+      setGlossary({ ...real, statuses: [...real.statuses, { id, name_zh: "新奇狀態", description_zh: null, tags: [], rules_zh: [], rules_dice: [], status_look: { polarity, control_group: null, dot_element: null, skip_turn: false, removed_by_element: [], absorbs_damage: false, prevents_move: false } }] });
     };
     for (const id of ["brand_new", "", "zzz_未知"]) {
       const { ctx } = fakeCtx();
@@ -179,7 +179,7 @@ describe("不認得的狀態", () => {
   });
 
   it("不認得的狀態在中間畫名稱第一個字", () => {
-    setGlossary({ ...real, statuses: [...real.statuses, { id: "brand_new", name_zh: "全新", description_zh: null, tags: [], rules_zh: [], status_look: null }] });
+    setGlossary({ ...real, statuses: [...real.statuses, { id: "brand_new", name_zh: "全新", description_zh: null, tags: [], rules_zh: [], rules_dice: [], status_look: null }] });
     const { ctx, calls } = fakeCtx();
     paintStatusIcon(ctx, "brand_new", 0, 0, 26);
     expect(calls).toContain("fillText");
@@ -251,7 +251,7 @@ describe("身上特效（依欄位，不寫死 ID）", () => {
       ...real,
       statuses: [
         ...real.statuses,
-        { id: "petrified", name_zh: "石化", description_zh: null, tags: [], rules_zh: [], status_look: { polarity: "debuff", control_group: "hard", dot_element: null, skip_turn: true, removed_by_element: ["fire"], absorbs_damage: false, prevents_move: false } },
+        { id: "petrified", name_zh: "石化", description_zh: null, tags: [], rules_zh: [], rules_dice: [], status_look: { polarity: "debuff", control_group: "hard", dot_element: null, skip_turn: true, removed_by_element: ["fire"], absorbs_damage: false, prevents_move: false } },
       ],
     });
     expect(bodyEffects(["petrified"]).frozen).toBe(true);

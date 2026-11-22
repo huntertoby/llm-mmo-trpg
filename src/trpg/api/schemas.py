@@ -186,6 +186,18 @@ class StatusLook(_ApiModel):
     prevents_move: bool = False
 
 
+class RuleDiceOut(_ApiModel):
+    """規則句裡的一行骰子行（HC-6c，AR-X10 待決 5）：``rules_zh[line]`` 是「擲 NdM，每點 ×K」，
+    補充它上一句的範圍。前端照這個把骰子行另起一行、用次要字色，不再比對句型。"""
+
+    line: int
+    """``rules_zh`` 的第幾行（0 起）。"""
+    count: int
+    sides: int
+    scale: int
+    """每點乘幾（``core.yaml`` 的 ``quantity_scale``）。"""
+
+
 class GlossaryEntry(_ApiModel):
     id: str
     name_zh: str
@@ -195,6 +207,8 @@ class GlossaryEntry(_ApiModel):
     """只有 ``statuses`` 的項目會有（Phase 3-36a）。"""
     rules_zh: tuple[str, ...] = ()
     """靜態規則說明（Phase 3-15）：地形、表面、物件「會怎樣」的中文短句，由內容資料產生。"""
+    rules_dice: tuple[RuleDiceOut, ...] = ()
+    """``rules_zh`` 裡哪幾行是骰子行（HC-6c；依行號排序，沒有就空）。"""
 
 
 class WeaponLookEntry(_ApiModel):

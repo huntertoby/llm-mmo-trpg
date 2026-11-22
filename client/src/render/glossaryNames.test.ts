@@ -22,7 +22,7 @@ describe("部件名稱讀 glossary", () => {
   it("新增原語只要 glossary 有一列就顯示中文名；沒有時顯示代碼、不壞", () => {
     expect(effectPart({ type: "brand_new" }).label).toBe("brand_new");
     expect(effectPart({ type: "brand_new" }).description).toBeUndefined();
-    setGlossary({ ...real, effects: [...real.effects, { id: "brand_new", name_zh: "全新原語", description_zh: "新的說明", tags: [], rules_zh: [] }] });
+    setGlossary({ ...real, effects: [...real.effects, { id: "brand_new", name_zh: "全新原語", description_zh: "新的說明", tags: [], rules_zh: [], rules_dice: [] }] });
     expect(effectPart({ type: "brand_new" }).label).toBe("全新原語");
     expect(partTip(effectPart({ type: "brand_new" }))).toBe("效果原語：新的說明");
   });

@@ -15067,6 +15067,14 @@
             "type": "array",
             "title": "Rules Zh",
             "default": []
+          },
+          "rules_dice": {
+            "items": {
+              "$ref": "#/components/schemas/RuleDiceOut"
+            },
+            "type": "array",
+            "title": "Rules Dice",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -24042,6 +24050,36 @@
         ],
         "title": "RouteHintOut",
         "description": "關鍵字與屬性不搭的提示（BAL-19g，06 6.27.3，#110）：配點後的最高屬性不在 ``fits`` 時，\n前端顯示 ``text_zh``（只提示、不擋）。``lean``：選的關鍵字前期的技能多半是法術（``spell``）或\n武器技（``weapon``）。"
+      },
+      "RuleDiceOut": {
+        "properties": {
+          "line": {
+            "type": "integer",
+            "title": "Line"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "sides": {
+            "type": "integer",
+            "title": "Sides"
+          },
+          "scale": {
+            "type": "integer",
+            "title": "Scale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "line",
+          "count",
+          "sides",
+          "scale"
+        ],
+        "title": "RuleDiceOut",
+        "description": "規則句裡的一行骰子行（HC-6c，AR-X10 待決 5）：``rules_zh[line]`` 是「擲 NdM，每點 ×K」，\n補充它上一句的範圍。前端照這個把骰子行另起一行、用次要字色，不再比對句型。"
       },
       "Run": {
         "properties": {

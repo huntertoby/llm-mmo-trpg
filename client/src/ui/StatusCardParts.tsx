@@ -15,7 +15,7 @@ import { DelayTrail } from "./MotionBits";
 import { PartTip } from "./PartTip";
 import { TileCanvas } from "./SkillIconView";
 import { StackTip } from "./StackTip";
-import { tipParts, type TipPart } from "./tipParts";
+import { entryTipParts, type TipPart } from "./tipParts";
 import { barFill, statusCorner, type ApPip, type ApRow, type BarData, type StatChip, type StatIcon } from "./statusCard";
 
 /** 條：三條一樣粗，條上寫「HP 41 / 50」；HP 條上疊淺藍的護盾段。 */
@@ -122,12 +122,10 @@ export function StatusBadge({ status, text }: { status: StatusView; text: string
   );
 }
 
-/** 狀態說明卡的各段（AR-X10）：說明＋規則句，骰子行「擲 NdM，每點 ×10」另起一行、次要字色；帶「會擴散」時最後多一行。
+/** 狀態說明卡的各段（AR-X10）：說明＋規則句，骰子行「擲 NdM，每點 ×10」另起一行、次要字色（HC-6c 起照名詞表 `rules_dice`）；帶「會擴散」時最後多一行。
  * 對照表沒有這個狀態時寫「狀態」（同 `statusTile`）。 */
 export function statusTipParts(id: string, spread: boolean): TipPart[] {
-  const entry = glossaryEntry("statuses", id);
-  const found = tipParts([entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])]);
-  const parts = found.length === 0 ? [{ text: "狀態", secondary: false }] : found;
+  const parts = entryTipParts(glossaryEntry("statuses", id), "狀態");
   return spread ? [...parts, { text: spreadNote(), secondary: false }] : parts;
 }
 
