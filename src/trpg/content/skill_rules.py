@@ -195,6 +195,8 @@ class ModifierPoints(ContentModel):
     form_upkeep_per_100: int = Field(default=0, ge=0)
     """形態維持費每減少 100‰ 的價值（Phase 3J-3，化形專精；每次使用的價值）。"""
     form_entry_per_100: int = Field(default=0, ge=0)
+    crit_damage_per_100: int = Field(default=0, ge=0)
+    """暴擊傷害每 ±100‰ 的價值（CR-1，#178；每次使用的價值，負的是代價）。"""
     silent_strike: int = Field(default=0, ge=0)
     """無聲（BS-1，#157：近戰攻擊不讓目標轉身；每次使用的價值）。"""
     """形態進入獎勵的數值每增加 100‰ 的價值（Phase 3J-3，化形專精）。"""

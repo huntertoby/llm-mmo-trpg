@@ -72,6 +72,7 @@ VALID_CHANGES: dict[str, dict[str, Any]] = {
     "form_entry_permille": rule(SKILLS, {"form_entry_permille": 500}),
     "silent_strike": rule({"all_attacks": True}, {"silent_strike": True}),  # BS-1（#157）
     "attack_shape": rule({"actions": ["attack"]}, {"attack_shape": "line"}),  # E5（#175）
+    "crit_damage_permille": rule({"all_attacks": True}, {"crit_damage_permille": 250}),  # CR-1
 }
 
 

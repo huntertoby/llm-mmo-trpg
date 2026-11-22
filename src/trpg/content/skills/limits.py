@@ -70,6 +70,10 @@ class SkillLimits(ContentModel):
     """``cost.cooldown`` 的上限（回合）。"""
     min_crit_range: int = Field(ge=2, le=20)
     """技能 ``crit_range`` 的下限（6.17 B）。"""
+    min_crit_permille: int = Field(default=1500, ge=1000, le=5000)
+    """技能自帶暴擊傷害倍率（``crit_permille``，CR-1）的下限（‰）。"""
+    max_crit_permille: int = Field(default=3000, ge=1000, le=5000)
+    """技能自帶暴擊傷害倍率的上限（‰）。"""
     max_grant_duration: int = Field(ge=1, le=20)
     """``grant_skill`` 的 ``duration`` 上限（輪，6.20）。"""
     max_summon_count: int = Field(ge=1, le=10)
@@ -209,6 +213,10 @@ def _top_problems(skill: SkillDef, limits: SkillLimits, *, count_effects: bool) 
         problems.append(f"cost.cooldown：冷卻最多 {limits.max_cooldown} 回合，收到 {cooldown}")
     if skill.crit_range is not None and skill.crit_range < limits.min_crit_range:
         problems.append(f"crit_range：最小是 {limits.min_crit_range}，收到 {skill.crit_range}")
+    crit = skill.crit_permille
+    if crit is not None and not limits.min_crit_permille <= crit <= limits.max_crit_permille:
+        low, high = limits.min_crit_permille, limits.max_crit_permille
+        problems.append(f"crit_permille：只能 {low}～{high}，收到 {crit}")
     problems += _form_entry_problems(skill, limits)
     return problems + _cost_problems(skill, limits) + _primitive_problems(skill, limits)
 

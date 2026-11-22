@@ -173,6 +173,8 @@ skill_limits:
   max_effects: 4              # 一個技能（複合技能兩段合計）最多幾個效果原語
   max_cooldown: 6             # 技能冷卻最多幾回合
   min_crit_range: 15          # 技能擴大暴擊範圍（crit_range）的下限（6.17 B）：最寬 15–20
+  min_crit_permille: 1500     # CR-1（#178）：技能自帶的暴擊傷害倍率（crit_permille）的範圍（‰，初值）
+  max_crit_permille: 3000
   max_grant_duration: 4       # 暫時獲得技能（grant_skill）最多幾輪（6.20）
   max_summon_count: 2         # 一次召喚的數量只能是 1 或這個值（3-33f2 數量型分歧進化）
   max_on_kill_effects: 2      # 擊殺時效果（on_kill）最多幾個

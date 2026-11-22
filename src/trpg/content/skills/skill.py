@@ -166,6 +166,13 @@ class SkillDef(ContentModel):
     """擴大暴擊範圍（Phase 3D-7b，6.17 B）：自然骰不小於它就暴擊（17 ＝ 17–20）；取技能與武器
     （法術技為 20）中較寬的。需要有傷害效果。下限是 ``core.yaml`` 的
     ``skill_limits.min_crit_range``（HC-4b，``Ruleset`` 層檢查）。"""
+    crit_permille: int | None = Field(
+        default=None, ge=1000, le=5000, exclude_if=lambda v: v is None
+    )
+    """這招自帶的暴擊傷害倍率（CR-1，05 5.4.2 第 3 點，例「這招暴擊 250%」）：比基礎倍率
+    （``core.crit_damage.base_permille``）多出的部分加進這招的暴擊傷害，再套全身上下限。需要有傷害
+    效果、只能用在主動技能；範圍是 ``core.yaml`` 的 ``skill_limits.min_crit_permille``～
+    ``max_crit_permille``。沒填時不輸出（既有技能的序列化與雜湊不變）。"""
     damage_permille: int | None = Field(default=None, ge=100, le=_PERMILLE - 1)
     """基礎傷害折扣（Phase 3D-7b，6.17 B）：技能的每個傷害效果再 × 它（‰；750 ＝ −25%），
     例如高變異技能用較低的基礎傷害換取暴擊與爆骰。需要有傷害效果。"""
@@ -1320,13 +1327,16 @@ class SkillDef(ContentModel):
                 )
 
     def _check_variance(self) -> None:
-        """``crit_range``、``damage_permille`` 需要有傷害效果、只能用在主動技能。"""
-        if self.crit_range is None and self.damage_permille is None:
+        """``crit_range``、``crit_permille``、``damage_permille`` 需要有傷害效果、只能用在
+        主動技能。"""
+        if self.crit_range is None and self.damage_permille is None and self.crit_permille is None:
             return
         if self.kind != "active":
-            raise ValueError(f"只有主動技能可以有 crit_range、damage_permille，收到 {self.kind}")
+            raise ValueError(
+                f"只有主動技能可以有 crit_range、crit_permille、damage_permille，收到 {self.kind}"
+            )
         if not any(e.type == "damage" for e in self.effects):
-            raise ValueError("crit_range、damage_permille 需要技能有傷害效果")
+            raise ValueError("crit_range、crit_permille、damage_permille 需要技能有傷害效果")
 
     def _check_effect(self, at: str, effect: EffectSpec, *, top: bool = False) -> None:
         """一個效果的結構；``at`` 是它的完整路徑（``effects[0]``、``cost.on_miss[1]``、

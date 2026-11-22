@@ -103,6 +103,7 @@ targets:
       - {path: cost.self_status.duration, label_zh: 自身代價狀態持續, kind: int, hint_min: 2, hint_max: 3, existing_only: true, note_zh: 施放後自己獲得的代價狀態持續回合（2～3）。}
       - {path: stance_upkeep, label_zh: 姿態維持費, kind: int, hint_min: 0, hint_max: 2, kinds: [stance], note_zh: 每個自己的回合開始付的點數（0～2）；沒寫＝0。}
       - {path: crit_range, label_zh: 暴擊下限, kind: int, hint_min: 15, hint_max: 19, existing_only: true, note_zh: 自然骰不小於它就暴擊（15～19）；清空＝不擴大。}
+      - {path: crit_permille, label_zh: 這招的暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, existing_only: true, note_zh: 這招暴擊時的傷害倍率（2500＝250%）；比基礎倍率多出的部分另算預算。清空＝照武器（法術照基礎 200%）。}
       - {path: damage_permille, label_zh: 基礎傷害折扣（‰）, kind: permille, hint_min: 100, hint_max: 999, existing_only: true, note_zh: 每個傷害效果再乘它（100～999）；清空＝不打折。}
       - {path: shape.range, label_zh: 射程, kind: range, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）；寫「武器射程」的不能改。射程每格 ±5% 預算（基準 4）。}
       - {path: shape.size, label_zh: 範圍大小, kind: int, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）。}
@@ -274,6 +275,8 @@ targets:
       # GS-3（#173，06 6.30）：帶進入時效果的化身技的冷卻下限（最低階級 min_form_entry_tier 是結構，不開）。
       - {path: skill_limits.min_form_entry_cooldown, label_zh: 帶進入時效果的化身技最短冷卻（回合）, kind: int, hint_min: 2, hint_max: 5, note_zh: 3 階以上的化身技帶「進入時效果」（例：熊王怒吼變身時讓周圍的敵人虛弱）時，冷卻（cost.cooldown）至少要這麼多回合。調高：這類化身技更難在不同形態之間輪替、每回合都發一次進入時效果；調低：可以更常發。調高後，現有冷卻比它短的化身技會在驗證時列出，要先改那些技能（目前手寫的 4 招都是 3）。設計下限是 2。只能 1～20。}
       - {path: skill_limits.max_cooldown, label_zh: 技能冷卻上限（回合）, kind: int, hint_min: 3, hint_max: 12, note_zh: 技能的冷卻（cost.cooldown）最多幾回合（內容、組合器、LLM、工坊都照這個擋）。調低後，現有冷卻超過的技能會在驗證時列出，要先改那些技能。只能 1～20。}
+      - {path: skill_limits.min_crit_permille, label_zh: 技能自帶暴擊傷害的下限（‰）, kind: permille, hint_min: 1000, hint_max: 2000, note_zh: 技能自己帶的暴擊傷害倍率（crit_permille）最低只能填到這麼多（1500＝150%）。現有低於它的技能會在驗證時列出。只能 1000～5000。}
+      - {path: skill_limits.max_crit_permille, label_zh: 技能自帶暴擊傷害的上限（‰）, kind: permille, hint_min: 2000, hint_max: 4000, note_zh: 技能自己帶的暴擊傷害倍率最高只能填到這麼多（3000＝300%）。越大，自帶高暴傷的招能做得越極端；現有超過它的技能會在驗證時列出。只能 1000～5000。}
       - {path: skill_limits.min_crit_range, label_zh: 技能擴大暴擊的極限（自然骰）, kind: int, hint_min: 13, hint_max: 19, note_zh: 技能的擴大暴擊範圍（crit_range）最寬只能到自然骰這個數字起就暴擊（15＝15～20 都暴擊）。越小，擴大暴擊的技能能做得越強。調高後，現有比它寬的技能會在驗證時列出。只能 2～20。}
       - {path: skill_limits.max_grant_duration, label_zh: 暫時獲得技能的最長輪數, kind: int, hint_min: 2, hint_max: 8, note_zh: 暫時獲得技能（grant_skill）給的技能最多留幾輪。越大，給技能的招能持續越久。調低後，現有超過的技能會在驗證時列出。只能 1～20。}
       - {path: skill_limits.max_refund_ap, label_zh: 擊殺返還 AP 的上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 擊殺時效果「返還 AP」（refund_ap）一次最多還幾點 AP（工坊的選項範圍也照這個）。越大，擊殺後連動越強。調低後，現有超過的技能會在驗證時列出。只能 1～10。}
@@ -606,6 +609,7 @@ targets:
       - {path: modifier.points_milli.summon_damage_per_100, label_zh: 修正：召喚物傷害每 +10%的價值, group_zh: 修正技能, kind: int, hint_min: 150, hint_max: 600, note_zh: 千分之一點；修正規則「召喚物傷害每 +10% 的價值」，乘上每場預估使用次數就是點數。越大，帶這條規則的修正技能越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: modifier.points_milli.form_upkeep_per_100, label_zh: 修正：形態維持費每 −10%的價值, group_zh: 修正技能, kind: int, hint_min: 100, hint_max: 400, note_zh: 千分之一點；修正規則「形態維持費每減少 10% 的價值」，乘上每場預估使用次數就是點數。越大，帶這條規則的修正技能越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: modifier.points_milli.form_entry_per_100, label_zh: 修正：形態進入獎勵每 +10%的價值, group_zh: 修正技能, kind: int, hint_min: 100, hint_max: 400, note_zh: 千分之一點；修正規則「形態進入獎勵每 +10% 的價值」，乘上每場預估使用次數就是點數。越大，帶這條規則的修正技能越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
+      - {path: modifier.points_milli.crit_damage_per_100, label_zh: 暴擊傷害每 +10% 的價值, group_zh: 修正技能, kind: int, hint_min: 0, hint_max: 200, note_zh: 千分之一點；修正技「暴擊傷害 +10%」每次使用值多少（初值 25＝基礎暴擊率 5% × 10% × 骰子占比 0.7 × 基準傷害 7），乘上預估使用次數就是預算點數。越大，加暴傷的修正技越貴、同預算能加的越少。}
       - {path: modifier.points_milli.silent_strike, label_zh: 無聲（被動常駐）的價值, group_zh: 修正技能, kind: int, hint_min: 0, hint_max: 1000, note_zh: 千分之一點；每次近戰攻擊不讓目標轉身值多少，乘上預估使用次數（所有攻擊 10 次）就是無聲被動的預算點數（360＝3.6 點）。改了「無聲步」這類被動的預算比例跟著變。}
       # SK-2b（SK-2 待決 5）：鉤的冷卻下限。
       - {path: hook_min_cooldown, label_zh: 鉤的最短冷卻（回合）, group_zh: 冷卻規則, kind: int, hint_min: 2, hint_max: 5, note_zh: 帶「鉤」（把直線上第一個敵人拉到身邊）的技能冷卻至少這麼多回合；手寫、組合器、LLM 與工坊做的鉤都照這個。越小鉤越常用。只能 1 以上。}
@@ -895,6 +899,8 @@ targets:
       - {path: stat_prices.defense.per, label_zh: 數值詞條：防禦的一個單位（‰）, group_zh: 數值詞條的單價, kind: permille, hint_min: 10, hint_max: 40, note_zh: 防禦值詞條一個單位是多少千分比的防禦（20＝2%）。越大，同點數給的防禦越多（越便宜）。}
       - {path: stat_prices.move.points, label_zh: 數值詞條：移動的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 6, hint_max: 24, note_zh: 移動詞條每一個單位花這麼多點。越大，移動詞條越貴、越少見。}
       - {path: stat_prices.move.per, label_zh: 數值詞條：移動的一個單位（格）, group_zh: 數值詞條的單價, kind: int, hint_min: 1, hint_max: 2, note_zh: 移動詞條一個單位是幾格。越大，同點數給的移動越多（越便宜）。}
+      - {path: stat_prices.crit_damage.points, label_zh: 數值詞條：暴擊傷害的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 2, hint_max: 15, note_zh: 暴擊傷害詞條每一個單位花這麼多點（CR-1 初值 3，刻意比暴擊範圍 +1 的 15 點貴）。越大，暴擊傷害詞條越貴。}
+      - {path: stat_prices.crit_damage.per, label_zh: 數值詞條：暴擊傷害的一個單位（‰）, group_zh: 數值詞條的單價, kind: permille, hint_min: 50, hint_max: 200, note_zh: 暴擊傷害詞條一個單位是多少千分比（100＝暴擊傷害 +10%）。越大，同點數給的暴擊傷害越多（越便宜）。}
       - {path: conditional_prices.hit.points, label_zh: 條件詞條：命中的點數, group_zh: 條件詞條, kind: int, hint_min: 4, hint_max: 16, note_zh: 條件成立時才生效的命中詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}
       - {path: conditional_prices.hit.per, label_zh: 條件詞條：命中的一個單位, group_zh: 條件詞條, kind: int, hint_min: 1, hint_max: 2, note_zh: 條件命中詞條一個單位是多少命中。越大，同點數給的命中越多（越便宜）。}
       - {path: conditional_prices.defense.points, label_zh: 條件詞條：防禦的點數, group_zh: 條件詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 條件成立時才生效的防禦詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}

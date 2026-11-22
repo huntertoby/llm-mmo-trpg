@@ -401,6 +401,12 @@ def damage_permille(state: BattleState, unit: UnitState, use: Use, subject: Subj
     return total if power >= _PERMILLE else total * power // _PERMILLE
 
 
+def crit_damage_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
+    """對 ``subject`` 的暴擊傷害加成（‰，CR-1；``crit_damage_permille`` 加總，同一招的複本照
+    8.21.5.3 遞減）。全身上下限由 :func:`trpg.engine.crit_damage.crit_damage_permille` 套。"""
+    return _sum_for(state, unit, use, "crit_damage_permille", subject)
+
+
 def spend_attack_limits(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> None:
     """普攻的傷害真的結算時，記下本回合用掉的「每回合 1 次」加傷（Phase 3-31）。
 
@@ -834,6 +840,7 @@ CHANGE_HANDLERS: Mapping[str, Callable[..., object]] = MappingProxyType(
         "form_entry_permille": form_entry_permille,
         "silent_strike": silent_strike,
         "attack_shape": attack_shape,
+        "crit_damage_permille": crit_damage_bonus,
     }
 )
 """每種修正規則改變（``content/modifier_changes.yaml``）由哪個查詢函式套用（Phase 3T-1 的宣告表；

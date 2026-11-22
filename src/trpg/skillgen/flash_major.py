@@ -91,6 +91,7 @@ _RESET: dict[str, Any] = {
     "modifiers": [],
     "mastery": None,
     "crit_range": None,
+    "crit_permille": None,
     "damage_permille": None,
     "pierce": False,
     "weapon_only": [],
