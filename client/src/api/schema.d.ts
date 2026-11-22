@@ -6096,6 +6096,8 @@ export interface components {
              * @default []
              */
             rules_dice: components["schemas"]["RuleDiceOut"][];
+            /** Rules Only */
+            rules_only?: boolean | null;
         };
         /**
          * GrantPreviewOut

@@ -35,6 +35,8 @@ export function tipParts(lines: readonly string[], dice: ReadonlySet<number> = n
 /** 名詞表一項的說明卡各段：說明＋規則句，骰子行照 `rules_dice` 另起一行。對照表沒有這一項（或沒有任何字）時寫 `fallback`。 */
 export function entryTipParts(entry: GlossaryEntry | undefined, fallback: string): TipPart[] {
   const rules = entry?.rules_zh ?? [];
+  // E4（KD-1 驗收小修 1）：只列規則的項目（倒地）一條規則一行、前面加「・」，不接說明（同「扶起」說明卡的排法）
+  if (entry?.rules_only === true && rules.length > 0) return rules.map((line) => ({ text: `・${line}`, secondary: false }));
   const dice = new Set((entry?.rules_dice ?? []).map((d) => d.line + 1)); // 第 0 行是說明
   const found = tipParts([entry?.description_zh ?? "", ...rules], dice);
   return found.length === 0 ? [{ text: fallback, secondary: false }] : found;
