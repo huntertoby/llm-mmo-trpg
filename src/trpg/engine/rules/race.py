@@ -16,6 +16,7 @@
 - ``burn_immunity_on``（角魔）：:func:`burn_immune`（``interactions``／``turns`` 的表面燃燒）；
 - ``weather_move_bonus``（海民）：:func:`weather_move_bonus`（``statuses.move_points_for_turn``）；
 - ``surface_move_bonus``（鱗族）的移動 +1：:func:`surface_move_bonus`（同上，看回合開始時腳下）；
+- ``flat_climb``（E3「攀岩」）：:func:`flat_climb_height`（``movement.unit_step_cost``）；
 - ``fall_immunity``（獸耳族「輕身」，#138）：:func:`fall_immune`（``effects.handlers.arrive``、
   ``heights`` 不發墜落事件；``basics`` 的攀跳可以往下跳；AI 的路線估值不把往下當風險）。
 
@@ -46,6 +47,7 @@ __all__ = [
     "concealed_limit_for",
     "conduction_immune",
     "fall_immune",
+    "flat_climb_height",
     "hazard_push_reduction",
     "passive_active",
     "passive_of",
@@ -153,6 +155,14 @@ def fall_immune(rules: Ruleset, unit: UnitState) -> bool:
     """墜落不受傷（獸耳族「輕身」，#138）：被推下、自己走下或跳下、腳下的地形被降低都算；致命地形
     照舊致命（那是 ``entered_deadly_terrain``，不是墜落）。"""
     return passive_of(rules, unit, "fall_immunity") is not None
+
+
+def flat_climb_height(rules: Ruleset, unit: UnitState) -> int:
+    """攀岩（地形規則 ``flat_climb``，E3）：上坡在這個層數以內當平地走；沒有時 0。"""
+    if unit.race is None and not unit.gear.affixes:
+        return 0
+    source = first_source(rules, unit, "flat_climb")
+    return 0 if source is None else source.rule.amount or 0
 
 
 def conduction_immune(state: BattleState, unit: UnitState) -> bool:
