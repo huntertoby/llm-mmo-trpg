@@ -36,6 +36,7 @@ __all__ = [
     "AttributePerk",
     "AttributePerks",
     "CoreRules",
+    "CritDamageRules",
     "HitTable",
     "HitThreshold",
     "PerkKind",
@@ -346,6 +347,25 @@ ELITE_TAG = "elite"
 """精英標籤（同 ``trpg.engine.ids.ELITE_TAG``；content 不匯入引擎）。"""
 
 
+class CritDamageRules(ContentModel):
+    """暴擊傷害倍率（CR-1，05 5.4.2，#178；‰）。
+
+    - ``base_permille``：基礎倍率（武器、天生武器、單位檔沒另填時用它；2000＝200%，改版前的骰數
+      加倍）。
+    - ``min_permille``／``max_permille``：全身下限與上限（所有來源相加、遞減之後再套）。
+    """
+
+    base_permille: int = Field(default=2000, ge=1000, le=5000)
+    min_permille: int = Field(default=1500, ge=1000, le=5000)
+    max_permille: int = Field(default=3000, ge=1000, le=5000)
+
+    @model_validator(mode="after")
+    def _check(self) -> CritDamageRules:
+        if self.min_permille > self.max_permille:
+            raise ValueError("crit_damage：min_permille 不可大於 max_permille")
+        return self
+
+
 class CoreRules(ContentModel):
     """``content/rules/core.yaml``：所有可調整的戰鬥規則數值。
 
@@ -499,6 +519,8 @@ class CoreRules(ContentModel):
     """條件「遠距」（``long_range``，SK-1，06 6.38 第 1 點）的門檻：施放者和目標的距離（曼哈頓，
     巨型單位照佔地）至少這麼多格。初值 5，數值工坊可調。"""
     crit_range_floor: int = Field(ge=1, le=20)
+    crit_damage: CritDamageRules = CritDamageRules()
+    """暴擊傷害倍率的基礎與全身上下限（CR-1，05 5.4.2）。舊紀錄沒有此欄位時是 200%、150%～300%。"""
     """暴擊範圍的下限（HC-7 從引擎搬來，值 2）：背刺、站定狙擊、形態、召喚物小特性等擴大暴擊範圍時，
     最寬到自然骰這個值起暴擊（2＝自然 1 永遠不暴擊）。"""
     opening_status_max_duration: int = Field(ge=1)

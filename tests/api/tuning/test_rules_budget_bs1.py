@@ -23,6 +23,9 @@ CORE_PATHS = (
     "backstab_hit_bonus",
     "backstab_crit_range_bonus",
     "ambush_hit_bonus",
+    "crit_damage.base_permille",  # CR-1（#178）暴擊傷害倍率
+    "crit_damage.min_permille",
+    "crit_damage.max_permille",
     "far_distance",  # SK-1（#166）條件「遠距」的門檻
     "trap_trace_radius",  # RG-2（#162）陷阱痕跡
     "shield_guard_hit_penalty",  # RG-1（#162）盾兵掩護
@@ -54,6 +57,8 @@ CORE_PATHS = (
     "element_mod_floor_permille",  # HC-4b：和裝備規則的總減傷上限一起開
     "skill_limits.min_form_entry_cooldown",  # GS-3：帶進入時效果的化身技最短冷卻
     "skill_limits.max_cooldown",  # HC-4b：技能結構的規則數值（從 skills/constants.py 搬來）
+    "skill_limits.min_crit_permille",  # CR-1：技能自帶的暴擊傷害倍率範圍
+    "skill_limits.max_crit_permille",
     "skill_limits.min_crit_range",
     "skill_limits.max_grant_duration",
     "skill_limits.max_refund_ap",
@@ -109,6 +114,7 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "skill_evolution",  # HC-4b2：召喚技分歧進化的幅度
         "flash",  # HC-4b3：閃現的計價與規則數值
         "surface",  # KD-1：冰面的滑倒 DC
+        "weapons",  # CR-1：每種武器的暴擊傷害倍率
         "world_rules",  # HC-4d：大世界規則、經濟、交易、賽季
         "world_economy",
         "world_trade",

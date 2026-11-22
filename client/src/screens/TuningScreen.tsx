@@ -173,7 +173,8 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
         // HC-4b3：閃現規則與計價（flash_templates.yaml）也放這裡。
         // HC-4d：大世界的規則、經濟、交易、賽季（world/rules.yaml、economy.yaml、trade.yaml、season.yaml）也放這裡。
         // KD-1：地面表面（surfaces.yaml，冰面的滑倒 DC）也放這裡。
-        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution, flash, surface, worldRules, worldEconomy, worldTrade, worldSeason] = await Promise.all([
+        // CR-1：武器表（weapons.yaml，每種武器的暴擊傷害倍率）也放這裡。
+        const [st, units, ai, rules, budget, gridObjects, pick, triggers, composer, conditions, synergies, forms, equipment, itemGen, evolution, flash, surface, weapons, worldRules, worldEconomy, worldTrade, worldSeason] = await Promise.all([
           tapi.tuningStatus(),
           tapi.tuningObjects("unit"),
           tapi.tuningObjects("ai").catch(() => []),
@@ -191,12 +192,13 @@ export function TuningScreen({ onHome, tapi = api }: Props) {
           tapi.tuningObjects("skill_evolution").catch(() => []),
           tapi.tuningObjects("flash").catch(() => []),
           tapi.tuningObjects("surface").catch(() => []),
+          tapi.tuningObjects("weapons").catch(() => []),
           tapi.tuningObjects("world_rules").catch(() => []),
           tapi.tuningObjects("world_economy").catch(() => []),
           tapi.tuningObjects("world_trade").catch(() => []),
           tapi.tuningObjects("world_season").catch(() => []),
         ]);
-        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution, ...flash, ...surface, ...worldRules, ...worldEconomy, ...worldTrade, ...worldSeason];
+        const objs = [...units, ...ai, ...rules, ...budget, ...gridObjects, ...pick, ...triggers, ...composer, ...conditions, ...synergies, ...forms, ...equipment, ...itemGen, ...evolution, ...flash, ...surface, ...weapons, ...worldRules, ...worldEconomy, ...worldTrade, ...worldSeason];
         if (cancelled) return;
         setStatus(st);
         setObjects(objs);

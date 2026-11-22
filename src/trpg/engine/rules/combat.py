@@ -82,6 +82,25 @@ HALF_COVER = "half_cover"
 _COVER_DIRECTIONS: tuple[XY, ...] = ((0, -1), (1, 0), (0, 1), (-1, 0))
 
 
+CRIT_PERMILLE_DOUBLE = 2000
+"""暴擊傷害倍率 200%（改版前寫死的 ×2；CR-1，05 5.4.2）。"""
+
+
+def crit_extra_total(extra_total: int, crit_permille: int | None) -> int:
+    """暴擊多擲的那組骰值乘（倍率 − 100%），無條件捨去（CR-1，05 5.4.2 第 1 點）。``None`` 或
+    200% 時就是原值（和改版前的「骰數加倍」逐位相同）。實際結算與預覽共用。"""
+    if crit_permille is None or crit_permille == CRIT_PERMILLE_DOUBLE:
+        return extra_total
+    return extra_total * (crit_permille - PERMILLE) // PERMILLE
+
+
+def crit_text_zh(crit_range: int, crit_permille: int) -> str:
+    """暴擊的顯示（CR-1，05 5.4.2 第 8 點），例「暴擊 19–20・250%」；只有自然 20 時
+    「暴擊 20・250%」。"""
+    span = "20" if crit_range >= NATURAL_HIT else f"{crit_range}–20"
+    return f"暴擊 {span}・{crit_permille / 10:g}%"
+
+
 def raw_damage_permille(roll_total: int, flat: int, scaled_permille: int) -> int:
     """骰值傷害的基底（‰）：（骰值總和 ＋ 固定值）× 1000 ＋ 屬性縮放。"""
     return (roll_total + flat) * PERMILLE + scaled_permille

@@ -123,6 +123,17 @@ affixes:
     value: {min: 100, max: 200}
     value_unit: permille
 
+  # CR-1（#178，05 5.4.2 第 3、7 點）：數值詞條「暴擊傷害 +N%」。初值 +10% ＝ 3 點（item_gen.yaml 的 stat_prices.crit_damage），
+  # 刻意比「暴擊範圍 +1 ＝ 15 點」貴；和武器、修正技、技能自帶、種族的倍率相加，再套全身 150%～300%。
+  # 暫不進產生器（item_gen.yaml held_back_affixes）：掉落、傭兵、重骰照舊，手寫物品可以用。
+  - id: affix_crit_damage
+    category: stat
+    name_zh: 暴擊傷害 +{n}
+    slots: [weapon, offhand, head, body, hands, feet, neck, ring]
+    stat: crit_damage
+    value: {min: 100, max: 100}
+    value_unit: permille
+
   # --- 3 技能強化（結算在 G2；keyword 的 id 暫定，以 3-24b1 的關鍵字推導為準）---
   - id: affix_kw_burn_duration
     category: keyword

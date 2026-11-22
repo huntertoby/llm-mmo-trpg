@@ -88,6 +88,7 @@ __all__ = [
     "diminished_total",
     "gear_attack_element",
     "gear_cooldown",
+    "gear_crit_damage_permille",
     "gear_damage_parts",
     "gear_damage_permille",
     "gear_damage_taken_permille",
@@ -211,12 +212,7 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
     for affix_id, entries in by_id.items():
         affix = entries[0].affix
         if isinstance(affix, StatAffix):
-            total = diminished_total(entries, _value)
-            if affix.stat == "defense":
-                bonuses.append(GearBonus(affix_id, "defense_permille", total))
-            else:
-                key = _stat_key(affix)
-                merged[key] = merged.get(key, 0) + total
+            _stat_total(affix, diminished_total(entries, _value), merged, bonuses)
         elif isinstance(affix, ConditionalAffix):
             total = diminished_total(entries, _value)
             stat = _CONDITIONAL_STAT[affix.effect]
@@ -246,6 +242,25 @@ def build_gear(loadout: Loadout, rules: EquipmentRules) -> GearState:
         cooldown_min=rules.caps.cooldown_min,
         offhand=offhand,
     )
+
+
+_QUERIED_STATS: dict[str, BonusStat] = {
+    "defense": "defense_permille",
+    "crit_damage": "crit_damage_permille",  # CR-1：暴擊傷害倍率
+}
+"""第 1 類數值裡不併進範本、戰鬥中查詢的種類。"""
+
+
+def _stat_total(
+    affix: StatAffix, total: int, merged: dict[str, int], bonuses: list[GearBonus]
+) -> None:
+    """第 1 類數值（遞減後的 ``total``）：防禦與暴擊傷害放進 ``bonuses``，其他併進 ``merged``。"""
+    stat = _QUERIED_STATS.get(affix.stat)
+    if stat is not None:
+        bonuses.append(GearBonus(affix.id, stat, total))
+    else:
+        key = _stat_key(affix)
+        merged[key] = merged.get(key, 0) + total
 
 
 def _base_bonuses(loadout: Loadout) -> list[GearBonus]:
@@ -458,6 +473,13 @@ def gear_defense_permille(unit: UnitState) -> int:
     if not unit.gear.bonuses:
         return 0
     return _self_sum(unit, "defense_permille")
+
+
+def gear_crit_damage_permille(unit: UnitState) -> int:
+    """裝備的暴擊傷害加成（‰，CR-1；同一詞條已在 :func:`build_gear` 遞減）；沒有時 0。"""
+    if not unit.gear.bonuses:
+        return 0
+    return _self_sum(unit, "crit_damage_permille")
 
 
 def gear_damage_taken_permille(unit: UnitState) -> int:

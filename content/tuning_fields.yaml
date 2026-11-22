@@ -79,6 +79,8 @@ targets:
       - {path: skills, label_zh: 技能（開場）, kind: skill_ids, note_zh: 單位開場會用的招；數量上限依 core.yaml 的 skill_slots，武器需求要和單位武器相容。}
       - {path: "phases[*].skills", label_zh: 階段技能, kind: skill_ids, note_zh: 進入這個階段後換成這組招；刪掉＝沿用上一階段，空清單＝這個階段不放招。開場階段不能設。}
       # AP-1（#168，05 5.2「⚠ AP 改版」）：敵人的每回合 AP。沒寫時一般敵人照核心規則的「每回合 AP」、精英與頭目照「精英、頭目的每回合 AP」。
+      # CR-1（#178，05 5.4.2 第 5 點）：單位自己的暴擊傷害倍率（例：頭目的重擊 300%）；沒寫照武器。
+      - {path: crit_permille, label_zh: 暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, note_zh: 這種敵人暴擊時的傷害倍率（2000＝200%，暴擊時骰子變兩倍）；沒寫＝照牠拿的武器（武器也沒寫就是核心規則的 200%）。調高：這種敵人暴擊更痛；調低：暴擊只多一點點。全身上下限照核心規則（150%～300%）。只能 1000～5000。}
       - {path: ap_per_turn, label_zh: 每回合 AP, kind: int, hint_min: 1, hint_max: 6, note_zh: 這種敵人每回合的 AP（初值：一般 3、精英與頭目 4）；沒寫時照核心規則。本回合上限＝每回合 AP＋可保留的 AP。只對敵方有效：當隊友時一律照玩家方的每回合 AP。}
 
   # NW-2a：技能（docs/phases/PhaseNW-2計畫.md 3.1）。效果層級的欄位＝effect_sites × effect_fields（effect_types 只展開到該原語的效果）。
@@ -101,6 +103,7 @@ targets:
       - {path: cost.self_status.duration, label_zh: 自身代價狀態持續, kind: int, hint_min: 2, hint_max: 3, existing_only: true, note_zh: 施放後自己獲得的代價狀態持續回合（2～3）。}
       - {path: stance_upkeep, label_zh: 姿態維持費, kind: int, hint_min: 0, hint_max: 2, kinds: [stance], note_zh: 每個自己的回合開始付的點數（0～2）；沒寫＝0。}
       - {path: crit_range, label_zh: 暴擊下限, kind: int, hint_min: 15, hint_max: 19, existing_only: true, note_zh: 自然骰不小於它就暴擊（15～19）；清空＝不擴大。}
+      - {path: crit_permille, label_zh: 這招的暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, existing_only: true, note_zh: 這招暴擊時的傷害倍率（2500＝250%）；比基礎倍率多出的部分另算預算。清空＝照武器（法術照基礎 200%）。}
       - {path: damage_permille, label_zh: 基礎傷害折扣（‰）, kind: permille, hint_min: 100, hint_max: 999, existing_only: true, note_zh: 每個傷害效果再乘它（100～999）；清空＝不打折。}
       - {path: shape.range, label_zh: 射程, kind: range, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）；寫「武器射程」的不能改。射程每格 ±5% 預算（基準 4）。}
       - {path: shape.size, label_zh: 範圍大小, kind: int, existing_only: true, note_zh: 範圍依形狀（skill_shapes.yaml）。}
@@ -221,6 +224,10 @@ targets:
       - {path: backstab_hit_bonus, label_zh: 背刺命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 近戰攻擊者站在目標背後格時命中加這麼多（敵我、頭目都適用）。有「無聲」的刺客可以留在背後連續吃到。}
       - {path: backstab_crit_range_bonus, label_zh: 背刺暴擊範圍, kind: int, hint_min: 0, hint_max: 3, note_zh: 背刺時暴擊範圍擴大這麼多（1＝武器 20 變 19～20）。}
       - {path: ambush_hit_bonus, label_zh: 潛行偷襲命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 帶隱蔽狀態出手時命中加這麼多；出手後脫離隱蔽，從隱蔽中近戰出手時目標不會轉身。}
+      # CR-1（#178，05 5.4.2）：暴擊傷害倍率。暴擊時多擲一組同樣顆數的骰子，那組乘（倍率 − 100%）；屬性與固定值不放大。
+      - {path: crit_damage.base_permille, label_zh: 暴擊傷害基礎倍率（‰）, group_zh: 暴擊傷害, kind: permille, hint_min: 1500, hint_max: 3000, note_zh: 武器、天生武器、單位檔沒另填時的暴擊傷害倍率（2000＝200%，暴擊時骰子變兩倍）。調高：所有沒另填的攻擊暴擊更痛、高變異的招更值錢；調低：暴擊只多一點點。敵我一起變。只能 1000～5000。}
+      - {path: crit_damage.min_permille, label_zh: 暴擊傷害全身下限（‰）, group_zh: 暴擊傷害, kind: permille, hint_min: 1000, hint_max: 2000, note_zh: 所有來源（武器、裝備、修正技、技能自帶、種族）相加之後，暴擊傷害最低只會到這麼多（1500＝150%）。調高：減暴傷的效果有限；調低：暴擊可以幾乎不加傷害。不能大於全身上限。}
+      - {path: crit_damage.max_permille, label_zh: 暴擊傷害全身上限（‰）, group_zh: 暴擊傷害, kind: permille, hint_min: 2000, hint_max: 4000, note_zh: 所有來源相加之後，暴擊傷害最高只會到這麼多（3000＝300%）。調高：堆暴傷的 build 上限更高、暴擊秒殺的風險變大；調低：堆暴傷很快就沒用。不能小於全身下限。}
       # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻。
       - {path: far_distance, label_zh: 遠距條件的距離, kind: int, hint_min: 3, hint_max: 8, note_zh: 技能條件「遠距」在施放者和目標距離至少這麼多格時成立（曼哈頓距離，巨型單位看佔地最近的一格）。越大越難成立；條件「貼身」固定是距離 1。只能 2～20。}
       # RG-1（#162，09 9.6.6「數值照工坊」）：盾兵替相鄰的遠程同伴擋遠程攻擊。
@@ -268,6 +275,8 @@ targets:
       # GS-3（#173，06 6.30）：帶進入時效果的化身技的冷卻下限（最低階級 min_form_entry_tier 是結構，不開）。
       - {path: skill_limits.min_form_entry_cooldown, label_zh: 帶進入時效果的化身技最短冷卻（回合）, kind: int, hint_min: 2, hint_max: 5, note_zh: 3 階以上的化身技帶「進入時效果」（例：熊王怒吼變身時讓周圍的敵人虛弱）時，冷卻（cost.cooldown）至少要這麼多回合。調高：這類化身技更難在不同形態之間輪替、每回合都發一次進入時效果；調低：可以更常發。調高後，現有冷卻比它短的化身技會在驗證時列出，要先改那些技能（目前手寫的 4 招都是 3）。設計下限是 2。只能 1～20。}
       - {path: skill_limits.max_cooldown, label_zh: 技能冷卻上限（回合）, kind: int, hint_min: 3, hint_max: 12, note_zh: 技能的冷卻（cost.cooldown）最多幾回合（內容、組合器、LLM、工坊都照這個擋）。調低後，現有冷卻超過的技能會在驗證時列出，要先改那些技能。只能 1～20。}
+      - {path: skill_limits.min_crit_permille, label_zh: 技能自帶暴擊傷害的下限（‰）, kind: permille, hint_min: 1000, hint_max: 2000, note_zh: 技能自己帶的暴擊傷害倍率（crit_permille）最低只能填到這麼多（1500＝150%）。現有低於它的技能會在驗證時列出。只能 1000～5000。}
+      - {path: skill_limits.max_crit_permille, label_zh: 技能自帶暴擊傷害的上限（‰）, kind: permille, hint_min: 2000, hint_max: 4000, note_zh: 技能自己帶的暴擊傷害倍率最高只能填到這麼多（3000＝300%）。越大，自帶高暴傷的招能做得越極端；現有超過它的技能會在驗證時列出。只能 1000～5000。}
       - {path: skill_limits.min_crit_range, label_zh: 技能擴大暴擊的極限（自然骰）, kind: int, hint_min: 13, hint_max: 19, note_zh: 技能的擴大暴擊範圍（crit_range）最寬只能到自然骰這個數字起就暴擊（15＝15～20 都暴擊）。越小，擴大暴擊的技能能做得越強。調高後，現有比它寬的技能會在驗證時列出。只能 2～20。}
       - {path: skill_limits.max_grant_duration, label_zh: 暫時獲得技能的最長輪數, kind: int, hint_min: 2, hint_max: 8, note_zh: 暫時獲得技能（grant_skill）給的技能最多留幾輪。越大，給技能的招能持續越久。調低後，現有超過的技能會在驗證時列出。只能 1～20。}
       - {path: skill_limits.max_refund_ap, label_zh: 擊殺返還 AP 的上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 擊殺時效果「返還 AP」（refund_ap）一次最多還幾點 AP（工坊的選項範圍也照這個）。越大，擊殺後連動越強。調低後，現有超過的技能會在驗證時列出。只能 1～10。}
@@ -600,6 +609,7 @@ targets:
       - {path: modifier.points_milli.summon_damage_per_100, label_zh: 修正：召喚物傷害每 +10%的價值, group_zh: 修正技能, kind: int, hint_min: 150, hint_max: 600, note_zh: 千分之一點；修正規則「召喚物傷害每 +10% 的價值」，乘上每場預估使用次數就是點數。越大，帶這條規則的修正技能越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: modifier.points_milli.form_upkeep_per_100, label_zh: 修正：形態維持費每 −10%的價值, group_zh: 修正技能, kind: int, hint_min: 100, hint_max: 400, note_zh: 千分之一點；修正規則「形態維持費每減少 10% 的價值」，乘上每場預估使用次數就是點數。越大，帶這條規則的修正技能越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
       - {path: modifier.points_milli.form_entry_per_100, label_zh: 修正：形態進入獎勵每 +10%的價值, group_zh: 修正技能, kind: int, hint_min: 100, hint_max: 400, note_zh: 千分之一點；修正規則「形態進入獎勵每 +10% 的價值」，乘上每場預估使用次數就是點數。越大，帶這條規則的修正技能越貴。改了相關的招（手寫、組合器、LLM、工坊）預算比例跟著重算，超出合格區間的會在驗證時列出。}
+      - {path: modifier.points_milli.crit_damage_per_100, label_zh: 暴擊傷害每 +10% 的價值, group_zh: 修正技能, kind: int, hint_min: 0, hint_max: 200, note_zh: 千分之一點；修正技「暴擊傷害 +10%」每次使用值多少（初值 25＝基礎暴擊率 5% × 10% × 骰子占比 0.7 × 基準傷害 7），乘上預估使用次數就是預算點數。越大，加暴傷的修正技越貴、同預算能加的越少。}
       - {path: modifier.points_milli.silent_strike, label_zh: 無聲（被動常駐）的價值, group_zh: 修正技能, kind: int, hint_min: 0, hint_max: 1000, note_zh: 千分之一點；每次近戰攻擊不讓目標轉身值多少，乘上預估使用次數（所有攻擊 10 次）就是無聲被動的預算點數（360＝3.6 點）。改了「無聲步」這類被動的預算比例跟著變。}
       # SK-2b（SK-2 待決 5）：鉤的冷卻下限。
       - {path: hook_min_cooldown, label_zh: 鉤的最短冷卻（回合）, group_zh: 冷卻規則, kind: int, hint_min: 2, hint_max: 5, note_zh: 帶「鉤」（把直線上第一個敵人拉到身邊）的技能冷卻至少這麼多回合；手寫、組合器、LLM 與工坊做的鉤都照這個。越小鉤越常用。只能 1 以上。}
@@ -791,6 +801,7 @@ targets:
       - {path: stance_upkeep_mana, label_zh: 姿態每點維持費（法力）, group_zh: 共通, kind: int, hint_min: 5, hint_max: 20, note_zh: 一般姿態（法術技）的維持費每 1 點，每回合開始扣這麼多法力；付不起就自動解除姿態。越大，帶維持費的法術姿態越貴。}
       - {path: cooldown, label_zh: 離開形態後的冷卻（回合）, group_zh: 共通, kind: int, hint_min: 1, hint_max: 4, note_zh: 離開一個形態（自己取消、被迫解除、切換）後，「那個形態」要等這麼多回合才能再進入；別的形態不受影響。越大，越不能頻繁切換同一個形態。只能 1～5。}
       - {path: "forms[*].natural_weapon.dice", label_zh: 天生武器的傷害骰, kind: dice, note_zh: 形態中普攻用的天生武器擲這個骰（再加屬性加成）。骰子越大，形態的普攻越痛。}
+      - {path: "forms[*].natural_weapon.crit_permille", label_zh: 天生武器的暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, existing_only: true, note_zh: 形態中普攻暴擊時的傷害倍率（2000＝200%）；沒寫＝核心規則的基礎倍率。調高：形態的普攻暴擊更痛；調低：暴擊只多一點點。只能 1000～5000。}
       - {path: "forms[*].natural_weapon.range", label_zh: 天生武器的射程（格）, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 天生武器最遠打幾格（近戰的觸及另見「觸及」；龍的吐息用這個列出「朝某個敵人」的快捷動作）。越大越能在遠處出手。只能 1～8。}
       - {path: "forms[*].natural_weapon.damage_permille", label_zh: 天生武器的傷害加成（‰）, kind: permille, hint_min: 0, hint_max: 300, existing_only: true, note_zh: 天生武器的傷害再多這麼多千分比（100＝+10%）。越大普攻越痛。只能 0～1000。}
       - {path: "forms[*].natural_weapon.traits.strikes", label_zh: 天生武器一次打幾下, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 普攻一次打幾下（每下各擲命中）。越多傷害越高。只能 1～3。}
@@ -888,6 +899,8 @@ targets:
       - {path: stat_prices.defense.per, label_zh: 數值詞條：防禦的一個單位（‰）, group_zh: 數值詞條的單價, kind: permille, hint_min: 10, hint_max: 40, note_zh: 防禦值詞條一個單位是多少千分比的防禦（20＝2%）。越大，同點數給的防禦越多（越便宜）。}
       - {path: stat_prices.move.points, label_zh: 數值詞條：移動的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 6, hint_max: 24, note_zh: 移動詞條每一個單位花這麼多點。越大，移動詞條越貴、越少見。}
       - {path: stat_prices.move.per, label_zh: 數值詞條：移動的一個單位（格）, group_zh: 數值詞條的單價, kind: int, hint_min: 1, hint_max: 2, note_zh: 移動詞條一個單位是幾格。越大，同點數給的移動越多（越便宜）。}
+      - {path: stat_prices.crit_damage.points, label_zh: 數值詞條：暴擊傷害的點數, group_zh: 數值詞條的單價, kind: int, hint_min: 2, hint_max: 15, note_zh: 暴擊傷害詞條每一個單位花這麼多點（CR-1 初值 3，刻意比暴擊範圍 +1 的 15 點貴）。越大，暴擊傷害詞條越貴。}
+      - {path: stat_prices.crit_damage.per, label_zh: 數值詞條：暴擊傷害的一個單位（‰）, group_zh: 數值詞條的單價, kind: permille, hint_min: 50, hint_max: 200, note_zh: 暴擊傷害詞條一個單位是多少千分比（100＝暴擊傷害 +10%）。越大，同點數給的暴擊傷害越多（越便宜）。}
       - {path: conditional_prices.hit.points, label_zh: 條件詞條：命中的點數, group_zh: 條件詞條, kind: int, hint_min: 4, hint_max: 16, note_zh: 條件成立時才生效的命中詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}
       - {path: conditional_prices.hit.per, label_zh: 條件詞條：命中的一個單位, group_zh: 條件詞條, kind: int, hint_min: 1, hint_max: 2, note_zh: 條件命中詞條一個單位是多少命中。越大，同點數給的命中越多（越便宜）。}
       - {path: conditional_prices.defense.points, label_zh: 條件詞條：防禦的點數, group_zh: 條件詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 條件成立時才生效的防禦詞條，每一個單位花這麼多點（再乘條件成立率）。越大越貴。}
@@ -988,6 +1001,12 @@ targets:
     glob: surfaces.yaml
     fields:
       - {path: "surfaces[*].on_enter.check.dc", label_zh: 滑倒檢定的 DC（冰面）, kind: int, hint_min: 6, hint_max: 16, existing_only: true, note_zh: 走進這種表面（目前只有冰面）的敏捷檢定要擲到這麼多才不滑倒（初值 10，KD-1 從 12 降下來）；被推、拉進來，或衝鋒、跳躍落在上面也用同一個 DC。調高：更容易滑倒倒地；調低：更穩。矮人、鱗族、會飛的單位不擲。}
+  # CR-1（#178，05 5.4.2 第 2 點）：武器表（weapons.yaml）。每種武器的暴擊傷害倍率；初值全部沒寫＝核心規則的 200%。
+  - kind: weapons
+    label_zh: 武器
+    glob: weapons.yaml
+    fields:
+      - {path: "weapons[*].crit_permille", label_zh: 暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, note_zh: 拿這種武器普攻、用武器技暴擊時的傷害倍率（2000＝200%，暴擊時骰子變兩倍）；沒寫＝核心規則的基礎倍率（200%）。調高：這種武器暴擊更痛、適合堆暴擊；調低：暴擊只多一點點。敵我一起變；法術技不看武器。只能 1000～5000。}
   - kind: flash
     label_zh: 閃現規則與計價
     glob: flash_templates.yaml

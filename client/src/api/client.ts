@@ -255,6 +255,7 @@ export const api = {
       | "skill_evolution"
       | "flash"
       | "surface"
+      | "weapons"
       | "world_rules"
       | "world_economy"
       | "world_trade"

@@ -283,6 +283,9 @@ class WeaponDef(ContentModel):
 
     - ``range``：射程（曼哈頓距離）；``1`` 為近戰（相鄰）。
     - ``crit_range``：暴擊的最低自然骰值，``20`` 表示只有自然 20，``19`` 表示 19–20。
+    - ``crit_permille``：暴擊傷害倍率（‰，CR-1，05 5.4.2）；沒填照
+      ``core.crit_damage.base_permille``
+      （200%）。武器小特性的一部分，不另算裝備預算。
     - ``weapon_class``：武器大類（Phase 2A）：``melee`` 近戰、``ranged`` 遠程、``focus`` 法器；
       技能的 ``weapon_req`` 與之對照。法器的攻擊加值也計入法術技的命中。
 
@@ -349,6 +352,11 @@ class WeaponDef(ContentModel):
     attr_mode: Literal["mean", "max"] = "mean"
     element: Element = Element.PHYSICAL
     crit_range: int = Field(default=20, ge=2, le=20)
+    crit_permille: int | None = Field(
+        default=None, ge=1000, le=5000, exclude_if=lambda v: v is None
+    )
+    """暴擊傷害倍率（‰，CR-1，05 5.4.2）：沒填（``None``）照 ``core.crit_damage.base_permille``
+    （200%）；不輸出，既有資料的序列化不變。"""
     two_handed: bool = False
     paired: bool = False
     strikes: int = Field(default=1, ge=1, le=3)
@@ -1795,6 +1803,12 @@ class UnitTemplate(ContentModel):
     ai_profile: str | None = Field(default=None, pattern=ID_PATTERN)
     skills: tuple[str, ...] = Field(default=(), max_length=32)
     max_mana: int | None = Field(default=None, ge=0)
+    crit_permille: int | None = Field(
+        default=None, ge=1000, le=5000, exclude_if=lambda v: v is None
+    )
+    """這個單位的暴擊傷害倍率（‰，CR-1，05 5.4.2 第 5 點；例：頭目的重擊 300%）：填了就蓋過武器的
+    倍率（開戰時寫進單位的武器，:meth:`~trpg.content.library.ContentLibrary.weapon_of`）；沒填照武器。
+    不輸出，既有單位的序列化不變。"""
     ap_per_turn: int | None = Field(default=None, ge=0, exclude_if=lambda v: v is None)
     """每回合 AP（AP-1，#168，05 5.2）：只對敵方單位有效；省略時一般敵人是 ``core.yaml`` 的
     ``ap_per_turn``、精英與頭目是 ``elite_ap_per_turn``。玩家方一律 ``party_ap_per_turn``、

@@ -75,7 +75,8 @@ class DamageEffect(EffectBase):
     ``mode``：
 
     - ``roll``：``(骰子 ＋ flat ＋ scaled_permille ÷ 1000) × 元素修正``，無條件捨去，
-      最低 ``min_damage``；``crit`` 時骰子顆數加倍、固定值不加倍。
+      最低 ``min_damage``；``crit`` 時多擲一組同樣顆數的骰子，那組乘（``crit_permille`` −
+      1000）÷ 1000、無條件捨去；固定值、屬性加成不放大（CR-1，05 5.4.2）。
     - ``percent_max_hp``：最大 HP × ``permille`` ÷ 1000（無條件捨去，最低 ``min_damage``）。
     - ``lethal``：直接把 HP 降為 0（致命地形）。
 
@@ -98,6 +99,9 @@ class DamageEffect(EffectBase):
     scale_attr: Attribute | None = None
     """屬性加成的來源屬性（僅供紀錄顯示；Phase 3-41b）。"""
     crit: bool = False
+    crit_permille: int | None = Field(default=None, ge=1000, exclude_if=lambda v: v is None)
+    """暴擊傷害倍率（‰，CR-1，05 5.4.2）：攻擊方在擲骰時算好（:mod:`trpg.engine.crit_damage`）；
+    ``None``＝200%（改版前的骰數加倍）。只在 ``crit`` 時有作用。"""
     permille: int = Field(default=0, ge=0)
     apply_element_mod: bool = True
     apply_weather: bool = True

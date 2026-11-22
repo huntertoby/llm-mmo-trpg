@@ -27,7 +27,7 @@ __all__ = ["GearTotalView", "gear_totals"]
 
 _FULL = 1000
 _PERMILLE_STATS: frozenset[str] = frozenset(
-    {"damage_permille", "defense_permille", "damage_taken_permille"}
+    {"damage_permille", "defense_permille", "damage_taken_permille", "crit_damage_permille"}
 )
 
 _STAT_LABEL: dict[str, str] = {
@@ -39,6 +39,7 @@ _STAT_LABEL: dict[str, str] = {
     "turn_start_hp_loss": "回合開始失去 HP",
     "max_hp": "最大 HP",
     "move": "移動",
+    "crit_damage_permille": "暴擊傷害",
 }
 
 

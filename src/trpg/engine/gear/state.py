@@ -33,8 +33,9 @@ type BonusStat = Literal[
     "damage_taken_permille",
     "cooldown_delta",
     "turn_start_hp_loss",
+    "crit_damage_permille",
 ]
-"""戰鬥中查詢的裝備數值種類。"""
+"""戰鬥中查詢的裝備數值種類（``crit_damage_permille``：CR-1 的暴擊傷害詞條）。"""
 
 
 @dataclass(frozen=True, slots=True)

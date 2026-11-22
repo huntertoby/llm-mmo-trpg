@@ -162,6 +162,7 @@ TABLE_NAMES_ZH: Final = {
     "skill_evolution": "技能分歧進化（全體共用）",
     "flash": "閃現規則與計價（全體共用）",
     "surface": "地面表面（全體共用）",
+    "weapons": "武器（全體共用）",
     "world_rules": "大世界規則：戰鬥、成長、許願池、實地地圖（全體共用）",
     "world_economy": "大世界經濟（全體共用）",
     "world_trade": "大世界交易與郵寄（全體共用）",
@@ -251,6 +252,11 @@ TABLE_NOTES_ZH: Final = {
     "surface": (
         "這份是全體共用的地面表面表（surfaces.yaml）：改一種表面的值，所有地圖上的這種表面一起變。",
         "目前只開放冰面的滑倒 DC（KD-1）；表面的效果、持續、元素互動是結構，不開。",
+    ),
+    "weapons": (
+        "這份是全體共用的武器表（weapons.yaml）：改一種武器的值，敵我所有拿這種武器的單位一起變。",
+        "目前只開放每種武器的暴擊傷害倍率（CR-1）；沒填的武器照核心戰鬥規則的基礎倍率。"
+        "傷害骰、射程、小特性是結構，不開。",
     ),
     "world_rules": (
         "這份是全體共用的大世界規則（world/rules.yaml）：改了之後所有角色的大世界戰鬥回寫、成長、"
@@ -393,6 +399,7 @@ _ENTRY_WORDS: Final[dict[str, str]] = {
     "profiles": "行為模式",
     "objects": "物件",
     "surfaces": "表面",
+    "weapons": "武器",
     "triggers": "觸發時機",
     "conditions": "條件",
     "synergies": "協同",

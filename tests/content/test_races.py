@@ -118,8 +118,10 @@ def test_table_values_match_design_7_7(library: ContentLibrary) -> None:
     assert races["cyborg"].skill.effects[0].amount == 100  # X10-2b：耐力、法力回復量 ×10
 
 
-def test_no_bundled_race_data_contains_forbidden_keys() -> None:
-    assert forbidden_key_problems(_raw_races(), "races") == []
+def test_origins_still_have_no_forbidden_keys() -> None:
+    """#179 只拿掉種族的禁用欄位檢查；出身照舊不影響戰鬥。"""
+    text = (default_content_dir() / "origins.yaml").read_text(encoding="utf-8")
+    assert forbidden_key_problems(yaml.safe_load(text), "origins") == []
 
 
 def test_content_check_cli_lists_races_and_origins(capsys: pytest.CaptureFixture[str]) -> None:
@@ -135,51 +137,21 @@ def test_content_check_cli_lists_races_and_origins(capsys: pytest.CaptureFixture
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    ("where", "key", "value", "kind"),
-    [
-        ("skill", "damage", {"dice": "1d6"}, "傷害"),
-        ("skill", "dice", "1d6", "傷害"),
-        ("skill", "hit_bonus", 2, "命中"),
-        ("skill", "crit_range", 1, "暴擊"),
-        ("skill", "max_hp_permille", 100, "最大 HP"),
-        ("skill", "grant_ap", 1, "AP"),
-        ("skill", "attrs", {"str": 1}, "屬性"),
-        ("passive", "damage_permille", 100, "傷害"),
-        ("passive", "accuracy", 5, "命中"),
-        ("passive", "crit", 5, "暴擊"),
-        ("passive", "max_hp", 10, "最大 HP"),
-        ("passive", "ap_bonus", 1, "AP"),
-        ("passive", "dex", 1, "屬性"),
-        ("race", "stats", {"con": 2}, "屬性"),
-    ],
-)
-def test_pure_numbers_are_rejected(
-    tmp_path: Path, where: str, key: str, value: object, kind: str
-) -> None:
-    data = _raw_races()
-    target = _first(data) if where == "race" else _first(data)[where]
-    target[key] = value
-    message = _load_bad(tmp_path, data)
-    assert "種族不得給" + kind in message
-    assert "防最佳解原則 1" in message
-
-
 def test_damage_in_effect_params_is_rejected(tmp_path: Path) -> None:
+    """#179 拿掉原則 1 之後，種族技的效果仍是封閉清單：效果類型不收的參數照樣擋（原則 2）。"""
     data = _raw_races()
     _first(data)["skill"]["effects"][0]["dice"] = "1d6"
-    assert "種族不得給傷害" in _load_bad(tmp_path, data)
+    assert "dice" in _load_bad(tmp_path, data)
 
 
-@pytest.mark.parametrize(
-    ("effect_type", "kind"),
-    [("damage", "傷害"), ("delayed_damage", "傷害"), ("grant_ap", "AP"), ("heal", "最大 HP")],
-)
-def test_damaging_effect_types_are_rejected(tmp_path: Path, effect_type: str, kind: str) -> None:
+@pytest.mark.parametrize("effect_type", ["damage", "delayed_damage", "grant_ap", "heal"])
+def test_effect_types_outside_the_closed_list_are_rejected(
+    tmp_path: Path, effect_type: str
+) -> None:
+    """#179：不再有「種族不得給傷害」的專門檢查，但不在封閉清單裡的效果類型照樣載入失敗。"""
     data = _raw_races()
     _first(data)["skill"]["effects"] = [{"type": effect_type}]
-    message = _load_bad(tmp_path, data)
-    assert f"會給{kind}" in message
+    assert "effects.0.type" in _load_bad(tmp_path, data)
 
 
 def test_unknown_effect_type_is_rejected(tmp_path: Path) -> None:
@@ -285,7 +257,7 @@ def _raw_origins() -> dict[str, Any]:
 def test_origin_cannot_carry_combat_numbers(tmp_path: Path, key: str) -> None:
     data = _raw_origins()
     data["origins"][0][key] = 1
-    assert "種族不得給" in _load_bad(tmp_path, data, OriginTable)
+    assert "出身不影響戰鬥" in _load_bad(tmp_path, data, OriginTable)
 
 
 def test_origin_extra_unknown_field_rejected(tmp_path: Path) -> None:

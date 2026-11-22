@@ -903,6 +903,33 @@ rules:
     where: ['<module>._DECIMAL_PRECISION', compute_hit_thresholds, weapon_attr_examples_zh]
     note: HC-4a：命中表的數學（ln 2、Decimal 精度）與說明範例的列數（每組 2 個、最多 5 組），不是玩法數值。
 
+  # ---------------------------------------------------- CR-1：暴擊傷害倍率（#178）
+  - id: py-cr1-crit-damage-defaults
+    class: config
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/rules.py]
+    where: [CritDamageRules]
+    note: CR-1：暴擊傷害的基礎、全身下限、上限已寫在 rules/core.yaml 的 crit_damage、開進工坊；schema 預設值只給沒有這欄的舊紀錄（值相同）。
+  - id: py-cr1-skill-crit-permille-defaults
+    class: config
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/content/skills/limits.py]
+    where: [SkillLimits]
+    owner: '*_crit_permille'
+    note: CR-1：技能自帶暴擊傷害倍率的範圍已寫在 rules/core.yaml 的 skill_limits、開進工坊；schema 預設值只給舊紀錄（值相同）。
+  - id: py-cr1-crit-double
+    class: const
+    status: done
+    lang: py
+    kind: number
+    files: [src/trpg/engine/rules/combat.py]
+    where: ['<module>.CRIT_PERMILLE_DOUBLE']
+    note: CR-1：200%＝改版前「骰數加倍」的判斷點（200% 時走和改版前完全相同的算法），不是可調的倍率（可調的是 core.crit_damage）。
+
   # ---------------------------------------------------- 後端 content：config
   # 保守：content schema 的預設值（內容沒寫、靠預設值生效的）與規則型的驗證門檻（應由 content／工坊設定帶）。
   # 純驗證用的上下限在上面歸 guard（HC-4a）。
@@ -925,8 +952,8 @@ rules:
     status: done
     files: src/trpg/engine/preview.py
     kind: number
-    where: ['_attack_numbers', '_damage_expectation']
-    note: HC-7 改判 const：預覽算暴擊傷害分佈的「骰數 × 2」，和結算（effects/handlers.py 的 _damage_rolls）同一個定義。
+    where: ['_attack_numbers', '_damage_expectation', 'crit_distribution']
+    note: HC-7 改判 const：預覽算暴擊傷害分佈的「骰數 × 2」，和結算（effects/handlers.py 的 _damage_rolls）同一個定義。CR-1 起倍率可變（core.crit_damage），× 2 只剩「200% 時直接用兩倍顆數的分佈」與「多擲同樣顆數」，仍是定義本身。
   - id: py-engine-state-config-number
     class: const
     status: done
@@ -1516,6 +1543,7 @@ rules:
       - '_modifier_uses'
       - '_passive_coefficient'
       - '_variance_factor'
+      - '_crit_factor'  # CR-1：從 _variance_factor 拆出
     note: HC-6a 改判：暴擊範圍上界 20 是 d20；「驅散 1 個增益」是 count 不是 all 的那一類（點數照 dispel_one_points）。
   - id: py-skillgen-option-conform-text-text
     class: const

@@ -6,18 +6,20 @@
   預設外觀。
 - ``content/origins.yaml``（:class:`OriginTable`）：碎界五區出身（預設外觀、開場劇情鍵、NPC 態度）。
 
-**防止種族變成最佳解**（7.7 的 5 條原則）寫成載入時的驗證規則，違反時以繁體中文說明原因：
+**防止種族變成最佳解**（7.7 的原則）寫成載入時的驗證規則，違反時以繁體中文說明原因：
 
-1. 不給純數值：資料中不得出現傷害、命中、暴擊、最大 HP、AP、屬性的欄位
-   （:func:`forbidden_key_problems`）。
-2. 只給功能型效果：種族技的效果類型、環境被動的規則都是封閉清單（:data:`RACE_EFFECT_SPECS`、
-   :data:`PASSIVE_RULE_SPECS`），每個類型只能填它自己的參數。
-3. 強度小於半個技能欄：種族技固定 1 AP、每場 1～2 次、不佔技能欄、效果最多 3 個、不加傷害
+1. ~~不給純數值~~：2026-11-22 #179 整條拿掉（CR-1）。種族可以給數值（目前只有環境被動的
+   ``stats``：暴擊傷害），由使用者在工坊和內容裡控制；種族不再跑禁用欄位檢查。
+2. 功能型效果是主軸，也可以另外給數值（#179）：種族技的效果類型、環境被動的規則仍是封閉清單
+   （:data:`RACE_EFFECT_SPECS`、:data:`PASSIVE_RULE_SPECS`），每個類型只能填它自己的參數；
+   數值放在環境被動的 ``stats``（:class:`RaceStats`，CR-1 擴充：暴擊傷害）。
+3. 強度小於半個技能欄：種族技固定 1 AP、每場 1～2 次、不佔技能欄、效果最多 3 個
    （推、拉不吃撞擊傷害；投擲不造成傷害）。
 4. 不給元素專屬機制（6.33）：此條無法機器檢查，由玩法 PM 審資料（見 3R-1 報告）。
 5. 主城重選種族是大世界功能，不在此處。
 
-出身**不影響戰鬥**：:class:`OriginDef` 沒有任何數值欄位，``extra="forbid"`` 與同一套禁用鍵檢查擋掉。
+出身**不影響戰鬥**：:class:`OriginDef` 沒有任何數值欄位，``extra="forbid"`` 與禁用鍵檢查
+（:func:`forbidden_key_problems`）擋掉；這條檢查只剩出身在用。
 本模組只有資料與驗證，不含引擎結算（3R-2）。
 """
 
@@ -53,6 +55,7 @@ __all__ = [
     "RaceLookOptions",
     "RacePassive",
     "RaceSkill",
+    "RaceStats",
     "RaceTable",
     "forbidden_key_problems",
     "look_choice_problems",
@@ -80,7 +83,7 @@ class RaceLimits(ContentModel):
 
 
 # ---------------------------------------------------------------------------
-# 原則 1：禁用欄位
+# 出身的禁用欄位（原本的原則 1；#179 起種族不檢查，只剩出身）
 # ---------------------------------------------------------------------------
 
 _FORBIDDEN_KEYS: dict[str, str] = {
@@ -109,39 +112,18 @@ _FORBIDDEN_KEYS: dict[str, str] = {
         "屬性",
     ),
 }
-"""禁用欄位名（小寫）→ 對應的「純數值」類別。"""
-
-_FORBIDDEN_EFFECT_TYPES: dict[str, str] = {
-    "damage": "傷害",
-    "delayed_damage": "傷害",
-    "detonate_runes": "傷害",
-    "charge_through": "傷害",
-    "grant_ap": "AP",
-    "extra_reaction": "AP",
-    "cheat_death": "最大 HP",
-    "heal": "最大 HP",
-    "shield": "最大 HP",
-    "revive": "最大 HP",
-}
+"""禁用欄位名（小寫）→ 對應的「純數值」類別（只用在出身）。"""
 
 
 def forbidden_key_problems(data: object, where: str) -> list[str]:
-    """遞迴找出資料中的禁用欄位，回傳中文原因（依鍵排序，確定性）。"""
+    """遞迴找出資料中的禁用欄位，回傳中文原因（依鍵排序，確定性）。#179 起只用在出身。"""
     problems: list[str] = []
     if isinstance(data, Mapping):
         for key in sorted(data, key=str):
             value = data[key]
             kind = _FORBIDDEN_KEYS.get(str(key).lower())
             if kind is not None:
-                problems.append(
-                    f"{where}.{key}：種族不得給{kind}（防最佳解原則 1：不給純數值，"
-                    "不加傷害、命中、暴擊、最大 HP、AP、屬性）"
-                )
-            elif key == "type" and isinstance(value, str) and value in _FORBIDDEN_EFFECT_TYPES:
-                problems.append(
-                    f"{where}.type：效果「{value}」會給{_FORBIDDEN_EFFECT_TYPES[value]}，"
-                    "種族技只能做功能型效果（位移、環境互動、感知、防守一次）"
-                )
+                problems.append(f"{where}.{key}：出身不影響戰鬥，不得給{kind}")
             problems += forbidden_key_problems(value, f"{where}.{key}")
     elif isinstance(data, list | tuple):
         for index, item in enumerate(data):
@@ -150,7 +132,7 @@ def forbidden_key_problems(data: object, where: str) -> list[str]:
 
 
 class _GuardedModel(ContentModel):
-    """載入前先跑禁用欄位檢查，讓錯誤原因是中文而不是「多餘欄位」。"""
+    """載入前先跑禁用欄位檢查，讓錯誤原因是中文而不是「多餘欄位」（#179 起只有出身用）。"""
 
     @model_validator(mode="before")
     @classmethod
@@ -370,8 +352,8 @@ class RaceEffect(ContentModel):
         return self
 
 
-class RaceSkill(_GuardedModel):
-    """種族技：主動、1 AP、每場限用 1～2 次、不佔技能欄、不加傷害（7.7）。"""
+class RaceSkill(ContentModel):
+    """種族技：主動、1 AP、每場限用 1～2 次、不佔技能欄（7.7）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -399,6 +381,22 @@ class RaceSkill(_GuardedModel):
 # ---------------------------------------------------------------------------
 
 
+class RaceStats(ContentModel):
+    """環境被動的「數值」類（#179，CR-1）：種族可以另外給數值。第一個用途是暴擊傷害。
+
+    - ``crit_damage_permille``：暴擊傷害 ±‰；和武器、裝備、修正技、技能自帶的倍率相加，再套全身
+      上下限 ``core.crit_damage``（150%～300%）。
+    """
+
+    crit_damage_permille: int = Field(ge=-1000, le=1000)
+
+    @model_validator(mode="after")
+    def _check(self) -> RaceStats:
+        if self.crit_damage_permille == 0:
+            raise ValueError("stats.crit_damage_permille 不可為 0（不給就整個 stats 不寫）")
+        return self
+
+
 PassiveRule = UnitRuleSpec
 """一種環境被動規則的參數規則（E2 起是共用表 :class:`trpg.content.unit_rules.UnitRuleSpec`）。"""
 
@@ -407,8 +405,8 @@ PASSIVE_RULE_SPECS: dict[str, UnitRuleSpec] = UNIT_RULE_SPECS
 地形規則用同一張表）。"""
 
 
-class RacePassive(_GuardedModel):
-    """環境被動：一條環境互動的小規則；不給數值（7.7 原則 1、2）。"""
+class RacePassive(ContentModel):
+    """環境被動：一條環境互動的小規則（7.7 原則 2）。"""
 
     id: str = Field(pattern=ID_PATTERN)
     name_zh: str = Field(min_length=1)
@@ -425,6 +423,8 @@ class RacePassive(_GuardedModel):
     radius: int | None = Field(default=None, ge=1, le=3)
     duration: int | None = Field(default=None, ge=1, le=3)
     """``trail_surface``（E3）：留下的表面持續幾個環境回合。"""
+    stats: RaceStats | None = Field(default=None, exclude_if=lambda v: v is None)
+    """數值類（#179，CR-1）：和環境規則並存的數值加成；沒寫時不輸出（現有 10 族的序列化不變）。"""
 
     @model_validator(mode="before")
     @classmethod
@@ -467,7 +467,7 @@ ORIGIN_TAGLINE_MAX = 16
 """出身短描述的字數上限（出身卡的一行小字）。"""
 
 
-class RaceDef(_GuardedModel):
+class RaceDef(ContentModel):
     """一個可玩種族。"""
 
     id: str = Field(pattern=ID_PATTERN)

@@ -29,6 +29,7 @@ stat_prices:
   element_resist: {points: 3, per: 50}  # 單一元素抗性 +5% ＝ 3
   defense: {points: 3, per: 20}         # 防禦值 +2% ＝ 3
   move: {points: 12, per: 1}            # 移動 +1 ＝ 12
+  crit_damage: {points: 3, per: 100}    # 暴擊傷害 +10% ＝ 3（CR-1，05 5.4.2 第 7 點；比暴擊範圍 +1 ＝ 15 貴，初值）
 
 # 條件數值＝數值點數 × 條件成立率（8.22.1 第 4 點）。
 conditional_prices:
@@ -121,4 +122,5 @@ offer_attempts: 8
 unique_affixes: [affix_unique_thunder_mist, affix_unique_steam_guard, affix_unique_frostfire]
 
 # 暫不進一般產生器的詞條（LW-1）：獨狼示範詞條「獨行的」先只定義、不掉落，由開發 PM 排入時從這裡拿掉。
-held_back_affixes: [affix_cond_lone_defense]
+# CR-1：暴擊傷害詞條「暴擊傷害 +10%」先只定義、不掉落（規格沒排進掉落；開發 PM 排入時從這裡拿掉）。
+held_back_affixes: [affix_cond_lone_defense, affix_crit_damage]

@@ -46,6 +46,7 @@ from trpg.content.skills import (
 from trpg.content.stacks import StackDef
 from trpg.engine.attack_shapes import ATTACK_LINE_LENGTH
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
+from trpg.engine.rules.combat import crit_text_zh
 from trpg.engine.rules.statuses import scaled_status_def
 from trpg.engine.skills.scaling import MASTERY_BONUS
 from trpg.engine.summons.core import SummonStats
@@ -379,7 +380,9 @@ def _damage_parts(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> tup
         extras.append(f"吸血：你回復造成傷害的 {spec.lifesteal_permille / 10:g}%")
     if spec.explode:
         extras.append(f"爆骰（擲到最大值再擲一次，每顆最多再擲 {lib.ruleset.core.explode_max} 次）")
-    if skill.crit_range is not None:
+    if skill.crit_permille is not None:  # CR-1（05 5.4.2 第 8 點）：例「暴擊 19–20・250%」
+        extras.append(crit_text_zh(skill.crit_range or 20, skill.crit_permille))
+    elif skill.crit_range is not None:
         extras.append(f"暴擊範圍 {skill.crit_range}–20")
     scale = scaling_text(spec)
     if scale is not None:
@@ -1365,6 +1368,7 @@ DESCRIBED_CHANGES: frozenset[str] = frozenset(
         "add_tags",
         "shape_to",
         "on_hit_effects",
+        "crit_damage_permille",
     }
 )
 """卡片文字（:func:`modifier_summary`）有寫法的修正規則改變種類（Phase 3T-1；
@@ -1434,12 +1438,19 @@ def _change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -
     return _other_change_text(library, skill, rule)
 
 
+_PERMILLE_CHANGE_TEXT = {
+    "form_upkeep_permille": "你的形態維持費 {pct:+g}%（無條件捨去）",
+    "form_entry_permille": "你的形態進入獎勵的數值 {pct:+g}%（無條件捨去）",
+    "crit_damage_permille": "暴擊傷害 {pct:+g}%（暴擊只放大骰子）",  # CR-1（#178）
+}
+"""只有一個 ‰ 數值的改變：格式字串（``pct`` 為百分比）。"""
+
+
 def _other_change_text(library: ContentLibrary, skill: SkillDef, rule: ModifierSpec) -> str:
     change = rule.change
-    if change.form_upkeep_permille is not None:
-        return f"你的形態維持費 {change.form_upkeep_permille / 10:+g}%（無條件捨去）"
-    if change.form_entry_permille is not None:
-        return f"你的形態進入獎勵的數值 {change.form_entry_permille / 10:+g}%（無條件捨去）"
+    permille = _PERMILLE_CHANGE_TEXT.get(change.kind)
+    if permille is not None:
+        return permille.format(pct=getattr(change, change.kind) / 10)
     if change.add_element is not None:
         return f"物理傷害改為{change.add_element.display_name}（已有元素的不變）"
     if change.add_tags is not None:

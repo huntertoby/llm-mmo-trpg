@@ -498,6 +498,7 @@ modifier:
     summon_damage_per_100: 300   # 召喚物傷害加成每 +10%（3-33f1；反推值）
     form_upkeep_per_100: 200     # 形態維持費每減少 10%（3J-3 化形專精；與下一項、武器技 −20% 一起反推：化形專精落在預算 70～100%；初值，未經模擬）
     form_entry_per_100: 200      # 形態進入獎勵的數值每 +10%（3J-3；反推值）
+    crit_damage_per_100: 25      # CR-1（#178）暴擊傷害每 +10%：基礎暴擊率 5% × 10% × 骰子占比 0.7 × 基準傷害 7 ≈ 0.0245 點（初值，未經模擬）
     silent_strike: 420           # BS-1（#157）無聲：每次近戰攻擊不讓目標轉身的價值（× all_attacks 10 次 ≈ 3.6 點；占位，數值工坊調）
     # heal_permille（3-24b1）不在這裡：基準武器傷害 × ‰（同 damage_permille，初值，未經模擬）
     # shape_to（3D-3）不在這裡：基準傷害 × 轉換前後的形狀倍率差（skill_shapes.yaml），單體→直線 ≈ 2.8、單體→連鎖 ≈ 1.75、直線→錐形 ≈ 1.4
@@ -529,7 +530,9 @@ gamble_on_miss_rate_permille: 300
 # 高變異、超載、依情況縮放（Phase 3D-7b；初值，未經模擬；都屬於「期望值」算法）：
 #   爆骰：每顆骰的平均 E_k ＝ (s+1)/2 ＋ E_(k−1)/s（k＝explode_max，s＝面數；武器技用 explode_weapon_sides），
 #         傷害點數 × (1 ＋ (E_k ÷ E_0 − 1) × variance_dice_share_permille‰)；
-#   暴擊範圍：額外暴擊率 ＝ (20 − crit_range) ÷ 20（以基礎暴擊 20 為準），傷害點數 × (1 ＋ 額外暴擊率 × variance_dice_share_permille‰)；
+#   暴擊範圍：額外暴擊率 ＝ (20 − crit_range) ÷ 20（以基礎暴擊 20 為準），傷害點數 × (1 ＋ 額外暴擊率 × (倍率 − 100%) × variance_dice_share_permille‰)；
+#     倍率＝技能自帶的 crit_permille，沒帶照 rules/core.yaml 的 crit_damage.base_permille（CR-1，#178；200% 時和改版前相同）；
+#   技能自帶暴擊傷害倍率（CR-1）：另 × (1 ＋ 基礎暴擊率 5% × (自帶倍率 − 基礎倍率) × variance_dice_share_permille‰)；
 #   damage_permille：傷害點數 × ‰；scaling：傷害點數 × (1 ＋ min(cap, 預估步數 × per_step)‰)，預估步數見 scale_expected_steps_milli；
 #   超載：帶標籤的傷害點數 × (1 ＋ 平均層數 × per_stack‰ × overload_expected_permille‰)。
 variance_dice_share_permille: 700

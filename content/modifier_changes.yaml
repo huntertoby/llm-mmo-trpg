@@ -146,6 +146,13 @@ changes:
     self_only: true
     true_only: true
     budget: {unit: flag, points: silent_strike}
+  # CR-1（#178，05 5.4.2 第 3、7 點）：你的暴擊傷害 ±‰。和武器、裝備、技能自帶、種族的倍率相加後套全身 150%～300%。
+  # 預算：每次使用的價值 ＝ 基礎暴擊率 5% × 加成 × 骰子占比 × 基準傷害（points_milli.crit_damage_per_100，初值）。
+  - id: crit_damage_permille
+    name_zh: 暴擊傷害 ±‰
+    applies_to: [attack, all_attacks, all_skills, skill_tags, weapon_skills]
+    nonzero: true
+    budget: {unit: magnitude, points: crit_damage_per_100, signed: true, per: 100}
   # E5（#175，08 8.29 E5 第 3～6 點）：普攻變形。值先只有 line（普攻變 2 格直線：從自己旁邊那格起、往目標方向
   # 打 2 格，只打敵人）。只限近戰、射程 1 的武器；只改自己回合的主動普攻（反應攻擊照舊打單體）。
   # 展開在 trpg.engine.attack_shapes；裝備授予時另過預算閘門（trpg.skillgen.reshape_gate）。

@@ -269,7 +269,7 @@ class _AffixBase(ContentModel):
         return self.category in NUMERIC_CATEGORIES  # type: ignore[attr-defined]
 
 
-type StatKind = Literal["attribute", "max_hp", "element_resist", "defense", "move"]
+type StatKind = Literal["attribute", "max_hp", "element_resist", "defense", "move", "crit_damage"]
 
 
 class StatAffix(_AffixBase):
@@ -280,6 +280,8 @@ class StatAffix(_AffixBase):
     - ``element_resist``：單一元素抗性 +N‰（``element`` 必填；上限見 ``EquipmentCaps``）。
     - ``defense``：防禦值 +N‰。
     - ``move``：移動 +N（裝備合計上限見 ``EquipmentCaps``）。
+    - ``crit_damage``：暴擊傷害 +N‰（CR-1，05 5.4.2 第 3 點；和其他來源相加後套全身上下限
+      ``core.crit_damage``）。
     """
 
     category: Literal["stat"]
@@ -295,7 +297,8 @@ class StatAffix(_AffixBase):
             raise ValueError(f"詞條 {self.id}：attribute 只在 stat: attribute 時填寫（且必填）")
         if (self.stat == "element_resist") != (self.element is not None):
             raise ValueError(f"詞條 {self.id}：element 只在 stat: element_resist 時填寫（且必填）")
-        if self.stat in ("element_resist", "defense") and self.value_unit != "permille":
+        permille_stats = ("element_resist", "defense", "crit_damage")
+        if self.stat in permille_stats and self.value_unit != "permille":
             raise ValueError(f"詞條 {self.id}：{self.stat} 的 value_unit 必須是 permille")
         return self
 
