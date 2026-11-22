@@ -13,7 +13,8 @@
 | 2 通過戳記（分流跑另放位置，記範圍與基準） | 完成 | `08081d223` |
 | 3 crash_case 240 秒逾時：查原因、放寬、留證 | 完成（原因只查到一半，見第 3 節） | `e1fefb52d` |
 | 4 文件：`docs/dev/上手-測試.md` 一之一、一之二節，第五節補時限 | 完成 | `be816db3f` |
-| 報告 | 本檔 | `21387b564`（草稿）、本次更新 |
+| 修 `test_sim_real` 寫死的 old=160（開發 PM 裁定） | 完成 | `2ea5d2777` |
+| 報告 | 本檔 | `21387b564`（草稿）、`5ba8b7a89`、本次更新 |
 
 ### 1. 分流規則表
 
@@ -85,11 +86,11 @@
 | 改 content | `content/ai_profiles.yaml` 末尾加一行註解 | 分流：全跑（動到 content/ai_profiles.yaml） | 全部九步：pytest 18472 passed，719 秒；vitest 60 秒 | 806 秒 |
 
 - 只改後端那次第一跑的結束碼是 1：我在 `rng.py` 檔尾加的註解沒照 ruff format 的空行規則，被 `ruff format --check` 擋下來（748 秒，其他步驟都過）。換成改模組說明的寫法後重跑通過。這是我的暫時改動造成的，不是 check.py 的問題。
-- 只改後端的 pytest 比改 content 那次慢（992 秒對 719 秒），兩次跑的測試一樣。差別應該是機器當時的負載，跟分流無關。
+- **「只改後端」的 1004 秒比改 content 全跑的 806 秒還久，原因判斷**：慢的只有 pytest 這一步，992 秒對 719 秒。兩次跑的是同一組 18472 個測試，參數一樣，分流只差在後端那次少跑前端三步（約 70 秒）。同一個「只改後端」範圍的第一次（被 format 擋下那次）pytest 只花 708 秒。同樣的步驟、同樣的測試，708 秒和 992 秒差了近 300 秒，所以是機器當時的負載不同，不是分流有問題。那段時間我自己沒有開其他程序；有沒有別的 agent 在跑開發用的測試，我看不到，不能確定。看門狗在全部通過時會刪掉逐測試的 trace，所以沒辦法事後比對是哪幾個測試變慢。
 - `--full`（888 秒）：只有 pytest 失敗，2 個失敗，其他步驟都通過。兩個失敗單獨重跑也一樣失敗。我的改動對 main 只有 `scripts/check.py`、`tests/infra/`、`docs/`，所以失敗跟 TS-1 無關。兩個都是標了 slow 的既有測試，平常的 check.py 不跑；KD-1、HC-8、WL-2 只跑 parity＋cli，沒跑 `--full`。
   1. `tests/api/tuning/test_sim_real.py::test_real_pool_is_deterministic`：測試裡的草稿寫 `units/ashen_heart.yaml` 的 `max_hp` old=160，但 x10 放大（`f3a405238`）之後內容是 1360，草稿驗證不過，丟出 `SimRequestError`。
   2. `tests/skillgen/test_random_composer.py::test_one_thousand_seeds_are_all_valid_and_spread_out`：種子 238 組出 2 階 rare 的「預支」光環，效果只有 `borrow_ap`。AP-2 把 `borrow_ap_points` 定成 0，所以預算比是 0，低於測試要求的下限 0.75。
-  - 規格寫「不改其他測試的內容」，這兩個我沒修，已經回報開發 PM（見待 PM 決定 8）。
+  - 開發 PM 裁定：第 1 個在這段修（`2ea5d2777`）。草稿改成從內容讀現值 `max_hp`，改後的值照舊是一半，斷言不變；單獨重跑 `pytest -m slow tests/api/tuning/test_sim_real.py` 的結束碼是 0（1 passed）。第 2 個不是測試寫錯：預支光環的預算是 0，組合器卻還是會組出來，要改的是組合器或檢查規則，由 PM 另排（見待 PM 決定 8）。依裁定，修完不再重跑 `--full`。
 - slow parity＋cli：995 passed，56 秒。
 
 ## 驗收條件
@@ -117,6 +118,7 @@
 | 同上（暫時改 content） | 0 |
 | `uv run python scripts/check.py --full`（合併 main `b7577cff8` 後） | 1：2 failed、19526 passed、8 skipped、4 xfailed |
 | `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+| `uv run pytest -q -m slow tests/api/tuning/test_sim_real.py`（修正 `2ea5d2777` 後） | 0（1 passed） |
 
 ## 待 PM 決定（規格沒寫到、我先採保守做法的地方）
 | 事項 | 我的做法 | 其他選項 |
@@ -128,7 +130,7 @@
 | 5 `docs/` 底下非 `.md` 的檔（圖、`.py`、csv） | 全跑：前端 dev 頁會讀 `docs/art`，後端有測試讀 `docs/art/sample/tools` | 歸到前端或後端 |
 | 6 新增 `--all`、`TRPG_CHECK_BASE` | 規格要求文件寫「怎麼強制全跑」，所以加了 `--all`；驗收要只比對暫時改動，所以加了 `TRPG_CHECK_BASE` | 拿掉，只留 `--full` |
 | 7 只動 client 時跑的 client build | 加在 check.py 裡；push 時 hook 也會再跑一次 build | 拿掉 check.py 那一步，只靠 hook |
-| 8 `--full` 的 2 個既有 slow 失敗（`test_sim_real` 寫死 old=160、組合器種子 238 的預支預算比 0） | 沒修（規格不改其他測試），回報開發 PM | 在這段修；或另排一段 |
+| 8 `test_random_composer.py::test_one_thousand_seeds_are_all_valid_and_spread_out` 失敗：種子 238 組出 2 階 rare、效果只有 `borrow_ap` 的光環；`borrow_ap_points: 0`，所以預算比是 0，低於下限 0.75 | 沒動（開發 PM 裁定另排） | 組合器不讓預支當唯一的效果；或檢查規則對預支另訂下限 |
 
 ## PM 裁定
 （由開發 PM 填）
