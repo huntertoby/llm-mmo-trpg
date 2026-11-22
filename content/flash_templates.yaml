@@ -1048,8 +1048,8 @@ headlines:
   - {template: trigger_swap, keyword: on_crit, headline_zh: 改成暴擊時才觸發，效果更強}
   - {template: trigger_swap, keyword: on_damaged, headline_zh: 改成受傷時觸發}
   - {template: trigger_swap, keyword: on_hit, headline_zh: 改成命中時觸發}
-  - {template: trigger_swap, keyword: hit_by_attack, headline_zh: 改成被任何攻擊擊中時觸發}
-  - {template: trigger_swap, keyword: hit_by_melee, headline_zh: 改成只在被近戰擊中時觸發}
+  - {template: trigger_swap, keyword: hit_by_attack, headline_zh: 改成被任何攻擊命中時觸發}
+  - {template: trigger_swap, keyword: hit_by_melee, headline_zh: 改成只在被近戰命中時觸發}
 
 condition_zh:
   target_collided: 目標這回合被[[kw:collision|撞過]]才有

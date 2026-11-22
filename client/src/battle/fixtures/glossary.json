@@ -4453,7 +4453,7 @@
   },
   {
    "id": "hit_by_melee",
-   "name_zh": "被近戰擊中時",
+   "name_zh": "被近戰命中時",
    "description_zh": "被近戰攻擊命中、傷害結算之後。",
    "tags": [],
    "status_look": null,
@@ -4480,7 +4480,7 @@
   },
   {
    "id": "hit_by_spell",
-   "name_zh": "被法術擊中時",
+   "name_zh": "被法術命中時",
    "description_zh": "被法術技命中、傷害結算之前；另一方是施放者。",
    "tags": [],
    "status_look": null,
