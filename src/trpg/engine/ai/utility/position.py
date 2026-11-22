@@ -45,7 +45,7 @@ from trpg.engine.ai.weapon_range import (
 from trpg.engine.ai.zone import hostile_zone_at
 from trpg.engine.effects.world import unit_push_block
 from trpg.engine.formation import formation_permille
-from trpg.engine.ids import BOSS_TAG, SHIELD_GUARD
+from trpg.engine.ids import BOSS_TAG, BURNING, SHIELD_GUARD
 from trpg.engine.preview import Preview
 from trpg.engine.rules.combat import (
     HALF_COVER,
@@ -71,7 +71,7 @@ from trpg.engine.rules.movement import (
     is_standable,
     step_cost,
 )
-from trpg.engine.rules.race import fall_immune
+from trpg.engine.rules.race import burn_immune, fall_immune
 from trpg.engine.rules.statuses import forced_target_sources
 from trpg.engine.skills.conditions import is_flanked
 from trpg.engine.state import BattleState, UnitState
@@ -166,19 +166,34 @@ def _taunter(state: BattleState, unit: UnitState) -> UnitState | None:
     return None
 
 
-def _harmful(state: BattleState, xy: tuple[int, int]) -> bool:
+def _harmful(state: BattleState, xy: tuple[int, int], unit: UnitState | None = None) -> bool:
+    """``xy`` 的表面對站在上面的單位有害：回合開始受傷（不限標籤的傷害）、回合開始或進入時被施加
+    狀態。
+
+    ``unit``（E2，08 8.29 E2 第 2 點）：要評估的單位。開關
+    ``heuristics.scoring.harmful_sees_immunity`` 打開時看它的免疫——表面施加的燃燒對
+    :func:`~trpg.engine.rules.race.burn_immune` 的單位不算有害（種族「炎膚」或裝備的同種地形
+    規則）。``unit`` 為 ``None`` 或開關關閉時不看免疫（E2 之前）。
+    """
     surface = state.tile(*xy).surface
     if surface is Surface.NONE:
         return False
     definition = state.ruleset.surface_def(surface)
     start = definition.on_turn_start
     enter = definition.on_enter
-    if start is not None:
-        if start.damage is not None and start.damage.only_tag is None:
+    if start is not None and start.damage is not None and start.damage.only_tag is None:
+        return True
+    viewer = unit if state.ruleset.ai.scoring.harmful_sees_immunity else None
+    for spec in (start, enter):
+        status = None if spec is None else spec.apply_status
+        if status is None:
+            continue
+        immune = (
+            viewer is not None and status == BURNING and burn_immune(state.ruleset, viewer, surface)
+        )
+        if not immune:
             return True
-        if start.apply_status is not None:
-            return True
-    return enter is not None and enter.apply_status is not None
+    return False
 
 
 def _ward(state: BattleState, unit: UnitState, orders: OrderContext | None = None) -> XY | None:
@@ -470,7 +485,7 @@ def _unit_position_value(
     value -= objective_cost(state, unit, w)
     if scene.orders is not None:
         value -= _order_penalty(scene.orders, xy)
-    if _harmful(state, xy) or (state.zones and hostile_zone_at(state, xy, unit.team)):
+    if _harmful(state, xy, unit) or (state.zones and hostile_zone_at(state, xy, unit.team)):
         value -= w.hazard  # 有害表面，或敵方會傷害自己的持續區域（Phase 3D-5）
     if w.formation:  # 陣法（Phase 5A-M2）：待在同門範圍內，落單扣分
         step = state.ruleset.ai.scoring.formation_step  # 倍率每這麼多‰ 算一份權重

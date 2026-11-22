@@ -29,16 +29,19 @@ __all__ = ["DISPLACE_PRIMITIVES", "displace_estimate", "exposure", "is_hurt", "t
 DISPLACE_PRIMITIVES = (TELEPORT_TARGET, SWAP_ANY)
 """需要 :func:`displace_estimate` 的效果原語。"""
 
-type Harmful = Callable[[BattleState, XY], bool]
+type Harmful = Callable[[BattleState, XY, UnitState | None], bool]
+"""格子對某個單位是否有害（E2：第三個參數是要評估的單位，看它的免疫）。"""
 
 
-def tile_harm(state: BattleState, xy: XY, trap_team: Team, harmful: Harmful) -> int:
-    """格子對站在上面的單位有多危險（便宜的估計）：致命地形、有害表面、``trap_team`` 陣營放的
-    陷阱各有分數（``ai_profiles.yaml`` 的 ``heuristics.estimate``），其他 0。"""
+def tile_harm(
+    state: BattleState, xy: XY, trap_team: Team, harmful: Harmful, unit: UnitState | None = None
+) -> int:
+    """格子對站在上面的單位（``unit``）有多危險（便宜的估計）：致命地形、有害表面、``trap_team``
+    陣營放的陷阱各有分數（``ai_profiles.yaml`` 的 ``heuristics.estimate``），其他 0。"""
     est = state.ruleset.ai.estimate
     if is_deadly(state, xy):
         return est.displace_deadly_points
-    if harmful(state, xy):
+    if harmful(state, xy, unit):
         return est.displace_surface_points
     traps = own_traps(state, trap_team)
     return est.displace_trap_points if any(t.xy == xy for t in traps) else 0
@@ -68,8 +71,8 @@ def _moved_value(
 ) -> int:
     """``unit`` 被移到 ``to`` 的收益（施放者的立場）：敵人走向危險、友方離開危險或受傷的友方
     離開敵人都是正的；反過來是負的。"""
-    here = tile_harm(state, unit.xy, caster.team, harmful)
-    there = tile_harm(state, to, caster.team, harmful)
+    here = tile_harm(state, unit.xy, caster.team, harmful, unit)
+    there = tile_harm(state, to, caster.team, harmful, unit)
     if unit.team is not caster.team:
         return there - here
     value = here - there

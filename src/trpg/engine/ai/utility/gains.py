@@ -396,11 +396,13 @@ def _surface_gains(f: _GainFrame) -> Fraction:
     """站在有害表面上的敵人數變化；技能讓友方站上有害的新表面則扣分。"""
     state, actor, team = f.state, f.actor, f.actor.team
     after = f.p.min_state
-    before_harm = sum(1 for u in _enemies(state, actor) if f.counts(u.id) and _harmful(state, u.xy))
-    after_harm = sum(
+    before_harm = sum(
+        1 for u in _enemies(state, actor) if f.counts(u.id) and _harmful(state, u.xy, u)
+    )
+    after_harm = sum(  # E2：在對手腳下放他免疫的表面不算
         1
         for u in after.living_units()
-        if u.team is not team and f.counts(u.id) and _harmful(after, u.xy)
+        if u.team is not team and f.counts(u.id) and _harmful(after, u.xy, u)
     )
     gains = f.w.surface * f.hit * (after_harm - before_harm)
     gains += _oil_setup_gains(f)
@@ -445,7 +447,8 @@ def _tile_value(f: _GainFrame, state: BattleState, uid: UnitId, xy: XY) -> Fract
         weight = w.kill + w.env_kill if f.is_enemy(uid) else w.kill
         divisor = state.ruleset.ai.scoring.possible_kill_divisor
         return Fraction(weight * (divisor - 1), divisor)
-    return Fraction(w.surface) if _harmful(state, xy) else Fraction(0)
+    unit = state.units.get(uid)  # E2：不把免疫的單位推進那種表面
+    return Fraction(w.surface) if _harmful(state, xy, unit) else Fraction(0)
 
 
 def _displace_gains(f: _GainFrame) -> Fraction:
@@ -566,7 +569,7 @@ def _harmed_allies(state: BattleState, actor: UnitState) -> int:
     return sum(
         1
         for u in state.living_units()
-        if u.team is actor.team and u.id != actor.id and _harmful(state, u.xy)
+        if u.team is actor.team and u.id != actor.id and _harmful(state, u.xy, u)
     )
 
 
