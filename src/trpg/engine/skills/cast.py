@@ -95,7 +95,7 @@ from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.statuses import is_rooted, skip_turn_status
 from trpg.engine.rules.weapons import range_damage_permille
-from trpg.engine.skill_triggers import collect_move
+from trpg.engine.skill_triggers import attacking, collect_move
 from trpg.engine.skills.conditions import Subject, condition_met, stack_at_least, subjects_of
 from trpg.engine.skills.exploits import (
     Exploit,
@@ -129,6 +129,7 @@ from trpg.engine.skills.targeting import (
 from trpg.engine.skills.variance import overload_bonus, scale_bonus
 from trpg.engine.stacks import consume_stacks
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.trigger_types import AttackInfo
 from trpg.engine.wind import spread_wind
 from trpg.shared.types import Element, Pos, Surface, UnitId
 
@@ -594,6 +595,24 @@ class Cast:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
+        with attacking(self.ctx, self.attack_info()):  # E4：觸發篩選看這次施放的攻擊種類
+            self._run()
+
+    def attack_info(self) -> AttackInfo:
+        """這次施放的攻擊種類（E4，08 8.29 E4 第 6 點）：近戰同格擋（``profile.height_limited``），
+        不是近戰時法術技為 ``spell``、其他為 ``ranged``；反應技的來源是 ``reaction``（反應 ID 為
+        技能 ID），其他施放（主動、被動、陷阱、裝備）都是 ``skill``。"""
+        skill = self.skill
+        kind = (
+            "melee"
+            if self.profile.height_limited
+            else ("spell" if skill.category == "spell" else "ranged")
+        )
+        if skill.kind == "reaction":
+            return AttackInfo(self.caster.id, kind, "reaction", skill.id)
+        return AttackInfo(self.caster.id, kind, "skill")
+
+    def _run(self) -> None:
         self.stacks_at_cast = dict(self.caster.stacks)  # KW-1：「層數達 N」看施放開始時的層數
         if not self.dash():  # 衝鋒一律最先結算；被擋下時其餘效果不結算
             return

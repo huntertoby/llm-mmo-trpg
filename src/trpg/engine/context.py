@@ -11,6 +11,7 @@ from trpg.engine.events import EventBase
 from trpg.engine.oath_tracking import observe_oath
 from trpg.engine.skill_triggers import Fired, PassiveIndex, observe
 from trpg.engine.state import BattleState
+from trpg.engine.trigger_types import AttackInfo
 from trpg.shared.rng import Rng
 from trpg.shared.types import UnitId
 
@@ -175,11 +176,13 @@ class Ctx:
     """
 
     __slots__ = (
+        "attack_info",
         "branched",
         "check_counts",
         "check_log",
         "check_override",
         "core",
+        "dealt_elements",
         "decisions",
         "downed",
         "events",
@@ -253,6 +256,12 @@ class Ctx:
         self.hit_count_once: set[UnitId] | None = None
         """普攻直線（E5，8.29 E5 第 6 點）結算中：這次普攻已經記過「每第 N 次命中」的攻擊者；
         不在直線普攻裡時 ``None``（每命中一個人照舊 +1）。"""
+        self.attack_info: AttackInfo | None = None
+        """目前這次攻擊的種類（E4 觸發篩選；普攻、反應攻擊與施放期間設定，結束後還原）。"""
+        self.dealt_elements: dict[tuple[UnitId, UnitId], set[str]] = {}
+        """E4 元素篩選：還沒結算的這一批裡，（攻擊者, 目標）之間攻擊造成過的傷害元素（只有有人帶
+        「命中時」「暴擊時」的元素篩選時才記；
+        :func:`~trpg.engine.skill_triggers.settle` 每批清空）。"""
         self.zone_entries: list[tuple[int, UnitId]] = []
         """單位進入持續區域：``(區域, 單位)``，效果佇列清空時（陷阱之後）依記錄順序結算
         （Phase 3D-5，:mod:`trpg.engine.zones`）。"""
