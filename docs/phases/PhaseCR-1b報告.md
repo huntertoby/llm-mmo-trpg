@@ -14,6 +14,8 @@
 | `2ad6a5e1e` | 第 4 項：兩個 wish 測試改成不靠牆上時間的等法 |
 | `33314e744` | 截圖 `docs/art/shots/cr-1b/`（6 張） |
 | `aba95be44` | `git merge --no-edit main`（只帶進 `docs/art/E3b驗收.md`） |
+| `f1666ea30` | 報告初版（全量檢查待補） |
+| `8d79c7896` | 6.5.1 浮動卡實測 4 張（滑過 → 釘住並滑入 → 捲到底 → 關閉）；第二次 `git merge --no-edit main`：Already up to date |
 
 ## 2. 做法
 
@@ -108,9 +110,9 @@ uv run python scripts/run_pytest.py -q -n 8 tests/api/test_wish_pregen.py tests/
 | 相關 vitest（previewText、pr2bPractice、critDamagePanel、unitInfo*、statusCard、avoidPanel、floatCardRule、`src/render`、pathPreview、trailPreview、tileInfoTrail） | 0（`src/render` 整包跑時 `qIconQi2d.test.ts` 一題在 wish 連跑的負載下超過 30 秒逾時，單獨重跑 16 passed、2.5 秒，和這段無關） |
 | 相關 pytest（`tests/api` 全部、`tests/narrative`、`tests/engine/test_crit_*`、`test_view.py`、`test_variance_preview.py`） | 0（`tests/api` 1498 passed、1 skipped） |
 | `corepack pnpm -C client build`（截圖前） | 0 |
-| `uv run python scripts/check.py --all`（merge main 後） | 待補 |
-| `uv run python scripts/run_pytest.py -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 待補 |
-| `corepack pnpm -C client build`（merge 後） | 待補 |
+| `uv run python scripts/check.py --all`（merge main、全部 commit 之後，第 1 次） | **0**：pytest 18698 passed、8 skipped；vitest 417 檔 4955 passed；ruff、format、mypy、lint-imports、client typecheck、situation coverage 通過；已寫通過戳記 |
+| `uv run python scripts/run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | **0**（995 passed）；CLI 快照、parity 都沒變，不用重產（用字改動只在技能自帶倍率的技能卡與倍率非 200% 的預覽，現有內容沒有這種技能與武器） |
+| `corepack pnpm -C client build`（check 之後） | **0** |
 
 ### 3.4 截圖（`docs/art/shots/cr-1b/`，交美術 PM）
 
@@ -123,7 +125,14 @@ uv run python scripts/run_pytest.py -q -n 8 tests/api/test_wish_pregen.py tests/
 - `docs/art/shots/cr-1b/cr1b_panel_800x600.jpg`：同上 800 寬
 - `docs/art/shots/cr-1b/cr1b_frost_preview_800x600.jpg`：霜行預覽（同 E3b 場景），預覽牌改擺停點下方，沒蓋到敵人
 
-截圖後伺服器與 Chrome 都用自己的 PID（`taskkill /PID … /T /F`）關掉，查過沒有殘留。
+6.5.1 浮動卡實測（800 寬，同一個攻擊預覽場景；格子資訊卡照 3-40b 規則要先釘住才能滑進，所以順序是滑過 → 釘住並滑入 → 捲到底 → 關閉）：
+
+- `docs/art/shots/cr-1b/cr1b_float_1_hover_800x600.jpg`：滑過木樁，卡片出現在目標右邊（440～710），預覽面板（8～238）沒被蓋
+- `docs/art/shots/cr-1b/cr1b_float_2_pin_enter_800x600.jpg`：Shift＋點釘住、展開「詳細」、滑鼠滑進卡片（`:hover` 為真，卡片不關）；卡片長高後頂到最大高度、卡片內可捲（`scrollHeight − clientHeight` 71）
+- `docs/art/shots/cr-1b/cr1b_float_3_scrolled_800x600.jpg`：在卡片內滾輪捲到底（`scrollTop` 71＝最大值），捲動不關閉；看得到「暴擊傷害｜武器「匕首」250%（全身上限 300%）」
+- `docs/art/shots/cr-1b/cr1b_float_4_closed_800x600.jpg`：按 Esc，卡片關閉（`.unit-float` 不存在）
+
+截圖後伺服器與 Chrome 都用自己的 PID（`taskkill /PID … /T /F`）關掉，查過沒有殘留。cr-1b 共 10 張。
 
 ## 4. 複雜度
 
@@ -138,4 +147,4 @@ uv run python scripts/run_pytest.py -q -n 8 tests/api/test_wish_pregen.py tests/
 5. **其他陣營不寫修正技名**，合併成「修正技 +N%」；隱蔽中看不到資訊的敵人整格不顯示。
 6. **浮動卡「放上層」的 z-index**：卡片降到 11（左欄 13 之下），只在怎樣都會重疊時套用；此時卡片也會在戰場上的其他浮動層之下。
 7. **預覽牌的「上方」**放在停點那一格的頭上（再高半格），「下方」貼停點下緣、水平置中；單位範圍＝格子往上多半格。這些是版面初值，美術看截圖再調。
-8. **6.5.1 的「滑進→捲到底→釘住→關閉」實測**：這段只改擺位，截圖時做了 Shift＋點釘住與展開「詳細」（800、1600 各一次），沒有逐項做完整流程。
+8. **6.5.1 實測的順序**：格子資訊卡要先釘住才能滑進（3-40b），所以實測照「滑過 → 釘住並滑入 → 捲到底 → Esc 關閉」做，4 張截圖見 3.4；只做了 800 寬（1600 寬卡片位置不變）。
