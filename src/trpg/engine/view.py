@@ -33,6 +33,7 @@ from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.attack_shapes import skill_note_zh, skill_problem_zh
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.boss_phases import next_phase
+from trpg.engine.crit_damage import crit_damage_breakdown, crit_damage_detail_zh
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
@@ -52,6 +53,7 @@ from trpg.engine.rules.unit_rules import (
     race_override_zh,
     terrain_notes,
 )
+from trpg.engine.skills.conditions import Subject
 from trpg.engine.skills.revive import revivable
 from trpg.engine.skills.targeting import skill_mana_cost
 from trpg.engine.state import (
@@ -565,6 +567,13 @@ class UnitView(_ViewModel):
     """裝備摘要（Phase 3G-G1，唯讀；依欄位固定順序，沒有裝備時為空）。"""
     gear_totals: tuple[GearTotalView, ...] = ()
     """裝備加成的來源（Phase 3G-G4，唯讀）：實際值（遞減、截斷後）與每條詞條的貢獻。"""
+    crit_damage_permille: int | None = None
+    """主手武器普攻的暴擊傷害倍率（‰，套完全身上下限；CR-1b，05 5.4.2 第 8 點）。和結算共用
+    :func:`trpg.engine.crit_damage.crit_damage_permille`；修正技只算沒有目標也成立的條件。觀看者
+    看不到資訊（``hidden_info``）時為 ``None``。"""
+    crit_damage_detail_zh: str | None = None
+    """暴擊傷害倍率的來源（角色面板「▸ 詳細」），例「武器「戰斧」200%・詞條 +10%（全身上限
+    300%）」；其他陣營的單位不寫修正技的名字。看不到資訊時為 ``None``。"""
     gear_skills: tuple[GearSkillView, ...] = ()
     """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
     skill_notes_zh: dict[str, tuple[str, ...]] | None = None
@@ -1092,9 +1101,18 @@ def _form_view(state: BattleState, unit: UnitState) -> FormView | None:
     )
 
 
+def _crit_damage_fields(state: BattleState, unit: UnitState, team: Team) -> tuple[int, str]:
+    """角色面板的暴擊傷害（CR-1b）：主手武器普攻、沒有目標（修正技只算不看目標的條件）。"""
+    breakdown = crit_damage_breakdown(
+        state, unit, use=modifiers.ATTACK, subject=Subject(None, unit.xy)
+    )
+    return breakdown.total, crit_damage_detail_zh(breakdown, names=unit.team is team)
+
+
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
     infused = unit.infused_skill if unit.alive else None
     hand = held_weapon(unit)  # 形態中仍顯示手上的武器（Phase 3J-1a）
+    crit = _crit_damage_fields(state, unit, team)
     return UnitView(
         id=unit.id,
         template_id=unit.template_id,
@@ -1180,6 +1198,8 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         facing=unit.facing,
         equipment=_equipment_view(state, unit),
         gear_totals=_gear_totals(state, unit),
+        crit_damage_permille=crit[0],
+        crit_damage_detail_zh=crit[1],
         charges=_charge_views(state, unit),
         form=_form_view(state, unit),
         form_cooldowns=tuple(

@@ -407,6 +407,24 @@ def crit_damage_bonus(state: BattleState, unit: UnitState, use: Use, subject: Su
     return _sum_for(state, unit, use, "crit_damage_permille", subject)
 
 
+def crit_damage_bonus_parts(
+    state: BattleState, unit: UnitState, use: Use, subject: Subject
+) -> tuple[tuple[SkillDef, int], ...]:
+    """:func:`crit_damage_bonus` 依來源技能拆開（CR-1b，角色面板「▸ 詳細」用）：每招一項（同一招的
+    複本先遞減再捨去），依規則順序；加總是 0 的不列。只給顯示用，結算一律用
+    :func:`crit_damage_bonus`。"""
+    sums: dict[str, int] = {}
+    skills: dict[str, SkillDef] = {}
+    for active in _applicable_active(state, unit, use, "crit_damage_permille"):
+        if condition_met(state, unit, active.rule.condition, subject):
+            value = active.rule.change.crit_damage_permille
+            assert value is not None  # _applicable_active 只給有這個改變的規則
+            sums[active.skill.id] = sums.get(active.skill.id, 0) + active.amount(value)
+            skills.setdefault(active.skill.id, active.skill)
+    parts = ((skills[sid], truncate_permille(total)) for sid, total in sums.items())
+    return tuple((skill, amount) for skill, amount in parts if amount != 0)
+
+
 def spend_attack_limits(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> None:
     """普攻的傷害真的結算時，記下本回合用掉的「每回合 1 次」加傷（Phase 3-31）。
 
