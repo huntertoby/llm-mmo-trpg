@@ -38,10 +38,13 @@ from trpg.content.skills import (
     ON_SUMMON_DOWNED,
     RUNE_BOTH_MESSAGE,
     SACRIFICE_SUMMON,
+    AttackKind,
+    AttackSource,
     ConditionSpec,
     EffectSpec,
     condition_text,
     held_gear,
+    trigger_filter_problem,
 )
 from trpg.content.slots import (
     SLOT_INDEX,
@@ -524,7 +527,9 @@ class TriggerAffix(_AffixBase):
     """第 6 類 觸發（8.21.2.6；Phase 3G-G3a）：觸發時機 ``trigger``（``skill_triggers.yaml``）時對
     ``effect_target`` 結算 ``effects``；``limit`` 每回合／每輪最多 1 次。``melee_only``：只有近戰
     造成的才算（``on_damaged``）。``tag``／``status``／``surface`` 是帶參數的時機（同被動技能的
-    ``trigger``）。"""
+    ``trigger``）。E4 篩選 ``element``、``attack_kind``、``source``、``reaction`` 同被動技能的
+    :class:`~trpg.content.skills.TriggerSpec`（都可省略，省略＝不篩、不輸出）；``melee_only`` 照舊
+    （只算普攻與反應攻擊），和新的 ``attack_kind: melee`` 是兩套定義。"""
 
     category: Literal["trigger"]
     trigger: str = Field(pattern=ID_PATTERN)
@@ -536,6 +541,10 @@ class TriggerAffix(_AffixBase):
     tag: str | None = Field(default=None, pattern=ID_PATTERN)
     status: str | None = Field(default=None, pattern=ID_PATTERN)
     surface: str | None = Field(default=None, pattern=ID_PATTERN)
+    element: Element | None = Field(default=None, exclude_if=lambda v: v is None)
+    attack_kind: AttackKind | None = Field(default=None, exclude_if=lambda v: v is None)
+    source: AttackSource | None = Field(default=None, exclude_if=lambda v: v is None)
+    reaction: str | None = Field(default=None, pattern=ID_PATTERN, exclude_if=lambda v: v is None)
 
     @model_validator(mode="after")
     def _check(self) -> TriggerAffix:
@@ -562,6 +571,15 @@ class TriggerAffix(_AffixBase):
                 f"詞條 {self.id}：on_keyword_exploited 必須 effect_target: self，"
                 "status 與 surface 擇一"
             )
+        problem = trigger_filter_problem(
+            self.trigger,
+            element=self.element,
+            attack_kind=self.attack_kind,
+            source=self.source,
+            reaction=self.reaction,
+        )
+        if problem is not None:
+            raise ValueError(f"詞條 {self.id}：{problem}")
         self._check_summon_downed()
         return self
 

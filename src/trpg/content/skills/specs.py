@@ -15,14 +15,17 @@ from trpg.content.skills.constants import (
     ON_ENTER_SURFACE,
     ON_KEYWORD_EXPLOITED,
     ON_STATUS_APPLIED,
+    AttackKind,
+    AttackSource,
     DelayedAnchor,
     DelayedRelease,
     FollowupWhen,
     Origin,
+    trigger_filter_problem,
 )
 from trpg.content.skills.effects import EffectSpec, ShapeSpec
 from trpg.content.yaml_sources import skeleton_ids
-from trpg.shared.types import Surface
+from trpg.shared.types import Element, Surface
 
 
 class SelfStatusCost(ContentModel):
@@ -139,6 +142,10 @@ class TriggerSpec(ContentModel):
       只能是 ``skill_triggers.yaml`` 寫的次數（06 6.38 第 10 點「每回合最多觸發 1 次」；
       HC-7 b 起由 Ruleset 層檢查）。SK-3b 起引擎不看每輪次數，改以「任何
       單位的每回合 1 次」計數（``UnitState.exploit_turn_counts``，被動與詞條同一套）。
+    - E4 篩選（#175，08 8.29 E4；都可省略，省略＝不篩，不輸出）：``element``（實際造成傷害的
+      元素，轉換以後的）、``attack_kind``（近戰／遠程／法術，近戰同格擋的定義）、``source``
+      （普攻／技能／反應）、``reaction``（反應 ID，要搭配 ``source: reaction``）。能搭配的時機見
+      :data:`~trpg.content.skills.constants.TRIGGER_FILTER_TIMINGS`。
     """
 
     event: str = Field(pattern=ID_PATTERN)
@@ -149,6 +156,10 @@ class TriggerSpec(ContentModel):
     target: Literal["self", "other", "nearest_enemy", "weakest_ally"] = "self"
     max_per_round: int = Field(default=1, ge=1, le=3)
     max_distance: int | None = Field(default=None, ge=1)
+    element: Element | None = Field(default=None, exclude_if=lambda v: v is None)
+    attack_kind: AttackKind | None = Field(default=None, exclude_if=lambda v: v is None)
+    source: AttackSource | None = Field(default=None, exclude_if=lambda v: v is None)
+    reaction: str | None = Field(default=None, pattern=ID_PATTERN, exclude_if=lambda v: v is None)
 
     @model_validator(mode="after")
     def _check(self) -> TriggerSpec:
@@ -173,6 +184,15 @@ class TriggerSpec(ContentModel):
         if self.surface is Surface.NONE:
             raise ValueError("trigger.surface 不可為 none")
         self._check_exploited()
+        problem = trigger_filter_problem(
+            self.event,
+            element=self.element,
+            attack_kind=self.attack_kind,
+            source=self.source,
+            reaction=self.reaction,
+        )
+        if problem is not None:
+            raise ValueError(f"trigger：{problem}")
         # AP-2 的 on_ap_spent_all、SK-3 的 on_keyword_exploited 每輪最多幾次：HC-7 b（a 段
         # 裁定 5）起寫在 skill_triggers.yaml 的 max_per_round，由 Ruleset 層的 _trigger_problems
         # 檢查並說明。

@@ -279,6 +279,55 @@ ON_ENTER_SURFACE = "on_enter_surface"
 """帶參數或需要特別處理的觸發時機 ID（Phase 3C-3a；其餘見 ``content/skill_triggers.yaml``）。"""
 
 ON_KEYWORD_EXPLOITED = "on_keyword_exploited"
+ON_BLOCK = "on_block"
+"""格擋時（E4，#175，08 8.29 E4 第 3 點）：持有者的格擋類反應真的結算時；另一方是攻擊者。"""
+ON_DISPLACE = "on_displace"
+"""讓別人位移時（E4，08 8.29 E4 第 1、2 點）：持有者推、拉、擊退、傳送別人、和別人互換，對方實際
+移動至少 1 格；另一方是被位移的單位。"""
+
+type AttackKind = Literal["melee", "ranged", "spell"]
+"""觸發篩選 ``attack_kind``（E4，08 8.29 E4 第 6 點）：近戰的定義和格擋相同——普攻看武器射程、
+技能看技能自己的近戰判定（近戰普攻、近戰武器技、近戰反應攻擊都算）；不是近戰時，法術技是
+``spell``，其他是 ``ranged``。"""
+
+type AttackSource = Literal["attack", "skill", "reaction"]
+"""觸發篩選 ``source``（E4）：自己回合的普攻 ``attack``、技能 ``skill``、反應攻擊或反應技
+``reaction``。"""
+
+TRIGGER_FILTER_TIMINGS: dict[str, frozenset[str]] = {
+    "element": frozenset({"on_hit", "on_crit", "on_damaged"}),
+    "attack_kind": frozenset({"on_hit", "on_crit", "on_damaged", ON_BLOCK}),
+    "source": frozenset({"on_hit", "on_crit", "on_damaged", ON_BLOCK}),
+    "reaction": frozenset({"on_hit", "on_crit", "on_damaged", ON_BLOCK}),
+}
+"""E4 的觸發篩選各自能搭配的時機（被動技能的 ``trigger`` 與裝備的觸發詞條共用）。都省略＝不篩。"""
+
+
+def trigger_filter_problem(
+    event: str,
+    *,
+    element: object | None,
+    attack_kind: object | None,
+    source: object | None,
+    reaction: str | None,
+) -> str | None:
+    """E4 觸發篩選的組合檢查：每個篩選只能搭配 :data:`TRIGGER_FILTER_TIMINGS` 列的時機；
+    ``reaction``（反應 ID）要搭配 ``source: reaction``。沒有問題時回傳 ``None``。"""
+    values = {
+        "element": element,
+        "attack_kind": attack_kind,
+        "source": source,
+        "reaction": reaction,
+    }
+    for name, value in values.items():
+        if value is not None and event not in TRIGGER_FILTER_TIMINGS[name]:
+            allowed = "、".join(sorted(TRIGGER_FILTER_TIMINGS[name]))
+            return f"{name} 篩選只能搭配這些時機：{allowed}；{event} 不可填"
+    if reaction is not None and source != "reaction":
+        return "reaction 篩選必須搭配 source: reaction"
+    return None
+
+
 ON_AP_SPENT_ALL = "on_ap_spent_all"
 """AP-2（#168，05 5.2）：持有者自己回合的一個動作把 AP 用到 0 時（每回合 1 次）。"""
 """你造的關鍵字被利用時（SK-3，#166，06 6.38 第 10 點）：``status``／``surface`` 擇一縮小範圍，
