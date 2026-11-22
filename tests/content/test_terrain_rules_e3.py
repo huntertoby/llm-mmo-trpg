@@ -128,3 +128,31 @@ def test_content_check_message_through_the_affix_table() -> None:
     }
     with pytest.raises(ValidationError, match="affix_t_bleed_trail：地形規則只能留下表面"):
         AffixTable.model_validate(data)
+
+
+# ---------------------------------------------------------------------------
+# 收尾：預算點數先給 0、產生器不產（等 E6-a）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("rule", sorted(_GOOD))
+def test_new_kinds_cost_zero_points_for_now(rule: str) -> None:
+    from tests.engine.helpers import library  # noqa: PLC0415
+    from trpg.content.item_budget import affix_points  # noqa: PLC0415
+
+    lib = library()
+    gen = lib.item_gen
+    assert gen is not None
+    assert affix_points(gen, _gear(rule, **_GOOD[rule]), None) == 0
+    assert "terrain" not in gen.category_points
+
+
+def test_no_content_uses_the_new_kinds_yet() -> None:
+    from tests.engine.helpers import library  # noqa: PLC0415
+
+    lib = library()
+    used = {a.rule for a in lib.affixes.values() if isinstance(a, TerrainAffix)}
+    races = lib.ruleset.races
+    assert races is not None
+    used |= {r.passive.rule for r in races.races}
+    assert not used & set(_GOOD)
