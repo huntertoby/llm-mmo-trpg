@@ -230,10 +230,14 @@ def test_week_limit_in_view(client: TestClient) -> None:
 def test_text_wish_wait_then_act(client: TestClient) -> None:
     """等待提示先排（插隊）、做好；接著送出文字許願直接拿那一筆（Mock：點燃、至少一張 LLM 卡）。"""
     url = f"/api/world/characters/{CID}/pregen/wait"
-    out = _ok(client.post(url, json={"kind": "wish", "text": WISH}))
-    assert out["status"] == "ready"
     pregen = _store(client).pregen
     assert pregen is not None
+    # CR-1b（佇列 (x)）：時鐘不走，「最多等 10 秒」永遠不到，等待改成等背景那一筆的 Future
+    # 做完（事件），不靠牆上時間；負載下 Mock 生成超過 10 秒時原本會回 timeout 而失敗。
+    # 產品的等待上限不變。
+    pregen.clock = lambda: 0.0
+    out = _ok(client.post(url, json={"kind": "wish", "text": WISH}))
+    assert out["status"] == "ready"
     calls = pregen.calls
     after = _ok(_act(client, kind="wish", text=WISH))
     assert pregen.calls == calls  # 送出時用等待排好的那一筆，沒有再呼叫
