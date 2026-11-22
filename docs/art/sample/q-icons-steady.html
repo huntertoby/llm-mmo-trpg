@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><title>KD-1 站穩：狀態圖示方案</title>
+<!-- 樣張，不接進遊戲（畫圖 agent，2026-11-22）。紀錄：docs/art/Q版小圖示-站穩.md；畫法：qIconsSteady.js（install() 把方案塞進 QIconsStatus.NEW，不改過審的檔）。
+     ?part=close   三個方案的特寫：狀態卡 20、頭頂 11 的 ×3 向量，與 2 倍內部解析度 ×6 最近鄰；最左是現行退回畫法（框中間「站」字）
+           t1      真 1 倍（res 1）×6 最近鄰：狀態卡 20、頭頂 11；每組 現行｜A｜B｜C
+           near    撞圖：每個方案和倒地、定身、緩速、纏繞、加速、穩若磐石、石膚、應變、守護並排（20 ×3 向量｜20 真 1 倍｜11 真 1 倍｜20 剪影｜11 2 倍）
+           audit   自查表（同 q-icons-status.html?part=audit 的量法）
+     重拍：uv run python -I docs/art/sample/tools/steady_shots.py <暫存資料夾> [close t1 near] ；--audit -->
+<style>
+  body{margin:0;padding:12px 16px;background:#14161f;color:#eadfcc;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif}
+  canvas{display:block}#out{display:none}pre{font:12px/1.5 Consolas,monospace;color:#d8ccb8}
+</style></head>
+<body>
+<div id="sheet"></div>
+<textarea id="out"></textarea>
+<script src="current.js"></script><script src="raceArt.js"></script><script src="paperdoll.js"></script><script src="fx.js"></script><script src="realms.js"></script>
+<script src="qDoll.js"></script><script src="obSamples.js"></script>
+<script src="qIcons.js"></script><script src="qIconsWeapons.js"></script><script src="qIconsSkills.js"></script><script src="qIconsParts.js"></script><script src="qIconsStatus.js"></script>
+<script src="qPartsData.js"></script>
+<script src="qIconsSteady.js"></script>
+<script>
+const QST = QIconsStatus, QP = QIconsParts, SD = QIconsSteady;
+SD.install();
+const P = new URLSearchParams(location.search), PART = P.get("part") || "close";
+const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", GAME_FONT = "'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif";
+const OPTS = ["steady_a", "steady_b", "steady_c"], LIVE = "__live";
+const NAME = { [LIVE]: "現行（退回畫法「站」）", steady_a: "A 靴子踩地", steady_b: "B 張腳人形", steady_c: "C 靴子＋錨" };
+const zhOf = (id) => NAME[id] ?? QST.entry(id)?.zh ?? id;
+
+// ---------------- 現行：status.ts 的 paintUnknown（名詞表名稱第一個字「站」、米白、bold 13px，±10 單位 × size/26 × 0.95），框照 paint（中性六角） ----------------
+function paintLive(ctx, cx, cy, size, unitPx) {
+  const r = size / 2, frameCss = size * unitPx;
+  ctx.save(); ctx.translate(cx, cy); QST.framePath(ctx, "neutral", r); ctx.fillStyle = QST.BASE_BG; ctx.fill(); ctx.lineWidth = Math.max(1.5, frameCss * 0.09) / unitPx; ctx.strokeStyle = QST.FRAME.neutral; ctx.stroke(); ctx.restore();
+  const k = (size / 26) * 0.95; ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k); ctx.fillStyle = "#f2e6c8"; ctx.font = `bold 13px ${GAME_FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("站", 0, 1); ctx.restore();
+}
+function liveCanvas(px, kind, zoom = 1, opt = {}) {
+  const res = opt.res ?? (zoom === 1 ? 2 : zoom), cv = document.createElement("canvas"); cv.width = cv.height = Math.round(px * res); const x = cv.getContext("2d");
+  if (kind === "head") { x.scale(res, res); paintLive(x, px / 2, px / 2, px - 2, 1); }
+  else { x.scale((px * res) / 100, (px * res) / 100); x.beginPath(); x.arc(50, 50, 49, 0, Math.PI * 2); x.clip(); paintLive(x, 50, 50, 84, px / 100); }
+  return cv;
+}
+/** 一格：狀態卡 20（cardCanvas）或頭頂 11（headCanvas）。 */
+const cell = (id, kind, zoom = 1, opt = {}) => (id === LIVE ? liveCanvas(kind === "card" ? 20 : 11, kind, zoom, opt) : kind === "card" ? QST.cardCanvas(id, 20, zoom, opt) : QST.headCanvas(id, 11, zoom, opt));
+
+// ---------------- 拼圖（照 ap2-borrow.html） ----------------
+function sheet(W, blocks) {
+  const lay = [], pad = 14; let y = pad;
+  const tmp = document.createElement("canvas").getContext("2d");
+  const wrap = (s, w, px) => { tmp.font = `${px}px ${FONT}`; const out = []; for (const para of String(s).split("\n")) { let line = ""; for (const ch of para) { if (tmp.measureText(line + ch).width > w && line) { out.push(line); line = ch; } else line += ch; } out.push(line); } return out; };
+  for (const b of blocks) {
+    if (b.title) { lay.push({ t: "title", s: b.title, y }); y += 26; }
+    else if (b.note) { const ls = wrap(b.note, W - 2 * pad, 13); lay.push({ t: "note", ls, y }); y += ls.length * 18 + 4; }
+    else if (b.cells) {
+      const gap = b.gap ?? 12; let x = pad, rowH = 0; const items = [];
+      for (const c of b.cells) {
+        const w = c.w ?? c.cv.width, h = c.h ?? c.cv.height;
+        if (x + w > W - pad + 0.5 && items.length) { lay.push({ t: "cells", items: items.splice(0), y }); y += rowH + 10; x = pad; rowH = 0; }
+        const caps = c.cap ? wrap(c.cap, Math.max(w, c.capW ?? 110), 12) : [];
+        items.push({ c, x, w, h, caps }); x += Math.max(w, caps.length ? (c.capW ?? 110) : 0) + gap; rowH = Math.max(rowH, h + (caps.length ? caps.length * 16 + 4 : 0));
+      }
+      lay.push({ t: "cells", items, y }); y += rowH + 10;
+    }
+  }
+  const Hh = y + pad, cv = document.createElement("canvas"); cv.width = W; cv.height = Hh;
+  const g = cv.getContext("2d"); g.fillStyle = "#14161f"; g.fillRect(0, 0, W, Hh); g.textBaseline = "top";
+  for (const l of lay) {
+    if (l.t === "title") { g.font = `bold 16px ${FONT}`; g.fillStyle = "#e8bb48"; g.fillText(l.s, pad, l.y); }
+    else if (l.t === "note") { g.font = `13px ${FONT}`; g.fillStyle = "#b8ab96"; l.ls.forEach((s, i) => g.fillText(s, pad, l.y + i * 18)); }
+    else for (const it of l.items) {
+      g.imageSmoothingEnabled = !it.c.nn; g.drawImage(it.c.cv, it.x, l.y, it.w, it.h); g.imageSmoothingEnabled = true;
+      g.font = `12px ${FONT}`; g.fillStyle = "#d8ccb8"; it.caps.forEach((s, i) => g.fillText(s, it.x, l.y + it.h + 4 + i * 16));
+    }
+  }
+  return cv;
+}
+function publish(cv, type = "image/png") {
+  document.getElementById("sheet").appendChild(cv);
+  document.getElementById("out").textContent = cv.toDataURL(type, 0.8);
+  document.documentElement.dataset.h = document.documentElement.scrollHeight;
+}
+const nn = (cv, Z, cap, capW) => ({ cv, w: cv.width * Z, h: cv.height * Z, nn: true, cap, capW });
+/** 剪影：狀態卡大小的圖樣本身（照 fitK 縮進框後、不含框），alpha ≥128 → 米白，其他深色。 */
+function SIL(id) { const S = QST.CARD_FRAME, k = QST.fitK(id, S, 0), src = QST.glyph(id, S * QST.GLYPH_K * k, 2, { ow: 0 }), c = document.createElement("canvas"); c.width = c.height = 40; const x = c.getContext("2d"); x.fillStyle = "#1e1e24"; x.fillRect(0, 0, 40, 40);
+  const t = document.createElement("canvas"); t.width = src.width; t.height = src.height; const tx = t.getContext("2d"); tx.drawImage(src, 0, 0); const d = tx.getImageData(0, 0, t.width, t.height);
+  for (let i = 0; i < d.data.length; i += 4) { const on = d.data[i + 3] >= 128; d.data[i] = d.data[i + 1] = d.data[i + 2] = on ? 235 : 30; d.data[i + 3] = 255; } tx.putImageData(d, 0, 0); x.drawImage(t, Math.round((40 - t.width) / 2), Math.round((40 - t.height) / 2)); return c; }
+
+const PARTS = {};
+PARTS.close = () => {
+  const blocks = [{ title: "KD-1「站穩」steady：三個方案特寫（中性＝金色六角框、深底；狀態卡 20 框 16.8、頭頂 11 框 9）" },
+    { note: "每列：狀態卡 20 ×3 向量｜頭頂 11 ×3 向量｜狀態卡 20 的 2 倍內部解析度 ×6 最近鄰｜頭頂 11 的 2 倍內部解析度 ×6 最近鄰｜實際大小（20、11）。第一列是現行（遊戲端 status.ts 的退回畫法：名稱第一個字）。" }];
+  for (const id of [LIVE, ...OPTS]) {
+    const e = id === LIVE ? null : QST.entry(id);
+    blocks.push({ title: zhOf(id) }, { note: e ? e.topic : "status.ts paintUnknown：米白「站」字（AWAITING_ART_STATUSES）" },
+      { cells: [{ cv: cell(id, "card", 3), w: 60, h: 60, cap: "20 ×3", capW: 60 }, { cv: cell(id, "head", 3), w: 33, h: 33, cap: "11 ×3", capW: 50 },
+        nn(cell(id, "card"), 6, "20 2倍 ×6"), nn(cell(id, "head"), 6, "11 2倍 ×6"), { cv: cell(id, "card"), w: 20, h: 20, cap: "20", capW: 30 }, { cv: cell(id, "head"), w: 11, h: 11, cap: "11", capW: 30 }], gap: 18 });
+  }
+  publish(sheet(1000, blocks));
+};
+PARTS.t1 = () => {
+  const blocks = [{ title: "真 1 倍（res 1，canvas 寬高＝CSS px）×6 最近鄰：現行｜A｜B｜C" }, { note: "100% 縮放螢幕的最壞情況（遊戲端固定 DPR 2）。上排狀態卡 20、下排頭頂 11；最後兩格是 B（推薦）的 2 倍內部解析度對照。" }];
+  for (const kind of ["card", "head"]) {
+    const cells = [LIVE, ...OPTS].map((id) => nn(cell(id, kind, 1, { res: 1 }), kind === "card" ? 6 : 8, `${kind === "card" ? "20" : "11"} ${zhOf(id)}`, 120));
+    cells.push(nn(cell("steady_b", kind), kind === "card" ? 3 : 4, `B 2倍（對照）`, 100));
+    blocks.push({ title: kind === "card" ? "狀態卡 20" : "頭頂 11" }, { cells, gap: 24 });
+  }
+  publish(sheet(1000, blocks));
+};
+const NEAR = ["prone", "root", "slow", "entangled", "hasted", "race_stonewall", "stoneskin", "race_adapt", "defending"];
+PARTS.near = () => {
+  const blocks = [{ title: "撞圖：方案 A／B／C 和相近的狀態並排" },
+    { note: "倒地（站穩的前一個狀態）、定身、緩速（移動控制）、纏繞（同一隻靴子）、加速、穩若磐石（同樣是「不會被打倒」）、石膚、應變（米白人形）、守護。每組：狀態卡 20 ×3 向量｜20 真 1 倍 ×4｜頭頂 11 真 1 倍 ×5｜20 的圖樣剪影（不含框）×1.5｜頭頂 11 的 2 倍內部解析度 ×3。" }];
+  const ids = [...OPTS, ...NEAR], cap = (id) => (OPTS.includes(id) ? "★" : "") + zhOf(id);
+  blocks.push({ cells: ids.map((id) => ({ cv: cell(id, "card", 3), w: 60, h: 60, cap: cap(id), capW: 76 })), gap: 20 },
+    { cells: ids.map((id) => nn(cell(id, "card", 1, { res: 1 }), 4)), gap: 16 },
+    { cells: ids.map((id) => ({ ...nn(cell(id, "head", 1, { res: 1 }), 5), w: 55, h: 55 })), gap: 41 },
+    { cells: ids.map((id) => ({ cv: SIL(id), w: 60, h: 60, nn: true })), gap: 36 },
+    { cells: ids.map((id) => ({ ...nn(cell(id, "head"), 3, null), w: 66, h: 66 })), gap: 30 });
+  publish(sheet(1240, blocks));
+};
+// 自查（照 q-icons-status.html?part=audit）：佔框 ≥70%、出框 ≤1%、平均亮度 ≥100、亮面 ≥5%、最粗處內切圓 ≥12%；兩種框（16.8、9）各照 fitK 縮進框後量
+PARTS.audit = () => {
+  const R = 8;
+  const measure = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data; let x0 = S, x1 = -1, y0 = S, y1 = -1, n = 0, lum = 0, bright = 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const i = (y * S + x) * 4; if (d[i + 3] < 200) continue; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); if (d[i] === 22 && d[i + 1] === 18 && d[i + 2] === 26) continue; n++; const Lm = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; lum += Lm; if (Lm >= 150) bright++; }
+    return { long: ((Math.max(x1 - x0, y1 - y0) + 1) / S) * QP.BOX, lum: lum / Math.max(1, n), bright: bright / Math.max(1, n) }; };
+  const thick = (cv) => { const S = cv.width, d = cv.getContext("2d").getImageData(0, 0, S, S).data, D = new Float32Array(S * S), INF = 1e6, at = (x, y) => (x < 0 || y < 0 || x >= S || y >= S ? 0 : D[y * S + x]);
+    for (let i = 0; i < S * S; i++) D[i] = d[i * 4 + 3] >= 100 ? INF : 0;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) if (D[y * S + x]) D[y * S + x] = Math.min(D[y * S + x], at(x - 1, y) + 1, at(x, y - 1) + 1, at(x - 1, y - 1) + 1.414, at(x + 1, y - 1) + 1.414);
+    let best = 0; for (let y = S - 1; y >= 0; y--) for (let x = S - 1; x >= 0; x--) if (D[y * S + x]) { D[y * S + x] = Math.min(D[y * S + x], at(x + 1, y) + 1, at(x, y + 1) + 1, at(x + 1, y + 1) + 1.414, at(x - 1, y + 1) + 1.414); best = Math.max(best, D[y * S + x]); }
+    return (best * 2) / S * QP.BOX; };
+  const lines = ["id | 縮放 卡／頭頂 | 佔框 卡／頭頂（≥70%） | 出框 卡／頭頂（≤1%） | 平均亮度（≥100） | 亮面（≥5%） | 最粗處（≥12%） | 結果"];
+  for (const id of [...OPTS, "steady"]) {
+    const m = [QST.CARD_FRAME, QST.HEAD_FRAME].map((S) => { const k = QST.fitK(id, S, 0), cpx = S * QST.GLYPH_K * k, cv = QST.glyph(id, cpx, R, { ow: 0 }), a = measure(cv); return { k, a, cv, fill: (a.long * cpx) / QST.innerWidth("neutral", S), out: QST.outsideFrac(id, S, k, 0) }; }), [A, B] = m, a = A.a, t = thick(A.cv);
+    const fail = [Math.min(A.fill, B.fill) < 0.7 ? "佔框" : "", Math.max(A.out, B.out) > 0.01 ? "出框" : "", a.lum < 100 ? "亮度" : "", a.bright < 0.05 ? "亮面" : "", t < 0.12 ? "太細" : ""].filter(Boolean);
+    lines.push(`${id} | ${A.k.toFixed(2)}／${B.k.toFixed(2)} | ${(A.fill * 100).toFixed(0)}%／${(B.fill * 100).toFixed(0)}% | ${(A.out * 100).toFixed(1)}%／${(B.out * 100).toFixed(1)}% | ${a.lum.toFixed(0)} | ${(a.bright * 100).toFixed(0)}% | ${(t * 100).toFixed(0)}% | ${fail.length ? "不過 " + fail.join(" ") : "過"}`);
+  }
+  const pre = document.createElement("pre"); pre.id = "audit"; pre.textContent = lines.join("\n"); document.getElementById("sheet").appendChild(pre);
+  document.getElementById("out").textContent = "data:text/plain,1"; document.documentElement.dataset.h = document.documentElement.scrollHeight;
+};
+(PARTS[PART] ?? PARTS.close)();
+</script>
+</body></html>
