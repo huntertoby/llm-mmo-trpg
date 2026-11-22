@@ -468,7 +468,7 @@ rules:
 
     note: 一次加減一個的按鈕文字、骰子寫法範例（2d6）。
   # HC-6b：前端說明文字。有資料的改成照伺服器組字（`/api/glossary` 的 `rules`、工坊的狀態與模擬選項、
-  # 卡片與面板已有的欄位、前端自己的常數）；下面幾條是語法用字（改判 const，各寫理由），剩下的留 ts-ui-text。
+  # 卡片與面板已有的欄位、前端自己的常數）；下面幾條是語法用字（改判 const，各寫理由），剩下的留 ts-ui-text（HC-8 搬完 0 筆、刪掉）。
   - id: ts-hc6b-ordinal-text
     class: const
     status: done
@@ -542,15 +542,6 @@ rules:
     files: [client/src/world/OpeningDialog.tsx]
     text: '一樣高就給第 1 招的'
     note: HC-8 改判：配點範例的「一樣高就給第 1 招」是序號（`recommended_level_up` 的平手規則：照起始招的順序取第一個）；範例裡的點數、屬性值已改讀 `rules.start_free_points`、`base_attribute`、`attribute_points_per_level`、`quantity_scale`。
-  - id: ts-ui-text
-    class: text
-    status: todo
-    lang: ts
-    kind: text
-    note: 玩家看得到的說明裡寫死的規則數字。HC-6c 後剩 2 筆，都在等「屬性點的顯示換算」：資料是 `attribute_points_per_level` 20（×10 量尺），畫面寫「每級 +2」與配點範例（開局 4 點、智力 12……）；要照哪個量尺顯示還沒定（HC-6b 待決、HC-6c 待決）。
-    files:
-      - client/src/world/OpeningDialog.tsx
-      - client/src/world/growthPanel.ts
 
   # ======================================================================== 後端：整個資料夾或檔案
   - id: py-shared-rng
@@ -729,7 +720,7 @@ rules:
   # ---------------------------------------------------- 後端 api：config（HC-7 b 搬完；剩下的改判）
   # HC-7 b：規則數字搬進 content（roguelite.yaml route_hint_tier、skill_pick.yaml 的 budget_seconds／pregen、
   # world/rules.yaml 的 display／notes、workshop.yaml max_rounds、core.skill_limits），回應的預設值改必填。
-  # 剩下的是數值工坊的工具設定（只留 api/tuning/schemas.py、drafts.py 一份）、請求格式護欄與結構常數。
+  # 剩下的是數值工坊的工具設定（HC-8 搬到 config/tuning.toml，程式內只留 tool_config.py 的 schema 預設）、請求格式護欄與結構常數。
   - id: py-api-tuning-tool-config-defaults
     class: config
     status: done
@@ -745,23 +736,6 @@ rules:
     where: ['GameRulesOut']
     owner: ['quantity_scale', 'attribute_points_per_level', 'base_attribute', 'start_free_points']
     note: HC-8（規格第 1 項「API 沒帶到的值就加欄位，新欄位要有預設值」）：屬性點兩句說明組字用的四個欄位。伺服器一律由內容庫填（core.yaml 的 quantity_scale、roguelite.yaml 的 attribute_points_per_level、base_attribute、start_free_points），預設值等於目前的內容（tests/api/test_game_rules_hc8.py 對照）。HC-7 b 起其他欄位必填、不給預設值，這四個照規格給；改內容時這裡不用跟著改（只在舊回應沒帶時生效）。
-  - id: py-api-tuning-tool-settings
-    class: config
-    status: done
-    files: [src/trpg/api/tuning/schemas.py, src/trpg/api/tuning/drafts.py, src/trpg/api/tuning/skills.py]
-    kind: number
-    where:
-      - '<module>.SMALL_SAMPLE'
-      - '<module>.MAX_RATIO_SEEDS'
-      - '<module>.SIM_DEFAULT_SEEDS'
-      - '<module>.MAP_DEFAULT_SEEDS'
-      - '<module>.MAX_SIM_MAPS'
-      - '<module>.MAX_SIM_BATTLES'
-      - '<module>.RATIO_DEFAULT_SEEDS'
-      - '<module>.RATIO_MAX_WORK'
-      - '<module>.DRAFT_NAME_MAX'
-      - '<module>.MAX_GROUP'
-    note: HC-7 b（規格 b.1「工坊的上下限對齊 api/tuning/schemas.py，只留一份」）：數值工坊這個開發工具自己的設定（預設種子、模擬場數與工作量上限、樣本小門檻、草稿名字數、分組改上限）。只留這一份，請求與回應的預設值、service、ratios、sim_jobs 都讀它；回應欄位的預設值改必填。不是遊戲規則，不進 content。
   - id: py-api-request-format-guards
     class: guard
     status: done
