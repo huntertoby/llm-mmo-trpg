@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Action, RaceView } from "../api/types";
 import { actionLabel } from "./actions";
-import { overrideNote, passiveLine, raceBlockedReason, raceBattleCardLines, raceDetailText, raceHudText, raceLabel, raceModes, raceUsesText } from "./race";
+import { passiveLabel, passiveLine, passiveSegments, raceBlockedReason, raceBattleCardLines, raceDetailText, raceHudText, raceLabel, raceModes, raceUsesText } from "./race";
+import { readFile, SRC_DIR } from "../test/sourceScan";
 import { actionAtTile, basicModes, fallbackActions, isSelfOnly } from "./targeting";
 import { smallView, unit } from "./testFixtures";
 
@@ -126,28 +127,57 @@ describe("race text", () => {
     expect(raceLabel(race(), "")).toBe("拋錨");
     expect(raceLabel(race(), "stamina")).toBe("拋錨（耐力）");
     expect(raceUsesText(race({ skill_uses_left: 0 }))).toBe("1 AP・剩 0／1 次");
-    expect(passiveLine(race())).toBe("被動・雨中海步：下雨天氣時，移動 +1。");
-    expect(passiveLine(race({ passive_active: true }))).toContain("（目前有作用）");
+    expect(passiveLine(race())).toBe("被動「雨中海步」：下雨天氣時，移動 +1。");
+    expect(passiveLine(race({ passive_active: true }))).toBe("被動「雨中海步」：下雨天氣時，移動 +1。・有作用");
   });
 
   it("writes one HUD line only for raced heroes", () => {
     expect(raceHudText(unit(H, "ally", 1, 1))).toBeNull();
     const hero = unit(H, "ally", 1, 1, { race: race({ passive_active: true }) });
-    expect(raceHudText(hero)).toBe("種族：海民｜拋錨 剩 1／1 次｜被動：雨中海步（目前有作用）");
+    expect(raceHudText(hero)).toBe("種族：海民｜拋錨 剩 1／1 次｜被動「雨中海步」・有作用");
   });
 });
 
-describe("race passive overridden by gear (E3)", () => {
-  it("adds no note when nothing overrides the passive", () => {
-    expect(overrideNote(race())).toBe("");
-    expect(raceDetailText(race())).toBe("海民（種族技：拋錨；被動：雨中海步）");
+describe("race passive overridden by gear (E3; E3b 用字)", () => {
+  it("全部有作用：被動「〇〇」・有作用（沒作用也沒被蓋過時不加註）", () => {
+    expect(passiveSegments(race({ passive_active: true }))).toEqual([{ text: "有作用", off: false }]);
+    expect(passiveLabel(race({ passive_active: true }))).toBe("被動「雨中海步」・有作用");
+    expect(passiveSegments(race())).toEqual([]);
+    expect(raceDetailText(race())).toBe("海民・種族技「拋錨」・被動「雨中海步」");
   });
 
-  it("notes the gear that overrides the passive", () => {
-    const r = race({ passive_overridden_zh: "被腳的「下雨時移動 +2」蓋過" });
-    expect(raceDetailText(r)).toBe("海民（種族技：拋錨；被動：雨中海步（被腳的「下雨時移動 +2」蓋過））");
-    expect(passiveLine(r)).toBe("被動・雨中海步：下雨天氣時，移動 +1。（被腳的「下雨時移動 +2」蓋過）");
+  it("部分被蓋過：灰色只套在被蓋過的那一段", () => {
+    const r = race({ passive_active: true, passive_overridden_zh: "水的部分被身體的「站在水上，移動 +2」蓋過", passive_overridden_full: false });
+    expect(passiveSegments(r)).toEqual([
+      { text: "水的部分被身體的「站在水上，移動 +2」蓋過", off: true },
+      { text: "，其他有作用", off: false },
+    ]);
+    expect(passiveLabel(r)).toBe("被動「雨中海步」・水的部分被身體的「站在水上，移動 +2」蓋過，其他有作用");
+    expect(raceDetailText(r)).toBe("海民・種族技「拋錨」・被動「雨中海步」・水的部分被身體的「站在水上，移動 +2」蓋過，其他有作用");
+    // 被動此刻沒作用時不寫「其他有作用」
+    expect(passiveSegments({ ...r, passive_active: false })).toEqual([{ text: "水的部分被身體的「站在水上，移動 +2」蓋過", off: true }]);
+  });
+
+  it("全部被蓋過：整段灰色，寫「沒有作用」", () => {
+    const r = race({ passive_active: true, passive_overridden_zh: "被腳的「下雨時移動 +2」蓋過", passive_overridden_full: true });
+    expect(passiveSegments(r)).toEqual([{ text: "被腳的「下雨時移動 +2」蓋過，沒有作用", off: true }]);
+    expect(passiveLine(r)).toBe("被動「雨中海步」：下雨天氣時，移動 +1。・被腳的「下雨時移動 +2」蓋過，沒有作用");
     const hero = { ...unit(H, "ally", 1, 1), race: r };
-    expect(raceHudText(hero)).toBe("種族：海民｜拋錨 剩 1／1 次｜被動：雨中海步（被腳的「下雨時移動 +2」蓋過）");
+    expect(raceHudText(hero)).toBe("種族：海民｜拋錨 剩 1／1 次｜被動「雨中海步」・被腳的「下雨時移動 +2」蓋過，沒有作用");
+    // 兩件裝備各蓋一部分、合起來整條被蓋過：照伺服器的 full
+    const split = race({ passive_overridden_zh: "水的部分被身體的「A」蓋過；冰的部分被腳的「B」蓋過", passive_overridden_full: true });
+    expect(passiveSegments(split)).toEqual([{ text: "水的部分被身體的「A」蓋過；冰的部分被腳的「B」蓋過，沒有作用", off: true }]);
+  });
+
+  it("不用括號；HUD 與角色面板都用 RacePassive，灰色與 text-wrap 有 CSS", () => {
+    for (const r of [race({ passive_active: true }), race({ passive_overridden_zh: "被腳的「X」蓋過", passive_overridden_full: true })]) {
+      expect(passiveLabel(r)).not.toMatch(/[（）]/);
+    }
+    expect(readFile(SRC_DIR, "ui/Hud.tsx")).toContain("<RacePassive race={hero.race} />");
+    expect(readFile(SRC_DIR, "ui/UnitInfo.tsx")).toContain("<RaceDetail");
+    expect(readFile(SRC_DIR, "ui/RacePassive.tsx")).toContain('className="race-off"');
+    const css = readFile(SRC_DIR, "styles/hud.css");
+    expect(css).toMatch(/\.race-passive \.race-off \{\s*color: var\(--muted\);/);
+    expect(css).toMatch(/\.hud-race \{\s*text-wrap: pretty;/);
   });
 });

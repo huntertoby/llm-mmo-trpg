@@ -9263,6 +9263,8 @@ export interface components {
             passive_active: boolean;
             /** Passive Overridden Zh */
             passive_overridden_zh?: string | null;
+            /** Passive Overridden Full */
+            passive_overridden_full?: boolean | null;
             look: components["schemas"]["RaceLook"];
         };
         /**

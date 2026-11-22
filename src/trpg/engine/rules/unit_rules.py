@@ -47,6 +47,7 @@ __all__ = [
     "effective_strength",
     "first_source",
     "gear_move_room",
+    "race_overridden_fully",
     "race_override_zh",
     "raw_strength",
     "rule_keys",
@@ -294,6 +295,15 @@ def terrain_notes(
         ]
         notes[key] = TerrainNote(overlap_zh="；".join(parts))
     return notes
+
+
+def race_overridden_fully(rules: Ruleset, unit: UnitState) -> bool:
+    """種族的環境被動整條都被裝備蓋過（E3b 顯示「…蓋過，沒有作用」）；部分蓋過或沒被蓋過為假。"""
+    if unit.race is None:
+        return False
+    overlaps = classify_sources(rule_sources(rules, unit), effective_strength(rules, unit))
+    race = next((o for o in overlaps if o.source.gear is None), None)
+    return race is not None and bool(race.covered) and race.full
 
 
 def race_override_zh(

@@ -23080,6 +23080,17 @@
             ],
             "title": "Passive Overridden Zh"
           },
+          "passive_overridden_full": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passive Overridden Full"
+          },
           "look": {
             "$ref": "#/components/schemas/RaceLook"
           }

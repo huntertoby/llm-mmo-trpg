@@ -64,25 +64,50 @@ const SHAPE_HOW: Readonly<Record<string, string>> = {
   object_then_tile: "先選物件，再選落點",
 };
 
-/** 環境被動那一行：「被動・林間視野：……（作用中）」；被裝備較強的同種規則蓋過時加註（E3）。 */
-export function passiveLine(race: RaceView): string {
-  return `被動・${race.passive_name_zh}：${race.passive_description_zh}${race.passive_active ? "（目前有作用）" : ""}${overrideNote(race)}`;
+/** E3b：被動加註的一段；`off` ＝ 沒有作用的那一段（畫面標灰）。 */
+export interface PassiveSegment {
+  text: string;
+  off: boolean;
 }
 
-/** 被裝備蓋過的加註「（被腳的「水上移動 +2」蓋過）」；沒有時空字串（E3，08 8.29 E2 補充）。 */
-export function overrideNote(race: RaceView): string {
+/**
+ * E3b（玩法 PM 11-22 定用字）：接在「被動「〇〇」」後面、用「・」接的加註，HUD 與角色面板共用：
+ * - 全部有作用：「有作用」（被動此刻沒作用、也沒被蓋過時不寫）；
+ * - 部分被蓋過：「水的部分被身體的「〇〇」蓋過，其他有作用」（灰色只套前半；被動此刻沒作用時不寫「其他有作用」）；
+ * - 全部被蓋過：「被腳的「〇〇」蓋過，沒有作用」（整段灰色）。
+ */
+export function passiveSegments(race: RaceView): PassiveSegment[] {
   const note = race.passive_overridden_zh ?? null;
-  return note === null || note === "" ? "" : `（${note}）`;
+  if (note === null || note === "") return race.passive_active ? [{ text: "有作用", off: false }] : [];
+  const full = race.passive_overridden_full ?? note.startsWith("被");
+  if (full) return [{ text: `${note}，沒有作用`, off: true }];
+  return [{ text: note, off: true }, ...(race.passive_active ? [{ text: "，其他有作用", off: false }] : [])];
 }
 
-/** 角色面板「▸ 詳細」的種族列：「鱗族（種族技：……；被動：流線身形（被腳的「……」蓋過））」。 */
+/** 「被動「流線身形」・有作用」（加註見 `passiveSegments`；沒有加註時只有「被動「〇〇」」）。 */
+export function passiveLabel(race: RaceView): string {
+  const note = passiveSegments(race)
+    .map((p) => p.text)
+    .join("");
+  return `被動「${race.passive_name_zh}」${note === "" ? "" : `・${note}`}`;
+}
+
+/** 環境被動那一行（說明卡、技能列）：「被動「林間視野」：……・有作用」。 */
+export function passiveLine(race: RaceView): string {
+  const note = passiveSegments(race)
+    .map((p) => p.text)
+    .join("");
+  return `被動「${race.passive_name_zh}」：${race.passive_description_zh}${note === "" ? "" : `・${note}`}`;
+}
+
+/** 角色面板「▸ 詳細」的種族列（純文字版）：「鱗族・種族技「潮息」・被動「流線身形」・有作用」。 */
 export function raceDetailText(race: RaceView): string {
-  return `${race.name_zh}（種族技：${race.skill_name_zh}；被動：${race.passive_name_zh}${overrideNote(race)}）`;
+  return `${race.name_zh}・種族技「${race.skill_name_zh}」・${passiveLabel(race)}`;
 }
 
-/** HUD 的一行種族文字：「種族：精靈｜林隱 剩 2／2 次｜被動：林間視野（目前有作用）」；沒有種族時 `null`。 */
+/** HUD 的一行種族文字：「種族：精靈｜林隱 剩 2／2 次｜被動「林間視野」・有作用」；沒有種族時 `null`。 */
 export function raceHudText(hero: UnitView): string | null {
   const race = hero.race ?? null;
   if (race === null) return null;
-  return `種族：${race.name_zh}｜${race.skill_name_zh} 剩 ${race.skill_uses_left}／${race.skill_uses_max} 次｜被動：${race.passive_name_zh}${race.passive_active ? "（目前有作用）" : ""}${overrideNote(race)}`;
+  return `種族：${race.name_zh}｜${race.skill_name_zh} 剩 ${race.skill_uses_left}／${race.skill_uses_max} 次｜${passiveLabel(race)}`;
 }
