@@ -1015,8 +1015,9 @@ def _knock_chance(
     """技能對 ``target`` 的擊倒對抗成功率（技能屬性對相同屬性）；不會擊倒時為 ``None``。"""
     enemy = target.team is not actor.team
     resolved = resolve_effects(state, skill)
-    prone = any(
-        r.type == "knock_prone" and (r.affects == "all" or (enemy and r.affects == "enemies"))
+    prone = any(  # 震波 KD-1 起也擲擊倒對抗（友方對象也擲）
+        (r.type == "knock_prone" and (r.affects == "all" or (enemy and r.affects == "enemies")))
+        or (r.type == "shockwave" and (r.affects != "allies" or not enemy))
         for r in resolved
     )
     charge_prone = enemy and any(
@@ -1842,7 +1843,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "pull": f"collisions、{_OUTCOMES}",
         "hook": f"collisions、{_OUTCOMES}（拉到施放者旁的位移；SK-2）",
         "knock_prone": "targets（擊倒對抗的成功率 _knock_chance）",
-        "shockwave": "targets（直接倒地，不擲對抗）",
+        "shockwave": "targets（擊倒對抗的成功率 _knock_chance；KD-1 起要擲對抗）",
         "teleport": "moves",
         "dash": "moves（衝鋒路線）",
         "charge_through": "moves、targets（擊倒對抗的成功率）",

@@ -483,6 +483,9 @@ class UnitState:
     自己回合開始時清除。"""
     owner_id: UnitId | None = None
     """召喚物的召喚者（Phase 3D-4a）；一般單位為 ``None``。"""
+    summon_skill_id: Annotated[str | None, Field(exclude_if=_empty)] = None
+    """召喚物是哪一招召喚出來的（KD-1：藤蔓纏住的擊倒對抗用召喚者這一招的縮放屬性）；一般單位、
+    沒記到時為 ``None``（不輸出）。"""
     summon_expires_round: int | None = None
     """召喚物在召喚者這一輪（含）的回合結束時消失（施放輪 ＋ ``duration``；Phase 3D-4a）。"""
     level: int = 1
@@ -721,6 +724,7 @@ class UnitState:
             ammo=self.ammo,
             turn_cast_tags=self.turn_cast_tags,
             owner_id=self.owner_id,
+            summon_skill_id=self.summon_skill_id,
             summon_expires_round=self.summon_expires_round,
             level=self.level,
             summon_bonus_permille=self.summon_bonus_permille,

@@ -330,7 +330,9 @@ class ManeuverRolled(EventBase):
     """技巧動作的對抗判定（推擊：力量 vs 力量；絆倒：敏捷 vs 敏捷）。"""
 
     type: Literal["maneuver_rolled"] = "maneuver_rolled"
-    maneuver: Literal["shove", "trip", "knock_prone", "teleport", "swap"]
+    maneuver: Literal[
+        "shove", "trip", "knock_prone", "teleport", "swap", "shockwave", "topple", "snare"
+    ]
     attacker_id: UnitId
     target_id: UnitId
     natural: int

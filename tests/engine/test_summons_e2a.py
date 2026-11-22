@@ -257,6 +257,7 @@ def test_the_wall_is_inert_blocks_the_way_and_the_view() -> None:
 
 def test_pushing_the_wall_topples_it_onto_the_units_behind_it() -> None:
     state, wid = summoned(WALL, at=(3, 3), foes=((4, 3), (5, 3)))
+    state = with_rolls(state, [(20, 20), (20, 20)])  # KD-1：壓到的兩人各擲擊倒對抗，自然 20
     ctx = Ctx(state.clone())
     first, second = ctx.state.units[U2].hp, ctx.state.units[U3].hp
     execute(ctx, [PushEffect(source_id=U1, target_id=wid, direction=(1, 0), distance=1)])

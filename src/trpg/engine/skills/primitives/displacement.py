@@ -13,7 +13,6 @@ from trpg.content.skills import (
 from trpg.engine import modifiers
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
-    ApplyStatusEffect,
     EffectBase,
     HurlObjectEffect,
     MoveUnitEffect,
@@ -211,8 +210,9 @@ def _shockwave_targets(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> 
 
 
 def shockwave(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[EffectBase]:
-    """震波（Phase 3-54b／3-54d）：影響格（直線）上的對象單位倒地，不擲對抗；敵方先擲命中（未命中
-    不倒地），友方不擲命中；帶 ``flying`` 標籤（會飛）的單位不受影響（``effect_fizzled``，原因
+    """震波（Phase 3-54b／3-54d）：影響格（直線）上的對象單位要過擊倒對抗才倒地（KD-1，05 5.13
+    第 5 點：技能的縮放屬性，守方 +加值、平手算守方贏；友方對象也擲）；敵方先擲命中（未命中不
+    倒地），友方不擲命中；帶 ``flying`` 標籤（會飛）的單位不受影響（``effect_fizzled``，原因
     ``shockwave_flying``）；已經倒地的略過。"""
     batch: list[EffectBase] = []
     for unit in _shockwave_targets(cast, effect, spec):
@@ -223,9 +223,7 @@ def shockwave(cast: Cast, effect: ResolvedEffect, spec: EffectSpec) -> list[Effe
                 EffectFizzled, effect_kind=SHOCKWAVE, pos=unit.pos, reason="shockwave_flying"
             )
             continue
-        batch.append(
-            ApplyStatusEffect(source_id=cast.caster.id, target_id=unit.id, status_id=PRONE)
-        )
+        batch += cast.knock_down(unit, "shockwave")
     return batch
 
 

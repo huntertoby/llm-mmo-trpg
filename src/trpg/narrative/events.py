@@ -1799,6 +1799,9 @@ def _maneuver(e: ManeuverRolled, v: _View) -> str:
         "shove": "推擊",
         "trip": "絆倒",
         "knock_prone": "擊倒",
+        "shockwave": "震波擊倒",
+        "topple": "壓倒",
+        "snare": "藤蔓絆倒",
         "teleport": "傳送",
         "swap": "交換位置",
     }[e.maneuver]
