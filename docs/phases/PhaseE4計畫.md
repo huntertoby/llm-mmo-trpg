@@ -11,6 +11,8 @@
 > - `ai/utility/position.py`
 >
 > 上面這些是 E3 的範圍。
+>
+> E3 會在 `effects/world.py` 的 `set_surface` 裡，`replace(...)` 多一行 `surface_trail=None`（霜行標記，開發 PM 同意）。合併時保留這一行。
 
 ## 範圍
 
