@@ -54,9 +54,9 @@
 
 | 比對 | 結果 |
 |---|---|
-| 442 招逐招預算（`BudgetReport` repr＋`validate_skill`） | （待補） |
-| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時） | （待補） |
-| 78 場（`compare78.py`，a 段那組；`format` 也比） | （待補） |
+| 442 招逐招預算（`BudgetReport` repr＋`validate_skill`） | 442 招，`cmp` 0（逐位相同） |
+| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時） | `cells=204 different=0 whole_equal=True`（兩邊結束碼 0） |
+| 78 場（`compare78.py`，a 段那組；`format` 也比） | `battles=78 events=26741 different=0`；內嵌規則包差異 0 |
 | CLI 快照（slow） | 見 3.3 |
 
 `LOG_FORMAT` 不升版（沒有新事件欄位；`UnitView`、`HeroOut` 的新欄位不進戰鬥紀錄）。
