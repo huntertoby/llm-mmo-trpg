@@ -420,3 +420,19 @@
 9. **錯誤出現的地方改了**（裁定 5）：觸發時機每輪次數改在內容庫的技能檢查報；道具技能 AP 改在物品表報，不再和同件物品的其他問題併成一句。
 10. **commit 的切法**：server 的留言和 API 共用參數，放在 b.1；b.3 之後 `tests/test_hardcoded_scan.py` 的前端抽查（受擊門檻改 layout、木樁 `?? 30` 拿掉）到 b.5 的 commit 才跟上，b.3 單獨跑那兩個抽查會失敗。
 11. **前端留 text 的 22 筆**：規格沒列（HC-6c 另排的介面項目之外）；例如誓約說明的「同時 1 個」可改讀 `slot_zh`，這段沒動。
+
+## 開發 PM 裁定 b 段（2026-11-22）
+
+驗收通過，已 push（53b7c987f）。check.py 0（pytest 18234、vitest 4845），slow parity＋cli 995，build 0；442 招、78 場（events 26206）、51 場、census 204 格 different=0。後端 config todo 121→0、text 3→0；前端 config 15→0。工坊篩選列截圖已看。
+
+1. 工坊篩選列階級 1～5：接受（照 `skill_limits.tiers`，技能本來就有 4、5 階）。
+2. 情境判定與說書人重試次數從 client 設定讀：接受。
+3. 工坊工具設定只留 `api/tuning/schemas.py`：接受。
+4. 畫面列幾筆放 `world/rules.yaml` 的 `display`：接受。
+5. 影子戰報顯示改讀 `shadow_reports_kept`：接受。
+6. 單場省略輪數讀 `workshop.yaml` max_rounds：接受。
+7. 格式上限放寬、超過規則改給中文規則錯誤：接受。
+8. 留言只在寫入時照 `notes.max_chars` 檢查：接受。
+9. 兩個檢查的錯誤位置改變、字照舊：接受（同 HC-4d 裁定 4）。
+10. b.3 單獨跑有 2 個抽查失敗、b.5 才跟上：接受（合併後是 0）。
+11. 前端剩 22 筆 text：併進 HC-6c。
