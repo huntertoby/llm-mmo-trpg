@@ -21,7 +21,7 @@
 // - `res` 預設 `ICON_RES`（樣張寫死 2，值相同）；沒有畫布時 `glyph` 回 null、`paint` 不貼圖樣（框照畫）。
 // - `ln(…, "butt")`：樣張把 "butt" 當 lineJoin 傳（瀏覽器忽略這個值），照傳、加型別轉換。用字串查表處加 `!`；`NEW` 加型別註記（鎖霧大陣在初始化式裡引用 `NEW`）。
 // ---------------------------------------------------------------------------------------------
-import { statusLook, statusName } from "../../battle/glossary";
+import { statusLook, statusName, statusNameOrNull } from "../../battle/glossary";
 import { FONT } from "../labels";
 import { FRAME_COLOR, framePath, polarityOf, STATUS_BASE_BG, type Polarity } from "../statusFrame";
 import { blank, blit, ci, ctxOf, el, f, flame, halo, ICON_RES, ln, OUT, outlinePx, poly, qCanvasAvailable, render, rr, starPts, TAU, type Ctx, type Pt, type QDef, type QOpts } from "./core";
@@ -221,9 +221,9 @@ export const HEAD_MAX = 12;
 export const tintInset = (frameCss: number, res: number, cls: string | null): number => (cls && frameCss < HEAD_MAX ? 1 / res : 0);
 /** 不認得的狀態：名稱第一個字的字色（需求 2.4 第 4 列）。 */
 export const UNKNOWN_INK = "#f2e6c8";
-/** 不認得的狀態畫名稱第一個字（遊戲端 drawGlyph 的字型與位置：±10 單位的座標 × size/26 × 0.95、bold 13px）；null／空字串畫「?」。 */
+/** 不認得的狀態畫名稱第一個字（遊戲端 drawGlyph 的字型與位置：±10 單位的座標 × size/26 × 0.95、bold 13px）；null／空字串、名詞表沒有名稱（顯示「未知狀態」）的畫「?」（WL-1 c）。 */
 function paintUnknown(ctx: Ctx, id: string | null | undefined, cx: number, cy: number, size: number): void {
-  const name = id == null || id === "" ? "?" : statusName(id), k = (size / 26) * 0.95;
+  const name = statusNameOrNull(id) ?? "?", k = (size / 26) * 0.95;
   ctx.save(); ctx.translate(cx, cy); ctx.scale(k, k); ctx.fillStyle = UNKNOWN_INK; ctx.font = `bold 13px ${FONT}`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText([...name][0] ?? "?", 0, 1); ctx.restore();
 }
 export interface PaintOpt { tint?: boolean }

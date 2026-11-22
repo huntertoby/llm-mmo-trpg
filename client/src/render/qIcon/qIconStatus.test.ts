@@ -219,7 +219,7 @@ describe("T-A8 不認得、不丟例外", () => {
   it("brand_new_status、空字串、null、不認得的極性：畫名稱第一個字（字色 #f2e6c8）或「?」", () => {
     setGlossary({ ...real, statuses: [...real.statuses, { id: "odd_status", name_zh: "怪異", description_zh: null, tags: [], rules_zh: [], status_look: { polarity: "weird", control_group: "hard", dot_element: null, skip_turn: false, removed_by_element: [], absorbs_damage: false, prevents_move: false } }] } as unknown as Glossary);
     const text = (id: string | null | undefined): string => { const [o] = record(card(id, 2)); const i = o.findIndex((c) => c.startsWith("fillText(")); expect(o[i - 4], String(id)).toBe("fillStyle=#f2e6c8"); return o[i]!; };
-    expect(text("brand_new_status")).toBe("fillText(b,0.000,1.000)");
+    expect(text("brand_new_status")).toBe("fillText(?,0.000,1.000)"); // WL-1 c：名詞表沒有名稱畫「?」
     expect(text("")).toBe("fillText(?,0.000,1.000)");
     expect(text(null)).toBe("fillText(?,0.000,1.000)");
     expect(text(undefined)).toBe("fillText(?,0.000,1.000)");

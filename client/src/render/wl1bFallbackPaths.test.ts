@@ -64,14 +64,14 @@ describe("WL-1 b：狀態圖示走 paintUnknown", () => {
     }
   });
 
-  it("沒有名稱的畫「?」，不認得但名詞表沒有的畫 id 的第一個字（現行，QI-3a 驗收過）", () => {
+  it("沒有名稱的畫「?」；名詞表沒有的也畫「?」（WL-1 c：名稱退回「未知狀態」，不畫「未」也不畫 id 的第一個字）", () => {
     withNameless();
     const first = (id: string | null | undefined): string => drawn((ctx) => QT.paint(ctx, id, 10, 10, 16.8)).find((c) => c.startsWith("fillText("))!.split("(")[1]!.split(",")[0]!;
     expect(first("")).toBe("?");
     expect(first(null)).toBe("?");
     expect(first(undefined)).toBe("?");
     expect(first(NAMELESS)).toBe("?");
-    expect(first("brand_new_thing")).toBe("b");
+    expect(first("brand_new_thing")).toBe("?");
   });
 
   it("狀態卡、頭頂、組裝列的狀態圓片都畫得出來", () => {

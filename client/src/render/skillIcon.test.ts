@@ -139,7 +139,7 @@ describe("部件庫：不認得的部件走預設", () => {
       expect(() => p?.draw(ctx)).not.toThrow();
       expect(p?.label).not.toBe("");
     }
-    expect(effectPart({ type: "apply_status", status: "glitter" }).label).toBe("glitter"); // 沒有名稱時顯示代碼
+    expect(effectPart({ type: "apply_status", status: "glitter" }).label).toBe("未知狀態"); // 沒有名稱時顯示「未知狀態」（WL-1 c），不顯示代碼
     expect(effectPart({ type: "apply_status", status: "burning" }).label).toBe("燃燒");
     expect(effectPart({ type: "create_surface", surface: "oil" }).label).toBe("油表面");
     expect(linkPart("sometime").key).toBe("sometime");

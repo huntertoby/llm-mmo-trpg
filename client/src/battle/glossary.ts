@@ -97,7 +97,16 @@ export function glossaryHasTag(category: GlossaryCategory, id: string, tag: stri
   return glossaryEntry(category, id)?.tags.includes(tag) ?? false;
 }
 
-export const statusName = (id: string): string => glossaryName("statuses", id);
+/** 未知狀態的顯示字（WL-1 c，玩法 PM 2026-11-22 第 2 題選 A）：名詞表沒有這個狀態、或名稱是空字串時用，玩家畫面不出現英文 id。 */
+export const UNKNOWN_STATUS_NAME = "未知狀態";
+/** 狀態在名詞表裡的中文名；沒有（或空字串）時回 `null`。 */
+export function statusNameOrNull(id: string | null | undefined): string | null {
+  if (id == null || id === "") return null;
+  const name = glossaryEntry("statuses", id)?.name_zh;
+  return name === undefined || name === "" ? null : name;
+}
+/** 狀態的中文名（說明框、組裝列狀態圓片、狀態卡、預覽、浮字……）；找不到時「未知狀態」（WL-1 c），不再退回英文 id。 */
+export const statusName = (id: string): string => statusNameOrNull(id) ?? UNKNOWN_STATUS_NAME;
 
 /** 代價狀態（技能代價自己付的狀態，3-50c）的註記。 */
 export const COST_STATUS_NOTE = "（代價狀態，無法淨化）";

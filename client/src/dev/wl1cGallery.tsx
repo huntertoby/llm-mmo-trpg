@@ -2,16 +2,22 @@
 // `&set=` 逗號接多段：
 // - `rename`：資料和舊前端表用字不同的 6 個骨架，用正式的 `SkillCardView`（詳細展開）畫：組裝列骨架格＋種類行。
 //   aura、control、reaction 用夾具的真技能卡；builder_finisher、consume_status、modifier 夾具沒有，借「灰燼收割」換骨架（種類行照名詞表）。
+// - `status`：名詞表沒有的狀態（`brand_new_status`）：狀態卡 `StatusBadge`（`#unk-badge`，點一下開說明框）、狀態的部件圓片 `statusTile`（`#unk-tile`，工坊狀態選項與組裝列同一套圓片；點一下開說明框）、
+//   技能卡組裝列的附加狀態格（借「驟雨」把緩速換成它）。
 // 名詞表用前端夾具 `battle/fixtures/glossary.json`。畫好後 `document.body.dataset.ready = "1"`。
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
-import type { GameRules, Glossary, SkillCard, SkillIconData } from "../api/types";
+import type { GameRules, Glossary, SkillCard, SkillIconData, StatusView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { setGameRules, setGlossary, skeletonName } from "../battle/glossary";
 import { waitForFonts } from "../render/fontLoad";
 import { installPinBadge } from "../render/hudIcon";
 import cards from "../ui/fixtures/skillCards.json";
 import { SkillCardView } from "../ui/SkillCardView";
+import { statusLine } from "../ui/Hud";
+import { StatusBadge } from "../ui/StatusCardParts";
+import { TipGlyph } from "../ui/SkillIconView";
+import { statusTile } from "../render/skillIcon";
 import "../styles/index.css";
 
 setGlossary(glossary as unknown as Glossary);
@@ -65,6 +71,28 @@ if (SET.includes("rename")) {
     real("reaction"),
   ];
   cardRow("技能卡（詳細展開）：改了名字的 6 個骨架（組裝列骨架格＝資料的 name_zh）", list);
+}
+
+if (SET.includes("status")) {
+  const UNK = "brand_new_status";
+  const sv = { status_id: UNK, remaining: 2, amount: null, cost_status: false } as unknown as StatusView;
+  document.body.append(h("h2", { textContent: "名詞表沒有的狀態：狀態卡（點一下開說明框）" }));
+  const host = h("div", { className: "tile-host", id: "unk-badge" });
+  document.body.append(host);
+  flushSync(() => createRoot(host).render(<StatusBadge status={sv} text={statusLine(sv)} />));
+  document.body.append(h("h2", { textContent: "名詞表沒有的狀態：狀態的部件圓片 statusTile（30 px；點一下開說明框）" }));
+  const tileHost = h("div", { className: "tile-host", id: "unk-tile" });
+  document.body.append(tileHost);
+  flushSync(() => createRoot(tileHost).render(<TipGlyph tile={statusTile(UNK)} px={30} />));
+  const base = ALL["skill_downpour"]!;
+  const icon = base.icon as SkillIconData;
+  const card = {
+    ...base,
+    id: `${base.id}_unknown_status`,
+    name_zh: `${base.name_zh}（緩速換成不認得的狀態）`,
+    icon: { ...icon, segments: icon.segments.map((s) => ({ ...s, effects: s.effects.map((e) => (e.type === "apply_status" ? { ...e, status: UNK } : e)) })) },
+  } as SkillCard;
+  cardRow("技能卡：組裝列的狀態圓片（不認得的狀態）", [card]);
 }
 
 document.body.dataset.ready = "1";
