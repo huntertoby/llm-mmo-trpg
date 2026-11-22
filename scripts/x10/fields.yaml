@@ -679,6 +679,7 @@ groups:
       - ap_carry_max
       - ap_per_turn
       - prone_ap_loss             # KD-1：倒地少的 AP
+      - steady_rounds             # KD-1：站穩的回合數
       - backstab_crit_range_bonus
       - base_sight_range
       - burning_object_rounds

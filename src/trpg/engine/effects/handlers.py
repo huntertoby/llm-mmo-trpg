@@ -54,6 +54,7 @@ from trpg.engine.ids import (
     PRONE,
     RACE_STONEWALL,
     SHIELDED,
+    STEADY,
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.practice import hold_standing
@@ -873,11 +874,13 @@ def _move_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 
 def _status_blocked(ctx: Ctx, unit: UnitState, status_id: str) -> str | None:
     """這個狀態施加不上去的原因：被揭露不能再隱蔽（``revealed``）、穩若磐石擊不倒（``stonewall``，
-    Phase 3R-2）。"""
+    Phase 3R-2）、巨型單位（``immovable``）、站穩（``steady``，KD-1）。"""
     if status_id == PRONE and unit.has_status(RACE_STONEWALL):
         return "stonewall"
     if status_id == PRONE and is_giant(unit):  # 巨型單位（GB-1a，T6）：倒地免疫
         return "immovable"
+    if status_id == PRONE and unit.has_status(STEADY):  # 站穩（KD-1，05 5.13 第 3 點）
+        return "steady"
     if status_id == CONCEALED and prevents_concealment(ctx.rules, unit):
         return "revealed"
     return None

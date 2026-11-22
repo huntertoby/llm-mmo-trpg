@@ -20,7 +20,7 @@ from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import ApplyStatusEffect, RemoveStatusEffect, SwapUnitsEffect
 from trpg.engine.events import GuardSet, UnitAimed, UnitStoodUp, WeaponReloaded
-from trpg.engine.ids import DEFENDING, PRONE
+from trpg.engine.ids import DEFENDING, PRONE, STEADY
 from trpg.engine.rules.footprint import adjacent
 from trpg.engine.rules.geometry import XY
 from trpg.engine.rules.landing import LandingBlock, landing_problem
@@ -44,6 +44,7 @@ __all__ = [
     "help_up_actions",
     "help_up_problem",
     "reload_problem",
+    "stand_steady",
     "swap_problem",
     "vault_action",
     "vault_destinations",
@@ -125,6 +126,23 @@ def help_up_actions(state: BattleState, unit: UnitState) -> list[Action]:
     ]
 
 
+def stand_steady(ctx: Ctx, unit: UnitState) -> None:
+    """站起來（自己站或被扶起）後得到「站穩」（KD-1，05 5.13 第 3 點）：持續到 ``steady_rounds``
+    個自己回合結束；在自己回合中站起時這個回合不算。``steady_rounds`` 0 時不給。"""
+    rounds = ctx.core.steady_rounds
+    if rounds <= 0 or not unit.alive:
+        return
+    own = 1 if ctx.state.active_unit == unit.id else 0
+    execute(
+        ctx,
+        [
+            ApplyStatusEffect(
+                target_id=unit.id, status_id=STEADY, source_id=unit.id, duration=rounds + own
+            )
+        ],
+    )
+
+
 def do_help_up(ctx: Ctx, unit: UnitState, action: Action) -> None:
     assert isinstance(action, HelpUp)
     problem = help_up_problem(ctx.state, unit, action.target_id)
@@ -134,6 +152,7 @@ def do_help_up(ctx: Ctx, unit: UnitState, action: Action) -> None:
     ally = ctx.state.units[action.target_id]
     execute(ctx, [RemoveStatusEffect(target_id=ally.id, status_id=PRONE, reason="helped_up")])
     ctx.emit(UnitStoodUp, unit_id=ally.id, cost=0, helper_id=unit.id)
+    stand_steady(ctx, ally)
 
 
 def guard_problem(state: BattleState, unit: UnitState, ally_id: UnitId | None) -> str | None:

@@ -55,6 +55,7 @@ from trpg.engine.basics import (
     guard_problem,
     help_up_actions,
     reload_problem,
+    stand_steady,
     swap_problem,
     vault_action,
     vault_destinations,
@@ -935,6 +936,7 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         unit.move_points -= plan.stand_up
         execute(ctx, [RemoveStatusEffect(target_id=unit.id, status_id=PRONE, reason="stood_up")])
         ctx.emit(UnitStoodUp, unit_id=unit.id, cost=plan.stand_up)
+        stand_steady(ctx, unit)
     walked: list[XY] = [unit.xy]
     touched: set[UnitId] = set()  # 規則改變 pass_through_apply 這次移動碰過的敵人（3D-6）
     for dest, cost in plan.steps:

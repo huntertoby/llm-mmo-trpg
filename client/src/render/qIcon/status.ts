@@ -153,6 +153,11 @@ export const NEW: Readonly<Record<string, NewEntry | undefined>> = {
 export type StatusKind = "b4" | "new" | "borrow";
 export interface StatusEntry { zh: string; topic: string; src: string; kind: StatusKind; family?: string; level?: number; d: SDraw }
 const STANCE_RE = /^stance_(\w+)_([1-5])$/;
+/**
+ * 還在等美術出圖的狀態（KD-1「站穩」，交美術 PM）：`entry` 回 null，畫面走退回畫法（名稱第一個字）。
+ * 美術補圖後從這裡拿掉；測試的「每個狀態都有 Q 版圖樣」與各基準只看不在這裡的狀態。
+ */
+export const AWAITING_ART_STATUSES: readonly string[] = ["steady"];
 /** 狀態的 Q 版圖樣；沒有（不認得的狀態）回 null。 */
 export function entry(id: string): StatusEntry | null {
   if (STATUS[id]) { const e = QP.entry("status", id); return { zh: e.zh, topic: e.topic ?? "", src: "b4:status." + id, kind: "b4", d: e.d }; }

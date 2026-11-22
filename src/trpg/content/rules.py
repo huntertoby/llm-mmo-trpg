@@ -431,6 +431,9 @@ class CoreRules(ContentModel):
     prone_stand_up_move_permille: int = Field(ge=0, le=1000)
     prone_ap_loss: int = Field(ge=0, le=3)
     """倒地後第一個自己回合少給的 AP（KD-1，#176，05 5.13 第 1 點；只扣一次，單格頭目不扣）。"""
+    steady_rounds: int = Field(ge=0, le=3)
+    """站穩（KD-1，05 5.13 第 3 點）持續到自己第幾個回合結束：1＝下一個自己回合結束（在自己回合中
+    站起時，這個回合不算）；0＝不給站穩。"""
 
     # 技巧動作與互動（1B）
     maneuver_ap_cost: int = Field(ge=0)

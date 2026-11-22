@@ -569,6 +569,25 @@
    "rules_dice": []
   },
   {
+   "id": "steady",
+   "name_zh": "站穩",
+   "description_zh": "剛站起來（自己站或被扶起），站得很穩：任何來源都不會讓你倒地；冰面照樣會滑，但滑完不倒地。持續到自己下一個回合結束。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
    "id": "burning",
    "name_zh": "燃燒",
    "description_zh": "身上著火，每回合開始時受到火焰傷害；重複施加時刷新持續時間。",
@@ -4670,7 +4689,7 @@
    "status_look": null,
    "rules_zh": [
     "花 1 AP，對相鄰、高度差不超過 1 層、倒地中的我方單位（含召喚物）使出",
-    "他立刻站起，不花他的移動點數，也不會觸發藉機攻擊",
+    "對方立刻站起，不花對方的移動點數，也不會觸發藉機攻擊",
     "自己倒地、被定身或不能行動時不能扶人；敵人也會互相扶起"
    ],
    "rules_dice": []

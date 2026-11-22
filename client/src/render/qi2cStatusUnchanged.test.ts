@@ -31,7 +31,8 @@ function fnv(s: string): string {
   return h.toString(16).padStart(8, "0");
 }
 
-const STATUS_IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).sort();
+// KD-1：等美術出圖的狀態（AWAITING_ART_STATUSES）走退回畫法，不進基準
+const STATUS_IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).filter((id) => !QT.AWAITING_ART_STATUSES.includes(id)).sort();
 
 /** 用假畫布畫一塊，回傳「寬x高|呼叫紀錄」的雜湊。`document.createElement` 與 Q 版畫布工廠都接到同一份紀錄。 */
 function record(draw: () => HTMLCanvasElement | null): string {

@@ -93,6 +93,15 @@ statuses:
     expires: never
     stacking: refresh
     min_rarity: rare
+  - id: steady
+    polarity: neutral
+    name_zh: 站穩
+    description_zh: 剛站起來（自己站或被扶起），站得很穩：任何來源都不會讓你倒地；冰面照樣會滑，但滑完不倒地。持續到自己下一個回合結束。
+    duration: 1
+    expires: turn_end
+    stacking: refresh
+    beneficial: true
+    mechanic_only: true
   - id: burning
     polarity: debuff
     name_zh: 燃燒

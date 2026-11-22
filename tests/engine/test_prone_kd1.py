@@ -16,13 +16,20 @@ from tests.engine.helpers import (
     spawn,
     spawn_giant,
     template,
+    with_rolls,
 )
-from trpg.engine import BattleState, HelpUp, Move, legal_actions, resolve
+from trpg.engine import BattleState, EndTurn, HelpUp, Move, Trip, legal_actions, resolve
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.basics import help_up_problem
 from trpg.engine.context import Ctx
 from trpg.engine.effects import ApplyStatusEffect, RemoveStatusEffect, run_effects
-from trpg.engine.events import EffectFizzled, ReactionTriggered, UnitMoved, UnitStoodUp
+from trpg.engine.events import (
+    EffectFizzled,
+    ReactionTriggered,
+    UnitMoved,
+    UnitSlid,
+    UnitStoodUp,
+)
 from trpg.engine.turns import start_turn
 from trpg.engine.view import project_for
 from trpg.shared.errors import IllegalActionError
@@ -209,3 +216,64 @@ def test_ai_scores_help_up_from_the_prone_value() -> None:
         s for s in UtilityAI(library().ai_profiles).rank(state) if isinstance(s.action, HelpUp)
     ]
     assert scored and scored[0].score > 0
+
+
+# ---------------------------------------------------------------------------
+# 第 3 點：站穩
+# ---------------------------------------------------------------------------
+
+
+def _steady_left(state: BattleState, uid: UnitId) -> int | None:
+    status = state.units[uid].get_status("steady")
+    return None if status is None else status.remaining
+
+
+def test_standing_up_yourself_gives_steady_through_your_next_turn() -> None:
+    state = give_turn(_knock(_pair(), U1), U1)
+    stood = resolve(state, Move(unit_id=U1, path=(Pos(x=0, y=0),))).state
+    assert not stood.units[U1].has_status("prone")
+    assert _steady_left(stood, U1) == CORE.steady_rounds + 1  # 這個回合不算
+
+
+def test_helped_up_off_turn_gets_steady_until_his_next_turn_ends() -> None:
+    state = give_turn(_knock(_trio()), U1)
+    helped = resolve(state, _help()).state
+    assert _steady_left(helped, U2) == CORE.steady_rounds
+
+
+def test_steady_wears_off_after_the_next_own_turn() -> None:
+    state = give_turn(_knock(_trio()), U1)
+    helped = resolve(state, _help()).state
+    ended = resolve(give_turn(helped, U2), EndTurn(unit_id=U2)).state
+    assert not ended.units[U2].has_status("steady")
+
+
+def _steady(state: BattleState, uid: UnitId) -> BattleState:
+    effect = ApplyStatusEffect(target_id=uid, status_id="steady", duration=1)
+    return run_effects(state, [effect]).state
+
+
+def test_steady_blocks_any_prone_source() -> None:
+    state = _steady(_pair(), U2)
+    result = run_effects(state, [ApplyStatusEffect(target_id=U2, status_id="prone")])
+    assert not result.state.units[U2].has_status("prone")
+    assert any(isinstance(e, EffectFizzled) and e.reason == "steady" for e in result.events)
+    assert not result.state.units[U2].prone_ap_due
+    tripped = resolve(with_rolls(give_turn(state, U1), [(20, 20)]), Trip(unit_id=U1, target_id=U2))
+    assert not tripped.state.units[U2].has_status("prone")
+
+
+def test_steady_on_ice_still_slides_but_does_not_fall() -> None:
+    m = make_map("000000\n000000", surfaces=[(1, 0, "ice")], enemy=[(5, 1)])
+    state = make_state(
+        m,
+        [
+            spawn(Team.ALLY, (0, 0), template("hero_fighter", reactions=[])),
+            spawn(Team.ENEMY, (5, 1), template("bandit", reactions=[])),
+        ],
+    )
+    state = with_rolls(give_turn(_steady(state, U1), U1), [(20, 1)])
+    result = resolve(state, Move(unit_id=U1, path=(Pos(x=0, y=0), Pos(x=1, y=0))))
+    assert any(isinstance(e, UnitSlid) for e in result.events)
+    assert result.state.units[U1].xy == (2, 0)
+    assert not result.state.units[U1].has_status("prone")
