@@ -33,8 +33,14 @@ from trpg.engine import (
 from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.basics import help_up_problem
 from trpg.engine.context import Ctx
-from trpg.engine.effects import ApplyStatusEffect, RemoveStatusEffect, run_effects
+from trpg.engine.effects import (
+    ApplyStatusEffect,
+    MoveUnitEffect,
+    RemoveStatusEffect,
+    run_effects,
+)
 from trpg.engine.events import (
+    CheckRolled,
     EffectFizzled,
     ManeuverRolled,
     ReactionTriggered,
@@ -48,7 +54,7 @@ from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.turns import start_turn
 from trpg.engine.view import project_for
 from trpg.shared.errors import IllegalActionError
-from trpg.shared.types import Attribute, Pos, Team, UnitId
+from trpg.shared.types import Attribute, Pos, Surface, Team, UnitId
 
 U1, U2, U3 = UnitId("unit_0001"), UnitId("unit_0002"), UnitId("unit_0003")
 CORE = library().ruleset.core
@@ -336,3 +342,30 @@ def test_knock_chance_matches_the_rolls() -> None:
     attack = effective_attribute(state.ruleset, state.units[U1], Attribute.DEX)
     assert contest_chance(state, target, Attribute.DEX, attack, knockdown=True) == expected
     assert contest_chance(state, target, Attribute.DEX, attack) > expected
+
+
+# ---------------------------------------------------------------------------
+# 第 6 點：冰面 DC（走進、被推進冰面都用同一個）
+# ---------------------------------------------------------------------------
+
+
+def _ice_dc() -> int:
+    check = library().ruleset.surface_def(Surface.ICE).on_enter
+    assert check is not None and check.check is not None
+    return check.check.dc
+
+
+def test_ice_dc_is_ten_for_walking_and_forced_entry() -> None:
+    assert _ice_dc() == 10
+    m = make_map("000000\n000000", surfaces=[(1, 0, "ice"), (1, 1, "ice")], enemy=[(5, 1)])
+    state = make_state(
+        m,
+        [
+            spawn(Team.ALLY, (0, 0), template("hero_fighter", reactions=[])),
+            spawn(Team.ENEMY, (5, 1), template("bandit", reactions=[])),
+        ],
+    )
+    walked = resolve(give_turn(state, U1), Move(unit_id=U1, path=(Pos(x=0, y=0), Pos(x=1, y=0))))
+    forced = run_effects(state, [MoveUnitEffect(unit_id=U1, dest=(1, 1), mode="forced")])
+    dcs = [e.dc for r in (walked, forced) for e in r.events if isinstance(e, CheckRolled)]
+    assert dcs == [10, 10]

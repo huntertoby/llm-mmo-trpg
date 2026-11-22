@@ -54,7 +54,7 @@ def test_surfaces_cover_every_surface(library: ContentLibrary) -> None:
     assert {s.id for s in table.surfaces} == {s for s in Surface if s is not Surface.NONE}
     ice = table.get(Surface.ICE)
     assert ice.on_enter is not None and ice.on_enter.check is not None
-    assert (ice.on_enter.check.dc, ice.on_enter.check.fail_status) == (12, "prone")
+    assert (ice.on_enter.check.dc, ice.on_enter.check.fail_status) == (10, "prone")  # KD-1：DC 12 → 10
     poison = table.get(Surface.POISON)
     assert poison.on_turn_start is not None and poison.on_turn_start.damage is not None
     assert str(poison.on_turn_start.damage.dice) == "1d4"
