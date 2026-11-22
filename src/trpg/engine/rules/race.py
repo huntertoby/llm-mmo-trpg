@@ -19,6 +19,8 @@
 - ``surface_damage_immunity``（E3）：:func:`surface_damage_immune`（``turns`` 的回合開始表面
   傷害；AI 的 ``_harmful``）；
 - ``flat_climb``（E3「攀岩」）：:func:`flat_climb_height`（``movement.unit_step_cost``）；
+- 數值類 ``stats.crit_damage_permille``（#179，CR-1）：:func:`race_crit_damage_permille`
+  （:func:`trpg.engine.crit_damage.crit_damage_permille`）；
 - ``fall_immunity``（獸耳族「輕身」，#138）：:func:`fall_immune`（``effects.handlers.arrive``、
   ``heights`` 不發墜落事件；``basics`` 的攀跳可以往下跳；AI 的路線估值不把往下當風險）。
 
@@ -53,6 +55,7 @@ __all__ = [
     "hazard_push_reduction",
     "passive_active",
     "passive_of",
+    "race_crit_damage_permille",
     "race_element_mods",
     "reveal_radius",
     "rule_move_bonus",
@@ -126,6 +129,14 @@ def passive_active(state: BattleState, unit: UnitState) -> bool:
     if passive.map_tags is not None:
         return bool(set(passive.map_tags) & set(state.map_tags))
     return True
+
+
+def race_crit_damage_permille(rules: Ruleset, unit: UnitState) -> int:
+    """種族環境被動的數值類「暴擊傷害 ±‰」（#179，CR-1）；沒有種族或沒給時 0。只看種族。"""
+    if unit.race is None:
+        return 0
+    stats = rules.race_def(unit.race).passive.stats
+    return 0 if stats is None else stats.crit_damage_permille
 
 
 def reveal_radius(rules: Ruleset, unit: UnitState) -> int:

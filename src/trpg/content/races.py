@@ -12,7 +12,7 @@
    ``stats``：暴擊傷害），由使用者在工坊和內容裡控制；種族不再跑禁用欄位檢查。
 2. 功能型效果是主軸，也可以另外給數值（#179）：種族技的效果類型、環境被動的規則仍是封閉清單
    （:data:`RACE_EFFECT_SPECS`、:data:`PASSIVE_RULE_SPECS`），每個類型只能填它自己的參數；
-   數值放在環境被動的 ``stats``（:class:`RaceStats`）。
+   數值放在環境被動的 ``stats``（:class:`RaceStats`，CR-1 擴充：暴擊傷害）。
 3. 強度小於半個技能欄：種族技固定 1 AP、每場 1～2 次、不佔技能欄、效果最多 3 個
    （推、拉不吃撞擊傷害；投擲不造成傷害）。
 4. 不給元素專屬機制（6.33）：此條無法機器檢查，由玩法 PM 審資料（見 3R-1 報告）。
@@ -55,6 +55,7 @@ __all__ = [
     "RaceLookOptions",
     "RacePassive",
     "RaceSkill",
+    "RaceStats",
     "RaceTable",
     "forbidden_key_problems",
     "look_choice_problems",
@@ -380,6 +381,22 @@ class RaceSkill(ContentModel):
 # ---------------------------------------------------------------------------
 
 
+class RaceStats(ContentModel):
+    """環境被動的「數值」類（#179，CR-1）：種族可以另外給數值。第一個用途是暴擊傷害。
+
+    - ``crit_damage_permille``：暴擊傷害 ±‰；和武器、裝備、修正技、技能自帶的倍率相加，再套全身
+      上下限 ``core.crit_damage``（150%～300%）。
+    """
+
+    crit_damage_permille: int = Field(ge=-1000, le=1000)
+
+    @model_validator(mode="after")
+    def _check(self) -> RaceStats:
+        if self.crit_damage_permille == 0:
+            raise ValueError("stats.crit_damage_permille 不可為 0（不給就整個 stats 不寫）")
+        return self
+
+
 PassiveRule = UnitRuleSpec
 """一種環境被動規則的參數規則（E2 起是共用表 :class:`trpg.content.unit_rules.UnitRuleSpec`）。"""
 
@@ -406,6 +423,8 @@ class RacePassive(ContentModel):
     radius: int | None = Field(default=None, ge=1, le=3)
     duration: int | None = Field(default=None, ge=1, le=3)
     """``trail_surface``（E3）：留下的表面持續幾個環境回合。"""
+    stats: RaceStats | None = Field(default=None, exclude_if=lambda v: v is None)
+    """數值類（#179，CR-1）：和環境規則並存的數值加成；沒寫時不輸出（現有 10 族的序列化不變）。"""
 
     @model_validator(mode="before")
     @classmethod

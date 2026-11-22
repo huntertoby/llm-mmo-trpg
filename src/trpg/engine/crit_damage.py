@@ -14,6 +14,8 @@
 3. 修正技（修正型被動）的 ``crit_damage_permille``
    （:func:`~trpg.engine.modifiers.crit_damage_bonus`；同一招的複本遞減）；被動觸發等不受修正的施放不算。
 4. 這招自帶的倍率（``SkillDef.crit_permille``）比基礎倍率多出的部分。
+5. 種族環境被動的數值類 ``stats.crit_damage_permille``（#179，
+   :func:`~trpg.engine.rules.race.race_crit_damage_permille`）。
 
 全部相加，最後套全身上下限 ``core.crit_damage.min_permille``～``max_permille``（150%～300%）。
 敵我用同一套規則。
@@ -28,6 +30,7 @@ from trpg.content.skills import SkillDef
 from trpg.engine.gear.core import gear_crit_damage_permille
 from trpg.engine.modifiers import Use, crit_damage_bonus
 from trpg.engine.rules.forms import held_weapon
+from trpg.engine.rules.race import race_crit_damage_permille
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.state import BattleState, UnitState
 
@@ -58,7 +61,7 @@ def crit_damage_permille(
     weapon = crit_weapon(unit, skill)
     own = None if weapon is None else weapon.crit_permille
     total = rules.base_permille if own is None else own
-    total += gear_crit_damage_permille(unit)
+    total += gear_crit_damage_permille(unit) + race_crit_damage_permille(state.ruleset, unit)
     if use is not None:
         target = subject if subject is not None else Subject(unit, unit.xy)
         total += crit_damage_bonus(state, unit, use, target)
