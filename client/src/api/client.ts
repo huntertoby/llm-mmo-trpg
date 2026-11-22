@@ -254,6 +254,7 @@ export const api = {
       | "item_gen"
       | "skill_evolution"
       | "flash"
+      | "surface"
       | "world_rules"
       | "world_economy"
       | "world_trade"

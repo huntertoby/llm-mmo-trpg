@@ -34,6 +34,7 @@ __all__ = [
     "REVEALED",
     "SHIELDED",
     "STEADFAST",
+    "STEADY",
     "TOPPLABLE",
     "next_unit_id",
 ]
@@ -58,6 +59,8 @@ RACE_ADAPT = "race_adapt"
 """人類種族技「應變」（Phase 3R-2）：到自己的下回合開始前，移動不觸發藉機攻擊。"""
 RACE_STONEWALL = "race_stonewall"
 """矮人種族技「穩若磐石」（Phase 3R-2）：不會被推、拉、擊倒。"""
+STEADY = "steady"
+"""站穩（KD-1，#176，05 5.13 第 3 點）：站起來或被扶起後得到，期間任何來源都不會讓他倒地。"""
 REVEALED = "revealed"
 """``reveal`` 施加的狀態（``prevents_concealment``）。"""
 OVERDRAWN = "overdrawn"

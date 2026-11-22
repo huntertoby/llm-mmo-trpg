@@ -122,7 +122,7 @@ describe("more-actions menu (Phase 3-21b)", () => {
     expect(BASIC_MODES.map((m) => m.kind).sort()).toEqual([...all].sort());
   });
 
-  it("keeps the number of basic actions within the limit of 10", () => {
+  it("keeps the number of basic actions within the limit of 11 (#177)", () => {
     expect(BASIC_ACTION_KINDS.length).toBeLessThanOrEqual(BASIC_ACTION_LIMIT);
     expect(new Set(BASIC_ACTION_KINDS).size).toBe(BASIC_ACTION_KINDS.length);
   });

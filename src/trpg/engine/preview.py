@@ -94,7 +94,7 @@ from trpg.engine.events import (
 )
 from trpg.engine.gear.charge import find_charge
 from trpg.engine.ids import BOSS_TAG, SHIELD_FORMATION
-from trpg.engine.maneuvers import contest_chance
+from trpg.engine.maneuvers import contest_chance, knock_terms
 from trpg.engine.oaths import oath_warning
 from trpg.engine.pierce import pierce_trace
 from trpg.engine.practice import is_practice_target
@@ -867,10 +867,11 @@ def _maneuver_chance(state: BattleState, actor: UnitState, action: Shove | Trip)
     modifier = rules.hit_table.modifier(
         effective_attribute(rules, actor, attr), max(1, effective_attribute(rules, target, attr))
     )
+    extra, target_number = knock_terms(rules, knockdown=isinstance(action, Trip))  # KD-1
     hit, _ = _chances(
         _naturals("none"),
-        modifier + rules.core.proficiency,
-        rules.core.hit_target,
+        modifier + rules.core.proficiency - extra,
+        target_number,
         21,
         always=is_practice_target(state, target),
     )
@@ -1014,8 +1015,9 @@ def _knock_chance(
     """技能對 ``target`` 的擊倒對抗成功率（技能屬性對相同屬性）；不會擊倒時為 ``None``。"""
     enemy = target.team is not actor.team
     resolved = resolve_effects(state, skill)
-    prone = any(
-        r.type == "knock_prone" and (r.affects == "all" or (enemy and r.affects == "enemies"))
+    prone = any(  # 震波 KD-1 起也擲擊倒對抗（友方對象也擲）
+        (r.type == "knock_prone" and (r.affects == "all" or (enemy and r.affects == "enemies")))
+        or (r.type == "shockwave" and (r.affects != "allies" or not enemy))
         for r in resolved
     )
     charge_prone = enemy and any(
@@ -1029,10 +1031,11 @@ def _knock_chance(
     modifier = rules.hit_table.modifier(
         skill_scaling_value(rules, actor, skill), max(1, effective_attribute(rules, target, attr))
     )
+    extra, target_number = knock_terms(rules, knockdown=True)  # 擊倒對抗（KD-1）
     hit, _ = _chances(
         _naturals("none"),
-        modifier + rules.core.proficiency,
-        rules.core.hit_target,
+        modifier + rules.core.proficiency - extra,
+        target_number,
         21,
         always=is_practice_target(state, target),
     )
@@ -1840,7 +1843,7 @@ PRIMITIVE_PREVIEW: Mapping[str, str] = MappingProxyType(
         "pull": f"collisions、{_OUTCOMES}",
         "hook": f"collisions、{_OUTCOMES}（拉到施放者旁的位移；SK-2）",
         "knock_prone": "targets（擊倒對抗的成功率 _knock_chance）",
-        "shockwave": "targets（直接倒地，不擲對抗）",
+        "shockwave": "targets（擊倒對抗的成功率 _knock_chance；KD-1 起要擲對抗）",
         "teleport": "moves",
         "dash": "moves（衝鋒路線）",
         "charge_through": "moves、targets（擊倒對抗的成功率）",

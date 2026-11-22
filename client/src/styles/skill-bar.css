@@ -242,6 +242,22 @@
   border-left: 1px solid var(--panel-border);
 }
 
+/* KD-1：倒地中，反應欄第一行寫「倒地中，不能反應」，反應技的圓鈕標灰（同「本場不成立」的灰） */
+.skill-minor-blocked {
+  flex-basis: 100%;
+  color: #d8d2c4;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.skill-mini.reaction-off > * {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.skill-mini.reaction-off {
+  opacity: 0.7;
+}
+
 .skill-mini {
   width: 34px;
   height: 34px;
@@ -386,12 +402,12 @@
 .skill-gear {
   font-size: 12px;
   color: #e8c46a;
-  /* 「來自裝備・副手：壁壘塔盾」太長時省略（完整文字在說明卡與 aria-label） */
+  /* E1 美術小修 1：只寫裝備名，放不下時截掉尾巴、不加「…」（完整文字在說明卡上方與 aria-label） */
   display: block;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
 .skill-button.from-gear {
@@ -414,6 +430,50 @@
   color: #e8c46a;
   font-size: 12px;
   line-height: 1.5;
+}
+
+/* E1 美術小修 2：說明卡上方的金框貼在卡片上，成為卡片的頂端——拿掉縫，金框下緣和卡片上緣重疊成一條線
+   （金線壓在上面），同寬；接縫處不圓角、金框不另外投影（卡片自己有影子）。 */
+.skill-card-float .gear-source-note {
+  position: relative;
+  z-index: 1;
+  margin-bottom: -1px;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
+}
+
+/* E5 美術小修 1：說明卡上方那幾條（來自裝備、沒有效果、本場不成立、現在不能用）的底色不透明，和卡片同一種深色，
+   底色畫到框線下面（虛線的空隙也不透出後面的介面） */
+.skill-card-float .skill-card-reason {
+  background-color: #14141c;
+  background-clip: border-box;
+  opacity: 1;
+}
+
+.skill-card-float .gear-source-note + .skill-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* E5 美術小修 2（E1 小修 2 的延伸）：金框、虛線框、卡片由上往下接成一張——每一條都不留縫、和下一條
+   的上緣重疊成一條線（上面那條的框線壓在上面），同寬；只有最上面那條留上方的圓角。 */
+.skill-card-float .skill-card-reason {
+  position: relative;
+  z-index: 1;
+  margin-bottom: -1px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.skill-card-float .skill-card-reason:first-child {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+
+.skill-card-float .skill-card-reason + .skill-card {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 /* Phase 3-26a：技能點、技能等級、營火換裝 */
@@ -707,4 +767,10 @@
   padding: 2px 6px;
   border-left: 3px solid #b08cff;
   background: rgba(176, 140, 255, 0.08);
+}
+
+/* E5 美術小修（被彈射擋下的那招）：說明卡內文最後的灰字，同 E2 沒效果的加註（灰色、不劃線） */
+.skill-card-left-out {
+  margin-top: 4px;
+  color: var(--muted);
 }

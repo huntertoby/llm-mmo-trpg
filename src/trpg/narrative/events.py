@@ -443,6 +443,7 @@ _FIZZLE_TEXT = {
     "followup_declined": "  放棄了第二段",
     "shockwave_flying": "  震波打不到會飛的單位",
     "stonewall": "  穩若磐石：擊不倒",
+    "steady": "  剛站起來站得很穩：擊不倒",  # 站穩（KD-1）
     "immovable": "  巨大的身軀紋風不動：擊不倒",  # 巨型頭目的倒地免疫（GB-1a 待決 2，併 GB-1c）
     "inscribe_needs_tiles": "  符文只能刻在影響的格子上（這招的刻印對象不是格子），沒有刻下",
     # 瞄準預告（RG-1，#162）射出時落空
@@ -501,6 +502,8 @@ def _unit_charged(e: UnitCharged, v: _View) -> str:
 
 @_handles(UnitStoodUp)
 def _stood_up(e: UnitStoodUp, v: _View) -> str:
+    if e.helper_id is not None:  # 扶起（KD-1）
+        return f"  {v.name[e.helper_id]} 扶起了 {v.name[e.unit_id]}（不花移動點數）"
     return f"  {v.name[e.unit_id]} 站了起來（消耗 {e.cost} 移動）"
 
 
@@ -885,7 +888,7 @@ def _shield_ended(e: ShieldEnded, v: _View) -> str:
 
 @_handles(StatusRemoved)
 def _status_removed(e: StatusRemoved, v: _View) -> str | None:
-    if e.reason == "stood_up":
+    if e.reason in ("stood_up", "helped_up"):
         return None
     why = _REMOVE_REASONS.get(e.reason)
     text = f"  {v.name[e.target_id]} 的「{v.statuses[e.status_id]}」"
@@ -1796,6 +1799,9 @@ def _maneuver(e: ManeuverRolled, v: _View) -> str:
         "shove": "推擊",
         "trip": "絆倒",
         "knock_prone": "擊倒",
+        "shockwave": "震波擊倒",
+        "topple": "壓倒",
+        "snare": "藤蔓絆倒",
         "teleport": "傳送",
         "swap": "交換位置",
     }[e.maneuver]

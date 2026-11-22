@@ -18,6 +18,7 @@ from trpg.shared.types import Element, ObjectId, Pos, UnitId
 __all__ = [
     "ACTION_ADAPTER",
     "ACTION_LIST_ADAPTER",
+    "BASIC_ACTION_LIMIT",
     "BASIC_ACTION_TYPES",
     "CHARGE_ACTION_TYPES",
     "MANAGEMENT_ACTION_TYPES",
@@ -37,6 +38,7 @@ __all__ = [
     "EndStance",
     "EndTurn",
     "FollowupTarget",
+    "HelpUp",
     "InfuseSkill",
     "Interact",
     "Move",
@@ -166,6 +168,14 @@ class Trip(_ActionBase):
     """絆倒（技巧動作）：相鄰敵人，敏捷對抗；成功時目標倒地。"""
 
     type: Literal["trip"] = "trip"
+    target_id: UnitId
+
+
+class HelpUp(_ActionBase):
+    """扶起（KD-1，#176，05 5.13 第 2 點）：花 ``help_up_ap_cost`` AP，讓一名相鄰、高度差在近戰
+    範圍內、倒地中的我方單位（含召喚物）立刻站起；不花他的移動點數，也不觸發藉機攻擊。"""
+
+    type: Literal["help_up"] = "help_up"
     target_id: UnitId
 
 
@@ -399,6 +409,7 @@ type Action = Annotated[
     | Vault
     | Shove
     | Trip
+    | HelpUp
     | Interact
     | Reload
     | ActivateCharge
@@ -419,12 +430,18 @@ BASIC_ACTION_TYPES: tuple[str, ...] = (
     "defend",
     "shove",
     "trip",
+    "help_up",
     "interact",
     "swap",
     "aim",
     "vault",
 )
-"""基本動作的種類（``docs/design/05-戰鬥.md`` 5.2.2：上限 10 個，不含結束回合與管理操作）。"""
+"""基本動作的種類（``docs/design/05-戰鬥.md`` 5.2.2：上限 :data:`BASIC_ACTION_LIMIT` 個，不含結束
+回合與管理操作）。"""
+
+BASIC_ACTION_LIMIT: int = 11
+"""基本動作總數上限（05 5.2.2；#177 起 11 個，含「扶起」）。只有測試讀它（設計上的約束，引擎不依它
+做任何結算），所以不放 content；前端 ``client/src/battle/targeting.ts`` 的同名常數要一起改。"""
 
 WEAPON_ACTION_TYPES: tuple[str, ...] = ("reload",)
 """武器動作：只有特定武器才有（裝填）；不算進基本動作的上限。"""
@@ -483,6 +500,7 @@ type Step = Annotated[
     | Vault
     | Shove
     | Trip
+    | HelpUp
     | Interact
     | Reload
     | ActivateCharge

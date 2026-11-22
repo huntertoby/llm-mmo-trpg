@@ -449,6 +449,7 @@ def test_beneficial_flags_in_content() -> None:
         "hasted",
         "regenerating",
         "shielded",
+        "steady",  # KD-1：站穩
         # 2E-2
         "stance_fury",
         "stance_bulwark",

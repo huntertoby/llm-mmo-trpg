@@ -1250,19 +1250,23 @@ class Cast:
         """護盾量倍率（‰）：消耗層數的加成（Phase 3-52）。"""
         return PERMILLE + self.shield_bonus
 
-    def knock_down(self, unit: UnitState) -> list[EffectBase]:
-        """對 ``unit`` 擲擊倒的對抗判定（技能的縮放屬性 vs 目標同屬性），成功才倒地。"""
+    def knock_down(
+        self, unit: UnitState, kind: Literal["knock_prone", "shockwave"] = "knock_prone"
+    ) -> list[EffectBase]:
+        """對 ``unit`` 擲擊倒的對抗判定（技能的縮放屬性 vs 目標同屬性；KD-1 起守方 +加值、平手算
+        守方贏），成功才倒地。``kind``：紀錄的對抗種類（震波另記 ``shockwave``）。"""
         if unit.has_status(PRONE):
             return []
         if not contest(
             self.ctx,
-            "knock_prone",
+            kind,
             self.caster,
             unit,
             skill_scaling_attr(self.caster, self.skill),
             skill_id=self.skill.id,
             primary=False,
             attack_value=skill_scaling_value(self.ctx.rules, self.caster, self.skill),
+            knockdown=True,
         ):
             return []
         return [ApplyStatusEffect(source_id=self.caster.id, target_id=unit.id, status_id=PRONE)]

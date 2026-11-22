@@ -144,4 +144,4 @@ def test_same_input_same_result() -> None:
     second = run_effects(state, [east(1)])
     assert state_to_json(first.state) == state_to_json(second.state)
     assert [e.model_dump() for e in first.events] == [e.model_dump() for e in second.events]
-    assert LOG_FORMAT.endswith("/136")
+    assert LOG_FORMAT.endswith("/137")

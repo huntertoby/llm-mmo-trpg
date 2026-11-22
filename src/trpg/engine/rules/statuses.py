@@ -40,6 +40,7 @@ __all__ = [
     "move_reduction",
     "next_turn_ap_penalty",
     "prevents_concealment",
+    "prone_ap_penalty",
     "scaled_bonus",
     "scaled_permille",
     "scaled_status_def",
@@ -180,12 +181,17 @@ def _status_ap_penalty(definition: StatusDef, status: StatusInstance) -> int:
 def ap_penalty(rules: Ruleset, unit: UnitState, *, borrowed: bool | None = None) -> int:
     """``ap_penalty`` 狀態（透支，Phase 3-50；預支，AP-2）在回合開始時少給的 AP：多個相加。
     ``borrowed`` 為 ``True``／``False`` 時只算預支／只算預支以外的（AP 列的用字）。"""
-    total = 0
+    total = prone_ap_penalty(rules, unit) if borrowed is not True else 0
     for status in unit.statuses:
         definition = rules.status_def(status.status_id)
         if borrowed is None or definition.ap_penalty_per_amount is borrowed:
             total += _status_ap_penalty(definition, status)
     return total
+
+
+def prone_ap_penalty(rules: Ruleset, unit: UnitState) -> int:
+    """這次倒地還沒扣的 AP（KD-1，05 5.13 第 1 點）：``prone_ap_due`` 時 ``prone_ap_loss``。"""
+    return rules.core.prone_ap_loss if unit.prone_ap_due else 0
 
 
 def next_turn_ap_penalty(
@@ -194,7 +200,7 @@ def next_turn_ap_penalty(
     """下一個自己回合開始時會少給的 AP（AP-1 第 6 項，AP 列的紅斜線）：``ap_penalty`` 狀態裡到那時
     還在的。``expires: turn_end`` 的狀態在自己回合結束時 −1，所以自己的回合中只剩 1 回合的（已經
     在這回合扣過）不算；不在自己回合時都算。``borrowed`` 同 :func:`ap_penalty`。"""
-    total = 0
+    total = prone_ap_penalty(rules, unit) if borrowed is not True else 0
     for status in unit.statuses:
         definition = rules.status_def(status.status_id)
         if borrowed is not None and definition.ap_penalty_per_amount is not borrowed:

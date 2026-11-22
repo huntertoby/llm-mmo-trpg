@@ -54,6 +54,7 @@ from trpg.engine.ids import (
     PRONE,
     RACE_STONEWALL,
     SHIELDED,
+    STEADY,
 )
 from trpg.engine.lifecycle import down_unit, escape_unit
 from trpg.engine.practice import hold_standing
@@ -873,11 +874,13 @@ def _move_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
 
 def _status_blocked(ctx: Ctx, unit: UnitState, status_id: str) -> str | None:
     """這個狀態施加不上去的原因：被揭露不能再隱蔽（``revealed``）、穩若磐石擊不倒（``stonewall``，
-    Phase 3R-2）。"""
+    Phase 3R-2）、巨型單位（``immovable``）、站穩（``steady``，KD-1）。"""
     if status_id == PRONE and unit.has_status(RACE_STONEWALL):
         return "stonewall"
     if status_id == PRONE and is_giant(unit):  # 巨型單位（GB-1a，T6）：倒地免疫
         return "immovable"
+    if status_id == PRONE and unit.has_status(STEADY):  # 站穩（KD-1，05 5.13 第 3 點）
+        return "steady"
     if status_id == CONCEALED and prevents_concealment(ctx.rules, unit):
         return "revealed"
     return None
@@ -957,10 +960,7 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         instance = _reapplied(existing, instance, redirects=definition.redirects_damage)
     others = [s for s in unit.statuses if s.status_id != status_id]
     unit.statuses = sorted([*others, instance], key=lambda s: s.status_id)
-    if (
-        definition.control_group is not None and not effect.self_paid
-    ):  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
-        unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
+    _mark_applied(ctx, unit, effect, status_id, fresh=existing is None)
     events.append(
         ctx.emit(
             StatusApplied,
@@ -972,6 +972,19 @@ def apply_status(ctx: Ctx, effect: ApplyStatusEffect) -> list[EventBase]:
         )
     )
     return events
+
+
+def _mark_applied(
+    ctx: Ctx, unit: UnitState, effect: ApplyStatusEffect, status_id: str, *, fresh: bool
+) -> None:
+    """施加成功後記在單位上的：控制遞減，以及倒地的少 AP（KD-1）。"""
+    definition = ctx.rules.status_def(status_id)
+    if (
+        definition.control_group is not None and not effect.self_paid
+    ):  # 控制遞減：同類別在 R + control_dr_rounds 輪結束前
+        unit.control_dr[definition.control_group] = ctx.state.round + ctx.core.control_dr_rounds
+    if status_id == PRONE and fresh and not unit.has_tag(BOSS_TAG):
+        unit.prone_ap_due = True  # 倒地後第一個自己回合少 AP（KD-1，05 5.13 第 1、7 點：頭目不扣）
 
 
 def _reapplied(

@@ -599,6 +599,15 @@ rules:
     slot: ['Field(max_length)', 'Field(min_length)']
     ann: ['str*', '*str | None*', 'Annotated[str*']
     note: 字串欄位的長度上限（名稱、說明、ID）。
+  - id: py-engine-actions-basic-action-limit
+    class: const
+    status: done
+    lang: py
+    files: [src/trpg/engine/actions.py]
+    where: <module>.BASIC_ACTION_LIMIT
+    kind: number
+    value: '11'
+    note: 基本動作總數上限（05 5.2.2，#177）：設計上的約束，只有測試讀它檢查 BASIC_ACTION_TYPES 的長度，引擎不依它做任何結算，數值工坊改它也沒有效果，所以不搬進 content（KD-1）。
   - id: py-d20
     class: const
     status: done

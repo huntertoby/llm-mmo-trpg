@@ -61,17 +61,18 @@ from trpg.engine.gear.summon import gear_summon_duration, inherit_attack_gear
 from trpg.engine.ids import CONCEALED, PRONE, next_unit_id
 from trpg.engine.infusion import active_infusions, default_infusion, template_of
 from trpg.engine.lifecycle import dismiss_summon, make_unit, summons_of
+from trpg.engine.maneuvers import contest
 from trpg.engine.rules.footprint import adjacent, dist_to, unit_dist
 from trpg.engine.rules.geometry import XY, neighbors4
 from trpg.engine.rules.landing import landing_problem
 from trpg.engine.rules.statuses import effective_attribute
-from trpg.engine.skills.scaling import skill_scaling_attr
+from trpg.engine.skills.scaling import skill_scaling_attr, skill_scaling_value
 from trpg.engine.skills.targeting import summon_site_problem
 from trpg.engine.state import BattleState, UnitState
 from trpg.engine.summons.variants import apply_summon_spec, trait_adjusted
 from trpg.engine.triggers import register_trigger
 from trpg.shared.rng import PERMILLE
-from trpg.shared.types import Pos, UnitId
+from trpg.shared.types import Attribute, Pos, UnitId
 
 __all__ = [
     "Growth",
@@ -376,6 +377,7 @@ def _build_summon(
         resource_attributes=owner.attributes,  # 資源上限的屬性由施放者推得（BAL-15b，6.29）
     )
     unit.owner_id = owner.id
+    unit.summon_skill_id = skill_id  # 藤蔓纏住的擊倒對抗看這一招的縮放屬性（KD-1）
     unit.level = owner.level
     unit.summon_bonus_permille = grown.bonus_permille + (
         0 if use is None else modifiers.summon_damage_permille(state, owner, use)
@@ -687,13 +689,38 @@ def _snare_trigger(ctx: Ctx, event: EventBase, depth: int) -> list[EffectBase]:
                 duration=snare.duration,
             )
         )
-        if snare.prone:
+        if snare.prone and _snare_knocks(ctx, vine, mover):
             effects.append(
                 ApplyStatusEffect(
                     depth=depth, source_id=vine.id, target_id=mover.id, status_id=PRONE
                 )
             )
     return effects
+
+
+def _snare_knocks(ctx: Ctx, vine: UnitState, mover: UnitState) -> bool:
+    """藤蔓纏住的倒地要過擊倒對抗（KD-1，05 5.13 第 5 點）：召喚者那一招的縮放屬性 vs 目標同屬性
+    （守方 +加值、平手算守方贏）。已經倒地的不擲；沒有召喚者或沒記到召喚的招時（測試直接放的藤蔓）用
+    藤蔓自己的意志。"""
+    if mover.has_status(PRONE):
+        return False
+    state = ctx.state
+    owner = None if vine.owner_id is None else state.units.get(vine.owner_id)
+    sid = vine.summon_skill_id
+    if owner is None or sid is None:
+        return contest(ctx, "snare", vine, mover, Attribute.WIL, primary=False, knockdown=True)
+    skill = state.ruleset.skill_def(sid)
+    return contest(
+        ctx,
+        "snare",
+        owner,
+        mover,
+        skill_scaling_attr(owner, skill),
+        skill_id=skill.id,
+        primary=False,
+        attack_value=skill_scaling_value(state.ruleset, owner, skill),
+        knockdown=True,
+    )
 
 
 def totem_targets(state: BattleState, totem: UnitState, spec: TotemSpec) -> list[UnitState]:

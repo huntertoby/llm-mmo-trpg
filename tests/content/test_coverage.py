@@ -33,6 +33,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
     "status": {
         "race_adapt": "只由人類種族技「應變」施加（3R-2），沒有技能施加",
         "borrowed_ap": "只由預支（borrow_ap，AP-2）施加，技能不能直接施加（mechanic_only）",
+        "steady": "只在站起來或被扶起時得到（KD-1），技能不能施加（mechanic_only）",
         "shard_burst": "只由碎晶傀儡範本的 opening_statuses 開場掛上（5A-M1），沒有技能施加",
         "sword_formation": "只由劍陣弟子範本的 opening_statuses 開場掛上（5A-M2），沒有技能施加",
         "array_ward": "只由陣眼石靈範本的 opening_statuses 開場掛上（5A-M2b），沒有技能施加",

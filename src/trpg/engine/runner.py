@@ -42,8 +42,8 @@ __all__ = [
     "run_battle",
 ]
 
-LOG_FORMAT = "trpg-battle-log/136"
-"""目前的戰鬥紀錄版本（``/136``，Phase E1：裝備授予技能一般化，#174）。
+LOG_FORMAT = "trpg-battle-log/137"
+"""目前的戰鬥紀錄版本（``/137``，Phase KD-1：倒地改版，#176）。
 版號策略與完整變更歷程在 ``docs/phases/戰鬥紀錄格式變更.md``：改版時在那份文件加一條，
 這裡只更新版號與這一行。"""
 DEFAULT_MAX_ACTIONS = 20_000

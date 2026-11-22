@@ -38,6 +38,7 @@ from trpg.engine import (
 )
 from trpg.engine.actions import (
     ACTION_ADAPTER,
+    BASIC_ACTION_LIMIT,
     BASIC_ACTION_TYPES,
     CHARGE_ACTION_TYPES,
     MANAGEMENT_ACTION_TYPES,
@@ -626,8 +627,9 @@ def test_ai_line_up_prefers_a_position_that_lines_up_several_enemies() -> None:
     assert _weapon_terms(lined, lined.units[U1], w.model_copy(update={"line_up": 0}), enemies) == 0
 
 
-def test_basic_action_cap_stays_at_ten_and_reload_is_a_weapon_action() -> None:
-    assert len(BASIC_ACTION_TYPES) == len(set(BASIC_ACTION_TYPES)) <= 10
+def test_basic_action_cap_stays_at_eleven_and_reload_is_a_weapon_action() -> None:
+    assert BASIC_ACTION_LIMIT == 11  # 05 5.2.2，#177
+    assert len(BASIC_ACTION_TYPES) == len(set(BASIC_ACTION_TYPES)) <= BASIC_ACTION_LIMIT
     assert WEAPON_ACTION_TYPES == ("reload",) and "reload" not in BASIC_ACTION_TYPES
     # 每一種動作都歸類：基本動作、武器動作、管理操作，或技能
     union = get_args(get_args(Action.__value__)[0])
@@ -643,7 +645,7 @@ def test_basic_action_cap_stays_at_ten_and_reload_is_a_weapon_action() -> None:
     }
     assert types == classified
     # 加上武器動作的總數（含裝填）也有上限，避免之後無限長
-    assert len(BASIC_ACTION_TYPES) + len(WEAPON_ACTION_TYPES) <= 11
+    assert len(BASIC_ACTION_TYPES) + len(WEAPON_ACTION_TYPES) <= BASIC_ACTION_LIMIT + 1
     assert ACTION_ADAPTER.validate_python({"type": "reload", "unit_id": U1}) == Reload(unit_id=U1)
 
 
