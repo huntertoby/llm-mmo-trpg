@@ -29,6 +29,7 @@ from trpg.engine.effects import ElementTouchEffect, run_effects
 from trpg.engine.events import (
     DamageDealt,
     EventBase,
+    ManeuverRolled,
     ObjectCreated,
     ObjectDamaged,
     ObjectDestroyed,
@@ -320,3 +321,20 @@ def test_a_battle_with_a_topple_is_deterministic_and_replays() -> None:
     replayed = replay(setup, 7, steps)
     assert state_to_json(replayed.state) == state_to_json(first.state)
     assert [e.model_dump() for e in replayed.events] == [e.model_dump() for e in first.events]
+
+
+def test_crushed_units_each_roll_a_strength_contest(monkeypatch: pytest.MonkeyPatch) -> None:
+    """KD-1（05 5.13 第 5 點）：壓到的人照舊受傷，另外每人各擲一次擊倒對抗（推倒者的力量）。"""
+    always(monkeypatch)
+    result = resolve(arena((2, 3), foes=[(4, 3), (5, 3)]), push())
+    rolled = of(result.events, ManeuverRolled)
+    assert [(r.maneuver, r.attacker_id, r.target_id) for r in rolled] == [
+        ("topple", U1, U2),
+        ("topple", U1, U3),
+    ]
+    bonus = result.state.ruleset.core.prone_contest_bonus
+    assert all(r.resist_bonus == bonus and r.success for r in rolled)
+    monkeypatch.setattr(Rng, "roll", lambda self, sides: 1 if sides == 20 else min(4, sides))
+    failed = resolve(arena((2, 3), foes=[(4, 3), (5, 3)]), push())
+    assert [d.target_id for d in of(failed.events, DamageDealt) if d.cause == "topple"] == [U2, U3]
+    assert not [s for s in of(failed.events, StatusApplied) if s.status_id == "prone"]

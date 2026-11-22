@@ -483,6 +483,9 @@ class UnitState:
     自己回合開始時清除。"""
     owner_id: UnitId | None = None
     """召喚物的召喚者（Phase 3D-4a）；一般單位為 ``None``。"""
+    summon_skill_id: Annotated[str | None, Field(exclude_if=_empty)] = None
+    """召喚物是哪一招召喚出來的（KD-1：藤蔓纏住的擊倒對抗用召喚者這一招的縮放屬性）；一般單位、
+    沒記到時為 ``None``（不輸出）。"""
     summon_expires_round: int | None = None
     """召喚物在召喚者這一輪（含）的回合結束時消失（施放輪 ＋ ``duration``；Phase 3D-4a）。"""
     level: int = 1
@@ -604,6 +607,9 @@ class UnitState:
     miss_refunded: Annotated[bool, Field(exclude_if=_empty)] = False
     """這個回合已經拿過失手返還（AP-1，05 5.2；每個單位每回合最多 1 次）；自己回合開始時清除。
     ``False`` 時不輸出。"""
+    prone_ap_due: Annotated[bool, Field(exclude_if=_empty)] = False
+    """這次倒地還沒扣過 AP（KD-1，#176，05 5.13 第 1 點）：倒地時設定（單格頭目不設），下一個自己
+    回合開始時扣 ``prone_ap_loss`` 並清除；在那之前被扶起或自己站起也照扣。``False`` 時不輸出。"""
     ap_borrowed: Annotated[int, Field(exclude_if=_empty)] = 0
     """這個回合用預支（``borrow_ap``，AP-2）實際多拿的 AP（AP 列的橘色菱形；已併入 ``ap``）。不是 0
     時這回合結束不保留 AP；回合結束時歸零；0 時不輸出。"""
@@ -695,6 +701,7 @@ class UnitState:
             ap_gain_turn=self.ap_gain_turn,
             ap_per_turn=self.ap_per_turn,
             miss_refunded=self.miss_refunded,
+            prone_ap_due=self.prone_ap_due,
             ap_carried_in=self.ap_carried_in,
             ap_lost=self.ap_lost,
             ap_borrowed=self.ap_borrowed,
@@ -717,6 +724,7 @@ class UnitState:
             ammo=self.ammo,
             turn_cast_tags=self.turn_cast_tags,
             owner_id=self.owner_id,
+            summon_skill_id=self.summon_skill_id,
             summon_expires_round=self.summon_expires_round,
             level=self.level,
             summon_bonus_permille=self.summon_bonus_permille,

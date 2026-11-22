@@ -59,7 +59,7 @@ from trpg.engine.gear.reactions import (
     redirect_affix,
     spend_reaction,
 )
-from trpg.engine.ids import CONCEALED, DECOY_TAG, RACE_ADAPT
+from trpg.engine.ids import CONCEALED, DECOY_TAG, PRONE, RACE_ADAPT
 from trpg.engine.lifecycle import dismiss_summon
 from trpg.engine.lock_on import lock_target_of
 from trpg.engine.practice import is_practice_target
@@ -339,7 +339,9 @@ def _react(
 ) -> ReactionDef | SkillDef | None:
     """找出 ``unit`` 第一條符合事件、目前可用的規則並詢問；使用時回傳反應定義或反應技
     （已扣次數與耐力、發出 ``reaction_triggered``，由呼叫端執行效果）。``aided`` 見
-    :func:`_candidate`。"""
+    :func:`_candidate`。倒地中不能用任何反應（KD-1，05 5.13 第 1 點）：不詢問、不發事件。"""
+    if unit.has_status(PRONE):
+        return None
     for rule in unit.reactions:
         if rule.mode == "off" or rule.when.event not in events:
             continue

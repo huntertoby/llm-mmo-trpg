@@ -459,16 +459,24 @@
   text-decoration-color: rgba(160, 160, 176, 0.6);
 }
 
+/* E2 美術小修 1：完全沒效果的兩種（和種族、和另一件裝備重複），加註也退成灰色、不劃線；金色只留給部分重疊 */
 .part-tip-line.inactive .part-tip-note {
   text-decoration: none;
   display: inline-block;
-  color: #e0b060;
+  color: var(--muted);
 }
 
 /* 部分重疊（E2）：這條仍生效，只在後面註明重疊的部分 */
 .part-tip-line .part-tip-aside {
   display: inline-block;
   color: #e0b060;
+}
+
+/* E2 美術小修 2：加註換行時懸掛縮排——第二行起和第一行的「（」後面切齊（同 HC-3 營火按鈕的懸掛縮排），
+   不退到最左邊和規則字切齊 */
+.part-tip-line .part-tip-note {
+  padding-left: 1em;
+  text-indent: -1em;
 }
 
 /* 一句話說明（3-32b，`Hint`）：3-47 起不產生外層元素；卡片是只有文字的小浮動卡 */

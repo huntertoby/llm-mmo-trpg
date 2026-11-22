@@ -25,6 +25,12 @@ CASES = [
     ("narrow_halls", 11, "build_trapper", "utility"),
 ]
 
+PROMPT_EXTRA = [
+    ("ruined_fort", 5, "build_tank", "utility"),
+    # KD-1：倒地不能反應後這組只剩 1 次詢問，多加一場讓接受與拒絕都走過（斷言不放寬）
+    ("ruined_fort", 7, "build_tank", "utility"),
+]
+
 
 def _chooser(kind: str, library: ContentLibrary) -> Chooser:
     if kind == "utility":
@@ -73,7 +79,7 @@ def test_hero_reaction_prompts_alternate_and_still_replay(
 ) -> None:
     """主角的反應改為 ``prompt``（測試用內容庫）：詢問時交替接受與拒絕，紀錄仍可重播。"""
     answers: list[bool] = []
-    for map_id, seed, hero, kind in [*CASES, ("ruined_fort", 5, "build_tank", "utility")]:
+    for map_id, seed, hero, kind in [*CASES, *PROMPT_EXTRA]:
         played = play(
             prompt_client,
             store_of(prompt_client),

@@ -20,6 +20,7 @@ from trpg.content.skills import (
 from trpg.engine.actions import (
     Attack,
     Defend,
+    HelpUp,
     UseSkill,
 )
 from trpg.engine.ai.displace import exposure, is_hurt
@@ -54,7 +55,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
-from trpg.engine.ids import PRONE
+from trpg.engine.ids import PRONE, STEADY
 from trpg.engine.preview import DamageRange, Preview
 from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.geometry import (
@@ -164,7 +165,8 @@ def _support_gains(state: BattleState, p: Preview, profile: AiProfile) -> Fracti
     - 增益（``ally_status_values``）：``support`` × 價值 × 新增的持續比例
       （新持續 − 剩餘 ÷ 新持續，下限 0；沒有預設持續的狀態＝尚未帶有時 1，已帶有 0）；
       目標在動作後倒下時為 0；
-    - 淨化：``support`` × 被移除的每個狀態在 ``status_values`` 的價值（沒列出的用 3）。
+    - 淨化、扶起（KD-1）：``support`` × 被移除的每個狀態在 ``status_values`` 的價值
+      （沒列出的用 3）。
     """
     w = profile.weights
     actor = state.units[p.action.unit_id]
@@ -179,6 +181,10 @@ def _support_gains(state: BattleState, p: Preview, profile: AiProfile) -> Fracti
     if w.support:
         gains += _buff_gains(state, actor, p, profile)
     return gains
+
+
+_REMOVED_FOR_ALLY = ("cleansed", "helped_up")
+"""友方身上被移除、算收益的原因：淨化，以及扶起（KD-1：倒地的價值照 ``status_values``）。"""
 
 
 def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiProfile) -> Fraction:
@@ -201,7 +207,7 @@ def _buff_gains(state: BattleState, actor: UnitState, p: Preview, profile: AiPro
                 remaining = 0 if current is None or current.remaining is None else current.remaining
                 share = Fraction(max(0, e.duration - remaining), e.duration)
             gains += w.support * points * share
-        elif isinstance(e, StatusRemoved) and e.reason == "cleansed":
+        elif isinstance(e, StatusRemoved) and e.reason in _REMOVED_FOR_ALLY:
             target = state.units.get(e.target_id)
             if target is not None and target.team is actor.team:
                 unlisted = state.ruleset.ai.scoring.unlisted_status_value
@@ -335,6 +341,8 @@ def _ally_gains(f: _GainFrame) -> Fraction:
     healed = sum(Fraction(lo + hi, 2) for uid, lo, hi in p.healed if uid in state.units)
     healed = Fraction(healed) / _scale(state)
     gains = Fraction(f.w.heal) * healed
+    if isinstance(p.action, HelpUp):  # 扶起（KD-1）：照淨化算移除的倒地
+        gains += _support_gains(state, p, f.profile)
     if isinstance(p.action, UseSkill):  # 防禦動作的 defending 由 ``defend`` 權重計分，不重複算
         gains += _support_gains(state, p, f.profile)
         gains += _stack_gains(state, f.actor, p, f.profile, f.hit)
@@ -381,15 +389,25 @@ def _push_gains(f: _GainFrame) -> Fraction:
     }
     gains = w.push * f.hit * len(pushed)
     gains += _status_gains(f.state, f.actor, p, f.profile, f.hit, only=f.only)
+    prone = _prone_value(f)
     for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
+        target = f.state.units[t.unit_id]
         if (
             t.knock_chance is not None
             and not t.ally
             and f.counts(t.unit_id)
-            and not f.state.units[t.unit_id].has_status(PRONE)
+            and not target.has_status(PRONE)
+            and not target.has_status(STEADY)  # 站穩（KD-1）：擊不倒，不加分
         ):
-            gains += w.status * t.hit_chance * t.knock_chance
+            gains += prone * t.hit_chance * t.knock_chance
     return gains
+
+
+def _prone_value(f: _GainFrame) -> Fraction:
+    """擊倒的價值（KD-1）：``status_values`` 有列倒地時＝``damage`` 權重 × 等值傷害點數（同其他
+    狀態），沒列時照舊用 ``status`` 權重。"""
+    points = f.profile.status_values.get(PRONE)
+    return Fraction(f.w.status) if points is None else Fraction(f.w.damage * points)
 
 
 def _surface_gains(f: _GainFrame) -> Fraction:

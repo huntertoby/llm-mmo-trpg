@@ -15,6 +15,7 @@ from tests.engine.helpers import (
     make_state,
     no_reactions,
     spawn,
+    with_rolls,
 )
 from tests.engine.skill_helpers import of
 from tests.engine.test_summon_growth import arena, cast_at
@@ -22,6 +23,7 @@ from trpg.engine import BattleState, Move, UseSkill, legal_actions, resolve
 from trpg.engine.context import Ctx
 from trpg.engine.events import (
     InfusionFizzled,
+    ManeuverRolled,
     SnareTriggered,
     SummonPulled,
     TerrainChanged,
@@ -122,11 +124,21 @@ def test_vine_cannot_move() -> None:
 
 def test_vine_snares_an_enemy_walking_next_to_it() -> None:
     state, sid = vine_arena()
-    result = resolve(give_turn(state, U2), Move(unit_id=U2, path=path((3, 6), (3, 5), (3, 4))))
+    walk = Move(unit_id=U2, path=path((3, 6), (3, 5), (3, 4)))
+    result = resolve(with_rolls(give_turn(state, U2), [(20, 20)]), walk)
     assert statuses(result.state, U2) >= {"slow", "prone"}
     [event] = of(result, SnareTriggered)
     assert (event.unit_id, event.target_id) == (sid, U2)
     assert result.state.units[U2].xy == (3, 4)
+    # KD-1（05 5.13 第 5 點）：倒地要過擊倒對抗，攻方是召喚者、用召喚藤蔓那一招的縮放屬性（意志）
+    [rolled] = of(result, ManeuverRolled)
+    assert (rolled.maneuver, rolled.attacker_id, rolled.skill_id) == (
+        "snare",
+        U1,
+        "skill_summon_vine",
+    )
+    failed = resolve(with_rolls(give_turn(state, U2), [(20, 1)]), walk)
+    assert statuses(failed.state, U2) >= {"slow"} and "prone" not in statuses(failed.state, U2)
 
 
 def test_vine_stops_the_walk_with_prone() -> None:
@@ -165,6 +177,7 @@ def test_vine_snares_an_enemy_pushed_next_to_it() -> None:
 
     state, sid = vine_arena()
     state.units[U2].pos = Pos(x=3, y=5)
+    state = with_rolls(state, [(20, 20)])  # 擊倒對抗自然 20（KD-1）
     result = run_effects(state, [PushEffect(target_id=U2, direction=(0, -1), distance=1)])
     assert result.state.units[U2].xy == (3, 4)
     assert "prone" in statuses(result.state, U2)

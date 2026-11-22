@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 
 from trpg.content.battle import Dice, UnitTemplate
 from trpg.content.composer_rules import ComposerRules
-from trpg.content.environment import AiProfileTable, ObjectTable
+from trpg.content.environment import AiProfileTable, ObjectTable, SurfaceTable
 from trpg.content.equipment import EquipmentRules
 from trpg.content.flash_templates import FlashTable
 from trpg.content.forms import FormTable
@@ -142,6 +142,7 @@ TARGET_MODELS: Final[dict[str, type[BaseModel]]] = {
     "item_gen": ItemGenRules,
     "skill_evolution": EvolutionTable,
     "flash": FlashTable,
+    "surface": SurfaceTable,
     "world_rules": WorldRules,
     "world_economy": EconomyRules,
     "world_trade": TradeRules,
@@ -174,6 +175,7 @@ TABLE_KINDS: Final = (
     "item_gen",
     "skill_evolution",
     "flash",
+    "surface",
     "world_rules",
     "world_economy",
     "world_trade",
@@ -237,6 +239,7 @@ class TuningTarget(ContentModel):
         "item_gen",
         "skill_evolution",
         "flash",
+        "surface",
         "world_rules",
         "world_economy",
         "world_trade",

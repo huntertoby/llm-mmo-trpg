@@ -21,6 +21,7 @@ import {
 } from "./skillIcon";
 import { conditionPart, costPart, effectPart, KNOWN_PARTS, linkPart, modifierChangePart, modifierTargetPart, triggerPart } from "./skillParts";
 import { setQCanvasFactory } from "./qIcon/core";
+import { AWAITING_ART_STATUSES } from "./qIcon/status";
 import { clearQSkillDefs } from "./qIcon/skills";
 import { clearQWeaponDefs } from "./qIcon/weapons";
 import { skillLook } from "./qIcon/partsAdapter";
@@ -96,7 +97,8 @@ describe("部件庫：對照 content/ 沒有漏", () => {
   it("每個效果原語、狀態、表面、條件、觸發都有專屬圖示", () => {
     const missing = (ids: string[], known: readonly string[]) => ids.filter((id) => !known.includes(id));
     expect(missing(contentIds("skill_primitives.yaml", "primitives"), KNOWN_PARTS.effects)).toEqual([]);
-    expect(missing(contentIds("statuses.yaml", "statuses").filter((s) => !s.startsWith("stance_")), KNOWN_PARTS.statuses)).toEqual([]);
+    // KD-1：等美術出圖的狀態（AWAITING_ART_STATUSES）先走退回畫法
+    expect(missing(contentIds("statuses.yaml", "statuses").filter((s) => !s.startsWith("stance_") && !AWAITING_ART_STATUSES.includes(s)), KNOWN_PARTS.statuses)).toEqual([]);
     expect(missing(contentIds("surfaces.yaml", "surfaces"), KNOWN_PARTS.surfaces)).toEqual([]);
     expect(missing(contentIds("skill_conditions.yaml", "conditions"), KNOWN_PARTS.conditions)).toEqual([]);
     expect(missing(contentIds("skill_triggers.yaml", "triggers"), KNOWN_PARTS.triggers)).toEqual([]);

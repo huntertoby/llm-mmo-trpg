@@ -10,7 +10,8 @@ import * as QT from "./qIcon/status";
 import { clearSkillIconCache, statusTile, tileCanvas } from "./skillIcon";
 import { STATUS_TILE_FIT, statusColor, statusGlyph, statusTileFits } from "./skillParts";
 
-const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).sort();
+// KD-1：等美術出圖的狀態（AWAITING_ART_STATUSES）走退回畫法，不進基準
+const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).filter((id) => !QT.AWAITING_ART_STATUSES.includes(id)).sort();
 const OTHER = IDS.filter((id) => QP.STATUS[id] === undefined);
 const FAINT_RING = "rgba(255,255,255,0.3)";
 

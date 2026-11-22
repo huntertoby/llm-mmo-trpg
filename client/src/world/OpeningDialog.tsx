@@ -86,9 +86,35 @@ export function flashLessonText(cost: number = gameRules().flash_open_cost, opti
 
 const ATTR_ORDER = ["str", "dex", "con", "int", "wis", "wil"] as const;
 
-/** 推薦配法的範例（07 7.2）：兩招看智力和力量時，開局各 2 點，升級的 2 點給比較低的、一樣高給第 1 招。 */
-export const ALLOCATE_EXAMPLE_ZH =
-  "例：兩招看智力和力量 → 開局 4 點各給 2 點（智力 12、力量 12）；升級的 2 點給比較低的那個，一樣高就給第 1 招的 → 智力 14、力量 12。";
+/** 配點範例的數字（照伺服器 `rules`：`start_free_points`、`base_attribute`、`attribute_points_per_level`；HC-8）。 */
+export interface AllocateExampleRules {
+  start: number;
+  base: number;
+  perLevel: number;
+}
+
+function allocateExampleRules(): AllocateExampleRules {
+  const r = gameRules();
+  return { start: r.start_free_points, base: r.base_attribute, perLevel: r.attribute_points_per_level };
+}
+
+/** 推薦配法的範例（07 7.2）：兩招看智力和力量時，開局點數兩招各半（奇數時多的給第 1 招，同 `recommended_allocation`），
+ *  升級的點數給比較低的、一樣高給第 1 招（同 `recommended_level_up`）。數字照伺服器的規則、照 ×10 後的原值顯示
+ *  （HC-8；玩法 PM 定案，05 5.4.1）。 */
+export function allocateExampleText(rules: AllocateExampleRules = allocateExampleRules()): string {
+  const { start, base, perLevel } = rules;
+  const second = Math.floor(start / 2);
+  const first = start - second;
+  const int = base + first;
+  const str = base + second;
+  const split = first === second ? `各給 ${first} 點` : `給智力 ${first} 點、力量 ${second} 點`;
+  // 升級：給比較低的，一樣高給第 1 招（智力）
+  const [intAfter, strAfter] = str < int ? [int, str + perLevel] : [int + perLevel, str];
+  return (
+    `例：兩招看智力和力量 → 開局 ${start} 點${split}（智力 ${int}、力量 ${str}）；` +
+    `升級的 ${perLevel} 點給比較低的那個，一樣高就給第 1 招的 → 智力 ${intAfter}、力量 ${strAfter}。`
+  );
+}
 
 /** 配點教學一個屬性滑過時的說明：第 1 行「你的技能：…」（沒有吃這個屬性的招就不顯示），第 2 行白話說明。 */
 export function attributeNoteText(attr: string, note: string, affects: readonly AttributeAffects[]): string {
@@ -159,7 +185,7 @@ export function AllocateLessonDialog({ lesson, affects, busy = false, onRecommen
             </>
           )}
         </p>
-        {lesson.respec !== true && <p className="muted small">{ALLOCATE_EXAMPLE_ZH}</p>}
+        {lesson.respec !== true && <p className="muted small">{allocateExampleText()}</p>}
         {/* OB-6（玩法 PM「OB-5b 後補定」）：不列六顆屬性時補一句屬性說明在哪裡看 */}
         {lesson.respec === true && (
           <p className="muted small" data-testid="world-allocate-attrs-note">

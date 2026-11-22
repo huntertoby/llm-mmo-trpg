@@ -87,6 +87,7 @@ __all__ = [
     "form_entry_permille",
     "form_upkeep_permille",
     "gate_blocked_skills",
+    "gear_reshapes_left_out",
     "grants_pierce",
     "heal_permille",
     "hit_bonus",
@@ -726,6 +727,38 @@ def gate_blocked_skills(
         if gate_permille(ruleset, modifier_key, skill.id) == BLOCKED:
             blocked.append(key)
     return tuple(affected), tuple(blocked)
+
+
+def gear_reshapes_left_out(
+    state: BattleState, unit: UnitState, skill_key: str
+) -> tuple[tuple[str, bool], ...]:
+    """主動技能 ``skill_key`` 身上沒有生效的裝備授予變形（E5 美術小修、08 8.29 E5 第 7 點）：
+    ``(修正技鍵, 被閘門擋下)``，依修正技鍵。被預算閘門擋下的是 ``True``；通過閘門、但已經有排在
+    前面的裝備變形生效（一招只套一種變形，:func:`~trpg.engine.reshape_gate.gated_rules`）的是
+    ``False``。
+    沒有裝備授予的變形、或不是主動技能時是空的。"""
+    gear = unit.gear_skills
+    skill = state.ruleset.skill_def(skill_key)
+    if not gear or skill.kind != "active" or skill.followup is not None:
+        return ()
+    weapon_range = held_weapon(unit).range
+    keys: list[str] = []
+    for active in _shape_rules(state, unit, skill):
+        key = active.skill.id
+        if key not in gear or key in keys:
+            continue
+        if reshaped_skill(state.ruleset, skill, [active], weapon_range) is skill:
+            continue
+        keys.append(key)
+    out: list[tuple[str, bool]] = []
+    chosen = False
+    for key in sorted(keys):
+        blocked = gate_permille(state.ruleset, key, skill.id) == BLOCKED
+        if blocked or chosen:
+            out.append((key, blocked))
+        else:
+            chosen = True
+    return tuple(out)
 
 
 def _shape_rules(state: BattleState, unit: UnitState, skill: SkillDef) -> list[ActiveRule]:

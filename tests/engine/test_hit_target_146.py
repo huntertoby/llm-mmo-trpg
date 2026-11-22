@@ -188,6 +188,13 @@ def _contest(state: BattleState, action: Maneuver, natural: int) -> ManeuverRoll
 def test_maneuver_boundary(action: Maneuver, attr: str, total: int, success: bool) -> None:
     state = _maneuver_state(attr)
     probe = _contest(state, action, 10)
+    if action is Trip:  # KD-1：絆倒是擊倒對抗，守方加值另外扣、平手算守方贏
+        bonus = library().ruleset.core.prone_contest_bonus
+        rolled = _contest(
+            state, action, _natural_for(total, probe.modifier - bonus, probe.proficiency)
+        )
+        assert (rolled.total, rolled.target_number, rolled.success) == (total, TARGET + 1, False)
+        return
     rolled = _contest(state, action, _natural_for(total, probe.modifier, probe.proficiency))
     assert (rolled.total, rolled.target_number, rolled.success) == (total, TARGET, success)
 

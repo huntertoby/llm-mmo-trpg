@@ -225,6 +225,7 @@ class RemoveStatusEffect(EffectBase):
         "expired",
         "removed",
         "stood_up",
+        "helped_up",
         "stance_ended",
         "consumed",
         "stolen",

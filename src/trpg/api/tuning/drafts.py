@@ -17,6 +17,8 @@ from typing import Final
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from trpg.api.tuning.tool_config import TUNING_TOOL
+
 __all__ = [
     "DEFAULT_DRAFT",
     "DRAFT_NAME_MAX",
@@ -30,8 +32,9 @@ __all__ = [
 ]
 
 DEFAULT_DRAFT: Final = "current"
-DRAFT_NAME_MAX: Final = 40
-"""草稿名稱最多幾個字（HC-6b：樣式和畫面的說明都照這個數）。"""
+DRAFT_NAME_MAX: Final = TUNING_TOOL.draft_name_max
+"""草稿名稱最多幾個字（HC-6b：樣式和畫面的說明都照這個數；HC-8 起值在 ``config/tuning.toml`` 的
+``[drafts] name_max``）。"""
 DRAFT_NAME_PATTERN: Final = rf"^[a-z0-9][a-z0-9_-]{{0,{DRAFT_NAME_MAX - 1}}}$"
 _FORMAT: Final = "trpg-tuning-draft/1"
 

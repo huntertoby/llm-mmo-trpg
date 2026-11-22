@@ -12,7 +12,8 @@ import { statusColor } from "./skillParts";
 import { clearStatusIconCache, glyphColor, paintStatusIcon, statusIconCanvas, statusIconKey } from "./statusIcon";
 
 const srcOf = (path: string): string => readSources().find(([p]) => p.replace(/\\/g, "/").endsWith(path))?.[1] ?? "";
-const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id);
+// KD-1：等美術出圖的狀態（AWAITING_ART_STATUSES）走退回畫法，不進基準
+const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).filter((id) => !QT.AWAITING_ART_STATUSES.includes(id));
 
 let log: FakeCanvasLog = { calls: [] };
 /** 重設紀錄、掛假畫布（Q 版畫布工廠與 document 都接同一份）。 */

@@ -136,8 +136,8 @@ def test_contest_text_follows_the_owner_weapon() -> None:
     dagger = lib.weapons["dagger"]
     plain = skill_card(lib, skill)
     held = skill_card(lib, skill, owner=CardOwner(weapon=dagger, attr_get=lambda a: 10))
-    assert "擊倒（力量對抗）" in plain.effects[1]
-    assert "擊倒（敏捷／力量（取較高）對抗）" in held.effects[1]
+    assert "擊倒（力量對抗，對方 +" in plain.effects[1]  # KD-1：擊倒對抗對方加值
+    assert "擊倒（敏捷／力量（取較高）對抗，對方 +" in held.effects[1]
     both = skill_card(
         lib, _weapon_skill("int", effects=[{"type": "knock_prone"}]), owner=CardOwner(weapon=dagger)
     )

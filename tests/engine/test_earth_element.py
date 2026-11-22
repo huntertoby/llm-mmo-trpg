@@ -22,7 +22,13 @@ from tests.engine.helpers import (
 from tests.engine.skill_helpers import SID, U1, battle, cast, of, script_rolls
 from trpg.content.skills import SkillDef, skill_elements
 from trpg.engine.ai.utility import UtilityAI
-from trpg.engine.events import DamageDealt, SkillUsed, StatusApplied, TerrainChanged
+from trpg.engine.events import (
+    DamageDealt,
+    ManeuverRolled,
+    SkillUsed,
+    StatusApplied,
+    TerrainChanged,
+)
 from trpg.engine.runner import replay, run_battle
 from trpg.engine.state import StatusInstance, state_to_json
 from trpg.narrative.skills import effect_summary, skill_card
@@ -225,7 +231,7 @@ def test_the_composer_only_uses_earth_only_parts_for_the_earth_theme() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 震波命中（敵方先擲命中、未命中不倒地、命中後不擲對抗；友方不擲命中）
+# 震波命中（敵方先擲命中、未命中不倒地；友方不擲命中。KD-1 起命中後還要擲擊倒對抗，友方對象也擲）
 # ---------------------------------------------------------------------------
 
 
@@ -244,23 +250,24 @@ def test_shockwave_on_enemies_rolls_to_hit_and_a_miss_stays_standing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     state = battle(_shock(), foes=[(4, 3), (5, 3)])
-    script_rolls(monkeypatch, [1, 19])  # 第一個敵人未命中（自然 1），第二個命中
+    script_rolls(monkeypatch, [1, 19, 20])  # 第一個敵人未命中（自然 1），第二個命中、對抗自然 20
     result = cast(state, direction="east")
     assert not _prone(result, "unit_0002")
     assert _prone(result, "unit_0003")
-    assert not [e for e in result.events if type(e).__name__ == "ManeuverRolled"]
+    rolled = of(result, ManeuverRolled)
+    assert [e.target_id for e in rolled] == [UnitId("unit_0003")]  # 未命中的不擲對抗
 
 
 def test_shockwave_on_allies_does_not_roll_to_hit(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(_shock("allies"), allies=[(4, 3), (5, 3)], foes=[(6, 6)])
-    script_rolls(monkeypatch, [])  # 任何一次擲骰都會讓測試失敗
+    script_rolls(monkeypatch, [20, 20])  # 不擲命中，只有兩顆擊倒對抗（KD-1）
     result = cast(state, direction="east")
     assert _prone(result, "unit_0002") and _prone(result, "unit_0003")
 
 
 def test_shockwave_on_everyone_rolls_for_enemies_only(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(_shock("all"), allies=[(4, 3)], foes=[(5, 3)])
-    script_rolls(monkeypatch, [1])  # 只有敵人擲命中一次：自然 1 未命中
+    script_rolls(monkeypatch, [1, 20])  # 只有敵人擲命中一次：自然 1 未命中；友方擲擊倒對抗
     result = cast(state, direction="east")
     assert _prone(result, "unit_0002")  # 友方照樣倒地
     assert not _prone(result, "unit_0003")
@@ -270,7 +277,7 @@ def test_shockwave_ignores_flying_and_already_prone_units(monkeypatch: pytest.Mo
     flier = no_reactions(tags=["flying"])
     state = battle(_shock(), foes=[(4, 3, flier), (5, 3), (6, 3)])
     state.units[UnitId("unit_0004")].statuses.append(StatusInstance("prone", None))
-    script_rolls(monkeypatch, [19, 19, 19, 19])  # 攻擊倒地的目標有優勢：多擲一顆
+    script_rolls(monkeypatch, [19, 19, 19, 19, 20])  # 倒地的目標有優勢：多擲一顆；最後是對抗
     result = cast(state, direction="east")
     assert not _prone(result, "unit_0002")
     assert _prone(result, "unit_0003")
@@ -311,7 +318,7 @@ def test_quake_wave_card_matches_the_fight(monkeypatch: pytest.MonkeyPatch) -> N
     assert "震波" in lines[1] and "先命中" in lines[1]
     skill = skill.model_copy(update={"id": SID})
     state = _seed_battle(skill, [(4, 3), (5, 3), (3, 6)])
-    script_rolls(monkeypatch, [19, 19, 4, 4])  # 兩個命中判定，再依序擲傷害骰
+    script_rolls(monkeypatch, [19, 19, 4, 4, 20, 20])  # 兩個命中判定、傷害骰，再兩顆擊倒對抗
     result = cast(state, direction="east")
     hits = [e for e in of(result, DamageDealt)]
     assert {e.target_id for e in hits} == {UnitId("unit_0002"), UnitId("unit_0003")}

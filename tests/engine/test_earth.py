@@ -35,6 +35,7 @@ from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import (
     DamageDealt,
     EffectFizzled,
+    ManeuverRolled,
     ShieldGained,
     SkillUsed,
     StatusApplied,
@@ -155,23 +156,29 @@ def _flying() -> Any:
 
 def test_shockwave_knocks_down_every_enemy_in_the_line(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(_shockwave(), foes=[(4, 3), (5, 3), (6, 3), (3, 6)])
-    script_rolls(monkeypatch, [19, 19, 19])
+    script_rolls(monkeypatch, [19, 19, 19, 20, 20, 20])  # 3 顆命中、3 顆擊倒對抗（KD-1）
     result = cast(state, direction="east")
     prone = {e.target_id for e in of(result, StatusApplied) if e.status_id == "prone"}
     assert prone == {UnitId("unit_0002"), UnitId("unit_0003"), UnitId("unit_0004")}
     assert not result.state.units[UnitId("unit_0005")].has_status("prone")  # 不在線上
 
 
-def test_shockwave_does_not_roll_a_contest() -> None:
+def test_shockwave_rolls_a_knockdown_contest(monkeypatch: pytest.MonkeyPatch) -> None:
+    """KD-1（05 5.13 第 5 點）：震波命中後還要擲擊倒對抗；對抗失敗就不倒地。"""
     state = battle(_shockwave(), foes=[(4, 3)])
-    result = cast(hit_with(state), direction="east")
-    assert not [e for e in result.events if type(e).__name__ == "ManeuverRolled"]
+    script_rolls(monkeypatch, [19, 20])
+    result = cast(state, direction="east")
+    (rolled,) = [e for e in result.events if isinstance(e, ManeuverRolled)]
+    assert rolled.maneuver == "shockwave" and rolled.success
     assert result.state.units[FOE].has_status("prone")
+    script_rolls(monkeypatch, [19, 1])
+    failed = cast(state, direction="east")
+    assert not failed.state.units[FOE].has_status("prone")
 
 
 def test_shockwave_does_not_affect_flying_units(monkeypatch: pytest.MonkeyPatch) -> None:
     state = battle(_shockwave(), foes=[(4, 3, _flying()), (5, 3)])
-    script_rolls(monkeypatch, [19, 19])
+    script_rolls(monkeypatch, [19, 19, 20])
     result = cast(state, direction="east")
     assert not result.state.units[FOE].has_status("prone")
     assert result.state.units[UnitId("unit_0003")].has_status("prone")
@@ -193,7 +200,7 @@ def test_shockwave_targets_follow_affects(
     affects: str, ally_down: bool, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     state = battle(_shockwave(affects), allies=[(5, 3)], foes=[(4, 3)])
-    script_rolls(monkeypatch, [19, 19])
+    script_rolls(monkeypatch, [19, 20, 20, 20])  # 命中（敵方才擲）、各對象的擊倒對抗
     result = cast(state, direction="east")
     assert result.state.units[UnitId("unit_0002")].has_status("prone") is ally_down
     foe = result.state.units[UnitId("unit_0003")]

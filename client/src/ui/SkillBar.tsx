@@ -44,6 +44,8 @@ interface Props {
   onBlockedMode?(reason: string): void;
   /** PR-2b：測試模式（`BattleView.practice`）：技能鈕不寫冷卻。省略＝實戰。 */
   practice?: boolean;
+  /** KD-1：主角整個不能反應的原因（倒地中「倒地中，不能反應」，`UnitView.reaction_blocked_zh`）；能反應時省略。 */
+  reactionBlocked?: string | null;
 }
 
 /** 技能卡上的圖釘：釘住或取消（取消時卡片關閉）。 */
@@ -166,7 +168,7 @@ function SkillSlot({
           )}
           {b.gearSource != null && (
             <span className="skill-gear" aria-label={gearSkillBadge(b.gearSource)}>
-              {gearSkillBadge(b.gearSource)}
+              {b.gearItem ?? gearSkillBadge(b.gearSource)}
             </span>
           )}
           {variant?.glow === true && (
@@ -183,7 +185,7 @@ function SkillSlot({
           <GearOffNote reason={b.gearOff} note={b.gearNote} />
           <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
-          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
+          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} notes={b.reshapeNotes} />
         </FloatCard>
       )}
     </div>
@@ -279,12 +281,15 @@ function MiniSlot({
   selected,
   enabled,
   onSelect,
+  reactionOff = false,
 }: {
   b: SkillButton;
   card: SkillCard | undefined;
   selected: boolean;
   enabled: boolean;
   onSelect(id: string): void;
+  /** KD-1：倒地中，反應技整個不能用（圓鈕標灰）。 */
+  reactionOff?: boolean;
 }) {
   const usable = enabled && b.disabledReason === null && b.actions.length > 0;
   const f = useFloatCard({ pinOn: usable ? "hold" : "always", shiftPin: true });
@@ -294,7 +299,7 @@ function MiniSlot({
     <span className="skill-mini-wrap" {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-mini${selected || f.pinned ? " selected" : ""}${gear !== null ? " from-gear" : ""}${gearOffClass(b)}${conditionOffClass(b.conditionOff)}`}
+        className={`skill-mini${selected || f.pinned ? " selected" : ""}${gear !== null ? " from-gear" : ""}${gearOffClass(b)}${conditionOffClass(b.conditionOff)}${reactionOff ? " reaction-off" : ""}`}
         aria-label={gear === null ? label : `${label}（${gear}${b.gearOff != null ? `，沒有效果：${b.gearOff}` : ""}）`}
         aria-pressed={f.pinned}
         onClick={() => usable && onSelect(b.skillId)}
@@ -395,6 +400,11 @@ export function SkillBar(props: Props) {
         </div>
         {minor.length > 0 && (
           <div className="skill-minor" aria-label="被動、反應與姿態">
+            {props.reactionBlocked != null && (
+              <span className="skill-minor-blocked small" data-testid="reaction-blocked">
+                {props.reactionBlocked}
+              </span>
+            )}
             {minor.map((b) => (
               <MiniSlot
                 key={b.skillId}
@@ -403,6 +413,7 @@ export function SkillBar(props: Props) {
                 selected={selectedKey === `skill:${b.skillId}`}
                 enabled={enabled}
                 onSelect={props.onSelect}
+                reactionOff={props.reactionBlocked != null && cards[b.skillId]?.kind_id === "reaction"}
               />
             ))}
           </div>

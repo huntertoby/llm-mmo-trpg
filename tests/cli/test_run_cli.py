@@ -202,7 +202,8 @@ def test_run_auto_flashes_and_shows_flash_counts(
 # AP-2（白板主動技預設 1 AP，候選與戰鬥都變）11、13 → 17、18（重掃 11～20：17、18、20）
 # X10-2b（量類 ×10，捨去讓戰鬥分岔，18 不再重閃完整技能）18 → 20
 # （重掃 11～30：17、20、21、23～27、29）
-@pytest.mark.parametrize("seed", [17, 20])
+# KD-1（倒地改版）20 → 21（重掃 11～30：14、17、18、21、23、25、26、28、29）
+@pytest.mark.parametrize("seed", [17, 21])
 @pytest.mark.slow
 def test_run_auto_reaches_a_major_flash_a_complete_skill_and_a_reflash(
     seed: int, capsys: pytest.CaptureFixture[str]

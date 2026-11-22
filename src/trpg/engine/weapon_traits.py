@@ -150,7 +150,7 @@ def _try_trip(ctx: Ctx, attacker: UnitState, target: UnitState) -> bool:
     if attacker.trip_round == ctx.state.round or target.has_status(PRONE):
         return False
     attacker.trip_round = ctx.state.round
-    return contest(ctx, "trip", attacker, target, TRIP_ATTR)
+    return contest(ctx, "trip", attacker, target, TRIP_ATTR, knockdown=True)
 
 
 def _in_water(state: BattleState, unit: UnitState) -> bool:

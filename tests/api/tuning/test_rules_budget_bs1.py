@@ -35,6 +35,12 @@ CORE_PATHS = (
     "ap_carry_max",
     "miss_refund_ap",
     "miss_refund_min_cost",
+    "prone_ap_loss",  # KD-1（#176）：倒地改版
+    "prone_stand_up_move_permille",
+    "help_up_ap_cost",
+    "steady_rounds",
+    "prone_contest_bonus",
+    "topple_damage_dice",
     "boss_parts.hp_total_max_permille",  # HC-4a：部位血量加總上限（從 parts.py 搬來）
     "tier_budget.1",  # HC-B：階級預算（數字鍵）、武器基準傷害、召喚物小特性的點數
     "tier_budget.2",
@@ -102,6 +108,7 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "item_gen",
         "skill_evolution",  # HC-4b2：召喚技分歧進化的幅度
         "flash",  # HC-4b3：閃現的計價與規則數值
+        "surface",  # KD-1：冰面的滑倒 DC
         "world_rules",  # HC-4d：大世界規則、經濟、交易、賽季
         "world_economy",
         "world_trade",
