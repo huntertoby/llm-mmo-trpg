@@ -145,7 +145,8 @@ def test_whitelist_has_all_affixes_in_11_categories() -> None:
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)
     assert {c: set(ids) for c, ids in WHITELIST.items()} == by_category
-    assert set(by_category) == set(AFFIX_CATEGORIES)
+    # E2：第 12 類「地形規則」先不放任何一條（產生器也不產）
+    assert set(by_category) == set(AFFIX_CATEGORIES) - {"terrain"}
 
 
 @pytest.mark.parametrize("affix_id", [a for ids in WHITELIST.values() for a in ids])

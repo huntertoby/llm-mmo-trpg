@@ -205,7 +205,9 @@ class ItemGenRules(ContentModel):
             missing = [s for s in SLOT_TYPES if s not in table]
             if missing:
                 raise ValueError(f"{name} 缺少部位：{', '.join(missing)}")
-        missing_cat = [c for c in AFFIX_CATEGORIES if c not in ("stat", "conditional", "cost")]
+        # 地形規則（E2）還沒有定價、產生器也不產（E6），不必寫 category_points
+        priced_elsewhere = ("stat", "conditional", "cost", "terrain")
+        missing_cat = [c for c in AFFIX_CATEGORIES if c not in priced_elsewhere]
         missing_cat = [c for c in missing_cat if c not in self.category_points]
         if missing_cat:
             raise ValueError(f"category_points 缺少類別：{', '.join(missing_cat)}")
@@ -277,7 +279,7 @@ def affix_points(rules: ItemGenRules, affix: AffixDef, value: int | None) -> Fra
         return _cost_points(rules, affix)
     if isinstance(affix, AttackAffix) and affix.weapon_element is not None:
         return Fraction(rules.weapon_element_points)
-    points = Fraction(rules.category_points[affix.category])
+    points = Fraction(rules.category_points.get(affix.category, 0))  # 地形規則（E2）尚未定價
     if isinstance(affix, TriggerAffix):  # limit 一定有值（預設每回合 1 次，8.21.5.3）
         points *= Fraction(rules.trigger_limit_permille, _PERMILLE)
     return points
