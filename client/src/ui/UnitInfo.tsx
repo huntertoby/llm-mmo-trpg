@@ -20,6 +20,7 @@ import { remainingRounds, summonKind } from "../battle/summons";
 import { modeText } from "../battle/summonControl";
 import { RaceDetail } from "./RacePassive";
 import { critDamageDetail, critDamageText } from "../battle/critDamage";
+import { CritDamageDetail } from "./CritDamageDetail";
 import { HIDDEN_INFO_HINT, isHiddenInfo, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
@@ -108,7 +109,7 @@ export function detailRows(unit: UnitView, names: UnitNames, view?: BattleView):
     ...phaseRows(unit),
     ["速度", String(unit.speed)],
     ...unit.weapon_traits_zh.map((line): [string, ReactNode] => ["武器特性", <RuleText key={line} text={line} />]),
-    ...(critDamageDetail(unit) === null ? [] : [["暴擊傷害", critDamageDetail(unit)] as [string, ReactNode]]),
+    ...(critDamageDetail(unit) === null ? [] : [["暴擊傷害", <CritDamageDetail key="crit" unit={unit} />] as [string, ReactNode]]),
     ...(hasMagazine(unit) ? [["彈匣", ammoText(unit).replace("彈匣 ", "")] as [string, ReactNode]] : []),
     ...(unit.offhand_name_zh === "" ? [] : [["副手", unit.offhand_name_zh] as [string, ReactNode]]),
     ...unit.offhand_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),

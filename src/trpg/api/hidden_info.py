@@ -110,6 +110,7 @@ def _masked_unit(unit: UnitView) -> UnitView:
         # CR-1b：暴擊傷害倍率含看狀態的修正技條件，和狀態一起藏
         "crit_damage_permille": None,
         "crit_damage_detail_zh": None,
+        "crit_damage_hint_zh": None,
     }
     if unit.parts is not None:
         update["parts"] = tuple(_masked_part(p) for p in unit.parts)

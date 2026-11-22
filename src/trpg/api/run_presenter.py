@@ -46,7 +46,7 @@ from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_ZH, SLOTS
-from trpg.engine.crit_damage import crit_damage_detail_zh
+from trpg.engine.crit_damage import crit_damage_detail_zh, crit_damage_hint_zh
 from trpg.narrative.skills import CardOwner, KeywordRef
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.errors import ChoiceError
@@ -531,6 +531,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         ),
         crit_damage_permille=crit.total,
         crit_damage_detail_zh=crit_damage_detail_zh(crit),
+        crit_damage_hint_zh=crit_damage_hint_zh(crit),
         skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
         start_keywords=() if run.start is None else keyword_refs(library, run.start.keywords),
         dev_pack=None if run.start is None else run.start.dev_pack,

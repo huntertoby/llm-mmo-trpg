@@ -18,7 +18,7 @@ from trpg.content.races import RaceDef, RacePassive
 from trpg.content.skills import SkillDef
 from trpg.engine import begin_battle
 from trpg.engine import modifiers as mods
-from trpg.engine.crit_damage import crit_damage_permille
+from trpg.engine.crit_damage import TARGET_RULE_HINT_ZH, crit_damage_permille
 from trpg.engine.skills.conditions import Subject
 from trpg.roguelite import RunState, battle_setup, new_run
 from trpg.roguelite.progress import hero_unit_id
@@ -26,15 +26,15 @@ from trpg.roguelite.progress import hero_unit_id
 MOD = "skill_cr1c_crit_mastery"
 
 
-def _modifier(change: int) -> SkillDef:
+def _modifier(change: int, condition: dict[str, Any] | None = None) -> SkillDef:
     data = library().ruleset.skill_def("skill_attack_mastery").model_dump(mode="json")
-    data.update(
-        id=MOD,
-        name_zh="暴擊專精",
-        modifiers=[
-            {"applies_to": {"all_attacks": True}, "change": {"crit_damage_permille": change}}
-        ],
-    )
+    rule: dict[str, Any] = {
+        "applies_to": {"all_attacks": True},
+        "change": {"crit_damage_permille": change},
+    }
+    if condition is not None:
+        rule["condition"] = condition
+    data.update(id=MOD, name_zh="暴擊專精", modifiers=[rule])
     return SkillDef.model_validate(data)
 
 
@@ -51,6 +51,7 @@ def _setup(
     gear: int = 0,
     race: int = 0,
     modifier: int | None = None,
+    condition: dict[str, Any] | None = None,
 ) -> tuple[ContentLibrary, RunState]:
     lib = library()
     run = new_run(lib, "build_fire", 0)
@@ -61,7 +62,7 @@ def _setup(
     hero = run.hero
     update: dict[str, Any] = {}
     if modifier is not None:
-        update["generated_skills"] = (*run.generated_skills, _modifier(modifier))
+        update["generated_skills"] = (*run.generated_skills, _modifier(modifier, condition))
         # 被動欄有上限：只留主動技，再放這招修正技（開戰的裝備檢查要過）
         actives = tuple(s for s in hero.skills if lib.ruleset.skill_def(s).slot_kind == "active")
         hero = hero.model_copy(update={"skills": (*actives, MOD)})
@@ -115,3 +116,21 @@ def test_the_panel_equals_the_battle_multiplier(monkeypatch: pytest.MonkeyPatch)
     foe = next(u for u in state.units_sorted() if u.team is not hero.team)
     attack = crit_damage_permille(state, hero, use=mods.ATTACK, subject=Subject(foe, foe.xy))
     assert _panel(lib, run)[0] == attack == 2550
+
+
+def test_the_hint_line_with_a_target_conditional_rule(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CR-1c 第 2 項：有「條件看目標」的修正技時提示行出現；數字不算它。"""
+    lib, run = _setup(
+        monkeypatch, modifier=250, condition={"type": "target_hp_below", "permille": 400}
+    )
+    out = hero_out(lib, run)
+    assert out.crit_damage_hint_zh == TARGET_RULE_HINT_ZH
+    assert (out.crit_damage_permille, out.crit_damage_detail_zh) == (
+        2000,
+        "武器「戰斧」200%（全身上限 300%）",
+    )
+
+
+def test_no_hint_line_without_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert hero_out(*_setup(monkeypatch, modifier=250)).crit_damage_hint_zh is None
+    assert hero_out(*_setup(monkeypatch)).crit_damage_hint_zh is None

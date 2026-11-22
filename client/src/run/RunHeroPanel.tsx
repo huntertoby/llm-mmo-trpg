@@ -9,6 +9,7 @@ import { WeaponIcon } from "../ui/WeaponIcon";
 import { itemTipLines, wornGear } from "./gearOffer";
 import { raceOriginText } from "./raceOrigin";
 import { critDamageDetail, critDamageText } from "../battle/critDamage";
+import { CritDamageDetail } from "../ui/CritDamageDetail";
 import {
   ATTRIBUTES,
   affectsOf,
@@ -49,7 +50,7 @@ function Bar({ label, value, max, kind }: { label: string; value: number; max: n
 }
 
 /** CR-1c（05 5.4.2 第 8 點）：數值區「暴擊傷害 N%」，「▸ 詳細」列來源；倍率與來源都由後端算（和戰鬥中的單位卡同一套字）。 */
-export function HeroCritDamage({ hero }: { hero: Pick<RunHero, "crit_damage_permille" | "crit_damage_detail_zh"> }) {
+export function HeroCritDamage({ hero }: { hero: Pick<RunHero, "crit_damage_permille" | "crit_damage_detail_zh" | "crit_damage_hint_zh"> }) {
   const crit = critDamageText(hero);
   if (crit === null) return null;
   const detail = critDamageDetail(hero);
@@ -65,7 +66,9 @@ export function HeroCritDamage({ hero }: { hero: Pick<RunHero, "crit_damage_perm
             <tbody>
               <tr>
                 <th>暴擊傷害</th>
-                <td data-testid="run-crit-detail">{detail}</td>
+                <td data-testid="run-crit-detail">
+                  <CritDamageDetail unit={hero} />
+                </td>
               </tr>
             </tbody>
           </table>

@@ -10,6 +10,12 @@ export function critDamageText(unit: Pick<UnitView, "crit_damage_permille">): st
   return `暴擊傷害 ${p / 10}%`;
 }
 
+/** CR-1c：「▸ 詳細」暴擊傷害列最後的提示行（有「條件看目標」的修正技時後端才給，看不到技能名的陣營不給）；沒有時 `null`。 */
+export function critDamageHint(unit: { crit_damage_hint_zh?: string | null }): string | null {
+  const h = unit.crit_damage_hint_zh;
+  return h == null || h === "" ? null : h;
+}
+
 /** 「▸ 詳細」的來源列（後端排好的字）；沒有時 `null`。 */
 export function critDamageDetail(unit: Pick<UnitView, "crit_damage_detail_zh">): string | null {
   const d = unit.crit_damage_detail_zh;

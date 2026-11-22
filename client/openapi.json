@@ -15775,6 +15775,17 @@
             ],
             "title": "Crit Damage Detail Zh"
           },
+          "crit_damage_hint_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crit Damage Hint Zh"
+          },
           "skills": {
             "items": {
               "$ref": "#/components/schemas/SkillCard"
@@ -31933,6 +31944,17 @@
               }
             ],
             "title": "Crit Damage Detail Zh"
+          },
+          "crit_damage_hint_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Crit Damage Hint Zh"
           },
           "gear_skills": {
             "items": {

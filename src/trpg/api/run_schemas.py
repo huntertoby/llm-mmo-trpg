@@ -645,6 +645,9 @@ class HeroOut(_ApiModel):
     crit_damage_detail_zh: str | None = None
     """暴擊傷害倍率的來源（主角面板「▸ 詳細」），用字和單位卡相同；主角自己的面板，修正技寫
     技能名。"""
+    crit_damage_hint_zh: str | None = None
+    """「▸ 詳細」暴擊傷害列最後的提示行（CR-1c）：主角有「條件看目標」的暴擊傷害修正技時是「另有
+    看目標的加成，攻擊預覽時才算」，沒有時 ``None``。"""
     skills: tuple[SkillCard, ...]
     start_keywords: tuple[KeywordRef, ...] = ()
     """開局選的關鍵字（Phase 3-24b2；以 build 開局時為空）。"""

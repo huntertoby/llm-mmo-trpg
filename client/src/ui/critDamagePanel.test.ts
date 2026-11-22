@@ -32,7 +32,7 @@ describe("角色面板的暴擊傷害", () => {
       const html = renderToStaticMarkup(createElement(UnitInfo, { unit: u, names, heroId: "unit_0001", skills: {} }));
       expect(html).toContain(`data-testid="unit-crit-damage">暴擊傷害 ${permille / 10}%<`);
       const row = detailRows(u, names).find(([k]) => k === "暴擊傷害");
-      expect(row?.[1]).toBe(detail);
+      expect(renderToStaticMarkup(createElement("td", null, row?.[1]))).toBe(`<td>${detail}</td>`);
       expect(html).toContain(detail);
     });
   }
