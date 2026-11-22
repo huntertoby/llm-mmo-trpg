@@ -9,8 +9,11 @@
 - ``timeout_case.py``：一個測試超過 pytest-timeout（thread 方式）的逾時，worker 被 ``os._exit``；
   ``tests/pytest_trace.py`` 要在那之前把 stack 寫進 ``.stacks``，``.trace`` 留下沒結束的測試。
 
-子程序限 :data:`CASE_LIMIT_SECONDS` 秒（全量時機器很忙，小測試組平常 4～8 秒）；超過就用 PID
-結束整棵程序樹並判失敗，失敗訊息附上到那時為止的輸出。
+子程序限 :data:`CASE_LIMIT_SECONDS` 秒（全量時機器很忙，小測試組平常 4～8 秒）；worker 掛掉的兩題
+限 :data:`CRASH_LIMIT_SECONDS` 秒。超過就用 PID 結束整棵程序樹並判失敗，失敗訊息附上到那時為止的
+輸出。子程序的主行程（xdist master）在時限前 :data:`MASTER_STACKS_LEAD_SECONDS` 秒把所有執行緒的
+stack 寫進 ``master-hang.stacks``，逾時時也附在失敗訊息裡（TS-1：兩次逾時都是子測試全部回報了、
+主行程卻沒收尾，下次再發生就看得到卡在哪裡）。
 """
 
 from __future__ import annotations
@@ -27,16 +30,28 @@ from tests.infra.test_run_pytest import run_pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 SUITE = ROOT / "tests" / "infra" / "stuck_suite"
-CONFTEST = """\
+MASTER_STACKS_ENV = "TRPG_CASE_MASTER_STACKS_AFTER"
+MASTER_STACKS_FILE = "master-hang.stacks"
+CONFTEST = f"""\
+import faulthandler
+import os
+
 from tests.pytest_trace import pytest_runtest_protocol  # noqa: F401
 from tests.xdist_loadgroup import pytest_xdist_make_scheduler  # noqa: F401
+
+if "PYTEST_XDIST_WORKER" not in os.environ and os.environ.get("{MASTER_STACKS_ENV}"):
+    # 只在主行程（xdist master）：時限前把 stack 寫下來，卡在收尾時看得到卡在哪裡。
+    _HANG = open("{MASTER_STACKS_FILE}", "w", encoding="utf-8")
+    faulthandler.dump_traceback_later(float(os.environ["{MASTER_STACKS_ENV}"]), file=_HANG)
 """
 INI = "[pytest]\ntimeout = 300\ntimeout_method = thread\n"
 CASE_LIMIT_SECONDS = 240
 TEST_TIMEOUT_SECONDS = 290  # 比 CASE_LIMIT_SECONDS 長，讓子程序逾時時由本測試收樹、印輸出
-TWO_CRASH_LIMIT_SECONDS = 540
-"""兩個 worker 一起掛掉的那一題要補開兩個 worker，負載重時 240 秒不夠（QF-4b 放寬）。"""
-TWO_CRASH_TIMEOUT_SECONDS = 600  # 比 TWO_CRASH_LIMIT_SECONDS 長，理由同上
+CRASH_LIMIT_SECONDS = 540
+"""worker 掛掉、要補開 worker 的兩題：負載重時 240 秒不夠。QF-4b 先放寬兩個一起掛的那題；
+TS-1 把只掛一個的那題也放寬到一樣（2026-11-22 的全量在 240 秒逾時）。"""
+CRASH_TIMEOUT_SECONDS = 600  # 比 CRASH_LIMIT_SECONDS 長，讓子程序逾時時由本測試收樹、印輸出
+MASTER_STACKS_LEAD_SECONDS = 20
 
 
 def _run_case(tmp_path: Path, case: str, limit: int = CASE_LIMIT_SECONDS) -> tuple[int, str, Path]:
@@ -52,6 +67,7 @@ def _run_case(tmp_path: Path, case: str, limit: int = CASE_LIMIT_SECONDS) -> tup
         "PYTHONPATH": os.pathsep.join([str(ROOT), str(ROOT / "src")]),
         "TRPG_WATCHDOG_DEMO": "1",
         run_pytest.TRACE_DIR_ENV: str(trace_dir),
+        MASTER_STACKS_ENV: str(max(limit - MASTER_STACKS_LEAD_SECONDS, 1)),
     }
     env.pop("PYTEST_XDIST_WORKER", None)
     env.pop("PYTEST_ADDOPTS", None)
@@ -73,8 +89,17 @@ def _run_case(tmp_path: Path, case: str, limit: int = CASE_LIMIT_SECONDS) -> tup
         except subprocess.TimeoutExpired:
             run_pytest.kill_tree(proc)
             partial = output_path.read_text(encoding="utf-8", errors="replace")
-            pytest.fail(f"{case}：{limit} 秒內沒跑完。輸出：\n{partial}")
+            note = _hang_note(tmp_path, partial)
+            pytest.fail(f"{case}：{limit} 秒內沒跑完。{note}輸出：\n{partial}")
     return proc.returncode, output_path.read_text(encoding="utf-8", errors="replace"), trace_dir
+
+
+def _hang_note(tmp_path: Path, partial: str) -> str:
+    """逾時時的補充：子測試是不是都回報了（卡在收尾），以及主行程的 stack。"""
+    note = "子測試都回報了（[100%]），卡在主行程收尾。" if "[100%]" in partial else ""
+    stacks = tmp_path / MASTER_STACKS_FILE
+    text = stacks.read_text(encoding="utf-8", errors="replace") if stacks.is_file() else ""
+    return f"{note}主行程 stack：\n{text}\n" if text.strip() else note
 
 
 def _crash_runs(tmp_path: Path) -> list[str]:
@@ -82,9 +107,9 @@ def _crash_runs(tmp_path: Path) -> list[str]:
     return sorted(path.name.split(".")[0] for path in (tmp_path / "crash_runs").iterdir())
 
 
-@pytest.mark.timeout(TEST_TIMEOUT_SECONDS)
+@pytest.mark.timeout(CRASH_TIMEOUT_SECONDS)
 def test_loadgroup_finishes_after_a_worker_crash(tmp_path: Path) -> None:
-    returncode, text, trace_dir = _run_case(tmp_path, "crash_case.py")
+    returncode, text, trace_dir = _run_case(tmp_path, "crash_case.py", CRASH_LIMIT_SECONDS)
     assert "SafeLoadGroupScheduling" in text, text
     assert "INTERNALERROR" not in text, text
     assert "1 failed, 3 passed" in text, text
@@ -95,11 +120,9 @@ def test_loadgroup_finishes_after_a_worker_crash(tmp_path: Path) -> None:
     assert [t.nodeid for t in summary.running] == ["test_crash_case.py::test_crash_once"]
 
 
-@pytest.mark.timeout(TWO_CRASH_TIMEOUT_SECONDS)
+@pytest.mark.timeout(CRASH_TIMEOUT_SECONDS)
 def test_loadgroup_survives_two_workers_crashing_together(tmp_path: Path) -> None:
-    returncode, text, trace_dir = _run_case(
-        tmp_path, "crash_twice_case.py", TWO_CRASH_LIMIT_SECONDS
-    )
+    returncode, text, trace_dir = _run_case(tmp_path, "crash_twice_case.py", CRASH_LIMIT_SECONDS)
     assert "INTERNALERROR" not in text, text
     assert "2 failed, 3 passed" in text, text
     assert returncode == 1, text

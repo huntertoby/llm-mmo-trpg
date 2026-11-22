@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 
 from trpg.api.tuning.drafts import Change, Draft
 from trpg.api.tuning.schemas import TuningSimRequest, TuningSimResult
@@ -14,12 +15,16 @@ from trpg.content.library import ContentLibrary
 from trpg.content.loader import bundled_content_dir
 
 pytestmark = pytest.mark.slow
+UNIT_FILE = "units/ashen_heart.yaml"
 
 
 def _run(tmp: Path, library: ContentLibrary) -> TuningSimResult:
     service = TuningService(bundled_content_dir(), tmp, library, sims=SimJobs(tmp / "s", workers=2))
     service.git = None
-    change = Change(file="units/ashen_heart.yaml", path="max_hp", old=160, new=80)
+    # 現值從內容讀（×10 之後是 1360，寫死 160 會讓草稿驗證不過）；改後照舊是一半。
+    unit = yaml.safe_load((bundled_content_dir() / UNIT_FILE).read_text(encoding="utf-8"))
+    max_hp = int(unit["max_hp"])
+    change = Change(file=UNIT_FILE, path="max_hp", old=max_hp, new=max_hp // 2)
     service.drafts.put(Draft(name="current", changes=(change,)))
     request = TuningSimRequest(boss="ashen", builds=["build_tank"], seeds=1)
     try:
