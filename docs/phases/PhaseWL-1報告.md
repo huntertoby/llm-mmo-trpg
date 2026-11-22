@@ -291,3 +291,100 @@ b 段合併為 d5ac5e359，寫死數值清單重產為 3818bc353，都已推上 
 5. 接受。
 6. 接受。
 7. 已重產（3818bc353）。
+
+---
+
+# c 段：骨架、狀態名稱統一
+
+依據：`docs/phases/PhaseWL-1計畫.md` 的 c 段（玩法 PM 2026-11-22 定字：第 1 題 B、第 2 題 A）；開發 PM 追加 3 項（美術 PM `docs/art/WL-1b驗收.md`）；美術 PM 的 WL-1c 標籤裁定（同檔 WL-1c 節）。基準：main `1ba0dc3ab`，中途 merge main 兩次（拿 `WL-1b驗收.md`）。分支 `worktree-agent-ab40036dc38f53503`，沒 push。
+只改前端，沒動後端、`docs/design/`、`content/`、`config/`。沒跑模擬、沒量平衡。
+
+## c1. 交付與 commit
+
+| 項目 | commit | 內容 |
+|---|---|---|
+| 1 骨架名稱以資料為準 | `24194acea` | 前端覆寫表 `SKELETON_NAME` 整張拿掉 |
+| 2 狀態名稱找不到顯示「未知狀態」 | `875eb4a49` | `statusName` 退回「未知狀態」；圖示中間沒有名稱畫「?」；新測試 |
+| 標籤兩行（美術 PM 裁定，開發 PM 轉來） | `82ea53036` | `.f-label` 最多兩行、`text-wrap: balance` |
+| 追加 1 狀態圓片退回 Q 版問號 | `2d0f67066` | `QP.hooks.status` 不認得的畫 `QP.unknownMark` |
+| 追加 2 空字串骨架當沒有骨架 | `9ff36a66f` | `partsOf` 把 `""` 當 `null` |
+| 追加 3 退回字畫「?」 | `b371c1ce3` | 測試鎖住、補拍；畫法本身在第 2 項已改（見 c3） |
+| 報告 | 本節的 commit | |
+
+## c2. 第 1 項：骨架名稱
+
+- 整張表拿掉：正式程式只有 `App.tsx` 在名詞表載入成功後才進畫面（載入失敗就顯示錯誤，不會畫技能卡），vitest 的 `src/test/setup.ts` 也先載名詞表，所以和「只拿掉 6 筆」結果一樣，照規格整張拿掉。`skeletonName(id, override)` 的 `override` 參數保留（預設 `{}`，現在沒有呼叫端傳）。
+- 技能卡種類行本來就讀後端 `skeleton_zh`（資料的字），沒改。
+
+| 骨架 | 改前（前端表） | 改後（資料 `name_zh`） |
+|---|---|---|
+| `aura` | 增益 | 光環 |
+| `control` | 控制 | 控場 |
+| `builder_finisher` | 累積終結 | 蓄力與終結 |
+| `consume_status` | 引爆狀態 | 消耗狀態 |
+| `modifier` | 改造 | 修正 |
+| `reaction` | 反應 | 反應技 |
+
+- 測試：`wl1bSkeletonName.test.ts` 的凍結表改成資料的 16 個字，並比對名詞表；`skillIcon.test.ts` 不再匯入表。
+- 「蓄力與終結」原本在 44px 的骨架格放不下（量到 50 > 44，截成「蓄力與…」），已回報開發 PM；美術 PM 裁定改成兩行並套到所有格子（第 c4 節）。
+
+## c3. 第 2 項＋追加 3：狀態名稱「未知狀態」、圖示畫「?」
+
+實作前 grep `statusName(` 列出的顯示處（都經 `battle/glossary.ts` 的 `statusName`，一處改完）：
+
+| 地方 | 檔案 |
+|---|---|
+| 組裝列／工坊的狀態圓片名稱與說明框標題 | `render/skillIcon.ts` `statusTile`、`statusIconTile` |
+| 效果部件「附加狀態」名稱 | `render/skillParts.ts` `effectPart` |
+| 狀態卡文字與說明框（主角 HUD、單位資訊） | `ui/Hud.tsx` `statusLine`、`ui/UnitInfo.tsx` |
+| 戰場浮字 | `battle/feedback.ts` |
+| 預覽句、走路預覽 | `battle/previewText.ts`、`battle/pathPreview.ts` `statusWord` |
+| 賭局結果、定時炸彈 | `battle/gamble.ts`、`battle/bombs.ts` |
+| 狀態圖示中間的字 | `render/qIcon/status.ts` `paintUnknown`、`render/statusIcon.ts` `drawGlyph`、`lookKey` |
+
+- `glossary.ts` 加 `UNKNOWN_STATUS_NAME`＝「未知狀態」、`statusNameOrNull(id)`（名詞表沒有或名稱是空字串時回 `null`）；`statusName` 退回「未知狀態」。
+- 圖示中間改用 `statusNameOrNull(id) ?? "?"`：有名稱畫第一個字，沒有名稱畫「?」。規格的「照舊」是指沒有名稱畫「?」，名稱改成「未知狀態」後不跟著改就會畫「未」，所以放在第 2 項一起改。追加 3 的 commit 把這條規則寫成測試，並補拍 20 px 真 1 倍。
+- 其他類別（表面、物件、元素……）的 `glossaryName` 仍退回 id，這段沒改（規格只點名狀態）。
+- 測試 `render/wl1cStatusName.test.ts`（3 個）：用不認得的 id，圓片名稱、說明框標題、效果部件、狀態卡文字、`StatusBadge` 的 HTML、走路預覽都不出現英文 id；狀態卡、頭頂、`drawGlyph` 中間畫「?」不畫「未」，快取鍵也是「?」；名詞表有名稱、沒有 Q 版圖樣的照舊畫第一個字。
+- 改過的舊斷言：`feedback.test.ts`（浮字）、`skillIcon.test.ts`（效果部件名稱）、`wl1bFallbackPaths.test.ts`、`qIconStatus.test.ts`（`brand_new_status` 畫「b」改成「?」）。
+
+## c4. 組裝列標籤兩行（美術 PM WL-1c 裁定）
+
+- `styles/workshop.css` 的 `.f-label`：`white-space: normal`、`text-wrap: balance`、`-webkit-line-clamp: 2`（加標準的 `line-clamp: 2`），拿掉 `nowrap`、`text-overflow`。格寬照舊 44px。
+- 實測（無頭 Chrome 量每個字的位置）：「蓄力與終結」排成「蓄力與／終結」，「被法術擊中時」排成「被法術／擊中時」；塞 10 個字時第二行尾巴是「…」。
+- 錯位：同一列每格圖示的上緣都一樣高（量每格 `canvas` 的 top，沒有不同的）；兩行的格子只讓那一列變高，「＋」照舊靠上。沒有錯位，不另附錯位截圖。
+- 測試 `ui/wl1cLabelWrap.test.ts`：鎖 CSS 的這幾條。
+
+## c5. 追加 1、2
+
+- **追加 1**：`skillParts.ts` 的 `QP.hooks.status` 在 `qIcon/status.ts` 也不認得時，改畫 `qIcon/parts.ts` 新匯出的 `unknownMark`（就是其他類別 `entry()` 不認得時的同一個 Q 版扁平問號，那裡也改成用它）。狀態圖示本身（框＋第一個字）不變。測試：掛鉤畫的和骨架不認得的問號呼叫紀錄完全相同；`qi4aStatusTile.test.ts` 那條「照舊畫現行圖樣」改成畫問號。
+- **追加 2**：`skillIcon.ts` 的 `partsOf` 把空字串骨架當 `null`，所以技能小圖不畫徽章（舊的非 Q 版路徑以前會畫）、組裝列不放骨架格。工坊的 `optionTile("skeleton", "")` 本來就回 `null`。`skeletonName("")` 仍回「未知骨架」（正式畫面不會再走到）。測試：空字串與 `null` 在 main／mid／full、兩種稀有度畫的呼叫紀錄相同，組裝列只有形狀與效果。
+
+## c6. 截圖（`docs/art/shots/wl-1c/`）
+
+網址都帶 `?mute=1`；無頭 Chrome `--disable-gpu --mute-audio`、裝置像素比 1。開發頁新加 `client/dev/wl1c-gallery.html`、`client/src/dev/wl1cGallery.tsx`（`?set=rename|status|empty`，不屬於正式 build）。
+
+| 檔 | 內容 |
+|---|---|
+| `wl1c-1-skeleton-rename-1600.jpg`、`-800.jpg` | 第 1 項：6 張改了名字的骨架技能卡（組裝列骨架格＋種類行）。拍的時候標籤還是單行，「蓄力與…」被截（回報用） |
+| `wl1c-2-status-unknown-tip-1600.jpg` | 第 2 項：不認得的狀態，狀態卡的說明框「未知狀態（2 回合）」 |
+| `wl1c-2-status-unknown-chip-1600.jpg` | 第 2 項：狀態圓片 `statusTile` 的說明框「未知狀態」；技能卡組裝列的附加狀態格（追加 1 以前的圖樣） |
+| `wl1c-3-label-2line-1600.jpg` | 標籤兩行：6 張卡 |
+| `wl1c-3-label-2line-builder-finisher-1600.jpg`、`-counterspell-1600.jpg` | 美術 PM 指定的兩張卡，各一張 |
+| `wl1c-3-label-2line-800-true1x.png` | 800 寬真 1 倍 PNG，兩行標籤 |
+| `wl1c-4-status-chip-qmark-1600.jpg` | 追加 1：狀態圓片和組裝列格是 Q 版問號 |
+| `wl1c-5-skeleton-empty-1600.jpg` | 追加 2：空字串骨架（沒有骨架格、沒有徽章）｜null｜打擊對照 |
+| `wl1c-6-status-unknown-20-true1x.png` | 追加 3：20 px 真 1 倍 ×6（`status-gallery.html?set=unknown&px=20&res=1&zoom=6&scene=0`）：`brand_new_status` 和空字串都畫「?」 |
+
+## c7. 檢查
+
+開發中：每項 commit 前 `typecheck` 0；相關 vitest 0（`src/render`、`src/ui`、`src/battle`、`src/tuning`、`src/run` 分次跑過）。沒動後端，ruff、mypy、lint-imports、`classify.py` 不適用。
+
+交件前全量：等開發 PM 排順序，跑完補在下面。
+
+## c8. 待 PM 決定
+
+1. **追加 3 的開發頁**：派工寫「在 wl1b-gallery 開發頁拍」，但 b 段第 1 組（狀態 20 px）是在 `status-gallery.html?set=unknown` 拍的，`wl1b-gallery` 沒有狀態圖示，所以照第 1 組原本的頁和參數拍。
+2. **其他類別的名稱仍退回英文 id**：表面、物件、元素、條件、觸發等的 `glossaryName` 找不到時還是回 id。規格只點名狀態，所以沒改。
+3. **`skeletonName` 的 `override` 參數**：留著，但沒有呼叫端在用；要不要刪由 PM 定。
+4. 「蓄力與終結」照美術 PM 裁定做成兩行，沒有改字。
