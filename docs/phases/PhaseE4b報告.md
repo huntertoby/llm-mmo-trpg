@@ -37,8 +37,8 @@
 |---|---|
 | `pnpm -C client exec tsc --noEmit`（每個 commit 前） | 0 |
 | vitest 相關檔（`src/render`、`src/ui`、`rg3Marks`、`statusCard`、`panelIcons`） | 0 |
-| `uv run python scripts/check.py --all` | 未跑：已問開發 PM「準備跑 check.py」，交件時還沒收到回覆 |
-| 前端 build（`pnpm -C client build`） | 未跑（同上） |
+| `uv run python scripts/check.py --all` | 0（開發 PM 回「可以跑」後跑；全部通過，已寫通過戳記） |
+| 前端 build（`pnpm -C client build`） | 0 |
 
 ## 4. 截圖（`docs/art/shots/e4b/`，交美術 PM）
 
