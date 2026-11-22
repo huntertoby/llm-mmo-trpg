@@ -195,6 +195,21 @@ export function drawPathMarks(g: Pen, draw: PathDraw, geo: TileGeo): void {
   for (const s of draw.slipStops) drawSlipStop(g, geo.center(s.pos));
 }
 
+/** E3b（美術 E3 驗收小修 2）：路徑線經過的格子（每段的兩端，不重複）：這些格子的高度標記「▲N」要畫在線上面。 */
+export function pathLineCells(draw: Pick<PathDraw, "segments">): Pos[] {
+  const seen = new Set<string>();
+  const out: Pos[] = [];
+  for (const s of draw.segments) {
+    for (const p of [s.from, s.to]) {
+      const key = `${p.x},${p.y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(p);
+    }
+  }
+  return out;
+}
+
 /** E3b：沿路留表面的格子框線（框內縮、短虛線、不填色）：和地圖上已有的冰（實線外框＋淡填色）分得開。 */
 export const TRAIL_INSET = 8;
 

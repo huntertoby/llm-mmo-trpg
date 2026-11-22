@@ -132,6 +132,8 @@ export abstract class RendererBase {
   protected scale = 1;
   /** 這一輪畫的高度標記（6F-9：縮放改變時重設最小尺寸）。 */
   protected heightBadges: Container[] = [];
+  /** E3b：這一輪畫的高度標記，依格子（`posKey`）；路徑線經過的格子把標記提到線上面（`HighlightLayer.liftPathBadges`）。 */
+  protected heightBadgeAt = new Map<string, Container>();
 
   /** 執行 ticker 上的一段工作；丟例外時視為繪製器壞掉。 */
   protected guard(work: () => void): void {
