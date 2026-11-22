@@ -8472,6 +8472,11 @@ export interface components {
             chance_permille: number | null;
             /** Detail */
             detail: string | null;
+            /**
+             * Save Roll
+             * @default false
+             */
+            save_roll: boolean;
         };
         /** PathPreviewOut */
         PathPreviewOut: {

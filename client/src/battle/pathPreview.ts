@@ -162,11 +162,12 @@ export function damageText(events: readonly PathEvent[]): string {
 
 /** 陷阱一張（AR-X10）：「陷阱：60–140 傷害・可能定身」；陷阱本身不確定時「可能觸發陷阱：60–140 傷害・…」。
  * 狀態看觸發之後還要不要另外擲（玩法 PM 追加，取代「整張只在開頭寫可能」）：還要擲的加「可能」，觸發就一定附上的不加。
- * 用狀態事件的 `certain` 判斷。注意：伺服器的 `certain` 是「最少／最多後果兩次模擬都出現」，陷阱本身不確定時，
- * 隨陷阱附上的狀態目前也一律是 `false`（見報告待決）。
+ * 伺服器的 `certain` 是「最少／最多後果兩次模擬都出現」，陷阱本身不確定時，隨陷阱附上的狀態一律是 `false`；
+ * HC-6c（AR-X10 補件）起狀態事件多帶 `save_roll`（得到前要另外擲抵抗）：陷阱不確定時，沒有要另外擲的狀態算「觸發就一定附上」。
  * `iced`：在冰面之後，不加「可能」（改畫紅色虛線，6A-4f）。 */
-export function trapText(trapCertain: boolean, dmg: string, statuses: ReadonlyArray<{ word: string; certain: boolean }>, iced: boolean): string {
-  const items = [...(dmg === "" ? [] : [dmg]), ...statuses.map((s) => maybe(s.word, iced || s.certain))];
+export function trapText(trapCertain: boolean, dmg: string, statuses: ReadonlyArray<{ word: string; certain: boolean; saveRoll?: boolean }>, iced: boolean): string {
+  const sure = (s: { certain: boolean; saveRoll?: boolean }): boolean => iced || s.certain || (!trapCertain && s.saveRoll === false);
+  const items = [...(dmg === "" ? [] : [dmg]), ...statuses.map((s) => maybe(s.word, sure(s)))];
   return named(iced || trapCertain ? "陷阱" : "可能觸發陷阱", items);
 }
 
@@ -224,7 +225,7 @@ function stepParts(step: PathStep, run: SlipRun | undefined, iced: boolean): Par
   take((x) => x.kind === "displaced" && x.detail === "slide"); // 滑行的每一格由 ◆ 表示
   for (const trap of take((x) => x.kind === "trap")) {
     const dmg = damageText(take((x) => x.kind === "damage" && x.other_id === trap.other_id));
-    const statuses = take((x) => x.kind === "status" && x.status_id !== "burning").map((s) => ({ word: statusWord(s.status_id ?? ""), certain: s.certain }));
+    const statuses = take((x) => x.kind === "status" && x.status_id !== "burning").map((s) => ({ word: statusWord(s.status_id ?? ""), certain: s.certain, saveRoll: s.save_roll }));
     parts.push({ icon: "trap", text: trapText(trap.certain, dmg, statuses, iced) });
   }
   for (const s of take((x) => x.kind === "status" && x.status_id === "burning")) {

@@ -39,6 +39,7 @@ function ev(kind: PathEvent["kind"], extra: Partial<PathEvent> = {}): PathEvent 
     amount_max: null,
     chance_permille: null,
     detail: null,
+    save_roll: false,
     ...extra,
   };
 }
@@ -240,7 +241,7 @@ describe("AR-X10：走路預覽的用字（不加負號、「可能」是前綴�
   const trap = (certain: boolean, min: number | null, max: number, root: boolean): PathEvent[] => [
     ev("trap", { other_id: "e1", certain }),
     ev("damage", { other_id: "e1", amount_min: min, amount_max: max }),
-    ev("status", { status_id: "root", certain: root }),
+    ev("status", { status_id: "root", certain: root, save_roll: !root }),
   ];
   it("陷阱確定、狀態不確定：「陷阱：60–140 傷害・可能定身」", () => {
     expect(tagOf(trap(true, 60, 140, false), { trap: true })).toBe("陷阱：60–140 傷害・可能定身");
@@ -256,6 +257,19 @@ describe("AR-X10：走路預覽的用字（不加負號、「可能」是前綴�
   });
   it("陷阱本身不確定、觸發就一定附上狀態：「可能觸發陷阱：60–140 傷害・定身」", () => {
     expect(tagOf(trap(false, 60, 140, true), { trap: true })).toBe("可能觸發陷阱：60–140 傷害・定身");
+  });
+  it("HC-6c：陷阱不確定時伺服器給的狀態一律 certain=false，照 save_roll 分：沒有要另外擲＝觸發就一定附上", () => {
+    const real = (save: boolean): PathEvent[] => [
+      ev("trap", { other_id: "e1", certain: false }),
+      ev("damage", { other_id: "e1", amount_min: null, amount_max: 140 }),
+      ev("status", { status_id: "root", certain: false, save_roll: save }),
+    ];
+    expect(tagOf(real(false), { trap: true })).toBe("可能觸發陷阱：最多 140 傷害・定身");
+    expect(tagOf(real(true), { trap: true })).toBe("可能觸發陷阱：最多 140 傷害・可能定身");
+  });
+  it("HC-6c：陷阱確定時照舊看 certain（save_roll 不影響）", () => {
+    const sure = [ev("trap", { other_id: "e1" }), ev("status", { status_id: "root", certain: false, save_roll: false })];
+    expect(tagOf(sure, { trap: true })).toBe("陷阱：可能定身");
   });
   it("多個狀態用「・」連接；沒有傷害、沒有狀態只寫「陷阱」", () => {
     const ev2 = [ev("trap", { other_id: "e1" }), ev("status", { status_id: "root" }), ev("status", { status_id: "slowed", certain: false })];

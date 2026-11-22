@@ -20948,6 +20948,11 @@
               }
             ],
             "title": "Detail"
+          },
+          "save_roll": {
+            "type": "boolean",
+            "title": "Save Roll",
+            "default": false
           }
         },
         "additionalProperties": false,

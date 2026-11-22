@@ -24,7 +24,7 @@ const COLS = 10;
 const ROWS = 3;
 
 function ev(kind: PathEvent["kind"], extra: Partial<PathEvent> = {}): PathEvent {
-  return { kind, certain: true, other_id: null, status_id: null, surface: null, pos: null, amount_min: null, amount_max: null, chance_permille: null, detail: null, ...extra };
+  return { kind, certain: true, other_id: null, status_id: null, surface: null, pos: null, amount_min: null, amount_max: null, chance_permille: null, detail: null, save_roll: false, ...extra };
 }
 
 function step(index: number, x: number, extra: Partial<PathStep> = {}): PathStep {
