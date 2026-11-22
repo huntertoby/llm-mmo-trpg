@@ -32,10 +32,18 @@ from trpg.content.equipment import (
 )
 from trpg.content.library import ContentLibrary, _affix_reference_problems
 from trpg.content.skill_rules import budget_rule_problems
-from trpg.engine import BattleState, Move, UseSkill, legal_actions, resolve
-from trpg.engine.events import ReactionTriggered
-from trpg.engine.modifiers import empty_active_slots
+from trpg.content.skills import SkillDef
+from trpg.engine import Attack, BattleState, Move, UseSkill, legal_actions, resolve
+from trpg.engine.events import DamageDealt, ReactionTriggered
+from trpg.engine.modifiers import (
+    ATTACK,
+    damage_permille,
+    empty_active_slots,
+    heal_permille,
+    skill_use,
+)
 from trpg.engine.setup import UnitSpawn
+from trpg.engine.skills.conditions import Subject
 from trpg.engine.state import UnitState, state_from_json, state_to_json
 from trpg.engine.view import project_for
 from trpg.shared.rng import Rng
@@ -110,11 +118,12 @@ def scene(
     seed: int = 0,
     same_id: bool = False,
     xy: tuple[int, int] = (0, 0),
+    extra: Sequence[SkillDef] = (),
 ) -> BattleState:
     m = make_map(FLAT7, ally=[xy], enemy=[foe])
     enemy = spawn(Team.ENEMY, foe, no_reactions("bandit", max_hp=999))
     me_ = hero(slots, skills, react=react, same_id=same_id, xy=xy)
-    return give_turn(make_state(m, [me_, enemy], seed=seed), U1)
+    return give_turn(make_state(m, [me_, enemy], seed=seed, skills=extra), U1)
 
 
 def me(state: BattleState) -> UnitState:
@@ -267,6 +276,86 @@ def test_views_name_the_item_for_skills_and_reactions() -> None:
     rule = next(r for r in view.reaction_rules if r.reaction == REACTION)
     assert rule.gear_source_zh == f"{by_key[REACTION].slot_zh}：測試main_hand"
     assert all(r.gear_source_zh == "" for r in view.reaction_rules if r.reaction != REACTION)
+
+
+# ---------------------------------------------------------------------------
+# 第 5 項：修正技重複——數字遞減後再套全身上限，非數字各自發動
+# ---------------------------------------------------------------------------
+
+
+def modifier(skill_id: str, change: Mapping[str, object]) -> SkillDef:
+    """測試專用修正技（普攻的改變 ``change``）。"""
+    base = library().skills[MODIFIER].model_dump(mode="json")
+    rule = {"applies_to": {"actions": ["attack"]}, "change": dict(change)}
+    data = {**base, "id": skill_id, "modifiers": [rule], "exclusive_group": None}
+    return SkillDef.model_validate(data)
+
+
+HEAVY = modifier("skill_t_heavy", {"damage_permille": 300})
+MENDING = SkillDef.model_validate(
+    {
+        **library().skills[MODIFIER].model_dump(mode="json"),
+        "id": "skill_t_mending",
+        "exclusive_group": None,
+        "modifiers": [{"applies_to": {"all_skills": True}, "change": {"heal_permille": 150}}],
+    }
+)
+SEARING = modifier(
+    "skill_t_searing",
+    {
+        "on_hit_effects": [
+            {"type": "damage", "dice": "1d4", "element": "fire", "affects": "enemies"}
+        ]
+    },
+)
+
+
+def attack_permille(state: BattleState) -> int:
+    foe = state.units[U2]
+    return damage_permille(state, me(state), ATTACK, Subject(foe, foe.xy))
+
+
+@pytest.mark.parametrize(
+    ("gear", "expected"),
+    [
+        ({}, 1300),  # 只有自己學的 1 份
+        ({"neck": [HEAVY.id]}, 1450),  # 300 ＋ 300×50%
+        ({"neck": [HEAVY.id], "ring_1": [HEAVY.id]}, 1500),  # 300＋150＋75＝525 → 上限 +50%
+    ],
+)
+def test_repeated_modifier_numbers_diminish_then_hit_the_cap(
+    gear: Mapping[str, Sequence[str]], expected: int
+) -> None:
+    state = scene(gear, [HEAVY.id], extra=[HEAVY])
+    assert attack_permille(state) == expected
+
+
+def test_diminishing_happens_before_the_cap() -> None:
+    """兩份 +300 遞減後 +450，沒到上限；如果先截上限（各 300）再加，會變成 +500。"""
+    state = scene({"neck": [HEAVY.id]}, [HEAVY.id], extra=[HEAVY])
+    assert (
+        attack_permille(state)
+        == 1450
+        < 1000 + library().ruleset.equipment.caps.damage_bonus_permille
+    )
+
+
+def test_three_copies_of_a_heal_modifier_add_one_and_three_quarters() -> None:
+    state = scene({"neck": [MENDING.id], "ring_1": [MENDING.id]}, [MENDING.id], extra=[MENDING])
+    any_skill = skill_use(state.ruleset.skill_def(ACTIVE))
+    assert heal_permille(state, me(state), any_skill) == 1000 + 150 + 75 + 37  # 37.5 捨去
+
+
+def test_non_numeric_parts_fire_once_per_copy(monkeypatch: pytest.MonkeyPatch) -> None:
+    always(monkeypatch)
+
+    def fire_hits(gear: Mapping[str, Sequence[str]]) -> int:
+        state = scene(gear, [SEARING.id], foe=(1, 0), extra=[SEARING])
+        result = resolve(state, Attack(unit_id=U1, target_id=U2))
+        return sum(1 for e in result.events if isinstance(e, DamageDealt) and e.element == "fire")
+
+    assert fire_hits({}) == 1
+    assert fire_hits({"neck": [SEARING.id]}) == 2
 
 
 # ---------------------------------------------------------------------------
