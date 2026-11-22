@@ -126,6 +126,9 @@ class Tile:
     - ``surface_magnitude_permille``：表面的強度（‰，BAL-12e，#76；技能的
       ``create_surface.magnitude_permille``）：回合開始的傷害與治療、進入或回合開始時施加的狀態
       乘上它。1000 ＝ 照表面定義；表面換成別種時回到 1000（吹送與擴散照原表面帶著）。
+    - ``surface_trail``：用地形規則 ``trail_surface``（例「霜行」，E3，08 8.29 E3）留下這片表面的
+      單位 ID（:mod:`trpg.engine.trail`）：留下的人踩到不會滑倒、到期直接消失（不變成
+      ``expires_to``）。表面被任何效果改變時清掉（``set_surface``）；``None`` 不輸出。
     """
 
     height: int
@@ -136,6 +139,7 @@ class Tile:
     object_id: ObjectId | None = None
     surface_creator: UnitId | None = None
     surface_magnitude_permille: int = 1000
+    surface_trail: Annotated[UnitId | None, Field(exclude_if=_empty)] = None
 
 
 @dataclass(slots=True, frozen=True)

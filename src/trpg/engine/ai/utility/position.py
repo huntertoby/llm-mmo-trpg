@@ -71,7 +71,7 @@ from trpg.engine.rules.movement import (
     is_standable,
     step_cost,
 )
-from trpg.engine.rules.race import burn_immune, fall_immune
+from trpg.engine.rules.race import burn_immune, fall_immune, surface_damage_immune
 from trpg.engine.rules.statuses import forced_target_sources
 from trpg.engine.skills.conditions import is_flanked
 from trpg.engine.state import BattleState, UnitState
@@ -173,7 +173,8 @@ def _harmful(state: BattleState, xy: tuple[int, int], unit: UnitState | None = N
     ``unit``（E2，08 8.29 E2 第 2 點）：要評估的單位。開關
     ``heuristics.scoring.harmful_sees_immunity`` 打開時看它的免疫——表面施加的燃燒對
     :func:`~trpg.engine.rules.race.burn_immune` 的單位不算有害（種族「炎膚」或裝備的同種地形
-    規則）。``unit`` 為 ``None`` 或開關關閉時不看免疫（E2 之前）。
+    規則）；回合開始的表面傷害對 :func:`~trpg.engine.rules.race.surface_damage_immune` 的單位
+    不算有害（E3，E2 裁定 4）。``unit`` 為 ``None`` 或開關關閉時不看免疫（E2 之前）。
     """
     surface = state.tile(*xy).surface
     if surface is Surface.NONE:
@@ -181,9 +182,10 @@ def _harmful(state: BattleState, xy: tuple[int, int], unit: UnitState | None = N
     definition = state.ruleset.surface_def(surface)
     start = definition.on_turn_start
     enter = definition.on_enter
-    if start is not None and start.damage is not None and start.damage.only_tag is None:
-        return True
     viewer = unit if state.ruleset.ai.scoring.harmful_sees_immunity else None
+    damages = start is not None and start.damage is not None and start.damage.only_tag is None
+    if damages and (viewer is None or not surface_damage_immune(state.ruleset, viewer, surface)):
+        return True
     for spec in (start, enter):
         status = None if spec is None else spec.apply_status
         if status is None:

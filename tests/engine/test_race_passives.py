@@ -517,5 +517,8 @@ def test_every_passive_rule_has_a_behaviour_test() -> None:
         "surface_move_bonus",
         "weather_move_bonus",
         "fall_immunity",  # 6R-1：tests/engine/test_race_beast.py
+        "trail_surface",  # E3：tests/engine/test_trail_e3.py
+        "flat_climb",  # E3：tests/engine/test_climb_e3.py
+        "surface_damage_immunity",  # E3：tests/engine/test_surface_immunity_e3.py
     }
     assert set(PASSIVE_RULE_SPECS) == covered

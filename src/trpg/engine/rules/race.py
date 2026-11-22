@@ -16,6 +16,9 @@
 - ``burn_immunity_on``（角魔）：:func:`burn_immune`（``interactions``／``turns`` 的表面燃燒）；
 - ``weather_move_bonus``（海民）：:func:`weather_move_bonus`（``statuses.move_points_for_turn``）；
 - ``surface_move_bonus``（鱗族）的移動 +1：:func:`surface_move_bonus`（同上，看回合開始時腳下）；
+- ``surface_damage_immunity``（E3）：:func:`surface_damage_immune`（``turns`` 的回合開始表面
+  傷害；AI 的 ``_harmful``）；
+- ``flat_climb``（E3「攀岩」）：:func:`flat_climb_height`（``movement.unit_step_cost``）；
 - ``fall_immunity``（獸耳族「輕身」，#138）：:func:`fall_immune`（``effects.handlers.arrive``、
   ``heights`` 不發墜落事件；``basics`` 的攀跳可以往下跳；AI 的路線估值不把往下當風險）。
 
@@ -46,6 +49,7 @@ __all__ = [
     "concealed_limit_for",
     "conduction_immune",
     "fall_immune",
+    "flat_climb_height",
     "hazard_push_reduction",
     "passive_active",
     "passive_of",
@@ -54,6 +58,7 @@ __all__ = [
     "rule_move_bonus",
     "sight_range_for",
     "slip_immune",
+    "surface_damage_immune",
     "surface_move_bonus",
     "weather_move_bonus",
 ]
@@ -125,8 +130,8 @@ def passive_active(state: BattleState, unit: UnitState) -> bool:
 
 def reveal_radius(rules: Ruleset, unit: UnitState) -> int:
     """狐族「靈覺」：看得見這個距離內的敵方陷阱與隱蔽單位（沒有時 0）。"""
-    passive = passive_of(rules, unit, "detect_hidden_nearby")
-    return 0 if passive is None else passive.radius or 0
+    source = first_source(rules, unit, "detect_hidden_nearby")  # 數值型：取較強的（E3）
+    return 0 if source is None else source.rule.radius or 0
 
 
 def race_element_mods(rules: Ruleset, template: UnitTemplate) -> dict[Element, int]:
@@ -155,6 +160,14 @@ def fall_immune(rules: Ruleset, unit: UnitState) -> bool:
     return passive_of(rules, unit, "fall_immunity") is not None
 
 
+def flat_climb_height(rules: Ruleset, unit: UnitState) -> int:
+    """攀岩（地形規則 ``flat_climb``，E3）：上坡在這個層數以內當平地走；沒有時 0。"""
+    if unit.race is None and not unit.gear.affixes:
+        return 0
+    source = first_source(rules, unit, "flat_climb")
+    return 0 if source is None else source.rule.amount or 0
+
+
 def conduction_immune(state: BattleState, unit: UnitState) -> bool:
     """站在水上時不會被雷電導電（晶能義體人「絕緣」；只看腳下的表面）。"""
     surface = state.tile(*unit.xy).surface
@@ -164,6 +177,14 @@ def conduction_immune(state: BattleState, unit: UnitState) -> bool:
 def burn_immune(rules: Ruleset, unit: UnitState, surface: Surface) -> bool:
     """走在 ``surface`` 上不會因此燃燒（角魔「炎膚」；只擋表面造成的燃燒）。"""
     return first_source(rules, unit, "burn_immunity_on", (surface.value,)) is not None
+
+
+def surface_damage_immune(rules: Ruleset, unit: UnitState, surface: Surface) -> bool:
+    """站在 ``surface`` 上不受回合開始的表面傷害（地形規則 ``surface_damage_immunity``，E3；只擋
+    ``cause="surface"``，其他來源照常）。"""
+    if unit.race is None and not unit.gear.affixes:
+        return False
+    return first_source(rules, unit, "surface_damage_immunity", (surface.value,)) is not None
 
 
 def _move_source(rules: Ruleset, unit: UnitState, rule: str, key: str | None) -> RuleSource | None:

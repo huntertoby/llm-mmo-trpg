@@ -43,7 +43,12 @@ def enter_surface(ctx: Ctx, unit: UnitState, *, own_move: bool = False) -> list[
     check = definition.on_enter.check
     if check is not None and own_move and check.slide_max > 0:
         return events
-    if check is not None and not slip_immune(ctx.rules, unit, surface):  # 矮人、鱗族不滑倒（3R-2）
+    # 矮人、鱗族不滑倒（3R-2）；自己霜行留下的冰不滑倒（E3）
+    if (
+        check is not None
+        and not slip_immune(ctx.rules, unit, surface)
+        and not _own_trail(ctx, unit)
+    ):
         roll = ctx.check_d20("surface", f"surface:{surface.value}", unit.id)
         modifier = ability_modifier(ctx, effective_attribute(ctx.rules, unit, check.attr))
         total = roll + modifier
@@ -62,3 +67,8 @@ def enter_surface(ctx: Ctx, unit: UnitState, *, own_move: bool = False) -> list[
             )
         )
     return events
+
+
+def _own_trail(ctx: Ctx, unit: UnitState) -> bool:
+    """腳下的表面是自己霜行留下的（E3；同 :func:`trpg.engine.trail.own_trail`，不匯入以免成環）。"""
+    return ctx.state.tile(*unit.xy).surface_trail == unit.id

@@ -163,6 +163,7 @@ from trpg.engine.state import (
 )
 from trpg.engine.summons.control import command_problem, mode_problem
 from trpg.engine.summons.core import detonate_if_adjacent
+from trpg.engine.trail import leave_trail
 from trpg.engine.turns import (
     advance_turn,
     end_turn,
@@ -946,6 +947,8 @@ def _do_move(ctx: Ctx, unit: UnitState, action: Action) -> None:
         unit.move_points -= cost
         before = unit.xy
         execute(ctx, [MoveUnitEffect(unit_id=unit.id, dest=dest, mode="walk", cost=cost)])
+        if unit.xy != before:
+            leave_trail(ctx, unit, before)  # 地形規則「每一步留下表面」（霜行，E3）
         enemy_enters_adjacent_reactions(ctx, unit, before)
         enemy_moves_in_range_reactions(ctx, unit)
         if unit.xy == dest:

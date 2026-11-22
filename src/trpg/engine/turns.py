@@ -50,7 +50,7 @@ from trpg.engine.practice import PASS_ROUND_ACTIONS, is_practice_hero, is_practi
 from trpg.engine.results import ResolveResult
 from trpg.engine.rewrites import ap_cap
 from trpg.engine.rules.movement import is_flying
-from trpg.engine.rules.race import burn_immune
+from trpg.engine.rules.race import burn_immune, surface_damage_immune
 from trpg.engine.rules.statuses import ap_penalty, move_points_for_turn, skip_turn_status
 from trpg.engine.shield_riders import expiry_effects
 from trpg.engine.skill_infusion import release_infusion
@@ -265,7 +265,9 @@ def _surface_turn_start(ctx: Ctx, unit: UnitState) -> list[EffectBase]:
                 HealEffect(target_id=unit.id, dice=heal.dice, multiplier_permille=magnitude)
             )
     damage = on_start.damage
-    if damage is not None and (damage.only_tag is None or unit.has_tag(damage.only_tag)):
+    tagged = damage is not None and (damage.only_tag is None or unit.has_tag(damage.only_tag))
+    # 表面傷害免疫（地形規則 surface_damage_immunity，E3）：只擋站在表面上的傷害
+    if damage is not None and tagged and not surface_damage_immune(ctx.rules, unit, tile.surface):
         effects.append(
             DamageEffect(
                 target_id=unit.id,
