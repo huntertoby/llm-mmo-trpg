@@ -12647,6 +12647,10 @@ export interface components {
              * @default []
              */
             gear_skills: components["schemas"]["GearSkillView"][];
+            /** Skill Notes Zh */
+            skill_notes_zh?: {
+                [key: string]: string[];
+            } | null;
             /**
              * Charges
              * @default []

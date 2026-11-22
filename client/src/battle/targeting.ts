@@ -219,6 +219,8 @@ export interface SkillButton {
   gearItem?: string | null;
   /** 裝備授予的技能沒有效果的原因（E5，例「這把武器不能套用」）：標灰＋原因；有效時 `null`。 */
   gearOff?: string | null;
+  /** 沒有套用到這招的裝備變形（E5 美術小修，`UnitView.skill_notes_zh`）：說明卡內文最後的灰字；沒有時省略。 */
+  reshapeNotes?: readonly string[];
   /** 裝備授予的技能只對一部分招式沒有效果時的說明（E5，例「這招不能套用：火球」）；不標灰。 */
   gearNote?: string | null;
   /** 效果原語的代碼（Phase 3D-8d；分辨一般瞬步與傳送他人）；卡片還沒取得時為空。 */
@@ -271,6 +273,7 @@ export function skillButtons(
       gearItem: gearSkillItem(hero, skillId),
       gearOff: gearSkillOff(hero, skillId),
       gearNote: gearSkillNote(hero, skillId),
+      reshapeNotes: hero.skill_notes_zh?.[skillId] ?? [],
       effectIds: card?.effect_ids ?? [],
       // 只有「位移 → 動作」用兩段選取（Phase 3F-3b）；其他種類（3F-4a／4b）照第一段選取，
       // 第二段在結算時暫停詢問或自動結算（延遲段：之後才釋放）

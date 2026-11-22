@@ -31802,6 +31802,23 @@
             "title": "Gear Skills",
             "default": []
           },
+          "skill_notes_zh": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skill Notes Zh"
+          },
           "charges": {
             "items": {
               "$ref": "#/components/schemas/ChargeView"

@@ -768,3 +768,9 @@
   border-left: 3px solid #b08cff;
   background: rgba(176, 140, 255, 0.08);
 }
+
+/* E5 美術小修（被彈射擋下的那招）：說明卡內文最後的灰字，同 E2 沒效果的加註（灰色、不劃線） */
+.skill-card-left-out {
+  margin-top: 4px;
+  color: var(--muted);
+}

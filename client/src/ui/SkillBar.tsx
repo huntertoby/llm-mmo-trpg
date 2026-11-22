@@ -185,7 +185,7 @@ function SkillSlot({
           <GearOffNote reason={b.gearOff} note={b.gearNote} />
           <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
-          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
+          <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} notes={b.reshapeNotes} />
         </FloatCard>
       )}
     </div>

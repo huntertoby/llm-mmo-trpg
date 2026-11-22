@@ -28,6 +28,7 @@ from trpg.content.parts import PartReach, max_part_hp
 from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
+from trpg.engine import modifiers
 from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.attack_shapes import skill_note_zh, skill_problem_zh
 from trpg.engine.bombs import bomb_spec
@@ -551,6 +552,10 @@ class UnitView(_ViewModel):
     """裝備加成的來源（Phase 3G-G4，唯讀）：實際值（遞減、截斷後）與每條詞條的貢獻。"""
     gear_skills: tuple[GearSkillView, ...] = ()
     """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
+    skill_notes_zh: dict[str, tuple[str, ...]] | None = None
+    """主動技能說明卡最後的灰字（E5 美術小修；鍵是 ``skills`` 裡的技能鍵）：沒有套用到這招的裝備
+    變形——被預算閘門擋下的（「彈射不會套用到這招」）。只有自己陣營、有這種技能時才有，否則
+    ``None``。"""
     charges: tuple[ChargeView, ...] = ()
     """裝備的充能詞條（Phase 3G-G3a，唯讀；依詞條 ID，沒有時為空）：層數與啟動需求。"""
     form: FormView | None = None
@@ -912,6 +917,32 @@ def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillVie
     return tuple(views)
 
 
+GATE_SKIPPED_ZH = "{modifier}不會套用到這招"
+"""裝備變形被預算閘門擋下的那招，說明卡最後的灰字（E5 美術小修；用字待玩法 PM 定）。"""
+
+
+def _skill_notes(state: BattleState, unit: UnitState) -> dict[str, tuple[str, ...]] | None:
+    """主動技能說明卡最後的灰字（:attr:`UnitView.skill_notes_zh`）；都沒有時 ``None``。"""
+    if not unit.gear_skills:
+        return None
+    notes: dict[str, tuple[str, ...]] = {}
+    for key in sorted(unit.all_skills):
+        lines = tuple(
+            GATE_SKIPPED_ZH.format(modifier=state.ruleset.skill_def(mod).name_zh)
+            for mod, blocked in modifiers.gear_reshapes_left_out(state, unit, key)
+            if blocked and _partly_blocked(state, unit, mod)
+        )
+        if lines:
+            notes[key] = lines
+    return notes or None
+
+
+def _partly_blocked(state: BattleState, unit: UnitState, modifier_key: str) -> bool:
+    """裝備變形只擋下一部分招式（整個擋下時修正技本身已經標灰，被擋的招不另外寫；E5 驗收）。"""
+    affected, blocked = modifiers.gate_blocked_skills(state, unit, modifier_key)
+    return bool(blocked) and blocked != affected
+
+
 def _affix_off_zh(state: BattleState, unit: UnitState, entry: GearAffix) -> str | None:
     """授予技能的詞條（第 9 類）給的技能在 ``unit`` 身上沒有效果的原因（E5）；其他詞條 ``None``。"""
     affix = entry.affix
@@ -1135,6 +1166,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         ),
         race=_race_view(state, unit),
         gear_skills=_gear_skill_views(state, unit) if unit.team is team else (),
+        skill_notes_zh=_skill_notes(state, unit) if unit.team is team else None,
         granted_skills=(
             tuple(
                 GrantedSkillView(
