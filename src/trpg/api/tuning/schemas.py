@@ -7,6 +7,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from trpg.api.tuning.drafts import DEFAULT_DRAFT, DRAFT_NAME_PATTERN
+from trpg.api.tuning.tool_config import TUNING_TOOL
 
 __all__ = [
     "MAP_DEFAULT_SEEDS",
@@ -46,24 +47,24 @@ __all__ = [
     "TuningUnitSkills",
 ]
 
-# ---- 數值工坊的工具設定（HC-7 b：只留這一份）----
-# 請求與回應的預設值、service、ratios、sim_jobs 都讀這裡。
-SMALL_SAMPLE = 30
-"""分母小於這個數時標「樣本小」（規格 5.4）。"""
-MAX_RATIO_SEEDS = 250
-"""比值情境每組種子數的上限（NW-2c；BAL-21e 全表用 250）。"""
-SIM_DEFAULT_SEEDS: Final = 3
-"""頭目戰預設「小」：1 個頭目 × 8 build × 3 種子＝24 場（第 0.0 節第 5 點）。"""
-MAP_DEFAULT_SEEDS: Final = 24
-"""地圖戰預設：1 張圖 × 24 種子（NW-2 5.6）。"""
-MAX_SIM_MAPS: Final = 3
-"""地圖戰一次最多幾張圖。"""
-MAX_SIM_BATTLES: Final = 160
-"""單次模擬的場數上限（改後）。"""
-RATIO_DEFAULT_SEEDS: Final = 50
-"""比值情境每組預設種子數（T11；BAL-21e 是 250）。"""
-RATIO_MAX_WORK: Final = 40_000
-"""比值情境單次上限：組數 × 種子（T11）。"""
+# ---- 數值工坊的工具設定（HC-7 b：只留這一份；HC-8 起值在 config/tuning.toml）----
+# 請求與回應的預設值、service、ratios、sim_jobs 都讀這裡；值由 ``tool_config.TUNING_TOOL`` 帶。
+SMALL_SAMPLE: Final = TUNING_TOOL.small_sample
+"""分母小於這個數時標「樣本小」（``[sim] small_sample``）。"""
+MAX_RATIO_SEEDS: Final = TUNING_TOOL.max_ratio_seeds
+"""每組種子數的上限（``[ratio] max_seeds``；比值情境與頭目戰、地圖戰的請求共用）。"""
+SIM_DEFAULT_SEEDS: Final = TUNING_TOOL.sim_default_seeds
+"""頭目戰預設種子數（``[sim] default_seeds``）。"""
+MAP_DEFAULT_SEEDS: Final = TUNING_TOOL.map_default_seeds
+"""地圖戰預設種子數（``[sim] map_default_seeds``）。"""
+MAX_SIM_MAPS: Final = TUNING_TOOL.max_sim_maps
+"""地圖戰一次最多幾張圖（``[sim] max_maps``）。"""
+MAX_SIM_BATTLES: Final = TUNING_TOOL.max_sim_battles
+"""單次模擬的場數上限（``[sim] max_battles``）。"""
+RATIO_DEFAULT_SEEDS: Final = TUNING_TOOL.ratio_default_seeds
+"""比值情境每組預設種子數（``[ratio] default_seeds``）。"""
+RATIO_MAX_WORK: Final = TUNING_TOOL.ratio_max_work
+"""比值情境單次上限：組數 × 種子（``[ratio] max_work``）。"""
 
 
 class _Model(BaseModel):

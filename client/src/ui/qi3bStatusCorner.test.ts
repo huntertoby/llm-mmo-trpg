@@ -3,10 +3,11 @@
 import { describe, expect, it } from "vitest";
 import type { StatusView } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
-import { entry as qStatusEntry } from "../render/qIcon/status";
+import { AWAITING_ART_STATUSES, entry as qStatusEntry } from "../render/qIcon/status";
 import { CRYSTAL_SURGE_RE, ELEMENT_STANCE_RE, statusCorner, statusTier } from "./statusCard";
 
-const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id);
+// KD-1：等美術出圖的狀態（AWAITING_ART_STATUSES）走退回畫法，不進基準
+const IDS = (glossary as unknown as { statuses: { id: string }[] }).statuses.map((s) => s.id).filter((id) => !AWAITING_ART_STATUSES.includes(id));
 const st = (status_id: string, remaining: number | null, amount: number | null): StatusView => ({ status_id, remaining, amount, source_id: null, charge_tiles: [], cost_status: false }) as unknown as StatusView;
 
 describe("T-B5 角落級數", () => {

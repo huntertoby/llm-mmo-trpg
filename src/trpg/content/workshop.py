@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
-from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
+from trpg.content.maps import MapArchetypeTable, MapDef
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import Team
 
@@ -60,16 +60,21 @@ class WorkshopRules(ContentModel):
 
 
 def workshop_problems(
-    rules: WorkshopRules, maps: Mapping[str, MapDef], units: Mapping[str, UnitTemplate]
+    rules: WorkshopRules,
+    maps: Mapping[str, MapDef],
+    units: Mapping[str, UnitTemplate],
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
-    """跨檔案檢查：地圖存在且是靶場類型、單位範本存在、敵方起始區放得下。"""
+    """跨檔案檢查：地圖存在且是靶場類型（``role: training``，Phase WL-2）、單位範本存在、敵方
+    起始區放得下。"""
     map_def = maps.get(rules.map)
     if map_def is None:
         return [f"未知的地圖：{rules.map}"]
     problems: list[str] = []
-    if map_def.archetype != TRAINING_ARCHETYPE:
+    if not archetypes.has_role(map_def.archetype, "training"):
         problems.append(
-            f"地圖 {rules.map} 的類型必須是 {TRAINING_ARCHETYPE}，收到 {map_def.archetype}"
+            f"地圖 {rules.map} 的類型必須是 {archetypes.role_label('training')}，"
+            f"收到 {map_def.archetype}"
         )
     unknown = sorted({t for o in rules.opponents for t in o.enemies if t not in units})
     if unknown:

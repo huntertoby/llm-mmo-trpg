@@ -89,6 +89,7 @@ export function BattleBottomBar(p: Props) {
         enabled={canAct}
         hint={practiceWording(actionHintText(hintState), practice)}
         practice={practice}
+        reactionBlocked={hero?.reaction_blocked_zh ?? null}
         hintOnce={hintKind === null ? null : { kind: hintKind, token: `${p.response.battle_id}:${view.round}` }}
         onPickMode={p.onPickMode}
         onSelect={p.onPickSkill}

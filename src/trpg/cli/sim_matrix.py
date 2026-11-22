@@ -49,7 +49,7 @@ def cmd_sim_matrix(
         print(f"錯誤：{message}", file=err)
         return 2
     elapsed = time.perf_counter() - started
-    print(format_matrix(report), file=out)
+    print(format_matrix(report, library.map_archetypes.ids()), file=out)
     if json_path is not None:
         json_path.write_bytes(MATRIX_ADAPTER.dump_json(report, indent=2) + b"\n")
         print(f"已寫入 {json_path}", file=err)

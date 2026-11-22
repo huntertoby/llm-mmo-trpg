@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fractions import Fraction
 
+from trpg.content.library import Ruleset
 from trpg.engine.context import Ctx
 from trpg.engine.events import ManeuverRolled
 from trpg.engine.practice import is_practice_target
@@ -12,7 +13,17 @@ from trpg.engine.rules.statuses import effective_attribute
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Attribute
 
-__all__ = ["contest", "contest_chance"]
+__all__ = ["contest", "contest_chance", "knock_terms"]
+
+
+def knock_terms(rules: Ruleset, *, knockdown: bool) -> tuple[int, int]:
+    """擊倒對抗（KD-1，05 5.13 第 4、5 點）的 ``(守方加值, 門檻)``：守方
+    +``prone_contest_bonus``，平手算守方贏（門檻 ``hit_target + 1``）；不是擊倒時
+    ``(0, hit_target)``。自然 1、自然 20 照舊。"""
+    core = rules.core
+    if not knockdown:
+        return 0, core.hit_target
+    return core.prone_contest_bonus, core.hit_target + 1
 
 
 def contest(
@@ -26,6 +37,7 @@ def contest(
     primary: bool = True,
     attack_value: int | None = None,
     resist_bonus: int = 0,
+    knockdown: bool = False,
 ) -> bool:
     """對抗判定：``d20 + 比例修正（攻方屬性 vs 守方屬性）+ 熟練 ≥ hit_target``。
 
@@ -33,6 +45,8 @@ def contest(
     次要的對抗（技能附帶的擊倒）是分歧點——``min`` 視為失敗、``max`` 視為成功。
     ``attack_value``：攻方的屬性值（省略時為 ``attr`` 的有效屬性；雙屬性技能傳入兩屬性的平均）。
     ``resist_bonus``：守方的抵抗加成（Phase 3D-2b，傳送他人用），從總和扣除。
+    ``knockdown``：擊倒對抗（KD-1）：守方再加 ``prone_contest_bonus``、平手算守方贏
+    （:func:`knock_terms`）。
     """
     rules = ctx.rules
     if attack_value is None:
@@ -45,8 +59,10 @@ def contest(
         natural = 20
     else:
         natural = ctx.opposed_d20("contest", f"contest:{kind}", target.id)
+    extra, target_number = knock_terms(rules, knockdown=knockdown)
+    resist_bonus += extra
     total = natural + modifier + proficiency - resist_bonus
-    success = is_hit(natural, total, rules.core.hit_target) or is_practice_target(ctx.state, target)
+    success = is_hit(natural, total, target_number) or is_practice_target(ctx.state, target)
     ctx.emit(
         ManeuverRolled,
         maneuver=kind,
@@ -56,7 +72,7 @@ def contest(
         modifier=modifier,
         proficiency=proficiency,
         total=total,
-        target_number=rules.core.hit_target,
+        target_number=target_number,
         success=success,
         skill_id=skill_id,
         resist_bonus=resist_bonus,
@@ -70,6 +86,8 @@ def contest_chance(
     attr: Attribute,
     attack_value: int,
     resist_bonus: int = 0,
+    *,
+    knockdown: bool = False,
 ) -> Fraction:
     """:func:`contest` 攻方成功的精確機率（窮舉 d20；自然 1 失敗、自然 20 成功）。"""
     if is_practice_target(state, target):
@@ -78,6 +96,7 @@ def contest_chance(
     modifier = rules.hit_table.modifier(
         attack_value, max(1, effective_attribute(rules, target, attr))
     )
-    bonus = modifier + rules.core.proficiency - resist_bonus
-    wins = sum(1 for n in range(1, 21) if is_hit(n, n + bonus, rules.core.hit_target))
+    extra, target_number = knock_terms(rules, knockdown=knockdown)
+    bonus = modifier + rules.core.proficiency - resist_bonus - extra
+    wins = sum(1 for n in range(1, 21) if is_hit(n, n + bonus, target_number))
     return Fraction(wins, 20)

@@ -28,6 +28,7 @@ from trpg.content.parts import PartReach, max_part_hp
 from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
+from trpg.engine import modifiers
 from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.attack_shapes import skill_note_zh, skill_problem_zh
 from trpg.engine.bombs import bomb_spec
@@ -35,6 +36,7 @@ from trpg.engine.boss_phases import next_phase
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
+from trpg.engine.ids import PRONE
 from trpg.engine.infusion import infusion_options
 from trpg.engine.part_breaks import part_tiles
 from trpg.engine.parts import current_phase_id
@@ -409,6 +411,10 @@ class RaceView(_ViewModel):
     前端紙娃娃疊在單位外觀上。"""
 
 
+PRONE_NO_REACTION_ZH = "倒地中，不能反應"
+"""倒地中的單位反應欄的說明（KD-1，05 5.13 第 1 點；畫面照這個字顯示）。"""
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -466,7 +472,9 @@ class UnitView(_ViewModel):
     cooldowns: dict[str, int]
     """冷卻中的技能；其他陣營單位的陷阱技能冷卻不列出。"""
     reaction_available: bool
-    """還有反應次數，且身上有（未關閉的）反應規則。"""
+    """還有反應次數，且身上有（未關閉的）反應規則；倒地中一律 ``False``（KD-1）。"""
+    reaction_blocked_zh: str | None = None
+    """整個不能反應的原因（KD-1：倒地中「倒地中，不能反應」，反應欄顯示）；能反應時 ``None``。"""
     reaction_rules: tuple[ReactionRuleView, ...]
     """反應規則與目前模式；只有自己陣營的單位會列出（其他陣營的單位為空）。"""
     ap_carry: int
@@ -544,6 +552,10 @@ class UnitView(_ViewModel):
     """裝備加成的來源（Phase 3G-G4，唯讀）：實際值（遞減、截斷後）與每條詞條的貢獻。"""
     gear_skills: tuple[GearSkillView, ...] = ()
     """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
+    skill_notes_zh: dict[str, tuple[str, ...]] | None = None
+    """主動技能說明卡最後的灰字（E5 美術小修；鍵是 ``skills`` 裡的技能鍵）：沒有套用到這招的裝備
+    變形——被預算閘門擋下的（「彈射不會套用到這招」）、已有其他變形的（「已有其他變形，〇〇的△△
+    不會套用」）。只有自己陣營、有這種技能時才有，否則 ``None``。"""
     charges: tuple[ChargeView, ...] = ()
     """裝備的充能詞條（Phase 3G-G3a，唯讀；依詞條 ID，沒有時為空）：層數與啟動需求。"""
     form: FormView | None = None
@@ -905,6 +917,41 @@ def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillVie
     return tuple(views)
 
 
+GATE_SKIPPED_ZH = "{modifier}不會套用到這招"
+"""裝備變形被預算閘門擋下的那招，說明卡最後的灰字（E5 美術小修；用字待玩法 PM 定）。"""
+
+SHAPE_TAKEN_ZH = "已有其他變形，{item}的{modifier}不會套用"
+"""一招只套一種變形（08 8.29 E5 第 7 點）：沒有生效的那個裝備變形，說明卡最後的灰字（用字待玩法 PM
+定）。"""
+
+
+def _skill_notes(state: BattleState, unit: UnitState) -> dict[str, tuple[str, ...]] | None:
+    """主動技能說明卡最後的灰字（:attr:`UnitView.skill_notes_zh`）；都沒有時 ``None``。"""
+    if not unit.gear_skills:
+        return None
+    slots = {key: gear.slot for key, gear in _gear_skill_grants(unit)}
+    items = {item.slot: item.name_zh for item in unit.gear.items}
+    notes: dict[str, tuple[str, ...]] = {}
+    for key in sorted(unit.all_skills):
+        lines: list[str] = []
+        for mod, blocked in modifiers.gear_reshapes_left_out(state, unit, key):
+            name = state.ruleset.skill_def(mod).name_zh
+            if not blocked:  # 一招只套一種變形（08 8.29 E5 第 7 點）
+                item = items.get(slots.get(mod, ""), "")
+                lines.append(SHAPE_TAKEN_ZH.format(item=item, modifier=name))
+            elif _partly_blocked(state, unit, mod):
+                lines.append(GATE_SKIPPED_ZH.format(modifier=name))
+        if lines:
+            notes[key] = tuple(lines)
+    return notes or None
+
+
+def _partly_blocked(state: BattleState, unit: UnitState, modifier_key: str) -> bool:
+    """裝備變形只擋下一部分招式（整個擋下時修正技本身已經標灰，被擋的招不另外寫；E5 驗收）。"""
+    affected, blocked = modifiers.gate_blocked_skills(state, unit, modifier_key)
+    return bool(blocked) and blocked != affected
+
+
 def _affix_off_zh(state: BattleState, unit: UnitState, entry: GearAffix) -> str | None:
     """授予技能的詞條（第 9 類）給的技能在 ``unit`` 身上沒有效果的原因（E5）；其他詞條 ``None``。"""
     affix = entry.affix
@@ -1071,7 +1118,9 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         statuses=tuple(_status_view(state, unit, s) for s in unit.statuses),
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),
+        reaction_blocked_zh=PRONE_NO_REACTION_ZH if unit.has_status(PRONE) else None,
         reaction_available=unit.alive
+        and not unit.has_status(PRONE)
         and any(r.mode != "off" for r in unit.reactions)
         and unit.reactions_used < reaction_limit(state.ruleset.core, unit),
         reaction_rules=(
@@ -1126,6 +1175,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         ),
         race=_race_view(state, unit),
         gear_skills=_gear_skill_views(state, unit) if unit.team is team else (),
+        skill_notes_zh=_skill_notes(state, unit) if unit.team is team else None,
         granted_skills=(
             tuple(
                 GrantedSkillView(

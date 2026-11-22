@@ -81,8 +81,9 @@ def _expected_knock(state: object, attr: str) -> Fraction:
     rules = library().ruleset
     caster, target = state.units[U1], state.units[U2]  # type: ignore[attr-defined]
     modifier = rules.hit_table.modifier(caster.attributes[attr], max(1, target.attributes[attr]))
-    total = modifier + rules.core.proficiency
-    wins = sum(1 for n in range(1, 21) if is_hit(n, n + total, rules.core.hit_target))
+    # KD-1：擊倒對抗守方 +prone_contest_bonus，平手算守方贏
+    total = modifier + rules.core.proficiency - rules.core.prone_contest_bonus
+    wins = sum(1 for n in range(1, 21) if is_hit(n, n + total, rules.core.hit_target + 1))
     return Fraction(wins, 20)
 
 

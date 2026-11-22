@@ -15,6 +15,14 @@ export function gearSkillSource(u: UnitView, skillId: string): string | null {
   return g === undefined ? null : `${g.slot_zh}：${g.item_name_zh}`;
 }
 
+/**
+ * 技能列按鈕上的副標題（E1 美術小修 1，玩法 PM 定 A）：只寫裝備名（金框、金字已經表示「來自裝備」）；
+ * 放不下時由 CSS 截掉尾巴（不加「…」），完整的「來自裝備・欄位：物品名」在說明卡上方與 aria-label。
+ */
+export function gearSkillItem(u: UnitView, skillId: string): string | null {
+  return gearSkillsOf(u).find((s) => s.skill_id === skillId)?.item_name_zh ?? null;
+}
+
 /** 這個裝備授予的技能在主角身上沒有效果的原因（E5：例「這把武器不能套用」）；有效或不是裝備來的時 `null`。 */
 export function gearSkillOff(u: UnitView, skillId: string): string | null {
   return gearSkillsOf(u).find((s) => s.skill_id === skillId)?.off_zh ?? null;

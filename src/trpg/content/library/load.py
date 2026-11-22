@@ -73,7 +73,7 @@ from trpg.content.library.unit_checks import (
 )
 from trpg.content.library.world import _load_world
 from trpg.content.loader import default_content_dir, load_content_file
-from trpg.content.maps import MapDef, check_map
+from trpg.content.maps import MapArchetypeTable, MapDef, check_map
 from trpg.content.modifier_changes import MODIFIER_CHANGES_FILE, ModifierChangeTable
 from trpg.content.races import RaceTable
 from trpg.content.regions import RegionTable, sanitize_map_theme
@@ -151,6 +151,20 @@ def _load_base_tables(
     skeletons = _load_dir(root / "skeletons", SkeletonDef, files)
     skills = _load_dir(root / "skills", SkillDef, files)
     summons = _load_summons(root, weapons.by_id(), files)
+    rule_changes = load("rule_changes.yaml", RuleChangeTable)
+    forms = load("forms.yaml", FormTable)
+    roguelite = load("roguelite.yaml", RunRules)
+    workshop = load("workshop.yaml", WorkshopRules)
+    workshop_text = load("workshop_text.yaml", WorkshopTextTable)
+    equipment_rules = load("rules/equipment.yaml", EquipmentRules)
+    affix_table = load("affixes.yaml", AffixTable)
+    item_table = load("items.yaml", ItemTable)
+    appearance = load("equipment/appearance.yaml", AppearanceTable)
+    item_gen = load("item_gen.yaml", ItemGenRules)
+    map_archetypes = load("map_archetypes.yaml", MapArchetypeTable)  # WL-2：地圖類型清單
+    regions = load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None
+    if regions is not None and (problems := _region_pool_problems(regions, map_archetypes)):
+        raise ContentError(root / "regions.yaml", "；".join(problems))
     return _BaseTables(
         elements=elements,
         core=core,
@@ -181,18 +195,37 @@ def _load_base_tables(
         skeletons=skeletons,
         skills=skills,
         summons=summons,
-        rule_changes=load("rule_changes.yaml", RuleChangeTable),
-        forms=load("forms.yaml", FormTable),
-        roguelite=load("roguelite.yaml", RunRules),
-        workshop=load("workshop.yaml", WorkshopRules),
-        workshop_text=load("workshop_text.yaml", WorkshopTextTable),
-        equipment_rules=load("rules/equipment.yaml", EquipmentRules),
-        affix_table=load("affixes.yaml", AffixTable),
-        item_table=load("items.yaml", ItemTable),
-        appearance=load("equipment/appearance.yaml", AppearanceTable),
-        item_gen=load("item_gen.yaml", ItemGenRules),
-        regions=load("regions.yaml", RegionTable) if (root / "regions.yaml").exists() else None,
+        rule_changes=rule_changes,
+        forms=forms,
+        roguelite=roguelite,
+        workshop=workshop,
+        workshop_text=workshop_text,
+        equipment_rules=equipment_rules,
+        affix_table=affix_table,
+        item_table=item_table,
+        appearance=appearance,
+        item_gen=item_gen,
+        map_archetypes=map_archetypes,
+        regions=regions,
     )
+
+
+def _region_pool_problems(regions: RegionTable, archetypes: MapArchetypeTable) -> list[str]:
+    """區域 ``map_pool`` 的類型都要在 ``map_archetypes.yaml``，而且要進抽選（Phase WL-2；原本是
+    ``RegionDef`` 的「不可含 test、training、boss」）。"""
+    problems: list[str] = []
+    for r in regions.regions:
+        problems += [
+            f"區域 {r.id} 的 map_pool：{problem}"
+            for a in r.map_pool
+            if (problem := archetypes.unknown_problem(a)) is not None
+        ]
+        banned = sorted(
+            a for a in set(r.map_pool) if archetypes.get(a) and not archetypes.in_random_pool(a)
+        )
+        if banned:
+            problems.append(f"區域 {r.id} 的 map_pool 不可含 {', '.join(banned)}")
+    return problems
 
 
 def _build_ruleset(root: Path, t: _BaseTables, races: RaceTable | None) -> Ruleset:
@@ -337,6 +370,8 @@ def _load_maps(
     )
     for map_id, map_def in maps.items():
         problems = check_map(map_def, terrain_map, t.core, t.objects.by_id())
+        if (unknown := t.map_archetypes.unknown_problem(map_def.archetype)) is not None:
+            problems.insert(0, unknown)  # WL-2：類型清單在 map_archetypes.yaml
         problems += _map_reference_problems(map_def, units, weather_map)
         problems += _map_phase_tile_problems(map_def, units)
         if problems:
@@ -354,10 +389,10 @@ def _load_run_extras(
 ) -> dict[str, Any]:
     """一輪（roguelite）與工作坊的檢查、開發用起始包、技能演化、閃現與技能成長（回傳
     :class:`ContentLibrary` 的對應欄位）。"""
-    problems = roguelite_problems(t.roguelite, maps, units, t.core.tier_budget)
+    problems = roguelite_problems(t.roguelite, maps, units, t.core.tier_budget, t.map_archetypes)
     if problems:
         raise ContentError(root / "roguelite.yaml", "；".join(problems))
-    problems = workshop_problems(t.workshop, maps, units)
+    problems = workshop_problems(t.workshop, maps, units, t.map_archetypes)
     if problems:
         raise ContentError(root / "workshop.yaml", "；".join(problems))
     weapon_map = t.weapons.by_id()
@@ -396,6 +431,7 @@ def _check_giants(
         terrain=t.terrain.by_id(),
         objects=t.objects.by_id(),
         roguelite=t.roguelite,
+        archetypes=t.map_archetypes,
         world_maps=world["world_maps"],
         world_encounters=world["world_encounters"],
     )
@@ -474,6 +510,7 @@ def load_library(
         items=items,
         appearance=t.appearance,
         item_gen=t.item_gen,
+        map_archetypes=t.map_archetypes,
         regions=t.regions,
         races=races,
         origins=origins,

@@ -29,6 +29,7 @@ def check(lib: ContentLibrary, **changes: Any) -> list[str]:
         terrain=lib.ruleset.terrain.by_id(),
         objects=lib.ruleset.objects.by_id(),
         roguelite=changes.pop("roguelite", lib.roguelite),
+        archetypes=lib.map_archetypes,
         world_maps=lib.world_maps,
         world_encounters=changes.pop("world_encounters", lib.world_encounters),
     )
@@ -169,6 +170,7 @@ def test_giant_facing_must_name_a_known_template() -> None:
         terrain=lib.ruleset.terrain.by_id(),
         objects=lib.ruleset.objects.by_id(),
         roguelite=lib.roguelite,
+        archetypes=lib.map_archetypes,
         world_maps=lib.world_maps,
         world_encounters=lib.world_encounters,
     )

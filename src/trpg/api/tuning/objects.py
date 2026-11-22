@@ -161,6 +161,7 @@ TABLE_NAMES_ZH: Final = {
     "item_gen": "物品生成（全體共用）",
     "skill_evolution": "技能分歧進化（全體共用）",
     "flash": "閃現規則與計價（全體共用）",
+    "surface": "地面表面（全體共用）",
     "world_rules": "大世界規則：戰鬥、成長、許願池、實地地圖（全體共用）",
     "world_economy": "大世界經濟（全體共用）",
     "world_trade": "大世界交易與郵寄（全體共用）",
@@ -246,6 +247,10 @@ TABLE_NOTES_ZH: Final = {
         "一起變（價格、選項數、次數、預算加成）。",
         "只開出題價格與規則數值（HC-4b3）；幅度階梯、模板、類別、轉型是結構，不開。"
         "閃現的蓄力、輕巧、伴生、護主幅度在技能預算表的「閃現」組。",
+    ),
+    "surface": (
+        "這份是全體共用的地面表面表（surfaces.yaml）：改一種表面的值，所有地圖上的這種表面一起變。",
+        "目前只開放冰面的滑倒 DC（KD-1）；表面的效果、持續、元素互動是結構，不開。",
     ),
     "world_rules": (
         "這份是全體共用的大世界規則（world/rules.yaml）：改了之後所有角色的大世界戰鬥回寫、成長、"
@@ -387,6 +392,7 @@ def _phase_label(data: Any, index: int) -> str:
 _ENTRY_WORDS: Final[dict[str, str]] = {
     "profiles": "行為模式",
     "objects": "物件",
+    "surfaces": "表面",
     "triggers": "觸發時機",
     "conditions": "條件",
     "synergies": "協同",

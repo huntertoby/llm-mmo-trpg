@@ -43,8 +43,8 @@ def P(x: int, y: int) -> Pos:
     return Pos(x=x, y=y)
 
 
-def _chance(bonus: int) -> Fraction:
-    return Fraction(sum(is_hit(n, n + bonus, 8) for n in range(1, 21)), 20)
+def _chance(bonus: int, target: int = 8) -> Fraction:
+    return Fraction(sum(is_hit(n, n + bonus, target) for n in range(1, 21)), 20)
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +97,9 @@ def test_trip_uses_dex_contest_and_shove_uses_str() -> None:
     for state, trip_mod in ((base, -1), (quick, 4)):
         p_trip = preview(state, Trip(unit_id=U1, target_id=U2))
         p_shove = preview(state, Shove(unit_id=U1, target_id=U2))
-        assert p_trip.hit_chance == _chance(trip_mod + 2)
+        # KD-1：絆倒守方 +prone_contest_bonus，平手算守方贏（門檻 9）
+        bonus = state.ruleset.core.prone_contest_bonus
+        assert p_trip.hit_chance == _chance(trip_mod + 2 - bonus, 9)
         assert p_shove.hit_chance == _chance(2 + 2)
         rolled = next(
             e

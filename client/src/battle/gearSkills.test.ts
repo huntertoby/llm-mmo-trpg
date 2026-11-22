@@ -1,7 +1,7 @@
 // Phase 3G-G3b：裝備授予的技能與反應——技能列與反應設定的「來自裝備」。
 import { describe, expect, it } from "vitest";
 import type { Action, GearSkillView, ReactionRuleView } from "../api/types";
-import { gearSkillBadge, gearSkillNote, gearSkillOff, gearSkillSource, gearSkillsOf } from "./gearSkills";
+import { gearSkillBadge, gearSkillItem, gearSkillNote, gearSkillOff, gearSkillSource, gearSkillsOf } from "./gearSkills";
 import { gearSourceText } from "./reactions";
 import { skillButtons } from "./targeting";
 import { unit } from "./testFixtures";
@@ -27,6 +27,13 @@ describe("gear granted skills", () => {
     expect(gearSkillSource(hero, "skill_gear_grapple")).toBe("手：鉤爪護手");
     expect(gearSkillSource(hero, "skill_bone_crusher")).toBeNull();
     expect(gearSkillBadge("手：鉤爪護手")).toBe("來自裝備・手：鉤爪護手");
+  });
+
+  it("E1 小修 1：技能列按鈕的副標題只寫裝備名", () => {
+    expect(gearSkillItem(hero, "skill_gear_grapple")).toBe("鉤爪護手");
+    expect(gearSkillItem(hero, "skill_bone_crusher")).toBeNull();
+    const [, granted] = skillButtons(hero, [], {});
+    expect(granted?.gearItem).toBe("鉤爪護手");
   });
 
   it("marks only the granted skill on the skill bar buttons", () => {

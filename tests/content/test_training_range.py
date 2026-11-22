@@ -7,7 +7,7 @@ import pytest
 from tests.engine.helpers import library
 from trpg.cli.sim import default_sim_maps
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import TRAINING_ARCHETYPE, check_map
+from trpg.content.maps import check_map
 from trpg.content.roguelite import roguelite_problems
 from trpg.content.workshop import workshop_problems
 from trpg.engine.actions import EndTurn
@@ -25,7 +25,7 @@ def test_training_range_and_dummy_pass_content_validation() -> None:
     lib = library()
     arena = lib.map("training_range")
     assert arena.name_zh == "靶場"
-    assert arena.archetype == TRAINING_ARCHETYPE
+    assert lib.map_archetypes.has_role(arena.archetype, "training")
     assert (arena.width, arena.height) == (12, 10)
     rules = lib.ruleset
     assert check_map(arena, rules.terrain.by_id(), rules.core, rules.objects.by_id()) == []
@@ -52,7 +52,7 @@ def test_workshop_rules_offer_dummy_and_fighting_opponents() -> None:
     assert rules.opponent("nope") is None
     bad = rules.model_copy(update={"map": "open_plain"})
     assert "地圖 open_plain 的類型必須是 training，收到 open_plain" in workshop_problems(
-        bad, lib.maps, lib.units
+        bad, lib.maps, lib.units, lib.map_archetypes
     )
 
 
@@ -62,7 +62,9 @@ def test_training_range_is_kept_out_of_roguelite_and_sims() -> None:
     assert "training_range" not in default_sim_maps(lib)
     pool = (*lib.roguelite.map_pool, "training_range")
     rules = lib.roguelite.model_copy(update={"map_pool": pool})
-    problems = roguelite_problems(rules, lib.maps, lib.units, lib.ruleset.core.tier_budget)
+    problems = roguelite_problems(
+        rules, lib.maps, lib.units, lib.ruleset.core.tier_budget, lib.map_archetypes
+    )
     assert "技能工坊的靶場不能進地圖池：training_range" in problems
 
 

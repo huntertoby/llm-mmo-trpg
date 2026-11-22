@@ -82,9 +82,11 @@ def test_capital_file_must_be_hub(library: ContentLibrary, tmp_path: Path) -> No
         source.replace("hub: true", "hub: false"), encoding="utf-8"
     )
     with pytest.raises(ContentError, match="hub"):
-        _load_world_maps(tmp_path, library.regions, library.maps, [])
+        _load_world_maps(tmp_path, library.regions, library.maps, library.map_archetypes, [])
     (tmp_path / "capital.yaml").write_text(source, encoding="utf-8")
-    regional, hubs = _load_world_maps(tmp_path, library.regions, library.maps, [])
+    regional, hubs = _load_world_maps(
+        tmp_path, library.regions, library.maps, library.map_archetypes, []
+    )
     assert regional == {} and set(hubs) == {"capital"}
 
 

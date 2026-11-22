@@ -429,9 +429,19 @@ class CoreRules(ContentModel):
     fall_damage_cap_permille: int = Field(ge=0, le=1000)
     deadly_terrain_elite_permille: int = Field(ge=0, le=1000)
     prone_stand_up_move_permille: int = Field(ge=0, le=1000)
+    prone_ap_loss: int = Field(ge=0, le=3)
+    """倒地後第一個自己回合少給的 AP（KD-1，#176，05 5.13 第 1 點；只扣一次，單格頭目不扣）。"""
+    prone_contest_bonus: int = Field(ge=0, le=20)
+    """擊倒對抗（絆倒、技能擊倒、衝鋒與擲物擊倒、召喚物絆倒、每第 N 次命中倒地、震波、壓到、藤蔓）
+    守方的加值；另外平手（總和剛好等於 ``hit_target``）算守方贏（KD-1，05 5.13 第 4、5 點）。"""
+    steady_rounds: int = Field(ge=0, le=3)
+    """站穩（KD-1，05 5.13 第 3 點）持續到自己第幾個回合結束：1＝下一個自己回合結束（在自己回合中
+    站起時，這個回合不算）；0＝不給站穩。"""
 
     # 技巧動作與互動（1B）
     maneuver_ap_cost: int = Field(ge=0)
+    help_up_ap_cost: int = Field(ge=1, le=3)
+    """扶起（KD-1，#176，05 5.13 第 2 點）花的 AP。"""
     interact_ap_cost: int = Field(ge=0)
     interact_height_limit: int = Field(ge=0)
     shove_distance: int = Field(ge=0)

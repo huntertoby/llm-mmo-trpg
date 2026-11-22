@@ -347,6 +347,15 @@ describe("try it out", () => {
     expect(arena.default_map).toBe("training_range");
   });
 
+  it("treats a map of a new archetype like any ordinary map (WL-2)", () => {
+    const dunes = { ...arena.maps.find((m) => m.id === "open_plain")!, id: "test_dunes", archetype: "dunes" };
+    const withDunes = { ...arena, maps: [...arena.maps, dunes] };
+    expect(isTrainingMap(withDunes, "test_dunes")).toBe(false);
+    const req = buildTryoutRequest(choiceOf({ mapId: "test_dunes" }), check, withDunes);
+    expect(req?.map_id).toBe("test_dunes");
+    expect(req?.opponents).toBeUndefined();
+  });
+
   it("refuses to try out a skill that is illegal or unfinished", () => {
     expect(buildTryoutRequest(choiceOf(), checkCommon, arena)).toBeNull();
     expect(buildTryoutRequest(choiceOf(), checkPartial, arena)).toBeNull();

@@ -150,7 +150,7 @@
    "rules_zh": [
     "由技能產生時持續 3 回合，之後變成水",
     "帶有冰霜元素（產生時會觸及格上的物件）",
-    "進入時 敏捷檢定 DC 12，失敗會倒地（滑倒判定）",
+    "進入時 敏捷檢定 DC 10，失敗會倒地（滑倒判定）",
     "火焰：變成水",
     "在上面產生火焰：變成水"
    ],
@@ -552,7 +552,7 @@
   {
    "id": "prone",
    "name_zh": "倒地",
-   "description_zh": "移動前要先站起來（消耗部分移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。",
+   "description_zh": "移動前要先站起來（消耗部分移動點數），也可以讓相鄰的隊友扶起；近戰攻擊倒地者有優勢，遠程攻擊有劣勢；倒地期間不能反應，倒地後的第一個自己回合少 AP。",
    "tags": [],
    "status_look": {
     "polarity": "debuff",
@@ -564,8 +564,30 @@
     "prevents_move": false
    },
    "rules_zh": [
-    "站起來要消耗 50% 的移動點數（進位）"
+    "站起來要消耗 50% 的移動點數（進位）；相鄰的隊友也可以花 1 AP 扶起（不花移動）",
+    "倒地期間不能用任何反應（格擋、藉機攻擊、監視射擊、反擊、反應技）",
+    "倒地後的第一個自己回合少 1 AP（只扣一次，被扶起也照扣；頭目不扣）",
+    "站起來或被扶起後「站穩」，到自己下一個回合結束前不會再倒地"
    ],
+   "rules_dice": []
+  },
+  {
+   "id": "steady",
+   "name_zh": "站穩",
+   "description_zh": "剛站起來（自己站或被扶起），站得很穩：任何來源都不會讓你倒地；冰面照樣會滑，但滑完不倒地。持續到自己下一個回合結束。",
+   "tags": [
+    "beneficial"
+   ],
+   "status_look": {
+    "polarity": "neutral",
+    "control_group": null,
+    "dot_element": null,
+    "skip_turn": false,
+    "removed_by_element": [],
+    "absorbs_damage": false,
+    "prevents_move": false
+   },
+   "rules_zh": [],
    "rules_dice": []
   },
   {
@@ -4431,7 +4453,7 @@
   },
   {
    "id": "hit_by_melee",
-   "name_zh": "被近戰擊中時",
+   "name_zh": "被近戰命中時",
    "description_zh": "被近戰攻擊命中、傷害結算之後。",
    "tags": [],
    "status_look": null,
@@ -4458,7 +4480,7 @@
   },
   {
    "id": "hit_by_spell",
-   "name_zh": "被法術擊中時",
+   "name_zh": "被法術命中時",
    "description_zh": "被法術技命中、傷害結算之前；另一方是施放者。",
    "tags": [],
    "status_look": null,
@@ -4621,8 +4643,8 @@
    "status_look": null,
    "rules_zh": [
     "花 1 AP，對相鄰的敵人使出",
-    "敏捷對抗：d20 ＋ 雙方敏捷差的攻防修正 ＋ 熟練 2，合計 ≥ 8 才成功",
-    "成功時目標倒地；站起要花掉一半（50%，無條件進位）的移動點數"
+    "敏捷對抗：d20 ＋ 雙方敏捷差的攻防修正 ＋ 熟練 2 − 3（擊倒對抗對方的加值），合計 ≥ 9 才成功（平手算對方贏）",
+    "成功時目標倒地；站起要花掉一半（50%，無條件進位）的移動點數；倒地期間不能反應，下一個自己回合少 AP"
    ],
    "rules_dice": []
   },
@@ -4659,6 +4681,19 @@
    "rules_zh": [
     "花 1 AP，與相鄰的我方單位（含召喚物）互換位置",
     "朝向不變，不會觸發藉機攻擊"
+   ],
+   "rules_dice": []
+  },
+  {
+   "id": "help_up",
+   "name_zh": "扶起",
+   "description_zh": "花 1 AP，讓相鄰、倒地的我方單位立刻站起",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [
+    "花 1 AP，對相鄰、高度差不超過 1 層、倒地中的我方單位（含召喚物）使出",
+    "對方立刻站起，不花對方的移動點數，也不會觸發藉機攻擊",
+    "自己倒地、被定身或不能行動時不能扶人；敵人也會互相扶起"
    ],
    "rules_dice": []
   },
@@ -5473,6 +5508,9 @@
   "summon_guard_radius": 2,
   "battle_team_size": 3,
   "item_skill_ap_cost": 1,
-  "situation_care_max": 2
+  "situation_care_max": 2,
+  "attribute_points_per_level": 20,
+  "base_attribute": 100,
+  "start_free_points": 40
  }
 }

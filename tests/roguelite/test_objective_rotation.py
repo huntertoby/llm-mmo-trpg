@@ -73,5 +73,7 @@ def test_rotation_rules_are_content_and_validated() -> None:
     greedy = RunRules.model_validate(
         {**data, "objective_rotation": {"min_escape": 3, "min_defend": 2}}
     )
-    problems = roguelite_problems(greedy, lib.maps, lib.units, lib.ruleset.core.tier_budget)
+    problems = roguelite_problems(
+        greedy, lib.maps, lib.units, lib.ruleset.core.tier_budget, lib.map_archetypes
+    )
     assert any("支援" in p for p in problems)

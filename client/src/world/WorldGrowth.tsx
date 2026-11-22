@@ -25,7 +25,7 @@ import { choiceLabel, defaultParams, oathButton, paramLabel, spendLock, swearAct
 import {
   ATTR_EMPTY_ZH,
   ATTR_LINE_ZH,
-  ATTR_PER_LEVEL_ZH,
+  attrPerLevelText,
   CARE_FOLD_ZH,
   CARE_FOLDS,
   CARE_LINE_ZH,
@@ -189,7 +189,7 @@ function FlashPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCh
   );
 }
 
-/** 屬性點分頁：入門期資訊條（伺服器的字）→「未分配的屬性點」＋「升級時每級 +2」→ 沒有點時虛線空狀態；配點與重配照現行。 */
+/** 屬性點分頁：入門期資訊條（伺服器的字）→「未分配的屬性點」＋「升級時每級 +20」→ 沒有點時虛線空狀態；配點與重配照現行。 */
 function AttrPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onChoose">) {
   const lock = spendLock(view);
   const cid = view.character.character_id;
@@ -201,7 +201,7 @@ function AttrPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCho
           <KeepNum text={starter} />
         </Callout>
       )}
-      <TabLine end={<Tag tone="dim">{ATTR_PER_LEVEL_ZH}</Tag>}>
+      <TabLine end={<Tag tone="dim">{attrPerLevelText()}</Tag>}>
         <span>{ATTR_LINE_ZH}</span>
       </TabLine>
       {view.character.attribute_points <= 0 && (

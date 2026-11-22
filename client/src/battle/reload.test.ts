@@ -38,7 +38,7 @@ describe("裝填（Phase 3-24a2）", () => {
     expect(moreModes(basicModes([]))).toEqual([]);
   });
 
-  it("裝填是武器動作：不在基本動作的清單裡，基本動作仍不超過 10 個", () => {
+  it("裝填是武器動作：不在基本動作的清單裡，基本動作仍不超過上限（11 個，#177）", () => {
     expect(WEAPON_ACTION_KINDS).toEqual(["reload"]);
     expect(BASIC_ACTION_KINDS).not.toContain("reload");
     expect(BASIC_ACTION_KINDS.length).toBeLessThanOrEqual(BASIC_ACTION_LIMIT);

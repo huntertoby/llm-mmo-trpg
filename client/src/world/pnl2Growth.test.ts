@@ -157,12 +157,12 @@ describe("各分頁內容", () => {
   const pane = (v: WorldView, tab: "flash" | "attr" | "care" | "look") =>
     html(createElement(WorldGrowth, { view: v, busy: false, onChoose: noop, onAct: noop, onClose: () => undefined, initialTab: tab }));
 
-  it("屬性點（入門期）：資訊條照伺服器、「未分配的屬性點」＋「升級時每級 +2」、虛線空狀態", () => {
+  it("屬性點（入門期）：資訊條照伺服器、「未分配的屬性點」＋「升級時每級 +20」、虛線空狀態", () => {
     const out = pane(view(STARTER), "attr");
     expect(out).toContain('data-pane="attr"');
     expect(out).toContain("入門期可以自己配點，正式選定時會照新武器重配一次。");
     expect(out).toContain("未分配的屬性點");
-    expect(out).toContain("升級時每級 +2");
+    expect(out).toContain("升級時每級 +20");
     expect(out).toContain("沒有未分配的屬性點。");
   });
 

@@ -62,6 +62,42 @@ def test_unknown_build_is_rejected() -> None:
         new_run(library(), "build_nobody", 1)
 
 
+PLAN_MAPS_WL2: dict[int, list[tuple[str, str]]] = {
+    0: [
+        ("open_plain", "eliminate"),
+        ("swamp", "defend"),
+        ("bridge_chasm", "eliminate"),
+        ("oil_depot", "eliminate"),
+        ("frozen_lake", "escape"),
+        ("bandit_lair", "eliminate"),
+    ],
+    3: [
+        ("frozen_lake", "eliminate"),
+        ("open_plain", "eliminate"),
+        ("lava_crossing", "escape"),
+        ("cliff_outpost", "eliminate"),
+        ("narrow_halls", "defend"),
+        ("bandit_lair", "eliminate"),
+    ],
+    7: [
+        ("swamp", "defend"),
+        ("open_plain", "eliminate"),
+        ("frozen_lake", "escape"),
+        ("narrow_halls", "eliminate"),
+        ("dark_forest", "eliminate"),
+        ("bandit_lair", "eliminate"),
+    ],
+}
+"""同一個種子抽到的地圖與勝利條件（WL-2 前的 main ``64ec5d206`` 跑出來的值；地圖類型清單搬進
+資料檔後要逐字相同）。"""
+
+
+@pytest.mark.parametrize("seed", sorted(PLAN_MAPS_WL2))
+def test_the_same_seed_draws_the_same_map_sequence(seed: int) -> None:
+    plan = make_plan(library(), seed)
+    assert [(p.map_id, p.objective) for p in plan] == PLAN_MAPS_WL2[seed]
+
+
 def test_plan_has_distinct_map_types_then_the_fixed_boss() -> None:
     lib = library()
     rules = lib.roguelite

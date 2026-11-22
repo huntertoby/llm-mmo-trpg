@@ -468,7 +468,7 @@ rules:
 
     note: 一次加減一個的按鈕文字、骰子寫法範例（2d6）。
   # HC-6b：前端說明文字。有資料的改成照伺服器組字（`/api/glossary` 的 `rules`、工坊的狀態與模擬選項、
-  # 卡片與面板已有的欄位、前端自己的常數）；下面幾條是語法用字（改判 const，各寫理由），剩下的留 ts-ui-text。
+  # 卡片與面板已有的欄位、前端自己的常數）；下面幾條是語法用字（改判 const，各寫理由），剩下的留 ts-ui-text（HC-8 搬完 0 筆、刪掉）。
   - id: ts-hc6b-ordinal-text
     class: const
     status: done
@@ -534,15 +534,14 @@ rules:
             client/src/world/WorldGrowth.tsx]
     text: '核對得到才 \+1|＋1 條詞條|每種用 1 個|同時 1 個，一直有效|免費帶 0～'
     note: HC-6c 改判：情境判定的用心清單一筆算一點（`trpg.world.situations`：`min(care_max, 筆數)`，上限已改讀 `rules.situation_care_max`）；鍛造「指定部位＋1 條詞條」是挑一條的欄位、特色材料「每種用 1 個」是每種一份（`flavor_max` 是種數，已照伺服器）；誓約「同時 1 個」是單一欄位（`OathView.current`，同 HC-6b 的 `ts-hc6b-single-text`）；雇用隊友「0～上限」的 0 是不帶（獨行），上限已改讀 `max_hired`。
-  - id: ts-ui-text
-    class: text
-    status: todo
+  - id: ts-hc8-ordinal-text
+    class: const
+    status: done
     lang: ts
     kind: text
-    note: 玩家看得到的說明裡寫死的規則數字。HC-6c 後剩 2 筆，都在等「屬性點的顯示換算」：資料是 `attribute_points_per_level` 20（×10 量尺），畫面寫「每級 +2」與配點範例（開局 4 點、智力 12……）；要照哪個量尺顯示還沒定（HC-6b 待決、HC-6c 待決）。
-    files:
-      - client/src/world/OpeningDialog.tsx
-      - client/src/world/growthPanel.ts
+    files: [client/src/world/OpeningDialog.tsx]
+    text: '一樣高就給第 1 招的'
+    note: HC-8 改判：配點範例的「一樣高就給第 1 招」是序號（`recommended_level_up` 的平手規則：照起始招的順序取第一個）；範例裡的點數、屬性值已改讀 `rules.start_free_points`、`base_attribute`、`attribute_points_per_level`（照原值顯示）。
 
   # ======================================================================== 後端：整個資料夾或檔案
   - id: py-shared-rng
@@ -600,6 +599,15 @@ rules:
     slot: ['Field(max_length)', 'Field(min_length)']
     ann: ['str*', '*str | None*', 'Annotated[str*']
     note: 字串欄位的長度上限（名稱、說明、ID）。
+  - id: py-engine-actions-basic-action-limit
+    class: const
+    status: done
+    lang: py
+    files: [src/trpg/engine/actions.py]
+    where: <module>.BASIC_ACTION_LIMIT
+    kind: number
+    value: '11'
+    note: 基本動作總數上限（05 5.2.2，#177）：設計上的約束，只有測試讀它檢查 BASIC_ACTION_TYPES 的長度，引擎不依它做任何結算，數值工坊改它也沒有效果，所以不搬進 content（KD-1）。
   - id: py-d20
     class: const
     status: done
@@ -721,24 +729,22 @@ rules:
   # ---------------------------------------------------- 後端 api：config（HC-7 b 搬完；剩下的改判）
   # HC-7 b：規則數字搬進 content（roguelite.yaml route_hint_tier、skill_pick.yaml 的 budget_seconds／pregen、
   # world/rules.yaml 的 display／notes、workshop.yaml max_rounds、core.skill_limits），回應的預設值改必填。
-  # 剩下的是數值工坊的工具設定（只留 api/tuning/schemas.py、drafts.py 一份）、請求格式護欄與結構常數。
-  - id: py-api-tuning-tool-settings
+  # 剩下的是數值工坊的工具設定（HC-8 搬到 config/tuning.toml，程式內只留 tool_config.py 的 schema 預設）、請求格式護欄與結構常數。
+  - id: py-api-tuning-tool-config-defaults
     class: config
     status: done
-    files: [src/trpg/api/tuning/schemas.py, src/trpg/api/tuning/drafts.py, src/trpg/api/tuning/skills.py]
+    files: src/trpg/api/tuning/tool_config.py
     kind: number
-    where:
-      - '<module>.SMALL_SAMPLE'
-      - '<module>.MAX_RATIO_SEEDS'
-      - '<module>.SIM_DEFAULT_SEEDS'
-      - '<module>.MAP_DEFAULT_SEEDS'
-      - '<module>.MAX_SIM_MAPS'
-      - '<module>.MAX_SIM_BATTLES'
-      - '<module>.RATIO_DEFAULT_SEEDS'
-      - '<module>.RATIO_MAX_WORK'
-      - '<module>.DRAFT_NAME_MAX'
-      - '<module>.MAX_GROUP'
-    note: HC-7 b（規格 b.1「工坊的上下限對齊 api/tuning/schemas.py，只留一份」）：數值工坊這個開發工具自己的設定（預設種子、模擬場數與工作量上限、樣本小門檻、草稿名字數、分組改上限）。只留這一份，請求與回應的預設值、service、ratios、sim_jobs 都讀它；回應欄位的預設值改必填。不是遊戲規則，不進 content。
+    where: ['TuningToolSettings']
+    note: HC-8（規格第 2 項，同 py-llm-config-config-number 的前例）：數值工坊這個開發工具自己的 10 項設定搬到 config/tuning.toml（使用者可用 config/tuning.local.toml 覆寫）；這裡是寫進 schema 的預設值，唯一一份，等於搬家前程式裡的值，config/tuning.toml 也寫同樣的值（tests/api/tuning/test_tool_config_hc8.py 對照）。api/tuning/schemas.py、drafts.py、skills.py 的常數改讀 TUNING_TOOL。不是遊戲規則，不進 content。
+  - id: py-api-game-rules-hc8-defaults
+    class: config
+    status: done
+    files: src/trpg/api/schemas.py
+    kind: number
+    where: ['GameRulesOut']
+    owner: ['attribute_points_per_level', 'base_attribute', 'start_free_points']
+    note: HC-8（規格第 1 項「API 沒帶到的值就加欄位，新欄位要有預設值」）：屬性點兩句說明組字用的三個欄位（畫面照 ×10 後的原值顯示，玩法 PM 定案）。伺服器一律由內容庫填（roguelite.yaml 的 attribute_points_per_level、base_attribute、start_free_points），預設值等於目前的內容（tests/api/test_game_rules_hc8.py 對照）。HC-7 b 起其他欄位必填、不給預設值，這三個照規格給；改內容時這裡不用跟著改（只在舊回應沒帶時生效）。
   - id: py-api-request-format-guards
     class: guard
     status: done

@@ -34,7 +34,13 @@ class InfoText:
     lines_zh: tuple[str, ...]
 
 
-def _contest(core: CoreRules, attr: str) -> str:
+def _contest(core: CoreRules, attr: str, *, knock: bool = False) -> str:
+    if knock:  # 擊倒對抗（KD-1，05 5.13 第 4 點）：對方 +加值、平手算對方贏
+        return (
+            f"{attr}對抗：d20 ＋ 雙方{attr}差的攻防修正 ＋ 熟練 {core.proficiency} − "
+            f"{core.prone_contest_bonus}（擊倒對抗對方的加值），合計 ≥ {core.hit_target + 1} 才成功"
+            "（平手算對方贏）"
+        )
     return (
         f"{attr}對抗：d20 ＋ 雙方{attr}差的攻防修正 ＋ 熟練 {core.proficiency}，"
         f"合計 ≥ {core.hit_target} 才成功"
@@ -107,7 +113,7 @@ def _move_and_attack(core: CoreRules) -> list[InfoText]:
 
 
 def _maneuvers(core: CoreRules) -> list[InfoText]:
-    """推擊、絆倒、推動與撥開物件、換位。"""
+    """推擊、絆倒、推動與撥開物件、換位、扶起。"""
     dice = core.collision_damage_dice
     return [
         InfoText(
@@ -132,9 +138,10 @@ def _maneuvers(core: CoreRules) -> list[InfoText]:
             f"{_ap(core.maneuver_ap_cost)}，敏捷對抗，成功讓相鄰敵人倒地",
             (
                 f"{_ap(core.maneuver_ap_cost)}，對相鄰的敵人使出",
-                _contest(core, "敏捷"),
+                _contest(core, "敏捷", knock=True),
                 "成功時目標倒地；站起要花掉"
-                f"一半（{permille_pct(core.prone_stand_up_move_permille)}，無條件進位）的移動點數",
+                f"一半（{permille_pct(core.prone_stand_up_move_permille)}，無條件進位）的移動點數；"
+                "倒地期間不能反應，下一個自己回合少 AP",
             ),
         ),
         InfoText(
@@ -164,6 +171,17 @@ def _maneuvers(core: CoreRules) -> list[InfoText]:
             (
                 f"{_ap(core.swap_ap_cost)}，與相鄰的我方單位（含召喚物）互換位置",
                 "朝向不變，不會觸發藉機攻擊",
+            ),
+        ),
+        InfoText(
+            "help_up",
+            "扶起",
+            f"{_ap(core.help_up_ap_cost)}，讓相鄰、倒地的我方單位立刻站起",
+            (
+                f"{_ap(core.help_up_ap_cost)}，對相鄰、高度差不超過 {core.melee_height_limit} 層、"
+                "倒地中的我方單位（含召喚物）使出",
+                "對方立刻站起，不花對方的移動點數，也不會觸發藉機攻擊",
+                "自己倒地、被定身或不能行動時不能扶人；敵人也會互相扶起",
             ),
         ),
     ]

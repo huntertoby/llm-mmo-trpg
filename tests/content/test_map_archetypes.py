@@ -4,16 +4,10 @@ from __future__ import annotations
 
 import pytest
 
+from tests.content_counts import COUNTS
 from tests.engine.helpers import library
 from trpg.cli.main import main
-from trpg.content.maps import (
-    ARCHETYPES,
-    BOSS_ARCHETYPE,
-    TEST_ARCHETYPE,
-    TRAINING_ARCHETYPE,
-    MapDef,
-    check_map,
-)
+from trpg.content.maps import MapDef, check_map
 from trpg.shared.types import Team
 from trpg.sim.batch import map_spec, run_batches
 
@@ -30,11 +24,9 @@ EXPECTED_TYPES = {
 
 
 def _real_maps() -> dict[str, MapDef]:
-    return {
-        k: v
-        for k, v in library().maps.items()
-        if v.archetype not in (TEST_ARCHETYPE, TRAINING_ARCHETYPE, BOSS_ARCHETYPE)
-    }
+    """一般地圖：類型會進抽選（``in_random_pool``；不是測試圖、靶場、Boss 地圖）。"""
+    lib = library()
+    return {k: v for k, v in lib.maps.items() if lib.map_archetypes.in_random_pool(v.archetype)}
 
 
 def test_archetype_is_required() -> None:
@@ -42,21 +34,26 @@ def test_archetype_is_required() -> None:
     del data["archetype"]
     with pytest.raises(ValueError, match="archetype"):
         MapDef.model_validate(data)
-    data["archetype"] = "volcano"
+    data["archetype"] = "Volcano"
     with pytest.raises(ValueError, match="archetype"):
         MapDef.model_validate(data)
+    # WL-2：格式對就過 schema；認不認得由載入器查（見 test_map_archetypes_from_data.py）
+    data["archetype"] = "volcano"
+    assert MapDef.model_validate(data).archetype == "volcano"
 
 
 def test_test_maps_are_tagged_test_and_everything_else_is_not() -> None:
-    maps = library().maps
-    assert {k for k, v in maps.items() if v.archetype == TEST_ARCHETYPE} == {
+    lib = library()
+    maps = lib.maps
+    assert {k for k, v in maps.items() if lib.map_archetypes.has_role(v.archetype, "test")} == {
         k for k in maps if k.startswith("test_")
     }
-    assert set(ARCHETYPES) == EXPECTED_TYPES | {
-        TEST_ARCHETYPE,
-        TRAINING_ARCHETYPE,
-        BOSS_ARCHETYPE,
-    }
+    table = lib.map_archetypes
+    assert len(table.ids()) == COUNTS["map_archetypes"]
+    assert {a for a in table.ids() if table.in_random_pool(a)} == EXPECTED_TYPES
+    special = {a.role: a.id for a in table.archetypes if a.role is not None}
+    assert special == {"test": "test", "training": "training", "boss": "boss"}
+    assert not any(table.in_random_pool(a) for a in special.values())
 
 
 def test_there_are_ten_real_maps_covering_all_eight_archetypes() -> None:
