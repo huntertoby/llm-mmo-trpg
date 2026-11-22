@@ -89,12 +89,13 @@ describe("T-A8 statusTile 其餘 86 種＝Q 版圓片＋qIcon/status.ts 的圖�
     }
   });
 
-  it("不認得的狀態（brand_new_status）照舊畫現行圖樣（名稱第一個字）", () => {
+  it("不認得的狀態（brand_new_status）畫 Q 版扁平問號，和其他類別一致（WL-1c；以前退回現行圖樣）", () => {
     expect(QT.entry("brand_new_status")).toBeNull();
     clearSkillIconCache();
     const now = rec(() => tileCanvas(statusTile("brand_new_status"), 24));
-    expect(now).toBe(withHook(legacyHook, "brand_new_status"));
-    expect(now).toContain("fillText(");
+    expect(now).toBe(withHook((c, o) => QP.unknownMark(c, o), "brand_new_status"));
+    expect(now).not.toBe(withHook(legacyHook, "brand_new_status"));
+    expect(now).not.toContain("fillText(");
   });
 
   it("色環仍是 FAINT_RING（白 30%，第 0 節第 9 列），圓片半徑 42", () => {

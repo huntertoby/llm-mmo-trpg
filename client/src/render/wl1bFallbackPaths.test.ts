@@ -7,7 +7,7 @@ import type { Glossary, SkillIconData } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { setGlossary } from "../battle/glossary";
 import { fakeCanvasFactory, fakeCtx, type FakeCanvasLog } from "../test/fakeCanvas";
-import { setQCanvasFactory } from "./qIcon/core";
+import { setQCanvasFactory, type QOpts } from "./qIcon/core";
 import * as QP from "./qIcon/parts";
 import { clearQSkillDefs } from "./qIcon/skills";
 import * as QT from "./qIcon/status";
@@ -81,11 +81,21 @@ describe("WL-1 b：狀態圖示走 paintUnknown", () => {
       expect(() => QT.headCanvas(id, 11, 1, { res: 1 }), id).not.toThrow();
       expect(() => statusIconCanvas(id, 20, 1), id).not.toThrow();
       expect(() => tileCanvas(statusIconTile(id), 20, 1), id).not.toThrow();
-      // 狀態的部件圓片（組裝列）：不認得的照 QI-2c 的現行圖樣退回（`skillParts.ts` 的 hooks.status）
+      // 狀態的部件圓片（組裝列）：不認得的畫 Q 版扁平問號（WL-1c；`skillParts.ts` 的 hooks.status）
       const calls = drawn((ctx) => statusTile(id).draw(ctx, 0.3, 1));
       expect(calls.some((c) => c.startsWith("fill(")), id).toBe(true);
       expect(calls.some((c) => c.startsWith("drawImage(")), id).toBe(true);
     }
+  });
+
+  it("WL-1c：組裝列狀態圓片的掛鉤，不認得的狀態畫的和其他類別的 Q 版問號一模一樣；認得的不是問號", () => {
+    withNameless();
+    const opts: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
+    const mark = drawn((ctx) => QP.unknownMark(ctx, opts));
+    expect(mark.length).toBeGreaterThan(0);
+    expect(drawn((ctx) => QP.entry("skeleton", "brand_new_thing").d(ctx, opts, undefined as never, {}))).toEqual(mark);
+    for (const id of ["brand_new_thing", ""]) expect(drawn((ctx) => QP.hooks.status!(ctx, opts, id)), id).toEqual(mark);
+    expect(drawn((ctx) => QP.hooks.status!(ctx, opts, "burning"))).not.toEqual(mark);
   });
 });
 

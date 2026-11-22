@@ -107,6 +107,8 @@ const hood = (c: Ctx, _o: QOpts) => { f(c, "#8a6ad8", () => { c.moveTo(0, -10.6)
 const crate = (c: Ctx, o: QOpts, x = 0, y = 0, s = 17) => { rr(c, "#a06a36", x - s / 2, y - s / 2, s, s, s * 0.12); f(c, "#d8a868", () => c.roundRect(x - s / 2, y - s / 2, s, s * 0.2, [s * 0.12, s * 0.12, 0, 0])); f(c, "#6a4420", () => c.roundRect(x - s / 2, y + s * 0.32, s, s * 0.18, [0, 0, s * 0.12, s * 0.12])); if (!o.small) ln(c, "#6a4420", s * 0.09, [[x - s * 0.3, y - s * 0.2], [x + s * 0.3, y + s * 0.24]]); };
 const grid3 = (c: Ctx, lit = "#ffb23a", mid = "#fff6c8") => { c.save(); c.scale(0.8, 0.8); for (let i = 0; i < 9; i++) rr(c, i === 4 ? mid : lit, -10 + (i % 3) * 6.9, -10 + Math.floor(i / 3) * 6.9, 6.2, 6.2, 1.4); c.restore(); }; /* 縮到 0.8：九宮格的四角才不會頂到圓片的色環 */
 const qmark = (c: Ctx, o: QOpts, x: number, y: number, k = 1) => halo(c, o, (q) => { st(q, "#ffe9a8", 2.4 * k, (p) => { p.arc(x, y - 2.6 * k, 2.6 * k, PI * 1.05, PI * 0.5); p.lineTo(x, y + 1.6 * k); }); ci(q, "#ffe9a8", x, y + 4.6 * k, 1.4 * k); });
+/** 不認得的部件：Q 版扁平問號（各類共用；WL-1c 起狀態圓片的掛鉤也用它）。 */
+export const unknownMark = (c: Ctx, o: QOpts): void => qmark(c, { ...o, flat: true }, 0, 0, 2);
 /** 主圖樣縮到左下、右上角壓一個小圖（修正的「改了什麼」、召喚物數值用）。 */
 const withBadge = (base: (c: Ctx, o: QOpts) => void, small: PartFn, bk = 0.8, sk = 0.48): PartFn => (c, o, T, opt) => { at(c, -2.2, 2.2, bk, (q) => base(q, o)); halo(c, o, (q) => at(q, 6, -5.6, sk, (p) => small(p, { ...o, tiny: true, small: true, owPx: 0, flat: true }, T, opt))); };
 export const upArrow = (c: Ctx, _o: QOpts, T: Tint = ["#ffb23a", "#fff6c8"]) => { poly(c, T[0], [[0, -11], [10, -1], [4, -1], [4, 9.6], [-4, 9.6], [-4, -1], [-10, -1]], 0.6); poly(c, T[1], [[0, -11], [-10, -1], [-4, -1], [-4, 9.6], [0, 9.6]]); };
@@ -788,7 +790,7 @@ export function entry(cat: string, id: string): PartEntry {
   if (cat === "condition" && typeof id === "string" && id.startsWith("target_has_status:")) { const s = entry("status", id.slice(18)); return { zh: "目標帶有狀態：" + (s.zh ?? id.slice(18)), topic: "那個狀態的圖，右上一個問號", live: s.live, d: (c, o, T, opt) => { at(c, -1.6, 1.4, 0.84, (q) => s.d(q, o, T, opt)); if (!o.tiny) qmark(c, o, 7.4, -6, 0.8); } }; }
   const e = CATS[cat]?.[id]; if (e) return e;
   if (cat === "status") return { zh: id, topic: "（沒有 Q 版圖樣：現行圖樣頂著）", live: true, d: (c, o) => (hooks.status ? hooks.status(c, o, id) : QS.ACT.buff.d(c, o, QS.ACT.buff.def as Tint)) };
-  return { zh: id, topic: "（不認得）", unknown: true, d: (c, o) => qmark(c, { ...o, flat: true }, 0, 0, 2) };
+  return { zh: id, topic: "（不認得）", unknown: true, d: unknownMark };
 }
 /** 圖樣定義（給 QIcons.render；畫在 48 格，±10 單位放大 1.8 倍）。cpx＝圖樣本身（±10 單位）顯示的 CSS px，決定簡化程度。 */
 export function def(cat: string, id: string, cpx = 20, opt: PartOpt = {}): PartDef {

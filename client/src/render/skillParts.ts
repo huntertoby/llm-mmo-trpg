@@ -5,7 +5,7 @@
 // QI-2c：部件帶 `q`（Q 版圖樣的類別與代碼，`qIcon/parts.ts`）；`drawChip` 收到 `unitPx`／`res` 時圓底與色環照舊、裡面改畫 Q 版圖樣
 // （`QP.chip`：圖樣＝直徑 78%、對齊整數裝置像素貼上）。`draw` 是舊畫法（留著不刪，規格第 0 節第 11 列）；修正技的「改造對象」QI-2d 起也有 `q`（`QP.targetOf`）。
 // 32 種以外的狀態由 `QP.hooks.status` 畫（這個檔載入時掛上）：QI-4a 起畫 `qIcon/status.ts` 的狀態卡形圖樣（`entry(id).d`），
-// `status.ts` 不認得的狀態才退回現行的 `statusGlyph()`（顏色 `statusColor`）。
+// `status.ts` 不認得的狀態畫 Q 版扁平問號（WL-1c，和其他部件類別一致）。
 import * as QP from "./qIcon/parts";
 import * as QStatus from "./qIcon/status";
 import { conditionName, effectName, glossaryDescription, statusName, surfaceName, triggerName } from "../battle/glossary";
@@ -241,7 +241,7 @@ export function statusGlyph(ctx: Ctx, id: string | null | undefined): void {
 
 // 32 種以外的狀態（QI-2c 起經這個掛鉤；QI-4a 換 Q 版，規格 docs/phases/PhaseQI-4計畫.md A3、第 0 節第 10 列）：
 // 認得的（名詞表 118 個全部）畫 `qIcon/status.ts` 的 `entry(id).d`（狀態卡形圖樣；圓片只放圖樣、不放框、不用頭頂簡化形，圖樣＝直徑 78% 由 `QP.chip` 決定）；
-// `status.ts` 不認得的照 QI-2c 的現行圖樣（`statusGlyph`＋`statusColor`）原樣退回。
+// `status.ts` 不認得的畫 Q 版扁平問號（WL-1c）。
 // QI-4b（美術 PM QI-4a 驗收可修 1）：圖樣套第④批 `parts.ts` 同一個 `fit()` 縮進色環（k＝`STATUS_TILE_FIT`，同第④批「帶電護盾」），
 // 免得護盾、心連結、旗桿這類大輪廓壓到環；元素架勢等六角臂章（`stance_*`）不縮——第④批的姿態臂章（`stance_guard`…）也沒縮，兩套才一樣大。
 export const STATUS_TILE_FIT = 0.86;
@@ -254,12 +254,9 @@ QP.hooks.status = (c, o, id) => {
     else e.d(c, o);
     return;
   }
-  c.save();
-  c.fillStyle = c.strokeStyle = statusColor(id);
-  c.lineWidth = 2.2;
-  c.lineCap = c.lineJoin = "round";
-  statusGlyph(c, id);
-  c.restore();
+  // WL-1c（美術 PM `docs/art/WL-1b驗收.md` 裁定 1）：`qIcon/status.ts` 也不認得的狀態畫 Q 版扁平問號，和其他部件類別一致
+  // （以前退回 QI-2c 的白色線條 `statusGlyph`）。
+  QP.unknownMark(c, o);
 };
 
 /** 狀態的圖樣顏色：`control_group` → 持續傷害元素 → 專屬色 → `polarity`（見 `statusIcon.glyphColor`）。 */
