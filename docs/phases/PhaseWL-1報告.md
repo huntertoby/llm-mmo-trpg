@@ -380,7 +380,15 @@ b 段合併為 d5ac5e359，寫死數值清單重產為 3818bc353，都已推上 
 
 開發中：每項 commit 前 `typecheck` 0；相關 vitest 0（`src/render`、`src/ui`、`src/battle`、`src/tuning`、`src/run` 分次跑過）。沒動後端，ruff、mypy、lint-imports、`classify.py` 不適用。
 
-交件前全量：等開發 PM 排順序，跑完補在下面。
+交件前全量（開發 PM 同意後；全部 commit 後 `git merge --no-edit main`，合併點 `77581e279`）：
+
+| 檢查 | 結束碼 |
+|---|---|
+| `scripts/check.py` | 0（ruff 等全過；pytest 18264 passed、8 skipped；vitest 406 檔 4889 passed）；已寫下通過戳記 |
+| `pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+| `corepack pnpm -C client build` | 0 |
+
+跑完之後只改了本報告（`.md`），沒有改程式。
 
 ## c8. 待 PM 決定
 
