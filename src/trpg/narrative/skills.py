@@ -1568,12 +1568,48 @@ def timing_text(library: ContentLibrary, skill: SkillDef) -> str | None:
 def trigger_timing_text(library: ContentLibrary, trigger: TriggerSpec) -> str:
     """被動觸發時機的一句話，帶參數的時機寫出參數（Phase 3-41a），例如「每命中 2 次」
     「施放帶「火焰」標籤的技能後」「敵人進入你的「水」表面時」。"""
-    text = _trigger_timing(library, trigger)
+    text = _trigger_timing(library, trigger) + trigger_filter_text(library, trigger)
     if trigger.target == "nearest_enemy":  # 3W-2b
         text += f"，對 {trigger.max_distance} 格內最近的一名敵人"
     elif trigger.target == "weakest_ally":  # TF-1（#159 庇佑）
         text += f"，對 {trigger.max_distance} 格內生命比例最低的一名友方（不含自己）"
     return text
+
+
+ATTACK_KIND_TEXT: dict[str, str] = {"melee": "近戰", "ranged": "遠程", "spell": "法術"}
+"""E4 篩選 ``attack_kind`` 的中文（近戰同格擋的定義）。"""
+
+ATTACK_SOURCE_TEXT: dict[str, str] = {"attack": "普攻", "skill": "技能", "reaction": "反應"}
+"""E4 篩選 ``source`` 的中文。"""
+
+
+def trigger_filter_text(library: ContentLibrary, spec: object) -> str:
+    """E4 觸發篩選的卡片句子（被動技能的 ``trigger`` 與裝備的觸發詞條共用）：「（只算火焰傷害、
+    近戰、反應：藉機攻擊）」；沒有篩選時是空字串。"""
+    parts: list[str] = []
+    element = getattr(spec, "element", None)
+    if element is not None:
+        parts.append(f"{element.display_name}傷害")
+    kind = getattr(spec, "attack_kind", None)
+    if kind is not None:
+        parts.append(ATTACK_KIND_TEXT[kind])
+    source = getattr(spec, "source", None)
+    reaction = getattr(spec, "reaction", None)
+    if source is not None:
+        text = ATTACK_SOURCE_TEXT[source]
+        if reaction is not None:
+            text += f"：{_reaction_name(library, reaction)}"
+        parts.append(text)
+    return f"（只算{'、'.join(parts)}）" if parts else ""
+
+
+def _reaction_name(library: ContentLibrary, reaction_id: str) -> str:
+    """反應篩選的名稱：內建反應的中文名；反應技寫技能名；都查不到時原樣。"""
+    found = {r.id: r.name_zh for r in library.ruleset.reactions.reactions}
+    if reaction_id in found:
+        return found[reaction_id]
+    skill = library.skills.get(reaction_id)
+    return reaction_id if skill is None else skill.name_zh
 
 
 def _trigger_timing(library: ContentLibrary, trigger: TriggerSpec) -> str:
