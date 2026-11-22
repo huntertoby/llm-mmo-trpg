@@ -13,7 +13,6 @@ from trpg.content.maps import (
     BOSS_ARCHETYPE,
     TEST_ARCHETYPE,
     TRAINING_ARCHETYPE,
-    Archetype,
     MapDef,
 )
 from trpg.content.schemas import ContentModel
@@ -28,9 +27,10 @@ class RegionDef(ContentModel):
     name_zh: str = Field(min_length=1)
     look: dict[str, str] = Field(default_factory=dict)
     """該區的預設覆寫（地圖檔的 ``look`` 會蓋過它）。"""
-    map_pool: tuple[Archetype, ...] = ()
+    map_pool: tuple[str, ...] = ()
     """該區的戰場地圖池（``docs/design/05-戰鬥.md`` 5.1「區域地圖池」，#43；Phase 5A-1）。
-    空＝不檢查；地點圖的戰鬥地圖類型必須在池內（見 :mod:`trpg.content.world_map`）。"""
+    空＝不檢查；地點圖的戰鬥地圖類型必須在池內（見 :mod:`trpg.content.world_map`）。類型必須在
+    ``map_archetypes.yaml``（載入器檢查，Phase WL-2）。"""
 
     @model_validator(mode="after")
     def _check_pool(self) -> RegionDef:

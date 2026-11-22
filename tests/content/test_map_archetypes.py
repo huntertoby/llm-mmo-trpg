@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
+from tests.content_counts import COUNTS
 from tests.engine.helpers import library
 from trpg.cli.main import main
 from trpg.content.maps import (
-    ARCHETYPES,
     BOSS_ARCHETYPE,
     TEST_ARCHETYPE,
     TRAINING_ARCHETYPE,
@@ -42,9 +42,12 @@ def test_archetype_is_required() -> None:
     del data["archetype"]
     with pytest.raises(ValueError, match="archetype"):
         MapDef.model_validate(data)
-    data["archetype"] = "volcano"
+    data["archetype"] = "Volcano"
     with pytest.raises(ValueError, match="archetype"):
         MapDef.model_validate(data)
+    # WL-2：格式對就過 schema；認不認得由載入器查（見 test_map_archetypes_from_data.py）
+    data["archetype"] = "volcano"
+    assert MapDef.model_validate(data).archetype == "volcano"
 
 
 def test_test_maps_are_tagged_test_and_everything_else_is_not() -> None:
@@ -52,7 +55,9 @@ def test_test_maps_are_tagged_test_and_everything_else_is_not() -> None:
     assert {k for k, v in maps.items() if v.archetype == TEST_ARCHETYPE} == {
         k for k in maps if k.startswith("test_")
     }
-    assert set(ARCHETYPES) == EXPECTED_TYPES | {
+    archetypes = library().map_archetypes.ids()
+    assert len(archetypes) == COUNTS["map_archetypes"]
+    assert set(archetypes) == EXPECTED_TYPES | {
         TEST_ARCHETYPE,
         TRAINING_ARCHETYPE,
         BOSS_ARCHETYPE,
