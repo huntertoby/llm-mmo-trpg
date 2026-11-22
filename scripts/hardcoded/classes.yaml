@@ -1478,6 +1478,14 @@ rules:
     kind: text
     where: ['_entangle_line', '_modifier_lines']
     note: HC-6a 改判：移動點數最低 0 是下限（不會變負）。
+  - id: py-narrative-status-info-half-e4
+    class: const
+    status: done
+    files: src/trpg/narrative/status_info.py
+    kind: number
+    scope: ['_half_text']
+    value: ['2']
+    note: E4：判斷站起消耗是不是剛好「一半」（千分比 × 2 ＝ 1000）來決定寫「一半」還是百分比，是用字的判斷，數值本身照工坊的 prone_stand_up_move_permille。
   - id: py-narrative-summon-info-text-text
     class: const
     status: done
