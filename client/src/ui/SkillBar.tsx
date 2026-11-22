@@ -168,7 +168,7 @@ function SkillSlot({
           )}
           {b.gearSource != null && (
             <span className="skill-gear" aria-label={gearSkillBadge(b.gearSource)}>
-              {gearSkillBadge(b.gearSource)}
+              {b.gearItem ?? gearSkillBadge(b.gearSource)}
             </span>
           )}
           {variant?.glow === true && (

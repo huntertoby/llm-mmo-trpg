@@ -7,7 +7,7 @@ import { unitTiles, unitsOnTile } from "./footprint";
 import { posKey, samePos } from "./geometry";
 import { pickCountText, splitCompositeKeys, tileCount, unitCount } from "./pickCount";
 import { activeReason } from "./activations";
-import { gearSkillNote, gearSkillOff, gearSkillSource } from "./gearSkills";
+import { gearSkillItem, gearSkillNote, gearSkillOff, gearSkillSource } from "./gearSkills";
 import { grantedRemaining } from "./granted";
 import { objectStyle } from "./glossary";
 
@@ -215,6 +215,8 @@ export interface SkillButton {
   grantedRemaining?: number | null;
   /** 裝備授予的技能（Phase 3G-G3b）：「來自裝備」的說明（物品名）；不是裝備來的為 `null`。 */
   gearSource?: string | null;
+  /** 裝備授予的技能：技能列按鈕副標題的裝備名（E1 小修 1）；不是裝備來的為 `null`。 */
+  gearItem?: string | null;
   /** 裝備授予的技能沒有效果的原因（E5，例「這把武器不能套用」）：標灰＋原因；有效時 `null`。 */
   gearOff?: string | null;
   /** 裝備授予的技能只對一部分招式沒有效果時的說明（E5，例「這招不能套用：火球」）；不標灰。 */
@@ -266,6 +268,7 @@ export function skillButtons(
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
       gearSource: gearSkillSource(hero, skillId),
+      gearItem: gearSkillItem(hero, skillId),
       gearOff: gearSkillOff(hero, skillId),
       gearNote: gearSkillNote(hero, skillId),
       effectIds: card?.effect_ids ?? [],

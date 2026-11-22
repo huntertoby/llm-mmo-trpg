@@ -402,12 +402,12 @@
 .skill-gear {
   font-size: 12px;
   color: #e8c46a;
-  /* 「來自裝備・副手：壁壘塔盾」太長時省略（完整文字在說明卡與 aria-label） */
+  /* E1 美術小修 1：只寫裝備名，放不下時截掉尾巴、不加「…」（完整文字在說明卡上方與 aria-label） */
   display: block;
   max-width: 100%;
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
+  text-overflow: clip;
 }
 
 .skill-button.from-gear {
