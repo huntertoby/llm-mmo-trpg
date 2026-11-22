@@ -34,7 +34,17 @@ export const CHOSEN_TAG_ZH = "正式選定後";
 
 /** 屬性點分頁（#18）。 */
 export const ATTR_LINE_ZH = "未分配的屬性點";
-export const ATTR_PER_LEVEL_ZH = "升級時每級 +2";
+/** 屬性點的顯示換算（HC-8）：資料是量類（×10 量尺，`core.yaml` 的 `quantity_scale`），玩家看到的數字 ÷ 這個值。 */
+export function attributeShown(raw: number, scale: number = gameRules().quantity_scale): number {
+  return scale > 0 ? raw / scale : raw;
+}
+/** 「升級時每級 +2」：每級點數照伺服器 `rules.attribute_points_per_level`（`roguelite.yaml`；HC-8）。 */
+export function attrPerLevelText(
+  perLevel: number = gameRules().attribute_points_per_level,
+  scale: number = gameRules().quantity_scale,
+): string {
+  return `升級時每級 +${attributeShown(perLevel, scale)}`;
+}
 export const ATTR_EMPTY_ZH = "沒有未分配的屬性點。";
 
 /** 整備分頁（#21～#23）。 */

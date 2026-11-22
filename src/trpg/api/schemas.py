@@ -310,6 +310,17 @@ class GameRulesOut(_ApiModel):
     situation_care_max: int
     """情境判定的用心加值最多幾點（``world/situation_rules.yaml`` 的 ``check.care_max``；
     引用線索的說明）。"""
+    # ---- HC-8：屬性點的兩句說明（成長面板「升級時每級 +N」、配點教學的範例）組字用 ----
+    # 規格要求新欄位有預設值；伺服器一律由內容庫填，預設值等於目前的內容
+    # （tests/api/test_game_rules_hc8.py 對照）。
+    quantity_scale: int = 10
+    """量類的倍率（``core.yaml`` 的 ``quantity_scale``）：屬性點顯示時 ÷ 這個值。"""
+    attribute_points_per_level: int = 20
+    """每升一級給幾點屬性點（``roguelite.yaml``，量類，×10 量尺）。"""
+    base_attribute: int = 100
+    """開局六項屬性的基礎值（``roguelite.yaml`` 的 ``base_attribute``，量類）。"""
+    start_free_points: int = 40
+    """開局自由分配的屬性點（``roguelite.yaml`` 的 ``start_free_points``，量類）。"""
 
 
 class Glossary(_ApiModel):

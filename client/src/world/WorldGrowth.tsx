@@ -25,7 +25,7 @@ import { choiceLabel, defaultParams, oathButton, paramLabel, spendLock, swearAct
 import {
   ATTR_EMPTY_ZH,
   ATTR_LINE_ZH,
-  ATTR_PER_LEVEL_ZH,
+  attrPerLevelText,
   CARE_FOLD_ZH,
   CARE_FOLDS,
   CARE_LINE_ZH,
@@ -201,7 +201,7 @@ function AttrPane({ view, busy, onChoose }: Pick<Props, "view" | "busy" | "onCho
           <KeepNum text={starter} />
         </Callout>
       )}
-      <TabLine end={<Tag tone="dim">{ATTR_PER_LEVEL_ZH}</Tag>}>
+      <TabLine end={<Tag tone="dim">{attrPerLevelText()}</Tag>}>
         <span>{ATTR_LINE_ZH}</span>
       </TabLine>
       {view.character.attribute_points <= 0 && (

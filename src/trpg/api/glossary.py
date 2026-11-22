@@ -223,6 +223,11 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
         source_min_at_start=core.source_min_at_start,
         summon_guard_radius=library.ai_profiles.summon.guard_radius,
         battle_team_size=TEAM_SIZE,
+        # HC-8：屬性點說明組字用（量類，前端 ÷ quantity_scale 顯示）
+        quantity_scale=core.quantity_scale,
+        attribute_points_per_level=run.attribute_points_per_level,
+        base_attribute=run.base_attribute,
+        start_free_points=run.start_free_points,
         **_world_text_rules(library),
     )
     return rules

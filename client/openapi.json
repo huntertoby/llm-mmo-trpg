@@ -13911,6 +13911,26 @@
           "situation_care_max": {
             "type": "integer",
             "title": "Situation Care Max"
+          },
+          "quantity_scale": {
+            "type": "integer",
+            "title": "Quantity Scale",
+            "default": 10
+          },
+          "attribute_points_per_level": {
+            "type": "integer",
+            "title": "Attribute Points Per Level",
+            "default": 20
+          },
+          "base_attribute": {
+            "type": "integer",
+            "title": "Base Attribute",
+            "default": 100
+          },
+          "start_free_points": {
+            "type": "integer",
+            "title": "Start Free Points",
+            "default": 40
           }
         },
         "additionalProperties": false,
