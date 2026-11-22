@@ -335,6 +335,9 @@ class Glossary(_ApiModel):
     （數字取自 ``core.yaml``）。"""
     objectives: tuple[GlossaryEntry, ...] = ()
     """勝利條件、目標格與結算原因的說明（Phase 3-41b）；``{rounds}`` 由前端填入限時輪數。"""
+    skeletons: tuple[GlossaryEntry, ...] = ()
+    """技能骨架（WL-1 b）：``content/skeletons/`` 的 ``name_zh``／``description_zh``，照 ``order``
+    排序。前端的骨架名稱表只用來覆寫，表裡沒有的骨架顯示這裡的中文名。"""
     weapon_looks: tuple[WeaponLookEntry, ...] = ()
     weapon_ranges: tuple[WeaponRangeEntry, ...] = ()
     """全部武器的射程（CB-3c，``weapons.yaml`` 的 ``range``）；只供畫面挑動畫片段，不做規則判斷。"""

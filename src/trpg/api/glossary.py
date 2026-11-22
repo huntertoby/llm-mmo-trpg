@@ -167,6 +167,10 @@ def build_glossary(library: ContentLibrary) -> Glossary:
         objectives=tuple(
             _entry(t.id, t.name_zh, t.summary_zh, (), t.lines_zh) for t in objective_texts()
         ),
+        skeletons=tuple(
+            _entry(k.id, k.name_zh, k.description_zh)
+            for k in sorted(library.skeletons.values(), key=lambda k: (k.order, k.id))
+        ),
         weapon_looks=tuple(
             WeaponLookEntry(
                 id=w.id, weapon_class=w.weapon_class, two_handed=w.two_handed, look=w.look

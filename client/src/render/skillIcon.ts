@@ -10,7 +10,7 @@
 //   拆解仍只有 `partsOf` 一份（`qIcon/partsAdapter.ts` 的 `toQParts` 只換欄位）。舊畫法（`paintBackground`、`drawMotif`…）留著不刪（規格第 0 節第 11 列）。
 //   畫布一律 `blank()`（測試可換假畫布）、寬高＝顯示 × `ICON_RES`，圖樣照原尺寸對齊整數裝置像素貼上（不縮放）。
 import type { SkillIconData } from "../api/types";
-import { glossaryEntry, statusName, surfaceName } from "../battle/glossary";
+import { glossaryEntry, skeletonName, statusName, surfaceName } from "../battle/glossary";
 import { SHAPE_NAMES } from "../battle/vfx";
 import { paintStatusIcon } from "./statusIcon";
 import { entryTipParts, type TipPart } from "../ui/tipParts";
@@ -419,7 +419,8 @@ const qChip =
 function skeletonTile(skeleton: string, second: boolean): AssemblyTile {
   return {
     cat: second ? "骨架（第二段）" : "骨架",
-    label: SKELETON_NAME[skeleton] ?? skeleton,
+    // WL-1 b：前端表只用來覆寫；表外的骨架讀 /api/glossary 的中文名，都沒有時「未知骨架」（不顯示英文 id）
+    label: skeletonName(skeleton, SKELETON_NAME),
     tip: "技能的骨架：決定這一段怎麼出手",
     id: `skeleton|${skeleton}`,
     // QI-2c：照 `QP.chipCanvas("skeleton")`：深色圓底 (50,50) 半徑 40、沒有色環、圖樣 62 單位

@@ -6022,6 +6022,11 @@ export interface components {
              */
             objectives: components["schemas"]["GlossaryEntry"][];
             /**
+             * Skeletons
+             * @default []
+             */
+            skeletons: components["schemas"]["GlossaryEntry"][];
+            /**
              * Weapon Looks
              * @default []
              */

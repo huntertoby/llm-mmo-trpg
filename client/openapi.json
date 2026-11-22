@@ -15010,6 +15010,14 @@
             "title": "Objectives",
             "default": []
           },
+          "skeletons": {
+            "items": {
+              "$ref": "#/components/schemas/GlossaryEntry"
+            },
+            "type": "array",
+            "title": "Skeletons",
+            "default": []
+          },
           "weapon_looks": {
             "items": {
               "$ref": "#/components/schemas/WeaponLookEntry"

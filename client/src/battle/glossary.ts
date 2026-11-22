@@ -20,7 +20,8 @@ export type GlossaryCategory =
   | "conditions"
   | "triggers"
   | "actions"
-  | "objectives";
+  | "objectives"
+  | "skeletons";
 
 const index = new Map<GlossaryCategory, Map<string, GlossaryEntry>>();
 
@@ -41,6 +42,7 @@ export function setGlossary(g: Glossary): void {
     "triggers",
     "actions",
     "objectives",
+    "skeletons",
   ];
   for (const c of categories) index.set(c, new Map((g[c] ?? []).map((e) => [e.id, e])));
   weaponLooks.clear();
@@ -111,6 +113,19 @@ export const elementName = (id: string): string => glossaryName("elements", id);
 export const effectName = (id: string): string => glossaryName("effects", id);
 export const conditionName = (id: string): string => glossaryName("conditions", id);
 export const triggerName = (id: string): string => glossaryName("triggers", id);
+/** 未知骨架的顯示字（WL-1 b，玩法 PM 2026-11-22 定用字）：名稱表和對照表都找不到時用，玩家畫面不出現英文 id。 */
+export const UNKNOWN_SKELETON_NAME = "未知骨架";
+/**
+ * 骨架的中文名（WL-1 b）：`override`（前端的覆寫表）→ `/api/glossary` 的 `skeletons`（`content/skeletons/*.yaml` 的 `name_zh`）
+ * → 「未知骨架」。`null`、`undefined`、空字串也回「未知骨架」，不丟錯。
+ */
+export function skeletonName(id: string | null | undefined, override: Readonly<Record<string, string>> = {}): string {
+  if (id == null || id === "") return UNKNOWN_SKELETON_NAME;
+  const own = Object.hasOwn(override, id) ? override[id] : undefined;
+  if (own !== undefined && own !== "") return own;
+  const data = glossaryEntry("skeletons", id)?.name_zh;
+  return data !== undefined && data !== "" ? data : UNKNOWN_SKELETON_NAME;
+}
 
 /** 效果原語、條件、觸發的玩家說明（內容檔的 `player_description`／`description_zh`）；沒有時為空字串。 */
 export const glossaryDescription = (category: GlossaryCategory, id: string): string => glossaryEntry(category, id)?.description_zh ?? "";

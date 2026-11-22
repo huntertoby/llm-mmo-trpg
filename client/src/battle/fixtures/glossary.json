@@ -4868,6 +4868,152 @@
    "rules_dice": []
   }
  ],
+ "skeletons": [
+  {
+   "id": "strike",
+   "name_zh": "打擊",
+   "description_zh": "單體傷害，搭配 0–1 個附帶效果（例如擊倒、流血）。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "area",
+   "name_zh": "範圍",
+   "description_zh": "形狀傷害，搭配表面或狀態等附帶效果。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "control",
+   "name_zh": "控場",
+   "description_zh": "狀態、表面、障礙或地形為主，傷害為輔。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "displace",
+   "name_zh": "位移",
+   "description_zh": "以位移為核心（推、拉、傳送、擊倒），傷害與其他附帶效果為輔。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "builder_finisher",
+   "name_zh": "蓄力與終結",
+   "description_zh": "一個技能累積層數，另一個消耗層數換成更高的傷害。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "combo",
+   "name_zh": "連段",
+   "description_zh": "以條件觸發的傷害（本回合或目標狀態等）；技能或效果必須有條件。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "trap",
+   "name_zh": "陷阱",
+   "description_zh": "在地面放置隱藏的陷阱，觸發時以陷阱格為中心結算技能的其餘效果。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "aura",
+   "name_zh": "光環",
+   "description_zh": "單一友方（含自己）或範圍內友方獲得治療、護盾、增益、淨化或有益表面；不得有對敵方的效果。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "summon",
+   "name_zh": "召喚",
+   "description_zh": "召喚物與持續時間。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "reaction",
+   "name_zh": "反應技",
+   "description_zh": "以反應而非 AP 觸發。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "stance",
+   "name_zh": "姿態",
+   "description_zh": "切換狀態，持續到取消。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "passive",
+   "name_zh": "被動",
+   "description_zh": "觸發時機加效果。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "modifier",
+   "name_zh": "修正",
+   "description_zh": "改變持有者自己的其他技能或基本動作（改造型），或持續改變攻擊的數值（修正型被動）。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "consume_status",
+   "name_zh": "消耗狀態",
+   "description_zh": "消耗目標身上的狀態，換取更強的效果。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "rune",
+   "name_zh": "刻印",
+   "description_zh": "在地面刻下自己專屬的符文（不立即生效），或引爆範圍內自己的符文。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  },
+  {
+   "id": "sacrifice",
+   "name_zh": "獻祭",
+   "description_zh": "獻祭自己的一個召喚物，在它的位置爆炸（傷害範圍內的敵人）或治療範圍內的友方。",
+   "tags": [],
+   "status_look": null,
+   "rules_zh": [],
+   "rules_dice": []
+  }
+ ],
  "weapon_looks": [
   {
    "id": "arcane_blade",

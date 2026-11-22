@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import type { SkillIconData } from "../api/types";
+import { skeletonName, UNKNOWN_SKELETON_NAME } from "../battle/glossary";
 import { ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
 import { listFiles, readFile, SRC_DIR } from "../test/sourceScan";
 import { ELEMENT_COLORS } from "./palette";
@@ -106,10 +107,14 @@ describe("部件庫：對照 content/ 沒有漏", () => {
     expect(Object.keys(ELEMENT_ICON).sort()).toEqual([...vfx].sort());
   });
 
-  it("每個骨架都有名稱", () => {
+  it("每個骨架都有名稱（WL-1 b：覆寫表或名詞表，不是英文 id、不是「未知骨架」）", () => {
     const ids = skeletonFiles.map((f) => f.replace(/\.yaml$/, ""));
     expect(ids.length).toBeGreaterThan(10);
-    for (const id of ids) expect(SKELETON_NAME[id], id).toBeDefined();
+    for (const id of ids) {
+      const name = skeletonName(id, SKELETON_NAME);
+      expect(name, id).not.toBe(id);
+      expect(name, id).not.toBe(UNKNOWN_SKELETON_NAME);
+    }
   });
 });
 
