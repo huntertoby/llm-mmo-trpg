@@ -8,6 +8,8 @@ import type { GlossaryEntry } from "../api/types";
 export interface TipPart {
   text: string;
   secondary: boolean;
+  /** E4b（E4 驗收小修 1）：前面是「・」的分點；換行時懸掛縮排，第二行起對齊「・」後面的字。 */
+  bullet?: boolean;
 }
 
 /**
@@ -36,7 +38,7 @@ export function tipParts(lines: readonly string[], dice: ReadonlySet<number> = n
 export function entryTipParts(entry: GlossaryEntry | undefined, fallback: string): TipPart[] {
   const rules = entry?.rules_zh ?? [];
   // E4（KD-1 驗收小修 1）：只列規則的項目（倒地）一條規則一行、前面加「・」，不接說明（同「扶起」說明卡的排法）
-  if (entry?.rules_only === true && rules.length > 0) return rules.map((line) => ({ text: `・${line}`, secondary: false }));
+  if (entry?.rules_only === true && rules.length > 0) return rules.map((line) => ({ text: `・${line}`, secondary: false, bullet: true }));
   const dice = new Set((entry?.rules_dice ?? []).map((d) => d.line + 1)); // 第 0 行是說明
   const found = tipParts([entry?.description_zh ?? "", ...rules], dice);
   return found.length === 0 ? [{ text: fallback, secondary: false }] : found;

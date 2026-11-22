@@ -586,6 +586,21 @@ export const COST: PartTable = {
 // =====================================================================
 const redStar = (c: Ctx, x: number, y: number, R = 5.4) => { poly(c, "#ff4a5a", starPts(x, y, R, R * 0.45, 6), 0.3); poly(c, "#ffffff", starPts(x, y, R * 0.5, R * 0.22, 6)); };
 const shieldAt = (c: Ctx, o: QOpts) => at(c, 4.6, 4.6, 0.56, (q) => QS.ACT.shield.d(q, o, QS.ACT.shield.def as Tint));
+/** E4 格擋時（e4Triggers.js blockArt）：大藍盾＋左上緣的黃撞擊星＋（>14）被彈開的小亮劍。 */
+function blockArt(c: Ctx, o: QOpts) {
+  at(c, 2.4, 1.6, 0.84, (q) => QS.ACT.shield.d(q, o, QS.ACT.shield.def as Tint));
+  if (!o.tiny) halo(c, o, (q) => at(q, -6.0, 2.2, 0.46, (p) => bladeSword(p, o), -0.42)); /* 盾的左邊、劍尖朝左上外翻（被彈開），柄在右下；不疊在撞擊星底下 */
+  halo(c, o, (q) => burstStar(q, -3.6, -4.6, o.tiny ? 5.2 : 4.6, "#ffd23f")); /* 盾的左上緣：鏗一聲擋下的那一點 */
+}
+/** E4 你讓別人位移時（e4Triggers.js displaceArt）：右邊亮紅人形，左下原地一圈米白空影子圈，影子圈上方兩道米白速度線（≤14 實心扁橢圓＋一道）。 */
+function displaceArt(c: Ctx, o: QOpts) {
+  at(c, 0.4, -0.4, 0.9, (u) => {
+    if (o.tiny) f(u, CREAM, () => u.ellipse(-5.8, 7.6, 4.4, 2.2, 0, 0, TAU));
+    else { f(u, CREAM, () => u.ellipse(-6.0, 7.6, 4.6, 2.4, 0, 0, TAU)); f(u, OUT, () => u.ellipse(-6.0, 7.6, 2.6, 0.9, 0, 0, TAU)); } /* 環的洞用外框色＝自查不算進亮度 */
+    for (const [y, x0, x1] of o.tiny ? [[1.2, -8.6, -1.0] as const] : ([[-2.2, -8.4, -1.6], [2.6, -9.8, -1.2]] as const)) rr(u, CREAM, x0, y - 1.1, x1 - x0, 2.2, 1.1);
+    halo(u, o, (q) => bust(q, ENEMY, 4.8, 2.6, 0.9));
+  });
+}
 export const TRIG: PartTable = {
   on_hit: { zh: "命中時", topic: "右上一顆大的黃色撞擊閃光，左下短粗的亮劍刺進去", d: fit((c, o) => { at(c, -2.2, 2.2, 0.6, (q) => bladeSword(q, o), PI / 4); halo(c, o, (q) => burstStar(q, 3.4, -3.4, 7.6, "#ffd23f")); }, 0.9) }, /* 第 2 版：細劍＋小閃光在 18px 是一條灰線；改成撞擊閃光為主、亮劍為輔（傷害是白四芒、暴擊是橘黃八芒） */
   on_kill: { zh: "擊倒時", topic: "骷髏頭、紅眼", src: "b3:finisher", d: fit(act("finisher"), 0.88) },
@@ -628,9 +643,12 @@ export const TRIG: PartTable = {
   },
   /* AR-AP2：AP-2 的觸發換成專屬圖樣（ap2Borrow.js），加在最後。 */
   on_ap_spent_all: { zh: "這回合用完所有 AP 時", topic: "卡片 AP 的閃電換成用掉的灰色，左下尖端掉出最後一顆金色四芒火花", d: spentAll },
+  /* E4：格擋時、你讓別人位移時換成專屬圖樣（e4Triggers.js 的 blockArt、displaceArt），加在最後。 */
+  on_block: { zh: "格擋時", topic: "一面放大的淡藍盾（受擊家族的同一面盾，佔滿），左上緣一顆黃白撞擊星，一把小亮劍被彈開、劍尖朝左上外翻（≤14 只留盾＋撞擊星）", d: blockArt },
+  on_displace: { zh: "你讓別人位移時", topic: "右邊一個紅色人形（被移走的另一方），左下原地一圈米白空影子圈，影子圈上方兩道米白速度線拖到人形背後（≤14 實心影子＋一道速度線）", d: displaceArt },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent", on_displace: "on_collision", on_block: "hit_by_melee" }; // E4：你讓別人位移時先借「造成撞擊後」、格擋時先借「被近戰命中時」（劍砍向盾），待美術出圖；TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借；AR-AP2：用完所有 AP 時換成專屬圖樣，拿掉暫借
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // E4：格擋時、你讓別人位移時換成專屬圖樣（TRIG 最後），拿掉暫借；TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借；AR-AP2：用完所有 AP 時換成專屬圖樣，拿掉暫借
 
 // =====================================================================
 // 接續 6 個
