@@ -174,6 +174,11 @@
   color: var(--accent);
 }
 
+/* E3b：滑過的格子在側欄已有的項目直接標金色（不另外在最上面再列一次） */
+.telegraph-list .telegraph-hot {
+  color: var(--accent);
+}
+
 /* Phase 3-41b：環境預告的項目可以滑過（在地圖上標出涉及的格子） */
 
 .telegraph-item {

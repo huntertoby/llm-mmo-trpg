@@ -18,7 +18,7 @@ import { showsRevivable } from "../battle/drawModel";
 import { heightNote } from "../battle/elevation";
 import { remainingRounds, summonKind } from "../battle/summons";
 import { modeText } from "../battle/summonControl";
-import { raceDetailText } from "../battle/race";
+import { RaceDetail } from "./RacePassive";
 import { HIDDEN_INFO_HINT, isHiddenInfo, UNKNOWN_MARK } from "../battle/hiddenInfo";
 import type { UnitNames } from "../battle/units";
 import { GearIcon } from "./GearIcon";
@@ -112,7 +112,7 @@ export function detailRows(unit: UnitView, names: UnitNames, view?: BattleView):
     ...unit.offhand_traits_zh.map((line): [string, ReactNode] => ["　特性", <RuleText key={line} text={line} />]),
     ...(unit.race == null
       ? []
-      : [["種族", raceDetailText(unit.race)] as [string, ReactNode]]),
+      : [["種族", <RaceDetail key="race" race={unit.race} />] as [string, ReactNode]]),
     ["位置", `(${unit.pos.x}, ${unit.pos.y})`],
   ];
   if (unit.owner_id !== null) {

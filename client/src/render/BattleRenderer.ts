@@ -206,6 +206,7 @@ export class BattleRenderer extends VfxLayer {
     this.ambient.begin(model);
     this.flameMarks = [];
     this.heightBadges = [];
+    this.heightBadgeAt.clear();
     for (const t of model.tiles) this.tileSprite(model, t);
     this.drawPracticeScene(model); // PR-2c：測試模式的滑軌與方角水池（實戰沒有）
     this.motion.drawSurfaces(model, this.surfaceHost);
@@ -229,6 +230,7 @@ export class BattleRenderer extends VfxLayer {
       if (look === null) this.ambient.object(node, o); // 6N-10：草叢、竹叢依風向擺
     }
     this.drawBadges(model);
+    this.liftPathBadges(); // E3b：路徑線經過的格子，「▲N」畫在線上面（rows.reset 重建了標記）
     for (const trap of model.traps) this.drawTrap(trap);
     this.drawRgTraces(model); // RG-3：可疑痕跡（陷阱層）
     this.drawLinks(model);

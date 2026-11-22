@@ -16,6 +16,7 @@ from trpg.engine.path_preview import (
     PathStep,
     SlipRun,
     StepReach,
+    TrailPreview,
 )
 from trpg.shared.types import Pos, Surface, UnitId
 
@@ -25,6 +26,7 @@ __all__ = [
     "PathPreviewRequest",
     "PathStepOut",
     "SlipRunOut",
+    "TrailOut",
     "path_preview_out",
 ]
 
@@ -118,6 +120,17 @@ class SlipRunOut(_ApiModel):
     """失敗的停點上的表面（冰與無表面以外）。"""
 
 
+class TrailOut(_ApiModel):
+    """這次移動沿路會留下的表面（地形規則「霜行」，E3b）：畫面在這些格子畫框線（不畫成冰），
+    預覽牌加一行「沿路留下冰 N 格（M 回合後消失）」。"""
+
+    tiles: tuple[XY, ...]
+    """會留下表面的格子（起點與途經；停點不留）。"""
+    surface: Surface
+    duration: int
+    """持續幾個環境回合（到期直接消失）。"""
+
+
 class PathPreviewOut(_ApiModel):
     unit_id: UnitId
     path: tuple[XY, ...]
@@ -140,6 +153,8 @@ class PathPreviewOut(_ApiModel):
     move_cost: int
     slip_runs: tuple[SlipRunOut, ...]
     """連續冰面段（6A-4f），依路徑順序。"""
+    trail: TrailOut | None = None
+    """沿路會留下的表面（霜行，E3b）；沒有時 ``null``。"""
 
 
 def _event_out(event: PathEvent) -> PathEventOut:
@@ -189,6 +204,12 @@ def _run_out(run: SlipRun, path: tuple[XY, ...]) -> SlipRunOut:
     )
 
 
+def _trail_out(t: TrailPreview | None) -> TrailOut | None:
+    if t is None:
+        return None
+    return TrailOut(tiles=t.tiles, surface=t.surface, duration=t.duration)
+
+
 def path_preview_out(p: PathPreview) -> PathPreviewOut:
     return PathPreviewOut(
         unit_id=p.unit_id,
@@ -204,4 +225,5 @@ def path_preview_out(p: PathPreview) -> PathPreviewOut:
         certain=p.certain,
         move_cost=p.move_cost,
         slip_runs=tuple(_run_out(r, p.path) for r in p.slip_runs),
+        trail=_trail_out(p.trail),
     )

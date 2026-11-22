@@ -66,6 +66,16 @@
   margin-top: 3px;
 }
 
+/* E3b（美術 E3 驗收小修 3）：種族那行換行時最後一行不要只剩一兩個字 */
+.hud-race {
+  text-wrap: pretty;
+}
+
+/* E3b（美術 E3 驗收小修 1）：種族被動加註裡沒有作用的那一段標灰（HUD、角色面板共用 `RacePassive`） */
+.race-passive .race-off {
+  color: var(--muted);
+}
+
 .hero-downed-notice {
   align-self: flex-start;
   padding: 4px 12px;

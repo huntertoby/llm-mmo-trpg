@@ -46,7 +46,12 @@ from trpg.engine.rules.footprint import is_giant, tiles_of
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import effective_attribute, next_turn_ap_penalty
-from trpg.engine.rules.unit_rules import TerrainNote, race_override_zh, terrain_notes
+from trpg.engine.rules.unit_rules import (
+    TerrainNote,
+    race_overridden_fully,
+    race_override_zh,
+    terrain_notes,
+)
 from trpg.engine.skills.revive import revivable
 from trpg.engine.skills.targeting import skill_mana_cost
 from trpg.engine.state import (
@@ -105,6 +110,10 @@ class TileView(_ViewModel):
     surface_team: Team | None
     object_id: str | None
     surface_creator: UnitId | None
+    surface_trail: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
+    """這片表面是誰用地形規則「霜行」（``trail_surface``）沿路留下的（E3b，08 8.29 E3 顯示：
+    名詞說明寫「〇〇沿路留下的冰」）；其他表面為 ``None`` 而且不輸出（既有的格子 JSON 逐字不變）。
+    地圖上看得到這片表面，留下的人的名字跟著寫出（守則 14：和 ``surface_creator`` 同一級）。"""
 
 
 class ObjectView(_ViewModel):
@@ -409,6 +418,9 @@ class RaceView(_ViewModel):
     passive_overridden_zh: str | None = None
     """環境被動被裝備較強的同種地形規則蓋過時的說明（E3，08 8.29 E2 補充；例「被腳的「水上移動
     +2」蓋過」、部分蓋過「水的部分被……蓋過」）；沒有時 ``None``。"""
+    passive_overridden_full: bool | None = Field(default=None, exclude_if=lambda v: v is None)
+    """E3b：有 ``passive_overridden_zh`` 時，是不是整條被蓋過（前端寫「…蓋過，沒有作用」；部分蓋過寫
+    「…蓋過，其他有作用」）；沒被蓋過時 ``None`` 而且不輸出。"""
     look: RaceLook
     """種族的預設外觀（Phase 3R-3b，``races.yaml`` 的 ``look``；純顯示資料）：
     前端紙娃娃疊在單位外觀上。"""
@@ -1264,7 +1276,10 @@ def _race_view(state: BattleState, unit: UnitState) -> RaceView | None:
         passive_name_zh=race.passive.name_zh,
         passive_description_zh=race.passive.description_zh,
         passive_active=passive_active(state, unit),
-        passive_overridden_zh=_race_override(state, unit),
+        passive_overridden_zh=(override := _race_override(state, unit)),
+        passive_overridden_full=(
+            None if override is None else race_overridden_fully(state.ruleset, unit)
+        ),
         look=race.look,
     )
 
@@ -1317,6 +1332,7 @@ def project_for(state: BattleState, team: Team) -> BattleView:
             surface_team=t.surface_team,
             object_id=t.object_id,
             surface_creator=t.surface_creator,
+            surface_trail=t.surface_trail,
         )
         for y in range(state.height)
         for x in range(state.width)

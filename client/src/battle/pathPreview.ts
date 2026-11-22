@@ -13,6 +13,7 @@ export type PathStep = Schemas["PathStepOut"];
 export type PathEvent = Schemas["PathEventOut"];
 export type PathPreviewRequest = Schemas["PathPreviewRequest"];
 export type SlipRun = Schemas["SlipRunOut"];
+export type TrailPreview = Schemas["TrailOut"];
 
 /** 路徑一段的種類：一般、冰面（滑倒有機率）、陷阱或火、到不了。 */
 export type SegKind = "normal" | "ice" | "danger" | "unreachable";
@@ -53,6 +54,17 @@ export const FRAME_COLORS: Readonly<Record<FrameKind, number>> = {
 
 export type TagIcon = "ice" | "trap" | "fire" | "water" | "hit" | "status";
 
+/**
+ * E3b（霜行，08 8.29 E3 顯示）：這次會留下表面的格子畫框線，不畫成冰（美術：地圖上的冰會讓人以為現在就有冰）。
+ * 框線顏色依留下的表面；沒列的表面用白色。
+ */
+export const TRAIL_COLORS: Readonly<Record<string, number>> = {
+  ice: 0xbfeaff,
+  fire: 0xffa060,
+  water: 0x8cc8ff,
+};
+export const TRAIL_DEFAULT_COLOR = 0xffffff;
+
 export const TAG_COLORS: Readonly<Record<TagIcon, number>> = {
   ice: 0x1e78d0,
   trap: 0xff6a50,
@@ -79,11 +91,13 @@ export interface PathDraw {
   bangs: Pos[];
   /** 冰面滑倒時的停點（#123，6E-2）：畫 ◆；`slide` 是滑行路徑（含起點）。 */
   slipStops: Array<{ pos: Pos; slide: Pos[] }>;
+  /** E3b：這次沿路會留下表面的格子（霜行；起點與途經，停點不留）：畫虛線框線，不畫成冰。 */
+  trail: Array<{ pos: Pos; surface: string }>;
   /** 原定的終點走不到：虛線框＋淡影，標「到不了」。 */
   missEnd: Pos | null;
 }
 
-export const EMPTY_PATH_DRAW: PathDraw = { segments: [], dots: [], frames: [], tags: [], bangs: [], slipStops: [], missEnd: null };
+export const EMPTY_PATH_DRAW: PathDraw = { segments: [], dots: [], frames: [], tags: [], bangs: [], slipStops: [], trail: [], missEnd: null };
 
 const toPos = (xy: readonly number[]): Pos => ({ x: xy[0] as number, y: xy[1] as number });
 
@@ -282,6 +296,27 @@ export function stopBangs(pv: PathPreview): Pos[] {
   return out;
 }
 
+/** E3b：預覽牌那一行「沿路留下冰 N 格（M 回合後消失）」；表面不是冰時換成那種表面的名字。 */
+export function trailText(trail: TrailPreview): string {
+  return `沿路留下${surfaceName(trail.surface)} ${trail.tiles.length} 格（${trail.duration} 回合後消失）`;
+}
+
+const TRAIL_ICONS: Readonly<Record<string, TagIcon>> = { ice: "ice", fire: "fire", water: "water" };
+
+/** E3b：沿路留表面的預覽牌（放在停點；不會留下任何一格時 `null`）。 */
+export function trailTag(pv: PathPreview): PathTag | null {
+  const trail = pv.trail ?? null;
+  if (trail === null || trail.tiles.length === 0) return null;
+  return { pos: toPos(pv.stop), icon: TRAIL_ICONS[trail.surface] ?? "status", text: trailText(trail) };
+}
+
+/** E3b：會留下表面的格子（框線）。 */
+export function trailCells(pv: PathPreview): Array<{ pos: Pos; surface: string }> {
+  const trail = pv.trail ?? null;
+  if (trail === null) return [];
+  return trail.tiles.map((xy) => ({ pos: toPos(xy), surface: trail.surface }));
+}
+
 /** 原定的終點走不到時回傳終點。 */
 export function missedEnd(pv: PathPreview): Pos | null {
   const last = pv.steps[pv.steps.length - 1];
@@ -295,6 +330,7 @@ export function pathDraw(pv: PathPreview | null): PathDraw {
   const segments = pathSegments(pv);
   const drawn = segments.length > 0;
   const steps = pv.steps.slice(1);
+  const trail = trailTag(pv);
   return {
     segments,
     dots: drawn ? steps.map((s) => ({ pos: toPos(s.pos), kind: stepKind(s) })) : [],
@@ -302,12 +338,16 @@ export function pathDraw(pv: PathPreview | null): PathDraw {
       const kind = stepMissed(s) ? null : frameOf(s);
       return kind === null ? [] : [{ pos: toPos(s.pos), kind }];
     }),
-    tags: steps.flatMap((s) => {
-      const tag = stepTag(s, pv);
-      return tag === null ? [] : [tag];
-    }),
+    tags: [
+      ...steps.flatMap((s) => {
+        const tag = stepTag(s, pv);
+        return tag === null ? [] : [tag];
+      }),
+      ...(trail === null ? [] : [trail]),
+    ],
     bangs: stopBangs(pv),
     slipStops: slipStops(pv),
+    trail: trailCells(pv),
     missEnd: missedEnd(pv),
   };
 }
