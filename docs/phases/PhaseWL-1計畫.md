@@ -50,3 +50,28 @@
   - 開發中經看門狗只跑相關的測試。
   - 全部 commit 之後，照派工的指示跑 `uv run python scripts/check.py` 和 slow 的 parity、cli。
 - **commit 與報告**：每項一個 commit。報告寫在 `docs/phases/PhaseWL-1報告.md`。
+
+---
+
+# b 段：前端退回圖示（a 段合併後才派）
+
+> 來源：
+> - 美術 PM 裁定 `docs/art/WL-1b退回圖示.md`：同意，沿用現行的退回畫法，不畫新圖。
+> - 玩法 PM 定用字（2026-11-22）：骨架名稱找不到時顯示「未知骨架」。
+
+## 範圍
+
+1. **骨架名稱改從資料讀**：`skillIcon.ts` 的 `SKELETON_NAME[skeleton] ?? skeleton` 改成讀後端帶來的骨架中文名（`content/skeletons/*.yaml` 的 `name_zh`），前端的表只用來覆寫。
+   - API 沒帶名稱就加欄位，欄位要有預設值，並重產 OpenAPI 和前端型別。
+   - 資料裡也找不到名稱時，顯示「未知骨架」。玩家畫面不能出現英文 id。
+   - 目前 16 種骨架顯示的字要和現在逐字相同。
+2. **每條路都走得到退回畫法，不會壞**：
+   - 狀態圖示照 `qIcon/status.ts` 的 `paintUnknown`；骨架徽章和其他部件圓片照 `qIcon/parts.ts` 的 Q 版問號。
+   - 沒有名稱、空字串、`null` 都要畫得出來，不能丟錯誤，也不能整格空白。
+3. **待畫清單快照**：寫一個 vitest，列出目前所有走到退回畫法的 id（狀態、骨架、部件），存成快照。這份清單就是美術的待畫清單。
+
+## 驗收
+
+- 截圖照 `docs/art/WL-1b退回圖示.md` 最後一節的 3 組，在開發頁拍，網址加 `?mute=1`，存到 `docs/art/shots/wl-1b/`。第 1 組要和 QI-3a 的 `3a-05` 長得一樣。
+- tsc、vitest、build 的結束碼都要是 0。有動到後端時，再加 ruff、format、mypy、lint-imports、`classify.py --check`。
+- 全部 commit 之後，照派工的指示跑全量檢查。報告接在 `docs/phases/PhaseWL-1報告.md` 的 b 節。
