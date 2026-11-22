@@ -38,11 +38,17 @@ testmon 已安裝，`check.py --testmon` 做好、有測試。試跑對照只做
   - `tests/api/test_wish_pregen.py::test_text_wish_is_logged_and_replayed_without_llm`（`WorldActionError`：池子沒聽懂願望）
   - 判斷：背景執行緒（`ThreadPoolExecutor`）的 Mock 生成被覆蓋追蹤拖慢，超過 10 秒的等待。testmon 會一直重選失敗過的測試，所以只要有資料，這兩個每次都會被選到、每次都失敗，`--testmon` 的結束碼永遠是 1。
 
-## 3. 試跑對照表（1／8，暫停中）
+## 3. 試跑對照表（有效 2／8，暫停中）
 
 | # | 種類 | 改動 | 選到／全部 | 選測試耗時 | 全跑耗時 | 選測試失敗 | 全跑失敗 | 漏抓 |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 故意弄壞：引擎結算 | `src/trpg/engine/crit_damage.py` 基礎暴擊倍率加 100 | 1443／18694（7.7%） | 655 秒 | 667 秒 | 40（38＋上面 2 個 testmon 才有的） | 38 | 0 |
+| 2 | 故意弄壞：規則 | `src/trpg/engine/rules/movement.py` 起身花費改成無條件捨去 | 164／18714（0.9%） | 一般 356 秒；nocollect 115 秒 | 780 秒 | 一般 3（1＋2 個 wish）；nocollect 1 | 1 | 一般 0；nocollect 0 |
+| 3 | 故意弄壞：內容載入（無效，要重做） | `src/trpg/content/races.py` 預設髮型一律 `none`，整個內容載入失敗 | 514／18714（預先收集結束碼 2） | 一般 889 秒（看門狗卡住重跑一次）；nocollect 76 秒 | 7620 秒，卡住兩次判失敗（124），沒有失敗清單 | 一般 492；nocollect 499 | 無法比 | 無法比 |
+
+- 第 2 次之前先合併 main `0463be2b9`（合併後是 `f3487fc54`），用 testmon 重建資料：選了 6050 個，跑 721 秒（只有 2 個 wish 失敗）。第 2 次起用這份資料當基準。
+- 依開發 PM 裁定，2 個 wish 測試當已知失敗，不算漏抓，也不算進結束碼判斷。nocollect 不記覆蓋，這 2 個在 nocollect 底下會過。
+- 第 3 次弄壞得太大：內容載入失敗，幾千個測試同時失敗，xdist 的 worker 一直掛掉、補開，最後整組卡住（stuck.txt 裡連 `test_check_split` 都卡 1829 秒），全跑沒有結果。這次對照無效，續跑時要改用影響小的寫法重做，預定改 `src/trpg/content/loader.py` 的驗證錯誤訊息開頭。
 
 - 選到的 1443 個多半是長的整合測試（跑整場戰鬥、重播、模擬），加上覆蓋追蹤，CPU 總時數 6164 秒，和全跑的 6646 秒差不多。
 - 還沒做：故意弄壞的規則（`engine/rules/movement.py`）、內容載入、skillgen（`skillgen/budget.py`）、API 四次；真實改動三次（已挑 `343b165da`、`4c4da4303`、`ee6b45d51`，暫時 worktree 已開在 scratchpad 的 `rw/`，建在 `343b165da` 的上一版，已裝好兩個套件）。
