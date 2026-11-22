@@ -6,13 +6,17 @@
 **同一種規則不疊加**（8.29 E2 第 1 點；開發 PM 與玩法 PM 2026-11-22 補定判法）。每條規則有一組
 「鍵」——它作用的表面、天氣、地形或地圖標籤（:func:`rule_keys`；沒有這類參數的規則只有一個鍵）：
 
-- 每個鍵由**第一個**給它的來源決定（開關型就是「有」；數值型取那個來源的數值）。後面的來源在這個鍵
-  上沒有效果，不疊加。
-- 一個來源的鍵**全部**被前面的來源給過 → 這條完全重複，標灰（:attr:`SourceOverlap.full`）。
-- 只有**部分**鍵被給過 → 這條照樣生效，重疊的鍵只算一份，卡片註明重疊的部分。
+- 每個鍵只有**一個**來源生效（開關型就是「有」；數值型取那個來源的數值），不疊加。
+- 誰生效：開關型是**第一個**給它的來源。數值型（``amount``、``permille``、``radius``、``duration``）
+  取**較強**的那條（E3，08 8.29 E2 補充；開發 PM 2026-11-22 補定）：比的是實際值——裝備給的移動加成
+  先截到裝備移動合計上限（:func:`gear_move_room`）再比；一樣強時排在前面的生效（種族先）。只有其他
+  參數也相同時才比強弱（例 ``trail_surface`` 的表面不同時，排在前面的生效）。
+- 一個來源的鍵**全部**由別的來源生效 → 這條沒有效果（:attr:`SourceOverlap.full`）：裝備標灰；種族
+  那條在角色面板註明被蓋過（:func:`race_override_zh`）。
+- 只有**部分**鍵由別的來源生效 → 這條照樣生效，重疊的鍵只算一份，卡片註明重疊的部分。
 
-判斷集中在 :func:`classify_sources`；戰鬥中的查詢 :func:`first_source` 用同一個規則（第一個給這個鍵
-的來源），兩者一致。
+判斷集中在 :func:`classify_sources`；戰鬥中的查詢 :func:`first_source` 用同一個規則（那個鍵上生效的
+來源），兩者一致。
 
 裝備地形規則給的移動加成計入「裝備的移動加成合計」上限（8.21.5.3，``caps.move_bonus``）：
 :func:`gear_move_room`。
@@ -22,13 +26,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
 from trpg.content.equipment import TerrainAffix, affix_text
 from trpg.content.library import Ruleset
 from trpg.content.slots import SLOT_INDEX, SLOT_ZH
-from trpg.content.unit_rules import UnitRule
+from trpg.content.unit_rules import UNIT_RULE_SPECS, UnitRule
 from trpg.engine.gear.state import GearAffix
 from trpg.engine.state import UnitState
 from trpg.shared.types import Surface
@@ -37,13 +41,18 @@ __all__ = [
     "ANY_KEY",
     "RuleSource",
     "SourceOverlap",
+    "Strength",
     "TerrainNote",
     "classify_sources",
+    "effective_strength",
     "first_source",
     "gear_move_room",
+    "race_override_zh",
+    "raw_strength",
     "rule_keys",
     "rule_sources",
     "terrain_notes",
+    "winners",
 ]
 
 ANY_KEY = "*"
@@ -78,16 +87,76 @@ class RuleSource:
 
 @dataclass(frozen=True, slots=True)
 class SourceOverlap:
-    """一條規則和前面來源的重疊：``covered`` 是被前面的來源給過的鍵（鍵 → 給它的那個來源），
-    依鍵在本規則中的順序。"""
+    """一條規則和其他來源的重疊：``covered`` 是由別的來源生效的鍵（鍵 → 生效的那個來源），依鍵在
+    本規則中的順序。"""
 
     source: RuleSource
     covered: tuple[tuple[str, RuleSource], ...]
 
     @property
     def full(self) -> bool:
-        """所有鍵都被前面給過：完全重複（標灰、沒有效果）。"""
+        """所有鍵都由別的來源生效：完全重複（沒有效果）。"""
         return len(self.covered) == len(rule_keys(self.source.rule))
+
+
+type Strength = Callable[[RuleSource], int]
+"""一個來源的強弱（越大越強；:func:`raw_strength`、:func:`effective_strength`）。"""
+
+_NUMERIC_FIELDS = ("amount", "permille", "radius", "duration")
+_MOVE_RULES = frozenset({"surface_move_bonus", "weather_move_bonus"})
+
+
+def raw_strength(source: RuleSource) -> int:
+    """規則的數值（越大越強；元素減傷 ``permille`` 是負數，取絕對值）；開關型為 0。"""
+    rule = source.rule
+    for name in _NUMERIC_FIELDS:
+        value: int | None = getattr(rule, name)
+        if value is not None:
+            return abs(value) if rule.rule == "damage_taken_permille" else value
+    return 0
+
+
+def effective_strength(rules: Ruleset, unit: UnitState) -> Strength:
+    """實際的強弱：裝備給的移動加成先截到裝備移動合計上限（:func:`gear_move_room`；開發 PM
+    2026-11-22），其他同 :func:`raw_strength`。"""
+    room = gear_move_room(rules, unit)
+
+    def strength(source: RuleSource) -> int:
+        value = raw_strength(source)
+        if source.gear is not None and source.rule.rule in _MOVE_RULES:
+            return min(value, room)
+        return value
+
+    return strength
+
+
+def _signature(rule: UnitRule) -> tuple[object, ...]:
+    """比強弱前要相同的其他參數（不含鍵與數值；例 ``trail_surface`` 的表面）。"""
+    key_field = _KEY_FIELD.get(rule.rule)
+    spec = UNIT_RULE_SPECS[rule.rule]
+    return tuple(
+        getattr(rule, name)
+        for name in spec.required
+        if name != key_field and name not in _NUMERIC_FIELDS
+    )
+
+
+def winners(
+    sources: Sequence[RuleSource], strength: Strength = raw_strength
+) -> dict[tuple[str, str], RuleSource]:
+    """每個（規則種類, 鍵）上生效的來源（規則見模組說明）：依來源順序走，較強而且其他參數相同時
+    取代。"""
+    won: dict[tuple[str, str], RuleSource] = {}
+    for source in sources:
+        kind = source.rule.rule
+        for key in rule_keys(source.rule):
+            current = won.get((kind, key))
+            if current is None or (
+                strength(source) > strength(current)
+                and _signature(source.rule) == _signature(current.rule)
+            ):
+                won[kind, key] = source
+    return won
 
 
 def rule_keys(rule: UnitRule) -> tuple[str, ...]:
@@ -118,26 +187,34 @@ def rule_sources(rules: Ruleset, unit: UnitState) -> tuple[RuleSource, ...]:
 def first_source(
     rules: Ruleset, unit: UnitState, rule: str, keys: Iterable[str] = (ANY_KEY,)
 ) -> RuleSource | None:
-    """第一個在 ``keys`` 的任一個鍵上給了規則 ``rule`` 的來源（就是那個鍵上生效的來源）；沒有時
-    ``None``。"""
-    wanted = set(keys)
-    for source in rule_sources(rules, unit):
-        if source.rule.rule == rule and wanted.intersection(rule_keys(source.rule)):
-            return source
-    return None
+    """``keys`` 的鍵上生效的規則 ``rule`` 的來源（:func:`winners`）；好幾個鍵各有不同的來源時取
+    最強的、一樣強時取排在前面的。沒有時 ``None``。"""
+    sources = tuple(s for s in rule_sources(rules, unit) if s.rule.rule == rule)
+    if not sources:
+        return None
+    strength = effective_strength(rules, unit)
+    won = winners(sources, strength)
+    found = [won[rule, k] for k in keys if (rule, k) in won]
+    if not found:
+        return None
+    order = {id(s): i for i, s in enumerate(sources)}
+    return max(found, key=lambda s: (strength(s), -order[id(s)]))
 
 
-def classify_sources(sources: Iterable[RuleSource]) -> tuple[SourceOverlap, ...]:
-    """每個來源和前面來源的重疊（依來源順序；判斷規則見模組說明）。"""
-    given: dict[tuple[str, str], RuleSource] = {}
+def classify_sources(
+    sources: Iterable[RuleSource], strength: Strength = raw_strength
+) -> tuple[SourceOverlap, ...]:
+    """每個來源和其他來源的重疊（依來源順序；判斷規則見模組說明）。``strength``：比強弱用的值
+    （戰鬥與顯示用 :func:`effective_strength`）。"""
+    ordered = tuple(sources)
+    won = winners(ordered, strength)
     result: list[SourceOverlap] = []
-    for source in sources:
+    for source in ordered:
         kind = source.rule.rule
-        keys = rule_keys(source.rule)
-        covered = tuple((k, given[kind, k]) for k in keys if (kind, k) in given)
+        covered = tuple(
+            (k, won[kind, k]) for k in rule_keys(source.rule) if won[kind, k] is not source
+        )
         result.append(SourceOverlap(source, covered))
-        for key in keys:
-            given.setdefault((kind, key), source)
     return tuple(result)
 
 
@@ -198,7 +275,7 @@ def terrain_notes(
     中文名。"""
     names = names or {}
     notes: dict[tuple[str, str], TerrainNote] = {}
-    for overlap in classify_sources(rule_sources(rules, unit)):
+    for overlap in classify_sources(rule_sources(rules, unit), effective_strength(rules, unit)):
         gear = overlap.source.gear
         if gear is None or not overlap.covered:
             continue
@@ -217,3 +294,27 @@ def terrain_notes(
         ]
         notes[key] = TerrainNote(overlap_zh="；".join(parts))
     return notes
+
+
+def race_override_zh(
+    rules: Ruleset, unit: UnitState, names: Mapping[str, str] | None = None
+) -> str | None:
+    """種族的環境被動被裝備較強的同種規則蓋過時的說明（E3，08 8.29 E2 補充）：完全蓋過「被腳的
+    「水上移動 +2」蓋過」；部分「水的部分被腳的「……」蓋過」。沒有被蓋過時 ``None``。"""
+    if unit.race is None:
+        return None
+    names = names or {}
+    overlaps = classify_sources(rule_sources(rules, unit), effective_strength(rules, unit))
+    race = next((o for o in overlaps if o.source.gear is None), None)
+    if race is None or not race.covered:
+        return None
+    if race.full and len({id(s) for _, s in race.covered}) == 1:
+        return f"被{_source_short(race.covered[0][1])}蓋過"
+    groups: dict[int, tuple[RuleSource, list[str]]] = {}
+    for k, source in race.covered:
+        groups.setdefault(id(source), (source, []))[1].append(
+            _key_name(rules, race.source.rule, k, names)
+        )
+    return "；".join(
+        f"{'、'.join(keys)}的部分被{_source_short(source)}蓋過" for source, keys in groups.values()
+    )

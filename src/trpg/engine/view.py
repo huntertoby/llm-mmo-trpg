@@ -46,7 +46,7 @@ from trpg.engine.rules.footprint import is_giant, tiles_of
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import passive_active
 from trpg.engine.rules.statuses import effective_attribute, next_turn_ap_penalty
-from trpg.engine.rules.unit_rules import TerrainNote, terrain_notes
+from trpg.engine.rules.unit_rules import TerrainNote, race_override_zh, terrain_notes
 from trpg.engine.skills.revive import revivable
 from trpg.engine.skills.targeting import skill_mana_cost
 from trpg.engine.state import (
@@ -406,6 +406,9 @@ class RaceView(_ViewModel):
     passive_description_zh: str
     passive_active: bool
     """環境被動此刻有沒有作用（天氣型、地圖型看目前戰場；其餘恆為真）。"""
+    passive_overridden_zh: str | None = None
+    """環境被動被裝備較強的同種地形規則蓋過時的說明（E3，08 8.29 E2 補充；例「被腳的「水上移動
+    +2」蓋過」、部分蓋過「水的部分被……蓋過」）；沒有時 ``None``。"""
     look: RaceLook
     """種族的預設外觀（Phase 3R-3b，``races.yaml`` 的 ``look``；純顯示資料）：
     前端紙娃娃疊在單位外觀上。"""
@@ -1261,8 +1264,17 @@ def _race_view(state: BattleState, unit: UnitState) -> RaceView | None:
         passive_name_zh=race.passive.name_zh,
         passive_description_zh=race.passive.description_zh,
         passive_active=passive_active(state, unit),
+        passive_overridden_zh=_race_override(state, unit),
         look=race.look,
     )
+
+
+def _race_override(state: BattleState, unit: UnitState) -> str | None:
+    if not unit.gear.active_affixes("terrain"):
+        return None
+    weather = state.weather
+    names = {} if weather is None else {weather.id: weather.name_zh}
+    return race_override_zh(state.ruleset, unit, names)
 
 
 def _activation_view(state: BattleState, activation: Activation) -> ActivationView:

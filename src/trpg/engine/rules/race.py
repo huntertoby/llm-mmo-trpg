@@ -130,8 +130,8 @@ def passive_active(state: BattleState, unit: UnitState) -> bool:
 
 def reveal_radius(rules: Ruleset, unit: UnitState) -> int:
     """狐族「靈覺」：看得見這個距離內的敵方陷阱與隱蔽單位（沒有時 0）。"""
-    passive = passive_of(rules, unit, "detect_hidden_nearby")
-    return 0 if passive is None else passive.radius or 0
+    source = first_source(rules, unit, "detect_hidden_nearby")  # 數值型：取較強的（E3）
+    return 0 if source is None else source.rule.radius or 0
 
 
 def race_element_mods(rules: Ruleset, template: UnitTemplate) -> dict[Element, int]:

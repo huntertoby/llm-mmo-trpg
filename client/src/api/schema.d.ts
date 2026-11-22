@@ -9243,6 +9243,8 @@ export interface components {
             passive_description_zh: string;
             /** Passive Active */
             passive_active: boolean;
+            /** Passive Overridden Zh */
+            passive_overridden_zh?: string | null;
             look: components["schemas"]["RaceLook"];
         };
         /**

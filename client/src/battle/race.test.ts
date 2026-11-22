@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Action, RaceView } from "../api/types";
 import { actionLabel } from "./actions";
-import { passiveLine, raceBlockedReason, raceBattleCardLines, raceHudText, raceLabel, raceModes, raceUsesText } from "./race";
+import { overrideNote, passiveLine, raceBlockedReason, raceBattleCardLines, raceDetailText, raceHudText, raceLabel, raceModes, raceUsesText } from "./race";
 import { actionAtTile, basicModes, fallbackActions, isSelfOnly } from "./targeting";
 import { smallView, unit } from "./testFixtures";
 
@@ -134,5 +134,18 @@ describe("race text", () => {
     expect(raceHudText(unit(H, "ally", 1, 1))).toBeNull();
     const hero = unit(H, "ally", 1, 1, { race: race({ passive_active: true }) });
     expect(raceHudText(hero)).toBe("種族：海民｜拋錨 剩 1／1 次｜被動：雨中海步（目前有作用）");
+  });
+});
+
+describe("race passive overridden by gear (E3)", () => {
+  it("adds no note when nothing overrides the passive", () => {
+    expect(overrideNote(race())).toBe("");
+    expect(raceDetailText(race())).toBe("海民（種族技：拋錨；被動：雨中海步）");
+  });
+
+  it("notes the gear that overrides the passive", () => {
+    const r = race({ passive_overridden_zh: "被腳的「下雨時移動 +2」蓋過" });
+    expect(raceDetailText(r)).toBe("海民（種族技：拋錨；被動：雨中海步（被腳的「下雨時移動 +2」蓋過））");
+    expect(passiveLine(r)).toBe("被動・雨中海步：下雨天氣時，移動 +1。（被腳的「下雨時移動 +2」蓋過）");
   });
 });
