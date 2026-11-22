@@ -14,6 +14,7 @@
 | 5 卡片句子（篩選寫在觸發時機那一行）、時機數改從 `REQUIRED_TRIGGERS` 推 | `9ad091a8c` |
 | 6 KD-1 驗收的兩件用字（倒地 6 行、彈射卡同名加次數） | `7a934eb78` |
 | 8 收尾（`classify.py --check`、上手筆記、截圖） | `fe06b0c50` |
+| 合併 main（含 E3 `967569588`）：`skills/cast.py` 的匯入兩邊都留（E3 的 `leave_trail`、E4 的 `AttackInfo`）；`寫死數值-清單.md` 取 main 再重產；`set_surface` 的 `surface_trail=None` 保留 | `ae42be782` |
 | 報告 | 最後一個 commit |
 
 第 7 項比第 4 項先 commit（前端檔案和第 3、4 項分開，順序不影響內容）。
@@ -138,7 +139,7 @@
 | `uv run python scripts/check.py` | FULL_RESULT |
 | `uv run pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli` | SLOW_RESULT |
 
-`LOG_FORMAT` 不升版：沒有新事件、動作、狀態欄位。`Ctx.attack_info`、`Ctx.dealt_elements`、`Fired.element` 都不在戰鬥狀態裡。
+`LOG_FORMAT` 不升版（合併 E3 後是 `/138`，E4 沒有改紀錄格式）：沒有新事件、動作、狀態欄位。`Ctx.attack_info`、`Ctx.dealt_elements`、`Fired.element` 都不在戰鬥狀態裡。
 
 ## 5. 截圖（`docs/art/shots/e4/`，交美術 PM）
 
@@ -151,8 +152,8 @@
 | `e4_kd1_prone_tip_1600x900.jpg`、`e4_kd1_prone_tip_800x600.jpg` | 倒地的說明框：6 行，每行前面「・」，沒有摘要句（KD-1 驗收小修 1） |
 | `e4_kd1_steady_1600x900.jpg` | 主角身上的「站穩」：HUD 狀態列、頭頂、說明框（KD-1 驗收最後一節的補拍） |
 | `e4_steady_closeup_x6.png` | 站穩的狀態卡 20、頭頂 11，真 1 倍與 DPR 2，各 ×6 最近鄰（遊戲端畫法；和樣張 B 欄逐像素相同，見 2.7） |
+| `e4_bounce_card_x2_1600x900.jpg` | 彈射的說明卡：「這招不能套用：鉤爪 ×2、守護之盾」（KD-1 驗收用字第 2 件）。暫存內容複本多一招只給截圖用、對所有技能的彈射（同 KD-1 的做法）＋坦克主角、兩件授予「鉤爪」的自訂裝備（鉤索圓盾、鉤爪護手） |
 
-彈射卡「鉤爪 ×2」沒有實機截圖，只有單元測試；要拍得用 KD-1 那份暫存內容複本另外佈置，見待決 9。
 
 ## 6. 待 PM 決定
 
@@ -164,7 +165,7 @@
 6. **舊 `melee_only` 的實際行為和草案寫的不同**：草案說「技能傷害不算」，實際是「`cause: attack`，而且距離在近戰範圍內」，貼身的法術技也算（`test_gear_on_damaged_kind_filter_differs_from_melee_only` 有測）。照規格不改，現有結果不變。
 7. **新時機的預算係數**：`on_block`、`on_displace` 都先給 250‰（保守），已開放在工坊（既有白名單）。依守則 8，這是數值疑慮，該記進 `docs/design/平衡待查.md`；但這段不改 `docs/design/`，所以只寫在這裡，請 PM 轉記。
 8. **LLM 與組合器不會產生篩選**：`TRIGGER_PARAM_NAMES` 和 `params` 都沒加，因為加了就要改 LLM 的提議 schema，也會動到快照。要開放請另排。被動技的 `reaction` ID 也沒做存在檢查，填錯的話不會觸發。
-9. **彈射卡「鉤爪 ×2」的實機補拍**：只有單元測試，請美術 PM 決定要不要補拍。
+9. ~~彈射卡「鉤爪 ×2」的實機補拍~~：已補（`e4_bounce_card_x2_1600x900.jpg`，開發 PM 指示）。
 10. **站穩的舊式線條圖樣 `GLYPH`**（部件圓片以外的退回、召喚物頭頂）：`statusIcon.test.ts` 要求每個狀態都要有，美術沒有指定，我照倒地的畫法改成站直的小人。要換的話請美術 PM 給。
 11. **倒地、站穩的實機截圖是在畫面資料裡加狀態**：所以技能列沒有「起身」鈕，反應欄也沒灰（伺服器端的狀態沒變）。這兩張只拍說明框與圖示。
 12. **工坊文字兩筆是實作者初稿**（`觸發.on_block`、`觸發.on_displace` 的 `player`），待玩法 PM 改寫。
