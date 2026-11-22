@@ -30,6 +30,7 @@ from trpg.content.skills import (
     EffectSpec,
     ModifierSpec,
     ModifierTarget,
+    ShapeConversion,
     ShapeSpec,
     SkillDef,
     TriggerSpec,
@@ -1358,11 +1359,29 @@ DESCRIBED_CHANGES: frozenset[str] = frozenset(
 
 
 def _shape_to_text(library: ContentLibrary, target: str) -> str:
-    """``shape_to`` 的說明：列出 ``skill_shapes.yaml`` 的轉換表中轉成 ``target`` 的原形狀。"""
+    """``shape_to`` 的說明：列出 ``skill_shapes.yaml`` 的轉換表中轉成 ``target`` 的原形狀。
+    轉成連鎖時另寫「彈射」與跳法（E5，08 8.29 E5 第 1 點：彈射就是單體→連鎖）。"""
     shapes = library.ruleset.shapes.by_id()
     sources = [c for c in library.ruleset.shapes.conversions if c.to == target]
     names = "、".join(shapes[c.from_shape].name_zh for c in sources)
-    return f"{names}形狀的技能轉為{shapes[target].name_zh}（效果原語不支援新形狀的技能不轉）"
+    text = f"{names}形狀的技能轉為{shapes[target].name_zh}"
+    if target == "chain":
+        text += _bounce_text(library, sources)
+    return f"{text}（效果原語不支援新形狀的技能不轉）"
+
+
+def _bounce_text(library: ContentLibrary, sources: Sequence[ShapeConversion]) -> str:
+    """單體→連鎖的「彈射」說明：跳幾次、跳多遠、每跳威力少多少（讀轉換表與 ``core.yaml``）。"""
+    params = sources[0].params if sources else {}
+    core = library.ruleset.core
+    jumps, reach = params.get("jumps"), params.get("jump_range")
+    hop = f"再跳到它 {reach} 格內" if reach is not None else "再跳到附近"
+    times = f"最多 {jumps} 次" if jumps is not None else ""
+    return (
+        f"：彈射——打完第一個目標（沒打中也會跳），{hop}、看得到、最近的敵人，{times}；"
+        f"每跳一次傷害、治療、護盾的威力 −{core.chain_falloff_permille / 10:g}%"
+        f"（最低 {core.chain_floor_permille / 10:g}%）"
+    )
 
 
 def _damage_text(rule: ModifierSpec) -> str:
