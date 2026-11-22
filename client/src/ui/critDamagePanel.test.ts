@@ -32,8 +32,10 @@ describe("角色面板的暴擊傷害", () => {
       const html = renderToStaticMarkup(createElement(UnitInfo, { unit: u, names, heroId: "unit_0001", skills: {} }));
       expect(html).toContain(`data-testid="unit-crit-damage">暴擊傷害 ${permille / 10}%<`);
       const row = detailRows(u, names).find(([k]) => k === "暴擊傷害");
-      expect(renderToStaticMarkup(createElement("td", null, row?.[1]))).toBe(`<td>${detail}</td>`);
-      expect(html).toContain(detail);
+      // CR-1c：來源用 WrapUnits 切段（「・」後面），去掉標籤後是原字
+      const cell = renderToStaticMarkup(createElement("td", null, row?.[1]));
+      expect(cell.replace(/<[^>]+>/g, "")).toBe(detail);
+      expect(html.replace(/<[^>]+>/g, "")).toContain(detail);
     });
   }
 

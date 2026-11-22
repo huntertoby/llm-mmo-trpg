@@ -49,11 +49,14 @@ function heroPanel(hint: string | null): string {
 
 /** 提示行在來源之後（同一格的最後一行）。 */
 function expectHintAfterDetail(html: string): void {
-  const at = html.indexOf(DETAIL);
-  const hintAt = html.indexOf(`data-testid="crit-damage-hint">${HINT}<`);
+  expect(html).toContain(`data-testid="crit-damage-hint">${HINT}<`);
+  const text = plain(html); // 來源切成 WrapUnits 段（CR-1c 小修 1），比字要先去掉標籤
+  const at = text.indexOf(DETAIL);
   expect(at).toBeGreaterThanOrEqual(0);
-  expect(hintAt).toBeGreaterThan(at);
+  expect(text.indexOf(HINT)).toBe(at + DETAIL.length);
 }
+
+const plain = (html: string) => html.replace(/<[^>]+>/g, "");
 
 describe("看目標的暴擊傷害加成提示", () => {
   it("單位卡：有這類修正技時，來源後面加一行提示", () => {
@@ -62,7 +65,7 @@ describe("看目標的暴擊傷害加成提示", () => {
 
   it("單位卡：沒有時不出現（後端送 null）", () => {
     expect(card(null)).not.toContain("crit-damage-hint");
-    expect(card(null)).toContain(DETAIL);
+    expect(plain(card(null))).toContain(DETAIL);
   });
 
   it("主角面板：有這類修正技時，來源後面加一行提示", () => {
@@ -71,6 +74,6 @@ describe("看目標的暴擊傷害加成提示", () => {
 
   it("主角面板：沒有時不出現", () => {
     expect(heroPanel(null)).not.toContain("crit-damage-hint");
-    expect(heroPanel(null)).toContain(DETAIL);
+    expect(plain(heroPanel(null))).toContain(DETAIL);
   });
 });

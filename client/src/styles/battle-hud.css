@@ -508,6 +508,12 @@
   white-space: nowrap;
 }
 
+/* CR-1c（美術 CR-1b 驗收小修 1）：「名稱＋數字」一個單位（WrapUnits 用「・」「、」全形空白切段），換行時整段移到下一行；
+   用 inline-block 不用 nowrap，一段比一行還長時段內照常斷 */
+.wrap-unit {
+  display: inline-block;
+}
+
 /* 預覽：「命中」「暴擊」「傷害」三段各自不換行（「傷害 3–10」不拆開），命中率綠色粗體，下面一行淡金色的必中句 */
 .preview-box li.practice-preview-line > .practice-nowrap {
   white-space: nowrap;

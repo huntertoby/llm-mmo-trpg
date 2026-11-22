@@ -41,7 +41,7 @@ describe("主角面板的暴擊傷害", () => {
       expect(html).toContain(`data-testid="run-crit-damage">暴擊傷害 ${permille / 10}%<`);
       expect(html).toMatch(/<details class="unit-details" data-testid="run-crit-details"><summary>詳細<\/summary>/);
       expect(html).toContain("<th>暴擊傷害</th>");
-      expect(html).toContain(detail);
+      expect(html.replace(/<[^>]+>/g, "")).toContain(detail); // 來源切成 WrapUnits 段（CR-1c 小修 1）
     });
   }
 
