@@ -155,3 +155,13 @@ triggers:
     min_rarity: epic
     random_composer: false
     max_per_round: 1   # 每回合最多 1 次（AP-2；HC-7 b 從 TriggerSpec 的檢查搬來）
+  # --- E4（#175，08 8.29 E4 第 1、2 點）：你讓別人位移時。給被動與裝備詞條用。係數為保守的初值，未經模擬（工坊可調）。
+  # random_composer: false（一般抽選不抽，既有種子不變）。
+  - id: on_displace
+    name_zh: 你讓別人位移時
+    llm_hint: "持有者推、拉、擊退、傳送別人或和別人互換位置，讓對方實際移動至少 1 格時發動。"
+    description_zh: 持有者推、拉、命中後擊退、傳送別人、和別人互換位置（含讓另外兩人互換），被位移的單位實際移動了至少 1 格時觸發；隊友也算，自己位移自己不算。一次位移只觸發 1 次（不是每格 1 次）；移動 0 格（第一格就被擋住）只算「造成撞擊後」，被推之後在冰上滑行不另外算。另一方為被位移的單位。
+    has_other: true
+    budget_coefficient_permille: 250
+    min_rarity: epic
+    random_composer: false

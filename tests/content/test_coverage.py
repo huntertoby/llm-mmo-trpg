@@ -16,6 +16,7 @@ _UNCOVERED: dict[str, dict[str, str]] = {
         "on_summon_downed": "只給裝備詞條用（3-33f2）：召喚物倒下時爆炸或治療，沒有被動技能",
         "on_battle_start": "只由閃現轉型「伴生」產生（TF-1，#159），沒有手寫技能",
         "on_ap_spent_all": "AP-2：給組合器、LLM 與裝備詞條用，沒有手寫示範",
+        "on_displace": "E4：新時機，給 LLM 與裝備詞條用，還沒有手寫示範",
     },
     "reaction_event": {
         "ally_hit_near": "只由閃現轉型「援手」（治療招）產生（TF-1，#159），沒有手寫技能"

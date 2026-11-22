@@ -68,7 +68,7 @@ from trpg.engine.rules.landing import landing_problem, nearest_free
 from trpg.engine.rules.movement import is_deadly, is_standable
 from trpg.engine.rules.race import hazard_push_reduction
 from trpg.engine.runes import inscribe_rune, remove_rune
-from trpg.engine.skill_triggers import collect_exploit
+from trpg.engine.skill_triggers import collect_displace, collect_exploit
 from trpg.engine.state import BattleState, ObjectState, UnitState
 from trpg.shared.types import ObjectId, Pos, Surface, Team, UnitId
 
@@ -553,9 +553,11 @@ def _push_unit(ctx: Ctx, effect: PushEffect, unit_id: UnitId) -> list[EventBase]
             break
         if effect.stop_before_deadly and is_deadly(state, nxt):
             break  # 鉤：不拉進致命地形，停在它前面（SK-2）
-        moved = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
-        events.extend(moved)
-        if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in moved):
+        arrived = arrive(ctx, unit, nxt, "forced", source_id=effect.source_id)
+        events.extend(arrived)
+        if step == 0:  # E4 on_displace：實際移動了 1 格，一次推拉只記 1 次
+            collect_displace(ctx, effect.source_id, unit.id)
+        if not unit.alive or any(isinstance(e, EnteredDeadlyTerrain) for e in arrived):
             return events  # 墜落、致命地形造成的停下不算撞擊（多推的部分也不算）
     if effect.extra_collisions > 0 and unit.alive:
         unit.collided_round = state.round  # 超過上限的撞擊也算（target_collided，3-24c）

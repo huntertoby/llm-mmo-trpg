@@ -38,7 +38,7 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Literal
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
-from trpg.content.skills import ON_AP_SPENT_ALL, SkillDef, TriggerSpec
+from trpg.content.skills import ON_AP_SPENT_ALL, ON_DISPLACE, SkillDef, TriggerSpec
 from trpg.engine import modifiers, stack_gain
 from trpg.engine.charge_queries import DELAYED_RELEASE, attacked_release
 from trpg.engine.events import (
@@ -85,6 +85,7 @@ __all__ = [
     "attacking",
     "check_trigger_depth",
     "collect_cast",
+    "collect_displace",
     "collect_exploit",
     "collect_move",
     "collect_turn_end",
@@ -556,6 +557,23 @@ def collect_exploit(
         ctx, index, ON_KEYWORD_EXPLOITED, seq, maker_id, exploiter_id,
         status=status, surface=None if surface is None else surface.value,
     )  # fmt: skip
+
+
+def collect_displace(ctx: Ctx, source_id: UnitId | None, moved_id: UnitId) -> None:
+    """``on_displace``（E4，08 8.29 E4 第 1、2 點）：``source_id`` 讓 ``moved_id`` 位移（推、拉、
+    擊退、傳送別人、互換），對方實際移動了至少 1 格；一次位移由呼叫端只呼叫 1 次。另一方是被位移的
+    單位（隊友也算）；自己位移自己不算。沒有持有者時直接返回。"""
+    if source_id is None or source_id == moved_id:
+        return
+    index = _index(ctx)
+    owned = [(o, s) for o, s in index.owners(ON_DISPLACE) if o == source_id]
+    gear_owned = [(o, g) for o, g in index.gear_owners(ON_DISPLACE) if o == source_id]
+    if not owned and not gear_owned:
+        return
+    seq = ctx.state.next_event_seq - 1  # 最後一筆 unit_moved
+    for owner, skill in owned:
+        _fire(ctx, seq, owner, skill, moved_id)
+    _fire_gear(ctx, index, ON_DISPLACE, seq, source_id, moved_id)
 
 
 def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
