@@ -232,11 +232,16 @@ class GearSkillView(_ViewModel):
     技能本身也在 ``UnitView.skills`` 裡，卸下裝備（戰鬥開始前不穿那件物品）就沒有。"""
 
     skill_id: str
+    """技能在 ``UnitView.skills`` 裡的鍵：同一招第二份起是複本鍵 ``<技能 ID>~2``（E1，08 8.28）。"""
     name_zh: str
     affix_id: str
     slot: str
     slot_zh: str
     item_name_zh: str
+    copy_of: str | None = None
+    """複本鍵的原技能 ID（E1；技能卡、圖示用原技能的）；不是複本時 ``None``。"""
+    kind: str = "active"
+    """技能種類（E1：``active``／``reaction``／``modifier``／``passive``）。"""
 
 
 class AffixLineView(_ViewModel):
@@ -837,33 +842,51 @@ def _charge_views(state: BattleState, unit: UnitState) -> tuple[ChargeView, ...]
     return tuple(views)
 
 
+def _gear_skill_grants(unit: UnitState) -> tuple[tuple[str, GearAffix], ...]:
+    """``unit.gear_skills`` 的每個鍵與給它的詞條（兩者都依詞條順序，一條詞條一個鍵；E1）。"""
+    action = unit.gear.active_affixes("action")
+    return tuple(zip(unit.gear_skills, action, strict=False))
+
+
 def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillView, ...]:
     """裝備授予的常駐技能（第 9 類，生效的詞條）：來源欄位與物品。"""
     names = {item.slot: item.name_zh for item in unit.gear.items}
     views: list[GearSkillView] = []
-    for gear in unit.gear.active_affixes("action"):
+    for key, gear in _gear_skill_grants(unit):
         affix = gear.affix
         assert isinstance(affix, ActionAffix)
+        skill = state.ruleset.skill_def(key)
         views.append(
             GearSkillView(
-                skill_id=affix.skill,
-                name_zh=state.ruleset.skill_def(affix.skill).name_zh,
+                skill_id=key,
+                name_zh=skill.name_zh,
                 affix_id=affix.id,
                 slot=gear.slot,
                 slot_zh=SLOT_ZH[gear.slot],
                 item_name_zh=names.get(gear.slot, ""),
+                copy_of=affix.skill if key != affix.skill else None,
+                kind=skill.kind,
             )
         )
     return tuple(views)
 
 
 def _reaction_gear_source(unit: UnitState, reaction: str) -> str:
-    """授予或擴充 ``reaction`` 的裝備詞條（第 10 類）：「物品名：詞條文字」，多條用「；」分隔。"""
+    """授予或擴充 ``reaction`` 的裝備詞條（第 10 類）：「物品名：詞條文字」，多條用「；」分隔。
+    裝備授予的反應技（第 9 類，E1）：「欄位：物品名」（同技能列的「來自裝備」）。"""
     names = {item.slot: item.name_zh for item in unit.gear.items}
+    granted = [
+        f"{SLOT_ZH[gear.slot]}：{names.get(gear.slot, '')}"
+        for key, gear in _gear_skill_grants(unit)
+        if key == reaction
+    ]
     return "；".join(
-        f"{names.get(gear.slot, '')}：{affix_text(gear.affix, gear.value)}"
-        for gear in unit.gear.active_affixes("reaction")
-        if isinstance(gear.affix, ReactionAffix) and gear.affix.reaction == reaction
+        granted
+        + [
+            f"{names.get(gear.slot, '')}：{affix_text(gear.affix, gear.value)}"
+            for gear in unit.gear.active_affixes("reaction")
+            if isinstance(gear.affix, ReactionAffix) and gear.affix.reaction == reaction
+        ]
     )
 
 

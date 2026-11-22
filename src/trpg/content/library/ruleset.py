@@ -27,6 +27,7 @@ from trpg.content.roguelite import RunRules
 from trpg.content.rule_changes import RuleChangeDef, RuleChangeTable
 from trpg.content.rules import CoreRules, HitTable
 from trpg.content.schemas import ContentModel
+from trpg.content.skill_copies import base_skill_id, is_copy_key
 from trpg.content.skill_keywords import KeywordTable
 from trpg.content.skill_tags import SkillTagTable
 from trpg.content.skill_triggers import SkillTriggerDef, SkillTriggerTable
@@ -399,9 +400,15 @@ class Ruleset(ContentModel):
         return index[stack_id]
 
     def skill_def(self, skill_id: str) -> SkillDef:
-        """技能定義；找不到時拋出 ``KeyError``。"""
+        """技能定義；找不到時拋出 ``KeyError``。
+
+        複本鍵（``<技能 ID>~2``，E1，:mod:`trpg.content.skill_copies`）回傳原技能的定義、``id`` 換成
+        複本鍵（冷卻、次數、事件都照這個鍵分開算）。"""
         index: dict[str, SkillDef] = self.__pydantic_private__["_skill_index"]  # type: ignore[index]
-        return index[skill_id]
+        found = index.get(skill_id)
+        if found is not None or not is_copy_key(skill_id):
+            return found if found is not None else index[skill_id]
+        return index[base_skill_id(skill_id)].model_copy(update={"id": skill_id})
 
     def race_def(self, race_id: str) -> RaceDef:
         """種族定義（Phase 3R-2）；沒有種族資料或找不到時拋出 ``KeyError``。"""
@@ -450,7 +457,7 @@ class Ruleset(ContentModel):
     def has_modifier(self, skill_ids: Iterable[str]) -> bool:
         """``skill_ids`` 之中是否有修正技能（``kind: modifier``，3C-2；引擎的快速路徑）。"""
         ids: frozenset[str] = self.__pydantic_private__["_modifier_ids"]  # type: ignore[index]
-        return any(skill_id in ids for skill_id in skill_ids)
+        return any(base_skill_id(skill_id) in ids for skill_id in skill_ids)
 
 
 def skill_reference_problems(

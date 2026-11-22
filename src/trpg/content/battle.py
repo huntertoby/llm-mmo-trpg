@@ -97,6 +97,8 @@ __all__ = [
 ]
 
 ID_PATTERN = r"^[a-z][a-z0-9_]*$"
+REACTION_KEY_PATTERN = r"^[a-z][a-z0-9_]*(~[0-9]+)?$"
+"""反應規則的 ``reaction``：ID，或技能的複本鍵（E1，:mod:`trpg.content.skill_copies`）。"""
 """內容 ID 與標籤的格式：小寫英文開頭的 snake_case。"""
 
 _DICE_RE = re.compile(r"^\s*(\d+)\s*d\s*(\d+)\s*$")
@@ -1182,7 +1184,8 @@ class ReactionRule(ContentModel):
     設定）。
     """
 
-    reaction: str = Field(pattern=ID_PATTERN)
+    reaction: str = Field(pattern=REACTION_KEY_PATTERN)
+    """反應 ID 或反應技的鍵（裝備授予的第二份反應技是複本鍵 ``<技能 ID>~2``，E1）。"""
     when: ReactionWhen
     unless: ReactionUnless | None = None
     mode: Literal["auto", "prompt", "off"] = "auto"

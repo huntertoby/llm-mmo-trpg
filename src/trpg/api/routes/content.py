@@ -10,6 +10,7 @@ from trpg.api.schemas import BuildSummary, Glossary, MapSummary
 from trpg.api.sessions import BattleNotFoundError, playable_maps
 from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.api.state import runs_of, store_of
+from trpg.content.skill_copies import base_skill_id, is_copy_key
 from trpg.content.skills import SkillDef
 
 __all__ = ["router"]
@@ -64,7 +65,9 @@ def get_skill(skill_id: str, request: Request, battle_id: str | None = None) -> 
     if skill is None and battle_id is not None:
         battle = store.get(battle_id)  # 6S-1：開發模式關時只查自己的戰鬥（別人的 404）
         check_owner(request, battle.owner, BattleNotFoundError(f"找不到戰鬥 {battle_id}"))
-        skill = battle.setup.ruleset.skills.by_id().get(skill_id)
+        skill = battle.setup.ruleset.skills.by_id().get(base_skill_id(skill_id))
+    if skill is None and is_copy_key(skill_id):  # E1：裝備授予的第二份（複本鍵）用原技能的卡片
+        skill = library.skills.get(base_skill_id(skill_id))
     if skill is None:
         skill = _run_skill(request, skill_id)
     if skill is None:
