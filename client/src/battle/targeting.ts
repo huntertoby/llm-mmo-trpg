@@ -7,7 +7,7 @@ import { unitTiles, unitsOnTile } from "./footprint";
 import { posKey, samePos } from "./geometry";
 import { pickCountText, splitCompositeKeys, tileCount, unitCount } from "./pickCount";
 import { activeReason } from "./activations";
-import { gearSkillSource } from "./gearSkills";
+import { gearSkillOff, gearSkillSource } from "./gearSkills";
 import { grantedRemaining } from "./granted";
 import { objectStyle } from "./glossary";
 
@@ -213,6 +213,8 @@ export interface SkillButton {
   grantedRemaining?: number | null;
   /** 裝備授予的技能（Phase 3G-G3b）：「來自裝備」的說明（物品名）；不是裝備來的為 `null`。 */
   gearSource?: string | null;
+  /** 裝備授予的技能沒有效果的原因（E5，例「這把武器不能套用」）：標灰＋原因；有效時 `null`。 */
+  gearOff?: string | null;
   /** 效果原語的代碼（Phase 3D-8d；分辨一般瞬步與傳送他人）；卡片還沒取得時為空。 */
   effectIds?: readonly string[];
   /** 複合技能（位移 → 動作，Phase 3F-3b）：有第二段。 */
@@ -260,6 +262,7 @@ export function skillButtons(
       disabledReason,
       grantedRemaining: grantedRemaining(hero, skillId),
       gearSource: gearSkillSource(hero, skillId),
+      gearOff: gearSkillOff(hero, skillId),
       effectIds: card?.effect_ids ?? [],
       // 只有「位移 → 動作」用兩段選取（Phase 3F-3b）；其他種類（3F-4a／4b）照第一段選取，
       // 第二段在結算時暫停詢問或自動結算（延遲段：之後才釋放）

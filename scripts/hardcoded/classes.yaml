@@ -954,6 +954,13 @@ rules:
     kind: number
     where: ['_value']
     note: HC-4c 改判 const：圖騰光環估值的 min(rounds, 99) 是輪數的上限護欄（剩餘輪數由召喚物到期輪算出，不會到 99），不是玩法數值。估計分數已搬到 heuristics.estimate。
+  - id: py-engine-attack-shapes-line-length
+    class: const
+    status: done
+    files: src/trpg/engine/attack_shapes.py
+    kind: number
+    owner: [ATTACK_LINE_LENGTH]
+    note: E5（#175）：普攻直線的長度「往目標方向打 2 格」是 08 8.29 E5 第 3 點定的形狀（同矛的 2 格），不是數值；改它等於改設計。
   - id: py-engine-ai-utility-scoring-config-number
     class: const
     status: done

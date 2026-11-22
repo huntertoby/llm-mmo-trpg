@@ -149,7 +149,7 @@ function SkillSlot({
     <div className="skill-slot" {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${reasoned ? " blocked" : ""}${variant?.glow === true && !blocked ? " variant-ready" : ""}${conditionOffClass(b.conditionOff)}`}
+        className={`skill-button${selected ? " selected" : ""}${b.grantedRemaining != null ? " granted" : ""}${b.gearSource != null ? " from-gear" : ""}${gearOffClass(b)}${reasoned ? " blocked" : ""}${variant?.glow === true && !blocked ? " variant-ready" : ""}${conditionOffClass(b.conditionOff)}`}
         data-variant={form?.id}
         aria-label={b.conditionOff != null ? conditionOffLabel(b.name, b.conditionOff) : undefined}
         disabled={blocked && !reasoned}
@@ -180,11 +180,27 @@ function SkillSlot({
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
           <GearSourceNote source={b.gearSource} />
+          <GearOffNote reason={b.gearOff} />
           <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>
       )}
+    </div>
+  );
+}
+
+/** 裝備授予的技能沒有效果（E5）：按鈕與小圖示標灰（沿用「本場不成立」的灰），已經標灰時不重複加。 */
+function gearOffClass(b: SkillButton): string {
+  return b.gearOff != null && b.conditionOff == null ? " cond-off" : "";
+}
+
+/** 說明卡上方的「沒有效果：這把武器不能套用」（E5；樣式同「本場不成立」那條）。 */
+function GearOffNote({ reason }: { reason: string | null | undefined }) {
+  if (reason == null) return null;
+  return (
+    <div className="skill-card-reason cond-off-note gear-off-note" data-testid="gear-off-note">
+      沒有效果：{reason}
     </div>
   );
 }
@@ -274,8 +290,8 @@ function MiniSlot({
     <span className="skill-mini-wrap" {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-mini${selected || f.pinned ? " selected" : ""}${gear !== null ? " from-gear" : ""}${conditionOffClass(b.conditionOff)}`}
-        aria-label={gear === null ? label : `${label}（${gear}）`}
+        className={`skill-mini${selected || f.pinned ? " selected" : ""}${gear !== null ? " from-gear" : ""}${gearOffClass(b)}${conditionOffClass(b.conditionOff)}`}
+        aria-label={gear === null ? label : `${label}（${gear}${b.gearOff != null ? `，沒有效果：${b.gearOff}` : ""}）`}
         aria-pressed={f.pinned}
         onClick={() => usable && onSelect(b.skillId)}
       >
@@ -284,6 +300,7 @@ function MiniSlot({
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
           <GearSourceNote source={b.gearSource} />
+          <GearOffNote reason={b.gearOff} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>

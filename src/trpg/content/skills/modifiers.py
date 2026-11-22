@@ -123,6 +123,10 @@ class ModifierChange(ContentModel):
     - ``silent_strike``（BS-1，#157，06 6.21.1 C；只能是 ``true``）：無聲——持有者的近戰攻擊
       （普攻、武器技、反應攻擊）不讓目標轉向；只在手持匕首或雙匕首時生效。只能放在隱蔽關鍵字的
       修正技能，或由主動技能以 ``grant_skill`` 暫時給（:mod:`trpg.content.silent_strike`）。
+    - ``attack_shape``（E5，#175）：普攻變形，值先只有 ``line``——自己回合的主動普攻變成 2 格直線
+      （從自己旁邊那格起往目標方向，只打敵人，隊友不受傷也不擋）。只限近戰、射程 1 的武器（矛、鞭
+      本來就打 2 格，遠程與法器不能套用）；藉機攻擊、監視射擊、反擊等反應攻擊照舊打單體
+      （:mod:`trpg.engine.attack_shapes`）。
     """
 
     damage_permille: int | None = Field(default=None, le=1000)
@@ -148,6 +152,8 @@ class ModifierChange(ContentModel):
     form_entry_permille: int | None = Field(default=None, ge=1, le=1000)
     silent_strike: bool | None = Field(default=None, exclude_if=lambda v: v is None)
     """沒填（``None``）時不輸出：既有修正技能的序列化與雜湊不變（BS-1）。"""
+    attack_shape: Literal["line"] | None = Field(default=None, exclude_if=lambda v: v is None)
+    """普攻變形（E5，#175，08 8.29 E5 第 3～6 點）；沒填時不輸出（既有修正技能的序列化不變）。"""
 
     @model_validator(mode="after")
     def _check(self) -> ModifierChange:

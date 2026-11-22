@@ -45,6 +45,12 @@ describe("沒生效的詞條標灰", () => {
   it("遞減到 0 權重但不是重複（沒有 duplicate_of）也有說明", () => {
     expect(inactiveNote(line({ active: false, weight_permille: 0 }))).toContain("沒有效果");
   });
+
+  it("授予的技能在這名角色身上沒有效果（E5）時標灰並寫原因", () => {
+    const off = line({ category: "action", off_zh: "這把武器不能套用" });
+    expect(inactiveNote(off)).toBe("這把武器不能套用");
+    expect(tipLines([off])[0]?.note).toBe("這把武器不能套用");
+  });
 });
 
 describe("裝備比較預測", () => {

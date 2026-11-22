@@ -186,6 +186,7 @@ class Ctx:
         "fire_lock",
         "fired",
         "gamble",
+        "hit_count_once",
         "passives",
         "preview",
         "rng",
@@ -249,6 +250,9 @@ class Ctx:
         self.fire_lock = fire_lock
         """AI 估值用的預覽（RG-1）：瞄準預告的技能假設「現在就射出」（照一般施放結算），
         :attr:`trpg.engine.preview.Preview.lock_fire`。正式結算固定為 ``False``。"""
+        self.hit_count_once: set[UnitId] | None = None
+        """普攻直線（E5，8.29 E5 第 6 點）結算中：這次普攻已經記過「每第 N 次命中」的攻擊者；
+        不在直線普攻裡時 ``None``（每命中一個人照舊 +1）。"""
         self.zone_entries: list[tuple[int, UnitId]] = []
         """單位進入持續區域：``(區域, 單位)``，效果佇列清空時（陷阱之後）依記錄順序結算
         （Phase 3D-5，:mod:`trpg.engine.zones`）。"""

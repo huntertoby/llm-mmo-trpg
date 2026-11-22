@@ -51,6 +51,7 @@ from trpg.content.skills import (
     rarity_rank,
     skeleton_ids,
 )
+from trpg.engine.attack_shapes import ATTACK_LINE_LENGTH
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.draft import Draft, DraftError, build_skill, draft_skeleton, step_complete
 from trpg.skillgen.option_conform import field_problems
@@ -1062,6 +1063,12 @@ def _change_field(name: str, library: ContentLibrary, category: str | None) -> F
                 Choice(value=s, name_zh=library.ruleset.shapes.by_id()[s].name_zh)
                 for s in ("line", "chain", "cone")
             ),
+        )
+    elif name == "attack_shape":  # E5（#175）：普攻變形，值先只有 2 格直線
+        value = FieldSpec(
+            **base,
+            type="choice",
+            choices=(Choice(value="line", name_zh=f"{ATTACK_LINE_LENGTH} 格直線"),),
         )
     elif name == "add_tags":
         max_tags = library.ruleset.core.skill_limits.modifier_bounds.max_add_tags

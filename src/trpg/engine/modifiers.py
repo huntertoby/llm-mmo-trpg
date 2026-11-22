@@ -73,6 +73,8 @@ __all__ = [
     "Use",
     "acting_skill",
     "ap_cost",
+    "attack_shape",
+    "attack_shape_rules",
     "cooldown_delta",
     "damage_element",
     "damage_permille",
@@ -510,6 +512,25 @@ def silent_strike(state: BattleState, unit: UnitState, use: Use) -> bool:
     )
 
 
+def attack_shape_rules(state: BattleState, unit: UnitState) -> list[ActiveRule]:
+    """``unit`` 成立的普攻變形規則（``attack_shape``，E5；依技能 ID、規則索引）。條件只能看持有者
+    自己（``self_only``）。武器能不能套用、預算閘門由 :mod:`trpg.engine.attack_shapes` 判斷。"""
+    return [
+        active
+        for active in _applicable_active(state, unit, ATTACK, "attack_shape")
+        if _self_holds(state, unit, active.rule)
+    ]
+
+
+def attack_shape(state: BattleState, unit: UnitState, use: Use) -> str | None:
+    """普攻的變形（E5）：第一條成立的 ``attack_shape``（目前只有 ``line``）；不是普攻、沒有時
+    ``None``。只看規則本身，實際生效與否見 :func:`trpg.engine.attack_shapes.attack_shape_state`。"""
+    if use.action != "attack":
+        return None
+    rules = attack_shape_rules(state, unit)
+    return rules[0].rule.change.attack_shape if rules else None
+
+
 def displace_split(
     state: BattleState, unit: UnitState, use: Use, subject: Subject, base: int
 ) -> tuple[int, int]:
@@ -728,6 +749,7 @@ CHANGE_HANDLERS: Mapping[str, Callable[..., object]] = MappingProxyType(
         "form_upkeep_permille": form_upkeep_permille,
         "form_entry_permille": form_entry_permille,
         "silent_strike": silent_strike,
+        "attack_shape": attack_shape,
     }
 )
 """每種修正規則改變（``content/modifier_changes.yaml``）由哪個查詢函式套用（Phase 3T-1 的宣告表；

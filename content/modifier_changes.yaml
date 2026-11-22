@@ -146,3 +146,12 @@ changes:
     self_only: true
     true_only: true
     budget: {unit: flag, points: silent_strike}
+  # E5（#175，08 8.29 E5 第 3～6 點）：普攻變形。值先只有 line（普攻變 2 格直線：從自己旁邊那格起、往目標方向
+  # 打 2 格，只打敵人）。只限近戰、射程 1 的武器；只改自己回合的主動普攻（反應攻擊照舊打單體）。
+  # 展開在 trpg.engine.attack_shapes；裝備授予時另過預算閘門（trpg.skillgen.reshape_gate）。
+  - id: attack_shape
+    name_zh: 普攻變形
+    applies_to: [attack]
+    self_only: true
+    reshapes: true
+    budget: {unit: structured}

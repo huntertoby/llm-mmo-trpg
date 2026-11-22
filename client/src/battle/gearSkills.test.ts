@@ -1,7 +1,7 @@
 // Phase 3G-G3b：裝備授予的技能與反應——技能列與反應設定的「來自裝備」。
 import { describe, expect, it } from "vitest";
 import type { Action, GearSkillView, ReactionRuleView } from "../api/types";
-import { gearSkillBadge, gearSkillSource, gearSkillsOf } from "./gearSkills";
+import { gearSkillBadge, gearSkillOff, gearSkillSource, gearSkillsOf } from "./gearSkills";
 import { gearSourceText } from "./reactions";
 import { skillButtons } from "./targeting";
 import { unit } from "./testFixtures";
@@ -72,5 +72,13 @@ describe("gear granted skills", () => {
     const rule = { gear_source_zh: "壁壘塔盾：被遠程攻擊時也可以格擋" } as ReactionRuleView;
     expect(gearSourceText(rule)).toBe("來自裝備・壁壘塔盾：被遠程攻擊時也可以格擋");
     expect(gearSourceText({ gear_source_zh: "" })).toBe("");
+  });
+
+  it("greys a granted skill that has no effect on this hero (E5)", () => {
+    const line: GearSkillView = { ...grapple, skill_id: "skill_t_line", name_zh: "直線", kind: "modifier", off_zh: "這把武器不能套用" };
+    const archer = unit("unit_0001", "ally", 1, 1, { skills: ["skill_gear_grapple", "skill_t_line"], gear_skills: [grapple, line] });
+    expect(gearSkillOff(archer, "skill_t_line")).toBe("這把武器不能套用");
+    expect(gearSkillOff(archer, "skill_gear_grapple")).toBeNull();
+    expect(skillButtons(archer, [], {}).map((b) => b.gearOff)).toEqual([null, "這把武器不能套用"]);
   });
 });

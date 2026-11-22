@@ -15,7 +15,9 @@ export interface TipLine {
 export const NUMERIC_CATEGORIES: ReadonlySet<string> = new Set(["stat", "conditional", "keyword", "weapon_trait", "cost"]);
 
 /** 沒生效的原因（生效中回傳 `null`）。 */
-export function inactiveNote(a: Pick<AffixLineView, "active" | "duplicate_of">): string | null {
+export function inactiveNote(a: Pick<AffixLineView, "active" | "duplicate_of" | "off_zh">): string | null {
+  // E5：生效的授予技能詞條，給的技能在這名角色身上沒有效果（例「這把武器不能套用」）
+  if (a.off_zh != null && a.off_zh !== "") return a.off_zh;
   if (a.active) return null;
   if (a.duplicate_of != null && a.duplicate_of !== "") return `和${a.duplicate_of}重複，沒有效果`;
   return "同種詞條疊太多條，這條沒有效果";

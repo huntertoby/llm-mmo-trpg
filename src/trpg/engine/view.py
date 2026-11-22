@@ -29,6 +29,7 @@ from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
 from trpg.content.slots import SLOT_ZH
 from trpg.engine.attack_element import effective_attack_element
+from trpg.engine.attack_shapes import skill_problem_zh
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.boss_phases import next_phase
 from trpg.engine.delayed import charge_infos
@@ -242,6 +243,9 @@ class GearSkillView(_ViewModel):
     """複本鍵的原技能 ID（E1；技能卡、圖示用原技能的）；不是複本時 ``None``。"""
     kind: str = "active"
     """技能種類（E1：``active``／``reaction``／``modifier``／``passive``）。"""
+    off_zh: str | None = None
+    """這個技能在這名單位身上沒有效果的原因（E5：普攻變形「這把武器不能套用」）；有效時
+    ``None``。"""
 
 
 class AffixLineView(_ViewModel):
@@ -258,6 +262,9 @@ class AffixLineView(_ViewModel):
     active: bool
     weight_permille: int
     duplicate_of: str | None = None
+    off_zh: str | None = None
+    """授予技能的詞條（第 9 類）：給的技能在這名單位身上沒有效果的原因（E5，例「這把武器不能
+    套用」）；有效時 ``None``。"""
 
 
 class AppearanceView(_ViewModel):
@@ -770,7 +777,7 @@ def _duplicate_of(gear: GearState, entry: GearAffix) -> str | None:
     return f"{SLOT_ZH[winner.slot]}的{affix_text(winner.affix, winner.value)}"
 
 
-def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
+def _equipment_view(state: BattleState, unit: UnitState) -> tuple[EquipmentSlotView, ...]:
     """裝備摘要：每個欄位的物品與詞條（詞條依類別、id 排序）。"""
     gear = unit.gear
     if not gear.items:
@@ -805,6 +812,7 @@ def _equipment_view(unit: UnitState) -> tuple[EquipmentSlotView, ...]:
                         active=a.active,
                         weight_permille=a.weight_permille,
                         duplicate_of=_duplicate_of(gear, a),
+                        off_zh=_affix_off_zh(state, unit, a),
                     )
                     for a in lines
                 ),
@@ -866,9 +874,18 @@ def _gear_skill_views(state: BattleState, unit: UnitState) -> tuple[GearSkillVie
                 item_name_zh=names.get(gear.slot, ""),
                 copy_of=affix.skill if key != affix.skill else None,
                 kind=skill.kind,
+                off_zh=skill_problem_zh(state, unit, key),
             )
         )
     return tuple(views)
+
+
+def _affix_off_zh(state: BattleState, unit: UnitState, entry: GearAffix) -> str | None:
+    """授予技能的詞條（第 9 類）給的技能在 ``unit`` 身上沒有效果的原因（E5）；其他詞條 ``None``。"""
+    affix = entry.affix
+    if not isinstance(affix, ActionAffix) or not entry.active:
+        return None
+    return skill_problem_zh(state, unit, affix.skill)
 
 
 def _reaction_gear_source(unit: UnitState, reaction: str) -> str:
@@ -1072,7 +1089,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         infusion_options=_infusion_views(state, unit) if unit.team is team else (),
         activations=tuple(_activation_view(state, a) for a in unit.activations),
         facing=unit.facing,
-        equipment=_equipment_view(unit),
+        equipment=_equipment_view(state, unit),
         gear_totals=_gear_totals(state, unit),
         charges=_charge_views(state, unit),
         form=_form_view(state, unit),

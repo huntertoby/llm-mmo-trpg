@@ -43,6 +43,7 @@ from trpg.content.skills import (
     silent_rounds_shown,
 )
 from trpg.content.stacks import StackDef
+from trpg.engine.attack_shapes import ATTACK_LINE_LENGTH
 from trpg.engine.ids import SHIELDED as SHIELD_STATUS
 from trpg.engine.rules.statuses import scaled_status_def
 from trpg.engine.skills.scaling import MASTERY_BONUS
@@ -1329,6 +1330,11 @@ _SIMPLE_CHANGE_TEXT = {
     "summon_limit_delta": "你同時存在的召喚物上限 {value:+d} 隻（最少 1 隻、最多 {hard_cap} 隻）",
     "summon_duration_delta": "你召喚的召喚物持續 +{value} 輪",
     "silent_strike": "無聲：手持匕首或雙匕首時，你的近戰攻擊不會讓目標轉身（可以留在背後連續背刺）",
+    "attack_shape": (  # E5（#175，08 8.29 E5 第 3～6 點）；值目前只有 line
+        f"你自己回合的普攻變成 {ATTACK_LINE_LENGTH} 格直線：從你旁邊那格起往目標方向打"
+        f" {ATTACK_LINE_LENGTH} 格，只打敵人（隊友不受傷，也不擋）；只限近戰、射程 1 的武器"
+        "（矛、鞭、遠程與法器不能套用），反應攻擊照舊打單體"
+    ),
 }
 """只有一個整數的改變：格式字串（``value`` 為改變的數值）。"""
 DESCRIBED_CHANGES: frozenset[str] = frozenset(

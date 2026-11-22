@@ -15,6 +15,11 @@ export function gearSkillSource(u: UnitView, skillId: string): string | null {
   return g === undefined ? null : `${g.slot_zh}：${g.item_name_zh}`;
 }
 
+/** 這個裝備授予的技能在主角身上沒有效果的原因（E5：例「這把武器不能套用」）；有效或不是裝備來的時 `null`。 */
+export function gearSkillOff(u: UnitView, skillId: string): string | null {
+  return gearSkillsOf(u).find((s) => s.skill_id === skillId)?.off_zh ?? null;
+}
+
 /** 技能列上的標記文字：「來自裝備・副手：壁壘塔盾」。 */
 export function gearSkillBadge(source: string): string {
   return `來自裝備・${source}`;

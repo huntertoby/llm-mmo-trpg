@@ -2142,6 +2142,8 @@ export interface components {
             weight_permille: number;
             /** Duplicate Of */
             duplicate_of?: string | null;
+            /** Off Zh */
+            off_zh?: string | null;
         };
         /**
          * AiChoiceView
@@ -5901,6 +5903,8 @@ export interface components {
              * @default active
              */
             kind: string;
+            /** Off Zh */
+            off_zh?: string | null;
         };
         /** GearSlotInfo */
         GearSlotInfo: {

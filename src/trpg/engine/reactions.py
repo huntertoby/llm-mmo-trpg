@@ -32,7 +32,7 @@ from collections.abc import Callable, Iterable
 from trpg.content.battle import ReactionRule
 from trpg.content.environment import ReactionDef
 from trpg.content.skills import SkillDef
-from trpg.engine import modifiers, part_breaks
+from trpg.engine import attack_shapes, modifiers, part_breaks
 from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
 from trpg.engine.effects import execute
@@ -784,11 +784,20 @@ def perform_unit_attack(
             return  # 空膛（Phase 3-24a2）：合法性已在 attack_problem 檢查，這裡只是保險
         reveal = gunshot_reveals(ctx.state, attacker)
         behind = pierce_line_targets(ctx.state, attacker, target)  # 開火前的直線（弩，3-24a2）
+        # E5（#175）：普攻變 2 格直線，只改自己回合的主動普攻（反應攻擊照舊單體）
+        line = attack_shapes.line_attack_permille(ctx.state, attacker)
+        if line is None or not primary or reaction:
+            line, inline = None, []
+        else:
+            inline = attack_shapes.attack_line_extras(ctx.state, attacker, target)
         pierce = attacker.weapon.pierce_permille
         spend_ammo(attacker)
         melee = attacker.weapon.is_melee
         # BS-1（#157）：從隱蔽中出手或無聲時，被打的單位不轉向（命中判定之前判斷：之後才脫離隱蔽）
         quiet = no_turn_reason(ctx.state, attacker) if melee else None
+        once = ctx.hit_count_once
+        if line is not None:
+            ctx.hit_count_once = set()  # 「每第 N 次命中」一次普攻只 +1（8.29 E5 第 6 點）
         ambushed, rolled, victim = _attack_once(
             ctx,
             attacker,
@@ -797,7 +806,23 @@ def perform_unit_attack(
             reaction=reaction,
             part_id=part_id,
             no_turn=quiet,
+            shape_permille=line,
         )
+        turns = [(victim, attacker_xy)] if rolled and melee and quiet is None else []
+        for extra in inline:  # 普攻直線：各自擲命中與暴擊；連擊、分裂只看第一個目標
+            if attacker.alive and extra.alive:
+                _, hit_rolled, other = _attack_once(
+                    ctx,
+                    attacker,
+                    extra,
+                    primary=False,
+                    no_turn=quiet,
+                    shape_permille=line,
+                    follow_ups=False,
+                )
+                if hit_rolled and quiet is None:
+                    turns.append((other, attacker_xy))
+        ctx.hit_count_once = once
         for extra in behind:  # 穿透：各自擲命中與傷害
             if attacker.alive and extra.alive:
                 _attack_once(
@@ -820,11 +845,11 @@ def perform_unit_attack(
                 backstab_allowed=not attacker.weapon.backstab_first_only,
                 part_id=part_id,
                 no_turn=quiet,
+                shape_permille=line,
             )
         attacker.next_attack_hit = attacker.next_attack_crit = (
             0  # 形態的進入獎勵：整次攻擊用完才失效
         )
-        turns = [(victim, attacker_xy)] if rolled and melee and quiet is None else []
         after_attack(ctx, attacker, target_xy, ambushed=ambushed, turns=turns)
         if reveal:
             reveal_after_gunshot(ctx, attacker)  # 槍聲（3-24a2）
@@ -870,6 +895,8 @@ def _attack_once(
     backstab_allowed: bool = True,
     part_id: str | None = None,
     no_turn: NoTurn | None = None,
+    shape_permille: int | None = None,
+    follow_ups: bool = True,
 ) -> tuple[bool, bool, UnitState]:
     """回傳（這次攻擊是不是在隱蔽中發動——潛行偷襲，結算完要移除隱蔽；有沒有擲命中；承受這次
     攻擊的單位——被守護者擋下時是守護者，3C-6b：轉身的是它）。
@@ -877,7 +904,10 @@ def _attack_once(
     ``no_turn``（BS-1）：這次近戰攻擊的目標不轉向的原因，記在 ``attack_rolled``（呼叫端判斷）。
 
     ``extra_permille``：這是普攻連擊多出來的一下（Phase 3-32a），傷害再乘上這個倍率；它不會再
-    觸發連擊與分裂。"""
+    觸發連擊與分裂。
+
+    ``shape_permille``（E5）：普攻變形（直線）的傷害倍率（預算閘門降傷；``None``＝沒有變形）。
+    ``follow_ups``：命中後要不要結算連擊與分裂（普攻直線上目標以外的人為 ``False``）。"""
     ally_targeted_reactions(ctx, attacker, target)  # 相鄰友方被瞄準：命中判定之前（3D-3）
     if not attacker.alive or not target.alive:
         return False, False, target
@@ -929,6 +959,8 @@ def _attack_once(
         exploits += rule_exploits(state, attacker, use, (Subject(target, target.xy),))
     start = len(ctx.events)
     block, multiplier = _hit_multiplier(ctx, attacker, target, extra_permille)
+    if shape_permille is not None:
+        multiplier = multiplier * shape_permille // PERMILLE
     weapon = attacker.weapon
     execute(
         ctx,
@@ -954,7 +986,7 @@ def _attack_once(
     report_exploits(ctx, attacker.id, exploits, start, set())  # 真的作用在目標上才算
     apply_hit_traits(ctx, attacker, target)  # 武器小特性：破甲、震退、祝禱（3-24a1）
     hit_reactions(ctx, attacker, target, melee=is_melee_attack(ctx, attacker))
-    if extra_permille is None and attacker.alive:  # 普攻流：分裂與連擊（3-32a）
+    if extra_permille is None and follow_ups and attacker.alive:  # 普攻流：分裂與連擊（3-32a）
 
         def again(permille: int) -> None:
             _attack_once(
@@ -965,6 +997,7 @@ def _attack_once(
                 extra_permille=permille,
                 part_id=part_id,
                 no_turn=no_turn,
+                shape_permille=shape_permille,
             )
 
         after_attack_hit(ctx, attacker, target, again)

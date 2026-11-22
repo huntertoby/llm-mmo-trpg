@@ -34,7 +34,7 @@ from trpg.content.skills import (
     SkillDef,
     silent_rounds_shown,
 )
-from trpg.engine import modifiers, part_breaks
+from trpg.engine import attack_shapes, modifiers, part_breaks
 from trpg.engine.actions import (
     Action,
     ActivateCharge,
@@ -1667,8 +1667,9 @@ def _build(
     topples, hurls = _scene_infos(max_events)
     checks: tuple[DisplaceCheck, ...] = ()
     notes = _cover_notes(cover)
-    if isinstance(action, Attack) and action.target_id is not None:  # 武器命中特性（3-24a1）
-        notes += actor.weapon.trait_lines_zh(state.ruleset.core, on_hit_only=True)
+    if isinstance(action, Attack) and action.target_id is not None:
+        tiles, attack_notes = _attack_extras(state, actor, action.target_id, tiles)
+        notes += attack_notes
     backstab = _backstab_targets(actor, max_events)
     notes += _positional_notes(state, actor, max_events, backstab)
     no_turn, no_turn_reason, no_turn_notes = _no_turn_info(state, actor, max_events, backstab)
@@ -1725,6 +1726,35 @@ def _build(
         ),
         rerolls=rerolls,
     )
+
+
+def _attack_extras(
+    state: BattleState, actor: UnitState, target_id: UnitId, tiles: tuple[XY, ...]
+) -> tuple[tuple[XY, ...], tuple[str, ...]]:
+    """普攻的額外說明：武器命中特性（3-24a1）與普攻直線（E5，影響格加上直線的格子）。"""
+    notes = actor.weapon.trait_lines_zh(state.ruleset.core, on_hit_only=True)
+    line_tiles, line_notes = _attack_line_info(state, actor, target_id)
+    if line_tiles:
+        tiles = tuple(sorted({*tiles, *line_tiles}, key=lambda p: (p[1], p[0])))
+    return tiles, (*notes, *line_notes)
+
+
+def _attack_line_info(
+    state: BattleState, actor: UnitState, target_id: UnitId
+) -> tuple[tuple[XY, ...], tuple[str, ...]]:
+    """普攻變形（E5）：直線打到的格子（含沒有人的格子）與說明；沒有變形規則時都是空的。"""
+    shaped = attack_shapes.attack_shape_state(state, actor)
+    target = state.units.get(target_id)
+    if target is None:
+        return (), ()
+    if shaped.shape == attack_shapes.LINE:
+        tiles = attack_shapes.attack_line_tiles(state, actor, target)
+        note = f"普攻直線：往目標方向打 {attack_shapes.ATTACK_LINE_LENGTH} 格，只打敵人"
+        if shaped.damage_permille != attack_shapes.FULL_PERMILLE:
+            note += f"（傷害 {shaped.damage_permille / 10:g}%）"
+        return tiles, (note,)
+    reason = attack_shapes.problem_zh(shaped.problem)
+    return (), (() if reason is None else (f"普攻變形沒有效果：{reason}",))
 
 
 def _all_checks_chance(checks: Sequence[DisplaceCheck]) -> Fraction | None:

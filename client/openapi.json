@@ -5281,6 +5281,17 @@
               }
             ],
             "title": "Duplicate Of"
+          },
+          "off_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Off Zh"
           }
         },
         "additionalProperties": false,
@@ -14725,6 +14736,17 @@
             "type": "string",
             "title": "Kind",
             "default": "active"
+          },
+          "off_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Off Zh"
           }
         },
         "additionalProperties": false,

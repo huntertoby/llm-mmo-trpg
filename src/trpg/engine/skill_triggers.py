@@ -283,6 +283,11 @@ def _count_hits(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
     gear_counters = [(o, g) for o, g in index.gear_owners("every_n_hits") if o == attacker]
     if not counters and not gear_counters:
         return
+    once = ctx.hit_count_once  # 普攻直線（E5）：一次普攻不管打中幾人只 +1
+    if once is not None:
+        if attacker in once:
+            return
+        once.add(attacker)
     unit = ctx.state.units[attacker]
     unit.hits_landed += 1
     for owner, skill in counters:

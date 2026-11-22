@@ -53,6 +53,7 @@ from trpg.content.skills import (
     on_hit_carrier,
 )
 from trpg.content.summons import SummonDef, summon_dpr
+from trpg.engine.attack_shapes import ATTACK_LINE_LENGTH
 from trpg.engine.ids import OVERDRAWN
 from trpg.skillgen.combo import self_combo_reasons
 from trpg.skillgen.mechanics import mechanic_tags, resolved_affects
@@ -66,6 +67,8 @@ __all__ = [
     "EffectBudget",
     "SegmentBudget",
     "VariantBudget",
+    "attack_line_shape_permille",
+    "attack_shape_value",
     "self_status_allowance_permille",
     "skill_budget",
     "weak_floor_exempt",
@@ -1551,6 +1554,32 @@ def _shape_to_change_value(
     return _shape_to_value(library, change.shape_to)
 
 
+def _attack_shape_change_value(
+    _skill: SkillDef, change: ModifierChange, library: ContentLibrary
+) -> tuple[Fraction, str]:
+    assert change.attack_shape is not None
+    return attack_shape_value(library)
+
+
+def attack_shape_value(library: ContentLibrary) -> tuple[Fraction, str]:
+    """普攻變 2 格直線（``attack_shape: line``，E5）每次使用的價值：普攻的換算基準（基準武器傷害）
+    ×（直線 :data:`ATTACK_LINE_LENGTH` 格的形狀倍率 − 單體的形狀倍率），倍率取自
+    ``skill_budget.yaml`` 的 ``shape_budget``（同 :func:`_shape_to_value`）。"""
+    before, after = attack_line_shape_permille(library)
+    damage = library.ruleset.core.budget_reference_weapon_damage
+    note = f"普攻 單體→直線 {ATTACK_LINE_LENGTH} 格 倍率 {before}‰→{after}‰"
+    return Fraction(damage * (after - before), _PERMILLE), note
+
+
+def attack_line_shape_permille(library: ContentLibrary) -> tuple[int, int]:
+    """普攻（單體）與普攻直線（``line``、``size`` ＝ :data:`ATTACK_LINE_LENGTH`）的形狀倍率
+    （‰）。"""
+    shapes = by_id(library.ruleset.shapes)
+    before = library.budget.shape_permille(shapes["single"], {})
+    after = library.budget.shape_permille(shapes["line"], {"size": ATTACK_LINE_LENGTH})
+    return before, after
+
+
 STRUCTURED_CHANGES: Mapping[str, _StructuredValue] = MappingProxyType(
     {
         "damage_permille": _damage_change_value,
@@ -1558,11 +1587,13 @@ STRUCTURED_CHANGES: Mapping[str, _StructuredValue] = MappingProxyType(
         "push_distance_delta": _push_change_value,
         "on_hit_effects": _on_hit_change_value,
         "shape_to": _shape_to_change_value,
+        "attack_shape": _attack_shape_change_value,
     }
 )
 """價值由其他資料算出的改變（``modifier_changes.yaml`` 的 ``budget.unit: structured``）：傷害‰、
 治療‰（基準武器傷害 × ‰）、推擊距離（``push`` 原語每格點數）、命中後效果（效果本身的點數）、
-形狀轉換（形狀倍率差）。新增 structured 種類要在這裡補算法（載入時檢查，3T-1）。"""
+形狀轉換（形狀倍率差）、普攻變形（普攻的形狀倍率差，E5）。新增 structured 種類要在這裡補算法
+（載入時檢查，3T-1）。"""
 
 
 def _points_value(
