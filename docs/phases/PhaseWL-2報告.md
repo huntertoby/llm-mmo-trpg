@@ -118,7 +118,8 @@
 | 逐招預算＋驗證 442 招（`hc7b_dump.py`） | `same=442 different=0` |
 | 每張地圖 3 種子 | `battles=51 different=0` |
 | census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | `cells=204 different=0`（不看 `timing`） |
-| 78 場（`compare78.py`） | 全量時跑（待填） |
+| 78 場（`compare78.py`；合併後對 main `c9acff0d7`） | `battles=78 events=26741 different=0`；內嵌規則包差異 0 條 |
+| CLI 快照、parity、前端夾具 | 全量裡的對應測試都通過（6.3） |
 
 ### 6.2 開發中的檢查
 
@@ -137,7 +138,19 @@
 
 ### 6.3 全量
 
-（待填：依開發 PM 排程跑）
+開發 PM 排程後，全部 commit 完 `git merge --no-edit main`（合進 main `c9acff0d7`，含 KD-1、HC-8），merge commit `f1692fc15`。
+- 衝突只有 `docs/phases/寫死數值-清單.md`：取 main 那份後用 `--md` 重產。
+- `content_counts.json` 自動合併，兩邊都保留（`map_archetypes 11`、`statuses 120`）。
+- `classify.py --check` 0、`--unused` 沒有輸出。
+
+| 檢查 | 結束碼 |
+|---|---|
+| `scripts/check.py` | 0（pytest 18430 passed、8 skipped；vitest 4905 passed）；已寫下通過戳記 |
+| `pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+| `corepack pnpm -C client build` | 0 |
+| `compare78.py` | 0（different=0） |
+
+跑完之後只改了本報告（`.md`），沒有改程式。
 
 ## 7. 待 PM 決定
 
