@@ -326,14 +326,6 @@ rules:
     slot: 'op:*'
     value: '2'
     note: HC-6b 改判（HC-3 裁定 3）：比值的預估秒數上界「× 2」是改前、改後各跑一次（次數的換算）。
-  - id: ts-tuning-presets
-    class: config
-    status: todo
-    kind: number
-    files: [client/src/tuning/skillModel.ts, client/src/screens/TuningScreen.tsx, client/src/ui/workshop/ToolPanels.tsx]
-    context: '\[1, 2, 3'
-    note: 保守：數值工坊篩選列的階級（1～3）與 AP（1～3）選項、技能工坊「隨機一個」的階級（1～5）選項；HC-3 裁定 3 要改由 API 帶（AP 上限是 core.yaml 的 skill_limits.max_ap_cost，階級另定），HC-6b 只改判快捷鈕與刻度，這幾筆還沒接。
-
   # ======================================================================== 前端：常數
   - id: ts-http-status
     class: const

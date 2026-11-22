@@ -278,6 +278,11 @@ class GameRulesOut(_ApiModel):
     """#149 招數下限：精英。"""
     min_moves_boss_phase: int
     """#149 招數下限：頭目每階段。"""
+    skill_tiers: int
+    """技能（＝角色）階級有幾階（``rules/core.yaml`` 的 ``skill_limits.tiers``；HC-7 b：工坊的
+    階級選項）。"""
+    max_ap_cost: int
+    """主動技最多幾 AP（``skill_limits.max_ap_cost``；HC-7 b：數值工坊篩選列的 AP 選項）。"""
 
 
 class Glossary(_ApiModel):

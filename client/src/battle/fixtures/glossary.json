@@ -4929,6 +4929,8 @@
   "league_signup_close_day": 13,
   "min_moves_mob": 2,
   "min_moves_elite": 3,
-  "min_moves_boss_phase": 3
+  "min_moves_boss_phase": 3,
+  "skill_tiers": 5,
+  "max_ap_cost": 3
  }
 }

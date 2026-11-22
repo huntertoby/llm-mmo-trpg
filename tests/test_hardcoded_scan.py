@@ -79,8 +79,9 @@ def test_backend_spot_checks(result: Any, file: str, owner: str, expected: str) 
 @pytest.mark.parametrize(
     ("file", "needle", "expected"),
     [
-        ("client/src/battle/impact.ts", "TIER_PERMILLE: readonly", "config"),
-        ("client/src/screens/GearScreen.tsx", "max_rounds", "config"),
+        # HC-7 b：受擊頓格的門檻改判 layout；木樁的回合上限後備 ?? 30 拿掉（伺服器照 workshop.yaml）
+        ("client/src/battle/impact.ts", "TIER_PERMILLE: readonly", "layout"),
+        ("client/src/battle/vfx.ts", "export const HEAVY_HIT_PERMILLE", "layout"),
     ],
 )
 def test_frontend_spot_checks(result: Any, file: str, needle: str, expected: str) -> None:

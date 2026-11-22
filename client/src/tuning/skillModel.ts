@@ -2,6 +2,7 @@
 // 寫回前要勾的「我確定」、地圖戰結果表。畫面在 `tuning/Skill*.tsx`、`GroupPanel.tsx`、`SkillIdsEditor.tsx`、`SimPanel.tsx`。
 // API 是 NW-2a 的 `/api/tuning/*`（`docs/phases/PhaseNW-2a報告.md` 第 1 節）；欄位一律由後端給，這裡不寫死欄位清單。
 import type {
+  GameRules,
   TuningApplyIn,
   TuningBudgetResult,
   TuningCheckResult,
@@ -15,6 +16,7 @@ import type {
   TuningSimOptions,
   TuningSkillFacets,
 } from "../api/types";
+import { gameRules } from "../battle/glossary";
 import { editKey, kindOfValues, row as rowOf, type Edit, type Edits, type SimMetric, type SimRow } from "./model";
 
 // ---- 技能表單：依區塊分組 ----------------------------------------------------
@@ -203,18 +205,28 @@ function flagChoice(key: "enemy_only" | "has_condition" | "ranged", value: boole
   };
 }
 
-/** 篩選列（規格 B1：階級、武器技／法術、近戰／遠程、AP、主動／被動、敵人專用、有條件）。 */
-export const FILTER_ROWS: readonly { label: string; choices: readonly FilterChoice[] }[] = [
-  { label: "階級", choices: [1, 2, 3].map((t) => listChoice("tier", t, `${t} 階`)) },
+/** 1～`n`（工坊的階級、AP 選項）。 */
+export function upTo(n: number): number[] {
+  return Array.from({ length: n }, (_, i) => i + 1);
+}
+
+/**
+ * 篩選列（規格 B1：階級、武器技／法術、近戰／遠程、AP、主動／被動、敵人專用、有條件）。階級與 AP 的選項照伺服器
+ * `rules.skill_tiers`、`rules.max_ap_cost`（`rules/core.yaml` 的 `skill_limits`；HC-7 b，HC-6b 裁定 6）。
+ */
+export function filterRows(rules: Pick<GameRules, "skill_tiers" | "max_ap_cost"> = gameRules()): readonly { label: string; choices: readonly FilterChoice[] }[] {
+  return [
+  { label: "階級", choices: upTo(rules.skill_tiers).map((t) => listChoice("tier", t, `${t} 階`)) },
   { label: "類別", choices: [listChoice("category", "weapon", "武器技"), listChoice("category", "spell", "法術")] },
   { label: "距離", choices: [flagChoice("ranged", false, "近戰"), flagChoice("ranged", true, "遠程")] },
-  { label: "AP", choices: [1, 2, 3].map((a) => listChoice("ap_cost", a, `${a} AP`)) },
+  { label: "AP", choices: upTo(rules.max_ap_cost).map((a) => listChoice("ap_cost", a, `${a} AP`)) },
   {
     label: "種類",
     choices: [listChoice("kind", "active", "主動"), listChoice("kind", "passive", "被動"), listChoice("kind", "stance", "姿態"), listChoice("kind", "reaction", "反應")],
   },
   { label: "其他", choices: [flagChoice("enemy_only", true, "敵人專用"), flagChoice("enemy_only", false, "不含敵人專用"), flagChoice("has_condition", true, "有條件")] },
-];
+  ];
+}
 
 // ---- 分組改 ------------------------------------------------------------------
 

@@ -13861,6 +13861,14 @@
           "min_moves_boss_phase": {
             "type": "integer",
             "title": "Min Moves Boss Phase"
+          },
+          "skill_tiers": {
+            "type": "integer",
+            "title": "Skill Tiers"
+          },
+          "max_ap_cost": {
+            "type": "integer",
+            "title": "Max Ap Cost"
           }
         },
         "additionalProperties": false,
@@ -13890,7 +13898,9 @@
           "league_signup_close_day",
           "min_moves_mob",
           "min_moves_elite",
-          "min_moves_boss_phase"
+          "min_moves_boss_phase",
+          "skill_tiers",
+          "max_ap_cost"
         ],
         "title": "GameRulesOut",
         "description": "畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。"

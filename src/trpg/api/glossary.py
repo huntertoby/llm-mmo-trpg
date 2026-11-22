@@ -200,6 +200,8 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
         pregen_wait_seconds=round(library.skill_pick.pregen.wait_seconds),
         wish_cards=library.skill_pick.pool.wish_cards,
         opening_end_level=opening_end_level(library),
+        skill_tiers=core.skill_limits.tiers,
+        max_ap_cost=core.skill_limits.max_ap_cost,
         **_world_text_rules(library),
     )
     return rules

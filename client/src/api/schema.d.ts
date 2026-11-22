@@ -5561,6 +5561,10 @@ export interface components {
             min_moves_elite: number;
             /** Min Moves Boss Phase */
             min_moves_boss_phase: number;
+            /** Skill Tiers */
+            skill_tiers: number;
+            /** Max Ap Cost */
+            max_ap_cost: number;
         };
         /**
          * GearAffixInfo
