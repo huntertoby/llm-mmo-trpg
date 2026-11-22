@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from pydantic import ValidationError
 
 from tests.engine.helpers import (
     caster_template,
@@ -28,6 +27,7 @@ from trpg.shared.types import Team
 from trpg.skillgen.flash_offer import FlashRequest, try_variation
 from trpg.skillgen.flash_state import Variation, acquire
 from trpg.skillgen.usage import SkillUsage
+from trpg.skillgen.validate import validate_skill
 
 PASSIVE = "skill_t_ap_spent"
 
@@ -92,8 +92,9 @@ def test_ending_the_turn_with_ap_left_does_not_fire() -> None:
 
 
 def test_the_trigger_is_once_per_round() -> None:
-    with pytest.raises(ValidationError, match="on_ap_spent_all"):
-        _passive(max_per_round=2)
+    """HC-7 b（a 段裁定 5）：每輪次數照 skill_triggers.yaml，由 Ruleset 層的技能檢查擋下。"""
+    messages = [v.message for v in validate_skill(_passive(max_per_round=2), library())]
+    assert any("on_ap_spent_all 每輪最多觸發 1 次（max_per_round 只能是 1）" in m for m in messages)
 
 
 def test_the_every_third_hit_affix_returns_one_ap(monkeypatch: pytest.MonkeyPatch) -> None:
