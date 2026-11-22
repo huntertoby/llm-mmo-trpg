@@ -104,6 +104,8 @@ interface PathTagsDrawn {
   nodes: Container[];
   tags: readonly PathTag[];
   avoid: Array<{ x: number; y: number }>;
+  /** CR-1b：有單位的格子（頂面左上角），小牌不蓋住它們。 */
+  units: Array<{ x: number; y: number }>;
   miss: { node: Container; pos: Pos } | null;
 }
 
@@ -138,6 +140,7 @@ export abstract class HighlightLayer extends TerrainLayer {
       p.nodes.map((n, i) => ({ o: this.origin((p.tags[i] as PathTag).pos), w: n.width })),
       p.avoid,
       TAG_HEIGHT * k,
+      p.units,
     );
     p.nodes.forEach((n, i) => {
       const at = spots[i] as { x: number; y: number };
@@ -528,7 +531,9 @@ export abstract class HighlightLayer extends TerrainLayer {
     const miss = path.missEnd === null ? null : { node: missTagNode(this.origin(path.missEnd)), pos: path.missEnd };
     if (miss !== null) this.marks.addChild(miss.node);
     // AR-X10：小牌字有最小畫面尺寸（`pathTagScale`）；放大與擺位在 `pathTagRescale`，縮放改變時也重排
-    this.pathTags = { nodes, tags: path.tags, avoid: path.bangs.map((p) => bangCenter(this.center(p))), miss };
+    // CR-1b（美術 E3b 驗收小修 1）：預覽牌不要蓋住單位（巨型單位的每一格都算）
+    const units = (this.model?.units ?? []).flatMap((u) => (isGiantDraw(u) ? (u.tiles ?? []) : [{ x: u.x, y: u.y }])).map((p) => this.origin(p));
+    this.pathTags = { nodes, tags: path.tags, avoid: path.bangs.map((p) => bangCenter(this.center(p))), units, miss };
     this.pathTagRescale();
     this.marks.addChild(bangs);
   }
