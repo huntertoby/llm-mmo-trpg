@@ -11,7 +11,7 @@
 | 2 其他同類的寫死清單 | `860c0314c` | 盤點（第 3 節）；圖示的兩份元素代碼改由 `Element` 推，不再各抄一份 |
 | 3 測試的內容計數改從快照推 | `90c7b8b1c` | `tests/content_counts.json`＋`tests/content_counts.py`＋過期檢查；改 10 筆斷言；上手筆記 |
 | 4 收尾 | `edc1588a4` | `classify.py --md` 重產清單；`--check` 0、`--unused` 沒有輸出 |
-| 報告 | 本 commit | |
+| 報告 | `1c33212f3` 起稿；之後一個 commit 補結果 | |
 
 ## 2. 第 1 項：骨架清單從資料讀
 
@@ -118,24 +118,26 @@
 
 | 比對 | 結果 |
 |---|---|
-| 逐招預算＋驗證 442 招（`hc7b_dump.py`） | RESULT_BUDGET |
-| 每張地圖 3 種子 | RESULT_51 |
-| 78 場（`compare78.py`，同 a 段那組） | RESULT_78 |
-| 組合器 census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | RESULT_CENSUS |
+| 逐招預算＋驗證 442 招（`hc7b_dump.py`） | `same=442 different=0` |
+| 每張地圖 3 種子 | `battles=51 different=0` |
+| 78 場（`compare78.py`，同 a 段那組） | `battles=78 events=26206 different=0`；內嵌規則包差異 0 條 |
+| 組合器 census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | `cells=204 different=0`（不看 `timing`） |
 
 ## 7. 檢查
 
 開發中每項 commit 前跑 ruff check、ruff format --check、mypy、lint-imports、`trpg content check`、`classify.py --check` 與相關測試（經看門狗），結束碼都是 0。
 
-**交件前全量**（全部 commit 後 `git merge --no-edit main`：MERGE_RESULT）：
+**交件前全量**（全部 commit 後 `git merge --no-edit main`：合進 main `98ad9fa6f`，main 多的只有文件）：
 
 | 檢查 | 結束碼 |
 |---|---|
-| `scripts/check.py` | RESULT_CHECK |
-| `pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | RESULT_SLOW |
-| `corepack pnpm -C client build` | RESULT_BUILD |
-| `trpg content check` | RESULT_CONTENT |
+| `scripts/check.py` | 0（pytest 18256 passed、8 skipped；vitest 4866 passed）；已寫下通過戳記 |
+| `pytest -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+| `corepack pnpm -C client build` | 0 |
+| `trpg content check` | 0（704 檔、442 技能） |
 | `classify.py --check`／`--unused` | 0／沒有輸出 |
+
+跑完之後只改了本報告（`.md`），沒有改程式。
 
 ## 8. 複雜度與 noqa
 
