@@ -5508,6 +5508,9 @@
   "summon_guard_radius": 2,
   "battle_team_size": 3,
   "item_skill_ap_cost": 1,
-  "situation_care_max": 2
+  "situation_care_max": 2,
+  "attribute_points_per_level": 20,
+  "base_attribute": 100,
+  "start_free_points": 40
  }
 }

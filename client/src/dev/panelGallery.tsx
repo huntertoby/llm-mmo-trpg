@@ -162,7 +162,7 @@ function KitScene() {
             <b>閃現</b>：4 級起
           </Callout>
           <Callout tone="info">入門期可以自己配點，正式選定時會照新武器重配一次。</Callout>
-          <TabLine end={<Tag tone="dim">升級時每級 +2</Tag>}>
+          <TabLine end={<Tag tone="dim">升級時每級 +20</Tag>}>
             <span>標籤：</span>
             <Tag tone="open">懸賞中</Tag>
             <Tag tone="live">進行中</Tag>
