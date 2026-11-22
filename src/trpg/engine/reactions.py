@@ -35,6 +35,7 @@ from trpg.content.skills import SkillDef
 from trpg.engine import attack_shapes, modifiers, part_breaks
 from trpg.engine.basics import guard_covers
 from trpg.engine.context import Ctx
+from trpg.engine.crit_damage import crit_damage_permille
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     CancelChargeEffect,
@@ -96,7 +97,7 @@ from trpg.engine.skills.targeting import (
     reaction_target_problem,
     skill_mana_cost,
 )
-from trpg.engine.state import UnitState
+from trpg.engine.state import BattleState, UnitState
 from trpg.engine.strikes import after_attack_hit
 from trpg.engine.weapon_traits import (
     apply_hit_traits,
@@ -991,6 +992,7 @@ def _attack_once(
                 * ctx.core.basic_attack_attr_multiplier_permille,
                 scale_attr=weapon_scale_attr(attacker),
                 crit=roll.crit,
+                crit_permille=_crit_permille(state, attacker, target) if roll.crit else None,
                 min_damage=ctx.core.min_damage_on_hit,
                 multiplier_permille=multiplier,
                 block_permille=block,
@@ -1017,6 +1019,13 @@ def _attack_once(
 
         after_attack_hit(ctx, attacker, target, again)
     return roll.ambush > 0, True, target
+
+
+def _crit_permille(state: BattleState, attacker: UnitState, target: UnitState) -> int:
+    """普攻暴擊的傷害倍率（CR-1，05 5.4.2）：修正規則的條件看這次的目標。"""
+    return crit_damage_permille(
+        state, attacker, use=modifiers.ATTACK, subject=Subject(target, target.xy)
+    )
 
 
 def _forced_outcome(ctx: Ctx, *, primary: bool) -> ForcedOutcome | None:

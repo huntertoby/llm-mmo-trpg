@@ -61,6 +61,7 @@ from trpg.engine.practice import hold_standing
 from trpg.engine.rules.combat import (
     PERMILLE,
     PPM,
+    crit_extra_total,
     element_modifier_ppm,
     raw_damage_permille,
     rolled_damage_amount,
@@ -243,8 +244,8 @@ def _rolled_damage(
     """擲骰（或固定值）傷害：骰值 ＋ 固定值 ＋ 縮放，乘上元素、天氣、倍率、狀態與陣法。"""
     mod_ppm = PPM
     weather = PERMILLE
-    rolls, exploded = _damage_rolls(ctx, effect)
-    raw_permille = raw_damage_permille(sum(rolls), effect.flat, effect.scaled_permille)
+    rolls, exploded, roll_total = _damage_rolls(ctx, effect)
+    raw_permille = raw_damage_permille(roll_total, effect.flat, effect.scaled_permille)
     if effect.apply_element_mod:
         defender = (
             unit if effect.part_id is None else part_breaks.element_view(unit, effect.part_id)
@@ -315,18 +316,31 @@ def _difficulty_permille(ctx: Ctx, target: UnitState, effect: DamageEffect) -> i
     return core.enemy_damage_permille
 
 
-def _damage_rolls(ctx: Ctx, effect: DamageEffect) -> tuple[tuple[int, ...], int]:
-    """傷害的骰值（與爆骰多擲的顆數）：暴擊時骰數加倍；聖光雙效（Phase 3D-8a）沿用已擲好的骰值，
-    暴擊的額外骰子另擲。"""
+def _damage_rolls(ctx: Ctx, effect: DamageEffect) -> tuple[tuple[int, ...], int, int]:
+    """傷害的骰值（與爆骰多擲的顆數、計入傷害的骰值總和）。
+
+    暴擊（CR-1，05 5.4.2）：照常擲原本的骰，再多擲一組同樣顆數（爆骰照常），多擲的那組乘
+    （倍率 − 100%）、無條件捨去（:func:`crit_extra_total`）。擲骰順序與次數和改版前「骰數加倍」
+    相同，200% 時結果逐位相同。``rolls`` 照擲出的原值記（含多擲的那組）。
+
+    聖光雙效（Phase 3D-8a）沿用已擲好的骰值，暴擊的額外骰子另擲（不爆骰）。"""
     if effect.dice is None:
-        return (), 0
-    count = effect.dice.count * (2 if effect.crit else 1)
+        return (), 0, 0
+    count = effect.dice.count
     if effect.preset_rolls is None:
-        return _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
-    extra = tuple(
-        ctx.roll_quantity(effect.dice.sides) for _ in range(count - len(effect.preset_rolls))
-    )
-    return effect.preset_rolls + extra, 0
+        rolls, exploded = _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
+        if not effect.crit:
+            return rolls, exploded, sum(rolls)
+        extra, more = _roll_damage_dice(ctx, effect.dice.sides, count, effect.explode_max)
+        total = sum(rolls) + crit_extra_total(sum(extra), effect.crit_permille)
+        return rolls + extra, exploded + more, total
+    preset = effect.preset_rolls
+    wanted = count * (2 if effect.crit else 1)
+    extra = tuple(ctx.roll_quantity(effect.dice.sides) for _ in range(wanted - len(preset)))
+    if not effect.crit:
+        return preset + extra, 0, sum(preset) + sum(extra)
+    total = sum(preset) + crit_extra_total(sum(extra), effect.crit_permille)
+    return preset + extra, 0, total
 
 
 def _roll_damage_dice(

@@ -56,6 +56,7 @@ from trpg.engine.actions import (
 from trpg.engine.battle import acting_unit, action_ap_cost, simulate_preview
 from trpg.engine.bombs import blast_tiles, bomb_spec
 from trpg.engine.control import plan_status, status_save_chance
+from trpg.engine.crit_damage import crit_damage_permille
 from trpg.engine.events import (
     AttackIntercepted,
     AttackRolled,
@@ -102,11 +103,13 @@ from trpg.engine.race.skills import race_skill_of
 from trpg.engine.rerolls import RerollInfo, possible_rerolls
 from trpg.engine.results import ResolveResult
 from trpg.engine.rules.combat import (
+    CRIT_PERMILLE_DOUBLE,
     PERMILLE,
     PPM,
     Cover,
     advantage_state,
     attack_reach,
+    crit_extra_total,
     half_cover,
     hit_modifier,
     is_hit,
@@ -546,6 +549,26 @@ def dice_distribution(count: int, sides: int, explode_max: int = 0, scale: int =
     return dist
 
 
+def crit_distribution(
+    count: int,
+    sides: int,
+    explode_max: int = 0,
+    scale: int = 1,
+    crit_permille: int | None = None,
+) -> Counter[int]:
+    """暴擊時計入傷害的骰值分布（次數；CR-1，05 5.4.2）：原本的 ``count`` 顆加上多擲的同樣顆數，
+    多擲的那組乘（倍率 − 100%）、無條件捨去（:func:`crit_extra_total`，同實際結算）。200%（或
+    ``None``）時和改版前的 ``count × 2`` 顆分布相同，直接用那一份。"""
+    if crit_permille is None or crit_permille == CRIT_PERMILLE_DOUBLE:
+        return dice_distribution(count * 2, sides, explode_max, scale)
+    normal = dice_distribution(count, sides, explode_max, scale)
+    dist: Counter[int] = Counter()
+    for base, n in normal.items():
+        for extra, m in normal.items():
+            dist[base + crit_extra_total(extra, crit_permille)] += n * m
+    return dist
+
+
 def _expected(dist: Counter[int], amount: dict[int, int]) -> Fraction:
     total = sum(dist.values())
     return Fraction(sum(amount[s] * n for s, n in dist.items()), total)
@@ -799,7 +822,14 @@ def _attack_numbers(
         )
         backstab = positional.backstab > 0
         dice = attack_dice(state, actor, backstab=backstab)
-        crit_dist = dice_distribution(dice.count * 2, dice.sides, scale=core.quantity_scale)
+        crit_dist = crit_distribution(
+            dice.count,
+            dice.sides,
+            scale=core.quantity_scale,
+            crit_permille=crit_damage_permille(
+                state, actor, use=modifiers.ATTACK, subject=Subject(target, target.xy)
+            ),
+        )
         target_key = action.target_id
     low = _primary_damage(min_events, actor.id, target_key)
     high = _primary_damage(max_events, actor.id, target_key)
@@ -980,6 +1010,13 @@ def _damage_expectation(  # noqa: PLR0917
         mid = Fraction(minimum + maximum, 2)
         return DamageRange(minimum, maximum, mid * hit, mid)
     core = state.ruleset.core
+    crit_permille = crit_damage_permille(
+        state,
+        actor,
+        use=modifiers.skill_use(skill),
+        subject=Subject(target, target.xy),
+        skill=skill,
+    )
     total = Fraction(0)
     shield = shield_amount(
         state.ruleset, target
@@ -990,7 +1027,7 @@ def _damage_expectation(  # noqa: PLR0917
         count, sides = (0, 1) if dice is None else (dice.count, dice.sides)
         explode = core.explode_max if spec.explode else 0
         normal = dice_distribution(count, sides, explode, core.quantity_scale)
-        doubled = dice_distribution(count * 2, sides, explode, core.quantity_scale)
+        doubled = crit_distribution(count, sides, explode, core.quantity_scale, crit_permille)
         table: dict[int, int] = {}
         for value in sorted(set(normal) | set(doubled)):
             nominal = rolled_damage_amount(

@@ -44,6 +44,7 @@ from trpg.engine import modifiers, part_breaks
 from trpg.engine.actions import UseSkill
 from trpg.engine.context import Ctx
 from trpg.engine.control import status_effect
+from trpg.engine.crit_damage import crit_damage_permille
 from trpg.engine.effects import execute
 from trpg.engine.effects.models import (
     ApplyStatusEffect,
@@ -460,6 +461,16 @@ class Cast:
         where = unit.xy if unit is not None else xy
         assert where is not None
         return query(self.ctx.state, self.caster, self.use, Subject(unit, where))
+
+    def crit_permille(self, unit: UnitState) -> int:
+        """對 ``unit`` 暴擊時的傷害倍率（CR-1，05 5.4.2）；不受修正的施放不算修正規則的加成。"""
+        return crit_damage_permille(
+            self.ctx.state,
+            self.caster,
+            use=self.use if self.modified else None,
+            subject=Subject(unit, unit.xy),
+            skill=self.skill,
+        )
 
     def _redirect(self, original: UnitState, guardian: UnitState) -> None:
         """替隊友擋攻擊：這次單體攻擊的所有效果改為作用在守護者身上（沿用原本的命中結果，不重擲；
@@ -1147,6 +1158,7 @@ class Cast:
             scaled_permille=scaled,
             scale_attr=skill_scale_attr(self.caster, self.skill),
             crit=roll is not None and roll.crit,
+            crit_permille=self.crit_permille(unit) if roll is not None and roll.crit else None,
             min_damage=self.ctx.core.min_damage_on_hit,
             explode_max=explode_max,
             preset_rolls=preset,

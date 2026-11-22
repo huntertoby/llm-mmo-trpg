@@ -221,6 +221,10 @@ targets:
       - {path: backstab_hit_bonus, label_zh: 背刺命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 近戰攻擊者站在目標背後格時命中加這麼多（敵我、頭目都適用）。有「無聲」的刺客可以留在背後連續吃到。}
       - {path: backstab_crit_range_bonus, label_zh: 背刺暴擊範圍, kind: int, hint_min: 0, hint_max: 3, note_zh: 背刺時暴擊範圍擴大這麼多（1＝武器 20 變 19～20）。}
       - {path: ambush_hit_bonus, label_zh: 潛行偷襲命中加成, kind: int, hint_min: 0, hint_max: 5, note_zh: 帶隱蔽狀態出手時命中加這麼多；出手後脫離隱蔽，從隱蔽中近戰出手時目標不會轉身。}
+      # CR-1（#178，05 5.4.2）：暴擊傷害倍率。暴擊時多擲一組同樣顆數的骰子，那組乘（倍率 − 100%）；屬性與固定值不放大。
+      - {path: crit_damage.base_permille, label_zh: 暴擊傷害基礎倍率（‰）, group_zh: 暴擊傷害, kind: permille, hint_min: 1500, hint_max: 3000, note_zh: 武器、天生武器、單位檔沒另填時的暴擊傷害倍率（2000＝200%，暴擊時骰子變兩倍）。調高：所有沒另填的攻擊暴擊更痛、高變異的招更值錢；調低：暴擊只多一點點。敵我一起變。只能 1000～5000。}
+      - {path: crit_damage.min_permille, label_zh: 暴擊傷害全身下限（‰）, group_zh: 暴擊傷害, kind: permille, hint_min: 1000, hint_max: 2000, note_zh: 所有來源（武器、裝備、修正技、技能自帶、種族）相加之後，暴擊傷害最低只會到這麼多（1500＝150%）。調高：減暴傷的效果有限；調低：暴擊可以幾乎不加傷害。不能大於全身上限。}
+      - {path: crit_damage.max_permille, label_zh: 暴擊傷害全身上限（‰）, group_zh: 暴擊傷害, kind: permille, hint_min: 2000, hint_max: 4000, note_zh: 所有來源相加之後，暴擊傷害最高只會到這麼多（3000＝300%）。調高：堆暴傷的 build 上限更高、暴擊秒殺的風險變大；調低：堆暴傷很快就沒用。不能小於全身下限。}
       # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻。
       - {path: far_distance, label_zh: 遠距條件的距離, kind: int, hint_min: 3, hint_max: 8, note_zh: 技能條件「遠距」在施放者和目標距離至少這麼多格時成立（曼哈頓距離，巨型單位看佔地最近的一格）。越大越難成立；條件「貼身」固定是距離 1。只能 2～20。}
       # RG-1（#162，09 9.6.6「數值照工坊」）：盾兵替相鄰的遠程同伴擋遠程攻擊。

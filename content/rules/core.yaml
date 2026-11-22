@@ -40,6 +40,12 @@ ambush_hit_bonus: 2           # 潛行偷襲：帶 concealed 狀態時發動攻�
 far_distance: 5               # SK-1（#166，06 6.38 第 1 點）：條件「遠距」的門檻，施放者和目標距離至少這麼多格（初值，工坊）
 # HC-7：引擎寫死的規則數字搬來（值不變）
 crit_range_floor: 2           # 暴擊範圍的下限：背刺、站定狙擊、小特性「銳利」擴大暴擊範圍時最寬到自然 2 起（自然 1 不暴擊）
+# CR-1（#178，05 5.4.2）：暴擊傷害倍率（‰）。暴擊時多擲一組同樣顆數的骰子，那組乘（倍率 − 100%）、無條件捨去；
+# 屬性與固定值不放大。武器、天生武器、單位檔沒另填時用 base_permille；所有來源相加後套全身上下限（初值，工坊）。
+crit_damage:
+  base_permille: 2000         # 基礎倍率 200%（改版前的骰數加倍）
+  min_permille: 1500          # 全身下限 150%
+  max_permille: 3000          # 全身上限 300%
 opening_status_max_duration: 2  # 開場狀態（單位檔的 opening_statuses、下一場修正）最多掛幾回合（Phase 5A-6b；不倒數的狀態不受限）
 defense_break_default_permille: 100  # 破甲狀態沒帶數值時的防禦降幅（‰）
 melee_height_limit: 1         # 近戰（射程 <= melee_height_limit_max_range）攻擊的高度差上限
