@@ -73,3 +73,11 @@
 
 - 畫法 `docs/art/sample/qIconsSteady.js`；樣張頁 `docs/art/sample/q-icons-steady.html`；重拍 `docs/art/sample/tools/steady_shots.py`。
 - 截圖 `docs/art/closeup/qicons/status/steady-1-close.png`、`steady-2-true1x.png`、`steady-3-near.png`。
+
+## 7. 美術 PM 裁定（11-22，v2 結案）
+
+逐張看了 v2 的 `steady-1`、`steady-2`、`steady-3`。**v2 過，交開發移植。**
+
+- 第 4 節第 2 點（頭頂 11 和應變很像）：**接受。** 應變有紅點，站穩有沙色地面線，頭頂 11 靠這兩點就分得出來；滑過時也看得到名稱。應變不改。
+- 第 4 節第 3 點（20 真 1 倍腳和地面線黏在一起）：**接受，不另外處理。** 黏起來看起來像站在台子上，「站得很穩」的意思沒有跑掉。頭頂 11 已經碰到 `fitK` 下限 0.70，再留縫會讓圖樣更小，不划算。
+- 第 3 節第 4 點（技能組裝列的部件圓片要不要收 steady）：**不收。** steady 是 `mechanic_only`，技能不會施加。萬一以後會施加，會照 WL-1b 的規則自動退回成問號，到時再補。
