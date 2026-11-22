@@ -422,6 +422,8 @@ class RacePassive(_GuardedModel):
     permille: int | None = None
     amount: int | None = Field(default=None, ge=1, le=2)
     radius: int | None = Field(default=None, ge=1, le=3)
+    duration: int | None = Field(default=None, ge=1, le=3)
+    """``trail_surface``（E3）：留下的表面持續幾個環境回合。"""
 
     @model_validator(mode="after")
     def _check_rule(self) -> RacePassive:

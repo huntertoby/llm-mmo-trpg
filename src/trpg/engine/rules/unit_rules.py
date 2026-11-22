@@ -59,6 +59,7 @@ _KEY_FIELD: dict[str, str] = {
     "burn_immunity_on": "surfaces",
     "surface_move_bonus": "surfaces",
     "weather_move_bonus": "weathers",
+    "surface_damage_immunity": "surfaces",
 }
 """規則 → 決定「作用在哪裡」的參數欄位（沒列出的規則只有 :data:`ANY_KEY`）。"""
 
