@@ -759,7 +759,7 @@ class TerrainAffix(_AffixBase):
     def _check(self) -> TerrainAffix:
         if self.rule in EQUIPMENT_FORBIDDEN_RULES:
             raise ValueError(
-                f"詞條 {self.id}：地形規則不能用 {self.rule}（元素減傷是數值抗性，請用第 1 類的"
+                f"詞條 {self.id}：地形規則不能用 {self.rule}（元素減傷是數值抗性，請用數值類的"
                 "元素抗性詞條）"
             )
         known, problems = unit_rule_param_problems(self)

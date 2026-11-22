@@ -1309,9 +1309,10 @@ rules:
     status: done
     kind: text
     files: [src/trpg/content/fields.py, src/trpg/content/races.py, src/trpg/content/skills/limits.py,
-            src/trpg/content/stacks.py]
-    where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check']
-    note: HC-6a 改判（HC-4d 的驗證訊息）：下限 ≥ 0、至少 1 個效果是非負與非空檢查；−1 是「只能減傷」的上界（負數）；1000 是 ‰ 換算。
+            src/trpg/content/stacks.py, src/trpg/content/unit_rules.py]
+    where: ['FieldMapRules._check', 'RacePassive.permille_problems', '_effect_problems', 'OverloadSpec._check',
+            'unit_rule_permille_problems']
+    note: HC-6a 改判（HC-4d 的驗證訊息）：下限 ≥ 0、至少 1 個效果是非負與非空檢查；−1 是「只能減傷」的上界（負數）；1000 是 ‰ 換算。E2 把種族被動的 permille 檢查搬到共用的 unit_rules.py，訊息照搬。
   - id: py-content-world-economy-const-text
     class: const
     status: done
