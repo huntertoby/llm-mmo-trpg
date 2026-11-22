@@ -6,7 +6,7 @@
 // 留給技能部件圓片 32 種以外的狀態（`skillParts.ts` 的 `QP.hooks.status`、`statusColor`）與召喚物頭頂（`qSummon.ts`）。
 // 快取鍵用級距（尺寸、內部解析度、極性、控制類別…），不用原始比例。
 import type { StatusLook } from "../api/types";
-import { statusLook, statusName } from "../battle/glossary";
+import { statusLook, statusNameOrNull } from "../battle/glossary";
 import { FONT } from "./labels";
 import { elementColor } from "./palette";
 import { blank, ctxOf, ICON_RES, qCanvasAvailable } from "./qIcon/core";
@@ -637,7 +637,7 @@ export function drawGlyph(c: Ctx, id: string | null | undefined): void {
     known(c);
     return;
   }
-  const name = id == null || id === "" ? "?" : statusName(id);
+  const name = statusNameOrNull(id) ?? "?";
   c.font = `bold 13px ${FONT}`;
   c.textAlign = "center";
   c.textBaseline = "middle";
@@ -671,7 +671,7 @@ export function statusIconKey(id: string, size: number, res: number = ICON_RES):
 function lookKey(id: string): string {
   const l = statusLook(id);
   // 沒有 Q 版圖樣的（不認得）畫名稱第一個字：字會變，放進鍵
-  const first = qStatusEntry(id) === null ? ([...statusName(id)][0] ?? "?") : "";
+  const first = qStatusEntry(id) === null ? ([...(statusNameOrNull(id) ?? "?")][0] ?? "?") : "";
   return `${id}|${l?.polarity ?? "-"}|${l?.control_group ?? "-"}|${l?.dot_element ?? "-"}|${first}`;
 }
 

@@ -6,7 +6,7 @@ import { ELEMENT_VFX, hexToNumber } from "../battle/vfxPalette";
 import { listFiles, readFile, SRC_DIR } from "../test/sourceScan";
 import { ELEMENT_COLORS } from "./palette";
 import fixture from "./fixtures/skill_icons.json";
-import { drawMotif, ELEMENT_ICON, elementPalette, gridLayout, isRanged, normalizeArm, SKELETON_NAME } from "./skillGlyphs";
+import { drawMotif, ELEMENT_ICON, elementPalette, gridLayout, isRanged, normalizeArm } from "./skillGlyphs";
 import {
   assemblyFormula,
   statusTile,
@@ -107,11 +107,11 @@ describe("部件庫：對照 content/ 沒有漏", () => {
     expect(Object.keys(ELEMENT_ICON).sort()).toEqual([...vfx].sort());
   });
 
-  it("每個骨架都有名稱（WL-1 b：覆寫表或名詞表，不是英文 id、不是「未知骨架」）", () => {
+  it("每個骨架都有名稱（WL-1 c：名詞表，不是英文 id、不是「未知骨架」）", () => {
     const ids = skeletonFiles.map((f) => f.replace(/\.yaml$/, ""));
     expect(ids.length).toBeGreaterThan(10);
     for (const id of ids) {
-      const name = skeletonName(id, SKELETON_NAME);
+      const name = skeletonName(id);
       expect(name, id).not.toBe(id);
       expect(name, id).not.toBe(UNKNOWN_SKELETON_NAME);
     }
@@ -139,7 +139,7 @@ describe("部件庫：不認得的部件走預設", () => {
       expect(() => p?.draw(ctx)).not.toThrow();
       expect(p?.label).not.toBe("");
     }
-    expect(effectPart({ type: "apply_status", status: "glitter" }).label).toBe("glitter"); // 沒有名稱時顯示代碼
+    expect(effectPart({ type: "apply_status", status: "glitter" }).label).toBe("未知狀態"); // 沒有名稱時顯示「未知狀態」（WL-1 c），不顯示代碼
     expect(effectPart({ type: "apply_status", status: "burning" }).label).toBe("燃燒");
     expect(effectPart({ type: "create_surface", surface: "oil" }).label).toBe("油表面");
     expect(linkPart("sometime").key).toBe("sometime");

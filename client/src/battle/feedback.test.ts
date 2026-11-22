@@ -141,9 +141,9 @@ describe("feedbackFor: lines and statuses", () => {
     expect(feedbackFor([ev("skill_used", { unit_id: "unit_0001", tiles: [{ x: 0, y: 0 }] })], view)).toEqual([]);
   });
 
-  it("pops a status icon with its name (the id when the glossary has none)", () => {
+  it("pops a status icon with its name (未知狀態 when the glossary has none, WL-1 c)", () => {
     const items = feedbackFor([ev("status_applied", { target_id: "unit_0003", status_id: "no_such_status" })], view);
-    expect(items).toEqual([{ kind: "status", pos: { x: 2, y: 1 }, text: "no_such_status", slot: 0 }]);
+    expect(items).toEqual([{ kind: "status", pos: { x: 2, y: 1 }, text: "未知狀態", slot: 0 }]);
   });
 
   it("areaCenter picks the tile closest to the average", () => {

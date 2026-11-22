@@ -7,7 +7,7 @@ import type { Glossary, SkillIconData } from "../api/types";
 import glossary from "../battle/fixtures/glossary.json";
 import { setGlossary } from "../battle/glossary";
 import { fakeCanvasFactory, fakeCtx, type FakeCanvasLog } from "../test/fakeCanvas";
-import { setQCanvasFactory } from "./qIcon/core";
+import { setQCanvasFactory, type QOpts } from "./qIcon/core";
 import * as QP from "./qIcon/parts";
 import { clearQSkillDefs } from "./qIcon/skills";
 import * as QT from "./qIcon/status";
@@ -64,14 +64,14 @@ describe("WL-1 b：狀態圖示走 paintUnknown", () => {
     }
   });
 
-  it("沒有名稱的畫「?」，不認得但名詞表沒有的畫 id 的第一個字（現行，QI-3a 驗收過）", () => {
+  it("沒有名稱的畫「?」；名詞表沒有的也畫「?」（WL-1 c：名稱退回「未知狀態」，不畫「未」也不畫 id 的第一個字）", () => {
     withNameless();
     const first = (id: string | null | undefined): string => drawn((ctx) => QT.paint(ctx, id, 10, 10, 16.8)).find((c) => c.startsWith("fillText("))!.split("(")[1]!.split(",")[0]!;
     expect(first("")).toBe("?");
     expect(first(null)).toBe("?");
     expect(first(undefined)).toBe("?");
     expect(first(NAMELESS)).toBe("?");
-    expect(first("brand_new_thing")).toBe("b");
+    expect(first("brand_new_thing")).toBe("?");
   });
 
   it("狀態卡、頭頂、組裝列的狀態圓片都畫得出來", () => {
@@ -81,11 +81,21 @@ describe("WL-1 b：狀態圖示走 paintUnknown", () => {
       expect(() => QT.headCanvas(id, 11, 1, { res: 1 }), id).not.toThrow();
       expect(() => statusIconCanvas(id, 20, 1), id).not.toThrow();
       expect(() => tileCanvas(statusIconTile(id), 20, 1), id).not.toThrow();
-      // 狀態的部件圓片（組裝列）：不認得的照 QI-2c 的現行圖樣退回（`skillParts.ts` 的 hooks.status）
+      // 狀態的部件圓片（組裝列）：不認得的畫 Q 版扁平問號（WL-1c；`skillParts.ts` 的 hooks.status）
       const calls = drawn((ctx) => statusTile(id).draw(ctx, 0.3, 1));
       expect(calls.some((c) => c.startsWith("fill(")), id).toBe(true);
       expect(calls.some((c) => c.startsWith("drawImage(")), id).toBe(true);
     }
+  });
+
+  it("WL-1c：組裝列狀態圓片的掛鉤，不認得的狀態畫的和其他類別的 Q 版問號一模一樣；認得的不是問號", () => {
+    withNameless();
+    const opts: QOpts = { small: false, tiny: false, owPx: 0, badge: false, u: 1 };
+    const mark = drawn((ctx) => QP.unknownMark(ctx, opts));
+    expect(mark.length).toBeGreaterThan(0);
+    expect(drawn((ctx) => QP.entry("skeleton", "brand_new_thing").d(ctx, opts, undefined as never, {}))).toEqual(mark);
+    for (const id of ["brand_new_thing", ""]) expect(drawn((ctx) => QP.hooks.status!(ctx, opts, id)), id).toEqual(mark);
+    expect(drawn((ctx) => QP.hooks.status!(ctx, opts, "burning"))).not.toEqual(mark);
   });
 });
 
@@ -134,8 +144,8 @@ describe("WL-1 b：骨架徽章、部件圓片走 Q 版問號", () => {
     expect(() => drawn((ctx) => paintSkillIcon(ctx, icon(""), "full", 96, 1))).not.toThrow();
   });
 
-  it("組裝列的骨架格：不認得、空字串都畫問號、名稱不是英文 id", () => {
-    for (const skeleton of ["brand_new_skeleton", ""]) {
+  it("組裝列的骨架格：不認得的畫問號、名稱不是英文 id", () => {
+    for (const skeleton of ["brand_new_skeleton"]) {
       const tile = assemblyFormula(icon(skeleton)).rows[0]!.find((t) => t.cat === "骨架")!;
       expect(tile.label).toBe("未知骨架");
       const calls = drawn((ctx) => tile.draw(ctx, 0.3, 1));
@@ -148,5 +158,14 @@ describe("WL-1 b：骨架徽章、部件圓片走 Q 版問號", () => {
   it("沒有骨架（null）時組裝列不放骨架格，其他部件照畫", () => {
     const f = assemblyFormula(icon(null));
     expect(f.rows[0]!.map((t) => t.cat)).toEqual(["形狀", "效果（核心）"]);
+  });
+
+  it("WL-1c：空字串的骨架當「沒有骨架」：組裝列不放骨架格、技能小圖和 null 畫得一模一樣（不畫徽章）", () => {
+    expect(assemblyFormula(icon("")).rows[0]!.map((t) => t.cat)).toEqual(["形狀", "效果（核心）"]);
+    for (const rarity of ["common", "epic"]) {
+      for (const [level, size] of [["mid", 56], ["full", 96], ["main", 40]] as const) {
+        expect(drawn((ctx) => paintSkillIcon(ctx, icon("", rarity), level, size, 1)), `${rarity}/${level}`).toEqual(drawn((ctx) => paintSkillIcon(ctx, icon(null, rarity), level, size, 1)));
+      }
+    }
   });
 });

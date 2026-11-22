@@ -482,14 +482,20 @@
   display: block;
 }
 
+/* WL-1c（美術 PM `docs/art/WL-1b驗收.md` 的 WL-1c 節，照 X10-3b）：放不下就換行、最多兩行、兩行平均分配；
+   兩行還放不下才在第二行尾巴「…」（滑過看全名）。格寬維持 44px。 */
 .f-label {
   max-width: 44px;
   font-size: 10px;
   line-height: 1.15;
   text-align: center;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .f-linkrow {
