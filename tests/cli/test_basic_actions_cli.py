@@ -48,7 +48,8 @@ def test_open_plain_battle_uses_swap_and_aim_and_replays(
 ) -> None:
     # CB-1：見上一個測試；BAL-20 AI 估值表補 burning（隊友法師的火焰箭軌跡變了）後 730 → 17
     # AP-1（玩家方 4 AP、失手返還）後 17 → 237（0～299 只有 237、247、258 同時換位又瞄準）
-    data, out = _log("open_plain", 237, tmp_path, capsys)
+    # KD-1（倒地改版）237 → 120（0～299 只有 120、298）
+    data, out = _log("open_plain", 120, tmp_path, capsys)
     assert data["format"] == "trpg-battle-log/137"
     assert {"swap", "aim"} <= {a["type"] for a in data["actions"]}
     assert "瞄準" in out

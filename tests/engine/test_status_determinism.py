@@ -69,8 +69,9 @@ def _json(events: Sequence[EventBase]) -> str:
 def test_same_seed_same_battle_and_replay_with_the_new_statuses() -> None:
     applied: set[str] = set()
     kinds: set[type] = set()
-    # 這兩個種子的戰鬥裡會出現暈眩、抵抗判定與流血、中毒、易傷（BAL-5：7 → 9；AP-1：9、10 → 4、9）
-    for seed in (4, 9):
+    # 這兩個種子的戰鬥裡會出現暈眩、抵抗判定與流血、中毒、易傷（BAL-5：7 → 9；AP-1：9、10 → 4、9；
+    # KD-1：4、9 → 7、12，倒地改版後 4、9 都沒有跳過回合）
+    for seed in (7, 12):
         a = run_battle(_setup(), seed, _ai())
         b = run_battle(_setup(), seed, _ai())
         assert state_to_json(a.state) == state_to_json(b.state)
