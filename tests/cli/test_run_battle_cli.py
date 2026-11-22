@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.main import main
+from trpg.engine.runner import LOG_FORMAT
 
 
 @pytest.mark.parametrize(("map_id", "seed"), [("open_plain", 0), ("dark_forest", 2)])
@@ -20,7 +21,7 @@ def test_battle_log_contains_runs_and_replays(
     out = capsys.readouterr().out
     assert "跑步（本回合移動 +3" in out  # 戰鬥紀錄有一行
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/137"
+    assert data["format"] == LOG_FORMAT
     assert any(a.get("type") == "run" for a in data["actions"])
     assert any(e["type"] == "unit_ran" for e in data["events"])
     assert main(["battle", "replay", str(log)]) == 0

@@ -43,6 +43,7 @@ from trpg.engine.skills.targeting import (
     shape_reach,
 )
 from trpg.engine.state import UnitState
+from trpg.engine.trail import leave_trail
 from trpg.shared.types import Pos
 
 if TYPE_CHECKING:
@@ -307,6 +308,8 @@ def _charge_walk(cast: Cast, spec: EffectSpec, route: ChargeRoute, start: XY, ga
             cast.ctx,
             [MoveUnitEffect(source_id=caster.id, unit_id=caster.id, dest=cell, mode="dash")],
         )
+        if caster.xy != before:
+            leave_trail(cast.ctx, caster, before)  # 霜行（E3）：直線衝撞的每一步也算
         enemy_enters_adjacent_reactions(cast.ctx, caster, before)
         enemy_moves_in_range_reactions(cast.ctx, caster)
         moved = True

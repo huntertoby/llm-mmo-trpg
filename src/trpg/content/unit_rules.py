@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -25,6 +26,7 @@ __all__ = [
     "UnitRuleSpec",
     "unit_rule_param_problems",
     "unit_rule_permille_problems",
+    "unit_rule_status_problem",
 ]
 
 
@@ -47,9 +49,21 @@ UNIT_RULE_SPECS: dict[str, UnitRuleSpec] = {
     "surface_move_bonus": UnitRuleSpec(("surfaces", "amount")),
     "weather_move_bonus": UnitRuleSpec(("weathers", "amount")),
     "fall_immunity": UnitRuleSpec(()),
+    "trail_surface": UnitRuleSpec(("surfaces", "duration")),
+    "flat_climb": UnitRuleSpec(("amount",)),
+    "surface_damage_immunity": UnitRuleSpec(("surfaces",)),
 }
 """允許的規則（封閉清單，只有環境互動的小規則；3R-2 照此結算）。``fall_immunity``（獸耳族
-「輕身」，#138）：墜落不受傷（被推下或自己往下都算；致命地形照舊）。"""
+「輕身」，#138）：墜落不受傷（被推下或自己往下都算；致命地形照舊）。
+
+E3（08 8.29 E3，#175）新增三種：
+
+- ``trail_surface``（每一步留下表面，例「霜行」）：自己步行、衝刺的每一步，在離開的那一格留下
+  ``surfaces`` 的唯一一種表面，持續 ``duration`` 個環境回合（:mod:`trpg.engine.trail`）；
+- ``flat_climb``（攀岩）：上 ``amount`` 層以內當平地走
+  （:func:`trpg.engine.rules.movement.unit_step_cost`）；
+- ``surface_damage_immunity``：站在 ``surfaces`` 上不受回合開始的表面傷害
+  （``cause="surface"``）。"""
 
 UNIT_RULE_PARAM_FIELDS = (
     "weathers",
@@ -60,6 +74,7 @@ UNIT_RULE_PARAM_FIELDS = (
     "permille",
     "amount",
     "radius",
+    "duration",
 )
 """規則的參數欄位（每種規則只能填 :class:`UnitRuleSpec` 的 ``required``）。"""
 
@@ -89,6 +104,8 @@ class UnitRule(Protocol):
     def amount(self) -> int | None: ...
     @property
     def radius(self) -> int | None: ...
+    @property
+    def duration(self) -> int | None: ...
 
 
 def unit_rule_param_problems(rule_def: UnitRule) -> tuple[str | None, list[str]]:
@@ -104,7 +121,30 @@ def unit_rule_param_problems(rule_def: UnitRule) -> tuple[str | None, list[str]]
             problems.append(f"缺少必填參數 {name}")
         elif value is not None and name not in spec.required:
             problems.append(f"不可使用參數 {name}")
+    trail = rule_def.surfaces if rule_def.rule == "trail_surface" else None
+    if trail is not None and (len(trail) != 1 or Surface.NONE in trail):
+        problems.append("trail_surface 的 surfaces 只能填一種表面（不能是 none）")
     return None, problems
+
+
+STATUS_KEYS: tuple[str, ...] = ("status", "statuses", "apply_status", "status_id")
+"""想讓地形規則施加狀態時會填的欄位（:func:`unit_rule_status_problem` 擋下）。"""
+
+UNIT_RULE_STATUS_ZH = (
+    "地形規則只能留下表面，不能施加狀態（「經過時對相鄰敵人施加狀態」是改寫規則，"
+    "全身同時只能有一個）"
+)
+
+
+def unit_rule_status_problem(data: object) -> str | None:
+    """原始資料想讓地形規則（種族環境被動、裝備地形規則）施加狀態時的中文錯誤（E3，08 8.29 E3 第 6
+    點）：填了狀態欄位，或規則種類名稱帶 ``status``。其他情況 ``None``。"""
+    if not isinstance(data, Mapping):
+        return None
+    rule = data.get("rule")
+    if any(key in data for key in STATUS_KEYS) or (isinstance(rule, str) and "status" in rule):
+        return UNIT_RULE_STATUS_ZH
+    return None
 
 
 def unit_rule_permille_problems(

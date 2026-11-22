@@ -9,7 +9,8 @@
 - 滑過的格子照「走進那一格」處理（``unit_moved`` 的 ``mode: slide``）：陷阱照樣觸發（讓人停下的
   陷阱就停在陷阱格），火、毒這類表面照樣生效；不觸發藉機攻擊與「敵人靠近」類反應（與強制位移相同）。
 - 被推、拉進冰面照舊（:func:`trpg.engine.effects.handlers.enter_surface`：檢定、失敗倒地、不滑）。
-- 矮人、鱗族（:func:`trpg.engine.rules.race.slip_immune`）與會飛的單位不擲、不滑。
+- 矮人、鱗族（:func:`trpg.engine.rules.race.slip_immune`）與會飛的單位不擲、不滑；自己霜行留下的冰
+  （E3，:func:`trpg.engine.trail.own_trail`）也不擲。
 
 純函式、確定性：檢定只用 ``ctx.check_d20("slide", ...)``（預覽時可以用
 :class:`trpg.engine.context.CheckOverride` 指定每次滑行檢定的結果，見 ``Ctx.check_override``）。
@@ -31,11 +32,13 @@ from trpg.engine.rules.movement import is_deadly, is_flying, is_standable
 from trpg.engine.rules.race import slip_immune
 from trpg.engine.rules.statuses import effective_attribute, is_rooted, skip_turn_status
 from trpg.engine.state import BattleState, UnitState
+from trpg.engine.trail import own_trail
 from trpg.shared.types import Pos, Surface
 
 __all__ = [
     "SlideRisk",
     "path_slide_risks",
+    "run_start",
     "slide_check",
     "slide_check_def",
     "slide_check_due",
@@ -57,14 +60,22 @@ def slide_check_def(state: BattleState, xy: XY) -> SurfaceCheck | None:
 
 
 def slide_check_due(state: BattleState, unit: UnitState, before: XY, dest: XY) -> bool:
-    """從 ``before`` 走到 ``dest`` 這一步要不要擲滑行檢定：``dest`` 是會滑行的表面、``before`` 不是
-    同一種表面（同一段冰只擲一次；這次移動從冰上出發時，接著走的冰算同一段），且移動者會滑倒。"""
+    """從 ``before`` 走到 ``dest`` 這一步要不要擲滑行檢定：``dest`` 是會滑行的表面、這一步是一段冰的
+    第一格（:func:`run_start`），且移動者會滑倒。自己霜行留下的冰不擲（E3，
+    :func:`~trpg.engine.trail.own_trail`）。"""
     if slide_check_def(state, dest) is None or is_flying(unit):
         return False
-    surface = state.tile(*dest).surface
-    if state.tile(*before).surface is surface:
+    if not run_start(state, unit, before, dest) or own_trail(state, unit, dest):
         return False
-    return not slip_immune(state.ruleset, unit, surface)
+    return not slip_immune(state.ruleset, unit, state.tile(*dest).surface)
+
+
+def run_start(state: BattleState, unit: UnitState, before: XY, dest: XY) -> bool:
+    """``dest`` 是不是一段冰的第一格：``before`` 不是同一種表面（同一段冰只擲一次；這次移動從冰上
+    出發時，接著走的冰算同一段）。E3：從自己霜行留下的冰（沒有擲過）走到別人的冰，算新的一段。"""
+    if state.tile(*before).surface is not state.tile(*dest).surface:
+        return True
+    return own_trail(state, unit, before) and not own_trail(state, unit, dest)
 
 
 def slide_check(ctx: Ctx, unit: UnitState) -> CheckRolled:

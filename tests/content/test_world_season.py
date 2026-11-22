@@ -33,6 +33,7 @@ def _problems(library: ContentLibrary, season: SeasonContent) -> list[str]:
     return season_problems(
         season,
         world_maps=library.world_maps,
+        archetypes=library.map_archetypes,
         encounters=library.world_encounters,
         catalog=library.enemy_catalog(),
         weather_ids=set(library.weather),
@@ -189,6 +190,7 @@ def test_season_boss_cross_file(
     problems = season_problems(
         SeasonContent.model_validate(data),
         world_maps=library.world_maps,
+        archetypes=library.map_archetypes,
         encounters=library.world_encounters,
         catalog=library.enemy_catalog(),
         weather_ids=set(library.weather),
@@ -210,6 +212,7 @@ def _league_problems(library: ContentLibrary, season: SeasonContent) -> list[str
     return season_problems(
         season,
         world_maps=library.world_maps,
+        archetypes=library.map_archetypes,
         encounters=library.world_encounters,
         catalog=library.enemy_catalog(),
         weather_ids=set(library.weather),

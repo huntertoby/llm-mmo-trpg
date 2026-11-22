@@ -17,7 +17,7 @@ from trpg.content.library.skill_checks import _story_skill_problems
 from trpg.content.library.tables import _check_unit_races
 from trpg.content.library.unit_checks import _check_units
 from trpg.content.loader import load_content_file
-from trpg.content.maps import MapDef
+from trpg.content.maps import MapArchetypeTable, MapDef
 from trpg.content.races import RaceTable
 from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
@@ -171,7 +171,9 @@ def _load_world_battle(
     regions, statuses = t.regions, t.statuses
     skills, weapon_map = t.skills, t.weapons.by_id()
     weather_map = t.weather.by_id()
-    world_maps, hub_maps = _load_world_maps(root / WORLD_MAPS_DIR, regions, maps, files)
+    world_maps, hub_maps = _load_world_maps(
+        root / WORLD_MAPS_DIR, regions, maps, t.map_archetypes, files
+    )
     world_rules = _load_world_rules(root / WORLD_RULES_FILE, regions, weather_map, files)
     world_oaths = _load_world_oaths(
         root / WORLD_OATHS_FILE,
@@ -200,6 +202,7 @@ def _load_world_battle(
         units=set(units),
         maps=maps,
         battle_maps={k: v.archetype for k, v in maps.items()},
+        archetypes=t.map_archetypes,
         status_ids={s.id for s in statuses.statuses if not s.enemy_only},  # 5F-R1：影子是玩家這邊
     )
     return _WorldBattle(
@@ -638,6 +641,7 @@ def _load_world_season(
     region_ids: set[str],
     units: set[str],
     maps: Mapping[str, MapDef],
+    archetypes: MapArchetypeTable,
     battle_maps: Mapping[str, str] | None = None,
     status_ids: set[str] | None = None,
 ) -> SeasonContent | None:
@@ -658,6 +662,7 @@ def _load_world_season(
             units=units,
             maps=maps,
             battle_maps=battle_maps,
+            archetypes=archetypes,
             status_ids=status_ids,
         )
         problems += [label + p for p in found]
@@ -688,6 +693,7 @@ def _load_world_maps(
     directory: Path,
     regions: RegionTable | None,
     maps: Mapping[str, MapDef],
+    archetypes: MapArchetypeTable,
     files: list[tuple[Path, ContentModel]],
 ) -> tuple[dict[str, LocationMapDef], dict[str, LocationMapDef]]:
     """載入 ``world/maps/*.yaml``（鍵＝``region``；資料夾不存在＝空）並做跨檔案檢查。
@@ -709,7 +715,9 @@ def _load_world_maps(
         if world_map.hub != (world_map.region == CAPITAL_REGION):
             raise ContentError(path, f"只有主城 {CAPITAL_REGION} 的地點圖標 hub: true，而且必須標")
         if not world_map.hub:
-            problems = world_map_problems(world_map, regions=regions, maps=maps)
+            problems = world_map_problems(
+                world_map, regions=regions, maps=maps, archetypes=archetypes
+            )
             if problems:
                 raise ContentError(path, "；".join(problems))
         files.append((path, world_map))

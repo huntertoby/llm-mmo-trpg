@@ -24,7 +24,7 @@ import re
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from itertools import pairwise
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -55,7 +55,11 @@ from trpg.content.slots import (
     Slot,
     SlotType,
 )
-from trpg.content.unit_rules import EQUIPMENT_FORBIDDEN_RULES, unit_rule_param_problems
+from trpg.content.unit_rules import (
+    EQUIPMENT_FORBIDDEN_RULES,
+    unit_rule_param_problems,
+    unit_rule_status_problem,
+)
 from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
@@ -772,6 +776,16 @@ class TerrainAffix(_AffixBase):
     permille: int | None = None
     amount: int | None = Field(default=None, ge=1, le=2)
     radius: int | None = Field(default=None, ge=1, le=3)
+    duration: int | None = Field(default=None, ge=1, le=3)
+    """``trail_surface``（E3）：留下的表面持續幾個環境回合。"""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_status(cls, data: Any) -> Any:
+        problem = unit_rule_status_problem(data)
+        if problem is not None:
+            raise ValueError(f"詞條 {data.get('id', '?')}：{problem}")
+        return data
 
     @model_validator(mode="after")
     def _check(self) -> TerrainAffix:

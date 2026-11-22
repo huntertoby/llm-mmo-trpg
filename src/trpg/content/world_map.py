@@ -23,7 +23,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
-from trpg.content.maps import BOSS_ARCHETYPE, MapDef
+from trpg.content.maps import MapArchetypeTable, MapDef
 from trpg.content.regions import RegionTable
 from trpg.content.schemas import ContentModel
 
@@ -327,8 +327,10 @@ def world_map_problems(
     *,
     regions: RegionTable | None,
     maps: Mapping[str, MapDef],
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
-    """跨檔案檢查：區域、傳送目的地、戰鬥地圖 ID、地圖類型在該區地圖池內。
+    """跨檔案檢查：區域、傳送目的地、戰鬥地圖 ID、地圖類型在該區地圖池內（Boss 地圖＝``role: boss``
+    的類型，Phase WL-2）。
 
     回傳排序過的問題清單；空＝通過。沒有 ``regions.yaml``（``regions`` 為 ``None``）時
     無法驗證區域，回報為問題。
@@ -352,19 +354,22 @@ def world_map_problems(
             if loc.gate_to is not None and loc.gate_to not in by_id:
                 problems.append(f"地點 {loc.id}：gate_to 是未知的區域 {loc.gate_to}")
     for loc in world_map.locations:
-        problems += _battle_map_refs(loc, maps, pool)
+        problems += _battle_map_refs(loc, maps, pool, archetypes)
     return sorted(problems)
 
 
 def _battle_map_refs(
-    loc: LocationDef, maps: Mapping[str, MapDef], pool: frozenset[str]
+    loc: LocationDef,
+    maps: Mapping[str, MapDef],
+    pool: frozenset[str],
+    archetypes: MapArchetypeTable,
 ) -> list[str]:
     out: list[str] = []
     for map_id in loc.battle_maps:
         map_def = maps.get(map_id)
         if map_def is None:
             out.append(f"地點 {loc.id}：未知的戰鬥地圖 {map_id}")
-        elif map_def.archetype == BOSS_ARCHETYPE:
+        elif archetypes.has_role(map_def.archetype, "boss"):
             if loc.kind != "boss":
                 out.append(f"地點 {loc.id}：Boss 地圖 {map_id} 只能放在 boss 地點")
         elif pool and loc.kind != "boss" and map_def.archetype not in pool:

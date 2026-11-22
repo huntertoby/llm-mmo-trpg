@@ -154,6 +154,7 @@ def set_surface(
             surface_team=team,
             surface_creator=creator,
             surface_magnitude_permille=magnitude,
+            surface_trail=None,
         ),
     )
     if before is surface:

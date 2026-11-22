@@ -11,7 +11,7 @@ from collections.abc import Mapping
 from pydantic import Field, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
-from trpg.content.maps import TRAINING_ARCHETYPE, MapDef
+from trpg.content.maps import MapArchetypeTable, MapDef
 from trpg.content.rules import ResourceKind
 from trpg.content.schemas import ContentModel
 from trpg.shared.types import ResistGroup, Team
@@ -213,8 +213,10 @@ def roguelite_problems(
     maps: Mapping[str, MapDef],
     units: Mapping[str, UnitTemplate],
     tiers: Mapping[int, int],
+    archetype_table: MapArchetypeTable,
 ) -> list[str]:
-    """跨檔案檢查：地圖與單位範本存在、雙方起始區放得下、地圖類型夠抽、階級有預算。"""
+    """跨檔案檢查：地圖與單位範本存在、雙方起始區放得下、地圖類型夠抽、階級有預算；地圖池不能有
+    不進抽選的類型（``map_archetypes.yaml`` 的 ``in_random_pool``／``role``，Phase WL-2）。"""
     problems: list[str] = []
     unknown_maps = sorted({m for m in (*rules.map_pool, rules.boss.map) if m not in maps})
     if unknown_maps:
@@ -225,9 +227,20 @@ def roguelite_problems(
     unknown_units = sorted(t for t in templates if t not in units)
     if unknown_units:
         problems.append(f"未知的單位範本：{', '.join(unknown_units)}")
-    training = sorted(m for m in rules.map_pool if maps[m].archetype == TRAINING_ARCHETYPE)
+    training = sorted(
+        m for m in rules.map_pool if archetype_table.has_role(maps[m].archetype, "training")
+    )
     if training:
         problems.append(f"技能工坊的靶場不能進地圖池：{', '.join(training)}")
+    banned = sorted(
+        m
+        for m in rules.map_pool
+        if m not in training and not archetype_table.in_random_pool(maps[m].archetype)
+    )
+    if banned:
+        problems.append(
+            f"不進抽選的地圖類型（in_random_pool: false）不能進地圖池：{', '.join(banned)}"
+        )
     archetypes = {maps[m].archetype for m in rules.map_pool}
     if len(archetypes) < rules.battles:
         problems.append(f"地圖池只有 {len(archetypes)} 種地圖類型，不夠 {rules.battles} 場不重複")

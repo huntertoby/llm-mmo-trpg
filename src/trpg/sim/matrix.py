@@ -25,7 +25,6 @@ from typing import Final
 from pydantic import BaseModel, ConfigDict, TypeAdapter
 
 from trpg.content.library import ContentLibrary
-from trpg.content.maps import ARCHETYPES
 from trpg.engine.setup import build_setup
 from trpg.shared.fmt import ratio_pct
 from trpg.sim.batch import (
@@ -439,14 +438,17 @@ def run_matrix(
 # ---------------------------------------------------------------------------
 
 
-def _archetype_order(report: MatrixReport) -> list[str]:
-    known = [a for a in ARCHETYPES if a in report.archetypes]
+def _archetype_order(report: MatrixReport, order: Sequence[str]) -> list[str]:
+    known = [a for a in order if a in report.archetypes]
     return known + [a for a in report.archetypes if a not in known]
 
 
-def format_matrix(report: MatrixReport) -> str:
-    """矩陣的文字格式（繁體中文）：每張地圖一節，加上類型層級的勝率、DPR、排名矩陣與標準檢查。"""
-    archetypes = _archetype_order(report)
+def format_matrix(report: MatrixReport, archetype_order: Sequence[str] = ()) -> str:
+    """矩陣的文字格式（繁體中文）：每張地圖一節，加上類型層級的勝率、DPR、排名矩陣與標準檢查。
+
+    類型欄照 ``archetype_order``（通常是 ``library.map_archetypes.ids()``，資料檔的順序；WL-2），
+    不在裡面的類型照報表裡出現的順序排在後面。"""
+    archetypes = _archetype_order(report, archetype_order)
     heading = ["build", *archetypes]
     out = _matrix_header(report)
     out += _map_sections(report)

@@ -46,7 +46,7 @@
 **2. 最後一次全量**：2026-11-14 e2bab3fe1 全過並 push（pytest 17682、vitest 4676、build 0），含 NW-3d（LLM 提議與技能工坊造牆物件改用組合器候選、1600 黑煙壓到 HUD 下）。版號 LOG_FORMAT /128、WORLD_RULES_VERSION 33、CHAR_FORMAT /15。**合併動到事件或 API 的段後，先重產 OpenAPI 再跑全量；有 agent 在跑測試時全量常在 99% 卡死，盡量等 agent 都回來再跑。**
 
 **3. 執行中的 agent（分支）**：
-- **2026-11-22 晚 現況（優先於以下各行）**：已 push：HC-6c（68854a87c＋裁定 b48963e3c）、WL-1 a（eb1f0bd25）／b（d5ac5e359）／c（cd1ac51b4，裁定 1592db687；美術結案 0c31dcf5f）、E2～E5 草案（`docs/phases/E2-E5草案.md`，d6b9fa7de）。進行中：E1（計畫 `PhaseE1計畫.md`，規則 08 8.28／#174；LOG_FORMAT 升 /136 已同意；跑全量前會先問）。等待：E2～E5 的 21 題裡 9 題玩法代決 A，12 題轉使用者（第一波 E2-2、E5-1、E5-2、E5-4、E5-5、E5-6 定了才派 E2∥E5；第二波 E3-2、E3-4、E4-2～4-5 定了才派 E3∥E4）。佇列新增：(f) 「擊中時」統一成「命中時」（玩法 PM 定，content／client 約 7 處，含反咒觸發格）；(g) 表面、物件、元素、條件、觸發找不到名稱時仍露英文 id，下次一起問玩法用字；(h) `skeletonName` 的 override 參數沒人用，碰 `skillIcon.ts` 時刪；(i) `_OFFHAND_ZH`、`_ELEMENT_ZH` 和資料 `name_zh` 重複；(j) 內容資料夾要跟著 `load_library` 走（E 系列碰載入層時做）；(k) `tests/infra/test_xdist_loadgroup.py` 單 worker 當掉那題 240 秒在全量負載下不夠，照 QF-4b 放寬；(m) E1 美術小修（`docs/art/E1驗收.md`）：技能列副標題只寫裝備名（玩法 PM 定 A，放不下截斷尾巴），說明卡金框和卡片之間的 3 px 縫拿掉；和 (f)「擊中時」一起併進 KD-1；(n) E3 要一併做：E2 裁定 1，數值型地形規則數字不同時取較強的那條（8.29 已補，0633bbb8d）；裝備較強時角色面板註明種族那條被蓋過，種族較強或一樣強時裝備那條標灰；E2 裁定 4，AI 表面傷害免疫接在 `_harmful` 的回合開始傷害段；(o) 8.29 E5 第 7 點：一招只套一種變形，技能卡要註明「已有其他變形」，下次碰前端時做（玩法 83a86d390）；(p) E5 裁定 6：AI 便宜估計 `skill_estimate.py` 不知道閘門降傷，下次碰時改；(l) 實作者先問「準備跑 check.py」時，可能在回覆送到前就交件，交件後再用 SendMessage 叫回來跑。
+- **2026-11-22 晚 現況（優先於以下各行）**：已 push：HC-6c（68854a87c＋裁定 b48963e3c）、WL-1 a（eb1f0bd25）／b（d5ac5e359）／c（cd1ac51b4，裁定 1592db687；美術結案 0c31dcf5f）、E2～E5 草案（`docs/phases/E2-E5草案.md`，d6b9fa7de）。進行中：E1（計畫 `PhaseE1計畫.md`，規則 08 8.28／#174；LOG_FORMAT 升 /136 已同意；跑全量前會先問）。等待：E2～E5 的 21 題裡 9 題玩法代決 A，12 題轉使用者（第一波 E2-2、E5-1、E5-2、E5-4、E5-5、E5-6 定了才派 E2∥E5；第二波 E3-2、E3-4、E4-2～4-5 定了才派 E3∥E4）。佇列新增：(f) 「擊中時」統一成「命中時」（玩法 PM 定，content／client 約 7 處，含反咒觸發格）；(g) 表面、物件、元素、條件、觸發找不到名稱時仍露英文 id，下次一起問玩法用字；(h) `skeletonName` 的 override 參數沒人用，碰 `skillIcon.ts` 時刪；(i) `_OFFHAND_ZH`、`_ELEMENT_ZH` 和資料 `name_zh` 重複；(j) 內容資料夾要跟著 `load_library` 走（E 系列碰載入層時做）；(k) `tests/infra/test_xdist_loadgroup.py` 單 worker 當掉那題 240 秒在全量負載下不夠，照 QF-4b 放寬；(m) E1 美術小修（`docs/art/E1驗收.md`）：技能列副標題只寫裝備名（玩法 PM 定 A，放不下截斷尾巴），說明卡金框和卡片之間的 3 px 縫拿掉；和 (f)「擊中時」一起併進 KD-1；(n) E3 要一併做：E2 裁定 1，數值型地形規則數字不同時取較強的那條（8.29 已補，0633bbb8d）；裝備較強時角色面板註明種族那條被蓋過，種族較強或一樣強時裝備那條標灰；E2 裁定 4，AI 表面傷害免疫接在 `_harmful` 的回合開始傷害段；(o) 8.29 E5 第 7 點：一招只套一種變形，技能卡要註明「已有其他變形」，下次碰前端時做（玩法 83a86d390）；(p) E5 裁定 6：AI 便宜估計 `skill_estimate.py` 不知道閘門降傷，下次碰時改；(q) WL-2 裁定 1、4：前端 TryoutPanel、tryout.ts 改讀 API 地圖摘要的 `role`，並加 role 存在檢查（照 WL-1 b）；(r) 組合器 seed 238 組出只有預支（borrow_ap，預算 0）的光環，`test_one_thousand_seeds_are_all_valid_and_spread_out`（slow）失敗：改組合器不出零預算單效果或改檢查規則，另開小段；(s) TS-1 裁定 2：讓 check.py 自己認同內容同基準的分流戳記（之後再議）；(l) 實作者先問「準備跑 check.py」時，可能在回覆送到前就交件，交件後再用 SendMessage 叫回來跑。
 - **2026-11-22 現況（優先於以下各行）**：已 push：HC-6a（3940021d3＋裁定 4cb00d459）、Swift 27B 量測與 config 改預設（54c11334b，報告 `docs/phases/Swift-Qwen27B品質評估.md`，待使用者決定：說書人簡體檢查、許願超過 10 秒、三選一退回 10%）、GS-3（21ca8f2cc＋裁定 f6fae5385；數值待決 1、2 轉使用者）、HC-6b 計畫（add305d93）。進行中：HC-6b。之後 HC-7（含 HC-6a 留下 26 筆 text、誓約冷卻「1 天內」從秒數組字、world fallback、重播／季存檔驗證失敗的中文訊息）→ 計數／白名單 → E1～E5 → E6。佇列新增（玩法 PM 定，06 6.30「GS-3 後補」32f6c3325）：(a) 化形守護護盾 ‰ 加只給升階重配用的旋鈕（照 6.34.9 維持原比例；組合器、LLM 不用），併進下一個碰技能的小段；(b) 進入時效果擲命中不用掉形態「下一次攻擊」獎勵，下次碰形態順手改；(c) 高階化身閃現照現行，不做專屬。另：`test_wish_pregen.py` 全量平行時 10 秒等待偶發失敗，下次碰許願預生成時處理。
 - **2026-11-21 晚 現況（優先於以下各行）**：
   - **已 push 到 main `0be842398`**：
@@ -180,12 +180,14 @@
 1. 讀 `CLAUDE.md`（特別是守則 11 節省 token、守則 12 複雜度）。
 2. 讀 `docs/phases/PhaseX計畫.md`——這是你的規格。
 3. 讀規格指定的前一階段報告與 `docs/design/` 主題檔（只讀指定的）。
-4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；開發中不跑完整的 `scripts/check.py`；pytest 平行最多 `-n 8`，**一律經看門狗跑：`uv run python scripts/run_pytest.py -q <路徑> -n 8`，不直接 `uv run pytest`**（QF-3a，說明見 `docs/dev/上手-測試.md`；worker 掛掉時回報保留的 `.claude/pm-logs/pytest/` 資料夾）。**交件前全部 commit 之後**，在自己的 worktree 跑一次 `uv run python scripts/check.py`。它跑全部非 slow 測試，經看門狗；通過會寫下 tree 戳記，PM 合併後 tree 沒變，push hook 就略過完整檢查（2026-11-21 使用者：「拿掉第二次重複的測試」）。跑完不要再改檔。再加規格指定的 slow 測試。同一時間只跑一份全部測試（使用者：「好，請開發 PM 錯開跑」）。**派工時 PM 二選一寫進 prompt**（2026-11-22，GS-3、HC-6b 兩次問完沒等回覆就交件，多一輪來回）：① 那段期間確定沒有別的全量：prompt 直接寫「全部 commit 後先 `git merge --no-edit main`，直接跑 check.py 和 slow，不用先問」；② 有別的 agent 也可能跑全量：prompt 寫「commit 完先 merge main，用 SendMessage 問 PM 能不能跑，**收到回覆前不要交件、也不要結束這一輪**（呼叫 SendMessage 後用完成通知等）」。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
+4. 開發中只跑相關測試檔；每次 commit 前只跑 `uv run ruff check .`、`uv run ruff format --check .`、`uv run mypy` 與相關測試；開發中不跑完整的 `scripts/check.py`；pytest 平行最多 `-n 8`，**一律經看門狗跑：`uv run python scripts/run_pytest.py -q <路徑> -n 8`，不直接 `uv run pytest`**（QF-3a，說明見 `docs/dev/上手-測試.md`；worker 掛掉時回報保留的 `.claude/pm-logs/pytest/` 資料夾）。**交件前全部 commit 之後**，在自己的 worktree 跑一次 `uv run python scripts/check.py --all`（2026-11-22 TS-1 起 check.py 不加參數會依改動分流，分流戳記 hook 不認；CLAUDE.md 第 11 條 794866c78）。它跑全部非 slow 測試，經看門狗；通過會寫下 tree 戳記，PM 合併後 tree 沒變，push hook 就略過完整檢查（2026-11-21 使用者：「拿掉第二次重複的測試」）。跑完不要再改檔。再加規格指定的 slow 測試。同一時間只跑一份全部測試（使用者：「好，請開發 PM 錯開跑」）。**派工時 PM 二選一寫進 prompt**（2026-11-22，GS-3、HC-6b 兩次問完沒等回覆就交件，多一輪來回）：① 那段期間確定沒有別的全量：prompt 直接寫「全部 commit 後先 `git merge --no-edit main`，直接跑 check.py 和 slow，不用先問」；② 有別的 agent 也可能跑全量：prompt 寫「commit 完先 merge main，用 SendMessage 問 PM 能不能跑，**收到回覆前不要交件、也不要結束這一輪**（呼叫 SendMessage 後用完成通知等）」。Python 一律用 `uv run python`（Mac 每個 shell 先 `export PATH="$HOME/.local/bin:$PATH"`；Windows 直接打 `python` 是商店空殼）；前端 `pnpm -C client …`。
 5. 不要 push。
 6. 逐條自我檢查驗收條件（要有測試名稱或指令輸出為證）。依邏輯分 commit，結尾帶 Co-Authored-By 一行（依你的系統提示）。
 7. 撰寫並 commit `docs/phases/PhaseX報告.md`；若新增了複雜度類 noqa（C901、PLR0911、PLR0912、PLR0915），在報告中逐一列出理由。
 
 若改到前端：彈出卡片一律用共用浮動卡元件（本檔 6.5.1）；交件截圖照本檔 6.5.2（`docs/art/shots/<段>/`、≤ 10 張、jpg 80、單張 ≤ 300 KB），並在瀏覽器實測「從觸發元素滑進卡片 → 捲到底 → 釘住 → 關閉」（1600×900 與 800×600），結果寫進報告。
+
+**對外資料帶「誰在看」**（CLAUDE.md 第 14 條，2026-11-22）：新增或修改送給玩家的視圖（API 回應、前端、LLM 敘事提示）時，先問「這個玩家看得到嗎」，依觀看者過濾陣營、視野、隱蔽、陷阱；完整資料只給 GM／除錯工具。舊視圖不用全面改（等多人階段），但新的不要再漏。
 
 規格沒寫到的採最保守做法並寫進報告「待 PM 決定」。不要修改 `docs/專案計畫.md`、`docs/design/`、`CLAUDE.md`、`docs/phases/` 下的計畫檔。
 
@@ -211,6 +213,7 @@
 1. 讀 `CLAUDE.md`，再用 `git diff --stat <base>..HEAD` 看範圍，只讀需要的部分。
 2. 找出：重複的邏輯、過長或過度分支的函式（含新增的複雜度 noqa）、違反守則 1–5 的地方（確定性、依賴方向、內容即資料）、
    只為通過測試而寫的特例、命名或模組放錯位置、之後 Phase 3／4 會卡住的設計。
+   新增或修改的對外視圖（API、前端、LLM 敘事提示）有沒有依觀看者過濾（守則 14：「這個玩家看得到嗎」）。
 3. 不要跑全量測試或大型模擬；需要時只跑相關測試檔。
 
 最終回覆用繁體中文，最多 10 點，依嚴重度排序。每點：位置（檔案:行）、問題、建議修法、估計工作量（小／中／大）。

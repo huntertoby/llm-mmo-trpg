@@ -17,6 +17,7 @@ from trpg.engine.ids import FLYING, PRONE
 from trpg.engine.rules.footprint import dist_to
 from trpg.engine.rules.forms import form_flat_height
 from trpg.engine.rules.geometry import XY, neighbors4
+from trpg.engine.rules.race import flat_climb_height
 from trpg.engine.rules.statuses import fear_sources, is_rooted
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Pos, UnitId
@@ -83,11 +84,15 @@ def is_flying(unit: UnitState) -> bool:
 
 def unit_step_cost(state: BattleState, unit: UnitState, a: XY, b: XY) -> int | None:
     """``unit`` 從 ``a`` 走到相鄰格 ``b`` 的成本：會飛的單位恆為 1（只要在地圖內），其餘同
-    :func:`step_cost`。"""
+    :func:`step_cost`。形態（巨鵰）與地形規則「攀岩」（``flat_climb``，E3）：上坡在那個層數以內
+    當平地走，只花 1 點（一步最多上 ``max_climb_height`` 層照舊；攀跳不受影響）。"""
     if is_flying(unit):
         return 1 if state.in_bounds(*b) else None
     cost = step_cost(state, a, b)
-    flat = form_flat_height(state.ruleset, unit)  # 形態：高度差 N 以內當平地走（Phase 3J-1a）
+    flat = max(
+        form_flat_height(state.ruleset, unit),  # 形態：高度差 N 以內當平地走（Phase 3J-1a）
+        flat_climb_height(state.ruleset, unit),  # 攀岩（E3，08 8.29 E3 第 5 點）
+    )
     if flat and cost is not None and cost > 1:
         rise = state.tile(*b).height - state.tile(*a).height
         if rise <= flat:
