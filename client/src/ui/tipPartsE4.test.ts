@@ -5,6 +5,10 @@ import type { GlossaryEntry } from "../api/types";
 import { entryTipParts } from "./tipParts";
 import { statusTile } from "../render/skillIcon";
 
+// 沒有 @types/node：同 arX10StatusTip.test.ts，用變數名載入 node:fs。
+const nodeFs = "node:fs";
+const { readFileSync } = (await import(/* @vite-ignore */ nodeFs)) as { readFileSync: (p: string, enc: string) => string };
+
 const statuses = (glossary as unknown as { statuses: GlossaryEntry[] }).statuses;
 const prone = statuses.find((s) => s.id === "prone")!;
 
@@ -31,6 +35,14 @@ describe("E4：倒地的說明框", () => {
     const burning = statuses.find((s) => s.id === "burning")!;
     expect(burning.rules_only).toBeUndefined();
     expect(entryTipParts(burning, "狀態")[0]!.text.startsWith(burning.description_zh ?? "")).toBe(true);
+  });
+  it("E4b（E4 驗收小修 1）：分點標成 bullet，換行時懸掛縮排、第二行對齊「・」後面的字", () => {
+    expect(entryTipParts(prone, "狀態").every((p) => p.bullet === true)).toBe(true);
+    const burning = statuses.find((s) => s.id === "burning")!;
+    expect(entryTipParts(burning, "狀態").some((p) => p.bullet === true)).toBe(false);
+    expect(readFileSync("src/ui/PartTip.tsx", "utf8")).toContain("part-tip-bullet");
+    const css = readFileSync("src/styles/float-card.css", "utf8");
+    expect(css).toMatch(/\.part-tip-text\.part-tip-bullet \{\s*padding-left: 1em;\s*text-indent: -1em;\s*\}/);
   });
   it("部件圓片的 tip 也一條一行", () => {
     expect(statusTile("prone").tip).toBe(LINES.map((l) => `・${l}`).join("\n"));

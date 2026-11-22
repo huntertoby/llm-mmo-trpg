@@ -58,7 +58,7 @@ export function PartTip({ cat, label, tip, lines, children, pin = true, classNam
           </div>
           {parts !== undefined
             ? parts.map((p, i) => (
-                <div key={i} className={`part-tip-text${p.secondary ? " part-tip-secondary" : ""}`}>
+                <div key={i} className={`part-tip-text${p.secondary ? " part-tip-secondary" : ""}${p.bullet === true ? " part-tip-bullet" : ""}`}>
                   {keepWords(p.text)}
                 </div>
               ))
