@@ -28560,6 +28560,17 @@
               }
             ],
             "title": "Surface Creator"
+          },
+          "surface_trail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface Trail"
           }
         },
         "additionalProperties": false,

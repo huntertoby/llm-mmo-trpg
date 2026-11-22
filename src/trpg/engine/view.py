@@ -105,6 +105,10 @@ class TileView(_ViewModel):
     surface_team: Team | None
     object_id: str | None
     surface_creator: UnitId | None
+    surface_trail: UnitId | None = Field(default=None, exclude_if=lambda v: v is None)
+    """這片表面是誰用地形規則「霜行」（``trail_surface``）沿路留下的（E3b，08 8.29 E3 顯示：
+    名詞說明寫「〇〇沿路留下的冰」）；其他表面為 ``None`` 而且不輸出（既有的格子 JSON 逐字不變）。
+    地圖上看得到這片表面，留下的人的名字跟著寫出（守則 14：和 ``surface_creator`` 同一級）。"""
 
 
 class ObjectView(_ViewModel):
@@ -1317,6 +1321,7 @@ def project_for(state: BattleState, team: Team) -> BattleView:
             surface_team=t.surface_team,
             object_id=t.object_id,
             surface_creator=t.surface_creator,
+            surface_trail=t.surface_trail,
         )
         for y in range(state.height)
         for x in range(state.width)

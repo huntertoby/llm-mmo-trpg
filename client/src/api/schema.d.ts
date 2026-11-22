@@ -11493,6 +11493,8 @@ export interface components {
             object_id: string | null;
             /** Surface Creator */
             surface_creator: string | null;
+            /** Surface Trail */
+            surface_trail?: string | null;
         };
         /**
          * ToppleOut
