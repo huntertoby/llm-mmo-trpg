@@ -182,5 +182,13 @@ def skill_note_zh(state: BattleState, unit: UnitState, skill_id: str) -> str | N
     affected, blocked = modifiers.gate_blocked_skills(state, unit, skill_id)
     if not blocked or blocked == affected:
         return None
-    names = "、".join(state.ruleset.skill_def(k).name_zh for k in blocked)
+    names = _counted_names([state.ruleset.skill_def(k).name_zh for k in blocked])
     return f"{GATE_PROBLEM_ZH}：{names}"
+
+
+def _counted_names(names: list[str]) -> str:
+    """同名的招只寫一次、後面加次數（E4，KD-1 驗收用字：「鉤爪 ×2」）；照第一次出現的順序。"""
+    counts: dict[str, int] = {}
+    for name in names:
+        counts[name] = counts.get(name, 0) + 1
+    return "、".join(name if n == 1 else f"{name} ×{n}" for name, n in counts.items())

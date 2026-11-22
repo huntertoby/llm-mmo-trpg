@@ -58,7 +58,7 @@ const STATUS_IDS = real.statuses.map((s) => s.id).filter((id) => !QT.AWAITING_AR
 
 describe("118 個狀態", () => {
   it("每個狀態都有 status_look、Q 版圖樣（舊 GLYPH 也還在，給部件圓片），且畫得出來、圖樣貼進框裡", () => {
-    expect(STATUS_IDS.length).toBe(119); // AP-2 ＋1（borrowed_ap）
+    expect(STATUS_IDS.length).toBe(120); // AP-2 ＋1（borrowed_ap），KD-1 ＋1（steady，E4 移植）
     for (const id of STATUS_IDS) {
       const entry = real.statuses.find((s) => s.id === id);
       expect(entry?.status_look, id).toBeTruthy();

@@ -22,6 +22,7 @@ describe("HC-6c：名詞表的骰子欄", () => {
   it("照欄位分段的結果和 AR-X10 的句型比對相同（字和排法都不變）", () => {
     const old = /^擲 \d+d\d+，每點 ×\d+$/u;
     for (const e of entries()) {
+      if (e.rules_only === true) continue; // E4：只列規則的項目（倒地）一條一行，另見 tipPartsE4.test.ts
       const lines = [e.description_zh ?? "", ...e.rules_zh];
       const byPattern = tipParts(lines, new Set(lines.flatMap((l, i) => (old.test(l) ? [i] : []))));
       expect(entryTipParts(e, "x"), e.id).toEqual(byPattern.length === 0 ? [{ text: "x", secondary: false }] : byPattern);

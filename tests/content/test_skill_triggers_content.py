@@ -21,11 +21,14 @@ COEFFICIENTS = {
     "on_status_applied": 400,
     "on_collision": 300,
     "on_battle_start": 200,  # TF-1 伴生（每場一次）；2026-11-21 使用者改值（300→200）
+    "on_displace": 250,  # E4：保守的初值（工坊可調）
+    "on_block": 250,  # E4：保守的初值（工坊可調）
 }
 PASSIVES = ("skill_ember_brand", "skill_second_wind", "skill_thorn_skin", "skill_mark_detonation")
 
 
-def test_the_twelve_triggers_are_defined_with_the_spec_coefficients() -> None:
+def test_every_required_trigger_is_defined_with_the_spec_coefficients() -> None:
+    """時機數不寫死：資料檔剛好是引擎實作的 ``REQUIRED_TRIGGERS``（E4 起不再寫「12 種」）。"""
     rules = library().ruleset
     assert sorted(t.id for t in rules.skill_triggers.triggers) == sorted(REQUIRED_TRIGGERS)
     for trigger_id, permille in COEFFICIENTS.items():

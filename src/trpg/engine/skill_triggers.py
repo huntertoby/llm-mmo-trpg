@@ -38,7 +38,13 @@ from dataclasses import replace
 from typing import TYPE_CHECKING, Literal
 
 from trpg.content.equipment import AttackAffix, ChargeAffix, TriggerAffix
-from trpg.content.skills import ON_AP_SPENT_ALL, SkillDef, TriggerSpec
+from trpg.content.skills import (
+    ON_AP_SPENT_ALL,
+    ON_BLOCK,
+    ON_DISPLACE,
+    SkillDef,
+    TriggerSpec,
+)
 from trpg.engine import modifiers, stack_gain
 from trpg.engine.charge_queries import DELAYED_RELEASE, attacked_release
 from trpg.engine.events import (
@@ -62,8 +68,14 @@ from trpg.engine.skills.casting import use_modifier_effects, use_triggered_skill
 from trpg.engine.skills.conditions import Subject, condition_met, skill_condition_met
 from trpg.engine.skills.targeting import PaidCost, pay_skill_cost, resource_problem
 from trpg.engine.state import BattleState, UnitState
-from trpg.engine.trigger_types import GEAR_ATTACK_RUNE, GEAR_PREFIX, MODIFIER_ON_HIT, Fired
-from trpg.shared.types import Surface, UnitId
+from trpg.engine.trigger_types import (
+    GEAR_ATTACK_RUNE,
+    GEAR_PREFIX,
+    MODIFIER_ON_HIT,
+    AttackInfo,
+    Fired,
+)
+from trpg.shared.types import Element, Surface, UnitId
 
 if TYPE_CHECKING:
     from trpg.engine.context import Ctx
@@ -72,10 +84,15 @@ __all__ = [
     "GEAR_ATTACK_RUNE",
     "GEAR_PREFIX",
     "MODIFIER_ON_HIT",
+    "AttackInfo",
     "Fired",
     "PassiveIndex",
+    "attack_info_of",
+    "attacking",
     "check_trigger_depth",
+    "collect_block",
     "collect_cast",
+    "collect_displace",
     "collect_exploit",
     "collect_move",
     "collect_turn_end",
@@ -98,6 +115,11 @@ _OBSERVED = frozenset(
 
 _MODIFIER_PREFIX = f"{MODIFIER_ON_HIT}:"
 
+_ELEMENT_HIT_TIMINGS = ("on_hit", "on_crit")
+"""元素篩選要等傷害結算完才判斷的時機（E4，08 8.29 E4 第 4 點：看實際造成傷害的元素）。"""
+
+type _Filtered = TriggerSpec | TriggerAffix
+
 
 class PassiveIndex:
     """戰鬥中所有單位裝備的被動技能，依觸發時機分組（單位 ID、技能 ID 排序）。
@@ -106,13 +128,14 @@ class PassiveIndex:
     充能詞條（Phase 3G-G3a），依觸發時機分組（單位 ID、詞條 ID 排序）。
     """
 
-    __slots__ = ("any", "by_event", "by_gear_event", "by_unit", "on_hit_owners")
+    __slots__ = ("any", "by_event", "by_gear_event", "by_unit", "element_hits", "on_hit_owners")
 
     def __init__(self, ctx: Ctx) -> None:
         self.by_event: dict[str, list[tuple[UnitId, SkillDef]]] = {}
         self.by_gear_event: dict[str, list[tuple[UnitId, GearAffix]]] = {}
         self.by_unit: dict[UnitId, list[SkillDef]] = {}
         owners: set[UnitId] = set()
+        element_hits = False
         rules = ctx.rules
         for unit in ctx.state.units_sorted():
             for gear in unit.gear.active_affixes():
@@ -122,6 +145,7 @@ class PassiveIndex:
                         owners.add(unit.id)  # 普攻命中後的符文效果（3-31）
                 elif isinstance(affix, TriggerAffix):
                     self.by_gear_event.setdefault(affix.trigger, []).append((unit.id, gear))
+                    element_hits |= _defers_element(affix.trigger, affix)
                 elif isinstance(affix, ChargeAffix):
                     self.by_gear_event.setdefault(affix.gain_trigger, []).append((unit.id, gear))
             for skill_id in sorted(unit.skills):
@@ -132,7 +156,10 @@ class PassiveIndex:
                     continue
                 self.by_event.setdefault(skill.trigger.event, []).append((unit.id, skill))
                 self.by_unit.setdefault(unit.id, []).append(skill)
+                element_hits |= _defers_element(skill.trigger.event, skill.trigger)
         self.on_hit_owners = frozenset(owners)
+        self.element_hits = element_hits
+        """有人帶「命中時」「暴擊時」的元素篩選（E4）：這時才記 ``Ctx.dealt_elements``。"""
         self.any = bool(self.by_event) or bool(owners) or bool(self.by_gear_event)
 
     def owners(self, event: str) -> list[tuple[UnitId, SkillDef]]:
@@ -140,6 +167,10 @@ class PassiveIndex:
 
     def gear_owners(self, event: str) -> list[tuple[UnitId, GearAffix]]:
         return self.by_gear_event.get(event, [])
+
+
+def _defers_element(event: str, spec: _Filtered) -> bool:
+    return spec.element is not None and event in _ELEMENT_HIT_TIMINGS
 
 
 def _index(ctx: Ctx) -> PassiveIndex:
@@ -154,10 +185,58 @@ def _index(ctx: Ctx) -> PassiveIndex:
 # ---------------------------------------------------------------------------
 
 
-def _fire(ctx: Ctx, seq: int, owner_id: UnitId, skill: SkillDef, other_id: UnitId | None) -> None:
-    assert skill.trigger is not None
+def attack_info_of(ctx: Ctx, attacker_id: UnitId | None) -> AttackInfo | None:
+    """``attacker_id`` 目前這次攻擊的種類（E4，``Ctx.attack_info``）；不是他的攻擊時 ``None``。"""
+    info = ctx.attack_info
+    return info if info is not None and info.attacker_id == attacker_id else None
+
+
+def _filters_pass(spec: _Filtered, info: AttackInfo | None) -> bool:
+    """E4 的攻擊種類、來源、反應篩選（都省略＝通過；有篩選但不知道是哪種攻擊＝不通過）。"""
+    if spec.attack_kind is None and spec.source is None and spec.reaction is None:
+        return True
+    if info is None:
+        return False
+    return (
+        spec.attack_kind in (None, info.kind)
+        and spec.source in (None, info.source)
+        and spec.reaction in (None, info.reaction)
+    )
+
+
+def _wanted_element(
+    spec: _Filtered, element: Element | None, *, deferred: bool
+) -> tuple[bool, str | None]:
+    """E4 的元素篩選：回傳（現在就通過嗎、要延到結算時才對照的元素）。``deferred``：命中時、
+    暴擊時——命中判定當下還沒有傷害，記在 ``Fired.element``，結算時對照 ``Ctx.dealt_elements``。"""
+    want = spec.element
+    if want is None:
+        return True, None
+    if deferred:
+        return True, want.value
+    return element is want, None
+
+
+def _fire(  # noqa: PLR0917
+    ctx: Ctx,
+    seq: int,
+    owner_id: UnitId,
+    skill: SkillDef,
+    other_id: UnitId | None,
+    info: AttackInfo | None = None,
+    element: Element | None = None,
+    *,
+    deferred: bool = False,
+) -> None:
+    trigger = skill.trigger
+    assert trigger is not None
+    if not _filters_pass(trigger, info):
+        return
+    ok, want = _wanted_element(trigger, element, deferred=deferred)
+    if not ok:
+        return
     ctx.fired.append(
-        Fired(seq, owner_id, skill.id, skill.trigger.event, other_id, ctx.trigger_depth + 1)
+        Fired(seq, owner_id, skill.id, trigger.event, other_id, ctx.trigger_depth + 1, want)
     )
 
 
@@ -174,9 +253,13 @@ def _fire_gear(  # noqa: PLR0917
     tag: str | None = None,
     surface: str | None = None,
     hits: int | None = None,
+    info: AttackInfo | None = None,
+    element: Element | None = None,
+    deferred: bool = False,
 ) -> None:
     """裝備詞條的收集：``who`` 身上以 ``timing`` 為時機的觸發與充能詞條各記一筆（觸發詞條的
-    ``melee_only``、``status``、``tag``、``surface``、每第 n 次命中的篩選在這裡過濾）。"""
+    ``melee_only``、``status``、``tag``、``surface``、每第 n 次命中、E4 的元素、攻擊種類、來源、
+    反應篩選在這裡過濾；命中時、暴擊時的元素篩選延到結算，見 :func:`_fire`）。"""
     if who is None:
         return
     for owner, gear in index.gear_owners(timing):
@@ -189,10 +272,24 @@ def _fire_gear(  # noqa: PLR0917
             or (affix.tag is not None and affix.tag != tag)
             or (affix.surface is not None and affix.surface != surface)
             or (affix.n is not None and (hits is None or hits % affix.n != 0))
+            or (isinstance(affix, TriggerAffix) and not _filters_pass(affix, info))
         ):
             continue
+        want: str | None = None
+        if isinstance(affix, TriggerAffix):
+            ok, want = _wanted_element(affix, element, deferred=deferred)
+            if not ok:
+                continue
         ctx.fired.append(
-            Fired(seq, owner, affix.id, f"{GEAR_PREFIX}{timing}", other_id, ctx.trigger_depth + 1)
+            Fired(
+                seq,
+                owner,
+                affix.id,
+                f"{GEAR_PREFIX}{timing}",
+                other_id,
+                ctx.trigger_depth + 1,
+                want,
+            )
         )
 
 
@@ -263,15 +360,14 @@ def _on_attack(ctx: Ctx, index: PassiveIndex, event: AttackRolled) -> None:
         _fire_gear(ctx, index, "on_natural_20", event.seq, attacker, event.target_id)
     if not event.hit:
         return
-    for owner, skill in index.owners("on_hit"):
-        if owner == attacker:
-            _fire(ctx, event.seq, owner, skill, event.target_id)
-    _fire_gear(ctx, index, "on_hit", event.seq, attacker, event.target_id)
-    if event.crit:
-        for owner, skill in index.owners("on_crit"):
+    info = attack_info_of(ctx, attacker)  # E4：攻擊種類、來源、反應篩選
+    for timing in ("on_hit", "on_crit") if event.crit else ("on_hit",):
+        for owner, skill in index.owners(timing):
             if owner == attacker:
-                _fire(ctx, event.seq, owner, skill, event.target_id)
-        _fire_gear(ctx, index, "on_crit", event.seq, attacker, event.target_id)
+                _fire(ctx, event.seq, owner, skill, event.target_id, info, deferred=True)
+        _fire_gear(
+            ctx, index, timing, event.seq, attacker, event.target_id, info=info, deferred=True
+        )
     _count_hits(ctx, index, event)
 
 
@@ -361,13 +457,18 @@ def _is_melee_damage(ctx: Ctx, event: DamageDealt) -> bool:
 def _on_damage(ctx: Ctx, index: PassiveIndex, event: DamageDealt) -> None:
     if event.amount <= 0:
         return
+    source = event.source_id
+    if index.element_hits and source is not None and event.cause == "attack":
+        ctx.dealt_elements.setdefault((source, event.target_id), set()).add(event.element.value)
+    # E4：攻擊造成的傷害才知道攻擊種類與來源；燃燒、表面等只看元素（8.29 E4 第 5 點）
+    info = attack_info_of(ctx, source) if event.cause == "attack" else None
     for owner, skill in index.owners("on_damaged"):
         if owner == event.target_id:
-            _fire(ctx, event.seq, owner, skill, event.source_id)
+            _fire(ctx, event.seq, owner, skill, source, info, event.element)
     if index.gear_owners("on_damaged"):
         _fire_gear(
-            ctx, index, "on_damaged", event.seq, event.target_id, event.source_id,
-            melee=_is_melee_damage(ctx, event),
+            ctx, index, "on_damaged", event.seq, event.target_id, source,
+            melee=_is_melee_damage(ctx, event), info=info, element=event.element,
         )  # fmt: skip
     if event.hp_after <= 0 and event.source_id is not None and event.source_id != event.target_id:
         for owner, skill in index.owners("on_kill"):
@@ -463,6 +564,39 @@ def collect_exploit(
         ctx, index, ON_KEYWORD_EXPLOITED, seq, maker_id, exploiter_id,
         status=status, surface=None if surface is None else surface.value,
     )  # fmt: skip
+
+
+def collect_block(ctx: Ctx, blocker: UnitState, attacker: UnitState) -> None:
+    """``on_block``（E4，08 8.29 E4 第 3 點）：``blocker`` 的格擋類反應（``reduce_damage``，含裝備讓
+    遠程也能格擋的）真的結算了。另一方是攻擊者；攻擊種類、來源篩選看被擋下的這次攻擊。替隊友擋、
+    替隊友承受、盾兵掩護不經過這裡。沒有持有者時直接返回。"""
+    index = _index(ctx)
+    owned = [(o, s) for o, s in index.owners(ON_BLOCK) if o == blocker.id]
+    gear_owned = [(o, g) for o, g in index.gear_owners(ON_BLOCK) if o == blocker.id]
+    if not owned and not gear_owned:
+        return
+    info = attack_info_of(ctx, attacker.id)
+    seq = ctx.state.next_event_seq - 1  # 剛發出的 reaction_triggered
+    for owner, skill in owned:
+        _fire(ctx, seq, owner, skill, attacker.id, info)
+    _fire_gear(ctx, index, ON_BLOCK, seq, blocker.id, attacker.id, info=info)
+
+
+def collect_displace(ctx: Ctx, source_id: UnitId | None, moved_id: UnitId) -> None:
+    """``on_displace``（E4，08 8.29 E4 第 1、2 點）：``source_id`` 讓 ``moved_id`` 位移（推、拉、
+    擊退、傳送別人、互換），對方實際移動了至少 1 格；一次位移由呼叫端只呼叫 1 次。另一方是被位移的
+    單位（隊友也算）；自己位移自己不算。沒有持有者時直接返回。"""
+    if source_id is None or source_id == moved_id:
+        return
+    index = _index(ctx)
+    owned = [(o, s) for o, s in index.owners(ON_DISPLACE) if o == source_id]
+    gear_owned = [(o, g) for o, g in index.gear_owners(ON_DISPLACE) if o == source_id]
+    if not owned and not gear_owned:
+        return
+    seq = ctx.state.next_event_seq - 1  # 最後一筆 unit_moved
+    for owner, skill in owned:
+        _fire(ctx, seq, owner, skill, moved_id)
+    _fire_gear(ctx, index, ON_DISPLACE, seq, source_id, moved_id)
 
 
 def collect_cast(ctx: Ctx, caster: UnitState, skill: SkillDef) -> None:
@@ -635,6 +769,18 @@ def _ally_downed_handler() -> DownedHandler:
 
 
 @contextmanager
+def attacking(ctx: Ctx, info: AttackInfo) -> Iterator[None]:
+    """括號內是 ``info`` 這次攻擊（普攻、反應攻擊、施放；E4 的攻擊種類與來源篩選看它）。巢狀時
+    （例如攻擊中途的反擊）結束後還原外層的攻擊。"""
+    outer = ctx.attack_info
+    ctx.attack_info = info
+    try:
+        yield
+    finally:
+        ctx.attack_info = outer
+
+
+@contextmanager
 def holding(ctx: Ctx) -> Iterator[None]:
     """括號內不結算觸發（施放技能、一次普攻），結束後一次結算。"""
     ctx.trigger_hold += 1
@@ -647,7 +793,11 @@ def holding(ctx: Ctx) -> Iterator[None]:
 
 def settle(ctx: Ctx) -> None:
     """結算收集到的觸發（括號內或已在結算中時不做事）。"""
-    if ctx.settling or ctx.trigger_hold or not (ctx.fired or ctx.downed):
+    if ctx.settling or ctx.trigger_hold:
+        return
+    if not (ctx.fired or ctx.downed):
+        if ctx.dealt_elements:
+            ctx.dealt_elements = {}
         return
     ctx.settling = True
     try:
@@ -655,7 +805,8 @@ def settle(ctx: Ctx) -> None:
             _settle_downed(ctx)
             batch = sorted(ctx.fired, key=lambda f: (f.seq, f.owner_id, f.skill_id))
             ctx.fired = []
-            for fired in batch:
+            dealt, ctx.dealt_elements = ctx.dealt_elements, {}
+            for fired in _element_checked(batch, dealt):
                 if fired.event.startswith(stack_gain.STACK_GAIN_PREFIX):
                     _resolver(stack_gain.STACK_GAIN_PREFIX)(ctx, fired)
                 elif fired.event.startswith(GEAR_PREFIX):
@@ -669,6 +820,31 @@ def settle(ctx: Ctx) -> None:
     finally:
         ctx.settling = False
         ctx.trigger_depth = 0
+
+
+def _element_checked(
+    batch: list[Fired], dealt: dict[tuple[UnitId, UnitId], set[str]]
+) -> list[Fired]:
+    """E4 元素篩選（命中時、暴擊時）：這一批裡，持有者對另一方的攻擊實際造成過那個元素的傷害才
+    留下；同一個持有者、同一條被動或詞條、同一個另一方只留第一筆（多段、多下的攻擊對同一個目標
+    最多觸發 1 次，8.29 E4 第 4 點）。沒有元素篩選的觸發原樣保留。"""
+    if all(f.element is None for f in batch):
+        return batch
+    kept: list[Fired] = []
+    seen: set[tuple[UnitId, str, str, UnitId | None]] = set()
+    for fired in batch:
+        if fired.element is not None:
+            key = (fired.owner_id, fired.skill_id, fired.event, fired.other_id)
+            other = fired.other_id
+            if (
+                key in seen
+                or other is None
+                or fired.element not in dealt.get((fired.owner_id, other), ())
+            ):
+                continue
+            seen.add(key)
+        kept.append(fired)
+    return kept
 
 
 def _settle_downed(ctx: Ctx) -> None:

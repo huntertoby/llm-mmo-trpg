@@ -630,7 +630,7 @@ export const TRIG: PartTable = {
   on_ap_spent_all: { zh: "這回合用完所有 AP 時", topic: "卡片 AP 的閃電換成用掉的灰色，左下尖端掉出最後一顆金色四芒火花", d: spentAll },
 };
 /** 名詞表（glossary）有、現行沒有專屬圖的 5 個觸發（現行畫「?」）：建議各用哪一個。不算在 22 個裡。 */
-export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent" }; // TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借；AR-AP2：用完所有 AP 時換成專屬圖樣，拿掉暫借
+export const TRIG_ALIAS: Readonly<Record<string, string>> = { targeted_by_melee: "hit_by_melee", targeted_by_attack: "hit_by_attack", enemy_moves_in_range: "enemy_enters_adjacent", ally_hit_in_range: "ally_hit_adjacent", kin_hit_in_range: "ally_hit_adjacent", on_battle_start: "on_turn_start", ally_hit_near: "ally_hit_adjacent", on_displace: "on_collision", on_block: "hit_by_melee" }; // E4：你讓別人位移時先借「造成撞擊後」、格擋時先借「被近戰命中時」（劍砍向盾），待美術出圖；TF-1 加兩個（戰鬥開始時、身旁隊友受擊後）；AR-SK3：SK-3 的三個換成專屬圖樣（TRIG 最後），拿掉暫借；AR-AP2：用完所有 AP 時換成專屬圖樣，拿掉暫借
 
 // =====================================================================
 // 接續 6 個

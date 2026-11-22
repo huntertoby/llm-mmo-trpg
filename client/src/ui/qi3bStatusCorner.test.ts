@@ -37,7 +37,7 @@ describe("T-B5 角落級數", () => {
 
   it("其他狀態照現行（剩餘回合 → 數值 → 空）；姿態、像架勢但不合樣式的 ID 不算級數", () => {
     const others = IDS.filter((id) => statusTier(id) === null);
-    expect(others).toHaveLength(119 - 45 - 2);
+    expect(others).toHaveLength(120 - 45 - 2); // E4：KD-1 的站穩移植後進計數
     for (const id of others) {
       expect(statusCorner(st(id, 3, 7)), id).toBe("3");
       expect(statusCorner(st(id, null, 7)), id).toBe("7");

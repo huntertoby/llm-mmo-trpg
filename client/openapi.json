@@ -15195,6 +15195,17 @@
             "type": "array",
             "title": "Rules Dice",
             "default": []
+          },
+          "rules_only": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rules Only"
           }
         },
         "additionalProperties": false,

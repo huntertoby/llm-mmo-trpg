@@ -77,5 +77,5 @@
   - ruff、format、mypy、lint-imports
   - `trpg content check`、`classify.py --check`
   - tsc、vitest、build
-- **全量檢查**：全部 commit 之後，照派工的指示跑 `uv run python scripts/check.py`，再跑 slow 的 parity、cli。
+- **全量檢查**：全部 commit 之後，照派工的指示跑 `uv run python scripts/check.py --all`，再跑 slow 的 parity、cli。
 - **commit 與報告**：每項一個 commit。報告寫在 `docs/phases/PhaseCR-1報告.md`。

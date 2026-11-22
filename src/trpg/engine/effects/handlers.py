@@ -81,6 +81,7 @@ from trpg.engine.rules.statuses import (
     summon_damage_dealt_permille,
     under_truce,
 )
+from trpg.engine.skill_triggers import collect_displace
 from trpg.engine.source import credit_elite_kill, take_source_well
 from trpg.engine.state import BattleState, StatusInstance, UnitState
 from trpg.engine.traps import detect_traps, queue_trap_entry, trace_traps
@@ -869,7 +870,11 @@ def _move_unit(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
     occupant = state.unit_at(dx, dy)
     if occupant is not None and occupant.id != unit.id and effect.mode != "walk":
         return [ctx.emit(MoveBlocked, unit_id=unit.id, to_pos=dest, reason="occupied")]
-    return arrive(ctx, unit, (dx, dy), effect.mode, effect.cost)
+    start = unit.xy
+    events = arrive(ctx, unit, (dx, dy), effect.mode, effect.cost)
+    if effect.mode == "teleported" and start != (dx, dy):  # E4 on_displace：傳送別人
+        collect_displace(ctx, effect.source_id, unit.id)
+    return events
 
 
 def _status_blocked(ctx: Ctx, unit: UnitState, status_id: str) -> str | None:
@@ -1047,4 +1052,6 @@ def _swap_units(ctx: Ctx, effect: EffectBase) -> list[EventBase]:
         return [ctx.emit(EffectFizzled, effect_kind="swap", pos=None, reason="swap_blocked")]
     events = arrive(ctx, first, b_xy, "swap", source_id=effect.source_id)
     events += arrive(ctx, second, a_xy, "swap", source_id=effect.source_id)
+    for moved in (first, second):  # E4 on_displace：被換走的人（施放者自己不算），各記 1 次
+        collect_displace(ctx, effect.source_id, moved.id)
     return events

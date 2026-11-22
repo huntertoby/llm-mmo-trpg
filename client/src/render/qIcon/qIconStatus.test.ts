@@ -55,15 +55,21 @@ describe("KD-1 等美術出圖的狀態", () => {
       expect(QT.entry(id), id).toBeNull();
     }
   });
+  it("E4：站穩已移植美術的圖（Q版小圖示-站穩.md 方案 B v2），不再等圖", () => {
+    expect(PENDING_ART).toEqual([]);
+    const e = QT.entry("steady");
+    expect(e?.kind).toBe("new");
+    expect(e?.zh).toBe("站穩");
+  });
 });
 
 describe("T-A1 名詞表 118 個都有 Q 版圖樣", () => {
   it("每個 entry(id) 都不是 null；來源：沿用 40（STATUS 32＋聖輝／暗影貳～伍 8）、借用 4、新畫 74（手畫 39＋紋章 35）", () => {
-    expect(IDS.length).toBe(119); // AP-2 ＋1（borrowed_ap；AR-AP2 換成美術的預支圖，和效果「預支」同一個）
+    expect(IDS.length).toBe(120); // KD-1 ＋1（steady，E4 移植 Q版小圖示-站穩.md 方案 B v2）；AP-2 ＋1（borrowed_ap；AR-AP2 換成美術的預支圖，和效果「預支」同一個）
     const es = IDS.map((id) => [id, QT.entry(id)] as const);
     for (const [id, e] of es) expect(e, id).not.toBeNull();
     const kinds = (k: string, family?: string | null): number => es.filter(([, e]) => e?.kind === k && (family === undefined || (e.family ?? null) === family)).length;
-    expect([kinds("b4"), kinds("borrow"), kinds("new"), kinds("new", null), kinds("new", "element_stance")]).toEqual([40, 4, 75, 40, 35]);
+    expect([kinds("b4"), kinds("borrow"), kinds("new"), kinds("new", null), kinds("new", "element_stance")]).toEqual([40, 4, 76, 41, 35]);
     expect(es.filter(([id, e]) => e?.kind === "b4" && Object.prototype.hasOwnProperty.call(QP.STATUS, id)).length).toBe(32);
     expect(es.filter(([, e]) => e?.kind === "borrow").map(([id]) => id).sort()).toEqual(["revealed", "shielded", "time_bomb", "undying"]);
   });
@@ -121,7 +127,7 @@ describe("T-A3 框底色", () => {
       expect(lastFill < stroke && stroke < img, id).toBe(true);
       if (!want[id] && f === card && res === 2) plain++;
     }
-    expect(plain).toBe(112); // AP-2 ＋1
+    expect(plain).toBe(113); // AP-2 ＋1，KD-1 站穩 ＋1
     expect(want["entangled"]).toBeUndefined();
   });
 });
@@ -198,10 +204,10 @@ describe("T-A6 fitK 表", () => {
       expect(Math.abs(v! * 50 - Math.round(v! * 50)), id).toBeLessThan(1e-9);
       n++;
     }
-    expect(n).toBe(119 * 2 * 2);
+    expect(n).toBe(120 * 2 * 2);
     // 頭頂染底的 7 個 × 2 種 inset＋全部 × 2 種框的 inset 0（含 tint=0 對照）
-    expect(Object.keys(FIT_TABLE).length).toBe(119 * 2 + 7 * 2);
-    expect(QT.fitTableSize()).toBe(252);
+    expect(Object.keys(FIT_TABLE).length).toBe(120 * 2 + 7 * 2);
+    expect(QT.fitTableSize()).toBe(254);
   });
   it("表上的鍵回表值、不量（不呼叫 getImageData）；表上沒有的鍵在沒有 Path2D 時回 1、不丟例外", () => {
     log.calls = [];
