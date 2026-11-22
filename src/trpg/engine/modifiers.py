@@ -12,6 +12,11 @@
 條件（``condition``）沿用技能條件：``self_hp_below`` 看持有者，其他看 ``subject``
 （這次動作的目標）。
 
+同一個修正技有好幾份（裝備授予的複本鍵 ``<技能 ID>~2``，E1，08 8.28 第 4 點）時，**數字**照
+8.21.5.3 遞減：第 1 份 100%、第 2 份 50%、第 3 份 25%、之後 0%（``equipment.diminishing_permille``，
+:attr:`ActiveRule.weight_permille`），加總後無條件捨去，再套全身上限（例如傷害 +50%）。非數字的部分
+（加標籤、改元素、穿透、命中後效果）每份各自生效。
+
 這個模組只讀取狀態，不修改。
 """
 
@@ -21,6 +26,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, replace
 from types import MappingProxyType
 
+from trpg.content.skill_copies import copy_rank
 from trpg.content.skills import (
     SHAPE_CHANGES,
     BasicAction,
@@ -35,7 +41,12 @@ from trpg.engine.attack_element import (
     attack_element_sources,
     resolve_attack_element,
 )
-from trpg.engine.gear.core import cap_damage_bonus, gear_damage_parts, gear_hit_bonus
+from trpg.engine.gear.core import (
+    cap_damage_bonus,
+    gear_damage_parts,
+    gear_hit_bonus,
+    truncate_permille,
+)
 from trpg.engine.gear.enhance import (
     gear_area_delta,
     gear_keyword_damage_permille,
@@ -123,11 +134,17 @@ def skill_use(skill: SkillDef) -> Use:
 
 @dataclass(frozen=True, slots=True)
 class ActiveRule:
-    """持有者身上的一條修正規則：來源技能、規則索引與規則本身。"""
+    """持有者身上的一條修正規則：來源技能、規則索引與規則本身。``weight_permille``：同一招第幾份的
+    遞減權重（E1；只有一份時 1000）。"""
 
     skill: SkillDef
     index: int
     rule: ModifierSpec
+    weight_permille: int = 1000
+
+    def amount(self, value: int) -> int:
+        """數字乘上遞減權重（‰，未捨去；加總後由 :func:`truncate_permille` 捨去）。"""
+        return value * self.weight_permille
 
 
 def unit_rules(state: BattleState, unit: UnitState) -> tuple[ActiveRule, ...]:
@@ -140,7 +157,10 @@ def unit_rules(state: BattleState, unit: UnitState) -> tuple[ActiveRule, ...]:
     for skill_id in sorted(unit.all_skills):
         skill = rules.skill_def(skill_id)
         if skill.is_modifier and (not skill.is_activatable or is_active(unit, skill_id)):
-            found.extend(ActiveRule(skill, i, rule) for i, rule in enumerate(skill.modifiers))
+            weight = rules.equipment.weight(copy_rank(skill_id) - 1)  # E1：第 n 份遞減
+            found.extend(
+                ActiveRule(skill, i, rule, weight) for i, rule in enumerate(skill.modifiers)
+            )
     return tuple(found)
 
 
@@ -225,18 +245,22 @@ def rule_limit_reached(unit: UnitState, active: ActiveRule) -> bool:
 
 
 def _sum_self(state: BattleState, unit: UnitState, use: Use, change: str) -> int:
-    return sum(
-        getattr(rule.change, change)
-        for rule in _applicable(state, unit, use, change)
-        if _self_holds(state, unit, rule)
+    return truncate_permille(
+        sum(
+            active.amount(getattr(active.rule.change, change))
+            for active in _applicable_active(state, unit, use, change)
+            if _self_holds(state, unit, active.rule)
+        )
     )
 
 
 def _sum_for(state: BattleState, unit: UnitState, use: Use, change: str, subject: Subject) -> int:
-    return sum(
-        getattr(rule.change, change)
-        for rule in _applicable(state, unit, use, change)
-        if condition_met(state, unit, rule.condition, subject)
+    return truncate_permille(
+        sum(
+            active.amount(getattr(active.rule.change, change))
+            for active in _applicable_active(state, unit, use, change)
+            if condition_met(state, unit, active.rule.condition, subject)
+        )
     )
 
 
@@ -260,9 +284,17 @@ def hit_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -
 def empty_active_slots(state: BattleState, unit: UnitState) -> int:
     """主動技能欄的空格數（Phase 3-32a，普攻精通）：``core.skill_slots.active`` 減去單位裝備的
     主動技能數（裝備授予的常駐技能、暫時獲得的技能不算；下限 0）。結算當下由技能欄推算，不存
-    狀態。"""
+    狀態。
+
+    E1（08 8.28）：裝備授予的技能也在 ``unit.skills`` 裡，改前會被算成佔欄；現在照
+    ``unit.gear_skills`` 排除。"""
     rules = state.ruleset
-    used = sum(1 for skill_id in unit.skills if rules.skill_def(skill_id).slot_kind == "active")
+    gear = unit.gear_skills
+    used = sum(
+        1
+        for skill_id in unit.skills
+        if skill_id not in gear and rules.skill_def(skill_id).slot_kind == "active"
+    )
     return max(0, rules.core.skill_slots.active - used)
 
 
@@ -284,12 +316,12 @@ def _split_for(
         if rule_limit_reached(unit, active):
             continue
         if condition_met(state, unit, active.rule.condition, subject):
-            amount = _rule_amount(state, unit, active, change)
+            amount = active.amount(_rule_amount(state, unit, active, change))
             if amount > 0:
                 gain += amount
             else:
                 loss += amount
-    return gain, loss
+    return truncate_permille(gain), truncate_permille(loss)
 
 
 def summon_damage_bonus(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> int:
@@ -398,10 +430,13 @@ def summon_attack_dice(state: BattleState, unit: UnitState, use: Use) -> int:
 
 def _sum_unit(state: BattleState, unit: UnitState, change: str) -> int:
     """持有者全部修正規則裡 ``change`` 種類的改變量加總（不看 ``applies_to``，條件看持有者）。"""
-    return sum(
-        getattr(active.rule.change, change)
-        for active in unit_rules(state, unit)
-        if getattr(active.rule.change, change) is not None and _self_holds(state, unit, active.rule)
+    return truncate_permille(
+        sum(
+            active.amount(getattr(active.rule.change, change))
+            for active in unit_rules(state, unit)
+            if getattr(active.rule.change, change) is not None
+            and _self_holds(state, unit, active.rule)
+        )
     )
 
 
@@ -504,11 +539,12 @@ def cooldown_delta(
     if not hit:
         return 0
     total = 0
-    for rule in _applicable(state, unit, use, "cooldown_delta"):
+    for active in _applicable_active(state, unit, use, "cooldown_delta"):
+        rule = active.rule
         if any(condition_met(state, unit, rule.condition, s) for s in hit):
             assert rule.change.cooldown_delta is not None
-            total += rule.change.cooldown_delta
-    return total
+            total += active.amount(rule.change.cooldown_delta)
+    return truncate_permille(total)
 
 
 def on_hit_rules(state: BattleState, unit: UnitState, use: Use) -> list[ActiveRule]:
@@ -596,27 +632,29 @@ def shaped_skill(state: BattleState, unit: UnitState, skill: SkillDef) -> SkillD
     if not rules and not gear_area:
         return skill
     shape = skill.shape
-    for rule in rules:
-        if rule.change.shape_to is not None:
-            shape = _convert(state, unit, skill, shape, rule.change.shape_to)
-    for rule in rules:
-        if rule.change.area_delta is not None:
-            shape = _grow(state, shape, rule.change.area_delta)
+    for active in rules:
+        if active.rule.change.shape_to is not None:
+            shape = _convert(state, unit, skill, shape, active.rule.change.shape_to)
+    for active in rules:
+        delta = active.rule.change.area_delta
+        grow = 0 if delta is None else truncate_permille(active.amount(delta))  # E1：遞減
+        if grow:
+            shape = _grow(state, shape, grow)
     if gear_area:
         shape = _grow(state, shape, gear_area)
     include = skill.include_caster or (
-        any(r.change.allow_self_target for r in rules) and _helps_allies(state, skill)
+        any(a.rule.change.allow_self_target for a in rules) and _helps_allies(state, skill)
     )
     if shape == skill.shape and include == skill.include_caster:
         return skill
     return skill.model_copy(update={"shape": shape, "include_caster": include})
 
 
-def _shape_rules(state: BattleState, unit: UnitState, skill: SkillDef) -> list[ModifierSpec]:
+def _shape_rules(state: BattleState, unit: UnitState, skill: SkillDef) -> list[ActiveRule]:
     use = skill_use(skill)
     tags = effective_tags(state, unit, skill)
     return [
-        active.rule
+        active
         for active in unit_rules(state, unit)
         if active.rule.change.kind in SHAPE_CHANGES
         and _matches(state, active.rule, use, tags)

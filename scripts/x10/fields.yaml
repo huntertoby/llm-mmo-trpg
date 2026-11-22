@@ -572,6 +572,7 @@ groups:
       - form_coefficient_permille
       - shield_max_hp_points                      # GS-3：看最大 HP 的護盾，每 100‰ 的預算點數（點數不放大）
       - gamble_*
+      - gear_skill_tier                           # E1：裝備授予技能的預算階級（階級，不是量）
       - grant_skill_expected_uses_per_round_permille
       - hook_*
       - hurl_object_discount_permille

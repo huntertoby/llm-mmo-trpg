@@ -184,8 +184,8 @@ def test_library_rejects_bad_action_and_reaction_references() -> None:
     assert isinstance(grapple, ActionAffix)
     assert isinstance(ranged, ReactionAffix) and isinstance(guard, ReactionAffix)
     assert problems(grapple.model_copy(update={"skill": "skill_no_such"}))
-    passive = next(s.id for s in lib.ruleset.skills.skills if s.kind == "passive")
-    assert problems(grapple.model_copy(update={"skill": passive}))  # 被動技不是「動作」
+    stance = next(s.id for s in lib.ruleset.skills.skills if s.kind == "stance")
+    assert problems(grapple.model_copy(update={"skill": stance}))  # 姿態不能由裝備授予（E1）
     assert problems(ranged.model_copy(update={"event": "enemy_leaves_adjacent"}))
     assert problems(ranged.model_copy(update={"reaction": "no_such_reaction"}))
     assert problems(guard.model_copy(update={"range": None}))
@@ -292,10 +292,15 @@ def test_granted_skills_are_listed_with_their_equipment_source() -> None:
     assert next(u for u in enemy_view.units if u.id == U1).gear_skills == ()
 
 
-def test_same_granting_affix_on_two_items_grants_the_skill_once() -> None:
+def test_same_granting_affix_on_two_items_grants_two_copies() -> None:
+    """E1（08 8.28 第 4 點，#174）起改成兩份：第二份是複本鍵，冷卻分開（改前只給 1 份）。"""
     state = scene({"hands": [GRAPPLE], "off_hand": [GRAPPLE]})
-    assert state.units[U1].skills.count("skill_gear_grapple") == 1
-    assert len(project_for(state, Team.ALLY).units[0].gear_skills) == 1
+    assert state.units[U1].gear_skills == ("skill_gear_grapple", "skill_gear_grapple~2")
+    views = project_for(state, Team.ALLY).units[0].gear_skills
+    assert [(g.skill_id, g.copy_of) for g in views] == [
+        ("skill_gear_grapple", None),
+        ("skill_gear_grapple~2", "skill_gear_grapple"),
+    ]
 
 
 def test_preview_of_a_granted_skill_shows_cost_and_effect() -> None:

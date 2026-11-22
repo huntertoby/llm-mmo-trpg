@@ -121,12 +121,18 @@ def _affix_reference_problems(
     ]
 
 
+GEAR_GRANTABLE_KINDS: tuple[str, ...] = ("active", "reaction", "modifier", "passive")
+"""裝備可以授予的技能種類（E1，08 8.28：主動、反應、修正、被動）；姿態不在其中。"""
+GEAR_GRANTABLE_ZH: tuple[str, ...] = ("主動", "反應", "修正", "被動")
+
+
 def _action_problems(affix: ActionAffix, ruleset: Ruleset) -> list[str]:
-    """授予動作（G3b）：授予的必須是主動技（被動技與反應技不是「動作」）。"""
+    """授予技能（G3b；E1 起四類）：授予的必須是主動、反應、修正或被動技（姿態不行）。"""
     skills = ruleset.skills.by_id()
     skill = skills.get(affix.skill)
-    if skill is not None and skill.kind != "active":
-        return [f"詞條 {affix.id} 授予的技能 {skill.id} 必須是主動技（目前 {skill.kind}）"]
+    if skill is not None and skill.kind not in GEAR_GRANTABLE_KINDS:
+        kinds = "、".join(GEAR_GRANTABLE_ZH)
+        return [f"詞條 {affix.id} 授予的技能 {skill.id} 必須是{kinds}技（目前 {skill.kind}）"]
     if skill is not None and carries_silent(skill, skills):  # BS-1（#157）：無聲不做成詞條
         return [f"詞條 {affix.id} 授予的技能 {skill.id} 會給「無聲」：無聲不能來自裝備詞條"]
     return []

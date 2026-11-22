@@ -179,11 +179,22 @@ function SkillSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
+          <GearSourceNote source={b.gearSource} />
           <NowOffNote reason={b.disabledReason} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact activeVariantId={form?.id ?? null} pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>
       )}
+    </div>
+  );
+}
+
+/** 說明卡上方的「來自裝備・欄位：物品名」（E1；按鈕上的字太長會省略，這裡寫完整）。 */
+function GearSourceNote({ source }: { source: string | null | undefined }) {
+  if (source == null) return null;
+  return (
+    <div className="skill-card-reason gear-source-note" data-testid="gear-source-note">
+      {gearSkillBadge(source)}
     </div>
   );
 }
@@ -238,7 +249,10 @@ function RaceSlot({
   );
 }
 
-/** 被動、反應、姿態的小圖示：可施放的姿態點了選取（觸控長按看卡片），其他點一下釘住卡片。 */
+/**
+ * 被動、反應、姿態的小圖示：可施放的姿態點了選取（觸控長按看卡片），其他點一下釘住卡片。
+ * E1（08 8.28）：裝備授予的被動、反應、修正技加金框，卡片頂端寫「來自裝備・欄位：物品名」（同主動技的標記）。
+ */
 function MiniSlot({
   b,
   card,
@@ -254,12 +268,14 @@ function MiniSlot({
 }) {
   const usable = enabled && b.disabledReason === null && b.actions.length > 0;
   const f = useFloatCard({ pinOn: usable ? "hold" : "always", shiftPin: true });
+  const gear = b.gearSource == null ? null : gearSkillBadge(b.gearSource);
+  const label = conditionOffLabel(b.name, b.conditionOff);
   return (
     <span className="skill-mini-wrap" {...f.triggerProps}>
       <button
         type="button"
-        className={`skill-mini${selected || f.pinned ? " selected" : ""}${conditionOffClass(b.conditionOff)}`}
-        aria-label={conditionOffLabel(b.name, b.conditionOff)}
+        className={`skill-mini${selected || f.pinned ? " selected" : ""}${gear !== null ? " from-gear" : ""}${conditionOffClass(b.conditionOff)}`}
+        aria-label={gear === null ? label : `${label}（${gear}）`}
         aria-pressed={f.pinned}
         onClick={() => usable && onSelect(b.skillId)}
       >
@@ -267,6 +283,7 @@ function MiniSlot({
       </button>
       {f.open && card !== undefined && (
         <FloatCard float={f} className="skill-card-float">
+          <GearSourceNote source={b.gearSource} />
           <ConditionOffNote mark={b.conditionOff} />
           <SkillCardView card={card} compact pin={cardPin(f)} offEffects={b.conditionOff?.effects} />
         </FloatCard>

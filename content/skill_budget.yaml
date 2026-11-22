@@ -33,6 +33,9 @@ shield_max_hp_points: 21
 # 被動技能（Phase 2E-1）：可用預算 ＝ tier_budget × 觸發時機的係數（skill_triggers.yaml）× (1000 ＋ 代價折抵) ÷ 1000；
 # trigger.max_per_round 每多 1 次，可用預算再 × 這個值（次數越多，每次能分到的預算越少）。初值，未經模擬。
 passive_extra_trigger_permille: 800
+# 裝備授予的技能（E1，08 8.28；玩法交接 4.1.36 待決答覆 1）：不管技能本身標幾階，一律照這一階的預算窗檢查
+# （trpg content check；超出就是錯）。開放數值工坊。
+gear_skill_tier: 1
 # 陷阱技能（Phase 2E-3）：觸發不確定，可用預算 ＝ tier_budget × AP 係數 × 這個值 × (1000 ＋ 代價折抵) ÷ 1000。
 # 陷阱的影響範圍倍率取 trap.shape（single／cross／square3）對應的形狀倍率。初值，未經模擬。
 trap_coefficient_permille: 800

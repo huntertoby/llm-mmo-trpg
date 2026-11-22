@@ -280,6 +280,8 @@ targets:
     label_zh: 技能預算表
     glob: skill_budget.yaml
     fields:
+      # E1（08 8.28，玩法交接 4.1.36 待決答覆 1）：裝備授予的技能照哪一階的預算窗檢查。
+      - {path: gear_skill_tier, label_zh: 裝備授予技能的預算階級, group_zh: 裝備授予技能, kind: int, hint_min: 1, hint_max: 3, note_zh: 裝備（第 9 類詞條）授予的主動、反應、修正、被動技，不管技能本身標幾階，一律照這一階的預算窗檢查（trpg content check，超出就是錯）。調高：可用預算變大，裝備可以給更強的招；調低：裝備給的招要更弱，現有超出的會在驗證時列出。只能 1 到階級數（core.yaml 的 skill_limits.tiers）。}
       # HC-B：原語的基礎預算點數（skill_budget.yaml 的 primitive_points，從 skill_primitives.yaml 搬來，值不變）。
       - {path: primitive_points.cleanse, label_zh: 淨化的預算點數, group_zh: 原語點數, kind: int, hint_min: 1, hint_max: 6, note_zh: 「淨化」算多少預算點數（固定，再乘形狀倍率）。越大，這種效果在同預算的技能裡越弱（帶它的招其他效果要讓出更多預算）；越小越強。改了所有帶它的招（手寫、組合器、LLM、工坊）預算比例跟著重算。只能 0 以上。}
       - {path: primitive_points.push, label_zh: 推擊的預算點數, group_zh: 原語點數, kind: int, hint_min: 1, hint_max: 4, note_zh: 「推擊」每 1 格算多少預算點數（× 距離，再乘形狀倍率）。越大，這種效果在同預算的技能裡越弱（帶它的招其他效果要讓出更多預算）；越小越強。改了所有帶它的招（手寫、組合器、LLM、工坊）預算比例跟著重算。只能 0 以上。也用在：衝撞的「推開」、召喚物的震退、修正規則的「推擊 +N 格」。}

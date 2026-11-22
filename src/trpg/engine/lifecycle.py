@@ -23,7 +23,7 @@ from trpg.engine.events import (
     UnitEscaped,
 )
 from trpg.engine.forms import leave_form
-from trpg.engine.gear.core import build_gear, geared_template
+from trpg.engine.gear.core import build_gear, gear_skill_keys, geared_template
 from trpg.engine.gear.enhance import geared_weapon
 from trpg.engine.gear.reactions import gear_reaction_rules
 from trpg.engine.heights import change_height
@@ -349,6 +349,7 @@ def make_unit(
     ``seed``（QK-6a）：戰鬥的初始種子，只用來讓一般敵人依 id 挑外觀（純顯示，不耗戰鬥亂數）；
     召喚物不挑外觀，可以省略。"""
     gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
+    gear_skills = gear_skill_keys(template.skills, gear)  # E1：裝備給的技能鍵
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
     wclass = weapon.weapon_class
@@ -390,6 +391,7 @@ def make_unit(
         mana=max_mana,
         max_mana=max_mana,
         skills=template.skills,
+        gear_skills=gear_skills,
         level=template.level,
         ammo=weapon.magazine,
         facing=default_facing(team) if facing is None else facing,
