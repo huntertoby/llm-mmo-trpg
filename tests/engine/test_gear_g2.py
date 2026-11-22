@@ -46,6 +46,7 @@ from trpg.engine.gear.enhance import (
     geared_weapon,
 )
 from trpg.engine.rules.weapons import range_damage_permille, weapon_hit_bonus
+from trpg.engine.runner import LOG_FORMAT
 from trpg.engine.setup import UnitSpawn
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.state import StatusInstance
@@ -449,5 +450,5 @@ def test_g2_gear_battle_log_json_and_replay(tmp_path: Path) -> None:
     args += ["--enemies", "bandit,bandit", "--seed", "7", "--log-json", str(log)]
     assert cli_main(args) == 0
     text = log.read_text(encoding="utf-8")
-    assert "trpg-battle-log/138" in text and '"affix_trait_hammer_knockback"' in text
+    assert LOG_FORMAT in text and '"affix_trait_hammer_knockback"' in text
     assert cli_main(["battle", "replay", str(log)]) == 0

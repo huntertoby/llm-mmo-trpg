@@ -56,6 +56,7 @@ from trpg.engine.events import (
 from trpg.engine.gear.charge import charge_problem
 from trpg.engine.refunds import refund_ap
 from trpg.engine.rewrites import grant_ap
+from trpg.engine.runner import LOG_FORMAT
 from trpg.engine.skill_triggers import reset_round_counts
 from trpg.engine.state import StatusInstance, state_from_json, state_to_json
 from trpg.engine.turns import start_turn
@@ -566,7 +567,7 @@ def test_g3a_gear_battle_log_json_and_replay(tmp_path: Path) -> None:
     args += ["--enemies", "bandit,bandit", "--seed", "3", "--log-json", str(log)]
     assert cli_main(args) == 0
     text = log.read_text(encoding="utf-8")
-    assert "trpg-battle-log/138" in text
+    assert LOG_FORMAT in text
     for needle in ('"gear_triggered"', '"charge_activated"', '"activate_charge"'):
         assert needle in text
     assert cli_main(["battle", "replay", str(log)]) == 0

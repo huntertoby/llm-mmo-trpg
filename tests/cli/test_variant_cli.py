@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.main import main
+from trpg.engine.runner import LOG_FORMAT
 
 ALLIES = "variant_vanguard,variant_tidecaller,variant_slinger"
 
@@ -37,7 +38,7 @@ def test_a_variant_battle_logs_the_form_and_replays(
     assert code == 0 and log.is_file()
     assert "（借牆猛撞）" in out or "（寒霜刃）" in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/138"
+    assert data["format"] == LOG_FORMAT
     variants = [e["variant"] for e in data["events"] if e["type"] == "skill_used"]
     assert any(v is not None for v in variants)
     code, replay = _run(["battle", "replay", str(log)], capsys)

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from trpg.cli.main import main
+from trpg.engine.runner import LOG_FORMAT
 
 
 def _run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
@@ -70,7 +71,7 @@ def test_battle_log_and_replay(tmp_path: Path, capsys: pytest.CaptureFixture[str
     )
     assert code == 0 and log.is_file() and str(log) in out
     data = json.loads(log.read_text(encoding="utf-8"))
-    assert data["format"] == "trpg-battle-log/138"
+    assert data["format"] == LOG_FORMAT
     assert data["seed"] == 7 and data["actions"] and data["events"]
     assert data["events"][0]["type"] == "battle_started"
 

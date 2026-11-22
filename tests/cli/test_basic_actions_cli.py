@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from trpg.cli.main import main
+from trpg.engine.runner import LOG_FORMAT
 
 
 def _log(
@@ -36,7 +37,7 @@ def test_open_plain_battle_uses_guard_and_replays(
     data, out = _log(
         "open_plain", 44, tmp_path, capsys
     )  # 3-24a1：弓有拋射，AI 軌跡改變，種子 3 → 98；3H-1 常駐數值後 → 222；3H-2 武器技花耐力後 → 98
-    assert data["format"] == "trpg-battle-log/138"
+    assert data["format"] == LOG_FORMAT
     assert any(a["type"] == "defend" and a.get("target_id") for a in data["actions"])
     assert any(e["type"] == "attack_intercepted" and e.get("guard") for e in data["events"])
     assert "守護" in out
@@ -50,7 +51,7 @@ def test_open_plain_battle_uses_swap_and_aim_and_replays(
     # AP-1（玩家方 4 AP、失手返還）後 17 → 237（0～299 只有 237、247、258 同時換位又瞄準）
     # KD-1（倒地改版）237 → 120（0～299 只有 120、298）
     data, out = _log("open_plain", 120, tmp_path, capsys)
-    assert data["format"] == "trpg-battle-log/138"
+    assert data["format"] == LOG_FORMAT
     assert {"swap", "aim"} <= {a["type"] for a in data["actions"]}
     assert "瞄準" in out
     _replays(tmp_path, capsys)
