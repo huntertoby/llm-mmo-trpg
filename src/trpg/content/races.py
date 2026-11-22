@@ -37,6 +37,7 @@ from trpg.content.unit_rules import (
     UnitRuleSpec,
     unit_rule_param_problems,
     unit_rule_permille_problems,
+    unit_rule_status_problem,
 )
 from trpg.shared.types import Element, Surface
 
@@ -424,6 +425,14 @@ class RacePassive(_GuardedModel):
     radius: int | None = Field(default=None, ge=1, le=3)
     duration: int | None = Field(default=None, ge=1, le=3)
     """``trail_surface``（E3）：留下的表面持續幾個環境回合。"""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _no_status(cls, data: Any) -> Any:
+        problem = unit_rule_status_problem(data)
+        if problem is not None:
+            raise ValueError(f"環境被動 {data.get('id', '?')}：{problem}")
+        return data
 
     @model_validator(mode="after")
     def _check_rule(self) -> RacePassive:

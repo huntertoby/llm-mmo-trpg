@@ -86,3 +86,45 @@ def test_flat_climb_and_immunity_params() -> None:
         _gear("flat_climb", amount=1, surfaces=["ice"])
     with pytest.raises(ValidationError, match="缺少必填參數 surfaces"):
         _race("surface_damage_immunity")
+
+
+# ---------------------------------------------------------------------------
+# 地形規則只能留表面，不能施加狀態（8.29 E3 第 6 點）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("key", ["status", "apply_status", "statuses", "status_id"])
+def test_terrain_rule_cannot_apply_a_status(key: str) -> None:
+    with pytest.raises(ValidationError, match="地形規則只能留下表面，不能施加狀態"):
+        _gear("trail_surface", surfaces=["ice"], duration=1, **{key: "bleeding"})
+    with pytest.raises(ValidationError, match="地形規則只能留下表面，不能施加狀態"):
+        _race("trail_surface", surfaces=["ice"], duration=1, **{key: "bleeding"})
+
+
+@pytest.mark.parametrize("rule", ["trail_status", "pass_through_status"])
+def test_status_rule_kinds_get_the_chinese_message(rule: str) -> None:
+    with pytest.raises(ValidationError, match="是改寫規則"):
+        _gear(rule)
+    with pytest.raises(ValidationError, match="是改寫規則"):
+        _race(rule)
+
+
+def test_content_check_message_through_the_affix_table() -> None:
+    from trpg.content.equipment import AffixTable  # noqa: PLC0415
+
+    data = {
+        "affixes": [
+            {
+                "id": "affix_t_bleed_trail",
+                "name_zh": "走過時讓相鄰敵人流血",
+                "category": "terrain",
+                "slots": ["feet"],
+                "rule": "trail_surface",
+                "surfaces": ["ice"],
+                "duration": 1,
+                "apply_status": "bleeding",
+            }
+        ]
+    }
+    with pytest.raises(ValidationError, match="affix_t_bleed_trail：地形規則只能留下表面"):
+        AffixTable.model_validate(data)

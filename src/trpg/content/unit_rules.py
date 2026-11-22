@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -25,6 +26,7 @@ __all__ = [
     "UnitRuleSpec",
     "unit_rule_param_problems",
     "unit_rule_permille_problems",
+    "unit_rule_status_problem",
 ]
 
 
@@ -123,6 +125,26 @@ def unit_rule_param_problems(rule_def: UnitRule) -> tuple[str | None, list[str]]
     if trail is not None and (len(trail) != 1 or Surface.NONE in trail):
         problems.append("trail_surface 的 surfaces 只能填一種表面（不能是 none）")
     return None, problems
+
+
+STATUS_KEYS: tuple[str, ...] = ("status", "statuses", "apply_status", "status_id")
+"""想讓地形規則施加狀態時會填的欄位（:func:`unit_rule_status_problem` 擋下）。"""
+
+UNIT_RULE_STATUS_ZH = (
+    "地形規則只能留下表面，不能施加狀態（「經過時對相鄰敵人施加狀態」是改寫規則，"
+    "全身同時只能有一個）"
+)
+
+
+def unit_rule_status_problem(data: object) -> str | None:
+    """原始資料想讓地形規則（種族環境被動、裝備地形規則）施加狀態時的中文錯誤（E3，08 8.29 E3 第 6
+    點）：填了狀態欄位，或規則種類名稱帶 ``status``。其他情況 ``None``。"""
+    if not isinstance(data, Mapping):
+        return None
+    rule = data.get("rule")
+    if any(key in data for key in STATUS_KEYS) or (isinstance(rule, str) and "status" in rule):
+        return UNIT_RULE_STATUS_ZH
+    return None
 
 
 def unit_rule_permille_problems(
