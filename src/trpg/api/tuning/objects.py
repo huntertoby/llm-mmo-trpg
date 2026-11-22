@@ -19,6 +19,7 @@ from trpg.api.tuning.schemas import (
     TuningSkillUser,
     TuningUnitSkills,
 )
+from trpg.api.tuning.shape_usage import unused_base_note
 from trpg.api.tuning.yaml_patch import MISSING, PatchError, lookup
 from trpg.content.battle import PhaseGrowSurface, UnitTemplate
 from trpg.content.composer_rules import StructureRules
@@ -856,6 +857,16 @@ def note_text(note: str, content_dir: Path) -> str:
     return note.replace("{wish_cards}", str(cards)).replace("{wish_cards_zh}", count_zh(cards))
 
 
+def _note_zh(
+    field: TuningField, path: str, content_dir: Path, library: ContentLibrary | None
+) -> str:
+    """欄位說明（:func:`note_text`）；形狀「沒填參數時」的基礎倍率沒有招用到時，接一句「目前沒有招用到，
+    改了暫時沒效果。」（HC-W2 裁定 1，由資料算：:mod:`trpg.api.tuning.shape_usage`）。"""
+    note = note_text(field.note_zh, content_dir)
+    extra = unused_base_note(path, library)
+    return note if extra is None else f"{note}{extra}"
+
+
 def _default_zh(field: TuningField) -> str | None:
     if field.path in _DEFAULTS_ZH:
         return _DEFAULTS_ZH[field.path]
@@ -1043,7 +1054,7 @@ def object_detail(
                 limit_min=low,
                 limit_max=high,
                 readonly_zh=_readonly(field, value),
-                note_zh=note_text(field.note_zh, content_dir),
+                note_zh=_note_zh(field, concrete, content_dir, library),
                 notice_zh=_field_notice(data, concrete, walls),
                 group_zh=field.group_zh or _part_group(data, concrete),
             )
