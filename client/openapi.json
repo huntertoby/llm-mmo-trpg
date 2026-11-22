@@ -31543,6 +31543,17 @@
             "type": "boolean",
             "title": "Reaction Available"
           },
+          "reaction_blocked_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reaction Blocked Zh"
+          },
           "reaction_rules": {
             "items": {
               "$ref": "#/components/schemas/ReactionRuleView"

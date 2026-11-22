@@ -369,3 +369,27 @@ def test_ice_dc_is_ten_for_walking_and_forced_entry() -> None:
     forced = run_effects(state, [MoveUnitEffect(unit_id=U1, dest=(1, 1), mode="forced")])
     dcs = [e.dc for r in (walked, forced) for e in r.events if isinstance(e, CheckRolled)]
     assert dcs == [10, 10]
+
+
+# ---------------------------------------------------------------------------
+# 第 7 點：反應欄的字、AI 的站穩
+# ---------------------------------------------------------------------------
+
+
+def test_view_says_why_a_prone_unit_cannot_react() -> None:
+    state = _knock(_pair())
+    unit = next(u for u in project_for(state, Team.ENEMY).units if u.id == U2)
+    assert unit.reaction_blocked_zh == "倒地中，不能反應"
+    standing = next(u for u in project_for(_pair(), Team.ENEMY).units if u.id == U2)
+    assert standing.reaction_blocked_zh is None
+
+
+def _trip_score(state: BattleState) -> Fraction:
+    ai = UtilityAI(library().ai_profiles)
+    (scored,) = [s for s in ai.rank(state) if isinstance(s.action, Trip)]
+    return scored.score
+
+
+def test_ai_does_not_value_tripping_a_steady_target() -> None:
+    base = give_turn(_pair(), U1)
+    assert _trip_score(give_turn(_steady(_pair(), U2), U1)) < _trip_score(base)

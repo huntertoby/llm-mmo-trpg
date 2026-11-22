@@ -34,7 +34,13 @@ class InfoText:
     lines_zh: tuple[str, ...]
 
 
-def _contest(core: CoreRules, attr: str) -> str:
+def _contest(core: CoreRules, attr: str, *, knock: bool = False) -> str:
+    if knock:  # 擊倒對抗（KD-1，05 5.13 第 4 點）：對方 +加值、平手算對方贏
+        return (
+            f"{attr}對抗：d20 ＋ 雙方{attr}差的攻防修正 ＋ 熟練 {core.proficiency} − "
+            f"{core.prone_contest_bonus}（擊倒對抗對方的加值），合計 ≥ {core.hit_target + 1} 才成功"
+            "（平手算對方贏）"
+        )
     return (
         f"{attr}對抗：d20 ＋ 雙方{attr}差的攻防修正 ＋ 熟練 {core.proficiency}，"
         f"合計 ≥ {core.hit_target} 才成功"
@@ -132,9 +138,10 @@ def _maneuvers(core: CoreRules) -> list[InfoText]:
             f"{_ap(core.maneuver_ap_cost)}，敏捷對抗，成功讓相鄰敵人倒地",
             (
                 f"{_ap(core.maneuver_ap_cost)}，對相鄰的敵人使出",
-                _contest(core, "敏捷"),
+                _contest(core, "敏捷", knock=True),
                 "成功時目標倒地；站起要花掉"
-                f"一半（{permille_pct(core.prone_stand_up_move_permille)}，無條件進位）的移動點數",
+                f"一半（{permille_pct(core.prone_stand_up_move_permille)}，無條件進位）的移動點數；"
+                "倒地期間不能反應，下一個自己回合少 AP",
             ),
         ),
         InfoText(

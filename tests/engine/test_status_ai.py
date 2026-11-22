@@ -152,6 +152,7 @@ def test_status_values_are_defined_for_every_new_status() -> None:
         "blinded",
         "marked",
         "overdrawn",  # 3-50：透支（cost.overdraft）的 AI 機會成本
+        "prone",  # KD-1：倒地變重，給初值
     }
     assert all(v > 0 for v in values.values())
     for profile in library().ai_profiles.profiles:

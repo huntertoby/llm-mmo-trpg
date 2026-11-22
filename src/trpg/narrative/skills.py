@@ -428,13 +428,23 @@ def _push_pull(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     return text
 
 
+def knock_contest_text(lib: ContentLibrary, attr: str) -> str:
+    """擊倒對抗的括號字（KD-1，05 5.13 第 4 點）：「力量對抗，對方 +3」；加值 0 時不寫。"""
+    bonus = lib.ruleset.core.prone_contest_bonus
+    return f"{attr}對抗" + (f"，對方 +{bonus}" if bonus else "")
+
+
 def _knock_prone(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
-    return f"擊倒（{contest_label(skill, lib)}對抗）"
+    return f"擊倒（{knock_contest_text(lib, contest_label(skill, lib))}）"
 
 
-def _shockwave(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
-    """震波（Phase 3-54b）。"""
-    return "震波：直線上的單位倒地（不擲對抗，對敵人仍要先命中；已經倒地和會飛的單位不受影響）"
+def _shockwave(lib: ContentLibrary, skill: SkillDef, _spec: EffectSpec) -> str:
+    """震波（Phase 3-54b；KD-1 起要擲擊倒對抗）。"""
+    contest = knock_contest_text(lib, contest_label(skill, lib))
+    return (
+        f"震波：直線上的單位擲擊倒對抗（{contest}），成功就倒地"
+        "（對敵人要先命中；已經倒地和會飛的單位不受影響）"
+    )
 
 
 def _teleport(_lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
@@ -609,7 +619,9 @@ def miss_text(lib: ContentLibrary, skill: SkillDef) -> str | None:
 def _charge_through(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None  # 參數表要求 dice（3D-2c）
     after = (
-        f"擊倒（{contest_label(skill, lib)}對抗）" if spec.on_hit == "knock_prone" else "推到路徑旁"
+        f"擊倒（{knock_contest_text(lib, contest_label(skill, lib))}）"
+        if spec.on_hit == "knock_prone"
+        else "推到路徑旁"
     )
     return (
         f"沿直線衝向目標格：沿途每個敵人各擲命中，命中受 {_dice(lib, spec.dice)} 物理傷害並{after}"
@@ -1033,7 +1045,7 @@ def _hurl_object(lib: ContentLibrary, skill: SkillDef, spec: EffectSpec) -> str:
     assert spec.dice is not None
     text = f"把 {spec.range} 格內的可推動物件丟到落點，落點單位受 {_dice(lib, spec.dice)} 物理傷害"
     if spec.knock_prone:
-        text += f"並擊倒（{contest_label(skill, lib)}對抗）"
+        text += f"並擊倒（{knock_contest_text(lib, contest_label(skill, lib))}）"
     return text + "；油桶落地爆炸、可破壞的物件碎掉"
 
 
@@ -1041,7 +1053,8 @@ def _topple(lib: ContentLibrary, _skill: SkillDef, _spec: EffectSpec) -> str:
     core = lib.ruleset.core
     return (
         f"推倒石柱或枯樹，往遠離自己的方向壓住 {core.topple_length} 格"
-        f"（{_dice(lib, core.topple_damage_dice)} 物理傷害並倒地）"
+        f"（{_dice(lib, core.topple_damage_dice)} 物理傷害；"
+        f"另擲擊倒對抗（{knock_contest_text(lib, '你的力量')}），成功才倒地）"
     )
 
 

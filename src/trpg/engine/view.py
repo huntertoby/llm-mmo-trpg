@@ -410,6 +410,10 @@ class RaceView(_ViewModel):
     前端紙娃娃疊在單位外觀上。"""
 
 
+PRONE_NO_REACTION_ZH = "倒地中，不能反應"
+"""倒地中的單位反應欄的說明（KD-1，05 5.13 第 1 點；畫面照這個字顯示）。"""
+
+
 class UnitView(_ViewModel):
     id: UnitId
     template_id: str
@@ -468,6 +472,8 @@ class UnitView(_ViewModel):
     """冷卻中的技能；其他陣營單位的陷阱技能冷卻不列出。"""
     reaction_available: bool
     """還有反應次數，且身上有（未關閉的）反應規則；倒地中一律 ``False``（KD-1）。"""
+    reaction_blocked_zh: str | None = None
+    """整個不能反應的原因（KD-1：倒地中「倒地中，不能反應」，反應欄顯示）；能反應時 ``None``。"""
     reaction_rules: tuple[ReactionRuleView, ...]
     """反應規則與目前模式；只有自己陣營的單位會列出（其他陣營的單位為空）。"""
     ap_carry: int
@@ -1072,6 +1078,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         statuses=tuple(_status_view(state, unit, s) for s in unit.statuses),
         stacks=dict(sorted(unit.stacks.items())),
         cooldowns=_visible_cooldowns(state, unit, team),
+        reaction_blocked_zh=PRONE_NO_REACTION_ZH if unit.has_status(PRONE) else None,
         reaction_available=unit.alive
         and not unit.has_status(PRONE)
         and any(r.mode != "off" for r in unit.reactions)

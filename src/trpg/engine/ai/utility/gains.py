@@ -55,7 +55,7 @@ from trpg.engine.events import (
     UnitDowned,
     UnitMoved,
 )
-from trpg.engine.ids import PRONE
+from trpg.engine.ids import PRONE, STEADY
 from trpg.engine.preview import DamageRange, Preview
 from trpg.engine.rules.footprint import unit_dist
 from trpg.engine.rules.geometry import (
@@ -389,15 +389,25 @@ def _push_gains(f: _GainFrame) -> Fraction:
     }
     gains = w.push * f.hit * len(pushed)
     gains += _status_gains(f.state, f.actor, p, f.profile, f.hit, only=f.only)
+    prone = _prone_value(f)
     for t in p.targets:  # 技能附帶的擊倒：命中率 × 對抗成功率（預覽的 min 只視為失敗）
+        target = f.state.units[t.unit_id]
         if (
             t.knock_chance is not None
             and not t.ally
             and f.counts(t.unit_id)
-            and not f.state.units[t.unit_id].has_status(PRONE)
+            and not target.has_status(PRONE)
+            and not target.has_status(STEADY)  # 站穩（KD-1）：擊不倒，不加分
         ):
-            gains += w.status * t.hit_chance * t.knock_chance
+            gains += prone * t.hit_chance * t.knock_chance
     return gains
+
+
+def _prone_value(f: _GainFrame) -> Fraction:
+    """擊倒的價值（KD-1）：``status_values`` 有列倒地時＝``damage`` 權重 × 等值傷害點數（同其他
+    狀態），沒列時照舊用 ``status`` 權重。"""
+    points = f.profile.status_values.get(PRONE)
+    return Fraction(f.w.status) if points is None else Fraction(f.w.damage * points)
 
 
 def _surface_gains(f: _GainFrame) -> Fraction:

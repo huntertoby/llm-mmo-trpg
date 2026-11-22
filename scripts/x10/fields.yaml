@@ -922,7 +922,7 @@ groups:
       - targets[kind=unit].fields[path=level|speed|ap_per_turn|"phases[*].grow_surface.max_rows"|"parts[*].on_break[*].amount"|"parts[*].on_break[*].rounds"].hint_*
       - targets[kind=unit].fields[kind=permille].hint_*
       - targets[kind=skill].fields[path!=cost.mana|cost.stamina].hint_*
-      - targets[kind=rules|budget|pick|skill_composer|skill_triggers|skill_conditions|skill_synergies|skill_evolution|flash].fields[].hint_*
+      - targets[kind=rules|budget|pick|skill_composer|skill_triggers|skill_conditions|skill_synergies|skill_evolution|flash|surface].fields[].hint_*   # KD-1：surface＝冰面 DC（d20）
       - targets[kind=world_rules|world_economy|world_trade|world_season].fields[].hint_*   # HC-4d：金幣、經驗、格數、天數、‰（大世界檔整組不 ×10）
       - targets[kind=forms].fields[path!=upkeep_stamina|upkeep_mana|stance_upkeep_stamina|stance_upkeep_mana].hint_*   # HC-W2：冷卻、格數、‰、回合
       - targets[kind=equipment].fields[].hint_*   # HC-W2：‰、條數、AP、冷卻、暴擊、移動

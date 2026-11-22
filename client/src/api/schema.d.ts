@@ -12549,6 +12549,8 @@ export interface components {
             };
             /** Reaction Available */
             reaction_available: boolean;
+            /** Reaction Blocked Zh */
+            reaction_blocked_zh?: string | null;
             /** Reaction Rules */
             reaction_rules: components["schemas"]["ReactionRuleView"][];
             /** Ap Carry */

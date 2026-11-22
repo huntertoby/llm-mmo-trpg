@@ -89,7 +89,7 @@ statuses:
   - id: prone
     polarity: debuff
     name_zh: 倒地
-    description_zh: 移動前要先站起來（消耗部分移動點數）；近戰攻擊倒地者有優勢，遠程攻擊有劣勢。
+    description_zh: 移動前要先站起來（消耗部分移動點數），也可以讓相鄰的隊友扶起；近戰攻擊倒地者有優勢，遠程攻擊有劣勢；倒地期間不能反應，倒地後的第一個自己回合少 AP。
     expires: never
     stacking: refresh
     min_rarity: rare
