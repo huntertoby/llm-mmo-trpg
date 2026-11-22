@@ -2125,7 +2125,11 @@ export interface components {
          *     數值類第 4 條起權重 0）；``weight_permille``：遞減權重（1000／500／250／0）。
          *
          *     ``duplicate_of``（Phase 3-32a）：這條 **沒有生效** 的重複詞條，是和哪一條重複（生效的那條的
-         *     「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。
+         *     「部位＋詞條文字」，例如「主手的每第 2 次普攻命中：…」）；生效中的詞條為 ``None``。E2 起第 12 類
+         *     地形規則和種族被動重複時是「種族被動「炎膚」」。
+         *
+         *     ``overlap_zh``（E2）：地形規則和前面的來源部分重疊時的說明（例「冰的部分和種族重複」；這條仍
+         *     生效，重疊的部分只算一份）；沒有時 ``None``。
          */
         AffixLineView: {
             /** Affix Id */
@@ -2142,6 +2146,8 @@ export interface components {
             weight_permille: number;
             /** Duplicate Of */
             duplicate_of?: string | null;
+            /** Overlap Zh */
+            overlap_zh?: string | null;
             /** Off Zh */
             off_zh?: string | null;
         };

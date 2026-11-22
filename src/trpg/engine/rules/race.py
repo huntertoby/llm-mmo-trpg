@@ -19,7 +19,13 @@
 - ``fall_immunity``（獸耳族「輕身」，#138）：:func:`fall_immune`（``effects.handlers.arrive``、
   ``heights`` 不發墜落事件；``basics`` 的攀跳可以往下跳；AI 的路線估值不把往下當風險）。
 
-查詢只讀 ``Ruleset.races`` 與單位／戰鬥狀態，是確定性的純函式。
+
+E2（08 8.29，#175）起，除了 :func:`passive_active` 與 :func:`race_element_mods` 只看種族，其他查詢都
+看「單位身上所有規則來源」（種族先、再依欄位固定順序看裝備的地形規則；同一個鍵只有第一個來源生效、
+不疊加，見 :mod:`trpg.engine.rules.unit_rules`）。裝備給的移動加成計入裝備的移動加成合計上限
+（:func:`rule_move_bonus`）。各函式的介面不變。
+
+查詢只讀 ``Ruleset.races``、單位的裝備狀態與戰鬥狀態，是確定性的純函式。
 """
 
 from __future__ import annotations
@@ -27,7 +33,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from trpg.content.library import Ruleset
-from trpg.content.races import RacePassive
+from trpg.content.unit_rules import UnitRule
+from trpg.engine.rules.unit_rules import RuleSource, first_source, gear_move_room, rule_sources
 from trpg.engine.state import BattleState, UnitState
 from trpg.shared.types import Element, Surface
 
@@ -44,6 +51,7 @@ __all__ = [
     "passive_of",
     "race_element_mods",
     "reveal_radius",
+    "rule_move_bonus",
     "sight_range_for",
     "slip_immune",
     "surface_move_bonus",
@@ -53,13 +61,14 @@ __all__ = [
 PERMILLE = 1000
 
 
-def passive_of(rules: Ruleset, unit: UnitState, rule: str) -> RacePassive | None:
-    """``unit`` 的環境被動，且規則為 ``rule``；沒有種族或規則不同時為 ``None``。種族 ID 不存在時
-    拋 ``KeyError``（載入時已驗證）。"""
-    if unit.race is None:
-        return None
-    passive = rules.race_def(unit.race).passive
-    return passive if passive.rule == rule else None
+def passive_of(rules: Ruleset, unit: UnitState, rule: str) -> UnitRule | None:
+    """``unit`` 身上第一條規則為 ``rule`` 的來源（種族的環境被動先，再依欄位順序看裝備的地形規則）；
+    沒有時為 ``None``。種族 ID 不存在時拋 ``KeyError``（載入時已驗證）。要看「某個表面、天氣上
+    生效的是哪一條」時用 :func:`trpg.engine.rules.unit_rules.first_source`。"""
+    for source in rule_sources(rules, unit):
+        if source.rule.rule == rule:
+            return source.rule
+    return None
 
 
 def _ceil_share(amount: int, permille: int) -> int:
@@ -77,17 +86,13 @@ def sight_range_for(state: BattleState, viewer: UnitState | None = None) -> int:
     result = base * permille // PERMILLE
     if viewer is None:
         return result
-    clear = passive_of(state.ruleset, viewer, "sight_penalty_reduction")
-    if (
-        clear is not None
-        and weather is not None
-        and weather.id in (clear.weathers or ())
-        and clear.permille
-    ):
-        result += _ceil_share(base - result, clear.permille)
-    bonus = passive_of(state.ruleset, viewer, "sight_bonus_on_map_tag")
-    if bonus is not None and set(bonus.map_tags or ()) & set(state.map_tags):
-        result += bonus.amount or 0
+    if weather is not None:
+        clear = first_source(state.ruleset, viewer, "sight_penalty_reduction", (weather.id,))
+        if clear is not None and clear.rule.permille:
+            result += _ceil_share(base - result, clear.rule.permille)
+    bonus = first_source(state.ruleset, viewer, "sight_bonus_on_map_tag", state.map_tags)
+    if bonus is not None:
+        result += bonus.rule.amount or 0
     return result
 
 
@@ -97,16 +102,16 @@ def concealed_limit_for(state: BattleState, viewer: UnitState | None, default: i
     weather = state.weather
     if viewer is None or weather is None:
         return default
-    clear = passive_of(state.ruleset, viewer, "sight_penalty_reduction")
-    if clear is None or not clear.permille or weather.id not in (clear.weathers or ()):
+    clear = first_source(state.ruleset, viewer, "sight_penalty_reduction", (weather.id,))
+    if clear is None or not clear.rule.permille:
         return default
     normal = state.ruleset.core.concealed_ranged_max_distance
-    return default + _ceil_share(max(0, normal - default), clear.permille)
+    return default + _ceil_share(max(0, normal - default), clear.rule.permille)
 
 
 def passive_active(state: BattleState, unit: UnitState) -> bool:
     """環境被動此刻有沒有作用（HUD 顯示用）：天氣型看目前天氣、地圖型看地圖標籤，其餘（地形、
-    表面、位移類）是隨時待命，恆為真。"""
+    表面、位移類）是隨時待命，恆為真。只看種族（裝備的地形規則顯示在裝備卡上）。"""
     if unit.race is None:
         return False
     passive = state.ruleset.race_def(unit.race).passive
@@ -126,7 +131,7 @@ def reveal_radius(rules: Ruleset, unit: UnitState) -> int:
 
 def race_element_mods(rules: Ruleset, template: UnitTemplate) -> dict[Element, int]:
     """單位的元素修正：範本的 ``element_mods`` 加上種族被動的元素減傷（龍裔火焰 −200‰ ＝ 抗性
-    20%；開戰時併入，之後同一般元素抗性結算）。"""
+    20%；開戰時併入，之後同一般元素抗性結算）。只看種族（裝備的地形規則不能用這種規則）。"""
     mods = dict(template.element_mods)
     if template.race is None:
         return mods
@@ -137,12 +142,11 @@ def race_element_mods(rules: Ruleset, template: UnitTemplate) -> dict[Element, i
 
 
 def slip_immune(rules: Ruleset, unit: UnitState, surface: Surface) -> bool:
-    """在 ``surface`` 上不會滑倒：矮人（冰）、鱗族（水與冰面）。"""
-    for rule in ("slip_immunity", "surface_move_bonus"):
-        passive = passive_of(rules, unit, rule)
-        if passive is not None and surface in (passive.surfaces or ()):
-            return True
-    return False
+    """在 ``surface`` 上不會滑倒：矮人（冰）、鱗族（水與冰面），或裝備的同種地形規則。"""
+    return any(
+        first_source(rules, unit, rule, (surface.value,)) is not None
+        for rule in ("slip_immunity", "surface_move_bonus")
+    )
 
 
 def fall_immune(rules: Ruleset, unit: UnitState) -> bool:
@@ -153,48 +157,73 @@ def fall_immune(rules: Ruleset, unit: UnitState) -> bool:
 
 def conduction_immune(state: BattleState, unit: UnitState) -> bool:
     """站在水上時不會被雷電導電（晶能義體人「絕緣」；只看腳下的表面）。"""
-    passive = passive_of(state.ruleset, unit, "conduction_immunity")
-    return passive is not None and state.tile(*unit.xy).surface in (passive.surfaces or ())
+    surface = state.tile(*unit.xy).surface
+    return first_source(state.ruleset, unit, "conduction_immunity", (surface.value,)) is not None
 
 
 def burn_immune(rules: Ruleset, unit: UnitState, surface: Surface) -> bool:
     """走在 ``surface`` 上不會因此燃燒（角魔「炎膚」；只擋表面造成的燃燒）。"""
-    passive = passive_of(rules, unit, "burn_immunity_on")
-    return passive is not None and surface in (passive.surfaces or ())
+    return first_source(rules, unit, "burn_immunity_on", (surface.value,)) is not None
+
+
+def _move_source(rules: Ruleset, unit: UnitState, rule: str, key: str | None) -> RuleSource | None:
+    return None if key is None else first_source(rules, unit, rule, (key,))
+
+
+def _move_amount(rules: Ruleset, unit: UnitState, source: RuleSource | None) -> int:
+    """一條移動加成的數值；裝備給的計入裝備的移動加成合計上限（8.21.5.3）。"""
+    if source is None:
+        return 0
+    amount = source.rule.amount or 0
+    return amount if source.from_race else min(amount, gear_move_room(rules, unit))
 
 
 def weather_move_bonus(rules: Ruleset, unit: UnitState, weather_id: str | None) -> int:
     """指定天氣下回合開始的移動點數加值（海民「雨中海步」：下雨 +1）。"""
-    passive = passive_of(rules, unit, "weather_move_bonus")
-    if passive is None or weather_id is None or weather_id not in (passive.weathers or ()):
-        return 0
-    return passive.amount or 0
+    source = _move_source(rules, unit, "weather_move_bonus", weather_id)
+    return _move_amount(rules, unit, source)
 
 
 def surface_move_bonus(rules: Ruleset, unit: UnitState, surface: Surface | None) -> int:
     """回合開始時腳下表面（``surface``）的移動點數加值（鱗族「流線身形」：水或冰面 +1；只加在
     這個回合，回合中離開水面不收回）。"""
-    passive = passive_of(rules, unit, "surface_move_bonus")
-    if passive is None or surface is None or surface not in (passive.surfaces or ()):
-        return 0
-    return passive.amount or 0
+    key = None if surface is None else surface.value
+    return _move_amount(rules, unit, _move_source(rules, unit, "surface_move_bonus", key))
+
+
+def rule_move_bonus(
+    rules: Ruleset, unit: UnitState, weather_id: str | None, surface: Surface | None
+) -> int:
+    """回合開始的移動加值合計：天氣（:func:`weather_move_bonus`）＋腳下表面
+    （:func:`surface_move_bonus`）。裝備給的部分合起來受裝備的移動加成合計上限（E2，8.21.5.3）；
+    種族給的不受影響。"""
+    sources = (
+        _move_source(rules, unit, "weather_move_bonus", weather_id),
+        _move_source(rules, unit, "surface_move_bonus", None if surface is None else surface.value),
+    )
+    race_part = sum(s.rule.amount or 0 for s in sources if s is not None and s.from_race)
+    gear_part = sum(s.rule.amount or 0 for s in sources if s is not None and not s.from_race)
+    if gear_part:
+        gear_part = min(gear_part, gear_move_room(rules, unit))
+    return race_part + gear_part
 
 
 def hazard_push_reduction(
     state: BattleState, unit: UnitState, direction: tuple[int, int], distance: int
 ) -> int:
     """獸人「沉穩重心」：被 **推** 時，若推的路徑上（含落點，最多 ``distance`` 格）有岩漿或深淵，
-    推的距離少 ``amount`` 格（回傳實際的減少量，不會讓距離低於 0；拉與傳送不呼叫這個函式）。"""
-    passive = passive_of(state.ruleset, unit, "knockback_reduction_at_hazard")
-    if passive is None or distance <= 0:
+    推的距離少 ``amount`` 格（回傳實際的減少量，不會讓距離低於 0；拉與傳送不呼叫這個函式）。
+    路徑上第一個有規則的地形格，由第一個給那種地形的來源決定減少量。"""
+    rule = "knockback_reduction_at_hazard"
+    if distance <= 0 or passive_of(state.ruleset, unit, rule) is None:
         return 0
-    hazards = set(passive.terrain or ())
     x, y = unit.xy
     dx, dy = direction
     for step in range(1, distance + 1):
         nx, ny = x + dx * step, y + dy * step
         if not state.in_bounds(nx, ny):
             break
-        if state.tile(nx, ny).terrain in hazards:
-            return min(distance, passive.amount or 0)
+        found = first_source(state.ruleset, unit, rule, (state.tile(nx, ny).terrain,))
+        if found is not None:
+            return min(distance, found.rule.amount or 0)
     return 0

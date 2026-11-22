@@ -51,6 +51,16 @@ describe("沒生效的詞條標灰", () => {
     expect(inactiveNote(off)).toBe("這把武器不能套用");
     expect(tipLines([off])[0]?.note).toBe("這把武器不能套用");
   });
+
+  it("地形規則和種族重複（E2）：標灰並寫種族被動", () => {
+    const dup = line({ category: "terrain", active: false, weight_permille: 0, duplicate_of: "種族被動「炎膚」" });
+    expect(tipLines([dup])[0]?.note).toBe("和種族被動「炎膚」重複，沒有效果");
+  });
+
+  it("地形規則部分重疊（E2）：不標灰，另外註明重疊的部分", () => {
+    const part = line({ category: "terrain", text_zh: "冰上水上不滑倒", overlap_zh: "冰的部分和種族重複" });
+    expect(tipLines([part])).toEqual([{ text: "冰上水上不滑倒", note: null, aside: "冰的部分和種族重複" }]);
+  });
 });
 
 describe("裝備比較預測", () => {

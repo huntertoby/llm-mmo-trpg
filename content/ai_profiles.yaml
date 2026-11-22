@@ -392,3 +392,4 @@ heuristics:
     formation_step: 100        # 陣法站位：倍率每多 100‰ 算一份 formation 權重
     hurt_hp_permille: 400      # 位移他人：HP 不高於這個千分比算「快倒下」
     exposure_radius: 2         # 位移他人：格子周圍幾格（切比雪夫）內的敵人
+    harmful_sees_immunity: true  # E2：判斷有害表面時看被評估單位的免疫（角魔「炎膚」、裝備地形規則）；false 時同 E2 之前

@@ -5,7 +5,7 @@
 
 對應資料檔：
 
-- ``content/affixes.yaml``：詞條白名單（:class:`AffixTable`）。11 類詞條用 ``category`` 區分的
+- ``content/affixes.yaml``：詞條白名單（:class:`AffixTable`）。12 類詞條用 ``category`` 區分的
   聯合型別（:data:`AffixDef`）驗證；LLM 之後只能從這裡選 id 並填 ``value``（守則 3）。
 - ``content/items.yaml``：物品（:class:`ItemTable`）。物品的基礎數值沿用既有資料：武器類物品引用
   ``weapons.yaml``；其他欄位目前沒有基礎資料，基礎數值為 0（只有詞條）。
@@ -52,7 +52,8 @@ from trpg.content.slots import (
     Slot,
     SlotType,
 )
-from trpg.shared.types import Attribute, Element
+from trpg.content.unit_rules import EQUIPMENT_FORBIDDEN_RULES, unit_rule_param_problems
+from trpg.shared.types import Attribute, Element, Surface
 
 __all__ = [
     "AFFIX_CATEGORIES",
@@ -84,6 +85,7 @@ __all__ = [
     "ReactionAffix",
     "RuleAffix",
     "StatAffix",
+    "TerrainAffix",
     "TriggerAffix",
     "ValueRange",
     "WeaponTraitAffix",
@@ -122,8 +124,9 @@ type AffixCategory = Literal[
     "action",
     "reaction",
     "rule",
+    "terrain",
 ]
-"""11 類詞條（8.21.1 的順序）。"""
+"""12 類詞條（8.21.1 的順序；第 12 類「地形規則」是 E2 加的，08 8.29）。"""
 
 AFFIX_CATEGORIES: tuple[str, ...] = (
     "stat",
@@ -137,10 +140,11 @@ AFFIX_CATEGORIES: tuple[str, ...] = (
     "action",
     "reaction",
     "rule",
+    "terrain",
 )
 
 AFFIX_CATEGORY_NUMBER: dict[str, int] = {c: i + 1 for i, c in enumerate(AFFIX_CATEGORIES)}
-"""類別 → 8.21.1 的編號（1 數值 … 11 改變規則）。"""
+"""類別 → 8.21.1 的編號（1 數值 … 11 改變規則、12 地形規則）。"""
 
 AFFIX_CATEGORY_ZH: dict[str, str] = {
     "stat": "數值",
@@ -154,13 +158,15 @@ AFFIX_CATEGORY_ZH: dict[str, str] = {
     "action": "動作",
     "reaction": "反應",
     "rule": "改變規則",
+    "terrain": "地形規則",
 }
 
 NUMERIC_CATEGORIES: frozenset[str] = frozenset(
     {"stat", "conditional", "keyword", "weapon_trait", "cost"}
 )
 """有「數值部分」的類別（8.21.5.3）：同 id 依 100／50／25／0% 遞減疊加。其餘類別（普攻附加、觸發、
-充能、動作、反應、改變規則）是非數值效果，同 id 只生效 1 條。"""
+充能、動作、反應、改變規則、地形規則）是非數值效果，同 id 只生效 1 條（地形規則和種族被動、
+其他裝備的同種規則怎麼算，見 :mod:`trpg.engine.rules.unit_rules`）。"""
 
 SELF_EVALUABLE_CONDITIONS: frozenset[str] = frozenset(
     {"moved_this_turn", "self_hp_below", "self_concealed", "lone_wolf"}
@@ -729,6 +735,43 @@ class RuleAffix(_AffixBase):
         return self
 
 
+class TerrainAffix(_AffixBase):
+    """第 12 類 地形規則（E2，08 8.29，#175）：一條和種族環境被動同一套的單位規則（規則種類與參數
+    檢查共用 :mod:`trpg.content.unit_rules`），例如「火焰表面不會讓你燃燒」。結算由
+    :mod:`trpg.engine.rules.unit_rules` 和種族被動一起查詢（種族先、再依欄位固定順序）；和前面的
+    來源重複的部分沒有效果、不疊加。
+
+    ``damage_taken_permille``（元素減傷）不能用（:data:`~trpg.content.unit_rules.EQUIPMENT_FORBIDDEN_RULES`）。
+    ``affixes.yaml`` 目前沒有這類詞條，產生器也不產（定價在 E6）。"""
+
+    category: Literal["terrain"]
+    rule: str = Field(pattern=ID_PATTERN)
+    weathers: tuple[str, ...] | None = None
+    map_tags: tuple[str, ...] | None = None
+    terrain: tuple[str, ...] | None = None
+    surfaces: tuple[Surface, ...] | None = None
+    element: Element | None = None
+    permille: int | None = None
+    amount: int | None = Field(default=None, ge=1, le=2)
+    radius: int | None = Field(default=None, ge=1, le=3)
+
+    @model_validator(mode="after")
+    def _check(self) -> TerrainAffix:
+        if self.rule in EQUIPMENT_FORBIDDEN_RULES:
+            raise ValueError(
+                f"詞條 {self.id}：地形規則不能用 {self.rule}（元素減傷是數值抗性，請用數值類的"
+                "元素抗性詞條）"
+            )
+        known, problems = unit_rule_param_problems(self)
+        if known is not None:
+            raise ValueError(
+                f"詞條 {self.id}：地形規則 {self.rule!r} 不在允許清單內（只允許：{known}）"
+            )
+        if problems:
+            raise ValueError(f"詞條 {self.id}：" + "；".join(problems))
+        return self
+
+
 type AffixDef = Annotated[
     StatAffix
     | ConditionalAffix
@@ -740,7 +783,8 @@ type AffixDef = Annotated[
     | CostAffix
     | ActionAffix
     | ReactionAffix
-    | RuleAffix,
+    | RuleAffix
+    | TerrainAffix,
     Field(discriminator="category"),
 ]
 """一條詞條（依 ``category`` 區分的聯合型別）。"""

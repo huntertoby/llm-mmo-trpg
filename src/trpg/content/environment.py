@@ -1311,7 +1311,10 @@ class ScoringAiRules(ContentModel):
       這個值）的門檻；
     - ``formation_step``：陣法站位每多少‰ 的陣法倍率算一份 ``formation`` 權重；
     - ``hurt_hp_permille``：位移他人時「快倒下」的門檻（HP 不高於最大 HP 的這個千分比）；
-    - ``exposure_radius``：位移他人時計算格子周圍幾格（切比雪夫距離）內的敵人。
+    - ``exposure_radius``：位移他人時計算格子周圍幾格（切比雪夫距離）內的敵人；
+    - ``harmful_sees_immunity``（E2，08 8.29 E2 第 2 點）：判斷「有害表面」時看被評估單位的免疫
+      （自己免疫的格子敢站、不把免疫的對手推進那種格子、不在對方腳下放他免疫的表面）；關掉時和
+      E2 之前相同。預設開。
     """
 
     unlisted_status_value: int = Field(ge=0)
@@ -1323,6 +1326,7 @@ class ScoringAiRules(ContentModel):
     formation_step: int = Field(ge=1)
     hurt_hp_permille: int = Field(ge=0, le=1000)
     exposure_radius: int = Field(ge=0)
+    harmful_sees_immunity: bool = True
 
 
 class InfusedPickRules(ContentModel):

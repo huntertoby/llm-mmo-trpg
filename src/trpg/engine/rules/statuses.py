@@ -15,7 +15,7 @@ from trpg.content.library import Ruleset
 from trpg.engine.gear.core import gear_damage_taken_permille
 from trpg.engine.ids import BOSS_TAG
 from trpg.engine.rules.forms import form_move_delta, form_taken_permille
-from trpg.engine.rules.race import surface_move_bonus, weather_move_bonus
+from trpg.engine.rules.race import rule_move_bonus
 from trpg.engine.state import StatusInstance, UnitState
 from trpg.shared.types import Attribute, Element, Surface, UnitId
 
@@ -153,8 +153,8 @@ def move_points_for_turn(
     points = unit.speed * _combined(rules, unit, lambda d: d.move_permille) // PERMILLE
     delta = sum(rules.status_def(s.status_id).move_delta for s in unit.statuses)  # 石膚 −1
     delta += form_move_delta(rules, unit)  # 形態的移動加減（Phase 3J-1a）
-    delta += weather_move_bonus(rules, unit, weather_id)  # 種族的環境被動（Phase 3R-2）
-    delta += surface_move_bonus(rules, unit, surface)  # 鱗族（3R-4）
+    # 種族的環境被動（Phase 3R-2 海民、3R-4 鱗族）與裝備的地形規則（E2，計入裝備移動上限）
+    delta += rule_move_bonus(rules, unit, weather_id, surface)
     if unit.part_mods:  # 部位破壞的移動下降（PB-1a）
         delta -= unit.part_mods.get("move", 0)
     return max(0, points + delta - move_reduction(rules, unit))

@@ -68,6 +68,7 @@ export function PartTip({ cat, label, tip, lines, children, pin = true, classNam
                 <div key={i} className={`part-tip-text part-tip-line${l.note === null ? "" : " inactive"}`}>
                   {l.text}
                   {l.note !== null && <span className="part-tip-note">（{l.note}）</span>}
+                  {l.note === null && l.aside != null && <span className="part-tip-note part-tip-aside">（{l.aside}）</span>}
                 </div>
               ))}
         </FloatCard>

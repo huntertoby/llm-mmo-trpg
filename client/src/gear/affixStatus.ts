@@ -9,6 +9,8 @@ import { affixText, type Selection } from "./gearDraft";
 export interface TipLine {
   text: string;
   note: string | null;
+  /** 仍生效、但有一部分沒有效果的說明（E2：地形規則和種族或前面的裝備部分重疊，例「冰的部分和種族重複」）；不標灰。 */
+  aside?: string | null;
 }
 
 /** 有數值部分、同 id 依遞減疊加的類別（和 `content/equipment.py` 的 `NUMERIC_CATEGORIES` 一致）。 */
@@ -25,7 +27,11 @@ export function inactiveNote(a: Pick<AffixLineView, "active" | "duplicate_of" | 
 
 /** 一件裝備的詞條 → 說明卡的行。 */
 export function tipLines(affixes: readonly AffixLineView[]): TipLine[] {
-  return affixes.map((a) => ({ text: a.text_zh, note: inactiveNote(a) }));
+  return affixes.map((a) => {
+    const note = inactiveNote(a);
+    const aside = note === null && a.overlap_zh != null && a.overlap_zh !== "" ? a.overlap_zh : null;
+    return aside === null ? { text: a.text_zh, note } : { text: a.text_zh, note, aside };
+  });
 }
 
 /** 比較預測的一行。 */

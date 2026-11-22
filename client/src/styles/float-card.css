@@ -465,6 +465,12 @@
   color: #e0b060;
 }
 
+/* 部分重疊（E2）：這條仍生效，只在後面註明重疊的部分 */
+.part-tip-line .part-tip-aside {
+  display: inline-block;
+  color: #e0b060;
+}
+
 /* 一句話說明（3-32b，`Hint`）：3-47 起不產生外層元素；卡片是只有文字的小浮動卡 */
 
 .hint-tip-text {

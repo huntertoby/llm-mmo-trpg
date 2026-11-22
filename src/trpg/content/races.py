@@ -32,6 +32,12 @@ from pydantic import Field, model_validator
 from trpg.content.battle import ID_PATTERN, LookBeard, LookChoice, LookHair
 from trpg.content.schemas import ContentModel
 from trpg.content.skills import ShapeSpec
+from trpg.content.unit_rules import (
+    UNIT_RULE_SPECS,
+    UnitRuleSpec,
+    unit_rule_param_problems,
+    unit_rule_permille_problems,
+)
 from trpg.shared.types import Element, Surface
 
 __all__ = [
@@ -392,39 +398,12 @@ class RaceSkill(_GuardedModel):
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class PassiveRule:
-    """一種環境被動規則的參數規則。"""
+PassiveRule = UnitRuleSpec
+"""一種環境被動規則的參數規則（E2 起是共用表 :class:`trpg.content.unit_rules.UnitRuleSpec`）。"""
 
-    required: tuple[str, ...]
-
-
-PASSIVE_RULE_SPECS: dict[str, PassiveRule] = {
-    "sight_penalty_reduction": PassiveRule(("weathers", "permille")),
-    "sight_bonus_on_map_tag": PassiveRule(("map_tags", "amount")),
-    "detect_hidden_nearby": PassiveRule(("radius",)),
-    "damage_taken_permille": PassiveRule(("element", "permille")),
-    "slip_immunity": PassiveRule(("surfaces",)),
-    "conduction_immunity": PassiveRule(("surfaces",)),
-    "knockback_reduction_at_hazard": PassiveRule(("terrain", "amount")),
-    "burn_immunity_on": PassiveRule(("surfaces",)),
-    "surface_move_bonus": PassiveRule(("surfaces", "amount")),
-    "weather_move_bonus": PassiveRule(("weathers", "amount")),
-    "fall_immunity": PassiveRule(()),
-}
-"""環境被動允許的規則（封閉清單，只有環境互動的小規則；3R-2 照此結算）。``fall_immunity``（獸耳族
-「輕身」，#138）：墜落不受傷（被推下或自己往下都算；致命地形照舊）。"""
-
-_PASSIVE_PARAM_FIELDS = (
-    "weathers",
-    "map_tags",
-    "terrain",
-    "surfaces",
-    "element",
-    "permille",
-    "amount",
-    "radius",
-)
+PASSIVE_RULE_SPECS: dict[str, UnitRuleSpec] = UNIT_RULE_SPECS
+"""環境被動允許的規則（E2 起是共用表 :data:`trpg.content.unit_rules.UNIT_RULE_SPECS`，裝備的
+地形規則用同一張表）。"""
 
 
 class RacePassive(_GuardedModel):
@@ -446,35 +425,23 @@ class RacePassive(_GuardedModel):
 
     @model_validator(mode="after")
     def _check_rule(self) -> RacePassive:
-        rule = PASSIVE_RULE_SPECS.get(self.rule)
-        if rule is None:
-            known = "、".join(sorted(PASSIVE_RULE_SPECS))
+        known, problems = unit_rule_param_problems(self)
+        if known is not None:
             raise ValueError(
                 f"環境被動 {self.id}：規則 {self.rule!r} 不在允許清單內"
                 f"（只允許環境互動的小規則：{known}）"
             )
-        problems: list[str] = []
-        for name in _PASSIVE_PARAM_FIELDS:
-            value = getattr(self, name)
-            if name in rule.required and value is None:
-                problems.append(f"缺少必填參數 {name}")
-            elif value is not None and name not in rule.required:
-                problems.append(f"不可使用參數 {name}")
         if problems:
             raise ValueError(f"環境被動 {self.id}：" + "；".join(problems))
         return self
 
     def permille_problems(self, limits: RaceLimits) -> list[str]:
         """``permille`` 超出 ``limits`` 的地方（HC-4d：上限在 ``races.yaml`` 的 ``limits``）。"""
-        if self.permille is None:
-            return []
-        top = limits.max_sight_reduction_permille
-        if self.rule == "sight_penalty_reduction" and not 0 < self.permille <= top:
-            return [f"permille 必須在 1～{top}（視線懲罰最多減半）"]
-        resist = limits.max_resist_permille
-        if self.rule == "damage_taken_permille" and not -resist <= self.permille < 0:
-            return [f"permille 必須為 −{resist}～−1（只能減傷，幅度有上限）"]
-        return []
+        return unit_rule_permille_problems(
+            self,
+            max_sight_reduction=limits.max_sight_reduction_permille,
+            max_resist=limits.max_resist_permille,
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@ from trpg.content.equipment import (
     KeywordAffix,
     ReactionAffix,
     RuleAffix,
+    TerrainAffix,
     TriggerAffix,
     WeaponTraitAffix,
     loadout_problems,
@@ -28,6 +29,7 @@ from trpg.content.item_budget import ItemGenRules, item_gen_problems
 from trpg.content.library.ruleset import Ruleset
 from trpg.content.silent_strike import carries_silent
 from trpg.content.skill_keywords import KeywordTable
+from trpg.content.unit_rules import unit_rule_permille_problems
 from trpg.content.weapon_params import set_weapon_param
 from trpg.shared.errors import ContentError
 
@@ -220,6 +222,32 @@ def _check_appearance(
         raise ContentError(root / "items.yaml", "；".join(problems))
 
 
+def _terrain_affix_problems(
+    affix: TerrainAffix, ruleset: Ruleset, weather_ids: Collection[str]
+) -> list[str]:
+    """地形規則（E2）：引用的天氣、地形存在；``permille`` 的上限同種族被動（``races.yaml`` 的
+    ``limits``；沒有種族表時不檢查上限）。"""
+    problems: list[str] = []
+    bad_weather = sorted(set(affix.weathers or ()) - set(weather_ids))
+    if bad_weather:
+        problems.append(f"詞條 {affix.id}：未知的天氣 {'、'.join(bad_weather)}")
+    terrain_ids = {t.id for t in ruleset.terrain.terrain}
+    bad_terrain = sorted(set(affix.terrain or ()) - terrain_ids)
+    if bad_terrain:
+        problems.append(f"詞條 {affix.id}：未知的地形 {'、'.join(bad_terrain)}")
+    if ruleset.races is not None:
+        limits = ruleset.races.limits
+        problems += [
+            f"詞條 {affix.id}：{p}"
+            for p in unit_rule_permille_problems(
+                affix,
+                max_sight_reduction=limits.max_sight_reduction_permille,
+                max_resist=limits.max_resist_permille,
+            )
+        ]
+    return problems
+
+
 def _check_item_gen(root: Path, rules: ItemGenRules, affixes: Mapping[str, AffixDef]) -> None:
     """物品產生器的係數和詞條白名單一致（Phase 3K-1）。"""
     problems = item_gen_problems(rules, affixes)
@@ -233,6 +261,8 @@ def _check_affixes(
     ruleset: Ruleset,
     weapons: Mapping[str, WeaponDef],
     offhands: Collection[str] = (),
+    *,
+    weather_ids: Collection[str] = (),
 ) -> None:
     keyword_ids = frozenset(ruleset.keywords.ids())
     problems = [
@@ -245,6 +275,12 @@ def _check_affixes(
         for affix in affixes.values()
         for o in affix.offhands
         if o not in offhands
+    ]
+    problems += [  # E2：地形規則引用的天氣、地形與 permille 上限
+        p
+        for affix in affixes.values()
+        if isinstance(affix, TerrainAffix)
+        for p in _terrain_affix_problems(affix, ruleset, weather_ids)
     ]
     if problems:
         raise ContentError(root / "affixes.yaml", "；".join(problems))
