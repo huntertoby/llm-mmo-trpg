@@ -24,7 +24,9 @@ SD.install();
 const P = new URLSearchParams(location.search), PART = P.get("part") || "close";
 const FONT = "'Noto Sans TC','Microsoft JhengHei',sans-serif", GAME_FONT = "'Noto Sans TC', 'Microsoft JhengHei', system-ui, sans-serif";
 const OPTS = ["steady_a", "steady_b", "steady_c"], LIVE = "__live";
-const NAME = { [LIVE]: "現行（退回畫法「站」）", steady_a: "A 靴子踩地", steady_b: "B 張腳人形", steady_c: "C 靴子＋錨" };
+/* v2（美術 PM 採用 B、地面線改沙色）：特寫、真 1 倍、撞圖只排現行與 B；A、C 留在畫法檔與自查表當紀錄 */
+const SHOW = ["steady_b"];
+const NAME = { [LIVE]: "現行（退回畫法「站」）", steady_a: "A 靴子踩地", steady_b: "B 張腳人形 v2", steady_c: "C 靴子＋錨" };
 const zhOf = (id) => NAME[id] ?? QST.entry(id)?.zh ?? id;
 
 // ---------------- 現行：status.ts 的 paintUnknown（名詞表名稱第一個字「站」、米白、bold 13px，±10 單位 × size/26 × 0.95），框照 paint（中性六角） ----------------
@@ -86,9 +88,9 @@ function SIL(id) { const S = QST.CARD_FRAME, k = QST.fitK(id, S, 0), src = QST.g
 
 const PARTS = {};
 PARTS.close = () => {
-  const blocks = [{ title: "KD-1「站穩」steady：三個方案特寫（中性＝金色六角框、深底；狀態卡 20 框 16.8、頭頂 11 框 9）" },
+  const blocks = [{ title: "KD-1「站穩」steady：方案 B 特寫（v2 地面線改沙色；中性＝金色六角框、深底；狀態卡 20 框 16.8、頭頂 11 框 9）" },
     { note: "每列：狀態卡 20 ×3 向量｜頭頂 11 ×3 向量｜狀態卡 20 的 2 倍內部解析度 ×6 最近鄰｜頭頂 11 的 2 倍內部解析度 ×6 最近鄰｜實際大小（20、11）。第一列是現行（遊戲端 status.ts 的退回畫法：名稱第一個字）。" }];
-  for (const id of [LIVE, ...OPTS]) {
+  for (const id of [LIVE, ...SHOW]) {
     const e = id === LIVE ? null : QST.entry(id);
     blocks.push({ title: zhOf(id) }, { note: e ? e.topic : "status.ts paintUnknown：米白「站」字（AWAITING_ART_STATUSES）" },
       { cells: [{ cv: cell(id, "card", 3), w: 60, h: 60, cap: "20 ×3", capW: 60 }, { cv: cell(id, "head", 3), w: 33, h: 33, cap: "11 ×3", capW: 50 },
@@ -97,9 +99,9 @@ PARTS.close = () => {
   publish(sheet(1000, blocks));
 };
 PARTS.t1 = () => {
-  const blocks = [{ title: "真 1 倍（res 1，canvas 寬高＝CSS px）×6 最近鄰：現行｜A｜B｜C" }, { note: "100% 縮放螢幕的最壞情況（遊戲端固定 DPR 2）。上排狀態卡 20、下排頭頂 11；最後兩格是 B（推薦）的 2 倍內部解析度對照。" }];
+  const blocks = [{ title: "真 1 倍（res 1，canvas 寬高＝CSS px）×6 最近鄰：現行｜B（v2）" }, { note: "100% 縮放螢幕的最壞情況（遊戲端固定 DPR 2）。上排狀態卡 20、下排頭頂 11；最後兩格是 B（推薦）的 2 倍內部解析度對照。" }];
   for (const kind of ["card", "head"]) {
-    const cells = [LIVE, ...OPTS].map((id) => nn(cell(id, kind, 1, { res: 1 }), kind === "card" ? 6 : 8, `${kind === "card" ? "20" : "11"} ${zhOf(id)}`, 120));
+    const cells = [LIVE, ...SHOW].map((id) => nn(cell(id, kind, 1, { res: 1 }), kind === "card" ? 6 : 8, `${kind === "card" ? "20" : "11"} ${zhOf(id)}`, 120));
     cells.push(nn(cell("steady_b", kind), kind === "card" ? 3 : 4, `B 2倍（對照）`, 100));
     blocks.push({ title: kind === "card" ? "狀態卡 20" : "頭頂 11" }, { cells, gap: 24 });
   }
@@ -107,9 +109,9 @@ PARTS.t1 = () => {
 };
 const NEAR = ["prone", "root", "slow", "entangled", "hasted", "race_stonewall", "stoneskin", "race_adapt", "defending"];
 PARTS.near = () => {
-  const blocks = [{ title: "撞圖：方案 A／B／C 和相近的狀態並排" },
+  const blocks = [{ title: "撞圖：方案 B（v2）和相近的狀態並排" },
     { note: "倒地（站穩的前一個狀態）、定身、緩速（移動控制）、纏繞（同一隻靴子）、加速、穩若磐石（同樣是「不會被打倒」）、石膚、應變（米白人形）、守護。每組：狀態卡 20 ×3 向量｜20 真 1 倍 ×4｜頭頂 11 真 1 倍 ×5｜20 的圖樣剪影（不含框）×1.5｜頭頂 11 的 2 倍內部解析度 ×3。" }];
-  const ids = [...OPTS, ...NEAR], cap = (id) => (OPTS.includes(id) ? "★" : "") + zhOf(id);
+  const ids = [...SHOW, ...NEAR], cap = (id) => (SHOW.includes(id) ? "★" : "") + zhOf(id);
   blocks.push({ cells: ids.map((id) => ({ cv: cell(id, "card", 3), w: 60, h: 60, cap: cap(id), capW: 76 })), gap: 20 },
     { cells: ids.map((id) => nn(cell(id, "card", 1, { res: 1 }), 4)), gap: 16 },
     { cells: ids.map((id) => ({ ...nn(cell(id, "head", 1, { res: 1 }), 5), w: 55, h: 55 })), gap: 41 },
