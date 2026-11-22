@@ -443,6 +443,14 @@
   box-shadow: none;
 }
 
+/* E5 美術小修 1：說明卡上方那幾條（來自裝備、沒有效果、本場不成立、現在不能用）的底色不透明，和卡片同一種深色，
+   底色畫到框線下面（虛線的空隙也不透出後面的介面） */
+.skill-card-float .skill-card-reason {
+  background-color: #14141c;
+  background-clip: border-box;
+  opacity: 1;
+}
+
 .skill-card-float .gear-source-note + .skill-card {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
