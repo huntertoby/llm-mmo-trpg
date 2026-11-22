@@ -6,10 +6,10 @@
 這一層：
 
 - **預測**（:func:`predicted_requests`，每個世界動作之後、角色第一次讀進來時）：
-  - 閃現：沒有待選的閃現與遭遇時，裝備中可以閃的技能（不指定類別、最多 :data:`FLASH_LIMIT` 招，
+  - 閃現：沒有待選的閃現與遭遇時，裝備中可以閃的技能（不指定類別、最多 ``pregen.flash_limit`` 招，
     依技能列順序）。6L-2b 起不看地點：戰鬥結束、那招可以閃了就開始，走回城鎮的路上也在生成；
   - 劇情技能：進行中任務還沒做的步驟有劇情技能時（6L-2b 起接到任務就開始，不只下一步；現在與做到
-    那一步的等級各一份，最多 :data:`STORY_LIMIT`）；
+    那一步的等級各一份，最多 ``pregen.story_limit``）；
   - 機遇：每份三選一最多 :data:`OPPORTUNITY_LLM_CARDS` 張請 LLM（6L-2b），其餘用組合器；
     ``pending_event`` 有可用的機遇解法時（最多 :data:`OPPORTUNITY_LIMIT`）。
 - **單一佇列**：一條背景執行緒依序做，同一時間只有一個 LLM 請求。暫存區全服最多
@@ -21,8 +21,9 @@
   統計只在開始生成時讀一次（那次請求的輸入）；同一招同一次出題只有一筆，已經在生成或做好的不重開。
   玩家按下時給出去的那一筆，鍵改成按下那一刻的請求鍵，引擎照樣驗證，日誌記下的就是這一份。
 - **玩家真的打開時**（引擎向供應者要，:meth:`WorldPregen.supplier`）：好了就給；還沒好就等，**最多
-  10 秒**（:data:`WAIT_SECONDS`，從第一次等待算起；劇情技能最多 2 秒，:data:`STORY_WAIT_SECONDS`，
-  6L-2b），超過就回 ``None``（引擎改給組合器、模板或內容版）。給出去的那一筆從暫存區拿掉；
+  10 秒**（``pregen.wait_seconds``，從第一次等待算起；劇情技能最多 2 秒，
+  ``pregen.story_wait_seconds``，6L-2b；HC-7 b 起這幾個數字在 ``content/skill_pick.yaml`` 的
+  ``pregen``），超過就回 ``None``（引擎改給組合器、模板或內容版）。給出去的那一筆從暫存區拿掉；
   引擎把最後給出的版本記進日誌。
 - **等待提示**（:meth:`WorldPregen.wait`，``POST .../pregen/wait``）：前端按閃現、選機遇解法之前
   先問；會等到好了或 10 秒，期間前端顯示等待提示，可以取消（取消＝不送那個動作）。
@@ -91,14 +92,10 @@ from trpg.world.story_gen import opportunity_request, story_base, story_request
 from trpg.world.wish import wish_request, wish_rules
 
 __all__ = [
-    "FLASH_LIMIT",
     "OPPORTUNITY_LIMIT",
     "OPPORTUNITY_LLM_CARDS",
     "QUEUE_LIMIT",
-    "STORY_LIMIT",
-    "STORY_WAIT_SECONDS",
     "URGENT_KINDS",
-    "WAIT_SECONDS",
     "Generators",
     "Kind",
     "PregenWaitOut",
@@ -114,23 +111,15 @@ __all__ = [
 
 _LOG = logging.getLogger(__name__)
 
-WAIT_SECONDS: Final = 10.0
-"""沒趕上時最多等多久（秒，使用者決定）；超過改給組合器、模板或內容版。"""
-STORY_WAIT_SECONDS: Final = 2.0
-"""劇情技能（破霧）沒趕上時最多靜默等多久（6L-2b，玩法 PM 照 #132）：完成那一步的動作沒有等待提示，
-不讓玩家沒有提示地卡 10 秒；超過就給內容版。"""
-FLASH_LIMIT: Final = 3
-"""每個角色一次最多預先生成幾招的閃現（保守上限）。"""
-STORY_LIMIT: Final = 2
-"""每個角色最多幾份劇情技能（同一步完成前後的等級各一份）。"""
 OPPORTUNITY_LIMIT: Final = 1
 """每個角色最多幾份機遇的三選一（同一個事件通常只有一個機遇解法）。"""
 OPPORTUNITY_LLM_CARDS: Final = 1
 """機遇的完整技能三選一每份最多幾張請 LLM（6L-2b，玩法 PM 照 #132）；其餘用組合器與技能池。
 roguelite 照舊（每種候選各擲一次）。"""
 QUEUE_LIMIT: Final = 12
-"""全服暫存區（含排隊中與做好的）最多幾筆；超過丟掉最舊、還沒開始的。"""
+"""全服暫存區（含排隊中與做好的）最多幾筆；超過丟掉最舊、還沒開始的（記憶體護欄）。"""
 _POLL_SECONDS: Final = 0.05
+"""等待時多久看一次背景結果（程式的輪詢間隔，不影響結果）。"""
 
 type Kind = Literal["flash", "story_skill", "complete_offer", "wish"]
 type _Record = FlashGen | StoryGen | OfferGen | WishGen
@@ -336,7 +325,7 @@ def _flash_requests(
 ) -> list[GenRequest]:
     out: list[GenRequest] = []
     for skill in char.hero.skills:
-        if len(out) >= FLASH_LIMIT:
+        if len(out) >= library.skill_pick.pregen.flash_limit:
             break
         request = flash_wait_request(library, world, char, FlashChoice(skill=skill), anywhere=True)
         if request is not None:
@@ -348,6 +337,7 @@ def _story_requests(
     library: ContentLibrary, world: WorldState, char: CharacterState
 ) -> list[GenRequest]:
     out: list[GenRequest] = []
+    limit = library.skill_pick.pregen.story_limit
     owned = {*char.hero.skills, *char.bench}
     table = library.world_quests.quests.get(char.region)
     for state in char.quests:
@@ -376,7 +366,7 @@ def _story_requests(
         keys: set[str] = set()
         for who in chars:
             request = story_request(library, who, story_base(library, who, base), who.region)
-            if request.key not in keys and len(out) < STORY_LIMIT:
+            if request.key not in keys and len(out) < limit:
                 keys.add(request.key)
                 out.append(request)
     return out
@@ -529,8 +519,11 @@ class WorldPregen:
     generators: Generators
     enabled: Callable[[], bool]
     clock: Callable[[], float] = time.monotonic
-    wait_seconds: float = WAIT_SECONDS
-    story_wait_seconds: float = STORY_WAIT_SECONDS
+    wait_seconds: float | None = None
+    """最多等幾秒；``None``＝照內容（``skill_pick.yaml`` 的 ``pregen.wait_seconds``）。測試可以
+    覆寫。"""
+    story_wait_seconds: float | None = None
+    """劇情技能最多等幾秒；``None``＝照內容（``pregen.story_wait_seconds``）。"""
     poll_seconds: float = _POLL_SECONDS
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _entries: dict[tuple[str, str], _Entry] = field(default_factory=dict)
@@ -640,16 +633,22 @@ class WorldPregen:
 
     # -- 等待 -----------------------------------------------------------------
 
+    def _limit(self, entry: _Entry) -> float:
+        """這一筆最多等幾秒：有覆寫用覆寫，沒有照這一筆的內容庫。"""
+        rules = entry.view.skill_pick.pregen
+        if entry.request.kind == "story_skill":
+            return (
+                rules.story_wait_seconds
+                if self.story_wait_seconds is None
+                else self.story_wait_seconds
+            )
+        return rules.wait_seconds if self.wait_seconds is None else self.wait_seconds
+
     def _await(self, entry: _Entry) -> tuple[_Record | None, bool]:
         """等這一筆（不持鎖）：回傳（結果, 有沒有逾時）。``deadline`` 從第一次等待算起。"""
         with self._lock:
             if entry.deadline is None:
-                limit = (
-                    self.story_wait_seconds
-                    if entry.request.kind == "story_skill"
-                    else self.wait_seconds
-                )
-                entry.deadline = self.clock() + limit
+                entry.deadline = self.clock() + self._limit(entry)
             deadline = entry.deadline
         while not entry.future.done():
             if self.clock() >= deadline:

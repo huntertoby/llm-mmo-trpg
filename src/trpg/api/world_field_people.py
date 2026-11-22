@@ -29,6 +29,7 @@ from trpg.engine.view import AppearanceView
 from trpg.shared.rng import fnv1a64
 from trpg.world.affinity import affinity_rules, rank_of, talk_entries
 from trpg.world.calendar import day_of
+from trpg.world.common import rules_of
 from trpg.world.field import FieldGrid
 from trpg.world.gear import item_loadout
 from trpg.world.quests import condition_holds, quest_table
@@ -36,7 +37,6 @@ from trpg.world.state import CharacterState, ShadowSnapshot, WorldState
 
 __all__ = [
     "ALERT_ZH",
-    "TOWN_FRIENDS_MAX",
     "NpcMark",
     "friend_cells",
     "friends_here",
@@ -44,8 +44,6 @@ __all__ = [
     "npc_marks",
 ]
 
-TOWN_FRIENDS_MAX: Final = 8
-"""一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）。"""
 
 ALERT_ZH: Final[Mapping[str, str]] = {"quest": "有任務可以接", "rumor": "有新的傳聞"}
 
@@ -214,7 +212,7 @@ def friends_here(
             and s.snapshot.location == found.place
         ),
         key=lambda s: s.owner,
-    )[:TOWN_FRIENDS_MAX]
+    )[: rules_of(library).display.town_friends]
     climb = library.ruleset.core.max_climb_height
     cells = friend_cells(found, grid, [s.owner for s in snaps], climb)
     return tuple(

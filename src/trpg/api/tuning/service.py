@@ -37,10 +37,6 @@ from trpg.api.tuning.objects import (
     object_file,
 )
 from trpg.api.tuning.ratios import (
-    DEFAULT_SEEDS as RATIO_DEFAULT_SEEDS,
-)
-from trpg.api.tuning.ratios import (
-    MAX_WORK,
     BaselineError,
     RatioStore,
     plan_ratio,
@@ -49,7 +45,12 @@ from trpg.api.tuning.ratios import (
     run_data,
 )
 from trpg.api.tuning.schemas import (
+    MAP_DEFAULT_SEEDS,
     MAX_RATIO_SEEDS,
+    MAX_SIM_MAPS,
+    RATIO_DEFAULT_SEEDS,
+    RATIO_MAX_WORK,
+    SIM_DEFAULT_SEEDS,
     SMALL_SAMPLE,
     TuningApplyResult,
     TuningBudgetResult,
@@ -115,11 +116,10 @@ __all__ = [
 ]
 
 TUNING_ENV: Final = "TRPG_TUNING"
-DEFAULT_SIM_SEEDS: Final = 3
-"""預設「小」：1 個頭目 × 8 build × 3 種子＝24 場（第 0.0 節第 5 點）。"""
-DEFAULT_MAP_SEEDS: Final = 24
-"""地圖戰預設：1 張圖 × 24 種子（NW-2 5.6）。"""
-MAX_SIM_MAPS: Final = 3
+DEFAULT_SIM_SEEDS: Final = SIM_DEFAULT_SEEDS
+"""頭目戰預設種子數（``schemas.SIM_DEFAULT_SEEDS``，HC-7 b 起只留那一份）。"""
+DEFAULT_MAP_SEEDS: Final = MAP_DEFAULT_SEEDS
+"""地圖戰預設種子數（``schemas.MAP_DEFAULT_SEEDS``）。"""
 _NOT_RESTARTED_ZH: Final = "這次開伺服器以來沒有寫回；遊戲用的是目前的數值。"
 
 
@@ -499,7 +499,7 @@ class TuningService:
             max_maps=MAX_SIM_MAPS,
             ratio_max_seeds=MAX_RATIO_SEEDS,
             small_sample=SMALL_SAMPLE,
-            ratio_max_work=MAX_WORK,
+            ratio_max_work=RATIO_MAX_WORK,
             ratio_battles_per_second=self.sims.ratio_battles_per_second,
         )
 

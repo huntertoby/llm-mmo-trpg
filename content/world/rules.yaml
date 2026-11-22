@@ -148,3 +148,13 @@ field_maps:
     capital: {long: [28, 36], short: [20, 28]}   # 約 32×24
     interior: {long: [8, 12], short: [6, 10]}    # 約 10×8
   stones_per_region: [2, 3]
+# 畫面最多列幾筆（HC-7 b：原本寫死在 trpg.api、trpg.server 的常數，值不變）。只決定畫面上列出幾筆，不影響規則。
+display:
+  town_friends: 8        # 一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）
+  footprint_friends: 3   # 一張圖最多畫幾位朋友的腳印
+  footprint_prints: 8    # 一位朋友最多畫幾個腳印
+  note_board: 20         # 地點留言板顯示最新幾則（代決 5E3-5）
+  note_footprints: 10    # 地點的足跡最多列幾筆
+# 地點留言（Phase 5E-3，#105；HC-7 b 從 trpg.server.notes 搬來，值不變）。
+notes:
+  max_chars: 50          # 一則留言最多幾個字（#105）

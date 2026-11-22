@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Final, Literal
 
 from trpg.api.tuning.schemas import (
+    MAX_SIM_BATTLES,
     SMALL_SAMPLE,
     TuningMapSide,
     TuningMapSimResult,
@@ -70,7 +71,8 @@ __all__ = [
     "summarize_map",
 ]
 
-MAX_BATTLES: Final = 160
+MAX_BATTLES: Final = MAX_SIM_BATTLES
+"""單次模擬的場數上限（``schemas.MAX_SIM_BATTLES``，HC-7 b 起只留那一份）。"""
 DEFAULT_SECONDS_PER_BATTLE: Final = 1.6
 """沒實測過時的每場秒數（BAL-20：頭目戰每場約 1.2～1.9 核心秒）。"""
 DEFAULT_MAP_SECONDS_PER_BATTLE: Final = 0.8

@@ -7,7 +7,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.api.world import WorldStore
 from trpg.content.world_narration import mask_text
 from trpg.server.announce import location_name
-from trpg.server.notes import NOTE_MAX_LEN, LocationNote, footprints
+from trpg.server.notes import LocationNote, footprints
+from trpg.world.common import rules_of
 from trpg.world.narration import story_masks
 from trpg.world.state import CharacterState
 
@@ -50,10 +51,11 @@ class LocationBoard(_ApiModel):
     location: str
     location_name_zh: str
     notes: list[NoteView]
-    """最新的 20 則，新的在前。"""
+    """最新的幾則（``world/rules.yaml`` 的 ``display.note_board``），新的在前。"""
     footprints: list[FootprintView]
-    """其他角色的足跡，新的在前（最多 10 筆）。"""
-    max_len: int = NOTE_MAX_LEN
+    """其他角色的足跡，新的在前（最多 ``display.note_footprints`` 筆）。"""
+    max_len: int
+    """一則留言最多幾個字（``world/rules.yaml`` 的 ``notes.max_chars``；HC-7 b 起必填）。"""
     admin: bool = False
     """目前登入的是管理者（每則留言旁都有刪除鍵，走 ``DELETE /api/world/notes/{note_id}``）。"""
 
@@ -82,6 +84,7 @@ def location_board(
     places = world_map.location_by_id() if world_map is not None else {}
     masks = story_masks(store.library, char)
     names = {cid: store.character(cid).hero.name_zh for cid in store.character_ids()}
+    rules = rules_of(store.library)
     steps = footprints(
         store.entries(),
         names,
@@ -90,14 +93,17 @@ def location_board(
         location=location,
         exclude=char.character_id,
         region_of=lambda loc: region if loc in places else None,
+        limit=rules.display.note_footprints,
     )
     return LocationBoard(
         region=region,
         location=location,
         location_name_zh=mask_text(location_name(store.library, region, location), masks),
         notes=[
-            _note_view(n, char.character_id, admin=admin) for n in store.notes.at(region, location)
+            _note_view(n, char.character_id, admin=admin)
+            for n in store.notes.at(region, location, rules.display.note_board)
         ],
+        max_len=rules.notes.max_chars,
         footprints=[
             FootprintView(
                 kind=f.kind,

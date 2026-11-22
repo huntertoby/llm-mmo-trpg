@@ -29,6 +29,13 @@
    "night": 1
   }
  },
+ "display": {
+  "footprint_friends": 3,
+  "footprint_prints": 8,
+  "note_board": 20,
+  "note_footprints": 10,
+  "town_friends": 8
+ },
  "encounter": {
   "base_permille": 150,
   "max_permille": 500,
@@ -171,6 +178,9 @@
    3,
    3
   ]
+ },
+ "notes": {
+  "max_chars": 50
  },
  "opportunity": {
   "guarantee_from_day": 6,

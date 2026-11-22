@@ -168,7 +168,10 @@ class RangeTrialRequest(_ApiModel):
     （看示範）。"""
 
     weapon: str = Field(pattern=ID_PATTERN)
-    keywords: tuple[str, ...] = Field(default=(), max_length=2)
+    keywords: tuple[str, ...] = Field(default=(), max_length=4)
+    """格式上限（同開局選關鍵字的請求）；最多幾個照 ``world/newcomer.yaml`` 的
+    ``range.trial_keywords_max``，由試打檢查並說明（HC-7 b：原本寫死 2，規則調高時請求會
+    先被擋）。"""
 
 
 class RangeTrialResponse(_ApiModel):

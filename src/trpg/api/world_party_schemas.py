@@ -174,7 +174,7 @@ class PartyView(_ApiModel):
     season_boss_ok: bool = True
     """隊伍能不能打賽季 Boss（有影子＝不能，#87）。"""
     season_boss_zh: str | None = None
-    free_slots: int = 2
+    free_slots: int
     """傭兵＋影子還能選幾名（劇情夥伴佔隊友位，5C-3）。"""
     companion_zh: str | None = None
     """劇情夥伴在隊時的說明（例「阿岳跟著你（霧渡新手路），佔 1 個隊友位；任務結束後離隊」）。"""

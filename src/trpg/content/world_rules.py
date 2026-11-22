@@ -34,11 +34,13 @@ __all__ = [
     "BattleRules",
     "CalendarRules",
     "DayPartHours",
+    "DisplayLimits",
     "EncounterRates",
     "EnemyGrowthRules",
     "FieldRules",
     "HastenRules",
     "HeroGrowthRules",
+    "NoteRules",
     "OpportunityRules",
     "PerceptionRules",
     "RegionWeather",
@@ -369,6 +371,29 @@ class FieldRules(ContentModel):
         return self.sight_range // self.sneak_sight_divisor
 
 
+class DisplayLimits(ContentModel):
+    """畫面最多列幾筆（HC-7 b：原本寫死在 ``trpg.api``、``trpg.server`` 的常數）。只決定畫面上列出
+    幾筆，不影響規則。"""
+
+    town_friends: int = Field(ge=0)
+    """一張城鎮圖最多站幾位朋友（依主人 ID 取前幾位）。"""
+    footprint_friends: int = Field(ge=0)
+    """一張圖最多畫幾位朋友的腳印。"""
+    footprint_prints: int = Field(ge=0)
+    """一位朋友最多畫幾個腳印。"""
+    note_board: int = Field(ge=1)
+    """地點留言板顯示最新幾則（代決 5E3-5）。"""
+    note_footprints: int = Field(ge=0)
+    """地點的足跡最多列幾筆。"""
+
+
+class NoteRules(ContentModel):
+    """地點留言（Phase 5E-3，#105；HC-7 b 從 ``trpg.server.notes`` 搬來）。"""
+
+    max_chars: int = Field(ge=1)
+    """一則留言最多幾個字（#105：50 字）。"""
+
+
 class WorldRules(ContentModel):
     """``content/world/rules.yaml``。"""
 
@@ -396,6 +421,10 @@ class WorldRules(ContentModel):
     field_maps: FieldMapRules
     day_parts: DayPartHours
     """早、午、晚、夜的起始鐘點（HC-4d；經 API 的 ``WorldClockView.day_parts`` 給前端）。"""
+    display: DisplayLimits
+    """畫面最多列幾筆（HC-7 b）。"""
+    notes: NoteRules
+    """地點留言（HC-7 b）。"""
     """實地地圖的大小建議與每區傳送石數（HC-4d，原本是 ``trpg.content.fields`` 的常數）。"""
 
     @model_validator(mode="after")

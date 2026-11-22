@@ -30,6 +30,7 @@ from trpg.api.skill_cards import CostStat, EffectStat, card_stats, effect_stat
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import EffectSpec, SkillDef, condition_text
+from trpg.engine.ids import SHIELDED
 from trpg.shared.range_text import range_text, span
 from trpg.shared.types import Element, Surface
 
@@ -77,8 +78,6 @@ _BUFF_ROUNDS_ZH = {
 }
 """卡片數字沒有回合、但蓄力與輕巧會調回合的增益原語（06 6.34「費用方向」第 6 點；FL-1c 暫時給技能、
 區域，FL-1d 護盾、不死、轉移傷害）的列名。"""
-_SHIELD_DEFAULT_DURATION = 2
-"""護盾省略 ``duration`` 時的回合（``skill_primitives.yaml`` 的 shield：省略＝2）。"""
 _NEUTRAL_MAGNITUDE = 1000
 _MAGNITUDE_TYPES = frozenset({"apply_status", "create_surface", "enter_form"})
 
@@ -198,10 +197,13 @@ def _magnitude(spec: EffectSpec) -> int | None:
     return spec.magnitude_permille or _NEUTRAL_MAGNITUDE
 
 
-def _buff_rounds(spec: EffectSpec) -> int | None:
+def _buff_rounds(library: ContentLibrary, spec: EffectSpec) -> int | None:
+    """增益回合；護盾省略 ``duration`` 時同引擎讀狀態表的預設回合（``statuses.yaml``，HC-7 b）。"""
     if spec.duration is not None:
         return spec.duration
-    return _SHIELD_DEFAULT_DURATION if spec.type == "shield" else None
+    if spec.type != "shield":
+        return None
+    return library.ruleset.statuses.by_id()[spec.status or SHIELDED].duration
 
 
 def _nested_rows(
@@ -242,6 +244,7 @@ def _nested_rows(
 
 
 def _pair_rows(
+    library: ContentLibrary,
     prefix: str,
     index: int,
     pair: tuple[tuple[EffectSpec, EffectStat], tuple[EffectSpec, EffectStat]],
@@ -271,7 +274,7 @@ def _pair_rows(
         direction = "new" if a is None else ("worse" if b is None else _compare(a, b))
         yield _row(f"{where}.amount", f"{name}{what}", a, b, direction, effect_index=index)
     buff = _BUFF_ROUNDS_ZH.get(new_spec.type)
-    a_rounds, b_rounds = _buff_rounds(old_spec), _buff_rounds(new_spec)
+    a_rounds, b_rounds = _buff_rounds(library, old_spec), _buff_rounds(library, new_spec)
     if (
         buff is not None
         and old.amount is None
@@ -305,7 +308,7 @@ def _effect_rows(
         a = old[index] if index < len(old) else None
         b = new[index] if index < len(new) else None
         if a is not None and b is not None and _same_effect(a[0], b[0]):
-            yield from _pair_rows(prefix, index, (a, b))
+            yield from _pair_rows(library, prefix, index, (a, b))
             yield from _nested_rows(library, prefix, index, a[0], b[0])
             continue
         if a is not None:
@@ -474,7 +477,7 @@ def _merge_moved(
                 (old_spec, effect_stat(library, before, index, old_spec)),
                 (new_spec, effect_stat(library, after, at, new_spec)),
             )
-            replace[id(new)] = list(_pair_rows(prefix, at, pair))
+            replace[id(new)] = list(_pair_rows(library, prefix, at, pair))
             replace[id(old)] = []
             used.add(id(new))
             break

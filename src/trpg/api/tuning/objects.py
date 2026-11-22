@@ -20,11 +20,12 @@ from trpg.api.tuning.schemas import (
     TuningUnitSkills,
 )
 from trpg.api.tuning.yaml_patch import MISSING, PatchError, lookup
-from trpg.content.battle import UnitTemplate
+from trpg.content.battle import PhaseGrowSurface, UnitTemplate
+from trpg.content.composer_rules import StructureRules
 from trpg.content.equipment import loadout_held
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import load_content_file, parse_yaml
-from trpg.content.schemas import ContentModel
+from trpg.content.schemas import ContentModel, field_bounds
 from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules
 from trpg.content.skills import SkillDef, weapon_problem
@@ -44,6 +45,8 @@ from trpg.content.tuning_fields import (
 from trpg.llm.prompts.wish_pick import count_zh
 from trpg.skillgen.budget import BudgetError, skill_budget
 from trpg.skillgen.composer_parts import obstacle_candidates
+
+_PERMILLE: Final = 1000
 
 __all__ = [
     "AI_NAME_ZH",
@@ -65,6 +68,7 @@ __all__ = [
     "retier_note_zh",
     "retier_notes",
     "skill_facets",
+    "skill_ranged",
     "skill_users",
     "table_notes",
     "unit_levels",
@@ -645,13 +649,19 @@ def _has_condition(skill: SkillDef) -> bool:
     return skill.condition is not None or any(e.condition is not None for e in skill.effects)
 
 
+def skill_ranged(skill: SkillDef) -> bool:
+    """工坊篩選的「遠程」：要遠程武器，或形狀射程 2 格以上（貼身 1 格以外）；清單與分組改共用
+    這一份。"""
+    shape_range = skill.shape.range
+    return skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range > 1)
+
+
 def _single_damage(skill: SkillDef) -> bool:
     return skill.shape.type == "single" and any(e.type == "damage" for e in skill.effects)
 
 
 def skill_facets(skill: SkillDef, library: ContentLibrary | None) -> TuningSkillFacets:
     """清單篩選用的分類；``library`` 有時另算 1 階預算比例。"""
-    shape_range = skill.shape.range
     ratio: int | None = None
     if library is not None:
         ratio = _ratio_permille(skill, library)
@@ -664,7 +674,7 @@ def skill_facets(skill: SkillDef, library: ContentLibrary | None) -> TuningSkill
         enemy_only=skill.enemy_only,
         has_condition=_has_condition(skill),
         shape=skill.shape.type,
-        ranged=skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range >= 2),  # noqa: PLR2004
+        ranged=skill_ranged(skill),
         tags=list(skill.tags),
         single_damage=skill.shape.type == "single"
         and any(e.type == "damage" for e in skill.effects),
@@ -859,11 +869,11 @@ def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int 
     leaf = parts[-1]
     if leaf == "hp_permille":
         return 1, 1000
-    if parts[2:3] == ("resist",):
-        return -1000, 1000
-    if leaf == "amount":
+    if parts[2:3] == ("resist",):  # PartDef 的驗證：-1000～1000‰
+        return -_PERMILLE, _PERMILLE
+    if leaf == "amount":  # StatDownBreak 的驗證：damage_dealt 是倍率‰，要小於 1000
         effect = lookup(data, parts[:4])
-        return (1, 999) if effect.get("stat") == "damage_dealt" else (1, None)
+        return (1, _PERMILLE - 1) if effect.get("stat") == "damage_dealt" else (1, None)
     if leaf == "rounds":  # GB-2：SealSkillBreak.rounds（ge=1）
         return 1, None
     return None, None
@@ -872,7 +882,7 @@ def _part_limits(data: Any, parts: Sequence[PathPart]) -> tuple[int | None, int 
 def _schema_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] | None:
     """schema 寫死的範圍（不靠原語、形狀表）；不是這幾種欄位 ``None``。"""
     if parts[-2:] == ("grow_surface", "max_rows"):  # GB-2：PhaseGrowSurface.max_rows
-        return 1, 9
+        return field_bounds(PhaseGrowSurface, "max_rows")
     if parts[:1] == ("objects",) and parts[-1] == "max_hp":  # NW-3：ObjectDef.max_hp（ge=1）
         return 1, None
     if parts[:1] == ("profiles",) and parts[-1] == "prefer_far_from_leader":  # NW-3b：ge=0
@@ -884,8 +894,8 @@ def _sk5_limits(parts: Sequence[PathPart]) -> tuple[int | None, int | None] | No
     """SK-5 的兩張表：觸發時機的係數（``ge=1``）、組合器的機率（0～1000）與吸血比例（1～500）。"""
     if parts[:1] == ("triggers",) and parts[-1] == "budget_coefficient_permille":
         return 1, None
-    if parts[-1] == "lifesteal_amount_permille":  # StructureRules（原語上限 500）
-        return 1, 500
+    if parts[-1] == "lifesteal_amount_permille":  # StructureRules（原語上限）
+        return field_bounds(StructureRules, "lifesteal_amount_permille")
     if parts[:1] in (("structure",), ("passive",)) and str(parts[-1]).endswith("_permille"):
         return 0, 1000  # StructureRules／PassiveRules
     return None

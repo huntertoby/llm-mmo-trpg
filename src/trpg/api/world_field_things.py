@@ -4,8 +4,9 @@
 - **朋友的腳印**：來源是其他角色的 ``visited_locations``（6C-6；:class:`FieldSocial` 由伺服器的
   :class:`~trpg.api.world.WorldStore` 從記憶體快取的角色組出來，不掃世界日誌）。每位朋友在室外圖上
   畫一串腳印：端點是入口與每個出口往內一格（依出口 ID），依 ``fnv1a64("<地圖>:<角色>")`` 挑兩個，
-  沿四方向 BFS 的最短路每隔一格畫一個（最多 :data:`PRINTS_MAX` 個）。最多
-  :data:`FOOTPRINT_FRIENDS_MAX` 位（依角色 ID）。同樣的地圖與名單一定畫在同樣的位置（確定性）。
+  沿四方向 BFS 的最短路每隔一格畫一個（最多 ``display.footprint_prints`` 個）。最多
+  ``display.footprint_friends`` 位（依角色 ID；兩個數字在 ``world/rules.yaml``，HC-7 b）。
+  同樣的地圖與名單一定畫在同樣的位置（確定性）。
 - **留言石碑**：這個地點有留言時，畫在入口附近第一個空的可站格（依和入口的距離、y、x）。
 """
 
@@ -33,9 +34,7 @@ from trpg.world.field_things import object_status, sneak_problem
 from trpg.world.state import CharacterState, Facing, WorldState
 
 __all__ = [
-    "FOOTPRINT_FRIENDS_MAX",
     "FOOTPRINT_NAMES",
-    "PRINTS_MAX",
     "FieldSocial",
     "Visitor",
     "footprint_cells",
@@ -44,10 +43,6 @@ __all__ = [
     "things_update",
 ]
 
-FOOTPRINT_FRIENDS_MAX: Final = 3
-"""一張圖最多畫幾位朋友的腳印。"""
-PRINTS_MAX: Final = 8
-"""一位朋友最多畫幾個腳印。"""
 FOOTPRINT_NAMES: Final = 3
 """區域圖上一個地點最多列幾位朋友。"""
 
@@ -125,7 +120,7 @@ def footprint_cells(
     out: list[tuple[XY, Facing]] = []
     for i in range(1, len(path) - 1, 2):
         out.append((path[i], _facing(path[i - 1], path[i])))
-        if len(out) >= PRINTS_MAX:
+        if len(out) >= rules_of(library).display.footprint_prints:
             break
     return out
 
@@ -154,7 +149,8 @@ def _footprints(
     visitors: Sequence[Visitor],
 ) -> tuple[FieldFootprintView, ...]:
     out: list[FieldFootprintView] = []
-    for v in sorted(visitors, key=lambda v: v.character_id)[:FOOTPRINT_FRIENDS_MAX]:
+    shown = rules_of(library).display.footprint_friends
+    for v in sorted(visitors, key=lambda v: v.character_id)[:shown]:
         for (x, y), facing in footprint_cells(library, char, found, grid, v.character_id):
             out.append(
                 FieldFootprintView(owner=v.character_id, name_zh=v.name_zh, x=x, y=y, facing=facing)

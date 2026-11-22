@@ -10,8 +10,6 @@ from tests.world.helpers import NOON, hero, make_world
 from trpg.api.sessions import SessionStore
 from trpg.api.world import WorldStore
 from trpg.api.world_field_things import (
-    FOOTPRINT_FRIENDS_MAX,
-    PRINTS_MAX,
     FieldSocial,
     Visitor,
     footprint_cells,
@@ -20,6 +18,7 @@ from trpg.api.world_field_things import (
 from trpg.api.world_field_view import field_view
 from trpg.api.world_presenter import world_view
 from trpg.content.library import ContentLibrary
+from trpg.world.common import rules_of
 from trpg.world.field import field_grid, field_map, placed
 from trpg.world.field_actions import EventMarkedEvent, SneakStartedEvent
 from trpg.world.layout import char_path
@@ -70,20 +69,21 @@ def test_campfires_objects_and_sneak_fields(field_library: ContentLibrary) -> No
 def test_footprints_are_deterministic_and_walkable(field_library: ContentLibrary) -> None:
     char = _char(field_library, "ferry_steps")
     social = _social("阿岳", "小白", "老鐵", "多一位")
+    display = rules_of(field_library).display
     first = field_view(field_library, char, social=social)
     second = field_view(field_library, char, social=social)
     assert first is not None and second is not None
     assert first.footprints == second.footprints and first.footprints
     owners = {p.owner for p in first.footprints}
     assert (
-        owners <= {"c0", "c1", "c2"} and len(owners) <= FOOTPRINT_FRIENDS_MAX
+        owners <= {"c0", "c1", "c2"} and len(owners) <= display.footprint_friends
     )  # 依角色 ID 最多 3 位
     walkable = {(t.x, t.y) for t in first.tiles if t.walkable}
     assert all((p.x, p.y) in walkable for p in first.footprints)
     found = field_map(field_library, "ferry_steps")
     assert found is not None
     grid = field_grid(field_library, char, found)
-    assert len(footprint_cells(field_library, char, found, grid, "c0")) <= PRINTS_MAX
+    assert len(footprint_cells(field_library, char, found, grid, "c0")) <= display.footprint_prints
     assert field_view(field_library, char) is not None
     plain = field_view(field_library, char)
     assert plain is not None and plain.footprints == () and plain.note_stone is None
@@ -124,7 +124,7 @@ def test_store_builds_social_from_other_saves(
     for c in (me, bob):
         scale = field_library.ruleset.core.quantity_scale  # X10-3a：存檔記量類倍率
         write_atomic(char_path(tmp_path, c.character_id), dumps_char_save(c, quantity_scale=scale))
-    store.notes.add(bob, "小心石階上的盜賊", NOON)
+    store.notes.add(bob, "小心石階上的盜賊", NOON, max_chars=50)
     social = store.field_social("alice")
     assert [v.character_id for v in social.visitors_at("cloud_ridge", "ferry_steps")] == ["bob"]
     assert [v.character_id for v in social.visitors_at("cloud_ridge", "rain_terraces")] == ["bob"]

@@ -161,6 +161,9 @@ class RunRules(ContentModel):
     """主角等級 → 候選技能的階級（第 1 項為等級 1；超過長度用最後一項）。"""
     offer_max_attempts: int = Field(ge=1)
     """湊齊候選最多嘗試幾個組合器種子。"""
+    route_hint_tier: int = Field(ge=1)
+    """開局路線提示（BAL-19g）算「前期拿得到」的技能時用的角色階級上限（前兩次升級；HC-7 b 從
+    ``trpg.api.attribute_text`` 搬來）。"""
     campfire_after: tuple[int, ...]
     """在第幾場（一般戰鬥）打完之後有營火。"""
     complete_skill_after: tuple[int, ...] = ()

@@ -990,18 +990,6 @@ class ComposerRules(ContentModel):
         return f"稀有度權重 {weights}"
 
 
-def _field_bounds(model: type[ContentModel], name: str) -> tuple[int, int]:
-    """``model`` 的整數欄位 ``name`` 的 ``ge``／``le``（HC-4b2：讓組合器的範圍照技能 schema，不另外
-    寫數字）。"""
-    low: int | None = None
-    high: int | None = None
-    for meta in model.model_fields[name].metadata:
-        low = getattr(meta, "ge", low)
-        high = getattr(meta, "le", high)
-    assert low is not None and high is not None, f"{model.__name__}.{name} 沒有上下限"
-    return low, high
-
-
 def composer_rule_problems(
     composer: ComposerRules, core: CoreRules, basic_summon_units: Sequence[str]
 ) -> list[str]:

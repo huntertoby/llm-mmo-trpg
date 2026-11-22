@@ -26,6 +26,8 @@ from pathlib import Path
 from typing import Any, Final
 
 from trpg.api.tuning.schemas import (
+    RATIO_DEFAULT_SEEDS,
+    RATIO_MAX_WORK,
     TuningRatioBaseline,
     TuningRatioLine,
     TuningRatioPlan,
@@ -66,10 +68,10 @@ __all__ = [
     "summary_of",
 ]
 
-DEFAULT_SEEDS: Final = 50
-"""每組預設種子數（T11；BAL-21e 是 250）。"""
-MAX_WORK: Final = 40_000
-"""單次上限：組數 × 種子（T11）。"""
+DEFAULT_SEEDS: Final = RATIO_DEFAULT_SEEDS
+"""每組預設種子數（``schemas.RATIO_DEFAULT_SEEDS``，HC-7 b 起只留那一份）。"""
+MAX_WORK: Final = RATIO_MAX_WORK
+"""單次上限：組數 × 種子（``schemas.RATIO_MAX_WORK``）。"""
 DEFAULT_RATE: Final = 450.0
 """沒實測過時的每秒場數（BAL-21e：27 萬場程序池 4 約 10 分鐘）。"""
 KEEP_RUNS: Final = 40

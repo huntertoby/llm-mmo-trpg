@@ -235,48 +235,48 @@ class GameRulesOut(_ApiModel):
     """開局選幾個關鍵字（``roguelite.yaml`` 的 ``start.keywords``）。"""
     complete_budget_permille: int
     """完整技能的預算加成（‰，``flash_templates.yaml`` 的 ``complete.budget_permille``）。"""
-    # ---- HC-6b：說明文字組字用（舊回應沒有這些欄位時照現值讀；伺服器一律由內容庫填）----
-    roguelite_battles: int = 5
+    # ---- HC-6b：說明文字組字用（伺服器一律由內容庫填；HC-7 b 起必填，不再寫預設值）----
+    roguelite_battles: int
     """一輪的一般戰鬥場數（``roguelite.yaml`` 的 ``battles``；之後 1 場頭目）。"""
-    roguelite_companions: int = 2
+    roguelite_companions: int
     """一輪的標準隊友人數（``roguelite.yaml`` 的 ``companions``）。"""
-    campfire_source: int = 1
+    campfire_source: int
     """營火加的源力（``roguelite.yaml`` 的 ``source.campfire``）。"""
-    budget_min_ratio_permille: int = 700
+    budget_min_ratio_permille: int
     """技能預算的合格區間下限（‰，``skill_budget.yaml``）。"""
-    budget_max_ratio_permille: int = 1000
+    budget_max_ratio_permille: int
     """技能預算的合格區間上限（‰）。"""
-    contagion_radius: int = 1
+    contagion_radius: int
     """疾病擴散傳給幾格內的同伴（``core.yaml`` 的 ``contagion_radius``）。"""
-    major_flash: int = 3
+    major_flash: int
     """第幾次閃現是大變化（``flash_templates.yaml`` 的 ``major_flash``）。"""
-    complete_flashes: int = 3
+    complete_flashes: int
     """完整技能視為已閃幾次（``complete.flashes``）。"""
-    flash_max_carry: int = 2
+    flash_max_carry: int
     """傳承最多帶走幾個小變化（``major_flash`` − 1）。"""
-    flash_open_cost: int = 1
+    flash_open_cost: int
     """不指定類別閃現花幾點靈感（``pricing.open.cost``）。"""
-    flash_open_options: int = 4
+    flash_open_options: int
     """不指定類別出幾個變化（``pricing.open.options``）。"""
-    flash_open_min_categories: int = 2
+    flash_open_min_categories: int
     """不指定類別時至少涵蓋幾類（``pricing.open.min_categories``）。"""
-    pregen_wait_seconds: int = 10
-    """預先生成（含許願）最多等幾秒（``world_pregen.WAIT_SECONDS``）。"""
-    wish_cards: int = 3
+    pregen_wait_seconds: int
+    """預先生成（含許願）最多等幾秒（``skill_pick.yaml`` 的 ``pregen.wait_seconds``）。"""
+    wish_cards: int
     """許願一次給幾張（``skill_pick.yaml`` 的 ``pool.wish_cards``，HC-6a 裁定 1）。"""
-    thread_limit: int = 5
+    thread_limit: int
     """每人線頭上限（``world/event_rules.yaml`` 的 ``threads.personal_limit``）。"""
-    thread_expire_seconds: int = 259200
+    thread_expire_seconds: int
     """線頭到期秒數（``threads.expire_seconds``）。"""
-    opening_end_level: int = 4
+    opening_end_level: int
     """入門期到幾級結束、閃現開放（``world.growth.OPENING_END_LEVEL``）。"""
-    league_signup_close_day: int = 13
+    league_signup_close_day: int
     """影子循環賽第幾天截止報名（``world/season.yaml`` 的 ``league.signup_close_day``）。"""
-    min_moves_mob: int = 2
+    min_moves_mob: int
     """#149 招數下限：一般敵人（``world/enemies.yaml`` 的 ``min_moves``；數值工坊的例外說明）。"""
-    min_moves_elite: int = 3
+    min_moves_elite: int
     """#149 招數下限：精英。"""
-    min_moves_boss_phase: int = 3
+    min_moves_boss_phase: int
     """#149 招數下限：頭目每階段。"""
 
 
@@ -329,7 +329,9 @@ class CreateBattleRequest(_ApiModel):
     dev_pack: str | None = None
     """開發者起始包（``?dev=1``）；武器與關鍵字取自 ``dev_starters.yaml``。"""
     ally_builds: tuple[str, ...] | None = None
-    max_rounds: int = Field(default=30, ge=1, le=200)
+    max_rounds: int | None = Field(default=None, ge=1, le=200)
+    """每場輪數上限；省略＝``content/workshop.yaml`` 的 ``max_rounds``（HC-7 b：原本寫死 30，
+    值相同）。``le=200`` 是格式護欄（同 ``WorkshopRules.max_rounds``）。"""
     custom_skills: tuple[dict[str, Any], ...] = ()
     """技能工坊「裝上試玩」（Phase 3F-1）：自訂技能定義（技能定義的 JSON，與
     ``/api/workshop/check`` 的 ``skill`` 同格式）。每個都必須通過驗證，以 ``Ruleset.with_skills``

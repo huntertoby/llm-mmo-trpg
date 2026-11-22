@@ -9343,11 +9343,17 @@
             "title": "Ally Builds"
           },
           "max_rounds": {
-            "type": "integer",
-            "maximum": 200.0,
-            "minimum": 1.0,
-            "title": "Max Rounds",
-            "default": 30
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 200.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Rounds"
           },
           "custom_skills": {
             "items": {
@@ -13774,108 +13780,87 @@
           },
           "roguelite_battles": {
             "type": "integer",
-            "title": "Roguelite Battles",
-            "default": 5
+            "title": "Roguelite Battles"
           },
           "roguelite_companions": {
             "type": "integer",
-            "title": "Roguelite Companions",
-            "default": 2
+            "title": "Roguelite Companions"
           },
           "campfire_source": {
             "type": "integer",
-            "title": "Campfire Source",
-            "default": 1
+            "title": "Campfire Source"
           },
           "budget_min_ratio_permille": {
             "type": "integer",
-            "title": "Budget Min Ratio Permille",
-            "default": 700
+            "title": "Budget Min Ratio Permille"
           },
           "budget_max_ratio_permille": {
             "type": "integer",
-            "title": "Budget Max Ratio Permille",
-            "default": 1000
+            "title": "Budget Max Ratio Permille"
           },
           "contagion_radius": {
             "type": "integer",
-            "title": "Contagion Radius",
-            "default": 1
+            "title": "Contagion Radius"
           },
           "major_flash": {
             "type": "integer",
-            "title": "Major Flash",
-            "default": 3
+            "title": "Major Flash"
           },
           "complete_flashes": {
             "type": "integer",
-            "title": "Complete Flashes",
-            "default": 3
+            "title": "Complete Flashes"
           },
           "flash_max_carry": {
             "type": "integer",
-            "title": "Flash Max Carry",
-            "default": 2
+            "title": "Flash Max Carry"
           },
           "flash_open_cost": {
             "type": "integer",
-            "title": "Flash Open Cost",
-            "default": 1
+            "title": "Flash Open Cost"
           },
           "flash_open_options": {
             "type": "integer",
-            "title": "Flash Open Options",
-            "default": 4
+            "title": "Flash Open Options"
           },
           "flash_open_min_categories": {
             "type": "integer",
-            "title": "Flash Open Min Categories",
-            "default": 2
+            "title": "Flash Open Min Categories"
           },
           "pregen_wait_seconds": {
             "type": "integer",
-            "title": "Pregen Wait Seconds",
-            "default": 10
+            "title": "Pregen Wait Seconds"
           },
           "wish_cards": {
             "type": "integer",
-            "title": "Wish Cards",
-            "default": 3
+            "title": "Wish Cards"
           },
           "thread_limit": {
             "type": "integer",
-            "title": "Thread Limit",
-            "default": 5
+            "title": "Thread Limit"
           },
           "thread_expire_seconds": {
             "type": "integer",
-            "title": "Thread Expire Seconds",
-            "default": 259200
+            "title": "Thread Expire Seconds"
           },
           "opening_end_level": {
             "type": "integer",
-            "title": "Opening End Level",
-            "default": 4
+            "title": "Opening End Level"
           },
           "league_signup_close_day": {
             "type": "integer",
-            "title": "League Signup Close Day",
-            "default": 13
+            "title": "League Signup Close Day"
           },
           "min_moves_mob": {
             "type": "integer",
-            "title": "Min Moves Mob",
-            "default": 2
+            "title": "Min Moves Mob"
           },
           "min_moves_elite": {
             "type": "integer",
-            "title": "Min Moves Elite",
-            "default": 3
+            "title": "Min Moves Elite"
           },
           "min_moves_boss_phase": {
             "type": "integer",
-            "title": "Min Moves Boss Phase",
-            "default": 3
+            "title": "Min Moves Boss Phase"
           }
         },
         "additionalProperties": false,
@@ -13884,7 +13869,28 @@
           "source_max",
           "skill_slots",
           "start_keywords",
-          "complete_budget_permille"
+          "complete_budget_permille",
+          "roguelite_battles",
+          "roguelite_companions",
+          "campfire_source",
+          "budget_min_ratio_permille",
+          "budget_max_ratio_permille",
+          "contagion_radius",
+          "major_flash",
+          "complete_flashes",
+          "flash_max_carry",
+          "flash_open_cost",
+          "flash_open_options",
+          "flash_open_min_categories",
+          "pregen_wait_seconds",
+          "wish_cards",
+          "thread_limit",
+          "thread_expire_seconds",
+          "opening_end_level",
+          "league_signup_close_day",
+          "min_moves_mob",
+          "min_moves_elite",
+          "min_moves_boss_phase"
         ],
         "title": "GameRulesOut",
         "description": "畫面要用的全域規則數字（HC-3）：由內容庫產生，前端不寫死。"
@@ -17972,8 +17978,7 @@
           },
           "max_len": {
             "type": "integer",
-            "title": "Max Len",
-            "default": 50
+            "title": "Max Len"
           },
           "admin": {
             "type": "boolean",
@@ -17988,7 +17993,8 @@
           "location",
           "location_name_zh",
           "notes",
-          "footprints"
+          "footprints",
+          "max_len"
         ],
         "title": "LocationBoard"
       },
@@ -20770,8 +20776,7 @@
           },
           "free_slots": {
             "type": "integer",
-            "title": "Free Slots",
-            "default": 2
+            "title": "Free Slots"
           },
           "companion_zh": {
             "anyOf": [
@@ -20801,7 +20806,8 @@
           "members",
           "max_hired",
           "can_hire",
-          "hire_problem_zh"
+          "hire_problem_zh",
+          "free_slots"
         ],
         "title": "PartyView",
         "description": "目前的隊伍與雇用（09 9.6.9 #97：主角＋最多 2 名；免費、出城前在城鎮選好、野外不能換）。"
@@ -23287,7 +23293,7 @@
               "type": "string"
             },
             "type": "array",
-            "maxItems": 2,
+            "maxItems": 4,
             "title": "Keywords",
             "default": []
           }
@@ -30459,13 +30465,11 @@
           },
           "map_default_seeds": {
             "type": "integer",
-            "title": "Map Default Seeds",
-            "default": 24
+            "title": "Map Default Seeds"
           },
           "map_seconds_per_battle": {
             "type": "number",
-            "title": "Map Seconds Per Battle",
-            "default": 0.8
+            "title": "Map Seconds Per Battle"
           },
           "ratio_default_seeds": {
             "type": "integer",
@@ -30485,13 +30489,11 @@
           },
           "ratio_max_work": {
             "type": "integer",
-            "title": "Ratio Max Work",
-            "default": 40000
+            "title": "Ratio Max Work"
           },
           "ratio_battles_per_second": {
             "type": "number",
-            "title": "Ratio Battles Per Second",
-            "default": 450.0
+            "title": "Ratio Battles Per Second"
           }
         },
         "additionalProperties": false,
@@ -30503,10 +30505,14 @@
           "max_battles",
           "workers",
           "seconds_per_battle",
+          "map_default_seeds",
+          "map_seconds_per_battle",
           "ratio_default_seeds",
           "ratio_max_seeds",
           "max_maps",
-          "small_sample"
+          "small_sample",
+          "ratio_max_work",
+          "ratio_battles_per_second"
         ],
         "title": "TuningSimOptions"
       },
@@ -31057,8 +31063,7 @@
           },
           "draft_name_max": {
             "type": "integer",
-            "title": "Draft Name Max",
-            "default": 40
+            "title": "Draft Name Max"
           }
         },
         "additionalProperties": false,
@@ -31068,7 +31073,8 @@
           "restart_needed",
           "restart_note_zh",
           "drafts",
-          "max_group"
+          "max_group",
+          "draft_name_max"
         ],
         "title": "TuningStatus"
       },
@@ -33009,7 +33015,6 @@
             "anyOf": [
               {
                 "type": "integer",
-                "maximum": 5.0,
                 "minimum": 1.0
               },
               {

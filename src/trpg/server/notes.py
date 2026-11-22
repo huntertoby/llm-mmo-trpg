@@ -1,6 +1,8 @@
 """地點留言與足跡（Phase 5E-3；``docs/phases/Phase5計畫.md`` 31.7；09 9.6.10 #105）。
 
-- 只有地點留言與足跡、留言上限 50 字；不過濾、不檢舉、不封鎖、不限次數；使用者（管理者）手動刪。
+- 只有地點留言與足跡、留言上限 50 字（HC-7 b 起字數與顯示筆數在 ``world/rules.yaml`` 的
+  ``notes``、``display``，由呼叫的 API 帶進來）；不過濾、不檢舉、不封鎖、不限次數；使用者
+  （管理者）手動刪。
 - 存檔 ``<世界資料夾>/notes.json``（``trpg-notes/1``）。**不進世界日誌**（代決 5E3-3）：留言是
   玩家文字、不影響規則、要能手動刪；照 5E1-2（帳號不進日誌）的慣例放在伺服器服務層，
   ``trpg-wlog/1`` 與重播不變。
@@ -30,11 +32,8 @@ from trpg.world.save import write_atomic
 from trpg.world.state import CharacterState
 
 __all__ = [
-    "BOARD_NOTES",
-    "FOOTPRINT_MAX",
     "NOTES_FILE",
     "NOTES_FORMAT",
-    "NOTE_MAX_LEN",
     "Footprint",
     "LocationNote",
     "LocationNoteStore",
@@ -45,11 +44,6 @@ __all__ = [
 ]
 
 NOTES_FORMAT: Final = "trpg-notes/1"
-NOTE_MAX_LEN: Final = 50
-"""留言上限（#105）。"""
-BOARD_NOTES: Final = 20
-"""畫面顯示最新幾則（代決 5E3-5）。"""
-FOOTPRINT_MAX: Final = 10
 NOTE_ID_PREFIX: Final = "n"
 
 
@@ -70,7 +64,9 @@ class LocationNote(BaseModel):
     character_id: str
     name: str
     """留言當下的角色名。"""
-    text: str = Field(min_length=1, max_length=NOTE_MAX_LEN)
+    text: str = Field(min_length=1)
+    """字數上限照規則（``world/rules.yaml`` 的 ``notes.max_chars``），寫入時由
+    :func:`clean_note_text` 檢查；存檔格式不另設上限（HC-7 b：規則調低時舊留言照讀）。"""
     at: int = Field(ge=0)
 
 
@@ -81,13 +77,14 @@ class _File(BaseModel):
     notes: tuple[LocationNote, ...] = ()
 
 
-def clean_note_text(text: str) -> str:
-    """去頭尾空白後 1～50 字、不能有控制字元（換行也不行）；不合法拋 :class:`NoteError`。"""
+def clean_note_text(text: str, max_chars: int) -> str:
+    """去頭尾空白後 1～``max_chars`` 字、不能有控制字元（換行也不行）；不合法拋
+    :class:`NoteError`。"""
     cleaned = text.strip()
     if not cleaned:
         raise NoteError("留言不能是空的")
-    if len(cleaned) > NOTE_MAX_LEN:
-        raise NoteError(f"留言最多 {NOTE_MAX_LEN} 字（現在 {len(cleaned)} 字）")
+    if len(cleaned) > max_chars:
+        raise NoteError(f"留言最多 {max_chars} 字（現在 {len(cleaned)} 字）")
     if any(not ch.isprintable() for ch in cleaned):
         raise NoteError("留言不能有換行或控制字元")
     return cleaned
@@ -147,15 +144,15 @@ class LocationNoteStore:
         write_atomic(self.path, text + "\n")
         self._cache = (self._stamp(), data.notes)
 
-    def at(self, region: str, location: str, limit: int = BOARD_NOTES) -> list[LocationNote]:
+    def at(self, region: str, location: str, limit: int) -> list[LocationNote]:
         """這個地點的留言，新的在前。"""
         here = [n for n in self.all() if n.region == region and n.location == location]
         here.sort(key=lambda n: (n.at, n.note_id), reverse=True)
         return here[:limit]
 
-    def add(self, char: CharacterState, text: str, now: int) -> LocationNote:
+    def add(self, char: CharacterState, text: str, now: int, *, max_chars: int) -> LocationNote:
         """在角色**現在所在**的地點留一則（所以不必另外檢查「站在那裡」）。"""
-        cleaned = clean_note_text(text)
+        cleaned = clean_note_text(text, max_chars)
         notes = self.all()
         taken = {n.note_id for n in notes}
         note_id = self._new_id()
@@ -203,8 +200,9 @@ def footprints(
     location: str,
     exclude: str,
     region_of: Callable[[str], str | None],
+    limit: int,
 ) -> list[Footprint]:
-    """其他角色在這個地點的足跡（新的在前、最多 :data:`FOOTPRINT_MAX` 筆）。
+    """其他角色在這個地點的足跡（新的在前、最多 ``limit`` 筆）。
 
     ``region_of(location)``：地點 ID 屬於哪一區（日誌只記 ``travel`` 的目的地，區域由地點圖查）。"""
     visits: dict[str, int] = {}
@@ -227,4 +225,4 @@ def footprints(
         and k.kind == "elite"  # 賽季 Boss 首殺在裂界門，不留在出發的城鎮（5F-3）
     ]
     found.sort(key=lambda f: (f.at, f.kind, f.character_id), reverse=True)
-    return found[:FOOTPRINT_MAX]
+    return found[:limit]

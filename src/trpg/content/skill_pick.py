@@ -259,6 +259,31 @@ class WishTags(ContentModel):
         return not any(self.group(g) for g in WISH_TAG_GROUPS)
 
 
+class PickBudgetSeconds(ContentModel):
+    """挑選模式等本機模型的時間預算（秒；HC-7 b 從 ``trpg.llm`` 的常數搬來）：超過就不再送下一格，
+    沒挑到的格子用分數第一名（許願用內容版）。"""
+
+    flash: float = Field(gt=0)
+    """閃現挑選（PK-3，``trpg.llm.flash_pick``）。"""
+    offer: float = Field(gt=0)
+    """三選一挑選（PK-2，``trpg.llm.pick``）。"""
+    wish: float = Field(gt=0)
+    """許願池挑選（PK-4，``trpg.llm.wish_pick``）。"""
+
+
+class PregenRules(ContentModel):
+    """大世界的預先生成（6L-2；HC-7 b 從 ``trpg.api.world_pregen`` 的常數搬來）。"""
+
+    wait_seconds: float = Field(gt=0)
+    """沒趕上時最多等多久（秒，使用者決定）；超過改給組合器、模板或內容版。"""
+    story_wait_seconds: float = Field(gt=0)
+    """劇情技能（破霧）沒趕上時最多靜默等多久（6L-2b，玩法 PM 照 #132）。"""
+    flash_limit: int = Field(ge=1)
+    """每個角色一次最多預先生成幾招的閃現。"""
+    story_limit: int = Field(ge=1)
+    """每個角色最多幾份劇情技能（同一步完成前後的等級各一份）。"""
+
+
 class SkillPickRules(ContentModel):
     """``content/skill_pick.yaml``。"""
 
@@ -278,3 +303,7 @@ class SkillPickRules(ContentModel):
     weights: PickWeights
     wish_tags: WishTagRules
     """PK-4 願望標籤的固定清單（07 7.6「許願池：願望驅動」第 1 點）。"""
+    budget_seconds: PickBudgetSeconds
+    """挑選模式等本機模型的時間預算（HC-7 b）。"""
+    pregen: PregenRules
+    """大世界預先生成的等待秒數與每人上限（HC-7 b）。"""

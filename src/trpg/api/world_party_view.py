@@ -68,7 +68,6 @@ __all__ = [
 SOLO_ZH = "獨行"
 COMPANION_NOTE_ZH = "劇情夥伴：任務結束後離隊"
 DEFAULT_AI_ZH = "預設"
-REPORTS_SHOWN = 20
 
 
 def _title(merc: MercenaryDef) -> str:
@@ -371,6 +370,15 @@ def report_line(
     return f"第 {day} 天：你的影子{what}{coins}"
 
 
+def _reports_kept(library: ContentLibrary) -> int:
+    """戰報顯示幾則：照留存的則數（``world/mercenaries.yaml`` 的 ``shadow_reports_kept``；HC-7 b
+    原本另寫 20，值相同）。"""
+    table = library.world_mercenaries
+    if table is None:
+        raise ValueError("沒有傭兵表（world/mercenaries.yaml），不能列影子戰報")
+    return table.shadow_reports_kept
+
+
 def my_shadow_view(
     library: ContentLibrary, world: WorldState, char: CharacterState, *, in_battle: bool
 ) -> MyShadowView:
@@ -393,7 +401,7 @@ def my_shadow_view(
         ai_zh=ai_zh,
         can_set_ai=can_set,
         coins=record.coins,
-        reports_zh=reports[:REPORTS_SHOWN],
+        reports_zh=reports[: _reports_kept(library)],
     )
 
 

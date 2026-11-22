@@ -3765,11 +3765,8 @@ export interface components {
             dev_pack?: string | null;
             /** Ally Builds */
             ally_builds?: string[] | null;
-            /**
-             * Max Rounds
-             * @default 30
-             */
-            max_rounds: number;
+            /** Max Rounds */
+            max_rounds?: number | null;
             /**
              * Custom Skills
              * @default []
@@ -5522,110 +5519,47 @@ export interface components {
             start_keywords: number;
             /** Complete Budget Permille */
             complete_budget_permille: number;
-            /**
-             * Roguelite Battles
-             * @default 5
-             */
+            /** Roguelite Battles */
             roguelite_battles: number;
-            /**
-             * Roguelite Companions
-             * @default 2
-             */
+            /** Roguelite Companions */
             roguelite_companions: number;
-            /**
-             * Campfire Source
-             * @default 1
-             */
+            /** Campfire Source */
             campfire_source: number;
-            /**
-             * Budget Min Ratio Permille
-             * @default 700
-             */
+            /** Budget Min Ratio Permille */
             budget_min_ratio_permille: number;
-            /**
-             * Budget Max Ratio Permille
-             * @default 1000
-             */
+            /** Budget Max Ratio Permille */
             budget_max_ratio_permille: number;
-            /**
-             * Contagion Radius
-             * @default 1
-             */
+            /** Contagion Radius */
             contagion_radius: number;
-            /**
-             * Major Flash
-             * @default 3
-             */
+            /** Major Flash */
             major_flash: number;
-            /**
-             * Complete Flashes
-             * @default 3
-             */
+            /** Complete Flashes */
             complete_flashes: number;
-            /**
-             * Flash Max Carry
-             * @default 2
-             */
+            /** Flash Max Carry */
             flash_max_carry: number;
-            /**
-             * Flash Open Cost
-             * @default 1
-             */
+            /** Flash Open Cost */
             flash_open_cost: number;
-            /**
-             * Flash Open Options
-             * @default 4
-             */
+            /** Flash Open Options */
             flash_open_options: number;
-            /**
-             * Flash Open Min Categories
-             * @default 2
-             */
+            /** Flash Open Min Categories */
             flash_open_min_categories: number;
-            /**
-             * Pregen Wait Seconds
-             * @default 10
-             */
+            /** Pregen Wait Seconds */
             pregen_wait_seconds: number;
-            /**
-             * Wish Cards
-             * @default 3
-             */
+            /** Wish Cards */
             wish_cards: number;
-            /**
-             * Thread Limit
-             * @default 5
-             */
+            /** Thread Limit */
             thread_limit: number;
-            /**
-             * Thread Expire Seconds
-             * @default 259200
-             */
+            /** Thread Expire Seconds */
             thread_expire_seconds: number;
-            /**
-             * Opening End Level
-             * @default 4
-             */
+            /** Opening End Level */
             opening_end_level: number;
-            /**
-             * League Signup Close Day
-             * @default 13
-             */
+            /** League Signup Close Day */
             league_signup_close_day: number;
-            /**
-             * Min Moves Mob
-             * @default 2
-             */
+            /** Min Moves Mob */
             min_moves_mob: number;
-            /**
-             * Min Moves Elite
-             * @default 3
-             */
+            /** Min Moves Elite */
             min_moves_elite: number;
-            /**
-             * Min Moves Boss Phase
-             * @default 3
-             */
+            /** Min Moves Boss Phase */
             min_moves_boss_phase: number;
         };
         /**
@@ -7394,10 +7328,7 @@ export interface components {
             notes: components["schemas"]["NoteView"][];
             /** Footprints */
             footprints: components["schemas"]["FootprintView"][];
-            /**
-             * Max Len
-             * @default 50
-             */
+            /** Max Len */
             max_len: number;
             /**
              * Admin
@@ -8503,10 +8434,7 @@ export interface components {
             season_boss_ok: boolean;
             /** Season Boss Zh */
             season_boss_zh?: string | null;
-            /**
-             * Free Slots
-             * @default 2
-             */
+            /** Free Slots */
             free_slots: number;
             /** Companion Zh */
             companion_zh?: string | null;
@@ -12206,15 +12134,9 @@ export interface components {
             seconds_per_battle: number;
             /** Maps */
             maps?: components["schemas"]["TuningSimMap"][];
-            /**
-             * Map Default Seeds
-             * @default 24
-             */
+            /** Map Default Seeds */
             map_default_seeds: number;
-            /**
-             * Map Seconds Per Battle
-             * @default 0.8
-             */
+            /** Map Seconds Per Battle */
             map_seconds_per_battle: number;
             /** Ratio Default Seeds */
             ratio_default_seeds: number;
@@ -12224,15 +12146,9 @@ export interface components {
             max_maps: number;
             /** Small Sample */
             small_sample: number;
-            /**
-             * Ratio Max Work
-             * @default 40000
-             */
+            /** Ratio Max Work */
             ratio_max_work: number;
-            /**
-             * Ratio Battles Per Second
-             * @default 450
-             */
+            /** Ratio Battles Per Second */
             ratio_battles_per_second: number;
         };
         /** TuningSimPhase */
@@ -12431,10 +12347,7 @@ export interface components {
             sim_running?: string | null;
             /** Max Group */
             max_group: number;
-            /**
-             * Draft Name Max
-             * @default 40
-             */
+            /** Draft Name Max */
             draft_name_max: number;
         };
         /**

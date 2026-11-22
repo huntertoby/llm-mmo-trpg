@@ -14,7 +14,6 @@ from trpg.api.llm_source import MockLlmProvider
 from trpg.api.sessions import SessionStore
 from trpg.api.world import WorldStore
 from trpg.api.world_pregen import (
-    FLASH_LIMIT,
     Generators,
     WorldPregen,
     predicted_requests,
@@ -165,11 +164,11 @@ def test_model_off_does_nothing(library: ContentLibrary) -> None:
 
 
 def test_single_queue_and_limits(library: ContentLibrary) -> None:
-    """同一時間只有一個 LLM 請求；閃現每個角色最多預先生成 FLASH_LIMIT 招。"""
+    """同一時間只有一個 LLM 請求；閃現每個角色最多預先生成 ``pregen.flash_limit`` 招。"""
     char = _town_char(library)
     requests = predicted_requests(library, make_world(), char)
     flashes = [r for r in requests if r.kind == "flash"]
-    assert 1 <= len(flashes) <= FLASH_LIMIT
+    assert 1 <= len(flashes) <= library.skill_pick.pregen.flash_limit
     rec = Recorder()
     pregen = WorldPregen(rec.generators(), enabled=lambda: True)
     try:

@@ -23,7 +23,7 @@ from typing import Any, Final, Literal
 from pydantic import ValidationError
 
 from trpg.api.tuning.check import Prepared, convert
-from trpg.api.tuning.objects import concrete_fields, read_data
+from trpg.api.tuning.objects import concrete_fields, read_data, skill_ranged
 from trpg.api.tuning.schemas import (
     TuningBudgetFlag,
     TuningBudgetResult,
@@ -325,9 +325,7 @@ def _matches(skill: SkillDef, f: TuningGroupFilter) -> bool:
     has_condition = skill.condition is not None or any(e.condition for e in skill.effects)
     if f.has_condition is not None and has_condition != f.has_condition:
         return False
-    shape_range = skill.shape.range
-    ranged = skill.weapon_req == "ranged" or (isinstance(shape_range, int) and shape_range >= 2)  # noqa: PLR2004
-    if f.ranged is not None and ranged != f.ranged:
+    if f.ranged is not None and skill_ranged(skill) != f.ranged:
         return False
     return f.single_damage is None or _has_damage_single(skill) == f.single_damage
 
@@ -365,12 +363,18 @@ def _round_div(num: int, den: int) -> int:
     return sign * ((abs(num) * 2 + den) // (den * 2))
 
 
-_SCALAR_LIMITS: Final[dict[str, tuple[int | None, int | None]]] = {
-    "ap_cost": (1, 3),
-    "cost.stamina": (0, None),
-    "cost.mana": (0, None),
-    "cost.cooldown": (1, 6),
-}
+def _scalar_limits(library: ContentLibrary) -> dict[str, tuple[int | None, int | None]]:
+    """分組改的純量欄位範圍：AP、冷卻上限照 ``rules/core.yaml`` 的 ``skill_limits``（HC-7 b：
+    原本寫死 3、6，只留內容一份）。"""
+    limits = library.ruleset.core.skill_limits
+    return {
+        "ap_cost": (1, limits.max_ap_cost),
+        "cost.stamina": (0, None),
+        "cost.mana": (0, None),
+        "cost.cooldown": (1, limits.max_cooldown),
+    }
+
+
 _BORROW_AP_LIMITS: Final = (0, 0)
 """帶預支（``borrow_ap``，AP-2）的技能的 ``ap_cost``：只能是 0（``SkillDef`` 的硬規則；QF-1）。"""
 _ZERO_DEFAULT: Final = frozenset({"cost.stamina", "cost.mana"})
@@ -472,6 +476,7 @@ def _scalar_edit(
     data: Any,
     target: TuningTarget,
     request: TuningGroupIn,
+    library: ContentLibrary,
     limits: Callable[[str], tuple[int | None, int | None]],
 ) -> tuple[list[_Edit], str | None]:
     path = request.target
@@ -489,7 +494,8 @@ def _scalar_edit(
         return [], "這招沒有寫這個值（例如沒有冷卻），只能用「設定」"
     raw = _apply_int(int(base or 0), request.op.kind, request.op.value)
     borrow = path == "ap_cost" and _borrows_ap(data)
-    low, high = _BORROW_AP_LIMITS if borrow else (_SCALAR_LIMITS.get(path) or limits(path))
+    fixed = _scalar_limits(library).get(path)
+    low, high = _BORROW_AP_LIMITS if borrow else (fixed or limits(path))
     new = None if raw is None else _clamp(raw, low, high)
     if new is None or new == current or (current is None and new == base):
         return [], _BORROW_SAME_ZH if borrow else _SAME_ZH
@@ -563,7 +569,7 @@ def group_preview(
         if request.target.startswith("damage_"):
             edits, reason = _damage_edits(data, target, request, library, bound)
         else:
-            edits, reason = _scalar_edit(data, target, request, bound)
+            edits, reason = _scalar_edit(data, target, request, library, bound)
         if not edits:
             rows.append(
                 TuningGroupRow(

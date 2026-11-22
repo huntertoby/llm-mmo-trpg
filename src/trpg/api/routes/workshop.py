@@ -139,6 +139,9 @@ def post_check(body: WorkshopCheckRequest, request: Request) -> WorkshopCheck:
 def post_random(body: WorkshopRandomRequest, request: Request) -> WorkshopRandom:
     """以隨機組合器產生一個技能（同種子同參數結果一致）；組不出來時 422。"""
     library = store_of(request).library
+    tiers = library.ruleset.core.skill_limits.tiers
+    if body.tier is not None and body.tier > tiers:
+        raise HTTPException(status_code=422, detail=f"技能階級只有 1～{tiers}（這次 {body.tier}）")
     skill = compose_random_skill(
         body.seed, tier=body.tier, rarity=body.rarity, skeleton=body.skeleton, library=library
     )

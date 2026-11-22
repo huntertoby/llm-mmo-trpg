@@ -16,7 +16,6 @@ from trpg.api.schemas import (
     WeaponLookEntry,
     WeaponRangeEntry,
 )
-from trpg.api.world_pregen import WAIT_SECONDS
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.narrative.action_info import action_texts, objective_texts
@@ -198,29 +197,40 @@ def _game_rules(library: ContentLibrary) -> GameRulesOut:
         flash_open_cost=flash.pricing.open.cost,
         flash_open_options=flash.pricing.open.options,
         flash_open_min_categories=flash.pricing.open.min_categories,
-        pregen_wait_seconds=round(WAIT_SECONDS),
+        pregen_wait_seconds=round(library.skill_pick.pregen.wait_seconds),
         wish_cards=library.skill_pick.pool.wish_cards,
         opening_end_level=opening_end_level(library),
+        **_world_text_rules(library),
     )
-    return rules.model_copy(update=_world_text_rules(library))
+    return rules
 
 
 def _world_text_rules(library: ContentLibrary) -> dict[str, int]:
-    """線頭、循環賽、#149 招數下限的規則數字（HC-6b）；沒有這些資料檔的精簡內容庫照欄位預設值。"""
-    update: dict[str, int] = {}
+    """線頭、循環賽、#149 招數下限的規則數字（HC-6b）。HC-7 b 起欄位必填：缺這些資料檔時報錯
+    （原本照欄位預設值）。"""
     events = library.world_event_content.rules
-    if events is not None:
-        update["thread_limit"] = events.threads.personal_limit
-        update["thread_expire_seconds"] = events.threads.expire_seconds
     league = league_rules(library)
-    if league is not None:
-        update["league_signup_close_day"] = league.signup_close_day
-    if library.world_enemies is not None:
-        floor = library.world_enemies.min_moves
-        update["min_moves_mob"] = floor.mob
-        update["min_moves_elite"] = floor.elite
-        update["min_moves_boss_phase"] = floor.boss_phase
-    return update
+    enemies = library.world_enemies
+    if events is None or league is None or enemies is None:
+        missing = [
+            name
+            for name, found in (
+                ("world/event_rules.yaml", events),
+                ("world/season.yaml 的 league", league),
+                ("world/enemies.yaml", enemies),
+            )
+            if found is None
+        ]
+        raise ValueError(f"名詞對照表要的規則數字缺資料：{'、'.join(missing)}")
+    floor = enemies.min_moves
+    return {
+        "thread_limit": events.threads.personal_limit,
+        "thread_expire_seconds": events.threads.expire_seconds,
+        "league_signup_close_day": league.signup_close_day,
+        "min_moves_mob": floor.mob,
+        "min_moves_elite": floor.elite,
+        "min_moves_boss_phase": floor.boss_phase,
+    }
 
 
 def _triggers(library: ContentLibrary) -> tuple[GlossaryEntry, ...]:

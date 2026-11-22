@@ -736,29 +736,10 @@ rules:
   # 不是量類（不列）：ge=1 的正數護欄（HP、法力、屬性下限）、max(1, …) 的「活著／最大 HP 至少 1」（X10-2b 已裁定不改）、
   #   SkillDef.stance_upkeep 與 _STANCE_UPKEEPS（維持費的「點數」，每點數量在 forms.yaml）、熟練、層數、格數、等級 − 1。
 
-  # ---------------------------------------------------- 後端 api：config
-  # 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
-  - id: py-api-attribute-text-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/attribute_text.py
-    kind: number
-    where: ['<module>._EARLY_TIER']
-    note: 保守：API 層寫死的玩法或工坊數字（工坊預設種子、上下限、預生成上限、顯示的規則數字）。
-  - id: py-api-flash-changes-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/flash_changes.py
-    kind: number
-    where: ['<module>._SHIELD_DEFAULT_DURATION']
-    note: 同上一條（api config）。
-  - id: py-api-gear-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/gear_schemas.py
-    kind: number
-    where: ['GearCustomItem']
-    note: 同上一條（api config）。
+  # ---------------------------------------------------- 後端 api：config（HC-7 b 搬完；剩下的改判）
+  # HC-7 b：規則數字搬進 content（roguelite.yaml route_hint_tier、skill_pick.yaml 的 budget_seconds／pregen、
+  # world/rules.yaml 的 display／notes、workshop.yaml max_rounds、core.skill_limits），回應的預設值改必填。
+  # 剩下的是數值工坊的工具設定（只留 api/tuning/schemas.py、drafts.py 一份）、請求格式護欄與結構常數。
   - id: py-api-llm-source-config-number
     class: config
     status: todo
@@ -766,157 +747,69 @@ rules:
     kind: number
     where: ['<module>.DEFAULT_ALERT_PERMILLE', '<module>.DEFAULT_PROBE_TIMEOUT_S']
     note: 同上一條（api config）。
-  - id: py-api-text-rules-defaults
+  - id: py-api-tuning-tool-settings
     class: config
-    status: todo
-    files: [src/trpg/api/schemas.py, src/trpg/api/tuning/schemas.py, src/trpg/api/tuning/drafts.py]
-    kind: number
-    where: ['GameRulesOut', 'TuningStatus', '<module>.DRAFT_NAME_MAX']
-    note: 保守：HC-6b 給說明文字組字的新欄位（GameRulesOut 的一輪場數、預算區間、閃現、線頭、#149 下限等，TuningStatus 的草稿名字數）的預設值，只給舊回應相容用，伺服器一律由內容庫或常數填；值和內容檔相同。DRAFT_NAME_MAX 是草稿名稱上限（工坊設定）。PM 可把預設值改判 const。
-  - id: py-api-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/schemas.py
-    kind: number
-    where: ['CreateBattleRequest']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-objects-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/objects.py
+    status: done
+    files: [src/trpg/api/tuning/schemas.py, src/trpg/api/tuning/drafts.py, src/trpg/api/tuning/skills.py]
     kind: number
     where:
-      - '_part_label'
-      - '_part_limits'
-      - '_part_skipped'
-      - '_schema_limits'
-      - '_sk5_limits'
-      - 'field_limits'
-      - 'skill_facets'
-    note: 同上一條（api config）。
-  - id: py-api-tuning-ratios-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/ratios.py
-    kind: number
-    where: ['<module>.DEFAULT_SEEDS', '<module>.MAX_WORK']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/schemas.py
-    kind: number
-    where:
-      - '<module>.MAX_RATIO_SEEDS'
       - '<module>.SMALL_SAMPLE'
+      - '<module>.MAX_RATIO_SEEDS'
+      - '<module>.SIM_DEFAULT_SEEDS'
+      - '<module>.MAP_DEFAULT_SEEDS'
+      - '<module>.MAX_SIM_MAPS'
+      - '<module>.MAX_SIM_BATTLES'
+      - '<module>.RATIO_DEFAULT_SEEDS'
+      - '<module>.RATIO_MAX_WORK'
+      - '<module>.DRAFT_NAME_MAX'
+      - '<module>.MAX_GROUP'
+    note: HC-7 b（規格 b.1「工坊的上下限對齊 api/tuning/schemas.py，只留一份」）：數值工坊這個開發工具自己的設定（預設種子、模擬場數與工作量上限、樣本小門檻、草稿名字數、分組改上限）。只留這一份，請求與回應的預設值、service、ratios、sim_jobs 都讀它；回應欄位的預設值改必填。不是遊戲規則，不進 content。
+  - id: py-api-request-format-guards
+    class: guard
+    status: done
+    files:
+      - src/trpg/api/gear_schemas.py
+      - src/trpg/api/schemas.py
+      - src/trpg/api/tuning/schemas.py
+      - src/trpg/api/world_range_schemas.py
+    kind: number
+    slot: 'Field(*)'
+    where:
+      - 'GearCustomItem'
+      - 'CreateBattleRequest'
       - 'TuningApplyIn'
       - 'TuningBudgetIn'
       - 'TuningDraftIn'
       - 'TuningRatioPlanIn'
-      - 'TuningSimOptions'
       - 'TuningSimRequest'
-    note: 同上一條（api config）。
-  - id: py-api-tuning-service-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/service.py
-    kind: number
-    where: ['<module>.DEFAULT_MAP_SEEDS', '<module>.DEFAULT_SIM_SEEDS', '<module>.MAX_SIM_MAPS']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-sim-jobs-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/sim_jobs.py
-    kind: number
-    where: ['<module>.MAX_BATTLES']
-    note: 同上一條（api config）。
-  - id: py-api-tuning-skills-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/tuning/skills.py
-    kind: number
-    where:
-      - '<module>.GROUP_PRESETS'
-      - '<module>._ARROWS'
-      - '<module>._CONDITIONAL'
-      - '<module>._MELEE_T1'
-      - '<module>._RANGED_T1'
-      - '<module>.MAX_GROUP'
-      - '<module>._SCALAR_LIMITS'
-      - '_matches'
-      - '_round_div'
-      - 'permille'
-    note: 同上一條（api config）。
-  - id: py-api-workshop-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/workshop_schemas.py
-    kind: number
-    where: ['WorkshopRandomRequest']
-    note: 同上一條（api config）。
-  - id: py-api-world-field-people-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_field_people.py
-    kind: number
-    where: ['<module>.TOWN_FRIENDS_MAX']
-    note: 同上一條（api config）。
-  - id: py-api-world-field-things-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_field_things.py
-    kind: number
-    where: ['<module>.FOOTPRINT_FRIENDS_MAX', '<module>.PRINTS_MAX']
-    note: 同上一條（api config）。
-  - id: py-api-world-newcomer-view-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_newcomer_view.py
-    kind: number
-    where: ['_allocate_lesson']
-    note: 同上一條（api config）。
-  - id: py-api-world-party-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_party_schemas.py
-    kind: number
-    where: ['PartyView']
-    note: 同上一條（api config）。
-  - id: py-api-world-party-view-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_party_view.py
-    kind: number
-    where: ['<module>.REPORTS_SHOWN']
-    note: 同上一條（api config）。
-  - id: py-api-world-pregen-config-number
-    class: config
-    status: todo
+      - 'RangeTrialRequest'
+    note: HC-7 b：請求的格式上限（擋過大的請求）。真正的規則上限在內容，由規則檢查：手動組物品的詞條 8 ＝ EquipmentRules.max_affixes_per_item 的 le（規則值 4）；單場戰鬥輪數 200 ＝ WorkshopRules.max_rounds 的 le；靶場看示範關鍵字 4（同開局選關鍵字的請求，規則是 newcomer.yaml range.trial_keywords_max 2；原本寫死 2，規則調高時請求會先被擋）；工坊請求的清單長度。
+  - id: py-api-world-pregen-queue-guard
+    class: guard
+    status: done
     files: src/trpg/api/world_pregen.py
     kind: number
+    where: ['<module>.QUEUE_LIMIT']
+    note: HC-7 b：全服預先生成暫存區的記憶體護欄（超過丟掉最舊、還沒開始的）；不影響規則與結果（暫存區只是加速，沒趕上就照常給組合器、模板或內容版）。
+  - id: py-api-structure-const-number
+    class: const
+    status: done
+    files:
+      - src/trpg/api/world_pregen.py
+      - src/trpg/api/tuning/objects.py
+      - src/trpg/api/tuning/skills.py
+      - src/trpg/api/world_newcomer_view.py
+    kind: number
     where:
-      - '<module>.FLASH_LIMIT'
-      - '<module>.QUEUE_LIMIT'
-      - '<module>.STORY_LIMIT'
-      - '<module>.STORY_WAIT_SECONDS'
-      - '<module>.WAIT_SECONDS'
       - '<module>._POLL_SECONDS'
-    note: 同上一條（api config）。
-  - id: py-api-world-range-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_range_schemas.py
-    kind: number
-    where: ['RangeTrialRequest']
-    note: 同上一條（api config）。
-  - id: py-api-world-story-schemas-config-number
-    class: config
-    status: todo
-    files: src/trpg/api/world_story_schemas.py
-    kind: number
-    where: ['<module>.CARE_CITE_MAX']
-    note: 同上一條（api config）。
-
+      - '_part_label'
+      - '_part_skipped'
+      - 'field_limits'
+      - '<module>._CONDITIONAL'
+      - '_round_div'
+      - 'permille'
+      - '_allocate_lesson'
+    note: HC-7 b 改判 const：_POLL_SECONDS 是等待時看背景結果的輪詢間隔（程式細節，不影響結果）；工坊欄位路徑的段數（parts[2]、parts[3] 是 on_break 的位置）是路徑格式；_CONDITIONAL 的 AP 2 是工坊「2 AP 條件型」這個常用預設組本身（規格 5.4 的選單，標籤照它組字）；四捨五入的 ×2 是整數運算；2 級＝第一次升級（角色從 1 級開始）。
   # ---------------------------------------------------- 後端 content：上下限重新歸類（HC-4a 第 1 項）
   # HC-1 開發 PM 裁定 2：純驗證用的上下限＝guard（留在 schema，done）；上下限本身就是遊戲規則的＝config；
   # 內容沒寫、靠預設值生效的預設值＝config（留在下面各檔的 py-content-*-config-number）。
@@ -1228,13 +1121,6 @@ rules:
     kind: number
     where: ['<module>.MIN_ENTRIES']
     note: 保守：社群功能（留言板、腳印、循環賽人數）的上限。
-  - id: py-server-notes-config-number
-    class: config
-    status: todo
-    files: src/trpg/server/notes.py
-    kind: number
-    where: ['<module>.BOARD_NOTES', '<module>.FOOTPRINT_MAX', '<module>.NOTE_MAX_LEN']
-    note: 同上一條（server config）。
 
   # ---------------------------------------------------- 後端 skillgen：HC-5b 判成結構常數
   - id: py-skillgen-grade-codes-hc5b

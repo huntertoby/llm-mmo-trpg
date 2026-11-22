@@ -33,8 +33,6 @@ from tests.world.helpers import NOON, hero, make_world
 from trpg.api.llm_source import MockLlmProvider
 from trpg.api.world_pregen import (
     OPPORTUNITY_LLM_CARDS,
-    STORY_WAIT_SECONDS,
-    WAIT_SECONDS,
     WorldPregen,
     flash_wait_request,
     opportunity_wait_request,
@@ -172,7 +170,9 @@ def test_story_skill_predicted_from_first_step(library: ContentLibrary) -> None:
 
 def test_story_wait_is_two_seconds(library: ContentLibrary) -> None:
     """完成那一步的動作沒有等待提示：沒趕上最多靜默等 2 秒（假時鐘），之後給內容版（``None``）。"""
-    assert STORY_WAIT_SECONDS == 2.0 < WAIT_SECONDS
+    rules = library.skill_pick.pregen
+    story_wait = rules.story_wait_seconds
+    assert story_wait == 2.0 < rules.wait_seconds
     gate = threading.Event()
     rec = Recorder(gate)
     clock = FakeClock(step=0.25)
@@ -185,7 +185,7 @@ def test_story_wait_is_two_seconds(library: ContentLibrary) -> None:
         start = clock.now
         assert pregen.supplier(library)(story) is None
         waited = clock.now - start
-        assert STORY_WAIT_SECONDS <= waited < STORY_WAIT_SECONDS + 1
+        assert story_wait <= waited < story_wait + 1
     finally:
         gate.set()
         pregen.shutdown()
