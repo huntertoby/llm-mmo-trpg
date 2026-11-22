@@ -292,14 +292,23 @@ def test_ai_slide_risk_sees_trail_ice_for_others_only() -> None:
 
 
 def _frost_setup() -> BattleSetup:
+    """英雄穿三種新地形規則（霜行、攀岩、表面傷害免疫）。"""
     lib = library()
     setup = build_setup(lib, "open_plain", ["hero_fighter"], ["bandit", "bandit"])
     hero = setup.units[0]
-    hero = hero.model_copy(update={"equipment": loadout({"feet": [FROST]})})
+    climb = terrain("affix_t_climb", "上 1 層不多花移動", rule="flat_climb", amount=1)
+    proof = terrain(
+        "affix_t_poison_proof",
+        "毒表面不會傷害你",
+        rule="surface_damage_immunity",
+        surfaces=["poison"],
+    )
+    gear = loadout({"feet": [FROST], "body": [climb], "head": [proof]})
+    hero = hero.model_copy(update={"equipment": gear})
     return setup.model_copy(update={"units": (hero, *setup.units[1:])})
 
 
-def test_battle_with_frost_walk_replays_identically() -> None:
+def test_battle_with_the_new_terrain_rules_replays_identically() -> None:
     setup = _frost_setup()
     first = run_battle(setup, 3)
     assert any(isinstance(e, SurfaceChanged) and e.cause == "trail" for e in first.events)
