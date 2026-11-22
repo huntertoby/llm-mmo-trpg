@@ -2,8 +2,16 @@
 
 通常用法（Windows、macOS、Linux 皆同）::
 
-    uv run python scripts/check.py          # 快速版（不跑標 slow 的測試、前端抽樣）
-    uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1）
+    uv run python scripts/check.py          # 快速版，依改動路徑分流（TS-1，見下）
+    uv run python scripts/check.py --all    # 快速版，不分流、全部步驟都跑
+    uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1），不分流
+
+分流（TS-1）：比對 ``origin/main``（``TRPG_CHECK_BASE`` 可改）的 merge-base 到工作區的改動。
+只動 ``client/`` 時只跑前端的 install、typecheck、test、build，加上會讀 ``client/`` 檔案的 pytest；
+只動 ``src/``、``tests/``、``scripts/`` 時略過前端三步；動到 ``content/``、``config/``、
+API schema（``client/openapi.json``、``client/src/api/schema.d.ts``）、``pyproject.toml``、
+``uv.lock``、``package.json``、lockfile、本腳本，或判斷不出來時全跑。``*.md`` 不影響分流。
+一開頭印一行說明這次跑哪些、略過哪些、為什麼。規則細節見 ``docs/dev/上手-測試.md``。
 
 pytest 平行數預設 12（QF-3a 從 8 調高），可用環境變數 ``TRPG_PYTEST_WORKERS`` 覆寫
 （數字或 ``auto``）。
@@ -35,6 +43,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -47,6 +56,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WATCHDOG_SCRIPT = "scripts/run_pytest.py"
 
 
+AREA_BACKEND = "backend"
+AREA_CLIENT = "client"
+
+
 @dataclass(frozen=True)
 class Step:
     title: str
@@ -56,6 +69,7 @@ class Step:
     optional: bool = False
     script: str | None = None  # 用 ``sys.executable <PROJECT_ROOT/script>`` 執行的腳本
     warn_only: bool = False  # 非零時只算「警告」，不影響結束碼
+    area: str = AREA_BACKEND  # TS-1 分流：這一步屬於後端還是前端
 
 
 def pytest_workers() -> str:
@@ -68,7 +82,7 @@ def pytest_workers() -> str:
 
 def _client_step(title: str, *args: str) -> Step:
     """``pnpm -C client <args>``；找不到 pnpm（corepack／pnpm／npx 皆無）時略過（不算失敗）。"""
-    return Step(title, None, "pnpm", ("-C", "client", *args), optional=True)
+    return Step(title, None, "pnpm", ("-C", "client", *args), optional=True, area=AREA_CLIENT)
 
 
 STEPS: tuple[Step, ...] = (
@@ -92,6 +106,165 @@ STEPS: tuple[Step, ...] = (
         warn_only=True,
     ),
 )
+
+# --- TS-1：依改動路徑分流 ----------------------------------------------------------------
+
+SCOPE_ALL = "all"  # 全跑（等於 TS-1 以前不加參數的行為）
+SCOPE_BACKEND = "backend"  # 只跑後端：略過前端的 install／typecheck／test
+SCOPE_CLIENT = "client"  # 只跑前端：install／typecheck／test／build，加上讀 client/ 的 pytest
+
+BASE_REF = "origin/main"
+BASE_ENV = "TRPG_CHECK_BASE"  # 改比對基準（例如驗收時用 HEAD）；預設 origin/main
+CLIENT_BUILD = _client_step("client build", "build")  # 只在「只跑前端」時加（全跑時 hook 另跑建置）
+CLIENT_PYTEST_TITLE = "pytest（讀 client/ 的測試）"
+
+# 動到就全跑的檔案與資料夾（TS-1 規格第 1 項）。
+ALL_DIRS = ("content/", "config/")
+ALL_FILES = frozenset(
+    {
+        "pyproject.toml",
+        "uv.lock",
+        ".python-version",
+        "scripts/check.py",
+        "client/openapi.json",  # API schema：後端 OpenAPI 的快照
+        "client/src/api/schema.d.ts",  # API schema：由 openapi.json 產生的前端型別
+    }
+)
+ALL_BASENAMES = frozenset(
+    {"package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "package-lock.json", "yarn.lock"}
+)
+BACKEND_DIRS = ("src/", "tests/", "scripts/")
+CLIENT_DIR = "client/"
+
+
+@dataclass(frozen=True)
+class Plan:
+    """這次要跑的範圍。``base`` 是比對的基準（merge-base 的 commit；判斷不出來時 None）。"""
+
+    scope: str
+    reason: str
+    base: str | None = None
+    changed: int = 0
+
+
+def _path_area(path: str) -> str | None:
+    """改動的檔案屬於哪一區（``all``／``backend``／``client``）；``None``＝不影響（``*.md``）。"""
+    if path.startswith(ALL_DIRS) or path in ALL_FILES or path.rsplit("/", 1)[-1] in ALL_BASENAMES:
+        return SCOPE_ALL
+    if path.endswith(".md"):
+        return None
+    if path.startswith(CLIENT_DIR):
+        return SCOPE_CLIENT
+    if path.startswith(BACKEND_DIRS):
+        return SCOPE_BACKEND
+    return SCOPE_ALL  # 不認得的位置（docs/ 的圖檔、.claude/、.github/ 等）：判斷不出來就全跑
+
+
+def base_ref() -> str:
+    """比對基準：環境變數 ``TRPG_CHECK_BASE``，沒設時 ``origin/main``。"""
+    return os.environ.get(BASE_ENV, "").strip() or BASE_REF
+
+
+def plan_scope(changed: list[str] | None, base: str | None) -> Plan:
+    """依改動清單決定範圍；清單是 None（git 失敗、沒有基準）時全跑。"""
+    if changed is None or base is None:
+        return Plan(SCOPE_ALL, f"找不到 {base_ref()} 或 git 失敗，判斷不出改動範圍")
+    count = len(changed)
+    areas: dict[str, list[str]] = {}
+    for path in sorted(changed):
+        area = _path_area(path)
+        if area is not None:
+            areas.setdefault(area, []).append(path)
+    if SCOPE_ALL in areas:
+        first = areas[SCOPE_ALL][0]
+        more = f" 等 {len(areas[SCOPE_ALL])} 個" if len(areas[SCOPE_ALL]) > 1 else ""
+        return Plan(
+            SCOPE_ALL, f"動到 {first}{more}（內容、設定、相依、API schema 或本腳本）", base, count
+        )
+    if not areas:
+        return Plan(
+            SCOPE_ALL, "沒有程式、測試或資料的改動（只有 .md 或沒有改動），照舊全跑", base, count
+        )
+    if set(areas) == {SCOPE_CLIENT}:
+        reason = "只動 client/（沒動 package.json、lockfile、API schema）"
+        return Plan(SCOPE_CLIENT, reason, base, count)
+    if set(areas) == {SCOPE_BACKEND}:
+        reason = "只動 src/、tests/、scripts/，沒動 client/ 與 API schema 快照"
+        return Plan(SCOPE_BACKEND, reason, base, count)
+    return Plan(SCOPE_ALL, "前端與後端都有改動", base, count)
+
+
+def changed_paths() -> tuple[list[str] | None, str | None]:
+    """相對 :func:`base_ref` 的 merge-base 的改動與基準 commit。
+
+    改動＝已 commit＋還沒 commit＋未追蹤的檔（``--no-renames``：改名的新舊路徑都算）。
+    任何一步 git 失敗時回傳 ``(None, None)``（呼叫端會全跑）。"""
+    base = _git("merge-base", "HEAD", base_ref())
+    if not base:
+        return None, None
+    diff = _git("-c", "core.quotePath=false", "diff", "--name-only", "--no-renames", base)
+    untracked = _git("-c", "core.quotePath=false", "ls-files", "--others", "--exclude-standard")
+    if diff is None or untracked is None:
+        return None, None
+    lines = [*diff.splitlines(), *untracked.splitlines()]
+    return sorted({line.strip() for line in lines if line.strip()}), base
+
+
+_CLIENT_REF = re.compile(r"""["']client[/"']""")
+
+
+def client_reading_tests(root: Path = PROJECT_ROOT) -> list[str]:
+    """會讀 ``client/`` 檔案的 pytest 測試檔（只跑前端時一起跑，免得漏掉前後端對照的測試）。
+
+    - 原始碼裡有 ``"client"`` 或 ``"client/...`` 字串的 ``tests/**/test_*.py``；
+    - 有這種字串的輔助模組（``tests/`` 裡非 ``test_*`` 的檔、``scripts/`` 的腳本），
+      再加上提到它模組名稱的測試檔。寧可多跑。
+    """
+    tests = sorted((root / "tests").glob("**/*.py"))
+    texts = {path: path.read_text(encoding="utf-8", errors="replace") for path in tests}
+    helpers = [p for p in sorted((root / "scripts").glob("**/*.py")) if p.name != "check.py"]
+    helpers += [p for p in tests if not p.name.startswith("test_")]
+    hits = {p for p in tests if p.name.startswith("test_") and _CLIENT_REF.search(texts[p])}
+    for helper in helpers:
+        text = texts.get(helper) or helper.read_text(encoding="utf-8", errors="replace")
+        if not _CLIENT_REF.search(text) or helper.stem == "__init__":
+            continue
+        word = re.compile(rf"\b{re.escape(helper.stem)}\b")
+        hits |= {p for p in tests if p.name.startswith("test_") and word.search(texts[p])}
+    return sorted(p.relative_to(root).as_posix() for p in hits)
+
+
+def steps_for(plan: Plan, client_tests: list[str] | None = None) -> tuple[list[Step], list[Step]]:
+    """依範圍挑步驟，回傳（要跑的、略過的）。"""
+    if plan.scope == SCOPE_ALL:
+        return list(STEPS), []
+    if plan.scope == SCOPE_BACKEND:
+        run = [s for s in STEPS if s.area == AREA_BACKEND]
+        return run, [s for s in STEPS if s.area != AREA_BACKEND]
+    run = [s for s in STEPS if s.area == AREA_CLIENT] + [CLIENT_BUILD]
+    skipped = [s for s in STEPS if s.area != AREA_CLIENT]
+    files = client_reading_tests() if client_tests is None else client_tests
+    if files:
+        pytest_step = next(s for s in STEPS if s.title == "pytest")
+        run.append(
+            dataclasses.replace(
+                pytest_step, title=CLIENT_PYTEST_TITLE, args=(*pytest_step.args, *files)
+            )
+        )
+    return run, skipped
+
+
+def describe(plan: Plan, run: list[Step], skipped: list[Step]) -> str:
+    """一開頭印的那一行：跑哪些、略過哪些、為什麼。"""
+    label = {SCOPE_ALL: "全跑", SCOPE_BACKEND: "只跑後端", SCOPE_CLIENT: "只跑前端"}[plan.scope]
+    base = (
+        f"基準 {plan.base[:10]}（{base_ref()} 的 merge-base），改動 {plan.changed} 個檔"
+        if plan.base
+        else "沒有基準"
+    )
+    ran = "、".join(s.title for s in run)
+    left = "、".join(s.title for s in skipped) or "無"
+    return f"分流：{label}（{base}）。原因：{plan.reason}。跑：{ran}。略過：{left}。"
 
 
 def _use_color() -> bool:
@@ -160,7 +333,7 @@ def clean_stale_pyc() -> int:
 def run_step(step: Step) -> str:
     """執行一個步驟，回傳 ``"通過"``、``"失敗"``、``"警告"``（``warn_only``）或 ``"略過"``。"""
     print(f"\n=== {step.title} ===", flush=True)
-    if step.title == "pytest" and (removed := clean_stale_pyc()):
+    if step.script == WATCHDOG_SCRIPT and (removed := clean_stale_pyc()):
         print(f"已清除 {removed} 個殘留的 .pyc 暫存檔。", flush=True)
     command = find_command(step)
     if command is None:
@@ -209,31 +382,44 @@ def write_pass_stamp() -> Path | None:
     return stamp
 
 
+USAGE = "用法：scripts/check.py [--all | --full]"
+
+
 def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
     args = sys.argv[1:] if argv is None else argv
-    if any(a not in ("--full",) for a in args):
-        print("用法：scripts/check.py [--full]")
+    if any(a not in ("--full", "--all") for a in args):
+        print(USAGE)
         return 2
     full = "--full" in args
     if full:
         # 完整版：包含標 slow 的測試與前端完整組合；後面的 -m "not llm" 覆蓋 addopts 的 -m，
         # 但仍排除需要真模型的 llm 測試。
         os.environ["TRPG_FULL"] = "1"
-    results = [(step.title, run_step(_full_step(step) if full else step)) for step in STEPS]
+    if full or "--all" in args:
+        plan = Plan(SCOPE_ALL, "指定 --full" if full else "指定 --all")
+    else:
+        plan = plan_scope(*changed_paths())
+    run, skipped = steps_for(plan)
+    print(describe(plan, run, skipped), flush=True)
+    results = [(step.title, run_step(_full_step(step) if full else step)) for step in run]
 
     print("\n=== 檢查結果摘要 ===")
     for title, result in results:
         painted = {"通過": green, "失敗": red, "警告": yellow, "略過": yellow}[result](result)
         print(f"  {title:<22} {painted}")
+    for step in skipped:
+        print(f"  {step.title:<22} {yellow('分流略過')}")
 
     failed = [title for title, result in results if result == "失敗"]
     if failed:
         print(red(f"\n失敗：{len(failed)} 個步驟（{'、'.join(failed)}）"))
         return 1
     print(green("\n全部檢查通過。"))
-    if all(result in ("通過", "警告") for _, result in results) and (stamp := write_pass_stamp()):
+    # 分流跑（有步驟略過）先不寫戳記，免得 push hook 把它當成全部通過。
+    full_pass = all(result in ("通過", "警告") for _, result in results)
+    if plan.scope == SCOPE_ALL and full_pass and (stamp := write_pass_stamp()):
         print(f"已寫入通過戳記：{stamp}（push 時同內容不再重跑）")
     return 0
 
