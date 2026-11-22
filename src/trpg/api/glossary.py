@@ -20,7 +20,7 @@ from trpg.api.schemas import (
 from trpg.content.battle import StatusDef
 from trpg.content.library import ContentLibrary
 from trpg.narrative.action_info import action_texts, objective_texts
-from trpg.narrative.status_info import stack_rules, status_rules
+from trpg.narrative.status_info import RULES_ONLY_STATUSES, stack_rules, status_rules
 from trpg.narrative.tile_info import object_rules, surface_rules, terrain_rules
 from trpg.roguelite.flashes import max_carry
 from trpg.shared.range_text import DiceNote
@@ -40,6 +40,7 @@ def _entry(
     rules_zh: tuple[str, ...] = (),
     *,
     status_look: StatusLook | None = None,
+    rules_only: bool | None = None,
 ) -> GlossaryEntry:
     return GlossaryEntry(
         id=id_,
@@ -49,6 +50,7 @@ def _entry(
         rules_zh=rules_zh,
         rules_dice=_rules_dice(rules_zh),
         status_look=status_look,
+        rules_only=rules_only,
     )
 
 
@@ -132,6 +134,7 @@ def build_glossary(library: ContentLibrary) -> Glossary:
                 ("beneficial",) if s.beneficial else (),
                 status_rules(s, library),
                 status_look=_status_look(s),
+                rules_only=True if s.id in RULES_ONLY_STATUSES else None,
             )
             for s in rules.statuses.statuses
         ),

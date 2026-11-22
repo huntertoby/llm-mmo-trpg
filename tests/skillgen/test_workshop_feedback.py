@@ -412,8 +412,9 @@ def test_table_has_the_164_rewritten_entries() -> None:
     # ＋ SK-2b 的淨化個數（原語參數一筆，實作者初稿）
     # ＋ AP-2 的預支（原語一筆，實作者初稿，待玩法 PM 改寫）
     # ＋ AP-2 的「這回合用完所有 AP 時」（觸發一筆，實作者初稿，待玩法 PM 改寫）
-    assert len(TABLE.texts) == 188
-    assert len({e.id for e in TABLE.texts}) == 188
+    # ＋ E4 的「你讓別人位移時」「格擋時」（觸發各一筆，實作者初稿，待玩法 PM 改寫）
+    assert len(TABLE.texts) == 190
+    assert len({e.id for e in TABLE.texts}) == 190
 
 
 def test_every_dev_text_has_a_player_rewrite_and_every_rewrite_is_used() -> None:

@@ -184,10 +184,16 @@ from trpg.content.skills.constants import (
     ON_AP_SPENT_ALL as ON_AP_SPENT_ALL,
 )
 from trpg.content.skills.constants import (
+    ON_BLOCK as ON_BLOCK,
+)
+from trpg.content.skills.constants import (
     ON_CAST_TAG as ON_CAST_TAG,
 )
 from trpg.content.skills.constants import (
     ON_COLLISION as ON_COLLISION,
+)
+from trpg.content.skills.constants import (
+    ON_DISPLACE as ON_DISPLACE,
 )
 from trpg.content.skills.constants import (
     ON_ENTER_SURFACE as ON_ENTER_SURFACE,
@@ -238,7 +244,16 @@ from trpg.content.skills.constants import (
     STEAL_BUFF as STEAL_BUFF,
 )
 from trpg.content.skills.constants import (
+    TRIGGER_FILTER_TIMINGS as TRIGGER_FILTER_TIMINGS,
+)
+from trpg.content.skills.constants import (
     YAML_RANGED_FIELDS as YAML_RANGED_FIELDS,
+)
+from trpg.content.skills.constants import (
+    AttackKind as AttackKind,
+)
+from trpg.content.skills.constants import (
+    AttackSource as AttackSource,
 )
 from trpg.content.skills.constants import (
     DelayedRelease as DelayedRelease,
@@ -278,6 +293,9 @@ from trpg.content.skills.constants import (
 )
 from trpg.content.skills.constants import (
     _unique as _unique,
+)
+from trpg.content.skills.constants import (
+    trigger_filter_problem as trigger_filter_problem,
 )
 from trpg.content.skills.effects import (
     EFFECT_PARAM_FIELDS,
@@ -552,6 +570,8 @@ __all__ = [
     "NATURAL_WEAPON_ATTR_LABEL",
     "NESTED_PARENTS",
     "NONZERO_CHANGES",
+    "ON_BLOCK",
+    "ON_DISPLACE",
     "ON_HIT_PRIMITIVES",
     "ON_KILL_TYPES",
     "ON_MISS_MIN_RARITY",
@@ -590,6 +610,7 @@ __all__ = [
     "TELEPORT_TARGET",
     "TIME_BOMB",
     "TOPPLE",
+    "TRIGGER_FILTER_TIMINGS",
     "TRUE_ONLY_CHANGES",
     "VARIANT_CONDITIONS",
     "VARIANT_TARGET_CONDITIONS",
@@ -602,6 +623,8 @@ __all__ = [
     "ZONE_MOVING_SHAPES",
     "Activation",
     "Affects",
+    "AttackKind",
+    "AttackSource",
     "BasicAction",
     "CompositionRule",
     "ConditionDef",
@@ -661,6 +684,7 @@ __all__ = [
     "skill_elements",
     "skill_problems",
     "skill_slot_problems",
+    "trigger_filter_problem",
     "true_only_params",
     "walk_effect",
     "weapon_problem",

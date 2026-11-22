@@ -176,7 +176,7 @@ describe("statusTile（部件圓片，0.0 第 7 點）", () => {
     const q = IDS.filter((id) => QP.STATUS[id] !== undefined);
     expect(q).toHaveLength(32); // 第④批 STATUS（需求 1.1）
     expect([...new Set(hooked)].sort()).toEqual(IDS.filter((id) => QP.STATUS[id] === undefined).sort());
-    expect(new Set(hooked).size).toBe(87); // 118 − 32，AP-2 ＋1（borrowed_ap）
+    expect(new Set(hooked).size).toBe(88); // 118 − 32，AP-2 ＋1（borrowed_ap），KD-1 ＋1（steady，E4 移植）
   });
 
   it("unitSprite.statusTexture 仍是 tileCanvas(statusTile(id), 24)（定時炸彈、蓄力徽章跟著換）", () => {

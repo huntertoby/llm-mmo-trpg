@@ -502,7 +502,9 @@ export function assemblyFormula(icon: SkillIconData): AssemblyFormula {
  */
 export function statusTile(id: string): AssemblyTile {
   const entry = glossaryEntry("statuses", id);
-  const tip = [entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])].filter((x) => x !== "").join(" ");
+  const tip = entry?.rules_only === true
+    ? (entry.rules_zh ?? []).map((line) => `・${line}`).join("\n") // E4：只列規則（倒地），一條一行
+    : [entry?.description_zh ?? "", ...(entry?.rules_zh ?? [])].filter((x) => x !== "").join(" ");
   return {
     cat: "狀態",
     label: statusName(id),

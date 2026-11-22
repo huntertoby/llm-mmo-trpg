@@ -145,6 +145,14 @@ export const NEW: Readonly<Record<string, NewEntry | undefined>> = {
   frost_ember_burst: { zh: "寒燼爆裂", topic: "一顆冰藍的寒燼核（深藍硬殼、殼縫透白光）", d: core("frost") },
   molten_shell: { zh: "熔殼", topic: "暗紅褐的龜殼形外殼（中間一塊六角殼片），殼片之間的縫透橘光", d: (c, o) => dome("#8a3a22", "#c46a42", "#ffb23a", 1.8, "#6a2a18")(c, o) },
   hard_shell: { zh: "硬殼", topic: "灰褐色的龜殼形硬殼（中間一塊六角殼片），殼片之間深色的縫", d: (c, o) => dome("#b0a084", "#e6dac2", "#5e4a3a", 1.6, "#8a7a62")(c, o) },
+  // KD-1：站穩（docs/art/Q版小圖示-站穩.md 方案 B v2；樣張 qIconsSteady.js 的 standWide 原樣）
+  steady: { zh: "站穩", topic: "米白人形兩腳張開成「人」字、雙手叉腰，腳踩一道寬沙色地面線（倒地的反面：站直）", d: (c, o) => {
+    rr(c, "#e0c088", -9.8, 8.2, 19.6, 3, 1.5);
+    for (const s of [-1, 1]) { ln(c, CREAM, 3.6, [[s * 1.8, 1.6], [s * 5.6, 7.6]]); rr(c, CREAM, s > 0 ? 4.2 : -8.8, 6.6, 4.6, 2.6, 1.3); }
+    for (const s of [-1, 1]) ln(c, CREAM, 2.6, [[s * 3.2, -2.6], [s * 7, -0.2], [s * 3.6, 2.2]]);
+    rr(c, CREAM, -4.2, -3.8, 8.4, 6.8, 2.8);
+    ci(c, CREAM, 0, -7.2, 3.6);
+    if (!o.tiny) { el(c, "#ffffff", -1.2, -8.4, 1.4, 0.9, -0.6); f(c, "rgba(0,0,0,0.12)", () => c.rect(1.6, -3.4, 2.4, 6.2)); } } },
 };
 
 // =====================================================================
@@ -157,7 +165,7 @@ const STANCE_RE = /^stance_(\w+)_([1-5])$/;
  * 還在等美術出圖的狀態（KD-1「站穩」，交美術 PM）：`entry` 回 null，畫面走退回畫法（名稱第一個字）。
  * 美術補圖後從這裡拿掉；測試的「每個狀態都有 Q 版圖樣」與各基準只看不在這裡的狀態。
  */
-export const AWAITING_ART_STATUSES: readonly string[] = ["steady"];
+export const AWAITING_ART_STATUSES: readonly string[] = []; // KD-1 的站穩已移植（Q版小圖示-站穩.md 方案 B v2）
 /** 狀態的 Q 版圖樣；沒有（不認得的狀態）回 null。 */
 export function entry(id: string): StatusEntry | null {
   if (STATUS[id]) { const e = QP.entry("status", id); return { zh: e.zh, topic: e.topic ?? "", src: "b4:status." + id, kind: "b4", d: e.d }; }

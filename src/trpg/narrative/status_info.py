@@ -133,19 +133,30 @@ def _modifier_lines(status: StatusDef, library: ContentLibrary) -> list[str]:
     return lines
 
 
+RULES_ONLY_STATUSES = frozenset({PRONE})
+"""說明框只列規則句、一條一行（不再接狀態的 ``description_zh``）的狀態（E4，KD-1 驗收小修 1；
+名詞表 ``GlossaryEntry.rules_only``）。"""
+
+
+def _half_text(permille: int) -> str:
+    """「花一半移動點數」：500‰ 寫「一半」，其他寫百分比（跟著工坊的值走）。"""
+    return "一半" if permille * 2 == NEUTRAL_PERMILLE else f" {permille / 10:g}% 的"
+
+
 def _prone_lines(core: CoreRules) -> list[str]:
-    """倒地的規則句（KD-1，05 5.13）：站起消耗、隊友扶起、不能反應、少 AP、站穩。"""
-    lines = [
-        f"站起來要消耗 {core.prone_stand_up_move_permille / 10:g}% 的移動點數（進位）；"
-        f"相鄰的隊友也可以花 {core.help_up_ap_cost} AP 扶起（不花移動）",
-        "倒地期間不能用任何反應（格擋、藉機攻擊、監視射擊、反擊、反應技）",
-    ]
+    """倒地的規則句（KD-1，05 5.13；E4 照玩法 PM 2026-11-22 的用字改成一條規則一行）：不能反應、
+    少 AP、優劣勢、不能衝鋒跳躍、站起與扶起、站穩。「1 AP」「一半」從資料組字；頭目不少 AP 的
+    例外不寫在這裡。"""
+    lines = ["不能使用反應（格擋、藉機攻擊、反擊）。"]
     if core.prone_ap_loss:
-        lines.append(
-            f"倒地後的第一個自己回合少 {core.prone_ap_loss} AP（只扣一次，被扶起也照扣；頭目不扣）"
-        )
+        lines.append(f"倒地後的第一個自己回合少 {core.prone_ap_loss} AP。")
+    lines += [
+        "近戰攻擊你有優勢，遠程攻擊你有劣勢。",
+        "不能衝鋒、跳躍、瞬步、攀跳。",
+        f"花{_half_text(core.prone_stand_up_move_permille)}移動點數站起來，或讓相鄰隊友扶起。",
+    ]
     if core.steady_rounds:
-        lines.append("站起來或被扶起後「站穩」，到自己下一個回合結束前不會再倒地")
+        lines.append("站起來後會「站穩」，到下一個自己回合結束前不會再倒地。")
     return lines
 
 

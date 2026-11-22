@@ -209,6 +209,9 @@ class GlossaryEntry(_ApiModel):
     """靜態規則說明（Phase 3-15）：地形、表面、物件「會怎樣」的中文短句，由內容資料產生。"""
     rules_dice: tuple[RuleDiceOut, ...] = ()
     """``rules_zh`` 裡哪幾行是骰子行（HC-6c；依行號排序，沒有就空）。"""
+    rules_only: bool | None = Field(default=None, exclude_if=lambda v: v is None)
+    """說明框只列 ``rules_zh``、一條一行（前面加「・」），不接 ``description_zh``（E4，KD-1 驗收
+    小修 1：倒地）。"""
 
 
 class WeaponLookEntry(_ApiModel):

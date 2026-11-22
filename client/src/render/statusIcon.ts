@@ -238,6 +238,13 @@ export const GLYPH: Readonly<Record<string, Glyph>> = {
     line(c, [[-2, 4], [9, 4]]);
     line(c, [[-10, 8], [10, 8]]);
   },
+  steady: (c) => {
+    // 站穩（KD-1；E4 移植 Q 版圖時補的舊式線條，同倒地的畫法改成站直：頭、身體、張開的兩腳、地面線）
+    circle(c, 0, -6, 3, true);
+    line(c, [[0, -3], [0, 3]]);
+    line(c, [[-5, 8], [0, 3], [5, 8]]);
+    line(c, [[-10, 8], [10, 8]]);
+  },
   burning: (c) => flame(c, 0, 1, 10),
   poison: (c) => {
     drop(c, 0, 0, 10);

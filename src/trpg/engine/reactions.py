@@ -80,7 +80,10 @@ from trpg.engine.rules.statuses import (
 )
 from trpg.engine.rules.weapons import range_damage_permille
 from trpg.engine.skill_triggers import (
+    AttackInfo,
+    attacking,
     check_trigger_depth,
+    collect_block,
     holding,
     redirect_fired,
     register_downed_handler,
@@ -379,6 +382,7 @@ def block_multiplier(
     definition = _react(ctx, target, events, attacker, effect="reduce_damage")
     if not isinstance(definition, ReactionDef):
         return PERMILLE
+    collect_block(ctx, target, attacker)  # E4 on_block：格擋真的結算了
     reduction = definition.damage_reduction_permille
     offhand = target.gear.offhand
     if definition.id == BLOCK_REACTION and offhand is not None:  # 圓盾的格擋強化（3I-2）
@@ -461,7 +465,9 @@ def hit_reactions(ctx: Ctx, attacker: UnitState, target: UnitState, *, melee: bo
     if isinstance(picked, SkillDef):
         _run_skill(ctx, target, picked, attacker)
     elif picked is not None:
-        perform_unit_attack(ctx, target, attacker, primary=False, reaction=True)
+        perform_unit_attack(
+            ctx, target, attacker, primary=False, reaction=True, reaction_id=picked.id
+        )
     ally_hit_near_reactions(ctx, attacker, target)  # 援手（TF-1）：身邊友方替受擊者補血
 
 
@@ -752,7 +758,9 @@ def enemy_moves_in_range_reactions(ctx: Ctx, mover: UnitState) -> None:
         picked = _react(ctx, reactor, ("enemy_moves_in_range",), mover, effect="basic_attack")
         if not isinstance(picked, ReactionDef):
             continue
-        perform_unit_attack(ctx, reactor, mover, primary=False, reaction=True)
+        perform_unit_attack(
+            ctx, reactor, mover, primary=False, reaction=True, reaction_id=picked.id
+        )
         status_id = picked.requires_status
         if extra_uses_left(reactor, picked.id) > 0:
             continue  # 裝備給了額外次數（3G-G3b）：還能再觸發一次，監視狀態保留到最後一次
@@ -771,6 +779,7 @@ def perform_unit_attack(
     primary: bool,
     reaction: bool = False,
     part_id: str | None = None,
+    reaction_id: str | None = None,
 ) -> None:
     """一次普攻：命中判定 → （命中時）格擋反應 → 傷害。
 
@@ -779,8 +788,12 @@ def perform_unit_attack(
     ``reaction``：這是反應攻擊（藉機攻擊、監視射擊）——命中加上感知的常駐數值（Phase 3H-1）。
     ``part_id``：打 ``target`` 的哪個部位（PB-1a，動作的 ``target_part``）：連擊武器的每一下與
     詞條連擊都打同一個部位（R5），穿透後方的目標打本體。
+    ``reaction_id``：反應攻擊用的是哪條反應（E4 的 ``reaction`` 篩選；召喚物反咬沒有）。
     """
-    with holding(ctx):
+    kind = "melee" if is_melee_attack(ctx, attacker) else "ranged"  # E4：近戰同格擋的定義
+    source = "reaction" if reaction else "attack"
+    info = AttackInfo(attacker.id, kind, source, reaction_id if reaction else None)
+    with holding(ctx), attacking(ctx, info):
         target_xy, attacker_xy = target.xy, attacker.xy
         if attacker.weapon.magazine > 0 and attacker.ammo <= 0:
             return  # 空膛（Phase 3-24a2）：合法性已在 attack_problem 檢查，這裡只是保險
@@ -1115,4 +1128,6 @@ def opportunity_attacks(ctx: Ctx, mover: UnitState, from_xy: XY, to_xy: XY) -> N
         if isinstance(picked, SkillDef):
             _run_skill(ctx, reactor, picked, mover)
         elif picked is not None:
-            perform_unit_attack(ctx, reactor, mover, primary=False, reaction=True)
+            perform_unit_attack(
+                ctx, reactor, mover, primary=False, reaction=True, reaction_id=picked.id
+            )

@@ -95,6 +95,8 @@ def _affix_reference_problems(
         refs.append(("條件", affix.condition.type, {c.id for c in ruleset.conditions.conditions}))
     if isinstance(affix, TriggerAffix):
         refs.append(("觸發時機", affix.trigger, {t.id for t in ruleset.skill_triggers.triggers}))
+        if affix.reaction is not None:  # E4：反應篩選的 ID
+            refs.append(("反應", affix.reaction, {r.id for r in ruleset.reactions.reactions}))
     if isinstance(affix, ChargeAffix):
         refs.append(
             ("觸發時機", affix.gain_trigger, {t.id for t in ruleset.skill_triggers.triggers})
