@@ -112,3 +112,14 @@
 8. **角色面板種族列改成「鱗族・種族技「潮息」・被動「流線身形」・……」**，種族名的說明卡與技能列的 `passiveLine` 也換成同一套字「被動「〇〇」：說明・有作用」。
 9. **`text-wrap: pretty` 在 800 寬仍留兩個字**：HUD 那行最後一行是「作用」（原本是「過）」）。Chrome 的 pretty 只保證不留單一個詞；要完全避開需要另外調字或寬度，請美術 PM 看截圖決定。
 10. **懸掛縮排的 CSS 選擇器放寬成 `.part-tip-bullet`**（原本要同時有 `.part-tip-text`），讓 `Hint` 的說明也能用同一條規則；`tipPartsE4.test.ts` 的比對跟著改一行。
+
+## 開發 PM 裁定（2026-11-23）
+
+**驗收通過**，合併為 `0463be2b9`。`check.py --all` 0（18689 passed、vitest 4934）、slow parity／cli 0、build 0；442 招逐位相同、census 204 格 different=0、78 場 26741 事件 different=0。
+
+- 第 1、3、5、6、10 點：保守做法，接受。
+- 第 2、9 點：框線樣式與「作用」兩字孤行，轉美術 PM 驗收時定。
+- 第 4 點：非冰表面也寫「不會變成水」，轉玩法 PM 定要不要拿掉。
+- 第 7、8 點：HUD 本文色＋沒作用段灰、角色面板種族列合併成一行，接受，轉美術、玩法 PM 看截圖。
+- 測試 `tests/api/test_wish_pregen.py::test_text_wish_is_logged_and_replayed_without_llm` 在 `-n 8` 下偶發失敗（TS-2 也在 testmon 下穩定重現，連同 `test_wish_api_wp2.py::test_text_wish_wait_then_act`）：記佇列 (x)，另開段處理等待時間。
+- 守則 14：霜行冰說明的持有者名字來自 `TileView.surface_trail`，和既有 `surface_creator` 同一級，接受。
