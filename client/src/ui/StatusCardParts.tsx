@@ -156,11 +156,17 @@ export function StackBadge({ id, count, cards, owned }: { id: string; count: num
   );
 }
 
+/** 腳下表面說明卡的各段（HC-6c，AR-X10 待決 4）：排法同狀態提示，骰子行「擲 NdM，每點 ×10」另起一行、次要字色
+ * （照名詞表 `rules_dice`）。對照表沒有這個表面時寫「地面上的表面」（同 `surfaceTile`）。 */
+export function surfaceTipParts(id: string): TipPart[] {
+  return entryTipParts(glossaryEntry("surfaces", id), "地面上的表面");
+}
+
 /** 腳下的表面圖示；滑過看「名稱（剩餘輪數）＋規則」。 */
 export function SurfaceBadge({ surface, text }: { surface: string; text: string }) {
   const tile = surfaceTile(surface);
   return (
-    <PartTip cat="腳下表面" label={text} tip={tile.tip} className="stat-badge surface-badge">
+    <PartTip cat="腳下表面" label={text} tip={tile.tip} parts={surfaceTipParts(surface)} className="stat-badge surface-badge">
       <TileCanvas tile={tile} px={20} />
     </PartTip>
   );
