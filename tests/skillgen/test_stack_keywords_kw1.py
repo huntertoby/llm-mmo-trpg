@@ -16,6 +16,7 @@ from typing import Any
 
 import pytest
 
+from tests.content_counts import COUNTS
 from tests.engine.helpers import library
 from tests.skillgen.test_proposal import _models
 from trpg.content.library import ContentLibrary
@@ -47,7 +48,7 @@ def skill(skill_id: str) -> SkillDef:
 
 def test_the_keyword_list_grows_from_12_to_16() -> None:
     table = lib().keywords
-    assert len(table.ids()) == 16
+    assert len(table.ids()) == COUNTS["keywords"]  # WL-1：數量看 tests/content_counts.json
     assert table.ids()[-4:] == NEW
     names = {k: table.by_id()[k].name_zh for k in NEW}
     assert names == {"combo_point": "連擊", "fury": "怒氣", "focus": "專注", "ki": "氣"}

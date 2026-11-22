@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
+from tests.content_counts import COUNTS
 from tests.engine.helpers import library
 from trpg.content.equipment import (
     AFFIX_CATEGORIES,
@@ -133,13 +134,13 @@ def _loadout(**slots: str) -> Loadout:
 # ---------------------------------------------------------------------------
 
 
-def test_whitelist_has_all_81_affixes_in_11_categories() -> None:
+def test_whitelist_has_all_affixes_in_11_categories() -> None:
     """3K-1 加了 7 條普攻附加元素與 8 條武器元素詞條（#52）：51 → 66；5D-3 加 3 條獨特詞條 → 69；
     5D-2b 補 8 條技能強化（潮濕、隱蔽、點燃、倒地、中毒）→ 77；5D-4 補帶電利用 → 78；
     LW-1 加獨狼條件數值「獨行的」→ 79；RG-4 加塔盾的「護陣」→ 80；
     AP-2 加「每第 3 次命中回 1 AP」→ 81。"""
     affixes = library().affixes
-    assert len(affixes) == 81
+    assert len(affixes) == COUNTS["affixes"]  # WL-1：數量看 tests/content_counts.json
     by_category: dict[str, set[str]] = {}
     for affix in affixes.values():
         by_category.setdefault(affix.category, set()).add(affix.id)

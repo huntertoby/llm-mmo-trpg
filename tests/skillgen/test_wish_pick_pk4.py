@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+from tests.content_counts import COUNTS
 from tests.roguelite.helpers import library
 from trpg.content.skill_pick import WishTags
 from trpg.skillgen.wish_pick import (
@@ -47,7 +48,7 @@ def test_tag_list_matches_the_design() -> None:
     assert (rules.max_keywords, rules.max_elements, rules.max_effects) == (2, 1, 2)
     assert (rules.max_shapes, rules.max_kinds) == (1, 1)
     lib = library()
-    assert len(lib.keywords.keywords) == 16
+    assert len(lib.keywords.keywords) == COUNTS["keywords"]  # WL-1：tests/content_counts.json
     prims = {p.id for p in lib.ruleset.primitives.primitives}
     statuses = {s.id for s in lib.ruleset.statuses.statuses}
     shapes = {s.id for s in lib.ruleset.shapes.shapes}

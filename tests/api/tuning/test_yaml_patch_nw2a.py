@@ -8,6 +8,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from tests.content_counts import COUNTS
 from trpg.api.tuning.objects import concrete_fields
 from trpg.api.tuning.yaml_patch import (
     MISSING,
@@ -61,7 +62,8 @@ def _set(data: dict[str, object], parts: tuple[PathPart, ...], value: object) ->
 def test_cases_cover_every_skill_file_and_dice() -> None:
     # LW-1 加 3 招；BS-1 加 2 招；RG-1 加 3 招；RG-2 加 1 招；AP-2 加搶拍
     # GS-2 加 4 招高階形態技；GS-3 加 4 招高階化身
-    assert len({rel for rel, _p, _k in CASES}) == 439  # KW-2 加 16 招；SK-3b 加 4 招示範
+    # KW-2 加 16 招；SK-3b 加 4 招示範；WL-1 起數量看 tests/content_counts.json
+    assert len({rel for rel, _p, _k in CASES}) == COUNTS["skill_files_without_gear"]
     kinds = {k for _r, _p, k in CASES}
     assert {"int", "permille", "dice", "range"} <= kinds
     assert (

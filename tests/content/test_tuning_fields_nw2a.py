@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from tests.content_counts import COUNTS
 from trpg.api.tuning.objects import concrete_fields, read_data
 from trpg.content.loader import bundled_content_dir, load_content_file
 from trpg.content.skills import SkillDef
@@ -31,7 +32,7 @@ def test_skill_target_covers_every_skill_file_except_gear(table: TuningFields) -
     files = target_files(CONTENT, skill)
     ids = {p.stem for p in files}
     assert (
-        len(files) == 439
+        len(files) == COUNTS["skill_files_without_gear"]
     )  # LW-1 加 3 招獨狼示範；BS-1 加 2 招（無聲步、影纏）；RG-1 加 3 招瞄準預告；RG-2 加狂怒劈砍
     # KW-2 加 16 招；SK-3b 加 4 招示範；AP-2 加搶拍（預支）；GS-2 加 4 招高階形態技
     # GS-3 加 4 招高階化身

@@ -10,6 +10,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
+from tests.content_counts import COUNTS
 from tests.engine.helpers import PROJECT_ROOT, library
 from trpg.content.library import load_library
 from trpg.content.rules import CoreRules
@@ -59,11 +60,10 @@ def _edit(path: Path, change: Any) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_all_sixteen_skeletons_have_a_data_file() -> None:
-    # 6.9 的 12 種骨架 ＋ Phase 3C-2 的 modifier（修正技能）＋ Phase 3C-3b 的 consume_status
-    # ＋ Phase 3-23 的 rune ＋ Phase 3-24c 的 sacrifice
+def test_every_skeleton_has_a_data_file() -> None:
+    # 骨架清單就是 content/skeletons/ 的檔（WL-1）；數量看 tests/content_counts.json
     lib = library()
-    assert set(lib.skeletons) == set(skeleton_ids()) and len(lib.skeletons) == 16
+    assert set(lib.skeletons) == set(skeleton_ids()) and len(lib.skeletons) == COUNTS["skeletons"]
     assert {i for i, s in lib.skeletons.items() if s.enabled} == ENABLED
     for skeleton_id in skeleton_ids():
         assert (PROJECT_ROOT / "content" / "skeletons" / f"{skeleton_id}.yaml").is_file()
