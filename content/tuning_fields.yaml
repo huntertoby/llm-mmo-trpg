@@ -79,6 +79,8 @@ targets:
       - {path: skills, label_zh: 技能（開場）, kind: skill_ids, note_zh: 單位開場會用的招；數量上限依 core.yaml 的 skill_slots，武器需求要和單位武器相容。}
       - {path: "phases[*].skills", label_zh: 階段技能, kind: skill_ids, note_zh: 進入這個階段後換成這組招；刪掉＝沿用上一階段，空清單＝這個階段不放招。開場階段不能設。}
       # AP-1（#168，05 5.2「⚠ AP 改版」）：敵人的每回合 AP。沒寫時一般敵人照核心規則的「每回合 AP」、精英與頭目照「精英、頭目的每回合 AP」。
+      # CR-1（#178，05 5.4.2 第 5 點）：單位自己的暴擊傷害倍率（例：頭目的重擊 300%）；沒寫照武器。
+      - {path: crit_permille, label_zh: 暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, note_zh: 這種敵人暴擊時的傷害倍率（2000＝200%，暴擊時骰子變兩倍）；沒寫＝照牠拿的武器（武器也沒寫就是核心規則的 200%）。調高：這種敵人暴擊更痛；調低：暴擊只多一點點。全身上下限照核心規則（150%～300%）。只能 1000～5000。}
       - {path: ap_per_turn, label_zh: 每回合 AP, kind: int, hint_min: 1, hint_max: 6, note_zh: 這種敵人每回合的 AP（初值：一般 3、精英與頭目 4）；沒寫時照核心規則。本回合上限＝每回合 AP＋可保留的 AP。只對敵方有效：當隊友時一律照玩家方的每回合 AP。}
 
   # NW-2a：技能（docs/phases/PhaseNW-2計畫.md 3.1）。效果層級的欄位＝effect_sites × effect_fields（effect_types 只展開到該原語的效果）。
@@ -795,6 +797,7 @@ targets:
       - {path: stance_upkeep_mana, label_zh: 姿態每點維持費（法力）, group_zh: 共通, kind: int, hint_min: 5, hint_max: 20, note_zh: 一般姿態（法術技）的維持費每 1 點，每回合開始扣這麼多法力；付不起就自動解除姿態。越大，帶維持費的法術姿態越貴。}
       - {path: cooldown, label_zh: 離開形態後的冷卻（回合）, group_zh: 共通, kind: int, hint_min: 1, hint_max: 4, note_zh: 離開一個形態（自己取消、被迫解除、切換）後，「那個形態」要等這麼多回合才能再進入；別的形態不受影響。越大，越不能頻繁切換同一個形態。只能 1～5。}
       - {path: "forms[*].natural_weapon.dice", label_zh: 天生武器的傷害骰, kind: dice, note_zh: 形態中普攻用的天生武器擲這個骰（再加屬性加成）。骰子越大，形態的普攻越痛。}
+      - {path: "forms[*].natural_weapon.crit_permille", label_zh: 天生武器的暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, existing_only: true, note_zh: 形態中普攻暴擊時的傷害倍率（2000＝200%）；沒寫＝核心規則的基礎倍率。調高：形態的普攻暴擊更痛；調低：暴擊只多一點點。只能 1000～5000。}
       - {path: "forms[*].natural_weapon.range", label_zh: 天生武器的射程（格）, kind: int, hint_min: 1, hint_max: 6, existing_only: true, note_zh: 天生武器最遠打幾格（近戰的觸及另見「觸及」；龍的吐息用這個列出「朝某個敵人」的快捷動作）。越大越能在遠處出手。只能 1～8。}
       - {path: "forms[*].natural_weapon.damage_permille", label_zh: 天生武器的傷害加成（‰）, kind: permille, hint_min: 0, hint_max: 300, existing_only: true, note_zh: 天生武器的傷害再多這麼多千分比（100＝+10%）。越大普攻越痛。只能 0～1000。}
       - {path: "forms[*].natural_weapon.traits.strikes", label_zh: 天生武器一次打幾下, kind: int, hint_min: 1, hint_max: 3, existing_only: true, note_zh: 普攻一次打幾下（每下各擲命中）。越多傷害越高。只能 1～3。}
@@ -992,6 +995,12 @@ targets:
     glob: surfaces.yaml
     fields:
       - {path: "surfaces[*].on_enter.check.dc", label_zh: 滑倒檢定的 DC（冰面）, kind: int, hint_min: 6, hint_max: 16, existing_only: true, note_zh: 走進這種表面（目前只有冰面）的敏捷檢定要擲到這麼多才不滑倒（初值 10，KD-1 從 12 降下來）；被推、拉進來，或衝鋒、跳躍落在上面也用同一個 DC。調高：更容易滑倒倒地；調低：更穩。矮人、鱗族、會飛的單位不擲。}
+  # CR-1（#178，05 5.4.2 第 2 點）：武器表（weapons.yaml）。每種武器的暴擊傷害倍率；初值全部沒寫＝核心規則的 200%。
+  - kind: weapons
+    label_zh: 武器
+    glob: weapons.yaml
+    fields:
+      - {path: "weapons[*].crit_permille", label_zh: 暴擊傷害倍率（‰）, kind: permille, hint_min: 1500, hint_max: 3000, note_zh: 拿這種武器普攻、用武器技暴擊時的傷害倍率（2000＝200%，暴擊時骰子變兩倍）；沒寫＝核心規則的基礎倍率（200%）。調高：這種武器暴擊更痛、適合堆暴擊；調低：暴擊只多一點點。敵我一起變；法術技不看武器。只能 1000～5000。}
   - kind: flash
     label_zh: 閃現規則與計價
     glob: flash_templates.yaml

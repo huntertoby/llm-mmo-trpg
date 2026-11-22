@@ -98,6 +98,10 @@ class NaturalWeapon(ContentModel):
     element: Element | None = None
     element_choices: tuple[Element, ...] = ()
     damage_permille: int = Field(default=0, ge=0, le=1000)
+    crit_permille: int | None = Field(
+        default=None, ge=1000, le=5000, exclude_if=lambda v: v is None
+    )
+    """天生武器的暴擊傷害倍率（‰，CR-1，05 5.4.2）；沒填照 ``core.crit_damage.base_permille``。"""
     traits: NaturalTraits = NaturalTraits()
     """天生武器特性（3J-1b）；沒有特性時全是預設值。"""
     charge: NaturalCharge | None = None
@@ -143,6 +147,7 @@ class NaturalWeapon(ContentModel):
             strikes=self.traits.strikes,
             knockback=self.traits.knockback,
             reach=self.traits.reach,
+            crit_permille=self.crit_permille,
             summon_only=True,
         )
 

@@ -112,6 +112,7 @@ def test_the_rules_and_budget_tables_are_listed(read_service: TuningService) -> 
         "skill_evolution",  # HC-4b2：召喚技分歧進化的幅度
         "flash",  # HC-4b3：閃現的計價與規則數值
         "surface",  # KD-1：冰面的滑倒 DC
+        "weapons",  # CR-1：每種武器的暴擊傷害倍率
         "world_rules",  # HC-4d：大世界規則、經濟、交易、賽季
         "world_economy",
         "world_trade",

@@ -263,7 +263,11 @@ class ContentLibrary:
             raise KeyError(f"未知的地圖：{map_id}（可用：{known}）") from None
 
     def weapon_of(self, template: UnitTemplate) -> WeaponDef:
-        return self.weapons[template.weapon]
+        """範本的武器；範本另填暴擊傷害倍率（``crit_permille``，CR-1）時寫進這把武器。"""
+        weapon = self.weapons[template.weapon]
+        if template.crit_permille is None:
+            return weapon
+        return weapon.model_copy(update={"crit_permille": template.crit_permille})
 
     def scaling_basis(self, skill: SkillDef | ScalingFacts) -> ScalingBasis:
         """技能（或工坊草稿）的縮放屬性允許範圍與由來（``skill_scaling.yaml``，Phase 3H-7）。"""
