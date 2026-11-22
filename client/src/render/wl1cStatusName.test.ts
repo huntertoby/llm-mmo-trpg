@@ -13,6 +13,9 @@ import { statusLine } from "../ui/Hud";
 import { StatusBadge } from "../ui/StatusCardParts";
 import { statusTile, tileTitle } from "./skillIcon";
 import { effectPart } from "./skillParts";
+import { fakeCtx, type FakeCanvasLog } from "../test/fakeCanvas";
+import * as QT from "./qIcon/status";
+import { drawGlyph, statusIconKey } from "./statusIcon";
 
 const real = glossary as unknown as Glossary;
 afterEach(() => setGlossary(real));
@@ -48,5 +51,26 @@ describe("WL-1 c：狀態名稱找不到時顯示「未知狀態」", () => {
     expect(statusTile(ID).label).toBe(UNKNOWN_STATUS_NAME);
     expect(statusLine(sv(ID))).toBe(`${UNKNOWN_STATUS_NAME}（2 回合）`);
     expect(texts[5]).toContain(`狀態：${UNKNOWN_STATUS_NAME}`);
+  });
+});
+
+describe("WL-1c 追加 3：名稱是退回用的字（未知狀態）時，圖示中間畫「?」不畫「未」", () => {
+  const center = (fn: (ctx: CanvasRenderingContext2D) => void): string[] => {
+    const log: FakeCanvasLog = { calls: [] };
+    fn(fakeCtx(log));
+    return (log.calls ?? []).filter((c) => c.startsWith("fillText(")).map((c) => c.slice("fillText(".length).split(",")[0]!);
+  };
+  it("狀態卡／頭頂（qIcon/status.ts 的 paintUnknown）、舊圖樣 drawGlyph、快取鍵都用「?」", () => {
+    setGlossary({ ...real, statuses: [...real.statuses, { id: "named_new", name_zh: "怪異", description_zh: null, tags: [], rules_zh: [], rules_dice: [], status_look: null }] } as unknown as Glossary);
+    for (const id of [ID, "another_new_status", ""]) {
+      expect(center((ctx) => QT.paint(ctx, id, 10, 10, 16.8)), id).toEqual(["?"]);
+      expect(center((ctx) => QT.paint(ctx, id, 10, 10, 9)), id).toEqual(["?"]);
+      expect(center((ctx) => drawGlyph(ctx, id)), id).toEqual(["?"]);
+    }
+    expect(statusIconKey(ID, 20)).toContain("|?|");
+    expect(statusIconKey(ID, 20)).not.toContain("未");
+    // 名詞表有名稱、只是沒有 Q 版圖樣的，照舊畫名稱第一個字
+    expect(center((ctx) => QT.paint(ctx, "named_new", 10, 10, 16.8))).toEqual(["怪"]);
+    expect(center((ctx) => drawGlyph(ctx, "named_new"))).toEqual(["怪"]);
   });
 });
