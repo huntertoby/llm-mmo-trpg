@@ -14709,6 +14709,22 @@
           "item_name_zh": {
             "type": "string",
             "title": "Item Name Zh"
+          },
+          "copy_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Copy Of"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "active"
           }
         },
         "additionalProperties": false,

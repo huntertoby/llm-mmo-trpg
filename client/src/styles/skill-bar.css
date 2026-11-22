@@ -398,6 +398,24 @@
   border-color: #b8923f;
 }
 
+/* E1：裝備授予的被動、反應、修正技（小圖示）也加金框；卡片頂端的「來自裝備」不省略 */
+.skill-mini.from-gear {
+  box-shadow: 0 0 0 2px #b8923f;
+}
+
+/* 說明卡上方的「來自裝備」：同 .now-off-note 自己帶底色，金色實線（同技能鈕的金框） */
+.gear-source-note {
+  margin-bottom: 4px;
+  padding: 5px 9px;
+  border: 1px solid #b8923f;
+  border-radius: 6px;
+  background: var(--ui-navy);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 60%);
+  color: #e8c46a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 /* Phase 3-26a：技能點、技能等級、營火換裝 */
 
 /* Phase 3-25b：戰場變奏（技能卡的型態列表、技能列按鈕發亮、預覽的型態） */

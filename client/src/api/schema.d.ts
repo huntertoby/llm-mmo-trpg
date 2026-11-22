@@ -5894,6 +5894,13 @@ export interface components {
             slot_zh: string;
             /** Item Name Zh */
             item_name_zh: string;
+            /** Copy Of */
+            copy_of?: string | null;
+            /**
+             * Kind
+             * @default active
+             */
+            kind: string;
         };
         /** GearSlotInfo */
         GearSlotInfo: {
