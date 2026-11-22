@@ -23,7 +23,6 @@ from tests.engine.helpers import (
 )
 from tests.engine.skill_helpers import FLAT7
 from trpg.content.equipment import (
-    SLOT_TYPE_OF,
     ActionAffix,
     EquippedAffix,
     EquippedItem,
@@ -33,7 +32,9 @@ from trpg.content.equipment import (
 from trpg.content.library import ContentLibrary, _affix_reference_problems
 from trpg.content.skill_rules import budget_rule_problems
 from trpg.content.skills import SkillDef
+from trpg.content.slots import SLOT_TYPE_OF
 from trpg.engine import Attack, BattleState, Move, UseSkill, legal_actions, resolve
+from trpg.engine.ai.utility import UtilityAI
 from trpg.engine.events import DamageDealt, ReactionTriggered
 from trpg.engine.modifiers import (
     ATTACK,
@@ -42,7 +43,8 @@ from trpg.engine.modifiers import (
     heal_permille,
     skill_use,
 )
-from trpg.engine.setup import UnitSpawn
+from trpg.engine.runner import replay, run_battle
+from trpg.engine.setup import BattleSetup, UnitSpawn, build_setup
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.state import UnitState, state_from_json, state_to_json
 from trpg.engine.view import project_for
@@ -356,6 +358,45 @@ def test_non_numeric_parts_fire_once_per_copy(monkeypatch: pytest.MonkeyPatch) -
 
     assert fire_hits({}) == 1
     assert fire_hits({"neck": [SEARING.id]}) == 2
+
+
+# ---------------------------------------------------------------------------
+# 第 7 項：AI 與重播
+# ---------------------------------------------------------------------------
+
+
+def test_ai_ranks_both_copies_and_falls_back_to_the_second_one() -> None:
+    state = scene({"main_hand": [ACTIVE], "off_hand": [ACTIVE]}, [], foe=(4, 0))
+    ai = UtilityAI(library().ai_profiles, override="brute")
+    ranked = {s.action.skill_id for s in ai.rank(state) if isinstance(s.action, UseSkill)}
+    assert {ACTIVE, COPY} <= ranked
+    state.units[U1].cooldowns[ACTIVE] = 2  # 第一份冷卻中：第二份照樣在候選裡
+    ranked = {s.action.skill_id for s in ai.rank(state) if isinstance(s.action, UseSkill)}
+    assert COPY in ranked and ACTIVE not in ranked
+
+
+def _geared_setup() -> BattleSetup:
+    lib = library()
+    setup = build_setup(lib, "test_flat_6x6", ["hero_fighter"], ["bandit", "bandit"])
+    gear = loadout(
+        {"main_hand": [ACTIVE, REACTION], "off_hand": [ACTIVE], "neck": [HEAVY.id, PASSIVE]}
+    )
+    hero = setup.units[0].model_copy(update={"equipment": gear})
+    ruleset = setup.ruleset.with_skills([HEAVY])
+    return setup.model_copy(update={"units": (hero, *setup.units[1:]), "ruleset": ruleset})
+
+
+def test_battles_with_granted_skills_replay_identically() -> None:
+    setup = _geared_setup()
+    first = run_battle(setup, 11)
+    second = run_battle(setup, 11)
+    dump = [e.model_dump() for e in first.events]
+    assert dump == [e.model_dump() for e in second.events]
+    again = replay(setup, 11, first.actions)
+    assert [e.model_dump() for e in again.events] == dump
+    assert state_to_json(again.state) == state_to_json(first.state)
+    hero = first.state.units[U1]
+    assert sorted(hero.gear_skills) == sorted([ACTIVE, COPY, REACTION, HEAVY.id, PASSIVE])
 
 
 # ---------------------------------------------------------------------------
