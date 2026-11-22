@@ -479,6 +479,13 @@
   text-indent: -1em;
 }
 
+/* E4b（E4 驗收小修 1）：倒地說明框的分點換行時懸掛縮排——第二行起對齊「・」後面的字（「・」是全形、1em），
+   不頂到最左邊和下一點的「・」對齊；同 E2 小修 2 的加註換行 */
+.part-tip-text.part-tip-bullet {
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
 /* 一句話說明（3-32b，`Hint`）：3-47 起不產生外層元素；卡片是只有文字的小浮動卡 */
 
 .hint-tip-text {
