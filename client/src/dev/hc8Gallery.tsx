@@ -18,7 +18,7 @@ await waitForFonts();
 const lesson = {
   kind: "allocate",
   lines: [
-    { speaker_zh: "葛蘭", text_zh: "升級了？身上多了兩點力氣。來，我示範怎麼分。" },
+    { speaker_zh: "葛蘭", text_zh: "升級了？身上又多了些力氣。來，我示範怎麼分。" },
     { speaker_zh: "葛蘭", text_zh: "不知道怎麼配就按「推薦配法」。配錯了也沒關係，在城鎮或營火都能免費重來。" },
   ],
   skills_zh: [],

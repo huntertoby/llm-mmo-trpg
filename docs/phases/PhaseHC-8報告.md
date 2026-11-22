@@ -121,7 +121,10 @@
 3. **`config/tuning.toml` 的格式**：分成 `[sim]`、`[ratio]`、`[drafts]`、`[skills]` 四個表格；`MAX_RATIO_SEEDS` 放在 `[ratio] max_seeds`，但它其實也是頭目戰、地圖戰種子欄的上限（原本就這樣），註解有寫。另加了環境變數 `TRPG_TUNING_CONFIG`（比照 `TRPG_LLM_CONFIG`），規格沒要求。
 4. **設定只在啟動時讀一次**：常數被 pydantic 的 `Field(le=…)`、`pattern` 在模組載入時用掉，所以改設定要重開伺服器（toml 註解與上手文件都有寫）。`[drafts] name_max` 改小時，比新上限長的舊草稿會讀不到（改回來就好）。
 5. **開發頁 `panelGallery.tsx` 的元件樣張**原本寫「升級時每級 +2」，定案 A 後順手改成 +20（只是排版樣張）。
-6. `newcomer.yaml` 葛蘭的台詞「身上多了兩點力氣」（中文數字，掃描不會抓）照定案 A 應是 20 點，和畫面上「這次升級的 20 點」不一致；`content/` 的字不在這段範圍內，沒動，請玩法 PM 看要不要改字。
+6. **已定：葛蘭的配點教學第一句不帶數字**（玩法 PM 定字；每級幾點在工坊改了也不用跟著改）。`content/world/newcomer.yaml` 的 `allocate_lesson` 第一句：
+   - 改前：「升級了？身上多了兩點力氣。來，我示範怎麼分。」
+   - 改後：「升級了？身上又多了些力氣。來，我示範怎麼分。」
+   - 一起更新：`tests/world/test_newcomer.py`（鎖這句的斷言）、開發頁 `client/src/dev/hc8Gallery.tsx` 的教學內容。沒改：美術樣張 `docs/art/sample/mentor-attr.html` 與舊報告 `PhaseOB-3報告.md`（歷史文件）。截圖 1 拍的是改字前的開發頁，台詞那行還是舊字（範例句與本段無關，沒重拍）。
 
 ## 7. 全量檢查
 
