@@ -1016,6 +1016,8 @@ class EquipmentCaps(ContentModel):
     - ``rule_affixes``：改變規則類詞條全身同時只生效 1 個（同一條詞條 id 掛在兩件物品上只算 1 個）。
       E6-b1 起超過時不再是穿戴錯誤：玩家勾選的（``Loadout.chosen``）優先，其次照欄位順序，其他的
       標灰（08 8.27；:mod:`trpg.engine.gear.limits`）。
+    - ``signature_active``：身上同時生效的招牌效果最多 3 個（E6-b1，08 8.27、8.30 第 4 點）；超過的
+      標灰（:mod:`trpg.engine.gear.limits`）。
     - 觸發連鎖沿用 ``core.max_trigger_depth``（G3）。
     """
 
@@ -1028,6 +1030,7 @@ class EquipmentCaps(ContentModel):
     move_bonus: int = Field(ge=0)
     cost_affixes: int = Field(ge=0)
     rule_affixes: int = Field(default=1, ge=0)
+    signature_active: int = Field(ge=0)
 
 
 class EquipmentRules(ContentModel):

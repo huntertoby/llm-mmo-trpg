@@ -353,7 +353,9 @@ def make_unit(
     裝備的名額（E6-b1，08 8.27、8.30）：改寫規則同時 1 個、招牌同時 3 個，超過的標灰
     （:func:`~trpg.engine.gear.limits.limit_gear`），之後的技能、反應都只看生效中的詞條。"""
     loadout = equipment if equipment is not None else Loadout()
-    gear = limit_gear(build_gear(loadout, rules.equipment), loadout, rules)
+    gear = limit_gear(
+        build_gear(loadout, rules.equipment), loadout, rules, race=template.race, weapon=weapon
+    )
     gear_skills = gear_skill_keys(template.skills, gear)  # E1：裝備給的技能鍵
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）
