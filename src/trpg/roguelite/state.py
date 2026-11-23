@@ -486,6 +486,11 @@ class RunState(_Model):
     裝備。舊存檔沒有此欄位時為空。"""
     backpack: tuple[ItemDef, ...] = ()
     """背包（Phase 3K-2）：換下與沒穿上的裝備，一輪內不限數量；營火可以換回。"""
+    gear_chosen: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """玩家在角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點）：每個是
+    ``"<欄位>:<詞條 ID>"``，開戰時帶進 :attr:`~trpg.content.equipment.Loadout.chosen`。換裝時寫入
+    換裝前生效的（保留原本生效的，:func:`trpg.roguelite.gear.keep_active_chosen`）。空的時候不輸出
+    （舊存檔沒有此欄位＝沒勾過）。"""
     node: Node
     llm: bool = False
     """LLM 生成開關（Phase 4-L6）：打開時候選產生器請 LLM 提議技能（需要呼叫端裝上提議器，見

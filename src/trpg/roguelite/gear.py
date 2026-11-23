@@ -44,6 +44,7 @@ __all__ = [
     "run_loadout",
     "take_gear",
     "target_slot",
+    "with_chosen",
     "worn_items",
 ]
 
@@ -67,14 +68,23 @@ def _loadout(library: ContentLibrary, items: dict[str, ItemDef]) -> Loadout:
     return resolve_loadout({slot: slot for slot in items}, items, library.affixes)
 
 
+def with_chosen(loadout: Loadout, chosen: tuple[str, ...]) -> Loadout:
+    """把玩家的勾選（``gear_chosen``，E6-b2）帶進裝備快照；沒勾過時原樣回傳（快照逐位元不變）。"""
+    if not chosen:
+        return loadout
+    return Loadout(items=loadout.items, chosen=chosen)
+
+
 def run_loadout(library: ContentLibrary, run: RunState) -> Loadout:
     """主角這一輪的裝備快照（開戰與角色面板共用）：``RunState.equipment`` 非空就用它，否則測試模式
-    挑的裝備，再否則範本的裝備。"""
+    挑的裝備，再否則範本的裝備；帶上玩家的勾選（``gear_chosen``，E6-b2）。"""
     if run.equipment:
-        return _loadout(library, run.equipment)
-    if run.test_equipment:
-        return resolve_loadout(run.test_equipment, library.items, library.affixes)
-    return library.loadout_of(run.hero)
+        loadout = _loadout(library, run.equipment)
+    elif run.test_equipment:
+        loadout = resolve_loadout(run.test_equipment, library.items, library.affixes)
+    else:
+        loadout = library.loadout_of(run.hero)
+    return with_chosen(loadout, run.gear_chosen)
 
 
 def item_score(library: ContentLibrary, item: ItemDef | None) -> Fraction:

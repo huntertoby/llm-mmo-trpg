@@ -24,7 +24,7 @@ from trpg.content.item_gen import downscale_item, generate_item_retrying
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.errors import ChoiceError
-from trpg.roguelite.gear import equip_swap, target_slot, worn_items
+from trpg.roguelite.gear import equip_swap, target_slot, with_chosen, worn_items
 from trpg.roguelite.state import RunState
 from trpg.shared.rng import Rng, fnv1a64
 from trpg.world.economy_actions import EquipAction, ItemEquippedEvent
@@ -58,7 +58,11 @@ def item_loadout(library: ContentLibrary, items: Mapping[str, ItemDef]) -> Loado
 
 
 def _run(char: CharacterState) -> RunState:
-    update = {"equipment": dict(char.equipment), "backpack": char.gear}
+    update = {
+        "equipment": dict(char.equipment),
+        "backpack": char.gear,
+        "gear_chosen": char.gear_chosen,
+    }
     return as_run(char).model_copy(update=update)
 
 
@@ -74,15 +78,15 @@ def worn_gear(library: ContentLibrary, char: CharacterState) -> dict[str, ItemDe
 
 def hero_loadout(library: ContentLibrary, char: CharacterState) -> Loadout:
     """主角開戰用的裝備快照：``equipment`` 非空就用它，否則範本的裝備；再加上 2 件共鳴的詞條
-    （Phase 5D-3，:mod:`trpg.world.resonance`）。"""
+    （Phase 5D-3，:mod:`trpg.world.resonance`）與玩家的勾選（``gear_chosen``，E6-b2）。"""
     if char.equipment:
         loadout = item_loadout(library, char.equipment)
     else:
         loadout = library.loadout_of(char.hero)
     weapon = library.weapons.get(char.hero.weapon)
-    if weapon is None:
-        return loadout
-    return apply_resonance(library, loadout, weapon)[0]
+    if weapon is not None:
+        loadout = apply_resonance(library, loadout, weapon)[0]
+    return with_chosen(loadout, char.gear_chosen)
 
 
 # ---------------------------------------------------------------------------
