@@ -102,3 +102,10 @@ PM 已裁定待決 1～7（2026-11-23）：1 由 E6-b2 換裝時寫 `chosen`；2
 ## 5. 平衡疑慮
 
 沒有。這段沒有試數值。
+
+## 開發 PM 驗收（2026-11-23）
+
+**通過**，已合併進 main。`check.py --all` 0；slow parity／cli 0；78 場、442 招、census 都 different=0（紀錄只有 format /138→/139；規則包多 `caps.signature_active: 3`）。
+
+- 待決 7 查明：`progress.py`、`league.py` 只取數值類的 `geared_template`，名額只標灰非數值類詞條，結果不受影響；真正戰鬥一律經 `make_unit` 套名額。不改，接受。
+- 待決 1「保留原本生效的」由 E6-b2 換裝時寫進 `chosen`。
