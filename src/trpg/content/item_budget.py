@@ -460,9 +460,9 @@ def _fill_problems(
     points: Fraction,
     where: str,
 ) -> list[str]:
-    """點數在詞條預算的 70～100%（8.22.1 第 6 點）。招牌物品（E6-a1，08 8.30 第 2 點）：上限照舊是
-    整件的 100%；下限只看招牌以外的部分——剩下的預算（扣掉招牌）× 70%；招牌以外什麼都沒放（放不下）
-    時不檢查下限。"""
+    """點數在詞條預算的 70～100%（8.22.1 第 6 點）。招牌物品（08 8.30 第 2 點）：上限照舊是整件的
+    100%；不檢查下限——招牌以外的部分放得下就放，不要求湊到 70%（E6-a2 照玩法 PM 的解讀，取代
+    E6-a1「招牌以外要到剩下預算的 70%」）。"""
     signature = sum(
         (signature_points(rules, budget) for a in defs if a.signature is not None), Fraction(0)
     )
@@ -476,13 +476,6 @@ def _fill_problems(
         ]
     if points > budget:
         return [f"{where}：詞條點數 {_fmt(points)} 超過預算 {budget}"]
-    rest, room = points - signature, budget - signature
-    low = room * Fraction(rules.min_fill_permille, _PERMILLE)
-    if rest and rest < low:
-        return [
-            f"{where}：招牌以外的詞條點數 {_fmt(rest)} 不到剩下預算 {_fmt(room)} 的 "
-            f"{rules.min_fill_permille / 10:g}%（{_fmt(low)}）"
-        ]
     return []
 
 

@@ -46,6 +46,8 @@ class CraftSlotView(_ApiModel):
     grade_amount: int
     """要幾個通用料。"""
     affixes: tuple[CraftOptionView, ...]
+    signatures: tuple[CraftOptionView, ...] = ()
+    """可以改指定的招牌類型（E6-a2，08 8.27；``id`` 是種類）；開關關著或部位不帶招牌時是空的。"""
 
 
 class CraftRarityView(_ApiModel):

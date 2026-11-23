@@ -3623,6 +3623,7 @@ export interface components {
             materials: string[];
             /** Item Level */
             item_level?: number | null;
+            signature?: components["schemas"]["SignatureKind"] | null;
         };
         /**
          * CraftGearView
@@ -3717,6 +3718,11 @@ export interface components {
             grade_amount: number;
             /** Affixes */
             affixes: components["schemas"]["CraftOptionView"][];
+            /**
+             * Signatures
+             * @default []
+             */
+            signatures: components["schemas"]["CraftOptionView"][];
         };
         /**
          * CraftingView
@@ -10365,6 +10371,8 @@ export interface components {
             /** Target Id */
             target_id: string;
         };
+        /** @enum {string} */
+        SignatureKind: "action" | "reaction" | "terrain" | "behavior" | "rule";
         /**
          * SituationAnswerRequest
          * @description 送出情境判定的回答（**第一次送出即定案**，9.6.4）。``text`` 只放進 LLM 的

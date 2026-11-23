@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { WorldCraftGear, WorldCrafting } from "../api/types";
-import { craftAction, draftProblem, initialDraft, toggleMaterial, withSlot } from "./crafting";
+import { craftAction, draftProblem, initialDraft, signatureValue, toggleMaterial, withSlot } from "./crafting";
 import { codeProblem, normalizeCode } from "./bagView";
 import { SmithyPanel, smithyTabs, type SmithyTab } from "./SmithyPanel";
 
@@ -39,9 +39,9 @@ function crafting(overrides: Partial<WorldCrafting> = {}): WorldCrafting {
     can_use: true,
     problem_zh: null,
     slots: [
-      { slot_type: "weapon", name_zh: "武器", grade_amount: 3, affixes: [] },
-      { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }] },
-      { slot_type: "body", name_zh: "身體", grade_amount: 2, affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
+      { slot_type: "weapon", name_zh: "武器", grade_amount: 3, signatures: [], affixes: [] },
+      { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, signatures: [], affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }] },
+      { slot_type: "body", name_zh: "身體", grade_amount: 2, signatures: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
     ],
     rarities: [
       { rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級" },
@@ -83,6 +83,40 @@ describe("打造表單", () => {
     expect(draftProblem(empty)).toContain("通用料");
     const action = craftAction({ ...initialDraft(crafting()), materials: ["item_mist_crystal"] }, "smithy_mist_ferry");
     expect(action).toMatchObject({ kind: "craft", station: "smithy_mist_ferry", slot_type: "neck", grade: "item_coarse_material", materials: ["item_mist_crystal"] });
+  });
+});
+
+describe("打造指定招牌類型（E6-a2）", () => {
+  const withSignatures = () =>
+    crafting({
+      slots: [
+        { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }], signatures: [{ id: "action", text_zh: "招牌：新動作" }] },
+        { slot_type: "feet", name_zh: "腳", grade_amount: 1, affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }], signatures: [{ id: "terrain", text_zh: "招牌：地形規則" }] },
+        { slot_type: "head", name_zh: "頭", grade_amount: 1, signatures: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
+      ],
+    });
+
+  it("選了招牌類型：送 signature、不送 affix（二選一）", () => {
+    const draft = { ...initialDraft(withSignatures()), affix: signatureValue("action") };
+    const action = craftAction(draft, "smithy_mist_ferry");
+    expect(action).toMatchObject({ kind: "craft", signature: "action", affix: null });
+    expect(craftAction(initialDraft(withSignatures()), "smithy_mist_ferry")).not.toHaveProperty("signature");
+  });
+
+  it("換部位：新部位沒有那一種就換成第一條詞條", () => {
+    const draft = { ...initialDraft(withSignatures()), affix: signatureValue("action") };
+    expect(withSlot(draft, withSignatures(), "feet").affix).toBe("affix_cond_still_defense");
+    expect(withSlot(draft, withSignatures(), "neck").affix).toBe(signatureValue("action"));
+  });
+
+  it("開關打開時多一個選項；開關關著（後端沒給）時不出現", () => {
+    const on = renderToStaticMarkup(createElement(SmithyPanel, { crafting: withSignatures(), busy: false, onAct: () => undefined, initialTab: "craft" }));
+    expect(on).toContain('data-testid="world-craft-signatures"');
+    expect(on).toContain("招牌：新動作");
+    expect(on).toContain("1 條詞條或 1 種招牌類型");
+    const off = renderToStaticMarkup(createElement(SmithyPanel, { crafting: crafting(), busy: false, onAct: () => undefined, initialTab: "craft" }));
+    expect(off).not.toContain("world-craft-signatures");
+    expect(off).not.toContain("招牌");
   });
 });
 

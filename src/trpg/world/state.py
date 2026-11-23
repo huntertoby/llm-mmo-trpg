@@ -65,7 +65,7 @@ from typing import Final, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from trpg.content.battle import ID_PATTERN, UnitTemplate
-from trpg.content.equipment import ItemDef
+from trpg.content.equipment import ItemDef, SignatureKind
 from trpg.content.skill_pick import WishTags
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SlotType
@@ -602,7 +602,10 @@ class CraftRecipe(_Model):
     """打造的配方（Phase 5D-3，08 8.20）：部位＋物品等級＋稀有度＋指定的 build 詞條＋材料組合。
 
     ``weapon_class`` 只有武器（主角武器的大類）；``affix`` 是 ``None``＝隱藏配方（獨特詞條由配方
-    決定）；``grade`` 是 1 種通用料；``materials`` 是特色材料（排序、不重複）。"""
+    決定）或指定了招牌類型；``grade`` 是 1 種通用料；``materials`` 是特色材料（排序、不重複）。
+
+    ``signature``（E6-a2，08 8.27）：指定的招牌類型（和 ``affix`` 二選一）；空值不輸出，舊配方的
+    指紋與配方碼逐位元不變。"""
 
     slot_type: SlotType
     weapon_class: Literal["melee", "ranged", "focus"] | None = None
@@ -611,6 +614,7 @@ class CraftRecipe(_Model):
     affix: str | None = Field(default=None, pattern=ID_PATTERN)
     grade: str = Field(pattern=ID_PATTERN)
     materials: tuple[str, ...] = ()
+    signature: SignatureKind | None = Field(default=None, exclude_if=lambda v: v is None)
 
     @field_validator("materials")
     @classmethod

@@ -7,7 +7,7 @@ import type { WorldAction, WorldCraftGear, WorldCrafting, WorldView } from "../a
 import { Hint } from "../ui/Hint";
 import { ItemListIcon } from "../ui/ItemIcon";
 import { codeProblem, normalizeCode } from "./bagView";
-import { craftAction, draftProblem, initialDraft, toggleMaterial, withSlot, type CraftDraft } from "./crafting";
+import { craftAction, draftProblem, initialDraft, signatureValue, toggleMaterial, withSlot, type CraftDraft } from "./crafting";
 import { walletLine } from "./economy";
 import { LimitNote, limitOf } from "./limits";
 
@@ -38,9 +38,12 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
   const rarity = crafting.rarities.find((r) => r.rarity === draft.rarity);
   const problem = !crafting.can_use ? crafting.problem_zh ?? "現在不能打造" : draftProblem(draft);
   const station = crafting.smithy ?? "";
+  const signatures = slot?.signatures ?? [];
+  // E6-a2：開關打開時多一個「指定招牌類型」選項（和詞條二選一）；開關關著時後端給空的，這段不出現
+  const pick = crafting.slots.some((s) => (s.signatures ?? []).length > 0) ? "1 條詞條或 1 種招牌類型" : "1 條詞條";
   return (
     <div className="world-craft-form small" data-testid="world-craft-form">
-      <div className="muted">指定部位＋1 條詞條；其餘詞條的傾向由特色材料決定。同一份配方一定打出同一件。</div>
+      <div className="muted">指定部位＋{pick}；其餘詞條的傾向由特色材料決定。同一份配方一定打出同一件。</div>
       <div className="world-form-grid">
         <label>
           部位
@@ -70,6 +73,15 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
                 {a.text_zh}
               </option>
             ))}
+            {signatures.length > 0 && (
+              <optgroup label="或指定招牌類型（不能指定是哪一條）" data-testid="world-craft-signatures">
+                {signatures.map((k) => (
+                  <option key={k.id} value={signatureValue(k.id)}>
+                    {k.text_zh}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </label>
         <label>

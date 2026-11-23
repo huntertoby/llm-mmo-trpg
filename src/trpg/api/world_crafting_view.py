@@ -16,7 +16,7 @@ from trpg.api.world_crafting_schemas import (
 )
 from trpg.api.world_economy_view import gear_title
 from trpg.content.battle import WeaponDef
-from trpg.content.equipment import ItemDef, affix_text
+from trpg.content.equipment import SIGNATURE_KIND_ZH, ItemDef, affix_text
 from trpg.content.item_budget import RARITY_ZH
 from trpg.content.item_gen import affix_choices
 from trpg.content.library import ContentLibrary
@@ -28,6 +28,7 @@ from trpg.world.crafting import (
     crafting_rules,
     enhance_cost,
     mod_of,
+    signature_choices,
     station_problem,
     stations_here,
 )
@@ -132,6 +133,8 @@ def _recipe_view(
             "＋".join(mats),
         ]
     )
+    if recipe.signature is not None:  # E6-a2：指定招牌類型的配方
+        summary += f"・指定招牌：{SIGNATURE_KIND_ZH[recipe.signature]}"
     if record.steps:  # 帶重骰序列的配方（5D-3b）
         rerolls = sum(1 for s in record.steps if s.affix is None)
         imbues = len(record.steps) - rerolls
@@ -159,14 +162,16 @@ def _affix_views(library: ContentLibrary, item: ItemDef, usable: bool) -> tuple[
     views: list[GearAffixView] = []
     for index, roll in enumerate(item.affixes):
         options = affix_choices(library, item, index) if usable else []
+        found = library.affixes.get(roll.affix)
+        signature = found is not None and found.signature is not None
         views.append(
             GearAffixView(
                 index=index,
                 text_zh=_affix_zh(library, roll.affix, roll.value),
                 can_change=bool(options),
-                choices=tuple(
-                    CraftOptionView(id=a.id, text_zh=affix_text(a, v)) for a, v in options
-                ),
+                choices=()  # 招牌只能重骰，不能指定（E6-a2，08 8.30 第 10 點）
+                if signature
+                else tuple(CraftOptionView(id=a.id, text_zh=affix_text(a, v)) for a, v in options),
             )
         )
     return tuple(views)
@@ -253,6 +258,10 @@ def _slot_views(library: ContentLibrary, char: CharacterState) -> tuple[CraftSlo
                     id=a.id, text_zh=affix_text(a, None if a.value is None else a.value.max)
                 )
                 for a in build_choices(library, slot, weapon_class)
+            ),
+            signatures=tuple(
+                CraftOptionView(id=k, text_zh=f"招牌：{SIGNATURE_KIND_ZH[k]}")
+                for k in signature_choices(library, slot, weapon_class)
             ),
         )
         for slot in SLOT_TYPES

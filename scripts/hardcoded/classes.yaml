@@ -532,8 +532,8 @@ rules:
     kind: text
     files: [client/src/world/EventCard.tsx, client/src/world/PartyPanel.tsx, client/src/world/SmithyPanel.tsx,
             client/src/world/WorldGrowth.tsx]
-    text: '核對得到才 \+1|＋1 條詞條|每種用 1 個|同時 1 個，一直有效|免費帶 0～'
-    note: HC-6c 改判：情境判定的用心清單一筆算一點（`trpg.world.situations`：`min(care_max, 筆數)`，上限已改讀 `rules.situation_care_max`）；鍛造「指定部位＋1 條詞條」是挑一條的欄位、特色材料「每種用 1 個」是每種一份（`flavor_max` 是種數，已照伺服器）；誓約「同時 1 個」是單一欄位（`OathView.current`，同 HC-6b 的 `ts-hc6b-single-text`）；雇用隊友「0～上限」的 0 是不帶（獨行），上限已改讀 `max_hired`。
+    text: '核對得到才 \+1|＋1 條詞條|^1 條詞條|1 種招牌類型|每種用 1 個|同時 1 個，一直有效|免費帶 0～'
+    note: HC-6c 改判：情境判定的用心清單一筆算一點（`trpg.world.situations`：`min(care_max, 筆數)`，上限已改讀 `rules.situation_care_max`）；鍛造「指定部位＋1 條詞條」是挑一條的欄位、特色材料「每種用 1 個」是每種一份（`flavor_max` 是種數，已照伺服器）；誓約「同時 1 個」是單一欄位（`OathView.current`，同 HC-6b 的 `ts-hc6b-single-text`）；雇用隊友「0～上限」的 0 是不帶（獨行），上限已改讀 `max_hired`。E6-a2：鍛造說明改成「1 條詞條或 1 種招牌類型」，同一個欄位二選一（08 8.27「打造的指定名額仍然只有 1 條」）。
   - id: ts-hc8-ordinal-text
     class: const
     status: done

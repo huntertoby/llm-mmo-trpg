@@ -8938,6 +8938,16 @@
               }
             ],
             "title": "Item Level"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignatureKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -9182,6 +9192,14 @@
             },
             "type": "array",
             "title": "Affixes"
+          },
+          "signatures": {
+            "items": {
+              "$ref": "#/components/schemas/CraftOptionView"
+            },
+            "type": "array",
+            "title": "Signatures",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -25654,6 +25672,16 @@
         ],
         "title": "Shove",
         "description": "推擊（技巧動作）：相鄰敵人，力量對抗；成功時沿「行動者 → 目標」方向推 1 格。"
+      },
+      "SignatureKind": {
+        "type": "string",
+        "enum": [
+          "action",
+          "reaction",
+          "terrain",
+          "behavior",
+          "rule"
+        ]
       },
       "SituationAnswerRequest": {
         "properties": {

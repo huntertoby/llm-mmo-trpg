@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trpg.content.battle import ID_PATTERN
+from trpg.content.equipment import SignatureKind
 from trpg.content.slots import SlotType
 
 __all__ = [
@@ -55,13 +56,17 @@ class CraftAction(_Model):
     """特色材料（每種 1 個；決定其餘詞條的傾向）。"""
     item_level: int | None = Field(default=None, ge=1, le=99)
     """``None``＝能打的最高等級（角色等級與通用料上限取小的）。"""
+    signature: SignatureKind | None = Field(default=None, exclude_if=lambda v: v is None)
+    """指定招牌類型（E6-a2，08 8.27：五種之一，不能指定是哪一條）；和 ``affix`` 二選一。"""
 
     @model_validator(mode="after")
     def _check(self) -> CraftAction:
-        fields = (self.slot_type, self.rarity, self.grade)
+        fields = (self.slot_type, self.rarity, self.grade, self.signature)
         if self.code is not None and (any(f is not None for f in fields) or self.materials):
             raise ValueError("用配方碼打造時不能再給部位、稀有度、材料")
-        if self.code is None and any(f is None for f in fields):
+        if self.affix is not None and self.signature is not None:
+            raise ValueError("指定詞條和指定招牌類型只能選一個")
+        if self.code is None and any(f is None for f in fields[:3]):
             raise ValueError("打造要給部位、稀有度與通用料（或給配方碼）")
         return self
 
