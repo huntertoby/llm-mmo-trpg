@@ -118,10 +118,11 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
   return (
     <PopupFrame placement={INLINE} className="world-event" testId="world-event" role="region" label={`事件：${event.location_name_zh}`}>
       <EventArt event={event} />
-      {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
-      {/* WM-1：旁白還在路上（走路先回畫面）：同一個說書人框畫占位，補上之後換成上面的旁白（高度不變） */}
+      {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" reserveMore />}
+      {/* WM-1：旁白還在路上（走路先回畫面）：同一個說書人框畫占位，補上之後換成上面的旁白（高度不變）；
+          QF-7：兩邊都留「多講一點」那一列，只有一段旁白、又有補充時，按鈕出現也不長高 */}
       {event.story == null && event.story_pending === true && (
-        <StoryPendingDialog text={STORY_PENDING_ZH} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story-pending" />
+        <StoryPendingDialog text={STORY_PENDING_ZH} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story-pending" reserveMore />
       )}
       {/* PNL-4：選項列 A（兩欄格子＋次行、放棄右下小鈕；SolutionTile.tsx） */}
       <SolutionGrid solutions={event.solutions} busy={busy} openTemplate={situation?.template ?? null} onOpen={onOpen} onSolve={onSolve} />

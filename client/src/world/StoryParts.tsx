@@ -79,9 +79,20 @@ interface DialogProps {
   portrait: NpcPortrait | null;
   region?: string | null;
   testId?: string;
+  /** QF-7（ak）：「多講一點」那一列一直留位子（沒有按鈕時放一顆看不見的），按鈕出現、補上旁白時框不長高；事件卡用。 */
+  reserveMore?: boolean;
 }
 
-export function StoryDialog({ story, speaker, portrait, region, testId = "world-dialog" }: DialogProps) {
+/** 「多講一點」的留位：同一顆按鈕、看不見、不能按（高度和真的按鈕逐像素相同）。 */
+function MoreSlot() {
+  return (
+    <button type="button" className="world-more-btn small world-more-slot" disabled tabIndex={-1} aria-hidden="true">
+      多講一點
+    </button>
+  );
+}
+
+export function StoryDialog({ story, speaker, portrait, region, testId = "world-dialog", reserveMore = false }: DialogProps) {
   const [state, setState] = useState(() => dialogStart(story));
   const page = state.pages[state.index] ?? "";
   const next = hasNext(state);
@@ -115,6 +126,7 @@ export function StoryDialog({ story, speaker, portrait, region, testId = "world-
             多講一點
           </button>
         )}
+        {!more && reserveMore && <MoreSlot />}
       </div>
     </div>
   );
@@ -125,12 +137,14 @@ interface PendingProps {
   speaker: string;
   portrait: DialogProps["portrait"];
   testId: string;
+  /** 同 `StoryDialog` 的 `reserveMore`：補上後可能有「多講一點」，占位時先留那一列。 */
+  reserveMore?: boolean;
 }
 
 /** 旁白還在路上時的占位（WM-1 小修，`docs/art/WM-1驗收.md`）：和補上後的 `StoryDialog` 同一個說書人框，
  * 頭像、名字照樣畫，框裡放灰色的占位句；文字區的高度和補上後一樣（事件卡裡至少兩行，`story.css`），
  * 補上旁白時卡片不長高、下面的按鈕不跳。 */
-export function StoryPendingDialog({ text, speaker, portrait, testId }: PendingProps) {
+export function StoryPendingDialog({ text, speaker, portrait, testId, reserveMore = false }: PendingProps) {
   return (
     <div className="world-dialog world-dialog-pending" data-testid={testId}>
       <Portrait portrait={portrait} region={null} size={48} label={speaker} />
@@ -141,6 +155,7 @@ export function StoryPendingDialog({ text, speaker, portrait, testId }: PendingP
         <div className="world-dialog-text world-dialog-placeholder" aria-live="polite" data-testid={`${testId}-text`}>
           {text}
         </div>
+        {reserveMore && <MoreSlot />}
       </div>
     </div>
   );

@@ -70,6 +70,43 @@ describe("WM-1 旁白後補", () => {
     expect(tail(waiting)).toBe(tail(done));
   });
 
+  it("QF-7（ak）：只有一段旁白又有「多講一點」：占位和補上是同一個框、都留「多講一點」那一列，框以外逐字相同", () => {
+    const ONE_MORE = { text_zh: "石階上，一名行商抱著貨箱喘氣。", more_zh: "他的腳踝腫得發亮。", source: "llm" as const };
+    const waiting = card(event());
+    const done = card(event({ story: ONE_MORE, story_pending: false }));
+    const plain = card(event({ story: STORY, story_pending: false }));
+    // 框：從外框的 <div 到外框結束（說書人框裡沒有巢狀的 world-dialog）
+    const frame = (html: string, id: string) => {
+      const at = html.indexOf(`data-testid="${id}"`);
+      expect(at).toBeGreaterThan(-1);
+      const start = html.lastIndexOf("<div", at);
+      const end = html.indexOf('<div class="world-event-solutions"', at);
+      expect(end).toBeGreaterThan(at);
+      return { start, end, inner: html.slice(start, end) };
+    };
+    const p = frame(waiting, "world-event-story-pending");
+    const d = frame(done, "world-event-story");
+    const n = frame(plain, "world-event-story");
+    // 同一個框：外框、頭像、名字、文字區、「多講一點」那一列的結構一樣（只差文字與狀態屬性）
+    const shape = (s: string) =>
+      s
+        .replace(/>[^<]*</gu, "><")
+        .replace(/ (data-[a-z-]+|aria-[a-z-]+|disabled|tabindex|style)(="[^"]*")?/gu, "")
+        .replace(/ class="([^"]*)"/gu, (_m, c: string) => ` class="${c.split(" ").filter((x) => !["world-dialog-pending", "world-dialog-placeholder", "world-more-slot"].includes(x)).join(" ")}"`)
+        .replace(/<button type="button" class="world-dialog-text">/gu, '<div class="world-dialog-text">')
+        .replace(/<\/button><button/gu, "</div><button");
+    expect(shape(p.inner)).toBe(shape(d.inner));
+    expect(shape(n.inner)).toBe(shape(d.inner));
+    // 「多講一點」：補上後是真的按鈕；占位、沒有補充時是同一顆看不見的留位
+    expect(d.inner).toContain('data-testid="world-event-story-more"');
+    expect(p.inner).toMatch(/<button type="button" class="world-more-btn small world-more-slot" disabled="" tabindex="-1" aria-hidden="true">多講一點<\/button>/u);
+    expect(n.inner).toContain("world-more-slot");
+    expect(d.inner).not.toContain("world-more-slot");
+    // 框以外的內容逐字相同
+    expect(waiting.slice(0, p.start)).toBe(done.slice(0, d.start));
+    expect(waiting.slice(p.end)).toBe(done.slice(d.end));
+  });
+
   it("沒有在等旁白（LLM 關著已經寫好、或沒有事件）時不送", () => {
     expect(pendingStoryKey("c1", view(event()))).toBe("c1|wounded_peddler|渡口石階");
     expect(pendingStoryKey("c1", view(event({ story: STORY, story_pending: false })))).toBeNull();
