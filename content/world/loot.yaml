@@ -17,6 +17,9 @@ gear:
   battle_permille: 150
   battle_weights: {common: 40, uncommon: 25, rare: 20}   # 照 item_gen.yaml 的 rarity_weights
   elite_epic_permille: 500
+  # E6-c2（08 8.30 第 8 點，#180）：精英、頭目的那一件 2% 是傳說；一般戰鬥不出。只在 item_gen.yaml 的
+  # legendary_enabled 打開時抽（關著時掉落不變）。頭、手、戒指抽到傳說時降成史詩（8.30 第 6 點）。
+  elite_legendary_permille: 20
   max_item_level: 10
   # 6T-1a（08 8.13 #135，和郵寄一起上線）：主手 50% 同大類、其餘依全服在線角色的武器大類比例分給另外
   # 兩大類（每天 6 點算）；精英 75／25；另外兩類合計不到 3 人時平均分。區域 Boss、懸賞一律同大類。

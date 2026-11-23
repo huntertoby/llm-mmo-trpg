@@ -5,8 +5,9 @@
   家族材料 > 通用料），一般敵人 ``material_permille`` 掉 1 份（家族材料〔區域的優先，其次
   各區共用的，例：盜賊各區掉焦鐵，5D-2b〕，沒有家族的掉通用料）。
 - **裝備**：陣容的每名精英必掉 1 件、``elite_epic_permille`` 史詩（20.2；5D-2b 玩法 PM 代決，取代
-  5D2-4 的一場 1 件）；沒有精英時 ``battle_permille`` 掉 1 件；物品等級＝地點建議等級（敵人等級），
-  詞條偏向該區關鍵字（20.2）。
+  5D2-4 的一場 1 件）、``elite_legendary_permille`` 傳說（E6-c2，08 8.30 第 8 點；只在
+  ``legendary_enabled`` 打開時，一般戰鬥不出）；沒有精英時 ``battle_permille`` 掉 1 件；物品等級＝
+  地點建議等級（敵人等級），詞條偏向該區關鍵字（20.2）。
 - **必帶詞條**（RG-4，#163「打盾兵拿盾兵的盾」）：掉落算在 ``signature_affixes`` 列的敵人頭上
   （精英的那一件算該精英；沒有精英時算整個敵方陣容）、掉到列的副手時補上詞條
   （:func:`~trpg.content.item_gen.with_affix`，不用亂數，其他掉落逐位元不變）；RG-5 起那一列
@@ -167,6 +168,15 @@ def _weighted(rng: Rng, weights: dict[Rarity, int]) -> Rarity:
     raise AssertionError("unreachable")
 
 
+def _legendary_roll(library: ContentLibrary, permille: int, rng: Rng) -> bool:
+    """精英、頭目那一件是不是傳說（E6-c2，08 8.30 第 8 點）：只在 ``legendary_enabled`` 打開時抽，
+    用 ``rng.fork("legendary")``，不推進原本的串流（關著時掉落逐位元不變）。"""
+    gen = library.item_gen
+    if gen is None or not gen.legendary_enabled or permille <= 0:
+        return False
+    return rng.fork("legendary").randint(0, 999) < permille
+
+
 def _gear_parts(library: ContentLibrary, char: CharacterState) -> list[SlotType]:
     """能掉的物品種類：主角武器是雙手或成對時不出副手（同 roguelite 三選一）。"""
     weapon = library.weapons[char.hero.weapon]
@@ -190,10 +200,13 @@ def _roll_gear(
 ) -> tuple[ItemDef, ...]:
     gear = rules.gear
     if elite:
+        legendary = _legendary_roll(library, gear.elite_legendary_permille, rng)
         epic = rng.randint(0, 999) < gear.elite_epic_permille
         rarity: Rarity = "epic" if epic else _weighted(rng, gear.battle_weights)
         if forced is not None:  # 區域 Boss 的保底（5F-3）：亂數照抽，稀有度換掉
             rarity = forced
+        if legendary:  # E6-c2：精英、頭目 2% 傳說（8.30 第 8 點；頭目的保底史詩也會變傳說）
+            rarity = "legendary"
     elif rng.randint(0, 999) < gear.battle_permille:
         rarity = _weighted(rng, gear.battle_weights)
     else:

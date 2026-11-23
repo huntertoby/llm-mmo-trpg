@@ -46,8 +46,8 @@ _WEAPON_SLOTS: Final = ("main_hand", "off_hand")
 def _weights_ok(weights: Mapping[Rarity, int], where: str) -> None:
     if any(w < 0 for w in weights.values()) or sum(weights.values()) <= 0:
         raise ValueError(f"{where}：權重不能是負的，合計要大於 0")
-    if "legendary" in weights:
-        raise ValueError(f"{where}：掉落不產生傳說（8.22.1 第 7 點）")
+    if "legendary" in weights:  # 傳說只在精英、頭目的掉落（elite_legendary_permille）
+        raise ValueError(f"{where}：一般戰鬥不掉傳說（08 8.30 第 8 點）")
 
 
 class GenericMaterial(ContentModel):
@@ -77,6 +77,10 @@ class GearDropRules(ContentModel):
     """一般掉落的稀有度權重（普通～稀有）。"""
     elite_epic_permille: int = Field(ge=0, le=1000)
     """陣容有精英：必掉 1 件，這個機率是史詩，否則照 ``battle_weights``。"""
+    elite_legendary_permille: int = Field(default=0, ge=0, le=1000)
+    """精英、頭目那一件是傳說的機率（E6-c2，08 8.30 第 8 點：初值 2%）。只在 ``item_gen.yaml`` 的
+    ``legendary_enabled`` 打開時抽（亂數用 ``fork("legendary")``，關著時掉落逐位元不變）；一般戰鬥
+    不出傳說。"""
     max_item_level: int = Field(ge=1)
     """物品等級上限（第一季 10，8.26.2）。"""
     main_hand: MainHandMix | None = None
