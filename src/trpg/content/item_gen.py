@@ -248,21 +248,24 @@ def _family(affix: AffixDef) -> str:
 
 
 def _best_value(
-    rules: ItemGenRules, affix: AffixDef, allowance: Fraction
+    rules: ItemGenRules, affix: AffixDef, allowance: Fraction, budget: int | None = None
 ) -> tuple[int | None, Fraction] | None:
-    """放得進 ``allowance`` 的最強數值與點數；放不進（或少於每條最低點數）時為 ``None``。"""
+    """放得進 ``allowance`` 的最強數值與點數；放不進（或少於每條最低點數）時為 ``None``。
+    ``budget``：該件的詞條預算（招牌詞條計價用，E6-a1）。"""
     floor = rules.min_affix_points
     if affix.value is None:
-        points = affix_points(rules, affix, None)
+        points = affix_points(rules, affix, None, budget=budget)
         return (None, points) if floor <= points <= allowance else None
     lo, hi = affix.value.min, affix.value.max
-    fixed = affix_points(rules, affix, lo) == affix_points(rules, affix, hi)
+    fixed = affix_points(rules, affix, lo, budget=budget) == affix_points(
+        rules, affix, hi, budget=budget
+    )
     if fixed:  # 點數和數值無關：取最強的數值
         value = max((lo, hi), key=lambda v: affix_strength(affix, v))
-        points = affix_points(rules, affix, value)
+        points = affix_points(rules, affix, value, budget=budget)
         return (value, points) if floor <= points <= allowance else None
     for value in range(hi, lo - 1, -1):
-        points = affix_points(rules, affix, value)
+        points = affix_points(rules, affix, value, budget=budget)
         if points <= allowance:
             return (value, points) if points >= floor else None
     return None
@@ -675,18 +678,19 @@ def affix_choices(
         source = [a for a in fits if pick.allows(a)]
     else:
         source = [a for a in fits if a.category in rule.categories]
+    budget = affix_budget(rules, item.item_level, item.slot_type)
     others: list[_Pick] = []
     for i, roll in enumerate(item.affixes):
         other = library.affixes.get(roll.affix)
         if i != index and other is not None:
-            others.append(_Pick(other, roll.value, affix_points(rules, other, roll.value)))
-    budget = affix_budget(rules, item.item_level, item.slot_type)
+            points = affix_points(rules, other, roll.value, budget=budget)
+            others.append(_Pick(other, roll.value, points))
     allowance = Fraction(budget) - sum((o.points for o in others), Fraction(0))
     found: list[tuple[AffixDef, int | None]] = []
     for affix in source:
         if affix.id == current or not _compatible(affix, others):
             continue
-        best = _best_value(rules, affix, allowance)
+        best = _best_value(rules, affix, allowance, budget)
         if best is not None:
             found.append((affix, best[0]))
     return found
@@ -714,28 +718,30 @@ def pick_affix(
 
 
 def _lower_value(
-    rules: ItemGenRules, affix: AffixDef, value: int | None, allowance: Fraction
+    rules: ItemGenRules, affix: AffixDef, value: int | None, allowance: Fraction, budget: int
 ) -> int | None:
     """從原本的數值往下限找第一個放得進 ``allowance`` 的數值；都放不進時用下限（照穿，5D-2b）。
-    點數和數值無關的詞條（固定數值、``value`` 沒有範圍）照舊。"""
+    點數和數值無關的詞條（固定數值、``value`` 沒有範圍、招牌）照舊。"""
     if affix.value is None or value is None:
         return value
     lo = affix.value.min
-    if affix_points(rules, affix, lo) == affix_points(rules, affix, value):
+    if affix_points(rules, affix, lo, budget=budget) == affix_points(
+        rules, affix, value, budget=budget
+    ):
         return value
     step = -1 if value >= lo else 1
     for candidate in range(value, lo + step, step):
-        if affix_points(rules, affix, candidate) <= allowance:
+        if affix_points(rules, affix, candidate, budget=budget) <= allowance:
             return candidate
     return lo
 
 
-def _fixed_points(rules: ItemGenRules, affix: AffixDef) -> bool:
-    """點數和數值無關的詞條（沒有範圍，或上下限點數相同）：縮數值也省不了點數。"""
+def _fixed_points(rules: ItemGenRules, affix: AffixDef, budget: int) -> bool:
+    """點數和數值無關的詞條（沒有範圍，或上下限點數相同；招牌）：縮數值也省不了點數。"""
     if affix.value is None:
         return True
-    return affix_points(rules, affix, affix.value.min) == affix_points(
-        rules, affix, affix.value.max
+    return affix_points(rules, affix, affix.value.min, budget=budget) == affix_points(
+        rules, affix, affix.value.max, budget=budget
     )
 
 
@@ -744,22 +750,28 @@ def _drop_fixed(
     library: ContentLibrary,
     affixes: Sequence[AffixRoll],
     budget: Fraction,
+    item_budget: int,
 ) -> tuple[AffixRoll, ...]:
     """每條都取下限仍超過 ``budget`` 時，從點數最高的固定點數詞條開始拿掉（同點數先拿後面的），
     直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。
     **build 詞條（關鍵字的技能強化）最後才拿**：先拿其他固定點數詞條，只剩 build 詞條仍超出預算
-    才拿它（5C-3f 玩法 PM 代決）。"""
+    才拿它（5C-3f 玩法 PM 代決）。``item_budget``：新等級的詞條預算（招牌計價用，E6-a1）。"""
     kept = list(affixes)
 
     def floor(roll: AffixRoll) -> Fraction:
         d = library.affixes[roll.affix]
-        return affix_points(rules, d, None if d.value is None else d.value.min)
+        low = None if d.value is None else d.value.min
+        return affix_points(rules, d, low, budget=item_budget)
 
     def is_build(roll: AffixRoll) -> bool:
         return isinstance(library.affixes[roll.affix], KeywordAffix)
 
     while sum((floor(r) for r in kept), Fraction(0)) > budget:
-        fixed = [i for i, r in enumerate(kept) if _fixed_points(rules, library.affixes[r.affix])]
+        fixed = [
+            i
+            for i, r in enumerate(kept)
+            if _fixed_points(rules, library.affixes[r.affix], item_budget)
+        ]
         if not fixed:
             break
         drop = max(fixed, key=lambda i: (not is_build(kept[i]), floor(kept[i]), i))
@@ -782,23 +794,27 @@ def downscale_item(library: ContentLibrary, item: ItemDef, item_level: int) -> I
     if library.item_gen is None:
         return item.model_copy(update={"item_level": target})
     rules = library.item_gen
-    budget = Fraction(affix_budget(rules, target, item.slot_type))
+    item_budget = affix_budget(rules, target, item.slot_type)
+    budget = Fraction(item_budget)
     update: dict[str, object] = {"item_level": target}
     if item.base_bonus_permille:
         cap = int(budget) // rules.base_bonus.points * rules.base_bonus.permille
         bonus = min(item.base_bonus_permille, cap)
         update["base_bonus_permille"] = bonus
         budget -= base_bonus_points(rules, bonus)
-    kept = _drop_fixed(rules, library, item.affixes, budget)
+    kept = _drop_fixed(rules, library, item.affixes, budget, item_budget)
     defs = [library.affixes[r.affix] for r in kept]
-    mins = [affix_points(rules, d, None if d.value is None else d.value.min) for d in defs]
+    mins = [
+        affix_points(rules, d, None if d.value is None else d.value.min, budget=item_budget)
+        for d in defs
+    ]
     rolls: list[AffixRoll] = []
     spent = Fraction(0)
     for i, (roll, affix) in enumerate(zip(kept, defs, strict=True)):
         allowance = budget - spent - sum(mins[i + 1 :], Fraction(0))
-        value = _lower_value(rules, affix, roll.value, allowance)
+        value = _lower_value(rules, affix, roll.value, allowance, item_budget)
         rolls.append(roll.model_copy(update={"value": value}))
-        spent += affix_points(rules, affix, value)
+        spent += affix_points(rules, affix, value, budget=item_budget)
     update["affixes"] = tuple(rolls)
     return item.model_copy(update=update)
 
@@ -823,13 +839,18 @@ def with_affix(library: ContentLibrary, item: ItemDef, affix_id: str) -> ItemDef
         return item.model_copy(update={"affixes": (*kept, AffixRoll(affix=affix.id))})
     if item.rarity in rules.rarities:
         limit = min(limit, max(1, rules.rarity(item.rarity).max_affixes))
-    budget = Fraction(affix_budget(rules, item.item_level, item.slot_type))
+    whole = affix_budget(rules, item.item_level, item.slot_type)
+    budget = Fraction(whole)
     lo = None if affix.value is None else affix.value.min
-    value, points = _best_value(rules, affix, budget) or (lo, affix_points(rules, affix, lo))
+    value, points = _best_value(rules, affix, budget, whole) or (
+        lo,
+        affix_points(rules, affix, lo, budget=whole),
+    )
 
     def spent(rolls: Sequence[AffixRoll]) -> Fraction:
         return sum(
-            (affix_points(rules, library.affixes[r.affix], r.value) for r in rolls), Fraction(0)
+            (affix_points(rules, library.affixes[r.affix], r.value, budget=whole) for r in rolls),
+            Fraction(0),
         )
 
     kept = list(item.affixes)

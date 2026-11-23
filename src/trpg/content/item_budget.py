@@ -6,7 +6,7 @@
   線性內插、無條件捨去）→ 部位預算（× 部位比例）→ 詞條部分（× 詞條比例）。**和稀有度無關**（08 8.5：
   稀有度不加強度）。
 - :func:`affix_points`：一條詞條的點數（:class:`~fractions.Fraction`；數值類照單位價、條件數值再乘
-  成立率、其他類別固定點數、代價型取淨值）。
+  成立率、其他類別固定點數、代價型取淨值；招牌詞條是該件詞條預算的固定比例，E6-a1）。
 - :func:`item_points`、:func:`item_budget_problems`：一件物品的詞條點數（含普通物品的基礎加成）與
   檢查——點數在詞條預算的 70～100%、每條至少 2 點、條數不超過稀有度上限、類別在稀有度允許的範圍、
   觸發與武器元素詞條每件最多 1 條、基礎加成只在沒有詞條的普通物品上。
@@ -66,6 +66,7 @@ __all__ = [
     "item_gen_problems",
     "item_points",
     "item_strength",
+    "signature_points",
     "slot_budget",
     "total_budget",
 ]
@@ -164,6 +165,9 @@ class ItemGenRules(ContentModel):
     condition_rates_permille: dict[ConditionTier, int]
     conditional_rates: dict[str, ConditionTier]
     category_points: dict[AffixCategory, int]
+    signature_permille: int = Field(ge=0, le=_PERMILLE)
+    """招牌詞條的點數佔該件詞條預算的千分比（08 8.27、8.30 第 11 點，E6-a1）：用分數算、不捨去，
+    不看物品等級。"""
     weapon_element_points: int = Field(ge=1)
     trigger_limit_permille: int = Field(ge=0, le=_PERMILLE)
     cost_prices: dict[CostStat, Price]
@@ -262,14 +266,28 @@ def _cost_points(rules: ItemGenRules, affix: CostAffix) -> Fraction:
     return max(Fraction(rules.cost_min_points), up - down)
 
 
-def affix_points(rules: ItemGenRules, affix: AffixDef, value: int | None) -> Fraction:
+def signature_points(rules: ItemGenRules, budget: int) -> Fraction:
+    """招牌詞條的點數 ＝ 該件詞條預算 × ``signature_permille``（分數，不捨去；08 8.30 第 11
+    點）。"""
+    return Fraction(budget * rules.signature_permille, _PERMILLE)
+
+
+def affix_points(
+    rules: ItemGenRules, affix: AffixDef, value: int | None, *, budget: int | None = None
+) -> Fraction:
     """一條詞條的物品預算點數（8.22.1 第 4 點）。
 
+    - 招牌詞條（``signature`` 有值，E6-a1）且給了該件的詞條預算 ``budget``：
+      :func:`signature_points`（08 8.27「招牌效果佔該件詞條預算的固定比例」）；
     - 數值：單位價 × 數值；條件數值：再 × 條件成立率；
     - 代價型：正面 − 負面，至少 ``cost_min_points``；
     - 武器元素詞條：``weapon_element_points``；觸發：類別點數，有每回合／每輪上限再 × 0.7；
     - 其他類別：類別固定點數（數值 ``N`` 不影響點數）。
+
+    沒給 ``budget`` 時招牌詞條照類別固定點數算（不知道是哪件物品，例如沒有物品等級的物品）。
     """
+    if affix.signature is not None and budget is not None:
+        return signature_points(rules, budget)
     if isinstance(affix, StatAffix):
         return rules.stat_prices[affix.stat].of(value or 0)
     if isinstance(affix, ConditionalAffix):
@@ -290,11 +308,19 @@ def base_bonus_points(rules: ItemGenRules, permille: int) -> Fraction:
     return Fraction(permille * rules.base_bonus.points, rules.base_bonus.permille)
 
 
+def _item_affix_budget(rules: ItemGenRules, item: ItemDef) -> int | None:
+    """物品的詞條預算（招牌詞條計價用）；沒有物品等級時為 ``None``。"""
+    if item.item_level is None:
+        return None
+    return affix_budget(rules, item.item_level, item.slot_type)
+
+
 def item_points(rules: ItemGenRules, item: ItemDef, affixes: Mapping[str, AffixDef]) -> Fraction:
-    """一件物品的詞條點數合計（含基礎加成）。"""
+    """一件物品的詞條點數合計（含基礎加成；招牌詞條照該件的詞條預算計價）。"""
+    budget = _item_affix_budget(rules, item)
     total = base_bonus_points(rules, item.base_bonus_permille)
     for roll in item.affixes:
-        total += affix_points(rules, affixes[roll.affix], roll.value)
+        total += affix_points(rules, affixes[roll.affix], roll.value, budget=budget)
     return total
 
 
@@ -391,6 +417,39 @@ def _rarity_problems(
     return problems
 
 
+def _fill_problems(
+    rules: ItemGenRules,
+    defs: Sequence[AffixDef],
+    budget: int,
+    points: Fraction,
+    where: str,
+) -> list[str]:
+    """點數在詞條預算的 70～100%（8.22.1 第 6 點）。招牌物品（E6-a1，08 8.30 第 2 點）：上限照舊是
+    整件的 100%；下限只看招牌以外的部分——剩下的預算（扣掉招牌）× 70%；招牌以外什麼都沒放（放不下）
+    時不檢查下限。"""
+    signature = sum(
+        (signature_points(rules, budget) for a in defs if a.signature is not None), Fraction(0)
+    )
+    if not signature:
+        low = Fraction(budget * rules.min_fill_permille, _PERMILLE)
+        if low <= points <= budget:
+            return []
+        return [
+            f"{where}：詞條點數 {_fmt(points)} 不在預算 {budget} 的 "
+            f"{rules.min_fill_permille / 10:g}%～100%（{_fmt(low)}～{budget}）"
+        ]
+    if points > budget:
+        return [f"{where}：詞條點數 {_fmt(points)} 超過預算 {budget}"]
+    rest, room = points - signature, budget - signature
+    low = room * Fraction(rules.min_fill_permille, _PERMILLE)
+    if rest and rest < low:
+        return [
+            f"{where}：招牌以外的詞條點數 {_fmt(rest)} 不到剩下預算 {_fmt(room)} 的 "
+            f"{rules.min_fill_permille / 10:g}%（{_fmt(low)}）"
+        ]
+    return []
+
+
 def item_budget_problems(
     rules: ItemGenRules, item: ItemDef, affixes: Mapping[str, AffixDef]
 ) -> list[str]:
@@ -409,14 +468,9 @@ def item_budget_problems(
     problems = _rarity_problems(rules, item, defs, where)
     budget = affix_budget(rules, item.item_level, item.slot_type)
     points = item_points(rules, item, affixes)
-    low = Fraction(budget * rules.min_fill_permille, _PERMILLE)
-    if not low <= points <= budget:
-        problems.append(
-            f"{where}：詞條點數 {_fmt(points)} 不在預算 {budget} 的 "
-            f"{rules.min_fill_permille / 10:g}%～100%（{_fmt(low)}～{budget}）"
-        )
+    problems += _fill_problems(rules, defs, budget, points, where)
     for roll, affix in zip(item.affixes, defs, strict=True):
-        each = affix_points(rules, affix, roll.value)
+        each = affix_points(rules, affix, roll.value, budget=budget)
         if each < rules.min_affix_points:
             problems.append(
                 f"{where}：詞條 {affix.id} 只有 {_fmt(each)} 點"

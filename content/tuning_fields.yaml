@@ -919,6 +919,7 @@ targets:
       - {path: category_points.reaction, label_zh: 詞條點數：反應, group_zh: 其他類別的點數, kind: int, hint_min: 8, hint_max: 30, note_zh: 一條反應詞條花這麼多點。越大，這類詞條越貴。}
       - {path: category_points.rule, label_zh: 詞條點數：改變規則, group_zh: 其他類別的點數, kind: int, hint_min: 20, hint_max: 80, note_zh: 一條改變規則詞條花這麼多點。越大，這類詞條越貴。}
       - {path: weapon_element_points, label_zh: 詞條點數：武器元素, group_zh: 其他類別的點數, kind: int, hint_min: 8, hint_max: 30, note_zh: 一條武器元素詞條（武器改成某元素）花這麼多點。越大越貴。}
+      - {path: signature_permille, label_zh: 招牌效果佔詞條預算（‰）, group_zh: 其他類別的點數, kind: permille, hint_min: 300, hint_max: 900, note_zh: 稀有、史詩的招牌效果（新動作、新反應、地形規則、行為改寫、改寫規則）佔這件裝備詞條預算的千分比（600＝60%，不看物品等級）。越大，招牌越貴、剩下給數值與技能強化的點數越少；越小，剩下的詞條越多。只能 0～1000。}
       - {path: trigger_limit_permille, label_zh: 有次數上限的觸發打折（‰）, group_zh: 其他類別的點數, kind: permille, hint_min: 350, hint_max: 1000, note_zh: 觸發詞條有每回合或每輪上限時，點數乘這個千分比（700＝打 7 折）。越小，有上限的觸發越便宜。只能 0～1000。}
       - {path: weapon_attribute_preference_permille, label_zh: 武器屬性詞條偏向縮放屬性（‰）, group_zh: 其他類別的點數, kind: permille, hint_min: 250, hint_max: 1000, note_zh: 武器、副手抽到屬性詞條時，這把武器的縮放屬性合計佔這麼多千分比的機率（雙屬性平分），其他屬性平分剩下的。越大越常抽到對口的屬性。只能 0～1000。}
       - {path: cost_prices.damage_permille.points, label_zh: 代價型：傷害的點數, group_zh: 代價型詞條, kind: int, hint_min: 2, hint_max: 6, note_zh: 代價型詞條的傷害增減，每一個單位算這麼多點（正面加、負面扣）。越大，傷害這一項的份量越重。}
