@@ -69,7 +69,7 @@ type MapRole = Literal["test", "training", "boss"]
 # QF-5（WL-2 裁定 4，照 WL-1 b 的骨架檢查）：程式依用途找類型、找不到會出錯或擋不下來的用途。
 # 每種至少要有一個類型標這個 role，缺了載入時給中文錯誤。改到下面的程式時同步這份。
 CODE_REQUIRED_ROLES: dict[MapRole, str] = {
-    "test": "開發用量測工具 sim/leap_check.py 的 field_as_battle_map 取 role_ids('test')[0]",
+    "test": "開發用量測工具 sim/leap_check.py 的 field_as_battle_map（取第一個 role: test 的類型）",
     "training": "技能工坊的靶場（content/workshop.py 檢查 workshop.yaml 的地圖、API 的對手選單）",
     "boss": "頭目地圖與賽季 Boss（content/world_map.py、content/world_season.py、api/sessions.py）",
 }
