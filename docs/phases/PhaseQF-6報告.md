@@ -98,7 +98,8 @@ QF-5 的四個檔（`content/maps.py`、`api/schemas.py`、`api/routes/content.p
 | `run_pytest.py -q -m slow tests/skillgen/test_random_composer.py -k one_thousand` | **0**（1 passed；第一版與新版各跑過一次） |
 | 新版 (r) 之後：ruff、format、lint-imports、`content check`、`classify.py --check` | 都是 0 |
 | 新版 (r) 之後的相關測試（預支 4 檔、`test_budget`、閃現、提議、工坊、組合器、引擎預支等 15 檔，`-n 8`） | 0（295 passed） |
-| 新版 (r) 之後的 `check.py --all`、slow parity＋cli | 開發 PM 排時段後再跑（QF-5 正在用全量的時段） |
+| 合併 QF-5（main `1f41f8b8f`，merge `d699c6464`）後的 `check.py --all` | **0**：pytest 18742 passed、8 skipped；client 422 檔、4984 項；已寫通過戳記 |
+| 同上，`run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | **0**（995 passed） |
 
 ## 4. 結果比對（基準 `7e0c34917`）
 
@@ -114,7 +115,12 @@ QF-5 的四個檔（`content/maps.py`、`api/schemas.py`、`api/routes/content.p
 - 第一版 (r) 時 census 有 3 格不同，3 格都來自組合器改了那 6 個種子。revert 後與新版都回到 0。
 - (p) 在 78 場沒有差異：現有內容沒有裝備授予的變形修正技，閘門表是空的，估計的乘數一律是 1。
 
+**合併 QF-5 後重跑（`d699c6464`，基準 `7e0c34917`）**：442 招 `cmp` 0；78 場 `battles=78 events=26741 different=0`，內嵌規則包差異 0；census `cells=204 different=0 whole_equal=True`。三項都是 different=0。
+
 ## 5. 待 PM 決定
+
+（開發 PM 2026-11-23 已裁定接受下列三件。）
+
 
 1. **(r) 已由玩法 PM 定 A，照做**：只有基本款豁免過弱下限。實際收窄的只有一種：只有預支、形狀不是自身的技能。這種原本豁免，現在擋下；目前內容和組合器都沒有。LLM 或工坊如果做出這種技能，會被判過弱。
 2. **(p) 只乘在一般估計段**：敵人分數與物件分數乘閘門‰；支援分數、扣友方分數、場地型分數不乘（閘門只降傷害）。特殊估計（召喚、區域、衝撞、投擲、位移、地形）沒有接，因為它們的分數不是照傷害算。現有內容閘門表是空的，實際上沒有影響。屬於解讀類，照最保守的做法，記在這裡。
