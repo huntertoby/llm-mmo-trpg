@@ -71,7 +71,6 @@ from trpg.engine.events import (
 )
 from trpg.engine.gear.core import build_gear
 from trpg.engine.gear.reactions import extra_uses_left, gear_reaction_rules
-from trpg.engine.setup import BattleSetupError
 from trpg.engine.skill_triggers import reset_round_counts
 from trpg.engine.state import state_from_json, state_to_json
 from trpg.engine.view import project_for
@@ -829,9 +828,11 @@ def _loadout_problems(slots: Mapping[str, Rolls]) -> list[str]:
     return loadout_problems(_loadout(slots), library().weapons["one_handed_sword"], rules)
 
 
-def test_two_different_rule_affixes_fail_the_loadout_check() -> None:
+def test_two_different_rule_affixes_pass_the_loadout_check() -> None:
+    """E6-b1（08 8.27）：兩條不同的改寫規則不再是穿戴錯誤，改成戰鬥中標灰（見
+    ``tests/engine/test_signature_limits_e6b1.py``）。"""
     problems = _loadout_problems({"neck": [FIRE_MENDS], "ring_1": [WAKE]})
-    assert any("改變規則類詞條全身最多 1 個" in p for p in problems)
+    assert not any("改變規則" in p for p in problems)
 
 
 def test_the_same_rule_affix_on_two_items_counts_once() -> None:
@@ -849,9 +850,10 @@ def test_a_gear_rule_blocks_activating_a_legendary_rule_change() -> None:
     assert problem is not None and "已有生效中的規則改變" in problem
 
 
-def test_setup_rejects_two_rule_affixes() -> None:
-    with pytest.raises(BattleSetupError, match="改變規則類詞條全身最多 1 個"):
-        arena({"neck": [FIRE_MENDS], "ring_1": [WAKE]})
+def test_setup_accepts_two_rule_affixes_and_keeps_one() -> None:
+    state = arena({"neck": [FIRE_MENDS], "ring_1": [WAKE]})
+    rules = state.units[U1].gear.active_affixes("rule")
+    assert [a.affix.id for a in rules] == [FIRE_MENDS[0]]  # 欄位順序：項鍊在戒指前
 
 
 # ---------------------------------------------------------------------------

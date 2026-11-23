@@ -15,13 +15,23 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Annotated, Literal
+
+from pydantic import Field
 
 from trpg.content.battle import OffhandDef
 from trpg.content.equipment import AffixDef
 from trpg.content.skills import ConditionSpec
 
-__all__ = ["BASE_BONUS_PREFIX", "BonusStat", "GearAffix", "GearBonus", "GearItem", "GearState"]
+__all__ = [
+    "BASE_BONUS_PREFIX",
+    "BonusStat",
+    "GearAffix",
+    "GearBonus",
+    "GearItem",
+    "GearState",
+    "LimitReason",
+]
 
 BASE_BONUS_PREFIX = "base:"
 """普通物品基礎加成（Phase 3K-1）在 :class:`GearBonus` 的 ``affix_id`` 前綴（後面接物品 id）。"""
@@ -36,6 +46,9 @@ type BonusStat = Literal[
     "crit_damage_permille",
 ]
 """戰鬥中查詢的裝備數值種類（``crit_damage_permille``：CR-1 的暴擊傷害詞條）。"""
+
+type LimitReason = Literal["rule", "signature"]
+"""詞條因為名額標灰的原因（E6-b1；:attr:`GearAffix.limited_by`）。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +77,10 @@ class GearAffix:
 
     ``weight_permille``：遞減權重——數值類依同 id 由大到小 1000／500／250／0；非數值類同 id 只有
     第一條 1000、其餘 0（不生效）。``rank``：在同 id 中的順序（0 起）。
+
+    ``limited_by``（E6-b1，08 8.27、8.30 第 4 點）：這條因為名額標灰（``weight_permille`` 是 0）的
+    原因：``rule``＝全身同時只生效 1 個改寫規則；``signature``＝招牌效果已經有 3 個生效。沒有被
+    名額擋下時 ``None``（不輸出）。計算見 :mod:`trpg.engine.gear.limits`。
     """
 
     slot: str
@@ -72,6 +89,7 @@ class GearAffix:
     value: int | None
     weight_permille: int
     rank: int
+    limited_by: Annotated[LimitReason | None, Field(exclude_if=lambda v: v is None)] = None
 
     @property
     def active(self) -> bool:
