@@ -120,3 +120,10 @@
   - ruff、format、mypy、lint-imports、pytest（18903 passed、8 skipped）、client install、typecheck、client test（425 檔、5012 passed）、situation coverage 全部通過。
   - 已寫下通過戳記。
 - `corepack pnpm -C client build`：**結束碼 0**。
+
+## 開發 PM 驗收（2026-11-23）
+
+**通過**，已合併進 main。`check.py --all` 第 2 次 0（第 1 次擋在寫死數字掃描，拿掉開發參數上限修好）；build 0。量測：第 1、2 步間隔 508 → 約 136 ms、放開後多走 2 → 0 步、伺服器一步約 36 → 20 ms；Tunnel 未實測，模擬 150 ms 延遲時每步 170～190 ms。
+
+- 11 件待決照裁定（報告第 6 節）。第 9 件主角面板沒看身上裝備，記進 E6-b2。
+- 截圖交美術 PM（拉回 3 張、旁白 2 張）。
