@@ -33,9 +33,14 @@ export class HeldKeys {
     return this.held[this.held.length - 1] ?? null;
   }
 
+  /** 下一步要走的方向（不用掉點按）：還按著的優先，再來是沒用掉的點按；都沒有為 `null`。 */
+  peek(): Direction | null {
+    return this.active ?? this.tap;
+  }
+
   /** 下一步要走的方向：還按著的優先，再來是沒用掉的點按（用掉）；都沒有為 `null`。 */
   take(): Direction | null {
-    const dir = this.active ?? this.tap;
+    const dir = this.peek();
     this.tap = null;
     return dir;
   }
