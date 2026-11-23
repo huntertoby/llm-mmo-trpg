@@ -1455,6 +1455,9 @@ class CharacterState(_Model):
     """背包裡的裝備（依取得順序；每件佔背包 1 格，8.17）。"""
     equipment: dict[str, ItemDef] = Field(default_factory=dict)
     """穿戴中的裝備（欄位 → 物品；空＝主角範本的裝備，同 ``RunState.equipment``）。"""
+    gear_chosen: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
+    """角色面板勾選要生效的招牌效果與改寫規則（E6-b2；同 ``RunState.gear_chosen``）。空的時候不輸出
+    （舊存檔沒有此欄位＝沒勾過）。"""
     pending_loot: PendingLoot | None = None
     """背包滿了、等戰後結算選要丟哪件的戰利品（5D-2b；``None``＝沒有）。舊存檔沒有這個欄位照讀。"""
 

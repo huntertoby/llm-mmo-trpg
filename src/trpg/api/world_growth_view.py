@@ -97,7 +97,7 @@ HERO_PANEL_CACHE_MAX: Final = 64
 """主角面板快取最多留幾份（WM-1；每個角色走路時只會用到最新的一份，舊的照最近使用淘汰）。"""
 
 type _Panel = tuple[HeroOut, PendingFlashOut | None]
-_panel_cache: OrderedDict[tuple[int, str, str], tuple[ContentLibrary, _Panel]] = OrderedDict()
+_panel_cache: OrderedDict[tuple[int, str], tuple[ContentLibrary, _Panel]] = OrderedDict()
 _panel_lock = threading.Lock()
 
 
@@ -114,15 +114,17 @@ def hero_panel(
 
     WM-1：結果只由內容庫視圖與 :func:`~trpg.world.growth.as_run` 轉出的 ``RunState`` 決定，
     所以照這兩樣快取——鍵是內容庫視圖本身（同一個物件）加上整份 ``RunState`` 的 JSON（技能、
-    等級、屬性、閃現、待選閃現、技能種子……全部都在裡面，任何一樣變了就是新的鍵）。角色穿戴的
-    裝備（``CharacterState.equipment``）目前不經 ``as_run``，保守起見也放進鍵：換裝備一定重算。
-    走路時角色的這些欄位都不變，每步不用再把全部技能驗證一次；回傳的模型是凍結的，共用不怕被改。"""
+    等級、屬性、閃現、待選閃現、技能種子……全部都在裡面，任何一樣變了就是新的鍵）。
+    走路時角色的這些欄位都不變，每步不用再把全部技能驗證一次；回傳的模型是凍結的，共用不怕被改。
+
+    E6-b2（WM-1 待決 9）：``as_run`` 不帶角色穿的裝備，面板的有效屬性、副手、暴擊倍率原本照主角
+    範本的裝備算；這裡把 ``CharacterState.equipment`` 與招牌勾選 ``gear_chosen`` 放進 ``RunState``
+    （同 :func:`trpg.world.gear.gear_run`），面板照角色身上的裝備算，裝備也就跟著進了快取鍵。"""
     lib = world_library(library)
-    run = as_run(char, seed=skill_seed(world, char))
-    gear = "|".join(
-        f"{slot}={item.model_dump_json()}" for slot, item in sorted(char.equipment.items())
+    run = as_run(char, seed=skill_seed(world, char)).model_copy(
+        update={"equipment": dict(char.equipment), "gear_chosen": char.gear_chosen}
     )
-    key = (id(lib), run.model_dump_json(), gear)
+    key = (id(lib), run.model_dump_json())
     with _panel_lock:
         hit = _panel_cache.get(key)
         if hit is not None and hit[0] is lib:

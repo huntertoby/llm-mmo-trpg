@@ -1,14 +1,20 @@
 // 一件可以換上的裝備卡（戰後三選一的候選、營火的背包；Phase 3K-2）：圖示、名稱、部位・稀有度・物品等級、
 // 基礎加成與詞條，下方和該欄位目前的裝備比較（目前的裝備圖示可滑過看說明，共用浮動卡 `PartTip`）。
+// E6-b2：帶招牌的物品在詞條清單前面畫招牌框（`SignatureBox`，卡片第一行）；`fx`＝撿到時的一次性強調（三選一、背包詳情）。
 import type { GearCandidate } from "../../api/types";
 import { gearKeywordLine } from "../../gear/gearKeywords";
 import { compareText, compareTone, itemLines, itemSubtitle, itemTipLines, noteLines, rarityClass } from "../../run/gearOffer";
 import { GearIcon } from "../GearIcon";
 import { PartTip } from "../PartTip";
+import { rarityOf, signatureLine } from "../../gear/signature";
+import { SignatureBox } from "./SignatureBox";
+import { useSignatureFx } from "./useSignatureFx";
 
-export function GearCardView({ cand }: { cand: GearCandidate }) {
+export function GearCardView({ cand, fx = false }: { cand: GearCandidate; fx?: boolean }) {
   const { item, current } = cand;
-  const lines = itemLines(item);
+  const sig = signatureLine(item);
+  const play = useSignatureFx(item.id, fx && sig !== null);
+  const lines = itemLines(item, sig);
   const keywords = gearKeywordLine(item.appearance, cand.slot);
   const now = current == null ? [] : itemLines(current);
   return (
@@ -25,8 +31,9 @@ export function GearCardView({ cand }: { cand: GearCandidate }) {
           </div>
         </div>
       </div>
+      {sig !== null && <SignatureBox line={sig} rarity={rarityOf(item)} fx={play} />}
       <ul className="gear-card-lines" data-testid="gear-card-lines">
-        {lines.length === 0 ? (
+        {lines.length === 0 && sig === null ? (
           <li className="muted">沒有詞條</li>
         ) : (
           lines.map((text, i) => <li key={`${i}:${text}`}>{text}</li>)

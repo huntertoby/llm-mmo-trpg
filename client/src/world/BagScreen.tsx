@@ -2,6 +2,7 @@
 // UI-E3（巡檢 #7、G2、hud.png C 案）：穿戴中改成 9 個格子（空的畫該欄的空槽圖示，有裝備畫 `gearIcon` 的實際圖示）；
 // 背包改成 6×5 的物品格（裝備與物品同一格表，`bagGrid.ts`）、腰包一排格子；點一格在下方看詳情（裝備卡＋換上、物品說明＋使用）。
 // 6T-1b 的別大類兩行字與換裝確認框照舊在裝備卡底下。
+// E6-b2：穿戴中下面是「招牌效果」的勾選（`SignaturePicker`，寬的時候兩欄；送 `gear_chosen`）；背包詳情第一次打開帶招牌的那件時播一次強調。
 // 由上而下：背包滿時選要丟哪件（`LootChoicePanel`）→ 穿戴中 9 欄（圖示滑過看詞條，共用浮動卡 `PartTip`）→
 // 背包的裝備（一輪的裝備卡 `GearCardView`：和該欄位目前裝備的比較；換主手且縮放屬性不同時先確認）→
 // 其他物品與腰包（`InventoryPanel`）。能不能換上、比較都由後端算好；停用原因用共用 <Hint>。
@@ -16,6 +17,7 @@ import { signatureFormZh } from "../render/gearResolve";
 import { Hint } from "../ui/Hint";
 import { PartTip } from "../ui/PartTip";
 import { GearCardView } from "../ui/gear/GearCardView";
+import { SignaturePicker } from "../ui/gear/SignaturePicker";
 import { WeaponSwapConfirm } from "../ui/gear/WeaponSwapConfirm";
 import { equipAction, equipState, otherRingSlot, pouchUseText } from "./bagView";
 import { itemHint, PouchEditor } from "./EconomyPanel";
@@ -108,7 +110,7 @@ function GearOffer({ cand, inventory, busy, onAct }: ActProps & { cand: GearCand
   };
   return (
     <div className="run-offer-card" data-testid={`world-gear-card-${cand.item.id}`}>
-      <GearCardView cand={cand} />
+      <GearCardView cand={cand} fx />
       {row !== null && <CrossClassLines row={row} />}
       {row?.opening_note_zh != null && (
         // OB-6 Q4：還能重選時，背包裡的起始武器本體寫明重選會收回（字由伺服器給）
@@ -305,6 +307,15 @@ export function WorldBagScreen({ view, busy, onAct, onClose, initialPick = null 
               <WornSlot key={e.slot} entry={e} />
             ))}
           </ul>
+          {inventory.signatures != null && (
+            <SignaturePicker
+              wide
+              panel={inventory.signatures}
+              equipment={inventory.equipment ?? []}
+              busy={busy}
+              onPick={(chosen) => onAct({ kind: "gear_chosen", chosen })}
+            />
+          )}
           {(inventory.resonance_zh ?? []).map((line) => (
             <div key={line} className="small" data-testid="world-resonance-line">
               {line}

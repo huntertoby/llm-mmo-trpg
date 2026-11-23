@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from trpg.api.gear_schemas import GearItemInfo
+from trpg.api.gear_schemas import GearItemInfo, SignaturePanelOut
 from trpg.api.schemas import BattleResponse
 from trpg.api.skill_cards import SkillCard
 from trpg.content.maps import Objective
@@ -673,6 +673,9 @@ class HeroOut(_ApiModel):
     """目前穿戴的裝備（Phase 3K-2；依欄位固定順序，9 個欄位都列）。"""
     backpack: tuple[GearCandidateOut, ...] = ()
     """背包（Phase 3K-2）：換下的裝備與換上後的比較；營火可以換上（``equip``）。"""
+    signatures: SignaturePanelOut | None = None
+    """角色面板的「招牌效果」一節（E6-b2）：身上的招牌與改寫規則、誰生效、勾選；身上沒有時
+    ``None``。勾選送 ``gear_chosen``。"""
 
 
 class BattlePlanOut(_ApiModel):

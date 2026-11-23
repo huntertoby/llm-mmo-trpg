@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from trpg.api.gear_schemas import SignaturePanelOut
 from trpg.api.run_schemas import GearCandidateOut, HeroGearSlotOut
 
 __all__ = [
@@ -69,6 +70,9 @@ class BagItemView(_ApiModel):
     """染料的顏色（``items.yaml`` 的 ``color``；QI-7 物品圖示）；不是染料為 ``None``。"""
     rare: bool | None = None
     """稀有材料（``items.yaml`` 的 ``rare``；QI-7 物品圖示的框線色）；不是材料為 ``None``。"""
+    signature: str | None = None
+    """帶招牌效果的裝備（E6-b2）：招牌的種類（``action`` 等，同 ``GearItemLine.signature``；背包滿
+    時的選擇列在名字後面加「招牌」小標與類型圖示）；沒有招牌為 ``None``。"""
 
 
 class InventoryView(_ApiModel):
@@ -92,6 +96,9 @@ class InventoryView(_ApiModel):
     gear_cards: tuple[GearCandidateOut, ...] = ()
     """背包裡的每件裝備：物品卡、換上會放進的欄位、和該欄位目前裝備的比較（5D-4；格式同一輪的
     背包）。順序同 ``bag`` 裡的裝備。"""
+    signatures: SignaturePanelOut | None = None
+    """「穿戴中」的招牌效果勾選（E6-b2，同一輪的角色面板）；身上沒有招牌也沒有改寫規則時
+    ``None``。勾選送 ``gear_chosen`` 動作（城鎮或營火）。"""
 
 
 class PendingLootView(_ApiModel):

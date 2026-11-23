@@ -175,7 +175,7 @@ export function RunScreen({ initial, autoResume = false, onHome, onNewRun }: Pro
         <RunEnded run={run} victory={view.victory} onNewRun={onNewRun} onHome={onHome} />
       ) : (
         <div className="run-layout">
-          <RunHeroPanel hero={run.hero} />
+          <RunHeroPanel hero={run.hero} busy={busy} onChoose={choose} />
           <div className="run-main">
             <RunPlanList run={run} />
             {run.pending_flash != null && <RunFlashPending key={`${run.pending_flash.skill_id}:${run.pending_flash.nth}:${run.pending_flash.slot}`} run={run} busy={busy} onChoose={choose} />}

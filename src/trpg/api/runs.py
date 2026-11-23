@@ -52,6 +52,7 @@ from trpg.roguelite.state import (
     DissolveChoice,
     FlashChoice,
     FlashPickChoice,
+    GearChosenChoice,
     InheritChoice,
     LevelUpNode,
     LoadoutChoice,
@@ -260,10 +261,11 @@ class RunStore:
             | InheritChoice
             | LoadoutChoice
             | RespecAttributesChoice
-            | AllocateChoice,
+            | AllocateChoice
+            | GearChosenChoice,
         ):
-            # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能閃現、配點或換裝
-            raise NodeConflictError("戰鬥進行中不能閃現、分配屬性點或換裝")
+            # 戰鬥進行中改主角的技能會讓存檔重播不一致：戰鬥結束後才能閃現、配點、換裝或勾選招牌
+            raise NodeConflictError("戰鬥進行中不能閃現、分配屬性點、換裝或勾選招牌效果")
         with (
             use_proposer(session.proposer),
             use_picker(session.picker),

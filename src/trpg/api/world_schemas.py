@@ -89,6 +89,7 @@ from trpg.world.crafting_actions import (
 from trpg.world.economy_actions import (
     BuyAction,
     EquipAction,
+    GearChosenAction,
     LootChooseAction,
     PouchAction,
     SellAction,
@@ -177,6 +178,7 @@ type WorldActionRequest = Annotated[
     | PouchAction
     | UseItemAction
     | EquipAction  # 5D-2
+    | GearChosenAction  # E6-b2
     | LootChooseAction  # 5D-2b
     | CraftAction  # 5D-3
     | EnhanceAction

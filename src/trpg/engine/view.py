@@ -23,6 +23,7 @@ from trpg.content.equipment import (
     affix_text,
 )
 from trpg.content.form_text import form_effect_lines, natural_weapon_text, upkeep_text
+from trpg.content.library import Ruleset
 from trpg.content.maps import Objective
 from trpg.content.parts import PartReach, max_part_hp
 from trpg.content.races import RaceLook
@@ -100,6 +101,7 @@ __all__ = [
     "TrapView",
     "UnitView",
     "ZoneView",
+    "limit_off_zh",
     "project_for",
 ]
 
@@ -867,15 +869,15 @@ def _affix_line(
         weight_permille=a.weight_permille if duplicate is None else 0,
         duplicate_of=duplicate if duplicate is not None else _duplicate_of(gear, a),
         overlap_zh=None if note is None else note.overlap_zh,
-        off_zh=_limited_zh(state, gear, a) or _affix_off_zh(state, unit, a),
+        off_zh=limit_off_zh(state.ruleset, gear, a) or _affix_off_zh(state, unit, a),
     )
 
 
-def _limited_zh(state: BattleState, gear: GearState, entry: GearAffix) -> str | None:
-    """因為名額標灰的說明（E6-b1，放在 :attr:`AffixLineView.off_zh`）；沒有被名額擋下時
-    ``None``。"""
+def limit_off_zh(ruleset: Ruleset, gear: GearState, entry: GearAffix) -> str | None:
+    """因為名額標灰的說明（E6-b1，放在 :attr:`AffixLineView.off_zh`；E6-b2 起角色面板與裝備卡
+    也用）；沒有被名額擋下時 ``None``。"""
     if entry.limited_by == "signature":
-        return SIGNATURE_LIMITED_ZH.format(n=state.ruleset.equipment.caps.signature_active)
+        return SIGNATURE_LIMITED_ZH.format(n=ruleset.equipment.caps.signature_active)
     if entry.limited_by != "rule":
         return None
     kept = [

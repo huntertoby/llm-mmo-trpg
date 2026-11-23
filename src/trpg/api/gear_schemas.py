@@ -26,6 +26,8 @@ __all__ = [
     "GearSlotInfo",
     "GearWeaponInfo",
     "GearWeaponLook",
+    "SignaturePanelOut",
+    "SignatureRowOut",
 ]
 
 
@@ -144,6 +146,17 @@ class GearAffixInfo(_ApiModel):
 class GearItemLine(_ApiModel):
     affix_id: str
     text_zh: str
+    signature: str | None = None
+    """招牌效果的種類（E6-b2：``action``、``reaction``、``terrain``、``behavior``、``rule``；沒標種類
+    的改寫規則也是 ``rule``）；不是招牌為 ``None``。前端照它畫裝備卡第一行的招牌框。"""
+    signature_zh: str | None = None
+    """招牌框的類型牌：「招牌・新動作」；傳說與獨特裝備「獨特效果・新動作」（08 8.30 第 4 點）。"""
+    signature_name_zh: str | None = None
+    """招牌框的名字（新動作、行為改寫是解鎖的那一招；其他沒有時 ``None``，前端用 ``text_zh``）。"""
+    off_zh: str | None = None
+    """這條沒有效果的原因（長版，E6-b2：裝備卡、比較、撿到時；例「身上已經有 3 個招牌效果生效，……」
+    「和項鍊的改寫規則衝突，沒有效果」）；穿戴中的物品照現在的勾選，候選照「換上之後」；有效時
+    ``None``。"""
 
 
 class GearItemInfo(_ApiModel):
@@ -193,3 +206,53 @@ class GearCheck(_ApiModel):
     legal: bool
     problems: tuple[str, ...] = ()
     hero: UnitView | None = None
+
+
+class SignatureRowOut(_ApiModel):
+    """角色面板「招牌效果」的一列（E6-b2，08 8.27、8.30 第 4 點）：身上的一條招牌或改寫規則。"""
+
+    key: str
+    """勾選鍵 ``"<欄位>:<詞條 ID>"``（送 ``gear_chosen`` 用）。"""
+    slot: str
+    slot_zh: str
+    item_name_zh: str
+    rarity: str
+    """物品的稀有度（列的色條用；沒標時 ``common``）。"""
+    affix_id: str
+    kind: str
+    """招牌種類（同 :attr:`GearItemLine.signature`）。"""
+    kind_zh: str
+    """種類的中文（新動作、新反應、地形規則、行為改寫、改寫規則）。"""
+    name_zh: str
+    text_zh: str
+    counted: bool
+    """標了招牌、佔「同時 3 個」的名額（方框）；沒標招牌的改寫規則為 ``False``。"""
+    rule: bool
+    """改寫規則（圓鈕，全身同時 1 條）。"""
+    active: bool
+    """生效中（勾選框勾著）。"""
+    off_zh: str | None = None
+    """沒有效果的原因（角色面板用短版：「已經有 3 個生效，這個沒有效果」；改寫規則照 8.27）。"""
+
+
+class SignaturePanelOut(_ApiModel):
+    """角色面板的「招牌效果」一節（E6-b2）：列依欄位固定順序（勾選時不跳動）。"""
+
+    rows: tuple[SignatureRowOut, ...]
+    active: int
+    """生效中、佔名額的招牌數。"""
+    cap: int
+    """同時生效的招牌上限（``caps.signature_active``）。"""
+    rules: int
+    """生效中的改寫規則條數。"""
+    rule_cap: int
+    has_rule: bool
+    """身上有改寫規則（節名後面才寫「改寫規則 N／1」）。"""
+    count_zh: str
+    """節名後面的字：「生效 2／3・改寫規則 1／1」，沒有改寫規則時「生效 2／3」。"""
+    full_zh: str
+    """已滿時按沒勾的列的提示（08 8.30 第 4 點用字，暫定）。"""
+    chosen: tuple[str, ...] = ()
+    """目前存的勾選（``gear_chosen``）。"""
+    problem_zh: str | None = None
+    """現在不能改勾選的原因（大世界：只有城鎮與營火）；可以時 ``None``。"""

@@ -31,7 +31,7 @@ export function RunGearOffer({ seed, view, busy, onChoose }: Props) {
           if (cand === undefined) return null;
           return (
             <div key={cand.item.id} className={`run-offer-card${pick === index ? " selected" : ""}`}>
-              <GearCardView cand={cand} />
+              <GearCardView cand={cand} fx />
               <button
                 type="button"
                 className={pick === index ? "primary" : ""}
