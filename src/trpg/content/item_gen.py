@@ -487,7 +487,8 @@ def _roll_affixes(
     allow_empty: bool = False,
 ) -> tuple[list[_Pick], int]:
     """詞條與（普通物品的）基礎加成（‰）。``allow_empty``（招牌以外的部分，08 8.30 第 2 點）：
-    放不下任何詞條時回傳空的，不拋錯。"""
+    先照原本的方法找到得了 70% 的組合；找不到時放得下就放（每步挑點數最高，不要求湊到 70%，
+    E6-a2 照玩法 PM 的解讀）；一條都放不下時回傳空的，不拋錯。"""
     rules = ctx.rules
     for _ in range(rules.max_attempts):
         count = rng.randint(rule.min_affixes, rule.max_affixes)
@@ -509,7 +510,11 @@ def _roll_affixes(
         bonus = _base_bonus(rules, budget)
         if bonus is not None:
             return [], bonus
-    if allow_empty:
+    if allow_empty:  # 放得下就放，不因為湊不到 70% 把放得下的詞條拿掉（08 8.30 第 2 點解讀）
+        for fallback in fallbacks:
+            picks = _fill(fallback, rule.max_affixes, _greedy, budget)
+            if picks:
+                return picks, 0
         return [], 0
     raise ItemGenError(f"無法在詞條預算 {budget} 內產生合規的詞條（{ctx.base.name_zh}）")
 

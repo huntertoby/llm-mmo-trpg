@@ -157,6 +157,8 @@ def test_counts_include_the_signature(lib: ContentLibrary) -> None:
 
 
 def test_rest_respects_the_70_percent_floor(lib: ContentLibrary) -> None:
+    """湊得到 70% 時產生器照舊優先湊到（這份內容庫抽樣到的都湊得到）。湊不到時放得下就放（E6-a2，
+    見 ``test_signature_fill_e6a2.py``）。"""
     rules = _rules(lib)
     for slot in SLOTS:
         for level in range(1, 11):

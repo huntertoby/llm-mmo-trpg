@@ -83,11 +83,12 @@ def test_item_points_price_the_signature_by_the_item_budget() -> None:
 def test_lower_bound_only_counts_the_rest() -> None:
     lib = tagged_library()
     rules = _rules(lib)
-    # 5 級主手：預算 24、招牌 14.4、剩 9.6、下限 6.72
+    # 5 級主手：預算 24、招牌 14.4、剩 9.6、70% 是 6.72
     ok = _item([("affix_attr_str", 30), (SIG, None)])  # 9 ≥ 6.72
     assert _fill(item_budget_problems(rules, ok, lib.affixes)) == []
-    low = _item([("affix_attr_str", 20), (SIG, None)])  # 6 < 6.72
-    assert any("招牌以外" in p for p in item_budget_problems(rules, low, lib.affixes))
+    # E6-a2（08 8.30 第 2 點的解讀）：招牌物品放得下就放，不要求湊到 70%，6 < 6.72 也通過
+    low = _item([("affix_attr_str", 20), (SIG, None)])
+    assert _fill(item_budget_problems(rules, low, lib.affixes)) == []
     over = _item([("affix_attr_str", 40), (SIG, None)])  # 14.4 ＋ 12 > 24
     assert any("超過預算" in p for p in item_budget_problems(rules, over, lib.affixes))
 
