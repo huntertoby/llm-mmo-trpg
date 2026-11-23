@@ -9,7 +9,7 @@ import pytest
 
 from tests.skillgen.helpers import lib
 from trpg.content.skills import EffectSpec, SkillDef, SkillRarity, legendary_cores
-from trpg.skillgen.budget import skill_budget
+from trpg.skillgen.budget import borrow_basic, skill_budget
 from trpg.skillgen.composer_parts import dice_ladder
 from trpg.skillgen.composer_tuning import tuning_bounds
 from trpg.skillgen.random_composer import (
@@ -246,10 +246,11 @@ def test_one_thousand_seeds_are_all_valid_and_spread_out() -> None:
     assert {s.rarity for s in skills} == set(RARITIES)
     counts = Counter(s.skeleton for s in skills)
     assert set(counts) >= set(ENABLED) and max(counts.values()) <= 400
+    # 預支基本款（06 6.3「預算」，QF-6）預算 0：只有它不套預算窗
     ratios = [
         skill_budget(s, library).ratio
         for s in skills
-        if s.rarity != "legendary" and s.kind != "modifier"
+        if s.rarity != "legendary" and s.kind != "modifier" and not borrow_basic(s)
     ]
     assert min(ratios) >= Fraction(75, 100) and max(ratios) <= Fraction(95, 100)
 
