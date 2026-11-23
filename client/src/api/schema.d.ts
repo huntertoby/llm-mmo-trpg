@@ -2515,6 +2515,8 @@ export interface components {
             color?: string | null;
             /** Rare */
             rare?: boolean | null;
+            /** Signature */
+            signature?: string | null;
         };
         /**
          * BattleHintView
@@ -5788,6 +5790,43 @@ export interface components {
             custom?: components["schemas"]["GearCustomItem"] | null;
         };
         /**
+         * GearChosenAction
+         * @description 角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點；城鎮或營火，同換裝）：
+         *     ``chosen`` 整份取代 ``CharacterState.gear_chosen``。招牌最多 3 個、改寫規則最多 1 條，勾的必須是
+         *     身上的招牌或改寫規則（:func:`trpg.roguelite.gear.chosen_problems`）。
+         */
+        GearChosenAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "gear_chosen";
+            /**
+             * Chosen
+             * @default []
+             */
+            chosen: string[];
+        };
+        /**
+         * GearChosenChoice
+         * @description 角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點）：``chosen`` 是新的
+         *     勾選（``"<欄位>:<詞條 ID>"``），整份取代 ``RunState.gear_chosen``。招牌最多
+         *     ``caps.signature_active`` 個、改寫規則最多 ``caps.rule_affixes`` 條，勾的必須是身上的招牌或
+         *     改寫規則（:func:`trpg.roguelite.gear.set_gear_chosen`）。戰鬥之間都可以送；不推進節點。
+         */
+        GearChosenChoice: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "gear_chosen";
+            /**
+             * Chosen
+             * @default []
+             */
+            chosen: string[];
+        };
+        /**
          * GearCustomItem
          * @description 手動組的物品（欄位的物品種類由欄位決定，所以不必填）。
          *
@@ -5893,6 +5932,14 @@ export interface components {
             affix_id: string;
             /** Text Zh */
             text_zh: string;
+            /** Signature */
+            signature?: string | null;
+            /** Signature Zh */
+            signature_zh?: string | null;
+            /** Signature Name Zh */
+            signature_name_zh?: string | null;
+            /** Off Zh */
+            off_zh?: string | null;
         };
         /**
          * GearOfferOut
@@ -6438,6 +6485,7 @@ export interface components {
              * @default []
              */
             backpack: components["schemas"]["GearCandidateOut"][];
+            signatures?: components["schemas"]["SignaturePanelOut"] | null;
         };
         /**
          * HeroStatusView
@@ -6911,6 +6959,7 @@ export interface components {
              * @default []
              */
             gear_cards: components["schemas"]["GearCandidateOut"][];
+            signatures?: components["schemas"]["SignaturePanelOut"] | null;
         };
         JsonValue: unknown;
         /**
@@ -10401,6 +10450,69 @@ export interface components {
         /** @enum {string} */
         SignatureKind: "action" | "reaction" | "terrain" | "behavior" | "rule";
         /**
+         * SignaturePanelOut
+         * @description 角色面板的「招牌效果」一節（E6-b2）：列依欄位固定順序（勾選時不跳動）。
+         */
+        SignaturePanelOut: {
+            /** Rows */
+            rows: components["schemas"]["SignatureRowOut"][];
+            /** Active */
+            active: number;
+            /** Cap */
+            cap: number;
+            /** Rules */
+            rules: number;
+            /** Rule Cap */
+            rule_cap: number;
+            /** Has Rule */
+            has_rule: boolean;
+            /** Count Zh */
+            count_zh: string;
+            /** Full Zh */
+            full_zh: string;
+            /**
+             * Chosen
+             * @default []
+             */
+            chosen: string[];
+            /** Problem Zh */
+            problem_zh?: string | null;
+        };
+        /**
+         * SignatureRowOut
+         * @description 角色面板「招牌效果」的一列（E6-b2，08 8.27、8.30 第 4 點）：身上的一條招牌或改寫規則。
+         */
+        SignatureRowOut: {
+            /** Key */
+            key: string;
+            /** Slot */
+            slot: string;
+            /** Slot Zh */
+            slot_zh: string;
+            /** Item Name Zh */
+            item_name_zh: string;
+            /** Rarity */
+            rarity: string;
+            /** Affix Id */
+            affix_id: string;
+            /** Kind */
+            kind: string;
+            /** Kind Zh */
+            kind_zh: string;
+            /** Name Zh */
+            name_zh: string;
+            /** Text Zh */
+            text_zh: string;
+            /** Counted */
+            counted: boolean;
+            /** Rule */
+            rule: boolean;
+            /** Active */
+            active: boolean;
+            /** Off Zh */
+            off_zh?: string | null;
+        };
+        /**
          * SituationAnswerRequest
          * @description 送出情境判定的回答（**第一次送出即定案**，9.6.4）。``text`` 只放進 LLM 的
          *     ``<player_input>``；``cite`` 是玩家點選引用的事實編號（``CiteFactView.fact``）。
@@ -13377,7 +13489,7 @@ export interface components {
             /** Class Zh */
             class_zh: string;
         };
-        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["DuelChoiceAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"] | components["schemas"]["WishAction"];
+        WorldActionRequest: components["schemas"]["TravelAction"] | components["schemas"]["CampAction"] | components["schemas"]["RetreatAction"] | components["schemas"]["DuelChoiceAction"] | components["schemas"]["RestAction"] | components["schemas"]["LoadoutAction"] | components["schemas"]["TeleportAction"] | components["schemas"]["AllocateAction"] | components["schemas"]["RespecAction"] | components["schemas"]["FlashAction"] | components["schemas"]["FlashPickAction"] | components["schemas"]["DissolveAction"] | components["schemas"]["InheritAction"] | components["schemas"]["SwearOathAction"] | components["schemas"]["ReleaseOathAction"] | components["schemas"]["AcceptQuestAction"] | components["schemas"]["OfferPickAction"] | components["schemas"]["TalkAction"] | components["schemas"]["TavernAction"] | components["schemas"]["EventSolveAction"] | components["schemas"]["HireAction"] | components["schemas"]["ShadowAiAction"] | components["schemas"]["NewsSeenAction"] | components["schemas"]["HintSeenAction"] | components["schemas"]["HintsOffAction"] | components["schemas"]["HintsResetAction"] | components["schemas"]["ChangeRaceAction"] | components["schemas"]["ChangeLookAction"] | components["schemas"]["OpeningConfirmAction"] | components["schemas"]["OpeningClassAction"] | components["schemas"]["OpeningReselectAction"] | components["schemas"]["BuyAction"] | components["schemas"]["SellAction"] | components["schemas"]["PouchAction"] | components["schemas"]["UseItemAction"] | components["schemas"]["EquipAction"] | components["schemas"]["GearChosenAction"] | components["schemas"]["LootChooseAction"] | components["schemas"]["CraftAction"] | components["schemas"]["EnhanceAction"] | components["schemas"]["RerollAction"] | components["schemas"]["ImbueAction"] | components["schemas"]["SalvageAction"] | components["schemas"]["LeagueEnterAction"] | components["schemas"]["LeagueWithdrawAction"] | components["schemas"]["SeasonBossAction"] | components["schemas"]["WalkAction"] | components["schemas"]["UseTeleportStoneAction"] | components["schemas"]["SneakAction"] | components["schemas"]["UseFieldObjectAction"] | components["schemas"]["WishAction"];
         /** WorldBattleResponse */
         WorldBattleResponse: {
             world: components["schemas"]["WorldView"];
@@ -14655,7 +14767,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["CompletePickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["FlashChoice"] | components["schemas"]["FlashPickChoice"] | components["schemas"]["DissolveChoice"] | components["schemas"]["InheritChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"];
+                "application/json": components["schemas"]["LevelUpChoice"] | components["schemas"]["CompletePickChoice"] | components["schemas"]["LeaveChoice"] | components["schemas"]["FlashChoice"] | components["schemas"]["FlashPickChoice"] | components["schemas"]["DissolveChoice"] | components["schemas"]["InheritChoice"] | components["schemas"]["RespecAttributesChoice"] | components["schemas"]["AllocateChoice"] | components["schemas"]["LoadoutChoice"] | components["schemas"]["GearPickChoice"] | components["schemas"]["EquipChoice"] | components["schemas"]["GearChosenChoice"];
             };
         };
         responses: {

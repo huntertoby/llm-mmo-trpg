@@ -17,6 +17,8 @@ __all__ = [
     "BuyAction",
     "CurrencyGainedEvent",
     "EquipAction",
+    "GearChosenAction",
+    "GearChosenEvent",
     "ItemBoughtEvent",
     "ItemEquippedEvent",
     "ItemSoldEvent",
@@ -84,6 +86,15 @@ class EquipAction(_Model):
     """背包裡裝備的 ID（``CharacterState.gear``）。"""
     slot: Slot | None = None
     """指定欄位（戒指 1／2）；``None``＝照物品種類自動挑（戒指先放空的）。"""
+
+
+class GearChosenAction(_Model):
+    """角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點；城鎮或營火，同換裝）：
+    ``chosen`` 整份取代 ``CharacterState.gear_chosen``。招牌最多 3 個、改寫規則最多 1 條，勾的必須是
+    身上的招牌或改寫規則（:func:`trpg.roguelite.gear.chosen_problems`）。"""
+
+    kind: Literal["gear_chosen"] = "gear_chosen"
+    chosen: tuple[str, ...] = ()
 
 
 class LootChooseAction(_Model):
@@ -188,6 +199,13 @@ class LootAbandonedEvent(_Model):
     kind: Literal["loot_abandoned"] = "loot_abandoned"
     materials: dict[str, int] = Field(default_factory=dict)
     gear_names: tuple[str, ...] = ()
+
+
+class GearChosenEvent(_Model):
+    """改了招牌勾選（E6-b2）：存下的勾選（依欄位固定順序）。"""
+
+    kind: Literal["gear_chosen"] = "gear_chosen"
+    chosen: tuple[str, ...] = ()
 
 
 class ItemEquippedEvent(_Model):

@@ -17,6 +17,7 @@ from trpg.api.flash_text import (
     term_ids,
 )
 from trpg.api.gear import item_info
+from trpg.api.gear_signature import candidate_off, signature_panel, worn_off
 from trpg.api.run_schemas import (
     AllocationPreviewOut,
     AttributePerkOut,
@@ -394,6 +395,7 @@ def gear_candidate(
     """戰後候選或背包裡的一件裝備：放進的欄位、該欄位目前的裝備與換上的連帶效果。``cross_class``：
     大世界的背包（主手可換別大類，6T-1b）。"""
     slot = target_slot(library, run, item)
+    run_off = worn_off(library, run)
     current = current_item(library, run, slot)
     try:
         notes = tuple(equip_notes(library, run, item, slot, cross_class=cross_class))
@@ -401,13 +403,34 @@ def gear_candidate(
         swap = weapon_swap_prompt(library, run, item, slot, attrs, cross_class=cross_class)
     except ChoiceError as exc:  # 換不上的（例如副手被占用的組合），卡片照樣列
         notes, swap = (str(exc),), None
+    off = candidate_off(library, run, item, slot, cross_class=cross_class)  # E6-b2：換上之後
     return GearCandidateOut(
-        item=item_info(library, item),
+        item=item_info(library, item, off),
         slot=slot,
         slot_zh=SLOT_ZH[slot],
-        current=None if current is None else item_info(library, current),
+        current=None if current is None else item_info(library, current, _slot_off(run_off, slot)),
         notes_zh=notes,
         weapon_swap_zh=swap,
+    )
+
+
+def _slot_off(offs: dict[tuple[str, str], str], slot: str) -> dict[str, str]:
+    """``worn_off`` 裡這個欄位的：詞條 ID → 原因。"""
+    return {affix: text for (s, affix), text in offs.items() if s == slot}
+
+
+def worn_slots(library: ContentLibrary, run: RunState) -> tuple[HeroGearSlotOut, ...]:
+    """穿戴中的 9 個欄位（依欄位固定順序）；被名額標灰的詞條帶原因（E6-b2）。"""
+    offs = worn_off(library, run)
+    return tuple(
+        HeroGearSlotOut(
+            slot=slot,
+            slot_zh=SLOT_ZH[slot],
+            item=None
+            if (held := current_item(library, run, slot)) is None
+            else item_info(library, held, _slot_off(offs, slot)),
+        )
+        for slot in SLOTS
     )
 
 
@@ -539,17 +562,9 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
         flash_rules=_flash_rules(library),
         flash=tuple(_flash_out(library, run, s) for s in owned_skills(run)),
         bench=tuple(_card(library, run, s) for s in skill_defs(library, run, run.bench)),
-        equipment=tuple(
-            HeroGearSlotOut(
-                slot=slot,
-                slot_zh=SLOT_ZH[slot],
-                item=None
-                if (held := current_item(library, run, slot)) is None
-                else item_info(library, held),
-            )
-            for slot in SLOTS
-        ),
+        equipment=worn_slots(library, run),
         backpack=tuple(gear_candidate(library, run, i) for i in run.backpack),
+        signatures=signature_panel(library, run),
     )
 
 

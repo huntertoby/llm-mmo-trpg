@@ -47,6 +47,8 @@ from trpg.world.economy_actions import (
     BuyAction,
     CurrencyGainedEvent,
     EquipAction,
+    GearChosenAction,
+    GearChosenEvent,
     ItemBoughtEvent,
     ItemEquippedEvent,
     ItemSoldEvent,
@@ -586,6 +588,7 @@ type WorldAction = Annotated[
     | PouchAction
     | UseItemAction
     | EquipAction  # 5D-2
+    | GearChosenAction  # E6-b2
     | LootChooseAction  # 5D-2b
     | CraftAction  # 5D-3
     | EnhanceAction
@@ -1344,6 +1347,7 @@ type WorldEvent = Annotated[
     | CurrencyGainedEvent
     | LootGainedEvent  # 5D-2
     | ItemEquippedEvent
+    | GearChosenEvent  # E6-b2
     | LootChosenEvent  # 5D-2b
     | LootAbandonedEvent
     | GearCraftedEvent  # 5D-3

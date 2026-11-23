@@ -64,6 +64,7 @@ RUN_ROUTES: tuple[tuple[str, str, Any], ...] = (
     ("POST", "/api/runs/{r}/flash-preview", {"skill": "no_such_skill"}),
     ("POST", "/api/runs/{r}/save", None),
     ("POST", "/api/runs/{r}/choice", {"kind": "leave"}),
+    ("POST", "/api/runs/{r}/choice", {"kind": "gear_chosen", "chosen": []}),  # E6-b2
     ("POST", "/api/runs/{r}/battle", None),
 )
 WORLD_ROUTES: tuple[tuple[str, str, Any], ...] = (
@@ -71,6 +72,7 @@ WORLD_ROUTES: tuple[tuple[str, str, Any], ...] = (
     ("POST", "/api/world/characters/{c}/flash-preview", {"skill": "no_such_skill"}),
     ("POST", "/api/world/characters/{c}/allocation-preview", {"attributes": {}}),
     ("POST", "/api/world/characters/{c}/battle", None),
+    ("POST", "/api/world/characters/{c}/actions", {"kind": "gear_chosen", "chosen": []}),  # E6-b2
 )
 
 

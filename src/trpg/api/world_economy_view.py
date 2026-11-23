@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from trpg.api.gear import item_info
+from trpg.api.gear_signature import signature_kind, signature_panel
 from trpg.api.gear_trade import gear_trade
 from trpg.api.opening_gear_note import opening_gear_note
-from trpg.api.run_presenter import gear_candidate
+from trpg.api.run_presenter import gear_candidate, worn_slots
 from trpg.api.run_schemas import HeroGearSlotOut
 from trpg.api.world_economy_schemas import (
     BagItemView,
@@ -24,7 +24,6 @@ from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPE_ZH, SLOT_ZH, SLOTS
 from trpg.content.world_economy import ITEM_KINDS, WorldItemDef
 from trpg.content.world_quests import AFFINITY_RANKS, AffinityRank
-from trpg.roguelite.gear import current_item
 from trpg.world.actions import WorldEvent
 from trpg.world.affinity import affinity_rules, rank_at_least, rank_of
 from trpg.world.economy import (
@@ -188,7 +187,18 @@ def _gear_item(
         cross_class_zh=None if trade is None else trade.cross_class_zh,
         cross_class_lost_zh=None if trade is None else trade.cross_class_lost_zh,
         opening_note_zh=None if char is None else opening_gear_note(library, char, item.id),
+        signature=_signature_of(library, item),
     )
+
+
+def _signature_of(library: ContentLibrary, item: ItemDef) -> str | None:
+    """物品帶的招牌種類（第一條招牌；E6-b2 背包滿時的「招牌」小標）；沒有為 ``None``。"""
+    for roll in item.affixes:
+        affix = library.affixes.get(roll.affix)
+        kind = None if affix is None else signature_kind(affix)
+        if kind is not None:
+            return kind
+    return None
 
 
 def _equipped_lines(library: ContentLibrary, char: CharacterState) -> tuple[str, ...]:
@@ -237,21 +247,18 @@ def inventory_view(
         gear_cards=tuple(
             gear_candidate(library, gear_run(char), g, cross_class=True) for g in char.gear
         ),
+        signatures=signature_panel(library, gear_run(char), problem=gear_problem),
     )
 
 
 def _equipment(library: ContentLibrary, char: CharacterState) -> tuple[HeroGearSlotOut, ...]:
-    run = gear_run(char)
     return tuple(
-        HeroGearSlotOut(
-            slot=slot,
-            slot_zh=SLOT_ZH[slot],
-            item=None
-            if (held := current_item(library, run, slot)) is None
-            else item_info(library, held),
-            opening_note_zh=None if held is None else opening_gear_note(library, char, held.id),
+        entry
+        if entry.item is None
+        else entry.model_copy(
+            update={"opening_note_zh": opening_gear_note(library, char, entry.item.id)}
         )
-        for slot in SLOTS
+        for entry in worn_slots(library, gear_run(char))
     )
 
 

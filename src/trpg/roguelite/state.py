@@ -57,6 +57,7 @@ __all__ = [
     "FlashLlmName",
     "FlashLlmRecord",
     "FlashPickChoice",
+    "GearChosenChoice",
     "GearOfferNode",
     "GearPickChoice",
     "InheritChoice",
@@ -401,6 +402,16 @@ class LoadoutChoice(_Model):
     skills: tuple[str, ...]
 
 
+class GearChosenChoice(_Model):
+    """角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點）：``chosen`` 是新的
+    勾選（``"<欄位>:<詞條 ID>"``），整份取代 ``RunState.gear_chosen``。招牌最多
+    ``caps.signature_active`` 個、改寫規則最多 ``caps.rule_affixes`` 條，勾的必須是身上的招牌或
+    改寫規則（:func:`trpg.roguelite.gear.set_gear_chosen`）。戰鬥之間都可以送；不推進節點。"""
+
+    kind: Literal["gear_chosen"] = "gear_chosen"
+    chosen: tuple[str, ...] = ()
+
+
 type Choice = Annotated[
     LevelUpChoice
     | CompletePickChoice
@@ -413,7 +424,8 @@ type Choice = Annotated[
     | AllocateChoice
     | LoadoutChoice
     | GearPickChoice
-    | EquipChoice,
+    | EquipChoice
+    | GearChosenChoice,
     Field(discriminator="kind"),
 ]
 

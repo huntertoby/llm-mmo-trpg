@@ -44,6 +44,7 @@ from trpg.shared.types import Attribute, top_attribute
 __all__ = [
     "active_picks",
     "auto_gear_pick",
+    "chosen_problems",
     "current_item",
     "equip",
     "equip_notes",
@@ -54,6 +55,7 @@ __all__ = [
     "limited_gear",
     "make_gear_offer",
     "run_loadout",
+    "set_gear_chosen",
     "take_gear",
     "target_slot",
     "with_chosen",
@@ -248,7 +250,7 @@ def active_picks(library: ContentLibrary, run: RunState) -> tuple[str, ...]:
     return tuple(chosen_key(slot, i) for slot, i in _pickable(gear) if (slot, i) in alive)
 
 
-def _may_overflow(library: ContentLibrary, loadout: Loadout) -> bool:
+def may_overflow(library: ContentLibrary, loadout: Loadout) -> bool:
     """這組裝備有沒有可能超過名額（招牌超過 ``signature_active``、改寫規則超過 ``rule_affixes``）；
     沒有時不用算誰生效。"""
     caps = library.ruleset.equipment.caps
@@ -276,7 +278,7 @@ def keep_active_chosen(library: ContentLibrary, before: RunState, after: RunStat
     名額時，把換裝前生效的招牌與改寫規則（還穿著的）寫進 ``gear_chosen``，新穿上的排在後面；不會
     超過時只拿掉換下那件的勾選（沒勾過的維持空的，開戰的裝備快照不變）。"""
     kept = _still_worn(library, before, after, before.gear_chosen)
-    if _may_overflow(library, run_loadout(library, after)):
+    if may_overflow(library, run_loadout(library, after)):
         alive = _still_worn(library, before, after, active_picks(library, before))
         trial = after.model_copy(update={"gear_chosen": alive})
         if any(a.limited_by is not None for a in limited_gear(library, trial).affixes):
@@ -423,3 +425,40 @@ def weapon_swap_prompt(
         return None
     mine = "、".join(a.display_name for a in _scaling_attrs(new))
     return f"這把看{mine}，你目前最高的是{top_attribute(attributes).display_name}"
+
+
+def chosen_problems(library: ContentLibrary, run: RunState, chosen: tuple[str, ...]) -> list[str]:
+    """勾選不合法的原因（E6-b2）：格式、重複、勾了身上沒有的（只能勾招牌或改寫規則）、招牌超過
+    ``caps.signature_active`` 個、改寫規則超過 ``caps.rule_affixes`` 條；合法時為空。"""
+    caps = library.ruleset.equipment.caps
+    worn = {
+        chosen_key(e.slot, a.affix.id): a.affix
+        for e in run_loadout(library, run).items
+        for a in e.affixes
+        if a.affix.signature is not None or a.affix.category == "rule"
+    }
+    problems: list[str] = []
+    if len(set(chosen)) != len(chosen):
+        problems.append("勾選重複")
+    unknown = [k for k in chosen if k not in worn]
+    if unknown:
+        problems.append(f"身上沒有這個招牌效果或改寫規則：{'、'.join(unknown)}")
+    picked = [worn[k] for k in dict.fromkeys(chosen) if k in worn]
+    signatures = sum(1 for a in picked if a.signature is not None)
+    if signatures > caps.signature_active:
+        problems.append(f"招牌效果最多勾 {caps.signature_active} 個（勾了 {signatures} 個）")
+    rules = sum(1 for a in picked if a.category == "rule")
+    if rules > caps.rule_affixes:
+        problems.append(f"改寫規則最多勾 {caps.rule_affixes} 條（勾了 {rules} 條）")
+    return problems
+
+
+def set_gear_chosen(library: ContentLibrary, run: RunState, chosen: tuple[str, ...]) -> RunState:
+    """套用角色面板的勾選（依欄位固定順序存）；不合法時拋 :class:`ChoiceError`（狀態不變）。"""
+    problems = chosen_problems(library, run, chosen)
+    if problems:
+        raise ChoiceError("；".join(problems))
+    ordered = tuple(
+        sorted(chosen, key=lambda k: (SLOT_INDEX[k.partition(":")[0]], k.partition(":")[2]))
+    )
+    return run.model_copy(update={"gear_chosen": ordered})

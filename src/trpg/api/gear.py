@@ -26,6 +26,7 @@ from trpg.api.gear_schemas import (
     GearWeaponInfo,
     GearWeaponLook,
 )
+from trpg.api.gear_signature import signature_kind, signature_label_zh, signature_name_zh
 from trpg.content.appearance import derive_keywords, item_appearance_problems
 from trpg.content.equipment import (
     AFFIX_CATEGORY_NUMBER,
@@ -78,8 +79,26 @@ def _base_bonus_zh(item: ItemDef) -> str | None:
     return f"基礎加成：{what} +{item.base_bonus_permille / 10:g}%"
 
 
-def item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
-    """一件物品的卡片資料（裝備測試介面與一輪的戰後三選一、背包共用）。"""
+def _item_line(
+    library: ContentLibrary, item: ItemDef, roll: AffixRoll, off: Mapping[str, str]
+) -> GearItemLine:
+    affix = library.affixes[roll.affix]
+    kind = signature_kind(affix)
+    return GearItemLine(
+        affix_id=roll.affix,
+        text_zh=affix_text(affix, roll.value),
+        signature=kind,
+        signature_zh=None if kind is None else signature_label_zh(library, item, affix),
+        signature_name_zh=None if kind is None else signature_name_zh(library, affix),
+        off_zh=off.get(roll.affix),
+    )
+
+
+def item_info(
+    library: ContentLibrary, item: ItemDef, off: Mapping[str, str] | None = None
+) -> GearItemInfo:
+    """一件物品的卡片資料（裝備測試介面與一輪的戰後三選一、背包共用）。``off``：被名額標灰的詞條
+    （詞條 ID → 原因，E6-b2；穿戴中照現在、候選照換上之後）。"""
     affixes = library.affixes
     weapon = library.weapons.get(item.weapon) if item.weapon is not None else None
     return GearItemInfo(
@@ -99,10 +118,7 @@ def item_info(library: ContentLibrary, item: ItemDef) -> GearItemInfo:
         paired=item.paired or (weapon is not None and weapon.paired),
         tags=item.tags,
         legendary=item.legendary,
-        affixes=tuple(
-            GearItemLine(affix_id=r.affix, text_zh=affix_text(affixes[r.affix], r.value))
-            for r in item.affixes
-        ),
+        affixes=tuple(_item_line(library, item, r, off or {}) for r in item.affixes),
         appearance=_appearance(item, affixes),
         rarity=item.rarity,
         rarity_zh=None if item.rarity is None else RARITY_ZH.get(item.rarity),

@@ -24,10 +24,21 @@ from trpg.content.item_gen import downscale_item, generate_item_retrying
 from trpg.content.keyword_derive import derive_keywords
 from trpg.content.library import ContentLibrary
 from trpg.roguelite.errors import ChoiceError
-from trpg.roguelite.gear import equip_swap, target_slot, with_chosen, worn_items
+from trpg.roguelite.gear import (
+    equip_swap,
+    set_gear_chosen,
+    target_slot,
+    with_chosen,
+    worn_items,
+)
 from trpg.roguelite.state import RunState
 from trpg.shared.rng import Rng, fnv1a64
-from trpg.world.economy_actions import EquipAction, ItemEquippedEvent
+from trpg.world.economy_actions import (
+    EquipAction,
+    GearChosenAction,
+    GearChosenEvent,
+    ItemEquippedEvent,
+)
 from trpg.world.errors import WorldActionError
 from trpg.world.growth import as_run, at_service
 from trpg.world.inventory import room_problem
@@ -37,6 +48,7 @@ from trpg.world.state import CharacterState
 
 __all__ = [
     "apply_equip",
+    "apply_gear_chosen",
     "equip_problem",
     "gear_run",
     "hero_loadout",
@@ -135,6 +147,22 @@ def apply_equip(
     )
     event = ItemEquippedEvent(slot=slot, item=item.id, name_zh=item.name_zh, removed=removed)
     return char, (event,)
+
+
+def apply_gear_chosen(
+    library: ContentLibrary, char: CharacterState, action: GearChosenAction
+) -> tuple[CharacterState, tuple[GearChosenEvent, ...]]:
+    """``gear_chosen`` 動作（E6-b2）：城鎮或營火、沒有遭遇時（同換裝）照角色面板的勾選存下；
+    不合法拋 :class:`WorldActionError`（狀態不變）。"""
+    problem = equip_problem(library, char)
+    if problem is not None:
+        raise WorldActionError(f"不能改招牌勾選：{problem}")
+    try:
+        done = set_gear_chosen(library, _run(char), action.chosen)
+    except ChoiceError as exc:
+        raise WorldActionError(str(exc)) from exc
+    char = char.model_copy(update={"gear_chosen": done.gear_chosen})
+    return char, (GearChosenEvent(chosen=done.gear_chosen),)
 
 
 # ---------------------------------------------------------------------------

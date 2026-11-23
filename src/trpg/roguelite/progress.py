@@ -37,7 +37,13 @@ from trpg.roguelite.flashes import (
     pick_flash,
     with_acquired,
 )
-from trpg.roguelite.gear import equip, gear_offer_node, run_loadout, take_gear
+from trpg.roguelite.gear import (
+    equip,
+    gear_offer_node,
+    run_loadout,
+    set_gear_chosen,
+    take_gear,
+)
 from trpg.roguelite.growth import set_loadout
 from trpg.roguelite.offers import make_offer, offer_updates, take_candidate
 from trpg.roguelite.retier import run_tier, sync_skill_tier
@@ -55,6 +61,7 @@ from trpg.roguelite.state import (
     EquipChoice,
     FlashChoice,
     FlashPickChoice,
+    GearChosenChoice,
     GearOfferNode,
     GearPickChoice,
     InheritChoice,
@@ -395,6 +402,10 @@ def apply_choice(library: ContentLibrary, run: RunState, choice: Choice) -> RunS
         return _manage_attributes(library, run, choice)
     if isinstance(choice, EquipChoice):
         return _equip_from_backpack(library, run, choice)
+    if isinstance(choice, GearChosenChoice):
+        if run.ended:
+            raise NodeConflictError(f"目前是{_NODE_TEXT[run.node.kind]}，不能勾選招牌效果")
+        return set_gear_chosen(library, run, choice.chosen)
     return _node_choice(library, run, choice)
 
 

@@ -77,7 +77,7 @@ from trpg.world.companions import sync_companions
 from trpg.world.crafting import CRAFTING_HANDLERS
 from trpg.world.duel import choose_duel
 from trpg.world.economy import ECONOMY_HANDLERS, after_step
-from trpg.world.economy_actions import EquipAction, LootChooseAction
+from trpg.world.economy_actions import EquipAction, GearChosenAction, LootChooseAction
 from trpg.world.endings import expire_threads
 from trpg.world.errors import WorldActionError
 from trpg.world.events import mark_finished, mark_met_opportunities, roll_event
@@ -113,7 +113,7 @@ from trpg.world.field_things import (
     sneak,
     use_field_object,
 )
-from trpg.world.gear import apply_equip
+from trpg.world.gear import apply_equip, apply_gear_chosen
 from trpg.world.growth import GROWTH_ACTIONS, apply_growth, hero_tier
 from trpg.world.league import league_step
 from trpg.world.league_actions import LeagueEnterAction, LeagueWithdrawAction
@@ -492,6 +492,9 @@ def _handlers() -> dict[type, _Handler]:
         EventSolveAction: _changes_world(solve_event),
         # 5D-2 換裝備；5D-2b 背包滿了：戰後結算選要丟哪件
         EquipAction: _keeps_world(lambda lib, _w, char, action, _n: apply_equip(lib, char, action)),
+        GearChosenAction: _keeps_world(
+            lambda lib, _w, char, action, _n: apply_gear_chosen(lib, char, action)
+        ),
         LootChooseAction: _keeps_world(
             lambda lib, _w, char, action, _n: choose_loot(lib, char, action)
         ),

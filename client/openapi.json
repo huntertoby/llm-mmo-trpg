@@ -1520,6 +1520,9 @@
                   },
                   {
                     "$ref": "#/components/schemas/EquipChoice"
+                  },
+                  {
+                    "$ref": "#/components/schemas/GearChosenChoice"
                   }
                 ],
                 "discriminator": {
@@ -1536,7 +1539,8 @@
                     "allocate": "#/components/schemas/AllocateChoice",
                     "loadout": "#/components/schemas/LoadoutChoice",
                     "gear_pick": "#/components/schemas/GearPickChoice",
-                    "equip": "#/components/schemas/EquipChoice"
+                    "equip": "#/components/schemas/EquipChoice",
+                    "gear_chosen": "#/components/schemas/GearChosenChoice"
                   }
                 },
                 "title": "Choice"
@@ -6178,6 +6182,17 @@
               }
             ],
             "title": "Rare"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
           }
         },
         "additionalProperties": false,
@@ -14459,6 +14474,50 @@
         "title": "GearChoice",
         "description": "一個欄位的選擇：內容庫物品 id，或自訂物品（二選一）。"
       },
+      "GearChosenAction": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "gear_chosen",
+            "title": "Kind",
+            "default": "gear_chosen"
+          },
+          "chosen": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chosen",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GearChosenAction",
+        "description": "角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點；城鎮或營火，同換裝）：\n``chosen`` 整份取代 ``CharacterState.gear_chosen``。招牌最多 3 個、改寫規則最多 1 條，勾的必須是\n身上的招牌或改寫規則（:func:`trpg.roguelite.gear.chosen_problems`）。"
+      },
+      "GearChosenChoice": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "gear_chosen",
+            "title": "Kind",
+            "default": "gear_chosen"
+          },
+          "chosen": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chosen",
+            "default": []
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "GearChosenChoice",
+        "description": "角色面板勾選要生效的招牌效果與改寫規則（E6-b2，08 8.27、8.30 第 4 點）：``chosen`` 是新的\n勾選（``\"<欄位>:<詞條 ID>\"``），整份取代 ``RunState.gear_chosen``。招牌最多\n``caps.signature_active`` 個、改寫規則最多 ``caps.rule_affixes`` 條，勾的必須是身上的招牌或\n改寫規則（:func:`trpg.roguelite.gear.set_gear_chosen`）。戰鬥之間都可以送；不推進節點。"
+      },
       "GearCustomItem": {
         "properties": {
           "name_zh": {
@@ -14713,6 +14772,50 @@
           "text_zh": {
             "type": "string",
             "title": "Text Zh"
+          },
+          "signature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature"
+          },
+          "signature_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Zh"
+          },
+          "signature_name_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Name Zh"
+          },
+          "off_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Off Zh"
           }
         },
         "additionalProperties": false,
@@ -15960,6 +16063,16 @@
             "type": "array",
             "title": "Backpack",
             "default": []
+          },
+          "signatures": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignaturePanelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -17050,6 +17163,16 @@
             "type": "array",
             "title": "Gear Cards",
             "default": []
+          },
+          "signatures": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignaturePanelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -25731,6 +25854,164 @@
           "rule"
         ]
       },
+      "SignaturePanelOut": {
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/SignatureRowOut"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "cap": {
+            "type": "integer",
+            "title": "Cap"
+          },
+          "rules": {
+            "type": "integer",
+            "title": "Rules"
+          },
+          "rule_cap": {
+            "type": "integer",
+            "title": "Rule Cap"
+          },
+          "has_rule": {
+            "type": "boolean",
+            "title": "Has Rule"
+          },
+          "count_zh": {
+            "type": "string",
+            "title": "Count Zh"
+          },
+          "full_zh": {
+            "type": "string",
+            "title": "Full Zh"
+          },
+          "chosen": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Chosen",
+            "default": []
+          },
+          "problem_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rows",
+          "active",
+          "cap",
+          "rules",
+          "rule_cap",
+          "has_rule",
+          "count_zh",
+          "full_zh"
+        ],
+        "title": "SignaturePanelOut",
+        "description": "角色面板的「招牌效果」一節（E6-b2）：列依欄位固定順序（勾選時不跳動）。"
+      },
+      "SignatureRowOut": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "slot_zh": {
+            "type": "string",
+            "title": "Slot Zh"
+          },
+          "item_name_zh": {
+            "type": "string",
+            "title": "Item Name Zh"
+          },
+          "rarity": {
+            "type": "string",
+            "title": "Rarity"
+          },
+          "affix_id": {
+            "type": "string",
+            "title": "Affix Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kind_zh": {
+            "type": "string",
+            "title": "Kind Zh"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "text_zh": {
+            "type": "string",
+            "title": "Text Zh"
+          },
+          "counted": {
+            "type": "boolean",
+            "title": "Counted"
+          },
+          "rule": {
+            "type": "boolean",
+            "title": "Rule"
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "off_zh": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Off Zh"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "slot",
+          "slot_zh",
+          "item_name_zh",
+          "rarity",
+          "affix_id",
+          "kind",
+          "kind_zh",
+          "name_zh",
+          "text_zh",
+          "counted",
+          "rule",
+          "active"
+        ],
+        "title": "SignatureRowOut",
+        "description": "角色面板「招牌效果」的一列（E6-b2，08 8.27、8.30 第 4 點）：身上的一條招牌或改寫規則。"
+      },
       "SituationAnswerRequest": {
         "properties": {
           "template": {
@@ -33756,6 +34037,9 @@
             "$ref": "#/components/schemas/EquipAction"
           },
           {
+            "$ref": "#/components/schemas/GearChosenAction"
+          },
+          {
             "$ref": "#/components/schemas/LootChooseAction"
           },
           {
@@ -33815,6 +34099,7 @@
             "event_solve": "#/components/schemas/EventSolveAction",
             "flash": "#/components/schemas/FlashAction",
             "flash_pick": "#/components/schemas/FlashPickAction",
+            "gear_chosen": "#/components/schemas/GearChosenAction",
             "hint_seen": "#/components/schemas/HintSeenAction",
             "hints_off": "#/components/schemas/HintsOffAction",
             "hints_reset": "#/components/schemas/HintsResetAction",

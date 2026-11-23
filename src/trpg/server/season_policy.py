@@ -129,6 +129,7 @@ _CHARACTER: Final[dict[str, ResetKind]] = _all(
     "shop_affinity",
     "gear",
     "equipment",
+    "gear_chosen",  # E6-b2 招牌勾選（跟著裝備，數值類）
     "pending_loot",
     "gear_mods",
     "crafts",
