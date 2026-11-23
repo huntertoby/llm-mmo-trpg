@@ -30,7 +30,7 @@
 | `mypy` | 0（1857 個檔） |
 | `lint-imports` | 0 |
 | `pytest tests/infra/test_check_split.py test_run_pytest.py test_xdist_loadgroup.py` | 0（51 passed） |
-| `scripts/check.py --all` | 見下方「全量檢查」 |
+| `scripts/check.py --all` | 0（見下方「全量檢查」） |
 
 ### grep `testmon`（排除 `docs/archive/`、TS-2 報告與計畫）
 
@@ -45,8 +45,14 @@
 
 ## 全量檢查
 
-（跑完後補）
+開發 PM 回「可以跑」後，先 `git merge --no-edit main`（併進 CR-1c，merge commit `ecbb866bf`），再跑 `uv run python scripts/check.py --all`：結束碼 **0**。
+
+- 分流：全跑（指定 --all），9 個步驟全部通過：ruff check、ruff format --check、mypy、lint-imports、pytest、client install、client typecheck、client test、situation coverage。
+- pytest：18711 passed、8 skipped，592 秒。
+- client test：421 個檔、4978 個測試全過。
+- 通過戳記寫在 `.git/pm-check-pass/cfd73adfb8f5eff00b67f14a73a55ff256cbe92b`（`ecbb866bf` 的 tree）。這份報告是之後才 commit 的，只改 `.md`。
 
 ## 待 PM 決定
 
 1. **grep 驗收和其他文件**：規格第 5 項要補的句子本身含 `testmon`，和「grep 找不到」的驗收互相衝突；另外 CR-1b／CR-1c 計畫、E3b 報告、TS-1 計畫、`開發PM交接.md` 也有這個字。我只改了規格點名的檔，其他歷史文件和交接沒動。要不要把這些也算進例外（我的建議：算進例外，這些是歷史紀錄），或要我改寫，請 PM 決定。
+   - **已裁定**（開發 PM）：照建議，要補的那句、歷史文件和交接都列為例外，不改。
