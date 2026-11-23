@@ -3,6 +3,7 @@
 // E6-b2：帶招牌的物品在詞條清單前面畫招牌框（`SignatureBox`，卡片第一行）；`fx`＝撿到時的一次性強調（三選一、背包詳情）。
 import type { GearCandidate } from "../../api/types";
 import { gearKeywordLine } from "../../gear/gearKeywords";
+import { joinClauses } from "../../gear/clauses";
 import { compareText, compareTone, itemLines, itemSubtitle, itemTipLines, noteLines, rarityClass } from "../../run/gearOffer";
 import { GearIcon } from "../GearIcon";
 import { PartTip } from "../PartTip";
@@ -66,7 +67,11 @@ export function GearCardView({ cand, fx = false }: { cand: GearCandidate; fx?: b
             </>
           )}
         </div>
-        {now.length > 0 && <div className="small muted">{now.join("；")}</div>}
+        {now.length > 0 && (
+          <div className="small muted" data-testid="gear-card-current-lines">
+            {joinClauses(now)}
+          </div>
+        )}
         <div className="small gear-card-score">{compareText(cand)}</div>
       </div>
     </div>

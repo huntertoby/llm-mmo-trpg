@@ -2,6 +2,7 @@
 // 規則（部位不重複、稀有度權重、能不能換上）全由後端裁決；這裡只整理要顯示的文字。
 import type { GearCandidate, GearItemInfo, RunChoice, RunHero } from "../api/types";
 import type { TipLine } from "../gear/affixStatus";
+import { joinClauses } from "../gear/clauses";
 import { withKeywordLine } from "../gear/gearKeywords";
 import { signatureFormZh } from "../render/gearResolve";
 
@@ -15,7 +16,7 @@ export function itemLines(item: GearItemInfo, skip: GearItemInfo["affixes"][numb
   const lines: string[] = [];
   if (item.base_bonus_zh != null) lines.push(item.base_bonus_zh);
   if (item.offhand_name_zh != null && item.offhand_traits_zh.length > 0) {
-    lines.push(`${item.offhand_name_zh}：${item.offhand_traits_zh.join("；")}`);
+    lines.push(`${item.offhand_name_zh}：${joinClauses(item.offhand_traits_zh)}`);
   }
   for (const a of item.affixes) if (a !== skip) lines.push(a.text_zh);
   return lines;

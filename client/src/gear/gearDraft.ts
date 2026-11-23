@@ -3,6 +3,7 @@
 // 兩邊的中文原因用語盡量一致。
 import type { GearAffixInfo, GearCatalog, GearChoice, GearItemInfo, GearTotalView } from "../api/types";
 import type { GearLook } from "../render/gearIcon";
+import { joinClauses } from "./clauses";
 
 /** 武器大類（`melee`／`ranged`／`focus`）的中文；用目錄裡武器帶的中文名，不寫死。 */
 export function weaponClassZh(catalog: GearCatalog, weaponClass: string): string {
@@ -240,7 +241,7 @@ export function toEquipment(selection: Selection, catalog: GearCatalog): Record<
 export function itemSummary(item: GearItemInfo): string {
   // 普通物品沒有詞條時寫基礎加成（Phase 3K-2，08 8.22.1 第 5 點）
   const base = item.base_bonus_zh == null ? [] : [item.base_bonus_zh];
-  return [...base, ...item.affixes.map((a) => a.text_zh)].join("；");
+  return joinClauses([...base, ...item.affixes.map((a) => a.text_zh)]);
 }
 
 /** 自訂物品的詞條摘要。 */

@@ -2,6 +2,7 @@
 import type { GearCatalog, GearSlotInfo } from "../../api/types";
 import { compareItem } from "../../gear/affixStatus";
 import { itemSummary, type Selection } from "../../gear/gearDraft";
+import { joinClauses } from "../../gear/clauses";
 import { GearIcon } from "../GearIcon";
 
 interface Props {
@@ -39,7 +40,7 @@ export function ItemList({ catalog, slot, selection, onPick }: Props) {
               </span>
               {item.offhand_name_zh != null && (
                 <span className="gear-row-affixes muted small" data-testid="item-offhand-traits">
-                  {item.offhand_name_zh}：{item.offhand_traits_zh.join("；")}
+                  {item.offhand_name_zh}：{joinClauses(item.offhand_traits_zh)}
                 </span>
               )}
               <span className="gear-row-affixes muted small">{itemSummary(item)}</span>

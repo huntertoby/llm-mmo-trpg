@@ -1,6 +1,7 @@
 // 裝備欄位格（Phase 3G-G4）：9 個欄位排成 3×3，每格 64px 圖示；點格子選欄位，右側換成該欄位的物品清單。
 import type { GearCatalog, GearItemInfo } from "../../api/types";
 import { draftLook, draftSummary, type CustomDraft, type Selection } from "../../gear/gearDraft";
+import { joinClauses } from "../../gear/clauses";
 import { GearIcon } from "../GearIcon";
 import { PartTip } from "../PartTip";
 
@@ -24,7 +25,7 @@ function pickLook(pick: NonNullable<Selection[string]>, catalog: GearCatalog): {
   }
   const item = catalog.items.find((i) => i.id === pick.item_id);
   if (item === undefined) return { name: "（未知物品）", look: null, tip: "目錄裡找不到這件物品" };
-  return { name: item.name_zh, look: item.appearance, tip: `${item.name_zh}：${item.affixes.map((a) => a.text_zh).join("；")}` };
+  return { name: item.name_zh, look: item.appearance, tip: `${item.name_zh}：${joinClauses(item.affixes.map((a) => a.text_zh))}` };
 }
 
 export function SlotGrid({ catalog, selection, selected, offHandBlocked, onSelect }: Props) {
