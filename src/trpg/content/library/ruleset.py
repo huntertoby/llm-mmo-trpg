@@ -509,6 +509,7 @@ def skill_reference_problems(
         if any(sid in p for p in problems)
     ]
     problems += granted_skill_problems(skill, skills, ruleset.primitives.by_id())
+    problems += _trigger_reaction_problems(skill, ruleset, skills)
     follow = skill.followup_skill()  # 複合技能的動作段（Phase 3F-3a）：同一套引用檢查
     if follow is not None:
         problems += [f"followup.{p}" for p in skill_reference_problems(follow, ruleset, skills)]
@@ -520,6 +521,24 @@ def skill_reference_problems(
             f"啟動，收到 {skill.ap_cost}"
         )
     return problems
+
+
+def _trigger_reaction_problems(
+    skill: SkillDef, ruleset: Ruleset, skills: Mapping[str, SkillDef]
+) -> list[str]:
+    """被動技 ``trigger.reaction`` 篩選的 ID 要存在（QF-6，E4 報告第 8 點）：``reactions.yaml`` 的
+    反應 ID（內建反應攻擊），或反應技（``kind: reaction``）的技能 ID（反應技的來源 ID 用技能 ID，
+    E4 待決 2）。找不到時報出技能 ID 與那個 ID。"""
+    spec = skill.trigger
+    if spec is None or spec.reaction is None:
+        return []
+    known = {r.id for r in ruleset.reactions.reactions}
+    if spec.reaction in known:
+        return []
+    found = skills.get(spec.reaction)
+    if found is not None and found.kind == "reaction":
+        return []
+    return [f"技能 {skill.id} 的 trigger.reaction：找不到反應 {spec.reaction!r}"]
 
 
 def _variant_lookup_problems(variant_id: str | None, form: SkillDef, ruleset: Ruleset) -> list[str]:
