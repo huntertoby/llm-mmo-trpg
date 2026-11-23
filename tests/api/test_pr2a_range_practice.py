@@ -453,8 +453,8 @@ def test_a6_new_badge_follows_hints_seen(client: TestClient) -> None:
     assert len(store.entries()) == lines + 1  # 既有動作，照常寫一筆日誌
     reset = _act(client, cid, {"kind": "hints_reset"})
     assert reset["workshop"]["practice_new"] is True
-    # SK-1 加一（36＝PK-4，35＝PK-3，34＝PK-2，33＝RG-5；PR-2a 沒有加）
-    assert WORLD_RULES_VERSION == 37
+    # E6-b2 加一（37＝SK-1，36＝PK-4，35＝PK-3，34＝PK-2；PR-2a 沒有加）
+    assert WORLD_RULES_VERSION == 38
 
 
 # ---------------------------------------------------------------------------

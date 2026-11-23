@@ -22,17 +22,27 @@ from collections.abc import Mapping
 from fractions import Fraction
 
 from trpg.content.battle import WeaponDef
-from trpg.content.equipment import ItemDef, Loadout, loadout_problems, resolve_loadout
+from trpg.content.equipment import (
+    ItemDef,
+    Loadout,
+    chosen_key,
+    loadout_problems,
+    resolve_loadout,
+)
 from trpg.content.item_budget import item_strength
 from trpg.content.item_gen import ItemGenError, WeaponClass, generate_item, roll_rarity
 from trpg.content.library import ContentLibrary
-from trpg.content.slots import SLOT_TYPE_OF, SLOT_TYPES, SLOTS, SlotType
+from trpg.content.slots import SLOT_INDEX, SLOT_TYPE_OF, SLOT_TYPES, SLOTS, SlotType
+from trpg.engine.gear.core import build_gear
+from trpg.engine.gear.limits import limit_gear
+from trpg.engine.gear.state import GearState
 from trpg.roguelite.errors import ChoiceError
 from trpg.roguelite.state import GearOfferNode, RunState
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, top_attribute
 
 __all__ = [
+    "active_picks",
     "auto_gear_pick",
     "current_item",
     "equip",
@@ -40,6 +50,8 @@ __all__ = [
     "equip_swap",
     "gear_offer_node",
     "item_score",
+    "keep_active_chosen",
+    "limited_gear",
     "make_gear_offer",
     "run_loadout",
     "take_gear",
@@ -201,7 +213,77 @@ def equip_swap(
         removed.append(old)
     backpack += removed
     done = run.model_copy(update={"hero": hero, "equipment": new, "backpack": tuple(backpack)})
-    return done, tuple(removed)
+    return keep_active_chosen(library, run, done), tuple(removed)
+
+
+# ---------------------------------------------------------------------------
+# 招牌與改寫規則的名額（E6-b2）
+# ---------------------------------------------------------------------------
+
+
+def limited_gear(library: ContentLibrary, run: RunState) -> GearState:
+    """主角開戰時的裝備狀態（遞減、改寫規則與招牌名額都套用過；同
+    :func:`trpg.engine.lifecycle.make_unit`），角色面板與換裝判斷「誰生效」用。"""
+    loadout = run_loadout(library, run)
+    rules = library.ruleset
+    gear = build_gear(loadout, rules.equipment)
+    weapon = library.weapons[run.hero.weapon]
+    return limit_gear(gear, loadout, rules, race=run.hero.race, weapon=weapon)
+
+
+def _pickable(gear: GearState) -> list[tuple[str, str]]:
+    """會被名額擋下的詞條（招牌、改寫規則）：（欄位, 詞條 ID），依欄位固定順序、再依 ID，不重複。"""
+    found = {
+        (a.slot, a.affix.id)
+        for a in gear.affixes
+        if a.affix.signature is not None or a.affix.category == "rule"
+    }
+    return sorted(found, key=lambda k: (SLOT_INDEX[k[0]], k[1]))
+
+
+def active_picks(library: ContentLibrary, run: RunState) -> tuple[str, ...]:
+    """目前生效中的招牌與改寫規則（勾選鍵 ``"<欄位>:<詞條 ID>"``，依欄位固定順序）。"""
+    gear = limited_gear(library, run)
+    alive = {(a.slot, a.affix.id) for a in gear.affixes if a.active}
+    return tuple(chosen_key(slot, i) for slot, i in _pickable(gear) if (slot, i) in alive)
+
+
+def _may_overflow(library: ContentLibrary, loadout: Loadout) -> bool:
+    """這組裝備有沒有可能超過名額（招牌超過 ``signature_active``、改寫規則超過 ``rule_affixes``）；
+    沒有時不用算誰生效。"""
+    caps = library.ruleset.equipment.caps
+    affixes = [a.affix for e in loadout.items for a in e.affixes]
+    signatures = sum(1 for a in affixes if a.signature is not None)
+    rules = {a.id for a in affixes if a.category == "rule"}
+    return signatures > caps.signature_active or len(rules) > caps.rule_affixes
+
+
+def _still_worn(
+    library: ContentLibrary, before: RunState, after: RunState, keys: tuple[str, ...]
+) -> tuple[str, ...]:
+    """``keys`` 裡換裝前後同一個欄位還是同一件物品的（換下的那件的勾選不留）。"""
+    old, new = worn_items(library, before), worn_items(library, after)
+
+    def same(key: str) -> bool:
+        slot = key.partition(":")[0]
+        return slot in old and slot in new and old[slot].id == new[slot].id
+
+    return tuple(k for k in keys if same(k))
+
+
+def keep_active_chosen(library: ContentLibrary, before: RunState, after: RunState) -> RunState:
+    """換裝後的勾選（08 8.27「保留原本生效的那個」、8.30 第 4 點「新穿上的標灰」）：換上之後會超過
+    名額時，把換裝前生效的招牌與改寫規則（還穿著的）寫進 ``gear_chosen``，新穿上的排在後面；不會
+    超過時只拿掉換下那件的勾選（沒勾過的維持空的，開戰的裝備快照不變）。"""
+    kept = _still_worn(library, before, after, before.gear_chosen)
+    if _may_overflow(library, run_loadout(library, after)):
+        alive = _still_worn(library, before, after, active_picks(library, before))
+        trial = after.model_copy(update={"gear_chosen": alive})
+        if any(a.limited_by is not None for a in limited_gear(library, trial).affixes):
+            return trial
+    if kept == after.gear_chosen:
+        return after
+    return after.model_copy(update={"gear_chosen": kept})
 
 
 # ---------------------------------------------------------------------------

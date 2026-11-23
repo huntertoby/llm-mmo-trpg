@@ -14,6 +14,7 @@ from trpg.content.library import ContentLibrary
 __all__ = [
     "GRAPPLE",
     "GUARD",
+    "OVERWATCH",
     "RANGED_BLOCK",
     "RULE_FIRE",
     "RULE_MOVE",
@@ -26,6 +27,7 @@ GRAPPLE = "affix_act_grapple"
 SMOKE = "affix_act_smoke"
 GUARD = "affix_react_guard_ally"
 RANGED_BLOCK = "affix_react_ranged_block"
+OVERWATCH = "affix_react_double_overwatch"
 RULE_FIRE = "affix_rule_fire_mends"
 RULE_MOVE = "affix_rule_move_any_object"
 
@@ -34,6 +36,7 @@ _KINDS = {
     SMOKE: "action",
     GUARD: "reaction",
     RANGED_BLOCK: "reaction",
+    OVERWATCH: "reaction",
     RULE_FIRE: "rule",
     RULE_MOVE: "rule",
 }

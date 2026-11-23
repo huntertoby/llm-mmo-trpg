@@ -126,7 +126,12 @@ def apply_equip(
             raise WorldActionError(f"不能換裝備：{room}")
     removed = tuple(g.name_zh for g in taken_off)
     char = char.model_copy(
-        update={"hero": done.hero, "equipment": dict(done.equipment), "gear": done.backpack}
+        update={
+            "hero": done.hero,
+            "equipment": dict(done.equipment),
+            "gear": done.backpack,
+            "gear_chosen": done.gear_chosen,  # E6-b2：保留換裝前生效的招牌
+        }
     )
     event = ItemEquippedEvent(slot=slot, item=item.id, name_zh=item.name_zh, removed=removed)
     return char, (event,)
