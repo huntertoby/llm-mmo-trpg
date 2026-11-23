@@ -254,7 +254,7 @@ class _AffixBase(ContentModel):
       必須帶 ``shield`` 標籤，身體不限）。
     - ``offhands``：副手類物品限定這些副手（``offhands.yaml`` 的 id；空 ＝ 不限；其他種類的物品不受
       影響；RG-4：塔盾專屬的「盾陣」）。沒填時不輸出（既有詞條的序列化不變）。
-    - ``legendary_only``：只能出現在傳說物品上（改變規則類）。
+    - ``legendary_only``：只能出現在傳說物品上（E6-a1 起由資料決定，改寫規則不再強制）。
     - ``signature``：這條是招牌效果、是哪一種（08 8.27、8.30，E6-a1）；點數是該件詞條預算的固定比例
       （:func:`trpg.content.item_budget.affix_points`）。沒填時不輸出（既有詞條的序列化不變）。
     - ``value``：數值 ``N`` 的範圍；``None`` 表示這條詞條沒有可擲的數值（固定效果）。
@@ -787,16 +787,11 @@ class ReactionAffix(_AffixBase):
 
 class RuleAffix(_AffixBase):
     """第 11 類 改變規則（8.21.2.11；結算在 G3）：``rule_changes.yaml`` 的一條規則，只作用在持有者
-    （或持有者造成的效果）；只出現在傳說物品上。"""
+    （或持有者造成的效果）。E6-a1（08 8.27）起稀有以上可以當招牌，不再強制 ``legendary_only``；
+    限不限傳說由資料決定（現有 3 條仍標限傳說，產生器與打造照舊不抽）。"""
 
     category: Literal["rule"]
     rule: str = Field(pattern=ID_PATTERN)
-
-    @model_validator(mode="after")
-    def _check(self) -> RuleAffix:
-        if not self.legendary_only:
-            raise ValueError(f"詞條 {self.id}：改變規則類必須 legendary_only: true")
-        return self
 
 
 class TerrainAffix(_AffixBase):

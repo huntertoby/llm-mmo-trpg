@@ -205,7 +205,8 @@ def test_cost_affix_sides_must_point_the_right_way() -> None:
         AFFIX.validate_python(data)
 
 
-def test_rule_affix_must_be_legendary_only() -> None:
+def test_rule_affix_no_longer_requires_legendary_only() -> None:
+    """E6-a1（08 8.27）：改寫規則稀有以上可以當招牌，限不限傳說由資料決定。"""
     data = {
         "id": "affix_x",
         "category": "rule",
@@ -213,8 +214,9 @@ def test_rule_affix_must_be_legendary_only() -> None:
         "slots": ["ring"],
         "rule": "fire_mends_allies",
     }
-    with pytest.raises(ValidationError, match="legendary_only"):
-        AFFIX.validate_python(data)
+    affix = AFFIX.validate_python(data)
+    assert affix.legendary_only is False
+    assert AFFIX.validate_python({**data, "legendary_only": True}).legendary_only is True
 
 
 def test_duplicate_affix_ids_rejected() -> None:

@@ -250,3 +250,42 @@ def test_downscale_keeps_the_signature(lib: ContentLibrary) -> None:
         item = _gen(lib, seed, "weapon", "epic", 10)
         small = downscale_item(lib, item, 1)
         assert small.affixes[-1] == item.affixes[-1]
+
+
+def test_rule_signature_without_legendary_only_is_drawn() -> None:
+    """E6-a1 第 5 項：改寫規則不再強制限傳說；沒標限傳說的可以當稀有、史詩的招牌。"""
+    rule = _ADAPTER.validate_python(
+        {
+            "id": "affix_test_sig_rule",
+            "name_zh": "{rule}",
+            "category": "rule",
+            "slots": ["neck"],
+            "rule": "fire_mends_allies",
+            "signature": "rule",
+        }
+    )
+    base = signature_library()
+    lib = dataclasses.replace(base, affixes={**base.affixes, rule.id: rule})
+    found = _kinds(lib, "neck", 80)
+    assert found["rule"] > 0
+    for seed in range(10):
+        _check(lib, _gen(lib, seed, "neck", "epic", 6))
+
+
+def test_existing_rule_affixes_stay_legendary_only() -> None:
+    lib = library()
+    rules = [a for a in lib.affixes.values() if a.category == "rule"]
+    assert rules
+    assert all(a.legendary_only for a in rules)
+    item = ItemDef.model_validate(
+        {
+            "id": "item_t_rule",
+            "name_zh": "測試",
+            "slot_type": "neck",
+            "rarity": "epic",
+            "item_level": 6,
+            "affixes": [{"affix": rules[0].id}],
+        }
+    )
+    problems = item_problems(item, lib.affixes, lib.weapons, lib.ruleset.equipment, lib.offhands)
+    assert problems
