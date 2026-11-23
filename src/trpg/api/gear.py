@@ -274,7 +274,9 @@ def _equipped_hero(
     if main is not None and main.item.weapon is not None:
         weapon = library.weapons[main.item.weapon]
         template = template.model_copy(update={"weapon": weapon.id})
-    problems = loadout_problems(loadout, weapon, setup.ruleset.equipment)
+    problems = loadout_problems(
+        loadout, weapon, setup.ruleset.equipment, setup.ruleset.gear_names
+    )
     defs = setup.ruleset.skills.by_id()
     held = loadout_held(weapon, loadout)
     for skill_id in template.skills:

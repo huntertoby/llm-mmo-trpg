@@ -884,7 +884,9 @@ def check_test_equipment(
         loadout = resolve_loadout(equipment, library.items, library.affixes)
     except ValueError as exc:
         raise ChoiceError(str(exc)) from exc
-    problems = loadout_problems(loadout, library.weapons[weapon], library.ruleset.equipment)
+    problems = loadout_problems(
+        loadout, library.weapons[weapon], library.ruleset.equipment, library.ruleset.gear_names
+    )
     if problems:
         raise ChoiceError("；".join(problems))
 

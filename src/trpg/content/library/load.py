@@ -305,7 +305,11 @@ def _load_gear(
             raise ContentError(root / "items.yaml", "；".join(problems))
     _check_appearance(root, t.appearance, t.item_table, t.keywords, offhand_map)
     _check_item_gen(root, t.item_gen, affixes)
-    return affixes, items, _GearCatalog(items=items, affixes=affixes, rules=t.equipment_rules)
+    names = {o: d.name_zh for o, d in offhand_map.items()}
+    catalog = _GearCatalog(
+        items=items, affixes=affixes, rules=t.equipment_rules, offhand_names=names
+    )
+    return affixes, items, catalog
 
 
 def _load_units(

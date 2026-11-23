@@ -10,7 +10,13 @@ from typing import Any
 
 from trpg.api.tuning.check import Prepared
 from trpg.api.tuning.drafts import Change
-from trpg.api.tuning.objects import TABLE_NAMES_ZH, concrete_fields, primitive_names, read_data
+from trpg.api.tuning.objects import (
+    TABLE_NAMES_ZH,
+    concrete_fields,
+    element_names,
+    primitive_names,
+    read_data,
+)
 from trpg.api.tuning.schemas import TuningChangeView, TuningDiff, TuningDiffRow
 from trpg.content.tuning_fields import TABLE_KINDS, TuningFields
 
@@ -29,7 +35,8 @@ def _labels(content_dir: Path, table: TuningFields, rel: str) -> tuple[str, dict
         if path.is_file() and path.match(target.glob):
             data = read_data(path)
             names = primitive_names(content_dir)
-            labels = {p: label for _f, p, label in concrete_fields(data, target, names)}
+            elements = element_names(content_dir)
+            labels = {p: label for _f, p, label in concrete_fields(data, target, names, elements)}
             if target.kind in TABLE_KINDS:
                 return TABLE_NAMES_ZH[target.kind], labels
             return str(data.get("name_zh") or path.stem), labels

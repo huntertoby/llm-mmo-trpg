@@ -182,7 +182,9 @@ def equip_swap(
         displaced = new.pop("off_hand", None)  # 雙手或成對武器占用副手：副手收進背包
         if displaced is not None:
             removed.append(displaced)
-    problems = loadout_problems(_loadout(library, new), weapon, library.ruleset.equipment)
+    problems = loadout_problems(
+        _loadout(library, new), weapon, library.ruleset.equipment, library.ruleset.gear_names
+    )
     if problems:
         raise ChoiceError("；".join(problems))
     if old is not None:

@@ -285,7 +285,10 @@ def _check_loadout(library: ContentLibrary, char: CharacterState, weapon: Weapon
     if not char.equipment:
         return
     problems = loadout_problems(
-        item_loadout(library, char.equipment), weapon, library.ruleset.equipment
+        item_loadout(library, char.equipment),
+        weapon,
+        library.ruleset.equipment,
+        library.ruleset.gear_names,
     )
     if problems:
         raise WorldActionError(f"不能重選：{'；'.join(problems)}")

@@ -375,7 +375,9 @@ def _check_loadouts(setup: BattleSetup) -> None:
         held = loadout_held(spawn.weapon, spawn.equipment)
         problems = [weapon_problem(s, spawn.weapon.weapon_class, held) for s in defs]
         problems += skill_slot_problems(defs, rules.core.skill_slots)
-        problems += loadout_problems(spawn.equipment, spawn.weapon, rules.equipment)  # 3G-G1
+        problems += loadout_problems(  # 3G-G1
+            spawn.equipment, spawn.weapon, rules.equipment, rules.gear_names
+        )
         found = next((p for p in problems if p is not None), None)
         if found is not None:
             raise BattleSetupError(f"{spawn.template.name_zh}：{found}")

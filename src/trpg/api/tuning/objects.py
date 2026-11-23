@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from functools import cache
 from pathlib import Path
 from typing import Any, Final, Literal
@@ -24,9 +24,10 @@ from trpg.api.tuning.yaml_patch import MISSING, PatchError, lookup
 from trpg.content.battle import PhaseGrowSurface, UnitTemplate
 from trpg.content.composer_rules import StructureRules
 from trpg.content.equipment import loadout_held
+from trpg.content.forms import CHOSEN
 from trpg.content.library import ContentLibrary
 from trpg.content.loader import load_content_file, parse_yaml
-from trpg.content.schemas import ContentModel, field_bounds
+from trpg.content.schemas import ContentModel, ElementTable, field_bounds
 from trpg.content.skill_pick import SkillPickRules
 from trpg.content.skill_rules import BudgetRules
 from trpg.content.skills import SkillDef, weapon_problem
@@ -412,20 +413,9 @@ _ENTRY_WORDS: Final[dict[str, str]] = {
 _COLON_ENTRIES: Final = frozenset({"profiles", "forms", "total_budget"})
 """標籤前綴後面加「：」的清單（欄位名不是接在名字後面讀的）。"""
 
-_ELEMENT_ZH: Final = {
-    "physical": "物理",
-    "fire": "火焰",
-    "ice": "冰霜",
-    "lightning": "雷電",
-    "poison": "毒素",
-    "wind": "風",
-    "earth": "大地",
-    "holy": "神聖",
-    "shadow": "暗影",
-    "chosen": "所選元素",
-}
-"""標籤裡的 ``{element}`` 換成的中文（HC-W2：形態的「受到某元素傷害的倍率」；``chosen``＝進入
-形態時選的元素）。"""
+_CHOSEN_ZH: Final = "所選元素"
+"""標籤裡的 ``{element}`` 是 ``chosen``（進入形態時選的元素，HC-W2）時換成的中文；其他元素讀
+``elements.yaml`` 的 ``name_zh``（:func:`element_names`，QF-6）。"""
 
 
 _MECHANIC_ZH: Final = {
@@ -456,8 +446,11 @@ def _entry_label(data: Any, parts: Sequence[PathPart]) -> str:
     return f"{name}：" if parts[0] in _COLON_ENTRIES else name
 
 
-def _with_element(label: str, data: Any, parts: Sequence[PathPart]) -> str:
-    """標籤裡的 ``{element}`` 換成路徑上最深、有 ``element`` 的那一層的元素中文（HC-W2）。"""
+def _with_element(
+    label: str, data: Any, parts: Sequence[PathPart], elements: Mapping[str, str]
+) -> str:
+    """標籤裡的 ``{element}`` 換成路徑上最深、有 ``element`` 的那一層的元素中文（HC-W2；
+    ``elements``：元素 ID → 中文名，查不到時寫 ID）。"""
     if "{element}" not in label:
         return label
     element = ""
@@ -467,7 +460,8 @@ def _with_element(label: str, data: Any, parts: Sequence[PathPart]) -> str:
         except PatchError:
             break
         if isinstance(node, dict) and "element" in node:
-            element = _ELEMENT_ZH.get(str(node["element"]), str(node["element"]))
+            key = str(node["element"])
+            element = _CHOSEN_ZH if key == CHOSEN else elements.get(key, key)
             break
     return label.replace("{element}", element)
 
@@ -583,6 +577,18 @@ def _primitive_names_of(path: Path) -> dict[str, str]:
     return names
 
 
+@cache
+def _element_names_of(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    return {e.id.value: e.name_zh for e in load_content_file(path, ElementTable).elements}
+
+
+def element_names(content_dir: Path) -> dict[str, str]:
+    """元素 ID → 中文名（``elements.yaml``；標籤裡的 ``{element}`` 用，QF-6）。"""
+    return _element_names_of(content_dir / "elements.yaml")
+
+
 def primitive_names(content_dir: Path) -> dict[str, str]:
     """原語 ID → 中文名（效果欄位的標籤用）。"""
     return _primitive_names_of(content_dir / "skill_primitives.yaml")
@@ -603,14 +609,19 @@ def _site_label(data: Any, parts: Sequence[PathPart], primitives: dict[str, str]
 
 
 def concrete_fields(
-    data: Any, target: TuningTarget, primitives: dict[str, str] | None = None
+    data: Any,
+    target: TuningTarget,
+    primitives: dict[str, str] | None = None,
+    elements: Mapping[str, str] | None = None,
 ) -> list[tuple[TuningField, str, str]]:
     """這個對象實際可改的欄位：``(白名單欄位, 具體路徑, 中文標籤)``。
 
     ``*`` 展開成每個索引；``phases[*]`` 不展開開場階段、``phases[*].trigger.*`` 只展開
     ``hp_below``（:func:`_phase_skipped`）；``kinds``、``existing_only``、``effect_types`` 照白名單
-    篩（NW-2a）。效果層級的欄位標籤前面加效果位置與原語中文名。"""
+    篩（NW-2a）。效果層級的欄位標籤前面加效果位置與原語中文名。``elements``：標籤裡 ``{element}``
+    的元素中文名（:func:`element_names`；只要路徑的呼叫端可省略）。"""
     names = primitives if primitives is not None else {}
+    element_zh = elements if elements is not None else {}
     effect_paths = {f"{s}.{f.path}" for s in target.effect_sites for f in target.effect_fields}
     out: list[tuple[TuningField, str, str]] = []
     for field in target.all_fields():
@@ -626,7 +637,7 @@ def concrete_fields(
                 label = f"{_entry_label(data, parts)}{field.label_zh}"
             elif field.path in effect_paths:
                 label = f"{_site_label(data, parts, names)}{field.label_zh}"
-            label = _with_element(_numbered(label, parts), data, parts)
+            label = _with_element(_numbered(label, parts), data, parts, element_zh)
             out.append((field, format_path(parts), label))
     return out
 
@@ -1050,7 +1061,8 @@ def object_detail(
     primitives = primitive_names(content_dir)
     walls = obstacle_objects(content_dir, table, library) if kind == "object" else frozenset()
     fields: list[TuningFieldView] = []
-    for field, concrete, raw_label in concrete_fields(data, target, primitives):
+    elements = element_names(content_dir)
+    for field, concrete, raw_label in concrete_fields(data, target, primitives, elements):
         label = _skill_names_in_label(raw_label, library)
         value = field_value(data, concrete)
         low, high = field_limits(content_dir, data, field, concrete)
