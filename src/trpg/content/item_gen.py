@@ -58,6 +58,8 @@ from trpg.content.item_budget import (
     affix_points,
     base_bonus_points,
     item_budget_problems,
+    legendary_unique,
+    signature_points,
 )
 from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPE_OF, SlotType
@@ -556,6 +558,53 @@ def _signature(
     if not pool:
         return None
     return _signature_pick(rules, rng.choice(_weighted(rng, pool)), budget)
+
+
+def _unique_kind(affix: AffixDef) -> SignatureKind | None:
+    """獨特效果候選的種類（抽種類用的部位權重）：招牌照它的種類；沒標招牌的改寫規則算改寫規則；
+    其他沒標種類的限傳說詞條為 ``None``（另成一組，權重 1）。"""
+    if affix.signature is not None:
+        return affix.signature
+    return "rule" if affix.category == "rule" else None
+
+
+def _unique_fits(library: ContentLibrary, base: _Base) -> list[AffixDef]:
+    """能當這件傳說獨特效果的詞條（依 id；08 8.30 第 7 點）：招牌詞條、改寫規則、限傳說詞條，能掛在
+    這件底材（以傳說物品檢查，所以限傳說的也能掛），不含獨特或暫緩詞條。"""
+    rules = _rules(library)
+    probe = _probe(base).model_copy(update={"legendary": True})
+    return [
+        a
+        for _, a in sorted(library.affixes.items())
+        if legendary_unique(a)
+        and a.id not in rules.unique_affixes
+        and a.id not in rules.held_back_affixes
+        and not affix_slot_problems(probe, a, base.weapon, library.weapons)
+    ]
+
+
+def _unique_effect(library: ContentLibrary, rng: Rng, base: _Base, budget: int) -> _Pick | None:
+    """傳說的獨特效果（E6-c1，08 8.27、8.30 第 7 點；走招牌那一步）：先依部位權重
+    （``signature_weights``）抽種類——沒有候選的種類權重 0，沒標種類的限傳說詞條另成一組、權重 1——
+    再從那一組（依 id）抽 1 條；數值取最強的，點數是詞條預算的 60%。沒有任何候選時為 ``None``
+    （不取亂數，呼叫端降成史詩）。"""
+    rules = _rules(library)
+    fits = _unique_fits(library, base)
+    weights = rules.signature_weights.get(base.slot_type, {})
+    pool: list[tuple[list[AffixDef], int]] = []
+    for each in SIGNATURE_KINDS:
+        members = [a for a in fits if _unique_kind(a) == each]
+        weight = weights.get(each, 0)
+        if members and weight > 0:
+            pool.append((members, weight))
+    others = [a for a in fits if _unique_kind(a) is None]
+    if others:
+        pool.append((others, 1))
+    if not pool:
+        return None
+    affix = rng.choice(_weighted(rng, pool))
+    value = _signature_value(affix)
+    return _Pick(affix, value, signature_points(rules, budget))
 
 
 def _signature_value(affix: AffixDef) -> int | None:
