@@ -16,17 +16,23 @@ def _lib() -> ContentLibrary:
     return library()
 
 
-def test_the_composer_no_longer_makes_the_zero_budget_borrow_aura() -> None:
-    """QF-6（佇列 (r)）：只有預支一個效果的基本款預算 0，組合器改成重抽，不再組出來（原本的
-    「做得出基本款」改成這一題；種子 238 等 6 個種子的結果因此改變）。"""
+def test_the_composer_makes_the_basic_borrow_skill() -> None:
     lib = _lib()
+    found = []
     for seed in range(400):
         try:
             skill = compose_random_skill(seed, rarity="rare", skeleton="aura", library=lib)
         except ComposeError:
             continue
-        assert [e.type for e in skill.effects] != ["borrow_ap"], seed
-        assert validate_skill(skill, lib) == []
+        if skill.borrows_ap:
+            found.append(skill)
+            assert skill.ap_cost == 0
+            assert skill.cost.cooldown == lib.composer.structure.borrow_cooldown
+            assert skill.cost.mana == 0 and skill.cost.stamina == 0  # AP-2b
+            assert skill.shape.type == "self"
+            assert [(e.type, e.amount) for e in skill.effects] == [("borrow_ap", 1)]
+            assert validate_skill(skill, lib) == []
+    assert found
 
 
 def test_the_composer_does_not_make_borrow_below_rare() -> None:

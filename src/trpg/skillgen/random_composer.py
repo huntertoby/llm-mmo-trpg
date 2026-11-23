@@ -36,7 +36,7 @@ from trpg.shared.errors import TrpgError
 from trpg.shared.rng import Rng
 from trpg.shared.types import Attribute, Element
 from trpg.skillgen.affinity import grant_affinity
-from trpg.skillgen.budget import BudgetError, skill_budget
+from trpg.skillgen.budget import BudgetError
 from trpg.skillgen.composer_parts import (
     NON_INTERCEPT_EVENTS,
     Ctx,
@@ -340,9 +340,7 @@ def _attempt(
     if core == [BORROW_AP]:  # AP-2：預支的基本款（獨立串流抽中；不走一般的形狀、效果與代價）
         if ap_cost is not None:
             raise Retry  # 指定了 AP 的題目做不出 0 AP 的預支
-        return _no_zero_budget_aura(
-            library, _borrow_skill(library, seed, fixed, weapon_req, scaling, ctx)
-        )
+        return _borrow_skill(library, seed, fixed, weapon_req, scaling, ctx)
     build_shape(ctx, core)
     build_effects(ctx, core)
     condition = build_condition(ctx)
@@ -371,21 +369,8 @@ def _attempt(
         ctx.ap_cost = ap
         base = {**base, "ap_cost": ap, "cost": build_cost(ctx)}
         if tune(rng, library, base, ctx.effects, ctx.knobs):
-            skill = _finish(library, seed, _with_scaling_extras(rng, library, base, ctx), ctx)
-            return _no_zero_budget_aura(library, skill)
+            return _finish(library, seed, _with_scaling_extras(rng, library, base, ctx), ctx)
     raise Retry
-
-
-def _no_zero_budget_aura(library: ContentLibrary, skill: SkillDef) -> SkillDef:
-    """組合器不組出「只有一個效果、而且預算 0」的光環（QF-6，佇列 (r)；例：只有預支 ``borrow_ap``
-    的基本款，預算 0，過不了預算窗）：是的話拋出 ``Retry`` 重抽，檢查規則不放寬。"""
-    if (
-        skill.skeleton == "aura"
-        and len(skill.effects) == 1
-        and skill_budget(skill, library).total == 0
-    ):
-        raise Retry
-    return skill
 
 
 def _borrow_skill(  # noqa: PLR0917 — 一次組合的參數（同 _attempt）
