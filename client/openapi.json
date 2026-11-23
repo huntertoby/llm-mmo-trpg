@@ -18969,6 +18969,14 @@
         "title": "MailView",
         "description": "郵寄面板（``GET …/mail``）。"
       },
+      "MapRole": {
+        "type": "string",
+        "enum": [
+          "test",
+          "training",
+          "boss"
+        ]
+      },
       "MapSummary": {
         "properties": {
           "id": {
@@ -18990,6 +18998,16 @@
           "height": {
             "type": "integer",
             "title": "Height"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MapRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

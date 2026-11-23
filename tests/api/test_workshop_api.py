@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,8 @@ from trpg.engine.runner import BattleLog
 from trpg.shared.types import Team
 from trpg.skillgen.draft import build_skill
 from trpg.skillgen.skill_yaml import skill_from_yaml
+
+ROOT = Path(__file__).resolve().parents[2]
 
 CHARGE = walk_draft(DISPLACE)
 """衝鋒＋傷害＋擊退（武器技，近戰；3F-2 驗收的例子）。"""
@@ -155,6 +158,19 @@ def test_arena_lists_the_training_range_first(client: TestClient) -> None:
     assert arena["opponents"][0]["enemies"] == ["木樁", "木樁", "木樁"]
     general = [m["id"] for m in client.get("/api/maps").json()]
     assert "training_range" not in general
+
+
+def test_arena_maps_carry_the_archetype_role(client: TestClient) -> None:
+    """QF-5（WL-2 裁定 1）：前端看 ``role`` 判斷靶場、頭目地圖，不比對類型 ID。"""
+    lib = store_of(client).library
+    maps = client.get("/api/workshop/arena").json()["maps"]
+    assert maps[0]["role"] == "training"
+    for m in maps:
+        kind = lib.map_archetypes.get(m["archetype"])
+        assert m["role"] == (None if kind is None else kind.role), m["id"]
+    fixture = ROOT / "client" / "src" / "workshop" / "fixtures" / "arena.json"
+    fx = {m["id"]: m["role"] for m in json.loads(fixture.read_text(encoding="utf-8"))["maps"]}
+    assert all(fx[m["id"]] == m["role"] for m in maps if m["id"] in fx)  # 前端夾具和真的一致
 
 
 def _create(client: TestClient, **extra: Any) -> Any:

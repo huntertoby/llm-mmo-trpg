@@ -12,7 +12,7 @@ import yaml
 from tests.engine.helpers import library
 from trpg.content.library import load_library
 from trpg.content.library.load import _region_pool_problems
-from trpg.content.maps import MapArchetypeTable
+from trpg.content.maps import MapArchetypeDef, MapArchetypeTable
 from trpg.content.roguelite import roguelite_problems
 from trpg.shared.errors import ContentError
 
@@ -90,7 +90,9 @@ def test_special_archetypes_are_marked_by_data_fields() -> None:
     assert table.role_ids("boss") == ("boss",)
     assert [a for a in table.ids() if not table.in_random_pool(a)] == ["test", "training", "boss"]
     assert table.role_label("boss") == "boss"
-    bare = MapArchetypeTable.model_validate({"archetypes": [{"id": "x"}]})
+    # QF-5：沒有 role 的清單載入時就擋下（test_code_required_map_roles.py），role_label 的退路只剩
+    # 不經驗證建出來的表會走到
+    bare = MapArchetypeTable.model_construct(archetypes=(MapArchetypeDef(id="x"),))
     assert bare.role_label("boss") == "role: boss"
 
 

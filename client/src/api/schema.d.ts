@@ -7712,6 +7712,8 @@ export interface components {
             send_note_zh: string;
             tab_lines?: components["schemas"]["MailTabLinesView"] | null;
         };
+        /** @enum {string} */
+        MapRole: "test" | "training" | "boss";
         /** MapSummary */
         MapSummary: {
             /** Id */
@@ -7724,6 +7726,7 @@ export interface components {
             width: number;
             /** Height */
             height: number;
+            role?: components["schemas"]["MapRole"] | null;
         };
         /**
          * MercenaryView

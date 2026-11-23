@@ -16,7 +16,7 @@ export function CritDamageDetail({ unit }: { unit: CritFields }) {
       {detail !== null && <WrapUnits text={detail} />}
       {hint !== null && (
         <div className="crit-damage-hint muted" data-testid="crit-damage-hint">
-          {hint}
+          <WrapUnits text={hint} />
         </div>
       )}
     </>

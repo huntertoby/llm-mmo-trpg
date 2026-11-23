@@ -59,7 +59,8 @@ def test_maps_lists_the_ten_playable_maps(client: TestClient) -> None:
     assert reply.status_code == 200
     maps = reply.json()
     assert len(maps) == 10
-    assert {"id", "name_zh", "archetype", "width", "height"} == set(maps[0])
+    assert {"id", "name_zh", "archetype", "width", "height", "role"} == set(maps[0])
+    assert all(m["role"] is None for m in maps)  # QF-5：一般地圖沒有用途
     assert all(not m["id"].startswith("test_") for m in maps)
     assert [m["id"] for m in maps] == sorted(m["id"] for m in maps)
 

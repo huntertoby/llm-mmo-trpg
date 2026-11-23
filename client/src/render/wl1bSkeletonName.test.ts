@@ -73,8 +73,9 @@ describe("WL-1 b：骨架名稱從資料讀", () => {
     expect(tileLabel("aura")).toBe("光環");
   });
 
-  it("override 參數仍可覆寫（目前沒有呼叫端傳）", () => {
-    expect(skeletonName("aura", { aura: "增益" })).toBe("增益");
+  it("QF-5：override 參數已刪，只收一個參數", () => {
+    expect(skeletonName.length).toBe(1);
+    expect(skeletonName("aura")).toBe("光環");
   });
 
   it("兩邊都找不到、空字串、null、undefined 都顯示「未知骨架」，不出現英文 id", () => {
@@ -93,8 +94,8 @@ describe("WL-1 b：骨架名稱從資料讀", () => {
     expect(skeletonName("brand_new_skeleton")).toBe(UNKNOWN_SKELETON_NAME);
   });
 
-  it("原型鏈上的名字（toString、constructor）不會被當成覆寫", () => {
-    expect(skeletonName("toString", {})).toBe(UNKNOWN_SKELETON_NAME);
-    expect(skeletonName("constructor", {})).toBe(UNKNOWN_SKELETON_NAME);
+  it("原型鏈上的名字（toString、constructor）不會被當成骨架名", () => {
+    expect(skeletonName("toString")).toBe(UNKNOWN_SKELETON_NAME);
+    expect(skeletonName("constructor")).toBe(UNKNOWN_SKELETON_NAME);
   });
 });

@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from trpg.api.auth import reject_dev_fields
 from trpg.api.player_text import player_options
-from trpg.api.schemas import MapSummary
+from trpg.api.schemas import map_summary
 from trpg.api.sessions import playable_maps
 from trpg.api.skill_cards import skill_card
 from trpg.api.state import store_of
@@ -86,12 +86,7 @@ def get_arena(request: Request) -> WorkshopArena:
     boss = playable_maps(library, include_boss=True)  # Boss 地圖排在一般地圖之後（3-5c-2）
     general = playable_maps(library)
     ids = [rules.map, *general, *(m for m in boss if m not in general and m != rules.map)]
-    maps = tuple(
-        MapSummary(
-            id=m.id, name_zh=m.name_zh, archetype=m.archetype, width=m.width, height=m.height
-        )
-        for m in (library.map(i) for i in ids)
-    )
+    maps = tuple(map_summary(library, m) for m in (library.map(i) for i in ids))
     opponents = tuple(
         ArenaOpponents(
             id=o.id,

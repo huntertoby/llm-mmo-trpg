@@ -71,3 +71,24 @@ def test_only_one_reshape_per_skill_the_other_gets_a_note() -> None:
     assert gear_reshapes_left_out(state, state.units[U1], STRIKE) == ((BOUNCE2, False),)
     (line,) = (_me(state).skill_notes_zh or {})[STRIKE]
     assert line.startswith("已有其他變形，") and line.endswith(f"的{BOUNCE2}不會套用")
+
+
+def test_only_one_reshape_on_the_skill_adds_no_taken_note() -> None:
+    """QF-5（佇列 (o)）：只有一個裝備變形會套到這招時，它就是生效的那個，不寫「已有其他變形」。"""
+    state = scene(_two_bounces(), gear=(BOUNCE,), skills=(STRIKE,))
+    assert gear_reshapes_left_out(state, state.units[U1], STRIKE) == ()
+    assert _me(state).skill_notes_zh is None
+
+
+def test_taken_note_names_the_item_and_is_hidden_from_the_other_team() -> None:
+    """QF-5（佇列 (o)）：生效的是哪一個以後端為準（技能鍵排序第一個）。
+
+    灰字只給自己陣營（守則 14）。"""
+    lib = _two_bounces()
+    state = scene(lib, gear=(BOUNCE2, BOUNCE), skills=(STRIKE,))
+    assert gear_reshapes_left_out(state, state.units[U1], STRIKE) == ((BOUNCE2, False),)
+    item = next(i.name_zh for i in state.units[U1].gear.items if i.slot == "body")
+    name = lib.ruleset.skill_def(BOUNCE2).name_zh
+    assert (_me(state).skill_notes_zh or {})[STRIKE] == (f"已有其他變形，{item}的{name}不會套用",)
+    other = next(u for u in project_for(state, Team.ENEMY).units if u.id == U1)
+    assert other.skill_notes_zh is None
