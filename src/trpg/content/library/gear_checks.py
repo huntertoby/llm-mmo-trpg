@@ -41,6 +41,8 @@ class _GearCatalog:
     items: dict[str, ItemDef]
     affixes: dict[str, AffixDef]
     rules: EquipmentRules
+    offhand_names: dict[str, str]
+    """副手 ID → 中文名（QF-6：詞條限定副手的訊息讀資料）。"""
 
     def offhand_of(self, template: UnitTemplate) -> OffhandDef | None:
         """範本裝備的副手定義（沒有或解析失敗為 ``None``；解析失敗由 :meth:`problems` 回報）。"""
@@ -54,7 +56,10 @@ class _GearCatalog:
             loadout = resolve_loadout(template.equipment, self.items, self.affixes)
         except ValueError as exc:
             return [f"equipment：{exc}"]
-        return [f"equipment：{p}" for p in loadout_problems(loadout, weapon, self.rules)]
+        return [
+            f"equipment：{p}"
+            for p in loadout_problems(loadout, weapon, self.rules, self.offhand_names)
+        ]
 
 
 def _trait_problems(affix: WeaponTraitAffix, weapons: Mapping[str, WeaponDef]) -> list[str]:

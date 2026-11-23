@@ -31,6 +31,7 @@ from trpg.content.modifier_changes import ChangeBudget
 from trpg.content.skill_rules import BudgetRules, ModifierBudget, ModifierPoints
 from trpg.content.skills import (
     ADD_STACK,
+    BORROW_AP,
     DAMAGE_MULTIPLIER,
     ENTER_FORM,
     EXTRA_REACTION,
@@ -69,6 +70,7 @@ __all__ = [
     "VariantBudget",
     "attack_line_shape_permille",
     "attack_shape_value",
+    "borrow_basic",
     "self_status_allowance_permille",
     "skill_budget",
     "weak_floor_exempt",
@@ -1875,6 +1877,18 @@ def _variant_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
     )
 
 
+def borrow_basic(skill: SkillDef) -> bool:
+    """預支基本款（06 6.3「預算」，2026-11-23 玩法 PM 定，佇列 (r)）：唯一效果是預支
+    （``borrow_ap``）、主動技、0 AP、形狀自身。只有一個效果、預算 0 的技能只有它合法。"""
+    return (
+        len(skill.effects) == 1
+        and skill.effects[0].type == BORROW_AP
+        and skill.kind == "active"
+        and skill.ap_cost == 0
+        and skill.shape.type == "self"
+    )
+
+
 def weak_floor_exempt(skill: SkillDef, library: ContentLibrary) -> bool:
     """升階後豁免預算窗下限（BAL-12f，06 6.34.9「BAL-12e 定」；``retier_report`` 用，一般驗證
     不受影響）：2 階以上、效果全是沒有數值的狀態（標記、隱蔽等，不含控制與姿態）或沒有數值的表面
@@ -1965,8 +1979,8 @@ def _skill_budget(skill: SkillDef, library: ContentLibrary) -> BudgetReport:
         ap_coefficient=coefficient,
         allowance_parts=_allowance_parts(skill, budget, by_id(rules.statuses), _scale(library)),
         allowance_cap=budget.allowance.total_cap,
-        # 預支（AP-2）只是挪時間、預算約等於 0：不套過弱下限
-        min_ratio=Fraction(0 if skill.borrows_ap else budget.min_ratio_permille, _PERMILLE),
+        # 預支（AP-2）只是挪時間、預算約等於 0：只有基本款不套過弱下限（QF-6）
+        min_ratio=Fraction(0 if borrow_basic(skill) else budget.min_ratio_permille, _PERMILLE),
         max_ratio=Fraction(budget.max_ratio_permille, _PERMILLE),
         coefficient_label=label,
         range_value=range_value,

@@ -1082,7 +1082,6 @@ def loadout_held(weapon: WeaponDef, loadout: Loadout | None) -> dict[str, str]:
 
 _WEAPON_CLASS_ZH = {"melee": "近戰武器", "ranged": "遠程武器", "focus": "法器"}
 _ITEM_TAG_ZH = {"shield": "盾"}
-_OFFHAND_ZH = {"tower_shield": "塔盾", "round_shield": "圓盾", "tome": "法書", "orb": "法器珠"}
 
 
 def _affix_slot_problems(
@@ -1090,8 +1089,12 @@ def _affix_slot_problems(
     affix: AffixDef,
     weapon: WeaponDef | None,
     weapons: Mapping[str, WeaponDef] | None = None,
+    offhand_names: Mapping[str, str] | None = None,
 ) -> list[str]:
-    """詞條能不能掛在這件物品上（種類、限定武器、標籤、傳說、法杖元素）。"""
+    """詞條能不能掛在這件物品上（種類、限定武器、標籤、傳說、法杖元素）。
+
+    ``offhand_names``：副手 ID → 中文名（``offhands.yaml`` 的 ``name_zh``；QF-6 起讀資料，查不到時
+    寫 ID）。"""
     where = f"物品 {item.id} 的詞條 {affix.id}"
     problems: list[str] = []
     if item.slot_type not in affix.slots:
@@ -1112,7 +1115,7 @@ def _affix_slot_problems(
         class_zh = _WEAPON_CLASS_ZH.get(affix.weapon_class, affix.weapon_class)
         problems.append(f"{where} 只能出現在{class_zh}上")
     if item.slot_type == "offhand" and affix.offhands and item.offhand not in affix.offhands:
-        names = "、".join(_OFFHAND_ZH.get(o, o) for o in affix.offhands)
+        names = "、".join((offhand_names or {}).get(o, o) for o in affix.offhands)
         problems.append(f"{where} 只能出現在{names}上")
     needed = affix.item_tags.get(item.slot_type, ())
     if needed and not set(needed) & set(item.tags):
@@ -1142,10 +1145,11 @@ def affix_slot_problems(
     affix: AffixDef,
     weapon: WeaponDef | None,
     weapons: Mapping[str, WeaponDef] | None = None,
+    offhand_names: Mapping[str, str] | None = None,
 ) -> list[str]:
     """詞條能不能掛在這件物品上（種類、限定武器、標籤、傳說、已有元素的武器；Phase 3K-1 的產生器
     用來篩選候選詞條）。"""
-    return _affix_slot_problems(item, affix, weapon, weapons)
+    return _affix_slot_problems(item, affix, weapon, weapons, offhand_names)
 
 
 def weapon_element_problems(name: str, affixes: Iterable[AffixDef], limit: int) -> list[str]:
@@ -1174,6 +1178,7 @@ def item_problems(
 ) -> list[str]:
     """物品本身的問題（跨檔案：詞條存在、可掛、數值在範圍內、條數上限、武器與副手存在）。"""
     problems: list[str] = []
+    offhand_names = None if offhands is None else {o: d.name_zh for o, d in offhands.items()}
     if item.offhand is not None and offhands is not None and item.offhand not in offhands:
         problems.append(f"物品 {item.id}：未知的副手 {item.offhand}")
     weapon: WeaponDef | None = None
@@ -1190,7 +1195,7 @@ def item_problems(
         if affix is None:
             problems.append(f"物品 {item.id}：未知的詞條 {roll.affix}（不在白名單）")
             continue
-        problems += _affix_slot_problems(item, affix, weapon, weapons)
+        problems += _affix_slot_problems(item, affix, weapon, weapons, offhand_names)
         problems += _value_problems(item, affix, roll.value)
     known = [a for roll in item.affixes if (a := affixes.get(roll.affix)) is not None]
     return (
@@ -1240,7 +1245,12 @@ def resolve_loadout(
     return Loadout(items=tuple(entries))
 
 
-def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules) -> list[str]:
+def loadout_problems(
+    loadout: Loadout,
+    weapon: WeaponDef,
+    rules: EquipmentRules,
+    offhand_names: Mapping[str, str] | None = None,
+) -> list[str]:
     """穿戴的合法性（8.23、8.21.5.2）：
 
     - 物品種類符合欄位（``slot_type``）；副手不能放第二把武器。
@@ -1250,6 +1260,8 @@ def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules)
     - 代價型詞條全身最多 ``caps.cost_affixes`` 條；改變規則類詞條全身最多 ``caps.rule_affixes``
       個（不同的詞條 id）。
     - 每件物品的詞條可以掛在這件物品上（:func:`_affix_slot_problems`）、數值在範圍內。
+
+    ``offhand_names``：副手 ID → 中文名（詞條限定副手時的訊息用；規則包的 ``gear_names``）。
     """
     problems: list[str] = []
     by_slot = loadout.by_slot()
@@ -1266,7 +1278,9 @@ def loadout_problems(loadout: Loadout, weapon: WeaponDef, rules: EquipmentRules)
                 )
         main_weapon = weapon if entry.slot == "main_hand" else None
         for equipped in entry.affixes:
-            problems += _affix_slot_problems(item, equipped.affix, main_weapon)
+            problems += _affix_slot_problems(
+                item, equipped.affix, main_weapon, offhand_names=offhand_names
+            )
             problems += _value_problems(item, equipped.affix, equipped.value)
         if len(entry.affixes) > rules.max_affixes_per_item:
             problems.append(f"{item.name_zh}：詞條最多 {rules.max_affixes_per_item} 條")
