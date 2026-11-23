@@ -3635,7 +3635,7 @@ export interface components {
             code?: string | null;
             slot_type?: components["schemas"]["SlotType"] | null;
             /** Rarity */
-            rarity?: ("rare" | "epic") | null;
+            rarity?: ("rare" | "epic" | "legendary") | null;
             /** Affix */
             affix?: string | null;
             /** Grade */

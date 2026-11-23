@@ -47,7 +47,7 @@ class CraftAction(_Model):
     station: str = Field(pattern=ID_PATTERN)
     code: str | None = Field(default=None, pattern=CODE_PATTERN)
     slot_type: SlotType | None = None
-    rarity: Literal["rare", "epic"] | None = None
+    rarity: Literal["rare", "epic", "legendary"] | None = None
     affix: str | None = Field(default=None, pattern=_AFFIX_ID)
     """build 詞條（隱藏配方時不用）。"""
     grade: str | None = Field(default=None, pattern=_ITEM_ID)
@@ -57,7 +57,8 @@ class CraftAction(_Model):
     item_level: int | None = Field(default=None, ge=1, le=99)
     """``None``＝能打的最高等級（角色等級與通用料上限取小的）。"""
     signature: SignatureKind | None = Field(default=None, exclude_if=lambda v: v is None)
-    """指定招牌類型（E6-a2，08 8.27：五種之一，不能指定是哪一條）；和 ``affix`` 二選一。"""
+    """指定招牌類型（E6-a2，08 8.27：五種之一，不能指定是哪一條）；和 ``affix`` 二選一。傳說時是
+    獨特效果的類型（E6-c2，08 8.30 第 10 點）。"""
 
     @model_validator(mode="after")
     def _check(self) -> CraftAction:

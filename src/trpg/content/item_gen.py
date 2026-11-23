@@ -564,7 +564,7 @@ def _signature(
     return _signature_pick(rules, rng.choice(_weighted(rng, pool)), budget)
 
 
-def _unique_kind(affix: AffixDef) -> SignatureKind | None:
+def unique_kind(affix: AffixDef) -> SignatureKind | None:
     """獨特效果候選的種類（抽種類用的部位權重）：招牌照它的種類；沒標招牌的改寫規則算改寫規則；
     其他沒標種類的限傳說詞條為 ``None``（另成一組，權重 1）。"""
     if affix.signature is not None:
@@ -587,21 +587,36 @@ def _unique_fits(library: ContentLibrary, base: _Base) -> list[AffixDef]:
     ]
 
 
-def _unique_effect(library: ContentLibrary, rng: Rng, base: _Base, budget: int) -> _Pick | None:
+def _unique_effect(
+    library: ContentLibrary,
+    rng: Rng,
+    base: _Base,
+    budget: int,
+    kind: SignatureKind | None = None,
+) -> _Pick | None:
     """傳說的獨特效果（E6-c1，08 8.27、8.30 第 7 點；走招牌那一步）：先依部位權重
     （``signature_weights``）抽種類——沒有候選的種類權重 0，沒標種類的限傳說詞條另成一組、權重 1——
     再從那一組（依 id）抽 1 條；數值取最強的，點數是詞條預算的 60%。沒有任何候選時為 ``None``
-    （不取亂數，呼叫端降成史詩）。"""
+    （不取亂數，呼叫端降成史詩）。
+
+    ``kind``（E6-c2，打造傳說指定獨特效果的類型，08 8.30 第 10 點）：只從這一種（依 id）抽，不看
+    部位權重；這一種沒有候選時為 ``None``（不取亂數）。"""
     rules = _rules(library)
     fits = _unique_fits(library, base)
+    if kind is not None:
+        chosen = [a for a in fits if unique_kind(a) == kind]
+        if not chosen:
+            return None
+        picked = rng.choice(chosen)
+        return _Pick(picked, _signature_value(picked), signature_points(rules, budget))
     weights = rules.signature_weights.get(base.slot_type, {})
     pool: list[tuple[list[AffixDef], int]] = []
     for each in SIGNATURE_KINDS:
-        members = [a for a in fits if _unique_kind(a) == each]
+        members = [a for a in fits if unique_kind(a) == each]
         weight = weights.get(each, 0)
         if members and weight > 0:
             pool.append((members, weight))
-    others = [a for a in fits if _unique_kind(a) is None]
+    others = [a for a in fits if unique_kind(a) is None]
     if others:
         pool.append((others, 1))
     if not pool:
@@ -695,7 +710,8 @@ def generate_item(
     兩者都不給時行為不變。
 
     E6-a2 打造指定招牌類型：``signature_kind`` 是招牌的種類（只從這一種抽；和 ``forced`` 二選一由
-    打造檢查）；不給時照部位權重。"""
+    打造檢查）；不給時照部位權重。傳說（開關打開）時是獨特效果的類型（E6-c2 打造傳說，08 8.30
+    第 10 點）：這一種沒有候選時拋錯，不降成史詩。"""
     if item_level < 1:
         raise ItemGenError(f"物品等級至少 1（收到 {item_level}）")
     slot_type = _slot_type(slot)
@@ -711,11 +727,12 @@ def generate_item(
     budget = affix_budget(rules, item_level, slot_type)
     unique = None
     if rarity == "legendary":
-        if signature_kind is not None:
-            raise ItemGenError("傳說的獨特效果不能指定類型")
-        unique = _unique_effect(library, rng, base, budget)
+        unique = _unique_effect(library, rng, base, budget, kind=signature_kind)
+        if unique is None and signature_kind is not None:  # E6-c2：指定的類型沒有候選
+            raise ItemGenError(f"{base.name_zh}沒有這種獨特效果的候選：{signature_kind}")
         if unique is None:  # 沒有獨特效果的候選：降成史詩
             rarity = "epic"
+        signature_kind = None  # 傳說的「類型」用在獨特效果，不另帶招牌（8.27）
     rule = rules.rarity(rarity)
     ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     signature = _signature(library, rng, base, rarity, budget, kind=signature_kind)

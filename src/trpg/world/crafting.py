@@ -30,11 +30,13 @@ from trpg.content.equipment import (
     ItemDef,
     SignatureKind,
 )
+from trpg.content.item_budget import legendary_unique
 from trpg.content.item_gen import (
     affix_choices,
     generate_item_retrying,
     pick_affix,
     replace_affix,
+    unique_kind,
 )
 from trpg.content.library import ContentLibrary
 from trpg.content.world_crafting import CraftingRules, HiddenRecipe, StationDef
@@ -80,6 +82,7 @@ __all__ = [
     "signature_choices",
     "station_problem",
     "stations_here",
+    "unique_choices",
     "variant_print",
 ]
 
@@ -232,6 +235,48 @@ def signature_choices(
     return [k for k in SIGNATURE_KINDS if k in kinds]
 
 
+def unique_choices(
+    library: ContentLibrary, slot_type: str, weapon_class: str | None = None
+) -> list[SignatureKind]:
+    """打造傳說時可以指定的獨特效果類型（E6-c2，08 8.30 第 7、10 點；依 8.27 的五種順序）：開關
+    （``legendary_enabled``）打開、部位能出傳說（``legendary_slots``），而且這一種有能掛在這個部位
+    的獨特效果候選（招牌、改寫規則、標了種類的限傳說詞條；不限定武器種類、不是獨特或暫緩詞條）。
+    沒標種類的限傳說詞條不能指定（只會在指定技能強化時抽到）。開關關著時是空的。"""
+    gen = library.item_gen
+    if gen is None or not gen.legendary_enabled or not gen.legendary_slot(slot_type):  # type: ignore[arg-type]
+        return []
+    kinds = {
+        unique_kind(a)
+        for a in library.affixes.values()
+        if legendary_unique(a)
+        and slot_type in a.slots
+        and a.id not in gen.unique_affixes
+        and a.id not in gen.held_back_affixes
+        and not a.weapons
+        and (a.weapon_class is None or a.weapon_class == weapon_class or slot_type != "weapon")
+    }
+    return [k for k in SIGNATURE_KINDS if k in kinds]
+
+
+def legendary_problem(library: ContentLibrary, slot_type: str) -> str | None:
+    """不能打造傳說的原因（E6-c2）：開關關著，或部位不能出傳說（08 8.30 第 6 點）；可以時為
+    ``None``。"""
+    gen = library.item_gen
+    if gen is None or not gen.legendary_enabled:
+        return "傳說打造還沒有開放"
+    if not gen.legendary_slot(slot_type):  # type: ignore[arg-type]
+        return "傳說只能打主手、副手、身體、腳、項鍊"
+    return None
+
+
+def _unique_problem(
+    library: ContentLibrary, kind: SignatureKind, slot_type: str, weapon_class: str | None
+) -> str | None:
+    if kind not in unique_choices(library, slot_type, weapon_class):
+        return f"這個部位不能指定獨特效果類型「{SIGNATURE_KIND_ZH[kind]}」"
+    return None
+
+
 def _signature_problem(
     library: ContentLibrary,
     kind: SignatureKind,
@@ -274,6 +319,35 @@ def _level_cap(library: ContentLibrary, char: CharacterState, grade: str) -> int
     return cap if loot is None else min(cap, loot.gear.max_item_level)
 
 
+def _chosen(
+    library: ContentLibrary, action: CraftAction, weapon_class: str | None
+) -> tuple[str | None, SignatureKind | None]:
+    """配方指定的那 1 條：build 詞條或招牌類型（E6-a2，二選一，08 8.27）；傳說時類型是獨特效果的
+    類型，另檢查開關與部位（E6-c2，08 8.30 第 6、10 點）。"""
+    assert action.slot_type is not None and action.rarity is not None
+    rarity = action.rarity
+    if rarity == "legendary":
+        problem = legendary_problem(library, action.slot_type)
+        if problem is not None:
+            raise WorldActionError(problem)
+    if action.signature is not None:
+        if rarity == "legendary":
+            problem = _unique_problem(library, action.signature, action.slot_type, weapon_class)
+        else:
+            problem = _signature_problem(
+                library, action.signature, rarity, action.slot_type, weapon_class
+            )
+        if problem is not None:
+            raise WorldActionError(problem)
+        return None, action.signature
+    if action.affix is None:
+        raise WorldActionError("要指定 1 條詞條")
+    allowed = {a.id for a in build_choices(library, action.slot_type, weapon_class)}
+    if action.affix not in allowed:
+        raise WorldActionError(f"這個部位不能指定 {action.affix}")
+    return action.affix, None
+
+
 def _recipe_from_fields(
     library: ContentLibrary, char: CharacterState, action: CraftAction
 ) -> tuple[CraftRecipe, HiddenRecipe | None]:
@@ -295,25 +369,13 @@ def _recipe_from_fields(
         raise WorldActionError(f"物品等級最高 {cap}（角色等級與通用料上限）")
     weapon_class = _hero_weapon_class(library, char) if action.slot_type == "weapon" else None
     hidden = rules.hidden_for(action.slot_type, materials)
+    rarity = action.rarity
     affix: str | None = None
     signature: SignatureKind | None = None
-    rarity = action.rarity
     if hidden is not None:  # 隱藏配方（M7）：稀有度與獨特詞條由配方決定（代決 5D3-7）
         rarity = hidden.rarity
-    elif action.signature is not None:  # E6-a2：指定招牌類型（和指定詞條二選一，08 8.27）
-        problem = _signature_problem(
-            library, action.signature, rarity, action.slot_type, weapon_class
-        )
-        if problem is not None:
-            raise WorldActionError(problem)
-        signature = action.signature
     else:
-        if action.affix is None:
-            raise WorldActionError("要指定 1 條詞條")
-        allowed = {a.id for a in build_choices(library, action.slot_type, weapon_class)}
-        if action.affix not in allowed:
-            raise WorldActionError(f"這個部位不能指定 {action.affix}")
-        affix = action.affix
+        affix, signature = _chosen(library, action, weapon_class)
     recipe = CraftRecipe(
         slot_type=action.slot_type,
         weapon_class=weapon_class,  # type: ignore[arg-type]
@@ -371,10 +433,18 @@ def plan_craft(
         recipe, steps = record.recipe, record.steps
     else:
         recipe, hidden = _recipe_from_fields(library, char, action)
+    if recipe.rarity == "legendary":  # 配方碼打造也照開關、部位（E6-c2）
+        problem = legendary_problem(library, recipe.slot_type)
+        if problem is not None:
+            raise WorldActionError(problem)
+    if recipe.rarity not in rules.craft.rarities:
+        raise WorldActionError(f"不能打造這個稀有度：{recipe.rarity}")
     print_ = fingerprint(recipe)
     spent = {recipe.grade: rules.craft.grade_amount[recipe.slot_type]}
     spent.update(dict.fromkeys(recipe.materials, 1))
     cost = rules.craft.rarities[recipe.rarity]
+    for item_id, count in sorted(cost.extra.items()):  # E6-c2：傳說另要的材料（平衡待查 41）
+        spent[item_id] = spent.get(item_id, 0) + count
     gold = cost.gold_per_level * recipe.item_level
     essence = 0
     for done, step in enumerate(steps):  # 照序列重骰與指定，費用照付（同原裝備當時的費用）
@@ -422,6 +492,8 @@ def _make_item(
     )
     if item is None:
         raise WorldActionError(f"這份配方打不出來（{problems[-1] if problems else ''}）")
+    if recipe.rarity == "legendary" and item.rarity != "legendary":  # 沒有獨特效果候選時降史詩
+        raise WorldActionError("這份配方打不出來（這個部位沒有能用的獨特效果）")
     tags = dict.fromkeys(item.tags)
     for m in recipe.materials:
         keyword = rules.materials[m].resonance

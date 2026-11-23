@@ -605,11 +605,11 @@ class CraftRecipe(_Model):
     決定）或指定了招牌類型；``grade`` 是 1 種通用料；``materials`` 是特色材料（排序、不重複）。
 
     ``signature``（E6-a2，08 8.27）：指定的招牌類型（和 ``affix`` 二選一）；空值不輸出，舊配方的
-    指紋與配方碼逐位元不變。"""
+    指紋與配方碼逐位元不變。傳說（E6-c2，08 8.30 第 10 點）時是指定的獨特效果類型。"""
 
     slot_type: SlotType
     weapon_class: Literal["melee", "ranged", "focus"] | None = None
-    rarity: Literal["rare", "epic"]
+    rarity: Literal["rare", "epic", "legendary"]
     item_level: int = Field(ge=1, le=99)
     affix: str | None = Field(default=None, pattern=ID_PATTERN)
     grade: str = Field(pattern=ID_PATTERN)

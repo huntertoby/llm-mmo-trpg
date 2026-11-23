@@ -53,7 +53,7 @@ RESONANCE_FILE: Final = "world/resonance.yaml"
 _ITEM_ID = r"^item_[a-z0-9_]+$"
 _AFFIX_ID = r"^affix_[a-z0-9_]+$"
 
-type CraftRarity = Literal["rare", "epic"]
+type CraftRarity = Literal["rare", "epic", "legendary"]
 
 
 class StationDef(ContentModel):
@@ -68,10 +68,20 @@ class StationDef(ContentModel):
 
 
 class CraftRarityCost(ContentModel):
-    """一個稀有度的打造費用：金幣 ``gold_per_level`` × 物品等級＋任務幣（8.15 高階打造）。"""
+    """一個稀有度的打造費用：金幣 ``gold_per_level`` × 物品等級＋任務幣（8.15 高階打造）。
+
+    ``extra``（E6-c2，傳說「材料很貴」，平衡待查第 41 條）：另外要的材料（物品 ID → 個數），和配方
+    的材料一起扣。"""
 
     gold_per_level: int = Field(ge=0)
     quest_coins: int = Field(default=0, ge=0)
+    extra: dict[str, int] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _check(self) -> CraftRarityCost:
+        if any(v < 1 for v in self.extra.values()):
+            raise ValueError("craft.rarities 的 extra 個數至少 1")
+        return self
 
 
 class CraftRules(ContentModel):
@@ -257,6 +267,11 @@ def _material_problems(
     keywords: Collection[str],
 ) -> list[str]:
     problems: list[str] = []
+    for rarity, cost in sorted(rules.craft.rarities.items()):
+        for item_id in sorted(cost.extra):
+            found = items.get(item_id)
+            if found is None or found.kind != "material":
+                problems.append(f"craft.rarities.{rarity}.extra：{item_id} 不是材料")
     essence = items.get(rules.essence)
     if essence is None or essence.kind != "material":
         problems.append(f"essence：{rules.essence} 不是 world/items.yaml 的材料")

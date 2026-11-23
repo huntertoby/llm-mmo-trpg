@@ -232,11 +232,17 @@ def _gear_view(
 def _rarity_views(library: ContentLibrary) -> tuple[CraftRarityView, ...]:
     rules = crafting_rules(library)
     assert rules is not None
+    gen = library.item_gen
     views = []
     for rarity, cost in rules.craft.rarities.items():
+        if rarity == "legendary" and (gen is None or not gen.legendary_enabled):
+            continue  # E6-c2：傳說打造跟著 legendary_enabled，關著時不列
         text = f"金幣 {cost.gold_per_level} × 物品等級"
         if cost.quest_coins:
             text += f"＋任務幣 {cost.quest_coins}"
+        for item_id, count in sorted(cost.extra.items()):  # E6-c2：傳說另要的材料
+            found = library.world_economy.items.get(item_id)
+            text += f"＋{item_id if found is None else found.name_zh} ×{count}"
         views.append(
             CraftRarityView(rarity=rarity, name_zh=RARITY_ZH.get(rarity, rarity), cost_zh=text)
         )

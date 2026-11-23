@@ -17,9 +17,13 @@ stations:
 craft:
   # 稀有起才有 1 條 build 詞條（item_gen.yaml 的 required），所以打造只有稀有、史詩（代決 5D3-2）。
   # 金幣＝gold_per_level × 物品等級（8.15 打造手續費）；史詩另收任務幣（8.15「高階打造」）。
+  # E6-c2（08 8.27「傳說可以打造，但材料很貴」、8.30 第 10、11 點）：傳說的初值見 docs/design/平衡待查.md
+  # 第 41 條（史詩的 2 倍再加料：金幣每級 40、任務幣 5，另要 1 個上料）；只在 item_gen.yaml 的
+  # legendary_enabled 打開時能打，部位照 legendary_slots。
   rarities:
     rare: {gold_per_level: 10}
     epic: {gold_per_level: 20, quest_coins: 2}
+    legendary: {gold_per_level: 40, quest_coins: 5, extra: {item_superior_material: 1}}
   # 8.13「打造的材料用量依部位預算比例調整」：主手 30%、身體 20%、其餘 ≤10%（8.22）
   grade_amount: {weapon: 3, body: 2, offhand: 1, head: 1, hands: 1, feet: 1, neck: 1, ring: 1}
   flavor_max: 3            # 特色材料最多 3 種，每種 1 個（代決 5D3-4）

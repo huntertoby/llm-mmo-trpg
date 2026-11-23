@@ -140,9 +140,13 @@ def test_switch_on_does_not_change_other_rarities(lib: ContentLibrary) -> None:
                 assert _gen(lib, seed, slot, 4, rarity) == _gen(off, seed, slot, 4, rarity)
 
 
-def test_signature_kind_cannot_target_a_legendary(lib: ContentLibrary) -> None:
-    with pytest.raises(ItemGenError, match="獨特效果不能指定類型"):
-        generate_item(lib, Rng(0), "neck", "legendary", 5, signature_kind="rule")
+def test_signature_kind_picks_the_unique_effect_kind(lib: ContentLibrary) -> None:
+    """E6-c2 起：傳說的 ``signature_kind`` 指定獨特效果的類型（打造傳說，08 8.30 第 10 點）；
+    這一種沒有候選時拋錯（不降成史詩）。"""
+    item = generate_item(lib, Rng(0), "neck", "legendary", 5, signature_kind="rule")
+    assert item.rarity == "legendary" and item.affixes[-1].affix in RULES
+    with pytest.raises(ItemGenError, match="沒有這種獨特效果的候選"):
+        generate_item(lib, Rng(0), "neck", "legendary", 5, signature_kind="action")
 
 
 def test_deterministic(lib: ContentLibrary) -> None:

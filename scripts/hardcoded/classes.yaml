@@ -1616,8 +1616,8 @@ rules:
     status: done
     files: src/trpg/world/crafting.py
     kind: text
-    where: ['_recipe_from_fields']
-    note: HC-6a 改判：「要指定 1 條詞條」是單一欄位（action.affix）的結構。
+    where: ['_recipe_from_fields', '_chosen']
+    note: HC-6a 改判：「要指定 1 條詞條」是單一欄位（action.affix）的結構（E6-c2 搬到 _chosen）。
   - id: py-world-growth-const-text
     class: const
     status: done
