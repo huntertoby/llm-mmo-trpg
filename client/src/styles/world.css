@@ -375,12 +375,6 @@
   margin-left: 6px;
 }
 
-/* WM-1：走路先回畫面、旁白還在路上時的占位 */
-.world-story-pending {
-  margin: 6px 0;
-  font-style: italic;
-}
-
 /* PNL-4：選項列 A（兩欄格子＋右下放棄小鈕）的版面在 world/story.css（.world-sol-*） */
 .world-event-solutions {
   margin: 6px 0 4px;

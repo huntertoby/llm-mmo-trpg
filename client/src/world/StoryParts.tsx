@@ -120,6 +120,32 @@ export function StoryDialog({ story, speaker, portrait, region, testId = "world-
   );
 }
 
+interface PendingProps {
+  text: string;
+  speaker: string;
+  portrait: DialogProps["portrait"];
+  testId: string;
+}
+
+/** 旁白還在路上時的占位（WM-1 小修，`docs/art/WM-1驗收.md`）：和補上後的 `StoryDialog` 同一個說書人框，
+ * 頭像、名字照樣畫，框裡放灰色的占位句；文字區的高度和補上後一樣（事件卡裡至少兩行，`story.css`），
+ * 補上旁白時卡片不長高、下面的按鈕不跳。 */
+export function StoryPendingDialog({ text, speaker, portrait, testId }: PendingProps) {
+  return (
+    <div className="world-dialog world-dialog-pending" data-testid={testId}>
+      <Portrait portrait={portrait} region={null} size={48} label={speaker} />
+      <div className="world-dialog-body">
+        <div className="world-dialog-name small">
+          <b>{speaker}</b>
+        </div>
+        <div className="world-dialog-text world-dialog-placeholder" aria-live="polite" data-testid={`${testId}-text`}>
+          {text}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** 擲骰動畫的骰子大小（需求：64px；翻滾時不寫字，停下才寫點數）。 */
 const DIE_PX = 64;
 

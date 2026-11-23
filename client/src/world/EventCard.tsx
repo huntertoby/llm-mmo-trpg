@@ -22,7 +22,7 @@ import { revealBottomInScroller, scrollerOf } from "../ui/scrollReveal";
 /** 事件卡疊在 HUD 中上方的欄裡（位置由欄決定；UI-E2 共用彈窗外觀）。 */
 const INLINE: PopupPlacement = { kind: "inline" };
 import { attrKey, attrKeys, OUTCOME_COLOR, solutionIcon, type Outcome } from "./narration";
-import { DiceRoll, NarratorSubtitle, StoryDialog } from "./StoryParts";
+import { DiceRoll, NarratorSubtitle, StoryDialog, StoryPendingDialog } from "./StoryParts";
 import { WaitScene } from "../ui/WaitScene";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
 import { HintBody, SolutionGrid } from "./SolutionTile";
@@ -119,11 +119,9 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
     <PopupFrame placement={INLINE} className="world-event" testId="world-event" role="region" label={`事件：${event.location_name_zh}`}>
       <EventArt event={event} />
       {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
-      {/* WM-1：旁白還在路上（走路先回畫面）：占位，補上之後換成上面的旁白 */}
+      {/* WM-1：旁白還在路上（走路先回畫面）：同一個說書人框畫占位，補上之後換成上面的旁白（高度不變） */}
       {event.story == null && event.story_pending === true && (
-        <p className="muted world-story-pending" data-testid="world-event-story-pending" aria-live="polite">
-          {STORY_PENDING_ZH}
-        </p>
+        <StoryPendingDialog text={STORY_PENDING_ZH} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story-pending" />
       )}
       {/* PNL-4：選項列 A（兩欄格子＋次行、放棄右下小鈕；SolutionTile.tsx） */}
       <SolutionGrid solutions={event.solutions} busy={busy} openTemplate={situation?.template ?? null} onOpen={onOpen} onSolve={onSolve} />

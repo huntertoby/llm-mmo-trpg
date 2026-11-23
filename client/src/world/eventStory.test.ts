@@ -43,6 +43,33 @@ describe("WM-1 旁白後補", () => {
     expect(done).not.toContain("world-event-story-pending");
   });
 
+  it("WM-1 小修：占位就畫同一個說書人框（頭像、名字），框裡是灰色的占位句；補上後同一個框、同一個文字區", () => {
+    const waiting = card(event());
+    const done = card(event({ story: STORY, story_pending: false }));
+    // 框的開頭（外框 class、頭像、名字）：從外框的 data-testid 到文字區之前，兩邊要一樣
+    const head = (html: string, id: string) => {
+      const at = html.indexOf(`data-testid="${id}"`);
+      expect(at).toBeGreaterThan(-1);
+      const open = html.lastIndexOf("<div", at);
+      const body = html.slice(html.indexOf(">", at) + 1, html.indexOf('class="world-dialog-text', at));
+      return { open: html.slice(open, at), body };
+    };
+    const pending = head(waiting, "world-event-story-pending");
+    const filled = head(done, "world-event-story");
+    expect(pending.open).toContain('class="world-dialog world-dialog-pending"');
+    expect(filled.open).toContain('class="world-dialog"');
+    expect(pending.body).toContain("<b>說書人</b>");
+    expect(pending.body.replace(/<div class="world-dialog-name small"><b>說書人<\/b>.*$/su, "")).toBe(
+      filled.body.replace(/<div class="world-dialog-name small"><b>說書人<\/b>.*$/su, ""),
+    );
+    // 文字區同一個 class（事件卡裡至少兩行，story.css），占位是灰色的
+    expect(waiting).toMatch(/class="world-dialog-text world-dialog-placeholder"[^>]*>說書人正在構思這段故事……</u);
+    expect(done).toContain('class="world-dialog-text"');
+    // 框以外的卡片內容（選項列）一樣
+    const tail = (html: string) => html.slice(html.indexOf("world-sol"));
+    expect(tail(waiting)).toBe(tail(done));
+  });
+
   it("沒有在等旁白（LLM 關著已經寫好、或沒有事件）時不送", () => {
     expect(pendingStoryKey("c1", view(event()))).toBe("c1|wounded_peddler|渡口石階");
     expect(pendingStoryKey("c1", view(event({ story: STORY, story_pending: false })))).toBeNull();

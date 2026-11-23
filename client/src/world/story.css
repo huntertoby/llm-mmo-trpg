@@ -97,6 +97,18 @@
   cursor: pointer;
 }
 
+/* WM-1 小修：事件卡裡的說書人框文字區先留好一段旁白的高度（占位和補上後一樣高，補上時卡片不長高、按鈕不跳）。
+ * 一段最多 48 字（narration.ts 的 PAGE_MAX），事件卡的文字區一行約 18 字，所以留 3 行（行高 1.55＋上下 2px）。 */
+.world-event .world-dialog-text {
+  min-height: calc(3 * 1.55em + 4px);
+}
+
+/* 占位：灰色的占位句（框、頭像、名字照補上後的樣子） */
+.world-dialog-placeholder {
+  color: var(--muted);
+  cursor: default;
+}
+
 .world-dialog-text:disabled {
   opacity: 1;
   cursor: default;
