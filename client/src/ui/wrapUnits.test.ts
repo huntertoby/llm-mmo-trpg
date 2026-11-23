@@ -41,6 +41,29 @@ describe("名稱＋數字不拆開", () => {
     expect(units(detail)).toContain("詞條 +10%・");
   });
 
+  it("QF-5：全形「（」前面切段（括號整段一起移），「，」後面切段（「，」留前段尾巴）", () => {
+    // 美術 CR-1c 驗收小修 1 列的三處 800 寬斷在詞中間
+    expect(wrapUnitParts("傷害 55–288（期望 69.3）")).toEqual(["傷害 55–288", "（期望 69.3）"]);
+    expect(wrapUnitParts("武器「匕首」250%・詞條 +10%（全身上限 300%）")).toEqual(["武器「匕首」250%・", "詞條 +10%", "（全身上限 300%）"]);
+    expect(wrapUnitParts("另有看目標的加成，攻擊預覽時才算")).toEqual(["另有看目標的加成，", "攻擊預覽時才算"]);
+    // 開頭就是「（」不會多出空段；接起來仍是原字
+    expect(wrapUnitParts("（期望 69.3）")).toEqual(["（期望 69.3）"]);
+    expect(wrapUnitParts(DETAIL).join("")).toBe(DETAIL);
+  });
+
+  it("QF-5 接線：預覽「（期望 69.3）」、單位卡「（全身上限 300%）」與提示行「攻擊預覽時才算」各是完整的一段", () => {
+    const content = { lines: ["傷害 55–288（期望 69.3）"], chain: null, hasChain: false, noTurn: new Map() };
+    const preview = units(renderToStaticMarkup(createElement(PreviewBox, { content, practice: false })));
+    expect(preview).toEqual(["傷害 55–288", "（期望 69.3）"]);
+    const u = unit("unit_0001", "ally", 1, 1, {
+      crit_damage_permille: 2850,
+      crit_damage_detail_zh: DETAIL,
+      crit_damage_hint_zh: "另有看目標的加成，攻擊預覽時才算",
+    });
+    const card = units(renderToStaticMarkup(createElement(UnitInfo, { unit: u, names, heroId: "unit_0001", skills: {} })));
+    expect(card).toEqual(expect.arrayContaining(["種族 +25%", "（全身上限 300%）", "另有看目標的加成，", "攻擊預覽時才算"]));
+  });
+
   it("CSS 用 inline-block，不用 nowrap（一段比一行長時段內還能斷）", () => {
     const rule = /\.wrap-unit\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
     expect(rule).toContain("display: inline-block");
