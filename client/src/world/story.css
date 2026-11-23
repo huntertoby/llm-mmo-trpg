@@ -109,6 +109,12 @@
   cursor: default;
 }
 
+/* QF-7（ak）：「多講一點」的留位，看不見、不能按，只占那一列的高度 */
+.world-more-slot {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .world-dialog-text:disabled {
   opacity: 1;
   cursor: default;

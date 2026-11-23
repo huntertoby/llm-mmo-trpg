@@ -7,6 +7,7 @@
 // `#reaction`：戰鬥的反應詢問視窗（正式元件 DecisionDialog，危險類紅帶）。實機要等敵人行動才碰得到，這裡用固定資料畫出來給美術 PM 看。
 // QK-2：`#qportraits`：Q 版頭像總表（37 位、體型、好感五級、種族卡；qPortraitScene.tsx）。
 // WM-1 小修：`?mode=story-pending`／`?mode=story-filled`：事件卡的旁白占位與補上後（按鈕位置要一樣）。
+// QF-7（ak）：`?mode=story-filled-more`：補上的旁白只有一段、又有「多講一點」（按鈕位置要和占位一樣）。
 // 6T-1d：`#soot`：五位帶 soot 的頭像（灰鴿、鉚釘、工坊師傅、主城鐵匠、爐叔；外觀直接讀 content，主城鐵匠在遊戲裡沒有頭像）。
 import { createRoot } from "react-dom/client";
 import { parse } from "yaml";
@@ -185,8 +186,8 @@ function EventScene() {
 
 /** WM-1 小修（`docs/art/WM-1驗收.md`）：旁白占位（`?mode=story-pending`）與補上後（`?mode=story-filled`）。
  * 同一個事件、不開情境判定，兩張的選項按鈕要在同一個位置（照實際視窗寬拍 800）。 */
-function StoryWaitScene({ filled }: { filled: boolean }) {
-  const event: WorldEventView = { ...EVENT, situation: null, story_pending: !filled, story: filled ? STORY : null };
+function StoryWaitScene({ filled, story = STORY }: { filled: boolean; story?: WorldEventView["story"] }) {
+  const event: WorldEventView = { ...EVENT, situation: null, story_pending: !filled, story: filled ? story : null };
   return (
     <Stage fill>
       <div className="world-hud-center" style={CENTER}>
@@ -195,6 +196,9 @@ function StoryWaitScene({ filled }: { filled: boolean }) {
     </Stage>
   );
 }
+
+/** QF-7（ak）：只有一段（48 字以內）、又有「多講一點」的旁白。 */
+const STORY_ONE_MORE = { ...STORY, text_zh: "霧從河面爬上來，渡口的燈籠一盞盞熄了。一隊商人困在斷橋邊，車輪陷進泥裡。" };
 
 /** 遇敵卡的假資料（雲嶺・竹林小徑；只填 EncounterPanel 會讀的欄位）。 */
 const ENCOUNTER_VIEW = {
@@ -375,7 +379,7 @@ function SootScene() {
 }
 
 const root = document.getElementById("root");
-const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene, "encounter-boss": BossEncounterScene, qportraits: QPortraitScene, "story-pending": () => <StoryWaitScene filled={false} />, "story-filled": () => <StoryWaitScene filled /> };
+const SCENES: Record<string, () => React.ReactElement> = { event: EventScene, roll: RollScene, icons: IconsScene, encounter: EncounterScene, reaction: ReactionScene, soot: SootScene, "encounter-boss": BossEncounterScene, qportraits: QPortraitScene, "story-pending": () => <StoryWaitScene filled={false} />, "story-filled": () => <StoryWaitScene filled />, "story-filled-more": () => <StoryWaitScene filled story={STORY_ONE_MORE} /> };
 const Scene = SCENES[MODE] ?? SubtitleScene;
 if (root !== null) createRoot(root).render(<Scene />);
 // UI-E1b：開發頁也能量「四角飾件沒有壓到內容」（排版煙霧檢查同一套量法）
