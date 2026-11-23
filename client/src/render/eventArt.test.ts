@@ -72,6 +72,7 @@ function event(over: Partial<WorldEventView> = {}): WorldEventView {
     location_name_zh: "雨梯田",
     actor_zh: "迷路的道童",
     motive_zh: "回青霧觀",
+    story_pending: false,
     story: null,
     who_zh: "",
     want_zh: "",

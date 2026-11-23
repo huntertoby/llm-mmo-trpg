@@ -925,6 +925,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/world/characters/{character_id}/event_story": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Event Story
+         * @description WM-1：補上地點事件的開場旁白。走路觸發事件時（LLM 開著）先回畫面、``event.story_pending``
+         *     為真，前端再送這個請求：照舊用 ``event_story``（LLM，不可用時模板）寫一個 ``narrate`` 動作
+         *     進日誌，回傳新的畫面。已經敘述過、事件不在了或有遭遇時不寫，直接回目前的畫面。
+         */
+        post: operations["post_event_story_api_world_characters__character_id__event_story_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/world/characters/{character_id}/range/trial": {
         parameters: {
             query?: never;
@@ -4489,6 +4511,11 @@ export interface components {
             /** Motive Zh */
             motive_zh: string;
             story: components["schemas"]["StoryView"] | null;
+            /**
+             * Story Pending
+             * @default false
+             */
+            story_pending: boolean;
             /** Who Zh */
             who_zh: string;
             /** Want Zh */
@@ -15148,6 +15175,37 @@ export interface operations {
                 "application/json": components["schemas"]["WorldActionRequest"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_event_story_api_world_characters__character_id__event_story_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                character_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

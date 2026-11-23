@@ -336,6 +336,8 @@ export const api = {
   world: (characterId: string) => worldRequest("GET", `/world/characters/${encodeURIComponent(characterId)}`),
   worldAct: (characterId: string, action: WorldAction) =>
     worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/actions`, action),
+  /** WM-1：補上地點事件的開場旁白（走路觸發事件時伺服器先回畫面，`event.story_pending`）。 */
+  worldEventStory: (characterId: string) => worldRequest("POST", `/world/characters/${encodeURIComponent(characterId)}/event_story`),
   /** TR-1（#134）：主城工坊靶場的沙盒試打（不寫世界日誌、不回寫角色；`keywords` 空＝示範招）。 */
   worldRangeTrial: (characterId: string, weapon: string, keywords: string[]) =>
     request<RangeTrialResponse>("POST", `/world/characters/${encodeURIComponent(characterId)}/range/trial`, { weapon, keywords }),

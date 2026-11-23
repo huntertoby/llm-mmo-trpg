@@ -2380,6 +2380,49 @@
         }
       }
     },
+    "/api/world/characters/{character_id}/event_story": {
+      "post": {
+        "tags": [
+          "world"
+        ],
+        "summary": "Post Event Story",
+        "description": "WM-1：補上地點事件的開場旁白。走路觸發事件時（LLM 開著）先回畫面、``event.story_pending``\n為真，前端再送這個請求：照舊用 ``event_story``（LLM，不可用時模板）寫一個 ``narrate`` 動作\n進日誌，回傳新的畫面。已經敘述過、事件不在了或有遭遇時不寫，直接回目前的畫面。",
+        "operationId": "post_event_story_api_world_characters__character_id__event_story_post",
+        "parameters": [
+          {
+            "name": "character_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Character Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/world/characters/{character_id}/range/trial": {
       "post": {
         "tags": [
@@ -11303,6 +11346,11 @@
                 "type": "null"
               }
             ]
+          },
+          "story_pending": {
+            "type": "boolean",
+            "title": "Story Pending",
+            "default": false
           },
           "who_zh": {
             "type": "string",
