@@ -40,7 +40,7 @@ const FACE: Readonly<Record<Direction, Facing>> = { up: "n", down: "s", left: "w
 export function devWalkMs(search: string): number | null {
   if (!isDevMode(search)) return null;
   const n = Number(new URLSearchParams(search).get("walkms") ?? "");
-  return Number.isInteger(n) && n > 0 && n <= 10000 ? n : null;
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
 /** 這張畫面最多可以領先幾格（看得到敵人時比較少）。 */
