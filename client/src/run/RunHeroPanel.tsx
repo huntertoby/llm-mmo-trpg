@@ -1,6 +1,8 @@
 // 主角的一輪狀態：等級與經驗、HP／法力／耐力／源力、屬性、技能（點開看卡片）。
-import type { RunHero } from "../api/types";
+// E6-b2：裝備圖示列下面是「招牌效果」的勾選（`SignaturePicker`；沒給 `onChoose` 時只能看）。
+import type { RunChoice, RunHero } from "../api/types";
 import { GearIcon } from "../ui/GearIcon";
+import { SignaturePicker } from "../ui/gear/SignaturePicker";
 import { PartTip } from "../ui/PartTip";
 import { SkillCardView } from "../ui/SkillCardView";
 import { CAN_FLASH_TEXT, flashCountText, flashOf, showCanFlash } from "./flash";
@@ -78,7 +80,7 @@ export function HeroCritDamage({ hero }: { hero: Pick<RunHero, "crit_damage_perm
   );
 }
 
-export function RunHeroPanel({ hero }: { hero: RunHero }) {
+export function RunHeroPanel({ hero, busy = false, onChoose }: { hero: RunHero; busy?: boolean; onChoose?: (choice: RunChoice) => Promise<number | null> }) {
   const usage = slotUsage(hero.skills);
   const raceLine = raceOriginText(hero.race_name_zh, hero.origin_name_zh);
   const traits: readonly string[] = (hero as { weapon_traits_zh?: readonly string[] }).weapon_traits_zh ?? [];
@@ -148,6 +150,14 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
             ))}
           </div>
         </div>
+      )}
+      {hero.signatures != null && (
+        <SignaturePicker
+          panel={hero.signatures}
+          equipment={hero.equipment ?? []}
+          busy={busy}
+          onPick={onChoose === undefined ? null : (chosen) => void onChoose({ kind: "gear_chosen", chosen })}
+        />
       )}
       <div className="run-attrs small">
         {ATTRIBUTES.map((a) => (

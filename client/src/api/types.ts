@@ -280,7 +280,8 @@ export type RunChoice =
   | Schemas["AllocateChoice"]
   | Schemas["LoadoutChoice"]
   | Schemas["GearPickChoice"]
-  | Schemas["EquipChoice"];
+  | Schemas["EquipChoice"]
+  | Schemas["GearChosenChoice"]; // E6-b2：角色面板的招牌勾選
 /** 開新一輪：`weapon` ＋ `keywords`（一般開局）或 `dev_pack`（開發者起始包）；`attributes` 省略時伺服器把開局點數全部點在武器的縮放屬性。 */
 export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | "test_mode" | "test_equipment" | "llm"> & {
   /** LLM 生成開關（4-L6b）：升級技能候選請本機模型提議；省略 ＝ 關閉。連不到模型時伺服器把這一輪當作關閉並在回應提示。 */
@@ -295,6 +296,9 @@ export type CreateRunRequest = Omit<Schemas["CreateRunRequest"], "attributes" | 
 export type GearCatalog = Schemas["GearCatalog"];
 export type GearSlotInfo = Schemas["GearSlotInfo"];
 export type GearItemInfo = Schemas["GearItemInfo"];
+/** 角色面板的「招牌效果」一節與一列（E6-b2）。 */
+export type SignaturePanel = Schemas["SignaturePanelOut"];
+export type SignatureRow = Schemas["SignatureRowOut"];
 export type GearAffixInfo = Schemas["GearAffixInfo"];
 /** 裝備上的一條詞條（含 `active`／`duplicate_of`，3-32a）。 */
 export type AffixLineView = Schemas["AffixLineView"];
@@ -388,6 +392,7 @@ export type WorldAction =
   | (Omit<Schemas["PouchAction"], "items"> & { items: Record<string, number> })
   | Schemas["UseItemAction"]
   | Schemas["EquipAction"]
+  | Schemas["GearChosenAction"] // E6-b2：穿戴中的招牌勾選
   // 5D-2b：背包滿了，戰後結算選要丟哪件
   | (Omit<Schemas["LootChooseAction"], "drop_gear"> & { drop_gear?: string[] })
   // 5D-3：鐵匠（打造、強化、分解）與附魔台（重骰、指定）

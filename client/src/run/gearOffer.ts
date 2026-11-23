@@ -10,21 +10,28 @@ export function rarityClass(item: Pick<GearItemInfo, "rarity" | "legendary">): s
   return `gear-rarity-${item.rarity ?? (item.legendary ? "legendary" : "common")}`;
 }
 
-/** 物品卡的內容行：基礎加成（普通物品）、副手特性、詞條；什麼都沒有時回傳空陣列。 */
-export function itemLines(item: GearItemInfo): string[] {
+/** 物品卡的內容行：基礎加成（普通物品）、副手特性、詞條；什麼都沒有時回傳空陣列。`skip`：不列的那條詞條（裝備卡的招牌另外畫框，E6-b2）。 */
+export function itemLines(item: GearItemInfo, skip: GearItemInfo["affixes"][number] | null = null): string[] {
   const lines: string[] = [];
   if (item.base_bonus_zh != null) lines.push(item.base_bonus_zh);
   if (item.offhand_name_zh != null && item.offhand_traits_zh.length > 0) {
     lines.push(`${item.offhand_name_zh}：${item.offhand_traits_zh.join("；")}`);
   }
-  for (const a of item.affixes) lines.push(a.text_zh);
+  for (const a of item.affixes) if (a !== skip) lines.push(a.text_zh);
   return lines;
+}
+
+/** 說明卡裡的一條詞條：招牌前面加類型牌的字（「招牌・新動作：…」）；被名額標灰的帶原因（長版，E6-b2）。 */
+function affixTipLine(a: GearItemInfo["affixes"][number]): TipLine {
+  const label = a.signature_zh != null && a.signature_zh !== "" ? `${a.signature_zh}：` : "";
+  return { text: `${label}${a.text_zh}`, note: a.off_zh != null && a.off_zh !== "" ? a.off_zh : null };
 }
 
 /** 浮動說明卡（`PartTip`）用的行：詞條行（沒有時「（沒有詞條）」），再接「關鍵字：…」一行（QI-4b；沒有關鍵字時不加，和改前逐字相同）。
  *  `slot`：物品所在欄位（外觀沒寫 `kind` 時選預設造型，和圖示同一個 `resolveGear`）。 */
 export function itemTipLines(item: GearItemInfo, slot?: string): TipLine[] {
-  const lines = itemLines(item).map((text) => ({ text, note: null }));
+  const lines: TipLine[] = itemLines({ ...item, affixes: [] }).map((text) => ({ text, note: null }));
+  for (const a of item.affixes) lines.push(affixTipLine(a));
   return withKeywordLine(lines.length === 0 ? [{ text: "（沒有詞條）", note: null }] : lines, item.appearance, slot);
 }
 

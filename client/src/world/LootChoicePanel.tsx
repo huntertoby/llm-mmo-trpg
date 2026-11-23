@@ -1,9 +1,11 @@
 // 背包滿了：戰後結算選要丟哪件（Phase 5D-2b；最小介面，完整背包畫面在 5D-4）。
 // 列出新拿到的與背包裡原本的；裝備用勾選、其他用個數；說明用共用 <Hint>，沿用商店與腰包的列樣式。
+// E6-b2：帶招牌的裝備在名字後面加「招牌」小標，附 14 px 類型圖示。
 import { useState } from "react";
 import type { WorldAction, WorldBagItem, WorldInventory, WorldPendingLoot } from "../api/types";
 import { Hint } from "../ui/Hint";
 import { ItemListIcon } from "../ui/ItemIcon";
+import { SignatureIcon } from "../ui/gear/SignatureIcon";
 import { type LootDraft, type LootSide, draftKey, lootChooseAction } from "./lootChoice";
 
 interface Props {
@@ -37,6 +39,12 @@ export function LootChoicePanel({ pending, inventory, busy, onAct }: Props) {
                 <span className="world-shop-thing">
                   <ItemListIcon id={item.item} gear={item.gear} color={item.color} rare={item.rare} />
                   <span className="world-shop-name">{item.name_zh}</span>
+                  {item.gear === true && item.signature != null && (
+                    <span className="gear-sig-loot" data-testid={`world-loot-signature-${key}`}>
+                      <SignatureIcon kind={item.signature} size={14} />
+                      招牌
+                    </span>
+                  )}
                 </span>
               </Hint>
               <span className="muted">{side === "new" ? "新拿到" : "背包裡"}</span>

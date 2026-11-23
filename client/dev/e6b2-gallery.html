@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>E6-b2 招牌效果驗收（開發用）</title>
+    <style>
+      body { background: #1b1d22; color: #d8dbe0; font: 14px "Noto Sans TC", sans-serif; margin: 0; padding: 16px; }
+      h3 { font-size: 12px; margin: 10px 0 4px; color: #ffe9a8; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px 12px; align-items: start; }
+      .grid > div { min-width: 0; }
+      .cap { color: #e0b060; font-size: 12px; margin: 0 0 4px; }
+      .line { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin: 4px 0; }
+      .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+      canvas.px { image-rendering: pixelated; }
+      .panel-host { max-width: 340px; }
+      /* 關鍵影格：把強調動畫停在 --t 那一刻（只在這頁） */
+      .freeze .gear-sig.fx, .freeze .gear-sig.fx::after, .freeze .gear-sig.fx .gear-sig-tag { animation-play-state: paused; animation-delay: calc(0.25s - var(--t)); }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/dev/e6b2Gallery.tsx"></script>
+  </body>
+</html>
