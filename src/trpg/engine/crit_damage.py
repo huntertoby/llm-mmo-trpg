@@ -34,20 +34,31 @@ from typing import Literal
 from trpg.content.battle import WeaponDef
 from trpg.content.skills import SkillDef
 from trpg.engine.gear.core import gear_crit_damage_permille
-from trpg.engine.modifiers import Use, crit_damage_bonus, crit_damage_bonus_parts
+from trpg.engine.modifiers import (
+    Use,
+    crit_damage_bonus,
+    crit_damage_bonus_parts,
+    crit_damage_has_target_rule,
+)
 from trpg.engine.rules.forms import held_weapon
 from trpg.engine.rules.race import race_crit_damage_permille
 from trpg.engine.skills.conditions import Subject
 from trpg.engine.state import BattleState, UnitState
 
 __all__ = [
+    "TARGET_RULE_HINT_ZH",
     "CritDamageBreakdown",
     "CritDamageSource",
     "crit_damage_breakdown",
     "crit_damage_detail_zh",
+    "crit_damage_hint_zh",
     "crit_damage_permille",
     "crit_weapon",
 ]
+
+TARGET_RULE_HINT_ZH = "另有看目標的加成，攻擊預覽時才算"
+"""角色面板「▸ 詳細」最後一行（CR-1c，05 5.4.2 第 8 點）：有「條件看目標」的暴擊傷害修正技時
+才出現。"""
 
 _GEAR_CARRIER_PREFIX = "skill_gear_"
 """裝備規則改變的包裝技能 ID 前綴（:func:`trpg.engine.activations._gear_rule_carrier`）。"""
@@ -73,6 +84,8 @@ class CritDamageBreakdown:
     total: int
     min_permille: int
     max_permille: int
+    target_rule: bool = False
+    """有「條件看目標」的暴擊傷害修正技（CR-1c）：面板沒有目標，不算進數字，另寫提示行。"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -180,6 +193,7 @@ def crit_damage_breakdown(
         total=max(rules.min_permille, min(rules.max_permille, raw.sum)),
         min_permille=rules.min_permille,
         max_permille=rules.max_permille,
+        target_rule=use is not None and crit_damage_has_target_rule(state, unit, use),
     )
 
 
@@ -218,6 +232,12 @@ def crit_damage_detail_zh(breakdown: CritDamageBreakdown, *, names: bool = True)
     if breakdown.raw < breakdown.min_permille:
         return f"{text}・最低 {_pct(breakdown.min_permille)}"
     return f"{text}（全身上限 {_pct(breakdown.max_permille)}）"
+
+
+def crit_damage_hint_zh(breakdown: CritDamageBreakdown) -> str | None:
+    """「▸ 詳細」最後的提示行（CR-1c）：有「條件看目標」的暴擊傷害修正技時是
+    :data:`TARGET_RULE_HINT_ZH`，沒有時 ``None``。"""
+    return TARGET_RULE_HINT_ZH if breakdown.target_rule else None
 
 
 def _merge_unnamed(sources: tuple[CritDamageSource, ...]) -> tuple[CritDamageSource, ...]:

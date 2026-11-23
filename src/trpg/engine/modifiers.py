@@ -29,6 +29,7 @@ from types import MappingProxyType
 from trpg.content.library import Ruleset
 from trpg.content.skill_copies import copy_rank
 from trpg.content.skills import (
+    CASTER_CONDITIONS,
     SHAPE_CHANGES,
     BasicAction,
     ModifierSpec,
@@ -423,6 +424,17 @@ def crit_damage_bonus_parts(
             skills.setdefault(active.skill.id, active.skill)
     parts = ((skills[sid], truncate_permille(total)) for sid, total in sums.items())
     return tuple((skill, amount) for skill, amount in parts if amount != 0)
+
+
+def crit_damage_has_target_rule(state: BattleState, unit: UnitState, use: Use) -> bool:
+    """``unit`` 身上有沒有「條件看目標」的暴擊傷害修正（CR-1c，05 5.4.2 第 8 點）：套用在 ``use``
+    上、改 ``crit_damage_permille``、條件（任一分支）不是只看施放者的（:data:`CASTER_CONDITIONS`
+    以外）。角色面板沒有目標，這類加成不算進數字，「▸ 詳細」另加一行提示；只給顯示用。"""
+    return any(
+        active.rule.condition is not None
+        and any(part.type not in CASTER_CONDITIONS for part in active.rule.condition.alternatives())
+        for active in _applicable_active(state, unit, use, "crit_damage_permille")
+    )
 
 
 def spend_attack_limits(state: BattleState, unit: UnitState, use: Use, subject: Subject) -> None:

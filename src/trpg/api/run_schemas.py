@@ -638,6 +638,16 @@ class HeroOut(_ApiModel):
     """副手（圓盾、塔盾、法書、法器珠；測試模式挑的裝備，Phase 3I-2）的中文名；沒有時為空。"""
     offhand_traits_zh: tuple[str, ...] = ()
     """副手特性的說明，每個特性一行（Phase 3I-2；圓盾附目前的格擋強化）。"""
+    crit_damage_permille: int | None = None
+    """主手武器普攻的暴擊傷害倍率（‰，套完全身上下限；CR-1c，05 5.4.2 第 8 點）。和戰鬥中的單位卡
+    同一個引擎函式（:func:`trpg.roguelite.hero_crit.hero_crit_breakdown`）；修正技只算不看目標的條件。
+    舊回應沒有時為 ``None``。"""
+    crit_damage_detail_zh: str | None = None
+    """暴擊傷害倍率的來源（主角面板「▸ 詳細」），用字和單位卡相同；主角自己的面板，修正技寫
+    技能名。"""
+    crit_damage_hint_zh: str | None = None
+    """「▸ 詳細」暴擊傷害列最後的提示行（CR-1c）：主角有「條件看目標」的暴擊傷害修正技時是「另有
+    看目標的加成，攻擊預覽時才算」，沒有時 ``None``。"""
     skills: tuple[SkillCard, ...]
     start_keywords: tuple[KeywordRef, ...] = ()
     """開局選的關鍵字（Phase 3-24b2；以 build 開局時為空）。"""

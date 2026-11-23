@@ -46,6 +46,7 @@ from trpg.content.equipment import ItemDef
 from trpg.content.library import ContentLibrary
 from trpg.content.skills import SkillDef
 from trpg.content.slots import SLOT_ZH, SLOTS
+from trpg.engine.crit_damage import crit_damage_detail_zh, crit_damage_hint_zh
 from trpg.narrative.skills import CardOwner, KeywordRef
 from trpg.roguelite import RunSave, RunState
 from trpg.roguelite.errors import ChoiceError
@@ -63,6 +64,7 @@ from trpg.roguelite.flashes import (
     state_of,
 )
 from trpg.roguelite.gear import current_item, equip_notes, target_slot, weapon_swap_prompt
+from trpg.roguelite.hero_crit import hero_crit_breakdown
 from trpg.roguelite.offers import skill_defs
 from trpg.roguelite.progress import hero_effective_attributes, run_loadout
 from trpg.roguelite.start import apply_allocation
@@ -472,6 +474,7 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
     effective = hero_effective_attributes(library, run)
     equipped = skill_defs(library, run, run.hero.skills)
     core = library.ruleset.core
+    crit = hero_crit_breakdown(library, run)  # CR-1c：主角面板的暴擊傷害
     return HeroOut(
         build_id=run.build_id or "",
         race_id=run.hero.race,
@@ -526,6 +529,9 @@ def _hero(library: ContentLibrary, run: RunState) -> HeroOut:
             if offhand is None
             else offhand.trait_lines_zh(library.ruleset.core, effective.__getitem__)
         ),
+        crit_damage_permille=crit.total,
+        crit_damage_detail_zh=crit_damage_detail_zh(crit),
+        crit_damage_hint_zh=crit_damage_hint_zh(crit),
         skills=tuple(_card(library, run, s) for s in skill_defs(library, run, run.hero.skills)),
         start_keywords=() if run.start is None else keyword_refs(library, run.start.keywords),
         dev_pack=None if run.start is None else run.start.dev_pack,

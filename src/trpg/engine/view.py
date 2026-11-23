@@ -33,7 +33,11 @@ from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.attack_shapes import skill_note_zh, skill_problem_zh
 from trpg.engine.bombs import bomb_spec
 from trpg.engine.boss_phases import next_phase
-from trpg.engine.crit_damage import crit_damage_breakdown, crit_damage_detail_zh
+from trpg.engine.crit_damage import (
+    crit_damage_breakdown,
+    crit_damage_detail_zh,
+    crit_damage_hint_zh,
+)
 from trpg.engine.delayed import charge_infos
 from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.gear.view import GearTotalView, gear_totals
@@ -574,6 +578,10 @@ class UnitView(_ViewModel):
     crit_damage_detail_zh: str | None = None
     """暴擊傷害倍率的來源（角色面板「▸ 詳細」），例「武器「戰斧」200%・詞條 +10%（全身上限
     300%）」；其他陣營的單位不寫修正技的名字。看不到資訊時為 ``None``。"""
+    crit_damage_hint_zh: str | None = None
+    """「▸ 詳細」暴擊傷害列最後的提示行（CR-1c）：單位有「條件看目標」的暴擊傷害修正技時是「另有
+    看目標的加成，攻擊預覽時才算」。看不到修正技名稱的陣營（其他陣營）、看不到資訊時一律
+    ``None``（最保守：看不到技能就不透露有這類修正技）。"""
     gear_skills: tuple[GearSkillView, ...] = ()
     """裝備授予的常駐技能（Phase 3G-G3b，唯讀；只有自己陣營的單位會列出，依欄位固定順序）。"""
     skill_notes_zh: dict[str, tuple[str, ...]] | None = None
@@ -1101,12 +1109,17 @@ def _form_view(state: BattleState, unit: UnitState) -> FormView | None:
     )
 
 
-def _crit_damage_fields(state: BattleState, unit: UnitState, team: Team) -> tuple[int, str]:
-    """角色面板的暴擊傷害（CR-1b）：主手武器普攻、沒有目標（修正技只算不看目標的條件）。"""
+def _crit_damage_fields(
+    state: BattleState, unit: UnitState, team: Team
+) -> tuple[int, str, str | None]:
+    """角色面板的暴擊傷害（CR-1b）：主手武器普攻、沒有目標（修正技只算不看目標的條件）。提示行
+    （CR-1c）只給看得到技能名的陣營（自己陣營）。"""
     breakdown = crit_damage_breakdown(
         state, unit, use=modifiers.ATTACK, subject=Subject(None, unit.xy)
     )
-    return breakdown.total, crit_damage_detail_zh(breakdown, names=unit.team is team)
+    own = unit.team is team
+    hint = crit_damage_hint_zh(breakdown) if own else None
+    return breakdown.total, crit_damage_detail_zh(breakdown, names=own), hint
 
 
 def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
@@ -1200,6 +1213,7 @@ def _unit_view(state: BattleState, unit: UnitState, team: Team) -> UnitView:
         gear_totals=_gear_totals(state, unit),
         crit_damage_permille=crit[0],
         crit_damage_detail_zh=crit[1],
+        crit_damage_hint_zh=crit[2],
         charges=_charge_views(state, unit),
         form=_form_view(state, unit),
         form_cooldowns=tuple(
