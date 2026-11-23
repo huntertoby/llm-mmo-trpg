@@ -49,7 +49,9 @@ function heroPanel(hint: string | null): string {
 
 /** 提示行在來源之後（同一格的最後一行）。 */
 function expectHintAfterDetail(html: string): void {
-  expect(html).toContain(`data-testid="crit-damage-hint">${HINT}<`);
+  // QF-5：提示行也切成 WrapUnits 段（「，」後面），比字要先去掉提示行裡的標籤
+  const hintHtml = /data-testid="crit-damage-hint">(.*?)<\/div>/.exec(html)?.[1] ?? "";
+  expect(plain(hintHtml)).toBe(HINT);
   const text = plain(html); // 來源切成 WrapUnits 段（CR-1c 小修 1），比字要先去掉標籤
   const at = text.indexOf(DETAIL);
   expect(at).toBeGreaterThanOrEqual(0);

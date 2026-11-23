@@ -16,6 +16,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from trpg.api.gear_schemas import GearChoice
 from trpg.api.skill_cards import SkillCard
 from trpg.content.battle import WeaponLook
+from trpg.content.library import ContentLibrary
+from trpg.content.maps import MapDef, MapRole
 from trpg.engine.actions import Action, FollowupTarget, Step, UseSkill
 from trpg.engine.ai.orders import IgnoredOrder, OrderSet
 from trpg.engine.preview import (
@@ -81,6 +83,7 @@ __all__ = [
     "TelegraphOut",
     "ToppleOut",
     "UpcomingEventOut",
+    "map_summary",
     "permille",
     "preview_out",
 ]
@@ -107,6 +110,22 @@ class MapSummary(_ApiModel):
     archetype: str
     width: int
     height: int
+    role: MapRole | None = None
+    """地圖類型的特殊用途（``map_archetypes.yaml`` 的 ``role``，QF-5／WL-2 裁定 1）：前端依用途
+    （靶場、頭目地圖）分支，不比對類型 ID；一般地圖為 ``None``。"""
+
+
+def map_summary(library: ContentLibrary, map_def: MapDef) -> MapSummary:
+    """地圖摘要（``/api/maps``、``/api/arena`` 共用）；``role`` 讀地圖類型清單（QF-5）。"""
+    kind = library.map_archetypes.get(map_def.archetype)
+    return MapSummary(
+        id=map_def.id,
+        name_zh=map_def.name_zh,
+        archetype=map_def.archetype,
+        width=map_def.width,
+        height=map_def.height,
+        role=None if kind is None else kind.role,
+    )
 
 
 class BuildSummary(_ApiModel):

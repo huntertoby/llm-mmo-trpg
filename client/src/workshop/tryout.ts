@@ -1,5 +1,5 @@
 // 裝上試玩：把工坊的技能放進 `POST /api/battles` 的請求，並在進戰鬥前先提醒放不出來的情況。
-import type { BattleResponse, CreateBattleRequest, WorkshopArena, WorkshopCheck } from "../api/types";
+import type { BattleResponse, CreateBattleRequest, MapSummary, WorkshopArena, WorkshopCheck } from "../api/types";
 import type { StartChoiceBody } from "../run/startFlow";
 import { getPath, isJson, type Json } from "./draft";
 
@@ -14,9 +14,16 @@ export interface TryoutChoice {
   opponents: string;
 }
 
-/** 這張地圖是不是靶場（只有靶場可以選對手）。 */
+/** 這張地圖是不是靶場（只有靶場可以選對手）。QF-5：看 API 地圖摘要的 `role`，不比對類型 ID。 */
 export function isTrainingMap(arena: WorkshopArena | null, mapId: string): boolean {
-  return arena?.maps.find((m) => m.id === mapId)?.archetype === "training";
+  return arena?.maps.find((m) => m.id === mapId)?.role === "training";
+}
+
+/** 地圖選單名稱後面的附註（QF-5：依 `role`）：靶場「（試玩專用，預設）」、頭目地圖「（頭目地圖）」，其他沒有。 */
+export function mapRoleNote(map: Pick<MapSummary, "role">): string {
+  if (map.role === "training") return "（試玩專用，預設）";
+  if (map.role === "boss") return "（頭目地圖）";
+  return "";
 }
 
 /** 送給後端的技能：用檢查後的正規化定義（含自動產生的 ID），來源標為工坊。 */

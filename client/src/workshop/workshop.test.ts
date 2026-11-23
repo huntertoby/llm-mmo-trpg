@@ -50,7 +50,7 @@ import {
   type EditorState,
   type KeyValueStore,
 } from "./state";
-import { buildTryoutRequest, isTrainingMap, manaNote, manaWarning, tryoutSkill } from "./tryout";
+import { buildTryoutRequest, isTrainingMap, manaNote, manaWarning, mapRoleNote, tryoutSkill } from "./tryout";
 import { draftToYaml, parseDraftText, sameDraft } from "./yamlEdit";
 import type { BattleResponse } from "../api/types";
 
@@ -354,6 +354,21 @@ describe("try it out", () => {
     const req = buildTryoutRequest(choiceOf({ mapId: "test_dunes" }), check, withDunes);
     expect(req?.map_id).toBe("test_dunes");
     expect(req?.opponents).toBeUndefined();
+  });
+
+  it("decides the training range by the map summary's role, not the archetype id (QF-5)", () => {
+    const base = arena.maps.find((m) => m.id === "open_plain")!;
+    const renamed = { ...base, id: "test_yard", archetype: "practice_yard", role: "training" as const };
+    const fakeId = { ...base, id: "test_fake", archetype: "training", role: null };
+    const withBoth = { ...arena, maps: [...arena.maps, renamed, fakeId] };
+    expect(isTrainingMap(withBoth, "test_yard")).toBe(true);
+    expect(isTrainingMap(withBoth, "test_fake")).toBe(false);
+    expect(arena.maps.find((m) => m.id === "training_range")?.role).toBe("training");
+    // 選單附註也看 role：類型 ID 叫 boss 但沒有 role 的不標，換了名字但 role 是 boss 的照標
+    expect(mapRoleNote({ role: "training" })).toBe("（試玩專用，預設）");
+    expect(mapRoleNote({ role: "boss" })).toBe("（頭目地圖）");
+    expect(mapRoleNote({ role: null })).toBe("");
+    expect(mapRoleNote({})).toBe(""); // 舊伺服器沒有 role 欄位：當一般地圖
   });
 
   it("refuses to try out a skill that is illegal or unfinished", () => {
