@@ -125,13 +125,11 @@ export const triggerName = (id: string): string => glossaryName("triggers", id);
 /** 未知骨架的顯示字（WL-1 b，玩法 PM 2026-11-22 定用字）：名稱表和對照表都找不到時用，玩家畫面不出現英文 id。 */
 export const UNKNOWN_SKELETON_NAME = "未知骨架";
 /**
- * 骨架的中文名（WL-1 b）：`override`（呼叫端給的覆寫；WL-1 c 起正式程式不傳，前端的覆寫表已拿掉）→ `/api/glossary` 的 `skeletons`
- * （`content/skeletons/*.yaml` 的 `name_zh`）→ 「未知骨架」。`null`、`undefined`、空字串也回「未知骨架」，不丟錯。
+ * 骨架的中文名（WL-1 b）：`/api/glossary` 的 `skeletons`（`content/skeletons/*.yaml` 的 `name_zh`）→ 「未知骨架」。
+ * `null`、`undefined`、空字串也回「未知骨架」，不丟錯。QF-5（佇列 (h)）刪掉沒人用的 `override` 參數。
  */
-export function skeletonName(id: string | null | undefined, override: Readonly<Record<string, string>> = {}): string {
+export function skeletonName(id: string | null | undefined): string {
   if (id == null || id === "") return UNKNOWN_SKELETON_NAME;
-  const own = Object.hasOwn(override, id) ? override[id] : undefined;
-  if (own !== undefined && own !== "") return own;
   const data = glossaryEntry("skeletons", id)?.name_zh;
   return data !== undefined && data !== "" ? data : UNKNOWN_SKELETON_NAME;
 }
