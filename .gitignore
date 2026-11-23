@@ -76,3 +76,6 @@ docs/phases/WC-2資料/buckets.json
 
 # 存檔備份（季末重置、×10 換算前）
 saves_backup/
+
+# pytest-testmon（TS-2 試用）
+.testmondata*
