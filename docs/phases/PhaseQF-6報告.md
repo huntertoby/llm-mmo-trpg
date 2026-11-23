@@ -1,8 +1,10 @@
 # Phase QF-6 報告：後端小修合併段（佇列 (u)、(p)、(i)、(r)）
 
-基準：main `7e0c34917`。分支 `worktree-agent-a439db38b729ca34e`，沒 push；交件前合併過 main（`d4004276c`，只多了 `docs/開發PM交接.md` 一行）。規格：`docs/phases/PhaseQF-6計畫.md`。
+基準：main `7e0c34917`。分支 `worktree-agent-a439db38b729ca34e`，沒 push；交件前合併過 main 兩次：`d4004276c` 只多了 `docs/開發PM交接.md` 一行；`72aae4737` 帶進玩法 PM 補的 06 6.3「預算」例外（`46d25550b`）。規格：`docs/phases/PhaseQF-6計畫.md`。
 
-**結論：四項都做完。** 442 招逐招預算、78 場都是 different=0。census 有 3 格不同，3 格都來自 (r)（只把 (r) 的檔換回基準再跑一次，different=0）。seed 238 那題 slow 測試恢復通過。
+**結論：四項都做完，442 招、78 場、census 都是 different=0。** seed 238 那題 slow 測試恢復通過。
+
+(r) 換過一次做法。第一版改組合器（`fa613acc3`），和 06 6.3、AP-2 第 4 項的預支基本款衝突，已經 revert（`06ed6a0af`）。之後玩法 PM 選 A：改檢查，組合器照舊；現在的做法是 `6ddc15eca`（見 2.4）。
 
 QF-5 的四個檔（`content/maps.py`、`api/schemas.py`、`api/routes/content.py`、`api/routes/workshop.py`）和 `client/` 都沒有碰。
 
@@ -13,8 +15,9 @@ QF-5 的四個檔（`content/maps.py`、`api/schemas.py`、`api/routes/content.p
 | (u) 被動技 `reaction` 篩選 id 存在檢查 | `213348695` | `content/library/ruleset.py`；新測試 `tests/content/test_trigger_reaction_ref_qf6.py` |
 | (p) AI 便宜估計補閘門降傷 | `15ea50e43` | `engine/ai/utility/skill_estimate.py`；新測試 `tests/engine/test_skill_estimate_gate_qf6.py` |
 | (i) 副手、元素中文名改讀資料 | `33a5e66aa`、`c42c51d55`（補 format） | `content/equipment.py`、`api/tuning/objects.py`、`api/tuning/diff.py`，以及傳名字的呼叫端（見 2.3）；新測試 `tests/content/test_name_tables_from_data_qf6.py` |
-| (r) 組合器不組出零預算單一效果的光環 | `fa613acc3` | `skillgen/random_composer.py`；改測試 `tests/skillgen/test_borrow_offers_ap2.py` |
-| 合併 main | `d4004276c` | |
+| (r) 第一版：組合器重抽（已撤） | `fa613acc3` → revert `06ed6a0af` | 和預支基本款衝突，轉玩法 |
+| 合併 main | `d4004276c`、`72aae4737` | 第二次帶進 06 6.3「預算」例外 |
+| (r) 預支基本款例外（玩法 PM 選 A） | `6ddc15eca` | `skillgen/budget.py`；`tests/skillgen/test_random_composer.py` 的預算窗；新測試 `tests/skillgen/test_borrow_basic_exempt_qf6.py` |
 | 報告 | 本 commit | |
 
 ## 2. 做法
@@ -57,13 +60,26 @@ QF-5 的四個檔（`content/maps.py`、`api/schemas.py`、`api/routes/content.p
   - 限定副手的詞條掛錯副手時，訊息照舊寫「只能出現在塔盾上」這種中文名。
 - CLI 快照：slow 的 `tests/cli` 全過，差異 0。
 
-### 2.4 (r) 組合器重抽零預算單一效果的光環
+### 2.4 (r) 預支基本款例外（06 6.3「預算」，玩法 PM 選 A）
 
-- 新增 `_no_zero_budget_aura`：骨架是 `aura`、只有一個效果、`skill_budget(...).total == 0` 時拋 `Retry`，交給既有的重抽迴圈（`search.composer_attempts`）。檢查規則沒有放寬。
-- 接在 `_attempt` 的兩個出口：預支基本款那條，以及一般流程。一般流程已經過了預算窗（比例至少 0.75），實際上不會碰到。
-- **1000 個種子（`compose_random_skill(seed)`）和基準比，變了 6 個：238、336、435、606、873、998。** 6 個原本都是只有 `borrow_ap` 的光環（預算 0、比例 0）；其他 994 個逐位相同。
-  - seed 238 現在是「淨化＋回復資源」的光環，比例 301/360（約 0.836）。
-- 既有測試 `test_the_composer_makes_the_basic_borrow_skill`（AP-2 第 4 項：「組合器做得出基本款」）跟這項直接衝突。改成 `test_the_composer_no_longer_makes_the_zero_budget_borrow_aura`：rare 光環 400 個種子都不會是只有預支的技能，而且都合法。見待 PM 決定 1。
+- 規則：「只有一個效果、預算 0 的技能不合法」，只有預支基本款例外。四項都符合才合法：唯一效果是 `borrow_ap`、主動技、0 AP、形狀自身。組合器照舊。
+- `skillgen/budget.py` 新增 `borrow_basic(skill)`，判斷上面四項。
+  - `BudgetReport.min_ratio`（過弱下限）原本對所有帶預支的技能都是 0，現在只有 `borrow_basic` 為真時才是 0。
+  - 其他預算 0 的單效果技能照舊算過弱（`budget.weak`）。
+- schema 原本就擋掉三種情形，所以「四項各缺一項」裡有三項本來就過不了：
+  - 預支加其他效果：「borrow_ap 必須是技能唯一的效果」；
+  - 不是主動技：「borrow_ap 只能用在主動技能」；
+  - 不是 0 AP：「ap_cost 必須是 0」。
+  - 所以實際上被收窄的只有一種：只有預支、但形狀不是自身。這種原本豁免過弱下限，現在會被擋下（目前內容和組合器都沒有這種技能）。
+- slow 測試 `test_one_thousand_seeds_are_all_valid_and_spread_out` 的預算窗（0.75～0.95），同樣只對 `borrow_basic` 例外。
+- **6 個種子都符合四項**（238、336、435、606、873、998）：都是只有 `borrow_ap`、active、0 AP、self，`min_ratio` 0，`validate_skill` 通過。新測試逐一驗證。
+- 新測試 `test_borrow_basic_exempt_qf6.py`：
+  - 四項都符合時通過；
+  - 形狀不是自身時擋下（過弱）；
+  - 唯一效果不是預支、預算 0（`leave_form`）時擋下（`budget.weak`）；
+  - 不是主動技（被動、反應）擋下；不是 0 AP 擋下；預支加其他效果擋下（後三種是 schema 擋的）；
+  - 6 個種子都是基本款。
+- 原本的 `test_the_composer_makes_the_basic_borrow_skill` 照原樣通過（revert 之後就是原檔）。
 
 ## 3. 檢查與結束碼
 
@@ -79,36 +95,28 @@ QF-5 的四個檔（`content/maps.py`、`api/schemas.py`、`api/routes/content.p
 | `uv run python scripts/check.py --all` 第 1 次 | 1（只有 ruff format 失敗：`api/gear.py`） |
 | `uv run python scripts/check.py --all` 第 2 次（`c42c51d55` 之後） | **0**：pytest 18720 passed、8 skipped；client 421 檔、4978 項；已寫通過戳記 |
 | `run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | **0**（995 passed） |
-| `run_pytest.py -q -m slow tests/skillgen/test_random_composer.py -k one_thousand` | **0**（1 passed） |
+| `run_pytest.py -q -m slow tests/skillgen/test_random_composer.py -k one_thousand` | **0**（1 passed；第一版與新版各跑過一次） |
+| 新版 (r) 之後：ruff、format、lint-imports、`content check`、`classify.py --check` | 都是 0 |
+| 新版 (r) 之後的相關測試（預支 4 檔、`test_budget`、閃現、提議、工坊、組合器、引擎預支等 15 檔，`-n 8`） | 0（295 passed） |
+| 新版 (r) 之後的 `check.py --all`、slow parity＋cli | 開發 PM 排時段後再跑（QF-5 正在用全量的時段） |
 
 ## 4. 結果比對（基準 `7e0c34917`）
 
-- 基準用 `git archive 7e0c34917 src content scripts config`，新版是全部程式 commit 之後的 worktree（`c42c51d55`）。
+- 基準用 `git archive 7e0c34917 src content scripts config`。
 - 腳本沿用 CR-1c 的 `compare78.py`、`budget.py`、`census_cmp.py`，放在暫存區，沒進 repo。
 
 | 比對 | 結果 |
 |---|---|
-| 442 招逐招預算（`BudgetReport` repr＋`validate_skill`） | 442 招，`cmp` 0（逐位相同）→ **different=0** |
-| 78 場（`compare78.py`；`format` 也比） | `battles=78 events=26741 different=0`；內嵌規則包差異 0 |
-| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時） | `cells=204 different=3`；兩邊結束碼 0 |
+| 442 招逐招預算（`BudgetReport` repr＋`validate_skill`；新版 (r) `6ddc15eca` 之後） | 442 招，`cmp` 0（逐位相同）→ **different=0**。內容裡的 `skill_borrowed_beat` 是基本款，`min_ratio` 照舊是 0 |
+| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時；新版 (r) 之後） | `cells=204 different=0 whole_equal=True` |
+| 78 場（`compare78.py`；`format` 也比；在 `c42c51d55` 跑） | `battles=78 events=26741 different=0`；內嵌規則包差異 0。新版 (r) 只改 `skillgen/budget.py`，引擎不匯入 skillgen，所以沒有重跑 |
 
-**census 的 3 格差異（全部來自 (r)）：**
-
-1. `- / active / 1 階 / epic`：`top_designs` 裡原本的「光環・自身・只有 borrow_ap（physical）」，換成「光環・allies_in_radius・apply_status:shielded_charged（poison）」。格子狀態仍是 thin，計數不變。
-2. `- / active / 3 階 / epic`：原本的「光環・自身・只有 borrow_ap（wind）」，換成「光環・square3・shield（physical）」。狀態仍是 thin。
-3. `summon / active / 1 階 / epic`：`diag.keyword_hit` 5 → 6。重抽後的技能帶到召喚關鍵字；狀態、legal、designs 不變。
-
-**來源確認**：把 HEAD 的 `src` 只換回基準的 `random_composer.py` 再跑 census，和基準比是 `cells=204 different=0 whole_equal=True`。所以 3 格都是 (r) 造成的，(u)、(p)、(i) 不影響 census。
-
-(p) 在 78 場沒有差異：現有內容沒有裝備授予的變形修正技，閘門表是空的，估計的乘數一律是 1。
+- 第一版 (r) 時 census 有 3 格不同，3 格都來自組合器改了那 6 個種子。revert 後與新版都回到 0。
+- (p) 在 78 場沒有差異：現有內容沒有裝備授予的變形修正技，閘門表是空的，估計的乘數一律是 1。
 
 ## 5. 待 PM 決定
 
-1. **（規則類，請 PM 確認）(r) 等於讓組合器不再做預支基本款。** 只有預支一個效果的基本款（06 6.3：0 AP、冷卻 2、自身、預支 1）預算本來就是 0。照規格「組合器不組出只有零預算單一效果的光環」去做，組合器的預支基本款就做不出來了。
-   - 和既有的 AP-2 第 4 項「組合器的獨立串流做得出來」直接衝突，所以原測試改成相反的斷言。
-   - 內容裡的預支技能 `skill_borrowed_beat` 不受影響；LLM 題目照舊可以用預支當核心（`test_llm_topics_can_take_borrow_as_the_core` 照過）。
-   - 抽中預支的那個獨立串流（`composer.borrow_core`，`skill_composer.yaml` 的 `borrow_core_permille: 50`、`borrow_cooldown: 2`）還在，但抽中後一定重抽，等於沒有作用。照規格不改 `config`／`content` 既有的值。
-   - 如果玩法要保留組合器的預支，另一種做法是讓基本款多帶一個有預算的效果，或者改 slow 測試的預算窗（讓預支例外）。後者等於放寬檢查規則，規格不允許，所以沒做。
+1. **(r) 已由玩法 PM 定 A，照做**：只有基本款豁免過弱下限。實際收窄的只有一種：只有預支、形狀不是自身的技能。這種原本豁免，現在擋下；目前內容和組合器都沒有。LLM 或工坊如果做出這種技能，會被判過弱。
 2. **(p) 只乘在一般估計段**：敵人分數與物件分數乘閘門‰；支援分數、扣友方分數、場地型分數不乘（閘門只降傷害）。特殊估計（召喚、區域、衝撞、投擲、位移、地形）沒有接，因為它們的分數不是照傷害算。現有內容閘門表是空的，實際上沒有影響。屬於解讀類，照最保守的做法，記在這裡。
 3. **(i) 只看有沒有問題的呼叫端沒傳名字**：`item_gen` 的兩處 `affix_slot_problems`、`world/resonance.py` 的 `loadout_problems` 只用結果是不是空的，沒傳副手名。真的拿這些訊息顯示時會寫副手 id。目前沒有路徑會把這些文字顯示出來。
 4. 沒有新增 `# noqa`。沒有改 `docs/design/`、`config/`、`content/`、`client/`、`CLAUDE.md`。
