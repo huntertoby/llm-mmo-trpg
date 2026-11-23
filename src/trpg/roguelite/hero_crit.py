@@ -4,8 +4,7 @@
 
 - 單位：:func:`~trpg.roguelite.progress.hero_spawn`（和開戰同一份範本、武器、裝備）交給
   :func:`~trpg.engine.lifecycle.make_unit`（和開戰同一個函式：裝備詞條、種族、裝備授予的技能都照算）；
-- 規則包：內容庫的規則包加上主角的生成技能（``Ruleset.with_skills``；開戰另外重算的變形閘門表
-  只影響傷害倍率，和暴擊傷害無關，所以不算）；
+- 規則包：內容庫的規則包加上主角的生成技能，和開戰同一個 ``gated_with_skills``（E5 預算閘門）；
 - 地圖：1×1 的石地（高度 0、沒有表面），主角站在 (0, 0)；第 1 輪、沒有其他單位。
 
 倍率與來源交給引擎的 :func:`~trpg.engine.crit_damage.crit_damage_breakdown`（和結算、戰鬥中的單位卡
@@ -24,6 +23,7 @@ from trpg.roguelite.progress import hero_spawn
 from trpg.roguelite.state import RunState
 from trpg.shared.rng import Rng
 from trpg.shared.types import Pos, UnitId
+from trpg.skillgen.reshape_gate import gated_with_skills
 
 __all__ = ["hero_crit_breakdown", "hero_panel_state"]
 
@@ -33,7 +33,7 @@ _HERO = UnitId("hero")
 def hero_panel_state(library: ContentLibrary, run: RunState) -> BattleState:
     """只有主角一個單位的最小戰鬥狀態（面板用，不拿來打）。"""
     spawn = hero_spawn(library, run)
-    ruleset = library.ruleset.with_skills(run.generated_skills)
+    ruleset = gated_with_skills(library, run.generated_skills)  # 和開戰同一個（E5 預算閘門）
     unit = make_unit(
         _HERO,
         template=spawn.template,
