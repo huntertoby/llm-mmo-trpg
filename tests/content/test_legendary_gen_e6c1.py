@@ -147,3 +147,13 @@ def test_signature_kind_cannot_target_a_legendary(lib: ContentLibrary) -> None:
 
 def test_deterministic(lib: ContentLibrary) -> None:
     assert _gen(lib, 7, "body", 6) == _gen(lib, 7, "body", 6)
+
+
+@pytest.mark.parametrize("slot", ["main_hand", "off_hand", "body", "feet", "neck"])
+def test_program_names_legendary(lib: ContentLibrary, slot: str) -> None:
+    """E6-c1 第 3 項：程式命名「傳說〇〇」（08 8.30 第 10 點；LLM 命名另開一段）。"""
+    for seed in range(4):
+        item = _gen(lib, seed, slot, 5)
+        epic = _gen(lib, seed, slot, 5, "epic")
+        assert item.name_zh.startswith("傳說")
+        assert item.name_zh.removeprefix("傳說") == epic.name_zh.removeprefix("史詩")

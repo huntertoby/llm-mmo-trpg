@@ -653,6 +653,12 @@ def _legendary(
     return rng.choice(pool) if pool else None
 
 
+def _item_name(rarity: Rarity, base: _Base) -> str:
+    """程式產生的名稱：「稀有度＋底材名」（#44）。傳說（E6-c1，08 8.30 第 10 點）第一版也由程式
+    取名，例如「傳說長劍」；LLM 取名另開一段，不用亂數、不看獨特效果。"""
+    return f"{RARITY_ZH[rarity]}{base.name_zh}"
+
+
 def _slot_type(slot: str) -> SlotType:
     if slot in SLOT_TYPE_OF:
         return SLOT_TYPE_OF[slot]
@@ -741,7 +747,7 @@ def generate_item(
         raise ItemGenError(f"詞條預算放不下指定的詞條 {forced}（{base.name_zh}）")
     item = ItemDef(
         id=f"item_gen_{slot_type}_{rng.randint(0, 0xFFFFFFFF):08x}",
-        name_zh=f"{RARITY_ZH[rarity]}{base.name_zh}",
+        name_zh=_item_name(rarity, base),
         slot_type=slot_type,
         weapon=None if base.weapon is None else base.weapon.id,
         offhand=None if base.offhand is None else base.offhand.id,
