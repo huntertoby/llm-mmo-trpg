@@ -25,6 +25,7 @@ from trpg.engine.events import (
 from trpg.engine.forms import leave_form
 from trpg.engine.gear.core import build_gear, gear_skill_keys, geared_template
 from trpg.engine.gear.enhance import geared_weapon
+from trpg.engine.gear.limits import limit_gear
 from trpg.engine.gear.reactions import gear_reaction_rules
 from trpg.engine.heights import change_height
 from trpg.engine.rules.facing import default_facing
@@ -347,8 +348,14 @@ def make_unit(
     基礎依範本或武器大類；``resource_attributes``（召喚物傳施放者的屬性，6.29）省略時用範本的。
 
     ``seed``（QK-6a）：戰鬥的初始種子，只用來讓一般敵人依 id 挑外觀（純顯示，不耗戰鬥亂數）；
-    召喚物不挑外觀，可以省略。"""
-    gear = build_gear(equipment if equipment is not None else Loadout(), rules.equipment)
+    召喚物不挑外觀，可以省略。
+
+    裝備的名額（E6-b1，08 8.27、8.30）：改寫規則同時 1 個、招牌同時 3 個，超過的標灰
+    （:func:`~trpg.engine.gear.limits.limit_gear`），之後的技能、反應都只看生效中的詞條。"""
+    loadout = equipment if equipment is not None else Loadout()
+    gear = limit_gear(
+        build_gear(loadout, rules.equipment), loadout, rules, race=template.race, weapon=weapon
+    )
     gear_skills = gear_skill_keys(template.skills, gear)  # E1：裝備給的技能鍵
     template = geared_template(template, gear, rules)
     weapon = geared_weapon(weapon, gear, rules.equipment)  # 武器特性強化（3G-G2）

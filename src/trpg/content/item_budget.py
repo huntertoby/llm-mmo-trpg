@@ -12,7 +12,10 @@
   觸發與武器元素詞條每件最多 1 條、基礎加成只在沒有詞條的普通物品上。
 
 條數下限與「稀有起 1 條 build 詞條」是產生器的目標，不是檢查項目：小部位預算不夠時照「每條至少
-2 點」下修（08 8.22）。傳說物品（從測試物品挑，08 8.22.1 第 7 點）不檢查。
+2 點」下修（08 8.22）。
+
+傳說（E6-c1，08 8.27、8.30 第 6、7 點）：2 條詞條（類別同史詩）＋ 1 個獨特效果；獨特效果照招牌計價
+（詞條預算的 60%），不佔那 2 條。沒有物品等級的傳說（``items.yaml`` 的測試傳說）不檢查。
 
 純函式；不讀亂數、不讀時間。
 """
@@ -61,12 +64,14 @@ __all__ = [
     "affix_points",
     "base_bonus_points",
     "base_pool",
+    "is_legendary",
     "item_base_points",
     "item_budget",
     "item_budget_problems",
     "item_gen_problems",
     "item_points",
     "item_strength",
+    "legendary_unique",
     "signature_points",
     "slot_budget",
     "total_budget",
@@ -83,7 +88,7 @@ RARITY_ZH: dict[str, str] = {
     "epic": "史詩",
     "legendary": "傳說",
 }
-_GENERATED: tuple[str, ...] = ("common", "uncommon", "rare", "epic")
+_GENERATED: tuple[str, ...] = RARITIES  # E6-c1：傳說也有詞條規則
 type ConditionTier = Literal["common", "occasional", "rare"]
 
 
@@ -187,11 +192,18 @@ class ItemGenRules(ContentModel):
     base_strength: BaseStrengthRule | None = None
     """整件物品的基礎強度換算（3K-2b）；沒填時預算分數只算詞條與基礎加成。"""
     rarities: dict[str, RarityRule]
-    """產生的稀有度（不含傳說：傳說從測試物品挑）。"""
+    """產生的稀有度。傳說（E6-c1）的條數是獨特效果以外的詞條（2 條），獨特效果另外算。"""
     signature_rarities: tuple[str, ...] = ()
     """帶招牌的稀有度（E6-a1，08 8.27：稀有、史詩）。"""
     signature_slots: tuple[SlotType, ...] = ()
     """帶招牌的部位（E6-a1，08 8.27：主手、副手、身體、腳、項鍊；頭、手、戒指不帶）。"""
+    legendary_slots: tuple[SlotType, ...] = ()
+    """傳說能出的部位（E6-c1，08 8.30 第 6 點：主手、副手、身體、腳、項鍊）；其他部位抽到傳說時降成
+    史詩。"""
+    legendary_enabled: bool = False
+    """產生器自己產傳說（E6-c1，08 8.27、8.30 第 10、11 點：預設關，第 10 步內容寫好、
+    招牌標完再開）。關著的時候抽到傳說照舊從 ``items.yaml`` 的測試傳說挑，
+    結果和 E6-c1 之前逐位元相同。"""
     signature_enabled: bool = False
     """產生器放不放招牌（E6-a1，08 8.30 第 11 點：預設關，內容進來再開）。關著的時候產生器的結果和
     E6 之前逐位元相同。"""
@@ -249,6 +261,10 @@ class ItemGenRules(ContentModel):
             raise ValueError("signature_weights 不可為負")
         return self
 
+    def legendary_slot(self, slot_type: SlotType) -> bool:
+        """這個部位能不能出傳說（08 8.30 第 6 點；E6-c1）。"""
+        return slot_type in self.legendary_slots
+
     def carries_signature(self, rarity: str | None, slot_type: SlotType) -> bool:
         """這個稀有度、部位的物品帶不帶招牌（08 8.27；E6-a1）。"""
         return rarity in self.signature_rarities and slot_type in self.signature_slots
@@ -305,13 +321,31 @@ def signature_points(rules: ItemGenRules, budget: int) -> Fraction:
     return Fraction(budget * rules.signature_permille, _PERMILLE)
 
 
+def legendary_unique(affix: AffixDef) -> bool:
+    """能當傳說獨特效果的詞條（E6-c1，08 8.30 第 7 點）：招牌詞條、改寫規則、標了「限傳說」的詞條。
+    傳說另外 2 條的類別同史詩，不會是這些詞條，所以傳說上符合的那一條就是獨特效果。"""
+    return affix.signature is not None or affix.category == "rule" or affix.legendary_only
+
+
+def is_legendary(item: ItemDef) -> bool:
+    """傳說物品（``legendary`` 旗標或稀有度是傳說）。"""
+    return item.legendary or item.rarity == "legendary"
+
+
 def affix_points(
-    rules: ItemGenRules, affix: AffixDef, value: int | None, *, budget: int | None = None
+    rules: ItemGenRules,
+    affix: AffixDef,
+    value: int | None,
+    *,
+    budget: int | None = None,
+    legendary: bool = False,
 ) -> Fraction:
     """一條詞條的物品預算點數（8.22.1 第 4 點）。
 
     - 招牌詞條（``signature`` 有值，E6-a1）且給了該件的詞條預算 ``budget``：
       :func:`signature_points`（08 8.27「招牌效果佔該件詞條預算的固定比例」）；
+    - 傳說物品（``legendary``，E6-c1）上的獨特效果（:func:`legendary_unique`）且給了 ``budget``：
+      同招牌，:func:`signature_points`（08 8.27「獨特效果佔 60%」）；
     - 數值：單位價 × 數值；條件數值：再 × 條件成立率；
     - 代價型：正面 − 負面，至少 ``cost_min_points``；
     - 武器元素詞條：``weapon_element_points``；觸發：類別點數，有每回合／每輪上限再 × 0.7；
@@ -319,7 +353,9 @@ def affix_points(
 
     沒給 ``budget`` 時招牌詞條照類別固定點數算（不知道是哪件物品，例如沒有物品等級的物品）。
     """
-    if affix.signature is not None and budget is not None:
+    if budget is not None and (
+        affix.signature is not None or (legendary and legendary_unique(affix))
+    ):
         return signature_points(rules, budget)
     if isinstance(affix, StatAffix):
         return rules.stat_prices[affix.stat].of(value or 0)
@@ -351,9 +387,12 @@ def _item_affix_budget(rules: ItemGenRules, item: ItemDef) -> int | None:
 def item_points(rules: ItemGenRules, item: ItemDef, affixes: Mapping[str, AffixDef]) -> Fraction:
     """一件物品的詞條點數合計（含基礎加成；招牌詞條照該件的詞條預算計價）。"""
     budget = _item_affix_budget(rules, item)
+    legendary = is_legendary(item)
     total = base_bonus_points(rules, item.base_bonus_permille)
     for roll in item.affixes:
-        total += affix_points(rules, affixes[roll.affix], roll.value, budget=budget)
+        total += affix_points(
+            rules, affixes[roll.affix], roll.value, budget=budget, legendary=legendary
+        )
     return total
 
 
@@ -429,15 +468,24 @@ def _rarity_problems(
     if rule is None:
         return [f"{where}：未知的稀有度 {rarity}（可用：{', '.join(rules.rarities)}）"]
     problems: list[str] = []
-    if len(defs) > rule.max_affixes:
+    unique = None
+    if rarity == "legendary":  # 獨特效果不佔條數、不算類別（08 8.27、8.30 第 6、7 點；E6-c1）
+        problems += _legendary_problems(rules, item, defs, where)
+        unique = next((a for a in defs if legendary_unique(a)), None)
+    counted = len(defs) - (unique is not None)
+    if counted > rule.max_affixes:
         problems.append(
-            f"{where}：{RARITY_ZH[rarity]}最多 {rule.max_affixes} 條詞條（有 {len(defs)} 條）"
+            f"{where}：{RARITY_ZH[rarity]}最多 {rule.max_affixes} 條詞條（有 {counted} 條）"
         )
     pick = rules.required_picks.get(item.slot_type)
     signature = None
     if rules.carries_signature(rarity, item.slot_type):  # 招牌算進條數，不算類別（08 8.30 第 1 點）
         signature = next((a for a in defs if a.signature is not None), None)
-    extra = [a for a in defs if a.category not in rule.categories and a is not signature]
+    extra = [
+        a
+        for a in defs
+        if a.category not in rule.categories and a is not signature and a is not unique
+    ]
     if len(extra) > rules.extra_build_affixes_max:
         ids = "、".join(a.id for a in extra)
         most = rules.extra_build_affixes_max
@@ -453,20 +501,34 @@ def _rarity_problems(
     return problems
 
 
+def _legendary_problems(
+    rules: ItemGenRules, item: ItemDef, defs: Sequence[AffixDef], where: str
+) -> list[str]:
+    """傳說的部位與獨特效果（E6-c1）：只出在 ``legendary_slots``；恰好 1 個獨特效果。"""
+    problems: list[str] = []
+    if not rules.legendary_slot(item.slot_type):
+        problems.append(f"{where}：傳說不能出在 {item.slot_type}（08 8.30 第 6 點）")
+    uniques = [a.id for a in defs if legendary_unique(a)]
+    if len(uniques) != 1:
+        found = "、".join(uniques) or "無"
+        problems.append(f"{where}：傳說要有 1 個獨特效果（有 {len(uniques)} 個：{found}）")
+    return problems
+
+
 def _fill_problems(
     rules: ItemGenRules,
     defs: Sequence[AffixDef],
     budget: int,
     points: Fraction,
     where: str,
+    *,
+    legendary: bool = False,
 ) -> list[str]:
     """點數在詞條預算的 70～100%（8.22.1 第 6 點）。招牌物品（08 8.30 第 2 點）：上限照舊是整件的
     100%；不檢查下限——招牌以外的部分放得下就放，不要求湊到 70%（E6-a2 照玩法 PM 的解讀，取代
-    E6-a1「招牌以外要到剩下預算的 70%」）。"""
-    signature = sum(
-        (signature_points(rules, budget) for a in defs if a.signature is not None), Fraction(0)
-    )
-    if not signature:
+    E6-a1「招牌以外要到剩下預算的 70%」）。傳說的獨特效果（E6-c1）比照招牌。"""
+    special = any(a.signature is not None or (legendary and legendary_unique(a)) for a in defs)
+    if not special:
         low = Fraction(budget * rules.min_fill_permille, _PERMILLE)
         if low <= points <= budget:
             return []
@@ -482,11 +544,13 @@ def _fill_problems(
 def item_budget_problems(
     rules: ItemGenRules, item: ItemDef, affixes: Mapping[str, AffixDef]
 ) -> list[str]:
-    """物品預算檢查（8.22.1 第 6 點；繁體中文，空串列為通過）。傳說物品不檢查（第一版從測試物品
-    挑）；沒有物品等級的物品無法檢查（回報問題）。白名單、可掛的部位與數值範圍由
+    """物品預算檢查（8.22.1 第 6 點；繁體中文，空串列為通過）。沒有物品等級的傳說（``items.yaml``
+    的測試傳說）不檢查；有物品等級的傳說（E6-c1 產生器產的）照「2 條詞條 ＋ 獨特效果 60%」檢查。
+    沒有物品等級的其他物品無法檢查（回報問題）。白名單、可掛的部位與數值範圍由
     :func:`~trpg.content.equipment.item_problems` 另外檢查。"""
     where = f"物品 {item.id}"
-    if item.legendary or item.rarity == "legendary":
+    legendary = is_legendary(item)
+    if legendary and item.item_level is None:
         return []
     if item.item_level is None:
         return [f"{where}：沒有物品等級，無法檢查物品預算"]
@@ -497,9 +561,9 @@ def item_budget_problems(
     problems = _rarity_problems(rules, item, defs, where)
     budget = affix_budget(rules, item.item_level, item.slot_type)
     points = item_points(rules, item, affixes)
-    problems += _fill_problems(rules, defs, budget, points, where)
+    problems += _fill_problems(rules, defs, budget, points, where, legendary=legendary)
     for roll, affix in zip(item.affixes, defs, strict=True):
-        each = affix_points(rules, affix, roll.value, budget=budget)
+        each = affix_points(rules, affix, roll.value, budget=budget, legendary=legendary)
         if each < rules.min_affix_points:
             problems.append(
                 f"{where}：詞條 {affix.id} 只有 {_fmt(each)} 點"

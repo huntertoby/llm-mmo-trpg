@@ -33,7 +33,7 @@ from trpg.content.equipment import TerrainAffix, affix_text
 from trpg.content.library import Ruleset
 from trpg.content.slots import SLOT_INDEX, SLOT_ZH
 from trpg.content.unit_rules import UNIT_RULE_SPECS, UnitRule
-from trpg.engine.gear.state import GearAffix
+from trpg.engine.gear.state import GearAffix, GearState
 from trpg.engine.state import UnitState
 from trpg.shared.types import Surface
 
@@ -47,6 +47,8 @@ __all__ = [
     "effective_strength",
     "first_source",
     "gear_move_room",
+    "gear_rule_sources",
+    "gear_strength",
     "race_overridden_fully",
     "race_override_zh",
     "raw_strength",
@@ -120,7 +122,12 @@ def raw_strength(source: RuleSource) -> int:
 def effective_strength(rules: Ruleset, unit: UnitState) -> Strength:
     """實際的強弱：裝備給的移動加成先截到裝備移動合計上限（:func:`gear_move_room`；開發 PM
     2026-11-22），其他同 :func:`raw_strength`。"""
-    room = gear_move_room(rules, unit)
+    return gear_strength(rules, unit.gear)
+
+
+def gear_strength(rules: Ruleset, gear: GearState) -> Strength:
+    """:func:`effective_strength`，但直接看裝備狀態（建立單位之前用；E6-b1 名額）。"""
+    room = _move_room(rules, gear)
 
     def strength(source: RuleSource) -> int:
         value = raw_strength(source)
@@ -175,10 +182,15 @@ def rule_keys(rule: UnitRule) -> tuple[str, ...]:
 def rule_sources(rules: Ruleset, unit: UnitState) -> tuple[RuleSource, ...]:
     """單位身上所有的規則來源：種族先，再依欄位固定順序（同欄位依詞條 ID）看生效中的地形規則。
     種族 ID 不存在時拋 ``KeyError``（載入時已驗證）。"""
+    return gear_rule_sources(rules, unit.race, unit.gear)
+
+
+def gear_rule_sources(rules: Ruleset, race: str | None, gear: GearState) -> tuple[RuleSource, ...]:
+    """:func:`rule_sources`，但直接看種族與裝備狀態（建立單位之前用；E6-b1 名額）。"""
     found: list[RuleSource] = []
-    if unit.race is not None:
-        found.append(RuleSource(rules.race_def(unit.race).passive))
-    terrain = unit.gear.active_affixes("terrain") if unit.gear.affixes else ()
+    if race is not None:
+        found.append(RuleSource(rules.race_def(race).passive))
+    terrain = gear.active_affixes("terrain") if gear.affixes else ()
     if terrain:
         ordered = sorted(terrain, key=lambda g: (SLOT_INDEX[g.slot], g.affix.id))
         found += [RuleSource(g.affix, g) for g in ordered if isinstance(g.affix, TerrainAffix)]
@@ -223,8 +235,12 @@ def gear_move_room(rules: Ruleset, unit: UnitState) -> int:
     """裝備的移動加成合計上限（``caps.move_bonus``）扣掉裝備數值詞條已經給的移動之後，地形規則還
     能加多少（最少 0）。數值詞條的移動是上限之前的合計，先截到上限；塔盾的移動 −N 在上限之後，
     不算進來（同 :func:`trpg.engine.gear.core.build_gear`）。"""
+    return _move_room(rules, unit.gear)
+
+
+def _move_room(rules: Ruleset, gear: GearState) -> int:
     cap = rules.equipment.caps.move_bonus
-    static = min(dict(unit.gear.uncapped).get("move", 0), cap)
+    static = min(dict(gear.uncapped).get("move", 0), cap)
     return max(0, cap - static)
 
 

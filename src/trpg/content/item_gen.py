@@ -14,8 +14,11 @@
    換成基礎加成。
 3. **名稱**：程式產生「稀有度＋底材名」（#44 原則；LLM 命名留給 Phase 4 之後）；詞條文字照白名單
    模板。
-4. **傳說**：不產生；從現有傳說物品挑同部位（主手還要同武器大類）的，沒有就降為史詩
-   （8.22.1 第 7 點）。
+4. **傳說**：``legendary_enabled`` 關著（預設）時不產生，從現有傳說物品挑同部位（主手還要同武器
+   大類）的，沒有就降為史詩（8.22.1 第 7 點）。打開時（E6-c1，08 8.27、8.30 第 6、7、10 點）：頭、
+   手、戒指降成史詩；其他部位先抽獨特效果（招牌那一步，見 :func:`_unique_effect`），
+   沒有候選就降成史詩；
+   再照稀有度表的傳說（2 條，類別同史詩）分剩下的預算；獨特效果放最後。
 5. **招牌**（E6-a1，08 8.27、8.30）：``signature_enabled`` 打開時，稀有、史詩的主手、副手、身體、
    腳、項鍊先依部位權重抽招牌種類（沒有候選的種類權重當 0），再從那一種抽 1 條，點數是詞條預算的
    60%；剩下的預算照 2. 分（條數少 1 條，放得下幾條算幾條，放不下就只有招牌）。招牌放在詞條的最後
@@ -57,7 +60,10 @@ from trpg.content.item_budget import (
     affix_budget,
     affix_points,
     base_bonus_points,
+    is_legendary,
     item_budget_problems,
+    legendary_unique,
+    signature_points,
 )
 from trpg.content.library import ContentLibrary
 from trpg.content.slots import SLOT_TYPE_OF, SlotType
@@ -558,6 +564,53 @@ def _signature(
     return _signature_pick(rules, rng.choice(_weighted(rng, pool)), budget)
 
 
+def _unique_kind(affix: AffixDef) -> SignatureKind | None:
+    """獨特效果候選的種類（抽種類用的部位權重）：招牌照它的種類；沒標招牌的改寫規則算改寫規則；
+    其他沒標種類的限傳說詞條為 ``None``（另成一組，權重 1）。"""
+    if affix.signature is not None:
+        return affix.signature
+    return "rule" if affix.category == "rule" else None
+
+
+def _unique_fits(library: ContentLibrary, base: _Base) -> list[AffixDef]:
+    """能當這件傳說獨特效果的詞條（依 id；08 8.30 第 7 點）：招牌詞條、改寫規則、限傳說詞條，能掛在
+    這件底材（以傳說物品檢查，所以限傳說的也能掛），不含獨特或暫緩詞條。"""
+    rules = _rules(library)
+    probe = _probe(base).model_copy(update={"legendary": True})
+    return [
+        a
+        for _, a in sorted(library.affixes.items())
+        if legendary_unique(a)
+        and a.id not in rules.unique_affixes
+        and a.id not in rules.held_back_affixes
+        and not affix_slot_problems(probe, a, base.weapon, library.weapons)
+    ]
+
+
+def _unique_effect(library: ContentLibrary, rng: Rng, base: _Base, budget: int) -> _Pick | None:
+    """傳說的獨特效果（E6-c1，08 8.27、8.30 第 7 點；走招牌那一步）：先依部位權重
+    （``signature_weights``）抽種類——沒有候選的種類權重 0，沒標種類的限傳說詞條另成一組、權重 1——
+    再從那一組（依 id）抽 1 條；數值取最強的，點數是詞條預算的 60%。沒有任何候選時為 ``None``
+    （不取亂數，呼叫端降成史詩）。"""
+    rules = _rules(library)
+    fits = _unique_fits(library, base)
+    weights = rules.signature_weights.get(base.slot_type, {})
+    pool: list[tuple[list[AffixDef], int]] = []
+    for each in SIGNATURE_KINDS:
+        members = [a for a in fits if _unique_kind(a) == each]
+        weight = weights.get(each, 0)
+        if members and weight > 0:
+            pool.append((members, weight))
+    others = [a for a in fits if _unique_kind(a) is None]
+    if others:
+        pool.append((others, 1))
+    if not pool:
+        return None
+    affix = rng.choice(_weighted(rng, pool))
+    value = _signature_value(affix)
+    return _Pick(affix, value, signature_points(rules, budget))
+
+
 def _signature_value(affix: AffixDef) -> int | None:
     """招牌的數值：取最強的（招牌點數固定是預算的 60%，和數值無關）。"""
     if affix.value is None:
@@ -587,6 +640,8 @@ def _base_bonus(rules: ItemGenRules, budget: Fraction | int) -> int | None:
 def _legendary(
     library: ContentLibrary, rng: Rng, slot_type: SlotType, weapon_class: WeaponClass | None
 ) -> ItemDef | None:
+    """開關關著時的傳說（8.22.1 第 7 點）：從 ``items.yaml`` 的測試傳說挑同部位的。
+    ``legendary_enabled`` 打開後不再走這裡（E6-c1，草案 D12：測試傳說留給測試與開發頁）。"""
     pool = [
         i
         for _, i in sorted(library.items.items())
@@ -599,6 +654,12 @@ def _legendary(
         )
     ]
     return rng.choice(pool) if pool else None
+
+
+def _item_name(rarity: Rarity, base: _Base) -> str:
+    """程式產生的名稱：「稀有度＋底材名」（#44）。傳說（E6-c1，08 8.30 第 10 點）第一版也由程式
+    取名，例如「傳說長劍」；LLM 取名另開一段，不用亂數、不看獨特效果。"""
+    return f"{RARITY_ZH[rarity]}{base.name_zh}"
 
 
 def _slot_type(slot: str) -> SlotType:
@@ -638,18 +699,38 @@ def generate_item(
     if item_level < 1:
         raise ItemGenError(f"物品等級至少 1（收到 {item_level}）")
     slot_type = _slot_type(slot)
-    if rarity == "legendary":
+    rules = _rules(library)
+    if rarity == "legendary" and not rules.legendary_enabled:  # 開關關著：E6 之前的做法
         found = _legendary(library, rng, slot_type, weapon_class)
         if found is not None:
             return found
         rarity = "epic"
-    rules = _rules(library)
-    rule = rules.rarity(rarity)
+    if rarity == "legendary" and not rules.legendary_slot(slot_type):  # 08 8.30 第 6 點
+        rarity = "epic"
     base = _base(library, rng, slot_type, weapon_class)
-    ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     budget = affix_budget(rules, item_level, slot_type)
+    unique = None
+    if rarity == "legendary":
+        if signature_kind is not None:
+            raise ItemGenError("傳說的獨特效果不能指定類型")
+        unique = _unique_effect(library, rng, base, budget)
+        if unique is None:  # 沒有獨特效果的候選：降成史詩
+            rarity = "epic"
+    rule = rules.rarity(rarity)
+    ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     signature = _signature(library, rng, base, rarity, budget, kind=signature_kind)
-    if signature is None:
+    if unique is not None:  # 傳說：2 條（剩下的預算）＋ 獨特效果，獨特效果放最後（E6-c1）
+        picks, bonus = _roll_affixes(
+            ctx,
+            rng,
+            rule,
+            Fraction(budget) - unique.points,
+            common=False,
+            forced=forced is not None,
+            allow_empty=True,
+        )
+        picks = [*picks, unique]
+    elif signature is None:
         picks, bonus = _roll_affixes(
             ctx, rng, rule, budget, common=rarity == "common", forced=forced is not None
         )
@@ -669,13 +750,14 @@ def generate_item(
         raise ItemGenError(f"詞條預算放不下指定的詞條 {forced}（{base.name_zh}）")
     item = ItemDef(
         id=f"item_gen_{slot_type}_{rng.randint(0, 0xFFFFFFFF):08x}",
-        name_zh=f"{RARITY_ZH[rarity]}{base.name_zh}",
+        name_zh=_item_name(rarity, base),
         slot_type=slot_type,
         weapon=None if base.weapon is None else base.weapon.id,
         offhand=None if base.offhand is None else base.offhand.id,
         offhand_def=base.offhand,
         paired=base.paired,
         tags=base.tags,
+        legendary=unique is not None,
         affixes=tuple(AffixRoll(affix=p.affix.id, value=p.value) for p in picks),
         kind=base.kind,
         form=base.form,
@@ -758,7 +840,10 @@ def affix_choices(
 
     招牌（E6-a2，08 8.30 第 3 點）：只換成同一種的另一條（能掛在這件、和其他條相容、不是原本那條、
     不是傳說限定、獨特或暫緩詞條）；數值取最強的（招牌點數固定是預算的 60%）。附魔台的「指定」不能
-    指定招牌（8.30 第 10 點），由呼叫端擋。"""
+    指定招牌（8.30 第 10 點），由呼叫端擋。
+
+    傳說（E6-c1，08 8.27「不能重抽獨特效果」）：獨特效果沒有候選；另外 2 條照一般規則（點數算法裡
+    獨特效果照 60%）。"""
     rules = _rules(library)
     if item.item_level is None or item.rarity is None or item.rarity not in rules.rarities:
         return []
@@ -768,6 +853,8 @@ def affix_choices(
     if current in rules.unique_affixes:
         return []
     current_affix = library.affixes.get(current)
+    if current_affix is not None and is_legendary(item) and legendary_unique(current_affix):
+        return []  # 傳說的獨特效果不能重抽（08 8.27；E6-c1）
     if current_affix is not None and current_affix.signature is not None:
         return _signature_choices(library, item, index, current_affix)
     rule = rules.rarity(item.rarity)
@@ -793,11 +880,12 @@ def affix_choices(
 
 def _others(library: ContentLibrary, item: ItemDef, index: int, budget: int) -> list[_Pick]:
     rules = _rules(library)
+    legendary = is_legendary(item)
     others: list[_Pick] = []
     for i, roll in enumerate(item.affixes):
         other = library.affixes.get(roll.affix)
         if i != index and other is not None:
-            points = affix_points(rules, other, roll.value, budget=budget)
+            points = affix_points(rules, other, roll.value, budget=budget, legendary=legendary)
             others.append(_Pick(other, roll.value, points))
     return others
 
@@ -841,31 +929,45 @@ def pick_affix(
 
 
 def _lower_value(
-    rules: ItemGenRules, affix: AffixDef, value: int | None, allowance: Fraction, budget: int
+    rules: ItemGenRules,
+    affix: AffixDef,
+    value: int | None,
+    allowance: Fraction,
+    budget: int,
+    *,
+    legendary: bool = False,
 ) -> int | None:
     """從原本的數值往下限找第一個放得進 ``allowance`` 的數值；都放不進時用下限（照穿，5D-2b）。
-    點數和數值無關的詞條（固定數值、``value`` 沒有範圍、招牌）照舊。"""
+    點數和數值無關的詞條（固定數值、``value`` 沒有範圍、招牌、傳說的獨特效果）照舊。"""
     if affix.value is None or value is None:
         return value
     lo = affix.value.min
-    if affix_points(rules, affix, lo, budget=budget) == affix_points(
-        rules, affix, value, budget=budget
+    if affix_points(rules, affix, lo, budget=budget, legendary=legendary) == affix_points(
+        rules, affix, value, budget=budget, legendary=legendary
     ):
         return value
     step = -1 if value >= lo else 1
     for candidate in range(value, lo + step, step):
-        if affix_points(rules, affix, candidate, budget=budget) <= allowance:
+        if affix_points(rules, affix, candidate, budget=budget, legendary=legendary) <= allowance:
             return candidate
     return lo
 
 
-def _fixed_points(rules: ItemGenRules, affix: AffixDef, budget: int) -> bool:
-    """點數和數值無關的詞條（沒有範圍，或上下限點數相同；招牌）：縮數值也省不了點數。"""
+def _fixed_points(
+    rules: ItemGenRules, affix: AffixDef, budget: int, *, legendary: bool = False
+) -> bool:
+    """點數和數值無關的詞條（沒有範圍，或上下限點數相同；招牌、傳說的獨特效果）：縮數值也省不了
+    點數。"""
     if affix.value is None:
         return True
-    return affix_points(rules, affix, affix.value.min, budget=budget) == affix_points(
-        rules, affix, affix.value.max, budget=budget
-    )
+    return affix_points(
+        rules, affix, affix.value.min, budget=budget, legendary=legendary
+    ) == affix_points(rules, affix, affix.value.max, budget=budget, legendary=legendary)
+
+
+def _kept_last(affix: AffixDef, *, legendary: bool) -> bool:
+    """一定在、最後才拿的詞條：招牌（08 8.30 第 2 點）與傳說的獨特效果（E6-c1）。"""
+    return affix.signature is not None or (legendary and legendary_unique(affix))
 
 
 def _drop_fixed(
@@ -874,29 +976,32 @@ def _drop_fixed(
     affixes: Sequence[AffixRoll],
     budget: Fraction,
     item_budget: int,
+    *,
+    legendary: bool = False,
 ) -> tuple[AffixRoll, ...]:
     """每條都取下限仍超過 ``budget`` 時，從點數最高的固定點數詞條開始拿掉（同點數先拿後面的），
     直到下限總點數放得進；全部固定詞條拿掉仍放不進就停（範圍詞條照穿，5D-4 玩法 PM 代決，#87）。
     **build 詞條（關鍵字的技能強化）最後才拿**：先拿其他固定點數詞條，只剩 build 詞條仍超出預算
-    才拿它（5C-3f 玩法 PM 代決）。``item_budget``：新等級的詞條預算（招牌計價用，E6-a1）。"""
+    才拿它（5C-3f 玩法 PM 代決）。``item_budget``：新等級的詞條預算（招牌計價用，E6-a1）；
+    ``legendary``：傳說物品（獨特效果照招牌計價、最後才拿，E6-c1）。"""
     kept = list(affixes)
 
     def floor(roll: AffixRoll) -> Fraction:
         d = library.affixes[roll.affix]
         low = None if d.value is None else d.value.min
-        return affix_points(rules, d, low, budget=item_budget)
+        return affix_points(rules, d, low, budget=item_budget, legendary=legendary)
 
     def is_build(roll: AffixRoll) -> bool:
         return isinstance(library.affixes[roll.affix], KeywordAffix)
 
-    def is_signature(roll: AffixRoll) -> bool:  # 招牌一定在（08 8.30 第 2 點）：最後才拿
-        return library.affixes[roll.affix].signature is not None
+    def is_signature(roll: AffixRoll) -> bool:  # 招牌、獨特效果一定在：最後才拿
+        return _kept_last(library.affixes[roll.affix], legendary=legendary)
 
     while sum((floor(r) for r in kept), Fraction(0)) > budget:
         fixed = [
             i
             for i, r in enumerate(kept)
-            if _fixed_points(rules, library.affixes[r.affix], item_budget)
+            if _fixed_points(rules, library.affixes[r.affix], item_budget, legendary=legendary)
         ]
         if not fixed:
             break
@@ -931,19 +1036,26 @@ def downscale_item(library: ContentLibrary, item: ItemDef, item_level: int) -> I
         bonus = min(item.base_bonus_permille, cap)
         update["base_bonus_permille"] = bonus
         budget -= base_bonus_points(rules, bonus)
-    kept = _drop_fixed(rules, library, item.affixes, budget, item_budget)
+    legendary = is_legendary(item)
+    kept = _drop_fixed(rules, library, item.affixes, budget, item_budget, legendary=legendary)
     defs = [library.affixes[r.affix] for r in kept]
     mins = [
-        affix_points(rules, d, None if d.value is None else d.value.min, budget=item_budget)
+        affix_points(
+            rules,
+            d,
+            None if d.value is None else d.value.min,
+            budget=item_budget,
+            legendary=legendary,
+        )
         for d in defs
     ]
     rolls: list[AffixRoll] = []
     spent = Fraction(0)
     for i, (roll, affix) in enumerate(zip(kept, defs, strict=True)):
         allowance = budget - spent - sum(mins[i + 1 :], Fraction(0))
-        value = _lower_value(rules, affix, roll.value, allowance, item_budget)
+        value = _lower_value(rules, affix, roll.value, allowance, item_budget, legendary=legendary)
         rolls.append(roll.model_copy(update={"value": value}))
-        spent += affix_points(rules, affix, value, budget=item_budget)
+        spent += affix_points(rules, affix, value, budget=item_budget, legendary=legendary)
     update["affixes"] = tuple(rolls)
     return item.model_copy(update=update)
 
@@ -966,8 +1078,11 @@ def with_affix(library: ContentLibrary, item: ItemDef, affix_id: str) -> ItemDef
     if rules is None or item.item_level is None:
         kept = list(item.affixes)[: limit - 1]
         return item.model_copy(update={"affixes": (*kept, AffixRoll(affix=affix.id))})
+    legendary = is_legendary(item)
     if item.rarity in rules.rarities:
-        limit = min(limit, max(1, rules.rarity(item.rarity).max_affixes))
+        # 傳說的獨特效果不佔稀有度的條數（E6-c1）
+        unique = legendary and any(legendary_unique(library.affixes[r.affix]) for r in item.affixes)
+        limit = min(limit, max(1, rules.rarity(item.rarity).max_affixes) + unique)
     whole = affix_budget(rules, item.item_level, item.slot_type)
     budget = Fraction(whole)
     lo = None if affix.value is None else affix.value.min
@@ -978,14 +1093,23 @@ def with_affix(library: ContentLibrary, item: ItemDef, affix_id: str) -> ItemDef
 
     def spent(rolls: Sequence[AffixRoll]) -> Fraction:
         return sum(
-            (affix_points(rules, library.affixes[r.affix], r.value, budget=whole) for r in rolls),
+            (
+                affix_points(
+                    rules, library.affixes[r.affix], r.value, budget=whole, legendary=legendary
+                )
+                for r in rolls
+            ),
             Fraction(0),
         )
 
     kept = list(item.affixes)
     while kept and (len(kept) + 1 > limit or spent(kept) + points > budget):
-        # 招牌一定在（08 8.30 第 2 點）：從最後一條「不是招牌」的開始拿
-        plain = [i for i, r in enumerate(kept) if library.affixes[r.affix].signature is None]
+        # 招牌、傳說的獨特效果一定在（08 8.30 第 2 點；E6-c1）：從最後一條「不是這些」的開始拿
+        plain = [
+            i
+            for i, r in enumerate(kept)
+            if not _kept_last(library.affixes[r.affix], legendary=legendary)
+        ]
         if not plain:
             break
         del kept[plain[-1]]

@@ -846,7 +846,8 @@ targets:
       - {path: caps.crit_range_min, label_zh: 暴擊範圍最低（自然骰）, group_zh: 硬上限, kind: int, hint_min: 16, hint_max: 19, note_zh: 裝備擴大暴擊範圍時，最多擴大到自然骰這個數字起就暴擊（18＝18、19、20 都暴擊）。越小，堆暴擊的裝備越強。只能 2～20。}
       - {path: caps.move_bonus, label_zh: 全身移動加成上限（格）, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 裝備的移動加成合計最多幾格。越大，堆移動的裝備越強。}
       - {path: caps.cost_affixes, label_zh: 全身代價型詞條上限, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 全身最多穿幾條代價型詞條（超過時穿戴驗證失敗）。越大，越能用代價換強度。}
-      - {path: caps.rule_affixes, label_zh: 全身改變規則類詞條上限, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 全身最多幾條改變規則類詞條同時生效（超過時穿戴驗證失敗）。越大，越能疊改變規則的效果。}
+      - {path: caps.rule_affixes, label_zh: 全身改變規則類詞條上限, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 全身最多幾條改變規則類詞條同時生效（超過的標灰，由玩家勾選要生效的）。越大，越能疊改變規則的效果。}
+      - {path: caps.signature_active, label_zh: 同時生效的招牌效果上限, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 5, note_zh: 身上最多幾個招牌效果同時生效（含傳說的獨特效果；超過的標灰，由玩家勾選要生效的）。越大，越能堆多種招牌的玩法。}
   # HC-W2：物品生成（item_gen.yaml）。只開計價與規則數值；稀有度條件的分類（conditional_rates）、類別清單、
   # 必選詞條、獨特與暫緩詞條清單是結構，不開；max_attempts、offer_attempts 是程式的重試次數，不開。
   - kind: item_gen
@@ -866,6 +867,8 @@ targets:
       - {path: rarities.rare.max_affixes, label_zh: 稀有：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 2, hint_max: 4, note_zh: 稀有物品最多幾條詞條。越大，稀有物品越強。只能 0～8。}
       - {path: rarities.epic.min_affixes, label_zh: 史詩：最少詞條數, group_zh: 稀有度, kind: int, hint_min: 2, hint_max: 4, note_zh: 史詩物品至少幾條詞條（含 1 條 build 詞條）。越大，史詩物品越強。不能大於最多詞條數。}
       - {path: rarities.epic.max_affixes, label_zh: 史詩：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 2, hint_max: 4, note_zh: 史詩物品最多幾條詞條。越大，史詩物品越強。只能 0～8。}
+      - {path: rarities.legendary.min_affixes, label_zh: 傳說：最少詞條數, group_zh: 稀有度, kind: int, hint_min: 1, hint_max: 3, note_zh: 傳說物品除了獨特效果以外至少幾條詞條（含 1 條 build 詞條；獨特效果另外算）。越大，傳說的詞條越多、每條越小（同等級同預算）。不能大於最多詞條數。}
+      - {path: rarities.legendary.max_affixes, label_zh: 傳說：最多詞條數, group_zh: 稀有度, kind: int, hint_min: 1, hint_max: 3, note_zh: 傳說物品除了獨特效果以外最多幾條詞條（獨特效果另外算）。越大，傳說的詞條越多、每條越小（同等級同預算）。只能 0～8。}
       - {path: "total_budget[*].total", label_zh: 總點數, group_zh: 預算, kind: int, hint_min: 50, hint_max: 700, note_zh: 這個物品等級的全身裝備預算（點）；表列等級之間線性內插，最後一段之後沿用最後一段的斜率。越大，同等級的裝備越強。後面的等級不能比前面少。}
       - {path: min_fill_permille, label_zh: 詞條點數至少用到預算的（‰）, group_zh: 預算, kind: permille, hint_min: 350, hint_max: 1000, note_zh: 產生的詞條點數至少要到詞條預算的這麼多千分比（700＝70%）。越大，產出越接近滿預算（強度更平均）；越小，弱裝備越多。只能 0～1000。}
       - {path: min_affix_points, label_zh: 每條詞條至少幾點, group_zh: 預算, kind: int, hint_min: 1, hint_max: 4, note_zh: 每條詞條至少要分到這麼多點。越大，低等級的裝備越難塞多條詞條。}

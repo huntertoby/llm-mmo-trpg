@@ -1240,7 +1240,7 @@ rules:
     status: done
     files: src/trpg/content/item_budget.py
     kind: text
-    where: ['item_budget_problems', '_fill_problems']   # E6-a1：檢查搬進 _fill_problems
+    where: ['item_budget_problems', '_fill_problems', '_legendary_problems']   # E6-a1：檢查搬進 _fill_problems；E6-c1：傳說的部位與獨特效果
     note: HC-6a 改判：預算區間的上界 100% 是「不超過預算本身」（下界已從 min_fill_permille 帶入）。
   - id: py-content-library-ruleset-text-text
     class: const

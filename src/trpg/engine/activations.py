@@ -146,7 +146,8 @@ def _gear_rule_change(
     state: BattleState, unit: UnitState, kind: str | None
 ) -> ActiveRuleChange | None:
     """裝備詞條提供的規則改變（只算生效的詞條，詞條 ID 排序）。一個單位同時最多 1 個規則改變：
-    穿戴驗證不允許兩條不同的規則詞條，啟動型傳說遇到裝備的規則時不能啟動。"""
+    兩條以上不同的規則詞條時只有 1 條生效、其他標灰（E6-b1，:mod:`trpg.engine.gear.limits`；
+    標灰的不擋啟動），啟動型傳說遇到生效中的裝備規則時不能啟動。"""
     for entry in unit.gear.active_affixes("rule"):
         affix = entry.affix
         if not isinstance(affix, RuleAffix):

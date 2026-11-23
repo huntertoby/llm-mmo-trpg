@@ -274,6 +274,8 @@ items:
     material: steel
     affixes:
       - {affix: affix_react_double_overwatch}
+  # 三件測試傳說（G3）：給測試與開發頁用（E6 草案 D12）。產生器只在 legendary_enabled 關著時挑它們；
+  # 打開後產生器自己產傳說，不再挑這三件（E6-c1）。
   - id: item_g3b_legend_ember
     name_zh: 慈焰項鍊
     slot_type: neck

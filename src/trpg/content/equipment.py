@@ -103,6 +103,7 @@ __all__ = [
     "affix_slot_problems",
     "affix_strength",
     "affix_text",
+    "chosen_key",
     "item_problems",
     "loadout_held",
     "loadout_problems",
@@ -1012,8 +1013,11 @@ class EquipmentCaps(ContentModel):
     - ``crit_range_min``：暴擊範圍最低 18（自然 18～20；G2 的武器特性與技能強化接上）。
     - ``move_bonus``：裝備的移動加成合計 ＋2。
     - ``cost_affixes``：代價型詞條全身最多 2 條（超過時穿戴驗證失敗）。
-    - ``rule_affixes``：改變規則類詞條全身最多 1 條（同時生效的規則改變最多 1 個；超過時穿戴驗證
-      失敗；同一條詞條 id 掛在兩件物品上只算 1 條）。
+    - ``rule_affixes``：改變規則類詞條全身同時只生效 1 個（同一條詞條 id 掛在兩件物品上只算 1 個）。
+      E6-b1 起超過時不再是穿戴錯誤：玩家勾選的（``Loadout.chosen``）優先，其次照欄位順序，其他的
+      標灰（08 8.27；:mod:`trpg.engine.gear.limits`）。
+    - ``signature_active``：身上同時生效的招牌效果最多 3 個（E6-b1，08 8.27、8.30 第 4 點）；超過的
+      標灰（:mod:`trpg.engine.gear.limits`）。
     - 觸發連鎖沿用 ``core.max_trigger_depth``（G3）。
     """
 
@@ -1026,6 +1030,7 @@ class EquipmentCaps(ContentModel):
     move_bonus: int = Field(ge=0)
     cost_affixes: int = Field(ge=0)
     rule_affixes: int = Field(default=1, ge=0)
+    signature_active: int = Field(ge=0)
 
 
 class EquipmentRules(ContentModel):
@@ -1084,9 +1089,14 @@ class EquippedItem(ContentModel):
 
 class Loadout(ContentModel):
     """一個單位的裝備快照（依欄位固定順序；空 ＝ 沒有裝備）。主手沒有物品時，單位的武器（舊的
-    ``weapon``）視為主手的基礎武器。"""
+    ``weapon``）視為主手的基礎武器。
+
+    ``chosen``（E6-b1，08 8.27、8.30 第 4 點，#180）：玩家在角色面板勾選要生效的招牌效果與改寫
+    規則，每個是 ``"<欄位>:<詞條 ID>"``（:func:`chosen_key`）。跟著快照進戰鬥，重播自成一體；空的
+    時候不輸出。指到身上沒有的詞條時不起作用（換裝後留下的舊勾選），不算錯誤。"""
 
     items: tuple[EquippedItem, ...] = ()
+    chosen: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
 
     @model_validator(mode="after")
     def _check(self) -> Loadout:
@@ -1094,6 +1104,11 @@ class Loadout(ContentModel):
         order = [SLOT_INDEX[e.slot] for e in self.items]
         if order != sorted(order):
             raise ValueError("裝備快照必須依欄位固定順序排列")
+        _unique(list(self.chosen), "招牌勾選")
+        for key in self.chosen:
+            slot, sep, affix_id = key.partition(":")
+            if not sep or slot not in SLOT_INDEX or not affix_id:
+                raise ValueError(f"招牌勾選的格式是「欄位:詞條 ID」：{key}")
         return self
 
     def by_slot(self) -> dict[str, EquippedItem]:
@@ -1106,6 +1121,11 @@ class Loadout(ContentModel):
         """副手欄的副手定義（沒有副手物品或物品沒有副手基礎特性時為 ``None``）。"""
         off = self.item_in("off_hand")
         return None if off is None else off.item.offhand_def
+
+
+def chosen_key(slot: str, affix_id: str) -> str:
+    """:attr:`Loadout.chosen` 的一個勾選（``"<欄位>:<詞條 ID>"``）。"""
+    return f"{slot}:{affix_id}"
 
 
 def loadout_held(weapon: WeaponDef, loadout: Loadout | None) -> dict[str, str]:
@@ -1291,8 +1311,8 @@ def loadout_problems(
     - 主手物品的武器必須是單位的武器（``weapon``，舊資料的主手）。
     - 雙手武器與成對武器占用副手（副手必須空著）。
     - 同一枚戒指不能裝兩次（``ring_1`` 與 ``ring_2`` 不可是同一個物品 id）。
-    - 代價型詞條全身最多 ``caps.cost_affixes`` 條；改變規則類詞條全身最多 ``caps.rule_affixes``
-      個（不同的詞條 id）。
+    - 代價型詞條全身最多 ``caps.cost_affixes`` 條。改變規則類詞條超過 ``caps.rule_affixes`` 個不是
+      穿戴錯誤（E6-b1，08 8.27）：多的那幾條在戰鬥中標灰（:mod:`trpg.engine.gear.limits`）。
     - 每件物品的詞條可以掛在這件物品上（:func:`_affix_slot_problems`）、數值在範圍內。
 
     ``offhand_names``：副手 ID → 中文名（詞條限定副手時的訊息用；規則包的 ``gear_names``）。
@@ -1341,9 +1361,4 @@ def loadout_problems(
     costs = sum(1 for e in loadout.items for a in e.affixes if a.affix.category == "cost")
     if costs > rules.caps.cost_affixes:
         problems.append(f"代價型詞條全身最多 {rules.caps.cost_affixes} 條（目前 {costs} 條）")
-    rule_ids = {a.affix.id for e in loadout.items for a in e.affixes if a.affix.category == "rule"}
-    if len(rule_ids) > rules.caps.rule_affixes:
-        problems.append(
-            f"改變規則類詞條全身最多 {rules.caps.rule_affixes} 個（目前 {len(rule_ids)} 個）"
-        )
     return problems

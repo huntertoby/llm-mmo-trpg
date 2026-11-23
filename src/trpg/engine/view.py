@@ -27,7 +27,7 @@ from trpg.content.maps import Objective
 from trpg.content.parts import PartReach, max_part_hp
 from trpg.content.races import RaceLook
 from trpg.content.skills import CHARGING, TIME_BOMB
-from trpg.content.slots import SLOT_ZH
+from trpg.content.slots import SLOT_INDEX, SLOT_ZH
 from trpg.engine import modifiers
 from trpg.engine.attack_element import effective_attack_element
 from trpg.engine.attack_shapes import skill_note_zh, skill_problem_zh
@@ -76,6 +76,8 @@ from trpg.shared.types import Element, Pos, Surface, Team, UnitId, rune_name
 
 __all__ = [
     "REACTION_TRIGGER_TEXT",
+    "RULE_LIMITED_ZH",
+    "SIGNATURE_LIMITED_ZH",
     "ActivationView",
     "AffixLineView",
     "AppearanceView",
@@ -289,8 +291,23 @@ class AffixLineView(_ViewModel):
     duplicate_of: str | None = None
     overlap_zh: str | None = None
     off_zh: str | None = None
-    """授予技能的詞條（第 9 類）：給的技能在這名單位身上沒有效果的原因（E5，例「這把武器不能
-    套用」）；有效時 ``None``。"""
+    """沒有效果的原因，前端照字顯示（``client/src/gear/affixStatus.ts`` 的 ``inactiveNote``）；
+    有效時 ``None``：
+
+    - 授予技能的詞條（第 9 類，生效中）：給的技能在這名單位身上沒有效果（E5，例「這把武器不能
+      套用」）。
+    - 因為名額標灰的詞條（E6-b1，08 8.27、8.30 第 4 點）：改寫規則「和主手的改寫規則衝突，沒有
+      效果」（:data:`RULE_LIMITED_ZH`）、招牌「身上已經有 3 個招牌效果生效，……」
+      （:data:`SIGNATURE_LIMITED_ZH`）。沿用這個欄位，API 與前端不用改（E6-b1 不動前端）。
+
+    誰看得到照裝備的顯示規則（和其他詞條欄位一樣）。"""
+
+
+RULE_LIMITED_ZH = "和{slot}的改寫規則衝突，沒有效果"
+"""改寫規則超過 1 條時，標灰那條的說明（08 8.27 原文；``slot`` 是生效那條的部位）。"""
+
+SIGNATURE_LIMITED_ZH = "身上已經有 {n} 個招牌效果生效，這個沒有效果，可以在角色面板換選"
+"""招牌超過 3 個時，標灰那條的說明（08 8.30 第 4 點原文；``n`` 是 ``caps.signature_active``）。"""
 
 
 class AppearanceView(_ViewModel):
@@ -821,8 +838,8 @@ def _rule_view(state: BattleState, unit: UnitState, rule: ReactionRule) -> React
 
 def _duplicate_of(gear: GearState, entry: GearAffix) -> str | None:
     """沒有生效的重複詞條所重複的那一條（同 id、排第一的詞條）：「部位＋詞條文字」；生效中的詞條
-    與找不到時 ``None``。"""
-    if entry.active:
+    與找不到時 ``None``。因為名額標灰的（E6-b1）不是重複，也是 ``None``。"""
+    if entry.active or entry.limited_by is not None:
         return None
     winner = next((g for g in gear.affixes if g.affix.id == entry.affix.id and g.rank == 0), None)
     if winner is None or winner is entry:
@@ -850,8 +867,26 @@ def _affix_line(
         weight_permille=a.weight_permille if duplicate is None else 0,
         duplicate_of=duplicate if duplicate is not None else _duplicate_of(gear, a),
         overlap_zh=None if note is None else note.overlap_zh,
-        off_zh=_affix_off_zh(state, unit, a),
+        off_zh=_limited_zh(state, gear, a) or _affix_off_zh(state, unit, a),
     )
+
+
+def _limited_zh(state: BattleState, gear: GearState, entry: GearAffix) -> str | None:
+    """因為名額標灰的說明（E6-b1，放在 :attr:`AffixLineView.off_zh`）；沒有被名額擋下時
+    ``None``。"""
+    if entry.limited_by == "signature":
+        return SIGNATURE_LIMITED_ZH.format(n=state.ruleset.equipment.caps.signature_active)
+    if entry.limited_by != "rule":
+        return None
+    kept = [
+        g
+        for g in gear.affixes
+        if g.affix.category == "rule" and g.limited_by != "rule" and g.rank == 0
+    ]
+    if not kept:  # 名額是 0（工坊調成 0）時沒有生效的那條
+        return RULE_LIMITED_ZH.format(slot="其他裝備")
+    winner = min(kept, key=lambda g: (SLOT_INDEX[g.slot], g.affix.id))
+    return RULE_LIMITED_ZH.format(slot=SLOT_ZH[winner.slot])
 
 
 def _equipment_view(state: BattleState, unit: UnitState) -> tuple[EquipmentSlotView, ...]:
