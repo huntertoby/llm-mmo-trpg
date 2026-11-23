@@ -103,6 +103,7 @@ import { WorkshopPanel } from "../world/WorkshopPanel";
 import { WishPanel, type WishFallback } from "../world/WishPanel";
 import { tagMode, WISH_ZH, wishAction, type TagPick, type WishMode } from "../world/wish";
 import { ReselectEntry, allocateClosingLines } from "../world/ReselectEntry";
+import { pendingStoryKey, withStory } from "../world/eventStory";
 
 /** 地圖的兩層（6D-5）：區域圖、大世界圖。 */
 type MapLayer = "region" | "atlas";
@@ -185,6 +186,22 @@ export function WorldScreen({ onHome, onLogin, onLogout }: Props) {
    * 先在本機記一下（`closed`），等伺服器回來的紀錄蓋過去，不會因為送出中又跳一次。 */
   const [closed, setClosed] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => setClosed(new Set()), [charId]);
+  // WM-1：走路觸發地點事件時伺服器先回畫面（旁白占位），這裡另外送一次補旁白；同一個事件只送一次，
+  // 回來只換 `event`（走路的回應可能已經更新了位置，見 `eventStory.ts`）
+  const storyAsked = useRef<string | null>(null);
+  const storyKey = pendingStoryKey(charId, view);
+  useEffect(() => {
+    if (storyKey === null || charId === null) {
+      storyAsked.current = null;
+      return;
+    }
+    if (storyAsked.current === storyKey) return;
+    storyAsked.current = storyKey;
+    void api
+      .worldEventStory(charId)
+      .then((filled) => setView((cur) => (cur === null ? cur : withStory(cur, filled))))
+      .catch(() => undefined); // 失敗就留著占位；下次載入畫面還是 story_pending，會再送
+  }, [storyKey, charId]);
   const hintState = hintsOf(view?.hints);
   const seenIds = new Set([...hintState.seen, ...closed]);
   function markSeen(ids: string[], level?: number) {

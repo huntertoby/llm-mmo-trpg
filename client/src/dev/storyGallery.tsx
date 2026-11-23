@@ -64,6 +64,7 @@ const EVENT: WorldEventView = {
   region: "cloud_ridge",
   actor_zh: "困住的商隊",
   motive_zh: "想在天黑前過河",
+  story_pending: false,
   story: STORY,
   who_zh: "",
   want_zh: "",

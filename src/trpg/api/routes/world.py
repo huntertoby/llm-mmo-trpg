@@ -107,7 +107,13 @@ from trpg.api.world import WorldCharacterNotFoundError, WorldOutcome, WorldStore
 from trpg.api.world_dev import dev_boss_battle, dev_teleport
 from trpg.api.world_field_schemas import FieldTilesView
 from trpg.api.world_field_view import field_tiles, visible_field_map
-from trpg.api.world_flow import act_with_story, answer_situation, chat, open_situation
+from trpg.api.world_flow import (
+    act_with_story,
+    answer_situation,
+    chat,
+    narrate_event,
+    open_situation,
+)
 from trpg.api.world_pregen import (
     Kind,
     PregenWaitOut,
@@ -296,6 +302,19 @@ def post_action(
         region = store.character(character_id).region
         client = world_llm_of(request).client()
         return _view(store, act_with_story(store, client, character_id, action), region)
+
+
+@router.post("/characters/{character_id}/event_story")
+def post_event_story(character_id: str, request: Request) -> WorldView:
+    """WM-1：補上地點事件的開場旁白。走路觸發事件時（LLM 開著）先回畫面、``event.story_pending``
+    為真，前端再送這個請求：照舊用 ``event_story``（LLM，不可用時模板）寫一個 ``narrate`` 動作
+    進日誌，回傳新的畫面。已經敘述過、事件不在了或有遭遇時不寫，直接回目前的畫面。"""
+    store = world_of(request)
+    with store.lock:
+        region = store.character(character_id).region
+        client = world_llm_of(request).client()
+        outcome = narrate_event(store, client, character_id)
+        return _view(store, outcome if outcome is not None else store.sync(character_id), region)
 
 
 @router.post("/characters/{character_id}/range/trial")

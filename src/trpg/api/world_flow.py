@@ -3,7 +3,8 @@
 - :class:`WorldLlm`：大世界自己的 LLM 開關（玩法 PM 2026-11-03：預設跟著伺服器設定）。伺服器層級、
   只存記憶體；打開時先探測，連不到維持關閉並回提示（代決 5B5-1）。
 - :func:`act_with_story`：世界動作之後，角色有沒敘述過的事件就自動送一次 ``event_story``（5B-3 待決
-  建議；代決 5B5-3）。
+  建議；代決 5B5-3）。WM-1：走路（``walk``）且 LLM 開著時先回畫面，旁白由前端另外送
+  ``POST …/event_story``（:func:`narrate_event`）補上；寫進日誌的仍是同一個 ``narrate`` 動作。
 - :func:`open_situation`／:func:`answer_situation`：情境判定（09 9.6.4）。玩家文字只放進 LLM 的
   ``<player_input>``（``trpg.llm.situation`` 用 ``wrap_player_input``；代決 5B5-5）；點選引用的事實
   併進提議的用心清單，引擎照常逐筆核對（代決 5B5-4）；**第一次送出即定案**（引擎結算後清掉事件）。
@@ -45,6 +46,7 @@ __all__ = [
     "act_with_story",
     "answer_situation",
     "chat",
+    "defers_story",
     "narrate_event",
     "open_situation",
 ]
@@ -159,11 +161,20 @@ def narrate_event(
     )
 
 
+def defers_story(client: LLMClient | None, action: WorldAction) -> bool:
+    """WM-1：這個動作觸發的事件旁白要不要晚點補——走路而且會真的呼叫 LLM 時，先回畫面（不讓一步卡在
+    LLM 上）；LLM 關著時模板旁白很快，照舊在同一個請求裡寫。"""
+    return client is not None and action.kind == "walk"
+
+
 def act_with_story(
     store: WorldStore, client: LLMClient | None, character_id: str, action: WorldAction
 ) -> WorldOutcome:
-    """世界動作＋自動事件旁白（代決 5B5-3）。"""
+    """世界動作＋自動事件旁白（代決 5B5-3）。WM-1：:func:`defers_story` 為真時只做動作，旁白等前端
+    送 ``event_story`` 再補（:func:`narrate_event`；畫面的 ``event.story_pending`` 為真）。"""
     outcome = store.act(character_id, action)
+    if defers_story(client, action):
+        return outcome
     return _merge(outcome, narrate_event(store, client, character_id))
 
 

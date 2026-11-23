@@ -27,6 +27,7 @@ import { WaitScene } from "../ui/WaitScene";
 import { AttrIcon, D20, MiscGlyph, SolutionGlyph } from "./StoryIcons";
 import { HintBody, SolutionGrid } from "./SolutionTile";
 import { canSubmitAnswer, checkFormula, insertCite, lengthLabel, PLAYER_TEXT_MAX, toggleCite } from "./story";
+import { STORY_PENDING_ZH } from "./eventStory";
 
 /** 一段旁白（舊的整段顯示；「（模板文字）」只標 LLM 不可用時的降級文字 `fallback`，保底機遇的 `authored` 與 LLM 的不標）。 */
 export function StoryBlock({ story, testId = "world-story" }: { story: WorldStory; testId?: string }) {
@@ -118,6 +119,12 @@ export function EventCard({ event, busy, onOpen, onSolve, onAnswer }: EventProps
     <PopupFrame placement={INLINE} className="world-event" testId="world-event" role="region" label={`事件：${event.location_name_zh}`}>
       <EventArt event={event} />
       {event.story != null && <StoryDialog key={event.story.text_zh} story={event.story} speaker="說書人" portrait={NARRATOR_PORTRAIT} testId="world-event-story" />}
+      {/* WM-1：旁白還在路上（走路先回畫面）：占位，補上之後換成上面的旁白 */}
+      {event.story == null && event.story_pending === true && (
+        <p className="muted world-story-pending" data-testid="world-event-story-pending" aria-live="polite">
+          {STORY_PENDING_ZH}
+        </p>
+      )}
       {/* PNL-4：選項列 A（兩欄格子＋次行、放棄右下小鈕；SolutionTile.tsx） */}
       <SolutionGrid solutions={event.solutions} busy={busy} openTemplate={situation?.template ?? null} onOpen={onOpen} onSolve={onSolve} />
       {situation !== null && <SituationForm key={situation.template} event={event} busy={busy} onAnswer={onAnswer} />}

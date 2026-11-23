@@ -390,6 +390,9 @@ def event_view(
         )
         if story is not None and opening
         else None,
+        story_pending=opening is None
+        and not trigger.narrated
+        and char.pending_encounter is None,  # WM-1：和 narrate_event 會寫的條件相同
         who_zh=mask_text(who, masks),
         want_zh=mask_text(skeleton.want_zh, masks),
         obstacle_zh=mask_text(skeleton.obstacle_zh, masks),

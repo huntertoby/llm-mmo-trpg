@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import threading
+from collections import OrderedDict
 from collections.abc import Callable
 from typing import Final
 
@@ -55,6 +57,7 @@ __all__ = [
     "SERVICE_ZH",
     "STARTER_RESPEC_ZH",
     "UNAVAILABLE_ZH",
+    "clear_hero_panel_cache",
     "growth_event_line",
     "growth_view",
     "hero_panel",
@@ -90,13 +93,48 @@ _END_REASON_ZH: Final[dict[str, str]] = {"max_rounds": "輪數用完"}
 # ---------------------------------------------------------------------------
 
 
+HERO_PANEL_CACHE_MAX: Final = 64
+"""主角面板快取最多留幾份（WM-1；每個角色走路時只會用到最新的一份，舊的照最近使用淘汰）。"""
+
+type _Panel = tuple[HeroOut, PendingFlashOut | None]
+_panel_cache: OrderedDict[tuple[int, str, str], tuple[ContentLibrary, _Panel]] = OrderedDict()
+_panel_lock = threading.Lock()
+
+
+def clear_hero_panel_cache() -> None:
+    """清空主角面板快取（測試比對「有快取／沒快取」用）。"""
+    with _panel_lock:
+        _panel_cache.clear()
+
+
 def hero_panel(
     library: ContentLibrary, world: WorldState, char: CharacterState
 ) -> tuple[HeroOut, PendingFlashOut | None]:
-    """一輪格式的主角面板與待選閃現（用大世界的內容庫視圖，角色階級照 07 7.6）。"""
+    """一輪格式的主角面板與待選閃現（用大世界的內容庫視圖，角色階級照 07 7.6）。
+
+    WM-1：結果只由內容庫視圖與 :func:`~trpg.world.growth.as_run` 轉出的 ``RunState`` 決定，
+    所以照這兩樣快取——鍵是內容庫視圖本身（同一個物件）加上整份 ``RunState`` 的 JSON（技能、
+    等級、屬性、閃現、待選閃現、技能種子……全部都在裡面，任何一樣變了就是新的鍵）。角色穿戴的
+    裝備（``CharacterState.equipment``）目前不經 ``as_run``，保守起見也放進鍵：換裝備一定重算。
+    走路時角色的這些欄位都不變，每步不用再把全部技能驗證一次；回傳的模型是凍結的，共用不怕被改。"""
     lib = world_library(library)
     run = as_run(char, seed=skill_seed(world, char))
-    return hero_out(lib, run), pending_flash_out(lib, run)
+    gear = "|".join(
+        f"{slot}={item.model_dump_json()}" for slot, item in sorted(char.equipment.items())
+    )
+    key = (id(lib), run.model_dump_json(), gear)
+    with _panel_lock:
+        hit = _panel_cache.get(key)
+        if hit is not None and hit[0] is lib:
+            _panel_cache.move_to_end(key)
+            return hit[1]
+    panel = hero_out(lib, run), pending_flash_out(lib, run)
+    with _panel_lock:
+        _panel_cache[key] = (lib, panel)  # 留著內容庫的參照：id 在快取期間不會被重用
+        _panel_cache.move_to_end(key)
+        while len(_panel_cache) > HERO_PANEL_CACHE_MAX:
+            _panel_cache.popitem(last=False)
+    return panel
 
 
 def skill_names(library: ContentLibrary, char: CharacterState) -> dict[str, str]:

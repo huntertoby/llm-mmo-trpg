@@ -5,6 +5,7 @@
 // 6B-6：HUD 版面時格子照戰鬥的預設大小，鏡頭跟著主角（`camera.ts`）；畫布在可視區裡平移，逐格走時鏡頭用同樣的時間平滑跟上。
 // 點擊換算沿用 `BattleCanvas` 的 `getBoundingClientRect()`（平移後的實際位置），所以鏡頭位移自動算進去。
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import type { FieldView, Pos, WorldAction, WorldView } from "../api/types";
 import { fitScale, scaledSize } from "../battle/stageLayout";
 import type { BattleRenderer } from "../render/BattleRenderer";
@@ -21,6 +22,8 @@ import { GUIDE_BUBBLE_MS, mainQuestNpc, steleTags, type ViewBox } from "./openin
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
+import { HeldKeys } from "./heldKeys";
+import { devWalkMs, WalkAhead, type ShownHero } from "./walkAhead";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { playFieldStep } from "./fieldSteps";
 import { frozenFriends, headAnchor, headMarks, npcBubbles, type GuideLines, type HeadMark } from "./fieldPeople";
@@ -34,13 +37,12 @@ import {
   keyDirection,
   nearTarget,
   pathNextTo,
-  stepTarget,
   targetAt,
   walkAction,
   walkedCells,
   walkPlan,
+  FIELD_HERO,
   STEP_MS,
-  type Direction,
   type FieldFriend,
   type FieldTarget,
 } from "./fieldModel";
@@ -89,10 +91,11 @@ export interface HudCamera {
   columns?: readonly Rect[];
 }
 
-type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
+/** `keys`＝方向鍵／WASD：照按住的方向一格一格走，每播完一格再看還有沒有按著（WM-1）。 */
+type Job = { kind: "keys" } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
 
-/** 方向鍵最多排幾步（快速連按時；超過的丟掉，避免放開鍵之後還一直走）。 */
-const KEY_QUEUE_MAX = 3;
+/** 點擊、E 互動最多排幾個（超過的丟掉）。 */
+const JOB_QUEUE_MAX = 3;
 /** 換地圖前的淡出時間。 */
 const FADE_MS = 220;
 /** NPC 對話泡泡停留的時間。 */
@@ -136,6 +139,8 @@ function rectsOfKey(key: string): Rect[] {
 const NO_GUIDES: GuideLines = new Map();
 /** 開發模式的鏡頭位移（RT-5d；`?dev=1&devcam=dx,dy`），網址在載入時讀一次。 */
 const DEV_CAM = typeof window === "undefined" ? null : devCameraShift(window.location.search);
+/** 方向鍵先走與拉回每格的時間（WM-1；開發模式可用 `?dev=1&walkms=N` 放慢，拍連續截圖用）。 */
+const AHEAD_MS = (typeof window === "undefined" ? null : devWalkMs(window.location.search)) ?? STEP_MS;
 
 export function WorldField({ view, busy, send, commit, onInteract, hud, guides = NO_GUIDES, hideMail = false }: Props) {
   const served = view.field as FieldView;
@@ -148,6 +153,9 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     () => (frozenList === served.friends ? served : { ...served, friends: [...frozenList] }),
     [served, frozenList],
   );
+  // WM-1：方向鍵先走時，主角畫在畫面上站的格子（領先伺服器；套用伺服器畫面時一起給），其他照伺服器
+  const [ahead, setAhead] = useState<ShownHero | null>(null);
+  const shown = useMemo<FieldView>(() => (ahead === null ? field : { ...field, me: { ...field.me, ...ahead } }), [field, ahead]);
   const blocked = view.encounter != null || view.battle_id != null;
   // NPC 的對話泡泡（21.7）：這次請求說的話，約 6 秒後收起（之後沒有對話的畫面不清掉，只等時間到；換地圖就收起）
   const [bubbles, setBubbles] = useState<ReadonlyMap<string, string>>(() => new Map());
@@ -190,7 +198,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
   const [redraw, setRedraw] = useState(0);
   // 6D-ART2：主城傳送陣的光圈照大世界圖已開放的區（不新增伺服器欄位）
   const openKey = openRegionsOf(view.atlas).join(",");
-  const model = useMemo(() => fieldDrawModel(field, view.character.name, openKey === "" ? [] : openKey.split(",")), [field, view.character.name, openKey, redraw]);
+  const model = useMemo(() => fieldDrawModel(shown, view.character.name, openKey === "" ? [] : openKey.split(",")), [shown, view.character.name, openKey, redraw]);
   const [hover, setHover] = useState<Pos | null>(null);
   // UI-E4：觸控點一下出口先亮綠框與目的地名（`armed`），再點一次同一個出口才走過去；滑鼠照舊點了就走
   const pointerKind = useRef("mouse");
@@ -217,13 +225,13 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     };
   }, []);
   // ---- 鏡頭（6B-6）：跟著「畫面上的主角」，逐格走時每一步更新一次、用同樣的時間平移 ----
-  const [focus, setFocus] = useState<{ pos: Pos; ms: number }>({ pos: field.me, ms: 0 });
+  const [focus, setFocus] = useState<{ pos: Pos; ms: number }>({ pos: shown.me, ms: 0 });
   const lastMap = useRef(field.map_id);
   useEffect(() => {
-    const changed = lastMap.current !== field.map_id;
-    lastMap.current = field.map_id;
-    setFocus((cur) => (!changed && cur.pos.x === field.me.x && cur.pos.y === field.me.y ? cur : { pos: field.me, ms: changed ? 0 : STEP_MS }));
-  }, [field.map_id, field.me]);
+    const changed = lastMap.current !== shown.map_id;
+    lastMap.current = shown.map_id;
+    setFocus((cur) => (!changed && cur.pos.x === shown.me.x && cur.pos.y === shown.me.y ? cur : { pos: shown.me, ms: changed ? 0 : STEP_MS }));
+  }, [shown.map_id, shown.me]);
   const hasHud = hud !== undefined;
   const hudW = hud?.width ?? 0;
   const hudH = hud?.height ?? 0;
@@ -372,6 +380,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
   }, [field]);
   const jobs = useRef<Job[]>([]);
   const running = useRef(false);
+  /** WM-1：按住的方向鍵（`keydown`／`keyup`／失焦），取代作業系統的按鍵重複與排隊。 */
+  const keys = useRef(new HeldKeys());
   /** AU-3：第幾步（腳步聲的變體鍵）。 */
   const stepNo = useRef(0);
   const alive = useRef(true);
@@ -380,6 +390,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     return () => {
       alive.current = false;
       jobs.current = [];
+      keys.current.clear();
     };
   }, []);
 
@@ -418,6 +429,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
         await wait(FADE_MS);
       }
       fieldNow.current = after;
+      setAhead(null);
       latest.current.commit(res);
       if (transit !== null && after !== null) void arriveMap(rendererRef, transit, after, () => !alive.current);
       const last = chunk[chunk.length - 1]!;
@@ -430,6 +442,58 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     return true;
   }, []);
 
+  /** 方向鍵走路（WM-1 前端先走；規則見 `walkAhead.ts`）。 */
+  const walkAhead = useCallback(async () => {
+    const skip = () => !alive.current;
+    const hero = (from: Pos, to: Pos, mode: "walk" | "forced") => ({ unitId: FIELD_HERO, from, to, mode, durationMs: AHEAD_MS, style: "slide" as const });
+    const run = new WalkAhead({
+      field: () => fieldNow.current,
+      blocked: () => latest.current.blocked,
+      alive: () => alive.current,
+      peek: () => keys.current.peek(),
+      take: () => void keys.current.take(),
+      release: () => keys.current.clear(),
+      send: (cell) => latest.current.send(walkAction([cell])),
+      step: async (cur, from, to) => {
+        playFieldStep(cur, to, stepNo.current++); // AU-3：依地表踏一步
+        setFocus({ pos: to, ms: AHEAD_MS });
+        await rendererRef.current?.animate([hero(from, to, "walk")], skip);
+      },
+      slideBack: async (_cur, from, path) => {
+        let here = from;
+        for (const to of path) {
+          if (!alive.current) return;
+          setFocus({ pos: to, ms: AHEAD_MS });
+          await rendererRef.current?.animate([hero(here, to, "forced")], skip); // 拉回：用滑的，不轉身
+          here = to;
+        }
+      },
+      others: async (before, after) => {
+        const steps = peopleSteps(before, after);
+        if (steps.length > 0) await Promise.all(steps.map((m) => rendererRef.current?.animate([m], skip)));
+      },
+      commit: (res, at) => {
+        fieldNow.current = res.field ?? null;
+        // 同步重畫（下一格的動畫才找得到新畫面上的小人）
+        flushSync(() => {
+          setAhead(at);
+          latest.current.commit(res);
+        });
+      },
+      fade: async () => {
+        setFading(true);
+        await wait(FADE_MS);
+      },
+      portal: (cell) => walkPath([cell]),
+      failed: () => {
+        jobs.current = [];
+        flushSync(() => setAhead(null));
+        setRedraw((n) => n + 1);
+      },
+    });
+    await run.run();
+  }, [walkPath]);
+
   const runJob = useCallback(
     async (job: Job) => {
       const cur = fieldNow.current;
@@ -437,9 +501,9 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
         jobs.current = [];
         return;
       }
-      if (job.kind === "dir") {
-        const next = stepTarget(cur, job.dir);
-        if (next !== null) await walkPath([next]);
+      if (job.kind === "keys") {
+        // WM-1：主角先走、請求在背景照順序送；每播完一格再看方向鍵還有沒有按著（放開後最多只走完正在播的那一格）
+        await walkAhead();
         return;
       }
       if (job.kind === "interact" && job.target.kind === "friend") {
@@ -457,9 +521,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
       const now = fieldNow.current;
       if (now !== null && now.map_id === cur.map_id && nearTarget(now.me, job.target)) latest.current.onInteract(job.target);
     },
-    [walkPath],
+    [walkPath, walkAhead],
   );
 
+  /** 正在跑的工作（方向鍵正在走時，新的按下不另外排隊）。 */
+  const current = useRef<Job | null>(null);
   const pump = useCallback(async () => {
     if (running.current) return;
     running.current = true;
@@ -467,9 +533,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     try {
       while (jobs.current.length > 0 && alive.current) {
         const job = jobs.current.shift()!;
+        current.current = job;
         await runJob(job);
       }
     } finally {
+      current.current = null;
       running.current = false;
       if (alive.current) setWalking(false);
     }
@@ -479,20 +547,23 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     (job: Job, replace: boolean) => {
       if (latest.current.blocked) return;
       if (replace) jobs.current = [job];
-      else if (jobs.current.length < KEY_QUEUE_MAX) jobs.current.push(job);
+      else if (job.kind === "keys" && jobs.current.some((j) => j.kind === "keys")) return;
+      else if (jobs.current.length < JOB_QUEUE_MAX) jobs.current.push(job);
       void pump();
     },
     [pump],
   );
 
-  // 方向鍵／WASD、E
+  // 方向鍵／WASD（WM-1：按下、放開、失焦都記下來，按住連走不等作業系統的重複）、E
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || typingInto(e.target)) return;
       const dir = keyDirection(e.key);
       if (dir !== null) {
         e.preventDefault();
-        enqueue({ kind: "dir", dir }, false);
+        if (!keys.current.press(dir, e.repeat)) return; // 作業系統的重複不算新的按下
+        // 正在走方向鍵的話，迴圈播完這一格自己會看到；沒在走就排一個
+        if (!(running.current && current.current?.kind === "keys")) enqueue({ kind: "keys" }, false);
         return;
       }
       if (e.key === "e" || e.key === "E") {
@@ -504,8 +575,24 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
         }
       }
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const dir = keyDirection(e.key);
+      if (dir !== null) keys.current.release(dir);
+    };
+    const letGo = () => keys.current.clear();
+    const onVisible = () => {
+      if (document.visibilityState === "hidden") letGo();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", letGo);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", letGo);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [enqueue]);
 
   function click(tile: Pos) {
@@ -576,7 +663,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
               columns={guideColumns?.columns}
               mapTop={guideColumns?.mapTop}
             />
-            <LevelPillar view={view} grid={model} at={field.me} scale={scale} />
+            <LevelPillar view={view} grid={model} at={shown.me} scale={scale} />
           </div>
         </CameraBox>
       </div>

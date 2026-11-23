@@ -151,6 +151,7 @@ describe("選項圖示（戰鬥、說服、潛行、調查……）", () => {
       location_name_zh: "霧渡鎮",
       actor_zh: "迷路的商隊",
       motive_zh: "想找路回去",
+      story_pending: false,
       story: story(LONG),
       who_zh: "",
       want_zh: "",

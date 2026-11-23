@@ -34,6 +34,7 @@ function event(art: EventArtId, region: string): WorldEventView {
     location_name_zh: LOCATION_ZH[region] ?? "雲嶺・竹林小徑",
     actor_zh: SCENES[art].zh,
     motive_zh: "（開發用假資料）",
+    story_pending: false,
     story: null,
     who_zh: "",
     want_zh: "",

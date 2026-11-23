@@ -165,6 +165,9 @@ class EventView(_ApiModel):
     motive_zh: str
     story: StoryView | None
     """開場旁白；還沒敘述時為 ``None``。"""
+    story_pending: bool = False
+    """WM-1：開場旁白還沒寫（走路觸發、LLM 開著時先回畫面）。前端畫占位並送
+    ``POST …/event_story`` 補上。"""
     who_zh: str
     want_zh: str
     obstacle_zh: str
