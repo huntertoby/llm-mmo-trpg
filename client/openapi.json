@@ -9192,6 +9192,14 @@
             },
             "type": "array",
             "title": "Affixes"
+          },
+          "signatures": {
+            "items": {
+              "$ref": "#/components/schemas/CraftOptionView"
+            },
+            "type": "array",
+            "title": "Signatures",
+            "default": []
           }
         },
         "additionalProperties": false,

@@ -157,7 +157,7 @@ const LOOT_INV = { ...INVENTORY, bag: [bag("item_coarse_material", 5), gearRow("
 const mat = (id: string, count: number, grade: boolean, lean: string | null = null) => ({ item: id, name_zh: BY_ID.get(id)?.name_zh ?? id, count, grade, level_cap: grade ? 1 : null, leaning_zh: lean, resonance_zh: null });
 const CRAFTING = {
   stations: [{ station: "smithy_mist_ferry", kind: "smithy", name_zh: "石記鐵鋪", npc_name_zh: "石師傅" }], smithy: "smithy_mist_ferry", enchanter: null, can_use: true, problem_zh: null,
-  slots: [{ slot_type: "weapon", name_zh: "武器", grade_amount: 3, affixes: [{ id: "affix_a", text_zh: "攻擊 +1" }] }],
+  slots: [{ slot_type: "weapon", name_zh: "武器", grade_amount: 3, signatures: [], affixes: [{ id: "affix_a", text_zh: "攻擊 +1" }] }],
   rarities: [{ rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級" }],
   materials: [mat("item_coarse_material", 5, true), mat("item_mist_crystal", 2, false, "傾向：敏捷 +n"), mat("item_wolf_fang", 4, false, "傾向：力量 +n"), mat("item_living_bone", 1, false, "傾向：體質 +n"), mat("item_lava_core", 1, false, "傾向：點燃")],
   flavor_max: 3, recipes: [], gear: [], essence: 0, note_zh: "沒人試過的材料組合只看得到傾向",

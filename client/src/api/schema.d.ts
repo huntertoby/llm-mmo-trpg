@@ -3718,6 +3718,11 @@ export interface components {
             grade_amount: number;
             /** Affixes */
             affixes: components["schemas"]["CraftOptionView"][];
+            /**
+             * Signatures
+             * @default []
+             */
+            signatures: components["schemas"]["CraftOptionView"][];
         };
         /**
          * CraftingView

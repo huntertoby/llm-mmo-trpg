@@ -282,3 +282,30 @@ def test_imbue_cannot_pick_signature(library: ContentLibrary, make_char: MakeCha
     row = gear.affixes[index]
     assert row.can_change and row.choices == ()
     assert gear.affixes[0].choices  # 一般詞條照舊可以指定
+
+
+# ---------------------------------------------------------------------------
+# 打造畫面的資料（E6-a2 第 4 項）
+# ---------------------------------------------------------------------------
+
+
+def test_view_lists_signature_kinds_only_when_switched_on(
+    plain: ContentLibrary, library: ContentLibrary, make_char: MakeChar
+) -> None:
+    char = _rich(make_char)
+    on = crafting_view(library, make_world(), char, in_battle=False)
+    assert on is not None
+    by_slot = {s.slot_type: s for s in on.slots}
+    assert [(o.id, o.text_zh) for o in by_slot["offhand"].signatures] == [
+        ("action", "招牌：新動作"),
+        ("reaction", "招牌：新反應"),
+    ]
+    assert by_slot["head"].signatures == ()
+    off = crafting_view(with_signatures(plain, enabled=False), make_world(), char, in_battle=False)
+    assert off is not None
+    assert all(s.signatures == () for s in off.slots)
+    # 配方表的摘要註明指定的招牌類型
+    done = _step(library, make_world(), char, _craft(slot_type="feet", signature="terrain"))
+    view = crafting_view(library, done.world, done.char, in_battle=False)
+    assert view is not None
+    assert view.recipes[0].summary_zh.endswith("・指定招牌：地形規則")

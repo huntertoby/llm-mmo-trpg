@@ -5,6 +5,7 @@ import type { WorldAction, WorldCrafting } from "../api/types";
 export interface CraftDraft {
   slot: string;
   rarity: string;
+  /** 指定的詞條 id；`signature:<種類>`＝改指定招牌類型（E6-a2，和詞條二選一）。 */
   affix: string;
   grade: string;
   materials: string[];
@@ -29,10 +30,20 @@ export function initialDraft(crafting: WorldCrafting, armorOnly = false): CraftD
   };
 }
 
-/** 換部位：詞條換成新部位的第一條（原本那條新部位也能選就保留）。 */
+/** 指定招牌類型的選項值前綴（E6-a2，08 8.27：打造可以改指定招牌「類型」，不能指定是哪一條）。 */
+export const SIGNATURE_PREFIX = "signature:";
+
+/** 招牌類型的選項值（`signature:<種類>`）。 */
+export function signatureValue(kind: string): string {
+  return SIGNATURE_PREFIX + kind;
+}
+
+/** 換部位：詞條換成新部位的第一條（原本那條、或原本的招牌類型新部位也能選就保留）。 */
 export function withSlot(draft: CraftDraft, crafting: WorldCrafting, slot: string): CraftDraft {
-  const options = crafting.slots.find((s) => s.slot_type === slot)?.affixes ?? [];
-  const keep = options.some((a) => a.id === draft.affix);
+  const found = crafting.slots.find((s) => s.slot_type === slot);
+  const options = found?.affixes ?? [];
+  const kinds = (found?.signatures ?? []).map((k) => signatureValue(k.id));
+  const keep = options.some((a) => a.id === draft.affix) || kinds.includes(draft.affix);
   return { ...draft, slot, affix: keep ? draft.affix : options[0]?.id ?? "" };
 }
 
@@ -50,15 +61,17 @@ export function draftProblem(draft: CraftDraft): string | null {
   return null;
 }
 
-/** 送出的 `craft` 動作（詞條空白時不帶，給隱藏配方用；後端裁決）。 */
+/** 送出的 `craft` 動作（詞條空白時不帶，給隱藏配方用；選了招牌類型時改帶 `signature`；後端裁決）。 */
 export function craftAction(draft: CraftDraft, station: string): WorldAction {
+  const signature = draft.affix.startsWith(SIGNATURE_PREFIX) ? draft.affix.slice(SIGNATURE_PREFIX.length) : null;
   return {
     kind: "craft",
     station,
     slot_type: draft.slot as never,
     rarity: draft.rarity as never,
-    affix: draft.affix === "" ? null : draft.affix,
+    affix: draft.affix === "" || signature !== null ? null : draft.affix,
     grade: draft.grade,
     materials: draft.materials,
+    ...(signature !== null ? { signature: signature as never } : {}),
   };
 }
