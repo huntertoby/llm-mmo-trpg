@@ -3728,6 +3728,11 @@ export interface components {
             name_zh: string;
             /** Cost Zh */
             cost_zh: string;
+            /**
+             * Slots
+             * @default []
+             */
+            slots: string[];
         };
         /**
          * CraftSlotView
@@ -3747,6 +3752,11 @@ export interface components {
              * @default []
              */
             signatures: components["schemas"]["CraftOptionView"][];
+            /**
+             * Uniques
+             * @default []
+             */
+            uniques: components["schemas"]["CraftOptionView"][];
         };
         /**
          * CraftingView

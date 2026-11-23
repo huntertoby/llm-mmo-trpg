@@ -9220,6 +9220,14 @@
           "cost_zh": {
             "type": "string",
             "title": "Cost Zh"
+          },
+          "slots": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Slots",
+            "default": []
           }
         },
         "additionalProperties": false,
@@ -9258,6 +9266,14 @@
             },
             "type": "array",
             "title": "Signatures",
+            "default": []
+          },
+          "uniques": {
+            "items": {
+              "$ref": "#/components/schemas/CraftOptionView"
+            },
+            "type": "array",
+            "title": "Uniques",
             "default": []
           }
         },

@@ -7,7 +7,19 @@ import type { WorldAction, WorldCraftGear, WorldCrafting, WorldView } from "../a
 import { Hint } from "../ui/Hint";
 import { ItemListIcon } from "../ui/ItemIcon";
 import { codeProblem, normalizeCode } from "./bagView";
-import { craftAction, draftProblem, initialDraft, signatureValue, toggleMaterial, withSlot, type CraftDraft } from "./crafting";
+import {
+  craftAction,
+  draftProblem,
+  initialDraft,
+  kindOptions,
+  LEGENDARY,
+  signatureValue,
+  slotsFor,
+  toggleMaterial,
+  withRarity,
+  withSlot,
+  type CraftDraft,
+} from "./crafting";
 import { walletLine } from "./economy";
 import { LimitNote, limitOf } from "./limits";
 
@@ -38,9 +50,13 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
   const rarity = crafting.rarities.find((r) => r.rarity === draft.rarity);
   const problem = !crafting.can_use ? crafting.problem_zh ?? "現在不能打造" : draftProblem(draft);
   const station = crafting.smithy ?? "";
-  const signatures = slot?.signatures ?? [];
-  // E6-a2：開關打開時多一個「指定招牌類型」選項（和詞條二選一）；開關關著時後端給空的，這段不出現
-  const pick = crafting.slots.some((s) => (s.signatures ?? []).length > 0) ? "1 條詞條或 1 種招牌類型" : "1 條詞條";
+  // E6-a2：開關打開時多一個「指定招牌類型」選項（和詞條二選一）；開關關著時後端給空的，這段不出現。
+  // E6-c2：選傳說時改成「指定獨特效果類型」，部位只列能打傳說的（後端的 `slots`）。
+  const legendary = draft.rarity === LEGENDARY;
+  const signatures = kindOptions(slot, draft.rarity);
+  const kindWord = legendary ? "獨特效果" : "招牌";
+  const hasKinds = crafting.slots.some((s) => kindOptions(s, draft.rarity).length > 0);
+  const pick = hasKinds ? `1 條詞條或 1 種${kindWord}類型` : "1 條詞條";
   return (
     <div className="world-craft-form small" data-testid="world-craft-form">
       <div className="muted">指定部位＋{pick}；其餘詞條的傾向由特色材料決定。同一份配方一定打出同一件。</div>
@@ -48,7 +64,7 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
         <label>
           部位
           <select value={draft.slot} disabled={busy} onChange={(e) => setDraft(withSlot(draft, crafting, e.target.value))} data-testid="world-craft-slot">
-            {crafting.slots.map((s) => (
+            {slotsFor(crafting, draft.rarity).map((s) => (
               <option key={s.slot_type} value={s.slot_type}>
                 {s.name_zh}（通用料 ×{s.grade_amount}）
               </option>
@@ -57,7 +73,7 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
         </label>
         <label>
           稀有度
-          <select value={draft.rarity} disabled={busy} onChange={(e) => setDraft({ ...draft, rarity: e.target.value })} data-testid="world-craft-rarity">
+          <select value={draft.rarity} disabled={busy} onChange={(e) => setDraft(withRarity(draft, crafting, e.target.value))} data-testid="world-craft-rarity">
             {crafting.rarities.map((r) => (
               <option key={r.rarity} value={r.rarity}>
                 {r.name_zh}
@@ -74,7 +90,7 @@ function CraftForm({ crafting, busy, onAct, armorOnly = false }: ActProps & { cr
               </option>
             ))}
             {signatures.length > 0 && (
-              <optgroup label="或指定招牌類型（不能指定是哪一條）" data-testid="world-craft-signatures">
+              <optgroup label={`或指定${kindWord}類型（不能指定是哪一條）`} data-testid="world-craft-signatures">
                 {signatures.map((k) => (
                   <option key={k.id} value={signatureValue(k.id)}>
                     {k.text_zh}

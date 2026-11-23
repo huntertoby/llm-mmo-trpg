@@ -15,6 +15,7 @@ import pytest
 
 from tests.world.helpers import NOON, make_world, without_fields
 from tests.world.test_crafting_signature_e6a2 import with_signatures
+from trpg.api.world_crafting_view import crafting_view
 from trpg.content.item_budget import is_legendary, legendary_unique
 from trpg.content.library import ContentLibrary
 from trpg.world.crafting import build_choices, plan_craft, unique_choices
@@ -192,3 +193,44 @@ def test_legendary_recipe_dump_has_no_new_field(
     affix = build_choices(library, "neck")[0].id
     plan = plan_craft(library, make_world(), _rich(make_char), _craft(affix=affix))
     assert "signature" not in plan.recipe.model_dump(mode="json")
+
+
+# ---------------------------------------------------------------------------
+# 打造畫面的資料（E6-c2 第 4 項）
+# ---------------------------------------------------------------------------
+
+
+def test_view_lists_legendary_only_when_switch_on(
+    plain: ContentLibrary, library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """開關打開：稀有度多傳說（費用寫上料、只能打五個部位），部位列獨特效果類型；關著時和原本一樣。"""
+    char = _rich(make_char)
+    on = crafting_view(library, make_world(), char, in_battle=False)
+    assert on is not None
+    rarities = {r.rarity: r for r in on.rarities}
+    assert list(rarities) == ["rare", "epic", "legendary"]
+    legendary = rarities["legendary"]
+    assert legendary.name_zh == "傳說"
+    assert legendary.cost_zh == "金幣 40 × 物品等級＋任務幣 5＋上料 ×1"
+    assert legendary.slots == LEGENDARY_SLOTS
+    assert rarities["rare"].slots == () and rarities["epic"].slots == ()
+    by_slot = {s.slot_type: s for s in on.slots}
+    assert [(o.id, o.text_zh) for o in by_slot["neck"].uniques] == [
+        ("action", "獨特效果：新動作"),
+        ("rule", "獨特效果：改寫規則"),
+    ]
+    assert by_slot["head"].uniques == ()
+    off = crafting_view(
+        with_legendary(with_signatures(plain, enabled=False), enabled=False),
+        make_world(),
+        char,
+        in_battle=False,
+    )
+    assert off is not None
+    assert [r.rarity for r in off.rarities] == ["rare", "epic"]
+    assert all(s.uniques == () for s in off.slots)
+    # 配方表的摘要註明指定的獨特效果類型
+    done = _step(library, make_world(), char, _craft(signature="rule"))
+    view = crafting_view(library, done.world, done.char, in_battle=False)
+    assert view is not None
+    assert view.recipes[0].summary_zh.endswith("・指定獨特效果：改寫規則")

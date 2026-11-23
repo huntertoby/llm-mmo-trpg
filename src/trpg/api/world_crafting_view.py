@@ -31,6 +31,7 @@ from trpg.world.crafting import (
     signature_choices,
     station_problem,
     stations_here,
+    unique_choices,
 )
 from trpg.world.crafting_actions import (
     AffixChangedEvent,
@@ -133,8 +134,9 @@ def _recipe_view(
             "＋".join(mats),
         ]
     )
-    if recipe.signature is not None:  # E6-a2：指定招牌類型的配方
-        summary += f"・指定招牌：{SIGNATURE_KIND_ZH[recipe.signature]}"
+    if recipe.signature is not None:  # E6-a2：指定招牌類型的配方（傳說是獨特效果，E6-c2）
+        what = "獨特效果" if recipe.rarity == "legendary" else "招牌"
+        summary += f"・指定{what}：{SIGNATURE_KIND_ZH[recipe.signature]}"
     if record.steps:  # 帶重骰序列的配方（5D-3b）
         rerolls = sum(1 for s in record.steps if s.affix is None)
         imbues = len(record.steps) - rerolls
@@ -243,8 +245,11 @@ def _rarity_views(library: ContentLibrary) -> tuple[CraftRarityView, ...]:
         for item_id, count in sorted(cost.extra.items()):  # E6-c2：傳說另要的材料
             found = library.world_economy.items.get(item_id)
             text += f"＋{item_id if found is None else found.name_zh} ×{count}"
+        slots = () if rarity != "legendary" or gen is None else gen.legendary_slots
         views.append(
-            CraftRarityView(rarity=rarity, name_zh=RARITY_ZH.get(rarity, rarity), cost_zh=text)
+            CraftRarityView(
+                rarity=rarity, name_zh=RARITY_ZH.get(rarity, rarity), cost_zh=text, slots=slots
+            )
         )
     return tuple(views)
 
@@ -268,6 +273,10 @@ def _slot_views(library: ContentLibrary, char: CharacterState) -> tuple[CraftSlo
             signatures=tuple(
                 CraftOptionView(id=k, text_zh=f"招牌：{SIGNATURE_KIND_ZH[k]}")
                 for k in signature_choices(library, slot, weapon_class)
+            ),
+            uniques=tuple(
+                CraftOptionView(id=k, text_zh=f"獨特效果：{SIGNATURE_KIND_ZH[k]}")
+                for k in unique_choices(library, slot, weapon_class)
             ),
         )
         for slot in SLOT_TYPES

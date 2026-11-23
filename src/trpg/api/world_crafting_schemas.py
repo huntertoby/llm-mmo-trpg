@@ -48,6 +48,9 @@ class CraftSlotView(_ApiModel):
     affixes: tuple[CraftOptionView, ...]
     signatures: tuple[CraftOptionView, ...] = ()
     """可以改指定的招牌類型（E6-a2，08 8.27；``id`` 是種類）；開關關著或部位不帶招牌時是空的。"""
+    uniques: tuple[CraftOptionView, ...] = ()
+    """打造傳說時可以改指定的獨特效果類型（E6-c2，08 8.30 第 10 點；``id`` 是種類）；傳說開關關著
+    或部位不能出傳說時是空的。"""
 
 
 class CraftRarityView(_ApiModel):
@@ -55,6 +58,8 @@ class CraftRarityView(_ApiModel):
     name_zh: str
     cost_zh: str
     """例「金幣 10 × 物品等級」「金幣 20 × 物品等級＋任務幣 2」。"""
+    slots: tuple[str, ...] = ()
+    """這個稀有度只能打的部位（E6-c2：傳說只能打主手、副手、身體、腳、項鍊）；空＝每個部位都能打。"""
 
 
 class CraftMaterialView(_ApiModel):

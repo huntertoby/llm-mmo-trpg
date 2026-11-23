@@ -72,7 +72,7 @@ describe("清單列的 24 圖示（需求 1.1 第 5 列；裝備列與表裡沒�
   it("鐵匠特色材料：圖示在 checkbox 和名字之間；通用料的 <select> 照舊沒有圖", () => {
     const crafting = {
       stations: [], smithy: "smithy", enchanter: null, can_use: true, problem_zh: null,
-      slots: [{ slot_type: "weapon", name_zh: "武器", grade_amount: 3, signatures: [], affixes: [] }], rarities: [{ rarity: "rare", name_zh: "稀有", cost_zh: "" }],
+      slots: [{ slot_type: "weapon", name_zh: "武器", grade_amount: 3, signatures: [], uniques: [], affixes: [] }], rarities: [{ rarity: "rare", name_zh: "稀有", cost_zh: "", slots: [] }],
       materials: [
         { item: "item_coarse_material", name_zh: "粗料", count: 3, grade: true, level_cap: 1, leaning_zh: null, resonance_zh: null },
         { item: "item_mist_crystal", name_zh: "霧晶", count: 1, grade: false, level_cap: null, leaning_zh: "傾向", resonance_zh: null },

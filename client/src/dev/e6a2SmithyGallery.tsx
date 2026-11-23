@@ -41,11 +41,11 @@ function crafting(on: boolean): WorldCrafting {
     problem_zh: null,
     slots: [
       { slot_type: "weapon", name_zh: "武器", grade_amount: 3, affixes: KW, signatures: on ? SIGS : [] },
-      { slot_type: "head", name_zh: "頭", grade_amount: 1, affixes: [{ id: "affix_cond_height_hit", text_zh: "站得比目標高：命中 +5%" }], signatures: [] },
+      { slot_type: "head", name_zh: "頭", grade_amount: 1, affixes: [{ id: "affix_cond_height_hit", text_zh: "站得比目標高：命中 +5%" }], signatures: [], uniques: [] },
     ],
     rarities: [
-      { rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級" },
-      { rarity: "epic", name_zh: "史詩", cost_zh: "金幣 20 × 物品等級＋任務幣 2" },
+      { rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級", slots: [] },
+      { rarity: "epic", name_zh: "史詩", cost_zh: "金幣 20 × 物品等級＋任務幣 2", slots: [] },
     ],
     materials: [mat("item_fine_material", "精料", 5, true), mat("item_mist_crystal", "霧晶", 2, false, "傾向：敏捷 +n"), mat("item_wolf_fang", "狼牙", 4, false, "傾向：力量 +n")],
     flavor_max: 3,

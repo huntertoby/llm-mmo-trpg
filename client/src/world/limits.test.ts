@@ -85,7 +85,7 @@ describe("延後的三選一", () => {
 });
 
 describe("OB-6 字串收尾與美術追蹤", () => {
-  const slot = (slot_type: string) => ({ slot_type, name_zh: slot_type, grade_amount: 1, signatures: [], affixes: [{ id: `a_${slot_type}`, name_zh: "詞條" }] });
+  const slot = (slot_type: string) => ({ slot_type, name_zh: slot_type, grade_amount: 1, signatures: [], uniques: [], affixes: [{ id: `a_${slot_type}`, name_zh: "詞條" }] });
   const crafting = { slots: [slot("weapon"), slot("offhand"), slot("head"), slot("body")], rarities: [{ rarity: "rare", name_zh: "稀有" }], materials: [] } as unknown as WorldCrafting;
 
   it("鐵匠：入門期（伺服器限制資料有 smith）部位預設第一個防具；其他時候照舊", () => {

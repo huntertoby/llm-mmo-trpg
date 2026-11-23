@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { WorldCraftGear, WorldCrafting } from "../api/types";
-import { craftAction, draftProblem, initialDraft, signatureValue, toggleMaterial, withSlot } from "./crafting";
+import { craftAction, draftProblem, initialDraft, signatureValue, slotsFor, toggleMaterial, withRarity, withSlot } from "./crafting";
 import { codeProblem, normalizeCode } from "./bagView";
 import { SmithyPanel, smithyTabs, type SmithyTab } from "./SmithyPanel";
 
@@ -39,13 +39,13 @@ function crafting(overrides: Partial<WorldCrafting> = {}): WorldCrafting {
     can_use: true,
     problem_zh: null,
     slots: [
-      { slot_type: "weapon", name_zh: "武器", grade_amount: 3, signatures: [], affixes: [] },
-      { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, signatures: [], affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }] },
-      { slot_type: "body", name_zh: "身體", grade_amount: 2, signatures: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
+      { slot_type: "weapon", name_zh: "武器", grade_amount: 3, signatures: [], uniques: [], affixes: [] },
+      { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, signatures: [], uniques: [], affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }] },
+      { slot_type: "body", name_zh: "身體", grade_amount: 2, signatures: [], uniques: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
     ],
     rarities: [
-      { rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級" },
-      { rarity: "epic", name_zh: "史詩", cost_zh: "金幣 20 × 物品等級＋任務幣 2" },
+      { rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級", slots: [] },
+      { rarity: "epic", name_zh: "史詩", cost_zh: "金幣 20 × 物品等級＋任務幣 2", slots: [] },
     ],
     materials: [
       { item: "item_coarse_material", name_zh: "粗料", count: 3, grade: true, level_cap: 1, leaning_zh: null, resonance_zh: null },
@@ -90,9 +90,9 @@ describe("打造指定招牌類型（E6-a2）", () => {
   const withSignatures = () =>
     crafting({
       slots: [
-        { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }], signatures: [{ id: "action", text_zh: "招牌：新動作" }] },
-        { slot_type: "feet", name_zh: "腳", grade_amount: 1, affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }], signatures: [{ id: "terrain", text_zh: "招牌：地形規則" }] },
-        { slot_type: "head", name_zh: "頭", grade_amount: 1, signatures: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
+        { slot_type: "neck", name_zh: "項鍊", grade_amount: 1, affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }], signatures: [{ id: "action", text_zh: "招牌：新動作" }], uniques: [] },
+        { slot_type: "feet", name_zh: "腳", grade_amount: 1, affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }], signatures: [{ id: "terrain", text_zh: "招牌：地形規則" }], uniques: [] },
+        { slot_type: "head", name_zh: "頭", grade_amount: 1, signatures: [], uniques: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
       ],
     });
 
@@ -117,6 +117,60 @@ describe("打造指定招牌類型（E6-a2）", () => {
     const off = renderToStaticMarkup(createElement(SmithyPanel, { crafting: crafting(), busy: false, onAct: () => undefined, initialTab: "craft" }));
     expect(off).not.toContain("world-craft-signatures");
     expect(off).not.toContain("招牌");
+  });
+});
+
+describe("打造傳說（E6-c2）", () => {
+  const LEGEND_SLOTS = ["weapon", "offhand", "body", "feet", "neck"];
+  const withLegendary = () =>
+    crafting({
+      slots: [
+        { slot_type: "head", name_zh: "頭", grade_amount: 1, signatures: [], uniques: [], affixes: [{ id: "affix_cond_still_defense", text_zh: "本回合沒有移動：防禦 +4%" }] },
+        {
+          slot_type: "neck",
+          name_zh: "項鍊",
+          grade_amount: 1,
+          affixes: [{ id: "affix_kw_burn_duration", text_zh: "你施加的燃燒 +1 回合" }],
+          signatures: [{ id: "action", text_zh: "招牌：新動作" }],
+          uniques: [
+            { id: "action", text_zh: "獨特效果：新動作" },
+            { id: "rule", text_zh: "獨特效果：改寫規則" },
+          ],
+        },
+      ],
+      rarities: [
+        { rarity: "rare", name_zh: "稀有", cost_zh: "金幣 10 × 物品等級", slots: [] },
+        { rarity: "epic", name_zh: "史詩", cost_zh: "金幣 20 × 物品等級＋任務幣 2", slots: [] },
+        { rarity: "legendary", name_zh: "傳說", cost_zh: "金幣 40 × 物品等級＋任務幣 5＋上料 ×1", slots: LEGEND_SLOTS },
+      ],
+    });
+
+  it("傳說只列能打的部位；換成傳說時頭換成項鍊", () => {
+    expect(slotsFor(withLegendary(), "legendary").map((s) => s.slot_type)).toEqual(["neck"]);
+    expect(slotsFor(withLegendary(), "rare").map((s) => s.slot_type)).toEqual(["head", "neck"]);
+    const draft = withRarity(initialDraft(withLegendary()), withLegendary(), "legendary");
+    expect(draft).toMatchObject({ rarity: "legendary", slot: "neck", affix: "affix_kw_burn_duration" });
+  });
+
+  it("傳說的類型是獨特效果：送 signature＋rarity legendary；換回稀有時不能用的類型換成詞條", () => {
+    const base = withRarity(initialDraft(withLegendary()), withLegendary(), "legendary");
+    const draft = { ...base, affix: signatureValue("rule") };
+    expect(craftAction(draft, "smithy_mist_ferry")).toMatchObject({ rarity: "legendary", signature: "rule", affix: null });
+    expect(withRarity(draft, withLegendary(), "rare").affix).toBe("affix_kw_burn_duration");
+    const action = { ...base, affix: signatureValue("action") };
+    expect(withRarity(action, withLegendary(), "epic").affix).toBe(signatureValue("action"));
+  });
+
+  it("選傳說時下拉改成「指定獨特效果類型」；費用寫上料", () => {
+    const html = renderToStaticMarkup(createElement(SmithyPanel, { crafting: withLegendary(), busy: false, onAct: () => undefined, initialTab: "craft" }));
+    expect(html).toContain('value="legendary"');
+    expect(html).toContain("傳說");
+  });
+
+  it("開關關著（後端不列傳說）：稀有度沒有傳說", () => {
+    const html = renderToStaticMarkup(createElement(SmithyPanel, { crafting: crafting(), busy: false, onAct: () => undefined, initialTab: "craft" }));
+    expect(html).not.toContain('value="legendary"');
+    expect(html).not.toContain("獨特效果");
   });
 });
 

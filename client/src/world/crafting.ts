@@ -38,13 +38,36 @@ export function signatureValue(kind: string): string {
   return SIGNATURE_PREFIX + kind;
 }
 
+/** 傳說（E6-c2）：類型選項是獨特效果的類型，不是招牌類型（08 8.30 第 10 點）。 */
+export const LEGENDARY = "legendary";
+
+type CraftSlot = WorldCrafting["slots"][number];
+
+/** 這個部位、這個稀有度能改指定的類型：傳說是獨特效果（`uniques`），其他是招牌（`signatures`）。 */
+export function kindOptions(slot: CraftSlot | undefined, rarity: string): CraftSlot["signatures"] {
+  return (rarity === LEGENDARY ? slot?.uniques : slot?.signatures) ?? [];
+}
+
+/** 這個稀有度能打的部位（E6-c2：傳說只能打主手、副手、身體、腳、項鍊；後端給空的＝每個部位都能打）。 */
+export function slotsFor(crafting: WorldCrafting, rarity: string): CraftSlot[] {
+  const allowed = crafting.rarities.find((r) => r.rarity === rarity)?.slots ?? [];
+  return allowed.length === 0 ? crafting.slots : crafting.slots.filter((s) => allowed.includes(s.slot_type));
+}
+
 /** 換部位：詞條換成新部位的第一條（原本那條、或原本的招牌類型新部位也能選就保留）。 */
 export function withSlot(draft: CraftDraft, crafting: WorldCrafting, slot: string): CraftDraft {
   const found = crafting.slots.find((s) => s.slot_type === slot);
   const options = found?.affixes ?? [];
-  const kinds = (found?.signatures ?? []).map((k) => signatureValue(k.id));
+  const kinds = kindOptions(found, draft.rarity).map((k) => signatureValue(k.id));
   const keep = options.some((a) => a.id === draft.affix) || kinds.includes(draft.affix);
   return { ...draft, slot, affix: keep ? draft.affix : options[0]?.id ?? "" };
+}
+
+/** 換稀有度（E6-c2）：部位不能打這個稀有度時換成第一個能打的；類型選項跟著換（招牌 ↔ 獨特效果）。 */
+export function withRarity(draft: CraftDraft, crafting: WorldCrafting, rarity: string): CraftDraft {
+  const slots = slotsFor(crafting, rarity);
+  const slot = slots.some((s) => s.slot_type === draft.slot) ? draft.slot : slots[0]?.slot_type ?? draft.slot;
+  return withSlot({ ...draft, rarity }, crafting, slot);
 }
 
 /** 勾選或取消一種特色材料（最多 `max` 種；滿了再勾不會加）。 */
