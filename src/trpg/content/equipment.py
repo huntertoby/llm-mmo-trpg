@@ -71,6 +71,9 @@ __all__ = [
     "NUMERIC_CATEGORIES",
     "OFFHAND_TRAIT_PARAMS",
     "SELF_EVALUABLE_CONDITIONS",
+    "SIGNATURE_CATEGORIES",
+    "SIGNATURE_KINDS",
+    "SIGNATURE_KIND_ZH",
     "ActionAffix",
     "AffixCategory",
     "AffixDef",
@@ -91,6 +94,7 @@ __all__ = [
     "Loadout",
     "ReactionAffix",
     "RuleAffix",
+    "SignatureKind",
     "StatAffix",
     "TerrainAffix",
     "TriggerAffix",
@@ -175,6 +179,32 @@ NUMERIC_CATEGORIES: frozenset[str] = frozenset(
 充能、動作、反應、改變規則、地形規則）是非數值效果，同 id 只生效 1 條（地形規則和種族被動、
 其他裝備的同種規則怎麼算，見 :mod:`trpg.engine.rules.unit_rules`）。"""
 
+type SignatureKind = Literal["action", "reaction", "terrain", "behavior", "rule"]
+"""招牌效果的五種（08 8.27、8.30 第 11 點，#169、#180）：新動作、新反應、地形規則、行為改寫、
+改寫規則。"""
+
+SIGNATURE_KINDS: tuple[SignatureKind, ...] = ("action", "reaction", "terrain", "behavior", "rule")
+"""五種招牌的固定順序（8.27 的順序；產生器依這個順序排權重）。"""
+
+SIGNATURE_KIND_ZH: dict[str, str] = {
+    "action": "新動作",
+    "reaction": "新反應",
+    "terrain": "地形規則",
+    "behavior": "行為改寫",
+    "rule": "改寫規則",
+}
+
+SIGNATURE_CATEGORIES: dict[str, frozenset[str]] = {
+    "action": frozenset({"action"}),
+    "reaction": frozenset({"action", "reaction"}),
+    "terrain": frozenset({"terrain"}),
+    "behavior": frozenset({"action"}),
+    "rule": frozenset({"rule"}),
+}
+"""每種招牌可以掛在哪些類別（E6-a1）：新動作、行為改寫是授予技能的第 9 類（授予主動技、修正技，由
+:mod:`trpg.content.library.gear_checks` 對照技能種類）；新反應是第 10 類，或授予反應技的第 9 類；
+地形規則是第 12 類；改寫規則是第 11 類。"""
+
 SELF_EVALUABLE_CONDITIONS: frozenset[str] = frozenset(
     {"moved_this_turn", "self_hp_below", "self_concealed", "lone_wolf"}
 )
@@ -225,6 +255,8 @@ class _AffixBase(ContentModel):
     - ``offhands``：副手類物品限定這些副手（``offhands.yaml`` 的 id；空 ＝ 不限；其他種類的物品不受
       影響；RG-4：塔盾專屬的「盾陣」）。沒填時不輸出（既有詞條的序列化不變）。
     - ``legendary_only``：只能出現在傳說物品上（改變規則類）。
+    - ``signature``：這條是招牌效果、是哪一種（08 8.27、8.30，E6-a1）；點數是該件詞條預算的固定比例
+      （:func:`trpg.content.item_budget.affix_points`）。沒填時不輸出（既有詞條的序列化不變）。
     - ``value``：數值 ``N`` 的範圍；``None`` 表示這條詞條沒有可擲的數值（固定效果）。
     """
 
@@ -236,6 +268,7 @@ class _AffixBase(ContentModel):
     item_tags: dict[SlotType, tuple[str, ...]] = Field(default_factory=dict)
     offhands: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
     legendary_only: bool = False
+    signature: SignatureKind | None = Field(default=None, exclude_if=lambda v: v is None)
     value: ValueRange | None = None
     value_unit: Literal["flat", "permille"] = "flat"
 
@@ -257,6 +290,12 @@ class _AffixBase(ContentModel):
             )
         if self.offhands and "offhand" not in self.slots:
             raise ValueError(f"詞條 {self.id}：限定 offhands 時 slots 必須含 offhand")
+        category: str = getattr(self, "category", "")
+        if self.signature is not None and category not in SIGNATURE_CATEGORIES[self.signature]:
+            allowed = "、".join(sorted(SIGNATURE_CATEGORIES[self.signature]))
+            raise ValueError(
+                f"詞條 {self.id}：招牌 {self.signature} 只能是 {allowed} 類（目前 {category}）"
+            )
         return self
 
     @property
