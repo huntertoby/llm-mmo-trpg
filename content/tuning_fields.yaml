@@ -846,7 +846,7 @@ targets:
       - {path: caps.crit_range_min, label_zh: 暴擊範圍最低（自然骰）, group_zh: 硬上限, kind: int, hint_min: 16, hint_max: 19, note_zh: 裝備擴大暴擊範圍時，最多擴大到自然骰這個數字起就暴擊（18＝18、19、20 都暴擊）。越小，堆暴擊的裝備越強。只能 2～20。}
       - {path: caps.move_bonus, label_zh: 全身移動加成上限（格）, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 裝備的移動加成合計最多幾格。越大，堆移動的裝備越強。}
       - {path: caps.cost_affixes, label_zh: 全身代價型詞條上限, group_zh: 硬上限, kind: int, hint_min: 1, hint_max: 4, note_zh: 全身最多穿幾條代價型詞條（超過時穿戴驗證失敗）。越大，越能用代價換強度。}
-      - {path: caps.rule_affixes, label_zh: 全身改變規則類詞條上限, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 全身最多幾條改變規則類詞條同時生效（超過時穿戴驗證失敗）。越大，越能疊改變規則的效果。}
+      - {path: caps.rule_affixes, label_zh: 全身改變規則類詞條上限, group_zh: 硬上限, kind: int, hint_min: 0, hint_max: 2, note_zh: 全身最多幾條改變規則類詞條同時生效（超過的標灰，由玩家勾選要生效的）。越大，越能疊改變規則的效果。}
   # HC-W2：物品生成（item_gen.yaml）。只開計價與規則數值；稀有度條件的分類（conditional_rates）、類別清單、
   # 必選詞條、獨特與暫緩詞條清單是結構，不開；max_attempts、offer_attempts 是程式的重試次數，不開。
   - kind: item_gen
