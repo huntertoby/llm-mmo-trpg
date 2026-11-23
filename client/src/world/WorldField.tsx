@@ -21,6 +21,7 @@ import { GUIDE_BUBBLE_MS, mainQuestNpc, steleTags, type ViewBox } from "./openin
 import { openRegionsOf } from "./fieldScenery";
 import { LevelPillar } from "./GainEffects";
 import { peopleSteps } from "./peopleWalk";
+import { HeldKeys } from "./heldKeys";
 import { arriveMap, leaveMap, mapTransit } from "./mapTransit";
 import { playFieldStep } from "./fieldSteps";
 import { frozenFriends, headAnchor, headMarks, npcBubbles, type GuideLines, type HeadMark } from "./fieldPeople";
@@ -40,7 +41,6 @@ import {
   walkedCells,
   walkPlan,
   STEP_MS,
-  type Direction,
   type FieldFriend,
   type FieldTarget,
 } from "./fieldModel";
@@ -89,10 +89,11 @@ export interface HudCamera {
   columns?: readonly Rect[];
 }
 
-type Job = { kind: "dir"; dir: Direction } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
+/** `keys`＝方向鍵／WASD：照按住的方向一格一格走，每播完一格再看還有沒有按著（WM-1）。 */
+type Job = { kind: "keys" } | { kind: "path"; to: Pos } | { kind: "interact"; target: FieldTarget };
 
-/** 方向鍵最多排幾步（快速連按時；超過的丟掉，避免放開鍵之後還一直走）。 */
-const KEY_QUEUE_MAX = 3;
+/** 點擊、E 互動最多排幾個（超過的丟掉）。 */
+const JOB_QUEUE_MAX = 3;
 /** 換地圖前的淡出時間。 */
 const FADE_MS = 220;
 /** NPC 對話泡泡停留的時間。 */
@@ -372,6 +373,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
   }, [field]);
   const jobs = useRef<Job[]>([]);
   const running = useRef(false);
+  /** WM-1：按住的方向鍵（`keydown`／`keyup`／失焦），取代作業系統的按鍵重複與排隊。 */
+  const keys = useRef(new HeldKeys());
   /** AU-3：第幾步（腳步聲的變體鍵）。 */
   const stepNo = useRef(0);
   const alive = useRef(true);
@@ -380,6 +383,7 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     return () => {
       alive.current = false;
       jobs.current = [];
+      keys.current.clear();
     };
   }, []);
 
@@ -437,9 +441,14 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
         jobs.current = [];
         return;
       }
-      if (job.kind === "dir") {
-        const next = stepTarget(cur, job.dir);
-        if (next !== null) await walkPath([next]);
+      if (job.kind === "keys") {
+        // 每走完一格（請求回來、動畫播完）再看方向鍵還有沒有按著；放開後最多只走完正在播的那一格
+        for (let dir = keys.current.take(); dir !== null && alive.current; dir = keys.current.take()) {
+          const here = fieldNow.current;
+          if (here === null || latest.current.blocked) break;
+          const next = stepTarget(here, dir);
+          if (next === null || !(await walkPath([next]))) break;
+        }
         return;
       }
       if (job.kind === "interact" && job.target.kind === "friend") {
@@ -460,6 +469,8 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     [walkPath],
   );
 
+  /** 正在跑的工作（方向鍵正在走時，新的按下不另外排隊）。 */
+  const current = useRef<Job | null>(null);
   const pump = useCallback(async () => {
     if (running.current) return;
     running.current = true;
@@ -467,9 +478,11 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     try {
       while (jobs.current.length > 0 && alive.current) {
         const job = jobs.current.shift()!;
+        current.current = job;
         await runJob(job);
       }
     } finally {
+      current.current = null;
       running.current = false;
       if (alive.current) setWalking(false);
     }
@@ -479,20 +492,23 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
     (job: Job, replace: boolean) => {
       if (latest.current.blocked) return;
       if (replace) jobs.current = [job];
-      else if (jobs.current.length < KEY_QUEUE_MAX) jobs.current.push(job);
+      else if (job.kind === "keys" && jobs.current.some((j) => j.kind === "keys")) return;
+      else if (jobs.current.length < JOB_QUEUE_MAX) jobs.current.push(job);
       void pump();
     },
     [pump],
   );
 
-  // 方向鍵／WASD、E
+  // 方向鍵／WASD（WM-1：按下、放開、失焦都記下來，按住連走不等作業系統的重複）、E
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || typingInto(e.target)) return;
       const dir = keyDirection(e.key);
       if (dir !== null) {
         e.preventDefault();
-        enqueue({ kind: "dir", dir }, false);
+        if (!keys.current.press(dir, e.repeat)) return; // 作業系統的重複不算新的按下
+        // 正在走方向鍵的話，迴圈播完這一格自己會看到；沒在走就排一個
+        if (!(running.current && current.current?.kind === "keys")) enqueue({ kind: "keys" }, false);
         return;
       }
       if (e.key === "e" || e.key === "E") {
@@ -504,8 +520,24 @@ export function WorldField({ view, busy, send, commit, onInteract, hud, guides =
         }
       }
     };
+    const onKeyUp = (e: KeyboardEvent) => {
+      const dir = keyDirection(e.key);
+      if (dir !== null) keys.current.release(dir);
+    };
+    const letGo = () => keys.current.clear();
+    const onVisible = () => {
+      if (document.visibilityState === "hidden") letGo();
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", letGo);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", letGo);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [enqueue]);
 
   function click(tile: Pos) {
