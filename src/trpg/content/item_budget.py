@@ -116,6 +116,16 @@ class RarityRule(ContentModel):
             raise ValueError("min_affixes 不可大於 max_affixes")
         return self
 
+    def besides_signature(self) -> RarityRule:
+        """帶招牌時，招牌以外的條數（08 8.30 第 1 點：招牌算進條數，稀有＝招牌＋1～2 條、
+        史詩＝招牌＋2 條）：上下限各少 1 條（至少 0）；類別與 build 詞條照舊。"""
+        return self.model_copy(
+            update={
+                "min_affixes": max(0, self.min_affixes - 1),
+                "max_affixes": max(0, self.max_affixes - 1),
+            }
+        )
+
 
 class RequiredPick(ContentModel):
     """「1 條 build 詞條」可以是哪些類別或哪幾條詞條。"""
@@ -177,6 +187,10 @@ class ItemGenRules(ContentModel):
     """整件物品的基礎強度換算（3K-2b）；沒填時預算分數只算詞條與基礎加成。"""
     rarities: dict[str, RarityRule]
     """產生的稀有度（不含傳說：傳說從測試物品挑）。"""
+    signature_rarities: tuple[str, ...] = ()
+    """帶招牌的稀有度（E6-a1，08 8.27：稀有、史詩）。"""
+    signature_slots: tuple[SlotType, ...] = ()
+    """帶招牌的部位（E6-a1，08 8.27：主手、副手、身體、腳、項鍊；頭、手、戒指不帶）。"""
     required_picks: dict[SlotType, RequiredPick]
     weapon_attribute_preference_permille: int = Field(ge=0, le=_PERMILLE)
     max_attempts: int = Field(ge=1, le=200)
@@ -218,7 +232,14 @@ class ItemGenRules(ContentModel):
         stray = sorted(set(self.rarities) - set(_GENERATED))
         if stray:
             raise ValueError(f"rarities 只能有 {', '.join(_GENERATED)}（多了 {', '.join(stray)}）")
+        stray = sorted(set(self.signature_rarities) - set(self.rarities))
+        if stray:
+            raise ValueError(f"signature_rarities 有 rarities 沒有的稀有度：{', '.join(stray)}")
         return self
+
+    def carries_signature(self, rarity: str | None, slot_type: SlotType) -> bool:
+        """這個稀有度、部位的物品帶不帶招牌（08 8.27；E6-a1）。"""
+        return rarity in self.signature_rarities and slot_type in self.signature_slots
 
     def rarity(self, rarity: str) -> RarityRule:
         found = self.rarities.get(rarity)
@@ -401,7 +422,10 @@ def _rarity_problems(
             f"{where}：{RARITY_ZH[rarity]}最多 {rule.max_affixes} 條詞條（有 {len(defs)} 條）"
         )
     pick = rules.required_picks.get(item.slot_type)
-    extra = [a for a in defs if a.category not in rule.categories]
+    signature = None
+    if rules.carries_signature(rarity, item.slot_type):  # 招牌算進條數，不算類別（08 8.30 第 1 點）
+        signature = next((a for a in defs if a.signature is not None), None)
+    extra = [a for a in defs if a.category not in rule.categories and a is not signature]
     if len(extra) > rules.extra_build_affixes_max:
         ids = "、".join(a.id for a in extra)
         most = rules.extra_build_affixes_max

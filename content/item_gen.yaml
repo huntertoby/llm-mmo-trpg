@@ -98,6 +98,11 @@ rarities:
     categories: [stat, conditional, trigger, attack, weapon_trait]
     required: true
 
+# 招牌效果（E6-a1，08 8.27、8.30 第 1 點）：這些稀有度、部位的物品帶 1 條招牌。招牌算進上面的條數
+# （稀有＝招牌＋1～2 條、史詩＝招牌＋2 條），不受上面的類別限制。
+signature_rarities: [rare, epic]
+signature_slots: [weapon, offhand, body, feet, neck]
+
 # 「1 條 build 詞條」依部位：主手、副手、飾品是技能強化；身體、頭、手、腳是條件數值或防守型觸發
 # （8.21.6 末段，#37）。預算放不下時照「每條至少 2 點」下修（8.22）。
 required_picks:

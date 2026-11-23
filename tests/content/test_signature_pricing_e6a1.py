@@ -105,3 +105,72 @@ def test_untagged_library_prices_unchanged() -> None:
     rules = _rules(lib)
     item = _item([("affix_attr_str", 30), (SIG, None)])
     assert item_points(rules, item, lib.affixes) == 9 + rules.category_points["action"]
+
+
+# ---------------------------------------------------------------------------
+# 條數（08 8.30 第 1 點）
+# ---------------------------------------------------------------------------
+
+
+def test_signature_rarities_and_slots_follow_8_27() -> None:
+    rules = _rules(library())
+    assert set(rules.signature_rarities) == {"rare", "epic"}
+    assert set(rules.signature_slots) == {"weapon", "offhand", "body", "feet", "neck"}
+    assert rules.carries_signature("rare", "feet")
+    assert not rules.carries_signature("uncommon", "weapon")
+    assert not rules.carries_signature("epic", "head")
+
+
+def test_counts_besides_the_signature() -> None:
+    rules = _rules(library())
+    rare = rules.rarity("rare").besides_signature()
+    epic = rules.rarity("epic").besides_signature()
+    assert (rare.min_affixes, rare.max_affixes) == (1, 2)  # 稀有＝招牌＋1～2 條
+    assert (epic.min_affixes, epic.max_affixes) == (2, 2)  # 史詩＝招牌＋2 條
+    assert rare.required and epic.required  # 其中 1 條照 8.21.6
+
+
+def _cat(problems: list[str]) -> list[str]:
+    return [p for p in problems if "不能有" in p or "最多" in p]
+
+
+def test_signature_counts_toward_the_affix_limit_but_not_categories() -> None:
+    lib = tagged_library()
+    rules = _rules(lib)
+    two = _item([("affix_kw_prone_damage", 150), ("affix_attr_str", 10), (SIG, None)], level=6)
+    assert _cat(item_budget_problems(rules, two, lib.affixes)) == []
+    four = _item(
+        [
+            ("affix_kw_prone_damage", 150),
+            ("affix_attr_str", 10),
+            ("affix_max_hp", 40),
+            (SIG, None),
+        ],
+        level=6,
+    )
+    assert any("最多 3 條" in p for p in item_budget_problems(rules, four, lib.affixes))
+
+
+def test_signature_on_other_rarities_or_slots_is_still_a_category_error() -> None:
+    lib = tagged_library()
+    rules = _rules(lib)
+    uncommon = _item([(SIG, None)]).model_copy(update={"rarity": "uncommon"})
+    assert any("不能有 action" in p for p in item_budget_problems(rules, uncommon, lib.affixes))
+    hands = ItemDef.model_validate(
+        {
+            "id": "item_t_sig_hands",
+            "name_zh": "測試",
+            "slot_type": "hands",
+            "rarity": "rare",
+            "item_level": 5,
+            "affixes": [{"affix": SIG}],
+        }
+    )
+    assert any("不能有 action" in p for p in item_budget_problems(rules, hands, lib.affixes))
+
+
+def test_untagged_action_affix_is_still_a_category_error() -> None:
+    lib = library()
+    rules = _rules(lib)
+    item = _item([(SIG, None)])
+    assert any("不能有 action" in p for p in item_budget_problems(rules, item, lib.affixes))
