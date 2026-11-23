@@ -83,9 +83,11 @@
 | 相關 vitest（`src/ui`、`src/battle`、`src/run` 整包；`src/render` 整包） | 0（render 135 檔 1704 passed） |
 | 相關 pytest（`test_crit_hint_cr1c`、`test_crit_panel_cr1b`、`test_crit_display_cr1`、`test_view`、`test_openapi_snapshot`、`tests/api/test_hidden_info.py`、`test_hero_crit_cr1c`） | 0 |
 | `corepack pnpm -C client build`（截圖前，兩次） | 0 |
-| `uv run python scripts/check.py --all`（全部 commit 之後） | （待補） |
-| `uv run python scripts/run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | （待補） |
-| `corepack pnpm -C client build`（check 之後） | （待補） |
+| `uv run python scripts/check.py --all`（merge main `32ca036fd` 之後，第 1 次） | 1：pytest 1 題失敗（`tests/skillgen/test_reshape_gate_paths_e5.py::test_every_with_skills_call_goes_through_the_gate`，`hero_crit` 直接呼叫 `with_skills`）；改成 `gated_with_skills`（`7694add12`） |
+| `uv run python scripts/check.py --all`（第 2 次） | **0**：pytest 18728 passed、8 skipped；vitest 421 檔 4978 passed；ruff、format、mypy、lint-imports、client typecheck、situation coverage 通過；已寫通過戳記 |
+| `uv run python scripts/run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | **0**（995 passed）；CLI 快照、parity 沒變 |
+| `corepack pnpm -C client build`（check 之後） | **0** |
+| 合併 main、修正後重跑三項比對（基準 `32d8068e0`） | 442 招 `cmp` 0；78 場 `battles=78 events=26741 different=0`；census `cells=204 different=0 whole_equal=True` |
 
 ### 3.4 截圖（`docs/art/shots/cr-1c/`，交美術 PM）
 
