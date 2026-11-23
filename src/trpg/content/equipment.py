@@ -103,6 +103,7 @@ __all__ = [
     "affix_slot_problems",
     "affix_strength",
     "affix_text",
+    "chosen_key",
     "item_problems",
     "loadout_held",
     "loadout_problems",
@@ -1084,9 +1085,14 @@ class EquippedItem(ContentModel):
 
 class Loadout(ContentModel):
     """一個單位的裝備快照（依欄位固定順序；空 ＝ 沒有裝備）。主手沒有物品時，單位的武器（舊的
-    ``weapon``）視為主手的基礎武器。"""
+    ``weapon``）視為主手的基礎武器。
+
+    ``chosen``（E6-b1，08 8.27、8.30 第 4 點，#180）：玩家在角色面板勾選要生效的招牌效果與改寫
+    規則，每個是 ``"<欄位>:<詞條 ID>"``（:func:`chosen_key`）。跟著快照進戰鬥，重播自成一體；空的
+    時候不輸出。指到身上沒有的詞條時不起作用（換裝後留下的舊勾選），不算錯誤。"""
 
     items: tuple[EquippedItem, ...] = ()
+    chosen: tuple[str, ...] = Field(default=(), exclude_if=lambda v: not v)
 
     @model_validator(mode="after")
     def _check(self) -> Loadout:
@@ -1094,6 +1100,11 @@ class Loadout(ContentModel):
         order = [SLOT_INDEX[e.slot] for e in self.items]
         if order != sorted(order):
             raise ValueError("裝備快照必須依欄位固定順序排列")
+        _unique(list(self.chosen), "招牌勾選")
+        for key in self.chosen:
+            slot, sep, affix_id = key.partition(":")
+            if not sep or slot not in SLOT_INDEX or not affix_id:
+                raise ValueError(f"招牌勾選的格式是「欄位:詞條 ID」：{key}")
         return self
 
     def by_slot(self) -> dict[str, EquippedItem]:
@@ -1106,6 +1117,11 @@ class Loadout(ContentModel):
         """副手欄的副手定義（沒有副手物品或物品沒有副手基礎特性時為 ``None``）。"""
         off = self.item_in("off_hand")
         return None if off is None else off.item.offhand_def
+
+
+def chosen_key(slot: str, affix_id: str) -> str:
+    """:attr:`Loadout.chosen` 的一個勾選（``"<欄位>:<詞條 ID>"``）。"""
+    return f"{slot}:{affix_id}"
 
 
 def loadout_held(weapon: WeaponDef, loadout: Loadout | None) -> dict[str, str]:
