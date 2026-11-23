@@ -141,7 +141,7 @@
 | 對照表至少 8 列 | 通過：10 列（9 次有效＋1 次無效），其中故意弄壞 7 列、真實改動 3 列 | 第 2 節 |
 | 結論與建議：漏抓、省多少、要不要用、第 11 條改寫全文 | 通過：建議不用，第 11 條不改，理由見第 5 節 | 第 4、5 節 |
 | 靜態檢查 | 通過 | 下表 |
-| 全部 commit 之後 `check.py --all` | 見下表 | 下表 |
+| 全部 commit 之後 `check.py --all` | 通過，結束碼 0 | 下表 |
 | 每項一個 commit | 第 1、2、4 項各一個；第 3 項依規格不 commit | 交付項目 |
 
 ## 檢查指令結果
@@ -153,7 +153,7 @@
 | `uv run lint-imports` | 0 |
 | `run_pytest.py -q tests/infra/test_check_testmon.py tests/infra/test_check_split.py -n 4` | 0（59 passed） |
 | `TRPG_CHECK_BASE=HEAD check.py --testmon`（#1 的暫時改動） | 1（預期：暫時改動弄壞 38 個） |
-| `uv run python scripts/check.py --all`（全部 commit 之後） | 交件前補上 |
+| `uv run python scripts/check.py --all`（全部 commit 之後，HEAD `c3d29443b`） | 0（pytest 18715 passed、8 skipped；vitest 4955 passed；729 秒；已寫通過戳記，之後只改這份報告） |
 
 ## 待 PM 決定
 1. `--testmon` 和兩個套件要留著當開發中的選用工具，還是移除（第 5 節；我先留著）。
