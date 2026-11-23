@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from trpg.api.auth import check_owner, optional_account, settings_of
 from trpg.api.glossary import build_glossary
-from trpg.api.schemas import BuildSummary, Glossary, MapSummary
+from trpg.api.schemas import BuildSummary, Glossary, MapSummary, map_summary
 from trpg.api.sessions import BattleNotFoundError, playable_maps
 from trpg.api.skill_cards import SkillCard, skill_card
 from trpg.api.state import runs_of, store_of
@@ -23,10 +23,7 @@ def list_maps(request: Request) -> list[MapSummary]:
     """可以開戰的地圖（有預設遭遇的地圖，依 ID 排序）。"""
     library = store_of(request).library
     return [
-        MapSummary(
-            id=m.id, name_zh=m.name_zh, archetype=m.archetype, width=m.width, height=m.height
-        )
-        for m in (library.map(map_id) for map_id in playable_maps(library))
+        map_summary(library, m) for m in (library.map(map_id) for map_id in playable_maps(library))
     ]
 
 

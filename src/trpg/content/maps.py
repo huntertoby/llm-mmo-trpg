@@ -66,6 +66,16 @@ type MapRole = Literal["test", "training", "boss"]
 （Phase 3F-1）、``boss`` Boss 戰專屬地圖（Phase 3-5b）。程式依用途找類型，不寫死類型 ID。"""
 
 
+# QF-5（WL-2 裁定 4，照 WL-1 b 的骨架檢查）：程式依用途找類型、找不到會出錯或擋不下來的用途。
+# 每種至少要有一個類型標這個 role，缺了載入時給中文錯誤。改到下面的程式時同步這份。
+CODE_REQUIRED_ROLES: dict[MapRole, str] = {
+    "test": "開發用量測工具 sim/leap_check.py 的 field_as_battle_map 取 role_ids('test')[0]",
+    "training": "技能工坊的靶場（content/workshop.py 檢查 workshop.yaml 的地圖、API 的對手選單）",
+    "boss": "頭目地圖與賽季 Boss（content/world_map.py、content/world_season.py、api/sessions.py）",
+}
+"""程式需要的地圖用途：role → 用到它的地方（錯誤訊息用）；順序＝錯誤訊息的順序。"""
+
+
 class MapArchetypeDef(ContentModel):
     """一種地圖類型（``content/map_archetypes.yaml`` 的一列，Phase WL-2）。"""
 
@@ -89,6 +99,10 @@ class MapArchetypeTable(ContentModel):
         dup = sorted({a for a in ids if ids.count(a) > 1})
         if dup:
             raise ValueError(f"地圖類型重複：{'、'.join(dup)}")
+        have = {a.role for a in self.archetypes}
+        needed = [f"{r}（{why}）" for r, why in CODE_REQUIRED_ROLES.items() if r not in have]
+        if needed:
+            raise ValueError(f"缺少程式需要的地圖用途（role）：{'；'.join(needed)}")
         return self
 
     def ids(self) -> tuple[str, ...]:

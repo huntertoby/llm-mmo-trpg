@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../../api/client";
 import type { BattleResponse, WorkshopArena, WorkshopCheck } from "../../api/types";
 import type { TryoutPrefs } from "../../workshop/state";
-import { buildTryoutRequest, isTrainingMap, manaNote, manaWarning } from "../../workshop/tryout";
+import { buildTryoutRequest, isTrainingMap, manaNote, manaWarning, mapRoleNote } from "../../workshop/tryout";
 import { parseSeed, randomSeed } from "../../screens/StartScreen";
 import { DevPackSelect, StartPickerView, useStartPicker } from "../../run/StartPicker";
 import { isDevMode } from "../../run/startFlow";
@@ -118,8 +118,7 @@ export function TryoutPanel({ check, pending, prefs, onPrefs, onStart, dev = isD
             {(arena?.maps ?? []).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name_zh}
-                {m.archetype === "training" ? "（試玩專用，預設）" : ""}
-                {m.archetype === "boss" ? "（頭目地圖）" : ""}
+                {mapRoleNote(m)}
               </option>
             ))}
           </select>
