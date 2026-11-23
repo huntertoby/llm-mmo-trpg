@@ -639,6 +639,8 @@ def _base_bonus(rules: ItemGenRules, budget: Fraction | int) -> int | None:
 def _legendary(
     library: ContentLibrary, rng: Rng, slot_type: SlotType, weapon_class: WeaponClass | None
 ) -> ItemDef | None:
+    """開關關著時的傳說（8.22.1 第 7 點）：從 ``items.yaml`` 的測試傳說挑同部位的。
+    ``legendary_enabled`` 打開後不再走這裡（E6-c1，草案 D12：測試傳說留給測試與開發頁）。"""
     pool = [
         i
         for _, i in sorted(library.items.items())

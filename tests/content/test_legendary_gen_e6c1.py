@@ -20,7 +20,7 @@ from trpg.content.item_budget import (
     legendary_unique,
     signature_points,
 )
-from trpg.content.item_gen import ItemGenError, generate_item
+from trpg.content.item_gen import ItemGenError, generate_item, generate_item_retrying
 from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
 
@@ -157,3 +157,19 @@ def test_program_names_legendary(lib: ContentLibrary, slot: str) -> None:
         epic = _gen(lib, seed, slot, 5, "epic")
         assert item.name_zh.startswith("傳說")
         assert item.name_zh.removeprefix("傳說") == epic.name_zh.removeprefix("史詩")
+
+
+TEST_LEGENDS = ("item_g3b_legend_ember", "item_g3b_legend_titan", "item_g3b_legend_wake")
+
+
+def test_generator_does_not_pick_test_legendaries(lib: ContentLibrary) -> None:
+    """E6-c1 第 4 項（草案 D12）：開關打開時不再從 ``items.yaml`` 挑測試傳說；三件仍留在內容裡。"""
+    for item_id in TEST_LEGENDS:
+        assert lib.items[item_id].legendary
+    for seed in range(40):
+        item = _gen(lib, seed, "neck", 1 + seed % 10)
+        assert item.id not in lib.items
+        assert item.id.startswith("item_gen_neck_")
+        assert item.item_level is not None
+        retried = generate_item_retrying(lib, Rng(seed), "neck", "legendary", 4)
+        assert retried is not None and retried.id not in lib.items
