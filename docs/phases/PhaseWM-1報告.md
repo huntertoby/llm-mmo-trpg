@@ -87,7 +87,7 @@
 | `corepack pnpm -C client exec tsc --noEmit` | 0 |
 | `corepack pnpm -C client exec vitest run src/world src/render/eventArt.test.ts src/api` | 0（72 檔、886 passed） |
 | `corepack pnpm -C client build` | 0（只有既有的 chunk 大小警告） |
-| `scripts/check.py --all` | 見第 7 節（排時段後跑） |
+| `scripts/check.py --all` | 0（見第 7 節） |
 
 ## 6. 待 PM 決定（已裁定）
 
@@ -113,4 +113,10 @@
 
 ## 7. 全量檢查
 
-（排時段後補上）
+開發 PM 說「可以跑」後，先 `git merge --no-edit main`（含 E6-c1，`3a7d5f7bf`），沒有衝突。
+
+- 第一次 `check.py --all`：結束碼 1。`tests/test_hardcoded_scan.py` 抓到 `devWalkMs` 的上限 `10000` 沒有歸類。開發用參數不需要上限，拿掉之後重跑（`1b7f0c98a`）。
+- 第二次 `uv run python scripts/check.py --all`：**結束碼 0**。
+  - ruff、format、mypy、lint-imports、pytest（18903 passed、8 skipped）、client install、typecheck、client test（425 檔、5012 passed）、situation coverage 全部通過。
+  - 已寫下通過戳記。
+- `corepack pnpm -C client build`：**結束碼 0**。
