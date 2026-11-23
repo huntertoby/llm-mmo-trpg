@@ -37,6 +37,7 @@ from trpg.content.equipment import (
     CostAffix,
     CostStat,
     ItemDef,
+    SignatureKind,
     StatAffix,
     StatKind,
     TriggerAffix,
@@ -191,6 +192,12 @@ class ItemGenRules(ContentModel):
     """帶招牌的稀有度（E6-a1，08 8.27：稀有、史詩）。"""
     signature_slots: tuple[SlotType, ...] = ()
     """帶招牌的部位（E6-a1，08 8.27：主手、副手、身體、腳、項鍊；頭、手、戒指不帶）。"""
+    signature_enabled: bool = False
+    """產生器放不放招牌（E6-a1，08 8.30 第 11 點：預設關，內容進來再開）。關著的時候產生器的結果和
+    E6 之前逐位元相同。"""
+    signature_weights: dict[SlotType, dict[SignatureKind, int]] = Field(default_factory=dict)
+    """部位 → 招牌種類的權重（08 8.30 第 11 點：部位偏向的種類 3、其他 1，項鍊全部 1）。沒列的種類
+    權重 0；某種類在這件物品上沒有候選詞條時也當 0。"""
     required_picks: dict[SlotType, RequiredPick]
     weapon_attribute_preference_permille: int = Field(ge=0, le=_PERMILLE)
     max_attempts: int = Field(ge=1, le=200)
@@ -235,6 +242,11 @@ class ItemGenRules(ContentModel):
         stray = sorted(set(self.signature_rarities) - set(self.rarities))
         if stray:
             raise ValueError(f"signature_rarities 有 rarities 沒有的稀有度：{', '.join(stray)}")
+        stray = sorted(set(self.signature_weights) - set(self.signature_slots))
+        if stray:
+            raise ValueError(f"signature_weights 有 signature_slots 沒有的部位：{', '.join(stray)}")
+        if any(w < 0 for table in self.signature_weights.values() for w in table.values()):
+            raise ValueError("signature_weights 不可為負")
         return self
 
     def carries_signature(self, rarity: str | None, slot_type: SlotType) -> bool:

@@ -102,6 +102,17 @@ rarities:
 # （稀有＝招牌＋1～2 條、史詩＝招牌＋2 條），不受上面的類別限制。
 signature_rarities: [rare, epic]
 signature_slots: [weapon, offhand, body, feet, neck]
+# 產生器放不放招牌（8.30 第 11 點：預設關，內容進來再開）。關著的時候產生器的結果和 E6 之前逐位元相同。
+signature_enabled: false
+# 部位 → 招牌種類的權重（8.27 部位偏向、8.30 第 11 點：偏向的種類 3、其他 1，項鍊全部 1）。某種類在
+# 這件物品上沒有候選詞條時權重當 0；五種都沒有就不帶招牌，照一般的稀有、史詩產生。
+# 種類：action 新動作、reaction 新反應、terrain 地形規則、behavior 行為改寫、rule 改寫規則。
+signature_weights:
+  weapon: {action: 3, reaction: 1, terrain: 1, behavior: 3, rule: 1}
+  offhand: {action: 3, reaction: 1, terrain: 1, behavior: 3, rule: 1}
+  body: {action: 1, reaction: 3, terrain: 1, behavior: 1, rule: 1}
+  feet: {action: 1, reaction: 1, terrain: 3, behavior: 1, rule: 1}
+  neck: {action: 1, reaction: 1, terrain: 1, behavior: 1, rule: 1}
 
 # 「1 條 build 詞條」依部位：主手、副手、飾品是技能強化；身體、頭、手、腳是條件數值或防守型觸發
 # （8.21.6 末段，#37）。預算放不下時照「每條至少 2 點」下修（8.22）。
