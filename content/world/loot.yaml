@@ -25,8 +25,9 @@ gear:
   # 兩大類（每天 6 點算）；精英 75／25；另外兩類合計不到 3 人時平均分。區域 Boss、懸賞一律同大類。
   main_hand: {same_permille: 500, elite_same_permille: 750, min_sample: 3}
 
-# 20.1：裝備回收＝物品等級 × 稀有度係數；沒列的（傳說）與沒有物品等級的（初始裝備）不收（代決 5D2-8）
-sell_rarity_coef: {common: 3, uncommon: 5, rare: 8, epic: 12}
+# 20.1：裝備回收＝物品等級 × 稀有度係數；沒有物品等級的（初始裝備、items.yaml 的測試傳說）不收（代決 5D2-8）。
+# E6-c2：傳說係數 20（平衡待查第 41 條初值，08 8.30 第 11 點）；傳說仍不能分解（crafting.yaml 的 salvage）。
+sell_rarity_coef: {common: 3, uncommon: 5, rare: 8, epic: 12, legendary: 20}
 
 # 20.5：傭兵每個部位帶同物品等級、稀有的系統裝備（詞條照底稿 build 的關鍵字；不掉落、不能拆）。
 # 主手、副手照底稿的武器不換（代決 5D2-9）。

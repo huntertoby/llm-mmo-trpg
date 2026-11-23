@@ -158,7 +158,7 @@ class LootRules(ContentModel):
     generic_by_level: tuple[GenericMaterial, ...] = Field(min_length=1)
     gear: GearDropRules
     sell_rarity_coef: dict[Rarity, int] = Field(default_factory=dict)
-    """20.1 裝備回收＝物品等級 × 係數；沒列的稀有度（傳說）不收。"""
+    """20.1 裝備回收＝物品等級 × 係數；沒列的稀有度不收（E6-c2 起傳說也列，平衡待查第 41 條）。"""
     mercenary_gear: MercenaryGearRules = Field(default_factory=MercenaryGearRules)
     families: dict[str, str] = Field(default_factory=dict)
     """各區共用的敵人 → 家族材料（5D-2b：盜賊各區都掉焦鐵）；區域的 ``families`` 優先。"""

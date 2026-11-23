@@ -377,7 +377,7 @@ def _sell_gear(
         raise WorldActionError("裝備一次賣一件")
     price = gear_price(library, piece)
     if price is None:
-        raise WorldActionError(f"{piece.name_zh}不能賣（初始裝備與傳說不收）")
+        raise WorldActionError(f"{piece.name_zh}不能賣（沒有物品等級的裝備不收）")
     char = remove_gear(char, [piece.id])  # 5D-3 的改動紀錄一併刪掉
     char = char.model_copy(update={"gold": char.gold + price})
     event = ItemSoldEvent(

@@ -147,7 +147,10 @@ def test_starting_gear_not_sellable(library: ContentLibrary, make_char: MakeChar
     staff = _item(library, "weapon")
     char = _act(library, make_char(gear=(staff,)), EquipAction(item=staff.id))
     assert gear_price(library, char.gear[0]) is None  # 初始武器沒有物品等級：不收（代決 5D2-8）
-    legend = _item(library, "ring").model_copy(update={"id": "item_x", "rarity": "legendary"})
+    # E6-c2 起傳說也收（係數 20）；沒有物品等級的（items.yaml 的測試傳說）照舊不收
+    legend = _item(library, "ring").model_copy(
+        update={"id": "item_x", "rarity": "legendary", "item_level": None}
+    )
     assert gear_price(library, legend) is None
     with pytest.raises(WorldActionError, match="不能賣"):
         _act(library, make_char(gear=(legend,)), SellAction(shop=SHOP, item=legend.id))
