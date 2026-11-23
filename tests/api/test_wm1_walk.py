@@ -25,6 +25,7 @@ from trpg.api.world import WorldStore
 from trpg.api.world_field_view import field_view
 from trpg.api.world_growth_view import clear_hero_panel_cache, hero_panel
 from trpg.content.library import ContentLibrary
+from trpg.content.slots import SLOT_TYPE_OF, SLOTS
 from trpg.roguelite.state import RunState
 from trpg.world.layout import LOG_FILE
 from trpg.world.replay import replay
@@ -115,7 +116,8 @@ def test_cache_invalidates_on_skills_gear_level(
     renamed = (first.model_copy(update={"name_zh": "改過的招"}), *char.generated_skills[1:])
     changed = {
         "skills": char.model_copy(update={"generated_skills": renamed}),
-        "gear": char.model_copy(update={"equipment": {item.slot_type: item}}),
+        # E6-b2 起面板照身上的裝備算：鍵要是真的欄位（原本放物品種類，面板不看所以沒出錯）
+        "gear": char.model_copy(update={"equipment": {_slot_of(item.slot_type): item}}),
         "level": char.model_copy(update={"level": char.level + 2}),
     }
     for name, other in changed.items():
@@ -128,6 +130,10 @@ def test_cache_invalidates_on_skills_gear_level(
     assert changed["level"] is not char
     clear_hero_panel_cache()
     assert hero_panel(lib, world, changed["skills"]) != base  # 技能變了，面板真的不同
+
+
+def _slot_of(slot_type: str) -> str:
+    return next(s for s in SLOTS if SLOT_TYPE_OF[s] == slot_type)
 
 
 def test_walk_field_still_filtered_for_viewer(client: TestClient) -> None:
