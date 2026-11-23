@@ -815,6 +815,8 @@ groups:
       - trigger_limit_permille
       - weapon_attribute_preference_permille
       - weapon_element_points
+      - signature_permille        # E6-a1：招牌點數佔詞條預算的 ‰
+      - signature_weights.*.*     # E6-a1：招牌種類的權重
 
   - files: equipment/*.yaml
     keep:

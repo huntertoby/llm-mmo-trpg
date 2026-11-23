@@ -133,6 +133,13 @@ def _affix_reference_problems(
 GEAR_GRANTABLE_KINDS: tuple[str, ...] = ("active", "reaction", "modifier", "passive")
 """裝備可以授予的技能種類（E1，08 8.28：主動、反應、修正、被動）；姿態不在其中。"""
 GEAR_GRANTABLE_ZH: tuple[str, ...] = ("主動", "反應", "修正", "被動")
+SIGNATURE_SKILL_KINDS: dict[str, str] = {
+    "action": "active",
+    "reaction": "reaction",
+    "behavior": "modifier",
+}
+"""授予技能（第 9 類）當招牌時，招牌種類 → 技能種類（E6-a1，08 8.27：新動作＝主動、新反應＝反應、
+行為改寫＝修正）。"""
 
 
 def _action_problems(affix: ActionAffix, ruleset: Ruleset) -> list[str]:
@@ -144,6 +151,12 @@ def _action_problems(affix: ActionAffix, ruleset: Ruleset) -> list[str]:
         return [f"詞條 {affix.id} 授予的技能 {skill.id} 必須是{kinds}技（目前 {skill.kind}）"]
     if skill is not None and carries_silent(skill, skills):  # BS-1（#157）：無聲不做成詞條
         return [f"詞條 {affix.id} 授予的技能 {skill.id} 會給「無聲」：無聲不能來自裝備詞條"]
+    wanted = SIGNATURE_SKILL_KINDS.get(affix.signature or "")
+    if skill is not None and wanted is not None and skill.kind != wanted:
+        return [
+            f"詞條 {affix.id}：招牌 {affix.signature} 授予的技能 {skill.id} 必須是 {wanted} 技"
+            f"（目前 {skill.kind}）"
+        ]
     return []
 
 
