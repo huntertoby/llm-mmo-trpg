@@ -8,6 +8,8 @@ import { RuleText } from "../ui/ruleText";
 import { WeaponIcon } from "../ui/WeaponIcon";
 import { itemTipLines, wornGear } from "./gearOffer";
 import { raceOriginText } from "./raceOrigin";
+import { critDamageDetail, critDamageText } from "../battle/critDamage";
+import { CritDamageDetail } from "../ui/CritDamageDetail";
 import {
   ATTRIBUTES,
   affectsOf,
@@ -44,6 +46,35 @@ function Bar({ label, value, max, kind }: { label: string; value: number; max: n
         {value} / {max}
       </span>
     </div>
+  );
+}
+
+/** CR-1c（05 5.4.2 第 8 點）：數值區「暴擊傷害 N%」，「▸ 詳細」列來源；倍率與來源都由後端算（和戰鬥中的單位卡同一套字）。 */
+export function HeroCritDamage({ hero }: { hero: Pick<RunHero, "crit_damage_permille" | "crit_damage_detail_zh" | "crit_damage_hint_zh"> }) {
+  const crit = critDamageText(hero);
+  if (crit === null) return null;
+  const detail = critDamageDetail(hero);
+  return (
+    <>
+      <div className="unit-line crit-damage-line small" data-testid="run-crit-damage">
+        {crit}
+      </div>
+      {detail !== null && (
+        <details className="unit-details" data-testid="run-crit-details">
+          <summary>詳細</summary>
+          <table className="unit-stats">
+            <tbody>
+              <tr>
+                <th>暴擊傷害</th>
+                <td data-testid="run-crit-detail">
+                  <CritDamageDetail unit={hero} />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+      )}
+    </>
   );
 }
 
@@ -137,6 +168,7 @@ export function RunHeroPanel({ hero }: { hero: RunHero }) {
           </span>
         ))}
       </div>
+      <HeroCritDamage hero={hero} />
       {(hero.attribute_perks ?? []).length > 0 && (
         <ul className="run-attr-perks small" data-testid="run-attr-perks">
           {(hero.attribute_perks ?? []).map((p) => (

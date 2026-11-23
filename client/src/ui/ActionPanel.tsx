@@ -6,6 +6,7 @@ import { cssColor, type LegendEntry } from "../battle/legend";
 import { DIRECTIONS } from "../battle/glossary";
 import { compositePickedTag, secondChoices } from "../battle/composite";
 import { chainLines, previewLines } from "../battle/previewText";
+import { WrapUnits } from "./WrapUnits";
 import { noTurnRows, type NoTurnKind } from "../battle/noTurn";
 import { objectStyle } from "../battle/glossary";
 import { pickCountText, tileCount } from "../battle/pickCount";
@@ -232,7 +233,7 @@ function ModeHelp(props: HelpProps) {
   );
 }
 
-interface PreviewContent {
+export interface PreviewContent {
   lines: string[];
   chain: ReturnType<typeof chainLines> | null;
   hasChain: boolean;
@@ -288,7 +289,9 @@ function PracticePreviewLines({ lines }: { lines: readonly string[] }) {
     <ul>
       {rows.map(({ text, parts }, i) =>
         parts === null ? (
-          <li key={`${i}:${text}`}>{text}</li>
+          <li key={`${i}:${text}`}>
+            <WrapUnits text={text} />
+          </li>
         ) : (
           <li key={`${i}:${text}`} className="practice-preview-line">
             {parts.map((p) => (
@@ -326,7 +329,7 @@ export function NoTurnLine({ text, kind }: { text: string; kind: NoTurnKind }) {
   );
 }
 
-function PreviewBox({ content, practice }: { content: PreviewContent; practice: boolean }) {
+export function PreviewBox({ content, practice }: { content: PreviewContent; practice: boolean }) {
   const { lines, chain, hasChain, noTurn } = content;
   return (
     <div className="preview-box" aria-label="預覽">
@@ -337,7 +340,13 @@ function PreviewBox({ content, practice }: { content: PreviewContent; practice: 
         <ul>
           {lines.map((l, i) => {
             const kind = noTurn.get(l);
-            return kind === undefined ? <li key={`${i}:${l}`}>{l}</li> : <NoTurnLine key={`${i}:${l}`} text={l} kind={kind} />;
+            return kind === undefined ? (
+              <li key={`${i}:${l}`}>
+                <WrapUnits text={l} />
+              </li>
+            ) : (
+              <NoTurnLine key={`${i}:${l}`} text={l} kind={kind} />
+            );
           })}
         </ul>
       )}
@@ -347,12 +356,12 @@ function PreviewBox({ content, practice }: { content: PreviewContent; practice: 
           <ul>
             {chain.certain.map((t) => (
               <li key={`c:${t}`}>
-                <b>確定</b>　{t}
+                <b>確定</b>　<WrapUnits text={t} />
               </li>
             ))}
             {chain.possible.map((t) => (
               <li key={`p:${t}`}>
-                <span className="muted">可能</span>　{t}
+                <span className="muted">可能</span>　<WrapUnits text={t} />
               </li>
             ))}
           </ul>

@@ -18,6 +18,7 @@ import {
   type PathTag,
   type TagIcon,
 } from "../battle/pathPreview";
+import type { FloatBounds } from "./floatStack";
 import { label } from "./labels";
 import { minMarkScale } from "./minMark";
 
@@ -349,18 +350,40 @@ function overlapArea(a: Box, b: Box): number {
 }
 
 /**
+ * CR-1c（美術 CR-1b 驗收小修 2）：置中放的小牌（左上角 `p`、寬 `w`、高 `h`）像浮動卡一樣往內推，整塊留在地圖可見範圍
+ * `bounds`（世界座標）內；比範圍還寬（高）時貼左（上）緣。沒給範圍時照原位。
+ */
+export function pushInside(p: Pt, w: number, h: number, bounds?: FloatBounds): Pt {
+  if (bounds === undefined) return p;
+  const x = Math.max(bounds.left, Math.min(p.x, bounds.right - w));
+  const y = Math.max(bounds.top, Math.min(p.y, bounds.bottom - h));
+  return { x, y };
+}
+
+/** 小牌整塊在範圍內（沒給範圍時一律算在內）。 */
+function fits(p: Pt, w: number, h: number, bounds?: FloatBounds): boolean {
+  if (bounds === undefined) return true;
+  return p.x >= bounds.left && p.x + w <= bounds.right && p.y >= bounds.top && p.y + h <= bounds.bottom;
+}
+
+/**
  * 各張小牌放在哪裡（世界座標的左上角），依序擺、不互相疊：依序試格子的右上、右下、左上、左下；
  * 都疊到時放右上再往上疊。`o` 是格子頂面的左上角，`w` 是小牌寬度，`h` 是小牌高度（AR-X10：放大後的高度）。
  *
  * CR-1b（美術 E3b 驗收小修 1、佇列 (w)）：`units` 是有單位的格子（頂面左上角）；有給時把它們當成不能放的區域
  * （`unitBox`，含頭部），停點右邊會蓋到單位時依序改擺上方、左邊、下方；都會蓋到時選蓋到最少的那一邊。
  * 沒給 `units` 時和改前一樣。
+ *
+ * CR-1c（美術 CR-1b 驗收小修 2）：`bounds` 是地圖可見範圍（世界座標）；上方、下方這兩個水平置中的位置先往內推
+ * （`pushInside`）再判斷會不會蓋到東西。左右兩邊的位置不推（推進來會蓋到停點），出界時不選；全部的位置都出界時
+ * 照舊從全部的位置挑。
  */
 export function placeTags(
   items: ReadonlyArray<{ o: Pt; w: number }>,
   avoid: readonly Pt[] = [],
   h: number = TAG_HEIGHT,
   units: readonly Pt[] = [],
+  bounds?: FloatBounds,
 ): Pt[] {
   // `avoid`：驚嘆號泡泡的中心（不讓小牌蓋住）
   const placed: Box[] = avoid.map((c) => ({
@@ -389,11 +412,13 @@ export function placeTags(
           ]
         : [
             { x: right, y: above }, // 停點右邊（原本的位置）
-            { x: mid, y: o.y - T * 0.45 - h }, // 上方（停點那一格的頭上）
+            pushInside({ x: mid, y: o.y - T * 0.45 - h }, w, h, bounds), // 上方（停點那一格的頭上；CR-1c 往內推）
             { x: left, y: above }, // 左邊
-            { x: mid, y: below }, // 下方
+            pushInside({ x: mid, y: below }, w, h, bounds), // 下方（CR-1c 往內推）
           ];
-    const free = tries.filter((p) => !hits(p.x, p.y, w));
+    // CR-1c：有給範圍時，出界的位置（左右兩邊）不選；全都出界時照舊從全部的位置挑
+    const inside = tries.filter((p) => fits(p, w, h, bounds));
+    const free = (inside.length > 0 ? inside : tries).filter((p) => !hits(p.x, p.y, w));
     let at = free.find((p) => covered(p.x, p.y, w) === 0);
     if (at === undefined && free.length > 0 && bodies.length > 0) {
       at = free.reduce((best, p) => (covered(p.x, p.y, w) < covered(best.x, best.y, w) ? p : best));

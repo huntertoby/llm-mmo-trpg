@@ -20,6 +20,7 @@ import { drawRegionBlobs, type RegionMark } from "../regionBlobs";
 import type { PathDraw, PathTag } from "../../battle/pathPreview";
 import { bangCenter, drawFaintGrid, drawPathLine, drawPathMarks, pathLineCells, drawSoftCells, HIT_SOFT, missTagNode, MOVE_SOFT, pathTagNode, pathTagScale, placeMissTag, RANGE_SOFT, placeTags, scaleTagNode, TAG_HEIGHT, type TileGeo } from "../pathArt";
 import { poolInsets } from "../practiceRange";
+import { visibleFieldBounds } from "../floatStack";
 import { TerrainLayer } from "./terrainLayer";
 import { hoverCellFrame, isGiantDraw } from "../../battle/drawModel";
 import { giantTargetFrame } from "../giantSprite";
@@ -141,6 +142,8 @@ export abstract class HighlightLayer extends TerrainLayer {
       p.avoid,
       TAG_HEIGHT * k,
       p.units,
+      // CR-1c（美術 CR-1b 驗收小修 2）：置中的小牌留在地圖可見範圍內（同浮動字的範圍：扣掉鏡頭偏移）
+      visibleFieldBounds((this.model?.width ?? 0) * T, (this.model?.height ?? 0) * T, this.worldBaseY, this.cam, { x: 0, y: 0 }),
     );
     p.nodes.forEach((n, i) => {
       const at = spots[i] as { x: number; y: number };
