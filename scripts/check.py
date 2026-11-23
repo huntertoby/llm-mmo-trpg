@@ -5,7 +5,6 @@
     uv run python scripts/check.py          # 快速版，依改動路徑分流（TS-1，見下）
     uv run python scripts/check.py --all    # 快速版，不分流、全部步驟都跑
     uv run python scripts/check.py --full   # 完整版（pytest -m ""、TRPG_FULL=1），不分流
-    uv run python scripts/check.py --testmon  # 試用（TS-2）：只跑後端時由 testmon 選測試，不寫戳記
 
 分流（TS-1）：比對 ``origin/main``（``TRPG_CHECK_BASE`` 可改）的 merge-base 到工作區的改動。
 只動 ``client/`` 時只跑前端的 install、typecheck、test、build，加上會讀 ``client/`` 檔案的 pytest；
@@ -37,11 +36,6 @@ pytest 經看門狗 ``scripts/run_pytest.py`` 執行（QF-3a）：超過 10 分�
 分流跑（有步驟被略過）改寫在 ``pm-check-pass-split/<tree hash>``（內容記 commit、範圍、基準），
 hook 不看這個位置，所以分流跑不會讓 hook 略過完整檢查（TS-1）。
 
-試用 testmon（TS-2）：加 ``--testmon`` 時，只有分流結果是「只跑後端」、而且後端改動都是
-``.py`` 才用 ``pytest-testmon`` 選測試（``--testmon-forceselect``，和 ``-m`` 一起篩）；其他範圍照
-上面的分流、不用 testmon。開頭那一行會寫選了幾個、略過幾個（``scripts/testmon_select.py`` 先只收集
-算出來）。testmon 選過的跑法**不寫任何通過戳記**。試用中，不能取代交件前的 ``--all``。
-
 工具的尋找順序：目前 Python 環境的模組（``sys.executable -m <tool>``）→
 與 ``sys.executable`` 同一資料夾的執行檔 → ``PATH`` 上的執行檔（``shutil.which``）。
 """
@@ -50,7 +44,6 @@ from __future__ import annotations
 
 import dataclasses
 import importlib.util
-import json
 import os
 import re
 import shutil
@@ -154,7 +147,6 @@ class Plan:
     reason: str
     base: str | None = None
     changed: int = 0
-    paths: tuple[str, ...] = ()  # 改動的檔（TS-2：判斷 testmon 追不追得到）
 
 
 def _path_area(path: str) -> str | None:
@@ -180,7 +172,6 @@ def plan_scope(changed: list[str] | None, base: str | None) -> Plan:
     if changed is None or base is None:
         return Plan(SCOPE_ALL, f"找不到 {base_ref()} 或 git 失敗，判斷不出改動範圍")
     count = len(changed)
-    paths = tuple(sorted(changed))
     areas: dict[str, list[str]] = {}
     for path in sorted(changed):
         area = _path_area(path)
@@ -201,7 +192,7 @@ def plan_scope(changed: list[str] | None, base: str | None) -> Plan:
         return Plan(SCOPE_CLIENT, reason, base, count)
     if set(areas) == {SCOPE_BACKEND}:
         reason = "只動 src/、tests/、scripts/，沒動 client/ 與 API schema 快照"
-        return Plan(SCOPE_BACKEND, reason, base, count, paths)
+        return Plan(SCOPE_BACKEND, reason, base, count)
     return Plan(SCOPE_ALL, "前端與後端都有改動", base, count)
 
 
@@ -403,120 +394,27 @@ def write_pass_stamp(plan: Plan | None = None) -> Path | None:
     return stamp
 
 
-# --- TS-2：試用 testmon -------------------------------------------------------------------
-
-TESTMON_FLAG = "--testmon"
-TESTMON_PYTEST_ARG = "--testmon-forceselect"  # addopts 有 -m，用 forceselect 才會真的篩
-TESTMON_SELECT_SCRIPT = "scripts/testmon_select.py"
-
-
-@dataclass(frozen=True)
-class TestmonPreview:
-    """testmon 這次會選的測試數（``scripts/testmon_select.py`` 只收集算出來）。"""
-
-    __test__ = False  # 不是 pytest 的測試類別
-
-    selected: int
-    skipped: int
-    new_db: bool
-
-
-def testmon_blocker(plan: Plan) -> str | None:
-    """這次不能用 testmon 的原因；可以用時回傳 None。
-
-    只在「只跑後端」時用。後端改動有非 ``.py`` 的檔（例如測試的快照、JSON）時也不用：
-    testmon 只追 Python 原始碼，追不到這些檔。"""
-    if plan.scope != SCOPE_BACKEND:
-        label = {SCOPE_ALL: "全跑", SCOPE_CLIENT: "只跑前端"}[plan.scope]
-        return f"這次範圍是{label}，testmon 只在只跑後端時用"
-    blind = [p for p in plan.paths if not p.endswith((".py", ".md"))]
-    if blind:
-        more = f" 等 {len(blind)} 個" if len(blind) > 1 else ""
-        return f"改動有 testmon 追不到的非 .py 檔（{blind[0]}{more}）"
-    return None
-
-
-def testmon_preview() -> TestmonPreview | None:
-    """先只收集一次，算出 testmon 會選幾個、略過幾個；失敗時 None（呼叫端退回不用 testmon）。"""
-    command = [sys.executable, str(PROJECT_ROOT / TESTMON_SELECT_SCRIPT)]
-    try:
-        done = subprocess.run(
-            command, cwd=PROJECT_ROOT, capture_output=True, text=True, check=False
-        )
-    except OSError:
-        return None
-    lines = done.stdout.strip().splitlines()
-    if done.returncode != 0 or not lines:
-        return None
-    try:
-        data = json.loads(lines[-1])
-        return TestmonPreview(int(data["selected"]), int(data["skipped"]), bool(data["new_db"]))
-    except (ValueError, KeyError, TypeError):
-        return None
-
-
-def with_testmon(run: list[Step]) -> list[Step]:
-    """把 pytest 步驟換成由 testmon 選測試的跑法。"""
-    return [
-        dataclasses.replace(s, args=(*s.args, TESTMON_PYTEST_ARG)) if s.title == "pytest" else s
-        for s in run
-    ]
-
-
-def describe_testmon(preview: TestmonPreview | None, blocker: str | None) -> str:
-    """開頭那一行後半：這次有沒有用 testmon、選了幾個、略過幾個。"""
-    if blocker is not None:
-        return f"指定 --testmon，但不用 testmon：{blocker}。"
-    if preview is None:
-        return "指定 --testmon，但 testmon 預先收集失敗，退回不用 testmon。"
-    note = "（還沒有 .testmondata，這次全跑並建資料）" if preview.new_db else ""
-    return (
-        f"這次用 testmon（試用）：選了 {preview.selected} 個測試、略過 {preview.skipped} 個"
-        f"{note}；不寫通過戳記。"
-    )
-
-
-def testmon_setup(plan: Plan, run: list[Step]) -> tuple[list[Step], str, bool]:
-    """``--testmon``：回傳（要跑的步驟、開頭那一行要加的說明、這次是否真的用 testmon）。"""
-    blocker = testmon_blocker(plan)
-    preview = testmon_preview() if blocker is None else None
-    note = describe_testmon(preview, blocker)
-    if preview is None:
-        return run, note, False
-    return with_testmon(run), note, True
-
-
-def _plan_for(args: list[str]) -> Plan:
-    """``--full``／``--all`` 不看 git、全跑；其他依改動分流。"""
-    full = "--full" in args
-    if full:
-        # 完整版：包含標 slow 的測試與前端完整組合；後面的 -m "not llm" 覆蓋 addopts 的 -m，
-        # 但仍排除需要真模型的 llm 測試。
-        os.environ["TRPG_FULL"] = "1"
-    if full or "--all" in args:
-        return Plan(SCOPE_ALL, "指定 --full" if full else "指定 --all")
-    return plan_scope(*changed_paths())
-
-
-USAGE = "用法：scripts/check.py [--all | --full] [--testmon]"
+USAGE = "用法：scripts/check.py [--all | --full]"
 
 
 def main(argv: list[str] | None = None) -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(errors="replace")
     args = sys.argv[1:] if argv is None else argv
-    if any(a not in ("--full", "--all", TESTMON_FLAG) for a in args):
+    if any(a not in ("--full", "--all") for a in args):
         print(USAGE)
         return 2
     full = "--full" in args
-    plan = _plan_for(args)
+    if full:
+        # 完整版：包含標 slow 的測試與前端完整組合；後面的 -m "not llm" 覆蓋 addopts 的 -m，
+        # 但仍排除需要真模型的 llm 測試。
+        os.environ["TRPG_FULL"] = "1"
+    if full or "--all" in args:
+        plan = Plan(SCOPE_ALL, "指定 --full" if full else "指定 --all")
+    else:
+        plan = plan_scope(*changed_paths())
     run, skipped = steps_for(plan)
-    line = describe(plan, run, skipped)
-    use_testmon = False
-    if TESTMON_FLAG in args:
-        run, note, use_testmon = testmon_setup(plan, run)
-        line += note
-    print(line, flush=True)
+    print(describe(plan, run, skipped), flush=True)
     results = [(step.title, run_step(_full_step(step) if full else step)) for step in run]
 
     print("\n=== 檢查結果摘要 ===")
@@ -531,9 +429,6 @@ def main(argv: list[str] | None = None) -> int:
         print(red(f"\n失敗：{len(failed)} 個步驟（{'、'.join(failed)}）"))
         return 1
     print(green("\n全部檢查通過。"))
-    if use_testmon:
-        print("這次由 testmon 選測試（試用），不寫通過戳記；交件前照舊跑 --all。")
-        return 0
     if all(result in ("通過", "警告") for _, result in results) and (
         stamp := write_pass_stamp(plan)
     ):
