@@ -200,6 +200,10 @@ class ItemGenRules(ContentModel):
     legendary_slots: tuple[SlotType, ...] = ()
     """傳說能出的部位（E6-c1，08 8.30 第 6 點：主手、副手、身體、腳、項鍊）；其他部位抽到傳說時降成
     史詩。"""
+    legendary_enabled: bool = False
+    """產生器自己產傳說（E6-c1，08 8.27、8.30 第 10、11 點：預設關，第 10 步內容寫好、
+    招牌標完再開）。關著的時候抽到傳說照舊從 ``items.yaml`` 的測試傳說挑，
+    結果和 E6-c1 之前逐位元相同。"""
     signature_enabled: bool = False
     """產生器放不放招牌（E6-a1，08 8.30 第 11 點：預設關，內容進來再開）。關著的時候產生器的結果和
     E6 之前逐位元相同。"""

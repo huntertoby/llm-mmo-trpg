@@ -14,8 +14,11 @@
    換成基礎加成。
 3. **名稱**：程式產生「稀有度＋底材名」（#44 原則；LLM 命名留給 Phase 4 之後）；詞條文字照白名單
    模板。
-4. **傳說**：不產生；從現有傳說物品挑同部位（主手還要同武器大類）的，沒有就降為史詩
-   （8.22.1 第 7 點）。
+4. **傳說**：``legendary_enabled`` 關著（預設）時不產生，從現有傳說物品挑同部位（主手還要同武器
+   大類）的，沒有就降為史詩（8.22.1 第 7 點）。打開時（E6-c1，08 8.27、8.30 第 6、7、10 點）：頭、
+   手、戒指降成史詩；其他部位先抽獨特效果（招牌那一步，見 :func:`_unique_effect`），
+   沒有候選就降成史詩；
+   再照稀有度表的傳說（2 條，類別同史詩）分剩下的預算；獨特效果放最後。
 5. **招牌**（E6-a1，08 8.27、8.30）：``signature_enabled`` 打開時，稀有、史詩的主手、副手、身體、
    腳、項鍊先依部位權重抽招牌種類（沒有候選的種類權重當 0），再從那一種抽 1 條，點數是詞條預算的
    60%；剩下的預算照 2. 分（條數少 1 條，放得下幾條算幾條，放不下就只有招牌）。招牌放在詞條的最後
@@ -687,18 +690,38 @@ def generate_item(
     if item_level < 1:
         raise ItemGenError(f"物品等級至少 1（收到 {item_level}）")
     slot_type = _slot_type(slot)
-    if rarity == "legendary":
+    rules = _rules(library)
+    if rarity == "legendary" and not rules.legendary_enabled:  # 開關關著：E6 之前的做法
         found = _legendary(library, rng, slot_type, weapon_class)
         if found is not None:
             return found
         rarity = "epic"
-    rules = _rules(library)
-    rule = rules.rarity(rarity)
+    if rarity == "legendary" and not rules.legendary_slot(slot_type):  # 08 8.30 第 6 點
+        rarity = "epic"
     base = _base(library, rng, slot_type, weapon_class)
-    ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     budget = affix_budget(rules, item_level, slot_type)
+    unique = None
+    if rarity == "legendary":
+        if signature_kind is not None:
+            raise ItemGenError("傳說的獨特效果不能指定類型")
+        unique = _unique_effect(library, rng, base, budget)
+        if unique is None:  # 沒有獨特效果的候選：降成史詩
+            rarity = "epic"
+    rule = rules.rarity(rarity)
+    ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     signature = _signature(library, rng, base, rarity, budget, kind=signature_kind)
-    if signature is None:
+    if unique is not None:  # 傳說：2 條（剩下的預算）＋ 獨特效果，獨特效果放最後（E6-c1）
+        picks, bonus = _roll_affixes(
+            ctx,
+            rng,
+            rule,
+            Fraction(budget) - unique.points,
+            common=False,
+            forced=forced is not None,
+            allow_empty=True,
+        )
+        picks = [*picks, unique]
+    elif signature is None:
         picks, bonus = _roll_affixes(
             ctx, rng, rule, budget, common=rarity == "common", forced=forced is not None
         )
@@ -725,6 +748,7 @@ def generate_item(
         offhand_def=base.offhand,
         paired=base.paired,
         tags=base.tags,
+        legendary=unique is not None,
         affixes=tuple(AffixRoll(affix=p.affix.id, value=p.value) for p in picks),
         kind=base.kind,
         form=base.form,
