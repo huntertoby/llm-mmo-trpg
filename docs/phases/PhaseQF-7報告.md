@@ -85,3 +85,13 @@ CLI 快照沒有差異（slow cli 全過）。
 ## 5. 平衡疑慮
 
 無。
+
+## 6. 開發 PM 驗收（2026-11-23）
+
+**通過**，併進 main。
+
+- 看過 diff：只有事件卡的旁白加 `reserveMore`，情境判定與判定結果的說書人框沒動；留位按鈕 `visibility: hidden`、`disabled`、`aria-hidden`，不會被按到或讀出。
+- `join_clauses` 只拿掉每段結尾的「。」再用「；」接，現有內容輸出不變。
+- 三項比對 different=0，`check.py --all` 0（已有戳記）。
+- 待決 1（一律多留一列）交美術 PM 看截圖 `docs/art/shots/qf-7/` 決定；美術若要改成別的做法，排進下一段。
+- 待決 2 不用處理：本來就是先擋住以後的內容。
