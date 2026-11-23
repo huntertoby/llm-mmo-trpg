@@ -51,6 +51,8 @@ from trpg.engine.ai.utility.gains import effective_skill
 from trpg.engine.ai.utility.position import _harmful, _outgunners, _Scene, _unit_position_value
 from trpg.engine.ai.zone import is_zone_skill, zone_estimate
 from trpg.engine.grants import granted_remaining
+from trpg.engine.modifiers import reshape_damage_permille
+from trpg.engine.reshape_gate import FULL
 from trpg.engine.resources import restorable_cooldowns
 from trpg.engine.rewrites import grant_ap_problem, resettable_cooldowns
 from trpg.engine.rules.footprint import dist_to
@@ -130,12 +132,14 @@ def skill_estimate(  # noqa: PLR0917
         return special
     effects = resolve_effects(state, skill)
     est = state.ruleset.ai.estimate
+    # QF-6（E5 裁定 6）：裝備授予的變形過預算閘門後降傷，打到的對象分數照同一份閘門‰打折
+    gate = Fraction(reshape_damage_permille(state, unit, skill), FULL)
     score = Fraction(0)
     useful = False
     for uid in area.units:
         other = state.units[uid]
         if other.team is not unit.team:
-            score += est.enemy_points
+            score += est.enemy_points * gate
             useful = True
         elif _supports(state, unit, skill, effects, other):
             score += est.support_points
@@ -145,7 +149,7 @@ def skill_estimate(  # noqa: PLR0917
     for xy in area.tiles:
         obj = state.object_at(*xy)
         if obj is not None and obj.hp is not None:
-            score += 1
+            score += gate
             useful = True
     if not useful:
         field = _field_value(state, unit, area.tiles, scene) if _is_field_skill(effects) else 0
