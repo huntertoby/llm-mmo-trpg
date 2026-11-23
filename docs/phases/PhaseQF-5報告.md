@@ -2,7 +2,7 @@
 
 實作者，2026-11-23，worktree `agent-a3352e2de7142e3c4`，基準 `7e0c34917`。
 
-> **狀態：全量檢查還沒跑。** 開發 PM 回覆 QF-6 正在跑全量，要 QF-5 先停；`check.py --all`、`pnpm -C client build`（交件前那次）、三項比對（442 招、78 場、census）都等開發 PM 說「可以跑」再補，結果補進 3.1、3.3。
+> **狀態：全部完成。** 開發 PM 說「可以跑」後先 `git merge --no-edit main`（只多 `docs/開發PM交接.md`），`check.py --all` 第 1 次擋下 1 題（見 3.3），修正後第 2 次 0；build 0；三項比對都 different=0。
 
 ## 1. Commit
 
@@ -13,6 +13,9 @@
 | `cba192998` | (h) 刪 `skeletonName` 沒人用的 `override` 參數 |
 | `9a9462c3b` | (q) API 地圖摘要加 `role`；試打面板改讀 `role`；程式需要的地圖用途存在檢查 |
 | `879328333` | 截圖 `docs/art/shots/qf-5/`（3 張） |
+| `5982daee1` | 報告（全量待跑） |
+| merge main | `git merge --no-edit main`，只多 `docs/開發PM交接.md` |
+| `554312b76` | (q) 修正：`CODE_REQUIRED_ROLES` 的說明字拿掉「[0]」（寫死數字掃描 `test_hardcoded_scan` 擋下） |
 
 ## 2. 做法
 
@@ -63,15 +66,13 @@
 
 ### 3.1 結果不變（different=0）
 
-**還沒跑**（等開發 PM 說「可以跑」）。基準 `7e0c34917` 的 `git archive`（`src`、`content`、`config`、`scripts`）已解到暫存區 `qf5/base`，腳本沿用 CR-1c 的 `compare78.py`、`budget.py`、`census_cmp.py`（暫存區 `qf5/run_cmp.sh`）。
+基準 `7e0c34917` 的 `git archive`（`src`、`content`、`config`、`scripts`）；新版是全部程式 commit（含 `554312b76`）之後的工作區。腳本沿用 CR-1c 的 `compare78.py`、`budget.py`、`census_cmp.py`（暫存區 `qf5/run_cmp.sh`）。
 
 | 比對 | 結果 |
 |---|---|
-| 442 招逐招預算 | 未跑 |
-| 78 場（`compare78.py`） | 未跑 |
-| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`） | 未跑 |
-
-預期：(aa)(h) 只動前端；(o) 只加測試；(q) 只多一個 API 欄位與載入檢查（現有資料三種用途都在），不影響戰鬥與預算。
+| 442 招逐招預算（`BudgetReport` repr＋`validate_skill`） | 442 招，兩邊結束碼 0，`cmp` 0（逐位相同） |
+| 78 場（`compare78.py`；`format` 也比） | `battles=78 events=26741 different=0`；內嵌規則包差異 0；結束碼 0 |
+| census 小樣本（`--seeds 4 --tiers 1,3 --rarities common,epic`，不看計時） | `cells=204 different=0 whole_equal=True`（兩邊結束碼 0） |
 
 ### 3.2 檢查指令（開發中）
 
@@ -95,8 +96,9 @@
 
 | 指令 | 結束碼 |
 |---|---|
-| `uv run python scripts/check.py --all` | 未跑（QF-6 在跑全量，開發 PM 要求先停） |
-| `corepack pnpm -C client build`（check 之後） | 未跑 |
+| `uv run python scripts/check.py --all`（merge main 之後，第 1 次） | 1：pytest 1 題失敗（`tests/test_hardcoded_scan.py::test_every_hardcoded_number_is_classified`）。`CODE_REQUIRED_ROLES` 的說明字「取 role_ids('test')[0]」含數字，沒有歸類；改字成「取第一個 role: test 的類型」（`554312b76`），不動 `scripts/hardcoded/classes.yaml` |
+| `uv run python scripts/check.py --all`（第 2 次） | **0**：pytest 18720 passed、8 skipped；vitest 422 檔 4984 passed；ruff、format、mypy、lint-imports、client typecheck、situation coverage 通過；已寫通過戳記 |
+| `corepack pnpm -C client build`（check 之後） | **0** |
 
 ### 3.4 截圖（`docs/art/shots/qf-5/`，交美術 PM）
 
