@@ -644,6 +644,9 @@ def _apply_step(
     if not options:
         raise WorldActionError(f"{item.name_zh}的第 {step.index + 1} 條詞條不能換")
     if step.affix is not None:
+        current = library.affixes.get(item.affixes[step.index].affix)
+        if current is not None and current.signature is not None:  # 08 8.30 第 10 點
+            raise WorldActionError("招牌效果不能指定成某一條，只能重骰")
         chosen = next((o for o in options if o[0].id == step.affix), None)
         if chosen is None:
             raise WorldActionError(f"這條不能指定成 {step.affix}")

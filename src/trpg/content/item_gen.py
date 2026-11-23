@@ -749,7 +749,11 @@ def affix_choices(
 
     候選：同稀有度可用類別（第 1 條是 build 詞條時只從 build 候選裡挑）、能掛在這件、和其他條相容、
     不是原本那條、不是獨特詞條、放得進「部位詞條預算 − 其他條的點數」；數值取放得進的最大值。
-    沒有物品等級、稀有度或詞條規則的物品沒有候選；那一條是獨特詞條時也沒有（不能重骰）。"""
+    沒有物品等級、稀有度或詞條規則的物品沒有候選；那一條是獨特詞條時也沒有（不能重骰）。
+
+    招牌（E6-a2，08 8.30 第 3 點）：只換成同一種的另一條（能掛在這件、和其他條相容、不是原本那條、
+    不是傳說限定、獨特或暫緩詞條）；數值取最強的（招牌點數固定是預算的 60%）。附魔台的「指定」不能
+    指定招牌（8.30 第 10 點），由呼叫端擋。"""
     rules = _rules(library)
     if item.item_level is None or item.rarity is None or item.rarity not in rules.rarities:
         return []
@@ -760,7 +764,7 @@ def affix_choices(
         return []
     current_affix = library.affixes.get(current)
     if current_affix is not None and current_affix.signature is not None:
-        return []  # 招牌的重骰在 E6-a2（08 8.30 第 3 點）；這段先不能換
+        return _signature_choices(library, item, index, current_affix)
     rule = rules.rarity(item.rarity)
     fits = _fits(library, _base_of(library, item))
     pick = rules.required_picks.get(item.slot_type) if rule.required else None
@@ -770,12 +774,7 @@ def affix_choices(
     else:
         source = [a for a in fits if a.category in rule.categories]
     budget = affix_budget(rules, item.item_level, item.slot_type)
-    others: list[_Pick] = []
-    for i, roll in enumerate(item.affixes):
-        other = library.affixes.get(roll.affix)
-        if i != index and other is not None:
-            points = affix_points(rules, other, roll.value, budget=budget)
-            others.append(_Pick(other, roll.value, points))
+    others = _others(library, item, index, budget)
     allowance = Fraction(budget) - sum((o.points for o in others), Fraction(0))
     found: list[tuple[AffixDef, int | None]] = []
     for affix in source:
@@ -785,6 +784,34 @@ def affix_choices(
         if best is not None:
             found.append((affix, best[0]))
     return found
+
+
+def _others(library: ContentLibrary, item: ItemDef, index: int, budget: int) -> list[_Pick]:
+    rules = _rules(library)
+    others: list[_Pick] = []
+    for i, roll in enumerate(item.affixes):
+        other = library.affixes.get(roll.affix)
+        if i != index and other is not None:
+            points = affix_points(rules, other, roll.value, budget=budget)
+            others.append(_Pick(other, roll.value, points))
+    return others
+
+
+def _signature_choices(
+    library: ContentLibrary, item: ItemDef, index: int, current: AffixDef
+) -> list[tuple[AffixDef, int | None]]:
+    """招牌那一條可以重骰成的招牌：同一種、不是原本那條（依 id；08 8.30 第 3 點）。"""
+    rules = _rules(library)
+    assert item.item_level is not None
+    budget = affix_budget(rules, item.item_level, item.slot_type)
+    others = _others(library, item, index, budget)
+    return [
+        (affix, _signature_value(affix))
+        for affix in _fits(library, _base_of(library, item))
+        if affix.signature == current.signature
+        and affix.id != current.id
+        and _compatible(affix, others)
+    ]
 
 
 def pick_affix(

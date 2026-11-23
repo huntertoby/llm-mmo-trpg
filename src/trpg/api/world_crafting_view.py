@@ -159,14 +159,16 @@ def _affix_views(library: ContentLibrary, item: ItemDef, usable: bool) -> tuple[
     views: list[GearAffixView] = []
     for index, roll in enumerate(item.affixes):
         options = affix_choices(library, item, index) if usable else []
+        found = library.affixes.get(roll.affix)
+        signature = found is not None and found.signature is not None
         views.append(
             GearAffixView(
                 index=index,
                 text_zh=_affix_zh(library, roll.affix, roll.value),
                 can_change=bool(options),
-                choices=tuple(
-                    CraftOptionView(id=a.id, text_zh=affix_text(a, v)) for a, v in options
-                ),
+                choices=()  # 招牌只能重骰，不能指定（E6-a2，08 8.30 第 10 點）
+                if signature
+                else tuple(CraftOptionView(id=a.id, text_zh=affix_text(a, v)) for a, v in options),
             )
         )
     return tuple(views)

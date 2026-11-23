@@ -14,17 +14,25 @@ from pydantic import ValidationError
 
 from tests.content.test_signature_gen_e6a1 import TAGS, _extra
 from tests.world.helpers import NOON, make_world, without_fields
-from trpg.content.item_gen import ItemGenError, generate_item
+from trpg.api.world_crafting_view import crafting_view
+from trpg.content.item_gen import ItemGenError, affix_choices, generate_item
 from trpg.content.library import ContentLibrary
 from trpg.shared.rng import Rng
 from trpg.world.crafting import build_choices, plan_craft, signature_choices
-from trpg.world.crafting_actions import CraftAction, GearCraftedEvent
+from trpg.world.crafting_actions import (
+    AffixChangedEvent,
+    CraftAction,
+    GearCraftedEvent,
+    ImbueAction,
+    RerollAction,
+)
 from trpg.world.errors import WorldActionError
 from trpg.world.state import CharacterState, WorldState
 from trpg.world.step import StepResult, world_step
 
 MakeChar = Callable[..., CharacterState]
 SMITHY = "smithy_mist_ferry"
+ENCHANTER = "enchanter_mist_ferry"
 COARSE = "item_coarse_material"
 FINE = "item_fine_material"
 SUPERIOR = "item_superior_material"
@@ -187,3 +195,90 @@ def test_generator_signature_kind(library: ContentLibrary) -> None:
         generate_item(library, Rng(0), "head", "epic", 6, signature_kind="action")
     with pytest.raises(ItemGenError, match="沒有「地形規則」"):
         generate_item(library, Rng(0), "neck", "epic", 6, signature_kind="terrain")
+
+
+# ---------------------------------------------------------------------------
+# 附魔台重骰招牌（08 8.30 第 3、10 點）
+# ---------------------------------------------------------------------------
+
+
+def _offhand(library: ContentLibrary, make_char: MakeChar) -> StepResult:
+    """10 級史詩副手、指定新動作：副手的新動作有 2 條（鉤爪、煙霧），招牌以外還有 1 條以上。"""
+    char = _rich(make_char, level=10)
+    action = _craft(slot_type="offhand", rarity="epic", signature="action", item_level=10)
+    return _step(library, make_world(), char, action)
+
+
+def _reroll(library: ContentLibrary, result: StepResult, item: str, index: int) -> StepResult:
+    action = RerollAction(station=ENCHANTER, item=item, index=index)
+    return _step(library, result.world, result.char, action)
+
+
+def test_reroll_signature_stays_same_kind(library: ContentLibrary, make_char: MakeChar) -> None:
+    done = _offhand(library, make_char)
+    item = done.char.gear[-1]
+    index = len(item.affixes) - 1
+    current = item.affixes[index].affix
+    options = affix_choices(library, item, index)
+    assert options, "招牌要能重骰"
+    assert {a.signature for a, _ in options} == {"action"}  # 只換成同一種
+    assert current not in {a.id for a, _ in options}
+    seen = {current}
+    for _ in range(4):
+        done = _reroll(library, done, item.id, index)
+        new = done.char.gear[-1].affixes[index].affix
+        assert library.affixes[new].signature == "action"
+        seen.add(new)
+    assert seen == {"affix_act_grapple", "affix_act_smoke"}
+
+
+def test_reroll_signature_without_other_candidates(
+    library: ContentLibrary, make_char: MakeChar
+) -> None:
+    """同一種只有原本那條時沒有候選（身體的新反應只有 1 條）：不能換。"""
+    char = _rich(make_char, level=10)
+    action = _craft(slot_type="body", rarity="epic", signature="reaction", item_level=10)
+    done = _step(library, make_world(), char, action)
+    item = done.char.gear[-1]
+    index = len(item.affixes) - 1
+    assert affix_choices(library, item, index) == []
+    with pytest.raises(WorldActionError, match="不能換"):
+        _reroll(library, done, item.id, index)
+
+
+def test_reroll_signature_cost_shares_count(library: ContentLibrary, make_char: MakeChar) -> None:
+    """費用照一般重骰，和同件其他詞條共用遞增次數（08 8.30 第 3 點）。"""
+    rules = library.world_crafting
+    assert rules is not None
+    done = _offhand(library, make_char)
+    item = done.char.gear[-1]
+    assert len(item.affixes) >= 2
+    last = len(item.affixes) - 1
+    gold: list[int] = []
+    for index in (0, last, 0, last):
+        done = _reroll(library, done, item.id, index)
+        gold += [e.gold_spent for e in done.events if isinstance(e, AffixChangedEvent)]
+    assert gold == [rules.reroll.gold(n) for n in range(4)]
+    assert gold[0] < gold[1] < gold[2] < gold[3]
+
+
+def test_imbue_cannot_pick_signature(library: ContentLibrary, make_char: MakeChar) -> None:
+    """附魔台的「指定」不能把招牌指定成某一條（08 8.30 第 10 點）；畫面上招牌那條沒有指定選單。"""
+    done = _offhand(library, make_char)
+    item = done.char.gear[-1]
+    index = len(item.affixes) - 1
+    other = next(a.id for a, _ in affix_choices(library, item, index))
+    with pytest.raises(WorldActionError, match="不能指定"):
+        _step(
+            library,
+            done.world,
+            done.char,
+            ImbueAction(station=ENCHANTER, item=item.id, index=index, affix=other),
+        )
+    view = crafting_view(library, done.world, done.char, in_battle=False)
+    assert view is not None
+    gear = next(g for g in view.gear if g.item == item.id)
+    assert gear.affixes is not None
+    row = gear.affixes[index]
+    assert row.can_change and row.choices == ()
+    assert gear.affixes[0].choices  # 一般詞條照舊可以指定
