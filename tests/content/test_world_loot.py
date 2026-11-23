@@ -53,8 +53,10 @@ def test_cloud_ridge_loads(library: ContentLibrary) -> None:
     assert rules.generic_material(1) == "item_coarse_material"
     assert rules.generic_material(5) == "item_fine_material"
     assert rules.generic_material(12) == "item_superior_material"
-    assert rules.sell_price("rare", 4) == 32 and rules.sell_price("legendary", 4) is None
+    # E6-c2：傳說也收（係數 20，平衡待查第 41 條）；沒有物品等級的照舊不收
+    assert rules.sell_price("rare", 4) == 32 and rules.sell_price("legendary", 4) == 80
     assert rules.sell_price("rare", None) is None
+    assert rules.sell_price("legendary", None) is None
 
 
 @pytest.mark.parametrize(
