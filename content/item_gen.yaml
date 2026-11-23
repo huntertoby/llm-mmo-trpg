@@ -97,6 +97,16 @@ rarities:
     max_affixes: 3
     categories: [stat, conditional, trigger, attack, weapon_trait]
     required: true
+  # 傳說（E6-c1，08 8.27、8.30 第 6、7 點；草案 D14）：2 條詞條，類別同史詩（第 1 條是 build 詞條）；
+  # 另外帶 1 個獨特效果（招牌、改寫規則或限傳說詞條，點數照 signature_permille），不佔這 2 條。
+  legendary:
+    min_affixes: 2
+    max_affixes: 2
+    categories: [stat, conditional, trigger, attack, weapon_trait]
+    required: true
+
+# 傳說能出的部位（08 8.30 第 6 點）：頭、手、戒指抽到傳說時降成史詩。
+legendary_slots: [weapon, offhand, body, feet, neck]
 
 # 招牌效果（E6-a1，08 8.27、8.30 第 1 點）：這些稀有度、部位的物品帶 1 條招牌。招牌算進上面的條數
 # （稀有＝招牌＋1～2 條、史詩＝招牌＋2 條），不受上面的類別限制。
