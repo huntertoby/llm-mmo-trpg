@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from trpg.api.world_crafting_schemas import (
     CraftGearView,
     CraftingView,
@@ -70,6 +72,14 @@ def _keyword_name(library: ContentLibrary, keyword: str) -> str:
 def _affix_zh(library: ContentLibrary, affix_id: str, value: int | None = None) -> str:
     affix = library.affixes.get(affix_id)
     return affix_id if affix is None else affix_text(affix, value)
+
+
+def join_clauses(parts: Iterable[str]) -> str:
+    """用「；」把幾段接成一行：先拿掉每段結尾的「。」，不會出現「。；」。
+
+    QF-7 (al)；同前端 ``gear/clauses.ts`` 的 ``joinClauses``。
+    """
+    return "；".join(part.rstrip("。") for part in parts)
 
 
 def _problem(
@@ -218,7 +228,7 @@ def _gear_view(
         item=item.id,
         name_zh=gear_title(item),
         worn=worn,
-        description_zh="；".join(_affix_zh(library, r.affix, r.value) for r in item.affixes),
+        description_zh=join_clauses(_affix_zh(library, r.affix, r.value) for r in item.affixes),
         code=None if mod.code is None else mod.code.upper(),
         enhance=mod.enhance,
         can_enhance=can_enhance,
