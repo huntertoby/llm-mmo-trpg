@@ -14,6 +14,7 @@
 | 4 前端打造畫面多傳說＋截圖 | `cfe522aed` |
 | 5 (ah) 旁白占位小修＋截圖 | `7057c5583` |
 | 6 E6-b2「。；」小修＋截圖（追加） | `8fc2f50f5` |
+| 第 3 項補一行舊斷言（`check.py --all` 抓到） | `700784bfb` |
 | 合併 main | `5d5d32f1b`（開工時） |
 | 報告 | 最後一個 commit |
 
@@ -76,9 +77,9 @@
 | `trpg content check` | 0 |
 | `scripts/hardcoded/classify.py --check` | 0（沒歸類 0） |
 | tsc（`pnpm -C client typecheck`）、vitest | 0、0（含在 `check.py --all`） |
-| `uv run python scripts/check.py --all`（全部程式 commit 之後） | CHECK_RESULT |
-| `uv run python scripts/run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | SLOW_RESULT |
-| `pnpm -C client build`（`corepack pnpm`） | BUILD_RESULT |
+| `uv run python scripts/check.py --all`（全部程式 commit 之後） | 第一次 1（`tests/content/test_world_loot.py` 一行舊斷言仍寫「傳說不收」，第 3 項漏改；補 commit `700784bfb`）；重跑 **0**：pytest 18959 passed、8 skipped；vitest 427 檔 5036；已寫通過戳記 |
+| `uv run python scripts/run_pytest.py -q -m slow tests/skillgen/test_refactor_parity.py tests/cli -n 8` | 0（995 passed） |
+| `pnpm -C client build`（`corepack pnpm`） | 0 |
 
 比對腳本與輸出在 scratchpad 的 `e6c2/`（`budget.py`、`compare78.py`、`census_*.py`、`gen_seed.py` 沿用 E6-c1／E6-a2；`loot_seed.py` 是這段新寫的）。
 
