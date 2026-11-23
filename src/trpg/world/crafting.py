@@ -23,7 +23,13 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
-from trpg.content.equipment import AffixDef, ItemDef
+from trpg.content.equipment import (
+    SIGNATURE_KIND_ZH,
+    SIGNATURE_KINDS,
+    AffixDef,
+    ItemDef,
+    SignatureKind,
+)
 from trpg.content.item_gen import (
     affix_choices,
     generate_item_retrying,
@@ -71,6 +77,7 @@ __all__ = [
     "mod_of",
     "plan_craft",
     "recipe_code",
+    "signature_choices",
     "station_problem",
     "stations_here",
     "variant_print",
@@ -201,6 +208,47 @@ def build_choices(
     ]
 
 
+def signature_choices(
+    library: ContentLibrary, slot_type: str, weapon_class: str | None = None
+) -> list[SignatureKind]:
+    """這個部位可以指定的招牌類型（E6-a2，08 8.27；依 8.27 的五種順序）：開關
+    （``signature_enabled``）打開、部位帶招牌（``signature_slots``），而且這一種有能掛在這個部位的
+    候選（篩法同 :func:`build_choices`：不限定武器種類、不是傳說限定、獨特或暫緩詞條）。開關關著時
+    是空的（打造畫面不出現這個選項）。"""
+    gen = library.item_gen
+    if gen is None or not gen.signature_enabled or slot_type not in gen.signature_slots:
+        return []
+    kinds = {
+        a.signature
+        for a in library.affixes.values()
+        if a.signature is not None
+        and slot_type in a.slots
+        and not a.legendary_only
+        and a.id not in gen.unique_affixes
+        and a.id not in gen.held_back_affixes
+        and not a.weapons
+        and (a.weapon_class is None or a.weapon_class == weapon_class or slot_type != "weapon")
+    }
+    return [k for k in SIGNATURE_KINDS if k in kinds]
+
+
+def _signature_problem(
+    library: ContentLibrary,
+    kind: SignatureKind,
+    rarity: str,
+    slot_type: str,
+    weapon_class: str | None,
+) -> str | None:
+    gen = library.item_gen
+    if gen is None or not gen.signature_enabled:
+        return "招牌效果還沒有開放，不能指定招牌類型"
+    if not gen.carries_signature(rarity, slot_type):  # type: ignore[arg-type]
+        return "這個部位與稀有度不帶招牌，不能指定招牌類型"
+    if kind not in signature_choices(library, slot_type, weapon_class):
+        return f"這個部位不能指定招牌類型「{SIGNATURE_KIND_ZH[kind]}」"
+    return None
+
+
 def grade_item(library: ContentLibrary, item_level: int) -> str | None:
     """物品等級對應的通用料（強化用；≤3 粗、≤7 精、其餘上，依 ``grade_cap``）。"""
     rules = _rules(library)
@@ -248,9 +296,17 @@ def _recipe_from_fields(
     weapon_class = _hero_weapon_class(library, char) if action.slot_type == "weapon" else None
     hidden = rules.hidden_for(action.slot_type, materials)
     affix: str | None = None
+    signature: SignatureKind | None = None
     rarity = action.rarity
     if hidden is not None:  # 隱藏配方（M7）：稀有度與獨特詞條由配方決定（代決 5D3-7）
         rarity = hidden.rarity
+    elif action.signature is not None:  # E6-a2：指定招牌類型（和指定詞條二選一，08 8.27）
+        problem = _signature_problem(
+            library, action.signature, rarity, action.slot_type, weapon_class
+        )
+        if problem is not None:
+            raise WorldActionError(problem)
+        signature = action.signature
     else:
         if action.affix is None:
             raise WorldActionError("要指定 1 條詞條")
@@ -266,6 +322,7 @@ def _recipe_from_fields(
         affix=affix,
         grade=action.grade,
         materials=materials,
+        signature=signature,
     )
     return recipe, hidden
 
@@ -361,6 +418,7 @@ def _make_item(
         forced=forced,
         leanings=leanings,
         problems=problems,
+        signature_kind=recipe.signature,
     )
     if item is None:
         raise WorldActionError(f"這份配方打不出來（{problems[-1] if problems else ''}）")

@@ -35,12 +35,14 @@ from typing import Literal
 
 from trpg.content.battle import OffhandDef, WeaponDef
 from trpg.content.equipment import (
+    SIGNATURE_KIND_ZH,
     SIGNATURE_KINDS,
     AffixDef,
     AffixRoll,
     AttackAffix,
     ItemDef,
     KeywordAffix,
+    SignatureKind,
     StatAffix,
     TriggerAffix,
     affix_slot_problems,
@@ -513,28 +515,53 @@ def _roll_affixes(
 
 
 def _signature(
-    library: ContentLibrary, rng: Rng, base: _Base, rarity: Rarity, budget: int
+    library: ContentLibrary,
+    rng: Rng,
+    base: _Base,
+    rarity: Rarity,
+    budget: int,
+    *,
+    kind: SignatureKind | None = None,
 ) -> _Pick | None:
     """招牌（E6-a1，08 8.27、8.30）：開關關著、不是帶招牌的稀有度與部位、或五種都沒有候選時為
     ``None``（這些情況都不取亂數）。先依部位權重抽種類（沒有候選的種類權重 0），再從那一種的候選
-    （依 id）抽 1 條；數值取最強的（點數和數值無關）。"""
+    （依 id）抽 1 條；數值取最強的（點數和數值無關）。
+
+    ``kind``（E6-a2 打造指定招牌類型，08 8.27）：只從這一種的候選抽（不看部位權重）；開關關著、
+    不是帶招牌的稀有度與部位、或這一種沒有候選時拋 :class:`ItemGenError`。"""
     rules = _rules(library)
-    if not rules.signature_enabled or not rules.carries_signature(rarity, base.slot_type):
+    carries = rules.signature_enabled and rules.carries_signature(rarity, base.slot_type)
+    if kind is not None:
+        if not carries:
+            raise ItemGenError(f"{base.name_zh}不能帶招牌，不能指定招牌類型")
+        members = [a for a in _fits(library, base) if a.signature == kind]
+        if not members:
+            raise ItemGenError(f"{base.name_zh}沒有「{SIGNATURE_KIND_ZH[kind]}」的招牌可以抽")
+        return _signature_pick(rules, rng.choice(members), budget)
+    if not carries:
         return None
     fits = [a for a in _fits(library, base) if a.signature is not None]
     weights = rules.signature_weights.get(base.slot_type, {})
     pool: list[tuple[list[AffixDef], int]] = []
-    for kind in SIGNATURE_KINDS:
-        members = [a for a in fits if a.signature == kind]
-        weight = weights.get(kind, 0)
+    for each in SIGNATURE_KINDS:
+        members = [a for a in fits if a.signature == each]
+        weight = weights.get(each, 0)
         if members and weight > 0:
             pool.append((members, weight))
     if not pool:
         return None
-    affix = rng.choice(_weighted(rng, pool))
-    value = None
-    if affix.value is not None:
-        value = max((affix.value.min, affix.value.max), key=lambda v: affix_strength(affix, v))
+    return _signature_pick(rules, rng.choice(_weighted(rng, pool)), budget)
+
+
+def _signature_value(affix: AffixDef) -> int | None:
+    """招牌的數值：取最強的（招牌點數固定是預算的 60%，和數值無關）。"""
+    if affix.value is None:
+        return None
+    return max((affix.value.min, affix.value.max), key=lambda v: affix_strength(affix, v))
+
+
+def _signature_pick(rules: ItemGenRules, affix: AffixDef, budget: int) -> _Pick:
+    value = _signature_value(affix)
     return _Pick(affix, value, affix_points(rules, affix, value, budget=budget))
 
 
@@ -588,6 +615,7 @@ def generate_item(
     keywords: Sequence[str] = (),
     forced: str | None = None,
     leanings: Mapping[str, int] | None = None,
+    signature_kind: SignatureKind | None = None,
 ) -> ItemDef:
     """產生一件物品（確定性：相同 ``rng`` 狀態與參數必得相同物品）。
 
@@ -598,7 +626,10 @@ def generate_item(
 
     Phase 5D-3 打造：``forced`` 是第 1 條（build 詞條）指定的詞條 ID（放不下就拋
     :class:`ItemGenError`；可以是獨特詞條）；``leanings``（詞條 → 權重倍數）是材料傾向（M2）。
-    兩者都不給時行為不變。"""
+    兩者都不給時行為不變。
+
+    E6-a2 打造指定招牌類型：``signature_kind`` 是招牌的種類（只從這一種抽；和 ``forced`` 二選一由
+    打造檢查）；不給時照部位權重。"""
     if item_level < 1:
         raise ItemGenError(f"物品等級至少 1（收到 {item_level}）")
     slot_type = _slot_type(slot)
@@ -612,7 +643,7 @@ def generate_item(
     base = _base(library, rng, slot_type, weapon_class)
     ctx = _context(library, base, rule, keywords, forced=forced, leanings=leanings)
     budget = affix_budget(rules, item_level, slot_type)
-    signature = _signature(library, rng, base, rarity, budget)
+    signature = _signature(library, rng, base, rarity, budget, kind=signature_kind)
     if signature is None:
         picks, bonus = _roll_affixes(
             ctx, rng, rule, budget, common=rarity == "common", forced=forced is not None
@@ -669,6 +700,7 @@ def generate_item_retrying(
     forced: str | None = None,
     leanings: Mapping[str, int] | None = None,
     problems: list[str] | None = None,
+    signature_kind: SignatureKind | None = None,
 ) -> ItemDef | None:
     """:func:`generate_item` 失敗就重試（Phase 5D-R1，打造、掉落、傭兵裝備共用）：第 n 次用
     ``rng.fork(f"try/{n}")``，最多 ``offer_attempts`` 次（沒有產生器規則時 1 次）；都失敗為
@@ -686,6 +718,7 @@ def generate_item_retrying(
                 keywords=keywords,
                 forced=forced,
                 leanings=leanings,
+                signature_kind=signature_kind,
             )
         except ItemGenError as exc:
             if problems is not None:
